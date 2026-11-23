@@ -27,12 +27,13 @@ namespace sw
         Client
     };
 
-    /** @brief 링크의 값 세 개입니다(소유하지 않음). 세 칸 모두 차 있어야 쓸 수 있습니다. */
+    /** @brief 링크의 값입니다(소유하지 않음). 창구 · 라우터가 차 있어야 쓸 수 있습니다. */
     struct NetLinkValue
     {
         INetPeers*        _pPeers{ nullptr };  ///< 보내고 연결을 묻는 창구
         NetMessageRouter* _pRouter{ nullptr }; ///< 받은 메시지를 나눠 주는 라우터(처리기를 단다)
         NetLinkRole       _role{ NetLinkRole::Server };
+        uint8             _bTicketRequired{ SW_FALSE }; ///< 서버 — 세션이 모든 연결에 접속 티켓(로그인 계정)을 요구한다. 계정이 있어야 하는 게임 서버는 이 값을 보고 선다(세션 설정이 정한다)
 
         [[nodiscard]] bool isComplete() const { return _pPeers != nullptr && _pRouter != nullptr; }
     };

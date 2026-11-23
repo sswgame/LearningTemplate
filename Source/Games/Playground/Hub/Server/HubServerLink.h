@@ -1,8 +1,8 @@
 /**
- * @file ValeServerLink.h
- * @brief LanternVale 의 서버 쪽 망 잇기입니다 — 골짜기 규칙 · 원격 호출 · MMO 복제 · 진행 저장을 묶습니다. 서버 전용 코드라 이 폴더(`Server/`)에 둔다.
- * @details 공유 쪽(`ValeNetLink.h`)은 창구(`IValeServer` · `IValeServerFactory`)만 알고, 공장은 모듈 부분으로 공개한다(`ValeServerFactory.cpp`).
- *          진행 저장소는 전용 서버의 온라인 조립 저장소다(`ValeProfileStore` — 저장소 계약 `ServiceStore`).
+ * @file HubServerLink.h
+ * @brief 허브의 서버 쪽 망 잇기입니다 — 허브 규칙 · 원격 호출 · MMO 복제 · 진행 저장을 묶습니다. 서버 전용 코드라 이 폴더(`Server/`)에 둔다.
+ * @details 공유 쪽(`HubNetLink.h`)은 창구(`IHubServer` · `IHubServerFactory`)만 알고, 공장은 모듈 부분으로 공개한다(`HubServerFactory.cpp`).
+ *          진행 저장소는 전용 서버의 온라인 조립 저장소다(`HubProfileStore` — 저장소 계약 `ServiceStore`).
  */
 #pragma once
 #include "Core/Container/unordered_map.h"
@@ -17,14 +17,14 @@
 #include "GameFramework/Kits/Feature/Network/NetClientServer/RemoteCall.h"
 #include "GameFramework/Kits/Feature/Network/NetMMO/MMOReplicator.h"
 
-#include "Games/LanternVale/Server/ValeProfileStore.h"
-#include "Games/LanternVale/ValeNetLink.h"
-#include "Games/LanternVale/ValeWorld.h"
+#include "Games/Playground/Hub/HubNetLink.h"
+#include "Games/Playground/Hub/HubWorld.h"
+#include "Games/Playground/Hub/Server/HubProfileStore.h"
 
 namespace sw
 {
     /** @brief 서버 링크의 셈입니다(진단 · 테스트). */
-    struct ValeServerStats
+    struct HubServerStats
     {
         uint64 _admittedCount{ 0 }; ///< 들인 접속
         uint64 _refusedCount{ 0 };  ///< 주체가 없거나 진행을 읽지 못해 받지 않은 접속
@@ -34,34 +34,34 @@ namespace sw
     };
 
     /** @brief 복제기에 마지막으로 올린 엔티티 값입니다. 같으면 다시 올리지 않습니다(언리얼 Push Model · Iris 의 더티 표시 자리). */
-    struct ValePublishedEntity
+    struct HubPublishedEntity
     {
         float3 _position{};
         int32  _stateValue{ 0 };
         uint32 _typeID{ 0 };
 
-        bool operator==( const ValePublishedEntity& other ) const { return _position == other._position && _stateValue == other._stateValue && _typeID == other._typeID; }
-        bool operator!=( const ValePublishedEntity& other ) const { return ( *this == other ) == false; }
+        bool operator==( const HubPublishedEntity& other ) const { return _position == other._position && _stateValue == other._stateValue && _typeID == other._typeID; }
+        bool operator!=( const HubPublishedEntity& other ) const { return ( *this == other ) == false; }
     };
 
     /**
-     * @class ValeServerLink
-     * @brief 서버 쪽입니다. 골짜기 규칙 · 원격 호출 · MMO 복제 · 진행 저장을 묶습니다. 라우터에는 사건만 받는 처리기로 달린다(게임 영역, 마스크 0).
+     * @class HubServerLink
+     * @brief 서버 쪽입니다. 허브 규칙 · 원격 호출 · MMO 복제 · 진행 저장을 묶습니다. 라우터에는 사건만 받는 처리기로 달린다(게임 영역, 마스크 0).
      */
-    class ValeServerLink final : public IValeServer
+    class HubServerLink final : public IHubServer
     {
     public:
-        ValeServerLink();
-        ~ValeServerLink() override;
+        HubServerLink();
+        ~HubServerLink() override;
 
-        ValeServerLink( const ValeServerLink& )            = delete;
-        ValeServerLink& operator=( const ValeServerLink& ) = delete;
+        HubServerLink( const HubServerLink& )            = delete;
+        HubServerLink& operator=( const HubServerLink& ) = delete;
 
         /**
-         * @brief 골짜기를 세우고 라우터에 답니다. @p storeSource 는 진행 저장소를 찾는 곳이다(맡길 때마다 묻는다 — 온라인 조립은 리로드 · 종료마다 다시 선다).
+         * @brief 허브를 세우고 라우터에 답니다. @p storeSource 는 진행 저장소를 찾는 곳이다(맡길 때마다 묻는다 — 온라인 조립은 리로드 · 종료마다 다시 선다).
          * @return 규칙 · 관심 격자 · 복제 설정이 틀렸거나 라우터 등록이 겹치면 오류를 남기고 false 입니다(링크는 서지 않는다)
          */
-        [[nodiscard]] bool initialize( INetPeers& peers, NetMessageRouter& router, const ValeRules& rules, const StreamingCellGridDef& gridDef, ValeServiceStoreSource storeSource );
+        [[nodiscard]] bool initialize( INetPeers& peers, NetMessageRouter& router, const HubRules& rules, const StreamingCellGridDef& gridDef, HubServiceStoreSource storeSource );
         /** @brief 접속한 모두의 진행 쓰기를 맡기고 라우터에서 뗍니다(맡긴 쓰기는 저장소가 끝낸다). 두 번 불러도 됩니다. */
         void shutdown() override;
         /** @brief 규칙 · 저장 · 복제를 한 틱 돌립니다. */
@@ -72,28 +72,28 @@ namespace sw
          * @details 연결 열림(`onConnectionOpened`)이 주체로 부른다. 테스트는 주체 없는 루프백 연결에 계정을 직접 넘긴다.
          */
         void acceptConnection( int32 connectionID, uint64 accountID );
-        /** @brief 아바타 행동 하나의 판정을 알립니다(`ValeAvatarAgent` 의 `Server` 함수 몸이 부른다). */
-        void reportAction( ValeAvatarAgent& agent, ValeActionResult result );
+        /** @brief 아바타 행동 하나의 판정을 알립니다(`HubAvatarAgent` 의 `Server` 함수 몸이 부른다). */
+        void reportAction( HubAvatarAgent& agent, HubActionResult result );
 
         /** @brief 연결이 열렸습니다 — 주체(계정)로 들입니다(라우터 사건 · 핫 리로드 뒤 붙어 있는 연결). */
         void onConnectionOpened( int32 connectionID );
         /** @brief 연결이 닫혔습니다 — 읽는 중이면 버리고, 들인 아바타는 진행 쓰기를 맡기고 내보냅니다. */
         void onConnectionClosed( int32 connectionID, NetDisconnectReason reason );
 
-        bool                    isActive() const { return _pPeers != nullptr; }
-        ValeWorld&              getWorld() { return _world; }
-        const ValeWorld&        getWorld() const { return _world; }
-        const ValeServerStats&  getStats() const { return _stats; }
-        const RemoteCallStats&  getRemoteCallStats() const { return _remoteCalls.getStats(); }
-        const ValeProfileStore& getProfiles() const { return _profiles; }
-        int32                   getOnlineCount() const { return static_cast<int32>( _mapAgent.size() ); }
+        bool                   isActive() const { return _pPeers != nullptr; }
+        HubWorld&              getWorld() { return _world; }
+        const HubWorld&        getWorld() const { return _world; }
+        const HubServerStats&  getStats() const { return _stats; }
+        const RemoteCallStats& getRemoteCallStats() const { return _remoteCalls.getStats(); }
+        const HubProfileStore& getProfiles() const { return _profiles; }
+        int32                  getOnlineCount() const { return static_cast<int32>( _mapAgent.size() ); }
 
     private:
         /** @brief 라우터에 다는 사건 처리기입니다 — 링크가 창구를 함께 상속하지 않고 멤버로 든다(기반은 하나). 게임 영역 마스크 0 으로 연결 사건만 받는다. */
         class NetEvents final : public INetMessageHandler
         {
         public:
-            explicit NetEvents( ValeServerLink& owner )
+            explicit NetEvents( HubServerLink& owner )
                 : _owner{ owner }
             {
             }
@@ -106,37 +106,37 @@ namespace sw
             void                    onConnectionClosed( int32 connectionID, NetDisconnectReason reason ) override { _owner.onConnectionClosed( connectionID, reason ); }
 
         private:
-            ValeServerLink& _owner;
+            HubServerLink& _owner;
         };
 
         /** @brief 읽힌 진행으로 아바타를 세우고 세션 대상으로 등록합니다. 그 사이 연결이 닫혔으면 버립니다. */
-        void completeAdmission( const ValeProfileLoad& load );
+        void completeAdmission( const HubProfileLoad& load );
         /** @brief 진행을 쓰고 아바타를 내보냅니다. */
         void releaseAgent( int32 connectionID );
-        void sendProgress( const ValeAvatarAgent& agent );
+        void sendProgress( const HubAvatarAgent& agent );
         void saveAll();
         /** @brief 복제 엔티티(아바타 · 놓인 것) 가운데 지난번 올린 값과 다른 것만 이번 틱 상태로 올립니다. */
         void publishEntities();
         /** @brief 엔티티 하나를 올립니다. 지난번 올린 값과 같으면 아무것도 하지 않습니다. */
-        void publishEntity( uint32 entityID, const ValePublishedEntity& value, float32 importance );
+        void publishEntity( uint32 entityID, const HubPublishedEntity& value, float32 importance );
         /** @brief 엔티티를 복제기에서 내립니다. 올린 적이 없으면 아무것도 하지 않습니다. */
         void removePublishedEntity( uint32 entityID );
 
     private:
-        ValeWorld                                         _world;
-        ValeProfileStore                                  _profiles;
-        NetEvents                                         _netEvents;
-        RemoteCallServer                                  _remoteCalls;
-        StreamingCellGrid                                 _grid; ///< 복제기보다 먼저 선언한다 — 복제기가 빌려 쓴다
-        MMOReplicator                                     _replicator;
-        unordered_map<int32, unique_ptr<ValeAvatarAgent>> _mapAgent;          ///< 연결 → 세션 객체(들인 접속)
-        unordered_map<int32, uint64>                      _mapPendingAccount; ///< 진행을 읽는 중인 연결 → 계정
-        vector<ValeProfileLoad>                           _listLoadScratch;
-        vector<uint8>                                     _listStateScratch;
-        unordered_map<uint32, ValePublishedEntity>        _mapPublished;     ///< 엔티티 id → 복제기에 마지막으로 올린 값
-        vector<Subscription>                              _listSubscription; ///< 라우터 등록. 처리기들보다 뒤에 선언한다 — 먼저 풀린다
-        ValeServerStats                                   _stats;
-        INetPeers*                                        _pPeers;
-        float32                                           _autosaveTimer;
+        HubWorld                                         _world;
+        HubProfileStore                                  _profiles;
+        NetEvents                                        _netEvents;
+        RemoteCallServer                                 _remoteCalls;
+        StreamingCellGrid                                _grid; ///< 복제기보다 먼저 선언한다 — 복제기가 빌려 쓴다
+        MMOReplicator                                    _replicator;
+        unordered_map<int32, unique_ptr<HubAvatarAgent>> _mapAgent;          ///< 연결 → 세션 객체(들인 접속)
+        unordered_map<int32, uint64>                     _mapPendingAccount; ///< 진행을 읽는 중인 연결 → 계정
+        vector<HubProfileLoad>                           _listLoadScratch;
+        vector<uint8>                                    _listStateScratch;
+        unordered_map<uint32, HubPublishedEntity>        _mapPublished;     ///< 엔티티 id → 복제기에 마지막으로 올린 값
+        vector<Subscription>                             _listSubscription; ///< 라우터 등록. 처리기들보다 뒤에 선언한다 — 먼저 풀린다
+        HubServerStats                                   _stats;
+        INetPeers*                                       _pPeers;
+        float32                                          _autosaveTimer;
     };
 } // namespace sw

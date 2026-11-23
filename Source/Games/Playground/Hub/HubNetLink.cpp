@@ -1,6 +1,6 @@
 #include "pch.h"
 
-#include "Games/LanternVale/ValeNetLink.h"
+#include "Games/Playground/Hub/HubNetLink.h"
 
 #include "Core/Network/Connection/NetEndpoint.h"
 #include "Core/Serialization/BitStream.h"
@@ -11,65 +11,65 @@
 namespace sw
 {
     // ------------------------------------------------------------------------------
-    // ValeAvatarAgent — `Server` 함수 몸은 서버가 건 골짜기에 넘겨 판정을 알리고, `Client` 함수 몸은 받은 값을 적는다
+    // HubAvatarAgent — `Server` 함수 몸은 서버가 건 허브에 넘겨 판정을 알리고, `Client` 함수 몸은 받은 값을 적는다
     // ------------------------------------------------------------------------------
-    void ValeAvatarAgent::attackCreature( uint32 creatureID )
+    void HubAvatarAgent::attackCreature( uint32 creatureID )
     {
         if ( _pWorld != nullptr )
             _onAction( *this, _pWorld->attackCreature( _avatarID, creatureID ) );
     }
 
-    bool ValeAvatarAgent::validateAttackCreature( uint32 creatureID ) const
+    bool HubAvatarAgent::validateAttackCreature( uint32 creatureID ) const
     {
-        return _pWorld != nullptr && _pWorld->isPlacementOfKind( creatureID, ValePlacementKind::Creature );
+        return _pWorld != nullptr && _pWorld->isPlacementOfKind( creatureID, HubPlacementKind::Creature );
     }
 
-    void ValeAvatarAgent::gatherHerb( uint32 herbID )
+    void HubAvatarAgent::gatherHerb( uint32 herbID )
     {
         if ( _pWorld != nullptr )
             _onAction( *this, _pWorld->gatherHerb( _avatarID, herbID ) );
     }
 
-    bool ValeAvatarAgent::validateGatherHerb( uint32 herbID ) const
+    bool HubAvatarAgent::validateGatherHerb( uint32 herbID ) const
     {
-        return _pWorld != nullptr && _pWorld->isPlacementOfKind( herbID, ValePlacementKind::Herb );
+        return _pWorld != nullptr && _pWorld->isPlacementOfKind( herbID, HubPlacementKind::Herb );
     }
 
-    void ValeAvatarAgent::moveTo( float32 x, float32 z )
+    void HubAvatarAgent::moveTo( float32 x, float32 z )
     {
         if ( _pWorld != nullptr )
             _onAction( *this, _pWorld->moveAvatar( _avatarID, x, z ) );
     }
 
-    bool ValeAvatarAgent::validateMoveTo( float32 x, float32 z ) const
+    bool HubAvatarAgent::validateMoveTo( float32 x, float32 z ) const
     {
-        return _pWorld != nullptr && _pWorld->isInsideVale( x, z );
+        return _pWorld != nullptr && _pWorld->isInsideHub( x, z );
     }
 
-    void ValeAvatarAgent::inviteToParty( uint32 avatarID )
+    void HubAvatarAgent::inviteToParty( uint32 avatarID )
     {
         if ( _pWorld != nullptr )
             _onAction( *this, _pWorld->inviteToParty( _avatarID, avatarID ) );
     }
 
-    bool ValeAvatarAgent::validateInviteToParty( uint32 avatarID ) const
+    bool HubAvatarAgent::validateInviteToParty( uint32 avatarID ) const
     {
-        return ValeWorld::isValidAvatarID( avatarID ) && avatarID != _avatarID;
+        return HubWorld::isValidAvatarID( avatarID ) && avatarID != _avatarID;
     }
 
-    void ValeAvatarAgent::acceptPartyInvite( uint32 leaderAvatarID )
+    void HubAvatarAgent::acceptPartyInvite( uint32 leaderAvatarID )
     {
         if ( _pWorld != nullptr )
             _onAction( *this, _pWorld->acceptPartyInvite( _avatarID, leaderAvatarID ) );
     }
 
-    void ValeAvatarAgent::leaveParty()
+    void HubAvatarAgent::leaveParty()
     {
         if ( _pWorld != nullptr )
             _onAction( *this, _pWorld->leaveParty( _avatarID ) );
     }
 
-    void ValeAvatarAgent::receiveProgress( uint32 avatarID, int32 level, int32 experience, int32 coins, int32 herbCount, int32 defeatCount, int32 partySize, uint32 inviteFromID )
+    void HubAvatarAgent::receiveProgress( uint32 avatarID, int32 level, int32 experience, int32 coins, int32 herbCount, int32 defeatCount, int32 partySize, uint32 inviteFromID )
     {
         _avatarID            = avatarID;
         _shownLevel          = level;
@@ -79,20 +79,20 @@ namespace sw
         _shownDefeatCount    = defeatCount;
         _shownPartySize      = partySize;
         _pendingInviteFromID = inviteFromID;
-        SW_LOG_INFO_ID( "LanternVale.Progress", "[LanternVale] progress avatar=%# level=%# experience=%# coins=%# herbs=%# defeats=%# party=%# invite=%#", avatarID, level, experience, coins,
+        SW_LOG_INFO_ID( "Hub.Progress", "[Hub] progress avatar=%# level=%# experience=%# coins=%# herbs=%# defeats=%# party=%# invite=%#", avatarID, level, experience, coins,
                         herbCount, defeatCount, partySize, inviteFromID );
     }
 
-    void ValeAvatarAgent::receiveActionResult( ValeActionResult result )
+    void HubAvatarAgent::receiveActionResult( HubActionResult result )
     {
         _lastResult = result;
         ++_resultCount;
     }
 
     // ------------------------------------------------------------------------------
-    // ValeClientLink
+    // HubClientLink
     // ------------------------------------------------------------------------------
-    ValeClientLink::ValeClientLink()
+    HubClientLink::HubClientLink()
         : _agent{}
         , _remoteCalls{}
         , _view{}
@@ -104,10 +104,10 @@ namespace sw
     {
     }
 
-    bool ValeClientLink::initialize( INetPeers& peers, NetMessageRouter& router )
+    bool HubClientLink::initialize( INetPeers& peers, NetMessageRouter& router )
     {
         _remoteCalls.initialize( &peers );
-        if ( _remoteCalls.registerTarget( RemoteCallTargets::kSessionTargetID, *ValeAvatarAgent::StaticType(), &_agent ) == false )
+        if ( _remoteCalls.registerTarget( RemoteCallTargets::kSessionTargetID, *HubAvatarAgent::StaticType(), &_agent ) == false )
             return false;
         _listSubscription.push_back( router.registerHandler( &_remoteCalls ) );
         _listSubscription.push_back( router.registerHandler( &_view ) );
@@ -115,7 +115,7 @@ namespace sw
         {
             if ( subscription.isActive() )
                 continue;
-            SW_LOG_ERROR_ID( "LanternVale.ClientRouterTaken", "[LanternVale] a message range of the vale client is already handled - the client link does not start" );
+            SW_LOG_ERROR_ID( "Hub.ClientRouterTaken", "[Hub] a message range of the hub client is already handled - the client link does not start" );
             _listSubscription.clear();
             return false;
         }
@@ -123,14 +123,14 @@ namespace sw
         return true;
     }
 
-    void ValeClientLink::shutdown()
+    void HubClientLink::shutdown()
     {
         _listSubscription.clear();
         _remoteCalls.unregisterTarget( RemoteCallTargets::kSessionTargetID );
         _bActive = SW_FALSE;
     }
 
-    void ValeClientLink::update()
+    void HubClientLink::update()
     {
         if ( _bActive == SW_FALSE )
             return;
@@ -143,16 +143,16 @@ namespace sw
         _remoteCalls.pollRejections( _listRejectScratch );
         for ( const RemoteCallRejectNotification& notification : _listRejectScratch )
         {
-            SW_LOG_WARNING_ID( "LanternVale.CallRejected", "[LanternVale] the server did not take call %# (%#)", notification._sequence, static_cast<int32>( notification._error ) );
+            SW_LOG_WARNING_ID( "Hub.CallRejected", "[Hub] the server did not take call %# (%#)", notification._sequence, static_cast<int32>( notification._error ) );
         }
         vector<MMOClientEvent> listEvent;
         _view.pollEvents( listEvent ); // 보이는 목록은 `getView` 가 읽는다 — 알림은 쌓이지 않게 비운다
     }
 
-    uint32 ValeClientLink::callServerFunction( string_view functionName, const vector<ReflectedValue>& listArg )
+    uint32 HubClientLink::callServerFunction( string_view functionName, const vector<ReflectedValue>& listArg )
     {
         if ( _bActive == SW_FALSE )
             return 0;
-        return _remoteCalls.callServer( RemoteCallTargets::kSessionTargetID, *ValeAvatarAgent::StaticType(), functionName, listArg );
+        return _remoteCalls.callServer( RemoteCallTargets::kSessionTargetID, *HubAvatarAgent::StaticType(), functionName, listArg );
     }
 } // namespace sw

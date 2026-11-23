@@ -7,24 +7,24 @@
 
 #include "GameFramework/Runtime/Online/Store/Server/MemoryServiceStore.h"
 
-#include "Games/LanternVale/Server/ValeServerLink.h"
+#include "Games/Playground/Hub/Server/HubServerLink.h"
 
-// 골짜기 서버 · 클라이언트를 루프백으로 잇는다 — 계정으로 들이기 → 반사 함수 호출로 전투 · 파티 → 서버가 알린 진행 → 검증 실패 끊기 → 저장 후 재접속 · 서버 재시작.
+// 허브 서버 · 클라이언트를 루프백으로 잇는다 — 계정으로 들이기 → 반사 함수 호출로 전투 · 파티 → 서버가 알린 진행 → 검증 실패 끊기 → 저장 후 재접속 · 서버 재시작.
 
 using namespace sw;
 
 namespace
 {
-    constexpr uint32 kNearCreatureID = ValeWorld::kPlacementIDBase + 0;
-    constexpr uint32 kSideCreatureID = ValeWorld::kPlacementIDBase + 1;
+    constexpr uint32 kNearCreatureID = HubWorld::kPlacementIDBase + 0;
+    constexpr uint32 kSideCreatureID = HubWorld::kPlacementIDBase + 1;
 
     /**
      * @brief 서버 엔드포인트를 그대로 넘기되 연결의 주체(계정)만 테스트가 정합니다. 루프백 연결은 티켓이 없어 주체가 0 이다 — 게임 접속 티켓 서버의 계정을 흉내 낸다.
      */
-    class ValeAccountPeers final : public INetPeers
+    class HubAccountPeers final : public INetPeers
     {
     public:
-        explicit ValeAccountPeers( NetEndpoint& inner )
+        explicit HubAccountPeers( NetEndpoint& inner )
             : _inner{ inner }
             , _mapAccount{}
         {
@@ -58,33 +58,33 @@ namespace
         unordered_map<int32, uint64> _mapAccount;
     };
 
-    ValeRules makeValeLinkTestRules()
+    HubRules makeHubLinkTestRules()
     {
-        ValeRules rules;
+        HubRules rules;
         rules._listLevelExperience          = { 100, 250, 450, 700 };
         rules._moveSpeed                    = 6.0f;
         rules._remoteCallBurstCount         = 20; // 씬과 같다
         rules._remoteCallRefillMilliseconds = 50;
-        ValePlacement spawn;
-        spawn._kind     = ValePlacementKind::Creature;
+        HubPlacement spawn;
+        spawn._kind     = HubPlacementKind::Creature;
         spawn._position = float3{ 2.0f, 0.0f, 0.0f };
         rules._listPlacement.push_back( spawn );
         spawn._position = float3{ -2.0f, 0.0f, 1.0f };
         rules._listPlacement.push_back( spawn );
-        spawn._kind     = ValePlacementKind::Herb;
+        spawn._kind     = HubPlacementKind::Herb;
         spawn._position = float3{ 0.0f, 0.0f, 1.5f };
         rules._listPlacement.push_back( spawn );
         return rules;
     }
 
     /** @brief 진행 저장소를 찾는 곳입니다 — 테스트는 늘 같은 메모리 저장소를 돌려준다(전용 서버는 온라인 조립 저장소를 맡길 때마다 찾는다). */
-    ValeServiceStoreSource makeStoreSource( ServiceStore& store )
+    HubServiceStoreSource makeStoreSource( ServiceStore& store )
     {
-        return SW_DELEGATE_LAMBDA( ValeServiceStoreSource, [&store]() -> ServiceStore*
+        return SW_DELEGATE_LAMBDA( HubServiceStoreSource, [&store]() -> ServiceStore*
         { return &store; } );
     }
 
-    StreamingCellGridDef makeValeLinkTestGrid()
+    StreamingCellGridDef makeHubLinkTestGrid()
     {
         StreamingCellGridDef grid;
         grid._cellSize      = 32.0f;
@@ -93,20 +93,20 @@ namespace
     }
 
     /** @brief 서버 하나와 클라이언트 @p clientCount 개 — 클라이언트 i 의 계정은 1000 + i 입니다. 진행 저장소는 메모리이고 서버를 다시 세워도 데이터는 남습니다. */
-    struct ValeLinkTestRig
+    struct HubLinkTestRig
     {
-        test::LoopbackCluster        _cluster{ 23u };
-        MemoryServiceDatabase        _database;
-        MemoryServiceStore           _store{ &_database }; ///< 서버를 다시 세워도 데이터는 남는다(전용 서버의 온라인 조립 저장소 자리)
-        ValeAccountPeers*            _pServerPeers{ nullptr };
-        unique_ptr<ValeAccountPeers> _pServerPeersOwner;
-        NetMessageRouter             _serverRouter;
-        NetMessageRouter             _arrClientRouter[2];
-        ValeServerLink               _server;
-        ValeClientLink               _arrClient[2];
-        int32                        _clientCount{ 0 };
+        test::LoopbackCluster       _cluster{ 23u };
+        MemoryServiceDatabase       _database;
+        MemoryServiceStore          _store{ &_database }; ///< 서버를 다시 세워도 데이터는 남는다(전용 서버의 온라인 조립 저장소 자리)
+        HubAccountPeers*            _pServerPeers{ nullptr };
+        unique_ptr<HubAccountPeers> _pServerPeersOwner;
+        NetMessageRouter            _serverRouter;
+        NetMessageRouter            _arrClientRouter[2];
+        HubServerLink               _server;
+        HubClientLink               _arrClient[2];
+        int32                       _clientCount{ 0 };
 
-        explicit ValeLinkTestRig( int32 clientCount )
+        explicit HubLinkTestRig( int32 clientCount )
             : _clientCount{ clientCount }
         {
             const NetEndpointConfig settings;
@@ -116,7 +116,7 @@ namespace
                 (void)_cluster.addEndpoint( static_cast<uint16>( 4600 + index ), settings );
             }
             SW_EXPECT_TRUE( _cluster.connectClients( 60 ) );
-            _pServerPeersOwner = make_unique<ValeAccountPeers>( _cluster.getServer() );
+            _pServerPeersOwner = make_unique<HubAccountPeers>( _cluster.getServer() );
             _pServerPeers      = _pServerPeersOwner.get();
             for ( int32 index = 0; index < clientCount; ++index )
             {
@@ -125,15 +125,15 @@ namespace
             }
         }
 
-        [[nodiscard]] bool startServer( ValeServerLink& server )
+        [[nodiscard]] bool startServer( HubServerLink& server )
         {
-            return server.initialize( *_pServerPeers, _serverRouter, makeValeLinkTestRules(), makeValeLinkTestGrid(), makeStoreSource( _store ) );
+            return server.initialize( *_pServerPeers, _serverRouter, makeHubLinkTestRules(), makeHubLinkTestGrid(), makeStoreSource( _store ) );
         }
 
         int32 getConnectionID( int32 clientIndex ) { return _cluster.getClient( clientIndex ).getClientIndex().value(); }
 
         /** @brief 망 · 라우터 · 링크를 @p seconds 만큼 돌립니다(1/60 초 걸음). */
-        void run( ValeServerLink& server, float32 seconds )
+        void run( HubServerLink& server, float32 seconds )
         {
             const int32 stepCount = static_cast<int32>( seconds * 60.0f ) + 1;
             for ( int32 step = 0; step < stepCount; ++step )
@@ -151,7 +151,7 @@ namespace
         }
 
         /** @brief 짐승을 쓰러질 때까지 세 번 칩니다(재사용 대기 0.5 초를 넘겨 기다린다). */
-        void defeat( ValeServerLink& server, int32 clientIndex, uint32 creatureID )
+        void defeat( HubServerLink& server, int32 clientIndex, uint32 creatureID )
         {
             for ( int32 strike = 0; strike < 3; ++strike )
             {
@@ -162,13 +162,13 @@ namespace
     };
 } // namespace
 
-/** @brief [ValeNetLinkTest] 계정으로 든 아바타가 반사 함수 호출로 짐승을 쓰러뜨리고, 서버가 판정한 결과 · 진행 · MMO 복제가 클라이언트에 온다. */
-SW_TEST_CASE( ValeNetLinkTest, ServerAuthorityLoopReachesTheClient )
+/** @brief [HubNetLinkTest] 계정으로 든 아바타가 반사 함수 호출로 짐승을 쓰러뜨리고, 서버가 판정한 결과 · 진행 · MMO 복제가 클라이언트에 온다. */
+SW_TEST_CASE( HubNetLinkTest, ServerAuthorityLoopReachesTheClient )
 {
-    ValeLinkTestRig rig( 1 );
+    HubLinkTestRig rig( 1 );
     SW_REQUIRE_TRUE( rig.startServer( rig._server ) );
     rig.run( rig._server, 0.5f );
-    const ValeAvatarAgent& agent = rig._arrClient[0].getAgent();
+    const HubAvatarAgent& agent = rig._arrClient[0].getAgent();
     SW_REQUIRE_TRUE( agent._avatarID != 0u );
     SW_EXPECT_EQUAL( 1, agent._shownLevel );
     SW_EXPECT_EQUAL( 1, rig._server.getOnlineCount() );
@@ -176,7 +176,7 @@ SW_TEST_CASE( ValeNetLinkTest, ServerAuthorityLoopReachesTheClient )
 
     rig.defeat( rig._server, 0, kNearCreatureID );
     SW_EXPECT_EQUAL( 3, agent._resultCount );
-    SW_EXPECT_TRUE( agent._lastResult == ValeActionResult::Ok );
+    SW_EXPECT_TRUE( agent._lastResult == HubActionResult::Ok );
     SW_EXPECT_EQUAL( 60, agent._shownExperience );
     SW_EXPECT_EQUAL( 5, agent._shownCoins );
     SW_EXPECT_EQUAL( 1, agent._shownDefeatCount );
@@ -187,14 +187,14 @@ SW_TEST_CASE( ValeNetLinkTest, ServerAuthorityLoopReachesTheClient )
     SW_EXPECT_NOT_EQUAL( 0u, rig._arrClient[0].callServerFunction( "attackCreature", { ReflectedValue::make( kSideCreatureID ) } ) );
     SW_EXPECT_NOT_EQUAL( 0u, rig._arrClient[0].callServerFunction( "attackCreature", { ReflectedValue::make( kSideCreatureID ) } ) );
     rig.run( rig._server, 0.2f );
-    SW_EXPECT_TRUE( agent._lastResult == ValeActionResult::CoolingDown );
+    SW_EXPECT_TRUE( agent._lastResult == HubActionResult::CoolingDown );
     SW_EXPECT_EQUAL( 1, rig._server.getOnlineCount() );
 }
 
-/** @brief [ValeNetLinkTest] 가만히 있는 골짜기는 복제기에 다시 올리지 않고, 쓰러뜨린 짐승만 바뀐 것으로 올린다(감사 K-13). */
-SW_TEST_CASE( ValeNetLinkTest, OnlyChangedEntitiesArePublished )
+/** @brief [HubNetLinkTest] 가만히 있는 허브는 복제기에 다시 올리지 않고, 쓰러뜨린 짐승만 바뀐 것으로 올린다(감사 K-13). */
+SW_TEST_CASE( HubNetLinkTest, OnlyChangedEntitiesArePublished )
 {
-    ValeLinkTestRig rig( 1 );
+    HubLinkTestRig rig( 1 );
     SW_REQUIRE_TRUE( rig.startServer( rig._server ) );
     rig.run( rig._server, 0.5f );
     const uint64 settledCount = rig._server.getStats()._publishCount;
@@ -208,20 +208,20 @@ SW_TEST_CASE( ValeNetLinkTest, OnlyChangedEntitiesArePublished )
     SW_EXPECT_EQUAL( settledCount + 1u, rig._server.getStats()._publishCount );
 }
 
-/** @brief [ValeNetLinkTest] 진행 저장소는 저장소 바이트(읽었거나 쓴 것)와 같은 진행을 다시 쓰지 않는다 — 자동 저장이 그대로인 진행을 쓰지 않는다(감사 K-13). */
-SW_TEST_CASE( ValeNetLinkTest, UnchangedProfileIsNotWrittenAgain )
+/** @brief [HubNetLinkTest] 진행 저장소는 저장소 바이트(읽었거나 쓴 것)와 같은 진행을 다시 쓰지 않는다 — 자동 저장이 그대로인 진행을 쓰지 않는다(감사 K-13). */
+SW_TEST_CASE( HubNetLinkTest, UnchangedProfileIsNotWrittenAgain )
 {
-    MemoryServiceDatabase   database;
-    MemoryServiceStore      store( &database );
-    ValeProfileStore        profiles;
-    vector<ValeProfileLoad> listLoad;
+    MemoryServiceDatabase  database;
+    MemoryServiceStore     store( &database );
+    HubProfileStore        profiles;
+    vector<HubProfileLoad> listLoad;
     profiles.bindSource( makeStoreSource( store ) );
     profiles.requestLoad( 7 );
     (void)store.pollCompletions();
     profiles.poll( listLoad );
     SW_REQUIRE_EQUAL( size_t{ 1 }, listLoad.size() );
     SW_REQUIRE_TRUE( listLoad[0]._bOk == SW_TRUE && listLoad[0]._bFound == SW_FALSE ); // 새 계정
-    ValeProfile profile;
+    HubProfile profile;
     profile._coins = 5;
     SW_EXPECT_TRUE( profiles.requestSave( 7, profile ) );
     SW_EXPECT_FALSE( profiles.requestSave( 7, profile ) ); // 쓰는 중인 바이트와 같다
@@ -238,7 +238,7 @@ SW_TEST_CASE( ValeNetLinkTest, UnchangedProfileIsNotWrittenAgain )
 
     // 다른 저장소 객체(서버 재시작)는 읽은 바이트를 저장소 값으로 안다 — 읽은 그대로는 쓰지 않는다.
     listLoad.clear();
-    ValeProfileStore restarted;
+    HubProfileStore restarted;
     restarted.bindSource( makeStoreSource( store ) );
     restarted.requestLoad( 7 );
     (void)store.pollCompletions();
@@ -247,19 +247,19 @@ SW_TEST_CASE( ValeNetLinkTest, UnchangedProfileIsNotWrittenAgain )
     SW_REQUIRE_TRUE( listLoad[0]._bFound == SW_TRUE );
     SW_EXPECT_EQUAL( 6, listLoad[0]._profile._coins );
     SW_EXPECT_FALSE( restarted.requestSave( 7, listLoad[0]._profile ) );
-    SW_EXPECT_LOG( "LanternVale.ProfileSaveUnread" );
+    SW_EXPECT_LOG( "Hub.ProfileSaveUnread" );
     SW_EXPECT_FALSE( restarted.requestSave( 8, listLoad[0]._profile ) ); // 읽지 않은 계정은 판을 몰라 쓰지 않는다
 }
 
-/** @brief [ValeNetLinkTest] 서버 둘이 한 계정을 쓰면 뒤 서버의 쓰기는 판 조건에 걸려 앞 서버의 진행을 덮지 않는다(저장소 계약 — 서버 여럿이 DB 하나를 나눈다). */
-SW_TEST_CASE( ValeNetLinkTest, SecondServerDoesNotOverwriteNewerProgress )
+/** @brief [HubNetLinkTest] 서버 둘이 한 계정을 쓰면 뒤 서버의 쓰기는 판 조건에 걸려 앞 서버의 진행을 덮지 않는다(저장소 계약 — 서버 여럿이 DB 하나를 나눈다). */
+SW_TEST_CASE( HubNetLinkTest, SecondServerDoesNotOverwriteNewerProgress )
 {
-    MemoryServiceDatabase   database;
-    MemoryServiceStore      storeA( &database );
-    MemoryServiceStore      storeB( &database );
-    ValeProfileStore        serverA;
-    ValeProfileStore        serverB;
-    vector<ValeProfileLoad> listLoad;
+    MemoryServiceDatabase  database;
+    MemoryServiceStore     storeA( &database );
+    MemoryServiceStore     storeB( &database );
+    HubProfileStore        serverA;
+    HubProfileStore        serverB;
+    vector<HubProfileLoad> listLoad;
     serverA.bindSource( makeStoreSource( storeA ) );
     serverB.bindSource( makeStoreSource( storeB ) );
     serverA.requestLoad( 7 );
@@ -269,19 +269,19 @@ SW_TEST_CASE( ValeNetLinkTest, SecondServerDoesNotOverwriteNewerProgress )
     serverA.poll( listLoad );
     serverB.poll( listLoad );
     SW_REQUIRE_EQUAL( size_t{ 2 }, listLoad.size() );
-    ValeProfile profile;
+    HubProfile profile;
     profile._coins = 10;
     SW_REQUIRE_TRUE( serverA.requestSave( 7, profile ) );
     (void)storeA.pollCompletions();
     serverA.poll( listLoad );
-    SW_EXPECT_LOG( "LanternVale.ProfileSaveFailed" );
+    SW_EXPECT_LOG( "Hub.ProfileSaveFailed" );
     profile._coins = 1;
     SW_REQUIRE_TRUE( serverB.requestSave( 7, profile ) ); // B 는 새 계정(없음)으로 읽었다 — "없어야 한다" 조건이 걸린다
     (void)storeB.pollCompletions();
     serverB.poll( listLoad );
     SW_EXPECT_EQUAL( uint64{ 0 }, serverB.getSavedCount() );
 
-    ValeProfileStore reader;
+    HubProfileStore reader;
     listLoad.clear();
     reader.bindSource( makeStoreSource( storeA ) );
     reader.requestLoad( 7 );
@@ -291,19 +291,19 @@ SW_TEST_CASE( ValeNetLinkTest, SecondServerDoesNotOverwriteNewerProgress )
     SW_EXPECT_EQUAL( 10, listLoad[0]._profile._coins );
 }
 
-/** @brief [ValeNetLinkTest] 세션이 끝난 계정의 기억은 마지막 쓰기가 끝나면 지운다 — 들고 있는 바이트가 접속 중인 계정 수를 따른다 */
-SW_TEST_CASE( ValeNetLinkTest, ReleasedAccountIsForgottenAfterItsLastWrite )
+/** @brief [HubNetLinkTest] 세션이 끝난 계정의 기억은 마지막 쓰기가 끝나면 지운다 — 들고 있는 바이트가 접속 중인 계정 수를 따른다 */
+SW_TEST_CASE( HubNetLinkTest, ReleasedAccountIsForgottenAfterItsLastWrite )
 {
-    MemoryServiceDatabase   database;
-    MemoryServiceStore      store( &database );
-    ValeProfileStore        profiles;
-    vector<ValeProfileLoad> listLoad;
+    MemoryServiceDatabase  database;
+    MemoryServiceStore     store( &database );
+    HubProfileStore        profiles;
+    vector<HubProfileLoad> listLoad;
     profiles.bindSource( makeStoreSource( store ) );
     profiles.requestLoad( 7 );
     profiles.requestLoad( 8 );
     (void)store.pollCompletions();
     profiles.poll( listLoad );
-    ValeProfile profile;
+    HubProfile profile;
     profile._coins = 5;
     SW_REQUIRE_TRUE( profiles.requestSave( 7, profile ) );
     profiles.releaseAccount( 7 );
@@ -316,14 +316,14 @@ SW_TEST_CASE( ValeNetLinkTest, ReleasedAccountIsForgottenAfterItsLastWrite )
     SW_EXPECT_EQUAL( size_t{ 0 }, profiles.getKnownAccountCount() );
 }
 
-/** @brief [ValeNetLinkTest] 파티 초대 · 수락이 서버에서 서고, 쓰러뜨린 짐승의 경험을 두 클라이언트가 나눠 받는다. */
-SW_TEST_CASE( ValeNetLinkTest, PartyIsServerAuthoritative )
+/** @brief [HubNetLinkTest] 파티 초대 · 수락이 서버에서 서고, 쓰러뜨린 짐승의 경험을 두 클라이언트가 나눠 받는다. */
+SW_TEST_CASE( HubNetLinkTest, PartyIsServerAuthoritative )
 {
-    ValeLinkTestRig rig( 2 );
+    HubLinkTestRig rig( 2 );
     SW_REQUIRE_TRUE( rig.startServer( rig._server ) );
     rig.run( rig._server, 0.5f );
-    const ValeAvatarAgent& leader = rig._arrClient[0].getAgent();
-    const ValeAvatarAgent& member = rig._arrClient[1].getAgent();
+    const HubAvatarAgent& leader = rig._arrClient[0].getAgent();
+    const HubAvatarAgent& member = rig._arrClient[1].getAgent();
     SW_REQUIRE_TRUE( leader._avatarID != 0u && member._avatarID != 0u );
 
     SW_EXPECT_NOT_EQUAL( 0u, rig._arrClient[0].callServerFunction( "inviteToParty", { ReflectedValue::make( member._avatarID ) } ) );
@@ -346,10 +346,10 @@ SW_TEST_CASE( ValeNetLinkTest, PartyIsServerAuthoritative )
     SW_EXPECT_EQUAL( 1, member._shownPartySize );
 }
 
-/** @brief [ValeNetLinkTest] 검증 짝이 지어낸 번호 · 자기 초대를 거르면 서버가 그 연결을 끊는다 — 몸(골짜기 규칙)은 돌지 않는다. */
-SW_TEST_CASE( ValeNetLinkTest, CraftedTargetsAreDisconnected )
+/** @brief [HubNetLinkTest] 검증 짝이 지어낸 번호 · 자기 초대를 거르면 서버가 그 연결을 끊는다 — 몸(허브 규칙)은 돌지 않는다. */
+SW_TEST_CASE( HubNetLinkTest, CraftedTargetsAreDisconnected )
 {
-    ValeLinkTestRig rig( 1 );
+    HubLinkTestRig rig( 1 );
     SW_REQUIRE_TRUE( rig.startServer( rig._server ) );
     rig.run( rig._server, 0.5f );
     SW_REQUIRE_TRUE( rig._arrClient[0].getAgent()._avatarID != 0u );
@@ -367,14 +367,14 @@ SW_TEST_CASE( ValeNetLinkTest, CraftedTargetsAreDisconnected )
     SW_EXPECT_TRUE( rig._cluster.getServer().getConnectionState( connectionID ) != NetConnectionState::Connected );
 }
 
-/** @brief [ValeNetLinkTest] 접속이 끝나면 진행을 저장하고, 같은 계정이 다시 들면(서버를 다시 세워도) 그 진행을 읽는다. 주체가 없는 연결은 받지 않는다. */
-SW_TEST_CASE( ValeNetLinkTest, ProgressSurvivesReconnectAndServerRestart )
+/** @brief [HubNetLinkTest] 접속이 끝나면 진행을 저장하고, 같은 계정이 다시 들면(서버를 다시 세워도) 그 진행을 읽는다. */
+SW_TEST_CASE( HubNetLinkTest, ProgressSurvivesReconnectAndServerRestart )
 {
-    ValeLinkTestRig rig( 1 );
+    HubLinkTestRig rig( 1 );
     SW_REQUIRE_TRUE( rig.startServer( rig._server ) );
     rig.run( rig._server, 0.5f );
     rig.defeat( rig._server, 0, kNearCreatureID );
-    const ValeAvatarAgent& agent = rig._arrClient[0].getAgent();
+    const HubAvatarAgent& agent = rig._arrClient[0].getAgent();
     SW_REQUIRE_EQUAL( 60, agent._shownExperience );
     const uint32 firstAvatarID = agent._avatarID;
 
@@ -391,16 +391,34 @@ SW_TEST_CASE( ValeNetLinkTest, ProgressSurvivesReconnectAndServerRestart )
 
     // 서버 재시작: 내리며 저장하고, 새 서버가 같은 저장소에서 읽는다.
     rig._server.shutdown();
-    ValeServerLink restarted;
+    HubServerLink restarted;
     SW_REQUIRE_TRUE( rig.startServer( restarted ) );
     rig.run( restarted, 0.3f );
     SW_EXPECT_EQUAL( uint64{ 1 }, restarted.getStats()._admittedCount );
     SW_EXPECT_EQUAL( 60, agent._shownExperience );
     SW_EXPECT_EQUAL( 1, agent._shownDefeatCount );
-
-    // 계정이 없는 연결(자격 없이 붙은)은 받지 않는다.
-    SW_EXPECT_LOG( "LanternVale.NoAccount" );
-    restarted.acceptConnection( connectionID + 1000, 0 );
-    SW_EXPECT_EQUAL( uint64{ 1 }, restarted.getStats()._refusedCount );
     restarted.shutdown();
+}
+
+/** @brief [HubNetLinkTest] 주체(티켓의 계정)가 없는 연결은 경고하고 끊는다 — 계정이 있는 연결은 그대로 든다. */
+SW_TEST_CASE( HubNetLinkTest, ConnectionWithoutAccountIsDisconnected )
+{
+    HubLinkTestRig rig( 2 );
+    const int32    accountConnectionID = rig.getConnectionID( 0 );
+    const int32    guestConnectionID   = rig.getConnectionID( 1 );
+    rig._pServerPeers->setAccount( guestConnectionID, 0 );
+    SW_EXPECT_LOG( "Hub.NoAccount" );
+    SW_REQUIRE_TRUE( rig.startServer( rig._server ) ); // 붙어 있던 연결을 들인다
+    for ( int32 step = 0; step < 8; ++step )
+    {
+        rig._cluster.step();
+        (void)rig._serverRouter.poll( *rig._pServerPeers ); // 서버만 — 끊긴 클라이언트 쪽 사건은 이 테스트가 보지 않는다
+        (void)rig._store.pollCompletions();
+        rig._server.update( 1.0f / 60.0f );
+    }
+    SW_EXPECT_EQUAL( uint64{ 1 }, rig._server.getStats()._refusedCount );
+    SW_EXPECT_EQUAL( uint64{ 1 }, rig._server.getStats()._admittedCount );
+    SW_EXPECT_EQUAL( 1, rig._server.getOnlineCount() );
+    SW_EXPECT_TRUE( rig._cluster.getServer().getConnectionState( guestConnectionID ) != NetConnectionState::Connected );
+    SW_EXPECT_TRUE( rig._cluster.getServer().getConnectionState( accountConnectionID ) == NetConnectionState::Connected );
 }

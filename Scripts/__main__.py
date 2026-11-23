@@ -56,7 +56,7 @@ _SUBCOMMAND: tuple[Subcommand, ...] = (
     Subcommand("format", "lint.format:main_format", "clang-format(C++ 는 include 순서 포함, 셰이더) — 린트 format 의 고치는 명령"),
     Subcommand("tidy", "lint.clang_tidy", "clang-tidy 병렬 실행 · 검사별 집계(본 트리 컴파일 DB 를 읽기만 한다) — 인자 없음: 전체, --changed [기준]: 바뀐 파일만(묶음 검증), --files: 지정 파일"),
     Subcommand("online-local", "net.online_local_run", "온라인 로컬 실행 — 전용 서버와 게임 클라이언트를 띄워 로그인 → 키트 호출까지 돈다. 저장소 · 키트 · 제공자는 --server-config 가 고른다(run · check)"),
-    Subcommand("net-pair", "net.net_pair_run", "두 프로세스 온라인 접속 시나리오 — 서버 · 클라이언트로 로그인 → 게임 접속 티켓 → 암호화 UDP 접속(run · check), LanternVale 저장 후 재접속(mmo)"),
+    Subcommand("net-pair", "net.net_pair_run", "두 프로세스 온라인 접속 시나리오 — 서버 · 클라이언트로 로그인 → 게임 접속 티켓 → 암호화 UDP 접속(run · check), 허브 서버 저장 후 재접속(mmo)"),
     Subcommand("new-online-kit", "dev.new_online_kit:main_new_online_kit", "온라인 키트 뼈대(Runtime · Server 모듈, 서술자 · 클라이언트 · 서비스 · 조립 · 테스트)를 만들고 중앙 표(메서드 영역 · 서버 키트 이름)에 한 줄씩 더한다"),
     Subcommand("new-kit", "dev.new_kit:main_new_kit", "키트 뼈대(카탈로그 · 컴포넌트 · 에디터 확장의 맵 검사 · 테스트)를 만들고 카탈로그 키 표에 두 줄을 더한다(--group <묶음 폴더>)"),
     Subcommand("lockstep-pair", "net.lockstep_pair_run", "락스텝 2 인 대전 — StarSkirmish 호스트 · 클라이언트 두 프로세스가 명령만 나눠 같은 판을 비동기 없이 도는지 본다(run)"),

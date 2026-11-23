@@ -1,18 +1,18 @@
-// ValeProfileRecordTest — 골짜기 진행 레코드는 진행의 칸 선언(`ValeProfile` 의 `Replicated` · 범위)이 바이트를 정한다.
+// HubProfileRecordTest — 허브 진행 레코드는 진행의 칸 선언(`HubProfile` 의 `Replicated` · 범위)이 바이트를 정한다.
 // 새 레코드는 왕복하고, 옛 판 1(손 배치 — 판을 두 번 실었다) 레코드도 잃지 않고 읽으며, 모르는 판 · 범위 밖 값은 쓰지도 읽지도 않는다(nogpu, 에셋 없음).
 #include "pch.h"
 
 #include "Core/Serialization/BitStream.h"
 #include "Core/Testing/TestFramework.h"
 
-#include "Games/LanternVale/Server/ValeProfileStore.h"
+#include "Games/Playground/Hub/Server/HubProfileStore.h"
 
 using namespace sw;
 
-/** @brief [ValeProfileRecordTest] 레코드가 같은 값으로 돌아오고, 판 1 레코드는 옛 배치로 읽히며, 모르는 판과 범위 밖 진행은 거절된다. */
-SW_TEST_CASE( ValeProfileRecordTest, RecordRoundTripsAndReadsFormat1 )
+/** @brief [HubProfileRecordTest] 레코드가 같은 값으로 돌아오고, 판 1 레코드는 옛 배치로 읽히며, 모르는 판과 범위 밖 진행은 거절된다. */
+SW_TEST_CASE( HubProfileRecordTest, RecordRoundTripsAndReadsFormat1 )
 {
-    ValeProfile saved;
+    HubProfile saved;
     saved._level       = 7;
     saved._experience  = 1234;
     saved._coins       = 56;
@@ -20,9 +20,9 @@ SW_TEST_CASE( ValeProfileRecordTest, RecordRoundTripsAndReadsFormat1 )
     saved._defeatCount = 21;
     saved._position    = float3{ -12.5f, 0.0f, 40.25f };
     vector<uint8> bytes;
-    SW_REQUIRE_TRUE( ValeProfileStore::encodeRecord( saved, bytes ) );
-    ValeProfile loaded;
-    SW_REQUIRE_TRUE( ValeProfileStore::decodeRecord( bytes, loaded ) );
+    SW_REQUIRE_TRUE( HubProfileStore::encodeRecord( saved, bytes ) );
+    HubProfile loaded;
+    SW_REQUIRE_TRUE( HubProfileStore::decodeRecord( bytes, loaded ) );
     SW_EXPECT_EQUAL( 7, loaded._level );
     SW_EXPECT_EQUAL( 1234, loaded._experience );
     SW_EXPECT_EQUAL( 56, loaded._coins );
@@ -42,21 +42,21 @@ SW_TEST_CASE( ValeProfileRecordTest, RecordRoundTripsAndReadsFormat1 )
     format1.writeFloat( 1.0f ); // 자리
     format1.writeFloat( 2.0f );
     format1.writeFloat( 3.0f );
-    ValeProfile legacy;
-    SW_REQUIRE_TRUE( ValeProfileStore::decodeRecord( format1.getBytes(), legacy ) );
+    HubProfile legacy;
+    SW_REQUIRE_TRUE( HubProfileStore::decodeRecord( format1.getBytes(), legacy ) );
     SW_EXPECT_EQUAL( 4, legacy._level );
     SW_EXPECT_EQUAL( 11, legacy._coins );
     SW_EXPECT_EQUAL( 5, legacy._defeatCount );
     SW_EXPECT_TRUE( legacy._position == ( float3{ 1.0f, 2.0f, 3.0f } ) );
 
     BitWriter unknown;
-    unknown.writeVarUint( ValeProfile::kFormatVersion + 1 );
-    ValeProfile untouched;
-    SW_EXPECT_FALSE( ValeProfileStore::decodeRecord( unknown.getBytes(), untouched ) );
+    unknown.writeVarUint( HubProfile::kFormatVersion + 1 );
+    HubProfile untouched;
+    SW_EXPECT_FALSE( HubProfileStore::decodeRecord( unknown.getBytes(), untouched ) );
 
-    ValeProfile levelZero;
+    HubProfile levelZero;
     levelZero._level = 0; // `Min = 1` 밖
     vector<uint8> refused;
-    SW_EXPECT_FALSE( ValeProfileStore::encodeRecord( levelZero, refused ) );
+    SW_EXPECT_FALSE( HubProfileStore::encodeRecord( levelZero, refused ) );
     SW_EXPECT_TRUE( refused.empty() );
 }
