@@ -353,6 +353,11 @@ namespace sw
         bool hasLayer( const hashed_string& layer ) const;
         bool isLayerEnabled( const hashed_string& layer ) const;
         /**
+         * @brief 레이어 @p listLayer 를 함께 켜도(스택에 쌓아도) 되는지 봅니다 — 그 가운데 하나가 켜는 가상 커서의 스틱 · 버튼을 다른 레이어(늘 켜진 레이어 포함)가 액션에 묶었으면 모두 알리고 false 입니다.
+         * @details 맵 읽기는 지금 켜진 레이어만 본다 — 함께 켤 묶음은 그것을 정한 데이터(미니게임 정의)가 읽힐 때 이것으로 본다. 모르는 레이어 이름은 보지 않는다(켤 때 거절된다).
+         */
+        [[nodiscard]] bool canStackLayers( const vector<hashed_string>& listLayer, string_view sourceName ) const;
+        /**
          * @brief 두 레이어의 바인딩이 한 번의 누름에 함께 발화할 수 있으면 true 입니다 — 같은 레이어이거나, 둘 다 지금 켜져 있습니다.
          * @details 묶음의 레이어는 파일의 겹침을 나누려고 있어서 게임에서는 함께 켜져 있다. 그래서 플레이어 재배치의 겹침은 같은 레이어만 보면 놓친다(Interact 를 W 로 옮기면 이동과 함께 돈다).
          */
@@ -662,6 +667,8 @@ namespace sw
          * @details 맵 읽기(`countVirtualCursorConflicts`)와 사용자 바인딩 읽기(`InputRemapSerializer::load`)가 같은 검사를 쓴다 — 한쪽만 고치면 다른 길로 같은 충돌이 들어온다.
          */
         [[nodiscard]] bool reportVirtualCursorConflict( string_view sourceName, const hashed_string& action, const ActionBinding& binding ) const;
+        /** @brief @p cursor 가 켜져 있을 때 바인딩 하나가 한 입력을 두 입력으로 만드는지 보고, 그러면 알리고 true 를 반환합니다. @p cursor 가 끔이면 false 입니다. */
+        [[nodiscard]] static bool reportCursorBinding( InputMapVirtualCursor cursor, string_view sourceName, const hashed_string& action, const ActionBinding& binding );
         /** @brief 바인딩 하나와 함께 켜질 수 있는 가상 커서입니다 — 맵 전체 값이 없으면 그 바인딩의 레이어와 함께 발화하는 레이어(`canLayersFireTogether`)의 값입니다. */
         InputMapVirtualCursor findVirtualCursorBeside( const hashed_string& layer ) const;
         /**

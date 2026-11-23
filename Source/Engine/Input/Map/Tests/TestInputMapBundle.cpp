@@ -183,7 +183,12 @@ SW_TEST_CASE( InputMapBundleTest, LayerVirtualCursorFollowsItsLayer )
     map.popLayer();
     SW_EXPECT_TRUE( map.getVirtualCursorStick() == InputMapVirtualCursor::Off );
 
+    // 함께 켤 묶음은 쌓기 전에 본다 — 커서 레이어와 패드 A 를 묶은 레이어는 함께 켜지 못한다.
     SW_EXPECT_LOG( "InputMap.InputMapActionBindsVirtual" );
+    SW_EXPECT_TRUE( map.canStackLayers( { command }, "InputMapBundleTest" ) );
+    SW_EXPECT_TRUE( map.canStackLayers( { hashed_string( "Gameplay" ) }, "InputMapBundleTest" ) );
+    SW_EXPECT_FALSE( map.canStackLayers( { hashed_string( "Gameplay" ), command }, "InputMapBundleTest" ) );
+
     SW_EXPECT_FALSE( map.loadFromXMLText( R"(<InputMap>
   <layers><layer name="Command" enabled="0" virtualCursor="LeftStick"/></layers>
   <action name="Command.Select" layer="Command" trigger="Pressed"><bind source="Gamepad" code="A"/></action>

@@ -24,6 +24,7 @@ namespace sw
 {
     class AssetID;
     class GameFeatureRegistry;
+    class InputMap;
     class XMLCatalogRoot;
 
     /** @brief 미니게임에 들어가는 방식입니다. */
@@ -68,6 +69,11 @@ namespace sw
          * @return 틀린 것을 모두 알리고(첫 오류에서 멈추지 않는다) 하나라도 있으면 false 입니다.
          */
         [[nodiscard]] bool validate( const GameFeatureRegistry& features, string_view sourceName ) const;
+        /**
+         * @brief 입력 문맥을 게임 입력 맵 @p inputMap 에 견줘 봅니다 — 함께 켜면 한 입력이 두 입력이 되는 조합(가상 커서 레이어와 그 스틱 · 패드 버튼을 묶은 레이어)을 거절한다.
+         * @return 틀린 것을 모두 알리고 하나라도 있으면 false 입니다. 없는 레이어는 켤 때 거절한다(`MinigameFlow`).
+         */
+        [[nodiscard]] bool validateInputLayers( const InputMap& inputMap, string_view sourceName ) const;
 
     private:
         /** @brief 루트 읽기입니다(`GameDataXML::loadFromAsset` · `loadFromXMLText`). */

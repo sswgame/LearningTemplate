@@ -351,7 +351,11 @@ namespace sw
             return false;
         }
         // 등록부는 GameFramework 의 모듈 서브시스템이다 — 없으면 호스트가 모듈을 올리지 않은 것이라 멈춘다.
-        return outDefinition.validate( game::getSubsystem<GameFeatureRegistry>(), assetPath );
+        if ( outDefinition.validate( game::getSubsystem<GameFeatureRegistry>(), assetPath ) == false )
+            return false;
+        // 입력 서비스가 없는 실행(전용 서버)은 켤 입력이 없다.
+        const InputManager* const pInput = game::findSubsystem<InputManager>();
+        return pInput == nullptr || outDefinition.validateInputLayers( pInput->getInputMap(), assetPath );
     }
 
     bool MinigameFlow::validateDepth( string_view name ) const

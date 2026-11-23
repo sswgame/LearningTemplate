@@ -428,7 +428,37 @@ namespace sw
 
     bool InputMap::reportVirtualCursorConflict( string_view sourceName, const hashed_string& action, const ActionBinding& binding ) const
     {
-        const InputMapVirtualCursor virtualCursor = findVirtualCursorBeside( binding._layer );
+        return reportCursorBinding( findVirtualCursorBeside( binding._layer ), sourceName, action, binding );
+    }
+
+    bool InputMap::canStackLayers( const vector<hashed_string>& listLayer, string_view sourceName ) const
+    {
+        InputMapVirtualCursor cursor = InputMapVirtualCursor::Off;
+        for ( const hashed_string& layer : listLayer )
+        {
+            const LayerDef* pLayer = findLayer( layer );
+            if ( pLayer != nullptr && pLayer->_virtualCursor != InputMapVirtualCursor::Off )
+                cursor = pLayer->_virtualCursor;
+        }
+        uint32 conflictCount = 0;
+        for ( const hashed_string& actionName : _listActionName )
+        {
+            const ActionEntry* pEntry = findAction( actionName );
+            if ( pEntry == nullptr )
+                continue;
+            for ( const ActionBinding& binding : pEntry->_definition._listBinding )
+            {
+                const LayerDef* pLayer = findLayer( binding._layer );
+                const bool      bFires = VectorUtil::contains( listLayer, binding._layer ) || ( pLayer != nullptr && pLayer->_bAlwaysOn == SW_TRUE );
+                if ( bFires && reportCursorBinding( cursor, sourceName, actionName, binding ) )
+                    ++conflictCount;
+            }
+        }
+        return conflictCount == 0;
+    }
+
+    bool InputMap::reportCursorBinding( InputMapVirtualCursor virtualCursor, string_view sourceName, const hashed_string& action, const ActionBinding& binding )
+    {
         if ( virtualCursor == InputMapVirtualCursor::Off )
             return false;
         const VirtualCursorSettings cursor{};
