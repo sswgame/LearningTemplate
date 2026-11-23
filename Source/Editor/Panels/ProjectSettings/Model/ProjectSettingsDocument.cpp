@@ -341,6 +341,28 @@ namespace sw::editor
         return isElementMode() ? makeDifferenceElement() : makeDifferenceJSON();
     }
 
+    bool ProjectSettingsDocument::restoreDifferenceText( string_view differenceText )
+    {
+        if ( _pType == nullptr || _current.isValid() == false )
+            return false;
+        ReflectedInstance fresh = ReflectedInstance::create( *_pType );
+        if ( fresh.isValid() == false )
+            return false;
+        if ( isElementMode() )
+        {
+            XMLDocument document; // 차이 글은 파일이 아니라 그 요소 하나다
+            if ( document.parse( differenceText, _path ) == false || document.getRoot().isValid() == false ||
+                 ConfigManager::readConfigXMLElement( fresh.get(), *_pType, document.getRoot(), _path.c_str() ) == false )
+                return false;
+        }
+        else if ( ConfigManager::readConfigJSON( fresh.get(), *_pType, differenceText, _path.c_str() ) == false )
+        {
+            return false;
+        }
+        _current = std::move( fresh );
+        return true;
+    }
+
     expected<string> ProjectSettingsDocument::makeDifferenceJSON() const
     {
         const expected<string> serialized = JSONSerializer::serialize( _current.get(), *_pType );
