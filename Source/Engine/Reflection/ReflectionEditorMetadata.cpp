@@ -2,6 +2,7 @@
 
 #include "Engine/Reflection/ReflectionEditorMetadata.h"
 
+#include "Core/Log/Logger.h"
 #include "Core/Registry/RegistrationList.h"
 
 #include "Engine/Reflection/ReflectionConstants.h"
@@ -24,6 +25,141 @@ namespace sw
             {
                 const auto iter = mapCustomMeta.find( key );
                 return iter != mapCustomMeta.end() ? &iter->second : nullptr;
+            }
+
+            /** @brief 커스텀 메타 줄을 넣습니다. 같은 키가 이미 있으면 먼저 적은 값이 남습니다. */
+            static void addCustomMeta( unordered_map<hashed_string, string>& outMap, const EditorMetadataRow& row )
+            {
+                outMap.emplace( hashed_string{ row._pKey }, string{ row._pText } );
+            }
+
+            /** @brief 그 대상에 없는 칸입니다 — 생성기가 낸 줄과 엔진 메타데이터 구조가 어긋났다. */
+            [[noreturn]] static void failUnknownField( const EditorMetadataRow& row )
+            {
+                reportFatalError( "Editor metadata row of '%#' has field %# that its target %# does not carry - the generator and ReflectionEditorMetadata.h disagree",
+                                  row._pName != nullptr ? row._pName : "(type)", static_cast<uint32>( row._field ), static_cast<uint32>( row._target ) );
+            }
+
+            static void applyRow( TypeEditorMetadata& outMetadata, const EditorMetadataRow& row )
+            {
+                switch ( row._field )
+                {
+                    case EditorMetadataField::Category:
+                        outMetadata._category = row._pText;
+                        break;
+                    case EditorMetadataField::DisplayName:
+                        outMetadata._displayName = row._pText;
+                        break;
+                    case EditorMetadataField::Tooltip:
+                        outMetadata._tooltip = row._pText;
+                        break;
+                    case EditorMetadataField::CustomMeta:
+                        addCustomMeta( outMetadata._mapCustomMeta, row );
+                        break;
+                    case EditorMetadataField::HideInMenu:
+                        outMetadata._bHideInMenu = SW_TRUE;
+                        break;
+                    default:
+                        failUnknownField( row );
+                }
+            }
+
+            static void applyRow( PropertyEditorMetadata& outMetadata, const EditorMetadataRow& row )
+            {
+                switch ( row._field )
+                {
+                    case EditorMetadataField::Category:
+                        outMetadata._category = row._pText;
+                        break;
+                    case EditorMetadataField::DisplayName:
+                        outMetadata._displayName = row._pText;
+                        break;
+                    case EditorMetadataField::Tooltip:
+                        outMetadata._tooltip = row._pText;
+                        break;
+                    case EditorMetadataField::CustomMeta:
+                        addCustomMeta( outMetadata._mapCustomMeta, row );
+                        break;
+                    case EditorMetadataField::EditCondition:
+                        outMetadata._editCondition = row._pText;
+                        break;
+                    case EditorMetadataField::FileFilter:
+                        outMetadata._fileFilter = row._pText;
+                        break;
+                    case EditorMetadataField::HideInInspector:
+                        outMetadata._bHideInInspector = SW_TRUE;
+                        break;
+                    case EditorMetadataField::EditConditionHides:
+                        outMetadata._bEditConditionHides = SW_TRUE;
+                        break;
+                    case EditorMetadataField::ColorHDR:
+                        outMetadata._bColorHDR = SW_TRUE;
+                        break;
+                    case EditorMetadataField::Multiline:
+                        outMetadata._bMultiline = SW_TRUE;
+                        break;
+                    case EditorMetadataField::UIMinRange:
+                        outMetadata._uiMinRange     = row._number;
+                        outMetadata._bHasUIMinRange = SW_TRUE;
+                        break;
+                    case EditorMetadataField::UIMaxRange:
+                        outMetadata._uiMaxRange     = row._number;
+                        outMetadata._bHasUIMaxRange = SW_TRUE;
+                        break;
+                    default:
+                        failUnknownField( row );
+                }
+            }
+
+            static void applyRow( FunctionEditorMetadata& outMetadata, const EditorMetadataRow& row )
+            {
+                switch ( row._field )
+                {
+                    case EditorMetadataField::Category:
+                        outMetadata._category = row._pText;
+                        break;
+                    case EditorMetadataField::DisplayName:
+                        outMetadata._displayName = row._pText;
+                        break;
+                    case EditorMetadataField::Tooltip:
+                        outMetadata._tooltip = row._pText;
+                        break;
+                    case EditorMetadataField::CustomMeta:
+                        addCustomMeta( outMetadata._mapCustomMeta, row );
+                        break;
+                    case EditorMetadataField::EditorPreview:
+                        outMetadata._editorPreview = row._pText;
+                        break;
+                    case EditorMetadataField::CallInEditor:
+                        outMetadata._bCallInEditor = SW_TRUE;
+                        break;
+                    case EditorMetadataField::Exec:
+                        outMetadata._bExec = SW_TRUE;
+                        break;
+                    default:
+                        failUnknownField( row );
+                }
+            }
+
+            static void applyRow( EnumeratorEditorMetadata& outMetadata, const EditorMetadataRow& row )
+            {
+                switch ( row._field )
+                {
+                    case EditorMetadataField::DisplayName:
+                        outMetadata._displayName = row._pText;
+                        break;
+                    case EditorMetadataField::Tooltip:
+                        outMetadata._tooltip = row._pText;
+                        break;
+                    case EditorMetadataField::CustomMeta:
+                        addCustomMeta( outMetadata._mapCustomMeta, row );
+                        break;
+                    case EditorMetadataField::Hidden:
+                        outMetadata._bHidden = SW_TRUE;
+                        break;
+                    default:
+                        failUnknownField( row );
+                }
             }
         };
     } // namespace
@@ -131,6 +267,46 @@ namespace sw
     {
         const auto iter = _mapEnumerator.find( name );
         return iter != _mapEnumerator.end() ? iter->second : EnumeratorEditorMetadata::getDefault();
+    }
+
+    void TypeEditorMetadataSource::fill( TypeEditorMetadataSet& outSet ) const
+    {
+        for ( uint32 rowIndex = 0; rowIndex < _rowCount; ++rowIndex )
+        {
+            const EditorMetadataRow& row = _pRow[rowIndex];
+            switch ( row._target )
+            {
+                case EditorMetadataTarget::Type:
+                    ReflectionEditorMetadataInternal::applyRow( outSet._type, row );
+                    break;
+                case EditorMetadataTarget::Property:
+                    ReflectionEditorMetadataInternal::applyRow( outSet.addProperty( hashed_string{ row._pName } ), row );
+                    break;
+                case EditorMetadataTarget::Event:
+                    ReflectionEditorMetadataInternal::applyRow( outSet.addEvent( hashed_string{ row._pName } ), row );
+                    break;
+                case EditorMetadataTarget::Function:
+                    ReflectionEditorMetadataInternal::applyRow( outSet.addFunction( hashed_string{ row._pName } ), row );
+                    break;
+                case EditorMetadataTarget::Enum:
+                case EditorMetadataTarget::Enumerator:
+                    ReflectionEditorMetadataInternal::failUnknownField( row );
+            }
+        }
+    }
+
+    void EnumEditorMetadataSource::fill( EnumEditorMetadata& outMetadata ) const
+    {
+        for ( uint32 rowIndex = 0; rowIndex < _rowCount; ++rowIndex )
+        {
+            const EditorMetadataRow& row = _pRow[rowIndex];
+            if ( row._target == EditorMetadataTarget::Enumerator )
+                ReflectionEditorMetadataInternal::applyRow( outMetadata.addEnumerator( hashed_string{ row._pName } ), row );
+            else if ( row._target == EditorMetadataTarget::Enum && row._field == EditorMetadataField::CustomMeta )
+                ReflectionEditorMetadataInternal::addCustomMeta( outMetadata._mapCustomMeta, row );
+            else
+                ReflectionEditorMetadataInternal::failUnknownField( row );
+        }
     }
 
     bool TypeEditorMetadataSource::add( const TypeEditorMetadataSource* pSource )

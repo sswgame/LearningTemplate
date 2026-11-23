@@ -16,6 +16,7 @@
 #include "Engine/Foundation/EngineServices.h"
 #include "Engine/Reflection/ReflectionCast.h"
 #include "Engine/Reflection/ReflectionConstants.h"
+#include "Engine/Reflection/ReflectionDesc.h"
 #include "Engine/Reflection/ReflectionEditorMetadata.h"
 #include "Engine/Reflection/ReflectionEnumNames.h"
 #include "Engine/Reflection/ReflectionMetadata.h"
@@ -54,14 +55,27 @@ namespace sw
         {
             _listParameter.emplace_back( desc._pParameters[index] );
         }
-        if ( desc._pFillMetadata != nullptr )
-            desc._pFillMetadata( _metadata.edit() );
+        if ( desc.hasMetadata() )
+            desc.applyTo( _metadata.edit() );
     }
 
     TaskValue FunctionDesc::invokeConstructor( void* pObject, const TaskArgs& args ) const
     {
         _pConstruct( pObject, args );
         return TaskValue{};
+    }
+
+    void FunctionDesc::applyTo( FunctionMetadata& outMetadata ) const
+    {
+        const auto toFlag = [this]( const uint8 flag ) -> uint8
+        { return ( _flags & flag ) != 0 ? SW_TRUE : SW_FALSE; };
+        outMetadata._bReliable         = toFlag( FunctionMetadataFlag::kReliable );
+        outMetadata._bValidate         = toFlag( FunctionMetadataFlag::kValidate );
+        outMetadata._bConstructor      = toFlag( FunctionMetadataFlag::kConstructor );
+        outMetadata._bStatic           = toFlag( FunctionMetadataFlag::kStatic );
+        outMetadata._bConst            = toFlag( FunctionMetadataFlag::kConst );
+        outMetadata._netRole           = _netRole;
+        outMetadata._maxCallsPerSecond = _maxCallsPerSecond;
     }
 
     const string* FunctionInfo::findCustomMeta( const hashed_string& key ) const noexcept
@@ -109,8 +123,6 @@ namespace sw
             _listParameter.emplace_back( desc._pParameters[index] );
         }
         setOps( desc._pOps ); // 인자 변환 표는 필드 타입의 템플릿 인자에서 온다
-        if ( desc._pFillMetadata != nullptr )
-            desc._pFillMetadata( _metadata.edit() );
     }
 
     EventInfo::EventInfo() noexcept

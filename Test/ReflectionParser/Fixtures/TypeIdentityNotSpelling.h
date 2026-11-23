@@ -1,5 +1,5 @@
 // EXPECT-GEN: "_lookalike"
-// EXPECT-NOT-GEN: m._bAssetPath = SW_TRUE
+// EXPECT-NOT-GEN: PropertyMetadataFlag::kAssetPath
 // EXPECT-TYPE: sw::fixture::TypeIdentityHolder
 // 형식의 정체는 철자가 아니라 선언의 FQN 이다 — 다른 이름공간의 `AssetRef<T>` 는 에셋 참조가 아니다(철자로 가르던 때는 "모양이 틀린 에셋 참조" 오류였다).
 #pragma once

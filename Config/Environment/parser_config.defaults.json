@@ -45,13 +45,6 @@
         "fms_extensions": "-fms-extensions",
         "fms_compat_version_prefix": "-fms-compatibility-version"
     },
-    "emit": {
-        "value_forbidden_base_types": [
-            "sw::Component",
-            "sw::GameObject"
-        ],
-        "value_forbidden_message": "GameObject or Component cannot be stored by value inside a PROPERTY(). Use a pointer, or a GameObjectHandle / ComponentHandle for a reference kept across frames."
-    },
     "parsing": {
         "component_base_types": [
             "Component",

@@ -15,12 +15,12 @@ namespace sw
     /** @brief 바이트를 세는 방출 함수 구역입니다. 표로 바꿀 다음 후보를 숫자로 고르는 데 쓴다(docs/NEXT.md 5-4 W-R3 (a)). */
     enum class CodeEmitSection : uint8
     {
-        FileHeader,          ///< 머리 · 값 검사 템플릿 · include
-        TypeRegistrar,       ///< 타입 등록 함수의 골격과 타입 메타데이터(아래 구역을 뺀 몫)
-        PropertyStatics,     ///< 프로퍼티 별칭 · 값 검사
-        NestedContainerTree, ///< 중첩 컨테이너 모양 표
-        PropertyDesc,        ///< 프로퍼티 서술자 한 줄(메타데이터 채우기를 뺀 몫)
-        PropertyMetadata,    ///< 프로퍼티 메타데이터 채우기 함수 본문
+        FileHeader,        ///< 머리 · include
+        TypeRegistrar,     ///< 타입 서술자의 골격과 타입 칸(아래 구역을 뺀 몫)
+        PropertyBinding,   ///< 프로퍼티의 드문 칸 표(옛 이름 · 접근자 · 알림 · 검증 · 비트필드)
+        PropertyContainer, ///< 컨테이너 모양 표(중첩 단계)
+        PropertyDesc,      ///< 프로퍼티 서술자 표 · 값 검사
+        PropertyMetadata,  ///< 프로퍼티 메타데이터 표
         EventList,
         MethodList,    ///< 메서드 표(호출 함수를 뺀 몫)
         MethodInvoker, ///< 메서드 호출 람다 — 형식이 있어야 해 표로 바꿀 수 없다
@@ -39,7 +39,7 @@ namespace sw
 
         static const utf8* toString( const CodeEmitSection section ) noexcept
         {
-            constexpr const utf8* kArrName[] = { "FileHeader", "TypeRegistrar", "PropertyStatics", "NestedContainerTree", "PropertyDesc", "PropertyMetadata", "EventList",
+            constexpr const utf8* kArrName[] = { "FileHeader", "TypeRegistrar", "PropertyBinding", "PropertyContainer", "PropertyDesc", "PropertyMetadata", "EventList",
                                                  "MethodList", "MethodInvoker", "FixedCodec", "TickBatch", "EnumRegistrar", "TypeTraits" };
             static_assert( SW_COUNT_OF( kArrName ) == static_cast<size_t>( CodeEmitSection::Count ), "CodeEmitSection names are out of date" );
             return kArrName[static_cast<size_t>( section )];
@@ -49,7 +49,7 @@ namespace sw
     /**
      * @class CodeEmitByteScope
      * @brief 방출 함수 하나를 감싸 그 동안 @p buffer 가 늘어난 바이트를 구역에 더합니다. 안쪽 구역의 몫은 빼므로 구역 합이 전체와 같다.
-     * @details 안쪽 구역이 다른 버퍼(메타데이터 채우기 `fillBuffer`)에 쓰고 바깥이 그 글을 붙여도, 안쪽 몫을 바깥에서 빼니 두 번 세지 않는다.
+     * @details 안쪽 구역이 다른 버퍼에 쓰고 바깥이 그 글을 붙여도, 안쪽 몫을 바깥에서 빼니 두 번 세지 않는다.
      */
     class CodeEmitByteScope
     {
@@ -117,7 +117,7 @@ namespace sw
             return *this;
         }
         // ------------------------------------------------------------------------------
-        // 2) emit — 원문·줄·할당·플래그
+        // 2) emit — 원문·줄
         // ------------------------------------------------------------------------------
         /** @brief 들여쓰기·개행 없이 원문을 붙입니다. */
         CodeEmit& raw( const string_view text )
@@ -152,31 +152,9 @@ namespace sw
             return *this;
         }
 
-        /** @brief `lhs = rhs;` 할당문을 출력합니다. */
-        CodeEmit& assign( const string_view lhs, const string_view rhs )
-        {
-            return linef( "%# = %#;", lhs, rhs );
-        }
-
-        /** @brief cond가 참이면 비트/불리언 플래그 `field = value;` 를 출력합니다. */
-        CodeEmit& flagIf( bool cond, const string_view field, const string_view value = "1" )
-        {
-            if ( cond )
-                assign( field, value );
-            return *this;
-        }
-
         // ------------------------------------------------------------------------------
-        // 3) emit — hashed_string / 따옴표 / 이스케이프
+        // 3) emit — 따옴표 / 이스케이프
         // ------------------------------------------------------------------------------
-        /** @brief `::sw::hashed_string( "name" )` 표현식을 만듭니다. 이름은 이스케이프해서 넣습니다. */
-        static string hs( const string_view name )
-        {
-            StringBuilder<constant::buffer::kMax1024> b;
-            b.appendFormat( "::sw::hashed_string( \"%#\" )", escapeCppString( name ) );
-            return string( b.view() );
-        }
-
         /** @brief 이스케이프된 C++ 문자열 리터럴 `"..."` 을 만듭니다. */
         static string quoted( const string_view value )
         {

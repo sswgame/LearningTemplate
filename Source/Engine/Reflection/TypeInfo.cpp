@@ -16,6 +16,7 @@
 #include "Engine/Foundation/EngineServices.h"
 #include "Engine/Reflection/ReflectionCast.h"
 #include "Engine/Reflection/ReflectionConstants.h"
+#include "Engine/Reflection/ReflectionDesc.h"
 #include "Engine/Reflection/ReflectionEditorMetadata.h"
 #include "Engine/Reflection/ReflectionEnumNames.h"
 #include "Engine/Reflection/ReflectionMetadata.h"
@@ -58,34 +59,60 @@ namespace sw
         };
     } // namespace
 
-    void TypeInfo::setPropertyTable( const PropertyDesc* pDesc, const size_t count )
+    TypeInfo::TypeInfo( const TypeDesc& desc )
+        : TypeInfo()
     {
-        _listProperty.clear();
-        _listProperty.reserve( count );
-        for ( size_t descIndex = 0; descIndex < count; ++descIndex )
-        {
-            _listProperty.emplace_back( pDesc[descIndex] );
-        }
-    }
+        const auto toFlag = [&desc]( const uint32 flag ) -> uint8
+        { return ( desc._flags & flag ) != 0 ? SW_TRUE : SW_FALSE; };
+        _name               = hashed_string( desc._pName );
+        _fullyQualifiedName = hashed_string( desc._pFullyQualifiedName );
+        _parentFQN          = hashed_string( desc._pParentFQN );
+        _moduleName         = hashed_string( desc._pModuleName );
+        _size               = desc._size;
+        _destroyInstance    = desc._pDestroyInstance;
+        _addComponent       = desc._pAddComponent;
+        _pValidate          = desc._pValidate;
+        _pFixedCodec        = desc._pFixedCodec;
+        _bAbstract          = toFlag( TypeDescFlag::kAbstract );
+        _bStatic            = toFlag( TypeDescFlag::kStatic );
+        _bPrimitive         = toFlag( TypeDescFlag::kPrimitive );
+        _bInterface         = toFlag( TypeDescFlag::kInterface );
 
-    void TypeInfo::setMethodTable( const FunctionDesc* pDesc, const size_t count )
-    {
-        _listMethod.clear();
-        _listMethod.reserve( count );
-        for ( size_t descIndex = 0; descIndex < count; ++descIndex )
+        // 적은 것이 없는 타입은 메타데이터 공유 기본값을 쓴다(힙 없음).
+        constexpr uint32 kMetadataFlags = TypeDescFlag::kOverridesTick | TypeDescFlag::kOverridesSubTick | TypeDescFlag::kOverridesSerializeState;
+        if ( ( desc._flags & kMetadataFlags ) != 0 || desc._version != 0 )
         {
-            if ( pDesc[descIndex]._pInvoke != nullptr || pDesc[descIndex]._pConstruct != nullptr )
-                _listMethod.emplace_back( pDesc[descIndex] );
+            TypeMetadata& metadata             = _metadata.edit();
+            metadata._bOverridesTick           = toFlag( TypeDescFlag::kOverridesTick );
+            metadata._bOverridesSubTick        = toFlag( TypeDescFlag::kOverridesSubTick );
+            metadata._bOverridesSerializeState = toFlag( TypeDescFlag::kOverridesSerializeState );
+            metadata._version                  = desc._version;
         }
-    }
 
-    void TypeInfo::setEventTable( const EventDesc* pDesc, const size_t count )
-    {
-        _listEvent.clear();
-        _listEvent.reserve( count );
-        for ( size_t descIndex = 0; descIndex < count; ++descIndex )
+        for ( uint32 index = 0; index < desc._interfaceCount; ++index )
         {
-            _listEvent.emplace_back( pDesc[descIndex] );
+            (void)_ownInterfaces.add( hashed_string( desc._pInterface[index]._pInterfaceFQN ), desc._pInterface[index]._portOffset ); // 겹침 · 넘침은 등록 검사가 오류로 알린다
+        }
+        for ( uint32 index = 0; index < desc._removedFieldCount; ++index )
+        {
+            _listRemovedField.push_back( hashed_string( desc._ppRemovedField[index] ) );
+        }
+        _listProperty.reserve( desc._propertyCount );
+        for ( uint32 index = 0; index < desc._propertyCount; ++index )
+        {
+            _listProperty.emplace_back( desc._pProperty[index] );
+        }
+        _listEvent.reserve( desc._eventCount );
+        for ( uint32 index = 0; index < desc._eventCount; ++index )
+        {
+            _listEvent.emplace_back( desc._pEvent[index] );
+        }
+        _listMethod.reserve( desc._methodCount );
+        for ( uint32 index = 0; index < desc._methodCount; ++index )
+        {
+            const FunctionDesc& method = desc._pMethod[index];
+            if ( method._pInvoke != nullptr || method._pConstruct != nullptr )
+                _listMethod.emplace_back( method );
         }
     }
 

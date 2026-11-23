@@ -22,6 +22,7 @@
 namespace sw
 {
     struct EnumEditorMetadata;
+    struct TypeDesc;
     struct TypeEditorMetadataSet;
 
     /**
@@ -88,7 +89,11 @@ namespace sw
         // ------------------------------------------------------------------------------
         // 3) 단건 등록과 별칭: REFLECT(Alias=…), ReflectBuiltins 코드젠
         // ------------------------------------------------------------------------------
-        /** @brief TypeInfo를 등록합니다. 값으로 받는다 — 생성 코드는 `std::move` 로 넘겨 프로퍼티 목록을 복사하지 않는다. */
+        /** @brief 생성 코드의 서술자로 타입을 등록하고 옛 이름(별칭) · 지운 이름까지 잇습니다. */
+        void registerType( const TypeDesc& desc );
+        /** @brief 생성 코드의 서술자로 열거형을 등록하고 옛 이름(별칭)을 잇습니다. */
+        void registerEnum( const EnumInfoDesc& desc );
+        /** @brief TypeInfo를 등록합니다. 값으로 받는다 — 옮겨 넘기면 프로퍼티 목록을 복사하지 않는다. */
         void registerClass( TypeInfo info );
         /** @brief EnumInfo를 등록합니다. */
         void registerEnum( const EnumInfo& info );
@@ -401,34 +406,34 @@ namespace sw
 namespace sw
 {
     // ------------------------------------------------------------------------------
-    // 7) TypeRegistrar: 정적 초기화로 Type 등록 함수를 사슬(`getChain`)에 단다. 올리는 쪽(`engine::registerModuleTypes`)이 이미지마다 걷어 간다.
+    // 7) TypeRegistrar: 정적 초기화로 Type 서술자를 사슬(`getChain`)에 단다. 올리는 쪽(`engine::registerModuleTypes`)이 이미지마다 걷어 간다.
     // ------------------------------------------------------------------------------
     struct SW_API TypeRegistrar
     {
-        void ( *_registerFunc )( TypeRegistry& ); ///< TypeRegistry에 TypeInfo를 넣는 함수
-        TypeRegistrar* _pNext;                    ///< 같은 사슬의 다음(먼저 만든) registrar
+        const TypeDesc& ( *_pGetDesc )(); ///< 타입 서술자(상수 표)를 돌려주는 생성 함수
+        TypeRegistrar* _pNext;            ///< 같은 사슬의 다음(먼저 만든) registrar
 
         /** @brief 아직 걷히지 않은 registrar 사슬입니다(Engine 이미지가 가진다). */
         static RegistrationChain<TypeRegistrar>& getChain();
 
-        TypeRegistrar( void ( *registerFunc )( TypeRegistry& ) );
+        explicit TypeRegistrar( const TypeDesc& ( *pGetDesc )() );
     };
 } // namespace sw
 
 namespace sw
 {
     // ------------------------------------------------------------------------------
-    // 8) EnumRegistrar: 정적 초기화로 Enum 등록 함수를 사슬(`getChain`)에 단다(TypeRegistrar 와 같다).
+    // 8) EnumRegistrar: 정적 초기화로 Enum 서술자를 사슬(`getChain`)에 단다(TypeRegistrar 와 같다).
     // ------------------------------------------------------------------------------
     struct SW_API EnumRegistrar
     {
-        void ( *_registerFunc )( TypeRegistry& ); ///< TypeRegistry에 EnumInfo를 넣는 함수
-        EnumRegistrar* _pNext;                    ///< 같은 사슬의 다음(먼저 만든) registrar
+        const EnumInfoDesc& ( *_pGetDesc )(); ///< 열거형 서술자(상수 표)를 돌려주는 생성 함수
+        EnumRegistrar* _pNext;                ///< 같은 사슬의 다음(먼저 만든) registrar
 
         /** @brief 아직 걷히지 않은 enum registrar 사슬입니다(Engine 이미지가 가진다). */
         static RegistrationChain<EnumRegistrar>& getChain();
 
-        EnumRegistrar( void ( *registerFunc )( TypeRegistry& ) );
+        explicit EnumRegistrar( const EnumInfoDesc& ( *pGetDesc )() );
     };
 
     // ------------------------------------------------------------------------------

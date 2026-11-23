@@ -41,12 +41,6 @@ namespace sw
                 return string( literal.view() );
             }
 
-            /** @brief 프로퍼티에 개발 전용 단위로 낼 에디터 메타데이터(표시 · 편집 필드, 슬라이더 범위)가 있으면 true 입니다. */
-            static bool hasPropertyEditorMetadata( const ParsedPropertyInfo& prop )
-            {
-                return AnnotationFields::hasEditorMetadata( prop ) || prop._bHasUIMinRange != SW_FALSE || prop._bHasUIMaxRange != SW_FALSE;
-            }
-
             /**
              * @brief `Min` · `Max` 글이 이 타입의 필드 하나(`_halfSize`, `-_halfSize`)이면 그 필드와 부호를 찾습니다.
              * @return 그 필드입니다. 숫자 · 성분 목록 · 이 타입에 없는 이름(바깥 타입의 필드)이면 nullptr 입니다. 그 꼴은 고정 배치형 코덱만 씁니다.
@@ -74,17 +68,18 @@ namespace sw
                 return nullptr;
             }
 
-            /** @brief 필드 이름 꼴 경계를 인스턴스에서 읽는 함수(`PropertyMetadata::_pReadMinRange` 등)를 냅니다. 읽기 공통 끝도 지키므로 Shipping 에도 냅니다. */
-            static void emitRangeReader( CodeEmit& emit, const ParsedTypeInfo& typeInfo, const string& text, const utf8* pMemberName )
+            /** @brief 필드 이름 꼴 경계를 인스턴스에서 읽는 함수(`PropertyMetadata::_pReadMinRange` 등)의 람다입니다. 그 꼴이 아니면 `nullptr` 입니다. 읽기 공통 끝도 지키므로 Shipping 에도 냅니다. */
+            static string makeRangeReader( const ParsedTypeInfo& typeInfo, const string& text )
             {
                 bool                      bNegate = false;
                 const ParsedPropertyInfo* pField  = findOwnRangeField( typeInfo, text, bNegate );
                 if ( pField == nullptr )
-                    return;
+                    return string( "nullptr" );
                 // 접근자 프로퍼티는 메서드를 부른다(`_pValueAccessor` 와 같은 규칙). 이름이 틀리거나 숫자가 아닌 필드면 생성된 코드가 컴파일되지 않는다.
-                const utf8* pCall = pField->_bIsAccessor == SW_TRUE ? "()" : "";
-                emit.linef( "m.%# = []( const void* pInstance ) -> ::float64 { return %#::sw::PropertyMetadata::toRangeNumber( static_cast<const %#*>( pInstance )->%#%# ); };",
-                            pMemberName, bNegate ? "-" : "", typeInfo._fullyQualifiedName, pField->_memberName, pCall );
+                StringBuilder<constant::buffer::kMax512> b;
+                b.appendFormat( "[]( const void* pInstance ) -> ::float64 { return %#PropertyMetadata::toRangeNumber( static_cast<const Self*>( pInstance )->%#%# ); }",
+                                bNegate ? "-" : "", pField->_memberName, pField->_bIsAccessor == SW_TRUE ? "()" : "" );
+                return string( b.view() );
             }
 
             /** @brief 이 타입이 선언한 프로퍼티 중 C++ 이름이 @p name 인 것입니다. 없으면(기반의 이름 포함) nullptr 입니다. */
@@ -165,16 +160,6 @@ namespace sw
             }
 
             /**
-             * @brief 컨테이너 필드에 대한 래퍼 타입 문자열(예: `sw::VectorWrapper<decltype(std::declval<MyClass>().myList)>`)을 생성합니다.
-             */
-            static string makeWrapperType( const string& containerType, const string& fqn, const string& fieldName )
-            {
-                StringBuilder<constant::buffer::kMax1024> b;
-                b.appendFormat( "sw::%#Wrapper<decltype(std::declval<%#>().%#)>", containerType, fqn, fieldName );
-                return string( b.view() );
-            }
-
-            /**
              * @brief 생성자 검색을 위한 고유 식별자 문자열(예: `$ctor(int32,float32)`)을 구성합니다.
              */
             static string makeCtorLookupName( const ParsedFunctionInfo& method, const ParserSession& session )
@@ -204,7 +189,7 @@ namespace sw
             }
 
             /**
-             * @brief 인자 서술자 표 `static constexpr ::sw::FunctionParameterDesc <tableName>[]` 를 씁니다 — 이름 · 정규 타입 · 기본 인자 글 · 변환 표 · 타입 핸들 대상.
+             * @brief 인자 서술자 표 `static constexpr FunctionParameterDesc <tableName>[]` 를 씁니다 — 이름 · 정규 타입 · 기본 인자 글 · 변환 표 · 타입 핸들 대상.
              * @param bWithTypeOps 이벤트는 변환 표를 `EventInfo::setOps` 가 템플릿 인자에서 채우므로 nullptr 를 씁니다.
              * @return 표를 썼으면 그 이름, 인자가 없으면 "nullptr".
              */
@@ -213,7 +198,7 @@ namespace sw
             {
                 if ( listParameter.empty() )
                     return string( "nullptr" );
-                emit.linef( "static constexpr ::sw::FunctionParameterDesc %#[] =", tableName );
+                emit.linef( "static constexpr FunctionParameterDesc %#[] =", tableName );
                 emit.line( "{" );
                 emit.push();
                 for ( const ParsedParameterInfo& parameter : listParameter )
@@ -248,40 +233,99 @@ namespace sw
                 return string( b.view() );
             }
 
-            /** @brief registerTypeAlias / registerEnumAlias 호출 줄을 만듭니다. */
-            static string emitAliasRegisterLines( const vector<string>& aliases, const string& canonical,
-                                                  const bool bEnum )
+            /** @brief 이름들로 문자열 리터럴 표 `static constexpr const ::utf8* <이름>[]` 을 씁니다(옛 이름 · 지운 이름). */
+            static void emitTextTable( CodeEmit& emit, const string_view tableName, const vector<string>& listText )
             {
-                if ( aliases.empty() )
-                    return {};
-
-                CodeEmitBuffer buf;
-                CodeEmit       emit( buf );
-                emit.push( 3 );
-                const utf8* pRegisterFunc = bEnum ? "registry.registerEnumAlias" : "registry.registerTypeAlias";
-                for ( const string& alias : aliases )
+                StringBuilder<constant::buffer::kMax256> texts;
+                for ( const string& text : listText )
                 {
-                    if ( alias.empty() || alias == canonical )
-                        continue;
-                    emit.linef( "%#( \"%#\", \"%#\" );", pRegisterFunc, CodeEmit::escapeCppString( alias ),
-                                CodeEmit::escapeCppString( canonical ) );
+                    texts.append( texts.size() > 0 ? ", " : "" );
+                    texts.append( CodeEmit::quoted( text ) );
                 }
-                return string( buf.view() );
+                emit.linef( "static constexpr const ::utf8* %#[] = { %# };", tableName, texts.view() );
             }
 
-            /** @brief 지운 타입 이름을 등록하는 줄(`registry.registerRetiredTypeName`)을 만듭니다. */
-            static string emitRetiredTypeLines( const vector<string>& listRemovedType )
+            /** @brief 등록할 옛 이름들입니다 — 빈 이름과 지금 이름(@p canonical)은 뺍니다. */
+            static vector<string> makeAliasList( const vector<string>& listAlias, const string& canonical )
             {
-                if ( listRemovedType.empty() )
-                    return {};
-                CodeEmitBuffer buf;
-                CodeEmit       emit( buf );
-                emit.push( 3 );
-                for ( const string& removedType : listRemovedType )
+                vector<string> listResult;
+                for ( const string& alias : listAlias )
                 {
-                    emit.linef( "registry.registerRetiredTypeName( \"%#\" );", CodeEmit::escapeCppString( removedType ) );
+                    if ( alias.empty() == false && alias != canonical )
+                        listResult.push_back( alias );
                 }
-                return string( buf.view() );
+                return listResult;
+            }
+
+            /** @brief 플래그 이름들을 엔진 상수의 OR 식(`PropertyMetadataFlag::kReadOnly | …`)으로 만듭니다. 없으면 `0u` 입니다. */
+            static string makeFlagExpr( const vector<string>& listFlag, const utf8* pFlagStruct )
+            {
+                if ( listFlag.empty() )
+                    return string( "0u" );
+                StringBuilder<constant::buffer::kMax256> b;
+                for ( const string& flag : listFlag )
+                {
+                    b.appendFormat( "%#%#::k%#", b.size() > 0 ? " | " : "", pFlagStruct, flag );
+                }
+                return string( b.view() );
+            }
+
+            /** @brief 집합체 칸(식, 엔진 쪽 기본값) 목록을 초기화 목록 글로 잇습니다. 뒤에서부터 기본값과 같은 칸은 뺀다 — 모두 기본값이면 빈 글입니다. */
+            static string makeCellList( std::initializer_list<pair<string, string_view>> listCell )
+            {
+                size_t count = listCell.size();
+                while ( count > 0 && string_view( ( listCell.begin() + ( count - 1 ) )->first ) == ( listCell.begin() + ( count - 1 ) )->second )
+                {
+                    --count;
+                }
+                StringBuilder<constant::buffer::kMax512> b;
+                for ( size_t index = 0; index < count; ++index )
+                {
+                    b.append( index > 0 ? ", " : "" );
+                    b.append( ( listCell.begin() + index )->first );
+                }
+                return string( b.view() );
+            }
+
+            /** @brief 서술자에 잇는 조각 `.<함수>( <인자> )` 입니다(`TypeDesc::withX`). */
+            static string makeCall( const utf8* pFunction, const string_view argument )
+            {
+                StringBuilder<constant::buffer::kMax256> b;
+                b.appendFormat( ".%#( %# )", pFunction, argument );
+                return string( b.view() );
+            }
+
+            /** @brief 검증 함수 @p name 을 부르는 `ReflectValidateFunction` 람다입니다. const 든 아니든 부를 수 있게 인스턴스를 그 타입으로 돌려 부른다. */
+            static string makeValidateLambda( const string& name )
+            {
+                StringBuilder<constant::buffer::kMax256> b;
+                b.appendFormat( "[]( const void* pInstance, ::sw::ValidationContext& context ) { static_cast<Self*>( const_cast<void*>( pInstance ) )->%#( context ); }", name );
+                return string( b.view() );
+            }
+
+            /** @brief 에디터 메타데이터 한 묶음을 개발 전용 단위의 줄(`EditorMetadataRow`)들로 더합니다. @p nameExpr 은 대상의 이름 글(타입 · 열거형 자신이면 `nullptr`)입니다. */
+            static void appendEditorRows( vector<string>& outListRow, const utf8* pTarget, const string& nameExpr, const AnnotationOutput& output )
+            {
+                const auto append = [&outListRow]( const string_view row )
+                { outListRow.push_back( string( row ) ); };
+                for ( const auto& [field, text] : output._listText )
+                {
+                    StringBuilder<constant::buffer::kMax512> row;
+                    row.appendFormat( "{ Target::%#, Field::%#, %#, %# },", pTarget, field, nameExpr, CodeEmit::quoted( text ) );
+                    append( row.view() );
+                }
+                for ( const string& flag : output._listFlag )
+                {
+                    StringBuilder<constant::buffer::kMax256> row;
+                    row.appendFormat( "{ Target::%#, Field::%#, %# },", pTarget, flag, nameExpr );
+                    append( row.view() );
+                }
+                for ( const auto& [key, value] : output._listCustomMeta )
+                {
+                    StringBuilder<constant::buffer::kMax512> row;
+                    row.appendFormat( "{ Target::%#, Field::CustomMeta, %#, %#, %# },", pTarget, nameExpr, CodeEmit::quoted( value ), CodeEmit::quoted( key ) );
+                    append( row.view() );
+                }
             }
         };
 
@@ -338,7 +382,6 @@ namespace sw
         }
 
         emitFileHeader( buffer );
-        emitPropertyValueCheck( buffer );
         // 타입 핸들 인자의 확인(`ComponentHandleArgument`)은 씬 매니저를 보므로, 그런 인자가 있는 산출물만 그 헤더를 넣는다(모든 .gen.cpp 가 매니저를 끌어오지 않는다).
         if ( hasHandleArgument() )
             buffer.append( "#include \"Engine/Object/GameObject/ComponentHandleArgument.h\"\n\n" );
@@ -365,41 +408,6 @@ namespace sw
                 emitTypeInfoAccessors( buffer, typeInfo );
         }
         return string( buffer.view() );
-    }
-
-    void CodeGenerator::emitPropertyValueCheck( CodeEmitBuffer& outBuffer ) const
-    {
-        const CodeEmitByteScope byteScope{ _emitBytes, outBuffer, CodeEmitSection::FileHeader };
-        // 프로퍼티마다 긴 static_assert 를 내지 않고 검사 템플릿 하나를 둔다. 같은 단위에 생성 파일이 여럿 들어와도(묶음 TU) 한 번만 정의한다.
-        const ParserConfig& config = _session._config;
-        if ( config._listValueForbiddenBaseType.empty() )
-            return;
-        StringBuilder<constant::buffer::kMax1024> condition;
-        for ( const string& baseType : config._listValueForbiddenBaseType )
-        {
-            if ( condition.size() > 0 )
-                condition.append( " || " );
-            condition.appendFormat( "std::is_base_of_v<%#, TValue>", baseType );
-        }
-        CodeEmit emit( outBuffer );
-        emit.line( "#ifndef SW_GENERATED_PROPERTY_VALUE_CHECK" );
-        emit.line( "#define SW_GENERATED_PROPERTY_VALUE_CHECK" );
-        emit.line( "namespace sw::generated" );
-        emit.line( "{" );
-        emit.push();
-        emit.line( "template <typename TDecl>" );
-        emit.line( "constexpr bool isPropertyValueAllowed()" );
-        emit.line( "{" );
-        emit.push();
-        emit.line( "using TValue = std::remove_cv_t<std::remove_reference_t<TDecl>>;" );
-        emit.linef( "static_assert( std::is_pointer_v<TValue> || ( %# ) == false, \"%#\" );", condition.view(), config._valueForbiddenMessage );
-        emit.line( "return true;" );
-        emit.pop();
-        emit.line( "}" );
-        emit.pop();
-        emit.line( "} // namespace sw::generated" );
-        emit.line( "#endif" );
-        emit.blank();
     }
 
     bool CodeGenerator::hasHandleArgument() const
@@ -435,78 +443,92 @@ namespace sw
         } );
     }
 
-    void CodeGenerator::emitPropertyMetadata( CodeEmit& emit, const ParsedTypeInfo& typeInfo, const ParsedPropertyInfo& prop ) const
+    string CodeGenerator::emitPropertyMetadata( CodeEmit& emit, const ParsedTypeInfo& typeInfo, const ParsedPropertyInfo& prop, const uint32 propIndex ) const
     {
         const CodeEmitByteScope byteScope{ _emitBytes, emit.buffer(), CodeEmitSection::PropertyMetadata };
-        AnnotationFields::emitRuntimeMetadata( emit, prop, "m." );
-
+        AnnotationOutput        output = AnnotationOutput::collectRuntime( prop );
         // 범위는 경계마다 값과 "있음" 표시가 함께 가는 Manual 필드다. 적힌 쪽만 낸다 — 표시가 하나면 `Min` 만 적어도
         // 위 경계(기본 1)까지 나가 인스펙터가 그 값을 1 에서 막는다.
         if ( prop._bHasMinRange != SW_FALSE )
-        {
-            emit.linef( "m._minRange     = %#;", CodeGeneratorInternal::formatRangeLiteral( prop._minRange ).c_str() );
-            emit.assign( "m._bHasMinRange", "SW_TRUE" );
-        }
+            output._listFlag.emplace_back( "HasMinRange" );
         if ( prop._bHasMaxRange != SW_FALSE )
+            output._listFlag.emplace_back( "HasMaxRange" );
+
+        string textTable( "nullptr" );
+        if ( output._listText.empty() == false )
         {
-            emit.linef( "m._maxRange     = %#;", CodeGeneratorInternal::formatRangeLiteral( prop._maxRange ).c_str() );
-            emit.assign( "m._bHasMaxRange", "SW_TRUE" );
+            StringBuilder<constant::buffer::kMax64> tableName;
+            tableName.appendFormat( "kMetaText%#", propIndex );
+            StringBuilder<constant::buffer::kMax1024> rows;
+            for ( const auto& [kind, text] : output._listText )
+            {
+                rows.appendFormat( "{ PropertyMetadataTextKind::%#, %# }, ", kind, CodeEmit::quoted( text ) );
+            }
+            emit.linef( "static constexpr PropertyMetadataText %#[] = { %#};", tableName.view(), rows.view() );
+            textTable = string( tableName.view() );
         }
-        // 상한은 코덱이 지키는 값 그대로다(상수 이름으로 적었으면 `PropertyResolver` 가 푼 값).
-        if ( prop._bHasMaxCount != SW_FALSE )
-            emit.linef( "m._maxCount     = %#u;", prop._maxCount );
-        // 단위는 상수 문맥에서 철자를 열거로 바꾼다 — 표에서 빠진 철자는 이 줄이 컴파일 오류다(검증은 `applyDisplayMeta` 가 먼저 했다).
+
+        StringBuilder<constant::buffer::kMax128> maxCount;
+        maxCount.appendFormat( "%#u", prop._bHasMaxCount != SW_FALSE ? prop._maxCount : 0u ); // 상한은 코덱이 지키는 값 그대로다(상수 이름으로 적었으면 `PropertyResolver` 가 푼 값)
+        StringBuilder<constant::buffer::kMax64> textCount;
+        textCount.appendFormat( "%#u", static_cast<uint32>( output._listText.size() ) );
+        // 단위는 상수 문맥에서 철자를 열거로 바꾼다 — 표에서 빠진 철자는 컴파일 오류다(검증은 `applyDisplayMeta` 가 먼저 했다).
+        string unit( "ReflectUnitKind::None" );
         if ( prop._units.empty() == false )
         {
-            emit.line( "{" );
-            emit.push();
-            emit.linef( "constexpr ::sw::ReflectUnitKind kUnit = ::sw::ReflectUnit::getKindOf( %# );", CodeEmit::quoted( prop._units ) );
-            emit.line( "static_assert( kUnit != ::sw::ReflectUnitKind::None, \"unknown PROPERTY( Units )\" );" );
-            emit.line( "m._unit = kUnit;" );
-            emit.pop();
-            emit.line( "}" );
+            StringBuilder<constant::buffer::kMax128> unitExpr;
+            unitExpr.appendFormat( "ReflectUnit::getRequiredKindOf( %# )", CodeEmit::quoted( prop._units ) );
+            unit = string( unitExpr.view() );
         }
-        // 숫자가 아닌 경계 중 이 타입의 필드 하나를 가리키는 것은 인스턴스에서 읽는 함수로 낸다(인스펙터와 읽기 공통 끝이 그 값으로 막는다).
-        CodeGeneratorInternal::emitRangeReader( emit, typeInfo, prop._minRangeExpr._text, "_pReadMinRange" );
-        CodeGeneratorInternal::emitRangeReader( emit, typeInfo, prop._maxRangeExpr._text, "_pReadMaxRange" );
-        // 기본값 · 편집 조건은 글이 아니라 컴파일된 대입 · 판정이다 — 이름 · 철자가 틀리면 이 줄이 컴파일되지 않는다.
-        // 이 함수는 `Registrar<T>`(모든 REFLECT 타입의 친구) 안에서 나가므로 기반의 비공개 칸도 읽는다.
+        // 기본값 · 편집 조건은 글이 아니라 컴파일된 대입 · 판정이다 — 이름 · 철자가 틀리면 이 칸이 컴파일되지 않는다.
+        // 이 표는 `Registrar<T>`(모든 REFLECT 타입의 친구) 안이라 기반의 비공개 칸도 읽는다.
+        string applyDefault( "nullptr" );
         if ( prop._defaultValue.empty() == false )
-            emit.linef( "m._pApplyDefault = []( void* pInstance ) { static_cast<%#*>( pInstance )->%#%# = %#; };", typeInfo._fullyQualifiedName, prop._memberName,
-                        prop._bIsAccessor == SW_TRUE ? "()" : "", CodeGeneratorInternal::makeDefaultLiteral( prop ) );
+        {
+            StringBuilder<constant::buffer::kMax512> b;
+            b.appendFormat( "[]( void* pInstance ) { static_cast<Self*>( pInstance )->%#%# = %#; }", prop._memberName, prop._bIsAccessor == SW_TRUE ? "()" : "",
+                            CodeGeneratorInternal::makeDefaultLiteral( prop ) );
+            applyDefault = string( b.view() );
+        }
+        string editCondition( "nullptr" );
         if ( prop._editCondition.empty() == false )
-            emit.linef( "m._pEditCondition = []( const void* pInstance ) -> bool { const %#& o = *static_cast<const %#*>( pInstance ); return %#; };",
-                        typeInfo._fullyQualifiedName, typeInfo._fullyQualifiedName, CodeGeneratorInternal::makeEditConditionExpr( typeInfo, prop._editCondition ) );
-        // 슬라이더 범위는 에디터 메타데이터다 — 개발 전용 단위가 낸다(`emitPropertyEditorMetadata`).
+        {
+            StringBuilder<constant::buffer::kMax512> b;
+            b.appendFormat( "[]( const void* pInstance ) -> bool { const Self& o = *static_cast<const Self*>( pInstance ); return %#; }",
+                            CodeGeneratorInternal::makeEditConditionExpr( typeInfo, prop._editCondition ) );
+            editCondition = string( b.view() );
+        }
+
+        // 칸 차례는 엔진 `PropertyMetadataDesc` 와 같다. 슬라이더 범위는 에디터 메타데이터다 — 개발 전용 단위가 낸다(`collectTypeEditorRows`).
+        // 숫자가 아닌 경계 중 이 타입의 필드 하나를 가리키는 것은 인스턴스에서 읽는 함수다(인스펙터와 읽기 공통 끝이 그 값으로 막는다).
+        const string cells = CodeGeneratorInternal::makeCellList( {
+            { CodeGeneratorInternal::makeFlagExpr( output._listFlag, "PropertyMetadataFlag" ), "0u" },
+            { prop._bHasMinRange != SW_FALSE ? CodeGeneratorInternal::formatRangeLiteral( prop._minRange ) : string( "0.0f" ), "0.0f" },
+            { prop._bHasMaxRange != SW_FALSE ? CodeGeneratorInternal::formatRangeLiteral( prop._maxRange ) : string( "1.0f" ), "1.0f" },
+            { unit, "ReflectUnitKind::None" },
+            { string( maxCount.view() ), "0u" },
+            { textTable, "nullptr" },
+            { string( textCount.view() ), "0u" },
+            { applyDefault, "nullptr" },
+            { CodeGeneratorInternal::makeRangeReader( typeInfo, prop._minRangeExpr._text ), "nullptr" },
+            { CodeGeneratorInternal::makeRangeReader( typeInfo, prop._maxRangeExpr._text ), "nullptr" },
+            { editCondition, "nullptr" },
+        } );
+        if ( cells.empty() )
+            return string( "nullptr" ); // 적은 것이 없는 프로퍼티는 공유 기본값을 쓴다(힙 없음, `ReflectMetadataBox`)
+        emit.linef( "static constexpr PropertyMetadataDesc kMeta%#{ %# };", propIndex, cells );
+        StringBuilder<constant::buffer::kMax64> address;
+        address.appendFormat( "&kMeta%#", propIndex );
+        return string( address.view() );
     }
 
-    void CodeGenerator::emitPropertyEditorMetadata( CodeEmit& emit, const ParsedPropertyInfo& prop, const utf8* pAddFunction ) const
+    string CodeGenerator::emitPropertyContainer( CodeEmit& emit, const ParsedPropertyInfo& prop, const uint32 propIndex ) const
     {
-        emit.line( "{" );
-        emit.push();
-        emit.linef( "::sw::PropertyEditorMetadata& p = set.%#( %# );", pAddFunction, CodeEmit::hs( prop._name ) );
-        AnnotationFields::emitEditorMetadata( emit, prop, "p." );
-        if ( prop._bHasUIMinRange != SW_FALSE )
-        {
-            emit.linef( "p._uiMinRange     = %#;", CodeGeneratorInternal::formatRangeLiteral( prop._uiMinRange ).c_str() );
-            emit.assign( "p._bHasUIMinRange", "SW_TRUE" );
-        }
-        if ( prop._bHasUIMaxRange != SW_FALSE )
-        {
-            emit.linef( "p._uiMaxRange     = %#;", CodeGeneratorInternal::formatRangeLiteral( prop._uiMaxRange ).c_str() );
-            emit.assign( "p._bHasUIMaxRange", "SW_TRUE" );
-        }
-        emit.pop();
-        emit.line( "}" );
-    }
+        const CodeEmitByteScope byteScope{ _emitBytes, emit.buffer(), CodeEmitSection::PropertyContainer };
+        if ( prop._bIsContainer == SW_FALSE )
+            return string( "nullptr" );
 
-    void CodeGenerator::emitNestedContainerTree( CodeEmit& emit, const ParsedTypeInfo& typeInfo, const ParsedPropertyInfo& prop, const uint32 propIndex ) const
-    {
-        const CodeEmitByteScope byteScope{ _emitBytes, emit.buffer(), CodeEmitSection::NestedContainerTree };
-        if ( prop._containerTree == nullptr || prop._containerTree->_bIsContainer == SW_FALSE )
-            return;
-
-        // 단계마다 정적 `const` 객체 하나다 — 안쪽이 먼저 있어야 바깥이 그 주소를 든다(아래에서 거꾸로 낸다).
+        // 단계마다 상수 줄 하나다 — 안쪽이 먼저 있어야 바깥이 그 주소를 든다(아래에서 거꾸로 낸다).
         struct Level
         {
             string _kind;
@@ -515,177 +537,193 @@ namespace sw
             string _keyTypeName;
             string _wrapperType;
         };
-        vector<Level> listLevel;
-        listLevel.push_back( Level{ toCppExpr( prop._containerKind ), prop._containerTree->_typeName, _session._typeNameMap.normalize( prop._elementTypeName ),
-                                    _session._typeNameMap.normalize( prop._keyTypeName ),
-                                    CodeGeneratorInternal::makeWrapperType( prop._containerType, typeInfo._fullyQualifiedName, prop._memberName ) } );
-
-        const ParsedContainerNode* node     = prop._containerTree->_elementNested.get();
-        ContainerKind              prevKind = prop._containerKind;
-        int32                      depth    = 1;
-        if ( node != nullptr && node->_bIsContainer )
-            emit.linef( "using NestC%#_0 = decltype( std::declval<%#>().%# );", propIndex, typeInfo._fullyQualifiedName, prop._memberName );
-        // 깊이 한도는 두지 않는다 — 단계마다 앞 단계의 원소 형식 별칭(`NestC<프로퍼티>_<깊이>`)을 잇는 반복이라 몇 겹이든 같다. 예전 한도(3)는 넘는 단계를 조용히 잘랐다.
-        while ( node != nullptr && node->_bIsContainer )
+        const auto makeWrapperType = [propIndex]( const string& containerType, const int32 depth )
         {
-            emit.linef( "using NestC%#_%# = typename NestC%#_%#::%#;", propIndex, depth, propIndex, depth - 1, containerElementTypeMember( prevKind ) );
-            StringBuilder<constant::buffer::kMax128> wrapperType;
-            wrapperType.appendFormat( "sw::%#Wrapper<NestC%#_%#>", node->_containerType, propIndex, depth );
-            // 안쪽 단계의 키 이름은 정규화하지 않는다(예전 출력과 같다).
-            listLevel.push_back( Level{ toCppExpr( node->_containerKind ), node->_typeName, _session._typeNameMap.normalize( node->_elementTypeName ), node->_keyTypeName,
-                                        string( wrapperType.view() ) } );
-            prevKind = node->_containerKind;
-            node     = node->_elementNested.get();
-            ++depth;
+            StringBuilder<constant::buffer::kMax256> b;
+            b.appendFormat( "sw::%#Wrapper<NestC%#_%#>", containerType, propIndex, depth );
+            return string( b.view() );
+        };
+        emit.linef( "using NestC%#_0 = %#;", propIndex, makePropertyDeclType( prop ) );
+        const string  wrapperType = makeWrapperType( prop._containerType, 0 );
+        vector<Level> listLevel;
+        if ( prop._containerTree != nullptr && prop._containerTree->_bIsContainer != SW_FALSE )
+        {
+            listLevel.push_back( Level{ toCppExpr( prop._containerKind ), prop._containerTree->_typeName, _session._typeNameMap.normalize( prop._elementTypeName ),
+                                        _session._typeNameMap.normalize( prop._keyTypeName ), wrapperType } );
+            const ParsedContainerNode* node     = prop._containerTree->_elementNested.get();
+            ContainerKind              prevKind = prop._containerKind;
+            int32                      depth    = 1;
+            // 깊이 한도는 두지 않는다 — 단계마다 앞 단계의 원소 형식 별칭(`NestC<프로퍼티>_<깊이>`)을 잇는 반복이라 몇 겹이든 같다. 예전 한도(3)는 넘는 단계를 조용히 잘랐다.
+            while ( node != nullptr && node->_bIsContainer )
+            {
+                emit.linef( "using NestC%#_%# = typename NestC%#_%#::%#;", propIndex, depth, propIndex, depth - 1, containerElementTypeMember( prevKind ) );
+                // 안쪽 단계의 키 이름은 정규화하지 않는다(예전 출력과 같다).
+                listLevel.push_back( Level{ toCppExpr( node->_containerKind ), node->_typeName, _session._typeNameMap.normalize( node->_elementTypeName ), node->_keyTypeName,
+                                            makeWrapperType( node->_containerType, depth ) } );
+                prevKind = node->_containerKind;
+                node     = node->_elementNested.get();
+                ++depth;
+            }
         }
-
         for ( size_t level = listLevel.size(); level-- > 0; )
         {
             const Level&                             entry = listLevel[level];
             StringBuilder<constant::buffer::kMax128> next;
             if ( level + 1 < listLevel.size() )
-                next.appendFormat( "&s_nested%#_%#", propIndex, static_cast<uint32>( level + 1 ) );
+                next.appendFormat( "&kNested%#_%#", propIndex, static_cast<uint32>( level + 1 ) );
             else
                 next.append( "nullptr" );
-            emit.linef( "static const ::sw::NestedContainerInfo s_nested%#_%#{ %#, %#, %#, %#, &::sw::ContainerWrapperOf<%#>::kInstance, %# };", propIndex,
-                        static_cast<uint32>( level ), entry._kind, CodeEmit::hs( entry._typeName ), CodeEmit::hs( entry._elementTypeName ),
-                        CodeEmit::hs( entry._keyTypeName ), entry._wrapperType, next.view() );
+            emit.linef( "static constexpr NestedContainerDesc kNested%#_%#{ %#, %#, %#, %#, &ContainerWrapperOf<%#>::kInstance, %# };", propIndex, static_cast<uint32>( level ),
+                        entry._kind, CodeEmit::quoted( entry._typeName ), CodeEmit::quoted( entry._elementTypeName ), CodeEmit::quoted( entry._keyTypeName ), entry._wrapperType,
+                        next.view() );
         }
+
+        // 표(`ReflectBuiltins.xxx` CONTAINER 줄)의 종류 · 역할이 래퍼 형식과 같은지 컴파일이 본다 — 어긋나면 이 칸의 생성 코드가 멈춘다.
+        // 표 밖 컨테이너(`REFLECT_CONTAINER( Kind, Stem )`)는 역할 칸이 없어 종류만 본다.
+        StringBuilder<constant::buffer::kMax512> wrapper;
+        const ContainerTypeRule*                 pRule = _session._containerTypeMap.findByWrapperStem( prop._containerType );
+        if ( pRule != nullptr )
+            wrapper.appendFormat( "ContainerWrapperOf<%#>::getChecked<%#, %#, %#>()", wrapperType, toCppExpr( pRule->_kind ), pRule->_bState == SW_TRUE ? "true" : "false",
+                                  pRule->_bFixed == SW_TRUE ? "true" : "false" );
+        else
+            wrapper.appendFormat( "ContainerWrapperOf<%#>::getOfKind<%#>()", wrapperType, toCppExpr( prop._containerKind ) );
+        const auto textOrNull = []( const string& text )
+        { return text.empty() ? string( "nullptr" ) : CodeEmit::quoted( text ); };
+        StringBuilder<constant::buffer::kMax64> nested;
+        if ( listLevel.empty() )
+            nested.append( "nullptr" );
+        else
+            nested.appendFormat( "&kNested%#_0", propIndex );
+        emit.linef( "static constexpr PropertyContainerDesc kContainer%#{ %#, %#, %#, %#, %# };", propIndex, toCppExpr( prop._containerKind ),
+                    textOrNull( _session._typeNameMap.normalize( prop._elementTypeName ) ), textOrNull( _session._typeNameMap.normalize( prop._keyTypeName ) ), wrapper.view(),
+                    nested.view() );
+        StringBuilder<constant::buffer::kMax64> address;
+        address.appendFormat( "&kContainer%#", propIndex );
+        return string( address.view() );
     }
 
-    string CodeGenerator::makePropertyDeclType( const ParsedTypeInfo& typeInfo, const ParsedPropertyInfo& prop )
+    string CodeGenerator::makePropertyDeclType( const ParsedPropertyInfo& prop )
     {
         // 접근자 프로퍼티(값이 객체 밖)는 필드가 없다. 선언 타입은 메서드가 돌려주는 참조의 대상이다.
         StringBuilder<constant::buffer::kMax256> b;
         if ( prop._bIsAccessor == SW_TRUE )
-            b.appendFormat( "std::remove_reference_t<decltype( std::declval<%#&>().%#() )>", typeInfo._fullyQualifiedName, prop._memberName );
+            b.appendFormat( "std::remove_reference_t<decltype( std::declval<Self&>().%#() )>", prop._memberName );
         else
-            b.appendFormat( "decltype( %#::%# )", typeInfo._fullyQualifiedName, prop._memberName );
+            b.appendFormat( "decltype( Self::%# )", prop._memberName );
         return string( b.view() );
     }
 
-    void CodeGenerator::emitPropertyStatics( CodeEmit& emit, const ParsedTypeInfo& typeInfo, const ParsedPropertyInfo& prop, const uint32 propIndex ) const
+    string CodeGenerator::emitPropertyBinding( CodeEmit& emit, const ParsedPropertyInfo& prop, const uint32 propIndex ) const
     {
-        const CodeEmitByteScope byteScope{ _emitBytes, emit.buffer(), CodeEmitSection::PropertyStatics };
-        // PROPERTY() 에 값으로 담으면 안 되는 기반 타입은 파일 머리의 검사 템플릿(`emitPropertyValueCheck`)이 막는다.
-        if ( _session._config._listValueForbiddenBaseType.empty() == false )
-            emit.linef( "static_assert( ::sw::generated::isPropertyValueAllowed<%#>() );", makePropertyDeclType( typeInfo, prop ) );
+        const CodeEmitByteScope byteScope{ _emitBytes, emit.buffer(), CodeEmitSection::PropertyBinding };
+        string                  aliasTable( "nullptr" );
         if ( prop._listAlias.empty() == false )
         {
-            StringBuilder<constant::buffer::kMax256> aliases;
-            for ( const string& alias : prop._listAlias )
-            {
-                if ( aliases.size() > 0 )
-                    aliases.append( ", " );
-                aliases.append( CodeEmit::quoted( alias ) );
-            }
-            emit.linef( "static constexpr const ::utf8* kAlias%#[] = { %# };", propIndex, aliases.view() );
+            StringBuilder<constant::buffer::kMax64> tableName;
+            tableName.appendFormat( "kAlias%#", propIndex );
+            CodeGeneratorInternal::emitTextTable( emit, tableName.view(), prop._listAlias );
+            aliasTable = string( tableName.view() );
         }
-        emitNestedContainerTree( emit, typeInfo, prop, propIndex );
-        emitContainerTableCheck( emit, typeInfo, prop );
+        StringBuilder<constant::buffer::kMax64> aliasCount;
+        aliasCount.appendFormat( "%#u", static_cast<uint32>( prop._listAlias.size() ) );
+
+        // 값 자리는 메서드가 안다. 인자는 오프셋이 기준으로 삼는 객체 주소다(`PropertyInfo::getRawPtr`).
+        string accessor( "nullptr" );
+        if ( prop._bIsAccessor == SW_TRUE )
+        {
+            StringBuilder<constant::buffer::kMax256> b;
+            b.appendFormat( "[]( void* pInstance ) -> void* { return std::addressof( static_cast<Self*>( pInstance )->%#() ); }", prop._memberName );
+            accessor = string( b.view() );
+        }
+        // RepNotify · Validate 는 파서가 모양을 확인했다(`validateMemberFunctions`) — 이전 값을 받는 함수면 그 타입 그대로 넘긴다.
+        string repNotify( "nullptr" );
+        if ( prop._repNotify.empty() == false )
+        {
+            StringBuilder<constant::buffer::kMax512> b;
+            if ( prop._bRepNotifyTakesOldValue == SW_TRUE )
+                b.appendFormat( "[]( void* pInstance, const void* pOldValue ) { static_cast<Self*>( pInstance )->%#( *static_cast<const %#*>( pOldValue ) ); }", prop._repNotify,
+                                makePropertyDeclType( prop ) );
+            else
+                b.appendFormat( "[]( void* pInstance, const void* ) { static_cast<Self*>( pInstance )->%#(); }", prop._repNotify );
+            repNotify = string( b.view() );
+        }
+        // const 든 아니든 부를 수 있게 인스턴스를 그 타입으로 돌려 부른다.
+        string validate( "nullptr" );
+        if ( prop._validate.empty() == false )
+            validate = CodeGeneratorInternal::makeValidateLambda( prop._validate );
+        // 파서가 측정한 바이트를 박지 않는다 — 파서는 Debug 정의를 모르고 측정한다(`PropertyInfo::resolveBitField` 설명).
+        string setBit( "nullptr" );
+        if ( prop._bIsBitField == SW_TRUE )
+        {
+            StringBuilder<constant::buffer::kMax256> b;
+            b.appendFormat( "[]( void* pInstance ) { static_cast<Self*>( pInstance )->%# = static_cast<%#>( 1 ); }", prop._memberName, makePropertyDeclType( prop ) );
+            setBit = string( b.view() );
+        }
+
+        // 칸 차례는 엔진 `PropertyBindingDesc` 와 같다.
+        const string cells = CodeGeneratorInternal::makeCellList( {
+            {prop._handleTargetTypeName.empty() ? string( "nullptr" ) : CodeEmit::quoted( prop._handleTargetTypeName ), "nullptr"},
+            {                                                                                               aliasTable, "nullptr"},
+            {                                                                              string( aliasCount.view() ),      "0u"},
+            {                                                                                                 accessor, "nullptr"},
+            {                                                                                                repNotify, "nullptr"},
+            {                                                                                                 validate, "nullptr"},
+            {                                                                                                   setBit, "nullptr"},
+            {                               prop._bIsBitField == SW_TRUE ? string( "sizeof( Self )" ) : string( "0u" ),      "0u"},
+        } );
+        if ( cells.empty() )
+            return string( "nullptr" );
+        emit.linef( "static constexpr PropertyBindingDesc kBinding%#{ %# };", propIndex, cells );
+        StringBuilder<constant::buffer::kMax64> address;
+        address.appendFormat( "&kBinding%#", propIndex );
+        return string( address.view() );
     }
 
-    void CodeGenerator::emitContainerTableCheck( CodeEmit& emit, const ParsedTypeInfo& typeInfo, const ParsedPropertyInfo& prop ) const
-    {
-        if ( prop._bIsContainer == SW_FALSE || prop._bIsAccessor == SW_TRUE )
-            return;
-        // 표(`ReflectBuiltins.xxx` CONTAINER 줄)의 종류 · 역할이 래퍼 형식과 같은지 컴파일이 본다 — 어긋나면 이 칸의 생성 코드가 멈춘다.
-        // 표 밖 컨테이너(`REFLECT_CONTAINER( Kind, Stem )`)는 역할 칸이 없어 종류만 본다.
-        const string             wrapperType = CodeGeneratorInternal::makeWrapperType( prop._containerType, typeInfo._fullyQualifiedName, prop._memberName );
-        const ContainerTypeRule* pRule       = _session._containerTypeMap.findByWrapperStem( prop._containerType );
-        if ( pRule != nullptr )
-            emit.linef( "static_assert( ::sw::ContainerWrapperOf<%#>::matchesTable( %#, %#, %# ), \"ReflectBuiltins.xxx: CONTAINER row '%#' (kind, State, Fixed) disagrees with sw::%#Wrapper\" );",
-                        wrapperType, toCppExpr( pRule->_kind ), pRule->_bState == SW_TRUE ? "true" : "false", pRule->_bFixed == SW_TRUE ? "true" : "false", pRule->_match,
-                        prop._containerType );
-        else
-            emit.linef( "static_assert( ::sw::ContainerWrapperOf<%#>::kKind == %#, \"REFLECT_CONTAINER kind disagrees with sw::%#Wrapper\" );", wrapperType,
-                        toCppExpr( prop._containerKind ), prop._containerType );
-    }
-
-    void CodeGenerator::emitPropertyDesc( CodeEmit& emit, const ParsedTypeInfo& typeInfo, const ParsedPropertyInfo& prop, const uint32 propIndex ) const
+    void CodeGenerator::emitPropertyTable( CodeEmit& emit, const ParsedTypeInfo& typeInfo ) const
     {
         const CodeEmitByteScope byteScope{ _emitBytes, emit.buffer(), CodeEmitSection::PropertyDesc };
-        // 칸 차례는 `PropertyDesc`(엔진 `PropertyInfo.h`)와 같다.
-        const string& fqn        = typeInfo._fullyQualifiedName;
-        const auto    textOrNull = []( const string& text )
-        { return text.empty() ? string( "nullptr" ) : CodeEmit::quoted( text ); };
-        const bool                               bNoOffset = prop._bIsBitField == SW_TRUE || prop._bIsAccessor == SW_TRUE;
-        StringBuilder<constant::buffer::kMax256> offsetExpr;
-        if ( bNoOffset )
-            offsetExpr.append( "0u" );
-        else
-            offsetExpr.appendFormat( "offsetof( %#, %# )", fqn, prop._memberName );
-        const bool   bNestedShape = prop._containerTree != nullptr && prop._containerTree->_bIsContainer != SW_FALSE;
-        const string declType     = makePropertyDeclType( typeInfo, prop );
+        // PROPERTY() 에 값으로 담으면 안 되는 기반 타입은 `ReflectGenerated.h` 의 검사가 막는다(타입마다 한 줄).
+        StringBuilder<constant::buffer::kMax1024> declTypes;
+        for ( const ParsedPropertyInfo& prop : typeInfo._listProperty )
+        {
+            declTypes.append( declTypes.size() > 0 ? ", " : "" );
+            declTypes.append( makePropertyDeclType( prop ) );
+        }
+        emit.linef( "static_assert( arePropertyValuesAllowed<%#>() );", declTypes.view() );
 
+        vector<string> listRow;
+        for ( size_t propIndex = 0; propIndex < typeInfo._listProperty.size(); ++propIndex )
+        {
+            const ParsedPropertyInfo& prop      = typeInfo._listProperty[propIndex];
+            const uint32              index     = static_cast<uint32>( propIndex );
+            const string              metadata  = emitPropertyMetadata( emit, typeInfo, prop, index );
+            const string              container = emitPropertyContainer( emit, prop, index );
+            const string              binding   = emitPropertyBinding( emit, prop, index );
+            // 비트필드는 `offsetof` 를 쓸 수 없다. 자리는 `resolveBitField` 가 이 구성의 실제 레이아웃에서 찾는다(`PropertyBindingDesc::_pSetBit`).
+            StringBuilder<constant::buffer::kMax256> offset;
+            if ( prop._bIsBitField == SW_TRUE || prop._bIsAccessor == SW_TRUE )
+                offset.append( "0u" );
+            else
+                offset.appendFormat( "offsetof( Self, %# )", prop._memberName );
+            const string                             tail = CodeGeneratorInternal::makeCellList( {
+                { metadata, "nullptr"},
+                {container, "nullptr"},
+                {  binding, "nullptr"},
+            } );
+            StringBuilder<constant::buffer::kMax512> row;
+            row.appendFormat( "{ %#, %#, %#%#%# },", CodeEmit::quoted( prop._name ), CodeEmit::quoted( _session._typeNameMap.normalize( prop._typeName ) ), offset.view(),
+                              tail.empty() ? "" : ", ", tail );
+            listRow.push_back( string( row.view() ) );
+        }
+        emit.line( "static constexpr PropertyDesc kProperties[] =" );
         emit.line( "{" );
         emit.push();
-        // 비트필드는 `offsetof` 를 쓸 수 없다. 자리는 `resolveBitField` 가 이 구성의 실제 레이아웃에서 찾는다(아래 `_pSetBit`).
-        emit.linef( "%#, %#, %#,", CodeEmit::quoted( prop._name ), CodeEmit::quoted( _session._typeNameMap.normalize( prop._typeName ) ), offsetExpr.view() );
-        if ( prop._bIsContainer )
+        for ( const string& row : listRow )
         {
-            emit.linef( "%#, %#, %#,", toCppExpr( prop._containerKind ), textOrNull( _session._typeNameMap.normalize( prop._elementTypeName ) ),
-                        textOrNull( _session._typeNameMap.normalize( prop._keyTypeName ) ) );
-            StringBuilder<constant::buffer::kMax64> nested;
-            if ( bNestedShape )
-                nested.appendFormat( "&s_nested%#_0", propIndex );
-            else
-                nested.append( "nullptr" );
-            emit.linef( "&::sw::ContainerWrapperOf<%#>::kInstance, %#,", CodeGeneratorInternal::makeWrapperType( prop._containerType, fqn, prop._memberName ),
-                        nested.view() );
-        }
-        else
-        {
-            emit.line( "::sw::ContainerKind::None, nullptr, nullptr, nullptr, nullptr," );
-        }
-        StringBuilder<constant::buffer::kMax64> alias;
-        if ( prop._listAlias.empty() )
-            alias.append( "nullptr" );
-        else
-            alias.appendFormat( "kAlias%#", propIndex );
-        emit.linef( "%#, %#, %#u,", textOrNull( prop._handleTargetTypeName ), alias.view(), static_cast<uint32>( prop._listAlias.size() ) );
-        // 값 자리는 메서드가 안다. 인자는 오프셋이 기준으로 삼는 객체 주소다(`PropertyInfo::getRawPtr`).
-        if ( prop._bIsAccessor == SW_TRUE )
-            emit.linef( "[]( void* pInstance ) -> void* { return std::addressof( static_cast<%#*>( pInstance )->%#() ); },", fqn, prop._memberName );
-        else
-            emit.line( "nullptr," );
-        // RepNotify · Validate 는 파서가 모양을 확인했다(`validateMemberFunctions`) — 이전 값을 받는 함수면 그 타입 그대로 넘긴다.
-        if ( prop._repNotify.empty() )
-            emit.line( "nullptr," );
-        else if ( prop._bRepNotifyTakesOldValue == SW_TRUE )
-            emit.linef( "[]( void* pInstance, const void* pOldValue ) { static_cast<%#*>( pInstance )->%#( *static_cast<const %#*>( pOldValue ) ); },", fqn,
-                        prop._repNotify, declType );
-        else
-            emit.linef( "[]( void* pInstance, const void* ) { static_cast<%#*>( pInstance )->%#(); },", fqn, prop._repNotify );
-        // const 든 아니든 부를 수 있게 인스턴스를 그 타입으로 돌려 부른다.
-        if ( prop._validate.empty() )
-            emit.line( "nullptr," );
-        else
-            emit.linef( "[]( const void* pInstance, ::sw::ValidationContext& context ) { static_cast<%#*>( const_cast<void*>( pInstance ) )->%#( context ); },", fqn,
-                        prop._validate );
-        // 파서가 측정한 바이트를 박지 않는다 — 파서는 Debug 정의를 모르고 측정한다(`PropertyInfo::resolveBitField` 설명).
-        if ( prop._bIsBitField == SW_TRUE )
-            emit.linef( "[]( void* pInstance ) { static_cast<%#*>( pInstance )->%# = static_cast<%#>( 1 ); }, sizeof( %# ),", fqn, prop._memberName, declType, fqn );
-        else
-            emit.line( "nullptr, 0u," );
-
-        // 적은 메타데이터가 없으면 채우기 함수도 없다 — 그 프로퍼티는 공유 기본값을 쓴다(힙 없음, `ReflectMetadataBox`).
-        CodeEmitBuffer fillBuffer;
-        CodeEmit       fillEmit( fillBuffer );
-        fillEmit.push( emit.getIndent() + 1 );
-        emitPropertyMetadata( fillEmit, typeInfo, prop );
-        if ( fillBuffer.view().empty() )
-        {
-            emit.line( "nullptr" );
-        }
-        else
-        {
-            emit.line( "[]( ::sw::PropertyMetadata& m ) {" );
-            emit.raw( fillBuffer.view() );
-            emit.line( "}" );
+            emit.line( row );
         }
         emit.pop();
-        emit.line( "}," );
+        emit.line( "};" );
     }
 
     void CodeGenerator::emitMethodInvoker( CodeEmit& emit, const ParsedTypeInfo& typeInfo,
@@ -705,17 +743,17 @@ namespace sw
             emit.line( "(void)objPtr;" );
             if ( returnType == annotation::kVoidTypeName )
             {
-                emit.linef( "%#::%#(%#);", typeInfo._fullyQualifiedName, method._name, callArgs );
+                emit.linef( "Self::%#(%#);", method._name, callArgs );
                 emit.line( "return ::sw::TaskValue{};" );
             }
             else
             {
-                emit.linef( "return ::sw::TaskValue{ %#::%#(%#) };", typeInfo._fullyQualifiedName, method._name, callArgs );
+                emit.linef( "return ::sw::TaskValue{ Self::%#(%#) };", method._name, callArgs );
             }
         }
         else
         {
-            emit.linef( "auto* self = static_cast<%#*>( objPtr );", typeInfo._fullyQualifiedName );
+            emit.line( "auto* self = static_cast<Self*>( objPtr );" );
             // 타입 핸들 인자는 이 컴포넌트의 씬에서 대상 타입을 확인해 만든다. 틀리면 확인 쪽이 오류를 남기고 메서드를 부르지 않는다(파서가 컴포넌트의 비정적 메서드만 받는다).
             for ( size_t paramIndex = 0; paramIndex < method._listParameter.size(); ++paramIndex )
             {
@@ -743,20 +781,6 @@ namespace sw
         emit.line( "}," );
     }
 
-    void CodeGenerator::emitConstructor( CodeEmit& emit, const ParsedTypeInfo& typeInfo, const ParsedFunctionInfo& method, const string& callArgs ) const
-    {
-        const CodeEmitByteScope byteScope{ _emitBytes, emit.buffer(), CodeEmitSection::MethodInvoker };
-        // 생성 TU 에는 placement new 한 줄만 남긴다 — 반환값 만들기는 `FunctionDesc::invokeConstructor`(Engine, 비인라인)가 한 곳에서 한다.
-        // 파서가 더한 기본 생성자는 기본 생성 가능할 때만 등록한다(참조 멤버 · 기본 생성자 없는 베이스는 가린다 — 생성 함수가 nullptr 면 등록에서 빠진다).
-        if ( method._bSynthesized != SW_FALSE )
-        {
-            emit.linef( "::sw::ReflectDefaultCtorOf<%#>::kConstruct", typeInfo._fullyQualifiedName );
-            return;
-        }
-        emit.linef( "[]( void* pObject, const ::sw::TaskArgs&%# ) { sw_placement_new( pObject ) %#(%#); }", method._listParameter.empty() ? "" : " args",
-                    typeInfo._fullyQualifiedName, callArgs ); // `Style/PlacementNew` 와 같은 모양
-    }
-
     void CodeGenerator::emitMethodList( CodeEmit& emit, const ParsedTypeInfo& typeInfo ) const
     {
         const CodeEmitByteScope byteScope{ _emitBytes, emit.buffer(), CodeEmitSection::MethodList };
@@ -764,11 +788,15 @@ namespace sw
         vector<string> listParamTable;
         for ( size_t methodIndex = 0; methodIndex < typeInfo._listMethod.size(); ++methodIndex )
         {
+            const ParsedFunctionInfo&               method = typeInfo._listMethod[methodIndex];
             StringBuilder<constant::buffer::kMax64> tableName;
             tableName.appendFormat( "kMethodParams%#", static_cast<uint32>( methodIndex ) );
-            listParamTable.push_back( CodeGeneratorInternal::emitParameterTable( emit, string( tableName.view() ), typeInfo._listMethod[methodIndex]._listParameter, _session, true ) );
+            listParamTable.push_back( CodeGeneratorInternal::emitParameterTable( emit, string( tableName.view() ), method._listParameter, _session, true ) );
+            // 상수가 0 이면 "함수 상한 없음" 과 구별되지 않는다 — 컴파일에서 멈춘다.
+            if ( method._maxCallsPerSecondName.empty() == false )
+                emit.linef( "static_assert( ( %# ) >= 1, \"MaxCallsPerSecond must be at least 1\" );", method._maxCallsPerSecondName );
         }
-        emit.line( "static constexpr ::sw::FunctionDesc kMethods[] =" );
+        emit.line( "static constexpr FunctionDesc kMethods[] =" );
         emit.line( "{" );
         emit.push();
         for ( size_t methodIndex = 0; methodIndex < typeInfo._listMethod.size(); ++methodIndex )
@@ -776,57 +804,53 @@ namespace sw
             const ParsedFunctionInfo& method       = typeInfo._listMethod[methodIndex];
             const bool                bConstructor = method._bConstructor != SW_FALSE;
             const string              returnType   = _session._typeNameMap.normalize( method._returnTypeName );
-            const string              lookupName   = bConstructor ? CodeGeneratorInternal::makeCtorLookupName( method, _session ) : method._name;
-            const string              returnOps    = ( returnType != annotation::kVoidTypeName && bConstructor == false ) ? CodeGeneratorInternal::makeTypeOpsExpr( returnType ) : string( "nullptr" );
+            // 파서가 더한 기본 생성자(거의 모든 타입)는 줄 전체가 같다 — 기본 생성할 수 있는지는 템플릿이 가른다(참조 멤버 · 기본 생성자 없는 기반은 등록에서 빠진다).
+            if ( bConstructor && method._bSynthesized != SW_FALSE )
+            {
+                emit.linef( "FunctionDesc::defaultConstructor<Self>( %#, %# ),", CodeEmit::quoted( annotation::kCtorLookupName ), CodeEmit::quoted( returnType ) );
+                continue;
+            }
+            const string lookupName = bConstructor ? CodeGeneratorInternal::makeCtorLookupName( method, _session ) : method._name;
+            const string returnOps  = ( returnType != annotation::kVoidTypeName && bConstructor == false ) ? CodeGeneratorInternal::makeTypeOpsExpr( returnType ) : string( "nullptr" );
+            const string callArgs   = CodeGeneratorInternal::makeInvokerCallArgs( method._listParameter, _session );
 
             emit.line( "{" );
             emit.push();
             emit.linef( "%#, %#, %#, %#,", CodeEmit::quoted( bConstructor ? string( annotation::kCtorLookupName ) : method._name ), CodeEmit::quoted( lookupName ),
                         CodeEmit::quoted( returnType ), returnOps );
             emit.linef( "%#, %#u,", listParamTable[methodIndex], static_cast<uint32>( method._listParameter.size() ) );
-            // 생성자 줄은 호출 칸이 비고 끝의 생성 칸(`_pConstruct`)을 쓴다.
+            // 생성자 줄은 호출 칸이 비고 생성 칸(`_pConstruct`)을 쓴다 — 생성 TU 에는 placement new 한 줄만 남긴다(`Style/PlacementNew` 와 같은 모양).
             if ( bConstructor )
+            {
                 emit.line( "nullptr," );
+                emit.linef( "[]( void* pObject, const ::sw::TaskArgs&%# ) { sw_placement_new( pObject ) Self(%#); },", method._listParameter.empty() ? "" : " args", callArgs );
+            }
             else
-                emitMethodInvoker( emit, typeInfo, method, returnType, CodeGeneratorInternal::makeInvokerCallArgs( method._listParameter, _session ) );
+            {
+                emitMethodInvoker( emit, typeInfo, method, returnType, callArgs );
+                emit.line( "nullptr," );
+            }
 
-            // 적은 메타데이터와 선언 사실(생성자 · 정적 · const)이 없으면 채우기 함수도 없다 — 공유 기본값을 쓴다.
-            CodeEmitBuffer fillBuffer;
-            CodeEmit       fillEmit( fillBuffer );
-            fillEmit.push( emit.getIndent() + 1 );
-            AnnotationFields::emitRuntimeMetadata( fillEmit, method, "m." );
-            // 함수별 초당 상한 — 상수 이름이면 그 이름을 그대로 쓴다(생성 코드에서 보이지 않으면 컴파일 오류로 멈춘다, 조용히 0 이 되지 않게).
-            if ( method._maxCallsPerSecond > 0 )
-                fillEmit.linef( "m._maxCallsPerSecond = %#u;", method._maxCallsPerSecond );
-            else if ( method._maxCallsPerSecondName.empty() == false )
-            {
-                // 상수가 0 이면 "함수 상한 없음" 과 구별되지 않는다 — 컴파일에서 멈춘다.
-                fillEmit.linef( "static_assert( ( %# ) >= 1, \"MaxCallsPerSecond must be at least 1\" );", method._maxCallsPerSecondName );
-                fillEmit.linef( "m._maxCallsPerSecond = static_cast<::uint32>( %# );", method._maxCallsPerSecondName );
-            }
-            fillEmit.flagIf( bConstructor, "m._bConstructor", "SW_TRUE" );
-            fillEmit.flagIf( method._bStatic != SW_FALSE, "m._bStatic", "SW_TRUE" );
-            fillEmit.flagIf( method._bConst != SW_FALSE, "m._bConst", "SW_TRUE" );
-            if ( fillBuffer.view().empty() )
-            {
-                emit.line( "nullptr," );
-            }
-            else
-            {
-                emit.line( "[]( ::sw::FunctionMetadata& m ) {" );
-                emit.raw( fillBuffer.view() );
-                emit.line( "}," );
-            }
+            // 메타데이터와 선언 사실(생성자 · 정적 · const)이다. 아무것도 없으면 등록이 공유 기본값을 쓴다(`FunctionDesc::hasMetadata`).
+            AnnotationOutput output = AnnotationOutput::collectRuntime( method );
             if ( bConstructor )
-                emitConstructor( emit, typeInfo, method, CodeGeneratorInternal::makeInvokerCallArgs( method._listParameter, _session ) );
+                output._listFlag.emplace_back( "Constructor" );
+            if ( method._bStatic != SW_FALSE )
+                output._listFlag.emplace_back( "Static" );
+            if ( method._bConst != SW_FALSE )
+                output._listFlag.emplace_back( "Const" );
+            // 함수별 초당 상한 — 상수 이름이면 그 이름을 그대로 쓴다(생성 코드에서 보이지 않으면 컴파일 오류로 멈춘다, 조용히 0 이 되지 않게).
+            StringBuilder<constant::buffer::kMax256> maxCalls;
+            if ( method._maxCallsPerSecondName.empty() )
+                maxCalls.appendFormat( "%#u", method._maxCallsPerSecond );
             else
-                emit.line( "nullptr" ); // 생성 칸 — 줄마다 모든 칸을 적는다(빠진 칸 경고)
+                maxCalls.appendFormat( "static_cast<::uint32>( %# )", method._maxCallsPerSecondName );
+            emit.linef( "%#, %#, %#", CodeGeneratorInternal::makeFlagExpr( output._listFlag, "FunctionMetadataFlag" ), toCppExpr( output._netRole ), maxCalls.view() );
             emit.pop();
             emit.line( "}," );
         }
         emit.pop();
         emit.line( "};" );
-        emit.line( "info.setMethodTable( kMethods, ::std::size( kMethods ) );" );
     }
 
     void CodeGenerator::emitEventList( CodeEmit& emit, const ParsedTypeInfo& typeInfo ) const
@@ -839,152 +863,141 @@ namespace sw
             tableName.appendFormat( "kEventParams%#", static_cast<uint32>( eventIndex ) );
             listParamTable.push_back( CodeGeneratorInternal::emitParameterTable( emit, string( tableName.view() ), typeInfo._listEvent[eventIndex]._listParameter, _session, false ) );
         }
-        emit.line( "static constexpr ::sw::EventDesc kEvents[] =" );
+        emit.line( "static constexpr EventDesc kEvents[] =" );
         emit.line( "{" );
         emit.push();
         for ( size_t eventIndex = 0; eventIndex < typeInfo._listEvent.size(); ++eventIndex )
         {
             const ParsedEventInfo& event = typeInfo._listEvent[eventIndex];
-            emit.line( "{" );
-            emit.push();
-            emit.linef( "%#, offsetof( %#, %# ),", CodeEmit::quoted( event._annotation._name ), typeInfo._fullyQualifiedName, event._memberName );
-            emit.linef( "%#, %#u,", listParamTable[eventIndex], static_cast<uint32>( event._listParameter.size() ) );
-            // 묶기 · 부르기 · 인자 변환 표는 필드 타입(`MulticastDelegate<void( Args... )>`)에서 템플릿이 만든다.
-            emit.linef( "&::sw::ReflectEventOpsOf<decltype( %#::%# )>::kOps,", typeInfo._fullyQualifiedName, event._memberName );
-            CodeEmitBuffer fillBuffer;
-            CodeEmit       fillEmit( fillBuffer );
-            fillEmit.push( emit.getIndent() + 1 );
-            AnnotationFields::emitRuntimeMetadata( fillEmit, event._annotation, "m." );
-            if ( fillBuffer.view().empty() )
-            {
-                emit.line( "nullptr" );
-            }
-            else
-            {
-                emit.line( "[]( ::sw::PropertyMetadata& m ) {" );
-                emit.raw( fillBuffer.view() );
-                emit.line( "}" );
-            }
-            emit.pop();
-            emit.line( "}," );
+            // 묶기 · 부르기 · 인자 변환 표는 필드 타입(`MulticastDelegate<void( Args... )>`)에서 템플릿이 만든다. 이벤트가 받는 애노테이션은 표시 메타뿐이라(개발 전용 단위) 런타임 칸이 없다.
+            emit.linef( "{ %#, offsetof( Self, %# ), %#, %#u, &::sw::ReflectEventOpsOf<decltype( Self::%# )>::kOps },", CodeEmit::quoted( event._annotation._name ), event._memberName,
+                        listParamTable[eventIndex], static_cast<uint32>( event._listParameter.size() ), event._memberName );
         }
         emit.pop();
         emit.line( "};" );
-        emit.line( "info.setEventTable( kEvents, ::std::size( kEvents ) );" );
     }
 
     void CodeGenerator::emitTypeRegistrar( CodeEmitBuffer& outBuffer, const ParsedTypeInfo& typeInfo, const size_t typeIndex ) const
     {
         const CodeEmitByteScope byteScope{ _emitBytes, outBuffer, CodeEmitSection::TypeRegistrar };
         const string            registrarName = sanitizeIdentifier( typeInfo._fullyQualifiedName );
-
-        CodeEmitBuffer flagsBuf;
-        {
-            CodeEmit fe( flagsBuf );
-            fe.push( 3 );
-            fe.flagIf( typeInfo._bAbstract, "info._bAbstract" );
-            fe.flagIf( typeInfo._bStatic, "info._bStatic" );
-            // 리플렉션 인터페이스는 상태 없는 계약이다 — 칸이 붙으면(크기가 vptr 하나를 넘으면) 컴파일이 멈춘다(파서의 데이터 멤버 검사가 놓친 기반 · 정렬까지).
-            if ( typeInfo._bInterface == SW_TRUE )
-            {
-                fe.line( "info._bInterface = SW_TRUE;" );
-                fe.linef( "static_assert( std::is_abstract_v<%#> && std::is_polymorphic_v<%#> && sizeof( %# ) == sizeof( void* ), "
-                          "\"REFLECT( Interface ) %# holds state - an interface is pure virtual functions only; move the state to the implementing component\" );",
-                          typeInfo._fullyQualifiedName, typeInfo._fullyQualifiedName, typeInfo._fullyQualifiedName, typeInfo._name );
-            }
-            // 내보낸 인터페이스 한 줄 = 표 한 칸(이름, 포트 오프셋). 포트가 그 인터페이스를 잇는지는 컴파일러가 본다 — 오프셋으로 되돌리는 캐스트의 전제다.
-            for ( const ParsedInterfaceExport& entry : typeInfo._listInterfaceExport )
-            {
-                fe.linef( "static_assert( std::is_base_of_v<::%#, decltype( ::%#::%# )>, \"port %# must derive from %#\" );", entry._interfaceFQN, typeInfo._fullyQualifiedName,
-                          entry._portMember, entry._portMember, entry._interfaceSpelling );
-                fe.linef( "(void)info._ownInterfaces.add( ::sw::hashed_string( \"%#\" ), static_cast<::uint32>( offsetof( %#, %# ) ) );", entry._interfaceFQN,
-                          typeInfo._fullyQualifiedName, entry._portMember );
-            }
-            // 컴포넌트 생성 함수는 타입 줄의 칸이다(언리얼 `UClass` 의 생성자 칸과 같은 자리). 이름으로 만드는 길은 이 칸만 본다.
-            if ( typeInfo.requiresComponentFactory() )
-                fe.linef( "info._addComponent = &::sw::GameObject::addComponentForReflection<%#>;", typeInfo._fullyQualifiedName );
-            if ( typeInfo._validate.empty() == false )
-            {
-                fe.linef( "info._pValidate = []( const void* pInstance, ::sw::ValidationContext& context ) { static_cast<%#*>( const_cast<void*>( pInstance ) )->%#( context ); };",
-                          typeInfo._fullyQualifiedName, typeInfo._validate );
-            }
-        }
-
-        string keyDeclaration;
-        // 부모는 리플렉션된 형식일 때만 적는다 — 리플렉션 밖 기반(`Subsystem` 같은 Core 인터페이스)은 등록부 사슬에 없어 끊긴 고리가 된다(언리얼 UCLASS 사슬도 UObject 계열 기반만 잇는다).
-        const string parentFQN    = typeInfo._bParentReflected == SW_TRUE ? typeInfo._parentFQN : string{};
-        const string registrarKey = makeRegistrarKey( typeInfo._bHidden == SW_TRUE, registrarName, typeInfo._fullyQualifiedName, keyDeclaration );
+        string                  keyDeclaration;
+        const string            registrarKey = makeRegistrarKey( typeInfo._bHidden == SW_TRUE, registrarName, typeInfo._fullyQualifiedName, keyDeclaration );
         outBuffer.append( keyDeclaration );
         appendTemplate( outBuffer, EmitTemplate::TypeRegistrarBegin, {
-                                                                         {        templatekey::kID,                registrarName},
-                                                                         {       templatekey::kFqn, typeInfo._fullyQualifiedName},
-                                                                         {       templatekey::kKey,                 registrarKey},
-                                                                         {      templatekey::kName,               typeInfo._name},
-                                                                         { templatekey::kParentFqn,                    parentFQN},
-                                                                         {templatekey::kModuleName,                  _moduleName},
-                                                                         {     templatekey::kFlags,    string( flagsBuf.view() )},
+                                                                         {templatekey::kFqn, typeInfo._fullyQualifiedName},
+                                                                         {templatekey::kKey,                 registrarKey},
         } );
 
         CodeEmit emit( outBuffer );
         emit.push( 3 );
 
-        AnnotationFields::emitRuntimeMetadata( emit, typeInfo, "info._metadata.edit()." );
-        for ( const string& removedField : typeInfo._listRemovedField )
+        // 서술자에 이을 조각이다 — 적은 것만 잇는다(`TypeDesc::withX`). 부모는 리플렉션된 형식일 때만 적는다 — 리플렉션 밖 기반(`Subsystem` 같은 Core 인터페이스)은
+        // 등록부 사슬에 없어 끊긴 고리가 된다(언리얼 UCLASS 사슬도 UObject 계열 기반만 잇는다).
+        vector<string> listPart;
         {
-            emit.linef( "info._listRemovedField.push_back( ::sw::hashed_string( \"%#\" ) );", CodeEmit::escapeCppString( removedField ) );
+            StringBuilder<constant::buffer::kMax512> head;
+            head.appendFormat( "makeTypeDesc<Self>( %#, %#, %#, %# )", CodeEmit::quoted( typeInfo._name ), CodeEmit::quoted( typeInfo._fullyQualifiedName ),
+                               CodeEmit::quoted( typeInfo._bParentReflected == SW_TRUE ? typeInfo._parentFQN : string{} ), CodeEmit::quoted( _moduleName ) );
+            listPart.push_back( string( head.view() ) );
         }
-        // 틱 · 상태 함수의 특성 비트는 컴파일러가 아는 사실이라 트레이트를 대입한다(엔진이 주 틱을 켜는 판정 `HasOnTickOverride_v` 와 같은 답).
-        if ( typeInfo._bComponent == SW_TRUE )
+        vector<string> listFlag;
+        if ( typeInfo._bAbstract )
+            listFlag.emplace_back( "Abstract" );
+        if ( typeInfo._bStatic )
+            listFlag.emplace_back( "Static" );
+        if ( typeInfo._bInterface == SW_TRUE )
         {
-            emit.linef( "info._metadata.edit()._bOverridesTick = ::sw::HasOnTickOverride_v<%#> ? SW_TRUE : SW_FALSE;", typeInfo._fullyQualifiedName );
-            emit.linef( "info._metadata.edit()._bOverridesSubTick = ::sw::HasOnSubTickOverride_v<%#> ? SW_TRUE : SW_FALSE;", typeInfo._fullyQualifiedName );
+            listFlag.emplace_back( "Interface" );
+            // 리플렉션 인터페이스는 상태 없는 계약이다 — 칸이 붙으면(크기가 vptr 하나를 넘으면) 컴파일이 멈춘다(파서의 데이터 멤버 검사가 놓친 기반 · 정렬까지).
+            emit.linef( "static_assert( std::is_abstract_v<Self> && std::is_polymorphic_v<Self> && sizeof( Self ) == sizeof( void* ), "
+                        "\"REFLECT( Interface ) %# holds state - an interface is pure virtual functions only; move the state to the implementing component\" );",
+                        typeInfo._name );
         }
-        emit.linef( "info._metadata.edit()._bOverridesSerializeState = ::sw::generated::HasSerializeState<%#>::value ? SW_TRUE : SW_FALSE;", typeInfo._fullyQualifiedName );
+        if ( listFlag.empty() == false )
+            listPart.push_back( CodeGeneratorInternal::makeCall( "withFlags", CodeGeneratorInternal::makeFlagExpr( listFlag, "TypeDescFlag" ) ) );
         // 타입의 저장 판(`REFLECT( Version = … )`) — 상수 이름이면 그 이름을 그대로 쓴다(값은 컴파일러가 푼다)
-        if ( typeInfo._versionName.empty() == false )
-            emit.linef( "info._metadata.edit()._version = static_cast<::uint32>( %# );", typeInfo._versionName );
-        else if ( typeInfo._version != 0 )
-            emit.linef( "info._metadata.edit()._version = %#u;", typeInfo._version );
-
-        if ( typeInfo._listProperty.empty() == false )
+        if ( typeInfo._versionName.empty() == false || typeInfo._version != 0 )
         {
-            // 프로퍼티는 상수 초기화되는 서술자 표 하나다(언리얼 UHT `PropPointers`). 등록은 표를 한 번 돌아 목록을 짓는다(`TypeInfo::setPropertyTable`).
-            for ( size_t propIndex = 0; propIndex < typeInfo._listProperty.size(); ++propIndex )
+            StringBuilder<constant::buffer::kMax256> version;
+            if ( typeInfo._versionName.empty() == false )
+                version.appendFormat( "static_cast<::uint32>( %# )", typeInfo._versionName );
+            else
+                version.appendFormat( "%#u", typeInfo._version );
+            listPart.push_back( CodeGeneratorInternal::makeCall( "withVersion", version.view() ) );
+        }
+        // 내보낸 인터페이스 한 줄 = 표 한 칸(이름, 포트 오프셋). 포트가 그 인터페이스를 잇는지는 컴파일러가 본다 — 오프셋으로 되돌리는 캐스트의 전제다.
+        if ( typeInfo._listInterfaceExport.empty() == false )
+        {
+            for ( const ParsedInterfaceExport& entry : typeInfo._listInterfaceExport )
             {
-                emitPropertyStatics( emit, typeInfo, typeInfo._listProperty[propIndex], static_cast<uint32>( propIndex ) );
+                emit.linef( "static_assert( std::is_base_of_v<::%#, decltype( Self::%# )>, \"port %# must derive from %#\" );", entry._interfaceFQN, entry._portMember,
+                            entry._portMember, entry._interfaceSpelling );
             }
-            emit.line( "static constexpr ::sw::PropertyDesc kProperties[] =" );
+            emit.line( "static constexpr TypeInterfaceDesc kInterfaces[] =" );
             emit.line( "{" );
             emit.push();
-            for ( size_t propIndex = 0; propIndex < typeInfo._listProperty.size(); ++propIndex )
+            for ( const ParsedInterfaceExport& entry : typeInfo._listInterfaceExport )
             {
-                emitPropertyDesc( emit, typeInfo, typeInfo._listProperty[propIndex], static_cast<uint32>( propIndex ) );
+                emit.linef( "{ %#, static_cast<::uint32>( offsetof( Self, %# ) ) },", CodeEmit::quoted( entry._interfaceFQN ), entry._portMember );
             }
             emit.pop();
             emit.line( "};" );
-            emit.line( "info.setPropertyTable( kProperties, ::std::size( kProperties ) );" );
+            listPart.push_back( CodeGeneratorInternal::makeCall( "withInterfaces", "kInterfaces" ) );
         }
-
-        if ( typeInfo._listEvent.empty() == false )
-            emitEventList( emit, typeInfo );
-
-        if ( typeInfo._listMethod.empty() == false )
-            emitMethodList( emit, typeInfo );
-
+        // 컴포넌트 생성 함수는 타입 줄의 칸이다(언리얼 `UClass` 의 생성자 칸과 같은 자리). 이름으로 만드는 길은 이 칸만 본다.
+        // 람다로 감싼다 — 내보낸 클래스(`GameObject`)의 함수 주소를 상수 식에 바로 쓰면 가져오는 DLL 에서 상수가 아닐 수 있다.
+        if ( typeInfo.requiresComponentFactory() )
+            listPart.push_back( CodeGeneratorInternal::makeCall( "withAddComponent",
+                                                                 "[]( void* pOwner ) -> void* { return ::sw::GameObject::addComponentForReflection<Self>( pOwner ); }" ) );
+        if ( typeInfo._validate.empty() == false )
         {
-            const CodeEmitByteScope byteScope{ _emitBytes, outBuffer, CodeEmitSection::FixedCodec };
+            emit.linef( "static constexpr ::sw::ReflectValidateFunction kValidate = %#;", CodeGeneratorInternal::makeValidateLambda( typeInfo._validate ) );
+            listPart.push_back( CodeGeneratorInternal::makeCall( "withValidate", "kValidate" ) );
+        }
+        const auto addTextTable = [&emit, &listPart]( const utf8* pTableName, const utf8* pWith, const vector<string>& listText )
+        {
+            if ( listText.empty() )
+                return;
+            CodeGeneratorInternal::emitTextTable( emit, pTableName, listText );
+            listPart.push_back( CodeGeneratorInternal::makeCall( pWith, pTableName ) );
+        };
+        addTextTable( "kRemovedFieldNames", "withRemovedFieldNames", typeInfo._listRemovedField );
+        addTextTable( "kTypeAliases", "withAliases", CodeGeneratorInternal::makeAliasList( typeInfo._listAlias, typeInfo._fullyQualifiedName ) );
+        addTextTable( "kRetiredTypeNames", "withRetiredTypeNames", typeInfo._listRemovedType );
+
+        if ( typeInfo._listProperty.empty() == false )
+        {
+            emitPropertyTable( emit, typeInfo );
+            listPart.push_back( CodeGeneratorInternal::makeCall( "withProperties", "kProperties" ) );
+        }
+        if ( typeInfo._listEvent.empty() == false )
+        {
+            emitEventList( emit, typeInfo );
+            listPart.push_back( CodeGeneratorInternal::makeCall( "withEvents", "kEvents" ) );
+        }
+        if ( typeInfo._listMethod.empty() == false )
+        {
+            emitMethodList( emit, typeInfo );
+            listPart.push_back( CodeGeneratorInternal::makeCall( "withMethods", "kMethods" ) );
+        }
+        {
+            const CodeEmitByteScope codecScope{ _emitBytes, outBuffer, CodeEmitSection::FixedCodec };
             _fixedCodec.emitRegistration( emit, typeIndex );
+            listPart.push_back( CodeGeneratorInternal::makeCall( "withFixedCodec", "&s_fixedCodec" ) );
         }
 
-        StringBuilder<constant::buffer::kMax1024> aliasRegs;
-        aliasRegs.append( CodeGeneratorInternal::emitAliasRegisterLines( typeInfo._listAlias, typeInfo._fullyQualifiedName, false ) );
-        aliasRegs.append( CodeGeneratorInternal::emitRetiredTypeLines( typeInfo._listRemovedType ) );
+        emit.line( "static constexpr TypeDesc kType =" );
+        emit.push();
+        for ( size_t partIndex = 0; partIndex < listPart.size(); ++partIndex )
+        {
+            emit.linef( "%#%#", listPart[partIndex], partIndex + 1 == listPart.size() ? ";" : "" );
+        }
+        emit.pop();
         appendTemplate( outBuffer, EmitTemplate::TypeRegistrarEnd,
                         {
-                            {       templatekey::kID,                registrarName},
-                            {      templatekey::kFqn, typeInfo._fullyQualifiedName},
-                            {      templatekey::kKey,                 registrarKey},
-                            {templatekey::kAliasRegs,             aliasRegs.view()},
+                            { templatekey::kID, registrarName},
+                            {templatekey::kKey,  registrarKey},
         } );
     }
 
@@ -1035,7 +1048,7 @@ namespace sw
         // 인덱스 목록도 그 값으로 지으므로 libclang 의 값과 대조하는 `static_assert` 가 필요 없다.
         CodeEmitBuffer tableBuffer;
         CodeEmit       tableEmit( tableBuffer );
-        tableEmit.push( 2 );
+        tableEmit.push( 3 );
         const auto emitTable = [&tableEmit]( const utf8* pTableName, const auto& emitRows )
         {
             tableEmit.linef( "static constexpr ::sw::NamedValue<int64> %#[] = {", pTableName );
@@ -1072,36 +1085,31 @@ namespace sw
             } );
         }
 
+        StringBuilder<constant::buffer::kMax64> aliases;
+        const vector<string>                    listAlias = CodeGeneratorInternal::makeAliasList( enumInfo._listAlias, enumInfo._fullyQualifiedName );
+        if ( listAlias.empty() == false )
+        {
+            CodeGeneratorInternal::emitTextTable( tableEmit, "kEnumAliases", listAlias );
+            aliases.appendFormat( ", kEnumAliases, %#u", static_cast<uint32>( listAlias.size() ) );
+        }
+
+        // 열거형의 커스텀 메타는 에디터 메타데이터다 — 개발 전용 단위가 낸다(`makeEditorMetadataText`).
         string       keyDeclaration;
         const string registrarKey = makeRegistrarKey( enumInfo._bHidden == SW_TRUE, registrarName, enumInfo._fullyQualifiedName, keyDeclaration );
         outBuffer.append( keyDeclaration );
-        appendTemplate( outBuffer, EmitTemplate::EnumRegistrarBegin, {
-                                                                         {           templatekey::kID,                                                                     registrarName},
-                                                                         {          templatekey::kFqn,                                                      enumInfo._fullyQualifiedName},
-                                                                         {          templatekey::kKey,                                                                      registrarKey},
-                                                                         {         templatekey::kName,                                                                    enumInfo._name},
-                                                                         {   templatekey::kModuleName,                                                                       _moduleName},
-                                                                         {    templatekey::kIsBitFlag,                                           enumInfo._bIsBitFlag ? "true" : "false"},
-                                                                         {  templatekey::kInvalidName, invalidEn != nullptr ? CodeEmit::quoted( invalidEn->_name ) : string( "nullptr" )},
-                                                                         {    templatekey::kCountName,     countEn != nullptr ? CodeEmit::quoted( countEn->_name ) : string( "nullptr" )},
-                                                                         {   templatekey::kEntryTable,                             enumInfo._listEnumerator.empty() ? "{}" : "kArrEntry"},
-                                                                         {templatekey::kRedirectTable,                                              bHasRedirect ? "kArrRedirect" : "{}"},
-        } );
-
-        CodeEmit emit( outBuffer );
-        emit.push( 3 );
-
-        // 열거형의 커스텀 메타는 에디터 메타데이터다 — 개발 전용 단위가 낸다(`makeEditorMetadataText`).
-        AnnotationFields::emitRuntimeMetadata( emit, enumInfo, "info." );
-
-        appendTemplate( outBuffer, EmitTemplate::EnumRegistrarEnd,
-                        {
-                            { templatekey::kID, registrarName },
-                            { templatekey::kFqn, enumInfo._fullyQualifiedName },
-                            { templatekey::kKey, registrarKey },
-                            { templatekey::kAliasRegs,
-                             CodeGeneratorInternal::emitAliasRegisterLines( enumInfo._listAlias, enumInfo._fullyQualifiedName, true ) },
-                            { templatekey::kTables, tableBuffer.view() },
+        appendTemplate( outBuffer, EmitTemplate::EnumRegistrar, {
+                                                                    {           templatekey::kID,                                                                     registrarName},
+                                                                    {          templatekey::kFqn,                                                      enumInfo._fullyQualifiedName},
+                                                                    {          templatekey::kKey,                                                                      registrarKey},
+                                                                    {         templatekey::kName,                                                                    enumInfo._name},
+                                                                    {   templatekey::kModuleName,                                                                       _moduleName},
+                                                                    {    templatekey::kIsBitFlag,                                           enumInfo._bIsBitFlag ? "true" : "false"},
+                                                                    {  templatekey::kInvalidName, invalidEn != nullptr ? CodeEmit::quoted( invalidEn->_name ) : string( "nullptr" )},
+                                                                    {    templatekey::kCountName,     countEn != nullptr ? CodeEmit::quoted( countEn->_name ) : string( "nullptr" )},
+                                                                    {   templatekey::kEntryTable,                             enumInfo._listEnumerator.empty() ? "{}" : "kArrEntry"},
+                                                                    {templatekey::kRedirectTable,                                              bHasRedirect ? "kArrRedirect" : "{}"},
+                                                                    {      templatekey::kAliases,                                                                    aliases.view()},
+                                                                    {       templatekey::kTables,                                                                tableBuffer.view()},
         } );
     }
 
@@ -1145,38 +1153,22 @@ namespace sw
         bool     bAny = false;
         for ( const ParsedTypeInfo& typeInfo : _header._listType )
         {
-            bAny = emitTypeEditorMetadata( emit, typeInfo ) || bAny;
+            vector<string> listRow;
+            collectTypeEditorRows( typeInfo, listRow );
+            bAny = emitEditorRowTable( emit, typeInfo._fullyQualifiedName, "Type", listRow ) || bAny;
         }
         for ( const ParsedEnumInfo& enumInfo : _header._listEnum )
         {
-            const auto hasEnumeratorMetadata = []( const ParsedEnumeratorInfo& enumerator )
-            { return AnnotationFields::hasEditorMetadata( enumerator ); };
-            const bool bAnyEnumeratorMetadata = VectorUtil::containsIf( enumInfo._listEnumerator, hasEnumeratorMetadata );
-            if ( AnnotationFields::hasEditorMetadata( enumInfo ) == false && bAnyEnumeratorMetadata == false )
-                continue;
-            const string id = sanitizeIdentifier( enumInfo._fullyQualifiedName );
-            emit.linef( "static void fillEnum_%#( ::sw::EnumEditorMetadata& meta )", id );
-            emit.line( "{" );
-            emit.push();
-            AnnotationFields::emitEditorMetadata( emit, enumInfo, "meta." );
+            vector<string>   listRow;
+            AnnotationOutput enumOutput = AnnotationOutput::collectEditor( enumInfo );
+            CodeGeneratorInternal::appendEditorRows( listRow, "Enum", "nullptr", enumOutput );
             // 열거자마다의 표시 메타(`ENUMERATOR( … )`)는 열거자 이름으로 단다 — 적은 열거자만.
             for ( const ParsedEnumeratorInfo& enumerator : enumInfo._listEnumerator )
             {
-                if ( hasEnumeratorMetadata( enumerator ) == false )
-                    continue;
-                emit.line( "{" );
-                emit.push();
-                emit.linef( "::sw::EnumeratorEditorMetadata& entry = meta.addEnumerator( %# );", CodeEmit::hs( enumerator._name ) );
-                AnnotationFields::emitEditorMetadata( emit, enumerator, "entry." );
-                emit.pop();
-                emit.line( "}" );
+                AnnotationOutput output = AnnotationOutput::collectEditor( enumerator );
+                CodeGeneratorInternal::appendEditorRows( listRow, "Enumerator", CodeEmit::quoted( enumerator._name ), output );
             }
-            emit.pop();
-            emit.line( "}" );
-            emit.linef( "static const ::sw::EnumEditorMetadataSource    s_%#_editorMetadata{ %#, &fillEnum_%# };", id, CodeEmit::quoted( enumInfo._fullyQualifiedName ), id );
-            emit.linef( "static const ::sw::EnumEditorMetadataRegistrar s_%#_editorMetadataRegistrar{ &s_%#_editorMetadata };", id, id );
-            emit.blank();
-            bAny = true;
+            bAny = emitEditorRowTable( emit, enumInfo._fullyQualifiedName, "Enum", listRow ) || bAny;
         }
         if ( bAny == false )
             emit.linef( "// No editor metadata in %#", _sourceFilePath );
@@ -1184,57 +1176,62 @@ namespace sw
         return string( buffer.view() );
     }
 
-    bool CodeGenerator::emitTypeEditorMetadata( CodeEmit& emit, const ParsedTypeInfo& typeInfo ) const
+    void CodeGenerator::collectTypeEditorRows( const ParsedTypeInfo& typeInfo, vector<string>& outListRow ) const
     {
-        bool bAny = AnnotationFields::hasEditorMetadata( typeInfo );
+        AnnotationOutput typeOutput = AnnotationOutput::collectEditor( typeInfo );
+        CodeGeneratorInternal::appendEditorRows( outListRow, "Type", "nullptr", typeOutput );
+
+        // 이름은 등록 단위와 같다 — 프로퍼티 · 이벤트는 이름, 메서드는 찾는 이름(`FunctionInfo::_hashName`, 생성자는 `makeCtorLookupName`).
+        const auto appendProperty = [&outListRow]( const ParsedPropertyInfo& prop, const utf8* pTarget )
+        {
+            AnnotationOutput output = AnnotationOutput::collectEditor( prop );
+            const string     name   = CodeEmit::quoted( prop._name );
+            CodeGeneratorInternal::appendEditorRows( outListRow, pTarget, name, output );
+            const auto appendNumber = [&outListRow, &name, pTarget]( const utf8* pField, const float32 value )
+            {
+                StringBuilder<constant::buffer::kMax256> row;
+                row.appendFormat( "{ Target::%#, Field::%#, %#, nullptr, nullptr, %# },", pTarget, pField, name, CodeGeneratorInternal::formatRangeLiteral( value ) );
+                outListRow.push_back( string( row.view() ) );
+            };
+            if ( prop._bHasUIMinRange != SW_FALSE )
+                appendNumber( "UIMinRange", prop._uiMinRange );
+            if ( prop._bHasUIMaxRange != SW_FALSE )
+                appendNumber( "UIMaxRange", prop._uiMaxRange );
+        };
         for ( const ParsedPropertyInfo& prop : typeInfo._listProperty )
         {
-            bAny = bAny || CodeGeneratorInternal::hasPropertyEditorMetadata( prop );
+            appendProperty( prop, "Property" );
         }
         for ( const ParsedEventInfo& event : typeInfo._listEvent )
         {
-            bAny = bAny || AnnotationFields::hasEditorMetadata( event._annotation );
+            appendProperty( event._annotation, "Event" );
         }
         for ( const ParsedFunctionInfo& method : typeInfo._listMethod )
         {
-            bAny = bAny || AnnotationFields::hasEditorMetadata( method );
+            AnnotationOutput output     = AnnotationOutput::collectEditor( method );
+            const string     lookupName = ( method._bConstructor != SW_FALSE ) ? CodeGeneratorInternal::makeCtorLookupName( method, _session ) : method._name;
+            CodeGeneratorInternal::appendEditorRows( outListRow, "Function", CodeEmit::quoted( lookupName ), output );
         }
-        if ( bAny == false )
-            return false;
+    }
 
-        // 열쇠는 등록 단위와 같다 — 프로퍼티 · 이벤트는 이름, 메서드는 찾는 이름(`FunctionInfo::_hashName`, 생성자는 `makeCtorLookupName`).
-        const string id = sanitizeIdentifier( typeInfo._fullyQualifiedName );
-        emit.linef( "// ── %# ──────────────────────────────", typeInfo._fullyQualifiedName );
-        emit.linef( "static void fillType_%#( ::sw::TypeEditorMetadataSet& set )", id );
+    bool CodeGenerator::emitEditorRowTable( CodeEmit& emit, const string& fqn, const utf8* pKind, const vector<string>& listRow )
+    {
+        if ( listRow.empty() )
+            return false;
+        const string id = sanitizeIdentifier( fqn );
+        emit.linef( "// ── %#", fqn );
+        emit.linef( "static constexpr ::sw::EditorMetadataRow kRows_%#[] =", id );
         emit.line( "{" );
         emit.push();
-        AnnotationFields::emitEditorMetadata( emit, typeInfo, "set._type." );
-        for ( const ParsedPropertyInfo& prop : typeInfo._listProperty )
+        for ( const string& row : listRow )
         {
-            if ( CodeGeneratorInternal::hasPropertyEditorMetadata( prop ) )
-                emitPropertyEditorMetadata( emit, prop, "addProperty" );
-        }
-        for ( const ParsedEventInfo& event : typeInfo._listEvent )
-        {
-            if ( AnnotationFields::hasEditorMetadata( event._annotation ) )
-                emitPropertyEditorMetadata( emit, event._annotation, "addEvent" );
-        }
-        for ( const ParsedFunctionInfo& method : typeInfo._listMethod )
-        {
-            if ( AnnotationFields::hasEditorMetadata( method ) == false )
-                continue;
-            const string lookupName = ( method._bConstructor != SW_FALSE ) ? CodeGeneratorInternal::makeCtorLookupName( method, _session ) : method._name;
-            emit.line( "{" );
-            emit.push();
-            emit.linef( "::sw::FunctionEditorMetadata& f = set.addFunction( %# );", CodeEmit::hs( lookupName ) );
-            AnnotationFields::emitEditorMetadata( emit, method, "f." );
-            emit.pop();
-            emit.line( "}" );
+            emit.line( row );
         }
         emit.pop();
-        emit.line( "}" );
-        emit.linef( "static const ::sw::TypeEditorMetadataSource    s_%#_editorMetadata{ %#, &fillType_%# };", id, CodeEmit::quoted( typeInfo._fullyQualifiedName ), id );
-        emit.linef( "static const ::sw::TypeEditorMetadataRegistrar s_%#_editorMetadataRegistrar{ &s_%#_editorMetadata };", id, id );
+        emit.line( "};" );
+        emit.linef( "static const ::sw::%#EditorMetadataSource    s_%#_editorMetadata{ %#, kRows_%#, %#u };", pKind, id, CodeEmit::quoted( fqn ), id,
+                    static_cast<uint32>( listRow.size() ) );
+        emit.linef( "static const ::sw::%#EditorMetadataRegistrar s_%#_editorMetadataRegistrar{ &s_%#_editorMetadata };", pKind, id, id );
         emit.blank();
         return true;
     }

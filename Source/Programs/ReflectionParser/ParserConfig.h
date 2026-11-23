@@ -26,9 +26,6 @@ namespace sw
         string         _flagFmsCompatibility;
         string         _flagFmsExtensions;
         string         _flagFmsCompatVersionPrefix;
-        /** @brief PROPERTY() 에 값으로 담으면 안 되는 기반 타입. 비면 static_assert 를 내보내지 않습니다. */
-        vector<string> _listValueForbiddenBaseType;
-        string         _valueForbiddenMessage;
         vector<string> _listComponentBaseType;
         vector<string> _listTypeStripPrefix;
         /** @brief 이름 · 경로 칸의 타입(소스에 적은 글에서 const · mutable · std:: · sw:: 를 뗀 것)입니다. 이 칸의 C++ 문자열 기본값은 Required 이거나 DefaultName 이어야 한다. */

@@ -1,11 +1,10 @@
-// EXPECT-GEN: _maxRange
+// EXPECT-GEN: PropertyMetadataDesc kMeta0{ PropertyMetadataFlag::kHasMinRange | PropertyMetadataFlag::kHasMaxRange, 0.0f, 100.0f }
 // EXPECT-NOT-GEN: SW_SHIPPING
-// EXPECT-NOT-GEN: _tooltip
-// EXPECT-NOT-GEN: _uiMaxRange
-// EXPECT-META: ::sw::ReflectionMetadataText::assign( set._type._tooltip, "Split fixture" )
-// EXPECT-META: set.addProperty( ::sw::hashed_string( "_health" ) )
-// EXPECT-META: ::sw::ReflectionMetadataText::assign( p._tooltip, "Hit points" )
-// EXPECT-META: p._uiMaxRange
+// EXPECT-NOT-GEN: Tooltip
+// EXPECT-NOT-GEN: UIMaxRange
+// EXPECT-META: { Target::Type, Field::Tooltip, nullptr, "Split fixture" }
+// EXPECT-META: { Target::Property, Field::Tooltip, "_health", "Hit points" }
+// EXPECT-META: { Target::Property, Field::UIMaxRange, "_health", nullptr, nullptr, 50.0f }
 // EXPECT-META: TypeEditorMetadataRegistrar
 // EXPECT-TYPE: sw::fixture::EditorMetadataSplitRecord
 #pragma once

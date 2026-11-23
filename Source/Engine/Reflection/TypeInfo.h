@@ -299,6 +299,7 @@ namespace sw
         uint8         _bIsCacheBuilt{ SW_FALSE }; ///< 자기 이름 맵(`_mapNameToProperty` · `_mapNameToMethod`)을 지었다. 아니면 이름 조회는 선형으로 찾는다
     };
 
+    struct TypeDesc;
     struct TypeInfo;
 
     /**
@@ -389,7 +390,9 @@ namespace sw
 
         /** @brief 비어 있는 TypeInfo 를 만듭니다. */
         TypeInfo() noexcept;
-        /// @brief 몸은 TypeInfo.cpp 에 둔다 — 인라인이면 생성 코드의 `RegisterType` 마다(지역 `info`) 벡터 · 맵 · 메타데이터 상자의 소멸 사슬이 펼쳐져 Release 최적화 시간을 키운다(언리얼 `UClass` 소멸자도 밖에 있다).
+        /** @brief 생성 코드의 서술자(`TypeDesc`)로 짓습니다. 프로퍼티 · 메서드 · 이벤트 목록의 할당은 각각 한 번이다. 호출 함수가 없는 메서드 줄(기본 생성할 수 없는 타입의 파서 생성자)은 뺀다. */
+        explicit TypeInfo( const TypeDesc& desc );
+        /// @brief 몸은 TypeInfo.cpp 에 둔다 — 인라인이면 쓰는 단위마다 벡터 · 맵 · 메타데이터 상자의 소멸 사슬이 펼쳐진다(언리얼 `UClass` 소멸자도 밖에 있다).
         ~TypeInfo();
         TypeInfo( const TypeInfo& other );
         TypeInfo( TypeInfo&& other ) noexcept;
@@ -398,13 +401,6 @@ namespace sw
 
         /** @brief 커스텀 메타데이터 태그를 조회합니다. */
         const string* findCustomMeta( const hashed_string& key ) const noexcept;
-
-        /** @brief 생성 코드의 서술자 표(`PropertyDesc`) @p count 줄로 선언 프로퍼티 목록을 짓습니다. 목록 할당은 한 번입니다. */
-        void setPropertyTable( const PropertyDesc* pDesc, size_t count );
-        /** @brief 생성 코드의 메서드 서술자 표 @p count 줄로 메서드 목록을 짓습니다. 호출 함수가 없는 줄(기본 생성할 수 없는 타입의 파서 생성자)은 뺀다. */
-        void setMethodTable( const FunctionDesc* pDesc, size_t count );
-        /** @brief 생성 코드의 이벤트 서술자 표 @p count 줄로 이벤트 목록을 짓습니다. */
-        void setEventTable( const EventDesc* pDesc, size_t count );
 
         /** @brief 카테고리를 반환합니다. */
         string_view getCategory() const noexcept;

@@ -1,8 +1,8 @@
 // BATCH-WITH: Batch/BatchOtherHeader.h
 // EXPECT-GEN: struct Registrar<sw::fixture::BatchLongRecord>
-// EXPECT-GEN: _parentFQN          = ::sw::hashed_string( "sw::fixture::BatchOtherBase" )
+// EXPECT-GEN: makeTypeDesc<Self>( "BatchLongRecord", "sw::fixture::BatchLongRecord", "sw::fixture::BatchOtherBase", "ParserFixture" )
 // EXPECT-GEN: "_flags"
-// EXPECT-GEN: "sw::fixture::BatchLongFlags", "ParserFixture", kArrEntry, {}, nullptr, nullptr, true }
+// EXPECT-GEN: "sw::fixture::BatchLongFlags", "ParserFixture", kArrEntry, {}, nullptr, nullptr, true, sizeof( E )
 // EXPECT-META: TooltipEnd
 // EXPECT-META: \"인용\"
 // EXPECT-META: 512 바이트보다 멀게

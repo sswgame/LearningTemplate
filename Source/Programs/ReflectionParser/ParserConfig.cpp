@@ -175,12 +175,6 @@ namespace sw
                 } );
             }
 
-            static void applyEmitSection( ParserConfig& config, const nlohmann::json& obj )
-            {
-                assignIfPresent( config._valueForbiddenMessage, obj, jsonkey::kEmitValueForbiddenMessage );
-                assignArrayIfPresent( config._listValueForbiddenBaseType, obj, jsonkey::kEmitValueForbiddenBases );
-            }
-
             static void applyParsingSection( ParserConfig& config, const nlohmann::json& obj )
             {
                 assignArrayIfPresent( config._listComponentBaseType, obj, jsonkey::kParsingComponentBaseTypes );
@@ -267,7 +261,6 @@ namespace sw
                     {      &config._flagFmsCompatibility,         "clang_flags.fms_compatibility"},
                     {         &config._flagFmsExtensions,            "clang_flags.fms_extensions"},
                     {&config._flagFmsCompatVersionPrefix, "clang_flags.fms_compat_version_prefix"},
-                    {     &config._valueForbiddenMessage,          "emit.value_forbidden_message"},
                 };
                 bool bComplete = true;
                 for ( const auto& [pValue, pKey] : arrRequiredText )
@@ -387,8 +380,6 @@ namespace sw
         , _flagFmsCompatibility{}
         , _flagFmsExtensions{}
         , _flagFmsCompatVersionPrefix{}
-        , _listValueForbiddenBaseType{}
-        , _valueForbiddenMessage{}
         , _listComponentBaseType{}
         , _listTypeStripPrefix{}
         , _listNameFieldSkipFolder{}
@@ -437,11 +428,10 @@ namespace sw
             _listBaseArg = std::move( listMerged );
         }
 
-        BLOCK( "Load paths / clang_flags / emit / parsing / tuning" )
+        BLOCK( "Load paths / clang_flags / parsing / tuning" )
         {
             ParserConfigInternal::mergeConfigSection( *this, defaultsDoc, localDoc, jsonkey::kPaths, ParserConfigInternal::applyPathsSection );
             ParserConfigInternal::mergeConfigSection( *this, defaultsDoc, localDoc, jsonkey::kClangFlags, ParserConfigInternal::applyClangFlagsSection );
-            ParserConfigInternal::mergeConfigSection( *this, defaultsDoc, localDoc, jsonkey::kEmit, ParserConfigInternal::applyEmitSection );
             ParserConfigInternal::mergeConfigSection( *this, defaultsDoc, localDoc, jsonkey::kParsing, ParserConfigInternal::applyParsingSection );
             ParserConfigInternal::mergeConfigSection( *this, defaultsDoc, localDoc, jsonkey::kTuning, ParserConfigInternal::applyTuningSection );
             if ( ParserConfigInternal::hasRequiredValues( *this, defaultsPath ) == false )

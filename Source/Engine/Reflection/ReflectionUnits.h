@@ -79,6 +79,10 @@ namespace sw
         static const ReflectUnit* findUnit( ReflectUnitKind kind ) noexcept;
         /** @brief 철자의 종류입니다(없으면 None). 생성 코드가 상수 문맥에서 불러 철자 오타를 컴파일 오류로 만든다. */
         static constexpr ReflectUnitKind getKindOf( string_view name ) noexcept;
+        /** @brief 철자의 종류입니다. 상수 문맥에서만 부른다 — 표에 없는 철자는 상수 식이 아니라 컴파일이 멈춘다(생성 코드의 메타데이터 표). */
+        static constexpr ReflectUnitKind getRequiredKindOf( string_view name ) noexcept;
+        /** @brief `getRequiredKindOf` 가 모르는 철자에서 부르는 **상수가 아닌** 함수입니다 — 컴파일 오류에 이 이름이 보인다. */
+        static void failUnknownUnitInConstant() noexcept {}
 
         /** @brief 받는 철자를 `a, b, c` 꼴 한 줄로 씁니다(오류 메시지용). */
         static string makeUnitList();
@@ -147,6 +151,14 @@ namespace sw
                 return unit._kind;
         }
         return ReflectUnitKind::None;
+    }
+
+    constexpr ReflectUnitKind ReflectUnit::getRequiredKindOf( const string_view name ) noexcept
+    {
+        const ReflectUnitKind kind = getKindOf( name );
+        if ( kind == ReflectUnitKind::None )
+            failUnknownUnitInConstant();
+        return kind;
     }
 
     inline const ReflectUnit* ReflectUnit::findUnit( const ReflectUnitKind kind ) noexcept

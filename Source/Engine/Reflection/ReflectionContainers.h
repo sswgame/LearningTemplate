@@ -619,7 +619,7 @@ namespace sw
     using UnorderedMapWrapper = MapWrapper<TContainer>;
 
     /**
-     * @brief 래퍼 타입마다 하나인 정적 `const` 객체입니다. 생성 코드의 서술자 표(`PropertyDesc::_pContainerWrapper`)가 이 주소를 싣는다.
+     * @brief 래퍼 타입마다 하나인 정적 `const` 객체입니다. 생성 코드의 서술자 표(`PropertyContainerDesc::_pWrapper`)가 이 주소를 싣는다.
      * @details 래퍼는 상태가 없어 프로퍼티마다 `make_shared` 로 짓던 것을 공유한다(언리얼 `FArrayProperty` 가 내부 프로퍼티를 정적 서술자로 드는 자리).
      *          모듈(DLL)마다 하나씩 생기고 그 모듈의 수명이다 — 등록한 타입의 함수 포인터와 같다.
      */
@@ -638,12 +638,27 @@ namespace sw
         static constexpr bool kStateCarried = kKind == ContainerKind::Sequence && TWrapper::kInPlaceElementWrite;
 
         /**
-         * @brief `ReflectBuiltins.xxx` CONTAINER 줄의 종류 · 역할이 이 래퍼 형식과 같은지입니다. 생성 코드가 컨테이너 칸마다 `static_assert` 로 부른다.
+         * @brief `ReflectBuiltins.xxx` CONTAINER 줄의 종류 · 역할이 이 래퍼 형식과 같은지입니다. 생성 코드가 컨테이너 칸마다 `getChecked` 로 본다.
          * @details 표가 래퍼와 다르면(종류를 Map 이라 적고 시퀀스 래퍼를 가리킴, State 를 집합에 담 …) 그 칸을 쓴 생성 코드가 컴파일되지 않는다.
          */
         static constexpr bool matchesTable( const ContainerKind kind, const bool bState, const bool bFixed )
         {
             return kind == kKind && bState == kStateCarried && bFixed == TWrapper::kFixedSize;
+        }
+
+        /** @brief 표의 종류 · 역할과 대조한 정적 래퍼의 주소입니다 — 생성 코드의 컨테이너 표가 이것으로 싣는다(어긋나면 그 칸의 생성 코드가 컴파일되지 않는다). */
+        template <ContainerKind kind, bool bState, bool bFixed>
+        static constexpr const IContainerWrapper* getChecked() noexcept
+        {
+            static_assert( matchesTable( kind, bState, bFixed ), "ReflectBuiltins.xxx: CONTAINER row (kind, State, Fixed) disagrees with the container wrapper type" );
+            return &kInstance;
+        }
+        /** @brief 표 밖 컨테이너(`REFLECT_CONTAINER( Kind, Stem )`)의 정적 래퍼 주소입니다 — 역할 칸이 없어 종류만 대조한다. */
+        template <ContainerKind kind>
+        static constexpr const IContainerWrapper* getOfKind() noexcept
+        {
+            static_assert( kind == kKind, "REFLECT_CONTAINER kind disagrees with the container wrapper type" );
+            return &kInstance;
         }
     };
 } // namespace sw

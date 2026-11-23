@@ -1,6 +1,6 @@
 // EXPECT-TYPE: sw::fixture::FixtureAssetUser
 // EXPECT-GEN: "_single"
-// EXPECT-GEN: hashed_string( "AssetRef" )
+// EXPECT-GEN: kContainer1{ sw::ContainerKind::Sequence, "AssetRef", nullptr,
 // EXPECT-ASSET-FIELD: _single FixtureAsset ref
 // EXPECT-ASSET-FIELD: _listMany FixtureAsset ref
 // EXPECT-ASSET-FIELD: _annotated - path

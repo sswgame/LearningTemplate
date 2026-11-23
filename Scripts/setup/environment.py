@@ -31,7 +31,6 @@ from common.project_constants import (
     FILE_PARSER_DEFAULTS,
     FILE_TOOLCHAIN_CONFIG,
     KEY_CLANG_FLAGS,
-    KEY_EMIT,
     KEY_LIBCLANG_DLL_PATH,
     KEY_LLVM_PATH,
     KEY_MSVC_TOOLS_DIR,
@@ -76,7 +75,7 @@ def _union_str_list(base: Any, extra: Any) -> list[str]:
 
 
 def _normalize_parser_config(raw: dict) -> dict:
-    """parser_args, paths, emit, tuning 등 중첩 스키마 구조를 정규화합니다."""
+    """parser_args, paths, tuning 등 중첩 스키마 구조를 정규화합니다."""
     out = dict(raw)
     args_section = _as_dict(out.get(KEY_PARSER_ARGS_SECTION))
     out[KEY_PARSER_ARGS_SECTION] = {
@@ -87,7 +86,6 @@ def _normalize_parser_config(raw: dict) -> dict:
     }
     out[KEY_PATHS] = _as_dict(out.get(KEY_PATHS))
     out[KEY_CLANG_FLAGS] = _as_dict(out.get(KEY_CLANG_FLAGS))
-    out[KEY_EMIT] = _as_dict(out.get(KEY_EMIT))
     out[KEY_TUNING] = _as_dict(out.get(KEY_TUNING))
     return out
 

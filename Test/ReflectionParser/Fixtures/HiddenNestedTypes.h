@@ -1,9 +1,10 @@
 // EXPECT-GEN: struct RegistrarKey_sw_fixture_HiddenOwner_HiddenRecord
 // EXPECT-GEN: struct Registrar<RegistrarKey_sw_fixture_HiddenOwner_HiddenRecord>
-// EXPECT-GEN: static Registrar<RegistrarKey_sw_fixture_HiddenOwner_HiddenRecord> s_sw_fixture_HiddenOwner_HiddenRecord_registrar
+// EXPECT-GEN: s_sw_fixture_HiddenOwner_HiddenRecord_registrar{ &Registrar<RegistrarKey_sw_fixture_HiddenOwner_HiddenRecord>::getDesc }
 // EXPECT-GEN: struct RegistrarKey_sw_fixture_HiddenOwner_HiddenMode
-// EXPECT-GEN: &Registrar<RegistrarKey_sw_fixture_HiddenOwner_HiddenMode>::registerEnum
-// EXPECT-GEN: offsetof( sw::fixture::HiddenOwner::HiddenRecord, _count )
+// EXPECT-GEN: &Registrar<RegistrarKey_sw_fixture_HiddenOwner_HiddenMode>::getDesc
+// EXPECT-GEN: using Self = sw::fixture::HiddenOwner::HiddenRecord
+// EXPECT-GEN: offsetof( Self, _count )
 // EXPECT-GEN: struct Registrar<sw::fixture::HiddenOwner>
 // EXPECT-GEN: struct Registrar<sw::fixture::HiddenOwner::PublicRecord>
 // EXPECT-NOT-GEN: ReflectTypeTraits
