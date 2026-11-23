@@ -4910,6 +4910,11 @@
 				<item>Source/Editor/Common/GUI/EditorPlayToolbar.cpp</item>
 			</origins>
 		</entry>
+		<entry key="EdWidget.Platform" source="Platform">
+			<origins>
+				<item>Source/Editor/Panels/Packaging/PackagingPanel.cpp</item>
+			</origins>
+		</entry>
 		<entry key="EdWidget.PlayMode" source="Play Mode">
 			<origins>
 				<item>Source/Editor/Panels/Inspector/InspectorPanel.cpp</item>
@@ -7779,6 +7784,12 @@
 		</entry>
 		<entry key="EditorPackaging.Package"
 		       source="Configure, build, cook and stage the selected game into the output folder">
+			<origins>
+				<item>Source/Editor/Panels/Packaging/PackagingPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EditorPackaging.Platform"
+		       source="Where the package runs. Desktop is this computer; Web makes a browser folder and Android a signed debug APK - both are client only and their preset decides the backend">
 			<origins>
 				<item>Source/Editor/Panels/Packaging/PackagingPanel.cpp</item>
 			</origins>

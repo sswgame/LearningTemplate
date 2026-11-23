@@ -1583,6 +1583,7 @@
 		<entry source="Place the client windows side by side (window size and position per App process) instead of letting them overlap"
 		       text="클라이언트 창을 겹치지 않게 나란히 놓습니다(App 프로세스마다 창 크기와 위치를 줍니다)" />
 		<entry source="Place {asset} on the {surface}" text="{asset} 을(를) {surface} 위에 놓기" />
+		<entry source="Platform" text="플랫폼" />
 		<entry source="Play" text="플레이" />
 		<entry source="Play Clip" text="클립 재생" />
 		<entry source="Play Mode" text="플레이 모드" />
@@ -2701,6 +2702,8 @@
 		       text="레이어가 다시 시작할 때 끊긴 포즈에서 이 반감기로 이어 갑니다. 0 이면 바로 바뀝니다." />
 		<entry source="When this key applies, in seconds from the start of the clip."
 		       text="이 키가 적용되는 시각으로, 클립 시작부터의 초입니다." />
+		<entry source="Where the package runs. Desktop is this computer; Web makes a browser folder and Android a signed debug APK - both are client only and their preset decides the backend"
+		       text="패키지를 돌릴 곳. Desktop 은 이 컴퓨터, Web 은 브라우저 폴더, Android 는 서명한 디버그 APK 를 만든다. 둘은 클라이언트뿐이고 백엔드는 그 프리셋이 정한다" />
 		<entry source="Whether this layer starts enabled. The enabled layer with the highest priority receives input first."
 		       text="이 레이어가 켜진 채 시작할지 정합니다. 켜진 레이어 중 우선순위가 가장 높은 레이어가 입력을 먼저 받습니다." />
 		<entry source="Whether this state's clip repeats. Default keeps the clip's own loop setting."

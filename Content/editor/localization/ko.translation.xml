@@ -1486,6 +1486,7 @@
 		<entry key="EdWidget.Panel" text="패널" sourceHash="1e85480db1ab92e5" />
 		<entry key="EdWidget.PatternNumpadNotation" text="패턴(숫자 패드 표기)" sourceHash="a5681696100c2b01" />
 		<entry key="EdWidget.Paused" text="일시 정지됨" sourceHash="95bc8722b2708f8b" />
+		<entry key="EdWidget.Platform" text="플랫폼" sourceHash="5c67b6c66029e5b2" />
 		<entry key="EdWidget.PlayMode" text="플레이 모드" sourceHash="7363b52b83fee3b6" />
 		<entry key="EdWidget.Playing" text="플레이 중" sourceHash="308604b3ae13fbb5" />
 		<entry key="EdWidget.Prefab" text="프리팹" sourceHash="a2d5fac94c77c683" />
@@ -2722,6 +2723,9 @@
 		<entry key="EditorPackaging.Package"
 		       text="고른 게임을 구성 · 빌드 · 쿠킹해 출력 폴더에 스테이징합니다"
 		       sourceHash="d61b9c9910edb9c2" />
+		<entry key="EditorPackaging.Platform"
+		       text="패키지를 돌릴 곳. Desktop 은 이 컴퓨터, Web 은 브라우저 폴더, Android 는 서명한 디버그 APK 를 만든다. 둘은 클라이언트뿐이고 백엔드는 그 프리셋이 정한다"
+		       sourceHash="6d4f6a4660452bc2" />
 		<entry key="EditorPackaging.RHIBackend"
 		       text="Shipping 이 정적으로 링크할 백엔드입니다(클라이언트만). 서버는 그리지 않는다"
 		       sourceHash="12bb0ab96cd5aadf" />
