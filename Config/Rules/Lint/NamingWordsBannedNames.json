@@ -2084,6 +2084,7 @@
     "ValeServerKits": "HubServerKits — 게임 LanternVale 을 Playground 허브 서버(Games/Playground/Hub)로 흡수했다(NEXT 7 절 14 단계)(2026-11-24)",
     "ValeProfileStoreInternal": "HubProfileStoreInternal — 게임 LanternVale 을 Playground 허브 서버(Games/Playground/Hub)로 흡수했다(NEXT 7 절 14 단계)(2026-11-24)",
     "ValeServerStats": "HubServerStats — 게임 LanternVale 을 Playground 허브 서버(Games/Playground/Hub)로 흡수했다(NEXT 7 절 14 단계)(2026-11-24)",
-    "isInsideVale": "isInsideHub — 게임 LanternVale 을 Playground 허브 서버(Games/Playground/Hub)로 흡수했다(NEXT 7 절 14 단계)(2026-11-24)"
+    "isInsideVale": "isInsideHub — 게임 LanternVale 을 Playground 허브 서버(Games/Playground/Hub)로 흡수했다(NEXT 7 절 14 단계)(2026-11-24)",
+    "LanternValeGame": "PlaygroundGame — 게임 LanternVale 을 Playground 허브 서버(Games/Playground/Hub)로 흡수했다(NEXT 7 절 14 단계)(2026-11-24)"
   }
 }
