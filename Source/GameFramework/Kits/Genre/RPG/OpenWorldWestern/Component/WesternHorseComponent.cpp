@@ -14,11 +14,15 @@
 
 #include "GameFramework/Kits/Genre/RPG/OpenWorldWestern/Component/WesternGameModeComponent.h"
 #include "GameFramework/Kits/Genre/RPG/OpenWorldWestern/Component/WesternHorseMountComponent.h"
+#include "GameFramework/Runtime/Foundation/Framework/Save/StatefulComponentRegistrar.h"
 
 namespace sw
 {
     namespace
     {
+        /** @brief 말 상태(스태미나 · 유대)를 모든 게임의 상태 스냅샷에 싣습니다(게임마다 올리지 않는다). */
+        const StatefulComponentRegistrar<WesternHorseComponent> s_horseStateRegistration{ "WesternHorseComponent" };
+
         /** @brief 말 사건을 한 줄 로그로 남깁니다(유대 단계 · 능력 · 지침 · 겁). */
         void logHorseEvent( const utf8* pHorseName, const WesternHorseEvent& horseEvent )
         {
@@ -26,27 +30,27 @@ namespace sw
             {
                 case WesternHorseEvent::Kind::BondLevelUp:
                 {
-                    SW_LOG_INFO_ID( "WesternHorse.BondLevel", "[WildWest] %# bond level %#", pHorseName, horseEvent._value );
+                    SW_LOG_INFO_ID( "WesternHorse.BondLevel", "[Western] %# bond level %#", pHorseName, horseEvent._value );
                     break;
                 }
                 case WesternHorseEvent::Kind::AbilityUnlocked:
                 {
-                    SW_LOG_INFO_ID( "WesternHorse.Learned", "[WildWest] %# learned %#", pHorseName, horseEvent._ability.c_str() );
+                    SW_LOG_INFO_ID( "WesternHorse.Learned", "[Western] %# learned %#", pHorseName, horseEvent._ability.c_str() );
                     break;
                 }
                 case WesternHorseEvent::Kind::Exhausted:
                 {
-                    SW_LOG_INFO_ID( "WesternHorse.OutBreathNoGallop", "[WildWest] %# is out of breath - no gallop until it recovers", pHorseName );
+                    SW_LOG_INFO_ID( "WesternHorse.OutBreathNoGallop", "[Western] %# is out of breath - no gallop until it recovers", pHorseName );
                     break;
                 }
                 case WesternHorseEvent::Kind::Spooked:
                 {
-                    SW_LOG_INFO_ID( "WesternHorse.RearsUp", "[WildWest] %# rears up", pHorseName );
+                    SW_LOG_INFO_ID( "WesternHorse.RearsUp", "[Western] %# rears up", pHorseName );
                     break;
                 }
                 case WesternHorseEvent::Kind::ThrewRider:
                 {
-                    SW_LOG_INFO_ID( "WesternHorse.ThrewRider", "[WildWest] %# threw its rider", pHorseName );
+                    SW_LOG_INFO_ID( "WesternHorse.ThrewRider", "[Western] %# threw its rider", pHorseName );
                     break;
                 }
             }

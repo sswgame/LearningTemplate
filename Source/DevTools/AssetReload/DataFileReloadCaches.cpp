@@ -65,5 +65,5 @@ namespace sw
 
 namespace sw
 {
-    SW_BUILT_IN_ASSET_CACHE( LocalizationReloadCache );
+    SW_BUILT_IN_ASSET_CACHE( LocalizationReloadCache, LocalizationReloadCache );
 } // namespace sw

@@ -8,6 +8,7 @@
 #include "Engine/Environment/Sky/SkyGradient.h"
 #include "Engine/Environment/Surface/SurfaceDeformBinding.h"
 #include "Engine/Graphics/Canvas/CanvasDrawList.h"
+#include "Engine/Graphics/Material/MaterialGlobals.h"
 #include "Engine/Graphics/View/SimulationOnlyFrameQueue.h"
 #include "Engine/Renderer/Frame/Packet/RenderFrameSettings.h"
 #include "Engine/Renderer/Frame/View/RenderView.h"
@@ -111,6 +112,8 @@ namespace sw
         FogSettings _fog;
         /** @brief 씬의 표면 변형 층(`SurfaceDeformSystem`)입니다. 핸들이 비면 층이 없고 셰이더는 정점을 옮기지 않는다(`g_SurfaceDeformParams.z` 가 0). */
         SurfaceDeformBinding _surfaceDeform;
+        /** @brief 이 프레임의 전역 머티리얼 값(날씨 · 환경 시간)입니다(`SceneEnvironment::collectMaterialGlobals` → PassCB `g_MaterialGlobal*`). */
+        MaterialGlobals _materialGlobals;
         /** @brief 이번 프레임의 추가 뷰(CCTV, 백미러, 분할 화면, PiP)입니다. 쉬는 뷰도 실립니다(`RenderViewRequest::_bRender`). */
         vector<RenderViewRequest> _listView;
         /**
@@ -173,6 +176,7 @@ namespace sw
             , _skyLight{}
             , _fog{}
             , _surfaceDeform{}
+            , _materialGlobals{}
             , _listView{}
             , _canvas{}
             , _mainView{}
@@ -230,10 +234,11 @@ namespace sw
             _listRealtimeProbe.clear();
             _listLensFlare.clear();
             _listDecal.clear();
-            _sky           = SkyGradient{};
-            _skyLight      = float4{};
-            _fog           = FogSettings{};
-            _surfaceDeform = SurfaceDeformBinding{};
+            _sky             = SkyGradient{};
+            _skyLight        = float4{};
+            _fog             = FogSettings{};
+            _surfaceDeform   = SurfaceDeformBinding{};
+            _materialGlobals = MaterialGlobals{};
             _listView.clear();
             _canvas.clear();
             _mainView = RenderViewSettings{};

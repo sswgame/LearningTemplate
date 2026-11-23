@@ -1,7 +1,6 @@
 #include "pch.h"
 
 #include "Core/Algorithm/VectorUtil.h"
-#include "Core/File/FileUtil.h"
 #include "Core/Math/VectorMath.h"
 #include "Core/Memory/Memory.h"
 #include "Core/String/StringBuilder.h"
@@ -14,7 +13,7 @@
 #include "Engine/Graphics/Material/MaterialTypes.h"
 #include "Engine/Graphics/Shader/Binding/ShaderBindingSlots.h"
 
-// MaterialInstance — 값 덮어쓰기의 사본 재사용과 저장 글, 키워드 · 멀티 컴파일 검사와 쿠킹 조합(nogpu).
+// MaterialInstance — 값 덮어쓰기의 사본 재사용과 조회 글, 런타임 스위치 검사와 정적 종류 거절(nogpu).
 
 using namespace sw;
 
@@ -88,7 +87,87 @@ SW_TEST_CASE( MaterialInstanceTest, SameValueKeepsRenderCopy )
 }
 
 /**
- * @brief [MaterialInstanceTest] 이진으로 든 값도 조회 · 저장의 글은 예전 형식 그대로다(공백으로 나눈 최단 왕복 표현)
+ * @brief [MaterialInstanceTest] 값 하나만 바뀐 사본은 그 칸만 다시 쓴다 — 다른 덮어쓰기 · 부모 칸은 앞 사본 그대로이고, 거절된 값의 칸은 앞 값이 아니라 부모 값이다
+ * @details 변이: 바뀐 칸만 쓰는 길이 칸을 부모 값으로 되돌리지 않으면 모양이 어긋나 버린 `_color` 가 앞 사본의 값(0.25)으로 남는다. 부모 값이 바뀐 뒤에도 앞 사본을 베끼면 새 부모 값 줄이 진다.
+ */
+SW_TEST_CASE( MaterialInstanceTest, ChangedValuePatchesOnlyItsProperty )
+{
+    shared_ptr<Material> material = Material::create();
+    SW_REQUIRE_TRUE( material->loadFromXML( MaterialInstanceTestUtil::kMaterial ) );
+    shared_ptr<MaterialInstance> instance = MaterialInstance::create( material.get() );
+    const hashed_string          colorName( "_color" );
+    const hashed_string          roughnessName( "_roughness" );
+    const MaterialProperty*      pColor     = material->findProperty( colorName );
+    const MaterialProperty*      pRoughness = material->findProperty( roughnessName );
+    SW_REQUIRE_TRUE( pColor != nullptr && pRoughness != nullptr );
+    const auto readFloat = []( const MaterialRenderBinding& binding, uint32 offset )
+    {
+        float32 value{ -1.0f };
+        if ( offset + sizeof( value ) <= binding._data->_bytes.size() )
+            Memory::copy( &value, binding._data->_bytes.data() + offset, sizeof( value ) );
+        return value;
+    };
+
+    instance->setVectorParameter( colorName, float4{ 0.25f, 0.5f, 0.75f, 1.0f } );
+    instance->setScalarParameter( roughnessName, 0.125f );
+    const MaterialRenderBinding first = instance->getRenderBinding( MaterialRenderInputs::capture() );
+    SW_REQUIRE_TRUE( first._data != nullptr );
+
+    instance->setScalarParameter( roughnessName, 0.5f );
+    const MaterialRenderBinding second = instance->getRenderBinding( MaterialRenderInputs::capture() );
+    SW_REQUIRE_TRUE( second._data != nullptr );
+    SW_EXPECT_NEAR( 0.25f, readFloat( second, pColor->_offset ), 1e-6f );
+    SW_EXPECT_NEAR( 0.5f, readFloat( second, pRoughness->_offset ), 1e-6f );
+    SW_EXPECT_NEAR( 0.125f, readFloat( first, pRoughness->_offset ), 1e-6f ); // 건넨 사본은 불변이다
+
+    // 부모의 값이 바뀌면 덮지 않은 칸이 따라온다(앞 사본을 베끼지 않는다).
+    instance->clearOverrides();
+    instance->setScalarParameter( roughnessName, 0.5f );
+    SW_REQUIRE_TRUE( material->setParameter( colorName, "0.125 0.5 0.75 1" ) );
+    const MaterialRenderBinding third = instance->getRenderBinding( MaterialRenderInputs::capture() );
+    SW_REQUIRE_TRUE( third._data != nullptr );
+    SW_EXPECT_NEAR( 0.125f, readFloat( third, pColor->_offset ), 1e-6f );
+    SW_EXPECT_NEAR( 0.5f, readFloat( third, pRoughness->_offset ), 1e-6f );
+
+    // 모양이 어긋난 값은 알리고 버린다 — 칸은 앞 덮어쓰기가 아니라 부모 값이다.
+    instance->setVectorParameter( colorName, float4{ 0.75f, 0.75f, 0.75f, 1.0f } );
+    (void)instance->getRenderBinding( MaterialRenderInputs::capture() );
+    SW_EXPECT_LOG( "Material.ParameterShapeMismatch" );
+    instance->setScalarParameter( colorName, 0.5f );
+    const MaterialRenderBinding dropped = instance->getRenderBinding( MaterialRenderInputs::capture() );
+    SW_REQUIRE_TRUE( dropped._data != nullptr );
+    SW_EXPECT_NEAR( 0.125f, readFloat( dropped, pColor->_offset ), 1e-6f );
+    SW_EXPECT_FALSE( instance->isParameterOverridden( colorName ) );
+    SW_EXPECT_NEAR( 0.5f, readFloat( dropped, pRoughness->_offset ), 1e-6f );
+}
+
+/**
+ * @brief [MaterialInstanceTest] 프로퍼티의 자리(`MaterialParameterHandle`)는 값이 바뀌는 동안 그대로이고, 다시 읽어 배치가 바뀌면 낡아 아무것도 내지 않는다(다시 찾으면 새 번호다)
+ */
+SW_TEST_CASE( MaterialInstanceTest, ParameterHandleFollowsTheLayoutGeneration )
+{
+    shared_ptr<Material> material = Material::create();
+    SW_REQUIRE_TRUE( material->loadFromXML( MaterialInstanceTestUtil::kMaterial ) );
+    const hashed_string           roughnessName( "_roughness" );
+    const MaterialParameterHandle handle = material->findParameter( roughnessName );
+    SW_REQUIRE_TRUE( material->findProperty( handle ) != nullptr );
+    SW_EXPECT_EQUAL( string( "_roughness" ), material->findProperty( handle )->_name );
+    SW_EXPECT_TRUE( material->findProperty( material->findParameter( hashed_string( "_missing" ) ) ) == nullptr );
+    SW_EXPECT_TRUE( material->findProperty( MaterialParameterHandle{} ) == nullptr );
+
+    SW_REQUIRE_TRUE( material->setParameter( roughnessName, "0.25" ) );
+    SW_EXPECT_TRUE( material->findProperty( handle ) != nullptr );
+
+    SW_REQUIRE_TRUE( material->loadFromXML( MaterialInstanceTestUtil::kTexturedMaterial ) );
+    SW_EXPECT_TRUE( material->findProperty( handle ) == nullptr );
+    MaterialParameterHandle renewed = handle;
+    const MaterialProperty* pColor  = material->resolveProperty( hashed_string( "_color" ), renewed );
+    SW_REQUIRE_TRUE( pColor != nullptr );
+    SW_EXPECT_EQUAL( string( "_color" ), pColor->_name );
+}
+
+/**
+ * @brief [MaterialInstanceTest] 이진으로 든 값도 조회의 글은 공백으로 나눈 최단 왕복 표현이다
  */
 SW_TEST_CASE( MaterialInstanceTest, FloatOverridesKeepTextForm )
 {
@@ -159,7 +238,7 @@ namespace
 {
     struct MaterialInstanceSwitchTestUtil
     {
-        /** @brief 런타임 스위치(Detail) · 에셋 전용 스위치(Wet, 끔 키워드 있음) · 멀티 컴파일(FogMode)을 선언한 부모입니다. */
+        /** @brief 런타임 스위치(Detail, 끔 키워드 있음) · 에셋 전용 스위치(Wet)를 선언한 부모입니다. */
         static constexpr const utf8* kSwitchMaterial = R"(<?xml version="1.0" encoding="utf-8"?>
 <MaterialDef formatVersion="0" name="Switches" shaderPath="engine/shaders/pbr_lit.hlsl" surfaceModel="Lit" alphaMode="Opaque">
 	<_properties>
@@ -167,60 +246,23 @@ namespace
 	</_properties>
 	<_permutations quality="High" shaderLOD="300" usage="StaticMesh">
 		<_staticSwitches>
-			<item name="Detail" keyword="MATERIAL_DETAIL" bEnabled="0" bShaderFeature="0"/>
-			<item name="Wet" keyword="MATERIAL_WET" keywordOff="MATERIAL_DRY" bEnabled="0" bShaderFeature="1"/>
+			<item name="Detail" keyword="MATERIAL_DETAIL" keywordOff="MATERIAL_PLAIN" bEnabled="0" bShaderFeature="0"/>
+			<item name="Wet" keyword="MATERIAL_WET" bEnabled="0" bShaderFeature="1"/>
 		</_staticSwitches>
-		<_multiCompiles>
-			<item name="FogMode" selected="FOG_OFF">
-				<_options>
-					<item>FOG_OFF</item>
-					<item>FOG_EXP</item>
-				</_options>
-			</item>
-		</_multiCompiles>
 	</_permutations>
 </MaterialDef>
 )";
-
-        /** @brief 에셋 전용 스위치(Wet)를 켜고 안개를 고른 인스턴스 에셋입니다. */
-        static constexpr const utf8* kWetInstance = R"(<?xml version="1.0" encoding="utf-8"?>
-<MaterialInstanceDef formatVersion="0" name="WetInstance" parentPath="testproject/switches.material">
-	<_keywords>
-		<item name="Wet" bEnabled="1"/>
-	</_keywords>
-	<_multiCompiles>
-		<item name="FogMode" selected="FOG_EXP"/>
-	</_multiCompiles>
-</MaterialInstanceDef>
-)";
-
-        /** @brief 부모가 선언하지 않은 키워드를 켠 인스턴스 에셋입니다. */
-        static constexpr const utf8* kUnknownInstance = R"(<?xml version="1.0" encoding="utf-8"?>
-<MaterialInstanceDef formatVersion="0" name="UnknownInstance" parentPath="testproject/switches.material">
-	<_keywords>
-		<item name="MATERIAL_NOT_DECLARED" bEnabled="1"/>
-	</_keywords>
-</MaterialInstanceDef>
-)";
-
-        /** @brief @p text 를 케이스 폴더의 파일로 쓰고 @p instance 로 읽습니다. */
-        static bool loadInstance( MaterialInstance& instance, const utf8* pFileName, const utf8* text )
-        {
-            const AbsolutePath path = test::makeScratchPath( "materialinstance" ).join( pFileName );
-            return FileUtil::ensureParentDirectoryExists( path ) && FileUtil::writeTextFile( path, string( text ) ) && instance.loadFromDiskFile( path.str() );
-        }
     };
 } // namespace
 
 /**
- * @brief [MaterialInstanceTest] 키워드 · 멀티 컴파일은 부모가 선언한 런타임 스위치 · 선택지만 받는다 — 모르는 이름 · 에셋 전용 스위치 · 모르는 선택지는 오류이고 퍼뮤테이션이 그대로다
+ * @brief [MaterialInstanceTest] 키워드는 부모가 선언한 런타임 스위치만 받는다 — 모르는 이름 · 에셋 전용 스위치는 오류이고 퍼뮤테이션이 그대로다
  * @details 변이: 이름 검사를 지우면 `MATERIAL_BENCH_CHURN` 같은 쿠킹하지 않은 define 이 퍼뮤테이션에 섞여(배포에서 대체 해시) 해시 줄이 진다.
  */
 SW_TEST_CASE( MaterialInstanceTest, KeywordsMustBeDeclaredByParent )
 {
     SW_EXPECT_LOG( "MaterialInstance.KeywordUnknown" );
     SW_EXPECT_LOG( "MaterialInstance.KeywordNotRuntime" );
-    SW_EXPECT_LOG( "MaterialInstance.MultiCompileUnknown" );
     shared_ptr<Material> material = Material::create();
     SW_REQUIRE_TRUE( material->loadFromXML( MaterialInstanceSwitchTestUtil::kSwitchMaterial ) );
     shared_ptr<MaterialInstance> instance = MaterialInstance::create( material.get() );
@@ -229,8 +271,6 @@ SW_TEST_CASE( MaterialInstanceTest, KeywordsMustBeDeclaredByParent )
 
     SW_EXPECT_FALSE( instance->enableKeyword( hashed_string( "MATERIAL_BENCH_CHURN" ) ) );
     SW_EXPECT_FALSE( instance->enableKeyword( hashed_string( "Wet" ) ) );
-    SW_EXPECT_FALSE( instance->setMultiCompile( hashed_string( "FogMode" ), "FOG_LINEAR" ) );
-    SW_EXPECT_FALSE( instance->setMultiCompile( hashed_string( "Unknown" ), "FOG_EXP" ) );
     SW_EXPECT_EQUAL( baseHash, instance->getPermutationHash() );
 
     shared_ptr<MaterialInstance> orphan = MaterialInstance::create( nullptr );
@@ -238,47 +278,13 @@ SW_TEST_CASE( MaterialInstanceTest, KeywordsMustBeDeclaredByParent )
 
     // 이름으로 켜도 키워드로 켜도 같은 스위치 한 칸이고, 부모가 그 스위치를 켠 것과 같은 define · 해시다(쿠커가 굽는 조합).
     SW_EXPECT_TRUE( instance->enableKeyword( hashed_string( "MATERIAL_DETAIL" ) ) );
-    SW_EXPECT_TRUE( instance->setMultiCompile( hashed_string( "FogMode" ), "FOG_EXP" ) );
     SW_EXPECT_TRUE( MaterialInstanceTestUtil::hasDefine( instance->getCachedShaderDefines(), "MATERIAL_DETAIL" ) );
-    SW_EXPECT_TRUE( MaterialInstanceTestUtil::hasDefine( instance->getCachedShaderDefines(), "FOG_EXP" ) );
-    SW_EXPECT_FALSE( MaterialInstanceTestUtil::hasDefine( instance->getCachedShaderDefines(), "FOG_OFF" ) );
+    SW_EXPECT_FALSE( MaterialInstanceTestUtil::hasDefine( instance->getCachedShaderDefines(), "MATERIAL_PLAIN" ) ); // 덮어쓰기는 define 글이 아니라 부모 칸의 값이다
     SW_REQUIRE_TRUE( material->setStaticSwitch( hashed_string( "Detail" ), true ) );
-    material->setMultiCompile( hashed_string( "FogMode" ), "FOG_EXP" );
     shared_ptr<MaterialInstance> plain = MaterialInstance::create( material.get() );
     SW_EXPECT_EQUAL( plain->getPermutationHash(), instance->getPermutationHash() );
     SW_EXPECT_TRUE( instance->disableKeyword( hashed_string( "Detail" ) ) );
     SW_EXPECT_FALSE( MaterialInstanceTestUtil::hasDefine( instance->getCachedShaderDefines(), "MATERIAL_DETAIL" ) );
-}
-
-/**
- * @brief [MaterialInstanceTest] 인스턴스 에셋이 고른 스위치 · 멀티 컴파일은 쿠커가 부르는 조합 목록(`collectRuntimeSwitchVariants`)에 든다 — 끔 키워드는 빠지고 런타임 정의와 같은 해시다.
- *        부모가 선언하지 않은 덮어쓰기는 오류이고 false 다(쿠킹이 멈춘다)
- * @details 변이: 쿠커가 `.material` 만 훑던 때처럼 부모의 조합만 내면 `MATERIAL_WET` 줄이 진다. 덮어쓰기를 define 글로 얹으면(예전 `refreshCachedDefines`) `MATERIAL_DRY` 가 남아 진다.
- */
-SW_TEST_CASE( MaterialInstanceTest, InstanceAssetCombinationsAreCollectedForCook )
-{
-    SW_EXPECT_LOG( "MaterialInstance.KeywordUnknown" );
-    shared_ptr<Material> material = Material::create();
-    SW_REQUIRE_TRUE( material->loadFromXML( MaterialInstanceSwitchTestUtil::kSwitchMaterial ) );
-
-    shared_ptr<MaterialInstance> wet = MaterialInstance::create( material.get() );
-    SW_REQUIRE_TRUE( MaterialInstanceSwitchTestUtil::loadInstance( *wet, "wet.materialinstance", MaterialInstanceSwitchTestUtil::kWetInstance ) );
-    SW_EXPECT_EQUAL( string( "testproject/switches.material" ), wet->getDesc()._parentPath );
-    vector<vector<string>> listDefine;
-    vector<uint64>         listHash;
-    SW_REQUIRE_TRUE( wet->collectRuntimeSwitchVariants( listDefine, listHash ) );
-    SW_REQUIRE_EQUAL( size_t( 2 ), listDefine.size() ); // 인스턴스 상태 + 런타임 스위치(Detail) 켬
-    SW_EXPECT_TRUE( MaterialInstanceTestUtil::hasDefine( listDefine[0], "MATERIAL_WET" ) );
-    SW_EXPECT_FALSE( MaterialInstanceTestUtil::hasDefine( listDefine[0], "MATERIAL_DRY" ) );
-    SW_EXPECT_TRUE( MaterialInstanceTestUtil::hasDefine( listDefine[0], "FOG_EXP" ) );
-    SW_EXPECT_EQUAL( wet->getPermutationHash(), listHash[0] );
-    SW_EXPECT_TRUE( MaterialInstanceTestUtil::hasDefine( listDefine[1], "MATERIAL_DETAIL" ) );
-
-    shared_ptr<MaterialInstance> unknown = MaterialInstance::create( material.get() );
-    SW_REQUIRE_TRUE( MaterialInstanceSwitchTestUtil::loadInstance( *unknown, "unknown.materialinstance", MaterialInstanceSwitchTestUtil::kUnknownInstance ) );
-    SW_EXPECT_FALSE( unknown->collectRuntimeSwitchVariants( listDefine, listHash ) );
-    SW_EXPECT_TRUE( listDefine.empty() );
-    SW_EXPECT_FALSE( MaterialInstanceTestUtil::hasDefine( unknown->getCachedShaderDefines(), "MATERIAL_NOT_DECLARED" ) );
 }
 
 namespace
@@ -294,24 +300,14 @@ namespace
 	</_properties>
 </MaterialDef>
 )";
-
-        /** @brief 키워드 칸을 켠 인스턴스 에셋입니다. */
-        static constexpr const utf8* kDetailMaskInstance = R"(<?xml version="1.0" encoding="utf-8"?>
-<MaterialInstanceDef formatVersion="0" name="DetailMaskInstance" parentPath="testproject/keywordvalue.material">
-	<_overrides>
-		<item name="_detailMask" value="1"/>
-	</_overrides>
-</MaterialInstanceDef>
-)";
     };
 } // namespace
 
 /**
- * @brief [MaterialInstanceTest] 키워드를 내는 Bool 칸은 런타임 값 API 가 오류로 거절해 define · 해시가 그대로이고, 인스턴스 에셋의 그 덮어쓰기는 define 과 쿠커 조합 목록에 든다.
- *        런타임 전환은 부모가 선언한 런타임 스위치(`enableKeyword`)로만 된다
- * @details 변이: 값 API 가 키워드 칸을 받으면(예전) 쿠킹하지 않은 `MATERIAL_DETAIL_MASK` 조합이 생겨 해시 줄이 진다. 부모의 `computeShaderDefines` 가 덮어쓰기를 보지 않으면 에셋 줄이 진다.
+ * @brief [MaterialInstanceTest] 키워드를 내는 Bool 칸은 값 API 가 오류로 거절해 define · 해시가 그대로다. 런타임 전환은 부모가 선언한 런타임 스위치(`enableKeyword`)로, 고정한 값은 자식 머티리얼로만 된다
+ * @details 변이: 값 API 가 키워드 칸을 받으면(예전) 쿠킹하지 않은 `MATERIAL_DETAIL_MASK` 조합이 생겨 해시 줄이 진다.
  */
-SW_TEST_CASE( MaterialInstanceTest, KeywordValueOverrideChangesDefines )
+SW_TEST_CASE( MaterialInstanceTest, KeywordValueIsRejected )
 {
     SW_EXPECT_LOG( "MaterialInstance.StaticValueRejected" );
     shared_ptr<Material> material = Material::create();
@@ -326,18 +322,6 @@ SW_TEST_CASE( MaterialInstanceTest, KeywordValueOverrideChangesDefines )
     SW_EXPECT_FALSE( MaterialInstanceTestUtil::hasDefine( instance->getCachedShaderDefines(), "MATERIAL_DETAIL_MASK" ) );
     SW_EXPECT_EQUAL( baseHash, instance->getPermutationHash() );
     SW_EXPECT_TRUE( instance->setParameter( hashed_string( "_color" ), "0.5 0.5 0.5 1" ) ); // 값 칸은 그대로 받는다
-
-    shared_ptr<MaterialInstance> asset = MaterialInstance::create( material.get() );
-    SW_REQUIRE_TRUE( MaterialInstanceSwitchTestUtil::loadInstance( *asset, "detailmask.materialinstance", MaterialInstanceKeywordValueTestUtil::kDetailMaskInstance ) );
-    SW_EXPECT_TRUE( MaterialInstanceTestUtil::hasDefine( asset->getCachedShaderDefines(), "MATERIAL_DETAIL_MASK" ) );
-    SW_EXPECT_NOT_EQUAL( baseHash, asset->getPermutationHash() );
-    SW_EXPECT_FALSE( MaterialInstanceTestUtil::hasDefine( material->getCachedShaderDefines(), "MATERIAL_DETAIL_MASK" ) ); // 부모는 그대로다
-    vector<vector<string>> listDefine;
-    vector<uint64>         listHash;
-    SW_REQUIRE_TRUE( asset->collectRuntimeSwitchVariants( listDefine, listHash ) );
-    SW_REQUIRE_EQUAL( size_t( 1 ), listDefine.size() );
-    SW_EXPECT_TRUE( MaterialInstanceTestUtil::hasDefine( listDefine[0], "MATERIAL_DETAIL_MASK" ) );
-    SW_EXPECT_EQUAL( asset->getPermutationHash(), listHash[0] );
 
     // 런타임 스위치 길은 그대로다 — 부모가 선언한 `bShaderFeature="0"` 스위치는 런타임에 켜고 끈다.
     shared_ptr<Material> switches = Material::create();
@@ -407,29 +391,4 @@ SW_TEST_CASE( MaterialInstanceTest, ParentReloadRefreshesInstanceCaches )
     Memory::copy( &roughness, after._data->_bytes.data() + pRoughness->_offset, sizeof( roughness ) );
     SW_EXPECT_NEAR( 0.5f, arrColor[0], 1e-6f ); // 덮지 않은 칸은 새 부모 값
     SW_EXPECT_NEAR( 0.25f, roughness, 1e-6f );  // 덮은 칸은 인스턴스 값
-}
-
-/**
- * @brief [MaterialInstanceTest] 부모 없이 쓴 키워드 칸 값은 나중에 부모를 붙일 때 오류로 알리고 버린다 — 거절(`setParameter`)을 비켜 가지 못한다. 에셋에서 읽은 값과 값 칸은 남는다
- * @details 변이: `setParent` 가 덮어쓰기를 거르지 않으면 쿠킹하지 않은 `MATERIAL_DETAIL_MASK` 가 define 에 들어 줄이 진다.
- */
-SW_TEST_CASE( MaterialInstanceTest, SetParentDropsRuntimeStaticValues )
-{
-    SW_EXPECT_LOG( "MaterialInstance.StaticValueRejected" );
-    shared_ptr<Material> material = Material::create();
-    SW_REQUIRE_TRUE( material->loadFromXML( MaterialInstanceKeywordValueTestUtil::kKeywordValueMaterial ) );
-
-    shared_ptr<MaterialInstance> orphan = MaterialInstance::create( nullptr );
-    SW_EXPECT_TRUE( orphan->setParameter( hashed_string( "_detailMask" ), "1" ) ); // 부모가 없어 아직 모른다
-    SW_EXPECT_TRUE( orphan->setParameter( hashed_string( "_color" ), "0.5 0.5 0.5 1" ) );
-    orphan->setParent( material.get() );
-    SW_EXPECT_FALSE( orphan->isParameterOverridden( hashed_string( "_detailMask" ) ) );
-    SW_EXPECT_TRUE( orphan->isParameterOverridden( hashed_string( "_color" ) ) );
-    SW_EXPECT_FALSE( MaterialInstanceTestUtil::hasDefine( orphan->getCachedShaderDefines(), "MATERIAL_DETAIL_MASK" ) );
-
-    shared_ptr<MaterialInstance> asset = MaterialInstance::create( nullptr );
-    SW_REQUIRE_TRUE( MaterialInstanceSwitchTestUtil::loadInstance( *asset, "detailmask_late.materialinstance", MaterialInstanceKeywordValueTestUtil::kDetailMaskInstance ) );
-    asset->setParent( material.get() );
-    SW_EXPECT_TRUE( asset->isParameterOverridden( hashed_string( "_detailMask" ) ) );
-    SW_EXPECT_TRUE( MaterialInstanceTestUtil::hasDefine( asset->getCachedShaderDefines(), "MATERIAL_DETAIL_MASK" ) );
 }

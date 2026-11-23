@@ -229,7 +229,7 @@ SW_TEST_CASE( LowLevelReportTest, ErrorIsWrittenToStderrBeforeReporter )
 }
 
 /**
- * @brief 치명 보고(`SW_FATAL` · `SW_LOW_LEVEL_FATAL` 이 멈추기 직전에 하는 일)는 오류처럼 stderr 에 먼저 쓰이고 보고자는 Fatal 로 받는다.
+ * @brief 치명 보고(`reportFatalError` · `SW_LOW_LEVEL_FATAL` 이 멈추기 직전에 하는 일)는 오류처럼 stderr 에 먼저 쓰이고 보고자는 Fatal 로 받는다.
  * @details 멈춤(`reportFatal` 의 abort)은 프로세스 안에서 볼 수 없어 그 앞 단계(`reportLowLevel`)만 부른다.
  */
 SW_TEST_CASE( LowLevelReportTest, FatalIsWrittenToStderrBeforeReporter )

@@ -10,7 +10,6 @@
 #include "Core/String/formatString.h"
 
 #include "Engine/Reflection/EnumName.h"
-#include "Engine/Reflection/TypeRegistry.h"
 #include "Engine/Serialization/XML/XMLDocument.h"
 #include "Engine/Serialization/XML/XMLReadUtil.h"
 
@@ -453,11 +452,10 @@ namespace sw
             }
             for ( XMLNode paramNode = schemaNode.findChild(); paramNode; paramNode = paramNode.findNextSibling() )
             {
-                CustomizationKind kind = CustomizationKind::Slider;
                 if ( StringUtil::equals( paramNode.getName(), "Migration" ) )
                     CustomizationSchemaInternal::readMigration( paramNode, schema, report, sourceName );
-                else if ( game::getSubsystem<TypeRegistry>().enumFromString( paramNode.getName(), kind ) ) // 원소 이름이 매개변수 종류다
-                    CustomizationSchemaInternal::readParameter( paramNode, kind, schema, report, sourceName );
+                else if ( const optional<CustomizationKind> kind = tryParseEnum<CustomizationKind>( paramNode.getName() ) ) // 원소 이름이 매개변수 종류다
+                    CustomizationSchemaInternal::readParameter( paramNode, *kind, schema, report, sourceName );
                 else
                     AppearanceXMLUtil::reportUnknownChild( schemaNode, paramNode, report, sourceName );
             }

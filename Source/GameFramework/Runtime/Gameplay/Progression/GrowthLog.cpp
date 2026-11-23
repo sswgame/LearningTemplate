@@ -51,7 +51,7 @@ namespace sw
     const GrowthEvent& GrowthLog::getEntry( uint32 index ) const
     {
         if ( index >= _count )
-            SW_FATAL( "Growth log entry %# is outside %# entries", index, _count );
+            reportFatalError( "Growth log entry %# is outside %# entries", index, _count );
         const uint32 oldest = ( _head + kCapacity - _count ) % kCapacity;
         return _arrEntry[( oldest + index ) % kCapacity];
     }

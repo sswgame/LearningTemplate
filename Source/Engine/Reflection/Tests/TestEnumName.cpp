@@ -54,15 +54,16 @@ SW_TEST_CASE( EnumNameTest, UnregisteredEnumHasNoNames )
  */
 SW_TEST_CASE( EnumNameTest, NamesParseBackToValues )
 {
-    const TypeRegistry& registry = engine::getSubsystem<TypeRegistry>();
+    const optional<PackCompressionKind> codec = tryParseEnum<PackCompressionKind>( "Zstd" );
+    SW_REQUIRE_TRUE( codec.has_value() );
+    SW_EXPECT_TRUE( *codec == PackCompressionKind::Zstd );
+    SW_EXPECT_FALSE( tryParseEnum<PackCompressionKind>( "Brotli" ).has_value() );
+    SW_EXPECT_FALSE( tryParseEnum<PackCompressionKind>( "zstd" ).has_value() ); // 철자 그대로만 — 대소문자가 다르면 모르는 이름
+    SW_EXPECT_FALSE( tryParseEnum<PackCompressionKind>( "" ).has_value() );
 
-    PackCompressionKind codec = PackCompressionKind::None;
-    SW_EXPECT_TRUE( registry.enumFromString( "Zstd", codec ) );
-    SW_EXPECT_TRUE( codec == PackCompressionKind::Zstd );
-    SW_EXPECT_FALSE( registry.enumFromString( "Brotli", codec ) );
-
-    PackFlag flags = PackFlag::None;
-    SW_EXPECT_TRUE( registry.enumFromString( "HasStringPool|HasCRC32", flags ) );
-    SW_EXPECT_EQUAL( 3, static_cast<int32>( flags ) );
+    const optional<PackFlag> flags = tryParseEnum<PackFlag>( "HasStringPool|HasCRC32" );
+    SW_REQUIRE_TRUE( flags.has_value() );
+    SW_EXPECT_EQUAL( 3, static_cast<int32>( *flags ) );
+    SW_EXPECT_FALSE( tryParseEnum<PackFlag>( "HasStringPool|Bogus" ).has_value() ); // 아는 토큰만 남기지 않는다
     SW_EXPECT_EQUAL( string( "Encrypted" ), string( getEnumName( PackFlag::Encrypted ) ) );
 }

@@ -100,6 +100,9 @@ namespace sw
     class SW_API AssetCacheBase
     {
     public:
+        /** @brief 다시 읽을 파일이 있는 캐시인지입니다(`getAssetCacheReloadFunction`). 코드로 짓는 값 표(`WeakInternCache`)가 거짓으로 가린다. */
+        static constexpr bool kReloadable = true;
+
         /** @brief 계측 선언(`CacheTracking`)을 받아 만듭니다. 선언 없이는 지을 수 없다. 나머지 상태는 구현이 갖습니다. */
         explicit AssetCacheBase( const CacheTracking& tracking )
             : _stats{ tracking.getHandle() }

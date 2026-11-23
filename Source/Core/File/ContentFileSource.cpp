@@ -167,7 +167,7 @@ namespace sw
         return s_diskSource;
 #elif defined( SW_PLATFORM_ANDROID ) || defined( SW_PLATFORM_WEB )
         // 파일 경로로 열리지 않는 플랫폼이다 — 기동이 소스(AAsset · 내려받은 메모리)를 걸어야 한다. 디스크로 조용히 가지 않는다.
-        SW_FATAL( "No content file source is bound on this platform" );
+        reportFatalError( "No content file source is bound on this platform" );
 #else
     #error "Unsupported platform"
 #endif

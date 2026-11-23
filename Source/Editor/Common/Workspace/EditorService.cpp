@@ -88,7 +88,7 @@ namespace sw::editor
                 return;
             }
 #endif
-            SW_FATAL( "Editor state is read off the editor thread - look the service up on the editor thread and pass it by value (see findEditorScope)" );
+            reportFatalError( "Editor state is read off the editor thread - look the service up on the editor thread and pass it by value (see findEditorScope)" );
         }
 
         /** @brief 메인 씬의 선택입니다 — 지금 에디터 범위(에디터 컨텍스트 또는 테스트가 건 범위)에 건 `EditorSelection`. 없으면 nullptr 입니다. */

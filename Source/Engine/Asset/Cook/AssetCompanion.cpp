@@ -2,42 +2,35 @@
 
 #include "Engine/Asset/Cook/AssetCompanion.h"
 
-#include "Core/Algorithm/VectorUtil.h"
-#include "Core/Registry/RegistrationList.h"
-#include "Core/String/StringUtil.h"
-
 namespace sw
 {
-    SW_DEFINE_REGISTRATION_LIST( AssetCompanionRegistry::getRegistrars, const AssetCompanionRegistrar, "AssetCompanionRegistry" )
-
-    void AssetCompanionRegistry::appendCompanionPaths( string_view assetID, vector<string>& outListPath )
+    namespace
     {
-        for ( const AssetCompanionRegistrar* pRegistrar : getRegistrars().getItems() )
+        SW_DEFINE_REGISTRATION_LIST( getAssetCompanionRules, const AssetCompanionRule, "AssetCompanionRule", RegistrationOrder::Insertion, true )
+    } // namespace
+
+    bool AssetCompanionRule::add( const AssetCompanionRule* pRule )
+    {
+        return getAssetCompanionRules().addLogged( pRule, "Asset companion rule", pRule->_pName ) == RegistrationResult::Added;
+    }
+
+    void AssetCompanionRule::remove( const AssetCompanionRule* pRule )
+    {
+        (void)getAssetCompanionRules().remove( pRule ); // 올라 있지 않은 줄을 빼는 것은 할 일이 없다
+    }
+
+    void AssetCompanionRule::appendCompanionPaths( string_view assetID, vector<string>& outListPath )
+    {
+        for ( const AssetCompanionRule* pRule : getAssetCompanionRules().getItems() )
         {
-            string path = pRegistrar->getRule()._pMakePath( assetID );
+            string path = pRule->_pMakePath( assetID );
             if ( path.empty() == false && string_view( path ) != assetID )
                 outListPath.push_back( std::move( path ) );
         }
     }
 
-    bool AssetCompanionRegistry::hasRule( string_view name )
+    bool AssetCompanionRule::hasRule( string_view name )
     {
-        for ( const AssetCompanionRegistrar* pRegistrar : getRegistrars().getItems() )
-        {
-            if ( StringUtil::equals( pRegistrar->getRule()._pName, name ) )
-                return true;
-        }
-        return false;
-    }
-
-    AssetCompanionRegistrar::AssetCompanionRegistrar( const AssetCompanionRule& rule )
-        : _rule{ rule }
-    {
-        (void)AssetCompanionRegistry::getRegistrars().add( this );
-    }
-
-    AssetCompanionRegistrar::~AssetCompanionRegistrar()
-    {
-        (void)AssetCompanionRegistry::getRegistrars().remove( this );
+        return getAssetCompanionRules().findByName( name ) != nullptr;
     }
 } // namespace sw

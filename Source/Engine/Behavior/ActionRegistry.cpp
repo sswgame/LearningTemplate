@@ -5,7 +5,6 @@
 #include "Core/Concurrency/atomic.h"
 #include "Core/Concurrency/mutex.h"
 #include "Core/Log/Logger.h"
-#include "Core/Registry/RegistrationList.h"
 #include "Core/String/StringUtil.h"
 #include "Core/Subsystem/ServiceSlot.h"
 #include "Core/Subsystem/Subsystem.h"
@@ -22,11 +21,8 @@ namespace sw
     {
         struct ActionRegistryInternal
         {
-            /** @brief 등록 목록입니다(함수 정적 — 다른 TU · DLL 의 정적 등록자가 먼저 쓴다). 워커가 읽으므로 자기 잠금을 든 목록이다. */
-            static SW_DEFINE_LOCKED_REGISTRATION_LIST( getRegistrations, const ActionEntry, "ActionRegistry", RegistrationOrder::Insertion, true, NameCase::IgnoreCase )
-
-                /** @brief 글을 이름과 괄호 안으로 나눕니다. 괄호가 틀리면 false 입니다. */
-                [[nodiscard]] static bool splitCall( string_view text, string_view& outName, string_view& outArguments )
+            /** @brief 글을 이름과 괄호 안으로 나눕니다. 괄호가 틀리면 false 입니다. */
+            [[nodiscard]] static bool splitCall( string_view text, string_view& outName, string_view& outArguments )
             {
                 const string_view trimmed = StringUtil::trim( text );
                 const size_t      openPos = trimmed.find( '(' );
@@ -45,59 +41,7 @@ namespace sw
 
 namespace sw
 {
-    void ActionRegistry::registerAction( const ActionEntry* pEntry )
-    {
-        (void)ActionRegistryInternal::getRegistrations().addLogged( pEntry, "Game action", pEntry->_pName ); // 거절은 공용 오류 로그가 알린다
-    }
-
-    void ActionRegistry::unregisterAction( const ActionEntry* pEntry )
-    {
-        (void)ActionRegistryInternal::getRegistrations().remove( pEntry ); // 올라 있지 않은 줄을 빼는 것은 할 일이 없다
-    }
-
-    uint32 ActionRegistry::getRemovalGeneration()
-    {
-        return ActionRegistryInternal::getRegistrations().getRemovalGeneration(); // 잠금 없이 읽는다 — 빠질 때만 오른다
-    }
-
-    bool ActionRegistry::isRegistered( const ActionEntry* pEntry )
-    {
-        return ActionRegistryInternal::getRegistrations().contains( pEntry );
-    }
-
-    const RegistryEntryOps& ActionRegistry::getEntryOps()
-    {
-        static const RegistryEntryOps s_entryOps{ &ActionRegistry::getRemovalGeneration,
-                                                  []( const void* pEntry )
-        { return ActionRegistry::isRegistered( static_cast<const ActionEntry*>( pEntry ) ); } };
-        return s_entryOps;
-    }
-
-    const ActionEntry* ActionRegistry::find( string_view name )
-    {
-        return ActionRegistryInternal::getRegistrations().findByName( name );
-    }
-
-    void ActionRegistry::collectNames( vector<string>& outListName )
-    {
-        ActionRegistryInternal::getRegistrations().collectNames( outListName );
-    }
-
-    string ActionRegistry::joinNames()
-    {
-        return ActionRegistryInternal::getRegistrations().joinNames();
-    }
-
-    ActionRegistrar::ActionRegistrar( const ActionEntry* pEntry )
-        : _pEntry{ pEntry }
-    {
-        ActionRegistry::registerAction( pEntry );
-    }
-
-    ActionRegistrar::~ActionRegistrar()
-    {
-        ActionRegistry::unregisterAction( _pEntry );
-    }
+    SW_DEFINE_LOCKED_REGISTRATION_LIST( ActionEntry::getEntries, const ActionEntry, "ActionRegistry", RegistrationOrder::Insertion, true, NameCase::IgnoreCase )
 } // namespace sw
 
 namespace sw
@@ -106,6 +50,11 @@ namespace sw
         : _pEntry{ nullptr }
         , _params{}
     {
+    }
+
+    const utf8* GameActionCall::getName() const
+    {
+        return _pEntry != nullptr ? _pEntry->_pName : "";
     }
 
     string_view GameActionCall::getCallName( string_view text )
@@ -157,7 +106,7 @@ namespace sw
         if ( expected<void> read = tryReadProperties( text, pEntry, params ); read.has_value() == false )
             return read;
         outCall._pEntry = pEntry;
-        outCall._params = RegisteredParams{ params.share(), pEntry, ActionRegistry::getEntryOps(), generation };
+        outCall._params = RegisteredParams{ params.share(), pEntry, ActionEntry::getEntries(), generation };
         return {};
     }
 
@@ -174,7 +123,7 @@ namespace sw
     {
         GameActionCall call;
         call._pEntry = &entry;
-        call._params = RegisteredParams{ InstancedStruct( params ).share(), &entry, ActionRegistry::getEntryOps(), ActionRegistry::getRemovalGeneration() }; // 편집 값과 나눠 들지 않게 복사한다
+        call._params = RegisteredParams{ InstancedStruct( params ).share(), &entry, ActionEntry::getEntries(), ActionRegistry::getRemovalGeneration() }; // 편집 값과 나눠 들지 않게 복사한다
         return call;
     }
 

@@ -3570,7 +3570,7 @@ namespace sw
     void VulkanRHIDevice::publishBufferReadSlot( RHIDescriptorIndex index, bool bUAV, RHIBufferHandle buffer, uint32 sliceOffset, uint32 sliceSize )
     {
         if ( index >= kBindlessBufferCapacity )
-            SW_FATAL( "Vulkan: bindless buffer index %# is outside the read table (%#)", index, kBindlessBufferCapacity );
+            reportFatalError( "Vulkan: bindless buffer index %# is outside the read table (%#)", index, kBindlessBufferCapacity );
         if ( bUAV == false )
             _arrBufferReadSlice.get()[index].store( ( static_cast<uint64>( sliceOffset ) << 32u ) | sliceSize, std::memory_order_relaxed );
         ( bUAV ? _arrUAVBufferReadSlot : _arrBufferReadSlot ).get()[index].store( buffer, std::memory_order_release );
@@ -4056,7 +4056,7 @@ namespace sw
                 // 앞 세트로 조용히 그려진다. 풀을 더 만들지 못하는 것은 장치 메모리 부족이라 그릴 길이 없어 멈춘다.
                 const VkDescriptorPool pool = createSlotPool();
                 if ( pool == VK_NULL_HANDLE )
-                    SW_FATAL( "Could not create another slot set descriptor pool (%# pools x %# sets in use) - out of device memory", static_cast<uint32>( listPool.size() ), kSlotSetsPerPool );
+                    reportFatalError( "Could not create another slot set descriptor pool (%# pools x %# sets in use) - out of device memory", static_cast<uint32>( listPool.size() ), kSlotSetsPerPool );
                 listPool.push_back( pool );
             }
 

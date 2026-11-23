@@ -52,7 +52,7 @@ namespace sw
          */
         static constexpr uint32 kMaxAssetStabilityFrames = 600;
         /**
-         * @brief 사진 앞 렌더 정착(`<Screenshot stability="render">` · `<WaitRenderStable/>` — 에셋 일 + 정착 조건)을 기다리는 벽시계 상한(초, `gv_scenarioWallScale` 배)입니다.
+         * @brief 사진 앞 렌더 정착(`<Screenshot stability="Render">` · `<WaitRenderStable/>` — 에셋 일 + 정착 조건)을 기다리는 벽시계 상한(초, `gv_scenarioWallScale` 배)입니다.
          * @details 나아가고 있는 일의 상한일 뿐이다 — 진척이 멈춘 조건은 정지 시한(`ScenarioRun.json` 의 `_stallFrames`)이 먼저 끝낸다. 옛 사진 앞 정착 대기(`<WaitUntil … timeoutWallSeconds="30">`)의 값이다.
          */
         static constexpr float32 kMaxRenderStableWallSeconds = 30.0f;
