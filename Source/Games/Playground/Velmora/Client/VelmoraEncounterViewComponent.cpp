@@ -15,6 +15,7 @@
 #include "Engine/Object/GameObject/WorldOrigin.h"
 
 #include "GameFramework/Kits/Genre/Action/ActionAdventure/Component/AdventureGameModeComponent.h"
+#include "GameFramework/Kits/Genre/Action/ActionCombat/Client/ActionRoomDebugDraw.h"
 #include "GameFramework/Runtime/Foundation/Framework/GameService.h"
 #include "GameFramework/Runtime/Gameplay/GameState/PlayerComponentUtil.h"
 
@@ -24,17 +25,11 @@ namespace sw
 {
     namespace
     {
-        /** @brief 룸 디버그 그리기 색 · 크기(m)입니다(`ActionCombatAvatarComponent` 와 같은 색). */
         struct VelmoraEncounterViewComponentInternal
         {
-            static constexpr float4  kActorColor        = float4( 1.0f, 0.55f, 0.2f, 1.0f ); ///< 홀 적
-            static constexpr float4  kBossColor         = float4( 1.0f, 0.25f, 0.2f, 1.0f ); ///< 보스 룸 적
-            static constexpr float4  kProjectileColor   = float4( 1.0f, 0.9f, 0.2f, 1.0f );  ///< 적 투사체
-            static constexpr float4  kInvulnerableColor = float4( 0.6f, 0.9f, 1.0f, 1.0f );  ///< 무적인 플레이어를 감싸는 공
-            static constexpr float32 kActorHeight       = 0.5f;
-            static constexpr float32 kProjectileHeight  = 0.4f;
-            static constexpr float32 kPlayerHeight      = 0.5f;
-            static constexpr float32 kInvulnerableRange = 0.34f; ///< 무적 공의 반지름 — 키트가 그리는 플레이어 공보다 조금 크다
+            static constexpr float4  kInvulnerableColor  = float4( 0.6f, 0.9f, 1.0f, 1.0f ); ///< 무적인 플레이어를 감싸는 공
+            static constexpr float32 kInvulnerableHeight = 0.5f;
+            static constexpr float32 kInvulnerableRadius = 0.34f; ///< 키트가 그리는 플레이어 공보다 조금 크다
         };
     } // namespace
 
@@ -97,21 +92,11 @@ namespace sw
         DebugDrawQueue* const pDraw = game::findSubsystem<DebugDrawQueue>();
         if ( pDraw == nullptr || pEncounter->isFighting() == false )
             return;
-        using Internal                = VelmoraEncounterViewComponentInternal;
-        const ActionRoom&  room       = pEncounter->getRoom();
-        const float4       actorColor = room.getKind() == ActionRoomKind::Boss ? Internal::kBossColor : Internal::kActorColor;
-        const WorldOrigin& origin     = manager.getWorldOrigin(); // 룸의 자리는 지역 표와 같은 절대 자리다
-        room.forEachLiveActor( [pDraw, &actorColor, &origin]( const float2& position, float32 radius )
-        { pDraw->drawSphere( origin.toLocal( float3( position._x, Internal::kActorHeight, position._y ) ), radius, actorColor ); } );
-        for ( const ProjectileState& projectile : room.getProjectiles() )
-        {
-            pDraw->drawSphere( origin.toLocal( float3( projectile._position._x, Internal::kProjectileHeight, projectile._position._y ) ), projectile._radius, Internal::kProjectileColor );
-        }
-        const AdventureGameModeComponent* const pDirector = room.isPlayerInvulnerable() ? PlayerComponentUtil::findOnOwner<AdventureGameModeComponent>( *this ) : nullptr;
+        using Internal            = VelmoraEncounterViewComponentInternal;
+        const WorldOrigin& origin = manager.getWorldOrigin();
+        ActionRoomDebugDraw::draw( *pDraw, origin, pEncounter->getRoom() );
+        const AdventureGameModeComponent* const pDirector = pEncounter->getRoom().isPlayerInvulnerable() ? PlayerComponentUtil::findOnOwner<AdventureGameModeComponent>( *this ) : nullptr;
         if ( pDirector != nullptr )
-        {
-            const float2& position = pDirector->getPlayerPosition();
-            pDraw->drawSphere( origin.toLocal( float3( position._x, Internal::kPlayerHeight, position._y ) ), Internal::kInvulnerableRange, Internal::kInvulnerableColor );
-        }
+            pDraw->drawSphere( ActionRoomDebugDraw::toScene( origin, pDirector->getPlayerPosition(), Internal::kInvulnerableHeight ), Internal::kInvulnerableRadius, Internal::kInvulnerableColor );
     }
 } // namespace sw

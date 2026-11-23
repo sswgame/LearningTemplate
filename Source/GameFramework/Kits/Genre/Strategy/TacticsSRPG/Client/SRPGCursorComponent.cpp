@@ -18,6 +18,7 @@
 #include "Engine/Object/GameObject/GameObjectManager.h"
 #include "Engine/Object/GameObject/GameObjectManagerResolve.inl"
 #include "Engine/Object/GameObject/Tick/TickContext.h"
+#include "Engine/Object/GameObject/WorldOrigin.h"
 
 #include "GameFramework/Kits/Genre/Strategy/TacticsSRPG/Component/SRPGGameModeComponent.h"
 #include "GameFramework/Runtime/Foundation/Framework/GameService.h"
@@ -145,21 +146,22 @@ namespace sw
                     (void)pDirector->endPlayerPhase();
             }
         }
-        drawField( *pDirector );
+        drawField( *pDirector, manager );
     }
 
-    void SRPGCursorComponent::drawField( const SRPGGameModeComponent& director ) const
+    void SRPGCursorComponent::drawField( const SRPGGameModeComponent& director, const GameObjectManager& manager ) const
     {
         DebugDrawQueue* pDraw = game::findSubsystem<DebugDrawQueue>();
         if ( pDraw == nullptr )
             return;
-        const SRPGBattlefield& field = director.getField();
-        // 칸 (x, y) 를 월드 (x, 0, y) 에 둔다 — 위에서 내려다본다.
+        const WorldOrigin&     origin = manager.getWorldOrigin();
+        const SRPGBattlefield& field  = director.getField();
+        // 칸 (x, y) 를 절대 자리 (x, 0, y) 에 둔다 — 위에서 내려다본다.
         for ( int32 y = 0; y < field.getHeight(); ++y )
         {
             for ( int32 x = 0; x < field.getWidth(); ++x )
             {
-                pDraw->drawBox( float3( static_cast<float32>( x ), -0.05f, static_cast<float32>( y ) ), float3( 0.48f, 0.05f, 0.48f ), float4( 0.3f, 0.35f, 0.3f, 1.0f ) );
+                pDraw->drawBox( origin.toLocal( float3( static_cast<float32>( x ), -0.05f, static_cast<float32>( y ) ) ), float3( 0.48f, 0.05f, 0.48f ), float4( 0.3f, 0.35f, 0.3f, 1.0f ) );
             }
         }
         for ( size_t index = 0; index < field.getUnits().size(); ++index )
@@ -169,9 +171,9 @@ namespace sw
                 continue;
             const bool   bSelected = static_cast<int32>( index ) == director.getSelectedUnit();
             const float4 color     = unit._team == SRPGTeam::Player ? ( bSelected ? float4( 0.6f, 0.9f, 1.0f, 1.0f ) : float4( 0.2f, 0.6f, 1.0f, 1.0f ) ) : float4( 1.0f, 0.3f, 0.2f, 1.0f );
-            pDraw->drawSphere( float3( static_cast<float32>( unit._cell._x ), 0.4f, static_cast<float32>( unit._cell._y ) ), 0.35f, color );
+            pDraw->drawSphere( origin.toLocal( float3( static_cast<float32>( unit._cell._x ), 0.4f, static_cast<float32>( unit._cell._y ) ) ), 0.35f, color );
         }
-        pDraw->drawBox( float3( static_cast<float32>( _cursor._x ), 0.05f, static_cast<float32>( _cursor._y ) ), float3( 0.5f, 0.02f, 0.5f ), float4( 1.0f, 0.95f, 0.3f, 1.0f ) );
+        pDraw->drawBox( origin.toLocal( float3( static_cast<float32>( _cursor._x ), 0.05f, static_cast<float32>( _cursor._y ) ) ), float3( 0.5f, 0.02f, 0.5f ), float4( 1.0f, 0.95f, 0.3f, 1.0f ) );
     }
 
     void SRPGCursorComponent::writeGrowthDebugLines( DebugHUDSectionWriter& writer, const GameObjectManager& manager ) const
