@@ -815,6 +815,7 @@ SW_TEST_CASE_F( JRPGRulesTest, EquipmentStatsAndRoundTrip )
     sw::InventorySlot blade;
     blade._itemID = "blade";
     blade._count  = 1;
+    blade._damage = 0.5f;
     sw::InventorySlot mail;
     mail._itemID = "mail";
     mail._count  = 1;
@@ -832,6 +833,9 @@ SW_TEST_CASE_F( JRPGRulesTest, EquipmentStatsAndRoundTrip )
     SW_REQUIRE_TRUE( restored.readState( reading ) );
     SW_EXPECT_EQUAL( 52, restored.computeAttack( 0 ) );
     SW_EXPECT_EQUAL( 14, restored.computeDefense( 0 ) );
+    const sw::InventorySlot* pRestoredBlade = restored.getMember( 0 )._equipment.findEquipped( "Weapon" );
+    SW_REQUIRE_NOT_NULL( pRestoredBlade );
+    SW_EXPECT_EQUAL( 0.5f, pRestoredBlade->_damage ); // 인스턴스 상태째 — id 만 실으면 새것이 된다
     SW_EXPECT_TRUE( JRPGTestUtil::isSameState( _party, restored ) );
 }
 
@@ -933,7 +937,7 @@ SW_TEST_CASE_F( JRPGRulesTest, PartyStateRefusals )
     } ) );
 
     // 정원을 넘는 멤버 수: 정원이 찬 파티가 쓴 바이트에 다른 파티의 멤버 하나(겹치지 않는 id)를 끼운다 — 멤버 칸 · 장비 칸은 저마다 맞아 정원만 넘는다.
-    // 바이트는 머리 · 멤버 수 · 멤버 칸들(리플렉션) 뒤에 멤버마다 장비(슬롯 수 + 빈 이름들)다.
+    // 바이트는 머리 · 멤버 수 · 멤버 칸들(리플렉션) 뒤에 멤버마다 장비(슬롯 수 + 빈 슬롯들)다.
     sw::JRPGParty full;
     sw::JRPGParty extra;
     initializeParty( full );
@@ -951,7 +955,7 @@ SW_TEST_CASE_F( JRPGRulesTest, PartyStateRefusals )
     full.writeState( fullBytes );
     extra.writeState( extraBytes );
     sw::StateIO::writeReflectedHeader<sw::JRPGParty>( header );
-    const size_t equipmentBytes  = sizeof( uint32 ) * ( 1 + extra.getMember( 0 )._equipment.getSlots().size() );
+    const size_t equipmentBytes  = sizeof( uint32 ) + sw::Inventory::kSlotStateMinBytes * extra.getMember( 0 )._equipment.getSlots().size();
     const size_t membersBegin    = static_cast<size_t>( header.getSize() ) + sizeof( uint32 );
     const size_t fullMembersEnd  = static_cast<size_t>( fullBytes.getSize() ) - equipmentBytes * sw::JRPGParty::kMaxMembers;
     const size_t extraMembersEnd = static_cast<size_t>( extraBytes.getSize() ) - equipmentBytes;
