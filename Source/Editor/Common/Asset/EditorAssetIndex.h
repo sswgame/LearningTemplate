@@ -21,6 +21,7 @@
 
 namespace sw
 {
+    class AssetScanCache;
     class TaskManager;
 } // namespace sw
 
@@ -45,6 +46,13 @@ namespace sw::editor
         string _target;            ///< 소문자 리소스 id 또는 `guid:<32자>`
         uint32 _line{ 0 };         ///< 1 부터 시작하는 줄 번호
         bool   _bInlined{ false }; ///< `_base="…"` 칸이다(`EditorAssetReference::_bInlined`). NOLINT(sw-bool-flag): 집합체다(중괄호 · 지정 초기화로 만든다) — C++17 비트필드는 기본값을 둘 수 없어 `T x;` 가 값을 남기지 않는다
+    };
+
+    /** @brief 파일 하나에서 뽑은 것입니다 — 정체성과 나가는 참조. 훑기 캐시에 두는 값도 이것이다. */
+    struct EditorAssetContent
+    {
+        optional<AssetGUID>     _guid;     ///< 텍스트 에셋의 머리 · 원본 곁 `.meta` 의 정체성(없을 수 있다)
+        vector<EditorAssetLink> _listLink; ///< 나가는 참조(텍스트 에셋만)
     };
 
     /** @brief 파일 하나의 줄입니다. */
@@ -83,8 +91,11 @@ namespace sw::editor
          * @brief @p resourceRoot(`Content/`)와 작업 도메인 폴더 @p scratchFolder(`AssetPaths::getScratchFolderPath`, 비면 빼고 없어도 뺀다) 아래를 모두 훑어 @p outData 를 짓습니다.
          *        워커에서 호출합니다. 텍스트 에셋은 @p pTaskManager 로 파일 단위 병렬로 읽고, nullptr 이면 차례로 읽습니다.
          * @details @p stopToken 이 올라가면 남은 파일을 읽지 않고 돌아온다 — 결과는 불완전하니 부른 쪽이 신호를 다시 읽고 버린다.
+         *          @p pCache(판 `kScanPayloadVersion`)를 주면 크기 · 시각이 그대로인 파일은 열지 않는다. 작업 도메인(실행마다 새 사본)의 파일은 캐시에 두지 않는다.
          */
-        static void scan( string_view resourceRoot, string_view scratchFolder, EditorAssetIndexData& outData, TaskManager* pTaskManager, const StopToken& stopToken = {} );
+        static void scan( string_view resourceRoot, string_view scratchFolder, EditorAssetIndexData& outData, TaskManager* pTaskManager, const StopToken& stopToken = {}, AssetScanCache* pCache = nullptr );
+        /** @brief 훑기 캐시에 두는 값(`EditorAssetContent`)의 판입니다. 참조 뽑기(`extractLinks` · 도메인 표) · 텍스트 에셋 판정 · 정체성 읽기 규칙을 바꾸면 올린다. */
+        static constexpr uint32 kScanPayloadVersion = 1;
         /** @brief 스캔한 결과로 색인을 바꿉니다. 이후 `isReady` 가 true 입니다. */
         void assign( EditorAssetIndexData&& data );
         /**
@@ -127,16 +138,17 @@ namespace sw::editor
         static bool isTextAsset( string_view path );
         /** @brief 텍스트 하나에서 참조를 뽑아 @p outListLink 에 더합니다(비우지 않는다). 대상이 있는지는 보지 않는다. @p listMountedDomain 은 고정 도메인 표 밖의 붙인 디스크 도메인 이름이다. */
         static void extractLinks( string_view text, vector<EditorAssetLink>& outListLink, const vector<string>& listMountedDomain = {} );
+        /**
+         * @brief 파일의 글에서 줄의 내용을 뽑습니다. @p pText 는 텍스트 에셋의 글, @p pMetaText 는 원본 곁 `.meta` 의 글이고, 없으면 nullptr 입니다. 아무 스레드에서나 부른다.
+         * @details 정체성은 텍스트 에셋이면 머리, 그 밖이면 곁의 `.meta` 에서 읽는다(`.meta` 는 목록의 파일이 아니다 — `EditorContentScan::isListedFile`).
+         */
+        static EditorAssetContent makeContent( const string* pText, const string* pMetaText, const vector<string>& listMountedDomain = {} );
 
     private:
         /** @brief 파일 @p assetID 의 줄과 그 줄이 만든 역방향 표 · GUID 줄을 뺍니다. */
         static void removeEntry( EditorAssetIndexData& inoutData, const string& assetID );
-        /**
-         * @brief 파일 @p displayPath(디스크 표기)의 줄을 넣습니다(있던 줄은 먼저 뺀다). @p pText 는 텍스트 에셋의 글, @p pMetaText 는 원본 곁 `.meta` 의 글이고, 없으면 nullptr 입니다.
-         * @details 정체성은 텍스트 에셋이면 머리, 그 밖이면 곁의 `.meta` 에서 읽는다(`.meta` 는 목록의 파일이 아니다 — `EditorContentScan::isListedFile`).
-         */
-        static void insertEntry( EditorAssetIndexData& inoutData, string_view displayPath, const FileStamp& fileStamp, const string* pText, const string* pMetaText,
-                                 const vector<string>& listMountedDomain = {} );
+        /** @brief 파일 @p displayPath(디스크 표기)의 줄을 넣습니다(있던 줄은 먼저 뺀다). */
+        static void insertEntry( EditorAssetIndexData& inoutData, string_view displayPath, const FileStamp& fileStamp, EditorAssetContent&& content );
         /** @brief 파일 @p displayPath 를 디스크에서 읽어 줄을 고칩니다. 크기 · 시각이 같으면(@p bForce 가 아니면) 열지 않는다. 없으면 줄을 뺀다. */
         static void refreshFromDisk( EditorAssetIndexData& inoutData, string_view resourceRoot, string_view displayPath, bool bForce );
 

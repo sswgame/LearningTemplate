@@ -10,10 +10,19 @@
 #include "Core/Concurrency/StopToken.h"
 #include "Core/Container/string.h"
 #include "Core/Container/vector.h"
+#include "Core/File/FileUtil.h"
 #include "Core/Foundation/Types.h"
 
 namespace sw::editor
 {
+    /** @brief 트리 훑기가 찾은 파일 하나입니다. 도장은 나열이 함께 준 값이라 파일마다 다시 묻지 않는다. */
+    struct EditorContentFile
+    {
+        string    _path;           ///< 디스크 경로(대소문자 그대로)
+        FileStamp _fileStamp{};    ///< 파일의 크기 · 쓰기 시각
+        FileStamp _sidecarStamp{}; ///< 곁 서술(`<파일>.meta`)의 크기 · 쓰기 시각. 없으면 0 이다
+    };
+
     /**
      * @struct EditorContentScan
      * @brief 리소스 트리의 폴더를 훑습니다. 반환과 경로 규칙은 `FileUtil::collectFiles` · `collectFolders` 와 같고, 곁 서술과 옛 작업 도메인 자리(`ProcessRoots::_content` 아래 `scratch/`)만 빠집니다.
@@ -33,9 +42,8 @@ namespace sw::editor
         [[nodiscard]] static bool collectFolders( string_view folder, vector<string>& outListFolder, bool bRecursive );
         /**
          * @brief 에디터의 리소스 트리 전체 — 리소스 루트 @p contentRoot 와 작업 도메인 폴더(@p scratchFolder, 아직 없으면 뺀다) — 아래 파일입니다.
-         * @details 트리 전체를 보는 쪽(에셋 색인 · 카탈로그 · 참조 검사)이 부른다. 작업 도메인 파일의 id 는 `AssetPaths::toAssetID` 로 푼다(루트 기준 상대 경로가 아니다).
+         * @details 트리 전체를 보는 쪽(에셋 색인)이 부른다. 작업 도메인 파일의 id 는 `AssetPaths::toAssetID` 로 푼다(루트 기준 상대 경로가 아니다).
          */
-        [[nodiscard]] static bool collectTreeFiles( string_view contentRoot, string_view scratchFolder, string_view extension, vector<string>& outListFilePath,
-                                                    const StopToken& stopToken = {} );
+        [[nodiscard]] static bool collectTreeFiles( string_view contentRoot, string_view scratchFolder, vector<EditorContentFile>& outListFile, const StopToken& stopToken = {} );
     };
 } // namespace sw::editor
