@@ -206,3 +206,59 @@ SW_TEST_CASE( ShaderCacheTest, DefineOrderDoesNotSplitEntries )
     SW_EXPECT_EQUAL( uint64( 1 ), cache.getProviderLoadCount().get() );
     SW_EXPECT_EQUAL( uint64( 1 ), cache.getMemoryHitCount().get() );
 }
+
+namespace
+{
+    /**
+     * @brief 읽는 도중에 재컴파일이 끝나는 공급자입니다 — 첫 읽기가 옛 바이트를 들고 있는 사이 `replaceCompiled` 가 새 바이트를 넣는다(핫 리로드와 워커 로드의 겹침).
+     */
+    class ReplacedWhileLoadingProvider final : public IShaderBytecodeProvider
+    {
+    public:
+        ShaderCache*   _pCache{ nullptr };
+        mutable size_t _collectedWhileLoading{ 0 };
+        mutable bool   _bReplaced{ false }; ///< NOLINT(sw-bool-flag): 테스트가 보는 답
+
+        [[nodiscard]] ShaderCompileResult load( const ShaderCompileDesc& desc ) const override
+        {
+            vector<ShaderCompileDesc> listDesc;
+            _pCache->collectCompiledDescs( listDesc );
+            _collectedWhileLoading = listDesc.size();
+
+            ShaderCompileResult replaced;
+            replaced._bytecode = { 2 };
+            replaced._bSuccess = true;
+            _bReplaced         = _pCache->replaceCompiled( desc, replaced );
+
+            ShaderCompileResult stale;
+            stale._bytecode = { 1 };
+            stale._bSuccess = true;
+            return stale;
+        }
+        [[nodiscard]] uint64 computeFingerprint( const ShaderCompileResult&, const ShaderCompileDesc& ) const override { return 1u; }
+        [[nodiscard]] bool   getReflection( ShaderCache&, const ShaderCompileDesc&, ShaderReflectionData& ) const override { return false; }
+    };
+} // namespace
+
+/**
+ * @brief [ShaderCacheTest] 로드 중에 재컴파일이 항목을 바꾸면 그 로드는 새 항목을 답으로 주고 덮지 않는다. 컴파일 중인 요청도 리로드 목록에 든다
+ * @details 예전에는 늦게 끝난 옛 로드가 새 바이트코드를 덮어 핫 리로드한 셰이더가 옛 그림으로 남았다.
+ */
+SW_TEST_CASE( ShaderCacheTest, LoadInFlightDoesNotOverwriteReplacedEntry )
+{
+    unique_ptr<ReplacedWhileLoadingProvider> pProvider       = make_unique<ReplacedWhileLoadingProvider>();
+    ReplacedWhileLoadingProvider* const      pProviderBorrow = pProvider.get();
+    ShaderCache                              cache;
+    pProviderBorrow->_pCache = &cache;
+    SW_REQUIRE_TRUE( cache.initializeWithProvider( std::move( pProvider ) ) );
+
+    const ShaderCompileDesc   desc   = makeDesc( "PSMain" );
+    const ShaderCompileResult result = cache.getOrCompile( desc );
+    SW_EXPECT_TRUE( pProviderBorrow->_bReplaced );
+    SW_EXPECT_EQUAL( size_t{ 1 }, pProviderBorrow->_collectedWhileLoading );
+    SW_REQUIRE_TRUE( result._bSuccess );
+    SW_EXPECT_TRUE( result._bytecode == vector<uint8>{ 2 } );
+    vector<uint8> cachedBytecode;
+    SW_REQUIRE_TRUE( cache.findCachedBytecode( desc, cachedBytecode ) );
+    SW_EXPECT_TRUE( cachedBytecode == vector<uint8>{ 2 } );
+}

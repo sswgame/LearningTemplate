@@ -218,6 +218,13 @@ namespace sw
         uint32 readyCount{ 0 };
         for ( const MaterialPSOBuilder::Result& result : listResult )
         {
+            if ( result._bDiscarded )
+            {
+                // 핫 리로드 앞에 시작한 생성이다 — 옛 바이트코드일 수 있고 그 키의 항목은 이미 지웠거나 새로 만드는 중이다.
+                if ( result._handle != 0 )
+                    pDevice->releaseHandle( result._handle );
+                continue;
+            }
             if ( result._handle == 0 )
             {
                 // 컴파일 실패다. 패스 PSO(다른 셰이더 · 다른 보기 모드)로 그리면 틀린 그림이 통과하므로 이 조합은 그리지 않고 오류를 남긴다.
@@ -350,12 +357,14 @@ namespace sw
         }
 
         // 3) 머티리얼 변형(입자 · 쿠키 아틀라스 · 디퍼드 타일 포함). 소유한 것만 파괴한다 — `_bOwned` 가 0 이면 패스 PSO 그대로다.
+        // 만드는 중인 것은 모두 무효로 하고 지운다 — 옛 바이트코드를 집었을 수 있고, 패스 PSO 를 놓았으면 그 키를 다시 찾는 쪽이 없다. 다음 셋업이 다시 넣는다.
+        _materialPSOBuilder.discardPending();
         {
             ScopedLock<mutex> lock{ _materialPSOMutex };
             for ( auto it = _mapMaterialPSO.begin(); it != _mapMaterialPSO.end(); )
             {
                 const MaterialPSOEntry& entry    = it->second;
-                const bool              bRelease = entry._state == MaterialPSOState::Failed ||
+                const bool              bRelease = entry._state == MaterialPSOState::Failed || entry._state == MaterialPSOState::Building ||
                                       ( entry._state == MaterialPSOState::Ready && ( bPassReleased || VectorUtil::contains( listAffected, entry._pso ) ) );
                 if ( bRelease == false )
                 {
