@@ -105,7 +105,20 @@ namespace sw
 
             void appendString( DBusMessageIter* pIter, const utf8* pText )
             {
-                dbus_message_iter_append_basic( pIter, DBUS_TYPE_STRING, &pText );
+                // D-Bus 의 글은 올바른 UTF-8 이어야 한다 — 아니면 덧붙이기가 져 메시지의 서명이 틀어진다(다른 사람이 지은 이름 · 잘린 글이 위젯에 올 수 있다).
+                const utf8* pValid = dbus_validate_utf8( pText, nullptr ) != FALSE ? pText : "";
+                dbus_message_iter_append_basic( pIter, DBUS_TYPE_STRING, &pValid );
+            }
+
+            /** @brief 지금 칸이 글이면 읽고 다음 칸으로 갑니다. 글이 아니면 nullptr 입니다 — 보낸 쪽의 서명은 믿을 수 없고, 다른 형의 칸을 글로 읽으면 엉뚱한 주소를 따라간다. */
+            const utf8* readString( DBusMessageIter* pIter )
+            {
+                if ( dbus_message_iter_get_arg_type( pIter ) != DBUS_TYPE_STRING )
+                    return nullptr;
+                const utf8* pText = nullptr;
+                dbus_message_iter_get_basic( pIter, &pText );
+                dbus_message_iter_next( pIter );
+                return pText;
             }
 
             void appendRef( DBusMessageIter* pIter, const string& busName, const utf8* pPath )
@@ -230,7 +243,7 @@ namespace sw
 
                 // 스크린 리더가 붙었는지는 세션 버스의 `org.a11y.Status.ScreenReaderEnabled` 가 말한다 — 지금 값을 읽고 바뀔 때의 신호를 받는다.
                 _bReaderOn = readScreenReaderEnabled();
-                dbus_bus_add_match( _pSession, "type='signal',interface='org.freedesktop.DBus.Properties',member='PropertiesChanged',path='/org/a11y/bus'", &error );
+                dbus_bus_add_match( _pSession, "type='signal',sender='org.a11y.Bus',interface='org.freedesktop.DBus.Properties',member='PropertiesChanged',path='/org/a11y/bus'", &error );
                 if ( dbus_error_is_set( &error ) )
                     dbus_error_free( &error );
                 return true;
@@ -342,12 +355,11 @@ namespace sw
                 if ( dbus_message_is_signal( pMessage, ATSPIInternal::kIfaceProps, "PropertiesChanged" ) == FALSE )
                     return;
                 DBusMessageIter iter;
-                if ( dbus_message_iter_init( pMessage, &iter ) == FALSE || dbus_message_iter_get_arg_type( &iter ) != DBUS_TYPE_STRING )
+                if ( dbus_message_iter_init( pMessage, &iter ) == FALSE )
                     return;
-                const utf8* pIface = nullptr;
-                dbus_message_iter_get_basic( &iter, &pIface );
-                const bool bStatusIface = pIface != nullptr && string( pIface ) == "org.a11y.Status";
-                if ( bStatusIface == false || dbus_message_iter_next( &iter ) == FALSE )
+                const utf8* pIface       = ATSPIInternal::readString( &iter );
+                const bool  bStatusIface = pIface != nullptr && string( pIface ) == "org.a11y.Status";
+                if ( bStatusIface == false || dbus_message_iter_get_arg_type( &iter ) != DBUS_TYPE_ARRAY )
                     return;
                 DBusMessageIter dict;
                 dbus_message_iter_recurse( &iter, &dict );
@@ -355,10 +367,9 @@ namespace sw
                 {
                     DBusMessageIter entry;
                     dbus_message_iter_recurse( &dict, &entry );
-                    const utf8* pKey = nullptr;
-                    dbus_message_iter_get_basic( &entry, &pKey );
-                    const bool bReaderKey = pKey != nullptr && string( pKey ) == "ScreenReaderEnabled";
-                    if ( bReaderKey && dbus_message_iter_next( &entry ) != FALSE )
+                    const utf8* pKey       = ATSPIInternal::readString( &entry );
+                    const bool  bReaderKey = pKey != nullptr && string( pKey ) == "ScreenReaderEnabled";
+                    if ( bReaderKey && dbus_message_iter_get_arg_type( &entry ) == DBUS_TYPE_VARIANT )
                     {
                         DBusMessageIter variant;
                         dbus_message_iter_recurse( &entry, &variant );
@@ -569,19 +580,15 @@ namespace sw
                 }
                 if ( member == "Set" )
                 {
-                    const utf8*     pIface = nullptr;
-                    const utf8*     pName  = nullptr;
                     DBusMessageIter iter;
                     if ( dbus_message_iter_init( pMessage, &iter ) == FALSE )
                         return replyError( pMessage, DBUS_ERROR_INVALID_ARGS, "Set(interface, name, value)" );
-                    dbus_message_iter_get_basic( &iter, &pIface );
-                    dbus_message_iter_next( &iter );
-                    dbus_message_iter_get_basic( &iter, &pName );
-                    dbus_message_iter_next( &iter );
-                    const bool bNamed       = pIface != nullptr && pName != nullptr;
-                    const bool bValueSetter = bNamed && string( pIface ) == kIfaceValue && string( pName ) == "CurrentValue";
-                    const bool bVariant     = dbus_message_iter_get_arg_type( &iter ) == DBUS_TYPE_VARIANT;
-                    const bool bSettable    = target._bRoot == false && bValueSetter && bVariant;
+                    const utf8* pIface       = readString( &iter );
+                    const utf8* pName        = pIface != nullptr ? readString( &iter ) : nullptr;
+                    const bool  bNamed       = pIface != nullptr && pName != nullptr;
+                    const bool  bValueSetter = bNamed && string( pIface ) == kIfaceValue && string( pName ) == "CurrentValue";
+                    const bool  bVariant     = dbus_message_iter_get_arg_type( &iter ) == DBUS_TYPE_VARIANT;
+                    const bool  bSettable    = target._bRoot == false && bValueSetter && bVariant;
                     if ( bSettable == false )
                         return replyError( pMessage, DBUS_ERROR_PROPERTY_READ_ONLY, "only Value.CurrentValue can be set" );
                     DBusMessageIter variant;
