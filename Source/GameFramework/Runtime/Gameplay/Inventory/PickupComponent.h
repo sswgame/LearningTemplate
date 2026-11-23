@@ -32,7 +32,7 @@ namespace sw
     public:
         REFLECT_BODY();
 
-        static constexpr const utf8* kSpawnedName = "Pickup"; ///< `spawn` 이 만든 오브젝트의 이름
+        static constexpr const utf8* kSpawnedName = "Pickup"; ///< `spawn` 이 만든 오브젝트의 이름(같은 이름이면 저장소가 `_2` 를 붙인다)
 
         PickupComponent();
         ~PickupComponent() override;
@@ -43,10 +43,13 @@ namespace sw
         void onRegister( GameObjectManager& manager ) override;
 
         /**
-         * @brief @p manager 에 아이템 조각 @p item 을 든 오브젝트를 @p position 에 만듭니다(작은 상자 메시 + 이 컴포넌트). 빈 조각이면 만들지 않고 nullptr 입니다.
-         * @details 버리기 화면 · 서버의 버리기 처리가 부른다. 이름은 `kSpawnedName` 이다(같은 이름이면 저장소가 `_2` 를 붙인다).
+         * @brief 프리팹 @p prefabPath(모습 · 상호작용 · 이 컴포넌트)를 @p position 에 세워 아이템 조각 @p item 을 쥐입니다. 못 세우면 오류를 남기고 nullptr 입니다(빈 조각이면 조용히 nullptr).
+         * @details 버리기 화면 · 서버의 버리기 처리가 부른다. 모습과 줍는 상호작용은 프리팹 데이터다(`CharacterEquipmentComponent` 의 `_pickupPrefab`) — 세운 것은 다시 상호작용으로 주울 수 있다.
+         *          부르는 쪽은 nullptr 이면 조각을 가방에 돌려준다(잃지 않는다).
          */
-        static GameObject* spawn( GameObjectManager& manager, const InventorySlot& item, const float3& position );
+        [[nodiscard]] static GameObject* spawn( GameObjectManager& manager, string_view prefabPath, const InventorySlot& item, const float3& position );
+        /** @brief 든 조각을 정합니다. 시작 전에 부릅니다(`spawn` · 테스트). */
+        void setItem( const InventorySlot& item );
 
         /** @brief 가방 @p bag(캐릭터의 것 — `CharacterEquipmentComponent::getBagForTrade`)에 이 조각을 모두 넣고 오브젝트를 없앱니다. 다 들어가지 않으면 아무것도 바꾸지 않고 false 입니다. */
         [[nodiscard]] bool pickUp( Inventory& bag );
@@ -61,6 +64,8 @@ namespace sw
     private:
         /** @brief 닿은 몸이 줍습니다(`_bPickUpOnTouch`, 받을 가방이 있는 몸만). */
         void handleOverlapBegin( const OverlapInfo& overlap );
+        /** @brief 상호작용을 끝낸 쪽이 줍습니다. */
+        void handleUsed( const GameObject& user );
         /** @brief 조각을 비우고 오브젝트를 없앱니다. */
         void consume();
 

@@ -1,6 +1,6 @@
 <?asset guid="5e4824070a8d6dfc5280c9330cd91a9b"?>
 <Scene formatVersion="3" name="InventoryDemo">
-	<!-- 인벤토리 · 오프라인 상점 시연(시나리오 automation/inventory · shopoffline). Player 는 마을 사람 프리셋에 장비 컴포넌트(가방 4 칸 · 무게 3)를 단다.
+	<!-- 인벤토리 · 오프라인 상점 시연(시나리오 automation/inventory · shopoffline). Player 는 마을 사람 프리셋에 장비 컴포넌트(가방 4 칸 · 무게 3)와 상호작용(Interact — 버린 것을 다시 줍는다)을 단다.
 	     바닥에 포션 더미(3 개) · 장화 · 투구 · 망토가 놓여 있다(PickupComponent). InventoryDemo 의 개발 명령(exec InventoryDemo openInventory · openShop)이 화면을 연다. -->
 	<SceneSettings _bStreaming="false" _unloadMargin="0" _maxCellLoadsPerFrame="0" _addToWorldBudgetMicroseconds="0">
 		<_cellGrid _cellSize="0" _loadingRadius="0" />
@@ -25,7 +25,14 @@
 				<_listComponent>
 					<SkeletalMeshComponent _localID="15127961318995883145" _componentName="SkeletalMeshComponent" _bActive="true" _localPosition="0,0,0" _localRotation="0,3.1415927,0" _localScale="1,1,1" _attachOwner="None" _attachOwnerID="0" _attachComponent="None" _meshID="" _materialPath="" _boundsRadius="2" _gpuSpinSeed="0" _bVisible="true" _skeletonPath="" _updateRateDivisor="1" _bFollowParentPose="false" _visibilityBasedTickOption="AlwaysTickPose" />
 					<CharacterAppearanceComponent _localID="13827364293183997314" _componentName="CharacterAppearanceComponent" _bActive="true" _presetID="CustomizeTownsfolk" _seed="0" _bMergeParts="true" />
-					<CharacterEquipmentComponent _localID="14928403153068946980" _componentName="CharacterEquipmentComponent" _bActive="true" _bagSlotCount="4" _bagMaxWeight="3" />
+					<CharacterEquipmentComponent _localID="14928403153068946980" _componentName="CharacterEquipmentComponent" _bActive="true" _bagSlotCount="4" _bagMaxWeight="3" _pickupPrefab="common/prefabs/gimmicks/loot/pickup.prefab.xml" />
+					<PawnComponent _localID="11149290121538025405" _moveAction="None" _lookAction="None" _upAction="None" _inputLayer="None" _aiControllerPrefab="" _maxPitch="80.21409" _autoPossess="Player0" _bLockMouse="false">
+						<_listButton>
+							<item>Interact</item>
+						</_listButton>
+						<_listAnalog />
+					</PawnComponent>
+					<InteractorComponent _localID="16055325405208558630" _space="Space3D" _eyeOffset="0,1.6,0" _facing2D="1,0,0" _interactButton="Interact" _bUseLineOfSight="false" _keepDistanceScale="1.25" />
 				</_listComponent>
 			</GameObject>
 		</entity>

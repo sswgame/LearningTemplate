@@ -260,6 +260,12 @@ namespace sw
         return pDef->_highlight;
     }
 
+    InteractableComponent* InteractableComponent::findOnOwner( const Component& component )
+    {
+        const GameObject* pOwner = component.getOwner();
+        return pOwner != nullptr ? pOwner->getComponent<InteractableComponent>() : nullptr;
+    }
+
     void InteractableComponent::completeInteraction( const GameObject& interactor )
     {
         const InteractionDef* pDef   = getDefinition();

@@ -3,6 +3,7 @@
  * @brief 채집하면 아이템을 주고, 다 쓰면 다시 자라는 채집 지점입니다.
  */
 #pragma once
+#include "Core/Delegate/Subscription.h"
 #include "Core/Foundation/Types.h"
 #include "Core/Math/Math.h"
 #include "Core/Name/hashed_string.h"
@@ -30,6 +31,8 @@ namespace sw
         GatheringNodeComponent();
         virtual ~GatheringNodeComponent() override = default;
 
+        /** @brief 같은 오브젝트의 상호작용 완료를 듣습니다. */
+        void onBeginPlay() override;
         void onTick( TickContext& context ) override;
         void stepOnce();
         /** @brief @p who 가 한 번 채집합니다. 상호작용이 부르는 것과 같은 동작입니다. 다 써서 없거나 받을 가방이 없거나 차면 false 입니다(횟수를 쓰지 않는다). 게임 스레드(틱 밖)에서 부릅니다. */
@@ -46,12 +49,15 @@ namespace sw
         void configure( const hashed_string& item, int32 count, int32 uses );
 
     private:
+        /** @brief 상호작용(Gather · Chop)을 끝낸 쪽에 줍니다. */
+        void handleUsed( const GameObject& user );
         /** @brief 다 썼다 — 쓰러지기를 시작하거나(`_fallDuration`) 바로 몸을 끕니다. @p who 의 반대쪽으로 쓰러집니다. */
         void handleDepleted( const GameObject& who );
         /** @brief 쓰러진 정도(0 = 서 있음, 1 = 누움)를 트랜스폼에 씁니다. */
         void applyFall( float32 amount );
 
     private:
+        Subscription _usedSubscription; ///< 상호작용 완료 구독(`handleUsed`)
         PROPERTY( Required, Category = "Gathering", DisplayName = "Item" )
         hashed_string _item;
         PROPERTY( Category = "Gathering", DisplayName = "Count", Min = 1 )

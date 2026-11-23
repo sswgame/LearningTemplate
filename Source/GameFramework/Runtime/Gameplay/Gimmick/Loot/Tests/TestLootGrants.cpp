@@ -128,8 +128,8 @@ SW_TEST_CASE( LootGrantTest, WorldItemIsPickedUpByUse )
     InventorySlot              stack;
     stack._itemID     = hashed_string( "Ore" );
     stack._count      = 3;
-    GameObject* pItem = PickupComponent::spawn( manager, stack, float3{} );
-    SW_REQUIRE_NOT_NULL( pItem );
+    GameObject* pItem = manager.createGameObject( hashed_string( "Dropped" ) );
+    pItem->addComponent<PickupComponent>()->setItem( stack );
     InteractableComponent* pInteractable = pItem->addComponent<InteractableComponent>();
     InteractionDef         def;
     def._id = hashed_string( "pickup" );
@@ -173,4 +173,29 @@ SW_TEST_CASE( LootGrantTest, DepletedTreeFallsAwayFromWhoFelledIt )
     const float3 up = float3::transformVector( float3{ 0.0f, 1.0f, 0.0f }, pRoot->getWorldMatrix() );
     SW_EXPECT_NEAR( 1.0f, up._x, 1.0e-2f ); // 벤 쪽(-X)의 반대
     SW_EXPECT_NEAR( 0.0f, up._y, 1.0e-2f );
+}
+
+/** @brief [LootGrantTest] 채집 지점 · 숨는 곳은 상호작용 완료 알림으로 동작한다(센서 없이) — 끝낸 쪽이 받는다 */
+SW_TEST_CASE( LootGrantTest, GatheringRunsOnTheCompletedInteraction )
+{
+    GameObjectManager          manager;
+    GameObject*                pWho       = manager.createGameObject( hashed_string( "Who" ) );
+    ItemReceiverTestComponent* pReceiver  = pWho->addComponent<ItemReceiverTestComponent>();
+    pReceiver->_room                      = 9;
+    GameObject*             pHerb         = manager.createGameObject( hashed_string( "Herb" ) );
+    InteractableComponent*  pInteractable = pHerb->addComponent<InteractableComponent>();
+    GatheringNodeComponent* pNode         = pHerb->addComponent<GatheringNodeComponent>();
+    pNode->configure( hashed_string( "Leaf" ), 2, 2 );
+    InteractionDef def;
+    def._id = hashed_string( "gather" );
+    pInteractable->setDefinition( def );
+    manager.beginPlay();
+
+    pInteractable->completeInteraction( *pWho );
+    SW_EXPECT_EQUAL( 2, pReceiver->_received );
+    SW_EXPECT_EQUAL( 1, pNode->getUsesLeft() );
+    pInteractable->completeInteraction( *pWho );
+    SW_EXPECT_EQUAL( 4, pReceiver->_received );
+    SW_EXPECT_TRUE( pNode->isDepleted() );
+    SW_EXPECT_FALSE( pInteractable->isEnabled() );
 }

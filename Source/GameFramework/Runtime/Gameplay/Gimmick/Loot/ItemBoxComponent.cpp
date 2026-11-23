@@ -72,15 +72,9 @@ namespace sw
         Component::onBeginPlay();
         if ( _openBy != ItemBoxOpenBy::Use )
             return;
-        GameObject*            pOwner        = getOwner();
-        InteractableComponent* pInteractable = pOwner != nullptr ? pOwner->getComponent<InteractableComponent>() : nullptr;
-        if ( pInteractable == nullptr )
-        {
-            SW_LOG_ERROR_ID( "ItemBox.UseNeedsInteractable", "Item box '%#' opens by use but has no InteractableComponent - it never opens", pOwner != nullptr ? pOwner->getName().c_str() : "" );
-            return;
-        }
-        _usedSubscription = pInteractable->getCompletedDelegate().add( [this]( const GameObject& user )
-        { handleUsed( user ); } );
+        _usedSubscription = InteractableComponent::listenCompleted<&ItemBoxComponent::handleUsed>( *this );
+        if ( _usedSubscription.isActive() == false )
+            SW_LOG_ERROR_ID( "ItemBox.UseNeedsInteractable", "Item box '%#' opens by use but has no InteractableComponent - it never opens", getOwner() != nullptr ? getOwner()->getName().c_str() : "" );
     }
 
     void ItemBoxComponent::handleUsed( const GameObject& user )

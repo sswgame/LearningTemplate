@@ -10,7 +10,6 @@
 #include "Engine/Object/GameObject/Tick/TickContext.h"
 
 #include "GameFramework/Runtime/Gameplay/Gimmick/GimmickUtil.h"
-#include "GameFramework/Runtime/Gameplay/Gimmick/Trigger/GimmickSensorComponent.h"
 #include "GameFramework/Runtime/Gameplay/Interaction/InteractableComponent.h"
 
 namespace sw
@@ -28,6 +27,17 @@ namespace sw
         , _standingRotation{}
         , _clock{}
     {
+    }
+
+    void GatheringNodeComponent::onBeginPlay()
+    {
+        Component::onBeginPlay();
+        _usedSubscription = InteractableComponent::listenCompleted<&GatheringNodeComponent::handleUsed>( *this ); // 상호작용이 없는 지점은 코드(`gather`)가 부른다
+    }
+
+    void GatheringNodeComponent::handleUsed( const GameObject& user )
+    {
+        (void)gather( user ); // 줬는지는 쓰지 않는다 — 못 주면 giveItem 이 경고를 남긴다
     }
 
     bool GatheringNodeComponent::gather( const GameObject& who )
@@ -92,27 +102,9 @@ namespace sw
 
     void GatheringNodeComponent::stepOnce()
     {
-        GameObject*              pOwner   = getOwner();
-        const GameObjectManager* pManager = pOwner != nullptr ? pOwner->getManager() : nullptr;
-        if ( pManager == nullptr )
+        GameObject* pOwner = getOwner();
+        if ( pOwner == nullptr )
             return;
-        // 상호작용(Gather)을 끝낸 쪽에 준다.
-        GimmickSensorComponent* pSensor = pOwner->getComponent<GimmickSensorComponent>();
-        if ( pSensor != nullptr && pSensor->consumeUses() > 0.0f )
-        {
-            const InteractableComponent* pInteractable = pOwner->getComponent<InteractableComponent>();
-            const GameObjectHandle       who           = pInteractable != nullptr ? pInteractable->getLastInteractor() : GameObjectHandle{};
-            // 가방은 다른 오브젝트(조종자)의 상태라 틱 뒤 게임 스레드에서 준다.
-            const GameObjectHandle node = pOwner->getHandle();
-            pManager->executeOrDeferPostTickOnScene( [node, who]( GameObjectManager& sceneManager )
-            {
-                GameObject*             pNodeObject = sceneManager.resolveGameObject( node );
-                GatheringNodeComponent* pNode       = pNodeObject != nullptr ? pNodeObject->getComponent<GatheringNodeComponent>() : nullptr;
-                const GameObject*       pWho        = sceneManager.resolveGameObject( who );
-                if ( pNode != nullptr && pWho != nullptr )
-                    (void)pNode->gather( *pWho ); // 줬는지는 쓰지 않는다 — 못 주면 giveItem 이 경고를 남긴다
-            } );
-        }
         if ( _fallStepsLeft > 0 )
         {
             --_fallStepsLeft;

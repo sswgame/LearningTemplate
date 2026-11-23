@@ -7,6 +7,8 @@
 #include "Core/Container/SlotHandle.h"
 #include "Core/Container/string.h"
 #include "Core/Delegate/Delegate.h"
+#include "Core/Delegate/Subscription.h"
+#include "Core/Foundation/StdHeaders.h"
 #include "Core/Foundation/Types.h"
 #include "Core/Math/Math.h"
 #include "Core/Memory/Memory.h"
@@ -107,14 +109,35 @@ namespace sw
 
         /** @brief 상호작용이 끝났을 때 부릅니다. 쿨다운, 완료 수, 이벤트, 권한 훅을 처리합니다. 게임 스레드에서 부릅니다. */
         void completeInteraction( const GameObject& interactor );
-        /** @brief 끝날 때마다 끝낸 쪽을 알리는 델리게이트입니다 — 같은 오브젝트의 상자 · 줍기가 듣는다(상호작용은 그것들을 모른다). 게임 스레드에서 온다. */
-        MulticastDelegate<void( const GameObject& )>& getCompletedDelegate() { return _completed; }
+        /**
+         * @brief @p listener 의 멤버 함수 @p Method( const GameObject& 끝낸 쪽 ) 를 같은 오브젝트의 상호작용 완료에 겁니다. 돌려받은 구독을 @p listener 의 멤버로 듭니다.
+         * @details 상자 · 줍기 · 채집 · 밀기 · 숨기가 듣는다 — 상호작용은 그것들을 모른다. 게임 스레드(틱 뒤)에서 온다. 켜지지 않았거나 파괴 대기 중인 컴포넌트에는 부르지 않는다
+         *          (`GameObjectEvents::listen` 과 같은 규칙). 시작(`onBeginPlay`)에서 부른다. 상호작용이 없으면 빈 구독이다.
+         */
+        template <auto Method, typename TComponent>
+        [[nodiscard]] static Subscription listenCompleted( TComponent& listener )
+        {
+            static_assert( std::is_base_of_v<Component, TComponent>, "the listener must be a component" );
+            InteractableComponent* const pInteractable = findOnOwner( listener );
+            if ( pInteractable == nullptr )
+                return Subscription{};
+            TComponent* const pListener = &listener;
+            return pInteractable->_completed.add( [pListener]( const GameObject& user )
+            {
+                const bool bCannotReceive = pListener->isPendingDestroy() || pListener->isSelfActive() == false;
+                if ( bCannotReceive )
+                    return;
+                std::invoke( Method, pListener, user );
+            } );
+        }
         /** @brief 지금까지 끝난 횟수입니다. 아무 스레드에서 읽어도 됩니다. 기믹 센서가 지난번에 읽은 수와 비교해서 사용 횟수로 셉니다. */
         uint32 getCompletedCount() const { return _completedCount.load( std::memory_order_relaxed ); }
         /** @brief 마지막으로 끝낸 쪽입니다. 밀기 방향과 채집 보상 대상을 정하는 데 씁니다. */
         GameObjectHandle getLastInteractor() const { return _lastInteractor; }
 
     private:
+        /** @brief @p component 와 같은 오브젝트의 상호작용입니다. 없으면 nullptr 입니다. */
+        static InteractableComponent* findOnOwner( const Component& component );
         /** @brief 정의를 다시 찾고(`findDefinition`) 공간 색인 항목의 반 크기를 맞춥니다. */
         void resolveDefinition();
         void findDefinition();
@@ -147,7 +170,7 @@ namespace sw
         const InteractionDef*                        _pDef;
         AssetReloadWatch<InteractionCatalog>         _catalogReload;    ///< 정의를 찾았을 때의 `SharedAssetCache<InteractionCatalog>::getReloadCount` 값. 달라지면 다시 찾는다
         InstanceHighlight                            _appliedHighlight; ///< 메시에 마지막으로 옮긴 강조(같으면 다시 옮기지 않는다)
-        MulticastDelegate<void( const GameObject& )> _completed;        ///< 끝남 알림(`getCompletedDelegate`)
+        MulticastDelegate<void( const GameObject& )> _completed;        ///< 끝남 알림(`listenCompleted`)
         atomic<uint32>                               _completedCount;   ///< 끝난 횟수. 같은 오브젝트의 기믹 센서가 읽어 간다
         atomic<uint8>                                _bHighlightRequested;
         uint8                                        _bHasOverride;

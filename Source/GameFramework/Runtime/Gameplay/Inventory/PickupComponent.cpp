@@ -4,25 +4,18 @@
 
 #include "Core/Log/Logger.h"
 
+#include "Engine/Asset/AssetManager.h"
+#include "Engine/Object/Component/SceneComponent.h"
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Object/GameObject/GameObjectEvents.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
-#include "Engine/Visual/Component/MeshComponent.h"
+#include "Engine/Object/Prefab/PrefabCache.h"
 
 #include "GameFramework/Runtime/Gameplay/Interaction/InteractableComponent.h"
 #include "GameFramework/Runtime/Gameplay/Inventory/IItemReceiver.h"
 
 namespace sw
 {
-    namespace
-    {
-        struct PickupComponentInternal
-        {
-            static constexpr const utf8* kMeshID    = "Cube"; ///< 떨어진 조각의 모습(엔진 기본 메시)
-            static constexpr float32     kMeshScale = 0.3f;   ///< 상자 한 변(m)
-        };
-    } // namespace
-
     PickupComponent::PickupComponent()
         : Component{}
         , _item{}
@@ -42,12 +35,19 @@ namespace sw
             _item._itemID = _itemID;
             _item._count  = _count;
         }
-        InteractableComponent* pInteractable = getOwner() != nullptr ? getOwner()->getComponent<InteractableComponent>() : nullptr;
-        if ( pInteractable != nullptr )
-        {
-            _usedSubscription = pInteractable->getCompletedDelegate().add( [this]( const GameObject& user )
-            { (void)giveTo( user ); } ); // 못 주면 giveTo 가 경고를 남기고 그대로 둔다
-        }
+        _usedSubscription = InteractableComponent::listenCompleted<&PickupComponent::handleUsed>( *this ); // 닿아서만 줍는 것은 상호작용이 없다
+    }
+
+    void PickupComponent::handleUsed( const GameObject& user )
+    {
+        (void)giveTo( user ); // 못 주면 giveTo 가 경고를 남기고 그대로 둔다
+    }
+
+    void PickupComponent::setItem( const InventorySlot& item )
+    {
+        _item   = item;
+        _itemID = item._itemID; // 씬 저장 · 불러오기는 id · 수를 싣는다(개체 상태는 이 실행 동안만)
+        _count  = item._count;
     }
 
     void PickupComponent::onRegister( GameObjectManager& manager )
@@ -88,28 +88,23 @@ namespace sw
             pManager->destroyGameObject( getOwner() );
     }
 
-    GameObject* PickupComponent::spawn( GameObjectManager& manager, const InventorySlot& item, const float3& position )
+    GameObject* PickupComponent::spawn( GameObjectManager& manager, string_view prefabPath, const InventorySlot& item, const float3& position )
     {
         if ( item.isEmpty() )
             return nullptr;
-        using Internal      = PickupComponentInternal;
-        GameObject* pObject = manager.createGameObject( hashed_string( kSpawnedName ) );
-        if ( pObject == nullptr )
+        AssetManager* const pAssets = manager.findAssetManager();
+        GameObject* const   pObject = pAssets != nullptr && prefabPath.empty() == false ? pAssets->getAssetCache<PrefabCache>().spawn( &manager, prefabPath, kSpawnedName ) : nullptr;
+        PickupComponent*    pPickup = pObject != nullptr ? pObject->getComponent<PickupComponent>() : nullptr;
+        SceneComponent*     pRoot   = pObject != nullptr ? pObject->getPrimarySceneComponent() : nullptr;
+        if ( pPickup == nullptr || pRoot == nullptr )
+        {
+            SW_LOG_ERROR_ID( "Pickup.SpawnFailed", "Could not drop %# x%#: the pickup prefab '%#' did not spawn or has no PickupComponent / transform", item._itemID.c_str(), item._count, prefabPath );
+            if ( pObject != nullptr )
+                manager.destroyGameObject( pObject );
             return nullptr;
-        MeshComponent* pMesh = pObject->addComponent<MeshComponent>();
-        if ( pMesh != nullptr )
-        {
-            pMesh->setMeshID( Internal::kMeshID );
-            pMesh->setLocalPosition( position );
-            pMesh->setLocalScale( float3{ Internal::kMeshScale, Internal::kMeshScale, Internal::kMeshScale } );
         }
-        PickupComponent* pItem = pObject->addComponent<PickupComponent>();
-        if ( pItem != nullptr )
-        {
-            pItem->_item   = item;
-            pItem->_itemID = item._itemID; // 씬 저장 · 불러오기는 id · 수를 싣는다(개체 상태는 이 실행 동안만)
-            pItem->_count  = item._count;
-        }
+        pRoot->setWorldPosition( position );
+        pPickup->setItem( item );
         return pObject;
     }
 

@@ -62,7 +62,7 @@ namespace sw
      * @class GimmickSensorComponent
      * @brief 겹친 오브젝트 목록(태그로 거름), 쌓이는 충격(피해, 사용), 신호 하나를 담습니다. 틱하지 않습니다.
      * @details 겹침 목록은 게임 스레드의 겹침 사건이 바꾸고, 회로는 다음 틱에 읽는다. 피해, 사용, 신호는 아무 스레드(병렬 틱)에서 넣어도 되도록
-     *          원자 값으로 두었고, 회로의 스텝이 소비한다(`consumeDamage`, `consumeUses`). 겹침 목록은 PROPERTY 이므로 핫 리로드와 플레이 복원을 거쳐도 유지된다.
+     *          원자 값으로 두었고, 회로의 스텝이 소비한다(`peekDamage` · `peekUses` 로 읽고 틱 뒤에 비운다). 겹침 목록은 PROPERTY 이므로 핫 리로드와 플레이 복원을 거쳐도 유지된다.
      */
     REFLECT( Category = "Gimmick", DisplayName = "Gimmick Sensor", Tooltip = "Occupants, damage, uses and a signal that gimmick circuit sensors read" )
     class SW_GF_API GimmickSensorComponent : public Component
@@ -103,11 +103,9 @@ namespace sw
 
         /** @brief 쌓인 피해를 꺼내고 비웁니다. */
         float32 consumeDamage();
-        /** @brief 쌓인 사용 횟수를 꺼내고 비웁니다. `notifyUsed` 로 쌓인 것과, 같은 오브젝트의 `InteractableComponent` 가 지난번 이후 완료한 수를 더한 값입니다. */
-        float32 consumeUses();
         /** @brief 쌓인 피해를 비우지 않고 읽습니다(`GimmickSensorImpulse`). */
         GimmickSensorImpulse peekDamage() const;
-        /** @brief `consumeUses` 가 돌려줄 값을 비우지 않고 읽습니다. */
+        /** @brief 쌓인 사용 횟수를 비우지 않고 읽습니다. `notifyUsed` 로 쌓인 것과, 같은 오브젝트의 `InteractableComponent` 가 지난번 이후 완료한 수를 더한 값입니다. */
         GimmickSensorImpulse peekUses() const;
         /** @brief @p read 로 읽은 피해만큼 비웁니다(읽은 뒤 들어온 것은 남는다). */
         void acknowledgeDamage( const GimmickSensorImpulse& read );
