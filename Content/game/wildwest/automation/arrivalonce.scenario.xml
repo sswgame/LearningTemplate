@@ -13,7 +13,7 @@
   실행: ctest -R Scenario.wildwest (SW_ACTIVE_GAME=WildWest) · App -scenario=game/wildwest/automation/arrivalonce.scenario.xml -unattended
 -->
 <Scenario name="game.wildwest.arrivalonce" fixedDelta="0.0166667" timeoutFrames="2400" startAfter="ScenePlaying" input="exclusive">
-	<Variable name="gv_wildWestAutoPlay" value="0"/>
+	<Variable name="gv_playgroundAutoPlay" value="0"/>
 	<WaitUntil watch="Assets.Pending" equals="0" timeoutWallSeconds="60"/>
 	<Expect watch="Session.Flag" key="wildwest.arrivalSeen" equals="0"/>
 	<Expect watch="Object.Property" target="TownArrival" key="SequenceTriggerComponent._fireCount" equals="0"/>

@@ -9,7 +9,7 @@
   실행: ctest -R Scenario.wildwest (SW_ACTIVE_GAME=WildWest) · App -scenario=game/wildwest/automation/navstream.scenario.xml -unattended [-cooked-content]
 -->
 <Scenario name="game.wildwest.navstream" fixedDelta="0.0166667" timeoutFrames="600" startAfter="ScenePlaying" input="exclusive">
-	<Variable name="gv_wildWestAutoPlay" value="0"/>
+	<Variable name="gv_playgroundAutoPlay" value="0"/>
 	<WaitUntil watch="Assets.Pending" equals="0" timeoutWallSeconds="60"/>
 	<WaitUntil watch="Nav.PathLinkCount" target="Climber" key="PlatformGoal" equals="1" timeoutSeconds="5"/> <!-- 내비메시가 섰고 단으로 가는 길은 링크 하나를 건넌다 -->
 	<Expect watch="Nav.AgentCount" atLeast="5"/>

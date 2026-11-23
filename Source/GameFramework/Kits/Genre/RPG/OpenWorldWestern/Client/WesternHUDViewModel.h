@@ -1,6 +1,6 @@
 /**
- * @file WildWestHUDViewModel.h
- * @brief 서부 평원 HUD 문서가 보이는 값(탑승 상태 글 · 말 스태미나 · 무법자 글)입니다 — 디렉터 컴포넌트는 세터만 부르고, 문서의 `{bind:필드}` 가 위젯 칸에 잇습니다.
+ * @file WesternHUDViewModel.h
+ * @brief 서부극 HUD 문서가 보이는 값(탑승 상태 글 · 말 스태미나 · 무법자 글)입니다 — 기수 뷰 컴포넌트는 세터만 부르고, 문서의 `{bind:필드}` 가 위젯 칸에 잇습니다.
  */
 #pragma once
 #include "Core/Container/string.h"
@@ -9,22 +9,24 @@
 #include "Engine/Presentation/UIViewModel.h"
 #include "Engine/Reflection/ReflectionMacros.h"
 
+#include "GameFramework/GameFrameworkExports.h"
+
 namespace sw
 {
     /**
-     * @class WildWestHUDViewModel
-     * @brief WildWest 플레이어 HUD 의 뷰모델입니다. `WildWestGameModeComponent` 가 소유하고 `IHUDViewModelBinder` 로 HUD 화면(`ui/hud.ui.xml`)에 겁니다.
-     * @details 칸은 승마의 것이라 게임이 가집니다 — 슈터의 무기 이름 · 체력 칸을 빌려 쓰지 않습니다(한 HUD 에 뷰모델 하나 — `HUDControllerComponent::attachViewModel`).
+     * @class WesternHUDViewModel
+     * @brief 서부극 플레이어 HUD 의 뷰모델입니다. `WesternRiderViewComponent` 가 소유하고 `IHUDViewModelBinder` 로 HUD 화면에 겁니다.
+     * @details 칸은 승마의 것이라 키트가 가집니다 — 슈터의 무기 이름 · 체력 칸을 빌려 쓰지 않습니다(한 HUD 에 뷰모델 하나 — `HUDControllerComponent::attachViewModel`).
      *          세터는 값이 같으면 알리지 않으므로 매 프레임 불러도 바인딩은 바뀐 칸만 씁니다. 게임 스레드만.
      */
-    REFLECT( DisplayName = "Wild West HUD View Model" )
-    class WildWestHUDViewModel : public UIViewModel
+    REFLECT( DisplayName = "Western HUD View Model" )
+    class SW_KIT_CLIENT_API WesternHUDViewModel : public UIViewModel
     {
     public:
         REFLECT_BODY();
 
-        WildWestHUDViewModel();
-        ~WildWestHUDViewModel() override;
+        WesternHUDViewModel();
+        ~WesternHUDViewModel() override;
 
         const TypeInfo* getTypeInfo() const override;
 

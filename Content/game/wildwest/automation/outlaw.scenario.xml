@@ -7,9 +7,9 @@
   실행: ctest -R Scenario.wildwest (SW_ACTIVE_GAME=WildWest) · App -scenario=game/wildwest/automation/outlaw.scenario.xml -unattended
 -->
 <Scenario name="game.wildwest.outlaw" fixedDelta="0.0166667" timeoutFrames="1800" startAfter="ScenePlaying" input="exclusive">
-	<Variable name="gv_wildWestAutoPlay" value="0"/>
+	<Variable name="gv_playgroundAutoPlay" value="0"/>
 	<WaitUntil watch="Pawn.Controller" target="Player" is="PlayerController" timeoutFrames="60"/>
-	<Expect watch="WildWest.OutlawStatus" target="Ranch" is=""/>
+	<Expect watch="Western.OutlawStatus" target="Ranch" is=""/>
 	<Expect watch="Western.Honor" target="Ranch" equals="0"/>
 	<Expect watch="Western.Money" target="Ranch" equals="20"/>
 	<!-- 절도: 점원이 금고 쪽을 보고 있다 -->
@@ -20,7 +20,7 @@
 	<Expect watch="Western.PendingReports" target="Ranch" equals="1"/>
 	<WaitUntil watch="Western.Bounty" target="Ranch" equals="25" timeoutFrames="120"/>
 	<Expect watch="Western.Wanted" target="Ranch" equals="1"/>
-	<Expect watch="WildWest.OutlawStatus" target="Ranch" is="Honor -20 (Neutral) - Wanted 1 - Bounty $25 - $20"/>
+	<Expect watch="Western.OutlawStatus" target="Ranch" is="Honor -20 (Neutral) - Wanted 1 - Bounty $25 - $20"/>
 	<!-- 한 번 턴 금고는 다시 고르지 않는다 -->
 	<Tap slot="Key.G" hold="1"/>
 	<AdvanceSimulation frames="5"/> <!-- 다시 눌러도 명예가 바뀌지 않는다(일어나지 않음 — 시간이 내용) -->
@@ -55,7 +55,7 @@
 	<Tap slot="Key.G" hold="1"/>
 	<WaitUntil watch="Western.Bounty" target="Ranch" equals="0" timeoutFrames="30"/>
 	<Expect watch="Western.Money" target="Ranch" equals="25"/>
-	<Expect watch="WildWest.OutlawStatus" target="Ranch" is="Honor 5 (Neutral) - $25"/>
+	<Expect watch="Western.OutlawStatus" target="Ranch" is="Honor 5 (Neutral) - $25"/>
 	<!-- 하루가 흐르면 코어가 준다(시간당 1.5). 스태미나 코어를 본다 — 체력 코어는 날씨(추위)에 따라 더 줄어 값이 정해지지 않는다 -->
 	<AdvanceGameTime hours="24"/>
 	<WaitUntil watch="Western.StaminaCore" target="Ranch" atMost="70" timeoutFrames="10"/>

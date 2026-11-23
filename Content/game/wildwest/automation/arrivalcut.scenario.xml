@@ -9,7 +9,7 @@
   실행: ctest -R Scenario.wildwest (SW_ACTIVE_GAME=WildWest) · App -scenario=game/wildwest/automation/arrivalcut.scenario.xml -unattended
 -->
 <Scenario name="game.wildwest.arrivalcut" fixedDelta="0.0166667" timeoutFrames="1200" startAfter="ScenePlaying" input="exclusive">
-	<Variable name="gv_wildWestAutoPlay" value="0"/>
+	<Variable name="gv_playgroundAutoPlay" value="0"/>
 	<WaitUntil watch="Assets.Pending" equals="0" timeoutWallSeconds="60"/>
 	<Expect watch="Camera.FrameObject" is="GameCamera"/>
 	<Expect watch="Object.DistanceTo" target="GameCamera" key="GameplayView" atMost="0.01"/>

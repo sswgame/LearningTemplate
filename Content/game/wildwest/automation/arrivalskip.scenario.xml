@@ -11,7 +11,7 @@
   실행: ctest -R Scenario.wildwest (SW_ACTIVE_GAME=WildWest) · App -scenario=game/wildwest/automation/arrivalskip.scenario.xml -unattended
 -->
 <Scenario name="game.wildwest.arrivalskip" fixedDelta="0.0166667" timeoutFrames="1500" startAfter="ScenePlaying" input="exclusive">
-	<Variable name="gv_wildWestAutoPlay" value="0"/>
+	<Variable name="gv_playgroundAutoPlay" value="0"/>
 	<WaitUntil watch="Assets.Pending" equals="0" timeoutWallSeconds="60"/>
 	<Expect watch="Sequence.InputBlocked" target="ArrivalDirector" equals="0"/>
 	<Expect watch="UI.HUDHidden" equals="0"/>

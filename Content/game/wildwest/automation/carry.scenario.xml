@@ -7,7 +7,7 @@
   실행: ctest -R Scenario.wildwest (SW_ACTIVE_GAME=WildWest) · App -scenario=game/wildwest/automation/carry.scenario.xml -unattended
 -->
 <Scenario name="game.wildwest.carry" fixedDelta="0.0166667" timeoutFrames="900" startAfter="ScenePlaying" input="exclusive">
-	<Variable name="gv_wildWestAutoPlay" value="0"/>
+	<Variable name="gv_playgroundAutoPlay" value="0"/>
 	<WaitUntil watch="Pawn.Controller" target="Player" is="PlayerController" timeoutFrames="60"/> <!-- 키 입력을 받을 조종자가 쥐었다 -->
 	<Expect watch="Grab.Held" target="Player" is="none"/>
 	<Press slot="Key.R"/>

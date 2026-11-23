@@ -2009,6 +2009,11 @@
     "ActionCombatDemoComponentInternal": "ActionCombatGameModeComponentInternal — 키트 셋 가르기: 시연 컴포넌트가 키트 디렉터(Component/*GameModeComponent)가 됐다(2026-11-21)",
     "ActionCombatDemoPhase": "ActionCombatPhase — 키트 셋 가르기: 시연 컴포넌트가 키트 디렉터(Component/*GameModeComponent)가 됐다(2026-11-21)",
     "ActionPlatformerDemoComponent": "ActionPlatformerGameModeComponent — 키트 셋 가르기: 시연 컴포넌트가 키트 디렉터(Component/*GameModeComponent)가 됐다(2026-11-21)",
-    "ActionPlatformerDemoComponentInternal": "ActionPlatformerGameModeComponentInternal — 키트 셋 가르기: 시연 컴포넌트가 키트 디렉터(Component/*GameModeComponent)가 됐다(2026-11-21)"
+    "ActionPlatformerDemoComponentInternal": "ActionPlatformerGameModeComponentInternal — 키트 셋 가르기: 시연 컴포넌트가 키트 디렉터(Component/*GameModeComponent)가 됐다(2026-11-21)",
+    "WildWestGameModeComponent": "WesternGameModeComponent — 와일드웨스트 게임을 Playground 허브 맵 바탕으로 흡수 — 디렉터는 서부극 키트 Component/, HUD 는 GF_Client_OpenWorldWestern(2026-11-24)",
+    "WildWestGameModeComponentInternal": "WesternGameModeComponentInternal — 와일드웨스트 게임을 Playground 허브 맵 바탕으로 흡수 — 디렉터는 서부극 키트 Component/, HUD 는 GF_Client_OpenWorldWestern(2026-11-24)",
+    "WildWestHUDViewModel": "WesternHUDViewModel — 와일드웨스트 게임을 Playground 허브 맵 바탕으로 흡수 — 디렉터는 서부극 키트 Component/, HUD 는 GF_Client_OpenWorldWestern(2026-11-24)",
+    "wildWestOutlawStatus": "westernOutlawStatus — 와일드웨스트 게임을 Playground 허브 맵 바탕으로 흡수 — 디렉터는 서부극 키트 Component/, HUD 는 GF_Client_OpenWorldWestern(2026-11-24)",
+    "gv_wildWestAutoPlay": "gv_playgroundAutoPlay — 와일드웨스트 게임을 Playground 허브 맵 바탕으로 흡수 — 디렉터는 서부극 키트 Component/, HUD 는 GF_Client_OpenWorldWestern(2026-11-24)"
   }
 }

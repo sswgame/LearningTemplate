@@ -68,7 +68,7 @@ namespace sw
      *          - **여는 쪽**: 같은 오브젝트의 첫 디렉터가 `startGame` 에서 `initialize` 를 부른다. 디렉터가 없는 씬(시연 · 테스트)은 `_bOpenAtBeginPlay` 로 기본 설정으로 연다. 시작값(공유 상태를 건드리는 시작 배치 포함)은
      *            `isFreshGame()` 일 때만 넣는다. 복원한 판 위에 시작값이 중복으로 쌓이지 않게 하기 위해서다.
      *          - **세이브**: `writeState` 는 상태마다 구간 하나(`StateIO::writeSection`)를 쓴다. 알 수 없는 구간은 건너뛰고, 빠진 구간은 새 판으로 둔다. 읽지 못한 구간이 있으면 로드 전체가 실패하고 상태는 그대로다(조용히 새 판으로 두지 않는다).
-     *            게임 인스턴스가 생성자에서 `getStateSnapshot().registerStatefulComponent<GameStateComponent>()` 로 스냅샷에 등록한다.
+     *            정의한 .cpp 가 `StatefulComponentRegistrar` 로 모든 게임의 스냅샷에 올린다(게임마다 적던 줄을 빠뜨린 게임은 시계 · 날씨 · 플래그를 조용히 잃었다) — 게임의 디렉터보다 먼저 복원 바이트를 받는다.
      */
     REFLECT( Category = "Framework", DisplayName = "Game State", Tooltip = "World state, one per scene (flags, clock, weather, land) used by the kit directors on the same object" )
     class SW_GF_API GameStateComponent : public Component

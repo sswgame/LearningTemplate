@@ -11,7 +11,7 @@
 <Scenario name="game.wildwest.cellstate" fixedDelta="0.0166667" timeoutFrames="2400" startAfter="ScenePlaying" startTimeoutFrames="900" input="exclusive">
 	<Launch variable="gv_firstScene" value="game/wildwest/automation/cellstate/cellstate.scene.xml"/>
 	<Launch variable="gv_sceneStreamSourceCells" value="true"/>
-	<Variable name="gv_wildWestAutoPlay" value="0"/>
+	<Variable name="gv_playgroundAutoPlay" value="0"/>
 	<WaitUntil watch="Scene.LoadedCellCount" atLeast="1" timeoutFrames="120"/> <!-- 원점 둘레 셀이 올랐다(셀을 나눠 스트리밍한다) -->
 	<Expect watch="Object.Exists" target="CellChest" equals="0"/>             <!-- 셀 A 는 반경 밖이다 -->
 	<AdvanceSimulation frames="30"/>                                            <!-- 바닥 셀(선반)이 없는 동안 상자가 떨어지지 않는다(일어나지 않음 — 시간이 내용) -->
