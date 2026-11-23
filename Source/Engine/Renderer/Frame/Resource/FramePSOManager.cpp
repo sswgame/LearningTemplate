@@ -247,10 +247,11 @@ namespace sw
         }
 
         /** @brief 디퍼드 조명 타일 종류 PSO 의 저장소 키입니다 — 머티리얼 변형 저장소의 키 공간을 빌린다(쿠키 아틀라스 PSO 와 같은 길 — 저장소가 소유하고 디바이스를 바꾸면 셋업이 다시 만든다). */
-        uint64 makeDeferredTilePSOKey( uint32 tileClass )
+        MaterialPSOKey makeDeferredTilePSOKey( uint32 tileClass )
         {
-            return RenderPSOCache::materialPSOKey( 0, HashUtil::combine( static_cast<uint64>( FourCCUtil::make( "DTLC" ) ), static_cast<uint64>( tileClass ) ), RenderViewMode::Lit, false,
-                                                   RHIMeshVertexFormat::Packed );
+            MaterialPSOKey key{};
+            key._permutationHash = HashUtil::combine( static_cast<uint64>( FourCCUtil::make( "DTLC" ) ), static_cast<uint64>( tileClass ) );
+            return key;
         }
 
         /** @brief PSO 를 동기로 만듭니다(셰이더 컴파일 · 드라이버 생성을 렌더 스레드가 기다리는 시간을 `RT.PSO.create` 로 잰다). */
@@ -415,7 +416,7 @@ namespace sw
         // 디퍼드 조명 타일 종류 변형 — 조명 패스 서술 그대로에 종류 define 과 타일 정점 진입점(deferred_lighting.hlsl VSTile). 분류 컴퓨트와 같은 조건(네이티브 bindless · 간접 인자)에서만 만든다.
         struct DeferredTilePSOJob
         {
-            uint64               _key{ 0 };
+            MaterialPSOKey       _key{};
             RHIPipelineStateDesc _desc{};
         };
         vector<DeferredTilePSOJob> listTileJob;
@@ -534,7 +535,7 @@ namespace sw
         }
         _listMaterialFallback.clear();
         _mapLayoutMaterialFallback.clear();
-        _particlePSOKey = 0;
+        _particlePSOKey = MaterialPSOKey{};
     }
 
     void FramePSOManager::onShaderRecompiled( string_view shaderPath )
@@ -750,9 +751,9 @@ namespace sw
             return 0;
         // 칸에 옮겨 그리는 PSO — 전체 화면 블릿 셰이더(쿠킹되는 Present 기본 셰이더)를 아틀라스 포맷으로. 머티리얼 변형 저장소의 키 공간을 빌려 저장소가 소유한다
         // (입자 PSO 와 같은 방식 — 디바이스를 바꾸면 저장소가 비고 여기서 다시 만든다).
-        const string& shaderPath = engine::getSubsystem<EngineDefaultAssets>()._shaderFullscreenBlit.get();
-        const uint64  psoKey     = RenderPSOCache::materialPSOKey( 0, HashUtil::combine( HashUtil::computeStringHash64( shaderPath, false ), FourCCUtil::make( "CKAT" ) ), RenderViewMode::Lit, false,
-                                                                   RHIMeshVertexFormat::Packed );
+        const string&  shaderPath = engine::getSubsystem<EngineDefaultAssets>()._shaderFullscreenBlit.get();
+        MaterialPSOKey psoKey{};
+        psoKey._permutationHash = HashUtil::combine( HashUtil::computeStringHash64( shaderPath, false ), FourCCUtil::make( "CKAT" ) );
         if ( _pCache->hasMaterialPSO( psoKey ) == false )
         {
             // 셰이더는 셋업이 데웠다(`createPassPSOS`) — 여기는 드라이버 생성만 남는다.
@@ -772,9 +773,9 @@ namespace sw
         if ( _pDevice == nullptr )
             return 0;
         // 쿠키 아틀라스 PSO 와 같은 길 — 머티리얼 변형 저장소의 키 공간을 빌려 저장소가 소유한다(디바이스를 바꾸면 저장소가 비고 여기서 다시 만든다).
-        const string& shaderPath = engine::getSubsystem<EngineDefaultAssets>()._shaderLayerBake.get();
-        const uint64  psoKey     = RenderPSOCache::materialPSOKey( 0, HashUtil::combine( HashUtil::computeStringHash64( shaderPath, false ), FourCCUtil::make( "LBAK" ) + static_cast<uint32>( targetFormat ) ),
-                                                                   RenderViewMode::Lit, false, RHIMeshVertexFormat::Packed );
+        const string&  shaderPath = engine::getSubsystem<EngineDefaultAssets>()._shaderLayerBake.get();
+        MaterialPSOKey psoKey{};
+        psoKey._permutationHash = HashUtil::combine( HashUtil::computeStringHash64( shaderPath, false ), FourCCUtil::make( "LBAK" ) + static_cast<uint32>( targetFormat ) );
         if ( _pCache->hasMaterialPSO( psoKey ) == false )
         {
             const RHIPipelineStateDesc   desc   = makeLayerBakePSODesc( shaderPath, targetFormat );
