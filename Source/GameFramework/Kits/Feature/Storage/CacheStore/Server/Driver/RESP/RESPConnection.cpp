@@ -225,15 +225,17 @@ namespace sw
                 _bAnswered = SW_TRUE;
                 continue;
             }
-            _bAnswered          = SW_TRUE;
             const bool bMessage = _bPushMode == SW_TRUE && value._type == RespType::Array && value._listElement.empty() == false && value._listElement[0].isText( "message" );
             if ( bMessage )
             {
+                _bAnswered = SW_TRUE;
                 _pushValueBuffer.push( std::move( value ) );
                 continue;
             }
             if ( _listAwaitTag.empty() )
-                return false;            // 보낸 적 없는 답이므로 순서가 어긋난 것이다
+                return false; // 보낸 적 없는 답이므로 순서가 어긋난 것이다
+            if ( value.isError() == false )
+                _bAnswered = SW_TRUE;    // 오류는 거절(-ERR max number of clients · -DENIED)일 수 있다. 거절하고 끊는 서버를 물러서지 않고 두드리지 않는다
             if ( _bPushMode == SW_TRUE ) // 구독 · 해지 확인(또는 거절)이다
             {
                 _listAwaitTag.pop_front();

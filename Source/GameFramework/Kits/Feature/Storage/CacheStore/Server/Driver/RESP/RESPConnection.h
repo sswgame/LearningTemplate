@@ -128,7 +128,7 @@ namespace sw
         int64                        _nextConnectNanoseconds;
         int64                        _maxBackoffMs;
         RESPConnectionState          _state;
-        uint8                        _bAnswered; ///< 이 연결에서 답 하나를 온전히 받았다(AUTH 거절은 아니다)
+        uint8                        _bAnswered; ///< 이 연결에서 보낸 명령의 답(오류가 아닌 것)이나 메시지를 온전히 받았다. 다시 잇기의 물러섬을 푼다
         uint8                        _bPushMode;
         uint8                        _bAuthRejected;
     };

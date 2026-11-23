@@ -456,6 +456,24 @@ SW_TEST_CASE_F( RESPStoreTest, PartialAnswersDoNotResetTheBackoff )
     SW_EXPECT_TRUE( _server._openedCount <= 8 ); // 100 ms 마다 시도해도 두 배씩 늘어난 물러섬이 1.6 초 동안 여섯 번쯤만 받는다
 }
 
+// 결함: 오류 답(-ERR max number of clients · -DENIED)도 물러섬을 풀어, 거절하고 끊는 서버를 물러서지 않고 두드렸다.
+SW_TEST_CASE_F( RESPStoreTest, ErrorRepliesDoNotResetTheBackoff )
+{
+    start();
+    SW_EXPECT_LOG( "RespConnection.RESPConnectionClosed" );
+    for ( int32 round = 0; round < 16; ++round )
+    {
+        (void)_store.submit( EphemeralRequest::makeGet( "k" ) );
+        (void)poll();
+        _server.send( _server._lastHandle, "-ERR max number of clients reached\r\n" );
+        (void)poll();
+        _server._transport->close( _server._lastHandle, StreamCloseMode::Abort );
+        (void)poll();
+        _clock.advanceMilliseconds( 100 );
+    }
+    SW_EXPECT_TRUE( _server._openedCount <= 8 ); // 100 ms 마다 시도해도 두 배씩 늘어난 물러섬이 1.6 초 동안 여섯 번쯤만 받는다
+}
+
 // 구독: 접두어를 붙여 구독하고, 받은 메시지는 접두어를 떼어 준다. 다른 접두어의 메시지는 버린다.
 SW_TEST_CASE_F( RESPStoreTest, SubscribeDeliversMessagesWithoutPrefix )
 {
