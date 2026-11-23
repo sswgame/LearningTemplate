@@ -2027,6 +2027,12 @@
     "WildWestGameModeComponentInternal": "WesternGameModeComponentInternal — 와일드웨스트 게임을 Playground 허브 맵 바탕으로 흡수 — 디렉터는 서부극 키트 Component/, HUD 는 GF_Client_OpenWorldWestern(2026-11-24)",
     "WildWestHUDViewModel": "WesternHUDViewModel — 와일드웨스트 게임을 Playground 허브 맵 바탕으로 흡수 — 디렉터는 서부극 키트 Component/, HUD 는 GF_Client_OpenWorldWestern(2026-11-24)",
     "wildWestOutlawStatus": "westernOutlawStatus — 와일드웨스트 게임을 Playground 허브 맵 바탕으로 흡수 — 디렉터는 서부극 키트 Component/, HUD 는 GF_Client_OpenWorldWestern(2026-11-24)",
-    "gv_wildWestAutoPlay": "gv_playgroundAutoPlay — 와일드웨스트 게임을 Playground 허브 맵 바탕으로 흡수 — 디렉터는 서부극 키트 Component/, HUD 는 GF_Client_OpenWorldWestern(2026-11-24)"
+    "gv_wildWestAutoPlay": "gv_playgroundAutoPlay — 와일드웨스트 게임을 Playground 허브 맵 바탕으로 흡수 — 디렉터는 서부극 키트 Component/, HUD 는 GF_Client_OpenWorldWestern(2026-11-24)",
+    "VoxelCraftGame": "PlaygroundGame — 게임 VoxelCraft 를 허브의 미니게임 voxelcraft 로 흡수(2026-11-24)",
+    "gv_voxelAutoPlay": "gv_playgroundAutoPlay — 게임 VoxelCraft 를 허브의 미니게임 voxelcraft 로 흡수(2026-11-24)",
+    "isChunkDirty": "VoxelChunk::_revision — 낡은 청크는 월드의 깃발이 아니라 판 번호로 알고 뷰가 지은 때의 번호와 견준다(2026-11-24)",
+    "clearChunkDirty": "VoxelChunk::_revision — 낡은 청크는 월드의 깃발이 아니라 판 번호로 알고 뷰가 지은 때의 번호와 견준다(2026-11-24)",
+    "markChunkDirty": "VoxelWorld::advanceChunkRevision — VoxelChunk::_revision — 낡은 청크는 월드의 깃발이 아니라 판 번호로 알고 뷰가 지은 때의 번호와 견준다(2026-11-24)",
+    "canDrawBlockMeshes": "VoxelAtlasGridGate::canDraw — 청크 그리기는 디렉터가 아니라 클라이언트의 VoxelWorldViewComponent 가 정한다(2026-11-24)"
   }
 }

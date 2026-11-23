@@ -18,6 +18,8 @@
 | `harvestvalley/models_raw/crops_dirt_*.glb` | Kenney "Nature Kit" 2.1 — 밭 흙(`crops_dirt_single` · `crops_dirt_row`, 밭 `FarmSoil` 자리). 묶음 <https://kenney.nl/media/pages/assets/nature-kit/37ac38a37b-1677698939/kenney_nature-kit.zip> (SHA-256 `fa7974a0d342bfe63c38664ba9f8ec1a4aab8ea25f099bdc56870e33588c4d9d`), `License.txt` 원문 "License: (Creative Commons Zero, CC0)" | CC0 1.0 |
 | `harvestvalley/models_raw/crops_corn_*.glb` · `harvestvalley/models_raw/crops_leafs_*.glb` · `harvestvalley/models_raw/crop_*.glb` · `harvestvalley/models_raw/tent_*.glb` · `harvestvalley/models_raw/log.glb` · `harvestvalley/models_raw/stump_*.glb` | Kenney "Nature Kit" (<https://kenney.nl/assets/nature-kit>) — 작물 단계(옥수수 · 잎) · 다 자란 작물(순무 · 당근 · 호박) · 천막 · 장작 · 그루터기 | CC0 1.0 |
 | `harvestvalley/sounds/*.ogg` | Kenney "Interface Sounds" (<https://kenney.nl/assets/interface-sounds>) — `confirmation_001` · `drop_002` · `pluck_001` · `select_002` | CC0 1.0 |
+| `voxelcraft/textures_raw/blocks.png` | Kenney "Voxel Pack" (<https://kenney.nl/assets/voxel-pack>) — 128 px 타일 열여섯을 4 × 4 아틀라스로 모은 것(칸 순서와 블록의 짝은 `data/blocks.xml`) | CC0 1.0 |
+| `voxelcraft/sounds/*.ogg` | Kenney "Impact Sounds" (<https://kenney.nl/assets/impact-sounds>) — `footstep_grass_000` · `impactPlank_medium_001` · `impactSoft_medium_000`(파일 이름은 소문자 `_` 로) | CC0 1.0 |
 
 - `AudioServiceTest` 가 OGG 디코드를 실제 파일로 확인하는 테스트 자료입니다.
 - CC0 는 표기 의무가 없지만 고마움을 적어 둡니다 — Kenney (www.kenney.nl).

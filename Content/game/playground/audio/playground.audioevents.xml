@@ -3,6 +3,7 @@
 	Playground 사운드 이벤트(AudioEventLibrary). 시네마틱 시나리오(automation/cinematic)의 시퀀스 소리 구간(data/cinematic.seq.xml 의 Audio 항목)이 낸다 — 화면 소리(2D)다.
 	Subtitle* 는 자막 시나리오(automation/subtitles)가 개발 명령 audio.post 로 내는 대사다 — 클립의 자막 키 · 이벤트의 화자 키가 자막 서비스로 간다(키는 data/localization/playground.strings.xml).
 	Farm* 는 허브 농장(minigames/harvestvalley)의 디렉터가 낸다 — 위에서 내려다보는 농장이라 모두 2D 다. 동작이 연달아 나올 수 있어 쿨다운으로 겹침을 줄이고 볼륨 · 피치를 조금씩 흔든다.
+	Voxel* 는 복셀 광산 미니게임(voxelcraft)에서 플레이어 자신의 동작(착지 · 블록 부수기 · 놓기)이라 2D 다 — 연달아 부수고 놓아도 겹치지 않게 쿨다운을 두고 볼륨 · 피치를 조금씩 흔든다.
 -->
 <AudioEventLibrary>
 	<_listEvent>
@@ -62,6 +63,48 @@
 		<AudioEventDef _name="FarmShip" _bus="ui" _priority="70" _maxInstances="2">
 			<_listClip>
 				<AudioClipEntry _path="game/playground/harvestvalley/sounds/confirmation_001.ogg" />
+			</_listClip>
+		</AudioEventDef>
+		<AudioEventDef _name="VoxelLand"
+		                _bus="sfx"
+		                _priority="40"
+		                _cooldownSeconds="0.15"
+		                _maxInstances="2"
+		                _steal="Oldest"
+		                _volumeDbMin="-4"
+		                _volumeDbMax="0"
+		                _pitchMin="-1.5"
+		                _pitchMax="1">
+			<_listClip>
+				<AudioClipEntry _path="game/playground/voxelcraft/sounds/footstep_grass_000.ogg" />
+			</_listClip>
+		</AudioEventDef>
+		<AudioEventDef _name="VoxelBlockBreak"
+		                _bus="sfx"
+		                _priority="55"
+		                _cooldownSeconds="0.05"
+		                _maxInstances="3"
+		                _steal="Oldest"
+		                _volumeDbMin="-3"
+		                _volumeDbMax="0"
+		                _pitchMin="-2"
+		                _pitchMax="1">
+			<_listClip>
+				<AudioClipEntry _path="game/playground/voxelcraft/sounds/impact_soft_medium_000.ogg" />
+			</_listClip>
+		</AudioEventDef>
+		<AudioEventDef _name="VoxelBlockPlace"
+		                _bus="sfx"
+		                _priority="55"
+		                _cooldownSeconds="0.05"
+		                _maxInstances="3"
+		                _steal="Oldest"
+		                _volumeDbMin="-3"
+		                _volumeDbMax="0"
+		                _pitchMin="-1"
+		                _pitchMax="2">
+			<_listClip>
+				<AudioClipEntry _path="game/playground/voxelcraft/sounds/impact_plank_medium_001.ogg" />
 			</_listClip>
 		</AudioEventDef>
 	</_listEvent>

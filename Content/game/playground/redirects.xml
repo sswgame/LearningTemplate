@@ -33,4 +33,12 @@
 	<Redirect from="game/playground/harvestvalley/automation/tutorialhint.scenario.xml" to="game/playground/automation/harvestvalley_tutorialhint.scenario.xml" />
 	<Redirect from="game/playground/harvestvalley/automation/editor/scheduleeditor.scenario.xml" to="game/playground/automation/editor/harvestvalley_scheduleeditor.scenario.xml" />
 	<Redirect from="game/playground/harvestvalley/data/farm.settings.xml" to="game/playground/data/playground.settings.xml" />
+	<PrefixRedirect from="game/voxelcraft" to="game/playground/voxelcraft" />
+	<Redirect from="game/playground/voxelcraft/audio/voxelcraft.audioevents.xml" to="game/playground/audio/playground.audioevents.xml" />
+	<Redirect from="game/playground/voxelcraft/automation/ai.scenario.xml" to="game/playground/automation/voxelcraft_ai.scenario.xml" />
+	<Redirect from="game/playground/voxelcraft/automation/control.scenario.xml" to="game/playground/automation/voxelcraft_control.scenario.xml" />
+	<Redirect from="game/playground/voxelcraft/automation/slice.scenario.xml" to="game/playground/automation/voxelcraft_slice.scenario.xml" />
+	<Redirect from="game/playground/voxelcraft/data/blocks.xml" to="game/playground/data/blocks.xml" />
+	<Redirect from="game/playground/voxelcraft/data/voxel.settings.xml" to="game/playground/data/playground.settings.xml" />
+	<Redirect from="game/playground/voxelcraft/shaders/voxel_blocks.hlsl" to="game/playground/shaders/voxel_blocks.hlsl" />
 </Redirects>
