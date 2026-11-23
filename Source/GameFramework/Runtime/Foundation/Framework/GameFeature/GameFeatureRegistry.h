@@ -25,7 +25,7 @@ namespace sw
     class GameFeatureScope;
 
     /**
-     * @brief 게임 기능 하나의 켜기 함수입니다. 서비스 · 카탈로그 · 전역 변수 · 되돌릴 일을 @p scope 에 겁니다(끄기는 범위가 한다).
+     * @brief 게임 기능 하나의 켜기 함수입니다. 서비스 · 카탈로그 · 컴포넌트(받는 이름) · 전역 변수 · 되돌릴 일을 @p scope 에 겁니다(끄기는 범위가 한다).
      * @return 걸지 못했으면(겹친 서비스 · 못 읽은 카탈로그) 이유를 알리고 false 입니다 — 범위 켜기 전체가 지고, 그때까지 건 것은 범위가 거둔다.
      */
     using GameFeatureActivateFunction = bool ( * )( GameFeatureScope& scope );

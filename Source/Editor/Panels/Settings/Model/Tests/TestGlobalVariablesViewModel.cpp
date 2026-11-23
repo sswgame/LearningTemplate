@@ -5,6 +5,7 @@
 #include "Core/Testing/TestFramework.h"
 #include "Core/Testing/TestWait.h"
 
+#include "Editor/Common/Workspace/Undo/CommandStack.h"
 #include "Editor/Panels/Settings/Model/GlobalVariablesViewModel.h"
 
 using namespace sw;
@@ -158,6 +159,49 @@ SW_TEST_CASE_F( GlobalVariablesViewModelTest, PresetSavedDuringScanIsListed )
 
     SW_REQUIRE_TRUE( waitForPresetScan( folder.str() ) );
     SW_EXPECT_EQUAL( size_t{ 2 }, _model.getPresetFiles().size() );
+}
+
+/**
+ * @brief [GlobalVariablesViewModelUndoTest] 값 끌기 · 프리셋 불러오기 · Reset All 이 저마다 한 단계로 되돌아가고, 단계는 자기 변수만 움직인다
+ */
+SW_TEST_CASE( GlobalVariablesViewModelUndoTest, EditsPresetAndResetAllUndoAsOneStepEach )
+{
+    GlobalVariablesViewModel model;
+    GlobalVariableInfo*      pDraw  = GlobalVariablesViewModel::findVariable( "gv_physicsDebugDraw" );
+    GlobalVariableInfo*      pOther = GlobalVariablesViewModel::findVariable( "gv_textureStreaming" );
+    SW_REQUIRE_TRUE( pDraw != nullptr && pOther != nullptr );
+    const bool bDraw  = pDraw->getValueAsBool();
+    const bool bOther = pOther->getValueAsBool();
+
+    model.beginEdit( pDraw->_name );
+    pDraw->setValueAsBool( !bDraw );
+    model.recordEdited( true );
+    SW_EXPECT_FALSE( model.getCommandStack().undo() ); // 끄는 동안은 거절한다
+    model.flushEdit( false );
+    pOther->setValueAsBool( !bOther ); // 창 밖(콘솔)에서 고쳤다
+    SW_EXPECT_TRUE( model.getCommandStack().undo() );
+    SW_EXPECT_TRUE( pDraw->getValueAsBool() == bDraw );
+    SW_EXPECT_TRUE( pOther->getValueAsBool() != bOther );
+    SW_EXPECT_TRUE( model.takeUndoMoved() );
+    SW_EXPECT_FALSE( model.takeUndoMoved() );
+
+    const AbsolutePath presetPath = test::makeScratchPath( "undo.gvpreset.xml" );
+    SW_REQUIRE_TRUE( FileUtil::ensureParentDirectoryExists( presetPath ) );
+    SW_REQUIRE_TRUE( FileUtil::writeTextFile( presetPath, bDraw ? R"(<GlobalVariablesPreset><Var name="gv_physicsDebugDraw" value="false"/></GlobalVariablesPreset>)"
+                                                                : R"(<GlobalVariablesPreset><Var name="gv_physicsDebugDraw" value="true"/></GlobalVariablesPreset>)" ) );
+    SW_REQUIRE_TRUE( model.loadPreset( presetPath.str() ) );
+    SW_EXPECT_TRUE( pDraw->getValueAsBool() != bDraw );
+
+    model.resetAllToDefault();
+    SW_EXPECT_TRUE( pDraw->isAtDefault() );
+    SW_EXPECT_TRUE( pOther->isAtDefault() );
+    SW_EXPECT_TRUE( model.getCommandStack().undo() ); // Reset All
+    SW_EXPECT_TRUE( pDraw->getValueAsBool() != bDraw );
+    SW_EXPECT_TRUE( pOther->getValueAsBool() != bOther );
+    SW_EXPECT_TRUE( model.getCommandStack().undo() ); // 프리셋
+    SW_EXPECT_TRUE( pDraw->getValueAsBool() == bDraw );
+
+    pOther->setValueAsBool( bOther );
 }
 
 /**

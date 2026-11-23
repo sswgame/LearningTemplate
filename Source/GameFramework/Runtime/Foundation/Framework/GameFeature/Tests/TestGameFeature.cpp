@@ -7,7 +7,12 @@
 #include "Core/Testing/TestFramework.h"
 
 #include "Engine/Input/Map/InputMap.h"
+#include "Engine/Object/Component/TagComponent.h"
+#include "Engine/Object/GameObject/GameObject.h"
+#include "Engine/Object/GameObject/GameObjectManager.h"
 
+#include "GameFramework/Runtime/Foundation/Framework/GameFeature/GameFeatureComponents.h"
+#include "GameFramework/Runtime/Foundation/Framework/GameFeature/GameFeatureReceiverComponent.h"
 #include "GameFramework/Runtime/Foundation/Framework/GameFeature/GameFeatureRegistry.h"
 #include "GameFramework/Runtime/Foundation/Framework/GameFeature/GameFeatureScope.h"
 #include "GameFramework/Runtime/Foundation/Framework/GameService.h"
@@ -254,6 +259,52 @@ SW_TEST_CASE( GameFeatureTest, LayeredScopesReleaseOnlyTheirOwn )
 
     SW_EXPECT_EQUAL( 0u, game->deactivate() );
     SW_EXPECT_NULL( fixture._gameScope.find<TestKitService>() );
+}
+
+/** @brief [GameFeatureTest] 컴포넌트 규칙은 이름이 맞는 받는 쪽에만, 켜기 전 · 뒤에 시작한 것 모두에 붙고, 끄면 붙인 것만 떨어진다(프리팹이 저작한 것은 그대로) */
+SW_TEST_CASE( GameFeatureTest, ComponentsFollowTheScope )
+{
+    GameFeatureScopeFixture fixture;
+    fixture._gameScope.emplaceSubsystem<GameFeatureComponents>();
+    const game::ScopedGameScope scopedScope( fixture._gameScope );
+    GameObjectManager           manager;
+    const auto                  makeReceiver = [&manager]( const utf8* pName, const utf8* pReceiver )
+    {
+        GameObject* pObject = manager.createGameObject( hashed_string( pName ) );
+        pObject->addComponent<GameFeatureReceiverComponent>()->setReceiver( hashed_string( pReceiver ) );
+        return pObject;
+    };
+    GameObject* pBefore   = makeReceiver( "Before", "Combatant" );
+    GameObject* pOther    = makeReceiver( "Other", "Vehicle" );
+    GameObject* pAuthored = makeReceiver( "Authored", "Combatant" );
+    (void)pAuthored->addComponent<TagComponent>();
+    manager.beginPlay();
+
+    unique_ptr<GameFeatureScope> pScope = fixture.makeScope( "kit" );
+    SW_REQUIRE_TRUE( pScope->addComponent<TagComponent>( "Combatant" ) );
+    pScope->finishActivation();
+    SW_EXPECT_NOT_NULL( pBefore->getComponent<TagComponent>() );
+    SW_EXPECT_NULL( pOther->getComponent<TagComponent>() );
+    GameObject* pAfter = makeReceiver( "After", "Combatant" );
+    manager.update( 1.0f / 60.0f ); // 새 오브젝트는 다음 틱 단계에서 시작한다
+    SW_EXPECT_NOT_NULL( pAfter->getComponent<TagComponent>() );
+    SW_EXPECT_EQUAL( 2u, fixture._gameScope.find<GameFeatureComponents>()->countAddedComponents() );
+
+    SW_EXPECT_EQUAL( 0u, pScope->deactivate() );
+    SW_EXPECT_NULL( pBefore->getComponent<TagComponent>() );
+    SW_EXPECT_NULL( pAfter->getComponent<TagComponent>() );
+    SW_EXPECT_NOT_NULL( pAuthored->getComponent<TagComponent>() );
+    SW_EXPECT_EQUAL( 0u, fixture._gameScope.find<GameFeatureComponents>()->countAddedComponents() );
+}
+
+/** @brief [GameFeatureTest] 받는 이름이 비었거나 규칙 목록이 없는 범위(게임 인스턴스 밖)의 컴포넌트 규칙은 거절한다 */
+SW_TEST_CASE( GameFeatureTest, ComponentRuleNeedsReceiverAndGameInstance )
+{
+    SW_EXPECT_LOG( "GameFeatureScope.ComponentNotAdded" );
+    GameFeatureScopeFixture fixture;
+    SW_EXPECT_FALSE( fixture.makeScope( "alone" )->addComponent<TagComponent>( "Combatant" ) );
+    fixture._gameScope.emplaceSubsystem<GameFeatureComponents>();
+    SW_EXPECT_FALSE( fixture.makeScope( "unnamed" )->addComponent<TagComponent>( "" ) );
 }
 
 /** @brief [GameFeatureTest] 등록된 기능을 이름으로 켜고(범위가 쥔 서비스가 걸린다) 끄면 거둔다. 겹친 이름 · 모르는 이름 · 켜기가 진 기능은 거절한다 */

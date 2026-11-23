@@ -1,5 +1,7 @@
 # 공용 팩 — 에셋 출처
 
+묶음(Kenney Interface Sounds · Impact Sounds · Blaster Kit · Quaternius · KayKit · Poly Haven …)마다 출처 · 라이선스 · 해시는 이 파일 한 곳이다. 같은 묶음을 쓰는 게임의 credits 는 파일과 묶음 이름만 적고 여기를 가리킨다.
+
 **Quaternius 라이선스 확인(2026-11-08).** 아래 Quaternius 묶음 여덟(Universal Base Characters · Universal Animation Library 1 · 2 · Stylized Nature · Medieval Village · Fantasy Props MegaKit · Sci-Fi Essentials Kit · Modular Character Outfits - Fantasy)은 각 묶음 페이지(itch.io · quaternius.com/packs)가 "Free to use in personal, educational and commercial projects. (CC0 License)" 로 밝힌다. quaternius.com/license.html 의 QAL v1.0(8/28/2026, 원본 재배포 금지)은 7 절에서 이미 받은 에셋에 소급하지 않는다고 적는다. 새로 받는 Quaternius 묶음은 그 묶음 페이지가 CC0 일 때만 들인다 — QAL 묶음은 원본을 저장소에 둘 수 없으니 다른 CC0 출처를 쓴다.
 
 | 파일 | 원본 | 라이선스 |
