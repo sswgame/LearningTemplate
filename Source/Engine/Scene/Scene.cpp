@@ -850,9 +850,9 @@ namespace sw
             return CellBuildResult::InProgress;
         }
 
-        // 다 지었다 — 앞 프레임에 숨긴 것을 대기 목록으로 되돌리고, 지금 씬의 늘 올라 있는 오브젝트를 기록해 잇는다. 기록을 끝에 하는 까닭: 짓는 사이에 지워진 오브젝트를 배치가 들지 않게.
+        // 다 지었다 — 앞 프레임에 숨긴 것을 대기 목록으로 되돌리고 잇는다. 늘 올라 있는 오브젝트는 이을 때 씬에 묻는다 — 짓는 사이에 지워진 오브젝트를 배치가 들지 않는다.
         manager.releaseStagedGameObjects( span<const uint64>( inoutListObjectID.data(), firstObjectIndex ) );
-        addReferenceTargets( build._context, &inoutListObjectID );
+        bindReferenceResolver( build._context );
         const bool bFinished = finishNodeBuild( listNode, build._context );
         build._bDone         = true;
         // 셀이 든 등록 줄을 미룬 줄 뒤에 붙인다 — 바깥 짝이 끝날 때(보통 바로 아래) 붙은 순서로 부른다.
@@ -877,7 +877,7 @@ namespace sw
             return;
         for ( const uint64 objectID : listObjectID )
         {
-            _mapObjectIDToFileID.erase( objectID );
+            _fileIDTable.erase( objectID );
             _mapPrefabSource.erase( objectID );
             _mapSceneInstancePath.erase( objectID );
             _mapInstanceMember.erase( objectID );
@@ -899,9 +899,9 @@ namespace sw
         unordered_map<uint64, string> mapCellPrefab;
         for ( const uint64 objectID : listObjectID )
         {
-            const auto fileIDIt = _mapObjectIDToFileID.find( objectID );
-            if ( fileIDIt != _mapObjectIDToFileID.end() )
-                inputs._mapSavedID.emplace( objectID, fileIDIt->second );
+            const uint64 fileID = _fileIDTable.findFileID( objectID );
+            if ( fileID != 0 )
+                inputs._mapSavedID.emplace( objectID, fileID );
             const auto prefabIt = _mapPrefabSource.find( objectID );
             if ( prefabIt != _mapPrefabSource.end() )
                 mapCellPrefab.emplace( objectID, prefabIt->second );
@@ -918,7 +918,7 @@ namespace sw
         }
         // 런타임 칸(`RuntimeState` — 볼륨 발동 수 · AI 블랙보드)까지 뜬다 — 저작 목적이면 내렸다 올린 셀이 처음 상태로 돌아간다. 파생 칸(`Transient`)은 뜨지 않는다.
         ObjectSaveOptions saveOptions{ SerializePurpose::Snapshot };
-        saveOptions._pSavedIDMap = &_mapObjectIDToFileID;
+        saveOptions._pSavedIDMap = &_fileIDTable.getFileIDs();
 
         outListNode.reserve( listObjectID.size() );
         for ( const uint64 objectID : listObjectID )
@@ -985,9 +985,9 @@ namespace sw
             DeferredRegistrationScope& operator=( const DeferredRegistrationScope& ) = delete;
         } deferScope{ *_objectManager };
         NodeBuildContext context;
-        // 레이어 묶음은 이미 지은 늘 올라 있는 엔티티를 파일 id 로 가리킨다 — 그 오브젝트를 같은 배치에 기록해 둔다(상태는 읽지 않는다).
+        // 레이어 묶음은 이미 지은 늘 올라 있는 엔티티를 파일 id 로 가리킨다 — 배치에 없는 id 는 씬에 묻는다.
         if ( build != NodeBuild::Document )
-            addReferenceTargets( context, nullptr );
+            bindReferenceResolver( context );
 
         for ( const SceneDocument::SceneObjectNode& entity : listNode )
         {
@@ -1002,23 +1002,18 @@ namespace sw
         return finishNodeBuild( listNode, context );
     }
 
-    void Scene::addReferenceTargets( NodeBuildContext& context, const vector<uint64>* pExcludedObjectID ) const
+    void Scene::bindReferenceResolver( NodeBuildContext& context ) const
     {
-        unordered_set<uint64> uniqueExcluded;
-        if ( pExcludedObjectID != nullptr )
-        {
-            uniqueExcluded.reserve( pExcludedObjectID->size() );
-            for ( const uint64 objectID : *pExcludedObjectID )
-                uniqueExcluded.insert( objectID );
-        }
-        for ( const auto& [objectID, fileID] : _mapObjectIDToFileID )
-        {
-            if ( uniqueExcluded.find( objectID ) != uniqueExcluded.end() )
-                continue;
-            GameObject* pExisting = _objectManager->findGameObjectByID( objectID );
-            if ( pExisting != nullptr && pExisting->isPendingDestroy() == false )
-                context._batch.addReferenceTarget( pExisting, fileID, pExisting->getName() );
-        }
+        context._batch.setExternalResolver( SW_DELEGATE_LAMBDA( SavedObjectResolver, [this]( uint64 fileID, hashed_string name )
+        { return findReferenceTarget( fileID, name ); } ) );
+    }
+
+    GameObject* Scene::findReferenceTarget( uint64 fileID, const hashed_string& name ) const
+    {
+        GameObject* const pObject = fileID != 0 ? _objectManager->findGameObjectByID( _fileIDTable.findObjectID( fileID ) ) : _objectManager->findGameObjectByName( name );
+        if ( pObject == nullptr || pObject->isPendingDestroy() || _fileIDTable.findFileID( pObject->getObjectID() ) == 0 )
+            return nullptr;
+        return pObject;
     }
 
     void Scene::buildEntityNode( const SceneDocument::SceneObjectNode& entity, const NodeBuild build, NodeBuildContext& context, vector<uint64>* pOutListObjectID )
@@ -1035,7 +1030,7 @@ namespace sw
         if ( entity._prefab.empty() == false )
             _mapPrefabSource[pGo->getObjectID()] = entity._prefab;
         if ( entity._fileID != 0 )
-            _mapObjectIDToFileID[pGo->getObjectID()] = entity._fileID;
+            _fileIDTable.set( pGo->getObjectID(), entity._fileID );
         if ( entity._sceneInstance.empty() == false )
             _mapSceneInstancePath[pGo->getObjectID()] = entity._sceneInstance;
         if ( entity._instanceAnchorFileID != 0 )
@@ -1364,13 +1359,13 @@ namespace sw
         {
             if ( pGo == nullptr )
                 continue;
-            const auto mapIt = _mapObjectIDToFileID.find( pGo->getObjectID() );
-            if ( mapIt != _mapObjectIDToFileID.end() )
+            const uint64 knownFileID = _fileIDTable.findFileID( pGo->getObjectID() );
+            if ( knownFileID != 0 )
             {
-                outMap.emplace( pGo->getObjectID(), mapIt->second );
+                outMap.emplace( pGo->getObjectID(), knownFileID );
                 continue;
             }
-            _mapObjectIDToFileID.emplace( pGo->getObjectID(), nextFileID );
+            _fileIDTable.set( pGo->getObjectID(), nextFileID );
             outMap.emplace( pGo->getObjectID(), nextFileID );
             ++nextFileID;
         }
@@ -1385,18 +1380,17 @@ namespace sw
         // 프리팹 쪽에서 오브젝트가 씬 파일 밖으로 옮겨진 모양이라 참조를 만들 수 없게 막는다.
         if ( _objectManager->getSubsystem<PrefabInstanceRegistry>().isAttachedNestedPart( pObject ) )
             return 0;
-        const auto mapIt = _mapObjectIDToFileID.find( objectID );
-        if ( mapIt != _mapObjectIDToFileID.end() )
-            return mapIt->second;
+        const uint64 knownFileID = _fileIDTable.findFileID( objectID );
+        if ( knownFileID != 0 )
+            return knownFileID;
         const uint64 nextFileID = computeNextFileID();
-        _mapObjectIDToFileID.emplace( objectID, nextFileID );
+        _fileIDTable.set( objectID, nextFileID );
         return nextFileID;
     }
 
     uint64 Scene::findFileID( uint64 objectID ) const
     {
-        const auto mapIt = _mapObjectIDToFileID.find( objectID );
-        return mapIt != _mapObjectIDToFileID.end() ? mapIt->second : 0;
+        return _fileIDTable.findFileID( objectID );
     }
 
     uint64 Scene::computeNextFileID() const
@@ -1406,7 +1400,7 @@ namespace sw
         uint64 nextFileID = 1;
         // 인스턴스 멤버 · 런타임 하위 레벨 앵커의 넓은 id 는 세지 않는다(앵커 범위에서 온 값이다).
         const SceneSubLevelSubsystem* pSubLevels = _objectManager != nullptr ? &_objectManager->getSubsystem<SceneSubLevelSubsystem>() : nullptr;
-        for ( const auto& [objectID, fileID] : _mapObjectIDToFileID )
+        for ( const auto& [objectID, fileID] : _fileIDTable.getFileIDs() )
         {
             const bool bWide = _mapInstanceMember.find( objectID ) != _mapInstanceMember.end() || ( pSubLevels != nullptr && pSubLevels->isAnchorFileID( fileID ) );
             if ( bWide == false )
@@ -1442,7 +1436,7 @@ namespace sw
         if ( _objectManager == nullptr )
             return;
         // 매니저를 비우고 다시 만든 오브젝트다 — 사라진 id 의 기록은 버린다(남기면 `findObjectIDByFileID` 가 같은 파일 id 의 옛 오브젝트를 먼저 찾는다).
-        const auto dropGone = [this]( auto& mapByObjectID )
+        const auto dropGoneFrom = [this]( const auto& mapByObjectID, auto& inoutTable )
         {
             vector<uint64> listGone;
             for ( const auto& entry : mapByObjectID )
@@ -1452,10 +1446,12 @@ namespace sw
             }
             for ( const uint64 objectID : listGone )
             {
-                mapByObjectID.erase( objectID );
+                inoutTable.erase( objectID );
             }
         };
-        dropGone( _mapObjectIDToFileID );
+        const auto dropGone = [&dropGoneFrom]( auto& mapByObjectID )
+        { dropGoneFrom( mapByObjectID, mapByObjectID ); };
+        dropGoneFrom( _fileIDTable.getFileIDs(), _fileIDTable );
         dropGone( _mapPrefabSource );
         dropGone( _mapSceneInstancePath );
         dropGone( _mapInstanceMember );
@@ -1463,20 +1459,53 @@ namespace sw
         for ( const SavedFileID& entry : listFileID )
         {
             if ( entry._fileID != 0 && _objectManager->findGameObjectByID( entry._objectID ) != nullptr )
-                _mapObjectIDToFileID[entry._objectID] = entry._fileID;
+                _fileIDTable.set( entry._objectID, entry._fileID );
         }
+    }
+
+    void SceneFileIDTable::set( uint64 objectID, uint64 fileID )
+    {
+        SW_ASSERT( objectID != 0 && fileID != 0 );
+        erase( objectID );
+        _mapObjectIDToFileID.emplace( objectID, fileID );
+        _mapFileIDToObjectID[fileID] = objectID;
+    }
+
+    void SceneFileIDTable::erase( uint64 objectID )
+    {
+        const auto fileIter = _mapObjectIDToFileID.find( objectID );
+        if ( fileIter == _mapObjectIDToFileID.end() )
+            return;
+        const auto objectIter = _mapFileIDToObjectID.find( fileIter->second );
+        if ( objectIter != _mapFileIDToObjectID.end() && objectIter->second == objectID )
+            _mapFileIDToObjectID.erase( objectIter ); // 그 파일 id 를 나중에 받은 오브젝트가 있으면 그것을 둔다
+        _mapObjectIDToFileID.erase( fileIter );
+    }
+
+    void SceneFileIDTable::clear()
+    {
+        _mapObjectIDToFileID.clear();
+        _mapFileIDToObjectID.clear();
+    }
+
+    uint64 SceneFileIDTable::findFileID( uint64 objectID ) const
+    {
+        const auto fileIter = _mapObjectIDToFileID.find( objectID );
+        return fileIter != _mapObjectIDToFileID.end() ? fileIter->second : 0;
+    }
+
+    uint64 SceneFileIDTable::findObjectID( uint64 fileID ) const
+    {
+        const auto objectIter = _mapFileIDToObjectID.find( fileID );
+        return objectIter != _mapFileIDToObjectID.end() ? objectIter->second : 0;
     }
 
     uint64 Scene::findObjectIDByFileID( uint64 fileID ) const
     {
         if ( fileID == 0 || _objectManager == nullptr )
             return 0;
-        for ( const auto& [objectID, knownFileID] : _mapObjectIDToFileID )
-        {
-            if ( knownFileID == fileID && _objectManager->resolveGameObject( GameObjectHandle::make( objectID ) ) != nullptr )
-                return objectID;
-        }
-        return 0;
+        const uint64 objectID = _fileIDTable.findObjectID( fileID );
+        return objectID != 0 && _objectManager->resolveGameObject( GameObjectHandle::make( objectID ) ) != nullptr ? objectID : 0;
     }
 
     bool Scene::assignFileID( const uint64 objectID, const uint64 fileID )
@@ -1484,7 +1513,7 @@ namespace sw
         const uint64 holderID = findObjectIDByFileID( fileID );
         if ( fileID == 0 || objectID == 0 || ( holderID != 0 && holderID != objectID ) )
             return false;
-        _mapObjectIDToFileID[objectID] = fileID;
+        _fileIDTable.set( objectID, fileID );
         return true;
     }
 
@@ -1505,7 +1534,7 @@ namespace sw
         _mapSceneInstancePath.clear();
         _mapInstanceMember.clear();
         _mapObjectDataLayer.clear();
-        _mapObjectIDToFileID.clear();
+        _fileIDTable.clear();
         _listUnresolvedEntity.clear();
         if ( _objectManager != nullptr )
         {
@@ -1729,7 +1758,7 @@ namespace sw
         snapshot._mapSceneInstancePath = _mapSceneInstancePath;
         snapshot._mapInstanceMember    = _mapInstanceMember;
         snapshot._mapObjectDataLayer   = _mapObjectDataLayer;
-        snapshot._mapObjectIDToFileID  = _mapObjectIDToFileID;
+        snapshot._fileIDTable          = _fileIDTable;
         snapshot._listUnresolvedEntity = _listUnresolvedEntity;
         if ( _objectManager != nullptr )
         {
@@ -1747,7 +1776,7 @@ namespace sw
         _mapSceneInstancePath = std::move( snapshot._mapSceneInstancePath );
         _mapInstanceMember    = std::move( snapshot._mapInstanceMember );
         _mapObjectDataLayer   = std::move( snapshot._mapObjectDataLayer );
-        _mapObjectIDToFileID  = std::move( snapshot._mapObjectIDToFileID );
+        _fileIDTable          = std::move( snapshot._fileIDTable );
         _listUnresolvedEntity = std::move( snapshot._listUnresolvedEntity );
         _worldOrigin          = snapshot._worldOrigin; // 오브젝트는 찍은 때의 자리(그 원점 기준)로 돌아온다
         if ( _objectManager != nullptr )

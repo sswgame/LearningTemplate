@@ -27,6 +27,30 @@ namespace sw
     using ObjectSavedIDMap = unordered_map<uint64, uint64>;
 
     /**
+     * @class SceneFileIDTable
+     * @brief 런타임 오브젝트 id 와 파일 id 를 양쪽으로 잇는 표입니다. 두 방향은 여기서만 함께 바뀝니다 — 파일 id 로 찾기가 오브젝트 수만큼 훑지 않게.
+     * @details 같은 파일 id 를 다시 걸면 나중 것이 그 파일 id 의 오브젝트입니다(사라진 오브젝트의 기록이 남아 있어도 다시 지은 오브젝트를 찾는다).
+     */
+    class SW_API SceneFileIDTable
+    {
+    public:
+        /** @brief @p objectID 에 @p fileID 를 겁니다. 이미 다른 파일 id 가 있으면 바꿉니다. 둘 다 0 이 아니어야 합니다. */
+        void set( uint64 objectID, uint64 fileID );
+        void erase( uint64 objectID );
+        void clear();
+        /** @brief 오브젝트의 파일 id 입니다. 없으면 0 입니다. */
+        uint64 findFileID( uint64 objectID ) const;
+        /** @brief 파일 id 의 오브젝트 id 입니다. 없으면 0 입니다. 그 오브젝트가 살아 있는지는 보지 않습니다. */
+        uint64 findObjectID( uint64 fileID ) const;
+        /** @brief 오브젝트 id → 파일 id 표입니다(저장 · 새 id 정하기가 훑는다). */
+        const ObjectSavedIDMap& getFileIDs() const { return _mapObjectIDToFileID; }
+
+    private:
+        ObjectSavedIDMap _mapObjectIDToFileID;
+        ObjectSavedIDMap _mapFileIDToObjectID;
+    };
+
+    /**
      * @class Scene
      * @brief 씬 하나의 데이터(이름 · 원본 경로 · 프리팹 출처 · 저장 ID 테이블 · 카메라 선택 · 오브젝트 매니저)를 소유합니다. 언리얼 Level/World · 유니티 Scene 에 해당하고, 오브젝트 수명은 자기 `GameObjectManager` 가 관리합니다.
      */
@@ -240,7 +264,7 @@ namespace sw
             unordered_map<uint64, string>          _mapSceneInstancePath;
             unordered_map<uint64, InstanceMember>  _mapInstanceMember;
             unordered_map<uint64, vector<string>>  _mapObjectDataLayer;
-            ObjectSavedIDMap                       _mapObjectIDToFileID;
+            SceneFileIDTable                       _fileIDTable;
             vector<SceneDocument::SceneObjectNode> _listUnresolvedEntity;
             SceneDataLayerState                    _dataLayers;
             SceneSubLevelCapture                   _subLevels;
@@ -288,8 +312,10 @@ namespace sw
         [[nodiscard]] bool instantiateNodes( const vector<SceneDocument::SceneObjectNode>& listNode, NodeBuild build, vector<uint64>* pOutListObjectID, const StopToken& stopToken = {} );
         /** @brief 짓는 배치 하나의 상태입니다(배치 · 프리팹 원형 · 프리팹 엔티티). 정의는 Scene.cpp. */
         struct NodeBuildContext;
-        /** @brief 지금 씬의 파일 id 가진 오브젝트를 배치에 가리킴 대상으로 기록합니다 — 셀 · 레이어 묶음이 늘 올라 있는 엔티티를 파일 id 로 가리킨다. @p pExcludedObjectID 의 오브젝트(이 배치가 지은 것)는 뺍니다. */
-        void addReferenceTargets( NodeBuildContext& context, const vector<uint64>* pExcludedObjectID ) const;
+        /** @brief 배치가 자기에게 없는 파일 id 를 이 씬에 묻게 합니다 — 셀 · 레이어 묶음이 늘 올라 있는 엔티티를 파일 id 로 가리킨다. 가리킨 것만 찾아 씬 크기와 무관하다. */
+        void bindReferenceResolver( NodeBuildContext& context ) const;
+        /** @brief 파일 id(0 이면 이름)의 살아 있는 오브젝트입니다. 이름은 파일 id 를 가진 오브젝트만 받습니다(저장된 이름은 파일 안의 것만 뜻한다). 없으면 nullptr 입니다. */
+        GameObject* findReferenceTarget( uint64 fileID, const hashed_string& name ) const;
         /** @brief 엔티티 하나의 오브젝트를 만들고 상태를 배치에 읽습니다(연결은 `finishNodeBuild`). 프리팹을 찾지 못하면 만들지 않습니다. */
         void buildEntityNode( const SceneDocument::SceneObjectNode& entity, NodeBuild build, NodeBuildContext& context, vector<uint64>* pOutListObjectID );
         /** @brief 배치를 잇고(부착 · 핸들), 인스턴스 멤버를 앵커에 붙이고, 중첩 프리팹 부품을 스폰한 뒤 병합합니다. 잇지 못하면 오류를 남기고 false 입니다. */
@@ -319,7 +345,7 @@ namespace sw
          * @brief 런타임 오브젝트 id → 파일 id 입니다. 읽을 때 엔티티의 id 로 채우고 저장 때 없는 것을 새로 줍니다(`collectSavedIDMap`).
          * @details 저장이 const 라 mutable 입니다 — 새 오브젝트에 id 를 주는 것은 씬의 보이는 상태를 바꾸지 않습니다.
          */
-        mutable ObjectSavedIDMap               _mapObjectIDToFileID;
+        mutable SceneFileIDTable               _fileIDTable;
         vector<SceneDocument::SceneObjectNode> _listUnresolvedEntity;     ///< 프리팹을 찾지 못한 엔티티(문서 그대로, 저장 때 다시 써 넣는다)
         uint8                                  _bRegistrationHeld    : 1; ///< `holdRegistration` 이 쥔 미루기가 남았다(`finishHeldRegistration` 이 놓는다)
         uint8                                  _bBuildAllDataLayers  : 1; ///< `setBuildAllDataLayers` — 쿠커의 씬
