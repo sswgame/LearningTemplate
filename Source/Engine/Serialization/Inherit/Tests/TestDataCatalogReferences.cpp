@@ -2,6 +2,7 @@
 // 카탈로그 키 칸(`<CatalogKey>` · `<Field>`)의 상속 · 다른 팩 · 깨진 값과 리플렉션 대조.
 #include "pch.h"
 
+#include "Core/Algorithm/VectorUtil.h"
 #include "Core/Container/unordered_set.h"
 #include "Core/Log/Logger.h"
 #include "Core/Testing/TestFramework.h"
@@ -270,6 +271,30 @@ SW_TEST_CASE( DataCatalogReferencesTest, BrokenKeyValuesFail )
     SW_EXPECT_FALSE( check.validate() );
 }
 
+/** @brief [DataCatalogReferencesTest] 물려받은 형식(`<Derived>`)의 원소는 바탕 · 바탕의 바탕이 가진 키 칸을 대조한다 — 예전에는 원소 이름이 바탕 이름이 아니라 놓쳤다. 자기에게 돌아오는 줄은 표 오류다 */
+SW_TEST_CASE( DataCatalogReferencesTest, DerivedRowsFollowTheBaseType )
+{
+    DataCatalogReferenceRules rules;
+    SW_REQUIRE_TRUE( rules.loadFromXMLText( R"(<DataCatalogReferenceTable>
+  <CatalogKey tag="ItemDef" catalog="ItemCatalog" entry="Item"/>
+  <Field owner="LootComponent" field="_item" tag="ItemDef"/>
+  <Derived type="ChestComponent" base="LootComponent"/>
+  <Derived type="MimicComponent" base="ChestComponent"/>
+</DataCatalogReferenceTable>)",
+                                            "table" ) );
+    DataCatalogKeyCheck check( rules );
+    SW_EXPECT_TRUE( check.isMentioned( R"(<Scene><MimicComponent _item="gold"/></Scene>)" ) );
+    addDataText( check, R"(<ItemCatalog><Item id="gold"/></ItemCatalog>)", "items" );
+    addDataText( check, R"(<Scene><ChestComponent _item="gold"/><MimicComponent _item="gone"/></Scene>)", "scene" );
+    SW_EXPECT_LOG( "DataCatalogKey.UnknownEntry" ); // 미믹의 gone 하나
+    SW_EXPECT_FALSE( check.validate() );
+
+    SW_EXPECT_LOG( "DataCatalogReferences.RuleInvalid" );
+    SW_EXPECT_LOG( "DataCatalogReferences.RuleInvalid" );
+    DataCatalogReferenceRules looped;
+    SW_EXPECT_FALSE( looped.loadFromXMLText( R"(<DataCatalogReferenceTable><Derived type="A" base="B"/><Derived type="B" base="A"/></DataCatalogReferenceTable>)", "table" ) );
+}
+
 /** @brief [DataCatalogReferencesTest] 루트가 항목 원소 하나인 파일(에디터가 내보낸 프리셋)도 그 항목을 정의한다 — 카탈로그 루트만 보면 런타임이 읽는 항목을 모른다 */
 SW_TEST_CASE( DataCatalogReferencesTest, SingleEntryFileDefinesItsEntry )
 {
@@ -341,6 +366,7 @@ SW_TEST_CASE( DataCatalogReferencesTest, ElementRowFindsCatalogDefinitionKeys )
  *          - `CatalogKey<Tag>` 칸마다 `<Field>` 줄이 있고 종류 이름이 같다. 줄마다 그 칸이 있다.
  *          - 키를 든 구조체가 칸 하나로 들면(원소 이름이 칸 이름) `<Struct owner field type>` 줄이 있다.
  *          - 칸 줄의 주인은 쿠커가 원소 이름으로 찾을 수 있다 — 컴포넌트, 목록 원소 구조체, `<Struct>` 형식, 또는 `<Element>` 줄이 이은 카탈로그 정의다.
+ *          - 키를 든 형식을 물려받은 형식마다 `<Derived type base>` 줄이 있다(쿠커는 원소 이름 — 가장 아래 형식 — 에서 이 줄로 바탕의 칸 줄을 따라간다).
  *          - 카탈로그 정의의 칸 줄 속성 이름은 `XMLFields::getAttributeName` 과 같다.
  *          타입 표는 잠근 채 다시 물을 수 없어(공유 잠금은 재귀가 아니다) 먼저 칸을 모으고 잠금 밖에서 본다.
  */
@@ -414,9 +440,33 @@ SW_TEST_CASE( DataCatalogReferencesTest, FieldTableMatchesReflection )
     {
         setKeyHolder.insert( row._owner );
     }
-
     vector<string>                           listProblem;
     StringBuilder<constant::buffer::kMax512> problem;
+    // 키를 든 형식을 물려받은 형식도 키를 든다(바탕의 바탕까지 — 더 늘지 않을 때까지 돈다).
+    for ( bool bGrown = true; bGrown; )
+    {
+        bGrown = false;
+        for ( const auto& [typeName, parentName] : listParent )
+        {
+            if ( setKeyHolder.contains( parentName ) == false )
+                continue;
+            const DataCatalogKeyDerived* pRow = rules.findKeyDerived( typeName );
+            if ( setKeyHolder.contains( typeName ) == false )
+            {
+                setKeyHolder.insert( typeName );
+                bGrown = true;
+            }
+            else if ( pRow != nullptr )
+                continue;
+            if ( pRow == nullptr || pRow->_base != parentName )
+            {
+                problem.clear();
+                problem.appendFormat( "%# derives from the key holder %# but has no <Derived type base> row with that base - the cook would not see the inherited key fields", typeName, parentName );
+                if ( VectorUtil::contains( listProblem, string( problem.view() ) ) == false )
+                    listProblem.push_back( string( problem.view() ) );
+            }
+        }
+    }
     for ( const PropertyRecord& record : listRecord )
     {
         if ( isKey( record ) )
@@ -472,14 +522,14 @@ SW_TEST_CASE( DataCatalogReferencesTest, FieldTableMatchesReflection )
             listProblem.push_back( string( problem.view() ) );
         }
     }
-    // 쿠커는 원소 이름(가장 아래 형식)으로 찾고 상속을 따라가지 않는다 — 키 칸을 든 형식을 물려받은 형식이 생기면 여기서 멈춘다.
-    for ( const auto& [typeName, parentName] : listParent )
+    for ( const DataCatalogKeyDerived& row : rules.getDerivedRows() )
     {
-        if ( setKeyHolder.contains( parentName ) && setKeyHolder.contains( typeName ) == false )
+        const bool bMatches = std::any_of( listParent.begin(), listParent.end(), [&row]( const std::pair<string, string>& parent )
+        { return parent.first == row._type && parent.second == row._base; } );
+        if ( isLoadedType( row._type ) && bMatches == false )
         {
             problem.clear();
-            problem.appendFormat( "%# derives from the key holder %# - the cook finds key fields by the element (leaf type) name and does not follow inheritance; keep key fields on the leaf type",
-                                  typeName, parentName );
+            problem.appendFormat( "<Derived type=\"%#\" base=\"%#\"> row does not match the reflected base type", row._type, row._base );
             listProblem.push_back( string( problem.view() ) );
         }
     }

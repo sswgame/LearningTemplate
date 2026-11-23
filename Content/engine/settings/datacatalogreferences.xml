@@ -15,6 +15,7 @@
   카탈로그 밖의 칸(씬 · 프리팹의 컴포넌트 · 구조체 칸 `CatalogKey<Tag>`):
   <CatalogKey tag catalog entry [targetKey]> 는 항목 종류 Tag(C++ 형식 이름)가 가리키는 카탈로그 루트와 항목 원소, <Field owner field tag> 는 원소 owner 의 칸 field 가
   그 종류의 id 라는 줄입니다. 팩 쿠커는 굽는 모든 도메인의 카탈로그 항목(펼친 글)을 모아 칸 값마다 대조하고, 없으면 팩을 쓰지 않습니다. 인스펙터는 같은 줄로 항목 콤보를 채웁니다.
+  <Derived type base> 는 키 칸을 든 형식을 물려받은 형식입니다 — 씬의 원소 이름은 가장 아래 형식이라 쿠커가 이 줄로 바탕의 칸 줄을 따라갑니다.
   칸을 더하거나 바꾸면 줄도 고칩니다 — 다르면 DataCatalogReferencesTest.FieldTableMatchesReflection 이 집니다(쿠커는 게임 모듈의 리플렉션을 보지 못한다).
 -->
 <DataCatalogReferenceTable>

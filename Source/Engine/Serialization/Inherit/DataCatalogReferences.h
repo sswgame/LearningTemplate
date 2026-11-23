@@ -23,6 +23,7 @@
  *       </Catalog>
  *       <CatalogKey tag="AbilitySetDef" catalog="AbilityCatalog" entry="AbilitySet"/> <!-- 항목 종류 → 카탈로그 루트 · 원소 -->
  *       <Field owner="AbilitySystemComponent" field="_abilitySetID" tag="AbilitySetDef"/>  <!-- `CatalogKey<AbilitySetDef>` 칸 -->
+ *       <Derived type="BossAbilityComponent" base="AbilitySystemComponent"/>               <!-- 칸을 물려받은 형식 -->
  *     </DataCatalogReferenceTable>
  * @endcode
  *          `<CatalogKey>` · `<Field>` 는 카탈로그 밖(씬 · 프리팹의 컴포넌트 · 구조체 칸 `CatalogKey<Tag>`)에서 항목을 가리키는 칸이다. 쿠커는 쿠킹하는 팩들의
@@ -110,6 +111,16 @@ namespace sw
     };
 
     /**
+     * @struct DataCatalogKeyDerived
+     * @brief 물려받은 형식 한 줄입니다(표의 `<Derived type base>`) — 씬 · 프리팹의 원소 이름은 가장 아래 형식이라, 바탕의 키 칸 줄(`<Field owner>` · `<Struct owner>`)을 찾으려면 이 연결이 필요하다.
+     */
+    struct DataCatalogKeyDerived
+    {
+        string _type; ///< 물려받은 리플렉션 형식 이름
+        string _base; ///< 바탕 형식 이름(다시 물려받은 형식일 수 있다)
+    };
+
+    /**
      * @class DataCatalogReferenceRules
      * @brief 참조 규칙 표 한 벌입니다. 읽은 뒤에는 바꾸지 않는다(`validateDocument` 는 const — 쿠킹 작업이 나란히 불러도 된다).
      */
@@ -156,6 +167,10 @@ namespace sw
         const vector<DataCatalogKeyElement>& getElementRows() const { return _listKeyElement; }
         /** @brief 형식 @p owner 의 구조체 칸 @p field 줄입니다. 없으면 nullptr 입니다. */
         [[nodiscard]] const DataCatalogKeyStruct* findKeyStruct( string_view owner, string_view field ) const;
+        /** @brief 물려받은 형식 줄입니다(표 순서). */
+        const vector<DataCatalogKeyDerived>& getDerivedRows() const { return _listKeyDerived; }
+        /** @brief 형식 @p type 의 물려받음 줄입니다. 없으면 nullptr 입니다. */
+        [[nodiscard]] const DataCatalogKeyDerived* findKeyDerived( string_view type ) const;
         /** @brief 정의 형식 @p type 의 첫 원소 줄입니다(한 정의가 여러 자리에 놓이면 줄이 여럿이다). 없으면 nullptr 입니다. */
         [[nodiscard]] const DataCatalogKeyElement* findKeyElement( string_view type ) const;
         /** @brief 칸 줄 @p field 가 카탈로그 원소에서 쓰는 속성 이름입니다(`_attribute`, 비면 칸 이름에서 `_` 를 뗀 것). */
@@ -173,6 +188,7 @@ namespace sw
         vector<DataCatalogKeyField>      _listKeyField;   ///< 카탈로그 키 칸 줄
         vector<DataCatalogKeyStruct>     _listKeyStruct;  ///< 구조체 칸 줄
         vector<DataCatalogKeyElement>    _listKeyElement; ///< 정의 형식 ↔ 카탈로그 원소 줄
+        vector<DataCatalogKeyDerived>    _listKeyDerived; ///< 물려받은 형식 줄
     };
 
     /**
@@ -209,7 +225,7 @@ namespace sw
         /** @brief @p node 와 그 아래 원소를 모두 훑어 칸 주인 원소의 값을 모읍니다. */
         void collectUses( const XMLNode& node, string_view sourceName );
         /**
-         * @brief 형식 @p typeName 의 원소 @p node 에서 칸 줄의 값을 모읍니다. 구조체 칸 줄(`<Struct>`)이면 그 자식 원소를 그 형식으로 다시 본다.
+         * @brief 형식 @p typeName 과 그 바탕 형식들(`<Derived>`)의 원소 @p node 에서 칸 줄의 값을 모읍니다. 구조체 칸 줄(`<Struct>`)이면 그 자식 원소를 그 형식으로 다시 본다.
          * @param bCatalogElement 카탈로그 정의 원소(`<Element>`)다 — 칸은 속성 이름(`findElementAttribute`)으로 찾고 목록은 쉼표 목록이다.
          */
         void collectTypedUses( const XMLNode& node, string_view typeName, bool bCatalogElement, string_view sourceName );
