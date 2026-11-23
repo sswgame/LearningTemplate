@@ -11,6 +11,7 @@
 #include "Engine/Content/AssetIO.h"
 #include "Engine/Foundation/EngineServices.h"
 #include "Engine/Serialization/Inherit/DataInheritance.h"
+#include "Engine/Serialization/Inherit/DataInheritanceSchemaRegistry.h"
 #include "Engine/Serialization/Inherit/ResourceComposer.h"
 #include "Engine/Serialization/XML/XMLDocument.h"
 #include "Engine/Serialization/XML/XMLFields.h"

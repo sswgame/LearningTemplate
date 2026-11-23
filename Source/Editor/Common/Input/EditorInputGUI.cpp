@@ -274,7 +274,7 @@ namespace sw::editor
         EditorInputActions&          inputActions  = editorContext.getSubsystem<EditorInputActions>();
         const EditorCommandDesc*     pDesc         = registry.find( commandID );
         if ( pDesc == nullptr )
-            SW_FATAL( "Menu item names command '%#' which is not registered", string( commandID ).c_str() );
+            reportFatalError( "Menu item names command '%#' which is not registered", string( commandID ).c_str() );
         fixed_string<constant::buffer::kMax128> menuLabel;
         EditorCommandRegistry::formatMenuLabel( *pDesc, menuLabel );
         string shortcutLabel;

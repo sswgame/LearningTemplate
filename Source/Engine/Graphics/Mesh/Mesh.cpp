@@ -32,7 +32,7 @@ namespace sw
         };
     } // namespace
 
-    SW_BUILT_IN_ASSET_CACHE_WITHOUT_RELOAD( RigidSkinMeshCache );
+    SW_BUILT_IN_ASSET_CACHE( RigidSkinMeshCache, RigidSkinMeshCache );
 } // namespace sw
 
 namespace sw

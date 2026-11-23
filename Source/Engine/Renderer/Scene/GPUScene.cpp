@@ -28,7 +28,8 @@ namespace sw
             /**
              * @brief 배치마다 머리 원소의 프록시에 사본을 올리고(바뀐 것만), 그 상수 버퍼 인덱스와 텍스처 슬롯을 배치에 덧씁니다.
              * @details 머티리얼의 GPU 자원은 렌더 스레드만 만든다 — 게임 스레드는 불변 사본만 실어 보낸다(`MaterialRenderProxy`). 원소 업로드(g_SwMaterials)는
-             *          사본의 바이트를 직접 읽으므로 원소마다 상수 버퍼를 만들지 않는다. 상수 버퍼는 배치가 고르는 머리 원소의 것뿐이다.
+             *          사본의 바이트를 직접 읽으므로 원소마다 상수 버퍼를 만들지 않는다. 상수 버퍼는 원소 배열이 없는 셰이더(MaterialCB — stride 0)의 배치만, 머리 원소의 것을 쓴다 —
+             *          원소 셰이더는 그 슬롯을 선언하지 않는다. 예전에는 원소 셰이더의 배치도 읽히지 않는 상수 버퍼를 만들고 값이 바뀔 때마다 같은 바이트를 두 번 올렸다.
              */
             static void bindBatchMaterialResources( IRHIDevice* pDevice, const vector<GPUMeshBatch>& listBatch, vector<GPUMeshBatchBinding>& inoutListBinding,
                                                     const vector<GPUMaterialGroup>& listGroup )
@@ -44,7 +45,8 @@ namespace sw
                     if ( binding.isValid() == false )
                         continue;
                     GPUMeshBatchBinding& gpu = inoutListBinding[batchIndex];
-                    gpu._materialCb          = binding._proxy->sync( pDevice, binding._data );
+                    if ( binding._data->_elementStride == 0 )
+                        gpu._materialCb = binding._proxy->sync( pDevice, binding._data );
                     // 슬롯 바인딩 백엔드(DX11 · GL)는 배치마다 텍스처 슬롯을 건다. 인스턴스가 덮어쓴 텍스처는 사본이 이미 얹었다.
                     for ( uint32 slot = 0; slot < shaderslot::kMaterialTextureCount; ++slot )
                     {
@@ -432,7 +434,7 @@ namespace sw
     void GPUScene::refreshScreenEffectBatches()
     {
         const string distortionDefine{ kMaterialDistortionDefine };
-        const string refractionDefine{ Material::kRefractionDefine };
+        const string refractionDefine{ kMaterialRefractionDefine };
         _bDistortionBatches = SW_FALSE;
         _bRefractionBatches = SW_FALSE;
         for ( const GPUMeshBatch& batch : _snapshot.getAllBatches() )
@@ -766,6 +768,8 @@ namespace sw
         };
 
         // 버퍼 · stride · 원소 수가 그대로면 사본이 바뀐 원소만 거울에 고치고 그 칸만 올린다(머티리얼 수가 아니라 바뀐 수에 비례).
+        // 원소 안의 바뀐 바이트만 올리지 않는다 — D3D11 은 구조 버퍼의 부분 갱신이 온전한 구조체가 아니면 버린다
+        // (https://microsoft.github.io/DirectX-Specs/d3d/archive/D3D11_3_FunctionalSpec.htm 의 구조 버퍼 갱신 절).
         const bool bIncremental = bRecreate == false && gpu._lastBytes.size() == needBytes && gpu._listUploadedData.size() == elementCount;
         if ( bIncremental )
         {

@@ -86,6 +86,7 @@ namespace sw
         , _editorPreview{}
         , _mapCustomMeta{}
         , _bCallInEditor{ SW_FALSE }
+        , _bExec{ SW_FALSE }
         , _reserved{ 0 }
     {
     }

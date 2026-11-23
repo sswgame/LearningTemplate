@@ -21,7 +21,6 @@
 #include "Engine/Config/EngineConfig.h"
 #include "Engine/Content/AssetPaths.h"
 #include "Engine/Graphics/Texture/TextureFormatFamily.h"
-#include "Engine/Reflection/TypeRegistry.h"
 
 #include "ModuleAPI/ABI/EditorAPI.h"
 
@@ -90,7 +89,7 @@ namespace sw::editor
                         // 모든 배포 대상의 변형을 한 번에 굽는다 — 팩은 대상마다 같고 실행이 장치에 맞는 변형을 고른다(`TextureFormatFamily::resolveCookFamilies`).
                         const TextureFormatSettings& settings = editor::getSubsystem<EngineConfig>()._textureFormats;
                         vector<TextureFormatFamily>  listFamily;
-                        if ( TextureFormatFamily::resolveCookFamilies( settings, editor::getSubsystem<TypeRegistry>(), listFamily ) == false )
+                        if ( TextureFormatFamily::resolveCookFamilies( settings, listFamily ) == false )
                             return -1; // 까닭은 표를 푸는 쪽이 남겼다
                         for ( const TextureFormatFamily& family : listFamily )
                         {

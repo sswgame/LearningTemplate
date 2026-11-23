@@ -13,6 +13,8 @@
 #include "Engine/Object/GameObject/Serialization/ObjectStateSerializer.h"
 #include "Engine/Reflection/Reflection.h"
 
+#include "GameFramework/Runtime/Foundation/Framework/Save/StatefulComponentRegistrar.h"
+
 namespace sw
 {
     namespace
@@ -31,25 +33,30 @@ namespace sw
 namespace sw
 {
     StatefulComponentRegistration::StatefulComponentRegistration( const utf8* pTypeName, CaptureFn pCapture, RestoreFn pRestore, DespawnFn pDespawn, TypeFn pGetType, WriteFn pWrite,
-                                                                  RestoreObjectFn pRestoreObject )
+                                                                  RestoreObjectFn pRestoreObject, SourceLocation site )
         : _pTypeName{ pTypeName }
         , _pCapture{ pCapture }
         , _pRestore{ pRestore }
         , _pDespawn{ pDespawn }
-        , _pCodec{}
+        , _pCodec{ pWrite != nullptr ? make_unique<ComponentStateCodec>( ComponentStateCodec{ pTypeName, pGetType, pWrite, pRestoreObject } ) : nullptr }
+        , _registrar{ this, &StatefulComponentRegistration::add, &StatefulComponentRegistration::remove, site }
     {
-        (void)ComponentStateStoreInternal::getRegistrationList().addLogged( this, "Stateful component type", string_view( pTypeName ) );
-        if ( pWrite == nullptr )
-            return;
-        _pCodec = make_unique<ComponentStateCodec>( ComponentStateCodec{ pTypeName, pGetType, pWrite, pRestoreObject } );
-        (void)ComponentStateCodec::add( _pCodec.get() ); // 거절은 등록부가 알렸다
     }
 
-    StatefulComponentRegistration::~StatefulComponentRegistration()
+    StatefulComponentRegistration::~StatefulComponentRegistration() = default;
+
+    bool StatefulComponentRegistration::add( StatefulComponentRegistration* pRegistration )
     {
-        if ( _pCodec != nullptr )
-            ComponentStateCodec::remove( _pCodec.get() );
-        (void)ComponentStateStoreInternal::getRegistrationList().remove( this ); // 거절된 중복 등록은 목록에 없다
+        if ( ComponentStateStoreInternal::getRegistrationList().addLogged( pRegistration, "Stateful component type", string_view( pRegistration->_pTypeName ) ) != RegistrationResult::Added )
+            return false;
+        return pRegistration->_pCodec == nullptr || ComponentStateCodec::add( pRegistration->_pCodec.get() );
+    }
+
+    void StatefulComponentRegistration::remove( StatefulComponentRegistration* pRegistration )
+    {
+        if ( pRegistration->_pCodec != nullptr )
+            ComponentStateCodec::remove( pRegistration->_pCodec.get() );
+        (void)ComponentStateStoreInternal::getRegistrationList().remove( pRegistration ); // 올린 등록만 불린다(거절된 것은 StaticRegistrar 가 내리지 않는다)
     }
 
     const vector<StatefulComponentRegistration*>& StatefulComponentRegistration::getRegistrations()

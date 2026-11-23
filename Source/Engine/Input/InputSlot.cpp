@@ -15,9 +15,6 @@ namespace sw
             static constexpr string_view kMousePrefix   = "Mouse";
             static constexpr string_view kGamepadPrefix = "Gamepad";
             static constexpr string_view kTouchPrefix   = "Touch";
-
-            /** @brief 열거자 이름으로 읽은 값이 실제로 그 이름인지 확인합니다. 리플렉션 조회는 모르는 이름에 기본값을 반환할 수 있기 때문입니다. */
-            static bool isSameName( const utf8* pCanonical, string_view name ) { return pCanonical != nullptr && StringUtil::equals( string_view( pCanonical ), name ); }
         };
     } // namespace
 } // namespace sw
@@ -36,7 +33,7 @@ namespace sw
         if ( StringUtil::equals( device, InputSlotInternal::kKeyPrefix ) )
         {
             const Key key = KeyCodeUtil::fromName( name );
-            if ( key == Key::Unknown || InputSlotInternal::isSameName( KeyCodeUtil::toName( key ), name ) == false )
+            if ( key == Key::Unknown )
                 return false;
             outSlot = InputSlot::fromKey( key );
             return true;
@@ -44,7 +41,7 @@ namespace sw
         if ( StringUtil::equals( device, InputSlotInternal::kMousePrefix ) )
         {
             const MouseButton button = MouseButtonUtil::fromName( name );
-            if ( button == MouseButton::Count || InputSlotInternal::isSameName( MouseButtonUtil::toName( button ), name ) == false )
+            if ( button == MouseButton::Count )
                 return false;
             outSlot = InputSlot::fromMouseButton( button );
             return true;

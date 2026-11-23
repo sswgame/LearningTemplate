@@ -38,10 +38,10 @@ SW_TEST_CHILD_ROLE( StaticRegistrationTest, DuplicateRegistrarChild )
     const DuplicateProbe                         first{ "probe" };
     const DuplicateProbe                         second{ "probe" };
     const StaticRegistrar<const DuplicateProbe*> firstRegistrar{
-        &first, &DuplicateProbeRegistry::add, &DuplicateProbeRegistry::remove, RegistrationSite{ "first_site.cpp", 10 }
+        &first, &DuplicateProbeRegistry::add, &DuplicateProbeRegistry::remove, SourceLocation{ "first_site.cpp", 10 }
     };
     const StaticRegistrar<const DuplicateProbe*> secondRegistrar{
-        &second, &DuplicateProbeRegistry::add, &DuplicateProbeRegistry::remove, RegistrationSite{ "second_site.cpp", 20 }
+        &second, &DuplicateProbeRegistry::add, &DuplicateProbeRegistry::remove, SourceLocation{ "second_site.cpp", 20 }
     };
     const vector<string> listRejected = collectRejectedStaticRegistrations();
     SW_REQUIRE_EQUAL( 1u, static_cast<uint32>( listRejected.size() ) );

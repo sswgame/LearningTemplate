@@ -20,7 +20,7 @@
 	<Store watch="Render.ViewRectWidth" as="fullRect"/>
 	<Store watch="Render.ViewRectHeight" as="fullRectHeight"/>
 	<Store watch="Render.ViewTransientRebuildCount" as="rebuilds"/>
-	<Screenshot file="renderscale_full.ppm" stability="assets"/>
+	<Screenshot file="renderscale_full.ppm" stability="Assets"/>
 	<Store watch="Render.OcclusionTilesBuilt" as="occlusion"/>
 	<!-- ① 단계 1 → 0.5 -->
 	<Variable name="gv_autoRenderScaleForce" value="0.5"/>
@@ -32,7 +32,7 @@
 	<!-- ② 가림 타일은 단계 뒤에도 지어진다(지난 프레임 사각형을 읽는다) -->
 	<WaitUntil watch="Render.OcclusionTilesBuilt" sameAs="occlusion" timeoutFrames="10"/>
 	<!-- ③ 배율 0.5 의 그림 -->
-	<Screenshot file="renderscale_half.ppm" stability="assets"/>
+	<Screenshot file="renderscale_half.ppm" stability="Assets"/>
 	<Expect watch="Render.OcclusionTilesBuilt" sameAs="occlusion"/>
 	<ExpectImage file="renderscale_half.ppm" golden="renderscale_half"/>
 	<!-- ④ 고정을 끄면 사각형이 풀 전체로 돌아온다 -->

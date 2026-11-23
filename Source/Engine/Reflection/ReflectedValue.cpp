@@ -25,8 +25,6 @@
 // 파서는 같은 칸의 멤버 이름으로 고정 배치형 코덱의 `offsetof` 를 내므로, 여기서 맞으면 생성 코드도 맞는다(UHT 가 `UScriptStruct` 의 멤버를 컴파일러에 맡기는 것과 같은 자리).
 // -----------------------------------------------------------------------------
 #define SW_BUILTIN_PP_EXPAND( x )                                                                                 x
-#define SW_BUILTIN_PP_CONCAT_IMPL( a, b )                                                                         a##b
-#define SW_BUILTIN_PP_CONCAT( a, b )                                                                              SW_BUILTIN_PP_CONCAT_IMPL( a, b )
 #define SW_BUILTIN_PP_COUNT_IMPL( _1, _2, _3, _4, _5, _6, _7, _8, _9, _10, _11, _12, _13, _14, _15, _16, N, ... ) N
 #define SW_BUILTIN_PP_COUNT( ... )                                                                                SW_BUILTIN_PP_EXPAND( SW_BUILTIN_PP_COUNT_IMPL( __VA_ARGS__, 16, 15, 14, 13, 12, 11, 10, 9, 8, 7, 6, 5, 4, 3, 2, 1 ) )
 
@@ -52,7 +50,7 @@
 #define SW_BUILTIN_MEMBER_CHECK_16( E, I, M, ... ) SW_BUILTIN_MEMBER_CHECK( E, I, M ) SW_BUILTIN_PP_EXPAND( SW_BUILTIN_MEMBER_CHECK_15( E, I + 1, __VA_ARGS__ ) )
 #define SW_BUILTIN_MEMBERS_CHECK( Elem, ... )                                                                                                                \
     static_assert( sizeof( T ) == SW_BUILTIN_PP_COUNT( __VA_ARGS__ ) * sizeof( Elem ), "ReflectBuiltins.xxx Layout: member count does not cover the type" ); \
-    SW_BUILTIN_PP_EXPAND( SW_BUILTIN_PP_CONCAT( SW_BUILTIN_MEMBER_CHECK_, SW_BUILTIN_PP_COUNT( __VA_ARGS__ ) )( Elem, 0, __VA_ARGS__ ) )                     \
+    SW_BUILTIN_PP_EXPAND( SW_CONCAT( SW_BUILTIN_MEMBER_CHECK_, SW_BUILTIN_PP_COUNT( __VA_ARGS__ ) )( Elem, 0, __VA_ARGS__ ) )                                \
     static_assert( sw::ReflectBuiltinLayoutCheck::matchesPackedTraits<T, std::is_same_v<Elem, int32>, SW_BUILTIN_PP_COUNT( __VA_ARGS__ )>(),                 \
                    "ReflectBuiltins.xxx Layout: PackedValueTraits component count or kIntegerComponents disagrees with the layout" );
 
@@ -791,6 +789,4 @@ namespace sw
 #undef SW_BUILTIN_MEMBER_CHECK_16
 #undef SW_BUILTIN_PP_COUNT
 #undef SW_BUILTIN_PP_COUNT_IMPL
-#undef SW_BUILTIN_PP_CONCAT
-#undef SW_BUILTIN_PP_CONCAT_IMPL
 #undef SW_BUILTIN_PP_EXPAND

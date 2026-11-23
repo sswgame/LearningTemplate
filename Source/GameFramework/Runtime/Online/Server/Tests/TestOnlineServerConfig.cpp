@@ -129,9 +129,9 @@ SW_TEST_CASE( OnlineServerConfigTest, KitRegistryFindsAndForgetsFactories )
     noCreate._pName = "__test_online_kit_nocreate";
 
     SW_EXPECT_NULL( sw::OnlineServerKitRegistry::findFactory( "__test_online_kit" ) );
-    sw::OnlineServerKitRegistry::registerFactory( &factory );
-    sw::OnlineServerKitRegistry::registerFactory( &noCreate );
-    sw::OnlineServerKitRegistry::registerFactory( nullptr );
+    SW_EXPECT_TRUE( sw::OnlineServerKitRegistry::registerFactory( &factory ) );
+    SW_EXPECT_FALSE( sw::OnlineServerKitRegistry::registerFactory( &noCreate ) );
+    SW_EXPECT_FALSE( sw::OnlineServerKitRegistry::registerFactory( nullptr ) );
     SW_EXPECT_TRUE( sw::OnlineServerKitRegistry::findFactory( "__test_online_kit" ) == &factory );
     SW_EXPECT_NULL( sw::OnlineServerKitRegistry::findFactory( "__test_online_kit_nocreate" ) );
     SW_EXPECT_NULL( sw::OnlineServerKitRegistry::findFactory( "__test_online" ) ); // 앞부분만 같은 이름은 아니다
@@ -163,9 +163,9 @@ SW_TEST_CASE( OnlineServerConfigTest, KitRegistryRejectsDuplicateName )
     second._pName   = "__test_online_kit_dup";
     second._pCreate = &createNothing;
 
-    sw::OnlineServerKitRegistry::registerFactory( &first );
-    sw::OnlineServerKitRegistry::registerFactory( &first ); // 같은 항목을 다시 올리는 것은 거절이 아니다
-    sw::OnlineServerKitRegistry::registerFactory( &second );
+    SW_EXPECT_TRUE( sw::OnlineServerKitRegistry::registerFactory( &first ) );
+    SW_EXPECT_TRUE( sw::OnlineServerKitRegistry::registerFactory( &first ) ); // 같은 항목을 다시 올리는 것은 거절이 아니다
+    SW_EXPECT_FALSE( sw::OnlineServerKitRegistry::registerFactory( &second ) );
     SW_EXPECT_TRUE( sw::OnlineServerKitRegistry::findFactory( "__test_online_kit_dup" ) == &first );
     sw::OnlineServerKitRegistry::unregisterFactory( &second );
     SW_EXPECT_TRUE( sw::OnlineServerKitRegistry::findFactory( "__test_online_kit_dup" ) == &first ); // 올라 있지 않은 것을 내려도 남은 것은 그대로

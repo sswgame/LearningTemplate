@@ -79,4 +79,4 @@ namespace sw
 /** @brief 엔진 컴포넌트 @p Type 의 상태 코덱을 등록합니다(그 컴포넌트의 .cpp, 파일 범위, `namespace sw` 안). */
 #define SW_COMPONENT_STATE_CODEC( Type )                                                                                            \
     static const ::sw::ComponentStateCodec          sw_componentStateCodec_##Type = ::sw::ComponentStateCodec::make<Type>( #Type ); \
-    static const ::sw::ComponentStateCodecRegistrar sw_componentStateCodecRegistrar_##Type{ &sw_componentStateCodec_##Type };
+    static const ::sw::ComponentStateCodecRegistrar sw_componentStateCodecRegistrar_##Type{ &sw_componentStateCodec_##Type, ::sw::SourceLocation::current() };

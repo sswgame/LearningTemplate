@@ -567,7 +567,7 @@ namespace sw
                 void visit( const string& assetID )
                 {
                     vector<string> listCompanion;
-                    AssetCompanionRegistry::appendCompanionPaths( assetID, listCompanion );
+                    AssetCompanionRule::appendCompanionPaths( assetID, listCompanion );
                     for ( const string& companion : listCompanion )
                     {
                         const string normalized = FileUtil::normalizePath( companion ).str();

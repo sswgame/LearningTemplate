@@ -15,12 +15,35 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).resolve().parents[2]))   # Scripts
 
 from common.git import run_git_or_raise  # noqa: E402
-from dev.move_asset import (PackAbsorb, PackRename, get_pack_absorb, get_pack_rename, is_domain_root, is_pack_string_file, list_golden_renames,  # noqa: E402
-                            list_leftover_patterns, rewrite_absorbed_strings, rewrite_pack_strings, rewrite_table_targets, write_redirects)
+from dev.move_asset import (PackAbsorb, PackRename, ScenarioRename, get_pack_absorb, get_pack_rename, get_scenario_rename, is_domain_root, is_pack_string_file,  # noqa: E402
+                            list_golden_renames, list_leftover_patterns, list_scenario_golden_renames, rewrite_absorbed_strings, rewrite_pack_strings,
+                            rewrite_scenario_name, rewrite_table_targets, write_redirects)
 from lint.asset_identity import FOUND, read_header  # noqa: E402
 from lint.asset_references import add_redirects  # noqa: E402
 
 RENAME = PackRename("oldpack", "newpack")
+
+
+class MoveAssetScenarioRenameTest(unittest.TestCase):
+    RENAME = ScenarioRename("game.oldpack.mount", "game.newpack.old_mount", "Content/game/newpack/old/automation/golden", "Content/game/newpack/automation/golden")
+
+    def test_the_name_follows_the_file_and_the_pack(self) -> None:
+        text = '<Scenario name="game.oldpack.mount" timeoutFrames="9">'
+        self.assertEqual(get_scenario_rename("game/newpack/old/automation/mount.scenario.xml", "game/newpack/automation/old_mount.scenario.xml", text), self.RENAME)
+        editor = get_scenario_rename("engine/automation/editor/a.scenario.xml", "engine/automation/editor/b.scenario.xml", '<Scenario name="editor.a">')
+        self.assertEqual(editor.new_name if editor is not None else "", "editor.b")
+        self.assertIsNone(get_scenario_rename("game/x/automation/a.scenario.xml", "game/x/automation/b.scenario.xml", '<Scenario name="game.x.other">'))   # 이름이 파일을 따르지 않는 시나리오
+        self.assertIsNone(get_scenario_rename("game/x/data/a.xml", "game/x/data/b.xml", text))
+
+    def test_only_its_goldens_move(self) -> None:
+        folder = "Content/game/newpack/old/automation/golden/"
+        list_index = [folder + "game.oldpack.mount.gallop.dx11.ppm", folder + "game.oldpack.mountain.view.dx11.ppm"]
+        self.assertEqual(list_scenario_golden_renames(list_index, self.RENAME),
+                         [(list_index[0], "Content/game/newpack/automation/golden/game.newpack.old_mount.gallop.dx11.ppm")])
+
+    def test_only_the_exact_name_changes(self) -> None:
+        self.assertEqual(rewrite_scenario_name('"game.oldpack.mount" game.oldpack.mount.gallop game.oldpack.mountain x.game.oldpack.mount', self.RENAME),
+                         ('"game.newpack.old_mount" game.newpack.old_mount.gallop game.oldpack.mountain x.game.oldpack.mount', 2))
 
 
 class MoveAssetPackRenameTest(unittest.TestCase):

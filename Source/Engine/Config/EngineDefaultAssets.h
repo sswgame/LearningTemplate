@@ -38,6 +38,8 @@ namespace sw
         PROPERTY( Required )
         DataPath _missingTexture; ///< 못 읽은 텍스처 대신 샘플하는 마젠타 체커
         PROPERTY( Required )
+        DataPath _materialGlobals; ///< 셰이더 전역 값(날씨 · 비)을 먹이는 머티리얼 파라미터 묶음(`MaterialGlobals`) — 모든 전역 칸을 적는다
+        PROPERTY( Required )
         DataPath _loadingTexture; ///< 비동기로 읽는 텍스처가 도착하기 전에 샘플하는 중간 회색(실패 표시가 아니라 정해진 로드 중 상태)
         PROPERTY( Required )
         DataPath _debugKeyInputMap; ///< App 셸 InputMap

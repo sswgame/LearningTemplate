@@ -5,8 +5,8 @@
 #include "Core/Delegate/DelegateSlot.h"
 
 #include "Engine/Asset/AssetRef.h"
-#include "Engine/Behavior/ActionRegistry.h"
 #include "Engine/Behavior/ConditionExpr.h"
+#include "Engine/Behavior/GameActionCall.h"
 #include "Engine/Content/AssetID.h"
 #include "Engine/Dialogue/DialogueGraphAsset.h"
 #include "Engine/Foundation/GameObjectHandle.h"

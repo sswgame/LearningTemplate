@@ -9,7 +9,7 @@
  * GL(ARB_gl_spirv)은 구조버퍼를 정점 · 픽셀 두 단계에서 읽으면 링크를 거절한다(water.hlsl 과 같은 길). 픽셀이 쓸 값(색 · 거칠기 · 텍스처 번호)은 사용자 보간 칸으로 넘긴다.
  * 알베도는 월드 xz 로 찍는다(한 칸 1 m — 프로토타입 격자와 같다).
  *
- * 날씨(칸 `_weather` · `_rain` — 파라미터 묶음 engine/materials/weather.matparams.xml 의 Weather · Rain): 땅은 날씨 젖음과 젖은 발자국(층의 젖음 채널) 중 큰 쪽만큼 젖고,
+ * 날씨(전역 값 g_MaterialGlobalWeather · g_MaterialGlobalRain — 파라미터 묶음 engine/materials/weather.matparams.xml 의 Weather · Rain): 땅은 날씨 젖음과 젖은 발자국(층의 젖음 채널) 중 큰 쪽만큼 젖고,
  * 노이즈 웅덩이와 꺼진 자리(발자국 · 바퀴 자국 — 깊이 × 날씨 젖음)에 물이 고이며, 웅덩이에 비 세기만큼 빗방울 링이 돈다(함수 묶음 material_functions.hlsli).
  */
 #include "lighting.hlsli"
@@ -23,8 +23,6 @@ static const float kSurfaceDeformPuddleScale = 6.0f;
 SW_MATERIAL_BEGIN
 {
     float4 _color;
-    float4 _weather; // 파라미터 묶음 Weather: x 젖음, y 웅덩이, z 눈, w 설선 높이(m)
-    float4 _rain;    // 파라미터 묶음 Rain: x 비 세기(0..1)
     float  _roughness;
     float  _metallic;
     uint   _albedoMap;
@@ -44,9 +42,8 @@ SW_MATERIAL_END
 struct MaterialVaryings
 {
     nointerpolation float4 _color : TEXCOORD8;
-    nointerpolation float4 _surface : TEXCOORD9; // x 거칠기, y 금속도, z 날씨 젖음, w 날씨 웅덩이
+    nointerpolation float2 _surface : TEXCOORD9; // x 거칠기, y 금속도
     nointerpolation uint   _albedoMap : TEXCOORD10;
-    nointerpolation float  _rain : TEXCOORD11; // 비 세기(0..1)
 };
 #include "material_shader.hlsli"
 #include "material_functions.hlsli"
@@ -62,9 +59,8 @@ MaterialVaryings computeMaterialVaryings( VertexContext context )
     const MaterialData material = context._material;
     MaterialVaryings   varyings;
     varyings._color     = material._color;
-    varyings._surface   = float4( material._roughness, material._metallic, material._weather.x, material._weather.y );
+    varyings._surface   = float2( material._roughness, material._metallic );
     varyings._albedoMap = material._albedoMap;
-    varyings._rain      = material._rain.x;
     return varyings;
 }
 
@@ -79,12 +75,12 @@ MaterialSurface computeMaterialSurface( PixelContext context )
     float  metallic  = user._surface.y;
     float3 normal    = SurfaceDeformLayer::tiltNormal( context._normal, place );
     // 날씨 — 젖음(날씨 · 젖은 발자국) → 웅덩이(노이즈 · 꺼진 자리) → 빗방울 링.
-    const float groundWet = user._surface.z;
+    const float groundWet = g_MaterialGlobalWeather.x;
     SurfaceFunction::applyWetness( albedo, roughness, kSurfaceDeformPorosity, max( groundWet, SurfaceDeformLayer::sampleWetness( place ) ) );
-    const float puddleNoise = SurfaceFunction::computePuddleMask( context._worldPosition, context._normal, user._surface.w, kSurfaceDeformPuddleScale );
+    const float puddleNoise = SurfaceFunction::computePuddleMask( context._worldPosition, context._normal, g_MaterialGlobalWeather.y, kSurfaceDeformPuddleScale );
     const float puddle      = max( puddleNoise, SurfaceDeformLayer::computePuddleFill( place, groundWet ) );
     SurfaceFunction::applyPuddle( albedo, roughness, metallic, normal, puddle );
-    SurfaceFunction::applyRainRipples( normal, place, puddle, g_SwMaterialTime, user._rain );
+    SurfaceFunction::applyRainRipples( normal, place, puddle, g_SwMaterialTime, g_MaterialGlobalRain.x );
 
     MaterialSurface surface;
     surface._albedo    = float4( albedo, 1.0f );

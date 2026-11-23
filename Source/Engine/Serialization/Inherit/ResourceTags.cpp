@@ -8,6 +8,7 @@
 #include "Core/String/StringUtil.h"
 #include "Core/String/formatString.h"
 
+#include "Engine/Behavior/ConditionRegistry.h"
 #include "Engine/Serialization/Inherit/ResourceComposition.h"
 
 namespace sw

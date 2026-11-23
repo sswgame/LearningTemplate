@@ -6,6 +6,7 @@
 
 #include "Engine/Behavior/ActionRegistry.h"
 #include "Engine/Behavior/ConditionExpr.h"
+#include "Engine/Behavior/ConditionRegistry.h"
 
 #include "GameFramework/Runtime/Character/AI/Blackboard.h"
 #include "GameFramework/Runtime/Character/Control/Controller/AIControllerComponent.h"

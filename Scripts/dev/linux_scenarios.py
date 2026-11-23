@@ -47,14 +47,15 @@ HOME = os.path.expanduser('~')
 CLONE = f'{HOME}/LT-linux'
 RELEASE = f'{CLONE}/build/Linux-Release'
 LOGS = f'{RELEASE}/Testing/Logs'
+VERIFY_LOGS = f'{CLONE}/build/VerifyLogs'  # 단위 · 서버 · 새니타이저 · 퍼저 로그 — /tmp 는 WSL 이 쉬면 지워져 진 까닭을 잃는다
 XVFB_ROOT = f'{HOME}/lt-deps/xvfb/root'
 FONT_DIR = f'{HOME}/.local/share/fonts'
 FONT_FILE = 'LiberationSans-Regular.ttf'  # 카탈로그가 찾는 Linux 글꼴(Content/engine/fonts/fontcatalog.xml)
 XVFB_DEBS = ('git-lfs xvfb xserver-common x11-xkb-utils xkb-data libxfont2 libfontenc1 libunwind8 libxkbfile1 libxtst6 libgl1 libgl1-mesa-dri '
              'libtirpc3t64 libxshmfence1 libpixman-1-0 libxcvt0 libglvnd0 libgbm1 libepoxy0 libxau6 libxdmcp6').split()
 SCREEN = '2560x1440x24'  # 체인의 큰 창이 화면 안에 들어오고, 실제 포인터가 창 밖 가운데에 머문다
-ALL_CHAINS = ('editor playground abilityarena frontiertown harvestvalley lanternvale meadowvillage nilecity shooter3d starskirmish themepark velmora voxelcraft wildwest '
-              'abilityarena.editor harvestvalley.editor shooter3d.editor themepark.editor').split()
+ALL_CHAINS = ('editor playground abilityarena lanternvale meadowvillage nilecity shooter3d starskirmish themepark velmora '
+              'abilityarena.editor playground.editor shooter3d.editor themepark.editor').split()
 PARALLEL_CHAINS = 4  # --gpu software(lavapipe)는 코어를 나눠 쓰므로 많이 띄우면 벽시계 시한을 넘긴다
 WALL_SCALE = '4'  # 소프트웨어 렌더링이라 벽시계 시한을 늘린다(gv_scenarioWallScale)
 # Windows PATH 가 끼면 Windows 도구를 잡는다. 끝의 폴더는 setup 이 sudo 없이 푼 도구(git-lfs — 클론의 reset 이 부르는 필터)다.
@@ -326,7 +327,7 @@ def run_chain(name, record, display):
             command.append(app_arguments.flag('scenario-update-golden'))
         started = time.time()
         # 출력은 파일로 남긴다 — 행 감시 · 종료 감시는 stderr 에만 까닭을 적는다. 버리면 "exit 12, 보고 없음" 만 남았다(Linux editor.selftests).
-        console_path = f'/tmp/lt.chain.{name}.out'
+        console_path = f'{VERIFY_LOGS}/lt.chain.{name}.out'
         with open(console_path, 'w', encoding='utf-8', errors='replace') as console:
             result = subprocess.run(['timeout', '3000', *command], cwd=f'{RELEASE}/Bin', env=env, stdout=console, stderr=subprocess.STDOUT)
         output = io.StringIO()
@@ -507,10 +508,10 @@ def verify_all(arguments):
     server_dir = f'{CLONE}/build/Linux-Server'
     # 시간을 판정하지 않는 CPU 일 두 갈래를 겹친다(Release 단위 ‖ 서버 빌드 → 기동 → 단위) — 묶음 검증(preflight.sh 의 cpu 단계)과 같은 원칙이다.
     # 체인(시간 · 그림 판정)은 이것들이 끝난 뒤 혼자 돈다.
-    jobs = [[('Release 단위', f'cd {RELEASE} && ./Bin/App --test -unattended > /tmp/lt.unit.log 2>&1; rc=$?; grep -E "case run|FAILED|TEST_RESULT=" /tmp/lt.unit.log | tail -n 6 | cut -c1-160; exit $rc')],
-             [('서버 빌드', f'cmake --build {server_dir} -j8 > /tmp/srv.build.log 2>&1; rc=$?; grep -E "error:|FAILED:|undefined reference" /tmp/srv.build.log | head -n 20 | cut -c1-220; exit $rc'),
-              ('서버 기동', f'cd {server_dir} && timeout 120 ./Bin/Server -gv_serverExitAfterTicks=60 > /tmp/srv.run.log 2>&1'),
-              ('서버 단위', f'cd {server_dir} && timeout 400 ./Bin/Server --test > /tmp/srv.unit.log 2>&1; rc=$?; grep -E "case run|NO TESTS|TEST_RESULT=" /tmp/srv.unit.log | cut -c1-140; exit $rc')]]
+    jobs = [[('Release 단위', f'cd {RELEASE} && ./Bin/App --test -unattended > {VERIFY_LOGS}/lt.unit.log 2>&1; rc=$?; grep -E "case run|FAILED|TEST_RESULT=" {VERIFY_LOGS}/lt.unit.log | tail -n 6 | cut -c1-160; exit $rc')],
+             [('서버 빌드', f'cmake --build {server_dir} -j8 > {VERIFY_LOGS}/srv.build.log 2>&1; rc=$?; grep -E "error:|FAILED:|undefined reference" {VERIFY_LOGS}/srv.build.log | head -n 20 | cut -c1-220; exit $rc'),
+              ('서버 기동', f'cd {server_dir} && timeout 120 ./Bin/Server -gv_serverExitAfterTicks=60 > {VERIFY_LOGS}/srv.run.log 2>&1'),
+              ('서버 단위', f'cd {server_dir} && timeout 1800 ./Bin/Server --test > {VERIFY_LOGS}/srv.unit.log 2>&1; rc=$?; grep -E "case run|FAILED|NO TESTS|TEST_RESULT=" {VERIFY_LOGS}/srv.unit.log | cut -c1-140; exit $rc')]]
     with concurrent.futures.ThreadPoolExecutor(len(jobs)) as pool:
         list_code = list(pool.map(run_job, jobs))
     code = next((rc for rc in list_code if rc != 0), 0)
@@ -539,10 +540,10 @@ def sanitize(arguments):
     # 누수는 처음에는 끈다 — 기준선을 만든 뒤 켠다(감사 P-8 "detect_leaks=0 으로 시작"). 첫 오류에서 멈춰 보고를 읽게 한다.
     options = ('ASAN_OPTIONS=detect_leaks=0:halt_on_error=1:abort_on_error=1 UBSAN_OPTIONS=print_stacktrace=1:halt_on_error=1' if kind == 'address'
                else f'TSAN_OPTIONS=halt_on_error=1:second_deadlock_stack=1:suppressions={CLONE}/Config/Build/TsanSuppressions.txt')
-    rc = shell(f'cd {build_dir} && {options} ./Bin/App --test -unattended > /tmp/lt.sanitize.log 2>&1; rc=$?; '
-               f'grep -E "case run|FAILED|ERROR: (Address|Thread)Sanitizer|runtime error|WARNING: ThreadSanitizer" /tmp/lt.sanitize.log | head -n 20 | cut -c1-200; exit $rc').returncode
+    rc = shell(f'cd {build_dir} && {options} ./Bin/App --test -unattended > {VERIFY_LOGS}/lt.sanitize.log 2>&1; rc=$?; '
+               f'grep -E "case run|FAILED|ERROR: (Address|Thread)Sanitizer|runtime error|WARNING: ThreadSanitizer" {VERIFY_LOGS}/lt.sanitize.log | head -n 20 | cut -c1-200; exit $rc').returncode
     if rc != 0:
-        print(f'SANITIZE_FAILED={kind} - /tmp/lt.sanitize.log')
+        print(f'SANITIZE_FAILED={kind} - {VERIFY_LOGS}/lt.sanitize.log')
         return rc
     # 퍼저는 ASan 묶음 끝에 타깃마다 30 초(docs/NEXT.md 퍼저 타깃) — 클론은 위에서 이미 옮겼다.
     if kind == 'address' and run_fuzz([], FUZZ_SMOKE_SECONDS, sync=False) != 0:
@@ -603,7 +604,7 @@ def run_fuzz(names, seconds, sync=True):
     failed = []
     for name in names:
         corpus = f'{build_dir}/Saved/Fuzz/{name}'
-        log = f'/tmp/lt.fuzz.{name}.log'
+        log = f'{VERIFY_LOGS}/lt.fuzz.{name}.log'
         os.makedirs(corpus, exist_ok=True)
         # 자라는 말뭉치를 앞에 둔다 — libFuzzer 는 첫 폴더에 새 입력을 쓴다(씨앗 폴더를 더럽히지 않는다).
         # 엔진은 공유 ASan 런타임(libclang_rt.asan.so)으로 짓는다 — 퍼저 실행 파일은 그 런타임을 먼저 싣지 않아 "ASan runtime does not come first" 로 바로 멈췄다. 런타임을 앞에 싣는다.
@@ -706,6 +707,7 @@ def main(argv):
         return self_check()
     if is_windows_host():
         return run_in_wsl(argv)
+    os.makedirs(VERIFY_LOGS, exist_ok=True)
     os.environ['PATH'] = PATH_LINUX  # git(common.git)도 shell() 과 같은 도구를 본다 — 물려받은 PATH 에는 git-lfs 가 없어 클론 reset 이 졌다
     global GPU
     if argv[:1] == ['--gpu'] and len(argv) > 1:

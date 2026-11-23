@@ -337,6 +337,10 @@ SW_DECLARE_CBUFFER( PassCB, SW_SLOT_PASS_CB )
     uint g_DeferredTileCapacity; // 디퍼드 조명 타일 목록의 종류 하나 칸 수(deferred_lighting.hlsl VSTile — 타일 그리기만 쓴다)
     // 표면 변형 층의 창(C++ SurfaceDeformBinding::_params) — (창 최소 x, 창 최소 z, 1 / 창 너비, 깊이 범위). z 가 0 이면 층이 없다. 텍스처는 엔진 칸 SurfaceDeform(g_SurfaceDeformIndex)
     float4 g_SurfaceDeformParams;
+    // 전역 머티리얼 값(C++ MaterialGlobals) — 머티리얼마다 같은 값을 원소에 들지 않고 여기서 읽는다. 값이 바뀌어도 머티리얼을 다시 패킹하지 않는다.
+    float4 g_MaterialGlobalWeather;     // x 젖음(0..1), y 웅덩이(0..1), z 눈(0..1), w 설선 높이(m) — 파라미터 묶음 engine/materials/weather.matparams.xml 의 Weather
+    float4 g_MaterialGlobalRain;        // x 비 세기(0..1 — 웅덩이 빗방울 링), yzw 0(예비) — 같은 묶음의 Rain
+    float4 g_MaterialGlobalEnvironment; // xyz 환경의 기준 시점(게임 카메라 위치 — 식생 거리 페이드), w 환경 시간(초 — 바람, 결정적 사진은 멈춘다)
     // 엔진 텍스처 인덱스 g_<이름>Index — 이름은 C++ 표 shaderslot::emulated::kEngineTextureNames 하나가 정하고 컴파일러가 SW_ENGINE_TEXTURE_INDEX_<칸> 으로 넣는다.
     // 손으로 적지 않는다: 표에 없는 엔진 텍스처 인덱스가 생기면 에뮬 백엔드(DX11 · GL)가 칸을 몰라 자홍을 낸다(뜻은 표의 주석). 걸려 있지 않은 역할은 kInvalidIndex 다.
     // 아래 25 줄은 SW_ENGINE_TEXTURE_COUNT 와 같은 수다.

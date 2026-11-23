@@ -273,28 +273,23 @@ namespace sw
  */
 #define SW_PROFILE_COMPILED SW_LOG_LEVEL_COMPILED( SW_LOG_VERBOSITY_INFO )
 
-/** @brief 두 토큰을 붙입니다(매크로 확장 후). */
-#define SW_PROFILE_CONCAT_INNER( a, b ) a##b
-/** @brief 두 토큰을 붙입니다. */
-#define SW_PROFILE_CONCAT( a, b ) SW_PROFILE_CONCAT_INNER( a, b )
-
 /**
  * @brief 이 스코프의 CPU 시간을 name 구간에 누적하고, 외부 프로파일러(Tracy)가 켜져 있으면 같은 이름의 구간을 남깁니다.
  * @details 슬롯 번호 · 외부 지점은 함수 지역 static 으로 한 번만 받습니다(C++11 이후 스레드 안전 초기화).
  */
 #define SW_PROFILE_SCOPE( name )                                                                                   \
-    static const ::sw::ProfileScopeID SW_PROFILE_CONCAT( swProfileSlot_, __LINE__ ) =                              \
+    static const ::sw::ProfileScopeID SW_CONCAT( swProfileSlot_, __LINE__ ) =                                      \
         ::sw::FrameProfiler::registerEngineScopeSite( name, __func__, __FILE__, static_cast<uint32>( __LINE__ ) ); \
-    ::sw::ScopedFrameProfile SW_PROFILE_CONCAT( swProfileScope_, __LINE__ )                                        \
+    ::sw::ScopedFrameProfile SW_CONCAT( swProfileScope_, __LINE__ )                                                \
     {                                                                                                              \
-        SW_PROFILE_CONCAT( swProfileSlot_, __LINE__ )                                                              \
+        SW_CONCAT( swProfileSlot_, __LINE__ )                                                                      \
     }
 
 /** @brief name 카운터에 value 를 더합니다(드로우 수 등). 시간이 아닙니다. */
-#define SW_PROFILE_COUNT( name, value )                                                                                      \
-    do                                                                                                                       \
-    {                                                                                                                        \
-        static const uint32 SW_PROFILE_CONCAT( swProfileCount_, __LINE__ ) =                                                 \
-            ::sw::FrameProfiler::registerEngineCounter( name );                                                              \
-        ::sw::FrameProfiler::addEngineCount( SW_PROFILE_CONCAT( swProfileCount_, __LINE__ ), static_cast<uint64>( value ) ); \
+#define SW_PROFILE_COUNT( name, value )                                                                              \
+    do                                                                                                               \
+    {                                                                                                                \
+        static const uint32 SW_CONCAT( swProfileCount_, __LINE__ ) =                                                 \
+            ::sw::FrameProfiler::registerEngineCounter( name );                                                      \
+        ::sw::FrameProfiler::addEngineCount( SW_CONCAT( swProfileCount_, __LINE__ ), static_cast<uint64>( value ) ); \
     } while ( false )

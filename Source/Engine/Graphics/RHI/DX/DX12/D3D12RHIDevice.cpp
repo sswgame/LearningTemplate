@@ -2240,7 +2240,7 @@ namespace sw
     void D3D12RHIDevice::publishBindlessReadSlot( RHIDescriptorIndex index, BindlessReadRegistry registry, const BindlessResourceRecord& record )
     {
         if ( index >= kBindlessDescriptorCapacity )
-            SW_FATAL( "D3D12: bindless index %# is outside the read table (%#)", index, kBindlessDescriptorCapacity );
+            reportFatalError( "D3D12: bindless index %# is outside the read table (%#)", index, kBindlessDescriptorCapacity );
         // 텍스처는 GPU 주소가 없다(GetGPUVirtualAddress 는 버퍼만 뜻이 있다). 상수 버퍼 크기는 등록이 같은 배타 락 안에서 읽는다. 값을 다 쓴 뒤 공개한다(`RHIBindlessReadSlot::publish`).
         const auto sizeIt = record._buffer != 0 ? _mapCbAlignedSize.find( record._buffer ) : _mapCbAlignedSize.end();
         _arrBindlessReadSlot.get()[index].publish( registry, record._buffer != 0 && record._resource != nullptr ? record._resource->GetGPUVirtualAddress() + record._sliceOffset : 0, record._offlineCPUHandle.ptr,

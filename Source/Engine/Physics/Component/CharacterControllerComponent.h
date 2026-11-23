@@ -49,6 +49,7 @@ namespace sw
         /** @brief 원하는 수평 이동 속도(월드, 미터/초)입니다. 다시 부를 때까지 유지합니다. Y 는 보지 않습니다(중력 · 점프가 정한다). */
         void setMoveVelocity( const float3& velocity );
         /** @brief 위로 @p speed(미터/초)를 줍니다. 다음 스텝에 듭니다. */
+        FUNCTION( Category = "Movement", Exec )
         void jump( float32 speed );
         /**
          * @brief 애니메이션 루트 모션의 이번 프레임 이동(월드, 미터)을 더합니다. 다음 물리 프레임의 스텝들이 나눠 움직입니다(벽에 막히고 턱을 오른다).
