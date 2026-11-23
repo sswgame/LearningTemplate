@@ -87,7 +87,7 @@ namespace sw
             SW_LOG_ERROR_ID( "Velmora.DirectorNotOpen", "Velmora: the region fights cannot open - no started Adventure Game Mode in front of them on this object" );
             return false;
         }
-        const AdventureRegionCatalog* const pRegions = game::findSubsystem<const AdventureRegionCatalog>();
+        const AdventureRegionCatalog* const pRegions = pDirector->findRegions();
         if ( pRegions == nullptr || validateRegionMonsters( *pRegions ) == false )
             return false; // 지역 표는 디렉터가 열린 것으로 이미 있다, 빠진 종은 위에서 알렸다
         pDirector->cancelEncounter();
@@ -149,7 +149,7 @@ namespace sw
         _bDashQueued          = SW_FALSE;
 
         AdventureGameModeComponent* const   pDirector = PlayerComponentUtil::findOnOwner<AdventureGameModeComponent>( *this );
-        const AdventureRegionCatalog* const pRegions  = game::findSubsystem<const AdventureRegionCatalog>();
+        const AdventureRegionCatalog* const pRegions  = pDirector != nullptr ? pDirector->findRegions() : nullptr;
         if ( pDirector == nullptr || pRegions == nullptr )
             return;
         if ( _phase == VelmoraPhase::Explore )

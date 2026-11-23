@@ -12,13 +12,16 @@
 #include "Core/Encoding/FourCCUtil.h"
 #include "Core/Foundation/Types.h"
 #include "Core/Math/Math.h"
+#include "Core/Memory/Memory.h"
 #include "Core/Name/hashed_string.h"
 
+#include "Engine/Asset/Cache/SharedAssetRef.h"
 #include "Engine/Reflection/ReflectionMacros.h"
 #include "Engine/Serialization/Serializer/CatalogKey.h"
 
 #include "GameFramework/GameFrameworkExports.h"
 #include "GameFramework/Kits/Genre/Action/ActionAdventure/AdventureCampaign.h"
+#include "GameFramework/Kits/Genre/Action/ActionAdventure/AdventureRegionCatalog.h"
 #include "GameFramework/Kits/Genre/Action/ActionAdventure/AdventureVitals.h"
 #include "GameFramework/Runtime/Foundation/Framework/GameModeComponent.h"
 #include "GameFramework/Runtime/Foundation/Grid/FacingDirection.h"
@@ -27,14 +30,13 @@
 
 namespace sw
 {
-    class AdventureRegionCatalog;
     class GameStateComponent;
-    struct AdventureRegionDef;
+    class QuestCatalog;
 
     /**
      * @class AdventureGameModeComponent
-     * @brief 지역을 걷는 액션 어드벤처 한 판입니다. 같은 오브젝트의 월드 상태(`GameStateComponent`, 맨 앞 — 깃발)와 플레이어 퀘스트 일지(`QuestLogComponent`)를 열고 플레이어 지갑(`WalletComponent`)을 쓴다.
-     * @details 지역 표는 게임 서비스 `AdventureRegionCatalog`, 퀘스트는 `QuestCatalog` 다(게임 기능 `ActionAdventure` 가 미니게임 범위에 건다 — 확장 팩이 층으로 항목을 더한다).
+     * @brief 지역을 걷는 액션 어드벤처 한 판입니다. 같은 오브젝트의 월드 상태(`GameStateComponent`, 맨 앞 — 깃발)와 플레이어 상태 오브젝트(`_playerState` — 조종자)의 퀘스트 일지(`QuestLogComponent`)를 열고 지갑(`WalletComponent`)을 쓴다.
+     * @details 지역 표(`AdventureRegionCatalog`) · 퀘스트(`QuestCatalog`)는 게임 기능 `ActionAdventure` 가 미니게임 범위에 건 것을 같이 쥔다(확장 팩이 층으로 항목을 더한다).
      *          - 걷기: 지역 밖으로는 나가지 못한다(지역이 땅이다). 전투가 열린 동안에는 그 지역 경계 안에 묶인다(게이트가 닫힌다).
      *          - 지역 진입: 진행 규칙에 알리고 자동 저장에 지역 이동을 알린다. 깨지 않은 전투가 있으면 기다리는 전투로 둔다.
      *          - 쓰기: 곁의 봉화를 켜거나(퀘스트 `Light`), 곁의 야영지에서 쉰다(체력을 채우고 일어설 지역 · 자동 저장 체크포인트). 전투 중에는 쓰지 못한다.
@@ -84,16 +86,18 @@ namespace sw
         void cancelEncounter() { _encounterRegion = hashed_string{}; }
 
         // ---- 읽기(클라이언트 모듈 · 감시 값) ----
-        const AdventureCampaign& getCampaign() const { return _campaign; }
-        const float2&            getPlayerPosition() const { return _playerPosition; }
-        FacingDirection          getFacing() const { return _facing; }
-        float32                  getPlayerX() const { return _playerPosition._x; }
-        float32                  getPlayerZ() const { return _playerPosition._y; }
-        int32                    getHealthQuarters() const { return _campaign.getVitals().computeHealthQuarters(); }
-        int32                    getHeartCount() const { return _campaign.getVitals().getHeartCount(); }
-        int32                    getFallCount() const { return _fallCount; }
-        const hashed_string&     getCurrentRegion() const { return _currentRegion; }
-        const hashed_string&     getRespawnRegion() const { return _campaign.getRespawnRegion(); }
+        /** @brief 쥔 지역 표입니다. 판을 열기 전에는 nullptr 입니다. */
+        const AdventureRegionCatalog* findRegions() const { return _pRegions.get(); }
+        const AdventureCampaign&      getCampaign() const { return _campaign; }
+        const float2&                 getPlayerPosition() const { return _playerPosition; }
+        FacingDirection               getFacing() const { return _facing; }
+        float32                       getPlayerX() const { return _playerPosition._x; }
+        float32                       getPlayerZ() const { return _playerPosition._y; }
+        int32                         getHealthQuarters() const { return _campaign.getVitals().computeHealthQuarters(); }
+        int32                         getHeartCount() const { return _campaign.getVitals().getHeartCount(); }
+        int32                         getFallCount() const { return _fallCount; }
+        const hashed_string&          getCurrentRegion() const { return _currentRegion; }
+        const hashed_string&          getRespawnRegion() const { return _campaign.getRespawnRegion(); }
 
     protected:
         [[nodiscard]] bool startGame() override;
@@ -105,8 +109,6 @@ namespace sw
         bool               hasPendingSpawn() const override;
 
     private:
-        /** @brief 지역 표입니다. 판을 연 뒤에는 늘 있다(없으면 판을 열지 않았다). */
-        const AdventureRegionCatalog* findRegions() const;
         /** @brief 받아 둔 이동 명령으로 걷습니다. 지역 밖(전투 중이면 그 지역 밖)으로는 가지 않는다. */
         void movePlayer( const float2& move, float32 deltaTime, const AdventureRegionCatalog& regions );
         /** @brief 지금 자리의 지역이 바뀌었으면 진입을 처리합니다. */
@@ -132,7 +134,9 @@ namespace sw
         PROPERTY( Category = "Player", DisplayName = "Vitals" )
         AdventureVitalsSettings _vitalsSettings;
 
-        AdventureCampaign _campaign;
+        SharedAssetRef<AdventureRegionCatalog> _pRegions;
+        shared_ptr<const QuestCatalog>         _pQuests; ///< 일지가 처음 열 때의 판을 계속 빌린다(`QuestLogComponent::initialize` 는 첫 호출만 듣는다) — 그 판을 쥔다
+        AdventureCampaign                      _campaign;
         PROPERTY( RuntimeState )
         float2              _playerPosition;
         float2              _commandMove;       ///< 마지막 입력 명령의 이동 축 — 클라이언트가 프레임마다 덮는 입력이라 싣지 않는다

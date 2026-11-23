@@ -2,7 +2,7 @@
 <?asset guid="01285eea14034d928deb4273e19b0345"?>
 <!--
   허브의 미니게임 입구 — 정의(minigames/*.minigame.xml)의 portalSlot 하나가 입구 하나다(maps/hub 의 MinigamePortals 가 prefabs/minigameportal 를 세운다).
-  흡수한 미니게임 일곱(pixeltown · harvestvalley · voxelcraft · frontiertown · meadowvillage · themepark · abilityarena)의 입구에 플레이어를 세워 들어가고, minigame.leave 로 나와 마을이 복원되는지 본다.
+  흡수한 미니게임 여덟(pixeltown · harvestvalley · voxelcraft · frontiertown · meadowvillage · themepark · abilityarena · velmora)의 입구에 플레이어를 세워 들어가고, minigame.leave 로 나와 마을이 복원되는지 본다.
   돌아온 자리는 입구 안이다 — 다시 세운 입구가 나타난 플레이어를 세지 않는다(_spawnInside Ignore). 입구를 더하면 여기에 한 묶음을 더한다.
   실행: App -scenario=game/playground/automation/hub_portals.scenario.xml -unattended (체인: ctest -R Scenario.playground)
 -->
@@ -97,6 +97,16 @@
 	<WaitUntil watch="Assets.Pending" equals="0" timeoutWallSeconds="60"/>
 	<DevCommand line="minigame.leave"/>
 	<WaitUntil watch="Minigame.RestoreCount" equals="6" timeoutWallSeconds="60"/>
+	<ExpectActiveScene path="game/playground/maps/hub.scene.xml"/>
+
+	<!-- velmora -->
+	<WaitUntil watch="Assets.Pending" equals="0" timeoutWallSeconds="60"/>
+	<DevCommand line="teleport Player 25 0.05 32"/>
+	<WaitUntil watch="Minigame.Active" is="velmora" timeoutWallSeconds="60"/>
+	<ExpectActiveScene path="game/playground/velmora/maps/vale.scene.xml"/>
+	<WaitUntil watch="Assets.Pending" equals="0" timeoutWallSeconds="60"/>
+	<DevCommand line="minigame.leave"/>
+	<WaitUntil watch="Minigame.RestoreCount" equals="7" timeoutWallSeconds="60"/>
 	<ExpectActiveScene path="game/playground/maps/hub.scene.xml"/>
 	<Expect watch="Minigame.Active" is="none"/>
 	<Expect watch="Minigame.LeakCount" equals="0"/>
