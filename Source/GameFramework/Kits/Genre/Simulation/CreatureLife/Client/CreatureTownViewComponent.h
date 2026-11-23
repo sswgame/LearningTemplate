@@ -126,13 +126,13 @@ namespace sw
         CatalogKey<CreatureSpeciesDef> _talkSpecies;
 
         TComponentHandle<CreatureTownGameModeComponent> _director;
-        SimulationViewSync<hashed_string>               _objectViews;         ///< 타일 번호(y × 너비 + x) → 오브젝트 id(빈 셀이면 빈 id)
-        SimulationViewSync<CreatureView>                _creatureViews;       ///< 온 순서 → 생물
-        uint32                                          _shownRevision;       ///< 맞춘 마을 판(0 이면 아직 — 열린 디렉터의 판은 1 부터다)
-        uint8                                           _bInputLive      : 1; ///< 이번 틱의 시간이 흘렀다(멈춤 중에는 입력을 넘기지 않는다)
-        uint8                                           _bActionsValid   : 1; ///< 액션 이름 · 종이 있다(`onBeginPlay`)
-        uint8                                           _bViewsValidated : 1; ///< 뷰 표를 카탈로그와 견줬다(한 번)
-        uint8                                           _bViewsRejected  : 1; ///< 뷰 표에 빠진 줄이 있어 모습을 세우지 않는다
-        [[maybe_unused]] uint8                          _reserved        : 4;
+        SimulationViewSync<hashed_string>               _objectViews;        ///< 타일 번호(y × 너비 + x) → 오브젝트 id(빈 셀이면 빈 id)
+        SimulationViewSync<CreatureView>                _creatureViews;      ///< 온 순서 → 생물
+        const CreatureLifeCatalog*                      _pValidatedCatalog;  ///< 뷰 표를 견준 카탈로그(다시 읽히면 다시 견준다 — 견주기만 하고 읽지 않는다)
+        uint32                                          _shownRevision;      ///< 맞춘 마을 판(0 이면 아직 — 열린 디렉터의 판은 1 부터다)
+        uint8                                           _bInputLive     : 1; ///< 이번 틱의 시간이 흘렀다(멈춤 중에는 입력을 넘기지 않는다)
+        uint8                                           _bActionsValid  : 1; ///< 액션 이름 · 종이 있다(`onBeginPlay`)
+        uint8                                           _bViewsRejected : 1; ///< 뷰 표에 빠진 줄이 있어 모습을 세우지 않는다
+        [[maybe_unused]] uint8                          _reserved       : 5;
     };
 } // namespace sw

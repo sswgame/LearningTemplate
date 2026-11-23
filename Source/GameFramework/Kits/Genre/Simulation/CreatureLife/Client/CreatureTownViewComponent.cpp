@@ -76,10 +76,10 @@ namespace sw
         , _director{}
         , _objectViews{}
         , _creatureViews{}
+        , _pValidatedCatalog{ nullptr }
         , _shownRevision{ 0 }
         , _bInputLive{ SW_FALSE }
         , _bActionsValid{ SW_FALSE }
-        , _bViewsValidated{ SW_FALSE }
         , _bViewsRejected{ SW_FALSE }
         , _reserved{ 0 }
     {
@@ -106,7 +106,7 @@ namespace sw
     {
         Component::onBeginPlay();
         setTickGroup( TickGroup::PostUpdate );
-        _bViewsValidated           = SW_FALSE;
+        _pValidatedCatalog         = nullptr;
         _bViewsRejected            = SW_FALSE;
         const bool bActionsMissing = _talkAction.empty() || _talkSpecies.empty();
         _bActionsValid             = bActionsMissing ? SW_FALSE : SW_TRUE;
@@ -153,11 +153,11 @@ namespace sw
             if ( input.wasActionTriggered( _talkAction ) )
                 (void)pDirector->submitTalk( _talkSpecies.key() ); // 거절한 까닭은 디렉터가 남긴다
         }
-        if ( _bViewsValidated == SW_FALSE )
+        const CreatureLifeCatalog* const pCatalog = pDirector->getCatalog(); // 열린 판에는 있다
+        if ( pCatalog != nullptr && pCatalog != _pValidatedCatalog )
         {
-            _bViewsValidated                          = SW_TRUE;
-            const CreatureLifeCatalog* const pCatalog = pDirector->getCatalog(); // 열린 판에는 있다
-            _bViewsRejected                           = pCatalog != nullptr && validateViews( *pCatalog ) ? SW_FALSE : SW_TRUE;
+            _pValidatedCatalog = pCatalog;
+            _bViewsRejected    = validateViews( *pCatalog ) ? SW_FALSE : SW_TRUE;
         }
         if ( _bViewsRejected == SW_TRUE || _shownRevision == pDirector->getTownRevision() )
             return;

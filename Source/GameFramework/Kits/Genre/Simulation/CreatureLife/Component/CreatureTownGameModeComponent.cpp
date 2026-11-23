@@ -66,7 +66,7 @@ namespace sw
     {
         // 셋 모두 본다 — 첫 오류에서 멈추면 씬을 고칠 때마다 하나씩 드러난다.
         // 일지 · 평판은 처음 열 때의 카탈로그를 계속 빌린다(`initialize` 는 첫 호출만 듣는다) — 판을 다시 열 때 새 판으로 바꾸면 빌린 쪽이 사라진 카탈로그를 가리킨다.
-        const bool bCreaturesLoaded  = acquireRequiredSnapshot( _creatureDataPath, _pCatalog );
+        const bool bCreaturesLoaded  = acquireRequired( _creatureDataPath, _pCatalog );
         const bool bQuestsLoaded     = _pQuestCatalog != nullptr || acquireRequiredSnapshot( _questDataPath, _pQuestCatalog );
         const bool bFriendshipLoaded = _pFriendshipCatalog != nullptr || acquireRequiredSnapshot( _friendshipDataPath, _pFriendshipCatalog );
         const bool bCatalogsLoaded   = bCreaturesLoaded && bQuestsLoaded && bFriendshipLoaded;

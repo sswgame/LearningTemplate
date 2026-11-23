@@ -128,7 +128,6 @@ namespace sw
         , _startingSeedCount{ 10 }
         , _itemStackSize{ 99 }
         , _pCropCatalog{}
-        , _pWeatherCatalog{}
         , _itemCatalog{}
         , _field{}
         , _shipment{}
@@ -212,8 +211,9 @@ namespace sw
         io.end();
         if ( io.isWriting() || io.isOk() == false )
             return;
-        _field             = std::move( restoredField );
-        _shipment          = std::move( restoredShipment );
+        _field    = std::move( restoredField );
+        _shipment = std::move( restoredShipment );
+        applyCropCatalog();                                               // 작물 카탈로그가 다시 읽혀 왕복했으면 가방 · 씨앗 목록도 새 판이다
         _stamina           = MathUtil::clamp( _stamina, 0, _maxStamina ); // 칸 사이 맞춤 — 최대는 설정이다
         _selectedSeedIndex = _listSeed.empty() ? 0 : MathUtil::clamp( _selectedSeedIndex, 0, static_cast<int32>( _listSeed.size() ) - 1 );
     }
@@ -243,10 +243,22 @@ namespace sw
     // ------------------------------------------------------------------------------
     // 데이터
     // ------------------------------------------------------------------------------
+    void FarmGameModeComponent::applyCropCatalog()
+    {
+        _itemCatalog = ItemCatalog{}; // 가방이 주소를 빌린다 — 제자리에서 다시 채운다
+        _pCropCatalog->fillItemCatalog( _itemCatalog, _itemStackSize );
+        _listSeed.clear();
+        for ( const CropDef& crop : _pCropCatalog->getCrops() )
+        {
+            _listSeed.push_back( crop._seedItem );
+        }
+    }
+
     bool FarmGameModeComponent::startGame()
     {
         // 작물이 적을 수 있는 계절은 작물 파일의 루트(`seasons`)가 정한다 — 공유 캐시가 읽으므로 읽기 전에 알려 줄 자리가 없다.
-        if ( acquireRequired( _weatherPath, _pWeatherCatalog ) == false )
+        shared_ptr<const WeatherCatalog> pWeatherCatalog; // 판 상태가 연 때의 판을 쥔다 — 디렉터가 따라가지 않는다
+        if ( acquireRequiredSnapshot( _weatherPath, pWeatherCatalog ) == false )
             return false;
         if ( acquireRequired( _cropDataPath, _pCropCatalog ) == false )
             return false;
@@ -261,14 +273,13 @@ namespace sw
             SW_LOG_ERROR_ID( "FarmGameMode.DirectorShippingBinShop", "[Farm] the game mode's Shipping Bin and Shop must point at objects in the scene - the farm cannot start" );
             return false;
         }
-        _itemCatalog = ItemCatalog{};
-        _pCropCatalog->fillItemCatalog( _itemCatalog, _itemStackSize );
+        applyCropCatalog();
         GameStateSettings settings;
         settings._clock._listSeason    = FarmGameModeComponentInternal::makeSeasons();
         settings._clock._secondsPerDay = _secondsPerDay;
         settings._clock._startHour     = _wakeHour;
         settings._clock._daysPerSeason = _daysPerSeason;
-        settings._pWeatherCatalog      = _pWeatherCatalog.snapshot(); // 비는 판 상태 날씨다(계절 가중치 · 하루 길이 — 카탈로그 데이터)
+        settings._pWeatherCatalog      = std::move( pWeatherCatalog ); // 비는 판 상태 날씨다(계절 가중치 · 하루 길이 — 카탈로그 데이터)
         GameStateComponent* pState     = GameStateComponent::openOnOwner( *this, settings );
         if ( pState == nullptr )
             return false; // 범위 밖(하루 길이 · 계절 날 수 등)은 판 상태가 오류를 남겼다
@@ -281,11 +292,6 @@ namespace sw
             return false;
         _field.initialize( _fieldWidth, _fieldHeight, _pCropCatalog.get() );
         _shipment = FarmShippingBin{};
-        _listSeed.clear();
-        for ( const CropDef& crop : _pCropCatalog->getCrops() )
-        {
-            _listSeed.push_back( crop._seedItem );
-        }
         // 시작 돈과 씨앗은 새 판에만 준다. 복원한 판에 덧쌓이지 않게 하기 위해서다.
         if ( pWallet->isFreshGame() )
             pWallet->getWallet().add( _shipment.getCurrency(), _startingGold );

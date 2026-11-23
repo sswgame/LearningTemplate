@@ -13,6 +13,7 @@
 #include "Core/Name/hashed_string.h"
 
 #include "Engine/Asset/AssetRef.h"
+#include "Engine/Asset/Cache/SharedAssetRef.h"
 #include "Engine/Reflection/ReflectionMacros.h"
 #include "Engine/Serialization/Serializer/CatalogKey.h"
 
@@ -72,7 +73,7 @@ namespace sw
 
         // ---- 읽기(클라이언트 모듈) ----
         const CreatureTown& getTown() const { return _town; }
-        /** @brief 이 판의 카탈로그입니다. 판이 열리기 전이면 nullptr 일 수 있습니다. */
+        /** @brief 지금 카탈로그입니다(다시 읽힌 판을 따라간다). 판이 열리기 전이면 nullptr 일 수 있습니다. */
         const CreatureLifeCatalog* getCatalog() const { return _pCatalog.get(); }
         /** @brief 마을 모습(오브젝트 · 사는 생물)의 판입니다 — 바꾸거나 복원할 때마다 오르고, 열린 판은 1 이상입니다. 뷰는 이 값이 바뀐 때만 맞춘다. */
         uint32 getTownRevision() const { return _townRevision; }
@@ -112,10 +113,10 @@ namespace sw
         PROPERTY( Category = "Economy", DisplayName = "Upgrade Objects", Tooltip = "Objects that form the upgrade habitat" )
         vector<CreatureTownPlacement> _listUpgradeObject;
 
-        shared_ptr<const CreatureLifeCatalog> _pCatalog;           ///< 연 때의 판 — 마을이 빌린다
-        shared_ptr<const QuestCatalog>        _pQuestCatalog;      ///< 연 때의 판 — 부탁 일지가 빌린다
-        shared_ptr<const ReputationCatalog>   _pFriendshipCatalog; ///< 연 때의 판 — 평판이 빌린다
-        CreatureTown                          _town;
-        uint32                                _townRevision; ///< `getTownRevision`
+        SharedAssetRef<CreatureLifeCatalog> _pCatalog;           ///< 마을이 빌린다 — 다시 읽히면 베이스가 상태를 왕복시켜 새 판에 다시 묶는다(`acquireRequired`)
+        shared_ptr<const QuestCatalog>      _pQuestCatalog;      ///< 처음 연 때의 판 — 부탁 일지가 빌린다(일지는 첫 카탈로그만 쓴다)
+        shared_ptr<const ReputationCatalog> _pFriendshipCatalog; ///< 처음 연 때의 판 — 평판이 빌린다(평판은 첫 카탈로그만 쓴다)
+        CreatureTown                        _town;
+        uint32                              _townRevision; ///< `getTownRevision`
     };
 } // namespace sw

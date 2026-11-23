@@ -116,6 +116,28 @@ namespace sw
         return true;
     }
 
+    bool FarmVillageGameModeComponent::openSchedule( const WorldClock& clock )
+    {
+        ScheduleSystemSettings settings;
+        settings._clock = clock.getSettings();
+        // 계획은 곧은 선(기본), 화면 안 걸음은 격자 길 — 도착 시각은 계획이 정하므로 격자를 바꿔도 일정이 갈리지 않는다.
+        _schedule.setPathing( nullptr, &_finePathing );
+        if ( _schedule.initialize( _pCatalog.get(), settings, FarmVillageGameModeComponentInternal::computeAbsoluteMinute( clock ) ) == false )
+            return false;
+        _listPosition.assign( static_cast<size_t>( _schedule.getNPCCount() ), float3{} );
+        _listBodySpeed.assign( static_cast<size_t>( _schedule.getNPCCount() ), 0.0f );
+        return true;
+    }
+
+    void FarmVillageGameModeComponent::showAllNPCs()
+    {
+        for ( int32 npcIndex = 0; npcIndex < _schedule.getNPCCount(); ++npcIndex )
+        {
+            _schedule.setNPCLOD( npcIndex, ScheduleLOD::Near );
+            _listPosition[static_cast<size_t>( npcIndex )] = _schedule.getNPCView( npcIndex )._location._position;
+        }
+    }
+
     bool FarmVillageGameModeComponent::startGame()
     {
         const GameStateComponent* pState = GameStateComponent::findOnOwner( *this );
@@ -133,15 +155,9 @@ namespace sw
         }
         if ( rebuildNavGrid() == false )
             return false;
-        const WorldClock&      clock = pState->getClock();
-        ScheduleSystemSettings settings;
-        settings._clock = clock.getSettings();
-        // 계획은 곧은 선(기본), 화면 안 걸음은 격자 길 — 도착 시각은 계획이 정하므로 격자를 바꿔도 일정이 갈리지 않는다.
-        _schedule.setPathing( nullptr, &_finePathing );
-        if ( _schedule.initialize( _pCatalog.get(), settings, FarmVillageGameModeComponentInternal::computeAbsoluteMinute( clock ) ) == false )
+        const WorldClock& clock = pState->getClock();
+        if ( openSchedule( clock ) == false )
             return false; // 범위 밖 설정은 일정 시스템이 오류를 남겼다
-        _listPosition.assign( static_cast<size_t>( _schedule.getNPCCount() ), float3{} );
-        _listBodySpeed.assign( static_cast<size_t>( _schedule.getNPCCount() ), 0.0f );
         if ( _bHasPendingSave )
         {
             // 일정이 서기 전에 읽은 저장(세이브 불러오기)을 지금 건다 — 끼어들기 · 호감도 · 약속 결과가 시계만으로는 나오지 않는다.
@@ -149,11 +165,7 @@ namespace sw
             _pendingSave     = ScheduleSaveState{};
             _bHasPendingSave = false;
         }
-        for ( int32 npcIndex = 0; npcIndex < _schedule.getNPCCount(); ++npcIndex )
-        {
-            _schedule.setNPCLOD( npcIndex, ScheduleLOD::Near );
-            _listPosition[static_cast<size_t>( npcIndex )] = _schedule.getNPCView( npcIndex )._location._position;
-        }
+        showAllNPCs();
         SW_LOG_INFO_ID( "FarmVillageGameMode.VillagerFollowDay", "[Village] %# villager(s) follow %# from day %# %#:%#", _schedule.getNPCCount(), _scheduleDataPath.c_str(), clock.getDay(), clock.getHourInt(),
                         clock.getMinute() );
         return true;
@@ -186,7 +198,17 @@ namespace sw
         }
         if ( _schedule.getNPCCount() > 0 )
         {
+            // 일정표가 다시 읽혔으면 새 판으로 일정을 다시 세운 뒤 저장을 건다(NPC 는 id 로 다시 찾는다). 빈 일정표는 받지 않는다 — 지금 일정이 그대로다.
+            const bool bCatalogReloaded = _pCatalog != nullptr && _schedule.getCatalog() != _pCatalog.get();
+            if ( bCatalogReloaded )
+            {
+                const GameStateComponent* const pState = GameStateComponent::findOnOwner( *this );
+                if ( io.check( _pCatalog->getNPCs().empty() == false && pState != nullptr && openSchedule( pState->getClock() ) ) == false )
+                    return;
+            }
             _schedule.restoreSaveState( state );
+            if ( bCatalogReloaded )
+                showAllNPCs();
             return;
         }
         _pendingSave     = std::move( state );
