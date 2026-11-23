@@ -285,7 +285,7 @@ namespace sw
                 if ( beginShadowTile( context, shadow._arrCascadeTile[cascadeIndex] ) == false )
                     continue;
                 // 주 시점의 캐스케이드 타일은 자기 컬링 슬롯의 목록을 그린다(그 캐스케이드 절두체로만 거른 것). 추가 뷰의 캐스케이드는 합친 칸이다.
-                const bool bCascadeSlot = _pActiveView == &_state._mainView && cascadeIndex < _state._cascadeCullCount;
+                const bool bCascadeSlot = _pActiveView == &_state.getMainView() && cascadeIndex < _state._cascadeCullCount;
                 context._cullViewIndex  = bCascadeSlot ? _state._cascadeCullSlotBase + cascadeIndex : _pActiveView->_shadowCullSlot;
                 drawSceneMeshes( context, pso, bTransparentBatch );
             }

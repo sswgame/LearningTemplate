@@ -586,9 +586,9 @@ namespace sw
         RHIBufferTransitionBatch _levelBufferTransitions;
         /// @brief 이번 프레임에 레벨 콜백이 낸 전이 · UAV 배리어 수입니다(지표 `RT.Graph.transitions` — 그래프로 옮긴 단계가 이 수를 늘리지 않아야 한다).
         uint32 _graphTransitionCount{ 0 };
-        /// @brief 지금 그리는 뷰입니다. 프레임 밖에서는 항상 `FrameRenderState::_mainView` 입니다. 바꾸는 곳은 `renderExtraView` 하나다.
+        /// @brief 지금 그리는 뷰입니다. 프레임 밖에서는 항상 주 시점(`FrameRenderState::getMainView`)입니다. 바꾸는 곳은 `renderExtraView` 하나다.
         FrameViewTarget* _pActiveView;
-        /// @brief `FrameRenderState::_mainView` 입니다 — 인라인 판정(`isRenderingExtraView`)이 FrameRenderState.h 없이 견준다.
+        /// @brief 주 시점(`FrameRenderState::getMainView`)입니다 — 인라인 판정(`isRenderingExtraView`)이 FrameRenderState.h 없이 견준다.
         FrameViewTarget* const _pMainView;
         /// @brief 프레임 그래프 리스트와 그것을 만든 디바이스입니다. `_pCmd` 는 프리패스를 기록하는 동안만 그 리스트를 가리킨다.
         IRHIDevice*                 _pCmdOwnerDevice;

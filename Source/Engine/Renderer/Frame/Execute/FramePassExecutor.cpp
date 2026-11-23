@@ -117,8 +117,8 @@ namespace sw
         , _displayEncode{ displayEncode }
         , _frameGraphExecutor{ pDevice, state, psoManager, fog }
         , _frameGraphContext{}
-        , _pActiveView{ &state._mainView }
-        , _pMainView{ &state._mainView }
+        , _pActiveView{ &state.getMainView() }
+        , _pMainView{ &state.getMainView() }
         , _pCmdOwnerDevice{ nullptr }
         , _frameCmd{}
         , _asyncComputeCmd{}
@@ -183,8 +183,7 @@ namespace sw
             // 리스트는 만든 디바이스의 것이다. 뷰마다의 리스트도 함께 버린다.
             _frameCmd.reset();
             _asyncComputeCmd.reset();
-            _state._mainView._commandList.reset();
-            for ( unique_ptr<FrameViewTarget>& pView : _state._listExtraView )
+            for ( unique_ptr<FrameViewTarget>& pView : _state._listView )
             {
                 pView->_commandList.reset();
             }
@@ -271,8 +270,8 @@ namespace sw
         _bHasExecutedDepthPrepass.store( 0 );
 
         // 주 출력의 캔버스는 주 출력에 마지막으로 그리는 뷰가 그린다. 화면 사각형 뷰는 주 시점 뒤에 겹치므로, 주 시점이 그리면 그 뷰가 UI 를 덮는다.
-        _pMainOutputCanvasView = &_state._mainView;
-        for ( const unique_ptr<FrameViewTarget>& pView : _state._listExtraView )
+        _pMainOutputCanvasView = &_state.getMainView();
+        for ( const unique_ptr<FrameViewTarget>& pView : _state._listView )
         {
             if ( pView->_bRenderThisFrame == SW_TRUE && pView->_outputKind == RenderViewOutputKind::ScreenRect )
                 _pMainOutputCanvasView = pView.get();
@@ -315,11 +314,12 @@ namespace sw
     uint32 FramePassExecutor::renderExtraViewsOfKind( IRHIDevice* pDevice, RenderViewOutputKind outputKind )
     {
         uint32 renderedCount = 0;
-        for ( unique_ptr<FrameViewTarget>& pView : _state._listExtraView )
+        for ( size_t viewIndex = FrameRenderState::kFirstExtraViewIndex; viewIndex < _state._listView.size(); ++viewIndex )
         {
-            if ( pView->_bRenderThisFrame == SW_FALSE || pView->_outputKind != outputKind )
+            FrameViewTarget& view = *_state._listView[viewIndex];
+            if ( view._bRenderThisFrame == SW_FALSE || view._outputKind != outputKind )
                 continue;
-            renderExtraView( pDevice, *pView );
+            renderExtraView( pDevice, view );
             ++renderedCount;
         }
         return renderedCount;
@@ -346,7 +346,7 @@ namespace sw
     bool FramePassExecutor::executeMainGraph( IRHIDevice* pDevice )
     {
         prepareShadowCacheLayerResource();
-        registerViewResources( _state._mainView );
+        registerViewResources( _state.getMainView() );
         // 병렬 기록이 가능하면(백엔드 capability, TaskManager, 레벨이 나올 만큼 컴파일된 그래프) 레벨마다 여러 리스트로 기록한다.
         // 첫 프레임처럼 그래프가 아직 컴파일되지 않았으면(getExecutionOrder() 가 비어 있으면) 직렬 경로로 간다.
         const bool bCanRunParallel = _state._pTaskManager != nullptr &&
@@ -359,9 +359,9 @@ namespace sw
         }
 
         // 직렬 경로도 그래프가 추론한 배리어를 쓴다. 패스가 기록하는 리스트와 **같은 것**을 넘긴다.
-        if ( _state._mainView._commandList == nullptr )
-            _state._mainView._commandList = pDevice->createCommandList();
-        IRHICommandList* pMainCmd = _state._mainView._commandList.get();
+        if ( _state.getMainView()._commandList == nullptr )
+            _state.getMainView()._commandList = pDevice->createCommandList();
+        IRHICommandList* pMainCmd = _state.getMainView()._commandList.get();
         if ( pMainCmd == nullptr )
             return false;
         // 직렬 경로도 그래프가 패스 문맥에 이 리스트를 싣는다(`RenderGraph::execute` — 병렬과 같은 `recordPassBody`).
@@ -403,7 +403,7 @@ namespace sw
         pCmd->endCommandList();
         pDevice->executeCommandList( pCmd );
 
-        _pActiveView = &_state._mainView;
+        _pActiveView = &_state.getMainView();
     }
 
     bool FramePassExecutor::shouldDrawBatchInPass( RenderPassKind passType, const GPUMeshBatch& batch, const GPUMeshBatchBinding& binding ) const
@@ -605,7 +605,7 @@ namespace sw
         // 줄여 그려 키우는 뷰는 텍스처를 출력 해상도만큼 선명하게 읽는다(R-15 — 배율 1 이면 0). 렌더 크기는 첨부 풀, 출력 크기는 뷰가 든다.
         context._passValues.setFloat4( passConstantNames()._textureMipBias, float4{ ViewTextureMipBiasUtil::compute( pool.getHeight(), view._outputHeight ), 0.0f, 0.0f, 0.0f } );
         // 컬링은 기록 시작 전에 도는데 그때는 상수 버퍼에서 도로 꺼낼 수 없다. 지금 그리는 뷰에 같은 값을 남긴다(지터 없는 것 — 절두체가 프레임마다 흔들리지 않는다).
-        _state.getCullInputOf( view ).setViewProjection( viewProj );
+        view._cullInput.setViewProjection( viewProj );
 
         // 시간 누적 기록을 버릴지는 셋업이 뷰마다 프레임에 한 번 정했다(`beginViewHistory` — 처음 그리는 프레임과 컷). TAA · 모션 블러 · 자동 노출 · 가림 판정이
         // 모두 `_bHistoryReset` 하나를 본다 — 모션 블러는 지난 뷰-투영을 이번 것으로 둬 속도가 0 이다.
@@ -725,7 +725,7 @@ namespace sw
         {
             for ( const RenderGraphPassDesc::ResolvedAttachment& output : pass._listResolvedColorOutput )
             {
-                const TransientAttachmentPool::Attachment attachment = _state._mainView._transientPool.find( output._attachment );
+                const TransientAttachmentPool::Attachment attachment = _state.getMainView()._transientPool.find( output._attachment );
                 const bool                                bScannable = attachment._texture != 0 && attachment._srv != kInvalidDescriptorIndex && GPUNanCheck::isScannableFormat( attachment._format );
                 if ( bScannable == false || VectorUtil::contains( listScanned, attachment._texture ) )
                     continue;

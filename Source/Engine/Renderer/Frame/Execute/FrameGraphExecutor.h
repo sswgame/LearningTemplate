@@ -54,7 +54,7 @@ namespace sw
         void releaseResources();
         /**
          * @brief 프레임 그래프를 돌리기 전에 부릅니다 — 앞 프레임들의 셰이더 메시지 기록이 도착했으면 로그로 내고, 이번 프레임의 컬링 · HZB · 가림 타일 표시를 비우고,
-         *        그래프가 전이를 낼 자원(지금은 HZB · 가림 타일 — 짓는 뷰만)을 @p table 에 등록합니다(뷰 칸: 주 시점 0, 추가 뷰 `_listExtraView` 번호 + 1).
+         *        그래프가 전이를 낼 자원(지금은 HZB · 가림 타일 — 짓는 뷰만)을 @p table 에 등록합니다(뷰 칸 = 뷰 번호 `FrameRenderState::_listView`).
          * @details 표시를 여기서 비우는 까닭: 파이프라인이 그 패스를 선언하지 않으면 패스가 돌지 않아 지난 파이프라인의 값이 남는다.
          *          짓지 않는 뷰는 등록하지 않는다 — 등록하면 그래프가 쓰지 않는 버퍼에 전이를 낸다(가림 판정은 기본 끔).
          * @param cmd 프레임 그래프를 기록할 리스트입니다 — 셰이더 메시지 링의 UAV 전이를 그래프 앞에 넣는다.
@@ -153,16 +153,16 @@ namespace sw
         bool isCullViewReady( uint32 cullViewIndex, const RenderView& renderView ) const;
         /**
          * @brief 돌 수 있는 컬링 슬롯이면 일감 목록(`_listCullJob`)에 넣고 true 입니다. 전이는 그래프가, 디스패치는 `dispatchCullAndSort` 가 목록을 따라 낸다.
-         * @param pExtraView 추가 뷰면 그 뷰(투명 순번 테이블을 정렬에 바인딩합니다), 고정 뷰(주 시점, 그림자)면 nullptr 입니다.
+         * @param pView 뷰의 시점 슬롯이면 그 뷰(LOD 카메라 · 가림 · 투명 순번 테이블), 그림자 슬롯이면 nullptr 입니다(LOD 는 주 카메라, 가림은 보지 않는다).
          */
-        bool enqueueCullView( uint32 cullViewIndex, const RenderView& renderView, const FrameViewTarget* pExtraView );
+        bool enqueueCullView( uint32 cullViewIndex, const RenderView& renderView, const FrameViewTarget* pView );
         /**
          * @brief 컬링 슬롯 하나를 컬링하고 정렬합니다. 그 뷰의 절두체와 자기 상수 버퍼를 씁니다. 버퍼는 이미 UAV 상태다 — 앞 · 뒤 전이는 그래프가 모든 슬롯을 묶어 낸다.
          *        되돌리기 → 컬링 → 정렬 사이는 선언한 UAV 핸들의 `uavBarrier` 다.
-         * @param pExtraView 추가 뷰면 그 뷰(투명 순번 테이블을 정렬에 바인딩합니다), 고정 뷰(주 시점, 그림자)면 nullptr 입니다.
+         * @param pView 뷰의 시점 슬롯이면 그 뷰(LOD 카메라 · 가림 · 투명 순번 테이블), 그림자 슬롯이면 nullptr 입니다(LOD 는 주 카메라, 가림은 보지 않는다).
          */
         void dispatchCullView( const RenderGraphPassContext& graphContext, uint32 cullViewIndex, const RenderView& renderView, uint32 instanceCount,
-                               const FrameViewTarget* pExtraView );
+                               const FrameViewTarget* pView );
         /** @brief 이번 프레임의 LOD 전환 진행량(`_lodFadeStep`)을 렌더 프레임 간격에서 정합니다. 컬링 디스패치 앞에서 한 번 부른다. */
         void computeLODFadeStep();
         /** @brief GPU 생산자로 뷰마다의 라이트 그리드를 채웁니다(light_grid.hlsl, 그룹 하나 = 뷰 하나). 생산자가 GPU 가 아니면 아무것도 하지 않습니다. */
@@ -206,13 +206,11 @@ namespace sw
         bool recordCurrentDepthHZB( const RenderGraphPassContext& graphContext, FrameViewTarget& view ) const;
         /** @brief 이번 프레임 2 단계 가림의 뒤 단계가 돌 수 있는지입니다(앞 단계가 차례를 적었다 · PSO · 슬롯 · 차례 표시 · 상수 버퍼 · 장면 깊이 복사). 등록(`registerViewGraphResources`)이 본다. */
         bool canRunLateOcclusion() const;
-        /** @brief 뷰 @p view 를 그리는 카메라의 뷰-투영입니다(주 시점은 주 카메라, 추가 뷰는 자기 컬링 입력 — `rememberDepthHistoryViews` 와 같은 출처). */
-        const float4x4& findViewProj( const FrameViewTarget& view ) const;
         /**
          * @brief 컬링 슬롯 @p cullViewIndex 의 컬링 상수를 채웁니다(절두체 · 개수 · LOD · 가림). 앞 단계(`dispatchCullView`)와 뒤 단계(`recordLateOcclusion`)가 같은 식을 쓴다.
          * @param bResetLODState 전환 상태를 비울지입니다(뒤 단계는 앞 단계가 정한 값을 그대로 받는다 — 비우기 신호를 두 번 꺼내지 않는다).
          */
-        void fillCullParams( uint32 cullViewIndex, const RenderView& renderView, uint32 instanceCount, const FrameViewTarget* pExtraView, bool bResetLODState,
+        void fillCullParams( uint32 cullViewIndex, const RenderView& renderView, uint32 instanceCount, const FrameViewTarget* pView, bool bResetLODState,
                              FrameRendererUtil::GPUCullParams& outParams ) const;
 
     private:
@@ -248,7 +246,7 @@ namespace sw
         {
             uint32                 _cullViewIndex{ 0 };
             const RenderView*      _pRenderView{ nullptr };
-            const FrameViewTarget* _pExtraView{ nullptr };
+            const FrameViewTarget* _pView{ nullptr };
         };
         /// @brief 이번 프레임의 컬링 일감입니다. 프레임마다 다시 쓰고 용량은 지닌다.
         vector<CullJob> _listCullJob;

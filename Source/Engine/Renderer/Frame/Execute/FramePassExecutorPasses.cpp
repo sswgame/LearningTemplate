@@ -923,7 +923,7 @@ namespace sw
         registerDeclaredInputs( context, input._passDesc );
 
         // 볼륨은 컴퓨트가 돈 프레임의 주 시점에서만 읽는다(추가 뷰는 볼륨을 계산하지 않는다). 상수는 이 패스의 복사본에만 쓴다.
-        const bool bVolume      = _fog.isFogVolumeActive() && _pActiveView == &_state._mainView && _fog.getFogVolumeBuffer()._srv != kInvalidDescriptorIndex;
+        const bool bVolume      = _fog.isFogVolumeActive() && _pActiveView == &_state.getMainView() && _fog.getFogVolumeBuffer()._srv != kInvalidDescriptorIndex;
         float4     volumeParams = _fog.getFrameFog()._volumeParams;
         volumeParams._x         = bVolume ? 1.0f : 0.0f;
         context._passValues.setFloat4( passConstantNames()._fogVolumeParams, volumeParams );
@@ -1104,7 +1104,7 @@ namespace sw
         const RenderViewModeInfo&    viewModeInfo = RenderViewModeUtil::getInfo( _pActiveView->_settings._viewMode );
         const RHIPipelineStateHandle pso          = _psoManager.getEnginePSO( RenderPassKind::LensFlare );
         const LensFlareSpriteBuffer& sprites      = _state._lensFlare;
-        const bool                   bDraws       = pso != 0 && sprites.getSpriteCount() > 0 && _pActiveView == &_state._mainView && viewModeInfo._bShowsBuffer == false && viewModeInfo._bWireframe == false;
+        const bool                   bDraws       = pso != 0 && sprites.getSpriteCount() > 0 && _pActiveView == &_state.getMainView() && viewModeInfo._bShowsBuffer == false && viewModeInfo._bWireframe == false;
         if ( bDraws == false )
             return;
 
@@ -1357,7 +1357,7 @@ namespace sw
         registerLightBuffer( context );
         registerSurfaceDeformLayer( context );
         ExtensionViewInfo view{};
-        view._bMainView = _pActiveView == &_state._mainView;
+        view._bMainView = _pActiveView == &_state.getMainView();
         view._width     = activePool().getWidth();
         view._height    = activePool().getHeight();
         ExtensionPassContext moduleContext( *this, &context, &pass, view );

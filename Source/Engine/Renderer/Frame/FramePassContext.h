@@ -66,7 +66,7 @@ namespace sw
          */
         RHIPipelineStateHandle _lastBindPSO{ 0 };
         /**
-         * @brief 이 패스가 어느 컬링 슬롯의 결과를 쓸지 정합니다. 0은 주 시점, 1은 그림자이고, `kFirstExtraCullView` 부터는 추가 뷰입니다.
+         * @brief 이 패스가 어느 컬링 슬롯의 결과를 쓸지 정합니다. 뷰 번호 n 의 시점이 2n, 그림자가 2n + 1 입니다(`kCullSlotsPerView`).
          * @details 그림자 패스만 그림자 슬롯을 쓰고, 나머지는 지금 그리는 뷰의 슬롯을 쓴다. 컬링 결과는 절두체에 종속되므로
          *          뷰를 잘못 고르면 그림자 캐스터가 사라지거나 화면 밖 물체를 그린다.
          */

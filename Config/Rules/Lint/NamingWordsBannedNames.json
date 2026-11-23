@@ -1,6 +1,12 @@
 {
   "_comment": "전수 개명한 옛 이름 → 새 이름 · 까닭(Scripts/lint/naming_words.py 의 naming-words 규칙이 되살린 옛 이름을 막는다). 언리얼 CoreRedirects 의 옛 이름 → 새 이름 자리이되 고쳐 주지 않고 막는다. 개명 도구(py -3 -m Scripts rename-symbol)가 줄을 더한다 — 키(옛 이름)는 개명 도구가 바꾸지 않는다.",
   "_bannedNames": {
+    "RenderViewKind": "지움 — 주 시점이 뷰 목록의 0 번이다. 컬링 슬롯은 kCullSlotsPerView · kMainCullSlot(2026-11-24)",
+    "_listExtraView": "FrameRenderState::_listView — 0 번이 주 시점이고 추가 뷰는 kFirstExtraViewIndex 부터다(2026-11-24)",
+    "kFirstExtraCullView": "kCullSlotsPerView — 뷰 번호 n 의 슬롯이 2n · 2n + 1 이다(2026-11-24)",
+    "kCullSlotsPerExtraView": "kCullSlotsPerView(2026-11-24)",
+    "getCullInputOf": "FrameViewTarget::_cullInput — 주 시점도 자기 컬링 입력을 가진다(2026-11-24)",
+    "forEachChangedAccess": "RenderGraph::importResources — 등록 접근이 그래프의 시작이자 끝이라 실행이 끝에 되돌린다(2026-11-24)",
     "PlayerProgressComponent": "WalletComponent · InventoryComponent · QuestLogComponent · ReputationComponent — 플레이어 한 명의 묶음(지갑 · 가방 · 일지 · 평판)을 기능마다 컴포넌트로 나눴다(Lyra 기능 컴포넌트). 찾기 · 열기는 PlayerComponentUtil(2026-11-21)",
     "PlayerProgressSettings": "InventorySettings(가방 슬롯 수 · 아이템 카탈로그) · QuestLogComponent::initialize · ReputationComponent::initialize 의 카탈로그 인자(2026-11-21)",
     "findInventory": "PlayerComponentUtil::findOnOwner<InventoryComponent> — 가방 없음은 슬롯 0 이 아니라 컴포넌트가 없는 것이다(2026-11-21)",

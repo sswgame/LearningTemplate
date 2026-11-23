@@ -199,13 +199,13 @@ namespace sw
         RenderStabilitySample getMainStabilitySample() const
         {
             RenderStabilitySample sample{};
-            sample._stillFrameCount       = _state._mainView._stillFrameCount;
-            sample._exposureErrorEv       = _state._mainView._exposureErrorEv;
-            sample._exposureAdaptationEv  = _state._mainView._exposureAdaptationEv;
+            sample._stillFrameCount       = _state.getMainView()._stillFrameCount;
+            sample._exposureErrorEv       = _state.getMainView()._exposureErrorEv;
+            sample._exposureAdaptationEv  = _state.getMainView()._exposureAdaptationEv;
             sample._giAccumulatedFrames   = _state._probeUpdater.getAccumulatedFrames();
-            sample._cameraStillFrameCount = _state._mainView._cameraStillFrameCount;
-            sample._bTemporalAccumulation = _state._mainView._bTAAHistoryWritten;
-            sample._bAutoExposure         = _state._mainView._bAutoExposureThisFrame;
+            sample._cameraStillFrameCount = _state.getMainView()._cameraStillFrameCount;
+            sample._bTemporalAccumulation = _state.getMainView()._bTAAHistoryWritten;
+            sample._bAutoExposure         = _state.getMainView()._bAutoExposureThisFrame;
             return sample;
         }
         /**
@@ -335,13 +335,13 @@ namespace sw
          */
         [[nodiscard]] bool findPSODesc( RHIPipelineStateHandle pso, RHIPipelineStateDesc& outDesc ) const;
         /** @brief 주 시점의 TAA 히스토리 텍스처입니다. 파이프라인에 TAA 패스가 없거나 아직 만들지 않았으면 0 입니다(진단과 테스트용). */
-        RHITextureHandle getTAAHistory() const { return _state._mainView._taaHistory; }
+        RHITextureHandle getTAAHistory() const { return _state.getMainView()._taaHistory; }
         /** @brief 주 시점의 첨부 풀입니다. 어느 타깃이 있고 몇 번 만들었는지 보는 진단 · 테스트용입니다(고치지 않는다). */
-        const TransientAttachmentPool& getMainViewPool() const { return _state._mainView._transientPool; }
+        const TransientAttachmentPool& getMainViewPool() const { return _state.getMainView()._transientPool; }
         /** @brief 마지막 프레임에 실제로 그린 추가 뷰 수입니다. 갱신 주기나 예산 때문에 쉰 뷰는 빠집니다(진단과 테스트용). */
         uint32 getLastRenderedExtraViewCount() const { return _passExecutor.getLastRenderedExtraViewCount(); }
         /** @brief 가지고 있는 추가 뷰 수입니다. 쉬는 뷰도 포함합니다. */
-        uint32 getExtraViewCount() const { return static_cast<uint32>( _state._listExtraView.size() ); }
+        uint32 getExtraViewCount() const { return static_cast<uint32>( _state._listView.size() - FrameRenderState::kFirstExtraViewIndex ); }
         /**
          * @brief 뷰 대상(주 시점 · 추가 뷰)을 모두 버리고 주 시점을 새로 만듭니다 — 다음 프레임은 새 프로세스의 첫 프레임처럼 풀 · 시간 누적 기록(TAA · 노출 · 깊이 · 지터 순번)이 없다.
          * @details 자동화 단계 시작이 부른다(`IEngineRenderDriver::discardViewTargets`, 렌더 스레드). 프레임을 넘는 뷰 상태는 `FrameViewTarget` 멤버로만 두므로 새 멤버를 더해도 여기를 고치지 않는다
@@ -357,8 +357,8 @@ namespace sw
             uint32             _byteSize{ 0 };
             const utf8*        _pUsage{ nullptr };
         };
-        /// @brief 컴퓨트 상수 버퍼 수입니다. 고정 뷰마다 컬링과 정렬이 하나씩 있고, 인스턴스 애니메이션, 메시 모프, 메시 스킨이 하나씩 더 있습니다. 추가 뷰의 것은 그 뷰가 가집니다.
-        static constexpr uint32 _s_kComputeConstantBufferCount = static_cast<uint32>( RenderViewKind::Count ) * 2 + 3;
+        /// @brief 컴퓨트 상수 버퍼 수입니다(인스턴스 애니메이션 · 메시 모프 · 메시 스킨). 컬링 · 정렬의 것은 뷰가 가집니다(`ensureViewCullBuffers`).
+        static constexpr uint32 _s_kComputeConstantBufferCount = 3;
         /// @brief 배치 하나가 한 프레임에 몇 개의 지오메트리 패스(그림자, 프리패스, 불투명, 반투명)에서 그려지는지의 어림값입니다.
         static constexpr uint32 _s_kDrawCbPassEstimate = 4;
         // ------------------------------------------------------------------------------
@@ -380,6 +380,12 @@ namespace sw
         void ensureTransientResources( uint32 overrideWidth = 0, uint32 overrideHeight = 0 );
         /** @brief 추가 뷰 하나를 통째로 해제합니다. 트랜지언트, 컬링 상수 버퍼, 리스트, 빌린 렌더 텍스처가 해당합니다. */
         void releaseExtraView( FrameViewTarget& view );
+        /** @brief 추가 뷰를 모두 놓고 목록에 주 시점만 남깁니다. */
+        void releaseExtraViews();
+        /** @brief 뷰 @p view 의 컬링 · 정렬 · 그림자 컬링 상수 버퍼를 갖춥니다(주 시점 · 추가 뷰 같음). 만들지 못하면 오류를 남기고 false 입니다. */
+        [[nodiscard]] bool ensureViewCullBuffers( FrameViewTarget& view );
+        /** @brief 뷰 @p view 의 컬링 · 정렬 · 그림자 컬링 상수 버퍼를 놓습니다. */
+        void releaseViewCullBuffers( FrameViewTarget& view );
         /**
          * @brief 이번 프레임의 추가 뷰 요청을 뷰 상태에 반영합니다. 새 뷰를 만들고, 사라진 뷰를 해제하고, 출력 텍스처, 풀 크기, 컬링 입력을 맞추고,
          *        GPUScene 의 컬링 슬롯 수를 정합니다. **업로드 전에**(셋업 단계) 불러야 합니다. 버퍼와 텍스처 생성은 기록 중에 할 수 없습니다.

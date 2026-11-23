@@ -34,7 +34,7 @@ namespace sw
 
     /**
      * @brief 뷰 하나가 프레임을 넘어 유지하는 상태입니다. 트랜지언트 풀, 추가 뷰의 컬링 입력, TAA 히스토리, 직렬 커맨드 리스트, 출력 텍스처가 들어 있습니다.
-     * @details 주 시점은 `_mainView` 이고(컬링 입력은 `_arrView[Main]`), 추가 뷰는 카메라 id(`_viewID`)로 찾는다. 패스 코드는 지금 그리는 뷰
+     * @details 주 시점은 뷰 목록의 0 번이고(`FrameRenderState::getMainView`), 추가 뷰는 카메라 id(`_viewID`)로 찾는다. 패스 코드는 지금 그리는 뷰
      *          (`FramePassExecutor::_pActiveView`)의 것만 본다. 뷰가 바뀌면 트랜지언트 이름(SceneColor 등)이 다른 텍스처를 가리키기 때문이다.
      */
     struct FrameViewTarget
@@ -52,7 +52,7 @@ namespace sw
         };
 
         TransientAttachmentPool     _transientPool;
-        RenderView                  _cullInput;   ///< 추가 뷰의 컬링 입력(행렬, 절두체, 자기 컬링 상수 버퍼)
+        RenderView                  _cullInput;   ///< 이 뷰의 컬링 입력(행렬, 절두체, 자기 컬링 · 정렬 상수 버퍼)
         unique_ptr<IRHICommandList> _commandList; ///< 이 뷰를 직렬로 기록하는 리스트(주 시점은 병렬 경로가 아닐 때만 쓴다)
         RenderViewSettings          _settings;
         hashed_string               _outputPath;                ///< 렌더 텍스처 경로
@@ -109,11 +109,11 @@ namespace sw
          * @details 추가 뷰가 주 시점 볼륨을 쓰면 다른 곳을 보는 CCTV · 분할 화면은 그림자가 빠진다(언리얼의 뷰별 그림자 뷰).
          */
         ViewShadowData _shadow;
-        /// @brief 추가 뷰의 그림자 패스 컬링 입력(행렬 · 절두체 · 자기 컬링 상수 버퍼)입니다. 주 시점은 `_arrView[Shadow]` 를 씁니다.
+        /// @brief 이 뷰의 그림자 패스 컬링 입력(행렬 · 절두체 · 자기 컬링 상수 버퍼 — 깊이만 쓰므로 정렬은 없다)입니다.
         RenderView _shadowCullInput;
-        uint32     _cullSlot{ 0 };
-        uint32     _shadowCullSlot{ static_cast<uint32>( RenderViewKind::Shadow ) }; ///< 그림자 패스가 쓰는 컬링 슬롯(주 시점은 1, 추가 뷰는 자기 슬롯)
-        uint32     _outputWidth{ 0 };                                                ///< 출력 크기(렌더 텍스처, 화면 사각형)
+        uint32     _cullSlot{ kMainCullSlot };
+        uint32     _shadowCullSlot{ kMainCullSlot + 1u }; ///< 그림자 패스가 쓰는 컬링 슬롯(`kCullSlotsPerView`)
+        uint32     _outputWidth{ 0 };                     ///< 출력 크기(렌더 텍스처, 화면 사각형)
         uint32     _outputHeight{ 0 };
         uint32     _shadowMapResolution{ 0 };                           ///< 풀이 가진 그림자 맵 한 변(0이면 아직 없음). 품질이 바뀌면 풀을 다시 만든다.
         uint32     _transientAliasGeneration{ 0 };                      ///< 풀을 만들 때 따른 앨리어싱 계획의 세대(`FrameRenderState::_transientAliasGeneration`). 다르면 풀을 다시 만든다.
