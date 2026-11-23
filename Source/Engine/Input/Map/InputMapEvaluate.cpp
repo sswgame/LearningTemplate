@@ -727,7 +727,7 @@ namespace sw
             }
             case BindingKind::Chord:
             {
-                if ( isSlotDown( binding._arrSlot[0], read ) && isSlotDown( binding._arrSlot[1], read ) )
+                if ( isSlotHeldThisFrame( binding._arrSlot[0], read ) && isSlotHeldThisFrame( binding._arrSlot[1], read ) ) // 한 프레임 안에 눌렀다 뗀 것도 누름이다(단일 슬롯과 같다)
                 {
                     outValue = float2{ 1.0f, 0.0f };
                     return true;
@@ -758,7 +758,7 @@ namespace sw
                 if ( areShortcutModifiersExact( binding, read ) == false )
                     return false;
 
-                if ( isSlotDown( binding._arrSlot[0], read ) )
+                if ( isSlotHeldThisFrame( binding._arrSlot[0], read ) )
                 {
                     outValue = float2{ 1.0f, 0.0f };
                     return true;
