@@ -57,7 +57,8 @@ ALL_CHAINS = ('editor playground abilityarena frontiertown harvestvalley lantern
               'abilityarena.editor harvestvalley.editor shooter3d.editor themepark.editor').split()
 PARALLEL_CHAINS = 4  # --gpu software(lavapipe)는 코어를 나눠 쓰므로 많이 띄우면 벽시계 시한을 넘긴다
 WALL_SCALE = '4'  # 소프트웨어 렌더링이라 벽시계 시한을 늘린다(gv_scenarioWallScale)
-PATH_LINUX = '/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin'  # Windows PATH 가 끼면 Windows 도구를 잡는다
+# Windows PATH 가 끼면 Windows 도구를 잡는다. 끝의 폴더는 setup 이 sudo 없이 푼 도구(git-lfs — 클론의 reset 이 부르는 필터)다.
+PATH_LINUX = f'/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin:{XVFB_ROOT}/usr/bin'
 
 
 GIT_SOURCE_ENV = 'LT_LINUX_GIT_SOURCE'  # 클론이 받아 올 git 폴더(WSL 경로) — Windows 에서 띄울 때 run_in_wsl 이 적는다
@@ -705,6 +706,7 @@ def main(argv):
         return self_check()
     if is_windows_host():
         return run_in_wsl(argv)
+    os.environ['PATH'] = PATH_LINUX  # git(common.git)도 shell() 과 같은 도구를 본다 — 물려받은 PATH 에는 git-lfs 가 없어 클론 reset 이 졌다
     global GPU
     if argv[:1] == ['--gpu'] and len(argv) > 1:
         GPU = argv[1]
