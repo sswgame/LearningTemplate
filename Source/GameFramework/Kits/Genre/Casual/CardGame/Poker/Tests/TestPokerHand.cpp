@@ -2,6 +2,10 @@
 
 #include "Core/Testing/TestFramework.h"
 
+#include "Engine/Serialization/Format/Archive.h"
+#include "Engine/Serialization/Format/StateIO.h"
+#include "Engine/Serialization/Format/Tests/StateBytesTestUtil.h"
+
 #include "GameFramework/Kits/Genre/Casual/CardGame/CardDeck.h"
 #include "GameFramework/Kits/Genre/Casual/CardGame/Poker/PokerHand.h"
 #include "GameFramework/Kits/Genre/Casual/CardGame/Poker/PokerTable.h"
@@ -247,4 +251,25 @@ SW_TEST_CASE( PokerTableTest, RefusedStartKeepsEveryChip )
     SW_EXPECT_EQUAL( pot, table.computePotTotal() );
     SW_REQUIRE_TRUE( table.act( table.getCurrentSeat(), sw::PokerActionKind::Fold ) );
     SW_EXPECT_EQUAL( 200, countChips() );
+}
+
+/**
+ * @brief [PokerTableTest] 다시 연 테이블은 새 테이블과 같은 상태다 — 앞 판의 큰 베팅이 남으면 칩이 적은 새 테이블의 저장을 읽기가 거절한다
+ */
+SW_TEST_CASE( PokerTableTest, ReinitializedTableMatchesAFreshOne )
+{
+    sw::PokerTable table;
+    SW_REQUIRE_TRUE( table.initialize( sw::PokerSettings{}, { 5000, 5000 } ) );
+    sw::GameRandom random( 7u );
+    SW_REQUIRE_TRUE( table.startHand( random ) );
+    SW_REQUIRE_TRUE( table.act( table.getCurrentSeat(), sw::PokerActionKind::AllIn ) );
+    SW_REQUIRE_TRUE( table.act( table.getCurrentSeat(), sw::PokerActionKind::Fold ) );
+
+    sw::PokerTable fresh;
+    sw::PokerTable restored;
+    SW_REQUIRE_TRUE( table.initialize( sw::PokerSettings{}, { 100, 100 } ) );
+    SW_REQUIRE_TRUE( fresh.initialize( sw::PokerSettings{}, { 100, 100 } ) );
+    SW_REQUIRE_TRUE( restored.initialize( sw::PokerSettings{}, { 100, 100 } ) );
+    SW_EXPECT_TRUE( sw::StateBytesTestUtil::hasSameState( table, fresh ) );
+    SW_EXPECT_TRUE( sw::StateBytesTestUtil::roundTrips( table, restored ) );
 }

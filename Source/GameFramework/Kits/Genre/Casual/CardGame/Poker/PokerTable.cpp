@@ -175,9 +175,13 @@ namespace sw
         {
             _listSeat[seat]._stack = listStack[seat];
         }
-        _button      = static_cast<int32>( listStack.size() ) - 1;
-        _currentSeat = constant::invalid_index::kInt32;
-        _street      = PokerStreet::HandOver;
+        _button        = static_cast<int32>( listStack.size() ) - 1;
+        _currentSeat   = constant::invalid_index::kInt32;
+        _currentBet    = 0;
+        _lastRaiseSize = 0;
+        _street        = PokerStreet::HandOver;
+        _deck.clear();
+        _board.clear();
         _eventBuffer.clear();
         _listLastPot.clear();
         return true;
