@@ -5,6 +5,7 @@
 #pragma once
 #include "Core/Container/string.h"
 #include "Core/Container/unordered_map.h"
+#include "Core/Container/unordered_set.h"
 #include "Core/Container/vector.h"
 #include "Core/Foundation/Macros.h"
 #include "Core/Foundation/Types.h"
@@ -91,6 +92,11 @@ namespace sw
          * @details 표 전체를 돈다 — 프리팹으로 저장하는 에디터 경로가 쓴다. 프레임마다 부르지 않는다.
          */
         void collectNestedPartsOf( uint64 ownerObjectID, vector<uint64>& outListObjectID ) const;
+        /**
+         * @brief @p inoutUniqueObjectID 의 오브젝트가 스폰한, 아직 붙어 있는(`isAttachedNestedPart`) 부품을 그 부품의 부품까지 @p inoutUniqueObjectID 와 @p inoutListObjectID 의 끝에 더합니다(스폰 순서 — 부모 부품이 앞).
+         * @details 표를 한 번 돈다 — 씬 컴포넌트가 없어 계층으로 찾을 수 없는 부품까지 모은다(스트리밍이 내리며 뜨는 오브젝트, `Scene::collectCellGroup`).
+         */
+        void collectAttachedPartsOf( unordered_set<uint64>& inoutUniqueObjectID, vector<uint64>& inoutListObjectID ) const;
         /**
          * @brief @p rootObjectID 인스턴스에서 부품 @p objectID 까지의 부품 경로(`PrefabPartOverride::_partPath`)를 만듭니다 — 바깥 인스턴스를 따라 올라가며 키를 잇습니다.
          * @return 부품이 아니거나, 키가 빈 부품을 지나거나, @p rootObjectID 에 닿지 않으면 false 입니다.

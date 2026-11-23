@@ -224,3 +224,51 @@ SW_TEST_CASE( SceneStreamingSourcesTest, HugeOrNaNCoordinatesStayBounded )
     streaming.update( 0.0f );
     SW_EXPECT_EQUAL( 0u, Internal::collectLoadedMask( streaming ) );
 }
+
+/**
+ * @brief [SceneStreamingSourcesTest] 조각은 셀 사각형이 아니라 내용 경계로 오르고 내린다 — 피벗 셀이 반경 밖이어도 몸이 반경 안이면 올라 있고, 그 몸이 덮는 자리는 내려가 있으면 바닥이 없다
+ */
+SW_TEST_CASE( SceneStreamingSourcesTest, ContentBoundsDecideLoading )
+{
+    SceneDocument doc{};
+    doc._name                                        = "LargeBody";
+    doc._sceneSettings._bStreaming                   = true;
+    doc._sceneSettings._cellGrid._cellSize           = 10.0f;
+    doc._sceneSettings._cellGrid._loadingRadius      = 20.0f;
+    doc._sceneSettings._unloadMargin                 = 0.0f;
+    doc._sceneSettings._maxCellLoadsPerFrame         = 4;
+    doc._sceneSettings._addToWorldBudgetMicroseconds = 1'000'000'000u;
+    doc._bValid                                      = true;
+    SceneDocument::StreamingCell cell{};
+    cell._cell = StreamingCellCoord{ 0, 0 };
+    SceneDocument::SceneObjectNode node{};
+    node._fileID      = 1;
+    node._name        = "Bridge";
+    node._embeddedXML = "<GameObject _schemaVersion=\"0\" _name=\"Bridge\" _bActive=\"true\"><_listComponent><SceneComponent _localPosition=\"5,0,5\" /></_listComponent></GameObject>";
+    cell._listSceneObjectNode.push_back( node );
+    cell._contentBounds = StreamingCellBounds{ 2.0f, 4.0f, 45.0f, 6.0f }; // 피벗 셀 (0,0) 에서 X 45 까지 뻗은 다리
+    doc._listStreamingCell.push_back( std::move( cell ) );
+
+    Scene scene{ "LargeBody" };
+    SW_REQUIRE_TRUE( scene.instantiate( doc ) );
+    SceneStreamingSubsystem& streaming = scene.getObjectManager()->getSubsystem<SceneStreamingSubsystem>();
+    const auto               moveTo    = [&streaming]( float32 x )
+    {
+        const StreamingSource source{
+            float3{ x, 0.0f, 5.0f },
+            20.0f, StreamingSourcePriority::Normal
+        };
+        SW_EXPECT_TRUE( streaming.setExternalSources( span<const StreamingSource>( &source, 1 ) ) );
+        streaming.update( 0.0f );
+    };
+    moveTo( 70.0f ); // 다리 끝에서 25 m — 반경 밖
+    SW_EXPECT_FALSE( streaming.isCellLoaded( StreamingCellCoord{ 0, 0 } ) );
+    SW_EXPECT_TRUE( streaming.isFloorMissing( float3{ 30.0f, 1.0f, 5.0f } ) );          // 다리가 덮는 자리
+    SW_EXPECT_FALSE( streaming.isFloorMissing( float3{ 30.0f, 1.0f, 8.0f } ) );         // 다리 옆
+    SW_EXPECT_TRUE( streaming.isCellStreamingCompleted( StreamingCellCoord{ 3, 0 } ) ); // 그 좌표의 조각은 없다 — 복제 보류는 기다리지 않는다
+    moveTo( 60.0f );                                                                    // 셀 (0,0) 은 50 m 지만 다리 끝은 15 m 다
+    SW_EXPECT_TRUE( streaming.isCellLoaded( StreamingCellCoord{ 0, 0 } ) );
+    SW_EXPECT_FALSE( streaming.isFloorMissing( float3{ 30.0f, 1.0f, 5.0f } ) );
+    moveTo( 70.0f );
+    SW_EXPECT_FALSE( streaming.isCellLoaded( StreamingCellCoord{ 0, 0 } ) );
+}

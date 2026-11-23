@@ -183,7 +183,7 @@ namespace sw
 
     uint32 SRPGCampaign::getMissionSeed() const
     {
-        return HashUtil::mix32( _seed ^ HashUtil::mix32( static_cast<uint32>( _runMap.getCurrent() + 1 ) * 0x9e3779b1u ) );
+        return GameRandom::deriveSeed( _seed, HashUtil::mix32( static_cast<uint32>( _runMap.getCurrent() + 1 ) * 0x9e3779b1u ) );
     }
 
     void SRPGCampaign::serializeState( StateIO& io )

@@ -14,6 +14,7 @@
 #include "Engine/Object/Component/SceneComponent.h"
 #include "Engine/Object/Component/SceneTransformHierarchy.h"
 #include "Engine/Object/GameObject/GameObject.h"
+#include "Engine/Object/GameObject/WorldOrigin.h"
 #include "Engine/Physics/Component/CharacterControllerComponent.h"
 
 namespace sw
@@ -48,6 +49,7 @@ namespace sw
         SceneComponent*               pScene          = pOwner->getPrimarySceneComponent();
         const float3                  currentPosition = pController != nullptr ? pController->getWorldPosition() : ( pScene != nullptr ? pScene->getWorldPosition() : agent._agentPosition );
         INavCrowd&                    crowd           = *runtime._pCrowd;
+        const WorldOrigin&            origin          = agent.getWorldOrigin(); // 에이전트는 로컬, 군중은 절대 자리다
         if ( agent._crowdAgentID == NavigationConstant::kInvalidAgentID )
         {
             if ( agent._driveMode == NavAgentDriveMode::CharacterController && pController == nullptr )
@@ -61,7 +63,7 @@ namespace sw
                 params._pathOptimizationRange = type._radius * 30.0f;
             }
             params._height      = type._height;
-            agent._crowdAgentID = crowd.addAgent( currentPosition, params );
+            agent._crowdAgentID = crowd.addAgent( origin.toAbsolute( currentPosition ), params );
             if ( agent._crowdAgentID == NavigationConstant::kInvalidAgentID )
             {
                 SW_LOG_WARNING_ID( "SceneNavigation.NavmeshCrowdFullAgents", "Navmesh '%#' crowd is full (%# agents) - '%#' does not move", runtime._agentType.c_str(), crowd.getMaxAgentCount(),
@@ -81,7 +83,7 @@ namespace sw
         }
         else if ( agent._bWarpPending == SW_TRUE )
         {
-            crowd.teleportAgent( agent._crowdAgentID, agent._pendingWarp );
+            crowd.teleportAgent( agent._crowdAgentID, origin.toAbsolute( agent._pendingWarp ) );
             if ( pController == nullptr && pScene != nullptr )
                 pScene->setWorldPosition( agent._pendingWarp );
             else if ( pController != nullptr )
@@ -93,7 +95,7 @@ namespace sw
         else if ( agent._driveMode != NavAgentDriveMode::Transform )
         {
             // 컨트롤러 · 폰 이동이 옮긴 자리를 받아들인다(SteerOnly 는 군중이 낸 속도를 조종자가 의도로 바꿔 폰이 걸었다).
-            crowd.syncAgentPosition( agent._crowdAgentID, currentPosition );
+            crowd.syncAgentPosition( agent._crowdAgentID, origin.toAbsolute( currentPosition ) );
         }
         else
         {
@@ -103,7 +105,7 @@ namespace sw
                                      float3::getHorizontalDistance( currentPosition, agent._writtenPosition ) > Internal::kTeleportDistance;
             if ( bTeleported )
             {
-                crowd.teleportAgent( agent._crowdAgentID, currentPosition );
+                crowd.teleportAgent( agent._crowdAgentID, origin.toAbsolute( currentPosition ) );
                 agent._bDestinationDirty = agent._bHasDestination;
                 NavStreamRoute::clearAgentRoute( agent );
             }
@@ -134,7 +136,7 @@ namespace sw
             }
             else
             {
-                agent._moveStatus = crowd.requestMoveTarget( agent._crowdAgentID, agent._destination ) ? NavMoveStatus::Moving : NavMoveStatus::Failed;
+                agent._moveStatus = crowd.requestMoveTarget( agent._crowdAgentID, origin.toAbsolute( agent._destination ) ) ? NavMoveStatus::Moving : NavMoveStatus::Failed;
             }
         }
     }
@@ -151,11 +153,17 @@ namespace sw
         NavCrowdAgentState state;
         if ( runtime._pCrowd->findAgentState( agent._crowdAgentID, state ) == false )
             return false;
-        agent._agentPosition   = state._position;
-        agent._velocity        = state._velocity;
-        agent._desiredVelocity = state._desiredVelocity;
-        agent._nextCorner      = state._nextCorner;
-        agent._bOnNavMesh      = state._bOnNavMesh ? SW_TRUE : SW_FALSE;
+        const WorldOrigin& origin = agent.getWorldOrigin();
+        state._position           = origin.toLocal( state._position ); // 이 아래로는 모두 로컬이다
+        state._target             = origin.toLocal( state._target );
+        state._nextCorner         = origin.toLocal( state._nextCorner );
+        state._link._start        = origin.toLocal( state._link._start );
+        state._link._end          = origin.toLocal( state._link._end );
+        agent._agentPosition      = state._position;
+        agent._velocity           = state._velocity;
+        agent._desiredVelocity    = state._desiredVelocity;
+        agent._nextCorner         = state._nextCorner;
+        agent._bOnNavMesh         = state._bOnNavMesh ? SW_TRUE : SW_FALSE;
         // 링크에 오른 첫 갱신에만 종류 이름을 찾는다(링크 컴포넌트 수만큼 훑는다).
         const bool bEnteredLink = state._bOnOffMeshLink && ( agent._bOnOffMeshLink == SW_FALSE || agent._linkTraversal._linkID != state._link._linkID );
         if ( bEnteredLink )

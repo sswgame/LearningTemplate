@@ -37,21 +37,6 @@ SW_TEST_CASE( ReflectionContainersTest, VectorWrapper )
 }
 
 /**
- * @brief [ReflectionContainersTest] List 래퍼
- */
-SW_TEST_CASE( ReflectionContainersTest, ListWrapper )
-{
-    sw::list<sw::string>                  lst = { "alpha", "beta" };
-    sw::ListWrapper<sw::list<sw::string>> wrapper;
-
-    SW_EXPECT_EQUAL( 2u, wrapper.getSize( &lst ) );
-    SW_EXPECT_EQUAL( sw::string( "alpha" ), *static_cast<sw::string*>( wrapper.getElement( &lst, 0 ) ) );
-
-    wrapper.clear( &lst );
-    SW_EXPECT_EQUAL( 0u, wrapper.getSize( &lst ) );
-}
-
-/**
  * @brief [ReflectionContainersTest] Deque 래퍼
  */
 SW_TEST_CASE( ReflectionContainersTest, DequeWrapper )

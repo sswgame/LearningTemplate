@@ -122,6 +122,8 @@ namespace sw
         /** @brief 켠 프리셋의 모드 상태입니다. 입력이 돌린 각, 줌, 팬, 암 길이를 담습니다. 켠 프리셋이 없으면 빈 상태입니다. */
         CameraModeState&       getModeState();
         const CameraModeState& getModeState() const;
+        /** @brief 블렌드 스택의 포즈 · 지난 초점 · 진행 중인 충격을 @p delta 만큼 옮깁니다(월드 원점 이동). */
+        void applyWorldOffset( const float3& delta );
         /** @brief 포즈를 내던 중 컷으로 바꿨으면 true 입니다. 읽으면 지우므로, 카메라에 컷 표시를 넣는 쪽이 한 번만 읽습니다. */
         bool consumeCut();
 

@@ -10,6 +10,7 @@
 #include "GameFramework/Runtime/Gameplay/Appearance/AppearanceSelection.h"
 #include "GameFramework/Runtime/Gameplay/Appearance/CharacterEquipmentComponent.h"
 #include "GameFramework/Runtime/Gameplay/Appearance/CustomizationSchema.h"
+#include "GameFramework/Runtime/Gameplay/Appearance/UserAppearancePresetStore.h"
 #include "GameFramework/Runtime/Gameplay/Inventory/ItemCatalog.h"
 
 using namespace sw;
@@ -196,6 +197,38 @@ SW_TEST_CASE_F( CustomizationShareCodeMigrationTest, NewerSchemaVersionIsRefused
     SW_EXPECT_TRUE( futureBody.error().kind() == ErrorKind::Unsupported );
     // 음성 대조: 같은 모양의 지금 판 코드는 읽힌다
     SW_EXPECT_TRUE( AppearanceSelection::decode( makeCode( 4, 2, 4 ), _database, decoded ).has_value() );
+}
+
+/** @brief [CustomizationShareCodeMigrationTest] 풀지 못하는 프리셋(더 새 스키마 판)은 여는 것만 실패하고, 다른 프리셋을 저장해도 코드 그대로 다시 써진다 */
+SW_TEST_CASE_F( CustomizationShareCodeMigrationTest, PresetTheContentCannotDecodeSurvivesSaving )
+{
+    UserAppearancePresetStore store;
+    SW_EXPECT_FALSE( store.savePreset( " ", AppearanceSelection{}, _database ) ); // 다듬으면 빈 이름
+    SW_REQUIRE_TRUE( store.savePreset( "Later", AppearanceSelection{}, _database ) );
+    const string           placeholderCode = store.findPresetByName( "Later" )->_code;
+    const string           futureCode      = makeCode( 4, 3, 4 ); // 몸 스키마 판 3 은 이 콘텐츠(판 2)보다 새것이다
+    const expected<string> written         = store.saveToText();
+    SW_REQUIRE_TRUE( written.has_value() );
+    string       text    = *written;
+    const size_t codePos = text.find( placeholderCode );
+    SW_REQUIRE_TRUE( codePos != string::npos );
+    text.replace( codePos, placeholderCode.size(), futureCode );
+
+    UserAppearancePresetStore loaded;
+    SW_REQUIRE_TRUE( loaded.loadFromXMLText( text ) );
+    AppearanceSelection  selection;
+    const expected<void> decoded = loaded.decodePreset( "Later", _database, selection );
+    SW_REQUIRE_FALSE( decoded.has_value() );
+    SW_EXPECT_TRUE( decoded.error().kind() == ErrorKind::Unsupported );
+    SW_REQUIRE_TRUE( loaded.savePreset( "Now", AppearanceSelection{}, _database ) );
+    SW_EXPECT_TRUE( loaded.decodePreset( "Now", _database, selection ).has_value() );
+
+    const expected<string> saved = loaded.saveToText();
+    SW_REQUIRE_TRUE( saved.has_value() );
+    UserAppearancePresetStore again;
+    SW_REQUIRE_TRUE( again.loadFromXMLText( *saved ) );
+    SW_REQUIRE_EQUAL( size_t{ 2 }, again.getPresets().size() );
+    SW_EXPECT_TRUE( again.findPresetByName( "Later" )->_code == futureCode );
 }
 
 /** @brief [CustomizationShareCodeMigrationTest] 펼치기는 옛 판 값을 올린 뒤 스키마로 거른다 — 올리지 않으면 Tint 가 "지워진 값" 으로 버려진다 */

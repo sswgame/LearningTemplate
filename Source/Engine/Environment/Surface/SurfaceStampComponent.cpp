@@ -51,6 +51,11 @@ namespace sw
         Component::onUnregister( manager );
     }
 
+    void SurfaceStampComponent::onWorldOriginShifted( const float3& delta )
+    {
+        _lastPoint += delta;
+    }
+
     void SurfaceStampComponent::onOwnerActiveInHierarchyChanged()
     {
         Component::onOwnerActiveInHierarchyChanged();

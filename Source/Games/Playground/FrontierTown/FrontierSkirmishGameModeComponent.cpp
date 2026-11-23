@@ -5,6 +5,7 @@
 #include "Engine/Asset/Cache/SharedAssetCache.h"
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
+#include "Engine/Object/GameObject/WorldOrigin.h"
 #include "Engine/Serialization/Format/Archive.h"
 #include "Engine/Serialization/Format/StateIO.h"
 #include "Engine/Visual/Component/MeshComponent.h"
@@ -194,7 +195,7 @@ namespace sw
             const float32  size      = bBuilding && unit._pDef != nullptr ? static_cast<float32>( unit._pDef->_footprint ) : 0.6f;
             const float3   center    = bBuilding ? float3{ static_cast<float32>( unit._cell._x ) + size * 0.5f, 0.4f, static_cast<float32>( unit._cell._y ) + size * 0.5f }
                                                  : float3{ unit._position._x, 0.3f, unit._position._z };
-            pMesh->setLocalPosition( center );
+            pMesh->setLocalPosition( manager.getWorldOrigin().toLocal( center ) );
             pMesh->setLocalScale( float3{ size * 0.9f, bBuilding ? 0.8f : 0.6f, size * 0.9f } );
             _tintCache.apply( *pMesh, bBuilding ? _buildingColor : _unitColor );
         }

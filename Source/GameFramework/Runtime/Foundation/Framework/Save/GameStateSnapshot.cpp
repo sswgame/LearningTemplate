@@ -6,6 +6,7 @@
 #include "Core/Memory/Memory.h"
 
 #include "Engine/Environment/Terrain/TerrainComponent.h"
+#include "Engine/Object/Component/ComponentStateCodec.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
 #include "Engine/Object/GameObject/Serialization/ObjectStateSerializer.h"
 #include "Engine/Reflection/ReflectedInstance.h"
@@ -39,7 +40,7 @@ namespace sw
              *          다른 실행에서 나간 id 를 복원하면 이 실행에서 이미 나간 id 와 겹칠 수 있기 때문이다.
              *          머리의 씬 정체는 찍을 때 활성 씬의 리소스 id(`Scene::getSourcePath`)다 — 읽을 때 지금 활성 씬과 다르면 섞지 않고 거절한다.
              */
-            static constexpr uint32 kVersion = 8; // 5: 머리에 콘텐츠 구성(켠 모드) 글이 실린다, 6: 머리에 씬 정체(활성 씬 리소스 id)가 실린다, 7: 넷째 섹션 씬 몫(파일 id · 스트리밍 셀), 8: 씬 몫에 런타임 하위 레벨
+            static constexpr uint32 kVersion = 10; // 5: 머리에 콘텐츠 구성(켠 모드) 글이 실린다, 6: 머리에 씬 정체(활성 씬 리소스 id)가 실린다, 7: 넷째 섹션 씬 몫(파일 id · 스트리밍 셀), 8: 씬 몫에 런타임 하위 레벨, 9: 하위 레벨에 읽음 표시(읽는 중에 저장한 것은 복원이 문서를 다시 읽는다), 10: 씬 몫의 엔티티마다 PROPERTY 밖 컴포넌트 상태
 
             /** @brief 봉투 머리(매직 · 판 뒤의 칸)입니다. */
             struct Header
@@ -247,10 +248,14 @@ namespace sw
 {
     GameStateSnapshot::GameStateSnapshot()
         : _listStatefulType{}
+        , _listCodec{}
         , _pComponentStateStore{ make_unique<ComponentStateStore>() }
     {
-        // 엔진 컴포넌트 중 PROPERTY 밖의 편집 상태를 가진 것 — 지형의 저장하지 않은 높이 · 스플랫이 모듈 리로드와 백엔드 교체를 넘어간다.
-        registerStatefulComponent<TerrainComponent>();
+        // 엔진 컴포넌트 중 PROPERTY 밖의 편집 상태를 가진 것 — 지형의 저장하지 않은 높이 · 스플랫이 모듈 리로드와 백엔드 교체를 넘어간다(코덱은 지형이 스스로 등록했다).
+        StatefulComponentType terrain;
+        terrain._pCapture = &GameStateSnapshot::captureComponentStates<TerrainComponent>;
+        terrain._pRestore = &GameStateSnapshot::restoreComponentStates<TerrainComponent>;
+        _listStatefulType.push_back( terrain );
         // 프레임워크 컴포넌트(카메라 디렉터 등)는 정의한 쪽이 정적으로 등록한다 — 게임마다 올리지 않아도 모든 게임의 스냅샷에 실린다.
         for ( const StatefulComponentRegistration* pRegistration : StatefulComponentRegistration::getRegistrations() )
         {
@@ -262,7 +267,20 @@ namespace sw
         }
     }
 
-    GameStateSnapshot::~GameStateSnapshot() = default;
+    GameStateSnapshot::~GameStateSnapshot()
+    {
+        for ( const unique_ptr<ComponentStateCodec>& pCodec : _listCodec )
+        {
+            ComponentStateCodec::remove( pCodec.get() );
+        }
+    }
+
+    void GameStateSnapshot::addCodec( const utf8* pTypeName, StatefulComponentRegistration::TypeFn pGetType, StatefulComponentRegistration::WriteFn pWrite,
+                                      StatefulComponentRegistration::RestoreObjectFn pRestore )
+    {
+        _listCodec.push_back( make_unique<ComponentStateCodec>( ComponentStateCodec{ pTypeName, pGetType, pWrite, pRestore } ) );
+        (void)ComponentStateCodec::add( _listCodec.back().get() ); // 거절은 등록부가 알렸다
+    }
 
     void GameStateSnapshot::beginCapture()
     {

@@ -179,18 +179,15 @@ SW_TEST_CASE( RespawnRemoteCallTest, MalformedAndFloodedCallsNeverReachTheFlow )
     (void)rig._flow.update( 0.016f, rig._serverTarget._context );
     SW_REQUIRE_TRUE( rig._flow.getPhase() == RespawnPhase::Selection );
 
-    // 손으로 짠 호출 — 정책 자리에 없는 이름(조작한 클라이언트의 흉내)
+    // 손으로 짠 호출 — 정책 자리에 없는 열거자(조작한 클라이언트의 흉내)
     NetMessageWriter messageWriter;
     BitWriter&       writer = messageWriter.begin( NetRemoteCallMessage::kCall );
     writer.writeVarUint( 1 );
     writer.writeVarUint( kPlayerID );
     writer.writeUint32( hashed_string::computeHash( "requestRespawn" ) );
     writer.writeVarUint( 2 );
-    const string arrArgText[] = { "Teleport", "0" };
-    for ( const string& text : arrArgText )
-    {
-        writer.writeBlob( reinterpret_cast<const uint8*>( text.data() ), static_cast<int32>( text.size() ) );
-    }
+    writer.writeVarInt( 99 ); // 등록되지 않은 `RespawnPolicyKind`
+    writer.writeVarInt( 0 );
     const vector<uint8>& bytes = messageWriter.getBytes();
     (void)rig._server.handleMessage( rig._connectionID, bytes.data(), messageWriter.getByteCount(), NetChannelKind::ReliableOrdered );
     SW_EXPECT_EQUAL( uint64{ 0 }, rig._server.getStats()._invokedCount );

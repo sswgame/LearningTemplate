@@ -237,61 +237,6 @@ namespace sw
 namespace sw
 {
     template <typename TContainer>
-    /// @brief list 시퀀스 래퍼입니다.
-    struct ListWrapper : SequenceContainerWrapperBase<ListWrapper<TContainer>>
-    {
-        /** @brief 원소 개수를 반환합니다. */
-        size_t getSize( const void* pContainer ) const override { return static_cast<const TContainer*>( pContainer )->size(); }
-        /** @brief 인덱스 위치의 원소 포인터를 반환합니다. */
-        void* getElement( void* pContainer, size_t index ) const override
-        {
-            TContainer* pContainerTyped = static_cast<TContainer*>( pContainer );
-            auto        it              = pContainerTyped->begin();
-            std::advance( it, index );
-            return &( *it );
-        }
-
-        /** @brief 인덱스 위치의 원소 const 포인터를 반환합니다. */
-        const void* getElementConst( const void* pContainer, size_t index ) const override
-        {
-            const TContainer* pContainerTyped = static_cast<const TContainer*>( pContainer );
-            auto              it              = pContainerTyped->begin();
-            std::advance( it, index );
-            return &( *it );
-        }
-
-        /** @brief 비웁니다. */
-        void clear( void* pContainer ) const override { static_cast<TContainer*>( pContainer )->clear(); }
-        /** @brief 0 으로 채운 저장소에 빈 컨테이너를 placement new 로 만듭니다. */
-        void constructEmpty( void* pContainer ) const override { sw_placement_new( pContainer ) TContainer{}; }
-        void destroyContainer( void* pContainer ) const override { static_cast<TContainer*>( pContainer )->~TContainer(); }
-        /** @brief 기본 원소를 뒤에 추가합니다. */
-        void addElementDefault( void* pContainer ) const override
-        {
-            using ElementType = typename TContainer::value_type;
-            static_cast<TContainer*>( pContainer )->emplace_back( ElementType{} );
-        }
-
-        /** @brief @p index 번째 원소를 지웁니다. */
-        bool eraseAt( void* pContainer, size_t index ) const override
-        {
-            TContainer* pContainerTyped = static_cast<TContainer*>( pContainer );
-            if ( pContainerTyped->size() <= index )
-                return false;
-            auto it = pContainerTyped->begin();
-            for ( size_t step = 0; step < index; ++step )
-            {
-                ++it;
-            }
-            pContainerTyped->erase( it );
-            return true;
-        }
-    };
-} // namespace sw
-
-namespace sw
-{
-    template <typename TContainer>
     /// @brief deque 시퀀스 래퍼입니다.
     struct DequeWrapper : SequenceContainerWrapperBase<DequeWrapper<TContainer>>
     {

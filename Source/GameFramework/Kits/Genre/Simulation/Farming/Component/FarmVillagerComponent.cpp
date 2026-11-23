@@ -5,6 +5,7 @@
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
 #include "Engine/Object/GameObject/Tick/TickContext.h"
+#include "Engine/Object/GameObject/WorldOrigin.h"
 #include "Engine/Visual/Component/MeshComponent.h"
 
 #include "GameFramework/Kits/Genre/Simulation/Farming/Component/FarmVillageGameModeComponent.h"
@@ -63,6 +64,6 @@ namespace sw
             pGameMode->collectNeighborPositions( _npcIndex, _listNeighbor );
             _agent.update( pGameMode->getNavGrid(), _listNeighbor, context.getDeltaTime() );
         }
-        pMesh->setLocalPosition( _agent.getPosition() + float3{ 0.0f, _heightOffset, 0.0f } );
+        pMesh->setLocalPosition( context.getManager().getWorldOrigin().toLocal( _agent.getPosition() + float3{ 0.0f, _heightOffset, 0.0f } ) );
     }
 } // namespace sw

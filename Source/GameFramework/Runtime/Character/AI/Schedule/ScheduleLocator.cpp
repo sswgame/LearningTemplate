@@ -33,18 +33,24 @@ namespace sw
         if ( _pCatalog == nullptr )
             return false;
         const vector<ScheduleSpotDef>& listSpot = _pCatalog->getSpots();
-        // 멱등 — 같은 NPC · 종류 · 날의 겹치는 창이면 이미 가진 예약이다.
-        for ( const Reservation& reservation : _listReservation )
+        // 멱등 — 같은 NPC · 종류 · 날의 겹치는 창이면 이미 가진 예약이다. 창은 요청까지 넓힌다(옛 창만 들면 나머지 시간을 남이 겹쳐 잡는다).
+        for ( Reservation& reservation : _listReservation )
         {
             const bool bSameOwner = reservation._npc == request._npc && reservation._kind == request._objectKind && reservation._day == request._day;
             const bool bOverlaps  = reservation._startMinute < request._endMinute && request._startMinute < reservation._endMinute;
-            if ( bSameOwner && bOverlaps )
-            {
-                const ScheduleSpotDef& spot = listSpot[static_cast<size_t>( reservation._spotIndex )];
-                outLocation                 = ScheduleLocation{ spot._position, spot._area };
-                outReservationID            = reservation._id;
-                return true;
-            }
+            if ( bSameOwner == false || bOverlaps == false )
+                continue;
+            const ScheduleSpotDef& spot        = listSpot[static_cast<size_t>( reservation._spotIndex )];
+            const int32            startMinute = MathUtil::min( reservation._startMinute, request._startMinute );
+            const int32            endMinute   = MathUtil::max( reservation._endMinute, request._endMinute );
+            const bool             bWidens     = startMinute != reservation._startMinute || endMinute != reservation._endMinute;
+            if ( bWidens && countOthersOverlapping( request._npc, reservation._spotIndex, request._day, startMinute, endMinute ) >= spot._capacity )
+                continue; // 나머지 시간은 남의 것이다 — 새로 고른다
+            reservation._startMinute = startMinute;
+            reservation._endMinute   = endMinute;
+            outLocation              = ScheduleLocation{ spot._position, spot._area };
+            outReservationID         = reservation._id;
+            return true;
         }
 
         int32   bestIndex    = -1;
@@ -53,7 +59,7 @@ namespace sw
         for ( int32 spotIndex = 0; spotIndex < static_cast<int32>( listSpot.size() ); ++spotIndex )
         {
             const ScheduleSpotDef& spot = listSpot[static_cast<size_t>( spotIndex )];
-            if ( spot._kind != request._objectKind || countOverlapping( spotIndex, request._day, request._startMinute, request._endMinute ) >= spot._capacity )
+            if ( spot._kind != request._objectKind || countOthersOverlapping( request._npc, spotIndex, request._day, request._startMinute, request._endMinute ) >= spot._capacity )
                 continue;
             const bool    bInArea  = request._area.empty() == false && spot._area == request._area;
             const float32 distance = float3::getDistance( spot._position, request._near );
@@ -143,13 +149,13 @@ namespace sw
         }
     }
 
-    int32 ScheduleSpotLocator::countOverlapping( int32 spotIndex, int32 day, int32 startMinute, int32 endMinute ) const
+    int32 ScheduleSpotLocator::countOthersOverlapping( const hashed_string& npc, int32 spotIndex, int32 day, int32 startMinute, int32 endMinute ) const
     {
         int32 count = 0;
         for ( const Reservation& reservation : _listReservation )
         {
             const bool bOverlaps        = reservation._startMinute < endMinute && startMinute < reservation._endMinute;
-            const bool bSameSpotOverlap = reservation._spotIndex == spotIndex && reservation._day == day && bOverlaps;
+            const bool bSameSpotOverlap = reservation._npc != npc && reservation._spotIndex == spotIndex && reservation._day == day && bOverlaps;
             if ( bSameSpotOverlap )
                 ++count;
         }

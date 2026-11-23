@@ -9,6 +9,7 @@
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
 #include "Engine/Object/GameObject/Tick/TickContext.h"
+#include "Engine/Object/GameObject/WorldOrigin.h"
 #include "Engine/Visual/Component/MeshComponent.h"
 
 #include "GameFramework/Kits/Feature/World/Voxel/Component/VoxelPlayerComponent.h"
@@ -64,7 +65,7 @@ namespace sw
         if ( bHasTarget == false )
             return;
         const float3 center{ static_cast<float32>( block._x ) + 0.5f, static_cast<float32>( block._y ) + 0.5f, static_cast<float32>( block._z ) + 0.5f };
-        pMesh->setLocalPosition( center );
+        pMesh->setLocalPosition( context.getManager().getWorldOrigin().toLocal( center ) );
         const int32 level = static_cast<int32>( MathUtil::clamp( pPlayer->getBreakProgress(), 0.0f, 0.99f ) * static_cast<float32>( kLevelCount ) );
         if ( level != _level && _arrLevelLook[level] != nullptr )
         {

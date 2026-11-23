@@ -208,6 +208,11 @@ namespace sw
          * @details 소유하지 않습니다 — 장비가 사라지기 전에 nullptr 로 부릅니다. 끼기 · 벗기 뒤에 같은 포인터로 다시 부르면 다시 조립하고, 장비의 버전이 그대로이면 해석은 건너뜁니다.
          */
         void setEquipment( const Equipment* pEquipment );
+        /**
+         * @brief 지금 입힐 외형의 전개(프리셋 · 선택)입니다 — 장비가 조립 전에 캐릭터 조건(몸 종류 · 체형 · 태그)을 알 때 부릅니다. 보관한 세이브 상태가 있으면 먼저 겁니다.
+         * @return 외형이 정해지지 않았거나 데이터가 없거나 펼치지 못하면 false 입니다.
+         */
+        [[nodiscard]] bool computeSpec( CharacterAppearanceSpec& outSpec );
         /** @brief 몸과 부품을 보이거나 숨깁니다. 1인칭에서 몸을 숨길 때 씁니다. */
         void setPartsVisible( bool bVisible );
         bool isPartsVisible() const { return _bPartsVisible; }
@@ -285,6 +290,8 @@ namespace sw
         void serializeState( StateIO& io );
         /** @brief 저장한 상태를 받습니다. 시작 전이면 보관했다가 `onBeginPlay` 가 겁니다. 읽지 못하면 알리고 지금 모습을 그대로 둡니다. */
         void restoreState( vector<uint8>&& bytes );
+        /** @brief 시작 전에 받아 보관한 상태입니다(`ComponentStateStore` 계약 — 있으면 그것이 곧 상태다). */
+        const vector<uint8>& getPendingStateBytes() const { return _pendingStateBytes; }
 
         /** @brief 지금 스폰해 둔 부품 오브젝트입니다. */
         void collectPartObjects( vector<GameObjectHandle>& outListObject ) const;

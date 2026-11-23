@@ -10,6 +10,7 @@
 #include "Engine/Object/GameObject/GameObjectManager.h"
 #include "Engine/Object/GameObject/GameObjectManagerResolve.inl"
 #include "Engine/Object/GameObject/Tick/TickContext.h"
+#include "Engine/Object/GameObject/WorldOrigin.h"
 #include "Engine/Object/Prefab/PrefabCache.h"
 #include "Engine/Visual/Component/MeshComponent.h"
 
@@ -168,7 +169,8 @@ namespace sw
             {
                 const float32 size = static_cast<float32>( view._pDef->_size );
                 const float32 half = size * CityViewComponentInternal::kHalfCell;
-                pMesh->setLocalPosition( float3{ static_cast<float32>( view._origin._x ) + half, CityViewComponentInternal::kBuildingHeight * 0.5f, static_cast<float32>( view._origin._y ) + half } );
+                pMesh->setLocalPosition( manager.getWorldOrigin().toLocal(
+                    float3{ static_cast<float32>( view._origin._x ) + half, CityViewComponentInternal::kBuildingHeight * 0.5f, static_cast<float32>( view._origin._y ) + half } ) );
                 pMesh->setLocalScale( float3{ size * CityViewComponentInternal::kBuildingFill, CityViewComponentInternal::kBuildingHeight, size * CityViewComponentInternal::kBuildingFill } );
                 _tintCache.apply( *pMesh, _buildingColor );
             }
@@ -181,8 +183,8 @@ namespace sw
             if ( pMesh != nullptr )
             {
                 const int2 cell = topology.toCell( static_cast<int32>( tileIndex ) );
-                pMesh->setLocalPosition( float3{ static_cast<float32>( cell._x ) + CityViewComponentInternal::kHalfCell, CityViewComponentInternal::kRoadHeight,
-                                                 static_cast<float32>( cell._y ) + CityViewComponentInternal::kHalfCell } );
+                pMesh->setLocalPosition( manager.getWorldOrigin().toLocal( float3{ static_cast<float32>( cell._x ) + CityViewComponentInternal::kHalfCell, CityViewComponentInternal::kRoadHeight,
+                                                                                   static_cast<float32>( cell._y ) + CityViewComponentInternal::kHalfCell } ) );
                 _tintCache.apply( *pMesh, _roadColor );
             }
             return handle;

@@ -5,6 +5,7 @@
 #include "Core/Algorithm/VectorUtil.h"
 #include "Core/Container/unordered_map.h"
 #include "Core/Container/unordered_set.h"
+#include "Core/Math/AABB.h"
 #include "Core/Math/MathUtil.h"
 
 #include "Engine/Object/Component/Component.h"
@@ -39,15 +40,55 @@ namespace sw
                 return pRoot;
             }
 
+            /** @brief 오브젝트 @p pObject 와 그 자식(다른 엔티티가 아닌 것 — 중첩 프리팹 부품)의 경계를 @p inoutBounds 에 더합니다. */
+            static void includeObjectBounds( const GameObject* pObject, const unordered_set<const GameObject*>& uniqueEntityObject, StreamingCellBounds& inoutBounds )
+            {
+                for ( const Component* pComponent : pObject->getComponents() )
+                {
+                    AABB box{};
+                    if ( pComponent == nullptr || pComponent->isSceneComponent() == false || static_cast<const SceneComponent*>( pComponent )->computeStreamingBounds( box ) == false )
+                        continue;
+                    inoutBounds.include( StreamingCellBounds{ box._min._x, box._min._z, box._max._x, box._max._z } );
+                }
+                vector<GameObject*> listChild;
+                pObject->getChildren( listChild );
+                for ( const GameObject* pChild : listChild )
+                {
+                    if ( uniqueEntityObject.count( pChild ) == 0 ) // 붙은 엔티티는 제 엔티티 차례에 잰다(같은 셀이다)
+                        includeObjectBounds( pChild, uniqueEntityObject, inoutBounds );
+                }
+            }
+
+            /** @brief 오브젝트 @p pObject 와 그 자식(다른 엔티티가 아닌 것 — 중첩 프리팹 부품)이 가리키는 것을 @p options 의 참조 목록에 모읍니다(바이트는 버린다). */
+            static void collectReferences( const GameObject* pObject, const unordered_set<const GameObject*>& uniqueEntityObject, const ObjectSaveOptions& options )
+            {
+                vector<uint8> stateBytes;
+                (void)ObjectStateSerializer::saveToBinaryBuffer( pObject, stateBytes, options );
+                vector<GameObject*> listChild;
+                pObject->getChildren( listChild );
+                for ( const GameObject* pChild : listChild )
+                {
+                    if ( uniqueEntityObject.count( pChild ) == 0 )
+                        collectReferences( pChild, uniqueEntityObject, options );
+                }
+            }
+
             /**
-             * @brief 지어 둔 오브젝트마다 셀 · 플래그를 정하고, 그 오브젝트가 가리키는 다른 엔티티(파일 id)를 모읍니다.
+             * @brief 지어 둔 오브젝트마다 셀 · 경계 · 플래그를 정하고, 그 오브젝트가 가리키는 다른 엔티티(파일 id)를 모읍니다.
              * @return 엔티티가 지어지지 않았으면 오류를 남기고 false 입니다.
              */
             [[nodiscard]] static bool collectCellRecords( const SceneDocument& doc, const StreamingCellGrid& grid, const unordered_map<uint64, GameObject*>& mapObjectByFileID, const ObjectSavedIDMap& mapSavedID,
                                                           string_view scenePath, vector<StreamingCellObjectRecord>& outListRecord, vector<StreamingCellReference>& outListReference )
             {
                 outListRecord.reserve( doc._listSceneObjectNode.size() );
-                vector<uint64> listReferencedID;
+                unordered_set<const GameObject*> uniqueEntityObject;
+                for ( const auto& [fileID, pObject] : mapObjectByFileID )
+                {
+                    uniqueEntityObject.insert( pObject );
+                }
+                vector<const GameObject*>                             listRoot; // 레코드마다 배치 루트
+                unordered_map<const GameObject*, StreamingCellBounds> mapRootBounds;
+                vector<uint64>                                        listReferencedID;
                 for ( const SceneDocument::SceneObjectNode& entity : doc._listSceneObjectNode )
                 {
                     const auto objectIt = mapObjectByFileID.find( entity._fileID );
@@ -63,14 +104,19 @@ namespace sw
                     record._objectID      = entity._fileID;
                     record._bAlwaysLoaded = pObject->isAlwaysLoaded() || pRoot->isAlwaysLoaded() || pRootScene == nullptr;
                     record._cell          = pRootScene != nullptr ? grid.computeCell( pRootScene->getWorldPosition() ) : StreamingCellCoord{};
+                    if ( record._bAlwaysLoaded == false )
+                    {
+                        includeObjectBounds( pObject, uniqueEntityObject, record._bounds );
+                        mapRootBounds[pRoot].include( record._bounds );
+                    }
+                    listRoot.push_back( pRoot );
                     outListRecord.push_back( record );
 
                     listReferencedID.clear();
                     ObjectSaveOptions options{ SerializePurpose::Authoring };
                     options._pSavedIDMap          = &mapSavedID;
                     options._pOutListReferencedID = &listReferencedID;
-                    vector<uint8> stateBytes;
-                    (void)ObjectStateSerializer::saveToBinaryBuffer( pObject, stateBytes, options ); // 참조만 모은다 — 바이트는 버린다
+                    collectReferences( pObject, uniqueEntityObject, options );
                     for ( const uint64 referencedObjectID : listReferencedID )
                     {
                         const auto targetIt = mapSavedID.find( referencedObjectID );
@@ -79,6 +125,15 @@ namespace sw
                             continue;
                         outListReference.push_back( StreamingCellReference{ entity._fileID, targetIt->second } );
                     }
+                }
+                // 격자보다 훨씬 큰 계층은 어느 셀에도 맞지 않는다 — 늘 올린다(자식은 루트를 따르므로 계층마다 정한다).
+                for ( size_t index = 0; index < outListRecord.size(); ++index )
+                {
+                    if ( outListRecord[index]._bAlwaysLoaded || grid.countCoveredCells( mapRootBounds[listRoot[index]] ) <= StreamingCellGrid::kMaxCoveredCells )
+                        continue;
+                    outListRecord[index]._bAlwaysLoaded = true;
+                    SW_LOG_INFO_ID( "SceneCellSplitter.SceneCookEntityTooLarge", "Scene cook: '%#' - entity '%#' covers more than %# cells and stays always loaded", scenePath, listRoot[index]->getName().c_str(),
+                                    StreamingCellGrid::kMaxCoveredCells );
                 }
                 return true;
             }
@@ -131,6 +186,7 @@ namespace sw
                     {
                         cellIndex = found->second;
                     }
+                    listCell[cellIndex]._contentBounds.include( record._bounds );
                     listCell[cellIndex]._listSceneObjectNode.push_back( std::move( entity ) );
                 }
                 VectorUtil::sort( listCell, []( const SceneDocument::StreamingCell& lhs, const SceneDocument::StreamingCell& rhs )
@@ -151,13 +207,20 @@ namespace sw
                 static constexpr uint32 kMesh     = 0;
                 static constexpr uint32 kMaterial = 1;
                 static constexpr uint32 kSection  = 2;
-                static constexpr uint32 kStatic   = 3;
-                static constexpr uint32 kVisible  = 4;
+                static constexpr uint32 kStatic   = 3; ///< 인스턴스 메시에는 없다(늘 정적이다)
+                static constexpr uint32 kVisible  = 4; ///< 인스턴스 메시에는 없다(늘 보인다)
                 static constexpr uint32 kKeyCount = 5;
 
-                const TypeInfo*     _pMeshType{ nullptr };
-                const PropertyInfo* _arrMeshProp[kKeyCount]{}; ///< 메시 · 머티리얼 · 구간 · 정적 · 보임
-                hashed_string       _vectorTypeName;           ///< 인스턴스 자리 글의 형식(메시 `_localPosition` 의 float3)
+                /** @brief 대리가 읽는 컴포넌트 형식 하나와 그 칸(메시 · 머티리얼 · 구간 · 정적 · 보임)입니다. */
+                struct Source
+                {
+                    const TypeInfo*     _pType{ nullptr };
+                    const PropertyInfo* _arrProp[kKeyCount]{};
+                };
+                static constexpr uint32 kSourceCount = 2;
+
+                Source        _arrSource[kSourceCount]; ///< 정적 메시 · 인스턴스 메시(씬 인스턴스를 묶은 것까지 — 언리얼 HLOD 도 ISM 을 넣는다)
+                hashed_string _vectorTypeName;          ///< 인스턴스 자리 글의 형식(메시 `_localPosition` 의 float3)
             };
 
             /**
@@ -168,26 +231,34 @@ namespace sw
             {
                 static constexpr const utf8* kMeshTypeName      = "MeshComponent";
                 static constexpr const utf8* kInstancedTypeName = "InstancedMeshComponent";
+                static constexpr const utf8* kMergedTypeName    = "HLODMeshComponent";
                 const TypeInfo* const        pMeshType          = services._pTypeRegistry != nullptr ? services._pTypeRegistry->findType( hashed_string( kMeshTypeName ) ) : nullptr;
                 const TypeInfo* const        pInstancedType     = services._pTypeRegistry != nullptr ? services._pTypeRegistry->findType( hashed_string( kInstancedTypeName ) ) : nullptr;
-                if ( pMeshType == nullptr || pInstancedType == nullptr )
+                const TypeInfo* const        pMergedType        = services._pTypeRegistry != nullptr ? services._pTypeRegistry->findType( hashed_string( kMergedTypeName ) ) : nullptr;
+                if ( pMeshType == nullptr || pInstancedType == nullptr || pMergedType == nullptr )
                 {
-                    SW_LOG_ERROR_ID( "SceneCellSplitter.HLODTypesMissing", "Scene cook: '%#' streams but '%#' or '%#' is not in the type table - its HLOD proxies cannot be built", scenePath, kMeshTypeName,
-                                     kInstancedTypeName );
+                    SW_LOG_ERROR_ID( "SceneCellSplitter.HLODTypesMissing", "Scene cook: '%#' streams but '%#', '%#' or '%#' is not in the type table - its HLOD proxies cannot be built", scenePath, kMeshTypeName,
+                                     kInstancedTypeName, kMergedTypeName );
                     return false;
                 }
-                static constexpr const utf8* kArrMeshKey[HLODMeshTypes::kKeyCount] = { "_meshID", "_materialPath", "_sectionName", "_bStatic", "_bVisible" };
-                bool                         bPropertiesKnown                      = true;
-                outTypes._pMeshType                                                = pMeshType;
-                for ( uint32 keyIndex = 0; keyIndex < HLODMeshTypes::kKeyCount; ++keyIndex )
+                static constexpr const utf8* kArrMeshKey[HLODMeshTypes::kKeyCount]      = { "_meshID", "_materialPath", "_sectionName", "_bStatic", "_bVisible" };
+                bool                         bPropertiesKnown                           = true;
+                const TypeInfo* const        arrSourceType[HLODMeshTypes::kSourceCount] = { pMeshType, pInstancedType };
+                for ( uint32 sourceIndex = 0; sourceIndex < HLODMeshTypes::kSourceCount; ++sourceIndex )
                 {
-                    outTypes._arrMeshProp[keyIndex] = pMeshType->findPropertyInHierarchy( hashed_string( kArrMeshKey[keyIndex] ) );
-                    bPropertiesKnown                = bPropertiesKnown && outTypes._arrMeshProp[keyIndex] != nullptr;
+                    HLODMeshTypes::Source& source = outTypes._arrSource[sourceIndex];
+                    source._pType                 = arrSourceType[sourceIndex];
+                    const uint32 keyCount         = source._pType == pMeshType ? HLODMeshTypes::kKeyCount : HLODMeshTypes::kStatic;
+                    for ( uint32 keyIndex = 0; keyIndex < keyCount; ++keyIndex )
+                    {
+                        source._arrProp[keyIndex] = source._pType->findPropertyInHierarchy( hashed_string( kArrMeshKey[keyIndex] ) );
+                        bPropertiesKnown          = bPropertiesKnown && source._arrProp[keyIndex] != nullptr;
+                    }
                 }
                 const PropertyInfo* pPositionProp = pMeshType->findPropertyInHierarchy( hashed_string( "_localPosition" ) );
                 if ( bPropertiesKnown == false || pPositionProp == nullptr )
                 {
-                    SW_LOG_ERROR_ID( "SceneCellSplitter.HLODPropertiesMissing", "Scene cook: '%#' streams but '%#' lacks a property the HLOD builder reads", scenePath, kMeshTypeName );
+                    SW_LOG_ERROR_ID( "SceneCellSplitter.HLODPropertiesMissing", "Scene cook: '%#' streams but '%#' or '%#' lacks a property the HLOD builder reads", scenePath, kMeshTypeName, kInstancedTypeName );
                     return false;
                 }
                 outTypes._vectorTypeName = pPositionProp->_typeName;
@@ -201,11 +272,13 @@ namespace sw
                 string         _materialText;
                 string         _sectionText;
                 vector<string> _listTransformText;
+                vector<float3> _listPosition; ///< 인스턴스마다 월드 위치(합칠 때 중심을 뺀다)
             };
 
             /**
-             * @brief 오브젝트 @p pObject 와 그 자식(다른 엔티티가 아닌 것 — 중첩 프리팹 부품)의 정적 메시를 @p inoutListGroup 에 모읍니다.
-             * @details 자리는 월드 행렬을 나눠 쓴다 — 대리는 원점에 있다.
+             * @brief 오브젝트 @p pObject 와 그 자식(다른 엔티티가 아닌 것 — 중첩 프리팹 부품)의 정적 메시 · 인스턴스 메시를 @p inoutListGroup 에 모읍니다.
+             * @details 자리는 월드 행렬을 나눠 쓴다 — 대리는 원점에 있다. 규칙 식생(`FoliageComponent`) · 흩뿌린 소품은 실행 때 짓고 제 페이드 거리에서 사라지므로 넣지 않는다
+             *          (언리얼도 런타임 생성 PCG · 랜드스케이프 잔디는 HLOD 에 없다).
              */
             static void collectHLODMeshes( const GameObject* pObject, const unordered_set<const GameObject*>& uniqueEntityObject, const HLODMeshTypes& types,
                                            vector<HLODGroup>& inoutListGroup )
@@ -213,34 +286,47 @@ namespace sw
                 const SerializeContext& context = SerializeContext::getDefault( SerializePurpose::Authoring );
                 for ( const Component* pComponent : pObject->getComponents() )
                 {
-                    if ( pComponent == nullptr || pComponent->getTypeInfo() != types._pMeshType || pComponent->isSceneComponent() == false )
+                    // 형식이 정확히 같은 것만 — 스킨 · 스프라이트 · 이미 합친 메시(파생)는 대리가 대신 그릴 수 없다.
+                    const HLODMeshTypes::Source* pSource = nullptr;
+                    for ( const HLODMeshTypes::Source& source : types._arrSource )
+                    {
+                        pSource = pComponent != nullptr && pComponent->getTypeInfo() == source._pType ? &source : pSource;
+                    }
+                    if ( pSource == nullptr || pComponent->isSceneComponent() == false )
                         continue;
                     // 움직이는 메시(정적이 아님)와 숨긴 메시는 대리에 넣지 않는다.
-                    string arrText[HLODMeshTypes::kKeyCount];
+                    string arrText[HLODMeshTypes::kKeyCount] = { string{}, string{}, string{}, string{ "true" }, string{ "true" } };
                     for ( uint32 keyIndex = 0; keyIndex < HLODMeshTypes::kKeyCount; ++keyIndex )
                     {
-                        arrText[keyIndex] = SerializerUtil::formatPropertyText( *types._arrMeshProp[keyIndex], ObjectAddress{ pComponent }, context );
+                        if ( pSource->_arrProp[keyIndex] != nullptr )
+                            arrText[keyIndex] = SerializerUtil::formatPropertyText( *pSource->_arrProp[keyIndex], ObjectAddress{ pComponent }, context );
                     }
                     if ( arrText[HLODMeshTypes::kStatic] != "true" || arrText[HLODMeshTypes::kVisible] != "true" )
                         continue;
-                    float3     scale{};
-                    quaternion rotation{};
-                    float3     position{};
-                    if ( static_cast<const SceneComponent*>( pComponent )->getWorldMatrix().decompose( scale, rotation, position ) == false )
-                        continue; // 스케일 0 — 그릴 것이 없다
-                    const float3 euler  = rotation.getEulerAngles();
-                    HLODGroup*   pGroup = nullptr;
+                    HLODGroup* pGroup = nullptr;
                     for ( HLODGroup& group : inoutListGroup )
                     {
                         const bool bSame = group._meshText == arrText[HLODMeshTypes::kMesh] && group._materialText == arrText[HLODMeshTypes::kMaterial] &&
                                            group._sectionText == arrText[HLODMeshTypes::kSection];
                         pGroup = pGroup == nullptr && bSame ? &group : pGroup;
                     }
-                    if ( pGroup == nullptr )
-                        pGroup = &inoutListGroup.emplace_back( HLODGroup{ arrText[HLODMeshTypes::kMesh], arrText[HLODMeshTypes::kMaterial], arrText[HLODMeshTypes::kSection], {} } );
-                    pGroup->_listTransformText.push_back( SerializerUtil::formatValueText( ValueAddress{ &position }, types._vectorTypeName, context ) );
-                    pGroup->_listTransformText.push_back( SerializerUtil::formatValueText( ValueAddress{ &euler }, types._vectorTypeName, context ) );
-                    pGroup->_listTransformText.push_back( SerializerUtil::formatValueText( ValueAddress{ &scale }, types._vectorTypeName, context ) );
+                    vector<float4x4> listWorld;
+                    static_cast<const SceneComponent*>( pComponent )->collectDrawnTransforms( listWorld );
+                    for ( const float4x4& world : listWorld )
+                    {
+                        float3     scale{};
+                        quaternion rotation{};
+                        float3     position{};
+                        if ( world.decompose( scale, rotation, position ) == false )
+                            continue; // 스케일 0 — 그릴 것이 없다
+                        const float3 euler = rotation.getEulerAngles();
+                        if ( pGroup == nullptr )
+                            pGroup = &inoutListGroup.emplace_back( HLODGroup{ arrText[HLODMeshTypes::kMesh], arrText[HLODMeshTypes::kMaterial], arrText[HLODMeshTypes::kSection], {}, {} } );
+                        pGroup->_listPosition.push_back( position );
+                        pGroup->_listTransformText.push_back( SerializerUtil::formatValueText( ValueAddress{ &position }, types._vectorTypeName, context ) );
+                        pGroup->_listTransformText.push_back( SerializerUtil::formatValueText( ValueAddress{ &euler }, types._vectorTypeName, context ) );
+                        pGroup->_listTransformText.push_back( SerializerUtil::formatValueText( ValueAddress{ &scale }, types._vectorTypeName, context ) );
+                    }
                 }
                 vector<GameObject*> listChild;
                 pObject->getChildren( listChild );
@@ -252,9 +338,70 @@ namespace sw
             }
 
             /**
+             * @brief 한 조각에 @p maxInstanceCount 이하로 놓인 묶음을 머티리얼마다 `HLODMeshComponent` 하나로 씁니다(@p appendComponent 가 컴포넌트 노드를 만든다).
+             * @details 머티리얼 하나에 합칠 자리가 하나뿐이면 합치지 않는다 — 인스턴스로 그려도 그리기 하나다.
+             * @return 묶음마다 합쳤으면 1 입니다.
+             */
+            template <typename AppendComponent>
+            [[nodiscard]] static vector<uint8> appendMergedGroups( const vector<HLODGroup>& listGroup, const uint32 maxInstanceCount, const HLODMeshTypes& types, const AppendComponent& appendComponent )
+            {
+                static constexpr const utf8* kMergedTypeName    = "HLODMeshComponent";
+                static constexpr const utf8* kPartTypeName      = "HLODMeshPart";
+                static constexpr const utf8* kTransformTypeName = "InstancedMeshTransform";
+                const SerializeContext&      context            = SerializeContext::getDefault( SerializePurpose::Authoring );
+                vector<uint8>                listMerged( listGroup.size(), 0 );
+                for ( size_t firstIndex = 0; firstIndex < listGroup.size(); ++firstIndex )
+                {
+                    // 같은 머티리얼의 아직 합치지 않은 묶음을 모은다(묶음 차례 — 결정적).
+                    vector<size_t> listMember;
+                    float3         center{};
+                    uint32         partCount = 0;
+                    for ( size_t groupIndex = firstIndex; groupIndex < listGroup.size(); ++groupIndex )
+                    {
+                        const HLODGroup& group  = listGroup[groupIndex];
+                        const bool       bMerge = listMerged[groupIndex] == 0 && group._materialText == listGroup[firstIndex]._materialText && group._listPosition.size() <= maxInstanceCount;
+                        if ( bMerge == false )
+                            continue;
+                        listMember.push_back( groupIndex );
+                        for ( const float3& position : group._listPosition )
+                        {
+                            center = center + position;
+                            ++partCount;
+                        }
+                    }
+                    // 첫 묶음이 많이 놓인 메시면 그 머티리얼의 나머지는 뒤 차례가 모은다.
+                    if ( partCount < 2 || listMember.front() != firstIndex )
+                        continue;
+                    center            = center * ( 1.0f / static_cast<float32>( partCount ) );
+                    XMLNode component = appendComponent( kMergedTypeName );
+                    component.setAttribute( "_materialPath", string_view( listGroup[firstIndex]._materialText ) );
+                    const XMLNode instance = component.appendChild( "_listInstance" ).appendChild( kTransformTypeName );
+                    instance.setAttribute( "_position", string_view( SerializerUtil::formatValueText( ValueAddress{ &center }, types._vectorTypeName, context ) ) );
+                    const XMLNode listPart = component.appendChild( "_listPart" );
+                    for ( const size_t groupIndex : listMember )
+                    {
+                        const HLODGroup& group = listGroup[groupIndex];
+                        listMerged[groupIndex] = 1;
+                        for ( size_t instanceIndex = 0; instanceIndex < group._listPosition.size(); ++instanceIndex )
+                        {
+                            const float3  relative = group._listPosition[instanceIndex] - center;
+                            const XMLNode part     = listPart.appendChild( kPartTypeName );
+                            part.setAttribute( "_meshID", string_view( group._meshText ) );
+                            part.setAttribute( "_sectionName", string_view( group._sectionText ) );
+                            part.setAttribute( "_position", string_view( SerializerUtil::formatValueText( ValueAddress{ &relative }, types._vectorTypeName, context ) ) );
+                            part.setAttribute( "_rotation", string_view( group._listTransformText[instanceIndex * 3 + 1] ) );
+                            part.setAttribute( "_scale", string_view( group._listTransformText[instanceIndex * 3 + 2] ) );
+                        }
+                    }
+                }
+                return listMerged;
+            }
+
+            /**
              * @brief 셀 조각마다 정적 메시를 인스턴스 메시로 모은 HLOD 대리 엔티티를 기본 목록(늘 올라 있음)에 더하고 조각에 그 파일 id 를 적습니다(설계 "씬 스트리밍 (라)").
-             * @details 언리얼 World Partition HLOD 의 Instancing 레이어(셀마다 대리 액터 하나 — 원본 메시를 인스턴스로)와 같은 꼴이다. 대리는 원점의 씬 컴포넌트 아래
-             *          (메시, 머티리얼, 구간)마다 `InstancedMeshComponent` 하나이고 인스턴스 자리는 월드 자리다. 조각의 레이어를 물려받아 레이어가 꺼지면 대리도 없다.
+             * @details 언리얼 World Partition HLOD 레이어 둘과 같은 꼴이다 — 한 조각에 `_hlodMergeMaxInstanceCount` 보다 많이 놓인 메시는 원본 메시를 인스턴스로(Instancing), 그 이하로 놓인 메시는
+             *          머티리얼마다 메시 하나로 합친다(MeshMerge, `HLODMeshComponent`). 대리는 원점의 씬 컴포넌트 아래 (메시, 머티리얼, 구간)마다 `InstancedMeshComponent` 하나 · 머티리얼마다
+             *          `HLODMeshComponent` 하나이고 자리는 월드 자리다(합치는 것은 부품들의 중심에 둔다 — 정점이 중심 둘레라 경계 구가 작다). 조각의 레이어를 물려받아 레이어가 꺼지면 대리도 없다.
              *          정적 메시가 없는 조각은 대리가 없다. @p mapObjectByFileID 는 나누기 전에 지은 배치 씬의 오브젝트다.
              */
             static void buildHLODProxies( const HLODMeshTypes& types, const unordered_map<uint64, GameObject*>& mapObjectByFileID, SceneDocument& inoutDoc, string_view scenePath )
@@ -311,12 +458,21 @@ namespace sw
                     XMLNode          listComponent = root.appendChild( "_listComponent" );
                     XMLNode          rootComponent = listComponent.appendChild( "SceneComponent" );
                     rootComponent.setAttribute( "_localID", kRootLocalID );
-                    for ( const HLODGroup& group : listGroup )
+                    const auto appendComponent = [&listComponent, &nextLocalID, &rootKey]( const utf8* pTypeName )
                     {
-                        XMLNode component = listComponent.appendChild( kInstancedTypeName );
+                        XMLNode component = listComponent.appendChild( pTypeName );
                         component.setAttribute( "_localID", nextLocalID++ );
                         component.setAttribute( "_attachOwner", "None" );
                         component.setAttribute( "_attachComponent", string_view( rootKey ) );
+                        return component;
+                    };
+                    const vector<uint8> listMerged = appendMergedGroups( listGroup, inoutDoc._sceneSettings._hlodMergeMaxInstanceCount, types, appendComponent );
+                    for ( size_t groupIndex = 0; groupIndex < listGroup.size(); ++groupIndex )
+                    {
+                        if ( listMerged[groupIndex] != 0 )
+                            continue;
+                        const HLODGroup& group     = listGroup[groupIndex];
+                        XMLNode          component = appendComponent( kInstancedTypeName );
                         component.setAttribute( "_meshID", string_view( group._meshText ) );
                         component.setAttribute( "_materialPath", string_view( group._materialText ) );
                         component.setAttribute( "_sectionName", string_view( group._sectionText ) );
@@ -368,6 +524,8 @@ namespace sw
                 ObjectSavedIDMap mapSavedID;
                 placement.collectSavedIDMap( mapSavedID );
 
+                if ( placement.getObjectManager()->hasDirtySceneTransforms() )
+                    placement.getObjectManager()->flushSceneTransforms(); // 경계 · HLOD 가 월드 행렬을 읽는다
                 vector<StreamingCellObjectRecord> listRecord;
                 vector<StreamingCellReference>    listReference;
                 if ( collectCellRecords( inoutDoc, grid, mapObjectByFileID, mapSavedID, scenePath, listRecord, listReference ) == false )
@@ -388,8 +546,6 @@ namespace sw
                     return false;
                 splitIntoCells( inoutDoc, listRecord );
                 // 나눈 조각마다 HLOD 대리를 굽는다 — 배치 씬(`placement`)이 아직 살아 있어 엔티티의 월드 자리를 그대로 읽는다.
-                if ( placement.getObjectManager()->hasDirtySceneTransforms() )
-                    placement.getObjectManager()->flushSceneTransforms();
                 buildHLODProxies( hlodTypes, mapObjectByFileID, inoutDoc, scenePath );
                 SW_LOG_INFO_ID( "SceneCellSplitter.SceneCookSplitCells", "Scene cook: '%#' split into %# cells (%# entities always loaded)", scenePath, static_cast<uint32>( inoutDoc._listStreamingCell.size() ),
                                 static_cast<uint32>( inoutDoc._listSceneObjectNode.size() ) );

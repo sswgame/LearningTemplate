@@ -28,6 +28,8 @@
 
 #include "ModuleAPI/Service/IServerKitLocator.h"
 
+#include <algorithm>
+
 namespace sw
 {
     namespace
@@ -564,9 +566,10 @@ namespace sw
             }
         }
         _lagHistory.record( _tick, _listLagScratch );
+        VectorUtil::sort( _listEntityScratch );
         for ( const uint32 entityID : _listEnemyEntityID )
         {
-            if ( VectorUtil::contains( _listEntityScratch, entityID ) == false )
+            if ( std::binary_search( _listEntityScratch.begin(), _listEntityScratch.end(), entityID ) == false )
                 _interest.removeEntity( entityID );
         }
         _listEnemyEntityID.swap( _listEntityScratch );

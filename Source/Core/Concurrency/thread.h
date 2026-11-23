@@ -46,6 +46,7 @@ namespace sw
     class Win32SplashWindow;            // 스플래시 창의 메시지 루프(GetMessageW 가 막는다) — 기동 스레드가 몇 초씩 막혀도 창이 답한다(언리얼 FWindowsSplash)
     class LinuxSplashThread;            // X11 · Wayland 스플래시의 이벤트 루프(poll 이 막는다) — 컴포지터 핑에 늘 답한다(언리얼 FLinuxSplash)
     class AlsaAudioBackend;             // ALSA 쓰기가 장치 버퍼가 빌 때까지 막는다
+    class AudioRenderThread;            // 오디오 믹스 — 장치 콜백(XAudio2 · AAudio)이 링에서 꺼내기만 하게 앞서 렌더하고, 링이 찰 때까지 막는다
     class WebAudioBackend;              // 믹서 스레드(웹 오디오 워클릿에 고정 간격으로 넣는다)
     class Box2DWorkerPool;              // Box2D 솔버가 공유 풀에서 교착한다(파일 머리말)
     class RenderThread;                 // 렌더 스레드 — 게임 스레드와 한 프레임 겹쳐 도는 고정 스레드(언리얼 RenderThread)
@@ -93,6 +94,7 @@ namespace sw
         friend class Win32SplashWindow;
         friend class LinuxSplashThread;
         friend class AlsaAudioBackend;
+        friend class AudioRenderThread;
         friend class WebAudioBackend;
         friend class Box2DWorkerPool;
         friend class RenderThread;
@@ -237,5 +239,10 @@ namespace sw
         static void sleepForSeconds( float64 seconds ) { std::this_thread::sleep_for( std::chrono::duration<float64>( seconds ) ); }
         /** @brief 남은 시간 조각을 다른 스레드에 넘깁니다. */
         static void yield() { std::this_thread::yield(); }
+        /**
+         * @brief 지금 스레드를 가장 높은 우선순위로 올립니다(언리얼 `TPri_TimeCritical`). 기한이 있는 짧은 일(오디오 렌더)만 씁니다.
+         * @details 권한이 없는 환경(리눅스 일반 사용자) · 우선순위가 없는 웹에서는 그대로 둔다 — 우선순위는 힌트이고 올리지 못해도 동작은 같다.
+         */
+        static SW_API void setCurrentThreadTimeCritical();
     };
 } // namespace sw

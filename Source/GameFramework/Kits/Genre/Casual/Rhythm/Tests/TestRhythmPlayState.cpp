@@ -278,3 +278,20 @@ SW_TEST_CASE_F( RhythmPlayStateTest, PlayDeterminism )
     };
     SW_EXPECT_TRUE( sw::StateBytesTestUtil::isDeterministic<sw::RhythmPlaySession>( setup, step, 200 ) );
 }
+
+/**
+ * @brief [RhythmPlayStateTest] 판정 창이 없는 판정기로는 판을 열지 않는다 — 열면 오토플레이의 `update` 가 끝나지 않는다
+ */
+SW_TEST_CASE( RhythmPlayStateTest, RefusesAJudgeWithoutWindows )
+{
+    sw::RhythmChart chart;
+    SW_REQUIRE_TRUE( chart.loadFromXMLText( kChartText, "NoWindows" ) );
+    const sw::TimingJudge  judge;
+    sw::RhythmPlaySettings settings;
+    settings._bAutoPlay = SW_TRUE;
+    sw::RhythmPlaySession session;
+    SW_EXPECT_LOG( "RhythmPlaySession.NoTimingWindows" );
+    SW_EXPECT_FALSE( session.initialize( &chart, &judge, settings ) );
+    session.update( 100.0f ); // 열리지 않은 판이라 할 일이 없다
+    SW_EXPECT_EQUAL( 0, session.getJudgedCount() );
+}

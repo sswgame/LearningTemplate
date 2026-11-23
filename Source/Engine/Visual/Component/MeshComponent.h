@@ -197,6 +197,8 @@ namespace sw
         bool getWorldBounds( float3& outCenter, float32& outRadius ) const override;
         /** @brief 메시 공간의 경계(`Mesh::getLocalBoundsMin/Max`, 메시가 없으면 단위 상자)를 월드로 옮긴 상자를 반환합니다. */
         bool getWorldBox( AABB& outBox ) const override;
+        /** @brief 메시가 아직 없으면 그 자리에서 읽어 잽니다. 읽지 못하면 크기가 없다(false). */
+        bool computeStreamingBounds( AABB& outBox ) const override;
 
         /**
          * @brief 그릴 메시 구간(`MeshSection`)의 이름을 정합니다. 비면 메시 전체를 그립니다. 저장됩니다(PROPERTY).

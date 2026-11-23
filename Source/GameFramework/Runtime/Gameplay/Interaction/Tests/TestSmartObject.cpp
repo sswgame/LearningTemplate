@@ -134,10 +134,10 @@ SW_TEST_CASE( SmartObjectTest, DestroyedClaimantFreesItsSlot )
 /** @brief [SmartObjectTest] 예약 어댑터: 겹치는 시간 창은 다른 슬롯을, 겹치지 않으면 같은 슬롯을 주고, 같은 요청은 같은 예약이다(멱등). 슬롯이 모자라면 거절한다 */
 SW_TEST_CASE( SmartObjectTest, LocatorReservesTimeWindows )
 {
-    GameObjectManager manager;
-    (void)Util::makeObject( manager, "Bench", float3{} );
+    Scene scene( "SmartObjectWindows" );
+    (void)Util::makeObject( *scene.getObjectManager(), "Bench", float3{} );
     SmartObjectScheduleLocator locator;
-    locator.initialize( &manager );
+    locator.initialize( &scene );
 
     ScheduleLocation firstSpot;
     ScheduleLocation secondSpot;
@@ -177,7 +177,7 @@ SW_TEST_CASE( SmartObjectTest, LocatorClaimsAndRestores )
     GameObject*                pPlayer = manager.createGameObject( hashed_string( "Player" ) );
     GameObject*                pFirst  = manager.createGameObject( hashed_string( "anna" ) );
     SmartObjectScheduleLocator locator;
-    locator.initialize( &manager );
+    locator.initialize( &scene );
     ScheduleLocation spot;
     uint32           reservationID = 0;
     SW_REQUIRE_TRUE( locator.reserve( Util::makeRequest( "anna", 600, 720, float3{ -4.0f, 0.0f, 0.0f } ), spot, reservationID ) );
@@ -191,13 +191,13 @@ SW_TEST_CASE( SmartObjectTest, LocatorClaimsAndRestores )
     SW_EXPECT_FALSE( locator.releaseClaim( reservationID, *pFirst ) );
     SW_EXPECT_FALSE( locator.claimReserved( reservationID + 1, *pFirst ) ); // 모르는 예약
 
-    vector<SmartObjectReservationSaveState> listSaved;
-    SW_REQUIRE_TRUE( locator.fillState( scene, listSaved ) );
+    vector<ScheduleReservationSaveState> listSaved;
+    locator.fillState( listSaved );
     SW_REQUIRE_EQUAL( size_t{ 1 }, listSaved.size() );
     SW_EXPECT_EQUAL( scene.findFileID( pSmart->getOwner()->getObjectID() ), listSaved[0]._object._fileID ); // 런타임 id 가 아니라 파일 id 다
     SmartObjectScheduleLocator restored;
-    restored.initialize( &manager );
-    restored.restoreState( scene, listSaved );
+    restored.initialize( &scene );
+    restored.restoreState( listSaved );
     SW_EXPECT_EQUAL( size_t{ 1 }, restored.getReservationCount() );
     ScheduleLocation restoredSpot;
     uint32           restoredID = 0;
@@ -206,8 +206,8 @@ SW_TEST_CASE( SmartObjectTest, LocatorClaimsAndRestores )
 
     pSmart->getOwner()->destroy();
     SmartObjectScheduleLocator orphaned;
-    orphaned.initialize( &manager );
-    orphaned.restoreState( scene, listSaved );
+    orphaned.initialize( &scene );
+    orphaned.restoreState( listSaved );
     SW_EXPECT_EQUAL( size_t{ 0 }, orphaned.getReservationCount() );
 }
 
@@ -218,12 +218,13 @@ SW_TEST_CASE( SmartObjectTest, LocatorReservationSurvivesNewRuntimeIDs )
     first.setSourcePath( "game/test/maps/reservation.scene.xml" );
     SmartObjectComponent*      pFirstBench = Util::makeObject( *first.getObjectManager(), "Bench", float3{} );
     SmartObjectScheduleLocator locator;
-    locator.initialize( first.getObjectManager() );
+    locator.initialize( &first );
     ScheduleLocation spot;
     uint32           reservationID = 0;
     SW_REQUIRE_TRUE( locator.reserve( Util::makeRequest( "anna", 600, 720, float3{} ), spot, reservationID ) );
-    vector<SmartObjectReservationSaveState> listSaved;
-    SW_REQUIRE_TRUE( locator.fillState( first, listSaved ) );
+    vector<ScheduleReservationSaveState> listSaved;
+    locator.fillState( listSaved );
+    SW_REQUIRE_EQUAL( size_t{ 1 }, listSaved.size() );
 
     // 다른 실행 — 저장할 때의 런타임 id 는 다른 벤치가 받고, 예약한 벤치는 새 id 를 받는다.
     Scene second( "SmartObjectSecondRun" );
@@ -238,8 +239,8 @@ SW_TEST_CASE( SmartObjectTest, LocatorReservationSurvivesNewRuntimeIDs )
     } );
 
     SmartObjectScheduleLocator restored;
-    restored.initialize( &manager );
-    restored.restoreState( second, listSaved );
+    restored.initialize( &second );
+    restored.restoreState( listSaved );
     SW_REQUIRE_EQUAL( size_t{ 1 }, restored.getReservationCount() );
     ScheduleLocation restoredSpot;
     uint32           restoredID = 0;
@@ -249,6 +250,6 @@ SW_TEST_CASE( SmartObjectTest, LocatorReservationSurvivesNewRuntimeIDs )
 
     second.setSourcePath( "" );
     SW_EXPECT_LOG( "SmartObject.ReservationHasNoIdentity" );
-    SW_EXPECT_FALSE( restored.fillState( second, listSaved ) );
+    restored.fillState( listSaved );
     SW_EXPECT_TRUE( listSaved.empty() );
 }

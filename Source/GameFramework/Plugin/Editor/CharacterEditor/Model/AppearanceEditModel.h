@@ -99,8 +99,8 @@ namespace sw::editor
         // --- 저장 ----------------------------------------------------------------------------------------------------
 
         // 프리셋 저장소를 슬롯에 쓰고 읽는 일은 문서가 한다(`CharacterEditorViewModel::savePreset` - 쓰기가 끝난 뒤 `markSaved( 맡긴 선택 )`).
-        /** @brief 저장소의 프리셋 하나를 열어 선택을 바꿉니다(기록을 지우고 "저장된 상태" 로 맞춥니다). 이름이 없으면 false 입니다. */
-        [[nodiscard]] bool loadFromPreset( const UserAppearancePresetStore& store, string_view name );
+        /** @brief 저장소의 프리셋 하나를 열어 선택을 바꿉니다(기록을 지우고 "저장된 상태" 로 맞춥니다). 이름이 없거나 지금 콘텐츠로 풀지 못하면 까닭이고 선택은 그대로입니다. */
+        [[nodiscard]] expected<void> loadFromPreset( const UserAppearancePresetStore& store, string_view name, const AppearanceDatabase& database );
 
         // --- 콘텐츠 데이터베이스를 보는 도우미 -----------------------------------------------------------------------
 

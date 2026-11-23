@@ -5,6 +5,7 @@
 #include "Core/Algorithm/VectorUtil.h"
 #include "Core/Container/unordered_map.h"
 #include "Core/Hash/HashUtil.h"
+#include "Core/Math/AABB.h"
 #include "Core/Math/MathUtil.h"
 #include "Core/Math/MatrixMath.h"
 #include "Core/Task/TaskManager.h"
@@ -26,6 +27,7 @@
 #include "Engine/Object/GameObject/GameObjectManagerResolve.inl"
 #include "Engine/Object/GameObject/Registry/ComponentRegistry.h"
 #include "Engine/Object/GameObject/Registry/PrimitiveRegistry.h"
+#include "Engine/Object/GameObject/WorldOrigin.h"
 #include "Engine/Profiling/FrameProfiler.h"
 #include "Engine/Serialization/Format/Archive.h"
 #include "Engine/Visual/MeshInstanceBatch.h"
@@ -275,6 +277,26 @@ namespace sw
         markCellsDirty();
     }
 
+    void FoliageComponent::onWorldOriginShifted( const float3& delta )
+    {
+        // 배치는 영역에 상대적이라 그대로다 — 지은 셀과 영역만 옮긴다(셀 키 · 내용 해시는 다음 다시 계산 때 새 자리로 갈린다).
+        for ( Cell& cell : _listCell )
+        {
+            cell._center += delta;
+            for ( const unique_ptr<MeshInstanceBatch>& pBatch : cell._listBatch )
+            {
+                for ( uint32 entry = 0; entry < cell._instanceCount; ++entry )
+                {
+                    float4x4 world = pBatch->getEntry( entry )._world;
+                    world.setTranslation( world.getTranslation() + delta );
+                    pBatch->setWorld( entry, world );
+                }
+            }
+        }
+        _builtRegion._min += float2{ delta._x, delta._z };
+        _builtRegion._max += float2{ delta._x, delta._z };
+    }
+
     void FoliageComponent::markCellsDirty()
     {
         for ( Cell& cell : _listCell )
@@ -410,6 +432,19 @@ namespace sw
                         _instanceCount, stopwatch.getElapsedMicroseconds() );
     }
 
+    bool FoliageComponent::computeStreamingBounds( AABB& outBox ) const
+    {
+        const PlacementRegion region = computeRegion();
+        if ( region._max._x <= region._min._x || region._max._y <= region._min._y )
+            return false;
+        const float32 height = getWorldPosition()._y;
+        outBox               = AABB{
+            float3{region._min._x, height, region._min._y},
+            float3{region._max._x, height, region._max._y}
+        };
+        return true;
+    }
+
     PlacementRegion FoliageComponent::computeRegion() const
     {
         const float3    origin = getWorldPosition();
@@ -447,11 +482,11 @@ namespace sw
         if ( pTerrain != nullptr )
         {
             const TerrainPlacementSurface surface( pTerrain->getHeightfield() );
-            PlacementScatter::scatter( layer._rule, computeRegion(), &surface, _listExclusion, listWeight, outListInstance );
+            PlacementScatter::scatter( layer._rule, computeRegion(), &surface, makeLocalExclusions(), listWeight, outListInstance );
             return true;
         }
         // 지형이 없으면 오너 높이의 평면이다.
-        PlacementScatter::scatter( layer._rule, computeRegion(), nullptr, _listExclusion, listWeight, outListInstance );
+        PlacementScatter::scatter( layer._rule, computeRegion(), nullptr, makeLocalExclusions(), listWeight, outListInstance );
         for ( PlacementInstance& instance : outListInstance )
         {
             instance._height += origin._y;
@@ -566,6 +601,21 @@ namespace sw
                         static_cast<uint32>( _listLayer.size() ), stopwatch.getElapsedMicroseconds(), _bBuiltOnTerrain == SW_TRUE ? "on terrain" : "flat" );
     }
 
+    vector<PlacementExclusion> FoliageComponent::makeLocalExclusions() const
+    {
+        vector<PlacementExclusion> listExclusion = _listExclusion;
+        const GameObject*          pOwner        = getOwner();
+        const GameObjectManager*   pManager      = pOwner != nullptr ? pOwner->getManager() : nullptr;
+        for ( PlacementExclusion& exclusion : listExclusion )
+        {
+            if ( pManager == nullptr )
+                break;
+            const float3 local = pManager->getWorldOrigin().toLocal( float3{ exclusion._center._x, 0.0f, exclusion._center._y } );
+            exclusion._center  = float2{ local._x, local._z };
+        }
+        return listExclusion;
+    }
+
     void FoliageComponent::computeAllLayerInstances( const TerrainComponent* pTerrain, const PlacementRegion* pDirtyArea, vector<vector<PlacementInstance>>& outListLayerInstance )
     {
         // 레이어 계산(후보 뽑기 · 정리)은 읽기 전용 입력(규칙 · 영역 · 높이맵 · 제외 영역)과 그 레이어의 후보 목록만 쓴다 - 레이어끼리 독립이라 워커에 나눈다.
@@ -604,9 +654,9 @@ namespace sw
         const TerrainPlacementSurface surface( pTerrain->getHeightfield() );
         vector<PlacementCandidate>&   listCandidate = *pCandidates; // 지형 위면 부르는 쪽이 이 레이어의 목록을 넘긴다
         const bool                    bResampled    = pDirtyArea != nullptr &&
-                                PlacementScatter::resampleCandidates( layer._rule, _builtRegion, &surface, _listExclusion, *pDirtyArea, listCandidate );
+                                PlacementScatter::resampleCandidates( layer._rule, _builtRegion, &surface, makeLocalExclusions(), *pDirtyArea, listCandidate );
         if ( bResampled == false )
-            PlacementScatter::sampleCandidates( layer._rule, _builtRegion, &surface, _listExclusion, listCandidate );
+            PlacementScatter::sampleCandidates( layer._rule, _builtRegion, &surface, makeLocalExclusions(), listCandidate );
         PlacementScatter::resolveCandidates( layer._rule, _builtRegion, listCandidate, listMeshWeight, outListInstance );
     }
 

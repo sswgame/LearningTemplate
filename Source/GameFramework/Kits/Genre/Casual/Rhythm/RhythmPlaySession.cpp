@@ -77,6 +77,12 @@ namespace sw
                              settings._initialLife, settings._comboBonusCap );
             return false;
         }
+        // 창이 없으면 어떤 누름도 노트에 닿지 않는다 — 오토플레이는 같은 노트를 끝없이 누르고 롱노트 끝은 줄 등급이 없다.
+        if ( pJudge->getWindows().empty() )
+        {
+            SW_LOG_ERROR_ID( "RhythmPlaySession.NoTimingWindows", "RhythmPlaySession: refused - the timing judge has no windows" );
+            return false;
+        }
         _pChart            = pChart;
         _pJudge            = pJudge;
         _settings          = settings;
@@ -177,8 +183,7 @@ namespace sw
                 {
                     const int32 noteIndex = lane._holdingNote;
                     lane._holdingNote     = constant::invalid_index::kInt32;
-                    const bool bNoWindow  = _pJudge->getWindows().empty();
-                    applyJudgment( noteIndex, bNoWindow ? nullptr : &_pJudge->getWindows().front(), 0.0f, true );
+                    applyJudgment( noteIndex, &_pJudge->getWindows().front(), 0.0f, true );
                     break;
                 }
             }

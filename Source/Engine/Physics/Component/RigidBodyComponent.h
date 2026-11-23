@@ -138,12 +138,16 @@ namespace sw
         ISocketPhysicsBody& getSocketPhysicsBody() { return _socketPhysics; }
         /** @brief 상태 해시에 트랜스폼과 선속도 · 각속도를 접습니다. */
         void foldStateHash( StateHashBuilder& inoutBuilder ) const override;
+        /** @brief 셰이프를 덮는 월드 상자입니다 — 메시 없이 충돌만 있는 바닥 · 벽도 자기 크기만큼 스트리밍된다. 메시 에셋에서 점을 채우는 셰이프(`_meshPath`)는 잴 점이 없어 뺀다(그 메시를 그리는 컴포넌트가 낸다). */
+        bool computeStreamingBounds( AABB& outBox ) const override;
 
     protected:
         /** @brief 동적 바디면 선속도 · 각속도를 0 으로 줍니다(정적 · 키네마틱은 트랜스폼이 운동이다). */
         void resetMotion() override;
         /** @brief 동적 바디만 바닥 없이 떨어진다. */
         bool needsStreamingFloor() const override { return _bodyType == PhysicsBodyType::Dynamic; }
+        /** @brief 바디의 셰이프 전부입니다(동적 바디가 쓰지 못하는 삼각 메시는 빼고). */
+        void collectStreamingFloorShapes( const float3& scale, vector<PhysicsShapeDesc3D>& outListShape ) const override;
         /** @brief 쓰는 고정 스텝 그룹마다 메서드를 등록합니다(`registerFixedStep`). */
         void onRegister( GameObjectManager& manager ) override;
         void onPhysicsFrameBegin( const FixedStepContext& context );

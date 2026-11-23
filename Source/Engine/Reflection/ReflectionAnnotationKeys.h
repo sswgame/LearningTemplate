@@ -135,7 +135,7 @@ namespace sw::reflect::attr
 
 namespace sw::reflect::attr
 {
-    /** @brief `REFLECT_CONTAINER( 종류[, 래퍼] )` 의 종류입니다. 둘째 인자는 래퍼 이름(`List` → ListWrapper)입니다. */
+    /** @brief `REFLECT_CONTAINER( 종류[, 래퍼] )` 의 종류입니다. 둘째 인자는 래퍼 이름(`Deque` → DequeWrapper)입니다. */
     struct ContainerKeys
     {
 #define REGISTER_CONTAINER_KIND( Name ) static constexpr AnnotationKey Name{};

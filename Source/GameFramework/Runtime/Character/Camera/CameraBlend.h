@@ -56,6 +56,8 @@ namespace sw
         float32           getWeight() const { return _weight; }
         const CameraPose& getPose() const { return _outputPose; }
         bool              hasPose() const { return _bHasPose == SW_TRUE; }
+        /** @brief 출발점과 낸 포즈를 @p delta 만큼 옮깁니다(월드 원점 이동). */
+        void applyWorldOffset( const float3& delta );
         /** @brief 마지막 `start` 가 이미 포즈를 내던 중의 컷이었는지입니다. 그러면 화면이 한 번에 바뀝니다(렌더러의 컷 신호). 읽으면 지웁니다. */
         bool consumeCut();
 

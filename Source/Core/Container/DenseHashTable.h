@@ -17,6 +17,7 @@
  */
 #pragma once
 #include "Core/Concurrency/DataRaceDetector.h"
+#include "Core/Container/BitwiseRelocatable.h"
 #include "Core/Container/pair.h"
 #include "Core/Container/vector.h"
 #include "Core/Foundation/Constants.h"
@@ -55,6 +56,19 @@ namespace sw::internal
         SW_INLINE const Key& getKey() const noexcept { return _key; }
     };
 } // namespace sw::internal
+
+namespace sw
+{
+    template <typename Key, typename T>
+    struct is_bitwise_relocatable<internal::DenseHashMapNode<Key, T>> : std::bool_constant<is_bitwise_relocatable_v<Key> && is_bitwise_relocatable_v<T>>
+    {
+    };
+
+    template <typename Key>
+    struct is_bitwise_relocatable<internal::DenseHashSetNode<Key>> : is_bitwise_relocatable<Key>
+    {
+    };
+} // namespace sw
 
 namespace sw::internal
 {

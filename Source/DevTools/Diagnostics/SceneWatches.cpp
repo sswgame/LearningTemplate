@@ -11,6 +11,7 @@
 #include "Core/Math/MathUtil.h"
 
 #include "DevTools/Diagnostics/DevSceneIterationAccess.h"
+#include "DevTools/Diagnostics/DevSceneStreamingAccess.h"
 
 #include "Engine/Automation/Watch/AutomationWatch.h"
 #include "Engine/Foundation/EngineServices.h"
@@ -99,12 +100,12 @@ namespace sw
             return readSceneWorldOrigin( true, outValue );
         }
 
-        /** @brief 감시 값 `Scene.PendingCellCount` 입니다. 원점 반경 안이라 올리려는데 아직 오르지 않은 셀 조각 수(로드 큐 — `SceneStreamingSubsystem::getPendingCellCount`)입니다. */
+        /** @brief 감시 값 `Scene.PendingCellCount` 입니다. 원점 반경 안이라 올리려는데 아직 오르지 않은 셀 조각 수(로드 큐 — `DevSceneStreamingAccess::getPendingCellCount`)입니다. */
         [[nodiscard]] bool readScenePendingCellCount( const GameObjectManager* pManager, float64& outValue )
         {
             if ( pManager == nullptr )
                 return false;
-            outValue = static_cast<float64>( pManager->getSubsystem<SceneStreamingSubsystem>().getPendingCellCount() );
+            outValue = static_cast<float64>( DevSceneStreamingAccess::getPendingCellCount( pManager->getSubsystem<SceneStreamingSubsystem>() ) );
             return true;
         }
 
@@ -113,7 +114,7 @@ namespace sw
         {
             if ( pManager == nullptr )
                 return false;
-            outValue = static_cast<float64>( pManager->getSubsystem<SceneStreamingSubsystem>().getHLODCount() );
+            outValue = static_cast<float64>( DevSceneStreamingAccess::getHLODCount( pManager->getSubsystem<SceneStreamingSubsystem>() ) );
             return true;
         }
 
@@ -122,7 +123,7 @@ namespace sw
         {
             if ( pManager == nullptr )
                 return false;
-            outValue = static_cast<float64>( pManager->getSubsystem<SceneStreamingSubsystem>().getShownHLODCount() );
+            outValue = static_cast<float64>( DevSceneStreamingAccess::getShownHLODCount( pManager->getSubsystem<SceneStreamingSubsystem>() ) );
             return true;
         }
 

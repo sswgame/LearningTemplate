@@ -207,7 +207,7 @@ namespace sw
                 return true;
             }
 
-            /** @brief 디버그 HUD 범주 `animation` — 군중 묶음 · 정점 애니메이션 · 예산이 예상한 평가 비용입니다(감시 값 `Animation.*` 이 아래에 붙는다). */
+            /** @brief 디버그 HUD 범주 `animation` — 군중 묶음 · 예산이 예상한 평가 비용입니다(감시 값 `Animation.*` 이 아래에 붙는다). */
             static void writeSection( DebugHUDSectionWriter& writer )
             {
                 const GameObjectManager* pManager = engine::findActiveObjectManager();
@@ -224,7 +224,6 @@ namespace sw
                 }
                 writer.addLineFormat( "crowd buckets", "%# (%# evaluated, %# visible members)", static_cast<uint32>( animation.getCrowd().getBuckets().size() ), animation.getCrowd().getEvaluatedBucketCount(),
                                       visibleMemberCount );
-                writer.addLineFormat( "vertex animation meshes", "%#", animation.getCrowd().getVertexAnimationMeshCount() );
                 writer.addLineFormat( "expected evaluation", "%.0f us", static_cast<float64>( animation.getExpectedEvaluationMicroseconds() ) );
             }
         };

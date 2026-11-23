@@ -119,6 +119,13 @@ namespace sw
         return MathUtil::max( worldBox._max._x - worldBox._min._x, worldBox._max._z - worldBox._min._z ) * 0.5f;
     }
 
+    bool ZoneVolumeComponent::computeStreamingBounds( AABB& outBox ) const
+    {
+        const float3 half = computeLocalHalfExtents();
+        outBox            = AABB{ -half, half }.transformedBy( getWorldMatrix() );
+        return true;
+    }
+
     float3 ZoneVolumeComponent::computeLocalHalfExtents() const
     {
         // 상자는 반 크기, 구는 반지름 x, 원기둥은 반지름 x · 반 높이 y 다. 퍼짐은 수평으로 — 독가스가 땅을 따라 번진다.

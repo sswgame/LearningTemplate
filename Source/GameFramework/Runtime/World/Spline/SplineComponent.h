@@ -36,6 +36,8 @@ namespace sw
 
         /** @brief 조절점, 방식, 닫힘을 한 번에 바꾸고 곡선을 다시 만듭니다. */
         void setControlPoints( const vector<float3>& listControlPoint, SplineKind type, bool bClosed );
+        /** @brief 월드 곡선을 옮긴 자리에서 다시 굽습니다(레일 · 강이 읽는다). */
+        void onWorldOriginShifted( const float3& delta ) override;
         /** @brief 지금 소유자의 월드 변환으로 월드 곡선을 다시 굳힙니다. */
         void bakeWorldPath();
 

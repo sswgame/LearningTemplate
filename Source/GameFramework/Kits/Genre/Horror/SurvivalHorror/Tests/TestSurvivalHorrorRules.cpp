@@ -35,8 +35,10 @@ namespace
   <Item id="ribbon" kind="SaveItem" maxStack="3"/>
   <Item id="mix" kind="Heal" heal="60"/>
   <Item id="big" w="3" h="2"/>
+  <Item id="board" w="2" h="2"/>
   <Combine id="mixHerbs" a="herb" b="herb" out="mix"/>
   <Combine id="makeBig" a="ammo" b="calm" out="big"/>
+  <Combine id="makeHuge" a="calm" b="board" out="big"/>
   <Monster id="zombie" sanityLoss="20"/>
   <KeyLock id="redDoor" key="keyRed" flag="redOpen"/>
   <KeyLock id="spareDoor" key="keySpare" flag="spareOpen" consumeKey="false"/>
@@ -693,6 +695,22 @@ SW_TEST_CASE_F( SurvivalHorrorRulesTest, CombineRollsBackWhenOutputDoesNotFit )
     SW_EXPECT_EQUAL( 0, countEvents( SurvivalHorrorEvent::Kind::Combined ) );
 }
 
+/**
+ * @brief [SurvivalHorrorRulesTest] 되돌린 조합은 가방을 그대로 둔다 — 재료를 다시 넣으면 작은 재료가 큰 재료의 자리를 차지해 큰 재료가 사라졌다
+ */
+SW_TEST_CASE_F( SurvivalHorrorRulesTest, RolledBackCombineKeepsEveryItemInPlace )
+{
+    const int32 wide = _grid.placeItem( "board", 1, 0, 0, false );
+    const int32 calm = _grid.placeItem( "calm", 1, 3, 1, false );
+    SW_REQUIRE_TRUE( wide >= 0 && calm >= 0 && _grid.placeItem( "keyRed", 1, 2, 0, false ) >= 0 );
+    SW_EXPECT_FALSE( _session.combineItems( calm, wide ) ); // (2, 0) 의 열쇠 때문에 3 x 2 결과가 들어갈 자리가 없다
+    SW_EXPECT_EQUAL( 1, _grid.getItemCount( "board" ) );
+    SW_EXPECT_EQUAL( 1, _grid.getItemCount( "calm" ) );
+    SW_EXPECT_EQUAL( 0, _grid.getItemCount( "big" ) );
+    SW_EXPECT_TRUE( _grid.findInstanceAt( 0, 0 ) == optional<int32>( wide ) );
+    SW_EXPECT_TRUE( _grid.findInstanceAt( 3, 1 ) == optional<int32>( calm ) );
+}
+
 // ── 세이브 ────────────────────────────────────────────────────────────
 
 /**
@@ -1145,6 +1163,20 @@ SW_TEST_CASE_F( SurvivalHorrorTest, EncounterRefusesNegativeActorID )
     SW_EXPECT_LOG( "SurvivalHorrorEncounter.RefusedActorID" );
     SurvivalHorrorEncounter encounter;
     SW_EXPECT_FALSE( encounter.initialize( _monster, { makeInvestigator( -1 ) }, 1u ) );
+}
+
+/**
+ * @brief [SurvivalHorrorTest] 읽을 때 거절하는 조사자 값은 열 때도 거절한다 — 받으면 그 판의 저장을 다시 읽지 못한다
+ */
+SW_TEST_CASE_F( SurvivalHorrorTest, EncounterRefusesInvestigatorsItCannotReadBack )
+{
+    SW_EXPECT_LOG( "SurvivalHorrorEncounter.RefusedInvestigator" );
+    SurvivalHorrorEncounter    encounter;
+    SurvivalHorrorInvestigator still = makeInvestigator( 1 );
+    still._speed                     = 0.0f;
+    SW_EXPECT_FALSE( encounter.initialize( _monster, { still }, 1u ) );
+    SW_EXPECT_FALSE( encounter.initialize( _monster, { makeInvestigator( 1, -1 ) }, 1u ) );
+    SW_EXPECT_FALSE( encounter.initialize( _monster, { makeInvestigator( 1, 5, -1 ) }, 1u ) );
 }
 
 /**

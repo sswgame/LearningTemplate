@@ -13,6 +13,7 @@
 #include "Core/Name/hashed_string.h"
 
 #include "Engine/Reflection/ReflectionMacros.h"
+#include "Engine/Scene/SceneObjectReference.h"
 
 #include "GameFramework/GameFrameworkExports.h"
 
@@ -64,12 +65,18 @@ namespace sw
 
 namespace sw
 {
-    /** @brief 기본 활동 슬롯 제공자(`ScheduleSpotLocator`)의 예약 하나입니다. */
+    /**
+     * @brief 활동 슬롯 제공자(`IScheduleActivityLocator`)의 예약 하나입니다. 자리는 제공자가 정한다 — 일정 데이터의 자리면 `_spot`, 씬 오브젝트의 슬롯이면 `_object` · `_slot` 이다.
+     * @details 오브젝트는 런타임 id 가 아니라 (씬 경로, 파일 id)로 적는다 — 런타임 id 는 다른 실행에서 다른 오브젝트가 받는다. 게임 상태 봉투는 실은 오브젝트의 파일 id 를 되살린다
+     *          (언리얼이 세이브에 액터 포인터 대신 `FSoftObjectPath` 를 싣는 자리).
+     */
     REFLECT()
     struct SW_GF_API ScheduleReservationSaveState
     {
         REFLECT_BODY();
 
+        PROPERTY()
+        SceneObjectReference _object{};
         PROPERTY()
         hashed_string _spot{};
         PROPERTY()
@@ -78,6 +85,8 @@ namespace sw
         hashed_string _kind{};
         PROPERTY()
         uint32 _id{ 0 };
+        PROPERTY()
+        int32 _slot{ 0 };
         PROPERTY()
         int32 _day{ 0 };
         PROPERTY()
@@ -101,6 +110,8 @@ namespace sw
         vector<NPCScheduleSaveState> _listNPC{};
         PROPERTY()
         vector<string> _listBrokenAppointment{}; ///< 오늘 깨진 약속
+        PROPERTY()
+        vector<string> _listMetAppointment{}; ///< 오늘 모인 약속 — 빠지면 불러온 뒤 끼어들기에서 돌아온 참가자가 "모임" 을 다시 낸다
         PROPERTY()
         vector<ScheduleReservationSaveState> _listReservation{};
         PROPERTY()

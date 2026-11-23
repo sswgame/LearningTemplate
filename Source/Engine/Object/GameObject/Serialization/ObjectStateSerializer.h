@@ -7,6 +7,7 @@
 #include "Core/Container/string.h"
 #include "Core/Container/unordered_map.h"
 #include "Core/Container/vector.h"
+#include "Core/Delegate/Delegate.h"
 #include "Core/File/FileUtil.h"
 #include "Core/Foundation/Expected.h"
 #include "Core/Foundation/Macros.h"
@@ -191,6 +192,12 @@ namespace sw
 namespace sw
 {
     /**
+     * @brief 배치가 읽지 않은 오브젝트를 묻는 해석기입니다. 인자는 저장된 id, 저장된 이름입니다 — id 로 물으면 이름이 비고, 이름으로 물으면 id 가 0 입니다. 없으면 nullptr 입니다.
+     * @details 이미 올라 있는 오브젝트를 배치마다 모두 기록하지 않고 가리킨 것만 묻는다(언리얼 링커가 바깥 패키지 참조를 가리킨 것만 찾는 자리).
+     */
+    SW_DECLARE_DELEGATE( GameObject*, SavedObjectResolver, uint64, hashed_string );
+
+    /**
      * @class ObjectStateBatch
      * @brief 여러 오브젝트의 상태를 **모두 읽은 뒤** 그 사이의 부착(부모, 소켓)을 한 번에 연결하는 배치입니다.
      * @details 상태를 읽는 모든 경로(씬 로드, 쿠커, 플레이 종료 복원, 핫 리로드, 세이브, 영속 이월, 복제, 되돌리기)가 이 배치를 거친다.
@@ -230,12 +237,14 @@ namespace sw
         ObjectStateBatch& operator=( const ObjectStateBatch& ) = delete;
 
         /**
-         * @brief 이 배치가 상태를 읽지 않은 오브젝트를 가리킴 대상으로만 기록합니다(상태 없는 엔티티, 셀 · 레이어 묶음이 가리키는 이미 올라 있는 오브젝트).
+         * @brief 이 배치가 상태를 읽지 않은 오브젝트를 가리킴 대상으로만 기록합니다(상태 없는 엔티티). 이미 올라 있는 오브젝트는 기록하지 않고 해석기(`setExternalResolver`)로 찾는다.
          * @details `finish` 는 이름만 되찾고 부착 · 핸들은 다시 풀지 않는다 — 그 연결은 그 오브젝트를 읽은 배치가 이미 풀었다(다시 풀면 씬 인스턴스 멤버의 부모를 잃는다).
          * @param savedID 같은 배치의 다른 상태가 이 오브젝트를 가리킬 때 쓰는 id 입니다. 0 이면 id 로는 찾을 수 없습니다(id 가 없는 데이터).
          * @param savedName 상태에 적힌 이름입니다. 매니저가 유일하게 바꾸기 **전**의 이름입니다.
          */
         void addReferenceTarget( GameObject* pObject, uint64 savedID, hashed_string savedName );
+        /** @brief 이 배치에 없는 저장된 id · 이름을 물을 해석기를 겁니다(셀 · 레이어 묶음 — 씬의 이미 올라 있는 오브젝트). `finish` 까지 살아 있어야 합니다. */
+        void setExternalResolver( SavedObjectResolver resolver ) { _externalResolver = std::move( resolver ); }
         /**
          * @brief 상태를 읽은 오브젝트 하나를 기록합니다. `finish` 가 부착 · 핸들을 잇고 이 오브젝트의 컴포넌트에 `onPostLoad` 를 부릅니다. 로더가 부릅니다.
          * @details `onPostLoad` 는 부착과 핸들 PROPERTY 가 해석된 **뒤에** 온다. 읽는 시점에 부르면 다른 오브젝트를 가리키는 필드가 아직 저장된 id 다.
@@ -265,9 +274,9 @@ namespace sw
             _bReferencesResolved = SW_FALSE;
         }
 
-        /** @brief 저장된 id 로 이 배치의 오브젝트를 찾습니다. 없으면 nullptr 입니다. */
+        /** @brief 저장된 id 로 이 배치의 오브젝트를 찾고, 없으면 해석기에 묻습니다. 없으면 nullptr 입니다. */
         GameObject* findBySavedID( uint64 savedID ) const;
-        /** @brief 저장된 이름으로 이 배치의 오브젝트를 찾습니다(id 가 없는 데이터용). 같은 이름이 여럿이면 먼저 기록된 것입니다. */
+        /** @brief 저장된 이름으로 이 배치의 오브젝트를 찾습니다(id 가 없는 데이터용). 같은 이름이 여럿이면 먼저 기록된 것이고, 없으면 해석기에 묻습니다. */
         GameObject* findBySavedName( hashed_string savedName ) const;
 
         ObjectIDSpace getIDSpace() const { return _idSpace; }
@@ -311,6 +320,7 @@ namespace sw
         unordered_map<uint64, GameObject*>   _mapSavedIDToObject;
         unordered_map<hashed_string, uint32> _mapSavedNameToEntry;
         ComponentKeyTextMap                  _mapComponentKeyText; ///< 읽은 핸들의 키 글이다(`addComponentKeyTexts`)
+        SavedObjectResolver                  _externalResolver;    ///< 이 배치에 없는 오브젝트를 묻는다(비었으면 배치 안에서만 찾는다)
         ObjectIDSpace                        _idSpace;
         uint8                                _bFinished           : 1;
         uint8                                _bReferencesResolved : 1; ///< `finish` 의 결과다. 두 번째 호출이 그대로 돌려준다

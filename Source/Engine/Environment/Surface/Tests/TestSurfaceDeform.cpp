@@ -325,3 +325,16 @@ SW_TEST_CASE( SurfaceDeformGridTest, WetPrintsEncodeInBlueAndMoveWithTheWindow )
     grid.fill( 1.0f );
     SW_EXPECT_EQUAL( 0u, grid.countWetTexels() );
 }
+
+/** @brief [SurfaceDeformGridTest] 월드 원점을 옮기면 자국이 같은 절대 자리에 남는다 — 칸의 내용은 그대로 두고 칸의 자리만 옮긴다 */
+SW_TEST_CASE( SurfaceDeformGridTest, OriginShiftKeepsTracksInPlace )
+{
+    SurfaceDeformGrid grid;
+    grid.reset( 64, 8.0f, 0.0f, 0.0f );
+    grid.applyStamp( SurfaceDeformTestUtil::makePrint(), 1.0f, 1.0f, 0.0f, 0.0f, 0.0f );
+    const float32 depth = grid.findHeightAt( 1.0f, 1.0f );
+    SW_REQUIRE_TRUE( depth < 0.0f );
+    grid.shiftOrigin( -100.0f, -40.0f );
+    SW_EXPECT_NEAR( depth, grid.findHeightAt( -99.0f, -39.0f ), 1e-6f );
+    SW_EXPECT_NEAR( 0.0f, grid.findHeightAt( 1.0f, 1.0f ), 1e-6f );
+}

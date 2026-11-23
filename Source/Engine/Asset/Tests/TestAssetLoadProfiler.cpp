@@ -32,3 +32,23 @@ SW_TEST_CASE( AssetLoadProfilerTest, OtherThreadsReadTheRefreshedCopy )
     profiler.refreshEnabled();
     SW_EXPECT_FALSE( profiler.isEnabled() );
 }
+
+/** @brief [AssetLoadProfilerTest] 씬 갱신 안의 동기 로드만 세고 비우면 처음으로 돌아간다 */
+SW_TEST_CASE( AssetLoadProfilerTest, SyncLoadsCountOnlyInsideTheSceneUpdate )
+{
+    AssetLoadProfiler profiler;
+    profiler.recordSyncLoad( "Mesh", "a.mesh", AssetLoadProfiler::kSyncLoadLogNanoseconds );
+    SW_EXPECT_EQUAL( 0u, profiler.getSceneUpdateSyncLoads()._count );
+
+    profiler.setSceneUpdateActive( true );
+    profiler.recordSyncLoad( "Mesh", "a.mesh", AssetLoadProfiler::kSyncLoadLogNanoseconds );
+    profiler.recordSyncLoad( "Mesh", "a.mesh", AssetLoadProfiler::kSyncLoadLogNanoseconds );
+    profiler.recordSyncLoad( "Mesh", "b.mesh", AssetLoadProfiler::kSyncLoadLogNanoseconds - 1 ); // 문턱 아래라 알리지 않는다
+    profiler.setSceneUpdateActive( false );
+    profiler.recordSyncLoad( "Mesh", "c.mesh", AssetLoadProfiler::kSyncLoadLogNanoseconds );
+    const AssetLoadProfiler::SyncLoadTotal total = profiler.getSceneUpdateSyncLoads();
+    SW_EXPECT_EQUAL( 3u, total._count );
+    SW_EXPECT_EQUAL( AssetLoadProfiler::kSyncLoadLogNanoseconds * 3 - 1, total._nanoseconds );
+    profiler.reset();
+    SW_EXPECT_EQUAL( 0u, profiler.getSceneUpdateSyncLoads()._count );
+}

@@ -647,3 +647,13 @@ SW_TEST_CASE( BattleRoyaleMatchTest, MatchDeterminism )
     };
     SW_EXPECT_TRUE( sw::StateBytesTestUtil::isDeterministic<sw::BattleRoyaleMatch>( setup, step, 200 ) );
 }
+
+/**
+ * @brief [BattleRoyaleMatchTest] 자기장 씨앗이 `mix32( 시드 ^ 상수 )` 이면 시드가 그 상수일 때 0(난수의 고정점)이라 단언에 걸린다 — 어느 시드로도 연다
+ */
+SW_TEST_CASE( BattleRoyaleMatchTest, SurvivesSeedEqualToMixConstant )
+{
+    const sw::BattleRoyaleCatalog catalog;
+    sw::BattleRoyaleMatch         match;
+    SW_EXPECT_TRUE( match.initialize( &catalog, nullptr, nullptr, 0x5a4f4e45u, nullptr ) );
+}

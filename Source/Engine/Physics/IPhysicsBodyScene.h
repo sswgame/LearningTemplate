@@ -104,6 +104,11 @@ namespace sw
         virtual void readBodyStates( span<const PhysicsBodyHandle> listBody, span<BodyState> outListState ) const = 0;
         /** @brief 바디를 그 위치로 옮깁니다(순간이동). 그 사이를 쓸지 않고 바디를 깨웁니다. */
         virtual void setBodyTransform( PhysicsBodyHandle body, const Vector& position, const Rotation& rotation ) = 0;
+        /**
+         * @brief 모든 바디를 @p delta 만큼 옮깁니다(월드 원점 이동 — 스텝 밖에서 부른다). 깨우지 않고 속도 · 접촉은 그대로입니다.
+         * @details 컴포넌트가 주인이 아닌 바디(래그돌 · 파편 · 천 · 지형 청크)도 함께 옮는다. 컴포넌트의 순간이동은 뒤에 같은 자리를 다시 적을 뿐이다. PhysX `PxScene::shiftOrigin` 자리.
+         */
+        virtual void shiftOrigin( const Vector& delta ) = 0;
         /** @brief 키네마틱 바디가 @p deltaTime 뒤에 목표 자세에 닿도록 속도를 줍니다(밀린 동적 바디가 그 속도를 받는다). */
         virtual void moveKinematic( PhysicsBodyHandle body, const Vector& targetPosition, const Rotation& targetRotation, float32 deltaTime ) = 0;
 

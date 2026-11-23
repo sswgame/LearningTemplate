@@ -7,22 +7,24 @@
  * - 앵커: 하위 레벨마다 씬 컴포넌트 하나를 가진 오브젝트를 놓은 자리(위치 · 회전)에 세운다. 늘 올라 있음(`GameObject::_bAlwaysLoaded`)이라 스트리밍 셀이 삼키지 않는다.
  * - 파일 id: 앵커는 이름에서 정한 넓은 값(`computeAnchorFileID`)이고 멤버는 내부 파일 id ^ 앵커 범위(`SceneDocument::computeInstanceIDScope`)다 — 파일 안 씬 인스턴스와 같은 규칙이라
  *   부착 · 핸들이 자기 하위 레벨 안에서 이어지고, 같은 씬을 두 번 더해도 겹치지 않는다. 이름이 같으면 프로세스가 달라도 id 가 같다(서버 · 클라이언트가 같은 하위 레벨을 각자 더해도
- *   MMO 정적 엔티티 `_staticID` · 넷 씬 번호가 맞는다). 앵커 id 는 씬의 다음 파일 id 셈에서 뺀다(`Scene::computeNextFileID` 가 묻는다).
+ *   MMO 정적 엔티티 `_staticID` · 넷 씬 번호가 맞는다). 앵커 id 는 짓기 앞에 넓은 id 로 알려 씬의 다음 파일 id 셈에서 뺀다(`Scene::recordWideFileID`).
  * - 이름: 멤버는 `<하위 레벨 이름>/<엔티티 이름>` 이다(씬 인스턴스와 같다).
  *
+ * [읽기] 씬 문서는 더하는 순간 워커가 읽어 멤버 노드까지 만든다(언리얼 `LoadLevelInstance` · 유니티 `LoadSceneAsync` · Godot `load_threaded_request` 도 비동기다) — 게임 스레드는 디스크 · 파싱을
+ * 기다리지 않는다. 씬이 없거나 받지 않는 씬이면 읽기가 끝난 갱신에 오류와 함께 `Failed` 다(`addSubLevel` 이 막는 것은 이름 · 씬 짝뿐이다). 결정적 실행은 읽기를 그 프레임에 기다린다.
+ *
  * [갱신 — `DestroyPost`, 게임 스레드] 더하기 · 빼기는 요청만 받고 다음 갱신이 처리한다(틱 도중 불러도 된다).
- * 1. 빼기: 지은 오브젝트(앵커 · 멤버)를 내린다(`Scene::unloadCell`). 짓는 중이면 짓기를 버린다.
+ * 1. 빼기: 지은 오브젝트(앵커 · 멤버)를 내린다(`Scene::unloadCell`). 짓는 중이면 짓기를, 읽는 중이면 읽기 결과를 버린다.
  * 2. 짓기: 앵커를 세우고 멤버를 엔티티 단위로 짓는다(`Scene::beginCellBuild` · `continueCellBuild` — 스트리밍 셀과 같은 길, 시간 예산은 월드 설정 `_addToWorldBudgetMicroseconds`,
  *    0 이면 한 프레임에 다 짓는다). 다 지은 뒤 한 번에 드러난다.
  *
  * [세이브 — 데이터 레이어 묶음과 같은 꼴] 세이브 봉투는 하위 레벨 오브젝트를 씬 섹션에서 빼고(`isSubLevelObject`) 하위 레벨마다 이름 · 씬 · 자리 · 지금 상태(목적 `Snapshot`)를 싣는다.
- * 복원은 매니저를 비우면(`onSceneCleared`) 하위 레벨을 모두 버리고, 세이브에 실린 것을 그 상태로 다시 세운다(`applySaveState` — 문서를 다시 읽지 않는다).
+ * 복원은 매니저를 비우면(`onSceneCleared`) 하위 레벨을 모두 버리고, 세이브에 실린 것을 그 상태로 다시 세운다(`applySaveState` — 문서를 다시 읽지 않는다. 아직 읽는 중에 저장한 것만 다시 읽는다).
  *
  * [스트리밍 · 복제] 하위 레벨은 셀에 들지 않는다(앵커가 늘 올라 있고 멤버는 앵커의 자식이다). 더하기 · 빼기는 프로세스마다의 일이다 — 서버의 복제(`NetObjectTable` 번호 · MMO 관심 영역)는
  * 게임이 하위 레벨 오브젝트에 번호를 매길 때만 따르고, 클라이언트는 같은 이름으로 같은 하위 레벨을 더한다(언리얼도 스트리밍 레벨 상태를 게임이 클라이언트에 맞춘다).
  *
  * [받지 않는 하위 레벨] 스트리밍하는 씬(셀이 있다) · 데이터 레이어를 쓰는 씬은 하위 레벨로 받지 않는다(오류). 하위 레벨은 한 묶음으로 오르내리는 단위라 그 안을 다시 나누지 않는다.
- * shortcut: 문서 읽기는 더하는 프레임의 게임 스레드에서 한다(짓기만 프레임에 나눈다) — 큰 하위 레벨이 생기면 씬 로드 단계(`SceneManager` 의 `_loadStage`)로 옮긴다.
  */
 #pragma once
 #include "Core/Container/string.h"
@@ -32,6 +34,7 @@
 #include "Core/Foundation/Macros.h"
 #include "Core/Foundation/Types.h"
 #include "Core/Memory/Memory.h"
+#include "Core/Task/TaskTypes.h"
 
 #include "Engine/Object/GameObject/Service/ISceneService.h"
 #include "Engine/Scene/Scene.h"
@@ -57,6 +60,8 @@ namespace sw
 
         /** @brief @p manager 의 하위 레벨 서비스를 만듭니다(서비스 레지스트리가 매니저마다 부른다). */
         explicit SceneSubLevelSubsystem( GameObjectManager& manager );
+        /** @brief 걸린 읽기가 끝나기를 기다립니다(워커가 엔진 서비스를 쓴다). */
+        ~SceneSubLevelSubsystem() override;
 
         SceneSubLevelSubsystem( const SceneSubLevelSubsystem& )            = delete;
         SceneSubLevelSubsystem& operator=( const SceneSubLevelSubsystem& ) = delete;
@@ -65,8 +70,9 @@ namespace sw
         using State     = SceneSubLevelCapture;
 
         /**
-         * @brief 씬 @p scenePath 를 이름 @p name 의 하위 레벨로 @p scene 에 더합니다. 다음 갱신부터 짓습니다.
-         * @return 이름이 비었거나 이미 있거나, 씬을 읽지 못했거나, 스트리밍하는 씬 · 데이터 레이어를 쓰는 씬이거나, @p scene 이 이 서비스의 매니저가 아니면 오류를 남기고 false 입니다.
+         * @brief 씬 @p scenePath 를 이름 @p name 의 하위 레벨로 @p scene 에 더합니다. 워커가 문서를 읽고, 다 읽은 갱신부터 짓습니다(`findSubLevelState` 로 본다).
+         * @details 읽지 못했거나 스트리밍하는 씬 · 데이터 레이어를 쓰는 씬이면 읽기가 끝난 갱신에 오류를 남기고 `Failed` 다.
+         * @return 이름이 비었거나 이미 있거나, @p scene 이 이 서비스의 매니저가 아니면 오류를 남기고 false 입니다.
          */
         [[nodiscard]] bool addSubLevel( Scene& scene, string_view name, string_view scenePath, const Placement& placement );
         /** @brief 이름 @p name 의 하위 레벨을 뺍니다(다음 갱신에 내린다). 없으면 오류를 남기고 false 입니다. */
@@ -89,8 +95,8 @@ namespace sw
         void collectSubLevelNames( vector<string>& outListName ) const;
         /** @brief 오브젝트(또는 그 조상)가 하위 레벨의 앵커 · 멤버면 true 입니다 — 세이브의 씬 섹션 · 씬 문서 쓰기가 빼는 오브젝트입니다. */
         bool isSubLevelObject( uint64 objectID ) const;
-        /** @brief 파일 id 가 하위 레벨 앵커의 것이면 true 입니다 — 씬이 다음 파일 id 를 셀 때 그 넓은 id 를 뺀다(앵커를 떠 둔 상태로 짓는 동안에도). */
-        bool isAnchorFileID( uint64 fileID ) const;
+        /** @brief 오브젝트 자신이 이 서비스의 목록에 들어 있으면 true 입니다(조상은 보지 않는다) — 조상이 다른 묶음에 든 오브젝트를 두 번 뜨지 않게 가린다(`Scene::collectCellGroup`). */
+        bool isListedObject( uint64 objectID ) const;
 
         /** @brief 이름 @p name 의 하위 레벨 앵커의 파일 id 입니다 — 넓은 값이라 씬 파일의 작은 id 와 겹치지 않고, 프로세스가 달라도 같다. */
         [[nodiscard]] static uint64 computeAnchorFileID( string_view name );
@@ -106,7 +112,8 @@ namespace sw
             string                                 _name;
             string                                 _scenePath;
             Placement                              _placement{};
-            vector<SceneDocument::SceneObjectNode> _listNode; ///< 지을 엔티티 — 다 지었으면 떠 둔 상태(앵커 포함, `Snapshot`), 아니면 멤버 내용(앵커는 세울 때 만든다)
+            vector<SceneDocument::SceneObjectNode> _listNode;       ///< 지을 엔티티 — 다 지었으면 떠 둔 상태(앵커 포함, `Snapshot`), 아니면 멤버 내용(앵커는 세울 때 만든다)
+            bool                                   _bRead{ false }; ///< 지을 엔티티가 있다 — 읽는 중에 저장했으면 false 이고 복원이 문서를 다시 읽는다 NOLINT(sw-bool-flag): 집합체다(중괄호 초기화로 만든다) — C++17 비트필드는 기본값을 둘 수 없다
         };
         /** @brief 세이브의 하위 레벨 몫입니다. */
         struct SaveState
@@ -126,6 +133,9 @@ namespace sw
         void restoreState( Scene& scene, State state );
 
     private:
+        /** @brief 워커와 나누는 읽기 결과입니다(정의는 .cpp). 워커가 노드를 채운 뒤 상태를 올리고, 게임 스레드는 상태를 본 뒤에만 가져간다. */
+        struct DocumentRead;
+
         /** @brief 하위 레벨 하나입니다. `Scene::CellBuild` 가 `_listNode` 를 가리키므로 따로 든다(`unique_ptr`). */
         struct SubLevel
         {
@@ -135,6 +145,7 @@ namespace sw
             uint64                                 _anchorFileID{ 0 };
             uint64                                 _anchorObjectID{ 0 };
             vector<SceneDocument::SceneObjectNode> _listNode;     ///< 지을 엔티티(짓는 동안 바꾸지 않는다)
+            shared_ptr<DocumentRead>               _pRead;        ///< 읽는 중인 결과(`Loading` 일 때만)
             shared_ptr<Scene::CellBuild>           _pBuild;       ///< 짓는 중인 진행(`Building` 일 때만)
             vector<uint64>                         _listObjectID; ///< 앵커와 지은 멤버(엔티티마다 하나, 부품 제외). 내릴 때 자식까지 지운다
             SubLevelState                          _state{ SubLevelState::Queued };
@@ -143,7 +154,13 @@ namespace sw
         /** @brief 이름의 하위 레벨입니다. 없으면 nullptr 입니다. */
         SubLevel* findSubLevel( string_view name );
         /** @brief 이름 · 씬 · 자리 · 지을 엔티티로 하위 레벨을 목록 끝에 더합니다(`Queued`). */
-        void pushSubLevel( string_view name, string_view scenePath, const Placement& placement, vector<SceneDocument::SceneObjectNode> listNode );
+        SubLevel& pushSubLevel( string_view name, string_view scenePath, const Placement& placement, vector<SceneDocument::SceneObjectNode> listNode );
+        /** @brief 씬 문서 읽기를 워커에 겁니다(`Loading`). 워커가 없으면(도구 · 테스트) 이 자리에서 읽습니다 — 거두는 것은 그래도 갱신이다. */
+        void requestDocument( SubLevel& subLevel );
+        /** @brief 읽기가 끝났으면 거둡니다(`Loading` → `Queued` · `Failed`). 끝나지 않았으면 그대로입니다. */
+        void collectDocument( SubLevel& subLevel );
+        /** @brief 읽기 잡의 본문입니다(워커) — 문서를 읽고 하위 레벨로 받을 수 있는지 본 뒤 멤버 노드를 만듭니다. */
+        static void readDocumentJob( const TaskArgs& args );
         /** @brief 앵커를 세우고 짓기를 시작합니다(`Queued` → `Building`). 앵커를 세우지 못하면 오류를 남기고 `Failed` 입니다. */
         void beginBuild( SubLevel& subLevel );
         /** @brief 이 서비스가 세운 앵커를 id 목록 앞에 넣습니다(이미 있거나 앵커가 없으면 그대로). 짓기가 끝난 뒤 · 내리기 전에 부른다. */
@@ -154,8 +171,9 @@ namespace sw
         void rebuildObjectMap();
 
     private:
-        Scene*                        _pScene;   ///< 하위 레벨을 받은 씬(빌림). 첫 더하기 · 복원이 정하고 `endScene` 이 놓는다
-        GameObjectManager*            _pManager; ///< 이 서비스의 매니저(빌림)
+        Scene*                        _pScene;    ///< 하위 레벨을 받은 씬(빌림). 첫 더하기 · 복원이 정하고 `endScene` 이 놓는다
+        GameObjectManager*            _pManager;  ///< 이 서비스의 매니저(빌림)
+        TaskStageHandle               _readStage; ///< 이 서비스가 낸 문서 읽기 전부(결정적 실행 · 소멸이 기다린다)
         vector<unique_ptr<SubLevel>>  _listSubLevel;
         unordered_map<uint64, uint64> _mapObjectSubLevel; ///< 앵커 · 멤버 오브젝트 id → 앵커 오브젝트 id(`isSubLevelObject`)
     };

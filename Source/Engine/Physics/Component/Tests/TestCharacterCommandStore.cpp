@@ -169,3 +169,69 @@ SW_TEST_CASE( CharacterCommandStoreTest, ResetPhysicsTeleportDropsInheritedMotio
     SW_EXPECT_TRUE( pBody->getLinearVelocity()._y > -oneFrameOfGravity );
     SW_EXPECT_NEAR( 0.0f, pBody->getAngularVelocity().getLength(), 1.0e-3f );
 }
+
+/**
+ * @brief [CharacterCommandStoreTest] 오르기 요청은 그 프레임만 중력 없이 준 속도로 움직이고(방식 Climbing), 부르지 않으면 그 자리에서 떨어지기 시작한다(오르던 속도를 잇지 않는다)
+ */
+SW_TEST_CASE( CharacterCommandStoreTest, ClimbVelocityReplacesGravityForOneFrame )
+{
+    using Internal = TestCharacterCommandStoreInternal;
+    GameObjectManager             manager;
+    CharacterControllerComponent* pCharacter = Internal::addCharacter( manager, "Climber", float3{ 0.0f, 50.0f, 0.0f } );
+    SW_REQUIRE_NOT_NULL( pCharacter );
+    manager.beginPlay();
+    manager.update( Internal::kFrame ); // 첫 물리 프레임이 캐릭터를 짓는다
+    const float3 start = pCharacter->getSimulatedPosition();
+    for ( uint32 frame = 0; frame < 30; ++frame )
+    {
+        pCharacter->applyClimbVelocity( float3{ 0.5f, 2.0f, 0.0f } );
+        manager.update( Internal::kFrame );
+    }
+    const float3 risen = pCharacter->getSimulatedPosition();
+    SW_EXPECT_TRUE( pCharacter->getMovementMode() == CharacterMovementMode::Climbing );
+    SW_EXPECT_NEAR( start._y + 1.0f, risen._y, 0.1f );
+    SW_EXPECT_NEAR( start._x + 0.25f, risen._x, 0.05f );
+
+    for ( uint32 frame = 0; frame < 30; ++frame )
+    {
+        manager.update( Internal::kFrame );
+    }
+    SW_EXPECT_TRUE( pCharacter->getMovementMode() == CharacterMovementMode::Falling );
+    SW_EXPECT_TRUE( pCharacter->getSimulatedPosition()._y < risen._y );
+    SW_EXPECT_NEAR( risen._x, pCharacter->getSimulatedPosition()._x, 1.0e-3f );
+}
+
+/**
+ * @brief [CharacterCommandStoreTest] 수직 이동 속도는 헤엄칠 때만 든다 — 물(밀도 1)에서는 위 · 아래로 가고, 물 밖에서는 떨어지는 것과 같다
+ */
+SW_TEST_CASE( CharacterCommandStoreTest, VerticalMoveSpeedOnlySwims )
+{
+    using Internal = TestCharacterCommandStoreInternal;
+    GameObjectManager             manager;
+    CharacterControllerComponent* pUp   = Internal::addCharacter( manager, "Up", float3{ 0.0f, 50.0f, 0.0f } );
+    CharacterControllerComponent* pDown = Internal::addCharacter( manager, "Down", float3{ 0.0f, 50.0f, 10.0f } );
+    CharacterControllerComponent* pIdle = Internal::addCharacter( manager, "Idle", float3{ 0.0f, 50.0f, 20.0f } );
+    CharacterControllerComponent* pAir  = Internal::addCharacter( manager, "Air", float3{ 0.0f, 50.0f, 30.0f } );
+    CharacterControllerComponent* pFall = Internal::addCharacter( manager, "Fall", float3{ 0.0f, 50.0f, 40.0f } );
+    manager.beginPlay();
+    manager.update( Internal::kFrame );
+    pUp->setVerticalMoveSpeed( 2.0f );
+    pDown->setVerticalMoveSpeed( -2.0f );
+    pAir->setVerticalMoveSpeed( 2.0f );
+    PhysicsFieldSample water;
+    water._fluidDensity = 1.0f;
+    water._immersion    = 1.0f;
+    water._drag         = 1.0f;
+    for ( uint32 frame = 0; frame < 60; ++frame )
+    {
+        for ( CharacterControllerComponent* pCharacter : { pUp, pDown, pIdle } )
+        {
+            pCharacter->applyPhysicsField( water );
+        }
+        manager.update( Internal::kFrame );
+    }
+    SW_EXPECT_TRUE( pUp->getMovementMode() == CharacterMovementMode::Swimming );
+    SW_EXPECT_NEAR( 2.0f, pUp->getSimulatedPosition()._y - pIdle->getSimulatedPosition()._y, 0.2f );
+    SW_EXPECT_NEAR( -2.0f, pDown->getSimulatedPosition()._y - pIdle->getSimulatedPosition()._y, 0.2f );
+    SW_EXPECT_NEAR( pFall->getSimulatedPosition()._y, pAir->getSimulatedPosition()._y, 1.0e-4f );
+}

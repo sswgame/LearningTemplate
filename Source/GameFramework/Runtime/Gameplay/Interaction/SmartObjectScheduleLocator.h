@@ -15,9 +15,6 @@
 #include "Core/Foundation/Types.h"
 #include "Core/Name/hashed_string.h"
 
-#include "Engine/Reflection/ReflectionMacros.h"
-#include "Engine/Scene/SceneObjectReference.h"
-
 #include "GameFramework/GameFrameworkExports.h"
 #include "GameFramework/Runtime/Character/AI/Schedule/ScheduleLocator.h"
 #include "GameFramework/Runtime/Character/AI/Schedule/ScheduleSaveState.h"
@@ -27,24 +24,6 @@ namespace sw
     class GameObject;
     class GameObjectManager;
     class Scene;
-
-    /**
-     * @brief 저장한 예약 하나입니다. 게임의 세이브에 `PROPERTY()` 로 넣는 리플렉션 구조체입니다.
-     * @details 오브젝트는 런타임 id 가 아니라 (씬 경로, 파일 id)로 적는다 — 런타임 id 는 다른 실행에서 다른 오브젝트가 받는다. 게임 상태 봉투는 실은 오브젝트의 파일 id 를 되살린다
-     *          (언리얼이 세이브에 액터 포인터 대신 `FSoftObjectPath` 를 싣는 자리). 슬롯은 칸 하나라 `_reservation._spot` 은 비운다.
-     */
-    REFLECT()
-    struct SW_GF_API SmartObjectReservationSaveState
-    {
-        REFLECT_BODY();
-
-        PROPERTY()
-        SceneObjectReference _object{};
-        PROPERTY()
-        ScheduleReservationSaveState _reservation{};
-        PROPERTY()
-        int32 _slot{ 0 };
-    };
 } // namespace sw
 
 namespace sw
@@ -52,14 +31,15 @@ namespace sw
     /**
      * @class SmartObjectScheduleLocator
      * @brief 씬의 스마트 오브젝트 슬롯을 일정의 슬롯으로 나눠 주는 제공자입니다. 게임 스레드에서만 부릅니다.
+     * @details 일정의 자리(카탈로그 · 요청 · 돌려주는 위치)는 절대라, 로컬인 슬롯 자리를 월드 원점으로 옮겨 견주고 돌려줍니다(`WorldOrigin`).
      */
     class SW_GF_API SmartObjectScheduleLocator final : public IScheduleActivityLocator
     {
     public:
         SmartObjectScheduleLocator();
 
-        /** @brief 슬롯을 찾을 씬의 오브젝트 매니저입니다(소유하지 않음). nullptr 이면 늘 슬롯이 없습니다. */
-        void initialize( GameObjectManager* pManager );
+        /** @brief 슬롯을 찾고 예약한 오브젝트의 정체를 물을 씬입니다(소유하지 않음). nullptr 이면 늘 슬롯이 없습니다. */
+        void initialize( Scene* pScene );
         /** @brief 예약을 모두 지웁니다(점유는 건드리지 않습니다). */
         void clear();
         /**
@@ -77,13 +57,9 @@ namespace sw
         /** @brief 점유를 비웁니다(블록이 끝날 때). 예약은 그대로이며 `release` 가 지웁니다. 그 NPC 가 점유한 슬롯이 없으면 false 입니다. */
         bool releaseClaim( uint32 reservationID, const GameObject& npc );
 
-        /**
-         * @brief 예약을 저장 상태로 채웁니다(`ScheduleSystem` 은 기본 제공자의 예약만 저장하므로 게임이 이것을 자기 세이브에 함께 싣는다).
-         * @param scene 예약한 오브젝트들의 씬입니다. 저장한 적 없는 씬이거나 씬이 저장하지 않는 오브젝트(다시 스폰되는 중첩 부품)면 안정된 정체가 없어 false 이고 목록을 비웁니다.
-         */
-        [[nodiscard]] bool fillState( const Scene& scene, vector<SmartObjectReservationSaveState>& outListReservation ) const;
-        /** @brief 저장 상태에서 예약을 복원합니다. 사라진 오브젝트의 예약은 버립니다(다시 세운 계획이 새 슬롯을 고른다). */
-        void   restoreState( const Scene& scene, const vector<SmartObjectReservationSaveState>& listReservation );
+        /** @brief 저장한 적 없는 씬이거나 씬이 저장하지 않는 오브젝트(다시 스폰되는 중첩 부품)의 예약이 있으면 안정된 정체가 없어 오류를 남기고 목록을 비웁니다. 사라진 오브젝트의 예약은 적지 않습니다. */
+        void   fillState( vector<ScheduleReservationSaveState>& outListReservation ) const override;
+        void   restoreState( const vector<ScheduleReservationSaveState>& listReservation ) override;
         size_t getReservationCount() const { return _listReservation.size(); }
 
     private:
@@ -109,12 +85,13 @@ namespace sw
 
         /** @brief 예약의 슬롯 슬롯(월드 위치)를 구합니다. 오브젝트가 사라졌으면 false 입니다. */
         bool computeReservationPosition( const Reservation& reservation, float3& outPosition ) const;
-        /** @brief 그 슬롯에 겹치는 시간 창의 예약이 있는지 셉니다. */
-        int32 countOverlapping( uint64 objectID, int32 slot, int32 day, int32 startMinute, int32 endMinute ) const;
+        /** @brief 그 슬롯에 겹치는 시간 창을 든 다른 NPC 의 예약이 있는지입니다. */
+        bool isTakenByOther( const hashed_string& npc, uint64 objectID, int32 slot, int32 day, int32 startMinute, int32 endMinute ) const;
         /** @brief 정의 id 가 @p kind 인 스마트 오브젝트의 슬롯을 (오브젝트 id, 슬롯) 순으로 모읍니다. */
         void collectCandidates( const hashed_string& kind, vector<Candidate>& outListCandidate ) const;
 
     private:
+        Scene*              _pScene;
         GameObjectManager*  _pManager;
         hashed_string       _defaultArea;
         vector<Reservation> _listReservation;

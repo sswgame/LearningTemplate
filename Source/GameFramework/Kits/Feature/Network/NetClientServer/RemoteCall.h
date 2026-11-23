@@ -17,8 +17,10 @@
  *            `RateLimited` 로 거절한다 — 끊지 않는다(정상 클라이언트도 지연 뒤 몰아 보낼 수 있다). 함수에 `FUNCTION( Server, MaxCallsPerSecond = N )` 을 적으면
  *            연결 버킷 위에 그 연결 · 그 함수의 버킷(초당 N, 한꺼번에 N)을 하나 더 둔다. 적지 않은 함수는 연결 상한만 받는다 — 함수 상한의 기본값이 아니라 계약이다.
  *            `Server` 가 아닌 함수에 적으면 서버가 지킬 수 없어 등록이 거절한다.
- *          - **인자**: 글로 실어 보내고 받는 쪽이 인자 타입으로 읽는다(`ReflectionInvoke::callWithText`). 그래서 원격 함수의 인자는 글 · 수 · bool · 열거형만 된다 —
- *            등록이 확인한다. 인자 수 · 길이는 상한이 있고 넘는 메시지는 손상된 것으로 버린다.
+ *          - **인자**: 함수의 인자 타입이 정하는 이진 꼴로 싣는다(언리얼 RPC 파라미터 배치 · 유니티 `FastBufferWriter` · Godot Variant 인코딩과 같은 자리) — bool 은 1 비트,
+ *            정수 · 열거형은 가변 길이 정수, 실수는 그 비트(유한만), 글은 길이와 바이트다. 양쪽이 같은 함수 정의를 보므로 형식 표시를 싣지 않는다.
+ *            원격 함수의 인자는 글 · 수 · bool · 열거형만 된다 — 등록이 확인한다. 인자 수 · 글 길이는 상한이 있고 넘는 메시지는 손상된 것으로 버린다.
+ *            인자는 대상 · 주인 · 역할 · 채널 · 호출률을 모두 지난 뒤에만 푼다 — 거절할 호출에 푸는 비용을 쓰지 않는다.
  *          수명: 대상의 인스턴스는 빌려 쓴다 — 대상이 사라지기 전에 `unregisterTarget` 을 부른다. 서버는 연결이 닫히면 그 연결이 주인인 대상을 지운다.
  */
 #pragma once
@@ -72,15 +74,15 @@ namespace sw
 
     /**
      * @brief 반사 함수 호출의 메시지 표입니다. 종류 · 마스크 · 와이어 버전은 표에서 나온다(`NetMessageTable`).
-     * @details 호출 본문은 함수마다 인자 형식이 달라(반사 인자 글) 손 본문이다. 거절은 고정 배치형(`NetMessageBodyDef`)이다.
+     * @details 호출 본문은 함수마다 인자 형식이 달라 손 본문이다. 거절은 고정 배치형(`NetMessageBodyDef`)이다.
      */
     struct NetRemoteCallMessage
     {
         /**
-         * @brief 호출 하나 — 순번(varuint) · 대상 id(varuint) · 함수 번호(32 비트, 이름 해시) · 인자 수(varuint) · 인자 글(blob 들). 클라이언트 → 서버는 `Server` 함수, 서버 → 클라이언트는 `Client` · `Multicast` 함수다.
-         *        판 2: 함수 이름 글 대신 함수 번호를 싣는다.
+         * @brief 호출 하나 — 순번(varuint) · 대상 id(varuint) · 함수 번호(32 비트, 이름 해시) · 인자 수(varuint) · 인자들(타입별 이진 꼴). 클라이언트 → 서버는 `Server` 함수, 서버 → 클라이언트는 `Client` · `Multicast` 함수다.
+         *        판 2: 함수 이름 글 대신 함수 번호를 싣는다. 판 3: 인자를 글 대신 타입별 이진 꼴로 싣는다.
          */
-        using Call = NetMessageSenderChannelDef<0, NetMessageDirection::Both, NetChannelKind::ReliableOrdered, 2>; ///< 채널은 함수의 `Reliable` 이 고른다(`beginMessage( channel )`)
+        using Call = NetMessageSenderChannelDef<0, NetMessageDirection::Both, NetChannelKind::ReliableOrdered, 3>; ///< 채널은 함수의 `Reliable` 이 고른다(`beginMessage( channel )`)
         /** @brief 서버 → 클라이언트. 받지 못한 호출(`RemoteCallRejectedBody`). */
         using Rejected = NetMessageBodyDef<1, NetMessageDirection::ToClient, NetChannelKind::ReliableOrdered, RemoteCallRejectedBody>;
         using Table    = NetMessageTable<NetKitMessageRange::kRemoteCall, Call, Rejected>;
@@ -139,20 +141,39 @@ namespace sw
         /** @brief 연결의 세션 객체를 가리키는 id 입니다. `registerTarget` 으로는 등록하지 못합니다(서버는 `registerSessionTarget`). */
         static constexpr uint32 kSessionTargetID = 0;
 
-        unordered_map<uint32, Target> _mapTarget{};
+        /** @brief 와이어 번호 하나가 가리키는 함수와 그 검증 짝입니다. */
+        struct RemoteFunction
+        {
+            const FunctionInfo* _pFunction{ nullptr };  ///< 없는 번호면 nullptr
+            const FunctionInfo* _pValidator{ nullptr }; ///< `Validate` 함수의 짝(`validate<이름>`). 아니거나 없으면 nullptr
+        };
+
+        /**
+         * @brief 타입 하나의 와이어 번호 → 함수 색인입니다. 타입마다 한 번 짓고 호출은 해시 조회 하나입니다(언리얼 `FClassNetCache` 와 같은 자리).
+         * @details 반사 타입의 함수 목록은 모듈이 다시 읽히면 바뀌므로 지은 때의 타입 테이블 세대를 적고, 세대가 다르면 다시 짓는다.
+         */
+        struct FunctionTable
+        {
+            unordered_map<uint32, RemoteFunction> _mapFunction{};
+            uint32                                _typeTableGeneration{ 0 };
+            uint32                                _contractGeneration{ 0 }; ///< 원격 호출 계약을 확인한 세대. 같은 타입의 대상이 많아도 세대마다 한 번이다(0 = 아직)
+        };
+
+        unordered_map<uint32, Target>                 _mapTarget{};
+        unordered_map<const TypeInfo*, FunctionTable> _mapFunctionTable{}; ///< 등록했거나 호출을 받은 타입마다 하나
 
         const Target* findTarget( uint32 targetID ) const;
         /**
          * @brief @p type 의 함수 가운데 @p role 의 원격 함수가 원격 호출 계약을 지키는지 봅니다 — 인자는 글 · 수 · bool · 열거형, `Validate` 면 짝 `validate<이름>` 이 bool 을 돌려주고 인자 타입이 같다.
          * @details 어긴 함수마다 오류를 남기고 false 를 반환합니다. 등록이 부른다 — 실행 중에 부를 수 없는 함수를 발견하는 일이 없게.
          */
-        static bool validateRemoteCallContract( const TypeInfo& type, FunctionNetRole role );
+        bool validateRemoteCallContract( const TypeInfo& type, FunctionNetRole role );
         /** @brief 함수의 와이어 번호입니다(이름 해시). */
         static uint32 getFunctionID( const FunctionInfo& function );
-        /** @brief @p type 의 계층에서 와이어 번호가 @p functionID 인 함수를 찾습니다(파생부터). 없으면 nullptr 입니다. */
-        static const FunctionInfo* findFunctionByID( const TypeInfo& type, uint32 functionID );
-        /** @brief @p function 의 검증 짝(`validate<이름>`)을 @p type 의 계층에서 찾습니다. 없으면 nullptr 입니다. */
-        static const FunctionInfo* findValidator( const TypeInfo& type, const FunctionInfo& function );
+        /** @brief @p type 의 계층에서 와이어 번호가 @p functionID 인 함수를 찾습니다(파생이 이긴다). 없으면 빈 값입니다. 값으로 받아 함수 몸이 대상을 더 등록해도 그대로다. */
+        RemoteFunction findFunctionByID( const TypeInfo& type, uint32 functionID );
+        /** @brief @p type 의 지금 세대 색인입니다. 없거나 낡았으면 짓습니다. */
+        FunctionTable& getOrBuildFunctionTable( const TypeInfo& type );
     };
 } // namespace sw
 
@@ -199,7 +220,7 @@ namespace sw
         void               unregisterSessionTarget( int32 connectionID );
         /**
          * @brief 대상의 주인 클라이언트에게 `Client` 함수를 부릅니다. 채널은 함수의 `Reliable` 이 정합니다. 클라이언트에서도 같은 id 의 대상이 받습니다.
-         * @return 대상이 없거나, 그 이름의 `Client` 함수가 없거나, 인자를 글로 싣지 못하거나, 보내지 못하면 오류를 남기고 false 입니다
+         * @return 대상이 없거나, 그 이름의 `Client` 함수가 없거나, 인자가 그 타입으로 바뀌지 않거나, 보내지 못하면 오류를 남기고 false 입니다
          */
         [[nodiscard]] bool callClient( uint32 targetID, string_view functionName, const vector<ReflectedValue>& listArg );
         /** @brief 연결의 세션 대상에서 `Client` 함수를 부릅니다 — 클라이언트의 id 0 대상이 받습니다. 실패는 `callClient` 와 같습니다. */
@@ -235,8 +256,6 @@ namespace sw
         RemoteCallServerConfig                          _config;
         RemoteCallStats                                 _stats;
         NetMessageWriter                                _messageWriter;
-        vector<string>                                  _listReceivedScratch; ///< 받은 호출의 인자 글. 함수 몸이 다시 보내도(`callSession` · `callServer`) 덮이지 않게 보내기와 따로 둔다
-        vector<string>                                  _listSendScratch;
         INetPeers*                                      _pPeers;
         ClockFunction                                   _pClock;
     };
@@ -264,7 +283,7 @@ namespace sw
         void               unregisterTarget( uint32 targetID );
         /**
          * @brief 서버 대상 @p targetID 의 `Server` 함수를 부릅니다. @p type 은 서버가 그 대상에 등록한 타입이며, 이름 · 역할 · 인자 수를 보내기 전에 여기서 봅니다.
-         * @return 보낸 호출의 순번(1 부터)입니다. 그 이름의 `Server` 함수가 없거나, 인자가 많거나 글로 싣지 못하거나, 비신뢰 호출이 1 KB 를 넘거나, 보내지 못하면 오류를 남기고 0 입니다
+         * @return 보낸 호출의 순번(1 부터)입니다. 그 이름의 `Server` 함수가 없거나, 인자가 많거나 그 타입으로 바뀌지 않거나, 비신뢰 호출이 1 KB 를 넘거나, 보내지 못하면 오류를 남기고 0 입니다
          */
         [[nodiscard]] uint32 callServer( uint32 targetID, const TypeInfo& type, string_view functionName, const vector<ReflectedValue>& listArg );
 
@@ -279,8 +298,6 @@ namespace sw
         RemoteCallTargets                         _targets;
         EventBuffer<RemoteCallRejectNotification> _rejections;
         NetMessageWriter                          _messageWriter;
-        vector<string>                            _listReceivedScratch; ///< 받은 호출의 인자 글. 함수 몸이 다시 보내도(`callSession` · `callServer`) 덮이지 않게 보내기와 따로 둔다
-        vector<string>                            _listSendScratch;
         INetPeers*                                _pPeers;
         uint64                                    _invokedCount;
         uint32                                    _nextSequence;

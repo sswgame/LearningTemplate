@@ -329,6 +329,27 @@ SW_TEST_CASE( CameraModeTest, FixedCameraStaysInTheBounds )
     CameraModeTestUtil::expectPoint( evaluatePreset( def, CameraTarget{} )._position, float3{ 1.0f, 0.0f, 0.0f } );
 }
 
+/** @brief [CameraModeTest] 프리셋이 적은 월드 자리(고정 자리 · 보는 점 · 경계)는 절대다 — 월드 원점을 옮기면 같은 절대 자리의 로컬에 선다 */
+SW_TEST_CASE( CameraModeTest, PresetWorldPositionsAreAbsolute )
+{
+    CameraPresetDef def = CameraModeTestUtil::makePreset( CameraPresetMode::Fixed );
+    def._view._offset   = float3{ 105.0f, 5.0f, 40.0f };
+    def._view._aim      = CameraAimMode::Point;
+    def._view._lookAt   = float3{ 115.0f, 5.0f, 40.0f };
+    CameraTarget target = CameraModeTestUtil::makeTarget( float3{} );
+    target._worldOrigin = WorldOrigin{
+        double3{ 100.0, 0.0, 40.0 }
+    };
+    const CameraPose fromSide = evaluatePreset( def, target );
+    CameraModeTestUtil::expectPoint( fromSide._position, float3{ 5.0f, 5.0f, 0.0f } );
+    CameraModeTestUtil::expectPoint( CameraModeTestUtil::computeForward( fromSide ), float3{ 1.0f, 0.0f, 0.0f } );
+
+    def._confiner._bBounds   = true;
+    def._confiner._boundsMin = float3{ 100.0f, 0.0f, 39.0f };
+    def._confiner._boundsMax = float3{ 102.0f, 10.0f, 41.0f };
+    CameraModeTestUtil::expectPoint( evaluatePreset( def, target )._position, float3{ 2.0f, 5.0f, 0.0f } );
+}
+
 SW_TEST_CASE( CameraModeTest, FirstPersonRidesTheTargetViewAndItsYawedOffset )
 {
     CameraPresetDef def   = CameraModeTestUtil::makePreset( CameraPresetMode::FirstPerson );

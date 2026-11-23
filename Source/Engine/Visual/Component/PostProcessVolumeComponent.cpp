@@ -4,6 +4,7 @@
 
 #include "Core/Algorithm/VectorUtil.h"
 #include "Core/Container/vector.h"
+#include "Core/Math/AABB.h"
 #include "Core/Math/MathUtil.h"
 
 #include "Engine/Object/GameObject/GameObject.h"
@@ -87,6 +88,16 @@ namespace sw
         if ( outside >= _blendRadius )
             return 0.0f;
         return blendWeight * ( 1.0f - outside / _blendRadius );
+    }
+
+    bool PostProcessVolumeComponent::computeStreamingBounds( AABB& outBox ) const
+    {
+        if ( _shape == PostProcessVolumeShape::Unbound )
+            return false; // 어디에나 — 덮는 자리가 없다(늘 올려 둘 것은 오브젝트가 `_bAlwaysLoaded` 로 정한다)
+        const float3 half   = ( _shape == PostProcessVolumeShape::Box ? _halfExtents : float3{ _radius, _radius, _radius } ) + float3{ _blendRadius, _blendRadius, _blendRadius };
+        const float3 center = getWorldPosition();
+        outBox              = AABB{ center - half, center + half };
+        return true;
     }
 
     void PostProcessVolumeComponent::setSettings( const PostProcessValues& values, const PostProcessOverrides& overrides )
