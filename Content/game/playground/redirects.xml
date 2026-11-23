@@ -65,4 +65,13 @@
 	<Redirect from="game/playground/data/kitdemo/demo.monsterhunt.xml" to="game/playground/data/monsterhunt.xml" />
 	<Redirect from="game/playground/data/kitdemo/demo.partyrounds.xml" to="game/playground/data/partyrounds.xml" />
 	<Redirect from="game/playground/data/kitdemo/demo.horror.xml" to="game/playground/data/horror.xml" />
+	<PrefixRedirect from="game/starskirmish" to="game/playground/starskirmish" />
+	<Redirect from="game/playground/starskirmish/automation/ai.scenario.xml" to="game/playground/automation/starskirmish_ai.scenario.xml" />
+	<Redirect from="game/playground/starskirmish/automation/control.scenario.xml" to="game/playground/automation/starskirmish_control.scenario.xml" />
+	<Redirect from="game/playground/starskirmish/automation/slice.scenario.xml" to="game/playground/automation/starskirmish_slice.scenario.xml" />
+	<Redirect from="game/playground/starskirmish/automation/viewsync.scenario.xml" to="game/playground/automation/starskirmish_viewsync.scenario.xml" />
+	<Redirect from="game/playground/starskirmish/automation/load/aiskirmish.scenario.xml" to="game/playground/automation/load/starskirmish_aiskirmish.scenario.xml" />
+	<Redirect from="game/playground/starskirmish/audio/starskirmish.audioevents.xml" to="game/playground/audio/playground.audioevents.xml" />
+	<Redirect from="game/playground/starskirmish/data/skirmish.settings.xml" to="game/playground/data/playground.settings.xml" />
+	<Redirect from="game/playground/starskirmish/data/unitmodels.xml" to="game/playground/starskirmish/data/units.views.xml" />
 </Redirects>

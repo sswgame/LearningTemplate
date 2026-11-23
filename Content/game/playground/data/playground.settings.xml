@@ -16,4 +16,25 @@
 	<Setting id="controls.voxelBreak" category="controls" type="KeyBinding" action="Voxel.Break" bindIndex="0" default=""/>
 	<Setting id="controls.voxelPlace" category="controls" type="KeyBinding" action="Voxel.Place" bindIndex="0" default=""/>
 	<Setting id="controls.frontierFastForward" category="controls" type="KeyBinding" action="FastForward" bindIndex="0" default=""/>
+	<Setting id="controls.skirmishSelect" category="controls" type="KeyBinding" action="Skirmish.Select" bindIndex="0" default=""/>
+	<Setting id="controls.skirmishOrder" category="controls" type="KeyBinding" action="Skirmish.Order" bindIndex="0" default=""/>
+	<Setting id="controls.skirmishSlower" category="controls" type="KeyBinding" action="Slower" bindIndex="0" default=""/>
+	<Setting id="controls.skirmishFaster" category="controls" type="KeyBinding" action="Faster" bindIndex="0" default=""/>
+	<Setting id="controls.skirmishPause" category="controls" type="KeyBinding" action="Pause" bindIndex="0" default=""/>
+	<Setting id="controls.skirmishAddToSelection" category="controls" type="KeyBinding" action="Skirmish.AddToSelection" bindIndex="0" default=""/>
+	<Setting id="controls.skirmishGroupModifier" category="controls" type="KeyBinding" action="Skirmish.GroupModifier" bindIndex="0" default=""/>
+	<Setting id="controls.skirmishAttackMove" category="controls" type="KeyBinding" action="Skirmish.AttackMove" bindIndex="0" default=""/>
+	<Setting id="controls.skirmishStop" category="controls" type="KeyBinding" action="Skirmish.Stop" bindIndex="0" default=""/>
+	<Setting id="controls.skirmishHold" category="controls" type="KeyBinding" action="Skirmish.Hold" bindIndex="0" default=""/>
+	<Setting id="controls.skirmishCommand1" category="controls" type="KeyBinding" action="Skirmish.Command1" bindIndex="0" default=""/>
+	<Setting id="controls.skirmishCommand2" category="controls" type="KeyBinding" action="Skirmish.Command2" bindIndex="0" default=""/>
+	<Setting id="controls.skirmishCommand3" category="controls" type="KeyBinding" action="Skirmish.Command3" bindIndex="0" default=""/>
+	<Setting id="controls.skirmishBuildSupplyDepot" category="controls" type="KeyBinding" action="Skirmish.Build.SupplyDepot" bindIndex="0" default=""/>
+	<Setting id="controls.skirmishBuildBarracks" category="controls" type="KeyBinding" action="Skirmish.Build.Barracks" bindIndex="0" default=""/>
+	<Setting id="controls.skirmishBuildRefinery" category="controls" type="KeyBinding" action="Skirmish.Build.Refinery" bindIndex="0" default=""/>
+	<Setting id="controls.skirmishBuildAcademy" category="controls" type="KeyBinding" action="Skirmish.Build.Academy" bindIndex="0" default=""/>
+	<Setting id="controls.skirmishBuildFactory" category="controls" type="KeyBinding" action="Skirmish.Build.Factory" bindIndex="0" default=""/>
+	<Setting id="controls.skirmishBuildStarport" category="controls" type="KeyBinding" action="Skirmish.Build.Starport" bindIndex="0" default=""/>
+	<Setting id="controls.skirmishBuildBunker" category="controls" type="KeyBinding" action="Skirmish.Build.Bunker" bindIndex="0" default=""/>
+	<Setting id="controls.skirmishJumpToSelection" category="controls" type="KeyBinding" action="Skirmish.JumpToSelection" bindIndex="0" default=""/>
 </UserSettingsSchema>

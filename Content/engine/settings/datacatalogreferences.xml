@@ -141,17 +141,18 @@
 	<Field owner="FrontierSkirmishGameModeComponent" field="_workerUnit" tag="RTSUnitDef"/>
 	<Field owner="FrontierSkirmishGameModeComponent" field="_soldierUnit" tag="RTSUnitDef"/>
 	<Field owner="FrontierSkirmishGameModeComponent" field="_barracksUnit" tag="RTSUnitDef"/>
-	<Field owner="SkirmishGameModeComponent" field="_listBuildUnitID" tag="RTSUnitDef"/>
+	<Field owner="RTSCommandInputComponent" field="_listBuildUnitID" tag="RTSUnitDef"/>
 	<Field owner="SkirmishGameModeComponent" field="_workerUnitID" tag="RTSUnitDef"/>
 	<Field owner="SkirmishGameModeComponent" field="_depotUnitID" tag="RTSUnitDef"/>
 	<Field owner="SkirmishGameModeComponent" field="_supplyUnitID" tag="RTSUnitDef"/>
 	<Field owner="SkirmishGameModeComponent" field="_productionUnitID" tag="RTSUnitDef"/>
 	<Field owner="SkirmishGameModeComponent" field="_armyUnitID" tag="RTSUnitDef"/>
+	<Derived type="LockstepSkirmishGameModeComponent" base="SkirmishGameModeComponent"/>
 	<CatalogKey tag="CityBuildingDef" catalog="CityCatalog" entry="Building"/>
 	<Field owner="CityGameModeComponent" field="_landmarkBuilding" tag="CityBuildingDef"/>
 	<CatalogKey tag="CameraPresetDef" catalog="CameraPresetCatalog" entry="Preset"/>
 	<Field owner="CameraDirectorComponent" field="_initialPreset" tag="CameraPresetDef"/>
-	<Field owner="SkirmishGameModeComponent" field="_watchCameraPreset" tag="CameraPresetDef"/>
+	<Field owner="RTSCommandInputComponent" field="_watchCameraPreset" tag="CameraPresetDef"/>
 	<CatalogKey tag="CropDef" catalog="CropCatalog" entry="Crop"/>
 	<Field owner="FarmCropModel" field="_cropID" tag="CropDef"/>
 	<CatalogKey tag="HousingPartDef" catalog="HousingPartCatalog" entry="Part"/>

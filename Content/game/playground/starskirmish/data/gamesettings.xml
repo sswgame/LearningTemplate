@@ -1,0 +1,18 @@
+<?xml version="1.0" encoding="utf-8"?>
+<?asset guid="0db24629075e601a594d15e5f2ef47d6"?>
+<!-- StarSkirmish 팩의 설정 — 시작 맵은 전장 씬이다(게임마다 팩의 data/gamesettings.xml 하나다). -->
+<GameSettings>
+  <!-- 엔진이 읽는 칸(PackEngineSettings) — 창 제목 · 렌더 파이프라인 · 사용자 설정과 텔레메트리 스키마 · UI 규칙 -->
+  <Engine _windowTitle="Star Skirmish" _userSettingsSchema="game/playground/data/playground.settings.xml" _bUIPauseMenu="true" />
+  <startMap>game/playground/starskirmish/maps/skirmish.scene.xml</startMap>
+  <inputMap path="common/input/base.input.xml"/>
+  <inputMap path="common/input/virtualcursor.input.xml"/>
+  <inputMap path="common/input/camera.input.xml"/>
+  <inputMap path="common/input/camerapan.input.xml"/>
+  <inputMap path="common/input/menu.input.xml"/>
+  <inputMap path="common/input/time.input.xml"/>
+  <inputMap path="game/playground/starskirmish/data/skirmish.input.xml"/>
+  <loadingScreen>engine/ui/loading.ui.xml</loadingScreen>
+  <audioEvents>game/playground/audio/playground.audioevents.xml</audioEvents>
+  <defaultLanguage>ko_kr</defaultLanguage>
+</GameSettings>

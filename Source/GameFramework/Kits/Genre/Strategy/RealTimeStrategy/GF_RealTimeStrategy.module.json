@@ -2,7 +2,7 @@
     "_name": "GF_RealTimeStrategy",
     "_version": "1.0.0",
     "_kind": "Kit",
-    "_description": "실시간 전략 키트(스타크래프트 장르) — 유닛 카탈로그 · 자원 · 보급 · 명령 · 채취 · 건설 · 생산 · 전투 · 전장의 안개 · 선택 · AI",
+    "_description": "실시간 전략 키트(스타크래프트 장르) — 유닛 카탈로그 · 자원 · 보급 · 명령 · 채취 · 건설 · 생산 · 전투 · 전장의 안개 · AI · 1 대 1 한 판 디렉터. 모습 · 선택 입력은 GF_Client_RealTimeStrategy",
     "_listDependency": [
         {
             "_name": "GameFramework"

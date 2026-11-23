@@ -85,7 +85,6 @@
 					                                   _bAutoPlay="false"
 					                                   _unitDataPath="game/playground/frontiertown/data/units.xml"
 					                                   _startMinerals="500"
-					                                   _unitPrefab="game/playground/frontiertown/prefabs/tile.prefab.xml"
 					                                   _workerUnit="worker"
 					                                   _soldierUnit="marine"
 					                                   _barracksUnit="barracks"
@@ -94,6 +93,12 @@
 					                                   _workerStart="2.5,0,2.5"
 					                                   _patrolA="2.5,0,6.5"
 					                                   _patrolB="10.5,0,6.5" />
+					<RTSBattlefieldViewComponent _localID="12821698634257031784" _componentName="RTSBattlefieldViewComponent"
+					                             _bActive="true"
+					                             _unitModelPath="game/playground/frontiertown/data/units.views.xml"
+					                             _unitPrefab="game/playground/starskirmish/prefabs/unit.prefab.xml">
+						<_unitPool _maxIdleCount="8" />
+					</RTSBattlefieldViewComponent>
 				</_listComponent>
 			</GameObject>
 		</entity>

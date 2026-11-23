@@ -7,7 +7,6 @@
 #include "Engine/Serialization/Format/Tests/StateBytesTestUtil.h"
 
 #include "GameFramework/Kits/Genre/Strategy/RealTimeStrategy/RTSCatalog.h"
-#include "GameFramework/Kits/Genre/Strategy/RealTimeStrategy/RTSSelection.h"
 #include "GameFramework/Kits/Genre/Strategy/RealTimeStrategy/RTSWorld.h"
 #include "GameFramework/Runtime/Gameplay/Inventory/Wallet.h"
 
@@ -526,52 +525,6 @@ SW_TEST_CASE( RTSWorldTest, ReadStateRefusesOutOfRangeValues )
     SW_EXPECT_EQUAL( size_t( 1 ), pUnit->_listProduction.size() );
 }
 
-/**
- * @brief [RTSWorldTest] 결함: 선택과 부대가 겹친 유닛과 상한을 넘는 선택을 그대로 받았다. 거절하고 선택을 둔다. 없는 유닛의 id 는 죽은 유닛의 id 와 같아 받는다
- */
-SW_TEST_CASE( RTSWorldTest, SelectionStateRefusesRepeatedAndOverLimit )
-{
-    const auto writeLists = []( const sw::vector<uint64>& listSelected, const sw::vector<uint64>& listFirstGroup, sw::Archive& outArchive )
-    {
-        sw::StateIO::writeIDList( outArchive, listSelected );
-        sw::StateIO::writeIDList( outArchive, listFirstGroup );
-        for ( int32 group = 1; group < sw::RTSSelection::kGroupCount; ++group )
-        {
-            sw::StateIO::writeIDList( outArchive, sw::vector<uint64>{} );
-        }
-    };
-    const uint64 first  = sw::RTSUnitID::make( 1, 1 ).packed();
-    const uint64 second = sw::RTSUnitID::make( 2, 1 ).packed();
-    const uint64 third  = sw::RTSUnitID::make( 3, 1 ).packed();
-
-    sw::RTSSelection selection;
-    selection.setMaxCount( 2 );
-
-    sw::Archive writtenValid;
-    writeLists( { first, second }, { third }, writtenValid );
-    sw::Archive readingValid( writtenValid.getData(), writtenValid.getSize() );
-    SW_REQUIRE_TRUE( selection.readState( readingValid ) );
-    SW_EXPECT_EQUAL( size_t( 2 ), selection.getSelected().size() );
-
-    sw::Archive writtenRepeated;
-    writeLists( { third, third }, {}, writtenRepeated );
-    sw::Archive readingRepeated( writtenRepeated.getData(), writtenRepeated.getSize() );
-    SW_EXPECT_FALSE( selection.readState( readingRepeated ) );
-
-    sw::Archive writtenGroupRepeated;
-    writeLists( { third }, { first, first }, writtenGroupRepeated );
-    sw::Archive readingGroupRepeated( writtenGroupRepeated.getData(), writtenGroupRepeated.getSize() );
-    SW_EXPECT_FALSE( selection.readState( readingGroupRepeated ) );
-
-    sw::Archive writtenOver;
-    writeLists( { first, second, third }, {}, writtenOver );
-    sw::Archive readingOver( writtenOver.getData(), writtenOver.getSize() );
-    SW_EXPECT_FALSE( selection.readState( readingOver ) );
-
-    SW_REQUIRE_EQUAL( size_t( 2 ), selection.getSelected().size() );
-    SW_EXPECT_EQUAL( first, selection.getSelected()[0].packed() );
-}
-
 /** @brief [RTSWorldTest] 8 배속은 30 fps 에서도 8 배다 — 배속을 곱한 델타가 프레임 상한(0.25 초)에 잘리면 7.5 배가 된다. 돌려준 진행 시간은 월드 시각과 같다(감사 K-6) */
 SW_TEST_CASE( RTSWorldTest, SpeedScaleKeepsStepRatio )
 {
@@ -662,42 +615,6 @@ SW_TEST_CASE( RTSWorldTest, CancelTrainRefundsTheLastQueuedUnit )
     SW_EXPECT_FALSE( match._world.cancelTrain( depot ) ); // 빈 대기열
     SW_EXPECT_FALSE( match._world.cancelTrain( sw::RTSUnitID{} ) );
     SW_EXPECT_EQUAL( before, match._arrWallet[0].getBalance( minerals ) ); // 거절은 돈을 건드리지 않는다
-}
-
-/** @brief [RTSWorldTest] 더블 클릭 선택은 사각형 안의 같은 종류인 내 유닛만 고른다. 남의 유닛을 누르면 그것 하나만 고르고 명령은 줄 수 없다. */
-SW_TEST_CASE( RTSWorldTest, SelectSameTypePicksOwnUnitsOfThatKindInTheRect )
-{
-    sw::RTSCatalog catalog;
-    SW_REQUIRE_TRUE( catalog.loadFromXMLText( kUnitXML, "RTSWorldTest" ) );
-    ScriptedMatch match;
-    SW_REQUIRE_TRUE( match.setUp( catalog ) );
-    sw::RTSSelection selection;
-    selection.setPlayer( 0 );
-    const sw::float3 mapMin{ 0.0f, 0.0f, 0.0f };
-    const sw::float3 mapMax{ static_cast<float32>( kMapSize ), 0.0f, static_cast<float32>( kMapSize ) };
-
-    // 맵 전체: 내 해병 8 — 내 일꾼 · 건물과 상대 해병은 빠진다
-    selection.selectSameType( match._world, match._arrArmy[0][0], mapMin, mapMax );
-    SW_REQUIRE_EQUAL( size_t( 8 ), selection.getSelected().size() );
-    SW_EXPECT_EQUAL( match._arrArmy[0][0].packed(), selection.getPrimary().packed() ); // 누른 유닛이 맨 앞이다
-    for ( const sw::RTSUnitID unitID : selection.getSelected() )
-    {
-        const sw::RTSUnit* pUnit = match._world.findUnit( unitID );
-        SW_REQUIRE_NOT_NULL( pUnit );
-        SW_EXPECT_EQUAL( 0, pUnit->_owner );
-        SW_EXPECT_TRUE( pUnit->_pDef->_id == kMarine );
-    }
-    SW_EXPECT_TRUE( selection.isCommandable( match._world ) );
-
-    // 좁은 사각형: 앞줄(z 10.5)의 네 기만 — 모서리 순서는 상관없다
-    selection.selectSameType( match._world, match._arrArmy[0][0], sw::float3{ 10.0f, 0.0f, 10.9f }, sw::float3{ 6.0f, 0.0f, 10.0f } );
-    SW_EXPECT_EQUAL( size_t( 4 ), selection.getSelected().size() );
-
-    // 남의 유닛을 누르면 그것 하나만 고른다
-    selection.selectSameType( match._world, match._arrArmy[1][0], mapMin, mapMax );
-    SW_REQUIRE_EQUAL( size_t( 1 ), selection.getSelected().size() );
-    SW_EXPECT_TRUE( selection.isSelected( match._arrArmy[1][0] ) );
-    SW_EXPECT_FALSE( selection.isCommandable( match._world ) );
 }
 
 /**

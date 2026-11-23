@@ -20,6 +20,11 @@
 | `harvestvalley/sounds/*.ogg` | Kenney "Interface Sounds" (<https://kenney.nl/assets/interface-sounds>) — `confirmation_001` · `drop_002` · `pluck_001` · `select_002` | CC0 1.0 |
 | `voxelcraft/textures_raw/blocks.png` | Kenney "Voxel Pack" (<https://kenney.nl/assets/voxel-pack>) — 128 px 타일 열여섯을 4 × 4 아틀라스로 모은 것(칸 순서와 블록의 짝은 `data/blocks.xml`) | CC0 1.0 |
 | `voxelcraft/sounds/*.ogg` | Kenney "Impact Sounds" (<https://kenney.nl/assets/impact-sounds>) — `footstep_grass_000` · `impactPlank_medium_001` · `impactSoft_medium_000`(파일 이름은 소문자 `_` 로) | CC0 1.0 |
+| `starskirmish/models_raw/kaykit_space/*` · `starskirmish/textures_raw/kaykit_space.png` | KayKit "Space Base Bits 1.0" (<https://github.com/KayKit-Game-Assets/KayKit-Space-Base-Bits-1.0>, 커밋 `6dfbcac9927d06283752c4defd4882cfe0d29666`) — 지형 다섯(`terrain_low` · `terrain_tall` · `terrain_slope` · `terrain_slope_inner_corner` · `terrain_slope_outer_corner`) · 바위 넷(`rock_a` · `rock_b` · `rocks_a` · `rocks_b`) — 씬에 견본으로만 둔다 · 아틀라스 `spacebits_texture.png`. 경로 `addons/kaykit_space_base_bits/Assets/gltf/`. `Assets/LICENSE.txt` 원문 "License: (Creative Commons Zero, CC0)". 만든 이 Kay Lousberg | CC0 1.0 |
+| 절벽 바위(`starskirmish/prefabs/cliff_rock_*.prefab.xml`) | Quaternius "Stylized Nature MegaKit" — 공용 원본 `common/models_raw/quaternius/nature/` 의 Rock_Medium_1 · 2 · 3(출처는 `common/credits.md`) | CC0 1.0 |
+| `starskirmish/models_raw/*.glb` | Kenney "Space Kit" (<https://kenney.nl/assets/space-kit>) — 우주선 다섯 · 격납고 셋 · 발전기 · 안테나 · 구조물 · 착륙장 · 포탑 둘 · 결정 · 분화구 | CC0 1.0 |
+| `starskirmish/sounds/confirmation_003.ogg` · `starskirmish/sounds/error_003.ogg` · `starskirmish/sounds/select_004.ogg` | Kenney "Interface Sounds" (<https://kenney.nl/assets/interface-sounds>) — `confirmation_003` · `error_003` · `select_004` | CC0 1.0 |
+| `starskirmish/sounds/impact_metal_heavy_000.ogg` | Kenney "Impact Sounds" (<https://kenney.nl/assets/impact-sounds>) — `impactMetal_heavy_000` | CC0 1.0 |
 
 - `AudioServiceTest` 가 OGG 디코드를 실제 파일로 확인하는 테스트 자료입니다.
 - CC0 는 표기 의무가 없지만 고마움을 적어 둡니다 — Kenney (www.kenney.nl).
@@ -27,3 +32,8 @@
 - 서부 평원(`maps/prairie.scene.xml`)의 선인장 · 울타리 · 말은 `wildwest/models_raw/` 의 모델이고(Farm Animals 라이선스 근거: 묶음의 `License.txt` 원문 "License: (Creative Commons Zero, CC0)"),
   땅 · 목장 · 기수는 아직 엔진 기본 도형과 색만 바꾼 머티리얼이다. 말 클립 이름에는 임포트가 `armature_` 접두어를 붙인다.
 - 허브 농장의 Nature Kit 모델(`harvestvalley/models_raw/`)은 내려받은 그대로다 — UniGLTF 출력이라 씬 루트로 자식 노드를 적어 glTF 2.0 을 어기지만 임포터가 맨 위 조상(`tmpParent`)으로 바꿔 읽고 경고한다. 텍스처가 없고 색은 임포터가 정점 색으로 굽는다.
+- RTS 매치의 Kenney Space Kit 원본 glb(`starskirmish/models_raw/`)는 내려받은 그대로다(UniGLTF 출력 — 위 농장 모델과 같은 경고). 모델 노드마다 키트 배치용 오프셋 (2, 0, 1.5) 이 들어 있어, 임포트 규칙
+  (`Config/Editor/ModelImportConfig.json` 의 `StarSkirmish_KitLayoutOffset`, `translation: [-2, 0, -1.5]`)이 그것을 지워 모델 원점(바닥 가운데)이 엔진 원점에 온다. 경계 상자 중심(`recenter: xz`)은 발전기 · 결정 · 포탑처럼
+  모양이 치우친 모델을 최대 6 cm 옮기므로 쓰지 않는다. 텍스처가 없고 색은 키트 머티리얼 색을 정점 색으로 굽는다(게임은 주인 색을 곱한다).
+- KayKit Space Base(`starskirmish/models_raw/kaykit_space/`)는 `.gltf` + `.bin` 이고 색은 아틀라스(`starskirmish/textures_raw/kaykit_space.png`, 원본 `spacebits_texture.png` 바이트 그대로)에서 읽는다. 파일 이름을 소문자로 바꾸느라
+  `.gltf` 안의 버퍼 `uri` 만 새 `.bin` 이름으로 고쳤다. 키트 배치 오프셋이 없으므로 임포트 규칙 `StarSkirmish_KayKitSpaceBase` 가 먼저 맞아 옮기지 않는다.

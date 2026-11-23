@@ -166,7 +166,7 @@ namespace sw
 {
     /**
      * @class RTSCatalog
-     * @brief `<RTSCatalog supplyMax="200"><Rules fixedStep="0.05" .../><Unit id="worker" kind="Unit" hp="45" .../></RTSCatalog>` 를 읽습니다. `<Rules>` 는 꼭 한 줄이다. 키는 `Content/game/starskirmish/data/units.xml` 입니다.
+     * @brief `<RTSCatalog supplyMax="200"><Rules fixedStep="0.05" .../><Unit id="worker" kind="Unit" hp="45" .../></RTSCatalog>` 를 읽습니다. `<Rules>` 는 꼭 한 줄이다. 키는 `Content/game/playground/starskirmish/data/units.xml` 입니다.
      */
     class SW_KIT_API RTSCatalog : public GameCatalog<RTSUnitDef, XMLCatalog<RTSCatalog>>
     {

@@ -258,6 +258,11 @@ namespace sw
         _grid.setBlocked( x, y, bBlocked || _land.isBlocked( x, y ) );
     }
 
+    bool RTSWorld::isTerrainBlocked( int32 x, int32 y ) const
+    {
+        return _grid.isInside( x, y ) && _listTerrainBlocked[static_cast<size_t>( _grid.computeIndex( int2{ x, y } ) )] != SW_FALSE;
+    }
+
     void RTSWorld::bindLand( LandRegistry* pLand, const int2& origin )
     {
         _land.bind( pLand, origin, hashed_string( "RealTimeStrategy" ) );

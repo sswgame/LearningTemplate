@@ -1,5 +1,5 @@
 {
-    "_packRoot": "game/starskirmish",
+    "_packRoot": "game/playground/starskirmish",
     "_cookRules": {
         "_listAlwaysCook": [
             { "_name": "UnitModels_JoinedFromName", "_listPattern": [ "models/**" ], "_bAutomationOnly": false }
