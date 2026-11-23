@@ -2,6 +2,7 @@
 #include "pch.h"
 
 #include "Core/File/FileUtil.h"
+#include "Core/Memory/Memory.h"
 #include "Core/String/StringBuilder.h"
 #include "Core/Testing/TestFramework.h"
 
@@ -112,6 +113,41 @@ SW_TEST_CASE( ModelImportSectionsTest, ReimportKeepsSectionNamesByRawNames )
     SW_EXPECT_EQUAL( uint32{ 1 }, ModelImportMaterial::keepPreviousSectionNames( listSection, listPrevious ) );
     SW_EXPECT_EQUAL( string( "wood" ), listSection[0]._sectionName );
     SW_EXPECT_EQUAL( string( "woodnew" ), listSection[1]._sectionName );
+}
+
+/**
+ * @brief [ModelImportSectionsTest] 관절 사이의 관절 아닌 노드 변환이 자식 본의 자리에 합쳐진다(glTF 는 관절 사이에 관절 아닌 노드를 허락한다)
+ */
+SW_TEST_CASE( ModelImportSectionsTest, NonJointNodeBetweenJointsKeepsTheBonePlace )
+{
+    const AbsolutePath root = test::makeScratchPath( "ModelImportJointOffset" );
+    SW_REQUIRE_TRUE( FileUtil::ensureDirectoryExists( root.join( "models_raw" ) ) );
+    // 위치 3 개(36 바이트) · 관절 번호 3 개(u8x4, 12 바이트) · 가중치 3 개(f32x4, 48 바이트).
+    vector<uint8> listByte( 96, 0 );
+    const float32 arrPosition[9]{ 0, 0, 0, 1, 0, 0, 0, 0, 1 };
+    const float32 arrWeight[12]{ 1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0 };
+    Memory::copy( listByte.data(), arrPosition, sizeof( arrPosition ) );
+    listByte[36 + 8] = 1; // 셋째 정점은 둘째 관절
+    Memory::copy( listByte.data() + 48, arrWeight, sizeof( arrWeight ) );
+    SW_REQUIRE_TRUE( FileUtil::writeFile( root.join( "models_raw/rig.bin" ), listByte.data(), listByte.size() ) );
+    const string_view json       = R"({ "asset": { "version": "2.0" }, "scene": 0, "scenes": [ { "nodes": [ 0, 3 ] } ],
+        "nodes": [ { "name": "Hips", "children": [ 1 ] }, { "name": "Offset", "translation": [ 0, 2, 0 ], "children": [ 2 ] }, { "name": "Spine", "translation": [ 0, 1, 0 ] },
+                   { "name": "Body", "mesh": 0, "skin": 0 } ],
+        "skins": [ { "joints": [ 0, 2 ] } ],
+        "buffers": [ { "uri": "rig.bin", "byteLength": 96 } ],
+        "bufferViews": [ { "buffer": 0, "byteOffset": 0, "byteLength": 36 }, { "buffer": 0, "byteOffset": 36, "byteLength": 12 }, { "buffer": 0, "byteOffset": 48, "byteLength": 48 } ],
+        "accessors": [ { "bufferView": 0, "componentType": 5126, "count": 3, "type": "VEC3", "min": [ 0, 0, 0 ], "max": [ 1, 0, 1 ] },
+                       { "bufferView": 1, "componentType": 5121, "count": 3, "type": "VEC4" }, { "bufferView": 2, "componentType": 5126, "count": 3, "type": "VEC4" } ],
+        "meshes": [ { "primitives": [ { "attributes": { "POSITION": 0, "JOINTS_0": 1, "WEIGHTS_0": 2 } } ] } ] })";
+    const string      sourcePath = root.join( "models_raw/rig.gltf" ).str();
+    SW_REQUIRE_TRUE( FileUtil::writeTextFile( FileUtil::toDiskPath( sourcePath ), json ) );
+
+    ModelImportResult result;
+    SW_REQUIRE_TRUE( ModelImporter::readModelAsset( sourcePath, ModelImportRule{}, result ) );
+    const optional<uint32> spine = result._skeleton.findBoneIndex( hashed_string( "Spine" ) );
+    SW_REQUIRE_TRUE( spine.has_value() );
+    SW_EXPECT_EQUAL( 0, result._skeleton.getBone( *spine )._parentIndex );
+    SW_EXPECT_NEAR( 3.0f, result._skeleton.getBone( *spine )._localTransform._translation._y, 1e-5f );
 }
 
 /**

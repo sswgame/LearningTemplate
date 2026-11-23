@@ -74,19 +74,27 @@ namespace sw::editor
                 return false;
             }
 
+            /** @brief 노드의 로컬 변환 행렬(엔진 공간)입니다. */
+            static float4x4 readLocalMatrix( const cgltf_node& node )
+            {
+                float32 arrLocal[16]{};
+                cgltf_node_transform_local( &node, arrLocal );
+                return ModelImportUtil::convertMatrixToEngineSpace( arrLocal );
+            }
+
             /**
              * @brief 모든 스킨의 관절(노드가 같으면 한 본)로 스켈레톤을 만듭니다. 부모가 앞에 오도록 깊이 우선 순서로 정렬하고, 관절 위의 비관절 조상의
              *        변환은 루트 본에 합칩니다. 역 바인드(메시의 값)는 그 관절을 처음 가진 스킨의 것입니다. 스킨끼리 다르면 경고합니다.
              * @param outMapJointBone 관절 노드에서 본 번호로의 대응입니다.
-             * @param outListRootParent 본마다 루트에 합친 행렬(엔진 공간)입니다. 루트가 아니면 단위 행렬이며, 클립 샘플에도 같은 행렬을 곱합니다.
+             * @param outListParentOffset 본마다 부모 본(루트는 장면)과 그 사이 관절이 아닌 노드들의 변환(엔진 공간)입니다. 사이에 노드가 없으면 단위 행렬이며, 클립 샘플에도 같은 행렬을 곱합니다.
              * @param outListBoneInverseBind 본 순서의 역 바인드입니다.
              */
             static bool buildSkeleton( const cgltf_data& data, Skeleton& outSkeleton, unordered_map<const cgltf_node*, int32>& outMapJointBone,
-                                       vector<float4x4>& outListRootParent, vector<float4x4>& outListBoneInverseBind, string_view sourcePath )
+                                       vector<float4x4>& outListParentOffset, vector<float4x4>& outListBoneInverseBind, string_view sourcePath )
             {
                 outSkeleton.clear();
                 outMapJointBone.clear();
-                outListRootParent.clear();
+                outListParentOffset.clear();
                 outListBoneInverseBind.clear();
                 unordered_map<const cgltf_node*, uint32> mapJointSlot;
                 vector<const cgltf_node*>                listJoint;
@@ -147,14 +155,20 @@ namespace sw::editor
                         const cgltf_node* pParentJoint = ModelImportAnimation::findJointAncestorBySlot( *pNode, mapJointSlot );
                         const int32       parentBone   = pParentJoint != nullptr ? outMapJointBone[pParentJoint] : -1;
                         BoneTransform     local        = ModelImportUtil::convertTransformToEngineSpace( ModelImportAnimation::readNodeLocal( *pNode ) );
-                        float4x4          rootParent   = float4x4::Identity;
+                        // 부모 본까지(루트는 장면까지)의 관절 아닌 노드 변환을 합친다 — 관절 사이에 관절 아닌 노드를 둘 수 있다(glTF 명세). 빼면 그 본부터 자리가 어긋난다.
+                        float4x4 parentOffset = float4x4::Identity;
                         if ( parentBone < 0 && pNode->parent != nullptr )
                         {
                             float32 arrParentWorld[16]{};
                             cgltf_node_transform_world( pNode->parent, arrParentWorld );
-                            rootParent = ModelImportUtil::convertMatrixToEngineSpace( arrParentWorld );
-                            local      = BoneTransform::makeFromMatrix( local.toMatrix() * rootParent );
+                            parentOffset = ModelImportUtil::convertMatrixToEngineSpace( arrParentWorld );
                         }
+                        for ( const cgltf_node* pBetween = pNode->parent; pParentJoint != nullptr && pBetween != pParentJoint; pBetween = pBetween->parent )
+                        {
+                            parentOffset = parentOffset * readLocalMatrix( *pBetween );
+                        }
+                        if ( parentOffset != float4x4::Identity )
+                            local = BoneTransform::makeFromMatrix( local.toMatrix() * parentOffset );
                         const expected<int32> boneIndex = outSkeleton.addBone( hashed_string( ModelImportUtil::makeNodeName( data, *pNode ) ), parentBone, local );
                         if ( boneIndex.has_value() == false )
                         {
@@ -163,7 +177,7 @@ namespace sw::editor
                         }
                         outListBoneInverseBind.push_back( listInverseBind[itSlot->second] );
                         outMapJointBone.emplace( pNode, *boneIndex );
-                        outListRootParent.push_back( rootParent );
+                        outListParentOffset.push_back( parentOffset );
                     }
                     for ( cgltf_size childIndex = pNode->children_count; childIndex > 0; --childIndex )
                     {
@@ -216,9 +230,7 @@ namespace sw::editor
                 float4x4 local         = float4x4::Identity;
                 for ( const cgltf_node* pStep = &node; pStep != nullptr && pStep != &joint; pStep = pStep->parent )
                 {
-                    float32 arrLocal[16]{};
-                    cgltf_node_transform_local( pStep, arrLocal );
-                    local = local * ModelImportUtil::convertMatrixToEngineSpace( arrLocal );
+                    local = local * readLocalMatrix( *pStep );
                 }
                 attachment._localTransform = BoneTransform::makeFromMatrix( local );
                 const string baseStem      = ModelImportUtil::makeFileStem( attachment._name );
@@ -244,9 +256,9 @@ namespace sw::editor
                                                         const vector<string>& listSectionMaterialName, ModelImportResult& outResult )
             {
                 unordered_map<const cgltf_node*, int32> mapJointBone;
-                vector<float4x4>                        listRootParent;
+                vector<float4x4>                        listParentOffset;
                 vector<float4x4>                        listBoneInverseBind;
-                if ( buildSkeleton( data, outResult._skeleton, mapJointBone, listRootParent, listBoneInverseBind, sourcePath ) == false )
+                if ( buildSkeleton( data, outResult._skeleton, mapJointBone, listParentOffset, listBoneInverseBind, sourcePath ) == false )
                     return false;
                 outResult._skeleton.setPartial( rule._bPartialSkeleton == SW_TRUE );
                 const uint32 boneCount = outResult._skeleton.getBoneCount();
@@ -337,11 +349,11 @@ namespace sw::editor
                 outResult._mesh._skinBinding._listInverseBind = std::move( listBoneInverseBind );
                 outResult._mesh._skinBinding._layoutHash      = outResult._skeleton.getHierarchyHash( boneCount );
                 outResult._bSkinned                           = SW_TRUE;
-                return readClips( data, mapJointBone, listRootParent, rule, sourcePath, outResult );
+                return readClips( data, mapJointBone, listParentOffset, rule, sourcePath, outResult );
             }
 
             /** @brief 애니메이션마다 클립 하나를 만들어 규칙의 코덱으로 압축합니다. 규칙의 클립 목록에 원본에 없는 이름이 있으면 false 입니다. */
-            [[nodiscard]] static bool readClips( const cgltf_data& data, const unordered_map<const cgltf_node*, int32>& mapJointBone, const vector<float4x4>& listRootParent,
+            [[nodiscard]] static bool readClips( const cgltf_data& data, const unordered_map<const cgltf_node*, int32>& mapJointBone, const vector<float4x4>& listParentOffset,
                                                  const ModelImportRule& rule, string_view sourcePath, ModelImportResult& inoutResult )
             {
                 if ( rule._bImportAnimations == SW_FALSE )
@@ -402,7 +414,7 @@ namespace sw::editor
                     float32                    morphDuration = 0.0f;
                     AnimationRawClip           rawClip;
                     const bool                 bChannelsRead = ModelImportAnimation::readMorphWeightCurves( animation, rule._animationSampleRate, listMorphCurve, morphDuration ) &&
-                                               ModelImportAnimation::resampleAnimation( animation, skeleton, mapJointBone, listRest, listRootParent, rule._animationSampleRate, morphDuration, rawClip );
+                                               ModelImportAnimation::resampleAnimation( animation, skeleton, mapJointBone, listRest, listParentOffset, rule._animationSampleRate, morphDuration, rawClip );
                     if ( bChannelsRead == false )
                     {
                         SW_LOG_ERROR_ID( "ModelImporter.GlTFClipChannelWhose", "glTF '%#': clip '%#' has a channel whose keys cannot be read", sourcePath, clipName.c_str() );

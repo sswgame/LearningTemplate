@@ -156,7 +156,7 @@ namespace sw::editor
     }
 
     bool ModelImportAnimation::resampleAnimation( const cgltf_animation& animation, const Skeleton& skeleton, const unordered_map<const cgltf_node*, int32>& mapJointBone,
-                                                  const vector<BoneTransform>& listRest, const vector<float4x4>& listRootParent, float32 sampleRate, float32 minimumDuration,
+                                                  const vector<BoneTransform>& listRest, const vector<float4x4>& listParentOffset, float32 sampleRate, float32 minimumDuration,
                                                   AnimationRawClip& outRawClip )
     {
         const uint32          boneCount = skeleton.getBoneCount();
@@ -200,8 +200,8 @@ namespace sw::editor
             for ( uint32 boneIndex = 0; boneIndex < boneCount; ++boneIndex )
             {
                 BoneTransform sample = ModelImportUtil::convertTransformToEngineSpace( sampleJoint( listChannel[boneIndex], listRest[boneIndex], time ) );
-                if ( listRootParent[boneIndex] != float4x4::Identity )
-                    sample = BoneTransform::makeFromMatrix( sample.toMatrix() * listRootParent[boneIndex] );
+                if ( listParentOffset[boneIndex] != float4x4::Identity )
+                    sample = BoneTransform::makeFromMatrix( sample.toMatrix() * listParentOffset[boneIndex] );
                 outRawClip._listSample[static_cast<size_t>( sampleIndex ) * boneCount + boneIndex] = sample;
             }
         }
