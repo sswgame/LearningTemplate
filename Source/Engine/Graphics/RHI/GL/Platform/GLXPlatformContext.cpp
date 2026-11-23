@@ -121,6 +121,10 @@ namespace sw
             glXGetFBConfigAttrib( pDpy, pFbcAll[configIndex], GLX_RENDER_TYPE, &usable );
             if ( ( usable & GLX_RGBA_BIT ) == 0 )
                 continue;
+            // 백버퍼(GL_BACK)에 그리고 glXSwapBuffers 로 낸다 — 버퍼가 하나뿐인 설정에는 GL_BACK 이 없다.
+            glXGetFBConfigAttrib( pDpy, pFbcAll[configIndex], GLX_DOUBLEBUFFER, &usable );
+            if ( usable == 0 )
+                continue;
             XVisualInfo* pVi = glXGetVisualFromFBConfig( pDpy, pFbcAll[configIndex] );
             if ( pVi == nullptr )
                 continue;
@@ -132,8 +136,14 @@ namespace sw
                 break;
             }
         }
+        // 창의 비주얼과 다른 설정으로 만든 문맥을 걸면 BadMatch 이고, 잡지 않은 X 오류는 프로세스를 끝낸다 — 다른 설정으로 대신하지 않고 멈춘다.
+        // https://registry.khronos.org/OpenGL-Refpages/gl2.1/xhtml/glXMakeCurrent.xml (BadMatch: drawable 과 ctx 의 비주얼이 다르다)
         if ( chosen == nullptr )
-            chosen = pFbcAll[0];
+        {
+            SW_LOG_ERROR_ID( "OpenGL.GLXNoFBConfigForVisual", "No double-buffered RGBA GLX framebuffer config matches the window's visual (%#)", static_cast<uint64>( windowVisualID ) );
+            XFree( pFbcAll );
+            return false;
+        }
 
         PFNGLXCREATECONTEXTATTRIBSARBPROC glXCreateContextAttribsARB =
             (PFNGLXCREATECONTEXTATTRIBSARBPROC)glXGetProcAddressARB( (const GLubyte*)"glXCreateContextAttribsARB" );
@@ -197,7 +207,13 @@ namespace sw
             SW_LOG_ERROR_ID( "OpenGL.FailedCreateGLXContext", "Failed to create GLX context (WSLg often lacks GL 4.x — use -vk)" );
             return false;
         }
-        if ( glXMakeCurrent( pDpy, win, context ) == 0 )
+        // glXMakeCurrent 의 실패는 반환값만이 아니라 X 오류(BadMatch · BadAccess)로도 온다 — 가로채지 않으면 Xlib 기본 처리기가 프로세스를 끝낸다.
+        bool bMadeCurrent = false;
+        {
+            GLXPlatformContextInternal::GLXXErrorScope trap( pDpy );
+            bMadeCurrent = glXMakeCurrent( pDpy, win, context ) != 0 && trap.failed() == false;
+        }
+        if ( bMadeCurrent == false )
         {
             SW_LOG_ERROR_ID( "OpenGL.GlXMakeCurrentFailed", "glXMakeCurrent failed" );
             glXDestroyContext( pDpy, context );

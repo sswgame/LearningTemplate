@@ -896,12 +896,13 @@ namespace sw
     void WebGPURHIDevice::collectTimestampReadback( uint32 ringSlot )
     {
         WebGPUTimestampReadback& readback = _arrTimestampReadback[ringSlot];
+        _timestampFrame._listMicro.clear(); // 읽을 것이 없는 프레임은 비운다(다른 네 백엔드와 같다) — 남기면 지난 값이 새 표본으로 다시 나간다
         if ( readback._bQueued != SW_FALSE && readback._bMapped.load( std::memory_order_acquire ) != SW_FALSE )
         {
             // 값은 나노초다(명세) — 틱 하나 = 1 ns. 적지 않은 칸은 `RHITimestampFrame::resolve` 가 음수로 둔다(마스크).
             const uint64* const pTick = static_cast<const uint64*>( wgpuBufferGetConstMappedRange( readback._buffer, 0, WebGPURHIDeviceInternal::kTimestampBytes ) );
             if ( pTick != nullptr )
-                (void)RHITimestampFrame::resolve( pTick, _timestampRing.getSlotMask( ringSlot ), 1.0, _timestampFrame );
+                (void)RHITimestampFrame::resolve( pTick, _timestampRing.getSlotMask( ringSlot ), _timestampRing.getComputeQueueMask( ringSlot ), 1.0, _timestampFrame );
             wgpuBufferUnmap( readback._buffer );
         }
         readback._bQueued = SW_FALSE;
@@ -1187,10 +1188,10 @@ namespace sw
         submitPending();
     }
 
-    void WebGPURHIDevice::allocateConstantSlice( const void* pData, uint32 size, WGPUBuffer& outBuffer, uint64& outOffset )
+    void WebGPURHIDevice::allocateConstantSlice( const void* pData, uint32 size, uint64 sliceBytes, WGPUBuffer& outBuffer, uint64& outOffset )
     {
         using Internal           = WebGPURHIDeviceInternal;
-        const uint64 alignedSize = MathUtil::align( static_cast<uint64>( size ), Internal::kConstantAlignment );
+        const uint64 alignedSize = MathUtil::align( sliceBytes, Internal::kConstantAlignment ); // 부르는 쪽이 묶을 크기다(`size` 이상)
         const bool   bNoRoom     = _activeRingIndex >= _listConstantRing.size() || _listConstantRing[_activeRingIndex]._used + alignedSize > _listConstantRing[_activeRingIndex]._capacity;
         if ( bNoRoom )
         {
@@ -1201,6 +1202,8 @@ namespace sw
         }
         ConstantRing& ring = _listConstantRing[_activeRingIndex];
         Memory::copy( ring._staging.data() + ring._used, pData, size );
+        if ( sliceBytes > size )
+            Memory::set( ring._staging.data() + ring._used + size, 0, static_cast<size_t>( sliceBytes - size ) ); // 갱신하지 않은 꼬리는 0 — 링의 지난 값이 새지 않는다
         outBuffer = ring._buffer;
         outOffset = ring._used;
         ring._used += alignedSize;
@@ -1260,7 +1263,25 @@ namespace sw
 
     void WebGPURHIDevice::endFrameInternal( bool vsync, bool bPresent )
     {
-        (void)vsync;         // 스왑체인 구성이 정한다(`applyVSyncInternal`)
+        (void)vsync; // 스왑체인 구성이 정한다(`applyVSyncInternal`)
+        if ( isDeviceLost() )
+        {
+            // 잃은 장치의 beginFrame 은 칸을 기다리지 않았다 — 칸의 앞 프레임이 남았을 수 있어 내지 않고 버린다(Vulkan 이 시작하지 않은 프레임을 건너뛰는 것과 같다).
+            closeFrameEncoder();
+            for ( const WGPUCommandBuffer buffer : _listPendingCommandBuffer )
+            {
+                if ( buffer != nullptr )
+                    wgpuCommandBufferRelease( buffer );
+            }
+            _listPendingCommandBuffer.clear();
+            _swapChain.releaseCurrent();
+            for ( WebGPURHISwapChain* pSwapChain : _windowSwapChains.getFrameList() )
+            {
+                pSwapChain->releaseCurrent();
+            }
+            _windowSwapChains.clearFrame();
+            return;
+        }
         resolveTimestamps(); // 프레임 인코더는 이 프레임의 마지막 세그먼트다 — 앞서 낸 리스트의 시각까지 모두 풀린다
         closeFrameEncoder();
         submitPending();

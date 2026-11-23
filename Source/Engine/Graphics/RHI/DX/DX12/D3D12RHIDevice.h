@@ -296,7 +296,7 @@ namespace sw
         [[nodiscard]] bool readTimestamps( RHITimestampFrame& outFrame );
         [[nodiscard]] bool readGPUClockNanos( int64& outGPUNanos );
         bool               isGPUClockReadCheap() const { return true; }
-        /** @brief 컴퓨트 큐 타임스탬프가 직접 큐와 같은 시계인지입니다(`compareComputeQueueClock` 이 힙을 만들 때 정한다). */
+        /** @brief 컴퓨트 큐 타임스탬프를 직접 큐 시계로 읽을 수 있는지입니다(`measureComputeQueueClock` 이 힙을 만들 때 정한다). */
         bool isComputeQueueTimestampComparable() const { return _bComputeTimestampComparable.load( std::memory_order_relaxed ) != SW_FALSE; }
 
         /** @brief 타임스탬프 쿼리 힙을 반환합니다. 준비되지 않았으면 nullptr 입니다. */
@@ -305,6 +305,7 @@ namespace sw
         uint32 getTimestampBase() const { return _frameRing.currentIndex() * constant::render::kMaxGPUTimestampSlot; }
         /** @brief 슬롯 하나를 기록했다고 표시합니다. 여러 패스 스레드가 동시에 부를 수 있습니다. */
         void                         markTimestampWritten( uint32 slotIndex ) { _timestampRing.markWritten( slotIndex ); }
+        void                         markComputeQueueTimestampWritten( uint32 slotIndex ) { _timestampRing.markComputeQueueWritten( slotIndex ); }
         void                         resizeInternal( uint32 width, uint32 height ) override;
         [[nodiscard]] bool           setBackBufferColorSpaceInternal( RHIColorSpace colorSpace, const RHIDisplayMetadata& metadata ) override;
         [[nodiscard]] bool           setDisplayMetadataInternal( const RHIDisplayMetadata& metadata ) override { return _swapChain.setDisplayMetadata( metadata ); }
@@ -596,11 +597,11 @@ namespace sw
         /** @brief 쿼리 힙과 읽기 버퍼를 한 번만 만듭니다. */
         void ensureTimestampResources();
         /**
-         * @brief 컴퓨트 큐의 타임스탬프를 직접 큐의 것과 같은 축으로 읽을 수 있는지 대조합니다(주파수 같음 + 두 큐 시계 표본의 GPU 증가분이 CPU 증가분과 맞음).
-         * @details 타임스탬프 주파수와 `GetClockCalibration` 은 큐마다 묻는다(https://learn.microsoft.com/en-us/windows/win32/direct3d12/timing). 같은 카운터면 두 큐의 표본 사이
-         *          GPU 증가분과 QPC 증가분이 같다 — 어긋남이 `kComputeClockSkewToleranceMicros` 안이면 true 다. 결과는 정보 로그로 남긴다(실장치 대조 기록).
+         * @brief 컴퓨트 큐 틱을 직접 큐 시계로 옮기는 값(`_computeClockOffsetTick`)을 잽니다. 두 큐의 주파수가 다르거나 시계를 읽지 못하면 false 입니다.
+         * @details 타임스탬프 주파수와 `GetClockCalibration` 은 큐마다 묻는다(https://learn.microsoft.com/en-us/windows/win32/direct3d12/timing) — 두 큐의 시계가 같다는 약속은 없다.
+         *          그래서 어긋났다고 재기를 끄지 않고 각 큐의 CPU 표본으로 이어 옮긴다(언리얼 D3D12 도 큐마다 보정 표본을 들고 CPU 축으로 바꾼다 — 기억에 의존한 비교).
          */
-        [[nodiscard]] bool compareComputeQueueClock( uint64 directFrequency ) const;
+        [[nodiscard]] bool measureComputeQueueClock( uint64 directFrequency );
         /** @brief 방금 펜스를 통과한 링 슬롯의 결과를 마이크로초로 변환합니다. */
         void collectTimestampsForSlot();
         /**
@@ -876,7 +877,11 @@ namespace sw
         Microsoft::WRL::ComPtr<ID3D12QueryHeap> _timestampHeap;
         Microsoft::WRL::ComPtr<ID3D12Resource>  _timestampReadback;
         uint64                                  _timestampFrequency;
-        /// @brief 컴퓨트 큐 타임스탬프가 직접 큐와 같은 시계인가입니다(`isComputeQueueTimestampComparable`). 힙을 만들 때 한 번 정하고, 병렬 기록 워커가 읽어 atomic 이다.
+        /// @brief 컴퓨트 큐 틱에 더하면 직접 큐 시계가 되는 값입니다(렌더 스레드만). 같은 카운터면 0 이다.
+        int64 _computeClockOffsetTick;
+        /// @brief 시계가 다른 장치에서 마지막으로 잰 뒤 읽은 프레임 수입니다(렌더 스레드만). 시계는 GPU 가 쉬면 멈출 수 있어 다시 잰다.
+        uint32 _computeClockAgeFrames;
+        /// @brief 컴퓨트 큐 타임스탬프를 직접 큐 시계로 읽을 수 있는가입니다(`isComputeQueueTimestampComparable`). 힙을 만들 때 한 번 정하고, 병렬 기록 워커가 읽어 atomic 이다.
         atomic<uint8> _bComputeTimestampComparable;
         /// @brief 이번 프레임 · 링 슬롯별로 기록된 슬롯 비트입니다. 쿼리 힙은 리셋하지 않아 안 적은 칸에 지난 사이클 값이 남으므로 이 비트로 가린다.
         RHITimestampRing     _timestampRing;

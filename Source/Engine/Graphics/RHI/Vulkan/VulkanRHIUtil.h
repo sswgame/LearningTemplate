@@ -200,6 +200,13 @@ namespace sw
             return VK_ATTACHMENT_STORE_OP_STORE;
         }
 
+        /// @brief 컬러 첨부를 만지는 단계와 접근입니다 — 쓰기뿐 아니라 읽기(LOAD · 블렌드)도 첨부 접근이다. 렌더 패스 의존성과 레이아웃 배리어가 같은 값을 쓴다.
+        static constexpr VkPipelineStageFlags kColorAttachmentStages = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
+        static constexpr VkAccessFlags        kColorAttachmentAccess = VK_ACCESS_COLOR_ATTACHMENT_READ_BIT | VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT;
+        /// @brief 깊이 첨부를 만지는 단계와 접근입니다 — 깊이 테스트 · 쓰기는 이른 · 늦은 프래그먼트 테스트 어느 쪽에서나 일어나고, 저장(storeOp)은 늦은 쪽이다.
+        static constexpr VkPipelineStageFlags kDepthAttachmentStages = VK_PIPELINE_STAGE_EARLY_FRAGMENT_TESTS_BIT | VK_PIPELINE_STAGE_LATE_FRAGMENT_TESTS_BIT;
+        static constexpr VkAccessFlags        kDepthAttachmentAccess = VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_READ_BIT | VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_WRITE_BIT;
+
         static bool hasExtension( const vector<VkExtensionProperties>& listAvailableExt, const utf8* pName )
         {
             return VectorUtil::containsIf( listAvailableExt, [&]( const VkExtensionProperties& ext )

@@ -404,10 +404,10 @@ namespace sw
         static void onDeviceLost( const WGPUDevice* pDevice, WGPUDeviceLostReason reason, WGPUStringView message, void* pUserdata1, void* pUserdata2 );
 
         /**
-         * @brief 상수 링에서 @p size 바이트(256 정렬)를 받아 @p pData 를 담고 그 칸을 돌려줍니다. 링은 이 프레임 제출 전에 올라간다.
+         * @brief 상수 링에서 @p sliceBytes 바이트(256 정렬, @p size 이상 — 묶음이 거는 크기)를 받아 @p pData 를 담고 그 칸을 돌려줍니다. 링은 이 프레임 제출 전에 올라간다.
          * @details 링은 프레임마다 하나이고 그 프레임이 GPU 에서 끝나면 다시 쓴다. 끝나지 않았으면 새 링을 만든다(브라우저는 기다릴 수 없다).
          */
-        void allocateConstantSlice( const void* pData, uint32 size, WGPUBuffer& outBuffer, uint64& outOffset );
+        void allocateConstantSlice( const void* pData, uint32 size, uint64 sliceBytes, WGPUBuffer& outBuffer, uint64& outOffset );
         /** @brief @p capacity 바이트의 상수 링을 하나 더 두고 지금 링으로 삼습니다. */
         void appendConstantRing( uint64 capacity );
 

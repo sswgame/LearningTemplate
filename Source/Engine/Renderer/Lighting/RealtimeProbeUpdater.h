@@ -57,6 +57,8 @@ namespace sw
         /**
          * @brief 이번 프레임 요청들의 구간을 정합니다.
          * @return 용량이 늘어 기록 버퍼를 다시 만들어야 하면 true 입니다(그때는 모든 볼륨이 새로 시작한다 — `isFresh` 가 모두 true).
+         * @details 늘어난 용량과 새 구간은 그 프레임을 갱신했다고 알릴 때(`advanceFrame`)까지 **남아 있다** — 부르는 쪽이 중간에 그만두면(버퍼 할당 실패) 다음 `assign` 이 다시 알린다.
+         *          한 번만 알리면 0 으로 채우지 않은 구간과 옛 크기 버퍼를 다음 프레임이 그대로 쓴다.
          */
         [[nodiscard]] bool assign( const vector<RealtimeProbeRequest>& listRequest );
         /** @brief 요청 @p requestIndex 의 기록 첫 float4 입니다. */
@@ -67,7 +69,7 @@ namespace sw
         uint32 getFramesSinceReset( uint32 requestIndex ) const { return _listFramesSinceReset[requestIndex]; }
         /** @brief 기록 버퍼 용량(float4)입니다. */
         uint32 getCapacity() const { return _span.getCapacity(); }
-        /** @brief 이번 프레임을 갱신했음을 적습니다 — 서 있는 볼륨마다 누적 프레임이 하나 는다. */
+        /** @brief 이번 프레임을 갱신했음(새 구간을 0 으로 채우고 버퍼를 갖췄음)을 적습니다 — 서 있는 볼륨마다 누적 프레임이 하나 는다. */
         void advanceFrame();
         /** @brief 모든 볼륨이 다음 `assign` 에서 새로 시작하게 합니다(버퍼를 놓거나 다시 만들지 못했을 때). */
         void clear();
@@ -78,16 +80,17 @@ namespace sw
         {
             uint32 _offset{ 0 };
             uint32 _count{ 0 };
-            uint32 _framesSinceReset{ 0 };
+            uint32 _framesSinceReset{ 0 }; ///< 0 이면 아직 한 프레임도 갱신하지 않은 구간이다(`isFresh`)
         };
 
     private:
-        unordered_map<uint64, HistorySlot> _mapSlot;              ///< 볼륨 정체 → 구간
-        SpanAllocator                      _span;                 ///< 기록 버퍼의 빈 구간
-        vector<uint64>                     _listActiveID;         ///< 이번 프레임 요청의 정체(차례대로)
-        vector<uint32>                     _listOffset;           ///< 요청마다 구간 시작
-        vector<uint32>                     _listFramesSinceReset; ///< 요청마다 누적 프레임
-        vector<uint8>                      _listFresh;            ///< 요청마다 새로 시작하는지
+        unordered_map<uint64, HistorySlot> _mapSlot;                  ///< 볼륨 정체 → 구간
+        SpanAllocator                      _span;                     ///< 기록 버퍼의 빈 구간
+        vector<uint64>                     _listActiveID;             ///< 이번 프레임 요청의 정체(차례대로)
+        vector<uint32>                     _listOffset;               ///< 요청마다 구간 시작
+        vector<uint32>                     _listFramesSinceReset;     ///< 요청마다 누적 프레임
+        vector<uint8>                      _listFresh;                ///< 요청마다 새로 시작하는지
+        uint8                              _bGrowPending{ SW_FALSE }; ///< 용량이 늘었고 아직 갱신한 프레임이 없다(버퍼를 다시 만들어야 한다)
     };
 } // namespace sw
 

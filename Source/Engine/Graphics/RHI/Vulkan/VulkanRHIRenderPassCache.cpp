@@ -5,6 +5,8 @@
 #include "Core/Foundation/PlatformOSHeaders.h"
 #include "Core/Hash/HashUtil.h"
 
+#include "Engine/Graphics/RHI/Vulkan/VulkanRHIUtil.h"
+
 #include <vulkan/vulkan.h>
 
 namespace sw
@@ -142,20 +144,23 @@ namespace sw
         subpass.pColorAttachments       = spec._colorCount > 0 ? arrColorRef : nullptr;
         subpass.pDepthStencilAttachment = bHasDepth ? &depthRef : nullptr;
 
-        // 바깥(앞선 제출)의 컬러 쓰기 → 이 패스의 컬러 쓰기. 깊이가 있으면 초기 프래그먼트 테스트 단계도 같이 건다.
+        // 바깥(앞 패스 · 앞선 제출)의 첨부 쓰기 → 이 패스의 첨부 읽기(LOAD · 블렌드 · 깊이 테스트) · 쓰기. 같은 첨부에 이어 그리는 패스는 레이아웃이 같아 배리어가 없고(`transitionTextureLayouts`)
+        // 이 의존성이 **유일한** 메모리 의존성이다 — 쓰기 접근을 적지 않으면 실행 순서만 서고 앞 패스의 쓰기가 보인다는 보장이 없다.
+        // https://docs.vulkan.org/refpages/latest/refpages/source/VkSubpassDependency.html (접근 범위는 srcAccessMask · dstAccessMask 로 좁혀진다)
         // 이 마스크는 여기 한 곳에서만 정한다(자리마다 적으면 깊이 없는 패스에 깊이 단계를 걸거나 깊이 패스에 빼먹는다).
         VkSubpassDependency dependency{};
         dependency.srcSubpass    = VK_SUBPASS_EXTERNAL;
         dependency.dstSubpass    = 0;
-        dependency.srcStageMask  = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
-        dependency.srcAccessMask = 0;
-        dependency.dstStageMask  = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
-        dependency.dstAccessMask = VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT;
+        dependency.srcStageMask  = VulkanRHIUtil::kColorAttachmentStages;
+        dependency.srcAccessMask = VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT;
+        dependency.dstStageMask  = VulkanRHIUtil::kColorAttachmentStages;
+        dependency.dstAccessMask = VulkanRHIUtil::kColorAttachmentAccess;
         if ( bHasDepth )
         {
-            dependency.srcStageMask |= VK_PIPELINE_STAGE_EARLY_FRAGMENT_TESTS_BIT;
-            dependency.dstStageMask |= VK_PIPELINE_STAGE_EARLY_FRAGMENT_TESTS_BIT;
-            dependency.dstAccessMask |= VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_WRITE_BIT;
+            dependency.srcStageMask |= VulkanRHIUtil::kDepthAttachmentStages;
+            dependency.srcAccessMask |= VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_WRITE_BIT;
+            dependency.dstStageMask |= VulkanRHIUtil::kDepthAttachmentStages;
+            dependency.dstAccessMask |= VulkanRHIUtil::kDepthAttachmentAccess;
         }
 
         VkRenderPassCreateInfo rpInfo{};

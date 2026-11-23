@@ -172,7 +172,8 @@ namespace sw
          * @brief 셰이더 핫 리로드: 그 셰이더로 만든 PSO 만 파괴하고 비웁니다(레이아웃 캐시도 그 셰이더 것만). 빈 자리는 `FramePSOManager::createPassPSOs` · 지연 생성이 다시 채웁니다.
          * @details 언리얼 셰이더 핫 리로드처럼 바뀐 셰이더를 쓰는 PSO 만 다시 만든다 — 패스 자원(상수 버퍼 · 풀 · 그리기 캐시)은 그대로다.
          *          엔진 패스 PSO 를 하나라도 놓으면 머티리얼 변형을 모두 놓는다: 변형 키에 패스 PSO 핸들이 들어 있어 남기면 쓰이지 않는 채로 쌓이고, `_bOwned` 가 0 인 변형은 놓은 패스 PSO 를 가리킨다.
-         *          `Failed` 변형과 실패(0)로 적힌 모듈 프로그램도 지운다 — 고친 셰이더로 다시 만들어 본다. 만드는 중(`Building`)인 변형은 빌더가 끝낼 때까지 둔다.
+         *          `Failed` 변형과 실패(0)로 적힌 모듈 프로그램도 지운다 — 고친 셰이더로 다시 만들어 본다.
+         *          만드는 중(`Building`)인 변형도 지우고 빌더의 작업을 무효로 한다(`MaterialPSOBuilder::discardPending`) — 옛 바이트코드로 만든 PSO 를 받지 않는다.
          * @return 파괴한 PSO 수입니다.
          */
         uint32 releasePSOsUsingShader( IRHIDevice* pDevice, string_view shaderPath );

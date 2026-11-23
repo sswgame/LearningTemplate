@@ -12,7 +12,7 @@ namespace sw
     {
         struct VFXParticleOrderInternal
         {
-            /// 이보다 많으면 기수 정렬이다(언리얼 나이아가라 `fx.Niagara.RadixSortThreshold` 의 기본값 400).
+            /// 이보다 많으면 기수 정렬이다(언리얼 `Niagara.RadixSortThreshold` 기본값 400 — https://dev.epicgames.com/documentation/en-us/unreal-engine/unreal-engine-console-variables-reference).
             static constexpr uint32 kBucketSortThreshold = 400;
             static constexpr uint32 kBucketBits          = 11; ///< 32 비트를 세 번에(11 · 11 · 10)
             static constexpr uint32 kBucketCount         = 1u << kBucketBits;

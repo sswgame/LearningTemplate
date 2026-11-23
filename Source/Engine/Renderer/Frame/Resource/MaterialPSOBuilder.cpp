@@ -26,7 +26,8 @@ namespace sw
     {
         {
             ScopedLock<mutex> lock{ _mutex };
-            _pDevice = pDevice;
+            _pDevice        = pDevice;
+            job._generation = _generation;
             ( bUrgent ? _listUrgent : _listLow ).push_back( std::move( job ) );
         }
         if ( bThread == false )
@@ -54,7 +55,7 @@ namespace sw
     void MaterialPSOBuilder::pushResult( Job&& job, RHIPipelineStateHandle handle )
     {
         ScopedLock<mutex> lock{ _mutex };
-        _listResult.push_back( Result{ job._key, std::move( job._desc ), handle } );
+        _listResult.push_back( Result{ job._key, std::move( job._desc ), handle, job._generation } );
         --_inFlight;
     }
 
@@ -70,11 +71,23 @@ namespace sw
         pushResult( std::move( job ), handle );
     }
 
+    void MaterialPSOBuilder::discardPending()
+    {
+        ScopedLock<mutex> lock{ _mutex };
+        _listUrgent.clear();
+        _listLow.clear();
+        ++_generation;
+    }
+
     void MaterialPSOBuilder::takeResults( vector<Result>& outListResult )
     {
         ScopedLock<mutex> lock{ _mutex };
         outListResult.clear();
         outListResult.swap( _listResult );
+        for ( Result& result : outListResult )
+        {
+            result._bDiscarded = result._generation != _generation;
+        }
     }
 
     uint32 MaterialPSOBuilder::buildOnCaller( uint32 budgetMicroseconds )

@@ -14,6 +14,7 @@
 #include "Engine/Config/EngineDefaultAssets.h"
 #include "Engine/Foundation/EngineServices.h"
 #include "Engine/Graphics/RHI/Backend/RHILiveCommandListUtil.h"
+#include "Engine/Graphics/RHI/Vulkan/VulkanPhysicalDeviceRank.h"
 #include "Engine/Graphics/RHI/Vulkan/VulkanPipelineCacheFile.h"
 #include "Engine/Graphics/RHI/Vulkan/VulkanRHICommandContext.h"
 #include "Engine/Graphics/RHI/Vulkan/VulkanRHICommandList.h"
@@ -314,8 +315,6 @@ namespace sw
                 return false;
             }
 
-            if ( verifyRequiredColorAttachmentFormats() == false )
-                return false;
             {
                 VkPhysicalDeviceProperties limitProperties{};
                 vkGetPhysicalDeviceProperties( _physicalDevice, &limitProperties );
@@ -822,7 +821,6 @@ namespace sw
         record._sizeBytes  = sizeBytes;
         record._usage      = usageFlags;
         record._cbSlotSize = cbSlotSize;
-        record._state      = RHIBufferState::Common;
 
         // GPU 메모리 추적기의 Buffer 줄에 올리는 유일한 자리다. 크기는 드라이버가 요구한 할당 크기(정렬 포함)다.
         const RHIBufferHandle handle = _gpuBuffers.insert( record );
@@ -1161,14 +1159,20 @@ namespace sw
                       { return vkEnumeratePhysicalDevices( _instance, pCount, pData ); } );
         if ( bEnumerated == false || listDevice.empty() )
             return false;
-        // 외장 GPU(저전력 선호면 내장 GPU)를 먼저 본다 — 열거 순서는 드라이버 마음이라 하이브리드 노트북에서 내장 GPU 가 먼저 나온다(DX 의 OS 선호 순서 · RHIDxgiAdapter.h 와 같은 규칙, 제조사와 무관).
-        const VkPhysicalDeviceType preferredType = bPreferMinimumPower ? VK_PHYSICAL_DEVICE_TYPE_INTEGRATED_GPU : VK_PHYSICAL_DEVICE_TYPE_DISCRETE_GPU;
-        std::stable_partition( listDevice.begin(), listDevice.end(), [preferredType]( VkPhysicalDevice device )
+        // 외장 GPU(저전력 선호면 내장 GPU)를 먼저, CPU 구현을 마지막에 본다 — 열거 순서는 드라이버 마음이라 하이브리드 노트북에서 내장 GPU 가, 리눅스에서 lavapipe 가 먼저 나온다
+        // (DX 의 OS 선호 순서 · RHIDxgiAdapter.h 와 같은 규칙, 제조사와 무관).
+        static_assert( VulkanPhysicalDeviceRank::kOther == VK_PHYSICAL_DEVICE_TYPE_OTHER && VulkanPhysicalDeviceRank::kIntegratedGPU == VK_PHYSICAL_DEVICE_TYPE_INTEGRATED_GPU &&
+                           VulkanPhysicalDeviceRank::kDiscreteGPU == VK_PHYSICAL_DEVICE_TYPE_DISCRETE_GPU && VulkanPhysicalDeviceRank::kVirtualGPU == VK_PHYSICAL_DEVICE_TYPE_VIRTUAL_GPU &&
+                           VulkanPhysicalDeviceRank::kCPU == VK_PHYSICAL_DEVICE_TYPE_CPU,
+                       "VulkanPhysicalDeviceRank 의 종류 값이 VkPhysicalDeviceType 과 다르다" );
+        const auto computeRank = [bPreferMinimumPower]( VkPhysicalDevice device ) -> uint32
         {
             VkPhysicalDeviceProperties properties{};
             vkGetPhysicalDeviceProperties( device, &properties );
-            return properties.deviceType == preferredType;
-        } );
+            return VulkanPhysicalDeviceRank::compute( static_cast<uint32>( properties.deviceType ), bPreferMinimumPower );
+        };
+        VectorUtil::stableSort( listDevice, [&computeRank]( VkPhysicalDevice left, VkPhysicalDevice right )
+        { return computeRank( left ) < computeRank( right ); } );
 
         for ( const VkPhysicalDevice& device : listDevice )
         {
@@ -1189,6 +1193,9 @@ namespace sw
             // 셰이더는 네이티브 bindless(SW_BINDLESS)로만 쿠킹한다 — 기능 · 한도가 모자란 장치(모바일에 흔하다)는 텍스처 세트를 만들지 못하고 그리지 못한다.
             if ( isBindlessCapable( device, candidateProperties.deviceName ) == false )
                 continue;
+            // 장치 확장 · 고정 첨부 형식이 모자란 장치도 여기서 건너뛴다 — 고른 뒤에 알면 다음 장치를 볼 길이 없다(장치 생성이 멈춘다).
+            if ( hasRequiredDeviceExtensions( device, candidateProperties.deviceName ) == false || hasRequiredColorAttachments( device, candidateProperties.deviceName, candidateProperties.limits.maxColorAttachments ) == false )
+                continue;
 
             uint32 queueFamilyCount{ 0 };
             vkGetPhysicalDeviceQueueFamilyProperties( device, &queueFamilyCount, nullptr );
@@ -1199,7 +1206,10 @@ namespace sw
             bool   bFound{ false };
             for ( const VkQueueFamilyProperties& queueFamily : queueFamilies )
             {
-                if ( queueFamily.queueFlags & VK_QUEUE_GRAPHICS_BIT )
+                // 프레임의 컴퓨트 패스를 그래픽스 큐에 내므로 둘 다 되는 패밀리여야 한다(명세: 그래픽스를 하는 장치에 둘 다 되는 패밀리가 하나 이상 있지만, 모든 그래픽스 패밀리가 그런 것은 아니다).
+                // https://docs.vulkan.org/spec/latest/chapters/devsandqueues.html#VkQueueFlagBits
+                constexpr VkQueueFlags kNeededQueueFlags = VK_QUEUE_GRAPHICS_BIT | VK_QUEUE_COMPUTE_BIT;
+                if ( ( queueFamily.queueFlags & kNeededQueueFlags ) == kNeededQueueFlags )
                 {
                     VkBool32   presentSupport{ false };
                     const bool bQueried = isVkSuccess( vkGetPhysicalDeviceSurfaceSupportKHR( device, queueFamilyIndex, _swapChain.getSurface(), &presentSupport ),
@@ -1238,7 +1248,7 @@ namespace sw
             _initResult = RHIInitResult::DriverUnsupported;
         }
         else if ( _physicalDevice == nullptr )
-            SW_LOG_ERROR_ID( "Vulkan.NoVulkanDeviceGraphics", "No Vulkan %#.%# device with a graphics queue that can present to this surface", constant::render::kVulkanRequiredMajor,
+            SW_LOG_ERROR_ID( "Vulkan.NoVulkanDeviceGraphics", "No Vulkan %#.%# device meets the renderer's requirements and has a graphics and compute queue that can present to this surface", constant::render::kVulkanRequiredMajor,
                              constant::render::kVulkanRequiredMinor );
         return _physicalDevice != nullptr;
     }
@@ -1301,15 +1311,29 @@ namespace sw
         return false;
     }
 
-    bool VulkanRHIDevice::verifyRequiredColorAttachmentFormats() const
+    bool VulkanRHIDevice::hasRequiredDeviceExtensions( VkPhysicalDevice device, const utf8* pDeviceName )
+    {
+        vector<VkExtensionProperties> listAvailableExt;
+        if ( enumerateVk( listAvailableExt, "vkEnumerateDeviceExtensionProperties", [device]( uint32* pCount, VkExtensionProperties* pData )
+        { return vkEnumerateDeviceExtensionProperties( device, nullptr, pCount, pData ); } ) == false )
+            return false;
+        for ( const utf8* pExtension : s_listDeviceExtensions )
+        {
+            if ( VulkanRHIUtil::hasExtension( listAvailableExt, pExtension ) )
+                continue;
+            SW_LOG_WARNING_ID( "Vulkan.SkippingDeviceExtension", "Skipping Vulkan device '%#': it has no %#", pDeviceName, pExtension );
+            return false;
+        }
+        return true;
+    }
+
+    bool VulkanRHIDevice::hasRequiredColorAttachments( VkPhysicalDevice device, const utf8* pDeviceName, uint32 maxColorAttachments )
     {
         // MRT 한도 — G버퍼(판 3)가 여섯 장을 함께 쓴다. Vulkan 의 최소 보장은 4 라 장치마다 확인한다(DX · GL · WebGPU 는 8 을 보장한다).
-        VkPhysicalDeviceProperties deviceProperties{};
-        vkGetPhysicalDeviceProperties( _physicalDevice, &deviceProperties );
-        if ( deviceProperties.limits.maxColorAttachments < kMaxColorAttachments )
+        if ( maxColorAttachments < kMaxColorAttachments )
         {
-            SW_LOG_ERROR_ID( "Vulkan.GPUColorAttachmentLimit", "This GPU binds %# color attachments at once, the renderer needs %# (G-buffer)", deviceProperties.limits.maxColorAttachments,
-                             kMaxColorAttachments );
+            SW_LOG_WARNING_ID( "Vulkan.GPUColorAttachmentLimit", "Skipping Vulkan device '%#': it binds %# color attachments at once, the renderer needs %# (G-buffer)", pDeviceName, maxColorAttachments,
+                               kMaxColorAttachments );
             return false;
         }
         // 화면 속도 · 왜곡 첨부(R16G16 실수)도 G버퍼 노멀(R16G16 부호 정규화)처럼 샘플 가능한 컬러 첨부여야 한다.
@@ -1317,11 +1341,12 @@ namespace sw
         for ( const VkFormat format : arrRequired )
         {
             VkFormatProperties props{};
-            vkGetPhysicalDeviceFormatProperties( _physicalDevice, format, &props );
+            vkGetPhysicalDeviceFormatProperties( device, format, &props );
             const VkFormatFeatureFlags kNeeded = VK_FORMAT_FEATURE_COLOR_ATTACHMENT_BIT | VK_FORMAT_FEATURE_SAMPLED_IMAGE_BIT;
             if ( ( props.optimalTilingFeatures & kNeeded ) != kNeeded )
             {
-                SW_LOG_ERROR_ID( "Vulkan.GPUCannotUseVulkan", "This GPU cannot use Vulkan format %# as a sampled color attachment (G-buffer normal)", static_cast<uint32>( format ) );
+                SW_LOG_WARNING_ID( "Vulkan.GPUCannotUseVulkan", "Skipping Vulkan device '%#': it cannot use format %# as a sampled color attachment (G-buffer normal)", pDeviceName,
+                                   static_cast<uint32>( format ) );
                 return false;
             }
         }
@@ -2420,7 +2445,7 @@ namespace sw
             arrTick[index] = arrResult[index * 2];
             readyMask.set( index );
         }
-        RHITimestampFrame::resolve( arrTick, readyMask, static_cast<float64>( _timestampPeriod ), _timestampFrame );
+        RHITimestampFrame::resolve( arrTick, readyMask, _timestampRing.getComputeQueueMask( getFrameSlot() ), static_cast<float64>( _timestampPeriod ), _timestampFrame );
     }
 
     // 길이 유지(긴 함수 정리 기준): 펜스 대기 · 이미지 획득 · 기록 시작의 프레임 순서가 곧 의미라 나누지 않는다.
@@ -3177,7 +3202,7 @@ namespace sw
             return IRHIDevice::createAsyncComputeCommandList(); // 능력이 거짓인 길 — 오류를 남기고 nullptr
         // 같은 패밀리라 일반 리스트(같은 패밀리의 풀 · 같은 바인딩)를 그대로 두 번째 큐에 낸다. 브레드크럼만 제 칸에 쓴다(큐 사이 쓰기 경합이 없게).
         unique_ptr<VulkanRHICommandList> list = make_unique<VulkanRHICommandList>( this );
-        list->setBreadcrumbSlotBase( kComputeBreadcrumbSlotBase );
+        list->setComputeQueueList( kComputeBreadcrumbSlotBase );
         return list;
     }
 
@@ -4311,9 +4336,9 @@ namespace sw
         if ( oldLayout == VK_IMAGE_LAYOUT_UNDEFINED && newLayout == VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL )
         {
             barrier.srcAccessMask = 0;
-            barrier.dstAccessMask = VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT;
+            barrier.dstAccessMask = VulkanRHIUtil::kColorAttachmentAccess;
             srcStage              = VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT;
-            dstStage              = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
+            dstStage              = VulkanRHIUtil::kColorAttachmentStages;
         }
         else if ( oldLayout == VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL && newLayout == VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL )
         {
@@ -4325,9 +4350,9 @@ namespace sw
         else if ( oldLayout == VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL && newLayout == VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL )
         {
             barrier.srcAccessMask = VK_ACCESS_SHADER_READ_BIT;
-            barrier.dstAccessMask = VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT;
+            barrier.dstAccessMask = VulkanRHIUtil::kColorAttachmentAccess; // 이어 그리는 패스(LOAD · 블렌드)는 앞 그림을 읽는다
             srcStage              = kShaderReadStages;
-            dstStage              = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
+            dstStage              = VulkanRHIUtil::kColorAttachmentStages;
         }
         else if ( oldLayout == VK_IMAGE_LAYOUT_UNDEFINED && newLayout == VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL )
         {
@@ -4338,18 +4363,18 @@ namespace sw
         }
         else if ( oldLayout == VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL && newLayout == VK_IMAGE_LAYOUT_DEPTH_STENCIL_READ_ONLY_OPTIMAL )
         {
-            // 그림자맵: 깊이 쓰기(late fragment tests) 가 끝난 뒤 프래그먼트 셰이더가 샘플한다.
+            // 그림자맵: 깊이 쓰기(이른 · 늦은 프래그먼트 테스트)가 끝난 뒤 셰이더가 샘플한다.
             barrier.srcAccessMask = VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_WRITE_BIT;
             barrier.dstAccessMask = VK_ACCESS_SHADER_READ_BIT;
-            srcStage              = VK_PIPELINE_STAGE_LATE_FRAGMENT_TESTS_BIT;
+            srcStage              = VulkanRHIUtil::kDepthAttachmentStages;
             dstStage              = kShaderReadStages;
         }
         else if ( oldLayout == VK_IMAGE_LAYOUT_DEPTH_STENCIL_READ_ONLY_OPTIMAL && newLayout == VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL )
         {
             barrier.srcAccessMask = VK_ACCESS_SHADER_READ_BIT;
-            barrier.dstAccessMask = VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_READ_BIT | VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_WRITE_BIT;
+            barrier.dstAccessMask = VulkanRHIUtil::kDepthAttachmentAccess;
             srcStage              = kShaderReadStages;
-            dstStage              = VK_PIPELINE_STAGE_EARLY_FRAGMENT_TESTS_BIT;
+            dstStage              = VulkanRHIUtil::kDepthAttachmentStages;
         }
         else
         {

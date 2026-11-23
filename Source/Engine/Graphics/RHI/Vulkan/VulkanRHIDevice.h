@@ -268,6 +268,8 @@ namespace sw
         uint32 getTimestampBase() const { return getFrameSlot() * constant::render::kMaxGPUTimestampSlot; }
         /** @brief 슬롯 하나를 기록했다고 표시합니다. 여러 패스 스레드가 동시에 부를 수 있습니다. */
         void markTimestampWritten( uint32 slotIndex ) { _timestampRing.markWritten( slotIndex ); }
+        /** @brief 비동기 컴퓨트 큐 리스트가 슬롯을 적었습니다(그래픽스 큐와 겹치는 슬롯을 가린다). */
+        void markComputeQueueTimestampWritten( uint32 slotIndex ) { _timestampRing.markComputeQueueWritten( slotIndex ); }
         /** @brief 리소스 생성과 파괴 인터페이스(VulkanRHIResourceFactory)를 반환합니다. */
         IRHIResourceFactory* getResourceFactory() override;
         /** @brief 프레임 스트림 컨텍스트입니다. 백버퍼 패스와 Present 가 여기에 기록합니다. */
@@ -381,12 +383,12 @@ namespace sw
         /// @brief VkBuffer 와 메모리, 사용 플래그입니다.
         struct VulkanBufferRecord
         {
-            VkBuffer          _buffer{ nullptr };
-            VulkanMemoryRange _memory{};
-            uint64            _sizeBytes{ 0 };  ///< VkDeviceSize — 만들 때의 요청 크기(`createVulkanBuffer`)
-            uint32            _usage{ 0 };      ///< VkBufferUsageFlags
-            uint32            _cbSlotSize{ 0 }; ///< 링 상수 버퍼(`createConstantBuffer`)의 프레임 칸 크기, 아니면 0. 표에 넣기 전에 정하고 바뀌지 않아 기록 경로가 락 없이 읽는다
-            RHIBufferState    _state = RHIBufferState::Common;
+            VkBuffer                        _buffer{ nullptr };
+            VulkanMemoryRange               _memory{};
+            uint64                          _sizeBytes{ 0 };  ///< VkDeviceSize — 만들 때의 요청 크기(`createVulkanBuffer`)
+            uint32                          _usage{ 0 };      ///< VkBufferUsageFlags
+            uint32                          _cbSlotSize{ 0 }; ///< 링 상수 버퍼(`createConstantBuffer`)의 프레임 칸 크기, 아니면 0. 표에 넣기 전에 정하고 바뀌지 않아 기록 경로가 락 없이 읽는다
+            RHITrackedState<RHIBufferState> _state;           ///< 기본값은 Common 이다. 병렬 기록 워커가 함께 옮길 수 있어 원자값이다(텍스처의 `_layout` · DX12 버퍼 레코드와 같은 장치)
         };
 
         /**
@@ -639,11 +641,13 @@ namespace sw
         /** @brief @p device 가 텍스처 세트(네이티브 bindless 배열 둘)의 기능과 update-after-bind 한도를 갖췄는지 봅니다. 못 미치면 이유를 남기고 false 입니다(장치 고르기가 건너뛴다). */
         [[nodiscard]] static bool isBindlessCapable( VkPhysicalDevice device, const utf8* pDeviceName );
 
+        /** @brief @p device 가 켤 장치 확장(`VK_KHR_swapchain`)을 모두 갖췄는지 봅니다. 없으면 이유를 남기고 false 입니다(장치 고르기가 건너뛴다). */
+        [[nodiscard]] static bool hasRequiredDeviceExtensions( VkPhysicalDevice device, const utf8* pDeviceName );
         /**
-         * @brief 엔진이 고정으로 쓰는 컬러 첨부 포맷 중 Vulkan 필수 목록에 없는 것(`R16G16_SNORM` — G버퍼 법선)을 이 GPU 가 첨부로 쓸 수 있는지 확인합니다.
-         * @details 없으면 false 이고 폴백은 없습니다(장치 생성이 멈춘다).
+         * @brief 엔진이 고정으로 쓰는 컬러 첨부 포맷 중 Vulkan 필수 목록에 없는 것(`R16G16_SNORM` — G버퍼 법선)과 동시 첨부 수를 이 GPU 가 받는지 확인합니다.
+         * @details 없으면 이유를 남기고 false 입니다(장치 고르기가 건너뛴다). 폴백 형식은 없다.
          */
-        bool verifyRequiredColorAttachmentFormats() const;
+        [[nodiscard]] static bool hasRequiredColorAttachments( VkPhysicalDevice device, const utf8* pDeviceName, uint32 maxColorAttachments );
 
         /**
          * @brief 스왑체인을 통째로 다시 만듭니다. 창 크기가 바뀌었거나 present 가 OUT_OF_DATE 를 냈을 때 부릅니다.
