@@ -245,9 +245,9 @@ SW_TEST_CASE_F( JRPGRulesTest, PhysicalDamageFormula )
     random.setSeed( 11 );
     for ( int32 roll = 0; roll < 64; ++roll )
     {
-        const int32 normal = sw::JRPGBattle::computePhysicalDamage( 40, 0, random );
+        const int32 normal = sw::JRPGBattle::computePhysicalDamage( sw::JRPGBattleSettings{}, 40, 0, random );
         SW_EXPECT_TRUE( 17 <= normal && normal <= 22 );
-        const int32 weak = sw::JRPGBattle::computePhysicalDamage( 1, 100, random );
+        const int32 weak = sw::JRPGBattle::computePhysicalDamage( sw::JRPGBattleSettings{}, 1, 100, random );
         SW_EXPECT_TRUE( 0 <= weak && weak <= 1 );
     }
 }

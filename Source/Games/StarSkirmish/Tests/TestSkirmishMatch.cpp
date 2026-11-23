@@ -15,7 +15,7 @@ using namespace sw;
 namespace
 {
     constexpr const utf8* kSkirmishUnitXML = R"(<RTSCatalog supplyMax="200">
-  <Rules fixedStep="0.05" minimumDamage="0.5" repathInterval="0.5" visionInterval="0.25" interactSlack="0.35" resourceSearchRadius="8" constructionStartRatio="0.1" underAttackCooldown="10" productionQueueMax="5" flowFieldGroupSize="6" bucketSize="4" mineralCurrency="Minerals" gasCurrency="Gas"/>
+  <Rules fixedStep="0.05" minimumDamage="0.5" repathInterval="0.5" visionInterval="0.25" interactSlack="0.35" resourceSearchRadius="8" constructionStartRatio="0.1" underAttackCooldown="10" autoTargetLeashScale="1.5" productionQueueMax="5" flowFieldGroupSize="6" bucketSize="4" mineralCurrency="Minerals" gasCurrency="Gas"/>
   <Unit id="minerals" name="minerals" kind="Resource" resource="Minerals" amount="1500" footprint="1"/>
   <Unit id="rich_minerals" name="rich_minerals" kind="Resource" resource="Minerals" amount="900" footprint="1"/>
   <Unit id="geyser" name="geyser" kind="Resource" resource="Gas" amount="2500" footprint="2"/>
@@ -25,7 +25,7 @@ namespace
 
     /** @brief 간헐천이 없는 카탈로그 — 맵 배치가 놓는 유닛이 빠졌다. */
     constexpr const utf8* kNoGeyserUnitXML = R"(<RTSCatalog supplyMax="200">
-  <Rules fixedStep="0.05" minimumDamage="0.5" repathInterval="0.5" visionInterval="0.25" interactSlack="0.35" resourceSearchRadius="8" constructionStartRatio="0.1" underAttackCooldown="10" productionQueueMax="5" flowFieldGroupSize="6" bucketSize="4" mineralCurrency="Minerals" gasCurrency="Gas"/>
+  <Rules fixedStep="0.05" minimumDamage="0.5" repathInterval="0.5" visionInterval="0.25" interactSlack="0.35" resourceSearchRadius="8" constructionStartRatio="0.1" underAttackCooldown="10" autoTargetLeashScale="1.5" productionQueueMax="5" flowFieldGroupSize="6" bucketSize="4" mineralCurrency="Minerals" gasCurrency="Gas"/>
   <Unit id="minerals" name="minerals" kind="Resource" resource="Minerals" amount="1500" footprint="1"/>
   <Unit id="rich_minerals" name="rich_minerals" kind="Resource" resource="Minerals" amount="900" footprint="1"/>
   <Unit id="command_center" name="command_center" kind="Building" hp="1500" armor="1" footprint="4" depot="true" provides="10" producedBy="worker" minerals="400" buildTime="75" sight="10"/>

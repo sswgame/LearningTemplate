@@ -115,6 +115,8 @@ namespace sw
         , _walkSpeed{ 4.0f }
         , _reach{ 0.9f }
         , _nearDistance{ 1.7f }
+        , _walkMarginMin{ 5.0f }
+        , _walkMarginMax{ 4.0f }
         , _weatherPath{}
         , _maxStamina{ 100 }
         , _startingGold{ 500 }
@@ -419,8 +421,8 @@ namespace sw
         if ( length < FarmGameModeComponentInternal::kMinMoveLength )
             return;
         const float3 step  = direction * ( _walkSpeed * deltaTime * MathUtil::min( length, 1.0f ) / length );
-        _playerPosition._x = MathUtil::clamp( _playerPosition._x + step._x, -5.0f, static_cast<float32>( _field.getWidth() ) + 4.0f );
-        _playerPosition._z = MathUtil::clamp( _playerPosition._z + step._z, -5.0f, static_cast<float32>( _field.getHeight() ) + 4.0f );
+        _playerPosition._x = MathUtil::clamp( _playerPosition._x + step._x, -_walkMarginMin, static_cast<float32>( _field.getWidth() ) + _walkMarginMax );
+        _playerPosition._z = MathUtil::clamp( _playerPosition._z + step._z, -_walkMarginMin, static_cast<float32>( _field.getHeight() ) + _walkMarginMax );
         // 네 방향으로 맞춘다. 대각선이면 더 큰 축을 쓴다.
         if ( MathUtil::abs( direction._x ) > MathUtil::abs( direction._z ) )
             _facing = float3{ direction._x > 0.0f ? 1.0f : -1.0f, 0.0f, 0.0f };

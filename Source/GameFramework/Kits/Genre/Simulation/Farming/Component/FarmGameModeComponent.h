@@ -188,6 +188,10 @@ namespace sw
         float32 _reach;
         PROPERTY( Category = "Farmer", DisplayName = "Near Distance", Tooltip = "Distance that counts as standing next to the shipping bin or the shop", Min = 0.0, Units = m )
         float32 _nearDistance;
+        PROPERTY( Category = "Farmer", DisplayName = "Walk Margin Min", Tooltip = "How far the farmer may walk past the field on the low X and Z sides", Min = 0.0, Units = m )
+        float32 _walkMarginMin;
+        PROPERTY( Category = "Farmer", DisplayName = "Walk Margin Max", Tooltip = "How far the farmer may walk past the field on the high X and Z sides", Min = 0.0, Units = m )
+        float32 _walkMarginMax;
         /** @brief 판 상태 날씨의 카탈로그입니다(`GameStateComponent` 의 `WeatherSystem` — 계절 가중치 · 하루 길이). 비는 그 날씨의 `wetness` 로 정한다. */
         PROPERTY( Category = "Weather", DisplayName = "Weather", Tooltip = "Weather catalog of the shared session state (season weights, a day long); rain is its wetness" )
         AssetRef<WeatherCatalog> _weatherPath;
