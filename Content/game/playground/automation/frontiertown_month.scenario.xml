@@ -1,0 +1,26 @@
+<?xml version="1.0" encoding="utf-8"?>
+<?asset guid="7d60fb8ccc64659d4d1bcb63a4de3cc4"?>
+<!--
+  개척 마을 미니게임(frontiertown) 키트 둘의 흐름 — 도시와 RTS 가 한 땅 · 한 지갑 · 한 시계를 나누며 판이 열리고, 공유 시계를 날 단위로 감아 도시의 달 결산이 돈다.
+  배치가 땅과 맞지 않아 거절되면 로그에 `[City] ... was refused` 가 남는다 — 끝에서 그 줄이 없는지 본다.
+  감기 사이의 2 프레임은 지나간 날 경계 알림을 다음 틱의 디렉터가 받는 자리다(그 틱이 돌아야 한다).
+  실행: ctest -R Scenario.playground · App -scenario=game/playground/automation/frontiertown_month.scenario.xml -unattended
+-->
+<Scenario name="game.playground.frontiertown_month" fixedDelta="0.0166667" timeoutFrames="900" startAfter="ScenePlaying" startTimeoutFrames="900" input="exclusive">
+	<Launch variable="gv_firstMinigame" value="frontiertown"/>
+	<Variable name="gv_playgroundAutoPlay" value="0"/>
+	<!-- 시계는 6 시에 시작하고 하루가 실제 24 초다(씬의 CityGameModeComponent) — 시작 전 프레임까지 합쳐 한 시간이 지나기 전이다. -->
+	<WaitUntil watch="Clock.Hour" atLeast="6" timeoutFrames="10"/> <!-- 시계가 첫 틱을 돌았다 -->
+	<Expect watch="Clock.Day" equals="0"/>
+	<Expect watch="Clock.Hour" atLeast="6"/>
+	<Expect watch="Clock.Hour" atMost="7"/>
+	<AdvanceGameTime hours="24"/>
+	<WaitUntil watch="Clock.Day" equals="1" timeoutFrames="10"/>
+	<AdvanceGameTime hours="24"/>
+	<WaitUntil watch="Clock.Day" equals="2" timeoutFrames="10"/>
+	<AdvanceGameTime hours="24"/>
+	<WaitUntil watch="Clock.Day" equals="3" timeoutFrames="10"/>
+	<ExpectLog id="City.LandmarkRefused" count="0"/>
+	<Record watch="Clock.Day"/>
+	<Pass/>
+</Scenario>

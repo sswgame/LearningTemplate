@@ -732,7 +732,7 @@ namespace sw
             const AutomationStepRegistration* pRegistration = AutomationStepRegistry::find( step._kind );
             if ( pRegistration != nullptr )
                 limitSeconds += pRegistration->_wallSeconds;
-            // 사진 앞 렌더 정착(`stability="render"`, 기본)은 제 벽시계 상한을 든다 — 옛 사진 앞 정착 대기(`<WaitUntil … timeoutWallSeconds="30">`)가 더하던 몫이다.
+            // 사진 앞 렌더 정착(`stability="Render"`, 기본)은 제 벽시계 상한을 든다 — 옛 사진 앞 정착 대기(`<WaitUntil … timeoutWallSeconds="30">`)가 더하던 몫이다.
             // 종류 이름을 보는 자리는 여기 하나다(등록의 고정 몫 `withWallBudget` 이면 정착을 기다리지 않는 사진 수십 장이 프로세스 시한을 넘겼다).
             const string* pStability = step.findAttribute( "stability" );
             if ( string_view{ step._kind } == "Screenshot" && ( pStability == nullptr || *pStability == "render" ) )

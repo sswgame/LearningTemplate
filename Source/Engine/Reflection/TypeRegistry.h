@@ -244,8 +244,6 @@ namespace sw
         // ------------------------------------------------------------------------------
         /** @brief enumerator 이름을 반환합니다. Invalid 나 Count 이거나 미등록이면 nullptr 입니다. */
         const utf8* enumToString( const hashed_string& enumName, int64 value ) const;
-        /** @brief 이름을 값으로 바꿉니다. 실패하면 false 를 반환하고 outValue 는 Invalid(없으면 0)가 됩니다. */
-        bool enumFromString( const hashed_string& enumName, string_view name, int64& outValue ) const;
         /** @brief ENUM(Flags) 비트플래그 EnumInfo 에 대해 `(flags & contains) == contains` 인지 검사합니다. */
         bool hasFlag( const hashed_string& enumName, int64 flags, int64 contains ) const;
 
@@ -256,36 +254,6 @@ namespace sw
             static_assert( std::is_enum_v<E>, "enumToString requires an enum type" );
             const EnumInfo* pInfo = findEnumOf<E>();
             return pInfo != nullptr ? pInfo->valueToCString( static_cast<int64>( value ) ) : nullptr;
-        }
-
-        /** @brief 문자열을 템플릿 enum 값으로 파싱합니다. */
-        template <typename E>
-        bool enumFromString( string_view name, E& outValue ) const
-        {
-            static_assert( std::is_enum_v<E>, "enumFromString requires an enum type" );
-            const EnumInfo* pInfo = findEnumOf<E>();
-            int64           raw{ 0 };
-            if ( pInfo == nullptr )
-            {
-                outValue = E{};
-                return false;
-            }
-            if ( pInfo->tryParse( name, raw ) && pInfo->isValidValue( raw ) )
-            {
-                outValue = static_cast<E>( raw );
-                return true;
-            }
-            outValue = static_cast<E>( ( pInfo->_bHasInvalid != SW_FALSE ) ? pInfo->_invalidValue : 0 );
-            return false;
-        }
-
-        /** @brief 파싱에 실패하면 Invalid(없으면 0)를 반환합니다. */
-        template <typename E>
-        E enumFromString( string_view name ) const
-        {
-            E value{};
-            enumFromString( name, value );
-            return value;
         }
 
         /**

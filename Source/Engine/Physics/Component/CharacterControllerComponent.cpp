@@ -19,41 +19,6 @@
 #include "Engine/Physics/Scene/PhysicsPoseStore.h"
 #include "Engine/Physics/Scene/ScenePhysics.h"
 #include "Engine/Reflection/ReflectionValidation.h"
-#include "Engine/Scene/SceneManager.h"
-
-namespace sw
-{
-    namespace
-    {
-        struct CharacterControllerComponentInternal
-        {
-            /** @brief `character.jump <object> [speed]` — 오브젝트의 캐릭터 컨트롤러가 위로 뜁니다(기본 5 m/s). 시나리오가 점프 · 탈출 입력을 흉내 낸다. */
-            static bool runJump( const vector<string>& listArgument, string& outReply )
-            {
-                float32    speed   = 5.0f;
-                const bool bParsed = ( listArgument.size() == 1 || listArgument.size() == 2 ) && ( listArgument.size() == 1 || StringUtil::parseFloat( listArgument[1], speed ) );
-                if ( bParsed == false || speed <= 0.0f )
-                    return false;
-                GameObject*                   pObject     = engine::findActiveObject( hashed_string( listArgument[0] ) );
-                CharacterControllerComponent* pController = pObject != nullptr ? pObject->getComponent<CharacterControllerComponent>() : nullptr;
-                if ( pController == nullptr )
-                {
-                    StringBuilder<constant::buffer::kMax256> reply;
-                    reply.appendFormat( "character.jump: no object named '%#' with a CharacterControllerComponent in the active scene", listArgument[0] );
-                    outReply.assign( reply.view() );
-                    return true;
-                }
-                pController->jump( speed );
-                StringBuilder<constant::buffer::kMax128> reply;
-                reply.appendFormat( "character.jump %#", listArgument[0] );
-                outReply.assign( reply.view() );
-                return true;
-            }
-        };
-    } // namespace
-
-    SW_DEV_COMMAND( CharacterJump, "character.jump", "character.jump <object> [speed]", "Make an object's character controller jump (speed in m/s, default 5)", &CharacterControllerComponentInternal::runJump );
-} // namespace sw
 
 namespace sw
 {

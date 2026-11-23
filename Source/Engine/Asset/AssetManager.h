@@ -126,7 +126,7 @@ namespace sw
          *          가상 함수 테이블도 같이 사라진다(남기면 다음 종료나 비우기가 사라진 코드로 점프한다. 언로드 훑기가 마지막 그물이다).
          *          nullptr · 같은 포인터 · 같은 종류 이름의 둘째 캐시면 빈 구독입니다.
          * @param pCache  구독보다 오래 사는 캐시.
-         * @param pReload 핫 리로드 함수(`SW_ASSET_CACHE_RELOAD_FUNCTION( 캐시 형식 )`). 다시 읽을 파일이 없으면 nullptr.
+         * @param pReload 핫 리로드 함수(`getAssetCacheReloadFunction<캐시 형식>()`). 다시 읽을 파일이 없으면 nullptr.
          */
         [[nodiscard]] Subscription registerAssetCache( AssetCacheBase* pCache, AssetCacheReloadFunction pReload );
         /** @brief 등록된 캐시 목록을 반환합니다. 소유하지 않습니다. */

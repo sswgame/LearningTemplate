@@ -7,7 +7,7 @@
 #include "Editor/Common/Widgets/PropertyGrid/EditorPropertyGrid.h"
 #include "Editor/Panels/Dialogue/Model/DialogueGraphPreviewViewModel.h"
 
-#include "Engine/Behavior/ActionRegistry.h"
+#include "Engine/Behavior/GameActionCall.h"
 #include "Engine/Dialogue/DialogueGraphAsset.h"
 
 namespace sw::editor

@@ -1,0 +1,202 @@
+#include "pch.h"
+
+#include "Games/Playground/FrontierTown/FrontierSkirmishGameModeComponent.h"
+
+#include "Engine/Asset/Cache/SharedAssetCache.h"
+#include "Engine/Object/GameObject/GameObject.h"
+#include "Engine/Object/GameObject/GameObjectManager.h"
+#include "Engine/Serialization/Format/Archive.h"
+#include "Engine/Serialization/Format/StateIO.h"
+#include "Engine/Visual/Component/MeshComponent.h"
+
+#include "GameFramework/Runtime/Gameplay/GameState/GameStateComponent.h"
+#include "GameFramework/Runtime/Gameplay/GameState/PlayerComponentUtil.h"
+#include "GameFramework/Runtime/Gameplay/Inventory/WalletComponent.h"
+
+namespace sw
+{
+    FrontierSkirmishGameModeComponent::FrontierSkirmishGameModeComponent()
+        : _unitDataPath{}
+        , _startMinerals{ 0 }
+        , _unitPrefab{}
+        , _workerUnit{}
+        , _soldierUnit{}
+        , _barracksUnit{}
+        , _barracksX{ 20 }
+        , _barracksY{ 20 }
+        , _workerStart{ 2.5f, 0.0f, 2.5f }
+        , _patrolA{ 2.5f, 0.0f, 6.5f }
+        , _patrolB{ 10.5f, 0.0f, 6.5f }
+        , _unitColor{ 0.30f, 0.45f, 0.85f, 1.0f }
+        , _buildingColor{ 0.55f, 0.30f, 0.30f, 1.0f }
+        , _pCatalog{}
+        , _world{}
+        , _tintCache{}
+        , _unitViews{}
+        , _worker{}
+        , _soldier{}
+        , _tickCount{ 0 }
+        , _bPatrolToB{ SW_TRUE }
+        , _bViewsDirty{ SW_FALSE }
+        , _reserved{ 0 }
+    {
+    }
+
+    FrontierSkirmishGameModeComponent::~FrontierSkirmishGameModeComponent() = default;
+
+    void FrontierSkirmishGameModeComponent::serializeGameState( StateIO& io )
+    {
+        GameStateComponent* pState  = io.isReading() ? GameStateComponent::findOnOwner( *this ) : nullptr;
+        WalletComponent*    pWallet = io.isReading() ? PlayerComponentUtil::findOnOwner<WalletComponent>( *this ) : nullptr;
+        if ( io.check( pState != nullptr && pWallet != nullptr ) == false )
+            return;
+        io.header( kStateTag, kStateVersion );
+        // 틱 수 · 순찰 방향은 상태 칸이다(`GameModeComponent::serializeState`). 유닛 id 는 묶은 값으로 손 본문이 싣는다.
+        uint64 workerValue  = _worker.packed();
+        uint64 soldierValue = _soldier.packed();
+        io.value( workerValue );
+        io.value( soldierValue );
+        if ( io.isOk() == false )
+            return;
+        // RTSWorld 는 옮길 수 없다(경로 풀이가 같은 객체의 격자를 참조한다) — 읽기는 지형을 다시 세운 _world 에 바로 한다. 유닛 · 시야 복원은 RTSWorld 직렬화가 임시 값에 읽고 다 읽은 뒤에만 옮긴다.
+        if ( io.isReading() && io.check( initializeWorld( _world, *pState, *pWallet ) ) == false )
+            return;
+        io.value( _world );
+        io.end();
+        if ( io.isWriting() || io.isOk() == false )
+            return;
+        _worker      = RTSUnitID::fromPacked( workerValue );
+        _soldier     = RTSUnitID::fromPacked( soldierValue );
+        _bViewsDirty = SW_TRUE;
+    }
+
+    bool FrontierSkirmishGameModeComponent::initializeWorld( RTSWorld& outWorld, GameStateComponent& state, WalletComponent& wallet ) const
+    {
+        const RTSCatalog* const pCatalog = _pCatalog.get();
+        const GridTopology&     land     = state.getLand().getTopology();
+        if ( pCatalog == nullptr || outWorld.initialize( pCatalog, land._width, land._height ) == false )
+            return false;
+        outWorld.bindLand( &state.getLand(), int2{ 0, 0 } );
+        (void)outWorld.addPlayer( 0, &wallet.getWallet(), float3{ 2.0f, 0.0f, 2.0f } ); // 플레이어 0 이 플레이어 지갑을 쓴다
+        return true;
+    }
+
+    bool FrontierSkirmishGameModeComponent::startGame()
+    {
+        if ( acquireRequired( _unitDataPath, _pCatalog ) == false )
+            return false;
+        // 판 상태(땅 · 시계)는 앞에 붙은 도시 디렉터가 연다 — 열리지 않았으면 여기서 다른 설정으로 열지 않고 멈춘다.
+        GameStateComponent* pState = GameStateComponent::findOnOwner( *this );
+        if ( pState == nullptr || pState->isInitialized() == false )
+        {
+            SW_LOG_ERROR_ID( "FrontierSkirmish.StateNotOpen", "[Frontier] the skirmish cannot start - no game mode in front of it on this object opened the shared state" );
+            return false;
+        }
+        WalletComponent* pWallet = PlayerComponentUtil::requireOnOwner<WalletComponent>( *this );
+        if ( pWallet == nullptr )
+            return false;
+        if ( initializeWorld( _world, *pState, *pWallet ) == false )
+        {
+            SW_LOG_ERROR_ID( "FrontierSkirmish.WorldNotOpen", "[Frontier] the skirmish cannot start - the RTS world does not open on the shared land" );
+            return false;
+        }
+        // 유닛 id 는 씬 데이터가 정본이다(C++ 에 기본값이 없다). 비었거나 카탈로그에 없으면 조용히 건너뛰지 않고 판을 열지 않는다.
+        bool bUnitsKnown = true;
+        for ( const CatalogKey<RTSUnitDef>* pUnitID : { &_workerUnit, &_soldierUnit, &_barracksUnit } )
+        {
+            if ( _pCatalog->find( pUnitID->key() ) != nullptr )
+                continue;
+            SW_LOG_ERROR_ID( "FrontierSkirmish.SkirmishUnitEmptyNot", "[Frontier] the skirmish unit '%#' is empty or not in the RTS unit catalog - the skirmish cannot start", pUnitID->c_str() );
+            bUnitsKnown = false;
+        }
+        if ( bUnitsKnown == false )
+            return false;
+        if ( pWallet->isFreshGame() )
+            pWallet->getWallet().add( _pCatalog->getRules()._mineralCurrency, _startMinerals );
+        if ( pState->isFreshGame() )
+        {
+            _worker  = _world.spawnUnit( _workerUnit.key(), 0, _workerStart );
+            _soldier = _world.spawnUnit( _soldierUnit.key(), 0, _patrolA );
+        }
+        _tickCount   = 0;
+        _bPatrolToB  = SW_TRUE;
+        _bViewsDirty = SW_TRUE;
+        return true;
+    }
+
+    void FrontierSkirmishGameModeComponent::issueOpeningOrders()
+    {
+        // 도시가 첫 틱에 땅을 칠한 뒤다 — 병영 자리가 도시 땅이면 RTS 가 거절한다(Occupied 계열). 그러면 씬 배치를 고친다.
+        const RTSCommandResult buildResult = _world.issueBuild( _worker, _barracksUnit.key(), int2{ _barracksX, _barracksY } );
+        if ( buildResult != RTSCommandResult::Ok )
+            SW_LOG_ERROR_ID( "FrontierSkirmish.WorkerCannotBuildCheck", "[Frontier] the worker cannot build '%#' at (%#, %#) (%#) - check the scene layout", _barracksUnit.c_str(), _barracksX, _barracksY, static_cast<int32>( buildResult ) );
+        const RTSCommandResult moveResult = _world.issueMove( _soldier, _patrolB );
+        if ( moveResult != RTSCommandResult::Ok )
+            SW_LOG_ERROR_ID( "FrontierSkirmish.SoldierCannotStartPatrol", "[Frontier] the soldier cannot start its patrol (%#)", static_cast<int32>( moveResult ) );
+    }
+
+    void FrontierSkirmishGameModeComponent::continuePatrol()
+    {
+        const RTSUnit* pSoldier = _world.findUnit( _soldier );
+        if ( pSoldier == nullptr || pSoldier->isIdle() == false )
+            return;
+        _bPatrolToB = _bPatrolToB == SW_TRUE ? SW_FALSE : SW_TRUE;
+        (void)_world.issueMove( _soldier, _bPatrolToB == SW_TRUE ? _patrolB : _patrolA ); // 경로가 막혀 거절되면 다음 틱에 반대쪽으로 다시 해 본다
+    }
+
+    void FrontierSkirmishGameModeComponent::updateGame( float32 deltaTime )
+    {
+        if ( ++_tickCount == 2 )
+            issueOpeningOrders();
+        else if ( _tickCount > 2 )
+            continuePatrol();
+        (void)_world.update( deltaTime, 1.0f ); // 배속 없는 시연 — 진행한 시간은 쓰지 않는다
+        _bViewsDirty = SW_TRUE;                 // 유닛이 움직였을 수 있다 — 틱 뒤 플러시가 모습을 옮긴다
+    }
+
+    void FrontierSkirmishGameModeComponent::onFlush( GameObjectManager& manager, bool bRespawnViews )
+    {
+        if ( bRespawnViews == false && _bViewsDirty == SW_FALSE )
+            return;
+        syncUnitViews( manager );
+        _bViewsDirty = SW_FALSE;
+    }
+
+    void FrontierSkirmishGameModeComponent::onViewsDespawned()
+    {
+        _unitViews.clear();
+    }
+
+    void FrontierSkirmishGameModeComponent::syncUnitViews( GameObjectManager& manager )
+    {
+        // 유닛 슬롯마다 모습 하나 — 새로 선 유닛만 스폰하고 죽은 유닛만 지운다(언리얼 Mass Representation 이 엔티티마다 액터를 맞추는 것과 같다).
+        // 예전에는 유닛 수가 바뀌면(병영이 서거나 하나가 죽으면) 모습을 모두 지우고 다시 세웠다.
+        _unitViews.beginCollect();
+        _world.forEachUnit( [this]( const RTSUnit& unit )
+        { _unitViews.show( static_cast<size_t>( unit._id.index() ), unit._id ); } );
+        _unitViews.endCollect();
+        _unitViews.flush( [&manager]( GameObjectHandle& inoutHandle )
+        { destroySpawned( manager, inoutHandle ); },
+                          [this, &manager]( size_t, RTSUnitID )
+        {
+            GameObject* const pView = spawnPrefab( manager, _unitPrefab, "FrontierUnit" );
+            return pView != nullptr ? pView->getHandle() : GameObjectHandle{};
+        } );
+        for ( const SimulationViewSync<RTSUnitID>::Slot& slot : _unitViews.getSlots() )
+        {
+            const RTSUnit* const pUnit = ( slot._shown == RTSUnitID{} ) ? nullptr : _world.findUnit( slot._shown );
+            GameObject* const    pView = pUnit != nullptr ? manager.resolveGameObject( slot._object ) : nullptr;
+            MeshComponent* const pMesh = pView != nullptr ? pView->getComponent<MeshComponent>() : nullptr;
+            if ( pMesh == nullptr )
+                continue;
+            const RTSUnit& unit      = *pUnit;
+            const bool     bBuilding = unit.isBuilding();
+            const float32  size      = bBuilding && unit._pDef != nullptr ? static_cast<float32>( unit._pDef->_footprint ) : 0.6f;
+            const float3   center    = bBuilding ? float3{ static_cast<float32>( unit._cell._x ) + size * 0.5f, 0.4f, static_cast<float32>( unit._cell._y ) + size * 0.5f }
+                                                 : float3{ unit._position._x, 0.3f, unit._position._z };
+            pMesh->setLocalPosition( center );
+            pMesh->setLocalScale( float3{ size * 0.9f, bBuilding ? 0.8f : 0.6f, size * 0.9f } );
+            _tintCache.apply( *pMesh, bBuilding ? _buildingColor : _unitColor );
+        }
+    }
+} // namespace sw

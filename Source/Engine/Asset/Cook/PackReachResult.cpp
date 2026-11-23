@@ -533,7 +533,7 @@ namespace sw
     void PackReachGraph::loadFile( const string& assetID, PackReachFile& outFile )
     {
         vector<string> listCompanion;
-        AssetCompanionRegistry::appendCompanionPaths( assetID, listCompanion );
+        AssetCompanionRule::appendCompanionPaths( assetID, listCompanion );
         for ( const string& companion : listCompanion )
         {
             string normalized = FileUtil::normalizePath( companion ).str();

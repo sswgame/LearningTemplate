@@ -130,7 +130,7 @@ namespace sw
     {
         const TypeInfo* const pType = findCachedTypeInfo();
         if ( pType == nullptr )
-            SW_FATAL( "GameModeComponent '%#' has no reflected type - its state fields cannot be reset", getTypeName().c_str() );
+            reportFatalError( "GameModeComponent '%#' has no reflected type - its state fields cannot be reset", getTypeName().c_str() );
         ReflectVisitOptions options;
         options._roleMask = PropertyRoleMask::makeRuntimeState();
         const ReflectPropertyVisitor propertyVisitor{ options };
@@ -142,7 +142,7 @@ namespace sw
             const bool bReset = fresh.isValid() && SerializerUtil::copyPropertyValue( field._property, ObjectAddress{ fresh.get() }, MutableObjectAddress{ this },
                                                                                       SerializeContext::getDefault( SerializePurpose::Snapshot ) );
             if ( bReset == false )
-                SW_FATAL( "state field '%#::%#' cannot be reset to its default before a game opens", pType->_fullyQualifiedName.c_str(), field._property._name.c_str() );
+                reportFatalError( "state field '%#::%#' cannot be reset to its default before a game opens", pType->_fullyQualifiedName.c_str(), field._property._name.c_str() );
             return ReflectVisitFlow::Continue;
         } );
     }
@@ -237,7 +237,7 @@ namespace sw
     {
         const TypeInfo* const pType = findCachedTypeInfo();
         if ( pType == nullptr )
-            SW_FATAL( "GameModeComponent '%#' has no reflected type - its state fields cannot be carried", getTypeName().c_str() );
+            reportFatalError( "GameModeComponent '%#' has no reflected type - its state fields cannot be carried", getTypeName().c_str() );
         if ( io.isWriting() )
         {
             io.reflectedAs( *pType, *this );

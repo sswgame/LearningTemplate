@@ -6,10 +6,18 @@
         "(Test/Scenario 의 SKIP_RETURN_CODE). 숫자는 이 파일에만 쓴다.",
         "",
         "name = ProcessExitCode 열거자(시나리오 결과면 AutomationResult 열거자와 같은 이름), code = 종료 코드, label = 요약 줄 · 보고의 이름.",
-        "14 는 없앤 \"미확정\" 결과의 자리라 비워 둔다. 77 은 automake · CTest 의 건너뜀 관례다(이 기계 · 빌드가 그 RHI 백엔드를 못 돌린다).",
+        "코드는 0 ~ 125 다 — POSIX 종료 상태는 8 비트이고 126 · 127 은 셸(실행 못 함 · 없음), 128 이상은 시그널이다. reserved_codes 의 코드는 쓰지 않는다(까닭은 그 줄). 생성기가 막는다.",
+        "77 은 automake · CTest 의 건너뜀 관례다(이 기계 · 빌드가 그 RHI 백엔드를 못 돌린다).",
         "16 은 -gv_screenshotQuit 의 사진을 쓰지 못한 끝, 17 은 App 초기화 실패다(크래시와 가른다 — 언리얼도 초기화 실패 코드를 따로 낸다).",
         "18 은 렌더 장치를 잃어 끝낸 것이다(EngineConfig _deviceLostPolicy = Quit — 언리얼 GPU 크래시 종료와 같은 자리).",
         "엔진 · 모듈의 종료 요청(Engine::requestQuit · QuitRequest)은 이 열거형만 받는다. 표에 없는 코드(예외 코드 · 시그널)는 \"crashed\" 로 센다."
+    ],
+
+    "reserved_codes": [
+        { "code": 1, "reason": "표 밖의 일반 실패(스크립트 · std::exit 의 관례)" },
+        { "code": 2, "reason": "셸 · argparse 의 잘못된 사용" },
+        { "code": 3, "reason": "MSVC CRT 의 abort" },
+        { "code": 14, "reason": "없앤 미확정 결과의 자리 — 옛 보고를 새 뜻으로 읽지 않게 비워 둔다" }
     ],
 
     "exit_codes": [

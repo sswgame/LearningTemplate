@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="utf-8"?>
+<?asset guid="8940306b8dba02947f6cc74cb4814af6"?>
+<!--
+  복셀 광산 미니게임(걷고 부수고 쌓는 섬) — Voxel 키트. 옛 게임 VoxelCraft 를 미니게임으로 흡수했다. 블록 카탈로그(data/blocks.xml)를 게임 기능 Voxel 이 미니게임 범위에 건다.
+  판은 맵의 VoxelGameModeComponent 가 돌리고, 청크는 같은 오브젝트의 VoxelWorldViewComponent(GF_Client_Voxel)가 그린다.
+  입력은 걷기 · 달리기 · 시선 공통 레이어와 Voxel 레이어(voxelcraft/data/voxel.input.xml)만 켠다.
+  시나리오 automation/voxelcraft_ai · voxelcraft_control · voxelcraft_slice 가 실행 전역 변수 gv_firstMinigame 로 들어간다.
+-->
+<Minigame name="voxelcraft" map="game/playground/voxelcraft/maps/island.scene.xml" entry="SceneSwitch" features="Voxel" inputContexts="Movement,Traversal,Look,Voxel" catalogs="voxelblocks"/>

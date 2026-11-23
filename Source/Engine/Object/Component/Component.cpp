@@ -150,9 +150,9 @@ namespace sw
 
             [[noreturn]] static void stopForUnsupportedField( const TypeInfo& owner, const PropertyInfo& prop )
             {
-                SW_FATAL( "state field '%#::%#' (%#) cannot be folded into the state hash - use a builtin with the State role (ReflectBuiltins.xxx), an enum, a reflected struct or a sequence of those, "
-                          "or keep the value out of RuntimeState and fold it in a foldStateHash override",
-                          owner._fullyQualifiedName.c_str(), prop._name.c_str(), prop._typeName.c_str() );
+                reportFatalError( "state field '%#::%#' (%#) cannot be folded into the state hash - use a builtin with the State role (ReflectBuiltins.xxx), an enum, a reflected struct or a sequence of those, "
+                                  "or keep the value out of RuntimeState and fold it in a foldStateHash override",
+                                  owner._fullyQualifiedName.c_str(), prop._name.c_str(), prop._typeName.c_str() );
             }
 
             /** @brief 상태 칸 하나를 접습니다. 구조체 값 · 구조체 원소는 걷기가 안쪽 칸으로 내려가 접으므로 여기서는 원소 수만 접는다. */

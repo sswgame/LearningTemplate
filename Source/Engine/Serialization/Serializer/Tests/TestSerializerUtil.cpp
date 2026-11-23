@@ -38,7 +38,7 @@ namespace
     {
         const PropertyInfo* pProp = getSampleType().findProperty( hashed_string( pName ) );
         if ( pProp == nullptr )
-            SW_FATAL( "SerializerSample has no property '%#'", pName );
+            reportFatalError( "SerializerSample has no property '%#'", pName );
         return *pProp;
     }
 

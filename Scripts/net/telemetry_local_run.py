@@ -2,7 +2,7 @@
 텔레메트리 · 크래시 업로드 로컬 실행 — 루프백 HTTP 수신기를 띄우고 게임을 두 번 띄워, 동의한 텔레메트리 스풀 파일과 보낼 줄의 크래시 묶음이 실제 HTTP 로 오는지 본다(H1).
 
   py -3 -m Scripts telemetry-local run                 # 기본: Shooter3D, Ninja-Debug
-  py -3 -m Scripts telemetry-local run --game WildWest
+  py -3 -m Scripts telemetry-local run --game Playground
 
 끝점은 gamesettings 칸(`_telemetryUploadEndpoint` · `_crashUploadEndpoint`)이고 저장소의 팩은 적지 않는다 - 이 스크립트는 `-gv_telemetryUploadEndpoint` ·
 `-gv_crashUploadEndpoint` 로 수신기를 가리킨다. 사용자 설정은 `-gv_userSettingsFile` 로 출력 폴더에 따로 두어 사람의 동의 설정을 바꾸지 않는다.

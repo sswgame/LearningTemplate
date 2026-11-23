@@ -4,11 +4,9 @@
 
 #include "Core/Encoding/FourCCUtil.h"
 #include "Core/Log/Logger.h"
-#include "Core/String/StringBuilder.h"
 
 #include "Engine/Automation/Watch/AutomationWatch.h"
 #include "Engine/Automation/Watch/AutomationWatchComponent.h"
-#include "Engine/Console/DevCommandRegistry.h"
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Scene/SceneManager.h"
 #include "Engine/Serialization/Format/StateIO.h"
@@ -30,44 +28,6 @@ namespace sw
             static constexpr uint32 kStateTag     = FourCCUtil::make( "IVSD" );
             static constexpr uint32 kStateVersion = 1;
 
-            /** @brief 활성 씬에서 이름 @p objectName 의 시연 컴포넌트입니다. 없으면 까닭을 @p outReply 에 적고 nullptr 입니다. */
-            static InventoryShopDemoComponent* findDemo( const string& objectName, string& outReply )
-            {
-                GameObject*                 pObject = engine::findActiveObject( hashed_string( objectName ) );
-                InventoryShopDemoComponent* pDemo   = pObject != nullptr ? pObject->getComponent<InventoryShopDemoComponent>() : nullptr;
-                if ( pDemo == nullptr || pDemo->isStarted() == false )
-                {
-                    StringBuilder<constant::buffer::kMax256> reply;
-                    reply.appendFormat( "no object named '%#' with a started InventoryShopDemoComponent", objectName );
-                    outReply = string( reply.view() );
-                }
-                return pDemo != nullptr && pDemo->isStarted() ? pDemo : nullptr;
-            }
-
-            /** @brief `demo.inventory <demo>` — 인벤토리 화면을 연다. */
-            static bool runOpenInventory( const vector<string>& listArgument, string& outReply )
-            {
-                if ( listArgument.size() != 1 )
-                    return false;
-                InventoryShopDemoComponent* pDemo = findDemo( listArgument[0], outReply );
-                if ( pDemo == nullptr )
-                    return false;
-                outReply = pDemo->openInventory() ? "inventory opened" : "inventory not opened (already open or no character)";
-                return true;
-            }
-
-            /** @brief `demo.shop <demo>` — 상점 화면을 연다. */
-            static bool runOpenShop( const vector<string>& listArgument, string& outReply )
-            {
-                if ( listArgument.size() != 1 )
-                    return false;
-                InventoryShopDemoComponent* pDemo = findDemo( listArgument[0], outReply );
-                if ( pDemo == nullptr )
-                    return false;
-                outReply = pDemo->openShop() ? "shop opened" : "shop not opened (already open or no character)";
-                return true;
-            }
-
             /** @brief 감시 값 `Demo.Gold` — 시연 지갑의 가게 통화 잔액입니다. */
             [[nodiscard]] static bool readGold( const AutomationWatchQuery& query, AutomationWatchValue& outValue )
             {
@@ -80,8 +40,6 @@ namespace sw
         };
     } // namespace
 
-    SW_DEV_COMMAND( DemoInventory, "demo.inventory", "demo.inventory <demo object>", "Open the runtime inventory screen of the inventory shop demo", &InventoryShopDemoInternal::runOpenInventory );
-    SW_DEV_COMMAND( DemoShop, "demo.shop", "demo.shop <demo object>", "Open the runtime shop screen of the inventory shop demo", &InventoryShopDemoInternal::runOpenShop );
     SW_AUTOMATION_QUERY_WATCH( demoGold, "Demo.Gold", "Shop currency balance of the inventory shop demo wallet", &InventoryShopDemoInternal::readGold, true, false );
 
     InventoryShopDemoComponent::InventoryShopDemoComponent()

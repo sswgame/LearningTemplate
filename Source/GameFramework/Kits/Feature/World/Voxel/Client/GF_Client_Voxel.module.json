@@ -1,0 +1,22 @@
+{
+    "_name": "GF_Client_Voxel",
+    "_version": "1.0.0",
+    "_kind": "Kit",
+    "_description": "복셀 샌드박스 키트(클라이언트) — 상주 청크를 메싱해 그리고 겨눈 블록을 표시한다(뷰). 규칙 · 디렉터 · 몸은 GF_Voxel",
+    "_listDependency": [
+        {
+            "_name": "GameFramework"
+        },
+        {
+            "_name": "GF_Voxel"
+        }
+    ],
+    "_listConfiguration": [
+        "Dev",
+        "Shipping"
+    ],
+    "_listTarget": [
+        "Client"
+    ],
+    "_bEnabledByDefault": true
+}

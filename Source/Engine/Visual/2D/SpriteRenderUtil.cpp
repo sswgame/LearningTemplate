@@ -94,5 +94,5 @@ namespace sw
 namespace sw
 {
     using SpriteTextureInstanceCache = SpriteRenderUtilInternal::TextureInstanceCache;
-    SW_BUILT_IN_ASSET_CACHE_WITHOUT_RELOAD( SpriteTextureInstanceCache );
+    SW_BUILT_IN_ASSET_CACHE( SpriteTextureInstanceCache, SpriteTextureInstanceCache );
 } // namespace sw

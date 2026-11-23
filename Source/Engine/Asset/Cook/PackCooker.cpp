@@ -291,7 +291,7 @@ namespace sw
                         files._listGameDomain.push_back( FileUtil::normalizePath( domain ).str() );
                 }
 
-                AssetCookRootRegistry::appendRoots( files._listCodeRoot );
+                AssetCookRoot::appendRoots( files._listCodeRoot );
                 files._automation = params._automationContent;
                 // 그래프 하나를 전체 고르기 · 기동 필수 · 씬마다의 고르기가 함께 걷는다 — 글마다 한 번 읽고 푼다.
                 PackReachGraph  graph( properties, config._cookRules, files, source );

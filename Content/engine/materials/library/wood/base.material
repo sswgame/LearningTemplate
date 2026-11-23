@@ -10,9 +10,8 @@
 		<item name="_patternScale" defaultValue="3" />
 		<item name="_specular" defaultValue="0.45" />
 	</_properties>
-	<_permutations quality="High" shaderLOD="300" usage="StaticMesh">
+	<_permutations>
 		<_alwaysDefines>
-			<item>MATERIAL_DOMAIN_SURFACE</item>
 			<item>MATERIAL_PATTERN_WOOD</item>
 		</_alwaysDefines>
 	</_permutations>

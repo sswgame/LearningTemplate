@@ -80,6 +80,8 @@ namespace sw
         string _faceExpression{};
         PROPERTY( Category = "Assets", Tooltip = "Material of the transparent cubes" )
         AssetRef<Material> _glassMaterial{};
+        PROPERTY( Category = "Assets", Tooltip = "Cube material of -gv_stressTestMaterialChurnKeyword - declares the runtime static switch the bench flips" )
+        AssetRef<Material> _permutationMaterial{};
         PROPERTY( Category = "Assets", Tooltip = "Scanned props the mesh bench draws with -gv_stressTestScanProps=1 (one batch each)" )
         vector<StressTestScanProp> _listScanProp{};
         PROPERTY( Category = "Assets", Tooltip = "Animator state of the rig knights" )

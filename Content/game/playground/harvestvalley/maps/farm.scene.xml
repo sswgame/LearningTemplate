@@ -1,0 +1,969 @@
+<?asset guid="b9575a0d56eec95a98d8322f327bcf9e"?>
+<Scene formatVersion="3" name="HarvestValley">
+	<SceneSettings _bStreaming="false" _unloadMargin="0" _maxCellLoadsPerFrame="0" _addToWorldBudgetMicroseconds="0">
+		<_cellGrid _cellSize="0" _loadingRadius="0" />
+	</SceneSettings>
+	<entities>
+		<entity id="1" name="GameCamera">
+			<GameObject _schemaVersion="0" _name="GameCamera" _bActive="true">
+				<_listComponent>
+					<CameraComponent _localID="17709685451340727998" _componentName="CameraComponent"
+					                 _bActive="true"
+					                 _localPosition="6,16,-10.08"
+					                 _localRotation="0.9272952,0,0"
+					                 _localScale="1,1,1"
+					                 _attachOwner="None"
+					                 _attachOwnerID="0"
+					                 _attachComponent="None"
+					                 _fovY="40.107045"
+					                 _nearZ="0.1"
+					                 _farZ="80"
+					                 _orthoHeight="15"
+					                 _priority="0"
+					                 _role="Game"
+					                 _bOrthographic="true" />
+					<CameraDirectorComponent _localID="17954231826208681790" _componentName="CameraDirectorComponent"
+					                         _bActive="true"
+					                         _catalogPath="game/playground/harvestvalley/data/farm.cameras.xml"
+					                         _initialPreset="farm"
+					                         _focusPoint="6,0,1.92"
+					                         _bReadInput="false">
+						<_listGroupTarget />
+					</CameraDirectorComponent>
+				</_listComponent>
+			</GameObject>
+		</entity>
+		<entity id="2" name="Sun">
+			<GameObject _schemaVersion="0" _name="Sun" _bActive="true">
+				<_listComponent>
+					<DirectionalLightComponent _localID="51927904365891271" _componentName="DirectionalLightComponent"
+					                           _bActive="true"
+					                           _localPosition="0,0,0"
+					                           _localRotation="0.356582,-2.138715,0"
+					                           _localScale="1,1,1"
+					                           _attachOwner="None"
+					                           _attachOwnerID="0"
+					                           _attachComponent="None"
+					                           _color="1,0.82,0.62"
+					                           _intensity="1.4"
+					                           _ambient="0.28"
+					                           _shadowExtent="20"
+					                           _shadowDistance="40"
+					                           _shadowViewDistance="1000"
+					                           _shadowReceiverMinHeight="-1"
+					                           _shadowReceiverMaxHeight="8"
+					                           _bCastShadow="true" />
+					<DaylightComponent _localID="2725634274623067929" _componentName="DaylightComponent"
+					                  _bActive="true"
+					                  _gameMode="35"
+					                  _rainDimming="0.55"
+					                  _nightIntensity="0.2"
+					                  _sunriseHour="6"
+					                  _sunsetHour="20"
+					                  _nightEndHour="5"
+					                  _horizonIntensity="0.25"
+					                  _noonIntensity="1.5"
+					                  _horizonPitch="14.323945"
+					                  _noonPitch="77.349304"
+					                  _morningYaw="-68.75494"
+					                  _eveningYaw="68.75494" />
+				</_listComponent>
+			</GameObject>
+		</entity>
+		<entity id="3" name="Meadow">
+			<GameObject _schemaVersion="0" _name="Meadow" _bActive="true">
+				<_listComponent>
+					<MeshComponent _localID="163493842152903304" _componentName="MeshComponent"
+					               _bActive="true"
+					               _localPosition="6,-0.01,3"
+					               _localRotation="0,0,0"
+					               _localScale="34,1,26"
+					               _attachOwner="None"
+					               _attachOwnerID="0"
+					               _attachComponent="None"
+					               _meshID="Plane"
+					               _materialPath="game/playground/harvestvalley/materials/meadow.material"
+					               _boundsRadius="0.866"
+					               _gpuSpinSeed="0"
+					               _bVisible="true" />
+				</_listComponent>
+			</GameObject>
+		</entity>
+		<entity id="4" name="FarmHouse">
+			<GameObject _schemaVersion="0" _name="FarmHouse" _bActive="true">
+				<_listComponent>
+					<MeshComponent _localID="163493842152903304" _componentName="MeshComponent"
+					               _bActive="true"
+					               _localPosition="6,0,-3.5"
+					               _localRotation="0,0,0"
+					               _localScale="5.5,5.5,5.5"
+					               _attachOwner="None"
+					               _attachOwnerID="0"
+					               _attachComponent="None"
+					               _meshID="game/playground/harvestvalley/models/tent_small_closed.mesh"
+					               _materialPath="engine/materials/defaultmaterial.material"
+					               _boundsRadius="0.866"
+					               _gpuSpinSeed="0"
+					               _bVisible="true" />
+				</_listComponent>
+			</GameObject>
+		</entity>
+		<entity id="5" name="ShippingBin">
+			<GameObject _schemaVersion="0" _name="ShippingBin" _bActive="true">
+				<_listComponent>
+					<MeshComponent _localID="163493842152903304" _componentName="MeshComponent"
+					               _bActive="true"
+					               _localPosition="13.4,0.4,1"
+					               _localRotation="0,0,0"
+					               _localScale="1.2,0.8,1"
+					               _attachOwner="None"
+					               _attachOwnerID="0"
+					               _attachComponent="None"
+					               _meshID="Cube"
+					               _materialPath="game/playground/harvestvalley/materials/shippingbin.material"
+					               _boundsRadius="0.866"
+					               _gpuSpinSeed="0"
+					               _bVisible="true" />
+				</_listComponent>
+			</GameObject>
+		</entity>
+		<entity id="6" name="SeedShop">
+			<GameObject _schemaVersion="0" _name="SeedShop" _bActive="true">
+				<_listComponent>
+					<MeshComponent _localID="163493842152903304" _componentName="MeshComponent"
+					               _bActive="true"
+					               _localPosition="-1.6,0,5"
+					               _localRotation="0,1.5707964,0"
+					               _localScale="4,4,4"
+					               _attachOwner="None"
+					               _attachOwnerID="0"
+					               _attachComponent="None"
+					               _meshID="game/playground/harvestvalley/models/tent_detailed_open.mesh"
+					               _materialPath="engine/materials/defaultmaterial.material"
+					               _boundsRadius="0.866"
+					               _gpuSpinSeed="0"
+					               _bVisible="true" />
+				</_listComponent>
+			</GameObject>
+		</entity>
+		<entity id="7" name="Fence">
+			<GameObject _schemaVersion="0" _name="Fence" _bActive="true">
+				<_listComponent>
+					<MeshComponent _localID="163493842152903304" _componentName="MeshComponent"
+					               _bActive="true"
+					               _localPosition="-0.19999999,0,9.400001"
+					               _localRotation="0,0,0"
+					               _localScale="0.7752,0.7752,0.7752"
+					               _attachOwner="None"
+					               _attachOwnerID="0"
+					               _attachComponent="None"
+					               _meshID="common/models/quaternius/village/prop_woodenfence_single.mesh"
+					               _materialPath="common/models/quaternius/village/prop_woodenfence_single/materials/mi_woodtrim.material"
+					               _boundsRadius="0.866"
+					               _gpuSpinSeed="0"
+					               _bVisible="true" />
+				</_listComponent>
+			</GameObject>
+		</entity>
+		<entity id="8" name="Fence_2">
+			<GameObject _schemaVersion="0" _name="Fence_2" _bActive="true">
+				<_listComponent>
+					<MeshComponent _localID="163493842152903304" _componentName="MeshComponent"
+					               _bActive="true"
+					               _localPosition="1.4000001,0,9.400001"
+					               _localRotation="0,0,0"
+					               _localScale="0.7752,0.7752,0.7752"
+					               _attachOwner="None"
+					               _attachOwnerID="0"
+					               _attachComponent="None"
+					               _meshID="common/models/quaternius/village/prop_woodenfence_single.mesh"
+					               _materialPath="common/models/quaternius/village/prop_woodenfence_single/materials/mi_woodtrim.material"
+					               _boundsRadius="0.866"
+					               _gpuSpinSeed="0"
+					               _bVisible="true" />
+				</_listComponent>
+			</GameObject>
+		</entity>
+		<entity id="9" name="Fence_3">
+			<GameObject _schemaVersion="0" _name="Fence_3" _bActive="true">
+				<_listComponent>
+					<MeshComponent _localID="163493842152903304" _componentName="MeshComponent"
+					               _bActive="true"
+					               _localPosition="3,0,9.400001"
+					               _localRotation="0,0,0"
+					               _localScale="0.7752,0.7752,0.7752"
+					               _attachOwner="None"
+					               _attachOwnerID="0"
+					               _attachComponent="None"
+					               _meshID="common/models/quaternius/village/prop_woodenfence_single.mesh"
+					               _materialPath="common/models/quaternius/village/prop_woodenfence_single/materials/mi_woodtrim.material"
+					               _boundsRadius="0.866"
+					               _gpuSpinSeed="0"
+					               _bVisible="true" />
+				</_listComponent>
+			</GameObject>
+		</entity>
+		<entity id="10" name="Fence_4">
+			<GameObject _schemaVersion="0" _name="Fence_4" _bActive="true">
+				<_listComponent>
+					<MeshComponent _localID="163493842152903304" _componentName="MeshComponent"
+					               _bActive="true"
+					               _localPosition="4.6,0,9.400001"
+					               _localRotation="0,0,0"
+					               _localScale="0.7752,0.7752,0.7752"
+					               _attachOwner="None"
+					               _attachOwnerID="0"
+					               _attachComponent="None"
+					               _meshID="common/models/quaternius/village/prop_woodenfence_single.mesh"
+					               _materialPath="common/models/quaternius/village/prop_woodenfence_single/materials/mi_woodtrim.material"
+					               _boundsRadius="0.866"
+					               _gpuSpinSeed="0"
+					               _bVisible="true" />
+				</_listComponent>
+			</GameObject>
+		</entity>
+		<entity id="11" name="Fence_5">
+			<GameObject _schemaVersion="0" _name="Fence_5" _bActive="true">
+				<_listComponent>
+					<MeshComponent _localID="163493842152903304" _componentName="MeshComponent"
+					               _bActive="true"
+					               _localPosition="6.2000003,0,9.400001"
+					               _localRotation="0,0,0"
+					               _localScale="0.7752,0.7752,0.7752"
+					               _attachOwner="None"
+					               _attachOwnerID="0"
+					               _attachComponent="None"
+					               _meshID="common/models/quaternius/village/prop_woodenfence_single.mesh"
+					               _materialPath="common/models/quaternius/village/prop_woodenfence_single/materials/mi_woodtrim.material"
+					               _boundsRadius="0.866"
+					               _gpuSpinSeed="0"
+					               _bVisible="true" />
+				</_listComponent>
+			</GameObject>
+		</entity>
+		<entity id="12" name="Fence_6">
+			<GameObject _schemaVersion="0" _name="Fence_6" _bActive="true">
+				<_listComponent>
+					<MeshComponent _localID="163493842152903304" _componentName="MeshComponent"
+					               _bActive="true"
+					               _localPosition="7.8,0,9.400001"
+					               _localRotation="0,0,0"
+					               _localScale="0.7752,0.7752,0.7752"
+					               _attachOwner="None"
+					               _attachOwnerID="0"
+					               _attachComponent="None"
+					               _meshID="common/models/quaternius/village/prop_woodenfence_single.mesh"
+					               _materialPath="common/models/quaternius/village/prop_woodenfence_single/materials/mi_woodtrim.material"
+					               _boundsRadius="0.866"
+					               _gpuSpinSeed="0"
+					               _bVisible="true" />
+				</_listComponent>
+			</GameObject>
+		</entity>
+		<entity id="13" name="Fence_7">
+			<GameObject _schemaVersion="0" _name="Fence_7" _bActive="true">
+				<_listComponent>
+					<MeshComponent _localID="163493842152903304" _componentName="MeshComponent"
+					               _bActive="true"
+					               _localPosition="9.400001,0,9.400001"
+					               _localRotation="0,0,0"
+					               _localScale="0.7752,0.7752,0.7752"
+					               _attachOwner="None"
+					               _attachOwnerID="0"
+					               _attachComponent="None"
+					               _meshID="common/models/quaternius/village/prop_woodenfence_single.mesh"
+					               _materialPath="common/models/quaternius/village/prop_woodenfence_single/materials/mi_woodtrim.material"
+					               _boundsRadius="0.866"
+					               _gpuSpinSeed="0"
+					               _bVisible="true" />
+				</_listComponent>
+			</GameObject>
+		</entity>
+		<entity id="14" name="Fence_8">
+			<GameObject _schemaVersion="0" _name="Fence_8" _bActive="true">
+				<_listComponent>
+					<MeshComponent _localID="163493842152903304" _componentName="MeshComponent"
+					               _bActive="true"
+					               _localPosition="11,0,9.400001"
+					               _localRotation="0,0,0"
+					               _localScale="0.7752,0.7752,0.7752"
+					               _attachOwner="None"
+					               _attachOwnerID="0"
+					               _attachComponent="None"
+					               _meshID="common/models/quaternius/village/prop_woodenfence_single.mesh"
+					               _materialPath="common/models/quaternius/village/prop_woodenfence_single/materials/mi_woodtrim.material"
+					               _boundsRadius="0.866"
+					               _gpuSpinSeed="0"
+					               _bVisible="true" />
+				</_listComponent>
+			</GameObject>
+		</entity>
+		<entity id="15" name="Fence_9">
+			<GameObject _schemaVersion="0" _name="Fence_9" _bActive="true">
+				<_listComponent>
+					<MeshComponent _localID="163493842152903304" _componentName="MeshComponent"
+					               _bActive="true"
+					               _localPosition="12.6,0,9.400001"
+					               _localRotation="0,0,0"
+					               _localScale="0.7752,0.7752,0.7752"
+					               _attachOwner="None"
+					               _attachOwnerID="0"
+					               _attachComponent="None"
+					               _meshID="common/models/quaternius/village/prop_woodenfence_single.mesh"
+					               _materialPath="common/models/quaternius/village/prop_woodenfence_single/materials/mi_woodtrim.material"
+					               _boundsRadius="0.866"
+					               _gpuSpinSeed="0"
+					               _bVisible="true" />
+				</_listComponent>
+			</GameObject>
+		</entity>
+		<entity id="16" name="Tree">
+			<GameObject _schemaVersion="0" _name="Tree" _bActive="true">
+				<_listComponent>
+					<MeshComponent _localID="163493842152903304" _componentName="MeshComponent"
+					               _bActive="true"
+					               _localPosition="-6.5,0,-1"
+					               _localRotation="0,0,0"
+					               _localScale="0.5642,0.5642,0.5642"
+					               _attachOwner="None"
+					               _attachOwnerID="0"
+					               _attachComponent="None"
+					               _meshID="common/models/quaternius/nature/commontree_1.mesh"
+					               _materialPath="common/models/quaternius/nature/commontree_1/materials/bark_normaltree.material"
+					               _boundsRadius="0.866"
+					               _gpuSpinSeed="0"
+					               _bVisible="true"
+					               _sectionName="bark_normaltree" />
+					<MeshSectionComponent _localID="2542659449416077965" _componentName="MeshSectionComponent"
+					                      _bActive="true"
+					                      _attachComponent="#0244d8c8807cd288"
+					                      _materialPath="common/models/quaternius/nature/commontree_1/materials/leaves_normaltree.material"
+					                      _sectionName="leaves_normaltree" />
+				</_listComponent>
+			</GameObject>
+		</entity>
+		<entity id="17" name="Tree_2">
+			<GameObject _schemaVersion="0" _name="Tree_2" _bActive="true">
+				<_listComponent>
+					<MeshComponent _localID="163493842152903304" _componentName="MeshComponent"
+					               _bActive="true"
+					               _localPosition="-7.5,0,3.5"
+					               _localRotation="0,0.9,0"
+					               _localScale="0.4343,0.4343,0.4343"
+					               _attachOwner="None"
+					               _attachOwnerID="0"
+					               _attachComponent="None"
+					               _meshID="common/models/quaternius/nature/commontree_4.mesh"
+					               _materialPath="common/models/quaternius/nature/commontree_4/materials/bark_normaltree.material"
+					               _boundsRadius="0.866"
+					               _gpuSpinSeed="0"
+					               _bVisible="true"
+					               _sectionName="bark_normaltree" />
+					<MeshSectionComponent _localID="2542659449416077965" _componentName="MeshSectionComponent"
+					                      _bActive="true"
+					                      _attachComponent="#0244d8c8807cd288"
+					                      _materialPath="common/models/quaternius/nature/commontree_4/materials/leaves_normaltree.material"
+					                      _sectionName="leaves_normaltree" />
+				</_listComponent>
+			</GameObject>
+		</entity>
+		<entity id="18" name="Tree_3">
+			<GameObject _schemaVersion="0" _name="Tree_3" _bActive="true">
+				<_listComponent>
+					<MeshComponent _localID="163493842152903304" _componentName="MeshComponent"
+					               _bActive="true"
+					               _localPosition="-6,0,8"
+					               _localRotation="0,1.8,0"
+					               _localScale="0.5363,0.5363,0.5363"
+					               _attachOwner="None"
+					               _attachOwnerID="0"
+					               _attachComponent="None"
+					               _meshID="common/models/quaternius/nature/commontree_2.mesh"
+					               _materialPath="common/models/quaternius/nature/commontree_2/materials/bark_normaltree.material"
+					               _boundsRadius="0.866"
+					               _gpuSpinSeed="0"
+					               _bVisible="true"
+					               _sectionName="bark_normaltree" />
+					<MeshSectionComponent _localID="2542659449416077965" _componentName="MeshSectionComponent"
+					                      _bActive="true"
+					                      _attachComponent="#0244d8c8807cd288"
+					                      _materialPath="common/models/quaternius/nature/commontree_2/materials/leaves_normaltree.material"
+					                      _sectionName="leaves_normaltree" />
+				</_listComponent>
+			</GameObject>
+		</entity>
+		<entity id="19" name="Tree_4">
+			<GameObject _schemaVersion="0" _name="Tree_4" _bActive="true">
+				<_listComponent>
+					<MeshComponent _localID="163493842152903304" _componentName="MeshComponent"
+					               _bActive="true"
+					               _localPosition="-1.5,0,10.8"
+					               _localRotation="0,2.7,0"
+					               _localScale="0.4349,0.4349,0.4349"
+					               _attachOwner="None"
+					               _attachOwnerID="0"
+					               _attachComponent="None"
+					               _meshID="common/models/quaternius/nature/commontree_3.mesh"
+					               _materialPath="common/models/quaternius/nature/commontree_3/materials/bark_normaltree.material"
+					               _boundsRadius="0.866"
+					               _gpuSpinSeed="0"
+					               _bVisible="true"
+					               _sectionName="bark_normaltree" />
+					<MeshSectionComponent _localID="2542659449416077965" _componentName="MeshSectionComponent"
+					                      _bActive="true"
+					                      _attachComponent="#0244d8c8807cd288"
+					                      _materialPath="common/models/quaternius/nature/commontree_3/materials/leaves_normaltree.material"
+					                      _sectionName="leaves_normaltree" />
+				</_listComponent>
+			</GameObject>
+		</entity>
+		<entity id="20" name="Tree_5">
+			<GameObject _schemaVersion="0" _name="Tree_5" _bActive="true">
+				<_listComponent>
+					<MeshComponent _localID="163493842152903304" _componentName="MeshComponent"
+					               _bActive="true"
+					               _localPosition="14.5,0,10.5"
+					               _localRotation="0,3.6,0"
+					               _localScale="0.585,0.585,0.585"
+					               _attachOwner="None"
+					               _attachOwnerID="0"
+					               _attachComponent="None"
+					               _meshID="common/models/quaternius/nature/commontree_5.mesh"
+					               _materialPath="common/models/quaternius/nature/commontree_5/materials/bark_normaltree.material"
+					               _boundsRadius="0.866"
+					               _gpuSpinSeed="0"
+					               _bVisible="true"
+					               _sectionName="bark_normaltree" />
+					<MeshSectionComponent _localID="2542659449416077965" _componentName="MeshSectionComponent"
+					                      _bActive="true"
+					                      _attachComponent="#0244d8c8807cd288"
+					                      _materialPath="common/models/quaternius/nature/commontree_5/materials/leaves_normaltree.material"
+					                      _sectionName="leaves_normaltree" />
+				</_listComponent>
+			</GameObject>
+		</entity>
+		<entity id="21" name="Tree_6">
+			<GameObject _schemaVersion="0" _name="Tree_6" _bActive="true">
+				<_listComponent>
+					<MeshComponent _localID="163493842152903304" _componentName="MeshComponent"
+					               _bActive="true"
+					               _localPosition="18,0,7"
+					               _localRotation="0,4.5,0"
+					               _localScale="0.5642,0.5642,0.5642"
+					               _attachOwner="None"
+					               _attachOwnerID="0"
+					               _attachComponent="None"
+					               _meshID="common/models/quaternius/nature/commontree_1.mesh"
+					               _materialPath="common/models/quaternius/nature/commontree_1/materials/bark_normaltree.material"
+					               _boundsRadius="0.866"
+					               _gpuSpinSeed="0"
+					               _bVisible="true"
+					               _sectionName="bark_normaltree" />
+					<MeshSectionComponent _localID="2542659449416077965" _componentName="MeshSectionComponent"
+					                      _bActive="true"
+					                      _attachComponent="#0244d8c8807cd288"
+					                      _materialPath="common/models/quaternius/nature/commontree_1/materials/leaves_normaltree.material"
+					                      _sectionName="leaves_normaltree" />
+				</_listComponent>
+			</GameObject>
+		</entity>
+		<entity id="22" name="Tree_7">
+			<GameObject _schemaVersion="0" _name="Tree_7" _bActive="true">
+				<_listComponent>
+					<MeshComponent _localID="163493842152903304" _componentName="MeshComponent"
+					               _bActive="true"
+					               _localPosition="19,0,2"
+					               _localRotation="0,5.4,0"
+					               _localScale="0.5363,0.5363,0.5363"
+					               _attachOwner="None"
+					               _attachOwnerID="0"
+					               _attachComponent="None"
+					               _meshID="common/models/quaternius/nature/commontree_2.mesh"
+					               _materialPath="common/models/quaternius/nature/commontree_2/materials/bark_normaltree.material"
+					               _boundsRadius="0.866"
+					               _gpuSpinSeed="0"
+					               _bVisible="true"
+					               _sectionName="bark_normaltree" />
+					<MeshSectionComponent _localID="2542659449416077965" _componentName="MeshSectionComponent"
+					                      _bActive="true"
+					                      _attachComponent="#0244d8c8807cd288"
+					                      _materialPath="common/models/quaternius/nature/commontree_2/materials/leaves_normaltree.material"
+					                      _sectionName="leaves_normaltree" />
+				</_listComponent>
+			</GameObject>
+		</entity>
+		<entity id="23" name="Tree_8">
+			<GameObject _schemaVersion="0" _name="Tree_8" _bActive="true">
+				<_listComponent>
+					<MeshComponent _localID="163493842152903304" _componentName="MeshComponent"
+					               _bActive="true"
+					               _localPosition="18,0,-3"
+					               _localRotation="0,6.3,0"
+					               _localScale="0.4343,0.4343,0.4343"
+					               _attachOwner="None"
+					               _attachOwnerID="0"
+					               _attachComponent="None"
+					               _meshID="common/models/quaternius/nature/commontree_4.mesh"
+					               _materialPath="common/models/quaternius/nature/commontree_4/materials/bark_normaltree.material"
+					               _boundsRadius="0.866"
+					               _gpuSpinSeed="0"
+					               _bVisible="true"
+					               _sectionName="bark_normaltree" />
+					<MeshSectionComponent _localID="2542659449416077965" _componentName="MeshSectionComponent"
+					                      _bActive="true"
+					                      _attachComponent="#0244d8c8807cd288"
+					                      _materialPath="common/models/quaternius/nature/commontree_4/materials/leaves_normaltree.material"
+					                      _sectionName="leaves_normaltree" />
+				</_listComponent>
+			</GameObject>
+		</entity>
+		<entity id="24" name="Log">
+			<GameObject _schemaVersion="0" _name="Log" _bActive="true">
+				<_listComponent>
+					<MeshComponent _localID="163493842152903304" _componentName="MeshComponent"
+					               _bActive="true"
+					               _localPosition="9.2,0,-3.1"
+					               _localRotation="0,0.3,0"
+					               _localScale="2.5,2.5,2.5"
+					               _attachOwner="None"
+					               _attachOwnerID="0"
+					               _attachComponent="None"
+					               _meshID="game/playground/harvestvalley/models/log.mesh"
+					               _materialPath="engine/materials/defaultmaterial.material"
+					               _boundsRadius="0.866"
+					               _gpuSpinSeed="0"
+					               _bVisible="true" />
+				</_listComponent>
+			</GameObject>
+		</entity>
+		<entity id="25" name="Stump">
+			<GameObject _schemaVersion="0" _name="Stump" _bActive="true">
+				<_listComponent>
+					<MeshComponent _localID="163493842152903304" _componentName="MeshComponent"
+					               _bActive="true"
+					               _localPosition="9.6,0,-4.6"
+					               _localRotation="0,0,0"
+					               _localScale="2.5,2.5,2.5"
+					               _attachOwner="None"
+					               _attachOwnerID="0"
+					               _attachComponent="None"
+					               _meshID="game/playground/harvestvalley/models/stump_round.mesh"
+					               _materialPath="engine/materials/defaultmaterial.material"
+					               _boundsRadius="0.866"
+					               _gpuSpinSeed="0"
+					               _bVisible="true" />
+				</_listComponent>
+			</GameObject>
+		</entity>
+		<entity id="26" name="Plant">
+			<GameObject _schemaVersion="0" _name="Plant" _bActive="true">
+				<_listComponent>
+					<MeshComponent _localID="163493842152903304" _componentName="MeshComponent"
+					               _bActive="true"
+					               _localPosition="-4,0,-2"
+					               _localRotation="0,0,0"
+					               _localScale="0.4636,0.4636,0.4636"
+					               _attachOwner="None"
+					               _attachOwnerID="0"
+					               _attachComponent="None"
+					               _meshID="common/models/quaternius/nature/bush_common_flowers.mesh"
+					               _materialPath="common/models/quaternius/nature/bush_common_flowers/materials/leaves_normaltree.material"
+					               _boundsRadius="0.866"
+					               _gpuSpinSeed="0"
+					               _bVisible="true"
+					               _sectionName="leaves_normaltree" />
+					<MeshSectionComponent _localID="2542659449416077965" _componentName="MeshSectionComponent"
+					                      _bActive="true"
+					                      _attachComponent="#0244d8c8807cd288"
+					                      _materialPath="common/models/quaternius/nature/bush_common_flowers/materials/flowers.material"
+					                      _sectionName="flowers" />
+				</_listComponent>
+			</GameObject>
+		</entity>
+		<entity id="27" name="Plant_2">
+			<GameObject _schemaVersion="0" _name="Plant_2" _bActive="true">
+				<_listComponent>
+					<MeshComponent _localID="163493842152903304" _componentName="MeshComponent"
+					               _bActive="true"
+					               _localPosition="-3.2,0,-1.2"
+					               _localRotation="0,0,0"
+					               _localScale="0.3529,0.3529,0.3529"
+					               _attachOwner="None"
+					               _attachOwnerID="0"
+					               _attachComponent="None"
+					               _meshID="common/models/quaternius/nature/flower_4_group.mesh"
+					               _materialPath="common/models/quaternius/nature/flower_4_group/materials/leaves.material"
+					               _boundsRadius="0.866"
+					               _gpuSpinSeed="0"
+					               _bVisible="true"
+					               _sectionName="leaves" />
+					<MeshSectionComponent _localID="2542659449416077965" _componentName="MeshSectionComponent"
+					                      _bActive="true"
+					                      _attachComponent="#0244d8c8807cd288"
+					                      _materialPath="common/models/quaternius/nature/flower_4_group/materials/flowers.material"
+					                      _sectionName="flowers" />
+				</_listComponent>
+			</GameObject>
+		</entity>
+		<entity id="28" name="Plant_3">
+			<GameObject _schemaVersion="0" _name="Plant_3" _bActive="true">
+				<_listComponent>
+					<MeshComponent _localID="163493842152903304" _componentName="MeshComponent"
+					               _bActive="true"
+					               _localPosition="2.5,0,-4.5"
+					               _localRotation="0,0,0"
+					               _localScale="0.281,0.281,0.281"
+					               _attachOwner="None"
+					               _attachOwnerID="0"
+					               _attachComponent="None"
+					               _meshID="common/models/quaternius/nature/flower_3_group.mesh"
+					               _materialPath="common/models/quaternius/nature/flower_3_group/materials/leaves.material"
+					               _boundsRadius="0.866"
+					               _gpuSpinSeed="0"
+					               _bVisible="true"
+					               _sectionName="leaves" />
+					<MeshSectionComponent _localID="2542659449416077965" _componentName="MeshSectionComponent"
+					                      _bActive="true"
+					                      _attachComponent="#0244d8c8807cd288"
+					                      _materialPath="common/models/quaternius/nature/flower_3_group/materials/flowers.material"
+					                      _sectionName="flowers" />
+				</_listComponent>
+			</GameObject>
+		</entity>
+		<entity id="29" name="Plant_4">
+			<GameObject _schemaVersion="0" _name="Plant_4" _bActive="true">
+				<_listComponent>
+					<MeshComponent _localID="163493842152903304" _componentName="MeshComponent"
+					               _bActive="true"
+					               _localPosition="16,0,4"
+					               _localRotation="0,0,0"
+					               _localScale="0.7235,0.7235,0.7235"
+					               _attachOwner="None"
+					               _attachOwnerID="0"
+					               _attachComponent="None"
+					               _meshID="common/models/quaternius/nature/plant_1.mesh"
+					               _materialPath="common/models/quaternius/nature/plant_1/materials/leaves.material"
+					               _boundsRadius="0.866"
+					               _gpuSpinSeed="0"
+					               _bVisible="true" />
+				</_listComponent>
+			</GameObject>
+		</entity>
+		<entity id="30" name="Plant_5">
+			<GameObject _schemaVersion="0" _name="Plant_5" _bActive="true">
+				<_listComponent>
+					<MeshComponent _localID="163493842152903304" _componentName="MeshComponent"
+					               _bActive="true"
+					               _localPosition="15.5,0,6"
+					               _localRotation="0,0,0"
+					               _localScale="0.3529,0.3529,0.3529"
+					               _attachOwner="None"
+					               _attachOwnerID="0"
+					               _attachComponent="None"
+					               _meshID="common/models/quaternius/nature/flower_4_group.mesh"
+					               _materialPath="common/models/quaternius/nature/flower_4_group/materials/leaves.material"
+					               _boundsRadius="0.866"
+					               _gpuSpinSeed="0"
+					               _bVisible="true"
+					               _sectionName="leaves" />
+					<MeshSectionComponent _localID="2542659449416077965" _componentName="MeshSectionComponent"
+					                      _bActive="true"
+					                      _attachComponent="#0244d8c8807cd288"
+					                      _materialPath="common/models/quaternius/nature/flower_4_group/materials/flowers.material"
+					                      _sectionName="flowers" />
+				</_listComponent>
+			</GameObject>
+		</entity>
+		<entity id="31" name="Plant_6">
+			<GameObject _schemaVersion="0" _name="Plant_6" _bActive="true">
+				<_listComponent>
+					<MeshComponent _localID="163493842152903304" _componentName="MeshComponent"
+					               _bActive="true"
+					               _localPosition="9.5,0,-4"
+					               _localRotation="0,0,0"
+					               _localScale="0.281,0.281,0.281"
+					               _attachOwner="None"
+					               _attachOwnerID="0"
+					               _attachComponent="None"
+					               _meshID="common/models/quaternius/nature/flower_3_group.mesh"
+					               _materialPath="common/models/quaternius/nature/flower_3_group/materials/leaves.material"
+					               _boundsRadius="0.866"
+					               _gpuSpinSeed="0"
+					               _bVisible="true"
+					               _sectionName="leaves" />
+					<MeshSectionComponent _localID="2542659449416077965" _componentName="MeshSectionComponent"
+					                      _bActive="true"
+					                      _attachComponent="#0244d8c8807cd288"
+					                      _materialPath="common/models/quaternius/nature/flower_3_group/materials/flowers.material"
+					                      _sectionName="flowers" />
+				</_listComponent>
+			</GameObject>
+		</entity>
+		<entity id="32" name="Plant_7">
+			<GameObject _schemaVersion="0" _name="Plant_7" _bActive="true">
+				<_listComponent>
+					<MeshComponent _localID="163493842152903304" _componentName="MeshComponent"
+					               _bActive="true"
+					               _localPosition="-3.5,0,9.5"
+					               _localRotation="0,0,0"
+					               _localScale="0.4636,0.4636,0.4636"
+					               _attachOwner="None"
+					               _attachOwnerID="0"
+					               _attachComponent="None"
+					               _meshID="common/models/quaternius/nature/bush_common_flowers.mesh"
+					               _materialPath="common/models/quaternius/nature/bush_common_flowers/materials/leaves_normaltree.material"
+					               _boundsRadius="0.866"
+					               _gpuSpinSeed="0"
+					               _bVisible="true"
+					               _sectionName="leaves_normaltree" />
+					<MeshSectionComponent _localID="2542659449416077965" _componentName="MeshSectionComponent"
+					                      _bActive="true"
+					                      _attachComponent="#0244d8c8807cd288"
+					                      _materialPath="common/models/quaternius/nature/bush_common_flowers/materials/flowers.material"
+					                      _sectionName="flowers" />
+				</_listComponent>
+			</GameObject>
+		</entity>
+		<entity id="33" name="Farmer">
+			<GameObject _schemaVersion="0" _name="Farmer" _bActive="true">
+				<_listComponent>
+					<SkeletalMeshComponent _localID="15127961318995883145" _componentName="SkeletalMeshComponent"
+					                       _bActive="true"
+					                       _localPosition="6,0,-1.2"
+					                       _localRotation="0,0,0"
+					                       _localScale="0.6,0.6,0.6"
+					                       _attachOwner="None"
+					                       _attachOwnerID="0"
+					                       _attachComponent="None"
+					                       _meshID=""
+					                       _materialPath=""
+					                       _boundsRadius="2"
+					                       _gpuSpinSeed="0"
+					                       _bVisible="true"
+					                       _skeletonPath=""
+					                       _updateRateDivisor="1"
+					                       _bFollowParentPose="false"
+					                       _visibilityBasedTickOption="AlwaysTickPose" />
+					<SkeletalAnimatorComponent _localID="6157124105282015569" _componentName="SkeletalAnimatorComponent"
+					                           _bActive="true"
+					                           _animationGraphPath="common/data/anim/ubc_farmer.animgraph.xml"
+					                           _animationSetPath="common/data/anim/ubc_farmer.animset.xml"
+					                           _initialState="Locomotion"
+					                           _currentState=""
+					                           _stateTime="0"
+					                           _playRate="1"
+					                           _blendSeconds="0.2"
+					                           _syncGroup=""
+					                           _syncWeight="1"
+					                           _bExtractRootMotion="false"
+					                           _bPlayOnBegin="true" />
+					<CharacterAppearanceComponent _localID="13827364293183997314" _componentName="CharacterAppearanceComponent"
+					                              _bActive="true"
+					                              _presetID="Farmer"
+					                              _seed="0"
+					                              _bMergeParts="true" />
+					<MoveAnimationComponent _localID="16603661262427416962" _componentName="MoveAnimationComponent"
+					                        _bActive="true"
+					                        _speedParameter="Speed" />
+					<FarmerComponent _localID="12882560504431958162" _componentName="FarmerComponent"
+					                 _bActive="true"
+					                 _gameMode="35"
+					                 _heightOffset="0"
+					                 _kind="Farmer" />
+					<PawnComponent _localID="11149290121538025405" _componentName="PawnComponent"
+					               _bActive="true"
+					               _moveAction="Move"
+					               _lookAction="None"
+					               _upAction="None"
+					               _inputLayer="None"
+					               _aiControllerPrefab=""
+					               _maxPitch="80.21409"
+					               _autoPossess="Player0">
+						<_listButton>
+							<item>Farm.Tool1</item>
+							<item>Farm.Tool2</item>
+							<item>Farm.Tool3</item>
+							<item>Farm.Tool4</item>
+							<item>Farm.SeedPrev</item>
+							<item>Farm.SeedNext</item>
+							<item>Farm.Use</item>
+							<item>Farm.Ship</item>
+							<item>Farm.Buy</item>
+							<item>Farm.Sleep</item>
+							<item>Status</item>
+						</_listButton>
+						<_listAnalog />
+					</PawnComponent>
+				</_listComponent>
+			</GameObject>
+		</entity>
+		<entity id="39" name="FirstFieldHint">
+			<GameObject _schemaVersion="0" _name="FirstFieldHint" _bActive="true">
+				<_listComponent>
+					<SceneComponent _localID="12574257654564749349" _componentName="SceneComponent"
+					                _bActive="true"
+					                _localPosition="10,0,-1.2"
+					                _localRotation="0,0,0"
+					                _localScale="1,1,1"
+					                _attachOwner="None"
+					                _attachOwnerID="0"
+					                _attachComponent="None" />
+					<TutorialHintTriggerComponent _localID="11197792962895791182" _componentName="TutorialHintTriggerComponent"
+					                       _bActive="true"
+					                       _activator="33"
+					                       _radius="2"
+					                       _bOnce="true"
+					                       _text="Press [action=Farm.Use] to work the soil with your tool"
+					                       _durationSeconds="6" />
+				</_listComponent>
+			</GameObject>
+		</entity>
+		<entity id="34" name="FarmTarget">
+			<GameObject _schemaVersion="0" _name="FarmTarget" _bActive="true">
+				<_listComponent>
+					<MeshComponent _localID="163493842152903304" _componentName="MeshComponent"
+					               _bActive="true"
+					               _localPosition="0,0.1,0"
+					               _localRotation="0,0,0"
+					               _localScale="1,0.04,1"
+					               _attachOwner="None"
+					               _attachOwnerID="0"
+					               _attachComponent="None"
+					               _meshID="Cube"
+					               _materialPath="game/playground/harvestvalley/materials/target.material"
+					               _boundsRadius="0.866"
+					               _gpuSpinSeed="0"
+					               _bVisible="true" />
+					<FarmerComponent _localID="12882560504431958162" _componentName="FarmerComponent"
+					                 _bActive="true"
+					                 _gameMode="35"
+					                 _heightOffset="0.1"
+					                 _kind="Target" />
+				</_listComponent>
+			</GameObject>
+		</entity>
+		<entity id="35" name="FarmGameMode">
+			<GameObject _schemaVersion="0" _name="FarmGameMode" _bActive="true">
+				<_listComponent>
+					<GameStateComponent _localID="6673597520240684436" _componentName="GameStateComponent" _bActive="true" />
+					<WalletComponent _localID="7202751467146875245" _componentName="WalletComponent" _bActive="true" />
+					<InventoryComponent _localID="6041785841110900339" _componentName="InventoryComponent" _bActive="true" />
+					<FarmGameModeComponent _localID="12488349250694271848" _componentName="FarmGameModeComponent"
+					                       _bActive="true"
+					                       _cropDataPath="game/playground/harvestvalley/data/crops.xml"
+					                       _weatherPath="game/playground/harvestvalley/data/farm.weather.xml"
+					                       _fieldWidth="12"
+					                       _fieldHeight="8"
+					                       _shippingBin="5"
+					                       _shop="6"
+					                       _farmer="33"
+					                       _autoFarmerPrefab="game/playground/harvestvalley/prefabs/autofarmer.prefab.xml"
+					                       _playerStart="6,0,-1.2"
+					                       _bAutoPlay="false" />
+					<FarmFieldViewComponent _localID="362370289443144604" _componentName="FarmFieldViewComponent"
+					                        _bActive="true"
+					                        _soilPrefab="game/playground/harvestvalley/prefabs/farmsoil.prefab.xml"
+					                        _cropPrefab="game/playground/harvestvalley/prefabs/farmcrop.prefab.xml"
+					                        _grassSoilColor="0.4,0.62,0.28,1"
+					                        _tilledSoilColor="0.58,0.4,0.24,1"
+					                        _wateredSoilColor="0.33,0.22,0.13,1"
+					                        _witheredCropColor="0.55,0.4,0.22,1"
+					                        _cameraRig="1">
+						<_listCropModel>
+							<FarmCropModel _cropID="turnip" _readyModel="game/playground/harvestvalley/models/crop_turnip.mesh" />
+							<FarmCropModel _cropID="onion" _readyModel="game/playground/harvestvalley/models/crop_turnip.mesh" />
+							<FarmCropModel _cropID="carrot" _readyModel="game/playground/harvestvalley/models/crop_carrot.mesh" />
+							<FarmCropModel _cropID="pumpkin" _readyModel="game/playground/harvestvalley/models/crop_pumpkin.mesh" />
+							<FarmCropModel _cropID="corn" _readyModel="game/playground/harvestvalley/models/crops_corn_stage_d.mesh">
+								<_listGrowingModel>
+									<item>game/playground/harvestvalley/models/crops_corn_stage_a.mesh</item>
+									<item>game/playground/harvestvalley/models/crops_corn_stage_b.mesh</item>
+									<item>game/playground/harvestvalley/models/crops_corn_stage_c.mesh</item>
+								</_listGrowingModel>
+							</FarmCropModel>
+						</_listCropModel>
+						<_listDefaultGrowingModel>
+							<item>game/playground/harvestvalley/models/crops_leafs_stage_a.mesh</item>
+							<item>game/playground/harvestvalley/models/crops_leafs_stage_b.mesh</item>
+						</_listDefaultGrowingModel>
+					</FarmFieldViewComponent>
+					<FarmVillageGameModeComponent _localID="1365981938186610330" _componentName="FarmVillageGameModeComponent"
+					                              _bActive="true"
+					                              _scheduleDataPath="game/playground/harvestvalley/data/villagers.schedules.xml"
+					                              _villagerPrefab="game/playground/harvestvalley/prefabs/villager.prefab.xml"
+					                              _navOrigin="-10,0,-8"
+					                              _navWidth="48"
+					                              _navHeight="42"
+					                              _navCellSize="1"
+					                              _navObstacleNames="FarmHouse, ShippingBin, SeedShop, Fence, Tree, Log, Stump"
+					                              _navObstacleRadius="0.8"
+					                              _bodyCatchUpScale="1.5"
+					                              _bodySnapDistance="3"
+					                              _bAutoPlay="false">
+						<_listVillagerPreset>
+							<item>TownsfolkMale</item>
+							<item>TownsfolkFemale</item>
+						</_listVillagerPreset>
+					</FarmVillageGameModeComponent>
+				</_listComponent>
+			</GameObject>
+		</entity>
+		<entity id="36" name="Cc0.cart">
+			<GameObject _schemaVersion="0" _name="Cc0.cart" _bActive="true">
+				<_listComponent>
+					<MeshComponent _localID="163493842152903304" _componentName="MeshComponent"
+					               _bActive="true"
+					               _localPosition="-20,0,-20"
+					               _localRotation="0,0,0"
+					               _localScale="0.3502,0.3502,0.3502"
+					               _attachOwner="None"
+					               _attachOwnerID="0"
+					               _attachComponent="None"
+					               _meshID="common/models/quaternius/village/prop_wagon.mesh"
+					               _materialPath="common/models/quaternius/village/prop_wagon/materials/mi_woodtrim_wear.material"
+					               _boundsRadius="0.866"
+					               _gpuSpinSeed="0"
+					               _bVisible="true" />
+				</_listComponent>
+			</GameObject>
+		</entity>
+		<entity id="37" name="Cc0.crops_dirt_row">
+			<GameObject _schemaVersion="0" _name="Cc0.crops_dirt_row" _bActive="true">
+				<_listComponent>
+					<MeshComponent _localID="163493842152903304" _componentName="MeshComponent"
+					               _bActive="true"
+					               _localPosition="-17,0,-20"
+					               _localRotation="0,0,0"
+					               _localScale="1,1,1"
+					               _attachOwner="None"
+					               _attachOwnerID="0"
+					               _attachComponent="None"
+					               _meshID="game/playground/harvestvalley/models/crops_dirt_row.mesh"
+					               _materialPath="engine/materials/defaultmaterial.material"
+					               _boundsRadius="0.866"
+					               _gpuSpinSeed="0"
+					               _bVisible="true" />
+				</_listComponent>
+			</GameObject>
+		</entity>
+		<entity id="38" name="Cc0.crops_dirt_single">
+			<GameObject _schemaVersion="0" _name="Cc0.crops_dirt_single" _bActive="true">
+				<_listComponent>
+					<MeshComponent _localID="163493842152903304" _componentName="MeshComponent"
+					               _bActive="true"
+					               _localPosition="-14,0,-20"
+					               _localRotation="0,0,0"
+					               _localScale="1,1,1"
+					               _attachOwner="None"
+					               _attachOwnerID="0"
+					               _attachComponent="None"
+					               _meshID="game/playground/harvestvalley/models/crops_dirt_single.mesh"
+					               _materialPath="engine/materials/defaultmaterial.material"
+					               _boundsRadius="0.866"
+					               _gpuSpinSeed="0"
+					               _bVisible="true" />
+				</_listComponent>
+			</GameObject>
+		</entity>
+	</entities>
+</Scene>

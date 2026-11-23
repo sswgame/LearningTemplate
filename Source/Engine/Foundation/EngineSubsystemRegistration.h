@@ -254,7 +254,7 @@ namespace sw::engine
         [[nodiscard]] bool isDeclared( uint64 typeHash ) const;
 
     private:
-        /** @brief `isDeclared` 가 거짓이면 `SW_FATAL` 이다(@p pLookup 은 찾은 자리의 함수 이름 — 타입이 들어 있다). */
+        /** @brief `isDeclared` 가 거짓이면 `reportFatalError` 이다(@p pLookup 은 찾은 자리의 함수 이름 — 타입이 들어 있다). */
         void requireDeclared( uint64 typeHash, const utf8* pLookup ) const;
 
     private:

@@ -1,6 +1,6 @@
 /**
  * @file ConditionExpr.h
- * @brief 조건 어휘입니다. 등록 줄 `SW_CONDITION` 과, 글을 읽을 때 후위 배열과 함수 포인터로 컴파일한 식 `ConditionExpr` 를 정의합니다.
+ * @brief 조건 어휘입니다. 인자 칸 구조체와, 글을 읽을 때 후위 배열과 함수 포인터로 컴파일한 식 `ConditionExpr` 를 정의합니다(등록 줄 `SW_CONDITION` 은 `ConditionRegistry.h`).
  * @details 문법은 우선순위가 낮은 것부터 `a || b`, `a && b`, `!a`, 비교(`== != < <= > >=`), 더하기 · 빼기(`+ -`), 곱하기 · 나누기(`* /`), 괄호, 그리고 피연산자다.
  *          산술은 수치 칸(지역 프로필의 피해 · 배율 · 세기)이 조건과 같은 문법 · 문맥으로 값을 내려고 있다 — `20 * (1 - target.FireResist)`, `5 + timeInside * 2`.
  *          0 으로 나누면 값이 없음(NaN)이다. 피연산자는 다음 넷이다.
@@ -31,6 +31,8 @@
 
 namespace sw
 {
+    struct ConditionEntry;
+
     /** @brief 인자 없는 조건 · 동작의 칸입니다. */
     REFLECT()
     struct SW_API VocabularyNoParams
@@ -73,58 +75,6 @@ namespace sw
 {
     /** @brief 형식을 지운 조건 함수입니다. 수를 돌려주며 0 과 NaN 은 거짓입니다. */
     using ConditionFunction = float64 ( * )( const GameplayContext& context, const void* pArgs );
-
-    /** @brief 조건 이름 하나의 등록 줄입니다. 글자는 등록한 이미지의 정적 저장소에 있습니다. */
-    struct ConditionEntry
-    {
-        const utf8*               _pName;
-        const InstancedStructOps* _pArgsOps;
-        ConditionFunction         _function;
-    };
-
-    /** @brief `float64( const GameplayContext&, const TArgs& )`(참거짓 반환도 된다) 함수를 형식을 지운 함수로 옮깁니다. */
-    template <typename TArgs, auto pFunction>
-    struct ConditionThunk
-    {
-        static float64 call( const GameplayContext& context, const void* pArgs )
-        {
-            return static_cast<float64>( pFunction( context, *static_cast<const TArgs*>( pArgs ) ) );
-        }
-    };
-
-    /**
-     * @struct ConditionRegistry
-     * @brief 이름 → 조건 표입니다. Engine 이미지의 함수 정적이라 모듈 경로 없이 도는 테스트 실행 파일에서도 등록이 보이고, 교체 이미지의 같은 이름은 대체합니다(`RegistrationReloadScope`).
-     * @details 등록은 모듈을 올리는 스레드에서, 찾기는 데이터를 읽는 스레드에서 오므로 잠금으로 지킨다. 프레임마다 도는 경로가 아니다(읽을 때만 찾는다).
-     */
-    struct SW_API ConditionRegistry
-    {
-        static void registerCondition( const ConditionEntry* pEntry );
-        static void unregisterCondition( const ConditionEntry* pEntry );
-        /** @brief 이름(대소문자 구분)의 등록 줄입니다. 없으면 nullptr 입니다. */
-        static const ConditionEntry* find( string_view name );
-        /** @brief 등록 줄이 빠질 때마다 오르는 세대입니다(`ActionRegistry::getRemovalGeneration` 과 같은 규칙 — 배포 빌드는 늘 0). */
-        static uint32 getRemovalGeneration();
-        /** @brief @p pEntry 가 지금 등록되어 있는지입니다(잠금 · 훑기 — 세대가 바뀐 뒤에만 부른다). */
-        static bool isRegistered( const ConditionEntry* pEntry );
-        /** @brief 위 둘을 칸 값 보관자(`RegisteredParams`)에 넘기는 표입니다. */
-        static const RegistryEntryOps& getEntryOps();
-        /** @brief 등록된 이름을 등록 순서대로 뒤에 붙입니다(편집기 목록 · 오류 문장). */
-        static void collectNames( vector<string>& outListName );
-    };
-
-    /** @brief `SW_CONDITION` 이 두는 정적 등록자입니다. */
-    class SW_API ConditionRegistrar
-    {
-    public:
-        explicit ConditionRegistrar( const ConditionEntry* pEntry );
-        ~ConditionRegistrar();
-        ConditionRegistrar( const ConditionRegistrar& )            = delete;
-        ConditionRegistrar& operator=( const ConditionRegistrar& ) = delete;
-
-    private:
-        const ConditionEntry* _pEntry;
-    };
 } // namespace sw
 
 namespace sw
@@ -220,16 +170,3 @@ namespace sw
         uint32                       _registryGeneration; ///< 컴파일할 때의 `ConditionRegistry::getRemovalGeneration`
     };
 } // namespace sw
-
-/**
- * @brief 조건을 그 함수의 .cpp 에서 등록합니다(`namespace sw` 안, 파일 범위). 이름이 곧 데이터가 적는 이름입니다.
- * @param name      식별자 이름(`weather`)
- * @param TArgs     칸 구조체(`ConditionNameListArgs`). 없으면 `VocabularyNoParams`
- * @param pFunction `float64( const GameplayContext&, const TArgs& )` 함수의 주소(참거짓 반환도 된다)
- */
-#define SW_CONDITION( name, TArgs, pFunction )                                                                                                                 \
-    static const ::sw::ConditionEntry     sw_condition_##name{ #name, &::sw::InstancedStructOps::of<TArgs>(), &::sw::ConditionThunk<TArgs, pFunction>::call }; \
-    static const ::sw::ConditionRegistrar sw_conditionRegistrar_##name                                                                                         \
-    {                                                                                                                                                          \
-        &sw_condition_##name                                                                                                                                   \
-    }

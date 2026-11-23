@@ -10,7 +10,7 @@
 <Scenario name="game.themepark.shadow" fixedDelta="0.0166667" timeoutFrames="400" startAfter="ScenePlaying" startTimeoutFrames="900" input="exclusive">
 	<Variable name="gv_parkAutoBuild" value="0"/>
 	<AdvanceSimulation frames="180"/> <!-- 공원이 돌아가는 시뮬레이션 시간이 사진 내용이다(손님 자리 · 그림자) -->
-	<Screenshot file="park.ppm" stability="assets"/>
+	<Screenshot file="park.ppm" stability="Assets"/>
 	<ExpectImage file="park.ppm" golden="shadow_top" region="0.0,0.0,1.0,0.12"/>
 	<ExpectImage file="park.ppm" golden="shadow_left" region="0.0,0.0,0.12,1.0"/>
 	<ExpectImage file="park.ppm" golden="shadow_center" region="0.3,0.3,0.7,0.7"/>

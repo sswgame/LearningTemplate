@@ -58,6 +58,7 @@
         "_loadingTexture",
         "_localizationProject",
         "_mappingPath",
+        "_materialGlobals",
         "_materialPath",
         "_meshID",
         "_meshLODSettings",
@@ -245,6 +246,7 @@
         "loadingTexture",
         "localizationProject",
         "mappingPath",
+        "materialGlobals",
         "materialPath",
         "mesh",
         "meshID",
@@ -501,6 +503,7 @@
         "_listStyleSheet",
         "_loadingTexture",
         "_localizationProject",
+        "_materialGlobals",
         "_meshLODSettings",
         "_missingMaterial",
         "_missingTexture",
@@ -647,6 +650,7 @@
         "listStyleSheet",
         "loadingTexture",
         "localizationProject",
+        "materialGlobals",
         "meshLODSettings",
         "missingMaterial",
         "missingTexture",
@@ -973,7 +977,6 @@
         "_parent",
         "_parentBone",
         "_parentEvent",
-        "_parentPath",
         "_partialRootBone",
         "_patchTrustPublicKeyXHex",
         "_patchTrustPublicKeyYHex",
@@ -1280,7 +1283,6 @@
         "parent",
         "parentBone",
         "parentEvent",
-        "parentPath",
         "partialRootBone",
         "patchTrustPublicKeyXHex",
         "patchTrustPublicKeyYHex",
@@ -1823,6 +1825,22 @@
         "confirmAction",
         "endTurnAction",
         "moveAction"
+      ]
+    },
+    {
+      "owner": "GF_Client_Voxel",
+      "listField": [
+        "_chunkPrefab",
+        "chunkPrefab"
+      ],
+      "listAssetRefField": [
+        "_chunkPrefab",
+        "chunkPrefab"
+      ],
+      "listPathTextField": [],
+      "listTextField": [
+        "_waterMeshName",
+        "waterMeshName"
       ]
     },
     {
@@ -2666,15 +2684,33 @@
     },
     {
       "owner": "GF_Voxel",
-      "listField": [],
-      "listAssetRefField": [],
+      "listField": [
+        "_autoPlayPrefab",
+        "autoPlayPrefab"
+      ],
+      "listAssetRefField": [
+        "_autoPlayPrefab",
+        "autoPlayPrefab"
+      ],
       "listPathTextField": [],
       "listTextField": [
+        "_breakButton",
+        "_hotbarScrollAnalog",
         "_id",
+        "_jumpButton",
+        "_listSlotButton",
         "_name",
+        "_placeButton",
+        "_sprintButton",
+        "breakButton",
         "drop",
+        "hotbarScrollAnalog",
         "id",
-        "name"
+        "jumpButton",
+        "listSlotButton",
+        "name",
+        "placeButton",
+        "sprintButton"
       ]
     },
     {
@@ -3515,6 +3551,7 @@
         "_knightSkeleton",
         "_material",
         "_mesh",
+        "_permutationMaterial",
         "_rigCapeMaterial",
         "_rigCapeMesh",
         "_rigCapeRig",
@@ -3550,6 +3587,7 @@
         "knightSkeleton",
         "material",
         "mesh",
+        "permutationMaterial",
         "rigCapeMaterial",
         "rigCapeMesh",
         "rigCapeRig",
@@ -3587,6 +3625,7 @@
         "_knightSkeleton",
         "_material",
         "_mesh",
+        "_permutationMaterial",
         "_rigCapeMaterial",
         "_rigCapeMesh",
         "_rigCapeRig",
@@ -3622,6 +3661,7 @@
         "knightSkeleton",
         "material",
         "mesh",
+        "permutationMaterial",
         "rigCapeMaterial",
         "rigCapeMesh",
         "rigCapeRig",
@@ -3861,38 +3901,6 @@
         "name",
         "respawnRegion",
         "startQuest"
-      ]
-    },
-    {
-      "owner": "game:VoxelCraft",
-      "listField": [
-        "_autoPlayPrefab",
-        "_chunkPrefab",
-        "autoPlayPrefab",
-        "chunkPrefab"
-      ],
-      "listAssetRefField": [
-        "_autoPlayPrefab",
-        "_chunkPrefab",
-        "autoPlayPrefab",
-        "chunkPrefab"
-      ],
-      "listPathTextField": [],
-      "listTextField": [
-        "_breakButton",
-        "_hotbarScrollAnalog",
-        "_jumpButton",
-        "_listSlotButton",
-        "_placeButton",
-        "_sprintButton",
-        "_waterMeshName",
-        "breakButton",
-        "hotbarScrollAnalog",
-        "jumpButton",
-        "listSlotButton",
-        "placeButton",
-        "sprintButton",
-        "waterMeshName"
       ]
     },
     {

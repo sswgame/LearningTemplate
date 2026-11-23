@@ -17,6 +17,7 @@
 #include "Engine/Environment/Surface/SurfaceDeformBinding.h"
 #include "Engine/Graphics/Canvas/CanvasDrawList.h"
 #include "Engine/Graphics/Debug/GPUMessage.h"
+#include "Engine/Graphics/Material/MaterialGlobals.h"
 #include "Engine/Graphics/Shader/Binding/ShaderBindingSlots.h"
 #include "Engine/Graphics/Texture/TextureCache.h"
 #include "Engine/Renderer/Canvas/CanvasRenderer.h"
@@ -194,6 +195,7 @@ namespace sw
         hashed_string          _skyHdriPath{};            ///< 지금 쥔 HDRI 하늘 텍스처의 경로입니다(`FrameRenderer::applyFrameSky`). 비었으면 쥔 것이 없다
         TextureHandle          _skyHdriLoad{};            ///< HDRI 하늘 텍스처의 로드 핸들입니다(참조를 쥔다). 스카이 패스가 준비된 것만 읽는다
         SurfaceDeformBinding   _surfaceDeform{};          ///< 이번 프레임의 표면 변형 층(패킷에서 — 핸들이 참조를 쥔다). 준비된 텍스처는 모든 패스가 건다(`FramePassExecutor::registerSurfaceDeformLayer`), 창은 프레임 시드(`FrameRenderer::updatePassConstants`)
+        MaterialGlobals        _materialGlobals{};        ///< 이번 프레임의 전역 머티리얼 값(패킷에서) — 프레임 시드가 PassCB `g_MaterialGlobal*` 에 쓴다(`FrameRenderer::updatePassConstants`)
         /** @brief 2D 빛 쿠키 아틀라스입니다(칸 나누기 · 쿠키 텍스처 수명 · 아틀라스 렌더 타깃). */
         Light2DCookieAtlas _cookieAtlas{};
         /** @brief 셋업이 경로로 빌리는 텍스처(컬러 그레이딩 LUT · 블룸 먼지 마스크 · 데칼 · 렌즈 플레어 스프라이트)의 로드 핸들입니다. 셋업이 뷰마다 묻고 프레임 시작에 안 쓰인 것을 놓는다. */

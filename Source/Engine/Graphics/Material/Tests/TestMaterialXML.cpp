@@ -182,6 +182,76 @@ SW_TEST_CASE( MaterialXMLTest, ChildInheritsParentAndOverridesOnlyWrittenValues 
 }
 
 /**
+ * @brief [MaterialXMLTest] 자식의 `_permutations` 는 부모 것과 이름으로 합친다 — 더할 define 한 줄 · 바꿀 스위치 칸만 적고, 지울 것은 `_op="Remove"` 다
+ * @details 변이: 통째로 바꾸면(예전) 부모의 define · 스위치 키워드 · 멀티 컴파일이 사라진다. 저장이 기본값 칸을 생략하면 부모가 켠 스위치를 끈 자식이 저장 뒤 다시 켜진다.
+ */
+SW_TEST_CASE( MaterialXMLTest, ChildPermutationsMergeByName )
+{
+    static constexpr const utf8*        kPermutationParent = R"(<?xml version="1.0" encoding="utf-8"?>
+<MaterialDef formatVersion="0" name="PermutationParent" shaderPath="engine/shaders/forward_lit.hlsl" surfaceModel="Lit" alphaMode="Opaque">
+	<_permutations quality="Low" shaderLOD="200" usage="StaticMesh">
+		<_alwaysDefines>
+			<item>MATERIAL_DOMAIN_SURFACE</item>
+			<item>MATERIAL_PARENT_ONLY</item>
+		</_alwaysDefines>
+		<_staticSwitches>
+			<item name="Detail" keyword="MATERIAL_DETAIL" keywordOff="MATERIAL_PLAIN" bEnabled="1" bShaderFeature="0"/>
+		</_staticSwitches>
+		<_multiCompiles>
+			<item name="FogMode" selected="FOG_OFF"><_options><item>FOG_OFF</item><item>FOG_EXP</item></_options></item>
+		</_multiCompiles>
+	</_permutations>
+</MaterialDef>
+)";
+    const sw::test::ScopedScratchDomain domain;
+    SW_REQUIRE_TRUE( sw::FileUtil::writeTextFile( domain.makeDiskPath( "permparent.material" ), kPermutationParent ) );
+    sw::StringBuilder<sw::constant::buffer::kMax1024> child;
+    child.appendFormat( R"(<?xml version="1.0" encoding="utf-8"?>
+<MaterialDef formatVersion="0" name="PermutationChild" _base="%#">
+	<_permutations quality="Epic">
+		<_alwaysDefines>
+			<item _op="Remove">MATERIAL_PARENT_ONLY</item>
+			<item>MATERIAL_CHILD</item>
+		</_alwaysDefines>
+		<_staticSwitches>
+			<item name="Detail" bEnabled="0"/>
+		</_staticSwitches>
+		<_multiCompiles>
+			<item name="FogMode" selected="FOG_EXP"/>
+		</_multiCompiles>
+	</_permutations>
+</MaterialDef>
+)",
+                        sw::test::ScopedScratchDomain::makeID( "permparent.material" ).str() );
+    SW_REQUIRE_TRUE( sw::FileUtil::writeTextFile( domain.makeDiskPath( "permchild.material" ), child.view() ) );
+
+    const auto expectMerged = []( const sw::Material& material )
+    {
+        const sw::MaterialPermutationDef& permutations = material.getPermutations();
+        SW_EXPECT_TRUE( permutations._quality == sw::MaterialQualityLevel::Epic );
+        SW_EXPECT_EQUAL( 200u, permutations._shaderLOD );
+        SW_EXPECT_TRUE( permutations.hasAlwaysDefine( "MATERIAL_DOMAIN_SURFACE" ) );
+        SW_EXPECT_TRUE( permutations.hasAlwaysDefine( "MATERIAL_CHILD" ) );
+        SW_EXPECT_FALSE( permutations.hasAlwaysDefine( "MATERIAL_PARENT_ONLY" ) );
+        SW_REQUIRE_EQUAL( size_t{ 1 }, permutations._listStaticSwitch.size() );
+        SW_EXPECT_EQUAL( sw::string( "MATERIAL_DETAIL" ), permutations._listStaticSwitch[0]._keyword );
+        SW_EXPECT_EQUAL( sw::string( "MATERIAL_PLAIN" ), permutations._listStaticSwitch[0]._keywordOff );
+        SW_EXPECT_TRUE( permutations._listStaticSwitch[0]._bEnabled == 0 );
+        SW_EXPECT_TRUE( permutations._listStaticSwitch[0]._bShaderFeature == 0 );
+        SW_REQUIRE_EQUAL( size_t{ 1 }, permutations._listMultiCompile.size() );
+        SW_EXPECT_EQUAL( sw::string( "FOG_EXP" ), permutations._listMultiCompile[0]._selected );
+        SW_EXPECT_EQUAL( size_t{ 2 }, permutations._listMultiCompile[0]._listOption.size() );
+    };
+    sw::shared_ptr<sw::Material> material = sw::Material::create();
+    SW_REQUIRE_TRUE( material->loadFromAsset( sw::test::ScopedScratchDomain::makeID( "permchild.material" ) ) );
+    expectMerged( *material );
+
+    sw::shared_ptr<sw::Material> reread = sw::Material::create();
+    SW_REQUIRE_TRUE( reread->loadFromXML( material->saveToString() ) );
+    expectMerged( *reread );
+}
+
+/**
  * @brief [MaterialXMLTest] 없는 부모 · 돌고 도는 부모 사슬은 자식 칸만으로 읽지 않고 로드 실패다
  */
 SW_TEST_CASE( MaterialXMLTest, MissingOrCyclicParentFailsToLoad )
