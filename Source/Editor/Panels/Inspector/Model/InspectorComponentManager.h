@@ -76,8 +76,8 @@ namespace sw::editor
         InspectorComponentManager( const InspectorComponentManager& )            = delete;
         InspectorComponentManager& operator=( const InspectorComponentManager& ) = delete;
 
-        /** @brief 타입 이름에 확장을 등록합니다. 같은 이름이 있으면 교체합니다. */
-        void                 registerType( string_view typeName, unique_ptr<IComponentInspector> pInspector );
+        /** @brief 타입 이름에 확장을 등록합니다. 같은 이름이 이미 있으면 오류를 남기고 false 입니다(먼저 것을 둔다). */
+        [[nodiscard]] bool   registerType( string_view typeName, unique_ptr<IComponentInspector> pInspector );
         IComponentInspector* find( string_view typeName ) const;
         /**
          * @brief 이 타입과 그 기반 타입들에 등록된 확장을 기반에서 파생 순서로 모읍니다.

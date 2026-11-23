@@ -2032,6 +2032,7 @@
     "gv_wildWestAutoPlay": "gv_playgroundAutoPlay — 와일드웨스트 게임을 Playground 허브 맵 바탕으로 흡수 — 디렉터는 서부극 키트 Component/, HUD 는 GF_Client_OpenWorldWestern(2026-11-24)",
     "AbilityArenaGame": "PlaygroundGame — 게임 AbilityArena 를 Playground 허브의 아레나 미니게임 abilityarena 로 흡수, 게임 코드는 AbilityArena 키트(2026-11-24)",
     "gv_arenaAutoPlay": "gv_playgroundAutoPlay — 게임 AbilityArena 를 Playground 허브의 아레나 미니게임 abilityarena 로 흡수, 자동 플레이 스위치는 Playground 것 하나(2026-11-24)",
+    "addOrReplace": "NameRegistry::addLogged(겹치면 거절) · addOwned(덮되 주인이 풀리면 앞 값으로 돌아간다) — 이름 레지스트리가 앞 등록을 소리 없이 바꾸는 길을 없앴다(2026-11-24)",
     "VoxelCraftGame": "PlaygroundGame — 게임 VoxelCraft 를 허브의 미니게임 voxelcraft 로 흡수(2026-11-24)",
     "gv_voxelAutoPlay": "gv_playgroundAutoPlay — 게임 VoxelCraft 를 허브의 미니게임 voxelcraft 로 흡수(2026-11-24)",
     "isChunkDirty": "VoxelChunk::_revision — 낡은 청크는 월드의 깃발이 아니라 판 번호로 알고 뷰가 지은 때의 번호와 견준다(2026-11-24)",

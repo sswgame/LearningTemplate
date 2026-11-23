@@ -15,25 +15,23 @@ namespace sw::editor
         return editor::getSubsystem<EditorContext>().getSubsystem<EditorPopupManager>();
     }
 
-    void EditorPopupManager::registerPopup( unique_ptr<EditorPopup> pPopup )
+    bool EditorPopupManager::registerPopup( unique_ptr<EditorPopup> pPopup )
     {
         if ( pPopup == nullptr )
-            return;
+            return false;
 
         const string popupID = string{ pPopup->getPopupID() };
-
-        // 같은 ID 가 이미 등록돼 있으면 교체한다
-        EditorPopupEntry* pExisting = VectorUtil::findBy<&EditorPopupEntry::_id>( _listPopup, popupID );
-        if ( pExisting != nullptr )
+        if ( VectorUtil::findBy<&EditorPopupEntry::_id>( _listPopup, popupID ) != nullptr )
         {
-            pExisting->_pInstance = std::move( pPopup );
-            return;
+            SW_LOG_ERROR_ID( "EditorPopupManager.DuplicateID", "Editor popup '%#' is already registered - the first one is kept", popupID.c_str() );
+            return false;
         }
 
         EditorPopupEntry entry;
         entry._id        = popupID;
         entry._pInstance = std::move( pPopup );
         _listPopup.push_back( std::move( entry ) );
+        return true;
     }
 
     EditorPopup* EditorPopupManager::findPopup( string_view id )
@@ -120,7 +118,8 @@ namespace sw::editor
             }
             if ( bExisting )
                 continue;
-            registerPopup( registration._pCreate() );
+            if ( registerPopup( registration._pCreate() ) == false )
+                continue;
             for ( EditorPopupEntry& entry : _listPopup )
             {
                 if ( entry._id == registration._pID )

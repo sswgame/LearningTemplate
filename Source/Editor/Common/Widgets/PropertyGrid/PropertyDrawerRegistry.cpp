@@ -960,6 +960,8 @@ namespace sw::editor
                 return make_unique<ValueProperty<T>>();
         }
 
+        constexpr const utf8* kRegistryLabel = "Inspector property type"; ///< 등록 거절 로그에 나오는 이름
+
         static_assert( SW_COUNT_OF( kArrDrawMethodArg ) == InspectorBuiltinValue::kBuiltinCount,
                        "kArrDrawMethodArg must have one entry per ReflectBuiltins.xxx type" );
 
@@ -967,17 +969,12 @@ namespace sw::editor
 
     PropertyDrawerRegistry::PropertyDrawerRegistry()
         : _registry{}
-        , _listRegistration{}
+        , _listDrawerSubscription{}
         , _syncedGeneration{ constant::invalid_index::kUint32 }
     {
     }
 
     PropertyDrawerRegistry::~PropertyDrawerRegistry() = default;
-
-    void PropertyDrawerRegistry::registerType( string_view typeName, unique_ptr<IInspectorProperty> pProperty )
-    {
-        _registry.addOrReplace( hashed_string( typeName ), std::move( pProperty ), "Inspector property type" );
-    }
 
     IInspectorProperty* PropertyDrawerRegistry::find( string_view typeName ) const
     {
@@ -987,8 +984,9 @@ namespace sw::editor
 
     void PropertyDrawerRegistry::registerDefaults()
     {
+        _listDrawerSubscription.clear();
+        _registry.clear();
         registerBuiltins();
-        _listRegistration.clear();
         _syncedGeneration = constant::invalid_index::kUint32;
         syncWithRegistry();
     }
@@ -1000,35 +998,25 @@ namespace sw::editor
         if ( list.getGeneration() == _syncedGeneration )
             return;
         _syncedGeneration = list.getGeneration();
-        // 항목이 빠졌으면 내장 위젯부터 다시 등록한다. 등록 항목이 가렸던 것이 돌아온다. 그다음 현재 항목을 모두 등록한다.
-        bool bRemoved = false;
-        for ( const EditorPropertyDrawerRegistration* pRegistration : _listRegistration )
-        {
-            bRemoved = bRemoved || DrawerRegistry::find( pRegistration->_pID ) != pRegistration;
-        }
-        if ( bRemoved )
-        {
-            _registry.clear();
-            registerBuiltins();
-        }
-        _listRegistration.clear();
+        // 앞 세대의 확장을 거두면 가렸던 내장 위젯이 돌아온다(`NameRegistry::addOwned`). 그다음 지금 항목을 모두 건다.
+        _listDrawerSubscription.clear();
         for ( uint32 index = 0; index < DrawerRegistry::getCount(); ++index )
         {
             const EditorPropertyDrawerRegistration& registration = DrawerRegistry::getAt( index );
-            registerType( registration._pID, registration._pCreate() );
-            _listRegistration.push_back( &registration );
+            _listDrawerSubscription.push_back( _registry.addOwned( hashed_string( registration._pID ), registration._pCreate(), kRegistryLabel ) );
         }
     }
 
     void PropertyDrawerRegistry::registerBuiltins()
     {
-#define SW_REFLECT_BUILTIN_TYPE( Canon, CppType, TextConv, Ns, ... ) registerType( #Canon, createBuiltinProperty<InspectorBuiltinCppTypeT<CppType>>() );
+        // 빈 표의 내장 이름들이다 — 겹치면 레지스트리가 오류로 알린다.
+#define SW_REFLECT_BUILTIN_TYPE( Canon, CppType, TextConv, Ns, ... ) (void)_registry.addLogged( hashed_string( #Canon ), createBuiltinProperty<InspectorBuiltinCppTypeT<CppType>>(), kRegistryLabel );
 #define SW_REFLECT_BUILTIN_CONTAINER( ... )
 #include "Engine/Reflection/ReflectBuiltins.xxx"
 #undef SW_REFLECT_BUILTIN_TYPE
 #undef SW_REFLECT_BUILTIN_CONTAINER
-        registerType( AssetRefBase::kTypeName, make_unique<AssetRefProperty>() );
-        registerType( CatalogKeyBase::kTypeName, make_unique<CatalogKeyProperty>() );
+        (void)_registry.addLogged( hashed_string( AssetRefBase::kTypeName ), make_unique<AssetRefProperty>(), kRegistryLabel );
+        (void)_registry.addLogged( hashed_string( CatalogKeyBase::kTypeName ), make_unique<CatalogKeyProperty>(), kRegistryLabel );
     }
 
     bool PropertyDrawerRegistry::drawMethodArg( const utf8* pLabel, InspectorMethodArgSlot& slot, const FunctionParameterInfo& parameter, const PropertyGridViewModel& model,

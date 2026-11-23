@@ -400,21 +400,22 @@ namespace sw
         : _registry{}
     {
         using Internal = AnimationPoseNodeInternal;
-        registerType( hashed_string( "BlendPoses" ), AnimationPoseNodeType{ 2u, &Internal::createBlendPoses, &Internal::validateBlendPoses, &Internal::fillBlendPoses } );
-        registerType( hashed_string( "Mirror" ), AnimationPoseNodeType{ 1u, &Internal::createMirror, &Internal::validateMirror, &Internal::fillMirror } );
-        registerType( hashed_string( "Montage" ), AnimationPoseNodeType{ 1u, &Internal::createMontage, &Internal::validateMontage, &Internal::fillMontage } );
+        // 빈 표의 엔진 이름들이다 — 겹치면 레지스트리가 오류로 알린다.
+        (void)registerType( hashed_string( "BlendPoses" ), AnimationPoseNodeType{ 2u, &Internal::createBlendPoses, &Internal::validateBlendPoses, &Internal::fillBlendPoses } );
+        (void)registerType( hashed_string( "Mirror" ), AnimationPoseNodeType{ 1u, &Internal::createMirror, &Internal::validateMirror, &Internal::fillMirror } );
+        (void)registerType( hashed_string( "Montage" ), AnimationPoseNodeType{ 1u, &Internal::createMontage, &Internal::validateMontage, &Internal::fillMontage } );
     }
 
     SW_ENGINE_SERVICE_SUBSYSTEM( AnimationPoseNodeRegistry, GameVisible, Services, (), SW_ENGINE_DEFAULT_FACTORY( AnimationPoseNodeRegistry ) );
 
-    void AnimationPoseNodeRegistry::registerType( const hashed_string& typeName, const AnimationPoseNodeType& type )
+    bool AnimationPoseNodeRegistry::registerType( const hashed_string& typeName, const AnimationPoseNodeType& type )
     {
         if ( typeName.empty() || type._create == nullptr )
         {
             SW_LOG_ERROR_ID( "AnimationPoseNode.PoseNodeTypeInvalid", "Pose node type '%#' needs a name and a factory", typeName.c_str() );
-            return;
+            return false;
         }
-        _registry.addOrReplace( typeName, type, "Animation pose node type" );
+        return _registry.addLogged( typeName, type, "Animation pose node type" );
     }
 
     const AnimationPoseNodeType* AnimationPoseNodeRegistry::findType( const hashed_string& typeName ) const

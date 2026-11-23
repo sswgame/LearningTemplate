@@ -85,7 +85,7 @@ namespace sw
         };
         for ( const UIBindingConverter& converter : arrEngineConverter )
         {
-            _registry.addOrReplace( converter._name, converter, "UI binding converter" );
+            (void)_registry.addLogged( converter._name, converter, "UI binding converter" ); // 빈 표의 엔진 이름이다 — 겹치면 위 등록이 오류로 알린다
         }
     }
 

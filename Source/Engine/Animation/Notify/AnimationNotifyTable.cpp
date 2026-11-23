@@ -270,18 +270,17 @@ namespace sw
     AnimationNotifyHandlerRegistry::AnimationNotifyHandlerRegistry()
         : _registry{}
     {
-        (void)AnimationNotifyHandlerRegistry::registerBuiltInHandlers( *this );
+        (void)AnimationNotifyHandlerRegistry::registerBuiltInHandlers( *this ); // 빈 표의 내장 이름이다 — 겹치면 레지스트리가 오류로 알린다
     }
 
     AnimationNotifyHandlerRegistry::~AnimationNotifyHandlerRegistry() = default;
 
     SW_ENGINE_SERVICE_SUBSYSTEM( AnimationNotifyHandlerRegistry, GameVisible, Services, (), SW_ENGINE_DEFAULT_FACTORY( AnimationNotifyHandlerRegistry ) );
 
-    void AnimationNotifyHandlerRegistry::registerHandler( const hashed_string& name, unique_ptr<IAnimationNotifyHandler> handler )
+    bool AnimationNotifyHandlerRegistry::registerHandler( const hashed_string& name, unique_ptr<IAnimationNotifyHandler> handler )
     {
-        if ( name.empty() || handler == nullptr )
-            return;
-        _registry.addOrReplace( name, std::move( handler ), "Animation notify handler" );
+        SW_ASSERT( handler != nullptr );
+        return _registry.addLogged( name, std::move( handler ), "Animation notify handler" );
     }
 
     const IAnimationNotifyHandler* AnimationNotifyHandlerRegistry::findHandler( const hashed_string& name ) const

@@ -477,9 +477,9 @@ namespace sw
 
 namespace sw
 {
-    void RigSecondaryNodes::registerNodes( RigNodeRegistry& registry )
+    bool RigSecondaryNodes::registerNodes( RigNodeRegistry& registry )
     {
-        registry.registerNode( "SpringChain", &RigSecondaryNodesFactory::createSpringChain );
-        registry.registerNode( "PoseDriver", &RigSecondaryNodesFactory::createPoseDriver );
+        return registry.registerNode( "SpringChain", &RigSecondaryNodesFactory::createSpringChain ) &&
+               registry.registerNode( "PoseDriver", &RigSecondaryNodesFactory::createPoseDriver );
     }
 } // namespace sw
