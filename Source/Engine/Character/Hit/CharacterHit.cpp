@@ -3,21 +3,17 @@
 #include "Engine/Character/Hit/CharacterHit.h"
 
 #include "Core/Math/MathUtil.h"
-#include "Core/String/StringUtil.h"
 
 #include "Engine/Character/Hit/IHitReceiver.h"
 #include "Engine/Character/Hit/RagdollComponent.h"
-#include "Engine/Console/DevCommandRegistry.h"
 #include "Engine/Object/Component/Component.h"
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Object/GameObject/GameObjectEvents.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
-#include "Engine/Physics/Asset/PhysicsAsset.h"
 #include "Engine/Physics/Component/RigidBody2DComponent.h"
 #include "Engine/Physics/Component/RigidBodyComponent.h"
 #include "Engine/Physics/IPhysicsScene.h"
 #include "Engine/Physics/Scene/ScenePhysics.h"
-#include "Engine/Scene/SceneManager.h"
 
 namespace sw
 {
@@ -287,73 +283,4 @@ namespace sw
         deliverHit( *pTarget, hit );
         return true;
     }
-} // namespace sw
-
-namespace sw
-{
-    namespace
-    {
-        struct CharacterHitCommandsInternal
-        {
-            /**
-             * @brief 이름 붙은 오브젝트의 래그돌에서 뼈 @p boneName 의 바디를 맞힙니다 — 때린 쪽 없이 맞음 길(래그돌 반응 · 체력 · 절단)을 그대로 지나게 한다(시나리오).
-             * @param bFatal 참이면 치명 표시를 달아 보낸다(때린 쪽이 정한 치명). 거짓이면 표시 없이 보내 받는 쪽의 체력이 쓰러짐을 정한다.
-             */
-            static bool deliverBoneHit( const string& objectName, const string& boneName, float32 damage, bool bFatal, string& outReply )
-            {
-                GameObject*             pObject  = engine::findActiveObject( hashed_string( objectName ) );
-                const RagdollComponent* pRagdoll = pObject != nullptr ? pObject->getComponent<RagdollComponent>() : nullptr;
-                const PhysicsAsset*     pAsset   = pRagdoll != nullptr ? pRagdoll->getPhysicsAsset() : nullptr;
-                if ( pAsset == nullptr )
-                {
-                    StringBuilder<constant::buffer::kMax256> builder;
-                    builder.appendFormat( "no object named '%#' with a ragdoll physics asset in the active scene", objectName );
-                    outReply = string( builder.view() );
-                    return false;
-                }
-                const hashed_string bone( boneName );
-                for ( size_t bodyIndex = 0; bodyIndex < pAsset->_listBody.size(); ++bodyIndex )
-                {
-                    if ( pAsset->_listBody[bodyIndex]._bone != bone )
-                        continue;
-                    HitInfo hit;
-                    hit._bodyIndex = static_cast<uint32>( bodyIndex );
-                    hit._direction = float3{ 0.0f, 0.0f, 1.0f };
-                    hit._damage    = damage;
-                    hit._impulse   = 40.0f;
-                    hit._bFatal    = bFatal;
-                    CharacterRayHit::deliverHit( *pObject, hit );
-                    StringBuilder<constant::buffer::kMax256> builder;
-                    builder.appendFormat( "%#%#", bFatal ? "fatal hit on " : "hit on ", boneName );
-                    outReply = string( builder.view() );
-                    return true;
-                }
-                StringBuilder<constant::buffer::kMax256> builder;
-                builder.appendFormat( "the ragdoll has no body on bone '%#'", boneName );
-                outReply = string( builder.view() );
-                return false;
-            }
-
-            /** @brief `combat.fatalhit <name> <bone>` — 치명 표시를 단 맞음(피해 100)입니다. */
-            static bool runFatalHit( const vector<string>& listArgument, string& outReply )
-            {
-                if ( listArgument.size() != 2 )
-                    return false;
-                return deliverBoneHit( listArgument[0], listArgument[1], 100.0f, true, outReply );
-            }
-
-            /** @brief `combat.hit <name> <bone> <damage>` — 표시 없는 맞음입니다. 쓰러짐은 받는 쪽의 체력 원천이 정하고 치명 신호를 다시 보낸다(게임의 총알 길과 같다). */
-            static bool runHit( const vector<string>& listArgument, string& outReply )
-            {
-                float32 damage = 0.0f;
-                if ( listArgument.size() != 3 || StringUtil::parseFloat( listArgument[2], damage ) == false )
-                    return false;
-                return deliverBoneHit( listArgument[0], listArgument[1], damage, false, outReply );
-            }
-        };
-    } // namespace
-
-    SW_DEV_COMMAND( CombatFatalHit, "combat.fatalhit", "combat.fatalhit <name> <bone>", "Deliver a fatal hit to the ragdoll body on a bone of a named object of the active scene", &CharacterHitCommandsInternal::runFatalHit );
-    SW_DEV_COMMAND( CombatHit, "combat.hit", "combat.hit <name> <bone> <damage>", "Deliver an unmarked hit to the ragdoll body on a bone of a named object - the target's health decides whether it is fatal",
-                    &CharacterHitCommandsInternal::runHit );
 } // namespace sw

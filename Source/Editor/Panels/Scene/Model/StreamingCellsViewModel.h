@@ -3,7 +3,7 @@
  * @brief 월드 셀 창의 ViewModel — 지난 나누기 미리보기와 그것을 만든 씬 세대를 들고, 창이 그릴 값(셀 · 위반 줄, 격자 설정, 쿠킹본 셀 수)을 모으며(`gather`),
  *        다시 나누기 · 오브젝트 고르기 명령을 받습니다. ImGui 를 모릅니다(`docs/agents/EditorUI.md` MVVM 계약).
  * @details 언리얼 World Partition 창이 셀 데이터(`UWorldPartitionRuntimeHash`)와 Slate 그리기를 나누는 것과 같다.
- *          나누기는 `SceneCooker::previewStreamingCells` 한 길이라 쿠커와 같은 결과다. 셀 상태는 `SceneStreamingSubsystem::update` 의 규칙과 같다.
+ *          나누기는 `StreamingCellPreview::build` 한 길이라 쿠커와 같은 결과다. 셀 상태는 `SceneStreamingSubsystem::update` 의 규칙과 같다.
  *          미리보기와 고르기는 문서 데이터가 아니라 되돌리기에 남지 않는다. 헤더는 씬 헤더를 보지 않는다 — 미리보기 결과는 .cpp 안의 구현이 든다.
  */
 #pragma once

@@ -69,9 +69,9 @@ if(EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/ThirdParty")
 	add_subdirectory(ThirdParty)
 endif()
 
-# 교차 빌드는 호스트 빌드의 도구(ReflectionParser · 쿠킹하는 App)를 쓴다 — 쿠킹 타깃(AssetAndToolTargets)이 호스트 폴더(SW_HOST_BUILD_DIR)를 읽기 전에 정한다.
+# 교차 빌드는 호스트 빌드의 도구(ReflectionParser · 쿠킹하는 App)를, 배포 빌드는 호스트 개발 빌드의 쿠커를 쓴다 — 쿠킹 타깃(AssetAndToolTargets)이 호스트 폴더(SW_HOST_BUILD_DIR)를 읽기 전에 정한다.
 # 예전에는 이 줄이 아래(Source/Core 뒤)에 있어 첫 구성에서 CookAssets 가 빈 경로(`cmake --build ""`)로 섰다 — 캐시가 생긴 두 번째 구성부터만 맞았다.
-if(CMAKE_CROSSCOMPILING)
+if(CMAKE_CROSSCOMPILING OR SW_SHIPPING_BUILD)
 	include(cmake/Modules/Build/HostTools.cmake)
 endif()
 include(cmake/Modules/Build/AssetAndToolTargets.cmake)

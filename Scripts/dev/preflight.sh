@@ -13,7 +13,7 @@
 # 지난 p95 보다 느리면 경고한다. Windows 끝에 흔들림 판정(test_history.py flaky — 끝 줄 FLAKY=)이 격리 표 밖 흔들림이 문턱을 넘으면 진다.
 #
 # 단계(시간 판정이 CPU 경합에 흔들리는 일과 그렇지 않은 일을 가른다 — 시나리오는 벽시계 시한 · 프레임에 걸린 그림을 판정하므로 GPU 단계는 혼자 돈다):
-#   build       lint --all(뒤에서) ‖ Release 빌드 → 임포트 → (ASan 빌드 → 서버 빌드 ‖ 배포 프리셋 둘 빌드 · 쿠킹 → shipping-check 기동 · 종료). 배포 빌드는 증분 빌드의 링크 꼬리에 비는 코어를 쓴다(2026-11-13: CPU 단계 11.5 분 중 9 분이 배포 빌드였다).
+#   build       lint --all(뒤에서) ‖ Release 빌드 → 임포트 → (ASan 빌드 ‖ 배포 Client → 서버(Release) → 배포 Server 빌드 · 쿠킹 → shipping-check 기동 · 종료). 배포 빌드는 증분 빌드의 링크 꼬리에 비는 코어를 쓴다(2026-11-13: CPU 단계 11.5 분 중 9 분이 배포 빌드였다).
 #               ASan 빌드가 끝나면 tidy 를 뒤에서 띄운다(아래 tidy).
 #               Debug 는 짓지 않는다 — 단언 · 검사는 SW_DO_CHECKS 로 Release 에 있고, CPU 단위는 ASan(Release + clang-cl ASan)이 돈다(사용자 결정 2026-11-18).
 #   changed     origin/main 뒤에 들어온 · 바뀐 테스트 · 시나리오만 Release 로 먼저(test_history.py changed). 돈 적 없는 테스트 · 기준 파일의 실패를
@@ -296,7 +296,9 @@ job_sanitizer_cpu() {
 # 배포 프리셋 둘(shipping-check 가 띄우는 것과 같은 목록 — 플레이어 Client 와 전용 Server)을 짓는다 — 쿠킹이 Content 를 읽으므로 임포트 뒤에 띄운다.
 job_shipping_build() {
   local P
-  for P in Ninja-Shipping Ninja-Shipping-Server; do
+  # 배포 팩은 호스트 개발 빌드가 굽는다(CookAssets 가 Ninja-Release · Ninja-Release-Server 를 먼저 짓는다 — HostTools.cmake). 같은 폴더를 다른 갈래가 동시에 짓지 않게
+  # 서버 개발 빌드도 이 갈래가 서버 배포 앞에서 짓는다(Ninja-Release 는 이 갈래보다 먼저 끝났다).
+  for P in Ninja-Shipping Ninja-Release-Server Ninja-Shipping-Server; do
     build_preset $P || return 1
   done
   # 기동 · 종료 확인을 빌드 갈래 끝에서 바로 — 살아 있음 판정이라 다른 빌드와 겹쳐도 되고, 실패가 cpu 단계 끝(2026-11-21 시작 74 분 뒤)이 아니라 배포 빌드 직후에 나온다.
@@ -395,7 +397,6 @@ if [ $RUN_BUILD -eq 1 ]; then
   start_job "shipping build" job_shipping_build
   build_preset Ninja-Release-ASan
   [ $RUN_TIDY -eq 0 ] || start_tidy
-  build_preset Ninja-Release-Server
   wait_jobs
   stage_passed build
 else

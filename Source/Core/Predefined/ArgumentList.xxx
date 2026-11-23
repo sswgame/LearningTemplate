@@ -5,7 +5,7 @@
  *          Name             : 열거자 이름. 코드가 쓰는 이름이고 명령줄 키가 아닙니다.
  *          Usage            : 쓰는 구성(`CommandLineArgumentUsage` — `All` · `Dev` · `Test` · `Server` · `AndroidDev`). 받지 않는 구성은 철자를 등록하지 않아
  *                             주면 "알 수 없는 인자" 로 기동이 멈춘다(조용히 무시하지 않는다). 열거값은 모든 구성에 있어 읽는 코드는 그대로 컴파일되고 읽으면 "주지 않음" 이다.
- *                             `All` 은 배포에서도 듣는 것(배포 App · Server 가 스스로 굽는 `-cook-all` 길 포함), `Dev` 는 개발 도구 · 진단, `Test` 는 단위 테스트 · 자동화 장치,
+ *                             `All` 은 배포에서도 듣는 것, `Dev` 는 개발 도구(쿠킹 포함 — 배포 팩은 호스트 개발 빌드가 굽는다) · 진단, `Test` 는 단위 테스트 · 자동화 장치,
  *                             `Server` 는 서버 코드가 있는 타깃(Game · Server), `AndroidDev` 는 Android 개발 구성만이다(언리얼 `UE_BUILD_SHIPPING` 에서 빠지는 명령줄과 같은 자리).
  *          valueSample      : 저장 타입을 정하는 견본 값입니다(값 자체는 쓰이지 않는다). 저장 타입은 bool · int32 · float32 · string ·
  *                             `CommandLineDiskPath{}`(디스크 경로 - 받을 때 기동 작업 폴더 기준으로 절대화, 빈 값은 오류) 다섯뿐입니다. **이 값의 타입이 곧 "값을 반드시 적어야 하는가" 입니다.** bool 은 `-key` 만 적을
@@ -66,13 +66,13 @@ SW_REGISTER_ARGUMENT( COOK_SCENES, Dev, false, "cook-scenes" )
 SW_REGISTER_ARGUMENT( COOK_PACKS, Dev, false, "cook-packs" )
 
 // 씬 쿠킹(`-cook-scenes`)과 팩 쿠킹(`-cook-packs`)을 차례로 하고 끝낸다 — 빌드의 CookAssets 타깃과 배포 패키징이 부른다
-SW_REGISTER_ARGUMENT( COOK_ALL, All, false, "cook-all" )
+SW_REGISTER_ARGUMENT( COOK_ALL, Dev, false, "cook-all" )
 
 // `-cook-scenes` · `-cook-packs` · `-cook-all` 이 쿠킹 결과를 쓸 스테이징 폴더
-SW_REGISTER_ARGUMENT( COOKED_DIR, All, CommandLineDiskPath{}, "cooked-dir" )
+SW_REGISTER_ARGUMENT( COOKED_DIR, Dev, CommandLineDiskPath{}, "cooked-dir" )
 
-// 셰이더 DDC 폴더(기본은 구성이 함께 쓰는 `<프로젝트>/Saved/ShaderCompileCache`) — 빈 캐시에서 굽기를 보는 테스트가 빌드 폴더가 함께 쓰는 DDC 를 지우지 않게 제 폴더를 준다
-SW_REGISTER_ARGUMENT( SHADER_DDC_DIR, Dev, CommandLineDiskPath{}, "shader-ddc-dir" )
+// DDC 폴더 — 층 설정(`Config/Dev/DerivedData.json`) 대신 이 폴더 하나(쓰기 가능, 정리 없음)를 쓴다. 빈 캐시에서 굽는 길의 테스트가 함께 쓰는 캐시를 건드리지 않게
+SW_REGISTER_ARGUMENT( DDC_DIR, Dev, CommandLineDiskPath{}, "ddc-dir" )
 
 // 이 실행이 컴파일 · 캐시에서 얻은 셰이더 요청을 끝날 때 이 파일(`*.shaderrequests`)에 적는다 — 다음 묶음 검증이 시간을 재기 전에 그 목록만 컴파일한다(언리얼 Shader Pipeline Cache 기록). 백엔드별 부모는 자식마다 `.<백엔드>` 를 붙여 넘긴다
 SW_REGISTER_ARGUMENT( SHADER_REQUEST_LOG, Dev, CommandLineDiskPath{}, "shader-request-log" )
@@ -80,10 +80,10 @@ SW_REGISTER_ARGUMENT( SHADER_REQUEST_LOG, Dev, CommandLineDiskPath{}, "shader-re
 SW_REGISTER_ARGUMENT( SHADER_REQUEST_DIR, Dev, CommandLineDiskPath{}, "shader-request-dir" )
 
 // `-cook-packs` · `-cook-all` 이 팩을 쓸 폴더
-SW_REGISTER_ARGUMENT( PACK_DIR, All, CommandLineDiskPath{}, "pack-dir" )
+SW_REGISTER_ARGUMENT( PACK_DIR, Dev, CommandLineDiskPath{}, "pack-dir" )
 
 // `-cook-packs` · `-cook-all` 이 배포 빌드의 팩을 굽는다 — 자동화 시나리오를 담지 않는다. 쿠킹하는 App 이 개발 구성이어도(교차 빌드는 호스트 개발 App 이 굽는다) 팩은 대상 구성을 따른다
-SW_REGISTER_ARGUMENT( PACK_FOR_SHIPPING, All, false, "pack-for-shipping" )
+SW_REGISTER_ARGUMENT( PACK_FOR_SHIPPING, Dev, false, "pack-for-shipping" )
 
 // 개발 구성에서도 배포처럼 쿠킹한 팩만 읽는다(낱개 파일 · 씬 XML · 라이브 셰이더 컴파일 없이) — 배포 읽기 경로를 배포 빌드 없이 확인한다. 팩이 먼저 있어야 한다(`-cook-all`)
 SW_REGISTER_ARGUMENT( COOKED_CONTENT, Dev, false, "cooked-content" )
@@ -94,7 +94,7 @@ SW_REGISTER_ARGUMENT( FILESERVE, AndroidDev, "", "fileserve" )
 
 // `-cook-packs` · `-cook-all` 이 팩과 함께 `-pack-dir` 에 남기는 빌드 내용 목록(`base.packbuild.xml` — 설치된 빌드의 출처)의 빌드 번호. 비우면 번호도 내용 목록도 없는 `patching="none"` 기록을 남긴다(패치를 쓰지 않는 빌드).
 // `-make-patch` 에서는 새 빌드 번호다
-SW_REGISTER_ARGUMENT( PACK_BUILD, All, "", "pack-build" )
+SW_REGISTER_ARGUMENT( PACK_BUILD, Dev, "", "pack-build" )
 
 // 새 빌드의 팩(`-pack-dir`)과 이전 빌드의 내용 목록(`-patch-base=<파일>.packbuild.xml`)의 차이로 패치 팩 · 패치 목록 · 새 빌드의 내용 목록을 `-patch-dir` 에 만들고 끝낸다. 새 빌드 번호는 `-pack-build` 다
 SW_REGISTER_ARGUMENT( MAKE_PATCH, Dev, false, "make-patch" )
@@ -108,7 +108,7 @@ SW_REGISTER_ARGUMENT( PATCH_DIR, Dev, CommandLineDiskPath{}, "patch-dir" )
 // `-make-patch` 가 패치 목록에 서명할 개인 키(ES256 P-256, PKCS#8 PEM) 파일 경로. 개인 키는 저장소에 두지 않고 이 인자로만 받는다. 비우면 서명하지 않는다(서명 없는 패치)
 SW_REGISTER_ARGUMENT( PATCH_SIGN_KEY, Dev, CommandLineDiskPath{}, "patch-sign-key" )
 
-// 쿠킹 스테이징(`-cooked-dir`)의 셰이더 바이너리가 지금 소스에서 나온 것인지(`cook.stamp` · 매니페스트) 쿠킹 표의 모든 백엔드로 보고, 문제가 있으면 실패로 끝난다.
+// 쿠킹 스테이징(`-cooked-dir`)의 셰이더 바이너리가 지금 소스에서 나온 것인지(컴파일 기록 · 매니페스트) 쿠킹 표의 모든 백엔드로 보고, 문제가 있으면 실패로 끝난다.
 // 팩을 구울 때(`-cook-all` · `-cook-packs`)는 이 인자 없이도 셰이더를 굽고 같은 판정을 한다
 SW_REGISTER_ARGUMENT( VERIFY_SHADERS, Dev, false, "verify-shaders" )
 
