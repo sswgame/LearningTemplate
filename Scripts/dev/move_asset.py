@@ -3,6 +3,7 @@
 
   py -3 -m Scripts move-asset common/prefabs/props/bow.prefab.xml common/prefabs/weapons/bow.prefab.xml [--dry-run]
   py -3 -m Scripts move-asset game/playground/materials game/playground/surfaces
+  py -3 -m Scripts move-asset <옛1> <새1> <옛2> <새2> …   # 여러 쌍을 차례로 — 끊어진 참조 검사(5)는 끝에 한 번
 
 경로는 리소스 id(`Content/` 뒤 — 앞에 `Content/` 를 붙여도 된다)다. 하는 일:
   1. `git mv` — 원본 곁의 정체성 서술(`<파일>.meta`)도 함께 옮기고 그 안의 원본 이름을 새 이름으로 쓴다(GUID 는 그대로 — 옮겨도 정체성은 같다).
@@ -338,24 +339,43 @@ def report_leftovers(root: Path, list_pattern: list[str]) -> None:
 
 def main(argv: list[str]) -> int:
     parser = argparse.ArgumentParser(prog="py -3 -m Scripts move-asset", description="에셋을 옮기고 경로 칸의 참조를 고친다")
-    parser.add_argument("old", help="옛 리소스 id(파일 또는 폴더)")
-    parser.add_argument("new", help="새 리소스 id")
+    parser.add_argument("id", nargs="+", help="옛 리소스 id(파일 또는 폴더)와 새 리소스 id — 여러 쌍이면 차례로 옮긴다")
     parser.add_argument("--dry-run", action="store_true", help="고칠 파일만 찍는다")
     parser.add_argument("--resume", action="store_true", help="파일은 이미 옮겼다 — 이름 · 참조 · 리다이렉트 고치기만 다시 돈다(도구 규칙을 넓힌 뒤 같은 옮기기에 적용)")
     args = parser.parse_args(argv)
 
+    if len(args.id) % 2 != 0:
+        parser.error("옛 id 와 새 id 는 짝이다")
+
     root = get_project_root()
     config = load_config(root)
-    old_id, new_id = to_asset_id(args.old), to_asset_id(args.new)
+    for old_argument, new_argument in zip(args.id[0::2], args.id[1::2]):
+        exit_code = move_one(root, config, to_asset_id(old_argument), to_asset_id(new_argument), args.dry_run, args.resume)
+        if exit_code != ExitCode.PASSED:
+            return exit_code
+    if args.dry_run:
+        return ExitCode.PASSED
+
+    list_problem = check_working_tree(root)
+    for problem in list_problem:
+        print(f"  - {problem}")
+    if list_problem:
+        print(f"[move-asset] 끊어진 참조 {len(list_problem)}건이 남았습니다 — 목록에 없는 칸이면 그 칸을 읽는 구조체에 PROPERTY( AssetPath ) 로 선언한다(Config/Dev/AssetReferenceFields.generated.json)")
+        return ExitCode.VIOLATION
+    return ExitCode.PASSED
+
+
+def move_one(root: Path, config: FieldConfig, old_id: str, new_id: str, dry_run: bool, resume: bool) -> ExitCode:
+    """한 쌍을 옮기고 참조 · 이름 · 리다이렉트를 고칩니다(끊어진 참조 검사는 부르는 쪽이 끝에 한 번). 옮길 수 없으면 까닭을 찍고 CHECK_INVALID."""
     old_path, new_path = f"{CONTENT_FOLDER}/{old_id}", f"{CONTENT_FOLDER}/{new_id}"
     if not set(new_id) <= NAME_CHARACTERS:
         print(f"[move-asset] '{new_id}' 는 리소스 이름 규칙(소문자 · 숫자 · '_' · '-' · '.' · '/')에 맞지 않습니다")
         return ExitCode.CHECK_INVALID
-    moved_path = new_path if args.resume else old_path   # 다시 돌기면 옮긴 자리가 있고 옛 자리가 없어야 한다
-    if not (root / moved_path).exists() or (args.resume and (root / old_path).exists()):
-        print(f"[move-asset] '{moved_path}' 가 없습니다" + (f"(또는 옛 자리 '{old_path}' 가 아직 있습니다)" if args.resume else "") + " — 아무것도 바꾸지 않았습니다")
+    moved_path = new_path if resume else old_path   # 다시 돌기면 옮긴 자리가 있고 옛 자리가 없어야 한다
+    if not (root / moved_path).exists() or (resume and (root / old_path).exists()):
+        print(f"[move-asset] '{moved_path}' 가 없습니다" + (f"(또는 옛 자리 '{old_path}' 가 아직 있습니다)" if resume else "") + " — 아무것도 바꾸지 않았습니다")
         return ExitCode.CHECK_INVALID
-    if not args.resume and ((root / new_path).exists() or (root / (new_path + META_EXTENSION)).exists()):
+    if not resume and ((root / new_path).exists() or (root / (new_path + META_EXTENSION)).exists()):
         print(f"[move-asset] '{new_path}'(또는 그 .meta)가 이미 있습니다 — 아무것도 옮기지 않았습니다")
         return ExitCode.CHECK_INVALID
     is_folder = (root / moved_path).is_dir()
@@ -369,7 +389,7 @@ def main(argv: list[str]) -> int:
         print(f"[move-asset] '{moved_path}/{REDIRECT_FILE_NAME}' 는 옮긴 뒤 아무 검색 순서도 읽지 않는다 — 그 줄을 {make_redirect_table_id(new_id)} 에 먼저 합친 뒤 지우고 다시 옮긴다")
         return ExitCode.CHECK_INVALID
 
-    if not args.dry_run and not args.resume:
+    if not dry_run and not resume:
         git_move(root, old_path, new_path)
         if not is_folder:
             move_sidecar(root, old_path, new_path)   # 폴더는 안의 .meta 가 함께 간다
@@ -379,7 +399,7 @@ def main(argv: list[str]) -> int:
         print(f"  [시나리오 이름] {scenario.old_name} -> {scenario.new_name}")
     for old_golden, new_golden in list_golden:
         print(f"  [골든] {old_golden} -> {new_golden.rsplit('/', 1)[-1]}")
-        if not args.dry_run:
+        if not dry_run:
             git_move(root, old_golden, new_golden)
     fixed_count, string_file_count, string_count = 0, 0, PackStringCount()
     for relative_path in list_index_files(root):
@@ -415,9 +435,9 @@ def main(argv: list[str]) -> int:
         if edit_count:
             fixed_count += 1
             print(f"  {relative_path}: {edit_count}")
-        if rewritten != text and not args.dry_run:
+        if rewritten != text and not dry_run:
             (root / relative_path).write_bytes(rewritten.encode("utf-8", "surrogateescape"))
-    print(f"[move-asset] {old_id} -> {new_id}: 참조 파일 {fixed_count} 개{' (dry run — 아무것도 바꾸지 않았다)' if args.dry_run else ''}")
+    print(f"[move-asset] {old_id} -> {new_id}: 참조 파일 {fixed_count} 개{' (dry run — 아무것도 바꾸지 않았다)' if dry_run else ''}")
     if rename is not None:
         print(f"[move-asset] 팩 이름 {rename.old_pack} -> {rename.new_pack}: 골든 {len(list_golden)} 개, 문자열 파일 {string_file_count} 개 — "
               f"시나리오 이름 {string_count.scenario_name} · 그 밖 이름 {string_count.other_name} · 경로 {string_count.path} · 체인 {string_count.chain} · 도메인 {string_count.domain}")
@@ -426,7 +446,7 @@ def main(argv: list[str]) -> int:
               f"(시나리오 이름 game.{absorb.old_pack}. · 체인 Scenario.{absorb.old_pack} 은 남은 목록을 보고 고친다)")
     if is_root_move:
         print(f"[move-asset] 도메인 뿌리 옮기기 — 리다이렉트는 {make_redirect_table_id(new_id)} 에 접두 한 줄(<PrefixRedirect from=\"{old_id}\" to=\"{new_id}\" />)")
-    if not args.dry_run:
+    if not dry_run:
         moved_table = root / CONTENT_FOLDER / make_redirect_table_id(new_id)
         if is_root_move and moved_table.is_file():   # 옛 팩의 표가 함께 옮겨졌다 — 가리키던 자리(to)가 새 팩 아래다
             moved_table.write_text(rewrite_table_targets(moved_table.read_text(encoding="utf-8"), list_rule), encoding="utf-8", newline="\n")
@@ -434,13 +454,4 @@ def main(argv: list[str]) -> int:
         for table_path in write_redirects(root, list_move, (old_id, new_id) if is_root_move else None):
             print(f"  [리다이렉트] {table_path}")
         report_leftovers(root, list_leftover_patterns(old_id, absorb) + ([scenario.old_name.lower()] if scenario is not None else []))
-    if args.dry_run:
-        return ExitCode.PASSED
-
-    list_problem = check_working_tree(root)
-    for problem in list_problem:
-        print(f"  - {problem}")
-    if list_problem:
-        print(f"[move-asset] 끊어진 참조 {len(list_problem)}건이 남았습니다 — 목록에 없는 칸이면 그 칸을 읽는 구조체에 PROPERTY( AssetPath ) 로 선언한다(Config/Dev/AssetReferenceFields.generated.json)")
-        return ExitCode.VIOLATION
     return ExitCode.PASSED

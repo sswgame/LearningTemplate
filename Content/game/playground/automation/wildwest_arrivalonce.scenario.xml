@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
 <?asset guid="4868e0f0828b4322aa346e4686f8f148"?>
 <!--
-  WildWest 도착 컷씬을 트리거 계약 위에서 한 번만 — 마을 앞(TownArrival)의 시퀀스 트리거가 ArrivalDirector 를 튼다. 정책은 씬 데이터다:
+  서부극 도착 컷씬을 트리거 계약 위에서 한 번만 — 마을 앞(TownArrival)의 시퀀스 트리거가 ArrivalDirector 를 튼다. 정책은 씬 데이터다:
   _progressFlag wildwest.arrivalSeen(본 기록 — 판 상태 플래그라 세이브에 실린다, 언리얼 USaveGame 의 진행 bool 자리) · _bOnce · _spawnInside Ignore(이미 안에 나타난 기수에는 틀지 않음).
   ① 기수가 안에 선 채 볼륨이 켜지면(나타남 — 스트리밍으로 올라옴 · 불러오기와 같은 길) 틀지 않는다.
   ② 나갔다 걸어 들어오면 한 번 틀고 플래그가 선다. 재생 중 입력이 막힌다.
@@ -10,9 +10,10 @@
   ⑤ 다시 들어와도 다시 틀지 않는다.
   ⑥ 마을 안에서 저장 → 불러오면 플래그가 돌아오고, 안에 나타난 기수 · 다시 걸어 들어온 기수 모두 틀지 않는다.
   판정은 감시 값이다(사진 없음): 본 기록 Session.Flag, 발동 수 Object.Property SequenceTriggerComponent._fireCount, 재생 Sequence.Frame · Sequence.History, 막기 Sequence.InputBlocked.
-  실행: ctest -R Scenario.wildwest (SW_ACTIVE_GAME=WildWest) · App -scenario=game/wildwest/automation/arrivalonce.scenario.xml -unattended
+  실행: ctest -R Scenario.playground · App -scenario=game/playground/automation/wildwest_arrivalonce.scenario.xml -unattended
 -->
-<Scenario name="game.wildwest.arrivalonce" fixedDelta="0.0166667" timeoutFrames="2400" startAfter="ScenePlaying" input="exclusive">
+<Scenario name="game.playground.wildwest_arrivalonce" fixedDelta="0.0166667" timeoutFrames="2400" startAfter="ScenePlaying" startTimeoutFrames="900" input="exclusive">
+	<Launch variable="gv_firstScene" value="game/playground/maps/prairie.scene.xml"/>
 	<Variable name="gv_playgroundAutoPlay" value="0"/>
 	<WaitUntil watch="Assets.Pending" equals="0" timeoutWallSeconds="60"/>
 	<Expect watch="Session.Flag" key="wildwest.arrivalSeen" equals="0"/>

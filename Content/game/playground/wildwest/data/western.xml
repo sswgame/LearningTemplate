@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
 <?asset guid="7339dc8b0e2e455adadbf6caa677bfb2"?>
 <!--
-  WildWest 의 서부극 카탈로그(GF_OpenWorldWestern `WesternCatalog`) — 디렉터 `_westernDataPath` 가 가리킨다.
+  서부 평원의 서부극 카탈로그(GF_OpenWorldWestern `WesternCatalog`) — 디렉터 `_westernDataPath` 가 가리킨다.
   말: 품종 둘, 말 먹이(시나리오 `<FeedHorse>`), 유대. 말 오브젝트의 `WesternHorseComponent::_breed` 가 `<Horse id>` 다.
   플레이어(`WesternOutlaw`): 범죄 · 지역 · 추적 · 명예 · 생존 · 음식 · 옷 · 사냥. 평원 동쪽 마을(prairie 씬의 `WesternDeedComponent`)이 id 로 쓴다. 빠른 반응을 보이려 신고 · 식는 시간을 짧게 잡았다.
 -->

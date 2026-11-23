@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
 <?asset guid="e6c3cd4b3048719b4673593c2935d563"?>
 <!--
-  WildWest 말(FollowOwnerAIControllerComponent)의 판단 — 주인이 8 m 넘게 멀어지거나 휘파람(Called)을 들으면 주인 곁으로 오고, 3 m 안에 닿으면 멈추고 휘파람을 잊는다.
+  서부극 말(FollowOwnerAIControllerComponent)의 판단 — 주인이 8 m 넘게 멀어지거나 휘파람(Called)을 들으면 주인 곁으로 오고, 3 m 안에 닿으면 멈추고 휘파람을 잊는다.
   가는 중이면(목적지가 걸려 있으면) 닿을 때까지 계속 간다. 감각은 FollowPosition · OwnerDistance(주인이 없으면 지운다)와 Called.
 -->
 <BehaviorTree>

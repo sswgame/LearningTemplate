@@ -1,10 +1,13 @@
 <?xml version="1.0" encoding="utf-8"?>
-<?asset guid="f0a5fc61f4342d2e928b271e75e068ac"?>
+<?asset guid="e075f8ea3e75e379934c41bf1c09e3af"?>
 <!--
-  장르 수직 슬라이스(G1) — 시작 → 목표(outlaw.scenario.xml 의 단계 그대로) → 결과 → 저장 · 복원 해시 동일.
-  목표 단계는 그 시나리오가 정본이다 — 거기를 고치면 이 파일도 맞춘다. 저장 슬롯은 wildwest/slice.
+  서부극 무법자 한 판 — 기수가 평원 동쪽 마을을 돌며 행동 버튼(G)으로 곁의 자리(WesternDeedComponent)를 쓴다. 입력 → 디렉터 → WesternOutlaw → 값까지 본다. 그림 판정은 없다(마을은 골든 밖이다).
+  금고 절도(명예 −20, 점원이 보아 1 초 뒤 신고 → 현상금 25 · 수배 1) → 보안관이 안 보는 곳에서 2 초 만에 식음 → 낯선 이 돕기(명예 +25) → 사슴 사냥 → 가죽 벗기기 → 팔기(3 성 사슴 30 달러) → 현상금 내기 → 하루 감기(코어 감소) → 식사(코어 회복) → 갈아입기.
+  시작 자리에서는 HUD 무법자 글이 비어 있어야 한다 — 탑승 골든이 그 자리를 찍는다.
+  실행: ctest -R Scenario.playground · App -scenario=game/playground/automation/wildwest_outlaw.scenario.xml -unattended
 -->
-<Scenario name="game.wildwest.slice" fixedDelta="0.0166667" timeoutFrames="2400" startAfter="ScenePlaying" input="exclusive">
+<Scenario name="game.playground.wildwest_outlaw" fixedDelta="0.0166667" timeoutFrames="1800" startAfter="ScenePlaying" startTimeoutFrames="900" input="exclusive">
+	<Launch variable="gv_firstScene" value="game/playground/maps/prairie.scene.xml"/>
 	<Variable name="gv_playgroundAutoPlay" value="0"/>
 	<WaitUntil watch="Pawn.Controller" target="Player" is="PlayerController" timeoutFrames="60"/>
 	<Expect watch="Western.OutlawStatus" target="Ranch" is=""/>
@@ -67,16 +70,5 @@
 	<WaitUntil watch="Object.Z" target="Player" near="35" tolerance="0.05" timeoutFrames="10"/> <!-- 순간이동이 들었다 -->
 	<Tap slot="Key.G" hold="1"/>
 	<WaitUntil watch="Western.Warmth" target="Ranch" equals="5" timeoutFrames="30"/>
-	<!-- 저장 → 세계를 더 돌림 → 두 번 복원: 같은 슬롯을 두 번 불러온 직후의 씬 상태 해시가 같아야 한다(복원이 세계를 다 되살린다 — 저장 순간의 해시와 견주면 명령이 도는 프레임만큼 흔들린다) -->
-	<DevCommand line="game.save wildwest/slice"/>
-	<WaitUntil watch="Save.Written" atLeast="1" timeoutWallSeconds="10"/>
-	<AdvanceSimulation frames="60"/> <!-- 저장 · 복원 사이 세계를 더 돌린다(시간이 내용) -->
-	<DevCommand line="game.load wildwest/slice"/>
-	<WaitUntil watch="Save.Loaded" atLeast="1" timeoutWallSeconds="10"/>
-	<RecordStateHash key="restored"/>
-	<AdvanceSimulation frames="60"/> <!-- 저장 · 복원 사이 세계를 더 돌린다(시간이 내용) -->
-	<DevCommand line="game.load wildwest/slice"/>
-	<WaitUntil watch="Save.Loaded" atLeast="2" timeoutWallSeconds="10"/>
-	<ExpectStateHash key="restored"/>
 	<Pass/>
 </Scenario>

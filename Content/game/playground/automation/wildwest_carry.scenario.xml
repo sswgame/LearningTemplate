@@ -1,12 +1,13 @@
 <?xml version="1.0" encoding="utf-8"?>
 <?asset guid="2b0a29b8dd104acc954aa32e0ed59f6f"?>
 <!--
-  WildWest 들기 — 기수의 GrabberComponent 가 폰의 의도 버튼 West.Carry(R)로 보급 상자(태그 West.Carryable)를 들고 다시 눌러 내려놓는다.
+  서부극 들기 — 기수의 GrabberComponent 가 폰의 의도 버튼 West.Carry(R)로 보급 상자(태그 West.Carryable)를 들고 다시 눌러 내려놓는다.
   입력 맵 → 폰 의도 → 집기 컴포넌트(틱 뒤 일)를 실제 키 입력으로 지난다. ① 멀리서는 들지 않는다. ② 손 닿는 곳(1.5 m)에서 누르면 든다.
   ③ 든 채로 옮기면 상자가 따라온다. ④ 다시 누르면 내려놓고 상자가 바닥에 떨어진다. 값으로 판정한다(골든 없음).
-  실행: ctest -R Scenario.wildwest (SW_ACTIVE_GAME=WildWest) · App -scenario=game/wildwest/automation/carry.scenario.xml -unattended
+  실행: ctest -R Scenario.playground · App -scenario=game/playground/automation/wildwest_carry.scenario.xml -unattended
 -->
-<Scenario name="game.wildwest.carry" fixedDelta="0.0166667" timeoutFrames="900" startAfter="ScenePlaying" input="exclusive">
+<Scenario name="game.playground.wildwest_carry" fixedDelta="0.0166667" timeoutFrames="900" startAfter="ScenePlaying" startTimeoutFrames="900" input="exclusive">
+	<Launch variable="gv_firstScene" value="game/playground/maps/prairie.scene.xml"/>
 	<Variable name="gv_playgroundAutoPlay" value="0"/>
 	<WaitUntil watch="Pawn.Controller" target="Player" is="PlayerController" timeoutFrames="60"/> <!-- 키 입력을 받을 조종자가 쥐었다 -->
 	<Expect watch="Grab.Held" target="Player" is="none"/>

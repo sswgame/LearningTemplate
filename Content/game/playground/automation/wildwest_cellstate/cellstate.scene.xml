@@ -1,6 +1,6 @@
 <?asset guid="cd21df3e109e41369a0e320278da65ec"?>
-<Scene formatVersion="3" _base="game/wildwest/maps/prairie.scene.xml" name="CellState">
-	<!-- 셀 경계 시나리오(automation/cellstate)의 무대 — prairie(16 m 셀 · 32 m 반경 · 여유 8 m)를 물려받아 서쪽 끝 셀 A(-5, 0: X -80 ~ -64)에 셀 엔티티를 더한다.
+<Scene formatVersion="3" _base="game/playground/maps/prairie.scene.xml" name="CellState">
+	<!-- 셀 경계 시나리오(automation/wildwest_cellstate)의 무대 — prairie(16 m 셀 · 32 m 반경 · 여유 8 m)를 물려받아 서쪽 끝 셀 A(-5, 0: X -80 ~ -64)에 셀 엔티티를 더한다.
 	     NPC · 상자(자동 저장 체크포인트 볼륨 — 발동 수는 RuntimeState) · 문 · 선반은 셀 A 에 들고, 선반 위 상자는 늘 올라 있다(바닥 셀이 내려가도 떨어지지 않는지 본다).
 	     땅 위 상자(GroundCrate)도 늘 올라 있고 셀 A 자리지만 늘 올라 있는 땅(prairie Ground)이 받쳐 쥐지 않는다.
 	     셀 B(-3, 0: X -48 ~ -32)에는 엔티티가 없다 — NPC 가 걸어 들어가면 스트리밍이 그 셀 조각을 만든다. 마을(X 36 ~)의 볼륨 · 다른 시나리오의 순간이동 자리와 떨어져 있다. -->
@@ -25,7 +25,7 @@
 					               _attachOwnerID="0"
 					               _attachComponent="#ae80bcb72e918025"
 					               _meshID="Capsule"
-					               _materialPath="game/wildwest/materials/rider.material"
+					               _materialPath="game/playground/wildwest/materials/rider.material"
 					               _boundsRadius="0.866"
 					               _gpuSpinSeed="0"
 					               _bVisible="true" />
@@ -52,7 +52,7 @@
 					               _attachOwnerID="0"
 					               _attachComponent="#ae80bcb72e918025"
 					               _meshID="Cube"
-					               _materialPath="game/wildwest/materials/wood.material"
+					               _materialPath="game/playground/wildwest/materials/wood.material"
 					               _boundsRadius="0.6"
 					               _gpuSpinSeed="0"
 					               _bVisible="true" />
@@ -86,7 +86,7 @@
 					               _attachOwnerID="0"
 					               _attachComponent="#ae80bcb72e918025"
 					               _meshID="Cube"
-					               _materialPath="game/wildwest/materials/wood.material"
+					               _materialPath="game/playground/wildwest/materials/wood.material"
 					               _boundsRadius="1.2"
 					               _gpuSpinSeed="0"
 					               _bVisible="true" />
@@ -124,7 +124,7 @@
 					               _attachOwnerID="0"
 					               _attachComponent="#63e709ac676dd304"
 					               _meshID="Cube"
-					               _materialPath="game/wildwest/materials/wood.material"
+					               _materialPath="game/playground/wildwest/materials/wood.material"
 					               _boundsRadius="2.2"
 					               _gpuSpinSeed="0"
 					               _bVisible="true" />
@@ -162,7 +162,7 @@
 					               _attachOwnerID="0"
 					               _attachComponent="#63e709ac676dd304"
 					               _meshID="Cube"
-					               _materialPath="game/wildwest/materials/wood.material"
+					               _materialPath="game/playground/wildwest/materials/wood.material"
 					               _boundsRadius="0.45"
 					               _gpuSpinSeed="0"
 					               _bVisible="true" />
@@ -200,7 +200,7 @@
 					               _attachOwnerID="0"
 					               _attachComponent="#63e709ac676dd304"
 					               _meshID="Cube"
-					               _materialPath="game/wildwest/materials/wood.material"
+					               _materialPath="game/playground/wildwest/materials/wood.material"
 					               _boundsRadius="0.45"
 					               _gpuSpinSeed="0"
 					               _bVisible="true" />

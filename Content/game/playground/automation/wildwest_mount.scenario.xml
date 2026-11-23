@@ -1,12 +1,13 @@
 <?xml version="1.0" encoding="utf-8"?>
 <?asset guid="694a13b5879f3291e988e7bd00ddfd00"?>
 <!--
-  WildWest 탑승 시나리오 — 기수가 곁의 말(Bessie)에 올라타고(Mount), W + Shift 로 2 초 질주하고, 멈춘 뒤 먹이를 주고(FeedHorse — 키트 단계) 내린다(Dismount).
+  서부극 탑승 시나리오 — 기수가 곁의 말(Bessie)에 올라타고(Mount), W + Shift 로 2 초 질주하고, 멈춘 뒤 먹이를 주고(FeedHorse — 키트 단계) 내린다(Dismount).
   탑승 단계와 감시 값 Pawn.Seat · Pawn.Controller 를 실제 게임에서 돌리고, 말 AI 가 탈 때 빙의를 넘기고 내리면 되찾는지 본다.
   사진 둘(안장에 앉은 기수 · 질주하는 말과 기수)은 백엔드별 골든과 견준다. 질주 사진은 그 프레임을 바로 찍는다(자리 잡기를 기다리면 질주가 흘러간다).
-  실행: ctest -R Scenario.wildwest (SW_ACTIVE_GAME=WildWest) · App -scenario=game/wildwest/automation/mount.scenario.xml -unattended
+  실행: ctest -R Scenario.playground · App -scenario=game/playground/automation/wildwest_mount.scenario.xml -unattended
 -->
-<Scenario name="game.wildwest.mount" fixedDelta="0.0166667" timeoutFrames="900" startAfter="ScenePlaying" input="exclusive">
+<Scenario name="game.playground.wildwest_mount" fixedDelta="0.0166667" timeoutFrames="900" startAfter="ScenePlaying" startTimeoutFrames="900" input="exclusive">
+	<Launch variable="gv_firstScene" value="game/playground/maps/prairie.scene.xml"/>
 	<Variable name="gv_playgroundAutoPlay" value="0"/>
 	<!-- 걷는 기수는 플레이어 조종자가 쥐고, 말은 말 AI 가 쥔다. -->
 	<WaitUntil watch="Pawn.Controller" target="Bessie" is="BessieAI" timeoutFrames="60"/>

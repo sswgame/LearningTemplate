@@ -6,9 +6,10 @@
   ② Herd 셋이 셀 경계 x -16 을 넘어 저마다의 목표에 닿는다(군중 회피는 타일 · 셀과 무관하다).
   ③ Drifter 가 먼 FarPost(x 50)로 간다 — 쿠킹본(-cooked-content)에서는 카메라 둘레 32 m 밖의 내려간 셀이라 오른 구간은 중간 목표로, 내려간 구간은
      대략 그래프로 가상 이동해 닿는다(Nav.RouteReplanCount 가 오른다). 소스 콘텐츠는 셀이 없어(모두 올라 있다) 세밀 경로 하나로 닿는다 — 판정은 두 길에서 같다.
-  실행: ctest -R Scenario.wildwest (SW_ACTIVE_GAME=WildWest) · App -scenario=game/wildwest/automation/navstream.scenario.xml -unattended [-cooked-content]
+  실행: ctest -R Scenario.playground · App -scenario=game/playground/automation/wildwest_navstream.scenario.xml -unattended [-cooked-content]
 -->
-<Scenario name="game.wildwest.navstream" fixedDelta="0.0166667" timeoutFrames="600" startAfter="ScenePlaying" input="exclusive">
+<Scenario name="game.playground.wildwest_navstream" fixedDelta="0.0166667" timeoutFrames="600" startAfter="ScenePlaying" startTimeoutFrames="900" input="exclusive">
+	<Launch variable="gv_firstScene" value="game/playground/maps/prairie.scene.xml"/>
 	<Variable name="gv_playgroundAutoPlay" value="0"/>
 	<WaitUntil watch="Assets.Pending" equals="0" timeoutWallSeconds="60"/>
 	<WaitUntil watch="Nav.PathLinkCount" target="Climber" key="PlatformGoal" equals="1" timeoutSeconds="5"/> <!-- 내비메시가 섰고 단으로 가는 길은 링크 하나를 건넌다 -->
