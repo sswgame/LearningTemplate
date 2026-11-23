@@ -2,6 +2,7 @@
 
 #include "Engine/Environment/Terrain/TerrainComponent.h"
 
+#include "Core/Math/AABB.h"
 #include "Core/Math/MathUtil.h"
 #include "Core/Math/MatrixMath.h"
 #include "Core/Math/NormalizedInt.h"
@@ -304,6 +305,16 @@ namespace sw
     {
         _heightMin = heightMin;
         _heightMax = heightMax;
+    }
+
+    bool TerrainComponent::computeStreamingBounds( AABB& outBox ) const
+    {
+        const float3 origin = getWorldPosition();
+        outBox              = AABB{
+            origin + float3{    0.0f, _heightMin,     0.0f},
+            origin + float3{_size._x, _heightMax, _size._y}
+        };
+        return true;
     }
 
     bool TerrainComponent::reloadTerrainKeepingEdits()

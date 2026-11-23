@@ -134,6 +134,8 @@ namespace sw
         void onPostLoad() override;
         void onBeginPlay() override;
         void onPropertyChanged( hashed_string propertyName ) override;
+        /** @brief 셀 나누기가 묻는 이 컴포넌트가 덮는 월드 상자입니다 — 피벗 셀이 아니라 덮는 자리가 로딩 반경에 들면 올라 있다. */
+        bool computeStreamingBounds( AABB& outBox ) const override;
         /** @brief 소유 오브젝트를 켜고 끄면 셀 배치를 더티로 표시합니다. 빌더가 다시 확인합니다. */
         void onOwnerActiveInHierarchyChanged() override;
         void onTick( TickContext& context ) override;

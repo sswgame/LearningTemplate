@@ -3,6 +3,7 @@
 #include "Engine/Visual/Component/ReflectionProbeComponent.h"
 
 #include "Core/Log/Logger.h"
+#include "Core/Math/AABB.h"
 #include "Core/Math/MathUtil.h"
 
 #include "Engine/Object/GameObject/GameObject.h"
@@ -41,6 +42,13 @@ namespace sw
         , _probeData{}
         , _probeDataRevision{ 0 }
     {
+    }
+
+    bool ReflectionProbeComponent::computeStreamingBounds( AABB& outBox ) const
+    {
+        const float3 center = getWorldPosition();
+        outBox              = AABB{ center - _extent * 0.5f, center + _extent * 0.5f };
+        return true;
     }
 
     void ReflectionProbeComponent::setExtent( const float3& extent )

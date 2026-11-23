@@ -5,6 +5,7 @@
 #include "Core/Algorithm/VectorUtil.h"
 #include "Core/Container/unordered_map.h"
 #include "Core/Hash/HashUtil.h"
+#include "Core/Math/AABB.h"
 #include "Core/Math/MathUtil.h"
 #include "Core/Math/MatrixMath.h"
 #include "Core/Task/TaskManager.h"
@@ -400,6 +401,19 @@ namespace sw
         }
         SW_LOG_INFO_ID( "FoliageComponent.FoliageRefreshedCellBatches", "Foliage: refreshed %# of %# cell batches after a terrain edit (%# instances, %# us)", _lastRebuiltBatchCount, static_cast<uint32>( _listCell.size() ),
                         _instanceCount, stopwatch.getElapsedMicroseconds() );
+    }
+
+    bool FoliageComponent::computeStreamingBounds( AABB& outBox ) const
+    {
+        const PlacementRegion region = computeRegion();
+        if ( region._max._x <= region._min._x || region._max._y <= region._min._y )
+            return false;
+        const float32 height = getWorldPosition()._y;
+        outBox               = AABB{
+            float3{region._min._x, height, region._min._y},
+            float3{region._max._x, height, region._max._y}
+        };
+        return true;
     }
 
     PlacementRegion FoliageComponent::computeRegion() const

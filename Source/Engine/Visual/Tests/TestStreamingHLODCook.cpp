@@ -213,3 +213,31 @@ SW_TEST_CASE( StreamingHLODCookTest, PartsAppendIntoOneMesh )
     SW_EXPECT_FALSE( HLODMeshComponent::appendPart( missing, *cube, listVertex, listIndex ) );
     SW_EXPECT_EQUAL( firstVertexCount * 2, listVertex.size() );
 }
+
+/** @brief [StreamingHLODCookTest] 셀에 든 인스턴스 메시(씬 인스턴스를 묶은 것)도 인스턴스마다 대리에 들고, 같은 메시의 정적 메시와 한 묶음이다 */
+SW_TEST_CASE( StreamingHLODCookTest, InstancedMeshesJoinTheProxy )
+{
+    const test::ScopedScratchDomain           domain;
+    StringBuilder<constant::buffer::kMax4096> text;
+    text.append( "<Scene formatVersion=\"3\" name=\"HLODInstanced\"><SceneSettings _bStreaming=\"true\" _unloadMargin=\"0\" _maxCellLoadsPerFrame=\"8\" _addToWorldBudgetMicroseconds=\"2000\">"
+                 "<_cellGrid _cellSize=\"10\" _loadingRadius=\"10\" /></SceneSettings><entities>" );
+    text.append( Util::makeMesh( "1", "Rock", "Cube", "2,0,2", "1,1,1", "true" ) );
+    text.append( "<entity id=\"2\" name=\"Props\"><GameObject _schemaVersion=\"0\" _name=\"Props\" _bActive=\"true\"><_listComponent><InstancedMeshComponent _localPosition=\"4,0,4\" "
+                 "_attachOwner=\"None\" _attachComponent=\"None\" _meshID=\"Cube\"><_listInstance><InstancedMeshTransform _position=\"0,0,0\" /><InstancedMeshTransform _position=\"1,0,0\" _scale=\"2,2,2\" />"
+                 "</_listInstance></InstancedMeshComponent></_listComponent></GameObject></entity></entities></Scene>" );
+    SW_REQUIRE_TRUE( FileUtil::writeTextFile( domain.makeDiskPath( "hlodinstanced.scene.xml" ), text.view() ) );
+    SceneDocument doc{};
+    SW_REQUIRE_TRUE( doc.loadXMLFromDiskFile( domain.makeDiskPath( "hlodinstanced.scene.xml" ).str() ) );
+    SW_REQUIRE_TRUE( SceneCooker::splitStreamingCells( SceneEngineServices::makeFromBoundEngine(), doc, "hlodinstanced.scene.xml" ) );
+
+    Scene scene{ "HLODInstanced" };
+    SW_REQUIRE_TRUE( scene.instantiate( doc ) );
+    const GameObject* pProxy = scene.getObjectManager()->findGameObjectByName( hashed_string( "HLOD_0_0" ) );
+    SW_REQUIRE_NOT_NULL( pProxy );
+    const InstancedMeshComponent* pInstances = pProxy->getComponent<InstancedMeshComponent>();
+    SW_REQUIRE_NOT_NULL( pInstances );
+    SW_REQUIRE_EQUAL( size_t{ 3 }, pInstances->getInstances().size() );
+    SW_EXPECT_NEAR( 4.0f, pInstances->getInstances()[1]._position._x, 1e-4f );
+    SW_EXPECT_NEAR( 5.0f, pInstances->getInstances()[2]._position._x, 1e-4f );
+    SW_EXPECT_NEAR( 2.0f, pInstances->getInstances()[2]._scale._x, 1e-4f );
+}

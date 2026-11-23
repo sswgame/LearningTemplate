@@ -126,6 +126,16 @@ namespace sw
         return true;
     }
 
+    void InstancedMeshComponent::collectDrawnTransforms( vector<float4x4>& inoutListWorld ) const
+    {
+        const float4x4 world = getWorldMatrix();
+        inoutListWorld.reserve( inoutListWorld.size() + _listInstance.size() );
+        for ( const InstancedMeshTransform& transform : _listInstance )
+        {
+            inoutListWorld.push_back( makeLocalMatrix( transform ) * world );
+        }
+    }
+
     void InstancedMeshComponent::releaseBatch()
     {
         if ( _pBatch != nullptr && _pPrimitiveRegistry != nullptr )
