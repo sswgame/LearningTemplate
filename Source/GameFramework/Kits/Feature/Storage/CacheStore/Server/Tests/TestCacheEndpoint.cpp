@@ -48,3 +48,19 @@ SW_TEST_CASE( CacheEndpointTest, RejectsBrokenEndpoints )
     SW_EXPECT_FALSE( CacheEndpoint::parseEndpoint( "10.0.0.7:7000?prefix", endpoint ).has_value() );
     SW_EXPECT_FALSE( CacheEndpoint::parseEndpoint( "10.0.0.7:7000?user=admin", endpoint ).has_value() );
 }
+
+/** @brief [CacheEndpointTest] IPv6 주소는 대괄호 없이 호스트(TLS 서버 이름)가 되고 포트는 대괄호 뒤에서만 읽는다 */
+SW_TEST_CASE( CacheEndpointTest, ReadsIpv6Addresses )
+{
+    CacheEndpoint endpoint;
+    SW_REQUIRE_TRUE( CacheEndpoint::parseEndpoint( "[2001:db8::7]:7000?tls=1", endpoint ).has_value() );
+    SW_EXPECT_EQUAL( string( "2001:db8::7" ), endpoint._host );
+    SW_EXPECT_TRUE( endpoint._address._port == 7000 && endpoint._bTLS == SW_TRUE );
+    SW_REQUIRE_TRUE( CacheEndpoint::parseEndpoint( "[2001:db8::7]", endpoint ).has_value() );
+    SW_EXPECT_EQUAL( string( "2001:db8::7" ), endpoint._host );
+    SW_EXPECT_TRUE( endpoint._address._port == CacheEndpoint::kDefaultRESPPort );
+    SW_REQUIRE_TRUE( CacheEndpoint::parseEndpoint( "2001:db8::7", endpoint ).has_value() );
+    SW_EXPECT_EQUAL( string( "2001:db8::7" ), endpoint._host );
+    SW_EXPECT_TRUE( endpoint._address._port == CacheEndpoint::kDefaultRESPPort );
+    SW_EXPECT_FALSE( CacheEndpoint::parseEndpoint( "[2001:db8::7", endpoint ).has_value() );
+}
