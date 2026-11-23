@@ -12,6 +12,7 @@
 #include "Engine/Object/GameObject/GameObjectManager.h"
 #include "Engine/Object/GameObject/GameObjectManagerResolve.inl"
 #include "Engine/Object/GameObject/Registry/ComponentRegistry.h"
+#include "Engine/Reflection/ReflectValueBinding.h"
 #include "Engine/Reflection/ReflectVisit.h"
 #include "Engine/Reflection/ReflectedValue.h"
 
@@ -94,9 +95,9 @@ namespace sw
              * @brief 잎 값 하나를 접습니다. 형식이 State 역할 밖이면 false 입니다(부르는 쪽이 멈춘다).
              * @details 내장 타입은 `ReflectBuiltins.xxx` 의 State 역할 · Layout 이 정한다(`StateIO::reflected` 와 같은 칸). Layout 이 none 인 State 타입만 손으로 접는다.
              */
-            static bool foldLeaf( StateHashBuilder& inoutBuilder, const TypeRegistry& registry, const hashed_string& typeName, const void* pValue )
+            static bool foldLeaf( StateHashBuilder& inoutBuilder, const ReflectValueFacts& facts, const void* pValue )
             {
-                const ReflectBuiltinIndex builtinIndex = ReflectedValueUtil::findBuiltinIndex( typeName );
+                const ReflectBuiltinIndex builtinIndex = facts._builtinIndex;
                 if ( builtinIndex != ReflectBuiltinIndex::kNone )
                 {
                     const ReflectBuiltinTraits traits = ReflectBuiltinTraitTable::get( builtinIndex );
@@ -138,10 +139,9 @@ namespace sw
                             return false;
                     }
                 }
-                const EnumInfo* pEnum = registry.findEnum( typeName );
-                if ( pEnum != nullptr )
+                if ( facts._pEnum != nullptr )
                 {
-                    const int64 value = pEnum->readValueFromMemory( pValue );
+                    const int64 value = facts._pEnum->readValueFromMemory( pValue );
                     inoutBuilder.addBytes( &value, sizeof( value ) );
                     return true;
                 }
@@ -171,18 +171,20 @@ namespace sw
                         stopForUnsupportedField( field._owner, prop );
                     const size_t elementCount = pSequence->getSize( field._pValue );
                     inoutBuilder.addUint32( static_cast<uint32>( elementCount ) );
-                    if ( propertyVisitor.findStructType( prop._elementTypeName ) != nullptr )
+                    const ReflectValueFacts elementFacts = prop.resolveElementFacts( propertyVisitor.getRegistry() ); // 칸마다 한 번 — 원소마다 이름으로 찾지 않는다
+                    if ( elementFacts.findStructType() != nullptr )
                         return ReflectVisitFlow::Continue;
                     for ( size_t elementIndex = 0; elementIndex < elementCount; ++elementIndex )
                     {
-                        if ( foldLeaf( inoutBuilder, propertyVisitor.getRegistry(), prop._elementTypeName, pSequence->getElementConst( field._pValue, elementIndex ) ) == false )
+                        if ( foldLeaf( inoutBuilder, elementFacts, pSequence->getElementConst( field._pValue, elementIndex ) ) == false )
                             stopForUnsupportedField( field._owner, prop );
                     }
                     return ReflectVisitFlow::Continue;
                 }
-                if ( propertyVisitor.findStructType( prop._typeName ) != nullptr )
+                const ReflectValueFacts valueFacts = prop.resolveValueFacts( propertyVisitor.getRegistry() );
+                if ( valueFacts.findStructType() != nullptr )
                     return ReflectVisitFlow::Continue;
-                if ( foldLeaf( inoutBuilder, propertyVisitor.getRegistry(), prop._typeName, field._pValue ) == false )
+                if ( foldLeaf( inoutBuilder, valueFacts, field._pValue ) == false )
                     stopForUnsupportedField( field._owner, prop );
                 return ReflectVisitFlow::Continue;
             }
