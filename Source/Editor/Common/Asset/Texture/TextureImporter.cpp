@@ -25,7 +25,6 @@
 #include "Engine/Asset/Cook/CookRecord.h"
 #include "Engine/Asset/Image/DDSFormat.h"
 #include "Engine/Asset/Image/ImageFileWriter.h"
-#include "Engine/Config/ConfigManager.h"
 #include "Engine/Content/AssetPaths.h"
 #include "Engine/Content/CookCodeFingerprint.h"
 #include "Engine/Graphics/RHI/RHIDescriptors.h"
@@ -711,9 +710,9 @@ namespace sw::editor
 
         // 바뀐 원본 하나만 임포트한다(루트 전체를 훑지 않는다). 스탬프를 기록하는 길은 `importAllTextures` 와 같은 `AssetImportStampUtil` 한 곳이라
         // 에디터에서 임포트한 것과 `App --import-textures` 로 임포트한 것이 같은 판정을 받는다. 내용이 그대로이면(저장만 다시 했다) 임포트하지 않는다.
-        // 설정 파일이 없으면 기본 규칙을 쓴다. 깨졌으면 기본 규칙으로 임포트하지 않는다(결과가 말없이 바뀐다) — 로드가 오류를 남겼다.
+        // 규칙 파일이 없거나 깨졌으면 기본 규칙으로 임포트하지 않는다(결과가 말없이 바뀐다) — 로드가 오류를 남겼다.
         TextureImportConfig config{};
-        if ( config.loadFromFile( makeDefaultImportConfigPath() ) == ConfigReadResult::Invalid )
+        if ( config.loadFromFile( makeDefaultImportConfigPath() ) == false )
             return true;
         // 핫 리로드의 임포트 잡이 워커에서 부르므로 작업 시스템을 찾지 않는다(워커는 에디터 서비스 범위를 읽지 않는다) — 밴드 압축도 이 워커가 차례로 한다.
         const TextureRawImporter         importer{ config, nullptr };

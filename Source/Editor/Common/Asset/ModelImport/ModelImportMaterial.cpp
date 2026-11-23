@@ -25,7 +25,6 @@
 #include "Editor/Common/Asset/Texture/TextureImporter.h"
 
 #include "Engine/Asset/AssetFormat.h"
-#include "Engine/Config/ConfigManager.h"
 #include "Engine/Config/EngineDefaultAssets.h"
 #include "Engine/Content/AssetIO.h"
 #include "Engine/Content/AssetPaths.h"
@@ -598,8 +597,8 @@ namespace sw::editor
     {
         // 규칙은 모델 옆에 꺼냈을 경로로 고른다(이름 꼬리 `_normal` · 모델 폴더 패턴). 고른 규칙을 저장소 폴더 이름에 남겨 텍스처 임포트가 같은 규칙으로 임포트한다(`TextureImportConfig::findMatchingRule`).
         TextureImportConfig config{};
-        if ( config.loadFromFile( TextureImporter::makeDefaultImportConfigPath() ) == ConfigReadResult::Invalid )
-            return false; // 로드가 오류를 남겼다 — 깨진 설정을 기본 규칙으로 읽지 않는다
+        if ( config.loadFromFile( TextureImporter::makeDefaultImportConfigPath() ) == false )
+            return false; // 로드가 오류를 남겼다 — 없거나 깨진 설정을 기본 규칙으로 읽지 않는다
         fixed_string<constant::buffer::kMax256> fileName;
         formatstring( fileName.data(), fileName.capacity(), "%#%#", texture._fileStem, texture._extension );
         const string           logicalPath = FileUtil::joinPath( rawTextureFolder, fileName );

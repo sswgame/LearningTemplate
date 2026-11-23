@@ -14,8 +14,6 @@
 
 namespace sw
 {
-    enum class ConfigReadResult : uint8;
-
     class JSONValue;
 
     struct AssetImportOverride;
@@ -149,8 +147,8 @@ namespace sw::editor
         TextureImportConfig();
         ~TextureImportConfig() = default;
 
-        /** @brief 파일에서 설정을 로드하고 프리셋 상속 트리를 해석합니다. 파일이 없으면 `Missing`(기본 규칙 — 정상), 있는데 읽지 못하면 오류를 남기고 `Invalid` 입니다. */
-        [[nodiscard]] ConfigReadResult loadFromFile( string_view configPath );
+        /** @brief 파일에서 설정을 로드하고 프리셋 상속 트리를 해석합니다. 규칙 파일은 필수다 — 없거나 읽지 못하면 오류를 남기고 false 입니다(기본 규칙으로 임포트하면 결과가 말없이 바뀐다). */
+        [[nodiscard]] bool loadFromFile( string_view configPath );
 
         /** @brief JSON 문자열에서 설정을 파싱합니다. */
         [[nodiscard]] bool loadFromJSONString( string_view jsonString );

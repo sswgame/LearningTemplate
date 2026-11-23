@@ -17,7 +17,6 @@
 #include "Editor/Common/Asset/Texture/TextureImporter.h"
 #include "Editor/Common/Workspace/EditorService.h"
 
-#include "Engine/Config/ConfigManager.h"
 #include "Engine/Config/EngineConfig.h"
 #include "Engine/Content/AssetPaths.h"
 #include "Engine/Graphics/Texture/TextureFormatFamily.h"
@@ -50,7 +49,7 @@ namespace sw::editor
                         }
                         const string        configPath = TextureImporter::makeDefaultImportConfigPath();
                         TextureImportConfig config;
-                        if ( config.loadFromFile( configPath ) != ConfigReadResult::Loaded )
+                        if ( config.loadFromFile( configPath ) == false )
                         {
                             SW_LOG_ERROR_ID( "AssetImportEntry.CannotImportTexturesWithout", "Cannot import textures without the import config: %#", configPath.c_str() );
                             return -1;
@@ -63,7 +62,7 @@ namespace sw::editor
                     {
                         const string      configPath = ModelImportConfig::makeDefaultConfigPath();
                         ModelImportConfig config;
-                        if ( config.loadFromFile( configPath ) != ConfigReadResult::Loaded )
+                        if ( config.loadFromFile( configPath ) == false )
                         {
                             SW_LOG_ERROR_ID( "AssetImportEntry.CannotImportModelsWithout", "Cannot import models without the import config: %#", configPath.c_str() );
                             return -1;
@@ -82,7 +81,7 @@ namespace sw::editor
                     {
                         const string        configPath = TextureImporter::makeDefaultImportConfigPath();
                         TextureImportConfig config;
-                        if ( config.loadFromFile( configPath ) != ConfigReadResult::Loaded )
+                        if ( config.loadFromFile( configPath ) == false )
                         {
                             SW_LOG_ERROR_ID( "AssetImportEntry.CannotCookVariantsWithout", "Cannot cook texture variants without the import config: %#", configPath.c_str() );
                             return -1;
