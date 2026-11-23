@@ -682,7 +682,6 @@
     "Source/GameFramework/Kits/Feature/Online/LiveOps/Server/Push/Provider/APNS/APNSPushProvider.cpp": {"integer": 2},
     "Source/GameFramework/Kits/Feature/Online/LiveOps/Server/Push/Provider/FCM/FCMPushProvider.cpp": {"integer": 2},
     "Source/GameFramework/Kits/Feature/Online/OnlineCore/Server/HTTP/HPACK.cpp": {"integer": 2, "hex": 15},
-    "Source/GameFramework/Kits/Feature/Online/OnlineCore/Server/HTTP/HPACK.h": {"integer": 1},
     "Source/GameFramework/Kits/Feature/Online/OnlineCore/Server/Identity/OnlinePushRelay.cpp": {"integer": 1},
     "Source/GameFramework/Kits/Feature/Online/OnlineCore/Server/Observability/ServiceMetrics.cpp": {"float": 1},
     "Source/GameFramework/Kits/Feature/Online/Social/Server/SocialCounts.cpp": {"minus-one": 3},
