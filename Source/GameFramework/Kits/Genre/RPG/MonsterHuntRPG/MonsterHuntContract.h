@@ -6,6 +6,7 @@
 #include "Core/Container/vector.h"
 #include "Core/Encoding/FourCCUtil.h"
 #include "Core/Event/EventBuffer.h"
+#include "Core/Foundation/Expected.h"
 #include "Core/Foundation/Macros.h"
 #include "Core/Foundation/Types.h"
 #include "Core/Math/Math.h"
@@ -91,9 +92,9 @@ namespace sw
         SW_DECLARE_STATE_IO();
 
     private:
-        /** @brief 지금 단계에서 아직 못 찾은 단서의 가장 작은 순서를 반환합니다. 다 찾았으면 −1 을 반환합니다. */
-        int32 computeOpenOrder() const;
-        bool  isFoundInternal( const hashed_string& clueID ) const;
+        /** @brief 지금 단계에서 아직 못 찾은 단서의 가장 작은 순서를 반환합니다. 다 찾았으면 없음입니다. */
+        optional<int32> computeOpenOrder() const;
+        bool            isFoundInternal( const hashed_string& clueID ) const;
         /** @brief 지금 단계의 단서를 다 찾았으면(단서가 없는 단계 포함) 일지에 알리고 찾을 것이 남은 단계까지 넘어갑니다. 끝까지 갔으면 끝남을 알립니다. */
         void advanceFinishedSteps();
 

@@ -251,8 +251,8 @@ namespace sw
         void advanceDay();
         void pollEvents( vector<ShopEvent>& outListEvent );
 
-        /** @brief 사는 단가입니다. 가게가 팔지 않는 아이템이면 -1 입니다. */
-        int32 computeBuyPrice( const hashed_string& shopID, const hashed_string& itemID ) const;
+        /** @brief 사는 단가입니다. 가게가 팔지 않는 아이템이면 없음입니다. */
+        optional<int32> computeBuyPrice( const hashed_string& shopID, const hashed_string& itemID ) const;
         /** @brief @p count 개를 지금 팔면 받는 돈입니다. 시세 하락을 반영합니다. */
         int64 computeSellTotal( const hashed_string& shopID, const hashed_string& itemID, int32 count ) const;
         /** @brief 남은 재고입니다. 무한이면 -1 이고, 진열에 없으면 0 입니다. */

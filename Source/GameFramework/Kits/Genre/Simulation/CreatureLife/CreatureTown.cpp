@@ -260,7 +260,9 @@ namespace sw
             return CreatureRequestResult::NotOffered;
         if ( _pQuestLog == nullptr )
             return CreatureRequestResult::Unavailable;
-        const QuestStartResult startResult = _pQuestLog->start( questID, MathUtil::max( 0, _pReputation != nullptr ? _pReputation->getTierIndex( CreatureTownInternal::makeFactionID( speciesID ) ) : 0 ) );
+        // 우정 단계가 레벨 자리다 — 평판이 없거나 단계를 적지 않은 종은 가장 낮은 단계다.
+        const optional<int32>  tier        = _pReputation != nullptr ? _pReputation->getTierIndex( CreatureTownInternal::makeFactionID( speciesID ) ) : optional<int32>{};
+        const QuestStartResult startResult = _pQuestLog->start( questID, tier.has_value() ? *tier : 0 );
         if ( startResult == QuestStartResult::AlreadyActive )
             return CreatureRequestResult::AlreadyActive;
         if ( startResult != QuestStartResult::Ok )
@@ -329,11 +331,11 @@ namespace sw
         return CreatureAbilityResult::Ok;
     }
 
-    int32 CreatureTown::placeHouse( int32 x, int32 y, int32 capacity )
+    optional<int32> CreatureTown::placeHouse( int32 x, int32 y, int32 capacity )
     {
         const bool bCannotPlaceHouse = _topology.isInside( x, y ) == false || _listObject[static_cast<size_t>( _topology.toIndex( x, y ) )].empty() == false || _land.isUsable( x, y ) == false;
         if ( bCannotPlaceHouse )
-            return constant::invalid_index::kInt32;
+            return nullopt;
         CreatureHouse house;
         house._tile     = int2{ x, y };
         house._capacity = MathUtil::max( 1, capacity );
@@ -649,8 +651,8 @@ namespace sw
     {
         if ( _pReputation == nullptr )
             return;
-        const hashed_string factionID  = CreatureTownInternal::makeFactionID( speciesID );
-        const int32         tierBefore = _pReputation->getTierIndex( factionID );
+        const hashed_string   factionID  = CreatureTownInternal::makeFactionID( speciesID );
+        const optional<int32> tierBefore = _pReputation->getTierIndex( factionID );
         (void)_pReputation->changeValue( factionID, delta );
         if ( _pReputation->getTierIndex( factionID ) != tierBefore )
             _eventBuffer.push( CreatureTownEvent{ speciesID, _pReputation->getTierName( factionID ), _pReputation->getValue( factionID ), CreatureTownEvent::Kind::FriendshipTierChanged } );

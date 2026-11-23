@@ -107,10 +107,10 @@ namespace sw
         return _listEntry.back();
     }
 
-    int32 ReputationState::computeTierIndex( const FactionDef* pFaction, int32 value )
+    optional<int32> ReputationState::computeTierIndex( const FactionDef* pFaction, int32 value )
     {
         if ( pFaction == nullptr || pFaction->_listTier.empty() )
-            return constant::invalid_index::kInt32;
+            return nullopt;
         int32 tierIndex = 0;
         for ( size_t index = 0; index < pFaction->_listTier.size(); ++index )
         {
@@ -122,20 +122,20 @@ namespace sw
 
     int32 ReputationState::applyDelta( const hashed_string& factionID, int32 delta )
     {
-        const FactionDef* pFaction = _pCatalog != nullptr ? _pCatalog->find( factionID ) : nullptr;
-        Entry&            entry    = acquireEntry( factionID );
-        const int32       minValue = pFaction != nullptr ? pFaction->_minValue : ReputationInternal::kUnknownMin;
-        const int32       maxValue = pFaction != nullptr ? pFaction->_maxValue : ReputationInternal::kUnknownMax;
-        const int32       oldValue = entry._value;
-        const int32       oldTier  = computeTierIndex( pFaction, oldValue );
-        entry._value               = MathUtil::clamp( oldValue + delta, minValue, maxValue );
-        const int32 newTier        = computeTierIndex( pFaction, entry._value );
+        const FactionDef*     pFaction = _pCatalog != nullptr ? _pCatalog->find( factionID ) : nullptr;
+        Entry&                entry    = acquireEntry( factionID );
+        const int32           minValue = pFaction != nullptr ? pFaction->_minValue : ReputationInternal::kUnknownMin;
+        const int32           maxValue = pFaction != nullptr ? pFaction->_maxValue : ReputationInternal::kUnknownMax;
+        const int32           oldValue = entry._value;
+        const optional<int32> oldTier  = computeTierIndex( pFaction, oldValue );
+        entry._value                   = MathUtil::clamp( oldValue + delta, minValue, maxValue );
+        const optional<int32> newTier  = computeTierIndex( pFaction, entry._value );
         if ( newTier != oldTier )
         {
             ReputationEvent event;
             event._factionID = factionID;
-            event._oldTier   = oldTier >= 0 ? pFaction->_listTier[static_cast<size_t>( oldTier )]._name : hashed_string{};
-            event._newTier   = newTier >= 0 ? pFaction->_listTier[static_cast<size_t>( newTier )]._name : hashed_string{};
+            event._oldTier   = oldTier.has_value() ? pFaction->_listTier[static_cast<size_t>( *oldTier )]._name : hashed_string{};
+            event._newTier   = newTier.has_value() ? pFaction->_listTier[static_cast<size_t>( *newTier )]._name : hashed_string{};
             event._value     = entry._value;
             _eventBuffer.push( event );
         }
@@ -189,16 +189,16 @@ namespace sw
         return pFaction != nullptr ? pFaction->_startValue : 0;
     }
 
-    int32 ReputationState::getTierIndex( const hashed_string& factionID ) const
+    optional<int32> ReputationState::getTierIndex( const hashed_string& factionID ) const
     {
         return computeTierIndex( _pCatalog != nullptr ? _pCatalog->find( factionID ) : nullptr, getValue( factionID ) );
     }
 
     hashed_string ReputationState::getTierName( const hashed_string& factionID ) const
     {
-        const FactionDef* pFaction  = _pCatalog != nullptr ? _pCatalog->find( factionID ) : nullptr;
-        const int32       tierIndex = computeTierIndex( pFaction, getValue( factionID ) );
-        return tierIndex >= 0 ? pFaction->_listTier[static_cast<size_t>( tierIndex )]._name : hashed_string{};
+        const FactionDef*     pFaction  = _pCatalog != nullptr ? _pCatalog->find( factionID ) : nullptr;
+        const optional<int32> tierIndex = computeTierIndex( pFaction, getValue( factionID ) );
+        return tierIndex.has_value() ? pFaction->_listTier[static_cast<size_t>( *tierIndex )]._name : hashed_string{};
     }
 
     void ReputationState::pollEvents( vector<ReputationEvent>& outListEvent )

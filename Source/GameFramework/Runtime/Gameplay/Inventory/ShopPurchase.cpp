@@ -82,15 +82,15 @@ namespace sw
         const hashed_string currency = _shop.getCurrency( _shopID );
         for ( const ShopStockDef& stock : pShop->_listStock )
         {
-            const ItemDef* pItem = _items.find( stock._itemID );
-            const int32    price = _shop.computeBuyPrice( _shopID, stock._itemID );
-            if ( pItem == nullptr || price < 0 || _shop.isUnlocked( stock ) == false )
+            const ItemDef*        pItem = _items.find( stock._itemID );
+            const optional<int32> price = _shop.computeBuyPrice( _shopID, stock._itemID );
+            if ( pItem == nullptr || price.has_value() == false || _shop.isUnlocked( stock ) == false )
                 continue; // 잠긴 진열은 보이지 않는다(가게 규칙과 같은 판정)
             ShopOffer offer{};
             offer._offerID     = stock._itemID.c_str();
             offer._displayName = pItem->_name.empty() ? string( stock._itemID.c_str() ) : pItem->_name;
             offer._currency    = currency;
-            offer._unitPrice   = price;
+            offer._unitPrice   = *price;
             offer._maxCount    = MathUtil::max( _items.getMaxStack( stock._itemID ), 1 );
             offer._stock       = _shop.getStockCount( _shopID, stock._itemID );
             outListOffer.push_back( std::move( offer ) );

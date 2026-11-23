@@ -683,7 +683,7 @@ SW_TEST_CASE_F( SurvivalHorrorRulesTest, CombiningItems )
 SW_TEST_CASE_F( SurvivalHorrorRulesTest, CombineRollsBackWhenOutputDoesNotFit )
 {
     // 4 x 2 격자의 (1, 1) 에 열쇠가 있어 3 x 2 결과가 들어갈 자리가 없다.
-    SW_REQUIRE_TRUE( _grid.placeItem( "keyRed", 1, 1, 1, false ) >= 0 );
+    SW_REQUIRE_TRUE( _grid.placeItem( "keyRed", 1, 1, 1, false ).has_value() );
     const int32 ammo = give( "ammo" );
     const int32 calm = give( "calm" );
     SW_EXPECT_FALSE( _session.combineItems( ammo, calm ) );

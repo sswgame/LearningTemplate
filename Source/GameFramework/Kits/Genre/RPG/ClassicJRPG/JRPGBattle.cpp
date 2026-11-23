@@ -177,13 +177,13 @@ namespace sw
         const int32 roundBefore = _turnOrder.getRound();
         while ( _result == JRPGBattleResult::Ongoing )
         {
-            const int32 actor = _turnOrder.next();
-            if ( actor < 0 || _turnOrder.getRound() != roundBefore + 1 )
+            const optional<int32> actor = _turnOrder.next();
+            if ( actor.has_value() == false || _turnOrder.getRound() != roundBefore + 1 )
                 break; // 이번 라운드의 차례가 다 돌았다(남은 큐는 다음 라운드의 restartRound 가 버린다)
-            if ( actor >= kEnemyActorBase )
-                executeEnemy( actor - kEnemyActorBase );
+            if ( *actor >= kEnemyActorBase )
+                executeEnemy( *actor - kEnemyActorBase );
             else
-                executeMember( actor );
+                executeMember( *actor );
             finishIfDecided();
         }
         for ( size_t memberIndex = 0; memberIndex < _listCommand.size(); ++memberIndex )

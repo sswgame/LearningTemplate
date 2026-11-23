@@ -67,7 +67,10 @@ namespace sw
         SurvivalHorrorTurnResult result;
         if ( _state != SurvivalHorrorEncounterState::Ongoing )
             return result;
-        result._actorID = _turnOrder.next();
+        const optional<int32> actor = _turnOrder.next();
+        if ( actor.has_value() == false )
+            return result; // 차례를 가질 행위자가 없다
+        result._actorID = *actor;
         ++_turnCount;
         if ( result._actorID == kMonsterActorID )
         {

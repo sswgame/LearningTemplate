@@ -231,10 +231,10 @@ namespace sw
 
         for ( int32 turn = 0; turn < kSideCount && _result == MonsterBattleResult::Ongoing; ++turn )
         {
-            const int32 side = _turnOrder.next();
-            if ( side < 0 || side >= kSideCount )
+            const optional<int32> side = _turnOrder.next();
+            if ( side.has_value() == false || *side >= kSideCount )
                 break;
-            executeAction( side );
+            executeAction( *side );
         }
 
         if ( _result == MonsterBattleResult::Ongoing )

@@ -160,8 +160,8 @@ SW_TEST_CASE( RespawnRulesTest, ReadsAttributesAndPolicies )
     SW_EXPECT_TRUE( rules._listPolicy[1]._kind == sw::RespawnPolicyKind::InPlace );
     SW_EXPECT_EQUAL( 50, rules._listPolicy[1]._costAmount );
     SW_EXPECT_TRUE( rules._listPolicy[1]._bRequestOnly );
-    SW_EXPECT_EQUAL( 1, rules.findPolicyIndex( sw::RespawnPolicyKind::InPlace ) );
-    SW_EXPECT_EQUAL( -1, rules.findPolicyIndex( sw::RespawnPolicyKind::TeamBase ) );
+    SW_EXPECT_TRUE( rules.findPolicyIndex( sw::RespawnPolicyKind::InPlace ) == 1 );
+    SW_EXPECT_FALSE( rules.findPolicyIndex( sw::RespawnPolicyKind::TeamBase ).has_value() );
 }
 
 /**

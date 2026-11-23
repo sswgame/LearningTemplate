@@ -751,7 +751,7 @@
     "Source/GameFramework/Kits/Genre/Simulation/CreatureLife/CreatureTown.cpp": {"integer": 5},
     "Source/GameFramework/Kits/Genre/Simulation/Farming/Client/FarmCropComponent.cpp": {"minus-one": 3, "float": 3, "integer": 2},
     "Source/GameFramework/Kits/Genre/Simulation/Farming/Client/FarmSoilComponent.cpp": {"minus-one": 3},
-    "Source/GameFramework/Kits/Genre/Simulation/Farming/Component/FarmAutoFarmerAIComponent.cpp": {"minus-one": 1, "float": 1},
+    "Source/GameFramework/Kits/Genre/Simulation/Farming/Component/FarmAutoFarmerAIComponent.cpp": {"float": 1},
     "Source/GameFramework/Kits/Genre/Simulation/Farming/Component/FarmGameModeComponent.cpp": {"minus-one": 4, "float": 3},
     "Source/GameFramework/Kits/Genre/Simulation/Farming/Component/FarmVillagerComponent.cpp": {"minus-one": 1},
     "Source/GameFramework/Kits/Genre/Simulation/Farming/FarmField.cpp": {"integer": 1},

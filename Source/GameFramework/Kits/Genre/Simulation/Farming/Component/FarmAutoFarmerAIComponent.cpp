@@ -43,16 +43,16 @@ namespace sw
             /** @brief 손에 든 도구의 참거짓 키입니다(`FarmTool` 순서). */
             static constexpr const utf8* kArrHoldingKey[] = { "HoldingHoe", "HoldingWateringCan", "HoldingSeeds", "HoldingHand" };
 
-            /** @brief 이번 계절에 자라는 씨앗의 순번입니다(가진 것 먼저). 없으면 -1 입니다. */
-            static int32 findSeasonalSeed( const CropCatalog& catalog, const Inventory& bag, const vector<hashed_string>& listSeed, const hashed_string& season )
+            /** @brief 이번 계절에 자라는 씨앗의 순번입니다(가진 것 먼저). 없으면 없음입니다. */
+            static optional<int32> findSeasonalSeed( const CropCatalog& catalog, const Inventory& bag, const vector<hashed_string>& listSeed, const hashed_string& season )
             {
-                int32 seasonalSeed = -1;
+                optional<int32> seasonalSeed;
                 for ( int32 seedIndex = 0; seedIndex < static_cast<int32>( listSeed.size() ); ++seedIndex )
                 {
                     const CropDef* pCrop = catalog.findCropBySeed( listSeed[static_cast<size_t>( seedIndex )] );
                     if ( pCrop == nullptr || pCrop->canGrowIn( season ) == false )
                         continue;
-                    if ( seasonalSeed < 0 || bag.getItemCount( pCrop->_seedItem ) > 0 )
+                    if ( seasonalSeed.has_value() == false || bag.getItemCount( pCrop->_seedItem ) > 0 )
                         seasonalSeed = seedIndex;
                     if ( bag.getItemCount( pCrop->_seedItem ) > 0 )
                         break;
@@ -192,13 +192,13 @@ namespace sw
         }
 
         // 이번 계절 씨앗(가진 것 먼저) — 디렉터의 고른 씨앗이 다르면 트리가 다음 씨앗을 누른다(판단마다 한 칸).
-        const int32    seasonalSeed  = Internal::findSeasonalSeed( catalog, bag, listSeed, pState->getClock().getSeasonName() );
-        const CropDef* pSeasonalCrop = seasonalSeed >= 0 ? catalog.findCropBySeed( listSeed[static_cast<size_t>( seasonalSeed )] ) : nullptr;
-        const bool     bHasSeed      = seasonalSeed >= 0 && bag.getItemCount( listSeed[static_cast<size_t>( seasonalSeed )] ) > 0;
-        blackboard.setBool( "SeedSelected", seasonalSeed < 0 || gameMode.getSelectedSeedIndex() == seasonalSeed );
+        const optional<int32> seasonalSeed  = Internal::findSeasonalSeed( catalog, bag, listSeed, pState->getClock().getSeasonName() );
+        const CropDef*        pSeasonalCrop = seasonalSeed.has_value() ? catalog.findCropBySeed( listSeed[static_cast<size_t>( *seasonalSeed )] ) : nullptr;
+        const bool            bHasSeed      = seasonalSeed.has_value() && bag.getItemCount( listSeed[static_cast<size_t>( *seasonalSeed )] ) > 0;
+        blackboard.setBool( "SeedSelected", seasonalSeed.has_value() == false || gameMode.getSelectedSeedIndex() == *seasonalSeed );
         blackboard.setBool( "HasSeed", bHasSeed );
         blackboard.setBool( "CanAffordSeed", pSeasonalCrop != nullptr && pWallet->getWallet().canAfford( gameMode.getCurrency(), pSeasonalCrop->_seedPrice ) );
-        Internal::writeTileJob( gameMode.getField(), _cultivateLimit, seasonalSeed >= 0, bHasSeed, blackboard );
+        Internal::writeTileJob( gameMode.getField(), _cultivateLimit, seasonalSeed.has_value(), bHasSeed, blackboard );
         blackboard.setVector( "ShipSpot", gameMode.getShippingBinPosition() + float3{ -1.0f, 0.0f, 0.0f } );
         blackboard.setVector( "ShopSpot", gameMode.getShopPosition() + float3{ 1.4f, 0.0f, 0.0f } );
     }
