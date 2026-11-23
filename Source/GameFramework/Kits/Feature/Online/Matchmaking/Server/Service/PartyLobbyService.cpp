@@ -791,6 +791,8 @@ namespace sw
     void PartyLobbyService::finishParty( const Request& request, MatchmakingServiceResult result, const PartySnapshot& party, AccountID removedID, uint64 brokenTicketID )
     {
         const vector<uint8> indexValue = MatchmakingProtocol::encodeID( request._partyID );
+        if ( result == MatchmakingResult::Ok )
+            refreshIndexTTL( party ); // 바꾸기는 모두 파티 기록의 수명을 늘린다 — 인덱스를 따로 두면 먼저 사라져 멤버가 파티에 든 채 찾지도 떠나지도 못한다
         switch ( request._operation )
         {
             case PartyLobbyOperation::PartyCreate:
@@ -802,10 +804,7 @@ namespace sw
                     break;
                 }
                 if ( request._operation == PartyLobbyOperation::PartyAccept )
-                {
                     submitFireAndForget( EphemeralRequest::makeErase( makeInviteKey( request._actorID, request._partyID ) ) );
-                    refreshIndexTTL( party );
-                }
                 notifyParty( party, kInvalidAccountID ); // 만든 사람에게도 보낸다. 클라이언트의 "내 파티" 는 알림이 원본이기 때문이다
                 break;
             }
@@ -821,7 +820,6 @@ namespace sw
                 notification._invite._partyID   = request._partyID;
                 notification._invite._inviterID = request._actorID;
                 _notificationBuffer.push( std::move( notification ) );
-                refreshIndexTTL( party );
                 break;
             }
             case PartyLobbyOperation::PartyLeave:
@@ -840,7 +838,6 @@ namespace sw
                 submitFireAndForget( EphemeralRequest::makeCompareAndErase( makeAccountPartyKey( removedID ), indexValue ) );
                 if ( brokenTicketID != 0 )
                     _brokenTicketBuffer.push( brokenTicketID );
-                refreshIndexTTL( party );
                 notifyParty( party, removedID );
                 break;
             }
