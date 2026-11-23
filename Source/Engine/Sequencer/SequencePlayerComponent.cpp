@@ -514,6 +514,16 @@ namespace sw
         _player.resume();
     }
 
+    void SequencePlayerComponent::copyTimelineFrom( const SequencePlayerComponent& source )
+    {
+        setSequence( source._player.getAsset() ); // 파일 경로가 아니라 열린 시퀀스를 옮긴다 — 경로를 옮기면 시작(onBeginPlay)이 다시 열며 재생을 끝낸다
+        _listBinding     = source._listBinding;
+        _framesPerSecond = source._framesPerSecond;
+        _playRate        = source._playRate;
+        _loopMode        = source._loopMode;
+        _bAutoPlay       = SW_FALSE;
+    }
+
     void SequencePlayerComponent::setSequence( const SequenceAsset& asset )
     {
         endPlayback( SequenceHistoryKind::Stopped );

@@ -125,6 +125,11 @@ namespace sw
 
         /** @brief 재생할 시퀀스를 바꿉니다(코드로 만든 시퀀스). 재생 중이었으면 먼저 끝낸다. 재생 위치는 그 시퀀스의 처음입니다. */
         void setSequence( const SequenceAsset& asset );
+        /**
+         * @brief @p source 의 시퀀스 · 바인딩 · 속도 · 반복을 옮깁니다(스스로 틀기는 끈다). 재생 중이었으면 먼저 끝냅니다.
+         * @details 화면 · 입력에 닿는 컷씬 칸(움직임 막기 · HUD · 건너뛰기 · 빨리감기)은 옮기지 않는다 — 서버가 다른 플레이어만 보는 재생을 따로 재는 자리(`SequenceTriggerComponent`)다.
+         */
+        void copyTimelineFrom( const SequencePlayerComponent& source );
         /** @brief 재생할 시퀀스 파일을 바꾸고 바로 엽니다. 못 열면 경고하고 빈 시퀀스입니다. */
         void setSequencePath( string_view path );
         /** @brief 재생할 시퀀스 파일 경로입니다. */

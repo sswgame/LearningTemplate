@@ -151,6 +151,35 @@ SW_TEST_CASE( SequenceNetSimTest, ActivatorPlaysOnlyForThatPlayerAndRecordsPerPl
     SW_EXPECT_EQUAL( 1.0, SequenceNetSimTestUtil::readServerValue( harness, "PlayerSeen1" ) );
 }
 
+/** @brief [SequenceNetSimTest] 다른 플레이어만의 재생이 도는 동안 들어온 플레이어도 자기 컷씬을 튼다 — 한쪽의 건너뛰기는 그 재생만 끝낸다(예전에는 디렉터 하나를 나눠 둘째 진입이 막혔다) */
+SW_TEST_CASE( SequenceNetSimTest, ActivatorPlaysRunSideBySide, ._timeoutSeconds = 120 )
+{
+    SequenceHarnessFixture fixture;
+    NetSimHarness&         harness = fixture._harness;
+    SW_REQUIRE_TRUE( SequenceNetSimGame::activateTrigger( harness.getServer(), SequenceNetSimGame::kPlayerTrigger, 1 ) );
+    SW_REQUIRE_TRUE( SequenceNetSimGame::activateTrigger( harness.getServer(), SequenceNetSimGame::kPlayerTrigger, 2 ) ); // 같은 갱신 — 둘 다 보낸다
+    SW_EXPECT_FALSE( SequenceNetSimGame::activateTrigger( harness.getServer(), SequenceNetSimGame::kPlayerTrigger, 1 ) ); // 자기 재생 중 재진입
+    SW_EXPECT_TRUE( fixture.waitPlaying( fixture._firstClient, SequenceNetSimGame::kPlayerDirector, true, 60 ) );
+    SW_EXPECT_TRUE( fixture.waitPlaying( fixture._secondClient, SequenceNetSimGame::kPlayerDirector, true, 60 ) );
+    const SequenceNetSessionComponent* pServerNet = SequenceNetSimGame::findNetSession( harness.getServer() );
+    SW_REQUIRE_NOT_NULL( pServerNet );
+    SW_EXPECT_EQUAL( 2u, pServerNet->getServer().getActivePlayCount() );
+
+    NetSimWorld* pSecond = harness.findClient( fixture._secondClient );
+    SW_REQUIRE_NOT_NULL( pSecond );
+    SequencePlayerComponent* pSecondPlayer = SequenceNetSimGame::findDirector( *pSecond, SequenceNetSimGame::kPlayerDirector );
+    SW_REQUIRE_NOT_NULL( pSecondPlayer );
+    SW_EXPECT_TRUE( pSecondPlayer->skipToEnd() );
+    for ( uint32 tick = 0; tick < 30 && pServerNet->getServer().getActivePlayCount() > 1u; ++tick )
+    {
+        harness.step();
+    }
+    SW_EXPECT_EQUAL( 1u, pServerNet->getServer().getActivePlayCount() ); // 둘째의 재생만 끝났다
+    NetSimWorld* pFirst = harness.findClient( fixture._firstClient );
+    SW_REQUIRE_NOT_NULL( pFirst );
+    SW_EXPECT_TRUE( SequenceNetSimTestUtil::isPlaying( *pFirst, SequenceNetSimGame::kPlayerDirector ) );
+}
+
 /** @brief [SequenceNetSimTest] 건너뛰기 요청은 그 재생의 폰을 가진 연결에서 온 것만 서버 재생을 끝내고, 다른 연결이 보낸 같은 요청은 버린다 */
 SW_TEST_CASE( SequenceNetSimTest, SkipRequestIsCheckedAgainstTheOwningConnection, ._timeoutSeconds = 120 )
 {
