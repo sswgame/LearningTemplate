@@ -18,7 +18,12 @@
 	<Expect watch="Object.X" target="MinigamePortal_frontiertown" near="-3" tolerance="0.01"/>
 	<Expect watch="Object.Z" target="MinigamePortal_frontiertown" near="32" tolerance="0.01"/>
 
-	<!-- pixeltown -->
+	<!-- pixeltown — 입구 둘레에 다가오면 미리 읽기가 먼저 걸린다(들어가지는 않는다) -->
+	<DevCommand line="teleport Player -24 0.05 36"/>
+	<WaitUntil watch="Object.X" target="Player" near="-24" tolerance="0.05" timeoutFrames="10"/>
+	<WaitUntil watch="Object.Property" target="MinigamePreload_pixeltown" key="MinigamePreloadTriggerComponent._fireCount" equals="1" timeoutFrames="30"/>
+	<ExpectLog id="MinigameFlow.Preload" contains="'pixeltown'" atLeast="1"/>
+	<Expect watch="Minigame.Active" is="none"/>
 	<DevCommand line="teleport Player -24 0.05 32"/>
 	<WaitUntil watch="Minigame.Active" is="pixeltown" timeoutWallSeconds="60"/>
 	<ExpectActiveScene path="game/playground/pixeltown/maps/town.scene.xml"/>

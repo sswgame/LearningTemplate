@@ -712,6 +712,17 @@ namespace sw
         _pendingPlacement = placement;
     }
 
+    bool MinigameFlow::preload( string_view name )
+    {
+        SceneManager* const pSceneManager = game::findSubsystem<SceneManager>();
+        MinigameDefinition  definition;
+        if ( pSceneManager == nullptr || loadDefinition( name, definition ) == false )
+            return false;
+        const bool bReading = pSceneManager->preloadScene( definition._map.get() );
+        SW_LOG_INFO_ID( "MinigameFlow.Preload", "Minigame '%#': %#", definition._name.c_str(), bReading ? "reading its map files ahead" : "its map has no preload list (not cooked) - it is read on entry" );
+        return true;
+    }
+
     void MinigameFlow::update()
     {
         // 되살린 씬의 결과를 먼저 알린다 — 앞 프레임에 되살린 오브젝트가 상태를 받고 시작한 뒤라 보상이 복원에 덮이지 않는다.

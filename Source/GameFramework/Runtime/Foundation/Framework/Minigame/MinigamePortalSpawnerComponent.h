@@ -18,6 +18,7 @@ namespace sw
 {
     class GameObjectManager;
     class MinigameFlow;
+    struct MinigameDefinition;
 
     /**
      * @class MinigamePortalSpawnerComponent
@@ -35,6 +36,8 @@ namespace sw
 
         /** @brief 세운 입구 오브젝트 이름의 앞부분입니다(`MinigamePortal_<미니게임>`). */
         static constexpr const utf8* kPortalNamePrefix = "MinigamePortal_";
+        /** @brief 세운 미리 읽기 볼륨 오브젝트 이름의 앞부분입니다(`MinigamePreload_<미니게임>`). */
+        static constexpr const utf8* kPreloadNamePrefix = "MinigamePreload_";
 
         MinigamePortalSpawnerComponent();
         ~MinigamePortalSpawnerComponent() override = default;
@@ -48,7 +51,10 @@ namespace sw
         float3 computeSlotPosition( int32 slot ) const;
 
     private:
-        /** @brief 정의마다 입구를 세웁니다. */
+        /** @brief 프리팹 @p prefab 을 이름 @p pName 으로 @p position 에 세우고 그 트리거 @p TTrigger 에 @p definition 의 이름을 넣습니다. 지면 오류를 남기고 false 입니다. */
+        template <typename TTrigger>
+        [[nodiscard]] bool spawnVolume( GameObjectManager& manager, const AssetRef<PrefabAsset>& prefab, const utf8* pName, const MinigameDefinition& definition );
+        /** @brief 정의마다 입구(와 미리 읽기 볼륨)를 세웁니다. */
         void spawnPortals( GameObjectManager& manager, const MinigameFlow& flow );
 
     private:
@@ -56,9 +62,11 @@ namespace sw
         AssetRef<PrefabAsset> _portalPrefab;
         PROPERTY( Category = "Minigame", DisplayName = "Columns", Min = 1, Tooltip = "Portal slots per row along X; the next row goes along Z" )
         int32 _columnCount;
+        PROPERTY( Category = "Minigame", DisplayName = "Preload Prefab", Tooltip = "Volume with a MinigamePreloadTriggerComponent spawned around each entrance (empty: map files are read on entry)" )
+        AssetRef<PrefabAsset> _preloadPrefab;
         PROPERTY( Category = "Minigame", DisplayName = "Slot Spacing", Tooltip = "Distance between slots along X and Z", Units = m )
         float2 _slotSpacing;
 
-        vector<GameObjectHandle> _listPortal; ///< 세운 입구
+        vector<GameObjectHandle> _listPortal; ///< 세운 입구와 미리 읽기 볼륨
     };
 } // namespace sw

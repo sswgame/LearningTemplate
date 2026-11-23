@@ -115,6 +115,11 @@ namespace sw
          * @details 씬 전환의 스냅숏은 씬을 도는 동안 찍지 않는다(자동 저장과 같은 자리 — `GameInstance::update`).
          */
         void requestEnter( string_view name, const optional<SubLevelPlacement>& placement );
+        /**
+         * @brief 미니게임 @p name 의 맵이 쓸 파일을 들어가기 전에 미리 읽습니다(`SceneManager::preloadScene` — 하나만 두고, 들어가면 로드가 이어받는다). 게임 상태는 바꾸지 않는다.
+         * @return 정의를 읽었으면 true 입니다(쿠킹 전 Dev 실행은 프리로드 목록이 없어 읽을 것이 없다). 정의를 읽지 못했거나 씬 매니저가 없으면 false 입니다.
+         */
+        [[nodiscard]] bool preload( string_view name );
         /** @brief 켜진 범위의 다시 읽힌 카탈로그를 새 판으로 걸고(`GameFeatureScope::rebindReloadedCatalogs`) 맡긴 나가기 · 진입을 처리합니다 — `GameInstance::update` 앞머리(틱 밖)가 부른다. */
         void update();
         /**
