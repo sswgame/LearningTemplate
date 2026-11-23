@@ -23,6 +23,9 @@
   <!-- 타일 걸음 마을 미니게임(minigames/pixeltown)의 말 걸기 — 공통 상호작용 액션 Interact 에 Space 를 더한다(Interaction 레이어라 시연 점프 Space 와 겹치지 않는다). -->
   <inputMap path="common/input/interact.input.xml"/>
   <inputMap path="game/playground/pixeltown/data/town.input.xml"/>
+  <!-- 야외 활동 장소(maps/outdoors)의 점프 · 위아래 · 이모트. 점프(Traversal 레이어 Space)는 시연 점프(Gameplay) · 상호작용(Interaction)과 레이어가 다르다. -->
+  <inputMap path="common/input/traversal.input.xml"/>
+  <inputMap path="game/playground/data/outdoors.input.xml"/>
   <localizationProject>game/playground/data/localization/playground.locproject.xml</localizationProject>
   <loadingScreen>engine/ui/loading.ui.xml</loadingScreen>
   <!-- 시네마틱 시퀀스의 소리 구간이 내는 이벤트 -->

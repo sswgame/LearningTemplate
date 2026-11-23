@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="utf-8"?>
+<?asset guid="02cba15920e9420c894816cf06098313"?>
+<!-- 야외 활동 장소(maps/outdoors)의 상호작용 — 상자 열기 · 줍기 · 나무 베기(도끼 태그, 연타) · 낚시(던지기 → 입질을 기다려 제때 누르기 → 감기 연타). -->
+<Interactions>
+  <Interaction id="OpenChest" prompt="ui.interact.open" mode="Press" maxDistance="3" lineOfSight="false"/>
+  <Interaction id="PickUp" prompt="ui.interact.pickup" mode="Press" maxDistance="3" lineOfSight="false"/>
+  <Interaction id="Chop" prompt="ui.interact.chop" mode="Mash" presses="3" decay="0.2" maxDistance="3" lineOfSight="false" requiredTags="Tool.Axe" cooldown="0.2"/>
+  <Interaction id="Fish" maxDistance="3" lineOfSight="false" cooldown="0.2">
+    <Step prompt="ui.fish.cast" mode="Press"/>
+    <Step prompt="ui.fish.wait" mode="Reaction" delayMin="0.6" delayMax="1.4" window="0.8"/>
+    <Step prompt="ui.fish.reel" mode="Mash" presses="3" decay="0.2"/>
+  </Interaction>
+</Interactions>
