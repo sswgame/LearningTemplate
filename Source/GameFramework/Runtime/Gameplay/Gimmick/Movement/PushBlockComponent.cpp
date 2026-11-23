@@ -8,6 +8,7 @@
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
 #include "Engine/Object/GameObject/Tick/TickContext.h"
+#include "Engine/Object/GameObject/WorldOrigin.h"
 
 #include "GameFramework/Runtime/Gameplay/Gimmick/Trigger/GimmickSensorComponent.h"
 #include "GameFramework/Runtime/Gameplay/Interaction/InteractableComponent.h"
@@ -51,8 +52,8 @@ namespace sw
         WorldRayHit  hit;
         if ( WorldQuery::raycast( *pManager, from, from + cellStep, pOwner->getObjectID(), hit ) )
             return false;
-        _from      = from;
-        _to        = from + cellStep;
+        _from      = pManager->getWorldOrigin().toAbsolute( from ); // 저장하는 자리라 절대다 — 되돌릴 때의 원점이 다를 수 있다
+        _to        = pManager->getWorldOrigin().toAbsolute( from + cellStep );
         _moveSteps = _clock.secondsToSteps( _moveTime, 1 );
         _stepsLeft = _moveSteps;
         return true;
@@ -88,6 +89,6 @@ namespace sw
             return;
         --_stepsLeft;
         const float32 alpha = 1.0f - static_cast<float32>( _stepsLeft ) / static_cast<float32>( MathUtil::max( 1, _moveSteps ) );
-        pScene->setWorldPosition( float3::lerp( _from, _to, alpha ) );
+        pScene->setWorldPosition( getOwner()->getManager()->getWorldOrigin().toLocal( float3::lerp( _from, _to, alpha ) ) );
     }
 } // namespace sw

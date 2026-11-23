@@ -20,6 +20,7 @@
 
 #include "Engine/Asset/Cache/SharedAssetCache.h"
 #include "Engine/Content/AssetTypeRegistry.h"
+#include "Engine/Object/GameObject/WorldOrigin.h"
 #include "Engine/Reflection/ReflectionMacros.h"
 
 #include "GameFramework/GameFrameworkExports.h"
@@ -499,11 +500,12 @@ namespace sw
         /** @brief 화면 비율을 모를 때(창이 없는 테스트, 서버) 쓰는 가로/세로 값입니다. */
         static constexpr float32 kDefaultAspectRatio = 16.0f / 9.0f;
 
-        float3  _focus{};
-        float32 _yaw{ 0.0f };
-        float32 _pitch{ 0.0f };
-        float32 _groupRadius{ 0.0f };                ///< 0 이면 대상 하나
-        float32 _aspectRatio{ kDefaultAspectRatio }; ///< 카메라 화면의 가로/세로
+        float3      _focus{};
+        float32     _yaw{ 0.0f };
+        float32     _pitch{ 0.0f };
+        float32     _groupRadius{ 0.0f };                ///< 0 이면 대상 하나
+        float32     _aspectRatio{ kDefaultAspectRatio }; ///< 카메라 화면의 가로/세로
+        WorldOrigin _worldOrigin{};                      ///< 프리셋이 적은 월드 자리(고정 자리 · 보는 점 · 경계 · 레일 — 절대)를 지금 씬 자리로 옮긴다
     };
 
     /**

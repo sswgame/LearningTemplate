@@ -1602,6 +1602,16 @@ namespace sw
         _objectManager->setWorldOrigin( target );
         _objectManager->flushSceneTransforms();
         _objectManager->notifyWorldOriginShifted( delta );
+        for ( const GameObject* pObject : _objectManager->getAllGameObjects( SceneIterationKey{} ) )
+        {
+            if ( pObject == nullptr || pObject->isPendingDestroy() )
+                continue;
+            for ( Component* pComponent : pObject->getComponents() )
+            {
+                if ( pComponent != nullptr && pComponent->isPendingDestroy() == false )
+                    pComponent->onWorldOriginShifted( delta );
+            }
+        }
         SW_LOG_INFO_ID( "Scene.WorldOriginShifted", "Scene '%#' moved its world origin to (%#, %#) - %# root objects moved", _name.c_str(), target._x, target._z, static_cast<uint32>( listRoot.size() ) );
         return true;
     }

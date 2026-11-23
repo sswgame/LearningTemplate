@@ -67,6 +67,8 @@ namespace sw
         void onUnregister( GameObjectManager& manager ) override;
         void onBeginPlay() override;
         void onTick( TickContext& context ) override;
+        /** @brief 초점 · 블렌드 스택 · 충격 · 포토 모드의 자리를 옮깁니다 — 화면이 옛 원점에서 감쇠로 끌려오지 않게. */
+        void onWorldOriginShifted( const float3& delta ) override;
 
         /** @brief 프리셋을 카탈로그의 블렌드로 켭니다. 없는 id 면 false 입니다. */
         [[nodiscard]] bool activatePreset( const hashed_string& id );

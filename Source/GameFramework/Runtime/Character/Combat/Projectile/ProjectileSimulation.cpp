@@ -273,6 +273,15 @@ namespace sw
         return _listEventScratch;
     }
 
+    void ProjectileSimulation::applyWorldOffset( const float3& delta )
+    {
+        for ( ProjectileState& projectile : _listProjectile )
+        {
+            projectile._position += delta;
+            projectile._previousPosition += delta;
+        }
+    }
+
     void ProjectileSimulation::removeDead()
     {
         size_t writeIndex = 0;

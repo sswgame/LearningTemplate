@@ -6,6 +6,7 @@
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
 #include "Engine/Object/GameObject/Tick/TickContext.h"
+#include "Engine/Object/GameObject/WorldOrigin.h"
 
 #include "GameFramework/Runtime/Character/Control/ControlSystem.h"
 
@@ -17,8 +18,8 @@ namespace sw
         , _tickSeconds{ constant::time::kDefaultFixedStepSeconds }
         , _bPingPong{ true }
         , _startPosition{}
+        , _bStarted{ false }
         , _boundTickSource{}
-        , _bStarted{ SW_FALSE }
         , _bWarnedNoTick{ false }
     {
     }
@@ -28,9 +29,18 @@ namespace sw
         Component::onBeginPlay();
         const GameObject*     pOwner = getOwner();
         const SceneComponent* pScene = pOwner != nullptr ? pOwner->getPrimarySceneComponent() : nullptr;
-        _startPosition               = pScene != nullptr ? pScene->getWorldPosition() : float3{};
-        _bStarted                    = pScene != nullptr;
+        if ( pScene != nullptr && _bStarted == false )
+        {
+            _startPosition = pOwner->getManager()->getWorldOrigin().toAbsolute( pScene->getWorldPosition() );
+            _bStarted      = true;
+        }
         registerSubTick( TickGroup::DuringPhysics, kApplySubTickID );
+    }
+
+    void InterpToMovementComponent::onEndPlay()
+    {
+        _bStarted = false;
+        Component::onEndPlay();
     }
 
     void InterpToMovementComponent::onSubTick( uint32 subTickID, TickContext& context )
@@ -74,7 +84,7 @@ namespace sw
         if ( pScene == nullptr || _bStarted == false )
             return;
         const float64 seconds = static_cast<float64>( tick ) * static_cast<float64>( _tickSeconds );
-        pScene->setWorldPosition( _startPosition + computeOffset( _listWaypoint, _segmentSeconds, _bPingPong, seconds ) );
+        pScene->setWorldPosition( pOwner->getManager()->getWorldOrigin().toLocal( _startPosition ) + computeOffset( _listWaypoint, _segmentSeconds, _bPingPong, seconds ) );
     }
 
     float3 InterpToMovementComponent::computeOffset( const vector<float3>& listWaypoint, float32 segmentSeconds, bool bPingPong, float64 seconds )
