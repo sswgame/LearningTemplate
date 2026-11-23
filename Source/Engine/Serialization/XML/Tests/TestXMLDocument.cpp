@@ -56,7 +56,8 @@ SW_TEST_CASE( XMLDocumentTest, ElementTextKeepsEdgeSpaces )
     sw::string       multiLine = "first\n<tag a=\"1\" b=\"";
     multiLine.append( longTagLine );
     multiLine.append( "\">\n" );
-    const sw::string arrText[] = { "  lead", "tail \t", " ", "\n", "plain", "a <b> & \"c\" ", "ends ]]> here", multiLine };
+    // 결함: `\r` 은 어느 글에서도 읽을 때 `\n` 이 되고, 양 끝에 공백이 있고 `]]>` 가 든 글은 공백을 잃었다.
+    const sw::string arrText[] = { "  lead", "tail \t", " ", "\n", "plain", "a <b> & \"c\" ", "ends ]]> here", multiLine, " both ]]> ends ", "]]>", "a\r\nb", "tail\r", "\r", " \r\n", " a]]\r>b " };
 
     sw::XMLDocument   document;
     const sw::XMLNode root = document.appendRoot( "Root" );
@@ -79,6 +80,18 @@ SW_TEST_CASE( XMLDocumentTest, ElementTextKeepsEdgeSpaces )
     const sw::XMLNode first = reread.getRoot( "Root" ).findChild( "item" );
     first.setValue( "short" ); // CDATA 였던 글을 바꿔도 하나다
     SW_EXPECT_EQUAL( sw::string( "short" ), sw::string( first.getText() ) );
+
+    // 결함: CDATA 였던 원소에 `]]>` 가 든 글을 쓰면 CDATA 가 둘로 나뉘어 저장되고 읽기는 앞의 것만 돌려주었다.
+    const sw::XMLNode second = first.findNextSibling( "item" );
+    second.setValue( "was ]]> raw" );
+    SW_EXPECT_EQUAL( sw::string( "was ]]> raw" ), sw::string( second.getText() ) );
+    first.setValue( " raw" );
+    first.setValue( first.getText() ); // 제 글을 다시 쓴다
+    sw::XMLDocument rewritten;
+    SW_REQUIRE_TRUE( rewritten.parse( reread.saveToString() ) );
+    const sw::XMLNode rewrittenFirst = rewritten.getRoot( "Root" ).findChild( "item" );
+    SW_EXPECT_EQUAL( sw::string( " raw" ), sw::string( rewrittenFirst.getText() ) );
+    SW_EXPECT_EQUAL( sw::string( "was ]]> raw" ), sw::string( rewrittenFirst.findNextSibling( "item" ).getText() ) );
 }
 
 /**

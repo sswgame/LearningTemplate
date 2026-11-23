@@ -23,30 +23,138 @@ namespace sw
         inline constexpr string_view kRawTextBegin = "<![CDATA[";
         inline constexpr string_view kRawTextEnd   = "]]>";
 
+        inline constexpr string_view kCommentBegin          = "<!--";
+        inline constexpr string_view kCommentEnd            = "-->";
+        inline constexpr string_view kEscapedCarriageReturn = "&#13;";
+        inline constexpr string_view kNumericReference      = "&#";
+
+        /** @brief 읽기가 글의 양 끝에서 다듬는 글자입니다. `\r` 은 들지 않는다 — 글자 참조(`&#13;`)로만 저장되므로 읽은 글에 있으면 들여쓰기가 아니라 값이다. */
+        bool isTrimmedSpace( utf8 character )
+        {
+            return character == ' ' || character == '\t' || character == '\n';
+        }
+
+        bool isTextNode( const pugi::xml_node& node )
+        {
+            return node.type() == pugi::node_pcdata || node.type() == pugi::node_cdata;
+        }
+
         /**
          * @brief 원소의 글을 씁니다. 양 끝에 공백이 있는 글은 CDATA 로 씁니다.
-         * @details 읽기는 글의 양 끝 공백을 다듬는다(`parse_trim_pcdata` — 보기 좋게 들여 쓴 글을 값으로 읽지 않게). 그래서 값에 든 공백은 다듬지 않는 CDATA 에만 남는다.
-         *          shortcut: `]]>` 가 든 글은 CDATA 하나에 담지 못해 양 끝 공백을 잃는다, 그런 글을 원소에 쓰는 형식이 생기면 나눠 담고 읽기가 잇는다.
+         * @details 읽기는 글의 양 끝 공백을 다듬는다(보기 좋게 들여 쓴 글을 값으로 읽지 않게). 그래서 값에 든 공백은 다듬지 않는 CDATA 에만 남는다.
+         *          CDATA 에 담지 못하는 두 글은 저장이 나눠 담고(`]]>` 는 pugixml 이, `\r` 은 `escapeCarriageReturns` 가) 읽기가 잇는다(`joinElementText`).
          */
         void setElementText( pugi::xml_node node, const utf8* pText )
         {
             const string_view text{ pText };
-            const auto        isSpace = []( utf8 character )
-            { return character == ' ' || character == '\t' || character == '\n' || character == '\r'; };
-            const bool bEdgeSpace = text.empty() == false && ( isSpace( text.front() ) || isSpace( text.back() ) );
-            if ( bEdgeSpace == false || text.find( kRawTextEnd ) != string_view::npos )
+            const bool        bEdgeSpace = text.empty() == false && ( isTrimmedSpace( text.front() ) || isTrimmedSpace( text.back() ) );
+            pugi::xml_node    oldText    = node.first_child();
+            while ( oldText.empty() == false && isTextNode( oldText ) == false )
             {
-                node.text().set( pText );
-                return;
+                oldText = oldText.next_sibling();
             }
-            for ( pugi::xml_node child = node.first_child(); child.empty() == false; )
+            const pugi::xml_node_type type    = bEdgeSpace ? pugi::node_cdata : pugi::node_pcdata;
+            pugi::xml_node            written = oldText.empty() ? node.append_child( type ) : node.insert_child_before( type, oldText );
+            (void)written.set_value( pText ); // 옛 글을 지우기 전에 쓴다 — `pText` 가 옛 글을 가리킬 수 있다(`setValue( getText() )`)
+            while ( oldText.empty() == false )
             {
-                const pugi::xml_node next = child.next_sibling();
-                if ( child.type() == pugi::node_pcdata || child.type() == pugi::node_cdata )
+                const pugi::xml_node next = oldText.next_sibling();
+                if ( isTextNode( oldText ) )
+                    (void)node.remove_child( oldText );
+                oldText = next;
+            }
+        }
+
+        /**
+         * @brief 저장이 나눠 담은 글을 원소마다 하나로 되돌립니다. @p bTrim 이면 양 끝 공백도 다듬습니다(pugixml 이 다듬지 않고 읽었을 때).
+         * @details 글자 참조를 푼 뒤에 다듬는 pugixml 의 다듬기는 값에 든 `&#13;` 까지 지운다. 줄 끝의 `\r` 은 읽을 때 `\n` 이 되므로 남은 `\r` 은 모두 값이다.
+         */
+        void joinElementText( const pugi::xml_node& root, bool bTrim )
+        {
+            vector<pugi::xml_node> listPending{ root };
+            while ( listPending.empty() == false )
+            {
+                pugi::xml_node node = listPending.back();
+                listPending.pop_back();
+                for ( pugi::xml_node child = node.first_child(); child.empty() == false; child = child.next_sibling() )
+                {
+                    if ( child.type() == pugi::node_element )
+                        listPending.push_back( child );
+                    if ( bTrim == false || child.type() != pugi::node_pcdata )
+                        continue;
+                    string_view trimmed{ child.value() };
+                    while ( trimmed.empty() == false && isTrimmedSpace( trimmed.front() ) )
+                    {
+                        trimmed.remove_prefix( 1 );
+                    }
+                    while ( trimmed.empty() == false && isTrimmedSpace( trimmed.back() ) )
+                    {
+                        trimmed.remove_suffix( 1 );
+                    }
+                    const string text{ trimmed };
+                    (void)child.set_value( text.c_str() );
+                }
+                for ( pugi::xml_node child = node.first_child(); child.empty() == false; child = child.next_sibling() )
+                {
+                    // 저장이 나눈 조각에는 CDATA 가 있다. 주석이 가른 글(PCDATA 둘)은 잇지 않는다
+                    const pugi::xml_node next    = child.next_sibling();
+                    const bool           bPieces = isTextNode( child ) && isTextNode( next ) && ( child.type() == pugi::node_cdata || next.type() == pugi::node_cdata );
+                    if ( bPieces == false )
+                        continue;
+                    string joined{ child.value() };
+                    for ( pugi::xml_node piece = next; isTextNode( piece ); piece = child.next_sibling() )
+                    {
+                        joined.append( piece.value() );
+                        (void)node.remove_child( piece );
+                    }
+                    pugi::xml_node written = node.insert_child_before( pugi::node_cdata, child );
+                    (void)written.set_value( joined.c_str() );
                     (void)node.remove_child( child );
-                child = next;
+                    child = written;
+                }
             }
-            (void)node.prepend_child( pugi::node_cdata ).set_value( pText );
+        }
+
+        /**
+         * @brief 원소 글의 `\r` 을 글자 참조로 바꿉니다. CDATA 안이면 CDATA 를 끊고 참조를 넣습니다.
+         * @details XML 읽기는 글의 `\r\n` · `\r` 을 `\n` 으로 바꾸므로 값에 든 `\r` 은 참조로만 남는다. pugixml 은 속성에서만 참조로 쓴다.
+         */
+        string escapeCarriageReturns( const string& xml )
+        {
+            if ( xml.find( '\r' ) == string::npos )
+                return xml;
+            string result;
+            result.reserve( xml.size() + xml.size() / 4 );
+            bool   bInRawText = false;
+            size_t position   = 0;
+            while ( position < xml.size() )
+            {
+                const string_view rest  = string_view{ xml }.substr( position );
+                const string_view bound = bInRawText ? kRawTextEnd : kRawTextBegin;
+                string_view       token = rest.substr( 0, 1 );
+                if ( StringUtil::startsWith( rest, bound ) )
+                {
+                    token      = bound;
+                    bInRawText = !bInRawText;
+                }
+                else if ( bInRawText == false && StringUtil::startsWith( rest, kCommentBegin ) )
+                {
+                    const size_t commentEnd = rest.find( kCommentEnd ); // 주석 속 `<![CDATA[` 는 글이 아니다
+                    token                   = commentEnd == string_view::npos ? rest : rest.substr( 0, commentEnd );
+                }
+                position += token.size();
+                if ( token != "\r" )
+                {
+                    result.append( token );
+                    continue;
+                }
+                if ( bInRawText )
+                    result.append( kRawTextEnd );
+                result.append( kEscapedCarriageReturn );
+                if ( bInRawText )
+                    result.append( kRawTextBegin );
+            }
+            return result;
         }
 
         /// @brief 이 길이를 넘는 요소 줄만 속성 단위로 접습니다.
@@ -132,9 +240,13 @@ namespace sw
                 // 접을 대상: 충분히 길고, 여는 태그이며, 속성이 둘 이상인 줄.
                 const bool bOpenTag = bInRawText == false && ( indentLen + 1 < line.size() ) && line[indentLen] == '<' &&
                                       line[indentLen + 1] != '/' && line[indentLen + 1] != '!' && line[indentLen + 1] != '?';
-                const size_t rawBegin = bInRawText ? 0 : line.find( kRawTextBegin );
-                if ( rawBegin != string_view::npos )
-                    bInRawText = line.find( kRawTextEnd, rawBegin ) == string_view::npos;
+                size_t boundPosition = line.find( bInRawText ? kRawTextEnd : kRawTextBegin );
+                while ( boundPosition != string_view::npos ) // 나눠 담은 글은 한 줄에 CDATA 가 여럿이다
+                {
+                    boundPosition += bInRawText ? kRawTextEnd.size() : kRawTextBegin.size();
+                    bInRawText    = !bInRawText;
+                    boundPosition = line.find( bInRawText ? kRawTextEnd : kRawTextBegin, boundPosition );
+                }
                 const size_t firstSpace = line.find( ' ', indentLen );
                 const size_t tagEnd     = bOpenTag ? findStartTagEnd( line, indentLen ) : string_view::npos;
 
@@ -628,7 +740,7 @@ namespace sw
             return {};
         XMLStringWriter writer;
         pNode.print( writer, "\t", kXMLSaveFormat );
-        return wrapLongElementLines( writer._result );
+        return wrapLongElementLines( escapeCarriageReturns( writer._result ) );
     }
 
     XMLNode XMLNode::appendClone( XMLNode src ) const
@@ -710,10 +822,11 @@ namespace sw
             return false;
         }
 
-        const pugi::xml_parse_result result = _impl->doc.load_buffer(
+        const bool                   bNumericReference = xmlText.find( kNumericReference ) != string_view::npos; // 참조로 저장한 `\r` 이 있을 수 있다 — 다듬기를 직접 한다
+        const pugi::xml_parse_result result            = _impl->doc.load_buffer(
             xmlText.data(),
             xmlText.size(),
-            pugi::parse_default | pugi::parse_trim_pcdata | ( bKeepComments ? pugi::parse_comments : 0u ) );
+            pugi::parse_default | ( bNumericReference ? 0u : pugi::parse_trim_pcdata ) | ( bKeepComments ? pugi::parse_comments : 0u ) );
 
         if ( result.status != pugi::status_ok )
         {
@@ -750,6 +863,8 @@ namespace sw
             _impl->doc.reset();
             return false;
         }
+        if ( bNumericReference || xmlText.find( kRawTextBegin ) != string_view::npos )
+            joinElementText( _impl->doc, bNumericReference );
         return true;
     }
 
@@ -895,7 +1010,7 @@ namespace sw
             return "";
         XMLStringWriter writer;
         _impl->doc.save( writer, "\t", kXMLSaveFormat );
-        return wrapLongElementLines( writer._result );
+        return wrapLongElementLines( escapeCarriageReturns( writer._result ) );
     }
 
     bool XMLDocument::saveCompleteToFile( string_view absPath ) const
