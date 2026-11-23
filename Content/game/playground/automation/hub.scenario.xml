@@ -8,8 +8,8 @@
      minigame.leave 가 하위 레벨을 빼고 끈다. 안에 머물러도 다시 들어가지 않는다.
   ③ 씬 전환: ArcadeGate 에 들어가면 마을을 돌아올 자리로 찍고 minigames/kitdemo_actioncombat 의 맵으로 바꾼다. minigame.leave 가 마을 맵을 열고 찍은 마을을 복원한다 —
      옮겨 둔 Marker · 입구 안의 플레이어 · 입구의 발동 수가 그대로이고, 복원된 자리(입구 안)에서 다시 들어가지 않는다(_spawnInside Ignore).
-  ④ 결과 값 → 어빌리티 이펙트: 마을에서 넘어져(ability.apply GE_HubStumble) 체력 50 인 채 들어가고, minigame.leave win heal=30 haste=1 로 나온다 —
-     복원이 체력 50 으로 되감은 뒤 플레이어의 MinigameRewardComponent 가 표대로 회복(+30) · 버프(State.Hasted)를 건다(미니게임은 플레이어를 직접 고치지 않는다).
+  ④ 결과 값 → 어빌리티 이펙트: 마을에서 넘어져(ability.apply GE_HubStumble) 체력 50 인 채 들어가고, minigame.leave win heal=30 haste=1 money=15 honor=10 로 나온다 —
+     복원이 체력 50 · 명예 25 · 돈 20 으로 되감은 뒤 플레이어의 MinigameRewardComponent 가 표대로 회복(+30) · 버프(State.Hasted) · 돈(+15) · 명예(+10)를 준다(미니게임은 플레이어를 직접 고치지 않는다).
   판정은 감시 값이다(사진 없음): Minigame.Active · Minigame.RestoreCount · Minigame.LeakCount(범위 해제 검사 — 남은 것이 있으면 GameFeatureScope.Leaked* 오류도 남는다),
   Scene.SubLevelCount · Scene.LoadedSubLevelCount, Object.X · Object.Z, 발동 수 Object.Property MinigameTriggerComponent._fireCount, Minigame.LastResult · Ability.Attribute · Ability.HasTag.
   실행: App -scenario=game/playground/automation/hub.scenario.xml -unattended (체인: ctest -R Scenario.playground)
@@ -57,7 +57,7 @@
 	<WaitUntil watch="Minigame.Active" is="kitdemo_actioncombat" timeoutWallSeconds="60"/>
 	<ExpectActiveScene path="game/playground/maps/kitdemo_actioncombat.scene.xml"/>
 	<WaitUntil watch="Assets.Pending" equals="0" timeoutWallSeconds="60"/>
-	<DevCommand line="minigame.leave win heal=30 haste=1"/>
+	<DevCommand line="minigame.leave win heal=30 haste=1 money=15 honor=10 round=1"/>
 	<WaitUntil watch="Minigame.RestoreCount" equals="1" timeoutWallSeconds="60"/>
 	<ExpectActiveScene path="game/playground/maps/hub.scene.xml"/>
 	<Expect watch="Minigame.Active" is="none"/>
@@ -71,8 +71,9 @@
 	<Expect watch="Object.Property" target="ArcadeGate" key="MinigameTriggerComponent._fireCount" equals="1"/>
 	<Expect watch="Minigame.LeakCount" equals="0"/>
 	<ExpectLog id="MinigameFlow.Restored" count="1"/>
-	<Expect watch="Western.Honor" target="Ranch" equals="25"/> <!-- 서부극 판(명예 · 지갑)도 찍은 대로 돌아왔다 -->
-	<Expect watch="Western.Money" target="Ranch" equals="20"/>
+	<!-- 서부극 판(명예 25 · 지갑 20)도 찍은 대로 돌아왔고, 그 위에 결과 값(경제 · 진행)이 얹혔다 -->
+	<Expect watch="Western.Honor" target="Ranch" equals="35"/>
+	<Expect watch="Western.Money" target="Ranch" equals="35"/>
 
 	<!-- ④ 결과 값은 복원 뒤 플레이어의 어빌리티 이펙트로 걸렸다 -->
 	<Expect watch="Minigame.LastResult" is="win"/>
