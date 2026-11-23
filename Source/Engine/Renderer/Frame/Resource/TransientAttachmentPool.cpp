@@ -7,6 +7,7 @@
 #include "Engine/Graphics/RHI/IRHIDevice.h"
 #include "Engine/Graphics/RHI/IRHIResourceFactory.h"
 #include "Engine/Profiling/FrameProfiler.h"
+#include "Engine/Renderer/Frame/Resource/TransientTextureLeases.h"
 
 namespace sw
 {
@@ -20,7 +21,15 @@ namespace sw
         , _outputWidth{ 0 }
         , _outputHeight{ 0 }
         , _heap{ 0 }
+        , _pLeases{ nullptr }
     {
+    }
+
+    void TransientAttachmentPool::setLeases( TransientTextureLeases* pLeases )
+    {
+        SW_ASSERT( _mapAttachment.empty() || _pLeases == pLeases );
+        if ( _mapAttachment.empty() )
+            _pLeases = pLeases;
     }
 
     RHITextureDesc TransientAttachmentPool::makeTextureDesc( RHIFormat format, bool bDepth, const RHIAttachmentOps& ops, uint32 width, uint32 height, bool bUnorderedAccess )
@@ -75,10 +84,10 @@ namespace sw
     }
 
     bool TransientAttachmentPool::allocate( IRHIDevice* pDevice, const hashed_string& name, RHIFormat format, bool bDepth, const RHIAttachmentOps& ops, RenderResolutionSpace space,
-                                            uint32 resolutionDivisor, bool bUnorderedAccess )
+                                            uint32 resolutionDivisor, bool bUnorderedAccess, bool bLeased )
     {
         const bool bAllocated = allocateSized( pDevice, name, format, bDepth, ops, computeScaledExtent( getExtent( space, true ), resolutionDivisor ),
-                                               computeScaledExtent( getExtent( space, false ), resolutionDivisor ), bUnorderedAccess );
+                                               computeScaledExtent( getExtent( space, false ), resolutionDivisor ), bUnorderedAccess, bLeased );
         if ( bAllocated == false )
             return false;
         Attachment& attachment = _mapAttachment.find( name )->second;
@@ -88,14 +97,28 @@ namespace sw
     }
 
     bool TransientAttachmentPool::allocateSized( IRHIDevice* pDevice, const hashed_string& name, RHIFormat format, bool bDepth, const RHIAttachmentOps& ops, uint32 width,
-                                                 uint32 height, bool bUnorderedAccess )
+                                                 uint32 height, bool bUnorderedAccess, bool bLeased )
     {
         if ( pDevice == nullptr || pDevice->getResourceFactory() == nullptr )
             return false;
         if ( _mapAttachment.find( name ) != _mapAttachment.end() )
             return true;
 
-        const RHITextureDesc   desc   = makeTextureDesc( format, bDepth, ops, width, height, bUnorderedAccess );
+        const RHITextureDesc desc = makeTextureDesc( format, bDepth, ops, width, height, bUnorderedAccess );
+        if ( bLeased && _pLeases != nullptr )
+        {
+            const uint32 leaseIndex = _pLeases->lease( *pDevice, desc, this, name.c_str() );
+            if ( leaseIndex == constant::invalid_index::kUint32 )
+            {
+                SW_LOG_WARNING_ID( "TransientAttachmentPool.FailedAllocateTransient", "Failed to allocate transient '%#'", name.c_str() );
+                return false;
+            }
+            const RHITextureSlot& leased = _pLeases->get( leaseIndex );
+            Attachment            attachment{ leased._texture, leased._srv, leased._uav, desc._width, desc._height, format, ops };
+            attachment._leaseIndex = leaseIndex;
+            _mapAttachment.emplace( name, attachment );
+            return true;
+        }
         const RHITextureHandle handle = pDevice->getResourceFactory()->createTexture2D( desc );
         if ( handle == 0 )
         {
@@ -141,16 +164,8 @@ namespace sw
             if ( other._aliasOwner == name )
                 return false;
         }
-        // 앞 프레임들이 아직 GPU 에서 이 타깃을 읽을 수 있다 — 백엔드의 해제 큐가 그 프레임들이 끝난 뒤에 지운다(release 와 같은 순서: SRV 먼저).
-        if ( pDevice != nullptr && pDevice->getResourceFactory() != nullptr )
-        {
-            if ( it->second._uav != kInvalidDescriptorIndex )
-                pDevice->getResourceFactory()->unregisterBindlessUAV( it->second._uav );
-            if ( it->second._srv != kInvalidDescriptorIndex )
-                pDevice->getResourceFactory()->unregisterBindlessTexture( it->second._srv );
-            if ( it->second._texture != 0 )
-                pDevice->releaseHandle( it->second._texture );
-        }
+        // 앞 프레임들이 아직 GPU 에서 이 타깃을 읽을 수 있다 — 백엔드의 해제 큐가 그 프레임들이 끝난 뒤에 지운다(release 와 같은 길).
+        releaseAttachment( pDevice, it->second );
         _mapAttachment.erase( it );
         return true;
     }
@@ -216,17 +231,8 @@ namespace sw
         {
             for ( auto& [name, attachment] : _mapAttachment )
             {
-                // 별칭은 주인의 텍스처 · SRV 를 빌렸다 — 주인이 한 번만 놓는다.
-                if ( attachment._aliasOwner.empty() == false )
-                    continue;
-                // 텍스처 SRV 인덱스다. 주의: 버퍼용 해제로 넘기면 버퍼 프리리스트가 오염되고, 그 자리를 다른 구조버퍼가
-                // 차지해 살아 있는 패스 CB 슬롯이 STORAGE 세트로 바뀐다(Vulkan 검증 에러).
-                if ( attachment._uav != kInvalidDescriptorIndex )
-                    pDevice->getResourceFactory()->unregisterBindlessUAV( attachment._uav );
-                if ( attachment._srv != kInvalidDescriptorIndex )
-                    pDevice->getResourceFactory()->unregisterBindlessTexture( attachment._srv );
-                if ( attachment._texture != 0 )
-                    pDevice->releaseHandle( attachment._texture );
+                releaseAttachment( pDevice, attachment );
+                attachment._leaseIndex = constant::invalid_index::kUint32; // 돌려줬다 — 아래 clear 가 다시 돌려주지 않는다
             }
             // 놓인 텍스처가 각자 힙을 붙든다(미룬 파괴가 끝날 때까지) — 핸들은 텍스처 뒤에 바로 놓아도 된다.
             if ( _heap != 0 )
@@ -235,8 +241,36 @@ namespace sw
         clear();
     }
 
+    void TransientAttachmentPool::releaseAttachment( IRHIDevice* pDevice, const Attachment& attachment )
+    {
+        // 별칭은 주인의 텍스처 · SRV 를 빌렸다 — 주인이 한 번만 놓는다.
+        if ( attachment._aliasOwner.empty() == false )
+            return;
+        if ( attachment._leaseIndex != constant::invalid_index::kUint32 )
+        {
+            _pLeases->release( pDevice, attachment._leaseIndex, this );
+            return;
+        }
+        if ( pDevice == nullptr || pDevice->getResourceFactory() == nullptr )
+            return;
+        // 텍스처 SRV 인덱스다. 주의: 버퍼용 해제로 넘기면 버퍼 프리리스트가 오염되고, 그 자리를 다른 구조버퍼가
+        // 차지해 살아 있는 패스 CB 슬롯이 STORAGE 세트로 바뀐다(Vulkan 검증 에러).
+        if ( attachment._uav != kInvalidDescriptorIndex )
+            pDevice->getResourceFactory()->unregisterBindlessUAV( attachment._uav );
+        if ( attachment._srv != kInvalidDescriptorIndex )
+            pDevice->getResourceFactory()->unregisterBindlessTexture( attachment._srv );
+        if ( attachment._texture != 0 )
+            pDevice->releaseHandle( attachment._texture );
+    }
+
     void TransientAttachmentPool::clear()
     {
+        // 디바이스 없이 잊는 길이다 — 빌린 텍스처도 풀에서 잊어야 다음 디바이스에서 옛 핸들을 빌려 주지 않는다.
+        for ( const auto& [name, attachment] : _mapAttachment )
+        {
+            if ( attachment._aliasOwner.empty() && attachment._leaseIndex != constant::invalid_index::kUint32 )
+                _pLeases->release( nullptr, attachment._leaseIndex, this );
+        }
         _mapAttachment.clear();
         _mapForward.clear();
         _width        = 0;

@@ -221,11 +221,12 @@ namespace sw
         , _frameSettings{ frameSettings }
         , _autoExposure{ autoExposure }
         , _upscale{ upscale }
+        , _transientLeases{}
         , _listScratchNeededAttachment{}
     {
     }
 
-    bool FrameViewResources::updateViewTransients( FrameViewTarget& view, uint32 width, uint32 height, const RenderGraphAliasPlan& aliasPlan, uint32 aliasGeneration )
+    bool FrameViewResources::updateViewTransients( FrameViewTarget& view, uint32 width, uint32 height, const RenderGraphAliasPlan& aliasPlan, uint32 aliasGeneration, bool bMainView )
     {
         TransientAttachmentPool& pool             = view._transientPool;
         const uint32             shadowResolution = _frameSettings._shadowMapResolution; // 게임 스레드가 뜬 사본(텍스처를 만들 수 있는 범위로 잘랐다) — 그림자 행렬의 텍셀 스냅과 같은 값
@@ -239,6 +240,7 @@ namespace sw
             return false;
 
         releaseViewTransients( view );
+        pool.setLeases( bMainView ? nullptr : &_transientLeases );
         pool.setSize( renderWidth, renderHeight, width, height );
         view._shadowMapResolution      = shadowResolution;
         view._transientAliasGeneration = aliasGeneration;
@@ -264,10 +266,10 @@ namespace sw
             if ( aliasOwner.empty() == false && pool.allocateAlias( attachmentName, aliasOwner, attachment.getOps() ) )
                 continue;
             if ( bShadowAtlas )
-                (void)pool.allocateSized( _pDevice, hashed_string( attachment._name.c_str() ), format, bDepth, attachment.getOps(), shadowResolution, shadowResolution );
+                (void)pool.allocateSized( _pDevice, hashed_string( attachment._name.c_str() ), format, bDepth, attachment.getOps(), shadowResolution, shadowResolution, false, true );
             else
                 pool.allocate( _pDevice, hashed_string( attachment._name.c_str() ), format, bDepth, attachment.getOps(), attachment._resolutionSpace, attachment._resolutionDivisor,
-                               FrameRendererUtil::isComputeOutputOrInput( _pipeline.getGraphPass(), attachment._name ) );
+                               FrameRendererUtil::isComputeOutputOrInput( _pipeline.getGraphPass(), attachment._name ), attachmentName != attachmentNames()._sceneDepth ); // 장면 깊이는 다음 프레임의 깊이 기록이 읽는다
         }
 
         // 패스가 쓰는 첨부는 모두 위에서 만들었다 — 파이프라인 로드가 선언하지 않은 입출력을 거절한다(`RenderPipelineAsset::validate`).
@@ -539,7 +541,7 @@ namespace sw
                     continue;
                 const RHIFormat format = attachment._format;
                 pool.allocate( _pDevice, hashed_string( attachment._name.c_str() ), format, FrameRendererUtil::isDepthFormat( format ), attachment.getOps(), attachment._resolutionSpace,
-                               attachment._resolutionDivisor, FrameRendererUtil::isComputeOutputOrInput( _pipeline.getGraphPass(), attachment._name ) );
+                               attachment._resolutionDivisor, FrameRendererUtil::isComputeOutputOrInput( _pipeline.getGraphPass(), attachment._name ), name != attachmentNames()._sceneDepth );
                 bAllocated = true;
             }
         };

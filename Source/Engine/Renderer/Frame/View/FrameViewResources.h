@@ -11,6 +11,7 @@
 #include "Core/Foundation/Types.h"
 #include "Core/Math/MatrixMath.h"
 
+#include "Engine/Renderer/Frame/Resource/TransientTextureLeases.h"
 #include "Engine/Renderer/Graph/RenderGraphAliasPlan.h"
 
 namespace sw
@@ -57,9 +58,10 @@ namespace sw
 
         /**
          * @brief 뷰 하나의 트랜지언트를 이 크기(출력 공간 — 렌더 공간은 시간 업스케일 배율로 줄인다)로 맞춥니다. 크기 · 그림자 품질이 같으면 그대로 두고, 다시 만들었으면 true 입니다.
+         * @param bMainView 주 시점이면 true 입니다 — 첨부를 다른 뷰와 나누지 않는다(스크린샷 · 렌더 타깃 목록이 그 텍스처를 본다). 추가 뷰는 서로 나눈다(`TransientTextureLeases`).
          * @details 다시 만들면 TAA · 깊이 히스토리, 가림 타일, 자동 노출 기록도 새로 만든다. 새것이라 시간 누적 기록은 첫 프레임에 버린다(`_bHasHistory` 를 내린다).
          */
-        [[nodiscard]] bool updateViewTransients( FrameViewTarget& view, uint32 width, uint32 height, const RenderGraphAliasPlan& aliasPlan, uint32 aliasGeneration );
+        [[nodiscard]] bool updateViewTransients( FrameViewTarget& view, uint32 width, uint32 height, const RenderGraphAliasPlan& aliasPlan, uint32 aliasGeneration, bool bMainView );
         /**
          * @brief 시간 업스케일의 렌더 해상도 배율입니다(EngineConfig `_render._temporalUpscaleRenderScale`). 출력 공간 첨부를 선언하지 않은 파이프라인은 늘 1 입니다.
          * @details 값이 없거나 범위 밖이면 멈춘다(폴백 없음). @p width · @p height(출력 공간)에 곱해 렌더 공간 크기가 된다(`TransientAttachmentPool::computeRenderExtent`).
@@ -103,6 +105,7 @@ namespace sw
         const RenderFrameSettings& _frameSettings; ///< 렌더러의 프레임 설정 사본(`FrameRenderState::_settings`) — 후처리 품질 · 모션 블러 · 그림자 맵 크기
         FrameAutoExposure&         _autoExposure;
         FrameUpscale&              _upscale;
+        TransientTextureLeases     _transientLeases;             ///< 추가 뷰들이 나눠 쓰는 첨부 텍스처
         vector<uint8>              _listScratchNeededAttachment; ///< 패스를 고를 때 선언한 첨부 자리마다 "이번 프레임에 읽힌다"(뷰마다 다시 쓴다)
     };
 } // namespace sw

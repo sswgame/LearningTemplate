@@ -990,7 +990,7 @@ namespace sw
                                                                                          settings._resolutionScale, settings._upscaleZoom );
         const uint32              poolHeight = FrameRendererUtil::computeViewPoolExtent( static_cast<float32>( height ) * settings._screenRect._w,
                                                                                          settings._resolutionScale, settings._upscaleZoom );
-        if ( _viewResources.updateViewTransients( _state.getMainView(), poolWidth, poolHeight, _state._transientAliasPlan, _state._transientAliasGeneration ) )
+        if ( _viewResources.updateViewTransients( _state.getMainView(), poolWidth, poolHeight, _state._transientAliasPlan, _state._transientAliasGeneration, true ) )
         {
             publishRenderTargets();
             reportRenderTargetMemory();
@@ -1380,7 +1380,7 @@ namespace sw
         const uint32  zoom   = view._outputKind == RenderViewOutputKind::ScreenRect ? view._settings._upscaleZoom : 0u;
         const uint32  width  = FrameRendererUtil::computeViewPoolExtent( static_cast<float32>( view._outputWidth ), scale, zoom );
         const uint32  height = FrameRendererUtil::computeViewPoolExtent( static_cast<float32>( view._outputHeight ), scale, zoom );
-        (void)_viewResources.updateViewTransients( view, width, height, _state._transientAliasPlan, _state._transientAliasGeneration );
+        (void)_viewResources.updateViewTransients( view, width, height, _state._transientAliasPlan, _state._transientAliasGeneration, false );
         view.updateViewRect( zoom > 0 ? 1.0f : view._settings._rectScale );
         // 기록을 버릴지는 컬링(가림 판정)이 기록 전에 보므로 그리기(renderExtraView)가 아니라 여기서 정한다.
         view.beginViewHistory();
