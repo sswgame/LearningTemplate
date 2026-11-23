@@ -34,11 +34,14 @@
  *            비낌만 쌓는 왜곡 버퍼(W10 Distortion)로는 다 나타낼 수 없다. 병합 지점: 맑은 유리의 비낌은 W10 왜곡 버퍼로 옮길 수 있다(같은 사본을 두 길로 읽지 않게).
  *          - 그물: 알파 투 커버리지가 RHI 에 없다 — 선 덮임을 픽셀 발자국으로 해석적으로 걸러(밉맵의 일) 피부 위 스타킹은 불투명 한 장으로 섞고, 오려 내는 레이스는 최소 폭을 받친다.
  *          - 털: 껍질(데이터만 — 같은 메시 여럿 + 인스턴스 값). 지느러미 · 카드 · 가닥(언리얼 Groom)은 메시 가공이나 전용 렌더가 든다.
- *          - 눈: 각막 굴절은 화면 공간이 아니라 구 위에서 시선을 굴절해 홍채 평면까지 따라간다(언리얼 Eye 예제의 EyeRefraction). 홍채 노멀은 메시 노멀 그대로다
- *            (shortcut: 오목한 홍채의 따로 노는 노멀이 없어 비스듬한 빛에서 홍채 음영이 얕다 — 클로즈업 눈이 중요해지면 홍채 노멀을 BRDF 에 둘째 노멀로 둔다).
+ *          - 눈: 각막 굴절은 화면 공간이 아니라 구 위에서 시선을 굴절해 홍채 평면까지 따라간다(언리얼 Eye 예제의 EyeRefraction). 홍채의 확산은 오목한 홍채 노멀로 잰다
+ *            (BRDF 의 둘째 노멀 — MATERIAL_LOBE_IRIS, 언리얼 Eye 의 Iris Normal). 각막 반사 · 코트는 메시 노멀이다.
  */
 #define SW_SHADING_MODEL_LAYERED
 #define MATERIAL_LOBE_COAT
+#if defined( MATERIAL_EYE )
+    #define MATERIAL_LOBE_IRIS
+#endif
 #include "lighting.hlsli"
 
 // appearance.material(라이브러리 뿌리)의 프로퍼티 순서 · 타입과 1:1 이다.
@@ -200,6 +203,8 @@ struct AppearanceSurface
     float  _filmIor;
     float  _filmWeight;
     float  _ior;
+    float3 _irisNormal; ///< 오목한 홍채의 노멀(눈 — 확산만)
+    float  _irisWeight; ///< 홍채 마스크(동공 밖). 눈이 아니면 0
     float3 _emissive;
     float3 _secondaryColor;
     float3 _layerColor;
@@ -334,6 +339,8 @@ static AppearanceSurface AppearanceSurface::make( PixelContext context )
     surface._filmIor           = material._filmIor;
     surface._filmWeight        = material._filmWeight;
     surface._ior               = material._ior;
+    surface._irisNormal        = surface._normal;
+    surface._irisWeight        = 0.0f;
     surface._emissive          = float3( 0.0f, 0.0f, 0.0f );
     surface._secondaryColor    = material._secondaryColor.rgb;
     surface._layerColor        = material._layerColor.rgb;
@@ -363,6 +370,7 @@ SurfaceBRDF AppearanceSurface::makeBRDF( float3 worldPosition )
     brdf.setAnisotropy( _tangent, _anisotropy );
     brdf.setThinFilm( _filmThickness, _filmIor, max( _ior, 1.0f ), _filmWeight );
     brdf.setStrand( _tangent, _strandShift, _roughness, _strandColor );
+    brdf.setIris( _irisNormal, _irisWeight );
     return brdf;
 }
 
@@ -379,8 +387,9 @@ uint AppearanceSurface::computeShadingModel()
 #if defined( MATERIAL_EYE )
 float4 AppearanceSurface::computeCustomData()
 {
-    // 홍채 마스크는 make 가 감쌈에 이미 곱했다(appearance_eye.hlsli) — a 는 0 이다.
-    return float4( _coatWeight, _coatRoughness, _subsurfaceWrap.r, 0.0f );
+    // 홍채 픽셀(8 비트 칸에서 0 이 아닌 마스크)은 산란 자리에 홍채 노멀을 싣는다 — 홍채는 산란하지 않는다(appearance_eye.hlsli).
+    const float4 iris = float4( SurfaceShading::packCoat( _coatWeight, _coatRoughness ), Octahedral::encode( _irisNormal ) * 0.5f + 0.5f, _irisWeight );
+    return _irisWeight > 0.5f / 255.0f ? iris : float4( _coatWeight, _coatRoughness, _subsurfaceWrap.r, 0.0f );
 }
 #elif defined( MATERIAL_LOBE_SUBSURFACE )
 float4 AppearanceSurface::computeCustomData()

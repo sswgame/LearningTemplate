@@ -18,7 +18,8 @@
 #ifndef SW_ENGINE_APPEARANCEEYE_HLSLI
 #define SW_ENGINE_APPEARANCEEYE_HLSLI
 
-static const float kEyePupilAlbedo = 0.01f; // 동공은 거의 빛을 돌려보내지 않는다(망막의 흡수)
+static const float kEyePupilAlbedo   = 0.01f; // 동공은 거의 빛을 돌려보내지 않는다(망막의 흡수)
+static const float kEyeIrisConcavity = 0.5f;  // 홍채 가장자리에서 홍채 면이 안쪽으로 기우는 기울기(오목한 얕은 그릇)
 
 struct AppearanceEye
 {
@@ -71,6 +72,10 @@ static void AppearanceEye::apply( inout AppearanceSurface surface, PixelContext 
     surface._albedo.rgb = lerp( surface._albedo.rgb, float3( kEyePupilAlbedo, kEyePupilAlbedo, kEyePupilAlbedo ), pupilMask );
     // 홍채는 산란하지 않는다(공막만) — 각막 쪽 감쌈을 끈다.
     surface._subsurfaceWrap *= 1.0f - irisMask;
+    // 오목한 홍채의 노멀 — 가장자리로 갈수록 축 쪽으로 기운다. 확산만 이 노멀로 잰다(각막 반사는 구의 노멀).
+    const float3 irisLocalNormal = normalize( float3( -iris * kEyeIrisConcavity, 1.0f ) );
+    surface._irisNormal          = axisX * irisLocalNormal.x + axisY * irisLocalNormal.y + axisZ * irisLocalNormal.z;
+    surface._irisWeight          = irisMask * ( 1.0f - pupilMask );
 
     // 아래 눈꺼풀의 눈물 띠 — 앞쪽 반구의 얇은 띠가 하이라이트를 잡는다.
     const float tearBand   = step( 0.0f, direction.z ) * ( 1.0f - smoothstep( 0.0f, 0.04f, abs( direction.y - material._tearLineHeight ) ) ) * saturate( material._wetMeniscus );

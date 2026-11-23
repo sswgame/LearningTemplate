@@ -13,7 +13,8 @@
  * | CLOTH             | 시엔 색 R         | 시엔 색 G         | 시엔 색 B         | 거칠기 · 무게 4 비트씩(SurfaceShading::packPair) |
  * | CLEAR_COAT        | 코트 무게         | 코트 거칠기       | —                 | —                    |
  * | HAIR              | W13 이 정한다(탄젠트 옥타헤드럴 · 옮김) — 병합 지점                                         |
- * | EYE               | 코트(각막 젖음)   | 코트 거칠기       | 공막 감쌈         | 홍채 마스크          |
+ * | EYE(공막, a = 0)  | 코트(각막 젖음)   | 코트 거칠기       | 공막 감쌈         | 0                    |
+ * | EYE(홍채, a > 0)  | 코트 무게 · 거칠기(packCoat) | 홍채 노멀 옥타 u | 홍채 노멀 옥타 v | 홍채 마스크   |
  * | THIN_TRANSLUCENT  | 투과 색 R         | 투과 색 G         | 투과 색 B         | 감쌈                 |
  * | ANISOTROPIC       | 탄젠트 옥타 u     | 탄젠트 옥타 v     | 비등방 (0..1 → -1..1) | 코트 무게 · 거칠기(packCoat) |
  * | SUBSURFACE_COAT   | 감쌈(밝은 채널)   | 감쌈 색조(packChroma) | 코트 무게     | 코트 거칠기(제곱근) · 투과 세기 4 비트씩 |
@@ -36,7 +37,7 @@
 #define SW_SHADING_MODEL_ID_CLOTH                 4  // 천 — Charlie 시엔
 #define SW_SHADING_MODEL_ID_CLEAR_COAT            5  // 코트 — 기름막 · 니스 · 젖음
 #define SW_SHADING_MODEL_ID_HAIR                  6  // 머리카락(W13)
-#define SW_SHADING_MODEL_ID_EYE                   7  // 눈 — 각막 젖음 + 공막 감쌈
+#define SW_SHADING_MODEL_ID_EYE                   7  // 눈 — 각막 젖음 + 공막 감쌈 · 홍채 노멀
 #define SW_SHADING_MODEL_ID_THIN_TRANSLUCENT      8  // 얇은 면 — 뒤에서 오는 빛
 #define SW_SHADING_MODEL_ID_ANISOTROPIC           9  // 비등방 GGX — 솔질 금속 · 비단
 #define SW_SHADING_MODEL_ID_SUBSURFACE_COAT       10 // 젖은 · 기름진 피부 — 피부 + 코트

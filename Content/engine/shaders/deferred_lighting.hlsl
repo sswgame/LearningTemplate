@@ -9,6 +9,7 @@
     #define MATERIAL_LOBE_SUBSURFACE
     #define MATERIAL_LOBE_TRANSMISSION
     #define MATERIAL_LOBE_ANISOTROPY
+    #define MATERIAL_LOBE_IRIS
 #elif SW_DEFERRED_TILE_CLASS == SW_DEFERRED_TILE_CLASS_SIMPLE
     #define SW_DEFERRED_LIGHTING_LOBES 0
 #else
@@ -50,8 +51,13 @@ void applyShadingModel( inout SurfaceBRDF brdf, uint shadingModel, float4 custom
     }
     else if ( shadingModel == SW_SHADING_MODEL_ID_EYE )
     {
-        brdf.setCoat( customData.r, customData.g );
-        brdf.setSubsurface( float3( customData.b, customData.b * 0.6f, customData.b * 0.5f ) * ( 1.0f - customData.a ) );
+        // 홍채 마스크(a)가 있는 픽셀은 산란 대신 홍채 노멀을 싣는다(shading_model_ids.hlsli 표).
+        const bool   bIris = customData.a > 0.0f;
+        const float2 coat  = bIris ? SurfaceShading::unpackCoat( customData.r ) : customData.rg;
+        const float  wrap  = bIris ? 0.0f : customData.b;
+        brdf.setCoat( coat.x, coat.y );
+        brdf.setSubsurface( float3( wrap, wrap * 0.6f, wrap * 0.5f ) );
+        brdf.setIris( bIris ? Octahedral::decode( customData.gb * 2.0f - 1.0f ) : brdf._normal, customData.a );
     }
     else if ( shadingModel == SW_SHADING_MODEL_ID_THIN_TRANSLUCENT )
     {
