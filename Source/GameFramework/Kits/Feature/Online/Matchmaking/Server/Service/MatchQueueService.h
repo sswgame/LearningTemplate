@@ -65,12 +65,11 @@ namespace sw
     /** @brief 대기열 상수입니다. 다른 모듈이 값으로 읽으므로 내보내는 클래스 밖에 둡니다. */
     struct MatchQueueLimit
     {
-        static constexpr int64  kLeaseTTLMs       = 10000;
-        static constexpr int64  kLeaseRenewMs     = 3000; ///< 임대를 연장하거나 잡아 보는 주기이다
-        static constexpr int64  kNoServerGiveUpMs = 30000;
-        static constexpr int64  kResultGraceMs    = 10000;
-        static constexpr int64  kRatingWaitMs     = 3000;          ///< 줄 서는 사람의 통계를 읽기를 기다리는 시간이다. 넘으면 RatingUnavailable 이다
-        static constexpr uint64 kLobbyMatchBit    = 0x80000000ull; ///< 로비 경기 id 의 아래쪽 32비트 중 첫 비트이다. 매처의 순번과 겹치지 않게 한다
+        static constexpr int64 kLeaseTTLMs       = 10000;
+        static constexpr int64 kLeaseRenewMs     = 3000; ///< 임대를 연장하거나 잡아 보는 주기이다
+        static constexpr int64 kNoServerGiveUpMs = 30000;
+        static constexpr int64 kResultGraceMs    = 10000;
+        static constexpr int64 kRatingWaitMs     = 3000; ///< 줄 서는 사람의 통계를 읽기를 기다리는 시간이다. 넘으면 RatingUnavailable 이다
     };
 } // namespace sw
 
@@ -243,7 +242,9 @@ namespace sw
             int64                   _expiresMs{ 0 };
         };
 
-        void onPartyFound( uint64 lookupTag, MatchmakingServiceResult result, const PartySnapshot& party );
+        /** @brief 티켓과 경기(모드 · 로비 모두)의 새 id 입니다. 위 32 비트가 이 서버, 아래가 순번 하나라 모드 · 로비끼리, 재시작 앞뒤로 겹치지 않는다(명단 기록의 이름이 경기 id 다). */
+        uint64 allocateID();
+        void   onPartyFound( uint64 lookupTag, MatchmakingServiceResult result, const PartySnapshot& party );
         /** @brief 파티 기록에 남은 다른 서버의 티켓을 권한 매처와 낸 서버에서 빼고 기록에서 지웁니다. */
         void onLeavePartyFound( uint64 lookupTag, MatchmakingServiceResult result, const PartySnapshot& party );
         /** @brief 통계가 모두 있으면 티켓을 내고, 아니면 올려 달라고 한 뒤 기다립니다. */
@@ -299,9 +300,8 @@ namespace sw
         MatchQueueDependencies                  _dependencies;
         Subscription                            _replyOwner; ///< 라우터 답의 주인 몫(`initialize` 가 열고 `shutdown` 이 놓는다)
         uint64                                  _nextLookupTag;
-        int64                                   _nowMs; ///< 마지막 `update` 의 시각이다(빠지기의 확인 시한을 센다)
-        uint32                                  _sequence;
-        uint32                                  _lobbySequence;
+        int64                                   _nowMs;    ///< 마지막 `update` 의 시각이다(빠지기의 확인 시한을 센다)
+        uint32                                  _sequence; ///< `allocateID` 의 순번이다
     };
 } // namespace sw
 

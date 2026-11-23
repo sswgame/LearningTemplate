@@ -45,7 +45,6 @@ namespace sw
         , _nextLookupTag{ 1 }
         , _nowMs{ 0 }
         , _sequence{ 0 }
-        , _lobbySequence{ 0 }
     {
     }
 
@@ -233,7 +232,7 @@ namespace sw
                 continue;
             }
             MatchMaker maker;
-            if ( maker.initialize( mode, dependencies._serverID ) == false )
+            if ( maker.initialize( mode ) == false )
                 continue; // 범위 밖 규칙은 `MatchMaker` 가 오류를 남겼다. 맞춰 돌리지 않고 이 모드를 등록하지 않는다
             _mapMode[mode._modeID] = mode;
             ModeState& state       = _mapModeState[mode._modeID];
@@ -265,6 +264,11 @@ namespace sw
         _listRatingWait.clear(); // 통계 창은 내리지 않는다 — 먼저 내려갔을 수 있고, 내려갈 때 메모리를 비운다
         _dependencies._pRouter = nullptr;
         _dependencies._pBus    = nullptr;
+    }
+
+    uint64 MatchQueueService::allocateID()
+    {
+        return ( _dependencies._serverID << kMatchQueueIDShift ) | ++_sequence;
     }
 
     bool MatchQueueService::hasMode( string_view modeID ) const
@@ -531,7 +535,7 @@ namespace sw
     {
         const MatchModeDef& mode = _mapMode[join._modeID];
         MatchTicket         ticket;
-        ticket._ticketID       = ( _dependencies._serverID << kMatchQueueIDShift ) | ++_sequence;
+        ticket._ticketID       = allocateID();
         ticket._region         = join._region;
         ticket._partyID        = partyID;
         ticket._originServerID = _dependencies._serverID;
@@ -598,6 +602,7 @@ namespace sw
         }
         for ( MatchFormed& match : listFormed )
         {
+            match._matchID = allocateID();
             state._listUnplaced.push_back( UnplacedMatch{ std::move( match ), nowMs.count() } );
         }
         for ( size_t index = 0; index < state._listUnplaced.size(); )
@@ -747,7 +752,7 @@ namespace sw
         ModeState*  pState = findModeState( lobby._modeID );
         MatchFormed match;
         match._modeID  = lobby._modeID;
-        match._matchID = ( _dependencies._serverID << kMatchQueueIDShift ) | MatchQueueLimit::kLobbyMatchBit | ++_lobbySequence;
+        match._matchID = allocateID();
         match._listTeam.resize( static_cast<size_t>( PartyLobbyLimit::kLobbyTeamCount ) );
         const auto  modeIt      = _mapMode.find( lobby._modeID );
         const int32 lobbyRating = modeIt != _mapMode.end() ? modeIt->second._initialRating : 0; // 모르는 모드는 아래 배치가 거절한다

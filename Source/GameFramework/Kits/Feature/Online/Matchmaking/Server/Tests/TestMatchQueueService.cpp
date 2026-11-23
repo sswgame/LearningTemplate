@@ -28,6 +28,7 @@ namespace
     constexpr AccountID kAlice          = 11;
     constexpr AccountID kBob            = 12;
     constexpr AccountID kCarol          = 13;
+    constexpr AccountID kDave           = 14;
     constexpr uint64    kServerA        = 1;
     constexpr uint64    kServerB        = 2;
 
@@ -762,13 +763,93 @@ SW_TEST_CASE( MatchQueueServiceTest, LobbyPlacementKeepsTeams )
     SW_EXPECT_EQUAL( kGameID, listResult[0]._assignment._serverID );
     SW_EXPECT_EQUAL( 0, listResult[0]._assignment._team );
     SW_EXPECT_EQUAL( 1, listResult[1]._assignment._team );
-    SW_EXPECT_TRUE( ( listResult[0]._assignment._matchID & MatchQueueLimit::kLobbyMatchBit ) != 0 );
+    SW_EXPECT_EQUAL( kServerA, listResult[0]._assignment._matchID >> 32 );
 
     lobby._modeID = "nope";
     world._server._queue.placeLobby( lobby, UnixMilliseconds{ kNowMs + 2001 } );
     listResult = world._server.takeNotifications();
     SW_REQUIRE_EQUAL( size_t( 2 ), listResult.size() );
     SW_EXPECT_TRUE( listResult[0]._assignment._result == MatchQueueResult::NoServer );
+}
+
+/** @brief [MatchQueueServiceTest] 같은 서버의 다른 모드 경기는 id 가 다르고 명단 기록도 따로 남는다 — 게임 서버가 네 사람을 모두 받는다(결함: 대기열마다 순번을 1 부터 세어 두 모드의 첫 경기가 같은 id 였다) */
+SW_TEST_CASE( MatchQueueServiceTest, MatchesOfDifferentModesKeepTheirOwnRecords )
+{
+    SoloWorld world;
+    world.startWithGameServer( vector<MatchModeDef>{ MatchQueueTestUtil::makeMode( "duel" ), MatchQueueTestUtil::makeMode( "arena" ) } );
+    MatchServerAgent agent;
+    agent.initialize( kGameID );
+    agent.startReading( &world._server._router );
+
+    SW_EXPECT_TRUE( world._server.join( kAlice, kNowMs, "duel" )._result == MatchmakingResult::Ok );
+    SW_EXPECT_TRUE( world._server.join( kBob, kNowMs, "duel" )._result == MatchmakingResult::Ok );
+    SW_EXPECT_TRUE( world._server.join( kCarol, kNowMs, "arena" )._result == MatchmakingResult::Ok );
+    SW_EXPECT_TRUE( world._server.join( kDave, kNowMs, "arena" )._result == MatchmakingResult::Ok );
+    world._server.update( kNowMs + 1 );
+    const vector<MatchQueueNotification> listFound = world._server.takeNotifications();
+    SW_REQUIRE_EQUAL( size_t( 4 ), listFound.size() );
+    uint64 duelMatchID  = 0;
+    uint64 arenaMatchID = 0;
+    for ( const MatchQueueNotification& found : listFound )
+    {
+        SW_EXPECT_TRUE( found._assignment._result == MatchQueueResult::Found );
+        if ( found._assignment._modeID == "duel" )
+            duelMatchID = found._assignment._matchID;
+        else
+            arenaMatchID = found._assignment._matchID;
+    }
+    SW_EXPECT_TRUE( duelMatchID != arenaMatchID );
+
+    agent.update( UnixMilliseconds{ kNowMs + 1 } );
+    world._server.poll( kNowMs + 1 );
+    SW_EXPECT_TRUE( agent.isAccepted( kAlice ) );
+    SW_EXPECT_TRUE( agent.isAccepted( kBob ) );
+    SW_EXPECT_TRUE( agent.isAccepted( kCarol ) );
+    SW_EXPECT_TRUE( agent.isAccepted( kDave ) );
+    agent.shutdown();
+}
+
+/** @brief [MatchQueueServiceTest] 매칭 서버가 다시 떠도 앞 실행의 경기 id 를 다시 쓰지 않는다 — 앞 경기의 명단 기록(경기 시한까지 산다)을 덮지 않고, 게임 서버가 이미 읽은 기록으로 보고 건너뛰지 않는다. 로비 경기도 같다 */
+SW_TEST_CASE( MatchQueueServiceTest, RestartedServerDoesNotReuseMatchIDs )
+{
+    SoloWorld world;
+    world.startWithGameServer( vector<MatchModeDef>{ MatchQueueTestUtil::makeMode() } );
+    LobbySnapshot lobby;
+    lobby._lobbyID = 9;
+    lobby._modeID  = "duel";
+    lobby._listMember.push_back( LobbyMember{ kAlice, 0, SW_TRUE } );
+    lobby._listMember.push_back( LobbyMember{ kBob, 1, SW_TRUE } );
+
+    const auto placeOneMatch = []( QueueServer& server ) -> uint64
+    {
+        SW_EXPECT_TRUE( server.join( kAlice )._result == MatchmakingResult::Ok );
+        SW_EXPECT_TRUE( server.join( kBob )._result == MatchmakingResult::Ok );
+        server.update( kNowMs + 1 );
+        const vector<MatchQueueNotification> listFound = server.takeNotifications();
+        SW_EXPECT_EQUAL( size_t( 2 ), listFound.size() );
+        return listFound.empty() ? 0 : listFound[0]._assignment._matchID;
+    };
+    const auto placeOneLobby = [&lobby]( QueueServer& server ) -> uint64
+    {
+        server._queue.placeLobby( lobby, UnixMilliseconds{ kNowMs + 1 } );
+        server.poll( kNowMs + 1 );
+        const vector<MatchQueueNotification> listFound = server.takeNotifications();
+        SW_EXPECT_EQUAL( size_t( 2 ), listFound.size() );
+        return listFound.empty() ? 0 : listFound[0]._assignment._matchID;
+    };
+    const uint64 firstMatchID = placeOneMatch( world._server );
+    const uint64 firstLobbyID = placeOneLobby( world._server );
+
+    QueueServer restarted{ world._cacheData, nullptr, kServerA };
+    restarted.start( vector<MatchModeDef>{ MatchQueueTestUtil::makeMode() } );
+    restarted.update( kNowMs ); // 서버 목록 첫 읽기를 맡긴다
+    restarted.update( kNowMs ); // 답을 스냅숏에 넣는다
+    const uint64 secondMatchID = placeOneMatch( restarted );
+    const uint64 secondLobbyID = placeOneLobby( restarted );
+    SW_EXPECT_TRUE( firstMatchID != 0 && secondMatchID != 0 );
+    SW_EXPECT_TRUE( firstMatchID != secondMatchID );
+    SW_EXPECT_TRUE( firstLobbyID != 0 && secondLobbyID != 0 );
+    SW_EXPECT_TRUE( firstLobbyID != secondLobbyID );
 }
 
 namespace
