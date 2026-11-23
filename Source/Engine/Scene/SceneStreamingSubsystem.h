@@ -16,6 +16,11 @@
  *    다 지은 뒤 배치를 잇고 한 번에 드러난다(언리얼 레벨 가시성 단계). 셀의 엔티티는 같은 셀이나 늘 올라 있는 엔티티만 가리키므로(쿠커가 검사했다) 셀 하나를 따로 지어도 참조가 끊기지 않는다.
  * 셀의 오브젝트는 셀마다 id 목록으로 묶어 함께 내린다(`Scene::unloadCell`). 이 단계에서 만든 오브젝트는 다음 프레임의 병합 단계에서 틱에 든다.
  *
+ * [조각 경계] 조각을 올릴지 · 내릴지는 셀 사각형이 아니라 조각의 경계(`StreamingCellBounds` — 셀 사각형 + 쿠커가 잰 내용 경계)로 잰다(언리얼 런타임 셀의 내용 경계). 소속은 자리(피벗)로 정하므로
+ * 셀보다 큰 건물 · 바닥은 피벗 셀이 반경 밖이어도 몸이 반경 안일 수 있다. 원점 둘레 셀을 훑을 때는 셀을 넘어 덮는 조각을 표(`_mapCoverIndex`)로 함께 찾는다.
+ *
+ * [비용] 프레임의 일은 올라 있거나 올리는 중인 조각(`_listActive`)과 원점 둘레에 묶인다 — 받은 조각 전체를 훑지 않는다. HLOD 대리는 단계가 바뀐 조각만 맞춘다(`_listHLODDirty`).
+ *
  * [셀 경계 — 소속은 내릴 때 자리로]
  * 쿠커가 정한 소속은 처음 값일 뿐이다. 셀을 내리는 프레임에 루트 오브젝트마다 지금 자리(primary 씬 컴포넌트, 쿠커와 같은 식)의 셀을 다시 본다(`regroupObjects`).
  * - 셀이 든 오브젝트가 다른 셀 자리에 있으면 같은 레이어 집합의 그 셀 조각으로 옮긴다 — 그 조각이 올라 있으면(또는 반경 안이라 지금 만든 빈 조각이면) id 만 옮겨 살려 두고,
@@ -25,7 +30,7 @@
  *   네트워크로 복제하는 스폰(`NetObjectTable` 생성 번호 — MMO 엔티티를 세운 오브젝트 등)은 넣지 않는다(존재는 서버가, 보임은 복제기 관심 영역이 정한다). 원점이 하나도 없으면 스폰을 넣지 않는다.
  * 셀을 넘는 참조는 약한 참조다 — 갈라진 뒤 다시 지으면 빈 핸들로 이어진다(배치 규칙).
  *
- * [바닥 없는 물리] 자리 셀에 문서의 조각(켜진 레이어)이 있는데 올라 있지 않으면 바닥이 없다(`isFloorMissing` = `isCellStreamingCompleted` 의 반대 — 바닥이 될 정적 바디가 그 셀에 있을 수 있다).
+ * [바닥 없는 물리] 자리 셀에 있거나 경계가 그 자리를 덮는 문서의 조각(켜진 레이어)이 올라 있지 않으면 바닥이 없다(`isFloorMissing` — 바닥이 될 정적 바디가 그 조각에 있을 수 있다).
  * 물리(`ScenePhysics`, 층이 위)가 프레임마다 이것을 물어 동적 강체 · 캐릭터 컨트롤러를 시뮬레이션에서 빼고, 셀이 오르면 풀어 지금 트랜스폼에서 바디를 다시 만든다.
  * 문서의 조각이 없는 셀(늘 올라 있는 지형만)은 바닥이 있다고 본다.
  *
@@ -46,8 +51,8 @@
  * 원점마다 반경 · 우선순위가 있다(`StreamingSource`, 언리얼 World Partition 스트리밍 소스). 올리는 셀은 원점 반경의 합집합이고, 읽기 차례는 셀을 덮는 원점 중
  * 가장 급한 우선순위 → 가까운 거리, 내리기는 모든 원점에서 (그 원점 반경 + 여유) 밖이다. 카메라 원점은 월드 설정의 로딩 반경 · `Normal` 이다(바깥 원점은 반경을 늘 함께 준다).
  *
- * [HLOD — 남은 일 `docs/NEXT.md` "씬 스트리밍 (라)"]
- * 쿠커가 셀 조각마다 정적 메시를 인스턴스 메시로 모은 대리 엔티티(늘 올라 있음, 조각의 레이어)를 굽고 조각에 그 파일 id 를 적는다(`SceneDocument::StreamingCell::_hlodFileID`).
+ * [HLOD]
+ * 쿠커가 셀 조각마다 정적 메시를 인스턴스 메시 · 머티리얼마다 합친 메시로 모은 대리 엔티티(늘 올라 있음, 조각의 레이어)를 굽고 조각에 그 파일 id 를 적는다(`SceneDocument::StreamingCell::_hlodFileID`).
  * 조각이 올라 있지 않으면(내려감 · 읽는 중 · 짓는 중 · 실패) 대리를 켜 두고, 다 지어 드러나면 끈다(`updateHLODVisibility` — 갱신 끝, 짓기 뒤). 짓는 동안은 대리가 남아 구멍이 나지 않는다.
  *
  * [우선순위 공유] 셀 읽기 차례 · IO 우선순위와 텍스처 밉 차례 · IO 우선순위가 같은 값이다(`computePriorityAt` — 그 자리 셀을 덮는 원점 중 가장 급한 것, `toAsyncIOPriority`).
@@ -178,7 +183,7 @@ namespace sw
         /** @brief 오브젝트(또는 그 조상)가 셀에 들어 있으면 true 입니다 — 세이브의 씬 섹션이 빼는 오브젝트입니다(셀 몫은 `writeSaveState` 가 싣는다). */
         bool isCellObject( uint64 objectID ) const;
         /**
-         * @brief 월드 자리 @p position 의 셀에 문서의 조각(켜진 레이어)이 있는데 올라 있지 않으면 true 입니다 — 바닥이 없다(읽는 중 · 짓는 중 포함, 실패한 조각 제외).
+         * @brief 월드 자리 @p position 의 셀에 있거나 경계가 그 자리를 덮는 문서의 조각(켜진 레이어)이 올라 있지 않으면 true 입니다 — 바닥이 없다(읽는 중 · 짓는 중 포함, 실패한 조각 제외).
          * @details 물리(`ScenePhysics`)가 동적 바디를 쥘지 묻는다. 스트리밍하지 않으면 false 입니다.
          */
         bool isFloorMissing( const float3& position ) const;
@@ -195,7 +200,7 @@ namespace sw
         bool isCellLoaded( const StreamingCellCoord& cell ) const;
         /**
          * @brief 셀 @p cell 의 스트리밍이 끝났으면 true 입니다 — 그 좌표의 문서 조각(`_bFromDocument`) 가운데 레이어가 켜진 것이 모두 올랐거나 실패했습니다(언리얼 `IsStreamingCompleted` 자리).
-         * @details 셀 상태 질의는 이것 하나다 — 물리의 바닥 쥐기(`isFloorMissing`)와 클라이언트 복제 보류(`MMOSceneClientWorld`)가 같은 판정을 본다.
+         * @details 클라이언트 복제 보류(`MMOSceneClientWorld`)와 물리의 바닥 쥐기(`isFloorMissing` — 그 자리를 덮는 이웃 조각까지)가 같은 판정(`isSlotUnfinished`)을 본다.
          *          엔티티가 없는 셀(조각 없음) · 옮겨 온 오브젝트를 받으려 만든 조각만 있는 셀 · 스트리밍하지 않는 씬은 기다릴 것이 없어 true 다.
          */
         bool isCellStreamingCompleted( const StreamingCellCoord& cell ) const;
@@ -207,8 +212,8 @@ namespace sw
         float32 getLoadingRadius() const { return _settings._cellGrid._loadingRadius; }
         /** @brief 셀이 오르거나(다 지어 드러남) 내려갈 때마다 오르는 번호입니다. 셀 구역의 입력을 따라 다시 재는 쪽(내비메시 타일)이 본다. */
         uint64 getChangeSerial() const { return _changeSerial; }
-        /** @brief 번호 @p serial 뒤에 오르내린 셀의 좌표를 @p outListCell 에 채웁니다(비우고 채운다, 조각마다 한 번 — 같은 좌표가 겹칠 수 있다). */
-        void collectCellsChangedSince( uint64 serial, vector<StreamingCellCoord>& outListCell ) const;
+        /** @brief 번호 @p serial 뒤에 오르내린 조각의 경계(절대)를 @p outListBounds 에 채웁니다(비우고 채운다, 조각마다 한 번). */
+        void collectBoundsChangedSince( uint64 serial, vector<StreamingCellBounds>& outListBounds ) const;
         /** @brief 원점마다 (그 원점 반경 + 이 여유)보다 멀면 내립니다(`StreamingSource::_loadingRadius` 가 원점마다 다를 때). */
         float32 getUnloadMargin() const { return _settings._unloadMargin; }
 
@@ -262,14 +267,25 @@ namespace sw
             uint64                                 _hlodFileID{ 0 };    ///< 이 조각의 HLOD 대리 엔티티(늘 올라 있음)의 파일 id — 0 이면 대리가 없다(`SceneDocument::StreamingCell::_hlodFileID`)
             uint64                                 _hlodObjectID{ 0 };  ///< 풀어 둔 대리 오브젝트 id(`resolveHLODObject` 만 쓴다) — 0 이거나 그 오브젝트가 사라졌으면 파일 id 로 다시 푼다
             CellState                              _state{ CellState::Unloaded };
-            uint64                                 _changeSerial{ 0 };         ///< 마지막으로 오르거나 내려간 때의 `SceneStreamingSubsystem::_changeSerial`
-            bool                                   _bContentHeld{ SW_FALSE };  ///< `_listNode` 를 짓고 나서도 든다(메모리 문서의 셀 · 떠 둔 상태) — 아니면 지은 뒤 버리고 다시 올릴 때 다시 읽는다 NOLINT(sw-bool-flag): 집합체다(중괄호 · 지정 초기화로 만든다) — C++17 비트필드는 기본값을 둘 수 없어 `T x;` 가 값을 남기지 않는다
-            bool                                   _bFromDocument{ SW_FALSE }; ///< 문서(쿠킹본)의 조각이다 — 바닥이 될 정적 바디가 있을 수 있다. 옮겨 온 오브젝트를 받으려 만든 조각은 아니다 NOLINT(sw-bool-flag): 집합체다(중괄호 · 지정 초기화로 만든다) — C++17 비트필드는 기본값을 둘 수 없어 `T x;` 가 값을 남기지 않는다
+            StreamingCellBounds                    _bounds{};                                        ///< 셀 사각형 + 내용 경계(절대) — 올리기 · 내리기를 이것으로 잰다
+            uint32                                 _slotIndex{ 0 };                                  ///< 자기 번호(`_listCell`)
+            uint32                                 _activeIndex{ constant::invalid_index::kUint32 }; ///< `_listActive` 안 자리(없으면 무효 — `setSlotState` 만 쓴다)
+            uint64                                 _changeSerial{ 0 };                               ///< 마지막으로 오르거나 내려간 때의 `SceneStreamingSubsystem::_changeSerial`
+            bool                                   _bContentHeld{ SW_FALSE };                        ///< `_listNode` 를 짓고 나서도 든다(메모리 문서의 셀 · 떠 둔 상태) — 아니면 지은 뒤 버리고 다시 올릴 때 다시 읽는다 NOLINT(sw-bool-flag): 집합체다(중괄호 · 지정 초기화로 만든다) — C++17 비트필드는 기본값을 둘 수 없어 `T x;` 가 값을 남기지 않는다
+            bool                                   _bFromDocument{ SW_FALSE };                       ///< 문서(쿠킹본)의 조각이다 — 바닥이 될 정적 바디가 있을 수 있다. 옮겨 온 오브젝트를 받으려 만든 조각은 아니다 NOLINT(sw-bool-flag): 집합체다(중괄호 · 지정 초기화로 만든다) — C++17 비트필드는 기본값을 둘 수 없어 `T x;` 가 값을 남기지 않는다
         };
 
         /** @brief 번호의 조각입니다(`_listCell` 은 조각을 따로 들어, 조각을 더해도 짓는 중인 조각의 주소가 흔들리지 않는다 — `Scene::CellBuild` 가 `_listNode` 를 가리킨다). */
         CellSlot&       getSlot( uint32 slotIndex ) { return *_listCell[slotIndex]; }
         const CellSlot& getSlot( uint32 slotIndex ) const { return *_listCell[slotIndex]; }
+        /** @brief 조각의 단계를 바꿉니다 — 활성 목록(`_listActive`)과 HLOD 다시 맞출 목록(`_listHLODDirty`)이 따라온다. 단계를 쓰는 길은 이것 하나다. */
+        void setSlotState( CellSlot& slot, CellState state );
+        /** @brief 조각과 그 표 · 목록을 모두 비웁니다(오브젝트 · 읽기는 부르는 쪽이 이미 놓았다). */
+        void clearSlots();
+        /** @brief 빈 조각을 목록 끝에 더하고 좌표 표에 올립니다(경계는 셀 사각형). */
+        CellSlot& addSlot( const StreamingCellCoord& cell, const vector<string>& listDataLayer );
+        /** @brief 문서의 조각이고 레이어가 켜졌는데 아직 오르지도 실패하지도 않았으면 true 입니다(바닥 쥐기 · 복제 보류의 판정). */
+        bool isSlotUnfinished( const CellSlot& slot ) const;
         /** @brief 문서의 셀(`_listSourceCell`)로 조각을 처음 상태로 다시 만듭니다. 오브젝트 · 읽기는 부르는 쪽이 이미 놓았다. */
         void resetCells();
         /** @brief 좌표 @p cell · 레이어 집합 @p listDataLayer 의 조각 번호입니다. 없으면 빈 조각(떠 둔 상태가 빈 목록)을 그 좌표의 끝 조각으로 만듭니다. */
@@ -298,14 +314,14 @@ namespace sw
 
         /** @brief 셀 좌표의 표 키입니다. */
         static uint64 makeCellKey( const StreamingCellCoord& cell );
-        /** @brief 원점들 중 가장 가까운 것까지 셀 @p cell 의 거리 제곱입니다. 원점이 없으면 가장 큰 값입니다. */
-        float32 computeNearestSourceDistanceSquared( const StreamingCellCoord& cell ) const;
-        /** @brief 셀 @p cell 이 원점 @p source 의 반경 안이면 true 입니다. */
-        bool isCellInSource( const StreamingCellCoord& cell, const StreamingSource& source ) const;
-        /** @brief 셀 @p cell 을 반경으로 덮는 원점 가운데 가장 급한 우선순위입니다. 덮는 원점이 없으면 `Lowest` 입니다. */
-        StreamingSourcePriority computeCellPriority( const StreamingCellCoord& cell ) const;
-        /** @brief 어느 원점이든 (그 원점 반경 + @p margin) 안에 셀 @p cell 이 닿으면 true 입니다. */
-        bool isCellWithinSources( const StreamingCellCoord& cell, float32 margin ) const;
+        /** @brief 원점들 중 가장 가까운 것까지 경계 @p bounds 의 거리 제곱입니다. 원점이 없으면 가장 큰 값입니다. */
+        float32 computeNearestSourceDistanceSquared( const StreamingCellBounds& bounds ) const;
+        /** @brief 경계 @p bounds 가 원점 @p source 의 반경에 닿으면 true 입니다. */
+        static bool isInSource( const StreamingCellBounds& bounds, const StreamingSource& source );
+        /** @brief 경계 @p bounds 에 반경이 닿는 원점 가운데 가장 급한 우선순위입니다. 닿는 원점이 없으면 `Lowest` 입니다. */
+        StreamingSourcePriority computeBoundsPriority( const StreamingCellBounds& bounds ) const;
+        /** @brief 어느 원점이든 (그 원점 반경 + @p margin) 안에 경계 @p bounds 가 닿으면 true 입니다. */
+        bool isWithinSources( const StreamingCellBounds& bounds, float32 margin ) const;
         /** @brief 셀 내용의 비동기 읽기를 겁니다(`Unloaded` → `Loading`). 걸지 못하면 오류를 남기고 `Failed` 입니다. */
         void requestCellContent( CellSlot& slot );
         /** @brief 읽기가 끝났으면 거둡니다(`Loading` → `Ready` · `Failed`). 끝나지 않았으면 그대로입니다. */
@@ -319,7 +335,7 @@ namespace sw
         void unloadCell( CellSlot& slot, bool bKeepState );
         /** @brief 올릴 셀 줄(`_listScratchLoad`)을 시간 예산 안에서 엔티티 단위로 짓습니다(파일 머리말의 갱신 3). 예산에 닿으면 남은 셀은 다음 프레임에 잇습니다. */
         void buildQueuedCells( bool bFinishEachFrame );
-        /** @brief 조각마다 HLOD 대리를 조각이 올라 있지 않을 때만 켭니다(바뀐 것만 `GameObject::setActive`). */
+        /** @brief 단계가 바뀐 조각 · 레이어가 있는 조각의 HLOD 대리를 조각이 올라 있지 않을 때만 켭니다(바뀐 것만 `GameObject::setActive`). */
         void updateHLODVisibility();
         /**
          * @brief 조각의 HLOD 대리 오브젝트입니다 — 풀어 둔 id(`CellSlot::_hlodObjectID`)를 쓰고, 없거나 사라졌으면(레이어를 껐다 켬 · 세이브 복원) 파일 id 로 한 번 다시 풀어 듭니다.
@@ -346,6 +362,10 @@ namespace sw
         vector<SceneDocument::StreamingCell>  _listSourceCell;       ///< 받은 문서의 셀(쿠킹본은 색인만) — 복원이 조각을 처음 상태로 되돌린다(`resetCells`)
         vector<unique_ptr<CellSlot>>          _listCell;             ///< 문서의 조각(문서 순서) 뒤에 옮겨 온 오브젝트를 받으려 만든 조각
         unordered_map<uint64, vector<uint32>> _mapCellIndex;         ///< `makeCellKey` → 그 좌표의 조각들(`_listCell` 인덱스, 문서 순서)
+        unordered_map<uint64, vector<uint32>> _mapCoverIndex;        ///< `makeCellKey` → 다른 셀의 조각인데 경계가 그 좌표를 덮는 것들(문서의 조각만)
+        vector<uint32>                        _listActive;           ///< 올라 있거나 올리는 중인 조각(`setSlotState` 가 맞춘다, 차례 없음)
+        vector<uint32>                        _listHLODDirty;        ///< 대리를 다시 맞출 조각(올랐거나 내려갔다 · 대리가 아직 서지 않았다)
+        vector<uint32>                        _listLayeredHLOD;      ///< 레이어가 있고 대리가 있는 조각 — 레이어를 껐다 켜면 대리가 다시 서므로 프레임마다 본다
         unordered_map<uint64, uint32>         _mapObjectSlot;        ///< 다 지었거나 옮겨 온 오브젝트 id → 든 조각(`_listObjectID` 의 거울)
         uint64                                _maxFileCellFileID;    ///< 파일에 남은 셀 엔티티의 가장 큰 파일 id(`beginWorld`)
         vector<StreamingSource>               _listExternalSource;   ///< `setExternalSources`
@@ -356,6 +376,7 @@ namespace sw
         vector<StreamingCellCoord>            _listScratchCell;      ///< 갱신 중 범위 안 셀(프레임마다 다시 쓴다)
         vector<uint32>                        _listScratchLoad;      ///< 갱신 중 범위 안의 올릴 셀 인덱스(가까운 순)
         vector<uint32>                        _listScratchUnload;    ///< 갱신 중 내릴 셀 인덱스
+        vector<uint32>                        _listScratchActive;    ///< 갱신 중 활성 조각의 사본(도는 동안 활성 목록이 바뀐다)
         vector<LoadOrderKey>                  _listScratchLoadKey;   ///< 갱신 중 올릴 셀의 정렬 키(셀마다 한 번 잰다)
     };
 } // namespace sw

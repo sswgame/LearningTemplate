@@ -178,6 +178,8 @@ namespace sw
             /// 이 조각의 HLOD 대리 엔티티(기본 목록 `_listSceneObjectNode` 에 든 늘 올라 있는 엔티티)의 파일 id — 쿠커가 조각의 정적 메시를 인스턴스 메시로 모아 굽는다
             /// (`SceneCooker::splitStreamingCells`). 0 이면 대리가 없다(정적 메시가 없는 조각). 스트리밍은 조각이 올라 있지 않을 때만 대리를 켠다
             uint64 _hlodFileID{ 0 };
+            /// 이 조각 엔티티들의 경계(셀 사각형은 넣지 않은 값) — 쿠커가 나눌 때 잰다. 크기 있는 엔티티가 없으면 빈 경계이고, 스트리밍은 셀 사각형과 합쳐 쓴다
+            StreamingCellBounds _contentBounds{};
 
             /** @brief 내용이 쿠킹본의 구간에 있으면(색인만 읽은 셀) true 입니다. */
             bool hasFileContent() const { return _contentSize != 0; }

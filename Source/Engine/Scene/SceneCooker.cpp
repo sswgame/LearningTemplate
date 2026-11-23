@@ -7,6 +7,7 @@
 #include "Core/Container/unordered_set.h"
 #include "Core/File/FileUtil.h"
 #include "Core/Hash/HashUtil.h"
+#include "Core/Math/AABB.h"
 #include "Core/Math/MathUtil.h"
 #include "Core/String/StringUtil.h"
 #include "Core/Time/MonotonicClock.h"
@@ -183,15 +184,41 @@ namespace sw
                 return pRoot;
             }
 
+            /** @brief 오브젝트 @p pObject 와 그 자식(다른 엔티티가 아닌 것 — 중첩 프리팹 부품)의 경계를 @p inoutBounds 에 더합니다. */
+            static void includeObjectBounds( const GameObject* pObject, const unordered_set<const GameObject*>& uniqueEntityObject, StreamingCellBounds& inoutBounds )
+            {
+                for ( const Component* pComponent : pObject->getComponents() )
+                {
+                    AABB box{};
+                    if ( pComponent == nullptr || pComponent->isSceneComponent() == false || static_cast<const SceneComponent*>( pComponent )->computeStreamingBounds( box ) == false )
+                        continue;
+                    inoutBounds.include( StreamingCellBounds{ box._min._x, box._min._z, box._max._x, box._max._z } );
+                }
+                vector<GameObject*> listChild;
+                pObject->getChildren( listChild );
+                for ( const GameObject* pChild : listChild )
+                {
+                    if ( uniqueEntityObject.count( pChild ) == 0 ) // 붙은 엔티티는 제 엔티티 차례에 잰다(같은 셀이다)
+                        includeObjectBounds( pChild, uniqueEntityObject, inoutBounds );
+                }
+            }
+
             /**
-             * @brief 지어 둔 오브젝트마다 셀 · 플래그를 정하고, 그 오브젝트가 가리키는 다른 엔티티(파일 id)를 모읍니다.
+             * @brief 지어 둔 오브젝트마다 셀 · 경계 · 플래그를 정하고, 그 오브젝트가 가리키는 다른 엔티티(파일 id)를 모읍니다.
              * @return 엔티티가 지어지지 않았으면 오류를 남기고 false 입니다.
              */
             [[nodiscard]] static bool collectCellRecords( const SceneDocument& doc, const StreamingCellGrid& grid, const unordered_map<uint64, GameObject*>& mapObjectByFileID, const ObjectSavedIDMap& mapSavedID,
                                                           string_view scenePath, vector<StreamingCellObjectRecord>& outListRecord, vector<StreamingCellReference>& outListReference )
             {
                 outListRecord.reserve( doc._listSceneObjectNode.size() );
-                vector<uint64> listReferencedID;
+                unordered_set<const GameObject*> uniqueEntityObject;
+                for ( const auto& [fileID, pObject] : mapObjectByFileID )
+                {
+                    uniqueEntityObject.insert( pObject );
+                }
+                vector<const GameObject*>                             listRoot; // 레코드마다 배치 루트
+                unordered_map<const GameObject*, StreamingCellBounds> mapRootBounds;
+                vector<uint64>                                        listReferencedID;
                 for ( const SceneDocument::SceneObjectNode& entity : doc._listSceneObjectNode )
                 {
                     const auto objectIt = mapObjectByFileID.find( entity._fileID );
@@ -207,6 +234,12 @@ namespace sw
                     record._objectID      = entity._fileID;
                     record._bAlwaysLoaded = pObject->isAlwaysLoaded() || pRoot->isAlwaysLoaded() || pRootScene == nullptr;
                     record._cell          = pRootScene != nullptr ? grid.computeCell( pRootScene->getWorldPosition() ) : StreamingCellCoord{};
+                    if ( record._bAlwaysLoaded == false )
+                    {
+                        includeObjectBounds( pObject, uniqueEntityObject, record._bounds );
+                        mapRootBounds[pRoot].include( record._bounds );
+                    }
+                    listRoot.push_back( pRoot );
                     outListRecord.push_back( record );
 
                     listReferencedID.clear();
@@ -223,6 +256,15 @@ namespace sw
                             continue;
                         outListReference.push_back( StreamingCellReference{ entity._fileID, targetIt->second } );
                     }
+                }
+                // 격자보다 훨씬 큰 계층은 어느 셀에도 맞지 않는다 — 늘 올린다(자식은 루트를 따르므로 계층마다 정한다).
+                for ( size_t index = 0; index < outListRecord.size(); ++index )
+                {
+                    if ( outListRecord[index]._bAlwaysLoaded || grid.countCoveredCells( mapRootBounds[listRoot[index]] ) <= StreamingCellGrid::kMaxCoveredCells )
+                        continue;
+                    outListRecord[index]._bAlwaysLoaded = true;
+                    SW_LOG_INFO_ID( "SceneCooker.SceneCookEntityTooLarge", "Scene cook: '%#' - entity '%#' covers more than %# cells and stays always loaded", scenePath, listRoot[index]->getName().c_str(),
+                                    StreamingCellGrid::kMaxCoveredCells );
                 }
                 return true;
             }
@@ -342,6 +384,7 @@ namespace sw
                     {
                         cellIndex = found->second;
                     }
+                    listCell[cellIndex]._contentBounds.include( record._bounds );
                     listCell[cellIndex]._listSceneObjectNode.push_back( std::move( entity ) );
                 }
                 VectorUtil::sort( listCell, []( const SceneDocument::StreamingCell& lhs, const SceneDocument::StreamingCell& rhs )
@@ -653,6 +696,8 @@ namespace sw
                 ObjectSavedIDMap mapSavedID;
                 placement.collectSavedIDMap( mapSavedID );
 
+                if ( placement.getObjectManager()->hasDirtySceneTransforms() )
+                    placement.getObjectManager()->flushSceneTransforms(); // 경계 · HLOD 가 월드 행렬을 읽는다
                 vector<StreamingCellObjectRecord> listRecord;
                 vector<StreamingCellReference>    listReference;
                 if ( collectCellRecords( inoutDoc, grid, mapObjectByFileID, mapSavedID, scenePath, listRecord, listReference ) == false )
@@ -673,8 +718,6 @@ namespace sw
                     return false;
                 splitIntoCells( inoutDoc, listRecord );
                 // 나눈 조각마다 HLOD 대리를 굽는다 — 배치 씬(`placement`)이 아직 살아 있어 엔티티의 월드 자리를 그대로 읽는다.
-                if ( placement.getObjectManager()->hasDirtySceneTransforms() )
-                    placement.getObjectManager()->flushSceneTransforms();
                 buildHLODProxies( hlodTypes, mapObjectByFileID, inoutDoc, scenePath );
                 SW_LOG_INFO_ID( "SceneCooker.SceneCookSplitCells", "Scene cook: '%#' split into %# cells (%# entities always loaded)", scenePath, static_cast<uint32>( inoutDoc._listStreamingCell.size() ),
                                 static_cast<uint32>( inoutDoc._listSceneObjectNode.size() ) );

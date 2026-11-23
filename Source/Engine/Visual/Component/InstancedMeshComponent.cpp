@@ -109,6 +109,22 @@ namespace sw
         rebuildBatch();
     }
 
+    bool InstancedMeshComponent::computeStreamingBounds( AABB& outBox ) const
+    {
+        const string&          meshID = _meshID.path();
+        const shared_ptr<Mesh> mesh   = MeshAssetFormat::isMeshAssetPath( meshID ) ? MeshCache::acquire( meshID ) : MeshUtil::acquirePrimitive( meshID );
+        if ( mesh == nullptr || mesh->getVertexCount() == 0 || _listInstance.empty() )
+            return false;
+        const AABB     local{ mesh->getLocalBoundsMin(), mesh->getLocalBoundsMax() };
+        const float4x4 world = getWorldMatrix();
+        outBox               = AABB::empty();
+        for ( const InstancedMeshTransform& transform : _listInstance )
+        {
+            outBox = outBox.unionWith( local.transformedBy( makeLocalMatrix( transform ) * world ) );
+        }
+        return true;
+    }
+
     void InstancedMeshComponent::releaseBatch()
     {
         if ( _pBatch != nullptr && _pPrimitiveRegistry != nullptr )

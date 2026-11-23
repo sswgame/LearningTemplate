@@ -79,6 +79,9 @@ namespace sw
         /** @brief 배치를 지었으면 true 입니다(메시가 오기 전 · 등록 전에는 false). */
         bool isBatchBuilt() const { return _pBatch != nullptr; }
 
+        /** @brief 모든 인스턴스를 덮는 월드 상자입니다(메시를 그 자리에서 읽어 잰다). */
+        bool computeStreamingBounds( AABB& outBox ) const override;
+
         /** @brief 인스턴스 자리 @p transform 의 컴포넌트 공간 행렬입니다(스케일 → 회전 → 이동, 행 벡터). */
         [[nodiscard]] static float4x4 makeLocalMatrix( const InstancedMeshTransform& transform );
 

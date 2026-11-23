@@ -881,21 +881,18 @@ namespace sw
         const span<const StreamingSource> listSource       = streaming.getActiveSources();
         const float32                     unloadMargin     = streaming.getUnloadMargin();
         const bool                        bFinishEachFrame = engine::getSubsystem<DeterministicRun>().getPolicy()._bFinishAssetJobsEachFrame == SW_TRUE;
-        const float32                     cellSize         = streaming.getGrid().getCellSize();
 
         // 셀이 오르내렸으면 그 구역의 입력이 바뀌었다 — 기하를 다시 모으고 닿은 타일의 입력 해시를 다시 잰다(언리얼 내비 타일 무효화).
-        vector<StreamingCellCoord> listChangedCell;
-        const uint64               changeSerial = streaming.getChangeSerial();
+        vector<StreamingCellBounds> listChangedBounds;
+        const uint64                changeSerial = streaming.getChangeSerial();
         if ( changeSerial != _streamingChangeSerial )
-            streaming.collectCellsChangedSince( _streamingChangeSerial, listChangedCell );
+            streaming.collectBoundsChangedSince( _streamingChangeSerial, listChangedBounds );
         bool       bChangeConsumed     = true;
-        const auto overlapsChangedCell = [&listChangedCell, cellSize]( const AABB& region )
+        const auto overlapsChangedCell = [&listChangedBounds]( const AABB& region )
         {
-            for ( const StreamingCellCoord& cell : listChangedCell )
+            for ( const StreamingCellBounds& bounds : listChangedBounds )
             {
-                const float32 minX = static_cast<float32>( cell._x ) * cellSize;
-                const float32 minZ = static_cast<float32>( cell._z ) * cellSize;
-                if ( minX <= region._max._x && minX + cellSize >= region._min._x && minZ <= region._max._z && minZ + cellSize >= region._min._z )
+                if ( bounds._minX <= region._max._x && bounds._maxX >= region._min._x && bounds._minZ <= region._max._z && bounds._maxZ >= region._min._z )
                     return true;
             }
             return false;
@@ -909,7 +906,7 @@ namespace sw
             const NavTileGrid& grid = runtime._pNavMesh->getTileGrid();
 
             bool bGeometryRefreshed = false;
-            if ( listChangedCell.empty() == false )
+            if ( listChangedBounds.empty() == false )
             {
                 shared_ptr<NavMeshGeometry> pGeometry        = make_shared<NavMeshGeometry>();
                 const uint32                pendingMeshCount = NavGeometryCollector::collectGeometry( SceneIterationKey{}, *_pManager, runtime._pSurface, _settings, _listGeometrySource.getItems(),

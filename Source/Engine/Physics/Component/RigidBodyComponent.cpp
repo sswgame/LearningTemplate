@@ -244,6 +244,55 @@ namespace sw
         inoutBuilder.addFloat3( getAngularVelocity() );
     }
 
+    bool RigidBodyComponent::computeStreamingBounds( AABB& outBox ) const
+    {
+        const float4x4 world  = getWorldMatrix();
+        AABB           bounds = AABB::empty();
+        for ( const PhysicsShapeDesc3D& shape : _listShape )
+        {
+            float3 halfExtents{};
+            switch ( shape._type )
+            {
+                case PhysicsShapeType3D::Box:
+                {
+                    halfExtents = shape._halfExtents;
+                    break;
+                }
+                case PhysicsShapeType3D::Sphere:
+                {
+                    halfExtents = float3{ shape._radius, shape._radius, shape._radius };
+                    break;
+                }
+                case PhysicsShapeType3D::Capsule:
+                {
+                    halfExtents = float3{ shape._radius, shape._halfHeight + shape._radius, shape._radius };
+                    break;
+                }
+                case PhysicsShapeType3D::ConvexHull:
+                case PhysicsShapeType3D::TriangleMesh:
+                {
+                    break; // 점으로 잰다
+                }
+            }
+            const float4x4 shapeWorld = float4x4::makeTrs( shape._localPosition, shape._localRotation, float3{ 1.0f, 1.0f, 1.0f } ) * world;
+            for ( const float3& point : shape._listPoint )
+            {
+                const float3 worldPoint = float3::transform( point, shapeWorld );
+                bounds                  = bounds.unionWith( AABB{ worldPoint, worldPoint } );
+            }
+            if ( halfExtents._x > 0.0f )
+                bounds = bounds.unionWith( AABB{
+                    float3{ -halfExtents._x, -halfExtents._y, -halfExtents._z },
+                    halfExtents
+                }
+                                               .transformedBy( shapeWorld ) );
+        }
+        if ( bounds.isValid() == false )
+            return false;
+        outBox = bounds;
+        return true;
+    }
+
     void RigidBodyComponent::collectStreamingFloorShapes( const float3& scale, vector<PhysicsShapeDesc3D>& outListShape ) const
     {
         for ( const PhysicsShapeDesc3D& shape : _listShape )

@@ -84,6 +84,10 @@ SW_TEST_CASE( StreamingHLODCookTest, SplitBuildsProxyPerFragmentWithStaticMeshes
     SW_EXPECT_TRUE( pFirst->_hlodFileID != 0 );
     SW_EXPECT_EQUAL( uint64{ 0 }, pMovingCell->_hlodFileID ); // 움직이는 메시와 숨긴 메시뿐이다
     SW_EXPECT_TRUE( pScaled->_hlodFileID != 0 );
+    // 조각의 경계는 엔티티의 월드 크기다(스케일 2 인 통은 24 ~ 26) — 움직이는 메시도 몸이라 잰다.
+    SW_EXPECT_NEAR( 24.0f, pScaled->_contentBounds._minX, 0.1f );
+    SW_EXPECT_NEAR( 26.0f, pScaled->_contentBounds._maxX, 0.1f );
+    SW_EXPECT_TRUE( pMovingCell->_contentBounds.isValid() );
     SW_EXPECT_TRUE( pFirst->_hlodFileID != pScaled->_hlodFileID );
 
     // 기본 목록: Ground + 대리 둘. 대리의 파일 id 는 엔티티와 겹치지 않는다.
