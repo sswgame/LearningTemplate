@@ -1,0 +1,8 @@
+<?asset guid="239fce68c3df392ddaa3685f6dde6f06"?>
+<!-- 사진 모드 시나리오(automation/photomode)의 카메라 — 고정 시점 하나(CameraDirectorComponent). 각은 도, 거리는 m 다. -->
+<CameraPresetCatalog>
+	<Preset id="still">
+		<View mode="Fixed" offset="0,2,-8" pitch="0" yaw="0"/>
+		<Lens fieldOfViewY="50" nearPlane="0.1" farPlane="100"/>
+	</Preset>
+</CameraPresetCatalog>
