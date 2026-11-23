@@ -12,9 +12,8 @@
 		<item name="_coatWeight" defaultValue="0.4" />
 		<item name="_coatRoughness" defaultValue="0.05" />
 	</_properties>
-	<_permutations quality="High" shaderLOD="300" usage="StaticMesh">
+	<_permutations>
 		<_alwaysDefines>
-			<item>MATERIAL_DOMAIN_SURFACE</item>
 			<item>MATERIAL_FORWARD_ONLY</item>
 			<item>MATERIAL_LOBE_THIN_FILM</item>
 		</_alwaysDefines>

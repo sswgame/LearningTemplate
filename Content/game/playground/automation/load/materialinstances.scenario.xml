@@ -3,7 +3,7 @@
 <!--
   부하 시나리오 — 머티리얼 인스턴스 5000(감사 R-4 자원 구간 할당의 측정 씬, docs/NEXT.md 측정 자원 구간 할당). 큐브 5000 개가 저마다 머티리얼 인스턴스를 든다
   (-gv_stressTestMaterialInstances=1). 값은 바꾸지 않는다 — 상수 버퍼 할당 수와 프레임 시간만 본다.
-  감시 값: RT.RHI.liveBuffers(살아 있는 버퍼 — DX12 는 버퍼마다 커밋 자원), RT.RHI.constantBufferPages(머티리얼 상수 버퍼 페이지),
+  감시 값: RT.RHI.liveBuffers(살아 있는 버퍼 — DX12 는 버퍼마다 커밋 자원), RT.RHI.constantBufferPages(머티리얼 상수 버퍼 페이지 — 원소 셰이더는 상수 버퍼를 만들지 않아 0),
            RT.Vulkan.allocationCount(살아 있는 VkDeviceMemory — maxMemoryAllocationCount 의 분자), 프레임 시간 p50.
   판정(설계): 구간 할당 전후로 할당 수가 1/10 아래로 줄고 프레임 시간이 흔들림 안이면 둔다. 짝: materialparams(값을 바꾸는 512 개).
   측정 창(<Load>)이 끝내므로 <Pass/> 가 없다. 하위 폴더라 게임 체인이 줍지 않는다.

@@ -449,7 +449,7 @@ namespace sw
         {
             // 판이 반쯤 바뀌었을 수 있다. 새 판으로 되돌린다.
             SW_LOG_WARNING_ID( "SkirmishGameMode.SavedMatchStateDoes", "[Skirmish] the saved match state does not match this build - starting a new match" );
-            (void)startGame();
+            (void)openGame();
         }
     }
 

@@ -1,6 +1,6 @@
 """
 vcpkg 설치 보호 검사 — 사용자가 끈 설치와 소스 트리 밖 설치 폴더는 읽기 전용이고, 소스 트리 안 설치 폴더만 설치할 수 있다
-(cmake/Toolchain/Vcpkg/VcpkgInstallPolicy.cmake 를 `cmake -P` 로 부른다).
+(cmake/Toolchain/Vcpkg/VcpkgInstallPolicy.cmake 를 `cmake -P` 로 부른다). 게이트 전체(Vcpkg.cmake)는 빈 캐시로 한 번 읽어 본다.
 
 실행: SW_CMAKE_COMMAND=<cmake 실행 파일> python -X utf8 Scripts/setup/tests/test_vcpkg_install_policy.py (CTest `Scripts.VcpkgInstallPolicy` 가 환경 변수를 준다).
 """
@@ -14,7 +14,8 @@ import tempfile
 import unittest
 from pathlib import Path
 
-POLICY_FILE = Path(__file__).resolve().parents[3] / "cmake/Toolchain/Vcpkg/VcpkgInstallPolicy.cmake"
+ROOT = Path(__file__).resolve().parents[3]
+POLICY_FILE = ROOT / "cmake/Toolchain/Vcpkg/VcpkgInstallPolicy.cmake"
 CMAKE_ENVIRONMENT = "SW_CMAKE_COMMAND"  # Test/CMakeLists.txt 가 스크립트 테스트 모두에 ${CMAKE_COMMAND} 를 준다
 CMAKE = ""
 
@@ -52,6 +53,32 @@ def parse_install_plan(output: str) -> tuple[str, str]:
     remove = next(text for text in lines if text.startswith("REMOVE=["))
     build = next(text for text in lines if text.startswith("BUILD=["))
     return remove[len("REMOVE=[") : -1], build[len("BUILD=[") : -1]
+
+
+class VcpkgEmptyCacheTest(unittest.TestCase):
+    def test_empty_cache_decides_every_input(self) -> None:
+        # 게이트의 값(트리플릿 · 오버레이)을 정하는 절이 통째로 지워져도 캐시가 찬 빌드 폴더는 옛 값으로 구성된다 — 빈 캐시에서만 드러난다.
+        with tempfile.TemporaryDirectory() as folder:
+            script = Path(folder) / "Probe.cmake"
+            script.write_text(
+                f'set(CMAKE_BINARY_DIR "{Path(folder).as_posix()}")\n'
+                f'set(SW_VCPKG_ROOT "{Path(folder).as_posix()}")\n'
+                f'set(VCPKG_INSTALLED_DIR "{ROOT.as_posix()}/build/vcpkg_installed_absent")\n'
+                'foreach(name IN ITEMS add_library target_compile_definitions)\nfunction(${name})\nendfunction()\nendforeach()\n'  # 스크립트 모드에 없는 타깃 명령
+                f'include("{(POLICY_FILE.parent / "Vcpkg.cmake").as_posix()}")\n'
+                "foreach(name IN ITEMS VCPKG_TARGET_TRIPLET VCPKG_HOST_TRIPLET VCPKG_OVERLAY_TRIPLETS VCPKG_OVERLAY_PORTS)\n"
+                'message(NOTICE "${name}=[${${name}}]")\n'
+                "endforeach()\n",
+                encoding="utf-8",
+            )
+            result = subprocess.run([CMAKE, "-P", str(script)], cwd=ROOT, capture_output=True, text=True, encoding="utf-8")
+            self.assertEqual(result.returncode, 0, result.stderr)
+            values = dict(text[:-1].split("=[", 1) for text in result.stderr.splitlines() if "=[" in text)
+            triplet_dir = Path(values["VCPKG_OVERLAY_TRIPLETS"])
+            self.assertNotEqual(values["VCPKG_HOST_TRIPLET"], "")
+            self.assertTrue((triplet_dir / f"{values['VCPKG_TARGET_TRIPLET']}.cmake").is_file())
+        overlay_ports = {Path(text) for text in values["VCPKG_OVERLAY_PORTS"].split(";")}
+        self.assertEqual(overlay_ports, set(ROOT.glob("ThirdParty/*/vcpkg-port")))
 
 
 class VcpkgInstallPlanTest(unittest.TestCase):

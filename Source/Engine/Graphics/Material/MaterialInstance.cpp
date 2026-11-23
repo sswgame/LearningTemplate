@@ -5,16 +5,13 @@
 #include "Core/Algorithm/VectorUtil.h"
 #include "Core/Math/VectorMath.h"
 
-#include "Engine/Asset/AssetFormat.h"
 #include "Engine/Asset/AssetManager.h"
-#include "Engine/Content/AssetPaths.h"
 #include "Engine/Foundation/EngineServices.h"
 #include "Engine/Graphics/Material/Material.h"
 #include "Engine/Graphics/Material/MaterialCache.h"
 #include "Engine/Graphics/Material/MaterialPacking.h"
 #include "Engine/Graphics/Material/MaterialPermutation.h"
 #include "Engine/Graphics/Material/MaterialRenderProxy.h"
-#include "Engine/Graphics/Material/MaterialXML.h"
 #include "Engine/Graphics/RHI/IRHIDevice.h"
 #include "Engine/Graphics/RHI/IRHIResourceFactory.h"
 #include "Engine/Graphics/RHI/RHI.h"
@@ -23,9 +20,6 @@
 #include "Engine/Graphics/Shader/Reflection/ShaderReflectionData.h"
 #include "Engine/Graphics/Texture/Texture2D.h"
 #include "Engine/Graphics/Texture/TextureCache.h"
-#include "Engine/Reflection/EnumName.h"
-#include "Engine/Serialization/XML/XMLDocument.h"
-#include "Engine/Serialization/XML/XMLFields.h"
 
 namespace sw
 {
@@ -66,9 +60,8 @@ namespace sw
              *          쓸 때가 아니라 렌더 사본을 만들 때(`rebuildRenderData`, 게임 스레드, 부모 초기화 뒤) 본다 — 부모의 속성 목록은 디바이스 초기화가 채우고
              *          맞추므로 쓸 때 읽으면 비어 있거나(검사가 조용히 빠진다) 비동기 씬 로드 워커에서 게임 스레드의 초기화와 겹친다(언리얼 MID 도 쓸 때는 이름 · 값만 둔다).
              */
-            [[nodiscard]] static bool canAcceptShape( const Material* pParent, hashed_string name, bool bScalar )
+            [[nodiscard]] static bool canAcceptShape( const MaterialProperty* pProp, bool bScalar )
             {
-                const MaterialProperty* pProp = pParent != nullptr ? pParent->findProperty( name ) : nullptr;
                 if ( pProp == nullptr )
                     return true;
                 const MaterialPropertyKind shaderType = pProp->_shaderType;
@@ -84,16 +77,15 @@ namespace sw
             }
 
             /** @brief 값을 넣거나 바꿉니다. 이미 같은 값이면 false 입니다(매 프레임 같은 키워드를 켜는 코드가 퍼뮤테이션 변경을 적지 않게). */
-            template <typename T>
-            static bool insertOrAssign( vector<pair<hashed_string, T>>& listPair, hashed_string key, const T& val )
+            static bool insertOrAssign( vector<pair<hashed_string, bool>>& listPair, hashed_string key, bool val )
             {
-                for ( auto& pair : listPair )
+                for ( pair<hashed_string, bool>& entry : listPair )
                 {
-                    if ( pair.first == key )
+                    if ( entry.first == key )
                     {
-                        if ( pair.second == val )
+                        if ( entry.second == val )
                             return false;
-                        pair.second = val;
+                        entry.second = val;
                         return true;
                     }
                 }
@@ -120,38 +112,12 @@ namespace sw
                 const MaterialProperty* pProp = pParent != nullptr ? pParent->findProperty( name ) : nullptr;
                 return pProp != nullptr && ( pProp->_type == MaterialPropertyKind::Bool || pProp->_type == MaterialPropertyKind::Keyword ) && pProp->_shaderKeyword.empty() == false;
             }
-
-            /** @brief 부모가 멀티 컴파일 @p name 을 선언하고 그 선택지에 @p option 이 있으면 true 입니다. */
-            static bool findMultiCompileOption( const Material* pParent, hashed_string name, string_view option )
-            {
-                if ( pParent == nullptr )
-                    return false;
-                for ( const MaterialMultiCompile& entry : pParent->getPermutations()._listMultiCompile )
-                {
-                    if ( hashed_string( entry._name.c_str() ) == name )
-                        return VectorUtil::contains( entry._listOption, option );
-                }
-                return false;
-            }
-
-            template <typename T>
-            static const T* findValue( const vector<pair<hashed_string, T>>& listPair, hashed_string key )
-            {
-                for ( const auto& pair : listPair )
-                {
-                    if ( pair.first == key )
-                        return &pair.second;
-                }
-                return nullptr;
-            }
         };
     } // namespace
 } // namespace sw
 
 namespace sw
 {
-    SW_ASSET_TYPE( MaterialInstance, MaterialInstance::kAssetType );
-
     shared_ptr<MaterialInstance> MaterialInstance::create( Material* pParentMaterial )
     {
         // 인자가 Material* 이라 ADL 이 std::make_shared 를 끌어온다. 한정해야 sw 것이 잡힌다.
@@ -160,12 +126,9 @@ namespace sw
 
     MaterialInstance::MaterialInstance( CreateKey, Material* pParentMaterial )
         : _pParentMaterial{ pParentMaterial }
-        , _desc{}
         , _listValueOverride{}
         , _listTextureOverride{}
         , _listKeywordOverride{}
-        , _listMultiCompileOverride{}
-        , _qualityOverride{ MaterialQualityLevel::Count }
         , _renderProxy{ MaterialRenderProxy::create() }
         , _renderData{}
         , _parentBufferGeneration{ 0 }
@@ -178,6 +141,7 @@ namespace sw
         , _parentPermutationHash{ 0 }
         , _parentLoadGeneration{ 0 }
         , _bDefinesDirty{ SW_TRUE }
+        , _bRebuildAll{ SW_TRUE }
         , _instReserved{ 0 }
         , _renderResourceHook{ make_unique<RHIRenderResourceHook<MaterialInstance>>( *this ) }
     {
@@ -220,60 +184,6 @@ namespace sw
             releaseTextureOverrides();
     }
 
-    bool MaterialInstance::loadFromAsset( const AssetID& assetID )
-    {
-        XMLDocument doc;
-        if ( doc.loadResource( assetID ) == false )
-            return false;
-        return loadFromXML( doc.saveToString() );
-    }
-
-    bool MaterialInstance::loadFromDiskFile( string_view diskPath )
-    {
-        XMLDocument doc;
-        if ( doc.loadFromFile( diskPath ) == false )
-            return false;
-        return loadFromXML( doc.saveToString() );
-    }
-
-    bool MaterialInstance::saveToFile( const AbsolutePath& absPath ) const
-    {
-
-        syncDescOverrides();
-
-        XMLDocument doc;
-        XMLNode     root = doc.appendRoot( "MaterialInstanceDef" );
-        AssetXMLFormat::writeXMLVersion( root, kAssetType._formatVersion );
-        XMLFields::writeProperties( root, MaterialInstanceRootParams{ _desc._name, _desc._parentPath } );
-        if ( _desc._quality.empty() == false )
-            root.appendAttribute( "quality", string_view( _desc._quality ) ); // 적지 않음이 "덮어쓰지 않음"이다
-
-        XMLNode overrides = root.appendChild( "_overrides" );
-        for ( const MaterialInstanceDef::Override& overrideItem : _desc._listOverride )
-        {
-            XMLFields::writeProperties( overrides.appendChild( "item" ), MaterialOverrideParams{ overrideItem._name, overrideItem._value, overrideItem._assetPath } );
-        }
-
-        if ( _desc._listKeyword.empty() == false )
-        {
-            XMLNode list = root.appendChild( "_keywords" );
-            for ( const MaterialInstanceDef::KeywordOverride& keywordItem : _desc._listKeyword )
-            {
-                XMLFields::writeProperties( list.appendChild( "item" ), MaterialKeywordOverrideParams{ keywordItem._name, keywordItem._bEnabled } );
-            }
-        }
-        if ( _desc._listMultiCompile.empty() == false )
-        {
-            XMLNode list = root.appendChild( "_multiCompiles" );
-            for ( const MaterialInstanceDef::MultiCompileOverride& multiCompileItem : _desc._listMultiCompile )
-            {
-                XMLFields::writeProperties( list.appendChild( "item" ), MaterialMultiCompileParams{ multiCompileItem._name, multiCompileItem._selected } );
-            }
-        }
-
-        return doc.saveCompleteToFile( absPath.str() );
-    }
-
     MaterialRenderBinding MaterialInstance::getRenderBinding( const MaterialRenderInputs& inputs )
     {
         if ( _pParentMaterial == nullptr )
@@ -288,8 +198,10 @@ namespace sw
         // 부모의 값 변경과 다시 맞춘 레이아웃을 놓친다.
         const bool bParentChanged   = _parentBufferGeneration != _pParentMaterial->getBufferGeneration();
         const bool bOverrideChanged = _overrideRevision.get() != _renderDataOverrideRevision;
-        if ( bTextureChanged || bParentChanged || bOverrideChanged || _renderData == nullptr )
+        if ( bTextureChanged || bParentChanged || _bRebuildAll == SW_TRUE || _renderData == nullptr )
             rebuildRenderData( pDevice );
+        else if ( bOverrideChanged )
+            patchRenderData();
         return MaterialRenderBinding{ _renderProxy, _renderData };
     }
 
@@ -300,31 +212,80 @@ namespace sw
         data->_elementStride                = _pParentMaterial->getElementStride();
         _parentBufferGeneration             = _pParentMaterial->getBufferGeneration();
         _renderDataOverrideRevision         = _overrideRevision.get();
+        _bRebuildAll                        = SW_FALSE;
         // 부모 바이트가 비었으면(레이아웃 오류 — 오류는 부모가 남겼다) 빈 사본이다. 렌더 스레드는 빈 바이트를 올리지 않는다.
         if ( data->_bytes.empty() == false )
         {
             dropShapeMismatchedOverrides();
-            for ( const ValueOverride& valueOverride : _listValueOverride )
+            for ( ValueOverride& valueOverride : _listValueOverride )
             {
-                if ( valueOverride._kind == ValueKind::Text )
-                    _pParentMaterial->packNamedValueIntoBuffer( valueOverride._name, valueOverride._text, data->_bytes );
-                else
-                    _pParentMaterial->packNamedFloatsIntoBuffer( valueOverride._name, valueOverride._arrValue, valueOverride.getFloatCount(), data->_bytes );
+                packValueOverride( valueOverride, data->_bytes );
             }
             // 덮어쓴 텍스처: 네이티브 bindless 는 지금 SRV 인덱스를, 슬롯 바인딩 백엔드(DX11 · GL)는 슬롯 서수를 넣는다(부모와 같은 규칙).
             const bool bNativeBindless = pDevice != nullptr && pDevice->supportsNativeBindlessSampling();
-            for ( const TextureOverride& texture : _listTextureOverride )
+            for ( TextureOverride& texture : _listTextureOverride )
             {
                 const RHIDescriptorIndex srv = texture.getStableSRV();
                 if ( srv == kInvalidDescriptorIndex )
                     continue;
                 const optional<uint32> textureBinding = bNativeBindless ? optional<uint32>{ srv } : findTextureSlot( texture._name );
-                if ( textureBinding.has_value() && *textureBinding != kInvalidDescriptorIndex )
-                    _pParentMaterial->packTextureIntoBuffer( texture._name, *textureBinding, data->_bytes );
+                if ( textureBinding.has_value() && *textureBinding != kInvalidDescriptorIndex && _pParentMaterial->resolveProperty( texture._name, texture._handle ) != nullptr )
+                    _pParentMaterial->packTextureIntoBuffer( texture._handle, *textureBinding, data->_bytes );
             }
         }
         fillTextureSlots( data->_arrTextureSRV, shaderslot::kMaterialTextureCount );
         _renderData = std::move( data );
+    }
+
+    void MaterialInstance::patchRenderData()
+    {
+        _renderDataOverrideRevision = _overrideRevision.get();
+        if ( _renderData->_bytes.empty() )
+            return; // 부모의 레이아웃 오류 — 부모가 다시 맞춰지면 통째로 짓는다
+        shared_ptr<MaterialRenderData> data;
+        const vector<uint8>&           parentBytes = _pParentMaterial->getBuffer();
+        for ( ValueOverride& valueOverride : _listValueOverride )
+        {
+            if ( valueOverride._bDirty == SW_FALSE )
+                continue;
+            const MaterialProperty* pProp = _pParentMaterial->resolveProperty( valueOverride._name, valueOverride._handle );
+            if ( pProp == nullptr )
+            {
+                valueOverride._bDirty = SW_FALSE; // 부모에 없는 이름이다(다른 변형이 쓸 수 있다)
+                continue;
+            }
+            if ( MaterialPacking::isTextureType( pProp->_type ) )
+            {
+                rebuildRenderData( _pParentMaterial->getRHIDevice() ); // 텍스처 칸에 글로 쓴 값 — 같은 칸의 텍스처 덮어쓰기가 뒤에 얹혀야 한다
+                return;
+            }
+            if ( data == nullptr )
+                data = sw::make_shared<MaterialRenderData>( *_renderData );
+            // 거절된 값(모양 어긋남 · 못 읽는 글)은 앞 값이 아니라 부모 값이다 — 칸을 부모 값으로 되돌린 뒤 쓴다(통째로 짓는 길과 같은 결과).
+            if ( pProp->_offset + pProp->_size <= parentBytes.size() && pProp->_offset + pProp->_size <= data->_bytes.size() )
+                Memory::copy( data->_bytes.data() + pProp->_offset, parentBytes.data() + pProp->_offset, pProp->_size );
+            if ( valueOverride._kind == ValueKind::Text || MaterialInstanceInternal::canAcceptShape( pProp, valueOverride._kind == ValueKind::Scalar ) )
+                packValueOverride( valueOverride, data->_bytes );
+            else
+                valueOverride._name = hashed_string{}; // 알렸다 — 아래에서 뺀다
+        }
+        VectorUtil::removeIf( _listValueOverride, []( const ValueOverride& valueOverride )
+        { return valueOverride._name.empty(); } );
+        if ( data != nullptr )
+            _renderData = std::move( data );
+    }
+
+    void MaterialInstance::packValueOverride( ValueOverride& inoutOverride, vector<uint8>& inoutBytes ) const
+    {
+        inoutOverride._bDirty         = SW_FALSE;
+        const MaterialProperty* pProp = _pParentMaterial->resolveProperty( inoutOverride._name, inoutOverride._handle );
+        if ( pProp == nullptr )
+            return;
+        // 못 읽는 값은 패커가 오류로 남기고 칸은 부모 값 그대로다.
+        if ( inoutOverride._kind == ValueKind::Text )
+            (void)MaterialPacking::packValueIntoBuffer( *pProp, inoutOverride._text, inoutBytes );
+        else
+            (void)MaterialPacking::packFloatsIntoBuffer( *pProp, inoutOverride._arrValue, inoutOverride.getFloatCount(), inoutBytes );
     }
 
     void MaterialInstance::dropShapeMismatchedOverrides()
@@ -332,7 +293,7 @@ namespace sw
         // 어긋난 값은 한 번 알리고 버린다(쓸 때 거절하던 것과 같은 결과) — 남겨 두면 사본을 만들 때마다 다시 알린다.
         const Material* pParent = _pParentMaterial;
         VectorUtil::removeIf( _listValueOverride, [pParent]( const ValueOverride& valueOverride )
-        { return valueOverride._kind != ValueKind::Text && MaterialInstanceInternal::canAcceptShape( pParent, valueOverride._name, valueOverride._kind == ValueKind::Scalar ) == false; } );
+        { return valueOverride._kind != ValueKind::Text && MaterialInstanceInternal::canAcceptShape( pParent->findProperty( valueOverride._name ), valueOverride._kind == ValueKind::Scalar ) == false; } );
     }
 
     string MaterialInstance::ValueOverride::makeText() const
@@ -365,8 +326,8 @@ namespace sw
             return;
         }
         pOverride->_text.clear();
-        pOverride->_kind       = kind;
-        pOverride->_bFromAsset = SW_FALSE;
+        pOverride->_kind   = kind;
+        pOverride->_bDirty = SW_TRUE;
         Memory::copy( pOverride->_arrValue, pValue, count * sizeof( float32 ) );
         markRenderDirty();
     }
@@ -404,7 +365,7 @@ namespace sw
             }
             if ( texture._load.hasFailed() )
             {
-                SW_LOG_WARNING_ID( "MaterialInstance.MaterialInstanceTextureCouldNot", "MaterialInstance '%#': texture '%#' for '%#' could not be loaded (%#) — the parent's texture stays.", _desc._name.c_str(),
+                SW_LOG_WARNING_ID( "MaterialInstance.MaterialInstanceTextureCouldNot", "Material instance of '%#': texture '%#' for '%#' could not be loaded (%#) — the parent's texture stays.", getParentName(),
                                    texture._assetPath.c_str(), texture._name.c_str(), texture._load.getError().c_str() );
                 texture._load.reset(); // 경로는 적어 두었다 — 다시 묻지 않는다(같은 경로를 다시 주면 `setTextureParameter` 가 다시 시도하게 한다)
                 bChanged = true;       // 쥐던 번호(누락 체커)를 놓았다 — 부모의 텍스처로 다시 패킹한다
@@ -425,6 +386,7 @@ namespace sw
             texture._acquiredPath.clear();
         }
         _pTextureDevice = nullptr;
+        _bRebuildAll    = SW_TRUE;
         markRenderDirty();
     }
 
@@ -466,9 +428,8 @@ namespace sw
             texture._assetPath.clear();
         }
         _listKeywordOverride.clear();
-        _listMultiCompileOverride.clear();
-        _qualityOverride = MaterialQualityLevel::Count;
-        _bDefinesDirty   = SW_TRUE;
+        _bDefinesDirty = SW_TRUE;
+        _bRebuildAll   = SW_TRUE;
         MaterialPermutation::recordPermutationChange( this );
         markRenderDirty();
     }
@@ -488,14 +449,13 @@ namespace sw
         const MaterialStaticSwitch* pSwitch = MaterialInstanceInternal::findSwitch( _pParentMaterial, keyword );
         if ( pSwitch == nullptr )
         {
-            SW_LOG_ERROR_ID( "MaterialInstance.KeywordUnknown", "Material instance '%#': the parent material '%#' declares no static switch '%#'", _desc._name,
-                             _pParentMaterial != nullptr ? string_view( _pParentMaterial->getDesc()._name ) : string_view( "<none>" ), keyword.c_str() );
+            SW_LOG_ERROR_ID( "MaterialInstance.KeywordUnknown", "Material instance: the parent material '%#' declares no static switch '%#'", getParentName(), keyword.c_str() );
             return false;
         }
         if ( pSwitch->_bShaderFeature != SW_FALSE )
         {
-            SW_LOG_ERROR_ID( "MaterialInstance.KeywordNotRuntime", "Material instance '%#': static switch '%#' is a shader feature (bShaderFeature=\"1\") - only asset states are cooked, so set it in a .materialinstance asset",
-                             _desc._name, keyword.c_str() );
+            SW_LOG_ERROR_ID( "MaterialInstance.KeywordNotRuntime", "Material instance of '%#': static switch '%#' is a shader feature (bShaderFeature=\"1\") - only asset states are cooked, so set it in a child material (_base)",
+                             getParentName(), keyword.c_str() );
             return false;
         }
         // 덮어쓰기는 스위치 이름으로 든다 — 키워드로 켜도 이름으로 켜도 한 칸이다.
@@ -507,24 +467,13 @@ namespace sw
         return true;
     }
 
-    void MaterialInstance::setParent( Material* pParentMaterial )
-    {
-        _pParentMaterial = pParentMaterial;
-        // 거절하지 않고 버린다 — 부모를 거절하면 인스턴스가 부모 없이 남아 그리지 못한다. 어긋난 모양을 알리고 버리는 `dropShapeMismatchedOverrides` 와 같은 처리다.
-        VectorUtil::removeIf( _listValueOverride, [this]( const ValueOverride& valueOverride )
-        { return valueOverride._bFromAsset == SW_FALSE && rejectStaticValue( valueOverride._name ); } );
-        _bDefinesDirty = SW_TRUE;
-        MaterialPermutation::recordPermutationChange( this );
-        markRenderDirty();
-    }
-
     bool MaterialInstance::rejectStaticValue( hashed_string name ) const
     {
         if ( MaterialInstanceInternal::isKeywordValueProperty( _pParentMaterial, name ) == false )
             return false;
         SW_LOG_ERROR_ID( "MaterialInstance.StaticValueRejected",
-                         "Material instance '%#': '%#' emits a shader keyword - a runtime value would make an uncooked permutation, so set it in a .materialinstance asset or use a runtime switch (enableKeyword)",
-                         _desc._name, name.c_str() );
+                         "Material instance of '%#': '%#' emits a shader keyword - a runtime value would make an uncooked permutation, so set it in a child material (_base) or use a runtime switch (enableKeyword)",
+                         getParentName(), name.c_str() );
         return true;
     }
 
@@ -532,12 +481,6 @@ namespace sw
     {
         if ( rejectStaticValue( name ) )
             return false;
-        assignText( name, value, false );
-        return true;
-    }
-
-    void MaterialInstance::assignText( hashed_string name, string_view value, bool bFromAsset )
-    {
         ValueOverride* pOverride = findValueOverride( name );
         if ( pOverride == nullptr )
         {
@@ -546,12 +489,13 @@ namespace sw
         }
         else if ( pOverride->_kind == ValueKind::Text && pOverride->_text == value )
         {
-            return;
+            return true;
         }
-        pOverride->_kind       = ValueKind::Text;
-        pOverride->_text       = value;
-        pOverride->_bFromAsset = bFromAsset ? SW_TRUE : SW_FALSE;
-        markRenderDirty(); // 키워드 칸 값(define)은 에셋 읽기만 쓰고, 읽기 끝에서 정의 캐시를 더럽힌다(`loadFromXML`)
+        pOverride->_kind   = ValueKind::Text;
+        pOverride->_text   = value;
+        pOverride->_bDirty = SW_TRUE;
+        markRenderDirty();
+        return true;
     }
 
     void MaterialInstance::setScalarParameter( hashed_string name, float32 value )
@@ -568,6 +512,7 @@ namespace sw
     void MaterialInstance::setTextureParameter( hashed_string name, string_view textureAssetPath )
     {
         // 원하는 경로만 적는다. 빌리고 돌려주는 것은 다음 getRenderBinding 이다(syncTextureOverrides).
+        _bRebuildAll = SW_TRUE;
         markRenderDirty();
         for ( TextureOverride& texture : _listTextureOverride )
         {
@@ -587,116 +532,28 @@ namespace sw
         _listTextureOverride.push_back( std::move( texture ) );
     }
 
-    void MaterialInstance::setQualityLevel( MaterialQualityLevel level )
+    string_view MaterialInstance::getParentName() const
     {
-        if ( _qualityOverride != level )
-        {
-            _qualityOverride = level;
-            _bDefinesDirty   = SW_TRUE;
-            MaterialPermutation::recordPermutationChange( this );
-            markRenderDirty();
-        }
+        return _pParentMaterial != nullptr ? string_view( _pParentMaterial->getName() ) : string_view( "<none>" );
     }
 
-    bool MaterialInstance::setMultiCompile( hashed_string name, string_view selectedOption )
+    MaterialPermutationDef MaterialInstance::makePermutations() const
     {
-        if ( MaterialInstanceInternal::findMultiCompileOption( _pParentMaterial, name, selectedOption ) == false )
+        MaterialPermutationDef permutations = _pParentMaterial->getPermutations();
+        for ( const pair<hashed_string, bool>& keywordOverride : _listKeywordOverride )
         {
-            SW_LOG_ERROR_ID( "MaterialInstance.MultiCompileUnknown", "Material instance '%#': the parent material '%#' declares no multi-compile '%#' with option '%#'", _desc._name,
-                             _pParentMaterial != nullptr ? string_view( _pParentMaterial->getDesc()._name ) : string_view( "<none>" ), name.c_str(), selectedOption );
-            return false;
-        }
-        if ( MaterialInstanceInternal::insertOrAssign( _listMultiCompileOverride, name, string( selectedOption ) ) == false )
-            return true; // 이미 고른 값이다 — 퍼뮤테이션이 그대로다
-        _bDefinesDirty = SW_TRUE;
-        MaterialPermutation::recordPermutationChange( this );
-        markRenderDirty();
-        return true;
-    }
-
-    bool MaterialInstance::makePermutations( MaterialPermutationDef& outPermutations ) const
-    {
-        if ( _pParentMaterial == nullptr )
-            return false;
-        outPermutations = _pParentMaterial->getPermutations();
-        if ( _qualityOverride != MaterialQualityLevel::Count )
-            outPermutations._quality = _qualityOverride;
-        bool bAllDeclared = true;
-        // 에셋(`.materialinstance`)에서 읽은 덮어쓰기는 부모를 모른 채 들어온다 — 부모 칸에 없는 이름은 여기서 알리고 뺀다(쿠커도 같은 함수라 같은 오류를 낸다).
-        for ( const auto& [name, bEnabled] : _listKeywordOverride )
-        {
-            MaterialStaticSwitch* pSwitch = nullptr;
-            for ( MaterialStaticSwitch& entry : outPermutations._listStaticSwitch )
-            {
-                if ( hashed_string( entry._name.c_str() ) == name || hashed_string( entry._keyword.c_str() ) == name )
-                {
-                    pSwitch = &entry;
-                    break;
-                }
-            }
+            const hashed_string&  name    = keywordOverride.first;
+            MaterialStaticSwitch* pSwitch = VectorUtil::findIf( permutations._listStaticSwitch, [&name]( const MaterialStaticSwitch& entry )
+            { return hashed_string( entry._name.c_str() ) == name; } );
             if ( pSwitch == nullptr )
             {
-                SW_LOG_ERROR_ID( "MaterialInstance.KeywordUnknown", "Material instance '%#': the parent material '%#' declares no static switch '%#'", _desc._name,
-                                 _pParentMaterial->getDesc()._name, name.c_str() );
-                bAllDeclared = false;
+                // 켠 뒤 부모를 다시 읽어 스위치가 없어졌다 — 부모가 선언한 칸만 define 이 되어, 쿠킹하지 않은 define 글이 퍼뮤테이션에 섞이지 않는다.
+                SW_LOG_ERROR_ID( "MaterialInstance.KeywordUnknown", "Material instance: the parent material '%#' declares no static switch '%#'", getParentName(), name.c_str() );
                 continue;
             }
-            pSwitch->_bEnabled = bEnabled ? 1 : 0;
+            pSwitch->_bEnabled = keywordOverride.second ? 1 : 0;
         }
-        for ( const auto& [name, selected] : _listMultiCompileOverride )
-        {
-            MaterialMultiCompile* pMultiCompile = nullptr;
-            for ( MaterialMultiCompile& entry : outPermutations._listMultiCompile )
-            {
-                if ( hashed_string( entry._name.c_str() ) == name && VectorUtil::contains( entry._listOption, selected ) )
-                {
-                    pMultiCompile = &entry;
-                    break;
-                }
-            }
-            if ( pMultiCompile == nullptr )
-            {
-                SW_LOG_ERROR_ID( "MaterialInstance.MultiCompileUnknown", "Material instance '%#': the parent material '%#' declares no multi-compile '%#' with option '%#'", _desc._name,
-                                 _pParentMaterial->getDesc()._name, name.c_str(), selected );
-                bAllDeclared = false;
-                continue;
-            }
-            pMultiCompile->_selected = selected;
-        }
-        return bAllDeclared;
-    }
-
-    bool MaterialInstance::collectRuntimeSwitchVariants( vector<vector<string>>& outListDefine, vector<uint64>& outListPermutationHash ) const
-    {
-        outListDefine.clear();
-        outListPermutationHash.clear();
-        MaterialPermutationDef permutations;
-        if ( makePermutations( permutations ) == false )
-            return false; // 부모가 없거나 모르는 덮어쓰기다(makePermutations 가 알렸다)
-        vector<pair<hashed_string, bool>> listKeywordValue;
-        if ( makeKeywordValueOverrides( listKeywordValue ) == false )
-            return false; // 읽지 못한 키워드 칸 값이다(makeKeywordValueOverrides 가 알렸다)
-        _pParentMaterial->collectRuntimeSwitchVariants( permutations, listKeywordValue, outListDefine, outListPermutationHash );
-        return true;
-    }
-
-    bool MaterialInstance::makeKeywordValueOverrides( vector<pair<hashed_string, bool>>& outListOverride ) const
-    {
-        outListOverride.clear();
-        bool bAllRead = true;
-        for ( const ValueOverride& valueOverride : _listValueOverride )
-        {
-            if ( valueOverride._kind != ValueKind::Text || MaterialInstanceInternal::isKeywordValueProperty( _pParentMaterial, valueOverride._name ) == false )
-                continue;
-            bool bEnabled{ false };
-            if ( MaterialPacking::parseBoolToken( valueOverride._text, valueOverride._name.c_str(), "MaterialInstance.KeywordValueUnreadable", bEnabled ) == false )
-            {
-                bAllRead = false; // parseBoolToken 이 오류로 남겼다
-                continue;
-            }
-            outListOverride.emplace_back( valueOverride._name, bEnabled );
-        }
-        return bAllRead;
+        return permutations;
     }
 
     bool MaterialInstance::getParameter( hashed_string name, string& outValue ) const
@@ -758,15 +615,10 @@ namespace sw
         if ( _bDefinesDirty == SW_TRUE )
         {
             _previousPermutationHash = _cachedPermutationHash; // 처음 만들 때는 0 이다
-            MaterialPermutationDef permutations;
             if ( _pParentMaterial != nullptr )
             {
-                // 모르는 덮어쓰기는 makePermutations 가 오류로 알리고 뺀다 — 부모가 선언한 칸만 define 이 되어, 쿠킹하지 않은 define 글이 퍼뮤테이션에 섞이지 않는다.
-                (void)makePermutations( permutations );
-                vector<pair<hashed_string, bool>> listKeywordValue;
-                (void)makeKeywordValueOverrides( listKeywordValue ); // 읽지 못한 값은 오류로 알리고 뺀다 — 부모 값으로 그린다
                 // 부모와 같은 정의 함수 · 해시 규칙이다 — 렌더 상태 · 그리기 순서는 부모의 것이라 다른 렌더 상태의 부모가 한 배치로 합쳐지지 않는다.
-                _pParentMaterial->computeShaderDefines( permutations, listKeywordValue, _listCachedDefine );
+                _pParentMaterial->computeShaderDefines( makePermutations(), _listCachedDefine );
                 _cachedPermutationHash = _pParentMaterial->computePermutationHash( _listCachedDefine );
             }
             else
@@ -802,11 +654,8 @@ namespace sw
             if ( texture._name == name && texture._assetPath.empty() == false )
                 return true;
         }
-        if ( MaterialInstanceInternal::findValue( _listKeywordOverride, name ) != nullptr )
-            return true;
-        if ( MaterialInstanceInternal::findValue( _listMultiCompileOverride, name ) != nullptr )
-            return true;
-        return false;
+        return VectorUtil::containsIf( _listKeywordOverride, [&name]( const pair<hashed_string, bool>& entry )
+        { return entry.first == name; } );
     }
 
     bool MaterialInstance::validateParametersWithReflection( const ShaderReflectionData& reflectionData ) const
@@ -816,142 +665,6 @@ namespace sw
             if ( MaterialInstanceInternal::reflectionHasParam( reflectionData, valueOverride._name ) == false )
                 return false;
         }
-        return true;
-    }
-
-    void MaterialInstance::syncDescOverrides() const
-    {
-        auto self = const_cast<MaterialInstance*>( this );
-        self->_desc._listOverride.clear();
-        for ( const ValueOverride& valueOverride : _listValueOverride )
-        {
-            MaterialInstanceDef::Override overrideItem{};
-            overrideItem._name  = valueOverride._name.c_str() ? valueOverride._name.c_str() : "";
-            overrideItem._value = valueOverride.makeText();
-            self->_desc._listOverride.push_back( std::move( overrideItem ) );
-        }
-        // 텍스처 덮어쓰기는 값이 아니라 에셋 경로다(`assetPath`). 날 인덱스는 다시 올리면 낡으므로 저장하지 않는다.
-        for ( const TextureOverride& texture : _listTextureOverride )
-        {
-            if ( texture._assetPath.empty() )
-                continue;
-            MaterialInstanceDef::Override overrideItem{};
-            overrideItem._name      = texture._name.c_str() ? texture._name.c_str() : "";
-            overrideItem._assetPath = texture._assetPath;
-            self->_desc._listOverride.push_back( std::move( overrideItem ) );
-        }
-        self->_desc._listKeyword.clear();
-        for ( const auto& [name, enabled] : _listKeywordOverride )
-        {
-            MaterialInstanceDef::KeywordOverride keywordItem{};
-            keywordItem._name     = name.c_str() ? name.c_str() : "";
-            keywordItem._bEnabled = enabled;
-            self->_desc._listKeyword.push_back( std::move( keywordItem ) );
-        }
-        self->_desc._listMultiCompile.clear();
-        for ( const auto& [name, selected] : _listMultiCompileOverride )
-        {
-            MaterialInstanceDef::MultiCompileOverride multiCompileItem{};
-            multiCompileItem._name     = name.c_str() ? name.c_str() : "";
-            multiCompileItem._selected = selected;
-            self->_desc._listMultiCompile.push_back( std::move( multiCompileItem ) );
-        }
-        if ( _qualityOverride != MaterialQualityLevel::Count )
-            self->_desc._quality = getEnumName( _qualityOverride );
-        else
-            self->_desc._quality.clear();
-        if ( _pParentMaterial != nullptr )
-            self->_desc._parentPath.clear(); // 런타임 부모다. 경로가 필요하면 부르는 쪽이 채운다.
-    }
-
-    bool MaterialInstance::loadFromXML( string_view xmlText )
-    {
-        XMLDocument doc;
-        if ( doc.parse( xmlText ) == false )
-            return false;
-
-        XMLNode root = doc.getRoot( "MaterialInstanceDef" );
-        if ( root.isValid() == false )
-            return false;
-
-        if ( AssetXMLFormat::upgradeToCurrentXMLVersion( kAssetType, root ) == false )
-            return false;
-
-        // 칸은 스키마(MaterialXML.h)가 정한다. 품질은 적지 않음이 "덮어쓰지 않음"이라 따로 읽는다.
-        const string_view              sourceName{ root.getAttributeText( "name" ) };
-        MaterialInstanceRootParams     rootParams;
-        optional<MaterialQualityLevel> quality;
-        if ( XMLFields::readProperties( root, rootParams, sourceName, { "formatVersion", "quality" } ) == false ||
-             XMLFields::readOptionalEnum( root, "quality", quality, sourceName ) == false )
-            return false;
-        _desc             = MaterialInstanceDef{};
-        _desc._name       = rootParams._name;
-        _desc._parentPath = rootParams._parentPath;
-        _desc._quality    = quality.has_value() ? string( getEnumName( *quality ) ) : string{};
-
-        XMLNode overrides = root.findChild( "_overrides" );
-        if ( overrides.isValid() )
-        {
-            for ( XMLNode item = overrides.findChild( "item" ); item; item = item.findNextSibling( "item" ) )
-            {
-                MaterialOverrideParams params;
-                if ( XMLFields::readProperties( item, params, sourceName ) == false )
-                    return false;
-                _desc._listOverride.push_back( MaterialInstanceDef::Override{ std::move( params._name ), std::move( params._value ), std::move( params._assetPath ) } );
-            }
-        }
-        XMLNode keywords = root.findChild( "_keywords" );
-        if ( keywords.isValid() )
-        {
-            for ( XMLNode item = keywords.findChild( "item" ); item; item = item.findNextSibling( "item" ) )
-            {
-                MaterialKeywordOverrideParams params;
-                if ( XMLFields::readProperties( item, params, sourceName ) == false )
-                    return false;
-                _desc._listKeyword.push_back( MaterialInstanceDef::KeywordOverride{ std::move( params._name ), params._bEnabled } );
-            }
-        }
-        XMLNode multiCompileNode = root.findChild( "_multiCompiles" );
-        if ( multiCompileNode.isValid() )
-        {
-            for ( XMLNode item = multiCompileNode.findChild( "item" ); item; item = item.findNextSibling( "item" ) )
-            {
-                MaterialMultiCompileParams params;
-                if ( XMLFields::readProperties( item, params, sourceName ) == false )
-                    return false;
-                _desc._listMultiCompile.push_back( MaterialInstanceDef::MultiCompileOverride{ std::move( params._name ), std::move( params._selected ) } );
-            }
-        }
-
-        _listValueOverride.clear();
-        _listKeywordOverride.clear();
-        _listMultiCompileOverride.clear();
-        for ( TextureOverride& texture : _listTextureOverride )
-        {
-            texture._assetPath.clear(); // 돌려준 뒤 뺀다(syncTextureOverrides)
-        }
-
-        // `assetPath` 가 있는 항목은 텍스처 덮어쓰기다. 빠뜨리면 .materialinstance 의 텍스처가 조용히 부모 것으로 남는다.
-        for ( const MaterialInstanceDef::Override& overrideItem : _desc._listOverride )
-        {
-            if ( overrideItem._assetPath.empty() == false )
-                setTextureParameter( hashed_string( overrideItem._name.c_str() ), overrideItem._assetPath );
-            else
-                assignText( hashed_string( overrideItem._name.c_str() ), overrideItem._value, true ); // 에셋의 키워드 칸 값은 쿠커가 굽는다 — 런타임 거절(`setParameter`)을 거치지 않는다
-        }
-        for ( const MaterialInstanceDef::KeywordOverride& keywordItem : _desc._listKeyword )
-        {
-            MaterialInstanceInternal::insertOrAssign( _listKeywordOverride, hashed_string( keywordItem._name.c_str() ), keywordItem._bEnabled );
-        }
-        for ( const MaterialInstanceDef::MultiCompileOverride& multiCompileItem : _desc._listMultiCompile )
-        {
-            MaterialInstanceInternal::insertOrAssign( _listMultiCompileOverride, hashed_string( multiCompileItem._name.c_str() ), multiCompileItem._selected );
-        }
-        if ( quality.has_value() )
-            _qualityOverride = *quality;
-        _bDefinesDirty = SW_TRUE; // 다시 읽은 스위치 · 멀티 컴파일 · 키워드 칸 값이 define 을 바꿀 수 있다
-        MaterialPermutation::recordPermutationChange( this );
-        markRenderDirty();
         return true;
     }
 

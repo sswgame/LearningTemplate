@@ -41,7 +41,7 @@ namespace sw
          * @details 바인드 · 레스트 포즈로 대신 그리지 않는다 — 풀이 이유를 오류로 남겼다(`FramePassExecutor::shouldDrawBatchInPass` 가 거른다).
          */
         uint8 _bDeformRefused{ SW_FALSE };
-        /** @brief 배치 머리 원소(`GPUMeshBatch::_materialIndex`)의 머티리얼 상수 버퍼 bindless 인덱스입니다(`MaterialRenderProxy::sync`). */
+        /** @brief 배치 머리 원소(`GPUMeshBatch::_materialIndex`)의 머티리얼 상수 버퍼 bindless 인덱스입니다(`MaterialRenderProxy::sync`). 원소 배열(g_SwMaterials)을 읽는 셰이더면 무효입니다. */
         RHIDescriptorIndex _materialCb = kInvalidDescriptorIndex;
         /** @brief 그룹의 GPU 구조 버퍼(g_SwMaterials, t5)와 SRV 인덱스입니다. 인스턴스의 _materialIndex 가 이 버퍼의 원소를 고른다. */
         RHIBufferHandle    _materialBuffer{ 0 };

@@ -407,6 +407,47 @@ SW_TEST_CASE( DataInheritanceTest, DeltaRoundTrip )
     SW_EXPECT_FALSE( noDeltaDoc.getRoot().findChild().isValid() );
 }
 
+/**
+ * @brief [DataInheritanceTest] 글이 열쇠인 목록(`kTextKey`)은 글 하나씩 더하고 지우며, 차이를 다시 펼치면 처음 글 목록이 나온다
+ * @details 변이: 펼치기가 글을 옮기지 않으면 새 줄이 빈 원소가 되고, 차이가 글뿐인 새 원소를 "차이 없음" 으로 보면 더한 줄이 저장에서 사라진다.
+ */
+SW_TEST_CASE( DataInheritanceTest, TextKeyedListMergesByText )
+{
+    static constexpr const utf8* kTextBase = R"(<Doc><_tags><item>t1</item><item>t2</item></_tags></Doc>)";
+    DataInheritanceSchema        schema{ "Doc" };
+    schema._listField.push_back( DataInheritanceSchema::makeKeyedList( "_tags", DataInheritanceSchema::kTextKey ) );
+    const auto joinTags = []( const string& text )
+    {
+        XMLDocument doc;
+        string      tags;
+        if ( doc.parse( text ) == false )
+            return tags;
+        for ( XMLNode item = doc.getRoot().findChild( "_tags" ).findChild( "item" ); item; item = item.findNextSibling( "item" ) )
+        {
+            tags += item.getText();
+            tags.push_back( ',' );
+        }
+        return tags;
+    };
+
+    DataInheritanceTestSource source;
+    source.add( "base.xml", kTextBase );
+    string flat;
+    SW_REQUIRE_TRUE( DataInheritance::flatten( R"(<Doc _base="base.xml"><_tags><item>t3</item><item _op="Remove">t1</item><item>t2</item></_tags></Doc>)", "child.xml", schema, source, flat ) );
+    SW_EXPECT_EQUAL( string( "t2,t3," ), joinTags( flat ) );
+
+    string delta;
+    SW_REQUIRE_TRUE( DataInheritance::makeDelta( flat, kTextBase, schema, "base.xml", delta ) );
+    SW_EXPECT_TRUE( delta.find( "t2" ) == string::npos ); // 물려받은 줄은 적지 않는다
+    string roundTrip;
+    SW_REQUIRE_TRUE( DataInheritance::flatten( delta, "child.xml", schema, source, roundTrip ) );
+    SW_EXPECT_EQUAL( joinTags( flat ), joinTags( roundTrip ) );
+
+    // 빈 글은 열쇠가 없다.
+    SW_EXPECT_LOG( "DataInheritance.ListKeyMissing2" );
+    SW_EXPECT_FALSE( DataInheritance::flatten( R"(<Doc _base="base.xml"><_tags><item/></_tags></Doc>)", "child.xml", schema, source, flat ) );
+}
+
 /** @brief [DataInheritanceTest] 저장이 지우지 않는 칸(필수 · 판)은 부모와 같아도 남는다 */
 SW_TEST_CASE( DataInheritanceTest, DeltaKeepsKeptAttributes )
 {

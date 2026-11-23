@@ -80,11 +80,15 @@ namespace sw
      * @brief 형식 하나를 합치는 규칙입니다. 리플렉션 형식은 `makeFromType` 이 PROPERTY 에서 만들고, 손으로 읽는 XML 형식은 같은 구조를 값으로 적습니다.
      * @details 노드 하나가 원소 하나입니다. `_listField` 에 없는 자식 원소는 통째로 바뀝니다(열쇠 없는 목록 · 글 값).
      *          `_keyAttribute` 가 있으면 이 원소의 자식들이 그 속성을 열쇠로 하는 목록이고, `_listField` 는 목록 원소 안쪽의 칸입니다.
+     *          글만 담는 목록(`<item>MATERIAL_X</item>`)은 열쇠가 `kTextKey` 입니다 — 원소의 글이 이름이라 글 하나를 더하고(`<item>새 글</item>`) 지웁니다(`<item _op="Remove">글</item>`).
      */
     struct SW_API DataInheritanceSchema
     {
+        /** @brief `_keyAttribute` 가 이 값이면 속성이 아니라 원소의 글이 열쇠다(속성 이름에 쓸 수 없는 글자라 겹치지 않는다). */
+        static constexpr const utf8* kTextKey = "#text";
+
         string         _name;              ///< 원소 이름. 맨 위 노드는 문서 루트 이름이다
-        string         _keyAttribute;      ///< 비어 있지 않으면 자식들이 이 속성을 열쇠로 하는 목록이다
+        string         _keyAttribute;      ///< 비어 있지 않으면 자식들이 이 속성(`kTextKey` 면 글)을 열쇠로 하는 목록이다
         vector<string> _listKeptAttribute; ///< 부모 · 기본값과 같아도 저장이 지우지 않는 속성(필수 칸 · 형식 판 · 이름)
         /**
          * @brief 열쇠 있는 목록 원소의 정체 속성입니다(애니메이션 그래프 전이의 `from` · `to`). 자식이 부모와 같은 열쇠의 원소에 다른 값을 적으면 고침이 아니라 열쇠가 겹친 것이다.
@@ -111,6 +115,10 @@ namespace sw
         [[nodiscard]] static DataInheritanceSchema makeKeyedList( string_view name, string_view keyAttribute );
         /** @brief @p name 의 자식 칸입니다. 없으면 nullptr 이고, 그 칸은 통째로 바뀝니다. */
         [[nodiscard]] const DataInheritanceSchema* findField( string_view name ) const;
+        /** @brief 열쇠 있는 목록의 원소 @p element 의 열쇠입니다. 열쇠 속성이 없거나 글이 비면 비어 있습니다. */
+        [[nodiscard]] optional<string> findElementKey( const XMLNode& element ) const;
+        /** @brief 열쇠 있는 목록의 원소 @p element 에 열쇠 @p key 를 적습니다(속성 또는 글). */
+        void writeElementKey( const XMLNode& element, string_view key ) const;
         /** @brief 리플렉션 형식의 규칙을 만듭니다. 구조체 칸 · `InheritKey` 칸이 있는 구조체 목록은 합치고, 필수 칸(`Required`)은 저장이 지우지 않습니다. */
         [[nodiscard]] static DataInheritanceSchema makeFromType( const TypeInfo& typeInfo );
     };
