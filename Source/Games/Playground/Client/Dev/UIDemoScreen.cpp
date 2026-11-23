@@ -205,10 +205,12 @@ namespace sw
         }
 
         unique_ptr<SliderWidget> slider = make_unique<SliderWidget>();
+        slider->setName( hashed_string( "VolumeSlider" ) ); // 시나리오 web/dominput 이 탭 순서를 이름으로 본다(아래 체크 · 콤보도)
         slider->setRange( 0.0f, 100.0f, 5.0f );
         slider->setValue( 65.0f );
         Internal::addLabeled( *column, "Volume", std::move( slider ) );
         unique_ptr<CheckBoxWidget> check = make_unique<CheckBoxWidget>();
+        check->setName( hashed_string( "VSyncCheck" ) );
         check->setChecked( true );
         (void)check->addChild( Internal::makeText( "V-Sync", 18.0f, float4{ 1.0f, 1.0f, 1.0f, 1.0f } ) );
         Internal::addLabeled( *column, "Display", std::move( check ) );
@@ -216,6 +218,7 @@ namespace sw
         progress->setPercent( 0.6f );
         Internal::addLabeled( *column, "Loading", std::move( progress ) );
         unique_ptr<ComboBoxWidget> combo = make_unique<ComboBoxWidget>();
+        combo->setName( hashed_string( "QualityCombo" ) );
         combo->setOptions( vector<string>{ "Low", "Medium", "High", "Epic" } );
         combo->setSelectedIndex( 2 );
         Internal::addLabeled( *column, "Quality", std::move( combo ) );
