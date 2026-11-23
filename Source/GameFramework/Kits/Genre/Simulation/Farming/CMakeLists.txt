@@ -1,6 +1,6 @@
 # ==============================================================================
 # @file Source/GameFramework/Kits/Genre/Simulation/Farming/CMakeLists.txt
-# @brief 농장 생활 키트 — 작물 카탈로그 · 밭 · 출하함(돈 · 가방 · 달력은 공유 상태를 빌린다)
+# @brief 농장 생활 키트 — 작물 카탈로그 · 밭 · 출하함(돈 · 가방 · 달력은 공유 상태를 빌린다), 디렉터 · 마을 일정은 Component/, 모습은 GF_Client_Farming
 # ==============================================================================
 
 sw_add_game_framework_kit(GF_Farming)

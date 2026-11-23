@@ -1,58 +1,21 @@
 <?asset guid="57d6125ff94a46bfb947271e54e65b52"?>
-<Scene formatVersion="3" name="Hub">
-	<!-- 마을 — 팩의 시작 맵(gamesettings startMap). 심즈처럼 돌고, 플레이어가 장소 · 사물로 장르 미니게임에 들어가고 돌아온다(MinigameFlow).
-	     스트리밍하는 씬이다(셀 10 m) — 카메라 · 해 · 바닥 · 플레이어 · 입구 · 표지는 늘 올라 있고, 둘레 장식 상자는 쿠킹이 셀로 나눈다(XML 로 연 씬은 셀 없이 모두 올라 있다).
+<Scene formatVersion="3" _base="game/playground/maps/prairie.scene.xml" name="Hub">
+	<!-- 마을 — 팩의 시작 맵(gamesettings startMap). 서부 평원(maps/prairie — GF_OpenWorldWestern 의 말 · 법 · 날씨 · 도착 컷씬 · 자동 저장, 스트리밍 셀 16 m)을 바탕으로 물려받고,
+	     플레이어가 장소 · 사물로 장르 미니게임에 들어가고 돌아온다(MinigameFlow). 바탕을 고치면 마을도 따라간다(언리얼 레벨 인스턴스 · Godot 씬 상속과 같은 자리).
 	     CardTableGate(x -6): 카드 탁자 — minigames/cardtable(SubLevel)을 하위 레벨 maps/hub_cardtable 로 더한다(마을이 보인 채로).
 	     ArcadeGate(x 6): 오락실 기계 — minigames/kitdemo_actioncombat(SceneSwitch)으로 씬을 바꾼다. 마을은 돌아올 자리로 찍어 두고 돌아올 때 복원한다.
 	     두 입구 모두 Player 태그만 받고 다시 들어갈 수 있으며(_bOnce false), 안에서 나타난 플레이어(돌아와 복원된 자리)는 세지 않는다(_spawnInside Ignore — 나갔다 들어와야 다시 들어간다).
 	     Marker 는 마을 상태 표지다 — 시나리오 automation/hub 가 옮긴 자리가 미니게임에 다녀온 뒤에도 그대로인지 본다.
-	     Player 는 어빌리티 시스템(세트 HubResident — 공용 전투 어트리뷰트 체력)을 가진다. HP 바는 체력 원천 계약(IHealthSource)으로 그것을 읽고,
-	     미니게임 결과 값(heal · haste)은 MinigameRewardComponent 가 돌아온 뒤 이펙트로 건다 — 미니게임 디렉터는 플레이어를 직접 고치지 않는다. -->
-	<SceneSettings _bStreaming="true" _unloadMargin="10" _maxCellLoadsPerFrame="4" _addToWorldBudgetMicroseconds="2000">
-		<_cellGrid _cellSize="10" _loadingRadius="40" />
-	</SceneSettings>
+	     Player(기수)는 어빌리티 시스템(세트 HubResident — 공용 전투 어트리뷰트 체력)을 더 가진다. HP 바는 체력 원천 계약(IHealthSource)으로 그것을 읽고,
+	     미니게임 결과 값(heal · haste)은 MinigameRewardComponent 가 돌아온 뒤 이펙트로 건다 — 미니게임 디렉터는 플레이어를 직접 고치지 않는다.
+	     지갑 · 평판은 바탕의 서부극 디렉터 오브젝트(Ranch)가 연 것 하나이고, 조종자에는 퀘스트 일지만 더한다(열린 평판이 둘이면 어느 플레이어인지 고르지 못한다 — PlayerComponentUtil::findOpen). -->
 	<entities>
-		<entity id="1" name="GameCamera">
-			<GameObject _schemaVersion="0" _name="GameCamera" _bActive="true" _bAlwaysLoaded="true">
-				<_listComponent>
-					<CameraComponent _localID="17709685451340727998" _localPosition="0,12,-12" _localRotation="0,0,0" _localScale="1,1,1" _attachOwner="None" _attachComponent="None" _fovY="51.5662" _nearZ="0.1" _farZ="200" _orthoHeight="10" _priority="10" _role="Game" _bOrthographic="false" />
-					<CameraManagerComponent _localID="3555541265262269731" _viewTarget="2" _localPlayerIndex="0" />
-				</_listComponent>
-			</GameObject>
-		</entity>
-		<entity id="2" name="GameplayView">
-			<GameObject _schemaVersion="0" _name="GameplayView" _bActive="true" _bAlwaysLoaded="true">
-				<_listComponent>
-					<CameraComponent _localID="17709685451340727998" _localPosition="0,14,-14" _localRotation="0.75,0,0" _localScale="1,1,1" _attachOwner="None" _attachComponent="None" _fovY="51.5662" _nearZ="0.1" _farZ="200" _orthoHeight="10" _priority="0" _role="Custom" _bOrthographic="false" />
-				</_listComponent>
-			</GameObject>
-		</entity>
-		<entity id="3" name="Ground">
-			<GameObject _schemaVersion="0" _name="Ground" _bActive="true" _bAlwaysLoaded="true">
-				<_listComponent>
-					<RigidBodyComponent _localID="7198733165449302788" _localPosition="0,-0.5,0" _localRotation="0,0,0" _localScale="1,1,1" _attachOwner="None" _attachComponent="None" _bodyType="Static" _layer="Default" _material="Default" _mass="0">
-						<_listShape>
-							<PhysicsShapeDesc3D _type="Box" _halfExtents="60,0.5,60" _radius="0.5" _halfHeight="0.5" _localPosition="0,0,0" _localRotation="0,0,0" _material="Default">
-								<_listPoint />
-								<_listIndex />
-							</PhysicsShapeDesc3D>
-						</_listShape>
-					</RigidBodyComponent>
-					<MeshComponent _localID="163493842152903304" _localPosition="0,0.5,0" _localRotation="0,0,0" _localScale="120,1,120" _attachOwner="None" _attachComponent="#63e709ac676dd304" _meshID="Plane" _materialPath="engine/materials/prototypegrid_dark.material" _boundsRadius="0.866" />
-				</_listComponent>
-			</GameObject>
-		</entity>
 		<entity id="4" name="Player">
-			<GameObject _schemaVersion="0" _name="Player" _bActive="true" _bAlwaysLoaded="true">
-				<_listComponent>
-					<CharacterControllerComponent _localID="1851894784675401076" _localPosition="0,0.05,0" _localRotation="0,0,0" _localScale="1,1,1" _attachOwner="None" _attachComponent="None" _radius="0.3" _halfHeight="0.6" _stepHeight="0.3" _maxSlopeAngle="45" _gravityScale="1" _mass="70" _layer="Character" />
-					<MeshComponent _localID="163493842152903304" _localPosition="0,0.9,0" _localRotation="0,0,0" _localScale="0.6,0.9,0.6" _attachOwner="None" _attachComponent="#19b3407eb1f9cd74" _meshID="Capsule" _materialPath="engine/materials/prototypegrid_orange.material" _boundsRadius="0.866" />
-					<PawnComponent _localID="11149290121538025405" _moveAction="Move" _lookAction="None" _upAction="None" _inputLayer="None" _aiControllerPrefab="" _maxPitch="80.21409" _autoPossess="Player0" _bLockMouse="false">
-						<_listButton />
-						<_listAnalog />
-					</PawnComponent>
+			<PrefabOverrides>
+				<Add after="#a359bedb2b11b548">
 					<AIStimulusSourceComponent _localID="7318405526120394117" _team="0" _bVisible="true" />
-					<CharacterMovementComponent _localID="14594004469458933705" _sprintButton="None" _jumpButton="None" _walkSpeed="3.5" _sprintSpeed="3.5" _acceleration="30" _deceleration="40" _jumpSpeed="5" _turnRate="12" _facingMode="MoveDirection" />
+				</Add>
+				<Add after="#a359bedb2b11b548">
 					<TagComponent _localID="5249839963692551013">
 						<_tags>
 							<_listTag>
@@ -60,28 +23,44 @@
 							</_listTag>
 						</_tags>
 					</TagComponent>
+				</Add>
+				<Add after="#a359bedb2b11b548">
 					<AbilitySystemComponent _localID="2238906797121419031" _abilitySetID="HubResident" _healthAttribute="Health" _maxHealthAttribute="MaxHealth" _damageNumberOffset="0,1.9,0" _bShowDamageNumbers="false" />
+				</Add>
+				<Add after="#a359bedb2b11b548">
 					<WidgetComponent _localID="11339505928329980331" _documentPath="" _space="Screen" _drawSize="64,8" _pivot="0.5,1" _worldSize="1,0.5" _screenOffset="0,0"
 					                 _worldOffset="0,2.1,0" _maxDistance="0" _referenceDistance="10" _bClampToScreenEdge="false" _bScaleWithDistance="false" />
+				</Add>
+				<Add after="#a359bedb2b11b548">
 					<HealthBarComponent _localID="13661083042096604780" _hpRatio="1" _remainRatio="1" _targetRatio="1" _lerpSpeed="5" _fillColor="0.25,0.85,0.3,1"
 					                    _trailColor="0.95,0.8,0.25,1" _backgroundColor="0.08,0.08,0.1,0.8" _bVisible="true" />
+				</Add>
+				<Add after="#a359bedb2b11b548">
 					<MinigameRewardComponent _localID="3816549270185516127">
 						<_listReward>
 							<MinigameRewardEffect _value="heal" _effect="GE_HubRewardHeal" />
 							<MinigameRewardEffect _value="haste" _effect="GE_HubRewardHaste" />
 						</_listReward>
 					</MinigameRewardComponent>
-				</_listComponent>
-			</GameObject>
+				</Add>
+			</PrefabOverrides>
 		</entity>
-		<entity id="5" name="Sun">
-			<GameObject _schemaVersion="0" _name="Sun" _bActive="true" _bAlwaysLoaded="true">
-				<_listComponent>
-					<DirectionalLightComponent _localID="51927904365891271" _localPosition="0,10,0" _localRotation="0.356582,-2.138715,0" _localScale="1,1,1" _attachOwner="None" _attachComponent="None" _color="1,0.95,0.85" _intensity="1.2" _ambient="0.5" _shadowExtent="20" _shadowDistance="40" _bCastShadow="false" />
-				</_listComponent>
-			</GameObject>
+		<!-- 바탕에서 카드 탁자 자리에 서 있는 말을 비켜 세운다. -->
+		<entity id="6" name="Shadow">
+			<PrefabOverrides>
+				<Override key="#ae80bcb72e918025">
+					<SceneComponent _localPosition="-5,0,-5" />
+				</Override>
+			</PrefabOverrides>
 		</entity>
-		<entity id="6" name="CardTableGate">
+		<entity id="115" name="PlayerController">
+			<PrefabOverrides>
+				<Add after="#42c61e09e972de64">
+					<QuestLogComponent _localID="4956706425476081741" _bOpenAtBeginPlay="true" />
+				</Add>
+			</PrefabOverrides>
+		</entity>
+		<entity id="301" name="CardTableGate">
 			<GameObject _schemaVersion="0" _name="CardTableGate" _bActive="true" _bAlwaysLoaded="true">
 				<_listComponent>
 					<RigidBodyComponent _localID="7198733165449302788" _localPosition="-6,1,0" _localRotation="0,0,0" _localScale="1,1,1" _attachOwner="None" _attachComponent="None" _bodyType="Static" _layer="Trigger" _material="Default" _mass="0" _bTrigger="true">
@@ -97,7 +76,7 @@
 				</_listComponent>
 			</GameObject>
 		</entity>
-		<entity id="7" name="ArcadeGate">
+		<entity id="302" name="ArcadeGate">
 			<GameObject _schemaVersion="0" _name="ArcadeGate" _bActive="true" _bAlwaysLoaded="true">
 				<_listComponent>
 					<RigidBodyComponent _localID="7198733165449302788" _localPosition="6,1,0" _localRotation="0,0,0" _localScale="1,1,1" _attachOwner="None" _attachComponent="None" _bodyType="Static" _layer="Trigger" _material="Default" _mass="0" _bTrigger="true">
@@ -113,49 +92,10 @@
 				</_listComponent>
 			</GameObject>
 		</entity>
-		<entity id="8" name="Marker">
+		<entity id="303" name="Marker">
 			<GameObject _schemaVersion="0" _name="Marker" _bActive="true" _bAlwaysLoaded="true">
 				<_listComponent>
 					<MeshComponent _localID="163493842152903304" _localPosition="0,0.5,-6" _localRotation="0,0,0" _localScale="1,1,1" _attachOwner="None" _attachComponent="None" _meshID="Cube" _materialPath="engine/materials/prototypegrid_light.material" _boundsRadius="0.866" />
-				</_listComponent>
-			</GameObject>
-		</entity>
-		<entity id="9" name="Crate_NE">
-			<GameObject _schemaVersion="0" _name="Crate_NE" _bActive="true">
-				<_listComponent>
-					<MeshComponent _localID="163493842152903304" _localPosition="25,0.5,25" _meshID="Cube" _materialPath="engine/materials/prototypegrid_light.material" _boundsRadius="0.9" />
-				</_listComponent>
-			</GameObject>
-		</entity>
-		<entity id="10" name="Crate_NW">
-			<GameObject _schemaVersion="0" _name="Crate_NW" _bActive="true">
-				<_listComponent>
-					<MeshComponent _localID="163493842152903304" _localPosition="-25,0.5,25" _meshID="Cube" _materialPath="engine/materials/prototypegrid_light.material" _boundsRadius="0.9" />
-				</_listComponent>
-			</GameObject>
-		</entity>
-		<entity id="11" name="Crate_SE">
-			<GameObject _schemaVersion="0" _name="Crate_SE" _bActive="true">
-				<_listComponent>
-					<MeshComponent _localID="163493842152903304" _localPosition="25,0.5,-25" _meshID="Cube" _materialPath="engine/materials/prototypegrid_light.material" _boundsRadius="0.9" />
-				</_listComponent>
-			</GameObject>
-		</entity>
-		<entity id="12" name="Crate_SW">
-			<GameObject _schemaVersion="0" _name="Crate_SW" _bActive="true">
-				<_listComponent>
-					<MeshComponent _localID="163493842152903304" _localPosition="-25,0.5,-25" _meshID="Cube" _materialPath="engine/materials/prototypegrid_light.material" _boundsRadius="0.9" />
-				</_listComponent>
-			</GameObject>
-		</entity>
-		<!-- 플레이어 조종자 — 폰(Player)이 Player0 으로 이것에 쥐인다. 플레이어 상태(지갑 · 퀘스트 일지 · 평판 — 기능마다 컴포넌트, 가방은 없다)를 들고 미니게임에 다녀와도 남는다(상태 범위 셋의 플레이어 몫). -->
-		<entity id="40" name="PlayerController">
-			<GameObject _schemaVersion="0" _name="PlayerController" _bActive="true" _bAlwaysLoaded="true">
-				<_listComponent>
-					<PlayerControllerComponent _localID="8860314903698244725" _playerIndex="0" />
-					<WalletComponent _localID="6090168750676469640" />
-					<QuestLogComponent _localID="4956706425476081741" _bOpenAtBeginPlay="true" />
-					<ReputationComponent _localID="6437973015515493674" _bOpenAtBeginPlay="true" />
 				</_listComponent>
 			</GameObject>
 		</entity>

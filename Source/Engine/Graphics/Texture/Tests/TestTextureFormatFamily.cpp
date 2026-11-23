@@ -18,7 +18,6 @@
 #include "Engine/Graphics/RHI/Tests/RHIFakeDevice.h"
 #include "Engine/Graphics/Texture/Texture2D.h"
 #include "Engine/Graphics/Texture/TextureFormatFamily.h"
-#include "Engine/Reflection/TypeRegistry.h"
 #include "Engine/Serialization/JSON/JSONDocument.h"
 
 using namespace sw;
@@ -60,7 +59,7 @@ SW_TEST_CASE( TextureFormatSelectionTest, SelectsTheFirstSupportedFamily )
 {
     const TextureFormatSettings settings = TextureFormatSelectionTestUtil::makeSettings();
     vector<TextureFormatFamily> listFamily;
-    SW_REQUIRE_TRUE( TextureFormatFamily::resolveTarget( settings, "Web", engine::getSubsystem<TypeRegistry>(), listFamily ) );
+    SW_REQUIRE_TRUE( TextureFormatFamily::resolveTarget( settings, "Web", listFamily ) );
     SW_REQUIRE_EQUAL( size_t( 2 ), listFamily.size() );
     SW_EXPECT_TRUE( listFamily[1].getFormat( TextureFormatUsage::HDR ) == RHIFormat::R16G16B16A16_FLOAT );
     SW_EXPECT_TRUE( listFamily[0].getFormat( TextureFormatUsage::Raw ) == RHIFormat::Unknown );
@@ -108,7 +107,7 @@ SW_TEST_CASE( TextureFormatSelectionTest, CookFamiliesAreTheUnionOfSuffixedFamil
     mobile._listPlatform                  = { "Android" };
     mobile._listFamily                    = { "ASTC" };
     vector<TextureFormatFamily> listFamily;
-    SW_REQUIRE_TRUE( TextureFormatFamily::resolveCookFamilies( settings, engine::getSubsystem<TypeRegistry>(), listFamily ) );
+    SW_REQUIRE_TRUE( TextureFormatFamily::resolveCookFamilies( settings, listFamily ) );
     SW_REQUIRE_EQUAL( size_t( 1 ), listFamily.size() );
     SW_EXPECT_EQUAL( string( ".astc" ), listFamily[0]._suffix );
 }
@@ -121,19 +120,18 @@ SW_TEST_CASE( TextureFormatSelectionTest, UnknownNamesAreErrors )
     SW_EXPECT_LOG( "TextureFormats.UnknownTarget" );
     SW_EXPECT_LOG( "TextureFormats.UnknownFamily" );
     SW_EXPECT_LOG( "TextureFormats.UnknownFormat" );
-    const TypeRegistry&         types = engine::getSubsystem<TypeRegistry>();
     vector<TextureFormatFamily> listFamily;
 
     TextureFormatSettings settings = TextureFormatSelectionTestUtil::makeSettings();
-    SW_EXPECT_FALSE( TextureFormatFamily::resolveTarget( settings, "Console", types, listFamily ) );
+    SW_EXPECT_FALSE( TextureFormatFamily::resolveTarget( settings, "Console", listFamily ) );
 
     settings._listTarget[0]._listFamily = { "BC", "PVRTC" };
-    SW_EXPECT_FALSE( TextureFormatFamily::resolveTarget( settings, "Web", types, listFamily ) );
+    SW_EXPECT_FALSE( TextureFormatFamily::resolveTarget( settings, "Web", listFamily ) );
     SW_EXPECT_TRUE( listFamily.empty() );
 
     settings                     = TextureFormatSelectionTestUtil::makeSettings();
     settings._listFamily[1]._hdr = "ASTC_HDR";
-    SW_EXPECT_FALSE( TextureFormatFamily::resolveTarget( settings, "Web", types, listFamily ) );
+    SW_EXPECT_FALSE( TextureFormatFamily::resolveTarget( settings, "Web", listFamily ) );
     SW_EXPECT_TRUE( listFamily.empty() );
 }
 
@@ -151,7 +149,7 @@ SW_TEST_CASE( TextureFormatSelectionTest, CompanionsCoverEveryFamilySuffix )
     const JSONValue families = table.get( "_listFamily" );
     SW_REQUIRE_TRUE( families.isArray() );
     vector<string> listCompanion;
-    AssetCompanionRegistry::appendCompanionPaths( "engine/textures/a.dds", listCompanion );
+    AssetCompanionRule::appendCompanionPaths( "engine/textures/a.dds", listCompanion );
     for ( size_t index = 0; index < families.size(); ++index )
     {
         const string suffix = families.at( index ).get( "_suffix" ).asString();
@@ -163,7 +161,7 @@ SW_TEST_CASE( TextureFormatSelectionTest, CompanionsCoverEveryFamilySuffix )
         SW_EXPECT_TRUE_MSG( VectorUtil::contains( listCompanion, variant ), message );
         // 변형 자신은 곁 파일이 없다(`a.astc.astc.dds` 를 찾지 않는다).
         vector<string> listNested;
-        AssetCompanionRegistry::appendCompanionPaths( variant, listNested );
+        AssetCompanionRule::appendCompanionPaths( variant, listNested );
         SW_EXPECT_FALSE( VectorUtil::contains( listNested, TextureFormatFamily::makeVariantPath( variant, suffix ) ) );
     }
     SW_EXPECT_TRUE( TextureFormatFamily::makeVariantPath( "engine/textures/a.png", ".astc" ).empty() );

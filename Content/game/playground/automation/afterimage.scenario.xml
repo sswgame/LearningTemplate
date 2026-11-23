@@ -13,13 +13,13 @@
 	<WaitUntil watch="Afterimage.CaptureCount" atLeast="3" timeoutSeconds="3"/>
 	<Expect watch="Afterimage.Visible" atLeast="1"/>
 	<Expect watch="Afterimage.Visible" atMost="6"/>
-	<Screenshot file="afterimage_still.ppm" stability="assets"/>
+	<Screenshot file="afterimage_still.ppm" stability="Assets"/>
 	<DevCommand line="object.place Actor 1.5 0 0"/>
 	<AdvanceSimulation frames="8"/> <!-- 옮긴 뒤 잔상이 쌓이는 시간(시간이 내용) -->
 	<DevCommand line="object.place Actor 3 0 0"/>
 	<AdvanceSimulation frames="8"/>
 	<Expect watch="Afterimage.Visible" atLeast="2"/>
-	<Screenshot file="afterimage_moved.ppm" stability="none"/>
+	<Screenshot file="afterimage_moved.ppm" stability="None"/>
 	<ExpectImagesDiffer first="afterimage_still.ppm" second="afterimage_moved.ppm" minDiffering="0.02"/>
 	<Pass/>
 </Scenario>

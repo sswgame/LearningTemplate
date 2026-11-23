@@ -1077,3 +1077,17 @@ SW_TEST_CASE( LogTest, RecordLineTextKeepsShortLinesInline )
     SW_EXPECT_TRUE( record._formatted.isInline() );
     SW_EXPECT_EQUAL( sw::string_view{ "ok" }, sw::string_view{ record._formatted.c_str() } );
 }
+
+/**
+ * @brief [LogTest] `reportFatalError` 의 서식은 부른 자리(파일 · 줄)를 함께 든다 — 매크로 없이도 멈춤 줄이 부른 줄을 가리킨다
+ */
+SW_TEST_CASE( LogTest, FatalFormatCarriesTheCallSite )
+{
+    const auto readFormat = []( sw::FatalFormat format )
+    { return format; };
+    const int32 expectedLine = __LINE__ + 1;
+    const auto  format       = readFormat( "value %#" );
+    SW_EXPECT_EQUAL( expectedLine, format._location._line );
+    SW_EXPECT_EQUAL( sw::string( __FILE__ ), sw::string( format._location._pFile ) );
+    SW_EXPECT_EQUAL( sw::string( "value %#" ), sw::string( format._format ) );
+}

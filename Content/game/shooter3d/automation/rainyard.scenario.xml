@@ -41,7 +41,7 @@
 	<AdvanceSimulation frames="1"/>
 	<DevCommand line="object.place Walker 16 0.05 -18"/> <!-- 사진에서 발자국을 가리지 않는 자리(무대 밖 돌 바닥) -->
 	<WaitUntil watch="Surface.ObjectLastFootstep" target="Walker" is="Stone" timeoutSeconds="5"/>
-	<Screenshot file="dirt_footprints.ppm" stability="assets"/>
+	<Screenshot file="dirt_footprints.ppm" stability="Assets"/>
 
 	<!-- ② 돌(마름) -->
 	<AdvanceSimulation frames="1"/>
@@ -120,13 +120,13 @@
 	<DevCommand line="object.place Walker 16 0.05 -18"/>
 	<AdvanceSimulation frames="90"/> <!-- 흙 패드의 마지막 진흙 튐(수명 0.5 초)이 다 사라질 시간 — 화면에 남은 입자가 사진의 차이에 섞이지 않게(시간이 내용) -->
 	<Variable name="gv_timeScale" value="0"/>
-	<Screenshot file="rain_rings_on.ppm" stability="assets"/>
+	<Screenshot file="rain_rings_on.ppm" stability="Assets"/>
 	<DevCommand line="matparam engine/materials/weather.matparams.xml Rain 0"/>
 	<WaitUntil watch="Material.CollectionValue" target="engine/materials/weather.matparams.xml" key="Rain.x" equals="0" timeoutFrames="10"/>
-	<Screenshot file="rain_rings_off.ppm" stability="assets"/>
+	<Screenshot file="rain_rings_off.ppm" stability="Assets"/>
 	<DevCommand line="matparam engine/materials/weather.matparams.xml Rain 1"/>
 	<WaitUntil watch="Material.CollectionValue" target="engine/materials/weather.matparams.xml" key="Rain.x" equals="1" timeoutFrames="10"/>
-	<Screenshot file="rain_rings_again.ppm" stability="assets"/>
+	<Screenshot file="rain_rings_again.ppm" stability="Assets"/>
 	<Variable name="gv_timeScale" value="1"/>
 	<ExpectImagesDiffer first="rain_rings_on.ppm" second="rain_rings_off.ppm" region="0.25,0.7,0.66,1" minDiffering="0.002" fullResolution="true"/> <!-- 링은 화소 단위 무늬라 골든 크기로 줄이면 평균이 지운다. 영역은 웅덩이 자리(링이 생기는 곳) — 멈춘 시간의 두 장이 0 % 라 잡음 바닥이 0 이다 -->
 	<ExpectImagesDiffer first="rain_rings_on.ppm" second="rain_rings_again.ppm" region="0.25,0.7,0.66,1" minDiffering="0" maxDiffering="0.0005" fullResolution="true"/>

@@ -2,39 +2,33 @@
 
 #include "Engine/Content/Pack/AssetCookRoot.h"
 
-#include "Core/Algorithm/VectorUtil.h"
-#include "Core/Registry/RegistrationList.h"
-
 namespace sw
 {
-    SW_DEFINE_REGISTRATION_LIST( AssetCookRootRegistry::getRegistrars, const AssetCookRootRegistrar, "AssetCookRootRegistry" )
-
-    void AssetCookRootRegistry::appendRoots( vector<string>& outListAssetID )
+    namespace
     {
-        for ( const AssetCookRootRegistrar* pRegistrar : getRegistrars().getItems() )
+        SW_DEFINE_REGISTRATION_LIST( getAssetCookRoots, const AssetCookRoot, "AssetCookRoot", RegistrationOrder::Insertion, true )
+    } // namespace
+
+    bool AssetCookRoot::add( const AssetCookRoot* pRoot )
+    {
+        return getAssetCookRoots().addLogged( pRoot, "Asset cook root", pRoot->_assetID ) == RegistrationResult::Added;
+    }
+
+    void AssetCookRoot::remove( const AssetCookRoot* pRoot )
+    {
+        (void)getAssetCookRoots().remove( pRoot ); // 올라 있지 않은 줄을 빼는 것은 할 일이 없다
+    }
+
+    void AssetCookRoot::appendRoots( vector<string>& outListAssetID )
+    {
+        for ( const AssetCookRoot* pRoot : getAssetCookRoots().getItems() )
         {
-            outListAssetID.emplace_back( pRegistrar->getAssetID() );
+            outListAssetID.emplace_back( pRoot->_assetID );
         }
     }
 
-    bool AssetCookRootRegistry::hasRoot( string_view assetID )
+    bool AssetCookRoot::hasRoot( string_view assetID )
     {
-        for ( const AssetCookRootRegistrar* pRegistrar : getRegistrars().getItems() )
-        {
-            if ( pRegistrar->getAssetID() == assetID )
-                return true;
-        }
-        return false;
-    }
-
-    AssetCookRootRegistrar::AssetCookRootRegistrar( string_view assetID )
-        : _assetID{ assetID }
-    {
-        (void)AssetCookRootRegistry::getRegistrars().add( this );
-    }
-
-    AssetCookRootRegistrar::~AssetCookRootRegistrar()
-    {
-        (void)AssetCookRootRegistry::getRegistrars().remove( this );
+        return getAssetCookRoots().findByName( assetID ) != nullptr;
     }
 } // namespace sw

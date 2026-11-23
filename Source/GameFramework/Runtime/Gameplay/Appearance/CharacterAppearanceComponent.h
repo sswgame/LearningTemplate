@@ -222,7 +222,7 @@ namespace sw
         /**
          * @brief 상태 스냅샷이 저장 전에 부릅니다(`StatefulComponentRegistrar` — 모든 게임): 스폰한 부품과 합친 구간 컴포넌트를 걷고, 계속 도는 실행은 틱 뒤에 다시 조립합니다.
          * @details 조립 결과는 프리셋 · 장비의 파생이라 세이브에 실으면 불러온 뒤 다시 조립한 것과 겹친다 — 합친 구간 컴포넌트는 합친 메시가 아직 없는 몸에서
-         *          되살아나 없는 구간을 찾았다(game.harvestvalley.slice 의 저장 · 불러오기, `MeshComponent.MeshNoSectionComponent`).
+         *          되살아나 없는 구간을 찾았다(game.playground.harvestvalley_slice 의 저장 · 불러오기, `MeshComponent.MeshNoSectionComponent`).
          */
         void despawnViews();
         /**

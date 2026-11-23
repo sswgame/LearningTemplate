@@ -13,7 +13,7 @@ namespace sw
         : _pAssetManager{ pAssetManager }
     {
         if ( _pAssetManager == nullptr )
-            SW_FATAL( "AndroidAssetFileReader: the activity has no asset manager - packs in the APK cannot be read" );
+            reportFatalError( "AndroidAssetFileReader: the activity has no asset manager - packs in the APK cannot be read" );
     }
 
     AsyncFileHandle AndroidAssetFileReader::open( string_view bundledName ) const

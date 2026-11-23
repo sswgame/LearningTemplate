@@ -21,10 +21,10 @@
 	<WaitUntil watch="Killcam.Playing" equals="1" timeoutFrames="10"/>
 	<WaitUntil watch="Camera.FrameObject" is="Killcam" timeoutFrames="10"/>
 	<Expect watch="Killcam.Phase" equals="0"/>
-	<Screenshot file="pierce_killcam_follow.ppm" stability="none"/>
+	<Screenshot file="pierce_killcam_follow.ppm" stability="None"/>
 	<WaitUntil watch="Killcam.Phase" equals="1" timeoutSeconds="4"/>
 	<AdvanceSimulation frames="6"/> <!-- 멈춤 구간에 들어선 뒤 6 프레임 장면(시간이 내용 — 골든 없이 두 장의 차만 본다) -->
-	<Screenshot file="pierce_killcam_hold.ppm" stability="none"/>
+	<Screenshot file="pierce_killcam_hold.ppm" stability="None"/>
 	<WaitUntil watch="Killcam.Playing" equals="0" timeoutSeconds="5"/>
 	<ExpectImagesDiffer first="pierce_killcam_follow.ppm" second="pierce_killcam_hold.ppm" minDiffering="0.05"/>
 	<Pass/>

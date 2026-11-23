@@ -119,8 +119,8 @@ namespace sw::engine
     {
         if ( isDeclared( typeHash ) )
             return;
-        SW_FATAL( "Engine subsystem factory '%#' looks up a type it does not list in its after list %# (%#) - add the type to the parentheses of its SW_ENGINE_SUBSYSTEM line",
-                  _record._pTypeName, _record._pAfterNames, pLookup );
+        reportFatalError( "Engine subsystem factory '%#' looks up a type it does not list in its after list %# (%#) - add the type to the parentheses of its SW_ENGINE_SUBSYSTEM line",
+                          _record._pTypeName, _record._pAfterNames, pLookup );
     }
 
     EngineRegistrationList::EngineRegistrationList()
@@ -307,7 +307,7 @@ namespace sw::engine
     {
         vector<const EngineSubsystemRecord*> listOrder;
         if ( const expected<void> ordered = orderSubsystems( stage, listOrder ); ordered.has_value() == false )
-            SW_FATAL( "Engine subsystem build order: %# (%#)", ordered.error().message(), ordered.error().detail() );
+            reportFatalError( "Engine subsystem build order: %# (%#)", ordered.error().message(), ordered.error().detail() );
         // 공장마다 그 공장이 더한 서브시스템 번호 — 수명 의존 대조(`findLifetimeMismatch`)가 쓴다.
         vector<vector<uint32>> listBuilt( listOrder.size() );
         for ( size_t recordIndex = 0; recordIndex < listOrder.size(); ++recordIndex )
@@ -325,6 +325,6 @@ namespace sw::engine
             }
         }
         if ( const expected<void> lifetime = findLifetimeMismatch( listOrder, listBuilt, scope.getCollection() ); lifetime.has_value() == false )
-            SW_FATAL( "Engine subsystem lifetime: %# (%#)", lifetime.error().message(), lifetime.error().detail() );
+            reportFatalError( "Engine subsystem lifetime: %# (%#)", lifetime.error().message(), lifetime.error().detail() );
     }
 } // namespace sw::engine

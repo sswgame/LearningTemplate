@@ -71,7 +71,7 @@ namespace sw
 
         /**
          * @brief 엔진 패스 PSO(패스 종류 표를 enum 순서로), 출력 패스의 포맷별 변형, 머티리얼 폴백 버퍼를 셋업에서 만듭니다. 저장소에 이미 있는 것은 그대로 둡니다.
-         * @details 출력 패스 PSO 를 하나라도 못 만들면 멈춘다(`SW_FATAL`) — 화면에 낼 수 없고 다른 PSO 로 대신하지 않는다.
+         * @details 출력 패스 PSO 를 하나라도 못 만들면 멈춘다(`reportFatalError`) — 화면에 낼 수 없고 다른 PSO 로 대신하지 않는다.
          *          그래픽스 · 컴퓨트 패스는 desc 를 먼저 모아 셰이더를 워커가 나눠 데우고(`warmShaders`), PSO 는 이 스레드가 차례로 만든다(백엔드 교체 뒤 셋업이 이 길을 다시 탄다).
          *          처음 그리는 프레임에 만드는 PSO(입자 · 쿠키 아틀라스)의 셰이더도 같은 데우기에 넣는다 — 그 프레임에는 드라이버 생성만 남는다.
          */
@@ -92,7 +92,7 @@ namespace sw
         RHIPipelineStateHandle findDeferredTilePSO( uint32 tileClass ) const;
         /**
          * @brief 주 출력에 그리는 패스(Present, Canvas, RCAS)의 PSO 를 **대상 포맷별로** 찾습니다.
-         * @details **조회만 한다.** 패스 실행(태스크 워커) 중에 불리므로 없다고 만들면 안 된다. 셋업에 없는 포맷이면 대신 그리지 않고 멈춘다(`SW_FATAL`) —
+         * @details **조회만 한다.** 패스 실행(태스크 워커) 중에 불리므로 없다고 만들면 안 된다. 셋업에 없는 포맷이면 대신 그리지 않고 멈춘다(`reportFatalError`) —
          *          돌려준 PSO 는 0 이 아니다. 언리얼이 PSO 초기화자의 RenderTargetFormats 를 바인딩된 타깃에서 뽑아 PSO 캐시 키로 삼는 것과 같다.
          */
         RHIPipelineStateHandle findOutputPSO( RenderPassKind passType, RHIFormat targetFormat ) const;

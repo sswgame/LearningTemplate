@@ -14,17 +14,17 @@
 	<Variable name="gv_shooterAutoPlay" value="1"/>
 	<!-- 두 번 맞힐 때까지(시뮬레이션 시각 — 고정 델타라 결정적이다). 예전 고정 420 프레임은 해골 적의 다가오는 시간에 맞춘 값이라 생물 적(크기 · 닿는 거리를 메시에서 구했다)에서는 한 번째에 닿았다 -->
 	<WaitUntil watch="Shooter3D.EnemyHitCount" atLeast="2" timeoutSeconds="20"/>
-	<Screenshot file="death_a.ppm" stability="assets"/>
+	<Screenshot file="death_a.ppm" stability="Assets"/>
 	<!-- 사망 연출의 결정적 시뮬레이션 시각이 사진 내용이다(두 번째 적중 뒤 3 · 8 · 18 · 28 초) -->
 	<AdvanceSimulation frames="180"/>
-	<Screenshot file="death_b.ppm" stability="assets"/>
+	<Screenshot file="death_b.ppm" stability="Assets"/>
 	<AdvanceSimulation frames="300"/>
-	<Screenshot file="death_c.ppm" stability="assets"/>
+	<Screenshot file="death_c.ppm" stability="Assets"/>
 	<AdvanceSimulation frames="600"/>
 	<Expect watch="Shooter3D.ShotCount" atLeast="6"/>
-	<Screenshot file="death_d.ppm" stability="assets"/>
+	<Screenshot file="death_d.ppm" stability="Assets"/>
 	<AdvanceSimulation frames="600"/>
-	<Screenshot file="death_e.ppm" stability="assets"/>
+	<Screenshot file="death_e.ppm" stability="Assets"/>
 	<ExpectImage file="death_a.ppm" golden="death_a"/>
 	<ExpectImage file="death_b.ppm" golden="death_b"/>
 	<ExpectImage file="death_c.ppm" golden="death_c"/>
