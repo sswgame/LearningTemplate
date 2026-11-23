@@ -26,6 +26,17 @@
 	<WaitUntil watch="Object.X" target="Player" near="0" tolerance="2" timeoutWallSeconds="20"/>
 	<Expect watch="Object.Z" target="Player" atMost="-4"/>
 	<Expect watch="Hub.PawnPredicted" equals="1"/>
+	<!-- ③ 카드 탁자(턴 중계): 두 자리가 차면 시작하고, 규칙에 맞는 행동만 서버가 번호를 붙인다. 둘이 번갈아 두 번씩 뽑는다(뽑으면 차례가 넘어간다 — 낸 패는 차례를 건너뛸 수 있다) -->
+	<DevCommand line="hub.cards join"/>
+	<WaitUntil watch="Hub.CardsStarted" equals="1" timeoutWallSeconds="60"/>
+	<Expect watch="Hub.CardsSeat" atLeast="0"/>
+	<WaitUntil watch="Hub.CardsMyTurn" equals="1" timeoutWallSeconds="30"/>
+	<DevCommand line="hub.cards draw"/>
+	<WaitUntil watch="Hub.CardsMyTurn" equals="0" timeoutWallSeconds="20"/>
+	<WaitUntil watch="Hub.CardsMyTurn" equals="1" timeoutWallSeconds="30"/>
+	<DevCommand line="hub.cards draw"/>
+	<WaitUntil watch="Hub.CardsActions" atLeast="4" timeoutWallSeconds="30"/>
+	<Expect watch="Hub.CardsRejected" equals="0"/>
 	<DevCommand line="hub.status"/>
 	<Pass/>
 </Scenario>

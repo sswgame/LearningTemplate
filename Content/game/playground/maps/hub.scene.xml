@@ -180,6 +180,8 @@
 							<item>6</item>
 						</_listMount>
 					</HubPawnReplicationComponent>
+					<!-- 접속한 두 사람의 카드 탁자(턴 중계) — 개발 명령 hub.cards. -->
+					<HubCardTableComponent _localID="11840276335901482617" _componentName="HubCardTableComponent" _bActive="true" />
 				</_listComponent>
 			</GameObject>
 		</entity>

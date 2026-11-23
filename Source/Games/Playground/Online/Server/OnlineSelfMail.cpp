@@ -15,6 +15,7 @@
 #include "Engine/Console/DevCommandRegistry.h"
 
 #include "GameFramework/Runtime/Foundation/Framework/GameService.h"
+#include "GameFramework/Runtime/Online/Identity/Server/AccountDirectory.h"
 #include "GameFramework/Runtime/Online/Ledger/LedgerTypes.h"
 #include "GameFramework/Runtime/Online/Mail/Server/ServiceMail.h"
 #include "GameFramework/Runtime/Online/Service/OnlineSession.h"
@@ -23,10 +24,15 @@
 
 #include "Games/Playground/Online/PlaygroundOnlineFlow.h"
 
+#include "ModuleAPI/Service/IServerKitLocator.h"
+
 namespace sw
 {
     namespace
     {
+        /** @brief 전용 서버에서 금화 우편을 넣을 때 받는 서버 키트 인터페이스 형식 목록입니다(개발 명령). */
+        using OnlineSelfMailKits = ServerKitDependencies<ServerKitRequired<ServiceStore>, ServerKitOptional<IAccountDirectory>>;
+
         /**
          * @class OnlineSelfMailJob
          * @brief 우편 하나를 저장소 스레드에서 넣고, 끝나면 게임 스레드에서 흐름의 보낸 수를 올리는 저장소 작업입니다.
@@ -48,7 +54,10 @@ namespace sw
             void complete() override
             {
                 if ( _bSent )
+                {
                     _pFlow->recordSelfMailSent();
+                    SW_LOG_INFO_ID( "Playground.OnlineSelfMailSent", "[Playground] self mail is stored" );
+                }
                 else if ( isCancelled() == false ) // 종료 중 취소는 오류가 아니다
                     SW_LOG_ERROR_ID( "Playground.OnlineSelfMailFailed", "[Playground] the self mail could not be written to the local server store" );
             }
@@ -69,33 +78,50 @@ namespace sw
         /** @brief 개발 명령 `playground.online.sendmail` 입니다. 세션과 흐름은 게임 범위에서 찾습니다. */
         struct OnlineSelfMailInternal
         {
-            /** @brief 이 프로세스 안에 세운 서버의 저장소에 로그인한 계정 앞으로 금화 우편을 넣습니다. @return 안에 세운 서버가 없거나 로그인 전이면 false 입니다. */
-            static bool sendOnLocalServer( OnlineSession& session, PlaygroundOnlineFlow& flow, int64 amount, int64 nowMs )
+            /** @brief 계정 @p accountID 앞으로 금화 우편을 저장소에 맡깁니다. */
+            static void submitMail( ServiceStore& store, PlaygroundOnlineFlow& flow, AccountID accountID, int64 amount, int64 nowMs )
             {
-                ServiceStore* const  pStore    = session.findLocalServerStore();
-                const AccountClient& account   = session.get<AccountClient>();
-                const AccountID      accountID = account.getIdentity()._accountID;
-                if ( pStore == nullptr || account.isLoggedIn() == false )
-                    return false;
                 ServiceMailMessage message;
                 message._listAttachment.push_back( ServiceMailAttachment{ PlaygroundOnlineFlow::kAssetGold, amount } );
                 message._titleKey = "mail.reward";
                 StringBuilder<constant::buffer::kMax256> idempotencyKeyBuilder;
-                idempotencyKeyBuilder.appendFormat( "playground.selfmail.%#", nowMs );
+                idempotencyKeyBuilder.appendFormat( "playground.selfmail.%#.%#", accountID, nowMs );
                 message._idempotencyKey     = string( idempotencyKeyBuilder.view() );
                 message._fundingHolder      = LedgerHolder::makeMint();
                 message._recipientAccountID = accountID;
                 message._createdMs          = nowMs;
                 message._expiryAction       = ServiceMail::getDefaultExpiryAction( message._fundingHolder );
                 // 서버 키트 없이 기반의 우편 표만 써서 금화 우편 하나를 넣는다
-                pStore->submit( make_unique<OnlineSelfMailJob>( flow, std::move( message ) ) );
+                store.submit( make_unique<OnlineSelfMailJob>( flow, std::move( message ) ) );
+            }
+
+            /** @brief 이 프로세스 안에 세운 서버의 저장소에 로그인한 계정 앞으로 금화 우편을 넣습니다. @return 안에 세운 서버가 없거나 로그인 전이면 false 입니다. */
+            static bool sendOnLocalServer( OnlineSession& session, PlaygroundOnlineFlow& flow, int64 amount, int64 nowMs )
+            {
+                ServiceStore* const  pStore  = session.findLocalServerStore();
+                const AccountClient& account = session.get<AccountClient>();
+                if ( pStore == nullptr || account.isLoggedIn() == false )
+                    return false;
+                submitMail( *pStore, flow, account.getIdentity()._accountID, amount, nowMs );
+                return true;
+            }
+
+            /** @brief 이 전용 서버에 접속한 계정 @p displayName 앞으로 금화 우편을 넣습니다(운영 콘솔 — 개발 서버만 개발 명령을 받는다). @return 온라인 조립이 없거나 그 이름이 접속해 있지 않으면 false 입니다. */
+            static bool sendOnDedicatedServer( PlaygroundOnlineFlow& flow, string_view displayName, int64 amount, int64 nowMs )
+            {
+                const optional<OnlineSelfMailKits> kits       = OnlineSelfMailKits::resolve( game::findSubsystem<IServerKitLocator>() );
+                IAccountDirectory* const           pDirectory = kits.has_value() ? kits->find<IAccountDirectory>() : nullptr;
+                AccountIdentity                    identity;
+                if ( pDirectory == nullptr || pDirectory->findIdentityByDisplayName( displayName, identity ) == false )
+                    return false;
+                submitMail( kits->get<ServiceStore>(), flow, identity._accountID, amount, nowMs );
                 return true;
             }
 
             static bool runSendMail( const vector<string>& listArgument, string& outReply )
             {
                 int32 amount = 0;
-                if ( listArgument.size() != 1 || StringUtil::parseInt( listArgument[0], amount ) == false || amount <= 0 )
+                if ( listArgument.empty() || listArgument.size() > 2 || StringUtil::parseInt( listArgument[0], amount ) == false || amount <= 0 )
                     return false;
                 OnlineSession* const        pSession = game::findSubsystem<OnlineSession>();
                 PlaygroundOnlineFlow* const pFlow    = game::findSubsystem<PlaygroundOnlineFlow>();
@@ -104,12 +130,13 @@ namespace sw
                     outReply = "playground.online: no Playground game instance";
                     return true;
                 }
-                const bool bSent = sendOnLocalServer( *pSession, *pFlow, amount, WallClock::nowUnixMilliseconds().count() );
-                outReply         = bSent ? "playground.online: mail queued" : "playground.online: needs the in-process server and a login";
+                const int64 nowMs = WallClock::nowUnixMilliseconds().count();
+                const bool  bSent = listArgument.size() == 2 ? sendOnDedicatedServer( *pFlow, listArgument[1], amount, nowMs ) : sendOnLocalServer( *pSession, *pFlow, amount, nowMs );
+                outReply          = bSent ? "playground.online: mail queued" : "playground.online: needs the in-process server and a login, or a dedicated server and the name of an online account";
                 return true;
             }
         };
     } // namespace
 
-    SW_DEV_COMMAND( PlaygroundOnlineSendMail, "playground.online.sendmail", "playground.online.sendmail <amount>", "Write a gold mail for the logged-in account into the in-process server's store", &OnlineSelfMailInternal::runSendMail );
+    SW_DEV_COMMAND( PlaygroundOnlineSendMail, "playground.online.sendmail", "playground.online.sendmail <amount> [display name]", "Write a gold mail for the logged-in account into the in-process server's store, or on a dedicated server for an online account", &OnlineSelfMailInternal::runSendMail );
 } // namespace sw

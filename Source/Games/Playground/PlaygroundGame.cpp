@@ -103,7 +103,7 @@ namespace sw
 
     bool PlaygroundGame::onInitialize()
     {
-        return bindScopedService( &_onlineFlow ) && bindScopedService<IMinigameMatchmaking>( &_onlineFlow );
+        return bindScopedService( &_onlineFlow ) && bindScopedService<IMinigameMatchmaking>( &_onlineFlow ) && bindScopedService( &_onlineFlow.getFriends() );
     }
 
     void PlaygroundGame::startFirstScene()
