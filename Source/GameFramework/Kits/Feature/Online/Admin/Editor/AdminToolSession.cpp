@@ -97,6 +97,25 @@ namespace sw::editor
         _statusLine = "Back to the in-memory provider";
     }
 
+    void AdminToolSession::resetToFreshEditor()
+    {
+        disconnectLive(); // 날아가던 요청의 답(Cancelled)이 여기서 온다 — 결과 칸은 그 뒤에 비운다
+        _fake            = FakeAdminProvider{ WallClock::nowUnixMilliseconds().count() };
+        _lookup          = AdminReply{};
+        _lookupAudit     = AdminReply{};
+        _reports         = AdminReply{};
+        _liveEvents      = AdminReply{};
+        _completedCount  = 0;
+        _pendingCount    = 0;
+        _lookupAccountID = kInvalidAccountID;
+        _actedAccountID  = kInvalidAccountID;
+        _lastResult      = AdminResult::Ok;
+        _lastMethod      = 0;
+        _bHasLookup      = SW_FALSE;
+        _bLastReplayed   = SW_FALSE;
+        _statusLine.clear();
+    }
+
     void AdminToolSession::updateConnection()
     {
         _connection.update( SystemMonotonicClock{}.nowMilliseconds() );

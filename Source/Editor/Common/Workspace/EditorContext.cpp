@@ -33,6 +33,7 @@ namespace sw::editor
 
     EditorContext::EditorContext()
         : _scope{}
+        , _listSubsystem{}
     {
         // 범위가 자기 주인을 안다 — `editor::getSubsystem<EditorContext>()` 는 지금 에디터 범위에서 이것을 찾는다(활성 컨텍스트 정적 포인터를 따로 두지 않는다).
         (void)_scope.bind( this ); // 새 범위라 겹치지 않는다
@@ -95,10 +96,19 @@ namespace sw::editor
         _scope.shutdownAll();
         SW_LOG_INFO_ID( "EditorContext.ShutdownMs", "Editor context shutdown (ms): background work %#, subsystems: %#", waitMicroseconds / 1000,
                         SubsystemTimingReport::describe( _scope.getCollection().getShutdownTimings() ).c_str() );
+        _listSubsystem.clear();
         _scope.destroyAll();                 // 뷰 렌더 타깃은 EditorRenderViews 의 종료가 놓는다
         _scope.unbind<EditorToolDefaults>(); // 셸이 소유한 값 — 다음 `initialize` 가 다시 건다
         _scope.unbind<EditorIconGlyphTable>();
         _scope.unbind<const EditorComponentIconTable>(); // 메인 `CommandStack` 칸은 주인(`EditorUndoHistory`)과 함께 `destroyAll` 이 지웠다
+    }
+
+    void EditorContext::resetToFreshEditor()
+    {
+        for ( size_t index = _listSubsystem.size(); index-- > 0; )
+        {
+            _listSubsystem[index]->resetToFreshEditor();
+        }
     }
 
     void EditorContext::setDockLayout( EditorDockLayout* pDockLayout )

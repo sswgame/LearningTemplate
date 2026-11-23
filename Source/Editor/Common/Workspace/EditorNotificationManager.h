@@ -30,6 +30,7 @@ namespace sw::editor
         /** @brief 서브시스템 이름입니다(다른 선언의 의존 칸이 이 상수를 가리킨다). */
         static constexpr const utf8* kSubsystemName = "EditorNotificationManager";
         const utf8*                  getSubsystemName() const override { return kSubsystemName; }
+        void                         resetToFreshEditor() override { clear(); }
 
         /**
          * @brief 알림을 하나 쌓습니다. **메인 스레드에서만 부릅니다.**

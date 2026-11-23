@@ -274,6 +274,7 @@ namespace sw::editor
         /** @brief 서브시스템 이름입니다(다른 선언의 의존 칸이 이 상수를 가리킨다). */
         static constexpr const utf8* kSubsystemName = "EditorCommandRegistry";
         const utf8*                  getSubsystemName() const override { return kSubsystemName; }
+        void                         resetToFreshEditor() override;
 
         /**
          * @brief 지금 에디터 컨텍스트의 커맨드 레지스트리입니다. 컨텍스트가 없으면(에디터 밖 테스트 · 종료 뒤) nullptr 입니다.

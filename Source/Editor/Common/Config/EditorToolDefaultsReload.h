@@ -21,6 +21,7 @@ namespace sw::editor
         SubsystemInitResult initializeSubsystem() override;
         void                shutdownSubsystem() override { _handler.reset(); }
         const utf8*         getSubsystemName() const override { return kSubsystemName; }
+        void                resetToFreshEditor() override {} // 처리기 구독뿐이다
 
         /** @brief @p fullPath 가 도구 기본값 파일이면 다시 읽습니다. 아니면 `NotTracked`, 깨졌으면(이전 값을 지켰다) `Failed` 입니다. */
         [[nodiscard]] static ReloadResult reloadIfToolDefaults( string_view fullPath );

@@ -530,6 +530,11 @@ namespace sw::editor
             }
 
             const utf8* getSubsystemName() const override { return kSubsystemName; }
+            void        resetToFreshEditor() override
+            {
+                _drag.end();
+                _bFrameValid = SW_FALSE;
+            }
 
             /**
              * @brief 대상의 결과 선분을 도형 값으로 모읍니다 — @p bStage 면 고른 모디파이어까지(`meshmodifiers.stage`), 아니면 전체 변형 미리보기(`meshmodifiers.preview`, CPU 미리보기를 먼저 갱신한다).

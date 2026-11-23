@@ -75,6 +75,7 @@ namespace sw::editor
             }
 
             const utf8* getSubsystemName() const override { return kSubsystemName; }
+            void        resetToFreshEditor() override {} // 입력이 바뀐 프레임에 다시 짓는 값이다
 
         private:
             /** @brief 활성 씬의 원본 경로(없으면 씬 이름)입니다. 활성 씬이 없으면 빈 문자열이다. */

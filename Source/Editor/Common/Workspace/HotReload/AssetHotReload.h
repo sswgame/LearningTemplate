@@ -68,6 +68,7 @@ namespace sw::editor
         }
         void        shutdownSubsystem() override { shutdown(); }
         const utf8* getSubsystemName() const override { return kSubsystemName; }
+        void        resetToFreshEditor() override {} // 디스크의 변경과 맞춘 상태라 단계와 무관하다
 
         AssetHotReload( const AssetHotReload& )            = delete;
         AssetHotReload& operator=( const AssetHotReload& ) = delete;

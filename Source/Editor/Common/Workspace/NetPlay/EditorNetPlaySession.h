@@ -223,7 +223,7 @@ namespace sw::editor
          * @details 자동화 체인의 단계 되돌리기가 부른다. 필드를 밖에서 하나씩 되돌리면 빠지는 것이 생겼다(열지 않은 트레이스가 다음 단계의 Profiler 를 Timeline 으로 열었다).
          *          자동화의 편집기 상태 폴더는 프로세스마다 비어 있어 새 프로세스도 프리셋 없는 기본 구성이다.
          */
-        void resetToFreshEditor();
+        void resetToFreshEditor() override;
         /** @brief 사용자 프리셋입니다. 패널이 저장 · 고르기 · 지우기를 하고, 고른 구성을 `getSettings` 에 복사합니다. */
         EditorNetPlayPresetStore& getPresetStore() { return _presetStore; }
 

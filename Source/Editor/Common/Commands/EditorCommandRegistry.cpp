@@ -239,6 +239,12 @@ namespace sw::editor
         _listRequested.push_back( RequestedCommand{ string{}, EditorCommandTarget{}, {}, move } );
     }
 
+    void EditorCommandRegistry::resetToFreshEditor()
+    {
+        ScopedLock<mutex> lock{ _requestMutex };
+        _listRequested.clear(); // 앞 단계가 넘긴 편집이 다음 단계의 씬에 돌지 않게 한다
+    }
+
     void EditorCommandRegistry::runRequestedSceneCommands()
     {
         {

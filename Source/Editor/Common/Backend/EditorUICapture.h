@@ -100,6 +100,7 @@ namespace sw::editor
     public:
         static constexpr const utf8* kSubsystemName = "EditorUICapture";
         const utf8*                  getSubsystemName() const override { return kSubsystemName; }
+        void                         resetToFreshEditor() override {} // 캡처 요청은 번호로 묶이고 낸 쪽이 결과를 기다린다 — 남은 요청을 버리면 쓰는 중인 파일만 잃는다
 
         // ------------------------------------------------------------------------------
         // UI 스레드

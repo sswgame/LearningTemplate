@@ -57,6 +57,7 @@ namespace sw::editor
 
         static constexpr const utf8* kSubsystemName = "EditorUndoHistory";
         const utf8*                  getSubsystemName() const override { return kSubsystemName; }
+        void                         resetToFreshEditor() override { _stack.clear(); }
         SubsystemInitResult          initializeSubsystem() override;
         void                         shutdownSubsystem() override;
 
