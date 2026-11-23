@@ -1,0 +1,86 @@
+<?asset guid="02cb87ae09004926a4246e6e63b1ef27"?>
+<Scene formatVersion="3" name="LocalPlayers">
+	<!-- 로컬 멀티 무대(minigames/localplayers, automation/localplayers) — 폰 둘을 로컬 플레이어 0 · 1 이 조종한다(PawnAutoPossess). 사용자 0 은 키보드 · 마우스, 사용자 1 은 짝지은 패드(InputManager::openLocalUsers). -->
+	<SceneSettings _bStreaming="false" _unloadMargin="0" _maxCellLoadsPerFrame="0" _addToWorldBudgetMicroseconds="0">
+		<_cellGrid _cellSize="0" _loadingRadius="0" />
+	</SceneSettings>
+	<entities>
+		<entity id="1" name="GameCamera">
+			<GameObject _schemaVersion="0" _name="GameCamera" _bActive="true">
+				<_listComponent>
+					<CameraComponent _localID="17709685451340727998" _localPosition="0,12,-12" _localRotation="0,0,0" _localScale="1,1,1" _attachOwner="None" _attachComponent="None" _fovY="51.5662" _nearZ="0.1" _farZ="200" _orthoHeight="10" _priority="10" _role="Game" _bOrthographic="false" />
+					<CameraManagerComponent _localID="3555541265262269731" _viewTarget="2" _localPlayerIndex="0" />
+				</_listComponent>
+			</GameObject>
+		</entity>
+		<entity id="2" name="GameplayView">
+			<GameObject _schemaVersion="0" _name="GameplayView" _bActive="true">
+				<_listComponent>
+					<CameraComponent _localID="17709685451340727998" _localPosition="0,10,-10" _localRotation="0.6,0,0" _localScale="1,1,1" _attachOwner="None" _attachComponent="None" _fovY="51.5662" _nearZ="0.1" _farZ="200" _orthoHeight="10" _priority="0" _role="Custom" _bOrthographic="false" />
+				</_listComponent>
+			</GameObject>
+		</entity>
+		<entity id="3" name="Ground">
+			<GameObject _schemaVersion="0" _name="Ground" _bActive="true">
+				<_listComponent>
+					<RigidBodyComponent _localID="7198733165449302788" _localPosition="0,-0.5,0" _localRotation="0,0,0" _localScale="1,1,1" _attachOwner="None" _attachComponent="None" _bodyType="Static" _layer="Default" _material="Default" _mass="0">
+						<_listShape>
+							<PhysicsShapeDesc3D _type="Box" _halfExtents="50,0.5,50" _radius="0.5" _halfHeight="0.5" _localPosition="0,0,0" _localRotation="0,0,0" _material="Default">
+								<_listPoint />
+								<_listIndex />
+							</PhysicsShapeDesc3D>
+						</_listShape>
+					</RigidBodyComponent>
+					<MeshComponent _localID="163493842152903304" _localPosition="0,0.5,0" _localRotation="0,0,0" _localScale="100,1,100" _attachOwner="None" _attachComponent="#63e709ac676dd304" _meshID="Plane" _materialPath="engine/materials/prototypegrid_dark.material" _boundsRadius="0.866" />
+				</_listComponent>
+			</GameObject>
+		</entity>
+		<entity id="4" name="Player0">
+			<GameObject _schemaVersion="0" _name="Player0" _bActive="true">
+				<_listComponent>
+					<CharacterControllerComponent _localID="1851894784675401076" _localPosition="-2,0.05,0" _localRotation="0,0,0" _localScale="1,1,1" _attachOwner="None" _attachComponent="None" _radius="0.3" _halfHeight="0.6" _stepHeight="0.3" _maxSlopeAngle="45" _gravityScale="1" _mass="70" _layer="Character" />
+					<MeshComponent _localID="163493842152903304" _localPosition="0,0.9,0" _localRotation="0,0,0" _localScale="0.6,0.9,0.6" _attachOwner="None" _attachComponent="#19b3407eb1f9cd74" _meshID="Capsule" _materialPath="engine/materials/prototypegrid_orange.material" _boundsRadius="0.866" />
+					<PawnComponent _localID="11149290121538025405" _moveAction="Move" _lookAction="None" _upAction="None" _inputLayer="None" _aiControllerPrefab="" _maxPitch="80.21409" _autoPossess="Player0" _bLockMouse="false">
+						<_listButton />
+						<_listAnalog />
+					</PawnComponent>
+					<CharacterMovementComponent _localID="14594004469458933705" _sprintButton="None" _jumpButton="None" _walkSpeed="3.5" _sprintSpeed="3.5" _acceleration="30" _deceleration="40" _jumpSpeed="5" _turnRate="12" _facingMode="MoveDirection" />
+					<TagComponent _localID="5249839963692551013">
+						<_tags>
+							<_listTag>
+								<item>Player</item>
+							</_listTag>
+						</_tags>
+					</TagComponent>
+				</_listComponent>
+			</GameObject>
+		</entity>
+		<entity id="6" name="Player1">
+			<GameObject _schemaVersion="0" _name="Player1" _bActive="true">
+				<_listComponent>
+					<CharacterControllerComponent _localID="1851894784675401076" _localPosition="2,0.05,0" _localRotation="0,0,0" _localScale="1,1,1" _attachOwner="None" _attachComponent="None" _radius="0.3" _halfHeight="0.6" _stepHeight="0.3" _maxSlopeAngle="45" _gravityScale="1" _mass="70" _layer="Character" />
+					<MeshComponent _localID="163493842152903304" _localPosition="0,0.9,0" _localRotation="0,0,0" _localScale="0.6,0.9,0.6" _attachOwner="None" _attachComponent="#19b3407eb1f9cd74" _meshID="Capsule" _materialPath="engine/materials/prototypegrid_light.material" _boundsRadius="0.866" />
+					<PawnComponent _localID="11149290121538025405" _moveAction="Move" _lookAction="None" _upAction="None" _inputLayer="None" _aiControllerPrefab="" _maxPitch="80.21409" _autoPossess="Player1" _bLockMouse="false">
+						<_listButton />
+						<_listAnalog />
+					</PawnComponent>
+					<CharacterMovementComponent _localID="14594004469458933705" _sprintButton="None" _jumpButton="None" _walkSpeed="3.5" _sprintSpeed="3.5" _acceleration="30" _deceleration="40" _jumpSpeed="5" _turnRate="12" _facingMode="MoveDirection" />
+					<TagComponent _localID="5249839963692551013">
+						<_tags>
+							<_listTag>
+								<item>Player</item>
+							</_listTag>
+						</_tags>
+					</TagComponent>
+				</_listComponent>
+			</GameObject>
+		</entity>
+		<entity id="5" name="Sun">
+			<GameObject _schemaVersion="0" _name="Sun" _bActive="true">
+				<_listComponent>
+					<DirectionalLightComponent _localID="51927904365891271" _localPosition="0,10,0" _localRotation="0.356582,-2.138715,0" _localScale="1,1,1" _attachOwner="None" _attachComponent="None" _color="1,0.95,0.85" _intensity="1.2" _ambient="0.5" _shadowExtent="20" _shadowDistance="40" _bCastShadow="false" />
+				</_listComponent>
+			</GameObject>
+		</entity>
+	</entities>
+</Scene>

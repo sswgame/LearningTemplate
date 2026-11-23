@@ -344,7 +344,7 @@ namespace sw
         const int32 stockCount = pRuntime->_listStockCount[static_cast<size_t>( stockIndex )];
         if ( ShopStockDef::isFiniteStock( stockCount ) && stockCount < count )
             return ShopResult::OutOfStock;
-        const int64 total = static_cast<int64>( computeBuyPrice( shopID, itemID ) ) * count;
+        const int64 total = static_cast<int64>( computeBuyPrice( shopID, itemID ).value() ) * count; // 가게 · 진열은 위에서 확인했다
         if ( wallet.canAfford( pShop->_currency, total ) == false )
             return ShopResult::NotEnoughMoney;
         if ( inventory.hasRoomFor( itemID, count ) == false )
@@ -360,7 +360,7 @@ namespace sw
         const ShopDef* pShop      = _pShopCatalog->find( shopID );
         ShopState*     pRuntime   = findRuntimeMutable( shopID );
         const int32    stockIndex = findStockIndex( *pShop, itemID ).value(); // evaluateBuy 가 진열을 확인했다
-        const int64    total      = static_cast<int64>( computeBuyPrice( shopID, itemID ) ) * count;
+        const int64    total      = static_cast<int64>( computeBuyPrice( shopID, itemID ).value() ) * count;
         if ( wallet.trySpend( pShop->_currency, total ) == false )
             return ShopResult::NotEnoughMoney;
         const int32 addedCount = inventory.addItem( itemID, count );
@@ -525,15 +525,15 @@ namespace sw
         _eventBuffer.moveAllTo( outListEvent );
     }
 
-    int32 ShopManager::computeBuyPrice( const hashed_string& shopID, const hashed_string& itemID ) const
+    optional<int32> ShopManager::computeBuyPrice( const hashed_string& shopID, const hashed_string& itemID ) const
     {
         const ShopDef*   pShop    = _pShopCatalog != nullptr ? _pShopCatalog->find( shopID ) : nullptr;
         const ShopState* pRuntime = findRuntime( shopID );
         if ( pShop == nullptr || pRuntime == nullptr )
-            return constant::invalid_index::kInt32;
+            return nullopt;
         const optional<int32> stockIndex = findStockIndex( *pShop, itemID );
         if ( stockIndex.has_value() == false )
-            return constant::invalid_index::kInt32;
+            return nullopt;
         const int32 basePrice = computeBasePrice( pShop->_listStock[static_cast<size_t>( *stockIndex )] );
         return ShopInternal::roundPrice( static_cast<float32>( basePrice ) * pShop->_buyMultiplier * pRuntime->_buyModifier );
     }

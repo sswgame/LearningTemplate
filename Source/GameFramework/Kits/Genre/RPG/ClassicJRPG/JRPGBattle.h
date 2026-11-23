@@ -96,9 +96,15 @@ namespace sw
         float32 _defendReduction{ 0.5f };     ///< 방어 명령에서 받는 피해에서 빼는 비율
         float32 _weaknessMultiplier{ 1.5f };  ///< 약점 유형을 맞혔을 때의 피해 배율
         float32 _fleeBase{ 0.5f };
-        float32 _fleePerAgility{ 0.02f }; ///< 평균 민첩 차이 1마다 늘어나는 도망 확률
-        float32 _fleePerAttempt{ 0.1f };  ///< 실패할 때마다 오르는 도망 확률
-        int32   _comboPerHit{ 1 };        ///< 기본 공격 한 타마다 얻는 콤보 포인트
+        float32 _fleePerAgility{ 0.02f };     ///< 평균 민첩 차이 1마다 늘어나는 도망 확률
+        float32 _fleePerAttempt{ 0.1f };      ///< 실패할 때마다 오르는 도망 확률
+        float32 _fleeChanceMin{ 0.05f };      ///< 도망 확률의 하한
+        float32 _fleeChanceMax{ 0.95f };      ///< 도망 확률의 상한
+        int32   _physicalVarianceMin{ 875 };  ///< 물리 피해 흔들림의 하한(1000 분율)
+        int32   _physicalVarianceMax{ 1125 }; ///< 물리 피해 흔들림의 상한(1000 분율)
+        int32   _skillVarianceMin{ 900 };     ///< 주문 · 합체기 피해 흔들림의 하한(1000 분율)
+        int32   _skillVarianceMax{ 1100 };    ///< 주문 · 합체기 피해 흔들림의 상한(1000 분율)
+        int32   _comboPerHit{ 1 };            ///< 기본 공격 한 타마다 얻는 콤보 포인트
         int32   _comboMax{ 9 };
         int32   _innerPerAttack{ 10 }; ///< 무협 옵션에서 기본 공격 한 타마다 얻는 내공
         int32   _innerPerHitTaken{ 5 };
@@ -229,7 +235,7 @@ namespace sw
         void bindParty( JRPGParty* pParty ) { _pParty = pParty; }
 
         /** @brief DQ 식 물리 피해를 계산합니다. */
-        static int32 computePhysicalDamage( int32 attack, int32 defense, GameRandom& random );
+        static int32 computePhysicalDamage( const JRPGBattleSettings& settings, int32 attack, int32 defense, GameRandom& random );
         /** @brief 지금 도망칠 확률을 반환합니다(0.05..0.95이며, 보스가 있으면 0입니다). */
         float32 computeFleeChance() const;
 

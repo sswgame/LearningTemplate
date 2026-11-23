@@ -671,6 +671,7 @@
 		<entry key="EdFormat.GameObjectID" text="GameObject  ID: {objectID}" sourceHash="f68ebd5b37309415" />
 		<entry key="EdFormat.ID" text="ID: {componentID}" sourceHash="73e4e2bde40d573a" />
 		<entry key="EdFormat.If" text="조건({condition})" sourceHash="54375bb3db4dff02" />
+		<entry key="EdFormat.InheritsFrom" text="{base} 에서 물려받음" sourceHash="0de1ab51422d933e" />
 		<entry key="EdFormat.KeepDisplaySettings"
 		       text="이 화면 설정을 유지할까요? {seconds} 초 뒤 되돌립니다"
 		       sourceHash="0022217cb6ebd09c" />
@@ -954,9 +955,6 @@
 		<entry key="EdPhysicsAsset.DuplicateBodyTip"
 		       text="이 바디를 아래에 복사합니다. 복사본은 스켈레톤의 본 이름을 적어야 섭니다."
 		       sourceHash="7cf451138bc634ae" />
-		<entry key="EdPhysicsAsset.InheritedAsset"
-		       text="이 에셋은 다른 파일(_base)을 물려받아 값이 여기 다 적혀 있지 않습니다. Catalog 창에서 고치세요."
-		       sourceHash="8386d6f12169eb4e" />
 		<entry key="EdPhysicsAsset.NotEditable"
 		       text="에셋 원문을 편집용으로 열지 못했습니다. 로그를 보세요."
 		       sourceHash="2c965150f4ed3e63" />
@@ -1127,6 +1125,9 @@
 		<entry key="EdText.HeldKeys" text="누른 키:" sourceHash="18a2f1991c417254" />
 		<entry key="EdText.Import" text="가져오기..." sourceHash="b6edf2b86255f94a" />
 		<entry key="EdText.Impulse" text="충격" sourceHash="7c74babe20065df4" />
+		<entry key="EdText.InheritsFromTip"
+		       text="부모와 다른 값만 이 파일에 씁니다. 부모 값으로 되돌리면 파일에서 빠집니다."
+		       sourceHash="cf53b3029d94e783" />
 		<entry key="EdText.InjectKeyDown" text="키 누름 넣기" sourceHash="20f9bb68fd6f00c7" />
 		<entry key="EdText.InjectKeyUp" text="키 뗌 넣기" sourceHash="fac30e7628de309e" />
 		<entry key="EdText.InjectStickTilt" text="스틱 기울임 넣기" sourceHash="f05eb4987959a983" />
@@ -1391,9 +1392,6 @@
 		<entry key="EdTip.WriteTheWeightsAndOnOffOf"
 		       text="이 인스턴스 노드의 가중치 · 켜짐을 리그 에셋(*.rig.xml)에 씁니다. 다른 키는 그대로입니다"
 		       sourceHash="0d8da0706fc03658" />
-		<entry key="EdVFX.InheritedEffect"
-		       text="이 효과는 다른 파일(_base)을 물려받아 값이 여기 다 적혀 있지 않습니다. Catalog 창에서 고치세요."
-		       sourceHash="62ba91ed71bb980f" />
 		<entry key="EdVFX.NotEditable"
 		       text="효과 원문을 편집용으로 열지 못했습니다. 로그를 보세요."
 		       sourceHash="1726e45c8cd75b1a" />

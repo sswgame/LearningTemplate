@@ -206,7 +206,7 @@ namespace sw
         CreatureAbilityResult useAbility( const hashed_string& speciesID, const hashed_string& abilityID, int32 x, int32 y, Inventory* pYieldInventory );
 
         /** @brief 빈 셀에 집을 짓고 집 index 를 반환합니다. 밖이거나 셀이 차 있거나 공유 땅이 남의 것이면 -1 입니다. */
-        int32               placeHouse( int32 x, int32 y, int32 capacity );
+        optional<int32>     placeHouse( int32 x, int32 y, int32 capacity );
         CreatureHouseResult assignHouse( const hashed_string& speciesID, int32 houseIndex );
         /** @brief 집 없는 생물을 온 순서대로, 자리가 남은 가장 가까운 집(서식지 기준 맨해튼 거리이며 같으면 앞 집)에 넣고, 넣은 수를 반환합니다. */
         int32 assignHomeless();

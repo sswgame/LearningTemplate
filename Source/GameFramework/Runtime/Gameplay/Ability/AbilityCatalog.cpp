@@ -121,28 +121,37 @@ namespace sw
 namespace sw
 {
     AbilityClassRegistry::AbilityClassRegistry()
-        : _mapAbilityFactory{}
-        , _mapAttributeSetFactory{}
+        : _abilityFactories{}
+        , _attributeSetFactories{}
     {
-        registerAttributeSetClass<AttributeSet>( "Generic" );
-        registerAttributeSetClass<CombatAttributeSet>( "Combat" );
-        registerAbilityClass<ApplyEffectsAbility>( "ApplyEffects" );
+        // 빈 표의 첫 이름들이라 겹치지 않는다 — 겹치면 레지스트리가 오류로 알린다.
+        (void)registerAttributeSetClass<AttributeSet>( "Generic" );
+        (void)registerAttributeSetClass<CombatAttributeSet>( "Combat" );
+        (void)registerAbilityClass<ApplyEffectsAbility>( "ApplyEffects" );
     }
 
     AbilityClassRegistry::~AbilityClassRegistry() = default;
 
-    void AbilityClassRegistry::registerAbilityClass( const hashed_string& className, AbilityFactoryFunc factory )
+    bool AbilityClassRegistry::registerAbilityClass( const hashed_string& className, AbilityFactoryFunc factory )
     {
-        if ( className.empty() || factory == nullptr )
-            return;
-        _mapAbilityFactory.insert_or_assign( className, factory );
+        SW_ASSERT( factory != nullptr );
+        return _abilityFactories.addLogged( className, factory, "Ability class" );
     }
 
-    void AbilityClassRegistry::registerAttributeSetClass( const hashed_string& className, AttributeSetFactoryFunc factory )
+    void AbilityClassRegistry::unregisterAbilityClass( const hashed_string& className )
     {
-        if ( className.empty() || factory == nullptr )
-            return;
-        _mapAttributeSetFactory.insert_or_assign( className, factory );
+        (void)_abilityFactories.remove( className ); // 없는 이름을 내리는 것은 할 일이 없는 것이다
+    }
+
+    bool AbilityClassRegistry::registerAttributeSetClass( const hashed_string& className, AttributeSetFactoryFunc factory )
+    {
+        SW_ASSERT( factory != nullptr );
+        return _attributeSetFactories.addLogged( className, factory, "Attribute set class" );
+    }
+
+    void AbilityClassRegistry::unregisterAttributeSetClass( const hashed_string& className )
+    {
+        (void)_attributeSetFactories.remove( className ); // 없는 이름을 내리는 것은 할 일이 없는 것이다
     }
 
     unique_ptr<Ability> AbilityClassRegistry::createAbility( const AbilityCatalog& catalog, const hashed_string& abilityID ) const
@@ -153,14 +162,14 @@ namespace sw
             SW_LOG_WARNING_ID( "AbilityCatalog.CreateAbilityNoAbilityCatalog", "createAbility: no ability '%#' in the catalog", abilityID.c_str() );
             return nullptr;
         }
-        const auto factoryIter = _mapAbilityFactory.find( pDef->_className );
-        if ( factoryIter == _mapAbilityFactory.end() )
+        const AbilityFactoryFunc* const pFactory = _abilityFactories.find( pDef->_className );
+        if ( pFactory == nullptr )
         {
             SW_LOG_WARNING_ID( "AbilityCatalog.CreateAbilityAbilityUsesClass", "createAbility: ability '%#' uses class '%#' which is not registered (registerAbilityClass)", abilityID.c_str(),
                                pDef->_className.c_str() );
             return nullptr;
         }
-        unique_ptr<Ability> pAbility = factoryIter->second();
+        unique_ptr<Ability> pAbility = ( *pFactory )();
         if ( pAbility != nullptr )
             pAbility->setConfig( pDef->_config );
         return pAbility;
@@ -168,18 +177,18 @@ namespace sw
 
     unique_ptr<AttributeSet> AbilityClassRegistry::createAttributeSet( const hashed_string& className ) const
     {
-        const auto factoryIter = _mapAttributeSetFactory.find( className );
-        if ( factoryIter == _mapAttributeSetFactory.end() )
+        const AttributeSetFactoryFunc* const pFactory = _attributeSetFactories.find( className );
+        if ( pFactory == nullptr )
         {
             SW_LOG_WARNING_ID( "AbilityCatalog.CreateAttributeSetAttributeSetClass", "createAttributeSet: attribute set class '%#' is not registered (registerAttributeSetClass)", className.c_str() );
             return nullptr;
         }
-        return factoryIter->second();
+        return ( *pFactory )();
     }
 
     bool AbilityClassRegistry::hasAbilityClass( const hashed_string& className ) const
     {
-        return _mapAbilityFactory.find( className ) != _mapAbilityFactory.end();
+        return _abilityFactories.find( className ) != nullptr;
     }
 } // namespace sw
 

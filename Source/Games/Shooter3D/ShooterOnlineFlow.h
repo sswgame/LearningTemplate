@@ -57,6 +57,10 @@ namespace sw
         void requestSubmitKills( OnlineSession& session, int64 kills );
         /** @brief 순위표 `kBoardKills` 의 상위 `kTopCount` 를 받습니다. */
         void requestTopKills( OnlineSession& session );
+        /** @brief 열린 기간 이벤트를 받습니다(로그인 뒤 — 출시 비율이 계정을 본다). 목록은 세션의 라이브 운영 클라이언트가 든다. */
+        static void requestLiveEvents( OnlineSession& session );
+        /** @brief 서비스 공지와 점검 창을 받습니다(로그인 전에도 된다). 상태는 세션의 서버 디렉터리 클라이언트가 든다. */
+        static void requestServiceStatus( OnlineSession& session );
         /** @brief 프로세스 안 서버의 저장소에 넣은 금화 우편이 끝났을 때 부릅니다. 넣기는 서버 코드(`Server/ShooterSelfMail.cpp`)의 개발 명령이라 클라이언트 구성에는 없습니다. */
         void  recordSelfMailSent() { ++_selfMailSentCount; }
         int32 getSelfMailSentCount() const { return _selfMailSentCount; }

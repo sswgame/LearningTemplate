@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="utf-8"?>
+<?asset guid="6dabb0809e4d40539a82207002a3b3e1"?>
+<!--
+  아레나 미니게임(웨이브를 막는 탑다운 전투 — 어빌리티 시스템) — AbilityArena 키트. 옛 게임 AbilityArena 를 미니게임으로 흡수했다.
+  게임 기능 AbilityArena 가 키트의 어빌리티 클래스를 게임 범위의 레지스트리(PlaygroundAbilities)에 등록하고 탄 카탈로그(data/projectiles.xml)를 미니게임 범위에 건다.
+  유닛의 이펙트 · 어빌리티 · 세트는 팩의 카탈로그(data/abilities.xml)에 있다. 판은 맵의 ArenaGameModeComponent 가 돌리고, 투사체 · 색은 같은 오브젝트의 ArenaViewComponent(GF_Client_AbilityArena)가 그린다.
+  입력은 걷기 공통 레이어와 Arena 레이어(abilityarena/data/arena.input.xml)만 켠다 — 입력 레이어 스택에 든 레이어만 발화한다.
+  시나리오 automation/abilityarena_ai · abilityarena_control · abilityarena_slice · editor/abilityarena_abilitydebugger 가 실행 전역 변수 gv_firstMinigame 로 들어간다.
+-->
+<Minigame name="abilityarena" map="game/playground/abilityarena/maps/arena.scene.xml" entry="SceneSwitch" portalSlot="6" features="AbilityArena" inputContexts="Movement,Arena" catalogs="projectiles"/>

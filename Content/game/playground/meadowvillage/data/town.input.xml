@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="utf-8"?>
+<?asset guid="07503c87cd4e494eaac958a0995da095"?>
+<!--
+  초원 마을 미니게임(minigames/meadowvillage)의 입력 차이 — Playground 공통 묶음(data/gamesettings.xml 의 <inputMap> 줄) 위에 얹힌다.
+  대화는 꺼져 있는 레이어 CreatureTown 이고 미니게임의 inputContexts 가 켠다 — 공통 Interact 는 다른 미니게임이 Space 를 더해 빨리 감기와 겹친다.
+-->
+<InputMap>
+	<layers>
+		<layer name="CreatureTown" enabled="0" blockLower="0"/>
+	</layers>
+	<action name="CreatureTown.Talk" layer="CreatureTown" trigger="Pressed">
+		<bind source="Key" code="E"/>
+	</action>
+</InputMap>

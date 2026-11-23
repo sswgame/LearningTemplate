@@ -59,8 +59,11 @@ namespace sw
         outIntent = ControlIntent{};
         if ( context._pInput == nullptr )
             return;
-        InputManager&             input    = *context._pInput;
-        const InputMap&           inputMap = input.getInputMap();
+        InputManager&         input    = *context._pInput;
+        const InputMap* const pUserMap = input.findUserMap( _playerIndex );
+        if ( pUserMap == nullptr )
+            return; // 로컬 멀티가 열리지 않았다(빙의할 때 알렸다) — 다른 사용자의 입력으로 대신하지 않는다
+        const InputMap&           inputMap = *pUserMap;
         const IInputCaptureQuery* pCapture = context._pInputCapture;
         // UI 가 커서를 바라면(메뉴가 열렸다) 잠금을 쉰다 — 닫히면 요청해 둔 잠금으로 돌아간다.
         const bool bUIWantsCursor = pCapture != nullptr && pCapture->shouldShowCursor();
@@ -142,23 +145,27 @@ namespace sw
         GameObject*        pPawnOwner = pawn.getOwner();
         if ( pManager == nullptr || pPawnOwner == nullptr )
             return;
-        const ControlSystem* pSystem = ControlSystem::find( *pManager );
-        InputManager*        pInput  = pSystem != nullptr ? pSystem->findInputManager() : nullptr;
-        if ( pInput != nullptr )
+        const ControlSystem* pSystem  = ControlSystem::find( *pManager );
+        InputManager*        pInput   = pSystem != nullptr ? pSystem->findInputManager() : nullptr;
+        InputMap* const      pUserMap = pInput != nullptr ? pInput->findUserMap( _playerIndex ) : nullptr;
+        if ( pInput != nullptr && pUserMap == nullptr )
+            SW_LOG_WARNING_ID( "Control.NoLocalUser", "Player %# possessed '%#' but only %# local users are open (InputManager::openLocalUsers) - it has no input", _playerIndex, pPawnOwner->getName().c_str(),
+                               pInput->getLocalUserCount() );
+        if ( pUserMap != nullptr )
         {
             if ( pawn.getInputLayer().empty() == false )
             {
                 // pushLayer 는 없는 레이어를 빈 레이어로 만들어 넣는다 — 이름이 틀리면 그 레이어의 액션이 켜지지 않는 것을 알 길이 없어 미는 쪽에서 알린다.
-                if ( _warnedPawn != pawn.getHandle() && pInput->getInputMap().hasLayer( pawn.getInputLayer() ) == false )
+                if ( _warnedPawn != pawn.getHandle() && pUserMap->hasLayer( pawn.getInputLayer() ) == false )
                     SW_LOG_WARNING_ID( "Control.InputLayerNotInInputMap", "Pawn '%#' input layer '%#' is not in the InputMap - pushing it enables no action", pPawnOwner->getName().c_str(),
                                        pawn.getInputLayer().c_str() );
-                pInput->getInputMap().pushLayer( pawn.getInputLayer() );
+                pUserMap->pushLayer( pawn.getInputLayer() );
                 _pushedLayer = pawn.getInputLayer();
             }
             if ( _warnedPawn != pawn.getHandle() )
             {
                 _warnedPawn = TComponentHandle<PawnComponent>{ &pawn };
-                warnMissingActions( pawn, *pInput );
+                warnMissingActions( pawn, *pUserMap );
             }
             _bMouseLockRequested = pawn.needsMouseLock() ? SW_TRUE : SW_FALSE;
             applyMouseLock( *pInput, _bMouseLockRequested == SW_TRUE );
@@ -178,8 +185,9 @@ namespace sw
         GameObjectManager*   pManager = pOwner != nullptr ? pOwner->getMutableManager() : nullptr;
         const ControlSystem* pSystem  = pManager != nullptr ? ControlSystem::find( *pManager ) : nullptr;
         InputManager*        pInput   = pSystem != nullptr ? pSystem->findInputManager() : nullptr;
-        if ( pInput != nullptr && _pushedLayer.empty() == false )
-            pInput->getInputMap().popLayer( _pushedLayer );
+        InputMap* const      pUserMap = pInput != nullptr ? pInput->findUserMap( _playerIndex ) : nullptr;
+        if ( pUserMap != nullptr && _pushedLayer.empty() == false )
+            pUserMap->popLayer( _pushedLayer );
         _bMouseLockRequested = SW_FALSE;
         if ( pInput != nullptr )
             applyMouseLock( *pInput, false );
@@ -189,10 +197,9 @@ namespace sw
             sendPossessionChanged( GameObjectHandle{} );
     }
 
-    void PlayerControllerComponent::warnMissingActions( const PawnComponent& pawn, const InputManager& input )
+    void PlayerControllerComponent::warnMissingActions( const PawnComponent& pawn, const InputMap& inputMap )
     {
-        const InputMap& inputMap  = input.getInputMap();
-        const utf8*     pPawnName = pawn.getOwner() != nullptr ? pawn.getOwner()->getName().c_str() : "?";
+        const utf8* pPawnName = pawn.getOwner() != nullptr ? pawn.getOwner()->getName().c_str() : "?";
         for ( const hashed_string& name : pawn.getButtonNames() )
         {
             if ( inputMap.getActionHandle( name ).isValid() == false )

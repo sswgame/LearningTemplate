@@ -65,5 +65,13 @@
 				</_listComponent>
 			</GameObject>
 		</entity>
+		<entity id="4" name="TrainingDummy">
+			<GameObject _schemaVersion="0" _name="TrainingDummy" _bActive="true">
+				<_listComponent>
+					<SceneComponent _localID="6604851127330942217" _localPosition="4,0,2" />
+					<GameFeatureReceiverComponent _localID="2918430577164220931" _receiver="Combatant" />
+				</_listComponent>
+			</GameObject>
+		</entity>
 	</entities>
 </Scene>

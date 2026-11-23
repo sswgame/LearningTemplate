@@ -9,6 +9,7 @@
 #pragma once
 #include "Core/Container/string.h"
 #include "Core/Container/vector.h"
+#include "Core/Foundation/Expected.h"
 #include "Core/Foundation/Macros.h"
 #include "Core/Foundation/Types.h"
 #include "Core/Name/hashed_string.h"
@@ -81,7 +82,7 @@ namespace sw
         float32 _penaltyDurabilityRatio{ 0.0f }; ///< 잃는 장비 내구도 비율 — 게임이 적용한다
 
         /** @brief 정책 종류의 첫 항목 자리입니다. 없으면 −1 입니다. */
-        [[nodiscard]] int32 findPolicyIndex( RespawnPolicyKind kind ) const;
+        [[nodiscard]] optional<int32> findPolicyIndex( RespawnPolicyKind kind ) const;
         /**
          * @brief 규칙이 틀린 까닭을 "; " 로 이어 반환합니다. 맞으면 빈 글입니다.
          * @details 범위 밖 칸, 빈 정책 목록, 같은 정책 두 번(요청이 종류로 항목을 찾는다), 통화 없는 비용 · 벌칙, 저절로 시도할 정책이 없는 목록을 본다.

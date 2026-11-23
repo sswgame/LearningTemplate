@@ -69,6 +69,7 @@ namespace sw
     GameModeComponent::GameModeComponent()
         : _bAutoPlay{ false }
         , _tickAfter{}
+        , _playerState{}
         , _listSpawned{}
         , _listPool{}
         , _listFollowedAsset{}
@@ -445,6 +446,15 @@ namespace sw
     {
         GameObjectManager* pManager = getObjectManager();
         return pManager != nullptr ? pManager->resolveGameObject( handle ) : nullptr;
+    }
+
+    const GameObject* GameModeComponent::requirePlayerState() const
+    {
+        const GameObject* const pPlayerState = findPlayerState();
+        if ( pPlayerState == nullptr )
+            SW_LOG_ERROR_ID( "GameMode.PlayerStateMissing", "GameMode '%#': Player State does not point at an object (the player controller object with the wallet) - the game cannot start",
+                             getTypeName().c_str() );
+        return pPlayerState;
     }
 
     void GameModeComponent::reportMissingAsset( string_view path )

@@ -178,6 +178,25 @@ namespace sw
         _intent._controlPitch = MathUtil::clamp( _intent._controlPitch + offset._y, -_maxPitch.radians(), _maxPitch.radians() );
     }
 
+    optional<uint32> PawnComponent::findPlayerIndex( PawnAutoPossess autoPossess )
+    {
+        switch ( autoPossess )
+        {
+            case PawnAutoPossess::None:
+            case PawnAutoPossess::AI:
+                return nullopt;
+            case PawnAutoPossess::Player0:
+                return 0u;
+            case PawnAutoPossess::Player1:
+                return 1u;
+            case PawnAutoPossess::Player2:
+                return 2u;
+            case PawnAutoPossess::Player3:
+                return 3u;
+        }
+        return nullopt;
+    }
+
     GameObject* PawnComponent::findControllerObject( const GameObjectManager& manager, const GameObject& pawnObject )
     {
         const PawnComponent*       pPawn       = pawnObject.getComponent<PawnComponent>();

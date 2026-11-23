@@ -125,10 +125,10 @@ namespace sw
         return listActor[bestIndex]._actorID;
     }
 
-    int32 TurnOrder::next()
+    optional<int32> TurnOrder::next()
     {
         if ( _listCombatant.empty() )
-            return constant::invalid_index::kInt32;
+            return nullopt;
         if ( _mode == TurnOrderMode::Timeline )
             return popTimeline( _listCombatant );
         if ( _listRoundQueue.empty() )

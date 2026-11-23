@@ -8,6 +8,7 @@
 
 #include "Engine/Reflection/TypeInfo.h"
 #include "Engine/Serialization/Format/XMLSerializer.h"
+#include "Engine/Serialization/Inherit/DataInheritance.h"
 #include "Engine/VFX/VFXEffectDef.h"
 
 using namespace sw;
@@ -42,6 +43,27 @@ namespace
             SW_EXPECT_TRUE( XMLSerializer::deserialize( &effect, *VFXEffectDef::StaticType(), document.getText() ) );
             return effect;
         }
+
+        /** @brief 물려받은 문서의 글을 런타임과 같은 길(펼치기)로 다시 읽습니다. */
+        static VFXEffectDef readInherited( const ReflectedXMLDocument& document )
+        {
+            DataInheritanceResourceSource source;
+            string                        flatText;
+            VFXEffectDef                  effect;
+            SW_EXPECT_TRUE( DataInheritance::flatten( document.getText(), "test", DataInheritanceSchema::makeFromType( *VFXEffectDef::StaticType() ), source, flatText ) );
+            SW_EXPECT_TRUE( XMLSerializer::deserialize( &effect, *VFXEffectDef::StaticType(), flatText ) );
+            return effect;
+        }
+
+        static optional<uint32> findEmitter( const VFXEffectDef& effect, string_view name )
+        {
+            for ( uint32 index = 0; index < static_cast<uint32>( effect._listEmitter.size() ); ++index )
+            {
+                if ( string_view{ effect._listEmitter[index]._name } == name )
+                    return index;
+            }
+            return nullopt;
+        }
     };
 } // namespace
 
@@ -50,7 +72,7 @@ SW_TEST_CASE( ReflectedXMLDocumentTest, CommitsOnlyTheEditedProperty )
 {
     using Internal = ReflectedXMLDocumentTestInternal;
     ReflectedXMLDocument document;
-    SW_REQUIRE_TRUE( document.load( *VFXEffectDef::StaticType(), Internal::kEffect ).has_value() );
+    SW_REQUIRE_TRUE( document.load( *VFXEffectDef::StaticType(), Internal::kEffect, "test" ).has_value() );
     SW_REQUIRE_TRUE( document.isEditable() );
     SW_EXPECT_FALSE( document.isDirty() );
 
@@ -81,7 +103,7 @@ SW_TEST_CASE( ReflectedXMLDocumentTest, DuplicateRemoveAndUndoText )
 {
     using Internal = ReflectedXMLDocumentTestInternal;
     ReflectedXMLDocument document;
-    SW_REQUIRE_TRUE( document.load( *VFXEffectDef::StaticType(), Internal::kEffect ).has_value() );
+    SW_REQUIRE_TRUE( document.load( *VFXEffectDef::StaticType(), Internal::kEffect, "test" ).has_value() );
     SW_EXPECT_TRUE( document.duplicateItem( Internal::kList, 0, "_name" ) );
     SW_REQUIRE_EQUAL( size_t{ 3 }, Internal::getEffect( document )._listEmitter.size() );
     SW_EXPECT_EQUAL( string( "Fire_copy" ), Internal::getEffect( document )._listEmitter[1]._name );
@@ -96,12 +118,54 @@ SW_TEST_CASE( ReflectedXMLDocumentTest, DuplicateRemoveAndUndoText )
     SW_EXPECT_EQUAL( size_t{ 2 }, Internal::getEffect( document )._listEmitter.size() );
 }
 
-/** @brief [ReflectedXMLDocumentTest] `_base` 로 물려받은 문서는 원문만 들고 고치지 않는다 */
-SW_TEST_CASE( ReflectedXMLDocumentTest, InheritedDocumentIsReadOnly )
+/** @brief [ReflectedXMLDocumentTest] `_base` 로 물려받은 문서는 부모를 펼친 값을 고치고 다른 칸만 적으며, 부모 값으로 되돌린 칸은 글에서 빠진다 */
+SW_TEST_CASE( ReflectedXMLDocumentTest, InheritedDocumentWritesOnlyTheDifference )
 {
+    using Internal = ReflectedXMLDocumentTestInternal;
     ReflectedXMLDocument document;
-    SW_REQUIRE_TRUE( document.load( *VFXEffectDef::StaticType(), "<VFXEffectDef _base=\"engine/vfx/sparks.vfx.xml\" />" ).has_value() );
-    SW_EXPECT_TRUE( document.isInherited() );
-    SW_EXPECT_FALSE( document.isEditable() );
-    SW_EXPECT_FALSE( document.removeItem( "_listEmitter", 0 ) );
+    SW_REQUIRE_TRUE( document.load( *VFXEffectDef::StaticType(), "<VFXEffectDef _base=\"engine/vfx/sparks.vfx.xml\" />", "test" ).has_value() );
+    SW_EXPECT_EQUAL( string( "engine/vfx/sparks.vfx.xml" ), document.getBaseID() );
+    SW_REQUIRE_TRUE( document.isEditable() );
+    const optional<uint32> emitterIndex = Internal::findEmitter( Internal::getEffect( document ), "Sparks" );
+    SW_REQUIRE_TRUE( emitterIndex.has_value() );
+    SW_EXPECT_TRUE( document.isInheritedItem( Internal::kList, *emitterIndex ) );
+    const uint32 parentCount = Internal::getEffect( document )._listEmitter[*emitterIndex]._maxParticles;
+
+    SW_EXPECT_FALSE( Internal::commit( document, *emitterIndex, "_maxParticles" ) ); // 부모와 같으면 적지 않는다
+    Internal::getEffect( document )._listEmitter[*emitterIndex]._maxParticles = parentCount + 8;
+    SW_EXPECT_TRUE( Internal::commit( document, *emitterIndex, "_maxParticles" ) );
+    SW_EXPECT_TRUE( StringUtil::contains( document.getText(), "_name=\"Sparks\"", true ) );
+    SW_EXPECT_FALSE( StringUtil::contains( document.getText(), "_duration", true ) ); // 고치지 않은 칸은 물려받는다
+    const VFXEffectDef     read      = Internal::readInherited( document );
+    const optional<uint32> readIndex = Internal::findEmitter( read, "Sparks" );
+    SW_REQUIRE_TRUE( readIndex.has_value() );
+    SW_EXPECT_EQUAL( parentCount + 8, read._listEmitter[*readIndex]._maxParticles );
+    SW_EXPECT_EQUAL( Internal::getEffect( document )._listEmitter.size(), read._listEmitter.size() );
+
+    Internal::getEffect( document )._listEmitter[*emitterIndex]._maxParticles = parentCount;
+    SW_EXPECT_TRUE( Internal::commit( document, *emitterIndex, "_maxParticles" ) );
+    SW_EXPECT_FALSE( StringUtil::contains( document.getText(), "_maxParticles", true ) );
+}
+
+/** @brief [ReflectedXMLDocumentTest] 물려받은 원소의 복사는 이 파일의 새 원소로 원본 뒤에 서고, 빼면 부모의 원소는 `_op="Remove"` · 이 파일의 원소는 글에서 사라진다 */
+SW_TEST_CASE( ReflectedXMLDocumentTest, InheritedItemsDuplicateAndRemove )
+{
+    using Internal = ReflectedXMLDocumentTestInternal;
+    ReflectedXMLDocument document;
+    SW_REQUIRE_TRUE( document.load( *VFXEffectDef::StaticType(), "<VFXEffectDef _base=\"engine/vfx/sparks.vfx.xml\" />", "test" ).has_value() );
+    const size_t           parentCount  = Internal::getEffect( document )._listEmitter.size();
+    const optional<uint32> emitterIndex = Internal::findEmitter( Internal::getEffect( document ), "Sparks" );
+    SW_REQUIRE_TRUE( emitterIndex.has_value() );
+
+    SW_REQUIRE_TRUE( document.duplicateItem( Internal::kList, *emitterIndex, "_name" ) );
+    SW_REQUIRE_EQUAL( parentCount + 1, Internal::getEffect( document )._listEmitter.size() );
+    SW_EXPECT_EQUAL( string( "Sparks_copy" ), Internal::getEffect( document )._listEmitter[*emitterIndex + 1]._name );
+    SW_EXPECT_FALSE( document.isInheritedItem( Internal::kList, *emitterIndex + 1 ) );
+
+    SW_EXPECT_TRUE( document.removeItem( Internal::kList, *emitterIndex + 1 ) );
+    SW_EXPECT_FALSE( StringUtil::contains( document.getText(), "Sparks_copy", true ) );
+    SW_EXPECT_TRUE( document.removeItem( Internal::kList, *emitterIndex ) );
+    SW_EXPECT_TRUE( StringUtil::contains( document.getText(), "_op=\"Remove\"", true ) );
+    SW_EXPECT_FALSE( Internal::findEmitter( Internal::readInherited( document ), "Sparks" ).has_value() );
+    SW_EXPECT_FALSE( Internal::findEmitter( Internal::getEffect( document ), "Sparks" ).has_value() );
 }

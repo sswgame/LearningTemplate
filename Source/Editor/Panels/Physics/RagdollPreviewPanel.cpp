@@ -167,8 +167,13 @@ namespace sw::editor
     {
         if ( _model.isEditable() == false )
         {
-            EditorWidgets::drawEmptyHint( _model.isInherited() ? SW_LOCKEY( "EdPhysicsAsset", "InheritedAsset" ) : SW_LOCKEY( "EdPhysicsAsset", "NotEditable" ) );
+            EditorWidgets::drawEmptyHint( SW_LOCKEY( "EdPhysicsAsset", "NotEditable" ) );
             return;
+        }
+        if ( _model.getBaseID().empty() == false )
+        {
+            ImGui::TextDisabled( "%s", SW_LOCKEYFORMAT( "EdFormat", "InheritsFrom", TextArgumentList().addText( "base", _model.getBaseID().c_str() ) ).c_str() );
+            EditorWidgets::drawTooltip( SW_LOCKEY( "EdText", "InheritsFromTip" ) );
         }
         if ( _model.editSelectedBody() == nullptr )
         {
@@ -188,7 +193,7 @@ namespace sw::editor
         target._pInstance = _model.editSelectedBody();
         target._pType     = RagdollPreviewViewModel::getBodyType();
         target._onEdited  = SW_DELEGATE_METHOD( Delegate<void( const PropertyInfo& )>, &RagdollPreviewPanel::onBodyPropertyEdited, this );
-        _grid.drawProperties( target, nullptr, {} );
+        _grid.drawProperties( target, nullptr, _model.collectHiddenProperties() );
         // 원소 주소가 바뀌는 편집은 그리드를 다 그린 뒤에 한다
         if ( bDuplicate )
             _model.duplicateSelectedBody();

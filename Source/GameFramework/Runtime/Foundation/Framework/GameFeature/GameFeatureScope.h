@@ -23,6 +23,7 @@
 
 #include "Engine/Asset/Cache/SharedAssetCache.h"
 #include "Engine/Asset/Cache/SharedAssetRef.h"
+#include "Engine/Reflection/TypeInfo.h"
 
 #include "GameFramework/GameFrameworkExports.h"
 
@@ -154,6 +155,18 @@ namespace sw
         }
 
         /**
+         * @brief 받는 이름이 @p receiver 인 오브젝트(`GameFeatureReceiverComponent`)마다 @p TComponent 를 붙입니다 — 이미 시작한 것은 지금, 뒤에 시작하는 것은 그때. 끌 때 뗍니다.
+         * @details 키트 하나를 켜면 카탈로그 · 서비스 · 컴포넌트가 한 번에 붙는 층이다 — 게임은 오브젝트에 받는 이름만 적고 키트의 컴포넌트를 프리팹마다 놓지 않는다
+         *          (언리얼 Game Feature 액션 Add Components).
+         * @return 게임 인스턴스가 없거나(`GameFeatureComponents`) 받는 이름이 비었으면 알리고 false 입니다.
+         */
+        template <class TComponent>
+        [[nodiscard]] bool addComponent( const utf8* pReceiver )
+        {
+            return addComponentRule( hashed_string( pReceiver ), TComponent::StaticType()->_name );
+        }
+
+        /**
          * @brief 전역 변수 @p name 을 @p value 로 바꾸고, 끌 때 지금 값으로 되돌립니다.
          * @return 변수가 없거나 값을 받지 않으면 알리고 false 입니다(바꾸지 않는다).
          */
@@ -177,6 +190,8 @@ namespace sw
         uint32 deactivate();
 
     private:
+        /** @brief `addComponent` 의 몸통입니다. */
+        [[nodiscard]] bool addComponentRule( const hashed_string& receiver, const hashed_string& componentType );
         /** @brief `loadCatalog` 의 경로입니다 — 선언되지 않았거나 경로를 못 만들면 알리고 false 입니다. */
         [[nodiscard]] bool resolveCatalogPath( const utf8* pKind, string& outPath ) const;
         /** @brief 같은 타입이 이미 걸려 있음을 알립니다. */

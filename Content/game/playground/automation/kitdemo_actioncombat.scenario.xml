@@ -12,6 +12,9 @@
 	<WaitUntil watch="ActionCombat.Alive" equals="2" timeoutFrames="120"/>
 	<Expect watch="ActionCombat.Phase" equals="0"/>
 	<Expect watch="ActionCombat.PlayerHP" equals="100"/>
+	<!-- 게임 기능 ActionCombat 가 받는 이름 Combatant 의 허수아비에 키트의 체력 컴포넌트를 붙였다 -->
+	<Expect watch="GameFeature.AddedComponents" equals="1"/>
+	<Expect watch="Object.Property" target="TrainingDummy" key="UnitStatsComponent._bIsDead" equals="0"/>
 	<!-- 홀: 오른쪽 졸개를 두 번 친다(쿨다운 0.28 초) -->
 	<Action name="KitDemo.Attack"/>
 	<AdvanceSimulation frames="24"/> <!-- 공격 쿨다운(0.28 초)이 지나는 0.4 초(시간이 내용) -->

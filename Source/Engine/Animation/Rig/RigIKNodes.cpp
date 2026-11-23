@@ -1007,14 +1007,14 @@ namespace sw
 
 namespace sw
 {
-    void RigIKNodes::registerNodes( RigNodeRegistry& registry )
+    bool RigIKNodes::registerNodes( RigNodeRegistry& registry )
     {
-        registry.registerNode( "TwoBoneIK", &RigIKNodesFactory::createTwoBone );
-        registry.registerNode( "FABRIKChain", &RigIKNodesFactory::createFABRIK );
-        registry.registerNode( "CCDChain", &RigIKNodesFactory::createCCD );
-        registry.registerNode( "Aim", &RigIKNodesFactory::createAim );
-        registry.registerNode( "FootPlacement", &RigIKNodesFactory::createFootPlacement );
-        registry.registerNode( "StrideWarping", &RigIKNodesFactory::createStrideWarping );
-        registry.registerNode( "FullBodyIK", &RigIKNodesFactory::createFullBody );
+        return registry.registerNode( "TwoBoneIK", &RigIKNodesFactory::createTwoBone ) &&
+               registry.registerNode( "FABRIKChain", &RigIKNodesFactory::createFABRIK ) &&
+               registry.registerNode( "CCDChain", &RigIKNodesFactory::createCCD ) &&
+               registry.registerNode( "Aim", &RigIKNodesFactory::createAim ) &&
+               registry.registerNode( "FootPlacement", &RigIKNodesFactory::createFootPlacement ) &&
+               registry.registerNode( "StrideWarping", &RigIKNodesFactory::createStrideWarping ) &&
+               registry.registerNode( "FullBodyIK", &RigIKNodesFactory::createFullBody );
     }
 } // namespace sw

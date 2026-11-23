@@ -35,6 +35,9 @@ namespace sw
         None = 0, ///< 아무도 빙의하지 않는다. 의도는 0(멈춤, 대기)이다. 탑승자가 내린 탈것이나 관전 대상에 쓴다
         Player0,  ///< 로컬 플레이어 0 의 조종자(없으면 조종 시스템이 하나 생성한다)
         AI,       ///< `_aiControllerPrefab` 을 생성해 빙의시킨다. 비었으면 기본 AI 조종자이고 가만히 서 있다
+        Player1,  ///< 로컬 플레이어 1 의 조종자(로컬 멀티 — `InputManager::openLocalUsers` 가 연 사용자의 장치로 조종한다)
+        Player2,  ///< 로컬 플레이어 2
+        Player3,  ///< 로컬 플레이어 3
     };
 } // namespace sw
 
@@ -80,6 +83,8 @@ namespace sw
         /** @brief 지금 쥔 조종자 컴포넌트입니다. 없으면 무효 핸들입니다. */
         const TComponentHandle<ControllerComponent>& getController() const { return _controller; }
         bool                                         isPossessed() const { return _controller.isValid(); }
+        /** @brief 자동 빙의 @p autoPossess 가 로컬 플레이어의 것이면 그 번호입니다. 아니면(없음 · AI) 없음입니다. */
+        static optional<uint32> findPlayerIndex( PawnAutoPossess autoPossess );
         /**
          * @brief @p pawnObject 의 폰을 쥔 조종자의 오브젝트입니다. 폰이나 조종자가 없으면 nullptr 입니다.
          * @details 조종자 쪽 상태(플레이어 상태 · 가방 · 지갑)를 폰에서 찾는 길은 이것 하나다(언리얼 `APawn::GetController` → 그 `PlayerState`).

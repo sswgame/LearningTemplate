@@ -129,7 +129,7 @@ namespace sw
         static float3 computeTileCenter( int32 x, int32 y );
 
     protected:
-        /** @brief 작물 카탈로그를 읽고 밭과 출하함을 새로 만들며, 같은 오브젝트의 공유 상태를 엽니다(새 판일 때만 시작 돈과 씨앗을 줍니다). */
+        /** @brief 작물 카탈로그를 읽고 밭과 출하함을 새로 만들며, 같은 오브젝트의 판 상태와 플레이어 상태(조종자)의 가방 · 지갑을 엽니다(새 판일 때만 시작 돈과 씨앗을 줍니다). */
         [[nodiscard]] bool startGame() override;
         void               onStateRestored( bool bRestored ) override;
         void               onGameStarted() override;
@@ -139,6 +139,8 @@ namespace sw
         bool               hasPendingSpawn() const override { return _bPossessionDirty == SW_TRUE; }
 
     private:
+        /** @brief 지금 작물 카탈로그로 가방의 아이템 목록과 가게 씨앗 목록을 채웁니다(시작 · 다시 읽힌 카탈로그). */
+        void applyCropCatalog();
         /** @brief 농부 폰의 이번 틱 의도를 처리합니다. 이동 축으로 걷고, 발동한 버튼(도구, 씨앗, 사용, 출하, 구매, 수면, 상태)을 규칙대로 실행합니다. */
         void applyFarmerIntent( float32 deltaTime, const PawnComponent& pawn );
         /** @brief 농부를 @p direction 방향으로 움직이고 바라보는 방향을 네 방향으로 맞춥니다. 벡터 길이 1 이 걷는 속도의 최대치이며, 길이가 곧 속도 비율입니다. */
@@ -187,6 +189,10 @@ namespace sw
         float32 _reach;
         PROPERTY( Category = "Farmer", DisplayName = "Near Distance", Tooltip = "Distance that counts as standing next to the shipping bin or the shop", Min = 0.0, Units = m )
         float32 _nearDistance;
+        PROPERTY( Category = "Farmer", DisplayName = "Walk Margin Min", Tooltip = "How far the farmer may walk past the field on the low X and Z sides", Min = 0.0, Units = m )
+        float32 _walkMarginMin;
+        PROPERTY( Category = "Farmer", DisplayName = "Walk Margin Max", Tooltip = "How far the farmer may walk past the field on the high X and Z sides", Min = 0.0, Units = m )
+        float32 _walkMarginMax;
         /** @brief 판 상태 날씨의 카탈로그입니다(`GameStateComponent` 의 `WeatherSystem` — 계절 가중치 · 하루 길이). 비는 그 날씨의 `wetness` 로 정한다. */
         PROPERTY( Category = "Weather", DisplayName = "Weather", Tooltip = "Weather catalog of the shared session state (season weights, a day long); rain is its wetness" )
         AssetRef<WeatherCatalog> _weatherPath;
@@ -213,12 +219,11 @@ namespace sw
         PROPERTY( Category = "Economy", DisplayName = "Item Stack Size", Tooltip = "Most seeds or produce one bag slot holds", Min = 1 )
         int32 _itemStackSize;
 
-        SharedAssetRef<CropCatalog>    _pCropCatalog;
-        SharedAssetRef<WeatherCatalog> _pWeatherCatalog;
-        ItemCatalog                    _itemCatalog; ///< 작물 카탈로그가 채운 씨앗과 수확물(공유 가방의 겹침 수).
-        FarmField                      _field;
-        FarmShippingBin                _shipment; ///< 출하함에 든 것(하루 끝에 팔린다).
-        vector<hashed_string>          _listSeed; ///< 카탈로그 순서의 씨앗 아이템(가게 진열).
+        SharedAssetRef<CropCatalog> _pCropCatalog;
+        ItemCatalog                 _itemCatalog; ///< 작물 카탈로그가 채운 씨앗과 수확물(공유 가방의 겹침 수).
+        FarmField                   _field;
+        FarmShippingBin             _shipment; ///< 출하함에 든 것(하루 끝에 팔린다).
+        vector<hashed_string>       _listSeed; ///< 카탈로그 순서의 씨앗 아이템(가게 진열).
         PROPERTY( RuntimeState )
         float3 _playerPosition;
         PROPERTY( RuntimeState )

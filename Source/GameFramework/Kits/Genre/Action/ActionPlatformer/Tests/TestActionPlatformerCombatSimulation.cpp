@@ -20,7 +20,7 @@
 namespace
 {
     constexpr const utf8* kRigCatalogXML = R"(<ActionPlatformer>
-  <Motor halfExtents="0.35,0.45" runSpeed="7" groundAcceleration="70" airAcceleration="40" jumpHeight="3.2" timeToApex="0.38" fallGravityScale="1.6" jumpCutRatio="0.45" maxFallSpeed="18" coyoteTime="0.1" jumpBufferTime="0.12" wallSlideSpeed="2.5" wallJumpSpeedX="7.5" wallJumpSpeedY="12" wallJumpLockTime="0.15" dashSpeed="18" dashDuration="0.15" dashCooldown="0.3" climbSpeed="4" dropThroughTime="0.25" extraJumpCount="0" airDashCount="1" wallJump="true"/>
+  <Motor halfExtents="0.35,0.45" runSpeed="7" groundAcceleration="70" airAcceleration="40" jumpHeight="3.2" timeToApex="0.38" fallGravityScale="1.6" jumpCutRatio="0.45" maxFallSpeed="18" coyoteTime="0.1" jumpBufferTime="0.12" wallSlideSpeed="2.5" wallJumpSpeedX="7.5" wallJumpSpeedY="12" wallJumpLockTime="0.15" dashSpeed="18" dashDuration="0.15" dashCooldown="0.3" climbSpeed="4" dropThroughTime="0.25" dashEndSpeedScale="0.4" climbJumpScale="0.8" climbSideScale="0.5" moveDeadzone="0.1" extraJumpCount="0" airDashCount="1" wallJump="true"/>
   <Grading><Grade id="S" min="90"/></Grading>
   <Parry window="4" radius="2" reflectSpeed="2" reflectDamage="3" hitstop="5" buffer="3"/>
   <Combo id="sword" moves="slash1,slash2"/>
@@ -442,7 +442,7 @@ SW_TEST_CASE( ActionCombatSimulationTest, StateRoundTripResumesIdentically )
     SW_EXPECT_FALSE( noGun.readState( forNoGun ) );
 
     sw::ActionPlatformerCatalog otherCatalog;
-    SW_REQUIRE_TRUE( otherCatalog.loadFromXMLText( R"(<ActionPlatformer><Motor halfExtents="0.35,0.45" runSpeed="7" groundAcceleration="70" airAcceleration="40" jumpHeight="3.2" timeToApex="0.38" fallGravityScale="1.6" jumpCutRatio="0.45" maxFallSpeed="18" coyoteTime="0.1" jumpBufferTime="0.12" wallSlideSpeed="2.5" wallJumpSpeedX="7.5" wallJumpSpeedY="12" wallJumpLockTime="0.15" dashSpeed="18" dashDuration="0.15" dashCooldown="0.3" climbSpeed="4" dropThroughTime="0.25" extraJumpCount="0" airDashCount="1" wallJump="true"/><Grading><Grade id="S" min="90"/></Grading></ActionPlatformer>)", "other" ) );
+    SW_REQUIRE_TRUE( otherCatalog.loadFromXMLText( R"(<ActionPlatformer><Motor halfExtents="0.35,0.45" runSpeed="7" groundAcceleration="70" airAcceleration="40" jumpHeight="3.2" timeToApex="0.38" fallGravityScale="1.6" jumpCutRatio="0.45" maxFallSpeed="18" coyoteTime="0.1" jumpBufferTime="0.12" wallSlideSpeed="2.5" wallJumpSpeedX="7.5" wallJumpSpeedY="12" wallJumpLockTime="0.15" dashSpeed="18" dashDuration="0.15" dashCooldown="0.3" climbSpeed="4" dropThroughTime="0.25" dashEndSpeedScale="0.4" climbJumpScale="0.8" climbSideScale="0.5" moveDeadzone="0.1" extraJumpCount="0" airDashCount="1" wallJump="true"/><Grading><Grade id="S" min="90"/></Grading></ActionPlatformer>)", "other" ) );
     sw::ActionPlatformerCombatSimulation otherCombo;
     SW_EXPECT_FALSE( otherCombo.initialize( &otherCatalog, &moves, kSword ) );
     SW_REQUIRE_TRUE( otherCombo.equipGun( gun, pellet, 0 ) );

@@ -20,21 +20,6 @@ namespace
 {
     struct ParkLayoutTestUtil
     {
-        /** @brief 실제 데이터(`coasters.xml` 의 family)와 같은 회로 하나입니다. */
-        static constexpr const utf8* kCoasters = R"(<CoasterLayoutCatalog>
-  <Physics gravity="9.81" rollingResistance="0.012" dragCoefficient="0.0004" liftSpeed="4" stationSpeed="3" boosterSpeed="22" boosterAcceleration="9" brakeSpeed="5" brakeDeceleration="10" fixedStep="0.00416667" stallSpeed="0.3" stallSeconds="3" gForceWarmupSeconds="0.5"/>
-  <Rating maxRating="10" intensityPerPositiveG="0.9" intensityPerNegativeG="1.5" intensityPerLateralG="1.2" intensitySpeedScale="15" nauseaPerLateralG="1.5" nauseaPerInversion="1" nauseaPerAirtime="0.3" nauseaPerIntensity="0.25" excitementSpeedScale="10" excitementPerAirtime="0.6" excitementPerInversion="0.8" excitementPerDrop="0.3" excitementDropHeightScale="15" excitementLengthScale="400" excitementIntensityLimit="8"/>
-  <Layout id="family" name="Little Dipper" startHeight="1">
-    <Piece type="Station" length="10"/>
-    <Piece type="LiftHill" length="16" height="8"/>
-    <Piece type="Drop" length="16" height="8"/>
-    <Piece type="TurnLeft" radius="10" angle="179.99985" bank="20"/>
-    <Piece type="Straight" length="54"/>
-    <Piece type="TurnLeft" radius="10" angle="179.99985" bank="15"/>
-    <Piece type="Brakes" length="8"/>
-  </Layout>
-</CoasterLayoutCatalog>)";
-
         /** @brief 평지 하나와 코스터 하나의 배치입니다. @p pEntryFee 가 입장료입니다. */
         static string makeLayout( const utf8* pEntryFee )
         {
@@ -59,7 +44,7 @@ SW_TEST_CASE( ParkLayoutTest, SharedCacheHoldsTheSamePackCoasterLayouts )
 {
     const test::ScopedScratchDomain domain;
     (void)domain.makeDiskFolder( "park/data" ).str();
-    SW_REQUIRE_TRUE( FileUtil::writeTextFile( domain.makeDiskPath( "park/data/coasters.xml" ), Util::kCoasters ) );
+    SW_REQUIRE_TRUE( FileUtil::writeTextFile( domain.makeDiskPath( "park/data/coasters.xml" ), kParkCoasters ) );
     SW_REQUIRE_TRUE( FileUtil::writeTextFile( domain.makeDiskPath( "park/data/rides.xml" ), Util::makeLayout( "5" ) ) );
     const string layoutID  = test::ScopedScratchDomain::makeID( "park/data/rides.xml" ).str();
     const string coasterID = test::ScopedScratchDomain::makeID( "park/data/coasters.xml" ).str();

@@ -26,6 +26,7 @@
 #include "GameFramework/Runtime/Foundation/Framework/Flow/GameSceneFlow.h"
 #include "GameFramework/Runtime/Foundation/Framework/Flow/IContentConfiguration.h"
 #include "GameFramework/Runtime/Foundation/Framework/Flow/IGameDevPart.h"
+#include "GameFramework/Runtime/Foundation/Framework/GameFeature/GameFeatureComponents.h"
 #include "GameFramework/Runtime/Foundation/Framework/GameFeature/GameFeatureScope.h"
 #include "GameFramework/Runtime/Foundation/Framework/GameService.h"
 #include "GameFramework/Runtime/Foundation/Framework/Minigame/MinigameFlow.h"
@@ -119,6 +120,8 @@ namespace sw
         _gameScope.emplaceSubsystem<TelemetryUploadLink>( _packConfig._data );
         // 플레이어 통계 · 업적은 gamesettings 에 통계 카탈로그가 있을 때만 선다 - 플랫폼 서비스(지금은 로컬 구현)까지 잇는다.
         _gameScope.emplaceSubsystem<PlayerStatsSubsystem>( _packConfig._data );
+        // 게임 기능이 붙이는 컴포넌트의 규칙 — 기능 범위(게임 · 미니게임)보다 먼저 서고 늦게 사라진다.
+        _gameScope.emplaceSubsystem<GameFeatureComponents>();
         // 미니게임 흐름은 늘 선다(미니게임을 쓰지 않는 게임에서는 아무 일도 안 한다) — 들어갈 때 게임 기능을 이 게임 범위에 걸고 나올 때 거두며, 종료가 `onShutdown` 뒤에 켜진 것을 끈다.
         _gameScope.emplaceSubsystem<MinigameFlow>( _gameScope, _packConfig, *this );
     }
@@ -523,17 +526,31 @@ namespace sw
 
     bool GameInstance::captureSnapshot( SerializePurpose purpose, vector<uint8>& outBytes )
     {
+        // 세이브는 어느 미니게임 안인지(칸 스택)를 머리에 담는다 — 불러오기가 그 미니게임을 켠 뒤 그 맵을 연다. 같은 실행 안의 스냅숏은 흐름이 살아 있어 담지 않는다.
+        vector<uint8> minigameBytes;
+        if ( purpose == SerializePurpose::SaveGame )
+            getSubsystem<MinigameFlow>().writeSaveState( minigameBytes );
+        return captureEnvelope( purpose, minigameBytes, outBytes );
+    }
+
+    bool GameInstance::captureSceneForSave( vector<uint8>& outBytes )
+    {
+        return captureEnvelope( SerializePurpose::SaveGame, vector<uint8>{}, outBytes );
+    }
+
+    bool GameInstance::captureEnvelope( SerializePurpose purpose, const vector<uint8>& minigameBytes, vector<uint8>& outBytes )
+    {
         if ( purpose == SerializePurpose::SaveGame && _saveLock.isBlocked() )
         {
             SW_LOG_WARNING_ID( "GameInstance.SaveBlocked", "Saving is blocked ('%#') - nothing is written", _saveLock.findBlockReason()->c_str() );
             return false;
         }
         // 순서: 올린 타입의 상태를 싣고 걷기 → 파생 훅(그 밖의 상태를 싣는다) → 봉투(파생의 리플렉션 상태 포함).
-        const auto capture = [this, purpose, &outBytes]()
+        const auto capture = [this, purpose, &minigameBytes, &outBytes]()
         {
             _stateSnapshot.beginCapture();
             onBeforeStateSerialize();
-            return _stateSnapshot.writeEnvelope( purpose, getStateTypeInfo(), static_cast<const GameInstance*>( this )->getStateInstance(), outBytes );
+            return _stateSnapshot.writeEnvelope( purpose, getStateTypeInfo(), static_cast<const GameInstance*>( this )->getStateInstance(), minigameBytes, outBytes );
         };
         if ( purpose == SerializePurpose::SaveGame )
         {

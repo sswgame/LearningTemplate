@@ -129,7 +129,7 @@ namespace sw
             }
             case InventoryCommandKind::Split:
             {
-                return bag.splitSlot( _fromSlot, _count ) != InventoryCommand::kNoSlot ? InventoryCommandResult::Ok : InventoryCommandResult::NoRoom;
+                return bag.splitSlot( _fromSlot, _count ).has_value() ? InventoryCommandResult::Ok : InventoryCommandResult::NoRoom;
             }
             case InventoryCommandKind::Drop:
             {

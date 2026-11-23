@@ -141,7 +141,7 @@ SW_TEST_CASE_F( CreatureTownReadStateTest, RealAndCraftedStatesRead )
 {
     SW_REQUIRE_TRUE( _town.setObject( 0, 0, "tree" ) );
     SW_REQUIRE_EQUAL( 1, _town.attractVisitorsAt( 0, 8, sw::DayPhase::Day, "sunny" ) );
-    SW_REQUIRE_EQUAL( 0, _town.placeHouse( 3, 3, 2 ) );
+    SW_REQUIRE_TRUE( _town.placeHouse( 3, 3, 2 ) == 0 );
     SW_REQUIRE_EQUAL( 1, _town.assignHomeless() );
 
     sw::Archive written;

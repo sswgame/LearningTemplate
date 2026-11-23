@@ -357,9 +357,9 @@ SW_TEST_CASE( GridInventoryTest, ReadRefusesItemsThatDoNotFitTheirCells )
     };
     sw::GridInventory written;
     SW_REQUIRE_TRUE( written.initialize( makeLookup( 1 ), 2, 1 ) );
-    SW_REQUIRE_TRUE( written.placeItem( kStone, 1, 0, 0, false ) >= 0 );
-    const int32 second = written.placeItem( kStone, 1, 1, 0, false );
-    SW_REQUIRE_TRUE( second >= 0 );
+    SW_REQUIRE_TRUE( written.placeItem( kStone, 1, 0, 0, false ).has_value() );
+    const sw::optional<int32> second = written.placeItem( kStone, 1, 1, 0, false );
+    SW_REQUIRE_TRUE( second.has_value() );
     sw::Archive bytes;
     written.writeState( bytes );
 
@@ -367,7 +367,7 @@ SW_TEST_CASE( GridInventoryTest, ReadRefusesItemsThatDoNotFitTheirCells )
     SW_REQUIRE_TRUE( restored.initialize( makeLookup( 1 ), 2, 1 ) );
     sw::Archive reading( bytes.getData(), bytes.getSize() );
     SW_REQUIRE_TRUE( restored.readState( reading ) );
-    SW_EXPECT_TRUE( restored.findInstanceAt( 1, 0 ) == sw::optional<int32>( second ) );
+    SW_EXPECT_TRUE( restored.findInstanceAt( 1, 0 ) == second );
     SW_EXPECT_EQUAL( 0, restored.countFreeCells() );
 
     sw::GridInventory wider; // 모양이 바뀌어 첫 아이템이 둘째 칸까지 차지한다 — 겹친다

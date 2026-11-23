@@ -242,6 +242,30 @@ SW_TEST_CASE( WesternOutlawTest, StateRoundTrip )
     SW_EXPECT_EQUAL( 1, untouched._outlaw.getCarcassCount() );
 }
 
+/** @brief [WesternOutlawTest] 다시 읽힌 카탈로그에 묶고 같은 상태를 읽으면 지난 현상금은 남고 다음 범죄는 새 수치로 쌓인다 */
+SW_TEST_CASE( WesternOutlawTest, RebindingTheCatalogAppliesTheNewNumbers )
+{
+    OutlawRig rig;
+    SW_REQUIRE_TRUE( rig.doDeed( WesternDeedKind::Crime, "theft", { OutlawRig::makeWitness( 1, false ) } ) );
+    rig._outlaw.update( 1.1f );
+    SW_REQUIRE_EQUAL( 25, rig._outlaw.getBounty() );
+    Archive written;
+    rig._outlaw.writeState( written );
+
+    string            text{ kOutlawXML };
+    const string_view oldBounty = R"(bounty="25")";
+    text.replace( text.find( oldBounty ), oldBounty.size(), R"(bounty="40")" );
+    WesternCatalog reloaded;
+    SW_REQUIRE_TRUE( reloaded.loadFromXMLText( text, "WesternOutlawTestReloaded" ) );
+    rig._outlaw.rebindCatalog( reloaded );
+    Archive reader( written.getData(), written.getSize() );
+    SW_REQUIRE_TRUE( rig._outlaw.readState( reader ) );
+    SW_EXPECT_EQUAL( 25, rig._outlaw.getBounty() );
+    SW_REQUIRE_TRUE( rig.doDeed( WesternDeedKind::Crime, "theft", { OutlawRig::makeWitness( 3, false ) } ) );
+    rig._outlaw.update( 1.1f );
+    SW_EXPECT_EQUAL( 65, rig._outlaw.getBounty() );
+}
+
 /**
  * @brief [WesternOutlawTest] 손질은 동물의 전리품 테이블을 굴려 빌린 가방에 넣는다 — 가죽과 함께 고기가 든다
  * @details 예전에는 전리품 카탈로그를 넘기지 않아 가죽만 얻었다. 변이: `skin` 에 전리품 카탈로그 대신 nullptr 를 넘기면 단언이 진다.
