@@ -105,6 +105,24 @@ namespace
     };
 } // namespace
 
+/** @brief [AppearanceSelectionTest] 공유 코드가 32 비트 해시로 싣는 외형 id 둘의 해시가 겹치면 데이터 로드가 막는다 — 막지 않으면 다른 외형으로 읽힌다 */
+SW_TEST_CASE( AppearanceSelectionTest, VisualIDHashClashIsALoadError )
+{
+    const hashed_string first( "visual_1062789" );
+    const hashed_string second( "visual_1279192" );
+    SW_REQUIRE_EQUAL( CustomizationSchemaDef::toSavedHash( first ), CustomizationSchemaDef::toSavedHash( second ) );
+    SW_EXPECT_LOG( "Appearance.IDHashClash" );
+    ItemCatalog        catalog;
+    AppearanceDatabase database;
+    SW_REQUIRE_TRUE( database.loadSectionFromXMLText( R"(<SlotCatalog><Slot name="Head"/></SlotCatalog>)", "test" ) );
+    SW_REQUIRE_TRUE( database.loadSectionFromXMLText( R"(<ItemVisualCatalog>
+        <ItemVisual id="visual_1062789"><Part name="Shell" kind="SocketPrefab" prefab="a.prefab" socket="Head"/></ItemVisual>
+        <ItemVisual id="visual_1279192"><Part name="Shell" kind="SocketPrefab" prefab="b.prefab" socket="Head"/></ItemVisual>
+    </ItemVisualCatalog>)",
+                                                      "test" ) );
+    SW_EXPECT_FALSE( database.finishLoad( &catalog ) );
+}
+
 /** @brief [AppearanceSelectionTest] 담기는 모습을 그대로 옮기고, 그것을 펼치면 보고할 것이 없다 */
 SW_TEST_CASE_F( AppearanceSelectionTest, CaptureThenApplyIsClean )
 {
