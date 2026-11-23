@@ -7,10 +7,14 @@
  *          창이 하는 일은 바디 표 + 뷰포트 겹침 선(스켈레톤 · 바디 셰이프 · 관절)과 시뮬레이션 시험(쓰러뜨리기 · 충격 · 부분 · 리셋)이다.
  */
 #pragma once
+#include "Core/Container/vector.h"
 #include "Core/Foundation/Types.h"
 
 #include "Editor/Common/GUI/Panel/EditorPreviewPanel.h"
+#include "Editor/Common/Widgets/PropertyGrid/EditorPropertyGrid.h"
 #include "Editor/Panels/Physics/Model/RagdollPreviewViewModel.h"
+#include "Editor/Viewport/Model/EditorColliderHandle.h"
+#include "Editor/Viewport/Model/EditorHandleDrag.h"
 
 namespace sw::editor
 {
@@ -29,10 +33,12 @@ namespace sw::editor
 
         RagdollPreviewPanel();
 
-        const utf8*        getPanelTitle() const override { return "Ragdoll Preview"; }
-        void               drawDocumentContent() override;
-        [[nodiscard]] bool saveDocument() override { return false; }
-        bool               canSaveDocument() const override { return false; }
+        const utf8* getPanelTitle() const override { return "Ragdoll Preview"; }
+        void        drawDocumentContent() override;
+        /** @brief 고친 물리 에셋 원문을 씁니다. 저장한 파일을 공유 캐시가 다시 읽고(`onDocumentSaved`) 몸을 다시 놓는다. */
+        [[nodiscard]] bool saveDocument() override;
+        /** @brief 지난 그리기에 세운 셰이프 크기 손잡이 수입니다(감시 값 `Editor.RagdollShapeHandleCount`). */
+        uint32 getShapeHandleCount() const { return static_cast<uint32>( _listShapeHandle.size() ); }
 
         /** @brief 문서에서 읽은 물리 에셋의 바디 수입니다. 문서를 읽지 못했으면 false 입니다(감시 값 `Editor.RagdollPreviewDocumentBodies`). */
         [[nodiscard]] bool findDocumentBodyCount( uint32& outCount ) const;
@@ -50,6 +56,13 @@ namespace sw::editor
     private:
         bool                canAcceptDocumentPath( string_view assetPath ) const override;
         ToolAssetLoadResult loadDocument() override;
+        string              captureDocumentText() const override { return _model.captureText(); }
+        void                applyDocumentText( string_view text ) override { _model.applyText( text ); }
+        /** @brief 바디 편집 칸(고른 바디의 프로퍼티 · 복사 · 빼기)을 그립니다. 고칠 수 없는 에셋이면 까닭을 보인다. */
+        void drawBodyEditor();
+        void onBodyPropertyEdited( const PropertyInfo& property );
+        /** @brief 고른 바디의 셰이프 크기 손잡이를 뷰포트 이미지 위에 그리고 끌기를 명령으로 냅니다. 손잡이가 마우스를 가져가면 다음 그리기의 궤도 카메라가 물러난다. */
+        void drawShapeHandles( const float4x4& viewProjection, const float2& imagePosition, const float2& imageSize );
         /** @brief 정적 바닥 바디를 세운다. 몸은 "Spawn" 을 누르면 놓는다. */
         void populatePreviewScene( Scene& scene ) override;
         /** @brief 맞춤(F)과 창을 처음 열 때의 카메라가 담을 구입니다. */
@@ -59,7 +72,12 @@ namespace sw::editor
         void drawOverlay();
 
     private:
-        RagdollPreviewViewModel _model;
-        RagdollPreviewState     _ragdollState; ///< 프레임마다 다시 채운다(값만)
+        RagdollPreviewViewModel                         _model;
+        RagdollPreviewState                             _ragdollState; ///< 프레임마다 다시 채운다(값만)
+        EditorPropertyGrid                              _grid;
+        EditorHandleDragTracker<ColliderHandle>         _handleTracker;
+        vector<ColliderHandle>                          _listShapeHandle;   ///< 이번 그리기의 손잡이(재사용 버퍼)
+        vector<EditorHandleDragCommand<ColliderHandle>> _listHandleCommand; ///< 이번 그리기의 명령(재사용 버퍼)
+        bool                                            _bHandleCapturing;  ///< NOLINT(sw-bool-flag): 손잡이가 마우스를 가져갔다 — 다음 그리기의 궤도 카메라를 막는다
     };
 } // namespace sw::editor

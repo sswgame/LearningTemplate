@@ -480,6 +480,8 @@
 		       text="고른 키를 값 · 접선 · 보간과 함께 복사합니다." />
 		<entry source="Copy the selected span item. Paste puts it at the current frame."
 		       text="고른 구간 항목을 복사합니다. 붙여 넣으면 현재 프레임에 놓입니다." />
+		<entry source="Copy this body below it. The copy needs the name of a bone in the skeleton before it can stand."
+		       text="이 바디를 아래에 복사합니다. 복사본은 스켈레톤의 본 이름을 적어야 섭니다." />
 		<entry source="Corner" text="모서리" />
 		<entry source="Corner rounding of buttons, input fields and control frames, in pixels (0 to 8)."
 		       text="버튼, 입력 필드 및 컨트롤 프레임의 모서리 둥글기(px, 0 ~ 8)" />
@@ -2100,6 +2102,8 @@
 		<entry source="Select All" text="모두 고르기" />
 		<entry source="Select All With" text="같은 것 모두 선택" />
 		<entry source="Select Owner GameObject" text="소유 GameObject 선택" />
+		<entry source="Select a body in the table to edit it. With a body placed, drag the square handles to resize its shapes."
+		       text="표에서 바디를 고르면 고칠 수 있습니다. 몸을 놓으면 네모 손잡이로 셰이프 크기를 끌 수 있습니다." />
 		<entry source="Select a character (Hierarchy or Scene view) to see its recorded state."
 		       text="기록된 상태를 보려면 캐릭터를 선택합니다(Hierarchy 또는 Scene 뷰)." />
 		<entry source="Select a component first" text="먼저 컴포넌트를 고르십시오" />
@@ -2426,6 +2430,8 @@
 		       text="활성 씬에 선언한 데이터 레이어가 없습니다. 월드 설정에서 더합니다." />
 		<entry source="The active scene does not stream. Turn on streaming in its World Settings to split it into cells."
 		       text="활성 씬은 스트리밍하지 않습니다. 셀로 나누려면 월드 설정에서 스트리밍을 켭니다." />
+		<entry source="The asset text could not be opened for editing - see the log."
+		       text="에셋 원문을 편집용으로 열지 못했습니다. 로그를 보세요." />
 		<entry source="The audio service is not running" text="오디오 서비스가 실행 중이 아닙니다" />
 		<entry source="The blend curve an Eased key follows to the next key (the same curves as camera and UI blends)."
 		       text="Eased 키가 다음 키까지 따르는 블렌드 곡선입니다(카메라 · UI 블렌드와 같은 곡선)." />
@@ -2493,6 +2499,8 @@
 		<entry source="Theme" text="테마" />
 		<entry source="Theme &amp; Look and Feel" text="테마 · 모양" />
 		<entry source="Theme &amp; Look and Feel..." text="테마 · 모양..." />
+		<entry source="This asset inherits from another file (_base), so its values are not all written here. Edit it in the Catalog window."
+		       text="이 에셋은 다른 파일(_base)을 물려받아 값이 여기 다 적혀 있지 않습니다. Catalog 창에서 고치세요." />
 		<entry source="This asset names no other asset." text="이 에셋은 다른 에셋을 참조하지 않습니다." />
 		<entry source="This binding kind (axis, stick, mouse delta ...) is not one key - edit the XML"
 		       text="이 바인딩 종류(축, 스틱, 마우스 델타 ...)는 키 하나가 아닙니다. XML 을 직접 편집합니다." />

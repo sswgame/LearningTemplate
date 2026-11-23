@@ -2864,6 +2864,29 @@
 				<item>Source/Editor/Common/Widgets/EditorNetModeCombo.cpp</item>
 			</origins>
 		</entry>
+		<entry key="EdPhysicsAsset.DuplicateBodyTip"
+		       source="Copy this body below it. The copy needs the name of a bone in the skeleton before it can stand.">
+			<origins>
+				<item>Source/Editor/Panels/Physics/RagdollPreviewPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EdPhysicsAsset.InheritedAsset"
+		       source="This asset inherits from another file (_base), so its values are not all written here. Edit it in the Catalog window.">
+			<origins>
+				<item>Source/Editor/Panels/Physics/RagdollPreviewPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EdPhysicsAsset.NotEditable" source="The asset text could not be opened for editing - see the log.">
+			<origins>
+				<item>Source/Editor/Panels/Physics/RagdollPreviewPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EdPhysicsAsset.SelectBody"
+		       source="Select a body in the table to edit it. With a body placed, drag the square handles to resize its shapes.">
+			<origins>
+				<item>Source/Editor/Panels/Physics/RagdollPreviewPanel.cpp</item>
+			</origins>
+		</entry>
 		<entry key="EdSection.Actions" source="Actions">
 			<origins>
 				<item>Source/Editor/Panels/InputMap/InputMapPanel.cpp</item>
@@ -4465,6 +4488,7 @@
 		</entry>
 		<entry key="EdVerb.Duplicate" source="Duplicate">
 			<origins>
+				<item>Source/Editor/Panels/Physics/RagdollPreviewPanel.cpp</item>
 				<item>Source/Editor/Panels/VFX/VFXPreviewPanel.cpp</item>
 			</origins>
 		</entry>
@@ -4532,8 +4556,10 @@
 				<item>Source/Editor/Panels/Catalog/CatalogTableEditor.cpp</item>
 				<item>Source/Editor/Panels/ContentBrowser/ContentBrowserPanel.cpp</item>
 				<item>Source/Editor/Panels/InputMap/InputMapPanel.cpp</item>
+				<item>Source/Editor/Panels/Physics/RagdollPreviewPanel.cpp</item>
 				<item>Source/Editor/Panels/TileMap/TileMapPanel.cpp</item>
 				<item>Source/Editor/Panels/TileSet/TileSetPanel.cpp</item>
+				<item>Source/Editor/Panels/VFX/VFXPreviewPanel.cpp</item>
 			</origins>
 		</entry>
 		<entry key="EdVerb.Reset" source="Reset">

@@ -2,10 +2,17 @@
 
 #include "Editor/Panels/Physics/Model/RagdollPreviewViewModel.h"
 
+#include "Core/File/FileUtil.h"
 #include "Core/Log/Logger.h"
+#include "Core/Math/MatrixMath.h"
+#include "Core/Math/Ray.h"
 #include "Core/Memory/Memory.h"
 #include "Core/Name/hashed_string.h"
 #include "Core/String/StringBuilder.h"
+
+#include "Editor/Common/Workspace/EditorService.h"
+#include "Editor/Panels/Catalog/Model/ReflectedXMLDocument.h"
+#include "Editor/Viewport/Model/EditorColliderHandleMath.h"
 
 #include "Engine/Animation/Component/SkeletalMeshComponent.h"
 #include "Engine/Animation/Skeletal/Skeleton.h"
@@ -13,6 +20,7 @@
 #include "Engine/Character/CharacterDataCache.h"
 #include "Engine/Character/Hit/RagdollComponent.h"
 #include "Engine/Content/AssetID.h"
+#include "Engine/Content/AssetPaths.h"
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
 #include "Engine/Object/Prefab/PrefabCache.h"
@@ -22,6 +30,7 @@
 #include "Engine/Physics/PhysicsDebugDraw.h"
 #include "Engine/Physics/Scene/ScenePhysics.h"
 #include "Engine/Reflection/EnumName.h"
+#include "Engine/Reflection/TypeInfo.h"
 #include "Engine/Scene/Scene.h"
 
 namespace sw::editor
@@ -30,6 +39,31 @@ namespace sw::editor
     {
         struct RagdollPreviewViewModelInternal
         {
+            /// @brief 에셋 문서의 바디 목록 칸과 바디의 열쇠 칸입니다(`PhysicsAsset::_listBody` · `PhysicsAssetBodyDef::_bone`).
+            static constexpr string_view kBodyList = "_listBody";
+            static constexpr string_view kBodyKey  = "_bone";
+            /// @brief 바디 셰이프의 배율입니다 — 래그돌은 본의 배율을 버리고 세운다.
+            static constexpr float3 kBodyScale{ 1.0f, 1.0f, 1.0f };
+
+            static void fillRows( const PhysicsAsset& asset, vector<RagdollPreviewBodyRow>& outListRow )
+            {
+                outListRow.clear();
+                for ( const PhysicsAssetBodyDef& body : asset._listBody )
+                {
+                    RagdollPreviewBodyRow& row = outListRow.emplace_back();
+                    row._bone                  = body._bone.c_str();
+                    row._hitZone               = body._hitZone._name.c_str();
+                    row._mass                  = body._mass;
+                    row._jointType             = body._joint._type;
+                    for ( const PhysicsShapeDesc3D& shape : body._listShape )
+                    {
+                        if ( row._shapes.empty() == false )
+                            row._shapes += ", ";
+                        row._shapes += getEnumName( shape._type );
+                    }
+                }
+            }
+
             /// @brief 충격의 방향입니다(월드, 길이 1). 옆으로 밀면서 조금 띄운다.
             static constexpr float3 kImpulseDirection{ 0.8f, 0.3f, 0.52f };
             /// @brief 바닥 바디의 반 크기(미터)입니다. 위 면이 y = 0 이다.
@@ -41,7 +75,9 @@ namespace sw::editor
 namespace sw::editor
 {
     RagdollPreviewViewModel::RagdollPreviewViewModel()
-        : _listBodyRow{}
+        : _pDocument{ make_unique<ReflectedXMLDocument>() }
+        , _loadedDiskPath{}
+        , _listBodyRow{}
         , _bodyPrefabPath{}
         , _activePrefabPath{}
         , _spawnedPrefabPath{}
@@ -56,6 +92,144 @@ namespace sw::editor
     {
     }
 
+    RagdollPreviewViewModel::~RagdollPreviewViewModel() = default;
+
+    void RagdollPreviewViewModel::bindDocumentEditRecorder( const DocumentEditRecorder& recorder )
+    {
+        _pDocument->bindDocumentEditRecorder( recorder );
+    }
+
+    string RagdollPreviewViewModel::captureText() const
+    {
+        return _pDocument->getText();
+    }
+
+    void RagdollPreviewViewModel::applyText( string_view text )
+    {
+        _pDocument->applyText( text );
+        refreshBodyRows();
+    }
+
+    bool RagdollPreviewViewModel::saveDocument()
+    {
+        if ( _loadedDiskPath.empty() || FileUtil::writeTextFile( FileUtil::toDiskPath( _loadedDiskPath ), _pDocument->getText() ) == false )
+        {
+            _status = "The physics asset could not be saved - see the log";
+            return false;
+        }
+        _pDocument->markSaved();
+        requestRespawn(); // 저장 뒤 공유 캐시가 다시 읽은 에셋으로 몸을 다시 놓는다
+        _status = "Saved";
+        return true;
+    }
+
+    bool RagdollPreviewViewModel::isEditable() const
+    {
+        return _pDocument->isEditable();
+    }
+
+    bool RagdollPreviewViewModel::isInherited() const
+    {
+        return _pDocument->isInherited();
+    }
+
+    void* RagdollPreviewViewModel::editSelectedBody()
+    {
+        PhysicsAsset* pAsset = static_cast<PhysicsAsset*>( _pDocument->getInstance() );
+        return pAsset != nullptr && _selectedBody >= 0 && static_cast<size_t>( _selectedBody ) < pAsset->_listBody.size() ? &pAsset->_listBody[static_cast<size_t>( _selectedBody )] : nullptr;
+    }
+
+    const TypeInfo* RagdollPreviewViewModel::getBodyType()
+    {
+        return PhysicsAssetBodyDef::StaticType();
+    }
+
+    void RagdollPreviewViewModel::commitBodyProperty( const PropertyInfo& property )
+    {
+        const void* pBody = editSelectedBody();
+        if ( pBody == nullptr )
+            return;
+        (void)_pDocument->commitItemProperty( RagdollPreviewViewModelInternal::kBodyList, static_cast<uint32>( _selectedBody ), pBody, *getBodyType(), property ); // 같은 글이면 바뀐 것이 없다
+        refreshBodyRows();
+    }
+
+    void RagdollPreviewViewModel::duplicateSelectedBody()
+    {
+        if ( editSelectedBody() == nullptr ||
+             _pDocument->duplicateItem( RagdollPreviewViewModelInternal::kBodyList, static_cast<uint32>( _selectedBody ), RagdollPreviewViewModelInternal::kBodyKey ) == false )
+            return;
+        ++_selectedBody;
+        refreshBodyRows();
+    }
+
+    void RagdollPreviewViewModel::removeSelectedBody()
+    {
+        if ( editSelectedBody() == nullptr || _listBodyRow.size() < 2 )
+            return;
+        if ( _pDocument->removeItem( RagdollPreviewViewModelInternal::kBodyList, static_cast<uint32>( _selectedBody ) ) == false )
+            return;
+        _selectedBody = kNoBody;
+        refreshBodyRows();
+    }
+
+    void RagdollPreviewViewModel::refreshBodyRows()
+    {
+        const PhysicsAsset* pAsset = static_cast<const PhysicsAsset*>( _pDocument->getInstance() );
+        if ( pAsset != nullptr )
+            RagdollPreviewViewModelInternal::fillRows( *pAsset, _listBodyRow );
+    }
+
+    bool RagdollPreviewViewModel::findSelectedBodyPose( Scene* pScene, float3& outPosition, quaternion& outRotation )
+    {
+        const PhysicsAssetBodyDef* pBody    = static_cast<const PhysicsAssetBodyDef*>( editSelectedBody() );
+        const RagdollComponent*    pRagdoll = findRagdoll( pScene );
+        GameObject*                pOwner   = pRagdoll != nullptr ? pRagdoll->getOwner() : nullptr;
+        SkeletalMeshComponent*     pUnit    = pOwner != nullptr ? pOwner->getComponent<SkeletalMeshComponent>() : nullptr;
+        if ( pBody == nullptr || pUnit == nullptr )
+            return false;
+        const optional<uint32>  boneIndex = pUnit->getSkeleton().findBoneIndex( pBody->_bone );
+        const vector<float4x4>& listModel = pUnit->getModelSpaceTransforms();
+        if ( boneIndex.has_value() == false || *boneIndex >= listModel.size() )
+            return false;
+        // 래그돌이 바디를 놓는 식과 같다 — 본의 월드 행렬에서 위치 · 회전만 쓰고 배율은 버린다.
+        const float4x4 world = listModel[*boneIndex] * pUnit->getWorldMatrix();
+        float3         scale{};
+        return world.decompose( scale, outRotation, outPosition );
+    }
+
+    void RagdollPreviewViewModel::gatherShapeHandles( Scene* pScene, vector<ColliderHandle>& outListHandle )
+    {
+        outListHandle.clear();
+        float3     position{};
+        quaternion rotation{};
+        if ( isEditable() == false || findSelectedBodyPose( pScene, position, rotation ) == false )
+            return;
+        const vector<PhysicsShapeDesc3D>& listShape = static_cast<const PhysicsAssetBodyDef*>( editSelectedBody() )->_listShape;
+        for ( uint32 shapeIndex = 0; shapeIndex < static_cast<uint32>( listShape.size() ); ++shapeIndex )
+        {
+            EditorColliderHandleMath::collectHandles( listShape[shapeIndex], shapeIndex, position, rotation, RagdollPreviewViewModelInternal::kBodyScale, outListHandle );
+        }
+    }
+
+    void RagdollPreviewViewModel::dragShapeHandle( const ColliderHandle& handle, const Ray& ray )
+    {
+        PhysicsAssetBodyDef* pBody = static_cast<PhysicsAssetBodyDef*>( editSelectedBody() );
+        if ( pBody == nullptr || handle._shapeIndex >= pBody->_listShape.size() )
+            return;
+        PhysicsShapeDesc3D& shape    = pBody->_listShape[handle._shapeIndex];
+        const float32       distance = Ray::computeClosestAxisParameter( ray, handle._center, handle._direction );
+        shape                        = EditorColliderHandleMath::applyDrag( shape, handle, distance, RagdollPreviewViewModelInternal::kBodyScale );
+        refreshBodyRows();
+    }
+
+    void RagdollPreviewViewModel::commitShapeDrag()
+    {
+        static const hashed_string s_shapeList( "_listShape" );
+        const PropertyInfo*        pProp = getBodyType()->findPropertyInHierarchy( s_shapeList );
+        if ( pProp != nullptr )
+            commitBodyProperty( *pProp );
+    }
+
     ToolAssetLoadResult RagdollPreviewViewModel::loadAsset( string_view assetPath )
     {
         _listBodyRow.clear();
@@ -67,20 +241,18 @@ namespace sw::editor
             _status = "The physics asset could not be read - see the log";
             return ToolAssetLoadResult::Malformed;
         }
-        const PhysicsAsset& asset = *pAsset;
-        for ( const PhysicsAssetBodyDef& body : asset._listBody )
+        RagdollPreviewViewModelInternal::fillRows( *pAsset, _listBodyRow );
+        // 편집 사본 — 물려받은 에셋은 원문만 든다(고치지 않는다). 읽지 못하면 공유 캐시가 이미 거절했다.
+        const optional<AbsolutePath> diskPath = AbsolutePath::isStrictAbsolute( assetPath ) ? AbsolutePath::tryMake( assetPath )
+                                                                                            : optional<AbsolutePath>{ editor::getSubsystem<AssetPaths>().toDiskPath( assetPath ) };
+        _loadedDiskPath                       = diskPath.has_value() ? diskPath->str() : string{};
+        _pDocument->clear();
+        string text;
+        if ( diskPath.has_value() && FileUtil::readTextFile( *diskPath, text ) )
         {
-            RagdollPreviewBodyRow& row = _listBodyRow.emplace_back();
-            row._bone                  = body._bone.c_str();
-            row._hitZone               = body._hitZone._name.c_str();
-            row._mass                  = body._mass;
-            row._jointType             = body._joint._type;
-            for ( const PhysicsShapeDesc3D& shape : body._listShape )
-            {
-                if ( row._shapes.empty() == false )
-                    row._shapes += ", ";
-                row._shapes += getEnumName( shape._type );
-            }
+            const expected<void> opened = _pDocument->load( *PhysicsAsset::StaticType(), text );
+            if ( opened.has_value() == false )
+                SW_LOG_WARNING_ID( "RagdollPreview.EditCopyNotRead", "Ragdoll Preview cannot edit '%#': %# (%#)", assetPath, opened.error().message(), opened.error().detail() );
         }
         _status = "Loaded";
         return ToolAssetLoadResult::Loaded;
@@ -224,7 +396,7 @@ namespace sw::editor
             pRagdoll->stopPartialRagdoll();
     }
 
-    void RagdollPreviewViewModel::drawOverlay( Scene* pScene, IPhysicsDebugRenderer& renderer, const RagdollPreviewOverlayColors& colors ) const
+    void RagdollPreviewViewModel::drawOverlay( Scene* pScene, IPhysicsDebugRenderer& renderer, const RagdollPreviewOverlayColors& colors )
     {
         constexpr float32             kJointMarkRadius = 0.03f; // 관절 표시 십자의 반지름(m)
         const RagdollComponent* const pRagdoll         = findRagdoll( pScene );
@@ -246,6 +418,17 @@ namespace sw::editor
                 if ( parentIndex < 0 || static_cast<size_t>( parentIndex ) >= boneCount )
                     continue;
                 renderer.drawLine( float3::transform( listModel[static_cast<size_t>( parentIndex )].getTranslation(), world ), float3::transform( listModel[boneIndex].getTranslation(), world ), colors._bone );
+            }
+        }
+
+        // 고른 바디의 편집 중인 셰이프 — 저장하기 전에도 고친 크기가 보인다(선 바디는 저장한 에셋이다).
+        float3     editPosition{};
+        quaternion editRotation{};
+        if ( isEditable() && findSelectedBodyPose( pScene, editPosition, editRotation ) )
+        {
+            for ( const PhysicsShapeDesc3D& shape : static_cast<const PhysicsAssetBodyDef*>( editSelectedBody() )->_listShape )
+            {
+                PhysicsDebugDraw::drawShape3D( renderer, shape, editPosition, editRotation, colors._selectedJoint );
             }
         }
 
