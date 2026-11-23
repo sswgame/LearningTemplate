@@ -311,7 +311,7 @@ namespace sw
      *          - `%%` 는 퍼센트 문자다. 알아볼 수 없는 `%…` 는 리터럴로 두고 인자를 소비하지 않는다.
      *          - 값 쪽 서식은 `Fmt( value, Format()... )` 로도 줄 수 있다.
      * @note 인자 수는 Debug 빌드에서 실행 시점에 대조한다. 플레이스홀더를 소비하는 그 위치에서 확인하므로 따로 세는 단계가 없다.
-     *       컴파일 시점 검사는 C++17 에서 함수 형태로는 불가능하다(C++20 `consteval` 포맷 타입으로 옮길 때 추가한다). 실행 시점
+     *       로그 매크로는 글자 상수 서식을 컴파일에서 대조한다(`LogFormatCheck`). 함수 형태의 컴파일 시점 검사는 C++17 에서 불가능하다(C++20 `consteval` 포맷 타입으로 옮길 때 추가한다). 실행 시점
      *       검사는 데이터에서 오는 포맷(지역화)까지 확인한다. Release 와 Shipping 에서는 아무것도 하지 않는다.
      */
     class FormatString
@@ -369,6 +369,26 @@ namespace sw
                 if ( match._pos == string_view::npos )
                     return count;
                 ++count;
+                format = format.substr( match._pos + match._len );
+            }
+        }
+
+        /**
+         * @brief 서식 옵션 없는 printf 변환(`%d` · `%i` · `%u` · `%s`, 길이 수식어 포함)이 있으면 true 입니다. 뜻이 `%#` 와 같고 타입은 인자가 정하므로 로그는 `%#` 하나만 쓴다(`SW_LOG_WRITE` 의 static_assert).
+         */
+        static constexpr bool hasBareConversion( string_view format ) noexcept
+        {
+            while ( true )
+            {
+                const PlaceholderMatch match = findNextPlaceholder( format );
+                if ( match._pos == string_view::npos )
+                    return false;
+                const string_view text = format.substr( match._pos, match._len );
+                const utf8        last = text[text.size() - 1];
+                size_t            cursor{ 1 };
+                skipFormatLengthModifier( text, cursor );
+                if ( cursor + 1 == text.size() && ( last == 'd' || last == 'i' || last == 'u' || last == 's' ) )
+                    return true;
                 format = format.substr( match._pos + match._len );
             }
         }

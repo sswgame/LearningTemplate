@@ -49,7 +49,7 @@ namespace sw
             return;
         if ( _team >= kTeamCount )
         {
-            SW_LOG_ERROR_ID( "AIStimulusSourceComponent.TeamOutOfRange", "AI stimulus source '%#' has team %d but the index has only %d teams - it is not registered", getOwner()->getName().c_str(),
+            SW_LOG_ERROR_ID( "AIStimulusSourceComponent.TeamOutOfRange", "AI stimulus source '%#' has team %# but the index has only %# teams - it is not registered", getOwner()->getName().c_str(),
                              static_cast<int32>( _team ), static_cast<int32>( kTeamCount ) );
             return;
         }

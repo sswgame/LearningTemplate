@@ -2193,7 +2193,7 @@ namespace sw
         if ( FAILED( D3D12SerializeRootSignature( &rootSigDesc, D3D_ROOT_SIGNATURE_VERSION_1_0, &signatureBlob, &errorBlob ) ) )
         {
             if ( errorBlob )
-                SW_LOG_ERROR_ID( "D3D12.RootSignatureSerializeError", "Root Signature Serialize Error: %s", static_cast<const utf8*>( errorBlob->GetBufferPointer() ) );
+                SW_LOG_ERROR_ID( "D3D12.RootSignatureSerializeError", "Root Signature Serialize Error: %#", static_cast<const utf8*>( errorBlob->GetBufferPointer() ) );
             return false;
         }
         if ( isHrSuccess( _device->CreateRootSignature( 0, signatureBlob->GetBufferPointer(), signatureBlob->GetBufferSize(), IID_PPV_ARGS( _rootSignature.GetAddressOf() ) ), "CreateRootSignature" ) == false )

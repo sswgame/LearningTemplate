@@ -87,7 +87,7 @@ namespace sw
             return;
 
         _bRecording = SW_FALSE;
-        SW_LOG_INFO_ID( "InputReplay.StoppedRecordingInputReplay", "Stopped recording input replay: %# (Total %d frames recorded)", _replayName.c_str(), static_cast<int32>( _listFrame.size() ) );
+        SW_LOG_INFO_ID( "InputReplay.StoppedRecordingInputReplay", "Stopped recording input replay: %# (Total %# frames recorded)", _replayName.c_str(), static_cast<int32>( _listFrame.size() ) );
     }
 
     void InputReplay::emitFrame( uint32 frameIndex, vector<RawInputEvent>& outListEvent )
@@ -201,7 +201,7 @@ namespace sw
         _replayName      = std::move( replayName );
         _startFrameIndex = 0;
         _bRecording      = SW_FALSE;
-        SW_LOG_INFO_ID( "InputReplay.SuccessfullyLoadedReplayFrames", "Successfully loaded replay: %# (%d frames)", _replayName.c_str(), static_cast<int32>( _listFrame.size() ) );
+        SW_LOG_INFO_ID( "InputReplay.SuccessfullyLoadedReplayFrames", "Successfully loaded replay: %# (%# frames)", _replayName.c_str(), static_cast<int32>( _listFrame.size() ) );
         return true;
     }
 

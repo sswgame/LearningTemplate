@@ -51,7 +51,7 @@ namespace sw
             SW_LOG_ERROR_ID( "ShaderCache.PrecompiledShaderBinaryNot", "Precompiled shader binary not found in the cooked content: '%#' [%#] — %#", desc._source.c_str(), desc._entryPoint.c_str(), precookedID.c_str() );
             return Internal::makeFailure( "Shader binary missing in the cooked content" );
         }
-        SW_LOG_TRACE_ID( "ShaderCache.LoadedCookedShaderBinary", "Loaded cooked shader binary: %# (%zu bytes)", precookedID.c_str(), precookedBytes.size() );
+        SW_LOG_TRACE_ID( "ShaderCache.LoadedCookedShaderBinary", "Loaded cooked shader binary: %# (%# bytes)", precookedID.c_str(), precookedBytes.size() );
         ShaderCompileResult result{};
         result._bytecode = std::move( precookedBytes );
         result._bSuccess = true;

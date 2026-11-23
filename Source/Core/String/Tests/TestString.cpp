@@ -1157,6 +1157,8 @@ SW_TEST_CASE( StringTest, PlaceholderNeverTakesSpecifiers )
     static_assert( sw::FormatString::countPlaceholders( "no placeholders" ) == 0 );
     static_assert( sw::FormatString::countPlaceholders( "%#x%# %#s %#.txt" ) == 4 );
     SW_EXPECT_EQUAL( 2u, sw::FormatString::countPlaceholders( sw::string( "%#-%#" ) ) );
+    static_assert( sw::FormatString::hasBareConversion( "a %d" ) && sw::FormatString::hasBareConversion( "%# %zu" ) && sw::FormatString::hasBareConversion( "%lld%#" ) );
+    static_assert( sw::FormatString::hasBareConversion( "%# 100%% %02x %3d %-20s %.2f %p %x" ) == false, "서식 옵션이 있는 변환은 맨 변환이 아니다" );
 
     // 널 포인터는 종류와 무관하게 (null) — `nullptr` 리터럴과 널 `const utf8*` 가 string_view 지름길을 타면
     // strlen(nullptr) 로 죽는다.

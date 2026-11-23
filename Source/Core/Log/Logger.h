@@ -215,6 +215,35 @@ namespace sw
     };
 } // namespace sw
 
+namespace sw
+{
+    /**
+     * @brief 로그 매크로의 서식(글자 상수)을 컴파일에서 대조합니다 — 자리표 수와 인자 수가 같고 맨 printf 변환(`%d` · `%s`)이 없어야 합니다.
+     * @details 매크로는 글자 상수를 그대로 받으므로 C++17 에서도 상수식으로 볼 수 있다. 실행 시점 검사(`FormatString::reportArgumentMismatch`)는 그 줄이 돌아야만 잡는다.
+     *          언리얼이 `UE_LOG` 서식을 컴파일에서 보는 것과 같은 자리다.
+     */
+    struct LogFormatCheck
+    {
+        /** @brief 인자 수를 형식으로 냅니다. 정의가 없습니다(`decltype` 안에서만 쓴다). */
+        template <typename... TArgs>
+        static std::integral_constant<uint32, sizeof...( TArgs )> countArguments( const TArgs&... args );
+
+        /** @brief @p argumentCount 는 서식 글까지 센 수입니다. */
+        static constexpr bool hasMatchingArguments( string_view format, uint32 argumentCount ) { return FormatString::countPlaceholders( format ) + 1 == argumentCount; }
+    };
+} // namespace sw
+
+/// @brief 가변 인자의 첫 인자(서식 글)입니다.
+#define SW_LOG_FORMAT_OF_IMPL( format, ... ) format
+#define SW_LOG_FORMAT_OF_EXPAND( x )         x // MSVC 호환 전처리기는 __VA_ARGS__ 를 인자 하나로 넘긴다 - 한 번 더 펼쳐야 나뉜다
+#define SW_LOG_FORMAT_OF( ... )              SW_LOG_FORMAT_OF_EXPAND( SW_LOG_FORMAT_OF_IMPL( __VA_ARGS__, 0 ) )
+
+/// @brief 로그 서식을 컴파일에서 대조하는 문장입니다(`LogFormatCheck`).
+#define SW_LOG_CHECK_FORMAT( ... )                                                                                                                                        \
+    static_assert( ::sw::LogFormatCheck::hasMatchingArguments( SW_LOG_FORMAT_OF( __VA_ARGS__ ), decltype( ::sw::LogFormatCheck::countArguments( __VA_ARGS__ ) )::value ), \
+                   "log format: the number of placeholders and arguments differ" );                                                                                       \
+    static_assert( ::sw::FormatString::hasBareConversion( SW_LOG_FORMAT_OF( __VA_ARGS__ ) ) == false, "log format: write %# instead of a bare %d, %i, %u or %s" )
+
 /// @brief 컴파일에서 빠진 SW_LOG_* 의 본문입니다. 인자를 평가하지 않지만 이름은 쓴 것으로 셉니다(`LogDiscardUtil`).
 #define SW_LOG_DISCARDED( ... ) ( (void)sizeof( ::sw::LogDiscardUtil::consume( __VA_ARGS__ ) ) )
 
@@ -257,6 +286,7 @@ namespace sw::internal
 #define SW_LOG_WRITE( level, pID, ... )                                                                                         \
     do                                                                                                                          \
     {                                                                                                                           \
+        SW_LOG_CHECK_FORMAT( __VA_ARGS__ );                                                                                     \
         if ( ::sw::Logger::shouldLog( level ) )                                                                                 \
             ::sw::internal::writeFormattedLog( level, SW_LOG_TAG, __FILE__, static_cast<int32>( __LINE__ ), pID, __VA_ARGS__ ); \
     } while ( false )
@@ -341,6 +371,7 @@ namespace sw
 #define SW_LOG_ASSERT( expr, ... )                                                                                                                 \
     do                                                                                                                                             \
     {                                                                                                                                              \
+        SW_LOG_CHECK_FORMAT( __VA_ARGS__ );                                                                                                        \
         if ( !( expr ) )                                                                                                                           \
         {                                                                                                                                          \
             if ( ::sw::internal::reportFormattedAssert( SW_LOG_TAG, #expr, __FILE__, static_cast<int32>( __LINE__ ), SW_ASSERT_FUNCTION_SIGNATURE, \

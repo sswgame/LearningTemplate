@@ -286,7 +286,7 @@ namespace sw
             pOutResult->_bSuccess         = SW_TRUE;
         }
 
-        SW_LOG_INFO_ID( "ShaderCooker.CookedShaderUBytes", "Cooked shader '%#' [%#] -> '%#' (%zu bytes)",
+        SW_LOG_INFO_ID( "ShaderCooker.CookedShaderUBytes", "Cooked shader '%#' [%#] -> '%#' (%# bytes)",
                         source.c_str(), entryPoint.data(), outputPath.data(), compileResult._bytecode.size() );
         return true;
     }
