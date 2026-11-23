@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="utf-8"?>
+<?asset guid="59863fdef4924e9db8e584591409f9d0"?>
+<!--
+  허브 농장 미니게임(농장 생활) — Farming 키트. 옛 게임 HarvestValley 를 미니게임으로 흡수했다. 키트는 게임 기능으로 걸 것이 없다(등록하지 않는다) — 맵의 FarmGameModeComponent(밭 · 하루 · 날씨)와
+  FarmVillageGameModeComponent(NPC 일과)가 판을 돌린다. 농사 키(Farm.*)는 꺼져 있는 입력 레이어 Farming(harvestvalley/data/farm.input.xml)이고 미니게임이 켠다 — 허브 · 다른 미니게임의 E · Space 와 겹치지 않는다.
+  시나리오 automation/harvestvalley_* 가 실행 전역 변수 gv_firstMinigame 로 들어간다.
+-->
+<Minigame name="harvestvalley" map="game/playground/harvestvalley/maps/farm.scene.xml" entry="SceneSwitch" inputContexts="Farming"/>

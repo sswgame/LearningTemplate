@@ -1,11 +1,12 @@
 <?xml version="1.0" encoding="utf-8"?>
 <?asset guid="3b93509e79ad609e4d2a19a64d0812d2"?>
 <!--
-  장르 수직 슬라이스(G1) — 시작 → 목표(actions.scenario.xml 의 단계 그대로) → 결과 → 저장 · 복원 해시 동일.
+  장르 수직 슬라이스(G1) — 시작 → 목표(harvestvalley_actions.scenario.xml 의 단계 그대로) → 결과 → 저장 · 복원 해시 동일.
   목표 단계는 그 시나리오가 정본이다 — 거기를 고치면 이 파일도 맞춘다. 저장 슬롯은 harvestvalley/slice.
 -->
-<Scenario name="game.harvestvalley.slice" fixedDelta="0.0166667" timeoutFrames="1200" startAfter="ScenePlaying" input="exclusive">
-	<Variable name="gv_farmAutoPlay" value="0"/>
+<Scenario name="game.playground.harvestvalley_slice" fixedDelta="0.0166667" timeoutFrames="1200" startAfter="ScenePlaying" startTimeoutFrames="900" input="exclusive">
+	<Launch variable="gv_firstMinigame" value="harvestvalley"/>
+	<Variable name="gv_playgroundAutoPlay" value="0"/>
 	<WaitUntil watch="Farm.FarmerControllerKind" equals="0" timeoutFrames="60"/>
 	<Expect watch="Farm.FarmerX" near="6" tolerance="0.01"/>
 	<Expect watch="Farm.FarmerTool" equals="0"/>

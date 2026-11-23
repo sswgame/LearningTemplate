@@ -1,19 +1,23 @@
 <?xml version="1.0" encoding="utf-8"?>
 <?asset guid="184c7181003847b17de6692909de840f"?>
 <!--
-  HarvestValley 에디터 시나리오 — NPC 일정 디버그 창(npc_schedule). 일정 시스템은 이 게임에만 있어 엔진 에디터 체인(engine/automation/editor)에서는 창이 비어 있다.
-  ① 플레이를 시작해 일정 시스템을 띄우고 ② 창을 열어 NPC 목록이 찼는지 본다. ③ pierre 를 골라 오늘 타임라인 줄이 나오는지 보고 에디터 UI 를 찍는다.
+  에디터 시나리오 — NPC 일정 디버그 창(npc_schedule). 일정 시스템은 허브 농장 씬에 있어 엔진 에디터 체인(engine/automation/editor)에서는 창이 비어 있다.
+  ① 농장 씬을 열고 플레이를 시작해 일정 시스템을 띄우고 ② 창을 열어 NPC 목록이 찼는지 본다. ③ pierre 를 골라 오늘 타임라인 줄이 나오는지 보고 에디터 UI 를 찍는다.
   ④ 10 시로 감아도 창이 따라온다(타임라인 줄 수는 그대로). 플레이를 멈춘다.
-  에디터 단계(EditorClick · CaptureEditorUI)를 쓰므로 게임 체인(Scenario.harvestvalley, 에디터 없음)이 줍지 않게 하위 폴더 editor/ 에 둔다.
-  실행: App -EnableEditor -scenario=game/harvestvalley/automation/editor/scheduleeditor.scenario.xml -unattended (SW_ACTIVE_GAME=HarvestValley)
+  에디터 단계(EditorClick · CaptureEditorUI)를 쓰므로 게임 체인(Scenario.playground, 에디터 없음)이 줍지 않게 하위 폴더 editor/ 에 둔다(체인 Scenario.playground.editor).
+  실행: App -EnableEditor -scenario=game/playground/automation/editor/harvestvalley_scheduleeditor.scenario.xml -unattended
 -->
-<Scenario name="game.harvestvalley.scheduleeditor" fixedDelta="0.0166667" timeoutFrames="1500" startAfter="Immediately" input="exclusive">
+<Scenario name="game.playground.harvestvalley_scheduleeditor" fixedDelta="0.0166667" timeoutFrames="1500" startAfter="Immediately" input="exclusive">
 	<WaitUntil watch="Scene.Transitioning" equals="0" timeoutWallSeconds="60"/>
 	<ResizeWindow width="1920" height="1080"/>
 	<Variable name="gv_editorUiScale" value="1"/>
-	<Variable name="gv_farmAutoPlay" value="0"/>
+	<Variable name="gv_playgroundAutoPlay" value="0"/>
 	<EditorWaitStable/>
 	<DevCommand line="layout.reset"/>
+	<EditorWaitStable/>
+	<DevCommand line="scene.open game/playground/harvestvalley/maps/farm.scene.xml"/>
+	<EditorWaitStable/>
+	<WaitUntil watch="Assets.Pending" equals="0" timeoutWallSeconds="60"/>
 
 	<!-- ① 플레이 -->
 	<EditorWaitStable/>
@@ -28,7 +32,7 @@
 	<EditorClick mark="schedule.npc.pierre"/>
 	<WaitUntil watch="Editor.ScheduleTimelineRowCount" atLeast="3" timeoutFrames="60"/>
 	<Store watch="Editor.ScheduleTimelineRowCount" as="pierreRows"/>
-	<CaptureEditorUI file="scheduleeditor/npc_schedule.png"/>
+	<CaptureEditorUI file="harvestvalley_scheduleeditor/npc_schedule.png"/>
 
 	<!-- ④ 시계를 감아도 같은 날의 계획 -->
 	<EditorWaitStable/>

@@ -7,4 +7,14 @@
 	<PrefixRedirect from="game/pixeltown" to="game/playground/pixeltown" />
 	<Redirect from="game/playground/pixeltown/automation/talk.scenario.xml" to="game/playground/automation/pixeltown_talk.scenario.xml" />
 	<Redirect from="game/playground/pixeltown/automation/slice.scenario.xml" to="game/playground/automation/pixeltown_slice.scenario.xml" />
+	<PrefixRedirect from="game/harvestvalley" to="game/playground/harvestvalley" />
+	<Redirect from="game/playground/harvestvalley/automation/actions.scenario.xml" to="game/playground/automation/harvestvalley_actions.scenario.xml" />
+	<Redirect from="game/playground/harvestvalley/automation/autofarmer.scenario.xml" to="game/playground/automation/harvestvalley_autofarmer.scenario.xml" />
+	<Redirect from="game/playground/harvestvalley/automation/control.scenario.xml" to="game/playground/automation/harvestvalley_control.scenario.xml" />
+	<Redirect from="game/playground/harvestvalley/automation/schedule.scenario.xml" to="game/playground/automation/harvestvalley_schedule.scenario.xml" />
+	<Redirect from="game/playground/harvestvalley/automation/scheduleday.scenario.xml" to="game/playground/automation/harvestvalley_scheduleday.scenario.xml" />
+	<Redirect from="game/playground/harvestvalley/automation/slice.scenario.xml" to="game/playground/automation/harvestvalley_slice.scenario.xml" />
+	<Redirect from="game/playground/harvestvalley/automation/tutorialhint.scenario.xml" to="game/playground/automation/harvestvalley_tutorialhint.scenario.xml" />
+	<Redirect from="game/playground/harvestvalley/automation/editor/scheduleeditor.scenario.xml" to="game/playground/automation/editor/harvestvalley_scheduleeditor.scenario.xml" />
+	<Redirect from="game/playground/harvestvalley/data/farm.settings.xml" to="game/playground/data/playground.settings.xml" />
 </Redirects>

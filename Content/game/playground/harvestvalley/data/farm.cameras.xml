@@ -1,5 +1,5 @@
 <?asset guid="8fa8833332da472864fe9c4d82d8a315"?>
-<!-- HarvestValley 카메라 프리셋 — 카메라 오브젝트의 CameraDirectorComponent 가 읽는다. 각은 도, 거리 · 높이는 m 다.
+<!-- 허브 농장 카메라 프리셋 — 카메라 오브젝트의 CameraDirectorComponent 가 읽는다. 각은 도, 거리 · 높이는 m 다.
      비스듬히 내려다보는 직교 시점이고 입력은 받지 않는다. 초점은 농장 디렉터가 밭 가운데와 농부 사이로 넣는다(setFocusPoint). -->
 <CameraPresetCatalog>
     <Preset id="farm">

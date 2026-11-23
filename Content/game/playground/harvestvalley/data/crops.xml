@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <?asset guid="9c2564bf5a22995137a67e7208dcda89"?>
-<!-- HarvestValley 의 작물. days = 물 받고 자라야 하는 날 수, regrow = 거둔 뒤 다시 열리기까지(0 이면 한 번), harvest = 한 번에 받는 수, color = 다 자란 작물의 색(r,g,b,a).
+<!-- 허브 농장의 작물. days = 물 받고 자라야 하는 날 수, regrow = 거둔 뒤 다시 열리기까지(0 이면 한 번), harvest = 한 번에 받는 수, color = 다 자란 작물의 색(r,g,b,a).
      씨앗은 가게(B)에서 seedPrice 에 사고, 수확물은 출하함에 넣으면 그날 밤 sellPrice 에 팔린다(씨앗은 반값). -->
 <CropCatalog seasons="Spring,Summer,Fall,Winter">
   <Crop id="turnip" name="Turnip" seed="turnip_seed" produce="turnip" days="4" seasons="Spring" seedPrice="120" sellPrice="60" harvest="1" color="0.92,0.88,0.95,1"/>

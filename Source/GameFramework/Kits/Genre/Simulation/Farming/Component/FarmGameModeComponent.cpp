@@ -52,11 +52,11 @@ namespace sw
             static constexpr auto kArrButtonName = makeEnumTable<FarmButton, const utf8*>( "Farm.Tool1", "Farm.Tool2", "Farm.Tool3", "Farm.Tool4", "Farm.SeedPrev", "Farm.SeedNext",
                                                                                            "Farm.Use", "Farm.Ship", "Farm.Buy", "Farm.Sleep", CommonInputActions::kStatus );
 
-            // 사운드 이벤트 이름 — 클립 · 범위 · 상한은 harvestvalley.audioevents.xml 이 정한다.
-            static constexpr const utf8* kEventSelect  = "ToolSelect";
-            static constexpr const utf8* kEventPlant   = "Plant";
-            static constexpr const utf8* kEventHarvest = "Harvest";
-            static constexpr const utf8* kEventShip    = "Ship";
+            // 사운드 이벤트 이름 — 클립 · 범위 · 상한은 게임의 사운드 이벤트 라이브러리(`*.audioevents.xml`)가 정한다.
+            static constexpr const utf8* kEventSelect  = "FarmToolSelect";
+            static constexpr const utf8* kEventPlant   = "FarmPlant";
+            static constexpr const utf8* kEventHarvest = "FarmHarvest";
+            static constexpr const utf8* kEventShip    = "FarmShip";
 
             /** @brief 공유 시계의 계절 이름입니다(시계 설정과 작물 카탈로그가 함께 씁니다). */
             static vector<hashed_string> makeSeasons() { return { hashed_string( "Spring" ), hashed_string( "Summer" ), hashed_string( "Fall" ), hashed_string( "Winter" ) }; }

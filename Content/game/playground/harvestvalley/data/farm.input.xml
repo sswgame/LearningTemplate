@@ -1,0 +1,56 @@
+<?xml version="1.0" encoding="utf-8"?>
+<?asset guid="4bf0eeada78fa960bf149d76f64924c3"?>
+<!--
+  허브 농장 미니게임(minigames/harvestvalley)의 입력 차이 — Playground 공통 묶음(data/gamesettings.xml 의 <inputMap> 줄) 위에 얹힌다. 게임 코드는 키를 묻지 않고 액션 이름만 묻는다.
+  농사 액션(접두 Farm.)은 꺼져 있는 레이어 Farming 이고 미니게임의 inputContexts 가 켠다 — 허브 · 다른 미니게임과 같은 키(E · Space · J)를 써도 함께 발화하지 않는다.
+-->
+<InputMap>
+	<layers>
+		<layer name="Farming" enabled="0" blockLower="0"/>
+	</layers>
+
+	<action name="Farm.Tool1" layer="Farming" trigger="Pressed">
+		<bind source="Key" code="Digit1"/>
+	</action>
+
+	<action name="Farm.Tool2" layer="Farming" trigger="Pressed">
+		<bind source="Key" code="Digit2"/>
+	</action>
+
+	<action name="Farm.Tool3" layer="Farming" trigger="Pressed">
+		<bind source="Key" code="Digit3"/>
+	</action>
+
+	<action name="Farm.Tool4" layer="Farming" trigger="Pressed">
+		<bind source="Key" code="Digit4"/>
+	</action>
+
+	<action name="Farm.SeedPrev" layer="Farming" trigger="Pressed">
+		<bind source="Key" code="Q"/>
+	</action>
+
+	<action name="Farm.SeedNext" layer="Farming" trigger="Pressed">
+		<bind source="Key" code="E"/>
+	</action>
+
+	<action name="Farm.Use" layer="Farming" trigger="Pressed">
+		<bind source="Key" code="Space"/>
+		<bind source="Key" code="J"/>
+	</action>
+
+	<action name="Farm.Ship" layer="Farming" trigger="Pressed">
+		<bind source="Key" code="F"/>
+	</action>
+
+	<action name="Farm.Buy" layer="Farming" trigger="Pressed">
+		<bind source="Key" code="B"/>
+	</action>
+
+	<action name="Farm.Sleep" layer="Farming" trigger="Pressed">
+		<bind source="Key" code="Z"/>
+	</action>
+	<!-- 현황은 Tab 이다(F1 이 아니다) — 공통 메뉴 레이어에 남는다. -->
+	<override name="Status" trigger="Pressed">
+		<bind source="Key" code="Tab"/>
+	</override>
+</InputMap>

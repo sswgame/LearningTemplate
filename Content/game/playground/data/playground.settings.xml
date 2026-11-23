@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <?asset guid="b77aba8b701558d4d656f0f051fcb23f"?>
-<!-- HarvestValley 의 사용자 설정 — 엔진 스키마(engine/settings/engine.settings.xml) 위에 덧붙는다(Config/Game/HarvestValley.json 의 _userSettingsSchema).
+<!-- Playground 의 사용자 설정 — 엔진 스키마(engine/settings/engine.settings.xml) 위에 덧붙는다(data/gamesettings.xml 의 _userSettingsSchema). farm* 은 허브 농장(minigames/harvestvalley)의 농사 키다.
      조작 탭의 키 바인딩: 입력 맵 묶음(data/gamesettings.xml 의 inputMap 줄)의 액션마다 첫 바인딩을 다시 잡을 수 있다. 빈 default 는 "입력 맵의 기본 바인딩"이다.
      text 를 적지 않았으므로 메뉴는 설정 id 를 보인다(표시 이름은 로컬라이제이션 수집 뒤에 text 키로 더한다). -->
 <UserSettingsSchema owner="game" version="1">

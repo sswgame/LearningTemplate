@@ -1,16 +1,17 @@
 <?xml version="1.0" encoding="utf-8"?>
 <?asset guid="595e8b8c89f1237c579a6c038a537fda"?>
 <!--
-  HarvestValley 마을 사람 일정 — 판 상태의 시계를 감고(AdvanceGameTime) 그 시각에 NPC 가 있어야 할 위치와 활동을 단언한다.
-  일정은 data/villagers.schedules.xml(ScheduleSystem), 몸은 Villager.<id>(FarmVillagerComponent 가 일정상 위치를 따라간다). 0 일은 월요일이고 6:00 에 시작한다.
+  허브 농장(미니게임 harvestvalley — 옛 게임 HarvestValley) 마을 사람 일정 — 판 상태의 시계를 감고(AdvanceGameTime) 그 시각에 NPC 가 있어야 할 위치와 활동을 단언한다.
+  일정은 harvestvalley/data/villagers.schedules.xml(ScheduleSystem), 몸은 Villager.<id>(FarmVillagerComponent 가 일정상 위치를 따라간다). 0 일은 월요일이고 6:00 에 시작한다.
   pierre: 평일 9:00–17:00 가게(general_store 24,0,6) WorkAt, 17:00–19:00 광장 벤치 UseObject. harvey: 9:00–15:00 병원, 15:00–17:00 강가(river) GoTo, 그 뒤 집.
-  실행: ctest -R Scenario.harvestvalley (SW_ACTIVE_GAME=HarvestValley) · App -scenario=game/harvestvalley/automation/schedule.scenario.xml -unattended
+  실행: ctest -R Scenario.playground · App -scenario=game/playground/automation/harvestvalley_schedule.scenario.xml -unattended
 -->
-<Scenario name="game.harvestvalley.schedule" fixedDelta="0.0166667" timeoutFrames="900" startAfter="ScenePlaying" input="exclusive">
-	<Variable name="gv_farmAutoPlay" value="0"/>
+<Scenario name="game.playground.harvestvalley_schedule" fixedDelta="0.0166667" timeoutFrames="900" startAfter="ScenePlaying" startTimeoutFrames="900" input="exclusive">
+	<Launch variable="gv_firstMinigame" value="harvestvalley"/>
+	<Variable name="gv_playgroundAutoPlay" value="0"/>
 	<!-- 6 시 — 모두 집에서 잔다. 몸은 집 위치(pierre_house 22,0,2)에 서 있다. -->
 	<WaitUntil watch="Object.Exists" target="Villager.pierre" equals="1" timeoutFrames="60"/>
-	<!-- 0 일은 맑음으로 고정한다 — 비는 판 상태 날씨(farm.weather.xml)가 씨앗으로 고르고, 비 오는 날은 pierre 의 저녁이 집(rain_indoors)이다 -->
+	<!-- 0 일은 맑음으로 고정한다 — 비는 판 상태 날씨(harvestvalley/data/farm.weather.xml)가 씨앗으로 고르고, 비 오는 날은 pierre 의 저녁이 집(rain_indoors)이다 -->
 	<DevCommand line="cheat.weather sunny 200000"/>
 	<WaitUntil watch="Farm.Raining" equals="0" timeoutFrames="10"/> <!-- 날씨 명령이 들었다 -->
 	<Expect watch="Clock.Day" equals="0"/>
