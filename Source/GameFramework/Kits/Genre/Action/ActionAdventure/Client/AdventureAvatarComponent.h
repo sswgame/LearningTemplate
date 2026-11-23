@@ -44,7 +44,8 @@ namespace sw
     private:
         /** @brief 틱 뒤 게임 스레드: 입력을 명령으로 넘기고 그립니다. */
         void updateAvatar( GameObjectManager& manager );
-        void draw( const AdventureGameModeComponent& director ) const;
+        /** @brief 판을 그립니다. 지역 표 · 플레이어 자리는 절대 자리라 @p manager 의 원점으로 옮긴다. */
+        static void draw( const AdventureGameModeComponent& director, const GameObjectManager& manager );
 
     private:
         PROPERTY( Category = "Input", DisplayName = "Move Action", Tooltip = "InputMap 2D action that walks the player (required)" )

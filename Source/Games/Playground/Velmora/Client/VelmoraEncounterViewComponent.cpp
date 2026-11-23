@@ -12,6 +12,7 @@
 #include "Engine/Object/GameObject/GameObjectManager.h"
 #include "Engine/Object/GameObject/GameObjectManagerResolve.inl"
 #include "Engine/Object/GameObject/Tick/TickContext.h"
+#include "Engine/Object/GameObject/WorldOrigin.h"
 
 #include "GameFramework/Kits/Genre/Action/ActionAdventure/Component/AdventureGameModeComponent.h"
 #include "GameFramework/Runtime/Foundation/Framework/GameService.h"
@@ -96,20 +97,21 @@ namespace sw
         DebugDrawQueue* const pDraw = game::findSubsystem<DebugDrawQueue>();
         if ( pDraw == nullptr || pEncounter->isFighting() == false )
             return;
-        using Internal               = VelmoraEncounterViewComponentInternal;
-        const ActionRoom& room       = pEncounter->getRoom();
-        const float4      actorColor = room.getKind() == ActionRoomKind::Boss ? Internal::kBossColor : Internal::kActorColor;
-        room.forEachLiveActor( [pDraw, &actorColor]( const float2& position, float32 radius )
-        { pDraw->drawSphere( float3( position._x, Internal::kActorHeight, position._y ), radius, actorColor ); } );
+        using Internal                = VelmoraEncounterViewComponentInternal;
+        const ActionRoom&  room       = pEncounter->getRoom();
+        const float4       actorColor = room.getKind() == ActionRoomKind::Boss ? Internal::kBossColor : Internal::kActorColor;
+        const WorldOrigin& origin     = manager.getWorldOrigin(); // 룸의 자리는 지역 표와 같은 절대 자리다
+        room.forEachLiveActor( [pDraw, &actorColor, &origin]( const float2& position, float32 radius )
+        { pDraw->drawSphere( origin.toLocal( float3( position._x, Internal::kActorHeight, position._y ) ), radius, actorColor ); } );
         for ( const ProjectileState& projectile : room.getProjectiles() )
         {
-            pDraw->drawSphere( float3( projectile._position._x, Internal::kProjectileHeight, projectile._position._y ), projectile._radius, Internal::kProjectileColor );
+            pDraw->drawSphere( origin.toLocal( float3( projectile._position._x, Internal::kProjectileHeight, projectile._position._y ) ), projectile._radius, Internal::kProjectileColor );
         }
         const AdventureGameModeComponent* const pDirector = room.isPlayerInvulnerable() ? PlayerComponentUtil::findOnOwner<AdventureGameModeComponent>( *this ) : nullptr;
         if ( pDirector != nullptr )
         {
             const float2& position = pDirector->getPlayerPosition();
-            pDraw->drawSphere( float3( position._x, Internal::kPlayerHeight, position._y ), Internal::kInvulnerableRange, Internal::kInvulnerableColor );
+            pDraw->drawSphere( origin.toLocal( float3( position._x, Internal::kPlayerHeight, position._y ) ), Internal::kInvulnerableRange, Internal::kInvulnerableColor );
         }
     }
 } // namespace sw

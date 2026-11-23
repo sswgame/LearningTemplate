@@ -8,6 +8,7 @@
 #include "Engine/Automation/Watch/AutomationComponentWatch.h"
 #include "Engine/Automation/Watch/AutomationWatch.h"
 #include "Engine/Object/GameObject/GameObjectManager.inl"
+#include "Engine/Object/GameObject/WorldOrigin.h"
 #include "Engine/Serialization/Format/StateIO.h"
 
 #include "GameFramework/Kits/Genre/Action/ActionAdventure/AdventureRegionCatalog.h"
@@ -312,6 +313,8 @@ namespace sw
     {
         outFocusObject   = GameObjectHandle{};
         outFocusPosition = float3( _playerPosition._x, 0.0f, _playerPosition._y );
+        if ( const GameObjectManager* const pManager = getObjectManager() )
+            outFocusPosition = pManager->getWorldOrigin().toLocal( outFocusPosition ); // 지역 표 · 자리는 절대 자리다
         return isStarted();
     }
 
