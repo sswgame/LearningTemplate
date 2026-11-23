@@ -8,6 +8,7 @@
 #include "Editor/Common/Asset/ModelImport/ModelImportConfig.h"
 #include "Editor/Common/Asset/ModelImport/ModelImportMaterial.h"
 #include "Editor/Common/Asset/ModelImport/ModelImporter.h"
+#include "Editor/Common/Asset/Tests/EditorScratchDomain.h"
 
 using namespace sw;
 using namespace sw::editor;
@@ -111,6 +112,25 @@ SW_TEST_CASE( ModelImportSectionsTest, ReimportKeepsSectionNamesByRawNames )
     SW_EXPECT_EQUAL( uint32{ 1 }, ModelImportMaterial::keepPreviousSectionNames( listSection, listPrevious ) );
     SW_EXPECT_EQUAL( string( "wood" ), listSection[0]._sectionName );
     SW_EXPECT_EQUAL( string( "woodnew" ), listSection[1]._sectionName );
+}
+
+/**
+ * @brief [ModelImportSectionsTest] 장비 메시의 원본 해시는 몸 메시의 내용을 따른다 — 몸을 다시 임포트하면 장비도 어긋남이다(스탬프 · DDC 열쇠)
+ */
+SW_TEST_CASE( ModelImportSectionsTest, SourceHashFollowsTheBodyMesh )
+{
+    const test::EditorScratchDomain domain;
+    string                          sourcePath;
+    SW_REQUIRE_TRUE( writeTwoMaterialGltf( domain.makeDiskPath( "garment" ).str(), false, sourcePath ) );
+    ModelImportRule rule{};
+    rule._bodySurface = test::EditorScratchDomain::makeID( "body.mesh" );
+    SW_REQUIRE_TRUE( FileUtil::writeTextFile( domain.makeDiskPath( "body.mesh" ), "body one" ) );
+    const uint64 before = ModelImporter::computeSourceHash( sourcePath, rule );
+    SW_EXPECT_TRUE( before != 0 );
+    SW_EXPECT_EQUAL( before, ModelImporter::computeSourceHash( sourcePath, rule ) );
+
+    SW_REQUIRE_TRUE( FileUtil::writeTextFile( domain.makeDiskPath( "body.mesh" ), "body two" ) );
+    SW_EXPECT_TRUE( before != ModelImporter::computeSourceHash( sourcePath, rule ) );
 }
 
 /**

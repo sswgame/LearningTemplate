@@ -1130,6 +1130,17 @@ namespace sw::editor
         const string lodText = rule.makeLODHashText();
         if ( lodText.empty() == false )
             hash = HashUtil::computeStringHash64( lodText.c_str(), lodText.size(), false, hash );
+        // 장비 메시는 몸 메시의 스킨 · 체형 모프를 옮겨 쓴다 — 몸을 다시 임포트했으면 장비도 어긋남이다(DDC 열쇠도 몸마다 갈린다). 몸은 의존 순서로 먼저 임포트된다.
+        if ( rule._bodySurface.empty() == false )
+        {
+            vector<uint8> bodyBytes;
+            if ( AssetIO::readBinaryAsset( AssetID{ rule._bodySurface }, bodyBytes ) == false )
+            {
+                SW_LOG_ERROR_ID( "ModelImporter.BodySurfaceUnreadable", "Model '%#': body mesh '%#' could not be read - the import stamp cannot be computed", sourcePath, rule._bodySurface.c_str() );
+                return 0;
+            }
+            hash = HashUtil::computeStringHash64( reinterpret_cast<const utf8*>( bodyBytes.data() ), bodyBytes.size(), false, hash );
+        }
         // 부가 데이터(클립 반복, 알림, 커브)를 고쳐도 다시 임포트해야 한다.
         vector<uint8> clipDataBytes;
         const string  clipDataPath = makeClipDataPath( sourcePath );
