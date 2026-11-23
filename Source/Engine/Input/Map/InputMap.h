@@ -330,8 +330,8 @@ namespace sw
             _triggerRules._navRepeatDelay = delaySeconds;
             _triggerRules._navRepeatRate  = rateSeconds;
         }
-        /** @brief 이 맵이 켜는 가상 커서입니다. `InputManager` 가 매 프레임 읽어 켜고 끕니다. */
-        InputMapVirtualCursor getVirtualCursorStick() const { return _virtualCursorStick; }
+        /** @brief 지금 켜는 가상 커서입니다 — 맵 전체 값이 없으면 발화하는 레이어가 적은 값입니다. `InputManager` 가 매 프레임 읽어 켜고 끕니다. */
+        InputMapVirtualCursor getVirtualCursorStick() const;
         void                  setVirtualCursorStick( InputMapVirtualCursor stick ) { _virtualCursorStick = stick; }
         InputManager*         getInputManager() const { return _pInput; }
         float32               getDoubleClickTime() const { return _triggerRules._doubleClickTime; }
@@ -653,7 +653,7 @@ namespace sw
 
     private:
         /**
-         * @brief 가상 커서(`_virtualCursorStick`)가 마우스로 바꾸는 스틱 · 패드 버튼(기본 설정의 A · B, 0 번 패드)을 따로 묶은 바인딩마다 알리고 그 수를 반환합니다.
+         * @brief 가상 커서(맵 전체 값 · 레이어 값)가 마우스로 바꾸는 스틱 · 패드 버튼(기본 설정의 A · B, 0 번 패드)을 따로 묶은 바인딩마다 알리고 그 수를 반환합니다.
          * @details 가상 커서가 꺼져 있으면 0 이다. 읽기(`loadFromAsset`)가 0 이 아니면 실패로 돌린다.
          */
         [[nodiscard]] uint32 countVirtualCursorConflicts( string_view sourceName ) const;
@@ -662,6 +662,8 @@ namespace sw
          * @details 맵 읽기(`countVirtualCursorConflicts`)와 사용자 바인딩 읽기(`InputRemapSerializer::load`)가 같은 검사를 쓴다 — 한쪽만 고치면 다른 길로 같은 충돌이 들어온다.
          */
         [[nodiscard]] bool reportVirtualCursorConflict( string_view sourceName, const hashed_string& action, const ActionBinding& binding ) const;
+        /** @brief 바인딩 하나와 함께 켜질 수 있는 가상 커서입니다 — 맵 전체 값이 없으면 그 바인딩의 레이어와 함께 발화하는 레이어(`canLayersFireTogether`)의 값입니다. */
+        InputMapVirtualCursor findVirtualCursorBeside( const hashed_string& layer ) const;
         /**
          * @brief 액션 @p action 의 바인딩 중 @p firstIndex 부터 가상 커서와 겹치는 것(`reportVirtualCursorConflict`)을 알리고 지운 뒤 지운 수를 반환합니다.
          * @details 바인딩 · 기본값 · 상태 세 목록을 함께 지운다 — 세 목록의 인덱스가 같다는 규칙은 맵이 지킨다(`commitBinding`).
@@ -703,7 +705,7 @@ namespace sw
         InputTriggerRules                    _triggerRules; ///< 시간 · 거리 문턱과 바인딩 상태 진행(홀드 · 탭 · 연타 · 끌기 · 반복)
         float32                              _totalElapsedTime;
         float32                              _lastDeltaSeconds;   ///< 가장 최근 `update` 의 프레임 시간. 프레임 시간 곱 바인딩이 쓴다.
-        InputMapVirtualCursor                _virtualCursorStick; ///< 이 맵이 켜는 가상 커서(`<InputMap virtualCursor>`)
+        InputMapVirtualCursor                _virtualCursorStick; ///< 맵 전체가 켜는 가상 커서(`<InputMap virtualCursor>` — 레이어 값은 `LayerDef`)
         uint8                                _bSuppressBaseActionOnChord : 1;
         uint8                                _bKeyboardFocusIgnored      : 1; /**< 키보드 포커스와 상관없이 키를 읽습니다(디버그 키 맵). */
         uint8                                _bReadsToolKeyboard         : 1; /**< 도구 포커스 동안에도 키를 읽습니다(에디터 맵). */

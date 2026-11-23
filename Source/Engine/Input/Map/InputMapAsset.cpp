@@ -202,7 +202,7 @@ namespace sw
             return false;
         }
         if ( hasLayer( params._name ) == false || listChild.size() == 0 )
-            registerLayer( params._name, params._priority, params._bEnabled, params._bBlockLower, params._bAlwaysOn );
+            ensureLayer( params._name, params._priority, params._bEnabled, params._bBlockLower, params._bAlwaysOn )._virtualCursor = params._virtualCursor;
         return true;
     }
 
@@ -428,10 +428,11 @@ namespace sw
 
     bool InputMap::reportVirtualCursorConflict( string_view sourceName, const hashed_string& action, const ActionBinding& binding ) const
     {
-        if ( _virtualCursorStick == InputMapVirtualCursor::Off )
+        const InputMapVirtualCursor virtualCursor = findVirtualCursorBeside( binding._layer );
+        if ( virtualCursor == InputMapVirtualCursor::Off )
             return false;
         const VirtualCursorSettings cursor{};
-        const GamepadStick          cursorStick       = _virtualCursorStick == InputMapVirtualCursor::RightStick ? GamepadStick::Right : GamepadStick::Left;
+        const GamepadStick          cursorStick       = virtualCursor == InputMapVirtualCursor::RightStick ? GamepadStick::Right : GamepadStick::Left;
         const InputSlot             arrCursorButton[] = { InputSlot::fromGamepadButton( cursor._primaryButton, cursor._padIndex ),
                                                           InputSlot::fromGamepadButton( cursor._secondaryButton, cursor._padIndex ) };
         const bool                  bCursorStick      = binding._kind == BindingKind::GamepadStick2D && binding._stick == cursorStick && binding._deviceIndex == cursor._padIndex;
@@ -446,7 +447,7 @@ namespace sw
         if ( bCursorStick == false && bCursorButton == false )
             return false;
         SW_LOG_ERROR_ID( "InputMap.InputMapActionBindsVirtual", "InputMap %#: action '%#' binds the %# the virtual cursor (%#) turns into the mouse - one press would fire twice; bind the mouse only",
-                         sourceName, action.c_str(), bCursorStick ? "stick" : "gamepad button", getEnumName( _virtualCursorStick ) );
+                         sourceName, action.c_str(), bCursorStick ? "stick" : "gamepad button", getEnumName( virtualCursor ) );
         return true;
     }
 
@@ -508,11 +509,12 @@ namespace sw
         if ( pLayer == nullptr )
             return;
         InputMapLayerParams layerParams;
-        layerParams._name        = layerName;
-        layerParams._priority    = pLayer->_priority;
-        layerParams._bEnabled    = pLayer->_bEnabled != SW_FALSE;
-        layerParams._bBlockLower = pLayer->_bBlockLower != SW_FALSE;
-        layerParams._bAlwaysOn   = pLayer->_bAlwaysOn != SW_FALSE;
+        layerParams._name          = layerName;
+        layerParams._priority      = pLayer->_priority;
+        layerParams._bEnabled      = pLayer->_bEnabled != SW_FALSE;
+        layerParams._bBlockLower   = pLayer->_bBlockLower != SW_FALSE;
+        layerParams._bAlwaysOn     = pLayer->_bAlwaysOn != SW_FALSE;
+        layerParams._virtualCursor = pLayer->_virtualCursor;
         XMLFields::writeProperties( layersNode.appendChild( "layer" ), layerParams );
     }
 

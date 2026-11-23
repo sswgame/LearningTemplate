@@ -765,6 +765,30 @@ namespace sw
         return layerA == layerB || ( isLayerActiveInternal( layerA ) && isLayerActiveInternal( layerB ) );
     }
 
+    InputMapVirtualCursor InputMap::getVirtualCursorStick() const
+    {
+        if ( _virtualCursorStick != InputMapVirtualCursor::Off )
+            return _virtualCursorStick;
+        for ( const LayerDef& def : _listLayerEntry )
+        {
+            if ( def._virtualCursor != InputMapVirtualCursor::Off && isLayerActiveInternal( def._name ) )
+                return def._virtualCursor;
+        }
+        return InputMapVirtualCursor::Off;
+    }
+
+    InputMapVirtualCursor InputMap::findVirtualCursorBeside( const hashed_string& layer ) const
+    {
+        if ( _virtualCursorStick != InputMapVirtualCursor::Off )
+            return _virtualCursorStick;
+        for ( const LayerDef& def : _listLayerEntry )
+        {
+            if ( def._virtualCursor != InputMapVirtualCursor::Off && canLayersFireTogether( def._name, layer ) )
+                return def._virtualCursor;
+        }
+        return InputMapVirtualCursor::Off;
+    }
+
     optional<uint32> InputMap::findActionSourceIndex( const hashed_string& action ) const
     {
         const ActionEntry* pEntry = findAction( action );

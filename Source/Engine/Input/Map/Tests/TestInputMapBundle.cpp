@@ -165,6 +165,33 @@ SW_TEST_CASE( InputMapBundleTest, VirtualCursorIsCheckedAgainstTheWholeBundle )
 }
 
 /**
+ * @brief [InputMapBundleTest] 레이어에 적은 가상 커서는 그 레이어가 발화하는 동안만 켜지고, 함께 발화하지 않는 레이어의 패드 바인딩은 막지 않는다 — 같은 레이어의 패드 A 는 거절한다
+ */
+SW_TEST_CASE( InputMapBundleTest, LayerVirtualCursorFollowsItsLayer )
+{
+    InputMap map;
+    SW_REQUIRE_TRUE( map.loadFromXMLText( R"(<InputMap>
+  <layers><layer name="Command" enabled="0" virtualCursor="LeftStick"/></layers>
+  <action name="Game.Accept" layer="Gameplay" trigger="Pressed"><bind source="Gamepad" code="A"/></action>
+  <action name="Command.Select" layer="Command" trigger="Pressed"><bind source="Mouse" code="Left"/></action>
+</InputMap>)",
+                                          "InputMapBundleTest" ) );
+    const hashed_string command( "Command" );
+    SW_EXPECT_TRUE( map.getVirtualCursorStick() == InputMapVirtualCursor::Off );
+    map.pushLayer( command );
+    SW_EXPECT_TRUE( map.getVirtualCursorStick() == InputMapVirtualCursor::LeftStick );
+    map.popLayer();
+    SW_EXPECT_TRUE( map.getVirtualCursorStick() == InputMapVirtualCursor::Off );
+
+    SW_EXPECT_LOG( "InputMap.InputMapActionBindsVirtual" );
+    SW_EXPECT_FALSE( map.loadFromXMLText( R"(<InputMap>
+  <layers><layer name="Command" enabled="0" virtualCursor="LeftStick"/></layers>
+  <action name="Command.Select" layer="Command" trigger="Pressed"><bind source="Gamepad" code="A"/></action>
+</InputMap>)",
+                                          "InputMapBundleTest" ) );
+}
+
+/**
  * @brief [InputMapBundleTest] 우선순위는 공통 < 게임 차이 < 플레이어 재배치다 — 재배치가 이기고, 기본으로 되돌리면 차이의 키다
  */
 SW_TEST_CASE( InputMapBundleTest, PlayerRebindWinsOverDiffAndResetsToIt )
