@@ -4,6 +4,7 @@
 
 #include "Core/Log/LogOnce.h"
 
+#include "Engine/Graphics/RHI/Vulkan/VulkanRHIRenderPassCache.h"
 #include "Engine/Graphics/RHI/Vulkan/VulkanRHIUtil.h"
 #include "Engine/Reflection/EnumName.h"
 
@@ -149,6 +150,9 @@ namespace sw
         , _listRenderFinishedSemaphore{}
         , _listImageFence{}
         , _acquireWait{ nullptr }
+        , _renderPass{ nullptr }
+        , _renderPassLoad{ nullptr }
+        , _renderPassImageFormat{ 0 }
         , _imageFormat{ 0 }
         , _extentWidth{ 0 }
         , _extentHeight{ 0 }
@@ -566,15 +570,56 @@ namespace sw
         return true;
     }
 
-    bool VulkanRHISwapChain::createFramebuffers( VkDevice device, VkRenderPass renderPass )
+    bool VulkanRHISwapChain::ensureRenderPasses( VkDevice device )
     {
+        if ( _renderPass != VK_NULL_HANDLE && _renderPassImageFormat == _imageFormat )
+            return true;
+        // 다시 만든 스왑체인의 포맷이 바뀌었다(표면이 다른 포맷만 준다 — 모니터 이동 · HDR 전환). 옛 포맷의 렌더 패스로 프레임버퍼를 만들면 첨부 포맷이 어긋난다(R-8).
+        if ( _renderPass != VK_NULL_HANDLE )
+            SW_LOG_INFO_ID( "Vulkan.SwapChainRenderPassFormatChanged", "The swap chain format changed (VkFormat %# -> %#) - rebuilding the swap chain render passes", _renderPassImageFormat, _imageFormat );
+        destroyRenderPasses( device );
+        // CLEAR 변종과 LOAD 변종. 한 프레임 안에서 백버퍼 렌더패스를 두 번 이상 여는 경우(그래프가 백버퍼에 그린 뒤 UI 를 얹는 경로)에 CLEAR 변종으로 다시 열면 앞의 내용이
+        // 통째로 지워진다. 첨부 포맷 · 개수 · 샘플 수가 같아 프레임버퍼와 파이프라인은 두 렌더패스 모두와 호환된다(render pass compatibility).
+        // LOAD 변종은 앞선 패스의 finalLayout 인 PRESENT_SRC 에서 시작한다.
+        VulkanRHIRenderPassCache::RenderPassSpec clearSpec{};
+        clearSpec.addColor( _imageFormat, VK_ATTACHMENT_LOAD_OP_CLEAR, VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_PRESENT_SRC_KHR );
+        _renderPass = VulkanRHIRenderPassCache::createFromSpec( device, clearSpec );
+        VulkanRHIRenderPassCache::RenderPassSpec loadSpec{};
+        loadSpec.addColor( _imageFormat, VK_ATTACHMENT_LOAD_OP_LOAD, VK_IMAGE_LAYOUT_PRESENT_SRC_KHR, VK_IMAGE_LAYOUT_PRESENT_SRC_KHR );
+        _renderPassLoad = VulkanRHIRenderPassCache::createFromSpec( device, loadSpec );
+        if ( _renderPass == VK_NULL_HANDLE || _renderPassLoad == VK_NULL_HANDLE )
+        {
+            destroyRenderPasses( device );
+            return false;
+        }
+        _renderPassImageFormat = _imageFormat;
+        return true;
+    }
+
+    void VulkanRHISwapChain::destroyRenderPasses( VkDevice device )
+    {
+        if ( device == nullptr )
+            return;
+        if ( _renderPassLoad != VK_NULL_HANDLE )
+            vkDestroyRenderPass( device, _renderPassLoad, nullptr );
+        if ( _renderPass != VK_NULL_HANDLE )
+            vkDestroyRenderPass( device, _renderPass, nullptr );
+        _renderPass            = VK_NULL_HANDLE;
+        _renderPassLoad        = VK_NULL_HANDLE;
+        _renderPassImageFormat = 0;
+    }
+
+    bool VulkanRHISwapChain::createFramebuffers( VkDevice device )
+    {
+        if ( ensureRenderPasses( device ) == false )
+            return false;
         _listFramebuffer.resize( _listImageView.size(), VK_NULL_HANDLE );
         for ( size_t imageIndex = 0; imageIndex < _listImageView.size(); imageIndex++ )
         {
             VkImageView             arrAttachment[] = { _listImageView[imageIndex] };
             VkFramebufferCreateInfo framebufferInfo{};
             framebufferInfo.sType           = VK_STRUCTURE_TYPE_FRAMEBUFFER_CREATE_INFO;
-            framebufferInfo.renderPass      = renderPass;
+            framebufferInfo.renderPass      = _renderPass;
             framebufferInfo.attachmentCount = 1;
             framebufferInfo.pAttachments    = arrAttachment;
             framebufferInfo.width           = _extentWidth;
