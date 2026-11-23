@@ -556,7 +556,7 @@ namespace sw
             if ( value.isValid() == false )
                 continue;
             const bool      bContainer = prop._bIsContainer == SW_TRUE;
-            const TypeInfo* pNested    = SerializerUtil::findNestedObjectType( bContainer ? prop._elementTypeName : prop._typeName, SerializeContext::getDefault( SerializePurpose::Authoring ) );
+            const TypeInfo* pNested    = SerializerUtil::findNestedObjectType( bContainer ? prop._elementTypeName : prop._typeName, bContainer ? prop.findElementBinding() : prop.findValueBinding(), SerializeContext::getDefault( SerializePurpose::Authoring ) );
             if ( bContainer == false && value.isObject() )
             {
                 if ( pNested != nullptr )

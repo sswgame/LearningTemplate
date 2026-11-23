@@ -290,8 +290,9 @@ namespace sw
          * @brief 이 타입 이름이 **중첩 객체**(프로퍼티를 풀어 쓰는 REFLECT 타입)이면 그 TypeInfo 를, 아니면 nullptr 를 반환합니다.
          * @details 텍스트 핸들러가 있거나(값을 한 줄로 쓴다) enum 이거나 기본형이면 중첩 객체가 아니다. `JSONSerializer` 와
          *          `XMLSerializer` 가 함께 쓴다. 한쪽만 규칙이 바뀌면 두 포맷이 같은 필드를 다르게 쓴다.
+         * @param pBinding @p typeName 에 묶은 사실(프로퍼티 · 컨테이너 원소)입니다. 값마다 불리므로 이름 조회 · 공유 잠금 없이 답하게 늘 넘기고, 묶음이 없을 때만 nullptr 입니다.
          */
-        SW_API static const TypeInfo* findNestedObjectType( hashed_string typeName, const SerializeContext& context );
+        SW_API static const TypeInfo* findNestedObjectType( const hashed_string& typeName, const ReflectValueBinding* pBinding, const SerializeContext& context );
 
         /**
          * @brief 필수 칸(`PROPERTY( Required )`)이 빠졌는지 봅니다 — 적히지 않았거나, 이름 · 경로 형식(`isNameValueType`)인데 적힌 글이 비었다.

@@ -10,13 +10,16 @@
 
 #include "Engine/Automation/Watch/AutomationWatch.h"
 #include "Engine/Automation/Watch/AutomationWatchComponent.h"
+#include "Engine/Foundation/EngineServices.h"
 #include "Engine/Graphics/View/SceneViewQuery.h"
 #include "Engine/Object/Component/CameraComponent.h"
 #include "Engine/Object/Component/SceneComponent.h"
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
+#include "Engine/Reflection/ReflectValueBinding.h"
 #include "Engine/Reflection/ReflectedValue.h"
 #include "Engine/Reflection/TypeInfo.h"
+#include "Engine/Reflection/TypeRegistry.h"
 #include "Engine/Serialization/Serializer/CatalogKey.h"
 
 namespace sw
@@ -112,8 +115,8 @@ namespace sw
             }
             // 갈래는 내장 타입 표 한 곳(`ReflectedValueUtil`)이 정한다 — 숫자 · bool 은 수, 글 갈래는 글로 읽는다.
             // Other 가 아닌 갈래는 내장 타입에서만 나오므로 아래 갈래 안에서는 자리가 있다.
-            const ReflectBuiltinIndex builtinIndex = ReflectedValueUtil::findBuiltinIndex( pProperty->_typeName );
-            const ReflectBuiltinClass builtinClass = ReflectedValueUtil::getBuiltinClass( pProperty->_typeName );
+            const ReflectBuiltinIndex builtinIndex = pProperty->resolveValueFacts( engine::getSubsystem<TypeRegistry>() )._builtinIndex;
+            const ReflectBuiltinClass builtinClass = ReflectedValueUtil::getBuiltinClass( builtinIndex );
             const void* const         pValue       = pProperty->getRawPtr( static_cast<const void*>( pComponent ) );
             float64                   number{ 0.0 };
             int64                     integer{ 0 };

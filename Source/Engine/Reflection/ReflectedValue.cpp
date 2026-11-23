@@ -614,11 +614,6 @@ namespace sw
         return pRow != nullptr && pRow->_bInteger == SW_TRUE;
     }
 
-    ReflectBuiltinClass ReflectedValueUtil::getBuiltinClass( const hashed_string& typeName )
-    {
-        return getBuiltinClass( findBuiltinIndex( typeName ) );
-    }
-
     bool ReflectedValueUtil::readNumber( const ReflectBuiltinIndex builtinIndex, const void* pValue, float64& outValue )
     {
         const ReflectValueInternal::BuiltinRow* pRow = ReflectValueInternal::findReadableRow( builtinIndex, pValue );

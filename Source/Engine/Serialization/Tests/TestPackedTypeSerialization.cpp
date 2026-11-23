@@ -381,7 +381,7 @@ SW_TEST_CASE( PackedValueSerializationTest, FloatArgumentConversionRejectsNonFin
 SW_TEST_CASE( PackedValueSerializationTest, BuiltinClassFollowsTheTable )
 {
     const auto getClassOf = []( const utf8* pName )
-    { return ReflectedValueUtil::getBuiltinClass( hashed_string( pName ) ); };
+    { return ReflectedValueUtil::getBuiltinClass( ReflectedValueUtil::findBuiltinIndex( hashed_string( pName ) ) ); };
     for ( const utf8* pName : { "int8", "uint64", "float32", "float64", "half", "unorm8", "unorm16", "snorm8", "snorm16" } )
     {
         SW_EXPECT_TRUE_MSG( getClassOf( pName ) == ReflectBuiltinClass::Number, pName );

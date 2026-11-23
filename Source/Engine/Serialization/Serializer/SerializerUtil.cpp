@@ -59,15 +59,6 @@ namespace sw
                 return ReflectedValueUtil::readNumber( builtinIndex, value.get(), outValue ); // kNone 이면 false
             }
 
-            /** @brief 칸 값 · 원소 형식이 중첩 객체면 그 타입입니다(`SerializerUtil::findNestedObjectType` 과 같은 규칙). 프로퍼티의 묶음으로 찾아 값마다 이름 조회 · 공유 잠금이 없다. */
-            static const TypeInfo* findNestedObjectType( const hashed_string& typeName, const ReflectValueBinding* pBinding, const SerializeContext& context )
-            {
-                const SerializerUtil::ValueCodecs codecs = SerializerUtil::findValueCodecs( typeName, pBinding, context );
-                if ( codecs.findTextWriter( context ) != nullptr || codecs.findEnum( context ) != nullptr )
-                    return nullptr;
-                return codecs.findStructType( context );
-            }
-
             /** @brief @p value 가 @p range 밖이면 "경로 = 값 is outside [아래, 위]" 한 줄을 더합니다. */
             static void appendRangeError( const string& path, const float64 value, const PropertyAllowedRange& range, vector<string>& outListError )
             {
@@ -110,7 +101,7 @@ namespace sw
                         const bool bSequence        = prop._containerWrapper != nullptr && prop._containerWrapper->asSequence() != nullptr && bNestedContainer == false;
                         if ( bSequence == false )
                             continue;
-                        const TypeInfo* pElement     = findNestedObjectType( prop._elementTypeName, prop.findElementBinding(), context );
+                        const TypeInfo* pElement     = SerializerUtil::findNestedObjectType( prop._elementTypeName, prop.findElementBinding(), context );
                         const bool      bNumberRange = pElement == nullptr && prop._metadata->hasAllowedRange();
                         if ( pElement == nullptr && bNumberRange == false )
                             continue;
@@ -138,7 +129,7 @@ namespace sw
                             return false;
                         continue;
                     }
-                    const TypeInfo* pNested = findNestedObjectType( prop._typeName, prop.findValueBinding(), context );
+                    const TypeInfo* pNested = SerializerUtil::findNestedObjectType( prop._typeName, prop.findValueBinding(), context );
                     if ( pNested != nullptr && isEveryValueWithinRange( *pNested, ObjectAddress{ pValue } ) == false )
                         return false;
                 }
@@ -638,16 +629,12 @@ namespace sw
                          owner._fullyQualifiedName.c_str(), prop._name.c_str() );
     }
 
-    const TypeInfo* SerializerUtil::findNestedObjectType( hashed_string typeName, const SerializeContext& context )
+    const TypeInfo* SerializerUtil::findNestedObjectType( const hashed_string& typeName, const ReflectValueBinding* pBinding, const SerializeContext& context )
     {
-        if ( context.findTextWriter( typeName ) != nullptr )
+        const ValueCodecs codecs = findValueCodecs( typeName, pBinding, context );
+        if ( codecs.findTextWriter( context ) != nullptr || codecs.findEnum( context ) != nullptr )
             return nullptr;
-        if ( context.getTypeRegistry().findEnum( typeName ) != nullptr )
-            return nullptr;
-        const TypeInfo* pTypeInfo = context.getTypeRegistry().findType( typeName );
-        if ( pTypeInfo == nullptr || pTypeInfo->isPrimitive() )
-            return nullptr;
-        return pTypeInfo;
+        return codecs.findStructType( context );
     }
 
     bool SerializerUtil::isNameValueType( const hashed_string& typeName )
@@ -1262,6 +1249,7 @@ namespace sw
         const bool        bSkipProperty = prop._bIsBitField == SW_TRUE || prop.hasValueAccessor();
         if ( bSkipProperty )
             return;
+        const SerializeContext&                  context = SerializeContext::getDefault( SerializePurpose::Authoring );
         StringBuilder<constant::buffer::kMax256> pathBuilder;
         if ( prefix.empty() == false )
             pathBuilder.appendFormat( "%#.", prefix );
@@ -1278,9 +1266,10 @@ namespace sw
             const bool bSequence        = prop._containerWrapper != nullptr && prop._containerWrapper->asSequence() != nullptr && bNestedContainer == false;
             if ( bSequence == false )
                 return;
-            const ISequenceContainerWrapper* pSequence    = prop._containerWrapper->asSequence();
-            const TypeInfo*                  pElement     = findNestedObjectType( prop._elementTypeName, SerializeContext::getDefault( SerializePurpose::Authoring ) );
-            const size_t                     elementCount = pSequence->getSize( pValue );
+            const ISequenceContainerWrapper* pSequence      = prop._containerWrapper->asSequence();
+            const TypeInfo*                  pElement       = SerializerUtil::findNestedObjectType( prop._elementTypeName, prop.findElementBinding(), context );
+            const ReflectBuiltinIndex        elementBuiltin = prop.resolveElementFacts( context.getTypeRegistry() )._builtinIndex;
+            const size_t                     elementCount   = pSequence->getSize( pValue );
             // 필드 경계는 원소가 아니라 이 프로퍼티를 가진 객체에서 읽는다(인스펙터와 같다).
             const PropertyAllowedRange range = prop._metadata->hasAllowedRange() ? prop._metadata->computeAllowedRange( pInstance ) : PropertyAllowedRange{};
             for ( size_t elementIndex = 0; elementIndex < elementCount; ++elementIndex )
@@ -1293,19 +1282,19 @@ namespace sw
                 // 구조체 원소의 값 주소는 그 원소 타입의 객체 주소다.
                 if ( pElement != nullptr )
                     collectRangeErrors( *pElement, ObjectAddress{ pElementValue }, elementPath, outListError, pListRestored );
-                else if ( Internal::readRangeNumber( ReflectedValueUtil::findBuiltinIndex( prop._elementTypeName ), ValueAddress{ pElementValue }, value ) )
+                else if ( Internal::readRangeNumber( elementBuiltin, ValueAddress{ pElementValue }, value ) )
                     Internal::appendRangeError( elementPath, value, range, outListError );
             }
             return;
         }
-        const TypeInfo* pNested = findNestedObjectType( prop._typeName, SerializeContext::getDefault( SerializePurpose::Authoring ) );
+        const TypeInfo* pNested = SerializerUtil::findNestedObjectType( prop._typeName, prop.findValueBinding(), context );
         if ( pNested != nullptr )
         {
             collectRangeErrors( *pNested, ObjectAddress{ pValue }, path, outListError, pListRestored );
             return;
         }
         float64 value = 0.0;
-        if ( prop._metadata->hasAllowedRange() && Internal::readRangeNumber( ReflectedValueUtil::findBuiltinIndex( prop._typeName ), ValueAddress{ pValue }, value ) )
+        if ( prop._metadata->hasAllowedRange() && Internal::readRangeNumber( prop.resolveValueFacts( context.getTypeRegistry() )._builtinIndex, ValueAddress{ pValue }, value ) )
             Internal::appendRangeError( path, value, prop._metadata->computeAllowedRange( pInstance ), outListError );
     }
 

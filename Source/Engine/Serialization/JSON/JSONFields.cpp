@@ -54,7 +54,7 @@ namespace sw
             const PropertyInfo& prop  = listProperty[propIndex];
             const JSONValue     field = object.get( key );
             // 구조체 칸은 같은 규칙으로 들어간다(`readObject` 로 넘기면 적지 않은 칸이 되돌아가고 키 이름 규칙도 다르다).
-            const TypeInfo* const pNested = prop._bIsContainer == SW_TRUE ? nullptr : SerializerUtil::findNestedObjectType( prop._typeName, context );
+            const TypeInfo* const pNested = prop._bIsContainer == SW_TRUE ? nullptr : SerializerUtil::findNestedObjectType( prop._typeName, prop.findValueBinding(), context );
             if ( pNested != nullptr )
             {
                 StringBuilder<constant::buffer::kMax256> textBuilder;

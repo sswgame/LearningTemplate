@@ -6,8 +6,11 @@
 #include "Core/Math/Radians.h"
 #include "Core/Math/VectorMath.h"
 
+#include "Engine/Foundation/EngineServices.h"
+#include "Engine/Reflection/ReflectValueBinding.h"
 #include "Engine/Reflection/ReflectedValue.h"
 #include "Engine/Reflection/TypeInfo.h"
+#include "Engine/Reflection/TypeRegistry.h"
 #include "Engine/Serialization/Serializer/SerializeContext.h"
 #include "Engine/Serialization/Serializer/SerializerUtil.h"
 #include "Engine/UI/WidgetTree/Widget.h"
@@ -145,7 +148,7 @@ namespace sw
             return unexpected( Error{ ErrorKind::Unsupported, "an animated property cannot be a container", path } );
         }
         const PropertyInfo&       leaf         = outProperty._path.getLeafProperty();
-        const ReflectBuiltinIndex builtinIndex = ReflectedValueUtil::findBuiltinIndex( leaf._typeName );
+        const ReflectBuiltinIndex builtinIndex = leaf.resolveValueFacts( engine::getSubsystem<TypeRegistry>() )._builtinIndex;
         const uint8               count        = leaf._bIsBitField == SW_TRUE ? 0 : UIAnimatedPropertyInternal::findComponentCount( builtinIndex );
         outProperty._kind                      = count > 0 ? UIAnimatedValueKind::Float : UIAnimatedValueKind::Discrete;
         outProperty._componentCount            = count;

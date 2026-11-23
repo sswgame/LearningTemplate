@@ -325,7 +325,7 @@ namespace sw
                     }
                     else
                     {
-                        const TypeInfo* pNestedType = SerializerUtil::findNestedObjectType( prop._typeName, context );
+                        const TypeInfo* pNestedType = SerializerUtil::findNestedObjectType( prop._typeName, prop.findValueBinding(), context );
                         if ( pNestedType != nullptr )
                         {
                             backend.beginMap( prop._name.c_str() );
@@ -365,7 +365,7 @@ namespace sw
                     return false;
                 if ( prop._bIsContainer && prop.hasContainerWrapper() )
                     return true;
-                return SerializerUtil::findNestedObjectType( prop._typeName, context ) != nullptr;
+                return SerializerUtil::findNestedObjectType( prop._typeName, prop.findValueBinding(), context ) != nullptr;
             }
 
             /**
@@ -574,7 +574,7 @@ namespace sw
                     }
                     else
                     {
-                        const TypeInfo* pNestedType = SerializerUtil::findNestedObjectType( prop._typeName, context );
+                        const TypeInfo* pNestedType = SerializerUtil::findNestedObjectType( prop._typeName, prop.findValueBinding(), context );
                         if ( pNestedType != nullptr )
                             state.readNestedProperty( prop, *pNestedType );
                         else
@@ -1046,7 +1046,7 @@ namespace sw
             if ( child.isValid() == false )
                 continue;
             const bool      bContainer = prop._bIsContainer == SW_TRUE;
-            const TypeInfo* pNested    = SerializerUtil::findNestedObjectType( bContainer ? prop._elementTypeName : prop._typeName, SerializeContext::getDefault( SerializePurpose::Authoring ) );
+            const TypeInfo* pNested    = SerializerUtil::findNestedObjectType( bContainer ? prop._elementTypeName : prop._typeName, bContainer ? prop.findElementBinding() : prop.findValueBinding(), SerializeContext::getDefault( SerializePurpose::Authoring ) );
             if ( bContainer == false )
             {
                 if ( pNested != nullptr )

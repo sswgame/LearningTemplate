@@ -8,11 +8,14 @@
 #include "Core/String/StringBuilder.h"
 #include "Core/String/StringUtil.h"
 
+#include "Engine/Foundation/EngineServices.h"
 #include "Engine/Localization/LocalizationManager.h"
 #include "Engine/Localization/TextFormatter.h"
 #include "Engine/Presentation/UIViewModel.h"
+#include "Engine/Reflection/ReflectValueBinding.h"
 #include "Engine/Reflection/ReflectedValue.h"
 #include "Engine/Reflection/TypeInfo.h"
+#include "Engine/Reflection/TypeRegistry.h"
 #include "Engine/UI/Screen/UIScreen.h"
 #include "Engine/UI/WidgetTree/Widget.h"
 #include "Engine/UserSettings/UserSettingsManager.h"
@@ -413,7 +416,7 @@ namespace sw
                 // 선택지 목록(텍스트 키)을 고른 항목보다 먼저 쓴다.
                 // 원소 타입은 캐스트할 C++ 타입의 내장 자리(`ReflectBuiltinOf<string>`)로 묻는다 — 이름 리터럴을 두지 않는다.
                 const bool bTextOptionList = binding._optionList.isValid() &&
-                                             ReflectedValueUtil::findBuiltinIndex( binding._optionList.getLeafProperty()._elementTypeName ) == ReflectBuiltinOf<string>::kIndex;
+                                             binding._optionList.getLeafProperty().resolveElementFacts( engine::getSubsystem<TypeRegistry>() )._builtinIndex == ReflectBuiltinOf<string>::kIndex;
                 if ( bTextOptionList )
                 {
                     vector<string>* pList = binding._optionList.getLeafProperty().getValuePtr<vector<string>>( binding._optionList.findLeafOwner( &widget ) );
