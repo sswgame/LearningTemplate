@@ -51,7 +51,6 @@
 #include "Engine/Destruction/Fracture/FractureAsset.h"
 #include "Engine/Graphics/Mesh/Mesh.h"
 #include "Engine/Graphics/Mesh/MeshAssetFormat.h"
-#include "Engine/Graphics/Mesh/MeshCache.h"
 #include "Engine/Graphics/RHI/RHITypes.h"
 #include "Engine/Serialization/JSON/JSONDocument.h"
 
@@ -782,7 +781,7 @@ namespace sw::editor
                 (void)sourcePath;
                 return nullptr;
             }
-            /** @brief 규칙에 몸 메시(`body_surface`)가 있으면 그 메시의 임포트 결과(`transferBodySurface` 가 `MeshCache` 로 읽는다)를 읽으므로 몸 메시를 임포트한 뒤에 직렬로 임포트합니다. */
+            /** @brief 규칙에 몸 메시(`body_surface`)가 있으면 그 메시의 임포트 결과(`transferBodySurface`)를 읽으므로 몸 메시를 임포트한 뒤에 직렬로 임포트합니다. */
             bool hasOrderDependency( string_view sourcePath, string_view assetPath ) const override
             {
                 vector<AssetImportOverride> listOverride;
@@ -865,12 +864,18 @@ namespace sw::editor
 
     bool ModelImporter::transferBodySurface( string_view sourcePath, const ModelImportRule& rule, MeshAssetData& inoutMesh )
     {
-        const shared_ptr<Mesh> body = MeshCache::acquire( rule._bodySurface );
-        if ( body == nullptr )
+        // 디스크에서 바로 읽는다 — 공유 캐시(`MeshCache`)는 열린 에디터가 쥔 옛 몸일 수 있어, 새 몸의 내용으로 적은 원본 해시와 다른 몸의 가중치가 결과에 남았다.
+        MeshAssetData    bodyData{};
+        shared_ptr<Mesh> body      = Mesh::create();
+        const bool       bBodyRead = MeshAssetFormat::loadFromAsset( AssetID{ rule._bodySurface }, bodyData ) && body->setGeometryWithTangents( std::move( bodyData._listVertex ), std::move( bodyData._listIndex ) );
+        if ( bBodyRead == false )
         {
             SW_LOG_ERROR_ID( "ModelImporter.ImportRuleBodyMesh", "Import rule '%#': body mesh '%#' for the surface transfer of %# cannot be read", rule._name.c_str(), rule._bodySurface.c_str(), sourcePath );
             return false;
         }
+        if ( bodyData._skinBinding.getBoneCount() > 0 )
+            body->setSkin( std::move( bodyData._listSkinVertex ), std::move( bodyData._skinBinding ) );
+        body->setMorphTargets( std::move( bodyData._listMorphTarget ) );
         shared_ptr<Mesh> garment = Mesh::create();
         if ( garment->setGeometryWithTangents( vector<RHIVertex>( inoutMesh._listVertex ), vector<uint32>( inoutMesh._listIndex ) ) == false )
             return false; // 메시가 까닭을 남겼다(임포트가 만든 번호라 생기지 않아야 한다)
