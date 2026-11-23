@@ -8,7 +8,7 @@
     "Source/Core/Compression/RLECompressionCodec.cpp": {"integer": 3, "hex": 3},
     "Source/Core/Concurrency/DataRaceDetector.cpp": {"integer": 1},
     "Source/Core/Concurrency/Futex.cpp": {"integer": 3},
-    "Source/Core/Concurrency/Queue/ConcurrentQueue.h": {"integer": 4},
+    "Source/Core/Concurrency/Queue/ConcurrentQueue.h": {"integer": 3},
     "Source/Core/Concurrency/Queue/SpscQueue.h": {"integer": 3},
     "Source/Core/Concurrency/Queue/WorkStealingDeque.h": {"integer": 2},
     "Source/Core/Concurrency/ShardedCounter.h": {"integer": 1},

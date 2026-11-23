@@ -27,9 +27,13 @@ namespace sw
 
     namespace ConcurrentQueueInternal
     {
-        /** @brief 캐시 라인에 정렬된 슬롯입니다. 시퀀스 번호로 소유권을 넘깁니다. */
+        /**
+         * @brief 슬롯 하나입니다. 시퀀스 번호로 소유권을 넘깁니다.
+         * @details 칸마다 캐시 줄에 정렬하지 않는다 — 8 바이트 항목 하나가 64 바이트를 쓰면 4096 칸 링이 256 KB 라 꺼낼 때마다 새 줄을 읽는다(L2 를 밀어낸다). 다투는 것은 머리 ·
+         *          꼬리 위치이고 그 둘만 떼어 놓는다(Vyukov 원본 · 언리얼 Tasks 의 전역 큐 · moodycamel 과 같은 배치). 벤치 `QueueCellBenchTest.*`.
+         */
         template <typename T>
-        struct alignas( 64 ) Cell
+        struct Cell
         {
             atomic<uint32> _sequence{ 0 };
             T              _data{};
