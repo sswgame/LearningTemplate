@@ -145,14 +145,17 @@ namespace sw
      */
     struct CharacterCommand3D
     {
-        float3             _moveVelocity{};           ///< 요청된 수평 속도 — 다시 부를 때까지 유지한다
-        float3             _pendingRootMotion{};      ///< 아직 스텝에 넘기지 않은 루트 모션 이동
-        float3             _pendingSurfaceVelocity{}; ///< 이번 프레임에 쌓인 면 속도
-        float3             _pendingLaunch{};          ///< 0 이 아니면 다음 스텝에 쏜다
-        PhysicsFieldSample _pendingField{};           ///< 이번 게임 프레임에 모인 물리 필드
-        float32            _pendingMoveScale{ 1.0f }; ///< 이번 프레임에 받은 이동 계수의 최솟값
-        float32            _pendingJumpSpeed{ 0.0f }; ///< 0 이 아니면 다음 스텝에 준다
-        bool               _bPendingStop{ false };    ///< NOLINT(sw-bool-flag): 집합체다(중괄호 · 지정 초기화로 만든다) — 참이면 다음 스텝이 이어받은 운동을 지운다(`stopMovementImmediately`)
+        float3             _moveVelocity{};            ///< 요청된 수평 속도 — 다시 부를 때까지 유지한다
+        float3             _pendingRootMotion{};       ///< 아직 스텝에 넘기지 않은 루트 모션 이동
+        float3             _pendingSurfaceVelocity{};  ///< 이번 프레임에 쌓인 면 속도
+        float3             _pendingLaunch{};           ///< 0 이 아니면 다음 스텝에 쏜다
+        PhysicsFieldSample _pendingField{};            ///< 이번 게임 프레임에 모인 물리 필드
+        float32            _pendingMoveScale{ 1.0f };  ///< 이번 프레임에 받은 이동 계수의 최솟값
+        float32            _pendingJumpSpeed{ 0.0f };  ///< 0 이 아니면 다음 스텝에 준다
+        float3             _pendingClimbVelocity{};    ///< 이번 게임 프레임의 오르기 속도(`_bPendingClimb` 일 때)
+        float32            _verticalMoveSpeed{ 0.0f }; ///< 헤엄칠 때 위아래로 가려는 속도 — 다시 부를 때까지 유지한다
+        bool               _bPendingClimb{ false };    ///< NOLINT(sw-bool-flag): 집합체다 — 이번 게임 프레임에 오르기 요청이 왔다
+        bool               _bPendingStop{ false };     ///< NOLINT(sw-bool-flag): 집합체다(중괄호 · 지정 초기화로 만든다) — 참이면 다음 스텝이 이어받은 운동을 지운다(`stopMovementImmediately`)
     };
 
     /** @struct CharacterCommand2D @brief 2D 캐릭터 컨트롤러가 다음 물리 프레임에 받을 입력입니다(이동 요청 · 점프 대기 — `CharacterCommand3D` 와 같은 계약). */

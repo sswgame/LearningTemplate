@@ -76,6 +76,7 @@ namespace sw
         , _reportedMoveScale{ 1.0f }
         , _airVelocity{}
         , _frameField{}
+        , _frameClimbVelocity{}
         , _walkVelocity{}
         , _fieldVelocity{}
         , _queuedStepVelocity{}
@@ -90,6 +91,9 @@ namespace sw
         , _appliedHeightReduction{ 0.0f }
         , _listStepHistory{}
         , _stepHistoryCount{ 0 }
+        , _bFrameClimb{ SW_FALSE }
+        , _bStepClimb{ SW_FALSE }
+        , _reserved{ 0 }
     {
         _commandSlot = engine::getSubsystem<PhysicsPoseStore>().getCommandStore<CharacterCommand3D>().allocateSlot( this, _pCommandPage );
     }
@@ -193,6 +197,21 @@ namespace sw
         { command._moveVelocity = float3{ velocity._x, 0.0f, velocity._z }; } );
     }
 
+    void CharacterControllerComponent::setVerticalMoveSpeed( float32 speed )
+    {
+        editCommand( [speed]( CharacterCommand3D& command )
+        { command._verticalMoveSpeed = speed; } );
+    }
+
+    void CharacterControllerComponent::applyClimbVelocity( const float3& velocity )
+    {
+        editCommand( [&velocity]( CharacterCommand3D& command )
+        {
+            command._pendingClimbVelocity = velocity;
+            command._bPendingClimb        = true;
+        } );
+    }
+
     void CharacterControllerComponent::jump( float32 speed )
     {
         editCommand( [speed]( CharacterCommand3D& command )
@@ -294,12 +313,19 @@ namespace sw
             return;
         // 이번 게임 프레임에 모인 필드를 이 물리 프레임의 것으로 옮긴다 — 스텝이 없는 프레임이 끼어도 한 프레임의 필드가 두 번 쌓이지 않는다.
         PhysicsFieldSample field{};
-        editCommand( [&field]( CharacterCommand3D& command )
+        float3             climbVelocity{};
+        bool               bClimb = false;
+        editCommand( [&field, &climbVelocity, &bClimb]( CharacterCommand3D& command )
         {
-            field                 = command._pendingField;
-            command._pendingField = PhysicsFieldSample{};
+            field                  = command._pendingField;
+            command._pendingField  = PhysicsFieldSample{};
+            climbVelocity          = command._pendingClimbVelocity;
+            bClimb                 = command._bPendingClimb;
+            command._bPendingClimb = false;
         } );
-        _frameField = field;
+        _frameField         = field;
+        _frameClimbVelocity = climbVelocity;
+        _bFrameClimb        = bClimb ? SW_TRUE : SW_FALSE;
         if ( consumeRebuild() )
             releasePhysics( physics );
 
@@ -438,8 +464,22 @@ namespace sw
         _verticalSpeed += ( field.computeBuoyancy( MathUtil::abs( gravityY ), kBodyDensity ) + field._acceleration._y ) * fixedDeltaTime;
         if ( field._drag > 0.0f )
             _verticalSpeed += ( field._flowVelocity._y - _verticalSpeed ) * MathUtil::saturate( field._drag * fixedDeltaTime );
+        // 헤엄: 손발이 낼 수 있는 속도까지만 끈다 — 부력 · 흐름 · 뛰어오름이 이미 더 빠르면 그대로다(걷기 요청과 같이 바로 든다).
+        if ( _movementMode == CharacterMovementMode::Swimming && command._verticalMoveSpeed != 0.0f )
+            _verticalSpeed = command._verticalMoveSpeed > 0.0f ? MathUtil::max( _verticalSpeed, command._verticalMoveSpeed ) : MathUtil::min( _verticalSpeed, command._verticalMoveSpeed );
         if ( jumpSpeed > 0.0f )
             _verticalSpeed = jumpSpeed;
+        // 오르기: 중력 · 필드 · 공중 관성 없이 이동기가 준 속도만 쓴다. 이 스텝의 점프 · 발사는 매달림을 놓는 것이라 이긴다.
+        const bool bClimb = _bFrameClimb == SW_TRUE && bLaunched == false && jumpSpeed <= 0.0f;
+        _bStepClimb       = bClimb ? SW_TRUE : SW_FALSE;
+        if ( bClimb )
+        {
+            _walkVelocity  = float3{};
+            _fieldVelocity = float3{};
+            _airVelocity   = float3{};
+            moveVelocity   = float3{ _frameClimbVelocity._x, 0.0f, _frameClimbVelocity._z };
+            _verticalSpeed = _frameClimbVelocity._y;
+        }
 
         _previousPosition   = _state._position;
         _queuedStepVelocity = float3{ moveVelocity._x, _verticalSpeed, moveVelocity._z };
@@ -465,9 +505,11 @@ namespace sw
             _listStepHistory[_stepHistoryCount % kStepHistoryCapacity] = StepRecord{ _queuedStepVelocity, _state };
             ++_stepHistoryCount;
         }
-        _movementMode = _frameField.selectMovementMode( _state._bGrounded, kBodyDensity );
+        _movementMode = _bStepClimb == SW_TRUE ? CharacterMovementMode::Climbing : _frameField.selectMovementMode( _state._bGrounded, kBodyDensity );
         // 결정: 바닥이 돌면 위치만이 아니라 방향(yaw)도 같이 돈다 — 이번 스텝에 바닥이 돈 각을 모아 두고 트랜스폼을 쓸 때 얹는다.
         _pendingGroundYaw += _state._groundYawRate * fixedDeltaTime;
+        if ( _bStepClimb == SW_TRUE )
+            _verticalSpeed = 0.0f; // 오르던 속도는 잇지 않는다 — 구역을 벗어나면 그 자리에서 떨어지기 시작한다
         // 천장에 막혔으면 오르던 속도가 줄었다 — 실제로 난 수직 속도를 잇는다. 디디면 수직 속도는 0 이다.
         if ( _state._bGrounded && _verticalSpeed <= 0.0f )
         {
