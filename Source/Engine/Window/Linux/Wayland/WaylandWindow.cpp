@@ -6,6 +6,7 @@
 #include "Core/Foundation/Constants.h"
 #include "Core/String/StringUtil.h"
 #include "Core/String/formatString.h"
+#include "Core/Time/MonotonicClock.h"
 
 #include "Engine/Window/Linux/Wayland/WaylandInputEvent.h"
 #include "Engine/Window/Linux/Wayland/WaylandShell.h"
@@ -338,6 +339,8 @@ namespace sw
             static constexpr const utf8* kMimeURIList = "text/uri-list";
             /** @brief 클립보드 읽기 · 쓰기가 상대를 기다리는 한 번의 한도(ms)입니다(X11 의 200 ms 와 같다). */
             static constexpr int32 kClipboardWaitMs = 200;
+            /** @brief 한 번의 주고받기 전체의 한도(ms)입니다. 한 번 기다림만 재면 한 바이트씩 흘리는 상대가 주 스레드를 끝없이 붙든다. */
+            static constexpr int32 kClipboardTransferMs = 1000;
             /** @brief 클립보드 글 한 번에 받는 최대 바이트입니다(끝없이 보내는 상대를 끊는다). */
             static constexpr size_t kClipboardMaxBytes = 16u * constant::memory::kBytesPerMegabyte;
             /** @brief 휠 한 칸에 해당하는 축 값입니다(컴포지터 관례 — 마우스 휠 한 칸이 10). */
@@ -529,7 +532,7 @@ namespace sw
 
             /**
              * @brief 제안 @p pOffer 의 @p pMime 형식 글을 파이프로 받아 @p outBytes 에 담습니다. 상대가 끝까지 보냈으면 true 입니다(클립보드 · 끌어 놓기가 같이 쓴다).
-             * @details 상대가 느리면 주 스레드가 오래 서지 않도록 한 번 기다림을 `kClipboardWaitMs` 로, 전체를 `kClipboardMaxBytes` 로 끊는다.
+             * @details 상대가 느리면 주 스레드가 오래 서지 않도록 한 번 기다림을 `kClipboardWaitMs` 로, 전체를 `kClipboardTransferMs` 와 `kClipboardMaxBytes` 로 끊는다.
              */
             static bool receiveOfferText( wl_display* pDisplay, wl_data_offer* pOffer, const utf8* pMime, string& outBytes )
             {
@@ -543,9 +546,10 @@ namespace sw
                 wl_data_offer_receive( pOffer, pMime, arrPipeEnd[1] );
                 close( arrPipeEnd[1] ); // 보내기 요청이 쓰기 끝을 복제해 들고 있다
                 wl_display_flush( pDisplay );
-                bool bCompleted = false;
-                utf8 arrBuffer[4096];
-                while ( outBytes.size() <= kClipboardMaxBytes )
+                bool           bCompleted = false;
+                const Deadline deadline   = Deadline::afterMilliseconds( kClipboardTransferMs );
+                utf8           arrBuffer[4096];
+                while ( outBytes.size() <= kClipboardMaxBytes && deadline.isExpired() == false )
                 {
                     pollfd waitEntry{ arrPipeEnd[0], POLLIN, 0 };
                     if ( poll( &waitEntry, 1, kClipboardWaitMs ) <= 0 )
@@ -594,15 +598,16 @@ namespace sw
                     close( fd );
                     return;
                 }
-                // 상대가 느리면 주 스레드가 오래 서지 않도록 막지 않는 쓰기로 `kClipboardWaitMs` 안에 못 쓰면 포기한다.
+                // 상대가 느리면 주 스레드가 오래 서지 않도록 막지 않는 쓰기로 한 번에 `kClipboardWaitMs`, 전체 `kClipboardTransferMs` 안에 못 쓰면 포기한다.
                 // 상대가 읽기를 닫았으면 쓰기가 SIGPIPE 로 프로세스를 죽인다 — 오류 코드로 받도록 무시로 둔다(프로세스 전역, `PosixProcess.cpp` 와 같다).
                 (void)signal( SIGPIPE, SIG_IGN );
                 const int32 flags = fcntl( fd, F_GETFL, 0 );
                 if ( flags != -1 )
                     fcntl( fd, F_SETFL, flags | O_NONBLOCK );
-                const utf8* pCursor    = state._clipboardText.data();
-                size_t      remaining  = state._clipboardText.size();
-                bool        bCompleted = true;
+                const Deadline deadline   = Deadline::afterMilliseconds( kClipboardTransferMs );
+                const utf8*    pCursor    = state._clipboardText.data();
+                size_t         remaining  = state._clipboardText.size();
+                bool           bCompleted = true;
                 while ( remaining > 0 )
                 {
                     const ssize_t written = write( fd, pCursor, remaining );
@@ -613,7 +618,7 @@ namespace sw
                         continue;
                     }
                     pollfd     waitEntry{ fd, POLLOUT, 0 };
-                    const bool bWouldBlock = written == -1 && ( errno == EAGAIN || errno == EWOULDBLOCK );
+                    const bool bWouldBlock = written == -1 && ( errno == EAGAIN || errno == EWOULDBLOCK ) && deadline.isExpired() == false;
                     if ( bWouldBlock == false || poll( &waitEntry, 1, kClipboardWaitMs ) <= 0 )
                     {
                         bCompleted = false;
