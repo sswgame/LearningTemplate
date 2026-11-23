@@ -846,6 +846,7 @@ namespace sw
     void WebGPURHIDevice::collectTimestampReadback( uint32 ringSlot )
     {
         WebGPUTimestampReadback& readback = _arrTimestampReadback[ringSlot];
+        _timestampFrame._listMicro.clear(); // 읽을 것이 없는 프레임은 비운다(다른 네 백엔드와 같다) — 남기면 지난 값이 새 표본으로 다시 나간다
         if ( readback._bQueued != SW_FALSE && readback._bMapped.load( std::memory_order_acquire ) != SW_FALSE )
         {
             // 값은 나노초다(명세) — 틱 하나 = 1 ns. 적지 않은 칸은 `RHITimestampFrame::resolve` 가 음수로 둔다(마스크).
