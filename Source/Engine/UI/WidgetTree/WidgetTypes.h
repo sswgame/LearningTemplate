@@ -215,5 +215,12 @@ namespace sw
         /// 이 화면의 왼쪽 위가 놓인 창 클라이언트 픽셀입니다. 게임 창(백버퍼)이면 0 이고, 에디터 게임 뷰면 패널 안 이미지 자리(`ViewportTarget::_windowX`)입니다.
         /// 포인터는 창 픽셀에서 이것을 뺀 뒤 배율로 나눕니다(`UIInputRouter::processPointer`).
         int2 _pointerOrigin{};
+
+        /** @brief UI 단위 사각형(x, y, 너비, 높이)을 창 클라이언트 픽셀로 옮깁니다. 운영체제에 자리를 알리는 쪽(접근성 브리지들)이 함께 씁니다. */
+        float4 toClientRect( const float4& uiRect ) const
+        {
+            const float32 scale = _uiScale > 0.0f ? _uiScale : 1.0f;
+            return float4{ uiRect._x * scale + static_cast<float32>( _pointerOrigin._x ), uiRect._y * scale + static_cast<float32>( _pointerOrigin._y ), uiRect._z * scale, uiRect._w * scale };
+        }
     };
 } // namespace sw

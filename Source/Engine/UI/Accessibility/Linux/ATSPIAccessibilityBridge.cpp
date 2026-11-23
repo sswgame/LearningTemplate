@@ -737,7 +737,7 @@ namespace sw
                     dbus_message_unref( pRep );
                     return DBUS_HANDLER_RESULT_HANDLED;
                 }
-                // 사각형은 게임 창 클라이언트 기준 UI 단위다. 요청의 좌표계가 화면(ATSPI_COORD_TYPE_SCREEN = 0)이면 창 클라이언트의 화면 위치를 더한다(확대기 · 강조 상자가 맞는다).
+                // 사각형은 게임 창 클라이언트 픽셀이다(UI 배율 · 게임 뷰 자리를 옮긴 값 — `UIViewport::toClientRect`). 요청의 좌표계가 화면(ATSPI_COORD_TYPE_SCREEN = 0)이면 창 클라이언트의 화면 위치를 더한다(확대기 · 강조 상자가 맞는다).
                 // 창 좌표(1) · 부모 좌표(2, 최상위 노드는 창과 같다)는 그대로 둔다. X11 이 아니면(Wayland 는 클라이언트에 전역 좌표를 주지 않는다) 원점 0 이다.
                 dbus_uint32_t coordType = 0;
                 dbus_message_get_args( pMessage, nullptr, DBUS_TYPE_UINT32, &coordType, DBUS_TYPE_INVALID );
@@ -745,11 +745,12 @@ namespace sw
                 int32 originY = 0;
                 if ( coordType == 0 && member != "GetSize" )
                     readWindowOrigin( originX, originY );
-                const int32     x    = static_cast<int32>( node._bounds._x ) + originX;
-                const int32     y    = static_cast<int32>( node._bounds._y ) + originY;
-                const int32     w    = static_cast<int32>( node._bounds._z );
-                const int32     h    = static_cast<int32>( node._bounds._w );
-                DBusMessage*    pRep = dbus_message_new_method_return( pMessage );
+                const float4    client = _ui.getViewport().toClientRect( node._bounds );
+                const int32     x      = static_cast<int32>( client._x ) + originX;
+                const int32     y      = static_cast<int32>( client._y ) + originY;
+                const int32     w      = static_cast<int32>( client._z );
+                const int32     h      = static_cast<int32>( client._w );
+                DBusMessage*    pRep   = dbus_message_new_method_return( pMessage );
                 DBusMessageIter iter;
                 dbus_message_iter_init_append( pRep, &iter );
                 bool bOk = true;

@@ -405,13 +405,10 @@ namespace sw
                     const optional<uint32>         node      = pSnapshot != nullptr ? pSnapshot->findNode( _screen, _widget ) : nullopt;
                     if ( node.has_value() == false || hwnd == nullptr )
                         return makeElementNotAvailable();
-                    const float4&     bounds   = pSnapshot->_listNode[*node]._bounds;
-                    const UIViewport& viewport = _pCore->_pUI->getViewport();
-                    const float64     scale    = viewport._uiScale > 0.0f ? static_cast<float64>( viewport._uiScale ) : 1.0;
-                    POINT             topLeft{ static_cast<LONG>( static_cast<float64>( bounds._x ) * scale ) + viewport._pointerOrigin._x,
-                                   static_cast<LONG>( static_cast<float64>( bounds._y ) * scale ) + viewport._pointerOrigin._y };
+                    const float4 client = _pCore->_pUI->getViewport().toClientRect( pSnapshot->_listNode[*node]._bounds );
+                    POINT        topLeft{ static_cast<LONG>( client._x ), static_cast<LONG>( client._y ) };
                     (void)ClientToScreen( hwnd, &topLeft );
-                    *pRetVal = UiaRect{ static_cast<float64>( topLeft.x ), static_cast<float64>( topLeft.y ), static_cast<float64>( bounds._z ) * scale, static_cast<float64>( bounds._w ) * scale };
+                    *pRetVal = UiaRect{ static_cast<float64>( topLeft.x ), static_cast<float64>( topLeft.y ), static_cast<float64>( client._z ), static_cast<float64>( client._w ) };
                     return S_OK;
                 }
 

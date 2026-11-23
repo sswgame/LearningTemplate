@@ -37,6 +37,19 @@ SW_TEST_CASE( UIAccessibilityTest, SliderRefusesNotANumber )
     SW_EXPECT_EQUAL( 1.0f, slider.getValue() );
 }
 
+/** @brief [UIAccessibilityTest] 알리는 자리는 UI 배율과 게임 뷰의 자리를 옮긴 창 픽셀이다(결함: 리눅스 브리지는 UI 단위를 그대로 알려 배율이 1 이 아니면 강조 상자가 어긋났다) */
+SW_TEST_CASE( UIAccessibilityTest, ClientRectFollowsScaleAndOrigin )
+{
+    UIViewport viewport;
+    viewport._uiScale       = 2.0f;
+    viewport._pointerOrigin = int2{ 30, 40 };
+    const float4 client     = viewport.toClientRect( float4{ 10.0f, 20.0f, 100.0f, 50.0f } );
+    SW_EXPECT_EQUAL( 50.0f, client._x );
+    SW_EXPECT_EQUAL( 80.0f, client._y );
+    SW_EXPECT_EQUAL( 200.0f, client._z );
+    SW_EXPECT_EQUAL( 100.0f, client._w );
+}
+
 /** @brief [UIAccessibilityTest] 점 아래의 요소는 맨 위 화면에서 고르고, 그 화면 안에서 가장 깊은 노드다(결함: 목록 끝부터 골라 겹친 화면에서 아래 화면의 요소를 답했다) */
 SW_TEST_CASE( UIAccessibilityTest, NodeAtPointComesFromTheTopScreen )
 {
