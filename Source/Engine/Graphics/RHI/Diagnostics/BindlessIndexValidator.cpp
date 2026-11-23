@@ -3,6 +3,7 @@
 #include "Engine/Graphics/RHI/Diagnostics/BindlessIndexValidator.h"
 
 #include "Core/Concurrency/mutex.h"
+#include "Core/Container/unordered_map.h"
 #include "Core/Container/unordered_set.h"
 #include "Core/Hash/HashUtil.h"
 
@@ -47,6 +48,9 @@ namespace sw
         unordered_set<BindlessSiteKey> _uniqueReportedSite SW_GUARDED_BY( _mutex );
         unordered_set<BindlessSiteKey> _uniqueAbsentSite   SW_GUARDED_BY( _mutex );
         unordered_set<BindlessSiteKey> _uniqueStrideSite   SW_GUARDED_BY( _mutex );
+
+        mutable shared_mutex                                       _strideMutex;                  ///< 병렬 기록 스레드가 바인드마다 읽으므로 보고 기록과 잠금을 나눈다
+        unordered_map<RHIDescriptorIndex, uint32> _mapBufferStride SW_GUARDED_BY( _strideMutex ); ///< 구조 버퍼 SRV → 원소 바이트 수
     };
 
     bool BindlessIndexValidator::isEnabled()
@@ -76,10 +80,12 @@ namespace sw
         return false;
     }
 
-    bool BindlessIndexValidator::validateStride( const IRHIDevice* pDevice, const hashed_string& passName, const hashed_string& fieldName, uint32 shaderStride, uint32 bufferStride )
+    bool BindlessIndexValidator::validateStride( const IRHIDevice* pDevice, const hashed_string& passName, const hashed_string& fieldName, uint32 shaderStride, RHIDescriptorIndex buffer )
     {
-        const bool bUnknown = pDevice == nullptr || shaderStride == 0 || bufferStride == 0;
-        if ( bUnknown || shaderStride == bufferStride )
+        if ( pDevice == nullptr || shaderStride == 0 )
+            return true;
+        const uint32 bufferStride = pDevice->getBindlessIndexReportLog().getBufferStride( buffer );
+        if ( bufferStride == 0 || shaderStride == bufferStride )
             return true;
         (void)pDevice->getBindlessIndexReportLog().reportStride( passName, fieldName, shaderStride, bufferStride ); // 같은 자리는 한 번만 남긴다
         return false;
@@ -132,6 +138,25 @@ namespace sw
         SW_LOG_ERROR_ID( "RHI.StructuredStrideMismatch", "[BindlessIndex] pass '%#' buffer '%#' was created with %#-byte elements but the shader declares %#-byte elements — element reads are misaligned",
                          passName.empty() ? "<no pass>" : passName.c_str(), fieldName.empty() ? "<unnamed>" : fieldName.c_str(), bufferStride, shaderStride );
         return true;
+    }
+
+    void BindlessIndexReportLog::recordBufferStride( RHIDescriptorIndex buffer, uint32 stride )
+    {
+        ScopedLock<shared_mutex> lock{ _pState->_strideMutex };
+        _pState->_mapBufferStride[buffer] = stride;
+    }
+
+    void BindlessIndexReportLog::removeBufferStride( RHIDescriptorIndex buffer )
+    {
+        ScopedLock<shared_mutex> lock{ _pState->_strideMutex };
+        _pState->_mapBufferStride.erase( buffer );
+    }
+
+    uint32 BindlessIndexReportLog::getBufferStride( RHIDescriptorIndex buffer ) const
+    {
+        ScopedSharedLock<shared_mutex> lock{ _pState->_strideMutex };
+        const auto                     it = _pState->_mapBufferStride.find( buffer );
+        return it != _pState->_mapBufferStride.end() ? it->second : 0u;
     }
 
     uint32 BindlessIndexReportLog::getStrideReportCount() const
