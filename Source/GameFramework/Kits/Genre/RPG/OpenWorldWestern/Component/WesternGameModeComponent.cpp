@@ -25,7 +25,6 @@ namespace sw
     WesternGameModeComponent::WesternGameModeComponent()
         : _westernDataPath{}
         , _player{}
-        , _playerState{}
         , _whistleButton{}
         , _useButton{}
         , _weatherDataPath{}
@@ -96,12 +95,9 @@ namespace sw
         GameStateComponent* pState     = GameStateComponent::openOnOwner( *this, settings );
         if ( pState == nullptr )
             return false; // 까닭은 판 상태가 남겼다
-        const GameObject* const pPlayerState = getObjectManager() != nullptr ? getObjectManager()->resolveGameObject( _playerState ) : nullptr;
+        const GameObject* const pPlayerState = requirePlayerState();
         if ( pPlayerState == nullptr )
-        {
-            SW_LOG_ERROR_ID( "WesternGameMode.PlayerStateMissing", "[Western] Player State does not point at an object (the player controller with the wallet and reputation) - the game cannot open" );
-            return false;
-        }
+            return false; // 까닭은 베이스가 남겼다
         const ReputationCatalog* const pHonor      = &_pWesternCatalog->getHonorReputation();
         ReputationComponent* const     pReputation = PlayerComponentUtil::openOn<ReputationComponent>( *pPlayerState, pHonor );
         WalletComponent* const         pWallet     = PlayerComponentUtil::requireOn<WalletComponent>( *pPlayerState );

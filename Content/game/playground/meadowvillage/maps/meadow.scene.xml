@@ -53,6 +53,17 @@
 				</_listComponent>
 			</GameObject>
 		</entity>
+		<!-- 플레이어 상태 — 조종자 오브젝트가 지갑을 쥔다(디렉터의 _playerState). -->
+		<entity id="9" name="PlayerController">
+			<GameObject _schemaVersion="0" _name="PlayerController" _bActive="true">
+				<_listComponent>
+					<PlayerControllerComponent _localID="4811566279812111972" _playerIndex="0" />
+					<WalletComponent _localID="7280284032837436068" _componentName="WalletComponent" _bActive="true" />
+					<QuestLogComponent _localID="6142667033349566711" _componentName="QuestLogComponent" _bActive="true" />
+					<ReputationComponent _localID="7241694008514979400" _componentName="ReputationComponent" _bActive="true" />
+				</_listComponent>
+			</GameObject>
+		</entity>
 		<entity id="3" name="VillageState">
 			<GameObject _schemaVersion="0" _name="VillageState" _bActive="true">
 				<_listComponent>
@@ -65,12 +76,10 @@
 					                _attachOwnerID="0"
 					                _attachComponent="None" />
 					<GameStateComponent _localID="6673597520240684436" _componentName="GameStateComponent" _bActive="true" />
-					<WalletComponent _localID="7280284032837436068" _componentName="WalletComponent" _bActive="true" />
-					<QuestLogComponent _localID="6142667033349566711" _componentName="QuestLogComponent" _bActive="true" />
-					<ReputationComponent _localID="7241694008514979400" _componentName="ReputationComponent" _bActive="true" />
 					<!-- _stateSettings: 하루 2 분(1 초 = 게임 12 분), 계절 넷 × 28 일, 공유 땅 40 x 40 칸(칸 1 m — 하우징 카탈로그의 칸과 같다, 밭 · 마을 · 집 부지를 덮는다) -->
 					<MeadowFarmGameModeComponent _localID="8448271495034838971" _componentName="MeadowFarmGameModeComponent"
 					                             _bActive="true"
+					                             _playerState="9"
 					                             _bAutoPlay="false"
 					                             _cropDataPath="game/playground/meadowvillage/data/crops.xml"
 					                             _crop="turnip"
@@ -88,6 +97,7 @@
 					</MeadowFarmGameModeComponent>
 					<CreatureTownGameModeComponent _localID="5244519647496677059" _componentName="CreatureTownGameModeComponent"
 					                               _bActive="true"
+					                               _playerState="9"
 					                               _bAutoPlay="false"
 					                               _creatureDataPath="game/playground/meadowvillage/data/creatures.xml"
 					                               _questDataPath="game/playground/meadowvillage/data/quests.xml"

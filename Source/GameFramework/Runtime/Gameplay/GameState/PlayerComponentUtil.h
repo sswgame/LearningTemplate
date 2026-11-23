@@ -2,7 +2,7 @@
  * @file PlayerComponentUtil.h
  * @brief 플레이어 상태 컴포넌트(`WalletComponent` · `InventoryComponent` · `QuestLogComponent` · `ReputationComponent`)의 찾기 · 열기입니다. 늦은 복원은 `DeferredStateRestore`.
  * @details 상태 범위 셋(언리얼 `AGameState` · `APlayerState` · 매치 상태) 가운데 플레이어 몫은 기능마다 컴포넌트 하나로 조종자 오브젝트에 함께 붙는다(Lyra 의
- *          `ULyraInventoryManagerComponent` · `ULyraQuickBarComponent` 처럼 기능마다). 조종자가 없는 디렉터 전용 씬(옛 게임 맵)은 디렉터 오브젝트에 둔다.
+ *          `ULyraInventoryManagerComponent` · `ULyraQuickBarComponent` 처럼 기능마다). 디렉터는 씬 참조 `GameModeComponent::_playerState` 로 그 오브젝트를 받는다.
  *          기능이 없으면 컴포넌트가 없다 — "슬롯 0 이면 가방 없음" 같은 특수 값을 두지 않는다.
  */
 #pragma once
@@ -21,7 +21,7 @@ namespace sw
     /**
      * @struct PlayerComponentUtil
      * @brief 플레이어 상태 컴포넌트 찾기 · 열기입니다. 컴포넌트마다 같은 찾기를 되풀이하지 않게 형식 인자로 받는다.
-     * @details - **디렉터**: 같은 오브젝트에서 `findOnOwner` · `openOnOwner`, 조종자가 있는 씬은 씬 참조로 받은 플레이어 상태 오브젝트에서 `requireOn` · `openOn`(디렉터의 `startGame`).
+     * @details - **디렉터**: `GameModeComponent::requirePlayerState` 의 오브젝트에서 `requireOn` · `openOn`(`startGame`), 뒤에는 `findOnPlayerState`.
      *          - **폰**: `PawnComponent::findControllerObject`(폰 → 쥔 조종자 → 그 오브젝트)의 결과에서 `getComponent<T>` — 형제 `PlayerStateComponent` 와 같은 길.
      *          - **씬 하나를 읽는 도구**(감시 값 · 치트 · 디버그 HUD · 퀘스트 목표 표시): `findOpen` — 열린 것이 둘 이상이면 오류로 멈춘다(어느 플레이어인지 등록 순서로 고르지 않는다).
      *            컴포넌트는 `onRegister` 에서 레지스트리에 올라 있어야 한다.

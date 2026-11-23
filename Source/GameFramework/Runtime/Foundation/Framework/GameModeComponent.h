@@ -53,6 +53,8 @@ namespace sw
      *            씬을 나눠 디렉터를 다른 오브젝트에 두면 PROPERTY `_tickAfter` 로 그 오브젝트의 첫 디렉터 뒤에 규칙을 돌린다.
      *            주 틱은 선행 조건을 받지 못하므로 그때만 규칙을 서브틱(`kRuleSubTick`)으로 옮기고, 그 디렉터의 규칙 틱(`getRuleTickHandle`)을 선행 조건으로 등록한다.
      *            걸지 않은 디렉터는 주 틱 그대로이다.
+     *          - **플레이어 상태**: 지갑 · 가방 · 평판 · 퀘스트 일지는 조종자 오브젝트에 있다(`PlayerComponentUtil`). 그것을 여는 디렉터는 PROPERTY `_playerState` 로 그 오브젝트를 가리킨다
+     *            (`requirePlayerState` — 없으면 판을 열지 않는다). 디렉터 오브젝트에 두지 않는다.
      *          - **다시 읽힌 카탈로그**: 규칙 객체는 카탈로그를 날 포인터로 빌린다. `acquireRequired` · `acquireBoundCatalog` 로 받은 에셋은 베이스가 연 판부터 쥐어 끊기지 않고,
      *            다시 읽히면 규칙 틱 앞에서 상태를 왕복(`writeState` → `readState`)시켜 규칙 객체를 새 판에 다시 묶는다(세이브를 읽는 길 하나 — 항목은 id 로 다시 찾는다).
      *            언리얼 DataTable 행 핸들이 다시 읽힌 표에서 행 이름으로 찾는 자리이다. 왕복이 지면(새 판에 없는 항목) 디렉터의 복원 실패 처리(`onStateRestored( false )`)를 따르고 알린다.
@@ -150,6 +152,8 @@ namespace sw
         [[nodiscard]] bool finishMinigame( const hashed_string& resultName );
         /** @brief 판이 열렸으면(`startGame` 이 성공) true 입니다. */
         bool isStarted() const { return _bStarted == SW_TRUE; }
+        /** @brief 플레이어 상태 오브젝트(`_playerState` — 조종자)입니다. 가리키는 것이 없으면 nullptr 입니다. */
+        const GameObject* findPlayerState() const { return findGameObject( _playerState ); }
         /** @brief 게임이 스스로 돌면 true 입니다(`_bAutoPlay`, 또는 개발 구성에서 게임의 `-gv_<게임>AutoPlay=1`). */
         bool isAutoPlayOn() const;
 
@@ -239,6 +243,14 @@ namespace sw
         {
             TObject* pObject = findGameObject( handle );
             return pObject != nullptr ? pObject->template getComponent<TComponent>() : nullptr;
+        }
+        /** @brief 플레이어 상태 오브젝트입니다. 판을 열 디렉터가 반드시 쓰는 것이라 없으면 오류(`GameMode.PlayerStateMissing`)를 남기고 nullptr 입니다. */
+        [[nodiscard]] const GameObject* requirePlayerState() const;
+        /** @brief 플레이어 상태 오브젝트의 @p TComponent 입니다. 없으면 nullptr 입니다. */
+        template <typename TComponent>
+        TComponent* findOnPlayerState()
+        {
+            return findOn<TComponent>( _playerState );
         }
         /**
          * @brief 판을 여는 데 꼭 필요한 에셋을 공유 캐시에서 받습니다. 경로가 비었거나 읽지 못하면 오류를 남기고 false 입니다.
@@ -345,6 +357,10 @@ namespace sw
         PROPERTY( Category = "Game Mode", DisplayName = "Tick After",
                   Tooltip = "Run this game mode's rules after the game mode on that object (cross-object order; same-object order is the component order)" )
         GameObjectHandle _tickAfter;
+
+        PROPERTY( Category = "Game Mode", DisplayName = "Player State",
+                  Tooltip = "Object that holds the player's wallet, inventory, reputation and quest log (the player controller object); game modes that open one of them do not start without it" )
+        GameObjectHandle _playerState;
 
         vector<GameObjectHandle> _listSpawned;
         vector<PrefabPool>       _listPool;             ///< 풀 정책으로 꺼낸 프리팹의 풀(경로마다 하나). 꺼낸 것은 `_listSpawned` 밖이라 `despawnViews` 가 풀째 지운다

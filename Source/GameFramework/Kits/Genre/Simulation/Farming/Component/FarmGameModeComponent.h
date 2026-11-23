@@ -130,7 +130,7 @@ namespace sw
         static float3 computeTileCenter( int32 x, int32 y );
 
     protected:
-        /** @brief 작물 카탈로그를 읽고 밭과 출하함을 새로 만들며, 같은 오브젝트의 공유 상태를 엽니다(새 판일 때만 시작 돈과 씨앗을 줍니다). */
+        /** @brief 작물 카탈로그를 읽고 밭과 출하함을 새로 만들며, 같은 오브젝트의 판 상태와 플레이어 상태(조종자)의 가방 · 지갑을 엽니다(새 판일 때만 시작 돈과 씨앗을 줍니다). */
         [[nodiscard]] bool startGame() override;
         void               onStateRestored( bool bRestored ) override;
         void               onGameStarted() override;

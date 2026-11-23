@@ -78,8 +78,6 @@ namespace sw
         AssetRef<WesternCatalog> _westernDataPath;
         PROPERTY( Category = "Scene", DisplayName = "Player", Tooltip = "Rider object (pawn with Mount Interaction)" )
         GameObjectHandle _player;
-        PROPERTY( Category = "Scene", DisplayName = "Player State", Tooltip = "Object that holds the player's wallet and reputation (the player controller object)" )
-        GameObjectHandle _playerState;
         PROPERTY( Category = "Control", DisplayName = "Whistle Button", Tooltip = "Intent button on the rider pawn that calls the horses" )
         hashed_string _whistleButton;
         PROPERTY( Category = "Control", DisplayName = "Use Button", Tooltip = "Intent button on the rider pawn that does the deed at the nearest spot" )

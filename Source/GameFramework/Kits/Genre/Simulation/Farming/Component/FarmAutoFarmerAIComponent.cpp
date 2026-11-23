@@ -166,8 +166,9 @@ namespace sw
         const GameObjectManager*     pManager   = pPawnOwner != nullptr ? pPawnOwner->getManager() : nullptr;
         const FarmGameModeComponent* pGameMode  = pManager != nullptr ? GameModeComponent::resolve<FarmGameModeComponent>( *pManager, _gameMode ) : nullptr;
         const GameStateComponent*    pState     = pGameMode != nullptr ? GameStateComponent::findOnOwner( *pGameMode ) : nullptr;
-        const InventoryComponent*    pBag       = pGameMode != nullptr ? PlayerComponentUtil::findOnOwner<InventoryComponent>( *pGameMode ) : nullptr;
-        const WalletComponent*       pWallet    = pGameMode != nullptr ? PlayerComponentUtil::findOnOwner<WalletComponent>( *pGameMode ) : nullptr;
+        const GameObject*            pPlayer    = pGameMode != nullptr ? pGameMode->findPlayerState() : nullptr;
+        const InventoryComponent*    pBag       = pPlayer != nullptr ? pPlayer->getComponent<InventoryComponent>() : nullptr;
+        const WalletComponent*       pWallet    = pPlayer != nullptr ? pPlayer->getComponent<WalletComponent>() : nullptr;
         const bool                   bReady     = pState != nullptr && pBag != nullptr && pWallet != nullptr && pGameMode->isStarted();
         blackboard.setBool( "FarmReady", bReady );
         if ( bReady == false )

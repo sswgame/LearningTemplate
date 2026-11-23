@@ -61,6 +61,9 @@ namespace sw
         uint8                  _bWins    : 1; ///< 다음 판이 우승자를 적는다 — 상태 칸이 아니라 되돌리지 않는다
         [[maybe_unused]] uint8 _reserved : 6;
 
+        /** @brief 판을 열 때 부르는 플레이어 상태 찾기입니다. */
+        const GameObject* requirePlayerStateForTest() const { return requirePlayerState(); }
+
     protected:
         bool startGame() override
         {

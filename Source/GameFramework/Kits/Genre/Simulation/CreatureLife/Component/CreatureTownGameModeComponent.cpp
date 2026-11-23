@@ -37,8 +37,8 @@ namespace sw
     void CreatureTownGameModeComponent::serializeGameState( StateIO& io )
     {
         GameStateComponent*  pState      = io.isReading() ? GameStateComponent::findOnOwner( *this ) : nullptr;
-        ReputationComponent* pReputation = io.isReading() ? PlayerComponentUtil::findOnOwner<ReputationComponent>( *this ) : nullptr;
-        QuestLogComponent*   pQuestLog   = io.isReading() ? PlayerComponentUtil::findOnOwner<QuestLogComponent>( *this ) : nullptr;
+        ReputationComponent* pReputation = io.isReading() ? findOnPlayerState<ReputationComponent>() : nullptr;
+        QuestLogComponent*   pQuestLog   = io.isReading() ? findOnPlayerState<QuestLogComponent>() : nullptr;
         if ( io.check( pState != nullptr && pReputation != nullptr && pQuestLog != nullptr ) == false )
             return;
         io.header( kStateTag, kStateVersion );
@@ -79,10 +79,11 @@ namespace sw
             return false;
         }
         // 지갑은 열기가 없다 — 마을 업그레이드이 쓰므로 판을 열 때 있는지 본다.
-        if ( PlayerComponentUtil::requireOnOwner<WalletComponent>( *this ) == nullptr )
-            return false;
-        QuestLogComponent*   pQuestLog   = PlayerComponentUtil::openOnOwner<QuestLogComponent>( *this, _pQuestCatalog.get() );
-        ReputationComponent* pReputation = PlayerComponentUtil::openOnOwner<ReputationComponent>( *this, _pFriendshipCatalog.get() );
+        const GameObject* const pPlayerState = requirePlayerState();
+        if ( pPlayerState == nullptr || PlayerComponentUtil::requireOn<WalletComponent>( *pPlayerState ) == nullptr )
+            return false; // 까닭은 찾기가 남겼다
+        QuestLogComponent*   pQuestLog   = PlayerComponentUtil::openOn<QuestLogComponent>( *pPlayerState, _pQuestCatalog.get() );
+        ReputationComponent* pReputation = PlayerComponentUtil::openOn<ReputationComponent>( *pPlayerState, _pFriendshipCatalog.get() );
         if ( pQuestLog == nullptr || pReputation == nullptr || initializeTown( _town, *pState, *pReputation, *pQuestLog ) == false )
             return false;
         if ( pState->isFreshGame() && placeObjects( _listStartObject ) == false )
@@ -104,8 +105,8 @@ namespace sw
     {
         (void)deltaTime;
         GameStateComponent* pState    = GameStateComponent::findOnOwner( *this );
-        QuestLogComponent*  pQuestLog = PlayerComponentUtil::findOnOwner<QuestLogComponent>( *this );
-        WalletComponent*    pWallet   = PlayerComponentUtil::findOnOwner<WalletComponent>( *this );
+        QuestLogComponent*  pQuestLog = findOnPlayerState<QuestLogComponent>();
+        WalletComponent*    pWallet   = findOnPlayerState<WalletComponent>();
         if ( pState == nullptr || pQuestLog == nullptr || pWallet == nullptr )
             return;
         const WorldClock&    clock    = pState->getClock();

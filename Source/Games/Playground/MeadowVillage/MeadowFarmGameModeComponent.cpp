@@ -99,9 +99,10 @@ namespace sw
         GameStateComponent* pState = GameStateComponent::openOnOwner( *this, _stateSettings );
         if ( pState == nullptr )
             return false;
-        WalletComponent* pWallet = PlayerComponentUtil::requireOnOwner<WalletComponent>( *this );
+        const GameObject* const pPlayerState = requirePlayerState();
+        WalletComponent* const  pWallet      = pPlayerState != nullptr ? PlayerComponentUtil::requireOn<WalletComponent>( *pPlayerState ) : nullptr;
         if ( pWallet == nullptr )
-            return false;
+            return false; // 까닭은 찾기가 남겼다
         if ( pWallet->isFreshGame() )
             pWallet->getWallet().add( Wallet::getDefaultCurrency(), _startingGold );
         _field.initialize( kFieldWidth, kFieldHeight, _pCropCatalog.get() );
@@ -126,7 +127,7 @@ namespace sw
     {
         (void)deltaTime;
         GameStateComponent* pState  = GameStateComponent::findOnOwner( *this );
-        WalletComponent*    pWallet = PlayerComponentUtil::findOnOwner<WalletComponent>( *this );
+        WalletComponent*    pWallet = findOnPlayerState<WalletComponent>();
         if ( pState == nullptr || pWallet == nullptr )
             return;
         // 키는 입력 맵(`data/gamesettings.xml` 의 입력 맵 묶음)이 정한다. 시계를 미는 것은 밭 디렉터 하나다(마을은 읽기만).

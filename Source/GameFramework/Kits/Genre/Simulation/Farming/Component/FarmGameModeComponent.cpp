@@ -287,10 +287,13 @@ namespace sw
         if ( pState == nullptr )
             return false; // 범위 밖(하루 길이 · 계절 날 수 등)은 판 상태가 오류를 남겼다
         InventorySettings bagSettings;
-        bagSettings._pItemCatalog   = &_itemCatalog;
-        bagSettings._slotCount      = kBagSlotCount;
-        InventoryComponent* pBag    = PlayerComponentUtil::openOnOwner<InventoryComponent>( *this, bagSettings );
-        WalletComponent*    pWallet = PlayerComponentUtil::requireOnOwner<WalletComponent>( *this );
+        bagSettings._pItemCatalog            = &_itemCatalog;
+        bagSettings._slotCount               = kBagSlotCount;
+        const GameObject* const pPlayerState = requirePlayerState();
+        if ( pPlayerState == nullptr )
+            return false; // 까닭은 베이스가 남겼다
+        InventoryComponent* pBag    = PlayerComponentUtil::openOn<InventoryComponent>( *pPlayerState, bagSettings );
+        WalletComponent*    pWallet = PlayerComponentUtil::requireOn<WalletComponent>( *pPlayerState );
         if ( pBag == nullptr || pWallet == nullptr )
             return false;
         _field.initialize( _fieldWidth, _fieldHeight, _pCropCatalog.get() );
@@ -455,7 +458,7 @@ namespace sw
         }
 
         GameStateComponent* pState = GameStateComponent::findOnOwner( *this );
-        InventoryComponent* pBag   = PlayerComponentUtil::findOnOwner<InventoryComponent>( *this );
+        InventoryComponent* pBag   = findOnPlayerState<InventoryComponent>();
         FarmActionResult    result = FarmActionResult::Done;
         switch ( _tool )
         {
@@ -516,7 +519,7 @@ namespace sw
             SW_LOG_INFO_ID( "FarmGameMode.StandNextShippingBin", "[Farm] stand next to the shipping bin to ship" );
             return 0;
         }
-        InventoryComponent* pBag = PlayerComponentUtil::findOnOwner<InventoryComponent>( *this );
+        InventoryComponent* pBag = findOnPlayerState<InventoryComponent>();
         if ( pBag == nullptr )
             return 0;
         Inventory& bag     = pBag->getInventory();
@@ -545,8 +548,8 @@ namespace sw
         const CropDef* pCrop = _pCropCatalog->findCropBySeed( getSelectedSeed() );
         if ( pCrop == nullptr )
             return false;
-        InventoryComponent* pBag    = PlayerComponentUtil::findOnOwner<InventoryComponent>( *this );
-        WalletComponent*    pWallet = PlayerComponentUtil::findOnOwner<WalletComponent>( *this );
+        InventoryComponent* pBag    = findOnPlayerState<InventoryComponent>();
+        WalletComponent*    pWallet = findOnPlayerState<WalletComponent>();
         if ( pBag == nullptr || pWallet == nullptr )
             return false;
         Inventory& bag    = pBag->getInventory();
@@ -569,7 +572,7 @@ namespace sw
     void FarmGameModeComponent::endDay( bool bPassedOut )
     {
         GameStateComponent* pState  = GameStateComponent::findOnOwner( *this );
-        WalletComponent*    pWallet = PlayerComponentUtil::findOnOwner<WalletComponent>( *this );
+        WalletComponent*    pWallet = findOnPlayerState<WalletComponent>();
         if ( pState == nullptr || pWallet == nullptr )
             return;
         WorldClock&                  clock        = pState->getClock();
@@ -605,7 +608,7 @@ namespace sw
             return; // 자동 농부는 씨앗을 하나씩 넘겨 가며 고른다. 그 줄은 로그에 남기지 않는다.
         [[maybe_unused]] const CropDef*            pCrop  = _pCropCatalog->findCropBySeed( getSelectedSeed() );
         [[maybe_unused]] const GameStateComponent* pState = GameStateComponent::findOnOwner( *this );
-        [[maybe_unused]] const InventoryComponent* pBag   = PlayerComponentUtil::findOnOwner<InventoryComponent>( *this );
+        [[maybe_unused]] const InventoryComponent* pBag   = findOnPlayerState<InventoryComponent>();
         SW_LOG_INFO_ID( "FarmGameMode.SeedG", "[Farm] seed: %# (have %#, %#G)%#", getSelectedSeed().c_str(), pBag != nullptr ? pBag->getInventory().getItemCount( getSelectedSeed() ) : 0,
                         pCrop != nullptr ? pCrop->_seedPrice : 0, pCrop != nullptr && pState != nullptr && pCrop->canGrowIn( pState->getClock().getSeasonName() ) ? "" : " - not this season" );
     }
@@ -613,8 +616,8 @@ namespace sw
     void FarmGameModeComponent::logStatus( bool bForce )
     {
         const GameStateComponent* pState  = GameStateComponent::findOnOwner( *this );
-        const InventoryComponent* pBag    = PlayerComponentUtil::findOnOwner<InventoryComponent>( *this );
-        const WalletComponent*    pWallet = PlayerComponentUtil::findOnOwner<WalletComponent>( *this );
+        const InventoryComponent* pBag    = findOnPlayerState<InventoryComponent>();
+        const WalletComponent*    pWallet = findOnPlayerState<WalletComponent>();
         if ( pState == nullptr || pBag == nullptr || pWallet == nullptr )
             return;
         const WorldClock& clock = pState->getClock();

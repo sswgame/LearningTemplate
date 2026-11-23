@@ -1,6 +1,6 @@
 /**
  * @file CityGameModeComponent.h
- * @brief 도시 건설 키트(`GF_CityBuilder`)의 디렉터 — 월드 상태(`GameStateComponent`)를 열고 플레이어 지갑(`WalletComponent`)에 시작 돈을 넣은 뒤, 도시(`CitySimulation`)를 공유 땅 · 지갑 · 시계 위에 돌립니다.
+ * @brief 도시 건설 키트(`GF_CityBuilder`)의 디렉터 — 월드 상태(`GameStateComponent`)를 열고 플레이어 지갑(조종자의 `WalletComponent`)에 시작 돈을 넣은 뒤, 도시(`CitySimulation`)를 공유 땅 · 지갑 · 시계 위에 돌립니다.
  * @details 키트 세 갈래의 가운데다: 규칙(키트 루트, 엔진 시계 · 렌더를 모른다)을 들고 씬과 잇는다. 빨리 감기 입력과 건물 · 도로 모습은 클라이언트 모듈
  *          (`GF_Client_CityBuilder` 의 `CityViewComponent`)이 이 디렉터의 명령 · 읽기 API 로만 다룬다 — 전용 서버는 그 모듈을 짓지 않는다.
  *          땅을 나누는 다른 키트의 디렉터(RTS 등)는 같은 오브젝트에서 이 디렉터 뒤에 붙는다 — 판을 여는 설정은 이 디렉터의 씬 데이터 하나다.
@@ -27,7 +27,7 @@ namespace sw
 
     /**
      * @class CityGameModeComponent
-     * @brief 도시 한 판입니다. 같은 오브젝트의 맨 앞 `GameStateComponent` 를 열고 플레이어 지갑(`WalletComponent`)에 새 판이면 시작 돈을 넣고, 첫 틱에 기념 건물(막힌 땅)과 도로(막히지 않은 땅)를 놓습니다.
+     * @brief 도시 한 판입니다. 같은 오브젝트의 맨 앞 `GameStateComponent` 를 열고 플레이어 지갑(조종자의 `WalletComponent`)에 새 판이면 시작 돈을 넣고, 첫 틱에 기념 건물(막힌 땅)과 도로(막히지 않은 땅)를 놓습니다.
      * @details 도시는 공유 땅을 빌린다(`CitySimulation::bindLand`, 원점 (0, 0)) — 같은 땅을 다른 디렉터가 빌리면 도시가 지은 칸에 그쪽은 짓지 못하고 유닛은 돌아간다.
      *          공유 시계의 날 넘김이 도시의 달 결산이다(`settleMonth`). 빨리 감기 명령(`submitFastForward`)을 받은 동안, 또는 자동 플레이면 시계와 도시가 `_fastTimeScale` 배로 흐른다.
      *          시계를 미는 것은 이 디렉터 하나다. 상태는 도시 하나(구간 'CITY')와 배치를 마쳤는지이고, 돈 · 시계 · 땅은 공유 상태에 있다.
