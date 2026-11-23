@@ -44,7 +44,7 @@ float4 computeMaterialLighting( PixelContext context, MaterialSurface surface )
 {
     const float3 albedo   = ViewMode::overrideLightingAlbedo( surface._albedo.rgb );
     const float3 tangentU = context._tangent.xyz;
-    const float3 tangentV = -cross( context._normal, tangentU ) * context._tangent.w; // 메시 규약: cross( N, T ) × w = −dP/dv
+    const float3 tangentV = -cross( context._normal, tangentU ) * CommonMath::computeBitangentSign( context._tangent.w ); // 메시 규약: cross( N, T ) × w = −dP/dv
 
     HairSurface hair;
     hair._baseColor = albedo;

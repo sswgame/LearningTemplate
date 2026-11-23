@@ -124,8 +124,12 @@ namespace sw
             return;
         }
         // 지역 사본에 읽고 끝까지 맞으면 바꾼다.
+        const AppearanceDatabase* pDatabase = game::findSubsystem<AppearanceDatabase>();
+        if ( io.check( _pShops != nullptr && pDatabase != nullptr ) == false )
+            return;
         Wallet      wallet = _wallet;
-        ShopManager shop   = _shop;
+        ShopManager shop;
+        shop.initialize( _pShops.get(), pDatabase->getItemCatalog() ); // 다시 읽힌 카탈로그면 새 판으로 읽는다
         io.value( wallet );
         io.value( shop );
         if ( io.isOk() == false )

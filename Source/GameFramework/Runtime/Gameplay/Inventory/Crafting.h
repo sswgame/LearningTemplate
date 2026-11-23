@@ -91,12 +91,15 @@ namespace sw
         friend class XMLCatalog<RecipeCatalog>;
 
     public:
+        /** @brief 데이터 종류 이름입니다. 게임 기능이 팩의 `data/recipes.xml` 을 게임 범위에 건다(`GameFeatureScope::loadCatalog`). */
+        static constexpr const utf8* kDataKind = "RecipeCatalog";
         /** @brief 이 에셋 종류의 접미사입니다(종류 표 `AssetTypeRegistry`). 타입 있는 참조 `AssetRef<RecipeCatalog>` 가 접미사로 가른다. */
         static constexpr AssetSuffix kArrAssetSuffix[] = {
             { ".recipes.xml", AssetSuffixRole::Plain },
         };
-        /** @brief 이 에셋 종류입니다(등록은 `Crafting.cpp` 의 줄이 로더를 더한다). */
-        static constexpr AssetTypeDef kAssetType{ "RecipeCatalog", kArrAssetSuffix, static_cast<uint32>( SW_COUNT_OF( kArrAssetSuffix ) ), {}, 0, {} };
+        /** @brief 이 에셋 종류입니다(등록은 `Crafting.cpp` 의 줄이 로더를 더한다). 팩의 `data/recipes.xml` 은 경로 규칙으로 가른다. */
+        static constexpr AssetTypeDef kAssetType =
+            AssetTypeDef{ kDataKind, kArrAssetSuffix, static_cast<uint32>( SW_COUNT_OF( kArrAssetSuffix ) ), {}, 0, {} }.withPathRule( AssetPathRule{ "game/", {}, "/data/recipes.xml" } );
 
         /** @brief @p itemID 를 만드는 레시피 목록입니다. 제작 화면의 "이걸 만들려면" 에 씁니다. */
         void findRecipesFor( const hashed_string& itemID, vector<const RecipeDef*>& outListRecipe ) const;

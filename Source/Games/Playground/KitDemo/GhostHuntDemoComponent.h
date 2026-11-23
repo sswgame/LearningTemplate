@@ -7,7 +7,6 @@
 #pragma once
 #include "Core/Foundation/Types.h"
 
-#include "Engine/Asset/AssetRef.h"
 #include "Engine/Asset/Cache/SharedAssetRef.h"
 #include "Engine/Reflection/ReflectionMacros.h"
 
@@ -46,9 +45,6 @@ namespace sw
         [[nodiscard]] bool runFight();
 
     private:
-        PROPERTY( Category = "Data", DisplayName = "Catalog", Tooltip = "Ghost hunt catalog XML (flashlight, vacuum, ghost)" )
-        AssetRef<GhostCatalog> _catalogPath;
-
         SharedAssetRef<GhostCatalog> _pCatalog;
         PROPERTY( RuntimeState )
         int32 _stunnedCount; ///< 손전등이 기절시킨 유령 수

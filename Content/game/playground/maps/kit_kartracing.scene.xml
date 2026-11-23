@@ -26,8 +26,7 @@
 			<GameObject _schemaVersion="0" _name="Director" _bActive="true">
 				<_listComponent>
 					<KartRacingDemoComponent _localID="13605204887210856222" _componentName="KartRacingDemoComponent"
-					                         _bActive="true"
-					                         _catalogPath="game/playground/data/kitdemo/demo.karttracks.xml" />
+					                         _bActive="true" />
 				</_listComponent>
 			</GameObject>
 		</entity>

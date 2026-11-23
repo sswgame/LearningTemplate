@@ -46,4 +46,23 @@
 	<Redirect from="game/playground/frontiertown/automation/autoplayclock.scenario.xml" to="game/playground/automation/frontiertown_autoplayclock.scenario.xml" />
 	<Redirect from="game/playground/frontiertown/automation/slice.scenario.xml" to="game/playground/automation/frontiertown_slice.scenario.xml" />
 	<Redirect from="game/playground/frontiertown/data/frontier.settings.xml" to="game/playground/data/playground.settings.xml" />
+	<Redirect from="game/playground/data/kitdemo/demo.fighters.xml" to="game/playground/data/fighters.xml" />
+	<Redirect from="game/playground/data/kitdemo/demo.restaurant.xml" to="game/playground/data/restaurant.xml" />
+	<Redirect from="game/playground/data/kitdemo/demo.recipes.xml" to="game/playground/data/recipes.xml" />
+	<Redirect from="game/playground/data/kitdemo/demo.conquest.xml" to="game/playground/data/conquest.xml" />
+	<Redirect from="game/playground/data/kitdemo/demo.actionplatformer.xml" to="game/playground/data/actionplatformer.xml" />
+	<Redirect from="game/playground/data/kitdemo/demo.srpg.xml" to="game/playground/data/srpg.xml" />
+	<Redirect from="game/playground/data/kitdemo/demo.asymhorror.xml" to="game/playground/data/asymhorror.xml" />
+	<Redirect from="game/playground/data/kitdemo/demo.battleroyale.xml" to="game/playground/data/battleroyale.xml" />
+	<Redirect from="game/playground/data/kitdemo/demo.deckbattle.xml" to="game/playground/data/deckbattle.xml" />
+	<Redirect from="game/playground/data/kitdemo/demo.jrpg.xml" to="game/playground/data/jrpg.xml" />
+	<Redirect from="game/playground/data/kitdemo/demo.scavenger.xml" to="game/playground/data/scavenger.xml" />
+	<Redirect from="game/playground/data/kitdemo/demo.ghosts.xml" to="game/playground/data/ghosts.xml" />
+	<Redirect from="game/playground/data/kitdemo/demo.karttracks.xml" to="game/playground/data/karttracks.xml" />
+	<Redirect from="game/playground/data/kitdemo/demo.mechs.xml" to="game/playground/data/mechs.xml" />
+	<Redirect from="game/playground/data/kitdemo/demo.metroidvania.xml" to="game/playground/data/metroidvania.xml" />
+	<Redirect from="game/playground/data/kitdemo/demo.monstercollector.xml" to="game/playground/data/monstercollector.xml" />
+	<Redirect from="game/playground/data/kitdemo/demo.monsterhunt.xml" to="game/playground/data/monsterhunt.xml" />
+	<Redirect from="game/playground/data/kitdemo/demo.partyrounds.xml" to="game/playground/data/partyrounds.xml" />
+	<Redirect from="game/playground/data/kitdemo/demo.horror.xml" to="game/playground/data/horror.xml" />
 </Redirects>

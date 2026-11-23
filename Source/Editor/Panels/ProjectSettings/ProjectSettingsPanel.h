@@ -58,6 +58,11 @@ namespace sw::editor
         /** @brief 고친 설정 파일들(`ProjectSettingsPage::_absolutePath`)입니다 — `saveDocument` 가 고친 페이지만 쓴다. */
         void collectFilesToSave( vector<string>& outListPath ) const override;
         void revertDocument() override;
+        /** @brief 고친 설정 파일 하나의 저장 글입니다(`ProjectSettingsPage::tryMakeText`). */
+        [[nodiscard]] expected<string> tryMakeFileText( string_view absolutePath ) const override;
+        [[nodiscard]] bool             isEditingFile( string_view absolutePath ) override;
+        /** @brief 설정 파일 하나의 사본 글을 그 페이지에 입히고 고릅니다. 되돌리기 단계는 버립니다. */
+        [[nodiscard]] bool applyFileText( string_view absolutePath, const string& text ) override;
 
     private:
         using Page = ProjectSettingsPage;
@@ -66,10 +71,12 @@ namespace sw::editor
         void reloadCatalog();
         void onPropertyEdited( const PropertyInfo& prop );
         void refreshDirtyState();
-        void drawPageList();
-        void drawPageDetail( Page& page );
-        void drawPageActions( Page& page );
-        void selectPage( Page& page );
+        /** @brief 파일 @p absolutePath 의 페이지입니다. 목록에 없으면 nullptr 입니다. */
+        Page* findPage( string_view absolutePath ) const;
+        void  drawPageList();
+        void  drawPageDetail( Page& page );
+        void  drawPageActions( Page& page );
+        void  selectPage( Page& page );
         /** @brief 표 단계가 @p page 의 문서를 움직인 뒤 초안 · 미저장 표시를 맞춥니다(`ProjectSettingsTableHistory`). */
         void onTableUndoMoved( Page& page );
 

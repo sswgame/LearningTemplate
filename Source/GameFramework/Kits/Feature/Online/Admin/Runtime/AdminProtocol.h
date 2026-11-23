@@ -217,6 +217,8 @@ namespace sw
         PROPERTY( MaxCount = OnlineLimit::kMaxKeySize )
         string _nextCursor{};
         PROPERTY()
+        AccountID _targetAccountID{ kInvalidAccountID }; ///< 요청이 가리킨 계정(`AdminRequest::_accountID`)이다. 답이 늦거나 섞여 와도 어느 계정의 명령인지 답이 안다
+        PROPERTY()
         int32 _processedCount{ 0 }; ///< BulkMail 에서 이번에 새로 보낸 수이다
         PROPERTY()
         AdminRole _targetRole{ AdminRole::None };

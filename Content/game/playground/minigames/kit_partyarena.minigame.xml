@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
 <?asset guid="3aee15d1af1846d0a1392b10660b58f6"?>
 <!--
-  장르 키트 시연 미니게임 — PartyArena 키트. 키트는 게임 기능으로 걸 것이 없다(등록하지 않는다) — 맵의 시연 컴포넌트(GameModeComponent 파생)가 판을 돌린다.
+  장르 키트 시연 미니게임 — PartyArena 키트. 맵의 시연 컴포넌트(GameModeComponent 파생)가 읽는 라운드 · 순위 점수(data/partyrounds.xml)를 게임 기능 PartyArena 가 미니게임 범위에 건다.
   시나리오 automation/kit_partyarena.scenario.xml 이 실행 전역 변수 gv_firstMinigame 로 들어간다.
 -->
-<Minigame name="kit_partyarena" map="game/playground/maps/kit_partyarena.scene.xml" entry="SceneSwitch"/>
+<Minigame name="kit_partyarena" map="game/playground/maps/kit_partyarena.scene.xml" entry="SceneSwitch" features="PartyArena" catalogs="PartyRoundSeries"/>

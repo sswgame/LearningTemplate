@@ -186,6 +186,21 @@ namespace sw::editor
         outListPath.push_back( EditorGlobalVariableCommands::getSessionPresetPath() );
     }
 
+    bool GlobalVariablesViewModel::isSessionFile( string_view absolutePath )
+    {
+        return FileUtil::isSameDiskPath( EditorGlobalVariableCommands::getSessionPresetPath(), absolutePath );
+    }
+
+    string GlobalVariablesViewModel::makeSessionText()
+    {
+        return EditorGlobalVariableCommands::makeSessionPresetText();
+    }
+
+    bool GlobalVariablesViewModel::applySessionText( string_view text )
+    {
+        return EditorGlobalVariableCommands::applyPresetText( text );
+    }
+
     const EnumInfo* GlobalVariablesViewModel::findEnumInfo( const string& enumType )
     {
         return enumType.empty() == false ? editor::getSubsystem<TypeRegistry>().findEnum( hashed_string( enumType.c_str() ) ) : nullptr;

@@ -26,8 +26,7 @@
 			<GameObject _schemaVersion="0" _name="Director" _bActive="true">
 				<_listComponent>
 					<MonsterHuntRPGDemoComponent _localID="17460984371286620264" _componentName="MonsterHuntRPGDemoComponent"
-					                             _bActive="true"
-					                             _catalogPath="game/playground/data/kitdemo/demo.monsterhunt.xml" />
+					                             _bActive="true" />
 				</_listComponent>
 			</GameObject>
 		</entity>

@@ -120,11 +120,13 @@ namespace sw
             if ( bindService( pCatalog ) == false ) // const 칸이다 — 찾는 쪽은 `game::findSubsystem<const TCatalog>()`
                 return false;
             const SharedAssetRef<TCatalog>* const pFollowed = pRef.get();
+            _listHeldObject.push_back( pFollowed->snapshot() );
             _listFollow.push_back( SW_DELEGATE_LAMBDA( Delegate<void()>, [this, pFollowed]()
             {
                 const TCatalog* const pLatest = pFollowed->get();
                 if ( pLatest == nullptr || _gameScope.find<const TCatalog>() == pLatest )
                     return;
+                _listHeldObject.push_back( pFollowed->snapshot() ); // 앞 판도 끌 때까지 쥔다 — 칸에서 찾은 날 포인터를 든 쪽이 끊기지 않게
                 _gameScope.unbind<const TCatalog>();
                 (void)_gameScope.bind( pLatest ); // 방금 푼 칸이라 겹치지 않는다 — 끌 때의 풀기(위 `bindService` 의 되돌릴 일)는 타입으로 푼다
             } ) );

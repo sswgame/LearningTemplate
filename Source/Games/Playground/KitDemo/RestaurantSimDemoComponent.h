@@ -7,7 +7,6 @@
 #pragma once
 #include "Core/Foundation/Types.h"
 
-#include "Engine/Asset/AssetRef.h"
 #include "Engine/Asset/Cache/SharedAssetRef.h"
 #include "Engine/Reflection/ReflectionMacros.h"
 
@@ -47,11 +46,6 @@ namespace sw
         [[nodiscard]] bool runDay();
 
     private:
-        PROPERTY( Category = "Data", DisplayName = "Catalog", Tooltip = "Restaurant catalog XML (menu, customers)" )
-        AssetRef<RestaurantCatalog> _catalogPath;
-        PROPERTY( Category = "Data", DisplayName = "Recipes", Tooltip = "Recipe catalog XML the menu dishes cook from" )
-        AssetRef<RecipeCatalog> _catalog;
-
         SharedAssetRef<RestaurantCatalog> _pCatalog;
         SharedAssetRef<RecipeCatalog>     _pRecipeCatalog;
         PROPERTY( RuntimeState )

@@ -72,6 +72,12 @@ namespace sw
 
         static constexpr int32 kWeaponCount = 3;
 
+        /**
+         * @brief 폰의 의도가 고른 무기 슬롯입니다 — 버튼 Weapon1..3 은 그 슬롯, SwitchWeapon 은 같은 이름 아날로그의 부호대로 앞 · 뒤로 한 칸(끝에서 돈다).
+         * @return 발동한 것이 없거나 방향이 0 이면 @p currentSlot 그대로입니다. 둘 다 발동하면 SwitchWeapon 이 이긴다.
+         */
+        [[nodiscard]] static int32 chooseWeaponSlot( const PawnComponent& pawn, int32 currentSlot );
+
         ShooterPlayerComponent();
         virtual ~ShooterPlayerComponent() override;
 
@@ -195,7 +201,7 @@ namespace sw
          * @details 목록 길이가 슬롯 수와 다르거나 id 가 무기 카탈로그에 없거나 그 무기에 `item` 이 없으면 오류를 남기고 false 다. 다른 무기로 대체하지 않는다.
          */
         [[nodiscard]] bool equipWeapons();
-        /** @brief 의도의 무기 버튼(Weapon1..3, SwitchWeapon 과 그 아날로그의 부호로 다음과 이전을 구분)과 Reload 를 무기에 반영합니다. */
+        /** @brief 의도의 무기 버튼(`chooseWeaponSlot`)과 Reload 를 무기에 반영합니다. */
         void applyWeaponIntent( const PawnComponent& pawn );
         /** @brief 같은 오브젝트의 몸 이동입니다. 없으면 nullptr 입니다. */
         ShooterBodyMovementComponent* findMovement() const;

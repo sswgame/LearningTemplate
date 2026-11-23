@@ -7,7 +7,6 @@
 #pragma once
 #include "Core/Foundation/Types.h"
 
-#include "Engine/Asset/AssetRef.h"
 #include "Engine/Asset/Cache/SharedAssetRef.h"
 #include "Engine/Reflection/ReflectionMacros.h"
 
@@ -45,9 +44,6 @@ namespace sw
         [[nodiscard]] bool runSession();
 
     private:
-        PROPERTY( Category = "Data", DisplayName = "Catalog", Tooltip = "Survival horror catalog XML (rules, item, monster)" )
-        AssetRef<SurvivalHorrorCatalog> _catalogPath;
-
         SharedAssetRef<SurvivalHorrorCatalog> _pCatalog;
         PROPERTY( RuntimeState )
         int32 _sanity; ///< 한 바퀴 뒤 정신력

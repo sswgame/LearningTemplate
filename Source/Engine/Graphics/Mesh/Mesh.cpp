@@ -55,6 +55,10 @@ namespace sw
                                SW_OFFSET_OF( RHIVertex, _arrUV ) == sizeof( float32 ) * 6 && kWeldKeyBytes == sizeof( float32 ) * 8,
                            "탄젠트 묶기 키는 RHIVertex 앞쪽의 위치 · 노멀 · UV 다 — 멤버 순서를 바꾸면 키를 다시 정한다" );
 
+            /** @brief 묶는 키의 앞쪽 — 위치만의 바이트 수입니다. */
+            static constexpr size_t kPositionKeyBytes = SW_OFFSET_OF( RHIVertex, _arrNormal );
+
+            static bool isSamePosition( const RHIVertex& lhs, const RHIVertex& rhs ) { return Memory::compare( &lhs, &rhs, kPositionKeyBytes ) == 0; }
             static bool isSameWeldKey( const RHIVertex& lhs, const RHIVertex& rhs ) { return Memory::compare( &lhs, &rhs, kWeldKeyBytes ) == 0; }
 
             /** @brief 정점 번호를 묶는 키(바이트) 순서로 세웁니다. 같은 키가 이웃하게 됩니다. */
@@ -70,6 +74,32 @@ namespace sw
                     return lhs < rhs; // 같은 키 안에서는 번호 순 — 정렬 결과가 결정적이다
                 }
             };
+
+            /** @brief 삼각형의 변 하나입니다 — 위치 번호 쌍(작은 쪽이 앞)과 그 끝의 묶음 번호입니다. */
+            struct WeldEdge
+            {
+                uint32 _positionLow{ 0 };
+                uint32 _positionHigh{ 0 };
+                uint32 _weldLow{ 0 };
+                uint32 _weldHigh{ 0 };
+            };
+            static bool isWeldEdgeLess( const WeldEdge& lhs, const WeldEdge& rhs )
+            {
+                if ( lhs._positionLow != rhs._positionLow )
+                    return lhs._positionLow < rhs._positionLow;
+                if ( lhs._positionHigh != rhs._positionHigh )
+                    return lhs._positionHigh < rhs._positionHigh;
+                if ( lhs._weldLow != rhs._weldLow )
+                    return lhs._weldLow < rhs._weldLow;
+                return lhs._weldHigh < rhs._weldHigh;
+            }
+            /** @brief 이음매가 아닌 변이 잇는 묶음 둘입니다. */
+            struct WeldLink
+            {
+                uint32 _from{ 0 };
+                uint32 _to{ 0 };
+            };
+            static bool isWeldLinkLess( const WeldLink& lhs, const WeldLink& rhs ) { return lhs._from != rhs._from ? lhs._from < rhs._from : lhs._to < rhs._to; }
 
             /** @brief 두 모서리 사이 각도(라디안)입니다. 길이가 0 인 모서리는 0 입니다. */
             static float32 computeCornerAngle( const float3& toNext, const float3& toPrev )
@@ -505,6 +535,148 @@ namespace sw
                 MeshInternal::storeTangent( inoutListVertex[vertexIndex], arrGroupTangent[side], arrGroupBitangent[side] );
             }
             groupStart = groupEnd;
+        }
+
+        // 3) 이음매 — 같은 위치에 키(노멀 · UV)가 다른 정점이 있으면 그 위치의 정점 모두에 표시한다. 키가 위치로 시작하므로 위치가 같은 정점은 정렬 순서에서 이웃한다.
+        groupStart = 0;
+        while ( groupStart < vertexCount )
+        {
+            uint32 groupEnd = groupStart + 1;
+            while ( groupEnd < vertexCount && MeshInternal::isSamePosition( inoutListVertex[listOrder[groupStart]], inoutListVertex[listOrder[groupEnd]] ) )
+            {
+                ++groupEnd;
+            }
+            const bool bSeam = MeshInternal::isSameWeldKey( inoutListVertex[listOrder[groupStart]], inoutListVertex[listOrder[groupEnd - 1]] ) == false;
+            for ( uint32 orderIndex = groupStart; bSeam && orderIndex < groupEnd; ++orderIndex )
+            {
+                float32& tangentW = inoutListVertex[listOrder[orderIndex]]._arrTangent[3];
+                tangentW          = RHIVertex::makeSeamTangentW( tangentW, RHIVertex::kSeamEdgeMaskAll ); // 변은 가르지 않았다 — 임포트 · 내장 도형은 `refineSeamEdges` 가 가른다
+            }
+            groupStart = groupEnd;
+        }
+    }
+
+    void Mesh::refineSeamEdges( vector<RHIVertex>& inoutListVertex, const vector<uint32>& listIndex )
+    {
+        const uint32 vertexCount = static_cast<uint32>( inoutListVertex.size() );
+        // 1) 묶음(위치 · 노멀 · UV 가 같은 정점들)과 위치에 정렬 순서로 번호를 매긴다.
+        vector<uint32> listOrder( vertexCount );
+        for ( uint32 vertexIndex = 0; vertexIndex < vertexCount; ++vertexIndex )
+        {
+            listOrder[vertexIndex] = vertexIndex;
+        }
+        VectorUtil::sort( listOrder, MeshInternal::WeldLess{ &inoutListVertex } );
+        vector<uint32> listWeld( vertexCount );
+        vector<uint32> listWeldPosition;
+        vector<uint8>  listSeamPosition;
+        for ( uint32 orderIndex = 0; orderIndex < vertexCount; ++orderIndex )
+        {
+            const uint32 vertexIndex  = listOrder[orderIndex];
+            const bool   bNewPosition = orderIndex == 0 || MeshInternal::isSamePosition( inoutListVertex[listOrder[orderIndex - 1]], inoutListVertex[vertexIndex] ) == false;
+            const bool   bNewWeld     = bNewPosition || MeshInternal::isSameWeldKey( inoutListVertex[listOrder[orderIndex - 1]], inoutListVertex[vertexIndex] ) == false;
+            if ( bNewPosition )
+                listSeamPosition.push_back( uint8{ 0 } );
+            else if ( bNewWeld )
+                listSeamPosition.back() = 1; // 한 위치에 묶음이 둘 이상
+            if ( bNewWeld )
+                listWeldPosition.push_back( static_cast<uint32>( listSeamPosition.size() - 1 ) );
+            listWeld[vertexIndex] = static_cast<uint32>( listWeldPosition.size() - 1 );
+        }
+
+        // 2) 변을 위치 쌍으로 모은다 — 한 위치 쌍에 묶음 쌍이 둘 이상이면 양쪽 UV · 노멀이 다른 이음매 변이다(끝점 하나만 갈린 다트의 끝 포함).
+        vector<MeshInternal::WeldEdge> listEdge;
+        listEdge.reserve( listIndex.size() );
+        for ( size_t triangleStart = 0; triangleStart + 2 < listIndex.size(); triangleStart += 3 )
+        {
+            for ( size_t corner = 0; corner < 3; ++corner )
+            {
+                const uint32 from = listIndex[triangleStart + corner];
+                const uint32 to   = listIndex[triangleStart + ( corner + 1 ) % 3];
+                if ( from >= vertexCount || to >= vertexCount )
+                    continue; // 범위 밖 번호는 `setGeometry` 가 거절한다 — 여기서는 읽지 않기만 한다
+                const uint32 fromPosition = listWeldPosition[listWeld[from]];
+                const uint32 toPosition   = listWeldPosition[listWeld[to]];
+                if ( fromPosition < toPosition )
+                    listEdge.push_back( MeshInternal::WeldEdge{ fromPosition, toPosition, listWeld[from], listWeld[to] } );
+                else if ( toPosition < fromPosition )
+                    listEdge.push_back( MeshInternal::WeldEdge{ toPosition, fromPosition, listWeld[to], listWeld[from] } );
+            }
+        }
+        VectorUtil::sort( listEdge, &MeshInternal::isWeldEdgeLess );
+        vector<MeshInternal::WeldEdge> listSeamEdge;
+        vector<MeshInternal::WeldLink> listLink; // 이음매가 아닌 변이 잇는 묶음 쌍(양쪽 방향)
+        size_t                         groupStart = 0;
+        while ( groupStart < listEdge.size() )
+        {
+            const size_t firstSeam = listSeamEdge.size();
+            size_t       groupEnd  = groupStart;
+            for ( ; groupEnd < listEdge.size() && listEdge[groupEnd]._positionLow == listEdge[groupStart]._positionLow && listEdge[groupEnd]._positionHigh == listEdge[groupStart]._positionHigh; ++groupEnd )
+            {
+                const bool bRepeated = groupEnd > groupStart && MeshInternal::isWeldEdgeLess( listEdge[groupEnd - 1], listEdge[groupEnd] ) == false;
+                if ( bRepeated == false )
+                    listSeamEdge.push_back( listEdge[groupEnd] );
+            }
+            if ( listSeamEdge.size() - firstSeam == 1 )
+            {
+                const MeshInternal::WeldEdge edge = listSeamEdge.back(); // 묶음 쌍이 하나 — 이음매가 아니다
+                listSeamEdge.pop_back();
+                listLink.push_back( MeshInternal::WeldLink{ edge._weldLow, edge._weldHigh } );
+                listLink.push_back( MeshInternal::WeldLink{ edge._weldHigh, edge._weldLow } );
+            }
+            else
+            {
+                listSeamPosition[listEdge[groupStart]._positionLow]  = 1;
+                listSeamPosition[listEdge[groupStart]._positionHigh] = 1;
+            }
+            groupStart = groupEnd;
+        }
+        VectorUtil::sort( listLink, &MeshInternal::isWeldLinkLess );
+        vector<uint32> listLinkStart( listWeldPosition.size() + 1, 0u );
+        for ( const MeshInternal::WeldLink& link : listLink )
+        {
+            ++listLinkStart[link._from + 1];
+        }
+        for ( size_t weld = 1; weld < listLinkStart.size(); ++weld )
+        {
+            listLinkStart[weld] += listLinkStart[weld - 1];
+        }
+
+        // 3) 이음매 변마다 두 끝이 나눠 갖는 비트를 고른다 — 이음매가 아닌 변으로 이어진 묶음이 가진 비트는 피한다(그 변이 이음매로 읽히지 않게). 비트가 모자라면 겹친다: 그 안쪽 변도
+        //    한 칸 눌릴 뿐 틈은 없다.
+        vector<uint32> listMask( listWeldPosition.size(), 0u );
+        const auto     collectLinkedMask = [&]( uint32 weld )
+        {
+            uint32 linkedMask = 0;
+            for ( uint32 linkIndex = listLinkStart[weld]; linkIndex < listLinkStart[weld + 1]; ++linkIndex )
+            {
+                linkedMask |= listMask[listLink[linkIndex]._to];
+            }
+            return linkedMask;
+        };
+        for ( const MeshInternal::WeldEdge& edge : listSeamEdge )
+        {
+            uint32& lowMask  = listMask[edge._weldLow];
+            uint32& highMask = listMask[edge._weldHigh];
+            if ( ( lowMask & highMask ) != 0u )
+                continue;
+            const uint32 allowedMask = RHIVertex::kSeamEdgeMaskAll & ~( collectLinkedMask( edge._weldLow ) | collectLinkedMask( edge._weldHigh ) );
+            const uint32 reusedMask  = allowedMask & ( lowMask | highMask );
+            const uint32 chosenMask  = reusedMask != 0u ? reusedMask : allowedMask != 0u ? allowedMask
+                                                                                         : RHIVertex::kSeamEdgeMaskAll;
+            const uint32 bit         = chosenMask & ( 0u - chosenMask ); // 가장 낮은 비트
+            lowMask |= bit;
+            highMask |= bit;
+        }
+
+        // 4) 이음매 위치의 정점 모두에 자기 묶음의 비트를 적는다.
+        for ( uint32 vertexIndex = 0; vertexIndex < vertexCount; ++vertexIndex )
+        {
+            float32&     tangentW = inoutListVertex[vertexIndex]._arrTangent[3];
+            const uint32 weld     = listWeld[vertexIndex];
+            if ( listSeamPosition[listWeldPosition[weld]] != 0 )
+                tangentW = RHIVertex::makeSeamTangentW( tangentW, listMask[weld] );
+            else
+                tangentW = tangentW < 0.0f ? -1.0f : 1.0f;
         }
     }
 

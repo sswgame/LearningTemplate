@@ -311,6 +311,13 @@ namespace sw
          *          UV 가 퇴화해(면적 0) 기울기가 없는 정점은 노멀에 수직이고 +X 에 가장 가까운 방향을 받는다(노멀이 X 축이면 +Z). 셰이더의 노멀 맵은 평평한 맵에서 노멀을 그대로 낸다.
          */
         static void computeTangents( vector<RHIVertex>& inoutListVertex, const vector<uint32>& listIndex );
+        /**
+         * @brief `computeTangents` 가 표시한 이음매 정점에 변 묶음을 적어 이음매 변과 안쪽 변을 두 끝점만으로 가르게 합니다(`RHIVertex::isSeamEdge`).
+         * @details 헐 셰이더는 이웃 삼각형을 모른다 — 변을 가르려면 두 끝점의 값뿐이다. 이음매 변마다 두 끝이 비트 하나를 나눠 갖고, 이음매가 아닌 변으로 이어진 정점과는 비트를 나누지 않는다
+         *          (그래프 색칠, 비트 6 개). 끝점 하나만 갈린 이음매 변(다트의 끝)의 다른 끝도 이음매 정점이 된다. 정렬이 들어 임포트(`.mesh` 쓰기) · 내장 도형만 부른다 — 런타임에 짓는 메시는
+         *          모든 비트(두 끝이 이음매면 이음매 변)로 둔다.
+         */
+        static void refineSeamEdges( vector<RHIVertex>& inoutListVertex, const vector<uint32>& listIndex );
         /** @brief 삼각형 목록 정점(인덱스 0..n-1)의 탄젠트를 구합니다. */
         static void computeTangents( vector<RHIVertex>& inoutListVertex );
         /** @brief 삼각형 목록(정점 셋이 삼각형 하나)의 인덱스 0..@p vertexCount-1 입니다. */
