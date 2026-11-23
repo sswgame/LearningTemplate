@@ -1,8 +1,0 @@
-{
-    "_packRoot": "game/playground/harvestvalley",
-    "_cookRules": {
-        "_listEntryIDField": [
-            { "_field": "_listVillagerPreset", "_kind": "preset" }
-        ]
-    }
-}
