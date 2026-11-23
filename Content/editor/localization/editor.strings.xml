@@ -9350,6 +9350,11 @@
 				<item>Source/Editor/Panels/Settings/ShortcutsPanel.cpp</item>
 			</origins>
 		</entry>
+		<entry key="EditorSettings.ReadingModules" source="Reading modules...">
+			<origins>
+				<item>Source/Editor/Panels/Settings/ModulesPanel.cpp</item>
+			</origins>
+		</entry>
 		<entry key="EditorSettings.RefreshModules" source="Read the module catalog from the module folder again">
 			<origins>
 				<item>Source/Editor/Panels/Settings/ModulesPanel.cpp</item>

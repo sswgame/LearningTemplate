@@ -3381,6 +3381,7 @@
 		<entry key="EditorSettings.PressKeyCombo"
 		       text="키 조합을 누르세요 (Esc 취소, Backspace 지우기)"
 		       sourceHash="4b8174992656914e" />
+		<entry key="EditorSettings.ReadingModules" text="모듈을 읽는 중..." sourceHash="d2ea96fb1e8e4f1c" />
 		<entry key="EditorSettings.RefreshModules"
 		       text="모듈 폴더에서 모듈 카탈로그를 다시 읽습니다"
 		       sourceHash="518176e49db04850" />

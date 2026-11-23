@@ -192,16 +192,16 @@ SW_TEST_CASE_F( ModulesViewModelTest, FailedReloadDropsTheOldResolution )
     SW_EXPECT_EQUAL( size_t{ 0 }, _model.getCatalog().getManifestCount() );
 }
 
-// 결함: "읽었는가" 를 매니페스트 수로 가려, 빈 폴더는 그리기마다 폴더를 다시 읽었다.
-SW_TEST_CASE( ModulesViewModelLoadTest, EmptyFolderIsNotReadAgain )
+// 결함: "읽었는가" 를 매니페스트 수로 가려, 빈 폴더는 그리기마다 폴더를 다시 읽었다 — 패널은 `isReady` 가 아닐 때만 요청한다.
+SW_TEST_CASE( ModulesViewModelLoadTest, EmptyFolderCountsAsRead )
 {
     const AbsolutePath folder = test::makeScratchPath( "Empty" );
     SW_REQUIRE_TRUE( FileUtil::ensureDirectoryExists( folder ) );
     ModulesViewModel model;
+    SW_EXPECT_FALSE( model.isReady() );
     model.reloadFrom( folder.str() );
+    SW_EXPECT_TRUE( model.isReady() );
     SW_EXPECT_TRUE( model.getLoadError().empty() );
-
-    model.ensureLoaded(); // 다시 읽으면 실행 파일 옆의 진짜 카탈로그를 읽는다
     SW_EXPECT_EQUAL( size_t{ 0 }, model.getCatalog().getManifestCount() );
 }
 

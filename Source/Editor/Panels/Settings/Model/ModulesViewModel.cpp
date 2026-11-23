@@ -50,11 +50,46 @@ namespace sw::editor
                 context._targetMask    = ModuleCatalog::getBuildTargetMask();
                 return context;
             }
+
+            /** @brief 폴더 @p directory 의 카탈로그를 읽고 해석합니다. 실패하면 경고를 남기고 해석을 비웁니다. 워커에서도 부른다(읽는 것은 인자와 빌드 상수뿐이다). */
+            static ModuleCatalogSnapshot loadSnapshot( string_view directory )
+            {
+                ModuleCatalogSnapshot      snapshot;
+                const ModuleResolveContext context = makeResolveContext();
+                expected<void>             loaded  = snapshot._catalog.loadDirectory( directory );
+                if ( loaded.has_value() )
+                    loaded = snapshot._catalog.resolve( context, snapshot._resolution );
+                if ( loaded.has_value() )
+                    return snapshot;
+                snapshot._resolution = ModuleResolution{};
+                StringBuilder<constant::buffer::kMax512> errorBuilder;
+                errorBuilder.appendFormat( "%# (%#)", loaded.error().message(), loaded.error().detail() );
+                snapshot._loadError = string( errorBuilder.view() );
+                SW_LOG_WARNING_ID( "ModulesPanel.ModulesCatalogCouldNot", "Modules: the catalog in %# could not be resolved - %#", string( directory ).c_str(), snapshot._loadError.c_str() );
+                return snapshot;
+            }
         };
     } // namespace
 
+    void ModuleCatalogLoadJob::request( string_view directory )
+    {
+        const uint32 generation = beginRequest( string( directory ) );
+        submitJob( "ModuleCatalogLoad", SW_DELEGATE_FUNCTION( TaskArgsDelegate, ModuleCatalogLoadJob::runJob ), MakeTaskArgs( _pState, generation ) );
+    }
+
+    void ModuleCatalogLoadJob::runJob( const TaskArgs& args )
+    {
+        const shared_ptr<State> pState     = args.get<shared_ptr<State>>( 0 );
+        const uint32            generation = args.get<uint32>( 1 );
+        string                  directory;
+        if ( readInput( pState, generation, directory ) == false || isStopRaised( readStopSignal( pState ) ) )
+            return;
+        publish( pState, generation, ModulesViewModelInternal::loadSnapshot( directory ) );
+    }
+
     ModulesViewModel::ModulesViewModel()
-        : _catalog{}
+        : _loadJob{}
+        , _catalog{}
         , _resolution{}
         , _loadError{}
         , _selectedModule{}
@@ -69,36 +104,29 @@ namespace sw::editor
     {
     }
 
-    void ModulesViewModel::ensureLoaded()
+    void ModulesViewModel::requestReload()
     {
-        if ( _bLoaded == SW_FALSE )
-            reload();
+        _loadJob.request( ModuleLibraryUtil::getModuleDirectory() );
     }
 
-    void ModulesViewModel::reload()
+    void ModulesViewModel::pollReload()
     {
-        reloadFrom( ModuleLibraryUtil::getModuleDirectory() );
+        ModuleCatalogSnapshot snapshot;
+        if ( _loadJob.take( snapshot ) == EditorTaskPoll::Ready )
+            applySnapshot( std::move( snapshot ) );
     }
 
     void ModulesViewModel::reloadFrom( string_view directory )
     {
-        _bLoaded = SW_TRUE;
-        _catalog = ModuleCatalog{};
-        // 읽기에 실패하면 풀기가 돌지 않는다 — 옛 카탈로그의 해석을 남기지 않는다.
-        _resolution = ModuleResolution{};
-        _loadError.clear();
-        const ModuleResolveContext context = ModulesViewModelInternal::makeResolveContext();
-        expected<void>             loaded  = _catalog.loadDirectory( directory );
-        if ( loaded.has_value() )
-            loaded = _catalog.resolve( context, _resolution );
-        if ( loaded.has_value() == false )
-        {
-            StringBuilder<constant::buffer::kMax512> errorBuilder;
-            errorBuilder.appendFormat( "%# (%#)", string( loaded.error().message().data(), loaded.error().message().size() ), string( loaded.error().detail().data(), loaded.error().detail().size() ) );
-            _loadError = string( errorBuilder.view() );
-        }
-        if ( loaded.has_value() == false )
-            SW_LOG_WARNING_ID( "ModulesPanel.ModulesCatalogCouldNot", "Modules: the catalog in %# could not be resolved - %#", string( directory ).c_str(), _loadError.c_str() );
+        applySnapshot( ModulesViewModelInternal::loadSnapshot( directory ) );
+    }
+
+    void ModulesViewModel::applySnapshot( ModuleCatalogSnapshot&& snapshot )
+    {
+        _catalog    = std::move( snapshot._catalog );
+        _resolution = std::move( snapshot._resolution );
+        _loadError  = std::move( snapshot._loadError );
+        _bLoaded    = SW_TRUE;
     }
 
     string ModulesViewModel::findInactiveReason( const string& name ) const

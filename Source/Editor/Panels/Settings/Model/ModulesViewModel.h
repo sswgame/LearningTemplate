@@ -10,6 +10,8 @@
 #include "Core/Container/vector.h"
 #include "Core/Foundation/Types.h"
 
+#include "Editor/Common/Task/EditorBackgroundTask.h"
+
 #include "Engine/Module/ModuleCatalog.h"
 
 namespace sw::editor
@@ -23,6 +25,28 @@ namespace sw::editor
         On,
         Off,
         Count
+    };
+
+    /** @brief 카탈로그 폴더 하나를 읽고 해석한 결과입니다. */
+    struct ModuleCatalogSnapshot
+    {
+        ModuleCatalog    _catalog{};
+        ModuleResolution _resolution{}; ///< 읽기에 실패하면 비어 있다(옛 해석을 남기지 않는다)
+        string           _loadError{};  ///< 읽기 · 해석이 실패한 까닭. 성공이면 비어 있다
+    };
+
+    /**
+     * @class ModuleCatalogLoadJob
+     * @brief 카탈로그 폴더를 워커에서 읽습니다 — 매니페스트는 모듈마다 파일 하나(100 개 넘음)라 키트가 늘수록 첫 그리기가 느려졌다.
+     */
+    class ModuleCatalogLoadJob final : public EditorBackgroundTask<string, ModuleCatalogSnapshot>
+    {
+    public:
+        /** @brief 워커에 폴더 @p directory 를 읽으라고 요청합니다. */
+        void request( string_view directory );
+
+    private:
+        static void runJob( const TaskArgs& args );
     };
 
     /**
@@ -40,11 +64,13 @@ namespace sw::editor
         // ------------------------------------------------------------------------------
         // 1) 카탈로그
         // ------------------------------------------------------------------------------
-        /** @brief 아직 읽지 않았으면 읽습니다. 패널이 그리기마다 부릅니다 — 읽은 폴더가 비었어도 다시 읽지 않습니다. */
-        void ensureLoaded();
-        /** @brief `Bin/Modules` 의 카탈로그를 다시 읽고 해석합니다. 실패하면 `getLoadError` 가 이유입니다. */
-        void reload();
-        /** @brief `reload` 와 같되 카탈로그 폴더 @p directory 를 받습니다(테스트는 빈 폴더에 매니페스트를 써서 넘긴다). */
+        /** @brief `Bin/Modules` 의 카탈로그를 워커에서 다시 읽고 해석하게 합니다. 결과는 `pollReload` 가 받는다 — 그 앞까지 지난 결과가 남는다. */
+        void requestReload();
+        /** @brief 끝난 다시 읽기를 받아들입니다. 패널이 그리기마다 부릅니다. 실패했으면 `getLoadError` 가 이유입니다. */
+        void pollReload();
+        /** @brief 카탈로그를 한 번 읽었으면 true 입니다(폴더가 비었어도). */
+        bool isReady() const { return _bLoaded == SW_TRUE; }
+        /** @brief 카탈로그 폴더 @p directory 를 이 자리에서 읽고 받아들입니다(테스트는 빈 폴더에 매니페스트를 써서 넘긴다). */
         void                    reloadFrom( string_view directory );
         const string&           getLoadError() const { return _loadError; }
         const ModuleCatalog&    getCatalog() const { return _catalog; }
@@ -97,9 +123,11 @@ namespace sw::editor
         bool hasChangedSinceStart() const { return _bChangedSinceStart; }
 
     private:
+        void               applySnapshot( ModuleCatalogSnapshot&& snapshot );
         [[nodiscard]] bool writeProjectOverride( const string& path );
 
     private:
+        ModuleCatalogLoadJob        _loadJob;
         ModuleCatalog               _catalog;
         ModuleResolution            _resolution;
         string                      _loadError;
