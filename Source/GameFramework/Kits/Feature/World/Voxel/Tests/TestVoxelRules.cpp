@@ -468,6 +468,29 @@ SW_TEST_CASE( VoxelWorldTest, SaveSurvivesCatalogReorder )
     SW_EXPECT_EQUAL( uint32( 0 ), world.countBlocks( sand ) );
 }
 
+// 도는 월드의 카탈로그가 다시 읽히면 디렉터가 상태를 왕복시킨다 — 새 카탈로그에 묶고 읽으면 올라와 있던 청크의 블록 번호도 id 로 다시 짝지어진다.
+SW_TEST_CASE( VoxelWorldTest, RebindingTheCatalogKeepsTheBlocksByID )
+{
+    VoxelFixture rig;
+    rig.layFloor( 2 );
+    SW_REQUIRE_TRUE( rig._world.setBlock( 20, 9, 20, rig._glass ) );
+    const vector<uint8> listSaved = VoxelFixture::save( rig._world );
+
+    VoxelBlockCatalog reordered;
+    for ( const utf8* pID : { "sand", "glass", "water", "stone" } )
+    {
+        VoxelBlockDef block;
+        block._id   = hashed_string( pID );
+        block._name = pID;
+        SW_REQUIRE_TRUE( reordered.addBlock( block ).has_value() );
+    }
+    rig._world.rebindCatalog( reordered );
+    Archive reading( listSaved.data(), listSaved.size() );
+    SW_REQUIRE_TRUE( rig._world.readState( reading ) );
+    SW_EXPECT_TRUE( rig._world.getBlock( 20, 9, 20 ) == reordered.findBlockIndex( hashed_string( "glass" ) ).value() );
+    SW_EXPECT_EQUAL( uint32( 32 * 32 ), rig._world.countBlocks( reordered.findBlockIndex( hashed_string( "stone" ) ).value() ) );
+}
+
 // 지금 카탈로그에 없는 블록 id 는 공기로 바꾸지 않고 세이브를 거절한다.
 SW_TEST_CASE( VoxelWorldTest, SaveWithUnknownBlockIsRefused )
 {

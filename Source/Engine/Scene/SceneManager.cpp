@@ -39,10 +39,16 @@
 
 namespace sw
 {
+    namespace
+    {
+        constexpr int32 kPreloadAheadFrames = 3600; ///< 열기 전에 미리 읽은 씬을 붙드는 기본 프레임 수(60 fps 1 분)
+    } // namespace
+
     SW_GLOBAL_VARIABLE( bool, gv_scenePreload, true, "씬 로드 요청 때 쿠킹이 구운 프리로드 목록(<씬>.preload.json)의 파일을 미리 읽는다 (끄면 씬이 에셋을 잡을 때 읽는다)" );
     SW_GLOBAL_VARIABLE( int32, gv_scenePreloadInFlight, 8, "씬 프리로드가 한 번에 걸어 두는 읽기 요청 수 (프레임에 IO 를 몰지 않는 예산)" );
     SW_GLOBAL_VARIABLE( int32, gv_scenePreloadPinMegabytes, 256, "씬 프리로드가 캐시에 붙드는 에셋 바이트 합의 상한 (MB, 넘으면 오래 안 쓴 것부터 놓는다)" );
     SW_GLOBAL_VARIABLE( int32, gv_scenePreloadHoldFrames, 120, "로드가 끝난 뒤 프리로드를 붙들고 있는 프레임 수 (씬이 에셋을 잡을 시간)" );
+    SW_GLOBAL_VARIABLE( int32, gv_scenePreloadAheadFrames, kPreloadAheadFrames, "열기 전에 미리 읽은 씬(preloadScene)을 열지 않고 붙들고 있는 프레임 수 (지나면 놓는다)" );
     // 언리얼 PIE 가 에디터 데이터로 World Partition 을 스트리밍하는 자리 — 셀은 쿠킹본에만 있어 소스 콘텐츠 실행(개발 · 시나리오)은 셀 경계를 밟지 못한다.
     SW_GLOBAL_VARIABLE( bool, gv_sceneStreamSourceCells, false, "스트리밍하는 씬을 소스(XML)로 열 때 쿠커처럼 메모리에서 셀로 나눠 스트리밍한다 (쿠킹본은 이미 셀이 있다)" );
     SW_GLOBAL_VARIABLE( int32, gv_sceneRegisterComponentsPerFrame, 2000, "비동기로 지은 씬을 받을 때 프레임마다 부르는 컴포넌트 등록 · 로드 뒤 처리 수 (0 = 한 프레임에 모두)" );
@@ -69,9 +75,13 @@ namespace sw
         , _saveBlockReason{}
         , _onSceneObjectsInvalidated{}
         , _onSceneLoadRequested{}
+        , _onWorldPlayChanged{}
         , _netLink{}
         , _pScenePreload{}
         , _preloadHeldFrames{ 0 }
+        , _pAheadPreload{}
+        , _aheadPreloadPath{}
+        , _aheadHeldFrames{ 0 }
         , _leakCheck{}
         , _heldPlaySnapshot{}
     {
@@ -131,6 +141,7 @@ namespace sw
 
         _bInitialized = SW_FALSE;
         _pScenePreload.reset(); // 붙든 에셋을 에셋 매니저가 살아 있는 동안 놓는다
+        _pAheadPreload.reset();
         if ( _queuedPath.empty() == false )
         {
             _queuedPath.clear();
@@ -359,29 +370,58 @@ namespace sw
         return true;
     }
 
-    void SceneManager::beginScenePreload( string_view path )
+    unique_ptr<PreloadSet> SceneManager::makeScenePreload( string_view path )
     {
-        _pScenePreload.reset();
-        _preloadHeldFrames = 0;
         if ( gv_scenePreload == false )
-            return;
+            return nullptr;
         // 목록은 쿠킹이 굽는다 — 쿠킹 전 Dev 실행은 목록이 없고, 그 씬은 예전처럼 에셋을 잡을 때 읽는다.
         const string listPath = ScenePreloadList::makeListPath( path );
         if ( listPath.empty() || AssetIO::hasAsset( AssetID{ listPath } ) == false )
-            return;
+            return nullptr;
         vector<string> listAsset;
         if ( ScenePreloadList::read( AssetID{ listPath }, listAsset ) == false || listAsset.empty() )
-            return; // 읽지 못한 이유는 읽기가 남겼다. 로드는 그대로 간다
-        _pScenePreload = make_unique<PreloadSet>( std::move( listAsset ), StreamingPriority::Normal, static_cast<uint32>( MathUtil::max( static_cast<int32>( gv_scenePreloadInFlight ), 1 ) ) );
+            return nullptr; // 읽지 못한 이유는 읽기가 남겼다. 로드는 그대로 간다
+        unique_ptr<PreloadSet> pPreload = make_unique<PreloadSet>( std::move( listAsset ), StreamingPriority::Normal, static_cast<uint32>( MathUtil::max( static_cast<int32>( gv_scenePreloadInFlight ), 1 ) ) );
         if ( _services._pAssetManager != nullptr )
-            _pScenePreload->enablePinning( *_services._pAssetManager, static_cast<uint64>( MathUtil::max( static_cast<int32>( gv_scenePreloadPinMegabytes ), 0 ) ) * constant::memory::kBytesPerMegabyte );
+            pPreload->enablePinning( *_services._pAssetManager, static_cast<uint64>( MathUtil::max( static_cast<int32>( gv_scenePreloadPinMegabytes ), 0 ) ) * constant::memory::kBytesPerMegabyte );
+        return pPreload;
+    }
+
+    void SceneManager::beginScenePreload( string_view path )
+    {
+        _preloadHeldFrames = 0;
+        // 미리 읽던 씬이면 그 세트를 이어받고, 다른 씬이면 놓는다 — 붙든 파일이 새 씬의 몫을 밀어내지 않게.
+        if ( _pAheadPreload != nullptr && _aheadPreloadPath == path )
+            _pScenePreload = std::move( _pAheadPreload );
+        else
+            _pScenePreload = makeScenePreload( path );
+        _pAheadPreload.reset();
+    }
+
+    bool SceneManager::preloadScene( string_view path )
+    {
+        if ( _pAheadPreload == nullptr || _aheadPreloadPath != path )
+        {
+            _pAheadPreload    = makeScenePreload( path );
+            _aheadPreloadPath = string( path );
+        }
+        _aheadHeldFrames = 0;
+        return _pAheadPreload != nullptr;
     }
 
     void SceneManager::updateScenePreload()
     {
+        AssetStreamingQueue* const pQueue = engine::findSubsystem<AssetStreamingQueue>();
+        if ( _pAheadPreload != nullptr )
+        {
+            if ( pQueue != nullptr )
+                _pAheadPreload->update( *pQueue );
+            ++_aheadHeldFrames;
+            if ( _aheadHeldFrames >= static_cast<uint32>( MathUtil::max( static_cast<int32>( gv_scenePreloadAheadFrames ), 0 ) ) )
+                _pAheadPreload.reset();
+        }
         if ( _pScenePreload == nullptr )
             return;
-        AssetStreamingQueue* pQueue = engine::findSubsystem<AssetStreamingQueue>();
         if ( pQueue != nullptr )
             _pScenePreload->update( *pQueue );
         if ( _bLoadInFlight.load( std::memory_order_acquire ) )
@@ -1077,13 +1117,15 @@ namespace sw
         // 플레이를 멈추면 영속 표시를 잊는다(유니티는 플레이 모드를 나가면 영속 씬을 비운다). 편집 중 씬을 바꿀 때 옮겨 가면 안 된다.
         if ( bPlaying == false )
             _listPersistentObjectID.clear();
-        GameObjectManager* pObjects = ( _pActiveScene != nullptr ) ? _pActiveScene->getObjectManager() : nullptr;
-        if ( pObjects == nullptr )
-            return;
         if ( bPlaying )
+            _onWorldPlayChanged.broadcast( true );
+        GameObjectManager* const pObjects = ( _pActiveScene != nullptr ) ? _pActiveScene->getObjectManager() : nullptr;
+        if ( pObjects != nullptr && bPlaying )
             pObjects->beginPlay();
-        else
+        else if ( pObjects != nullptr )
             pObjects->endPlay();
+        if ( bPlaying == false )
+            _onWorldPlayChanged.broadcast( false );
     }
 
     /**

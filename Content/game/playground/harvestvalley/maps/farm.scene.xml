@@ -841,14 +841,23 @@
 				</_listComponent>
 			</GameObject>
 		</entity>
+		<!-- 플레이어 상태 — 조종자 오브젝트가 지갑을 쥔다(디렉터의 _playerState). -->
+		<entity id="40" name="PlayerController">
+			<GameObject _schemaVersion="0" _name="PlayerController" _bActive="true">
+				<_listComponent>
+					<PlayerControllerComponent _localID="4811566279812111972" _playerIndex="0" />
+					<WalletComponent _localID="7202751467146875245" _componentName="WalletComponent" _bActive="true" />
+					<InventoryComponent _localID="6041785841110900339" _componentName="InventoryComponent" _bActive="true" />
+				</_listComponent>
+			</GameObject>
+		</entity>
 		<entity id="35" name="FarmGameMode">
 			<GameObject _schemaVersion="0" _name="FarmGameMode" _bActive="true">
 				<_listComponent>
 					<GameStateComponent _localID="6673597520240684436" _componentName="GameStateComponent" _bActive="true" />
-					<WalletComponent _localID="7202751467146875245" _componentName="WalletComponent" _bActive="true" />
-					<InventoryComponent _localID="6041785841110900339" _componentName="InventoryComponent" _bActive="true" />
 					<FarmGameModeComponent _localID="12488349250694271848" _componentName="FarmGameModeComponent"
 					                       _bActive="true"
+					                       _playerState="40"
 					                       _cropDataPath="game/playground/harvestvalley/data/crops.xml"
 					                       _weatherPath="game/playground/harvestvalley/data/farm.weather.xml"
 					                       _fieldWidth="12"

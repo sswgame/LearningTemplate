@@ -54,6 +54,8 @@ namespace sw
         int32 _throwBreakFrames{ 20 }; ///< 잡기 풀기 입력을 받는 시간
         PROPERTY( Min = 0 )
         int32 _throwBreakRecovery{ 16 }; ///< 잡기를 푼 뒤 둘 다 움직일 수 없는 시간
+        PROPERTY( Min = 0.0 )
+        float32 _throwBreakPushDistance{ 0.3f }; ///< 잡기를 푼 쪽이 밀려나는 거리
         PROPERTY( Min = 0 )
         int32 _inputBufferFrames{ 8 }; ///< 움직일 수 없는 동안 입력한 커맨드를 기억하는 시간(선입력)
         PROPERTY( Min = 0 )

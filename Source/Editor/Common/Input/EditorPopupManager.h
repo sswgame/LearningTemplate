@@ -77,15 +77,16 @@ namespace sw::editor
         /** @brief 지금 에디터 컨텍스트의 팝업 관리자입니다. 에디터가 서 있을 때만 부른다. 팝업 View 가 작업 공간 헤더(`EditorContext`) 없이 찾는 창구다(`docs/agents/EditorUI.md` MVVM). */
         [[nodiscard]] static EditorPopupManager& getInEditorContext();
 
-        void registerPopup( unique_ptr<EditorPopup> pPopup );
+        /** @brief 팝업을 그 ID 로 올립니다. 같은 ID 가 이미 있으면 오류를 남기고 false 입니다(먼저 것을 둔다). */
+        [[nodiscard]] bool registerPopup( unique_ptr<EditorPopup> pPopup );
 
+        /** @brief @p TPopup 을 만들어 올립니다. 거절되면 nullptr 입니다. */
         template <typename TPopup, typename... TArgs>
         TPopup* registerPopup( TArgs&&... args )
         {
             auto    pPopup = make_unique<TPopup>( std::forward<TArgs>( args )... );
             TPopup* pRaw   = pPopup.get();
-            registerPopup( std::move( pPopup ) );
-            return pRaw;
+            return registerPopup( std::move( pPopup ) ) ? pRaw : nullptr;
         }
 
         EditorPopup* findPopup( string_view id );

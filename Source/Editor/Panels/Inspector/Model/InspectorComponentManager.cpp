@@ -20,23 +20,20 @@ namespace sw::editor
 
     InspectorComponentManager::~InspectorComponentManager() = default;
 
-    void InspectorComponentManager::registerType( string_view typeName, unique_ptr<IComponentInspector> pInspector )
+    bool InspectorComponentManager::registerType( string_view typeName, unique_ptr<IComponentInspector> pInspector )
     {
         const hashed_string name( typeName );
-        resetTypeCache( _cacheTypeGeneration ); // 확장 목록이 바뀐다 — 타입별 목록이 옛 확장을 가리키지 않게 버린다
-        for ( InspectorComponentEntry& entry : _listEntry )
+        if ( find( typeName ) != nullptr )
         {
-            if ( entry._typeName == name )
-            {
-                entry._pInstance     = std::move( pInspector );
-                entry._pRegistration = nullptr;
-                return;
-            }
+            SW_LOG_ERROR_ID( "InspectorComponentManager.DuplicateType", "Component inspector for '%#' is already registered - the first one is kept", name.c_str() );
+            return false;
         }
+        resetTypeCache( _cacheTypeGeneration ); // 확장 목록이 바뀐다 — 타입별 목록이 옛 목록에 머물지 않게 버린다
         InspectorComponentEntry entry{};
         entry._typeName  = name;
         entry._pInstance = std::move( pInspector );
         _listEntry.push_back( std::move( entry ) );
+        return true;
     }
 
     IComponentInspector* InspectorComponentManager::find( string_view typeName ) const
@@ -101,7 +98,7 @@ namespace sw::editor
                 continue;
             _listEntry.erase( _listEntry.begin() + static_cast<ptrdiff_t>( index ) );
         }
-        // 2) 새 줄은 만든다 — 같은 타입에 직접 건 확장이 있으면 등록 줄이 바꾼다
+        // 2) 새 줄은 만든다 — 같은 타입의 확장이 이미 있으면 거절하고 알린다
         for ( uint32 index = 0; index < InspectorRegistry::getCount(); ++index )
         {
             const EditorInspectorRegistration& registration = InspectorRegistry::getAt( index );
@@ -112,12 +109,8 @@ namespace sw::editor
             }
             if ( bExisting )
                 continue;
-            registerType( registration._pGetComponentType()->_name.c_str(), registration._pCreate() );
-            for ( InspectorComponentEntry& entry : _listEntry )
-            {
-                if ( entry._typeName == registration._pGetComponentType()->_name )
-                    entry._pRegistration = &registration;
-            }
+            if ( registerType( registration._pGetComponentType()->_name.c_str(), registration._pCreate() ) )
+                _listEntry.back()._pRegistration = &registration; // 방금 올린 줄이다
         }
     }
 

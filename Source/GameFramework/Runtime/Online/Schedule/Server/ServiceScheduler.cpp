@@ -238,10 +238,11 @@ namespace sw
             Job& job = _listJob[jobIndex];
             if ( job._bClaimPending == SW_TRUE )
                 continue;
-            const int64 occurrenceMs = computeLatestOccurrence( job._definition, nowMs.count() );
-            if ( occurrenceMs < 0 || occurrenceMs <= job._handledOccurrenceMs )
+            const optional<int64> latest = computeLatestOccurrence( job._definition, nowMs.count() );
+            if ( latest.has_value() == false || *latest <= job._handledOccurrenceMs )
                 continue;
-            const bool bWaitingRetry = job._retryOccurrenceMs == occurrenceMs && nowMs.count() < job._retryAtMs;
+            const int64 occurrenceMs  = *latest;
+            const bool  bWaitingRetry = job._retryOccurrenceMs == occurrenceMs && nowMs.count() < job._retryAtMs;
             if ( bWaitingRetry )
                 continue;
             job._bClaimPending = SW_TRUE;
@@ -265,13 +266,13 @@ namespace sw
         } );
     }
 
-    int64 ServiceScheduler::computeLatestOccurrence( const ScheduleDef& definition, int64 nowMs )
+    optional<int64> ServiceScheduler::computeLatestOccurrence( const ScheduleDef& definition, int64 nowMs )
     {
         if ( nowMs < 0 )
-            return constant::invalid_index::kInt64;
+            return nullopt;
         const int64 minuteOffsetMs = static_cast<int64>( definition._minuteOfDay ) * ServiceSchedulerInternal::kMinuteMs;
         const int64 dayIndex       = ServiceSchedulerInternal::floorDivide( nowMs, ServiceSchedulerInternal::kDayMs );
-        int64       occurrenceMs   = constant::invalid_index::kInt64;
+        int64       occurrenceMs   = 0;
         switch ( definition._kind )
         {
             case ScheduleKind::Daily:
@@ -292,8 +293,9 @@ namespace sw
             }
             case ScheduleKind::Window:
             {
-                const bool bInside = definition._windowStartMs <= nowMs && nowMs < definition._windowEndMs;
-                occurrenceMs       = bInside ? definition._windowStartMs : constant::invalid_index::kInt64;
+                if ( nowMs < definition._windowStartMs || definition._windowEndMs <= nowMs )
+                    return nullopt;
+                occurrenceMs = definition._windowStartMs;
                 break;
             }
             case ScheduleKind::Interval:
@@ -302,7 +304,9 @@ namespace sw
                 break;
             }
         }
-        return occurrenceMs >= 0 ? occurrenceMs : constant::invalid_index::kInt32;
+        if ( occurrenceMs < 0 )
+            return nullopt; // 유닉스 시각 0 앞의 회차는 없다
+        return occurrenceMs;
     }
 
     bool ServiceScheduler::isValidDefinition( const ScheduleDef& definition )

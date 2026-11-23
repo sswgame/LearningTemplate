@@ -68,7 +68,7 @@ namespace sw
         simulation.openDay( hashed_string( "clear" ) );
         for ( int32 index = 0; index < RestaurantSimDemoComponentInternal::kCustomerCount; ++index )
         {
-            if ( simulation.admitCustomer( hashed_string( "student" ) ) < 0 )
+            if ( simulation.admitCustomer( hashed_string( "student" ) ).has_value() == false )
             {
                 SW_LOG_ERROR_ID( "KitDemo.RestaurantSimUnknownCustomer", "Restaurant demo: the catalog has no customer type student - the day does not run" );
                 return false;

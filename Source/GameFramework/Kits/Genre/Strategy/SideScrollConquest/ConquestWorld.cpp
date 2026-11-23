@@ -217,11 +217,11 @@ namespace sw
         return ConquestResult::Ok;
     }
 
-    int32 ConquestWorld::spawnUnit( const hashed_string& unitID, ConquestTeam team, float32 x, ConquestOrder order )
+    optional<int32> ConquestWorld::spawnUnit( const hashed_string& unitID, ConquestTeam team, float32 x, ConquestOrder order )
     {
         const ConquestUnitDef* pDef = _pCatalog != nullptr ? _pCatalog->findUnit( unitID ) : nullptr;
         if ( pDef == nullptr || team == ConquestTeam::Neutral )
-            return constant::invalid_index::kInt32;
+            return nullopt;
         ConquestUnit unit;
         unit._pDef      = pDef;
         unit._x         = x;
@@ -753,8 +753,9 @@ namespace sw
                     building._trainProgress    = 0.0f;
                     const hashed_string unitID = building._listQueue.front();
                     building._listQueue.erase( building._listQueue.begin() );
-                    const int32 spawnedID = spawnUnit( unitID, ConquestTeam::Player, site._pDef->_x, ConquestOrder::Follow );
-                    pushEvent( ConquestEvent::Kind::UnitTrained, unitID, spawnedID, ConquestTeam::Player );
+                    const optional<int32> spawnedID = spawnUnit( unitID, ConquestTeam::Player, site._pDef->_x, ConquestOrder::Follow );
+                    if ( spawnedID.has_value() )
+                        pushEvent( ConquestEvent::Kind::UnitTrained, unitID, *spawnedID, ConquestTeam::Player );
                 }
             }
         }

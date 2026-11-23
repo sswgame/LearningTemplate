@@ -13,6 +13,9 @@
 #include "GameFramework/Runtime/Gameplay/Ability/CombatAttributeSet.h"
 #include "GameFramework/Runtime/Gameplay/Ability/MinigameRewardComponent.h"
 #include "GameFramework/Runtime/Gameplay/Ability/TagCountTable.h"
+#include "GameFramework/Runtime/Gameplay/Inventory/WalletComponent.h"
+#include "GameFramework/Runtime/Gameplay/Progression/ReputationComponent.h"
+#include "GameFramework/Runtime/Gameplay/Quest/QuestLogComponent.h"
 
 using namespace sw;
 
@@ -127,6 +130,48 @@ SW_TEST_CASE( MinigameRewardTest, EffectMissingFromCatalogIsError )
         MinigameResultValue{ hashed_string( "ghost" ), 1 }
     } ) ) );
     SW_EXPECT_EQUAL( 0u, rig._pReward->getAppliedCount() );
+}
+
+/** @brief [MinigameRewardTest] 경제 · 진행: 결과 값은 플레이어 상태 오브젝트의 지갑 · 평판 · 퀘스트 일지에 닿고, 같은 값을 여러 표에 적으면 모두 준다. 0 이하의 통화 · 없는 받는 쪽은 오류다 */
+SW_TEST_CASE( MinigameRewardTest, ResultValuesReachThePlayerState )
+{
+    MinigameRewardFixture rig;
+    SW_REQUIRE_TRUE( rig._pReward != nullptr );
+    GameObject* const          pController = rig._manager.createGameObject( hashed_string( "Controller" ) );
+    WalletComponent* const     pWallet     = pController->addComponent<WalletComponent>();
+    ReputationComponent* const pReputation = pController->addComponent<ReputationComponent>();
+    QuestLogComponent* const   pQuestLog   = pController->addComponent<QuestLogComponent>();
+    SW_REQUIRE_TRUE( pReputation->initialize( nullptr ) != GameStateInitResult::Refused );
+    const hashed_string gold( "Gold" );
+    const hashed_string town( "town" );
+    rig._pReward->setPlayerRewardTable( pController->getHandle(), vector<MinigameRewardCurrency>{
+                                                                      MinigameRewardCurrency{ hashed_string( "prize" ), gold }
+    },
+                                        vector<MinigameRewardReputation>{ MinigameRewardReputation{ hashed_string( "prize" ), town }, MinigameRewardReputation{ hashed_string( "fame" ), town } }, vector<MinigameRewardQuest>{ MinigameRewardQuest{ hashed_string( "round" ), hashed_string( "Minigame" ), hashed_string( "arcade" ) } } );
+
+    SW_EXPECT_TRUE( rig._pReward->applyResult( MinigameRewardFixture::makeResult( {
+        MinigameResultValue{hashed_string( "prize" ), 15},
+        MinigameResultValue{ hashed_string( "fame" ), -5}
+    } ) ) );
+    SW_EXPECT_EQUAL( int64{ 15 }, pWallet->getWallet().getBalance( gold ) );
+    SW_EXPECT_EQUAL( 10, pReputation->getReputation().getValue( town ) );
+    SW_EXPECT_EQUAL( 3u, rig._pReward->getAppliedCount() );
+
+    SW_EXPECT_LOG( "MinigameReward.AmountNotPositive" );
+    SW_EXPECT_FALSE( rig._pReward->applyResult( MinigameRewardFixture::makeResult( {
+        MinigameResultValue{ hashed_string( "prize" ), 0 }
+    } ) ) );
+    SW_EXPECT_EQUAL( int64{ 15 }, pWallet->getWallet().getBalance( gold ) );
+
+    // 열리지 않은 일지는 받는 쪽이 아니다 — 열면 받는다.
+    SW_EXPECT_LOG( "MinigameReward.NoReceiver" );
+    SW_EXPECT_FALSE( rig._pReward->applyResult( MinigameRewardFixture::makeResult( {
+        MinigameResultValue{ hashed_string( "round" ), 1 }
+    } ) ) );
+    SW_REQUIRE_TRUE( pQuestLog->initialize( nullptr ) != GameStateInitResult::Refused );
+    SW_EXPECT_TRUE( rig._pReward->applyResult( MinigameRewardFixture::makeResult( {
+        MinigameResultValue{ hashed_string( "round" ), 1 }
+    } ) ) );
 }
 
 /** @brief [MinigameRewardTest] 값이 없는 결과(결과 없이 나옴)는 할 일이 없다 — 오류도 아니다 */

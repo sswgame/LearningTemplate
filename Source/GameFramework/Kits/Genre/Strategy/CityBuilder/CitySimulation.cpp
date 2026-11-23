@@ -150,7 +150,7 @@ namespace sw
         , _stepTimer{}
         , _random{}
         , _time{ 0.0f }
-        , _floodFertility{ 0.8f }
+        , _floodFertility{ 0.0f }
         , _wageDebt{ 0.0f }
         , _topology{}
         , _land{}
@@ -192,7 +192,7 @@ namespace sw
         _stepTimer = FixedStepTimer( settings._fixedStep, 5.0f );
         _random.setSeed( settings._randomSeed );
         _time               = 0.0f;
-        _floodFertility     = 0.8f;
+        _floodFertility     = settings._floodFertilityStart;
         _wageDebt           = 0.0f;
         _monthIncome        = 0;
         _workforce          = 0;
@@ -963,7 +963,7 @@ namespace sw
             }
             return total;
         }();
-        const bool bAttractive = _workforce < jobs + 4 || ( _workforce > 0 && static_cast<float32>( _workforce - _employed ) / static_cast<float32>( _workforce ) < 0.25f );
+        const bool bAttractive = _workforce < jobs + _settings._immigrationJobMargin || ( _workforce > 0 && static_cast<float32>( _workforce - _employed ) / static_cast<float32>( _workforce ) < _settings._immigrationMaxIdleRatio );
         for ( int32 buildingIndex = 0; buildingIndex < static_cast<int32>( _listBuilding.size() ); ++buildingIndex )
         {
             CityBuilding& house = _listBuilding[static_cast<size_t>( buildingIndex )];
@@ -1042,7 +1042,7 @@ namespace sw
         if ( bNewYear )
         {
             // 범람: 해마다 다르다(40 % ... 100 %). 범람원 농장의 다음 한 해 생산량을 정한다.
-            _floodFertility = _random.nextRange( 0.4f, 1.0f );
+            _floodFertility = _random.nextRange( _settings._floodFertilityMin, _settings._floodFertilityMax );
             _eventBuffer.push( CityEvent{ static_cast<int32>( _floodFertility * 100.0f ), nullopt, CityEvent::Kind::Flood } );
         }
     }

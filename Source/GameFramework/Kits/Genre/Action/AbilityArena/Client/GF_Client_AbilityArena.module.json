@@ -1,0 +1,22 @@
+{
+    "_name": "GF_Client_AbilityArena",
+    "_version": "1.0.0",
+    "_kind": "Kit",
+    "_description": "아레나 키트(클라이언트) — 디렉터의 탄을 모습으로 세우고 유닛 색 · 쓰러짐을 그린다(뷰). 규칙 · 디렉터는 GF_AbilityArena",
+    "_listDependency": [
+        {
+            "_name": "GameFramework"
+        },
+        {
+            "_name": "GF_AbilityArena"
+        }
+    ],
+    "_listConfiguration": [
+        "Dev",
+        "Shipping"
+    ],
+    "_listTarget": [
+        "Client"
+    ],
+    "_bEnabledByDefault": true
+}

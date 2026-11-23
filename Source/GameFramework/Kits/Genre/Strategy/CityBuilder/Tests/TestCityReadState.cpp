@@ -18,7 +18,7 @@ namespace
 {
     constexpr int32       kCitySize   = 4;
     constexpr const utf8* kCatalogXML = R"(<CityCatalog roadCost="1">
-  <Rules walkerSpeed="2.5" workerRatio="0.4" serviceDuration="30" immigrationInterval="1.5" evolveDelay="3" wagePerWorkerPerMonth="0.5" fixedStep="0.25" serviceReach="2" goodsPerFourPeople="1" randomSeed="3100" currency="Deben"/>
+  <Rules walkerSpeed="2.5" workerRatio="0.4" serviceDuration="30" immigrationInterval="1.5" immigrationJobMargin="4" immigrationMaxIdleRatio="0.25" floodFertilityStart="0.8" floodFertilityMin="0.4" floodFertilityMax="1" evolveDelay="3" wagePerWorkerPerMonth="0.5" fixedStep="0.25" serviceReach="2" goodsPerFourPeople="1" randomSeed="3100" currency="Deben"/>
   <Good id="grain" name="Grain"/>
   <Building id="hut" name="Hut" kind="House" size="1" cost="1"/>
   <Building id="garden" name="Garden" kind="Decoration" size="2" cost="1"/>

@@ -292,8 +292,8 @@ namespace sw
         void                shutdownSubsystem() override {}
         const utf8*         getSubsystemName() const override { return kSubsystemName; }
 
-        /** @brief 종류를 등록합니다. 같은 이름이 있으면 바꿉니다. 이름이나 생성 함수가 없으면 오류를 남기고 등록하지 않습니다. */
-        void registerType( const hashed_string& typeName, const AnimationPoseNodeType& type );
+        /** @brief 종류를 등록합니다. 이름이나 생성 함수가 없거나 같은 이름이 이미 있으면 오류를 남기고 false 입니다(먼저 것을 둔다). */
+        [[nodiscard]] bool registerType( const hashed_string& typeName, const AnimationPoseNodeType& type );
         /** @brief 이름의 종류입니다. 모르는 이름이면 nullptr 입니다. */
         const AnimationPoseNodeType* findType( const hashed_string& typeName ) const;
         /** @brief 등록된 종류 이름들을 등록 순서로 반환합니다(진단과 에디터용). */

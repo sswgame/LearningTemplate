@@ -685,7 +685,7 @@ SW_TEST_CASE_F( SurvivalHorrorRulesTest, CombiningItems )
 SW_TEST_CASE_F( SurvivalHorrorRulesTest, CombineRollsBackWhenOutputDoesNotFit )
 {
     // 4 x 2 격자의 (1, 1) 에 열쇠가 있어 3 x 2 결과가 들어갈 자리가 없다.
-    SW_REQUIRE_TRUE( _grid.placeItem( "keyRed", 1, 1, 1, false ) >= 0 );
+    SW_REQUIRE_TRUE( _grid.placeItem( "keyRed", 1, 1, 1, false ).has_value() );
     const int32 ammo = give( "ammo" );
     const int32 calm = give( "calm" );
     SW_EXPECT_FALSE( _session.combineItems( ammo, calm ) );
@@ -700,15 +700,15 @@ SW_TEST_CASE_F( SurvivalHorrorRulesTest, CombineRollsBackWhenOutputDoesNotFit )
  */
 SW_TEST_CASE_F( SurvivalHorrorRulesTest, RolledBackCombineKeepsEveryItemInPlace )
 {
-    const int32 wide = _grid.placeItem( "board", 1, 0, 0, false );
-    const int32 calm = _grid.placeItem( "calm", 1, 3, 1, false );
-    SW_REQUIRE_TRUE( wide >= 0 && calm >= 0 && _grid.placeItem( "keyRed", 1, 2, 0, false ) >= 0 );
-    SW_EXPECT_FALSE( _session.combineItems( calm, wide ) ); // (2, 0) 의 열쇠 때문에 3 x 2 결과가 들어갈 자리가 없다
+    const optional<int32> wide = _grid.placeItem( "board", 1, 0, 0, false );
+    const optional<int32> calm = _grid.placeItem( "calm", 1, 3, 1, false );
+    SW_REQUIRE_TRUE( wide.has_value() && calm.has_value() && _grid.placeItem( "keyRed", 1, 2, 0, false ).has_value() );
+    SW_EXPECT_FALSE( _session.combineItems( *calm, *wide ) ); // (2, 0) 의 열쇠 때문에 3 x 2 결과가 들어갈 자리가 없다
     SW_EXPECT_EQUAL( 1, _grid.getItemCount( "board" ) );
     SW_EXPECT_EQUAL( 1, _grid.getItemCount( "calm" ) );
     SW_EXPECT_EQUAL( 0, _grid.getItemCount( "big" ) );
-    SW_EXPECT_TRUE( _grid.findInstanceAt( 0, 0 ) == optional<int32>( wide ) );
-    SW_EXPECT_TRUE( _grid.findInstanceAt( 3, 1 ) == optional<int32>( calm ) );
+    SW_EXPECT_TRUE( _grid.findInstanceAt( 0, 0 ) == wide );
+    SW_EXPECT_TRUE( _grid.findInstanceAt( 3, 1 ) == calm );
 }
 
 // ── 세이브 ────────────────────────────────────────────────────────────

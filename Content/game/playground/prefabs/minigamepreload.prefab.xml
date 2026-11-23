@@ -1,0 +1,17 @@
+<?asset guid="29bd9c89679642489fb09ddf6497bde4"?>
+<!-- 허브 미니게임 입구의 미리 읽기 볼륨 — MinigamePortalSpawnerComponent 가 입구마다 하나씩 세우고 _minigame 을 채운다. 입구보다 넓다(앞뒤 6 m, 옆은 이웃 입구와 겹치지 않는다). -->
+<Prefab formatVersion="1" name="MinigamePreload">
+	<GameObject _schemaVersion="0" _name="MinigamePreload" _bActive="true" _bAlwaysLoaded="true">
+		<_listComponent>
+			<RigidBodyComponent _localID="7198733165449302788" _localPosition="0,0,0" _localRotation="0,0,0" _localScale="1,1,1" _attachOwner="None" _attachComponent="None" _bodyType="Static" _layer="Trigger" _material="Default" _mass="0" _bTrigger="true">
+				<_listShape>
+					<PhysicsShapeDesc3D _type="Box" _halfExtents="3.4,1,6" _radius="0.5" _halfHeight="0.5" _localPosition="0,1,0" _localRotation="0,0,0" _material="Default">
+						<_listPoint />
+						<_listIndex />
+					</PhysicsShapeDesc3D>
+				</_listShape>
+			</RigidBodyComponent>
+			<MinigamePreloadTriggerComponent _localID="4132149105006913374" _activatorTag="Player" _bOnce="false" _spawnInside="Ignore" _minigame="" />
+		</_listComponent>
+	</GameObject>
+</Prefab>

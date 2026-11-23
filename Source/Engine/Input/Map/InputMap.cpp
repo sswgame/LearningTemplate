@@ -75,6 +75,7 @@ namespace sw
         , _totalElapsedTime{ 0.0f }
         , _lastDeltaSeconds{ 0.0f }
         , _virtualCursorStick{ InputMapVirtualCursor::Off }
+        , _userDevices{}
         , _bSuppressBaseActionOnChord{ SW_TRUE }
         , _bKeyboardFocusIgnored{ SW_FALSE }
         , _bReadsToolKeyboard{ SW_FALSE }

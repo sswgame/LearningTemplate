@@ -58,10 +58,12 @@ namespace sw
         outListClue.clear();
         if ( isSolved() || senseRadius < 0.0f ) // 음수 반지름은 제곱하면 양수가 되어 그 거리까지 보인다
             return;
-        const int32 openOrder = computeOpenOrder();
+        const optional<int32> openOrder = computeOpenOrder();
+        if ( openOrder.has_value() == false )
+            return;
         for ( const MonsterHuntClueDef& clue : _pContract->_listStep[static_cast<size_t>( _stepIndex )]._listClue )
         {
-            if ( clue._order > openOrder || isFoundInternal( clue._id ) )
+            if ( clue._order > *openOrder || isFoundInternal( clue._id ) )
                 continue;
             if ( computeDistanceSquared( position, clue._position ) <= senseRadius * senseRadius )
                 outListClue.push_back( &clue );
@@ -83,7 +85,8 @@ namespace sw
             return MonsterHuntClueResult::UnknownClue;
         if ( isFoundInternal( clueID ) )
             return MonsterHuntClueResult::AlreadyFound;
-        if ( pClue->_order > computeOpenOrder() )
+        const optional<int32> openOrder = computeOpenOrder(); // 못 찾은 단서가 있으니 늘 있다
+        if ( openOrder.has_value() && pClue->_order > *openOrder )
             return MonsterHuntClueResult::OutOfOrder;
         if ( computeDistanceSquared( position, pClue->_position ) > pClue->_radius * pClue->_radius )
             return MonsterHuntClueResult::TooFar;
@@ -102,10 +105,10 @@ namespace sw
 
     void MonsterHuntInvestigation::advanceFinishedSteps()
     {
-        if ( computeOpenOrder() >= 0 )
+        if ( computeOpenOrder().has_value() )
             return;
         // 단계의 단서를 모두 찾았다. 일지에 알리고 다음 단계로 넘어간다. 단서가 없는 단계는 바로 넘긴다.
-        while ( _stepIndex < static_cast<int32>( _pContract->_listStep.size() ) && computeOpenOrder() < 0 )
+        while ( _stepIndex < static_cast<int32>( _pContract->_listStep.size() ) && computeOpenOrder().has_value() == false )
         {
             const hashed_string           stepID = _pContract->_listStep[static_cast<size_t>( _stepIndex )]._id;
             MonsterHuntInvestigationEvent completed;
@@ -158,14 +161,14 @@ namespace sw
         _eventBuffer.moveAllTo( outListEvent );
     }
 
-    int32 MonsterHuntInvestigation::computeOpenOrder() const
+    optional<int32> MonsterHuntInvestigation::computeOpenOrder() const
     {
         if ( isSolved() )
-            return constant::invalid_index::kInt32;
-        int32 openOrder = constant::invalid_index::kInt32;
+            return nullopt;
+        optional<int32> openOrder;
         for ( const MonsterHuntClueDef& clue : _pContract->_listStep[static_cast<size_t>( _stepIndex )]._listClue )
         {
-            if ( isFoundInternal( clue._id ) == false && ( openOrder < 0 || clue._order < openOrder ) )
+            if ( isFoundInternal( clue._id ) == false && ( openOrder.has_value() == false || clue._order < *openOrder ) )
                 openOrder = clue._order;
         }
         return openOrder;

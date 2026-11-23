@@ -41,8 +41,8 @@ namespace sw
                 return float2{ local._x * c + local._y * s, -local._x * s + local._y * c };
             }
 
-            /** @brief 받침을 잃는지 볼 상대가 놓인 층입니다. 바닥은 같은 층, 구조물은 위층을 받친다. 가구는 아무것도 받치지 않는다(-1). */
-            static int32 computeSupportedLevel( const HousingPartDef& part, int32 level )
+            /** @brief 받침을 잃는지 볼 상대가 놓인 층입니다. 바닥은 같은 층, 구조물은 위층을 받친다. 가구는 아무것도 받치지 않는다(없음). */
+            static optional<int32> computeSupportedLevel( const HousingPartDef& part, int32 level )
             {
                 switch ( part._layer )
                 {
@@ -51,9 +51,9 @@ namespace sw
                     case HousingPartLayer::Structure:
                         return level + 1;
                     case HousingPartLayer::Furniture:
-                        return constant::invalid_index::kInt32;
+                        return nullopt;
                 }
-                return constant::invalid_index::kInt32;
+                return nullopt;
             }
 
             /** @brief @p layer 의 부품이 @p other 층의 칸과 겹칠 수 없으면 true 입니다(바닥끼리, 구조물 · 가구끼리). */
@@ -318,12 +318,12 @@ namespace sw
     {
         using Internal                  = HousingLayoutInternal;
         const HousingPartDef* pPart     = _pCatalog->findPart( placement._partID );
-        const int32           heldLevel = Internal::computeSupportedLevel( *pPart, placement._transform._level );
-        if ( heldLevel < 0 )
+        const optional<int32> heldLevel = Internal::computeSupportedLevel( *pPart, placement._transform._level );
+        if ( heldLevel.has_value() == false )
             return false;
         for ( const HousingPlacement& other : _listPlacement )
         {
-            if ( other._placementID == placement._placementID || other._transform._level != heldLevel )
+            if ( other._placementID == placement._placementID || other._transform._level != *heldLevel )
                 continue;
             const HousingPartDef* pOther = _pCatalog->findPart( other._partID );
             // 같은 층의 바닥끼리 · 위층의 벽 · 가구는 이 부품에 기대지 않는다.

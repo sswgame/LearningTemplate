@@ -1,0 +1,8 @@
+<?asset guid="6c22e0b3e6f254d93665583fb6959df3"?>
+<Prefab formatVersion="1" _base="game/playground/abilityarena/prefabs/casterai.prefab.xml" name="ArenaGruntAI">
+	<PrefabOverrides>
+		<Override key="#eaf9066b6f41ae42">
+			<ArenaEnemyAIComponent _behaviorTree="game/playground/abilityarena/data/ai/grunt.bt.xml" />
+		</Override>
+	</PrefabOverrides>
+</Prefab>

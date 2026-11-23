@@ -41,7 +41,7 @@ namespace sw
     void CityGameModeComponent::serializeGameState( StateIO& io )
     {
         GameStateComponent* pState  = io.isReading() ? GameStateComponent::findOnOwner( *this ) : nullptr;
-        WalletComponent*    pWallet = io.isReading() ? PlayerComponentUtil::findOnOwner<WalletComponent>( *this ) : nullptr;
+        WalletComponent*    pWallet = io.isReading() ? findOnPlayerState<WalletComponent>() : nullptr;
         if ( io.isReading() && io.check( pState != nullptr && pWallet != nullptr ) == false )
             return;
         io.header( kStateTag, kStateVersion ); // 배치를 마쳤는지는 상태 칸이다(`GameModeComponent::serializeState`)
@@ -83,9 +83,10 @@ namespace sw
         GameStateComponent* pState     = GameStateComponent::openOnOwner( *this, settings );
         if ( pState == nullptr )
             return false;
-        WalletComponent* pWallet = PlayerComponentUtil::requireOnOwner<WalletComponent>( *this );
+        const GameObject* const pPlayerState = requirePlayerState();
+        WalletComponent* const  pWallet      = pPlayerState != nullptr ? PlayerComponentUtil::requireOn<WalletComponent>( *pPlayerState ) : nullptr;
         if ( pWallet == nullptr )
-            return false;
+            return false; // 까닭은 찾기가 남겼다
         if ( pWallet->isFreshGame() )
             pWallet->getWallet().add( _pCatalog->getRules()._currency, _startingMoney );
         if ( initializeCity( _city, *pState, *pWallet ) == false )
@@ -97,7 +98,7 @@ namespace sw
 
     void CityGameModeComponent::onGameStarted()
     {
-        SW_LOG_INFO_ID( "City.TownOpen", "[City] the town is open - hold fast forward to speed up the clock; the city shares one land, one wallet and one clock with the other game modes on this object" );
+        SW_LOG_INFO_ID( "City.TownOpen", "[City] the town is open - hold fast forward to speed up the clock; the city shares one land and one clock with the other game modes on this object, and the player's wallet" );
     }
 
     bool CityGameModeComponent::submitFastForward( bool bHeld )

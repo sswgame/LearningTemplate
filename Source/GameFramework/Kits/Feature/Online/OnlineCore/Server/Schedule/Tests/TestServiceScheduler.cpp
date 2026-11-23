@@ -130,11 +130,11 @@ namespace
 /** @brief [ServiceSchedulerTest] 일일 회차: 오늘 시각이 지났으면 오늘, 아직이면 어제다 */
 SW_TEST_CASE( ServiceSchedulerTest, DailyOccurrence )
 {
-    SW_EXPECT_EQUAL( kDayStart + 60 * kMinuteMs, ServiceScheduler::computeLatestOccurrence( makeDaily( 60 ), kNowMs ) );
-    SW_EXPECT_EQUAL( kDayStart - kDayMs + 23 * 60 * kMinuteMs, ServiceScheduler::computeLatestOccurrence( makeDaily( 23 * 60 ), kNowMs ) );
+    SW_EXPECT_TRUE( ServiceScheduler::computeLatestOccurrence( makeDaily( 60 ), kNowMs ) == kDayStart + 60 * kMinuteMs );
+    SW_EXPECT_TRUE( ServiceScheduler::computeLatestOccurrence( makeDaily( 23 * 60 ), kNowMs ) == kDayStart - kDayMs + 23 * 60 * kMinuteMs );
     const int64 exactMs = kDayStart + 22 * 60 * kMinuteMs;
-    SW_EXPECT_EQUAL( exactMs, ServiceScheduler::computeLatestOccurrence( makeDaily( 22 * 60 ), exactMs ) ); // 정각은 그 회차다
-    SW_EXPECT_EQUAL( int64( -1 ), ServiceScheduler::computeLatestOccurrence( makeDaily(), -1 ) );
+    SW_EXPECT_TRUE( ServiceScheduler::computeLatestOccurrence( makeDaily( 22 * 60 ), exactMs ) == exactMs ); // 정각은 그 회차다
+    SW_EXPECT_FALSE( ServiceScheduler::computeLatestOccurrence( makeDaily(), -1 ).has_value() );
 }
 
 /** @brief [ServiceSchedulerTest] 주간 회차: 요일은 월요일 0 이고, 오늘이 그 요일이어도 시각 전이면 지난주다 */
@@ -145,14 +145,14 @@ SW_TEST_CASE( ServiceSchedulerTest, WeeklyOccurrence )
     weekly._kind  = ScheduleKind::Weekly;
 
     weekly._dayOfWeek = 0; // 월요일 - 어제다
-    SW_EXPECT_EQUAL( kDayStart - kDayMs, ServiceScheduler::computeLatestOccurrence( weekly, kNowMs ) );
+    SW_EXPECT_TRUE( ServiceScheduler::computeLatestOccurrence( weekly, kNowMs ) == kDayStart - kDayMs );
     weekly._dayOfWeek = 1; // 화요일 - 오늘이다
-    SW_EXPECT_EQUAL( kDayStart, ServiceScheduler::computeLatestOccurrence( weekly, kNowMs ) );
+    SW_EXPECT_TRUE( ServiceScheduler::computeLatestOccurrence( weekly, kNowMs ) == kDayStart );
     weekly._minuteOfDay = 23 * 60; // 오늘 저녁 전이다
-    SW_EXPECT_EQUAL( kDayStart - 7 * kDayMs + 23 * 60 * kMinuteMs, ServiceScheduler::computeLatestOccurrence( weekly, kNowMs ) );
+    SW_EXPECT_TRUE( ServiceScheduler::computeLatestOccurrence( weekly, kNowMs ) == kDayStart - 7 * kDayMs + 23 * 60 * kMinuteMs );
     weekly._minuteOfDay = 0;
     weekly._dayOfWeek   = 2; // 수요일 - 지난주다
-    SW_EXPECT_EQUAL( kDayStart - 6 * kDayMs, ServiceScheduler::computeLatestOccurrence( weekly, kNowMs ) );
+    SW_EXPECT_TRUE( ServiceScheduler::computeLatestOccurrence( weekly, kNowMs ) == kDayStart - 6 * kDayMs );
 }
 
 /** @brief [ServiceSchedulerTest] 기간은 [시작, 끝) 안에서 시작 시각 하나이고, 간격은 UTC 0 기준 배수다 */
@@ -163,15 +163,15 @@ SW_TEST_CASE( ServiceSchedulerTest, WindowAndIntervalOccurrence )
     window._kind          = ScheduleKind::Window;
     window._windowStartMs = kNowMs - 10;
     window._windowEndMs   = kNowMs + 10;
-    SW_EXPECT_EQUAL( window._windowStartMs, ServiceScheduler::computeLatestOccurrence( window, kNowMs ) );
-    SW_EXPECT_EQUAL( int64( -1 ), ServiceScheduler::computeLatestOccurrence( window, window._windowEndMs ) );
-    SW_EXPECT_EQUAL( int64( -1 ), ServiceScheduler::computeLatestOccurrence( window, window._windowStartMs - 1 ) );
+    SW_EXPECT_TRUE( ServiceScheduler::computeLatestOccurrence( window, kNowMs ) == window._windowStartMs );
+    SW_EXPECT_FALSE( ServiceScheduler::computeLatestOccurrence( window, window._windowEndMs ).has_value() );
+    SW_EXPECT_FALSE( ServiceScheduler::computeLatestOccurrence( window, window._windowStartMs - 1 ).has_value() );
 
     ScheduleDef interval;
     interval._jobID      = "interval.sweep";
     interval._kind       = ScheduleKind::Interval;
     interval._intervalMs = 10 * kMinuteMs;
-    SW_EXPECT_EQUAL( ( kNowMs / interval._intervalMs ) * interval._intervalMs, ServiceScheduler::computeLatestOccurrence( interval, kNowMs ) );
+    SW_EXPECT_TRUE( ServiceScheduler::computeLatestOccurrence( interval, kNowMs ) == ( kNowMs / interval._intervalMs ) * interval._intervalMs );
 }
 
 /** @brief [ServiceSchedulerTest] 일정 검사: 작업 id 글자 · 시각 범위 · 요일 · 기간 · 간격 상한. 틀리면 등록하지 않는다 */

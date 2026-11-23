@@ -36,7 +36,7 @@ namespace
 
     struct XTestUtil
     {
-        /** @brief AbilityArena 근접 적 트리(`game/abilityarena/data/ai/grunt.bt.xml`)와 같은 모양입니다. */
+        /** @brief 아레나 근접 적 트리(`game/playground/abilityarena/data/ai/grunt.bt.xml`)와 같은 모양입니다. */
         static constexpr const utf8* kGruntTree = R"XML(<BehaviorTree>
   <Selector name="Grunt">
     <Sequence name="NoTarget">

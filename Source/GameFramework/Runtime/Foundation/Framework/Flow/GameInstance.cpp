@@ -526,17 +526,31 @@ namespace sw
 
     bool GameInstance::captureSnapshot( SerializePurpose purpose, vector<uint8>& outBytes )
     {
+        // 세이브는 어느 미니게임 안인지(칸 스택)를 머리에 담는다 — 불러오기가 그 미니게임을 켠 뒤 그 맵을 연다. 같은 실행 안의 스냅숏은 흐름이 살아 있어 담지 않는다.
+        vector<uint8> minigameBytes;
+        if ( purpose == SerializePurpose::SaveGame )
+            getSubsystem<MinigameFlow>().writeSaveState( minigameBytes );
+        return captureEnvelope( purpose, minigameBytes, outBytes );
+    }
+
+    bool GameInstance::captureSceneForSave( vector<uint8>& outBytes )
+    {
+        return captureEnvelope( SerializePurpose::SaveGame, vector<uint8>{}, outBytes );
+    }
+
+    bool GameInstance::captureEnvelope( SerializePurpose purpose, const vector<uint8>& minigameBytes, vector<uint8>& outBytes )
+    {
         if ( purpose == SerializePurpose::SaveGame && _saveLock.isBlocked() )
         {
             SW_LOG_WARNING_ID( "GameInstance.SaveBlocked", "Saving is blocked ('%#') - nothing is written", _saveLock.findBlockReason()->c_str() );
             return false;
         }
         // 순서: 올린 타입의 상태를 싣고 걷기 → 파생 훅(그 밖의 상태를 싣는다) → 봉투(파생의 리플렉션 상태 포함).
-        const auto capture = [this, purpose, &outBytes]()
+        const auto capture = [this, purpose, &minigameBytes, &outBytes]()
         {
             _stateSnapshot.beginCapture();
             onBeforeStateSerialize();
-            return _stateSnapshot.writeEnvelope( purpose, getStateTypeInfo(), static_cast<const GameInstance*>( this )->getStateInstance(), outBytes );
+            return _stateSnapshot.writeEnvelope( purpose, getStateTypeInfo(), static_cast<const GameInstance*>( this )->getStateInstance(), minigameBytes, outBytes );
         };
         if ( purpose == SerializePurpose::SaveGame )
         {

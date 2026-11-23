@@ -6,4 +6,4 @@
   입력은 걷기 · 달리기 · 시선 공통 레이어와 Voxel 레이어(voxelcraft/data/voxel.input.xml)만 켠다.
   시나리오 automation/voxelcraft_ai · voxelcraft_control · voxelcraft_slice 가 실행 전역 변수 gv_firstMinigame 로 들어간다.
 -->
-<Minigame name="voxelcraft" map="game/playground/voxelcraft/maps/island.scene.xml" entry="SceneSwitch" features="Voxel" inputContexts="Movement,Traversal,Look,Voxel" catalogs="voxelblocks"/>
+<Minigame name="voxelcraft" map="game/playground/voxelcraft/maps/island.scene.xml" entry="SceneSwitch" portalSlot="2" features="Voxel" inputContexts="Movement,Traversal,Look,Voxel" catalogs="voxelblocks"/>

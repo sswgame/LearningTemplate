@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
 <?asset guid="8a4d650cc32c4ea58d520cfe08f6e2fd"?>
 <!--
-  마을의 카드 탁자 미니게임 — 하위 레벨 진입(마을이 보인 채로 maps/hub_cardtable 을 들어갈 때의 활성 씬에 더한다). 카드 규칙은 맵의 시연 컴포넌트가 쥔다(게임 기능 없음).
-  마을의 CardTableGate(MinigameTriggerComponent)가 들어가고 minigame.leave 가 하위 레벨을 빼고 나온다. 시나리오 automation/hub.scenario.xml.
+  마을의 카드 탁자 미니게임 — 하위 레벨 진입(마을이 보인 채로 maps/hub_cardtable 을 들어갈 때의 활성 씬에 더한다). 지금 맵은 탁자 · 카드 더미 메시뿐이다 — 규칙이 없고 켤 게임 기능 · 카탈로그도 없다(입구 · 하위 레벨 흐름의 자리).
+  마을의 CardTableGate(MinigameTriggerComponent)가 들어가고 minigame.leave 가 하위 레벨을 빼고 나온다. 안에서 저장하면 하위 레벨째 실린다. 시나리오 automation/hub.scenario.xml.
 -->
 <Minigame name="cardtable" map="game/playground/maps/hub_cardtable.scene.xml" entry="SubLevel"/>
