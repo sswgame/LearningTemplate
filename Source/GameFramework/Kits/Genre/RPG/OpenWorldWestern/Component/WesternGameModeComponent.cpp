@@ -25,6 +25,7 @@ namespace sw
     WesternGameModeComponent::WesternGameModeComponent()
         : _westernDataPath{}
         , _player{}
+        , _playerState{}
         , _whistleButton{}
         , _useButton{}
         , _weatherDataPath{}
@@ -82,12 +83,18 @@ namespace sw
         GameStateComponent* pState     = GameStateComponent::openOnOwner( *this, settings );
         if ( pState == nullptr )
             return false; // 까닭은 판 상태가 남겼다
+        const GameObject* const pPlayerState = getObjectManager() != nullptr ? getObjectManager()->resolveGameObject( _playerState ) : nullptr;
+        if ( pPlayerState == nullptr )
+        {
+            SW_LOG_ERROR_ID( "WesternGameMode.PlayerStateMissing", "[Western] Player State does not point at an object (the player controller with the wallet and reputation) - the game cannot open" );
+            return false;
+        }
         const ReputationCatalog* const pHonor      = &_pWesternCatalog->getHonorReputation();
-        ReputationComponent* const     pReputation = PlayerComponentUtil::openOnOwner<ReputationComponent>( *this, pHonor );
-        WalletComponent* const         pWallet     = PlayerComponentUtil::requireOnOwner<WalletComponent>( *this );
+        ReputationComponent* const     pReputation = PlayerComponentUtil::openOn<ReputationComponent>( *pPlayerState, pHonor );
+        WalletComponent* const         pWallet     = PlayerComponentUtil::requireOn<WalletComponent>( *pPlayerState );
         if ( pReputation == nullptr || pWallet == nullptr )
-            return false;                                                                               // 까닭은 찾기 · 열기가 남겼다
-        InventoryComponent* const pBag = PlayerComponentUtil::findOnOwner<InventoryComponent>( *this ); // 가방은 선택이다 — 프레리 씬은 붙이지 않는다
+            return false;                                                                  // 까닭은 찾기 · 열기가 남겼다
+        InventoryComponent* const pBag = pPlayerState->getComponent<InventoryComponent>(); // 가방은 선택이다 — 프레리 씬은 붙이지 않는다
         AIPerceptionSettings      sight{};
         sight._sightRange = _witnessSightRange;
         // 전리품 카탈로그는 없다 — 프레리 동물은 전리품 테이블을 적지 않는다(적으면 손질이 오류를 낸다).

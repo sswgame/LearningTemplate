@@ -8,7 +8,7 @@
 	     Marker 는 마을 상태 표지다 — 시나리오 automation/hub 가 옮긴 자리가 미니게임에 다녀온 뒤에도 그대로인지 본다.
 	     Player(기수)는 어빌리티 시스템(세트 HubResident — 공용 전투 어트리뷰트 체력)을 더 가진다. HP 바는 체력 원천 계약(IHealthSource)으로 그것을 읽고,
 	     미니게임 결과 값(heal · haste)은 MinigameRewardComponent 가 돌아온 뒤 이펙트로 건다 — 미니게임 디렉터는 플레이어를 직접 고치지 않는다.
-	     지갑 · 평판은 바탕의 서부극 디렉터 오브젝트(Ranch)가 연 것 하나이고, 조종자에는 퀘스트 일지만 더한다(열린 평판이 둘이면 어느 플레이어인지 고르지 못한다 — PlayerComponentUtil::findOpen). -->
+	     지갑 · 평판 · 퀘스트 일지는 조종자(PlayerController — 플레이어 상태)에 있다. 지갑 · 평판은 바탕(prairie)이 붙이고 서부극 디렉터(Ranch)가 그것을 열며, 허브가 일지를 더한다. -->
 	<entities>
 		<entity id="4" name="Player">
 			<PrefabOverrides>

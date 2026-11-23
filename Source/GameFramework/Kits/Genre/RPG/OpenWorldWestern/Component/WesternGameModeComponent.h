@@ -31,9 +31,9 @@ namespace sw
      * @brief 레드 데드 리뎀션 2 · 젤다 BotW 식 오픈월드 승마 한 판입니다. 걷는 기수(`_player`)가 가까운 말에 상호작용 버튼으로 올라타고(`MountInteractionComponent`),
      *        말을 몰고(`MountMovementComponent` · `WesternHorseMountComponent`), 같은 버튼으로 내립니다(`VehicleExitComponent`). 이 디렉터는 그 흐름을 돌리지 않고 둘레만 맡습니다.
      * @details 타기 · 몰기 · 내리기는 키트와 기반 컴포넌트가 하고, 말 한 마리의 상태(`WesternHorse`)는 말 오브젝트의 `WesternHorseComponent` 가 가진다(품종은 이 디렉터의 카탈로그에서 찾는다).
-     *          이 디렉터가 하는 일은 셋이다. 판을 열 때 서부극 카탈로그 · 날씨를 읽고 같은 오브젝트의 월드 상태(`GameStateComponent`, 맨 앞) · 플레이어 평판(`ReputationComponent`)을 열고 지갑(`WalletComponent`)을 찾는다(없으면 판을 열지 않는다).
+     *          이 디렉터가 하는 일은 셋이다. 판을 열 때 서부극 카탈로그 · 날씨를 읽고 같은 오브젝트의 월드 상태(`GameStateComponent`, 맨 앞)와 플레이어 상태 오브젝트(`_playerState` — 조종자)의 평판(`ReputationComponent`)을 열고 지갑(`WalletComponent`)을 찾는다(없으면 판을 열지 않는다).
      *          기수가 걷는 동안 휘파람 버튼이 발동하면 그 기수를 주인으로 둔 말 AI(`FollowOwnerAIControllerComponent`)를 모두 부른다. 행동 버튼이 발동하면 곁의 자리(`WesternDeedComponent`)를 쓴다.
-     *          판 상태는 플레이어의 삶(`WesternOutlaw`)이고 시계 · 날씨는 월드 상태, 지갑 · 평판은 플레이어 진행이 싣는다(이 디렉터 오브젝트 — 디렉터가 같은 오브젝트에서 잠금 없이 읽는다). 말 상태는 말 컴포넌트가 스냅숏에 싣는다.
+     *          판 상태는 플레이어의 삶(`WesternOutlaw`)이고 시계 · 날씨는 월드 상태, 지갑 · 평판은 플레이어 상태 오브젝트의 컴포넌트가 싣는다(규칙은 틱 뒤 게임 스레드에서 돌아 다른 오브젝트를 읽고 쓴다). 말 상태는 말 컴포넌트가 스냅숏에 싣는다.
      *          자동 플레이(`_bAutoPlay` · 게임의 자동 플레이 스위치)는 기수를 가장 가까운 말에 태운다.
      */
     REFLECT( Category = "Western", DisplayName = "Western Game Mode", Tooltip = "Opens the western catalog, runs the player's honor, law, survival and hunting, whistles horses and does deeds" )
@@ -78,6 +78,8 @@ namespace sw
         AssetRef<WesternCatalog> _westernDataPath;
         PROPERTY( Category = "Scene", DisplayName = "Player", Tooltip = "Rider object (pawn with Mount Interaction)" )
         GameObjectHandle _player;
+        PROPERTY( Category = "Scene", DisplayName = "Player State", Tooltip = "Object that holds the player's wallet and reputation (the player controller object)" )
+        GameObjectHandle _playerState;
         PROPERTY( Category = "Control", DisplayName = "Whistle Button", Tooltip = "Intent button on the rider pawn that calls the horses" )
         hashed_string _whistleButton;
         PROPERTY( Category = "Control", DisplayName = "Use Button", Tooltip = "Intent button on the rider pawn that does the deed at the nearest spot" )
