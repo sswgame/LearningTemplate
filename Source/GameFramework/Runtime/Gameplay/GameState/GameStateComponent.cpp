@@ -15,7 +15,7 @@
 #include "Engine/Serialization/Format/StateIO.h"
 
 #include "GameFramework/Runtime/Foundation/Framework/GameService.h"
-#include "GameFramework/Runtime/Foundation/Framework/Save/ComponentStateStore.h"
+#include "GameFramework/Runtime/Foundation/Framework/Save/StatefulComponentRegistrar.h"
 #include "GameFramework/Runtime/Foundation/GameData/ConfigRangeUtil.h"
 #include "GameFramework/Runtime/Gameplay/GameState/StateSectionTableUtil.h"
 #include "GameFramework/Runtime/Gameplay/Inventory/Inventory.h"

@@ -1028,7 +1028,6 @@
         "_sourceFolder",
         "_sourceHash",
         "_speedCurve",
-        "_stability",
         "_startSegment",
         "_staticLayer",
         "_stinger",
@@ -1341,7 +1340,6 @@
         "sourceHash",
         "space",
         "speedCurve",
-        "stability",
         "startSegment",
         "staticLayer",
         "stinger",
@@ -1739,8 +1737,14 @@
     },
     {
       "owner": "GF_CityBuilder",
-      "listField": [],
-      "listAssetRefField": [],
+      "listField": [
+        "_cityDataPath",
+        "cityDataPath"
+      ],
+      "listAssetRefField": [
+        "_cityDataPath",
+        "cityDataPath"
+      ],
       "listPathTextField": [],
       "listTextField": [
         "_currency",
@@ -1811,6 +1815,63 @@
         "_moveAction",
         "jumpAction",
         "moveAction"
+      ]
+    },
+    {
+      "owner": "GF_Client_CityBuilder",
+      "listField": [
+        "_tilePrefab",
+        "tilePrefab"
+      ],
+      "listAssetRefField": [
+        "_tilePrefab",
+        "tilePrefab"
+      ],
+      "listPathTextField": [],
+      "listTextField": [
+        "_fastForwardAction",
+        "fastForwardAction"
+      ]
+    },
+    {
+      "owner": "GF_Client_Farming",
+      "listField": [
+        "_cropPrefab",
+        "_listDefaultGrowingModel",
+        "_listGrowingModel",
+        "_readyModel",
+        "_soilPrefab",
+        "cropPrefab",
+        "listDefaultGrowingModel",
+        "listGrowingModel",
+        "readyModel",
+        "soilPrefab"
+      ],
+      "listAssetRefField": [
+        "_cropPrefab",
+        "_listDefaultGrowingModel",
+        "_listGrowingModel",
+        "_readyModel",
+        "_soilPrefab",
+        "cropPrefab",
+        "listDefaultGrowingModel",
+        "listGrowingModel",
+        "readyModel",
+        "soilPrefab"
+      ],
+      "listPathTextField": [],
+      "listTextField": []
+    },
+    {
+      "owner": "GF_Client_OpenWorldWestern",
+      "listField": [],
+      "listAssetRefField": [],
+      "listPathTextField": [],
+      "listTextField": [
+        "_outlawStatus",
+        "_rideStatus",
+        "outlawStatus",
+        "rideStatus"
       ]
     },
     {
@@ -1966,14 +2027,40 @@
     },
     {
       "owner": "GF_Farming",
-      "listField": [],
-      "listAssetRefField": [],
+      "listField": [
+        "_autoFarmerPrefab",
+        "_cropDataPath",
+        "_scheduleDataPath",
+        "_villagerPrefab",
+        "_weatherPath",
+        "autoFarmerPrefab",
+        "cropDataPath",
+        "scheduleDataPath",
+        "villagerPrefab",
+        "weatherPath"
+      ],
+      "listAssetRefField": [
+        "_autoFarmerPrefab",
+        "_cropDataPath",
+        "_scheduleDataPath",
+        "_villagerPrefab",
+        "_weatherPath",
+        "autoFarmerPrefab",
+        "cropDataPath",
+        "scheduleDataPath",
+        "villagerPrefab",
+        "weatherPath"
+      ],
       "listPathTextField": [],
       "listTextField": [
         "_id",
+        "_key",
         "_name",
+        "_navObstacleNames",
         "id",
+        "key",
         "name",
+        "navObstacleNames",
         "produce",
         "seed"
       ]
@@ -2324,8 +2411,18 @@
     },
     {
       "owner": "GF_OpenWorldWestern",
-      "listField": [],
-      "listAssetRefField": [],
+      "listField": [
+        "_weatherDataPath",
+        "_westernDataPath",
+        "weatherDataPath",
+        "westernDataPath"
+      ],
+      "listAssetRefField": [
+        "_weatherDataPath",
+        "_westernDataPath",
+        "weatherDataPath",
+        "westernDataPath"
+      ],
       "listPathTextField": [],
       "listTextField": [
         "_animalID",
@@ -2336,6 +2433,8 @@
         "_listClothing",
         "_name",
         "_regionID",
+        "_useButton",
+        "_whistleButton",
         "animalID",
         "currency",
         "flag",
@@ -2346,7 +2445,9 @@
         "loot",
         "name",
         "regionID",
-        "unlocks"
+        "unlocks",
+        "useButton",
+        "whistleButton"
       ]
     },
     {
@@ -3388,77 +3489,6 @@
       "listTextField": []
     },
     {
-      "owner": "game:FrontierTown",
-      "listField": [
-        "_tilePrefab",
-        "_unitPrefab",
-        "tilePrefab",
-        "unitPrefab"
-      ],
-      "listAssetRefField": [
-        "_tilePrefab",
-        "_unitPrefab",
-        "tilePrefab",
-        "unitPrefab"
-      ],
-      "listPathTextField": [],
-      "listTextField": []
-    },
-    {
-      "owner": "game:HarvestValley",
-      "listField": [
-        "_autoFarmerPrefab",
-        "_cropDataPath",
-        "_cropPrefab",
-        "_listDefaultGrowingModel",
-        "_listGrowingModel",
-        "_readyModel",
-        "_scheduleDataPath",
-        "_soilPrefab",
-        "_villagerPrefab",
-        "_weatherPath",
-        "autoFarmerPrefab",
-        "cropDataPath",
-        "cropPrefab",
-        "listDefaultGrowingModel",
-        "listGrowingModel",
-        "readyModel",
-        "scheduleDataPath",
-        "soilPrefab",
-        "villagerPrefab",
-        "weatherPath"
-      ],
-      "listAssetRefField": [
-        "_autoFarmerPrefab",
-        "_cropDataPath",
-        "_cropPrefab",
-        "_listDefaultGrowingModel",
-        "_listGrowingModel",
-        "_readyModel",
-        "_scheduleDataPath",
-        "_soilPrefab",
-        "_villagerPrefab",
-        "_weatherPath",
-        "autoFarmerPrefab",
-        "cropDataPath",
-        "cropPrefab",
-        "listDefaultGrowingModel",
-        "listGrowingModel",
-        "readyModel",
-        "scheduleDataPath",
-        "soilPrefab",
-        "villagerPrefab",
-        "weatherPath"
-      ],
-      "listPathTextField": [],
-      "listTextField": [
-        "_key",
-        "_navObstacleNames",
-        "key",
-        "navObstacleNames"
-      ]
-    },
-    {
       "owner": "game:MeadowVillage",
       "listField": [
         "_prefab",
@@ -3563,6 +3593,8 @@
         "_rigWeaponSockets",
         "_shopDocument",
         "_shopsPath",
+        "_unitDataPath",
+        "_unitPrefab",
         "catalog",
         "catalogPath",
         "combatEnemyClips",
@@ -3598,7 +3630,9 @@
         "rigWeaponRig",
         "rigWeaponSockets",
         "shopDocument",
-        "shopsPath"
+        "shopsPath",
+        "unitDataPath",
+        "unitPrefab"
       ],
       "listAssetRefField": [
         "_catalog",
@@ -3637,6 +3671,8 @@
         "_rigWeaponSockets",
         "_shopDocument",
         "_shopsPath",
+        "_unitDataPath",
+        "_unitPrefab",
         "catalog",
         "catalogPath",
         "combatEnemyClips",
@@ -3672,7 +3708,9 @@
         "rigWeaponRig",
         "rigWeaponSockets",
         "shopDocument",
-        "shopsPath"
+        "shopsPath",
+        "unitDataPath",
+        "unitPrefab"
       ],
       "listPathTextField": [],
       "listTextField": [
@@ -3901,32 +3939,6 @@
         "name",
         "respawnRegion",
         "startQuest"
-      ]
-    },
-    {
-      "owner": "game:WildWest",
-      "listField": [
-        "_weatherDataPath",
-        "_westernDataPath",
-        "weatherDataPath",
-        "westernDataPath"
-      ],
-      "listAssetRefField": [
-        "_weatherDataPath",
-        "_westernDataPath",
-        "weatherDataPath",
-        "westernDataPath"
-      ],
-      "listPathTextField": [],
-      "listTextField": [
-        "_outlawStatus",
-        "_rideStatus",
-        "_useButton",
-        "_whistleButton",
-        "outlawStatus",
-        "rideStatus",
-        "useButton",
-        "whistleButton"
       ]
     }
   ]

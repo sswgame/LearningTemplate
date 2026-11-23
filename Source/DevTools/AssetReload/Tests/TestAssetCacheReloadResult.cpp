@@ -113,7 +113,8 @@ SW_TEST_CASE( AssetCacheReloadResultTest, UnheldPathIsNotTracked )
 /** @brief [AssetCacheReloadResultTest] 파일에서 읽지 않는 값 표(WeakInternCache)는 리로드 함수가 없고, 파일 캐시는 있다 — 등록 줄이 적지 않고 형식이 정한다 */
 SW_TEST_CASE( AssetCacheReloadResultTest, ValueTablesHaveNoReloadFunction )
 {
-    SW_EXPECT_TRUE( getAssetCacheReloadFunction<WeakInternCache<int32, float32>>() == nullptr );
+    using ValueTable = WeakInternCache<int32, float32>; // 매크로 인자에 쉼표를 두지 않는다
+    SW_EXPECT_TRUE( getAssetCacheReloadFunction<ValueTable>() == nullptr );
     SW_EXPECT_TRUE( MaterialCache::kReloadable );
     SW_EXPECT_TRUE( engine::getSubsystem<AssetManager>().findReloadFunction( engine::getSubsystem<AssetManager>().findAssetCache( MaterialCache::kAssetKindName ) ) != nullptr );
 }
