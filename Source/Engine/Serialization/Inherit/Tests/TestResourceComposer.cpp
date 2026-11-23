@@ -110,7 +110,7 @@ SW_TEST_CASE( ResourceComposerTest, DocumentTableRowParses )
 /** @brief [ResourceComposerTest] 규칙 표는 코드 뿌리라 배포 팩에 담긴다 — 표가 `Config/Dev` 에 있던 때는 배포 구성의 카탈로그 층이 표를 읽지 못해 오류로 멈췄다 */
 SW_TEST_CASE( ResourceComposerTest, RuleTableIsACookRootResource )
 {
-    SW_EXPECT_TRUE( AssetCookRootRegistry::hasRoot( DataCatalogInheritance::kTableAssetID ) );
+    SW_EXPECT_TRUE( AssetCookRoot::hasRoot( DataCatalogInheritance::kTableAssetID ) );
     string text;
     SW_REQUIRE_TRUE( AssetIO::readTextAsset( AssetID{ DataCatalogInheritance::kTableAssetID }, text ) );
 }

@@ -239,7 +239,7 @@ namespace sw
 
 namespace sw
 {
-    SW_BUILT_IN_ASSET_CACHE( MeshCache );
+    SW_BUILT_IN_ASSET_CACHE( MeshCache, MeshCache );
 } // namespace sw
 
 namespace sw

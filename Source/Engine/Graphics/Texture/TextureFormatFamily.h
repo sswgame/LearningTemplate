@@ -15,7 +15,6 @@
 namespace sw
 {
     class IRHIDevice;
-    class TypeRegistry;
 
     struct TextureFormatSettings;
 } // namespace sw
@@ -50,7 +49,7 @@ namespace sw
          * @brief 표에서 대상 @p targetName 의 묶음을 우선순위대로 @p outListFamily 에 풉니다.
          * @return 모르는 대상 · 묶음 · 형식 이름이 있으면 오류를 남기고 false 입니다(반쯤 푼 목록을 남기지 않는다).
          */
-        [[nodiscard]] static bool resolveTarget( const TextureFormatSettings& settings, string_view targetName, const TypeRegistry& types, vector<TextureFormatFamily>& outListFamily );
+        [[nodiscard]] static bool resolveTarget( const TextureFormatSettings& settings, string_view targetName, vector<TextureFormatFamily>& outListFamily );
         /**
          * @brief 빌드 플랫폼 @p platformName(`build::kPlatformName`)이 쓰는 대상의 이름입니다. 실행은 이 대상의 묶음에서 고른다.
          * @return 그 플랫폼을 적은 대상이 없거나 둘 이상이면 오류를 남기고 빈 글입니다(데스크톱 대상으로 대신 고르지 않는다).
@@ -61,7 +60,7 @@ namespace sw
          * @details 쿠킹은 대상마다 따로 하지 않는다 — 한 번 구운 팩이 모든 배포 대상(데스크톱 · Android · 웹)에 같고, 실행이 장치에 맞는 곁 변형을 고른다(Godot 의 형식별 파일과 같은 모양).
          * @return 모르는 묶음 · 형식 이름이 있으면 오류를 남기고 false 입니다.
          */
-        [[nodiscard]] static bool resolveCookFamilies( const TextureFormatSettings& settings, const TypeRegistry& types, vector<TextureFormatFamily>& outListFamily );
+        [[nodiscard]] static bool resolveCookFamilies( const TextureFormatSettings& settings, vector<TextureFormatFamily>& outListFamily );
         /** @brief @p listFamily 가운데 @p device 가 네 용도를 모두 지원하는 첫 묶음입니다. 없으면 nullptr 입니다. */
         [[nodiscard]] static const TextureFormatFamily* selectFamily( const vector<TextureFormatFamily>& listFamily, const IRHIDevice& device );
         /**

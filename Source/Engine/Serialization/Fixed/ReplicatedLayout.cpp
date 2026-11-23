@@ -37,7 +37,7 @@ namespace sw
 
     void ReplicatedLayout::stopForMissingSchema( const hashed_string& fqn, const Error& reason )
     {
-        SW_FATAL( "'%#' has no replicated schema: %# (%#)", fqn.c_str(), reason.message(), reason.detail() );
+        reportFatalError( "'%#' has no replicated schema: %# (%#)", fqn.c_str(), reason.message(), reason.detail() );
     }
 
     void ReplicatedLayout::collectChangedProperties( const FixedCodec& schema, const void* pBefore, const void* pAfter, DynamicBitset& outChanged )

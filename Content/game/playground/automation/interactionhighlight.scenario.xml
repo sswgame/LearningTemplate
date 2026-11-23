@@ -15,12 +15,12 @@
 	<!-- PickCube 앞 — 외곽선 -->
 	<DevCommand line="teleport Player -1.5 0.5 -0.2"/>
 	<WaitRenderStable/> <!-- 사진 앞 렌더 안정(TAA · 노출 · 에셋) -->
-	<Screenshot file="outline.ppm" stability="none"/>
+	<Screenshot file="outline.ppm" stability="None"/>
 
 	<!-- HideCube 앞(벽 너머) — 감각 모드 -->
 	<DevCommand line="teleport Player 2 0.5 0.8"/>
 	<WaitRenderStable/> <!-- 사진 앞 렌더 안정(TAA · 노출 · 에셋) -->
-	<Screenshot file="sense.ppm" stability="none"/>
+	<Screenshot file="sense.ppm" stability="None"/>
 
 	<ExpectImage file="outline.ppm" golden="outline" region="0.26,0.38,0.42,0.64"/>
 	<ExpectImage file="outline.ppm" golden="outline_2" region="0.62,0.37,0.76,0.60"/>

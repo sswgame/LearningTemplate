@@ -4,6 +4,7 @@
 <EngineDefaultAssets _defaultMaterial="engine/materials/defaultmaterial.material"
                      _missingMaterial="engine/materials/missingmaterial.material"
                      _missingTexture="engine/textures/missing.dds"
+                     _materialGlobals="engine/materials/weather.matparams.xml"
                      _loadingTexture="engine/textures/loading.dds"
                      _debugKeyInputMap="engine/input/default.input.xml"
                      _uiInputMap="engine/input/ui.input.xml"

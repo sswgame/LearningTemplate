@@ -1,0 +1,14 @@
+<?asset guid="d364a28c2d0555ef306c1a5c42fbae52"?>
+<Prefab formatVersion="1" name="FarmAutoFarmer">
+	<GameObject _schemaVersion="0" _name="FarmAutoFarmer" _bActive="true">
+		<_listComponent>
+			<FarmAutoFarmerAIComponent _localID="11352697028849582381" _componentName="FarmAutoFarmerAIComponent"
+			                           _bActive="true"
+			                           _possessAtStart="0"
+			                           _turnRate="20"
+			                           _arriveDistance="0.15"
+			                           _behaviorTree="game/playground/harvestvalley/data/ai/autofarmer.bt.xml"
+			                           _cultivateLimit="32" />
+		</_listComponent>
+	</GameObject>
+</Prefab>

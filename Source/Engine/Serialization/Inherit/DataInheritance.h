@@ -80,11 +80,15 @@ namespace sw
      * @brief 형식 하나를 합치는 규칙입니다. 리플렉션 형식은 `makeFromType` 이 PROPERTY 에서 만들고, 손으로 읽는 XML 형식은 같은 구조를 값으로 적습니다.
      * @details 노드 하나가 원소 하나입니다. `_listField` 에 없는 자식 원소는 통째로 바뀝니다(열쇠 없는 목록 · 글 값).
      *          `_keyAttribute` 가 있으면 이 원소의 자식들이 그 속성을 열쇠로 하는 목록이고, `_listField` 는 목록 원소 안쪽의 칸입니다.
+     *          글만 담는 목록(`<item>MATERIAL_X</item>`)은 열쇠가 `kTextKey` 입니다 — 원소의 글이 이름이라 글 하나를 더하고(`<item>새 글</item>`) 지웁니다(`<item _op="Remove">글</item>`).
      */
     struct SW_API DataInheritanceSchema
     {
+        /** @brief `_keyAttribute` 가 이 값이면 속성이 아니라 원소의 글이 열쇠다(속성 이름에 쓸 수 없는 글자라 겹치지 않는다). */
+        static constexpr const utf8* kTextKey = "#text";
+
         string         _name;              ///< 원소 이름. 맨 위 노드는 문서 루트 이름이다
-        string         _keyAttribute;      ///< 비어 있지 않으면 자식들이 이 속성을 열쇠로 하는 목록이다
+        string         _keyAttribute;      ///< 비어 있지 않으면 자식들이 이 속성(`kTextKey` 면 글)을 열쇠로 하는 목록이다
         vector<string> _listKeptAttribute; ///< 부모 · 기본값과 같아도 저장이 지우지 않는 속성(필수 칸 · 형식 판 · 이름)
         /**
          * @brief 열쇠 있는 목록 원소의 정체 속성입니다(애니메이션 그래프 전이의 `from` · `to`). 자식이 부모와 같은 열쇠의 원소에 다른 값을 적으면 고침이 아니라 열쇠가 겹친 것이다.
@@ -111,6 +115,10 @@ namespace sw
         [[nodiscard]] static DataInheritanceSchema makeKeyedList( string_view name, string_view keyAttribute );
         /** @brief @p name 의 자식 칸입니다. 없으면 nullptr 이고, 그 칸은 통째로 바뀝니다. */
         [[nodiscard]] const DataInheritanceSchema* findField( string_view name ) const;
+        /** @brief 열쇠 있는 목록의 원소 @p element 의 열쇠입니다. 열쇠 속성이 없거나 글이 비면 비어 있습니다. */
+        [[nodiscard]] optional<string> findElementKey( const XMLNode& element ) const;
+        /** @brief 열쇠 있는 목록의 원소 @p element 에 열쇠 @p key 를 적습니다(속성 또는 글). */
+        void writeElementKey( const XMLNode& element, string_view key ) const;
         /** @brief 리플렉션 형식의 규칙을 만듭니다. 구조체 칸 · `InheritKey` 칸이 있는 구조체 목록은 합치고, 필수 칸(`Required`)은 저장이 지우지 않습니다. */
         [[nodiscard]] static DataInheritanceSchema makeFromType( const TypeInfo& typeInfo );
     };
@@ -221,52 +229,3 @@ namespace sw
         static void reportBaseNotFound( string_view baseID, string_view sourceName );
     };
 } // namespace sw
-
-namespace sw
-{
-    /**
-     * @class DataInheritanceSchemaRegistrar
-     * @brief 손 형식의 규칙 하나를 정적 초기화에서 올립니다(`SW_DATA_INHERITANCE_SCHEMA`). 정적 등록 표(`LockedRegistrationList`)에 오르고, 모듈이 내려가면 소멸자가 뺍니다.
-     */
-    class SW_API DataInheritanceSchemaRegistrar
-    {
-    public:
-        DataInheritanceSchemaRegistrar( const utf8* pRootName, DataInheritance::MakeSchemaFunction pfnMakeSchema );
-        DataInheritanceSchemaRegistrar( const utf8* pRootName, DataInheritance::MergeFunction pfnMerge );
-        ~DataInheritanceSchemaRegistrar();
-        DataInheritanceSchemaRegistrar( const DataInheritanceSchemaRegistrar& )            = delete;
-        DataInheritanceSchemaRegistrar& operator=( const DataInheritanceSchemaRegistrar& ) = delete;
-
-        /** @brief 루트 이름이 @p rootName 인 규칙 함수입니다. 없으면 nullptr 입니다. */
-        [[nodiscard]] static DataInheritance::MakeSchemaFunction find( string_view rootName );
-        /** @brief 루트 이름이 @p rootName 인 합치기 함수입니다. 없으면 nullptr 입니다. */
-        [[nodiscard]] static DataInheritance::MergeFunction findMerge( string_view rootName );
-
-    private:
-        const utf8*                         _pRootName;
-        DataInheritance::MakeSchemaFunction _pfnMakeSchema;
-        DataInheritance::MergeFunction      _pfnMerge;
-    };
-} // namespace sw
-
-/**
- * @brief 루트 이름 @p RootName 의 손 XML 형식이 부모를 가리킬 수 있게 올립니다. 팩 쿠커가 이 규칙으로 펼칩니다.
- * @details 팩 쿠킹은 게임 모듈을 올리기 전에 돌아 모듈의 정적 등록을 보지 못하므로 Engine 만 쓴다. 게임 · 키트 형식은 `Content/engine/settings/datacataloginheritance.xml` 의 `<Document>` 줄에 적는다.
- */
-#define SW_DATA_INHERITANCE_SCHEMA( RootName, pfnMakeSchema )                                                                                                                           \
-    static_assert( ::sw::string_view( SW_REGISTRAR_MODULE ) == ::sw::string_view( "Engine" ), "the pack cook cannot see a module's registrar - use a Document row of the rule table" ); \
-    static const ::sw::DataInheritanceSchemaRegistrar s_dataInheritanceSchema##RootName                                                                                                 \
-    {                                                                                                                                                                                   \
-        #RootName, pfnMakeSchema                                                                                                                                                        \
-    }
-
-/**
- * @brief 칸 규칙으로 풀리지 않는 Engine 형식의 합치기 함수를 올립니다. 읽기(`ResourceContext::forMerge`)와 팩 쿠커가 같은 함수로 부모 없는 한 벌을 만듭니다.
- * @details 예외 길이 아니다 — 결과는 다른 형식과 똑같이 펼친 글이고, 런타임은 그 글만 읽는다. 게임 · 키트 형식은 쓸 수 없다(`SW_DATA_INHERITANCE_SCHEMA` 와 같은 까닭).
- */
-#define SW_DATA_INHERITANCE_MERGE( RootName, pfnMerge )                                                                                          \
-    static_assert( ::sw::string_view( SW_REGISTRAR_MODULE ) == ::sw::string_view( "Engine" ), "the pack cook cannot see a module's registrar" ); \
-    static const ::sw::DataInheritanceSchemaRegistrar s_dataInheritanceMerge##RootName                                                           \
-    {                                                                                                                                            \
-        #RootName, pfnMerge                                                                                                                      \
-    }

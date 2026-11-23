@@ -25,7 +25,7 @@ namespace sw
 
     /**
      * @class InventoryShopDemoComponent
-     * @brief 지갑 · 가게(`ShopManager`)를 들고, 캐릭터 가방 위에 오프라인 구매 공급자(`LocalShopPurchaseProvider`)를 세웁니다. 화면은 개발 명령 `demo.inventory` · `demo.shop` 이 엽니다.
+     * @brief 지갑 · 가게(`ShopManager`)를 들고, 캐릭터 가방 위에 오프라인 구매 공급자(`LocalShopPurchaseProvider`)를 세웁니다. 화면은 개발 명령 `exec <오브젝트> openInventory` · `openShop` 이 엽니다.
      */
     REFLECT( Category = "KitDemo", DisplayName = "Inventory Shop Demo", Tooltip = "Wallet and shop over a character bag; opens the runtime inventory and shop screens" )
     class InventoryShopDemoComponent : public GameModeComponent
@@ -40,9 +40,9 @@ namespace sw
         void serializeGameState( StateIO& io ) override;
 
         /** @brief 인벤토리 화면을 엽니다. 이미 열렸거나 캐릭터가 없으면 false 입니다. */
-        [[nodiscard]] bool openInventory();
+        [[nodiscard]] FUNCTION( Category = "Demo", Exec ) bool openInventory();
         /** @brief 상점 화면을 엽니다. 이미 열렸거나 판이 열리지 않았으면 false 입니다. */
-        [[nodiscard]] bool openShop();
+        [[nodiscard]] FUNCTION( Category = "Demo", Exec ) bool openShop();
 
         const Wallet&        getWallet() const { return _wallet; }
         const hashed_string& getCurrency() const { return _currency; }

@@ -142,9 +142,9 @@ namespace sw
 
             [[noreturn]] static void stopForUnsupportedField( const TypeInfo& owner, const PropertyInfo& prop )
             {
-                SW_FATAL( "state field '%#::%#' (%#) cannot be carried by StateIO::reflected - use a builtin with the State role (ReflectBuiltins.xxx), an enum, a reflected struct "
-                          "or a sequence of those, or take the field out of RuntimeState and carry it with io.value in serializeState",
-                          owner._fullyQualifiedName.c_str(), prop._name.c_str(), prop._typeName.c_str() );
+                reportFatalError( "state field '%#::%#' (%#) cannot be carried by StateIO::reflected - use a builtin with the State role (ReflectBuiltins.xxx), an enum, a reflected struct "
+                                  "or a sequence of those, or take the field out of RuntimeState and carry it with io.value in serializeState",
+                                  owner._fullyQualifiedName.c_str(), prop._name.c_str(), prop._typeName.c_str() );
             }
 
             /** @brief 이 깊이에서 싣는 칸인지 봅니다. 최상위는 상태 역할 칸만, 안쪽 구조체는 Transient 가 아닌 칸 전부입니다. */
@@ -160,7 +160,7 @@ namespace sw
             {
                 if ( depth > constant::reflection::kMaxParentChainDepth )
                 {
-                    SW_FATAL( "state type '%#' nests reflected structs deeper than %# - a struct contains itself", type._fullyQualifiedName.c_str(), constant::reflection::kMaxParentChainDepth );
+                    reportFatalError( "state type '%#' nests reflected structs deeper than %# - a struct contains itself", type._fullyQualifiedName.c_str(), constant::reflection::kMaxParentChainDepth );
                 }
                 for ( const PropertyInfo& prop : type.getPropertiesWithBase() )
                 {
@@ -234,7 +234,7 @@ namespace sw
         // 레지스트리를 이름으로 바로 찾는다 — `StaticType()` 은 DLL 밖으로 내보내지 않은 키트 타입에서 링크가 깨진다(`FixedLayout::findCodec` 과 같은 까닭).
         const TypeInfo* pType = TypeLookupCache{}.find( fqn );
         if ( pType == nullptr )
-            SW_FATAL( "StateIO::reflected: '%#' is not a registered reflected type - add REFLECT() and REFLECT_BODY() or check the reflection generation", fqn.c_str() );
+            reportFatalError( "StateIO::reflected: '%#' is not a registered reflected type - add REFLECT() and REFLECT_BODY() or check the reflection generation", fqn.c_str() );
         return *pType;
     }
 
@@ -317,8 +317,8 @@ namespace sw
     void StateIO::reflectedDerived( const TypeInfo& dynamicType, const hashed_string& staticFqn, void* pObject )
     {
         if ( dynamicType.isDerivedFrom( staticFqn ) == false )
-            SW_FATAL( "StateIO::reflectedAs: '%#' is not '%#' or derived from it - the fields would be read at another type's offsets", dynamicType._fullyQualifiedName.c_str(),
-                      staticFqn.c_str() );
+            reportFatalError( "StateIO::reflectedAs: '%#' is not '%#' or derived from it - the fields would be read at another type's offsets", dynamicType._fullyQualifiedName.c_str(),
+                              staticFqn.c_str() );
         reflectedObject( dynamicType, pObject, findReflectedLayoutHash( dynamicType ) );
     }
 

@@ -53,7 +53,7 @@
 	<Expect watch="UI.SubtitleShown" equals="1"/>
 	<Expect watch="UI.SubtitleWrappedLines" atLeast="2"/>
 	<Expect watch="UI.SubtitleOverflow" equals="0"/>
-	<Screenshot file="subtitles_ploc.ppm" stability="assets"/>
+	<Screenshot file="subtitles_ploc.ppm" stability="Assets"/>
 	<ExpectImage file="subtitles_ploc.ppm" golden="subtitles_ploc" region="0,0.55,1,1"/>
 	<Pass/>
 </Scenario>

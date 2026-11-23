@@ -729,10 +729,10 @@ namespace sw
                 continue;
             const auto watchersIt = _mapFriendToWatchers.find( link._otherID );
             if ( watchersIt == _mapFriendToWatchers.end() ) // addFriendWatcher 가 넣은 것만 뺀다 — 없으면 역색인이 관계 목록과 갈라진 것이다
-                SW_FATAL( "SocialService: friend index has no watchers of account %# while account %# lists it", link._otherID, accountID );
+                reportFatalError( "SocialService: friend index has no watchers of account %# while account %# lists it", link._otherID, accountID );
             unordered_set<AccountID>& setWatcher = watchersIt->second;
             if ( setWatcher.erase( accountID ) == 0 )
-                SW_FATAL( "SocialService: friend index lost watcher %# of account %#", accountID, link._otherID );
+                reportFatalError( "SocialService: friend index lost watcher %# of account %#", accountID, link._otherID );
             if ( setWatcher.empty() )
                 _mapFriendToWatchers.erase( watchersIt );
         }

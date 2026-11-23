@@ -138,7 +138,7 @@
 	<Field owner="SkirmishGameModeComponent" field="_productionUnitID" tag="RTSUnitDef"/>
 	<Field owner="SkirmishGameModeComponent" field="_armyUnitID" tag="RTSUnitDef"/>
 	<CatalogKey tag="CityBuildingDef" catalog="CityCatalog" entry="Building"/>
-	<Field owner="FrontierCityGameModeComponent" field="_landmarkBuilding" tag="CityBuildingDef"/>
+	<Field owner="CityGameModeComponent" field="_landmarkBuilding" tag="CityBuildingDef"/>
 	<CatalogKey tag="CameraPresetDef" catalog="CameraPresetCatalog" entry="Preset"/>
 	<Field owner="CameraDirectorComponent" field="_initialPreset" tag="CameraPresetDef"/>
 	<Field owner="SkirmishGameModeComponent" field="_watchCameraPreset" tag="CameraPresetDef"/>
@@ -150,7 +150,7 @@
 	<CatalogKey tag="WesternHorseDef" catalog="WesternCatalog" entry="Horse"/>
 	<CatalogKey tag="WesternHuntWeaponDef" catalog="WesternCatalog" entry="HuntWeapon"/>
 	<CatalogKey tag="WesternHitZoneDef" catalog="WesternCatalog" entry="HitZone"/>
-	<Field owner="WildWestGameModeComponent" field="_regionID" tag="WesternRegionDef"/>
+	<Field owner="WesternGameModeComponent" field="_regionID" tag="WesternRegionDef"/>
 	<Field owner="WesternHorseComponent" field="_breed" tag="WesternHorseDef"/>
 	<Field owner="WesternDeedComponent" field="_weapon" tag="WesternHuntWeaponDef"/>
 	<Field owner="WesternDeedComponent" field="_zone" tag="WesternHitZoneDef"/>

@@ -30,7 +30,7 @@ namespace sw
             /** @brief 글 연산으로 판정하는 상대 경로인지 봅니다 — 비지 않았고, 절대 경로가 아니며, `..` 마디가 없다. */
             static bool isPlainRelativePath( string_view path )
             {
-                if ( path.empty() || AbsolutePath::isStrictAbsolute( path ) || path.front() == '/' || path.front() == '\\' )
+                if ( path.empty() || FileUtil::isAbsolutePath( path ) ) // OS 와 무관하게 같은 판정 — `C:/` 는 Linux 에서도 절대다(시나리오는 OS 사이를 옮겨 다닌다)
                     return false;
                 StringBuilder<constant::buffer::kMax1024> wrapped;
                 wrapped.appendFormat( "/%#/", FileUtil::normalizeSeparators( path ) );

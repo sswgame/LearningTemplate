@@ -106,12 +106,42 @@ SW_TEST_CASE( MaterialParameterCollectionTest, ValidateRejectsBadNames )
     SW_EXPECT_FALSE( desc.validate( "test" ) );
 }
 
-/** @brief [MaterialParameterCollectionTest] 프로퍼티 값 글은 타입의 채널 수만큼이고 머티리얼 값 글과 같은 꼴이다 */
-SW_TEST_CASE( MaterialParameterCollectionTest, PropertyTextHasTheTypeChannels )
+/**
+ * @brief [MaterialParameterCollectionTest] 전역 칸을 가진 값은 프레임 상수로 나가고 머티리얼 세대를 올리지 않는다 — 한 칸을 둘이 먹이면 읽기 오류, 빠진 칸이 있으면 false 다
+ * @details 변이: 전역 값이 세대를 올리면 날씨가 흐르는 동안 장면의 모든 머티리얼 원소를 매 프레임 다시 맞춘다.
+ */
+SW_TEST_CASE( MaterialParameterCollectionTest, GlobalValuesGoToTheFrameConstants )
 {
-    const float4 value{ 0.5f, 0.25f, 2.0f, 1.0f };
-    SW_EXPECT_EQUAL( string( "0.5" ), MaterialParameterCollection::makePropertyText( value, 1u ) );
-    SW_EXPECT_EQUAL( string( "0.5 0.25 2 1" ), MaterialParameterCollection::makePropertyText( value, 4u ) );
+    MaterialParameterCollectionDef desc;
+    desc._listParameter.resize( 3 );
+    desc._listParameter[0]._name   = "Weather";
+    desc._listParameter[0]._value  = float4{ 0.5f, 0.25f, 0.0f, 10.0f };
+    desc._listParameter[0]._global = MaterialGlobalSlot::Weather;
+    desc._listParameter[1]._name   = "Rain";
+    desc._listParameter[1]._global = MaterialGlobalSlot::Rain;
+    desc._listParameter[2]._name   = "Tint";
+    SW_EXPECT_TRUE( desc.validate( "globals" ) );
+
+    MaterialParameterCollection collection{ desc };
+    const uint32                generation = collection.getGeneration();
+    SW_EXPECT_TRUE( collection.isGlobal( hashed_string( "Weather" ) ) );
+    SW_EXPECT_FALSE( collection.isGlobal( hashed_string( "Tint" ) ) );
+    SW_EXPECT_TRUE( collection.setValue( hashed_string( "Rain" ), float4{ 0.75f, 0.0f, 0.0f, 0.0f } ) );
+    SW_EXPECT_EQUAL( generation, collection.getGeneration() );
+    SW_EXPECT_TRUE( collection.setValue( hashed_string( "Tint" ), float4{ 1.0f, 0.0f, 0.0f, 1.0f } ) );
+    SW_EXPECT_TRUE( generation != collection.getGeneration() );
+
+    MaterialGlobals globals;
+    SW_EXPECT_TRUE( collection.writeGlobals( globals ) );
+    SW_EXPECT_NEAR( 0.5f, globals._weather._x, 1e-6f );
+    SW_EXPECT_NEAR( 10.0f, globals._weather._w, 1e-6f );
+    SW_EXPECT_NEAR( 0.75f, globals._rain._x, 1e-6f );
+
+    desc._listParameter[1]._global = MaterialGlobalSlot::None;
+    SW_EXPECT_FALSE( MaterialParameterCollection{ desc }.writeGlobals( globals ) );
+    SW_EXPECT_LOG( "MaterialParameterCollection.GlobalRepeated" );
+    desc._listParameter[1]._global = MaterialGlobalSlot::Weather;
+    SW_EXPECT_FALSE( desc.validate( "globals" ) );
 }
 
 /** @brief [MaterialParameterCollectionTest] 묶음 변형은 값을 이름으로 합친다 */

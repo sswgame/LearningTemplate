@@ -65,7 +65,7 @@ namespace sw
         if ( commandLine.getArgument( CommandLineArgument::WORKERS, workerCount ) == false )
             return;
         if ( workerCount < 1 )
-            SW_FATAL( "-workers=%# must be 1 or more", workerCount );
+            reportFatalError( "-workers=%# must be 1 or more", workerCount );
         taskManager.setSubsystemWorkerCount( static_cast<uint32>( workerCount ) );
     } );
 

@@ -6,7 +6,7 @@
 #include "Core/GlobalVariable/GlobalVariableManager.h"
 #include "Core/Math/BitUtil.h"
 #include "Core/Math/MathUtil.h"
-#include "Core/String/EnumNameTable.h"
+#include "Core/String/NamedValue.h"
 #include "Core/String/StringUtil.h"
 
 #include "Engine/Input/IInputDevice.h"

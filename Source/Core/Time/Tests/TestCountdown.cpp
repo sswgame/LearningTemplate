@@ -91,12 +91,12 @@ SW_TEST_CASE( CountdownTest, CountdownRepeatRateDoesNotDependOnFrameRate )
 
 /**
  * @brief [CountdownTest] `tickRepeat` — 누르고 있는 동안 간격마다 한 번, 지나친 몫을 이어 빈도가 걸음 크기에 매이지 않고, 쉬면 늦음을 버린다
- * @details 테스트 게임 둘이 이 줄을 쓴다 — VoxelCraft 블록 놓기(0.25 초 간격, 걸음 0.1 초 상한)와 Shooter3D 적 휘두르기(1.5 초). 손으로 세던 판
+ * @details 테스트 게임 둘이 이 줄을 쓴다 — 복셀 광산 블록 놓기(0.25 초 간격, 걸음 0.1 초 상한)와 Shooter3D 적 휘두르기(1.5 초). 손으로 세던 판
  *          (`x -= dt; if ( want && x <= 0 ) x = interval;`)은 0.1 초 걸음에서 놓기 간격을 0.3 초로 늘렸다 — 10 초 누르면 41 이 아니라 34 번.
  */
 SW_TEST_CASE( CountdownTest, CountdownTickRepeatKeepsTheHeldRate )
 {
-    BLOCK( "VoxelCraft 블록 놓기 — 0.25 초 간격을 0.1 초 걸음 · 60 fps 로 10 초 누르고 있으면 첫 누름 + 40 번" )
+    BLOCK( "복셀 광산 블록 놓기 — 0.25 초 간격을 0.1 초 걸음 · 60 fps 로 10 초 누르고 있으면 첫 누름 + 40 번" )
     {
         for ( const float32 deltaTime : { 0.1f, 1.0f / 60.0f } )
         {

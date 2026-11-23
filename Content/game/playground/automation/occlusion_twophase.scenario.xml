@@ -17,7 +17,7 @@
 	<!-- ① 뒤 단계는 2 단계를 쓸 수 있는 프레임에만 돈다 -->
 	<Store watch="Render.OcclusionTwoPhase" as="twoPhase"/>
 	<Expect watch="Render.OcclusionLatePhase" sameAs="twoPhase"/>
-	<Screenshot file="occlusion_on.ppm" stability="assets"/>
+	<Screenshot file="occlusion_on.ppm" stability="Assets"/>
 	<!-- ② 끈 그림과 같다 -->
 	<Variable name="gv_occlusionCulling" value="false"/>
 	<AdvanceSimulation frames="1"/> <!-- 제자리 변화 뒤 그리지 않는 한 프레임 — 다음 그림이 TAA · 노출 기록을 버리고 새로 쌓는다 -->

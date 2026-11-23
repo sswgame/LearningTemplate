@@ -34,7 +34,7 @@ namespace sw
 
     SubsystemInitResult UIStyleSheetCache::initializeSubsystem()
     {
-        _assetCacheRegistration = engine::getSubsystem<AssetManager>().registerAssetCache( &_cache, SW_ASSET_CACHE_RELOAD_FUNCTION( UITextAssetCache ) );
+        _assetCacheRegistration = engine::getSubsystem<AssetManager>().registerAssetCache( &_cache, getAssetCacheReloadFunction<UITextAssetCache>() );
         return SubsystemInitResult::Succeeded;
     }
 
