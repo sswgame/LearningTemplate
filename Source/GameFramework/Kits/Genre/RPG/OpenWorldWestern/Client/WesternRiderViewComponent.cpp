@@ -179,7 +179,7 @@ namespace sw
         const MountGait               gait            = pMovement != nullptr ? pMovement->getGait() : MountGait::Idle;
         const float32                 speed           = pMovement != nullptr ? pMovement->getForwardSpeed() : 0.0f;
         utf8                          arrStatus[constant::buffer::kMax128]{};
-        formatstring( arrStatus, constant::buffer::kMax128, "Riding %s - %s %.1f m/s - E: dismount  Shift: gallop", pHorseObject->getName().c_str(),
+        formatstring( arrStatus, constant::buffer::kMax128, "Riding %# - %# %.1f m/s - E: dismount  Shift: gallop", pHorseObject->getName().c_str(),
                       WesternRiderViewComponentInternal::findGaitName( gait ), speed );
         pViewModel->setRideStatus( arrStatus );
         pViewModel->setStamina( pHorse != nullptr ? pHorse->getStamina().getValue() : 0.0f, pHorse != nullptr ? pHorse->getStamina().getRatio() : 0.0f );

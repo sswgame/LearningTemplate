@@ -230,6 +230,14 @@ namespace sw
 
         /** @brief @p argumentCount 는 서식 글까지 센 수입니다. */
         static constexpr bool hasMatchingArguments( string_view format, uint32 argumentCount ) { return FormatString::countPlaceholders( format ) + 1 == argumentCount; }
+
+        /** @brief 식 안에서 쓰는 검사입니다(`SW_ENSURE` — 문장인 static_assert 를 둘 수 없다). */
+        template <bool bMatching, bool bBare>
+        static constexpr void require()
+        {
+            static_assert( bMatching, "log format: the number of placeholders and arguments differ" );
+            static_assert( bBare == false, "log format: write %# instead of a bare %d, %i, %u or %s" );
+        }
     };
 } // namespace sw
 
@@ -243,6 +251,22 @@ namespace sw
     static_assert( ::sw::LogFormatCheck::hasMatchingArguments( SW_LOG_FORMAT_OF( __VA_ARGS__ ), decltype( ::sw::LogFormatCheck::countArguments( __VA_ARGS__ ) )::value ), \
                    "log format: the number of placeholders and arguments differ" );                                                                                       \
     static_assert( ::sw::FormatString::hasBareConversion( SW_LOG_FORMAT_OF( __VA_ARGS__ ) ) == false, "log format: write %# instead of a bare %d, %i, %u or %s" )
+
+/// @brief `SW_LOG_CHECK_FORMAT` 의 식 판입니다(값은 void).
+#define SW_LOG_REQUIRE_FORMAT( ... )                                                                                                                                                         \
+    ::sw::LogFormatCheck::require<( ::sw::LogFormatCheck::hasMatchingArguments( SW_LOG_FORMAT_OF( __VA_ARGS__ ), decltype( ::sw::LogFormatCheck::countArguments( __VA_ARGS__ ) )::value ) ), \
+                                  ( ::sw::FormatString::hasBareConversion( SW_LOG_FORMAT_OF( __VA_ARGS__ ) ) )>()
+
+/**
+ * @def SW_COMPILE_ERROR_IF
+ * @brief 함수 선언 끝에 붙여, 부르는 자리의 인자가 상수식일 때 @p cond 가 참이면 컴파일 오류로 만듭니다(clang `diagnose_if`). 다른 컴파일러에서는 아무 일도 하지 않습니다.
+ * @details 서식을 매크로가 아니라 함수 인자로 받는 자리(`reportFatalError`)는 C++17 형식만으로 글자를 볼 수 없다. 인자가 상수식이 아니면 조용히 지나므로 검사이지 계약이 아니다.
+ */
+#if defined( __clang__ )
+    #define SW_COMPILE_ERROR_IF( cond, message ) __attribute__( ( diagnose_if( cond, message, "error" ) ) )
+#else
+    #define SW_COMPILE_ERROR_IF( cond, message )
+#endif
 
 /// @brief 컴파일에서 빠진 SW_LOG_* 의 본문입니다. 인자를 평가하지 않지만 이름은 쓴 것으로 셉니다(`LogDiscardUtil`).
 #define SW_LOG_DISCARDED( ... ) ( (void)sizeof( ::sw::LogDiscardUtil::consume( __VA_ARGS__ ) ) )
@@ -300,7 +324,7 @@ namespace sw
         SourceLocation _location;
 
         template <size_t Count>
-        FatalFormat( const utf8 ( &arrFormat )[Count], SourceLocation location = SourceLocation::current() ) noexcept
+        constexpr FatalFormat( const utf8 ( &arrFormat )[Count], SourceLocation location = SourceLocation::current() ) noexcept
             : _format{ arrFormat, Count - 1 }
             , _location{ location }
         {
@@ -313,6 +337,11 @@ namespace sw
      *          `std::abort` 합니다(`sw::internal::reportFatal`). 로그 수준 필터 · 컴파일 제외를 타지 않습니다. 로그보다 아래 티어는 `SW_LOW_LEVEL_FATAL`.
      *          버퍼를 부르는 쪽 프레임에 두지 않게 줄 밖에 둔다(`writeFormattedLog` 와 같은 까닭).
      */
+    template <typename... Args>
+    [[noreturn]] SW_NOINLINE void reportFatalError( const FatalFormat format, Args&&... args ) noexcept
+        SW_COMPILE_ERROR_IF( FormatString::countPlaceholders( format._format ) != sizeof...( Args ), "fatal error format: the number of placeholders and arguments differ" )
+            SW_COMPILE_ERROR_IF( FormatString::hasBareConversion( format._format ), "fatal error format: write %# instead of a bare %d, %i, %u or %s" );
+
     template <typename... Args>
     [[noreturn]] SW_NOINLINE void reportFatalError( const FatalFormat format, Args&&... args ) noexcept
     {
@@ -385,9 +414,9 @@ namespace sw
  * @details 단언한 뒤 같은 조건을 다시 적어 빠져나가는 두 줄(`SW_LOG_ASSERT( x, … ); if ( !x ) return;`)은 두 조건이 어긋날 수 있다 — 한 식으로 묶는다.
  *          모든 구성에서 식을 평가하고 실패를 로그로 남긴다. 검사 구성에서는 부른 자리에서 멈춘다(가로채기 · 대화상자는 `SW_LOG_ASSERT` 와 같다).
  */
-#define SW_ENSURE( expr, ... )                                                                                                                       \
-    ( ( expr ) ? true                                                                                                                                \
-               : ( ::sw::internal::reportFormattedAssert( SW_LOG_TAG, #expr, __FILE__, static_cast<int32>( __LINE__ ), SW_ASSERT_FUNCTION_SIGNATURE, \
-                                                          __VA_ARGS__ )                                                                              \
-                       ? ( SW_DEBUG_BREAK(), false )                                                                                                 \
-                       : false ) )
+#define SW_ENSURE( expr, ... )                                                                                                                                                             \
+    ( SW_LOG_REQUIRE_FORMAT( __VA_ARGS__ ), ( expr ) ? true                                                                                                                                \
+                                                     : ( ::sw::internal::reportFormattedAssert( SW_LOG_TAG, #expr, __FILE__, static_cast<int32>( __LINE__ ), SW_ASSERT_FUNCTION_SIGNATURE, \
+                                                                                                __VA_ARGS__ )                                                                              \
+                                                             ? ( SW_DEBUG_BREAK(), false )                                                                                                 \
+                                                             : false ) )

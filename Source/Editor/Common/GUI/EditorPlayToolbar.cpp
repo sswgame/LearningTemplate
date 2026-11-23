@@ -61,7 +61,7 @@ namespace sw::editor
                     return true;
                 }
                 fixed_string<constant::buffer::kMax64> chip;
-                formatstring( chip.data(), chip.capacity(), "Net %d/%d", state._netConnectedClients, state._netProcessCount - 1 );
+                formatstring( chip.data(), chip.capacity(), "Net %#/%#", state._netConnectedClients, state._netProcessCount - 1 );
                 EditorWidgets::drawChip( chip.c_str(), SW_THEME_COLOR( "Signal", "Success" ) );
                 EditorWidgets::drawTooltip( SW_LOCKEY( "EdCommon", "NetPlayClients" ) );
                 ImGui::SameLine();
