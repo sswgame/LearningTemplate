@@ -46,6 +46,9 @@
 					<ButtonWidget _name="Options" _command="OpenOptions">
 						<TextWidget _text="Options" />
 					</ButtonWidget>
+					<ButtonWidget _name="LeaveMinigame" _visibility="Collapsed" _command="LeaveMinigame">
+						<TextWidget _text="Leave Minigame" />
+					</ButtonWidget>
 					<ButtonWidget _name="ReturnToTitle" _visibility="Collapsed" _command="ReturnToTitle">
 						<TextWidget _text="Return to Title" />
 					</ButtonWidget>

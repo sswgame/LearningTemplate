@@ -122,6 +122,14 @@ namespace sw
         ++_layoutRevision;
     }
 
+    void CityGameModeComponent::collectMinigameResult( vector<MinigameResultValue>& outListValue ) const
+    {
+        const GameObject* const      pPlayerState = findPlayerState();
+        const WalletComponent* const pWallet      = pPlayerState != nullptr ? pPlayerState->getComponent<WalletComponent>() : nullptr;
+        if ( pWallet != nullptr )
+            addMoneyResult( outListValue, pWallet->getWallet().getBalance( _pCatalog->getRules()._currency ) - _startingMoney );
+    }
+
     void CityGameModeComponent::updateGame( float32 deltaTime )
     {
         GameStateComponent* pState = GameStateComponent::findOnOwner( *this );

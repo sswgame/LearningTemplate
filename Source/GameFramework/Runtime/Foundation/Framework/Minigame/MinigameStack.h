@@ -77,6 +77,9 @@ namespace sw
     /** @brief 결과에 실려 바탕 판으로 넘어가는 값 하나입니다(번 돈 · 얻은 물건 수 · 점수). 이름의 뜻은 결과를 받는 쪽(허브 디렉터)이 정한다. */
     struct MinigameResultValue
     {
+        /** @brief 번 돈(순이익)의 값 이름입니다 — 허브의 보상 표가 같은 이름을 적는다. */
+        static constexpr const utf8* kMoneyName = "money";
+
         hashed_string _name; ///< 값 이름(예: 화폐 id · 아이템 id · `score`)
         int64         _amount{ 0 };
     };

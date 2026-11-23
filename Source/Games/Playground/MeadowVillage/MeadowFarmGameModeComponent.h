@@ -59,6 +59,7 @@ namespace sw
         [[nodiscard]] bool startGame() override;
         void               onGameStarted() override;
         void               updateGame( float32 deltaTime ) override;
+        void               collectMinigameResult( vector<MinigameResultValue>& outListValue ) const override;
         void               onFlush( GameObjectManager& manager, bool bRespawnViews ) override;
         void               onViewsDespawned() override;
         bool               hasPendingSpawn() const override { return _bViewsDirty == SW_TRUE; }
