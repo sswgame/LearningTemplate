@@ -4,6 +4,9 @@
 	<cultures>
 		<item>ko</item>
 	</cultures>
+	<stagedCultures>
+		<item>ko</item>
+	</stagedCultures>
 	<stringTables>
 		<item>playground.strings.xml</item>
 	</stringTables>
@@ -12,5 +15,18 @@
 	</codeRoots>
 	<assetRoots>
 		<item>game/playground</item>
+		<item>common/data</item> <!-- 아이템 이름(items.xml)은 캐릭터 키트와 함께 common 에 있다 -->
 	</assetRoots>
+	<assetRules>
+		<rule files="items.xml" attribute="name" kind="text" context="Item name">
+			<elements>
+				<item>Item</item>
+			</elements>
+		</rule>
+		<rule files="weapons.xml" attribute="name" kind="text" context="Weapon name">
+			<elements>
+				<item>Weapon</item>
+			</elements>
+		</rule>
+	</assetRules>
 </LocalizationProject>

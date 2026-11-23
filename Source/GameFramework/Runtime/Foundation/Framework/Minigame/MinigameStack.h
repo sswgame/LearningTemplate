@@ -51,20 +51,25 @@ namespace sw
     /** @brief 돌아올 자리입니다. 갈래를 더하면 나가기(`MinigameFlow::leave`)의 `std::visit` 이 빠진 갈래를 컴파일 오류로 알린다. 갈래 번호는 세이브 형식이다 — 새 갈래는 끝에 더한다. */
     using MinigameReturnPoint = std::variant<MinigameSuspendedScene, MinigameSubLevelReturn, MinigameEntranceReturn>;
 
+    struct MinigameResult;
+
     /** @brief 스택 칸 하나입니다. */
     struct SW_GF_API MinigameFrame
     {
         /** @brief 칸이 쥐는 저장 막기의 까닭입니다. */
         static constexpr const utf8* kSaveBlockReason = "minigame";
 
-        MinigameDefinition  _definition;  ///< 이 칸의 미니게임
-        MinigameReturnPoint _returnPoint; ///< 이 미니게임을 덮기 전으로 돌아가는 길
-        Subscription        _saveBlock{}; ///< 이 칸이 저장을 막는 동안 쥔다(`updateSaveBlock`) — 칸이 사라지면 풀린다
+        MinigameDefinition  _definition;   ///< 이 칸의 미니게임
+        MinigameReturnPoint _returnPoint;  ///< 이 미니게임을 덮기 전으로 돌아가는 길
+        uint64              _matchID{ 0 }; ///< 매치형이면 배정받은 매치(`MinigameFlow::enterMatch`). 매치형이 아니면 0
+        Subscription        _saveBlock{};  ///< 이 칸이 저장을 막는 동안 쥔다(`updateSaveBlock`) — 칸이 사라지면 풀린다
 
         /** @brief 이 칸 안에서 저장할 수 있으면 true 입니다 — 정의가 허락하고(`MinigameSavePolicy::Allowed`), 덮은 씬이 있으면 그 세이브 봉투를 찍어 두었다. */
         bool canSave() const;
         /** @brief 저장할 수 없는 칸이면 @p saveLock 에 막기를 걸고, 할 수 있으면 풉니다. 칸을 쌓거나 정의를 바꾼 뒤 부른다. */
         void updateSaveBlock( SaveLock& saveLock );
+        /** @brief 매치 칸이면 정의의 점수 값(`_matchScore`)을 @p inoutResult 의 값 목록에서 꺼내 매치 결과 칸에 옮깁니다 — 순위표에 낼 값이 허브 보상 표로 가지 않게. */
+        void takeMatchResult( MinigameResult& inoutResult ) const;
     };
 
     /** @brief 세이브에 실린 칸 하나입니다(아래부터 위로) — 정의는 이름으로 다시 읽는다. */
@@ -91,9 +96,12 @@ namespace sw
      */
     struct MinigameResult
     {
-        hashed_string               _minigame;   ///< 끝난 미니게임 이름
-        hashed_string               _resultName; ///< 결과 이름(미니게임이 정한다 — 예: `win` · `lose`). 비었으면 결과 없이 나왔다
-        vector<MinigameResultValue> _listValue;  ///< 바탕 판에 넘길 값(디렉터의 `collectMinigameResult`). 비었으면 넘길 것이 없다
+        hashed_string               _minigame;     ///< 끝난 미니게임 이름
+        hashed_string               _resultName;   ///< 결과 이름(미니게임이 정한다 — 예: `win` · `lose`). 비었으면 결과 없이 나왔다
+        vector<MinigameResultValue> _listValue;    ///< 바탕 판에 넘길 값(디렉터의 `collectMinigameResult`). 비었으면 넘길 것이 없다
+        uint64                      _matchID{ 0 }; ///< 매치형이면 배정받은 매치. 매치형이 아니면 0
+        string                      _matchBoard{}; ///< 매치 결과를 낼 순위표(정의의 `_matchBoard`)
+        optional<int64>             _matchScore{}; ///< 매치 점수. 디렉터가 내지 않았으면(중간에 나왔다) nullopt — 순위표에 내지 않는다
     };
 
     /**
@@ -137,6 +145,8 @@ namespace sw
         const MinigameFrame* findTop() const { return _listFrame.empty() ? nullptr : &_listFrame.back(); }
         /** @brief 맨 위 칸 바로 아래 칸(맨 위가 덮은 미니게임)입니다. 없으면 nullptr 입니다. */
         const MinigameFrame* findCovered() const { return _listFrame.size() < 2 ? nullptr : &_listFrame[_listFrame.size() - 2]; }
+        /** @brief 쌓인 매치 칸의 매치입니다(매치는 한 번에 하나). 없으면 0 입니다. */
+        uint64 findMatchID() const;
         /** @brief 씬 전환 칸(찍은 바탕 씬을 쥔 칸)이 하나라도 있으면 true 입니다. */
         bool hasSuspendedScene() const;
 

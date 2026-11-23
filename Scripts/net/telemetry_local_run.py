@@ -1,8 +1,8 @@
 """
 텔레메트리 · 크래시 업로드 로컬 실행 — 루프백 HTTP 수신기를 띄우고 게임을 두 번 띄워, 동의한 텔레메트리 스풀 파일과 보낼 줄의 크래시 묶음이 실제 HTTP 로 오는지 본다(H1).
 
-  py -3 -m Scripts telemetry-local run                 # 기본: Shooter3D, Ninja-Debug
-  py -3 -m Scripts telemetry-local run --game Playground
+  py -3 -m Scripts telemetry-local run                 # 기본: Playground, Ninja-Debug
+  py -3 -m Scripts telemetry-local run --game NileCity
 
 끝점은 gamesettings 칸(`_telemetryUploadEndpoint` · `_crashUploadEndpoint`)이고 저장소의 팩은 적지 않는다 - 이 스크립트는 `-gv_telemetryUploadEndpoint` ·
 `-gv_crashUploadEndpoint` 로 수신기를 가리킨다. 사용자 설정은 `-gv_userSettingsFile` 로 출력 폴더에 따로 두어 사람의 동의 설정을 바꾸지 않는다.
@@ -171,5 +171,5 @@ def main(list_argument: list[str]) -> int:
     parser = argparse.ArgumentParser(prog="py -3 -m Scripts telemetry-local", description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     sub = parser.add_subparsers(dest="mode", required=True)
     run_parser = sub.add_parser("run", help="수신기를 띄우고 게임을 두 번 띄워 텔레메트리 · 크래시 업로드를 본다")
-    run_parser.add_argument("--game", default="Shooter3D", help="게임 이름")
+    run_parser.add_argument("--game", default="Playground", help="게임 이름")
     return _run(parser.parse_args(list_argument))

@@ -3,7 +3,7 @@
  * @brief 한 프로세스 온라인 서버입니다. 부하 봇이 겨눌 서비스 호스트 하나에 설정 파일(`LoadBot.online.json`)의 키트(계정 · 디렉터리 · 채팅 · 친구 · 순위 · 매칭 · 라이브 운영 · 경제 · 우편 · 거래)를 올립니다.
  * @details - 조립은 전용 서버와 같은 `OnlineServerRuntime` 이고, 온라인 설정(키트 목록과 옵션)도 전용 서버와 같은 꼴의 파일(`LoadBot.online.json`)을
  *            같은 로더(`ConfigManager::readConfigFileInto<OnlineServerConfig>`)로 읽는다. 이 클래스는 부하에 딸린 값(지역 · 연결 상한 · 서버 id · 가벼운 해시)만 얹는다.
- *          - 저장소 · 캐시는 기본이 메모리 구현(같은 프로세스)이다. 서버 설정(`_pStoreConfig` — 봇 `--store-config=Config/Server/Online/Shooter3D.external.json`)을 주면
+ *          - 저장소 · 캐시는 기본이 메모리 구현(같은 프로세스)이다. 서버 설정(`_pStoreConfig` — 봇 `--store-config=Config/Server/Online/Playground.external.json`)을 주면
  *            전용 서버와 같은 규칙(`OnlineServerRuntime::resolveStores`, 온라인 설정의 `_storeName` · `_cacheName`)으로 그 저장소(PostgreSQL · RESP)를 쓴다 — 원장 경로의 Conflict 를 재는 길.
  *            이 서버를 게임 서버로 디렉터리에 등록해 매칭 배정이 그리로 간다.
  *          - 기동하면 전체 우편(캠페인) 하나를 넣어 봇의 `mailbox_claim_all` 이 원장 발행을 지나게 한다. 끝에 원장 감사(`readLedgerAudit`)와 저장소 커밋 · 충돌 수를 봇이 읽는다(감사 O-12).

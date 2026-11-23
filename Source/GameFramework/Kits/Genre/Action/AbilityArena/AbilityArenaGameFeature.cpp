@@ -26,19 +26,20 @@ namespace sw
         }
 
         /**
-         * @brief 키트의 어빌리티 클래스를 게임 범위의 레지스트리(게임 기능 하나가 건 서비스, 이 범위보다 오래 산다)에 올리고 탄 카탈로그(팩의 `data/projectiles.xml`)를 게임 기능 범위에 겁니다 —
-         *        미니게임 정의의 catalogs 에 `projectiles` 가 있어야 한다. 어빌리티 데이터(`data/abilities.xml`)는 게임이 이미 건 팩의 카탈로그다.
+         * @brief 키트의 어빌리티 클래스를 게임 범위의 레지스트리(게임 기능 하나가 건 서비스, 이 범위보다 오래 산다)에 올립니다.
+         *        어빌리티 데이터(`data/abilities.xml`)와 탄(`data/projectiles.xml`)은 게임이 게임 범위에 이미 건 팩의 카탈로그다 — 탄은 다른 미니게임도 쓴다.
          */
         [[nodiscard]] bool activateAbilityArena( GameFeatureScope& scope )
         {
             AbilityClassRegistry* const pClasses = game::findSubsystem<AbilityClassRegistry>();
-            if ( pClasses == nullptr )
+            if ( pClasses == nullptr || game::findSubsystem<const ProjectileCatalog>() == nullptr )
             {
-                SW_LOG_ERROR_ID( "AbilityArena.NoAbilityClassRegistry", "Ability arena: no AbilityClassRegistry is bound to the game scope - the game must bind one before this feature" );
+                SW_LOG_ERROR_ID( "AbilityArena.NoGameScopeService", "Ability arena: no %# is bound to the game scope - the game must bind one before this feature",
+                                 pClasses == nullptr ? "AbilityClassRegistry" : "ProjectileCatalog" );
                 return false;
             }
             return addAbilityClass<ArenaMeleeStrikeAbility>( scope, *pClasses, "ArenaMeleeStrike" ) && addAbilityClass<ArenaProjectileAbility>( scope, *pClasses, "ArenaProjectile" ) &&
-                   addAbilityClass<ArenaDashAbility>( scope, *pClasses, "ArenaDash" ) && scope.loadCatalog<ProjectileCatalog>();
+                   addAbilityClass<ArenaDashAbility>( scope, *pClasses, "ArenaDash" );
         }
     } // namespace
 

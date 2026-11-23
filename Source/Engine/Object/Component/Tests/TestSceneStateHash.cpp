@@ -94,7 +94,7 @@ SW_TEST_CASE( SceneStateHashTest, NanPositionIsIndependentOfCreationOrder )
 
 /**
  * @brief [SceneStateHashTest] 실행 중에 세운 파생 오브젝트(`GameObject::setTransient`)는 상태가 아니다 — 움직여도 해시가 그대로다
- * @details 외형 조립의 부품은 워커가 끝낸 프레임에 붙어 자리가 실행마다 달랐다(game.shooter3d.slice 의 두 번 불러오기 해시). 표시를 지우면 진다.
+ * @details 외형 조립의 부품은 워커가 끝낸 프레임에 붙어 자리가 실행마다 달랐다(game.playground.shooter3d_slice 의 두 번 불러오기 해시). 표시를 지우면 진다.
  */
 SW_TEST_CASE( SceneStateHashTest, TransientObjectsAreNotState )
 {

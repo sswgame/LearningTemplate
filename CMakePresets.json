@@ -101,10 +101,10 @@
     {
       "name": "Ninja-Debug",
       "displayName": "Windows Ninja Debug (Clang-cl)",
-      "description": "Windows Debug build using Ninja + Clang-cl — 활성 게임에 Shooter3D 를 함께 지어 온라인 키트(계정 · 채팅 · 경제 · 우편함과 서버 짝)가 매일 컴파일되고 UnitTests.Shooter3D 가 그 테스트를 돈다",
+      "description": "Windows Debug build using Ninja + Clang-cl — 활성 게임 Playground 가 온라인 키트(계정 · 채팅 · 경제 · 우편함과 서버 짝)까지 짓고, 작은 둘째 팩 NileCity 를 함께 지어 게임 둘(Bin/Games/<게임>)을 싣는 길을 매일 본다",
       "inherits": "base-windows",
       "cacheVariables": {
-        "SW_GAMES": "Shooter3D",
+        "SW_GAMES": "NileCity",
         "CMAKE_BUILD_TYPE": "Debug"
       }
     },
@@ -123,10 +123,10 @@
     {
       "name": "Ninja-Release-ASan",
       "displayName": "Windows Ninja Release + AddressSanitizer (Clang-cl)",
-      "description": "묶음 검증의 CPU 단위 테스트(`ctest -L nogpu`)와 clang-tidy 컴파일 DB 구성 — Release 최적화에 단언 · 검사(SW_DO_CHECKS)와 clang-cl ASan(/MD, 런타임 DLL 은 Bin 으로 — cmake/Toolchain/Options/Sanitizer.cmake). 언리얼 `-EnableASan`(Windows MSVC ASan, Development 구성) 자리, 유니티는 엔진 소스 ASan 구성이 없다. 게임 · 키트 범위는 Ninja-Debug 와 같고(Shooter3D — 모든 게임은 Ninja-Release 가 짓고 돈다), 유니티 빌드를 끈다(묶음 TU 는 컴파일 DB 에 원본 파일이 없어 tidy 가 고를 수 없다)",
+      "description": "묶음 검증의 CPU 단위 테스트(`ctest -L nogpu`)와 clang-tidy 컴파일 DB 구성 — Release 최적화에 단언 · 검사(SW_DO_CHECKS)와 clang-cl ASan(/MD, 런타임 DLL 은 Bin 으로 — cmake/Toolchain/Options/Sanitizer.cmake). 언리얼 `-EnableASan`(Windows MSVC ASan, Development 구성) 자리, 유니티는 엔진 소스 ASan 구성이 없다. 게임 · 키트 범위는 Ninja-Debug 와 같고(NileCity — 모든 게임은 Ninja-Release 가 짓고 돈다), 유니티 빌드를 끈다(묶음 TU 는 컴파일 DB 에 원본 파일이 없어 tidy 가 고를 수 없다)",
       "inherits": "Ninja-Release",
       "cacheVariables": {
-        "SW_GAMES": "Shooter3D",
+        "SW_GAMES": "NileCity",
         "SW_BUILD_UNUSED_KITS": "OFF",
         "SW_ENABLE_UNITY_BUILD": "OFF",
         "SW_ENABLE_SANITIZER": "ON",
@@ -168,10 +168,10 @@
     {
       "name": "Ninja-Release-Server",
       "displayName": "Windows Ninja Release - Dedicated Server (Clang-cl)",
-      "description": "전용 서버 타깃(SW_TARGET_TYPE=Server) Release — 창 · GPU · 에디터 · RHI 백엔드 없음, Server 실행 파일만. 묶음 검증이 짓고 `Server --test` 를 돈다(단언 · 검사는 SW_DO_CHECKS 로 Release 에도 있다 — 언리얼 Development Server 타깃). 게임은 Ninja-Debug 와 같은 Shooter3D(온라인 키트의 서버 짝). 빌드 폴더 build/Ninja-Release-Server",
+      "description": "전용 서버 타깃(SW_TARGET_TYPE=Server) Release — 창 · GPU · 에디터 · RHI 백엔드 없음, Server 실행 파일만. 묶음 검증이 짓고 `Server --test` 를 돈다(단언 · 검사는 SW_DO_CHECKS 로 Release 에도 있다 — 언리얼 Development Server 타깃). 게임은 Ninja-Debug 와 같다(Playground — 온라인 키트의 서버 짝 — 와 NileCity). 빌드 폴더 build/Ninja-Release-Server",
       "inherits": "base-windows",
       "cacheVariables": {
-        "SW_GAMES": "Shooter3D",
+        "SW_GAMES": "NileCity",
         "CMAKE_BUILD_TYPE": "Release",
         "SW_TARGET_TYPE": "Server"
       }

@@ -195,13 +195,13 @@ SW_TEST_CASE( ProjectSettingsEntryTest, OtherGamePresetsAreTyped )
     listTyped[0]._absolutePath = FileUtil::normalizeSeparators( FileUtil::joinPath( projectRoot.str(), listTyped[0]._relativePath ) );
     ProjectSettingsEntry::addOtherGamePresets( projectRoot.str(), listTyped );
     SW_EXPECT_EQUAL( listTyped[0]._gameName, string( "Playground" ) );
-    const ProjectSettingsEntry* pShooter = nullptr;
+    const ProjectSettingsEntry* pOtherGame = nullptr;
     for ( const ProjectSettingsEntry& entry : listTyped )
-        pShooter = entry._page == "GameConfig/Shooter3D" ? &entry : pShooter;
-    SW_REQUIRE_TRUE( pShooter != nullptr );
-    SW_EXPECT_EQUAL( pShooter->_typeName, string( "GameConfig" ) );
-    SW_EXPECT_EQUAL( pShooter->_gameName, string( "Shooter3D" ) );
-    SW_EXPECT_EQUAL( pShooter->_relativePath, string( "Config/Game/Shooter3D.json" ) );
+        pOtherGame = entry._page == "GameConfig/NileCity" ? &entry : pOtherGame;
+    SW_REQUIRE_TRUE( pOtherGame != nullptr );
+    SW_EXPECT_EQUAL( pOtherGame->_typeName, string( "GameConfig" ) );
+    SW_EXPECT_EQUAL( pOtherGame->_gameName, string( "NileCity" ) );
+    SW_EXPECT_EQUAL( pOtherGame->_relativePath, string( "Config/Game/NileCity.json" ) );
 
     vector<ProjectSettingsEntry> listTable;
     SW_REQUIRE_TRUE( ProjectSettingsEntry::collectTables( projectRoot.str(), listTyped, listTable ) );

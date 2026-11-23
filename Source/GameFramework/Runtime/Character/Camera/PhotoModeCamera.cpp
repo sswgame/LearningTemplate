@@ -128,7 +128,7 @@ namespace sw
 
             /**
              * @brief 화면 시점을 모는 디렉터(`CameraDirectorComponent::findViewDirector` — 씬에 하나)입니다. @p bInPhotoMode 이면 포토 모드가 켜져 있을 때만 냅니다.
-             * @details 매니저가 있는 게임(Shooter3D · 서부 평원)은 디렉터가 뷰 타깃에 있고 매니저가 그 포즈를 화면 카메라로 옮긴다(언리얼 PlayerCameraManager 의 뷰 타깃).
+             * @details 매니저가 있는 게임(사격장 · 서부 평원)은 디렉터가 뷰 타깃에 있고 매니저가 그 포즈를 화면 카메라로 옮긴다(언리얼 PlayerCameraManager 의 뷰 타깃).
              */
             static CameraDirectorComponent* findDirector( bool bInPhotoMode )
             {

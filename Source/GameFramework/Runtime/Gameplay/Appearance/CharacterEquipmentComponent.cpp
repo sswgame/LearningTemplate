@@ -400,27 +400,6 @@ namespace sw
                 return true;
             }
 
-            /** @brief `equipment.unequip <object> <slot>` — 장비 칸을 벗겨 가방에 넣는다. */
-            static bool runUnequip( const vector<string>& listArgument, string& outReply )
-            {
-                if ( listArgument.size() != 2 )
-                    return false;
-                CharacterEquipmentComponent* pEquipment = findEquipment( listArgument[0], outReply );
-                if ( pEquipment == nullptr )
-                    return false;
-                if ( pEquipment->unequipToBag( hashed_string( listArgument[1] ) ) == false )
-                {
-                    StringBuilder<constant::buffer::kMax256> replyBuilder;
-                    replyBuilder.appendFormat( "could not unequip '%#' (empty slot or no room in the bag)", listArgument[1] );
-                    outReply = string( replyBuilder.view() );
-                    return false;
-                }
-                StringBuilder<constant::buffer::kMax256> replyBuilder;
-                replyBuilder.appendFormat( "unequipped %#", listArgument[1] );
-                outReply = string( replyBuilder.view() );
-                return true;
-            }
-
             /** @brief `item.pickup <character> <worldItem>` — 월드 아이템의 조각을 캐릭터 가방에 모두 넣고 그 오브젝트를 없앤다. 다 들어가지 않으면 그대로 둔다(가방 가득). */
             static bool runPickUp( const vector<string>& listArgument, string& outReply )
             {
@@ -648,7 +627,6 @@ namespace sw
     SW_DEV_COMMAND( EquipmentGive, "equipment.give", "equipment.give <object> <item>", "Put a new item instance in a character's equipment bag", &CharacterEquipmentCommandsInternal::runGive );
     SW_DEV_COMMAND( EquipmentEquip, "equipment.equip", "equipment.equip <object> <bagSlot> [slot]", "Wear the item instance of a bag slot (what it displaces goes to the bag)",
                     &CharacterEquipmentCommandsInternal::runEquip );
-    SW_DEV_COMMAND( EquipmentUnequip, "equipment.unequip", "equipment.unequip <object> <slot>", "Take off an equipment slot into the bag", &CharacterEquipmentCommandsInternal::runUnequip );
     SW_DEV_COMMAND( ItemPickUp, "item.pickup", "item.pickup <character> <worldItem>", "Pick a world item stack up into a character's equipment bag (refused when it does not all fit)",
                     &CharacterEquipmentCommandsInternal::runPickUp );
     SW_DEV_COMMAND( EquipmentRestore, "equipment.restore", "equipment.restore <object> <base64>", "Apply saved equipment state bytes (an older save sample upgrades on read)",

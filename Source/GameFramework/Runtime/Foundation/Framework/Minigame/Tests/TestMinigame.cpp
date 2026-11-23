@@ -1,5 +1,5 @@
 // MinigameTest — 미니게임 데이터 읽기 · 참조 검사(모르는 게임 기능 · 겹친 이름 · 빠진 맵, 모르는 속성 · 원소), 칸 스택(쌓기 · 교체 · 빈 스택 나가기 · 깊이 한도 ·
-// 저장 막기 · 장치 밖 씬 이동 비우기), 결과 통로(값 목록 · 디렉터 계약 ③), 넷 세션의 씬 전환 거절(nogpu).
+// 저장 막기 · 장치 밖 씬 이동 비우기), 결과 통로(값 목록 · 디렉터 계약 ③ · 매치 점수), 넷 세션의 씬 전환 거절(nogpu).
 #include "pch.h"
 
 #include "Core/File/FileUtil.h"
@@ -221,6 +221,61 @@ SW_TEST_CASE( MinigameTest, StackPushesAndPopsFromTheTop )
     SW_REQUIRE_TRUE( stack.pop( popped ) );
     SW_EXPECT_TRUE( std::holds_alternative<MinigameEntranceReturn>( popped._returnPoint ) ); // 돌아올 씬 없이 들어간 칸 — 입구 씬으로 나간다
     SW_EXPECT_TRUE( stack.isEmpty() );
+}
+
+/** @brief [MinigameTest] 매치형 칸(matchMode · matchBoard · matchScore)은 한 벌이고 씬 전환이어야 한다 — 하나만 적은 정의는 진다 */
+SW_TEST_CASE( MinigameTest, MatchSettingsComeTogether )
+{
+    const test::ScopedScratchDomain domain;
+    const AbsolutePath              path = domain.makeDiskPath( "minigame/arena.scene.xml" );
+    SW_REQUIRE_TRUE( FileUtil::ensureDirectoryExists( path.getParent() ) && FileUtil::writeTextFile( path, "<Scene/>" ) );
+    const GameFeatureRegistry features;
+
+    MinigameDefinition match;
+    SW_REQUIRE_TRUE( MinigameDefinition::loadFromXMLText(
+        R"(<Minigame name="match" map="testproject/minigame/arena.scene.xml" entry="SceneSwitch" save="Blocked" matchMode="solo" matchBoard="kills" matchScore="kills"/>)", "match.minigame.xml", match ) );
+    SW_EXPECT_TRUE( match.isMatch() );
+    SW_EXPECT_TRUE( match.validate( features, "match.minigame.xml" ) );
+
+    SW_EXPECT_LOG( "MinigameDefinition.MatchIncomplete" );
+    MinigameDefinition partial;
+    SW_REQUIRE_TRUE( MinigameDefinition::loadFromXMLText( R"(<Minigame name="match" map="testproject/minigame/arena.scene.xml" entry="SceneSwitch" save="Blocked" matchMode="solo"/>)", "match.minigame.xml", partial ) );
+    SW_EXPECT_FALSE( partial.validate( features, "match.minigame.xml" ) );
+}
+
+/** @brief [MinigameTest] 매치 칸의 점수 값은 바탕 판 보상 목록에서 빠져 매치 결과 칸으로 간다 — 매치가 아닌 칸은 값 목록을 그대로 둔다 */
+SW_TEST_CASE( MinigameTest, MatchScoreLeavesTheRewardValues )
+{
+    MinigameFrame frame{ makeMinigame( "match", MinigameEntry::SceneSwitch ), MinigameReturnPoint{ MinigameEntranceReturn{} } };
+    frame._definition._matchMode  = "solo";
+    frame._definition._matchBoard = "kills";
+    frame._definition._matchScore = hashed_string( "kills" );
+    const auto makeResult         = []()
+    { return MinigameResult{
+          hashed_string( "match" ),
+          hashed_string( "down" ),
+          { MinigameResultValue{ hashed_string( "kills" ), 7 }, MinigameResultValue{ hashed_string( "gold" ), 2 } }
+ }; };
+
+    MinigameResult offline = makeResult();
+    frame.takeMatchResult( offline ); // 배정 없이 선 칸(서버가 첫 판으로 띄운 것)
+    SW_EXPECT_EQUAL( 2u, static_cast<uint32>( offline._listValue.size() ) );
+    SW_EXPECT_FALSE( offline._matchScore.has_value() );
+
+    frame._matchID        = 41;
+    MinigameResult result = makeResult();
+    frame.takeMatchResult( result );
+    SW_EXPECT_EQUAL( uint64{ 41 }, result._matchID );
+    SW_EXPECT_EQUAL( string( "kills" ), result._matchBoard );
+    SW_REQUIRE_TRUE( result._matchScore.has_value() );
+    SW_EXPECT_EQUAL( int64{ 7 }, *result._matchScore );
+    SW_REQUIRE_TRUE( result._listValue.size() == 1 );
+    SW_EXPECT_TRUE( result._listValue[0]._name == hashed_string( "gold" ) );
+
+    MinigameStack stack;
+    SW_EXPECT_EQUAL( uint64{ 0 }, stack.findMatchID() );
+    stack.push( std::move( frame ) );
+    SW_EXPECT_EQUAL( uint64{ 41 }, stack.findMatchID() );
 }
 
 /** @brief [MinigameTest] 깊이 한도: 한도까지만 쌓을 수 있고, 한도가 없으면(0 — 설정 빠짐) 하나도 쌓지 않는다(기본값으로 메우지 않는다) */

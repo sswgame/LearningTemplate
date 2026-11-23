@@ -65,7 +65,7 @@ namespace sw
         /** @brief 가방 칸 @p bagSlot 의 인스턴스를 장비 칸 @p slot 에 낍니다(비우면 받는 칸을 고른다). 벗겨진 것은 가방으로 간다. */
         EquipResult equipFromBag( int32 bagSlot, const hashed_string& slot );
         /** @brief 장비 칸을 벗겨 가방에 넣습니다(함께 벗겨진 것도). 가방에 자리가 없거나 거부되면 그대로 두고 false 입니다. */
-        [[nodiscard]] bool unequipToBag( const hashed_string& slot );
+        [[nodiscard]] FUNCTION( Category = "Equipment", Exec ) bool unequipToBag( const hashed_string& slot );
         /**
          * @brief 낀 아이템 인스턴스의 꾸미기 값 하나를 바꿉니다(염색). 값의 뜻은 그 아이템 외형의 스키마가 정한다.
          * @details 인스턴스의 값이 옛 판(옛 세이브)이면 스키마로 지금 판까지 올린 뒤 넣는다(`CustomizationSchemaDef::applyValue`). 칸이 비었거나, 아이템에 스키마가 없거나,

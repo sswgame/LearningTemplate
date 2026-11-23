@@ -1,0 +1,40 @@
+<?xml version="1.0" encoding="utf-8"?>
+<?asset guid="e5ae2dfa3c63d559c560c62c499bd64f"?>
+<!--
+  사격장 온라인 매치 — 로그인 → 매칭 → 매치 세션 → 결과 보고 → 순위표(K4). 프로세스 안 서버(Config/Server/Online/Playground.json, 전용 서버와 같은 파일)에 붙어 값으로 본다.
+  허브(시작 맵)에서 매치형 미니게임 shooter3d_match 로 들어가면 바로 들어가지 않고 매칭 모드 arena_solo(data/playground.matchmodes.xml)에 줄을 선다. 디렉터리에 등록한 이 서버(_publicAddress)로
+  배정 알림이 오면(OnlineMatchFound) 허브를 떠나 매치로 들어간다(MatchState 3 · Minigame.Active). 접속하지 않은 허브라 옮길 넷 세션은 없다.
+  판이 끝나면(결과 down · 처치 7) 점수가 순위표 arena_kills(data/playground.leaderboards.xml, 가장 좋은 기록)에 가고 허브로 돌아온다(RestoreCount) — 점수 값은 허브 보상 표로 가지 않는다.
+  낮은 점수를 다시 내도 기록은 그대로다.
+  실행: App -scenario=game/playground/automation/shooter3d_onlinematch.scenario.xml -unattended (체인: ctest -R Scenario.playground.shooter3d)
+-->
+<Scenario name="game.playground.shooter3d_onlinematch" fixedDelta="0.0166667" timeoutFrames="7200" startAfter="ScenePlaying" startTimeoutFrames="900" requiresModule="GF_Server_Matchmaking">
+	<AllowLog id="LoginTicketKey.AccountKitNoTicketKeySecretEnvironment" reason="프로세스 안 개발 서버는 티켓 주 키 없이 개발 키를 쓴다 - 게임 접속 티켓을 쓰지 않는다"/>
+	<Variable name="gv_playgroundAutoPlay" value="0"/>
+	<Expect watch="Online.SessionClientCount" atLeast="6"/>
+	<Expect watch="Playground.OnlineMatchFound" equals="0"/>
+	<DevCommand line="online.local.start Config/Server/Online/Playground.json"/>
+	<WaitUntil watch="Online.SessionState" atLeast="3" timeoutSeconds="20"/>
+	<Expect watch="Online.SessionState" equals="3"/>
+	<DevCommand line="playground.online.login"/>
+	<WaitUntil watch="Playground.OnlineLoggedIn" equals="1" timeoutSeconds="20"/>
+	<!-- 줄 → 배정 → 매치 -->
+	<DevCommand line="minigame.enter shooter3d_match"/>
+	<WaitUntil watch="Playground.OnlineMatchFound" equals="1" timeoutSeconds="20"/>
+	<WaitUntil watch="Minigame.Active" is="shooter3d_match" timeoutSeconds="60"/>
+	<Expect watch="Playground.MatchState" equals="3"/>
+	<!-- 판 끝 → 결과 보고 → 허브 -->
+	<DevCommand line="minigame.leave down kills=7"/>
+	<WaitUntil watch="Minigame.RestoreCount" equals="1" timeoutSeconds="60"/>
+	<WaitUntil watch="Playground.OnlineSubmittedScoreCount" equals="1" timeoutSeconds="10"/>
+	<WaitUntil watch="Playground.MatchState" equals="0" timeoutSeconds="10"/>
+	<Expect watch="Minigame.Active" is="none"/>
+	<DevCommand line="playground.online.submitkills 3"/>
+	<WaitUntil watch="Playground.OnlineSubmittedScoreCount" equals="2" timeoutSeconds="10"/>
+	<DevCommand line="playground.online.topkills"/>
+	<WaitUntil watch="Playground.OnlineTopKillsCount" equals="1" timeoutSeconds="10"/>
+	<Expect watch="Playground.OnlineTopKillsScore" equals="7"/>
+	<DevCommand line="online.disconnect"/>
+	<Expect watch="Online.SessionState" equals="0"/>
+	<Pass/>
+</Scenario>

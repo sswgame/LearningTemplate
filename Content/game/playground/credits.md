@@ -32,6 +32,11 @@
 | `abilityarena/models_raw/*.glb` · `abilityarena/textures_raw/dungeon_colormap.png` | Kenney "Mini Dungeon" (<https://kenney.nl/assets/mini-dungeon>) — 사람 · 오크 · 바닥 · 벽 · 기둥 · 함정(모두 한 장의 팔레트 텍스처에서 색을 읽는다, 파일 이름은 소문자 `_` 로) | CC0 1.0 |
 | `abilityarena/sounds/impact_punch_*.ogg` | Kenney "Impact Sounds" (<https://kenney.nl/assets/impact-sounds>) — `impactPunch_medium_000` · `impactPunch_heavy_000` | CC0 1.0 |
 | `abilityarena/sounds/error_004.ogg` · `abilityarena/sounds/maximize_001.ogg` | Kenney "Interface Sounds" (<https://kenney.nl/assets/interface-sounds>) | CC0 1.0 |
+| `shooter3d/textures_raw/crosshair.png` | Kenney "Starter Kit FPS" `sprites/crosshair.png` | CC0 1.0 |
+| `shooter3d/textures_raw/hitmarker.png` | Kenney "Starter Kit FPS" `sprites/hit.png` | CC0 1.0 |
+| `shooter3d/models_raw/kaykit_dungeon/*.glb` · `shooter3d/textures_raw/kaykit_dungeon.png` | KayKit "Dungeon Remastered 1.0" (<https://github.com/KayKit-Game-Assets/KayKit-Dungeon-Remastered-1.0>, 커밋 `b0ca9bd96a8072ab36a3a5464f00ed1e06a16d07`) — 벽 다섯(`wall` · `wall_half` · `wall_corner` · `wall_doorway` · `wall_broken`) · 바닥 둘 · 기둥 둘(`pillar` · `column`) · 엄폐물(`barrier*` 넷 · `crates_stacked` · `box_large` · `box_small` · `barrel_large` · `barrel_small` · `keg`), 큐브 벽 · 엄폐물(`Wall_*` · `Cover_*`) 자리용 · 아틀라스 `Assets/texture/dungeon_texture.png`. 경로 `addons/kaykit_dungeon_remastered/Assets/gltf/<이름>.gltf.glb`. `Assets/LICENSE.txt` 원문 "License: (Creative Commons Zero, CC0)". 만든 이 Kay Lousberg | CC0 1.0 |
+| `shooter3d/models_raw/crate_medium.glb` | Kenney "Blaster Kit" (<https://kenney.nl/assets/blaster-kit>) — 나무 상자. 색은 공용 팩의 `materials/blaster_palette.material`(키트의 팔레트 텍스처)에서 읽는다 | CC0 1.0 |
+| `shooter3d/sounds/*.ogg` | Kenney "Impact Sounds" (<https://kenney.nl/assets/impact-sounds>) — `footstep_concrete_000` · `impactMetal_light_001` · `impactMetal_medium_000` · `impactPlank_medium_000` | CC0 1.0 |
 
 - `AudioServiceTest` 가 OGG 디코드를 실제 파일로 확인하는 테스트 자료입니다.
 - CC0 는 표기 의무가 없지만 고마움을 적어 둡니다 — Kenney (www.kenney.nl).
@@ -45,4 +50,12 @@
   모양이 치우친 모델을 최대 6 cm 옮기므로 쓰지 않는다. 텍스처가 없고 색은 키트 머티리얼 색을 정점 색으로 굽는다(게임은 주인 색을 곱한다).
 - KayKit Space Base(`starskirmish/models_raw/kaykit_space/`)는 `.gltf` + `.bin` 이고 색은 아틀라스(`starskirmish/textures_raw/kaykit_space.png`, 원본 `spacebits_texture.png` 바이트 그대로)에서 읽는다. 파일 이름을 소문자로 바꾸느라
   `.gltf` 안의 버퍼 `uri` 만 새 `.bin` 이름으로 고쳤다. 키트 배치 오프셋이 없으므로 임포트 규칙 `StarSkirmish_KayKitSpaceBase` 가 먼저 맞아 옮기지 않는다.
+- 사격장의 스프라이트 원본: <https://github.com/KenneyNL/Starter-Kit-FPS> (커밋 `185fd2326d74a5cf858cffc616f87cf9696f9cc0`). 에셋(2D 스프라이트 · 3D 모델 · 소리)은
+  [CC0](https://creativecommons.org/publicdomain/zero/1.0/), 코드는 MIT 입니다. 우리는 스프라이트 둘만 옮겼고 코드는 쓰지 않았습니다.
+- 원본은 `shooter3d/models_raw/` · `shooter3d/textures_raw/` 에 두고, 엔진이 읽는 `models/*.mesh` · `textures/*.dds` 는 `App --import-models` ·
+  `App --import-textures` 가 만든다(스탬프는 각 폴더의 `import.stamp`). 파일 이름은 원본의 camelCase · `-` 를 소문자 `_` 로 바꾼 것이다.
+- KayKit Dungeon 모델은 `models/kaykit_dungeon/<이름>.mesh` 로 임포트된다(원본의 `.gltf.glb` 를 `.glb` 로 줄인 이름). 색은 `textures/kaykit_dungeon.dds` 에서
+  읽는다. 맵(`shooter3d/maps/arena.scene.xml`)은 이 메시를 경기장 밖 전시 줄(`Cc0.*`)에만 둔다.
+- 사격장 아레나의 바닥 · 벽 · 엄폐물(블로커 크기 큐브)은 Poly Haven 스캔 텍스처(`materials/floor` · `wall` · `cover.material` — 월드 좌표 타일링), 소품(`Ph.*`)은
+  Poly Haven 스캔 모델이다 — 원본과 출처는 공용 팩(`common/credits.md`)에 있다.
 - 테마파크 가장자리 나무 · 꽃 덤불(`themepark/maps/park.scene.xml` 의 PropScatter)은 공용 Quaternius "Stylized Nature MegaKit" 의 구간 모델이다(출처는 `common/credits.md`).

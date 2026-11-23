@@ -1,0 +1,44 @@
+<?xml version="1.0" encoding="utf-8"?>
+<?asset guid="35a96724b302fdec07899de72055b030"?>
+<!--
+  사격장 미니게임(minigames/shooter3d)의 입력 차이 — Playground 공통 묶음(data/gamesettings.xml 의 <inputMap> 줄) 위에 얹힌다. 게임 코드는 키를 묻지 않고 액션 이름만 묻는다.
+  레이어 Shooter 는 꺼져 있고 미니게임의 inputContexts 가 들어가 있는 동안만 켠다 — 허브 · 다른 미니게임의 같은 키와 겹치지 않는다.
+  CycleCamera 는 시점 카메라 디렉터의 _cycleAction 이다. 포토 모드 조작은 이 묶음이 아니라 엔진 맵(engine/input/photomode.input.xml)이다.
+-->
+<InputMap>
+	<layers>
+		<layer name="Shooter" enabled="0" blockLower="0"/>
+	</layers>
+	<action name="Fire" layer="Shooter" trigger="Pressed">
+		<bind source="Mouse" code="Left"/>
+		<bind source="Gamepad" code="RightShoulder"/>
+	</action>
+	<action name="Reload" layer="Shooter" trigger="Pressed">
+		<bind source="Key" code="R"/>
+		<bind source="Gamepad" code="X"/>
+	</action>
+	<action name="Melee" layer="Shooter" trigger="Pressed">
+		<bind source="Key" code="V"/>
+		<bind source="Gamepad" code="RightThumb"/>
+	</action>
+	<action name="CycleCamera" layer="Shooter" trigger="Pressed">
+		<bind source="Key" code="C"/>
+		<bind source="Gamepad" code="Back"/>
+	</action>
+	<!-- 조준 — 누르고 있는 동안 카메라 상황 Aim(shooter.cameras.xml)을 켠다. 궤도 시점의 Camera.LookHold 와 같은 버튼이지만 레이어가 달라 겹치지 않는다. -->
+	<action name="Aim" layer="Shooter" trigger="Down">
+		<bind source="Mouse" code="Right"/>
+	</action>
+	<action name="SwitchWeapon" layer="Shooter" trigger="Pressed">
+		<axis1d negative="Q" positive="E"/>
+	</action>
+	<action name="Weapon1" layer="Shooter" trigger="Pressed">
+		<bind source="Key" code="Digit1"/>
+	</action>
+	<action name="Weapon2" layer="Shooter" trigger="Pressed">
+		<bind source="Key" code="Digit2"/>
+	</action>
+	<action name="Weapon3" layer="Shooter" trigger="Pressed">
+		<bind source="Key" code="Digit3"/>
+	</action>
+</InputMap>

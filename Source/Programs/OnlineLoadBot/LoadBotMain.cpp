@@ -8,7 +8,7 @@
  *          - `--local-server` 는 같은 프로세스에 서버 조립(`LoadBotLocalServer` — 전용 서버와 같은 `OnlineServerRuntime`)을 띄우고 루프백 TCP(플랫폼 전송, 평문)로 붙는다.
  *            키트 목록 · 옵션은 `--online-config`(`LoadBot.online.json`)를 전용 서버와 같은 로더로 읽는다. 포트 0 이면 OS 가 고른다. 서버 시각은 UTC 벽시계, 봇 지연은 `MonotonicClock`.
  *          - `--server` 는 전용 서버(`Server` 의 온라인 서비스)에 붙는다. 그 서비스 포트는 TLS 1.3 이므로 `--tls=<신뢰 PEM>` 을 함께 준다(값이 없으면 오류 - 개발용 인증서로 대신하지 않는다).
- *          - `--store-config` 는 로컬 서버가 쓸 저장소 · 캐시를 전용 서버의 서버 설정(`Shooter3D.external.json` — PostgreSQL · RESP, 비밀은 환경 변수)에서 고른다. 없으면 메모리.
+ *          - `--store-config` 는 로컬 서버가 쓸 저장소 · 캐시를 전용 서버의 서버 설정(`Playground.external.json` — PostgreSQL · RESP, 비밀은 환경 변수)에서 고른다. 없으면 메모리.
  *          - 로컬 서버면 끝에 원장 감사(재화 총량 보존 — `LedgerAuditReport`)와 저장소 커밋 · 충돌 수를 읽어 보고서에 싣는다. 감사가 균형이 아니면 종료 코드 5.
  *          - 끝에 동작별 지연 백분위 표를 로그로, `--report` 면 JSON 을 파일로 쓴다. 오류율이 상한(기본 1 %)을 넘으면 종료 코드 1, 인자 · 시나리오 오류는 2,
  *            보고서를 쓰지 못하면 4, 원장 감사가 깨지면 5(`LoadBotModuleEntry`).

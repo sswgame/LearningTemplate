@@ -1,0 +1,4 @@
+<?xml version="1.0" encoding="utf-8"?>
+<?asset guid="37e1661f5a2349f28473bb0c69f9a73a"?>
+<!-- 사격장 조작으로 도는 시나리오 무대 — 움직이는 바닥. 허브 입구는 없고 시나리오 automation/shooter3d_movingfloor 가 gv_firstMinigame 로 들어간다(사격장과 같은 입력 레이어를 켠다). -->
+<Minigame name="shooter3d_movingfloor" map="game/playground/shooter3d/maps/movingfloor.scene.xml" entry="SceneSwitch" inputContexts="Movement,Traversal,Look,Camera,CameraOrbit,Shooter"/>

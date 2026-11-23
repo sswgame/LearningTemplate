@@ -1,5 +1,5 @@
 <?asset guid="ceac9f0afdd283524eff26ae8d91c3f3"?>
-<!-- Shooter3D 적 Trilobite 의 알림 표 — 공격 클립의 Impact 알림(models_raw/quaternius/scifi/enemy_trilobite.clips.json)이 맞는 시각이다(ShooterEnemyComponent 의 _attackHitEvent). -->
+<!-- 사격장 적 Trilobite 의 알림 표 — 공격 클립의 Impact 알림(models_raw/quaternius/scifi/enemy_trilobite.clips.json)이 맞는 시각이다(ShooterEnemyComponent 의 _attackHitEvent). -->
 <AnimationNotifies>
     <Notify name="Impact" handler="AbilityEvent" event="AttackHit"/>
 </AnimationNotifies>

@@ -52,4 +52,12 @@
 	<Setting id="controls.arenaFireball" category="controls" type="KeyBinding" action="Arena.Fireball" bindIndex="0" default=""/>
 	<Setting id="controls.arenaHeal" category="controls" type="KeyBinding" action="Arena.Heal" bindIndex="0" default=""/>
 	<Setting id="controls.arenaDash" category="controls" type="KeyBinding" action="Arena.Dash" bindIndex="0" default=""/>
+	<Setting id="controls.shooterFire" category="controls" type="KeyBinding" action="Fire" bindIndex="0" default=""/>
+	<Setting id="controls.shooterJump" category="controls" type="KeyBinding" action="Jump" bindIndex="0" default=""/>
+	<Setting id="controls.shooterReload" category="controls" type="KeyBinding" action="Reload" bindIndex="0" default=""/>
+	<Setting id="controls.shooterCycleCamera" category="controls" type="KeyBinding" action="CycleCamera" bindIndex="0" default=""/>
+	<Setting id="controls.shooterWeapon1" category="controls" type="KeyBinding" action="Weapon1" bindIndex="0" default=""/>
+	<Setting id="controls.shooterWeapon2" category="controls" type="KeyBinding" action="Weapon2" bindIndex="0" default=""/>
+	<Setting id="controls.shooterWeapon3" category="controls" type="KeyBinding" action="Weapon3" bindIndex="0" default=""/>
+	<Setting id="controls.shooterCameraLookHold" category="controls" type="KeyBinding" action="Camera.LookHold" bindIndex="0" default=""/>
 </UserSettingsSchema>

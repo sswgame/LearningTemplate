@@ -17,7 +17,7 @@ namespace sw::editor
     /** @brief 설정 파일 하나입니다. 같은 타입이 파일 여럿이면(`Config/Game` 아래 게임마다 하나) 파일마다 하나씩 나옵니다. */
     struct ProjectSettingsEntry
     {
-        string _page;         ///< 페이지 키(리플렉션 타입 이름, 고르지 않은 게임의 프리셋은 `GameConfig/Shooter3D`). 목록 이름 · 자체 검사 표식이 쓴다
+        string _page;         ///< 페이지 키(리플렉션 타입 이름, 고르지 않은 게임의 프리셋은 `GameConfig/NileCity`). 목록 이름 · 자체 검사 표식이 쓴다
         string _relativePath; ///< 프로젝트 루트 기준 경로(슬래시) - 보여 주기용
         string _absolutePath; ///< 설정 테이블이 읽은 자리(절대, 슬래시). 창은 이것을 열고 쓴다 - 상대 경로에서 다시 풀지 않는다(R8)
         string _typeName;     ///< 리플렉션 타입 이름(`EngineConfig`). 비면 표 페이지다(`collectTables`)

@@ -529,12 +529,12 @@ namespace sw
 
     static_assert( GlobalVariableRegistrar::isTestVariablePath( "D:/Repo/Source/DevTools/Net/NetLineEmulation.cpp" ) );
     static_assert( GlobalVariableRegistrar::isTestVariablePath( "D:\\Repo\\Source\\Editor\\SelfTest\\EditorWatchSupport.h" ) );
-    static_assert( GlobalVariableRegistrar::isTestVariablePath( "/home/u/Repo/Source/Games/Shooter3D/Dev/ShooterAutoplay.cpp" ) );
+    static_assert( GlobalVariableRegistrar::isTestVariablePath( "/home/u/Repo/Source/Games/Playground/Dev/PlaygroundAutoplay.cpp" ) );
     static_assert( GlobalVariableRegistrar::isTestVariablePath( "Source/Engine/Config/Tests/TestGlobalVariableMacro.cpp" ) );
     static_assert( GlobalVariableRegistrar::isTestVariablePath( "D:/Repo/Source/GameFramework/Developer/GameSettingsLaunchOverride.cpp" ) );
     static_assert( GlobalVariableRegistrar::isTestVariablePath( "D:/Repo/Source/GameFramework/Runtime/Developer/X.cpp" ) == false );
     static_assert( GlobalVariableRegistrar::isTestVariablePath( "D:/Dev/Repo/Source/Engine/Audio/AudioEngine.cpp" ) == false );
-    static_assert( GlobalVariableRegistrar::isTestVariablePath( "D:/Repo/Source/Games/Shooter3D/DevilComponent.cpp" ) == false );
+    static_assert( GlobalVariableRegistrar::isTestVariablePath( "D:/Repo/Source/Games/Playground/DevilComponent.cpp" ) == false );
     static_assert( GlobalVariableRegistrar::isTestVariablePath( "D:/Repo/Source/GameFramework/Plugin/Editor/X.cpp" ) == false );
     static_assert( GlobalVariableRegistrar::isTestVariablePath( "Engine/Config/Tests/X.cpp" ) == false );
 } // namespace sw

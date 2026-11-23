@@ -2,7 +2,7 @@
     "_name": "SWGame",
     "_version": "1.0.0",
     "_kind": "Game",
-    "_description": "Playground — 엔진 기능 쇼케이스 · 자동화 시험대인 최소 SWGame. 키트는 콘텐츠가 쓰는 것만(넷 파괴 · 넷 페어드 애니메이션의 두 프로세스 확인 씬, 컷씬 재생 복제 본보기(넷 시뮬레이션 하니스), 근접 판정 · 유닛 스탯의 meleeduel 씬, 하우징 시연 씬, 모드 시연, 장르 키트 시연 K1 · 키트 규칙 시연 K-14, 타일 걸음 마을 미니게임 pixeltown, 허브 맵 바탕인 서부 평원 — 말 · 날씨 · 도착 컷씬, 허브 농장 미니게임 harvestvalley, 복셀 광산 미니게임 voxelcraft, 도시 건설 미니게임 frontiertown, 하우징 · 생물 미니게임 meadowvillage, 테마파크 미니게임 themepark, 아레나 미니게임 abilityarena, 액션 어드벤처 미니게임 velmora, 허브 서버 — 전용 서버의 공유 월드 · 계정마다 진행 저장, RTS 매치 미니게임 starskirmish — 넷 세션이 열리면 GF_NetLockstep 으로 2 인 대전)",
+    "_description": "Playground — 엔진 기능 쇼케이스 · 자동화 시험대인 최소 SWGame. 키트는 콘텐츠가 쓰는 것만(넷 파괴 · 넷 페어드 애니메이션의 두 프로세스 확인 씬, 컷씬 재생 복제 본보기(넷 시뮬레이션 하니스), 근접 판정 · 유닛 스탯의 meleeduel 씬, 하우징 시연 씬, 모드 시연, 장르 키트 시연 K1 · 키트 규칙 시연 K-14, 타일 걸음 마을 미니게임 pixeltown, 허브 맵 바탕인 서부 평원 — 말 · 날씨 · 도착 컷씬, 허브 농장 미니게임 harvestvalley, 복셀 광산 미니게임 voxelcraft, 도시 건설 미니게임 frontiertown, 하우징 · 생물 미니게임 meadowvillage, 테마파크 미니게임 themepark, 아레나 미니게임 abilityarena, 액션 어드벤처 미니게임 velmora, 허브 서버 — 전용 서버의 공유 월드 · 계정마다 진행 저장, RTS 매치 미니게임 starskirmish — 넷 세션이 열리면 GF_NetLockstep 으로 2 인 대전, 사격장 미니게임 shooter3d — 네트워크 몸 이동은 GF_NetClientServer(서버 권위 · 내 폰 예측), 온라인 키트(계정 · 채팅 · 경제 · 우편함 · 매칭 · 순위표 · 라이브 운영 · 서버 디렉터리)를 싣는 온라인 흐름 PlaygroundOnlineFlow)",
     "_listDependency": [
         {
             "_name": "GameFramework"
@@ -126,6 +126,27 @@
         },
         {
             "_name": "GF_ActionAdventure"
+        },
+        {
+            "_name": "GF_Chat"
+        },
+        {
+            "_name": "GF_Economy"
+        },
+        {
+            "_name": "GF_Leaderboard"
+        },
+        {
+            "_name": "GF_LiveOps"
+        },
+        {
+            "_name": "GF_Mailbox"
+        },
+        {
+            "_name": "GF_Matchmaking"
+        },
+        {
+            "_name": "GF_ServerDirectory"
         }
     ],
     "_listConfiguration": [
@@ -137,5 +158,14 @@
         "Server"
     ],
     "_bEnabledByDefault": true,
-    "_listModuleOverride": []
+    "_listModuleOverride": [
+        {
+            "_name": "GF_Server_CacheStore",
+            "_bEnabled": true
+        },
+        {
+            "_name": "GF_Server_SQLStore",
+            "_bEnabled": true
+        }
+    ]
 }

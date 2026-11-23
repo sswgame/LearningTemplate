@@ -94,6 +94,9 @@ namespace sw
         /** @brief 안에 세운 서버(`startLocalServer`)의 저장소입니다. 없으면 nullptr 입니다. 개발 명령 · 시나리오의 준비 단계가 게임 스레드에서 작업을 맡깁니다. */
         [[nodiscard]] ServiceStore* findLocalServerStore() const;
 
+        /** @brief gamesettings 의 허브 서버 접속 티켓 이름(`_onlineHubServerID`)입니다. 적지 않았으면 빈 글입니다. */
+        const string& getHubServerID() const;
+
         OnlineServiceClient& getServiceClient() { return _client; }
         OnlineClientState    getState() const { return _client.getState(); }
         bool                 isReady() const { return _client.isReady(); }

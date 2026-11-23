@@ -91,7 +91,7 @@ SW_TEST_CASE( CountdownTest, CountdownRepeatRateDoesNotDependOnFrameRate )
 
 /**
  * @brief [CountdownTest] `tickRepeat` — 누르고 있는 동안 간격마다 한 번, 지나친 몫을 이어 빈도가 걸음 크기에 매이지 않고, 쉬면 늦음을 버린다
- * @details 테스트 게임 둘이 이 줄을 쓴다 — 복셀 광산 블록 놓기(0.25 초 간격, 걸음 0.1 초 상한)와 Shooter3D 적 휘두르기(1.5 초). 손으로 세던 판
+ * @details 테스트 게임 둘이 이 줄을 쓴다 — 복셀 광산 블록 놓기(0.25 초 간격, 걸음 0.1 초 상한)와 사격장 적 휘두르기(1.5 초). 손으로 세던 판
  *          (`x -= dt; if ( want && x <= 0 ) x = interval;`)은 0.1 초 걸음에서 놓기 간격을 0.3 초로 늘렸다 — 10 초 누르면 41 이 아니라 34 번.
  */
 SW_TEST_CASE( CountdownTest, CountdownTickRepeatKeepsTheHeldRate )
@@ -110,7 +110,7 @@ SW_TEST_CASE( CountdownTest, CountdownTickRepeatKeepsTheHeldRate )
             SW_EXPECT_NEAR( 41.0f, static_cast<float32>( placeCount ), 1.0f );
         }
     }
-    BLOCK( "Shooter3D 적 휘두르기 — 사정거리 밖에서 쉰 시간은 잇지 않는다(들어오면 한 번, 몰아 휘두르지 않는다)" )
+    BLOCK( "사격장 적 휘두르기 — 사정거리 밖에서 쉰 시간은 잇지 않는다(들어오면 한 번, 몰아 휘두르지 않는다)" )
     {
         Countdown swingCooldown;
         swingCooldown.start( 0.75f );

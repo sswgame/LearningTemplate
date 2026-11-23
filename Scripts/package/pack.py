@@ -32,7 +32,7 @@ Dev 산출물(`Modules/` · `Saved/` · `Symbols/`)과 다른 실행 파일(테�
 
 사용법:
     py -3 Scripts/package/pack.py --target Client --game Playground
-    py -3 Scripts/package/pack.py --target Server --game Shooter3D --rhi DirectX12 --output Saved/Packages
+    py -3 Scripts/package/pack.py --target Server --game Playground --rhi DirectX12 --output Saved/Packages
     py -3 Scripts/package/pack.py --platform Web --game Playground
     py -3 Scripts/package/pack.py --target Client --skip-build --skip-cook --bin-dir build/Ninja-Debug/Bin   # 스테이징만(창의 시나리오)
 """

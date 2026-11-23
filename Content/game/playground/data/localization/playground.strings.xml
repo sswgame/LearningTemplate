@@ -1,6 +1,11 @@
 <?asset guid="23267bc32729c612b7d0ab7681cded9a"?>
 <SourceStringTable culture="en">
 	<entries>
+		<entry key="/" source="/" context="TextWidget._text">
+			<origins>
+				<item>game/playground/shooter3d/ui/hud.ui.xml</item>
+			</origins>
+		</entry>
 		<entry key="Actor" source="Actor" context="SequenceBinding._name">
 			<origins>
 				<item>game/playground/data/cinematic.seq.xml</item>
@@ -14,6 +19,21 @@
 		<entry key="ArrivalCutB" source="ArrivalCutB" context="SequenceBinding._name">
 			<origins>
 				<item>game/playground/wildwest/data/arrival.seq.xml</item>
+			</origins>
+		</entry>
+		<entry key="Assault Rifle" source="Assault Rifle" context="Weapon name">
+			<origins>
+				<item>common/data/items.xml</item>
+			</origins>
+		</entry>
+		<entry key="Bone Axe" source="Bone Axe" context="Item name">
+			<origins>
+				<item>common/data/items.xml</item>
+			</origins>
+		</entry>
+		<entry key="Bone Shield" source="Bone Shield" context="Item name">
+			<origins>
+				<item>common/data/items.xml</item>
 			</origins>
 		</entry>
 		<entry key="CutA" source="CutA" context="SequenceBinding._name">
@@ -36,9 +56,54 @@
 				<item>game/playground/data/cutscenegate.seq.xml</item>
 			</origins>
 		</entry>
+		<entry key="Gilded Knight Helmet" source="Gilded Knight Helmet" context="Item name">
+			<origins>
+				<item>common/data/items.xml</item>
+			</origins>
+		</entry>
+		<entry key="Heraldic Cape" source="Heraldic Cape" context="Item name">
+			<origins>
+				<item>common/data/items.xml</item>
+			</origins>
+		</entry>
+		<entry key="Knight Helmet" source="Knight Helmet" context="Item name">
+			<origins>
+				<item>common/data/items.xml</item>
+			</origins>
+		</entry>
+		<entry key="Knight Helmet (Dyeable)" source="Knight Helmet (Dyeable)" context="Item name">
+			<origins>
+				<item>common/data/items.xml</item>
+			</origins>
+		</entry>
+		<entry key="Knight Helmet (Merged)" source="Knight Helmet (Merged)" context="Item name">
+			<origins>
+				<item>common/data/items.xml</item>
+			</origins>
+		</entry>
+		<entry key="Knight Sword (Merged)" source="Knight Sword (Merged)" context="Item name">
+			<origins>
+				<item>common/data/items.xml</item>
+			</origins>
+		</entry>
+		<entry key="Longbow" source="Longbow" context="Item name">
+			<origins>
+				<item>common/data/items.xml</item>
+			</origins>
+		</entry>
 		<entry key="Mind the pond - nobody swims in it." source="Mind the pond - nobody swims in it." context="Dialogue line">
 			<origins>
 				<item>game/playground/pixeltown/dialogue/elder.dialogue.xml</item>
+			</origins>
+		</entry>
+		<entry key="Notched Blade" source="Notched Blade" context="Item name">
+			<origins>
+				<item>common/data/items.xml</item>
+			</origins>
+		</entry>
+		<entry key="Pistol" source="Pistol" context="Weapon name">
+			<origins>
+				<item>common/data/items.xml</item>
 			</origins>
 		</entry>
 		<entry key="Press [action=Farm.Use] to work the soil with your tool"
@@ -46,6 +111,26 @@
 		       context="TutorialHintTriggerComponent._text">
 			<origins>
 				<item>game/playground/harvestvalley/maps/farm.scene.xml</item>
+			</origins>
+		</entry>
+		<entry key="Pump Shotgun" source="Pump Shotgun" context="Weapon name">
+			<origins>
+				<item>common/data/items.xml</item>
+			</origins>
+		</entry>
+		<entry key="Round Shield" source="Round Shield" context="Item name">
+			<origins>
+				<item>common/data/items.xml</item>
+			</origins>
+		</entry>
+		<entry key="Round Shield (Merged)" source="Round Shield (Merged)" context="Item name">
+			<origins>
+				<item>common/data/items.xml</item>
+			</origins>
+		</entry>
+		<entry key="Rusted Helm" source="Rusted Helm" context="Item name">
+			<origins>
+				<item>common/data/items.xml</item>
 			</origins>
 		</entry>
 		<entry key="Stamina" source="Stamina" context="TextWidget._text">
@@ -80,9 +165,19 @@
 				<item>game/playground/audio/playground.audioevents.xml</item>
 			</origins>
 		</entry>
+		<entry key="Tattered Cape" source="Tattered Cape" context="Item name">
+			<origins>
+				<item>common/data/items.xml</item>
+			</origins>
+		</entry>
 		<entry key="The warrior wakes." source="The warrior wakes." context="SequenceTrackItem._text">
 			<origins>
 				<item>game/playground/data/cinematic.seq.xml</item>
+			</origins>
+		</entry>
+		<entry key="Travel Cape" source="Travel Cape" context="Item name">
+			<origins>
+				<item>common/data/items.xml</item>
 			</origins>
 		</entry>
 		<entry key="Welcome to Dry Gulch." source="Welcome to Dry Gulch." context="SequenceTrackItem._text">
