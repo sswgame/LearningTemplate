@@ -47,7 +47,7 @@ namespace sw
     void MaterialPSOBuilder::pushResult( Job&& job, RHIPipelineStateHandle handle )
     {
         ScopedLock<mutex> lock{ _mutex };
-        _listResult.push_back( Result{ job._key, std::move( job._desc ), handle, job._shaderGeneration } );
+        _listResult.push_back( Result{ job._key, std::move( job._desc ), handle } );
         --_inFlight;
     }
 

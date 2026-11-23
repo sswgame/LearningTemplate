@@ -180,8 +180,7 @@ namespace sw
          * @brief 셰이더 핫 리로드: 그 셰이더로 만든 PSO 만 파괴하고 비웁니다(레이아웃 캐시도 그 셰이더 것만). 빈 자리는 `FramePSOManager::createPassPSOs` · 지연 생성이 다시 채웁니다.
          * @details 언리얼 셰이더 핫 리로드처럼 바뀐 셰이더를 쓰는 PSO 만 다시 만든다 — 패스 자원(상수 버퍼 · 풀 · 그리기 캐시)은 그대로다.
          *          엔진 패스 PSO 를 하나라도 놓으면 머티리얼 변형을 모두 놓는다: 변형 키에 패스 PSO 핸들이 들어 있어 남기면 쓰이지 않는 채로 쌓이고, `_bOwned` 가 0 인 변형은 놓은 패스 PSO 를 가리킨다.
-         *          `Failed` 변형과 실패(0)로 적힌 모듈 프로그램도 지운다 — 고친 셰이더로 다시 만들어 본다. 만드는 중(`Building`)인 변형도 지우고 빌더의 결과는 세대가 달라 버린다
-         *          — 옛 바이트코드로 만든 PSO 가 `Ready` 로 들거나 놓인 패스 PSO 의 키에 남지 않는다.
+         *          `Failed` 변형과 실패(0)로 적힌 모듈 프로그램도 지운다 — 고친 셰이더로 다시 만들어 본다. 만드는 중(`Building`)인 변형은 빌더가 끝낼 때까지 둔다.
          * @return 파괴한 PSO 수입니다.
          */
         uint32 releasePSOsUsingShader( IRHIDevice* pDevice, string_view shaderPath );
@@ -211,8 +210,6 @@ namespace sw
         unordered_map<hashed_string, RHIPipelineStateHandle>    _mapExtensionProgramPSO;
         unordered_map<uint64, MaterialPSOEntry> _mapMaterialPSO SW_GUARDED_BY( _materialPSOMutex );
         mutable mutex                                           _materialPSOMutex;
-        /// @brief 셰이더 다시 컴파일마다 오르는 세대입니다(렌더 스레드만). 청할 때 작업에 싣고, 합칠 때 다르면 결과를 버립니다.
-        uint32 _shaderGeneration;
         /// @brief 머티리얼 변형의 생성 줄과 전용 스레드입니다. 캐시가 소유해 미리보기 렌더러와 함께 씁니다(해제는 `releaseAll` 이 스레드부터 합류합니다).
         MaterialPSOBuilder _materialPSOBuilder;
     };

@@ -24,7 +24,6 @@ namespace sw
         , _mapExtensionProgramPSO{}
         , _mapMaterialPSO{}
         , _materialPSOMutex{}
-        , _shaderGeneration{ 0 }
     {
     }
 
@@ -205,7 +204,7 @@ namespace sw
 
     void RenderPSOCache::requestMaterialPSO( IRHIDevice* pDevice, uint64 key, RHIPipelineStateDesc&& desc, bool bUrgent, bool bAsync )
     {
-        _materialPSOBuilder.submit( pDevice, MaterialPSOBuilder::Job{ key, std::move( desc ), _shaderGeneration }, bUrgent, bAsync );
+        _materialPSOBuilder.submit( pDevice, MaterialPSOBuilder::Job{ key, std::move( desc ) }, bUrgent, bAsync );
     }
 
     uint32 RenderPSOCache::pollMaterialPSOBuilds( IRHIDevice* pDevice, bool bAsync, uint32 budgetMicroseconds )
@@ -219,14 +218,6 @@ namespace sw
         uint32 readyCount{ 0 };
         for ( const MaterialPSOBuilder::Result& result : listResult )
         {
-            // 만드는 사이 셰이더가 다시 컴파일됐다(`releasePSOsUsingShader`) — 옛 바이트코드로 만들었을 수 있고 키의 패스 PSO 도 놓였을 수 있어 버린다.
-            // 그 키는 그때 지워졌고, 배치가 다시 청하면 새 세대로 만든다.
-            if ( result._shaderGeneration != _shaderGeneration )
-            {
-                if ( result._handle != 0 )
-                    pDevice->releaseHandle( result._handle );
-                continue;
-            }
             if ( result._handle == 0 )
             {
                 // 컴파일 실패다. 패스 PSO(다른 셰이더 · 다른 보기 모드)로 그리면 틀린 그림이 통과하므로 이 조합은 그리지 않고 오류를 남긴다.
@@ -359,14 +350,12 @@ namespace sw
         }
 
         // 3) 머티리얼 변형(입자 · 쿠키 아틀라스 · 디퍼드 타일 포함). 소유한 것만 파괴한다 — `_bOwned` 가 0 이면 패스 PSO 그대로다.
-        //    만드는 중인 것은 세대를 올려 그 결과를 버리게 하고 항목을 지운다(빌더가 옛 바이트코드를 이미 읽었을 수 있다 — 어느 작업이 그런지 알 수 없어 모두).
-        ++_shaderGeneration;
         {
             ScopedLock<mutex> lock{ _materialPSOMutex };
             for ( auto it = _mapMaterialPSO.begin(); it != _mapMaterialPSO.end(); )
             {
                 const MaterialPSOEntry& entry    = it->second;
-                const bool              bRelease = entry._state == MaterialPSOState::Failed || entry._state == MaterialPSOState::Building ||
+                const bool              bRelease = entry._state == MaterialPSOState::Failed ||
                                       ( entry._state == MaterialPSOState::Ready && ( bPassReleased || VectorUtil::contains( listAffected, entry._pso ) ) );
                 if ( bRelease == false )
                 {

@@ -57,7 +57,7 @@ SW_TEST_CASE( RenderPSOCacheShaderReleaseTest, ReleasesOnlyPSOsOfTheChangedShade
     cache.setMaterialPSO( 101, RenderPSOCache::MaterialPSOEntry::failed() );
     cache.setMaterialPSO( 102, RenderPSOCache::MaterialPSOEntry::building() );
 
-    // 컴퓨트 셰이더 하나 — 그 PSO 만 놓고, 실패한 변형 · 만드는 중인 변형은 다시 만들게 지운다. 패스 PSO · 만든 변형은 그대로다.
+    // 컴퓨트 셰이더 하나 — 그 PSO 만 놓고, 실패한 변형은 다시 만들어 보게 지운다. 패스 PSO · 만든 변형 · 만드는 중인 변형은 그대로다.
     SW_EXPECT_EQUAL( 1u, cache.releasePSOsUsingShader( &device, "engine:shaders/blur_cs.hlsl" ) );
     SW_EXPECT_TRUE( factory._listDestroyedPipelineState == vector<RHIPipelineStateHandle>{ kBlurPSO } );
     RHIPipelineStateHandle found{ 0 };
@@ -66,7 +66,7 @@ SW_TEST_CASE( RenderPSOCacheShaderReleaseTest, ReleasesOnlyPSOsOfTheChangedShade
     SW_EXPECT_EQUAL( kShadowPSO, cache.findEnginePSO( RenderPassKind::Shadow ) );
     SW_EXPECT_EQUAL( kVariantPSO, cache.findMaterialPSO( 100 ) );
     SW_EXPECT_TRUE( cache.findMaterialPSOState( 101 ) == RenderPSOCache::MaterialPSOState::Absent );
-    SW_EXPECT_TRUE( cache.findMaterialPSOState( 102 ) == RenderPSOCache::MaterialPSOState::Absent );
+    SW_EXPECT_TRUE( cache.findMaterialPSOState( 102 ) == RenderPSOCache::MaterialPSOState::Building );
 
     // 포워드 셰이더 — 그 패스 PSO 를 놓고, 변형 키에 패스 PSO 핸들이 들어 있으니 만든 변형도 놓는다. 그림자 패스 PSO 는 그대로다.
     factory._listDestroyedPipelineState.clear();
@@ -76,7 +76,7 @@ SW_TEST_CASE( RenderPSOCacheShaderReleaseTest, ReleasesOnlyPSOsOfTheChangedShade
     SW_EXPECT_EQUAL( RHIPipelineStateHandle{}, cache.findEnginePSO( RenderPassKind::ForwardOpaque ) );
     SW_EXPECT_EQUAL( kShadowPSO, cache.findEnginePSO( RenderPassKind::Shadow ) );
     SW_EXPECT_TRUE( cache.findMaterialPSOState( 100 ) == RenderPSOCache::MaterialPSOState::Absent );
-    SW_EXPECT_TRUE( cache.findMaterialPSOState( 102 ) == RenderPSOCache::MaterialPSOState::Absent );
+    SW_EXPECT_TRUE( cache.findMaterialPSOState( 102 ) == RenderPSOCache::MaterialPSOState::Building );
     RHIPipelineStateDesc desc{};
     SW_EXPECT_FALSE( cache.findDesc( kForwardPSO, desc ) );
     SW_EXPECT_TRUE( cache.findDesc( kShadowPSO, desc ) );
@@ -109,26 +109,4 @@ SW_TEST_CASE( RenderPSOCacheShaderReleaseTest, OverwriteReleasesThePreviousPSO )
     cache.setExtensionProgramPSO( &device, programKey, kOld );
     cache.setExtensionProgramPSO( &device, programKey, RHIPipelineStateHandle{} ); // 실패(0)로 덮어도 옛 핸들은 놓는다
     SW_EXPECT_TRUE( factory._listDestroyedPipelineState == ( vector<RHIPipelineStateHandle>{ kOld, kOld } ) );
-}
-
-/**
- * @brief [RenderPSOCacheShaderReleaseTest] 만드는 사이 셰이더가 바뀐 변형의 결과는 버린다 — 옛 바이트코드의 결과(성공이든 실패든)가 새 요청의 자리를 채우지 않는다
- * @details 변이: 세대를 보지 않고 합치면(예전) 옛 작업의 실패가 새로 청한 키를 `Failed` 로 굳혀 고친 셰이더로 다시 만들지 않는다.
- */
-SW_TEST_CASE( RenderPSOCacheShaderReleaseTest, DiscardsBuildsStartedBeforeTheShaderChanged )
-{
-    SW_EXPECT_LOG( "RHI.PipelineFrontUnbound" ); // 가짜 팩토리는 만들지 못한다(핸들 0) — 결과의 자리만 본다
-    test::FakeRHIBufferFactory factory;
-    test::FakeRHIDevice        device;
-    device._pResourceFactory = &factory;
-    constexpr uint64 kKey    = 200;
-
-    RenderPSOCache cache;
-    SW_REQUIRE_TRUE( cache.beginMaterialPSO( kKey ) );
-    cache.requestMaterialPSO( &device, kKey, makeGraphicsDesc( "shaders/forward.hlsl" ), true, false );
-    (void)cache.releasePSOsUsingShader( &device, "shaders/forward.hlsl" );
-    SW_EXPECT_TRUE( cache.findMaterialPSOState( kKey ) == RenderPSOCache::MaterialPSOState::Absent );
-    SW_REQUIRE_TRUE( cache.beginMaterialPSO( kKey ) ); // 배치가 다시 청했다
-    SW_EXPECT_EQUAL( 0u, cache.pollMaterialPSOBuilds( &device, false, 0 ) );
-    SW_EXPECT_TRUE( cache.findMaterialPSOState( kKey ) == RenderPSOCache::MaterialPSOState::Building );
 }
