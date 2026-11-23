@@ -4,6 +4,7 @@
 
 #include "Core/Math/MathUtil.h"
 
+#include "Engine/Behavior/ActionRegistry.h"
 #include "Engine/Behavior/ConditionRegistry.h"
 #include "Engine/Navigation/INavMover.h"
 

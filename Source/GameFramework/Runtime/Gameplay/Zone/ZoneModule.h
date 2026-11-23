@@ -17,8 +17,8 @@
 #include "Core/Name/hashed_string.h"
 #include "Core/Registry/NamedEntryRegistry.h"
 
-#include "Engine/Behavior/ActionRegistry.h"
 #include "Engine/Behavior/ConditionExpr.h"
+#include "Engine/Behavior/GameActionCall.h"
 #include "Engine/Behavior/GameplayContext.h"
 
 #include "GameFramework/GameFrameworkExports.h"

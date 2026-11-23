@@ -5,6 +5,7 @@
 #include "Core/Container/EnumArray.h"
 #include "Core/Math/MathUtil.h"
 
+#include "Engine/Behavior/ActionRegistry.h"
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
 

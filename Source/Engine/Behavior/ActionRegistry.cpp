@@ -52,6 +52,11 @@ namespace sw
     {
     }
 
+    const utf8* GameActionCall::getName() const
+    {
+        return _pEntry != nullptr ? _pEntry->_pName : "";
+    }
+
     string_view GameActionCall::getCallName( string_view text )
     {
         string_view name;
