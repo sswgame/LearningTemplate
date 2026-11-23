@@ -5,6 +5,7 @@
 #pragma once
 #include "Core/Concurrency/mutex.h"
 #include "Core/Memory/Memory.h"
+#include "Core/Task/TaskTypes.h"
 
 #include "Engine/Config/RHIBackendType.h"
 #include "Engine/EngineMinimal.h"
@@ -680,9 +681,15 @@ namespace sw
         [[nodiscard]] bool initializePipelineCache();
         /** @brief 파이프라인 캐시를 디스크에 저장하고 정리합니다(종료). */
         void savePipelineCache();
-        /** @brief 파이프라인 캐시를 디스크에 씁니다. 디스크의 바이트와 같으면 쓰지 않는다. 캐시는 그대로 둔다(주기 저장 · 종료 저장이 함께 쓴다). */
+        /**
+         * @brief 파이프라인 캐시를 디스크에 씁니다. 디스크의 바이트와 같으면 쓰지 않는다. 캐시는 그대로 둔다(주기 저장 · 종료 저장이 함께 쓴다).
+         * @details 어느 스레드에서나 부른다 — 캐시는 내부 동기화이고, 주기 저장의 워커가 도는 동안 장치 · 캐시는 바뀌지 않는다(`savePipelineCache` 가 기다린 뒤 지운다).
+         */
         void writePipelineCacheFile();
-        /** @brief 주기(`RHIDeviceDesc::_pipelineCacheSaveIntervalSeconds`)가 지났고 캐시가 자랐으면 디스크에 씁니다(R-13). 프레임 시작이 부른다. */
+        /**
+         * @brief 주기(`RHIDeviceDesc::_pipelineCacheSaveIntervalSeconds`)가 지났고 캐시가 자랐으면 워커에 저장을 맡깁니다(R-13). 프레임 시작이 부른다.
+         * @details 캐시 데이터를 뜨고 디스크를 읽고 쓰는 일은 렌더 스레드에서 하지 않는다 — 캐시가 클수록 그 프레임이 늦는다(언리얼도 PSO 캐시를 비동기로 쓴다 — 기억).
+         */
         void savePipelineCacheIfDue();
 
         /**
@@ -1157,6 +1164,7 @@ namespace sw
         int64                                                             _pipelineCacheSaveIntervalNanoseconds{ 0 }; ///< 주기 저장 간격(`RHIDeviceDesc::_pipelineCacheSaveIntervalSeconds`)
         int64                                                             _pipelineCacheLastSaveNanoseconds{ 0 };     ///< 지난 저장(또는 읽기) 시각
         uint64                                                            _pipelineCacheLastSavedBytes{ 0 };          ///< 지난 저장(또는 읽기) 때의 캐시 크기
+        TaskStageHandle                                                   _pipelineCacheSaveStage;                    ///< 주기 저장 태스크(캐시를 지우기 전에 기다린다 — 렌더 스레드 · 해제 길에서만 쓴다)
 
         /// @brief 살아 있는 장치 메모리 할당 수입니다(`allocateDeviceMemory` · `freeDeviceMemory`). 한도는 물리 장치를 고른 뒤 정한다.
         VulkanMemoryAccount _memoryAccount;
