@@ -1137,31 +1137,8 @@ namespace sw::editor
         if ( bHasClipData )
             hash = HashUtil::computeStringHash64( reinterpret_cast<const utf8*>( clipDataBytes.data() ), clipDataBytes.size(), false, hash );
 
-        // `.gltf` 는 버퍼를 옆 파일로 둘 수 있다. 그 바이트가 바뀌어도 어긋남이어야 한다. data URI 는 이미 본문에 있다.
-        if ( FileUtil::hasExtension( sourcePath, ".gltf" ) == false )
-            return hash;
-        const string        path    = string( sourcePath );
-        const cgltf_options options = ModelImportUtil::makeOptions();
-        cgltf_data*         pData   = nullptr;
-        if ( cgltf_parse_file( &options, path.c_str(), &pData ) != cgltf_result_success )
-        {
-            cgltf_free( pData );
-            return hash;
-        }
-        const string directory = FileUtil::getDirectoryPart( sourcePath );
-        for ( cgltf_size bufferIndex = 0; bufferIndex < pData->buffers_count; ++bufferIndex )
-        {
-            const utf8* pUri = pData->buffers[bufferIndex].uri;
-            if ( pUri == nullptr || StringUtil::startsWith( pUri, "data:" ) )
-                continue;
-            vector<uint8> bufferBytes;
-            const string  bufferPath  = FileUtil::joinPath( directory, pUri );
-            const bool    bBufferRead = FileUtil::exists( FileUtil::toDiskPath( bufferPath ) ) && FileUtil::readFile( FileUtil::toDiskPath( bufferPath ), bufferBytes ); // 해시는 있는 버퍼만 섞는다(없는 버퍼는 임포트가 오류로 알린다)
-            if ( bBufferRead && bufferBytes.empty() == false )
-                hash = HashUtil::computeStringHash64( reinterpret_cast<const utf8*>( bufferBytes.data() ), bufferBytes.size(), false, hash );
-        }
-        cgltf_free( pData );
-        return hash;
+        // 버퍼 · 이미지를 옆 파일로 둘 수 있다. 그 바이트가 바뀌어도 어긋남이어야 한다(이미지는 결과의 공유 원본으로 꺼낸다). data URI 는 이미 본문에 있다.
+        return ModelImportUtil::mixExternalFiles( sourcePath, bytes, hash );
     }
 
     void ModelImporter::collectImportedFiles( string_view importedMeshPath, vector<string>& outListPath )

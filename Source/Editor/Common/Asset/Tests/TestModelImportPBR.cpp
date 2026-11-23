@@ -7,6 +7,7 @@
 #include "Core/Testing/TestFramework.h"
 
 #include "Editor/Common/Asset/ModelImport/ModelImportMaterial.h"
+#include "Editor/Common/Asset/ModelImport/ModelImportUtil.h"
 
 using namespace sw;
 using namespace sw::editor;
@@ -100,6 +101,51 @@ SW_TEST_CASE( ModelImportPBRTest, OcclusionPackedInORMKeepsStrength )
     SW_EXPECT_NEAR( 0.5f, result._pbrMaterial._occlusionStrength, 1e-6f );
 
     SW_EXPECT_TRUE( FileUtil::removeDirectory( root ) );
+}
+
+/**
+ * @brief [ModelImportPBRTest] 본문에 든 이미지(`data:` URI)와 퍼센트 표기 파일 이름을 읽는다 — 흰 텍스처로 넘어가거나 "파일 없음" 이 되지 않는다
+ */
+SW_TEST_CASE( ModelImportPBRTest, ReadsEmbeddedAndPercentEncodedImages )
+{
+    const AbsolutePath root = test::makeScratchPath( "ModelImportPbrURI" );
+    SW_REQUIRE_TRUE( FileUtil::ensureDirectoryExists( root.join( "models_raw" ) ) );
+    SW_REQUIRE_TRUE( FileUtil::writeTextFile( root.join( "models_raw/my tex.png" ), "png" ) );
+    const string_view json       = R"({ "asset": { "version": "2.0" },
+        "images": [ { "uri": "data:image/jpeg;base64,YWJj" }, { "uri": "my%20tex.png" } ],
+        "textures": [ { "source": 0 }, { "source": 1 } ],
+        "materials": [ { "name": "Embedded", "normalTexture": { "index": 1 }, "pbrMetallicRoughness": { "baseColorTexture": { "index": 0 } } } ] })";
+    const string      sourcePath = root.join( "models_raw/embedded.gltf" ).str();
+    ParsedGltf        parsed;
+    cgltf_options     options{};
+    SW_REQUIRE_TRUE( cgltf_parse( &options, json.data(), json.size(), &parsed._pData ) == cgltf_result_success );
+
+    ModelImportResult result;
+    SW_REQUIRE_TRUE( ModelImportMaterial::readPBRMaterial( *parsed._pData, sourcePath, result ) );
+    SW_EXPECT_TRUE( result._pbrMaterial._albedo._bytes == ( vector<uint8>{ 'a', 'b', 'c' } ) );
+    SW_EXPECT_EQUAL( string( ".jpg" ), result._pbrMaterial._albedo._extension );
+    SW_EXPECT_TRUE( result._pbrMaterial._normal._bytes == ( vector<uint8>{ 'p', 'n', 'g' } ) );
+    SW_EXPECT_TRUE( StringUtil::endsWith( result._pbrMaterial._normal._sourcePath, "/models_raw/my tex.png" ) );
+}
+
+/**
+ * @brief [ModelImportPBRTest] 원본 해시는 옆에 둔 이미지의 내용을 따르고, 텍스처 원본 폴더의 이미지는 섞지 않는다(그 내용은 텍스처 임포트가 따라간다)
+ */
+SW_TEST_CASE( ModelImportPBRTest, SourceHashFollowsExternalImages )
+{
+    const AbsolutePath root = test::makeScratchPath( "ModelImportPbrHash" );
+    SW_REQUIRE_TRUE( FileUtil::ensureDirectoryExists( root.join( "models_raw" ) ) && FileUtil::ensureDirectoryExists( root.join( "textures_raw" ) ) );
+    SW_REQUIRE_TRUE( FileUtil::writeTextFile( root.join( "models_raw/side tex.png" ), "one" ) );
+    SW_REQUIRE_TRUE( FileUtil::writeTextFile( root.join( "textures_raw/shared.png" ), "one" ) );
+    const string_view   json = R"({ "asset": { "version": "2.0" }, "images": [ { "uri": "side%20tex.png" }, { "uri": "../textures_raw/shared.png" } ] })";
+    const vector<uint8> bytes( json.begin(), json.end() );
+    const string        sourcePath = root.join( "models_raw/side.gltf" ).str();
+    const uint64        before     = ModelImportUtil::mixExternalFiles( sourcePath, bytes, 1 );
+
+    SW_REQUIRE_TRUE( FileUtil::writeTextFile( root.join( "textures_raw/shared.png" ), "two" ) );
+    SW_EXPECT_EQUAL( before, ModelImportUtil::mixExternalFiles( sourcePath, bytes, 1 ) );
+    SW_REQUIRE_TRUE( FileUtil::writeTextFile( root.join( "models_raw/side tex.png" ), "two" ) );
+    SW_EXPECT_TRUE( before != ModelImportUtil::mixExternalFiles( sourcePath, bytes, 1 ) );
 }
 
 /**

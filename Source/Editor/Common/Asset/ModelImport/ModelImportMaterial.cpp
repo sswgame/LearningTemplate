@@ -9,6 +9,7 @@
 #include "Core/Algorithm/VectorUtil.h"
 #include "Core/Container/unordered_map.h"
 #include "Core/Container/unordered_set.h"
+#include "Core/Encoding/Base64Util.h"
 #include "Core/File/FileUtil.h"
 #include "Core/Log/Logger.h"
 #include "Core/String/StringBuilder.h"
@@ -421,14 +422,27 @@ namespace sw::editor
                 outTexture._bytes.assign( pBytes, pBytes + image.buffer_view->size );
             return true;
         }
-        if ( image.uri == nullptr || StringUtil::startsWith( image.uri, "data:" ) )
+        if ( image.uri == nullptr )
             return true;
-        outTexture._extension = FileUtil::getExtension( image.uri );
+        if ( ModelImportUtil::isExternalURI( image.uri ) == false )
+        {
+            // 본문에 든 이미지(`data:image/png;base64,…` — glTF Embedded 내보내기). 풀지 못하면 흰 텍스처로 임포트하지 않고 실패한다.
+            const string_view uri{ image.uri };
+            const size_t      comma = uri.find( ',' );
+            const string_view head  = uri.substr( 0, comma == string_view::npos ? 0 : comma );
+            const bool        bRead = StringUtil::endsWith( head, ";base64" ) && Base64Util::decode( uri.substr( comma + 1 ), outTexture._bytes );
+            if ( bRead == false )
+            {
+                SW_LOG_ERROR_ID( "ModelImport.ImageDataUnreadable", "glTF '%#': an embedded image is not base64 data", sourcePath );
+                return false;
+            }
+            if ( StringUtil::contains( head, "image/jpeg" ) )
+                outTexture._extension = ".jpg";
+            return true;
+        }
         // 원본이 가리키는 바깥 파일을 못 읽으면 흰 텍스처로 임포트하지 않고 실패한다(빠진 파일이 결과에 말없이 묻힌다).
-        string imagePath = FileUtil::joinPath( FileUtil::getDirectoryPart( sourcePath ), image.uri );
-        string canonicalPath;
-        if ( FileUtil::makeCanonicalPath( FileUtil::toDiskPath( imagePath ), canonicalPath ) ) // `../` 을 푼다 — 원본 옆이 아닌 textures_raw 의 이미지를 가리키는 glTF
-            imagePath = FileUtil::normalizeSeparators( canonicalPath );
+        const string imagePath = ModelImportUtil::resolveURI( sourcePath, image.uri );
+        outTexture._extension  = FileUtil::getExtension( imagePath );
         outTexture._sourcePath = imagePath;
         if ( FileUtil::readFile( FileUtil::toDiskPath( imagePath ), outTexture._bytes ) == false )
         {

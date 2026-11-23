@@ -7,6 +7,7 @@
 #include "Editor/Common/Asset/ModelImport/ModelImportUtil.h"
 
 #include "Core/File/FileUtil.h"
+#include "Core/Hash/HashUtil.h"
 #include "Core/Log/Logger.h"
 #include "Core/Memory/Memory.h"
 #include "Core/String/StringBuilder.h"
@@ -39,6 +40,58 @@ namespace sw::editor
         options.memory.alloc_func = &ModelImportUtil::allocate;
         options.memory.free_func  = &ModelImportUtil::free;
         return options;
+    }
+
+    bool ModelImportUtil::isExternalURI( const utf8* pURI )
+    {
+        return pURI != nullptr && pURI[0] != '\0' && StringUtil::startsWith( pURI, "data:" ) == false;
+    }
+
+    string ModelImportUtil::resolveURI( string_view sourcePath, const utf8* pURI )
+    {
+        string decoded{ pURI };
+        decoded.push_back( '\0' ); // cgltf 는 널로 끝나는 글을 제자리에서 푼다
+        decoded.resize( cgltf_decode_uri( decoded.data() ) );
+        string path = FileUtil::joinPath( FileUtil::getDirectoryPart( sourcePath ), decoded );
+        string canonicalPath;
+        if ( FileUtil::makeCanonicalPath( FileUtil::toDiskPath( path ), canonicalPath ) ) // `../` 을 푼다 — 원본 옆이 아닌 textures_raw 의 이미지를 가리키는 glTF
+            path = FileUtil::normalizeSeparators( canonicalPath );
+        return path;
+    }
+
+    uint64 ModelImportUtil::mixExternalFiles( string_view sourcePath, const vector<uint8>& listByte, uint64 hash )
+    {
+        const cgltf_options options = makeOptions();
+        cgltf_data*         pData   = nullptr;
+        if ( cgltf_parse( &options, listByte.data(), listByte.size(), &pData ) != cgltf_result_success )
+        {
+            cgltf_free( pData );
+            return hash; // 깨진 원본은 임포트가 오류로 알린다
+        }
+        StringBuilder<constant::buffer::kMax64> rawMarker;
+        rawMarker.appendFormat( "/%#/", kRawTextureFolder );
+        const auto mixFile = [&hash]( const string& path )
+        {
+            vector<uint8> fileBytes;
+            const bool    bRead = FileUtil::exists( FileUtil::toDiskPath( path ) ) && FileUtil::readFile( FileUtil::toDiskPath( path ), fileBytes );
+            if ( bRead && fileBytes.empty() == false )
+                hash = HashUtil::computeStringHash64( reinterpret_cast<const utf8*>( fileBytes.data() ), fileBytes.size(), false, hash );
+        };
+        for ( cgltf_size bufferIndex = 0; bufferIndex < pData->buffers_count; ++bufferIndex )
+        {
+            if ( isExternalURI( pData->buffers[bufferIndex].uri ) )
+                mixFile( resolveURI( sourcePath, pData->buffers[bufferIndex].uri ) );
+        }
+        for ( cgltf_size imageIndex = 0; imageIndex < pData->images_count; ++imageIndex )
+        {
+            if ( isExternalURI( pData->images[imageIndex].uri ) == false )
+                continue;
+            const string imagePath = resolveURI( sourcePath, pData->images[imageIndex].uri );
+            if ( imagePath.find( rawMarker.view() ) == string::npos )
+                mixFile( imagePath );
+        }
+        cgltf_free( pData );
+        return hash;
     }
 
     float3 ModelImportUtil::convertToEngineSpace( const float3& value )
