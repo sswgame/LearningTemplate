@@ -6,6 +6,7 @@
 #include "Core/Network/NetTypes.h"
 #include "Core/Network/Transport/IStreamTransport.h"
 #include "Core/String/StringBuilder.h"
+#include "Core/String/StringUtil.h"
 #include "Core/Time/Clock.h"
 #include "Core/Time/MonotonicClock.h"
 
@@ -139,7 +140,7 @@ namespace sw
         _client.shutdown();
         _pTransport.reset();
         _tlsContext.reset();
-        _password.clear();
+        StringUtil::wipeSecret( _password );
         _bPending = SW_FALSE;
     }
 
@@ -240,7 +241,7 @@ namespace sw
         {
             _bLoginSent = SW_TRUE;
             (void)_account.login( _loginName, _password );
-            _password.clear(); // 보낸 뒤에는 쓰지 않는다
+            StringUtil::wipeSecret( _password ); // 보낸 뒤에는 쓰지 않는다 — 크래시 덤프 · 힙에 남기지 않는다
         }
         vector<AccountClientReply> listReply;
         (void)_account.pollReplies( listReply );

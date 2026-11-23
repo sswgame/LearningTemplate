@@ -68,6 +68,14 @@ namespace sw
                 return length;
             }
 
+            /** @brief 남길(기록 · 출력 · 로그) 줄입니다 — 비밀 인자를 받는 명령이면 그 자리를 가린다(`DevCommandRegistry::makeMaskedLine`). */
+            static string makeMaskedLine( string_view line )
+            {
+                const vector<string>          listToken = StringUtil::splitQuotedTokens( line );
+                const DevCommandRegistration* pCommand  = listToken.empty() ? nullptr : engine::getSubsystem<DevCommandRegistry>().findCommand( listToken[0] );
+                return pCommand != nullptr ? DevCommandRegistry::makeMaskedLine( *pCommand, line ) : string( line );
+            }
+
             static DevConsoleResult readVariable( GlobalVariableManager* pVariables, string_view name, string& outReply )
             {
                 GlobalVariableInfo*                      pInfo = pVariables != nullptr ? pVariables->findVariable( name ) : nullptr;
@@ -204,8 +212,10 @@ namespace sw
         if ( trimmed.empty() )
             return DevConsoleResult::Empty;
 
-        if ( _listHistory.empty() || _listHistory.back() != trimmed )
-            _listHistory.push_back( string( trimmed ) );
+        // 친 줄은 기록 · 출력 · 로그 세 곳에 남는다 — 모두 비밀 인자를 가린 이 줄만 쓴다(실행은 원래 줄).
+        const string maskedLine = DevConsoleInternal::makeMaskedLine( trimmed );
+        if ( _listHistory.empty() || _listHistory.back() != maskedLine )
+            _listHistory.push_back( maskedLine );
         if ( _listHistory.size() > kMaxHistoryCount )
             _listHistory.erase( _listHistory.begin() );
         resetHistoryCursor();
@@ -218,7 +228,7 @@ namespace sw
         }
 
         StringBuilder<constant::buffer::kMax256> echo;
-        echo.appendFormat( "> %#", trimmed );
+        echo.appendFormat( "> %#", maskedLine );
         appendOutput( echo.view(), false );
         string                 reply;
         const DevConsoleResult result = execute( trimmed, reply );
@@ -226,7 +236,7 @@ namespace sw
         if ( reply.empty() == false )
             appendOutput( reply, bError );
         // 로그로 나가는 줄은 머리까지 포함해 한 줄 답의 상한을 넘지 않는다 - 개별 명령이 상한을 기억하지 않아도 되고 새 명령도 우회하지 못한다. 오버레이에는 전체가 남는다.
-        const string logLine = makeLogLine( trimmed, reply );
+        const string logLine = makeLogLine( maskedLine, reply );
         if ( bError )
             SW_LOG_WARNING_ID( "DevCommand.Failed", "%#", logLine.c_str() ); // 시나리오 `<DevCommand>` 단계와 같은 사건 id 다(개발 명령의 답)
         else
