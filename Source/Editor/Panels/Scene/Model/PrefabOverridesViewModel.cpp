@@ -8,6 +8,7 @@
 #include "Editor/Common/Workspace/Asset/EditorAssetType.h"
 #include "Editor/Common/Workspace/EditorSelection.h"
 #include "Editor/Common/Workspace/EditorService.h"
+#include "Editor/Common/Workspace/EditorWorkspace.h"
 
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Object/Prefab/PrefabAsset.h"
@@ -33,40 +34,38 @@ namespace sw::editor
         : _selectedPrefabPath{}
         , _selectedInstanceName{}
         , _lastScanKey{}
+        , _scannedEditSerial{ 0 }
         , _listOverride{}
         , _listNestedPrefab{}
         , _bShowOnlyModified{ true }
     {
-        scan( nullptr );
-    }
-
-    void PrefabOverridesViewModel::scan( const utf8* pPrefabPath )
-    {
-        const string_view path = ( pPrefabPath != nullptr ) ? string_view{ pPrefabPath } : string_view{};
-        EditorToolAssetCommands::collectPrefabOverrides( PrefabOverridesViewModelInternal::getPrefabTargetInstance(), path, _selectedPrefabPath,
-                                                         _selectedInstanceName, _listOverride, _listNestedPrefab );
-    }
-
-    void PrefabOverridesViewModel::refreshIfFocusChanged()
-    {
-        const utf8*       pScanPath{ nullptr };
-        GameObject*       pPrimary = editor::getMainSceneSelection().getPrimaryObject();
-        const uint64      objectID = pPrimary != nullptr ? pPrimary->getObjectID() : 0;
-        const string_view matching = EditorAssetTypeRegistry::matchingFocusedPath( EditorAssetType{ PrefabAsset::kAssetType } );
-        if ( matching.empty() == false )
-            pScanPath = matching.data();
-        if ( EditorAssetTypeRegistry::consumeWorkspaceFocusKey( _lastScanKey, objectID ) )
-            scan( pScanPath );
+        rescan();
     }
 
     void PrefabOverridesViewModel::rescan()
     {
-        scan( _selectedPrefabPath.c_str() );
+        // 프리팹에 포커스가 있으면 그 중첩 목록을 보인다 — 인스턴스를 골랐으면 인스턴스의 프리팹이 이긴다(`collectPrefabOverrides`).
+        const string_view focused = EditorAssetTypeRegistry::matchingFocusedPath( EditorAssetType{ PrefabAsset::kAssetType } );
+        EditorToolAssetCommands::collectPrefabOverrides( PrefabOverridesViewModelInternal::getPrefabTargetInstance(), focused, _selectedPrefabPath,
+                                                         _selectedInstanceName, _listOverride, _listNestedPrefab );
+    }
+
+    void PrefabOverridesViewModel::refreshIfChanged()
+    {
+        const GameObject*      pPrimary   = PrefabOverridesViewModelInternal::getPrefabTargetInstance();
+        const uint64           objectID   = pPrimary != nullptr ? pPrimary->getObjectID() : 0;
+        const EditorWorkspace* pWorkspace = editor::findSubsystem<EditorWorkspace>(); // 선택: 셸 없는 테스트 호스트에는 없다
+        const uint32           editSerial = pWorkspace != nullptr ? pWorkspace->getSceneEditSerial() : 0;
+        const bool             bFocus     = EditorAssetTypeRegistry::consumeWorkspaceFocusKey( _lastScanKey, objectID );
+        if ( bFocus == false && editSerial == _scannedEditSerial )
+            return;
+        _scannedEditSerial = editSerial;
+        rescan();
     }
 
     void PrefabOverridesViewModel::applyAllToTemplate()
     {
-        if ( EditorToolAssetCommands::applyPrefabOverridesToTemplate( PrefabOverridesViewModelInternal::getPrefabTargetInstance(), AssetID{ _selectedPrefabPath } ) )
+        if ( EditorToolAssetCommands::applyPrefabOverridesToTemplate( PrefabOverridesViewModelInternal::getPrefabTargetInstance() ) )
             SW_LOG_TRACE_ID( "PrefabTool.AppliedAllInstanceOverrides", "Applied all instance overrides back to template %s", _selectedPrefabPath.c_str() );
         else
             SW_LOG_ERROR_ID( "PrefabTool.CouldNotApplyOverrides", "Could not apply overrides to template %s", _selectedPrefabPath.c_str() );
@@ -75,7 +74,7 @@ namespace sw::editor
 
     void PrefabOverridesViewModel::revertAll()
     {
-        if ( EditorToolAssetCommands::revertAllPrefabOverrides( PrefabOverridesViewModelInternal::getPrefabTargetInstance(), _selectedPrefabPath ) )
+        if ( EditorToolAssetCommands::revertAllPrefabOverrides( PrefabOverridesViewModelInternal::getPrefabTargetInstance() ) )
             SW_LOG_TRACE_ID( "PrefabTool.RevertedAllOverrides", "Reverted all overrides on %s", _selectedInstanceName.c_str() );
         else
             SW_LOG_ERROR_ID( "PrefabTool.CouldNotRevertOverrides", "Could not revert overrides on %s", _selectedInstanceName.c_str() );
@@ -85,7 +84,7 @@ namespace sw::editor
     void PrefabOverridesViewModel::revertOverride( size_t overrideIndex )
     {
         PrefabOverrideItem& item = _listOverride[overrideIndex];
-        EditorToolAssetCommands::revertPrefabOverride( PrefabOverridesViewModelInternal::getPrefabTargetInstance(), item, _selectedPrefabPath );
+        EditorToolAssetCommands::revertPrefabOverride( PrefabOverridesViewModelInternal::getPrefabTargetInstance(), item );
         SW_LOG_TRACE_ID( "PrefabTool.Reverted", "Reverted %s.%s to %s", item._componentName.c_str(), item._propertyName.c_str(), item._defaultValue.c_str() );
         rescan();
     }
