@@ -153,31 +153,15 @@ run() {
   if [ -n "$OUT" ]; then "$@" > "$OUT" 2>&1; else "$@"; fi
 }
 
-# ninja 1.12 의 재압축(DepsLog · BuildLog Recompact — cmake 구성 끝의 `ninja -t recompact`, 빌드 시작의 자동 재압축)은 새 파일 <이름>.recompact 를 다 쓰고 닫은 뒤
-# 옛 파일을 지우고 이름을 바꾼다. 그 사이 바깥 프로세스(백신 검사)가 새 파일을 잡으면 이름 바꾸기가 "failed recompaction: Permission denied" 로 져
-# 옛 파일만 사라지고, 다음 구성 · 빌드가 빈 기록으로 시작해 전체 재빌드가 난다(2026-11-21 ASan — 05:24 의 .ninja_deps.recompact 가 남아 있었다).
-# 그 꼴(옛 것 없음 + .recompact 있음)이면 ninja 가 하려던 이름 바꾸기를 마저 한다 — .recompact 는 옛 것을 지우기 전에 이미 닫힌 완성본이다.
-restore_build_logs() {
-  [ $DRY -eq 1 ] && return 0
-  local F
-  for F in build/$1/.ninja_deps build/$1/.ninja_log; do
-    if [ ! -e "$F" ] && [ -f "$F.recompact" ]; then
-      mv "$F.recompact" "$F" && echo "$F: 지다 만 ninja 재압축을 마저 끝냈다(.recompact → 제자리)" || windows_failed "$F.recompact 이름 바꾸기"
-    fi
-  done
-}
-
 build_preset() {
   local P=$1
   local LOGS=build/$P/Testing/Logs
   [ $DRY -eq 1 ] || mkdir -p $LOGS   # --dry-run 은 빌드 폴더를 만들지 않는다(워크트리에서 명령 순서만 볼 때)
   echo "== $P build $(date +%T)"
-  restore_build_logs $P
-  # 재압축이 바깥 프로세스에 막혀 지면(restore_build_logs) — 이 문구일 때만 기록을 제자리에 돌린 뒤 한 번 더 구성한다. 돌리지 않고 다시 구성하면 빈 기록으로 전체 재빌드다.
+  # 재압축이 바깥 프로세스(백신 검사)에 막혀 지면 — 이 문구일 때만 한 번 더 구성한다. 구성 시작이 기록을 제자리에 돌린다(cmake/Modules/Build/NinjaBuildLogs.cmake).
   run $LOGS/verify.configure.log cmake --preset $P ||
-    { grep -aq "failed recompaction: Permission denied" $LOGS/verify.configure.log && restore_build_logs $P && run $LOGS/verify.configure.log cmake --preset $P; } ||
+    { grep -aq "failed recompaction: Permission denied" $LOGS/verify.configure.log && run $LOGS/verify.configure.log cmake --preset $P; } ||
     windows_failed "$P configure"
-  restore_build_logs $P
   if ! run $LOGS/verify.build.log cmake --build --preset $P -- -k 0; then
     grep -E "error|FAILED" $LOGS/verify.build.log | head -30
     windows_failed "$P build"
