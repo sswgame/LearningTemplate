@@ -27,7 +27,7 @@ namespace sw
     public:
         static constexpr const utf8* kSubsystemName = "NetLineEmulation";
         /** @brief 알아보는 샤드 수의 상한입니다(그 뒤 샤드는 감싸지 않는다). */
-        static constexpr int32 kMaxShardCount = 64;
+        static constexpr int32 kMaxShardCount = 128; // UDP 샤드 64 + 같은 수의 스트림 샤드(`ServerConfig::_gameStreamPort`)
 
         explicit NetLineEmulationSubsystem( GameNetSession& session );
         ~NetLineEmulationSubsystem() override;

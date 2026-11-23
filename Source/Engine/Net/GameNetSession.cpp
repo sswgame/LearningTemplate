@@ -12,7 +12,10 @@
 #include "Core/Network/DevOnlineExtension.h"
 #include "Core/Network/Message/NetStatsReport.h"
 #include "Core/Network/Transport/PlatformSocketUtil.h"
+#include "Core/Network/Transport/ProxyProtocolAcceptTransport.h"
+#include "Core/Network/Transport/StreamNetTransport.h"
 #include "Core/Network/Transport/UDPNetTransport.h"
+#include "Core/Network/Transport/WebSocketAcceptTransport.h"
 #include "Core/String/StringBuilder.h"
 #include "Core/String/StringUtil.h"
 #include "Core/Subsystem/SubsystemScope.h"
@@ -80,8 +83,67 @@ namespace sw
                     SW_LOG_ERROR_ID( "GameNetSession.NetSessionShardsRun", "Net session shards %#-%# run past the UDP port range", params._listenPort, lastPort );
                     return false;
                 }
+                if ( params._streamListenPort != 0 )
+                {
+                    const int32 lastStreamPort = static_cast<int32>( params._streamListenPort ) + getStreamShardCount( params ) - 1;
+                    if ( bServer == false || params._maxStreamConnectionsPerRemote < 1 || constant::network::kMaxPort < lastStreamPort )
+                    {
+                        SW_LOG_ERROR_ID( "GameNetSession.NetSessionStreamPort", "Net session stream ports %#-%# (%# connection(s) per host) - only a server opens them, inside the TCP port range, with 1 or more per host",
+                                         params._streamListenPort, lastStreamPort, params._maxStreamConnectionsPerRemote );
+                        return false;
+                    }
+                }
                 return true;
             }
+            /** @brief 스트림 샤드 수입니다 — UDP 샤드마다 하나, 한 포트를 나누면 하나(연결은 커널이 나누지 않고 전송 하나가 받는다). */
+            static int32 getStreamShardCount( const GameNetSessionParams& params )
+            {
+                if ( params._streamListenPort == 0 )
+                    return 0;
+                return params._bShardsSharePort ? 1 : params._shardCount;
+            }
+            /** @brief 스트림 전송의 설정입니다. */
+            static StreamTransportConfig makeStreamConfig( const GameNetSessionParams& params )
+            {
+                StreamTransportConfig settings;
+                settings._maxConnections = params._hostSettings._maxConnections * kStreamConnectionsPerSlot;
+                // 보낼 줄이 차면 데이터그램을 버린다(UDP 와 같다) — 연결 하나가 1 초 남짓의 송신 상한까지만 쌓는다.
+                settings._maxQueuedSendBytes     = MathUtil::max( params._hostSettings._maxBytesPerSecond, kNetMaxPacketSize );
+                settings._sendHighWatermarkBytes = settings._maxQueuedSendBytes;
+                settings._sendLowWatermarkBytes  = settings._maxQueuedSendBytes / 2;
+                return settings;
+            }
+            /** @brief 서버가 @p port 에 여는 스트림 전송입니다 — 브라우저(WebSocket)와 원시 TCP 를 함께 받고, 프록시 뒤면 PROXY v2 머리를 먼저 읽는다(서비스 리슨과 같은 겹). 열지 못하면 nullptr 입니다. */
+            static unique_ptr<INetTransport> createListenStream( const GameNetSessionParams& params, uint16 port )
+            {
+                unique_ptr<IStreamTransport> stream = StreamTransportFactory::createPlatformTransport();
+                if ( params._listStreamTrustedProxy.empty() == false )
+                    stream = make_unique<ProxyProtocolAcceptTransport>( std::move( stream ), params._listStreamTrustedProxy );
+                stream                                   = make_unique<WebSocketAcceptTransport>( std::move( stream ) );
+                unique_ptr<StreamNetTransport> transport = make_unique<StreamNetTransport>( std::move( stream ) );
+                const bool                     bIpv6     = params._listenFamily == NetAddressFamily::Ipv6;
+                const NetAddress               loopback  = bIpv6 ? NetAddress::makeIpv6Loopback( port ) : NetAddress::makeLoopback( port );
+                const NetAddress               any       = bIpv6 ? NetAddress::makeIpv6AnyInterface( port ) : NetAddress::makeAnyInterface( port );
+                if ( transport->listen( params._bLoopbackOnly ? loopback : any, makeStreamConfig( params ), params._maxStreamConnectionsPerRemote ) == false )
+                {
+                    SW_LOG_ERROR_ID( "GameNetSession.NetSessionStreamListen", "Net session could not listen on stream port %# (in use?)", port );
+                    return nullptr;
+                }
+                return transport;
+            }
+            /** @brief 클라이언트가 서버에 거는 스트림 전송입니다. 시작도 못 하면 nullptr 입니다. */
+            static unique_ptr<INetTransport> createClientStream( const GameNetSessionParams& params )
+            {
+                unique_ptr<StreamNetTransport> transport = make_unique<StreamNetTransport>( StreamTransportFactory::createPlatformTransport() );
+                if ( transport->connect( params._serverAddress, makeStreamConfig( params ) ) == false )
+                {
+                    SW_LOG_ERROR_ID( "GameNetSession.NetSessionStreamConnect", "Net session could not start a stream connection to %#", params._serverAddress.toString() );
+                    return nullptr;
+                }
+                return transport;
+            }
+            /** @brief 받은 스트림 연결의 상한을 엔드포인트 자리의 몇 배로 두는지입니다 — 접속 절차 중이거나 끊긴 것을 아직 모르는 연결이 자리를 다 쓰지 않게. */
+            static constexpr int32 kStreamConnectionsPerSlot = 2;
             /** @brief 비율(0~1)을 백분율로 바꾸는 배수입니다. */
             static constexpr float32 kPercent = 100.0f;
             /** @brief 초당 킬로비트(`NetConnectionStats::_sentBandwidth`)를 초당 바이트로 바꾸는 배수입니다(1000 / 8). */
@@ -239,17 +301,17 @@ namespace sw
 namespace sw
 {
     /**
-     * @brief 포트 샤드 하나 — 소켓, 그것을 감싼 데코레이터(있으면), 호스트, 네트워크 스레드입니다.
+     * @brief 포트 샤드 하나 — 소켓(UDP, 스트림 샤드 · 웹 클라이언트는 스트림 전송), 그것을 감싼 데코레이터(있으면), 호스트, 네트워크 스레드입니다.
      * @details 선언 순서가 소멸 순서를 정한다: 스레드 → 호스트 → 데코레이터 → 소켓(데코레이터는 안쪽 전송을 빌려 쓰고, 호스트는 데코레이터를 빌려 쓴다).
      */
     struct GameNetSession::Shard
     {
-        unique_ptr<UDPNetTransport> _transport{};
-        unique_ptr<INetTransport>   _decorator{}; ///< `_transport` 를 감싼 전송(`setTransportDecorator` — 개발 도구의 회선 흉내). 있으면 호스트가 이것을 쓴다
-        NetEndpoint                 _host{};
-        NetEndpointThread           _thread{};
-        ShardMetrics                _metrics{};  ///< 서버 — 운영 지표 시리즈(`bindMetricRegistry`)
-        NetEndpointCounters         _reported{}; ///< 서버 — 지표에 옮긴 엔드포인트 셈(늘어난 만큼 = 지금 − 이것). 샤드와 함께 0 에서 시작한다
+        unique_ptr<INetTransport> _transport{};
+        unique_ptr<INetTransport> _decorator{}; ///< `_transport` 를 감싼 전송(`setTransportDecorator` — 개발 도구의 회선 흉내). 있으면 호스트가 이것을 쓴다
+        NetEndpoint               _host{};
+        NetEndpointThread         _thread{};
+        ShardMetrics              _metrics{};  ///< 서버 — 운영 지표 시리즈(`bindMetricRegistry`)
+        NetEndpointCounters       _reported{}; ///< 서버 — 지표에 옮긴 엔드포인트 셈(늘어난 만큼 = 지금 − 이것). 샤드와 함께 0 에서 시작한다
     };
 } // namespace sw
 
@@ -359,6 +421,22 @@ namespace sw
         outParams._bLoopbackOnly    = bLoopbackOnly;
         outParams._listenFamily     = listenAddress._family;
         outParams._bShardsSharePort = config._bGamePortReuse;
+        if ( config._gameStreamPort < 0 || constant::network::kMaxPort < config._gameStreamPort )
+        {
+            SW_LOG_ERROR_ID( "GameNetSession.ServerConfigStreamPort", "Server config _gameStreamPort %# is not a TCP port - the game port stays closed", config._gameStreamPort );
+            outParams = GameNetSessionParams{};
+            return false;
+        }
+        outParams._streamListenPort                     = static_cast<uint16>( config._gameStreamPort );
+        outParams._maxStreamConnectionsPerRemote        = config._maxGameStreamConnectionsPerRemote;
+        const expected<vector<uint32>> listTrustedProxy = ProxyProtocolAcceptTransport::parseTrustedProxies( config._listGameStreamTrustedProxy );
+        if ( listTrustedProxy.has_value() == false )
+        {
+            SW_LOG_ERROR_ID( "GameNetSession.ServerConfigStreamProxy", "Server config _listGameStreamTrustedProxy: %# ('%#') - the game port stays closed", listTrustedProxy.error().message(), listTrustedProxy.error().detail() );
+            outParams = GameNetSessionParams{};
+            return false;
+        }
+        outParams._listStreamTrustedProxy = *listTrustedProxy;
         if ( GameNetSessionInternal::isValidShardLayout( outParams ) == false )
         {
             outParams = GameNetSessionParams{};
@@ -413,20 +491,28 @@ namespace sw
         return true;
     }
 
-    unique_ptr<GameNetSession::Shard> GameNetSession::createShard( const GameNetSessionParams& params, uint16 transportPort, int32 shardIndex )
+    unique_ptr<INetTransport> GameNetSession::createUDPTransport( const GameNetSessionParams& params, uint16 transportPort )
     {
-        unique_ptr<Shard> shard = make_unique<Shard>();
-        shard->_transport       = make_unique<UDPNetTransport>();
+        unique_ptr<UDPNetTransport> transport = make_unique<UDPNetTransport>();
         // 클라이언트는 서버 주소가 정한다 — 다른 기계의 서버면 그 답을 받아야 하므로 루프백에만 묶을 수 없다.
         const bool             bServer       = params._role == GameNetRole::Server;
         const bool             bLoopbackOnly = bServer ? params._bLoopbackOnly : params._serverAddress.isLoopback();
         const NetAddressFamily family        = bServer ? params._listenFamily : params._serverAddress._family;
         const UDPPortSharing   sharing       = params._bShardsSharePort ? UDPPortSharing::ReusePort : UDPPortSharing::Exclusive;
-        if ( shard->_transport->open( transportPort, bLoopbackOnly, sharing, family ) == false )
+        if ( transport->open( transportPort, bLoopbackOnly, sharing, family ) == false )
         {
             SW_LOG_ERROR_ID( "GameNetSession.NetSessionCouldNot", "Net session could not open UDP port %# (in use?)", transportPort );
             return nullptr;
         }
+        return transport;
+    }
+
+    unique_ptr<GameNetSession::Shard> GameNetSession::createShard( const GameNetSessionParams& params, unique_ptr<INetTransport> transport, int32 shardIndex )
+    {
+        if ( transport == nullptr )
+            return nullptr; // 만든 쪽이 알렸다
+        unique_ptr<Shard> shard       = make_unique<Shard>();
+        shard->_transport             = std::move( transport );
         INetTransport* pHostTransport = shard->_transport.get();
         // 건 데코레이터가 있으면 소켓을 감싼다(개발 도구의 회선 흉내 — 엔진은 무엇인지 모른다). nullptr 이면 그대로 쓴다.
         if ( _transportDecorator.isBound() )
@@ -455,14 +541,23 @@ namespace sw
             SW_LOG_ERROR_ID( "GameNetSession.NetSessionParamsCarry", "Net session params carry a game connect ticket but are not an encrypted client - use makeTicketClientParams" );
             return false;
         }
-        const bool           bServer = params._role == GameNetRole::Server;
+        const bool           bServer          = params._role == GameNetRole::Server;
+        const int32          streamShardCount = GameNetSessionInternal::getStreamShardCount( params );
         vector<NetEndpoint*> listHost;
-        for ( int32 shardIndex = 0; shardIndex < params._shardCount; ++shardIndex )
+        for ( int32 shardIndex = 0; shardIndex < params._shardCount + streamShardCount; ++shardIndex )
         {
             // 샤드 n 은 첫 포트 + n(한 포트를 나누면 모두 첫 포트). 클라이언트는 운영체제가 고른 포트 하나다.
-            const uint16      shardOffset   = params._bShardsSharePort ? uint16{ 0 } : static_cast<uint16>( shardIndex );
-            const uint16      transportPort = bServer ? static_cast<uint16>( params._listenPort + shardOffset ) : uint16{ 0 };
-            unique_ptr<Shard> shard         = createShard( params, transportPort, shardIndex );
+            // UDP 샤드 뒤에 스트림 샤드가 이어진다 — 키트 · 라우터는 둘을 가르지 않는다(연결 ID 만 다르다).
+            const uint16              shardOffset   = params._bShardsSharePort ? uint16{ 0 } : static_cast<uint16>( shardIndex );
+            const uint16              transportPort = bServer ? static_cast<uint16>( params._listenPort + shardOffset ) : uint16{ 0 };
+            unique_ptr<INetTransport> transport;
+            if ( shardIndex >= params._shardCount )
+                transport = GameNetSessionInternal::createListenStream( params, static_cast<uint16>( params._streamListenPort + ( shardIndex - params._shardCount ) ) );
+            else if ( bServer == false && params._bStreamLink )
+                transport = GameNetSessionInternal::createClientStream( params );
+            else
+                transport = createUDPTransport( params, transportPort );
+            unique_ptr<Shard> shard = createShard( params, std::move( transport ), shardIndex );
             if ( shard == nullptr )
             {
                 shutdown();
@@ -482,7 +577,7 @@ namespace sw
             {
                 if ( shard->_host.listen() == false )
                 {
-                    SW_LOG_ERROR_ID( "GameNetSession.NetSessionCouldNot2", "Net session could not listen on UDP port %#", shard->_transport->getLocalAddress()._port );
+                    SW_LOG_ERROR_ID( "GameNetSession.NetSessionCouldNot2", "Net session could not listen on port %#", shard->_transport->getLocalAddress()._port );
                     shutdown();
                     return false;
                 }
@@ -521,12 +616,14 @@ namespace sw
         _role = params._role;
         if ( _role == GameNetRole::Client )
             SW_LOG_INFO_ID( "GameNetSession.NetSessionConnecting", "Net session connecting to %#", _serverAddress.toString() );
-        else if ( getShardCount() == 1 )
+        else if ( params._shardCount == 1 )
             SW_LOG_INFO_ID( "GameNetSession.NetSessionListeningUDP", "Net session listening on UDP port %#", _listenPort );
         else if ( params._bShardsSharePort )
-            SW_LOG_INFO_ID( "GameNetSession.NetSessionListeningUDP2", "Net session listening on UDP port %# (%# shards share the port)", _listenPort, getShardCount() );
+            SW_LOG_INFO_ID( "GameNetSession.NetSessionListeningUDP2", "Net session listening on UDP port %# (%# shards share the port)", _listenPort, params._shardCount );
         else
-            SW_LOG_INFO_ID( "GameNetSession.NetSessionListeningUDP3", "Net session listening on UDP port %# (%# shards, ports %#-%#)", _listenPort, getShardCount(), _listenPort, _listenPort + getShardCount() - 1 );
+            SW_LOG_INFO_ID( "GameNetSession.NetSessionListeningUDP3", "Net session listening on UDP port %# (%# shards, ports %#-%#)", _listenPort, params._shardCount, _listenPort, _listenPort + params._shardCount - 1 );
+        if ( streamShardCount > 0 )
+            SW_LOG_INFO_ID( "GameNetSession.NetSessionListeningStream", "Net session listening on stream port %# (%# port(s), browser clients)", params._streamListenPort, streamShardCount );
         return true;
     }
 
