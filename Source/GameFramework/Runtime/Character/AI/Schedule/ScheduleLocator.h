@@ -3,7 +3,7 @@
  * @brief 활동 슬롯 제공자입니다. `UseObject` 블록이 "벤치 하나", "작업대 하나" 를 시간 창으로 예약하는 인터페이스와, 데이터의 `<Spot>` 으로 나눠 주는 기본 구현을 둡니다.
  * @details 스마트 오브젝트는 점유할 수 있는 슬롯입니다. 플레이어와 AI 가 같이 쓰는 벤치, 작업대, 엄폐물이 그 예입니다.
  *          스마트 오브젝트 시스템이 이 인터페이스를 구현해 `ScheduleSystem::setActivityLocator` 로 등록합니다.
- *          예약은 멱등이어야 합니다. 같은 NPC, 종류, 날, 겹치는 시간 창이면 같은 예약을 돌려줍니다.
+ *          예약은 멱등이어야 합니다. 같은 NPC, 종류, 날, 겹치는 시간 창이면 같은 예약을 돌려줍니다(요청 창이 더 넓으면 예약 창을 넓히고, 넓힐 자리가 없으면 새로 고릅니다).
  *          그래서 계획을 다시 세워도 슬롯이 바뀌지 않고, 저장에서 복원한 예약을 그대로 다시 고릅니다.
  */
 #pragma once
@@ -90,7 +90,8 @@ namespace sw
             int32         _endMinute{ 0 };
         };
 
-        int32 countOverlapping( int32 spotIndex, int32 day, int32 startMinute, int32 endMinute ) const;
+        /** @brief 그 슬롯에 겹치는 시간 창을 든 다른 NPC 의 예약 수입니다. */
+        int32 countOthersOverlapping( const hashed_string& npc, int32 spotIndex, int32 day, int32 startMinute, int32 endMinute ) const;
 
     private:
         const ScheduleCatalog* _pCatalog;

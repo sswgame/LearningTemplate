@@ -192,3 +192,49 @@ SW_TEST_CASE( ScheduleSystemTest, NPCObjectIsFoundByItsComponentNotItsName )
     SW_EXPECT_TRUE( schedule.getNPCID( *villagerIndex ) == sw::hashed_string( "b" ) );
     SW_EXPECT_FALSE( sw::NPCScheduleComponent::findNPCIndex( schedule, *pNamedOnly ).has_value() );
 }
+
+/**
+ * @brief [ScheduleSystemTest] 같은 NPC 의 예약 창이 넓어지면 넓어진 시간까지 자리를 쥔다 — 나머지 시간을 남이 겹쳐 잡지 못한다
+ * @details 약속이 깨져 나뉘었던 칸이 다시 하나로 합쳐지면 더 넓은 창으로 다시 예약한다. 옛 창만 들고 있으면 정원 1 인 벤치에 둘이 선다.
+ */
+SW_TEST_CASE( ScheduleSystemTest, WidenedReservationHoldsTheWholeWindow )
+{
+    sw::ScheduleCatalog catalog;
+    SW_REQUIRE_TRUE( catalog.loadFromXMLText( R"(<Schedules><Place id="home" position="0 0 0"/><Spot id="bench" kind="Bench" position="1 0 0"/><Spot id="stool" kind="Bench" position="9 0 0"/>
+  <NPC id="a" home="home" speed="10"/><NPC id="b" home="home" speed="10"/></Schedules>)",
+                                              "WidenedReservation" ) );
+    sw::ScheduleSpotLocator locator;
+    locator.initialize( &catalog );
+
+    sw::ScheduleReserveRequest request;
+    request._npc         = sw::hashed_string( "a" );
+    request._objectKind  = sw::hashed_string( "Bench" );
+    request._startMinute = 9 * kHour;
+    request._endMinute   = 10 * kHour;
+    sw::ScheduleLocation location;
+    sw::uint32           narrowID = 0;
+    SW_REQUIRE_TRUE( locator.reserve( request, location, narrowID ) );
+    sw::uint32 wideID  = 0;
+    request._endMinute = 12 * kHour;
+    SW_REQUIRE_TRUE( locator.reserve( request, location, wideID ) );
+    SW_EXPECT_EQUAL( narrowID, wideID );
+
+    // 남은 11 시 ~ 12 시도 a 의 것이다 — b 는 먼 의자로 간다.
+    sw::ScheduleReserveRequest other = request;
+    other._npc                       = sw::hashed_string( "b" );
+    other._startMinute               = 11 * kHour;
+    sw::uint32 otherID               = 0;
+    SW_REQUIRE_TRUE( locator.reserve( other, location, otherID ) );
+    SW_EXPECT_NEAR( 9.0f, location._position._x, 1.0e-4f );
+
+    // 남이 쥔 시간까지는 넓히지 못한다 — 의자의 아침을 잡은 c 는 b 의 11 시를 빼앗지 않는다.
+    sw::ScheduleReserveRequest third = request;
+    third._npc                       = sw::hashed_string( "c" );
+    third._startMinute               = 9 * kHour;
+    third._endMinute                 = 10 * kHour;
+    sw::uint32 thirdID               = 0;
+    SW_REQUIRE_TRUE( locator.reserve( third, location, thirdID ) );
+    SW_EXPECT_NEAR( 9.0f, location._position._x, 1.0e-4f );
+    third._endMinute = 12 * kHour;
+    SW_EXPECT_FALSE( locator.reserve( third, location, thirdID ) );
+}

@@ -82,8 +82,8 @@ namespace sw
 
         /** @brief 예약의 슬롯 슬롯(월드 위치)를 구합니다. 오브젝트가 사라졌으면 false 입니다. */
         bool computeReservationPosition( const Reservation& reservation, float3& outPosition ) const;
-        /** @brief 그 슬롯에 겹치는 시간 창의 예약이 있는지 셉니다. */
-        int32 countOverlapping( uint64 objectID, int32 slot, int32 day, int32 startMinute, int32 endMinute ) const;
+        /** @brief 그 슬롯에 겹치는 시간 창을 든 다른 NPC 의 예약이 있는지입니다. */
+        bool isTakenByOther( const hashed_string& npc, uint64 objectID, int32 slot, int32 day, int32 startMinute, int32 endMinute ) const;
         /** @brief 정의 id 가 @p kind 인 스마트 오브젝트의 슬롯을 (오브젝트 id, 슬롯) 순으로 모읍니다. */
         void collectCandidates( const hashed_string& kind, vector<Candidate>& outListCandidate ) const;
 
