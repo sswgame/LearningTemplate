@@ -66,6 +66,8 @@ namespace sw::editor
         void drawLocalizationTab();
         /** @brief 로컬라이즈 툴바를 그립니다. */
         void drawLocalizationToolbar();
+        /** @brief 현지화 도구 줄입니다 — 수집 · 확인 · PO 내보내기 단추와 문화권마다의 진행도 · PO 가져오기 단추(언리얼 Localization Dashboard 자리). */
+        void drawLocalizationTools();
         /** @brief 로컬라이즈 레코드 테이블을 그립니다. */
         void drawLocalizationTable();
         /** @brief 현지화 테이블의 한 줄(키 · 원문 · 번역 필드 · 삭제 단추)을 그립니다. 삭제 단추를 눌렀으면 true 입니다. */
@@ -80,6 +82,10 @@ namespace sw::editor
         /** @brief 되돌리기가 준 원문으로 게임 데이터 표를 맞춥니다. */
         void applyDocumentText( string_view text ) override;
 
+    public:
+        /** @brief 보이는 탭의 되돌리기 스택입니다 — 현지화 탭은 레코드 스택, 게임 데이터 탭은 문서 스택이다. */
+        CommandStack* findPanelCommandStack() override;
+
     private:
         DataTableViewModel                      _model;
         fixed_string<constant::buffer::kMax128> _localizationFilter;
@@ -89,7 +95,8 @@ namespace sw::editor
         CatalogTableEditor _gameDataTable;
         /** @brief 표 편집기가 본 모델의 게임 데이터 읽기 횟수입니다. 다르면 표 편집기 상태(고른 칸 · 되돌리기 위치)를 지운다. */
         uint32 _seenGameDataLoadCount;
-        bool   _bGameDataRaw;   ///< NOLINT(sw-bool-flag): 주소(`&`)를 넘긴다
-        bool   _bNeedsWorkOnly; ///< 할 일이 남은 행만 본다. NOLINT(sw-bool-flag): 주소(`&`)를 넘긴다
+        bool   _bGameDataRaw;     ///< NOLINT(sw-bool-flag): 주소(`&`)를 넘긴다
+        bool   _bNeedsWorkOnly;   ///< 할 일이 남은 행만 본다. NOLINT(sw-bool-flag): 주소(`&`)를 넘긴다
+        bool   _bLocalizationTab; ///< NOLINT(sw-bool-flag): 지난 그리기에 현지화 탭이 보였다(Ctrl+Z 의 스택)
     };
 } // namespace sw::editor

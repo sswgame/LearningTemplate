@@ -44,8 +44,11 @@ namespace sw::editor
         void flush( bool bInteracting );
         /** @brief 지금 대상을 기록 밖에서 고쳤습니다(파일로 되돌리기) — 기준 글을 다시 잡는다. */
         void resetBaseline();
-        /** @brief 글이 아닌 기록(표 문서의 노드 기록)을 움직이는 단계를 같은 스택에 올립니다 — 편집한 차례대로 되돌아가게 한 스택을 쓴다. */
-        void pushStep( string_view label, const Delegate<void()>& undo, const Delegate<void()>& redo );
+        /**
+         * @brief 글이 아닌 기록(표 문서의 노드 기록 · 현지화 레코드)을 움직이는 단계를 같은 스택에 올립니다 — 편집한 차례대로 되돌아가게 한 스택을 쓴다.
+         * @param heldBytes 단계가 쥔 자료의 바이트입니다(되돌리기 바이트 한도가 센다). 다른 곳의 기록을 가리키기만 하면 0 이다.
+         */
+        void pushStep( string_view label, const Delegate<void()>& undo, const Delegate<void()>& redo, uint64 heldBytes );
         /** @brief 단계를 모두 버리고 대상을 놓습니다. */
         void clear();
 

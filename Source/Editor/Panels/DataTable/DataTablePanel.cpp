@@ -30,6 +30,9 @@ namespace sw::editor
     {
         struct DataTablePanelInternal
         {
+            /** @brief 문화권 진행 막대의 폭(글자 수)입니다. */
+            static constexpr float32 kProgressColumns = 28.0f;
+
             /** @brief 열린 데이터 테이블 창의 현지화 표 레코드 수 · 보이는 행 수를 읽습니다. 창이 닫혔거나 표를 읽지 않았으면 false 입니다. */
             [[nodiscard]] static bool readRecordCounts( uint32& outRecordCount, uint32& outVisibleCount )
             {
@@ -92,7 +95,13 @@ namespace sw::editor
         , _seenGameDataLoadCount{ 0 }
         , _bGameDataRaw{ false }
         , _bNeedsWorkOnly{ false }
+        , _bLocalizationTab{ true }
     {
+    }
+
+    CommandStack* DataTablePanel::findPanelCommandStack()
+    {
+        return _bLocalizationTab ? &_model.getLocalizationStack() : EditorDocumentPanel::findPanelCommandStack();
     }
 
     bool DataTablePanel::saveDocument()
@@ -176,12 +185,14 @@ namespace sw::editor
         {
             if ( ImGui::BeginTabItem( SW_LOCKEY( "EdSection", "LocalizationStrings" ) ) )
             {
+                _bLocalizationTab = true;
                 drawLocalizationTab();
                 ImGui::EndTabItem();
             }
 
             if ( ImGui::BeginTabItem( SW_LOCKEY( "EdSection", "GameDataXMLTables" ) ) )
             {
+                _bLocalizationTab = false;
                 drawGameDataTab();
                 ImGui::EndTabItem();
             }
@@ -202,7 +213,70 @@ namespace sw::editor
             return;
         }
 
+        drawLocalizationTools();
         drawLocalizationTable();
+        _model.flushRecordEdit( ImGui::IsAnyItemActive() ); // 놓은 편집을 한 단계로 올린다
+    }
+
+    void DataTablePanel::drawLocalizationTools()
+    {
+        using Tool           = DataTableViewModel::LocalizationTool;
+        const bool bCanStart = _model.canStartLocalizationTool();
+        ImGui::BeginDisabled( bCanStart == false );
+        const bool bGather = ImGui::Button( SW_LOCKEY( "EditorDataTable", "GatherText" ) );
+        EditorSelfTestMarks::record( "dataTable.gatherText" );
+        EditorWidgets::drawTooltip( SW_LOCKEY( "EditorDataTable", "GatherTextTip" ) );
+        EditorChrome::sameLineIfFits( EditorChrome::measureSmallButton( SW_LOCKEY( "EditorDataTable", "CheckText" ) ) );
+        const bool bCheck = ImGui::Button( SW_LOCKEY( "EditorDataTable", "CheckText" ) );
+        EditorSelfTestMarks::record( "dataTable.checkText" );
+        EditorWidgets::drawTooltip( SW_LOCKEY( "EditorDataTable", "CheckTextTip" ) );
+        EditorChrome::sameLineIfFits( EditorChrome::measureSmallButton( SW_LOCKEY( "EditorDataTable", "ExportPo" ) ) );
+        const bool bExport = ImGui::Button( SW_LOCKEY( "EditorDataTable", "ExportPo" ) );
+        EditorWidgets::drawTooltip( SW_LOCKEY( "EditorDataTable", "ExportPoTip" ) );
+        ImGui::EndDisabled();
+        if ( bGather )
+            (void)_model.startLocalizationTool( Tool::GatherText, 0 ); // 띄울 수 없으면 단추가 꺼져 있다
+        else if ( bCheck )
+            (void)_model.startLocalizationTool( Tool::CheckText, 0 );
+        else if ( bExport )
+            (void)_model.startLocalizationTool( Tool::ExportPo, 0 );
+        if ( _model.isLocalizationToolRunning() == false && _model.isLocalizationDirty() )
+        {
+            ImGui::SameLine();
+            EditorThemeUtil::textMuted( SW_LOCKEY( "EditorDataTable", "SaveBeforeTools" ) ); // 도구가 파일을 고쳐 편집과 부딪힌다
+        }
+        else if ( _model.getLocalizationToolStatus().empty() == false )
+        {
+            ImGui::SameLine();
+            EditorThemeUtil::textMuted( _model.getLocalizationToolStatus().c_str() );
+        }
+
+        const vector<string>& listCulture = _model.getSheet()._listCulture;
+        const uint32          totalCount  = static_cast<uint32>( _model.getSheet()._listRecord.size() );
+        for ( size_t cultureIndex = 0; cultureIndex < listCulture.size(); ++cultureIndex )
+        {
+            const LocalizationCultureProgress progress = _model.countCultureProgress( cultureIndex );
+            ImGui::PushID( static_cast<int32>( cultureIndex ) );
+            StringBuilder<constant::buffer::kMax256> overlay;
+            overlay.appendFormat( "%#  %#/%#", listCulture[cultureIndex], progress._currentCount, totalCount );
+            const string  overlayText{ overlay.view() };
+            const float32 fraction = totalCount > 0 ? static_cast<float32>( progress._currentCount ) / static_cast<float32>( totalCount ) : 0.0f;
+            ImGui::ProgressBar( fraction, ImVec2{ EditorChrome::measureTextExtent( EditorTextExtent::ofText( DataTablePanelInternal::kProgressColumns, 0.0f ) ).x, 0.0f }, overlayText.c_str() );
+            ImGui::SameLine();
+            ImGui::TextUnformatted( SW_LOCKEYFORMAT( "EditorDataTable", "CultureProgress",
+                                                     TextArgumentList()
+                                                         .addInteger( "stale", static_cast<int64>( progress._staleCount ) )
+                                                         .addInteger( "review", static_cast<int64>( progress._reviewCount ) )
+                                                         .addInteger( "missing", static_cast<int64>( progress._missingCount ) ) )
+                                        .c_str() );
+            ImGui::SameLine();
+            ImGui::BeginDisabled( bCanStart == false );
+            if ( ImGui::SmallButton( SW_LOCKEY( "EditorDataTable", "ImportPo" ) ) )
+                (void)_model.startLocalizationTool( Tool::ImportPo, cultureIndex );
+            ImGui::EndDisabled();
+            EditorWidgets::drawTooltip( SW_LOCKEY( "EditorDataTable", "ImportPoTip" ) );
+            ImGui::PopID();
+        }
     }
 
     void DataTablePanel::drawLocalizationToolbar()
@@ -283,6 +357,8 @@ namespace sw::editor
         // 확인 단추 자리를 남기고 칸이 나머지 폭을 채운다(폭 인자 0 은 이 값을 쓴다).
         ImGui::SetNextItemWidth( bConfirmable ? -( EditorChrome::measureSmallButton( SW_LOCKEY( "EditorDataTable", "ConfirmTranslation" ) ) + ImGui::GetStyle().ItemSpacing.x ) : -1.0f );
         const bool bChanged = EditorWidgets::drawTextField( "##tr", text, 0.0f );
+        if ( ImGui::IsItemActivated() )
+            _model.beginRecordEdit( record ); // 활성이 된 프레임에는 아직 글이 바뀌지 않았다
         if ( pushedColorCount > 0 )
             ImGui::PopStyleColor( static_cast<int32>( pushedColorCount ) );
 
@@ -400,7 +476,11 @@ namespace sw::editor
         }
 
         ImGui::TableSetColumnIndex( 1 );
-        if ( EditorWidgets::drawTextField( "##source", record._source, -1.0f ) )
+        const bool bSourceChanged = EditorWidgets::drawTextField( "##source", record._source, -1.0f );
+        if ( ImGui::IsItemActivated() )
+            _model.beginRecordEdit( record );
+        EditorSelfTestMarks::recordFormat( "dataTable.source.%#", record._key.c_str() );
+        if ( bSourceChanged )
             _model.markSourceEdited( record );
 
         for ( size_t cultureIndex = 0; cultureIndex < cultureCount; ++cultureIndex )

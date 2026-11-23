@@ -80,7 +80,7 @@ namespace sw::editor
         };
         StringBuilder<constant::buffer::kMax256> label;
         label.appendFormat( "Edit %#", page._entry._page );
-        _pHistory->pushStep( label.view(), makeMove( true ), makeMove( false ) );
+        _pHistory->pushStep( label.view(), makeMove( true ), makeMove( false ), 0u ); // 자료는 표 문서의 기록이 쥔다
     }
 
     void ProjectSettingsHistory::clear()

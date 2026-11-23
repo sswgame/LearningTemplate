@@ -47,12 +47,12 @@ namespace sw::editor
         syncInteraction();
     }
 
-    void EditorStateTextHistory::pushStep( string_view label, const Delegate<void()>& undo, const Delegate<void()>& redo )
+    void EditorStateTextHistory::pushStep( string_view label, const Delegate<void()>& undo, const Delegate<void()>& redo, uint64 heldBytes )
     {
         CommandStack::Command command;
         command._label = string{ label };
-        command._undo  = UndoStep::makeTransient( undo, _owner, 0u ); // 자료는 대상의 기록이 쥔다 — 이 단계는 가리키기만 한다
-        command._redo  = UndoStep::makeTransient( redo, _owner, 0u );
+        command._undo  = UndoStep::makeTransient( undo, _owner, heldBytes );
+        command._redo  = UndoStep::makeTransient( redo, _owner, heldBytes );
         _stack.push( std::move( command ) );
     }
 

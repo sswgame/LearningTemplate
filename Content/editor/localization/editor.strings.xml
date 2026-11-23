@@ -6305,6 +6305,17 @@
 				<item>Source/Editor/Panels/DataTable/DataTablePanel.cpp</item>
 			</origins>
 		</entry>
+		<entry key="EditorDataTable.CheckText" source="Check Text">
+			<origins>
+				<item>Source/Editor/Panels/DataTable/DataTablePanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EditorDataTable.CheckTextTip"
+		       source="Check that the tables are up to date and no staged translation is missing or stale. Nothing is written">
+			<origins>
+				<item>Source/Editor/Panels/DataTable/DataTablePanel.cpp</item>
+			</origins>
+		</entry>
 		<entry key="EditorDataTable.ConfirmTranslation" source="OK">
 			<origins>
 				<item>Source/Editor/Panels/DataTable/DataTablePanel.cpp</item>
@@ -6316,8 +6327,44 @@
 				<item>Source/Editor/Panels/DataTable/DataTablePanel.cpp</item>
 			</origins>
 		</entry>
+		<entry key="EditorDataTable.CultureProgress" source="stale {stale}, review {review}, missing {missing}">
+			<origins>
+				<item>Source/Editor/Panels/DataTable/DataTablePanel.cpp</item>
+			</origins>
+		</entry>
 		<entry key="EditorDataTable.DeleteKeyTip"
 		       source="Remove this key from the source table and every translation table when you save.">
+			<origins>
+				<item>Source/Editor/Panels/DataTable/DataTablePanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EditorDataTable.ExportPo" source="Export PO">
+			<origins>
+				<item>Source/Editor/Panels/DataTable/DataTablePanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EditorDataTable.ExportPoTip" source="Write one po file per culture next to the project for translators">
+			<origins>
+				<item>Source/Editor/Panels/DataTable/DataTablePanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EditorDataTable.GatherText" source="Gather Text">
+			<origins>
+				<item>Source/Editor/Panels/DataTable/DataTablePanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EditorDataTable.GatherTextTip"
+		       source="Collect the source text of this project from code and assets and update its tables">
+			<origins>
+				<item>Source/Editor/Panels/DataTable/DataTablePanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EditorDataTable.ImportPo" source="Import PO">
+			<origins>
+				<item>Source/Editor/Panels/DataTable/DataTablePanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EditorDataTable.ImportPoTip" source="Read the po file of this culture back into the translation table">
 			<origins>
 				<item>Source/Editor/Panels/DataTable/DataTablePanel.cpp</item>
 			</origins>
@@ -6391,6 +6438,11 @@
 			</origins>
 		</entry>
 		<entry key="EditorDataTable.SaveBeforeSwitchingTip" source="Save or revert this file before opening another one.">
+			<origins>
+				<item>Source/Editor/Panels/DataTable/DataTablePanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EditorDataTable.SaveBeforeTools" source="Save the table first - the tools write the same files.">
 			<origins>
 				<item>Source/Editor/Panels/DataTable/DataTablePanel.cpp</item>
 			</origins>

@@ -2029,13 +2029,32 @@
 		<entry key="EditorDataTable.AddKeyTip"
 		       text="왼쪽에 입력한 키로 문자열을 추가합니다. 테이블에 이미 있는 키는 무시합니다."
 		       sourceHash="e4ce1f6fbf06f1a3" />
+		<entry key="EditorDataTable.CheckText" text="원문 확인" sourceHash="c7ae5088cd6e18fe" />
+		<entry key="EditorDataTable.CheckTextTip"
+		       text="표가 최신인지, 출시 문화권의 번역이 빠지거나 낡지 않았는지 본다. 파일은 고치지 않는다"
+		       sourceHash="25a4a2998ea16dd3" />
 		<entry key="EditorDataTable.ConfirmTranslation" text="확인" sourceHash="091d3d07b5b3076f" />
 		<entry key="EditorDataTable.ConfirmTranslationTip"
 		       text="이 글을 그대로 둡니다. 지금 원문의 번역이 되고 저장할 때 낡음 · 검토 표시가 사라집니다."
 		       sourceHash="121bdeeff5430a67" />
+		<entry key="EditorDataTable.CultureProgress"
+		       text="낡음 {stale}, 검토 {review}, 없음 {missing}"
+		       sourceHash="602d94c2aa4fc315" />
 		<entry key="EditorDataTable.DeleteKeyTip"
 		       text="저장할 때 이 키를 원문 테이블과 모든 번역 테이블에서 지웁니다."
 		       sourceHash="9ae9ac16bec83b09" />
+		<entry key="EditorDataTable.ExportPo" text="PO 내보내기" sourceHash="1b29a28572e5917c" />
+		<entry key="EditorDataTable.ExportPoTip"
+		       text="번역가에게 줄 po 파일을 문화권마다 프로젝트 곁에 쓴다"
+		       sourceHash="5925ac6d0b8760a8" />
+		<entry key="EditorDataTable.GatherText" text="원문 수집" sourceHash="413e819928ced1dd" />
+		<entry key="EditorDataTable.GatherTextTip"
+		       text="이 프로젝트의 원문을 코드와 에셋에서 모아 표를 고친다"
+		       sourceHash="48367a653dba2a14" />
+		<entry key="EditorDataTable.ImportPo" text="PO 가져오기" sourceHash="835b5db8453d3751" />
+		<entry key="EditorDataTable.ImportPoTip"
+		       text="이 문화권의 po 파일을 번역 표로 읽어 들인다"
+		       sourceHash="d881434766b3ace5" />
 		<entry key="EditorDataTable.KeyTip"
 		       text="컨텍스트: {context}&#10;주석: {comment}&#10;최대 길이: {maxLength}"
 		       sourceHash="3270e0426b5c2d53" />
@@ -2068,6 +2087,9 @@
 		<entry key="EditorDataTable.SaveBeforeSwitchingTip"
 		       text="다른 파일을 열기 전에 이 파일을 저장하거나 되돌립니다."
 		       sourceHash="2e6714349a0b9409" />
+		<entry key="EditorDataTable.SaveBeforeTools"
+		       text="표를 먼저 저장하세요. 도구가 같은 파일을 씁니다."
+		       sourceHash="d8153fcfbe9fc417" />
 		<entry key="EditorDataTable.SaveFileTip"
 		       text="고친 XML 글을 이 파일에 씁니다. 올바른 XML 이 아닌 글은 저장하지 않습니다."
 		       sourceHash="04294fe1a00c05e2" />
