@@ -53,7 +53,7 @@ namespace sw
         void rebuildLocalPath();
 
     private:
-        PROPERTY( Category = "Spline", DisplayName = "Control Points", Tooltip = "Owner-local points; Bezier uses [anchor, handle, handle, anchor, ...]", Units = m )
+        PROPERTY( Category = "Spline", DisplayName = "Control Points", Tooltip = "Owner-local points; Bezier uses [anchor, handle, handle, anchor, ...]", Units = m, Meta = "Shape=Points,ShapeScale=Transform" )
         vector<float3> _listControlPoint;
         PROPERTY( Category = "Spline", DisplayName = "Samples Per Segment", Min = 1, Tooltip = "Arc-length table density" )
         int32 _samplesPerSegment;

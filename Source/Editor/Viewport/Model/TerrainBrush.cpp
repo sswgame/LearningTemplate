@@ -13,6 +13,7 @@ namespace sw::editor
         switch ( mode )
         {
             case TerrainBrushMode::PaintLayer:
+            case TerrainBrushMode::EraseLayer:
                 return TerrainBrushTarget::LayerWeight;
             case TerrainBrushMode::CutHole:
             case TerrainBrushMode::FillHole:
@@ -154,6 +155,7 @@ namespace sw::editor
                     break;
                 }
                 case TerrainBrushMode::PaintLayer:
+                case TerrainBrushMode::EraseLayer:
                 case TerrainBrushMode::CutHole:
                 case TerrainBrushMode::FillHole:
                 case TerrainBrushMode::Count:
@@ -169,7 +171,8 @@ namespace sw::editor
     bool TerrainBrush::applyLayerWeight( vector<SurfaceLayerWeights>& inOutListWeight, uint32 resolution, const vector<TerrainBrushSample>& listSample,
                                          const TerrainBrushSettings& settings, float32 deltaTime )
     {
-        const bool bCannotPaintLayer = settings._mode != TerrainBrushMode::PaintLayer || settings._layerIndex >= SurfaceLayerWeights::kLayerCount ||
+        const bool bErase            = settings._mode == TerrainBrushMode::EraseLayer;
+        const bool bCannotPaintLayer = ( settings._mode != TerrainBrushMode::PaintLayer && bErase == false ) || settings._layerIndex >= SurfaceLayerWeights::kLayerCount ||
                                        inOutListWeight.size() != static_cast<size_t>( resolution ) * resolution;
         if ( bCannotPaintLayer )
             return false;
@@ -181,14 +184,25 @@ namespace sw::editor
             SurfaceLayerWeights& weight = inOutListWeight[static_cast<size_t>( sample._sampleZ ) * resolution + sample._sampleX];
             const float32        amount = MathUtil::saturate( settings._strength * sample._weight * deltaTime );
             const float32        target = weight.get( settings._layerIndex );
-            if ( amount <= 0.0f || target >= 1.0f )
+            if ( amount <= 0.0f || ( bErase ? target <= 0.0f : target >= 1.0f ) )
                 continue;
-            // 목표 레이어를 1 쪽으로 amount 만큼 당기고, 나머지 레이어는 같은 비율로 줄여 합 1 을 지킨다.
-            const float32 others = 1.0f - target;
-            const float32 scale  = others > 0.0f ? ( 1.0f - ( target + ( 1.0f - target ) * amount ) ) / others : 0.0f;
+            // 목표 레이어를 1(칠하기) · 0(지우기) 쪽으로 amount 만큼 당기고, 나머지 레이어는 같은 비율로 맞춰 합 1 을 지킨다.
+            const float32 goal      = bErase ? 0.0f : 1.0f;
+            const float32 newWeight = target + ( goal - target ) * amount;
+            const float32 others    = 1.0f - target;
+            if ( others <= 0.0f ) // 지우는 레이어가 전부다 — 바탕이 받는다
+            {
+                if ( settings._layerIndex == 0 )
+                    continue;
+                weight.set( settings._layerIndex, newWeight );
+                weight.set( 0, 1.0f - newWeight );
+                bChanged = true;
+                continue;
+            }
+            const float32 scale = ( 1.0f - newWeight ) / others;
             for ( uint32 layer = 0; layer < SurfaceLayerWeights::kLayerCount; ++layer )
             {
-                weight.set( layer, layer == settings._layerIndex ? target + ( 1.0f - target ) * amount : weight.get( layer ) * scale );
+                weight.set( layer, layer == settings._layerIndex ? newWeight : weight.get( layer ) * scale );
             }
             bChanged = true;
         }

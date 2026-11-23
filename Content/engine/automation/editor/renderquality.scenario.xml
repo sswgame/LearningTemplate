@@ -1,0 +1,31 @@
+<?xml version="1.0" encoding="utf-8"?>
+<?asset guid="5c1f0a6be2d94f7796b4c0d1e83a7f25"?>
+<!--
+  에디터 시나리오 — 사용자 설정의 렌더 품질을 바꾸면 그림자 · 텍스처 풀 값이 그 자리에서 따라온다(손 확인을 대신한다).
+  옵션 메뉴와 같은 길(settings.apply)로 low · ultra 를 고르고, 렌더러가 프레임마다 바로 읽는 엔진 설정 칸(RenderQuality.* — Config/Engine/RenderQuality.json 의 단계 값)을 본다.
+  끝에 high 로 돌려 시작 값과 같은지 본다 — 앞 단계가 남긴 값에 기대지 않게 시작도 high 로 맞춘다. 무인 실행의 사용자 설정 파일은 실행별 파일이다.
+  실행: App -EnableEditor -scenario=engine/automation/editor/renderquality.scenario.xml -unattended
+-->
+<Scenario name="editor.renderquality" fixedDelta="0.0166667" timeoutFrames="900" startAfter="Immediately" input="exclusive">
+	<EditorWaitStable/>
+	<DevCommand line="settings.apply graphics.renderQuality=high"/>
+	<AdvanceSimulation frames="1"/> <!-- 설정 명령은 다음 프레임 시작에 든다(프레임 경계) -->
+	<Store watch="RenderQuality.TexturePoolMegabytes" as="poolHigh"/>
+	<Store watch="RenderQuality.ShadowLocalMinTileResolution" as="tileHigh"/>
+	<Store watch="RenderQuality.ShadowLocalCullSlotLimit" as="slotHigh"/>
+	<DevCommand line="settings.apply graphics.renderQuality=low"/>
+	<WaitUntil watch="RenderQuality.TexturePoolMegabytes" equals="256" timeoutFrames="60"/>
+	<Expect watch="RenderQuality.ShadowLocalMinTileResolution" equals="64"/>
+	<Expect watch="RenderQuality.ShadowLocalCullSlotLimit" equals="4"/>
+	<DevCommand line="settings.apply graphics.renderQuality=ultra"/>
+	<WaitUntil watch="RenderQuality.TexturePoolMegabytes" equals="896" timeoutFrames="60"/>
+	<Expect watch="RenderQuality.ShadowLocalMinTileResolution" equals="256"/>
+	<Expect watch="RenderQuality.ShadowLocalCullSlotLimit" equals="32"/>
+	<DevCommand line="settings.apply graphics.renderQuality=high"/>
+	<AdvanceSimulation frames="1"/> <!-- 설정 명령은 다음 프레임 시작에 든다(프레임 경계) -->
+	<Expect watch="RenderQuality.TexturePoolMegabytes" sameAs="poolHigh"/>
+	<Expect watch="RenderQuality.ShadowLocalMinTileResolution" sameAs="tileHigh"/>
+	<Expect watch="RenderQuality.ShadowLocalCullSlotLimit" sameAs="slotHigh"/>
+	<EditorWaitStable/>
+	<Pass/>
+</Scenario>

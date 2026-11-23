@@ -10,6 +10,7 @@
 #include "Editor/Viewport/Model/EditorVisualizerDrawList.h"
 
 #include "Engine/Audio/Component/AudioReverbZoneComponent.h"
+#include "Engine/Environment/Water/WaterBodyComponent.h"
 #include "Engine/Navigation/Component/NavMeshObstacleComponent.h"
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
@@ -186,6 +187,76 @@ SW_TEST_CASE( PropertyShapeTest, LineCountsPerShape )
     SW_EXPECT_EQUAL( circle, countLines( PropertyShapeKind::Circle ) );
     SW_EXPECT_EQUAL( circle * 2 + 4 + circle * 2, countLines( PropertyShapeKind::Capsule ) ); // 끝 원 둘 · 옆선 넷 · 반원 넷(반원 하나가 원의 절반)
     SW_EXPECT_EQUAL( circle * 2 + 4, countLines( PropertyShapeKind::Cylinder ) );             // 위 · 아래 원 둘 · 옆선 넷
+    SW_EXPECT_EQUAL( size_t{ 0 }, countLines( PropertyShapeKind::Points ) );                  // 점이 없으면 선도 없다
+}
+
+/**
+ * @brief [PropertyShapeTest] 점 목록 — 점마다 손잡이 하나가 배율 · 축을 먹인 월드 자리에 서고, 보는 면 위로 끈 자리를 저장 값으로 되돌린다
+ */
+SW_TEST_CASE( PropertyShapeTest, PointHandlesSitOnTheWorldPointsAndWriteTheStoredPoint )
+{
+    using Internal           = PropertyShapeTestInternal;
+    PropertyShapeValue value = Internal::makeValue( PropertyShapeKind::Points );
+    value._vectorScale       = sw::float3{ 2.0f, 1.0f, 1.0f };
+    value._listPoint         = {
+        sw::float3{0.0f, 0.0f, 0.0f},
+        sw::float3{1.0f, 0.0f, 0.0f},
+        sw::float3{1.0f, 0.0f, 4.0f}
+    };
+    sw::editor::EditorVisualizerDrawList drawList;
+    value.addLines( sw::editor::EditorVisualizerLine{}, drawList );
+    SW_EXPECT_EQUAL( size_t{ 2 }, drawList._listLine.size() );
+
+    sw::vector<PropertyShapeHandle> listHandle;
+    value.collectHandles( 7, sw::hashed_string( "_listPoint" ), sw::hashed_string{}, listHandle );
+    SW_REQUIRE_EQUAL( size_t{ 3 }, listHandle.size() );
+    SW_EXPECT_TRUE( listHandle[0].isSameHandle( listHandle[0] ) );
+    SW_EXPECT_FALSE( listHandle[0].isSameHandle( listHandle[1] ) ); // 자리만 다른 점은 다른 손잡이다
+    SW_EXPECT_NEAR( 3.0f, listHandle[1]._position._x, Internal::kTolerance );
+    SW_EXPECT_NEAR( 2.0f, listHandle[1]._position._y, Internal::kTolerance );
+
+    // 위에서 내려다보는 레이 — 높이를 지킨 채 수평으로 끌린다. 월드 x 5 는 원점 1 · 배율 2 라 저장 값 2 다.
+    const sw::Ray    down    = Internal::makeRay( sw::float3{ 5.0f, 12.0f, 6.0f }, sw::float3{ 5.0f, 0.0f, 6.0f } );
+    const sw::float3 dragged = listHandle[1].computeDraggedVector( down );
+    SW_EXPECT_NEAR( 2.0f, dragged._x, Internal::kTolerance );
+    SW_EXPECT_NEAR( 0.0f, dragged._y, Internal::kTolerance );
+    SW_EXPECT_NEAR( 3.0f, dragged._z, Internal::kTolerance );
+}
+
+/**
+ * @brief [PropertyShapeTest] 점 손잡이 끌기는 그 원소만 편집 요청으로 쓴다 — 강 경로(WaterBodyComponent)의 둘째 점만 옮겨지고, 없는 자리는 쓰지 않는다
+ */
+SW_TEST_CASE( PropertyShapeTest, ApplyDragWritesOnlyThePickedPoint )
+{
+    using Internal = PropertyShapeTestInternal;
+    sw::GameObjectManager manager;
+    sw::GameObject*       pObject = manager.createGameObject( sw::hashed_string( "River" ) );
+    SW_REQUIRE_NOT_NULL( pObject );
+    sw::WaterBodyComponent* pWater = pObject->addComponent<sw::WaterBodyComponent>();
+    SW_REQUIRE_NOT_NULL( pWater );
+    pWater->setRiverPath( {
+                              sw::float3{0.0f, 0.0f, 0.0f},
+                              sw::float3{2.0f, 0.0f, 0.0f}
+    },
+                          4.0f );
+
+    PropertyShapeValue value = Internal::makeValue( PropertyShapeKind::Points );
+    value._frame._origin     = sw::float3{};
+    value._listPoint         = pWater->getRiverPoints();
+    sw::vector<PropertyShapeHandle> listHandle;
+    value.collectHandles( pWater->getComponentID(), sw::hashed_string( "_listRiverPoint" ), sw::hashed_string{}, listHandle );
+    SW_REQUIRE_EQUAL( size_t{ 2 }, listHandle.size() );
+
+    const sw::TypeRegistry& registry = sw::editor::PropertyGridViewModel::getTypeRegistry();
+    const sw::Ray           down     = Internal::makeRay( sw::float3{ 5.0f, 10.0f, 1.0f }, sw::float3{ 5.0f, 0.0f, 1.0f } );
+    SW_EXPECT_TRUE( sw::editor::PropertyShapeHandleEdit::applyDrag( *pWater, listHandle[1], down, registry ) );
+    SW_EXPECT_NEAR( 0.0f, pWater->getRiverPoints()[0]._x, Internal::kTolerance );
+    SW_EXPECT_NEAR( 5.0f, pWater->getRiverPoints()[1]._x, Internal::kTolerance );
+    SW_EXPECT_NEAR( 1.0f, pWater->getRiverPoints()[1]._z, Internal::kTolerance );
+
+    PropertyShapeHandle gone = listHandle[1];
+    gone._elementIndex       = 5;
+    SW_EXPECT_FALSE( sw::editor::PropertyShapeHandleEdit::applyDrag( *pWater, gone, down, registry ) );
 }
 
 /**

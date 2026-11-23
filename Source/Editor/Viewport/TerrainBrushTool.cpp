@@ -77,6 +77,39 @@ namespace sw::editor
                     ImGui::SetTooltip( "%s", SW_LOCKEY( "EdTip", "TerrainResample" ) );
             }
 
+            /**
+             * @brief 폴리지 고르기입니다 — 고른 폴리지 레이어의 밀도 지형 레이어를 브러시 레이어로 둔다. 칠하면 심기고 Erase Layer 로 지운다.
+             * @details 밀도 레이어가 없는 폴리지는 고를 수 없고 까닭을 보인다(Inspector 의 Density Layer 로 정한다).
+             */
+            static void drawFoliageCombo( TerrainBrushSettings& settings )
+            {
+                vector<TerrainBrushFoliageLayer> listFoliage;
+                TerrainBrushEdit::collectFoliageLayers( listFoliage );
+                if ( listFoliage.empty() )
+                    return;
+                const utf8* pPreview = SW_LOCKEY( "EdWidget", "NoFoliageOnLayer" );
+                for ( const TerrainBrushFoliageLayer& foliage : listFoliage )
+                {
+                    if ( foliage._densityLayerIndex == settings._layerIndex )
+                        pPreview = foliage._label.c_str();
+                }
+                EditorWidgets::drawPropertyRowLabel( SW_LOCKEY( "EdField", "Foliage" ) );
+                const bool bOpen = EditorWidgets::beginCombo( "##Foliage", pPreview );
+                EditorWidgets::drawTooltip( SW_LOCKEY( "EdTip", "TerrainFoliage" ) );
+                if ( bOpen == false )
+                    return;
+                for ( const TerrainBrushFoliageLayer& foliage : listFoliage )
+                {
+                    ImGui::BeginDisabled( foliage._densityLayerIndex.has_value() == false );
+                    if ( ImGui::Selectable( foliage._label.c_str(), foliage._densityLayerIndex == settings._layerIndex ) && foliage._densityLayerIndex.has_value() )
+                        settings._layerIndex = *foliage._densityLayerIndex;
+                    ImGui::EndDisabled();
+                    if ( foliage._densityLayerIndex.has_value() == false )
+                        EditorWidgets::drawTooltip( SW_LOCKEY( "EdTip", "TerrainFoliageNoDensity" ) );
+                }
+                ImGui::EndCombo();
+            }
+
             /** @brief 브러시 설정 창입니다(모드 · 반경 · 세기 · 감쇠 · 레이어 · 해상도 · 저장). 설정 값은 Model 의 것을 바로 고친다(`TerrainBrushEdit::getSettings`). */
             static void drawSettingsWindow( const EditorViewportVisualizerArgs& args, const TerrainBrushViewState& state, vector<TerrainBrushCommand>& outListCommand )
             {
@@ -84,7 +117,7 @@ namespace sw::editor
                 ImGui::SetNextWindowPos( ImVec2{ args._canvasPos._x + 12.0f, args._canvasPos._y + 48.0f }, ImGuiCond_FirstUseEver );
                 if ( ImGui::Begin( "Terrain Brush###TerrainBrushTool", nullptr, ImGuiWindowFlags_AlwaysAutoResize ) )
                 {
-                    static constexpr auto kArrModeName = makeEnumTable<TerrainBrushMode, const utf8*>( "Raise", "Lower", "Flatten", "Paint Layer", "Smooth", "Cut Hole", "Fill Hole" );
+                    static constexpr auto kArrModeName = makeEnumTable<TerrainBrushMode, const utf8*>( "Raise", "Lower", "Flatten", "Paint Layer", "Smooth", "Cut Hole", "Fill Hole", "Erase Layer" );
                     int32                 mode         = static_cast<int32>( settings._mode );
                     EditorWidgets::drawPropertyRowLabel( SW_LOCKEY( "EdField", "Mode" ) );
                     if ( EditorWidgets::combo( SW_WIDGET_ID( "##Mode" ), &mode, kArrModeName.data(), static_cast<int32>( kArrModeName.size() ) ) )
@@ -95,8 +128,9 @@ namespace sw::editor
                     EditorWidgets::sliderFloat( SW_WIDGET_ID( "##Strength" ), &settings._strength, 0.05f, 60.0f, "%.2f /s", ImGuiSliderFlags_Logarithmic );
                     EditorWidgets::drawPropertyRowLabel( SW_LOCKEY( "EdField", "Falloff" ) );
                     EditorWidgets::sliderFloat( SW_WIDGET_ID( "##Falloff" ), &settings._falloff, 0.0f, 1.0f, "%.2f" );
-                    if ( settings._mode == TerrainBrushMode::PaintLayer )
+                    if ( TerrainBrush::getTarget( settings._mode ) == TerrainBrushTarget::LayerWeight )
                     {
+                        drawFoliageCombo( settings );
                         int32 layer = static_cast<int32>( settings._layerIndex );
                         EditorWidgets::drawPropertyRowLabel( SW_LOCKEY( "EdField", "Layer" ) );
                         if ( EditorWidgets::sliderInt( SW_WIDGET_ID( "##Layer" ), &layer, 0, static_cast<int32>( kLayerCount ) - 1 ) )

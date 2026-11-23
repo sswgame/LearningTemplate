@@ -20,6 +20,9 @@ namespace sw::editor
     {
         struct PackagingPanelInternal
         {
+            /** @brief 짧은 이름 콤보(플랫폼 · 타깃)의 폭입니다(DPI 배율 전). */
+            static constexpr float32 kShortComboWidth = 120.0f;
+
             /** @brief 이름 목록에서 하나를 고르는 콤보입니다. @p getName 이 순번의 이름을 돌려주고, 고르면 @p inoutIndex 를 바꿉니다. */
             template <typename GetName>
             static void drawOptionCombo( const utf8* pLabel, float32 width, const utf8* pPreview, uint32 count, GetName&& getName, uint32& inoutIndex )
@@ -104,9 +107,18 @@ namespace sw::editor
         const float32 dpiScale = EditorThemeUtil::getDPIScale();
 
         ImGui::BeginDisabled( bBusy );
-        Internal::drawOptionCombo( EditorThemeUtil::makeStableLabel( SW_LOCKEY( "EdWidget", "Target" ), "Target" ), 120.0f * dpiScale, PackagingViewModel::getTargetName( _model.getTargetIndex() ), PackagingViewModel::getTargetCount(),
+        Internal::drawOptionCombo( EditorThemeUtil::makeStableLabel( SW_LOCKEY( "EdWidget", "Platform" ), "Platform" ), Internal::kShortComboWidth * dpiScale, PackagingViewModel::getPlatformName( _model.getPlatformIndex() ),
+                                   PackagingViewModel::getPlatformCount(), []( uint32 index )
+        { return PackagingViewModel::getPlatformName( index ); }, _model.editPlatformIndex() );
+        EditorSelfTestMarks::record( "packaging.platform" );
+        EditorWidgets::drawTooltip( SW_LOCKEY( "EditorPackaging", "Platform" ) );
+        ImGui::SameLine();
+        const bool bDesktop = _model.isDesktopPlatform();
+        ImGui::BeginDisabled( bDesktop == false ); // 웹 · Android 는 클라이언트뿐이다
+        Internal::drawOptionCombo( EditorThemeUtil::makeStableLabel( SW_LOCKEY( "EdWidget", "Target" ), "Target" ), Internal::kShortComboWidth * dpiScale, bDesktop ? PackagingViewModel::getTargetName( _model.getTargetIndex() ) : PackagingViewModel::getTargetName( 0 ), PackagingViewModel::getTargetCount(),
                                    []( uint32 index )
         { return PackagingViewModel::getTargetName( index ); }, _model.editTargetIndex() );
+        ImGui::EndDisabled();
         EditorWidgets::drawTooltip( SW_LOCKEY( "EditorPackaging", "Target" ) );
         ImGui::SameLine();
         const vector<string>& listGame     = _model.getGames();
@@ -116,9 +128,11 @@ namespace sw::editor
         { return listGame[index].c_str(); }, _model.editGameIndex() );
         EditorWidgets::drawTooltip( SW_LOCKEY( "EditorPackaging", "Game" ) );
         ImGui::SameLine();
-        Internal::drawOptionCombo( "RHI", 150.0f * dpiScale, PackagingViewModel::getBackendName( _model.getRHIIndex() ), PackagingViewModel::getBackendCount(),
+        ImGui::BeginDisabled( bDesktop == false ); // 다른 플랫폼의 백엔드는 그 프리셋이 정한다
+        Internal::drawOptionCombo( "RHI", 150.0f * dpiScale, PackagingViewModel::getBackendName( bDesktop ? _model.getRHIIndex() : 0u ), PackagingViewModel::getBackendCount(),
                                    []( uint32 index )
         { return PackagingViewModel::getBackendName( index ); }, _model.editRHIIndex() );
+        ImGui::EndDisabled();
         EditorWidgets::drawTooltip( SW_LOCKEY( "EditorPackaging", "RHIBackend" ) );
 
         EditorChrome::setNextItemWidthColumns( 43.0f );
@@ -191,13 +205,33 @@ namespace sw::editor
             ImGui::TextDisabled( "%s", progress._outputFolder.c_str() );
     }
 
+    void PackagingPanel::drawNextAction()
+    {
+        // 첫 패키징 · 실패 뒤의 다음 행동 — 진행 줄이 없는 빈 로그 상자만 두지 않는다.
+        const PackagingProgress& progress = _model.getProgress();
+        if ( progress._state == PackagingState::Failed )
+        {
+            EditorThemeUtil::textMuted( SW_LOCKEY( "EditorPackaging", "NextActionFailed" ) );
+            return;
+        }
+        if ( progress._state != PackagingState::Idle || _model.getLines().empty() == false )
+            return;
+        if ( _model.getGames().empty() )
+        {
+            EditorWidgets::drawEmptyHint( SW_LOCKEY( "EditorPackaging", "NoGames" ) );
+            return;
+        }
+        EditorWidgets::drawEmptyHint( SW_LOCKEY( "EditorPackaging", "FirstPackage" ) );
+    }
+
     void PackagingPanel::drawLogList()
     {
         ImGui::Separator();
         if ( ImGui::BeginChild( "##packaging_log", ImVec2( 0.0f, 0.0f ), ImGuiChildFlags_Borders ) )
         {
-            const vector<string>& listLine  = _model.getLines();
-            const size_t          firstLine = listLine.size() > PackagingViewModel::kVisibleLineCount ? listLine.size() - PackagingViewModel::kVisibleLineCount : 0;
+            const vector<string>& listLine = _model.getLines();
+            drawNextAction();
+            const size_t firstLine = listLine.size() > PackagingViewModel::kVisibleLineCount ? listLine.size() - PackagingViewModel::kVisibleLineCount : 0;
             for ( size_t lineIndex = firstLine; lineIndex < listLine.size(); ++lineIndex )
             {
                 const string& line = listLine[lineIndex];

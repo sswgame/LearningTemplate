@@ -1200,6 +1200,8 @@ namespace sw::editor
         const EditorListFilter filter{ _searchBuffer.c_str() };
         if ( listVisible.empty() && filter.isActive() )
             EditorWidgets::drawNoSearchResultHint( filter.getText() );
+        else if ( listVisible.empty() && _model.canImport() && _model.isFolderRefreshPending() == false )
+            drawEmptyFolder();
         else if ( _viewMode == ViewMode::Tiles )
             drawTilesView( listVisible );
         else
@@ -1274,6 +1276,15 @@ namespace sw::editor
         vector<string> listPath;
         (void)EditorFileDrop::takeDrop( listPath, dropPosition );                // 위에서 놓인 것을 확인했다
         (void)_model.importDroppedFiles( listPath, findFolder( dropPosition ) ); // 받은 수 · 거른 사유는 모델이 로그로 남긴다
+    }
+
+    void ContentBrowserPanel::drawEmptyFolder()
+    {
+        // 첫 임포트의 다음 행동 — 단추는 도구줄의 Import 와 같은 길이고, 파일을 끌어 놓아도 된다.
+        const bool bImport = EditorWidgets::drawEmptyState( SW_LOCKEY( "EditorContentBrowser", "EmptyFolder" ), EditorThemeUtil::makeStableLabel( SW_LOCKEY( "EdText", "Import" ), "ImportEmptyFolder" ) );
+        EditorSelfTestMarks::record( "contentBrowser.emptyFolderImport" );
+        if ( bImport )
+            _model.importFilesFromDialog();
     }
 
     void ContentBrowserPanel::drawBreadcrumbs()

@@ -272,7 +272,7 @@
     "Source/Editor/Panels/Multiplayer/MultiplayerSessionTab.cpp": {"minus-one": 3, "float": 1, "integer": 1},
     "Source/Editor/Panels/Multiplayer/MultiplayerSyncTab.cpp": {"integer": 3},
     "Source/Editor/Panels/Packaging/Model/PackagingProgress.cpp": {"integer": 1},
-    "Source/Editor/Panels/Packaging/PackagingPanel.cpp": {"float": 4, "integer": 1},
+    "Source/Editor/Panels/Packaging/PackagingPanel.cpp": {"float": 3, "integer": 1},
     "Source/Editor/Panels/Packaging/PackagingPanel.h": {"float": 2},
     "Source/Editor/Panels/Physics/Model/RagdollPreviewViewModel.cpp": {"minus-one": 2},
     "Source/Editor/Panels/Physics/Model/RagdollPreviewViewModel.h": {"minus-one": 1},

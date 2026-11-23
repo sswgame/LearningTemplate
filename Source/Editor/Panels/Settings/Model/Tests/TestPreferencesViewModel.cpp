@@ -3,6 +3,7 @@
 #include "Core/Testing/TestFramework.h"
 
 #include "Editor/Common/Config/EditorSettingsRegistry.h"
+#include "Editor/Common/Workspace/Undo/CommandStack.h"
 #include "Editor/Panels/Settings/Model/PreferencesViewModel.h"
 
 #include "Engine/Module/ModuleCatalog.h"
@@ -161,7 +162,7 @@ SW_TEST_CASE_F( PreferencesViewModelTest, EditCallsTheHookAndWaitsBeforeSaving )
     SW_EXPECT_FALSE( _model.hasPendingSave() );
 
     _model.selectSection( _section );
-    _model.recordEdited();
+    _model.recordEdited( "Edit", false );
     SW_EXPECT_EQUAL( 1, s_changedCount );
     SW_EXPECT_TRUE( _model.hasPendingSave() );
 
@@ -172,7 +173,7 @@ SW_TEST_CASE_F( PreferencesViewModelTest, EditCallsTheHookAndWaitsBeforeSaving )
 SW_TEST_CASE_F( PreferencesViewModelTest, EditWithoutHookStillWaitsToSave )
 {
     _model.selectSection( _page );
-    _model.recordEdited();
+    _model.recordEdited( "Edit", false );
     SW_EXPECT_EQUAL( 0, s_changedCount );
     SW_EXPECT_TRUE( _model.hasPendingSave() );
 }
@@ -189,6 +190,30 @@ SW_TEST_CASE_F( PreferencesViewModelTest, ResetRestoresDefaultsAndCallsTheHookOn
     SW_EXPECT_TRUE( _instance._bEnabled == _default._bEnabled );
     SW_EXPECT_EQUAL( 1, s_changedCount );
     SW_EXPECT_TRUE( _model.hasPendingSave() );
+}
+
+// 저장 단추가 없는 창이라 잘못 누른 되돌리기 · 편집을 되돌릴 길이 Ctrl+Z 뿐이다 — 끌기는 한 단계, 섹션 되돌리기도 한 단계다.
+SW_TEST_CASE_F( PreferencesViewModelTest, EditsAndResetUndoAsOneStepEach )
+{
+    _model.selectSection( _section );
+    _instance._name = "dragging";
+    _model.recordEdited( "Edit _name", true );
+    _instance._name = "changed";
+    _model.recordEdited( "Edit _name", true );
+    SW_EXPECT_FALSE( _model.getCommandStack().undo() ); // 끄는 동안은 거절한다
+    _model.flushEdit( false );
+    SW_EXPECT_EQUAL( size_t{ 1 }, _model.getCommandStack().getCommandCount() );
+
+    _model.resetSelectedSection();
+    SW_EXPECT_EQUAL( size_t{ 2 }, _model.getCommandStack().getCommandCount() );
+    SW_EXPECT_TRUE( _instance._name == _default._name );
+
+    SW_EXPECT_TRUE( _model.getCommandStack().undo() );
+    SW_EXPECT_TRUE( _instance._name == "changed" );
+    SW_EXPECT_TRUE( _model.getCommandStack().undo() );
+    SW_EXPECT_TRUE( _instance._name == _default._name );
+    SW_EXPECT_TRUE( _model.getCommandStack().redo() );
+    SW_EXPECT_TRUE( _instance._name == "changed" );
 }
 
 SW_TEST_CASE_F( PreferencesViewModelTest, ResetWithoutSelectionDoesNothing )

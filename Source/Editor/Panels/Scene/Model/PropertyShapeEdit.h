@@ -7,6 +7,7 @@
  *          - `PROPERTY( …, Meta = "Shape=Box" ) float3 _halfExtents;`
  *          - `PROPERTY( …, Meta = "Shape=Cone, ShapeRange=_radius" ) Radians _outerConeAngle;`(반각 — 각 형식, 길이는 같은 타입의 float32 프로퍼티)
  *          - `PROPERTY( …, Meta = "Shape=Arrow" ) float3 _localDirection;`
+ *          - `PROPERTY( …, Meta = "Shape=Points,ShapeScale=Transform" ) vector<float3> _listControlPoint;`(점마다 손잡이 하나 — 점을 더하고 빼는 것은 인스펙터의 목록 칸이다)
  *          - `PROPERTY( …, Meta = "Shape=Circle" ) float32 _outerRadius;`(로컬 XY 평면 — 2D)
  *          - `PROPERTY( …, Meta = "Shape=Capsule, ShapeRange=_halfHeight, ShapeOrigin=Base" ) float32 _radius;`(축 로컬 +Y, `Base` 면 바닥이 원점)
  *          - `ShapeScale=Physics` · `ShapeScale=Physics2D` 는 값을 쓰는 쪽이 월드 배율을 먹이는 규칙(`PhysicsComponent::makeScaledShape`)으로 그리고, 손잡이는 배율을 나눠 되쓴다.
@@ -56,6 +57,7 @@ namespace sw::editor
         None,      ///< 배율을 보지 않는다(기본 — 빛 · 오디오 · 부력)
         Physics,   ///< 3D 물리(`PhysicsComponent::makeScaledShape` 3D): 상자 축마다, 구 최대 축, 캡슐 반지름 max(X, Z) · 반 높이 Y
         Physics2D, ///< 2D 물리(`makeScaledShape` 2D): 상자 X · Y, 원 · 구 max(X, Y), 캡슐 반지름 X · 반 높이 Y
+        Transform, ///< 월드 행렬 그대로(`float3::transform( 점, world )`) — 점 목록만
     };
 
     /** @brief 모양 틀의 축 규칙입니다(`ShapeAxes=`). */
@@ -85,7 +87,8 @@ namespace sw::editor
         /**
          * @brief 타입 @p type(상속 포함)의 모양 선언을 @p outListDecl 뒤에 붙입니다(비우지 않는다).
          * @return 선언이 틀리면(모르는 모양 · 값 형식이 맞지 않음 · 원뿔 · 캡슐에 `ShapeRange` 가 없거나 float32 가 아님 · 다른 모양의 `ShapeRange` ·
-         *         모르는 `ShapeAxes` · `ShapeOrigin` · `ShapeScale` 값 · 캡슐 밖의 `ShapeOrigin` · 원뿔 · 화살표의 `ShapeScale` · float3 가 아닌 `ShapeCenter` ·
+         *         모르는 `ShapeAxes` · `ShapeOrigin` · `ShapeScale` 값 · 캡슐 밖의 `ShapeOrigin` · 원뿔 · 화살표의 `ShapeScale` · 점 목록 밖의 `ShapeScale=Transform` ·
+         *         점 목록의 `Physics` 배율 · float3 가 아닌 `ShapeCenter` ·
          *         `|` 로 여럿 적은 모양에 `ShapeSelector` 가 없거나 열거자 이름의 집합이 다름 · 고르는 열거와 함께 쓴 `ShapeRange` · `ShapeOrigin`) 그 오류입니다 — 앞에서 읽은 선언은 남는다.
          *         폴백으로 그리지 않는다: 틀린 선언은 그 타입의 모양 전부를 막고 오류를 남긴다.
          */

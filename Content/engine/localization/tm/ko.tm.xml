@@ -119,6 +119,8 @@
 		<entry source="Crouch" text="앉기" />
 		<entry source="Cue presentations" text="큐 연출" />
 		<entry source="Current" text="현재값" />
+		<entry source="Curve of every spline in the scene - drag the control point handles of the selected one (Shapes)"
+		       text="씬의 스플라인마다 곡선 - 고른 스플라인은 조절점 손잡이를 끈다(Shapes)" />
 		<entry source="Custom" text="사용자 지정" />
 		<entry source="Customization values" text="꾸미기 값" />
 		<entry source="Customize (release a slider to refit)" text="꾸미기(슬라이더를 놓으면 다시 맞춘다)" />
@@ -502,6 +504,7 @@
 		<entry source="Source bones" text="원본 뼈" />
 		<entry source="Spatial" text="공간" />
 		<entry source="Speaker Setup" text="스피커 구성" />
+		<entry source="Splines" text="스플라인" />
 		<entry source="Split how many?" text="몇 개를 나눌까요?" />
 		<entry source="Sprint" text="달리기" />
 		<entry source="Stacks" text="스택" />

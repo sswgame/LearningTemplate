@@ -13,6 +13,14 @@
 | `Client` | `Ninja-Shipping` | `App.exe` | 없음 |
 | `Server` | `Ninja-Shipping-Server` | `Server.exe` | `CookContract.json` 의 `target_excluded_asset_kinds`(텍스처 · 셰이더 바이너리 · 오디오) |
 
+| 플랫폼 | 프리셋 | 묶는 도구 | 패키지 |
+| --- | --- | --- | --- |
+| `Desktop` | 위 표(이 호스트) | 이 스크립트 | `<산출 폴더>/<게임>-<타깃>` |
+| `Web` | `Web-Shipping` | `web_package.make_web_package` | `<산출 폴더>/<게임>-Web`(브라우저 폴더) |
+| `Android` | `Android-Shipping` | `android_apk.make_apk` | `<산출 폴더>/<게임>-Android`(서명한 디버그 APK) |
+
+Web · Android 는 클라이언트뿐이고 백엔드가 프리셋에 묶여 있다 — `--target Server` · `--rhi` 는 실패다. 쿠킹은 데스크톱과 같은 길(호스트 개발 빌드)이다.
+
 스테이징은 빌드 폴더 `Bin` 의 맨 위 DLL(쿠킹 전용 셰이더 컴파일러는 뺀다)과 그 타깃의 실행 파일, `THIRD_PARTY_NOTICES.txt`, 서버면 `ClientOnlyTypes.json`, 그리고 `Packs/` 가운데 공용 팩과 그 게임의 팩만 베낀다
 (`Bin/Packs` 에는 모든 게임의 팩이 구워져 있다 — 이름은 `list_pack_name_of_game` 이 게임 프리셋의 `_packRoot` 로 정한다). 쿠킹은 빌드의 `CookAssets`
 타깃이 호스트 개발 빌드의 `--cook-all` 로 한다(DevTools 의 `PackCooker`, 팩 파일 이름 규칙 `PackCooker::makePackFileName`). 이름이 어긋나면 스테이징이 빠진 팩을 알리고 멈춘다.
@@ -25,6 +33,7 @@ Dev 산출물(`Modules/` · `Saved/` · `Symbols/`)과 다른 실행 파일(테�
 사용법:
     py -3 Scripts/package/pack.py --target Client --game Playground
     py -3 Scripts/package/pack.py --target Server --game Shooter3D --rhi DirectX12 --output Saved/Packages
+    py -3 Scripts/package/pack.py --platform Web --game Playground
     py -3 Scripts/package/pack.py --target Client --skip-build --skip-cook --bin-dir build/Ninja-Debug/Bin   # 스테이징만(창의 시나리오)
 """
 
@@ -50,6 +59,15 @@ from common.host_platform import executable_name, HOST  # noqa: E402
 LIST_STEP_NAME: tuple[str, ...] = ("build", "cook", "stage", "verify")
 #: 타깃마다 Shipping 프리셋과 실행 파일 이름.
 MAP_TARGET_PRESET: dict[str, str] = {"Client": "Ninja-Shipping", "Server": "Ninja-Shipping-Server"}
+#: 플랫폼마다 타깃의 Shipping 프리셋. Desktop 은 이 호스트다.
+DESKTOP_PLATFORM = "Desktop"
+WEB_PLATFORM = "Web"
+ANDROID_PLATFORM = "Android"
+MAP_PLATFORM_PRESET: dict[str, dict[str, str]] = {
+    DESKTOP_PLATFORM: MAP_TARGET_PRESET,
+    WEB_PLATFORM: {"Client": "Web-Shipping"},
+    ANDROID_PLATFORM: {"Client": "Android-Shipping"},
+}
 MAP_TARGET_EXECUTABLE: dict[str, str] = {"Client": executable_name("App"), "Server": executable_name("Server")}
 #: 실행 파일 옆에 두는 공유 라이브러리 확장자.
 LIST_LIBRARY_SUFFIX: tuple[str, ...] = (HOST.shared_library_suffix,)
@@ -109,6 +127,7 @@ class PackageRequest:
     game: str
     rhi: str
     output_root: Path
+    platform: str = DESKTOP_PLATFORM
     bin_dir: Path | None = None
     skip_build: bool = False
     skip_cook: bool = False
@@ -123,9 +142,19 @@ def begin_step(request: PackageRequest, step_index: int) -> None:
     print(f"[package] step {step_index + 1}/{len(LIST_STEP_NAME)} {request.current_step}", flush=True)
 
 
-def make_staging_dir(output_root: Path, game: str, target: str) -> Path:
-    """`<산출 폴더>/<게임>-<타깃>` 입니다."""
-    return output_root / f"{game}-{target}"
+def make_staging_dir(request: PackageRequest, output_root: Path) -> Path:
+    """`<산출 폴더>/<게임>-<타깃>` 입니다. 데스크톱이 아니면 타깃 대신 플랫폼 이름이다(그 플랫폼은 클라이언트뿐이다)."""
+    return output_root / f"{request.game}-{request.target if request.platform == DESKTOP_PLATFORM else request.platform}"
+
+
+def find_preset(request: PackageRequest) -> str:
+    """요청의 Shipping 프리셋입니다. 그 플랫폼이 짓지 않는 타깃 · 백엔드를 고르면 실패다(조용히 다른 것으로 짓지 않는다)."""
+    preset = MAP_PLATFORM_PRESET[request.platform].get(request.target)
+    if preset is None:
+        raise PackageError(f"platform {request.platform} does not build the {request.target} target")
+    if request.platform != DESKTOP_PLATFORM and request.rhi:
+        raise PackageError(f"platform {request.platform} has its own backend - leave --rhi empty (got '{request.rhi}')")
+    return preset
 
 
 def is_cook_only_library(path: Path) -> bool:
@@ -207,7 +236,7 @@ def _make_configure_definitions(request: PackageRequest) -> list[str]:
 
 def run_build(request: PackageRequest, project_root: Path) -> None:
     """Shipping 프리셋을 그 게임 · 백엔드로 구성하고 빌드한다(빌드에 리소스 팩 쿠킹이 든다)."""
-    preset = MAP_TARGET_PRESET[request.target]
+    preset = find_preset(request)
     if run_cmake(["--preset", preset, *_make_configure_definitions(request)], cwd=project_root, capture=False).return_code != 0:
         raise PackageError(f"cmake --preset {preset} failed")
     if run_cmake(["--build", "--preset", preset], cwd=project_root, capture=False).return_code != 0:
@@ -228,8 +257,31 @@ def run_cook(request: PackageRequest, project_root: Path, bin_dir: Path) -> None
         raise PackageError(f"cooking ({build_dir} CookAssets) failed")
 
 
+def stage_platform_package(request: PackageRequest, project_root: Path, bin_dir: Path, staging_dir: Path) -> None:
+    """플랫폼 묶음 도구로 패키지 폴더를 만든다 — 웹은 브라우저 폴더, Android 는 APK 하나. 팩은 빌드가 구운 `Bin/Packs` 다."""
+    # 두 도구가 이 모듈의 팩 고르기를 쓴다 — 여기서 부를 때 읽는다.
+    from package.android_apk import ApkError, make_apk
+    from package.web_package import make_web_package, WebPackageError
+    build_dir = bin_dir.parent
+    pack_dir = bin_dir / PACK_FOLDER_NAME
+    try:
+        if request.platform == WEB_PLATFORM:
+            make_web_package(request.game, build_dir, pack_dir, staging_dir, project_root)
+            return
+        apk = make_apk(request.game, find_preset(request), build_dir, pack_dir, project_root)
+    except (WebPackageError, ApkError) as error:
+        raise PackageError(str(error)) from error
+    if staging_dir.exists():
+        shutil.rmtree(staging_dir)
+    staging_dir.mkdir(parents=True)
+    shutil.copy2(apk, staging_dir / apk.name)
+
+
 def stage_package(request: PackageRequest, project_root: Path, bin_dir: Path, staging_dir: Path) -> None:
-    """스테이징 폴더를 비우고 Bin 의 배포 항목, 그 게임의 팩, 서버 설정을 베낀다."""
+    """스테이징 폴더를 비우고 Bin 의 배포 항목, 그 게임의 팩, 서버 설정을 베낀다. 데스크톱이 아니면 그 플랫폼의 묶음 도구가 만든다."""
+    if request.platform != DESKTOP_PLATFORM:
+        stage_platform_package(request, project_root, bin_dir, staging_dir)
+        return
     if staging_dir.exists():
         shutil.rmtree(staging_dir)
     staging_dir.mkdir(parents=True)
@@ -264,7 +316,12 @@ def stage_package(request: PackageRequest, project_root: Path, bin_dir: Path, st
 
 
 def verify_package(request: PackageRequest, staging_dir: Path) -> None:
-    """실행 파일이 있고, 서버 패키지에 클라이언트 실행 파일이, 패키지에 쿠킹 전용 라이브러리가 들지 않았는지 본다."""
+    """실행 파일이 있고, 서버 패키지에 클라이언트 실행 파일이, 패키지에 쿠킹 전용 라이브러리가 들지 않았는지 본다. 웹은 첫 화면 파일, Android 는 APK 가 있는지 본다."""
+    if request.platform != DESKTOP_PLATFORM:
+        pattern = "index.html" if request.platform == WEB_PLATFORM else "*.apk"
+        if not any(staging_dir.glob(pattern)):
+            raise PackageError(f"{pattern} is missing from the {request.platform} package")
+        return
     if (staging_dir / MAP_TARGET_EXECUTABLE[request.target]).is_file() is False:
         raise PackageError(f"{MAP_TARGET_EXECUTABLE[request.target]} is missing from the package")
     list_leaked = [path.name for path in staging_dir.rglob("*") if path.is_file() and is_cook_only_library(path)]
@@ -285,14 +342,14 @@ def resolve_bin_dir(request: PackageRequest, project_root: Path) -> Path:
     """`--bin-dir` 이 있으면 그것, 없으면 타깃 프리셋의 빌드 폴더 `Bin` 입니다."""
     if request.bin_dir is not None:
         return request.bin_dir if request.bin_dir.is_absolute() else project_root / request.bin_dir
-    return get_bin_dir(MAP_TARGET_PRESET[request.target], project_root)
+    return get_bin_dir(find_preset(request), project_root)
 
 
 def make_package(request: PackageRequest, project_root: Path) -> Path:
     """네 단계를 돌리고 스테이징 폴더를 돌려준다. 실패하면 `PackageError` 이고, 실패한 단계는 `request.currentStep` 이다."""
     bin_dir = resolve_bin_dir(request, project_root)
     output_root = request.output_root if request.output_root.is_absolute() else project_root / request.output_root
-    staging_dir = make_staging_dir(output_root, request.game, request.target)
+    staging_dir = make_staging_dir(request, output_root)
 
     begin_step(request, 0)
     if request.skip_build is False:
@@ -314,6 +371,7 @@ def make_package(request: PackageRequest, project_root: Path) -> Path:
 
 def parse_arguments(argv: list[str] | None) -> argparse.Namespace:
     parser = argparse.ArgumentParser(description="Shipping 빌드 · 쿠킹 · 스테이징으로 배포 패키지 하나를 만든다")
+    parser.add_argument("--platform", choices=list(MAP_PLATFORM_PRESET), default=DESKTOP_PLATFORM, help="패키지를 돌릴 플랫폼(Desktop 은 이 호스트)")
     parser.add_argument("--target", choices=sorted(MAP_TARGET_PRESET), default="Client", help="빌드 타깃(Client · Server)")
     parser.add_argument("--game", default="Playground", help="게임 프리셋 이름(Config/Game/<이름>.json, SW_ACTIVE_GAME)")
     parser.add_argument("--rhi", default="", help="Shipping 이 정적으로 링크할 백엔드(쿠킹 표 이름 — DirectX12 · DirectX11 · Vulkan · OpenGL)")
@@ -327,7 +385,7 @@ def parse_arguments(argv: list[str] | None) -> argparse.Namespace:
 
 def main(argv: list[str] | None = None) -> int:
     args = parse_arguments(argv)
-    request = PackageRequest(target=args.target, game=args.game, rhi=args.rhi, output_root=Path(args.output),
+    request = PackageRequest(target=args.target, game=args.game, rhi=args.rhi, output_root=Path(args.output), platform=args.platform,
                              bin_dir=Path(args.bin_dir) if args.bin_dir else None, skip_build=args.skip_build, skip_cook=args.skip_cook,
                              list_mod_id=[part.strip() for part in args.mods.split(",") if part.strip()])
     project_root = get_project_root()

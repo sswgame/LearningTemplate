@@ -9,9 +9,12 @@
 
 namespace sw::editor::editorcommand
 {
-    inline constexpr const utf8* kEditUndo        = "edit.undo";
-    inline constexpr const utf8* kEditRedo        = "edit.redo";
-    inline constexpr const utf8* kBuildCompileAll = "build.compileAll";
-    inline constexpr const utf8* kPlayStart       = "play.start";
-    inline constexpr const utf8* kAssetBrowseTo   = "asset.browseTo";
+    inline constexpr const utf8* kEditUndo          = "edit.undo";
+    inline constexpr const utf8* kEditRedo          = "edit.redo";
+    inline constexpr const utf8* kBuildCompileAll   = "build.compileAll";
+    inline constexpr const utf8* kPlayStart         = "play.start";
+    inline constexpr const utf8* kAssetBrowseTo     = "asset.browseTo";
+    inline constexpr const utf8* kSceneNew          = "scene.new";
+    inline constexpr const utf8* kSceneOpen         = "scene.open";
+    inline constexpr const utf8* kSceneObjectCreate = "scene.object.create";
 } // namespace sw::editor::editorcommand

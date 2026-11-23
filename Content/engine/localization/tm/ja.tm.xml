@@ -114,6 +114,8 @@
 		<entry source="Crouch" text="しゃがみ" />
 		<entry source="Cue presentations" text="キュー演出" />
 		<entry source="Current" text="現在値" />
+		<entry source="Curve of every spline in the scene - drag the control point handles of the selected one (Shapes)"
+		       text="シーンの各スプラインの曲線 - 選択中のスプラインは制御点のハンドルをドラッグ（Shapes）" />
 		<entry source="Custom" text="カスタム" />
 		<entry source="Customization values" text="カスタマイズ値" />
 		<entry source="Customize (release a slider to refit)"
@@ -495,6 +497,7 @@
 		<entry source="Source bones" text="ソースボーン" />
 		<entry source="Spatial" text="空間" />
 		<entry source="Speaker Setup" text="スピーカー構成" />
+		<entry source="Splines" text="スプライン" />
 		<entry source="Split how many?" text="いくつ分けますか?" />
 		<entry source="Sprint" text="ダッシュ" />
 		<entry source="Stacks" text="スタック" />
