@@ -1,18 +1,19 @@
 <?xml version="1.0" encoding="utf-8"?>
 <?asset guid="d1ef2f932703436185b11759bf4527d4"?>
 <!--
-  MeadowVillage 하우징 서버 권위 배치 — 한 프로세스 재생(서버 월드 0 · 클라이언트 월드 1, 뒤에 늦게 붙는 클라이언트 월드 2)에서 값으로 본다. 그림은 판정하지 않는다.
+  초원 마을(미니게임 meadowvillage — 옛 게임 MeadowVillage) 하우징 서버 권위 배치 — 한 프로세스 재생(서버 월드 0 · 클라이언트 월드 1, 뒤에 늦게 붙는 클라이언트 월드 2)에서 값으로 본다. 그림은 판정하지 않는다.
   ① 차지: 클라이언트 1 의 집 디렉터(자동 플레이)가 부지를 차지해 달라고 요청하고 서버가 주인으로 적는다(Owned).
   ② 배치: 디렉터의 놓기 아홉은 요청이고, 서버가 자기 레이아웃 · 지갑으로 판정해 적용한 부지 상태가 클라이언트에 방송된다(두 월드의 배치 수 · 잔액이 같다).
   ③ 늦은 참가: 클라이언트 2 가 붙으면(netsim.addclient) 다음 서버 틱에 같은 부지 상태를 받는다.
   ④ 남의 부지: 클라이언트 2 의 디렉터가 부지를 차지하려 하면 서버가 NotOwner(HousingPlaceResult 14)로 거절하고 아무것도 바뀌지 않는다.
   값은 감시 값 Editor.NetSimValue(target = 월드, key = MeadowNetSimGame 의 값 이름)다.
-  실행: App -EnableEditor -scenario=game/meadowvillage/automation/editor/nethousing.scenario.xml -unattended (체인: Scenario.meadowvillage.editor)
+  실행: App -EnableEditor -scenario=game/playground/automation/editor/meadowvillage_nethousing.scenario.xml -unattended (체인: Scenario.playground.editor)
 -->
-<Scenario name="game.meadowvillage.nethousing" requiresModule="GF_EditorPlugin_NetSimulation" fixedDelta="0.0166667" timeoutFrames="6000" startAfter="Immediately" input="exclusive">
+<Scenario name="game.playground.meadowvillage_nethousing" requiresModule="GF_EditorPlugin_NetSimulation" fixedDelta="0.0166667" timeoutFrames="6000" startAfter="Immediately" input="exclusive">
+	<WaitUntil watch="Scene.Transitioning" equals="0" timeoutWallSeconds="60"/>
 	<ResizeWindow width="1920" height="1080"/>
 	<Variable name="gv_editorUiScale" value="1"/>
-	<Variable name="gv_meadowAutoPlay" value="1"/>
+	<Variable name="gv_playgroundAutoPlay" value="1"/>
 	<DevCommand line="layout.reset"/>
 	<EditorWaitStable/>
 	<DevCommand line="panel.focus multiplayer"/>
@@ -47,10 +48,11 @@
 	<Expect watch="Editor.NetSimValue" target="1" key="Owned" equals="1"/>
 	<Expect watch="Editor.NetSimValue" target="0" key="PlacementCount" equals="9"/>
 	<!-- 끝: 다음 시나리오에 스위치와 세션을 남기지 않는다 -->
-	<Variable name="gv_meadowAutoPlay" value="0"/>
+	<Variable name="gv_playgroundAutoPlay" value="0"/>
 	<EditorClick mark="multiplayer.inprocess.stop" state="Down"/>
 	<AdvanceSimulation frames="3"/> <!-- 누름 · 뗌을 다른 프레임에 둔다(프레임 경계) -->
 	<EditorClick mark="multiplayer.inprocess.stop" state="Up"/>
 	<WaitUntil watch="Editor.NetSimRunning" equals="0" timeoutFrames="60"/>
+	<Variable name="gv_editorUiScale" value="0"/>
 	<Pass/>
 </Scenario>

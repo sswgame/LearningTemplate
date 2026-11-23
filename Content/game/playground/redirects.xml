@@ -46,4 +46,12 @@
 	<Redirect from="game/playground/frontiertown/automation/autoplayclock.scenario.xml" to="game/playground/automation/frontiertown_autoplayclock.scenario.xml" />
 	<Redirect from="game/playground/frontiertown/automation/slice.scenario.xml" to="game/playground/automation/frontiertown_slice.scenario.xml" />
 	<Redirect from="game/playground/frontiertown/data/frontier.settings.xml" to="game/playground/data/playground.settings.xml" />
+	<PrefixRedirect from="game/meadowvillage" to="game/playground/meadowvillage" />
+	<Redirect from="game/playground/meadowvillage/automation/autoplayclock.scenario.xml" to="game/playground/automation/meadowvillage_autoplayclock.scenario.xml" />
+	<Redirect from="game/playground/meadowvillage/automation/day.scenario.xml" to="game/playground/automation/meadowvillage_day.scenario.xml" />
+	<Redirect from="game/playground/meadowvillage/automation/housing.scenario.xml" to="game/playground/automation/meadowvillage_housing.scenario.xml" />
+	<Redirect from="game/playground/meadowvillage/automation/questmarker.scenario.xml" to="game/playground/automation/meadowvillage_questmarker.scenario.xml" />
+	<Redirect from="game/playground/meadowvillage/automation/slice.scenario.xml" to="game/playground/automation/meadowvillage_slice.scenario.xml" />
+	<Redirect from="game/playground/meadowvillage/automation/editor/nethousing.scenario.xml" to="game/playground/automation/editor/meadowvillage_nethousing.scenario.xml" />
+	<Redirect from="game/playground/meadowvillage/data/meadow.settings.xml" to="game/playground/data/playground.settings.xml" />
 </Redirects>

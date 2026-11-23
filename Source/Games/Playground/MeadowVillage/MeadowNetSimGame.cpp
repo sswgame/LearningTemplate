@@ -1,7 +1,7 @@
 /**
  * @file MeadowNetSimGame.cpp
- * @brief MeadowVillage 를 한 프로세스 가상 서버(`NetSimHarness`, 에디터 Multiplayer 창의 In process 탭)에서 돌리는 `INetSimGame` 입니다 — 하우징 서버 권위 배치를 둘 이상의 월드로 본다.
- * @details 월드마다 마을 씬(`game/meadowvillage/maps/meadow.scene.xml`)을 그 월드의 씬에 풀어 넣는다. 씬의 하우징 부지와 `HousingNetSessionComponent` 는 월드의 넷 링크로
+ * @brief 초원 마을 미니게임(`minigames/meadowvillage`)의 맵을 한 프로세스 가상 서버(`NetSimHarness`, 에디터 Multiplayer 창의 In process 탭)에서 돌리는 `INetSimGame` 입니다 — 하우징 서버 권위 배치를 둘 이상의 월드로 본다.
+ * @details 월드마다 마을 씬(`game/playground/meadowvillage/maps/meadow.scene.xml`)을 그 월드의 씬에 풀어 넣는다. 씬의 하우징 부지와 `HousingNetSessionComponent` 는 월드의 넷 링크로
  *          역할을 받으므로 서버 월드는 판정 · 방송하고 클라이언트 월드는 요청을 보낸다(자동 플레이의 집 디렉터가 짓는다). 늦게 붙은 클라이언트 월드도 같은 길로 서고
  *          다음 서버 틱에 부지 상태를 받는다. 이 게임의 세션은 가진 메시지가 없다 — 복제는 하우징 키트의 처리기가 넷 링크의 라우터에 직접 단다.
  *          게임 모듈이 올라오면 `NetSimGameRegistry` 에 등록하고, 내려가기 전에 뺀다.
@@ -24,12 +24,12 @@
 
 namespace sw
 {
-    /** @brief MeadowVillage 의 한 프로세스 재생 게임입니다. 파일 머리말 참고. */
+    /** @brief 초원 마을의 한 프로세스 재생 게임입니다. 파일 머리말 참고. */
     class MeadowNetSimGame final : public INetSimGame
     {
     public:
         static constexpr const utf8* kName         = "MeadowVillage: housing"; ///< `NetSimGameRegistry` 에 등록하는 이름
-        static constexpr const utf8* kScenePath    = "game/meadowvillage/maps/meadow.scene.xml";
+        static constexpr const utf8* kScenePath    = "game/playground/meadowvillage/maps/meadow.scene.xml";
         static constexpr float32     kViewTargetX  = 4.0f;  ///< 밭과 집 부지 사이(m)
         static constexpr float32     kViewTargetZ  = -2.0f; ///< 집 부지(z -7 ~ -1)와 밭(z 0 ~ 2) 사이(m)
         static constexpr float32     kViewDistance = 24.0f;
@@ -50,7 +50,7 @@ namespace sw
     {
         /**
          * @class MeadowNetSimSession
-         * @brief 월드 하나의 MeadowVillage 세션입니다 — 메시지는 없고, 시나리오가 볼 부지 값을 낸다(`Editor.NetSimValue`).
+         * @brief 월드 하나의 초원 마을 세션입니다 — 메시지는 없고, 시나리오가 볼 부지 값을 낸다(`Editor.NetSimValue`).
          */
         class MeadowNetSimSession final : public INetSimSession
         {

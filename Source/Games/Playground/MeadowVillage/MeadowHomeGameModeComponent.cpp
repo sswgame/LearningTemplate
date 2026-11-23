@@ -1,6 +1,6 @@
 #include "pch.h"
 
-#include "Games/MeadowVillage/MeadowHomeGameModeComponent.h"
+#include "Games/Playground/MeadowVillage/MeadowHomeGameModeComponent.h"
 
 #include "Core/Log/Logger.h"
 #include "Core/Math/MathUtil.h"

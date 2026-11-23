@@ -95,6 +95,9 @@
             "_name": "GF_Farming"
         },
         {
+            "_name": "GF_CreatureLife"
+        },
+        {
             "_name": "GF_Voxel"
         },
         {

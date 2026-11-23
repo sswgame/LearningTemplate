@@ -24,7 +24,7 @@
 					                 _bOrthographic="true" />
 					<CameraDirectorComponent _localID="17954231826208681790" _componentName="CameraDirectorComponent"
 					                         _bActive="true"
-					                         _catalogPath="game/meadowvillage/data/meadow.cameras.xml"
+					                         _catalogPath="game/playground/meadowvillage/data/meadow.cameras.xml"
 					                         _initialPreset="meadow"
 					                         _focusPoint="6,0,1.5"
 					                         _bReadInput="false">
@@ -72,9 +72,9 @@
 					<MeadowFarmGameModeComponent _localID="8448271495034838971" _componentName="MeadowFarmGameModeComponent"
 					                             _bActive="true"
 					                             _bAutoPlay="false"
-					                             _cropDataPath="game/meadowvillage/data/crops.xml"
+					                             _cropDataPath="game/playground/meadowvillage/data/crops.xml"
 					                             _crop="turnip"
-					                             _tilePrefab="game/meadowvillage/prefabs/tile.prefab.xml">
+					                             _tilePrefab="game/playground/meadowvillage/prefabs/tile.prefab.xml">
 						<_stateSettings _landWidth="40" _landHeight="40" _landCellSize="1" _landOrigin="-20,0,-20">
 							<_clock _secondsPerDay="120" _startHour="6" _daysPerSeason="28">
 								<_listSeason>
@@ -89,9 +89,9 @@
 					<CreatureTownGameModeComponent _localID="5244519647496677059" _componentName="CreatureTownGameModeComponent"
 					                               _bActive="true"
 					                               _bAutoPlay="false"
-					                               _creatureDataPath="game/meadowvillage/data/creatures.xml"
-					                               _questDataPath="game/meadowvillage/data/quests.xml"
-					                               _friendshipDataPath="game/meadowvillage/data/friendship.xml"
+					                               _creatureDataPath="game/playground/meadowvillage/data/creatures.xml"
+					                               _questDataPath="game/playground/meadowvillage/data/quests.xml"
+					                               _friendshipDataPath="game/playground/meadowvillage/data/friendship.xml"
 					                               _townSize="6"
 					                               _fixedWeatherID="sunny"
 					                               _upgradeHabitat="orchard"
@@ -108,23 +108,23 @@
 					<CreatureTownViewComponent _localID="3650821947715502638" _componentName="CreatureTownViewComponent"
 					                           _bActive="true"
 					                           _townOrigin="6,0,0"
-					                           _talkAction="Interact"
+					                           _talkAction="CreatureTown.Talk"
 					                           _talkSpecies="sprout">
 						<_listObjectView>
-							<CreatureTownObjectView _object="grass" _prefab="game/meadowvillage/prefabs/grass.prefab.xml" />
-							<CreatureTownObjectView _object="tree" _prefab="game/meadowvillage/prefabs/tree.prefab.xml" />
+							<CreatureTownObjectView _object="grass" _prefab="game/playground/meadowvillage/prefabs/grass.prefab.xml" />
+							<CreatureTownObjectView _object="tree" _prefab="game/playground/meadowvillage/prefabs/tree.prefab.xml" />
 						</_listObjectView>
 						<_listCreatureView>
-							<CreatureTownCreatureView _species="sprout" _prefab="game/meadowvillage/prefabs/sprout.prefab.xml" />
+							<CreatureTownCreatureView _species="sprout" _prefab="game/playground/meadowvillage/prefabs/sprout.prefab.xml" />
 						</_listCreatureView>
 					</CreatureTownViewComponent>
 					<HousingPlotComponent _localID="9951375036076253157" _componentName="HousingPlotComponent"
 					                      _bActive="true"
 					                      _bAutoPlay="false"
-					                      _partCatalog="game/meadowvillage/data/housingparts.xml"
+					                      _partCatalog="game/playground/meadowvillage/data/housingparts.xml"
 					                      _startingFunds="200"
-					                      _ghostPlaceablePrefab="game/meadowvillage/prefabs/housing/ghost_placeable.prefab.xml"
-					                      _ghostBlockedPrefab="game/meadowvillage/prefabs/housing/ghost_blocked.prefab.xml">
+					                      _ghostPlaceablePrefab="game/playground/meadowvillage/prefabs/housing/ghost_placeable.prefab.xml"
+					                      _ghostBlockedPrefab="game/playground/meadowvillage/prefabs/housing/ghost_blocked.prefab.xml">
 						<_settings _plotID="meadow_home" _sizeX="6" _sizeZ="6" _levelCount="2" _historyLimit="64" _bFreePlacement="false" _maxReach="0" />
 					</HousingPlotComponent>
 					<MeadowHomeGameModeComponent _localID="10875432985987803690" _componentName="MeadowHomeGameModeComponent"
@@ -158,8 +158,8 @@
 					               _attachOwner="None"
 					               _attachOwnerID="0"
 					               _attachComponent="None"
-					               _meshID="game/meadowvillage/models/crops_dirt_single.mesh"
-					               _materialPath="game/meadowvillage/materials/nature.material"
+					               _meshID="game/playground/meadowvillage/models/crops_dirt_single.mesh"
+					               _materialPath="game/playground/meadowvillage/materials/nature.material"
 					               _boundsRadius="0.866"
 					               _gpuSpinSeed="0"
 					               _bVisible="true" />
@@ -177,8 +177,8 @@
 					               _attachOwner="None"
 					               _attachOwnerID="0"
 					               _attachComponent="None"
-					               _meshID="game/meadowvillage/models/ground_grass.mesh"
-					               _materialPath="game/meadowvillage/materials/nature.material"
+					               _meshID="game/playground/meadowvillage/models/ground_grass.mesh"
+					               _materialPath="game/playground/meadowvillage/materials/nature.material"
 					               _boundsRadius="0.866"
 					               _gpuSpinSeed="0"
 					               _bVisible="true" />
@@ -196,8 +196,8 @@
 					               _attachOwner="None"
 					               _attachOwnerID="0"
 					               _attachComponent="None"
-					               _meshID="game/meadowvillage/models/ground_path_tile.mesh"
-					               _materialPath="game/meadowvillage/materials/nature.material"
+					               _meshID="game/playground/meadowvillage/models/ground_path_tile.mesh"
+					               _materialPath="game/playground/meadowvillage/materials/nature.material"
 					               _boundsRadius="0.866"
 					               _gpuSpinSeed="0"
 					               _bVisible="true" />
@@ -215,8 +215,8 @@
 					               _attachOwner="None"
 					               _attachOwnerID="0"
 					               _attachComponent="None"
-					               _meshID="game/meadowvillage/models/ground_river_tile.mesh"
-					               _materialPath="game/meadowvillage/materials/nature.material"
+					               _meshID="game/playground/meadowvillage/models/ground_river_tile.mesh"
+					               _materialPath="game/playground/meadowvillage/materials/nature.material"
 					               _boundsRadius="0.866"
 					               _gpuSpinSeed="0"
 					               _bVisible="true" />

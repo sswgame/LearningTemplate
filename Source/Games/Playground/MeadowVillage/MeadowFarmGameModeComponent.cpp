@@ -1,6 +1,6 @@
 #include "pch.h"
 
-#include "Games/MeadowVillage/MeadowFarmGameModeComponent.h"
+#include "Games/Playground/MeadowVillage/MeadowFarmGameModeComponent.h"
 
 #include "Engine/Asset/Cache/SharedAssetCache.h"
 #include "Engine/Input/Map/CommonInputActions.h"

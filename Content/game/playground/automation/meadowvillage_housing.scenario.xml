@@ -1,22 +1,23 @@
 <?xml version="1.0" encoding="utf-8"?>
 <?asset guid="f2536fcf11884abbbdebf6868d22d4a1"?>
 <!--
-  MeadowVillage 집 — 판 상태(VillageState)와 한 오브젝트인 하우징 부지(6 x 6 칸, 시작 200 골드)가 공유 땅(40 x 40 칸)에서 칸을 차지하고,
-  자동 플레이(gv_meadowAutoPlay)의 집 디렉터(MeadowHomeGameModeComponent)가 부지 API 로 바닥 6 · 벽 · 문(벽 끝 소켓에 붙는다) · 탁자를 0.25 초마다 하나씩 놓는다(90 골드).
+  초원 마을 미니게임(meadowvillage — 옛 게임 MeadowVillage) 집 — 판 상태(VillageState)와 한 오브젝트인 하우징 부지(6 x 6 칸, 시작 200 골드)가 공유 땅(40 x 40 칸)에서 칸을 차지하고,
+  자동 플레이(gv_playgroundAutoPlay)의 집 디렉터(MeadowHomeGameModeComponent)가 부지 API 로 바닥 6 · 벽 · 문(벽 끝 소켓에 붙는다) · 탁자를 0.25 초마다 하나씩 놓는다(90 골드).
   게임 저장(game.save) → 탁자를 치움(회수 15) → 게임 불러오기(game.load)에서 같은 배치 · id · 잔액과 부품 뷰 아홉으로 돌아오는지 본다. 집이 선 모습은 골든 하나(house)로 견준다.
   밭 · 마을은 같은 판에서 그대로 돈다(자동 플레이가 시계를 8 배로 흘린다) — 짓기가 끝나면 스위치를 꺼 사진 앞의 시간을 고정한다.
-  실행: ctest -R Scenario.meadowvillage (SW_ACTIVE_GAME=MeadowVillage) · App -scenario=game/meadowvillage/automation/housing.scenario.xml -unattended
+  실행: ctest -R Scenario.playground · App -scenario=game/playground/automation/meadowvillage_housing.scenario.xml -unattended
 -->
-<Scenario name="game.meadowvillage.housing" fixedDelta="0.0166667" timeoutFrames="3000" startAfter="ScenePlaying" input="exclusive">
-	<Variable name="gv_meadowAutoPlay" value="0"/>
+<Scenario name="game.playground.meadowvillage_housing" fixedDelta="0.0166667" timeoutFrames="3000" startAfter="ScenePlaying" startTimeoutFrames="900" input="exclusive">
+	<Launch variable="gv_firstMinigame" value="meadowvillage"/>
+	<Variable name="gv_playgroundAutoPlay" value="0"/>
 	<WaitUntil watch="Housing.LandBound" target="VillageState" equals="1" timeoutFrames="10"/> <!-- 부지가 열려 공유 땅을 차지했다 -->
 	<Expect watch="Housing.PlacementCount" target="VillageState" equals="0"/>
 	<Expect watch="Housing.Funds" target="VillageState" equals="200"/>
 
 	<!-- 자동 플레이가 집을 짓는다 -->
-	<Variable name="gv_meadowAutoPlay" value="1"/>
+	<Variable name="gv_playgroundAutoPlay" value="1"/>
 	<WaitUntil watch="Housing.PlacementCount" target="VillageState" equals="9" timeoutSeconds="20"/>
-	<Variable name="gv_meadowAutoPlay" value="0"/>
+	<Variable name="gv_playgroundAutoPlay" value="0"/>
 	<Expect watch="Housing.Funds" target="VillageState" equals="110"/>
 	<Expect watch="Housing.LastResult" target="VillageState" is="Ok"/>
 	<Expect watch="Housing.Placement" target="VillageState" key="8" is="150 150 0 0"/> <!-- 문은 날 자리 1.3, 1.6 에서 벽 끝 소켓으로 붙었다 -->

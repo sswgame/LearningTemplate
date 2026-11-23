@@ -1,5 +1,5 @@
 <?asset guid="7931de743a65909bd5d4e150b0ba8cba"?>
-<!-- MeadowVillage 카메라 프리셋 — 카메라 오브젝트의 CameraDirectorComponent 가 읽는다. 각은 도, 거리 · 높이는 m 다.
+<!-- 초원 마을(minigames/meadowvillage) 카메라 프리셋 — 카메라 오브젝트의 CameraDirectorComponent 가 읽는다. 각은 도, 거리 · 높이는 m 다.
      비스듬히 내려다보는 직교 시점이고 입력은 받지 않는다. 초점은 씬의 _focusPoint 에 고정한다. -->
 <CameraPresetCatalog>
     <Preset id="meadow">
