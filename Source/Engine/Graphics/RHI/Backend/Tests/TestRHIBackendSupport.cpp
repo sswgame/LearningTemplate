@@ -588,6 +588,35 @@ SW_TEST_CASE( RHIConstantBufferMirrorTest, FillsStaleSlotsOnceAndForgets )
 }
 
 /**
+ * @brief [RHIConstantBufferMirrorTest] 칸이 다른 버퍼들도 채우기 한 번에 모두 채우고, 부수는 쪽의 레코드 거두기는 그 버퍼만 잊은 뒤 같은 잠금 안에서 돈다
+ * @details 변이: 채우기가 첫 칸만 돌면 쓴 수가, 지우기가 다른 버퍼까지 잊으면 남은 수가 진다.
+ */
+SW_TEST_CASE( RHIConstantBufferMirrorTest, EveryShardFillsAndRemoveRunsTheRelease )
+{
+    constexpr uint32        kBufferCount = 40;
+    RHIConstantBufferMirror mirror;
+    uint32                  writeCount{ 0 };
+    const auto              writeSlot = [&writeCount]( RHIBufferHandle, uint32, uint32, const void*, uint32 )
+    { ++writeCount; };
+    const uint32 value{ 5 };
+    for ( uint32 index = 1; index <= kBufferCount; ++index )
+    {
+        mirror.write( RHIBufferHandle{ index }, 0, 0, &value, sizeof( value ), writeSlot );
+    }
+    SW_EXPECT_EQUAL( kBufferCount, mirror.getPendingBufferCount() );
+    writeCount = 0;
+    mirror.fillSlot( 1, writeSlot );
+    SW_EXPECT_EQUAL( kBufferCount, writeCount );
+    uint32 releaseCount{ 0 };
+    mirror.remove( RHIBufferHandle{ 17 }, [&releaseCount]()
+    { ++releaseCount; } );
+    SW_EXPECT_EQUAL( 1u, releaseCount );
+    SW_EXPECT_EQUAL( kBufferCount - 1u, mirror.getPendingBufferCount() );
+    mirror.clear();
+    SW_EXPECT_EQUAL( 0u, mirror.getPendingBufferCount() );
+}
+
+/**
  * @brief [RHIConstantBufferMirrorTest] 페이지의 두 구간(같은 버퍼, 다른 오프셋)은 따로 기억 · 채우고, 페이지를 부수면 둘 다 잊는다(감사 R-4)
  */
 SW_TEST_CASE( RHIConstantBufferMirrorTest, KeepsPageSlicesApart )

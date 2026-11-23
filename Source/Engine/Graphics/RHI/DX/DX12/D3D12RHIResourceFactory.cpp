@@ -70,12 +70,11 @@ namespace sw
             return 0;
 
         const RHIBufferHandle handle = _pDevice->storeBuffer( buffer );
+        // 핸들을 돌려주기 전이라 다른 스레드는 이 칸을 아직 모른다 — 매핑 주소와 칸 크기를 락 없이 적는다(그 뒤로 바뀌지 않는다).
+        if ( D3D12RHIDevice::BufferRecord* const pRecord = _pDevice->findBufferRecord( handle ) )
         {
-            // 상수버퍼 맵은 등록(`publishBindlessReadSlot` 이 크기를 읽기 표로 옮긴다) · 프레임 CBV 갱신 · 갱신 그림자가 읽는다. 에디터가 없는 빌드는
-            // 게임 틱과 기록이 겹치므로, 게임 스레드의 삽입(해시 표 재배치)이 그 읽기와 겹치지 않게 배타 락으로 넣는다.
-            UniqueLock<shared_mutex> lock{ _pDevice->_bindlessMutex };
-            _pDevice->_mapCbAlignedSize[handle] = alignedSize;
-            _pDevice->_mapCbMapped[handle]      = pMapped;
+            pRecord->_pConstantMapped     = pMapped;
+            pRecord->_constantAlignedSize = alignedSize;
         }
         return handle;
     }
@@ -86,12 +85,11 @@ namespace sw
             return;
 
         // 이번 프레임 칸에 쓰고, 나머지 칸은 링이 그 칸으로 돌아올 때 채운다(`RHIConstantBufferMirror` — 값이 바뀔 때만 쓰는 머티리얼 버퍼가
-        // 세 프레임 중 두 프레임을 옛 값으로 그리지 않게). 조회와 복사는 읽기 락 안에서 한다 — 다른 스레드의 `destroyBuffer` 가 Unmap 하는
-        // 도중에 쓰면 안 된다.
-        ScopedSharedLock<shared_mutex> lock{ _pDevice->_bindlessMutex };
-        if ( _pDevice->_mapCbMapped.contains( buffer ) == false )
+        // 세 프레임 중 두 프레임을 옛 값으로 그리지 않게). 레코드는 등록표 잠금 없이 찾고, 부수기와는 미러의 칸 잠금이 가른다(`destroyBufferNative`).
+        const D3D12RHIDevice::BufferRecord* const pRecord = _pDevice->findBufferRecord( buffer );
+        if ( pRecord == nullptr || pRecord->_pConstantMapped == nullptr )
             return;
-        SW_PROFILE_COUNT( "RT.Bind.constantBufferWrites", 1 ); // 미러 락 경합의 분모(설계 L-1)
+        SW_PROFILE_COUNT( "RT.Bind.constantBufferWrites", 1 );
         _pDevice->_constantBufferMirror.write( buffer, 0, _pDevice->_frameRing.currentIndex(), pData, size,
                                                [this]( RHIBufferHandle target, uint32 slot, uint32 offset, const void* pBytes, uint32 byteCount )
         { _pDevice->writeConstantBufferSlot( target, slot, offset, pBytes, byteCount ); } );
@@ -108,8 +106,8 @@ namespace sw
         if ( slice._buffer == 0 || pData == nullptr )
             return;
         // 버퍼 갱신과 같은 길이되 이번 프레임 칸의 구간 오프셋에 쓴다(나머지 칸은 미러가 같은 오프셋에 채운다).
-        ScopedSharedLock<shared_mutex> lock{ _pDevice->_bindlessMutex };
-        if ( _pDevice->_mapCbMapped.contains( slice._buffer ) == false )
+        const D3D12RHIDevice::BufferRecord* const pRecord = _pDevice->findBufferRecord( slice._buffer );
+        if ( pRecord == nullptr || pRecord->_pConstantMapped == nullptr )
             return;
         SW_PROFILE_COUNT( "RT.Bind.constantBufferWrites", 1 );
         _pDevice->_constantBufferMirror.write( slice._buffer, slice._offset, _pDevice->_frameRing.currentIndex(), pData, MathUtil::min( size, slice._size ),
@@ -781,19 +779,13 @@ namespace sw
         // 렌더 스레드만 쓴다(여기서 쓰면 경쟁이다). 핸들은 세대가 있어 다시 쓰이지 않으므로, 지운 핸들은 드로우의 `resolveBuffer` 가 null 로
         // 풀어 건너뛴다.
         UniqueLock<shared_mutex> registryLock{ _pDevice->_bindlessMutex };
-        const auto               mapIt = _pDevice->_mapCbMapped.find( buffer );
-        if ( mapIt != _pDevice->_mapCbMapped.end() && mapIt->second != nullptr )
-        {
-            ID3D12Resource* pResource = _pDevice->resolveBuffer( buffer );
-            if ( pResource != nullptr )
-                pResource->Unmap( 0, nullptr );
-            _pDevice->_mapCbMapped.erase( mapIt );
-        }
-        _pDevice->_mapCbAlignedSize.erase( buffer );
         _pDevice->_mapStructuredStride.erase( buffer );
-        _pDevice->_constantBufferMirror.remove( buffer );
+        // 상수 버퍼는 매핑한 채 놓는다(D3D12 는 매핑한 자원을 그대로 놓아도 된다 — 자원은 GPU 펜스 뒤에 사라진다). 레코드는 미러의 칸 잠금 안에서 거둔다: 진행 중인 쓰기가 그 잠금 안에서 레코드를 읽는다.
         D3D12RHIDevice::BufferRecord taken{};
-        if ( _pDevice->_gpuBuffers.take( buffer, taken ) == false )
+        bool                         bTaken{ false };
+        _pDevice->_constantBufferMirror.remove( buffer, [&]()
+        { bTaken = _pDevice->_gpuBuffers.take( buffer, taken ); } );
+        if ( bTaken == false )
             return false;
         Microsoft::WRL::ComPtr<ID3D12Resource> owned = std::move( taken._resource );
 
@@ -1267,8 +1259,8 @@ namespace sw
 
         // 상수 버퍼는 루트 CBV 로만 건다(resolveBufferAddress 가 이번 링 슬롯 주소를 낸다). 힙에는 뷰를 만들지 않는다 — 셰이더는 힙에서 CBV 를 읽지 않고
         // (b# 는 루트 서술자, 힙 테이블은 t# · u# 범위다), 예전엔 등록 때 두 개를 만들고 프레임마다 링 슬롯으로 다시 썼다(R-7). 번호는 바인딩 열쇠로만 쓴다.
-        // 상수버퍼 맵 조회는 위에서 쥔 배타 락(`lock`) 안이다. 그 맵은 같은 `_bindlessMutex` 가 지킨다.
-        if ( _pDevice->_mapCbAlignedSize.contains( buffer ) == false )
+        const D3D12RHIDevice::BufferRecord* const pRecord = _pDevice->findBufferRecord( buffer );
+        if ( pRecord == nullptr || pRecord->_constantAlignedSize == 0 )
         {
             // 링이 아닌 버퍼: 루트 CBV 가 읽는 256 바이트보다 좁으면 상수 버퍼가 될 수 없다.
             // 집은 인덱스를 돌려준다. 그냥 반환하면 좁은 버퍼를 등록할 때마다 힙 슬롯이 하나씩 샌다(잠금은 쥐고 있다).
@@ -1294,9 +1286,9 @@ namespace sw
 
         UniqueLock<shared_mutex> lock{ _pDevice->_bindlessMutex };
         // 루트 CBV 는 링 칸 주소 + 구간 오프셋이다(`resolveBufferAddress` 가 프레임 칸을 더한다). 링 페이지가 아니거나 칸을 넘는 구간은 부르는 쪽의 결함이다.
-        const auto sizeIt            = _pDevice->_mapCbAlignedSize.find( slice._buffer );
-        const bool bSliceOutsidePage = sizeIt == _pDevice->_mapCbAlignedSize.end() || static_cast<uint64>( slice._offset ) + slice._size > sizeIt->second;
-        const bool bSliceMisaligned  = slice._offset % D3D12_CONSTANT_BUFFER_DATA_PLACEMENT_ALIGNMENT != 0 || slice._size == 0;
+        const D3D12RHIDevice::BufferRecord* const pRecord           = _pDevice->findBufferRecord( slice._buffer );
+        const bool                                bSliceOutsidePage = pRecord == nullptr || static_cast<uint64>( slice._offset ) + slice._size > pRecord->_constantAlignedSize;
+        const bool                                bSliceMisaligned  = slice._offset % D3D12_CONSTANT_BUFFER_DATA_PLACEMENT_ALIGNMENT != 0 || slice._size == 0;
         if ( bSliceOutsidePage || bSliceMisaligned )
         {
             lock.unlock(); // 잠금은 잎 잠금이다 — 로그는 놓은 뒤에 남긴다
