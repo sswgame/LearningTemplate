@@ -507,7 +507,7 @@ namespace sw
             listEntry.push_back( bRenamed ? Internal::makeBufferEntry( binding, pBuffer->_overrideBuffer, pBuffer->_overrideOffset, pBuffer->_sizeBytes )
                                           : Internal::makeBufferEntry( binding, pBuffer->_buffer, 0, pBuffer->_sizeBytes ) );
         }
-        // 같은 (레이아웃, 항목) 은 프레임 안에서 한 번만 짓는다 — 브라우저에서 그룹 하나는 JS 객체 하나라 그리기마다 지으면 GC 압력이 그리기 수만큼 는다.
+        // 같은 (레이아웃, 항목) 은 한 번만 짓는다(프레임을 넘겨 든다) — 브라우저에서 그룹 하나는 JS 객체 하나라 그리기마다 지으면 GC 압력이 그리기 수만큼 는다.
         return _pDevice->_bindGroupCache.getOrCreate( _pDevice->_device, pipeline._groupLayout, listEntry );
     }
 

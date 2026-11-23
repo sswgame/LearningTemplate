@@ -327,7 +327,7 @@ namespace sw
          */
         const RHIStructuredBuffer& getPrevInstanceWorldBuffer() const { return _prevInstanceWorlds; }
         /** @brief 지난 월드 행렬 버퍼의 원소 수(인스턴스 수)입니다. */
-        uint32 getPrevInstanceWorldCount() const { return static_cast<uint32>( _listUploadedPrevWorld.size() ); }
+        uint32 getPrevInstanceWorldCount() const { return _prevInstanceWorldCount; }
         /** @brief 마지막 upload 에서 기록이 있는 물체가 하나라도 움직였으면 true 입니다. 카메라가 서 있어도 모션 블러를 끄지 않는 근거다(`FrameViewResources::applyViewPassSelection`). */
         bool hasObjectMotion() const { return _bObjectMotion != SW_FALSE; }
         /**
@@ -478,10 +478,10 @@ namespace sw
         GPUInstanceMotionHistory _motionHistory;
         /// @brief 지난 월드 행렬 버퍼(t15)입니다.
         RHIStructuredBuffer _prevInstanceWorlds;
-        /// @brief 이번 프레임에 기록이 낸 지난 월드 행렬입니다(스크래치).
-        vector<float4x4> _listScratchPrevWorld;
-        /// @brief 마지막으로 올린 지난 월드 행렬입니다. 같으면 다시 올리지 않는다.
-        vector<float4x4> _listUploadedPrevWorld;
+        /// @brief 그 버퍼에 올려 둔 원소 수입니다(만들지 못했으면 0).
+        uint32 _prevInstanceWorldCount{ 0 };
+        /// @brief 지난 업로드 뒤 바뀐 칸입니다(스크래치 — `GPUSceneSlotBuffer::takeChangedSlots`).
+        vector<uint32> _listScratchChangedSlot;
         /// @brief 마지막 upload 에서 물체가 움직였는지입니다(`hasObjectMotion`).
         uint8 _bObjectMotion{ SW_FALSE };
         /// @brief 배치에 화면 왜곡 머티리얼이 있는지입니다(`hasDistortionBatches`).

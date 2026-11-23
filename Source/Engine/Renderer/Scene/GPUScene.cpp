@@ -450,25 +450,41 @@ namespace sw
     void GPUScene::updateMotionHistory( IRHIDevice* pDevice )
     {
         SW_PROFILE_SCOPE( "RT.GPUScene.motionHistory" );
-        // shortcut: 움직이는 프레임마다 인스턴스 수만큼 열쇠를 찾고 버퍼 전체(인스턴스당 64 바이트)를 올린다 — 인스턴스가 수만을 넘어 이 구간이 측정에 드러나면 바뀐 구간만 올린다.
         // 칸 순이다 — 정점 셰이더가 칸 번호로 지난 행렬을 읽는다(binding.hlsli `InstanceData::loadPreviousWorld`). 구멍은 열쇠가 0 이라 기록이 없다.
-        _bObjectMotion                            = _motionHistory.update( _slotBuffer.getSlots(), _listScratchPrevWorld ) ? SW_TRUE : SW_FALSE;
+        _slotBuffer.takeChangedSlots( _listScratchChangedSlot );
+        _bObjectMotion = _motionHistory.update( _slotBuffer.getSlots(), _listScratchChangedSlot ) ? SW_TRUE : SW_FALSE;
+
         constexpr RHIBufferUsage kPrevWorldUsage  = RHIBufferUsage::Structured | RHIBufferUsage::ShaderResource;
-        const uint32             count            = static_cast<uint32>( _listScratchPrevWorld.size() );
+        constexpr uint32         kStride          = static_cast<uint32>( sizeof( float4x4 ) );
+        const vector<float4x4>&  listPrevWorld    = _motionHistory.getPreviousWorlds();
+        GPUSceneDirtySlots&      dirty            = _motionHistory.getDirtySlots();
+        const uint32             count            = static_cast<uint32>( listPrevWorld.size() );
         const uint64             generationBefore = _prevInstanceWorlds._generation; // 세대 번호로 본다 — 다시 만든 버퍼가 같은 핸들 번호를 받을 수 있다
-        if ( _prevInstanceWorlds.ensureCapacity( pDevice, static_cast<uint32>( sizeof( float4x4 ) ), count, kPrevWorldUsage, true, false, nullptr ) == false )
+        if ( _prevInstanceWorlds.ensureCapacity( pDevice, kStride, count, kPrevWorldUsage, true, false, nullptr ) == false )
         {
             if ( count > 0 )
                 SW_LOG_ERROR_ONCE_ID( "GPUScene.FailedCreatePrevInstanceWorld", "Failed to create the previous instance world buffer (%# instances) - objects get camera-only velocity", count );
-            _listUploadedPrevWorld.clear();
+            _prevInstanceWorldCount = 0;
             return;
         }
-        const bool bSameAsUploaded = _prevInstanceWorlds._generation == generationBefore && _listUploadedPrevWorld.size() == _listScratchPrevWorld.size() &&
-                                     Memory::compare( _listUploadedPrevWorld.data(), _listScratchPrevWorld.data(), _listScratchPrevWorld.size() * sizeof( float4x4 ) ) == 0;
-        if ( bSameAsUploaded )
-            return;
-        _prevInstanceWorlds.upload( pDevice, _listScratchPrevWorld.data(), count * static_cast<uint32>( sizeof( float4x4 ) ) );
-        _listUploadedPrevWorld.swap( _listScratchPrevWorld );
+        if ( _prevInstanceWorlds._generation != generationBefore )
+            dirty.markFullUpload();
+        if ( dirty.collectRuns( kMaxInstanceScatterRunCount, _listScratchSlotRun ) )
+        {
+            _listScratchCopyRegion.clear();
+            for ( const GPUInstanceDirtyRange& run : _listScratchSlotRun )
+            {
+                _listScratchCopyRegion.push_back( RHIBufferCopyRegion{ run._start * kStride, run._start * kStride, run._count * kStride } );
+            }
+            if ( _listScratchCopyRegion.empty() == false )
+                (void)_prevInstanceWorlds.uploadRegions( pDevice, listPrevWorld.data(), _listScratchCopyRegion );
+        }
+        else
+        {
+            _prevInstanceWorlds.upload( pDevice, listPrevWorld.data(), count * kStride );
+        }
+        dirty.clear();
+        _prevInstanceWorldCount = count;
     }
 
     void GPUScene::uploadBatchTable( IRHIDevice* pDevice, uint32 argsCount )
@@ -653,7 +669,8 @@ namespace sw
         _pUploadedInstanceOrder.reset();
         _batchInfo.release( pDevice );
         _prevInstanceWorlds.release( pDevice );
-        _listUploadedPrevWorld.clear(); // 버퍼를 다시 만들면 내용을 다시 올린다
+        _motionHistory.getDirtySlots().markFullUpload(); // 버퍼를 다시 만들면 전체를 올린다
+        _prevInstanceWorldCount = 0;
         for ( GPUMeshVertexPool& pool : _arrVertexPool )
         {
             pool.release( pDevice );

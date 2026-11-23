@@ -12,6 +12,7 @@
 #include "Core/Container/vector.h"
 
 #include "Engine/EngineMinimal.h"
+#include "Engine/Renderer/Scene/GPUSceneDirtySlots.h"
 #include "Engine/Renderer/Scene/GPUSceneSnapshot.h"
 
 namespace sw
@@ -38,18 +39,20 @@ namespace sw
         /** @brief 칸 순 사본입니다. 원소 번호가 GPUScene 칸입니다. */
         const vector<GPUInstance>& getSlots() const { return _listSlot; }
         /** @brief 올리지 않은 바뀐 칸 수입니다(같은 칸은 한 번). */
-        uint32 getDirtySlotCount() const { return static_cast<uint32>( _listDirtySlot.size() ); }
+        uint32 getDirtySlotCount() const { return _dirty.getCount(); }
         /** @brief 다음 업로드가 전체를 올려야 하면 true 입니다(처음 · 버퍼를 새로 만들었다). */
-        bool isFullUploadPending() const { return _bFullUploadPending != SW_FALSE; }
+        bool isFullUploadPending() const { return _dirty.isFullUploadPending(); }
         /** @brief 다음 업로드가 전체를 올리게 합니다(버퍼를 새로 만들어 GPU 내용을 모른다). */
-        void markFullUpload() { _bFullUploadPending = SW_TRUE; }
+        void markFullUpload() { _dirty.markFullUpload(); }
         /**
          * @brief 바뀐 칸을 이어진 구간으로 모아 @p outListRun 에 담습니다(칸 오름차순).
          * @return 전체를 올려야 하거나(`isFullUploadPending`) 구간이 @p maxRunCount 를 넘으면 false — 부르는 쪽이 사본 전체를 올린다.
          */
-        [[nodiscard]] bool collectRuns( uint32 maxRunCount, vector<GPUInstanceDirtyRange>& outListRun );
+        [[nodiscard]] bool collectRuns( uint32 maxRunCount, vector<GPUInstanceDirtyRange>& outListRun ) { return _dirty.collectRuns( maxRunCount, outListRun ); }
         /** @brief 올렸다고 기록합니다(바뀐 칸 · 전체 표시를 비운다). */
-        void clearPending();
+        void clearPending() { _dirty.clear(); }
+        /** @brief 지난번 호출 뒤 `apply` 가 바꾼 칸을 @p outListSlot 에 넘기고 비웁니다(움직임 기록이 그 칸만 본다 — 같은 칸이 되풀이될 수 있다). 업로드 여부와 무관하다. */
+        void takeChangedSlots( vector<uint32>& outListSlot );
         /** @brief 사본과 기록을 모두 버립니다(씬을 비울 때). 다음 `apply` 뒤 업로드는 전체다. */
         void reset();
 
@@ -59,8 +62,7 @@ namespace sw
 
     private:
         vector<GPUInstance> _listSlot;
-        vector<uint32>      _listDirtySlot; ///< 올리지 않은 바뀐 칸(같은 칸은 한 번 — `_listDirtyFlag`)
-        vector<uint8>       _listDirtyFlag; ///< 칸마다 `_listDirtySlot` 에 들었는지
-        uint8               _bFullUploadPending{ SW_TRUE };
+        vector<uint32>      _listChangedSlot; ///< `takeChangedSlots` 가 가져갈 칸
+        GPUSceneDirtySlots  _dirty;           ///< 올리지 않은 바뀐 칸
     };
 } // namespace sw
