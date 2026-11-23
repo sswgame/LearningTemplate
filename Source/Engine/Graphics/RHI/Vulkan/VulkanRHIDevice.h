@@ -639,11 +639,13 @@ namespace sw
         /** @brief @p device 가 텍스처 세트(네이티브 bindless 배열 둘)의 기능과 update-after-bind 한도를 갖췄는지 봅니다. 못 미치면 이유를 남기고 false 입니다(장치 고르기가 건너뛴다). */
         [[nodiscard]] static bool isBindlessCapable( VkPhysicalDevice device, const utf8* pDeviceName );
 
+        /** @brief @p device 가 켤 장치 확장(`VK_KHR_swapchain`)을 모두 갖췄는지 봅니다. 없으면 이유를 남기고 false 입니다(장치 고르기가 건너뛴다). */
+        [[nodiscard]] static bool hasRequiredDeviceExtensions( VkPhysicalDevice device, const utf8* pDeviceName );
         /**
-         * @brief 엔진이 고정으로 쓰는 컬러 첨부 포맷 중 Vulkan 필수 목록에 없는 것(`R16G16_SNORM` — G버퍼 법선)을 이 GPU 가 첨부로 쓸 수 있는지 확인합니다.
-         * @details 없으면 false 이고 폴백은 없습니다(장치 생성이 멈춘다).
+         * @brief 엔진이 고정으로 쓰는 컬러 첨부 포맷 중 Vulkan 필수 목록에 없는 것(`R16G16_SNORM` — G버퍼 법선)과 동시 첨부 수를 이 GPU 가 받는지 확인합니다.
+         * @details 없으면 이유를 남기고 false 입니다(장치 고르기가 건너뛴다). 폴백 형식은 없다.
          */
-        bool verifyRequiredColorAttachmentFormats() const;
+        [[nodiscard]] static bool hasRequiredColorAttachments( VkPhysicalDevice device, const utf8* pDeviceName, uint32 maxColorAttachments );
 
         /**
          * @brief 스왑체인을 통째로 다시 만듭니다. 창 크기가 바뀌었거나 present 가 OUT_OF_DATE 를 냈을 때 부릅니다.

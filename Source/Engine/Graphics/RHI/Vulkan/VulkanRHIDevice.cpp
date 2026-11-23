@@ -14,6 +14,7 @@
 #include "Engine/Config/EngineDefaultAssets.h"
 #include "Engine/Foundation/EngineServices.h"
 #include "Engine/Graphics/RHI/Backend/RHILiveCommandListUtil.h"
+#include "Engine/Graphics/RHI/Vulkan/VulkanPhysicalDeviceRank.h"
 #include "Engine/Graphics/RHI/Vulkan/VulkanPipelineCacheFile.h"
 #include "Engine/Graphics/RHI/Vulkan/VulkanRHICommandContext.h"
 #include "Engine/Graphics/RHI/Vulkan/VulkanRHICommandList.h"
@@ -314,8 +315,6 @@ namespace sw
                 return false;
             }
 
-            if ( verifyRequiredColorAttachmentFormats() == false )
-                return false;
             {
                 VkPhysicalDeviceProperties limitProperties{};
                 vkGetPhysicalDeviceProperties( _physicalDevice, &limitProperties );
@@ -1174,14 +1173,20 @@ namespace sw
                       { return vkEnumeratePhysicalDevices( _instance, pCount, pData ); } );
         if ( bEnumerated == false || listDevice.empty() )
             return false;
-        // 외장 GPU(저전력 선호면 내장 GPU)를 먼저 본다 — 열거 순서는 드라이버 마음이라 하이브리드 노트북에서 내장 GPU 가 먼저 나온다(DX 의 OS 선호 순서 · RHIDxgiAdapter.h 와 같은 규칙, 제조사와 무관).
-        const VkPhysicalDeviceType preferredType = bPreferMinimumPower ? VK_PHYSICAL_DEVICE_TYPE_INTEGRATED_GPU : VK_PHYSICAL_DEVICE_TYPE_DISCRETE_GPU;
-        std::stable_partition( listDevice.begin(), listDevice.end(), [preferredType]( VkPhysicalDevice device )
+        // 외장 GPU(저전력 선호면 내장 GPU)를 먼저, CPU 구현을 마지막에 본다 — 열거 순서는 드라이버 마음이라 하이브리드 노트북에서 내장 GPU 가, 리눅스에서 lavapipe 가 먼저 나온다
+        // (DX 의 OS 선호 순서 · RHIDxgiAdapter.h 와 같은 규칙, 제조사와 무관).
+        static_assert( VulkanPhysicalDeviceRank::kOther == VK_PHYSICAL_DEVICE_TYPE_OTHER && VulkanPhysicalDeviceRank::kIntegratedGPU == VK_PHYSICAL_DEVICE_TYPE_INTEGRATED_GPU &&
+                           VulkanPhysicalDeviceRank::kDiscreteGPU == VK_PHYSICAL_DEVICE_TYPE_DISCRETE_GPU && VulkanPhysicalDeviceRank::kVirtualGPU == VK_PHYSICAL_DEVICE_TYPE_VIRTUAL_GPU &&
+                           VulkanPhysicalDeviceRank::kCPU == VK_PHYSICAL_DEVICE_TYPE_CPU,
+                       "VulkanPhysicalDeviceRank 의 종류 값이 VkPhysicalDeviceType 과 다르다" );
+        const auto computeRank = [bPreferMinimumPower]( VkPhysicalDevice device ) -> uint32
         {
             VkPhysicalDeviceProperties properties{};
             vkGetPhysicalDeviceProperties( device, &properties );
-            return properties.deviceType == preferredType;
-        } );
+            return VulkanPhysicalDeviceRank::compute( static_cast<uint32>( properties.deviceType ), bPreferMinimumPower );
+        };
+        VectorUtil::stableSort( listDevice, [&computeRank]( VkPhysicalDevice left, VkPhysicalDevice right )
+        { return computeRank( left ) < computeRank( right ); } );
 
         for ( const VkPhysicalDevice& device : listDevice )
         {
@@ -1202,6 +1207,9 @@ namespace sw
             // 셰이더는 네이티브 bindless(SW_BINDLESS)로만 쿠킹한다 — 기능 · 한도가 모자란 장치(모바일에 흔하다)는 텍스처 세트를 만들지 못하고 그리지 못한다.
             if ( isBindlessCapable( device, candidateProperties.deviceName ) == false )
                 continue;
+            // 장치 확장 · 고정 첨부 형식이 모자란 장치도 여기서 건너뛴다 — 고른 뒤에 알면 다음 장치를 볼 길이 없다(장치 생성이 멈춘다).
+            if ( hasRequiredDeviceExtensions( device, candidateProperties.deviceName ) == false || hasRequiredColorAttachments( device, candidateProperties.deviceName, candidateProperties.limits.maxColorAttachments ) == false )
+                continue;
 
             uint32 queueFamilyCount{ 0 };
             vkGetPhysicalDeviceQueueFamilyProperties( device, &queueFamilyCount, nullptr );
@@ -1212,7 +1220,10 @@ namespace sw
             bool   bFound{ false };
             for ( const VkQueueFamilyProperties& queueFamily : queueFamilies )
             {
-                if ( queueFamily.queueFlags & VK_QUEUE_GRAPHICS_BIT )
+                // 프레임의 컴퓨트 패스를 그래픽스 큐에 내므로 둘 다 되는 패밀리여야 한다(명세: 그래픽스를 하는 장치에 둘 다 되는 패밀리가 하나 이상 있지만, 모든 그래픽스 패밀리가 그런 것은 아니다).
+                // https://docs.vulkan.org/spec/latest/chapters/devsandqueues.html#VkQueueFlagBits
+                constexpr VkQueueFlags kNeededQueueFlags = VK_QUEUE_GRAPHICS_BIT | VK_QUEUE_COMPUTE_BIT;
+                if ( ( queueFamily.queueFlags & kNeededQueueFlags ) == kNeededQueueFlags )
                 {
                     VkBool32   presentSupport{ false };
                     const bool bQueried = isVkSuccess( vkGetPhysicalDeviceSurfaceSupportKHR( device, queueFamilyIndex, _swapChain.getSurface(), &presentSupport ),
@@ -1251,7 +1262,7 @@ namespace sw
             _initResult = RHIInitResult::DriverUnsupported;
         }
         else if ( _physicalDevice == nullptr )
-            SW_LOG_ERROR_ID( "Vulkan.NoVulkanDeviceGraphics", "No Vulkan %#.%# device with a graphics queue that can present to this surface", constant::render::kVulkanRequiredMajor,
+            SW_LOG_ERROR_ID( "Vulkan.NoVulkanDeviceGraphics", "No Vulkan %#.%# device meets the renderer's requirements and has a graphics and compute queue that can present to this surface", constant::render::kVulkanRequiredMajor,
                              constant::render::kVulkanRequiredMinor );
         return _physicalDevice != nullptr;
     }
@@ -1314,15 +1325,29 @@ namespace sw
         return false;
     }
 
-    bool VulkanRHIDevice::verifyRequiredColorAttachmentFormats() const
+    bool VulkanRHIDevice::hasRequiredDeviceExtensions( VkPhysicalDevice device, const utf8* pDeviceName )
+    {
+        vector<VkExtensionProperties> listAvailableExt;
+        if ( enumerateVk( listAvailableExt, "vkEnumerateDeviceExtensionProperties", [device]( uint32* pCount, VkExtensionProperties* pData )
+        { return vkEnumerateDeviceExtensionProperties( device, nullptr, pCount, pData ); } ) == false )
+            return false;
+        for ( const utf8* pExtension : s_listDeviceExtensions )
+        {
+            if ( VulkanRHIUtil::hasExtension( listAvailableExt, pExtension ) )
+                continue;
+            SW_LOG_WARNING_ID( "Vulkan.SkippingDeviceExtension", "Skipping Vulkan device '%#': it has no %#", pDeviceName, pExtension );
+            return false;
+        }
+        return true;
+    }
+
+    bool VulkanRHIDevice::hasRequiredColorAttachments( VkPhysicalDevice device, const utf8* pDeviceName, uint32 maxColorAttachments )
     {
         // MRT 한도 — G버퍼(판 3)가 여섯 장을 함께 쓴다. Vulkan 의 최소 보장은 4 라 장치마다 확인한다(DX · GL · WebGPU 는 8 을 보장한다).
-        VkPhysicalDeviceProperties deviceProperties{};
-        vkGetPhysicalDeviceProperties( _physicalDevice, &deviceProperties );
-        if ( deviceProperties.limits.maxColorAttachments < kMaxColorAttachments )
+        if ( maxColorAttachments < kMaxColorAttachments )
         {
-            SW_LOG_ERROR_ID( "Vulkan.GPUColorAttachmentLimit", "This GPU binds %# color attachments at once, the renderer needs %# (G-buffer)", deviceProperties.limits.maxColorAttachments,
-                             kMaxColorAttachments );
+            SW_LOG_WARNING_ID( "Vulkan.GPUColorAttachmentLimit", "Skipping Vulkan device '%#': it binds %# color attachments at once, the renderer needs %# (G-buffer)", pDeviceName, maxColorAttachments,
+                               kMaxColorAttachments );
             return false;
         }
         // 화면 속도 · 왜곡 첨부(R16G16 실수)도 G버퍼 노멀(R16G16 부호 정규화)처럼 샘플 가능한 컬러 첨부여야 한다.
@@ -1330,11 +1355,12 @@ namespace sw
         for ( const VkFormat format : arrRequired )
         {
             VkFormatProperties props{};
-            vkGetPhysicalDeviceFormatProperties( _physicalDevice, format, &props );
+            vkGetPhysicalDeviceFormatProperties( device, format, &props );
             const VkFormatFeatureFlags kNeeded = VK_FORMAT_FEATURE_COLOR_ATTACHMENT_BIT | VK_FORMAT_FEATURE_SAMPLED_IMAGE_BIT;
             if ( ( props.optimalTilingFeatures & kNeeded ) != kNeeded )
             {
-                SW_LOG_ERROR_ID( "Vulkan.GPUCannotUseVulkan", "This GPU cannot use Vulkan format %# as a sampled color attachment (G-buffer normal)", static_cast<uint32>( format ) );
+                SW_LOG_WARNING_ID( "Vulkan.GPUCannotUseVulkan", "Skipping Vulkan device '%#': it cannot use format %# as a sampled color attachment (G-buffer normal)", pDeviceName,
+                                   static_cast<uint32>( format ) );
                 return false;
             }
         }
