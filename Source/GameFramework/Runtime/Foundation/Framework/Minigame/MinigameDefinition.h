@@ -13,6 +13,7 @@
 #include "Core/Container/string.h"
 #include "Core/Container/vector.h"
 #include "Core/Foundation/Types.h"
+#include "Core/Math/VectorMath.h"
 #include "Core/Name/hashed_string.h"
 
 #include "Engine/Reflection/ReflectionMacros.h"
@@ -73,6 +74,8 @@ namespace sw
         vector<hashed_string> _listCatalog{}; ///< 기능이 읽을 데이터 종류(`kDataKind`). 기능이 적지 않은 종류를 읽거나 적은 종류를 아무도 읽지 않으면 켜기가 진다
         PROPERTY( Name = "save" )
         MinigameSavePolicy _savePolicy{ MinigameSavePolicy::Allowed }; ///< 안에서 세이브를 허락하는지
+        PROPERTY()
+        float3 _subLevelOffset{}; ///< 하위 레벨을 얹을 자리(입구 사물)에서 맵 원점까지의 어긋남(미터). 맵의 정문이 원점이 아닐 때 적는다
         PROPERTY( Name = "localPlayers", Min = 1, Max = 4 )
         int32 _localPlayerCount{ 1 }; ///< 한 화면에서 함께 하는 사람 수. 2 이상이면 켜는 동안 입력 사용자를 연다(`InputManager::openLocalUsers`)
         PROPERTY( Min = -1 )

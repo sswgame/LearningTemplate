@@ -105,7 +105,7 @@
 		<entity id="304" name="MinigamePortals">
 			<GameObject _schemaVersion="0" _name="MinigamePortals" _bActive="true" _bAlwaysLoaded="true">
 				<_listComponent>
-					<MinigamePortalSpawnerComponent _localID="4824942144226795713" _localPosition="-24,1,32" _localRotation="0,0,0" _localScale="1,1,1" _attachOwner="None" _attachComponent="None" _portalPrefab="game/playground/prefabs/minigameportal.prefab.xml" _columnCount="8" _preloadPrefab="game/playground/prefabs/minigamepreload.prefab.xml" _slotSpacing="7,7" />
+					<MinigamePortalSpawnerComponent _localID="4824942144226795713" _localPosition="-24,0,32" _localRotation="0,0,0" _localScale="1,1,1" _attachOwner="None" _attachComponent="None" _portalPrefab="game/playground/prefabs/minigameportal.prefab.xml" _columnCount="8" _preloadPrefab="game/playground/prefabs/minigamepreload.prefab.xml" _slotSpacing="7,7" />
 				</_listComponent>
 			</GameObject>
 		</entity>

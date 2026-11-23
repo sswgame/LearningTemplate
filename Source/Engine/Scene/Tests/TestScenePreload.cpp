@@ -11,6 +11,25 @@
 
 using namespace sw;
 
+/** @brief [SceneManagerTest] 월드 플레이 알림은 바뀔 때만 한 번씩 오고, 구독을 놓으면 오지 않는다(활성 씬이 없어도 온다) */
+SW_TEST_CASE( SceneManagerTest, WorldPlayChangesAreBroadcastOnce )
+{
+    SceneManager sceneManager;
+    vector<bool> listPlaying;
+    Subscription subscription = sceneManager.onWorldPlayChanged().add( SW_DELEGATE_LAMBDA( Delegate<void( bool )>, [&listPlaying]( bool bPlaying )
+    { listPlaying.push_back( bPlaying ); } ) );
+    sceneManager.setWorldPlaying( true );
+    sceneManager.setWorldPlaying( true );
+    sceneManager.setWorldPlaying( false );
+    SW_REQUIRE_TRUE( listPlaying.size() == 2 );
+    SW_EXPECT_TRUE( listPlaying[0] );
+    SW_EXPECT_FALSE( listPlaying[1] );
+    subscription.reset();
+    sceneManager.setWorldPlaying( true );
+    SW_EXPECT_TRUE( listPlaying.size() == 2 );
+    sceneManager.setWorldPlaying( false );
+}
+
 /** @brief [ScenePreloadTest] 목록이 있는 씬은 미리 읽기를 걸고(두 번 불러도 같다), 목록이 없거나 빈 씬은 걸지 않는다 */
 SW_TEST_CASE( ScenePreloadTest, PreloadsOnlyScenesWithAList )
 {

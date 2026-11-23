@@ -15,6 +15,8 @@
  *          `SubLevel` 은 들어갈 때의 활성 씬에 맵을 하위 레벨(이름 = 미니게임 이름)로 더하고 나올 때 뺀다. 자리는 진입을 건 사물(트리거)의 변환이다 — 언리얼 레벨 인스턴스 액터 자리,
  *          얹을 자리 없이는 들어가지 않는다(원점에 엉뚱하게 얹히지 않게). 바탕 틱은 멈추지 않는다 — 미니게임 입력은 `inputContexts` 레이어가 위에서 가린다.
  *          장치 밖 씬 이동(세이브 불러오기 · 타이틀로 · 시나리오의 씬 열기)이 오면 칸 스택과 미니게임 범위를 비운다 — 씬 매니저의 받아들임 알림으로 이 흐름이 요청하지 않은 게임 이동을 듣는다.
+ *          월드가 플레이를 시작할 때 활성 씬이 씬 전환 미니게임의 맵이면(에디터가 미니게임 맵을 편집하다 플레이 · 모듈 리로드 뒤 다시 시작) 그 미니게임 안으로 시작하고, 멈추면 비운다 —
+ *          언리얼 Lyra 가 월드 설정의 기본 경험으로 에디터 플레이를 여는 자리다. 실행 전역 변수로 들어간 것과 같은 칸(돌아올 씬 없음)이다.
  *          진입: 개발 명령 `minigame.enter <이름> [얹을 사물]` · `minigame.switch <이름>` · `minigame.leave [결과]`, 사물의 `MinigameTriggerComponent`(틱 뒤에 맡기고 `update` 가
  *          틱 밖에서 처리 — 스냅숏은 씬을 도는 동안 찍지 않는다), 실행 전역 변수 `-gv_firstMinigame=<이름>`(첫 씬 `gv_firstScene` 보다 위 — `enterFirstMinigame`).
  */
@@ -191,6 +193,12 @@ namespace sw
         void onReturnLoaded( Scene* pScene );
         /** @brief 씬 로드 받아들임 알림입니다. 이 흐름이 요청하지 않은 게임 이동이면 칸 스택과 미니게임을 비웁니다(`clearForOutsideTravel`). */
         void onSceneLoadRequested( const string& scenePath, SceneLoadKind kind, const TaskFuture<Scene*>& future );
+        /** @brief 월드의 플레이가 시작(활성 씬의 `beginPlay` 앞) · 끝(`endPlay` 뒤)났습니다. 시작이면 활성 씬의 맵을 가진 미니게임을 켜고, 끝이면 모두 비웁니다. */
+        void onWorldPlayChanged( bool bPlaying );
+        /** @brief 활성 씬이 씬 전환 미니게임 하나의 맵이면 그 미니게임을 칸(돌아올 씬 없음)으로 켭니다. 여러 미니게임의 맵이면 경고하고 켜지 않습니다. */
+        void enterMinigameOfActiveScene();
+        /** @brief 팩의 미니게임 이름을 모읍니다(파일 이름순). 폴더를 나열하지 못하면 까닭은 나열이 남기고 빈 목록입니다. */
+        void collectNames( vector<string>& outListName ) const;
         /** @brief 장치 밖 씬 이동 — 기다리던 진입 · 나가기, 칸 스택, 켜진 미니게임을 모두 버린다(맵은 바꾸지 않는다 — 이동이 이미 들어왔다). */
         void clearForOutsideTravel( const string& scenePath );
         /** @brief @p name 의 정의를 읽고 이름 · 참조를 봅니다. 지면 알리고 false 입니다. */
@@ -230,6 +238,7 @@ namespace sw
         FinishedDelegate               _onFinished;            ///< 결과를 받는 함수 목록
         MinigameResult                 _lastResult;            ///< 마지막으로 넘긴 결과
         Subscription                   _sceneLoadRequested;    ///< 씬 로드 받아들임 알림의 구독(초기화가 걸고 종료가 푼다)
+        Subscription                   _worldPlayChanged;      ///< 월드 플레이 알림의 구독(초기화가 걸고 종료가 푼다)
         uint32                         _leakCount;             ///< 끈 범위들이 남긴 것의 합
         optional<MinigameResult>       _pendingRestoredResult; ///< 찍은 씬을 되살린 프레임의 결과 — 되살린 오브젝트의 상태 적용 · 시작(onBeginPlay) 뒤인 다음 `update` 에 알린다
         uint32                         _restoreCount;          ///< 돌아올 자리 복원 수

@@ -25,6 +25,7 @@
 #include "Engine/Scene/Scene.h"
 #include "Engine/Scene/SceneManager.h"
 #include "Engine/Scene/SceneSubLevelSubsystem.h"
+#include "Engine/Serialization/Inherit/AssetRedirect.h"
 #include "Engine/Serialization/Serializer/SerializePurpose.h"
 
 #include "GameFramework/Runtime/Foundation/Framework/Flow/GameInstance.h"
@@ -265,6 +266,7 @@ namespace sw
         , _onFinished{}
         , _lastResult{}
         , _sceneLoadRequested{}
+        , _worldPlayChanged{}
         , _leakCount{ 0 }
         , _pendingRestoredResult{}
         , _restoreCount{ 0 }
@@ -280,6 +282,8 @@ namespace sw
         // 누가 요청했든 게임 이동을 듣는다 — 세이브 불러오기 · 타이틀로 · 시나리오의 씬 열기가 칸 스택을 낡게 만든다(씬 흐름 `GameSceneFlow` 와 같은 알림).
         SceneManager* const pSceneManager = game::findSubsystem<SceneManager>();
         if ( pSceneManager != nullptr )
+            _worldPlayChanged = pSceneManager->onWorldPlayChanged().add( SW_DELEGATE_METHOD( Delegate<void( bool )>, &MinigameFlow::onWorldPlayChanged, this ) );
+        if ( pSceneManager != nullptr )
             _sceneLoadRequested = pSceneManager->onSceneLoadRequested().add( SW_DELEGATE_METHOD( SceneLoadRequestedHandler, &MinigameFlow::onSceneLoadRequested, this ) );
         return SubsystemInitResult::Succeeded;
     }
@@ -287,6 +291,7 @@ namespace sw
     void MinigameFlow::shutdownSubsystem()
     {
         _sceneLoadRequested.reset();
+        _worldPlayChanged.reset();
         _pendingEnter.clear();
         _pendingPlacement      = nullopt;
         _pendingLeave          = nullopt;
@@ -314,9 +319,9 @@ namespace sw
         return packConfig.resolve( relativeBuilder.view() );
     }
 
-    void MinigameFlow::collectPortals( vector<MinigameDefinition>& outListPortal ) const
+    void MinigameFlow::collectNames( vector<string>& outListName ) const
     {
-        outListPortal.clear();
+        outListName.clear();
         vector<AssetID> listAsset;
         if ( AssetIO::collectAssets( AssetID{ _packConfig.resolve( kMinigameFolder ) }, kMinigameSuffix, listAsset ) == AssetFolderListing::Failed )
             return; // 까닭은 나열이 남겼다. 폴더가 없는 팩은 미니게임이 없다
@@ -324,7 +329,17 @@ namespace sw
         {
             string_view fileName;
             FileUtil::getFileNamePart( assetID.view(), fileName );
-            const string_view  name = fileName.substr( 0, fileName.size() - string_view( kMinigameSuffix ).size() );
+            outListName.push_back( string( fileName.substr( 0, fileName.size() - string_view( kMinigameSuffix ).size() ) ) );
+        }
+    }
+
+    void MinigameFlow::collectPortals( vector<MinigameDefinition>& outListPortal ) const
+    {
+        outListPortal.clear();
+        vector<string> listName;
+        collectNames( listName );
+        for ( const string& name : listName )
+        {
             MinigameDefinition definition;
             if ( loadDefinition( name, definition ) && definition.hasPortal() )
                 (void)MinigameDefinition::insertPortal( outListPortal, std::move( definition ) ); // 겹친 자리는 알렸다
@@ -474,8 +489,9 @@ namespace sw
             activateTop(); // 만든 돌아올 자리(저장 막기 포함)는 여기서 버려진다
             return false;
         }
-        const string mapPath = definition._map.get();
-        const bool   bSub    = definition._entry == MinigameEntry::SubLevel;
+        const string mapPath        = definition._map.get();
+        const bool   bSub           = definition._entry == MinigameEntry::SubLevel;
+        const float3 subLevelOffset = definition._subLevelOffset;
         _stack.push( MinigameFrame{ std::move( definition ), std::move( returnPoint ) } );
         _stack.findTop()->updateSaveBlock( _owner.getSaveLock() );
         _pActive            = std::move( pScope );
@@ -489,8 +505,10 @@ namespace sw
         if ( bSub )
         {
             // 하위 레벨 이름은 미니게임 이름이다 — 나올 때 그 이름으로 뺀다. 자리는 진입을 건 사물의 변환이다(언리얼 레벨 인스턴스 액터).
-            SceneSubLevelSubsystem& subLevels = pScene->getObjectManager()->getSubsystem<SceneSubLevelSubsystem>();
-            if ( subLevels.addSubLevel( *pScene, name, mapPath, *placement ) == false )
+            SceneSubLevelSubsystem& subLevels    = pScene->getObjectManager()->getSubsystem<SceneSubLevelSubsystem>();
+            SubLevelPlacement       mapPlacement = *placement;
+            mapPlacement._position               = mapPlacement._position + subLevelOffset;
+            if ( subLevels.addSubLevel( *pScene, name, mapPath, mapPlacement ) == false )
             {
                 SW_LOG_ERROR_ID( "MinigameFlow.SubLevelRefused", "Minigame '%#': the map '%#' could not be added to the active scene (see the messages above)", name, mapPath.c_str() );
                 rollback();
@@ -807,6 +825,59 @@ namespace sw
         if ( _stack.isEmpty() && isLeaving() == false )
             return;
         clearForOutsideTravel( scenePath );
+    }
+
+    void MinigameFlow::onWorldPlayChanged( bool bPlaying )
+    {
+        if ( bPlaying )
+        {
+            enterMinigameOfActiveScene();
+            return;
+        }
+        // 컴포넌트가 끝난 뒤다 — 에디터가 멈춘 플레이의 범위 · 칸 · 맡긴 일이 다음 플레이에 남지 않게 한다.
+        _pendingEnter.clear();
+        _pendingPlacement      = nullopt;
+        _pendingRestoredResult = nullopt;
+        if ( _stack.isEmpty() == false || isLeaving() )
+            clearForOutsideTravel( "(the world stopped playing)" );
+    }
+
+    void MinigameFlow::enterMinigameOfActiveScene()
+    {
+        const Scene* const pScene = MinigameFlowInternal::findActivePlayScene();
+        if ( pScene == nullptr || pScene->getSourcePath().empty() || _stack.isEmpty() == false || isEntering() || isLeaving() )
+            return;
+        const string   sceneID = AssetRedirect::toCurrentID( pScene->getSourcePath() );
+        string         found;
+        vector<string> listName;
+        collectNames( listName );
+        for ( const string& name : listName )
+        {
+            MinigameDefinition definition;
+            const bool         bSameMap = MinigameDefinition::loadFromAsset( AssetID{ makeAssetPath( _packConfig, name ) }, definition ) && definition._entry == MinigameEntry::SceneSwitch &&
+                                  definition._map.isSet() && AssetRedirect::toCurrentID( definition._map.get() ) == sceneID;
+            if ( bSameMap == false )
+                continue;
+            if ( found.empty() == false )
+            {
+                SW_LOG_WARNING_ID( "MinigameFlow.SceneOfSeveralMinigames", "Scene '%#' is the map of minigames '%#' and '%#' - the world plays it without a minigame", sceneID.c_str(), found.c_str(), name.c_str() );
+                return;
+            }
+            found = name;
+        }
+        MinigameDefinition definition;
+        if ( found.empty() || loadDefinition( found, definition ) == false || validateEntry( definition, MinigameFlowInternal::isNetSessionActive() ) == false || validateDepth( found ) == false )
+            return; // 미니게임의 맵이 아니거나 까닭을 남겼다
+        unique_ptr<GameFeatureScope> pScope = activate( definition );
+        if ( pScope == nullptr )
+        {
+            SW_LOG_ERROR_ID( "MinigameFlow.NotActivated", "Minigame '%#' of the active scene could not be activated (see the messages above)", found.c_str() );
+            return;
+        }
+        _stack.push( MinigameFrame{ std::move( definition ), MinigameReturnPoint{ MinigameEntranceReturn{} } } );
+        _stack.findTop()->updateSaveBlock( _owner.getSaveLock() );
+        _pActive = std::move( pScope );
+        SW_LOG_INFO_ID( "MinigameFlow.EnteredOfScene", "The world starts playing in minigame '%#' - the active scene is its map", found.c_str() );
     }
 
     void MinigameFlow::clearForOutsideTravel( const string& scenePath )

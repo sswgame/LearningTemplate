@@ -1,18 +1,19 @@
 <?asset guid="48d9122f05cf4e408c5693aee28c27ea"?>
 <!-- 허브의 미니게임 입구 — MinigamePortalSpawnerComponent(maps/hub 의 MinigamePortals)가 portalSlot 을 적은 미니게임 정의마다 하나씩 세우고 _minigame 을 채운다.
+     원점은 바닥이다 — 하위 레벨 미니게임의 맵을 이 자리(+ 정의의 subLevelOffset)에 얹는다.
      Player 태그만 받고 다시 들어갈 수 있으며(_bOnce false), 안에서 나타난 플레이어(돌아와 복원된 자리)는 세지 않는다(_spawnInside Ignore). -->
 <Prefab formatVersion="1" name="MinigamePortal">
 	<GameObject _schemaVersion="0" _name="MinigamePortal" _bActive="true" _bAlwaysLoaded="true">
 		<_listComponent>
 			<RigidBodyComponent _localID="7198733165449302788" _localPosition="0,0,0" _localRotation="0,0,0" _localScale="1,1,1" _attachOwner="None" _attachComponent="None" _bodyType="Static" _layer="Trigger" _material="Default" _mass="0" _bTrigger="true">
 				<_listShape>
-					<PhysicsShapeDesc3D _type="Box" _halfExtents="1.5,1,1.5" _radius="0.5" _halfHeight="0.5" _localPosition="0,0,0" _localRotation="0,0,0" _material="Default">
+					<PhysicsShapeDesc3D _type="Box" _halfExtents="1.5,1,1.5" _radius="0.5" _halfHeight="0.5" _localPosition="0,1,0" _localRotation="0,0,0" _material="Default">
 						<_listPoint />
 						<_listIndex />
 					</PhysicsShapeDesc3D>
 				</_listShape>
 			</RigidBodyComponent>
-			<MeshComponent _localID="163493842152903304" _localPosition="0,-0.95,0" _localRotation="0,0,0" _localScale="3,0.1,3" _attachOwner="None" _attachComponent="#63e709ac676dd304" _meshID="Cube" _materialPath="engine/materials/prototypegrid_orange.material" _boundsRadius="0.866" />
+			<MeshComponent _localID="163493842152903304" _localPosition="0,0.05,0" _localRotation="0,0,0" _localScale="3,0.1,3" _attachOwner="None" _attachComponent="#63e709ac676dd304" _meshID="Cube" _materialPath="engine/materials/prototypegrid_orange.material" _boundsRadius="0.866" />
 			<MinigameTriggerComponent _localID="8526823632005175649" _activatorTag="Player" _bOnce="false" _spawnInside="Ignore" _minigame="" />
 		</_listComponent>
 	</GameObject>

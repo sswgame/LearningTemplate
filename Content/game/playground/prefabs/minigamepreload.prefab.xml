@@ -5,7 +5,7 @@
 		<_listComponent>
 			<RigidBodyComponent _localID="7198733165449302788" _localPosition="0,0,0" _localRotation="0,0,0" _localScale="1,1,1" _attachOwner="None" _attachComponent="None" _bodyType="Static" _layer="Trigger" _material="Default" _mass="0" _bTrigger="true">
 				<_listShape>
-					<PhysicsShapeDesc3D _type="Box" _halfExtents="3.4,1,6" _radius="0.5" _halfHeight="0.5" _localPosition="0,0,0" _localRotation="0,0,0" _material="Default">
+					<PhysicsShapeDesc3D _type="Box" _halfExtents="3.4,1,6" _radius="0.5" _halfHeight="0.5" _localPosition="0,1,0" _localRotation="0,0,0" _material="Default">
 						<_listPoint />
 						<_listIndex />
 					</PhysicsShapeDesc3D>

@@ -75,6 +75,7 @@ namespace sw
         , _saveBlockReason{}
         , _onSceneObjectsInvalidated{}
         , _onSceneLoadRequested{}
+        , _onWorldPlayChanged{}
         , _netLink{}
         , _pScenePreload{}
         , _preloadHeldFrames{ 0 }
@@ -1116,13 +1117,15 @@ namespace sw
         // 플레이를 멈추면 영속 표시를 잊는다(유니티는 플레이 모드를 나가면 영속 씬을 비운다). 편집 중 씬을 바꿀 때 옮겨 가면 안 된다.
         if ( bPlaying == false )
             _listPersistentObjectID.clear();
-        GameObjectManager* pObjects = ( _pActiveScene != nullptr ) ? _pActiveScene->getObjectManager() : nullptr;
-        if ( pObjects == nullptr )
-            return;
         if ( bPlaying )
+            _onWorldPlayChanged.broadcast( true );
+        GameObjectManager* const pObjects = ( _pActiveScene != nullptr ) ? _pActiveScene->getObjectManager() : nullptr;
+        if ( pObjects != nullptr && bPlaying )
             pObjects->beginPlay();
-        else
+        else if ( pObjects != nullptr )
             pObjects->endPlay();
+        if ( bPlaying == false )
+            _onWorldPlayChanged.broadcast( false );
     }
 
     /**

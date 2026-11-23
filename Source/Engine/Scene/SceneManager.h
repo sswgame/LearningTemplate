@@ -50,6 +50,9 @@ namespace sw
     using SceneLoadRequestedHandler  = Delegate<void( const string& scenePath, SceneLoadKind kind, const TaskFuture<Scene*>& future )>;
     using SceneLoadRequestedDelegate = MulticastDelegate<void( const string& scenePath, SceneLoadKind kind, const TaskFuture<Scene*>& future )>;
 
+    /** @brief 월드의 플레이가 바뀐다는 알림입니다 — 시작은 활성 씬의 `beginPlay` 앞, 끝은 `endPlay` 뒤에 옵니다(`SceneManager::setWorldPlaying`). */
+    using WorldPlayChangedDelegate = MulticastDelegate<void( bool bPlaying )>;
+
     /** @brief 미리보기 씬이 아닌 씬(또는 없는 키)을 가리키는 키입니다. */
     inline constexpr uint32 kInvalidSceneKey = 0;
 
@@ -220,6 +223,8 @@ namespace sw
         void setWorldPlaying( bool bPlaying );
         /** @brief 월드가 플레이 중이면 true 입니다. */
         bool isWorldPlaying() const { return _bWorldPlaying; }
+        /** @brief 월드의 플레이가 바뀔 때 부를 함수 목록입니다(언리얼 `FWorldDelegates::OnWorldBeginPlay` · `FEditorDelegates::EndPIE` 자리) — 씬의 컴포넌트가 시작하기 앞 · 끝난 뒤에 범위를 켜고 끈다. */
+        WorldPlayChangedDelegate& onWorldPlayChanged() { return _onWorldPlayChanged; }
         /**
          * @brief 에디터 모듈을 리로드하는 동안 플레이 전 편집 씬의 롤백 스냅샷을 맡습니다. 앞에 맡긴 것은 버립니다.
          * @details 월드는 리로드 너머로 계속 돈다 — 새 에디터 이미지가 `takePlaySnapshot` 으로 되찾아 Stop 이 편집 씬을 되돌린다. 형이 엔진 것이라
@@ -378,6 +383,7 @@ namespace sw
         string                          _saveBlockReason;           ///< 비어 있지 않으면 씬 저장을 막는다(`setSaveBlockReason`)
         SceneObjectsInvalidatedDelegate _onSceneObjectsInvalidated; ///< `onSceneObjectsInvalidated`
         SceneLoadRequestedDelegate      _onSceneLoadRequested;      ///< `onSceneLoadRequested`
+        WorldPlayChangedDelegate        _onWorldPlayChanged;        ///< `onWorldPlayChanged`
         NetLinkValue                    _netLink;                   ///< 새로 받아들이는 씬에 올릴 넷 링크(`setNetLink`). 비어 있으면 올리지 않는다
 
         unique_ptr<PreloadSet>        _pScenePreload;     ///< 로드 중이거나 끝난 지 얼마 안 된 씬의 프리로드. 없으면 nullptr
