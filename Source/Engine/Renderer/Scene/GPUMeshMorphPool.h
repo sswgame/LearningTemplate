@@ -234,8 +234,6 @@ namespace sw
         uint32 getSkinBoneCount() const { return _skinBoneCount; }
         /** @brief 결과 구간을 받은 스킨 인스턴스 수입니다. */
         uint32 getSkinInstanceCount() const { return static_cast<uint32>( _listSkinRow.size() ); }
-        /** @brief 풀에 든 스킨 원본(스킨 데이터 번호가 다른 메시) 수입니다. 같은 캐릭터의 사본이 레스트를 나눠 쓰는지 테스트가 확인합니다. */
-        uint32 getSkinSourceCount() const { return static_cast<uint32>( _mapSkinSource.size() ); }
         /** @brief 업로드한 스킨 원본의 정점 수 합입니다. */
         uint32 getSkinSourceVertexCount() const { return _skinSourceVertexCount; }
         /** @brief 스킨 원본의 레스트 버퍼입니다(원소 하나가 float4 셋 — 원본마다 레스트 정점 구간과 모프 차이 구간이 있습니다). */

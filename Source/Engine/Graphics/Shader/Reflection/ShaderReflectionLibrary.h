@@ -75,9 +75,6 @@ namespace sw
         /** @brief 캐시를 비웁니다(셰이더를 다시 쿠킹한 뒤, 라이브 셰이더를 편집한 뒤, 엔진 종료 때 `ShaderCache::shutdown`). 캐시 세대가 증가합니다. */
         static void clearCache();
 
-        /** @brief 지금 캐시에 있는 매니페스트 수입니다(RHI 폴더마다 하나이고, 없는 파일도 빈 채로 하나입니다). 진단과 테스트용입니다. */
-        static uint32 getCachedManifestCount();
-
         /**
          * @brief 캐시를 비운 횟수입니다. 이 값이 바뀌면 전에 얻은 리플렉션은 낡았을 수 있습니다.
          * @details 머티리얼은 셰이더 레이아웃을 맞출 때 이 값을 적어 두고, 바뀌면 다시 맞춥니다(`Material::isShaderLayoutSynced`).
@@ -103,8 +100,6 @@ namespace sw
 
         /** @brief 매니페스트를 모두 버리고 세대를 올립니다(`ShaderReflectionLibrary::clearCache` 의 본문, 셰이더 캐시 종료). */
         void clear() SW_EXCLUDES_LOCK( _mutex );
-        /** @brief 지금 든 매니페스트 수입니다. */
-        uint32 getCount() SW_EXCLUDES_LOCK( _mutex );
         /** @brief 비운 횟수입니다. */
         uint32 getGeneration() const { return _generation.load( std::memory_order_acquire ); }
 

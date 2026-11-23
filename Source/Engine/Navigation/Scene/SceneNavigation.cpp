@@ -1380,6 +1380,8 @@ namespace sw
                     formatstring( label.data(), label.capacity(), "%# routes", name );
                     writer.addLineFormat( label, "%# coarse, %# virtual, %# replans", stats._coarseRouteAgentCount, stats._virtualAgentCount, stats._replanCount );
                 }
+                const uint32 pendingPathCount = pManager->getSubsystem<SceneNavigation>().getPendingPathRequestCount();
+                writer.addLineFormat( "path requests waiting", "%#", pendingPathCount );
                 const DebugHUDRegistry*      pRegistry = engine::findSubsystem<DebugHUDRegistry>();
                 const GameObjectHandle       target    = pRegistry != nullptr ? pRegistry->getTarget() : GameObjectHandle{};
                 const GameObject*            pTarget   = target.isValid() ? pManager->findGameObjectByID( target.objectID() ) : nullptr;

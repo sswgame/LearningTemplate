@@ -11,8 +11,11 @@
 #include "Engine/Animation/Scene/AnimationSystem.h"
 #include "Engine/Automation/Watch/AutomationWatch.h"
 #include "Engine/Automation/Watch/AutomationWatchComponent.h"
+#include "Engine/Console/DebugHUDRegistry.h"
+#include "Engine/Console/DebugHUDSectionFormat.h"
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Object/GameObject/GameObjectManager.inl"
+#include "Engine/Scene/SceneManager.h"
 
 namespace sw
 {
@@ -20,6 +23,9 @@ namespace sw
     {
         struct AnimationWatchesInternal
         {
+            /** @brief HUD 섹션 순서 — 물리(50) 바로 아래다. */
+            static constexpr int32 kSectionOrder = 52;
+
             /** @brief 지난 프레임에 일한 유닛 가운데 군중 방식이 @p mode 인 수를 담습니다. 씬이 없으면 false 입니다. */
             [[nodiscard]] static bool readCrowdModeCount( const GameObjectManager* pManager, AnimationCrowdMode mode, float64& outValue )
             {
@@ -115,12 +121,34 @@ namespace sw
                 outValue.setText( pAnimator->getCurrentStateName().c_str() );
                 return true;
             }
+
+            /** @brief 디버그 HUD 범주 `animation` — 군중 묶음 · 정점 애니메이션 · 예산이 예상한 평가 비용입니다(감시 값 `Animation.*` 이 아래에 붙는다). */
+            static void writeSection( DebugHUDSectionWriter& writer )
+            {
+                const GameObjectManager* pManager = engine::findActiveObjectManager();
+                if ( pManager == nullptr )
+                {
+                    writer.addLine( "animation", "no active scene" );
+                    return;
+                }
+                const AnimationSystem& animation = pManager->getSubsystem<AnimationSystem>();
+                uint32                 visibleMemberCount{ 0 };
+                for ( const unique_ptr<AnimationCrowdBucket>& pBucket : animation.getCrowd().getBuckets() )
+                {
+                    visibleMemberCount += pBucket->getVisibleMemberCount();
+                }
+                writer.addLineFormat( "crowd buckets", "%# (%# evaluated, %# visible members)", static_cast<uint32>( animation.getCrowd().getBuckets().size() ), animation.getCrowd().getEvaluatedBucketCount(),
+                                      visibleMemberCount );
+                writer.addLineFormat( "vertex animation meshes", "%#", animation.getCrowd().getVertexAnimationMeshCount() );
+                writer.addLineFormat( "expected evaluation", "%.0f us", static_cast<float64>( animation.getExpectedEvaluationMicroseconds() ) );
+            }
         };
     } // namespace
 } // namespace sw
 
 namespace sw
 {
+    SW_DEBUG_HUD_CATEGORY( animation, "animation", "Animation (crowd, budget)", AnimationWatchesInternal::kSectionOrder, DebugHUDSectionFlag::kNone, &AnimationWatchesInternal::writeSection, nullptr, "Animation" );
     SW_AUTOMATION_WATCH( animationCrowdSharedMeshes, "Animation.CrowdSharedMeshes", "Units that shared a crowd bucket's pose last frame", &AnimationWatchesInternal::readCrowdSharedMeshes );
     SW_AUTOMATION_WATCH( animationCrowdSoloMeshes, "Animation.CrowdSoloMeshes", "Crowd-sharing skeletalMeshes that evaluated alone last frame (a state that cannot be shared)",
                          &AnimationWatchesInternal::readCrowdSoloMeshes );

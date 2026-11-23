@@ -62,7 +62,7 @@ namespace sw
         {
             if ( engine::areEngineServicesBound() == false )
                 return false;
-            outValue = static_cast<float64>( engine::getSubsystem<InputManager>().getRawMouseEventCount() );
+            outValue = static_cast<float64>( engine::getSubsystem<InputManager>().getRawMouseEventCount().get() );
             return true;
         }
 

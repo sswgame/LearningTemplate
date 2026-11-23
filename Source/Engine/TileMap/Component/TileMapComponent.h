@@ -100,8 +100,6 @@ namespace sw
         const vector<PhysicsBodyHandle>& getChunkBodies() const { return _listChunkBody; }
         /** @brief 청크 수입니다(배치를 만들지 않은 빈 청크 포함). */
         uint32 getChunkCount() const { return static_cast<uint32>( _listChunkBatch.size() ); }
-        /** @brief 그리기 배치를 만든 청크 수입니다. */
-        uint32 getBuiltChunkCount() const;
         /** @brief 맵 데이터입니다. */
         const TileMapXMLData& getTileMap() const { return _map; }
         /** @brief 타일셋입니다. 읽기 전에는 빈 타일셋(브러시 없음)입니다. */

@@ -27,6 +27,7 @@
 #include "Engine/Input/Devices/MouseDevice.h"
 #include "Engine/Input/InputManager.h"
 #include "Engine/Object/Component/CameraComponent.h"
+#include "Engine/Object/Component/SceneTransformHierarchy.h"
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Object/GameObject/GameObjectManager.inl"
 #include "Engine/Object/GameObject/Registry/CameraRegistry.h"
@@ -213,6 +214,7 @@ namespace sw
                 }
                 writer.addLineFormat( "objects", "%#", count._objectCount );
                 writer.addLineFormat( "components", "%#", count._componentCount );
+                writer.addLineFormat( "dirty transform roots", "%#", static_cast<uint32>( pManager->getTransformHierarchy().getDirtyRootCount() ) );
             }
 
             static void writePhysics( DebugHUDSectionWriter& writer )
@@ -264,6 +266,7 @@ namespace sw
                     const int2 position = pMouse->getPosition();
                     writer.addLineFormat( "mouse", "%#, %#%#", position._x, position._y, input.isMouseLockActive() ? " (locked)" : "" );
                 }
+                writer.addLineFormat( "raw events waiting", "%#", input.getPendingRawEventCount() );
                 if ( input.isVirtualInputAttached() )
                     writer.addLine( "virtual", input.isOSInputSuppressed() ? "exclusive" : "mixed" );
             }
