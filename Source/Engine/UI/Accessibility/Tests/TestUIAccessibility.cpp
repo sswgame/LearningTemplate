@@ -6,6 +6,9 @@
 #include "Engine/UI/Accessibility/UIAccessibilitySnapshot.h"
 #include "Engine/UI/Layout/CanvasPanel.h"
 #include "Engine/UI/Screen/UIScreen.h"
+#include "Engine/UI/Widgets/SliderWidget.h"
+
+#include <limits>
 
 // UIAccessibilityTest — 스크린 리더가 읽고 시키는 화면의 규칙(플랫폼 API · 디바이스 없이)(nogpu).
 
@@ -21,6 +24,18 @@ namespace
         return make_unique<UIScreen>( desc, make_unique<CanvasPanel>() );
     }
 } // namespace
+
+/** @brief [UIAccessibilityTest] 숫자가 아닌 값은 슬라이더 값이 되지 않는다(결함: 스크린 리더가 보낸 NaN 이 범위 제한을 지나 설정 값이 됐다) */
+SW_TEST_CASE( UIAccessibilityTest, SliderRefusesNotANumber )
+{
+    SliderWidget slider;
+    slider.setRange( 0.0f, 1.0f, 0.1f );
+    slider.setValueFromUser( 0.5f );
+    slider.setValueFromUser( std::numeric_limits<float32>::quiet_NaN() );
+    SW_EXPECT_EQUAL( 0.5f, slider.getValue() );
+    slider.setValueFromUser( std::numeric_limits<float32>::infinity() ); // 무한대는 범위 끝이다
+    SW_EXPECT_EQUAL( 1.0f, slider.getValue() );
+}
 
 /** @brief [UIAccessibilityTest] 점 아래의 요소는 맨 위 화면에서 고르고, 그 화면 안에서 가장 깊은 노드다(결함: 목록 끝부터 골라 겹친 화면에서 아래 화면의 요소를 답했다) */
 SW_TEST_CASE( UIAccessibilityTest, NodeAtPointComesFromTheTopScreen )
