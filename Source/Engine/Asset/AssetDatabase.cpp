@@ -65,15 +65,28 @@ namespace sw
             return false;
         }
         AssetIdentityRules loaded;
-        bool               bValid = JSONFields::readProperties( document.getRoot(), loaded, path, { "_comment" } );
-        bValid                    = AssetDatabaseInternal::hasNoEmptyText( loaded._listHeaderSuffix, "listHeaderSuffix", path ) && bValid;
-        bValid                    = AssetDatabaseInternal::hasNoEmptyText( loaded._listSkipPattern, "listSkipPattern", path ) && bValid;
-        bValid                    = AssetDatabaseInternal::hasNoEmptyText( loaded._listDerivedFolder, "listDerivedFolder", path ) && bValid;
+        // 구조체 목록 칸은 `JSONFields` 가 직렬화기로 넘겨 C++ 칸 이름을 키로 기대한다 — 이 파일은 칸 이름 규칙이라 원소마다 읽는다.
+        bool            bValid   = JSONFields::readProperties( document.getRoot(), loaded, path, { "_comment", "listImportedFolder" } );
+        const JSONValue imported = document.getRoot().get( "listImportedFolder" );
+        if ( imported.isArray() == false || imported.size() == 0 )
+        {
+            SW_LOG_ERROR_ID( "AssetIdentityRules.NoImportedFolder", "Asset identity rules %# need listImportedFolder", path );
+            bValid = false;
+        }
+        for ( size_t index = 0; imported.isArray() && index < imported.size(); ++index )
+        {
+            AssetImportedFolder folder;
+            bValid = JSONFields::readProperties( imported.at( index ), folder, path ) && bValid;
+            bValid = AssetDatabaseInternal::hasNoEmptyText( folder._listSourceExtension, "listSourceExtension", path ) && bValid;
+            loaded._listImportedFolder.push_back( std::move( folder ) );
+        }
+        bValid = AssetDatabaseInternal::hasNoEmptyText( loaded._listHeaderSuffix, "listHeaderSuffix", path ) && bValid;
+        bValid = AssetDatabaseInternal::hasNoEmptyText( loaded._listSkipPattern, "listSkipPattern", path ) && bValid;
         if ( bValid == false )
             return false;
-        _listHeaderSuffix  = std::move( loaded._listHeaderSuffix );
-        _listSkipPattern   = std::move( loaded._listSkipPattern );
-        _listDerivedFolder = std::move( loaded._listDerivedFolder );
+        _listHeaderSuffix   = std::move( loaded._listHeaderSuffix );
+        _listSkipPattern    = std::move( loaded._listSkipPattern );
+        _listImportedFolder = std::move( loaded._listImportedFolder );
         return true;
     }
 
@@ -99,14 +112,52 @@ namespace sw
         StringBuilder<constant::buffer::kMax512> wrapped;
         wrapped.appendFormat( "/%#", AssetDatabaseInternal::toLowerID( assetID ) );
         StringBuilder<constant::buffer::kMax256> marker;
-        for ( const string& folder : _listDerivedFolder )
+        for ( const AssetImportedFolder& imported : _listImportedFolder )
         {
             marker.clear();
-            marker.appendFormat( "/%#/", folder );
+            marker.appendFormat( "/%#/", imported._folder );
             if ( wrapped.view().find( marker.view() ) != string_view::npos )
                 return true;
         }
         return false;
+    }
+
+    void AssetIdentityRules::collectImportedSources( string_view outputID, vector<AssetImportedSource>& outListSource ) const
+    {
+        const string lowered = FileUtil::normalizePath( outputID ).str();
+        for ( const AssetImportedFolder& imported : _listImportedFolder )
+        {
+            StringBuilder<constant::buffer::kMax256> markerBuilder;
+            markerBuilder.appendFormat( "/%#/", imported._folder );
+            const string_view marker = markerBuilder.view();
+            for ( size_t position = lowered.find( marker ); position != string::npos; position = lowered.find( marker, position + 1 ) )
+            {
+                const size_t tailStart = position + marker.size();
+                // 줄기 끝을 뒤에서부터 옮긴다 — 마지막 조각은 확장자를 뺀 두 줄기(첫 점 앞 · 마지막 점 앞), 그 앞 조각은 폴더 이름도 줄기다.
+                for ( size_t segmentEnd = lowered.size(); segmentEnd > tailStart; segmentEnd = lowered.rfind( '/', segmentEnd - 1 ) )
+                {
+                    const size_t slash        = lowered.rfind( '/', segmentEnd - 1 ); // 폴더 표지의 `/` 가 있어 늘 있다
+                    const string segment      = lowered.substr( slash + 1, segmentEnd - slash - 1 );
+                    const size_t firstStem    = segment.find( '.' );
+                    const size_t lastStem     = segment.rfind( '.' );
+                    const size_t arrStemEnd[] = { firstStem == string::npos ? segment.size() : firstStem, lastStem == string::npos ? segment.size() : lastStem };
+                    for ( size_t stemIndex = 0; stemIndex < SW_COUNT_OF( arrStemEnd ); ++stemIndex )
+                    {
+                        if ( arrStemEnd[stemIndex] == 0 || ( stemIndex > 0 && arrStemEnd[stemIndex] == arrStemEnd[0] ) )
+                            continue;
+                        const size_t stemEnd = slash + 1 + arrStemEnd[stemIndex];
+                        for ( const string& extension : imported._listSourceExtension )
+                        {
+                            StringBuilder<constant::buffer::kMax512> sourceBuilder;
+                            sourceBuilder.appendFormat( "%#/%#/%#%#", string_view( lowered ).substr( 0, position ), imported._sourceFolder, string_view( lowered ).substr( tailStart, stemEnd - tailStart ), extension );
+                            outListSource.push_back( AssetImportedSource{ string( sourceBuilder.view() ), lowered.substr( stemEnd ) } );
+                        }
+                    }
+                    if ( slash < tailStart )
+                        break; // 산출물 폴더 바로 아래 조각까지 봤다
+                }
+            }
+        }
     }
 
     string AssetMeta::toXML() const
@@ -287,7 +338,8 @@ namespace sw
         VectorUtil::sort( listSorted, []( const AssetIdentityFile* pLeft, const AssetIdentityFile* pRight )
         { return pLeft->_assetID < pRight->_assetID; } );
 
-        AssetDatabase database;
+        AssetDatabase         database;
+        vector<const string*> listOutputID; // 임포트 산출물 — 원본이 모두 오른 뒤에 줄을 적는다
         for ( const AssetIdentityFile* pFile : listSorted )
         {
             const string& assetID = pFile->_assetID;
@@ -300,6 +352,8 @@ namespace sw
                     const AssetGUIDHeader header = AssetGUIDHeader::read( pFile->_text );
                     if ( header._state == AssetGUIDHeaderState::Found )
                         Internal::registerGUID( database._mapGUIDToPath, database._mapPathToGUID, *header._guid, assetID, outListIssue );
+                    else if ( header._state == AssetGUIDHeaderState::Missing && rules.isUnderDerivedFolder( assetID ) )
+                        listOutputID.push_back( &assetID );
                     else
                         outListIssue.push_back( AssetIdentityIssue{ header._state == AssetGUIDHeaderState::Missing ? AssetIdentityIssueKind::MissingHeader : AssetIdentityIssueKind::InvalidHeader, assetID, {} } );
                     break;
@@ -324,9 +378,27 @@ namespace sw
                     break;
                 }
                 case AssetIdentityKind::Source:
-                    if ( setSidecarID.contains( Internal::toLowerID( AssetMeta::makePath( assetID ) ) ) == false )
+                    if ( setSidecarID.contains( Internal::toLowerID( AssetMeta::makePath( assetID ) ) ) )
+                        break;
+                    if ( rules.isUnderDerivedFolder( assetID ) )
+                        listOutputID.push_back( &assetID );
+                    else
                         outListIssue.push_back( AssetIdentityIssue{ AssetIdentityIssueKind::MissingMeta, assetID, {} } );
                     break;
+            }
+        }
+        vector<AssetImportedSource> listSource;
+        for ( const string* pOutputID : listOutputID )
+        {
+            listSource.clear();
+            rules.collectImportedSources( *pOutputID, listSource );
+            for ( const AssetImportedSource& source : listSource )
+            {
+                const optional<AssetGUID> sourceGUID = database.findGUID( source._sourceID );
+                if ( sourceGUID.has_value() == false )
+                    continue;
+                Internal::registerGUID( database._mapGUIDToPath, database._mapPathToGUID, AssetGUID::fromName( *sourceGUID, source._outputName ), *pOutputID, outListIssue );
+                break;
             }
         }
         return database;
@@ -341,8 +413,7 @@ namespace sw
             outListIssue.push_back( AssetIdentityIssue{ AssetIdentityIssueKind::Unreadable, root, {} } );
             return AssetDatabase{};
         }
-        vector<string>        listID;
-        unordered_set<string> setID;
+        vector<string> listID;
         for ( const string& abs : listAbs )
         {
             const string normalized = FileUtil::normalizeSeparators( abs );
@@ -354,16 +425,13 @@ namespace sw
             if ( FileUtil::startsWithPathComponent( FileUtil::normalizePath( assetID ), AssetPaths::kScratchDomain ) )
                 continue;
             listID.push_back( assetID );
-            setID.insert( AssetDatabaseInternal::toLowerID( listID.back() ) );
         }
         vector<AssetIdentityFile> listFile;
         for ( const string& assetID : listID )
         {
-            const AssetIdentityKind kind         = rules.classify( assetID );
-            const bool              bDerivedFile = kind == AssetIdentityKind::Source && rules.isUnderDerivedFolder( assetID ) &&
-                                      setID.contains( AssetDatabaseInternal::toLowerID( AssetMeta::makePath( assetID ) ) ) == false;
-            if ( kind == AssetIdentityKind::Skipped || bDerivedFile )
-                continue; // 임포트 산출물(커밋하지 않는 캐시)은 원본의 정체성을 쓴다
+            const AssetIdentityKind kind = rules.classify( assetID );
+            if ( kind == AssetIdentityKind::Skipped )
+                continue;
             AssetIdentityFile file{ assetID, {} };
             const bool        bCarriesIdentity = kind == AssetIdentityKind::Header || kind == AssetIdentityKind::Sidecar;
             if ( bCarriesIdentity && FileUtil::readTextFile( FileUtil::toDiskPath( FileUtil::joinPath( root, assetID ) ), file._text ) == false )
@@ -380,15 +448,35 @@ namespace sw
     {
         const AssetIdentityKind kind = classify( assetID );
         string                  text;
-        if ( kind == AssetIdentityKind::Header && FileUtil::readTextFile( FileUtil::toDiskPath( absPath ), text ) )
-            return AssetGUIDHeader::read( text )._guid;
-        if ( kind != AssetIdentityKind::Source )
+        const bool              bHeader = kind == AssetIdentityKind::Header;
+        if ( bHeader == false && kind != AssetIdentityKind::Source )
             return nullopt;
+        if ( bHeader && FileUtil::readTextFile( FileUtil::toDiskPath( absPath ), text ) )
+        {
+            const optional<AssetGUID> headerGUID = AssetGUIDHeader::read( text )._guid;
+            if ( headerGUID.has_value() )
+                return headerGUID;
+        }
         const AbsolutePath metaPath = AssetMeta::makePath( FileUtil::toDiskPath( absPath ) );
-        if ( FileUtil::isRegularFile( metaPath ) && FileUtil::readTextFile( metaPath, text ) )
+        if ( bHeader == false && FileUtil::isRegularFile( metaPath ) && FileUtil::readTextFile( metaPath, text ) )
         {
             AssetMeta meta;
             return meta.parseXML( text, AssetMeta::makePath( assetID ) );
+        }
+        // 자기 정체성이 없는 산출물 자리의 파일은 임포트 산출물이다 — 원본의 `.meta` 와 산출물 이름이 정체성이다.
+        if ( isUnderDerivedFolder( assetID ) == false || absPath.size() <= assetID.size() )
+            return nullopt;
+        const string_view           contentRoot = absPath.substr( 0, absPath.size() - assetID.size() );
+        vector<AssetImportedSource> listSource;
+        collectImportedSources( assetID, listSource );
+        for ( const AssetImportedSource& source : listSource )
+        {
+            const AbsolutePath sourceMetaPath = AssetMeta::makePath( FileUtil::toDiskPath( FileUtil::joinPath( contentRoot, source._sourceID ) ) );
+            if ( FileUtil::isRegularFile( sourceMetaPath ) == false || FileUtil::readTextFile( sourceMetaPath, text ) == false )
+                continue;
+            AssetMeta                 meta;
+            const optional<AssetGUID> sourceGUID = meta.parseXML( text, AssetMeta::makePath( source._sourceID ) );
+            return sourceGUID.has_value() ? optional<AssetGUID>{ AssetGUID::fromName( *sourceGUID, source._outputName ) } : nullopt;
         }
         return nullopt;
     }

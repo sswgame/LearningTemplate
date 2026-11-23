@@ -27,6 +27,7 @@ import tempfile
 import xml.etree.ElementTree as ElementTree
 from dataclasses import dataclass
 from pathlib import Path
+from typing import Iterator
 from xml.sax.saxutils import quoteattr
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))   # Scripts
@@ -36,7 +37,6 @@ from common.git import run_git_bytes, run_git_in_hook_repository  # noqa: E402
 from lint.lint_scope import LintScope  # noqa: E402
 
 RULES_PATH = "Config/Dev/AssetIdentity.json"
-ASSET_REFERENCE_FIELDS_PATH = "Config/Dev/AssetReferenceFields.json"
 CONTENT_FOLDER = "Content"
 META_EXTENSION = ".meta"
 DECLARATION = "<?xml"
@@ -51,12 +51,22 @@ FOUND, MISSING, INVALID = "found", "missing", "invalid"
 
 
 @dataclass(frozen=True)
+class ImportedFolder:
+    """임포트 산출물 폴더 하나 — 산출물은 커밋하지 않고 같은 자리의 원본 폴더에서 만든다(C++ `AssetImportedFolder`)."""
+
+    folder: str
+    source_folder: str
+    list_source_extension: tuple[str, ...]
+    generated_referrers: bool   # 산출물 안의 글 에셋(임포터가 쓴 머티리얼 · 프리팹)은 참조자로 훑지 않는다 — 임포터의 몫이다
+
+
+@dataclass(frozen=True)
 class Rules:
     """`Config/Dev/AssetIdentity.json` 의 내용(C++ `AssetIdentityRules`)."""
 
     list_header_suffix: tuple[str, ...]
     list_skip_pattern: tuple[str, ...]
-    list_derived_folder: tuple[str, ...]
+    list_imported: tuple[ImportedFolder, ...]
 
 
 @dataclass(frozen=True)
@@ -84,12 +94,86 @@ class Issue:
 def load_rules(project_root: Path) -> Rules:
     document = json.loads((project_root / RULES_PATH).read_text(encoding="utf-8"))
     list_value = []
-    for key in ("listHeaderSuffix", "listSkipPattern", "listDerivedFolder"):
+    for key in ("listHeaderSuffix", "listSkipPattern"):
         value = document.get(key)
         if not isinstance(value, list) or not value or not all(isinstance(item, str) and item for item in value):
             raise ValueError(f"{RULES_PATH}: '{key}' 는 빈 글이 없는 목록이어야 한다")
         list_value.append(tuple(item.lower() for item in value))
-    return Rules(*list_value)
+    list_imported = []
+    for entry in document.get("listImportedFolder") or []:
+        if not (isinstance(entry, dict) and set(entry) == {"folder", "sourceFolder", "listSourceExtension", "generatedReferrers"} and isinstance(entry["generatedReferrers"], bool)
+                and all(isinstance(text, str) and text for text in (entry["folder"], entry["sourceFolder"], *entry["listSourceExtension"]))):
+            raise ValueError(f"{RULES_PATH}: listImportedFolder 의 원소가 틀렸다: {entry}")
+        list_imported.append(ImportedFolder(entry["folder"], entry["sourceFolder"], tuple(entry["listSourceExtension"]), entry["generatedReferrers"]))
+    if not list_imported:
+        raise ValueError(f"{RULES_PATH}: listImportedFolder 가 없다")
+    return Rules(*list_value, tuple(list_imported))
+
+
+def iterate_imported_sources(output_id: str, list_imported: tuple[ImportedFolder, ...]) -> Iterator[tuple[str, str]]:
+    """산출물 자리의 (원본 후보 리소스 id, 산출물 이름)을 가까운 것부터 낸다(있는지는 보지 않는다) — C++ `AssetIdentityRules::collectImportedSources` 와 같은 규칙.
+
+    원본은 산출물 자리의 어느 조상이다: `models/a/b/c.mesh` 는 `models_raw/a/b/c.glb` → `a/b.glb` → `a.glb` 순서다."""
+    lowered = output_id.lower()
+    for imported in list_imported:
+        marker = f"/{imported.folder}/"
+        position = lowered.find(marker)
+        while position >= 0:
+            tail_start = position + len(marker)
+            segment_end = len(lowered)
+            while segment_end > tail_start:
+                slash = lowered.rfind("/", 0, segment_end)
+                segment = lowered[slash + 1:segment_end]
+                for stem_length in dict.fromkeys(end if end >= 0 else len(segment) for end in (segment.find("."), segment.rfind("."))):
+                    if stem_length == 0:
+                        continue
+                    stem_end = slash + 1 + stem_length
+                    for extension in imported.list_source_extension:
+                        yield f"{lowered[:position]}/{imported.source_folder}/{lowered[tail_start:stem_end]}{extension}", lowered[stem_end:]
+                if slash < tail_start:
+                    break
+                segment_end = slash
+            position = lowered.find(marker, position + 1)
+
+
+_MASK64 = (1 << 64) - 1
+_FNV_OFFSET64 = 14695981039346656037
+_FNV_PRIME64 = 1099511628211
+_GOLDEN_RATIO64 = 0x9E3779B97F4A7C15
+
+
+def _fnv64(data: bytes, seed: int) -> int:
+    value = seed
+    for byte in data:
+        value = ((value ^ byte) * _FNV_PRIME64) & _MASK64
+    return value
+
+
+def _mix64(value: int) -> int:
+    value = ((value ^ (value >> 30)) * 0xBF58476D1CE4E5B9) & _MASK64
+    value = ((value ^ (value >> 27)) * 0x94D049BB133111EB) & _MASK64
+    return value ^ (value >> 31)
+
+
+def make_name_guid(name: str) -> str:
+    """C++ `AssetGUID::fromName( name )` — 씨앗이 다른 FNV-1a 64 두 개를 섞은 값(ASCII 대소문자 무시)."""
+    data = bytes(byte + 32 if 0x41 <= byte <= 0x5A else byte for byte in name.encode("utf-8"))
+    high, low = _mix64(_fnv64(data, _FNV_OFFSET64)), _mix64(_fnv64(data, _FNV_OFFSET64 ^ _GOLDEN_RATIO64))
+    return f"{high:016x}{low if high or low else _GOLDEN_RATIO64:016x}"
+
+
+def make_output_guid(source_guid: str, output_name: str) -> str:
+    """임포트 산출물의 GUID — C++ `AssetGUID::fromName( 원본 GUID, 산출물 이름 )`."""
+    return make_name_guid(source_guid + output_name)
+
+
+def find_output_guid(output_id: str, map_path_to_guid: dict[str, str], list_imported: tuple[ImportedFolder, ...]) -> str | None:
+    """산출물 자리의 GUID — 원본이 색인(소문자 리소스 id → GUID)에 있으면 그 원본과 산출물 이름에서, 없으면 None. 산출물이 디스크에 없어도 된다."""
+    for source_id, output_name in iterate_imported_sources(output_id, list_imported):
+        source_guid = map_path_to_guid.get(source_id)
+        if source_guid is not None:
+            return make_output_guid(source_guid, output_name)
+    return None
 
 
 def classify(asset_id: str, rules: Rules) -> str:
@@ -572,9 +656,13 @@ def run_self_check(project_root: Path | None = None) -> None:
     assert parse_meta(f'<AssetMeta _guid="{sample}" _source="hit.ogg" _extra="1" />') is None
 
     rules = load_rules(project_root)
-    imported = json.loads((project_root / ASSET_REFERENCE_FIELDS_PATH).read_text(encoding="utf-8"))["listImportedFolder"]
-    set_imported = {entry["folder"].lower() for entry in imported}
-    assert set(rules.list_derived_folder) == set_imported, f"{RULES_PATH} listDerivedFolder {sorted(rules.list_derived_folder)} != {ASSET_REFERENCE_FIELDS_PATH} {sorted(set_imported)}"
+    assert make_output_guid("0123456789abcdef0011223344556677", ".MESH") == "28016f06802dfbf1a257d90c3347b2fb"   # C++ AssetGUIDTest.OutputIdentityComesFromSourceAndOutputName 과 같은 글
+    assert next(iterate_imported_sources("common/models/a/b/c.mesh", rules.list_imported)) == ("common/models_raw/a/b/c.glb", ".mesh")
+    map_source = {"common/models_raw/a.glb": sample}
+    assert find_output_guid("common/models/a/b/c.mesh", map_source, rules.list_imported) == make_output_guid(sample, "/b/c.mesh")
+    assert find_output_guid("common/models/a.mesh", map_source, rules.list_imported) == make_output_guid(sample, ".mesh")
+    assert find_output_guid("common/models/_shared/x.material", map_source, rules.list_imported) is None
+    assert find_output_guid("common/prefabs/a.prefab.xml", map_source, rules.list_imported) is None
     list_issue, _ = collect_issues({"a/x.prefab.xml": write_header("<P/>", sample), "a/y.prefab.xml": write_header("<P/>", sample), "a/z.ogg": "",
                                   "a/w.ogg.meta": make_meta_text("a/w.ogg", other), "a/golden/q.ppm": ""}, rules)
     assert [(issue.kind, issue.asset_id) for issue in list_issue] == [("orphan-meta", "a/w.ogg.meta"), ("duplicate", "a/y.prefab.xml"), ("missing-meta", "a/z.ogg")], list_issue

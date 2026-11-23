@@ -6,8 +6,8 @@ Scripts/lint/asset_references.py
 에셋 참조 검사 — 참조 칸은 아직 경로로 가리키므로(언리얼 소프트 경로와 같다 — GUID 로 바꾸는 일은 docs/NEXT.md 의 2 단계) 끊어진 경로를 커밋 전에 잡는다.
 정체성(GUID · `.meta`)의 짝은 `asset_identity.py`(`asset-ids`)가 본다.
 
-- 어떤 칸이 경로인지는 리플렉션 선언이 정하고 파서가 낸 표(`Config/Dev/AssetReferenceFields.generated.json`) 한 곳에 모인다. 도메인 · 확장자 · 임포트 폴더는
-  `Config/Dev/AssetReferenceFields.json` 이다. 같은 파일을 C++ 검사(`App --check-asset-refs`,
+- 어떤 칸이 경로인지는 리플렉션 선언이 정하고 파서가 낸 표(`Config/Dev/AssetReferenceFields.generated.json`) 한 곳에 모인다. 도메인 · 확장자는
+  `Config/Dev/AssetReferenceFields.json`, 임포트 폴더는 `Config/Dev/AssetIdentity.json` 이다. 같은 파일을 C++ 검사(`App --check-asset-refs`,
   ctest `ToolCheckAssetRefs`)와 에디터 이름 바꾸기 · 옮기기(`AssetReferenceFields`), `py -3 -m Scripts move-asset` 이 읽는다.
   글 모양을 짐작하는 정규식으로 찾지 않는다 — 칸 이름이 목록에 있는 속성 · 요소 글 · JSON 키의 값만, 그 안에서도 도메인(`engine/` …)으로 시작하는 낱말만 경로다.
 - 있음 판정은 **스테이지(인덱스)** 기준이다. 커밋하지 않은 파일은 없는 것으로 본다(작업 트리에만 있는 파일을 가리킨 커밋은 다른 체크아웃에서 끊긴다).
@@ -32,6 +32,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[1]))   # Scripts
 
 import common  # noqa: E402,F401 — import 하면 콘솔이 UTF-8 이 된다(common/__init__.py)
 from common.git import run_git, run_git_bytes  # noqa: E402
+from lint.asset_identity import RULES_PATH, ImportedFolder, iterate_imported_sources, load_rules  # noqa: E402
 from lint.index_cache import Facts, get_index_keys, open_facts  # noqa: E402
 from lint.lint_scope import LintScope  # noqa: E402
 
@@ -46,18 +47,8 @@ TEMPLATE_CHARACTERS = "{}$*%<>"
 
 
 @dataclass(frozen=True)
-class ImportedFolder:
-    """임포트 산출물 폴더 하나 — 산출물은 커밋하지 않고 같은 자리의 원본 폴더에서 만든다."""
-
-    folder: str
-    source_folder: str
-    list_source_extension: tuple[str, ...]
-    generated_referrers: bool   # 산출물 안의 글 에셋(임포터가 쓴 머티리얼 · 프리팹)은 참조자로 훑지 않는다 — 임포터의 몫이다
-
-
-@dataclass(frozen=True)
 class FieldConfig:
-    """`Config/Dev/AssetReferenceFields.json` 의 내용."""
+    """`Config/Dev/AssetReferenceFields.json` 의 내용과 임포트 산출물 폴더(`Config/Dev/AssetIdentity.json`)."""
 
     list_domain: tuple[str, ...]
     list_unchecked_domain: tuple[str, ...]
@@ -92,12 +83,9 @@ def load_config(project_root: Path) -> FieldConfig:
     set_field: set[str] = set()
     for owner in _require(generated, "listOwner", list):
         set_field.update(_require(owner, "listField", list))
-    list_imported = []
-    for entry in _require(document, "listImportedFolder", list):
-        list_imported.append(ImportedFolder(_require(entry, "folder", str), _require(entry, "sourceFolder", str),
-                                           tuple(_require(entry, "listSourceExtension", list)), _require(entry, "generatedReferrers", bool)))
+    list_imported = load_rules(project_root).list_imported
     return FieldConfig(tuple(_require(document, "listDomain", list)), tuple(_require(document, "listUncheckedDomain", list)),
-                       tuple(_require(document, "listTextExtension", list)), frozenset(set_field), tuple(list_imported),
+                       tuple(_require(document, "listTextExtension", list)), frozenset(set_field), list_imported,
                        tuple(_require(document, "listCMakeFile", list)), tuple(_require(document, "listCMakeArgument", list)))
 
 
@@ -277,22 +265,8 @@ class AssetSet:
 
 
 def is_imported_from_source(asset_id: str, assets: AssetSet, config: FieldConfig) -> bool:
-    """`<…>/models/a/b/c.mesh` 처럼 임포트 산출물 자리면, 같은 자리의 원본(`<…>/models_raw/a/b/c.glb` → `a/b.glb` → `a.glb`)이 있는지 봅니다."""
-    for imported in config.list_imported:
-        marker = "/" + imported.folder + "/"
-        position = asset_id.find(marker)
-        while position >= 0:
-            base = asset_id[:position] + "/" + imported.source_folder + "/"
-            list_segment = asset_id[position + len(marker):].split("/")
-            for count in range(len(list_segment), 0, -1):
-                head = "/".join(list_segment[:count - 1])
-                last = list_segment[count - 1]
-                for stem in {last.split(".")[0], last.rsplit(".", 1)[0]}:
-                    candidate = base + (head + "/" if head else "") + stem
-                    if any(assets.contains(candidate + extension) for extension in imported.list_source_extension):
-                        return True
-            position = asset_id.find(marker, position + 1)
-    return False
+    """임포트 산출물 자리(`<…>/models/a/b/c.mesh`)면 같은 자리의 원본이 있는지 봅니다(`iterate_imported_sources`)."""
+    return any(assets.contains(source_id) for source_id, _ in iterate_imported_sources(asset_id, config.list_imported))
 
 
 def resolves(asset_id: str, assets: AssetSet, config: FieldConfig) -> bool:
@@ -466,7 +440,7 @@ def check_asset_references(project_root: Path, scope: LintScope) -> list[str]:
                            contribute=lambda _, list_pair: [f"{old}\t{new}" for old, new in list_pair])
     map_redirect = dict(token.split("\t", 1) for token in redirects.summary)
     def open_references(**options: Any) -> Facts:
-        return open_facts(project_root, "asset-refs", [__file__, str(project_root / CONFIG_PATH), str(project_root / GENERATED_PATH)], list_referrer,
+        return open_facts(project_root, "asset-refs", [__file__, str(project_root / CONFIG_PATH), str(project_root / GENERATED_PATH), str(project_root / RULES_PATH)], list_referrer,
                          lambda path, text: [[reference.line, reference.field, reference.start, reference.end, reference.path] for reference in extract_references(path, text, config)],
                          map_key=map_key, read_texts=lambda list_path: read_index_blobs(project_root, list_path), contribute=lambda _, list_row: [row[4] for row in list_row], **options)
 

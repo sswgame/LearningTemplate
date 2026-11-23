@@ -4,6 +4,8 @@
  * @details 정체성은 무작위 GUID(`AssetGUID`)다 — 경로 id 는 옮기면 바뀌어 리다이렉트 표가 영구히 자란다. 우리 형식 글(XML)은 파일 머리(`AssetGUIDHeader`)에, 원본(png · ogg · glb …)은
  *          곁의 `<파일>.meta` 에 든다(유니티 `.meta`, Godot 4.4 의 `.uid` 곁 파일과 같은 자리). 도구가 만들고 짝을 지킨다 — 사람은 서술을 만지지 않는다
  *          (`py -3 -m Scripts asset-ids --fix` · 에디터 옮기기 · 복제 · 가져오기 · 내용 바꾸기).
+ *          임포트 산출물(커밋하지 않는 캐시 — `models/x.mesh`)의 정체성은 원본 GUID 와 산출물 이름에서 나온다(`AssetGUID::fromName( 원본, 이름 )`). 색인은 산출물마다 줄을 적어
+ *          참조가 산출물도 GUID 하나로 가리킨다(원본을 옮겨도 그대로다).
  *          색인을 짓다 만난 결함(겹친 GUID · 짝 없는 `.meta` · `.meta` 없는 원본 · 머리 없는 글)은 모두 문제 목록으로 낸다 — 고르거나 새 GUID 로 메우지 않는다(폴백 없음).
  *          개발 실행은 이 색인을 런타임 색인(`AssetRegistry`)의 층으로 건다(`AssetManager`), 배포 구성은 팩마다 든 `assetindex.xml` 을 건다.
  */
@@ -31,6 +33,29 @@ namespace sw
         Source,  ///< 원본 — 곁의 `.meta` 가 정체성을 든다
     };
 
+    /** @brief 임포트 산출물 폴더 하나입니다 — 산출물은 커밋하지 않고 같은 자리의 원본 폴더에서 만든다(`models_raw/x.glb` → `models/x.mesh` · `models/x/…`). */
+    REFLECT()
+    struct SW_API AssetImportedFolder
+    {
+        REFLECT_BODY();
+
+        PROPERTY( Required )
+        string _folder;
+        PROPERTY( Required )
+        string _sourceFolder;
+        PROPERTY( Required )
+        vector<string> _listSourceExtension;
+        PROPERTY( Required )
+        bool _bGeneratedReferrers{ false }; ///< 산출물 안의 글 에셋(임포터가 쓴 머티리얼 · 프리팹)은 참조자로 훑지 않는다 — 임포터의 몫이다 NOLINT(sw-bool-flag): 집합체다(중괄호 · 지정 초기화로 만든다) — C++17 비트필드는 기본값을 둘 수 없어 `T x;` 가 값을 남기지 않는다
+    };
+
+    /** @brief 임포트 산출물 자리 하나가 가리킬 수 있는 원본 하나입니다(`AssetIdentityRules::collectImportedSources`). */
+    struct AssetImportedSource
+    {
+        string _sourceID;   ///< 원본 리소스 id(`common/models_raw/a/b.glb`)
+        string _outputName; ///< 원본 안의 산출물 이름 — 산출물 id 에서 원본 줄기를 뺀 나머지(`.mesh` · `/materials/mi_eyes.material`)
+    };
+
     /**
      * @struct AssetIdentityRules
      * @brief 정체성 규칙 파일(`kConfigFile`)입니다. 파이썬 도구(`Scripts/lint/asset_identity.py`)가 같은 키를 읽는다. 패턴의 `*` 는 `/` 도 넘는다(`StringUtil::matchesWildcard`).
@@ -47,20 +72,29 @@ namespace sw
         vector<string> _listHeaderSuffix; ///< 정체성을 파일 머리에 드는 우리 형식 접미사(소문자)
         PROPERTY( Required )
         vector<string> _listSkipPattern; ///< 정체성이 없는 파일의 리소스 id 패턴
-        PROPERTY( Required )
-        vector<string> _listDerivedFolder; ///< 임포트 산출물 폴더 이름 — 그 안의 `.meta` 없는 파일은 산출물(캐시)이다
+
+        vector<AssetImportedFolder> _listImportedFolder; ///< 임포트 산출물 폴더 — 그 안의 정체성 없는 파일(머리 · `.meta` 없음)은 산출물(캐시)이다
 
         /** @brief 프로젝트 루트의 규칙 파일을 읽습니다. 없거나 칸이 빠지면 오류를 남기고 false 입니다(기본 규칙으로 대신하지 않는다). */
         [[nodiscard]] bool load( string_view projectRoot );
         /** @brief 리소스 id @p assetID 의 정체성 자리입니다. 대소문자는 가리지 않습니다. */
         AssetIdentityKind classify( string_view assetID ) const;
-        /** @brief @p assetID 가 임포트 산출물 폴더(`_listDerivedFolder`) 아래면 true 입니다. */
+        /** @brief @p assetID 가 임포트 산출물 폴더(`_listImportedFolder`) 아래면 true 입니다. */
         bool isUnderDerivedFolder( string_view assetID ) const;
+        /**
+         * @brief 산출물 자리 @p outputID 의 원본 후보를 가까운 것부터 @p outListSource 끝에 더합니다(있는지는 보지 않는다).
+         * @details 원본은 산출물 자리의 어느 조상이다 — `models/a/b/c.mesh` 는 `models_raw/a/b/c.glb` → `a/b.glb` → `a.glb` 순서로 본다(옆 폴더 `a/clips` 도 `a.glb` 의 것).
+         *          끊어진 참조 검사(`AssetReferenceFields`)와 산출물 정체성이 이 규칙 하나를 쓴다(파이썬 `asset_identity.py` 의 `iterate_imported_sources`).
+         */
+        void collectImportedSources( string_view outputID, vector<AssetImportedSource>& outListSource ) const;
 
         // ------------------------------------------------------------------------------
         // 디스크의 에셋 파일 하나의 정체성 — 에디터 새로 만들기 · 복제 · 가져오기(새 GUID)와 내용 바꾸기(GUID 유지)가 함께 지난다. 자리는 `classify` 가 정한다.
         // ------------------------------------------------------------------------------
-        /** @brief 디스크 파일 @p absPath(리소스 id @p assetID)의 GUID 입니다 — 우리 형식 글은 머리, 원본은 곁의 `.meta`. 정체성이 없거나 읽지 못하면 없음입니다. */
+        /**
+         * @brief 디스크 파일 @p absPath(리소스 id @p assetID — 경로는 id 로 끝난다)의 GUID 입니다 — 우리 형식 글은 머리, 원본은 곁의 `.meta`, 임포트 산출물은 원본의 `.meta` 와 산출물 이름.
+         * @return 정체성이 없거나 읽지 못하면 없음입니다.
+         */
         [[nodiscard]] optional<AssetGUID> readIdentity( string_view absPath, string_view assetID ) const;
         /**
          * @brief 막 생긴 파일 @p absPath(리소스 id @p assetID)에 새 GUID 를 줍니다. 베낀 글이 든 머리 · 베낀 원본의 옛 서술은 새 것으로 바꾼다(복사본은 새 에셋이다).
@@ -164,11 +198,12 @@ namespace sw
         /**
          * @brief 파일 목록에서 색인을 짓습니다(디스크를 보지 않는다 — 단위 테스트 · 파이썬 도구와 같은 규칙).
          * @details 결함은 @p outListIssue 에 더한다. 겹친 GUID 는 먼저 온 쪽만 색인에 남고, 결함이 있는 파일은 색인에 들지 않는다.
+         *          임포트 산출물 폴더의 정체성 없는 파일(머리 · `.meta` 없음)은 산출물이다 — 원본이 색인에 있으면 산출물 줄을 적고, 없으면(내용 주소 공유 결과 `_shared/`) 줄이 없다.
          */
         static AssetDatabase build( const vector<AssetIdentityFile>& listFile, const AssetIdentityRules& rules, vector<AssetIdentityIssue>& outListIssue );
         /**
          * @brief 디스크 폴더 @p contentRoot(리소스 id 의 뿌리, `Content`)를 훑어 색인을 짓습니다. 정체성을 드는 파일만 읽는다.
-         * @details 임포트 산출물 폴더의 `.meta` 없는 파일은 산출물로 보고 건너뛴다(`AssetIdentityRules::_listDerivedFolder`). 폴더를 훑지 못하면 `Unreadable` 하나를 낸다.
+         * @details 폴더를 훑지 못하면 `Unreadable` 하나를 낸다.
          */
         static AssetDatabase scan( string_view contentRoot, const AssetIdentityRules& rules, vector<AssetIdentityIssue>& outListIssue );
 

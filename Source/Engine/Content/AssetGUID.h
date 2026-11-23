@@ -3,7 +3,7 @@
  * @brief 에셋의 정체성(무작위 128비트 GUID)과 그 글 표기 · 파일 속 자리 규칙입니다.
  * @details 경로는 옮기면 바뀐다 — 경로를 id 로 쓰면 옮길 때마다 리다이렉트 줄이 영구히 쌓인다(`AssetRedirect`). GUID 는 에셋이 처음 생길 때 한 번 만들고
  *          내용이 바뀌어도 · 옮겨도 그대로다. 내용이 바뀌었는지는 따로 내용 해시(`ContentHash`)가 말한다. 유니티 `.meta` 의 guid, Godot 4 의 `uid://` 와 같은 자리다.
- *          - **빈 값이 없다.** 기본 생성자가 없고 만드는 길은 `create`(새 정체성) · `tryParse`(적힌 정체성) · `fromName`(커밋하지 않는 임포트 결과의 결정적 정체성) 셋뿐이다 — 없음은 `optional<AssetGUID>` 로 적는다.
+ *          - **빈 값이 없다.** 기본 생성자가 없고 만드는 길은 `create`(새 정체성) · `tryParse`(적힌 정체성) · `fromName`(이름에서 만든 결정적 정체성 — 임포트 산출물 · 내용 주소 파일) 셋뿐이다 — 없음은 `optional<AssetGUID>` 로 적는다.
  *          - **글 표기는 하나다.** 소문자 16진 32 자(하이픈 없음, 유니티 표기). 대문자 · 하이픈 · 모두 0 은 받지 않는다 — 같은 GUID 를 두 철자로 적으면 글로 대조하는 린트 · 색인이 갈린다.
  *          - **자리.** 우리 형식 XML 에셋은 파일 머리의 처리 지시 `<?asset guid="…"?>`(XML 선언 바로 뒤)에, 원본(png · ogg · glb …)은 곁의 `.meta` 서술(`AssetMeta`)에 둔다.
  *            루트 속성으로 두지 않는 까닭: 종류마다 로더가 받는 루트 속성을 따로 적고(70 여 종류를 모두 고쳐야 한다), 데이터 상속(`_base` 합치기)이 부모의 루트 속성을 자식에게 베껴
@@ -32,10 +32,15 @@ namespace sw
         [[nodiscard]] static AssetGUID create();
         /**
          * @brief 이름 @p name 에서 결정적으로 만든 정체성입니다(UUID v5 처럼 이름 기반 — 같은 이름은 늘 같은 GUID). 대소문자는 가리지 않는다(리소스 id 색인과 같다).
-         * @details 커밋하지 않는 임포트 결과(`models/` 아래 생성물)만 쓴다 — 다시 임포트해도 · 다른 컴퓨터에서 임포트해도 같아야 하는데 무작위 GUID 를 둘 곳(커밋한 파일)이 없다.
-         *          손으로 만든 에셋은 `create` 다(이름을 바꿔도 정체성이 그대로여야 한다).
+         * @details 내용 주소 파일(`textures_raw/_shared/` — 경로가 곧 내용이라 두 사람이 따로 임포트해도 같은 파일이다)만 쓴다. 손으로 만든 에셋은 `create` 다(이름을 바꿔도 정체성이 그대로여야 한다).
          */
         [[nodiscard]] static AssetGUID fromName( string_view name );
+        /**
+         * @brief 정체성 @p nameSpace 안의 이름 @p name 에서 결정적으로 만든 정체성입니다(UUID v5 의 이름공간 + 이름).
+         * @details 커밋하지 않는 임포트 산출물의 정체성이다 — 원본 GUID 와 산출물 이름(`.mesh` · `/materials/mi_eyes.material`)에서 나오므로 다시 임포트해도 · 다른 컴퓨터에서도 · 원본을 옮겨도 같다.
+         *          유니티가 하위 에셋을 (원본 guid, 이름에서 만든 fileID)로 가리키는 것을 GUID 하나로 접은 것이다. 파이썬 도구(`asset_identity.py` 의 `make_output_guid`)가 같은 규칙이다.
+         */
+        [[nodiscard]] static AssetGUID fromName( const AssetGUID& nameSpace, string_view name );
         /** @brief 글 표기 @p text 를 읽습니다. 소문자 16진 32 자가 아니거나 모두 0 이면 없음입니다(대소문자 · 하이픈을 고쳐 읽지 않는다). */
         [[nodiscard]] static optional<AssetGUID> tryParse( string_view text );
 
@@ -55,6 +60,8 @@ namespace sw
             , _low{ low }
         {
         }
+        /** @brief 이름 해시 두 개(섞기 전)로 만든 정체성입니다 — 모두 0(글 표기가 받지 않는다)은 정해진 값으로 비켜 결정성을 지킨다. */
+        static AssetGUID fromNameHash( uint64 highHash, uint64 lowHash );
 
     private:
         uint64 _high;

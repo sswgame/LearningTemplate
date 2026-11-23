@@ -151,32 +151,15 @@ namespace sw
             return false;
         }
         AssetReferenceFieldsConfig config;
-        using Internal       = AssetReferenceFieldsInternal;
-        const JSONValue root = document.getRoot();
-        // 구조체 목록 칸은 `JSONFields` 가 직렬화기로 넘겨 C++ 칸 이름을 키로 기대한다 — 이 파일은 칸 이름 규칙이라 원소마다 읽는다.
-        bool                        bValid   = JSONFields::readProperties( root, config, path, { "listImportedFolder" } );
-        const JSONValue             imported = root.get( "listImportedFolder" );
-        vector<AssetImportedFolder> listImported;
-        if ( imported.isArray() == false )
-        {
-            SW_LOG_ERROR_ID( "AssetReferenceFields.ConfigInvalid", "Asset reference fields %# need listImportedFolder", path );
-            bValid = false;
-        }
-        for ( size_t index = 0; imported.isArray() && index < imported.size(); ++index )
-        {
-            AssetImportedFolder folder;
-            bValid = JSONFields::readProperties( imported.at( index ), folder, path ) && bValid;
-            listImported.push_back( std::move( folder ) );
-        }
-        bValid = Internal::hasNoEmptyText( config._listDomain, "listDomain", path ) && bValid;
-        bValid = Internal::hasNoEmptyText( config._listUncheckedDomain, "listUncheckedDomain", path ) && bValid;
-        bValid = Internal::hasNoEmptyText( config._listTextExtension, "listTextExtension", path ) && bValid;
-        bValid = Internal::hasNoEmptyText( config._listCMakeFile, "listCMakeFile", path ) && bValid;
-        bValid = Internal::hasNoEmptyText( config._listCMakeArgument, "listCMakeArgument", path ) && bValid;
-        for ( const AssetImportedFolder& folder : listImported )
-        {
-            bValid = Internal::hasNoEmptyText( folder._listSourceExtension, "listSourceExtension", path ) && bValid;
-        }
+        using Internal         = AssetReferenceFieldsInternal;
+        const JSONValue root   = document.getRoot();
+        bool            bValid = JSONFields::readProperties( root, config, path );
+        bValid                 = _identityRules.load( projectRoot ) && bValid;
+        bValid                 = Internal::hasNoEmptyText( config._listDomain, "listDomain", path ) && bValid;
+        bValid                 = Internal::hasNoEmptyText( config._listUncheckedDomain, "listUncheckedDomain", path ) && bValid;
+        bValid                 = Internal::hasNoEmptyText( config._listTextExtension, "listTextExtension", path ) && bValid;
+        bValid                 = Internal::hasNoEmptyText( config._listCMakeFile, "listCMakeFile", path ) && bValid;
+        bValid                 = Internal::hasNoEmptyText( config._listCMakeArgument, "listCMakeArgument", path ) && bValid;
         if ( bValid == false )
             return false;
         _listDomain          = std::move( config._listDomain );
@@ -184,7 +167,6 @@ namespace sw
         _listTextExtension   = std::move( config._listTextExtension );
         _listCMakeFile       = std::move( config._listCMakeFile );
         _listCMakeArgument   = std::move( config._listCMakeArgument );
-        _listImported        = std::move( listImported );
         _setField.clear();
         return loadGeneratedProperties( projectRoot );
     }
@@ -248,7 +230,7 @@ namespace sw
         StringBuilder<constant::buffer::kMax512> wrapped;
         wrapped.appendFormat( "/%#", lowered );
         StringBuilder<constant::buffer::kMax256> marker;
-        return std::none_of( _listImported.begin(), _listImported.end(), [&wrapped, &marker]( const AssetImportedFolder& folder )
+        return std::none_of( _identityRules._listImportedFolder.begin(), _identityRules._listImportedFolder.end(), [&wrapped, &marker]( const AssetImportedFolder& folder )
         {
             if ( folder._bGeneratedReferrers == false )
                 return false;
@@ -522,44 +504,10 @@ namespace sw
 
     bool AssetReferenceFields::isImportedFromSource( string_view assetID, const AssetIDSet& assets ) const
     {
-        for ( const AssetImportedFolder& imported : _listImported )
-        {
-            StringBuilder<constant::buffer::kMax256> markerBuilder;
-            markerBuilder.appendFormat( "/%#/", imported._folder );
-            const string_view marker   = markerBuilder.view();
-            size_t            position = assetID.find( marker );
-            while ( position != string_view::npos )
-            {
-                StringBuilder<constant::buffer::kMax512> baseBuilder;
-                baseBuilder.appendFormat( "%#/%#/", assetID.substr( 0, position ), imported._sourceFolder );
-                const string_view         base        = baseBuilder.view();
-                const vector<string_view> listSegment = StringUtil::split( assetID.substr( position + marker.size() ), "/" );
-                // 원본은 산출물 자리의 어느 조상이다 — `models/a/b/c.mesh` 는 `models_raw/a/b/c.glb` → `a/b.glb` → `a.glb` 순서로 본다(옆 폴더 `a/clips` 도 `a.glb` 의 것).
-                for ( size_t count = listSegment.size(); count > 0; --count )
-                {
-                    string head;
-                    for ( size_t segment = 0; segment + 1 < count; ++segment )
-                    {
-                        head.append( listSegment[segment] ).append( "/" );
-                    }
-                    const string                             last( listSegment[count - 1] );
-                    const string                             arrStem[] = { last.substr( 0, last.find( '.' ) ), FileUtil::removeExtension( last ) };
-                    StringBuilder<constant::buffer::kMax512> candidate;
-                    for ( const string& stem : arrStem )
-                    {
-                        for ( const string& extension : imported._listSourceExtension )
-                        {
-                            candidate.clear();
-                            candidate.appendFormat( "%#%#%#%#", base, head, stem, extension );
-                            if ( assets.contains( candidate.view() ) )
-                                return true;
-                        }
-                    }
-                }
-                position = assetID.find( marker, position + 1 );
-            }
-        }
-        return false;
+        vector<AssetImportedSource> listSource;
+        _identityRules.collectImportedSources( assetID, listSource );
+        return std::any_of( listSource.begin(), listSource.end(), [&assets]( const AssetImportedSource& source )
+        { return assets.contains( source._sourceID ); } );
     }
 
     bool AssetReferenceFields::canResolve( string_view assetID, const AssetIDSet& assets ) const
@@ -574,7 +522,7 @@ namespace sw
         vector<AssetReferenceRewriteRule> listRule{
             AssetReferenceRewriteRule{ oldPath, newPath, bFolder }
         };
-        for ( const AssetImportedFolder& imported : _listImported )
+        for ( const AssetImportedFolder& imported : _identityRules._listImportedFolder )
         {
             StringBuilder<constant::buffer::kMax256> markerBuilder;
             markerBuilder.appendFormat( "/%#/", imported._sourceFolder );

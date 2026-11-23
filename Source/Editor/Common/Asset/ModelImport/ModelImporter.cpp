@@ -651,7 +651,7 @@ namespace sw::editor
              * @details 언리얼이 임포트 때 기존 USkeleton 을 고르는 일을 내용 대조로 저절로 한다. 공용 폴더는 옆 폴더 밖이라 다시 임포트해도 지워지지 않는다.
              *          원본이 사라져 아무도 가리키지 않는 파일은 남는다(스켈레톤 하나는 작다).
              */
-            [[nodiscard]] static bool writeSharedSkeleton( const AssetPaths& assetPaths, const Skeleton& skeleton, string_view outputPath, string& outSharedPath )
+            [[nodiscard]] static bool writeSharedSkeleton( const Skeleton& skeleton, string_view outputPath, string& outSharedPath )
             {
                 const string                            normalized = FileUtil::normalizeSeparators( outputPath );
                 StringBuilder<constant::buffer::kMax64> marker;
@@ -666,16 +666,13 @@ namespace sw::editor
                 const uint64                             hash = HashUtil::appendBytes64( HashUtil::kFNVOffset64, body.data(), body.size() );
                 StringBuilder<constant::buffer::kMax256> sharedPathBuilder;
                 sharedPathBuilder.appendFormat( "%#%#/skeleton_%#%#", string_view( normalized ).substr( 0, folderEnd + marker.size() ), ModelImportUtil::kSharedSkeletonFolder, hash, Skeleton::kExtension );
-                outSharedPath               = string( sharedPathBuilder.view() );
-                const optional<string> text = ImportedAssetStore::makeTextWithIdentity( assetPaths, outSharedPath, body );
-                if ( text.has_value() == false )
-                    return false;
+                outSharedPath = string( sharedPathBuilder.view() );
 
                 // 잠그지 않는다: 이름이 내용 지문이라 워커 둘이 같은 파일을 써도 같은 글이고, `writeTextFile` 은 저마다의 임시 파일에 쓴 뒤 바꿔 끼운다.
                 string existing;
-                if ( FileUtil::exists( FileUtil::toDiskPath( outSharedPath ) ) && FileUtil::readTextFile( FileUtil::toDiskPath( outSharedPath ), existing ) && existing == *text )
+                if ( FileUtil::exists( FileUtil::toDiskPath( outSharedPath ) ) && FileUtil::readTextFile( FileUtil::toDiskPath( outSharedPath ), existing ) && existing == body )
                     return true;
-                if ( FileUtil::ensureParentDirectoryExists( FileUtil::toDiskPath( outSharedPath ) ) == false || FileUtil::writeTextFile( FileUtil::toDiskPath( outSharedPath ), *text ) == false )
+                if ( FileUtil::ensureParentDirectoryExists( FileUtil::toDiskPath( outSharedPath ) ) == false || FileUtil::writeTextFile( FileUtil::toDiskPath( outSharedPath ), body ) == false )
                 {
                     SW_LOG_ERROR_ID( "ModelImporter.FailedWriteSkeleton", "Failed to write skeleton %#", outSharedPath.c_str() );
                     return false;
@@ -724,7 +721,7 @@ namespace sw::editor
                 StringBuilder<constant::buffer::kMax256> setNameBuilder;
                 setNameBuilder.appendFormat( "%#%#", stem, AnimationSet::kExtension );
                 const string setPath = FileUtil::joinPath( sideFolder, setNameBuilder.view() );
-                if ( ImportedAssetStore::writeTextWithIdentity( assetPaths, setPath, animationSet.saveToString() ) == false )
+                if ( ImportedAssetStore::writeResultText( setPath, animationSet.saveToString() ) == false )
                 {
                     SW_LOG_ERROR_ID( "ModelImporter.FailedWriteAnimationSet", "Failed to write animation set %#", setPath.c_str() );
                     return false;
@@ -931,18 +928,18 @@ namespace sw::editor
             return false;
         // 스켈레톤은 내용당 한 벌이고, 모델 옆 파일은 그것을 가리키는 차이 없는 변형이다 — 데이터가 적은 경로(프리팹 · 본 LOD · 리타깃 프로필)는 그대로다.
         string sharedSkeletonPath;
-        if ( Internal::writeSharedSkeleton( assetPaths, result._skeleton, outputPath, sharedSkeletonPath ) == false )
+        if ( Internal::writeSharedSkeleton( result._skeleton, outputPath, sharedSkeletonPath ) == false )
             return false;
         skeletonFileData._base = assetPaths.toAssetID( sharedSkeletonPath );
         StringBuilder<constant::buffer::kMax256> skeletonNameBuilder;
         skeletonNameBuilder.appendFormat( "%#%#", stem, Skeleton::kExtension );
         const string skeletonPath = FileUtil::joinPath( sideFolder, skeletonNameBuilder.view() );
-        if ( ImportedAssetStore::writeTextWithIdentity( assetPaths, skeletonPath, skeletonFileData.toXML() ) == false )
+        if ( ImportedAssetStore::writeResultText( skeletonPath, skeletonFileData.toXML() ) == false )
         {
             SW_LOG_ERROR_ID( "ModelImporter.FailedWriteSkeleton", "Failed to write skeleton %#", skeletonPath.c_str() );
             return false;
         }
-        if ( ModelImportVrm::writeVrmAvatar( assetPaths, result, sourcePath, sideFolder, stem ) == false )
+        if ( ModelImportVrm::writeVrmAvatar( result, sourcePath, sideFolder, stem ) == false )
             return false;
         if ( ModelImportVrm::writeSectionPrefab( assetPaths, result, outputPath, sideFolder, stem ) == false )
             return false;

@@ -15,9 +15,12 @@ namespace
         static AssetIdentityRules makeRules()
         {
             AssetIdentityRules rules;
-            rules._listHeaderSuffix  = { ".xml", ".material" };
-            rules._listSkipPattern   = { "*/golden/*", "*.md" };
-            rules._listDerivedFolder = { "models", "textures" };
+            rules._listHeaderSuffix   = { ".xml", ".material" };
+            rules._listSkipPattern    = { "*/golden/*", "*.md" };
+            rules._listImportedFolder = {
+                AssetImportedFolder{  "models",   "models_raw", { ".glb", ".vrm" },  true},
+                AssetImportedFolder{"textures", "textures_raw",         { ".png" }, false},
+            };
             return rules;
         }
 
@@ -68,6 +71,60 @@ SW_TEST_CASE( AssetDatabaseTest, IndexesHeadersAndSidecarsBothWays )
     SW_REQUIRE_TRUE( database.findGUID( "Common/Audio/Hit.ogg" ).has_value() );                           // 대소문자는 가리지 않는다
     SW_EXPECT_TRUE( *database.findGUID( "common/audio/hit.ogg" ) == sound );
     SW_EXPECT_FALSE( database.findGUID( "common/credits.md" ).has_value() );
+}
+
+/**
+ * @brief [AssetDatabaseTest] 임포트 산출물은 원본 GUID 와 산출물 이름에서 나온 줄을 갖는다 — 원본을 옮겨도 산출물의 GUID 는 그대로고, 손으로 커밋한 파일(머리 · .meta)은 자기 정체성, 원본 없는 공유 결과는 줄이 없다
+ */
+SW_TEST_CASE( AssetDatabaseTest, ImportedOutputsGetLinesFromTheirSource )
+{
+    const AssetIdentityRules rules  = AssetDatabaseTestUtil::makeRules();
+    const AssetGUID          source = AssetGUID::create();
+    const AssetGUID          mirror = AssetGUID::create();
+    const auto               scan   = [&]( const utf8* pStem, vector<AssetIdentityIssue>& outListIssue )
+    {
+        StringBuilder<constant::buffer::kMax256> builder;
+        const auto                               makeID = [&builder, pStem]( const utf8* pPrefix, const utf8* pTail )
+        {
+            builder.clear();
+            builder.appendFormat( "common/%#/%#%#", pPrefix, pStem, pTail );
+            return string( builder.view() );
+        };
+        const vector<AssetIdentityFile> listFile{
+            { makeID( "models_raw", ".glb" ), {} },
+            { makeID( "models_raw", ".glb.meta" ), AssetMeta::makeText( makeID( "models_raw", ".glb" ), source ) },
+            { makeID( "models", ".mesh" ), {} },
+            { makeID( "models", "/materials/mi_eyes.material" ), "<MaterialDef/>" },
+            { makeID( "models", "/mirrors.xml" ), AssetDatabaseTestUtil::makeHeaderText( mirror ) },
+            { "common/models/_shared/materials/00ff.material", "<MaterialDef/>" },
+        };
+        return AssetDatabase::build( listFile, rules, outListIssue );
+    };
+    vector<AssetIdentityIssue> listIssue;
+    const AssetDatabase        database = scan( "kaykit/knight", listIssue );
+    const AssetDatabase        moved    = scan( "people/hero", listIssue );
+    SW_EXPECT_TRUE( listIssue.empty() );
+    SW_EXPECT_EQUAL( size_t{ 4 }, database.getCount() ); // 원본 · 산출물 둘 · 손으로 커밋한 표
+    SW_EXPECT_EQUAL( string( "common/models/kaykit/knight.mesh" ), database.findPath( AssetGUID::fromName( source, ".mesh" ) ).value_or( string{} ) );
+    SW_EXPECT_EQUAL( string( "common/models/kaykit/knight/materials/mi_eyes.material" ), database.findPath( AssetGUID::fromName( source, "/materials/mi_eyes.material" ) ).value_or( string{} ) );
+    SW_EXPECT_EQUAL( string( "common/models/people/hero.mesh" ), moved.findPath( AssetGUID::fromName( source, ".mesh" ) ).value_or( string{} ) );
+    SW_EXPECT_EQUAL( string( "common/models/kaykit/knight/mirrors.xml" ), database.findPath( mirror ).value_or( string{} ) );
+    SW_EXPECT_FALSE( database.findGUID( "common/models/_shared/materials/00ff.material" ).has_value() );
+}
+
+/** @brief [AssetDatabaseTest] 디스크의 산출물 하나의 정체성(파일 감시 · 쿠킹)도 색인의 줄과 같다 */
+SW_TEST_CASE( AssetDatabaseTest, OutputOnDiskReadsTheIdentityOfItsSource )
+{
+    const AssetIdentityRules rules      = AssetDatabaseTestUtil::makeRules();
+    const AssetGUID          source     = AssetGUID::create();
+    const AbsolutePath       sourceMeta = sw::test::makeScratchPath( "common/models_raw/rock.glb.meta" );
+    const AbsolutePath       mesh       = sw::test::makeScratchPath( "common/models/rock.mesh" );
+    SW_REQUIRE_TRUE( FileUtil::ensureParentDirectoryExists( sourceMeta ) && FileUtil::writeTextFile( sourceMeta, AssetMeta::makeText( "common/models_raw/rock.glb", source ) ) );
+    SW_REQUIRE_TRUE( FileUtil::ensureParentDirectoryExists( mesh ) && FileUtil::writeTextFile( mesh, "mesh" ) );
+    const optional<AssetGUID> guid = rules.readIdentity( mesh.str(), "common/models/rock.mesh" );
+    SW_REQUIRE_TRUE( guid.has_value() );
+    SW_EXPECT_TRUE( *guid == AssetGUID::fromName( source, ".mesh" ) );
+    SW_EXPECT_FALSE( rules.readIdentity( mesh.str(), "common/models/gone.mesh" ).has_value() );
 }
 
 SW_TEST_CASE( AssetDatabaseTest, ReportsBrokenPairsAndCopiesWithoutGuessing )
