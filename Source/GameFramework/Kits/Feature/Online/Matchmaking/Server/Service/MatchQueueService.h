@@ -223,6 +223,14 @@ namespace sw
             uint64            _partyID{ 0 };
         };
 
+        /** @brief 파티 기록에 티켓 잡기를 기다리는 줄 서기입니다. 잡은 뒤에만 티켓이 대기열에 들어갑니다. */
+        struct PartyReservation
+        {
+            PendingJoin _join{};
+            MatchTicket _ticket{};
+            uint8       _bDropped{ SW_FALSE }; ///< 기다리는 동안 빠졌다. 잡히면 바로 푼다
+        };
+
         /** @brief 명단 기록 쓰기를 기다리는 결과 하나입니다. `_recipientID` 가 있으면(로비 멤버) 그 계정에 바로 알리고, 없으면 티켓을 낸 서버로 보냅니다. */
         struct PendingDelivery
         {
@@ -254,9 +262,12 @@ namespace sw
         [[nodiscard]] bool isRatingLoaded( const MatchModeDef& mode, AccountID accountID ) const;
         void               releaseRetained( const RatingWait& wait );
         [[nodiscard]] bool isJoinPending( AccountID accountID ) const;
-        /** @brief 파티 찾기나 통계 읽기를 기다리는, 그 계정이 든 줄 서기를 NotQueued 로 끝냅니다. 있었으면 true 입니다. */
+        /** @brief 파티 찾기 · 통계 읽기 · 파티 기록 잡기를 기다리는, 그 계정이 든 줄 서기를 NotQueued 로 끝냅니다. 있었으면 true 입니다. */
         [[nodiscard]] bool dropPendingJoin( AccountID accountID );
-        void               submitTicket( const PendingJoin& join, const vector<AccountID>& listAccount, uint64 partyID );
+        /** @brief 티켓을 만듭니다. 파티면 파티 기록에 먼저 잡고(`onPartyTicketReserved`), 혼자면 바로 대기열에 넣습니다. */
+        void submitTicket( const PendingJoin& join, const vector<AccountID>& listAccount, uint64 partyID );
+        void onPartyTicketReserved( uint64 ticketID, MatchmakingServiceResult result, const PartySnapshot& party );
+        void enqueueTicket( const PendingJoin& join, const MatchTicket& ticket );
         /** @brief 백필로 채운 티켓을 게임 서버(배정)와 티켓을 낸 서버(결과)에 알립니다. */
         void deliverBackfill( const MatchBackfilled& backfilled, UnixMilliseconds nowMs );
         /**
@@ -291,6 +302,7 @@ namespace sw
         unordered_map<uint64, PendingJoin>      _mapLookupToJoin;  ///< 파티 찾기를 기다리는 줄 서기 요청이다
         unordered_map<uint64, LeaveRequest>     _mapLookupToLeave; ///< 파티 찾기를 기다리는 빠지기 요청이다
         vector<RatingWait>                      _listRatingWait;
+        unordered_map<uint64, PartyReservation> _mapTicketToReservation; ///< 파티 기록에 잡히기를 기다리는 티켓이다
         unordered_map<uint64, string>           _mapLeaseRequestToMode;
         unordered_map<uint64, PendingPlacement> _mapRecordWrite; ///< 명단 기록 쓰기의 답을 기다리는 배정이다(요청 id 열쇠)
         unordered_map<uint64, PendingPlacement> _mapListWrite;   ///< 기록은 남았고 목록 쓰기의 답을 기다리는 배정이다(요청 id 열쇠)

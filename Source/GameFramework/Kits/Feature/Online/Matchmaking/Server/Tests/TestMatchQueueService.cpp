@@ -927,6 +927,47 @@ SW_TEST_CASE( MatchQueueServiceTest, PartyLeaderQueuesWholeParty )
     SW_EXPECT_TRUE( party.joinAndWait( kAlice )._result == MatchmakingResult::Ok ); // 파티 기록의 티켓도 지워졌다
 }
 
+/** @brief [MatchQueueServiceTest] 줄 선 바로 뒤(파티 기록에 쓰는 동안) 빠져도 기록에 없는 티켓이 남지 않아 다시 설 수 있다(결함: 지우기가 쓰기보다 먼저 읽어 아무것도 하지 않았고, 뒤에 닿은 쓰기가 파티를 "줄 섬" 에 가뒀다) */
+SW_TEST_CASE( MatchQueueServiceTest, LeavingWhileThePartyTicketIsWrittenLeavesNoTicket )
+{
+    PartyQueueWorld party( 2 );
+    (void)party.makeParty( kAlice, kBob );
+    MatchQueueService& queue = party._world._server._queue;
+    queue.joinQueue( kAlice, "duel", "kr", UnixMilliseconds{ kNowMs }, 7 );
+    (void)party._world._server._router.poll(); // 계정 → 파티
+    (void)party._world._server._router.poll(); // 파티를 읽었다 — 기록에 티켓을 쓰는 중이다
+    queue.leaveQueue( kAlice, 8 );
+    party.poll();
+    vector<MatchQueueCompletion> listCompletion;
+    queue.takeCompletions( listCompletion );
+    SW_REQUIRE_EQUAL( size_t( 2 ), listCompletion.size() );
+    SW_EXPECT_EQUAL( uint64( 8 ), listCompletion[1]._requestTag );
+    SW_EXPECT_TRUE( listCompletion[1]._result == MatchmakingResult::Ok );
+    SW_EXPECT_EQUAL( 0, queue.getLocalTicketCount() );
+    SW_EXPECT_EQUAL( 0, queue.getQueuedTicketCount( "duel" ) );
+
+    SW_EXPECT_TRUE( party.joinAndWait( kAlice )._result == MatchmakingResult::Ok );
+}
+
+/** @brief [MatchQueueServiceTest] 파티를 찾은 뒤 멤버가 떠났으면 옛 명단의 티켓이 서지 않는다(kBusy) — 떠난 사람이 경기에 묶이지 않는다. 다시 서면 남은 사람의 티켓이다 */
+SW_TEST_CASE( MatchQueueServiceTest, MemberLeavingAfterTheLookupIsNotQueued )
+{
+    PartyQueueWorld party( 2 );
+    (void)party.makeParty( kAlice, kBob );
+    MatchQueueService& queue = party._world._server._queue;
+    queue.joinQueue( kAlice, "duel", "kr", UnixMilliseconds{ kNowMs }, 7 );
+    party._party.leaveParty( kBob, 9 ); // 두 길이 함께 돈다 — 떠나기가 찾기 뒤 · 쓰기 앞에 닿는다
+    party.poll();
+    SW_EXPECT_TRUE( party._world._server.takeCompletion()._result.hasError( OnlineError::kBusy ) );
+    SW_EXPECT_EQUAL( 0, queue.getLocalTicketCount() );
+
+    SW_EXPECT_TRUE( party.joinAndWait( kAlice )._result == MatchmakingResult::Ok );
+    queue.leaveQueue( kAlice, 8 );
+    const vector<MatchQueueNotification> listCancelled = party._world._server.takeNotifications();
+    SW_REQUIRE_EQUAL( size_t( 1 ), listCancelled.size() );
+    SW_EXPECT_EQUAL( kAlice, listCancelled[0]._recipientID );
+}
+
 /** @brief [MatchQueueServiceTest] 파티 인원이 팀 인원을 넘으면 PartyTooLarge 이고 티켓이 없다 */
 SW_TEST_CASE( MatchQueueServiceTest, PartyLargerThanTeamIsRefused )
 {

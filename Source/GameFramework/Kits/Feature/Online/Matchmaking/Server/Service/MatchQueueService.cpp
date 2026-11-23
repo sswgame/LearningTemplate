@@ -37,6 +37,7 @@ namespace sw
         , _mapLookupToJoin{}
         , _mapLookupToLeave{}
         , _listRatingWait{}
+        , _mapTicketToReservation{}
         , _mapLeaseRequestToMode{}
         , _completionBuffer{}
         , _notificationBuffer{}
@@ -261,7 +262,8 @@ namespace sw
         _mapModeState.clear();
         _mapLookupToJoin.clear();
         _mapLookupToLeave.clear();
-        _listRatingWait.clear(); // 통계 창은 내리지 않는다 — 먼저 내려갔을 수 있고, 내려갈 때 메모리를 비운다
+        _listRatingWait.clear();         // 통계 창은 내리지 않는다 — 먼저 내려갔을 수 있고, 내려갈 때 메모리를 비운다
+        _mapTicketToReservation.clear(); // 늦게 온 잡기 답은 찾지 못하고 버려진다. 기록의 티켓은 멤버가 빠지기로 푼다(`onLeavePartyFound`)
         _dependencies._pRouter = nullptr;
         _dependencies._pBus    = nullptr;
     }
@@ -467,6 +469,11 @@ namespace sw
             if ( VectorUtil::contains( wait._listAccount, accountID ) )
                 return true;
         }
+        for ( const auto& [ticketID, reservation] : _mapTicketToReservation )
+        {
+            if ( reservation._bDropped == SW_FALSE && VectorUtil::containsBy<&MatchMember::_accountID>( reservation._ticket._listMember, accountID ) )
+                return true;
+        }
         return false;
     }
 
@@ -556,18 +563,50 @@ namespace sw
             return;
         }
 
-        LocalTicket& local = _mapLocalTicket[ticket._ticketID];
-        local._listAccount = listAccount;
-        local._modeID      = join._modeID;
-        local._ticketID    = ticket._ticketID;
-        local._partyID     = partyID;
-        local._deadlineMs  = join._nowMs.count() + mode._maxWaitMs + MatchQueueLimit::kNoServerGiveUpMs + MatchQueueLimit::kResultGraceMs;
-        for ( const AccountID accountID : listAccount )
+        if ( partyID == 0 || _dependencies._pPartyLobby == nullptr )
         {
-            _mapAccountToTicket[accountID] = ticket._ticketID;
+            enqueueTicket( join, ticket );
+            return;
         }
-        if ( partyID != 0 && _dependencies._pPartyLobby != nullptr )
-            _dependencies._pPartyLobby->setPartyTicket( partyID, ticket._ticketID );
+        PartyReservation& reservation = _mapTicketToReservation[ticket._ticketID];
+        reservation._join             = join;
+        reservation._ticket           = ticket;
+        _dependencies._pPartyLobby->reservePartyTicket( partyID, ticket._ticketID, listAccount, SW_DELEGATE_METHOD( PartyLobbyService::PartyFoundDelegate, &MatchQueueService::onPartyTicketReserved, this ) );
+    }
+
+    void MatchQueueService::onPartyTicketReserved( uint64 ticketID, MatchmakingServiceResult result, const PartySnapshot& party )
+    {
+        (void)party; // 멤버는 기록이 견주었다
+        const auto reservationIt = _mapTicketToReservation.find( ticketID );
+        if ( reservationIt == _mapTicketToReservation.end() )
+            return;
+        const PartyReservation reservation = std::move( reservationIt->second );
+        _mapTicketToReservation.erase( reservationIt );
+        const bool bDropped = reservation._bDropped != SW_FALSE;
+        if ( result == MatchmakingResult::Ok && bDropped == false )
+        {
+            enqueueTicket( reservation._join, reservation._ticket );
+            return;
+        }
+        // 빠졌거나 잡지 못했다. 쓰기의 답만 잃었을 수 있으므로(kUnavailable) 어느 쪽이든 푼다 — 비교 후 지우기라 남의 티켓은 남는다.
+        _dependencies._pPartyLobby->clearPartyTicket( reservation._ticket._partyID, ticketID );
+        if ( bDropped == false ) // 빠진 요청의 완료는 빠질 때 갔다
+            _completionBuffer.push( MatchQueueCompletion{ reservation._join._requestTag, 0, result } );
+    }
+
+    void MatchQueueService::enqueueTicket( const PendingJoin& join, const MatchTicket& ticket )
+    {
+        const MatchModeDef& mode  = _mapMode[join._modeID];
+        LocalTicket&        local = _mapLocalTicket[ticket._ticketID];
+        local._modeID             = join._modeID;
+        local._ticketID           = ticket._ticketID;
+        local._partyID            = ticket._partyID;
+        local._deadlineMs         = join._nowMs.count() + mode._maxWaitMs + MatchQueueLimit::kNoServerGiveUpMs + MatchQueueLimit::kResultGraceMs;
+        for ( const MatchMember& member : ticket._listMember )
+        {
+            local._listAccount.push_back( member._accountID );
+            _mapAccountToTicket[member._accountID] = ticket._ticketID;
+        }
         _completionBuffer.push( MatchQueueCompletion{ join._requestTag, ticket._ticketID, MatchmakingResult::Ok } );
 
         ModeState* pState = findModeState( join._modeID );
@@ -929,6 +968,14 @@ namespace sw
             _listRatingWait.erase( _listRatingWait.begin() + static_cast<ptrdiff_t>( index ) );
             _completionBuffer.push( MatchQueueCompletion{ dropped._join._requestTag, 0, MatchmakingResult::NotQueued } );
             releaseRetained( dropped );
+            return true;
+        }
+        for ( auto& [ticketID, reservation] : _mapTicketToReservation )
+        {
+            if ( reservation._bDropped != SW_FALSE || VectorUtil::containsBy<&MatchMember::_accountID>( reservation._ticket._listMember, accountID ) == false )
+                continue;
+            reservation._bDropped = SW_TRUE; // 잡기는 이미 나갔다. 답이 오면 푼다(`onPartyTicketReserved`)
+            _completionBuffer.push( MatchQueueCompletion{ reservation._join._requestTag, 0, MatchmakingResult::NotQueued } );
             return true;
         }
         return false;

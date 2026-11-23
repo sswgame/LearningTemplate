@@ -248,7 +248,7 @@ SW_TEST_CASE( PartyLobbyServiceTest, QueuedPartyLocksMembership )
     SW_EXPECT_TRUE( rig.invite( kAlice, kCarol ) == MatchmakingResult::Ok );
 
     constexpr uint64 kTicket = 0x100000001ull;
-    rig._service.setPartyTicket( partyID, kTicket );
+    rig._service.reservePartyTicket( partyID, kTicket, vector<AccountID>{ kAlice, kBob }, PartyLobbyService::PartyFoundDelegate{} );
     rig.poll();
     SW_EXPECT_EQUAL( kTicket, rig.find( kAlice )._party._queuedTicketID );
     SW_EXPECT_TRUE( rig.accept( kCarol, partyID ) == MatchmakingResult::AlreadyQueued );

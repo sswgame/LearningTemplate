@@ -157,6 +157,8 @@ namespace sw
                 {
                     if ( party._queuedTicketID != _request._expectedTicketID )
                         return _request._expectedTicketID == 0 ? MatchmakingResult::AlreadyQueued : MatchmakingResult::NotQueued; // 그사이 다른 티켓이 섰거나 이미 풀렸다
+                    if ( _request._ticketID != 0 && party._listMemberID != _request._listExpectedMember )
+                        return MatchmakingServiceResult::fail( OnlineError::kBusy ); // 파티를 찾은 뒤 멤버가 바뀌었다 — 옛 명단의 티켓을 세우지 않는다
                     party._queuedTicketID = _request._ticketID;
                     break;
                 }
@@ -481,12 +483,14 @@ namespace sw
         submitStep( EphemeralRequest::makeGet( makeAccountPartyKey( leaderID ) ), StepKind::IndexRead, request );
     }
 
-    void PartyLobbyService::setPartyTicket( uint64 partyID, uint64 ticketID )
+    void PartyLobbyService::reservePartyTicket( uint64 partyID, uint64 ticketID, const vector<AccountID>& listMember, const PartyFoundDelegate& onReserved )
     {
         Request request;
-        request._operation = PartyLobbyOperation::PartySetTicket;
-        request._partyID   = partyID;
-        request._ticketID  = ticketID;
+        request._operation          = PartyLobbyOperation::PartySetTicket;
+        request._partyID            = partyID;
+        request._ticketID           = ticketID;
+        request._listExpectedMember = listMember;
+        request._onPartyFound       = onReserved;
         startPartyMutation( request );
     }
 
@@ -844,7 +848,9 @@ namespace sw
             {
                 if ( result == MatchmakingResult::Ok )
                     notifyParty( party, kInvalidAccountID );
-                return; // 완료는 없다
+                if ( request._onPartyFound.isBound() )
+                    request._onPartyFound( request._ticketID, result, party ); // 잡기의 결과다. 풀기는 기다리는 쪽이 없다
+                return;                                                        // 완료는 없다
             }
             default:
             {
