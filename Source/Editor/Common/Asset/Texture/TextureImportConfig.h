@@ -177,6 +177,11 @@ namespace sw::editor
         static constexpr string_view kSharedDefaultRuleName = "default";
         /** @brief 규칙 @p ruleName 으로 임포트할 공유 원본의 경로입니다(`<x>/textures_raw/_shared/<소문자 규칙>/<키><확장자>`). */
         static string makeSharedSourcePath( string_view domainFolder, string_view ruleName, string_view key, string_view extension );
+        /**
+         * @brief 경로로 규칙을 고르는 칸(이름 · 조건)만 적은 글입니다. 규칙의 압축 설정은 들지 않는다.
+         * @details 모델이 꺼낸 내장 이미지는 고른 규칙의 이름이 원본 폴더다 — 이 글이 바뀌면 그 자리가 바뀔 수 있어 모델의 원본 해시에 섞는다(`ModelImportUtil::mixExternalFiles`). 설정만 바뀐 규칙은 텍스처 임포트가 따라간다.
+         */
+        string makeSelectionText() const;
         /** @brief @p relativePath 가 공유 원본이면 폴더에 적힌 규칙 이름(소문자)을, 아니면 빈 글을 돌려줍니다. */
         static string findSharedRuleName( string_view relativePath );
 

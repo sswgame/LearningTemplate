@@ -59,7 +59,7 @@ namespace sw::editor
         return path;
     }
 
-    uint64 ModelImportUtil::mixExternalFiles( string_view sourcePath, const vector<uint8>& listByte, uint64 hash )
+    uint64 ModelImportUtil::mixExternalFiles( string_view sourcePath, const vector<uint8>& listByte, string_view imageRuleText, uint64 hash )
     {
         const cgltf_options options = makeOptions();
         cgltf_data*         pData   = nullptr;
@@ -82,14 +82,22 @@ namespace sw::editor
             if ( isExternalURI( pData->buffers[bufferIndex].uri ) )
                 mixFile( resolveURI( sourcePath, pData->buffers[bufferIndex].uri ) );
         }
+        bool bHasEmbeddedImage = false; // 텍스처 원본 폴더 밖의 이미지는 공유 원본으로 꺼낸다 — 어느 폴더인지는 텍스처 규칙이 정한다
         for ( cgltf_size imageIndex = 0; imageIndex < pData->images_count; ++imageIndex )
         {
             if ( isExternalURI( pData->images[imageIndex].uri ) == false )
+            {
+                bHasEmbeddedImage = true;
                 continue;
+            }
             const string imagePath = resolveURI( sourcePath, pData->images[imageIndex].uri );
-            if ( imagePath.find( rawMarker.view() ) == string::npos )
-                mixFile( imagePath );
+            if ( imagePath.find( rawMarker.view() ) != string::npos )
+                continue;
+            bHasEmbeddedImage = true;
+            mixFile( imagePath );
         }
+        if ( bHasEmbeddedImage )
+            hash = HashUtil::computeStringHash64( imageRuleText.data(), imageRuleText.size(), false, hash );
         cgltf_free( pData );
         return hash;
     }

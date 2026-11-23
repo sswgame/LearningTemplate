@@ -231,8 +231,9 @@ namespace sw::editor
 
         /**
          * @brief 원본 바이트, 부가 데이터, 적용한 규칙, 임포터 버전을 섞어 FNV-1a 64 해시를 계산합니다. `.gltf` 이면 그것이 가리키는 외부 버퍼 파일도 포함합니다. 읽지 못하면 0 입니다.
+         * @param imageRuleText 꺼낼 이미지의 텍스처 규칙을 고르는 글(`TextureImportConfig::makeSelectionText`)입니다. 이미지를 꺼내는 모델에만 섞는다.
          */
-        static uint64 computeSourceHash( string_view sourcePath, const ModelImportRule& rule );
+        static uint64 computeSourceHash( string_view sourcePath, const ModelImportRule& rule, string_view imageRuleText );
         /** @brief 임포트 결과 전체(`.mesh` 와 옆 폴더의 파일들)의 해시를 계산합니다. `.mesh` 가 없으면 0 입니다. */
         static uint64 computeImportedHash( string_view importedMeshPath );
         /** @brief `computeImportedHash` 가 섞는 결과 파일(`.mesh` · `.fracture` · 옆 폴더 파일 · 그것이 가리키는 공유 파일)을 모읍니다(DDC 덩어리). `.mesh` 가 없으면 아무것도 더하지 않습니다. */

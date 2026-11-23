@@ -140,12 +140,28 @@ SW_TEST_CASE( ModelImportPBRTest, SourceHashFollowsExternalImages )
     const string_view   json = R"({ "asset": { "version": "2.0" }, "images": [ { "uri": "side%20tex.png" }, { "uri": "../textures_raw/shared.png" } ] })";
     const vector<uint8> bytes( json.begin(), json.end() );
     const string        sourcePath = root.join( "models_raw/side.gltf" ).str();
-    const uint64        before     = ModelImportUtil::mixExternalFiles( sourcePath, bytes, 1 );
+    const uint64        before     = ModelImportUtil::mixExternalFiles( sourcePath, bytes, "rules", 1 );
 
     SW_REQUIRE_TRUE( FileUtil::writeTextFile( root.join( "textures_raw/shared.png" ), "two" ) );
-    SW_EXPECT_EQUAL( before, ModelImportUtil::mixExternalFiles( sourcePath, bytes, 1 ) );
+    SW_EXPECT_EQUAL( before, ModelImportUtil::mixExternalFiles( sourcePath, bytes, "rules", 1 ) );
     SW_REQUIRE_TRUE( FileUtil::writeTextFile( root.join( "models_raw/side tex.png" ), "two" ) );
-    SW_EXPECT_TRUE( before != ModelImportUtil::mixExternalFiles( sourcePath, bytes, 1 ) );
+    SW_EXPECT_TRUE( before != ModelImportUtil::mixExternalFiles( sourcePath, bytes, "rules", 1 ) );
+}
+
+/**
+ * @brief [ModelImportPBRTest] 이미지를 꺼내는 모델의 원본 해시는 텍스처 규칙을 고르는 글을 따르고, 꺼내지 않는 모델(텍스처 원본 폴더를 가리킴 · 이미지 없음)은 따르지 않는다
+ */
+SW_TEST_CASE( ModelImportPBRTest, SourceHashFollowsImageRules )
+{
+    const string sourcePath = test::makeScratchPath( "ModelImportPbrRules" ).join( "models_raw/a.gltf" ).str();
+    const auto   mix        = [&sourcePath]( string_view json, string_view ruleText )
+    { return ModelImportUtil::mixExternalFiles( sourcePath, vector<uint8>( json.begin(), json.end() ), ruleText, 1 ); };
+    constexpr string_view kEmbedded = R"({ "asset": { "version": "2.0" }, "images": [ { "uri": "data:image/png;base64,AA==" } ] })";
+    constexpr string_view kRawOnly  = R"({ "asset": { "version": "2.0" }, "images": [ { "uri": "../textures_raw/shared.png" } ] })";
+    constexpr string_view kNoImage  = R"({ "asset": { "version": "2.0" } })";
+    SW_EXPECT_TRUE( mix( kEmbedded, "a" ) != mix( kEmbedded, "b" ) );
+    SW_EXPECT_EQUAL( mix( kRawOnly, "a" ), mix( kRawOnly, "b" ) );
+    SW_EXPECT_EQUAL( mix( kNoImage, "a" ), mix( kNoImage, "b" ) );
 }
 
 /**

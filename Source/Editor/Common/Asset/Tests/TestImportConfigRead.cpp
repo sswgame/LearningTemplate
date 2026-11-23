@@ -198,3 +198,20 @@ SW_TEST_CASE( ModelImportConfigTest, SingleFilePatternIsRejected )
     sw::editor::TextureImportConfig textureConfig;
     SW_EXPECT_FALSE( textureConfig.loadFromJSONString( R"({ "rules": [ { "name": "One", "filter": { "includePatterns": ["game/textures_raw/blocks.png"] } } ] })" ) );
 }
+
+/**
+ * @brief [ImportConfigReadTest] 텍스처 규칙을 고르는 글은 이름 · 조건이 바뀌면 바뀌고, 압축 설정만 바뀌면 그대로다
+ */
+SW_TEST_CASE( ImportConfigReadTest, SelectionTextFollowsNamesAndFilters )
+{
+    const auto makeText = []( sw::string_view rules )
+    {
+        sw::editor::TextureImportConfig config;
+        SW_EXPECT_TRUE( config.loadFromJSONString( rules ) );
+        return config.makeSelectionText();
+    };
+    const sw::string base = makeText( R"({ "rules": [ { "name": "Normal", "format": "BC5", "filter": { "includePatterns": ["*_n.*"] } } ] })" );
+    SW_EXPECT_EQUAL( base, makeText( R"({ "rules": [ { "name": "Normal", "format": "BC7", "filter": { "includePatterns": ["*_n.*"] } } ] })" ) );
+    SW_EXPECT_TRUE( base != makeText( R"({ "rules": [ { "name": "Normal2", "format": "BC5", "filter": { "includePatterns": ["*_n.*"] } } ] })" ) );
+    SW_EXPECT_TRUE( base != makeText( R"({ "rules": [ { "name": "Normal", "format": "BC5", "filter": { "excludePatterns": ["*_n.*"] } } ] })" ) );
+}

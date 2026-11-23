@@ -33,6 +33,7 @@
 #include "Editor/Common/Asset/ModelImport/ModelImportUtil.h"
 #include "Editor/Common/Asset/ModelImport/ModelImportVrm.h"
 #include "Editor/Common/Asset/ModelImport/ToonMaterialDef.h"
+#include "Editor/Common/Asset/Texture/TextureImportConfig.h"
 #include "Editor/Common/Asset/Texture/TextureImporter.h"
 #include "Editor/Common/Workspace/EditorService.h"
 
@@ -752,9 +753,10 @@ namespace sw::editor
         {
         public:
             /** @brief @p assetPaths 는 부른 스레드가 찾아 넘긴 경로 상태다 — `importSource` 가 워커에서 돌아 서비스를 찾지 않는다. */
-            ModelRawImporter( const AssetPaths& assetPaths, const ModelImportConfig& config )
+            ModelRawImporter( const AssetPaths& assetPaths, const ModelImportConfig& config, const TextureImportConfig& textureConfig )
                 : _assetPaths{ assetPaths }
                 , _config{ config }
+                , _imageRuleText{ textureConfig.makeSelectionText() }
             {
             }
 
@@ -772,7 +774,7 @@ namespace sw::editor
                 ModelImportRule rule;
                 if ( findRule( sourcePath, assetPath, rule ) == false )
                     return 0; // 규칙이 겹치는 원본은 해시를 만들지 않는다(0 = 읽지 못함). 어긋남으로 잡히고 임포트도 같은 오류로 멈춘다
-                return ModelImporter::computeSourceHash( sourcePath, rule );
+                return ModelImporter::computeSourceHash( sourcePath, rule, _imageRuleText );
             }
             uint64      computeImportedHash( string_view importedPath ) const override { return ModelImporter::computeImportedHash( importedPath ); }
             const utf8* findUnsupportedReason( string_view sourcePath ) const override
@@ -820,6 +822,7 @@ namespace sw::editor
         private:
             const AssetPaths&        _assetPaths;
             const ModelImportConfig& _config;
+            string                   _imageRuleText; ///< 꺼낼 이미지의 텍스처 규칙을 고르는 글(원본 해시에 섞는다)
         };
     } // namespace
 } // namespace sw::editor
@@ -986,7 +989,10 @@ namespace sw::editor
         if ( config.loadFromFile( ModelImportConfig::makeDefaultConfigPath() ) == false )
             return true;
         // 바뀐 원본만 임포트한다(루트 전체를 훑지 않는다). 스탬프를 쓰는 길은 `importAllModels` 와 같은 `AssetImportStampUtil` 한 곳이다.
-        const ModelRawImporter           importer{ assetPaths, config };
+        TextureImportConfig textureConfig{};
+        if ( textureConfig.loadFromFile( TextureImporter::makeDefaultImportConfigPath() ) == false )
+            return true;
+        const ModelRawImporter           importer{ assetPaths, config, textureConfig };
         const expected<DerivedDataCache> derivedDataCache = DerivedDataCache::open( DerivedDataBucket::Import );
         if ( derivedDataCache.has_value() == false )
         {
@@ -1005,7 +1011,10 @@ namespace sw::editor
 
     AssetImportSummary ModelImporter::importAllModels( const AssetPaths& assetPaths, string_view resourceRoot, const ModelImportConfig& config, AssetImportMode mode )
     {
-        const ModelRawImporter           importer{ assetPaths, config };
+        TextureImportConfig textureConfig{};
+        if ( textureConfig.loadFromFile( TextureImporter::makeDefaultImportConfigPath() ) == false )
+            return AssetImportSummary::makeFailed( "ModelImporter: the texture import rules could not be read (see the log)" );
+        const ModelRawImporter           importer{ assetPaths, config, textureConfig };
         const expected<DerivedDataCache> derivedDataCache = DerivedDataCache::open( DerivedDataBucket::Import );
         if ( derivedDataCache.has_value() == false )
         {
@@ -1096,7 +1105,7 @@ namespace sw::editor
         return string( pathBuilder.view() );
     }
 
-    uint64 ModelImporter::computeSourceHash( string_view sourcePath, const ModelImportRule& rule )
+    uint64 ModelImporter::computeSourceHash( string_view sourcePath, const ModelImportRule& rule, string_view imageRuleText )
     {
         vector<uint8> bytes;
         if ( FileUtil::readFile( FileUtil::toDiskPath( sourcePath ), bytes ) == false || bytes.empty() )
@@ -1161,7 +1170,7 @@ namespace sw::editor
             hash = HashUtil::computeStringHash64( reinterpret_cast<const utf8*>( clipDataBytes.data() ), clipDataBytes.size(), false, hash );
 
         // 버퍼 · 이미지를 옆 파일로 둘 수 있다. 그 바이트가 바뀌어도 어긋남이어야 한다(이미지는 결과의 공유 원본으로 꺼낸다). data URI 는 이미 본문에 있다.
-        return ModelImportUtil::mixExternalFiles( sourcePath, bytes, hash );
+        return ModelImportUtil::mixExternalFiles( sourcePath, bytes, imageRuleText, hash );
     }
 
     void ModelImporter::collectImportedFiles( string_view importedMeshPath, vector<string>& outListPath )

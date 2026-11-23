@@ -2,6 +2,7 @@
 
 #include "Editor/Common/Asset/Texture/TextureImportConfig.h"
 
+#include "Core/Container/pair.h"
 #include "Core/File/FileUtil.h"
 #include "Core/Log/Logger.h"
 #include "Core/String/StringBuilder.h"
@@ -272,6 +273,27 @@ namespace sw::editor
         StringBuilder<constant::buffer::kMax256> pathBuilder;
         pathBuilder.appendFormat( "%#/textures_raw/%#/%#/%#%#", domainFolder, kSharedFolderName, rule, key, extension );
         return string( pathBuilder.view() );
+    }
+
+    string TextureImportConfig::makeSelectionText() const
+    {
+        StringBuilder<constant::buffer::kMax4096> text;
+        for ( const TextureImportRule& rule : _listRule )
+        {
+            text.appendFormat( "rule=%#\n", rule._name );
+            const pair<const utf8*, const vector<string>*> arrList[] = {
+                {"includePattern", &rule._filter._listIncludePattern},
+                {"excludePattern", &rule._filter._listExcludePattern},
+                {   "includePath",    &rule._filter._listIncludePath},
+                {   "excludePath",    &rule._filter._listExcludePath}
+            };
+            for ( const pair<const utf8*, const vector<string>*>& list : arrList )
+            {
+                for ( const string& value : *list.second )
+                    text.appendFormat( "%#=%#\n", list.first, value );
+            }
+        }
+        return string( text.view() );
     }
 
     string TextureImportConfig::findSharedRuleName( string_view relativePath )

@@ -161,12 +161,12 @@ SW_TEST_CASE( ModelImportSectionsTest, SourceHashFollowsTheBodyMesh )
     ModelImportRule rule{};
     rule._bodySurface = test::EditorScratchDomain::makeID( "body.mesh" );
     SW_REQUIRE_TRUE( FileUtil::writeTextFile( domain.makeDiskPath( "body.mesh" ), "body one" ) );
-    const uint64 before = ModelImporter::computeSourceHash( sourcePath, rule );
+    const uint64 before = ModelImporter::computeSourceHash( sourcePath, rule, {} );
     SW_EXPECT_TRUE( before != 0 );
-    SW_EXPECT_EQUAL( before, ModelImporter::computeSourceHash( sourcePath, rule ) );
+    SW_EXPECT_EQUAL( before, ModelImporter::computeSourceHash( sourcePath, rule, {} ) );
 
     SW_REQUIRE_TRUE( FileUtil::writeTextFile( domain.makeDiskPath( "body.mesh" ), "body two" ) );
-    SW_EXPECT_TRUE( before != ModelImporter::computeSourceHash( sourcePath, rule ) );
+    SW_EXPECT_TRUE( before != ModelImporter::computeSourceHash( sourcePath, rule, {} ) );
 }
 
 /**

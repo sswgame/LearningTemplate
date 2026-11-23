@@ -115,8 +115,9 @@ namespace sw::editor
         /**
          * @brief 원본 바이트 @p listByte 가 가리키는 바깥 파일(버퍼 · 이미지)의 내용을 @p hash 에 섞습니다.
          * @details 텍스처 원본 폴더(`textures_raw/`)의 이미지는 섞지 않는다 — 결과는 그 텍스처의 경로만 적고 내용은 텍스처 임포트가 따라간다. 없는 파일은 임포트가 오류로 알린다.
+         * @param imageRuleText 꺼내는 이미지의 텍스처 규칙을 고르는 글 — 이미지를 꺼내는 모델(내장 · 텍스처 원본 폴더 밖 이미지)에만 섞는다(꺼낸 자리가 고른 규칙의 폴더다).
          */
-        [[nodiscard]] static uint64 mixExternalFiles( string_view sourcePath, const vector<uint8>& listByte, uint64 hash );
+        [[nodiscard]] static uint64 mixExternalFiles( string_view sourcePath, const vector<uint8>& listByte, string_view imageRuleText, uint64 hash );
 
         /** @brief 메시의 @p targetIndex 번째 모프 타깃 이름을 만듭니다. `extras.targetNames` 를 쓰고(cgltf 는 `target_names` 로 읽는다), 없으면 "target<번호>" 입니다. */
         static hashed_string makeMorphTargetName( const cgltf_mesh* pMesh, cgltf_size targetIndex );
