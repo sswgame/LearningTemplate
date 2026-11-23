@@ -859,11 +859,12 @@ namespace sw
     {
         const auto ticketIt = _mapLocalTicket.find( ticketID );
         if ( ticketIt == _mapLocalTicket.end() )
-            return;                                   // 이미 끝났다. 시한 뒤에 온 늦은 결과이거나 이미 빠진 티켓이다
-        if ( ticketIt->second._leaveRequestTag != 0 ) // 빠지기의 답이다 — 경기가 먼저 났으면(Found) 빠지지 못했다
+            return; // 이미 끝났다. 시한 뒤에 온 늦은 결과이거나 이미 빠진 티켓이다
+        // 빠지기의 답이다 — 경기가 먼저 났으면(Found) 빠지지 못했다
+        const MatchmakingResult leaveResult = assignment._result == MatchQueueResult::Cancelled ? MatchmakingResult::Ok : MatchmakingResult::NotQueued;
+        for ( const uint64 leaveRequestTag : ticketIt->second._listLeaveRequestTag )
         {
-            const MatchmakingResult leaveResult = assignment._result == MatchQueueResult::Cancelled ? MatchmakingResult::Ok : MatchmakingResult::NotQueued;
-            _completionBuffer.push( MatchQueueCompletion{ ticketIt->second._leaveRequestTag, ticketID, leaveResult } );
+            _completionBuffer.push( MatchQueueCompletion{ leaveRequestTag, ticketID, leaveResult } );
         }
         for ( const AccountID accountID : ticketIt->second._listAccount )
         {
@@ -892,7 +893,7 @@ namespace sw
     {
         LocalTicket& ticket = _mapLocalTicket[ticketID];
         if ( leaveRequestTag != 0 )
-            ticket._leaveRequestTag = leaveRequestTag;
+            ticket._listLeaveRequestTag.push_back( leaveRequestTag );
         if ( ticket._cancelDeadlineMs != 0 )
             return; // 이미 빼는 중이다 — 같은 답을 기다린다
         ticket._cancelDeadlineMs = _nowMs + _dependencies._cancelConfirmWaitMs;

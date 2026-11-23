@@ -190,7 +190,7 @@ namespace sw
             uint64            _partyID{ 0 };
             int64             _deadlineMs{ 0 };
             int64             _cancelDeadlineMs{ 0 }; ///< 빠지기를 보낸 뒤 권한 서버의 답을 기다리는 시한(0 이면 빠지는 중이 아니다)
-            uint64            _leaveRequestTag{ 0 };  ///< 이 티켓을 뺀 `leaveQueue` 요청이다. 끝날 때(Cancelled · Found · Timeout) 답한다
+            vector<uint64>    _listLeaveRequestTag{}; ///< 이 티켓을 뺀 `leaveQueue` 요청들이다(파티원마다 낼 수 있다). 끝날 때(Cancelled · Found · Timeout) 모두 답한다
         };
 
         /** @brief 이 서버가 낸 티켓을 빼 달라고 권한 서버에 맡깁니다. 확인 답(Cancelled)이 와야 끝나며, 그 전에 Found 가 오면 경기가 이긴다(감사 O-18). */

@@ -512,6 +512,26 @@ SW_TEST_CASE( MatchQueueServiceTest, LeaveRacingAFormedMatchYieldsToFound )
     SW_EXPECT_TRUE( world._serverB.takeCompletion()._result == MatchmakingResult::NotQueued );
 }
 
+/** @brief [MatchQueueServiceTest] 확인을 기다리는 동안 다시 빠지기를 낸 요청도 모두 답을 받는다(결함: 앞 요청의 태그를 덮어 그 호출이 답 없이 남았다) */
+SW_TEST_CASE( MatchQueueServiceTest, EveryLeaveRequestIsAnswered )
+{
+    PairWorld world;
+    world.start( vector<MatchModeDef>{ MatchQueueTestUtil::makeMode() } );
+    SW_REQUIRE_TRUE( world._serverB.join( kAlice )._result == MatchmakingResult::Ok );
+    world.updateBoth( kNowMs + 1 );
+
+    world._serverB._queue.leaveQueue( kAlice, 8 );
+    world._serverB._queue.leaveQueue( kAlice, 9 ); // 권한 서버(A)의 확인이 오기 전
+    world.updateBoth( kNowMs + 2 );
+    vector<MatchQueueCompletion> listCompletion;
+    world._serverB._queue.takeCompletions( listCompletion );
+    SW_REQUIRE_EQUAL( size_t( 2 ), listCompletion.size() );
+    SW_EXPECT_EQUAL( uint64( 8 ), listCompletion[0]._requestTag );
+    SW_EXPECT_TRUE( listCompletion[0]._result == MatchmakingResult::Ok );
+    SW_EXPECT_EQUAL( uint64( 9 ), listCompletion[1]._requestTag );
+    SW_EXPECT_TRUE( listCompletion[1]._result == MatchmakingResult::Ok );
+}
+
 /** @brief [MatchQueueServiceTest] 권한 서버의 답이 시한 안에 오지 않으면(권한이 없다) 빠진 것으로 끝낸다 */
 SW_TEST_CASE( MatchQueueServiceTest, LeaveWithoutAuthorityEndsAtTheConfirmDeadline )
 {
