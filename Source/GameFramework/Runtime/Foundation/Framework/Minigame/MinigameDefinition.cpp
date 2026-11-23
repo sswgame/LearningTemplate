@@ -66,6 +66,14 @@ namespace sw
             SW_LOG_ERROR_ID( "MinigameDefinition.DuplicateName", "%#: '%#' is listed twice", sourceName, pDuplicate->c_str() );
             bValid = false;
         }
+        // 매치형 칸은 한 벌이다 — 배정만 있고 결과를 낼 곳이 없거나, 결과만 있고 배정이 없는 정의는 어느 쪽도 돌지 않는다.
+        const bool bMatchAny = isMatch() || _matchBoard.empty() == false || _matchScore.empty() == false;
+        const bool bMatchAll = isMatch() && _matchBoard.empty() == false && _matchScore.empty() == false && _entry == MinigameEntry::SceneSwitch;
+        if ( bMatchAny && bMatchAll == false )
+        {
+            SW_LOG_ERROR_ID( "MinigameDefinition.MatchIncomplete", "%#: a match minigame needs matchMode, matchBoard and matchScore together and entry=\"SceneSwitch\"", sourceName );
+            bValid = false;
+        }
         if ( _map.isSet() == false || AssetIO::hasAsset( AssetID{ _map.get() } ) == false )
         {
             SW_LOG_ERROR_ID( "MinigameDefinition.MapMissing", "%#: map '%#' does not exist", sourceName, _map.isSet() ? _map.c_str() : "" );

@@ -78,10 +78,19 @@ namespace sw
         /**
          * @brief 미니게임 @p name 을 맨 위에 쌓아 들어갑니다(켜진 미니게임이 있으면 그 범위를 끄고 덮는다).
          * @param placement `SubLevel` 을 얹을 자리(진입을 건 사물의 변환). `SubLevel` 은 반드시 있어야 하고, `SceneSwitch` 는 보지 않는다.
-         * @return 못 읽거나 검사에서 지거나, 넷 세션이 열렸는데 `SceneSwitch` 이거나, `SubLevel` 인데 활성 씬 · 자리가 없거나, 맨 위와 같은 미니게임이거나, 깊이 한도에 닿았거나,
+         *        매치형(`MinigameDefinition::isMatch`)이면 들어가지 않고 매칭 창구(`IMinigameMatchmaking`)로 줄을 선다 — 배정되면 창구가 `enterMatch` 한다. 첫 씬을 매치로 띄우는 전용 서버만 바로 들어간다.
+         * @return 못 읽거나 검사에서 지거나, 매치형인데 매칭 창구가 없거나, 넷 세션이 열렸는데 `SceneSwitch` 이거나, `SubLevel` 인데 활성 씬 · 자리가 없거나, 맨 위와 같은 미니게임이거나, 깊이 한도에 닿았거나,
          *         다른 진입 · 나가기가 맵을 기다리는 중이면 알리고 false 입니다. 찍기 · 켜기 · 맵 · 하위 레벨 요청이 져도 false 이고, 그때는 덮었던 미니게임을 다시 켠다(원자적).
          */
         [[nodiscard]] bool enter( string_view name, const optional<SubLevelPlacement>& placement = nullopt );
+        /**
+         * @brief 배정받은 매치 @p matchID 의 매치형 미니게임 @p name 에 들어갑니다 — 매칭 창구(`IMinigameMatchmaking`)가 매치 세션으로 옮긴 뒤 부릅니다.
+         * @details 매치형은 이 길로만 들어간다(`enter` 는 줄을 설 뿐이다). 매치 세션은 방금 옮겨 온 것이라 씬을 바꿔도 허브 세션을 가르지 않는다 — 넷 세션 거절을 보지 않는다.
+         * @return 매치형이 아니거나, 매치 번호가 없거나, 이미 매치에 있거나, 다른 진입 · 나가기가 맵을 기다리는 중이거나 들어가지 못하면 알리고 false 입니다.
+         */
+        [[nodiscard]] bool enterMatch( string_view name, uint64 matchID );
+        /** @brief 이름 @p name 이 매치형 미니게임이면 true 입니다(정의를 읽는다 — 못 읽으면 알리고 false). */
+        [[nodiscard]] bool isMatchMinigame( string_view name ) const;
         /**
          * @brief 맨 위 미니게임을 @p name 으로 바꿉니다 — 돌아올 자리는 그대로다(마리오 파티식 연속). 칸이 없으면 `enter` 와 같다.
          * @return 맨 위나 새 것이 `SubLevel` 이면(얹은 씬이 바뀌는 교체는 나간 뒤 들어간다) 알리고 false 입니다. 나머지 거절은 `enter` 와 같고, 지면 앞 미니게임을 다시 켠다(원자적).
@@ -134,7 +143,7 @@ namespace sw
         /** @brief 하위 레벨을 사물 @p anchor 의 변환(위치는 절대 — 월드 원점을 더한다)에 얹는 자리입니다 — 트리거 · 개발 명령이 쓴다. 장면 컴포넌트가 없으면 nullopt 입니다. */
         static optional<SubLevelPlacement> makeAnchorPlacement( const GameObject& anchor );
         /**
-         * @brief @p definition 이 지금 인스턴스에서 들어갈 수 있는 방식인지 봅니다 — 넷 세션이 열렸으면(@p bNetSessionActive) 씬 전환은 거절한다(폴백 없음).
+         * @brief @p definition 이 지금 인스턴스에서 들어갈 수 있는 방식인지 봅니다 — 넷 세션이 열렸으면(@p bNetSessionActive) 씬 전환은 거절한다(폴백 없음). 씬이 서기 전 첫 진입은 세션을 가르지 않아 열린 것으로 치지 않는다.
          * @return 거절이면 알리고 false 입니다.
          */
         [[nodiscard]] static bool validateEntry( const MinigameDefinition& definition, bool bNetSessionActive );
@@ -161,6 +170,8 @@ namespace sw
         [[nodiscard]] bool loadDefinition( string_view name, MinigameDefinition& outDefinition ) const;
         /** @brief 엔진 설정의 쌓기 깊이 한도를 보고 하나 더 쌓을 수 있으면 true 입니다. 한도가 없거나 닿았으면 알리고 false 입니다. */
         [[nodiscard]] bool validateDepth( string_view name ) const;
+        /** @brief 검사를 마친 정의로 들어갑니다(`enter` · `enterMatch` 의 공통 몸) — 켜고, 돌아올 자리를 만들고, 맵을 요청한다. 지면 덮었던 미니게임을 다시 켠다(원자적). */
+        [[nodiscard]] bool enterDefinition( MinigameDefinition definition, const optional<SubLevelPlacement>& placement );
         /** @brief @p definition 을 켭니다 — 게임 기능(적은 순서) → 카탈로그 맞춤 → 입력 문맥 → UI. 하나라도 지면 그때까지 건 것을 거두고(해제 검사 포함) nullptr 입니다. */
         [[nodiscard]] unique_ptr<GameFeatureScope> activate( const MinigameDefinition& definition );
         /** @brief 씬 전환 칸의 돌아올 자리를 만듭니다 — 활성 씬이 있으면 자동 저장을 한 번 맡기고 찍은 뒤 저장을 막는다, 없으면 입구 씬. 찍지 못하면 알리고 false 입니다. */

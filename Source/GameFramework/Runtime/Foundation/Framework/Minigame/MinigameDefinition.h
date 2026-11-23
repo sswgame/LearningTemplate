@@ -49,6 +49,12 @@ namespace sw
         DataPath _map; ///< 들어갈 맵 씬(리소스 id)
         PROPERTY( Required )
         MinigameEntry _entry{ MinigameEntry::SceneSwitch }; ///< 들어가는 방식
+        PROPERTY()
+        string _matchMode{}; ///< 매치형이면 매칭 모드(서버 매칭 키트 `MatchModeCatalog` 의 id) — 적으면 배정받은 매치로만 들어간다(`MinigameFlow::enterMatch`). 아래 둘과 함께 적는다
+        PROPERTY()
+        string _matchBoard{}; ///< 매치 결과를 낼 순위표(서버 순위표 키트 `LeaderboardCatalog` 의 id)
+        PROPERTY()
+        hashed_string _matchScore{}; ///< 순위표에 낼 결과 값 이름(디렉터의 `collectMinigameResult`) — 이 값은 바탕 판의 보상으로 넘기지 않는다
         PROPERTY( Name = "features" )
         vector<hashed_string> _listFeature{}; ///< 켤 게임 기능 이름(`SW_GAME_FEATURE` 의 이름, 적은 순서로 켜고 역순으로 끈다)
         PROPERTY( Name = "inputContexts" )
@@ -57,6 +63,9 @@ namespace sw
         vector<string> _listUI{}; ///< 열 UI 문서(리소스 id). DataPath 목록은 리플렉션 글 처리기가 없어 글 목록이다 — 있는지는 `validate` 가 본다
         PROPERTY( Name = "catalogs" )
         vector<hashed_string> _listCatalog{}; ///< 기능이 읽을 데이터 종류(`kDataKind`). 기능이 적지 않은 종류를 읽거나 적은 종류를 아무도 읽지 않으면 켜기가 진다
+
+        /** @brief 매치형이면 true 입니다 — 매칭 줄에 서고 배정받아 매치 세션으로 들어간다. */
+        bool isMatch() const { return _matchMode.empty() == false; }
 
         /** @brief 리소스 @p assetID 의 XML 을 읽습니다. 실패하면 이유를 알리고 false 이며, @p outDefinition 은 그대로입니다. */
         [[nodiscard]] static bool loadFromAsset( const AssetID& assetID, MinigameDefinition& outDefinition );
