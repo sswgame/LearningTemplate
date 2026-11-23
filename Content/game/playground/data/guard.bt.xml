@@ -1,0 +1,23 @@
+<?xml version="1.0" encoding="utf-8"?>
+<?asset guid="c4ec5d660cde45fa815c340776bb39fa"?>
+<!--
+  경비(maps/gimmickeffects 의 GuardBrain — PerceptionAIControllerComponent)의 판단. 보이면 쫓고(Chase), 들었거나 놓친 자리를 기억하면 가서 살피고(Investigate), 아니면 선다(Idle).
+-->
+<BehaviorTree>
+	<Selector id="root" name="Guard">
+		<Sequence id="chase" name="Chase">
+			<Condition test="hasBlackboard(SeenPosition)"/>
+			<Action name="Chase" task="ai.state" state="Chase"/>
+			<Action task="ai.moveTo" key="SeenPosition" repathDistance="0.5"/>
+		</Sequence>
+		<Sequence id="investigate" name="Investigate">
+			<Condition test="hasBlackboard(AlertPosition)"/>
+			<Action name="Investigate" task="ai.state" state="Investigate"/>
+			<Action task="ai.moveTo" key="AlertPosition" repathDistance="0.5"/>
+		</Sequence>
+		<Sequence id="idle" name="Idle">
+			<Action name="Idle" task="ai.state" state="Idle"/>
+			<Action task="ai.stop"/>
+		</Sequence>
+	</Selector>
+</BehaviorTree>

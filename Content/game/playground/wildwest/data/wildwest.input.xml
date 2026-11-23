@@ -2,7 +2,7 @@
 <?asset guid="48766c9ec15ed0d52c1c17547ef58206"?>
 <!--
   서부 평원(maps/prairie)의 입력 차이 — Playground 묶음(data/gamesettings.xml 의 <inputMap> 줄) 위에 얹힌다.
-  기수 폰과 말 폰이 같은 액션 이름을 의도 버튼으로 쓴다 — 걸을 때는 Interact 가 타기, 탔을 때는 내리기다. Sprint 는 말의 질주다. 점프는 없다.
+  기수 폰과 말 폰이 같은 액션 이름을 의도 버튼으로 쓴다 — 걸을 때는 Interact 가 타기, 탔을 때는 내리기다. Sprint 는 말의 질주다. 기수 · 말 폰은 점프 버튼이 없다.
 -->
 <InputMap>
 	<action name="West.Whistle" layer="Gameplay" trigger="Pressed">
@@ -15,5 +15,4 @@
 	<action name="West.Carry" layer="Gameplay" trigger="Pressed">
 		<bind source="Key" code="R"/>
 	</action>
-	<remove name="Jump"/>
 </InputMap>

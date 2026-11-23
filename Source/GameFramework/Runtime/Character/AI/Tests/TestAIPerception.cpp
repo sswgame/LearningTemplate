@@ -77,8 +77,8 @@ SW_TEST_CASE( AIPerceptionTest, SharedQueryFindsRegisteredSources )
     vector<Component*> listKey;
     AIStimulusSourceComponent::gatherStimuli( manager, 1, float3{}, 10.0f, listStimulus, listKey );
     SW_REQUIRE_EQUAL( size_t{ 1 }, listStimulus.size() );
-    SW_EXPECT_EQUAL( pNear->getOwner()->getObjectID(), listStimulus[0]._id );
-    SW_EXPECT_NEAR( 3.0f, listStimulus[0]._position._x, 1e-5f );
+    SW_EXPECT_EQUAL( pNear->getOwner()->getObjectID(), listStimulus[0].getID() );
+    SW_EXPECT_NEAR( 3.0f, listStimulus[0].getPosition()._x, 1e-5f );
 
     AIStimulusSourceComponent::gatherStimuli( manager, 0, float3{}, 10.0f, listStimulus, listKey );
     SW_EXPECT_TRUE( listStimulus.empty() ); // 자기 팀은 묻지 않는다
@@ -138,9 +138,39 @@ SW_TEST_CASE( AIPerceptionTest, NoiseWidensTheHearingEntry )
     pLoud->reportNoise( 8.0f ); // 틱 밖이라 바로 고친다
     AIStimulusSourceComponent::gatherStimuli( manager, 1, float3{}, 10.0f, listStimulus, listKey );
     SW_REQUIRE_EQUAL( size_t{ 1 }, listStimulus.size() );
-    SW_EXPECT_NEAR( 8.0f, listStimulus[0]._noiseRadius, 1e-5f );
+    SW_EXPECT_NEAR( 8.0f, listStimulus[0].getNoiseRadius(), 1e-5f );
 
     pLoud->clearNoise();
     AIStimulusSourceComponent::gatherStimuli( manager, 1, float3{}, 10.0f, listStimulus, listKey );
     SW_EXPECT_TRUE( listStimulus.empty() );
+}
+
+/**
+ * @brief [AIPerceptionTest] 소리 자극은 시야 안이어도 보이지 않고 들리기만 한다. 보이던 대상이 시야에서 나가 소리만 내면 들리되 보이지 않는다
+ */
+SW_TEST_CASE( AIPerceptionTest, SoundIsHeardNotSeen )
+{
+    const float3 eye{};
+    const float3 forward{ 1.0f, 0.0f, 0.0f };
+    const float3 ahead{ 3.0f, 0.0f, 0.0f };
+    AIPerception perception;
+    perception.sense( eye, forward, vector<AIStimulus>{ AIStimulus::makeHearing( ahead, 7, 8.0f ) }, nullptr, 0.1f );
+    const AIPerceivedTarget* pTarget = perception.findTarget( 7 );
+    SW_REQUIRE_NOT_NULL( pTarget );
+    SW_EXPECT_TRUE( pTarget->_bHeard == SW_TRUE );
+    SW_EXPECT_TRUE( pTarget->_bSeen == SW_FALSE );
+    SW_EXPECT_NULL( perception.findNearestSeen( eye ) );
+
+    perception.sense( eye, forward, vector<AIStimulus>{ AIStimulus::makeSight( ahead, 7 ) }, nullptr, 0.1f );
+    pTarget = perception.findTarget( 7 );
+    SW_REQUIRE_NOT_NULL( pTarget );
+    SW_EXPECT_TRUE( pTarget->_bSeen == SW_TRUE );
+    SW_EXPECT_TRUE( pTarget->_bHeard == SW_FALSE );
+
+    perception.sense( eye, forward, vector<AIStimulus>{ AIStimulus::makeHearing( ahead, 7, 8.0f ) }, nullptr, 0.1f );
+    pTarget = perception.findTarget( 7 );
+    SW_REQUIRE_NOT_NULL( pTarget );
+    SW_EXPECT_TRUE( pTarget->_bSeen == SW_FALSE );
+    SW_EXPECT_TRUE( pTarget->_bHeard == SW_TRUE );
+    SW_EXPECT_NEAR( 0.0f, pTarget->_age, 1.0e-6f );
 }

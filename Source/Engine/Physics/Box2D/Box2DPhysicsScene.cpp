@@ -1348,6 +1348,20 @@ namespace sw
         CharacterRecord record;
         record._desc            = desc;
         record._state._position = desc._position;
+        // 속 바디 — 트리거(센서)가 캐릭터를 몸으로 느낀다(3D Jolt 속 바디와 같은 자리). 겹침 전용 센서라 무버에 걸리지도, 동적 바디를 밀지도 않는다.
+        if ( desc._bInnerBody )
+        {
+            PhysicsBodyDesc2D body;
+            body._listShape.push_back( makeInnerShape( desc ) );
+            body._position      = desc._position;
+            body._userData      = desc._userData;
+            body._type          = PhysicsBodyType::Kinematic;
+            body._layer         = desc._layer;
+            body._gravityFactor = 0.0f;
+            body._bOverlapOnly  = true;
+            body._bLockRotation = true;
+            record._innerBody   = createBody( body );
+        }
         return PhysicsCharacterHandle::fromSlot( _characters.insert( std::move( record ) ) );
     }
 
@@ -1364,14 +1378,38 @@ namespace sw
             SW_LOG_ERROR_ID( "Box2DPhysicsScene.SetCharacterSizeInvalid", "setCharacterSize: radius %# and half height %# do not make a capsule", radius, halfHeight );
             return false;
         }
-        // 무버는 바디가 없다 — 이동마다 캡슐을 서술자로 새로 만들므로(`makeMoverCapsule`) 서술자만 고치면 다음 이동부터 새 크기다.
+        // 무버는 이동마다 캡슐을 서술자로 새로 만들므로(`makeMoverCapsule`) 서술자만 고치면 다음 이동부터 새 크기다. 속 바디는 셰이프만 갈아 핸들 · 접촉을 잇는다.
         pRecord->_desc._radius     = radius;
         pRecord->_desc._halfHeight = halfHeight;
+        BodyRecord* pInner         = findBody( pRecord->_innerBody );
+        if ( pInner == nullptr || pInner->_listShapeID.empty() )
+            return true;
+        const PhysicsShapeDesc2D shape = makeInnerShape( pRecord->_desc );
+        const b2Capsule          capsule{
+            b2Vec2{shape._localPosition._x, shape._localPosition._y - shape._halfHeight},
+            b2Vec2{shape._localPosition._x, shape._localPosition._y + shape._halfHeight},
+            shape._radius
+        };
+        b2Shape_SetCapsule( pInner->_listShapeID.front(), &capsule );
+        pInner->_pListShape = make_shared<const ShapeDescList>( ShapeDescList{ shape } );
         return true;
+    }
+
+    PhysicsShapeDesc2D Box2DPhysicsScene::makeInnerShape( const PhysicsCharacterDesc2D& desc )
+    {
+        PhysicsShapeDesc2D shape;
+        shape._type          = PhysicsShapeType2D::Capsule;
+        shape._radius        = desc._radius;
+        shape._halfHeight    = desc._halfHeight;
+        shape._localPosition = float2{ 0.0f, desc._radius + desc._halfHeight };
+        return shape;
     }
 
     void Box2DPhysicsScene::destroyCharacter( PhysicsCharacterHandle character )
     {
+        const CharacterRecord* pRecord = _characters.get( character.getSlot() );
+        if ( pRecord != nullptr && pRecord->_innerBody.isValid() )
+            destroyBody( pRecord->_innerBody );
         _characters.erase( character.getSlot() );
     }
 
@@ -1450,6 +1488,8 @@ namespace sw
         state._velocity        = deltaTime > 0.0f ? ( position - start ) * ( 1.0f / deltaTime ) - carriedVelocity : float2{};
         state._carriedVelocity = deltaTime > 0.0f ? carriedVelocity : float2{};
         state._groundYawRate   = groundYawRate;
+        if ( pRecord->_innerBody.isValid() )
+            moveKinematic( pRecord->_innerBody, position, 0.0f, deltaTime ); // 이어지는 월드 스텝이 속 바디를 그 자리로 옮긴다
         return state;
     }
 
@@ -1460,6 +1500,8 @@ namespace sw
             return;
         pRecord->_state._position   = position;
         pRecord->_state._groundBody = PhysicsBodyHandle{}; // 옮긴 직후 한 스텝은 옛 바닥의 속도를 싣지 않는다
+        if ( pRecord->_innerBody.isValid() )
+            setBodyTransform( pRecord->_innerBody, position, 0.0f );
     }
 
     bool Box2DPhysicsScene::getCharacterState( PhysicsCharacterHandle character, PhysicsCharacterState2D& outState ) const

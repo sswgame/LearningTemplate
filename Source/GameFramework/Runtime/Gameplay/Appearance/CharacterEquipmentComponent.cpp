@@ -12,6 +12,7 @@
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Object/GameObject/GameObjectEvents.h"
 #include "Engine/Object/GameObject/GameObjectManager.inl"
+#include "Engine/Object/Prefab/PrefabAsset.h"
 #include "Engine/Scene/SceneManager.h"
 #include "Engine/Serialization/Format/Archive.h"
 #include "Engine/Serialization/Format/FormatUpgrade.h"
@@ -68,7 +69,9 @@ namespace sw
         , _pendingStateBytes{}
         , _bagSlotCount{ 16 }
         , _bagMaxWeight{ 0.0f }
+        , _pickupPrefab{}
         , _bStarted{ SW_FALSE }
+        , _itemReceiverPort{}
     {
     }
 
@@ -147,6 +150,21 @@ namespace sw
         {
             _character._tags.addTag( tag );
         }
+    }
+
+    ItemGrantResult CharacterEquipmentComponent::ItemReceiverPort::receiveItem( const hashed_string& item, int32 count )
+    {
+        CharacterEquipmentComponent& owner = getPortOwner<CharacterEquipmentComponent>( *this, offsetof( CharacterEquipmentComponent, _itemReceiverPort ) );
+        if ( owner.isStarted() == false || owner._bag.hasRoomFor( item, count ) == false )
+            return ItemGrantResult::NoRoom;
+        (void)owner._bag.addItem( item, count ); // 자리를 먼저 봤으므로 모두 들어간다
+        return ItemGrantResult::Granted;
+    }
+
+    ItemGrantResult CharacterEquipmentComponent::ItemReceiverPort::receiveStack( const InventorySlot& stack )
+    {
+        CharacterEquipmentComponent& owner = getPortOwner<CharacterEquipmentComponent>( *this, offsetof( CharacterEquipmentComponent, _itemReceiverPort ) );
+        return owner.addToBag( stack ) ? ItemGrantResult::Granted : ItemGrantResult::NoRoom;
     }
 
     bool CharacterEquipmentComponent::addToBag( const InventorySlot& item )

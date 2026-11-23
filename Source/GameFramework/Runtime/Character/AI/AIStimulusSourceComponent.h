@@ -13,20 +13,12 @@
 #include "Engine/Reflection/ReflectionMacros.h"
 
 #include "GameFramework/GameFrameworkExports.h"
+#include "GameFramework/Runtime/Character/AI/AIPerception.h"
 
 namespace sw
 {
     class GameObjectManager;
-    struct AIStimulus;
     struct SpatialGridLayerDesc;
-
-    /** @brief 자극 종류입니다. 종류마다 색인 층이 따로 있다. */
-    enum class AIStimulusKind : uint8
-    {
-        Sight,   ///< 보이는 몸(반 크기 0 인 점)
-        Hearing, ///< 낸 소리(반 크기 = 소리 반경)
-        Count,
-    };
 
     /**
      * @class AIStimulusSourceComponent
@@ -65,7 +57,7 @@ namespace sw
         static const SpatialGridLayerDesc& getLayer( uint8 team, AIStimulusKind kind );
         /**
          * @brief @p ownTeam 이 아닌 팀의 원천 중 @p eye 둘레 반 크기 @p range 상자에 걸린 것(보이는 몸 · 상자에 닿는 소리)을 @p outListStimulus 에 담습니다(먼저 비운다).
-         * @details 오브젝트 하나는 한 번만 담는다(번호 = 오브젝트 id). 고르기만 하고 보이는지 · 들리는지는 감각이 지금 자리로 판정한다.
+         * @details 종류마다 하나씩 담는다(번호 = 오브젝트 id — 보이면서 소리를 내면 둘). 고르기만 하고 보이는지 · 들리는지는 감각이 지금 자리로 판정한다.
          *          @p inoutListKey 는 질의 버퍼다(감각이 들고 있어 프레임마다 새로 잡지 않는다).
          */
         static void gatherStimuli( const GameObjectManager& manager, uint8 ownTeam, const float3& eye, float32 range, vector<AIStimulus>& outListStimulus, vector<Component*>& inoutListKey );

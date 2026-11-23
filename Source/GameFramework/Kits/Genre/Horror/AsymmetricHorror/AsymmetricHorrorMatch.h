@@ -34,7 +34,7 @@
 
 namespace sw
 {
-    struct AIStimulus;
+    class AIStimulus;
     struct AsymmetricHorrorKillerDef;
     struct AsymmetricHorrorSnapshot;
 
@@ -308,7 +308,7 @@ namespace sw
         float32 computeHeartbeat( int32 survivor ) const;
         float32 computeSurvivorSpeed( int32 survivor ) const;
         float32 computeKillerSpeed() const;
-        /** @brief 살인마 봇의 `AIPerception::sense` 에 넣을 자극을 모읍니다. 숨지 않은 생존자의 위치에 이번 걸음의 소음 반경을 실습니다. */
+        /** @brief 살인마 봇의 `AIPerception::sense` 에 넣을 자극을 모읍니다. 숨지 않은 생존자의 몸(시각)과 이번 걸음에 낸 소리(청각)입니다. */
         void                       collectKillerStimuli( vector<AIStimulus>& outListStimulusEntry ) const;
         const InteractionProgress* findActivityProgress( int32 survivor ) const;
         void                       makeSnapshot( AsymmetricHorrorSnapshot& outSnapshot ) const;

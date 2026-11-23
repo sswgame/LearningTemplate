@@ -48,6 +48,17 @@ namespace sw
 
         /** @brief 원하는 수평 이동 속도(월드, 미터/초)입니다. 다시 부를 때까지 유지합니다. Y 는 보지 않습니다(중력 · 점프가 정한다). */
         void setMoveVelocity( const float3& velocity );
+        /**
+         * @brief 헤엄칠 때 위(+) · 아래(-)로 가려는 속도(미터/초)입니다. 다시 부를 때까지 유지하며, 이동 방식이 `Swimming` 인 스텝만 씁니다(걷기 · 낙하의 수직은 중력 · 점프가 정한다).
+         * @details 그 속도보다 느릴 때만 끌어올리거나 내린다 — 부력 · 흐름 · 뛰어오름이 더 빠르면 그대로다. 아무 스레드에서 불러도 됩니다.
+         */
+        void setVerticalMoveSpeed( float32 speed );
+        /**
+         * @brief 이번 물리 프레임은 사다리 · 벽을 이 속도(월드, 미터/초 — 수직 포함)로 오릅니다. 중력 · 물리 필드 · 공중 관성을 쓰지 않고 이동 방식이 `Climbing` 이 됩니다.
+         * @details 필드(`applyPhysicsField`)처럼 프레임마다 다시 불러야 이어진다 — 부르지 않은 프레임부터 떨어진다(떠날 때 수직 속도는 0). 같은 스텝의 점프 · 발사가 이긴다.
+         *          언리얼은 사다리를 `MOVE_Custom` 이동 방식으로 짠다 — 충돌 · 이동은 같은 캡슐 쓸기 한 길이다. 아무 스레드에서 불러도 됩니다.
+         */
+        void applyClimbVelocity( const float3& velocity );
         /** @brief 위로 @p speed(미터/초)를 줍니다. 다음 스텝에 듭니다. */
         FUNCTION( Category = "Movement", Exec )
         void jump( float32 speed );
@@ -87,10 +98,10 @@ namespace sw
         void applyPhysicsField( const PhysicsFieldSample& sample );
         /** @brief 지난 물리 프레임에 쓴 필드입니다(진단 · 감시 값). */
         const PhysicsFieldSample& getPhysicsField() const { return _frameField; }
-        /** @brief 지난 스텝이 필드로 고른 이동 방식입니다(걷기 · 낙하 · 수영 · 부유). */
+        /** @brief 지난 스텝이 고른 이동 방식입니다(걷기 · 낙하 · 수영 · 부유 · 오르기). */
         CharacterMovementMode getMovementMode() const { return _movementMode; }
         /** @brief 마지막 스텝에 바닥을 딛고 있었는지입니다. */
-        bool isGrounded() const { return _state._bGrounded; }
+        bool isGrounded() const { return _bGrounded; }
         /** @brief 마지막 스텝의 바닥 법선입니다. */
         float3 getGroundNormal() const { return _state._groundNormal; }
         /** @brief 마지막 스텝에서 실제로 난 속도입니다. */
@@ -190,6 +201,19 @@ namespace sw
         /// 기본 켬(감사 S-7) — 트리거 · 천이 캐릭터를 느낀다. 캐릭터끼리 막는 것은 씬의 캐릭터 대 캐릭터 충돌이 한다(속 바디와 상관없다).
         PROPERTY( Category = "Character", DisplayName = "Inner Body", Tooltip = "Keep a kinematic capsule body on the character so triggers, cloth and sensors feel it (it also pushes dynamic bodies harder)" )
         bool _bInnerBody;
+        // 이어받는 운동 상태 — 상태 칸이라 스냅샷 복원 · 상태 해시가 싣는다(복원한 장면이 새로 지은 캐릭터가 같은 궤적을 잇는다). 물리 스텝만 쓴다(`onPrePhysicsStep` · `onPostPhysicsStep`).
+        PROPERTY( RuntimeState, Category = "Character", Tooltip = "Runtime: walking velocity of the last step" )
+        float3 _walkVelocity; ///< 지난 스텝에 실제로 낸 걷는 속도 — 접지가 낮으면(빙판) 요청 속도로 천천히 간다
+        PROPERTY( RuntimeState, Category = "Character", Tooltip = "Runtime: horizontal velocity gathered from fields" )
+        float3 _fieldVelocity; ///< 필드의 가속 · 흐름이 쌓은 수평 속도(당김 · 해류) — 디디면 접지만큼 줄어든다
+        PROPERTY( RuntimeState, Category = "Character", Tooltip = "Runtime: horizontal velocity kept in the air (launch, leaving a moving floor)" )
+        float3 _airVelocity; ///< 발사 · 떠난 바닥의 수평 속도 — 땅에 다시 닿으면 0
+        PROPERTY( RuntimeState, Category = "Character", Tooltip = "Runtime: vertical speed" )
+        float32 _verticalSpeed;
+        PROPERTY( RuntimeState, Category = "Character", Tooltip = "Runtime: movement mode of the last step" )
+        CharacterMovementMode _movementMode;
+        PROPERTY( RuntimeState, Category = "Character", Tooltip = "Runtime: stood on a floor after the last step" )
+        bool _bGrounded; ///< 마지막 스텝 뒤 바닥을 딛고 있었다(`_state._bGrounded` — 복원한 뒤 첫 스텝 앞에도 이동기가 읽는다)
 
         PhysicsCharacterHandle                  _character;
         PhysicsCharacterState3D                 _state;
@@ -200,21 +224,20 @@ namespace sw
         float3 _frameSurfaceVelocity            SW_GUARDED_BY( _physicsStep ); ///< 이번 물리 프레임의 면 속도
         float32 _frameMoveScale                 SW_GUARDED_BY( _physicsStep ); ///< 이번 물리 프레임의 이동 계수
         atomic<float32>                         _reportedMoveScale;            ///< 진단 · 감시 값이 읽는 사본(`getMoveScale`) — 물리 스텝이 쓰고 게임 스레드가 읽는다
-        float3 _airVelocity                     SW_GUARDED_BY( _physicsStep ); ///< 발사 · 떠난 바닥의 수평 속도 — 땅에 다시 닿으면 0
         PhysicsFieldSample                      _frameField;                   ///< 이번 물리 프레임의 필드(`onPhysicsFrameBegin` 이 옮긴다)
-        float3 _walkVelocity                    SW_GUARDED_BY( _physicsStep ); ///< 지난 스텝에 실제로 낸 걷는 속도 — 접지가 낮으면(빙판) 요청 속도로 천천히 간다
-        float3 _fieldVelocity                   SW_GUARDED_BY( _physicsStep ); ///< 필드의 가속 · 흐름이 쌓은 수평 속도(당김 · 해류) — 디디면 접지만큼 줄어든다
+        float3                                  _frameClimbVelocity;           ///< 이번 물리 프레임의 오르기 속도(`_bFrameClimb` 일 때)
         float3 _queuedStepVelocity              SW_GUARDED_BY( _physicsStep ); ///< 이번 스텝에 넣은 이동 속도(수직 포함 — 스텝 기록용)
         float32 _queuedStepSeconds              SW_GUARDED_BY( _physicsStep ); ///< 이번 스텝에 넣은 이동의 길이(초). 0 이면 넣지 않았다 — `onPostPhysicsStep` 이 읽고 비운다
-        CharacterMovementMode                   _movementMode;                 ///< 지난 스텝의 이동 방식
         float3                                  _previousPosition;
-        float3                                  _worldScale;    ///< 트랜스폼의 월드 배율(변경 번호가 바뀔 때만 다시 읽는다)
-        quaternion                              _worldRotation; ///< 트랜스폼의 월드 회전(바닥이 돈 각을 얹어 쓴다). 변경 번호가 같으면 그대로다
-        float32                                 _verticalSpeed;
+        float3                                  _worldScale;               ///< 트랜스폼의 월드 배율(변경 번호가 바뀔 때만 다시 읽는다)
+        quaternion                              _worldRotation;            ///< 트랜스폼의 월드 회전(바닥이 돈 각을 얹어 쓴다). 변경 번호가 같으면 그대로다
         float32                                 _pendingGroundYaw;         ///< 마지막 쓰기 뒤 디딘 바닥이 위 축 둘레로 돈 각(rad) — 다음 트랜스폼 쓰기에 얹는다
         atomic<float32>                         _requestedHeightReduction; ///< 줄일 키(m, `setHeightReduction`) — 아무 스레드가 쓰고 물리 프레임 시작이 읽는다
         float32                                 _appliedHeightReduction;   ///< 백엔드 캡슐을 지은 줄인 키(m) — `getScaledCapsule` 이 뺀다
         vector<StepRecord>                      _listStepHistory;          ///< 스텝 기록 고리(`setStepHistoryEnabled` 가 켜졌을 때 처음 칸을 만든다 — 꺼져 있으면 비어 있다)
         uint32                                  _stepHistoryCount;         ///< 기록한 스텝의 누계(고리의 다음 칸은 `% kStepHistoryCapacity`)
+        uint8                                   _bFrameClimb : 1;          ///< 이번 물리 프레임에 오르기 요청이 있다
+        uint8                                   _bStepClimb  : 1;          ///< 이번 스텝을 오르기로 움직였다(점프 · 발사가 없었다)
+        [[maybe_unused]] uint8                  _reserved    : 6;
     };
 } // namespace sw

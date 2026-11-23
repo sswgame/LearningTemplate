@@ -1,6 +1,6 @@
 /**
  * @file InteractionCatalog.h
- * @brief 상호작용 정의(데이터)입니다. 종류마다 안내 문구 키, 입력 방식(누름, 누르고 있기, 연타), 단계, 거리, 시야각, 시야, 쿨다운, 태그 조건,
+ * @brief 상호작용 정의(데이터)입니다. 종류마다 안내 문구 키, 입력 방식(누름, 누르고 있기, 연타, 반응), 단계, 거리, 시야각, 시야, 쿨다운, 태그 조건,
  *        맞춤 지점(모션 워핑 마커), 강조, 권한을 정의하고, 스마트 오브젝트의 슬롯 목록도 담습니다.
  * @details XML 형식은 다음과 같다(`Content/common/data/interactions/default.interactions.xml`).
  * @code
@@ -17,7 +17,7 @@
  *       <SmartObject id="Bench"><Slot id="Left" offset="-0.5 0 0" yaw="180.00041" tags="Activity.Sit"/></SmartObject>
  *     </Interactions>
  * @endcode
- *          단계가 없으면 `<Interaction>` 의 mode, prompt, duration, presses, decay 가 한 단계가 된다. 각도는 라디안으로 적는다(`maxAngle` 은 [0, π], `yaw` 는 [−2π, 2π]). 깨진 숫자와 범위 밖 값은 오류다(자르지 않는다).
+ *          단계가 없으면 `<Interaction>` 의 mode, prompt, duration, presses, decay, delayMin, delayMax, window 가 한 단계가 된다. 각도는 라디안으로 적는다(`maxAngle` 은 [0, π], `yaw` 는 [−2π, 2π]). 깨진 숫자와 범위 밖 값은 오류다(자르지 않는다).
  *          `pairedAnimation` 은 단계가 시작될 때 고를 페어드 애니메이션 세트(`;` 로 나눈 경로, 자리에 맞는 첫 세트)이고, 적으면 두 역할 이름이 필수이며
  *          `montage` 와 함께 쓰지 않는다(둘 다 하는 쪽의 애니메이터를 재생한다).
  *          알 수 없는 속성, 원소, 열거자 이름은 경고를 남기고 읽기에 실패한다(`ResourceDataSchemaTest`).
@@ -50,7 +50,8 @@ namespace sw
     {
         Press = 0, ///< 한 번 누르면 끝
         Hold,      ///< 누르고 있는 동안 차오른다. 떼면 처음부터 다시 시작한다(`InteractionProgress`)
-        Mash       ///< 누를 때마다 차오르고, 쉬면 줄어든다
+        Mash,      ///< 누를 때마다 차오르고, 쉬면 줄어든다
+        Reaction   ///< 정해지지 않은 때(`_delayMin` ~ `_delayMax`)를 기다렸다가 열린 동안(`_window`) 누른다 — 먼저 누르거나 놓치면 취소(낚시의 입질, 제때 누르기)
     };
 
     /** @brief 고른 대상을 렌더러가 어떻게 강조할지 나타냅니다. 렌더러가 나중에 읽는 플래그입니다. */
@@ -96,6 +97,12 @@ namespace sw
         int32 _presses{ 5 }; ///< Mash 에서 쓴다. 끝내는 데 필요한 누름 횟수
         PROPERTY( Min = 1 )
         int32 _maxParticipants{ 1 };
+        PROPERTY( Min = 0.0, Units = s )
+        float32 _delayMin{ 1.0f }; ///< Reaction 에서 쓴다. 열릴 때까지의 가장 짧은 시간
+        PROPERTY( Min = 0.0, Units = s )
+        float32 _delayMax{ 3.0f }; ///< Reaction 에서 쓴다. 열릴 때까지의 가장 긴 시간
+        PROPERTY( Min = 0.001, Units = s )
+        float32 _window{ 0.5f }; ///< Reaction 에서 쓴다. 열려 있는 시간
         PROPERTY()
         InteractionInputMode _mode{ InteractionInputMode::Press };
     };

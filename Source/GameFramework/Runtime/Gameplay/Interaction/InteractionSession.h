@@ -1,7 +1,8 @@
 /**
  * @file InteractionSession.h
- * @brief 상호작용 한 번의 진행입니다. 단계마다 입력 방식(누름, 누르고 있기, 연타)대로 차오르고, 마지막 단계를 끝내면 완료되며, 놓거나 떠나면 취소됩니다.
- * @details 누르고 있기는 기반인 `InteractionProgress`(끊기면 처음부터)를 그대로 쓴다. 시간은 `update` 로만 흐르며 결정적이다.
+ * @brief 상호작용 한 번의 진행입니다. 단계마다 입력 방식(누름, 누르고 있기, 연타, 반응)대로 차오르고, 마지막 단계를 끝내면 완료되며, 놓거나 떠나면 취소됩니다.
+ * @details 누르고 있기는 기반인 `InteractionProgress`(끊기면 처음부터)를 그대로 쓴다. 시간은 `update` 로만 흐르며 결정적이다 — 반응 단계가 열리는 때도
+ *          하는 쪽 id · 시작한 횟수 · 단계 번호로만 정한다(같은 순서로 하면 같은 때에 열린다).
  */
 #pragma once
 #include "Core/Container/vector.h"
@@ -65,6 +66,8 @@ namespace sw
         int32                   getStepCount() const { return _pDef != nullptr ? static_cast<int32>( _pDef->_listStep.size() ) : 0; }
         /** @brief 지금 단계의 진행량(0..1)입니다. */
         float32 getStepProgress() const;
+        /** @brief 반응 단계가 지금 열려 있으면 true 입니다(이때 누르면 그 단계를 끝낸다 — 입질). */
+        bool isReactionOpen() const;
         /** @brief 지금 단계의 정의입니다. 진행 중이 아니면 nullptr 입니다. */
         const InteractionStepDef* getStep() const;
         const InteractionDef*     getDefinition() const { return _pDef.get(); }
@@ -81,8 +84,11 @@ namespace sw
         EventBuffer<InteractionSessionEvent> _eventBuffer;
         vector<InteractionEvent>             _listHoldEvent;
         uint32                               _actorID;
+        uint32                               _beginCount; ///< 시작한 횟수 — 반응 단계가 열리는 때의 난수 씨앗에 든다
         int32                                _stepIndex;
         float32                              _mashProgress;
+        float32                              _reactionTime;     ///< 반응 단계에 들어와 지난 시간(초)
+        float32                              _reactionOpenTime; ///< 반응 단계가 열리는 때(초)
         InteractionSessionState              _state;
     };
 } // namespace sw

@@ -8,6 +8,7 @@
   <Interaction id="Unlock" prompt="ui.interact.unlock" mode="Hold" duration="1" maxDistance="2" maxAngle="69.99825" requiredTags="Item.Key" alignment="Handle" authority="Server"/>
   <Interaction id="SwipeKeycard" prompt="ui.interact.keycard" mode="Press" maxDistance="1.5" maxAngle="60.00014" requiredTags="Item.Keycard" alignment="Reader"/>
   <Interaction id="PickUp" prompt="ui.interact.pickup" mode="Press" maxDistance="1.5" highlight="Outline"/>
+  <Interaction id="PickUpItem" prompt="ui.interact.pickup" mode="Press" maxDistance="2.5" lineOfSight="false" highlight="Outline"/>
   <Interaction id="Push" prompt="ui.interact.push" mode="Hold" duration="0.4" maxDistance="1.2" maxAngle="45.000104" alignment="Back"/>
   <Interaction id="Revive" prompt="ui.interact.revive" mode="Hold" duration="3" maxParticipants="2" maxDistance="1.5" forbiddenTags="State.Downed"/>
   <Interaction id="ForceOpen" prompt="ui.interact.force" mode="Mash" presses="8" decay="0.4" maxDistance="1.5" maxAngle="60.00014" alignment="Front"/>

@@ -11,6 +11,7 @@
 #include "Core/Foundation/Types.h"
 #include "Core/Name/hashed_string.h"
 
+#include "Engine/Asset/AssetRef.h"
 #include "Engine/Object/Component/Component.h"
 #include "Engine/Reflection/ReflectionMacros.h"
 #include "Engine/Serialization/Format/StateIO.h"
@@ -18,6 +19,7 @@
 #include "GameFramework/GameFrameworkExports.h"
 #include "GameFramework/Runtime/Gameplay/Inventory/Equipment.h"
 #include "GameFramework/Runtime/Gameplay/Inventory/EquipmentCondition.h"
+#include "GameFramework/Runtime/Gameplay/Inventory/IItemReceiver.h"
 #include "GameFramework/Runtime/Gameplay/Inventory/Inventory.h"
 #include "GameFramework/Runtime/Gameplay/Inventory/InventoryCommand.h"
 
@@ -25,6 +27,7 @@ namespace sw
 {
     class AppearanceDatabase;
     struct CharacterAppearanceSpec;
+    class PrefabAsset;
     struct CustomizationSchemaDef;
 
     /**
@@ -33,6 +36,7 @@ namespace sw
      * @details 아이템 인스턴스의 꾸미기 값(`InventorySlot::_customization` — 염색 색 · 머티리얼 변형)은 인스턴스를 따라다닌다: 벗어 가방에 넣고 다시 껴도,
      *          같은 아이템 정의의 다른 인스턴스(염색한 것 · 기본색)와 바꿔 껴도 그 인스턴스의 값이 외형 해석을 지나 그 부품의 머티리얼 값이 된다(구운 메시 캐시 키에는 들지 않는다).
      *          언리얼 Lyra 의 장비 관리자(인벤토리 항목 인스턴스 → 장비 인스턴스 → 외형) · 유니티 게임들의 아이템 인스턴스 데이터와 같은 자리다.
+     *          가방은 아이템 받기 계약(`IItemReceiver`)을 포트로 내보낸다 — 상자 · 채집 · 줍기가 이 캐릭터에게 바로 준다(조종자의 `InventoryComponent` 보다 먼저 찾힌다).
      *          상태(장비 칸 · 가방)는 게임 세이브에 실린다(`serializeState` — 아이템 칸은 `Inventory::serializeSlot` 하나로 쓴다). 시작 전에 받은 상태는 시작 때 건다.
      *          장비 칸 표는 외형 데이터의 칸 표다(`SlotCatalog::makeEquipmentLayout` — 게임플레이 칸과 외형 칸이 한 표에서 나온다).
      */
@@ -41,6 +45,7 @@ namespace sw
     {
     public:
         REFLECT_BODY();
+        REFLECT_INTERFACE( IItemReceiver, _itemReceiverPort );
 
         static constexpr uint32 kStateTag     = FourCCUtil::make( "CEQP" );
         static constexpr uint32 kStateVersion = 2; ///< 2: 아이템 칸에 꾸미기 스키마 판(`Inventory::serializeSlot`). 판 1 은 `SW_STATE_FORMAT_UPGRADE` 가 올린다
@@ -85,7 +90,9 @@ namespace sw
         const Inventory& getBag() const { return _bag; }
         /** @brief 가방을 거래(가게 사기 · 팔기 — `LocalShopPurchaseProvider`)에 빌려 줍니다. 칸 조작은 `applyCommand` 를 거칩니다. */
         Inventory& getBagForTrade() { return _bag; }
-        bool       isStarted() const { return _bStarted == SW_TRUE; }
+        /** @brief 버린 조각을 세울 프리팹입니다(`PickupComponent::spawn`). 비면 버린 조각을 세우지 못한다 — 버리기 화면이 가방에 돌려준다. */
+        const string& getPickupPrefab() const { return _pickupPrefab.path(); }
+        bool          isStarted() const { return _bStarted == SW_TRUE; }
         /** @brief 화면(엔진 UI 소유 — 컴포넌트보다 오래 살 수 있다)이 이 컴포넌트를 약하게 빌리는 출처입니다(`WeakRef`). */
         WeakRefSource& getWeakRefSource() { return _weakRefSource; }
 
@@ -117,7 +124,16 @@ namespace sw
         int32 _bagSlotCount;
         PROPERTY( Category = "Equipment", DisplayName = "Bag Max Weight", Min = 0.0, Tooltip = "Most weight the bag carries (0: no limit)" )
         float32 _bagMaxWeight;
-        uint8   _bStarted;
+        PROPERTY( Category = "Equipment", DisplayName = "Pickup Prefab", Tooltip = "Prefab a dropped item is spawned as (needs a PickupComponent; give it an interaction so it can be picked up again)" )
+        AssetRef<PrefabAsset> _pickupPrefab;
+        uint8                 _bStarted;
+        /** @brief 아이템 받기 계약을 가방으로 넘기는 포트입니다(`REFLECT_INTERFACE`). 가방이 열리기 전이면 자리가 없다고 답한다. */
+        struct ItemReceiverPort final : IItemReceiver
+        {
+            [[nodiscard]] ItemGrantResult receiveItem( const hashed_string& item, int32 count ) override;
+            [[nodiscard]] ItemGrantResult receiveStack( const InventorySlot& stack ) override;
+        };
+        ItemReceiverPort _itemReceiverPort;
         // 컴포넌트 핸들(`TComponentHandle`)은 오브젝트 관리자마다의 id 공간이라 관리자가 새로 서면 같은 id 가 다른 컴포넌트를 가리킬 수 있다 — 관리자보다 오래 사는 빌림은 약한 참조다.
         WeakRefSource _weakRefSource; ///< 맨 끝 멤버 — 먼저 닫혀, 다른 멤버가 사라지는 동안 화면이 컴포넌트를 돌려받지 않는다
     };

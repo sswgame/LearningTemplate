@@ -4,6 +4,7 @@
     "submitWithoutWake": "TaskManager::SubmitBatch — 깨우지 않는 제출을 따로 열면 깨우기를 잊을 수 있어 범위 형식으로만 둔다(2026-11-24)",
     "ListWrapper": "없음 — sw::list 를 지웠다. 쓴 순서 목록은 LRUMap(2026-11-24)",
     "getRealtimeViolations": "없음 — 장치 콜백은 AudioRenderThread 의 링에서 꺼내기만 하고 실시간 구간 위반은 단언이다(2026-11-24)",
+    "consumeUses": "InteractableComponent::listenCompleted — 상호작용 완료를 소비하지 않고 듣는다(2026-11-24)",
     "enumFromString": "tryParseEnum<E> — 실패하면 Invalid(없으면 0)를 채워 돌려주던 폴백을 없애고 optional 로(2026-11-24)",
     "RegistryEntryOps": "LockedRegistrationListBase — 등록 목록이 스스로 답한다, 표마다 함수 표를 만들지 않는다(2026-11-24)",
     "RegistrationSite": "SourceLocation — 같은 모양(파일 · 줄)의 형식 하나(2026-11-24)",
