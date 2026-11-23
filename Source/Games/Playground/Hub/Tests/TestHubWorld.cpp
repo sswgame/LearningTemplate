@@ -25,6 +25,10 @@ namespace
         rules._listLevelExperience = { 100, 250, 450, 700 };
         rules._moveSpeed           = 6.0f;  // 씬과 같다
         rules._rideSpeed           = 12.0f; // 씬과 같다
+        rules._listAvatarStart     = {
+            RespawnSpawnPoint{hashed_string( "hub_0" ),  float3{ 0.0f, 0.0f, 0.0f }, 0.0f, -1},
+            RespawnSpawnPoint{hashed_string( "hub_1" ), float3{ 1.5f, 0.0f, -1.5f }, 0.0f, -1}
+        };
         HubPlacement spawn;
         spawn._kind     = HubPlacementKind::Creature;
         spawn._position = float3{ 2.0f, 0.0f, 0.0f };
@@ -133,6 +137,43 @@ SW_TEST_CASE( HubWorldTest, RidingHasItsOwnSpeedLimit )
     SW_EXPECT_TRUE( refused > 0 );
     SW_EXPECT_TRUE( world.findAvatar( walkerID )->_profile._position._z < 22.0f );
     SW_EXPECT_TRUE( world.moveAvatar( riderID, float3{ 0.0f, std::numeric_limits<float32>::quiet_NaN(), 22.0f }, true ) == HubActionResult::StepTooLong );
+}
+
+/** @brief [HubWorldTest] 새 아바타는 앞선 시작 자리 가운데 빈 곳에 서고, 다 찼으면 아바타에서 가장 먼 곳에 선다. 저장된 자리가 밖이면 시작 자리로 온다. */
+SW_TEST_CASE( HubWorldTest, NewAvatarsTakeFreeStartPoints )
+{
+    HubWorld world;
+    SW_REQUIRE_TRUE( world.initialize( makeHubTestRules() ) );
+    HubProfile profile;
+    profile._position    = world.chooseAvatarStart();
+    const uint32 firstID = world.addAvatar( 1, profile );
+    SW_EXPECT_TRUE( world.findAvatar( firstID )->_profile._position == ( float3{ 0.0f, 0.0f, 0.0f } ) );
+    profile._position     = world.chooseAvatarStart();
+    const uint32 secondID = world.addAvatar( 2, profile );
+    SW_EXPECT_TRUE( world.findAvatar( secondID )->_profile._position == ( float3{ 1.5f, 0.0f, -1.5f } ) );
+
+    // 둘 다 찼다 — 첫 아바타가 0.5 m 비켜 선 첫 자리가 더 멀다.
+    SW_EXPECT_TRUE( world.moveAvatar( firstID, float3{ 0.0f, 0.0f, 0.5f }, false ) == HubActionResult::Ok );
+    SW_EXPECT_TRUE( world.chooseAvatarStart() == ( float3{ 0.0f, 0.0f, 0.0f } ) );
+
+    world.removeAvatar( secondID );
+    profile._position    = float3{ 500.0f, 0.0f, 0.0f }; // 규칙이 바뀌어 저장된 자리가 밖이다
+    const uint32 thirdID = world.addAvatar( 3, profile );
+    SW_EXPECT_TRUE( world.findAvatar( thirdID )->_profile._position == ( float3{ 1.5f, 0.0f, -1.5f } ) );
+}
+
+/** @brief [HubWorldTest] 시작 자리가 없거나 경계 밖이면 허브를 세우지 않는다. */
+SW_TEST_CASE( HubWorldTest, StartPointsAreRequiredInsideTheHub )
+{
+    HubWorld world;
+    HubRules missing = makeHubTestRules();
+    missing._listAvatarStart.clear();
+    SW_EXPECT_LOG( "Hub.AvatarStartMissing" );
+    SW_EXPECT_FALSE( world.initialize( missing ) );
+    HubRules outside                             = makeHubTestRules();
+    outside._listAvatarStart.back()._position._x = 500.0f;
+    SW_EXPECT_LOG( "Hub.AvatarStartOutside" );
+    SW_EXPECT_FALSE( world.initialize( outside ) );
 }
 
 /** @brief [HubWorldTest] 폰의 걸음은 허브 경계 안으로 잘린다 — 서버와 예측이 같은 함수다. */

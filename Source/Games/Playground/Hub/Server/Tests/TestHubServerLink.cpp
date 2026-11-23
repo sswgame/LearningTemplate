@@ -61,9 +61,10 @@ namespace
     HubRules makeHubLinkTestRules()
     {
         HubRules rules;
-        rules._listLevelExperience          = { 100, 250, 450, 700 };
-        rules._moveSpeed                    = 6.0f;
-        rules._rideSpeed                    = 12.0f;
+        rules._listLevelExperience = { 100, 250, 450, 700 };
+        rules._moveSpeed           = 6.0f;
+        rules._rideSpeed           = 12.0f;
+        rules._listAvatarStart.push_back( RespawnSpawnPoint{} );
         rules._remoteCallBurstCount         = 20; // 씬과 같다
         rules._remoteCallRefillMilliseconds = 50;
         HubPlacement spawn;

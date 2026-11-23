@@ -19,6 +19,8 @@
 
 #include "Engine/Reflection/ReflectionMacros.h"
 
+#include "GameFramework/Runtime/Gameplay/Respawn/RespawnFlow.h"
+
 namespace sw
 {
     class BitReader;
@@ -109,8 +111,11 @@ namespace sw
         float32 _partyShareRange{ 30.0f };
         PROPERTY( Min = 1.0, Units = s, Tooltip = "How often the server writes the profiles of everyone online" )
         float32 _autosaveSeconds{ 30.0f };
-        PROPERTY()
-        float3 _avatarSpawn{};
+        /** @brief 새 계정이 서는 시작 자리입니다(차례가 앞선 빈 자리부터 — `HubWorld::chooseAvatarStart`). */
+        PROPERTY( Required )
+        vector<RespawnSpawnPoint> _listAvatarStart{};
+        PROPERTY( Min = 0.0, Units = m, Tooltip = "A start point is taken while another avatar stands within this distance" )
+        float32 _startClearance{ 1.0f };
         /** @brief 레벨 n + 1 에 오르는 누적 경험(첫 칸이 레벨 2)입니다. 오름차순이어야 하고, 마지막 칸을 넘으면 최고 레벨입니다. */
         PROPERTY( Required )
         vector<int32> _listLevelExperience{};
@@ -227,6 +232,11 @@ namespace sw
         bool isPlacementOfKind( uint32 placementID, HubPlacementKind kind ) const;
         /** @brief 점이 허브 경계 안인지 봅니다. 무한대 · NaN 은 밖입니다. */
         bool isInsideHub( float32 x, float32 z ) const;
+        /**
+         * @brief 새 아바타가 설 시작 자리입니다 — 다른 아바타가 `_startClearance` 안에 없는 첫 자리, 다 찼으면 가장 가까운 아바타가 가장 먼 자리.
+         * @details 언리얼 `AGameModeBase::ChoosePlayerStart` 의 자리(빈 `APlayerStart` 먼저)다. 물리로 막힌 자리는 폰을 세울 때 곁의 빈 자리로 비킨다(`CharacterControllerComponent::findFreeSpot`).
+         */
+        float3 chooseAvatarStart() const;
         /** @brief 아바타 id 꼴인지 봅니다(1 이상, 놓인 것 id 아래). */
         static bool isValidAvatarID( uint32 avatarID ) { return avatarID != 0 && avatarID < kPlacementIDBase; }
 

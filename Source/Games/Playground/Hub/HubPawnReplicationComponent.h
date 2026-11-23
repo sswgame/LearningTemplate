@@ -177,7 +177,7 @@ namespace sw
         // 서버
         void runServerFrame( GameObjectManager& manager, const HubWorldComponent& hub, float32 seconds );
         void syncServerPawnList( GameObjectManager& manager, const HubWorldComponent& hub );
-        void spawnServerPawn( GameObjectManager& manager, const HubAvatarSession& session );
+        void spawnServerPawn( GameObjectManager& manager, const HubWorldComponent& hub, const HubAvatarSession& session );
         void removeServerPawn( GameObjectManager& manager, const ServerPawn& pawn );
         void stepServerPawn( GameObjectManager& manager, const HubWorldComponent& hub, ServerPawn& pawn );
         void publishPoses( GameObjectManager& manager );
@@ -226,6 +226,8 @@ namespace sw
         float32 _smoothingSnapDistance;
         PROPERTY( Category = "Network", DisplayName = "Reconcile Tolerance", Min = 0.0, Units = m, Tooltip = "Predicted and server positions closer than this count as the same" )
         float32 _reconcileTolerance;
+        PROPERTY( Category = "Network", DisplayName = "Spawn Search Radius", Min = 0.0, Units = m, Tooltip = "A new pawn whose spot is blocked stands on a free spot within this distance" )
+        float32 _spawnSearchRadius;
         PROPERTY( Category = "Network", DisplayName = "Interest Cell Size", Min = 0.001, Units = m, Tooltip = "Cell size of the server's interest grid" )
         float32 _interestCellSize;
         PROPERTY( Category = "Network", DisplayName = "Interest Enter Radius", Min = 0.0, Units = m, Tooltip = "Pawns and horses inside this radius of a client's pawn start replicating to it" )

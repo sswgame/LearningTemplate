@@ -70,9 +70,16 @@ namespace sw
             SW_LOG_ERROR_ID( "Hub.PlacementListInvalid", "Hub rules: the hub needs 1..%# creatures and herbs - got %#", kMaxPlacement, static_cast<uint32>( rules._listPlacement.size() ) );
             bValid = false;
         }
-        if ( isInsideHub( rules._avatarSpawn._x, rules._avatarSpawn._z ) == false )
+        if ( rules._listAvatarStart.empty() )
         {
-            SW_LOG_ERROR_ID( "Hub.AvatarSpawnOutside", "Hub rules: the avatar spawn point lies outside the hub (half extent %#)", rules._worldHalfExtent );
+            SW_LOG_ERROR_ID( "Hub.AvatarStartMissing", "Hub rules: the hub needs at least one avatar start point" );
+            bValid = false;
+        }
+        for ( const RespawnSpawnPoint& start : rules._listAvatarStart )
+        {
+            if ( isInsideHub( start._position._x, start._position._z ) )
+                continue;
+            SW_LOG_ERROR_ID( "Hub.AvatarStartOutside", "Hub rules: the avatar start point '%#' lies outside the hub (half extent %#)", start._id.c_str(), rules._worldHalfExtent );
             bValid = false;
         }
         for ( size_t index = 0; bValid && index < rules._listPlacement.size(); ++index )
@@ -105,10 +112,32 @@ namespace sw
         avatar._moveBudget = _rules._maxMoveStep; // 들어온 자리에서 한 걸음은 바로 걷는다
         // 저장된 자리가 지금 허브 밖이면(규칙이 바뀌었다) 나는 자리에서 다시 시작한다 — 진행은 그대로다.
         if ( isInsideHub( avatar._profile._position._x, avatar._profile._position._z ) == false )
-            avatar._profile._position = _rules._avatarSpawn;
+            avatar._profile._position = chooseAvatarStart();
         const uint32 avatarID = avatar._avatarID;
         _mapAvatar[avatarID]  = avatar;
         return avatarID;
+    }
+
+    float3 HubWorld::chooseAvatarStart() const
+    {
+        float3  best{};
+        float32 bestDistance = -1.0f;
+        for ( const RespawnSpawnPoint& start : _rules._listAvatarStart )
+        {
+            float32 nearest = MathUtil::kMaxFloat;
+            for ( const auto& entry : _mapAvatar )
+            {
+                nearest = MathUtil::min( nearest, float3::getHorizontalDistance( entry.second._profile._position, start._position ) );
+            }
+            if ( nearest >= _rules._startClearance )
+                return start._position;
+            if ( nearest > bestDistance )
+            {
+                bestDistance = nearest;
+                best         = start._position;
+            }
+        }
+        return best; // 시작 자리가 하나도 없는 규칙은 `initialize` 가 거절했다
     }
 
     void HubWorld::removeAvatar( uint32 avatarID )

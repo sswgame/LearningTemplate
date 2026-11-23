@@ -128,7 +128,14 @@
 						        _partyMaxSize="4"
 						        _partyShareRange="30"
 						        _autosaveSeconds="30"
-						        _avatarSpawn="0,0,0">
+						        _startClearance="1">
+							<!-- 시작 자리 — 앞 자리부터 빈 곳에 선다. 모두 나는 자리 곁이라 첫 짐승 둘 · 버섯에 걸어가지 않고 닿는 것은 첫 자리뿐이다. -->
+							<_listAvatarStart>
+								<RespawnSpawnPoint _id="hub_0" _position="0,0,0" _yaw="0" _team="-1" />
+								<RespawnSpawnPoint _id="hub_1" _position="1.5,0,-1.5" _yaw="0" _team="-1" />
+								<RespawnSpawnPoint _id="hub_2" _position="-1.5,0,-1.5" _yaw="0" _team="-1" />
+								<RespawnSpawnPoint _id="hub_3" _position="0,0,-3" _yaw="0" _team="-1" />
+							</_listAvatarStart>
 							<_listLevelExperience>
 								<item>100</item>
 								<item>250</item>
@@ -155,6 +162,7 @@
 					                             _smoothingHalfLife="0.05"
 					                             _smoothingSnapDistance="2"
 					                             _reconcileTolerance="0.01"
+					                             _spawnSearchRadius="3"
 					                             _interestCellSize="16"
 					                             _interestEnterRadius="60"
 					                             _interestLeaveRadius="70">
