@@ -77,6 +77,7 @@ namespace sw
         /**
          * @brief 씬 판: @p ownTeam 이 아닌 팀의 자극 원천을 공간 색인에서 직접 골라(`AIStimulusSourceComponent::gatherStimuli`, 시야 상자) 한 번 감지합니다.
          * @details 질의 버퍼는 이 감각이 들고 있어 프레임마다 새로 잡지 않는다. 같은 감각을 두 스레드에서 함께 부르지 않는다.
+         *          월드 원점이 옮겨졌으면 기억한 자리를 같은 만큼 옮긴 뒤 감지한다(`GameObjectManager::getWorldOriginShiftTotal`).
          */
         void sense( const GameObjectManager& manager, uint8 ownTeam, const float3& eyePosition, const float3& forward, const NavGrid* pGrid, float32 deltaTime );
         /** @brief 이 위치와 방향에서 @p target 이 보이는지입니다. 기억과는 상관없습니다. @p bAlreadySeen 이면 놓치는 거리를 씁니다. */
@@ -93,5 +94,6 @@ namespace sw
         vector<AIPerceivedTarget> _listTarget;
         vector<AIStimulus>        _listCandidate; ///< 씬 판 `sense` 의 후보 버퍼
         vector<Component*>        _listQueryKey;  ///< 씬 판 `sense` 의 색인 질의 버퍼
+        double3                   _originShift;   ///< 기억한 자리가 기준한 원점 이동의 합
     };
 } // namespace sw

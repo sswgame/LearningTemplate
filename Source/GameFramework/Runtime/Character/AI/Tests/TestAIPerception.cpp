@@ -100,6 +100,30 @@ SW_TEST_CASE( AIPerceptionTest, SharedQueryFindsRegisteredSources )
 }
 
 /**
+ * @brief [AIPerceptionTest] 월드 원점을 옮기면 안 보이게 된 대상의 마지막 자리도 같은 만큼 옮겨진다 — 수색이 옛 원점의 엉뚱한 자리로 가지 않는다
+ */
+SW_TEST_CASE( AIPerceptionTest, RememberedPositionFollowsTheWorldOrigin )
+{
+    GameObjectManager          manager;
+    AIStimulusSourceComponent* pSource = Util::makeSource( manager, "Near", float3{ 3.0f, 0.0f, 4.0f } );
+    const uint64               id      = pSource->getOwner()->getObjectID();
+    manager.notifyWorldOriginShifted( float3{ -500.0f, 0.0f, 0.0f } ); // 감각이 생기기 전의 이동은 기억과 상관없다
+
+    AIPerception perception;
+    perception.sense( manager, 1, float3{}, float3{ 1.0f, 0.0f, 0.0f }, nullptr, 0.1f );
+    SW_REQUIRE_NOT_NULL( perception.findTarget( id ) );
+    SW_EXPECT_NEAR( 3.0f, perception.findTarget( id )->_lastKnownPosition._x, 1e-4f );
+
+    SW_REQUIRE_TRUE( pSource->getOwner()->removeComponent( pSource ) ); // 대상이 사라졌다 — 기억만 남는다
+    manager.notifyWorldOriginShifted( float3{ -1000.0f, 0.0f, -500.0f } );
+    perception.sense( manager, 1, float3{ -1000.0f, 0.0f, -500.0f }, float3{ 1.0f, 0.0f, 0.0f }, nullptr, 0.1f );
+    const AIPerceivedTarget* pTarget = perception.findTarget( id );
+    SW_REQUIRE_NOT_NULL( pTarget );
+    SW_EXPECT_NEAR( -997.0f, pTarget->_lastKnownPosition._x, 1e-3f );
+    SW_EXPECT_NEAR( -496.0f, pTarget->_lastKnownPosition._z, 1e-3f );
+}
+
+/**
  * @brief [AIPerceptionTest] 소리는 반경만큼 색인 상자를 넓혀 시야 상자 밖에서도 들린다. 거두면 다시 들리지 않는다
  */
 SW_TEST_CASE( AIPerceptionTest, NoiseWidensTheHearingEntry )

@@ -563,6 +563,8 @@ namespace sw
         void notifySceneLoading( string_view sourcePath );
         /** @brief 모든 씬 서비스에 월드 원점이 @p delta 만큼 옮겨졌다고 알립니다(`ISceneService::onWorldOriginShifted`, 씬이 루트를 옮긴 뒤 부른다). */
         void notifyWorldOriginShifted( const float3& delta );
+        /** @brief 지금까지 알린 원점 이동의 합입니다. 씬 서비스가 아니면서 월드 자리를 기억하는 값(`AIPerception` 의 기억)이 적을 때의 합과 견줘 같은 만큼 옮긴다. */
+        const double3& getWorldOriginShiftTotal() const;
         /** @brief 원점 옮기기를 막는 첫 서비스의 이름입니다(`ISceneService::canShiftWorldOrigin`). 막는 서비스가 없으면 nullptr 입니다. */
         [[nodiscard]] const utf8* findWorldOriginShiftBlocker() const;
         /** @brief 모든 씬 서비스에 미리보기 정책을 적용합니다(`ISceneService::applyPreviewPolicy`). */
