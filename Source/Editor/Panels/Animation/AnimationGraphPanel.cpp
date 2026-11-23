@@ -3,6 +3,7 @@
 #include "Editor/Panels/Animation/AnimationGraphPanel.h"
 
 #include "Core/Algorithm/VectorUtil.h"
+#include "Core/Container/unordered_set.h"
 #include "Core/Math/MathUtil.h"
 #include "Core/String/StringBuilder.h"
 #include "Core/String/fixed_string.h"
@@ -274,6 +275,14 @@ namespace sw::editor
 
     void AnimationGraphPanel::drawStateNodes()
     {
+        // 핀 그림이 연결을 보이는 노드 — 노드마다 링크를 모두 훑지 않는다.
+        unordered_set<int32> uniqueLinkedIn;
+        unordered_set<int32> uniqueLinkedOut;
+        for ( const GraphLink& link : _graph._listLink )
+        {
+            uniqueLinkedIn.insert( link._toNode );
+            uniqueLinkedOut.insert( link._fromNode );
+        }
         for ( GraphNode& node : _graph._listNode )
         {
             const ed::NodeId nodeID = EditorNodeGraphID::toNodeID( node._id );
@@ -291,15 +300,8 @@ namespace sw::editor
                 formatstring( nodeMark.data(), nodeMark.capacity(), "animationGraph.node.%#", node._name );
                 EditorSelfTestMarks::recordRect( nodeMark.c_str(), float2{ nameMin.x, nameMin.y }, float2{ nameMax.x, nameMax.y } );
             }
-            bool bLinkedIn  = false;
-            bool bLinkedOut = false;
-            for ( const GraphLink& link : _graph._listLink )
-            {
-                bLinkedIn  = bLinkedIn || link._toNode == node._id;
-                bLinkedOut = bLinkedOut || link._fromNode == node._id;
-            }
             _nodeGraph.beginPin( AnimationGraphPanelInternal::pinIn( node._id ), true );
-            _nodeGraph.drawPinIcon( 0, bLinkedIn );
+            _nodeGraph.drawPinIcon( 0, uniqueLinkedIn.contains( node._id ) );
             ImGui::SameLine();
             ImGui::TextUnformatted( "In" );
             _nodeGraph.endPin();
@@ -307,7 +309,7 @@ namespace sw::editor
             _nodeGraph.beginPin( AnimationGraphPanelInternal::pinOut( node._id ), false );
             ImGui::TextUnformatted( "Out" );
             ImGui::SameLine();
-            _nodeGraph.drawPinIcon( 0, bLinkedOut );
+            _nodeGraph.drawPinIcon( 0, uniqueLinkedOut.contains( node._id ) );
             _nodeGraph.endPin();
             _nodeGraph.endNode();
 
