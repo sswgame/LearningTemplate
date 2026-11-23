@@ -1,7 +1,8 @@
 <?asset guid="5e4824070a8d6dfc5280c9330cd91a9b"?>
 <Scene formatVersion="3" name="InventoryDemo">
 	<!-- 인벤토리 · 오프라인 상점 시연(시나리오 automation/inventory · shopoffline). Player 는 마을 사람 프리셋에 장비 컴포넌트(가방 4 칸 · 무게 3)를 단다.
-	     바닥에 포션 더미(3 개) · 장화 · 투구 · 망토가 놓여 있다(PickupComponent). InventoryDemo 의 개발 명령(demo.inventory · demo.shop)이 화면을 연다. -->
+	     바닥에 포션 더미(3 개) · 장화 · 투구 · 망토가 놓여 있다(PickupComponent). InventoryDemo 의 개발 명령(demo.inventory · demo.shop)이 화면을 연다.
+	     CraftingStation 은 같은 가방으로 만드는 작업대다(시나리오 automation/crafting, 명령 craft.enqueue 등). -->
 	<SceneSettings _bStreaming="false" _unloadMargin="0" _maxCellLoadsPerFrame="0" _addToWorldBudgetMicroseconds="0">
 		<_cellGrid _cellSize="0" _loadingRadius="0" />
 	</SceneSettings>
@@ -65,6 +66,13 @@
 			<GameObject _schemaVersion="0" _name="InventoryDemo" _bActive="true">
 				<_listComponent>
 					<InventoryShopDemoComponent _localID="17448692205256493972" _componentName="InventoryShopDemoComponent" _bActive="true" _shopsPath="game/playground/data/inventorydemo.shops.xml" _shopID="general" _startingGold="100" _characterName="Player" _inventoryDocument="common/ui/inventory/inventory.ui.xml" _shopDocument="common/ui/shop/shop.ui.xml" />
+				</_listComponent>
+			</GameObject>
+		</entity>
+		<entity id="9" name="CraftingStation">
+			<GameObject _schemaVersion="0" _name="CraftingStation" _bActive="true">
+				<_listComponent>
+					<CraftingDemoComponent _localID="5139995369692792800" _recipePath="game/playground/data/craftdemo.recipes.xml" _station="Workbench" _startLevel="1" _characterName="Player" />
 				</_listComponent>
 			</GameObject>
 		</entity>
