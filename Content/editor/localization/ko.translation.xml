@@ -563,6 +563,7 @@
 		<entry key="EdField.Falloff" text="감쇠" sourceHash="cb90668223a1ad85" />
 		<entry key="EdField.FarPlane" text="먼 평면" sourceHash="32b2cfb94b6a25dc" />
 		<entry key="EdField.FirstFrame" text="첫 프레임" sourceHash="548bbd6d1029e318" />
+		<entry key="EdField.Foliage" text="폴리지" sourceHash="18a7838d97ce9e68" />
 		<entry key="EdField.FrameCount" text="프레임 수" sourceHash="63fef9115f7dacf9" />
 		<entry key="EdField.FrameRounding" text="칸 둥글기" sourceHash="ae92ce359b95a0ee" />
 		<entry key="EdField.HUDOpacity" text="HUD 불투명도" sourceHash="5e6bfaa28872f983" />
@@ -1366,6 +1367,12 @@
 		<entry key="EdTip.TargetsOnOtherUnitsOrObjectsAre"
 		       text="다른 단위 · 오브젝트의 목표는 호스트가 놓습니다 — 그 오브젝트를 옮기세요"
 		       sourceHash="7cbe5f899889f043" />
+		<entry key="EdTip.TerrainFoliage"
+		       text="폴리지는 밀도 레이어를 칠한 곳에 자랍니다. 고르면 그 레이어를 칠하고 Erase Layer 로 지웁니다"
+		       sourceHash="14413d519990ae19" />
+		<entry key="EdTip.TerrainFoliageNoDensity"
+		       text="이 폴리지는 지형 레이어를 보지 않습니다. Inspector 에서 규칙의 Density Layer 를 정하면 칠할 수 있습니다"
+		       sourceHash="9a8e1e1f6941c30c" />
 		<entry key="EdTip.TerrainResample"
 		       text="마지막으로 고친 지형의 높이와 구멍을 새 해상도로 다시 표본합니다(되돌릴 수 있음)"
 		       sourceHash="0b1baced59071c3a" />
@@ -1504,6 +1511,7 @@
 		<entry key="EdWidget.NewActionName" text="새 액션 이름" sourceHash="6ee3a452443a26a8" />
 		<entry key="EdWidget.NewLayerName" text="새 레이어 이름" sourceHash="8c7fe68b86632b3f" />
 		<entry key="EdWidget.NoFileDefaults" text="파일 없음 - 기본값" sourceHash="ccc95153c036563f" />
+		<entry key="EdWidget.NoFoliageOnLayer" text="(이 레이어에 폴리지 없음)" sourceHash="4bf8d612d83a5100" />
 		<entry key="EdWidget.OutputFolder" text="출력 폴더" sourceHash="9d7d1af4a632c558" />
 		<entry key="EdWidget.Panel" text="패널" sourceHash="1e85480db1ab92e5" />
 		<entry key="EdWidget.PatternNumpadNotation" text="패턴(숫자 패드 표기)" sourceHash="a5681696100c2b01" />

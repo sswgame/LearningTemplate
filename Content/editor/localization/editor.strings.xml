@@ -1609,6 +1609,11 @@
 				<item>Source/Editor/Panels/Animation/SpriteClipPanel.cpp</item>
 			</origins>
 		</entry>
+		<entry key="EdField.Foliage" source="Foliage">
+			<origins>
+				<item>Source/Editor/Viewport/TerrainBrushTool.cpp</item>
+			</origins>
+		</entry>
 		<entry key="EdField.FrameCount" source="frame count">
 			<origins>
 				<item>Source/Editor/Panels/Animation/SpriteClipPanel.cpp</item>
@@ -4368,6 +4373,18 @@
 				<item>Source/Editor/Panels/Animation/RigDebugPanel.cpp</item>
 			</origins>
 		</entry>
+		<entry key="EdTip.TerrainFoliage"
+		       source="Foliage grows where its density layer is painted. Pick one to paint that layer; Erase Layer removes it">
+			<origins>
+				<item>Source/Editor/Viewport/TerrainBrushTool.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EdTip.TerrainFoliageNoDensity"
+		       source="This foliage ignores the terrain layers. Set Density Layer of its rule in the Inspector to paint it">
+			<origins>
+				<item>Source/Editor/Viewport/TerrainBrushTool.cpp</item>
+			</origins>
+		</entry>
 		<entry key="EdTip.TerrainResample"
 		       source="Resample the heights and holes of the last edited terrain to a new resolution (undoable)">
 			<origins>
@@ -4936,6 +4953,11 @@
 		<entry key="EdWidget.NoFileDefaults" source="No file - defaults">
 			<origins>
 				<item>Source/Editor/Panels/ProjectSettings/ProjectSettingsPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EdWidget.NoFoliageOnLayer" source="(no foliage on this layer)">
+			<origins>
+				<item>Source/Editor/Viewport/TerrainBrushTool.cpp</item>
 			</origins>
 		</entry>
 		<entry key="EdWidget.OutputFolder" source="Output Folder">

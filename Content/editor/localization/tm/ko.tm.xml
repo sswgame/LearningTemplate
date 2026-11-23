@@ -8,6 +8,7 @@
 		<entry source="(no animations)" text="(애니메이션 없음)" />
 		<entry source="(no description)" text="(설명 없음)" />
 		<entry source="(no document)" text="(문서 없음)" />
+		<entry source="(no foliage on this layer)" text="(이 레이어에 폴리지 없음)" />
 		<entry source="(no keys)" text="(키 없음)" />
 		<entry source="(no project)" text="(프로젝트 없음)" />
 		<entry source="(none)" text="(없음)" />
@@ -782,6 +783,9 @@
 		       text="같은 로그 줄을 한 줄로 접고 앞에 횟수를 적습니다" />
 		<entry source="Folder rule" text="폴더 규칙" />
 		<entry source="Folder the packaged build is staged into" text="패키지 빌드를 스테이징할 폴더입니다" />
+		<entry source="Foliage" text="폴리지" />
+		<entry source="Foliage grows where its density layer is painted. Pick one to paint that layer; Erase Layer removes it"
+		       text="폴리지는 밀도 레이어를 칠한 곳에 자랍니다. 고르면 그 레이어를 칠하고 Erase Layer 로 지웁니다" />
 		<entry source="Follow" text="따라가기" />
 		<entry source="Follow new logs while scrolled to the bottom. Scrolling up to read pauses it; scrolling back to the bottom resumes it"
 		       text="맨 아래에 있을 때 새 로그를 따라 내려갑니다. 위로 올려 읽는 동안은 멈추고, 맨 아래로 내리면 다시 따라갑니다" />
@@ -2514,6 +2518,8 @@
 		       text="이 파일은 아직 추적하지 않아 비교할 것이 없습니다." />
 		<entry source="This folder is empty. Import source files here, or drop them onto this window."
 		       text="폴더가 비어 있습니다. 여기로 원본 파일을 임포트하거나 이 창에 끌어 놓으세요." />
+		<entry source="This foliage ignores the terrain layers. Set Density Layer of its rule in the Inspector to paint it"
+		       text="이 폴리지는 지형 레이어를 보지 않습니다. Inspector 에서 규칙의 Density Layer 를 정하면 칠할 수 있습니다" />
 		<entry source="This format cannot be read back." text="이 포맷은 다시 읽어 올 수 없습니다." />
 		<entry source="This is a prefab instance" text="프리팹 인스턴스입니다" />
 		<entry source="This map has no actions yet. Create one in the section below."
