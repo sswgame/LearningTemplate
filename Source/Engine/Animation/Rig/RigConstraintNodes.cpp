@@ -70,20 +70,6 @@ namespace sw
                 return node;
             }
 
-            const utf8* getTypeName() const override
-            {
-                switch ( _mode )
-                {
-                    case Mode::CopyTransform:
-                        return "CopyTransform";
-                    case Mode::Position:
-                        return "Position";
-                    case Mode::Rotation:
-                        return "Rotation";
-                }
-                return "CopyTransform";
-            }
-
             [[nodiscard]] bool parse( RigXMLReader& reader ) override
             {
 
@@ -147,8 +133,6 @@ namespace sw
                 node->reset();
                 return node;
             }
-
-            const utf8* getTypeName() const override { return "ParentSwitch"; }
 
             [[nodiscard]] bool parse( RigXMLReader& reader ) override
             {
@@ -248,7 +232,6 @@ namespace sw
         {
         public:
             unique_ptr<RigNode> clone() const override { return make_unique<RigDistanceNode>( *this ); }
-            const utf8*         getTypeName() const override { return "Distance"; }
 
             [[nodiscard]] bool parse( RigXMLReader& reader ) override
             {
@@ -293,7 +276,6 @@ namespace sw
         {
         public:
             unique_ptr<RigNode> clone() const override { return make_unique<RigLimitRotationNode>( *this ); }
-            const utf8*         getTypeName() const override { return "LimitRotation"; }
 
             [[nodiscard]] bool parse( RigXMLReader& reader ) override
             {
@@ -338,7 +320,6 @@ namespace sw
         {
         public:
             unique_ptr<RigNode> clone() const override { return make_unique<RigTwistDistributionNode>( *this ); }
-            const utf8*         getTypeName() const override { return "TwistDistribution"; }
 
             [[nodiscard]] bool parse( RigXMLReader& reader ) override
             {
@@ -440,7 +421,6 @@ namespace sw
         {
         public:
             unique_ptr<RigNode> clone() const override { return make_unique<RigScaleBoneNode>( *this ); }
-            const utf8*         getTypeName() const override { return "ScaleBone"; }
 
             [[nodiscard]] bool parse( RigXMLReader& reader ) override
             {

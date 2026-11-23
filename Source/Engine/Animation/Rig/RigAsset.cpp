@@ -81,7 +81,10 @@ namespace sw
         const RigNodeFactory* pFactory = _registry.find( typeName );
         if ( pFactory == nullptr || *pFactory == nullptr )
             return nullptr;
-        return ( *pFactory )();
+        unique_ptr<RigNode> node = ( *pFactory )();
+        if ( node != nullptr )
+            node->_typeName = typeName;
+        return node;
     }
 
     vector<hashed_string> RigNodeRegistry::getTypeNames() const

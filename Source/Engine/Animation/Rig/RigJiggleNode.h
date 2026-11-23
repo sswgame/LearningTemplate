@@ -31,7 +31,6 @@ namespace sw
         RigJiggleNode();
 
         unique_ptr<RigNode> clone() const override;
-        const utf8*         getTypeName() const override { return kTypeName; }
         [[nodiscard]] bool  parse( RigXMLReader& reader ) override;
         [[nodiscard]] bool  bind( const RigBindContext& context ) override;
         void                evaluate( RigEvaluateContext& context ) override;

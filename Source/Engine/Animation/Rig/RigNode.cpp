@@ -339,6 +339,7 @@ namespace sw
 
     RigNode::RigNode()
         : _common{}
+        , _typeName{}
     {
     }
 
