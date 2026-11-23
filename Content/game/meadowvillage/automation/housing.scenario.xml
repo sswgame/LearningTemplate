@@ -40,7 +40,7 @@
 	<Expect watch="Object.Exists" target="VillageState_Part9" equals="1"/>
 
 	<!-- 집이 선 모습 — 부지가 있는 화면 왼쪽 아래(골든은 처음 돌릴 때 -scenario-record-missing-golden 으로 남기고 그림을 본다) -->
-	<Screenshot file="house.ppm" stability="assets"/>
+	<Screenshot file="house.ppm" stability="Assets"/>
 	<ExpectImage file="house.ppm" golden="house" region="0.15,0.45,0.6,1.0"/>
 	<Pass/>
 </Scenario>

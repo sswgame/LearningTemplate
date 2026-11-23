@@ -22,9 +22,6 @@ namespace sw
 
             static constexpr int32 kNeighborReach = 1; ///< 청크를 올리고 내릴 때 다시 메싱할 이웃의 거리(여덟 이웃)
 
-            static int32 toChunkX( uint64 key ) { return static_cast<int32>( static_cast<uint32>( key >> 32 ) ); }
-            static int32 toChunkZ( uint64 key ) { return static_cast<int32>( static_cast<uint32>( key ) ); }
-
             /** @brief 블록을 같은 값이 이어지는 구간으로 줄입니다. */
             static void compressRuns( const vector<VoxelBlockIndex>& listBlock, vector<VoxelBlockRun>& outListRun )
             {
@@ -115,6 +112,7 @@ namespace sw
         , _land{}
         , _chunkCountX{ 0 }
         , _chunkCountZ{ 0 }
+        , _lastRevision{ 0 }
     {
     }
 
@@ -168,13 +166,14 @@ namespace sw
             VoxelWorldInternal::expandRuns( storedIt->second, chunk._listBlock ); // 저장본은 남겨 둔다 — 바뀌지 않은 채 내리면 다시 적지 않는다
         else if ( fillGeneratedBlocks( chunkX, chunkZ, chunk._listBlock ) == false )
             return false;
-        _mapChunk[key] = std::move( chunk );
+        chunk._revision = ++_lastRevision;
+        _mapChunk[key]  = std::move( chunk );
         for ( int32 offsetZ = -VoxelWorldInternal::kNeighborReach; offsetZ <= VoxelWorldInternal::kNeighborReach; ++offsetZ )
         {
             for ( int32 offsetX = -VoxelWorldInternal::kNeighborReach; offsetX <= VoxelWorldInternal::kNeighborReach; ++offsetX )
             {
                 if ( offsetX != 0 || offsetZ != 0 )
-                    markChunkDirty( chunkX + offsetX, chunkZ + offsetZ ); // 이웃의 경계 면과 꼭짓점 그늘이 바뀐다
+                    advanceChunkRevision( chunkX + offsetX, chunkZ + offsetZ ); // 이웃의 경계 면과 꼭짓점 그늘이 바뀐다
             }
         }
         return true;
@@ -194,7 +193,7 @@ namespace sw
             for ( int32 offsetX = -VoxelWorldInternal::kNeighborReach; offsetX <= VoxelWorldInternal::kNeighborReach; ++offsetX )
             {
                 if ( offsetX != 0 || offsetZ != 0 )
-                    markChunkDirty( chunkX + offsetX, chunkZ + offsetZ );
+                    advanceChunkRevision( chunkX + offsetX, chunkZ + offsetZ );
             }
         }
     }
@@ -207,14 +206,14 @@ namespace sw
         vector<uint64> listFarKey;
         for ( const auto& entry : _mapChunk )
         {
-            const int32 distance = MathUtil::max( MathUtil::abs( VoxelWorldInternal::toChunkX( entry.first ) - centerChunkX ),
-                                                  MathUtil::abs( VoxelWorldInternal::toChunkZ( entry.first ) - centerChunkZ ) );
+            const int32 distance = MathUtil::max( MathUtil::abs( toChunkX( entry.first ) - centerChunkX ),
+                                                  MathUtil::abs( toChunkZ( entry.first ) - centerChunkZ ) );
             if ( distance > radius )
                 listFarKey.push_back( entry.first );
         }
         for ( const uint64 key : listFarKey )
         {
-            unloadChunk( VoxelWorldInternal::toChunkX( key ), VoxelWorldInternal::toChunkZ( key ) );
+            unloadChunk( toChunkX( key ), toChunkZ( key ) );
             ++changedCount;
         }
         int32 loadedCount = 0;
@@ -268,15 +267,15 @@ namespace sw
             return true;
         slot               = block;
         pChunk->_bModified = SW_TRUE;
-        markChunkDirty( chunkX, chunkZ );
+        advanceChunkRevision( chunkX, chunkZ );
         if ( localX == 0 )
-            markChunkDirty( chunkX - 1, chunkZ );
+            advanceChunkRevision( chunkX - 1, chunkZ );
         if ( localX == kVoxelChunkSize - 1 )
-            markChunkDirty( chunkX + 1, chunkZ );
+            advanceChunkRevision( chunkX + 1, chunkZ );
         if ( localZ == 0 )
-            markChunkDirty( chunkX, chunkZ - 1 );
+            advanceChunkRevision( chunkX, chunkZ - 1 );
         if ( localZ == kVoxelChunkSize - 1 )
-            markChunkDirty( chunkX, chunkZ + 1 );
+            advanceChunkRevision( chunkX, chunkZ + 1 );
         return true;
     }
 
@@ -300,19 +299,6 @@ namespace sw
                 return y;
         }
         return nullopt;
-    }
-
-    bool VoxelWorld::isChunkDirty( int32 chunkX, int32 chunkZ ) const
-    {
-        const VoxelChunk* pChunk = findChunk( chunkX, chunkZ );
-        return pChunk != nullptr && pChunk->_bDirty != SW_FALSE;
-    }
-
-    void VoxelWorld::clearChunkDirty( int32 chunkX, int32 chunkZ )
-    {
-        VoxelChunk* pChunk = findChunkMutable( chunkX, chunkZ );
-        if ( pChunk != nullptr )
-            pChunk->_bDirty = SW_FALSE;
     }
 
     void VoxelWorld::serializeState( StateIO& io )
@@ -364,8 +350,8 @@ namespace sw
             vector<VoxelBlockRun> listScratchRun;
             for ( const uint64 key : listKey )
             {
-                int32 chunkX = VoxelWorldInternal::toChunkX( key );
-                int32 chunkZ = VoxelWorldInternal::toChunkZ( key );
+                int32 chunkX = toChunkX( key );
+                int32 chunkZ = toChunkZ( key );
                 io.value( chunkX );
                 io.value( chunkZ );
                 const auto                   chunkIt = _mapChunk.find( key );
@@ -449,10 +435,9 @@ namespace sw
             if ( storedIt != _mapStoredChunk.end() )
                 VoxelWorldInternal::expandRuns( storedIt->second, chunk._listBlock );
             else
-                (void)fillGeneratedBlocks( VoxelWorldInternal::toChunkX( entry.first ), VoxelWorldInternal::toChunkZ( entry.first ), chunk._listBlock ); // 훅이 없으면 오류를 남기고 공기다
+                (void)fillGeneratedBlocks( toChunkX( entry.first ), toChunkZ( entry.first ), chunk._listBlock ); // 훅이 없으면 오류를 남기고 공기다
             chunk._bModified = SW_FALSE;
-            chunk._bDirty    = SW_TRUE;
-            ++chunk._revision; // 이미 만든 메시가 오래된 것이 된다
+            chunk._revision  = ++_lastRevision; // 이미 만든 메시가 오래된 것이 된다
         }
     }
 
@@ -486,12 +471,10 @@ namespace sw
         return chunkIt != _mapChunk.end() ? &chunkIt->second : nullptr;
     }
 
-    void VoxelWorld::markChunkDirty( int32 chunkX, int32 chunkZ )
+    void VoxelWorld::advanceChunkRevision( int32 chunkX, int32 chunkZ )
     {
         VoxelChunk* pChunk = findChunkMutable( chunkX, chunkZ );
-        if ( pChunk == nullptr )
-            return;
-        pChunk->_bDirty = SW_TRUE;
-        ++pChunk->_revision;
+        if ( pChunk != nullptr )
+            pChunk->_revision = ++_lastRevision;
     }
 } // namespace sw

@@ -44,11 +44,11 @@ namespace sw
         return {};
     }
 
-    void OnlineServerKitRegistry::registerFactory( OnlineServerKitFactory* pFactory )
+    bool OnlineServerKitRegistry::registerFactory( OnlineServerKitFactory* pFactory )
     {
         if ( pFactory == nullptr || pFactory->_pCreate == nullptr )
-            return;
-        (void)ServiceFactoryNode::addTo( OnlineServerKitFactoryList::getList(), pFactory );
+            return false;
+        return ServiceFactoryNode::addTo( OnlineServerKitFactoryList::getList(), pFactory );
     }
 
     void OnlineServerKitRegistry::unregisterFactory( OnlineServerKitFactory* pFactory )

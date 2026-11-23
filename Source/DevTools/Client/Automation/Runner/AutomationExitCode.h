@@ -51,7 +51,7 @@ namespace sw
     {
         const EngineFrameExit exitCode = getAutomationExitCode( result );
         if ( exitCode.has_value() == false )
-            SW_FATAL( "getAutomationExitStatus: a running scenario has no exit status" );
+            reportFatalError( "getAutomationExitStatus: a running scenario has no exit status" );
         return static_cast<int32>( *exitCode );
     }
 } // namespace sw

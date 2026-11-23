@@ -9,19 +9,9 @@
 		<item name="_anisotropy" defaultValue="1"/>
 		<item name="_porosity" defaultValue="0"/>
 	</_properties>
-	<_permutations quality="High" shaderLOD="300" usage="StaticMesh">
+	<_permutations>
 		<_alwaysDefines>
-			<item>MATERIAL_DOMAIN_SURFACE</item>
 			<item>MATERIAL_LOBE_ANISOTROPY</item>
 		</_alwaysDefines>
-		<_multiCompiles>
-			<item name="FogMode" selected="FOG_OFF">
-				<_options>
-					<item>FOG_OFF</item>
-					<item>FOG_LINEAR</item>
-					<item>FOG_EXP</item>
-				</_options>
-			</item>
-		</_multiCompiles>
 	</_permutations>
 </MaterialDef>

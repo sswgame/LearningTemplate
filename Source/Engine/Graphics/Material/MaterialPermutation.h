@@ -30,6 +30,14 @@ namespace sw
          */
         static void recordPermutationChange( const void* pOwner );
 
+        /**
+         * @brief define 목록 @p listDefine(머티리얼이 낼 수 있는 조합 하나)이 그려질 수 있는 조합이면 true 입니다. 아니면 이유와 함께 오류(`Material.UnsupportedFeature`)를 남기고 false 입니다.
+         * @details 기능 define 마다의 조건(받는 알파 모드 · 함께 쓸 수 없는 기능 · 필수 프로퍼티)은 `MaterialPermutation.cpp` 의 표 하나다. 예전에는 조건이 패스 종류 표와 셰이더 `#error` 에
+         *          흩어져, 불투명 왜곡 · 반투명 외곽선처럼 어느 패스도 그리지 않는 조합이 조용히 읽히고 쿠킹됐다. 머티리얼 읽기(`Material::loadComposed`)가 낼 수 있는 조합 모두에 부르므로
+         *          쿠킹도 그 파일에서 멈춘다(`ShaderCookRequestCollector`).
+         */
+        [[nodiscard]] static bool validateFeatures( const MaterialDef& desc, const vector<MaterialProperty>& listProperty, const vector<string>& listDefine, string_view sourceLabel );
+
         static void appendUniqueDefine( vector<string>& outListDefine, string_view define );
 
         /**

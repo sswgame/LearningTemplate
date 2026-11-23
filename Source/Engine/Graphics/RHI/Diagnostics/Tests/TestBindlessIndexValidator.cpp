@@ -10,6 +10,7 @@
 
 #include "Engine/Graphics/RHI/Diagnostics/BindlessIndexValidator.h"
 #include "Engine/Graphics/RHI/IRHIDevice.h"
+#include "Engine/Graphics/RHI/RHIStructuredBuffer.h"
 #include "Engine/Graphics/RHI/Tests/RHIFakeDevice.h"
 
 #include <thread>
@@ -98,7 +99,7 @@ SW_TEST_CASE_F( BindlessIndexValidatorTest, AbsentNotesAreCountedApart )
 
 /**
  * @brief [BindlessIndexValidatorTest] 구조 버퍼 원소 크기가 셰이더 선언과 다를 때만 걸리고, 자리마다 한 번 보고한다
- * @details 0 은 "모름"(리플렉션이 크기를 못 줬거나 크기를 모르는 등록)이라 묻지 않는다. 죽은 번호 보고 수에 섞이지 않는다.
+ * @details 0 은 "모름"(리플렉션이 크기를 못 줬거나 구조 버퍼가 아닌 번호)이라 묻지 않는다. 죽은 번호 보고 수에 섞이지 않는다.
  */
 SW_TEST_CASE_F( BindlessIndexValidatorTest, StrideMismatchReportsEachSiteOnce )
 {
@@ -107,15 +108,42 @@ SW_TEST_CASE_F( BindlessIndexValidatorTest, StrideMismatchReportsEachSiteOnce )
     const hashed_string passName{ "ForwardOpaque" };
     const hashed_string field{ "SwLights" };
 
-    SW_EXPECT_TRUE( BindlessIndexValidator::validateStride( &device, passName, field, 80, 80 ) );
-    SW_EXPECT_TRUE( BindlessIndexValidator::validateStride( &device, passName, field, 0, 64 ) );
-    SW_EXPECT_TRUE( BindlessIndexValidator::validateStride( &device, passName, field, 80, 0 ) );
-    SW_EXPECT_FALSE( BindlessIndexValidator::validateStride( &device, passName, field, 80, 64 ) );
-    SW_EXPECT_FALSE( BindlessIndexValidator::validateStride( &device, passName, field, 80, 64 ) );
+    device.getBindlessIndexReportLog().recordBufferStride( 5, 80 );
+    device.getBindlessIndexReportLog().recordBufferStride( 6, 64 );
+    SW_EXPECT_TRUE( BindlessIndexValidator::validateStride( &device, passName, field, 80, 5 ) );
+    SW_EXPECT_TRUE( BindlessIndexValidator::validateStride( &device, passName, field, 0, 6 ) );
+    SW_EXPECT_TRUE( BindlessIndexValidator::validateStride( &device, passName, field, 80, 9 ) ); // 적지 않은 번호
+    SW_EXPECT_FALSE( BindlessIndexValidator::validateStride( &device, passName, field, 80, 6 ) );
+    SW_EXPECT_FALSE( BindlessIndexValidator::validateStride( &device, passName, field, 80, 6 ) );
     SW_EXPECT_EQUAL( 1u, device.getBindlessIndexReportLog().getStrideReportCount() );
     SW_EXPECT_EQUAL( 0u, device.getBindlessIndexReportLog().getReportCount() );
 
-    SW_EXPECT_TRUE( BindlessIndexValidator::validateStride( nullptr, passName, field, 80, 64 ) );
+    SW_EXPECT_TRUE( BindlessIndexValidator::validateStride( nullptr, passName, field, 80, 6 ) );
+}
+
+/**
+ * @brief [BindlessIndexValidatorTest] 구조 버퍼는 만들 때 원소 크기를 디바이스에 적고 놓을 때 잊는다 — 핸들로 등록해도 검사에서 빠지지 않는다
+ * @details 변이: `RHIStructuredBuffer` 가 적지 않으면(예전처럼 등록하는 쪽이 크기를 넘기면) 인스턴스 · 배치 · 머티리얼 버퍼의 어긋남이 보고되지 않는다.
+ */
+SW_TEST_CASE_F( BindlessIndexValidatorTest, StructuredBufferRecordsItsStride )
+{
+    test::FakeRHIBufferFactory factory;
+    test::FakeRHIDevice        device;
+    device._pResourceFactory = &factory;
+    factory._bufferSRV       = 11;
+    RHIStructuredBuffer buffer;
+    SW_REQUIRE_TRUE( buffer.ensureCapacity( &device, 48, 4, RHIBufferUsage::Structured | RHIBufferUsage::ShaderResource, true, false, nullptr ) );
+    const RHIDescriptorIndex first = buffer._srv;
+    SW_REQUIRE_TRUE( first != kInvalidDescriptorIndex );
+    SW_EXPECT_EQUAL( 48u, device.getBindlessIndexReportLog().getBufferStride( first ) );
+
+    // 원소 크기가 바뀌면 다시 만들고 새 크기를 적는다.
+    SW_REQUIRE_TRUE( buffer.ensureCapacity( &device, 64, 4, RHIBufferUsage::Structured | RHIBufferUsage::ShaderResource, true, false, nullptr ) );
+    const RHIDescriptorIndex second = buffer._srv;
+    SW_EXPECT_EQUAL( 64u, device.getBindlessIndexReportLog().getBufferStride( second ) );
+
+    buffer.release( &device );
+    SW_EXPECT_EQUAL( 0u, device.getBindlessIndexReportLog().getBufferStride( second ) );
 }
 
 /**

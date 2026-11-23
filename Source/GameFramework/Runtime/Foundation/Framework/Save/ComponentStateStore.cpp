@@ -12,6 +12,8 @@
 #include "Engine/Object/GameObject/Serialization/ObjectStateSerializer.h"
 #include "Engine/Reflection/Reflection.h"
 
+#include "GameFramework/Runtime/Foundation/Framework/Save/StatefulComponentRegistrar.h"
+
 namespace sw
 {
     namespace
@@ -29,18 +31,23 @@ namespace sw
 
 namespace sw
 {
-    StatefulComponentRegistration::StatefulComponentRegistration( const utf8* pTypeName, CaptureFn pCapture, RestoreFn pRestore, DespawnFn pDespawn )
+    StatefulComponentRegistration::StatefulComponentRegistration( const utf8* pTypeName, CaptureFn pCapture, RestoreFn pRestore, DespawnFn pDespawn, SourceLocation site )
         : _pTypeName{ pTypeName }
         , _pCapture{ pCapture }
         , _pRestore{ pRestore }
         , _pDespawn{ pDespawn }
+        , _registrar{ this, &StatefulComponentRegistration::add, &StatefulComponentRegistration::remove, site }
     {
-        (void)ComponentStateStoreInternal::getRegistrationList().addLogged( this, "Stateful component type", string_view( pTypeName ) );
     }
 
-    StatefulComponentRegistration::~StatefulComponentRegistration()
+    bool StatefulComponentRegistration::add( StatefulComponentRegistration* pRegistration )
     {
-        (void)ComponentStateStoreInternal::getRegistrationList().remove( this ); // 거절된 중복 등록은 목록에 없다
+        return ComponentStateStoreInternal::getRegistrationList().addLogged( pRegistration, "Stateful component type", string_view( pRegistration->_pTypeName ) ) == RegistrationResult::Added;
+    }
+
+    void StatefulComponentRegistration::remove( StatefulComponentRegistration* pRegistration )
+    {
+        (void)ComponentStateStoreInternal::getRegistrationList().remove( pRegistration ); // 올린 등록만 불린다(거절된 것은 StaticRegistrar 가 내리지 않는다)
     }
 
     const vector<StatefulComponentRegistration*>& StatefulComponentRegistration::getRegistrations()

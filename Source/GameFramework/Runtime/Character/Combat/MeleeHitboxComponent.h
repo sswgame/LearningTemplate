@@ -40,6 +40,7 @@ namespace sw
          * @brief 휘두르기를 시작합니다. @p duration 초 동안 판정이 켜지고, 0 이하면 다시 부를 때까지 켜져 있습니다.
          * @details 지금 칼날에 걸린 오브젝트는 이 호출 안에서 바로 맞는다. 틱 안에서 부르면 그 스윕은 틱 직후로 미뤄진다.
          */
+        FUNCTION( Category = "Combat", Exec )
         void beginAttack( int32 damage, float32 duration );
 
     private:

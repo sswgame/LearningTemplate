@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
 <?asset guid="833f49692d45427ba8cc5a155d5fa83f"?>
 <!--
-  부하 시나리오 — 퍼뮤테이션 런타임 변경. 큐브 512 개가 저마다 머티리얼 인스턴스를 들고, 30 프레임마다 인스턴스 하나의 키워드 · 멀티 컴파일을 바꾼다
+  부하 시나리오 — 퍼뮤테이션 런타임 변경. 큐브 512 개가 저마다 머티리얼 인스턴스를 들고, 30 프레임마다 인스턴스 하나의 런타임 스위치를 바꾼다
   (-gv_stressTestMaterialChurnKeyword — 처음 보는 퍼뮤테이션이면 새 PSO). 그 인스턴스를 쓰는 칸만 다시 모으고(전체 수집 아님), 새 배치를 끝에 붙이고,
   PSO 는 빌더 스레드가 만드는 동안 직전 변형으로 그리는지(언리얼 PSO precaching · 유니티 비동기 셰이더 컴파일) 잰다.
   감시 값: GT.GPUScene.build.permutationDirtySlots(바뀐 인스턴스를 쓰는 칸 — 1 근처), GT.GPUScene.build.collect 시간(전체 수집이면 512 칸),

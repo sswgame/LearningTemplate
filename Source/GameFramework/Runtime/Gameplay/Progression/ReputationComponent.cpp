@@ -6,7 +6,7 @@
 #include "Engine/Object/GameObject/GameObjectManager.h"
 #include "Engine/Object/GameObject/Registry/ComponentRegistry.h"
 
-#include "GameFramework/Runtime/Foundation/Framework/Save/ComponentStateStore.h"
+#include "GameFramework/Runtime/Foundation/Framework/Save/StatefulComponentRegistrar.h"
 #include "GameFramework/Runtime/Gameplay/GameState/GameStateComponent.h"
 
 namespace sw
@@ -65,7 +65,7 @@ namespace sw
         const GameObject* const         pOwner = getOwner();
         const GameStateComponent* const pWorld = pOwner != nullptr ? GameStateComponent::findOpen( pOwner->getManager() ) : nullptr;
         if ( pWorld == nullptr )
-            return; // 월드 시계가 없는 씬(허브)은 날이 넘어가지 않는다
+            return; // 월드 시계가 없는 씬은 날이 넘어가지 않는다
         for ( const WorldClockEvent& clockEvent : pWorld->getClockEvents() )
         {
             if ( clockEvent._kind == WorldClockEvent::Kind::DayChanged )

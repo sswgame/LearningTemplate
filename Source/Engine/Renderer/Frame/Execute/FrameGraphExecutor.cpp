@@ -121,7 +121,7 @@ namespace sw
     {
         // 셰이더 메시지 링은 PSO 보다 먼저 만든다 — 메시지 변형 PSO 는 이 버퍼 없이는 돌릴 수 없으므로 만들지 못하면 멈춘다(폴백 없음).
         if ( _state._gpuMessages.initialize( _pDevice ) == false )
-            SW_FATAL( "GPU messages are on but the message ring could not be created - see the log above" );
+            reportFatalError( "GPU messages are on but the message ring could not be created - see the log above" );
         // 정렬 디스패치의 t2 자리표 — 순번 표가 없는 뷰도 빈 슬롯으로 디스패치하지 않는다(DX12 는 빈 디스크립터를 읽으면 폴트).
         constexpr uint32 kZeroRank = 0;
         if ( _transparentRankPlaceholder.ensureCapacity( _pDevice, sizeof( uint32 ), 1, RHIBufferUsage::ShaderResource, true, false, &kZeroRank ) == false )
@@ -129,10 +129,10 @@ namespace sw
         _occlusion.ensurePlaceholder( _pDevice );
         // 가림 판정 설정은 필수다 — 없거나 틀리면 기본값으로 대신하지 않고 멈춘다(설정 칸이 문턱의 정본이다).
         if ( ConfigManager::readConfigFileInto( OcclusionCullingConfig::kConfigFile, _occlusionConfig ) != ConfigReadResult::Loaded )
-            SW_FATAL( "%# is missing or unreadable - the occlusion culling settings have no default (the log above names the key)", OcclusionCullingConfig::kConfigFile );
+            reportFatalError( "%# is missing or unreadable - the occlusion culling settings have no default (the log above names the key)", OcclusionCullingConfig::kConfigFile );
         const string reason = _occlusionConfig.validate();
         if ( reason.empty() == false )
-            SW_FATAL( "%# is invalid: %#", OcclusionCullingConfig::kConfigFile, reason );
+            reportFatalError( "%# is invalid: %#", OcclusionCullingConfig::kConfigFile, reason );
         if ( _lateCullCb.isValid() == false && _lateCullCb.create( _pDevice, sizeof( FrameRendererUtil::GPUCullParams ) ) == false )
             SW_LOG_ERROR_ID( "FrameGraphExecutor.FailedCreateLateCullCb", "Failed to create the late occlusion cull constant buffer - two-phase occlusion runs only its first phase" );
     }

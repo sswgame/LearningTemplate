@@ -7,14 +7,14 @@
  *
  *          캐시는 모두 매니저마다 하나씩 만들고 매니저가 지웁니다. 정적 창구(`MeshCache::acquire` 등)는 `engine::getSubsystem<AssetManager>().getAssetCache<T>()` 로
  *          자기 캐시를 찾는다 — 예전의 "공유 캐시"(엔진 수명 범위가 소유한 객체를 빌려 올림)는 없다. 다시 읽을 파일이 없는 캐시(코드로 짓는 값 표)는
- *          `SW_BUILT_IN_ASSET_CACHE_WITHOUT_RELOAD` 로 올린다.
+ *          `kReloadable` 을 거짓으로 가린다(`WeakInternCache`).
  *
  * @note 표는 Engine 이미지 안에서만 채웁니다. 모듈(게임 · 키트)의 캐시는 `AssetManager::registerAssetCache` 로 올리고 내려가기 전에 그 구독을 놓습니다 —
  *       이 표의 항목은 내리지 않으므로, 모듈이 쓰면 언로드 뒤 죽은 함수를 가리킵니다.
  */
 #pragma once
 #include "Core/Container/vector.h"
-#include "Core/Foundation/DevOnly.h"
+#include "Core/Foundation/BuildConfig.h"
 #include "Core/Foundation/Macros.h"
 #include "Core/Foundation/Types.h"
 #include "Core/Memory/Memory.h"
@@ -25,13 +25,25 @@
 namespace sw
 {
     /**
-     * @brief 캐시 형식 @p TCache 의 비가상 멤버 `reload( assetID )` 를 부르는 리로드 함수입니다(`SW_ASSET_CACHE_RELOAD_FUNCTION`).
+     * @brief 캐시 형식 @p TCache 의 비가상 멤버 `reload( assetID )` 를 부르는 리로드 함수입니다(`getAssetCacheReloadFunction`).
      * @details 멤버가 `ReloadResult` 를 돌려주지 않으면(예전 `void`) 이 `return` 이 컴파일되지 않는다 — 결과를 버리는 캐시를 등록할 수 없다.
      */
     template <typename TCache>
     ReloadResult reloadAssetCache( AssetCacheBase& cache, const AssetID& assetID )
     {
         return static_cast<TCache&>( cache ).reload( assetID );
+    }
+
+    /**
+     * @brief 캐시 형식 @p TCache 의 리로드 함수입니다. 다시 읽을 파일이 없는 캐시(`TCache::kReloadable` 이 거짓)와 배포 빌드는 `nullptr` 이고 리로드 본문을 참조하지 않는다.
+     */
+    template <typename TCache>
+    constexpr AssetCacheReloadFunction getAssetCacheReloadFunction()
+    {
+        if constexpr ( build::kShipping == false && TCache::kReloadable )
+            return &reloadAssetCache<TCache>;
+        else
+            return nullptr;
     }
 
     /** @brief 캐시를 하나 만듭니다. */
@@ -80,33 +92,9 @@ namespace sw
 } // namespace sw
 
 /**
- * @brief 캐시 형식 @p Type 의 리로드 함수(`AssetCacheReloadFunction`)입니다. 배포 빌드는 리로드가 없다 — `nullptr` 이고 리로드 본문을 참조하지 않는다.
- * @details 빌드 스위치는 `SW_DEV_ONLY_FUNCTION` 한 곳이다(캐시마다 `#if` 를 두지 않는다).
- */
-#define SW_ASSET_CACHE_RELOAD_FUNCTION( Type ) ( static_cast<::sw::AssetCacheReloadFunction>( SW_DEV_ONLY_FUNCTION( &::sw::reloadAssetCache<Type> ) ) )
-
-/**
  * @brief 캐시 @p Type 을 내장 캐시로 등록합니다(캐시의 .cpp, 파일 범위, `namespace sw` 안). 매니저마다 하나씩 만듭니다.
+ * @param id 정적 이름을 만드는 식별자입니다(템플릿 인스턴스 `SharedAssetCache<Skeleton>` 처럼 형식 이름이 식별자가 아닐 수 있다).
+ * @details 리로드 함수는 형식이 정한다(`getAssetCacheReloadFunction`) — 다시 읽을 파일이 없는 캐시(`WeakInternCache` 파생)는 저절로 없다.
  */
-#define SW_BUILT_IN_ASSET_CACHE( Type ) SW_BUILT_IN_ASSET_CACHE_WITH_ID( Type, Type )
-
-/**
- * @brief 이름이 식별자가 아닌 캐시 @p Type(템플릿 인스턴스 `SharedAssetCache<Skeleton>` 등)을 등록합니다. @p id 는 정적 이름을 만드는 식별자입니다.
- */
-#define SW_BUILT_IN_ASSET_CACHE_WITH_ID( id, Type )                                                                       \
-    static const ::sw::BuiltInAssetCacheRegistration sw_builtInAssetCache_##id{ &::sw::createBuiltInAssetCache<Type>,     \
-                                                                                SW_ASSET_CACHE_RELOAD_FUNCTION( Type ) }; \
-    static const ::sw::BuiltInAssetCacheRegistrar    sw_builtInAssetCacheRegistrar_##id                                   \
-    {                                                                                                                     \
-        &sw_builtInAssetCache_##id                                                                                        \
-    }
-
-/**
- * @brief 다시 읽을 파일이 없는 캐시 @p Type(코드로 짓는 값 표 — `WeakInternCache` 파생)을 등록합니다. 리로드 함수가 없다.
- */
-#define SW_BUILT_IN_ASSET_CACHE_WITHOUT_RELOAD( Type )                                                                             \
-    static const ::sw::BuiltInAssetCacheRegistration sw_builtInAssetCache_##Type{ &::sw::createBuiltInAssetCache<Type>, nullptr }; \
-    static const ::sw::BuiltInAssetCacheRegistrar    sw_builtInAssetCacheRegistrar_##Type                                          \
-    {                                                                                                                              \
-        &sw_builtInAssetCache_##Type                                                                                               \
-    }
+#define SW_BUILT_IN_ASSET_CACHE( id, Type ) \
+    SW_STATIC_REGISTRATION( builtInAssetCache, ::sw::BuiltInAssetCacheRegistration, ::sw::BuiltInAssetCacheRegistrar, id, &::sw::createBuiltInAssetCache<Type>, ::sw::getAssetCacheReloadFunction<Type>() )

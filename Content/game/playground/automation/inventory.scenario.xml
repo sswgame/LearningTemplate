@@ -21,7 +21,7 @@
 	<ExpectLog id="Pickup.PickedUp" count="1"/>
 
 	<!-- ⑵ 패드만으로 나누기: 첫 입력은 기본 포커스(Slot0), X 는 동작 메뉴, 메뉴 순서 Use · Equip · Split -->
-	<DevCommand line="demo.inventory InventoryDemo"/>
+	<DevCommand line="exec InventoryDemo openInventory"/>
 	<WaitUntil watch="UI.ActiveScreen" is="common/ui/inventory/inventory.ui.xml" timeoutFrames="30"/>
 	<Tap slot="Gamepad.DPadDown" hold="1"/>
 	<WaitUntil watch="UI.FocusedWidget" is="Slot0" timeoutFrames="10"/>
@@ -85,7 +85,7 @@
 	<DevCommand line="item.pickup Player HelmetDrop"/>
 	<Expect watch="Equipment.BagItem" target="Player" key="0" is="helmet_knight"/>
 	<Expect watch="Equipment.Stat" target="Player" key="armor" equals="0"/>
-	<DevCommand line="demo.inventory InventoryDemo"/>
+	<DevCommand line="exec InventoryDemo openInventory"/>
 	<WaitUntil watch="UI.ActiveScreen" is="common/ui/inventory/inventory.ui.xml" timeoutFrames="30"/>
 	<WaitUntil watch="UI.FocusedWidget" is="Slot0" timeoutFrames="10"/> <!-- 패드로 열었다 — 탐색 방식이라 기본 포커스가 선다 -->
 	<Tap slot="Gamepad.X" hold="1"/>

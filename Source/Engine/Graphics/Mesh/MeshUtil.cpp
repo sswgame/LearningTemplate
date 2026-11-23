@@ -679,5 +679,5 @@ namespace sw
 
 namespace sw
 {
-    SW_BUILT_IN_ASSET_CACHE_WITHOUT_RELOAD( PrimitiveMeshCache );
+    SW_BUILT_IN_ASSET_CACHE( PrimitiveMeshCache, PrimitiveMeshCache );
 } // namespace sw

@@ -1,0 +1,10 @@
+<?asset guid="9916123fb7af96865ecf507801d4e0da"?>
+<Prefab formatVersion="1" name="VoxelAutoPlay">
+	<GameObject _schemaVersion="0" _name="VoxelAutoPlay" _bActive="true">
+		<_listComponent>
+			<VoxelAutoPlayControllerComponent _localID="8199746220104088750" _componentName="VoxelAutoPlayControllerComponent"
+			                                  _bActive="true"
+			                                  _behaviorTree="game/playground/voxelcraft/data/ai/autoplay.bt.xml" />
+		</_listComponent>
+	</GameObject>
+</Prefab>

@@ -10,7 +10,7 @@
 <Scenario name="game.playground.realtimegi" fixedDelta="0.0166667" timeoutFrames="400" startAfter="ScenePlaying" startTimeoutFrames="900" input="exclusive">
 	<Launch variable="gv_firstScene" value="game/playground/maps/realtimegi.scene.xml"/>
 	<WaitUntil watch="Render.GIAccumulatedFrames" atLeast="120" timeoutFrames="300"/> <!-- 프로브 GI 가 30 번(주기 4, 섞기 0.25 — 남은 몫 0.75^30) 쌓였다 -->
-	<Screenshot file="realtimegi.ppm" stability="assets"/>
+	<Screenshot file="realtimegi.ppm" stability="Assets"/>
 	<ExpectImage file="realtimegi.ppm" golden="realtimegi" region="0.4,0.4,0.6,0.55"/>
 	<Pass/>
 </Scenario>

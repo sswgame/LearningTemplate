@@ -89,7 +89,7 @@ namespace sw
                     return index;
                 }
             }
-            SW_FATAL( "Enum %# has no sentinel enumerator '%#' - the reflection parser checks this", desc._pFullyQualifiedName, pSentinelName );
+            reportFatalError( "Enum %# has no sentinel enumerator '%#' - the reflection parser checks this", desc._pFullyQualifiedName, pSentinelName );
             return desc._listEntry.size();
         };
         const size_t invalidIndex = findSentinel( desc._pInvalidName, info._invalidValue );

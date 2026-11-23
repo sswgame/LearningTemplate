@@ -36,7 +36,7 @@ namespace sw
     SubsystemInitResult UIDocumentCache::initializeSubsystem()
     {
         // 핫 리로드 · 종료 · 진단이 다른 에셋 캐시와 같은 길로 간다.
-        _assetCacheRegistration = engine::getSubsystem<AssetManager>().registerAssetCache( &_cache, SW_ASSET_CACHE_RELOAD_FUNCTION( UITextAssetCache ) );
+        _assetCacheRegistration = engine::getSubsystem<AssetManager>().registerAssetCache( &_cache, getAssetCacheReloadFunction<UITextAssetCache>() );
         return SubsystemInitResult::Succeeded;
     }
 

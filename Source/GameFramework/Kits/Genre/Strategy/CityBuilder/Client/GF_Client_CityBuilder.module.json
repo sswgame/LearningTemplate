@@ -1,0 +1,22 @@
+{
+    "_name": "GF_Client_CityBuilder",
+    "_version": "1.0.0",
+    "_kind": "Kit",
+    "_description": "도시 건설 키트(클라이언트) — 디렉터의 건물 · 도로를 모습으로 세우고 빨리 감기 입력을 디렉터 명령으로 바꾼다(뷰 · 입력). 규칙 · 디렉터는 GF_CityBuilder",
+    "_listDependency": [
+        {
+            "_name": "GameFramework"
+        },
+        {
+            "_name": "GF_CityBuilder"
+        }
+    ],
+    "_listConfiguration": [
+        "Dev",
+        "Shipping"
+    ],
+    "_listTarget": [
+        "Client"
+    ],
+    "_bEnabledByDefault": true
+}

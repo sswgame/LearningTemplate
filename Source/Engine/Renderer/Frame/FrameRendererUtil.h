@@ -427,6 +427,10 @@ namespace sw
         hashed_string _fogVolumeParams{ "g_FogVolumeParams" };
         /// @brief 표면 변형 층의 창(`SurfaceDeformBinding::_params`) — 지면 · 지형의 정점 셰이더와 그림자 패스가 같은 값을 읽는다.
         hashed_string _surfaceDeformParams{ "g_SurfaceDeformParams" };
+        /// @brief 전역 머티리얼 값(`MaterialGlobals`)입니다.
+        hashed_string _materialGlobalWeather{ "g_MaterialGlobalWeather" };
+        hashed_string _materialGlobalRain{ "g_MaterialGlobalRain" };
+        hashed_string _materialGlobalEnvironment{ "g_MaterialGlobalEnvironment" };
         /// @brief 안개 패스의 진단 보기입니다(`FrameFog::makeDebugParams`, fog.hlsl).
         hashed_string _fogDebugParams{ "g_FogDebugParams" };
         hashed_string _postProcessMaterial{ "g_PostProcessMaterial" };   ///< 후처리 머티리얼 그리기마다의 무게(x)

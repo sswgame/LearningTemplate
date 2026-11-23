@@ -15,7 +15,7 @@
 	<Launch variable="gv_viewDistanceScale" value="1"/>
 	<WaitRenderStable/> <!-- 사진 앞 렌더 안정(TAA · 노출 · 에셋) -->
 	<WaitUntil watch="Assets.Pending" equals="0" timeoutWallSeconds="60"/>
-	<Screenshot file="ppmat_off.ppm" stability="assets"/>
+	<Screenshot file="ppmat_off.ppm" stability="Assets"/>
 
 	<DevCommand line="scene.layer PostMaterialBefore on"/>
 	<WaitUntil watch="Assets.Pending" equals="0" timeoutWallSeconds="60"/>

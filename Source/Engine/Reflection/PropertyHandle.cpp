@@ -21,7 +21,7 @@ namespace sw
             if ( list.empty() == false && &property >= list.data() && &property < list.data() + list.size() )
                 return PropertyHandle{ &declaring, static_cast<uint32>( &property - list.data() ), declaring._contentGeneration };
         }
-        SW_FATAL( "PropertyHandle: property '%#' is not declared by %# or its bases", property._name.c_str(), type._fullyQualifiedName.c_str() );
+        reportFatalError( "PropertyHandle: property '%#' is not declared by %# or its bases", property._name.c_str(), type._fullyQualifiedName.c_str() );
         return PropertyHandle{};
     }
 
@@ -35,8 +35,8 @@ namespace sw
     {
         const PropertyInfo* pProperty = find();
         if ( pProperty == nullptr )
-            SW_FATAL( "PropertyHandle: the declaring type %# was unloaded or registered again - the property reference is stale",
-                      _pType != nullptr ? _pType->_fullyQualifiedName.c_str() : "(none)" );
+            reportFatalError( "PropertyHandle: the declaring type %# was unloaded or registered again - the property reference is stale",
+                              _pType != nullptr ? _pType->_fullyQualifiedName.c_str() : "(none)" );
         return *pProperty;
     }
 } // namespace sw
