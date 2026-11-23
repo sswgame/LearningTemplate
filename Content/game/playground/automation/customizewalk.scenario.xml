@@ -2,7 +2,7 @@
 <?asset guid="7a037ddb2fa741ebbcd79a23c64e2558"?>
 <!--
   게임 중 꾸미기 ⑥ 걷는 동안 체형 · 굽 신발 — 무대 maps/bodycustomization 의 Dancer(해골 전사, 발 디딤 리그 skeleton_bodydemo). customizeheels 와 같은 몸(CustomizeDancer)을
-  개발 명령 anim.play 로 제자리 걷기(Walking_A)에 두고, 다리 길이 극값(LegLength ±1) · 굽(heels_high)에서 발바닥이 땅에 서는지 값으로 본다.
+  개발 명령 exec … play 로 제자리 걷기(Walking_A)에 두고, 다리 길이 극값(LegLength ±1) · 굽(heels_high)에서 발바닥이 땅에 서는지 값으로 본다.
   감시 값은 발 디딤 노드 출력이다 — sole_gap_peak(최근 1 ~ 2 초 가장 낮은 발목 - (땅 + 레퍼런스 발목 높이 + 굽)의 절댓값 최댓값 — 걷기 한 주기를 덮는다),
   leg_lift(체형의 다리 길이 비로 골반을 옮긴 높이). ground_hits 는 광선이 땅에 닿은 수라 다리가 땅에 묻혀도 2 다 — 발 높이는 sole_gap 만 본다.
   고친 결함: 다리 길이 비율이 다리를 늘여도 골반은 그대로라 디딘 발이 늘인 만큼 땅에 묻혔다(줄이면 떴다) — 발 디딤이 다리 길이 비만큼 골반을 옮긴다.
@@ -16,7 +16,7 @@
 	<WaitUntil watch="Appearance.Preset" target="Dancer" is="CustomizeDancer" timeoutFrames="10"/>
 	<WaitUntil watch="Assets.Pending" equals="0" timeoutWallSeconds="60"/>
 	<WaitUntil watch="Appearance.Idle" target="Dancer" equals="1" timeoutFrames="300"/>
-	<DevCommand line="anim.play Dancer Walking_A"/>
+	<DevCommand line="exec Dancer play Walking_A"/>
 	<WaitUntil watch="Animation.State" target="Dancer" is="Walking_A" timeoutFrames="60"/>
 
 	<!-- ⑴ 기본 몸 — 걷는 클립 자체의 발 높이 오차(기준) -->
