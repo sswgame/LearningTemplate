@@ -47,7 +47,7 @@ namespace sw
         ID3D12GraphicsCommandList* commandListForRecord();
 
         void blitTextureNative( RHITextureHandle src, RHITextureHandle dst ) override;
-        void bindShaderResource( RHIDescriptorIndex index, uint32 slot ) override;
+        void bindShaderResource( RHITextureSRVIndex index, uint32 slot ) override;
         void prepareTextureForShaderReadNative( RHITextureHandle texture ) override;
         void prepareTextureForRenderTargetNative( RHITextureHandle texture ) override;
         /** @brief 앨리어싱 배리어(앞 리소스를 특정하지 않는다)를 기록합니다 — 힙에 겹쳐 놓은 텍스처의 프레임 첫 쓰기 앞. */
@@ -55,17 +55,17 @@ namespace sw
         void prepareTextureForUnorderedAccessNative( RHITextureHandle texture ) override;
         /** @brief 텍스처 전이를 `ResourceBarrier` 한 번으로 냅니다(배열 크기만큼씩). 단일 `prepareTextureFor*Native` 도 원소 하나로 이 길을 지난다. */
         void transitionTexturesNative( const RHITextureTransition* pTransition, uint32 count ) override;
-        void bindComputeUAV( RHIDescriptorIndex index, uint32 slot ) override;
-        void bindGraphicsUAV( RHIDescriptorIndex index, uint32 slot ) override;
+        void bindComputeUAV( RHIUnorderedAccessIndex index, uint32 slot ) override;
+        void bindGraphicsUAV( RHIUnorderedAccessIndex index, uint32 slot ) override;
         void setVertexBuffer( uint32 slot, RHIBufferHandle buffer, uint32 stride, uint32 offset = 0 ) override;
         void drawNative( uint32 vertexCount, uint32 startVertex = 0 ) override;
         void drawInstancedNative( uint32 vertexCount, uint32 instanceCount, uint32 startVertex = 0, uint32 startInstance = 0 ) override;
-        void bindConstantBuffer( RHIDescriptorIndex constantBufferIndex, uint32 slot ) override;
+        void bindConstantBuffer( RHIBufferSRVIndex constantBufferIndex, uint32 slot ) override;
         /** @brief 버퍼의 이번 프레임 슬롯에 씁니다. `IRHIResourceFactory::updateConstantBuffer` 와 같은 일이며, 이 백엔드의 커맨드 스트림은 버퍼 버전을 갖지 않습니다. */
         void                     updateConstantBufferNative( RHIBufferHandle buffer, const void* pData, uint32 size ) override;
-        void                     bindStructuredBuffer( RHIDescriptorIndex index, uint32 slot ) override;
-        void                     bindComputeConstantBuffer( RHIDescriptorIndex constantBufferIndex, uint32 slot ) override;
-        void                     bindComputeShaderResource( RHIDescriptorIndex index, uint32 slot ) override;
+        void                     bindStructuredBuffer( RHIBufferSRVIndex index, uint32 slot ) override;
+        void                     bindComputeConstantBuffer( RHIBufferSRVIndex constantBufferIndex, uint32 slot ) override;
+        void                     bindComputeShaderResource( RHIBufferSRVIndex index, uint32 slot ) override;
         void                     dispatchComputeNative( uint32 threadGroupCountX, uint32 threadGroupCountY, uint32 threadGroupCountZ ) override;
         void                     setViewport( const RHIViewport& viewport ) override;
         void                     setScissorRect( const RHIScissorRect& rect ) override;
@@ -104,6 +104,8 @@ namespace sw
          * @return 인덱스가 범위 밖이거나 슬롯이 비어 있으면 0 입니다.
          */
         D3D12_GPU_VIRTUAL_ADDRESS resolveBufferAddress( RHIDescriptorIndex index, bool bUAV, bool bConstantBuffer ) const;
+        /** @brief 그래픽스(또는 컴퓨트) t 슬롯에 SRV 뷰를 적습니다 — 텍스처 · 구조 버퍼가 같은 테이블이다. */
+        void bindSRVView( bool bCompute, RHIDescriptorIndex index, uint32 slot );
         /** @brief 등록된 bindless 인덱스의 오프라인 뷰 핸들입니다(슬롯 테이블 복사 원본). 없으면 ptr 0 입니다. */
         D3D12_CPU_DESCRIPTOR_HANDLE resolveOfflineView( RHIDescriptorIndex index, bool bUAV ) const; /**
                                                                                                       * @brief 바뀐 t/u 슬롯 테이블을 온라인 블록에 확정해 루트 테이블로 바인딩합니다. 드로우와 디스패치 직전에 부릅니다(Vulkan 의 flushSlotSet 에 해당합니다).

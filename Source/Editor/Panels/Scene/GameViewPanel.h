@@ -61,8 +61,8 @@ namespace sw::editor
         void releaseDevOverlayTexture();
 
     private:
-        GameViewModel _model;
-        void*         _pDevOverlayTextureID; ///< 개발 겹치기 텍스처의 ImGui ID(이 패널 소유, 없으면 nullptr)
-        uint64        _devOverlayTexture;    ///< 그 ID 의 RHI 텍스처
+        GameViewModel    _model;
+        void*            _pDevOverlayTextureID; ///< 개발 겹치기 텍스처의 ImGui ID(이 패널 소유, 없으면 nullptr)
+        RHITextureHandle _devOverlayTexture;    ///< 그 ID 의 RHI 텍스처
     };
 } // namespace sw::editor

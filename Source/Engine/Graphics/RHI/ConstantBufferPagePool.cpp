@@ -66,7 +66,7 @@ namespace sw
         // 옮긴다 — 지금의 "커지면 다시 만든다" 자리. 칸은 새 칸을 먼저 잡은 뒤 놓는다(`reallocate` — 닫힌 옛 번호를 이번 새 칸이 받지 않는다).
         const ConstantBufferSlot oldSlot       = inoutSlice._slot;
         const RHIBufferSlice     oldRange      = inoutSlice._range;
-        const RHIDescriptorIndex oldDescriptor = inoutSlice._descriptorIndex;
+        const RHIBufferSRVIndex  oldDescriptor = inoutSlice._descriptorIndex;
         inoutSlice.detach();
         bool               bNewPage   = false;
         RHIBufferHandle    closedPage = 0;
@@ -83,7 +83,7 @@ namespace sw
         }
         // 옛 구간의 디스크립터 → 전용 버퍼 → 닫힌 페이지 차례로 잠금 밖에서 돌려준다(구간이 바뀌어 디스크립터도 새로 난다).
         if ( oldDescriptor != kInvalidDescriptorIndex )
-            device.releaseBindlessIndex( RHIBindlessIndexSpace::Buffer, oldDescriptor );
+            device.releaseBindlessIndex( oldDescriptor );
         if ( oldRange._buffer != 0 && oldSlot.isValid() == false )
             device.releaseHandle( oldRange._buffer );
         if ( closedPage != 0 )
@@ -115,7 +115,7 @@ namespace sw
     void ConstantBufferPagePool::releaseSlice( IRHIDevice& device, const ConstantBufferPoolSlice& slice )
     {
         if ( slice._descriptorIndex != kInvalidDescriptorIndex )
-            device.releaseBindlessIndex( RHIBindlessIndexSpace::Buffer, slice._descriptorIndex );
+            device.releaseBindlessIndex( slice._descriptorIndex );
         if ( slice._slot.isValid() )
             releaseSlot( device, slice._slot );
         else if ( slice.isValid() )
@@ -150,7 +150,7 @@ namespace sw
         if ( bNewPage )
         {
             // 새 페이지의 칸은 지금 이것 하나라 다른 스레드가 이 번호를 만지지 않는다 — 만들기는 잠금 밖에서 하고 표에만 잠가 넣는다.
-            page = pFactory->createConstantBufferPage( ConstantBufferSlotAllocator::kPageBytes );
+            page = pFactory->createConstantBufferPage( RHIResourceCreateKey{}, ConstantBufferSlotAllocator::kPageBytes );
             if ( page == 0 )
             {
                 {
@@ -170,8 +170,8 @@ namespace sw
             ScopedLock<mutex> lock{ _mutex };
             page = _listPageBuffer[slot._pageIndex];
         }
-        const RHIBufferSlice     range{ page, slot._offset, slot._sizeBytes };
-        const RHIDescriptorIndex index = pFactory->registerBindlessBufferSRV( range );
+        const RHIBufferSlice    range{ page, slot._offset, slot._sizeBytes };
+        const RHIBufferSRVIndex index = pFactory->registerBindlessBufferSRV( range );
         if ( index == kInvalidDescriptorIndex )
         {
             SW_LOG_ERROR_ID( "ConstantBufferPagePool.CouldNotRegisterSlice", "Could not register a constant buffer slice (offset %#, %# bytes)", slot._offset, slot._sizeBytes );
@@ -189,14 +189,14 @@ namespace sw
         // 가장 큰 등급보다 큰 머티리얼은 드물다 — 페이지 꼴의 전용 버퍼 하나와 그 전체 구간이다(셰이더 계약은 같다).
         IRHIResourceFactory* const pFactory = device.getResourceFactory();
         const uint32               byteSize = MathUtil::align( sizeBytes, constant::render::kConstantBufferAlignment );
-        const RHIBufferHandle      buffer   = pFactory->createConstantBufferPage( byteSize );
+        const RHIBufferHandle      buffer   = pFactory->createConstantBufferPage( RHIResourceCreateKey{}, byteSize );
         if ( buffer == 0 )
         {
             SW_LOG_ERROR_ONCE_ID( "ConstantBufferPagePool.CouldNotCreateDedicated", "Could not create a dedicated constant buffer of %# bytes", byteSize );
             return false;
         }
-        const RHIBufferSlice     range{ buffer, 0, byteSize };
-        const RHIDescriptorIndex index = pFactory->registerBindlessBufferSRV( range );
+        const RHIBufferSlice    range{ buffer, 0, byteSize };
+        const RHIBufferSRVIndex index = pFactory->registerBindlessBufferSRV( range );
         if ( index == kInvalidDescriptorIndex )
         {
             SW_LOG_ERROR_ID( "ConstantBufferPagePool.CouldNotRegisterDedicated", "Could not register a dedicated constant buffer of %# bytes", byteSize );

@@ -73,6 +73,30 @@ SW_TEST_CASE( BufferViewLayoutTest, RowsFollowStrideAndScalar )
     SW_EXPECT_EQUAL( BufferViewLayout::kMaxColumnCount, BufferViewLayout::make( 256, BufferViewScalar::Uint )._columnCount );
 }
 
+SW_TEST_CASE( BufferViewLayoutTest, ShaderMembersNameAndTypeTheColumns )
+{
+    const vector<RenderBufferEntry::Member> listMember{
+        RenderBufferEntry::Member{"_center", "Float3",  0, 12},
+        RenderBufferEntry::Member{ "_count",   "Uint", 12,  4},
+    };
+    const BufferViewLayout layout = BufferViewLayout::make( 20, BufferViewScalar::Shader, listMember );
+    SW_REQUIRE_EQUAL( size_t{ 5 }, layout._listColumnName.size() );
+    SW_EXPECT_EQUAL( string( "_center[1]" ), layout._listColumnName[1] );
+    SW_EXPECT_EQUAL( string( "_count" ), layout._listColumnName[3] );
+    SW_EXPECT_EQUAL( string( "+16" ), layout._listColumnName[4] ); // 셰이더가 선언하지 않은 칸은 오프셋과 16 진수다
+
+    vector<uint8> byte( 20 );
+    const float32 center = 0.5f;
+    const uint32  count  = 7;
+    Memory::copy( byte.data() + 4, &center, sizeof( center ) );
+    Memory::copy( byte.data() + 12, &count, sizeof( count ) );
+    vector<string> listCell;
+    SW_REQUIRE_TRUE( layout.formatRow( byte, 0, listCell ) );
+    SW_EXPECT_EQUAL( string( "0.5" ), listCell[1] );
+    SW_EXPECT_EQUAL( string( "7" ), listCell[3] );
+    SW_EXPECT_EQUAL( string( "0x00000000" ), listCell[4] );
+}
+
 SW_TEST_CASE( RenderDebuggerViewModelTest, FrameDebuggerStepsThroughRecordedDraws )
 {
     RenderDebugRegistry     registry;
@@ -136,7 +160,7 @@ SW_TEST_CASE( RenderDebuggerViewModelTest, GraphTabRequestsCaptureAndBufferTabRe
     viewModel.selectTab( RenderDebuggerTab::Buffers );
     SW_REQUIRE_TRUE( registry.takeBufferListRequest() );
     registry.publishBufferList( {
-        RenderBufferEntry{ "OcclusionTiles", 0, 4, 2 }
+        RenderBufferEntry{ "OcclusionTiles", 0, 4, 2, {} }
     } );
     (void)viewModel.gather( sources );
     SW_REQUIRE_EQUAL( size_t{ 1 }, state._listBuffer.size() );
@@ -153,7 +177,7 @@ SW_TEST_CASE( RenderDebuggerViewModelTest, GraphTabRequestsCaptureAndBufferTabRe
     vector<uint8> byte( sizeof( arrDepth ) );
     Memory::copy( byte.data(), arrDepth, sizeof( arrDepth ) );
     registry.publishBufferContent( RenderBufferContent{
-        RenderBufferEntry{ name, slot, 4, 2 },
+        RenderBufferEntry{ name, slot, 4, 2, {} },
         byte, serial
     } );
     (void)viewModel.gather( sources );

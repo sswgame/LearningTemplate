@@ -25,13 +25,29 @@ namespace sw
 
     /**
      * @struct RHIConstantBuffer
-     * @brief 상수 버퍼와 bindless 인덱스입니다. 생성, 갱신, 해제를 한 곳에 모읍니다.
+     * @brief 상수 버퍼와 bindless 인덱스입니다. 생성, 갱신, 해제를 한 곳에 모읍니다. 옮기기만 됩니다(사본이 있으면 같은 버퍼를 두 번 놓는다).
      */
     struct RHIConstantBuffer
     {
-        RHIBufferHandle    _buffer{ 0 };
-        RHIDescriptorIndex _index{ kInvalidDescriptorIndex };
+        RHIBufferHandle   _buffer{ 0 };
+        RHIBufferSRVIndex _index{ kInvalidDescriptorIndex };
 
+        RHIConstantBuffer() = default;
+        RHIConstantBuffer( RHIConstantBuffer&& other ) noexcept { swap( other ); }
+        RHIConstantBuffer& operator=( RHIConstantBuffer&& other ) noexcept
+        {
+            swap( other );
+            return *this;
+        }
+        RHIConstantBuffer( const RHIConstantBuffer& )            = delete;
+        RHIConstantBuffer& operator=( const RHIConstantBuffer& ) = delete;
+
+        /** @brief 두 칸의 내용을 맞바꿉니다. 옮기기가 쓴다 — 대입한 쪽의 옛 내용은 @p other 에 남는다(임시면 잊는다). */
+        void swap( RHIConstantBuffer& other ) noexcept
+        {
+            std::swap( _buffer, other._buffer );
+            std::swap( _index, other._index );
+        }
         /** @brief 버퍼와 인덱스가 둘 다 살아 있어 바인딩해도 되는 상태인지 확인합니다. */
         bool isValid() const { return _buffer != 0 && _index != kInvalidDescriptorIndex; }
 

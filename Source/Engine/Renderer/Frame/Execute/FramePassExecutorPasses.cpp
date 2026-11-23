@@ -178,7 +178,7 @@ namespace sw
             SW_LOG_ERROR_ONCE_ID( "FramePassExecutor.ExecutePassNoActiveIRHICommandList", "executePass: no active IRHICommandList" );
             return;
         }
-        // 이번 뷰에서 꺼진 패스는 그래프 콜백이 맨 앞에서 돌려보냈다(`onGraphPassExecute` — 문맥 복사 · 상수 칸 잡기 전).
+        // 이번 뷰에서 꺼진 패스는 실행 계획에 없다(`selectGraphPlan`).
 
         // 이벤트 표지(캡처의 구간 이름) + GPU 브레드크럼 시작 · 끝 표지 — 디바이스 소실 때 끝난 패스와 돌던 패스를 이름으로 싣는다. 어느 길로 돌아가도 짝이 맞는다.
         const GPUPassScope passScope{ *context._pCmd, passName };
@@ -378,6 +378,7 @@ namespace sw
                 case RenderPassKind::NanCheck:
                 case RenderPassKind::IndirectArgsReset:
                 case RenderPassKind::ScreenRotation:
+                case RenderPassKind::SceneVoxelize:
                 case RenderPassKind::ProbeUpdate:
                 case RenderPassKind::DeferredTileClassify:
                 case RenderPassKind::AutoExposureHistogram:
@@ -440,6 +441,17 @@ namespace sw
         executeFullscreenInto( context, pso, *pTarget, targetClear );
     }
 
+    bool FramePassExecutor::isTiledLightingReady( const FrameViewTarget& view ) const
+    {
+        const bool bBuffers = view._deferredTileList.isValid() && view._deferredTileArgs.isValid();
+        bool       bReady   = bBuffers && _pDevice->supportsNativeBindlessSampling() && _psoManager.getEnginePSO( RenderPassKind::DeferredTileClassify ) != 0;
+        for ( uint32 tileClass = 0; tileClass < kDeferredTileClassCount; ++tileClass )
+        {
+            bReady = bReady && _psoManager.findDeferredTilePSO( tileClass ) != 0;
+        }
+        return bReady;
+    }
+
     bool FramePassExecutor::executeTiledLighting( const PassExecuteInput& input, const hashed_string& target )
     {
         // 셰이더의 SwRootConstants(deferred_tile_classify.hlsl)와 같은 배치다.
@@ -455,18 +467,13 @@ namespace sw
         constexpr uint32 kModeClear    = 0;
         constexpr uint32 kModeClassify = 1;
 
-        using Internal                        = FramePassExecutorInternal;
-        const FrameViewTarget&       view     = *_pActiveView;
-        const RHIPipelineStateHandle classify = _psoManager.getEnginePSO( RenderPassKind::DeferredTileClassify );
-        bool                         bReady   = classify != 0 && view._deferredTileList.isValid() && view._deferredTileArgs.isValid() && _pDevice->supportsNativeBindlessSampling();
-        RHIPipelineStateHandle       arrTilePSO[kDeferredTileClassCount]{};
-        for ( uint32 tileClass = 0; tileClass < kDeferredTileClassCount; ++tileClass )
-        {
-            arrTilePSO[tileClass] = _psoManager.findDeferredTilePSO( tileClass );
-            bReady                = bReady && arrTilePSO[tileClass] != 0;
-        }
+        using Internal                                              = FramePassExecutorInternal;
+        FramePassContext&                              context      = input._context;
+        const RenderGraphPassContext&                  graphPass    = *context._pGraphPass;
+        const FrameViewTarget&                         view         = *_pActiveView;
         const RenderGraphPassDesc::ResolvedAttachment* pAlbedoInput = Internal::findInputByRole( input._passDesc, RenderPassInputRole::GBufferAlbedo );
-        if ( bReady == false || pAlbedoInput == nullptr )
+        // 분류를 돌릴 수 있는 뷰만 등록했다(`registerViewResources` · `isTiledLightingReady`) — 판정을 다시 하지 않는다. 둘은 레벨 콜백이 UAV 로 옮겼다(이 패스의 선언).
+        if ( graphPass.isRegistered( ViewGraphResource::deferredTileArgs() ) == false || pAlbedoInput == nullptr )
             return false;
         const TransientAttachmentPool::Attachment albedo = activePool().find( pAlbedoInput->_attachment );
         RootConstants                             constants{};
@@ -481,29 +488,20 @@ namespace sw
         constants._albedoIndex = static_cast<uint32>( albedo._srv );
 
         // 1) 분류 — 간접 인자를 지우고(그룹 하나) 타일마다 그룹 하나. 렌더 패스 밖이다. G버퍼 알베도는 그래프가 이 패스의 입력으로 셰이더 읽기 상태로 옮겨 두었다.
-        FramePassContext&         context      = input._context;
-        IRHIPassCommandList&      cmd          = *context._pCmd;
-        const RHIBufferTransition arrToWrite[] = {
-            RHIBufferTransition{view._deferredTileArgs._buffer, RHIBufferState::UnorderedAccess},
-            RHIBufferTransition{view._deferredTileList._buffer, RHIBufferState::UnorderedAccess}
-        };
-        cmd.transitionBuffers( arrToWrite, static_cast<uint32>( SW_COUNT_OF( arrToWrite ) ) );
-        cmd.setComputePipelineState( classify );
+        IRHIPassCommandList& cmd = *context._pCmd;
+        cmd.setComputePipelineState( _psoManager.getEnginePSO( RenderPassKind::DeferredTileClassify ) );
         // g_DeferredTileArgsRW(u0) / g_DeferredTileListRW(u1) — deferred_tile_classify.hlsl 레지스터와 1:1 이다.
         cmd.bindComputeUAV( view._deferredTileArgs._uav, 0 );
         cmd.bindComputeUAV( view._deferredTileList._uav, 1 );
         constants._mode = kModeClear;
         cmd.setComputeRootConstants( 0, sizeof( constants ) / sizeof( uint32 ), &constants );
         cmd.dispatchCompute( 1, 1, 1 );
-        cmd.uavBarrier( view._deferredTileArgs._buffer );
+        graphPass.uavBarrier( ViewGraphResource::deferredTileArgs() );
         constants._mode = kModeClassify;
         cmd.setComputeRootConstants( 0, sizeof( constants ) / sizeof( uint32 ), &constants );
         cmd.dispatchCompute( columns, rows, 1 );
-        const RHIBufferTransition arrToRead[] = {
-            RHIBufferTransition{view._deferredTileArgs._buffer, RHIBufferState::IndirectArgument},
-            RHIBufferTransition{view._deferredTileList._buffer,   RHIBufferState::ShaderResource}
-        };
-        cmd.transitionBuffers( arrToRead, static_cast<uint32>( SW_COUNT_OF( arrToRead ) ) );
+        graphPass.transition( ViewGraphResource::deferredTileArgs(), RenderGraphAccess::IndirectArgs );
+        graphPass.transition( ViewGraphResource::deferredTileList(), RenderGraphAccess::ShaderRead );
 
         // 2) 종류마다 간접 그리기 — 인스턴스 하나가 타일 하나(정점 여섯). 타일 목록은 패스 전용 구조버퍼 칸(t11)에 PSO · 공통 바인딩 뒤에 건다(렌즈 플레어와 같다).
         if ( beginColorPass( context, target, hashed_string{}, getTargetClearColor( target ), getColorLoadFor( target ), RHIRenderPassLoadOp::Load ) == false )
@@ -512,9 +510,10 @@ namespace sw
         context._passValues.setUint( passConstantNames()._deferredTileCapacity, view._deferredTileCapacity );
         for ( uint32 tileClass = 0; tileClass < kDeferredTileClassCount; ++tileClass )
         {
+            const RHIPipelineStateHandle tilePSO = _psoManager.findDeferredTilePSO( tileClass );
             commitBindlessTextureBindings( context );
-            cmd.setPipelineState( arrTilePSO[tileClass] );
-            if ( bindForDraw( context, arrTilePSO[tileClass], kInvalidDescriptorIndex ) == false )
+            cmd.setPipelineState( tilePSO );
+            if ( bindForDraw( context, tilePSO, kInvalidDescriptorIndex ) == false )
                 continue;
             cmd.bindStructuredBuffer( view._deferredTileList._srv, shaderslot::kPassBuffer );
             cmd.drawIndirect( view._deferredTileArgs._buffer, tileClass * static_cast<uint32>( sizeof( RHIDrawIndirectCommand ) ), 1 );
@@ -594,12 +593,10 @@ namespace sw
             SW_LOG_ERROR_ONCE_ID( "FramePassExecutor.ComputeImplementationNoSource", "Pass '%#' compute implementation has no SourceColor view - it does not run", passDesc._name );
             return;
         }
-        // 그룹은 8x8 출력 텍셀이다(셰이더의 SW_NUMTHREADS 와 같다 — 그룹 공유 타일의 크기).
         // 입력은 레벨 콜백이 셰이더 읽기로, 출력은 이 패스의 UAV 선언으로 RW 텍스처 상태로 옮겼다(`bindPassCallbacks`). 뒤 패스의 읽기 · UAV 는 레벨 콜백이 옮기거나 기다린다.
-        constexpr uint32 kGroupSize = 8;
         context._pCmd->setComputePipelineState( pso );
         context._pCmd->setComputeRootConstants( 0, sizeof( constants ) / sizeof( uint32 ), &constants );
-        context._pCmd->dispatchCompute( FrameRendererUtil::divideRoundUp( constants._width, kGroupSize ), FrameRendererUtil::divideRoundUp( constants._height, kGroupSize ), 1 );
+        context._pCmd->dispatchThreads( constants._width, constants._height, 1 );
         (void)markAttachmentCleared( target );
     }
 
@@ -644,7 +641,7 @@ namespace sw
         }
         context._pCmd->setComputePipelineState( pso );
         context._pCmd->setComputeRootConstants( 0, sizeof( constants ) / sizeof( uint32 ), &constants );
-        context._pCmd->dispatchCompute( FrameRendererUtil::divideRoundUp( constants._width, passDesc._threadGroupSize ), FrameRendererUtil::divideRoundUp( constants._height, passDesc._threadGroupSize ), 1 );
+        context._pCmd->dispatchThreads( constants._width, constants._height, 1 );
         // 뒤 패스가 샘플하면 레벨 콜백이 셰이더 읽기로 옮긴다. 컴퓨트가 칠했으니 이번 프레임 첫 렌더 패스가 지우면 안 된다.
         (void)markAttachmentCleared( target );
     }
@@ -861,7 +858,7 @@ namespace sw
 
     bool FramePassExecutor::isPassDisabledInView( uint32 passIndex ) const
     {
-        // 파이프라인 패스 목록 밖(모듈 확장 패스)은 고르기가 보지 않는다 — 부르는 쪽(`onGraphPassExecute`)이 거른다.
+        // 파이프라인 패스 목록 밖(모듈 확장 패스)은 고르기가 보지 않는다 — 고르기 결과 밖이면 돈다.
         const vector<uint8>& listPassDisabled = _pActiveView->_listPassDisabled;
         return passIndex < listPassDisabled.size() && listPassDisabled[passIndex] == SW_TRUE;
     }
@@ -925,7 +922,7 @@ namespace sw
         registerDeclaredInputs( context, input._passDesc );
 
         // 볼륨은 컴퓨트가 돈 프레임의 주 시점에서만 읽는다(추가 뷰는 볼륨을 계산하지 않는다). 상수는 이 패스의 복사본에만 쓴다.
-        const bool bVolume      = _fog.isFogVolumeActive() && _pActiveView == &_state._mainView && _fog.getFogVolumeBuffer()._srv != kInvalidDescriptorIndex;
+        const bool bVolume      = _fog.isFogVolumeActive() && _pActiveView == &_state.getMainView() && _fog.getFogVolumeBuffer()._srv != kInvalidDescriptorIndex;
         float4     volumeParams = _fog.getFrameFog()._volumeParams;
         volumeParams._x         = bVolume ? 1.0f : 0.0f;
         context._passValues.setFloat4( passConstantNames()._fogVolumeParams, volumeParams );
@@ -1019,16 +1016,16 @@ namespace sw
             if ( draw._location != location || draw._pso == 0 || draw._buffer == 0 || draw._srv == kInvalidDescriptorIndex )
                 continue;
             // 둘째부터는 앞 결과를 읽는다 — 출력을 뷰의 사본으로 옮기고 원본 역할을 그 사본으로 바꾼다(그리는 동안 같은 텍스처를 읽을 수 없다).
-            const bool bChained = draw._pChainSource != nullptr && draw._pChainSource->getTexture() != 0 && targetTexture != 0;
+            const bool bChained = draw._pChainSource != nullptr && draw._pChainSource->isValid() && targetTexture != 0;
             if ( bChained )
             {
                 context._pCmd->endRenderPass();
-                context._pCmd->blitTexture( targetTexture, draw._pChainSource->getTexture() );
+                context._pCmd->blitTexture( targetTexture, draw._pChainSource->_texture );
                 // 사본은 이 패스가 복사 대상으로 선언했다(`ViewGraphResource` — 이어 그리는 머티리얼이 있는 뷰만 등록) — 다음 머티리얼이 읽도록 셰이더 읽기로 옮긴다.
                 context._pGraphPass->transition( location == PostProcessBlendableLocation::BeforeTonemap ? ViewGraphResource::postProcessChainBeforeTonemap()
                                                                                                          : ViewGraphResource::postProcessChainAfterTonemap(),
-                                                 RHITextureState::ShaderResource );
-                context._resourceRegistry.registerTexture( attachmentNames()._sourceColor, draw._pChainSource->getTexture(), draw._pChainSource->getSRV() );
+                                                 RenderGraphAccess::ShaderRead );
+                context._resourceRegistry.registerTexture( attachmentNames()._sourceColor, draw._pChainSource->_texture, draw._pChainSource->_srv );
                 if ( beginColorPass( context, target, hashed_string{}, getTargetClearColor( target ), RHIRenderPassLoadOp::Load, RHIRenderPassLoadOp::Load ) == false )
                     return;
             }
@@ -1106,7 +1103,7 @@ namespace sw
         const RenderViewModeInfo&    viewModeInfo = RenderViewModeUtil::getInfo( _pActiveView->_settings._viewMode );
         const RHIPipelineStateHandle pso          = _psoManager.getEnginePSO( RenderPassKind::LensFlare );
         const LensFlareSpriteBuffer& sprites      = _state._lensFlare;
-        const bool                   bDraws       = pso != 0 && sprites.getSpriteCount() > 0 && _pActiveView == &_state._mainView && viewModeInfo._bShowsBuffer == false && viewModeInfo._bWireframe == false;
+        const bool                   bDraws       = pso != 0 && sprites.getSpriteCount() > 0 && _pActiveView == &_state.getMainView() && viewModeInfo._bShowsBuffer == false && viewModeInfo._bWireframe == false;
         if ( bDraws == false )
             return;
 
@@ -1121,8 +1118,8 @@ namespace sw
         const bool bNativeBindless = _pDevice != nullptr && _pDevice->supportsNativeBindlessSampling();
         for ( const LensFlareDrawRange& range : sprites.getDrawRanges() )
         {
-            RHIDescriptorIndex arrTextureSRV[shaderslot::kMaterialTextureCount];
-            for ( RHIDescriptorIndex& srv : arrTextureSRV )
+            RHITextureSRVIndex arrTextureSRV[shaderslot::kMaterialTextureCount];
+            for ( RHITextureSRVIndex& srv : arrTextureSRV )
             {
                 srv = kInvalidDescriptorIndex;
             }
@@ -1172,10 +1169,17 @@ namespace sw
         // 바인딩해 섞어도 이번 이미지만 남게 한다. 원본을 히스토리 텍스처에 복사하지 않는 것은 포맷이 다를 수 있어서다(원본 R8G8B8A8, 히스토리 R16G16B16A16이며
         // D3D 의 복사는 같은 포맷만 받는다). 패스 끝의 복사(TAA 출력에서 히스토리로)가 히스토리를 새로 채운다.
         const bool bCut = activeView._bTAAHistoryReset == SW_TRUE && pSrcName != nullptr;
+        // 기록은 이 패스가 복사 대상으로 선언한 뷰 자원이다(`ViewGraphResource::taaHistory`) — 읽기 앞에 셰이더 읽기로 옮긴다(지난 프레임이 그 상태로 남겼고 새로 만든 텍스처만 실제로 옮겨진다).
+        const bool bHistory = context._pGraphPass->isRegistered( ViewGraphResource::taaHistory() );
         if ( bCut )
+        {
             registerPassTexture( context, names._gbufferAlbedo, *pSrcName );
-        else if ( activeView._taaHistory != 0 )
-            context._resourceRegistry.registerTexture( names._gbufferAlbedo, activeView._taaHistory, activeView._taaHistorySRV );
+        }
+        else if ( bHistory )
+        {
+            context._pGraphPass->transition( ViewGraphResource::taaHistory(), RenderGraphAccess::ShaderRead );
+            context._resourceRegistry.registerTexture( names._gbufferAlbedo, activeView._taaHistory._texture, activeView._taaHistory._srv );
+        }
         if ( beginColorPass( context, taaTarget, hashed_string{}, _state._clearColor, getColorLoadFor( taaTarget ), RHIRenderPassLoadOp::Load ) )
         {
             // TAA PSO 가 없으면(셋업이 알렸다) 원본을 복사해 TAA 없이 넘기지 않는다 — drawFullscreen 이 그리지 않는다.
@@ -1183,10 +1187,11 @@ namespace sw
             context._pCmd->endRenderPass();
         }
 
-        const RHITextureHandle taaOut              = findTransient( taaTarget );
-        const bool             bTAAHistoryWritable = taaOut != 0 && activeView._taaHistory != 0;
-        if ( bTAAHistoryWritable )
-            context._pCmd->blitTexture( taaOut, activeView._taaHistory );
+        const RHITextureHandle taaOut = findTransient( taaTarget );
+        if ( taaOut == 0 || bHistory == false )
+            return;
+        context._pCmd->blitTexture( taaOut, activeView._taaHistory._texture );
+        context._pGraphPass->transition( ViewGraphResource::taaHistory(), RenderGraphAccess::ShaderRead ); // 복사는 기록을 렌더 타깃 상태로 남긴다 — 다음 프레임이 그대로 샘플하지 않게
     }
 
     void FramePassExecutor::executePresentPass( const PassExecuteInput& input )
@@ -1359,7 +1364,7 @@ namespace sw
         registerLightBuffer( context );
         registerSurfaceDeformLayer( context );
         ExtensionViewInfo view{};
-        view._bMainView = _pActiveView == &_state._mainView;
+        view._bMainView = _pActiveView == &_state.getMainView();
         view._width     = activePool().getWidth();
         view._height    = activePool().getHeight();
         ExtensionPassContext moduleContext( *this, &context, &pass, view );

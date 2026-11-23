@@ -11,6 +11,7 @@
 #pragma once
 #include "Core/Foundation/Macros.h"
 #include "Core/Foundation/Types.h"
+#include "Core/Registry/RegistrationList.h"
 
 #include "Engine/Graphics/Debug/RenderDiagnostics.h"
 #include "Engine/Graphics/Display/DisplayOutput.h"
@@ -18,6 +19,11 @@
 
 namespace sw
 {
+    struct RenderFrameSettings;
+
+    /** @brief 뜬 사본의 진단 · 비교 칸을 덮는 함수입니다(개발 도구의 `SW_RENDER_FRAME_SETTINGS_OVERRIDE`). 게임 스레드의 `RenderFrameSettings::capture` 만 부른다. */
+    using RenderFrameSettingsOverride = void ( * )( RenderFrameSettings& inoutSettings );
+
     /**
      * @struct RenderFrameSettings
      * @brief 한 프레임의 렌더 설정 사본입니다. 기본값이 변수의 기본값(배포 동작)이다 — 패킷을 짓지 않는 경로(테스트)는 기본값으로 그린다.
@@ -31,7 +37,6 @@ namespace sw
         int32                   _postQuality{ 2 };                                ///< 후처리 품질 0~3(패스의 `_minPostQuality` 보다 낮으면 건너뛴다 — 사용자 설정 graphics.postQuality)
         int32                   _upscaler{ 0 };                                   ///< 업스케일 필터(0 선형, 1 FSR 1 — 사용자 설정 graphics.upscaler)
         int32                   _shadowFilter{ 0 };                               ///< 그림자 필터 요청(0 PCF 3x3, 1 PCSS — 범위 밖은 `ShadowFilter::getActiveMode` 가 알리고 PCF 로 그린다)
-        uint32                  _renderGraphParallelMinWidth{ 2 };                ///< 패스가 이보다 적은 그래프 레벨은 이어 기록한다(2 미만은 2 — `-gv_renderGraphParallelMinWidth`)
         MeshMorphDiagMode       _meshMorphDebugMode{ MeshMorphDiagMode::Normal }; ///< 메시 모프 진단(`-gv_meshMorphDebugMode`)
         uint8                   _bGPUCulling{ SW_TRUE };                          ///< GPU 컬링 컴퓨트 디스패치(`-gv_gpuCulling`)
         uint8                   _bDrawMerge{ SW_TRUE };                           ///< 연속 배치를 멀티 드로우 하나로 묶기(`-gv_drawMerge`)
@@ -49,6 +54,23 @@ namespace sw
          * @brief 지금의 변수 값으로 사본을 뜹니다. **게임 스레드 전용**(Debug 단언)입니다 — 진단 정책도 여기서 내보낸다(`RenderDiagnostics::publish`).
          * @details 패킷을 짓기 시작할 때(`RenderPacketBuilder::beginPacket`)와 렌더러 기동(`FrameRendererSubsystem`) 때 부른다.
          */
-        [[nodiscard]] static RenderFrameSettings capture();
+        [[nodiscard]] SW_API static RenderFrameSettings capture();
+        /** @brief 덮는 함수를 붙입니다. 이미 붙어 있으면 false 이고 오류를 남깁니다. */
+        [[nodiscard]] SW_API static bool registerOverride( RenderFrameSettingsOverride settingsOverride );
+        /** @brief @p settingsOverride 가 붙어 있으면 뗍니다. */
+        SW_API static void unregisterOverride( RenderFrameSettingsOverride settingsOverride );
     };
+
+    /** @brief `SW_RENDER_FRAME_SETTINGS_OVERRIDE` 가 두는 정적 등록자입니다(공통 틀 `StaticRegistrar`). */
+    SW_DEFINE_STATIC_REGISTRAR( RenderFrameSettingsOverrideRegistrar, RenderFrameSettingsOverride, &RenderFrameSettings::registerOverride, &RenderFrameSettings::unregisterOverride );
 } // namespace sw
+
+/**
+ * @brief 렌더 설정 사본을 덮는 함수를 붙입니다(개발 전용 .cpp 의 파일 범위, `namespace sw` 안). @p id 는 정적 이름을 만드는 식별자입니다.
+ * @details 진단 · 비교 스위치(컬링 끄기 · 배치 묶기 끄기 …)를 런타임 파일의 일반 변수로 두면 배포 바이너리가 그 스위치를 받는다 — 변수는 개발 도구에만 있고 런타임은 이 창구만 둔다.
+ */
+#define SW_RENDER_FRAME_SETTINGS_OVERRIDE( id, settingsOverride )                       \
+    static const ::sw::RenderFrameSettingsOverrideRegistrar sw_renderFrameSettings_##id \
+    {                                                                                   \
+        settingsOverride                                                                \
+    }

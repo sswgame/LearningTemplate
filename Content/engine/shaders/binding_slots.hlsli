@@ -453,6 +453,5 @@
 #define SW_FOG_VOLUME_DIM_Z              32u
 #define SW_FOG_VOLUME_NEAR               0.3f
 #define SW_FOG_VOLUME_PARAM_FLOAT4_COUNT 15u
-#define SW_FOG_VOLUME_GROUP_SIZE         8u
 
 #endif // SW_ENGINE_BINDINGSLOTS_HLSLI

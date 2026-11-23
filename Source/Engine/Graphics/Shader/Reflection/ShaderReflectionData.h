@@ -6,6 +6,7 @@
 #include "Core/Foundation/Expected.h"
 
 #include "Engine/EngineMinimal.h"
+#include "Engine/Graphics/RHI/RHIHandles.h"
 #include "Engine/Reflection/ReflectionMacros.h"
 
 namespace sw
@@ -109,6 +110,8 @@ namespace sw
          *          지금은 SPIR-V 도 `-fvk-use-dx-layout` 으로 DX 규칙을 따르지만, 값은 여전히 그 백엔드의 리플렉션에서 읽습니다.
          */
         vector<ShaderBufferInfo> _listStructuredElement;
+        /// @brief 컴퓨트 스테이지의 스레드 그룹 크기입니다. 다른 스테이지는 0 입니다.
+        RHIThreadGroupSize _groupSize{};
 
         /**
          * @brief 바이트코드에서 리플렉션 데이터를 뽑습니다(DXC · FXC · SPIR-V · WebGPU 꾸러미).

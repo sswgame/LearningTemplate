@@ -136,13 +136,13 @@ namespace sw
 
         // 바인딩은 PSO 뒤에 건다(setPipelineState 가 슬롯 상태를 비운다) — 부르는 쪽이 PSO 를 걸고 PassCB 를 바인딩한 뒤 여기로 온다.
         // t11 은 CPU 방출기의 공유 버퍼이거나 GPU 방출기 자기의 렌더 입력이다 — 바뀔 때만 다시 건다.
-        const bool         bSharedReady    = _uploadedParticleCount > 0 && _particleBuffer.isValid();
-        RHIDescriptorIndex boundParticles  = kInvalidDescriptorIndex;
-        uint32             drawnBatchCount = 0;
+        const bool        bSharedReady    = _uploadedParticleCount > 0 && _particleBuffer.isValid();
+        RHIBufferSRVIndex boundParticles  = kInvalidDescriptorIndex;
+        uint32            drawnBatchCount = 0;
         if ( _orderBuffer.isValid() == false )
             return 0; // prepareFrame 이 만들지 못했다(오류를 남겼다)
         // 순서 목록은 CPU 정렬 목록과 GPU 정렬 버퍼 둘이다 — 방출기마다의 구간은 플래그 칸 위 비트로 가고, 목록은 바뀔 때만 다시 건다.
-        RHIDescriptorIndex boundOrder = _orderBuffer._srv;
+        RHIBufferSRVIndex boundOrder = _orderBuffer._srv;
         cmd.bindStructuredBuffer( boundOrder, shaderslot::kParticleOrderBuffer );
         for ( const GPUTransparentParticleSlot& slot : listSlot )
         {
@@ -153,10 +153,10 @@ namespace sw
             const VFXGPUSimulation::DrawSource* pGPUSource  = _gpuSimulation.findDrawSource( batchIndex );
             const bool                          bGPUBatch   = batch.findGPURequest() != nullptr;
             const bool                          bSourceGone = bGPUBatch ? pGPUSource == nullptr : bSharedReady == false;
-            const RHIDescriptorIndex            srv         = _textures.findReadySRV( batch._texturePath );
+            const RHITextureSRVIndex            srv         = _textures.findReadySRV( batch._texturePath );
             if ( srv == kInvalidDescriptorIndex || bSourceGone )
                 continue;
-            const RHIDescriptorIndex particleSRV = bGPUBatch ? pGPUSource->_particleSRV : _particleBuffer._srv;
+            const RHIBufferSRVIndex particleSRV = bGPUBatch ? pGPUSource->_particleSRV : _particleBuffer._srv;
             if ( particleSRV != boundParticles )
             {
                 cmd.bindStructuredBuffer( particleSRV, shaderslot::kPassBuffer );
@@ -168,9 +168,9 @@ namespace sw
             arrRoot[Root::kRootFlags]        = ( batch._bAdditive == SW_TRUE ? Root::kFlagAdditive : 0u ) | ( batch._bRibbon == SW_TRUE ? Root::kFlagRibbon : 0u );
             // 정렬하는 방출기는 이 뷰의 순서 구간을 싣는다(첫 칸 + 1, 0 = 순서 없음). CPU 방출기는 게임 스레드가 정렬한 목록, GPU 방출기는 컴퓨트가 이번 프레임에 쓴 버퍼다
             // (정렬 일이 기록되지 않은 GPU 방출기는 옛 칸을 읽지 않게 순서 없이 그린다).
-            const bool               bHasOrder = slot._order._first != constant::invalid_index::kUint32;
-            const bool               bOrdered  = bHasOrder && ( bGPUBatch == false || _gpuSimulation.isBatchSorted( batchIndex ) );
-            const RHIDescriptorIndex orderSRV  = bGPUBatch ? _gpuSimulation.getOrderSRV() : _orderBuffer._srv;
+            const bool              bHasOrder = slot._order._first != constant::invalid_index::kUint32;
+            const bool              bOrdered  = bHasOrder && ( bGPUBatch == false || _gpuSimulation.isBatchSorted( batchIndex ) );
+            const RHIBufferSRVIndex orderSRV  = bGPUBatch ? _gpuSimulation.getOrderSRV() : _orderBuffer._srv;
             if ( bOrdered && orderSRV != boundOrder )
             {
                 cmd.bindStructuredBuffer( orderSRV, shaderslot::kParticleOrderBuffer );

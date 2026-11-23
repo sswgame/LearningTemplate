@@ -13,7 +13,7 @@ namespace sw
         ++_version;
     }
 
-    void FrameResourceRegistry::registerTexture( hashed_string name, RHITextureHandle handle, RHIDescriptorIndex srv )
+    void FrameResourceRegistry::registerTexture( hashed_string name, RHITextureHandle handle, RHITextureSRVIndex srv )
     {
         // **값이 실제로 달라질 때만** 버전을 증가시킨다. 같은 값을 다시 등록하는 것은 상수 버퍼 내용에 영향이 없고,
         // 그때마다 버전을 증가시키면 드로우마다 상수 버퍼를 다시 만들게 된다(배치마다 같은 버퍼를 다시 등록하는 경로가 있다).
@@ -24,7 +24,7 @@ namespace sw
         ++_version;
     }
 
-    void FrameResourceRegistry::registerBuffer( hashed_string name, RHIBufferHandle handle, RHIDescriptorIndex index )
+    void FrameResourceRegistry::registerBuffer( hashed_string name, RHIBufferHandle handle, RHIBufferSRVIndex index )
     {
         RegisteredBuffer& entry = _mapBuffer[name];
         if ( entry._handle == handle && entry._index == index )

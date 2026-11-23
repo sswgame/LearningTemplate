@@ -121,7 +121,7 @@ namespace sw
         TextureCache( const TextureCache& )            = delete;
         TextureCache& operator=( const TextureCache& ) = delete;
         /**
-         * @brief 텍스처 품질(`-gv_textureMipDrop` — 사용자 설정 graphics.textureQuality)과 밉 스트리밍(`-gv_textureStreaming`)의 사본을 지금 변수 값으로 다시 뜹니다. **게임 스레드 전용**(Debug 단언)입니다.
+         * @brief 텍스처 품질(`-gv_textureMipDrop` — 사용자 설정 graphics.textureQuality)의 사본을 지금 변수 값으로 다시 뜹니다. **게임 스레드 전용**(Debug 단언)입니다.
          * @details 로드 워커 · 렌더 스레드(업로드 펌프 · 스트리밍)는 변수 대신 이 사본을 읽는다. 만들 때 한 번, 그 뒤 게임 스레드가 패킷을 짓기 시작할 때마다 부른다(`RenderPacketBuilder::beginPacket`).
          */
         void refreshQualitySettings();
@@ -376,7 +376,7 @@ namespace sw
          * @brief 이 로드의 텍스처를 가리키는 bindless 번호입니다 — 머티리얼이 한 번 받아 쥔다(R-6). 로드 중이면 로드 중 텍스처, 끝나면 진짜 텍스처, 실패하면 누락 체커를 가리킨다.
          * @details 어느 스레드에서든 부른다. 예약하지 못한 로드(엔진 서비스 없음 · 표가 참)와 시작 전에 실패한 로드는 kInvalidDescriptorIndex 다 — 받는 쪽이 누락 체커를 따로 빌린다.
          */
-        RHIDescriptorIndex getStableSRV() const;
+        RHITextureSRVIndex getStableSRV() const;
 
     private:
         [[nodiscard]] expected<void> runLoad() override;
@@ -409,7 +409,7 @@ namespace sw
         uint32                       _renderTargetHeight;
         Source                       _source;
         TextureResidency             _residency;           ///< 파일을 업로드할 밉 범위 — 비동기 로드는 아래쪽 밉부터(`TextureCache::request`)
-        atomic<RHIDescriptorIndex>   _failedSRV;           ///< 실패한 로드가 맡은 번호(누락 체커를 가리킨다) — 이 로드 작업이 사라질 때 놓는다
+        atomic<RHITextureSRVIndex>   _failedSRV;           ///< 실패한 로드가 맡은 번호(누락 체커를 가리킨다) — 이 로드 작업이 사라질 때 놓는다
         atomic<IRHIDevice*>          _pFailedSRVDevice;    ///< `_failedSRV` 를 받은 디바이스 — 놓을 때 아직 붙은 디바이스인지 본다
         uint8                        _bHoldsReference : 1; ///< 항목의 참조 하나를 쥐었는가(완료에 성공했거나 캐시 적중)
     };

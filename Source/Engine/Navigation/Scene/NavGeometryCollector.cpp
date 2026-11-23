@@ -252,10 +252,29 @@ namespace sw
                                 ++pendingMeshCount;
                             return; // 읽는 중이면 다음 모으기에, 읽지 못했으면(로드 실패) 그리지 않는 메시라 넣지 않는다
                         }
-                        mesh = bMeshAsset ? MeshCache::acquire( meshID ) : MeshUtil::acquirePrimitive( meshID );
+                        mesh = bMeshAsset ? MeshCache::acquire( meshID, MeshCPUAccess::Keep ) : MeshUtil::acquirePrimitive( meshID );
                     }
                     if ( mesh == nullptr || mesh->getIndexCount() < 3 )
                         return;
+                    if ( mesh->getCPUAccess() != MeshCPUAccess::Keep )
+                    {
+                        // 그리기용으로 읽은 메시는 CPU 정점을 놓는다 — 쥐도록 요청한다(놓았으면 파일을 다시 읽는다). 런타임은 기다리지 않고 다음 모으기에 넣는다.
+                        const string& sourceID = mesh->getSourceAsset().str();
+                        if ( arrival == NavMeshArrival::Defer )
+                        {
+                            const MeshHandle load = MeshCache::request( sourceID, MeshCPUAccess::Keep );
+                            if ( load.isLoading() )
+                            {
+                                ++pendingMeshCount;
+                                return;
+                            }
+                            mesh = load.get();
+                        }
+                        else
+                            mesh = MeshCache::acquire( sourceID, MeshCPUAccess::Keep );
+                        if ( mesh == nullptr )
+                            return; // 파일을 다시 읽지 못했다(캐시가 알렸다)
+                    }
                     vector<float3> listPosition;
                     listPosition.reserve( mesh->getVertexCount() );
                     for ( const RHIVertex& vertex : mesh->getCPUView().getVertices() )

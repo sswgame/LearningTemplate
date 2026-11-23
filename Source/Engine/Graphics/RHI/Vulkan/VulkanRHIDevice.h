@@ -26,6 +26,7 @@
 #include "Engine/Graphics/RHI/Transfer/RHIStagingAllocator.h"
 #include "Engine/Graphics/RHI/Transfer/RHITransferSerials.h"
 #include "Engine/Graphics/RHI/Vulkan/VulkanMemoryAccount.h"
+#include "Engine/Graphics/RHI/Vulkan/VulkanMemoryAllocator.h"
 #include "Engine/Graphics/RHI/Vulkan/VulkanRHIHandle.h"
 #include "Engine/Graphics/RHI/Vulkan/VulkanRHIRenderPassCache.h"
 #include "Engine/Graphics/RHI/Vulkan/VulkanRHISwapChain.h"
@@ -179,6 +180,7 @@ namespace sw
      */
     class VulkanRHIDevice : public IRHIDevice
     {
+        friend class VulkanMemoryAllocator;
         friend class VulkanRHICommandContext;
         friend class VulkanRHICommandList;
 
@@ -321,12 +323,12 @@ namespace sw
         unique_ptr<IRHICommandList> createCommandList() override;
 
         /** @brief 커맨드 리스트를 프레임 스트림의 제출 순서에 연결합니다. 즉시 모드면 바로 제출합니다. */
-        void executeCommandList( IRHICommandList* pCmdList ) override;
-        void executeCommandListImmediate( IRHICommandList* pCmdList ) override;
+        void executeCommandListInternal( IRHICommandList* pCmdList ) override;
+        void executeCommandListImmediateInternal( IRHICommandList* pCmdList ) override;
         /** @brief 그래픽스 패밀리의 두 번째 큐에 낼 리스트를 만듭니다(패밀리가 같아 일반 리스트와 같은 풀 · 같은 바인딩이다). 그 큐가 없으면 오류를 남기고 nullptr 입니다. */
         unique_ptr<IRHICommandList> createAsyncComputeCommandList() override;
         /** @brief 그래픽스 일을 큐에 내며 세마포어를 신호하고, 두 번째 큐가 그것을 기다려 리스트를 실행한 뒤 다른 세마포어를 신호합니다. 그 세마포어의 번호를 돌려준다. */
-        RHIQueueSyncPoint submitAsyncCompute( IRHICommandList* pCmdList ) override;
+        RHIQueueSyncPoint submitAsyncComputeInternal( IRHICommandList* pCmdList ) override;
         /** @brief 그 전 그래픽스 일을 큐에 낸 뒤, 다음 그래픽스 제출이 그 세마포어를 기다리게 합니다. */
         void waitForAsyncCompute( RHIQueueSyncPoint point ) override;
 
@@ -382,7 +384,7 @@ namespace sw
         struct VulkanBufferRecord
         {
             VkBuffer                        _buffer{ nullptr };
-            VkDeviceMemory                  _memory{ nullptr };
+            VulkanMemoryRange               _memory{};
             uint64                          _sizeBytes{ 0 };  ///< VkDeviceSize — 만들 때의 요청 크기(`createVulkanBuffer`)
             uint32                          _usage{ 0 };      ///< VkBufferUsageFlags
             uint32                          _cbSlotSize{ 0 }; ///< 링 상수 버퍼(`createConstantBuffer`)의 프레임 칸 크기, 아니면 0. 표에 넣기 전에 정하고 바뀌지 않아 기록 경로가 락 없이 읽는다
@@ -410,10 +412,10 @@ namespace sw
         /// @brief VkImage 와 뷰, 현재 레이아웃입니다.
         struct VulkanTextureRecord
         {
-            VkImage        _image{ nullptr };
-            VkImageView    _imageView{ nullptr };
-            VkImageView    _sampleView{ nullptr }; ///< 깊이 텍스처 샘플링용 DEPTH 단일 aspect 뷰입니다. 컬러는 nullptr 이며 `_imageView` 를 그대로 씁니다.
-            VkDeviceMemory _memory{ nullptr };     ///< 자기 메모리입니다. placed 텍스처는 비어 있고 `_heapMemory` 가 메모리를 붙든다.
+            VkImage           _image{ nullptr };
+            VkImageView       _imageView{ nullptr };
+            VkImageView       _sampleView{ nullptr }; ///< 깊이 텍스처 샘플링용 DEPTH 단일 aspect 뷰입니다. 컬러는 nullptr 이며 `_imageView` 를 그대로 씁니다.
+            VulkanMemoryRange _memory{};              ///< 자기 메모리 구간입니다. placed 텍스처는 비어 있고 `_heapMemory` 가 메모리를 붙든다.
             /// @brief placed 텍스처(`createPlacedTexture2D`)가 놓인 힙입니다. 파괴의 해제 대리자가 이 참조를 펜스 뒤까지 들고 간다.
             shared_ptr<VulkanHeapMemory> _heapMemory;
             VkFramebuffer                _framebuffer{ nullptr };
@@ -1167,6 +1169,8 @@ namespace sw
 
         /// @brief 살아 있는 장치 메모리 할당 수입니다(`allocateDeviceMemory` · `freeDeviceMemory`). 한도는 물리 장치를 고른 뒤 정한다.
         VulkanMemoryAccount _memoryAccount;
+        /// @brief 버퍼 · 텍스처의 메모리를 블록에서 나눠 준다(스테이징 링 · 힙 · 되읽기 링은 자기 할당이다).
+        VulkanMemoryAllocator _memoryAllocator{ *this };
         /// @brief 할당 수 한도에서 남길 칸입니다(`RHIDeviceDesc::_allocationCountReserve`).
         uint32 _allocationCountReserve{ 0 };
 

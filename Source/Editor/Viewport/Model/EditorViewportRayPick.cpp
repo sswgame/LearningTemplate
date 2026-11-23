@@ -17,6 +17,7 @@
 #include "Engine/Animation/Scene/AnimationCrowd.h"
 #include "Engine/Animation/Scene/AnimationSystem.h"
 #include "Engine/Graphics/Mesh/Mesh.h"
+#include "Engine/Graphics/Mesh/MeshCache.h"
 #include "Engine/Graphics/Mesh/MeshVertex.h"
 #include "Engine/Graphics/Mesh/MeshVertexAnimation.h"
 #include "Engine/Graphics/View/SceneViewQuery.h"
@@ -191,8 +192,8 @@ namespace sw::editor
                 localRay._direction    = localStep * ( 1.0f / stepLength );
                 const float32 localMax = maxDistance * stepLength;
 
-                const Mesh* pMesh    = mesh.getMesh().get();
-                const bool  bHasMesh = pMesh != nullptr && pMesh->getVertexCount() > 0 && pMesh->getIndexCount() > 0;
+                shared_ptr<Mesh> pMesh    = mesh.getMesh();
+                const bool       bHasMesh = pMesh != nullptr && pMesh->getVertexCount() > 0 && pMesh->getIndexCount() > 0;
                 if ( bHasMesh == false )
                 {
                     // 메시를 읽는 중이면 그리는 것이 없다 — 상자는 `MeshComponent::getWorldBox` 의 단위 상자다(선택 · 프레이밍이 같은 크기를 본다).
@@ -217,6 +218,11 @@ namespace sw::editor
                         return false;
                 }
 
+                // 그리기용으로 읽은 메시는 CPU 정점을 놓는다 — 상자에 맞은 메시만 쥐도록 요청한다(놓았으면 파일을 다시 읽는다, 그 뒤로는 쥔다).
+                if ( pMesh->getCPUAccess() != MeshCPUAccess::Keep )
+                    pMesh = MeshCache::acquire( pMesh->getSourceAsset().str(), MeshCPUAccess::Keep );
+                if ( pMesh == nullptr )
+                    return false; // 파일을 다시 읽지 못했다(캐시가 알렸다)
                 vector<float3> listPosition;
                 if ( collectPosedPositions( mesh, *pMesh, vertexAnimationClock, listPosition ) == false )
                     return false;

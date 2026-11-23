@@ -61,15 +61,8 @@ namespace sw
 
     void FrameUpscale::releaseUpscaleIntermediate( FrameViewTarget& view )
     {
-        if ( _pDevice != nullptr && view._upscaleIntermediateSRV != kInvalidDescriptorIndex )
-            _pDevice->getResourceFactory()->unregisterBindlessTexture( view._upscaleIntermediateSRV );
-        if ( _pDevice != nullptr && view._upscaleIntermediate != 0 )
-            _pDevice->releaseHandle( view._upscaleIntermediate );
-        view._upscaleIntermediate    = 0;
-        view._upscaleIntermediateSRV = kInvalidDescriptorIndex;
-        view._upscaleWidth           = 0;
-        view._upscaleHeight          = 0;
-        view._bUpscaleThisFrame      = SW_FALSE;
+        view._upscaleIntermediate.release( _pDevice );
+        view._bUpscaleThisFrame = SW_FALSE;
     }
 
     void FrameUpscale::prepareUpscale( FrameViewTarget& view, uint32 viewportWidth, uint32 viewportHeight )
@@ -93,33 +86,19 @@ namespace sw
         const bool bUpscale = bCandidate && bPostChain == false && _psoManager.getEnginePSO( RenderPassKind::UpscaleEasu ) != 0;
         if ( bUpscale == false )
         {
-            if ( view._upscaleIntermediate != 0 )
-                releaseUpscaleIntermediate( view );
+            releaseUpscaleIntermediate( view );
             return;
         }
-        const bool bSameSize = view._upscaleIntermediate != 0 && view._upscaleWidth == viewportWidth && view._upscaleHeight == viewportHeight;
-        if ( bSameSize == false )
+        RHITextureDesc desc{};
+        desc._width             = viewportWidth;
+        desc._height            = viewportHeight;
+        desc._format            = getRenderPassKindInfo( RenderPassKind::UpscaleEasu )._pColorFormat[0]; // EASU PSO 와 같은 포맷 한 곳
+        desc._bIsRenderTarget   = SW_TRUE;
+        desc._bIsShaderResource = SW_TRUE;
+        if ( view._upscaleIntermediate.ensure( *_pDevice, desc, "UpscaleIntermediate" ) == false )
         {
-            releaseUpscaleIntermediate( view );
-            RHITextureDesc desc{};
-            desc._width                   = viewportWidth;
-            desc._height                  = viewportHeight;
-            desc._format                  = getRenderPassKindInfo( RenderPassKind::UpscaleEasu )._pColorFormat[0]; // EASU PSO 와 같은 포맷 한 곳
-            desc._bIsRenderTarget         = SW_TRUE;
-            desc._bIsShaderResource       = SW_TRUE;
-            IRHIResourceFactory* pFactory = _pDevice->getResourceFactory();
-            view._upscaleIntermediate     = pFactory->createTexture2D( desc );
-            pFactory->setTextureDebugName( view._upscaleIntermediate, "UpscaleIntermediate" );
-            if ( view._upscaleIntermediate != 0 )
-                view._upscaleIntermediateSRV = pFactory->registerBindlessTexture( view._upscaleIntermediate );
-            if ( view._upscaleIntermediateSRV == kInvalidDescriptorIndex )
-            {
-                SW_LOG_ERROR_ID( "FrameUpscale.FailedCreateFSRIntermediate", "Failed to create the FSR 1 intermediate (%#x%#, RGBA8 RT) - this view is upscaled linearly", viewportWidth, viewportHeight );
-                releaseUpscaleIntermediate( view );
-                return;
-            }
-            view._upscaleWidth  = viewportWidth;
-            view._upscaleHeight = viewportHeight;
+            SW_LOG_ERROR_ONCE_ID( "FrameUpscale.FailedCreateFSRIntermediate", "Failed to create the FSR 1 intermediate (%#x%#, RGBA8 RT) - this view is upscaled linearly", viewportWidth, viewportHeight );
+            return;
         }
         view._bUpscaleThisFrame = SW_TRUE;
     }
@@ -137,11 +116,11 @@ namespace sw
         RHIRenderPassBeginInfo beginInfo{};
         beginInfo._bBindColor        = SW_TRUE;
         beginInfo._colorTargetCount  = 1;
-        beginInfo._arrColorTarget[0] = view._upscaleIntermediate;
+        beginInfo._arrColorTarget[0] = view._upscaleIntermediate._texture;
         beginInfo._arrLoadOp[0]      = RHIRenderPassLoadOp::DontCare;
         beginInfo._depthTarget       = 0;
-        beginInfo._width             = view._upscaleWidth;
-        beginInfo._height            = view._upscaleHeight;
+        beginInfo._width             = view._upscaleIntermediate._width;
+        beginInfo._height            = view._upscaleIntermediate._height;
         cmd.beginRenderPass( beginInfo );
         cmd.setPipelineState( _psoManager.getEnginePSO( RenderPassKind::UpscaleEasu ) );
         // 원본 — 네이티브는 bindless 번호(루트 상수), 에뮬은 SourceColor 칸(fsr1.hlsl 이 같은 이름으로 읽는다). PSO 뒤에 건다(setPipelineState 가 슬롯 상태를 비운다).
@@ -152,8 +131,8 @@ namespace sw
         constants._inputHeight        = static_cast<float32>( view.scaleToRect( source, false ) );
         constants._inputTextureWidth  = static_cast<float32>( source._width );
         constants._inputTextureHeight = static_cast<float32>( source._height );
-        constants._outputWidth        = static_cast<float32>( view._upscaleWidth );
-        constants._outputHeight       = static_cast<float32>( view._upscaleHeight );
+        constants._outputWidth        = static_cast<float32>( view._upscaleIntermediate._width );
+        constants._outputHeight       = static_cast<float32>( view._upscaleIntermediate._height );
         constexpr uint32 kSourceSlot  = shaderslot::emulated::getSlot( "SourceColor" );
         if ( bNativeBindless == false )
             cmd.bindShaderResource( source._srv, kSourceSlot );
@@ -161,7 +140,7 @@ namespace sw
         cmd.draw( 3, 0 );
         cmd.endRenderPass();
         // 같은 패스의 RCAS 가 읽는다 — 쓰기로 선언한 중간 RT 를 패스 안에서 셰이더 읽기로 옮긴다.
-        context._pGraphPass->transition( ViewGraphResource::upscaleIntermediate(), RHITextureState::ShaderResource );
+        context._pGraphPass->transition( ViewGraphResource::upscaleIntermediate(), RenderGraphAccess::ShaderRead );
         // PSO · 슬롯을 직접 바꿨다 — 뒤의 그리기가 바인딩 캐시를 믿고 PSO 를 건너뛰지 않게 지운다.
         context.resetBindingCache();
         return true;
@@ -174,13 +153,13 @@ namespace sw
         cmd.setPipelineState( pso );
         const bool                          bNativeBindless = _pDevice->supportsNativeBindlessSampling();
         FrameUpscaleInternal::RootConstants constants{};
-        constants._source            = bNativeBindless ? static_cast<uint32>( view._upscaleIntermediateSRV ) : 0u;
-        constants._outputWidth       = static_cast<float32>( view._upscaleWidth ); // 픽셀 = 정점 UV × 중간 RT 크기(SV_Position 은 GL 기본 프레임버퍼에서 원점이 다르다)
-        constants._outputHeight      = static_cast<float32>( view._upscaleHeight );
+        constants._source            = bNativeBindless ? static_cast<uint32>( view._upscaleIntermediate._srv ) : 0u;
+        constants._outputWidth       = static_cast<float32>( view._upscaleIntermediate._width ); // 픽셀 = 정점 UV × 중간 RT 크기(SV_Position 은 GL 기본 프레임버퍼에서 원점이 다르다)
+        constants._outputHeight      = static_cast<float32>( view._upscaleIntermediate._height );
         constants._sharpness         = _frameSettings._upscalerSharpness; // 사본을 뜰 때 0 아래를 잘랐다
         constexpr uint32 kSourceSlot = shaderslot::emulated::getSlot( "SourceColor" );
         if ( bNativeBindless == false )
-            cmd.bindShaderResource( view._upscaleIntermediateSRV, kSourceSlot );
+            cmd.bindShaderResource( view._upscaleIntermediate._srv, kSourceSlot );
         cmd.setGraphicsRootConstants( 0, sizeof( constants ) / sizeof( uint32 ), &constants );
         cmd.draw( 3, 0 );
         context.resetBindingCache();

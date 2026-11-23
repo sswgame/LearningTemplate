@@ -386,19 +386,13 @@ namespace sw
     void VulkanRHIDevice::writeConstantBufferSlot( RHIBufferHandle buffer, uint32 slot, uint32 offset, const void* pData, uint32 size )
     {
         VulkanBufferRecord* pRecord                     = resolveAllocatedBuffer( buffer );
-        const bool          bCannotUpdateConstantBuffer = pRecord == nullptr || pRecord->_cbSlotSize == 0 || pRecord->_memory == VK_NULL_HANDLE || pData == nullptr || size == 0 ||
+        const bool          bCannotUpdateConstantBuffer = pRecord == nullptr || pRecord->_cbSlotSize == 0 || pRecord->_memory._pMapped == nullptr || pData == nullptr || size == 0 ||
                                                  offset >= pRecord->_cbSlotSize;
         if ( bCannotUpdateConstantBuffer )
             return;
         const uint32 slotSize  = pRecord->_cbSlotSize;
         const uint32 copyBytes = MathUtil::min( size, slotSize - offset ); // 페이지 구간이면 그 칸 안에서 자른다
-        void*        pMapped{ nullptr };
-        // Map 실패는 오류로 남긴다 — 조용히 건너뛰면 옛 상수로 그려 원인이 화면에서만 보인다.
-        if ( isVkSuccess( vkMapMemory( _device, pRecord->_memory, static_cast<VkDeviceSize>( slot ) * slotSize + offset, copyBytes, 0, &pMapped ), "vkMapMemory (constant buffer slot)" ) == false ||
-             pMapped == nullptr )
-            return;
-        Memory::copy( pMapped, pData, copyBytes );
-        vkUnmapMemory( _device, pRecord->_memory );
+        Memory::copy( pRecord->_memory._pMapped + static_cast<size_t>( slot ) * slotSize + offset, pData, copyBytes );
     }
 
     void VulkanRHIDevice::fillConstantBufferSlot()
@@ -452,8 +446,7 @@ namespace sw
             {
                 if ( record._buffer != VK_NULL_HANDLE )
                     vkDestroyBuffer( _device, record._buffer, nullptr );
-                if ( record._memory != VK_NULL_HANDLE )
-                    freeDeviceMemory( record._memory );
+                _memoryAllocator.release( record._memory );
             } );
             _gpuBuffers.clear();
             _constantBufferMirror.clear();
@@ -485,8 +478,7 @@ namespace sw
                     vkDestroyImageView( _device, record._sampleView, nullptr );
                 if ( record._image != VK_NULL_HANDLE )
                     vkDestroyImage( _device, record._image, nullptr );
-                if ( record._memory != VK_NULL_HANDLE )
-                    freeDeviceMemory( record._memory );
+                _memoryAllocator.release( record._memory );
             } );
             // 힙 핸들 표를 텍스처 표보다 먼저 비운다 — 이미지는 위에서 모두 지웠고, 남은 참조(레코드 · 해제 대리자)가 놓일 때 장치가 아직 살아 있다.
             _mapTransientHeap.clear();
@@ -498,11 +490,11 @@ namespace sw
             _uavRegistry.clear();
             for ( uint32 index = 0; index < kBindlessBufferCapacity; ++index )
             {
-                publishBufferReadSlot( index, false, 0 );
-                publishBufferReadSlot( index, true, 0 );
+                publishBufferReadSlot( RHIDescriptorIndex{ index }, false, 0 );
+                publishBufferReadSlot( RHIDescriptorIndex{ index }, true, 0 );
             }
             // 합성 프레임버퍼 · PSO 호환 RP · desc RP 는 캐시가 한 번에 놓는다. 스왑체인 RP 는 아래에서 스왑체인이 놓는다.
-            _renderPassCache.destroyAll( _device, _swapChain.getRenderPass() );
+            _renderPassCache.destroyAll( _device );
             _textureRegistry.clear();
 
             for ( VkDescriptorSet& textureSet : _arrTextureSet )
@@ -633,6 +625,7 @@ namespace sw
             }
             savePipelineCache();
             destroyBreadcrumbBuffer();
+            _memoryAllocator.releaseAll(); // 자원 · 해제 큐가 모두 놓은 뒤다
             vkDestroyDevice( _device, nullptr );
             _device = nullptr;
         }
@@ -790,37 +783,31 @@ namespace sw
             return 0;
         }
 
-        VkMemoryAllocateInfo allocInfo{};
-        allocInfo.sType           = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO;
-        allocInfo.allocationSize  = memRequirements.size;
-        allocInfo.memoryTypeIndex = memoryTypeIndex;
-
-        VkDeviceMemory memory = VK_NULL_HANDLE;
-        if ( allocateDeviceMemory( allocInfo, memory ) == false )
+        VulkanMemoryAllocator::Request request{};
+        request._sizeBytes       = memRequirements.size;
+        request._alignment       = memRequirements.alignment;
+        request._memoryTypeIndex = memoryTypeIndex;
+        request._bHostVisible    = placement == VulkanBufferMemory::HostVisible ? SW_TRUE : SW_FALSE;
+        VulkanMemoryRange memory{};
+        if ( _memoryAllocator.allocate( request, memory ) == false )
         {
             vkDestroyBuffer( _device, buffer, nullptr );
             SW_LOG_ERROR_ID( "Vulkan.FailedAllocateMemoryVkBuffer", "Failed to allocate memory for VkBuffer." );
             return 0;
         }
 
-        // 메모리를 붙이지 못한 버퍼 · 초기 값을 쓰지 못한 버퍼는 돌려주지 않는다 — 빈 버퍼로 그리면 조용히 0 을 읽는다.
-        bool bReady = isVkSuccess( vkBindBufferMemory( _device, buffer, memory, 0 ), "vkBindBufferMemory" );
-        if ( bReady && pInitialData != nullptr )
-        {
-            void* pMapped{ nullptr };
-            bReady = isVkSuccess( vkMapMemory( _device, memory, 0, sizeBytes, 0, &pMapped ), "vkMapMemory (initial data)" ) && pMapped != nullptr;
-            if ( bReady )
-            {
-                Memory::copy( pMapped, pInitialData, static_cast<size_t>( sizeBytes ) );
-                vkUnmapMemory( _device, memory );
-            }
-        }
+        // 메모리를 붙이지 못한 버퍼 · 초기 값을 쓰지 못한 버퍼는 돌려주지 않는다 — 빈 버퍼로 그리면 조용히 틀린 화면이 나온다.
+        const bool bInitialDataWritable = pInitialData == nullptr || memory._pMapped != nullptr;
+        SW_ASSERT( bInitialDataWritable && "initial data needs host visible memory" );
+        const bool bReady = isVkSuccess( vkBindBufferMemory( _device, buffer, memory._memory, memory._offset ), "vkBindBufferMemory" ) && bInitialDataWritable;
         if ( bReady == false )
         {
             vkDestroyBuffer( _device, buffer, nullptr );
-            freeDeviceMemory( memory );
+            _memoryAllocator.release( memory );
             return 0;
         }
+        if ( pInitialData != nullptr )
+            Memory::copy( memory._pMapped, pInitialData, static_cast<size_t>( sizeBytes ) );
 
         VulkanBufferRecord record{};
         record._buffer     = buffer;
@@ -2825,7 +2812,7 @@ namespace sw
         return make_unique<VulkanRHICommandList>( this );
     }
 
-    void VulkanRHIDevice::executeCommandListImmediate( IRHICommandList* pCmdList )
+    void VulkanRHIDevice::executeCommandListImmediateInternal( IRHICommandList* pCmdList )
     {
         VulkanRHICommandList* pList = static_cast<VulkanRHICommandList*>( pCmdList );
         if ( pList == nullptr || _graphicsQueue == VK_NULL_HANDLE )
@@ -2864,7 +2851,7 @@ namespace sw
         }
     }
 
-    void VulkanRHIDevice::executeCommandList( IRHICommandList* pCmdList )
+    void VulkanRHIDevice::executeCommandListInternal( IRHICommandList* pCmdList )
     {
         VulkanRHICommandList* pList                    = static_cast<VulkanRHICommandList*>( pCmdList );
         const bool            bCannotSubmitCommandList = pList == nullptr || _bFrameStarted == SW_FALSE || _activeFrameBuffer == VK_NULL_HANDLE;
@@ -2970,15 +2957,14 @@ namespace sw
         UploadStagingBlock        block{};
         const RHIBufferHandle     handle  = createVulkanBuffer( capacity, VK_BUFFER_USAGE_TRANSFER_SRC_BIT, nullptr, 0, VulkanBufferMemory::HostVisible );
         VulkanBufferRecord* const pRecord = resolveAllocatedBuffer( handle );
-        void*                     pMapped{ nullptr };
-        const bool                bMapped = pRecord != nullptr && isVkSuccess( vkMapMemory( _device, pRecord->_memory, 0, VK_WHOLE_SIZE, 0, &pMapped ), "vkMapMemory (upload staging)" ) && pMapped != nullptr;
+        const bool                bMapped = pRecord != nullptr && pRecord->_memory._pMapped != nullptr;
         if ( bMapped == false )
         {
             releaseHandle( handle ); // 0 이면 무시한다
             return block;
         }
         block._buffer     = handle;
-        block._pMapped    = static_cast<uint8*>( pMapped ); // 펜스 뒤 다시 쓰는 동안 매핑해 둔다(호스트 일관 메모리)
+        block._pMapped    = pRecord->_memory._pMapped; // 펜스 뒤 다시 쓰는 동안 매핑해 둔다(호스트 일관 메모리)
         block._capacity   = capacity;
         block._bDedicated = bDedicated ? SW_TRUE : SW_FALSE;
         return block;
@@ -3115,8 +3101,7 @@ namespace sw
             return;
         if ( owned._buffer != VK_NULL_HANDLE )
             vkDestroyBuffer( _device, owned._buffer, nullptr );
-        if ( owned._memory != VK_NULL_HANDLE )
-            freeDeviceMemory( owned._memory ); // 매핑은 메모리 해제가 풀어 준다
+        _memoryAllocator.release( owned._memory );
         getMemoryTracker().recordFree( RHIMemoryKey::makeBuffer( block._buffer ) );
     }
 
@@ -3193,10 +3178,10 @@ namespace sw
         return list;
     }
 
-    RHIQueueSyncPoint VulkanRHIDevice::submitAsyncCompute( IRHICommandList* pCmdList )
+    RHIQueueSyncPoint VulkanRHIDevice::submitAsyncComputeInternal( IRHICommandList* pCmdList )
     {
         if ( _asyncComputeQueue == VK_NULL_HANDLE )
-            return IRHIDevice::submitAsyncCompute( pCmdList );
+            return IRHIDevice::submitAsyncComputeInternal( pCmdList );
         VulkanRHICommandList* pList = static_cast<VulkanRHICommandList*>( pCmdList );
         if ( pList == nullptr || pList->nativeCommandBuffer() == VK_NULL_HANDLE || _bFrameStarted == SW_FALSE )
             return RHIQueueSyncPoint{};
@@ -3567,7 +3552,7 @@ namespace sw
     void VulkanRHIDevice::publishBufferReadSlot( RHIDescriptorIndex index, bool bUAV, RHIBufferHandle buffer, uint32 sliceOffset, uint32 sliceSize )
     {
         if ( index >= kBindlessBufferCapacity )
-            reportFatalError( "Vulkan: bindless buffer index %# is outside the read table (%#)", index, kBindlessBufferCapacity );
+            reportFatalError( "Vulkan: bindless buffer index %# is outside the read table (%#)", index.getValue(), kBindlessBufferCapacity );
         if ( bUAV == false )
             _arrBufferReadSlice.get()[index].store( ( static_cast<uint64>( sliceOffset ) << 32u ) | sliceSize, std::memory_order_relaxed );
         ( bUAV ? _arrUAVBufferReadSlot : _arrBufferReadSlot ).get()[index].store( buffer, std::memory_order_release );

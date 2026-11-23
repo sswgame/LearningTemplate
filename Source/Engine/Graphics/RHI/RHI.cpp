@@ -103,16 +103,6 @@ namespace sw
         }
     }
 
-    RHIRenderPassDesc::RHIRenderPassDesc() noexcept
-        : _listColorAttachment{}
-        , _clearDepth{ 1.0f }
-        , _clearStencil{ 0 }
-        , _bHasDepthStencil{ SW_FALSE }
-        , _reservedFlags{ 0 }
-        , _arrReserved{ 0, 0 }
-    {
-    }
-
     RHITextureDesc::RHITextureDesc() noexcept
         : _clearColor{ 0.0f, 0.0f, 0.0f, 0.0f }
         , _width{ 1 }
@@ -142,8 +132,7 @@ namespace sw
     }
 
     RHIRenderPassBeginInfo::RHIRenderPassBeginInfo() noexcept
-        : _renderPass{ 0 }
-        , _pSwapChain{ nullptr }
+        : _pSwapChain{ nullptr }
         , _arrColorTarget{}
         , _depthTarget{ 0 }
         , _arrClearColor{}

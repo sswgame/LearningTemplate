@@ -20,8 +20,8 @@ namespace sw
         : _format{ format }
         , _allocator{}
         , _indexAllocator{}
-        , _vertexBuffer{ 0 }
-        , _indexBuffer{ 0 }
+        , _vertexBuffer{}
+        , _indexBuffer{}
         , _mapEntry{}
         , _listScratchAdded{}
         , _listScratchRetry{}
@@ -49,8 +49,8 @@ namespace sw
         {
             // GPU 원본 — 렌더 프록시 버퍼는 [위치 구간(그릴 정점 수 칸)][속성 구간] 이다(`Mesh::getAttributeStreamOffset`). CPU 정점을 읽지 않는다(R-15).
             const RHIBufferHandle source = proxy.getVertexBuffer();
-            _listPendingCopy.push_back( PendingCopy{ _vertexBuffer, dstPosition, source, 0, static_cast<uint64>( count ) * constant::render::kMeshPositionStride } );
-            _listPendingCopy.push_back( PendingCopy{ _vertexBuffer, dstAttribute, source, mesh.getAttributeStreamOffset(), static_cast<uint64>( count ) * attributeStride } );
+            _listPendingCopy.push_back( PendingCopy{ _vertexBuffer._buffer, dstPosition, source, 0, static_cast<uint64>( count ) * constant::render::kMeshPositionStride } );
+            _listPendingCopy.push_back( PendingCopy{ _vertexBuffer._buffer, dstAttribute, source, mesh.getAttributeStreamOffset(), static_cast<uint64>( count ) * attributeStride } );
             return true;
         }
         // 프록시가 없는 동적 메시(프레임마다 새 메시 — 천) — CPU 정점을 쥔 메시만 여기 온다(절차 메시는 CPU 정점을 놓지 않는다). GPU 전용 버퍼라 스테이징으로 올린다.
@@ -63,7 +63,7 @@ namespace sw
             RHIBufferCopyRegion{                                                    0,  static_cast<uint32>( dstPosition ), count * constant::render::kMeshPositionStride},
             RHIBufferCopyRegion{RHIMeshVertexStreams::computeAttributeOffset( count ), static_cast<uint32>( dstAttribute ),                       count * attributeStride},
         };
-        device.getResourceFactory()->updateStructuredBufferRegions( _vertexBuffer, _listScratchByte.data(), arrRegion, 2 );
+        device.getResourceFactory()->updateStructuredBufferRegions( _vertexBuffer._buffer, _listScratchByte.data(), arrRegion, 2 );
         return true;
     }
 
@@ -85,9 +85,9 @@ namespace sw
         }
         _listPendingCopy.clear();
         // 옛 풀을 읽는 복사를 방금 기록했다 — 이 프레임이 끝난 뒤에 놓는다(`releaseHandle` 이 이미 만든 패킷 뒤로 미룬다).
-        for ( const RHIBufferHandle retired : _listRetiredBuffer )
+        for ( RHIGeometryBuffer& retired : _listRetiredBuffer )
         {
-            device.releaseHandle( retired );
+            retired.release( &device );
         }
         _listRetiredBuffer.clear();
     }
@@ -131,7 +131,7 @@ namespace sw
         if ( _mapEntry.empty() )
         {
             // 풀을 끄거나(gv_vertexPool=false) 씬이 비었다 — 버퍼를 놓는다. 배치는 자기 정점 · 인덱스 버퍼로 돌아간다.
-            const bool bHadBuffer = _vertexBuffer != 0;
+            const bool bHadBuffer = _vertexBuffer.isValid();
             release( pDevice );
             return bChanged || bHadBuffer;
         }
@@ -142,7 +142,7 @@ namespace sw
         _listScratchAdded.insert( _listScratchAdded.end(), _listScratchRetry.begin(), _listScratchRetry.end() );
 
         // 3) 들어온 메시에 구간을 준다. 하나라도 자리가 없으면(용량 부족, 조각남) 새 버퍼로 다시 채운다.
-        if ( _vertexBuffer == 0 || placeAddedMeshes( pDevice ) == false )
+        if ( _vertexBuffer.isValid() == false || placeAddedMeshes( pDevice ) == false )
             repack( pDevice );
         return true;
     }
@@ -244,7 +244,7 @@ namespace sw
                 SW_LOG_ERROR_ONCE_ID( "GPUMeshVertexPool.NoVertexSource", "A pooled mesh has neither a render proxy vertex buffer nor CPU vertices - its pool span stays empty" );
         }
         if ( _listScratchIndexRegion.empty() == false )
-            pDevice->getResourceFactory()->updateGeometryBufferRegions( _indexBuffer, _listScratchIndex.data(), _listScratchIndexRegion.data(),
+            pDevice->getResourceFactory()->updateGeometryBufferRegions( _indexBuffer._buffer, _listScratchIndex.data(), _listScratchIndexRegion.data(),
                                                                         static_cast<uint32>( _listScratchIndexRegion.size() ) );
         return true;
     }
@@ -264,8 +264,7 @@ namespace sw
 
         // 옛 풀 정점 버퍼는 새 풀로 GPU 복사하는 원본이다(R-15 — CPU 정점을 다시 읽지 않는다). 그 복사를 프레임 업로드 단계가 기록한 뒤에 지연 해제한다.
         // 옛 자리(구간 시작)를 먼저 적어 둔다 — 아래에서 새 자리로 덮는다. 내용이 바뀌어 다시 들어온 메시는 옛 자리가 없다(`retireEntry`).
-        IRHIResourceFactory*               pFactory          = pDevice->getResourceFactory();
-        const RHIBufferHandle              oldVertexBuffer   = _vertexBuffer;
+        const RHIBufferHandle              oldVertexBuffer   = _vertexBuffer._buffer;
         const uint32                       oldCapacity       = _allocator.getCapacity();
         const uint32                       oldAttributeStart = RHIMeshVertexStreams::computeAttributeOffset( oldCapacity );
         unordered_map<const Mesh*, uint32> mapOldBase; // 이 호출 안에서만 — 맵의 메시는 모두 이번 update 에서 본 것이라 살아 있다
@@ -275,17 +274,13 @@ namespace sw
                 mapOldBase[entry._pMesh] = entry._base;
         }
         if ( oldVertexBuffer != 0 )
-            _listRetiredBuffer.push_back( oldVertexBuffer );
-        if ( _indexBuffer != 0 )
-            pDevice->releaseHandle( _indexBuffer ); // 인덱스는 CPU 인덱스에서 새로 올린다(업로드 힙)
-        _vertexBuffer = 0;
-        _indexBuffer  = 0;
+            _listRetiredBuffer.push_back( std::exchange( _vertexBuffer, RHIGeometryBuffer{} ) );
+        _indexBuffer.release( pDevice ); // 인덱스는 CPU 인덱스에서 새로 올린다(업로드 힙)
         _allocator.reset( capacity );
         _indexAllocator.reset( indexCapacity );
         _liveVertexCount = 0;
 
-        _vertexBuffer = pFactory->createGPUVertexBuffer( RHIMeshVertexStreams::computeBufferBytes( _format, capacity ) );
-        if ( _vertexBuffer == 0 )
+        if ( _vertexBuffer.createGPUVertex( *pDevice, RHIMeshVertexStreams::computeBufferBytes( _format, capacity ) ) == false )
         {
             SW_LOG_ERROR_ID( "GPUMeshVertexPool.FailedCreateVertexPool", "Failed to create the vertex pool buffers (%# vertices, %# indices) - the batches are drawn with their own buffers.", capacity, indexCapacity );
             for ( auto& [contentID, entry] : _mapEntry )
@@ -328,9 +323,9 @@ namespace sw
             {
                 // 옛 풀 → 새 풀 — 위치 구간과 속성 구간을 한 번씩(두 풀의 속성 구간 시작은 용량이 정한다).
                 const uint64 count = entry._count;
-                _listPendingCopy.push_back( PendingCopy{ _vertexBuffer, static_cast<uint64>( entry._base ) * constant::render::kMeshPositionStride, oldVertexBuffer,
+                _listPendingCopy.push_back( PendingCopy{ _vertexBuffer._buffer, static_cast<uint64>( entry._base ) * constant::render::kMeshPositionStride, oldVertexBuffer,
                                                          static_cast<uint64>( oldIt->second ) * constant::render::kMeshPositionStride, count * constant::render::kMeshPositionStride } );
-                _listPendingCopy.push_back( PendingCopy{ _vertexBuffer, newAttribute + static_cast<uint64>( entry._base ) * attributeStride, oldVertexBuffer,
+                _listPendingCopy.push_back( PendingCopy{ _vertexBuffer._buffer, newAttribute + static_cast<uint64>( entry._base ) * attributeStride, oldVertexBuffer,
                                                          oldAttributeStart + static_cast<uint64>( oldIt->second ) * attributeStride, count * attributeStride } );
             }
             else if ( queueMeshFill( *pDevice, *pMesh, entry._base, capacity ) == false )
@@ -342,12 +337,10 @@ namespace sw
         }
         // 꼬리는 비워 둔 용량이다 — 0 으로 채워 버퍼 전체를 한 번에 만든다(createIndexBuffer 는 내용 없이 만들 수 없다).
         _listScratchIndex.resize( indexCapacity );
-        _indexBuffer = pFactory->createIndexBuffer( _listScratchIndex.data(), indexCapacity * static_cast<uint32>( sizeof( uint32 ) ) );
-        if ( _indexBuffer == 0 )
+        if ( _indexBuffer.createIndex( *pDevice, _listScratchIndex.data(), indexCapacity * static_cast<uint32>( sizeof( uint32 ) ) ) == false )
         {
             SW_LOG_ERROR_ID( "GPUMeshVertexPool.FailedCreateVertexPool", "Failed to create the vertex pool buffers (%# vertices, %# indices) - the batches are drawn with their own buffers.", capacity, indexCapacity );
-            _listRetiredBuffer.push_back( _vertexBuffer ); // 쌓인 복사가 읽거나 쓴다 — 기록한 뒤 놓는다
-            _vertexBuffer = 0;
+            _listRetiredBuffer.push_back( std::exchange( _vertexBuffer, RHIGeometryBuffer{} ) ); // 쌓인 복사가 읽거나 쓴다 — 기록한 뒤 놓는다
             // 항목은 남긴다 — 내용이 같으면 집합이 바뀐 프레임에만 다시 시도한다(매 프레임 다시 만들며 오류를 쌓지 않는다).
             for ( auto& [contentID, entry] : _mapEntry )
             {
@@ -368,21 +361,15 @@ namespace sw
 
     void GPUMeshVertexPool::release( IRHIDevice* pDevice )
     {
-        IRHIResourceFactory* pFactory = pDevice != nullptr ? pDevice->getResourceFactory() : nullptr;
-        if ( pFactory != nullptr && _vertexBuffer != 0 )
-            pDevice->releaseHandle( _vertexBuffer );
+        _vertexBuffer.release( pDevice );
+        _indexBuffer.release( pDevice );
         // 기록하지 못한 복사는 버린다(디바이스가 바뀌거나 내려간다) — 옛 풀 버퍼도 함께 놓는다.
-        for ( const RHIBufferHandle retired : _listRetiredBuffer )
+        for ( RHIGeometryBuffer& retired : _listRetiredBuffer )
         {
-            if ( pFactory != nullptr )
-                pDevice->releaseHandle( retired );
+            retired.release( pDevice );
         }
         _listRetiredBuffer.clear();
         _listPendingCopy.clear();
-        if ( pFactory != nullptr && _indexBuffer != 0 )
-            pDevice->releaseHandle( _indexBuffer );
-        _vertexBuffer = 0;
-        _indexBuffer  = 0;
         _mapEntry.clear();
         _allocator.reset( 0 );
         _indexAllocator.reset( 0 );

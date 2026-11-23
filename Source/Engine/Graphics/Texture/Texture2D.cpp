@@ -412,8 +412,8 @@ namespace sw
         }
         // 지키던 번호가 있으면(로드를 시작할 때 예약 · 크기 변경 · 핫 리로드) 새 텍스처로 다시 묶는다 — 번호가 그대로라 머티리얼을 다시 묶지 않는다(R-6). 없으면 새로 등록한다.
         // 예약한 번호는 렌더 스레드가 살린 뒤에야 다시 묶을 수 있다 — 업로드를 끝내는 이 자리가 먼저 살린다(대개 프레임 시작이 이미 살렸다).
-        const RHIDescriptorIndex keptSRV = getKeptSRV();
-        RHIDescriptorIndex       srv{ kInvalidDescriptorIndex };
+        const RHITextureSRVIndex keptSRV = getKeptSRV();
+        RHITextureSRVIndex       srv{ kInvalidDescriptorIndex };
         if ( keptSRV != kInvalidDescriptorIndex )
         {
             pDevice->activateReservedBindlessTextures();
@@ -434,7 +434,7 @@ namespace sw
             _keptSRV.store( kInvalidDescriptorIndex, std::memory_order_release );
         _uploadTicket = RHITransferTicket{};
         SW_LOG_INFO_ID( "Texture2D.Texture2DReadyMipsTop", "Texture2D '%#' ready: %#×%#, %# mips (%# top mips streamed later), format %#, srv %#", _path.c_str(), _width, _height, _mipCount, _streamedMipCount,
-                        static_cast<uint32>( _format ), srv );
+                        static_cast<uint32>( _format ), srv.getValue() );
         return Texture2DUploadStatus::Ready;
     }
 
@@ -541,7 +541,7 @@ namespace sw
         outDesc._format                = format;
         outDesc._bIsShaderResource     = SW_TRUE;
         IRHIResourceFactory* pResource = device.getResourceFactory();
-        outHandle                      = pResource->createTexture2D( outDesc );
+        outHandle                      = pResource->createTexture2D( RHIResourceCreateKey{}, outDesc );
         if ( outHandle == 0 )
         {
             SW_LOG_ERROR_ID( "Texture.CreateFailed", "Texture2D: createTexture2D failed for '%#' (%#×%#, %# mips)", relativePath, outDesc._width, outDesc._height, outDesc._mipLevels );
@@ -583,7 +583,7 @@ namespace sw
         desc._bIsRenderTarget            = SW_TRUE;
         desc._bIsShaderResource          = SW_TRUE;
         IRHIResourceFactory*   pResource = pDevice->getResourceFactory();
-        const RHITextureHandle handle    = pResource->createTexture2D( desc );
+        const RHITextureHandle handle    = pResource->createTexture2D( RHIResourceCreateKey{}, desc );
         if ( handle == 0 )
         {
             SW_LOG_ERROR_ID( "Texture.CreateFailed", "Texture2D: createTexture2D failed for render target '%#' (%#×%#)", name, width, height );
@@ -687,7 +687,7 @@ namespace sw
         desc._format                     = _format;
         desc._bIsShaderResource          = SW_TRUE;
         IRHIResourceFactory*   pResource = pDevice->getResourceFactory();
-        const RHITextureHandle handle    = pResource->createTexture2D( desc );
+        const RHITextureHandle handle    = pResource->createTexture2D( RHIResourceCreateKey{}, desc );
         if ( handle == 0 )
         {
             SW_LOG_ERROR_ID( "Texture.CreateFailed", "Texture2D: createTexture2D failed for CPU texture '%#' (%#×%#)", _path.c_str(), _width, _height );
@@ -736,7 +736,7 @@ namespace sw
 
     void Texture2D::releaseRHIKeepingSRV( IRHIDevice* pDevice )
     {
-        const RHIDescriptorIndex kept = takeKeptSRV();
+        const RHITextureSRVIndex kept = takeKeptSRV();
         releaseRHI( pDevice );
         _keptSRV.store( kept, std::memory_order_release );
     }
@@ -783,9 +783,9 @@ namespace sw
         // 지키던 번호는 그 번호를 낸 디바이스에 돌려준다 — 예약만 했거나 다시 만드는 중이면 `_pDevice` 가 비어 있으므로 아래 남의 디바이스 검사보다 먼저 본다.
         if ( pDevice != nullptr && _pKeptSRVDevice.load( std::memory_order_acquire ) == pDevice )
         {
-            const RHIDescriptorIndex kept = takeKeptSRV();
+            const RHITextureSRVIndex kept = takeKeptSRV();
             if ( kept != kInvalidDescriptorIndex )
-                pDevice->releaseBindlessIndex( RHIBindlessIndexSpace::Texture, kept ); // 올리다 실패했거나 아직 올라오지 않은 텍스처가 지키던 번호(로드 중 텍스처 · 누락 체커를 가리킨다)
+                pDevice->releaseBindlessIndex( kept ); // 올리다 실패했거나 아직 올라오지 않은 텍스처가 지키던 번호(로드 중 텍스처 · 누락 체커를 가리킨다)
         }
         // 남의 디바이스가 죽는 통보라면 내 것이 아니다.
         const bool bForeignDeviceWarned = pDevice != nullptr && _pDevice != nullptr && _pDevice != pDevice;
@@ -796,7 +796,7 @@ namespace sw
         {
             // 마지막 소유가 게임 스레드에서 놓일 수 있다(머티리얼과 함께) — 렌더 스레드가 병렬 기록 중이면 핸들 반환을 그 프레임 뒤로 미룬다.
             if ( getSRV() != kInvalidDescriptorIndex )
-                pDevice->releaseBindlessIndex( RHIBindlessIndexSpace::Texture, getSRV() );
+                pDevice->releaseBindlessIndex( getSRV() );
             if ( getHandle() != 0 )
                 pDevice->releaseHandle( getHandle() );
             // 위쪽 밉을 올리는 중이던 새 텍스처도 내린다(등록 전이라 SRV 는 없다).

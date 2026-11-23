@@ -27,6 +27,7 @@
  *       기다리다 시간을 넘깁니다(`acquireGraphicsContextBlocking timed out`).
  */
 #pragma once
+#include "Core/Container/unordered_set.h"
 #include "Core/Container/vector.h"
 #include "Core/Foundation/Macros.h"
 #include "Core/Foundation/Types.h"
@@ -72,7 +73,7 @@ namespace sw
         uint32 flush();
 
         /**
-         * @brief 이 큐가 메시(동적 메시 밖)의 정점 버퍼를 만드는 쪽이면 true 입니다 — 워커 생성을 허용하는 백엔드이고 `-gv_gpuUploadQueue` 가 켜져 있다.
+         * @brief 이 큐가 메시(동적 메시 밖)의 정점 버퍼를 만드는 쪽이면 true 입니다 — 워커 생성을 허용하는 백엔드입니다.
          * @details 메시 하나를 만드는 쪽은 하나다. 이 값이 참인 패킷의 메시는 렌더 스레드가 다시 만들지 않는다(`GPUSceneSnapshot::_bMeshesCreatedBeforeHandoff`).
          */
         bool shouldCreateMeshes() const;
@@ -89,6 +90,8 @@ namespace sw
          *        메시가 사라지면 안 되기 때문입니다(Graphics README 의 소유 규칙 1번과 같은 이유입니다).
          */
         vector<shared_ptr<Mesh>> _listPendingMesh;
+        /** @brief `_listPendingMesh` 에 든 메시입니다 — 같은 메시의 되풀이 요청을 거른다(목록을 훑으면 새 메시가 많은 프레임이 제곱으로 는다). */
+        unordered_set<const Mesh*> _uniquePendingMesh;
         /** @brief 이 백엔드가 워커 생성을 허용하면 1 입니다. 0 이면 큐는 요청을 받지 않습니다. */
         uint8 _bParallel{ SW_FALSE };
     };

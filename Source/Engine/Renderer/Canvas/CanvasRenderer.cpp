@@ -70,7 +70,7 @@ namespace sw
         _quadBuffer.upload( device, inoutFrame, _markers.getMarkerCount() > 0 );
     }
 
-    void CanvasRenderer::recordMarkerProjection( IRHIPassCommandList& cmd, RHIPipelineStateHandle pso, RHIBufferHandle instanceBuffer, RHIDescriptorIndex instanceSRV, RHIDescriptorIndex placeholderSRV,
+    void CanvasRenderer::recordMarkerProjection( IRHIPassCommandList& cmd, RHIPipelineStateHandle pso, RHIBufferHandle instanceBuffer, RHIBufferSRVIndex instanceSRV, RHIBufferSRVIndex placeholderSRV,
                                                  GPUMessageChannel& inoutMessages, bool bShowInstanceSlots )
     {
         _markers.record( cmd, _quadBuffer, pso, instanceBuffer, instanceSRV, placeholderSRV, inoutMessages, bShowInstanceSlots );
@@ -105,7 +105,7 @@ namespace sw
             arrRoot[CanvasRendererInternal::kRootColorVision]  = colorVisionMode;
             for ( uint32 slot = 0; slot < shaderslot::kCanvasTextureCount; ++slot )
             {
-                RHIDescriptorIndex srv = kInvalidDescriptorIndex;
+                RHITextureSRVIndex srv = kInvalidDescriptorIndex;
                 if ( slot < batch._textureCount )
                     srv = findTextureSRV( batch._arrTexture[slot] );
                 if ( srv == kInvalidDescriptorIndex )
@@ -180,7 +180,7 @@ namespace sw
         }
     }
 
-    RHIDescriptorIndex CanvasRenderer::findTextureSRV( const CanvasTextureRef& texture ) const
+    RHITextureSRVIndex CanvasRenderer::findTextureSRV( const CanvasTextureRef& texture ) const
     {
         if ( texture._texture != nullptr )
             return texture._texture->isRHIValid() ? texture._texture->getSRV() : kInvalidDescriptorIndex;

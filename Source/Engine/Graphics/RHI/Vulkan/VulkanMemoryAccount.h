@@ -12,7 +12,7 @@ namespace sw
      * @class VulkanMemoryAccount
      * @brief 살아 있는 `VkDeviceMemory` 수를 세고, 장치 한도(`maxMemoryAllocationCount`)에서 남겨 둘 칸(`EngineConfig::_rhi._allocationCountReserve`)을 넘는 할당을 거절합니다.
      * @details 한도를 넘는 `vkAllocateMemory` 는 명세상 실패(`VK_ERROR_TOO_MANY_OBJECTS`)이거나 드라이버에 따라 정의되지 않은 동작이다 — 데스크톱도 흔히 4096 이다(R-4).
-     *          자원마다 전용 할당을 하는 지금 구조에서 그 근처에 닿으면 조용히 깨지지 않고 오류로 멈춘다. 서브할당(언리얼 Vulkan `FMemoryManager` · Godot VMA)이 오면
+     *          그 근처에 닿으면 조용히 깨지지 않고 오류로 멈춘다. 자원은 블록을 나눠 쓰므로(`VulkanMemoryAllocator`) 이 계수가 세는 것은 블록과 전용 할당이다.
      *          이 계수가 블록 수를 센다. 모든 할당 · 해제가 `VulkanRHIDevice::allocateDeviceMemory` · `freeDeviceMemory` 를 지나 이 계수를 거친다. 여러 스레드가 부른다.
      */
     class VulkanMemoryAccount

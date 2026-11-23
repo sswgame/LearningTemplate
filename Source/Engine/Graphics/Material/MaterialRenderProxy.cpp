@@ -23,7 +23,7 @@ namespace sw
         // 디바이스가 먼저 죽었으면 clearRHI 가 이미 잊게 했다 — 남아 있으면 `_constant` 의 소멸이 살아 있는 디바이스에 돌려준다.
     }
 
-    RHIDescriptorIndex MaterialRenderProxy::sync( IRHIDevice* pDevice, const shared_ptr<const MaterialRenderData>& data )
+    RHIBufferSRVIndex MaterialRenderProxy::sync( IRHIDevice* pDevice, const shared_ptr<const MaterialRenderData>& data )
     {
         if ( pDevice == nullptr || data == nullptr || data->_bytes.empty() )
             return kInvalidDescriptorIndex;

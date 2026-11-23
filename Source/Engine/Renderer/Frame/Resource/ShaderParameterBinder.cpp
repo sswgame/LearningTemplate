@@ -29,17 +29,16 @@ namespace sw
 
         // **값이 실제로 달라질 때만** 버전을 올린다. 같은 값을 다시 넣는 호출이 흔한데(드로우마다 g_World 를
         // 같은 항등 행렬로 다시 넣는다), 그때마다 버전을 올리면 상수버퍼를 드로우마다 새로 만들게 된다.
-        for ( Entry& entry : _listEntry )
+        const uint32 found = findIndex( name );
+        if ( found != constant::invalid_index::kUint32 )
         {
-            if ( entry._name == name )
-            {
-                if ( entry._size == byteSize && Memory::compare( entry._data.data(), pData, byteSize ) == 0 )
-                    return;
-                entry._size = byteSize;
-                Memory::copy( entry._data.data(), pData, byteSize );
-                ++_version;
+            Entry& entry = _listEntry[found];
+            if ( entry._size == byteSize && Memory::compare( entry._data.data(), pData, byteSize ) == 0 )
                 return;
-            }
+            entry._size = byteSize;
+            Memory::copy( entry._data.data(), pData, byteSize );
+            ++_version;
+            return;
         }
 
         ++_version;
@@ -48,6 +47,7 @@ namespace sw
         entry._size = byteSize;
         Memory::copy( entry._data.data(), pData, byteSize );
         _listEntry.push_back( entry );
+        insertIndex( static_cast<uint32>( _listEntry.size() - 1 ) );
     }
 
     void PassConstantValues::setMatrix( hashed_string name, const float4x4& value )
@@ -72,27 +72,63 @@ namespace sw
 
     const uint8* PassConstantValues::find( hashed_string name, uint32& outSize ) const
     {
-        for ( const Entry& entry : _listEntry )
+        const uint32 found = findIndex( name );
+        if ( found == constant::invalid_index::kUint32 )
         {
-            if ( entry._name == name )
-            {
-                outSize = entry._size;
-                return entry._data.data();
-            }
+            outSize = 0;
+            return nullptr;
         }
-        outSize = 0;
-        return nullptr;
+        outSize = _listEntry[found]._size;
+        return _listEntry[found]._data.data();
     }
 
     void PassConstantValues::remove( hashed_string name )
     {
-        for ( size_t entryIndex = 0; entryIndex < _listEntry.size(); ++entryIndex )
-        {
-            if ( _listEntry[entryIndex]._name != name )
-                continue;
-            _listEntry.erase( _listEntry.begin() + entryIndex );
-            ++_version;
+        const uint32 found = findIndex( name );
+        if ( found == constant::invalid_index::kUint32 )
             return;
+        _listEntry.erase( _listEntry.begin() + found );
+        rebuildIndex( _listIndex.size() ); // 뒤 항목의 번호가 모두 당겨졌다(드문 길 — 확장 요소가 빌린 칸을 되돌릴 때)
+        ++_version;
+    }
+
+    uint32 PassConstantValues::findIndex( const hashed_string& name ) const
+    {
+        if ( _listIndex.empty() )
+            return constant::invalid_index::kUint32;
+        const size_t mask = _listIndex.size() - 1;
+        for ( size_t slot = name.getIndex() & mask; _listIndex[slot] != 0; slot = ( slot + 1 ) & mask )
+        {
+            const uint32 entryIndex = static_cast<uint32>( _listIndex[slot] ) - 1u;
+            if ( _listEntry[entryIndex]._name == name )
+                return entryIndex;
+        }
+        return constant::invalid_index::kUint32;
+    }
+
+    void PassConstantValues::insertIndex( uint32 entryIndex )
+    {
+        constexpr size_t kMinCapacity = 256; // 엔진 상수(약 100)가 절반 아래로 든다
+        if ( _listEntry.size() * 2 > _listIndex.size() )
+        {
+            rebuildIndex( MathUtil::max( kMinCapacity, _listIndex.size() * 2 ) ); // 새 항목도 함께 들어간다
+            return;
+        }
+        const size_t mask = _listIndex.size() - 1;
+        size_t       slot = _listEntry[entryIndex]._name.getIndex() & mask;
+        while ( _listIndex[slot] != 0 )
+        {
+            slot = ( slot + 1 ) & mask;
+        }
+        _listIndex[slot] = static_cast<uint16>( entryIndex + 1u );
+    }
+
+    void PassConstantValues::rebuildIndex( size_t capacity )
+    {
+        _listIndex.assign( capacity, uint16{ 0 } );
+        for ( uint32 entryIndex = 0; entryIndex < _listEntry.size(); ++entryIndex )
+        {
+            insertIndex( entryIndex );
         }
     }
 
@@ -114,12 +150,13 @@ namespace sw
             }
 
             /** @brief 넘기는 bindless 인덱스가 살아 있는 슬롯인지 봅니다. 죽은 번호는 DX12 · Vulkan 에서 디바이스 손실로 끝나므로 검사가 로그로 남긴다. */
-            static void validateIndex( const BindlessIndexCheckSite* pIndexCheck, bool bCheck, RHIBindlessIndexSpace space, RHIDescriptorIndex index,
+            template <typename Index>
+            static void validateIndex( const BindlessIndexCheckSite* pIndexCheck, bool bCheck, Index index,
                                        const hashed_string& name, uint32 elementIndex = 0 )
             {
                 if ( bCheck == false )
                     return;
-                (void)BindlessIndexValidator::validate( *pIndexCheck, space, index, name, elementIndex ); // 죽은 번호는 검사가 로그로 남긴다
+                (void)pIndexCheck->validate( index, name, elementIndex ); // 죽은 번호는 검사가 로그로 남긴다
             }
 
             /**
@@ -129,7 +166,7 @@ namespace sw
              *          채운다 — 0 으로 두면 셰이더가 힙 0번을 잘못 읽는다(InstanceData::loadWorld / Bindless::sampleIndex 는 kInvalidIndex 비교로 폴백).
              */
             static void uploadEngineConstantBuffer( IRHIPassCommandList& cmd, const ShaderBindingLayout& layout, const FrameResourceRegistry& registry,
-                                                    const PassConstantValues& values, const RHIConstantBuffer& engineCb,
+                                                    const PassConstantValues& values, RHIBufferHandle engineCb,
                                                     const BindlessIndexCheckSite* pIndexCheck, bool bCheckIndex )
             {
                 const uint32 alignedSize = MathUtil::align( layout.getEngineCbSize(), 16u );
@@ -151,22 +188,21 @@ namespace sw
                     uint32       autoIndex = kInvalidDescriptorIndex;
                     if ( ( pValue == nullptr || valueSize == 0 ) && member._autoIndexKey.empty() == false )
                     {
-                        RHIBindlessIndexSpace    autoSpace = RHIBindlessIndexSpace::Texture;
-                        const RegisteredTexture* pTex      = registry.findTexture( member._autoIndexKey );
+                        const RegisteredTexture* pTex = registry.findTexture( member._autoIndexKey );
                         if ( pTex != nullptr )
                         {
+                            validateIndex( pIndexCheck, bCheckIndex, pTex->_srv, member._valueKey );
                             autoIndex = pTex->_srv;
                         }
                         else
                         {
-                            const RegisteredBuffer* pBuffer = registry.findBuffer( member._autoIndexKey );
-                            if ( pBuffer != nullptr )
-                                autoIndex = pBuffer->_index;
-                            autoSpace = RHIBindlessIndexSpace::Buffer;
+                            const RegisteredBuffer* pBuffer     = registry.findBuffer( member._autoIndexKey );
+                            const RHIBufferSRVIndex bufferIndex = pBuffer != nullptr ? pBuffer->_index : kInvalidDescriptorIndex;
+                            validateIndex( pIndexCheck, bCheckIndex, bufferIndex, member._valueKey );
+                            autoIndex = bufferIndex;
                         }
-                        validateIndex( pIndexCheck, bCheckIndex, autoSpace, autoIndex, member._valueKey );
                         pValue    = reinterpret_cast<const uint8*>( &autoIndex );
-                        valueSize = sizeof( uint32 );
+                        valueSize = sizeof( autoIndex );
                     }
 
                     if ( pValue == nullptr || valueSize == 0 )
@@ -176,7 +212,7 @@ namespace sw
                         Memory::copy( cbBytes.data() + member._offset, pValue, writeSize );
                 }
 
-                cmd.updateConstantBuffer( engineCb._buffer, cbBytes.data(), static_cast<uint32>( cbBytes.size() ) );
+                cmd.updateConstantBuffer( engineCb, cbBytes.data(), static_cast<uint32>( cbBytes.size() ) );
             }
 
             /**
@@ -184,8 +220,8 @@ namespace sw
              * @details 리플렉션이 주는 `_registerIndex` 는 백엔드마다 뜻이 다를 수 있다(세트 · 시프트 규약). 그대로 넘기면 한 CB 가 다른 CB 자리를
              *          덮어쓰거나 어느 슬롯에도 안 걸리는데, 같은 UNIFORM_BUFFER 라 검증 에러도 안 난다. 텍스처 · 구조버퍼는 3) 의 표가 맡는다.
              */
-            static void bindReservedConstantBuffers( IRHIPassCommandList& cmd, const ShaderBindingLayout& layout, const RHIConstantBuffer& engineCb,
-                                                     RHIDescriptorIndex materialCb, const BindlessIndexCheckSite* pIndexCheck, bool bCheckIndex )
+            static void bindReservedConstantBuffers( IRHIPassCommandList& cmd, const ShaderBindingLayout& layout, RHIBufferSRVIndex engineCbIndex,
+                                                     RHIBufferSRVIndex materialCb, const BindlessIndexCheckSite* pIndexCheck, bool bCheckIndex )
             {
                 // 이 함수는 드로우마다 불린다. 리터럴이라도 hashed_string 을 여기서 만들면 드로우마다
                 // 전역 레지스트리 intern(FNV + 샤드 뮤텍스)이 붙는다. 함수 지역 static 으로 한 번만 만든다.
@@ -194,9 +230,9 @@ namespace sw
                 {
                     if ( slot._kind != ShaderBindingKind::ConstantBuffer )
                         continue;
-                    const bool               bMaterialCb = slot._name == s_materialCbName;
-                    const RHIDescriptorIndex cbIndex     = bMaterialCb ? materialCb : engineCb._index;
-                    validateIndex( pIndexCheck, bCheckIndex, RHIBindlessIndexSpace::Buffer, cbIndex, slot._name );
+                    const bool              bMaterialCb = slot._name == s_materialCbName;
+                    const RHIBufferSRVIndex cbIndex     = bMaterialCb ? materialCb : engineCbIndex;
+                    validateIndex( pIndexCheck, bCheckIndex, cbIndex, slot._name );
                     if ( cbIndex != kInvalidDescriptorIndex )
                         cmd.bindConstantBuffer( cbIndex, bMaterialCb ? shaderslot::kMaterialConstantBuffer : shaderslot::kPassConstantBuffer );
                 }
@@ -206,7 +242,7 @@ namespace sw
              * @brief 머티리얼 텍스처 인덱스를 검사하고, 에뮬 백엔드(DX11 · GL)면 t16..t31 에 서수대로 겁니다.
              * @details 네이티브 bindless 백엔드는 인덱스가 이미 MaterialCB 에 있어 걸 필요가 없지만, 같은 번호가 머티리얼 데이터에 들어가 있어 검사는 네 백엔드 모두 한다.
              */
-            static void bindMaterialTextures( IRHIPassCommandList& cmd, bool bNativeBindless, const RHIDescriptorIndex* pMaterialTexSRV,
+            static void bindMaterialTextures( IRHIPassCommandList& cmd, bool bNativeBindless, const RHITextureSRVIndex* pMaterialTexSRV,
                                               const BindlessIndexCheckSite* pIndexCheck, bool bCheckIndex )
             {
                 if ( pMaterialTexSRV == nullptr )
@@ -214,7 +250,7 @@ namespace sw
                 static const hashed_string s_materialTextureName{ "MaterialTexture" };
                 for ( uint32 texIndex = 0; texIndex < shaderslot::kMaterialTextureCount; ++texIndex )
                 {
-                    validateIndex( pIndexCheck, bCheckIndex, RHIBindlessIndexSpace::Texture, pMaterialTexSRV[texIndex], s_materialTextureName, texIndex );
+                    validateIndex( pIndexCheck, bCheckIndex, pMaterialTexSRV[texIndex], s_materialTextureName, texIndex );
                 }
                 if ( bNativeBindless )
                     return;
@@ -242,7 +278,7 @@ namespace sw
                         const RegisteredTexture* pTex = registry.findTexture( bind._lookupKey );
                         if ( pTex != nullptr && pTex->_srv != kInvalidDescriptorIndex )
                         {
-                            validateIndex( pIndexCheck, bCheckIndex, RHIBindlessIndexSpace::Texture, pTex->_srv, bind._lookupKey );
+                            validateIndex( pIndexCheck, bCheckIndex, pTex->_srv, bind._lookupKey );
                             cmd.bindShaderResource( pTex->_srv, bind._registerIndex );
                         }
                         continue;
@@ -250,7 +286,7 @@ namespace sw
                     const RegisteredBuffer* pBuffer = registry.findBuffer( bind._lookupKey );
                     if ( pBuffer != nullptr && pBuffer->_index != kInvalidDescriptorIndex )
                     {
-                        validateIndex( pIndexCheck, bCheckIndex, RHIBindlessIndexSpace::Buffer, pBuffer->_index, bind._lookupKey );
+                        validateIndex( pIndexCheck, bCheckIndex, pBuffer->_index, bind._lookupKey );
                         if ( bCheckIndex )
                             (void)BindlessIndexValidator::validateStride( pIndexCheck->_pDevice, pIndexCheck->_passName, bind._lookupKey, bind._elementStride, pBuffer->_index ); // 어긋남은 검사가 로그로 남긴다
                         cmd.bindStructuredBuffer( pBuffer->_index, bind._registerIndex );
@@ -264,10 +300,11 @@ namespace sw
                                               const ShaderBindingLayout&    layout,
                                               const FrameResourceRegistry&  registry,
                                               const PassConstantValues&     values,
-                                              const RHIConstantBuffer&      engineCb,
-                                              RHIDescriptorIndex            materialCb,
+                                              RHIBufferHandle               engineCb,
+                                              RHIBufferSRVIndex             engineCbIndex,
+                                              RHIBufferSRVIndex             materialCb,
                                               bool                          bNativeBindless,
-                                              const RHIDescriptorIndex*     pMaterialTexSRV,
+                                              const RHITextureSRVIndex*     pMaterialTexSRV,
                                               bool                          bEngineCbUpToDate,
                                               bool                          bResourcesUpToDate,
                                               const BindlessIndexCheckSite* pIndexCheck )
@@ -279,10 +316,10 @@ namespace sw
 
         // 1) 값 · 레지스트리가 그대로면 버퍼 내용도 그대로다. 다시 만들지도, 올리지도 않는다.
         //    배치마다 바뀌는 값은 루트 상수로 나가므로(binding.hlsli) 한 패스의 두 번째 드로우부터는 늘 여기로 온다.
-        const bool bUploadEngineCb = layout.getEngineCbSize() > 0 && engineCb._buffer != 0 && bEngineCbUpToDate == false;
+        const bool bUploadEngineCb = layout.getEngineCbSize() > 0 && engineCb != 0 && bEngineCbUpToDate == false;
         if ( bUploadEngineCb )
             Internal::uploadEngineConstantBuffer( cmd, layout, registry, values, engineCb, pIndexCheck, bCheckIndex );
-        Internal::bindReservedConstantBuffers( cmd, layout, engineCb, materialCb, pIndexCheck, bCheckIndex );
+        Internal::bindReservedConstantBuffers( cmd, layout, engineCbIndex, materialCb, pIndexCheck, bCheckIndex );
         Internal::bindMaterialTextures( cmd, bNativeBindless, pMaterialTexSRV, pIndexCheck, bCheckIndex );
 
         // 3) 등록 내용이 그대로면 이미 걸린 것과 같은 자원을 다시 거는 셈이라 건너뛴다(같은 패스 안의 두 번째

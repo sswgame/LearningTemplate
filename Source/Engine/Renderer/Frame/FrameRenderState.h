@@ -5,7 +5,6 @@
  *          소유는 렌더러가 하고 패스 실행은 참조로 받는다. 언리얼 `FSceneRenderer` 가 `FViewInfo` 목록과 장면 데이터를 들고, 패스(RDG 람다)가 그것을 잡아 읽는 나눔과 같다.
  */
 #pragma once
-#include "Core/Container/EnumArray.h"
 #include "Core/Container/vector.h"
 #include "Core/Foundation/Macros.h"
 #include "Core/Foundation/Types.h"
@@ -104,16 +103,15 @@ namespace sw
          */
         RenderGraphAliasPlan _transientAliasPlan{};
         uint32               _transientAliasGeneration{ 0 };
-        /// @brief 주 시점입니다. 파이프라인이 선언한 첨부(창 크기로 만들고 구성이 바뀔 때만 다시 만든다), TAA 히스토리, 직렬 리스트, 출력 사각형을 가집니다.
-        FrameViewTarget _mainView{};
-        /// @brief 추가 뷰들입니다. 카메라 id 순서가 아니라 처음 본 순서로 쌓습니다. 뷰마다 자기 풀과 컬링 슬롯을 가집니다.
-        vector<unique_ptr<FrameViewTarget>> _listExtraView{};
+        /// @brief 뷰 목록에서 주 시점의 자리이자 첫 추가 뷰의 자리입니다.
+        static constexpr size_t kMainViewIndex       = 0;
+        static constexpr size_t kFirstExtraViewIndex = 1;
         /**
-         * @brief 이번 프레임의 뷰들입니다. 행렬, 절두체, 상수 버퍼를 각자 소유합니다.
-         * @details 뷰를 얻으면 그 뷰의 값이 함께 따라온다. 주의: 이 값들을 뷰 밖 멤버로 흩어 두면 "이 값은 어느 뷰
-         *          것인가" 를 사람이 기억해야 하고, 컬링 상수 버퍼를 뷰끼리 나눠 쓰게 되어 뒤 업로드가 앞 디스패치를 덮어쓴다.
+         * @brief 이번 프레임의 뷰들입니다. 0 번이 주 시점(늘 있고 주소가 바뀌지 않는다 — 협력 객체가 쥔다)이고 나머지는 추가 뷰(카메라 id 순서가 아니라 처음 본 순서)입니다.
+         * @details 뷰마다 자기 풀 · 히스토리 · 컬링 입력(행렬, 절두체, 상수 버퍼) · 컬링 슬롯을 가진다(언리얼 `FSceneViewFamily::Views` 처럼 주 시점도 목록의 한 원소다).
+         *          주의: 이 값들을 뷰 밖 멤버로 흩어 두면 "이 값은 어느 뷰 것인가" 를 사람이 기억해야 하고, 주 시점과 추가 뷰를 따로 도는 코드가 한쪽만 고쳐진다.
          */
-        EnumArray<RenderViewKind, RenderView> _arrView{};
+        vector<unique_ptr<FrameViewTarget>> _listView = makeMainViewList();
         /**
          * @brief 주 시점 방향광 캐스케이드마다의 그림자 컬링 입력(절두체 · 자기 컬링 상수 버퍼)입니다. 앞 `_cascadeCullCount` 개만 씁니다.
          * @details 컬링 슬롯은 추가 뷰 슬롯 뒤에 붙는다(`_cascadeCullSlotBase` + 캐스케이드 번호). 추가 뷰(CCTV · PiP)는 작은 장면이라 합친 칸 하나를 그대로 쓴다.
@@ -182,7 +180,7 @@ namespace sw
         struct FrameDecalDraw
         {
             GPUDecal           _element{};
-            RHIDescriptorIndex _arrTextureSRV[shaderslot::kMaterialTextureCount] = {
+            RHITextureSRVIndex _arrTextureSRV[shaderslot::kMaterialTextureCount] = {
                 kInvalidDescriptorIndex, kInvalidDescriptorIndex, kInvalidDescriptorIndex, kInvalidDescriptorIndex, kInvalidDescriptorIndex, kInvalidDescriptorIndex,
                 kInvalidDescriptorIndex, kInvalidDescriptorIndex, kInvalidDescriptorIndex, kInvalidDescriptorIndex, kInvalidDescriptorIndex, kInvalidDescriptorIndex,
                 kInvalidDescriptorIndex, kInvalidDescriptorIndex, kInvalidDescriptorIndex, kInvalidDescriptorIndex };
@@ -237,15 +235,22 @@ namespace sw
         uint32 _outputHeight{ 0 };
         uint8  _bHasFrameSky{ SW_FALSE }; ///< 이번 프레임의 씬에 하늘이 있다(`_frameSky`). 기록 전에 정하고 패스 콜백은 읽기만 한다
 
-        /** @brief 뷰 하나를 얻습니다. 그 뷰의 행렬, 절두체, 상수 버퍼가 함께 옵니다. */
-        RenderView&       view( RenderViewKind kind ) { return _arrView[kind]; }
-        const RenderView& view( RenderViewKind kind ) const { return _arrView[kind]; }
-        /** @brief 뷰 @p target 의 컬링 입력입니다. 주 시점은 `_arrView[Main]`, 추가 뷰는 자기 것입니다. */
-        RenderView& getCullInputOf( FrameViewTarget& target ) { return &target == &_mainView ? view( RenderViewKind::Main ) : target._cullInput; }
+        /** @brief 주 시점(뷰 0 번)입니다. 파이프라인이 선언한 첨부(창 크기로 만들고 구성이 바뀔 때만 다시 만든다), TAA 히스토리, 직렬 리스트, 출력 사각형을 가집니다. */
+        FrameViewTarget&       getMainView() { return *_listView[kMainViewIndex]; }
+        const FrameViewTarget& getMainView() const { return *_listView[kMainViewIndex]; }
         /**
          * @brief 시간으로 구동하는 컴퓨트가 읽을 시간(초)입니다. 렌더러 시계(`FrameMeshDeformState::_animationTimer`)의 누적 시간을 스냅샷의 주기로 접은 값입니다.
          * @details 셰이더 칸이 float 라 접지 않으면 긴 실행에서 끊긴다(감사 C-12). 이 함수를 부르는 디스패치는 업로드된 스냅샷이 있을 때만 돈다.
          */
         float32 getAnimationTime() const { return TimeRolloverUtil::fold( _deform._animationTimer.getTotalTime(), _gpuScene.getShaderTimeRolloverSeconds() ); }
+
+    private:
+        /** @brief 주 시점 하나만 든 뷰 목록입니다(처음 값). */
+        static vector<unique_ptr<FrameViewTarget>> makeMainViewList()
+        {
+            vector<unique_ptr<FrameViewTarget>> listView;
+            listView.push_back( make_unique<FrameViewTarget>() );
+            return listView;
+        }
     };
 } // namespace sw

@@ -4,8 +4,10 @@
 
 #include "Core/Math/MathUtil.h"
 
+#include "Engine/Graphics/RHI/Diagnostics/RHIComputeBindingLog.h"
 #include "Engine/Graphics/RHI/Diagnostics/RHIDrawDiagnostics.h"
 #include "Engine/Graphics/RHI/IRHIDevice.h"
+#include "Engine/Graphics/RHI/IRHIResourceFactory.h"
 #include "Engine/Graphics/RHI/RHIDescriptors.h"
 
 namespace sw
@@ -14,6 +16,40 @@ namespace sw
         : _bRenderPassOpen{ SW_FALSE }
         , _bRenderPassNoBackBuffer{ SW_FALSE }
     {
+    }
+
+    void IRHICommandContext::trackComputeBinding( RHIDescriptorIndex index, bool bUAV, uint32 slot )
+    {
+        if ( slot < kTrackedComputeSlotCount )
+            _arrTrackedCompute[bUAV ? 1 : 0][slot] = index;
+    }
+
+    void IRHICommandContext::clearTrackedComputeBindings()
+    {
+        for ( RHIDescriptorIndex( &arrSlot )[kTrackedComputeSlotCount] : _arrTrackedCompute )
+        {
+            for ( RHIDescriptorIndex& index : arrSlot )
+            {
+                index = kInvalidDescriptorIndex;
+            }
+        }
+    }
+
+    void IRHICommandContext::recordComputeBindings()
+    {
+        if constexpr ( build::kShipping == false )
+        {
+            RHIComputeBindingLog& log = getContextDevice().getComputeBindingLog();
+            for ( uint32 space = 0; log.isEnabled() && _computePSO != 0 && space < 2; ++space )
+            {
+                for ( uint32 slot = 0; slot < kTrackedComputeSlotCount; ++slot )
+                {
+                    if ( _arrTrackedCompute[space][slot] != kInvalidDescriptorIndex )
+                        log.record( _arrTrackedCompute[space][slot], space == 1, _computePSO, slot );
+                }
+            }
+            clearTrackedComputeBindings();
+        }
     }
 
     namespace
@@ -116,17 +152,33 @@ namespace sw
     {
         endRenderPassBefore( "setComputePipelineState" );
         setComputePipelineStateNative( pso );
+        _computePSO       = pso;
+        _computeGroupSize = pso != 0 ? getContextDevice().getResourceFactory()->getThreadGroupSize( pso ) : RHIThreadGroupSize{};
+    }
+
+    void IRHICommandContext::dispatchThreads( uint32 threadCountX, uint32 threadCountY, uint32 threadCountZ )
+    {
+        if ( threadCountX == 0 || threadCountY == 0 || threadCountZ == 0 )
+            return;
+        const bool bNoPipeline = _computeGroupSize.isValid() == false;
+        SW_ASSERT( bNoPipeline == false && "dispatchThreads needs a bound compute PSO (its shader gives the thread group size)" );
+        if ( bNoPipeline )
+            return;
+        dispatchCompute( ( threadCountX + _computeGroupSize._x - 1u ) / _computeGroupSize._x, ( threadCountY + _computeGroupSize._y - 1u ) / _computeGroupSize._y,
+                         ( threadCountZ + _computeGroupSize._z - 1u ) / _computeGroupSize._z );
     }
 
     void IRHICommandContext::dispatchCompute( uint32 threadGroupCountX, uint32 threadGroupCountY, uint32 threadGroupCountZ )
     {
         endRenderPassBefore( "dispatchCompute" );
+        recordComputeBindings();
         dispatchComputeNative( threadGroupCountX, threadGroupCountY, threadGroupCountZ );
     }
 
     void IRHICommandContext::dispatchIndirect( RHIBufferHandle argumentBuffer, uint32 argumentBufferOffset )
     {
         endRenderPassBefore( "dispatchIndirect" );
+        recordComputeBindings();
         dispatchIndirectNative( argumentBuffer, argumentBufferOffset );
     }
 

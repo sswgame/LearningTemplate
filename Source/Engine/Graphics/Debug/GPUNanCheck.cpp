@@ -111,7 +111,7 @@ namespace sw
         return static_cast<uint32>( _listSlotName.size() - 1 );
     }
 
-    void GPUNanCheck::scan( IRHICommandList& commands, RHIPipelineStateHandle pso, string_view name, RHIDescriptorIndex srv, uint32 width, uint32 height )
+    void GPUNanCheck::scan( IRHICommandList& commands, RHIPipelineStateHandle pso, string_view name, RHITextureSRVIndex srv, uint32 width, uint32 height )
     {
         if ( isActive() == false || pso == 0 || srv == kInvalidDescriptorIndex || width == 0 || height == 0 )
             return;
@@ -126,7 +126,7 @@ namespace sw
         commands.setComputePipelineState( pso );
         commands.bindComputeUAV( _buffer._uav, 0 );
         commands.setComputeRootConstants( 0, sizeof( constants ) / sizeof( uint32 ), &constants );
-        commands.dispatchThreads( width, height, 1, kGroupSize, kGroupSize, 1 );
+        commands.dispatchThreads( width, height, 1 );
         _bScannedThisFrame = SW_TRUE;
     }
 

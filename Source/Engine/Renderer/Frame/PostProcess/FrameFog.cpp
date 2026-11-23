@@ -241,7 +241,7 @@ namespace sw
         _volumeState      = FogVolumeState::Active;
     }
 
-    void FrameFog::dispatchVolumetricFog( IRHIPassCommandList& cmd, const GPULightBuffer& lightBuffer, RHIDescriptorIndex placeholderSRV ) const
+    void FrameFog::dispatchVolumetricFog( IRHIPassCommandList& cmd, const GPULightBuffer& lightBuffer, RHIBufferSRVIndex placeholderSRV ) const
     {
         if ( _bFogVolumeActive == SW_FALSE )
             return;
@@ -249,8 +249,8 @@ namespace sw
         // t0 라이트 · t2 그리드는 라이트 버퍼가 없거나 뷰의 그리드가 없는 프레임에 자리표를 건다(라이트 수 0 이면 셰이더가 읽지 않는다 — DX12 는 빈 디스크립터를 읽으면 폴트).
         const bool                 bLights = lightBuffer.isBindable();
         const RHIStructuredBuffer* pGrid   = bLights ? lightBuffer.findGridBuffer() : nullptr;
-        const RHIDescriptorIndex   lights  = bLights ? lightBuffer.getBuffer()._srv : placeholderSRV;
-        const RHIDescriptorIndex   grid    = pGrid != nullptr ? pGrid->_srv : placeholderSRV;
+        const RHIBufferSRVIndex    lights  = bLights ? lightBuffer.getBuffer()._srv : placeholderSRV;
+        const RHIBufferSRVIndex    grid    = pGrid != nullptr ? pGrid->_srv : placeholderSRV;
 
         // 쓰기 앞 UAV · 안개 패스(그래프, t11) 앞 셰이더 읽기는 프레임 그래프가 낸다(`VolumetricFogVolume` — `FrameGraphExecutor::beginFrame` 이 등록한다).
         cmd.setComputePipelineState( _psoManager.getEnginePSO( RenderPassKind::VolumetricFog ) );
@@ -259,8 +259,7 @@ namespace sw
         cmd.bindComputeShaderResource( _fogVolumeParamBuffer._srv, 1 );
         cmd.bindComputeShaderResource( grid, 2 );
         cmd.bindComputeUAV( _fogVolumeBuffer._uav, 0 );
-        constexpr uint32 kGroupSize = SW_FOG_VOLUME_GROUP_SIZE;
-        cmd.dispatchThreads( SW_FOG_VOLUME_DIM_X, SW_FOG_VOLUME_DIM_Y, 1, kGroupSize, kGroupSize, 1 );
+        cmd.dispatchThreads( SW_FOG_VOLUME_DIM_X, SW_FOG_VOLUME_DIM_Y, 1 );
     }
 } // namespace sw
 

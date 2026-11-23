@@ -6,6 +6,7 @@
 
 #include "Engine/Asset/AssetManager.h"
 #include "Engine/Graphics/Material/MaterialInstance.h"
+#include "Engine/Graphics/Mesh/Mesh.h"
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
 #include "Engine/Object/GameObject/GameObjectManager.inl"
@@ -277,7 +278,7 @@ namespace sw
         // 읽지 못한 모델은 캐시가 경로마다 한 번 경고한다.
         for ( const string& path : listModelPath )
         {
-            _listCropMesh.push_back( MeshCache::request( path ) );
+            _listCropMesh.push_back( MeshCache::request( path, MeshCPUAccess::ReleaseAfterUpload ) );
         }
     }
 

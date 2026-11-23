@@ -78,12 +78,12 @@ namespace sw::editor
 
     void GameViewPanel::syncDevOverlayTexture()
     {
-        const uint64 texture = GameViewModel::findDevOverlayTexture();
+        const RHITextureHandle texture = GameViewModel::findDevOverlayTexture();
         if ( texture == _devOverlayTexture && ( _pDevOverlayTextureID != nullptr || texture == 0 ) )
             return;
         releaseDevOverlayTexture();
         _pDevOverlayTextureID = EditorViewSurface::registerOverlayTexture( texture ); // 겹치기가 없거나 렌더 스레드가 아직 만들지 않았으면 nullptr(다음 프레임)
-        _devOverlayTexture    = _pDevOverlayTextureID != nullptr ? texture : 0;
+        _devOverlayTexture    = _pDevOverlayTextureID != nullptr ? texture : RHITextureHandle{ 0 };
     }
 
     void GameViewPanel::drawDevOverlay( const float2& imagePos, const float2& imageSize )

@@ -614,7 +614,7 @@ namespace sw::editor
             const bool bPaintsColor = hasColorPainter( _stack );
             if ( _gpuPreviewMesh == nullptr || bPaintsColor || _bGPUPreviewColored )
             {
-                shared_ptr<Mesh> fresh = Mesh::create();
+                shared_ptr<Mesh> fresh = Mesh::create( MeshCPUAccess::Keep );
                 // 원본을 삼각형 목록으로 풀어 두었다(`expandToTriangleList`) — 정점 수가 같으므로 인덱스가 그대로 맞는다.
                 (void)fresh->setGeometry( bPaintsColor ? makeColoredVertices( _sourceData._listVertex, _previewMesh ) : _sourceData._listVertex, vector<uint32>( _sourceData._listIndex ) );
                 fresh->setGPUMorphEnabled( true );
@@ -632,7 +632,7 @@ namespace sw::editor
         // (렌더 스냅샷이 옛 메시를 쥐고 있어 제자리 갱신은 안전하지 않다 - 그래서 비용은 새 메시 만들기 + 탄젠트 + 정점 풀 재업로드다: MeshModifierPreviewCost MM3 결정)
         SW_PROFILE_SCOPE( "Editor.MeshModifiers.CPUMesh" );
         SW_PROFILE_COUNT( "Editor.MeshModifiers.CPUMeshVertices", static_cast<uint32>( _previewMesh._listPosition.size() ) );
-        shared_ptr<Mesh> cpuMesh = Mesh::create();
+        shared_ptr<Mesh> cpuMesh = Mesh::create( MeshCPUAccess::Keep );
         (void)cpuMesh->setGeometry( MeshModifierSessionInternal::makeVertices( _sourceData._listVertex, _previewMesh ), vector<uint32>( _sourceData._listIndex ) );
         mountPreviewMesh( *pMeshComp, cpuMesh );
         _cpuPreviewMesh = std::move( cpuMesh );

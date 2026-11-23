@@ -449,3 +449,30 @@ SW_TEST_CASE( ShaderBindingLayoutTest, CacheKeyKeepsDefineBoundariesAndEntryPoin
     SW_EXPECT_TRUE( ShaderBindingLayoutCache::makeCacheKey( joined, ShaderTargetFormat::SPIRV_Vulkan ) != ShaderBindingLayoutCache::makeCacheKey( split, ShaderTargetFormat::SPIRV_Vulkan ) );
     SW_EXPECT_TRUE( ShaderBindingLayoutCache::makeCacheKey( other, ShaderTargetFormat::SPIRV_Vulkan ) != ShaderBindingLayoutCache::makeCacheKey( base, ShaderTargetFormat::SPIRV_Vulkan ) );
 }
+
+/**
+ * @brief [ShaderBindingLayoutTest] 머티리얼 데이터 · 텍스처 · 머티리얼 CB 를 하나라도 거는 셰이더만 머티리얼을 읽는다(깊이 셰이더는 아니다)
+ * @details 변이: 텍스처나 머티리얼 CB 를 세지 않으면 그 단언이 진다.
+ */
+SW_TEST_CASE( ShaderBindingLayoutTest, UsesMaterialDataOnlyWhenBound )
+{
+    using Util = ShaderBindingLayoutTestUtil;
+    ShaderReflectionData depth{};
+    Util::addConstantBuffer( depth, shaderslot::cbname::kPass, shaderslot::kPassConstantBuffer, 64 );
+    Util::addResource( depth, shaderslot::resname::kInstances, "StructuredBuffer", 0, 4 );
+    SW_EXPECT_FALSE( Util::makeSingleStage( depth ).usesMaterialData() );
+
+    ShaderReflectionData materials = depth;
+    Util::addResource( materials, shaderslot::resname::kMaterials, "StructuredBuffer", 0, 5 );
+    SW_EXPECT_TRUE( Util::makeSingleStage( materials ).usesMaterialData() );
+    SW_EXPECT_FALSE( Util::makeSingleStage( materials ).usesMaterialCb() );
+
+    ShaderReflectionData texture = depth;
+    Util::addResource( texture, "g_AnyTexture", "Texture", 0, 16 );
+    SW_EXPECT_TRUE( Util::makeSingleStage( texture ).usesMaterialData() );
+
+    ShaderReflectionData materialCb = depth;
+    Util::addConstantBuffer( materialCb, shaderslot::cbname::kMaterial, shaderslot::kMaterialConstantBuffer, 64 );
+    SW_EXPECT_TRUE( Util::makeSingleStage( materialCb ).usesMaterialData() );
+    SW_EXPECT_TRUE( Util::makeSingleStage( materialCb ).usesMaterialCb() );
+}

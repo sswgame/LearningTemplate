@@ -23,30 +23,40 @@ namespace sw
 {
     namespace
     {
-        /** @brief 패스 하나를 열린 리스트 @p pCmdList 에 기록합니다(열고 닫지 않는다). 직렬 · 병렬 · 큐 실행이 모두 이 한 함수로 패스 문맥을 만든다. */
-        void recordPassBody( RenderGraphNode& node, IRHICommandList* pCmdList )
+        /// 계획 캐시의 상한입니다. 뷰 종류 · 켠 효과 조합이 이보다 많이 오가면 전체 계획만 남기고 다시 만든다.
+        constexpr size_t kMaxPlanCount = 64;
+        /// 이보다 패스가 적은 레벨은 병렬로 기록하지 않고 이어 기록한다 — 패스 하나짜리 레벨은 나눌 일이 없다(언리얼 RDG `r.RDG.ParallelExecute.PassMin` 도 폭을 따로 벌리지 않는다).
+        constexpr size_t kMinParallelWidth = 2;
+
+        /** @brief 패스 하나를 열린 리스트 @p pCmdList 에 기록합니다(열고 닫지 않는다). 직렬 · 병렬 · 큐 실행이 모두 이 한 함수로 패스 문맥을 만든다. @p listAccess 는 이번 계획의 접근이다. */
+        void recordPassBody( RenderGraphNode& node, const vector<RenderGraphResourceAccess>& listAccess, IRHICommandList* pCmdList )
         {
             RenderGraphPassContext passContext;
-            passContext._passName     = node._name;
-            passContext._payload      = node._payload;
-            passContext._pListInputs  = &node._listInput;
-            passContext._pListOutputs = &node._listOutput;
-            passContext._pListAccess  = &node._listAccess;
+            passContext._passName    = node._name;
+            passContext._payload     = node._payload;
+            passContext._pListAccess = &listAccess;
             passContext.setCommandList( pCmdList );
+            // 끝 접근은 선언 접근에서 시작하고 패스 안 전이만 고친다. 용량은 다시 쓴다.
+            node._listExitAccess.resize( listAccess.size() );
+            for ( size_t index = 0; index < listAccess.size(); ++index )
+            {
+                node._listExitAccess[index] = listAccess[index]._access;
+            }
+            passContext.setExitAccesses( &node._listExitAccess );
             node._execute( passContext );
         }
 
-        void recordRenderPass( RenderGraphNode* pNode, IRHICommandList* pCmdList, bool bAlreadyBegun )
+        RHIClosedCommandList recordRenderPass( RenderGraphNode* pNode, const vector<RenderGraphResourceAccess>& listAccess, IRHICommandList* pCmdList, bool bAlreadyBegun )
         {
             const bool bNodeNotRecordable = pNode == nullptr || pCmdList == nullptr || pNode->_execute.isBound() == false;
             if ( bNodeNotRecordable )
-                return;
+                return pCmdList != nullptr && bAlreadyBegun ? pCmdList->closeCommandList() : RHIClosedCommandList{}; // 레벨 배리어는 이미 이 리스트에 있다
 
             // 레벨의 첫 리스트는 렌더 스레드가 이미 열어 배리어를 앞머리에 기록해 뒀다. 이어서 기록한다.
             if ( bAlreadyBegun == false )
                 pCmdList->beginCommandList();
-            recordPassBody( *pNode, pCmdList );
-            pCmdList->endCommandList();
+            recordPassBody( *pNode, listAccess, pCmdList );
+            return pCmdList->closeCommandList();
         }
 
         /**
@@ -230,12 +240,14 @@ namespace sw
      */
     struct ParallelPassEntry
     {
-        RenderGraphNode* _pNode{ nullptr };
-        IRHICommandList* _pPassCmdList{ nullptr };
+        RenderGraphNode*                         _pNode{ nullptr };
+        IRHICommandList*                         _pPassCmdList{ nullptr };
+        const vector<RenderGraphResourceAccess>* _pListAccess{ nullptr }; ///< 이번 계획의 접근
         /// @brief 렌더 스레드가 이미 열고 레벨 배리어를 기록한 리스트인지 나타냅니다(레벨의 첫 엔트리입니다).
-        bool _bAlreadyBegun{ false }; ///< NOLINT(sw-bool-flag): 집합체다(중괄호 · 지정 초기화로 만든다) — C++17 비트필드는 기본값을 둘 수 없어 `T x;` 가 값을 남기지 않는다
+        bool                 _bAlreadyBegun{ false }; ///< NOLINT(sw-bool-flag): 집합체다(중괄호 · 지정 초기화로 만든다) — C++17 비트필드는 기본값을 둘 수 없어 `T x;` 가 값을 남기지 않는다
+        RHIClosedCommandList _closed{};               ///< 기록을 닫은 값(기록하지 못했으면 빈 값)
 
-        void record() { recordRenderPass( _pNode, _pPassCmdList, _bAlreadyBegun ); }
+        void record() { _closed = recordRenderPass( _pNode, *_pListAccess, _pPassCmdList, _bAlreadyBegun ); }
     };
 } // namespace sw
 
@@ -246,6 +258,8 @@ namespace sw
         vector<ParallelPassEntry> _listPassEntry;
         /// @brief 노드 인덱스에서 그 패스가 프레임마다 다시 여는 커맨드 리스트를 찾는 목록입니다. 처음 쓸 때 만들고 그 뒤로 다시 씁니다.
         vector<unique_ptr<IRHICommandList>> _listNodeCmdList;
+        /// @brief 마지막 레벨이 병렬이라 이어 기록하던 리스트가 없을 때, 들인 자원을 되돌리는 전이를 기록하는 리스트입니다.
+        unique_ptr<IRHICommandList> _pReturnCmdList;
         /// @brief 리스트를 만든 디바이스입니다. 다른 디바이스가 오면 먼저 해제합니다(백엔드 교체).
         IRHIDevice* _pCmdListDevice{ nullptr };
     };
@@ -264,8 +278,53 @@ namespace sw
         if ( _pParallelScratch == nullptr )
             return;
         _pParallelScratch->_listNodeCmdList.clear();
+        _pParallelScratch->_pReturnCmdList.reset();
         _pParallelScratch->_listPassEntry.clear();
         _pParallelScratch->_pCmdListDevice = nullptr;
+    }
+
+    optional<RHIBufferState> RenderGraphAccessUtil::findBufferState( RenderGraphAccess access )
+    {
+        switch ( access )
+        {
+            case RenderGraphAccess::ShaderRead:
+                return RHIBufferState::ShaderResource;
+            case RenderGraphAccess::UnorderedAccess:
+            case RenderGraphAccess::UnorderedAccessRead:
+                return RHIBufferState::UnorderedAccess;
+            case RenderGraphAccess::IndirectArgs:
+                return RHIBufferState::IndirectArgument;
+            case RenderGraphAccess::CopySource:
+                return RHIBufferState::CopySource;
+            case RenderGraphAccess::CopyDest:
+                return RHIBufferState::CopyDest;
+            case RenderGraphAccess::RenderTarget:
+            case RenderGraphAccess::DepthRead:
+            case RenderGraphAccess::DepthWrite:
+                break;
+        }
+        return nullopt;
+    }
+
+    optional<RHITextureState> RenderGraphAccessUtil::findTextureState( RenderGraphAccess access )
+    {
+        switch ( access )
+        {
+            case RenderGraphAccess::ShaderRead:
+            case RenderGraphAccess::DepthRead:
+                return RHITextureState::ShaderResource;
+            case RenderGraphAccess::UnorderedAccess:
+            case RenderGraphAccess::UnorderedAccessRead:
+                return RHITextureState::UnorderedAccess;
+            case RenderGraphAccess::RenderTarget:
+            case RenderGraphAccess::DepthWrite:
+                return RHITextureState::RenderTarget;
+            case RenderGraphAccess::IndirectArgs:
+            case RenderGraphAccess::CopySource:
+            case RenderGraphAccess::CopyDest:
+                break;
+        }
+        return nullopt;
     }
 
     bool RenderGraphPassContext::isDeclared( const RenderGraphResourceAccess& access ) const
@@ -322,20 +381,37 @@ namespace sw
             _pCmdList->uavBarrierTexture( texture );
     }
 
-    void RenderGraphPassContext::transitionTexture( const RenderGraphResourceAccess& access, RHITextureState state, uint32 slot ) const
+    void RenderGraphPassContext::transitionDeclared( const RenderGraphResourceAccess& declared, RenderGraphAccess target, uint32 slot ) const
     {
-        const RHITextureHandle texture{ findDeclaredHandle( access, slot ) };
-        if ( texture == 0 || _pCmdList == nullptr )
+        const uint64 handle = findDeclaredHandle( declared, slot );
+        if ( handle == 0 || _pCmdList == nullptr )
             return;
-        const RHITextureTransition transition{ texture, state };
-        _pCmdList->transitionTextures( &transition, 1 );
-    }
-
-    void RenderGraphPassContext::transitionBuffer( const RenderGraphResourceAccess& access, RHIBufferState state, uint32 slot ) const
-    {
-        const RHIBufferHandle buffer{ findDeclaredHandle( access, slot ) };
-        if ( buffer != 0 && _pCmdList != nullptr )
-            _pCmdList->transitionBuffer( buffer, state );
+        const bool                      bBuffer      = declared._viewable == RenderGraphViewableKind::Buffer;
+        const optional<RHIBufferState>  bufferState  = bBuffer ? RenderGraphAccessUtil::findBufferState( target ) : optional<RHIBufferState>{};
+        const optional<RHITextureState> textureState = bBuffer ? optional<RHITextureState>{} : RenderGraphAccessUtil::findTextureState( target );
+        if ( bufferState.has_value() )
+        {
+            _pCmdList->transitionBuffer( RHIBufferHandle{ handle }, *bufferState );
+        }
+        else if ( textureState.has_value() )
+        {
+            const RHITextureTransition transition{ RHITextureHandle{ handle }, *textureState };
+            _pCmdList->transitionTextures( &transition, 1 );
+        }
+        else
+        {
+            // 자원 종류에 없는 접근(버퍼의 첨부 접근 · 텍스처의 복사 접근)이다 — 낼 상태가 없어 추적도 바꾸지 않는다.
+            SW_LOG_ERROR_ONCE_ID( "Renderer.GraphTransitionWithoutState", "Render graph pass '%#' transitions '%#' to an access this resource kind has no state for - nothing is issued", _passName.c_str(),
+                                  declared._resource.c_str() );
+            return;
+        }
+        if ( _pListExitAccess == nullptr )
+            return;
+        for ( size_t index = 0; index < _pListAccess->size(); ++index )
+        {
+            if ( ( *_pListAccess )[index]._resource == declared._resource )
+                ( *_pListExitAccess )[index] = target;
+        }
     }
 
     /**
@@ -425,12 +501,136 @@ namespace sw
         _listImportedResource.push_back( RenderGraphResourceAccess{ name, initialAccess, type } );
     }
 
+    void RenderGraph::importResources( const FrameBufferTable& table )
+    {
+        _listImportedResource.clear();
+        for ( const FrameBufferTable::Entry& entry : table.getEntries() )
+        {
+            if ( entry._bAttachment == false )
+                importResource( entry._name, entry._viewable, entry._initialAccess );
+        }
+    }
+
     void RenderGraph::beginExecution( RenderGraphExecutionContext& context ) const
     {
         context.reset();
         for ( const RenderGraphResourceAccess& imported : _listImportedResource )
         {
-            context.seedAccess( imported._resource, imported._access );
+            // 텍스처의 실제 레이아웃은 백엔드가 안다(새로 만든 텍스처) — 심지 않아 첫 사용이 늘 전이를 요구한다(`importResource`).
+            if ( imported._viewable == RenderGraphViewableKind::Buffer )
+                context.seedAccess( imported._resource, imported._access );
+        }
+    }
+
+    void RenderGraph::applyExitAccesses( RenderGraphExecutionContext& context, const RenderGraphNode& node, const vector<RenderGraphResourceAccess>& listAccess )
+    {
+        SW_ASSERT( node._listExitAccess.size() == listAccess.size() ); // 방금 기록한 패스다(`recordPassBody`)
+        for ( size_t index = 0; index < listAccess.size(); ++index )
+        {
+            if ( node._listExitAccess[index] != listAccess[index]._access )
+                context.seedAccess( listAccess[index]._resource, node._listExitAccess[index] );
+        }
+    }
+
+    bool RenderGraph::selectPlan( const vector<uint8>& listPassState )
+    {
+        if ( _listPlan.empty() )
+            return true;
+        const bool bAllRun = VectorUtil::allOf( listPassState, []( uint8 state )
+        { return state == 0; } );
+        if ( bAllRun )
+        {
+            _activePlanIndex = 0;
+            return true;
+        }
+        for ( size_t planIndex = 1; planIndex < _listPlan.size(); ++planIndex )
+        {
+            if ( _listPlan[planIndex]._listPassState == listPassState )
+            {
+                _activePlanIndex = planIndex;
+                return true;
+            }
+        }
+        return false;
+    }
+
+    void RenderGraph::addPlan( const vector<uint8>& listPassState, const unordered_map<hashed_string, hashed_string>& mapForward )
+    {
+        if ( _listPlan.empty() )
+            return;
+        if ( _listPlan.size() >= kMaxPlanCount )
+            _listPlan.resize( 1 );
+        Plan plan;
+        plan._listPassState = listPassState;
+        // 이 레벨에서 이미 놓은 패스들의 접근 — 같은 자원을 다르게 읽거나 쓰는 패스는 다음 작은 레벨로 간다.
+        vector<unordered_map<hashed_string, RenderGraphAccess>> listSubLevelAccess;
+        for ( const vector<PlanPass>& listLevelPass : _listPlan[0]._listLevel )
+        {
+            const size_t firstSubLevel = plan._listLevel.size();
+            listSubLevelAccess.clear();
+            for ( const PlanPass& source : listLevelPass )
+            {
+                const uint32 payload = _listNode[source._nodeIndex]._payload;
+                if ( payload < listPassState.size() && listPassState[payload] != 0 )
+                    continue;
+                PlanPass pass;
+                pass._nodeIndex = source._nodeIndex;
+                pass._listAccess.reserve( source._listAccess.size() );
+                for ( const RenderGraphResourceAccess& access : source._listAccess )
+                {
+                    const bool bTextureRead = access._viewable == RenderGraphViewableKind::Texture && isRenderGraphWriteAccess( access._access ) == false;
+                    if ( bTextureRead == false || mapForward.find( access._resource ) == mapForward.end() )
+                        pass._listAccess.push_back( access );
+                }
+                // 가리키는 이름으로 바뀐 읽기는 그 뒤에 — 같은 이름의 선언(쓰기 · 같은 읽기)이 이미 있으면 그것 하나다.
+                for ( const RenderGraphResourceAccess& access : source._listAccess )
+                {
+                    const bool bTextureRead = access._viewable == RenderGraphViewableKind::Texture && isRenderGraphWriteAccess( access._access ) == false;
+                    const auto forwardIt    = mapForward.find( access._resource );
+                    if ( bTextureRead == false || forwardIt == mapForward.end() || forwardIt->second.empty() )
+                        continue;
+                    const bool bDeclared = VectorUtil::containsIf( pass._listAccess, [&forwardIt]( const RenderGraphResourceAccess& declared )
+                    { return declared._resource == forwardIt->second; } );
+                    if ( bDeclared == false )
+                        pass._listAccess.push_back( RenderGraphResourceAccess{ forwardIt->second, access._access, access._viewable } );
+                }
+                size_t subLevel = 0;
+                for ( ; subLevel < listSubLevelAccess.size(); ++subLevel )
+                {
+                    const unordered_map<hashed_string, RenderGraphAccess>& mapAccess = listSubLevelAccess[subLevel];
+                    const bool                                             bConflict = VectorUtil::containsIf( pass._listAccess, [&mapAccess]( const RenderGraphResourceAccess& access )
+                                                                {
+                        const auto it = mapAccess.find( access._resource );
+                        return it != mapAccess.end() && ( it->second != access._access || isRenderGraphWriteAccess( access._access ) );
+                    } );
+                    if ( bConflict == false )
+                        break;
+                }
+                if ( subLevel == listSubLevelAccess.size() )
+                {
+                    listSubLevelAccess.emplace_back();
+                    plan._listLevel.emplace_back();
+                }
+                for ( const RenderGraphResourceAccess& access : pass._listAccess )
+                {
+                    listSubLevelAccess[subLevel][access._resource] = access._access;
+                }
+                plan._listLevel[firstSubLevel + subLevel].push_back( std::move( pass ) );
+            }
+        }
+        _activePlanIndex = _listPlan.size();
+        _listPlan.push_back( std::move( plan ) );
+    }
+
+    void RenderGraph::collectReturnBarriers( RenderGraphExecutionContext& context )
+    {
+        _listLevelBarrier.clear();
+        _mapLevelBarrierIndex.clear();
+        for ( const RenderGraphResourceAccess& imported : _listImportedResource )
+        {
+            const optional<RenderGraphAccess> lastAccess = context.findAccess( imported._resource );
+            if ( lastAccess.has_value() && *lastAccess != imported._access )
+                requestBarrier( context, imported, RHIQueueKind::Graphics );
         }
     }
 
@@ -445,6 +645,8 @@ namespace sw
         _listQueueStep.clear();
         _listFinalJoinBatch.clear();
         _asyncBatchCount = 0;
+        _listPlan.clear();
+        _activePlanIndex = 0;
 
         if ( _listNode.empty() )
             return false;
@@ -487,6 +689,19 @@ namespace sw
         computeResourceLifetimes();
         computeQueuePlan( graph._adjacency );
 
+        Plan fullPlan;
+        fullPlan._listLevel.reserve( _listCompiledLevel.size() );
+        for ( const vector<hashed_string>& listLevelPass : _listCompiledLevel )
+        {
+            vector<PlanPass>& listPlanPass = fullPlan._listLevel.emplace_back();
+            listPlanPass.reserve( listLevelPass.size() );
+            for ( const hashed_string& passName : listLevelPass )
+            {
+                const size_t nodeIndex = _mapNameToIndex[passName];
+                listPlanPass.push_back( PlanPass{ nodeIndex, _listNode[nodeIndex]._listAccess } );
+            }
+        }
+        _listPlan.push_back( std::move( fullPlan ) );
         return true;
     }
 
@@ -602,16 +817,14 @@ namespace sw
         // 그래픽스 리스트를 닫아 넘기고 다시 연다 — 포크의 신호와 조인의 대기는 큐에 넘긴 일에만 걸리므로 그 자리까지의 기록을 먼저 넘긴다.
         const auto handOffGraphics = [&device, &graphicsList]()
         {
-            graphicsList.endCommandList();
-            device.executeCommandList( &graphicsList );
+            device.executeCommandList( graphicsList.closeCommandList() );
             graphicsList.beginCommandList();
         };
         const auto joinBatches = [&]( const vector<uint32>& listBatch )
         {
             if ( listBatch.empty() )
                 return;
-            graphicsList.endCommandList();
-            device.executeCommandList( &graphicsList );
+            device.executeCommandList( graphicsList.closeCommandList() );
             for ( uint32 batch : listBatch )
             {
                 device.waitForAsyncCompute( listBatchPoint[batch] );
@@ -637,19 +850,24 @@ namespace sw
             IRHICommandList* const pList = step._queue == RHIQueueKind::Graphics ? &graphicsList : pAsyncList;
             _listLevelBarrier.clear();
             _mapLevelBarrierIndex.clear();
-            appendPassBarriers( context, node );
+            appendPassBarriers( context, node, node._listAccess );
             issueBarriers( pList );
             if ( node._execute.isBound() )
-                recordPassBody( node, pList );
+            {
+                recordPassBody( node, node._listAccess, pList );
+                applyExitAccesses( context, node, node._listAccess );
+            }
 
             if ( step._queue == RHIQueueKind::AsyncCompute && step._bEndsBatch != 0 )
             {
-                pAsyncList->endCommandList();
+                RHIClosedCommandList closedBatch = pAsyncList->closeCommandList();
                 handOffGraphics(); // 포크 지점 — 이 묶음은 여기까지의 그래픽스 일 뒤에 시작한다
-                listBatchPoint[step._batch] = device.submitAsyncCompute( pAsyncList );
+                listBatchPoint[step._batch] = device.submitAsyncCompute( std::move( closedBatch ) );
             }
         }
         joinBatches( _listFinalJoinBatch );
+        collectReturnBarriers( context );
+        issueBarriers( &graphicsList );
         return true;
     }
 
@@ -666,47 +884,44 @@ namespace sw
                 return false;
         }
 
-        for ( const hashed_string& passName : _listCompiledExecutionOrder )
+        for ( const vector<PlanPass>& listLevelPass : _listPlan[_activePlanIndex]._listLevel )
         {
-            unordered_map<hashed_string, size_t>::iterator indexIt = _mapNameToIndex.find( passName );
-            if ( indexIt == _mapNameToIndex.end() )
+            for ( const PlanPass& pass : listLevelPass )
             {
-                SW_LOG_ERROR_ID( "RenderGraph.ExecuteUnknownPassOrder", "execute: unknown pass in order: %#", passName.c_str() );
-                return false;
+                RenderGraphNode& node = _listNode[pass._nodeIndex];
+                // 직렬 경로도 **같은 추론**을 쓴다. 상태만 기록하고 배리어를 내지 않으면 전이가 패스 콜백 안 여기저기에서
+                // 즉흥적으로 일어난다. 경로가 둘이면 한쪽에만 수정이 들어간다.
+                // 배리어는 이 패스가 기록하는 것과 **같은 리스트**에 들어가야 한다(레벨처럼 앞으로 몰 수 없다).
+                _listLevelBarrier.clear();
+                _mapLevelBarrierIndex.clear();
+                appendPassBarriers( context, node, pass._listAccess );
+                issueBarriers( pCmdList );
+
+                // 패스 문맥은 병렬 · 큐 실행과 같은 함수가 만든다 — 직렬만 리스트를 빠뜨리던 사본(`uavBarrier` · `transition` 이 조용히 무동작)을 두지 않는다.
+                if ( node._execute.isBound() )
+                {
+                    recordPassBody( node, pass._listAccess, pCmdList );
+                    applyExitAccesses( context, node, pass._listAccess );
+                }
             }
-
-            RenderGraphNode& node = _listNode[indexIt->second];
-            // 직렬 경로도 **같은 추론**을 쓴다. 상태만 기록하고 배리어를 내지 않으면 전이가 패스 콜백 안 여기저기에서
-            // 즉흥적으로 일어난다. 경로가 둘이면 한쪽에만 수정이 들어간다.
-            // 배리어는 이 패스가 기록하는 것과 **같은 리스트**에 들어가야 한다(레벨처럼 앞으로 몰 수 없다).
-            _listLevelBarrier.clear();
-            _mapLevelBarrierIndex.clear();
-            appendPassBarriers( context, node );
-            issueBarriers( pCmdList );
-
-            // 패스 문맥은 병렬 · 큐 실행과 같은 함수가 만든다 — 직렬만 리스트를 빠뜨리던 사본(`uavBarrier` · `transition` 이 조용히 무동작)을 두지 않는다.
-            if ( node._execute.isBound() )
-                recordPassBody( node, pCmdList );
         }
-
+        collectReturnBarriers( context );
+        issueBarriers( pCmdList );
         return true;
     }
 
-    bool RenderGraph::executeParallel( RenderGraphExecutionContext& context, TaskManager* pTaskManager, IRHIDevice* pDevice )
+    bool RenderGraph::executeParallel( RenderGraphExecutionContext& context, TaskManager& taskManager, IRHIDevice& device )
     {
         SW_PROFILE_SCOPE( "RT.Graph.executeParallel" );
 
         if ( _listCompiledExecutionOrder.empty() && compile() == false )
             return false;
 
-        const bool bSequentialExecution = pTaskManager == nullptr || pDevice == nullptr || _listCompiledExecutionOrder.size() <= 1 ||
-                                          pDevice->getCapabilities()._bParallelCommandRecording == SW_FALSE;
-        if ( bSequentialExecution )
-            return execute( context );
-
         beginExecution( context );
-        if ( prepareParallelCommandLists( pDevice ) == false )
+        if ( prepareParallelCommandLists( device ) == false )
             return false;
+        // 병렬 기록을 못 하는 디바이스는 모든 레벨을 아래 이어 기록하는 길로 낸다 — 리스트 없는 `execute` 로 빠지면 패스가 리스트를 받지 못해 조용히 그려지지 않는다.
+        const bool bParallelRecording = device.getCapabilities()._bParallelCommandRecording != SW_FALSE;
 
         // 의존성 레벨 단위로 처리한다. 같은 레벨의 패스들만 동시에 병렬 기록하고,
         // 레벨 경계마다 태스크를 기다린 뒤 그 레벨의 커맨드 리스트를 먼저 GPU 큐에 제출한다.
@@ -722,33 +937,26 @@ namespace sw
         // 14 패스에서 그래프 400 µs 중 300 µs. 같은 리스트 안의 기록 순서와 레벨마다의 배리어가 레벨 순서를 지키므로 GPU 순서는 그대로다. 패스가 둘 이상인
         // 레벨만 병렬로 기록하고, 그 앞에서 이어 기록하던 리스트를 먼저 제출한다.
         IRHICommandList* pSerialList      = nullptr;
-        auto             submitSerialList = [pDevice, &pSerialList]()
+        auto             submitSerialList = [&device, &pSerialList]()
         {
             if ( pSerialList == nullptr )
                 return;
-            pSerialList->endCommandList();
-            pDevice->executeCommandList( pSerialList );
+            device.executeCommandList( pSerialList->closeCommandList() );
             pSerialList = nullptr;
         };
-        // 레벨 폭 계측(docs/NEXT.md 측정 렌더 그래프 폭): 병렬로 기록한 레벨 · 패스 수, 이어 기록한 패스 수, 가장 넓은 레벨. 병렬 레벨의 시간은
-        // `RT.Graph.parallelLevel`(기록 · 합류 · 제출)이다. 폭이 2 근처에 머물고 그 시간이 패스 본문 합보다 크면 합류 비용이 이득을 지운다.
+        // 레벨 폭 계측: 병렬로 기록한 레벨 · 패스 수, 이어 기록한 패스 수, 가장 넓은 레벨. 병렬 레벨의 시간은 `RT.Graph.parallelLevel`(기록 · 합류 · 제출)이다.
         size_t parallelLevelCount = 0;
         size_t parallelPassCount  = 0;
         size_t serialPassCount    = 0;
         size_t maxLevelWidth      = 0;
-        for ( const vector<hashed_string>& level : _listCompiledLevel )
+        for ( const vector<PlanPass>& level : _listPlan[_activePlanIndex]._listLevel )
         {
-            if ( collectLevelPasses( context, level ) == false )
-            {
-                submitSerialList(); // 연 리스트를 열린 채로 두지 않는다
-                return false;
-            }
+            collectLevelPasses( context, level );
             const vector<ParallelPassEntry>& listPassEntry = _pParallelScratch->_listPassEntry;
             if ( listPassEntry.empty() )
                 continue;
-            maxLevelWidth                 = MathUtil::max( maxLevelWidth, listPassEntry.size() );
-            const size_t parallelMinWidth = static_cast<size_t>( MathUtil::max( context._parallelMinWidth, 2u ) ); // 레벨마다 고정 비용이 좁은 레벨의 이득을 지우는지 재는 스위치(`-gv_renderGraphParallelMinWidth`)
-            const bool   bRecordSerially  = listPassEntry.size() < parallelMinWidth;
+            maxLevelWidth              = MathUtil::max( maxLevelWidth, listPassEntry.size() );
+            const bool bRecordSerially = bParallelRecording == false || listPassEntry.size() < kMinParallelWidth;
             if ( bRecordSerially )
             {
                 serialPassCount += listPassEntry.size();
@@ -761,7 +969,8 @@ namespace sw
                 issueBarriers( pSerialList );
                 for ( const ParallelPassEntry& entry : listPassEntry )
                 {
-                    recordPassBody( *entry._pNode, pSerialList );
+                    recordPassBody( *entry._pNode, *entry._pListAccess, pSerialList );
+                    applyExitAccesses( context, *entry._pNode, *entry._pListAccess );
                 }
                 continue;
             }
@@ -769,7 +978,21 @@ namespace sw
             ++parallelLevelCount;
             parallelPassCount += listPassEntry.size();
             SW_PROFILE_SCOPE( "RT.Graph.parallelLevel" );
-            recordAndSubmitParallelLevel( pTaskManager, pDevice );
+            recordAndSubmitParallelLevel( taskManager, device );
+            for ( const ParallelPassEntry& entry : listPassEntry )
+            {
+                applyExitAccesses( context, *entry._pNode, *entry._pListAccess );
+            }
+        }
+        collectReturnBarriers( context );
+        if ( _listLevelBarrier.empty() == false )
+        {
+            if ( pSerialList == nullptr )
+            {
+                pSerialList = _pParallelScratch->_pReturnCmdList.get();
+                pSerialList->beginCommandList();
+            }
+            issueBarriers( pSerialList );
         }
         submitSerialList();
         SW_PROFILE_COUNT( "RT.Graph.parallelLevels", parallelLevelCount );
@@ -779,16 +1002,16 @@ namespace sw
         return true;
     }
 
-    bool RenderGraph::prepareParallelCommandLists( IRHIDevice* pDevice )
+    bool RenderGraph::prepareParallelCommandLists( IRHIDevice& device )
     {
         // 엔트리 목록과 노드별 커맨드 리스트는 프레임을 넘어 다시 쓴다(`ParallelScratch`, 완전한 타입은 이 파일에만 있다).
         // 패스마다 프레임마다 새로 만들면 래퍼 하나에 백엔드 할당까지 프레임당 패스 수의 몇 배가 된다.
         if ( _pParallelScratch == nullptr )
             _pParallelScratch = make_unique<ParallelScratch>();
-        if ( _pParallelScratch->_pCmdListDevice != pDevice )
+        if ( _pParallelScratch->_pCmdListDevice != &device )
         {
             releaseCommandLists(); // 지난 디바이스의 리스트다. 새 디바이스에서 다시 만든다.
-            _pParallelScratch->_pCmdListDevice = pDevice;
+            _pParallelScratch->_pCmdListDevice = &device;
         }
         ParallelScratch& scratch = *_pParallelScratch;
         if ( scratch._listNodeCmdList.size() < _listNode.size() )
@@ -797,39 +1020,41 @@ namespace sw
         // 모든 레벨의 커맨드 리스트를 **기록과 제출 전에** 마련한다. 만들 수 없으면 아무것도 내지 않고 이 프레임을 실패로 돌려준다.
         // 주의: 레벨을 돌며 만들다 실패했을 때 직렬 `execute` 로 넘어가면, 앞 레벨이 이미 기록과 제출을 마친 뒤라 그 패스들이 **두 번** 돌고
         // 직렬 경로는 커맨드 리스트 없이 기록한다(호출하는 쪽 `FrameRenderer` 가 병렬로 오기 전에 프레임 리스트를 닫아 제출했다).
-        for ( const vector<hashed_string>& level : _listCompiledLevel )
+        for ( const vector<PlanPass>& level : _listPlan[_activePlanIndex]._listLevel )
         {
-            for ( const hashed_string& passName : level )
+            for ( const PlanPass& pass : level )
             {
-                const auto indexIt = _mapNameToIndex.find( passName );
-                if ( indexIt == _mapNameToIndex.end() )
-                {
-                    SW_LOG_ERROR_ID( "RenderGraph.ExecuteParallelUnknownPassLevel", "executeParallel: unknown pass in level: %#", passName.c_str() );
-                    return false;
-                }
-                const RenderGraphNode& node = _listNode[indexIt->second];
+                const RenderGraphNode& node = _listNode[pass._nodeIndex];
                 if ( node._execute.isBound() == false )
                     continue;
 
-                unique_ptr<IRHICommandList>& passCmd = scratch._listNodeCmdList[indexIt->second];
+                unique_ptr<IRHICommandList>& passCmd = scratch._listNodeCmdList[pass._nodeIndex];
                 if ( passCmd == nullptr )
-                    passCmd = pDevice->createCommandList();
+                    passCmd = device.createCommandList();
                 if ( passCmd == nullptr )
                 {
                     // 디바이스가 죽으면 매 프레임 여기로 온다. 같은 오류를 끝없이 되풀이하지 않는다.
                     // 프로세스에 한 번이다. 그래프가 둘 이상이고 서로 다른 스레드에서 돌 수 있어 `exchange` 로 한 번만 남긴다.
                     {
                         SW_LOG_ERROR_ONCE_ID( "Renderer.GraphCommandListUnavailable", "executeParallel: could not create a command list for pass '%#' - nothing was recorded or submitted this frame",
-                                              passName.c_str() );
+                                              node._name.c_str() );
                     }
                     return false;
                 }
             }
         }
+        // 되돌릴 자원이 있을 수 있으면 그 전이를 담을 리스트도 미리 만든다(마지막 레벨이 병렬이면 이어 기록하던 리스트가 없다).
+        if ( _listImportedResource.empty() == false && scratch._pReturnCmdList == nullptr )
+            scratch._pReturnCmdList = device.createCommandList();
+        if ( _listImportedResource.empty() == false && scratch._pReturnCmdList == nullptr )
+        {
+            SW_LOG_ERROR_ONCE_ID( "Renderer.GraphReturnListUnavailable", "executeParallel: could not create a command list for the final transitions - nothing was recorded or submitted this frame" );
+            return false;
+        }
         return true;
     }
 
-    bool RenderGraph::collectLevelPasses( RenderGraphExecutionContext& context, const vector<hashed_string>& listLevelPass )
+    void RenderGraph::collectLevelPasses( RenderGraphExecutionContext& context, const vector<PlanPass>& listLevelPass )
     {
         ParallelScratch&           scratch       = *_pParallelScratch;
         vector<ParallelPassEntry>& listPassEntry = scratch._listPassEntry;
@@ -838,28 +1063,20 @@ namespace sw
         _listLevelBarrier.clear();
         _mapLevelBarrierIndex.clear();
 
-        for ( const hashed_string& passName : listLevelPass )
+        for ( const PlanPass& pass : listLevelPass )
         {
-            const auto indexIt = _mapNameToIndex.find( passName );
-            if ( indexIt == _mapNameToIndex.end() )
-            {
-                SW_LOG_ERROR_ID( "RenderGraph.ExecuteParallelUnknownPassLevel", "executeParallel: unknown pass in level: %#", passName.c_str() );
-                return false;
-            }
-
-            RenderGraphNode& node = _listNode[indexIt->second];
-            appendPassBarriers( context, node );
+            RenderGraphNode& node = _listNode[pass._nodeIndex];
+            appendPassBarriers( context, node, pass._listAccess );
 
             if ( node._execute.isBound() == false )
                 continue;
 
             // 리스트는 `prepareParallelCommandLists` 가 모두 마련했다.
-            listPassEntry.push_back( ParallelPassEntry{ &node, scratch._listNodeCmdList[indexIt->second].get() } );
+            listPassEntry.push_back( ParallelPassEntry{ &node, scratch._listNodeCmdList[pass._nodeIndex].get(), &pass._listAccess } );
         }
-        return true;
     }
 
-    void RenderGraph::recordAndSubmitParallelLevel( TaskManager* pTaskManager, IRHIDevice* pDevice )
+    void RenderGraph::recordAndSubmitParallelLevel( TaskManager& taskManager, IRHIDevice& device )
     {
         vector<ParallelPassEntry>& listPassEntry = _pParallelScratch->_listPassEntry;
 
@@ -878,16 +1095,16 @@ namespace sw
 
         // 이 구간 동안 bindless 레지스트리는 불변이어야 한다. 기록 중 등록과 해제가 일어나면
         // 읽는 쪽이 dangling 을 잡는다. 디바이스가 규칙 위반을 감시할 수 있게 알려 준다.
-        pDevice->setParallelRecording( true );
+        device.setParallelRecording( true );
 
         // `runParallel` 로 바꾸지 않는다 — 그 티켓은 Normal 큐로 가는데 렌더 스레드가 곧바로 기다리는 기록은 High 레인이어야 한다(아래). 스테이지는 이미 TaskManager 의 것이다.
-        TaskStageHandle stage = pTaskManager->createStage( "RenderGraphLevel" );
+        TaskStageHandle stage = taskManager.createStage( "RenderGraphLevel" );
         BLOCK( "Submit pass record tasks" )
         {
-            TaskManager::SubmitBatch batch{ *pTaskManager }; // 레벨의 패스를 모두 넣은 뒤 한 번만 깨운다. 패스마다 깨우면 그 시그널이 기록 시간의 대부분이었다.
+            TaskManager::SubmitBatch batch{ taskManager }; // 레벨의 패스를 모두 넣은 뒤 한 번만 깨운다. 패스마다 깨우면 그 시그널이 기록 시간의 대부분이었다.
             for ( ParallelPassEntry& entry : listPassEntry )
             {
-                TaskHandle handle = pTaskManager->emplaceTask( "RenderPassRecord", SW_DELEGATE_METHOD( TaskDelegate, &ParallelPassEntry::record, &entry ) );
+                TaskHandle handle = taskManager.emplaceTask( "RenderPassRecord", SW_DELEGATE_METHOD( TaskDelegate, &ParallelPassEntry::record, &entry ) );
                 if ( handle.isValid() )
                 {
                     // 렌더 스레드는 이 스테이지를 곧바로 기다린다. 게임 스레드의 대량 잡(트랜스폼 플러시, 씬 수집)
@@ -905,13 +1122,12 @@ namespace sw
             }
         }
 
-        pTaskManager->waitStage( stage );
-        pDevice->setParallelRecording( false );
+        taskManager.waitStage( stage );
+        device.setParallelRecording( false );
 
         for ( ParallelPassEntry& entry : listPassEntry )
         {
-            if ( entry._pPassCmdList != nullptr )
-                pDevice->executeCommandList( entry._pPassCmdList );
+            device.executeCommandList( std::move( entry._closed ) ); // 기록하지 못한 패스는 빈 값이다
         }
     }
 
@@ -1001,11 +1217,11 @@ namespace sw
         return string( builder.view() );
     }
 
-    void RenderGraph::appendPassBarriers( RenderGraphExecutionContext& context, const RenderGraphNode& node )
+    void RenderGraph::appendPassBarriers( RenderGraphExecutionContext& context, const RenderGraphNode& node, const vector<RenderGraphResourceAccess>& listAccess )
     {
         // 비동기 컴퓨트를 받지 않는 그래프는 그 패스를 그래픽스로 계획한다(`computeQueuePlan`) — 전이도 그 큐의 것이다.
         const RHIQueueKind queue = _bAsyncComputeSupported ? node._queue : RHIQueueKind::Graphics;
-        for ( const RenderGraphResourceAccess& access : node._listAccess )
+        for ( const RenderGraphResourceAccess& access : listAccess )
         {
             requestBarrier( context, access, queue );
         }
@@ -1166,5 +1382,7 @@ namespace sw
         _listQueueStep.clear();
         _listFinalJoinBatch.clear();
         _asyncBatchCount = 0;
+        _listPlan.clear();
+        _activePlanIndex = 0;
     }
 } // namespace sw

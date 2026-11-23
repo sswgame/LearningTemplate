@@ -31,6 +31,12 @@ namespace sw
             static const hashed_string kName( "AutoExposureTarget" );
             return RenderGraphTextureUAV{ kName };
         }
+        /** @brief 뷰의 TAA 히스토리입니다 — TAA 패스가 셰이더 읽기로 읽고, 끝에 출력을 복사해 다음 프레임의 셰이더 읽기로 남긴다(복사는 `blitTexture` 가 상태를 옮긴다). */
+        static RenderGraphTextureCopyDest taaHistory()
+        {
+            static const hashed_string kName( "TAAHistory" );
+            return RenderGraphTextureCopyDest{ kName };
+        }
         /** @brief FSR 1 의 EASU 출력(중간 RT)입니다 — Present 가 그리고 같은 패스의 RCAS 가 읽는다. */
         static RenderGraphRenderTarget upscaleIntermediate()
         {
@@ -89,6 +95,18 @@ namespace sw
         static RenderGraphBufferUAV cullLODState()
         {
             static const hashed_string kName( "CullLODState" );
+            return RenderGraphBufferUAV{ kName };
+        }
+        /** @brief 뷰의 디퍼드 조명 타일 간접 인자입니다 — 분류를 돌릴 수 있는 뷰만 등록한다(조명 패스가 컴퓨트로 쓰고 같은 패스가 간접 그리기로 읽는다). */
+        static RenderGraphBufferUAV deferredTileArgs()
+        {
+            static const hashed_string kName( "DeferredTileArgs" );
+            return RenderGraphBufferUAV{ kName };
+        }
+        /** @brief 뷰의 디퍼드 조명 타일 목록입니다(타일 그리기의 정점 셰이더가 읽는다). */
+        static RenderGraphBufferUAV deferredTileList()
+        {
+            static const hashed_string kName( "DeferredTileList" );
             return RenderGraphBufferUAV{ kName };
         }
         /** @brief 2 단계 가림의 차례 표시입니다(프레임 그래프 `OccludedOrders`). */

@@ -22,7 +22,7 @@ namespace sw
     {
     public:
         /** @brief 메시가 만들 때 부릅니다. @p owner 는 이 객체보다 오래 산다(메시가 소유한다). */
-        explicit MeshRenderData( const Mesh& owner ) noexcept
+        explicit MeshRenderData( Mesh& owner ) noexcept
             : _owner{ owner }
         {
         }
@@ -37,8 +37,13 @@ namespace sw
         void releaseRHI( IRHIDevice* pDevice ) override;
         /** @brief (RHIRenderResource) 디바이스가 이미 없을 때 부릅니다. 핸들만 버립니다. */
         void clearRHI( IRHIDevice* pDevice ) override;
-        /** @brief 메시의 CPU 정점을 디바이스에 업로드(또는 재업로드)합니다. 같은 디바이스면 여러 번 불러도 결과가 같습니다. */
+        /**
+         * @brief 메시의 CPU 정점을 디바이스에 업로드(또는 재업로드)합니다. 같은 디바이스면 여러 번 불러도 결과가 같습니다.
+         * @details 올린 뒤 `MeshCPUAccess::ReleaseAfterUpload` 메시의 CPU 정점을 놓는다. 놓은 뒤 다시 올려야 하면(장치 교체) 원본 파일을 다시 읽는다.
+         */
         [[nodiscard]] bool initRHI( IRHIDevice* pDevice ) override;
+        /** @brief (RHIRenderResource) 장치 교체의 워커 준비 — 버퍼가 없고 CPU 정점을 놓은 메시의 원본 파일을 다시 읽습니다. */
+        void prepareRHI() override;
 
         /** @brief 정점 · 인덱스 버퍼를 실제로 해제합니다. 살아 있는 디바이스면 반환하고, 아니면 버립니다. 메시 내용이 바뀔 때 메시가 부릅니다. */
         void releaseBuffers();
@@ -57,7 +62,7 @@ namespace sw
         bool isRHIValid() const { return _vertex.isResident() && _index.isResident(); }
 
     private:
-        const Mesh& _owner;
+        Mesh& _owner;
         /** @brief 정점 · 인덱스 버퍼입니다. 어느 디바이스의 것인지를 함께 가지고 있습니다(RHIDeviceBuffer). 둘은 함께 만들고 함께 놓는다. */
         RHIDeviceBuffer _vertex;
         RHIDeviceBuffer _index;

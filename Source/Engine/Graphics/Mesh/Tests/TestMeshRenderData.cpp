@@ -15,7 +15,7 @@
 SW_TEST_CASE( MeshRenderDataTest, ProxyLivesAndDiesWithTheMesh )
 {
     const uint32             before = sw::RHIRenderResource::getRegisteredCount();
-    sw::shared_ptr<sw::Mesh> mesh   = sw::Mesh::create();
+    sw::shared_ptr<sw::Mesh> mesh   = sw::Mesh::create( sw::MeshCPUAccess::Keep );
     SW_EXPECT_EQUAL( before + 1u, sw::RHIRenderResource::getRegisteredCount() );
     sw::MeshRenderData* pRenderData = &mesh->getRenderData();
     SW_EXPECT_FALSE( pRenderData->isRHIValid() );

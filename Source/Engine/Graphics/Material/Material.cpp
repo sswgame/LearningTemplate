@@ -37,7 +37,6 @@
 
 namespace sw
 {
-    static_assert( std::is_same_v<MaterialTextureIndex, RHIDescriptorIndex>, "MaterialTextureIndex must be the RHI bindless index type (MaterialTypes.h)" );
 
     MaterialProperty::MaterialProperty() noexcept
         : _type{ MaterialPropertyKind::Unknown }
@@ -184,7 +183,7 @@ namespace sw
         const bool    bNativeBindless = pRHI->supportsNativeBindlessSampling();
         TextureCache& textures        = engine::getSubsystem<AssetManager>().getAssetCache<TextureCache>();
         uint32        nextOrdinal     = 0;
-        auto          recordSlot      = [this]( uint32 slot, const string& name, RHIDescriptorIndex srv )
+        auto          recordSlot      = [this]( uint32 slot, const string& name, RHITextureSRVIndex srv )
         {
             if ( _listMaterialTextureSRV.size() <= slot )
             {
@@ -219,7 +218,7 @@ namespace sw
             // 기본 텍스처를 그린다(초기화하는 스레드가 디스크를 기다리지 않는다).
             TextureHandle      load = textures.request( prop._assetPath, AssetLoadStart::Async, TextureStreamingGroup::Streamable );
             string             borrowedPath;
-            RHIDescriptorIndex srv = load.isValid() ? load.getOperation()->getStableSRV() : kInvalidDescriptorIndex;
+            RHITextureSRVIndex srv = load.isValid() ? load.getOperation()->getStableSRV() : kInvalidDescriptorIndex;
             if ( srv == kInvalidDescriptorIndex )
             {
                 // 시작 전에 실패했거나(경로 · 디바이스 없음) 번호를 예약하지 못했다 — 마젠타 체커를 빌린다. 흰색이면 화면에서 빠진 것을 알 수 없다(Shipping 도 같다).
@@ -241,7 +240,7 @@ namespace sw
             _listTextureLoad.push_back( std::move( load ) );
             _listBorrowedTexturePath.push_back( std::move( borrowedPath ) );
             recordSlot( ordinal, prop._name, srv );
-            setTextureParameter( hashed_string( prop._name.c_str() ), bNativeBindless ? srv : ordinal );
+            setTextureParameter( hashed_string( prop._name.c_str() ), bNativeBindless ? srv.getValue() : ordinal );
         }
         return true;
     }
@@ -763,7 +762,7 @@ namespace sw
         return setParameter( name, prop->_defaultValue );
     }
 
-    bool Material::packTextureIntoBuffer( const MaterialParameterHandle& handle, RHIDescriptorIndex descIdx, vector<uint8>& inoutBuffer ) const
+    bool Material::packTextureIntoBuffer( const MaterialParameterHandle& handle, uint32 shaderTextureIndex, vector<uint8>& inoutBuffer ) const
     {
         const MaterialProperty* pProp = findProperty( handle );
         if ( pProp == nullptr || MaterialPacking::isNonBufferType( pProp->_type ) )
@@ -773,8 +772,7 @@ namespace sw
         if ( inoutBuffer.size() < pProp->_offset + packSize )
             inoutBuffer.resize( pProp->_offset + packSize, 0 );
 
-        const uint32 uIdx = static_cast<uint32>( descIdx );
-        Memory::copy( inoutBuffer.data() + pProp->_offset, &uIdx, sizeof( uIdx ) );
+        Memory::copy( inoutBuffer.data() + pProp->_offset, &shaderTextureIndex, sizeof( shaderTextureIndex ) );
         return true;
     }
 
@@ -819,15 +817,15 @@ namespace sw
         return true;
     }
 
-    bool Material::setTextureParameter( hashed_string name, RHIDescriptorIndex descIdx )
+    bool Material::setTextureParameter( hashed_string name, uint32 shaderTextureIndex )
     {
         MaterialProperty* pProp = findProperty( name );
         if ( pProp == nullptr )
             return false;
         if ( MaterialPacking::isTextureType( pProp->_type ) == false && pProp->_shaderType != MaterialPropertyKind::Uint )
             return false;
-        pProp->_textureIndex = descIdx;
-        pProp->_value        = to_string( descIdx );
+        pProp->_textureIndex = shaderTextureIndex;
+        pProp->_value        = to_string( shaderTextureIndex );
         if ( MaterialPacking::packPropertyIntoBuffer( *pProp, _data._bytes ) == false )
             return false;
         _bufferGeneration.bump( this );

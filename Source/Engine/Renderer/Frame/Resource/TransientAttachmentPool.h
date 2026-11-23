@@ -20,6 +20,8 @@ namespace sw
 {
     class IRHIDevice;
 
+    class TransientTextureLeases;
+
     /**
      * @class TransientAttachmentPool
      * @brief 첨부 텍스처와 그 bindless SRV 의 소유자입니다. 한 크기로 만들고, 이름으로 찾고, 한 번에 놓습니다.
@@ -34,18 +36,19 @@ namespace sw
          */
         struct Attachment
         {
-            RHITextureHandle      _texture{ 0 };
-            RHIDescriptorIndex    _srv{ kInvalidDescriptorIndex };
-            RHIDescriptorIndex    _uav{ kInvalidDescriptorIndex }; ///< RW 텍스처 번호입니다. 컴퓨트 패스가 쓰는 첨부만 있습니다
-            uint32                _width{ 0 };                     ///< 이 첨부의 실제 크기(풀 크기를 나눗수로 나눈 값, 올림)
-            uint32                _height{ 0 };
-            RHIFormat             _format{ RHIFormat::Unknown };           ///< 만들 때의 포맷(파이프라인 XML 의 선언)
-            RHIAttachmentOps      _ops{};                                  ///< 초기값 · 로드 · 저장 동작 — 파이프라인 XML 의 선언
-            uint32                _idleFrames{ 0 };                        ///< 쓰는 패스가 이어서 돌지 않은 프레임 수(`releaseIfIdle`)
-            hashed_string         _aliasOwner{};                           ///< 텍스처를 빌린 별칭이면 주인 첨부 이름(`allocateAlias`). 비면 자기 텍스처다
-            uint8                 _bPlaced{ 0 };                           ///< 텍스처가 풀의 힙에 겹쳐 놓였다(`allocatePlaced`) — 쓰기 전이 앞에 앨리어싱 배리어가 든다
-            uint8                 _bViewSized{ 0 };                        ///< 풀 크기(나눗수)를 따르는 첨부다 — 뷰 사각형 안에 그린다. 그림자 맵처럼 크기를 따로 준 첨부(`allocateSized`)는 0
-            RenderResolutionSpace _space{ RenderResolutionSpace::Render }; ///< 크기를 따르는 공간(렌더 · 출력 — 파이프라인 XML 의 선언). 크기를 따로 준 첨부는 렌더
+            RHITextureHandle        _texture{ 0 };
+            RHITextureSRVIndex      _srv{ kInvalidDescriptorIndex };
+            RHIUnorderedAccessIndex _uav{ kInvalidDescriptorIndex }; ///< RW 텍스처 번호입니다. 컴퓨트 패스가 쓰는 첨부만 있습니다
+            uint32                  _width{ 0 };                     ///< 이 첨부의 실제 크기(풀 크기를 나눗수로 나눈 값, 올림)
+            uint32                  _height{ 0 };
+            RHIFormat               _format{ RHIFormat::Unknown };                   ///< 만들 때의 포맷(파이프라인 XML 의 선언)
+            RHIAttachmentOps        _ops{};                                          ///< 초기값 · 로드 · 저장 동작 — 파이프라인 XML 의 선언
+            uint32                  _idleFrames{ 0 };                                ///< 쓰는 패스가 이어서 돌지 않은 프레임 수(`releaseIfIdle`)
+            uint32                  _leaseIndex{ constant::invalid_index::kUint32 }; ///< 텍스처를 빌렸으면 빌린 번호(`TransientTextureLeases`). 무효면 자기 텍스처다
+            hashed_string           _aliasOwner{};                                   ///< 텍스처를 빌린 별칭이면 주인 첨부 이름(`allocateAlias`). 비면 자기 텍스처다
+            uint8                   _bPlaced{ 0 };                                   ///< 텍스처가 풀의 힙에 겹쳐 놓였다(`allocatePlaced`) — 쓰기 전이 앞에 앨리어싱 배리어가 든다
+            uint8                   _bViewSized{ 0 };                                ///< 풀 크기(나눗수)를 따르는 첨부다 — 뷰 사각형 안에 그린다. 그림자 맵처럼 크기를 따로 준 첨부(`allocateSized`)는 0
+            RenderResolutionSpace   _space{ RenderResolutionSpace::Render };         ///< 크기를 따르는 공간(렌더 · 출력 — 파이프라인 XML 의 선언). 크기를 따로 준 첨부는 렌더
         };
 
         /**
@@ -86,6 +89,12 @@ namespace sw
             return rounded < 1u ? 1u : ( rounded > outputExtent ? outputExtent : rounded );
         }
 
+        /**
+         * @brief 다른 뷰와 텍스처를 나누는 풀을 정합니다(추가 뷰). 첨부가 하나도 없을 때만 바꾼다.
+         * @details 정하면 `bLeased` 로 만드는 첨부가 거기서 빌린다. 정하지 않으면(주 시점) 모두 자기 텍스처다 — 밖에서 보는 첨부(스크린샷 · 렌더 타깃 목록)가 다른 뷰의 그림이 되지 않는다.
+         */
+        void setLeases( TransientTextureLeases* pLeases );
+
         TransientAttachmentPool();
         ~TransientAttachmentPool() = default;
 
@@ -120,15 +129,16 @@ namespace sw
 
         /**
          * @brief 이름으로 첨부를 만듭니다. 크기는 공간 @p space 의 크기를 `resolutionDivisor` 로 나눈 값(올림)입니다.
+         * @param bLeased 내용이 이 뷰의 그래프 안에서만 사는 첨부다 — 나누는 풀(`setLeases`)이 있으면 빌린다.
          * @return 이미 있으면 그대로 true 이고, 못 만들면 경고를 남기고 false 입니다.
          */
         bool allocate( IRHIDevice* pDevice, const hashed_string& name, RHIFormat format, bool bDepth, const RHIAttachmentOps& ops, RenderResolutionSpace space, uint32 resolutionDivisor,
-                       bool bUnorderedAccess = false );
+                       bool bUnorderedAccess = false, bool bLeased = false );
         /**
          * @brief 프레임 크기와 상관없는 크기(width × height)로 첨부를 만듭니다. 그림자 맵처럼 화면이 아니라 빛의 볼륨을 담는 타깃용입니다.
          * @return 이미 있으면 그대로 true 이고, 못 만들면 경고를 남기고 false 입니다.
          */
-        bool allocateSized( IRHIDevice* pDevice, const hashed_string& name, RHIFormat format, bool bDepth, const RHIAttachmentOps& ops, uint32 width, uint32 height, bool bUnorderedAccess = false );
+        bool allocateSized( IRHIDevice* pDevice, const hashed_string& name, RHIFormat format, bool bDepth, const RHIAttachmentOps& ops, uint32 width, uint32 height, bool bUnorderedAccess = false, bool bLeased = false );
         /**
          * @brief 이미 만든 첨부 @p owner 의 텍스처를 @p name 이 함께 씁니다(앨리어싱 — 레벨 수명이 겹치지 않고 서술이 같은 첨부, `RenderGraphAliasPlan::make`).
          * @details 별칭은 자기 로드 · 저장 · 클리어 값(@p ops)과 자기 클리어 기록(`markCleared` 의 이름 키)을 가진다 — 처음 쓰는 패스가 자기 값으로 지운다. 텍스처 · SRV · RW 는
@@ -200,6 +210,10 @@ namespace sw
         void resetCleared();
 
     private:
+        /** @brief 첨부의 텍스처를 놓습니다 — 빌린 것은 돌려주고, 별칭은 아무것도 하지 않습니다. */
+        void releaseAttachment( IRHIDevice* pDevice, const Attachment& attachment );
+
+    private:
         /// @brief 이름은 대소문자를 무시한다(`hashed_string`). 대소문자만 다른 첨부는 파이프라인 로드가 거절한다(`RenderPipelineAsset`).
         unordered_map<hashed_string, Attachment> _mapAttachment;
         /// @brief 꺼진 효과의 출력 이름 → 그 원본 이름입니다(`forward`). 뷰가 프레임마다 정하고 패스 기록 중에는 읽기만 한다.
@@ -212,6 +226,7 @@ namespace sw
         uint32                                      _outputWidth; ///< 출력 공간
         uint32                                      _outputHeight;
         /// @brief 서술이 다른 첨부를 겹쳐 놓는 힙입니다(`allocatePlaced`). 없으면 0 — 놓인 텍스처가 각자 힙을 붙들어 `release` 가 핸들을 먼저 놓아도 된다.
-        RHITransientHeapHandle _heap;
+        RHITransientHeapHandle  _heap;
+        TransientTextureLeases* _pLeases; ///< 다른 뷰와 나누는 텍스처 풀(없으면 nullptr)
     };
 } // namespace sw

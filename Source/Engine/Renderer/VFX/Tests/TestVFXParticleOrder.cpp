@@ -47,16 +47,16 @@ SW_TEST_CASE( VFXParticleOrderTest, ViewDepthDrawsFarthestFirst )
 {
     const vector<GPUParticle> listParticle = makeLine();
     vector<uint32>            listOrder{ 99u }; // 앞 방출기의 구간
-    vector<float32>           listDepth;        // 깊이 작업 버퍼(호출마다 다시 쓴다)
+    VFXParticleSortScratch    scratch;          // 깊이 작업 버퍼(호출마다 다시 쓴다)
     const float3              eye{ 0.0f, 0.0f, -10.0f };
     const float3              axis{ 0.0f, 0.0f, 1.0f };
-    const VFXParticleOrder    range = VFXParticleOrder::appendViewDepth( listParticle, float4x4::Identity, eye, axis, listDepth, listOrder );
+    const VFXParticleOrder    range = VFXParticleOrder::appendViewDepth( listParticle, float4x4::Identity, eye, axis, scratch, listOrder );
     SW_EXPECT_EQUAL( range._first, 1u );
     SW_EXPECT_TRUE( isOrder( listOrder, range, vector<uint32>{ 1u, 3u, 2u, 0u } ) );
     SW_EXPECT_EQUAL( listOrder[0], 99u );
 
     // 축이 없으면 눈까지의 거리로 잰다 — 같은 순서다.
-    const VFXParticleOrder distanceRange = VFXParticleOrder::appendViewDepth( listParticle, float4x4::Identity, eye, float3{}, listDepth, listOrder );
+    const VFXParticleOrder distanceRange = VFXParticleOrder::appendViewDepth( listParticle, float4x4::Identity, eye, float3{}, scratch, listOrder );
     SW_EXPECT_TRUE( isOrder( listOrder, distanceRange, vector<uint32>{ 1u, 3u, 2u, 0u } ) );
 }
 
@@ -65,10 +65,10 @@ SW_TEST_CASE( VFXParticleOrderTest, OppositeEyeReversesOrder )
 {
     const vector<GPUParticle> listParticle = makeLine();
     vector<uint32>            listOrder;
-    vector<float32>           listDepth;
+    VFXParticleSortScratch    scratch;
     const float4x4            world = float4x4::makeTranslation( float3{ 0.0f, 0.0f, 100.0f } );
-    const VFXParticleOrder    front = VFXParticleOrder::appendViewDepth( listParticle, world, float3{ 0.0f, 0.0f, 90.0f }, float3{ 0.0f, 0.0f, 1.0f }, listDepth, listOrder );
-    const VFXParticleOrder    back  = VFXParticleOrder::appendViewDepth( listParticle, world, float3{ 0.0f, 0.0f, 110.0f }, float3{ 0.0f, 0.0f, -1.0f }, listDepth, listOrder );
+    const VFXParticleOrder    front = VFXParticleOrder::appendViewDepth( listParticle, world, float3{ 0.0f, 0.0f, 90.0f }, float3{ 0.0f, 0.0f, 1.0f }, scratch, listOrder );
+    const VFXParticleOrder    back  = VFXParticleOrder::appendViewDepth( listParticle, world, float3{ 0.0f, 0.0f, 110.0f }, float3{ 0.0f, 0.0f, -1.0f }, scratch, listOrder );
     SW_EXPECT_TRUE( isOrder( listOrder, front, vector<uint32>{ 1u, 3u, 2u, 0u } ) );
     SW_EXPECT_TRUE( isOrder( listOrder, back, vector<uint32>{ 0u, 2u, 3u, 1u } ) );
 }
@@ -83,8 +83,8 @@ SW_TEST_CASE( VFXParticleOrderTest, EqualDepthKeepsIndexOrder )
     listParticle.push_back( makeParticle( 5.0f, 0.0f ) );
     listParticle.push_back( makeParticle( 2.0f, 0.0f ) );
     vector<uint32>         listOrder;
-    vector<float32>        listDepth;
-    const VFXParticleOrder range = VFXParticleOrder::appendViewDepth( listParticle, float4x4::Identity, float3{ 0.0f, 0.0f, -10.0f }, float3{ 0.0f, 0.0f, 1.0f }, listDepth, listOrder );
+    VFXParticleSortScratch scratch;
+    const VFXParticleOrder range = VFXParticleOrder::appendViewDepth( listParticle, float4x4::Identity, float3{ 0.0f, 0.0f, -10.0f }, float3{ 0.0f, 0.0f, 1.0f }, scratch, listOrder );
     SW_EXPECT_TRUE( isOrder( listOrder, range, vector<uint32>{ 1u, 3u, 0u, 2u, 4u } ) );
 }
 
@@ -93,12 +93,51 @@ SW_TEST_CASE( VFXParticleOrderTest, AgeOrdersIgnoreEye )
 {
     const vector<GPUParticle> listParticle = makeLine();
     vector<uint32>            listOrder;
-    const VFXParticleOrder    oldest   = VFXParticleOrder::appendByAge( listParticle, true, listOrder );
-    const VFXParticleOrder    youngest = VFXParticleOrder::appendByAge( listParticle, false, listOrder );
+    VFXParticleSortScratch    scratch;
+    const VFXParticleOrder    oldest   = VFXParticleOrder::appendByAge( listParticle, true, scratch, listOrder );
+    const VFXParticleOrder    youngest = VFXParticleOrder::appendByAge( listParticle, false, scratch, listOrder );
     SW_EXPECT_TRUE( isOrder( listOrder, oldest, vector<uint32>{ 2u, 0u, 3u, 1u } ) );
     SW_EXPECT_TRUE( isOrder( listOrder, youngest, vector<uint32>{ 1u, 3u, 0u, 2u } ) );
     SW_EXPECT_EQUAL( youngest._first, 4u );
 
-    const VFXParticleOrder empty = VFXParticleOrder::appendByAge( vector<GPUParticle>{}, true, listOrder );
+    const VFXParticleOrder empty = VFXParticleOrder::appendByAge( vector<GPUParticle>{}, true, scratch, listOrder );
     SW_EXPECT_EQUAL( empty._count, 0u );
+}
+
+/**
+ * @brief [VFXParticleOrderTest] 입자가 많을 때(기수 정렬)도 순서가 같은 규칙이다 — 먼 것부터, 같은 깊이는 번호 순, 축 뒤(음수 깊이)도 이어진다
+ * @details 변이: 부호 비트를 뒤집지 않으면(음수 깊이가 양수 뒤로) 순서 단언이, 흩기가 안정이 아니면 같은 깊이의 번호 순이 진다.
+ */
+SW_TEST_CASE( VFXParticleOrderTest, ManyParticlesKeepTheSameRule )
+{
+    constexpr uint32    kParticleCount = 3000;
+    vector<GPUParticle> listParticle;
+    for ( uint32 index = 0; index < kParticleCount; ++index )
+    {
+        const uint32 scattered = ( index * 7919u ) % 600u; // 같은 깊이가 다섯씩
+        listParticle.push_back( makeParticle( static_cast<float32>( scattered ) - 300.0f, static_cast<float32>( scattered ) / 600.0f ) );
+    }
+    vector<uint32>         listOrder{ 5u };
+    VFXParticleSortScratch scratch;
+    const VFXParticleOrder range = VFXParticleOrder::appendViewDepth( listParticle, float4x4::Identity, float3{}, float3{ 0.0f, 0.0f, 1.0f }, scratch, listOrder );
+    SW_REQUIRE_EQUAL( kParticleCount, range._count );
+    bool bOrdered = listOrder[0] == 5u;
+    for ( uint32 index = 1; index < range._count; ++index )
+    {
+        const uint32  left       = listOrder[range._first + index - 1u];
+        const uint32  right      = listOrder[range._first + index];
+        const float32 leftDepth  = listParticle[left]._positionSize._z;
+        const float32 rightDepth = listParticle[right]._positionSize._z;
+        bOrdered                 = bOrdered && ( leftDepth > rightDepth || ( leftDepth == rightDepth && left < right ) );
+    }
+    SW_EXPECT_TRUE( bOrdered );
+    const VFXParticleOrder youngest = VFXParticleOrder::appendByAge( listParticle, false, scratch, listOrder );
+    bool                   bYoung   = true;
+    for ( uint32 index = 1; index < youngest._count; ++index )
+    {
+        const uint32 left  = listOrder[youngest._first + index - 1u];
+        const uint32 right = listOrder[youngest._first + index];
+        bYoung             = bYoung && ( listParticle[left]._rotationLife._y < listParticle[right]._rotationLife._y || ( listParticle[left]._rotationLife._y == listParticle[right]._rotationLife._y && left < right ) );
+    }
+    SW_EXPECT_TRUE( bYoung );
 }

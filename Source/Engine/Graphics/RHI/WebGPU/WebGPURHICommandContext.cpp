@@ -347,44 +347,44 @@ namespace sw
         writeRootConstants( _state._graphics, num32BitValues, pData, destOffsetIn32BitValues );
     }
 
-    void WebGPURHICommandContext::bindComputeUAV( RHIDescriptorIndex index, uint32 slot )
+    void WebGPURHICommandContext::bindComputeUAV( RHIUnorderedAccessIndex index, uint32 slot )
     {
         if ( slot < shaderslot::wgpu::kURange )
             _state._compute._arrUnorderedAccess[slot] = index;
     }
 
-    void WebGPURHICommandContext::bindGraphicsUAV( RHIDescriptorIndex index, uint32 slot )
+    void WebGPURHICommandContext::bindGraphicsUAV( RHIUnorderedAccessIndex index, uint32 slot )
     {
         // 그래픽스 단계 u 바인딩은 구현하지 않았다(`RHICapabilities::_bGraphicsShaderWrites` 가 거짓) — 셰이더 메시지 채널은 이 백엔드에서 켜지지 않아 여기에 오지 않는다.
         (void)index;
         (void)slot;
     }
 
-    void WebGPURHICommandContext::bindShaderResource( RHIDescriptorIndex index, uint32 slot )
+    void WebGPURHICommandContext::bindShaderResource( RHITextureSRVIndex index, uint32 slot )
     {
         if ( slot < shaderslot::wgpu::kTRange )
             _state._graphics._arrShaderResource[slot] = index;
     }
 
-    void WebGPURHICommandContext::bindStructuredBuffer( RHIDescriptorIndex index, uint32 slot )
+    void WebGPURHICommandContext::bindStructuredBuffer( RHIBufferSRVIndex index, uint32 slot )
     {
         if ( slot < shaderslot::wgpu::kTRange )
             _state._graphics._arrShaderResource[slot] = index;
     }
 
-    void WebGPURHICommandContext::bindConstantBuffer( RHIDescriptorIndex constantBufferIndex, uint32 slot )
+    void WebGPURHICommandContext::bindConstantBuffer( RHIBufferSRVIndex constantBufferIndex, uint32 slot )
     {
         if ( slot < shaderslot::wgpu::kBRange )
             _state._graphics._arrConstantBuffer[slot] = constantBufferIndex;
     }
 
-    void WebGPURHICommandContext::bindComputeConstantBuffer( RHIDescriptorIndex constantBufferIndex, uint32 slot )
+    void WebGPURHICommandContext::bindComputeConstantBuffer( RHIBufferSRVIndex constantBufferIndex, uint32 slot )
     {
         if ( slot < shaderslot::wgpu::kBRange )
             _state._compute._arrConstantBuffer[slot] = constantBufferIndex;
     }
 
-    void WebGPURHICommandContext::bindComputeShaderResource( RHIDescriptorIndex index, uint32 slot )
+    void WebGPURHICommandContext::bindComputeShaderResource( RHIBufferSRVIndex index, uint32 slot )
     {
         if ( slot < shaderslot::wgpu::kTRange )
             _state._compute._arrShaderResource[slot] = index;
@@ -508,7 +508,7 @@ namespace sw
             listEntry.push_back( bRenamed ? Internal::makeBufferEntry( binding, pBuffer->_overrideBuffer, pBuffer->_overrideOffset, pBuffer->_sizeBytes )
                                           : Internal::makeBufferEntry( binding, pBuffer->_buffer, 0, pBuffer->_sizeBytes ) );
         }
-        // 같은 (레이아웃, 항목) 은 프레임 안에서 한 번만 짓는다 — 브라우저에서 그룹 하나는 JS 객체 하나라 그리기마다 지으면 GC 압력이 그리기 수만큼 는다.
+        // 같은 (레이아웃, 항목) 은 한 번만 짓는다(프레임을 넘겨 든다) — 브라우저에서 그룹 하나는 JS 객체 하나라 그리기마다 지으면 GC 압력이 그리기 수만큼 는다.
         return _pDevice->_bindGroupCache.getOrCreate( _pDevice->_device, pipeline._groupLayout, listEntry );
     }
 

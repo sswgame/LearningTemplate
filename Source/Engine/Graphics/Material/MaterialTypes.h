@@ -13,13 +13,6 @@
 namespace sw
 {
     /**
-     * @brief 머티리얼 텍스처의 bindless 인덱스입니다. `RHIDescriptorIndex` 와 같은 형식이다(`Material.cpp` 의 static_assert).
-     * @details 게임이 보는 머티리얼 헤더가 `RHIHandles.h` 를 include 하지 않도록 주인 형식으로 둔다(타깃 게이트 — `WaterWaveMath::kMaxWaveCount` 와 같은 방식).
-     *          "없음" 은 `kInvalidDescriptorIndex` 와 같은 값이다.
-     */
-    using MaterialTextureIndex = uint32;
-
-    /**
      * @brief 머티리얼의 알파 다루는 법입니다(glTF alphaMode · 언리얼 Blend Mode 자리). 배치 목록과 셰이더 변형이 여기서 정해진다.
      */
     ENUM()
@@ -189,11 +182,11 @@ namespace sw
         /** @brief 묶음 안의 이름입니다. `_collectionPath` 와 함께 적습니다. */
         string _collectionParameter;
 
-        float32              _min;
-        float32              _max;
-        uint32               _offset;
-        uint32               _size;
-        MaterialTextureIndex _textureIndex;
+        float32 _min;
+        float32 _max;
+        uint32  _offset;
+        uint32  _size;
+        uint32  _textureIndex; ///< 셰이더가 읽는 텍스처 값 — 네이티브 bindless 는 SRV 번호, 에뮬(DX11 · GL · WebGPU)은 칸 서수. 없으면 `kInvalidDescriptorIndex` 와 같은 값
 
         uint8                  _bHDR      : 1;
         uint8                  _bSRGB     : 1;

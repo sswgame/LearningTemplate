@@ -18,12 +18,16 @@ namespace sw
 
     /**
      * @struct RHIDeviceBuffer
-     * @brief 만들어 준 디바이스를 함께 보관하는 GPU 버퍼 핸들입니다. 디바이스가 죽기 전에 통보가 와서 비워지므로, 값이 남아 있으면 유효합니다.
+     * @brief 만들어 준 디바이스를 함께 보관하는 GPU 버퍼 핸들입니다. 디바이스가 죽기 전에 통보가 와서 비워지므로, 값이 남아 있으면 유효합니다. 복사하지 않습니다(두 번 놓는다).
      */
     struct RHIDeviceBuffer
     {
         RHIBufferHandle _buffer{ 0 };        ///< 0 이면 초기화된 적이 없거나 잊은 상태입니다
         IRHIDevice*     _pDevice{ nullptr }; ///< 만들어 준 디바이스. 통보를 받으므로 죽은 뒤에 남아 있지 않습니다
+
+        RHIDeviceBuffer()                                    = default;
+        RHIDeviceBuffer( const RHIDeviceBuffer& )            = delete;
+        RHIDeviceBuffer& operator=( const RHIDeviceBuffer& ) = delete;
 
         /** @brief 초기화되어 있으면 true 입니다. 디바이스가 죽으면 통보(`RHIRenderResource`)가 먼저 와서 여기를 비웁니다. */
         bool isResident() const { return _buffer != 0; }
@@ -36,6 +40,6 @@ namespace sw
             _buffer  = buffer;
         }
         /** @brief 핸들을 잊습니다. 죽은 디바이스의 것을 destroy 하면 해제 후 사용이므로, 잊는 것이 옳을 때 씁니다. */
-        void clear() { *this = RHIDeviceBuffer{}; }
+        void clear() { attach( nullptr, RHIBufferHandle{ 0 } ); }
     };
 } // namespace sw

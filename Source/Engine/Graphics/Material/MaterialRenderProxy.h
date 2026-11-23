@@ -34,7 +34,7 @@ namespace sw
          * @brief 머티리얼 텍스처의 백엔드 SRV 인덱스(서수 순서)입니다. 네이티브 bindless 가 아닌 백엔드(DX11, GL)가 t16..t31 에 바인딩합니다.
          * @note 초기값은 칸마다 적는다 — 빠진 칸은 0(유효한 SRV 번호)이 되어 다른 텍스처를 건다.
          */
-        RHIDescriptorIndex _arrTextureSRV[shaderslot::kMaterialTextureCount] = {
+        RHITextureSRVIndex _arrTextureSRV[shaderslot::kMaterialTextureCount] = {
             kInvalidDescriptorIndex, kInvalidDescriptorIndex, kInvalidDescriptorIndex, kInvalidDescriptorIndex,
             kInvalidDescriptorIndex, kInvalidDescriptorIndex, kInvalidDescriptorIndex, kInvalidDescriptorIndex,
             kInvalidDescriptorIndex, kInvalidDescriptorIndex, kInvalidDescriptorIndex, kInvalidDescriptorIndex,
@@ -69,7 +69,7 @@ namespace sw
          * @details 셰이더를 다시 쿠킹해 레이아웃의 등급이 바뀌면 구간을 그 등급으로 옮긴다(bindless 인덱스가 바뀐다 — 부르는 쪽은 매번 돌려받은 값을 쓴다).
          * @return 상수 버퍼 구간의 bindless 인덱스입니다. 바이트가 비었거나 구간을 받지 못하면 kInvalidDescriptorIndex 입니다.
          */
-        RHIDescriptorIndex sync( IRHIDevice* pDevice, const shared_ptr<const MaterialRenderData>& data );
+        RHIBufferSRVIndex sync( IRHIDevice* pDevice, const shared_ptr<const MaterialRenderData>& data );
 
         /** @brief (RHIRenderResource) 살아 있는 디바이스에 상수 버퍼 구간을 돌려줍니다. */
         void releaseRHI( IRHIDevice* pDevice ) override;
