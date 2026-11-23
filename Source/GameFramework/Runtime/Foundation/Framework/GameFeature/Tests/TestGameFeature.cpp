@@ -10,6 +10,7 @@
 #include "Engine/Object/Component/TagComponent.h"
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
+#include "Engine/Object/GameObject/Serialization/ObjectStateSerializer.h"
 
 #include "GameFramework/Runtime/Foundation/Framework/GameFeature/GameFeatureComponents.h"
 #include "GameFramework/Runtime/Foundation/Framework/GameFeature/GameFeatureReceiverComponent.h"
@@ -288,6 +289,17 @@ SW_TEST_CASE( GameFeatureTest, ComponentsFollowTheScope )
     GameObject* pAfter = makeReceiver( "After", "Combatant" );
     manager.update( 1.0f / 60.0f ); // 새 오브젝트는 다음 틱 단계에서 시작한다
     SW_EXPECT_NOT_NULL( pAfter->getComponent<TagComponent>() );
+    SW_EXPECT_EQUAL( 2u, fixture._gameScope.find<GameFeatureComponents>()->countAddedComponents() );
+    SW_EXPECT_TRUE( pBefore->getComponent<TagComponent>()->isTransient() );
+    SW_EXPECT_FALSE( pAuthored->getComponent<TagComponent>()->isTransient() );
+
+    // 세이브에 들지 않고, 제자리에서 다시 읽으면 받는 쪽이 다시 붙인다 — 들면 저작한 것처럼 남아 기능을 꺼도 떨어지지 않는다.
+    vector<uint8> savedBytes;
+    SW_REQUIRE_TRUE( ObjectStateSerializer::saveToBinaryBuffer( pBefore, savedBytes, ObjectSaveOptions{ SerializePurpose::Snapshot } ) );
+    SW_REQUIRE_TRUE( ObjectStateSerializer::loadFromBinaryBuffer( pBefore, savedBytes.data(), savedBytes.size(), ObjectLoadContext{ SerializePurpose::Snapshot } ) != 0 );
+    manager.update( 1.0f / 60.0f );
+    SW_REQUIRE_NOT_NULL( pBefore->getComponent<TagComponent>() );
+    SW_EXPECT_TRUE( pBefore->getComponent<TagComponent>()->isTransient() );
     SW_EXPECT_EQUAL( 2u, fixture._gameScope.find<GameFeatureComponents>()->countAddedComponents() );
 
     SW_EXPECT_EQUAL( 0u, pScope->deactivate() );

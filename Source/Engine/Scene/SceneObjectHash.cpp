@@ -34,14 +34,17 @@ namespace sw
     {
         struct SceneStateHashInternal
         {
-            /** @brief 오브젝트 하나의 해시입니다 — 이름 · 활성, 그리고 컴포넌트마다(소유 순서) `Component::foldStateHash` 가 접은 상태. */
+            /** @brief 오브젝트 하나의 해시입니다 — 이름 · 활성, 그리고 컴포넌트마다(소유 순서, 파생 컴포넌트 빼고) `Component::foldStateHash` 가 접은 상태. */
             static uint64 hashObject( const GameObject& object, string_view name )
             {
                 StateHashBuilder builder;
                 builder.addString( name );
                 builder.addUint8( object.isActive() ? 1 : 0 );
                 object.forEachComponent( [&builder]( const Component* pComponent )
-                { pComponent->foldStateHash( builder ); } );
+                {
+                    if ( pComponent->isTransient() == false ) // 붙인 쪽이 다시 붙이는 파생 컴포넌트는 상태가 아니다
+                        pComponent->foldStateHash( builder );
+                } );
                 return builder.getHash();
             }
 

@@ -419,6 +419,14 @@ namespace sw
         /** @brief `onRegister` 가 불렸고 `onUnregister` 는 아직 불리지 않았으면 true 입니다. */
         bool isRegistered() const { return _bRegistered == SW_TRUE; }
         /**
+         * @brief 실행 중에 다른 쪽이 붙인 파생 컴포넌트로 표시합니다(`GameObject::setTransient` 의 컴포넌트 판 — 언리얼 `RF_Transient` 컴포넌트 · 유니티 `HideFlags.DontSave`). 저장되지 않는 실행 상태입니다.
+         * @details 오브젝트 상태의 모든 저장(저작 · 세이브 · 스냅샷 · 되돌리기 · 복제)과 컴포넌트 상태 · 씬 상태 해시가 건너뛴다 — 붙인 쪽이 다시 붙이므로 상태가 아니다. 저장에 들면 불러온 뒤 저작한
+         *          것처럼 남아 붙인 쪽이 떼지 못한다. 붙인 직후 게임 스레드에서, 병렬 틱 밖에서만 부른다(틱 워커가 읽는 비트와 같은 바이트다).
+         */
+        void setTransient( bool bTransient ) { _bTransient = bTransient ? SW_TRUE : SW_FALSE; }
+        /** @brief 실행 중에 붙은 파생 컴포넌트면 true 입니다(`setTransient`). */
+        bool isTransient() const { return _bTransient == SW_TRUE; }
+        /**
          * @brief 저장된 상태를 읽었고 `onPostLoad` 가 같은 배치 끝에 올 것이라 기록합니다. 매니저(`GameObjectManager::postLoadComponent`)만 부른다.
          * @details 씬을 짓는 배치는 등록을 모두 마친 뒤 로드 뒤 처리를 부른다. 그 사이의 `onRegister` 는 이 표시를 보고 무거운 리소스 빌드를 `onPostLoad` 에 맡긴다
          *          (언리얼은 `PostLoad` 가 `OnRegister` 보다 먼저라 렌더 상태를 한 번 짓는다 — 여기는 `onPostLoad` 가 같은 배치의 등록을 봐야 해서 순서가 반대다).
@@ -677,7 +685,8 @@ namespace sw
         uint8                  _bRegistered       : 1; ///< onRegister 가 불렸고 onUnregister 는 아직 불리지 않았다. `dispatchRegister` 와 `dispatchUnregister` 만 바꾼다
         uint8                  _bPostLoadPending  : 1; ///< 상태를 읽었고 `onPostLoad` 가 배치 끝에 온다. `markPostLoadPending` 과 `dispatchPostLoad` 만 바꾼다
         uint8                  _bStaged           : 1; ///< 나눠 짓는 셀에 들어 아직 드러나지 않았다. 저장소 잠금 아래에서 `stageGameObjects` · `releaseStagedGameObjects` 만 바꾼다
-        uint8                  _reservedFlags     : 2;
+        uint8                  _bTransient        : 1; ///< 실행 중에 붙은 파생 컴포넌트다 — 저장 · 상태 해시가 건너뛴다(`setTransient`)
+        uint8                  _reservedFlags     : 1;
         /**
          * @brief `_pPoolEntry` 의 버킷 안 위치입니다. 버킷에 없으면 `kNotInPoolEntry` 입니다. 제거를 O(1) 로 하려고 둡니다.
          * @details 플래그(4 B) 뒤, `_listSubTick` 앞의 정렬 패딩에 들어간다. 앞쪽으로 옮기면 객체가 커진다. 저장소의 `_mutex` 아래에서만 바뀐다.
