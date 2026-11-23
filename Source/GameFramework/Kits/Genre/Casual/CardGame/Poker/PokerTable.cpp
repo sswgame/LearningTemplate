@@ -185,6 +185,8 @@ namespace sw
 
     bool PokerTable::startHand( GameRandom& random )
     {
+        if ( _street != PokerStreet::HandOver )
+            return false; // 진행 중인 판을 새로 열면 팟의 칩이 사라진다
         CardPile::makeStandardDeck( _deck );
         _deck.shuffle( random );
         return openHand();
@@ -192,6 +194,8 @@ namespace sw
 
     bool PokerTable::startHandWithDeck( const CardPile& deck )
     {
+        if ( _street != PokerStreet::HandOver )
+            return false;
         _deck = deck;
         return openHand();
     }
@@ -251,11 +255,9 @@ namespace sw
             if ( pokerSeat._bInHand == SW_TRUE )
                 ++playerCount;
         }
-        if ( playerCount < 2 )
-        {
-            _street = PokerStreet::HandOver;
+        // 나누다 덱이 떨어지면 낸 블라인드가 갈 곳이 없다 — 칩을 움직이기 전에 본다.
+        if ( playerCount < 2 || _deck.getCount() < playerCount * PokerTableInternal::kHoleCount + PokerTableInternal::kBoardCount )
             return false;
-        }
         _board.clear();
         _listLastPot.clear();
         // 아래 다음 자리 찾기는 핸드에 둘 이상이 있을 때다(위에서 셌다) — 비면 결함이라 value 가 단언한다.

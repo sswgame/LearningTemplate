@@ -163,9 +163,9 @@ namespace sw
          * @return 설정이 선언된 범위 안이고 칩이 모두 0 이상이면 true 입니다. 밖이면 오류를 남기고 false 이며 상태를 바꾸지 않습니다.
          */
         [[nodiscard]] bool initialize( const PokerSettings& settings, const vector<int32>& listStack );
-        /** @brief 덱을 섞어 판을 엽니다. 칩이 있는 자리가 둘 미만이면 false 를 반환합니다. */
+        /** @brief 덱을 섞어 판을 엽니다. 판이 진행 중이거나 칩이 있는 자리가 둘 미만이면 false 를 반환하고 칩은 그대로입니다. */
         [[nodiscard]] bool startHand( GameRandom& random );
-        /** @brief 주어진 덱(맨 위부터 나눕니다)으로 판을 엽니다. 테스트와 리플레이용입니다. */
+        /** @brief 주어진 덱(맨 위부터 나눕니다)으로 판을 엽니다. 테스트와 리플레이용입니다. 홀과 보드를 다 깔 장수가 없는 덱도 거절합니다. */
         [[nodiscard]] bool startHandWithDeck( const CardPile& deck );
 
         /** @brief 차례인 @p seat 의 행동을 처리합니다. 규칙에 어긋나면(차례가 아님, 체크 불가, 최소 레이즈 미달, 칩 부족) false 를 반환하고 아무것도 바꾸지 않습니다. */

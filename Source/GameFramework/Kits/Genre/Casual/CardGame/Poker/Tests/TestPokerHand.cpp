@@ -4,6 +4,8 @@
 
 #include "GameFramework/Kits/Genre/Casual/CardGame/CardDeck.h"
 #include "GameFramework/Kits/Genre/Casual/CardGame/Poker/PokerHand.h"
+#include "GameFramework/Kits/Genre/Casual/CardGame/Poker/PokerTable.h"
+#include "GameFramework/Runtime/Foundation/Random/GameRandom.h"
 
 // PokerHandTest — 포커 족보 판정: 열 족보, 휠(A-2-3-4-5)의 높은 카드 5, 로열 · 스트레이트 플러시, 족보 안의 비교 숫자 순서(풀하우스는 트리플 먼저,
 // 투페어는 높은 페어 · 낮은 페어 · 키커), 무늬만 다른 무승부, 7 장 중 가장 센 5 장, 5 장보다 적은 입력. 키트 GF_CardGame(nogpu).
@@ -207,4 +209,42 @@ SW_TEST_CASE( PokerHandTest, FewerThanFiveCardsGiveEmptyValue )
     const sw::PokerHandValue six = evaluate( { "Ac", "Ad", "Ah", "As", "2c", "Kd" } );
     SW_EXPECT_TRUE( six._rank == sw::PokerHandRank::FourOfAKind );
     SW_EXPECT_EQUAL( uint8( 13 ), six._arrTieBreak[1] ); // 키커는 2 가 아니라 K
+}
+
+/**
+ * @brief [PokerTableTest] 열 수 없는 판은 칩을 건드리지 않는다 — 진행 중인 판을 다시 열거나 장수가 모자란 덱으로 열어도 칩이 사라지지 않는다
+ */
+SW_TEST_CASE( PokerTableTest, RefusedStartKeepsEveryChip )
+{
+    sw::PokerTable table;
+    SW_REQUIRE_TRUE( table.initialize( sw::PokerSettings{}, { 100, 100 } ) );
+    const auto countChips = [&table]()
+    {
+        int32 total = 0;
+        for ( int32 seat = 0; seat < table.getSeatCount(); ++seat )
+        {
+            total += table.getSeat( seat )._stack;
+        }
+        return total;
+    };
+
+    sw::CardPile shortDeck;
+    sw::CardPile::makeStandardDeck( shortDeck );
+    while ( shortDeck.getCount() > 8 ) // 홀 넷 + 보드 다섯에 한 장 모자란다
+    {
+        sw::Card card;
+        SW_REQUIRE_TRUE( shortDeck.draw( card ) );
+    }
+    SW_EXPECT_FALSE( table.startHandWithDeck( shortDeck ) );
+    SW_EXPECT_EQUAL( 200, countChips() );
+    SW_EXPECT_TRUE( table.getStreet() == sw::PokerStreet::HandOver );
+
+    sw::GameRandom random( 7u );
+    SW_REQUIRE_TRUE( table.startHand( random ) );
+    const int32 pot = table.computePotTotal();
+    SW_REQUIRE_TRUE( pot > 0 );
+    SW_EXPECT_FALSE( table.startHand( random ) );
+    SW_EXPECT_EQUAL( pot, table.computePotTotal() );
+    SW_REQUIRE_TRUE( table.act( table.getCurrentSeat(), sw::PokerActionKind::Fold ) );
+    SW_EXPECT_EQUAL( 200, countChips() );
 }
