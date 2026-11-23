@@ -7,6 +7,7 @@
 #include "Core/Log/Logger.h"
 #include "Core/Network/DevOnlineExtension.h"
 #include "Core/Network/Security/INetSecurityProvider.h"
+#include "Core/String/StringUtil.h"
 
 #include "Engine/Content/AssetPaths.h"
 
@@ -102,11 +103,11 @@ namespace sw
             pem = Internal::readPem( *privateKeyPath, settings._privateKeyPem );
         if ( pem.has_value() == false )
         {
-            settings._privateKeyPassphrase.assign( settings._privateKeyPassphrase.size(), '\0' );
+            StringUtil::wipeSecret( settings._privateKeyPassphrase );
             return unexpected( pem.error() );
         }
         expected<unique_ptr<ITLSContext>> context = provider.createTLSContext( settings );
-        settings._privateKeyPassphrase.assign( settings._privateKeyPassphrase.size(), '\0' );
+        StringUtil::wipeSecret( settings._privateKeyPassphrase );
         return context;
     }
 
