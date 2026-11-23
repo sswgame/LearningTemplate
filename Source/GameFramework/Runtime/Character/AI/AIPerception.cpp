@@ -47,43 +47,38 @@ namespace sw
         for ( AIPerceivedTarget& target : _listTarget )
         {
             target._age += deltaTime;
-            target._bHeard = SW_FALSE;
+            target._bWasSeen = target._bSeen;
+            target._bSeen    = SW_FALSE; // 이번에 시각이 다시 잡지 않으면 안 보이는 것이다(후보에 없거나 소리만 난 대상)
+            target._bHeard   = SW_FALSE;
         }
         for ( const AIStimulus& stimulus : listCandidate )
         {
             AIPerceivedTarget* pTarget = nullptr;
             for ( AIPerceivedTarget& target : _listTarget )
             {
-                if ( target._id == stimulus._id )
+                if ( target._id == stimulus.getID() )
                     pTarget = &target;
             }
-            const bool bAlreadySeen = pTarget != nullptr && pTarget->_bSeen != SW_FALSE;
-            const bool bSeen        = canSee( eyePosition, forward, stimulus._position, pGrid, bAlreadySeen );
-            const bool bHeard       = stimulus._noiseRadius > 0.0f &&
-                                float3::getDistance( eyePosition, stimulus._position ) <= stimulus._noiseRadius * _settings._hearingScale;
+            const bool bSight       = stimulus.getKind() == AIStimulusKind::Sight;
+            const bool bAlreadySeen = pTarget != nullptr && pTarget->_bWasSeen != SW_FALSE;
+            const bool bSeen        = bSight && canSee( eyePosition, forward, stimulus.getPosition(), pGrid, bAlreadySeen );
+            const bool bHeard       = bSight == false && float3::getDistance( eyePosition, stimulus.getPosition() ) <= stimulus.getNoiseRadius() * _settings._hearingScale;
             if ( bSeen == false && bHeard == false )
-            {
-                if ( pTarget != nullptr )
-                    pTarget->_bSeen = SW_FALSE;
                 continue;
-            }
             if ( pTarget == nullptr )
             {
                 _listTarget.push_back( AIPerceivedTarget{} );
                 pTarget      = &_listTarget.back();
-                pTarget->_id = stimulus._id;
+                pTarget->_id = stimulus.getID();
             }
-            pTarget->_lastKnownPosition = stimulus._position;
+            pTarget->_lastKnownPosition = stimulus.getPosition();
             pTarget->_age               = 0.0f;
-            pTarget->_bSeen             = bSeen ? SW_TRUE : SW_FALSE;
-            pTarget->_bHeard            = bHeard ? SW_TRUE : SW_FALSE;
+            if ( bSeen )
+                pTarget->_bSeen = SW_TRUE;
+            if ( bHeard )
+                pTarget->_bHeard = SW_TRUE;
         }
-        // 후보에 없는 대상(죽었거나 멀리 갔다)도 안 보이는 것이다. 오래되면 잊는다.
-        for ( AIPerceivedTarget& target : _listTarget )
-        {
-            if ( target._age > 0.0f )
-                target._bSeen = SW_FALSE;
-        }
+        // 오래된 기억은 잊는다.
         VectorUtil::removeIf( _listTarget, [this]( const AIPerceivedTarget& target )
         { return target._age > _settings._memoryDuration; } );
     }
