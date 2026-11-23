@@ -78,7 +78,7 @@ namespace sw
         /** @brief 볼록 껍질 · 삼각 메시를 채울 메시 에셋입니다. 점을 직접 적지 않았을 때만 쓴다(`PhysicsMeshShapeCache`). 메시 로컬 좌표가 셰이프 로컬이다. */
         PROPERTY( Tooltip = "Convex hull / triangle mesh: .mesh asset to fill the points from when _listPoint is empty" )
         AssetRef<MeshAssetFormat> _meshPath;
-        PROPERTY( Tooltip = "Physics material name (empty: the body's material)" )
+        PROPERTY( Tooltip = "Physics material name (empty: the body's material)", Meta = "NameSource=PhysicsMaterial" )
         hashed_string _material{};
     };
 } // namespace sw
@@ -105,7 +105,7 @@ namespace sw
         Radians _localAngle{};
         PROPERTY( Tooltip = "Polygon / chain points (body local)" )
         vector<float2> _listPoint;
-        PROPERTY( Tooltip = "Physics material name (empty: the body's material)" )
+        PROPERTY( Tooltip = "Physics material name (empty: the body's material)", Meta = "NameSource=PhysicsMaterial" )
         hashed_string _material{};
         PROPERTY( Tooltip = "Chain: connect the last point back to the first" )
         bool _bLoop{ SW_FALSE };

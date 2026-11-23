@@ -1,6 +1,6 @@
 /**
  * @file AssetPackIndex.h
- * @brief 팩 하나에 든 에셋의 GUID → 팩 안 경로 색인(`assetindex.xml`)입니다. 팩 쿠킹이 쓰고, 런타임이 마운트한 팩마다 읽어 합친다(읽는 쪽은 2 단계 — docs/NEXT.md).
+ * @brief 팩 하나에 든 에셋의 GUID → 팩 안 경로 색인(`assetindex.xml`)입니다. 팩 쿠킹이 쓰고, 런타임이 마운트한 팩마다 읽어 합친다(`AssetManager`).
  * @details 배포본에는 `.meta` 가 없다(PackConfig 가 뺀다) — 정체성은 이 색인이 나른다. 팩마다 자기 색인을 들고, 패치 · DLC 팩은 자기 색인에 줄을 더할 뿐이다
  *          (옮기기용 리다이렉트 표처럼 옛 줄이 영구히 쌓이지 않는다 — 옮긴 에셋은 GUID 가 그대로라 새 팩의 줄이 새 경로를 적는다).
  *          유니티 Addressables 의 카탈로그(GUID → 번들 안 경로), 언리얼 에셋 레지스트리의 팩(.pak)별 조각과 같은 자리다.
@@ -14,6 +14,7 @@
 #include "Core/Foundation/Types.h"
 
 #include "Engine/Content/AssetGUID.h"
+#include "Engine/Content/AssetRegistry.h"
 
 namespace sw
 {
@@ -35,7 +36,8 @@ namespace sw
         /** @brief 색인 글의 판(루트 `formatVersion`)입니다. 꼴이 바뀌면 올리고 읽는 쪽이 옛 판을 올린다. */
         static constexpr uint32 kFormatVersion = 0;
 
-        vector<AssetPackIndexEntry> _listEntry;
+        vector<AssetPackIndexEntry>   _listEntry;
+        vector<AssetIdentityRedirect> _listRedirect; ///< 도메인 리다이렉트 표의 정체성 대체 줄(`AssetRedirect::parseIdentityRows`)
 
         /** @brief 색인 글입니다(GUID 순). GUID · 경로가 겹치면 그 까닭입니다. */
         [[nodiscard]] expected<string> makeText() const;

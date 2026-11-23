@@ -32,7 +32,7 @@ namespace sw::editor
         static constexpr string_view kImportStampHeader = "SWMODELIMPORT 1";
 
         /** @brief 임포터 버전입니다. 같은 원본에서 다른 결과가 나오게 바꿨다면 올립니다. 원본 해시에 섞입니다. */
-        static constexpr uint32 kImporterVersion = 9; // 9: 우리 형식 글 결과에 결정적 GUID 머리(`ImportedAssetStore::makeTextWithIdentity`) · 8: 공유 클립 파일 이름에 클립 이름을 붙인다 · 7: 머티리얼 값 · 클립 · 내장 이미지를 공유 저장소에 한 벌 + 역 바인드는 메시로 · 같은 스켈레톤 한 벌 · 5: 고유 정점 + 인덱스(glTF 정점을 나눠 쓴다) · 4: 스킨드 모델도 텍스처 PBR 머티리얼을 쓴다 · 일반 glTF 머티리얼 구간
+        static constexpr uint32 kImporterVersion = 10; // 10: 결과 글에 정체성 머리를 쓰지 않는다(GUID 는 원본 GUID + 결과 이름 — `AssetDatabase::build`) · 8: 공유 클립 파일 이름에 클립 이름을 붙인다 · 7: 머티리얼 값 · 클립 · 내장 이미지를 공유 저장소에 한 벌 + 역 바인드는 메시로 · 같은 스켈레톤 한 벌 · 5: 고유 정점 + 인덱스(glTF 정점을 나눠 쓴다) · 4: 스킨드 모델도 텍스처 PBR 머티리얼을 쓴다 · 일반 glTF 머티리얼 구간
 
         /** @brief 원본 옆에 두는 부가 데이터(클립 반복, 알림, 커브) 파일의 접미사입니다. */
         static constexpr string_view kClipDataSuffix = ".clips.json";

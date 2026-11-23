@@ -54,16 +54,15 @@ namespace sw
                 MatchmakingKitConfig kitConfig;
                 if ( expected<void> result = entry.readSettings( kitConfig ); result.has_value() == false )
                     return result;
-                const string& catalogPath = kitConfig._catalog;
-                _maxPartySize             = kitConfig._maxPartySize;
-                _reconnectGraceMs         = kitConfig._reconnectGraceMs;
-                _cancelConfirmWaitMs      = kitConfig._cancelConfirmWaitMs;
-                _bGameServer              = kitConfig._bGameServer ? SW_TRUE : SW_FALSE;
-                if ( catalogPath.empty() == false )
+                _maxPartySize        = kitConfig._maxPartySize;
+                _reconnectGraceMs    = kitConfig._reconnectGraceMs;
+                _cancelConfirmWaitMs = kitConfig._cancelConfirmWaitMs;
+                _bGameServer         = kitConfig._bGameServer ? SW_TRUE : SW_FALSE;
+                if ( kitConfig._catalog.empty() == false )
                 {
-                    _pCatalog = SharedAssetCache<MatchModeCatalog>::acquire( catalogPath );
+                    _pCatalog = kitConfig._catalog.acquire();
                     if ( _pCatalog == nullptr )
-                        return unexpected( Error{ ErrorKind::NotFound, "the match mode catalog could not be read", catalogPath } );
+                        return unexpected( Error{ ErrorKind::NotFound, "the match mode catalog could not be read", kitConfig._catalog.path() } );
                     _listMode = _pCatalog->getModes();
                 }
                 _listMode.insert( _listMode.end(), kitConfig._listMode.begin(), kitConfig._listMode.end() );

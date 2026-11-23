@@ -1,12 +1,13 @@
 /**
  * @file AssetReferenceFields.h
- * @brief 에셋 참조 규칙(`Config/Dev/AssetReferenceFields.json` — 도메인 · 글 확장자 · 임포트 폴더 · CMake)과 칸 목록입니다 — 글 에셋에서 경로를 뽑고, 없는지 가리고, 옮긴 경로로 고칩니다.
+ * @brief 에셋 참조 규칙(`Config/Dev/AssetReferenceFields.json` — 도메인 · 글 확장자 · CMake)과 칸 목록입니다 — 글 에셋에서 경로를 뽑고, 없는지 가리고, 옮긴 경로로 고칩니다.
  * @details 칸 이름은 파서가 낸 표(`kGeneratedFile`) 하나다 — 경로 칸은 모두 리플렉션 선언(`PROPERTY( AssetPath )` · `AssetRef<T>` · `DataPath`)이고 손으로 적는 이름 표는 없다
  *          (손으로 읽던 XML 칸은 `XMLFields` 로 읽는 스키마 구조체로 옮겼다 — 언리얼이 `FSoftObjectPath` 칸만 참조로 보는 것과 같다).
- *          에셋은 경로 하나로 가리킨다(식별자 표 · `.meta` 는 없다 — 언리얼 소프트 경로와 같다). 그래서 끊어진 경로를 잡는 규칙이 참조의 정본이고, 같은 데이터 파일을
+ *          참조 글은 GUID(`guid:<32자>`)이거나 경로다(`PROPERTY( AssetPath )` 글 · 코드 · CMake). 둘 다 끊어지면 여기서 잡고, 같은 데이터 파일을
  *          다섯 곳이 읽는다: 커밋 전 검사(`Scripts/lint/asset_references.py`), `py -3 -m Scripts move-asset`, 헤드리스 검사(`App --check-asset-refs` — ctest
  *          `ToolCheckAssetRefs`), 에디터 이름 바꾸기 · 옮기기(`EditorAssetFileCommands::moveAsset`), 팩 쿠킹의 참조 따라가기(`PackReachResult` — 쓰는 것만 담는다).
  *          뽑기 규칙은 파이썬 쪽(`asset_references.py` 의 `_extract*`)과 같은 것이다 — 하나를 고치면 다른 하나도 고친다(언어가 달라 코드를 나눌 수 없는 자리라 둘이다).
+ *          임포트 산출물 폴더는 정체성 규칙(`AssetIdentityRules` — `Config/Dev/AssetIdentity.json`)의 것을 쓴다.
  *          글 모양을 짐작해 찾지 않는다: 목록에 든 이름의 XML 속성 · XML 요소 글(`<_listX><item>…</item></_listX>` 포함) · JSON 키 · CMake 인자의 값만 보고,
  *          그 안에서도 도메인(`engine/` …)으로 시작하는 낱말만 경로다. 팩 쿠커가 쓰므로 엔진(`Engine/Asset/Reference`)에 둔다 — 배포 실행 파일도 패키징 때
  *          쿠커다(`pack.py` 의 `--cook-all`). 예전에는 에디터 모듈에 있어 쿠커가 참조를 볼 수 없었다.
@@ -19,6 +20,7 @@
 #include "Core/Foundation/Macros.h"
 #include "Core/Foundation/Types.h"
 
+#include "Engine/Asset/AssetDatabase.h"
 #include "Engine/Content/AssetGUID.h"
 #include "Engine/Reflection/ReflectionMacros.h"
 
@@ -67,24 +69,6 @@ namespace sw
     private:
         unordered_set<string> _setFile;
         unordered_set<string> _setFolder;
-    };
-
-    /** @brief 임포트 산출물 폴더 하나입니다 — 산출물은 커밋하지 않고 같은 자리의 원본 폴더에서 만든다(`models_raw/x.glb` → `models/x.mesh` · `models/x/…`). */
-    REFLECT()
-    struct AssetImportedFolder
-    {
-        REFLECT_BODY();
-
-        PROPERTY( Required )
-        string _folder;
-        PROPERTY( Required )
-        string _sourceFolder;
-        PROPERTY( Required )
-        vector<string> _listSourceExtension;
-        PROPERTY( Required )
-        vector<string> _listOutputSuffix; ///< 그 원본에서 나오는 산출물의 접미사 — 나오지 않는 종류(손으로 적은 글)는 이 폴더에서 풀리지 않는다
-        PROPERTY( Required )
-        bool _bGeneratedReferrers{ false }; ///< 산출물 안의 글 에셋(임포터가 쓴 머티리얼 · 프리팹)은 참조자로 훑지 않는다 — 임포터의 몫이다 NOLINT(sw-bool-flag): 집합체다(중괄호 · 지정 초기화로 만든다) — C++17 비트필드는 기본값을 둘 수 없어 `T x;` 가 값을 남기지 않는다
     };
 
     /** @brief 칸 목록 파일(`AssetReferenceFields::kConfigFile`)의 스키마입니다. `Scripts/lint/asset_references.py` 도 같은 키를 읽는다. */
@@ -161,12 +145,12 @@ namespace sw
         void               extractCMake( string_view text, const vector<size_t>& listLineStart, vector<AssetReference>& outListReference ) const;
 
     private:
-        vector<string>              _listDomain;
-        vector<string>              _listUncheckedDomain;
-        vector<string>              _listTextExtension;
-        unordered_set<string>       _setField;
-        vector<AssetImportedFolder> _listImported;
-        vector<string>              _listCMakeFile;
-        vector<string>              _listCMakeArgument;
+        vector<string>        _listDomain;
+        vector<string>        _listUncheckedDomain;
+        vector<string>        _listTextExtension;
+        unordered_set<string> _setField;
+        AssetIdentityRules    _identityRules; ///< 임포트 산출물 폴더(`AssetIdentityRules::_listImportedFolder`)
+        vector<string>        _listCMakeFile;
+        vector<string>        _listCMakeArgument;
     };
 } // namespace sw

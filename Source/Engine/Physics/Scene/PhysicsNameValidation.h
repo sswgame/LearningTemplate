@@ -28,5 +28,7 @@ namespace sw
         static void collectProfileNames( vector<hashed_string>& outListName );
         /** @brief 충돌 채널 이름(오브젝트 · 트레이스)을 표 차례로 @p outListName 에 담습니다(먼저 비운다, `Meta = "NameSource=CollisionChannel"`). */
         static void collectChannelNames( vector<hashed_string>& outListName );
+        /** @brief 물리 재질 이름을 표 차례로 @p outListName 에 담습니다(먼저 비운다, `Meta = "NameSource=PhysicsMaterial"`). */
+        static void collectMaterialNames( vector<hashed_string>& outListName );
     };
 } // namespace sw

@@ -11,7 +11,6 @@
 #include "Engine/Content/AssetIO.h"
 #include "Engine/Content/Tests/ScopedScratchDomain.h"
 #include "Engine/Foundation/EngineServices.h"
-#include "Engine/Serialization/Inherit/AssetRedirect.h"
 
 using namespace sw;
 
@@ -255,35 +254,6 @@ SW_TEST_CASE( SharedAssetCacheTest, ReloadWatchReportsEachReloadOnce )
     SW_EXPECT_TRUE( watch.takeChanged() );
     SW_EXPECT_FALSE( watch.takeChanged() );
     SW_EXPECT_FALSE( watch.isStale() );
-}
-
-/**
- * @brief [SharedAssetCacheTest] 옮긴 에셋의 옛 id 와 지금 id 로 받으면 한 칸의 같은 객체인지 검증(A-20 — 요청 글이 키이면 두 벌 올랐다)
- */
-SW_TEST_CASE( SharedAssetCacheTest, RedirectedAndCanonicalIdsShareOneEntry )
-{
-    using Util = SharedAssetCacheTestUtil;
-    const test::ScopedScratchDomain domain;
-    const string                    oldID = test::ScopedScratchDomain::makeID( "old.txt" ).str();
-    const string                    newID = test::ScopedScratchDomain::makeID( "new.txt" ).str();
-    SW_REQUIRE_TRUE( FileUtil::writeTextFile( domain.makeDiskPath( "new.txt" ), "moved" ) );
-    StringBuilder<constant::buffer::kMax512> redirectXML;
-    redirectXML.appendFormat( "<Redirects><Redirect from=\"%#\" to=\"%#\"/></Redirects>", oldID, newID );
-    SW_REQUIRE_TRUE( AssetRedirect::loadFromXMLTexts( vector<string>{ string( redirectXML.view() ) }, vector<string>{ "test/redirects.xml" } ) );
-    {
-        const Util::ScopedModuleCache                     scope;
-        const shared_ptr<const SharedAssetCacheTestAsset> byOld = Util::Cache::acquire( oldID ).snapshot();
-        const shared_ptr<const SharedAssetCacheTestAsset> byNew = Util::Cache::acquire( newID ).snapshot();
-        SW_REQUIRE_TRUE( byOld != nullptr );
-        SW_EXPECT_EQUAL( string( "moved" ), byOld->_text );
-        SW_EXPECT_TRUE( byOld.get() == byNew.get() );
-        AssetCacheBase* const pCache = engine::getSubsystem<AssetManager>().findAssetCache( Util::Cache::kAssetKindName );
-        SW_REQUIRE_TRUE( pCache != nullptr );
-        SW_EXPECT_TRUE( pCache->isCached( oldID ) );
-        SW_EXPECT_TRUE( pCache->isCached( newID ) );
-        SW_EXPECT_EQUAL( size_t( 1 ), pCache->getCachedCount() );
-    }
-    AssetRedirect::clear();
 }
 
 /** @brief [SharedAssetRefTest] 산 에셋을 같이 쥔 참조는 건 쪽이 놓은 뒤에도 살려 두고 다시 읽기를 따라간다 — 캐시에서 오지 않은 값은 빌린다 */

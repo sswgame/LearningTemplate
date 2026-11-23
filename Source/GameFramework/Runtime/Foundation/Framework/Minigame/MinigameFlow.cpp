@@ -27,7 +27,6 @@
 #include "Engine/Scene/Scene.h"
 #include "Engine/Scene/SceneManager.h"
 #include "Engine/Scene/SceneSubLevelSubsystem.h"
-#include "Engine/Serialization/Inherit/AssetRedirect.h"
 #include "Engine/Serialization/Serializer/SerializePurpose.h"
 
 #include "GameFramework/Runtime/Foundation/Framework/Flow/GameInstance.h"
@@ -914,7 +913,7 @@ namespace sw
         const Scene* const pScene = MinigameFlowInternal::findActivePlayScene();
         if ( pScene == nullptr || pScene->getSourcePath().empty() || _stack.isEmpty() == false || isEntering() || isLeaving() )
             return;
-        const string   sceneID = AssetRedirect::toCurrentID( pScene->getSourcePath() );
+        const string   sceneID = pScene->getSourcePath();
         string         found;
         vector<string> listName;
         collectNames( listName );
@@ -922,7 +921,7 @@ namespace sw
         {
             MinigameDefinition definition;
             const bool         bSameMap = MinigameDefinition::loadFromAsset( AssetID{ makeAssetPath( _packConfig, name ) }, definition ) && definition._entry == MinigameEntry::SceneSwitch &&
-                                  definition._map.isSet() && AssetRedirect::toCurrentID( definition._map.get() ) == sceneID;
+                                  definition._map.isSet() && definition._map.get() == sceneID;
             if ( bSameMap == false )
                 continue;
             if ( found.empty() == false )

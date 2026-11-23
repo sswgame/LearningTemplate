@@ -15,6 +15,7 @@
 #include "Core/Log/Logger.h"
 #include "Core/String/StringBuilder.h"
 
+#include "Editor/Common/Asset/AssetSourceLocator.h"
 #include "Editor/Common/Asset/EditorContentScan.h"
 #include "Editor/Common/Workspace/EditorService.h"
 
@@ -82,6 +83,7 @@ namespace sw::editor
                     SW_LOG_ERROR_ID( "AssetReferenceCheck.ContentUnlisted", "Asset reference check: the files under %# could not be listed", contentRoot );
                     return -1;
                 }
+                AssetSourceLocator::collectStoredSources( contentRoot, listFile ); // 저장소 밖 원본의 산출물도 있는 것이다
                 AssetIDSet                   assets;
                 vector<pair<string, string>> listReferrer; // (디스크 경로, 리소스 id)
                 for ( const string& filePath : listFile )

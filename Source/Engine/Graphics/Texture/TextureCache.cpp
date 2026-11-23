@@ -27,6 +27,7 @@
 #include "Engine/Config/EngineConfig.h"
 #include "Engine/Config/EngineDefaultAssets.h"
 #include "Engine/Content/AssetIO.h"
+#include "Engine/Content/AssetRegistry.h"
 #include "Engine/Foundation/EngineServices.h"
 #include "Engine/Foundation/EngineSubsystemRegistration.h"
 #include "Engine/Graphics/RHI/Diagnostics/RHIMemoryTracker.h"
@@ -38,7 +39,6 @@
 #include "Engine/Graphics/Texture/TextureStreamingPolicy.h"
 #include "Engine/Graphics/Texture/TextureStreamingPool.h"
 #include "Engine/Profiling/FrameProfiler.h"
-#include "Engine/Serialization/Inherit/AssetRedirect.h"
 #include "Engine/Serialization/Serializer/ReloadResult.h"
 
 #include <condition_variable>
@@ -483,7 +483,7 @@ namespace sw
     {
         const ScopedMemoryTag memoryScope{ kMemoryTag };
         IRHIDevice* const     pDevice = _impl->_pBoundDevice.load( std::memory_order_acquire );
-        const string          key     = AssetRedirect::toCacheKey( relativePath );
+        const string          key     = AssetRegistry::toCacheKey( relativePath );
         if ( key.empty() || pDevice == nullptr )
         {
             shared_ptr<TextureLoadOperation> pFailed = sw::make_shared<TextureLoadOperation>( key, pDevice, TextureLoadOperation::Source::File, nullptr, _impl );
@@ -601,7 +601,7 @@ namespace sw
         if ( pTexture == nullptr )
             return nullptr;
         // 핸들 몫의 참조는 이 함수를 나가며 놓인다 — 돌려주는 포인터 몫(짝 `release`)을 하나 더 센다. 핸들이 쥐고 있으므로 항목은 있다.
-        const string             key = AssetRedirect::toCacheKey( relativePath );
+        const string             key = AssetRegistry::toCacheKey( relativePath );
         UniqueLock<shared_mutex> lock{ _impl->_mutex };
         const auto               it = _impl->_mapEntry.find( key );
         SW_ASSERT( it != _impl->_mapEntry.end() );
@@ -1120,7 +1120,7 @@ namespace sw
         ScopedLock<mutex> lock{ _impl->_streamingMutex };
         for ( const string& relativePath : listRelativePath )
         {
-            const auto [it, bInserted] = _impl->_mapStreamingDemand.emplace( AssetRedirect::toCacheKey( relativePath ), demand );
+            const auto [it, bInserted] = _impl->_mapStreamingDemand.emplace( AssetRegistry::toCacheKey( relativePath ), demand );
             if ( bInserted == false )
                 it->second.merge( demand );
         }
@@ -1189,7 +1189,7 @@ namespace sw
         const bool bValidRequest = isCPUTexturePath( relativePath ) && bSizeMatches;
         if ( _impl == nullptr || bValidRequest == false )
             return false;
-        const string             key = AssetRedirect::toCacheKey( relativePath );
+        const string             key = AssetRegistry::toCacheKey( relativePath );
         UniqueLock<shared_mutex> lock{ _impl->_mutex };
         if ( _impl->_mapEntry.find( key ) != _impl->_mapEntry.end() )
             return false;
@@ -1205,7 +1205,7 @@ namespace sw
     {
         if ( _impl == nullptr || isCPUTexturePath( relativePath ) == false )
             return;
-        const string             key = AssetRedirect::toCacheKey( relativePath );
+        const string             key = AssetRegistry::toCacheKey( relativePath );
         unique_ptr<Texture2D>    pErased; // 픽셀 바이트(수 MB)는 잠금을 놓은 뒤 푼다
         UniqueLock<shared_mutex> lock{ _impl->_mutex };
         const auto               it = _impl->_mapEntry.find( key );
@@ -1225,7 +1225,7 @@ namespace sw
         const bool bInvalidDeclaration = _impl == nullptr || isRenderTargetPath( relativePath ) == false || width == 0 || height == 0;
         if ( bInvalidDeclaration )
             return;
-        const string             key = AssetRedirect::toCacheKey( relativePath );
+        const string             key = AssetRegistry::toCacheKey( relativePath );
         UniqueLock<shared_mutex> lock{ _impl->_mutex };
         Impl::RenderTargetSize&  size = _impl->_mapRenderTargetSize[key];
         size._width                   = width;
@@ -1238,7 +1238,7 @@ namespace sw
         const bool            bInvalidRenderTargetRequest = _impl == nullptr || pDevice == nullptr || isRenderTargetPath( relativePath ) == false || width == 0 || height == 0;
         if ( bInvalidRenderTargetRequest )
             return false;
-        const string key = AssetRedirect::toCacheKey( relativePath );
+        const string key = AssetRegistry::toCacheKey( relativePath );
 
         // 크기를 먼저 알린다 — 아직 만들지 않았으면 다음 acquire 가 이 크기로 만든다. 다시 만드는 일은 reload 와 같이 잠금 밖에서 한다.
         UniqueLock<shared_mutex> lock{ _impl->_mutex };
@@ -1303,7 +1303,7 @@ namespace sw
     {
         if ( relativePath.empty() || _impl == nullptr )
             return nullptr;
-        const string                   key = AssetRedirect::toCacheKey( relativePath );
+        const string                   key = AssetRegistry::toCacheKey( relativePath );
         ScopedSharedLock<shared_mutex> lock{ _impl->_mutex };
         const auto                     it = _impl->_mapEntry.find( key );
         // 올리는 중(처음 acquire · reload)인 항목은 내주지 않는다 — 그 스레드가 잠금 없이 같은 객체의 핸들 · SRV 를 바꾸고 있다.
@@ -1319,7 +1319,7 @@ namespace sw
         if ( _impl == nullptr || bEmpty )
             return;
         Impl::RegionUpdate update;
-        update._key       = AssetRedirect::toCacheKey( relativePath );
+        update._key       = AssetRegistry::toCacheKey( relativePath );
         update._x         = x;
         update._y         = y;
         update._width     = width;
@@ -1454,7 +1454,7 @@ namespace sw
     {
         if ( relativePath.empty() || _impl == nullptr )
             return;
-        _impl->releaseReference( AssetRedirect::toCacheKey( relativePath ), _impl->_pBoundDevice.load( std::memory_order_acquire ) );
+        _impl->releaseReference( AssetRegistry::toCacheKey( relativePath ), _impl->_pBoundDevice.load( std::memory_order_acquire ) );
     }
 
     bool TextureCache::isCached( string_view relativePath ) const
@@ -1462,7 +1462,7 @@ namespace sw
         if ( relativePath.empty() || _impl == nullptr )
             return false;
 
-        const string                   key = AssetRedirect::toCacheKey( relativePath );
+        const string                   key = AssetRegistry::toCacheKey( relativePath );
         ScopedSharedLock<shared_mutex> lock{ _impl->_mutex };
         return _impl->_mapEntry.find( key ) != _impl->_mapEntry.end();
     }
@@ -1849,7 +1849,7 @@ namespace sw
         const bool bCanReload = _impl != nullptr && pDevice != nullptr;
         if ( bNotOnDisk || bCanReload == false )
             return ReloadResult::NotTracked;
-        const string key = AssetRedirect::toCacheKey( relativePath );
+        const string key = AssetRegistry::toCacheKey( relativePath );
 
         // 렌더 스레드 비우기와 다시 올리기는 잠금 밖에서 한다. 잠금을 쥔 채 비우면 같은 잠금을 기다리는
         // 렌더 스레드와 서로 기다릴 수 있다. 진행 중 표시를 세워 두면 그사이 acquire 는 기다리고 release 는 지우지 않는다.

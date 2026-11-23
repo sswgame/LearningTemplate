@@ -7,6 +7,7 @@
 #include "Core/Hash/HashUtil.h"
 #include "Core/String/StringUtil.h"
 
+#include "Engine/Content/AssetGUID.h"
 #include "Engine/Localization/CultureInfo.h"
 #include "Engine/Localization/LocalizationBinaryTable.h"
 #include "Engine/Serialization/XML/XMLDocument.h"
@@ -140,12 +141,13 @@ namespace sw
 
             [[nodiscard]] static bool writeTextFile( string_view absolutePath, const string& text )
             {
-                // 내용이 같으면 쓰지 않는다. 파일 시간이 바뀌면 핫 리로드와 빌드 스탬프가 헛돈다.
-                string     existing;
-                const bool bContentUnchanged = FileUtil::readOptionalTextFile( FileUtil::toDiskPath( absolutePath ), existing ) == OptionalFileRead::Read && existing == text;
-                if ( bContentUnchanged )
+                // 정체성 머리는 문서 밖의 처리 지시라 다시 쓴 글에 없다 — 있던 파일의 것을 옮겨 쓴다. 내용이 같으면 쓰지 않는다. 파일 시간이 바뀌면 핫 리로드와 빌드 스탬프가 헛돈다.
+                string       existing;
+                const bool   bExisting   = FileUtil::readOptionalTextFile( FileUtil::toDiskPath( absolutePath ), existing ) == OptionalFileRead::Read;
+                const string textToWrite = bExisting ? AssetGUIDHeader::carryOver( existing, text ) : text;
+                if ( bExisting && existing == textToWrite )
                     return true;
-                return FileUtil::ensureParentDirectoryExists( FileUtil::toDiskPath( absolutePath ) ) && FileUtil::writeTextFile( FileUtil::toDiskPath( absolutePath ), text );
+                return FileUtil::ensureParentDirectoryExists( FileUtil::toDiskPath( absolutePath ) ) && FileUtil::writeTextFile( FileUtil::toDiskPath( absolutePath ), textToWrite );
             }
         };
     } // namespace

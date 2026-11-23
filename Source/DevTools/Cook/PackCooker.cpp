@@ -36,6 +36,7 @@
 #include "Engine/Foundation/EngineServices.h"
 #include "Engine/Reflection/TypeInfo.h"
 #include "Engine/Serialization/Format/JSONSerializer.h"
+#include "Engine/Serialization/Inherit/AssetRedirect.h"
 #include "Engine/Serialization/Inherit/DataCatalogReferences.h"
 #include "Engine/Serialization/Inherit/DataInheritance.h"
 #include "Engine/Serialization/Inherit/ResourceComposer.h"
@@ -660,39 +661,73 @@ namespace sw
             }
 
             /**
-             * @brief 팩에 담은 소스 파일 하나의 정체성(GUID)을 팩 색인(@p inoutIndex)에 한 줄 더합니다 — 배포본에는 `.meta` 가 없어(PackConfig 가 뺀다) 정체성은 이 색인이 나른다.
-             * @details 우리 형식 글은 머리를, 원본은 곁의 `.meta` 를 디스크 입구(`AssetIO::readTextFile`)로 읽는다 — 이 작업의 입력이 되어 GUID 가 바뀌면 팩을 다시 굽는다.
-             *          임포트 산출물(`.meta` 없는 `textures/` · `models/` 파일)은 원본의 정체성을 쓴다 — 원본 GUID → 산출물 경로 줄은 2 단계에서 임포트 기록으로 잇는다(docs/NEXT.md).
-             *          정체성이 없는 파일은 쿠킹 실패다 — 경로로 대신하지 않는다(`py -3 -m Scripts asset-ids --fix`).
+             * @brief 소스 파일 하나의 정체성(GUID)입니다 — 우리 형식 글은 머리, 원본은 곁의 `.meta`, 임포트 산출물은 원본의 `.meta` 와 산출물 이름. 없으면 없음입니다.
+             * @details 디스크 입구(`AssetIO::readTextFile`)로 읽는다 — 이 작업의 입력이 되어 GUID 가 바뀌면 팩을 다시 굽는다. 규칙은 저작 색인(`AssetDatabase::build`)과 같다.
              */
-            [[nodiscard]] static bool addPackedIdentity( const AssetIdentityRules& rules, const string& domain, const string& relativePath, const string& absPath, AssetPackIndex& inoutIndex )
+            [[nodiscard]] static optional<AssetGUID> readPackedIdentity( const AssetIdentityRules& rules, AssetIdentityKind kind, const string& assetID, const string& absPath )
             {
-                const string            assetID = makeAssetID( domain, relativePath );
+                if ( kind != AssetIdentityKind::Header && kind != AssetIdentityKind::Source )
+                    return nullopt;
+                const string metaAbs = AssetMeta::makePath( absPath );
+                string       text;
+                AssetMeta    meta;
+                if ( kind == AssetIdentityKind::Header && AssetIO::readTextFile( absPath, text ) )
+                {
+                    const optional<AssetGUID> headerGUID = AssetGUIDHeader::read( text )._guid;
+                    if ( headerGUID.has_value() )
+                        return headerGUID;
+                }
+                if ( kind == AssetIdentityKind::Source && FileUtil::isRegularFile( FileUtil::toDiskPath( metaAbs ) ) && AssetIO::readTextFile( metaAbs, text ) )
+                    return meta.parseXML( text, AssetMeta::makePath( assetID ) );
+                if ( rules.isUnderDerivedFolder( assetID ) == false )
+                    return nullopt;
+                const string_view           contentRoot = string_view( absPath ).substr( 0, absPath.size() - assetID.size() ); // 원본 경로는 리소스 id 로 끝난다(`makeAssetID`)
+                vector<AssetImportedSource> listSource;
+                rules.collectImportedSources( assetID, listSource );
+                for ( const AssetImportedSource& source : listSource )
+                {
+                    const string sourceMetaAbs = AssetMeta::makePath( FileUtil::joinPath( contentRoot, source._sourceID ) );
+                    if ( FileUtil::isRegularFile( FileUtil::toDiskPath( sourceMetaAbs ) ) == false )
+                        continue;
+                    const optional<AssetGUID> sourceGUID = AssetIO::readTextFile( sourceMetaAbs, text ) ? meta.parseXML( text, AssetMeta::makePath( source._sourceID ) ) : optional<AssetGUID>{};
+                    return sourceGUID.has_value() ? optional<AssetGUID>{ AssetGUID::fromName( *sourceGUID, source._outputName ) } : nullopt;
+                }
+                return nullopt;
+            }
+
+            /**
+             * @brief 팩에 담은 소스 파일 하나의 정체성(GUID)을 팩 색인(@p inoutIndex)에 한 줄 더합니다 — 배포본에는 `.meta` 가 없어(PackConfig 가 뺀다) 정체성은 이 색인이 나른다.
+             * @details 원본이 없는 산출물(내용 주소 공유 결과 `_shared/`)은 줄이 없다 — 산출물끼리 경로로 가리킨다.
+             *          그 밖에 정체성이 없는 파일은 쿠킹 실패다 — 경로로 대신하지 않는다(`py -3 -m Scripts asset-ids --fix`).
+             */
+            [[nodiscard]] static bool addPackedIdentity( const AssetIdentityRules& rules, const string& domain, const PackItem& item, AssetPackIndex& inoutIndex )
+            {
+                const string            assetID = makeAssetID( domain, item._relativePath );
                 const AssetIdentityKind kind    = rules.classify( assetID );
-                const string            metaAbs = AssetMeta::makePath( absPath );
                 if ( kind == AssetIdentityKind::Skipped || kind == AssetIdentityKind::Sidecar )
                     return true;
-                if ( kind == AssetIdentityKind::Source && rules.isUnderDerivedFolder( assetID ) && FileUtil::isRegularFile( FileUtil::toDiskPath( metaAbs ) ) == false )
-                    return true;
-                string              text;
-                optional<AssetGUID> guid;
-                if ( kind == AssetIdentityKind::Header && AssetIO::readTextFile( absPath, text ) )
-                    guid = AssetGUIDHeader::read( text )._guid;
-                if ( kind == AssetIdentityKind::Source && FileUtil::isRegularFile( FileUtil::toDiskPath( metaAbs ) ) && AssetIO::readTextFile( metaAbs, text ) )
-                {
-                    AssetMeta meta;
-                    guid = meta.parseXML( text, AssetMeta::makePath( assetID ) );
-                }
-                // 산출물 폴더의 우리 형식 글(임포트가 쓴 `_shared/materials/*.material`)은 머리가 없다 — 원본의 정체성을 쓴다. 손으로 커밋한 글(거울 표 등)은
-                // 커밋 검사(`asset-ids` — git 이 추적하는 파일만 본다)가 머리를 요구하므로, 여기서는 디스크에만 있는 산출물을 건너뛴다.
-                if ( guid.has_value() == false && kind == AssetIdentityKind::Header && rules.isUnderDerivedFolder( assetID ) )
+                const optional<AssetGUID> guid = readPackedIdentity( rules, kind, assetID, item._absPath );
+                if ( guid.has_value() == false && rules.isUnderDerivedFolder( assetID ) )
                     return true;
                 if ( guid.has_value() == false )
                 {
                     SW_LOG_ERROR_ID( "PackCooker.PackCookNoIdentity", "Pack cook: '%#' has no asset GUID - run py -3 -m Scripts asset-ids --fix", assetID );
                     return false;
                 }
-                inoutIndex._listEntry.push_back( AssetPackIndexEntry{ *guid, FileUtil::normalizeSeparators( relativePath ) } );
+                inoutIndex._listEntry.push_back( AssetPackIndexEntry{ *guid, FileUtil::normalizeSeparators( item._relativePath ) } );
+                return true;
+            }
+
+            /** @brief 도메인 리다이렉트 표의 정체성 대체 줄을 팩 색인에 더합니다. 읽지 못했거나 틀렸으면 이유가 남고 false 입니다. */
+            [[nodiscard]] static bool addIdentityRedirects( const PackItem& item, AssetPackIndex& inoutIndex )
+            {
+                string text;
+                if ( AssetIO::readTextFile( item._absPath, text ) == false )
+                    return false;
+                const expected<vector<AssetIdentityRedirect>> rows = AssetRedirect::parseIdentityRows( text, item._absPath );
+                if ( rows.has_value() == false )
+                    return false;
+                inoutIndex._listRedirect.insert( inoutIndex._listRedirect.end(), rows->begin(), rows->end() );
                 return true;
             }
 
@@ -716,6 +751,7 @@ namespace sw
             struct DomainListing
             {
                 vector<PackItem>  _listItem;
+                vector<PackItem>  _listReferencedExcluded; ///< 닿았지만 싣지 않는 원본 — 정체성 색인에만 줄이 든다
                 vector<string>    _listStale;
                 DroppedShaderList _droppedRequested; ///< 닿은 출처가 요청했는데 원본이 닿지 않아 뺀 것 — 런타임이 찾을 셰이더가 팩에 없다(경고)
                 DroppedShaderList _droppedOther;     ///< 닿지 않은 출처만 요청했거나 요청 밖(낡은 잔재 등) — 정보 줄
@@ -740,6 +776,8 @@ namespace sw
                     string relativePath;
                     if ( makeListedRelativePath( domainDir, absPath, relativePath ) == false )
                         return false;
+                    if ( selection._setReferencedExcluded.contains( makeAssetID( domain, relativePath ) ) )
+                        outListing._listReferencedExcluded.push_back( PackItem{ PackStreamWriter::makePathHash( relativePath ), relativePath, absPath, PackItemSource::Source, {} } );
                     if ( PackCooker::shouldIncludeFile( relativePath, config, params._shaderFolder, params._buildTarget ) == false )
                         continue;
                     // 산출물은 스테이징에만 있다. 소스 트리에 남은 것은 낡은 쿠킹 잔재이고, Dev 런타임이 소스가 없을 때 그것으로 물러나 실패를 가리므로 넣지 않는다.
@@ -953,8 +991,19 @@ namespace sw
                         return kFailed;
                     for ( const PackItem& item : listing._listItem ) // 색인은 도메인 전체다 — 다른 몫에 담긴 원본도 센다
                     {
-                        if ( item._source == PackItemSource::Source && addPackedIdentity( identityRules, domain, item._relativePath, item._absPath, identityIndex ) == false )
+                        if ( item._source == PackItemSource::Source && addPackedIdentity( identityRules, domain, item, identityIndex ) == false )
                             return kFailed;
+                        // 정체성 대체 줄은 색인이 나른다 — 런타임은 색인만 합친다.
+                        if ( item._source == PackItemSource::Source && item._relativePath == AssetRedirect::kFileName && addIdentityRedirects( item, identityIndex ) == false )
+                            return kFailed;
+                    }
+                    // 닿았지만 이 대상이 싣지 않는 원본(셰이더 원본, 전용 서버의 텍스처)도 줄은 싣는다 — 줄이 없으면 그것을 가리키는 GUID 참조가 풀리지 않아 읽기가 진다.
+                    for ( const PackItem& item : listing._listReferencedExcluded )
+                    {
+                        const string              assetID = makeAssetID( domain, item._relativePath );
+                        const optional<AssetGUID> guid    = readPackedIdentity( identityRules, identityRules.classify( assetID ), assetID, item._absPath );
+                        if ( guid.has_value() )
+                            identityIndex._listEntry.push_back( AssetPackIndexEntry{ *guid, FileUtil::normalizeSeparators( item._relativePath ) } );
                     }
                     const expected<string> indexText = identityIndex.makeText();
                     if ( indexText.has_value() == false )

@@ -456,6 +456,7 @@ namespace sw
                     return false;
                 }
                 AssetRegistryLayer layer{ indexID, {} };
+                layer._listRedirect = index->_listRedirect;
                 layer._listEntry.reserve( index->_listEntry.size() );
                 for ( const AssetPackIndexEntry& entry : index->_listEntry )
                 {
@@ -466,7 +467,7 @@ namespace sw
         }
         else
         {
-            // shortcut: 기동 때 한 번 훑는다 — 에디터가 만들고 옮긴 에셋은 다음 기동까지 색인에 없다. 파일 감시로 갱신하는 일은 NEXT 의 GUID 2 단계에 남았다.
+            // 기동 때 한 번 훑는다 — 에디터가 만들고 옮기고 임포트한 에셋은 그 자리에서 줄을 고친다(`AssetRegistry::record` · `move`, 파일 감시 `AssetHotReload::recordIdentity`).
             const ProcessRoots& roots = ProcessRoots::get();
             AssetIdentityRules  rules;
             if ( rules.load( roots._project.str() ) == false )
@@ -511,7 +512,7 @@ namespace sw
                 SW_LOG_ERROR_ID( "AssetManager.PatchIndexInvalid", "%# of '%#' - %# '%#'", AssetPackIndex::kFileName, listPatchSource[patchIndex], index.error().message(), index.error().detail() );
                 return false;
             }
-            AssetRegistryLayer layer{ listPatchSource[patchIndex], {} };
+            AssetRegistryLayer layer{ listPatchSource[patchIndex], {}, index->_listRedirect };
             for ( const AssetPackIndexEntry& entry : index->_listEntry )
             {
                 layer._listEntry.push_back( AssetRegistryEntry{ entry._guid, entry._path } );

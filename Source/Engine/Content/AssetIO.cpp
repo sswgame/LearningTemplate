@@ -15,7 +15,6 @@
 #include "Engine/Content/CookJob.h"
 #include "Engine/Content/Pack/PackManager.h"
 #include "Engine/Foundation/EngineServices.h"
-#include "Engine/Serialization/Inherit/AssetRedirect.h"
 #include "Engine/Serialization/Inherit/ResourceRemap.h"
 
 namespace sw
@@ -71,21 +70,13 @@ namespace sw
          */
         string_view remapForRead( string_view relativePath, string& storage )
         {
-            // 옮긴 에셋의 옛 id 부터 푼다(`AssetRedirect` — 고정 표라 쿠킹 안에서도 푼다). 경로 교체는 그 뒤, 새 id 에 건다.
-            string_view currentPath = relativePath;
-            string      redirected;
-            if ( AssetRedirect::resolve( relativePath, redirected ) )
-            {
-                storage     = std::move( redirected );
-                currentPath = storage;
-            }
             string remapped;
-            if ( CookJob::findCurrent() == nullptr && ResourceRemap::resolve( currentPath, remapped ) )
+            if ( CookJob::findCurrent() == nullptr && ResourceRemap::resolve( relativePath, remapped ) )
             {
                 storage = std::move( remapped );
                 return storage;
             }
-            return currentPath;
+            return relativePath;
         }
 
         template <typename DiskReadFn, typename PackReadFn>

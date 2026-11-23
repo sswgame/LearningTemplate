@@ -26,11 +26,26 @@ namespace sw
         string    _assetID;
     };
 
+    /** @brief 참조 글 하나를 푼 것입니다(`AssetRegistry::readReferenceText`). */
+    struct AssetReferenceTarget
+    {
+        string              _path; ///< 지금 리소스 id(빈 글이면 "가리키지 않음")
+        optional<AssetGUID> _guid; ///< 정체성 — 색인에 없는 경로 글이면 없음
+    };
+
+    /** @brief 정체성 대체 한 줄입니다(`AssetRedirect` 표의 `<IdentityRedirect>`) — `_from` 을 가리키는 참조는 `_to` 로 풀린다. */
+    struct AssetIdentityRedirect
+    {
+        AssetGUID _from;
+        AssetGUID _to;
+    };
+
     /** @brief 합칠 층 하나입니다 — 팩 하나의 색인 또는 저작 색인. `_sourceName` 은 오류에 적는 이름이다. */
     struct AssetRegistryLayer
     {
-        string                     _sourceName;
-        vector<AssetRegistryEntry> _listEntry;
+        string                        _sourceName;
+        vector<AssetRegistryEntry>    _listEntry;
+        vector<AssetIdentityRedirect> _listRedirect{}; ///< 정체성 대체 줄
     };
 
     /**
@@ -47,10 +62,11 @@ namespace sw
          * @brief 층들을 마운트 순서(@p listLayer 의 앞이 낮은 우선순위)로 합칩니다.
          * @details 뒤 층의 줄이 같은 GUID 의 앞 줄을 이긴다(옮긴 에셋의 옛 경로는 비운다). 뒤 층이 앞 층의 다른 GUID 가 쓰던 경로를 가지면 그 앞 GUID 는 풀리지 않는다 —
          *          그 자리의 파일은 이제 다른 에셋이다. 한 층 안에서 GUID 나 경로(대소문자 무시)가 겹치면 고르지 않고 오류다.
+         *          정체성 대체 줄은 뒤 층이 같은 옛 GUID 의 앞 줄을 이기고, 합친 줄이 순환하면 오류다.
          */
         [[nodiscard]] static expected<AssetRegistry> merge( const vector<AssetRegistryLayer>& listLayer );
 
-        /** @brief @p guid 의 리소스 id 입니다(복사). 없으면 없음입니다. */
+        /** @brief @p guid 의 리소스 id 입니다(복사). 그 GUID 의 에셋이 없으면 정체성 대체 줄을 따라간 에셋의 것이고, 그것도 없으면 없음입니다. */
         [[nodiscard]] optional<string> findPath( const AssetGUID& guid ) const;
         /** @brief 리소스 id @p assetID 의 GUID 입니다. 대소문자는 가리지 않습니다. 없으면 없음입니다. */
         [[nodiscard]] optional<AssetGUID> findGUID( string_view assetID ) const;
@@ -83,12 +99,28 @@ namespace sw
         [[nodiscard]] static bool isReferenceText( string_view text );
         /** @brief GUID 참조 글 @p text 의 GUID 입니다. 머리가 없거나 뒤가 글 표기가 아니면 없음입니다(고쳐 읽지 않는다). */
         [[nodiscard]] static optional<AssetGUID> parseReferenceText( string_view text );
+        /**
+         * @brief 파일에 적힌 참조 글 @p text 를 풉니다 — GUID 참조는 지금 경로로, 경로 글은 색인에서 정체성을 찾아 둔다(없으면 경로만). 앞뒤 공백은 뺀다.
+         * @details 참조를 읽는 칸(`AssetRef<T>` · `DataPath`)이 모두 이 함수를 지난다. 빈 글은 "가리키지 않음" 이다.
+         * @return GUID 글이 틀렸으면 `InvalidArgument`, 색인에 없으면 `NotFound` 입니다(다른 에셋으로 대신하지 않는다).
+         */
+        [[nodiscard]] static expected<AssetReferenceTarget> readReferenceText( string_view text );
+        /** @brief @p path 를 파일에 적을 참조 글입니다 — 정체성이 있으면 GUID 참조, 없으면 경로 글 그대로. `readReferenceText` 의 짝이다. */
+        [[nodiscard]] static string makeReferenceText( string_view path, const optional<AssetGUID>& guid );
+
+        /**
+         * @brief 경로로 찾는 에셋 캐시(메시 · 프리팹 · 머티리얼 · 텍스처 · UI 글 · 물리 메시)의 키를 만드는 한 곳입니다 — 맵 키 꼴(`FileUtil::normalizePath`)로 접은 지금 경로다. GUID 참조 글도 받는다.
+         * @details 캐시마다 접기를 따로 적으면 한쪽이 빠뜨려 같은 에셋이 두 칸에 올랐다(A-20). 키가 GUID 글이 아니라 경로인 까닭: 경로를 옮겨 적는 리다이렉트가 없어 경로와 GUID 가
+         *          일대일이고, 키는 곧 읽을 리소스 id 이자 파일 감시 사건의 이름이다(Godot 도 uid 를 경로로 풀어 경로로 ResourceCache 를 찾는다). GUID 키면 모든 조회가 색인 잠금을 한 번 더 탄다.
+         */
+        [[nodiscard]] static string toCacheKey( string_view path );
 
         /** @brief 한 줄을 적습니다 — 같은 GUID 의 옛 자리와 같은 자리의 다른 GUID 를 비운다(`merge` · `record` · `move` 가 함께 쓴다). */
         void put( const AssetGUID& guid, string_view assetID );
 
     private:
-        unordered_map<AssetGUID, string> _mapGUIDToPath;
-        unordered_map<string, AssetGUID> _mapPathToGUID; ///< 키는 소문자 리소스 id
+        unordered_map<AssetGUID, string>    _mapGUIDToPath;
+        unordered_map<string, AssetGUID>    _mapPathToGUID; ///< 키는 소문자 리소스 id
+        unordered_map<AssetGUID, AssetGUID> _mapRedirect;   ///< 정체성 대체(옛 GUID → 끝 GUID, 사슬은 합칠 때 접는다)
     };
 } // namespace sw
