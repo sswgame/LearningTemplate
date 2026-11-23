@@ -14,6 +14,21 @@
 namespace sw
 {
     /**
+     * @struct RHIQueueClockSample
+     * @brief 두 큐의 GPU 시계를 CPU 시계와 함께 이어서 찍은 표본 하나입니다(DX12 `GetClockCalibration` — 주파수와 시계는 큐마다 묻는다).
+     */
+    struct RHIQueueClockSample
+    {
+        uint64 _graphicsGPUTick{ 0 }; ///< 그래픽스 큐 GPU 틱
+        uint64 _graphicsCPUTick{ 0 }; ///< 그 순간의 CPU 틱
+        uint64 _computeGPUTick{ 0 };  ///< 컴퓨트 큐 GPU 틱
+        uint64 _computeCPUTick{ 0 };  ///< 그 순간의 CPU 틱
+    };
+} // namespace sw
+
+namespace sw
+{
+    /**
      * @struct RHITimestampFrame
      * @brief 이미 끝난 한 프레임의 타임스탬프입니다(`IRHITimestampProvider::readTimestamps`).
      * @details 슬롯 값은 기준점(그 프레임에서 가장 이른 슬롯) 뒤 마이크로초이고, 기준점 자체는 GPU 시계의 나노초입니다. 엔진 테이블(`GPU.<패스>`)은
@@ -44,5 +59,13 @@ namespace sw
 
         /** @brief 틱을 GPU 시계 나노초로 바꿉니다(`resolve` 의 기준점과 `readGPUClockNanos` 가 같은 환산을 쓰게 한 곳에 둡니다). */
         static int64 convertTickToNanos( uint64 tick, float64 nanosPerTick );
+
+        /**
+         * @brief 컴퓨트 큐 틱에 더하면 그래픽스 큐 시계의 틱이 되는 값입니다(두 큐의 GPU 주파수가 같을 때).
+         * @details 두 GPU 시계를 각자의 CPU 표본으로 잇는다. 표본 하나는 두 시계를 읽는 사이에 선점되면 수백 µs 어긋나므로 표본들의 **중앙값**을 쓴다.
+         *          중앙값이 @p sameClockToleranceMicros 안이면 같은 카운터로 보고 0 을 준다(표본 잡음을 패스 시간에 섞지 않는다).
+         * @param listSample 비어 있으면 0 입니다(부르는 쪽이 먼저 본다).
+         */
+        static int64 computeComputeQueueTickOffset( const vector<RHIQueueClockSample>& listSample, uint64 gpuFrequency, uint64 cpuFrequency, float64 sameClockToleranceMicros );
     };
 } // namespace sw
