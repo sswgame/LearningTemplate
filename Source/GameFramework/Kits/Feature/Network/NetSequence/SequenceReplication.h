@@ -6,7 +6,8 @@
  *          - **판정은 서버가 한다.** 트리거 계약의 진입은 모든 월드가 내지만 시퀀스 트리거는 클라이언트 월드에서 틀지 않는다(`SequenceTriggerComponent` 머리말 — 언리얼 `HasAuthority`).
  *            서버는 갱신마다 트리거 등록 칸에서 발동 수가 오른 트리거를 찾아 시작 메시지(재생 번호, 디렉터 · 활성자 오브젝트 번호, 대상, 서버의 지금 프레임)를 보낸다.
  *          - **대상.** `Everyone` 은 연결된 모두, `Activator` 는 활성자 폰을 가진 연결 하나(`PawnComponent::findInputConnection` — 언리얼 `Client` RPC 의 소유 연결)다.
- *            가진 연결이 없는 폰(리슨 서버 호스트의 폰)이면 원격에 보낼 곳이 없다.
+ *            가진 연결이 없는 폰(리슨 서버 호스트의 폰)이면 원격에 보낼 곳이 없다. 여러 플레이어의 `Activator` 재생은 함께 돈다 — 서버는 플레이어마다 시간만 재는 디렉터를 두고
+ *            (`SequenceTriggerComponent::getPlays`), 클라이언트에는 씬의 디렉터 번호를 보내 자기 월드의 디렉터 하나로 튼다.
  *          - **늦은 참가.** 연결이 열리면 다음 갱신에서 재생 중인 `Everyone` 재생마다 그때의 프레임으로 시작을 그 연결에만 보낸다 — 클라이언트는 그 프레임부터 튼다
  *            (`SequencePlayerComponent::playFromFrame`, 지난 이벤트는 쏘지 않는다).
  *          - **끝.** 서버의 디렉터가 재생을 멈추면(정상 끝 · 건너뛰기 · 멈춤) 끝 메시지를 대상에게 보내고, 클라이언트는 아직 재생 중이면 끝으로 건너뛴다(`skipToEnd`).
@@ -142,9 +143,9 @@ namespace sw
         struct Play
         {
             uint32                  _playID{ 0 };
-            GameObjectHandle        _director{};
+            GameObjectHandle        _director{}; ///< 서버에서 이 재생을 도는 디렉터(플레이어만의 디렉터일 수 있다)
             GameObjectHandle        _activator{};
-            NetObjectID             _directorNetID{ 0 };
+            NetObjectID             _directorNetID{ 0 }; ///< 클라이언트가 틀 씬 디렉터의 번호(트리거의 `getSequence`)
             NetObjectID             _activatorNetID{ 0 };
             int32                   _targetConnection{ constant::invalid_index::kInt32 }; ///< `Activator` 재생의 대상 연결(없으면 원격에 보낼 곳이 없다)
             SequenceTriggerAudience _audience{ SequenceTriggerAudience::Everyone };
@@ -159,8 +160,10 @@ namespace sw
         void sendEnds();
         void sendToJoining();
         void sendNewPlays();
-        /** @brief 트리거의 새 재생을 만듭니다. 디렉터 · 활성자에 번호가 없으면 오류를 남기고 false 입니다. */
-        [[nodiscard]] bool makePlay( const SequenceTriggerComponent& trigger, Play& outPlay );
+        /** @brief 트리거의 새 재생 @p triggerPlay 를 보낼 재생으로 만듭니다. 디렉터 · 활성자에 번호가 없으면 오류를 남기고 false 입니다. */
+        [[nodiscard]] bool makePlay( const SequenceTriggerComponent& trigger, const SequenceTriggerPlay& triggerPlay, Play& outPlay );
+        /** @brief 새 재생 하나의 시작을 대상에게 보내고 살아 있는 재생에 더합니다. */
+        void startPlay( const SequenceTriggerComponent& trigger, const SequenceTriggerPlay& triggerPlay );
         /** @brief 재생의 시작 메시지를 씁니다(프레임은 서버 디렉터의 지금 프레임). 디렉터가 재생 중이 아니면 false 입니다. */
         [[nodiscard]] bool writeStart( const Play& play );
         /** @brief 쓴 메시지를 재생의 대상에게 보냅니다. 보낸 연결 수를 돌려줍니다. */

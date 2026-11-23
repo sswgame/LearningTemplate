@@ -31,22 +31,30 @@ namespace sw
 
         RHITimestampRing()
             : _currentMask{}
+            , _currentComputeQueueMask{}
             , _arrSlotMask{}
+            , _arrComputeQueueMask{}
         {
         }
 
         /** @brief 모든 칸 · 이번 프레임 마스크를 비웁니다(장치를 세우거나 놓을 때). */
         void reset()
         {
-            _currentMask.clear();
-            for ( GPUTimestampSlotMask& mask : _arrSlotMask )
+            for ( uint32 ringSlot = 0; ringSlot < kSlotCount; ++ringSlot )
             {
-                mask = GPUTimestampSlotMask{};
+                beginFrame( ringSlot );
             }
         }
 
         /** @brief 이번 프레임에 슬롯 @p timestampSlot 을 적었습니다. 병렬 기록 스레드에서 불러도 된다(슬롯은 패스 인덱스로 고정이다). */
         void markWritten( uint32 timestampSlot ) { _currentMask.set( timestampSlot ); }
+
+        /** @brief 이번 프레임에 **비동기 컴퓨트 큐 리스트**가 슬롯 @p timestampSlot 을 적었습니다(`markWritten` 을 겸한다). 그래픽스 큐와 시간이 겹치는 슬롯이라 따로 가린다. */
+        void markComputeQueueWritten( uint32 timestampSlot )
+        {
+            _currentMask.set( timestampSlot );
+            _currentComputeQueueMask.set( timestampSlot );
+        }
 
         /** @brief 이번 프레임의 마스크를 칸 @p ringSlot 에 굳히고 돌려줍니다(제출 직전 — 기록이 모두 끝났다). */
         GPUTimestampSlotMask closeFrame( uint32 ringSlot )
@@ -54,6 +62,7 @@ namespace sw
             SW_CHECK_INDEX( ringSlot, kSlotCount );
             const GPUTimestampSlotMask mask = _currentMask.load();
             _arrSlotMask[ringSlot]          = mask;
+            _arrComputeQueueMask[ringSlot]  = _currentComputeQueueMask.load();
             return mask;
         }
 
@@ -64,16 +73,27 @@ namespace sw
             return _arrSlotMask[ringSlot];
         }
 
+        /** @brief 칸 @p ringSlot 에 굳힌 슬롯 가운데 비동기 컴퓨트 큐 리스트가 적은 것입니다(`getSlotMask` 의 부분 집합). */
+        const GPUTimestampSlotMask& getComputeQueueMask( uint32 ringSlot ) const
+        {
+            SW_CHECK_INDEX( ringSlot, kSlotCount );
+            return _arrComputeQueueMask[ringSlot];
+        }
+
         /** @brief 칸 @p ringSlot 을 다시 씁니다 — 지난 결과를 읽은 뒤 그 칸 마스크와 이번 프레임 마스크를 비운다. */
         void beginFrame( uint32 ringSlot )
         {
             SW_CHECK_INDEX( ringSlot, kSlotCount );
-            _arrSlotMask[ringSlot] = GPUTimestampSlotMask{};
+            _arrSlotMask[ringSlot]         = GPUTimestampSlotMask{};
+            _arrComputeQueueMask[ringSlot] = GPUTimestampSlotMask{};
             _currentMask.clear();
+            _currentComputeQueueMask.clear();
         }
 
     private:
-        GPUTimestampSlotAtomicMask _currentMask;             ///< 이번 프레임에 적은 슬롯(기록 스레드가 올린다)
-        GPUTimestampSlotMask       _arrSlotMask[kSlotCount]; ///< 칸마다 굳힌 마스크(렌더 스레드만)
+        GPUTimestampSlotAtomicMask _currentMask;                     ///< 이번 프레임에 적은 슬롯(기록 스레드가 올린다)
+        GPUTimestampSlotAtomicMask _currentComputeQueueMask;         ///< 그 가운데 비동기 컴퓨트 큐 리스트가 적은 슬롯
+        GPUTimestampSlotMask       _arrSlotMask[kSlotCount];         ///< 칸마다 굳힌 마스크(렌더 스레드만)
+        GPUTimestampSlotMask       _arrComputeQueueMask[kSlotCount]; ///< 칸마다 굳힌 컴퓨트 큐 마스크(렌더 스레드만)
     };
 } // namespace sw

@@ -7,7 +7,6 @@
 #include "Core/Math/MatrixMath.h"
 #include "Core/String/StringUtil.h"
 
-#include "Engine/Console/DevCommandRegistry.h"
 #include "Engine/Foundation/EngineServices.h"
 #include "Engine/Foundation/EngineSubsystemRegistration.h"
 
@@ -43,36 +42,6 @@ namespace sw
                 inoutList.resize( keepCount );
             }
         };
-
-        bool runDebugDrawCategory( const vector<string>& listArgument, string& outReply )
-        {
-            if ( engine::areEngineServicesBound() == false )
-                return false;
-            DebugDrawQueue& queue = engine::getSubsystem<DebugDrawQueue>();
-            if ( listArgument.empty() )
-            {
-                vector<hashed_string> listCategory;
-                queue.collectCategories( listCategory );
-                outReply = "categories:";
-                for ( const hashed_string& category : listCategory )
-                {
-                    outReply += ' ';
-                    outReply += category.c_str();
-                    outReply += queue.isCategoryEnabled( category ) ? "(on)" : "(off)";
-                }
-                return true;
-            }
-            if ( listArgument.size() != 2 )
-                return false;
-            bool bOn{ false };
-            if ( StringUtil::tryParseBool( listArgument[1], bOn ) == false )
-                return false;
-            queue.setCategoryEnabled( hashed_string( listArgument[0] ), bOn );
-            StringBuilder<constant::buffer::kMax256> builder;
-            builder.appendFormat( "%# %#", listArgument[0], bOn ? "on" : "off" );
-            outReply = builder.view();
-            return true;
-        }
     } // namespace
 } // namespace sw
 
@@ -342,9 +311,6 @@ namespace sw
         const auto it = _mapCategoryEnabled.find( category );
         return it == _mapCategoryEnabled.end() || it->second != 0;
     }
-
-    SW_DEV_COMMAND( DebugDrawCategory, "debugdraw.category", "debugdraw.category [<name> <on|off>]", "List or toggle DebugDrawQueue categories",
-                    &runDebugDrawCategory );
 } // namespace sw
 
 namespace sw

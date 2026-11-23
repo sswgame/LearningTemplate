@@ -618,15 +618,10 @@ namespace sw
             // 프록시 뒤 배치면 PROXY v2 머리가 TLS · WebSocket 보다 먼저 온다 — 그 장식자가 플랫폼 전송 바로 위에 선다(감사 O-17)
             if ( platformTransport != nullptr && parts._config._listTrustedProxy.empty() == false )
             {
-                vector<uint32> listTrustedProxy;
-                for ( const string& text : parts._config._listTrustedProxy )
-                {
-                    NetAddress proxy;
-                    if ( NetAddress::parse( text, 0, proxy ) == false || proxy.isIpv6() ) // PROXY v2 해석기는 TCP over IPv4 만 받는다
-                        return unexpected( Error{ ErrorKind::InvalidArgument, "online config _listTrustedProxy has an entry that is not an IPv4 address", text } );
-                    listTrustedProxy.push_back( proxy.getIpv4() );
-                }
-                platformTransport = make_unique<ProxyProtocolAcceptTransport>( std::move( platformTransport ), std::move( listTrustedProxy ) );
+                expected<vector<uint32>> listTrustedProxy = ProxyProtocolAcceptTransport::parseTrustedProxies( parts._config._listTrustedProxy );
+                if ( listTrustedProxy.has_value() == false )
+                    return unexpected( listTrustedProxy.error() );
+                platformTransport = make_unique<ProxyProtocolAcceptTransport>( std::move( platformTransport ), std::move( *listTrustedProxy ) );
             }
             if ( platformTransport != nullptr )
                 parts._ownedTransport = make_unique<WebSocketAcceptTransport>( std::move( platformTransport ) );

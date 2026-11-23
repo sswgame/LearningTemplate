@@ -94,13 +94,16 @@ namespace sw
 
     bool MeadowTownGameModeComponent::startGame()
     {
+        SharedAssetRef<CreatureLifeCatalog> pCreatures;
+        if ( acquireBoundCatalog( pCreatures ) == false )
+            return false;
         // 밭 디렉터가 이미 열었으면 아무것도 하지 않는다. 범위 밖 설정은 판 상태가 오류를 남겼다.
         GameStateComponent* pState = GameStateComponent::openOnOwner( *this, MeadowVillageData::makeStateSettings() );
         if ( pState == nullptr || MeadowVillageData::openPlayerState( *this ) == false )
             return false;
         ReputationComponent* pReputation = PlayerComponentUtil::findOnOwner<ReputationComponent>( *this ); // 방금 열었다 — 있다
         QuestLogComponent*   pQuestLog   = PlayerComponentUtil::findOnOwner<QuestLogComponent>( *this );
-        if ( initializeTown( _town, *pState, *pReputation, *pQuestLog ) == false || validateViews( *game::findSubsystem<const CreatureLifeCatalog>() ) == false )
+        if ( initializeTown( _town, *pState, *pReputation, *pQuestLog ) == false || validateViews( *pCreatures ) == false )
             return false;
         if ( pState->isFreshGame() )
         {

@@ -38,8 +38,7 @@ namespace sw
                                 &SideScrollConquestDemoComponent::getSquadSize );
 
     SideScrollConquestDemoComponent::SideScrollConquestDemoComponent()
-        : _catalogPath{}
-        , _pCatalog{}
+        : _pCatalog{}
         , _victory{ 0 }
         , _territory{ 0 }
         , _squadSize{ 0 }
@@ -73,7 +72,7 @@ namespace sw
 
     bool SideScrollConquestDemoComponent::startGame()
     {
-        if ( acquireRequired( _catalogPath, _pCatalog ) == false )
+        if ( acquireBoundCatalog( _pCatalog ) == false )
             return false;
         return runMatch();
     }

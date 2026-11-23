@@ -190,7 +190,7 @@ namespace sw
                 return true;
             }
 
-            /** @brief 부모의 목록 원소를 차례로 모읍니다. 열쇠가 없는 원소는 오류입니다. */
+            /** @brief 목록 원소를 차례로 모읍니다. 열쇠가 없거나 겹치는 원소는 오류입니다 — 겹치면 합치기는 첫 원소만 고치고, 차이 적기는 목록 밖 자리를 읽는다. */
             [[nodiscard]] static bool collectParentEntries( const XMLNode& parent, const DataInheritanceSchema& schema, vector<ListEntry>& outListEntry, string_view sourceName )
             {
                 if ( parent.isValid() == false )
@@ -203,6 +203,11 @@ namespace sw
                     if ( key.has_value() == false )
                     {
                         SW_LOG_ERROR_ID( "DataInheritance.ListKeyMissing", "'%#': an element of list '%#' in its base has no key '%#'", sourceName, schema._name, schema._keyAttribute );
+                        return false;
+                    }
+                    if ( findEntry( outListEntry, *key ) != nullptr )
+                    {
+                        SW_LOG_ERROR_ID( "DataInheritance.DuplicateKey", "'%#': element '%#' is written twice in list '%#'", sourceName, *key, schema._name );
                         return false;
                     }
                     outListEntry.push_back( ListEntry{ std::move( *key ), element, XMLNode{} } );

@@ -21,6 +21,9 @@ namespace sw
 
         struct JoltSoftBodySetInternal
         {
+            /** @brief 면의 값을 세 정점에 고르게 나누는 몫입니다. */
+            static constexpr float32 kFaceVertexShare = 1.0f / 3.0f;
+
             /** @brief 엔진 행렬(행-벡터, 이동은 4 행)을 Jolt 행렬(열-벡터, 이동은 4 열)로 옮깁니다 — 엔진의 행이 Jolt 의 열이다. */
             static JPH::Mat44 toJoltMatrix( const float4x4& matrix )
             {
@@ -313,6 +316,50 @@ namespace sw
         if ( lock.Succeeded() == false )
             return;
         static_cast<JPH::SoftBodyMotionProperties*>( lock.GetBody().GetMotionProperties() )->SetNumIterations( iterationCount ); // 다음 스텝부터다
+    }
+
+    void JoltSoftBodySet::applyWind( PhysicsSoftBodyHandle softBody, const float3& windVelocity, float32 dragDensity, float32 seconds )
+    {
+        const Record* pRecord = _softBodies.get( softBody.getSlot() );
+        if ( pRecord == nullptr )
+            return;
+        {
+            JPH::BodyLockWrite lock( _system.GetBodyLockInterface(), pRecord->_bodyID );
+            if ( lock.Succeeded() == false )
+                return;
+            JPH::Body&                     body    = lock.GetBody();
+            JPH::SoftBodyMotionProperties* pMotion = static_cast<JPH::SoftBodyMotionProperties*>( body.GetMotionProperties() );
+            // 정점의 자리 · 속도는 몸 로컬이다 — 바람을 몸 로컬로 돌려 면마다 잰다.
+            const JPH::Vec3 wind = body.GetRotation().Conjugated() * JoltUtil::toJolt( windVelocity );
+            _listWindForce.assign( pMotion->GetVertices().size(), float3{} );
+            for ( const JPH::SoftBodySharedSettings::Face& face : pMotion->GetFaces() )
+            {
+                const JPH::SoftBodyVertex& vertexA    = pMotion->GetVertex( face.mVertex[0] );
+                const JPH::SoftBodyVertex& vertexB    = pMotion->GetVertex( face.mVertex[1] );
+                const JPH::SoftBodyVertex& vertexC    = pMotion->GetVertex( face.mVertex[2] );
+                const JPH::Vec3            areaNormal = ( vertexB.mPosition - vertexA.mPosition ).Cross( vertexC.mPosition - vertexA.mPosition ) * 0.5f;
+                const float32              area       = areaNormal.Length();
+                if ( area <= MathUtil::kEpsilon )
+                    continue; // 접혀 넓이가 없는 면
+                const JPH::Vec3 normal      = areaNormal / area;
+                const JPH::Vec3 relative    = wind - ( vertexA.mVelocity + vertexB.mVelocity + vertexC.mVelocity ) * JoltSoftBodySetInternal::kFaceVertexShare;
+                const float32   normalSpeed = relative.Dot( normal );
+                const float3    force       = JoltUtil::toEngine( normal * ( 0.5f * dragDensity * area * MathUtil::abs( normalSpeed ) * normalSpeed * JoltSoftBodySetInternal::kFaceVertexShare ) );
+                for ( const JPH::uint32 vertexIndex : face.mVertex )
+                    _listWindForce[vertexIndex] += force;
+            }
+            for ( size_t vertexIndex = 0; vertexIndex < _listWindForce.size(); ++vertexIndex )
+            {
+                JPH::SoftBodyVertex& vertex = pMotion->GetVertex( static_cast<JPH::uint>( vertexIndex ) );
+                if ( vertex.mInvMass <= 0.0f )
+                    continue; // 고정 정점
+                const JPH::Vec3 change  = JoltUtil::toJolt( _listWindForce[vertexIndex] ) * ( vertex.mInvMass * seconds );
+                const float32   length  = change.Length();
+                const float32   maximum = ( wind - vertex.mVelocity ).Length();
+                vertex.mVelocity += length > maximum ? change * ( maximum / length ) : change;
+            }
+        }
+        _system.GetBodyInterface().ActivateBody( pRecord->_bodyID );
     }
 
     void JoltSoftBodySet::drawDebug( IPhysicsDebugRenderer& renderer ) const

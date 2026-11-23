@@ -269,17 +269,6 @@ namespace sw
         return true;
     }
 
-    bool SceneTransformHierarchy::hasQueuedWrites() const
-    {
-        for ( const vector<SceneTransformWrite>& listSlot : _listWriteScratch )
-        {
-            if ( listSlot.empty() == false )
-                return true;
-        }
-        return VectorUtil::containsIf( _listPendingSlotScratch, [&]( const vector<uint32>& listSlot )
-        { return listSlot.empty() == false; } );
-    }
-
     void SceneTransformHierarchy::clearQueuedWrites()
     {
         for ( vector<SceneTransformWrite>& listSlot : _listWriteScratch )

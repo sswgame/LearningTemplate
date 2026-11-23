@@ -7,7 +7,6 @@
 #pragma once
 #include "Core/Foundation/Types.h"
 
-#include "Engine/Asset/AssetRef.h"
 #include "Engine/Asset/Cache/SharedAssetRef.h"
 #include "Engine/Reflection/ReflectionMacros.h"
 
@@ -46,9 +45,6 @@ namespace sw
         [[nodiscard]] bool runMatch();
 
     private:
-        PROPERTY( Category = "Data", DisplayName = "Catalog", Tooltip = "Fighter catalog XML (roster; its moves attribute names the frame data)" )
-        AssetRef<FighterCatalog> _catalogPath;
-
         SharedAssetRef<FighterCatalog> _pCatalog;
         PROPERTY( RuntimeState )
         int32 _matchWinner; ///< 대전 결과(0, 1, 무승부 2, 끝나지 않으면 -1)

@@ -28,17 +28,20 @@ namespace sw
      */
     enum class ShadingModelID : uint8
     {
-        None            = SW_SHADING_MODEL_ID_NONE,
-        Unlit           = SW_SHADING_MODEL_ID_UNLIT,
-        DefaultLit      = SW_SHADING_MODEL_ID_DEFAULT_LIT,
-        Subsurface      = SW_SHADING_MODEL_ID_SUBSURFACE,
-        Cloth           = SW_SHADING_MODEL_ID_CLOTH,
-        ClearCoat       = SW_SHADING_MODEL_ID_CLEAR_COAT,
-        Hair            = SW_SHADING_MODEL_ID_HAIR,
-        Eye             = SW_SHADING_MODEL_ID_EYE,
-        ThinTranslucent = SW_SHADING_MODEL_ID_THIN_TRANSLUCENT,
-        Anisotropic     = SW_SHADING_MODEL_ID_ANISOTROPIC,
-        Count           = SW_SHADING_MODEL_ID_COUNT,
+        None                = SW_SHADING_MODEL_ID_NONE,
+        Unlit               = SW_SHADING_MODEL_ID_UNLIT,
+        DefaultLit          = SW_SHADING_MODEL_ID_DEFAULT_LIT,
+        Subsurface          = SW_SHADING_MODEL_ID_SUBSURFACE,
+        Cloth               = SW_SHADING_MODEL_ID_CLOTH,
+        ClearCoat           = SW_SHADING_MODEL_ID_CLEAR_COAT,
+        Hair                = SW_SHADING_MODEL_ID_HAIR,
+        Eye                 = SW_SHADING_MODEL_ID_EYE,
+        ThinTranslucent     = SW_SHADING_MODEL_ID_THIN_TRANSLUCENT,
+        Anisotropic         = SW_SHADING_MODEL_ID_ANISOTROPIC,
+        SubsurfaceCoat      = SW_SHADING_MODEL_ID_SUBSURFACE_COAT,
+        ClothCoat           = SW_SHADING_MODEL_ID_CLOTH_COAT,
+        ThinTranslucentCoat = SW_SHADING_MODEL_ID_THIN_TRANSLUCENT_COAT,
+        Count               = SW_SHADING_MODEL_ID_COUNT,
     };
     static_assert( static_cast<float32>( SW_SHADING_MODEL_ID_COUNT ) <= SW_SHADING_MODEL_ID_SCALE, "번호는 8 비트 UNORM 칸에 실린다(번호 / 255)" );
 

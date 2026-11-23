@@ -2,6 +2,7 @@
 
 #include "ModuleManager/Host/HostDevLayer.h"
 
+#include "DevTools/FileWatch/FileWatchService.h"
 #include "DevTools/Host/HostDevTools.h"
 
 #include "Engine/Foundation/EngineServices.h"
@@ -25,7 +26,7 @@ namespace sw
         class HostDevLayer final : public IHostDevLayer
         {
         public:
-            void addToHostScope( SubsystemScope& host, Engine& engine ) override { _devTools.addToHostScope( host, engine ); }
+            void addToHostScope( SubsystemScope& host, Engine& engine ) override { _devTools.addToHostScope( host, engine, _fileWatch ); }
 
             void pollShellActions( float32 deltaTime, bool bEnableEditor ) override
             {
@@ -43,7 +44,7 @@ namespace sw
             bool initializeModuleReload( uint8 targetMask, SubsystemScope& host, ModuleLoaderSubsystem& moduleLibraryHost, ModuleCatalog& outCatalog,
                                          ModuleResolution& outResolution ) override
             {
-                return _moduleReload.initialize( targetMask, host, moduleLibraryHost, outCatalog, outResolution );
+                return _moduleReload.initialize( targetMask, host, moduleLibraryHost, _fileWatch, outCatalog, outResolution );
             }
 
             ILiveReloadManager* getLiveReloadManager() const override { return _moduleReload.getLiveReloadManager(); }
@@ -58,7 +59,8 @@ namespace sw
             void detach() override { _devTools.detach(); }
 
         private:
-            HostDevTools _devTools;
+            FileWatchService _fileWatch; ///< 프로세스의 파일 감시 창구 — 아래 둘이 빌려 써 맨 앞에 둔다(마지막에 사라진다)
+            HostDevTools     _devTools;
 #if SW_WITH_DYNAMIC_MODULES
             ModuleReloadDriver _moduleReload;
 #endif

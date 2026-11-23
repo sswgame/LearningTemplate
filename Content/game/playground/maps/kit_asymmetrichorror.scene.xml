@@ -26,8 +26,7 @@
 			<GameObject _schemaVersion="0" _name="Director" _bActive="true">
 				<_listComponent>
 					<AsymmetricHorrorDemoComponent _localID="15405978080755987680" _componentName="AsymmetricHorrorDemoComponent"
-					                               _bActive="true"
-					                               _catalogPath="game/playground/data/kitdemo/demo.asymhorror.xml" />
+					                               _bActive="true" />
 				</_listComponent>
 			</GameObject>
 		</entity>

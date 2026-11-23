@@ -3,7 +3,7 @@
  * @brief EventDispatcher 채널 "game" 의 장르 공통 수명주기 이벤트를 정의합니다.
  * @details 프레임워크가 정해진 시점에 이 이벤트를 낸다.
  *          모두 `GameEventUtil::send` 로 내며, 버스 스레드면 즉시, 아니면 다음 `processEvents` 에서 전달된다.
- *          - `SaveGameSavedEvent` 와 `SaveGameLoadedEvent`: `GameInstance::saveGameToSlot` 과 `loadGameFromSlot`(자동 저장 되돌리기 `AutosaveManager::restoreLatest` · `restoreCheckpoint` 도 같은 적용 길)이 맡긴 슬롯 쓰기 · 읽기가 끝난 뒤 낸다 — 세이브가 다른 씬이면 그 씬이 열려 적용한 뒤다. 성공과 실패 모두 낸다.
+ *          - `SaveGameSavedEvent` 와 `SaveGameLoadedEvent`: `GameSaveSlots::save` 과 `load`(자동 저장 되돌리기 `AutosaveManager::restoreLatest` · `restoreCheckpoint` 도 같은 적용 길)이 맡긴 슬롯 쓰기 · 읽기가 끝난 뒤 낸다 — 세이브가 다른 씬이면 그 씬이 열려 적용한 뒤다. 성공과 실패 모두 낸다.
  *          - `SceneLoadRequestedEvent`: `GameSceneFlow` 가 게임 이동 씬 로드를 받아들일 때(`requestFirstScene` · `requestEntranceScene` · `requestTitleScene` 포함) 씬 로드를 요청할 때 낸다.
  *          - `SceneLoadCompletedEvent`: 그 로드가 활성 씬이 되었거나 실패한 뒤의 첫 `GameInstance::update` 에서 낸다.
  *
@@ -35,7 +35,7 @@ namespace sw
     // ------------------------------------------------------------------------------
     // 2) 세이브와 로드: GameInstance
     // ------------------------------------------------------------------------------
-    /** @brief 게임 상태 저장(`GameInstance::saveGameToSlot`)이 끝났음을 알립니다. */
+    /** @brief 게임 상태 저장(`GameSaveSlots::save`)이 끝났음을 알립니다. */
     struct SW_GF_API SaveGameSavedEvent final : EventBase
     {
         string _slot;             ///< 쓴(쓰려 한) 로컬 저장 슬롯 이름
@@ -46,7 +46,7 @@ namespace sw
 
 namespace sw
 {
-    /** @brief 게임 상태 불러오기(`GameInstance::loadGameFromSlot`)가 끝났음을 알립니다. */
+    /** @brief 게임 상태 불러오기(`GameSaveSlots::load`)가 끝났음을 알립니다. */
     struct SW_GF_API SaveGameLoadedEvent final : EventBase
     {
         string _slot;             ///< 읽은(읽으려 한) 로컬 저장 슬롯 이름

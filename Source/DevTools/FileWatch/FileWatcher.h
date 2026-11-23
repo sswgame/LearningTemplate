@@ -55,6 +55,18 @@ namespace sw
 
 namespace sw
 {
+    /**
+     * @class FileWatcherKey
+     * @brief OS 감시자를 만드는 열쇠입니다. `FileWatchService` 만 만든다 — 그 밖에서 감시자를 띄우는 코드는 컴파일되지 않는다.
+     * @details 예전에는 설정 리로드 · 데이터 폴더 감시마다 · 에디터 에셋 리로드 둘 · 모듈 핫 리로드가 저마다 감시자(핸들 · 스레드)를 띄워 같은 트리를 여러 번 보고 저마다 큐를 비웠다.
+     *          언리얼 DirectoryWatcher 모듈이 프로세스의 감시를 하나로 모으는 자리다.
+     */
+    class FileWatcherKey
+    {
+        friend class FileWatchService;
+        FileWatcherKey() {} // NOLINT(modernize-use-equals-default) — `= default` 면 C++17 집합체라 `{}` 가 private 를 비켜 간다
+    };
+
     SW_DECLARE_DELEGATE( void, FileChangeDelegate, const FileChangeEvent& );
 
     // ------------------------------------------------------------------------------
@@ -68,7 +80,7 @@ namespace sw
     {
     public:
         /** @brief 이 플랫폼의 OS 감시자(Windows ReadDirectoryChangesW · 리눅스 · Android inotify)를 만듭니다. 감시는 `startWatching` 이 시작합니다. OS 감시가 없는 플랫폼(웹)은 nullptr 입니다. 파일 머리말 참고. */
-        [[nodiscard]] static unique_ptr<FileWatcher> createNative();
+        [[nodiscard]] static unique_ptr<FileWatcher> createNative( FileWatcherKey key );
 
         /** @brief 가상 소멸자입니다. 감시를 멈추고 워커 스레드를 조인하는 일은 구현 클래스가 합니다. */
         virtual ~FileWatcher() = default;

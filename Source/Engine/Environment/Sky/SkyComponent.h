@@ -48,10 +48,12 @@ namespace sw
         void        setHorizonColor( const float3& color ) { _horizonColor = color; }
         void        setGroundColor( const float3& color ) { _groundColor = color; }
         void        setIntensity( float32 intensity ) { _intensity = intensity; }
-        void        setMode( SkyMode mode ) { _mode = mode; }
-        void        setHdriTexture( string_view path ) { _hdriTexture = path; }
-        void        setHdriRadianceMap( string_view path ) { _hdriRadianceMap = string( path ); }
-        void        setHdriAmbient( const SH9Color& ambient ) { _listHdriAmbient.assign( ambient._arrCoefficient, ambient._arrCoefficient + SH9Color::kCoefficientCount ); }
+        /** @brief 적은 세기에 곱할 배율입니다(날씨 — 흐린 하늘). 저장하지 않습니다. 음수는 0 으로 자릅니다. */
+        void setIntensityScale( float32 scale ) { _intensityScale = scale > 0.0f ? scale : 0.0f; }
+        void setMode( SkyMode mode ) { _mode = mode; }
+        void setHdriTexture( string_view path ) { _hdriTexture = path; }
+        void setHdriRadianceMap( string_view path ) { _hdriRadianceMap = string( path ); }
+        void setHdriAmbient( const SH9Color& ambient ) { _listHdriAmbient.assign( ambient._arrCoefficient, ambient._arrCoefficient + SH9Color::kCoefficientCount ); }
 
         /** @brief @p manager 의 켜진 하늘(씬에 하나)입니다. 없거나 둘 이상이면(오류) @p outGradient 를 비우고(세기 0) false 입니다. 읽기만 합니다. */
         [[nodiscard]] static bool findSky( const GameObjectManager& manager, SkyGradient& outGradient );
@@ -111,5 +113,7 @@ namespace sw
         float32 _cloudSoftness;
         PROPERTY( Category = "Clouds", DisplayName = "Color", Meta = "Color", EditCondition = "_bClouds", Tooltip = "Linear RGB multiplied onto the lit cloud" )
         float3 _cloudColor;
+
+        float32 _intensityScale; ///< 날씨 같은 실행 중 배율(저장하지 않는다)
     };
 } // namespace sw

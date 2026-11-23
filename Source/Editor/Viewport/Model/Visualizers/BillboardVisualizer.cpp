@@ -12,7 +12,7 @@
 #include "Editor/Viewport/Model/EditorCanvasProjection.h"
 #include "Editor/Viewport/Model/EditorVisualizerDrawList.h"
 
-#include "Engine/Environment/Foliage/WindComponent.h"
+#include "Engine/Environment/Wind/WindComponent.h"
 #include "Engine/Graphics/Shader/Binding/ShaderBindingSlots.h"
 #include "Engine/Localization/LocText.h"
 #include "Engine/Object/Component/CameraComponent.h"

@@ -17,7 +17,7 @@
 
 #include "DevTools/AssetReload/ReloadSource.h"
 #include "DevTools/AssetReload/ReloadTracker.h"
-#include "DevTools/FileWatch/FileWatcher.h"
+#include "DevTools/FileWatch/FileWatchService.h"
 #include "DevTools/ModuleReload/LiveReload/ModuleCallGuard.h"
 #include "DevTools/ModuleReload/LiveReload/ModuleCompiler.h"
 #include "DevTools/ModuleReload/LiveReload/ModuleLibraryPatch.h"
@@ -96,11 +96,12 @@ namespace sw
 
 namespace sw
 {
-    LiveReloadManager::LiveReloadManager()
+    LiveReloadManager::LiveReloadManager( FileWatchService& fileWatch )
         : _mapModule{}
         , _dependencyGraph{}
         , _listSharedModule{}
-        , _fileWatcher{ FileWatcher::createNative() }
+        , _fileWatch{ fileWatch }
+        , _moduleFolderWatch{}
         , _buildStampPath{}
         , _seenBuildToken{}
         , _buildMutex{}
@@ -117,6 +118,7 @@ namespace sw
         , _completedReloadCount{ 0 }
         , _bReloadGraphBroken{ SW_FALSE }
         , _bBuildStampPending{ SW_FALSE }
+        , _bModuleFolderChanged{ SW_FALSE }
         , _reserved{ 0 }
     {
         // 지운 수일 뿐이다. 실행 뿌리를 물려받은 앞 프로세스가 같은 pid 로 남긴 사본이 있으면 여기서 지운다.
@@ -144,11 +146,7 @@ namespace sw
         // 지운 수일 뿐이다. 아직 매핑된 사본은 남고, 실행 뿌리째 주인 정리(`SavedCleanup`)가 거둔다.
         (void)ShadowCopyName::removeCopies( ShadowCopyName::getDirectory() );
 
-        if ( _fileWatcher != nullptr )
-        {
-            _fileWatcher->stopWatching();
-            _fileWatcher.reset();
-        }
+        _moduleFolderWatch.reset();
 
         // 언로드를 미룬 옛 라이브러리를 먼저 언로드한다. 그것들은 같은 배치의 미룬 라이브러리나 **지금 살아 있는** 라이브러리에 바인딩돼 있으므로, 살아
         // 있는 모듈을 먼저 언로드하면 옛 라이브러리의 정적 소멸자가 언로드된 코드로 점프할 수 있다.
@@ -271,13 +269,13 @@ namespace sw
             return false;
         }
         // 바깥 빌드의 신호는 모듈 폴더의 성공 스탬프다(`update`). 감시는 첫 등록이 한 번 건다 — 모듈이 없는 프로세스(테스트)는 감시 스레드를 띄우지 않는다.
-        const bool bWatchModuleFolder = _fileWatcher != nullptr && _fileWatcher->isWatching() == false;
-        if ( bWatchModuleFolder )
+        if ( _moduleFolderWatch.isActive() == false )
         {
             _buildStampPath = FileUtil::joinPath( moduleDir, config::kFileModuleBuildStamp );
             if ( readBuildToken( _buildStampPath, _seenBuildToken ) == false )
                 SW_LOG_WARNING_ID( "LiveReloadManager.MissingOutsideBuildsNot", "%# is missing - outside builds are not reloaded until the build tree is configured (sw_add_module_build_stamp)", _buildStampPath );
-            if ( _fileWatcher->startWatching( moduleDir, false ) == false )
+            _moduleFolderWatch = _fileWatch.watch( moduleDir, FileWatchDepth::Folder, {}, SW_DELEGATE_METHOD( FileChangeDelegate, &LiveReloadManager::onModuleFolderChanged, this ) );
+            if ( _moduleFolderWatch.isActive() == false )
                 SW_LOG_ERROR_ID( "LiveReloadManager.FailedWatchModuleDirectory", "Failed to watch the module directory %# - outside builds are not reloaded", moduleDir );
         }
 
@@ -377,25 +375,19 @@ namespace sw
         return event._bInProgress;
     }
 
+    void LiveReloadManager::onModuleFolderChanged( const FileChangeEvent& /*changeEvent*/ )
+    {
+        _bModuleFolderChanged = SW_TRUE; // 깨우기만 한다 — 새 빌드인지는 `update` 가 스탬프의 내용으로 본다
+    }
+
     void LiveReloadManager::update()
     {
-        vector<FileChangeEvent> listEvent;
-
-        BLOCK( "Poll File Events" )
-        {
-            if ( _fileWatcher != nullptr )
-            {
-                const FileWatchPollResult poll = _fileWatcher->pollEvents( listEvent );
-                if ( poll._bWatchLost )
-                    SW_LOG_ERROR_ID( "LiveReloadManager.ModuleDirectoryWatchingStopped", "Module directory watching stopped - outside builds are not reloaded until the process restarts" );
-            }
-        }
-
         // 바깥 빌드는 모듈 DLL 의 쓰기가 아니라 성공 스탬프로 본다 — 연쇄 빌드가 모듈을 하나씩 다시 쓰는 도중의 반쯤 링크된 집합을 올리지 않는다.
         // 이벤트는 깨우는 데만 쓰고 스탬프의 내용을 비교한다(넘쳐서 합성 리스캔이 와도, 이름이 바뀌며 써도 같다). 스탬프는 빌드마다 새 시각 글을 쓰므로(`WriteModuleBuildStamp.cmake`)
         // 내용이 다르면 새 빌드다 — 쓰기 시각 비교는 같은 틱 · 같은 크기의 두 쓰기를 같다고 봤다.
-        if ( listEvent.empty() == false )
+        if ( _bModuleFolderChanged == SW_TRUE )
         {
+            _bModuleFolderChanged = SW_FALSE;
             string     currentToken;
             const bool bStampChanged = readBuildToken( _buildStampPath, currentToken ) && currentToken != _seenBuildToken;
             if ( bStampChanged )

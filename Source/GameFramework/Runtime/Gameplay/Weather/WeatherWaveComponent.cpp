@@ -10,7 +10,6 @@
 #include "Engine/Object/GameObject/Tick/TickContext.h"
 
 #include "GameFramework/Runtime/Gameplay/GameState/GameStateComponent.h"
-#include "GameFramework/Runtime/World/Environment/WeatherSystem.h"
 
 namespace sw
 {
@@ -38,9 +37,6 @@ namespace sw
                                   pOwner != nullptr ? pOwner->getName().c_str() : "?" );
             return;
         }
-        // 날씨가 없는 씬은 잔잔한 값(0)이다 — 판 상태가 날씨를 열지 않았다(CharacterWetnessComponent 의 비와 같은 규칙).
-        const GameStateComponent* pSession = GameStateComponent::findOpen( &context.getManager() );
-        const float32             value    = pSession != nullptr ? pSession->getWeather().computeValue( _weatherValue ) : 0.0f;
-        pWater->setWaveAmplitudeScale( computeAmplitudeScale( value, _stormScale ) );
+        pWater->setWaveAmplitudeScale( computeAmplitudeScale( GameStateComponent::readWeather( context.getManager(), _weatherValue ), _stormScale ) ); // 날씨가 없는 씬은 잔잔하다(0)
     }
 } // namespace sw

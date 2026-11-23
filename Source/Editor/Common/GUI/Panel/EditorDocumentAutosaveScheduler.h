@@ -1,6 +1,6 @@
 /**
  * @file EditorDocumentAutosaveScheduler.h
- * @brief 문서 패널 자동 저장의 주기입니다 — 열린 문서 패널의 사본(`EditorDocumentPanelBase::takeAutosaveCopy`)을 주기마다 모아 워커로 씁니다(감사 E-1). ImGui 를 그리지 않는다.
+ * @brief 문서 패널 자동 저장의 주기입니다 — 열린 문서 패널의 사본(`EditorDocumentPanelBase::takeAutosaveCopies`)을 주기마다 모아 워커로 씁니다(감사 E-1). ImGui 를 그리지 않는다.
  */
 #pragma once
 #include "Core/Container/vector.h"

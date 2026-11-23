@@ -108,7 +108,7 @@ namespace sw::editor
         /** @brief 문서 패널의 복구 후보입니다(감사 E-1). 씬 후보와 같이 지난 세션이 비정상 종료했을 때(또는 `autosave.rescan`)만 찬다. */
         static const vector<EditorDocumentAutosaveEntry>& getRecoverableDocuments();
         /**
-         * @brief 문서 후보 @p index 를 복원합니다 — 문서를 워크스페이스 포커스로 열게 하고, 그 문서 패널이 읽으면(`takePendingDocumentRestore`) 사본 글을 되돌리기와 같은 길로 적용해 dirty 로 둔다.
+         * @brief 문서 후보 @p index 를 복원합니다 — 문서를 워크스페이스 포커스로 열게 하고(상태 문서는 그 패널을 연다), 그 문서 패널이 읽으면(`takePendingDocumentRestore`) 사본 글을 되돌리기와 같은 길로 적용해 dirty 로 둔다.
          * @details 거절 이유가 있거나 사본 글을 읽지 못하면 false 입니다. 다른 문서를 고치고 있었으면 미저장 확인은 문서 열기 길이 한다.
          */
         static bool restoreDocument( uint32 index );
@@ -119,6 +119,13 @@ namespace sw::editor
          * @details 에디터 상태가 없는 호스트(문서 패널 테스트)면 false 다.
          */
         [[nodiscard]] static bool takePendingDocumentRestore( string_view documentPath, string& outText );
+        /**
+         * @brief 복원을 청한 문서와 사본 글을 꺼내지 않고 봅니다. 청이 없으면 false 입니다. 상태 문서 패널이 자기 파일인지 보고 적용한 뒤 `takePendingDocumentRestore` 로 꺼낸다.
+         * @details 두 글은 청이 남아 있는 동안만 유효하다.
+         */
+        [[nodiscard]] static bool peekPendingDocumentRestore( string_view& outDocumentPath, string_view& outText );
+        /** @brief 복원 청을 거둡니다(사본 · 후보는 남는다). 사본 글을 적용하지 못한 패널이 부른다. */
+        static void cancelPendingDocumentRestore();
         /** @brief 이번 세션에 문서 복원을 끝낸 수입니다(감시 값 `Editor.AutosaveDocumentRestoredCount`). */
         static uint32 getRestoredDocumentCount();
         /** @brief 씬 리소스 id 를 사본 폴더 이름(`[a-z0-9_.-]`)으로 바꿉니다. 같은 id 는 같은 이름입니다. */
@@ -127,5 +134,7 @@ namespace sw::editor
         [[nodiscard]] static string findMetaValue( string_view metaText, string_view key );
         /** @brief 리소스 id @p sourceID 의 원본 파일 내용 해시입니다. 풀지 못하거나 아직 없으면(새 문서) 0 입니다 — 사본을 쓸 때와 복구할 때 같은 규칙으로 견준다. */
         [[nodiscard]] static uint64 computeSourceHash( string_view sourceID );
+        /** @brief 문서 사본 @p entry 가 가리키는 원본의 내용 해시입니다 — 에셋 문서는 `computeSourceHash`, 상태 문서는 저장할 파일(`EditorDocumentAutosaveEntry::resolveFileID`). */
+        [[nodiscard]] static uint64 computeDocumentSourceHash( const EditorDocumentAutosaveEntry& entry );
     };
 } // namespace sw::editor

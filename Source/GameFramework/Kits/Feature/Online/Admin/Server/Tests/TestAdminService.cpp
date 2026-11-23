@@ -334,6 +334,7 @@ SW_TEST_CASE( AdminServiceTest, AdjustNotifiesBalanceOnce )
     const AdminTestReply replay = rig.call( kOperator, AdminMethod::AdjustAsset::kID, request, 50 );
     SW_EXPECT_TRUE( replay._serviceResult == AdminResult::Ok );
     SW_EXPECT_EQUAL( SW_TRUE, replay._bReplayed );
+    SW_EXPECT_EQUAL( kPlayer, replay._targetAccountID ); // 다시 보낸 답도 대상 계정을 담는다 — 도구가 그 계정을 다시 읽는다
     SW_EXPECT_EQUAL( size_t( 1 ), rig._balances._listAccount.size() );
 
     SW_EXPECT_TRUE( rig.call( kViewer, AdminMethod::AdjustAsset::kID, request )._serviceResult.hasError( OnlineError::kForbidden ) );

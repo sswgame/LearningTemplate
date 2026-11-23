@@ -63,6 +63,11 @@ namespace sw
          * @details 화면마다 위젯 트리 순서입니다(`UIAccessibilitySnapshot::appendTree`). 닫는 중인 화면은 뺀다. 화면 스택을 읽기만 한다 — 브리지가 클라이언트의 물음에 답할 때 부른다.
          */
         static void populateSnapshot( const UISystem& ui, UIAccessibilitySnapshot& outSnapshot );
+        /**
+         * @brief @p listScreen(그리기 순서) 가운데 사람이 입력할 수 있는 화면을 위에서 아래로 모읍니다. 입력을 막는 화면(모달) 아래는 없습니다.
+         * @details 스크린 리더가 읽는 화면과 일을 시킬 수 있는 화면(`UIAccessibilityActions`)이 같은 목록을 쓴다 — 규칙이 둘이면 사람이 닿지 못하는 단추를 스크린 리더가 누른다.
+         */
+        static void collectInteractiveScreens( const vector<unique_ptr<UIScreen>>& listScreen, vector<UIScreen*>& outListScreen );
 
     private:
         /** @brief 화면 하나의 접근성 노드를 스냅샷에 덧붙입니다(포커스 위젯을 알아 둔다). */

@@ -7,7 +7,6 @@
 #pragma once
 #include "Core/Foundation/Types.h"
 
-#include "Engine/Asset/AssetRef.h"
 #include "Engine/Asset/Cache/SharedAssetRef.h"
 #include "Engine/Reflection/ReflectionMacros.h"
 
@@ -46,9 +45,6 @@ namespace sw
         [[nodiscard]] bool runMatch();
 
     private:
-        PROPERTY( Category = "Data", DisplayName = "Catalog", Tooltip = "Asymmetric horror rules catalog XML (generator, endgame, killer)" )
-        AssetRef<AsymmetricHorrorRulesCatalog> _catalogPath;
-
         SharedAssetRef<AsymmetricHorrorRulesCatalog> _pCatalog;
         PROPERTY( RuntimeState )
         int32 _completedGenerators; ///< 고친 발전기 수

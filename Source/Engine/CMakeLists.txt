@@ -140,6 +140,8 @@ sw_glob_source_tree(cook_code_inputs RECURSE
 	"${CMAKE_SOURCE_DIR}/Source/Engine/*.cpp"
 	"${CMAKE_SOURCE_DIR}/Source/Engine/*.inl"
 	"${CMAKE_SOURCE_DIR}/Source/Engine/*.xxx"
+	"${CMAKE_SOURCE_DIR}/Source/DevTools/Cook/*.h" # 쿠커는 DevTools 에 있다 — 지문은 소스 글만 읽는다
+	"${CMAKE_SOURCE_DIR}/Source/DevTools/Cook/*.cpp"
 )
 set(cook_code_header "${CMAKE_BINARY_DIR}/generated/engineabi/CookCodeFingerprint.gen.h")
 # 쿠커 도구 판은 쿠킹하는 쪽의 vcpkg 기록이다 — 교차 빌드는 호스트 빌드의 것(HostTools.cmake), 아니면 이 빌드의 것.
@@ -298,7 +300,7 @@ endif()
 # 유니티가 꺼져 있어 CI 에서만 터진다.
 #
 # "익명 네임스페이스가 합쳐져 이름이 부딪친다" 는 **이름 규칙으로 막혀 있다**. 익명 네임스페이스의 도우미는
-# 클래스가 아니라 **TU 이름**을 딴다(`ShaderCookStampInternal` 등, docs/agents/CppStyle.md "Helpers"). 이름 규칙이 그것을 정한다.
+# 클래스가 아니라 **TU 이름**을 딴다(`ShaderCompilerInternal` 등, docs/agents/CppStyle.md "Helpers"). 이름 규칙이 그것을 정한다.
 #
 # 다시 넣고 싶어지면 먼저 `SW_ENABLE_UNITY_BUILD` 를 켠 빌드로 **무엇이 실제로 부딪치는지** 보고, 목록이 아니라 그 이름을 고칠 것.
 #

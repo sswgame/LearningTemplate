@@ -4,7 +4,7 @@
 
 #include "Core/Foundation/Constants.h"
 #include "Core/Log/Logger.h"
-#include "Core/String/StringUtil.h"
+#include "Core/String/StringBuilder.h"
 
 #include "Engine/Automation/Watch/AutomationWatch.h"
 #include "Engine/Automation/Watch/AutomationWatchComponent.h"
@@ -242,26 +242,6 @@ namespace sw
                 return true;
             }
 
-            /** @brief `grab.throw <holder> <vx> <vy> <vz>` — 든 것을 그 속도(m/s, 월드)로 던집니다. 0 0 0 이면 내려놓습니다. */
-            static bool runThrow( const vector<string>& listArgument, string& outReply )
-            {
-                float3     velocity{};
-                const bool bBadArguments = listArgument.size() != 4 || StringUtil::parseFloat( listArgument[1], velocity._x ) == false ||
-                                           StringUtil::parseFloat( listArgument[2], velocity._y ) == false || StringUtil::parseFloat( listArgument[3], velocity._z ) == false;
-                if ( bBadArguments )
-                    return false;
-                GrabberComponent* pGrabber = findGrabber( listArgument[0], outReply );
-                if ( pGrabber == nullptr )
-                    return false;
-                if ( pGrabber->throwHeld( velocity ) == false )
-                {
-                    outReply = "nothing held";
-                    return false;
-                }
-                outReply = "released";
-                return true;
-            }
-
             /** @brief 감시 값 `Grab.Held` 입니다. 대상의 집기 컴포넌트가 든 오브젝트 이름이고, 든 것이 없으면 `none` 입니다. */
             [[nodiscard]] static bool readHeld( const AutomationWatchQuery& query, AutomationWatchValue& outValue )
             {
@@ -276,6 +256,5 @@ namespace sw
     } // namespace
 
     SW_DEV_COMMAND( GrabPick, "grab.pick", "grab.pick <holder> <target>", "Make the named holder's GrabberComponent pick up the named object of the active scene", &GrabberCommandsInternal::runPick );
-    SW_DEV_COMMAND( GrabThrow, "grab.throw", "grab.throw <holder> <vx> <vy> <vz>", "Throw what the named holder carries at a world velocity (0 0 0 drops it)", &GrabberCommandsInternal::runThrow );
     SW_AUTOMATION_QUERY_WATCH( grabHeld, "Grab.Held", "Name of the object the target's GrabberComponent holds; none when it holds nothing", &GrabberCommandsInternal::readHeld, true, false );
 } // namespace sw

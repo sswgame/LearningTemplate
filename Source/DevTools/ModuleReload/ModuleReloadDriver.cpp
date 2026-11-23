@@ -149,7 +149,7 @@ namespace sw
 
     ModuleReloadDriver::~ModuleReloadDriver() = default;
 
-    bool ModuleReloadDriver::initialize( uint8 targetMask, SubsystemScope& hostScope, ModuleLoaderSubsystem& moduleLibraryHost, ModuleCatalog& outCatalog,
+    bool ModuleReloadDriver::initialize( uint8 targetMask, SubsystemScope& hostScope, ModuleLoaderSubsystem& moduleLibraryHost, FileWatchService& fileWatch, ModuleCatalog& outCatalog,
                                          ModuleResolution& outResolution )
     {
         // 무엇을 로드할지는 모듈 매니페스트가 정한다(App 은 빌드가 담은 모든 대상, 전용 서버는 Server 대상).
@@ -157,7 +157,7 @@ namespace sw
             return false;
         moduleLibraryHost.setResolution( outResolution );
 
-        _pState->_liveReloadManager = make_unique<LiveReloadManager>();
+        _pState->_liveReloadManager = make_unique<LiveReloadManager>( fileWatch );
         _pState->_pHostScope        = &hostScope;
         const bool bBound           = hostScope.bind( this ); // 개발 명령 `module.reload` · 감시 값 `Module.*` 가 엔진 범위에서 올라가 찾는다
         SW_ASSERT( bBound );

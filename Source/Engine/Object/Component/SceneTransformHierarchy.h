@@ -205,8 +205,6 @@ namespace sw
          * @return 실제로 값이 바뀐 건수입니다(틱 중이면 세터로 돌린 건수).
          */
         uint32 applyBatch( GameObjectManager& manager, const SceneTransformWrite* pWrite, uint32 count );
-        /** @brief 어느 스레드 슬롯에든 쌓인 쓰기나 대기 슬롯이 있으면 true 입니다. */
-        bool hasQueuedWrites() const;
 
         /**
          * @brief 슬롯의 월드가 다시 합성된 직후의 알림입니다. 슬롯의 프리미티브에 렌더 더티를 기록하고, 알림 비트가 켜져 있으면 소유 컴포넌트의 훅을 부릅니다.

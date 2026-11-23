@@ -382,7 +382,7 @@ namespace sw
         const bool bUseComposite              = ( colorCount > 1 ) || ( colorCount == 1 && colorHandles[0] != kRHIBackBufferTexture && bHasDepth ) ||
                                    ( colorCount == 0 && bHasDepth ) || bSingleTextureKeepsContent;
 
-        VkRenderPass  renderPass  = _pDevice->_renderPass;
+        VkRenderPass  renderPass  = VK_NULL_HANDLE;
         VkFramebuffer framebuffer = VK_NULL_HANDLE;
         VkExtent2D    extent{ _pDevice->_swapChain.getExtentWidth(), _pDevice->_swapChain.getExtentHeight() };
         VkClearValue  clearValues[kMaxColorAttachments + 1]{};
@@ -470,7 +470,7 @@ namespace sw
             else
             {
                 const VulkanRHISwapChain* pSwapChain = _pDevice->useSwapChain( beginInfo._pSwapChain );
-                if ( _pDevice->_renderPass == VK_NULL_HANDLE || pSwapChain == nullptr || pSwapChain->getCurrentFramebuffer() == VK_NULL_HANDLE )
+                if ( pSwapChain == nullptr || pSwapChain->getRenderPass() == VK_NULL_HANDLE || pSwapChain->getCurrentFramebuffer() == VK_NULL_HANDLE )
                 {
                     return RHIRenderPassBeginResult::NoBackBuffer; // 그릴 백버퍼가 없다(최소화 · 스왑체인 재생성 중) — 이 패스의 드로우는 알리지 않고 버린다
                 }
@@ -479,8 +479,7 @@ namespace sw
                 // 스왑체인 렌더패스는 loadOp 이 렌더패스 객체에 박혀 있어 begin 시점에 못 고른다.
                 // 요청된 loadOp 에 맞는 변종을 고른다. Load 인데 CLEAR 변종을 쓰면 앞 패스가 백버퍼에
                 // 그린 내용이 지워진다.
-                if ( beginInfo._arrLoadOp[0] == RHIRenderPassLoadOp::Load && _pDevice->_renderPassLoad != VK_NULL_HANDLE )
-                    renderPass = _pDevice->_renderPassLoad;
+                renderPass = beginInfo._arrLoadOp[0] == RHIRenderPassLoadOp::Load ? pSwapChain->getLoadRenderPass() : pSwapChain->getRenderPass();
             }
 
             if ( _pState->_bRenderPassActive == SW_TRUE )
@@ -636,7 +635,11 @@ namespace sw
         {
             const RHIBufferState                 newState = pTransition[index]._state;
             VulkanRHIDevice::VulkanBufferRecord* pRecord  = _pDevice->resolveAllocatedBuffer( pTransition[index]._buffer );
-            if ( pRecord == nullptr || pRecord->_buffer == VK_NULL_HANDLE || pRecord->_state == newState )
+            if ( pRecord == nullptr || pRecord->_buffer == VK_NULL_HANDLE )
+                continue;
+            // 확인과 기록이 한 번이다 — 같은 레벨의 두 워커가 같은 버퍼를 같은 상태로 옮기면 한쪽만 배리어를 낸다(`RHITrackedState`, DX12 와 같다).
+            RHIBufferState stateBefore{};
+            if ( pRecord->_state.transitionTo( newState, stateBefore ) == false )
                 continue;
             if ( _pState->_bRenderPassActive == SW_TRUE )
             {
@@ -647,7 +650,7 @@ namespace sw
             VkAccessFlags        dstAccess{ 0 };
             VkPipelineStageFlags srcStage = VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT;
             VkPipelineStageFlags dstStage = VK_PIPELINE_STAGE_BOTTOM_OF_PIPE_BIT;
-            mapStateVal( pRecord->_state, srcAccess, srcStage );
+            mapStateVal( stateBefore, srcAccess, srcStage );
             mapStateVal( newState, dstAccess, dstStage );
 
             VkBufferMemoryBarrier& barrier = arrBarrier[barrierCount++];
@@ -662,7 +665,6 @@ namespace sw
             barrier.size                   = VK_WHOLE_SIZE;
             srcStageSum |= srcStage;
             dstStageSum |= dstStage;
-            pRecord->_state = newState;
             if ( barrierCount == kMaxBarrierPerCall )
                 flushBarriers();
         }

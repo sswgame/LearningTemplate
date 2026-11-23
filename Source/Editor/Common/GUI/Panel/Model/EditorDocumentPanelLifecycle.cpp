@@ -196,7 +196,7 @@ namespace sw::editor
             recordDocumentEdit( DocumentEdit::make( before, restoredText, "Restore Autosave Copy" ) );
     }
 
-    DocumentAutosaveResult EditorDocumentPanel::takeAutosaveCopy( string& outDocumentPath, string& outText )
+    DocumentAutosaveResult EditorDocumentPanel::takeAutosaveCopies( vector<EditorDocumentAutosaveEntry>& inoutListEntry )
     {
         if ( isDocumentDirty() == false || _bLoadFailed == SW_TRUE || _loadedAssetPath.empty() )
             return DocumentAutosaveResult::Nothing;
@@ -207,8 +207,10 @@ namespace sw::editor
         if ( textHash == 0 || textHash == _lastCopyTextHash )
             return DocumentAutosaveResult::Nothing; // 문서 글이 없는 패널이거나 지난 사본과 같다
         _lastCopyTextHash = textHash;
-        outDocumentPath   = _loadedAssetPath;
-        outText           = std::move( text );
+        EditorDocumentAutosaveEntry entry{};
+        entry._documentPath = _loadedAssetPath;
+        entry._text         = std::move( text );
+        inoutListEntry.push_back( std::move( entry ) );
         return DocumentAutosaveResult::Ready;
     }
 

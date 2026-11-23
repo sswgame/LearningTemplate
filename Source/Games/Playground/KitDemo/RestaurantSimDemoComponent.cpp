@@ -40,9 +40,7 @@ namespace sw
                                 &RestaurantSimDemoComponent::getProfit );
 
     RestaurantSimDemoComponent::RestaurantSimDemoComponent()
-        : _catalogPath{}
-        , _catalog{}
-        , _pCatalog{}
+        : _pCatalog{}
         , _pRecipeCatalog{}
         , _served{ 0 }
         , _revenue{ 0 }
@@ -89,7 +87,7 @@ namespace sw
 
     bool RestaurantSimDemoComponent::startGame()
     {
-        if ( acquireRequired( _catalogPath, _pCatalog ) == false || acquireRequired( _catalog, _pRecipeCatalog ) == false )
+        if ( acquireBoundCatalog( _pCatalog ) == false || acquireBoundCatalog( _pRecipeCatalog ) == false )
             return false;
         return runDay();
     }

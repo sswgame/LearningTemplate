@@ -106,6 +106,14 @@ SW_TEST_CASE( AdminToolSessionTest, RefreshReadsTheAccountActedOn )
     SW_EXPECT_TRUE( session.getLookup()._sanction._arrUntilMs[ServiceSanctionKind::ChatMute] != 0 );
 }
 
+/** @brief 메모리 제공자도 서버처럼 답에 대상 계정을 담는다. */
+SW_TEST_CASE( AdminToolSessionTest, RepliesCarryTheTargetAccount )
+{
+    AdminToolSession session;
+    session.requestLookup( AdminToolSessionTestUtil::kOther );
+    SW_EXPECT_EQUAL( AccountID( AdminToolSessionTestUtil::kOther ), session.getLookup()._targetAccountID );
+}
+
 SW_TEST_CASE( AdminToolSessionTest, FailedCommandDoesNotRefresh )
 {
     AdminToolSession session;

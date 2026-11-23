@@ -5,6 +5,7 @@
 #include "Core/Network/Connection/NetEndpointSecurity.h"
 #include "Core/Network/NetTypes.h"
 #include "Core/Network/Transport/IStreamTransport.h"
+#include "Core/Network/Transport/PlatformSocketUtil.h"
 #include "Core/String/StringBuilder.h"
 #include "Core/Time/Clock.h"
 #include "Core/Time/MonotonicClock.h"
@@ -59,7 +60,8 @@ namespace sw
                     return true;
                 }
                 NetAddress gameAddress;
-                if ( NetAddress::parse( listArgument[4], 0, gameAddress ) == false || gameAddress.isValid() == false )
+                // 이름도 받는다(개발 명령이라 막는 해석이어도 된다) — 웹의 wss 는 이름으로 인증서를 확인한다.
+                if ( PlatformSocketUtil::resolveAddress( listArgument[4], 0, gameAddress ) == false || gameAddress.isValid() == false )
                 {
                     outReply = "ticketconnect: the game address needs host:port";
                     return true;
@@ -75,6 +77,10 @@ namespace sw
                 request._platform = "windows";
 #elif defined( SW_PLATFORM_LINUX )
                 request._platform = "linux";
+#elif defined( SW_PLATFORM_ANDROID )
+                request._platform = "android";
+#elif defined( SW_PLATFORM_WEB )
+                request._platform = "web";
 #else
     #error "Unsupported platform"
 #endif

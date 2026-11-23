@@ -83,6 +83,8 @@ namespace sw
         float32       getArriveDistance() const { return _arriveDistance; }
         void          setArriveDistance( float32 distance ) { _arriveDistance = distance; }
 
+        /** @brief 이 조종자의 디버그 범주 이름입니다 — HUD 섹션 `npc` 와 비주얼 로거의 판단 기록이 같은 이름을 쓴다. */
+        static constexpr const utf8* kDebugCategoryName = "npc";
         /**
          * @brief 판단의 지금 상태 이름입니다(상태 머신의 상태 · 고른 할 일). 파생이 `think` 에서 상태가 바뀔 때 부릅니다.
          * @details 디버그 표시와 자동화 감시 값 `AI.State` 가 읽는다(`<ExpectVisited probe="AI.State" sequence="Till,Plant"/>`). 언리얼 Gameplay Debugger 의 BT 줄과 상태 줄에 해당한다.

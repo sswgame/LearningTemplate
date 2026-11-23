@@ -1,0 +1,24 @@
+<?xml version="1.0" encoding="utf-8"?>
+<?asset guid="7d0f3c1a5b8e4f62a9c4d1e07b2f6a31"?>
+<!-- 비 — 세로 줄 텍스처가 빠르게 떨어진다(13 ~ 16 m/s, 시점 위 10 m 에서 1.1 초).
+     시점 위를 따라다니는 상자에서 태어나 월드에 남고(_space World), 물리 바디에 닿으면 사라지고(_collision Kill — 지붕 아래에는 들지 않는다) 위 60 m 안에 지붕이 있으면 태어나지 않는다(_openSkyDistance — 높은 실내). 세기는 Intensity 의 알파다
+     (PrecipitationComponent). 텍스처는 Kenney 파티클 팩(CC0). -->
+<VFXEffectDef>
+	<_listUserParameter>
+		<VFXUserParameterDef _name="Intensity" _value="1, 1, 1, 1"/>
+	</_listUserParameter>
+	<_listEmitter>
+		<VFXEmitterDef _name="Streaks" _texturePath="engine/textures/particles/kenney_particle/trace_07.dds" _blendMode="Alpha" _bLooping="true"
+		               _maxParticles="1000" _duration="1" _spawnRate="800" _lifetimeMin="1.1" _lifetimeMax="1.1"
+		               _spawnHalfExtents="10, 1, 10" _space="World" _velocityMin="-0.4, -16, -0.4" _velocityMax="0.4, -13, 0.4" _gravity="0, 0, 0" _tintParameter="Intensity">
+			<_collision _mode="Kill" _method="PhysicsRaycast" _openSkyDistance="60"/>
+			<_sizeOverLife><_listKey><FloatCurveKey _time="0" _value="0.4" _interpolation="Linear"/></_listKey></_sizeOverLife>
+			<_colorOverLife>
+				<_red><_listKey><FloatCurveKey _time="0" _value="0.72" _interpolation="Linear"/></_listKey></_red>
+				<_green><_listKey><FloatCurveKey _time="0" _value="0.78" _interpolation="Linear"/></_listKey></_green>
+				<_blue><_listKey><FloatCurveKey _time="0" _value="0.86" _interpolation="Linear"/></_listKey></_blue>
+				<_alpha><_listKey><FloatCurveKey _time="0" _value="0.45" _interpolation="Linear"/></_listKey></_alpha>
+			</_colorOverLife>
+		</VFXEmitterDef>
+	</_listEmitter>
+</VFXEffectDef>

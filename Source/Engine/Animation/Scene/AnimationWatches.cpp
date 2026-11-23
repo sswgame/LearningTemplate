@@ -3,7 +3,6 @@
  * @brief 애니메이션 시스템의 자동화 감시 값입니다(`Animation.*`) — 군중 공유(`AnimationCrowd`)가 유닛을 어떻게 나눴는지 시나리오가 단언합니다. 프로파일 카운터
  *        `GT.Animation.crowd*Units` 와 같은 값입니다. 감시 값 레지스트리(`Engine/Automation/Watch`)가 아래층이라 애니메이션이 자기 감시 값을 등록합니다.
  *        `Animation.BoneX` 는 대상 오브젝트의 본 하나의 월드 X 입니다(포즈 노드 `Mirror` 가 좌우를 뒤집었는지 본다). `Animation.State` 는 대상 애니메이터의 현재 상태입니다.
- *        개발 명령 `anim.play <object> <state>` 는 시나리오가 쇼케이스 무대의 캐릭터를 걷게 한다(배포 구성은 등록하지 않는다 — `SW_DEV_COMMAND`).
  */
 #include "pch.h"
 
@@ -12,7 +11,8 @@
 #include "Engine/Animation/Scene/AnimationSystem.h"
 #include "Engine/Automation/Watch/AutomationWatch.h"
 #include "Engine/Automation/Watch/AutomationWatchComponent.h"
-#include "Engine/Console/DevCommandRegistry.h"
+#include "Engine/Console/DebugHUDRegistry.h"
+#include "Engine/Console/DebugHUDSectionFormat.h"
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Object/GameObject/GameObjectManager.inl"
 #include "Engine/Scene/SceneManager.h"
@@ -23,6 +23,9 @@ namespace sw
     {
         struct AnimationWatchesInternal
         {
+            /** @brief HUD 섹션 순서 — 물리(50) 바로 아래다. */
+            static constexpr int32 kSectionOrder = 52;
+
             /** @brief 지난 프레임에 일한 유닛 가운데 군중 방식이 @p mode 인 수를 담습니다. 씬이 없으면 false 입니다. */
             [[nodiscard]] static bool readCrowdModeCount( const GameObjectManager* pManager, AnimationCrowdMode mode, float64& outValue )
             {
@@ -119,31 +122,25 @@ namespace sw
                 return true;
             }
 
-            /** @brief `anim.play <object> <state>` — 이름 붙은 오브젝트의 애니메이터로 상태(그래프가 없으면 클립)를 반복 재생합니다. */
-            static bool runPlay( const vector<string>& listArgument, string& outReply )
+            /** @brief 디버그 HUD 범주 `animation` — 군중 묶음 · 정점 애니메이션 · 예산이 예상한 평가 비용입니다(감시 값 `Animation.*` 이 아래에 붙는다). */
+            static void writeSection( DebugHUDSectionWriter& writer )
             {
-                if ( listArgument.size() != 2 )
-                    return false;
-                GameObject*                pObject   = engine::findActiveObject( hashed_string( listArgument[0] ) );
-                SkeletalAnimatorComponent* pAnimator = pObject != nullptr ? pObject->getComponent<SkeletalAnimatorComponent>() : nullptr;
-                if ( pAnimator == nullptr )
+                const GameObjectManager* pManager = engine::findActiveObjectManager();
+                if ( pManager == nullptr )
                 {
-                    StringBuilder<constant::buffer::kMax256> builder;
-                    builder.appendFormat( "no object named '%#' with a SkeletalAnimatorComponent in the active scene", listArgument[0] );
-                    outReply = string( builder.view() );
-                    return true;
+                    writer.addLine( "animation", "no active scene" );
+                    return;
                 }
-                if ( pAnimator->play( hashed_string( listArgument[1] ) ) == false )
+                const AnimationSystem& animation = pManager->getSubsystem<AnimationSystem>();
+                uint32                 visibleMemberCount{ 0 };
+                for ( const unique_ptr<AnimationCrowdBucket>& pBucket : animation.getCrowd().getBuckets() )
                 {
-                    StringBuilder<constant::buffer::kMax256> builder;
-                    builder.appendFormat( "anim.play: '%#' has no state or clip '%#'", listArgument[0], listArgument[1] );
-                    outReply = string( builder.view() );
-                    return true;
+                    visibleMemberCount += pBucket->getVisibleMemberCount();
                 }
-                StringBuilder<constant::buffer::kMax256> builder;
-                builder.appendFormat( "anim.play %# %#", listArgument[0], listArgument[1] );
-                outReply = string( builder.view() );
-                return true;
+                writer.addLineFormat( "crowd buckets", "%# (%# evaluated, %# visible members)", static_cast<uint32>( animation.getCrowd().getBuckets().size() ), animation.getCrowd().getEvaluatedBucketCount(),
+                                      visibleMemberCount );
+                writer.addLineFormat( "vertex animation meshes", "%#", animation.getCrowd().getVertexAnimationMeshCount() );
+                writer.addLineFormat( "expected evaluation", "%.0f us", static_cast<float64>( animation.getExpectedEvaluationMicroseconds() ) );
             }
         };
     } // namespace
@@ -151,6 +148,7 @@ namespace sw
 
 namespace sw
 {
+    SW_DEBUG_HUD_CATEGORY( animation, "animation", "Animation (crowd, budget)", AnimationWatchesInternal::kSectionOrder, DebugHUDSectionFlag::kNone, &AnimationWatchesInternal::writeSection, nullptr, "Animation" );
     SW_AUTOMATION_WATCH( animationCrowdSharedMeshes, "Animation.CrowdSharedMeshes", "Units that shared a crowd bucket's pose last frame", &AnimationWatchesInternal::readCrowdSharedMeshes );
     SW_AUTOMATION_WATCH( animationCrowdSoloMeshes, "Animation.CrowdSoloMeshes", "Crowd-sharing skeletalMeshes that evaluated alone last frame (a state that cannot be shared)",
                          &AnimationWatchesInternal::readCrowdSoloMeshes );
@@ -161,8 +159,6 @@ namespace sw
                          &AnimationWatchesInternal::readPoseEvaluatedUnits );
     SW_AUTOMATION_QUERY_WATCH( animationBoneX, "Animation.BoneX", "World X of the bone named key on the target object's skeletal mesh (m)", &AnimationWatchesInternal::readBoneX, true, true );
     SW_AUTOMATION_QUERY_WATCH( animationState, "Animation.State", "State (or clip) the target object's skeletal animator plays now", &AnimationWatchesInternal::readState, true, false );
-    SW_DEV_COMMAND( AnimationPlay, "anim.play", "anim.play <object> <state>", "Play a state (or a clip when there is no graph) on a named object's skeletal animator, looping",
-                    &AnimationWatchesInternal::runPlay );
     SW_AUTOMATION_WATCH( animationEvaluatedBones, "Animation.EvaluatedBones", "Bones the skeletalMeshes that built their own pose evaluated last frame (bone LOD skips the rest)",
                          &AnimationWatchesInternal::readEvaluatedBones );
     SW_AUTOMATION_WATCH( animationSkeletalMeshes, "Animation.SkeletalMeshes", "Skeletal meshes registered with the scene's animation system", &AnimationWatchesInternal::readSkeletalMeshes );

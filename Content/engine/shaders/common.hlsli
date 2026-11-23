@@ -184,12 +184,24 @@ static const float kInvPi  = 0.31830988618379067154f;
 // 선형 Rec.709 휘도 가중치 — 노출 측정 · 그레이딩 · 가닥 흔들림이 같은 값을 쓴다.
 static const float3 kLuminanceWeights = float3( 0.2126f, 0.7152f, 0.0722f );
 
+// 정점 탄젠트 w 의 크기가 이보다 작으면(0 은 아니다) 이음매 정점이다(C++ RHIVertex::isOnSeam 과 같은 문턱 — 이음매는 64/127 이하, 나머지는 1).
+static const float kSeamTangentThreshold = 0.75f;
+// 이음매 정점의 탄젠트 w 크기는 (1 + 변 묶음) / 이 값이다(C++ RHIVertex::kSeamCodeScale).
+static const float kSeamCodeScale = 127.0f;
+
 /** @brief 여러 셰이더가 함께 쓰는 순수 함수(상태 · 리소스 없음). 같은 식을 셰이더마다 두지 않는다. */
 struct CommonMath
 {
     static float computeLuminance( float3 linearColor );
+    static float computeBitangentSign( float tangentW );
     static float computeInterleavedGradientNoise( float2 pixel );
 };
+
+/** @brief 탄젠트 w 의 손잡이(±1) — 크기는 이음매 표시라 부호만 읽는다. */
+static float CommonMath::computeBitangentSign( float tangentW )
+{
+    return tangentW < 0.0f ? -1.0f : 1.0f;
+}
 
 /** @brief 선형 색의 휘도(Rec.709)입니다. */
 static float CommonMath::computeLuminance( float3 linearColor )
@@ -236,7 +248,8 @@ struct VertexInput
     float2 _uv : TEXCOORD0;
     SW_VK_LOCATION( SW_VERTEX_LOCATION_COLOR )
     float4 _color : COLOR;
-    // xyz 탄젠트 · w 바이탄젠트 부호(±1) — 바이탄젠트 = cross( normal, tangent.xyz ) * tangent.w (glTF · MikkTSpace 규약, C++ RHIVertex::_arrTangent).
+    // xyz 탄젠트 · w 의 부호가 바이탄젠트 부호 — 바이탄젠트 = cross( normal, tangent.xyz ) * CommonMath::computeBitangentSign( tangent.w ) (glTF · MikkTSpace 규약,
+    // C++ RHIVertex::_arrTangent). w 의 크기는 이음매 표시다(kSeamTangentThreshold) — 곱하지 않고 부호로만 쓴다.
     SW_VK_LOCATION( SW_VERTEX_LOCATION_TANGENT )
     float4 _tangent : TANGENT;
 };

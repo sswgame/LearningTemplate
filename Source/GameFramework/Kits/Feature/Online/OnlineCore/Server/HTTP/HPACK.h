@@ -35,11 +35,17 @@ namespace sw
     class SW_KIT_SERVER_API HPACKDecoder
     {
     public:
-        /** @brief 동적 표 크기의 상한입니다(우리가 SETTINGS_HEADER_TABLE_SIZE 로 알린 값, 기본 4096). 상대가 표 크기 갱신으로 이보다 크게 부르면 오류다. */
-        explicit HPACKDecoder( uint32 maxDynamicTableSize = 4096 );
+        static constexpr uint32 kDefaultTableSize       = 4096;      ///< SETTINGS_HEADER_TABLE_SIZE 의 처음 값
+        static constexpr uint32 kDefaultHeaderListBytes = 64 * 1024; ///< 블록 하나를 푼 헤더 목록의 상한(RFC 9113 6.5.2 의 셈 — 이름 + 값 + 32)
 
         /**
-         * @brief 헤더 블록 하나를 읽어 @p outListHeader 를 채웁니다. 깨졌거나 허프만 문자열이 틀렸거나 색인이 표 밖이면 그 이유입니다(목록은 비운다).
+         * @param maxDynamicTableSize 동적 표 크기의 상한(우리가 SETTINGS_HEADER_TABLE_SIZE 로 알린 값). 상대가 표 크기 갱신으로 이보다 크게 부르면 오류다.
+         * @param maxHeaderListBytes  블록 하나를 푼 헤더 목록의 상한(SETTINGS_MAX_HEADER_LIST_SIZE). 색인 한 바이트가 표의 큰 항목으로 풀리므로 받은 바이트의 상한으로는 막지 못한다(RFC 9113 6.5.2).
+         */
+        explicit HPACKDecoder( uint32 maxDynamicTableSize = kDefaultTableSize, uint32 maxHeaderListBytes = kDefaultHeaderListBytes );
+
+        /**
+         * @brief 헤더 블록 하나를 읽어 @p outListHeader 를 채웁니다. 깨졌거나 허프만 문자열이 틀렸거나 색인이 표 밖이거나 푼 목록이 상한을 넘으면 그 이유입니다(목록은 비운다).
          * @details 동적 표는 읽는 도중 바뀌므로 실패한 블록 뒤의 연결은 쓸 수 없다(RFC 7541 은 압축 상태 오류를 연결 오류로 본다) — 부르는 쪽이 연결을 닫는다.
          */
         [[nodiscard]] expected<void> decode( const uint8* pBlock, size_t size, vector<HTTPHeader>& outListHeader );
@@ -47,6 +53,8 @@ namespace sw
         uint32                       getDynamicTableSize() const { return _dynamicSize; }
 
     private:
+        /** @brief 블록의 헤더를 차례로 풀어 @p outListHeader 에 더합니다. 실패하면 부른 쪽(`decode`)이 목록을 비웁니다. */
+        [[nodiscard]] expected<void>   decodeHeaders( const uint8* pBlock, size_t size, vector<HTTPHeader>& outListHeader );
         [[nodiscard]] expected<uint32> readInteger( const uint8*& pCursor, const uint8* pEnd, int32 prefixBits ) const;
         [[nodiscard]] expected<void>   readString( const uint8*& pCursor, const uint8* pEnd, string& outText ) const;
         /** @brief 허프만 부호화된 문자열(RFC 7541 5.2)을 풉니다. 패딩이 7 비트를 넘거나 1 이 아니면, EOS 가 들었거나 부호표에 없는 부호면 오류입니다. */
@@ -60,5 +68,6 @@ namespace sw
         uint32            _dynamicSize;
         uint32            _currentLimit; ///< 상대가 표 크기 갱신으로 정한 지금 상한
         uint32            _maxLimit;
+        uint32            _maxHeaderListBytes;
     };
 } // namespace sw

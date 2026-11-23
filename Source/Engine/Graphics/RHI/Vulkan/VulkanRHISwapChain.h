@@ -106,8 +106,10 @@ namespace sw
          */
         [[nodiscard]] bool create( VkPhysicalDevice physicalDevice, VkDevice device, uint32 width, uint32 height );
 
-        /** @brief 백버퍼 렌더패스에 맞는 프레임버퍼를 이미지마다 만듭니다. */
-        [[nodiscard]] bool createFramebuffers( VkDevice device, VkRenderPass renderPass );
+        /** @brief 이 스왑체인의 포맷으로 만든 렌더 패스에 맞는 프레임버퍼를 이미지마다 만듭니다. 렌더 패스는 없거나 포맷이 바뀌었으면 여기서 다시 짓는다(GPU 가 쉬는 자리에서만 부른다). */
+        [[nodiscard]] bool createFramebuffers( VkDevice device );
+        /** @brief 렌더 패스 둘을 파괴합니다. 스왑체인을 아주 버릴 때(창 닫기 · 장치 종료)만 부릅니다 — 다시 만들 때는 포맷이 같으면 그대로 쓴다. */
+        void destroyRenderPasses( VkDevice device );
 
         /** @brief acquire · renderFinished 세마포어를 만듭니다. `create` 로 이미지 수가 정해진 뒤에 부릅니다. */
         [[nodiscard]] bool createSemaphores( VkDevice device, uint32 frameCountInFlight );
@@ -186,10 +188,20 @@ namespace sw
         VkImage getCurrentImage() const;
         /** @brief 현재 이미지의 백버퍼 프레임버퍼입니다. 준비 안 됐으면 nullptr 입니다. */
         VkFramebuffer getCurrentFramebuffer() const;
+        /**
+         * @brief 이 스왑체인의 렌더 패스(loadOp = CLEAR)입니다. 없으면 VK_NULL_HANDLE 입니다.
+         * @details 창마다 자기 포맷의 렌더 패스를 든다 — 주 창이 HDR 이어도 다른 창(에디터 도구 창)은 SDR 포맷 그대로 열리고 그려진다. 예전에는 주 창의 렌더 패스 하나를 나눠 써
+         *          HDR 인 동안 새 창을 거절했고, HDR 로 바꾸면 열려 있던 창의 프레임버퍼가 어긋났다.
+         */
+        VkRenderPass getRenderPass() const { return _renderPass; }
+        /** @brief 같은 첨부의 loadOp = LOAD 변형입니다 — 한 프레임에 백버퍼를 두 번 이상 여는 길이 앞의 그림을 지우지 않게 고른다. */
+        VkRenderPass getLoadRenderPass() const { return _renderPassLoad; }
         /** @brief 현재 이미지의 renderFinished 세마포어입니다. 마지막 제출이 이것을 신호합니다. */
         VkSemaphore getRenderFinishedSemaphore() const;
 
     private:
+        /** @brief 지금 이미지 포맷의 렌더 패스 둘(CLEAR · LOAD)을 확보합니다. `createFramebuffers` 안에서만 부릅니다. */
+        [[nodiscard]] bool ensureRenderPasses( VkDevice device );
         /** @brief 이미지마다 뷰를 만듭니다. `create` 안에서만 부릅니다. */
         [[nodiscard]] bool createImageViews( VkDevice device );
         /** @brief 프레임버퍼 · 이미지 뷰와 지금 스왑체인을 놓습니다(물려줄 옛 스왑체인은 남긴다). `destroy` · `retireForRecreate` 가 함께 쓴다. */
@@ -212,6 +224,10 @@ namespace sw
         vector<VkFence> _listImageFence;
         /// @brief 방금 획득해 이 프레임의 첫 제출이 기다릴 세마포어입니다(`takeAcquireWait`).
         VkSemaphore _acquireWait;
+
+        VkRenderPass _renderPass;            ///< loadOp = CLEAR
+        VkRenderPass _renderPassLoad;        ///< loadOp = LOAD
+        uint32       _renderPassImageFormat; ///< 두 렌더 패스를 만든 이미지 포맷(VkFormat)
 
         uint32 _imageFormat;
         uint32 _extentWidth;

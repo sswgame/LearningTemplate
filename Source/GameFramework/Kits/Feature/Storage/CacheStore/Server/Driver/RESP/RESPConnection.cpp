@@ -7,8 +7,14 @@
 
 namespace sw
 {
-    RESPConnection::RESPConnection( bool bPushMode )
-        : _parser{}
+    namespace
+    {
+        constexpr int64 kRESPFirstBackoffMs = 100; ///< 두 번째 실패부터의 첫 대기(`ExponentialBackoff`)
+    } // namespace
+
+    RESPConnection::RESPConnection( bool bPushMode, const IClock& clock )
+        : _clock{ clock }
+        , _parser{}
         , _listAwaitTag{}
         , _replyRecordBuffer{}
         , _pushValueBuffer{}
@@ -17,7 +23,11 @@ namespace sw
         , _cipherBytes{}
         , _tlsSession{}
         , _handle{}
+        , _backoff{ ExponentialBackoff::createWithRandomSeed( kRESPFirstBackoffMs ) }
+        , _nextConnectNanoseconds{ 0 }
+        , _maxBackoffMs{ 0 }
         , _state{ RESPConnectionState::Closed }
+        , _bAnswered{ SW_FALSE }
         , _bPushMode{ static_cast<uint8>( bPushMode ? SW_TRUE : SW_FALSE ) }
         , _bAuthRejected{ SW_FALSE }
     {
@@ -25,8 +35,10 @@ namespace sw
 
     RESPConnection::~RESPConnection() = default;
 
-    bool RESPConnection::beginConnect( IStreamTransport& transport, const NetAddress& address, ITLSContext* pTLSContext, const RESPCommand* pAuthCommand )
+    bool RESPConnection::beginConnect( IStreamTransport& transport, const NetAddress& address, ITLSContext* pTLSContext, const RESPCommand* pAuthCommand, int64 maxBackoffMs )
     {
+        _maxBackoffMs = maxBackoffMs;
+        _bAnswered    = SW_FALSE;
         _parser.reset();
         _listAwaitTag.clear();
         _pendingSendBytes.clear();
@@ -37,7 +49,10 @@ namespace sw
         {
             _tlsSession = pTLSContext->createSession();
             if ( _tlsSession == nullptr )
+            {
+                holdReconnect();
                 return false;
+            }
         }
         if ( pAuthCommand != nullptr )
         {
@@ -50,6 +65,7 @@ namespace sw
             _listAwaitTag.clear();
             _pendingSendBytes.clear();
             _state = RESPConnectionState::Closed;
+            holdReconnect();
             return false;
         }
         _state = RESPConnectionState::Connecting;
@@ -60,8 +76,7 @@ namespace sw
     {
         if ( _state == RESPConnectionState::Closed )
             return false;
-        if ( _bPushMode == SW_FALSE )
-            _listAwaitTag.push_back( tag );
+        _listAwaitTag.push_back( tag );
         if ( _state == RESPConnectionState::Connecting )
         {
             command.appendTo( _pendingSendBytes );
@@ -93,6 +108,7 @@ namespace sw
         _handle                             = StreamConnectionHandle{};
         _state                              = RESPConnectionState::Closed;
         failAwaitingTags();
+        holdReconnect();
         transport.close( handle, StreamCloseMode::Abort );
     }
 
@@ -149,6 +165,7 @@ namespace sw
         _handle = StreamConnectionHandle{};
         _state  = RESPConnectionState::Closed;
         failAwaitingTags();
+        holdReconnect();
         return true;
     }
 
@@ -194,7 +211,7 @@ namespace sw
                 return true;
             if ( result == RESPParseResult::Error )
                 return false;
-            // AUTH 답은 두 모드 모두 첫 태그이다. 구독 연결도 AUTH 는 태그로 짝짓는다.
+            // AUTH 답은 두 모드 모두 첫 태그이다.
             const bool bAuthReply = _listAwaitTag.empty() == false && _listAwaitTag.front()._step == kAuthStep;
             if ( bAuthReply )
             {
@@ -205,15 +222,27 @@ namespace sw
                     _bAuthRejected = SW_TRUE;
                     return true;
                 }
+                _bAnswered = SW_TRUE;
                 continue;
             }
-            if ( _bPushMode == SW_TRUE )
+            const bool bMessage = _bPushMode == SW_TRUE && value._type == RespType::Array && value._listElement.empty() == false && value._listElement[0].isText( "message" );
+            if ( bMessage )
             {
+                _bAnswered = SW_TRUE;
                 _pushValueBuffer.push( std::move( value ) );
                 continue;
             }
             if ( _listAwaitTag.empty() )
                 return false; // 보낸 적 없는 답이므로 순서가 어긋난 것이다
+            if ( value.isError() == false )
+                _bAnswered = SW_TRUE;    // 오류는 거절(-ERR max number of clients · -DENIED)일 수 있다. 거절하고 끊는 서버를 물러서지 않고 두드리지 않는다
+            if ( _bPushMode == SW_TRUE ) // 구독 · 해지 확인(또는 거절)이다
+            {
+                _listAwaitTag.pop_front();
+                if ( value.isError() )
+                    SW_LOG_ERROR_ID( "RespConnection.RESPSubscriptionRefused", "RESP server refused a subscription command: %#", string( value.getText() ).c_str() );
+                continue;
+            }
             _replyRecordBuffer.push( RESPReplyRecord{} );
             RESPReplyRecord& record = _replyRecordBuffer.getLast();
             record._tag             = _listAwaitTag.front();
@@ -222,12 +251,19 @@ namespace sw
         }
     }
 
+    void RESPConnection::holdReconnect()
+    {
+        if ( _bAnswered == SW_TRUE )
+            _backoff.reset();
+        _nextConnectNanoseconds = _clock.nowNanoseconds() + _backoff.takeDelayMs( _maxBackoffMs ) * constant::time::kNanosecondsPerMillisecond;
+    }
+
     void RESPConnection::failAwaitingTags()
     {
         for ( const RESPCommandTag& tag : _listAwaitTag )
         {
-            if ( tag._step == kAuthStep )
-                continue;
+            if ( tag._step == kAuthStep || _bPushMode == SW_TRUE )
+                continue; // 구독 확인은 답을 내지 않는다 — 다시 연결하면 채널을 모두 다시 구독한다
             _replyRecordBuffer.push( RESPReplyRecord{} );
             RESPReplyRecord& record = _replyRecordBuffer.getLast();
             record._tag             = tag;

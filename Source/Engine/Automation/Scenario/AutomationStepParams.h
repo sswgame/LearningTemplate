@@ -70,6 +70,36 @@ namespace sw
         uint32 _count{ 1 };
     };
 
+    /** @brief `DispatchDOMEvent` 가 내는 DOM 이벤트입니다. 값의 차례는 `AutomationDOMEvent.js` 와 같다. */
+    ENUM()
+    enum class AutomationDOMEventKind : uint8
+    {
+        KeyDown = 0,    ///< `_value` 는 `KeyboardEvent.code`("Tab" · "Backspace")
+        KeyUp,          ///< 같은 키를 뗀다
+        Text,           ///< 조합 없는 확정 글(`input` · insertText)
+        Composition,    ///< 조합 중 글 전체(`compositionupdate`)
+        CompositionEnd, ///< 확정(`compositionend`)
+        PointerMove,    ///< 캔버스 안 (`_x`, `_y`) 비율 자리
+        PointerDown,
+        PointerUp,
+    };
+
+    /** @brief `DispatchDOMEvent` 의 인자입니다 — 브라우저 페이지에 DOM 이벤트를 낸다(웹 창의 입력 길 전체를 지난다). 웹 밖에서는 건너뜀이다. */
+    REFLECT()
+    struct SW_API AutomationDOMEventParams
+    {
+        REFLECT_BODY();
+
+        PROPERTY( Required )
+        AutomationDOMEventKind _kind{ AutomationDOMEventKind::KeyDown };
+        PROPERTY( Tooltip = "KeyboardEvent.code for keys, the text for text and composition events" )
+        string _value{};
+        PROPERTY( Min = 0, Max = 1, Tooltip = "Pointer position inside the canvas, 0 left to 1 right" )
+        float32 _x{ 0.5f };
+        PROPERTY( Min = 0, Max = 1, Tooltip = "Pointer position inside the canvas, 0 top to 1 bottom" )
+        float32 _y{ 0.5f };
+    };
+
     /** @brief `ExpectCursorClip` 의 인자입니다. */
     REFLECT()
     struct SW_API AutomationCursorClipParams

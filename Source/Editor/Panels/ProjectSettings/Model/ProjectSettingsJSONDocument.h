@@ -86,6 +86,8 @@ namespace sw::editor
         [[nodiscard]] expected<void> open( string_view absolutePath );
         /** @brief 글 @p text 를 파일 @p absolutePath 의 내용으로 열어 트리를 만듭니다(`open` 의 본체 — 테스트가 디스크 없이 부른다). */
         [[nodiscard]] expected<void> openText( string_view absolutePath, string_view text );
+        /** @brief 연 파일의 편집본 글 @p text 를 저장하지 않은 편집으로 엽니다(자동 저장 사본 복원 — 저장 기준은 디스크 글 그대로다). 열려 있지 않거나 글이 틀리면 false 이고 문서는 그대로입니다. */
+        [[nodiscard]] bool restoreText( string_view text );
         /** @brief 파일을 다시 읽어 편집을 버립니다. */
         [[nodiscard]] expected<void> revert();
         /** @brief 지금 트리를 파일에 씁니다. 읽기 전용이거나 닫혀 있거나 쓰지 못하면 오류를 남기고 false 입니다. */

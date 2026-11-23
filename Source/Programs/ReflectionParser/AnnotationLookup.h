@@ -13,7 +13,6 @@
 #include "Programs/ReflectionParser/AnnotationApply.h"
 #include "Programs/ReflectionParser/AnnotationFields.h"
 #include "Programs/ReflectionParser/ParserDefines.h"
-#include "Programs/ReflectionParser/ParserSession.h"
 
 #include <clang-c/Index.h>
 
@@ -49,7 +48,7 @@ namespace sw
          * @return 모르는 토큰이 없으면 true
          */
         template <typename TParsed>
-        [[nodiscard]] static bool applyAnnotation( const string_view spelling, TParsed& target, const ParserSession& session, const string_view owner )
+        [[nodiscard]] static bool applyAnnotation( const string_view spelling, TParsed& target, const string_view owner )
         {
             vector<string> listUnknownToken;
             AnnotationApply::apply( spelling, target, listUnknownToken );

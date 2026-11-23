@@ -26,8 +26,7 @@
 			<GameObject _schemaVersion="0" _name="Director" _bActive="true">
 				<_listComponent>
 					<GhostHuntDemoComponent _localID="9953062523458564462" _componentName="GhostHuntDemoComponent"
-					                        _bActive="true"
-					                        _catalogPath="game/playground/data/kitdemo/demo.ghosts.xml" />
+					                        _bActive="true" />
 				</_listComponent>
 			</GameObject>
 		</entity>

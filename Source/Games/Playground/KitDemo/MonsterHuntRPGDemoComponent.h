@@ -7,7 +7,6 @@
 #pragma once
 #include "Core/Foundation/Types.h"
 
-#include "Engine/Asset/AssetRef.h"
 #include "Engine/Asset/Cache/SharedAssetRef.h"
 #include "Engine/Reflection/ReflectionMacros.h"
 
@@ -46,9 +45,6 @@ namespace sw
         [[nodiscard]] bool runContract();
 
     private:
-        PROPERTY( Category = "Data", DisplayName = "Catalog", Tooltip = "Monster hunt catalog XML (monster, contract)" )
-        AssetRef<MonsterHuntCatalog> _catalogPath;
-
         SharedAssetRef<MonsterHuntCatalog> _pCatalog;
         PROPERTY( RuntimeState )
         int32 _solved; ///< 조사가 풀렸으면 1

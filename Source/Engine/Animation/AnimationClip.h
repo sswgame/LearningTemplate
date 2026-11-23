@@ -87,8 +87,6 @@ namespace sw
         uint32                       getTrackCount() const { return static_cast<uint32>( _listTrackName.size() ); }
         const vector<hashed_string>& getTrackNames() const { return _listTrackName; }
         AnimationCodecID             getCodecID() const { return _codecID; }
-        /** @brief 블롭 크기(바이트)입니다. */
-        size_t getCodecByteCount() const { return _codecByteCount; }
         /** @brief 16 바이트 정렬된 블롭 시작입니다. */
         const uint8*                      getCodecData() const { return reinterpret_cast<const uint8*>( _listCodecBlock.data() ); }
         const AnimationNotifyTrack&       getNotifyTrack() const { return _notifyTrack; }

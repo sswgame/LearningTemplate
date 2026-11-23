@@ -192,7 +192,7 @@ namespace
             header.appendFormat( R"({"alg":"ES256","x5c":["%#","%#","%#"]})", ReceiptEndpointTestUtil::extractPemBody( _listChainPem[0] ), ReceiptEndpointTestUtil::extractPemBody( _listChainPem[1] ),
                                  ReceiptEndpointTestUtil::extractPemBody( _listChainPem[2] ) );
             StringBuilder<constant::buffer::kMax256> payloadBuilder;
-            payloadBuilder.appendFormat( R"({"transactionId":"%#","productId":"gem100","bundleId":"%#","environment":"Production","appAccountToken":"tok","purchaseDate":1700000000000})", kAppleOrder, kBundle );
+            payloadBuilder.appendFormat( R"({"transactionId":"%#","productId":"gem100","bundleId":"%#","environment":"Production","appAccountToken":"tok","quantity":1,"purchaseDate":1700000000000})", kAppleOrder, kBundle );
             string                                    payload{ payloadBuilder.view() };
             StringBuilder<constant::buffer::kMax8192> signingInputBuilder;
             signingInputBuilder.appendFormat( "%#.%#", ReceiptEndpointTestUtil::encodeURL( header.view() ), ReceiptEndpointTestUtil::encodeURL( payload ) );
@@ -337,7 +337,9 @@ SW_TEST_CASE_F( ReceiptEndToEndTest, AppleReachesTheEndpointAndVerifiesTheChain 
     const ReceiptValidationResult result = validate( "apple", kAppleOrder );
     SW_EXPECT_TRUE_MSG( result._status == ReceiptStatus::Valid, result._failureText.c_str() );
     SW_EXPECT_EQUAL( string( kAppleOrder ), result._transactionID );
-    SW_EXPECT_EQUAL( string( "gem100" ), result._productID );
+    SW_REQUIRE_EQUAL( size_t( 1 ), result._listItem.size() );
+    SW_EXPECT_EQUAL( string( "gem100" ), result._listItem[0]._productID );
+    SW_EXPECT_EQUAL( int64( 1 ), result._listItem[0]._quantity );
     SW_EXPECT_EQUAL( string( "tok" ), result._storeBuyerID );
     SW_REQUIRE_EQUAL( size_t( 1 ), _endpoint._listAppleAuthorization.size() );
     SW_EXPECT_TRUE( StringUtil::startsWith( _endpoint._listAppleAuthorization[0], "Bearer " ) );

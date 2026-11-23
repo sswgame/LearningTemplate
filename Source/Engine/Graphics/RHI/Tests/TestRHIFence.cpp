@@ -66,7 +66,7 @@ SW_TEST_CASE( RHIFenceTest, DeferredSpanIsReusedOnlyAfterItsFenceCompletes )
 
 /**
  * @brief [RHIFenceTest] 못 기다린 비우기(`Abandoned`)는 완료 값을 올리지 않고, 뒤 프레임의 `Completed` 가 그 값을 덮어 올린다
- * @details 변이: 통지 결과를 보지 않고 늘 올리면(옛 한 채널 해제 콜백) 첫 단언이 진다 — 종료 · 잃은 장치 · 웹 `waitIdle` 에서 끝나지 않은 구간을 다시 내준다.
+ * @details 변이: 통지 결과를 보지 않고 늘 올리면(옛 한 채널 해제 콜백) 첫 단언이 진다 — 종료 · 잃은 장치 · 시간 초과에서 끝나지 않은 구간을 다시 내준다.
  */
 SW_TEST_CASE( RHIFenceTest, AbandonedNotificationDoesNotCompleteTheValue )
 {

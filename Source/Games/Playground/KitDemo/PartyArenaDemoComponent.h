@@ -8,7 +8,6 @@
 #pragma once
 #include "Core/Foundation/Types.h"
 
-#include "Engine/Asset/AssetRef.h"
 #include "Engine/Asset/Cache/SharedAssetRef.h"
 #include "Engine/Reflection/ReflectionMacros.h"
 
@@ -47,9 +46,6 @@ namespace sw
         [[nodiscard]] bool runSeries();
 
     private:
-        PROPERTY( Category = "Data", DisplayName = "Catalog", Tooltip = "Party round series XML (rounds, placement points, win score)" )
-        AssetRef<PartyRoundSeries> _catalogPath;
-
         SharedAssetRef<PartyRoundSeries> _pCatalog;
         PROPERTY( RuntimeState )
         int32 _winner; ///< 우승한 사람 번호(-1 없음)

@@ -7,7 +7,6 @@
 #pragma once
 #include "Core/Foundation/Types.h"
 
-#include "Engine/Asset/AssetRef.h"
 #include "Engine/Asset/Cache/SharedAssetRef.h"
 #include "Engine/Reflection/ReflectionMacros.h"
 
@@ -50,9 +49,6 @@ namespace sw
         [[nodiscard]] static bool walkTo( ScavengerExpedition& inoutExpedition, int32 player, const hashed_string& target );
 
     private:
-        PROPERTY( Category = "Data", DisplayName = "Catalog", Tooltip = "Coop scavenger catalog XML (quota, carry, facility, scrap, moons)" )
-        AssetRef<ScavengerCatalog> _catalogPath;
-
         SharedAssetRef<ScavengerCatalog> _pCatalog;
         PROPERTY( RuntimeState )
         int32 _soldValue; ///< 회사에서 판 값

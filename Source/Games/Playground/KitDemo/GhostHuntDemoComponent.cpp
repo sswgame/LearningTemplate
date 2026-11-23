@@ -36,8 +36,7 @@ namespace sw
                                 &GhostHuntDemoComponent::getRemainingGhosts );
 
     GhostHuntDemoComponent::GhostHuntDemoComponent()
-        : _catalogPath{}
-        , _pCatalog{}
+        : _pCatalog{}
         , _stunnedCount{ 0 }
         , _caughtCoins{ 0 }
         , _remainingGhosts{ 0 }
@@ -85,7 +84,7 @@ namespace sw
 
     bool GhostHuntDemoComponent::startGame()
     {
-        if ( acquireRequired( _catalogPath, _pCatalog ) == false )
+        if ( acquireBoundCatalog( _pCatalog ) == false )
             return false;
         return runFight();
     }

@@ -358,6 +358,16 @@ namespace sw
                 return pName != nullptr && typeInfo.findPropertyByNameText( pName ) != nullptr;
             }
 
+            /** @brief 칸이 원소로 적히면(컨테이너 · 중첩 구조체) true, 속성으로 적히면 false 입니다. 쓰기(`writeXMLProperties`) · 읽기(`readXMLIntoInstance`)가 고르는 순서와 같습니다. */
+            static bool isElementProperty( const PropertyInfo& prop, const SerializeContext& context )
+            {
+                if ( prop._bIsBitField == SW_TRUE )
+                    return false;
+                if ( prop._bIsContainer && prop.hasContainerWrapper() )
+                    return true;
+                return SerializerUtil::findNestedObjectType( prop._typeName, context ) != nullptr;
+            }
+
             /**
              * @brief 안쪽 원소(컴포넌트 · 구조체 칸 · 컨테이너의 구조체 원소)를 읽고, orphan 목록이 있으면 그 원소의 모르는 속성 · 자식도 orphan 으로 남깁니다.
              * @details 루트 원소는 `deserializeSoft` 가 따로 훑는다. 안쪽 원소의 모르는 이름은 타입 이름을 붙여 적는다(`SpriteComponent._clipPth`) —
@@ -368,7 +378,7 @@ namespace sw
             {
                 const FieldReadResult propertiesResult = readXMLIntoInstance( instance, typeInfo, backend, context, pOutListOrphan, pOutListRestored );
                 if ( pOutListOrphan != nullptr )
-                    appendUnknownXMLChildOrphans( backend.getCurrentNode(), typeInfo, pOutListOrphan, typeInfo._name.c_str() );
+                    appendUnknownXMLChildOrphans( backend.getCurrentNode(), typeInfo, context, pOutListOrphan, typeInfo._name.c_str() );
                 return propertiesResult;
             }
 
@@ -620,10 +630,11 @@ namespace sw
             }
 
             /**
-             * @brief 원소 @p node 의 속성 · 자식 가운데 타입이 모르는 이름을 orphan 으로 남깁니다.
+             * @brief 원소 @p node 의 속성 · 자식 가운데 읽기가 보지 않는 것을 orphan 으로 남깁니다 — 타입이 모르는 이름, 되풀이된 자식, 자리가 틀린 칸(속성이어야 할 값을 원소로, 또는 거꾸로).
+             * @details 칸은 자리(`isElementProperty`)마다 첫 것만 읽는다. 남기지 않으면 적은 값이 알림 없이 사라지고 칸은 초기값이 된다 — 속성의 되풀이는 파싱이 거절한다(`XMLDocument`).
              * @param pOwnerTypeName 안쪽 원소면 그 타입 이름(경고에 붙는다), 루트면 nullptr 입니다.
              */
-            static void appendUnknownXMLChildOrphans( XMLNode node, const TypeInfo& typeInfo,
+            static void appendUnknownXMLChildOrphans( XMLNode node, const TypeInfo& typeInfo, const SerializeContext& context,
                                                       vector<SchemaOrphanValue>* pOutListOrphan, const utf8* pOwnerTypeName = nullptr )
             {
                 if ( pOutListOrphan == nullptr || node.isValid() == false )
@@ -637,8 +648,14 @@ namespace sw
                         continue;
                     if ( StringUtil::equals( pChildName, kSchemaVersionKey ) )
                         continue;
-                    if ( isNameKnown( typeInfo, pChildName ) )
+                    const PropertyInfo* pChildProperty = typeInfo.findPropertyByNameText( pChildName );
+                    if ( pChildProperty != nullptr && isElementProperty( *pChildProperty, context ) )
+                    {
+                        const XMLNode repeated = child.findNextSibling( pChildName );
+                        if ( repeated.isValid() )
+                            appendUnknownNameOrphan( pChildName, repeated.getText(), pOwnerTypeName, *pOutListOrphan );
                         continue;
+                    }
                     const utf8* pNameAttr = child.findAttribute( kXMLPropertyNameAttr );
                     if ( pNameAttr != nullptr && isNameKnown( typeInfo, pNameAttr ) )
                         continue;
@@ -652,7 +669,8 @@ namespace sw
                         continue;
                     if ( StringUtil::equals( pAttrName, kSchemaVersionKey ) )
                         continue;
-                    if ( isNameKnown( typeInfo, pAttrName ) )
+                    const PropertyInfo* pAttributeProperty = typeInfo.findPropertyByNameText( pAttrName );
+                    if ( pAttributeProperty != nullptr && isElementProperty( *pAttributeProperty, context ) == false )
                         continue;
                     appendUnknownNameOrphan( pAttrName, attr.getValue(), pOwnerTypeName, *pOutListOrphan );
                 }
@@ -692,7 +710,7 @@ namespace sw
                 const bool                    bPropertiesRead = readXMLIntoInstance( MutableObjectAddress{ pInstance }, typeInfo, backend, context, pOutListOrphan, &listRestored ) == FieldReadResult::Read;
 
                 if ( pOutListOrphan != nullptr )
-                    appendUnknownXMLChildOrphans( root, typeInfo, pOutListOrphan );
+                    appendUnknownXMLChildOrphans( root, typeInfo, context, pOutListOrphan );
 
                 // 선언된 범위는 읽기 공통 끝에서 본다(바이너리 · JSON 과 같다). 되돌린 칸은 파일 값이 아니라 뺀다.
                 const bool bWithinRange = SerializerUtil::isWithinDeclaredRanges( typeInfo, ObjectAddress{ pInstance }, listRestored );
@@ -959,7 +977,7 @@ namespace sw
 
         vector<SchemaOrphanValue> listOrphan;
         if ( root.isValid() )
-            XMLSerializerInternal::appendUnknownXMLChildOrphans( root, typeInfo, &listOrphan );
+            XMLSerializerInternal::appendUnknownXMLChildOrphans( root, typeInfo, context, &listOrphan );
         if ( listOrphan.empty() == false )
             return false;
         // 선언된 범위는 읽기 공통 끝에서 본다(바이너리 · JSON 과 같다).

@@ -57,7 +57,7 @@ namespace sw
     void SliderWidget::setValue( float32 value )
     {
         const float32 clamped = MathUtil::clamp( value, _minValue, _maxValue );
-        if ( clamped == _value )
+        if ( clamped == _value || MathUtil::isFinite( clamped ) == false ) // NaN 은 범위로 잘리지 않는다 — 스크린 리더(다른 프로세스)가 보낸 값도 여기로 온다
             return;
         _value = clamped;
         invalidate( WidgetDirty::kPaint );
