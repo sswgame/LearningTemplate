@@ -1166,6 +1166,20 @@ SW_TEST_CASE_F( SurvivalHorrorTest, EncounterRefusesNegativeActorID )
 }
 
 /**
+ * @brief [SurvivalHorrorTest] 읽을 때 거절하는 조사자 값은 열 때도 거절한다 — 받으면 그 판의 저장을 다시 읽지 못한다
+ */
+SW_TEST_CASE_F( SurvivalHorrorTest, EncounterRefusesInvestigatorsItCannotReadBack )
+{
+    SW_EXPECT_LOG( "SurvivalHorrorEncounter.RefusedInvestigator" );
+    SurvivalHorrorEncounter    encounter;
+    SurvivalHorrorInvestigator still = makeInvestigator( 1 );
+    still._speed                     = 0.0f;
+    SW_EXPECT_FALSE( encounter.initialize( _monster, { still }, 1u ) );
+    SW_EXPECT_FALSE( encounter.initialize( _monster, { makeInvestigator( 1, -1 ) }, 1u ) );
+    SW_EXPECT_FALSE( encounter.initialize( _monster, { makeInvestigator( 1, 5, -1 ) }, 1u ) );
+}
+
+/**
  * @brief [SurvivalHorrorTest] 모든 눈이 성공이면 힘만큼 강인함을 깎아 이긴다. 빠른 쪽이 먼저 움직이고, 괴물은 그 사이에 때린다. 끝나면 빈 결과이다
  */
 SW_TEST_CASE_F( SurvivalHorrorTest, EncounterVictory )
