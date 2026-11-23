@@ -133,7 +133,7 @@ namespace sw
         shared_ptr<Mesh> mesh;
         if ( MeshAssetFormat::isMeshAssetPath( meshID ) )
         {
-            _meshLoad = MeshCache::request( meshID );
+            _meshLoad = MeshCache::request( meshID, MeshCPUAccess::ReleaseAfterUpload );
             if ( _meshLoad.isLoading() )
             {
                 _pPrimitiveRegistry->addAssetWaiter( this, &InstancedMeshComponent::updateMeshArrival );

@@ -12,6 +12,7 @@
 #include "Engine/Asset/Cache/BuiltInAssetCache.h"
 #include "Engine/Asset/Cache/WeakInternCache.h"
 #include "Engine/Foundation/EngineServices.h"
+#include "Engine/Graphics/Mesh/MeshAssetFormat.h"
 #include "Engine/Graphics/Mesh/MeshRenderData.h"
 #include "Engine/Graphics/Mesh/MeshVertexAnimation.h"
 #include "Engine/Graphics/RHI/RHIMeshVertexStreams.h"
@@ -111,8 +112,10 @@ namespace sw
         };
     } // namespace
 
-    Mesh::Mesh( CreateKey ) noexcept
-        : _renderData{ make_unique<MeshRenderData>( *this ) }
+    Mesh::Mesh( CreateKey, MeshCPUAccess cpuAccess, AssetID sourceAsset ) noexcept
+        : _sourceAsset{ std::move( sourceAsset ) }
+        , _cpuAccess{ cpuAccess }
+        , _renderData{ make_unique<MeshRenderData>( *this ) }
     {
     }
 
@@ -120,10 +123,81 @@ namespace sw
 
     MeshCPUView Mesh::getCPUView() const
     {
-        if ( _cpuAccess == MeshCPUAccess::Keep )
+        if ( getCPUAccess() == MeshCPUAccess::Keep )
             return MeshCPUView{ this };
-        SW_LOG_ERROR_ID( "Mesh.CPUVerticesReleased", "Mesh: CPU vertices were read from a mesh that released them after upload - request it with MeshCPUAccess::Keep" );
+        SW_LOG_ERROR_ID( "Mesh.CPUVerticesReleased", "Mesh '%#': CPU vertices were read from a mesh that releases them after upload - request it with MeshCPUAccess::Keep", _sourceAsset.str() );
         return MeshCPUView{ nullptr };
+    }
+
+    bool Mesh::tryRetainCPUVertices()
+    {
+        ScopedLock<mutex> lock{ _cpuVertexMutex };
+        if ( _bHoldsCPUVertices.load( std::memory_order_acquire ) == SW_FALSE )
+            return false;
+        _cpuAccess.store( MeshCPUAccess::Keep, std::memory_order_release );
+        return true;
+    }
+
+    bool Mesh::retainCPUVertices()
+    {
+        ScopedLock<mutex> lock{ _cpuVertexMutex };
+        if ( _bHoldsCPUVertices.load( std::memory_order_acquire ) == SW_FALSE && reloadCPUVertices() == false )
+            return false;
+        _cpuAccess.store( MeshCPUAccess::Keep, std::memory_order_release ); // 정점을 채운 뒤다 — 토큰을 얻은 스레드는 채운 정점을 본다
+        return true;
+    }
+
+    uint64 Mesh::getCPUVertexBytes() const
+    {
+        const bool bHolds = _bHoldsCPUVertices.load( std::memory_order_acquire ) != SW_FALSE;
+        return bHolds ? static_cast<uint64>( getDrawVertexCount() ) * sizeof( RHIVertex ) : 0u;
+    }
+
+    void Mesh::requireCPUVertices( const utf8* pWhy )
+    {
+        if ( tryRetainCPUVertices() == false )
+            SW_LOG_ERROR_ID( "Mesh.CPUVerticesNeeded", "Mesh '%#': %# needs CPU vertices but the mesh already released them - request it with MeshCPUAccess::Keep", _sourceAsset.str(), pWhy );
+    }
+
+    bool Mesh::ensureCPUVertices()
+    {
+        ScopedLock<mutex> lock{ _cpuVertexMutex };
+        return _bHoldsCPUVertices.load( std::memory_order_acquire ) != SW_FALSE || reloadCPUVertices();
+    }
+
+    void Mesh::releaseCPUVertices()
+    {
+        ScopedLock<mutex> lock{ _cpuVertexMutex };
+        if ( getCPUAccess() == MeshCPUAccess::Keep )
+            return;
+        _bHoldsCPUVertices.store( SW_FALSE, std::memory_order_release );
+        _listVertex    = vector<RHIVertex>{}; // 용량까지 놓는다
+        _listLODVertex = vector<RHIVertex>{};
+    }
+
+    bool Mesh::reloadCPUVertices()
+    {
+        MeshAssetData data{};
+        if ( MeshAssetFormat::loadFromAsset( _sourceAsset, data ) == false )
+        {
+            SW_LOG_ERROR_ID( "Mesh.CPUVerticesUnreadable", "Mesh '%#': the released CPU vertices could not be read again from the file", _sourceAsset.str() );
+            return false;
+        }
+        vector<RHIVertex> listLODVertex;
+        for ( const MeshLODLevel& level : data._listLOD )
+        {
+            listLODVertex.insert( listLODVertex.end(), level._listVertex.begin(), level._listVertex.end() );
+        }
+        if ( data._listVertex.size() != _vertexCount || listLODVertex.size() != _lodVertexCount )
+        {
+            SW_LOG_ERROR_ID( "Mesh.CPUVerticesChanged", "Mesh '%#': the file has %# + %# vertices but the loaded mesh has %# + %# - reload the mesh", _sourceAsset.str(), data._listVertex.size(),
+                             listLODVertex.size(), _vertexCount, _lodVertexCount );
+            return false;
+        }
+        _listVertex    = std::move( data._listVertex );
+        _listLODVertex = std::move( listLODVertex );
+        _bHoldsCPUVertices.store( SW_TRUE, std::memory_order_release );
+        return true;
     }
 
     const vector<RHIVertex>& MeshCPUView::getVertices() const
@@ -138,11 +212,19 @@ namespace sw
         return _pMesh != nullptr ? _pMesh->_listLODVertex : s_listEmpty;
     }
 
-    shared_ptr<Mesh> Mesh::create()
+    shared_ptr<Mesh> Mesh::create( MeshCPUAccess cpuAccess )
     {
+        // 되읽을 파일이 없는 메시가 정점을 놓으면 장치가 바뀔 때 되살릴 수 없다.
+        SW_LOG_ASSERT( cpuAccess == MeshCPUAccess::Keep, "A mesh without a source file cannot release its CPU vertices - use Mesh::createForAsset" );
         // Material 과 MaterialInstance 와 같은 규칙이다. 제어 블록(소멸 코드)이 Engine.dll 에 있어야
         // 게임 모듈이 만든 메시를 엔진이 마지막까지 보관할 수 있다. 도형을 채우는 것은 MeshUtil 의 일이다.
-        return sw::make_shared<Mesh>( CreateKey{} );
+        return sw::make_shared<Mesh>( CreateKey{}, cpuAccess, AssetID{} );
+    }
+
+    shared_ptr<Mesh> Mesh::createForAsset( const AssetID& sourceAsset, MeshCPUAccess cpuAccess )
+    {
+        SW_LOG_ASSERT( sourceAsset.isEmpty() == false, "A mesh asset needs its source id - it is read again after the CPU vertices are released" );
+        return sw::make_shared<Mesh>( CreateKey{}, cpuAccess, sourceAsset );
     }
 
     shared_ptr<Mesh> Mesh::acquireRigidSkinSource( const Mesh& source )
@@ -155,7 +237,7 @@ namespace sw
 
     shared_ptr<Mesh> Mesh::createRigidSkinSource( const Mesh& source )
     {
-        shared_ptr<Mesh> rigid = create();
+        shared_ptr<Mesh> rigid = create( MeshCPUAccess::Keep );
         (void)rigid->setGeometryWithTangents( vector<RHIVertex>( source._listVertex ), vector<uint32>( source._listIndex ) );
         // 기본 영향이 본 0 에 가중치 1 이다(`MeshSkinVertex`).
         rigid->setSkin( vector<MeshSkinVertex>( source._listVertex.size() ), MeshSkinBinding::makeIdentity( 1u ) );
@@ -252,12 +334,15 @@ namespace sw
             SW_LOG_ERROR_ID( "Mesh.MeshIndicesOutOfRange", "Mesh indices (%#) are not whole triangles or name a vertex past %# - the mesh is empty", listIndex.size(), vertexCount );
             _listVertex.clear();
             _listIndex.clear();
+            _vertexCount = 0;
             refreshBoundingRadius();
             _uvDensity = 0.0f;
             return false;
         }
-        _listVertex = std::move( listVertex );
-        _listIndex  = std::move( listIndex );
+        _listVertex  = std::move( listVertex );
+        _listIndex   = std::move( listIndex );
+        _vertexCount = vertexCount;
+        _bHoldsCPUVertices.store( SW_TRUE, std::memory_order_release ); // 새 내용이다 — 올린 뒤 다시 놓는다
         refreshBoundingRadius();
         _uvDensity = computeUVDensity( _listVertex, _listIndex );
         return true;
@@ -322,6 +407,7 @@ namespace sw
     void Mesh::clearLODs()
     {
         _listLOD.clear();
+        _lodVertexCount = 0;
         _listLODVertex.clear();
         _listLODIndex.clear();
         _listLODSkinVertex.clear();
@@ -334,6 +420,11 @@ namespace sw
         _contentID = IdentityToken::make();
         if ( listLevel.empty() )
             return true;
+        if ( _bHoldsCPUVertices.load( std::memory_order_acquire ) == SW_FALSE )
+        {
+            SW_LOG_ERROR_ID( "Mesh.MeshLODsNeedCPUVertices", "Mesh '%#': LODs were set after the CPU vertices were released - set the geometry again first - the mesh keeps LOD 0 only", _sourceAsset.str() );
+            return false;
+        }
         if ( _vertexAnimation != nullptr )
         {
             SW_LOG_ERROR_ID( "Mesh.MeshLODsNeedMesh", "Mesh LODs need a mesh without vertex animation - the mesh keeps LOD 0 only" );
@@ -403,6 +494,7 @@ namespace sw
             firstIndex += indexCount;
             previousScreenSize = level._screenSize;
         }
+        _lodVertexCount = static_cast<uint32>( _listLODVertex.size() );
         return true;
     }
 
@@ -596,9 +688,11 @@ namespace sw
 
     void Mesh::setSkin( vector<MeshSkinVertex> listSkinVertex, MeshSkinBinding skinBinding )
     {
-        const bool bMatches = skinBinding.getBoneCount() > 0 && listSkinVertex.size() == _listVertex.size();
-        _listSkinVertex     = bMatches ? std::move( listSkinVertex ) : vector<MeshSkinVertex>{};
-        _skinBinding        = bMatches ? std::move( skinBinding ) : MeshSkinBinding{};
+        const bool bMatches = skinBinding.getBoneCount() > 0 && listSkinVertex.size() == _vertexCount;
+        if ( bMatches )
+            requireCPUVertices( "skinning" ); // 휴지 자세를 CPU 정점에서 올린다(모프 풀)
+        _listSkinVertex = bMatches ? std::move( listSkinVertex ) : vector<MeshSkinVertex>{};
+        _skinBinding    = bMatches ? std::move( skinBinding ) : MeshSkinBinding{};
         // 낮은 단계는 옛 스킨(뼈 번호 · 있고 없음)에 맞춘 것이다 — 스킨을 바꾸면 뗀다(읽기는 스킨 뒤에 `setLODs` 로 다시 건다).
         clearLODs();
         _contentID = IdentityToken::make();
@@ -643,7 +737,9 @@ namespace sw
 
     void Mesh::setMorphTargets( vector<MeshMorphTarget> listTarget )
     {
-        const uint32 vertexCount = static_cast<uint32>( _listVertex.size() );
+        const uint32 vertexCount = _vertexCount;
+        if ( listTarget.empty() == false )
+            requireCPUVertices( "a morph target" );
         for ( MeshMorphTarget& target : listTarget )
         {
             VectorUtil::removeIf( target._listDelta, [vertexCount]( const MeshMorphDelta& delta )
@@ -662,6 +758,13 @@ namespace sw
     {
         _vertexAnimation = std::move( animation );
         _contentID       = IdentityToken::make();
+    }
+
+    void Mesh::setGPUMorphEnabled( bool bEnabled )
+    {
+        if ( bEnabled )
+            requireCPUVertices( "GPU morphing" );
+        _bGPUMorph = bEnabled ? SW_TRUE : SW_FALSE;
     }
 
     void Mesh::setGPUDeformProgram( const vector<float4>& listProgram )

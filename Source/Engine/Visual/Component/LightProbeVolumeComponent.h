@@ -11,13 +11,13 @@
 #include "Core/Memory/Memory.h"
 
 #include "Engine/Graphics/Lighting/LightProbeGrid.h"
-#include "Engine/Graphics/Lighting/SceneVoxelScene.h"
 #include "Engine/Object/Component/SceneComponent.h"
 #include "Engine/Reflection/ReflectionMacros.h"
 
 namespace sw
 {
     class ValidationContext;
+    struct SceneVoxelScene;
 
     /**
      * @class LightProbeVolumeComponent

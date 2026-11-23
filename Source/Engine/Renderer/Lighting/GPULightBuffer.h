@@ -23,7 +23,6 @@
 #include "Core/Name/hashed_string.h"
 
 #include "Engine/Graphics/Debug/RenderDiagnostics.h"
-#include "Engine/Graphics/Lighting/SceneVoxelScene.h"
 #include "Engine/Graphics/RHI/RHIStructuredBuffer.h"
 #include "Engine/Graphics/Shader/Binding/GPULight.h"
 #include "Engine/Graphics/Shader/Binding/ShaderBindingSlots.h"
@@ -37,6 +36,7 @@ namespace sw
     class Scene;
     struct LightProbeGrid;
     struct ReflectionProbeAsset;
+    struct SceneVoxelScene;
     struct SkyLightData;
 
     /** @brief 쿠키(빛 텍스처)를 쓰는 빛 하나입니다 — 라이트 목록의 원소 번호와 텍스처 경로입니다. 렌더러가 칸을 나눠 그 원소의 `_extra.w` 에 적습니다(`Light2DCookieAtlas`). */

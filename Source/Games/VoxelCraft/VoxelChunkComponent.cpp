@@ -36,7 +36,7 @@ namespace sw
                 {
                     listBuildVertex.push_back( toBuildVertex( vertex ) );
                 }
-                shared_ptr<Mesh> mesh = Mesh::create();
+                shared_ptr<Mesh> mesh = Mesh::create( MeshCPUAccess::Keep );
                 if ( mesh == nullptr )
                     return;
                 mesh->setBuildVertices( listBuildVertex );

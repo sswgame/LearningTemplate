@@ -451,7 +451,7 @@ namespace sw
         vector<MeshSection>     listSection     = Internal::remapSections( source, listTriangleKept );
         vector<MeshMorphTarget> listMorphTarget = Internal::remapKeptMorphTargets( source, listMorphWeight, listNewIndex );
 
-        shared_ptr<Mesh> baked = Mesh::create();
+        shared_ptr<Mesh> baked = Mesh::create( MeshCPUAccess::Keep );
         // 위치가 바뀌었으므로 탄젠트를 다시 구한다. 번호는 남은 정점 안이다(위에서 만들었다).
         (void)baked->setGeometry( std::move( listBaked ), std::move( listBakedIndex ) );
         if ( source.hasSkin() )
@@ -595,7 +595,7 @@ namespace sw
         if ( listIndex.empty() )
             return unexpected( Error{ ErrorKind::InvalidArgument, "every merge part is empty - there is nothing to draw" } );
 
-        shared_ptr<Mesh> merged = Mesh::create();
+        shared_ptr<Mesh> merged = Mesh::create( MeshCPUAccess::Keep );
         // 조각마다 검사된 번호를 합친 정점 번호로 옮겼다 — 합친 정점 안이다.
         if ( pHooks != nullptr )
             (void)merged->setGeometry( std::move( listVertex ), std::move( listIndex ) ); // UV 를 옮겼을 수 있으므로 탄젠트를 다시 구한다

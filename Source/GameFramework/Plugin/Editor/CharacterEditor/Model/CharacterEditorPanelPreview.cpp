@@ -10,6 +10,7 @@
 #include "Engine/Character/Socket/ResolvedSocketTable.h"
 #include "Engine/Character/Socket/SocketSet.h"
 #include "Engine/Graphics/Mesh/Mesh.h"
+#include "Engine/Graphics/Mesh/MeshCache.h"
 #include "Engine/Object/Component/SceneComponent.h"
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
@@ -63,7 +64,7 @@ namespace sw::editor
                 for ( const GameObject* pObject : listObject )
                 {
                     const Mesh* pMesh = findPickMesh( *pObject );
-                    count += pMesh != nullptr ? static_cast<uint32>( pMesh->getCPUView().getVertices().size() ) : 0u;
+                    count += pMesh != nullptr ? pMesh->getVertexCount() : 0u;
                 }
                 return count;
             }
@@ -82,7 +83,14 @@ namespace sw::editor
                     const Mesh*                  pMesh  = findPickMesh( object );
                     const SkeletalMeshComponent* pUnit  = object.getComponent<SkeletalMeshComponent>();
                     const SceneComponent*        pScene = object.getPrimarySceneComponent();
-                    if ( pMesh == nullptr || pScene == nullptr || pMesh->getCPUView().getVertices().empty() )
+                    // 스킨 없는 부품(그리기용으로 읽은 파일)은 CPU 정점을 놓는다 — 집으려면 쥐도록 요청한다(놓았으면 파일을 다시 읽는다, 그 뒤로는 쥔다).
+                    shared_ptr<Mesh> pKeptMesh{};
+                    if ( pMesh != nullptr && pMesh->getCPUAccess() != MeshCPUAccess::Keep )
+                    {
+                        pKeptMesh = MeshCache::acquire( pMesh->getSourceAsset().str(), MeshCPUAccess::Keep );
+                        pMesh     = pKeptMesh.get();
+                    }
+                    if ( pMesh == nullptr || pScene == nullptr || pMesh->getVertexCount() == 0 )
                         continue;
                     BodyPickSurface& surface = outListSurface.emplace_back();
                     BodyPickSurface::build( pMesh->getCPUView().getVertices(), pMesh->getMorphTargets(), pUnit != nullptr ? pUnit->getMorphWeights() : listNoWeight, pMesh->getSkinVertices(),

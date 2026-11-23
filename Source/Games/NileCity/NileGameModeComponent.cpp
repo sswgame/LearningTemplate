@@ -9,6 +9,7 @@
 #include "Engine/Automation/Watch/AutomationComponentWatch.h"
 #include "Engine/Automation/Watch/AutomationWatch.h"
 #include "Engine/Graphics/Material/MaterialInstance.h"
+#include "Engine/Graphics/Mesh/Mesh.h"
 #include "Engine/Graphics/Mesh/MeshCache.h"
 #include "Engine/Input/IInputCaptureQuery.h"
 #include "Engine/Input/InputManager.h"
@@ -646,7 +647,7 @@ namespace sw
         // 읽지 못한 모델은 캐시가 경로마다 한 번 경고한다.
         for ( const string& path : listModelPath )
         {
-            _listModelMesh.push_back( MeshCache::request( path ) );
+            _listModelMesh.push_back( MeshCache::request( path, MeshCPUAccess::ReleaseAfterUpload ) );
         }
     }
 

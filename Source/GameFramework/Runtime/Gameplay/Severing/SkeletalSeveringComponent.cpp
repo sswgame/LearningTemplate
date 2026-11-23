@@ -136,7 +136,7 @@ namespace sw
                 {
                     listLevelIndex.push_back( listIndex[lod._firstIndex - indexBase + index] - lod._firstVertex );
                 }
-                shared_ptr<Mesh> level = Mesh::create();
+                shared_ptr<Mesh> level = Mesh::create( MeshCPUAccess::Keep );
                 if ( level->setGeometryWithTangents( std::move( listLevelVertex ), std::move( listLevelIndex ) ) == false )
                     return nullptr;
                 level->setSkin( std::move( listLevelSkin ), mesh.getSkinBinding() );
@@ -162,7 +162,7 @@ namespace sw
                     vector<MeshSkinVertex> listPieceSkin;
                     splitByTriangle( *source, result, listKeptVertex, listKeptSkin, listPieceVertex, listPieceSkin );
                     // 탄젠트 · 인덱스는 LOD 0 과 같은 길(`setVertices`)로 만든다 — 캡 정점은 탄젠트가 없다.
-                    shared_ptr<Mesh> kept = Mesh::create();
+                    shared_ptr<Mesh> kept = Mesh::create( MeshCPUAccess::Keep );
                     kept->setVertices( std::move( listKeptVertex ) );
                     MeshLODLevel level;
                     level._listVertex     = kept->getCPUView().getVertices();
@@ -451,7 +451,7 @@ namespace sw
         vector<RHIVertex>      listPieceVertex;
         vector<MeshSkinVertex> listPieceSkin;
         Internal::splitByTriangle( *mesh, result, listKeptVertex, listKeptSkin, listPieceVertex, listPieceSkin );
-        shared_ptr<Mesh> kept = Mesh::create();
+        shared_ptr<Mesh> kept = Mesh::create( MeshCPUAccess::Keep );
         kept->setVertices( std::move( listKeptVertex ) );
         kept->setSkin( std::move( listKeptSkin ), mesh->getSkinBinding() );
         // 낮은 단계도 같이 자른다(스킨을 먼저 둔 뒤 — `setSkin` 은 LOD 를 뗀다). 받지 못하면 setLODs 가 오류를 남기고 LOD 0 만 남는다.
@@ -464,7 +464,7 @@ namespace sw
         // 3) 떨어진 조각: 현재 포즈로 스키닝해 정적 메시로 만들고, 그 정점의 볼록 껍질로 강체를 만든다.
         PhysicsShapeDesc3D hull;
         const float3       center    = Internal::poseAndCenterPiece( listPieceVertex, listPieceSkin, pUnit->getSkinPalette(), pUnit->getWorldMatrix(), hull );
-        shared_ptr<Mesh>   pieceMesh = Mesh::create();
+        shared_ptr<Mesh>   pieceMesh = Mesh::create( MeshCPUAccess::Keep );
         pieceMesh->setVertices( std::move( listPieceVertex ) );
 
         StringBuilder<constant::buffer::kMax256> pieceName;

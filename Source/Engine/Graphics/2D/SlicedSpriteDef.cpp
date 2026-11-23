@@ -154,7 +154,7 @@ namespace sw
                 SlicedSpriteDef::makeSlicedVertices( desc, listVertex );
                 if ( listVertex.empty() )
                     return {};
-                shared_ptr<Mesh> mesh = Mesh::create();
+                shared_ptr<Mesh> mesh = Mesh::create( MeshCPUAccess::Keep );
                 mesh->setVertices( std::move( listVertex ) );
                 return mesh;
             }

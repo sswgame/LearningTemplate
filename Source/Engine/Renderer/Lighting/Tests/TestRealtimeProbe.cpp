@@ -364,7 +364,7 @@ SW_TEST_CASE( SceneVoxelizerTest, DominantAxisPaintMatchesSeparatingAxis )
         sw::SceneVoxelScene scene;
         scene._grid = grid;
         sw::SceneVoxelSource source{};
-        source._mesh = sw::Mesh::create();
+        source._mesh = sw::Mesh::create( sw::MeshCPUAccess::Keep );
         SW_REQUIRE_TRUE( source._mesh->setGeometry( std::move( listVertex ), sw::vector<uint32>{ 0, 1, 2 } ) );
         source._box        = grid.getBounds();
         source._indexCount = 3u;
@@ -398,7 +398,7 @@ SW_TEST_CASE( SceneVoxelizerTest, EmissionKeepsTheBrightestRank )
             vertex._arrPosition[1] = height;
         }
         sw::SceneVoxelSource source{};
-        source._mesh = sw::Mesh::create();
+        source._mesh = sw::Mesh::create( sw::MeshCPUAccess::Keep );
         SW_REQUIRE_TRUE( source._mesh->setGeometry( std::move( listVertex ), sw::vector<uint32>{ 0, 1, 2 } ) );
         source._box            = scene._grid.getBounds();
         source._indexCount     = 3u;

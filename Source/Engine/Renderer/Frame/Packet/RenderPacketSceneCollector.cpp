@@ -10,6 +10,7 @@
 #include "Engine/Environment/SceneEnvironment.h"
 #include "Engine/Foundation/EngineServices.h"
 #include "Engine/Graphics/2D/Render2DSettings.h"
+#include "Engine/Graphics/Lighting/SceneVoxelScene.h"
 #include "Engine/Graphics/Mesh/Mesh.h"
 #include "Engine/Graphics/RHI/IRHIDevice.h"
 #include "Engine/Graphics/Upload/GPUUploadQueue.h"

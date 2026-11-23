@@ -851,13 +851,13 @@ namespace sw::editor
 
     bool ModelImporter::transferBodySurface( string_view sourcePath, const ModelImportRule& rule, MeshAssetData& inoutMesh )
     {
-        const shared_ptr<Mesh> body = MeshCache::acquire( rule._bodySurface );
+        const shared_ptr<Mesh> body = MeshCache::acquire( rule._bodySurface, MeshCPUAccess::Keep );
         if ( body == nullptr )
         {
             SW_LOG_ERROR_ID( "ModelImporter.ImportRuleBodyMesh", "Import rule '%#': body mesh '%#' for the surface transfer of %# cannot be read", rule._name.c_str(), rule._bodySurface.c_str(), sourcePath );
             return false;
         }
-        shared_ptr<Mesh> garment = Mesh::create();
+        shared_ptr<Mesh> garment = Mesh::create( MeshCPUAccess::Keep );
         if ( garment->setGeometryWithTangents( vector<RHIVertex>( inoutMesh._listVertex ), vector<uint32>( inoutMesh._listIndex ) ) == false )
             return false; // 메시가 까닭을 남겼다(임포트가 만든 번호라 생기지 않아야 한다)
         if ( inoutMesh._listSkinVertex.empty() == false )
