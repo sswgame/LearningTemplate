@@ -2009,6 +2009,12 @@
     "ActionCombatDemoComponentInternal": "ActionCombatGameModeComponentInternal — 키트 셋 가르기: 시연 컴포넌트가 키트 디렉터(Component/*GameModeComponent)가 됐다(2026-11-21)",
     "ActionCombatDemoPhase": "ActionCombatPhase — 키트 셋 가르기: 시연 컴포넌트가 키트 디렉터(Component/*GameModeComponent)가 됐다(2026-11-21)",
     "ActionPlatformerDemoComponent": "ActionPlatformerGameModeComponent — 키트 셋 가르기: 시연 컴포넌트가 키트 디렉터(Component/*GameModeComponent)가 됐다(2026-11-21)",
-    "ActionPlatformerDemoComponentInternal": "ActionPlatformerGameModeComponentInternal — 키트 셋 가르기: 시연 컴포넌트가 키트 디렉터(Component/*GameModeComponent)가 됐다(2026-11-21)"
+    "ActionPlatformerDemoComponentInternal": "ActionPlatformerGameModeComponentInternal — 키트 셋 가르기: 시연 컴포넌트가 키트 디렉터(Component/*GameModeComponent)가 됐다(2026-11-21)",
+    "VoxelCraftGame": "PlaygroundGame — 게임 VoxelCraft 를 허브의 미니게임 voxelcraft 로 흡수(2026-11-24)",
+    "gv_voxelAutoPlay": "gv_playgroundAutoPlay — 게임 VoxelCraft 를 허브의 미니게임 voxelcraft 로 흡수(2026-11-24)",
+    "isChunkDirty": "VoxelChunk::_revision — 낡은 청크는 월드의 깃발이 아니라 판 번호로 알고 뷰가 지은 때의 번호와 견준다(2026-11-24)",
+    "clearChunkDirty": "VoxelChunk::_revision — 낡은 청크는 월드의 깃발이 아니라 판 번호로 알고 뷰가 지은 때의 번호와 견준다(2026-11-24)",
+    "markChunkDirty": "VoxelWorld::advanceChunkRevision — VoxelChunk::_revision — 낡은 청크는 월드의 깃발이 아니라 판 번호로 알고 뷰가 지은 때의 번호와 견준다(2026-11-24)",
+    "canDrawBlockMeshes": "VoxelAtlasGridGate::canDraw — 청크 그리기는 디렉터가 아니라 클라이언트의 VoxelWorldViewComponent 가 정한다(2026-11-24)"
   }
 }
