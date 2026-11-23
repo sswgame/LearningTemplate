@@ -15,4 +15,5 @@
 	<Setting id="controls.voxelSprint" category="controls" type="KeyBinding" action="Sprint" bindIndex="0" default=""/>
 	<Setting id="controls.voxelBreak" category="controls" type="KeyBinding" action="Voxel.Break" bindIndex="0" default=""/>
 	<Setting id="controls.voxelPlace" category="controls" type="KeyBinding" action="Voxel.Place" bindIndex="0" default=""/>
+	<Setting id="controls.frontierFastForward" category="controls" type="KeyBinding" action="FastForward" bindIndex="0" default=""/>
 </UserSettingsSchema>

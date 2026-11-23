@@ -1,29 +1,24 @@
 #include "pch.h"
 
-#include "Games/FrontierTown/FrontierSkirmishGameModeComponent.h"
+#include "Games/Playground/FrontierTown/FrontierSkirmishGameModeComponent.h"
 
+#include "Engine/Asset/Cache/SharedAssetCache.h"
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
 #include "Engine/Serialization/Format/Archive.h"
 #include "Engine/Serialization/Format/StateIO.h"
 #include "Engine/Visual/Component/MeshComponent.h"
 
-#include "GameFramework/Kits/Genre/Strategy/RealTimeStrategy/RTSCatalog.h"
-#include "GameFramework/Runtime/Foundation/Framework/GameService.h"
 #include "GameFramework/Runtime/Gameplay/GameState/GameStateComponent.h"
 #include "GameFramework/Runtime/Gameplay/GameState/PlayerComponentUtil.h"
 #include "GameFramework/Runtime/Gameplay/Inventory/WalletComponent.h"
 
-#include "Games/FrontierTown/FrontierTownData.h"
-
-namespace sw
-{
-} // namespace sw
-
 namespace sw
 {
     FrontierSkirmishGameModeComponent::FrontierSkirmishGameModeComponent()
-        : _unitPrefab{}
+        : _unitDataPath{}
+        , _startMinerals{ 0 }
+        , _unitPrefab{}
         , _workerUnit{}
         , _soldierUnit{}
         , _barracksUnit{}
@@ -34,6 +29,7 @@ namespace sw
         , _patrolB{ 10.5f, 0.0f, 6.5f }
         , _unitColor{ 0.30f, 0.45f, 0.85f, 1.0f }
         , _buildingColor{ 0.55f, 0.30f, 0.30f, 1.0f }
+        , _pCatalog{}
         , _world{}
         , _tintCache{}
         , _unitViews{}
@@ -74,12 +70,11 @@ namespace sw
         _bViewsDirty = SW_TRUE;
     }
 
-    bool FrontierSkirmishGameModeComponent::initializeWorld( RTSWorld& outWorld, GameStateComponent& state, WalletComponent& wallet )
+    bool FrontierSkirmishGameModeComponent::initializeWorld( RTSWorld& outWorld, GameStateComponent& state, WalletComponent& wallet ) const
     {
-        const RTSCatalog* pCatalog = game::findSubsystem<const RTSCatalog>();
-        if ( pCatalog == nullptr )
-            return false;
-        if ( outWorld.initialize( pCatalog, FrontierTownData::kLandSize, FrontierTownData::kLandSize ) == false )
+        const RTSCatalog* const pCatalog = _pCatalog.get();
+        const GridTopology&     land     = state.getLand().getTopology();
+        if ( pCatalog == nullptr || outWorld.initialize( pCatalog, land._width, land._height ) == false )
             return false;
         outWorld.bindLand( &state.getLand(), int2{ 0, 0 } );
         (void)outWorld.addPlayer( 0, &wallet.getWallet(), float3{ 2.0f, 0.0f, 2.0f } ); // 플레이어 0 이 플레이어 지갑을 쓴다
@@ -88,28 +83,36 @@ namespace sw
 
     bool FrontierSkirmishGameModeComponent::startGame()
     {
-        // 도시 디렉터가 먼저 열었으면 아무것도 하지 않는다 — 같은 설정이라 어느 쪽이 먼저 열어도 같은 판이다.
-        GameStateComponent* pState  = GameStateComponent::openOnOwner( *this, FrontierTownData::makeStateSettings() );
-        WalletComponent*    pWallet = pState != nullptr ? PlayerComponentUtil::requireOnOwner<WalletComponent>( *this ) : nullptr;
+        if ( acquireRequired( _unitDataPath, _pCatalog ) == false )
+            return false;
+        // 판 상태(땅 · 시계)는 앞에 붙은 도시 디렉터가 연다 — 열리지 않았으면 여기서 다른 설정으로 열지 않고 멈춘다.
+        GameStateComponent* pState = GameStateComponent::findOnOwner( *this );
+        if ( pState == nullptr || pState->isInitialized() == false )
+        {
+            SW_LOG_ERROR_ID( "FrontierSkirmish.StateNotOpen", "[Frontier] the skirmish cannot start - no game mode in front of it on this object opened the shared state" );
+            return false;
+        }
+        WalletComponent* pWallet = PlayerComponentUtil::requireOnOwner<WalletComponent>( *this );
         if ( pWallet == nullptr )
             return false;
         if ( initializeWorld( _world, *pState, *pWallet ) == false )
         {
-            SW_LOG_ERROR_ID( "FrontierSkirmish.SkirmishCannotStartRTS", "[Frontier] the skirmish cannot start - the RTS unit catalog is not loaded" );
+            SW_LOG_ERROR_ID( "FrontierSkirmish.WorldNotOpen", "[Frontier] the skirmish cannot start - the RTS world does not open on the shared land" );
             return false;
         }
         // 유닛 id 는 씬 데이터가 정본이다(C++ 에 기본값이 없다). 비었거나 카탈로그에 없으면 조용히 건너뛰지 않고 판을 열지 않는다.
-        const RTSCatalog* pCatalog    = game::findSubsystem<const RTSCatalog>();
-        bool              bUnitsKnown = true;
+        bool bUnitsKnown = true;
         for ( const CatalogKey<RTSUnitDef>* pUnitID : { &_workerUnit, &_soldierUnit, &_barracksUnit } )
         {
-            if ( pCatalog != nullptr && pCatalog->find( pUnitID->key() ) != nullptr )
+            if ( _pCatalog->find( pUnitID->key() ) != nullptr )
                 continue;
             SW_LOG_ERROR_ID( "FrontierSkirmish.SkirmishUnitEmptyNot", "[Frontier] the skirmish unit '%#' is empty or not in the RTS unit catalog - the skirmish cannot start", pUnitID->c_str() );
             bUnitsKnown = false;
         }
         if ( bUnitsKnown == false )
             return false;
+        if ( pWallet->isFreshGame() )
+            pWallet->getWallet().add( _pCatalog->getRules()._mineralCurrency, _startMinerals );
         if ( pState->isFreshGame() )
         {
             _worker  = _world.spawnUnit( _workerUnit.key(), 0, _workerStart );

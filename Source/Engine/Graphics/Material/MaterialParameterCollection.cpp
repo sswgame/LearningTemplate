@@ -4,7 +4,6 @@
 
 #include "Core/Algorithm/VectorUtil.h"
 #include "Core/Log/Logger.h"
-#include "Core/String/StringBuilder.h"
 #include "Core/String/StringUtil.h"
 
 #include "Engine/Asset/AssetManager.h"

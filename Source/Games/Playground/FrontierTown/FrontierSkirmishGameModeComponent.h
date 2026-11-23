@@ -1,19 +1,20 @@
 /**
  * @file FrontierSkirmishGameModeComponent.h
  * @brief 개척 마을의 RTS 디렉터 — 공유 지갑을 플레이어 0 에 빌려 주고, 공유 땅 위에서 일꾼이 병영을 짓고 해병이 도시 건물을 돌아 순찰합니다.
+ * @details 키트(GF_RealTimeStrategy)를 쓰는 길은 StarSkirmish 디렉터와 같다 — 유닛 카탈로그는 씬의 참조(`_unitDataPath`), 시작 광물은 디렉터의 씬 데이터, 규칙은 `RTSWorld` 하나다.
  */
 #pragma once
-#include "Core/Container/string.h"
-#include "Core/Container/vector.h"
 #include "Core/Encoding/FourCCUtil.h"
 #include "Core/Foundation/Types.h"
 
 #include "Engine/Asset/AssetRef.h"
+#include "Engine/Asset/Cache/SharedAssetRef.h"
 #include "Engine/Foundation/GameObjectHandle.h"
 #include "Engine/Object/Prefab/PrefabAsset.h"
 #include "Engine/Reflection/ReflectionMacros.h"
 #include "Engine/Serialization/Serializer/CatalogKey.h"
 
+#include "GameFramework/Kits/Genre/Strategy/RealTimeStrategy/RTSCatalog.h"
 #include "GameFramework/Kits/Genre/Strategy/RealTimeStrategy/RTSWorld.h"
 #include "GameFramework/Runtime/Foundation/Framework/GameModeComponent.h"
 #include "GameFramework/Runtime/Foundation/Framework/Presentation/SimulationViewSync.h"
@@ -26,7 +27,7 @@ namespace sw
 
     /**
      * @class FrontierSkirmishGameModeComponent
-     * @brief RTS 한 판입니다. 도시 디렉터가 연 공유 상태를 읽고(이미 열렸으면 그대로), 새 판이면 일꾼과 해병을 놓습니다.
+     * @brief RTS 한 판입니다. 앞에 붙은 도시 디렉터(`CityGameModeComponent`)가 연 공유 상태를 빌리고, 새 판이면 시작 광물 · 일꾼 · 해병을 놓습니다.
      * @details RTS 는 공유 땅을 빌린다(`RTSWorld::bindLand`, 원점 (0, 0)) — 도시가 지은 칸은 막혀 짓지 못하고 경로가 돌아간다. 돈은 공유 지갑(플레이어 0)이다.
      *          둘째 틱에 일꾼에게 `_barracksX`, `_barracksY` 에 병영 짓기를, 해병에게 두 지점(`_patrol*`) 사이 이동을 준다. 해병은 도착할 때마다 반대쪽으로 다시 간다.
      *          이 디렉터는 입력과 시계를 만지지 않는다(도시 디렉터가 민다). 모습은 유닛마다 판 하나이고, 유닛이 있으면 틱마다 위치를 옮긴다.
@@ -55,8 +56,8 @@ namespace sw
         bool               hasPendingSpawn() const override { return _bViewsDirty == SW_TRUE; }
 
     private:
-        /** @brief 빈 월드를 열고 공유 땅과 지갑을 겁니다(시작과 복원이 같은 설정으로 연다). 카탈로그가 없으면 false 입니다. */
-        [[nodiscard]] static bool initializeWorld( RTSWorld& outWorld, GameStateComponent& state, WalletComponent& wallet );
+        /** @brief 빈 월드를 열고 공유 땅과 지갑을 겁니다(시작과 복원이 같은 설정으로 연다). 격자 크기는 공유 땅의 크기이고, 월드가 열리지 않으면 false 입니다. */
+        [[nodiscard]] bool initializeWorld( RTSWorld& outWorld, GameStateComponent& state, WalletComponent& wallet ) const;
         /** @brief 둘째 틱의 명령 — 병영 짓기와 첫 순찰 이동입니다. 거절되면 이유를 남긴다(데이터 오류). */
         void issueOpeningOrders();
         /** @brief 해병이 멈췄으면 순찰의 다른 끝으로 보냅니다. */
@@ -64,6 +65,10 @@ namespace sw
         void syncUnitViews( GameObjectManager& manager );
 
     private:
+        PROPERTY( Category = "Data", DisplayName = "Unit Data", Tooltip = "Unit catalog XML" )
+        AssetRef<RTSCatalog> _unitDataPath;
+        PROPERTY( Category = "Rules", DisplayName = "Start Minerals", Tooltip = "Minerals a fresh game adds to the shared wallet (the currency of the unit catalog rules)", Min = 0 )
+        int32 _startMinerals;
         PROPERTY( Category = "Prefabs", Tooltip = "One unit view (a cube)" )
         AssetRef<PrefabAsset> _unitPrefab;
         PROPERTY( Category = "Units", DisplayName = "Worker", Tooltip = "RTS catalog id of the starting worker" )
@@ -87,6 +92,7 @@ namespace sw
         PROPERTY( Category = "Look", DisplayName = "Building Color" )
         float4 _buildingColor;
 
+        SharedAssetRef<RTSCatalog>    _pCatalog;
         RTSWorld                      _world;
         MaterialTintCache             _tintCache;
         SimulationViewSync<RTSUnitID> _unitViews; ///< 유닛 슬롯 번호 → 보일 유닛(죽으면 없다)

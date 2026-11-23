@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <?asset guid="76d4b3db0b1f18238f653be840042028"?>
-<!-- FrontierTown 의 유닛 · 건물(GF_RealTimeStrategy 의 RTSCatalog 형식) — 조립 시험이라 최소다. 일꾼이 병영을 짓고 해병이 순찰한다.
+<!-- 도시 건설 미니게임(minigames/frontiertown)의 유닛 · 건물(GF_RealTimeStrategy 의 RTSCatalog 형식) — 조립 시험이라 최소다. 일꾼이 병영을 짓고 해병이 순찰한다.
      형식 설명은 game/starskirmish/data/units.xml 머리말에 있다. 돈(minerals)은 공유 지갑의 Minerals 통화다. -->
 <RTSCatalog supplyMax="200">
 	<!-- 규칙(RTSSettings) — 모든 칸이 필수다. 걸음 20 Hz, 시간은 게임 초 -->
