@@ -508,7 +508,7 @@ namespace sw
                     const expected<string>     partState = ObjectStateSerializer::saveToXMLString( pPart, options );
                     const expected<void>       overrides = partState.has_value() ? PrefabOverrides::computeOverrides( *partState, baseState, node._overrideXML ) : expected<void>{ unexpected( partState.error() ) };
                     const bool                 bOverridesMade =
-                        overrides.has_value() && pPrefabs->collectPartOverrides( *pPart, *pSource, listDeepPart ) && PrefabOverrides::appendPartOverrides( node._overrideXML, listDeepPart );
+                        overrides.has_value() && pPrefabs->collectPartOverrides( *pPart, *pSource, nullptr, listDeepPart ) && PrefabOverrides::appendPartOverrides( node._overrideXML, listDeepPart );
                     if ( bOverridesMade == false )
                     {
                         SW_LOG_WARNING_ID( "PrefabAsset.OverridesNestedPrefabInstance", "Overrides of nested prefab instance '%#' could not be computed (%#) - it is not written to the prefab", node._name,

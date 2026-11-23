@@ -59,6 +59,20 @@ namespace sw
                 }
             }
 
+            /** @brief 오브젝트 @p pObject 와 그 자식(다른 엔티티가 아닌 것 — 중첩 프리팹 부품)이 가리키는 것을 @p options 의 참조 목록에 모읍니다(바이트는 버린다). */
+            static void collectReferences( const GameObject* pObject, const unordered_set<const GameObject*>& uniqueEntityObject, const ObjectSaveOptions& options )
+            {
+                vector<uint8> stateBytes;
+                (void)ObjectStateSerializer::saveToBinaryBuffer( pObject, stateBytes, options );
+                vector<GameObject*> listChild;
+                pObject->getChildren( listChild );
+                for ( const GameObject* pChild : listChild )
+                {
+                    if ( uniqueEntityObject.count( pChild ) == 0 )
+                        collectReferences( pChild, uniqueEntityObject, options );
+                }
+            }
+
             /**
              * @brief 지어 둔 오브젝트마다 셀 · 경계 · 플래그를 정하고, 그 오브젝트가 가리키는 다른 엔티티(파일 id)를 모읍니다.
              * @return 엔티티가 지어지지 않았으면 오류를 남기고 false 입니다.
@@ -102,8 +116,7 @@ namespace sw
                     ObjectSaveOptions options{ SerializePurpose::Authoring };
                     options._pSavedIDMap          = &mapSavedID;
                     options._pOutListReferencedID = &listReferencedID;
-                    vector<uint8> stateBytes;
-                    (void)ObjectStateSerializer::saveToBinaryBuffer( pObject, stateBytes, options ); // 참조만 모은다 — 바이트는 버린다
+                    collectReferences( pObject, uniqueEntityObject, options );
                     for ( const uint64 referencedObjectID : listReferencedID )
                     {
                         const auto targetIt = mapSavedID.find( referencedObjectID );
