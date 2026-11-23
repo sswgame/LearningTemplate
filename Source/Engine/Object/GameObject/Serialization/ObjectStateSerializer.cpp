@@ -861,6 +861,7 @@ namespace sw
         , _mapSavedIDToObject{}
         , _mapSavedNameToEntry{}
         , _mapComponentKeyText{}
+        , _externalResolver{}
         , _idSpace{ idSpace }
         , _bFinished{ SW_FALSE }
         , _bReferencesResolved{ SW_TRUE }
@@ -1087,13 +1088,17 @@ namespace sw
     GameObject* ObjectStateBatch::findBySavedID( uint64 savedID ) const
     {
         const auto mapIt = _mapSavedIDToObject.find( savedID );
-        return ( mapIt != _mapSavedIDToObject.end() ) ? mapIt->second : nullptr;
+        if ( mapIt != _mapSavedIDToObject.end() )
+            return mapIt->second;
+        return savedID != 0 && _externalResolver.isBound() ? _externalResolver( savedID, hashed_string{} ) : nullptr;
     }
 
     GameObject* ObjectStateBatch::findBySavedName( hashed_string savedName ) const
     {
         const auto mapIt = _mapSavedNameToEntry.find( savedName );
-        return ( mapIt != _mapSavedNameToEntry.end() ) ? _listEntry[mapIt->second]._pObject : nullptr;
+        if ( mapIt != _mapSavedNameToEntry.end() )
+            return _listEntry[mapIt->second]._pObject;
+        return savedName.empty() == false && _externalResolver.isBound() ? _externalResolver( 0, savedName ) : nullptr;
     }
 
     GameObject* ObjectStateBatch::findAttachOwner( const Entry& entry, hashed_string ownerName, uint64 ownerID ) const

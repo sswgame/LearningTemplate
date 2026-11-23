@@ -33,6 +33,8 @@ namespace sw
 
         void onBeginPlay() override;
         void onTick( TickContext& context ) override;
+        /** @brief 지난 틱 자리를 옮깁니다. */
+        void onWorldOriginShifted( const float3& delta ) override;
 
         /** @brief 고르게 한 지금 수평 속도(m/s)입니다. */
         float32 getSpeed() const { return _speed; }

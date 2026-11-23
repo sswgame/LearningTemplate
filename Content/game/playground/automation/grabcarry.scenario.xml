@@ -2,7 +2,7 @@
 <?asset guid="a460e9b6be99249bdf0030f8479a458b"?>
 <!--
   집기(GrabberComponent) · 눌림판 무게(SensorWeightOverrideComponent) · 씬 너머 남기기(PersistAcrossScenesComponent) — 값으로 판정한다(골든 없음).
-  ① Hand 가 상자를 집으면(개발 명령 grab.pick — 게임의 집기 입력과 같은 함수) 상자가 손을 따라 키네마틱으로 붙는다. ② 손을 눌림판 위로 옮기고 내려놓으면(exec Hand throwCarried 0 0 0)
+  ① Hand 가 상자를 집으면(개발 명령 grab.pick — 게임의 집기 입력과 같은 함수) 상자가 손을 따라 키네마틱으로 붙는다. ② 손을 눌림판 위로 옮기고 내려놓으면(exec Hand throwHeld "0 0 0")
   상자가 동적으로 돌아가 떨어지고, 눌림판이 재는 무게는 강체 질량 5 가 아니라 상자의 무게 덮어쓰기 40 이다. ③ 씬을 바꾸면 Keeper 만 남는다.
   실행: App -scenario=game/playground/automation/grabcarry.scenario.xml -unattended (체인: ctest -R Scenario.playground)
 -->

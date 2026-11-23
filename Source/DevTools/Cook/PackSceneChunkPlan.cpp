@@ -108,15 +108,16 @@ namespace sw
     vector<PackChunkIssue> PackSceneChunkPlan::findUncovered( const vector<PackSceneReach>& listScene, const unordered_map<string, string>& mapAssetChunk, const unordered_set<string>& setStartupChunk,
                                                               const vector<PackSceneEntry>& listSceneChunks )
     {
+        unordered_map<string, const PackSceneEntry*> mapSceneEntry; // 씬마다 목록 전체를 훑지 않는다
+        for ( const PackSceneEntry& entry : listSceneChunks )
+        {
+            mapSceneEntry[entry._sceneID] = &entry;
+        }
         vector<PackChunkIssue> listIssue;
         for ( const PackSceneReach& scene : listScene )
         {
-            const PackSceneEntry* pEntry = nullptr;
-            for ( const PackSceneEntry& entry : listSceneChunks )
-            {
-                if ( entry._sceneID == scene._sceneID )
-                    pEntry = &entry;
-            }
+            const auto                  entryIter = mapSceneEntry.find( scene._sceneID );
+            const PackSceneEntry* const pEntry    = entryIter != mapSceneEntry.end() ? entryIter->second : nullptr;
             for ( const string& assetID : scene._setReached )
             {
                 const auto   itChunk  = mapAssetChunk.find( assetID );

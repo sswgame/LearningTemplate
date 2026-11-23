@@ -50,8 +50,8 @@ namespace sw::editor
 
     string CharacterEditorLocalStore::makeThumbnailSlot( const UserAppearancePresetStore& store, string_view presetName )
     {
-        const vector<UserAppearancePreset>& listPreset = store.getPresets();
-        const UserAppearancePreset*         pPreset    = store.findPresetByName( presetName );
+        const vector<UserAppearancePresetRecord>& listPreset = store.getPresets();
+        const UserAppearancePresetRecord*         pPreset    = store.findPresetByName( presetName );
         if ( pPreset != nullptr && pPreset->_thumbnailSlot.empty() == false )
             return pPreset->_thumbnailSlot;
         // 프리셋 수 + 1 개의 번호 가운데 하나는 반드시 비어 있다.
@@ -60,7 +60,7 @@ namespace sw::editor
             fixed_string<constant::buffer::kMax64> slot;
             formatstring( slot.data(), slot.capacity(), "%#%#", CharacterEditorLocalStoreInternal::kThumbnailSlotPrefix, number );
             bool bTaken = false;
-            for ( const UserAppearancePreset& preset : listPreset )
+            for ( const UserAppearancePresetRecord& preset : listPreset )
                 bTaken = bTaken || string_view( preset._thumbnailSlot.c_str() ) == string_view( slot.c_str() );
             if ( bTaken == false )
                 return string{ slot.c_str() };

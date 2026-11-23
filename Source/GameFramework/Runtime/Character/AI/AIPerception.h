@@ -31,12 +31,46 @@ namespace sw
 
 namespace sw
 {
-    /** @brief 감각에 닿을 수 있는 대상 하나입니다. 게임이 감지할 때마다 넘깁니다. */
-    struct AIStimulus
+    /** @brief 자극 종류입니다. 감각은 자기 종류만 본다 — 소리는 시야각 안이어도 보이지 않는다. 씬 색인도 종류마다 층이 따로 있다. */
+    enum class AIStimulusKind : uint8
     {
-        float3  _position{};
-        uint64  _id{ 0 };
-        float32 _noiseRadius{ 0.0f }; ///< 이번에 낸 소리의 반경. 0 이면 조용하다
+        Sight,   ///< 보이는 몸(반 크기 0 인 점)
+        Hearing, ///< 낸 소리(반 크기 = 소리 반경)
+        Count,
+    };
+
+    /**
+     * @brief 감각에 닿을 수 있는 자극 하나입니다(대상 하나가 보이면서 소리를 내면 둘이다). 게임이 감지할 때마다 넘깁니다.
+     * @details 종류 없이 만들 수 없다 — 예전 자극은 자리와 소리 반경을 한 칸에 실어 소리만 내는 원천(삐걱 바닥)도 시야 안이면 보인 것이 됐다.
+     *          언리얼 `FAIStimulus` 가 감각(`UAISense_Sight` · `UAISense_Hearing`)마다 따로 나고 감각이 자기 자극만 처리하는 나눔이다.
+     */
+    class AIStimulus
+    {
+    public:
+        /** @brief 보이는 몸입니다. */
+        static AIStimulus makeSight( const float3& position, uint64 id ) { return AIStimulus{ AIStimulusKind::Sight, position, id, 0.0f }; }
+        /** @brief 반경 @p noiseRadius 의 소리입니다. */
+        static AIStimulus makeHearing( const float3& position, uint64 id, float32 noiseRadius ) { return AIStimulus{ AIStimulusKind::Hearing, position, id, noiseRadius }; }
+
+        const float3&  getPosition() const { return _position; }
+        uint64         getID() const { return _id; }
+        float32        getNoiseRadius() const { return _noiseRadius; }
+        AIStimulusKind getKind() const { return _kind; }
+
+    private:
+        AIStimulus( AIStimulusKind kind, const float3& position, uint64 id, float32 noiseRadius )
+            : _position{ position }
+            , _id{ id }
+            , _noiseRadius{ noiseRadius }
+            , _kind{ kind }
+        {
+        }
+
+    private:
+        float3         _position;
+        uint64         _id;
+        float32        _noiseRadius; ///< 소리의 반경(Hearing 만)
+        AIStimulusKind _kind;
     };
 } // namespace sw
 
@@ -47,9 +81,10 @@ namespace sw
     {
         float3  _lastKnownPosition{};
         uint64  _id{ 0 };
-        float32 _age{ 0.0f };        ///< 마지막으로 감지한 뒤 지난 시간
-        uint8   _bSeen{ SW_FALSE };  ///< 지금 보인다
-        uint8   _bHeard{ SW_FALSE }; ///< 이번 감지에서 들렸다
+        float32 _age{ 0.0f };          ///< 마지막으로 감지한 뒤 지난 시간
+        uint8   _bSeen{ SW_FALSE };    ///< 지금 보인다
+        uint8   _bHeard{ SW_FALSE };   ///< 이번 감지에서 들렸다
+        uint8   _bWasSeen{ SW_FALSE }; ///< 지난 감지에서 보였다(놓치는 거리를 쓰는 판정)
     };
 } // namespace sw
 
@@ -69,7 +104,7 @@ namespace sw
 
         void setSettings( const AIPerceptionSettings& settings ) { _settings = settings; }
         /**
-         * @brief 한 번 감지합니다. 후보 중 보이거나 들린 것을 기억에 넣습니다.
+         * @brief 한 번 감지합니다. 시각은 보이는 자극만, 청각은 소리 자극만 보고 감지한 것을 기억에 넣습니다.
          * @details 감지되지 않은 기억은 나이를 더하고, `_memoryDuration` 이 지나면 잊습니다.
          * @param pGrid 가림을 볼 격자입니다. 없으면 가림을 보지 않습니다.
          */
@@ -77,6 +112,7 @@ namespace sw
         /**
          * @brief 씬 판: @p ownTeam 이 아닌 팀의 자극 원천을 공간 색인에서 직접 골라(`AIStimulusSourceComponent::gatherStimuli`, 시야 상자) 한 번 감지합니다.
          * @details 질의 버퍼는 이 감각이 들고 있어 프레임마다 새로 잡지 않는다. 같은 감각을 두 스레드에서 함께 부르지 않는다.
+         *          월드 원점이 옮겨졌으면 기억한 자리를 같은 만큼 옮긴 뒤 감지한다(`GameObjectManager::getWorldOrigin`).
          */
         void sense( const GameObjectManager& manager, uint8 ownTeam, const float3& eyePosition, const float3& forward, const NavGrid* pGrid, float32 deltaTime );
         /** @brief 이 위치와 방향에서 @p target 이 보이는지입니다. 기억과는 상관없습니다. @p bAlreadySeen 이면 놓치는 거리를 씁니다. */
@@ -93,5 +129,6 @@ namespace sw
         vector<AIPerceivedTarget> _listTarget;
         vector<AIStimulus>        _listCandidate; ///< 씬 판 `sense` 의 후보 버퍼
         vector<Component*>        _listQueryKey;  ///< 씬 판 `sense` 의 색인 질의 버퍼
+        double3                   _worldOrigin;   ///< 기억한 자리가 기준한 월드 원점의 절대 자리
     };
 } // namespace sw

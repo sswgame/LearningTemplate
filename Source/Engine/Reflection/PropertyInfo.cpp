@@ -31,6 +31,20 @@
  */
 namespace sw
 {
+    namespace
+    {
+        /** @brief 묶음이 있고 @p registry 가 엔진 레지스트리면 묶음에서, 아니면 이름으로 찾습니다 — 묶음은 엔진 레지스트리 세대의 사실이라 다른 레지스트리의 답을 담지 않는다. */
+        ReflectValueFacts resolvePropertyFacts( const ReflectValueBinding* pBinding, const hashed_string& typeName, const TypeRegistry& registry )
+        {
+            if ( pBinding != nullptr && engine::findSubsystem<TypeRegistry>() == &registry )
+                return pBinding->resolve( typeName, registry );
+            return ReflectValueFacts::find( typeName, registry );
+        }
+    } // namespace
+} // namespace sw
+
+namespace sw
+{
     const string* PropertyInfo::findCustomMeta( const hashed_string& key ) const noexcept
     {
         return _metadata->getEditor().findCustomMeta( key );
@@ -116,6 +130,16 @@ namespace sw
     const ReflectValueBinding* PropertyInfo::findKeyBinding() const noexcept
     {
         return _pValueBindings != nullptr ? &_pValueBindings->_key : nullptr;
+    }
+
+    ReflectValueFacts PropertyInfo::resolveValueFacts( const TypeRegistry& registry ) const
+    {
+        return resolvePropertyFacts( findValueBinding(), _typeName, registry );
+    }
+
+    ReflectValueFacts PropertyInfo::resolveElementFacts( const TypeRegistry& registry ) const
+    {
+        return resolvePropertyFacts( findElementBinding(), _elementTypeName, registry );
     }
 
     NestedContainerInfo PropertyInfo::getContainerShape() const

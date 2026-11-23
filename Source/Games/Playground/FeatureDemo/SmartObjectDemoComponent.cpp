@@ -11,7 +11,11 @@
 #include "Engine/Object/Component/SceneComponent.h"
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
+#include "Engine/Scene/Scene.h"
+#include "Engine/Scene/SceneManager.h"
 #include "Engine/Serialization/Format/StateIO.h"
+
+#include "GameFramework/Runtime/Foundation/Framework/GameService.h"
 
 #include "Games/Playground/FeatureDemo/FeatureDemoCommandUtil.h"
 
@@ -65,7 +69,14 @@ namespace sw
     {
         if ( acquireRequired( _scheduleDataPath, _pCatalog ) == false )
             return false;
-        _locator.initialize( getObjectManager() );
+        const SceneManager* const pSceneManager = game::findSubsystem<SceneManager>();
+        Scene* const              pScene        = pSceneManager != nullptr ? pSceneManager->getActiveScene() : nullptr;
+        if ( pScene == nullptr || pScene->getObjectManager() != getObjectManager() )
+        {
+            SW_LOG_ERROR_ID( "FeatureDemo.SmartObjectNotInActiveScene", "Smart object demo: it is not in the active scene - the reservations cannot name its objects" );
+            return false;
+        }
+        _locator.initialize( pScene );
         _schedule.setActivityLocator( &_locator );
         if ( _schedule.initialize( _pCatalog.get(), ScheduleSystemSettings{}, _startMinute ) == false )
             return false; // 일정 시스템이 까닭을 남겼다

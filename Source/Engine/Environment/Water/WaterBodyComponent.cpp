@@ -2,6 +2,7 @@
 
 #include "Engine/Environment/Water/WaterBodyComponent.h"
 
+#include "Core/Math/AABB.h"
 #include "Core/Math/MathUtil.h"
 #include "Core/Math/MatrixMath.h"
 
@@ -321,6 +322,26 @@ namespace sw
             outArrWave[waveIndex] = waveIndex < _listWave.size() ? _listWave[waveIndex].toVector() : float4{ 0.0f, 1.0f, 0.0f, 0.0f };
             outArrWave[waveIndex]._z *= _waveAmplitudeScale; // 진폭 칸 — 화면과 질의가 같은 배율을 본다
         }
+    }
+
+    bool WaterBodyComponent::computeStreamingBounds( AABB& outBox ) const
+    {
+        const float3 origin = getWorldPosition();
+        if ( _shape != WaterBodyShape::River )
+        {
+            const float3 half{ 0.5f * _size._x, 0.0f, 0.5f * _size._y };
+            outBox = AABB{ origin - half, origin + half };
+            return true;
+        }
+        if ( _listRiverPoint.empty() )
+            return false;
+        const float3 half{ 0.5f * _riverWidth, 0.0f, 0.5f * _riverWidth };
+        outBox = AABB::empty();
+        for ( const float3& point : _listRiverPoint )
+        {
+            outBox = outBox.unionWith( AABB{ origin + point - half, origin + point + half } );
+        }
+        return true;
     }
 
     float32 WaterBodyComponent::computeBoundsRadius() const

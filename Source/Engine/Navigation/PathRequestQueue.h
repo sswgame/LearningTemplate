@@ -249,14 +249,14 @@ namespace sw
                 }
                 return;
             }
-            TaskManager& taskManager = *pTaskManager;
+            TaskManager&             taskManager = *pTaskManager;
+            TaskManager::SubmitBatch batch{ taskManager }; // 모두 넣은 뒤 한 번 깨운다
             for ( ChunkTask& chunk : _listChunk )
             {
                 TaskHandle task = taskManager.emplaceTask( taskName, SW_DELEGATE_METHOD( TaskDelegate, &ChunkTask::run, &chunk ) );
                 taskManager.addToStage( _stage, task, taskName );
-                taskManager.submitWithoutWake( task );
+                batch.submit( task );
             }
-            taskManager.wakeSleepingWorkers( chunkCount );
             _pLaunchedTaskManager = pTaskManager;
         }
 

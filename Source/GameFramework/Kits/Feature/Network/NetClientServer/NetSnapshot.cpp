@@ -4,6 +4,8 @@
 
 #include "Core/Algorithm/CompareUtil.h"
 #include "Core/Algorithm/VectorUtil.h"
+#include "Core/Math/MathUtil.h"
+#include "Core/Memory/Memory.h"
 #include "Core/Network/Message/NetSendBudget.h"
 #include "Core/Serialization/BitStream.h"
 
@@ -38,6 +40,69 @@ namespace sw
                 }
                 return removedCount;
             }
+
+            /** @brief 조각 @p chunkIndex 의 바이트 수입니다. */
+            static size_t getChunkSize( size_t byteCount, size_t chunkIndex )
+            {
+                return MathUtil::min( NetSnapshot::kDeltaChunkBytes, byteCount - chunkIndex * NetSnapshot::kDeltaChunkBytes );
+            }
+
+            /** @brief 받는 쪽 판이 @p baselineRevision 일 때 조각 델타의 비트 수입니다(마스크 + 바뀐 조각). 조각으로 이을 수 없으면(모양이 바뀌었다 · 조각 판이 없다) 비어 있습니다. */
+            static optional<int32> computeChunkDeltaBits( const NetEntityState& entity, uint64 baselineRevision )
+            {
+                const size_t chunkCount = NetSnapshot::computeChunkCount( entity._buffer.size() );
+                if ( baselineRevision < entity._shapeRevision || entity._listChunkRevision.size() != chunkCount || chunkCount == 0 )
+                    return nullopt;
+                size_t bits = chunkCount;
+                for ( size_t chunkIndex = 0; chunkIndex < chunkCount; ++chunkIndex )
+                {
+                    if ( entity._listChunkRevision[chunkIndex] > baselineRevision )
+                        bits += getChunkSize( entity._buffer.size(), chunkIndex ) * kBitsPerByte;
+                }
+                return static_cast<int32>( bits );
+            }
+
+            static void writeChunkDelta( BitWriter& writer, const NetEntityState& entity, uint64 baselineRevision )
+            {
+                const size_t chunkCount = entity._listChunkRevision.size();
+                for ( size_t chunkIndex = 0; chunkIndex < chunkCount; ++chunkIndex )
+                {
+                    writer.writeBool( entity._listChunkRevision[chunkIndex] > baselineRevision );
+                }
+                for ( size_t chunkIndex = 0; chunkIndex < chunkCount; ++chunkIndex )
+                {
+                    if ( entity._listChunkRevision[chunkIndex] > baselineRevision )
+                        writer.writeBytes( entity._buffer.data() + chunkIndex * NetSnapshot::kDeltaChunkBytes, static_cast<int32>( getChunkSize( entity._buffer.size(), chunkIndex ) ) );
+                }
+            }
+
+            /** @brief 기준 바이트 @p inoutBuffer 위에 바뀐 조각을 덮습니다. 조각 수는 기준의 바이트 수가 정한다(받은 수를 믿지 않는다). */
+            [[nodiscard]] static bool readChunkDelta( BitReader& reader, vector<uint8>& inoutBuffer )
+            {
+                const size_t chunkCount = NetSnapshot::computeChunkCount( inoutBuffer.size() );
+                if ( chunkCount == 0 )
+                    return false; // 빈 상태는 조각으로 바뀔 것이 없다 — 깨진 데이터다
+                uint64 arrMask[kMaskWordCount]{};
+                for ( size_t chunkIndex = 0; chunkIndex < chunkCount; ++chunkIndex )
+                {
+                    if ( reader.readBool() )
+                        arrMask[chunkIndex / kBitsPerMaskWord] |= uint64{ 1 } << ( chunkIndex % kBitsPerMaskWord );
+                }
+                for ( size_t chunkIndex = 0; chunkIndex < chunkCount; ++chunkIndex )
+                {
+                    if ( ( arrMask[chunkIndex / kBitsPerMaskWord] & ( uint64{ 1 } << ( chunkIndex % kBitsPerMaskWord ) ) ) == 0 )
+                        continue;
+                    if ( reader.readBytes( inoutBuffer.data() + chunkIndex * NetSnapshot::kDeltaChunkBytes, static_cast<int32>( getChunkSize( inoutBuffer.size(), chunkIndex ) ) ) == false )
+                        return false;
+                }
+                return reader.hasOverflowed() == false;
+            }
+
+        private:
+            static constexpr size_t kBitsPerByte     = 8;
+            static constexpr size_t kBitsPerMaskWord = sizeof( uint64 ) * kBitsPerByte;
+            /// 상태 바이트 상한(`kMaxEntityBytes`)의 조각을 모두 담는다 — 복원본에는 상한을 넘는 엔티티가 없다(`readBlob` 이 막는다).
+            static constexpr size_t kMaskWordCount = ( NetSnapshot::kMaxEntityBytes / NetSnapshot::kDeltaChunkBytes + kBitsPerMaskWord ) / kBitsPerMaskWord;
         };
     } // namespace
 } // namespace sw
@@ -59,6 +124,30 @@ namespace sw
     {
         const auto entityIter = std::lower_bound( _listEntity.begin(), _listEntity.end(), entityID, &NetSnapshotInternal::isSentEntityBefore );
         return entityIter != _listEntity.end() && entityIter->_entityID == entityID ? &*entityIter : nullptr;
+    }
+
+    void NetSnapshot::updateChunkRevision( NetEntityState& inoutEntity, NetEntityState* pPrevious )
+    {
+        const size_t byteCount  = inoutEntity._buffer.size();
+        const size_t chunkCount = computeChunkCount( byteCount );
+        const bool   bSameShape = pPrevious != nullptr && pPrevious->_typeID == inoutEntity._typeID && pPrevious->_buffer.size() == byteCount &&
+                                pPrevious->_listChunkRevision.size() == chunkCount;
+        if ( bSameShape == false )
+        {
+            inoutEntity._shapeRevision = inoutEntity._revision;
+            inoutEntity._listChunkRevision.assign( chunkCount, inoutEntity._revision );
+            return;
+        }
+        inoutEntity._shapeRevision = pPrevious->_shapeRevision;
+        inoutEntity._listChunkRevision.swap( pPrevious->_listChunkRevision );
+        if ( inoutEntity._revision == pPrevious->_revision )
+            return;
+        for ( size_t chunkIndex = 0; chunkIndex < chunkCount; ++chunkIndex )
+        {
+            const size_t offset = chunkIndex * kDeltaChunkBytes;
+            if ( Memory::compare( inoutEntity._buffer.data() + offset, pPrevious->_buffer.data() + offset, NetSnapshotInternal::getChunkSize( byteCount, chunkIndex ) ) != 0 )
+                inoutEntity._listChunkRevision[chunkIndex] = inoutEntity._revision;
+        }
     }
 
     void NetSnapshot::writeDelta( BitWriter& writer, const NetDeltaSource& source, const NetSentSnapshot* pBaseline, int32 maxBytes, NetSentSnapshot& outWritten,
@@ -136,13 +225,25 @@ namespace sw
             const int32 size = static_cast<int32>( entity._buffer.size() );
             if ( size > kMaxEntityBytes )
                 continue; // 받는 쪽이 읽지 않는 크기이므로 싣지도, 기록에 넣지도 않는다
-            const int32 entityBits = 1 + BitMath::computeVarUintBits( entity._entityID ) + BitMath::computeVarUintBits( entity._typeID ) + BitMath::computeBlobBits( size );
+            // 받는 쪽이 기준 판을 가졌으면 그 뒤에 바뀐 조각만, 아니면(새 엔티티 · 모양이 바뀜) 통째로 싣는다. 조각이 더 크면 통째다.
+            const int32           fullBits   = BitMath::computeVarUintBits( entity._typeID ) + BitMath::computeBlobBits( size );
+            const optional<int32> chunkBits  = bInBaseline ? NetSnapshotInternal::computeChunkDeltaBits( entity, pFound->_revision ) : optional<int32>{};
+            const bool            bChunks    = chunkBits.has_value() && *chunkBits < fullBits;
+            const int32           entityBits = 1 + BitMath::computeVarUintBits( entity._entityID ) + 1 + ( bChunks ? *chunkBits : fullBits );
             if ( budget.tryReserveBits( entityBits ) == false )
                 continue; // 뒤에 오는 작은 엔티티는 들어갈 수 있다
             writer.writeBool( true );
             writer.writeVarUint( entity._entityID );
-            writer.writeVarUint( entity._typeID );
-            writer.writeBlob( entity._buffer.data(), size );
+            writer.writeBool( bChunks );
+            if ( bChunks )
+            {
+                NetSnapshotInternal::writeChunkDelta( writer, entity, pFound->_revision );
+            }
+            else
+            {
+                writer.writeVarUint( entity._typeID );
+                writer.writeBlob( entity._buffer.data(), size );
+            }
             outListCurrent[relevantIndex] = kEntityWritten;
             // 기준에 있던 엔티티는 그 항목의 판을 바꾸고, 새 엔티티는 뒤에 붙인 뒤 끝에서 한 번 정렬한다.
             if ( bInBaseline )
@@ -207,12 +308,20 @@ namespace sw
         const size_t baselineCount = outSnapshot._listEntity.size(); // [0, baselineCount) 는 id 오름차순이다
         while ( reader.readBool() )
         {
-            const uint32          entityID = reader.readVarUint32();
-            const uint32          typeID   = reader.readVarUint32();
-            NetEntityState* const pBegin   = outSnapshot._listEntity.data();
-            NetEntityState* const pEnd     = pBegin + baselineCount;
-            NetEntityState*       pEntity  = std::lower_bound( pBegin, pEnd, entityID, &NetSnapshotInternal::isEntityBefore );
-            if ( pEntity == pEnd || pEntity->_entityID != entityID )
+            const uint32          entityID    = reader.readVarUint32();
+            const bool            bChunks     = reader.readBool();
+            NetEntityState* const pBegin      = outSnapshot._listEntity.data();
+            NetEntityState* const pEnd        = pBegin + baselineCount;
+            NetEntityState*       pEntity     = std::lower_bound( pBegin, pEnd, entityID, &NetSnapshotInternal::isEntityBefore );
+            const bool            bInBaseline = pEntity != pEnd && pEntity->_entityID == entityID;
+            if ( bChunks )
+            {
+                if ( bInBaseline == false || NetSnapshotInternal::readChunkDelta( reader, pEntity->_buffer ) == false )
+                    return false; // 이을 기준이 없는 조각은 깨진 데이터다
+                continue;
+            }
+            const uint32 typeID = reader.readVarUint32();
+            if ( bInBaseline == false )
                 pEntity = &outSnapshot._listEntity.emplace_back();
             pEntity->_entityID = entityID;
             pEntity->_typeID   = typeID;

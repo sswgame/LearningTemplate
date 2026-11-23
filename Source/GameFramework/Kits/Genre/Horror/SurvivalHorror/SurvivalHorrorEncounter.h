@@ -88,7 +88,7 @@ namespace sw
 
         SurvivalHorrorEncounter();
 
-        /** @brief @p successFace 이상이 나오면 성공으로 봅니다(기본 5이며 여섯 면 중 둘입니다). 1 ~ 6 밖이거나, 시드가 0 이거나, 조사자 번호가 음수 · 괴물 번호 · 겹침이면 오류를 남기고 false 입니다(맞추지 않습니다). */
+        /** @brief @p successFace 이상이 나오면 성공으로 봅니다(기본 5이며 여섯 면 중 둘입니다). 1 ~ 6 밖이거나, 시드가 0 이거나, 조사자 번호가 음수 · 괴물 번호 · 겹침이거나, 조사자 속도가 0 이하 · 나머지 값이 음수이면 오류를 남기고 false 입니다(맞추지 않습니다). */
         [[nodiscard]] bool initialize( const SurvivalHorrorMonsterDef& monster, const vector<SurvivalHorrorInvestigator>& listInvestigator, uint32 seed, int32 successFace = 5 );
         /** @brief 다음 차례를 진행합니다. 이미 끝났으면 `_actorID` 가 -1 인 빈 결과를 반환합니다. */
         SurvivalHorrorTurnResult playNextTurn();
@@ -112,6 +112,8 @@ namespace sw
         void                        refreshState();
         /** @brief 차례를 받을 수 있는 번호(0 이상, 괴물 번호와 다름)이고 겹치지 않으면 true 입니다. 겹친 둘은 차례 하나를 나눠 쓰고 한쪽이 빠지면 함께 빠진다. */
         [[nodiscard]] static bool hasValidActorIDs( const vector<SurvivalHorrorInvestigator>& listInvestigator );
+        /** @brief 조사자 값이 규칙 안이면 true 입니다. 여는 쪽과 읽는 쪽이 같은 것을 본다 — 열 때 받은 값을 읽을 때 거절하면 그 판의 저장을 다시 읽지 못한다. */
+        [[nodiscard]] static bool hasValidProperties( const SurvivalHorrorInvestigator& investigator );
         /** @brief 읽은 상태가 스스로 맞는지 봅니다. 빠짐은 체력 · 정신력이 정하고, 차례에는 남은 조사자와 괴물만 있으며, 결과는 강인함과 남은 수가 정합니다. */
         [[nodiscard]] bool isStateConsistent() const;
 

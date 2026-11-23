@@ -103,11 +103,15 @@ namespace sw
         void onUnregister( GameObjectManager& manager ) override;
         void onPostLoad() override;
         void onPropertyChanged( hashed_string propertyName ) override;
+        /** @brief 셀 나누기가 묻는 이 컴포넌트가 덮는 월드 상자입니다 — 피벗 셀이 아니라 덮는 자리가 로딩 반경에 들면 올라 있다. */
+        bool computeStreamingBounds( AABB& outBox ) const override;
         /** @brief 소유 오브젝트를 켜고 끄면 청크 배치를 더티로 표시합니다. 빌더가 다시 확인합니다. */
         void onOwnerActiveInHierarchyChanged() override;
         void onTick( TickContext& context ) override;
         /** @brief 오너가 움직였다고 표시만 합니다(여러 스레드에서 불린다). 다음 틱이 틱 뒤로 다시 읽기를 미룹니다. */
         void onWorldTransformUpdated() override;
+        /** @brief 높이장과 청크를 그 자리에서 옮깁니다 — 높이장 에셋을 다시 읽지 않는다. */
+        void onWorldOriginShifted( const float3& delta ) override;
 
         /**
          * @brief 높이장과 스플랫을 다시 읽고 청크를 다시 만듭니다. 등록 전이면 데이터만 읽습니다.

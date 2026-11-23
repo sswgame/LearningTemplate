@@ -27,9 +27,13 @@ namespace sw
 
     namespace ConcurrentQueueInternal
     {
-        /** @brief 캐시 라인에 정렬된 슬롯입니다. 시퀀스 번호로 소유권을 넘깁니다. */
+        /**
+         * @brief 슬롯 하나입니다. 시퀀스 번호로 소유권을 넘깁니다.
+         * @details 칸마다 캐시 줄에 정렬하지 않는다 — 8 바이트 항목 하나가 64 바이트를 쓰면 4096 칸 링이 256 KB 라 꺼낼 때마다 새 줄을 읽는다(L2 를 밀어낸다). 다투는 것은 머리 ·
+         *          꼬리 위치이고 그 둘만 떼어 놓는다(Vyukov 원본 · 언리얼 Tasks 의 전역 큐 · moodycamel 과 같은 배치). 벤치 `QueueCellBenchTest.*`.
+         */
         template <typename T>
-        struct alignas( 64 ) Cell
+        struct Cell
         {
             atomic<uint32> _sequence{ 0 };
             T              _data{};
@@ -208,12 +212,16 @@ namespace sw
             while ( dequeue( dummy ) ) {}
         }
 
-        /** @brief 현재 요소 수의 근삿값을 반환합니다. 다른 스레드가 동시에 넣고 빼므로 정확하지 않습니다. */
+        /**
+         * @brief 현재 요소 수의 근삿값을 반환합니다. 다른 스레드가 동시에 넣고 빼므로 정확하지 않습니다.
+         * @details 두 위치를 따로 읽는다 — 순서가 바뀐 읽기(ARM)나 두 읽기 사이의 넣고 꺼내기로 꼬리가 머리보다 뒤처져 보일 수 있고, 그때는 0 이다(부호 없는 뺄셈이면 42억이 된다).
+         */
         SW_INLINE uint32 size() const
         {
-            const uint32 head = _dequeuePos.load( std::memory_order_relaxed );
-            const uint32 tail = _enqueuePos.load( std::memory_order_relaxed );
-            return ( tail - head );
+            const uint32 head  = _dequeuePos.load( std::memory_order_relaxed );
+            const uint32 tail  = _enqueuePos.load( std::memory_order_relaxed );
+            const int32  count = static_cast<int32>( tail - head );
+            return count > 0 ? static_cast<uint32>( count ) : 0u;
         }
 
         /** @brief 비어 있는지 반환합니다. */

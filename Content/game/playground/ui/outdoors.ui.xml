@@ -1,0 +1,20 @@
+<?asset guid="772d2fe8bb2a4a2ab5e16f434628f66a"?>
+<UIDocument _schemaVersion="1">
+	<!-- 야외 활동 장소(maps/outdoors)의 HUD — 오른쪽 위 미니맵. 그림은 캡처 카메라(MinimapCamera)의 렌더 텍스처, 점은 MinimapComponent 가 패널 Minimap 에 놓는다(같은 자리). -->
+	<UIScreenDef _layer="HUD" _bTakesFocus="false" _bShowCursor="false" />
+	<SafeZonePanel _visibility="SelfHitTestInvisible">
+		<CanvasPanel _visibility="SelfHitTestInvisible">
+			<BorderPanel _name="MinimapBack" _visibility="HitTestInvisible">
+				<_slot _anchorMin="1,0" _anchorMax="1,0" _offsetMin="-232,32" _offsetMax="-32,232" />
+				<_background _color="0,0,0,0.55" _borderColor="0.9,0.92,0.95,0.8" _borderWidth="2" _cornerRadius="100,100,100,100" />
+			</BorderPanel>
+			<ImageWidget _name="MinimapPicture" _visibility="HitTestInvisible" _imagePath="rendertarget/outdoors_minimap">
+				<_slot _anchorMin="1,0" _anchorMax="1,0" _offsetMin="-224,40" _offsetMax="-40,224" />
+				<_brush _color="1,1,1,0.9" _cornerRadius="92,92,92,92" />
+			</ImageWidget>
+			<CanvasPanel _name="Minimap" _visibility="HitTestInvisible">
+				<_slot _anchorMin="1,0" _anchorMax="1,0" _offsetMin="-224,40" _offsetMax="-40,224" />
+			</CanvasPanel>
+		</CanvasPanel>
+	</SafeZonePanel>
+</UIDocument>

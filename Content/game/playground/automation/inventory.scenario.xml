@@ -2,7 +2,7 @@
 <?asset guid="3a73da4cbbb4ed8b6d5cf321294aebb2"?>
 <!--
   런타임 인벤토리 화면(InventoryScreen) — 무대 maps/inventorydemo 의 Player(장비 컴포넌트: 가방 4 칸 · 무게 3), 바닥의 포션 더미 · 투구 · 장화 · 망토.
-  ⑴ 줍기 → 칸 증가, ⑵ 패드만으로 동작 메뉴(X) → 나누기(수량 대화 상자 — 오른쪽으로 2) → 칸 둘, ⑶ 집기(A) · 옆 칸에 놓기(A) → 겹치기, 버리기(수량 2) → 월드 아이템 → 줍기,
+  ⑴ 줍기 → 칸 증가, ⑵ 패드만으로 동작 메뉴(X) → 나누기(수량 대화 상자 — 오른쪽으로 2) → 칸 둘, ⑶ 집기(A) · 옆 칸에 놓기(A) → 겹치기, 버리기(수량 2) → 월드 아이템 → 상호작용(E)으로 줍기,
   ⑷ 패드만으로 투구 장착(메뉴 → Equip) → 장비 칸 · 능력치(armor 3) · 외형(Head) 바뀜, ⑸ 칸 가득 → 줍기 거절(바닥에 남는다),
   ⑹ 세이브 · 정렬로 배치를 바꿈 · 불러오기 → 같은 배치 · 같은 장비 · 같은 돈. 감시 값 중심 — 마우스 끌어 놓기는 같은 명령(Move)이라 이 판정이 덮는다.
   실행: ctest -R Scenario.playground (체인)
@@ -74,12 +74,14 @@
 	<Tap slot="Gamepad.A" hold="1"/>
 	<WaitUntil watch="Object.Exists" target="Pickup" equals="1" timeoutFrames="30"/>
 	<Expect watch="Equipment.BagCount" target="Player" key="1" equals="1"/>
-	<DevCommand line="item.pickup Player Pickup"/>
-	<Expect watch="Equipment.BagCount" target="Player" key="1" equals="3"/>
-	<Expect watch="Object.Exists" target="Pickup" equals="0"/>
-	<ExpectLog id="Pickup.PickedUp" count="2"/>
 	<Tap slot="Gamepad.B" hold="1"/>
 	<WaitUntil watch="UI.ActiveScreen" is="none" timeoutFrames="30"/>
+	<!-- 버린 것은 상호작용으로 다시 줍는다 — 캐릭터 장비 컴포넌트의 가방이 받는다(IItemReceiver) -->
+	<WaitUntil watch="Interaction.Focus" target="Player" is="Pickup" timeoutFrames="30"/>
+	<Tap slot="Key.E" hold="2"/>
+	<WaitUntil watch="Object.Exists" target="Pickup" equals="0" timeoutFrames="20"/>
+	<Expect watch="Equipment.BagCount" target="Player" key="1" equals="3"/>
+	<ExpectLog id="Pickup.PickedUp" count="2"/>
 
 	<!-- ⑷ 패드만으로 투구 장착 → 장비 칸 · 능력치 · 외형 -->
 	<DevCommand line="item.pickup Player HelmetDrop"/>

@@ -48,6 +48,11 @@ namespace sw
         return state;
     }
 
+    void AudioListenerComponent::onWorldOriginShifted( const float3& delta )
+    {
+        _lastState._position += delta;
+    }
+
     void AudioListenerComponent::setMode( AudioSpatialMode mode, float32 screenHalfWidth )
     {
         _mode            = mode;

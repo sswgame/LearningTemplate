@@ -49,9 +49,9 @@ namespace sw
         [[nodiscard]] bool makeLink( const NavMeshSettings& settings, uint8 fallbackArea, NavOffMeshLink& outLink ) const;
         /** @brief 두 끝의 월드 위치입니다. 오브젝트에 씬 컴포넌트가 없으면 false 입니다. */
         [[nodiscard]] bool computeWorldEndpoints( float3& outStart, float3& outEnd ) const;
-        /** @brief 지금 자세의 링크 번호입니다(씬 컴포넌트가 없으면 0). */
+        /** @brief 지금 자세의 링크 번호입니다(씬 컴포넌트가 없으면 0). 절대 자리로 정한다 — 쿠킹본의 번호와 같고 원점을 옮겨도 바뀌지 않는다. */
         uint32 computeCurrentLinkID() const;
-        /** @brief 두 끝(센티미터로 자름)과 종류 이름으로 정한 링크 번호입니다. 0 이 아닙니다. */
+        /** @brief 두 끝(절대 자리, 센티미터로 자름)과 종류 이름으로 정한 링크 번호입니다. 0 이 아닙니다. */
         static uint32 computeLinkID( const float3& start, const float3& end, const hashed_string& linkType );
 
         const float3&        getStartOffset() const { return _startOffset; }
@@ -79,6 +79,8 @@ namespace sw
 
         /** @brief 지금 위치의 타일과 마지막으로 알린 위치의 타일을 다시 베이크하게 합니다. */
         void invalidateLinkArea();
+        /** @brief 로컬 월드 자리를 절대 자리로 옮깁니다(등록 전이면 그대로). */
+        float3 toAbsolute( const float3& local ) const;
 
         PROPERTY( Category = "Link", DisplayName = "Start", Tooltip = "Start point relative to the object", Units = m )
         float3 _startOffset;
@@ -95,7 +97,7 @@ namespace sw
         PROPERTY( Category = "Link", DisplayName = "Enabled", Tooltip = "A disabled link is not crossed (a closed door)" )
         bool _bLinkEnabled;
 
-        AABB                   _reportedBounds; ///< 마지막으로 다시 베이크하게 한 영역
+        AABB                   _reportedBounds; ///< 마지막으로 다시 베이크하게 한 영역(로컬 월드 — 원점을 옮기면 `SceneNavigation` 이 함께 옮긴다)
         uint32                 _navIndex;
         Subscription           _navRegistration;   ///< `SceneNavigation` 등록 구독(`onRegister` 가 받고 `onUnregister` 가 놓는다)
         uint8                  _bEnabledDirty : 1; ///< 막기 · 풀기를 아직 내비메시에 넣지 않았다

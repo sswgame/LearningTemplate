@@ -75,6 +75,8 @@ namespace sw
         void applyPreviewPolicy( const ScenePreviewPolicy& policy ) override;
         /** @brief 씬을 비울 때 부릅니다. 등록은 컴포넌트가 스스로 풀므로 할 일이 없습니다. */
         void onSceneCleared() override {}
+        /** @brief 리스너의 지난 자리를 옮깁니다. */
+        void onWorldOriginShifted( const float3& delta ) override;
 
         /** @brief 쓸 엔진을 정합니다(테스트). nullptr 이면 생성자로 받은 오디오 서비스의 엔진입니다. */
         void setAudioEngine( AudioEngine* pEngine ) { _pEngineOverride = pEngine; }

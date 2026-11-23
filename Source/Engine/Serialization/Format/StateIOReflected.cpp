@@ -6,6 +6,7 @@
 
 #include "Engine/Foundation/EngineServices.h"
 #include "Engine/Reflection/EnumInfo.h"
+#include "Engine/Reflection/ReflectValueBinding.h"
 #include "Engine/Reflection/ReflectVisit.h"
 #include "Engine/Reflection/ReflectedValue.h"
 #include "Engine/Reflection/TypeRegistry.h"
@@ -114,17 +115,19 @@ namespace sw
                 }
             }
 
-            static LeafKind classify( const TypeRegistry& registry, const hashed_string& typeName )
+            static LeafKind classify( const ReflectValueFacts& facts )
             {
-                const ReflectBuiltinIndex builtinIndex = ReflectedValueUtil::findBuiltinIndex( typeName );
-                if ( builtinIndex != ReflectBuiltinIndex::kNone )
-                    return classifyBuiltin( builtinIndex );
-                if ( registry.findEnum( typeName ) != nullptr )
+                if ( facts._builtinIndex != ReflectBuiltinIndex::kNone )
+                    return classifyBuiltin( facts._builtinIndex );
+                if ( facts._pEnum != nullptr )
                     return LeafKind::Enum;
-                const TypeInfo* pType = registry.findType( typeName );
-                if ( pType != nullptr && pType->isPrimitive() == false )
-                    return LeafKind::Struct;
-                return LeafKind::Unsupported;
+                return facts.findStructType() != nullptr ? LeafKind::Struct : LeafKind::Unsupported;
+            }
+
+            /** @brief 칸의 잎(값, 시퀀스면 원소) 형식의 사실입니다. 프로퍼티의 묶음에서 읽는다 — 롤백 · 스냅샷마다 칸과 원소 수만큼 이름을 찾지 않는다. */
+            static ReflectValueFacts resolveLeafFacts( const TypeRegistry& registry, const PropertyInfo& prop, const bool bSequence )
+            {
+                return bSequence ? prop.resolveElementFacts( registry ) : prop.resolveValueFacts( registry );
             }
 
             /** @brief 칸이 싣는 시퀀스 래퍼입니다. 컨테이너가 아니면 nullptr, State 역할 밖(맵 · 집합 · 중첩)은 실을 수 없어 멈춘다(`PropertyInfo::findStateSequence`). */
@@ -174,33 +177,33 @@ namespace sw
                     if ( prop._bIsBitField == SW_TRUE )
                         inoutCanonical += "bit";
                     else
-                        appendLeafCanonical( registry, type, prop, leafType, depth, inoutCanonical );
+                        appendLeafCanonical( registry, type, prop, resolveLeafFacts( registry, prop, pSequence != nullptr ), leafType, depth, inoutCanonical );
                     if ( pSequence != nullptr )
                         inoutCanonical += ']';
                     inoutCanonical += ';';
                 }
             }
 
-            static void appendLeafCanonical( const TypeRegistry& registry, const TypeInfo& owner, const PropertyInfo& prop, const hashed_string& leafType, const uint32 depth,
-                                             string& inoutCanonical )
+            static void appendLeafCanonical( const TypeRegistry& registry, const TypeInfo& owner, const PropertyInfo& prop, const ReflectValueFacts& facts, const hashed_string& leafType,
+                                             const uint32 depth, string& inoutCanonical )
             {
-                const LeafKind kind = classify( registry, leafType );
+                const LeafKind kind = classify( facts );
                 if ( kind == LeafKind::Unsupported )
                     stopForUnsupportedField( owner, prop );
                 inoutCanonical += leafType.c_str();
                 if ( kind == LeafKind::Struct )
                 {
                     inoutCanonical += '{';
-                    appendCanonical( registry, *registry.findType( leafType ), false, depth + 1, inoutCanonical );
+                    appendCanonical( registry, *facts._pType, false, depth + 1, inoutCanonical );
                     inoutCanonical += '}';
                 }
             }
 
             /** @brief f32 · i32 Layout 값 하나를 성분마다 싣습니다. 성분 수는 Layout 의 멤버 수다(`ReflectedValueUtil::getBuiltinComponentCount`). */
             template <typename TElement>
-            static void valueComponents( StateIO& io, const hashed_string& typeName, void* pValue )
+            static void valueComponents( StateIO& io, const ReflectBuiltinIndex builtinIndex, void* pValue )
             {
-                const uint8 count      = ReflectedValueUtil::getBuiltinComponentCount( ReflectedValueUtil::findBuiltinIndex( typeName ) );
+                const uint8 count      = ReflectedValueUtil::getBuiltinComponentCount( builtinIndex );
                 TElement*   pComponent = static_cast<TElement*>( pValue );
                 for ( uint8 index = 0; index < count; ++index )
                 {
@@ -322,8 +325,8 @@ namespace sw
             return;
         }
 
-        // 잎 하나(칸 값 또는 시퀀스 원소)를 싣는다. 종류(@p kind)는 칸마다 한 번 가른다 — 시퀀스 원소마다 이름을 다시 맞추지 않는다.
-        auto valueLeaf = [&]( const PropertyInfo& prop, const hashed_string& leafType, const LeafKind kind, void* pValue )
+        // 잎 하나(칸 값 또는 시퀀스 원소)를 싣는다. 형식의 사실(@p facts)과 종류(@p kind)는 칸마다 한 번 푼다 — 시퀀스 원소마다 이름을 다시 맞추지 않는다.
+        auto valueLeaf = [&]( const PropertyInfo& prop, const ReflectValueFacts& facts, const LeafKind kind, void* pValue )
         {
             switch ( kind )
             {
@@ -335,13 +338,13 @@ namespace sw
                     return;
                 }
                 case LeafKind::Number:
-                    Internal::findValueNumber( ReflectedValueUtil::findBuiltinIndex( leafType ) )( *this, pValue );
+                    Internal::findValueNumber( facts._builtinIndex )( *this, pValue );
                     return;
                 case LeafKind::Float32s:
-                    Internal::valueComponents<float32>( *this, leafType, pValue );
+                    Internal::valueComponents<float32>( *this, facts._builtinIndex, pValue );
                     return;
                 case LeafKind::Int32s:
-                    Internal::valueComponents<int32>( *this, leafType, pValue );
+                    Internal::valueComponents<int32>( *this, facts._builtinIndex, pValue );
                     return;
                 case LeafKind::String:
                     value( *static_cast<string*>( pValue ) );
@@ -350,10 +353,10 @@ namespace sw
                     value( *static_cast<hashed_string*>( pValue ) );
                     return;
                 case LeafKind::Enum:
-                    Internal::valueEnum( *this, *registry.findEnum( leafType ), pValue );
+                    Internal::valueEnum( *this, *facts._pEnum, pValue );
                     return;
                 case LeafKind::Struct:
-                    reflectedProperties( *registry.findType( leafType ), pValue, false, depth + 1 );
+                    reflectedProperties( *facts._pType, pValue, false, depth + 1 );
                     return;
                 case LeafKind::Unsupported:
                     break;
@@ -386,19 +389,21 @@ namespace sw
                     if ( isOk() && isReading() )
                         pSequence->clear( pContainer );
                 }
-                const LeafKind elementKind = Internal::classify( registry, prop._elementTypeName );
+                const ReflectValueFacts elementFacts = Internal::resolveLeafFacts( registry, prop, true );
+                const LeafKind          elementKind  = Internal::classify( elementFacts );
                 // 원소는 읽는 만큼만 만든다 — 개수를 먼저 믿고 다 만들면 망가진 개수 하나가 남은 바이트 × 원소 크기만큼 메모리를 잡는다(원소의 최소 바이트를 손으로 적던 자리).
                 const bool bGrowWhileReading = isReading() && pSequence->isFixedSize() == false;
                 for ( uint32 index = 0; index < elementCount && isOk(); ++index )
                 {
                     if ( bGrowWhileReading )
                         pSequence->addElementDefault( pContainer );
-                    valueLeaf( prop, prop._elementTypeName, elementKind, pSequence->getElement( pContainer, index ) );
+                    valueLeaf( prop, elementFacts, elementKind, pSequence->getElement( pContainer, index ) );
                 }
             }
             else
             {
-                valueLeaf( prop, prop._typeName, Internal::classify( registry, prop._typeName ), prop.getRawPtr( pObject ) );
+                const ReflectValueFacts valueFacts = Internal::resolveLeafFacts( registry, prop, false );
+                valueLeaf( prop, valueFacts, Internal::classify( valueFacts ), prop.getRawPtr( pObject ) );
             }
             if ( isOk() == false )
                 return;

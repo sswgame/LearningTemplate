@@ -10,6 +10,7 @@
 #include "Core/Testing/TestFramework.h"
 
 #include "Engine/Navigation/Component/NavMeshAgentComponent.h"
+#include "Engine/Navigation/Component/NavMeshLinkComponent.h"
 #include "Engine/Navigation/INavMesh.h"
 #include "Engine/Navigation/NavMeshAsset.h"
 #include "Engine/Navigation/NavMeshGeometry.h"
@@ -39,12 +40,22 @@ namespace
         BoxGeometrySource( const GameObject* pOwner, vector<Box> listBox )
             : _pOwner{ pOwner }
             , _listBox{ std::move( listBox ) }
+            , _startPosition{ getOwnerPosition() }
         {
         }
 
         const GameObject* getNavGeometryOwner() const override { return _pOwner; }
         bool              shouldOverrideOwnerGeometry() const override { return true; }
-        void              collectNavGeometry( NavMeshGeometry& outGeometry, uint8 area ) const override { addBoxes( _listBox, area, outGeometry ); }
+        void              collectNavGeometry( NavMeshGeometry& outGeometry, uint8 area ) const override
+        {
+            // 상자는 만든 때의 월드 자리로 준다 — 오브젝트가 옮겨지면(원점 이동) 함께 옮긴다.
+            vector<Box> listMoved = _listBox;
+            for ( Box& box : listMoved )
+            {
+                box._center = box._center + ( getOwnerPosition() - _startPosition );
+            }
+            addBoxes( listMoved, area, outGeometry );
+        }
 
         static void addBoxes( const vector<Box>& listBox, uint8 area, NavMeshGeometry& outGeometry )
         {
@@ -55,8 +66,16 @@ namespace
         }
 
     private:
+        float3 getOwnerPosition() const
+        {
+            const SceneComponent* pScene = _pOwner != nullptr ? _pOwner->getPrimarySceneComponent() : nullptr;
+            return pScene != nullptr ? pScene->getWorldPosition() : float3{};
+        }
+
+    private:
         const GameObject* _pOwner;
         vector<Box>       _listBox;
+        float3            _startPosition;
     };
 
     struct NavTileStreamingTestUtil
@@ -499,4 +518,104 @@ SW_TEST_CASE( NavTileStreamingTest, AsyncPathReachesPastStreamedOutTiles )
     (void)navigation.findStreamingPath( agentName, start, end, direct );
     SW_EXPECT_EQUAL( direct._listPoint.size(), path._listPoint.size() );
     SW_EXPECT_EQUAL( direct._listCoarsePoint.size(), path._listCoarsePoint.size() );
+}
+
+/**
+ * @brief [NavTileStreamingTest] 월드 원점을 옮겨도 내비메시는 절대 자리 그대로다 — 질의는 로컬 자리로 묻고 로컬로 받으며, 앞서 낸 비동기 요청도 새 로컬로 온다. 타일은 다시 굽지 않는다
+ */
+SW_TEST_CASE( NavTileStreamingTest, OriginShiftKeepsQueriesLocal )
+{
+    NavStripWorld world;
+    SW_REQUIRE_TRUE( world.prepare() );
+    SceneNavigation&    navigation = world.getNavigation();
+    const hashed_string agentName  = world._settings._listAgentType[0]._name;
+    Util::setSource( world.getStreaming(), float3{ 0.0f, 0.0f, 0.0f } ); // 바깥 원점은 절대 자리다
+    Util::step( navigation );
+    const uint32 loadedTileCount = navigation.findNavMesh( agentName )->getLoadedTileCount();
+
+    const float3 start{ 0.0f, 0.5f, -2.0f };
+    const float3 end{ 8.0f, 0.5f, 2.0f };
+    const float3 shift{ 1000.0f, 0.0f, 500.0f };
+    NavPath      before;
+    SW_REQUIRE_TRUE( navigation.findPath( agentName, start, end, before ) == NavPathStatus::Complete );
+    NavPathTicket ticket = navigation.requestPath( agentName, start, end );
+    SW_REQUIRE_TRUE( world._scene.shiftWorldOrigin( double3{ 1000.0, 0.0, 500.0 } ) );
+
+    NavPath after;
+    SW_REQUIRE_TRUE( navigation.findPath( agentName, start - shift, end - shift, after ) == NavPathStatus::Complete );
+    SW_REQUIRE_EQUAL( before._listPoint.size(), after._listPoint.size() );
+    SW_EXPECT_NEAR( before._listPoint.back()._x - shift._x, after._listPoint.back()._x, 1.0e-3f );
+    SW_EXPECT_NEAR( before._listPoint.back()._z - shift._z, after._listPoint.back()._z, 1.0e-3f );
+    NavLocation location;
+    SW_REQUIRE_TRUE( navigation.findNearestPoint( agentName, start - shift, location ) );
+    SW_EXPECT_NEAR( start._x - shift._x, location._position._x, 1.0e-3f );
+    NavRaycastHit hit;
+    SW_REQUIRE_TRUE( navigation.raycast( agentName, start - shift, end - shift, hit ) );
+    SW_EXPECT_NEAR( end._x - shift._x, hit._position._x, 1.0e-3f );
+
+    NavPath          async;
+    PathRequestState state = PathRequestState::Pending;
+    for ( uint32 frame = 0; frame < 4 && state == PathRequestState::Pending; ++frame )
+    {
+        Util::step( navigation );
+        state = navigation.takePathResult( ticket, async );
+    }
+    SW_REQUIRE_TRUE( state == PathRequestState::Ready );
+    SW_REQUIRE_TRUE( async._listPoint.empty() == false );
+    SW_EXPECT_NEAR( end._x - shift._x, async._listPoint.back()._x, 1.0e-3f );
+    SW_EXPECT_EQUAL( loadedTileCount, navigation.findNavMesh( agentName )->getLoadedTileCount() );
+    SW_EXPECT_EQUAL( 0u, navigation.getPendingTileCount() );
+}
+
+/** @brief [NavTileStreamingTest] 걷는 에이전트는 원점이 옮겨져도 이어 간다 — 목적지 · 군중 자리 · 쓴 자리가 같은 만큼 옮겨져 순간이동으로 보지 않고 옮긴 목적지에 닿는다 */
+SW_TEST_CASE( NavTileStreamingTest, AgentKeepsWalkingAcrossOriginShift )
+{
+    NavStripWorld world;
+    SW_REQUIRE_TRUE( world.prepare() );
+    SceneNavigation&       navigation = world.getNavigation();
+    NavMeshAgentComponent* pAgent     = Util::spawnAgent( world.getObjects(), "Walker", float3{ 0.0f, 0.5f, 0.0f }, 5.0f );
+    SW_REQUIRE_NOT_NULL( pAgent );
+    world.getObjects().beginPlay();
+    Util::setSource( world.getStreaming(), float3{ 0.0f, 0.0f, 0.0f } );
+    Util::step( navigation );
+    pAgent->setDestination( float3{ 8.0f, 0.5f, 0.0f } );
+    for ( uint32 frame = 0; frame < 15; ++frame )
+    {
+        Util::step( navigation );
+    }
+    const float3 beforeShift = pAgent->getAgentPosition();
+    SW_REQUIRE_TRUE( pAgent->getMoveStatus() == NavMoveStatus::Moving );
+    SW_EXPECT_TRUE( beforeShift._x > 0.1f );
+
+    SW_REQUIRE_TRUE( world._scene.shiftWorldOrigin( double3{ 1000.0, 0.0, 500.0 } ) );
+    SW_EXPECT_NEAR( beforeShift._x - 1000.0f, pAgent->getAgentPosition()._x, 1.0e-3f );
+    SW_EXPECT_NEAR( -992.0f, pAgent->getDestination()._x, 1.0e-3f );
+    const float32 distanceLeft = 8.0f - beforeShift._x;
+    uint32        frameCount   = 0;
+    while ( frameCount < 200 && pAgent->getMoveStatus() == NavMoveStatus::Moving )
+    {
+        Util::step( navigation );
+        ++frameCount;
+    }
+    SW_EXPECT_TRUE( pAgent->getMoveStatus() == NavMoveStatus::Arrived );
+    SW_EXPECT_NEAR( -992.0f, pAgent->getAgentPosition()._x, 0.5f );
+    SW_EXPECT_NEAR( -500.0f, pAgent->getAgentPosition()._z, 0.5f );
+    // 옮긴 자리를 바깥 순간이동으로 봤다면 멈췄다 처음부터 속도를 올린다 — 남은 거리를 최고 속도로 가는 시간의 두 배 안에 닿는다.
+    SW_EXPECT_TRUE( static_cast<float32>( frameCount ) * Util::kDeltaTime < 2.0f * distanceLeft / 5.0f + 1.0f );
+}
+
+/** @brief [NavTileStreamingTest] 링크 번호는 절대 자리로 정한다 — 원점을 옮겨도 쿠킹본 · 막기 상태가 가리키는 번호가 그대로다 */
+SW_TEST_CASE( NavTileStreamingTest, LinkNumberSurvivesOriginShift )
+{
+    NavStripWorld world;
+    SW_REQUIRE_TRUE( world.prepare() );
+    GameObject* pObject = world.getObjects().createGameObject( hashed_string{ "Ladder" } );
+    SW_REQUIRE_NOT_NULL( pObject );
+    pObject->addComponent<SceneComponent>()->setWorldPosition( float3{ 4.0f, 0.5f, 1.0f } );
+    const NavMeshLinkComponent* pLink = pObject->addComponent<NavMeshLinkComponent>();
+    SW_REQUIRE_NOT_NULL( pLink );
+    const uint32 linkID = pLink->computeCurrentLinkID();
+    SW_EXPECT_NOT_EQUAL( 0u, linkID );
+    SW_REQUIRE_TRUE( world._scene.shiftWorldOrigin( double3{ 1000.0, 0.0, 500.0 } ) );
+    SW_EXPECT_EQUAL( linkID, pLink->computeCurrentLinkID() );
 }

@@ -388,6 +388,13 @@ namespace sw
         } );
     }
 
+    void JoltSoftBodySet::shiftOrigin( const JPH::Vec3& delta )
+    {
+        JPH::BodyInterface& bodies = _system.GetBodyInterface();
+        _softBodies.forEach( [&bodies, &delta]( Record& record )
+        { bodies.SetPosition( record._bodyID, bodies.GetPosition( record._bodyID ) + delta, JPH::EActivation::DontActivate ); } );
+    }
+
     void JoltSoftBodySet::clear()
     {
         _softBodies.forEach( [this]( Record& record )

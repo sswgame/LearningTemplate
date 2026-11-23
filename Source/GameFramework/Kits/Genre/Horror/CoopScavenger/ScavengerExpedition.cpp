@@ -63,7 +63,11 @@ namespace sw
         _random.setSeed( seed );
         _listShipScrap.clear();
         _eventBuffer.clear();
+        // 앞 원정의 잠금 해제를 거둔 뒤 새로 연다. `clear` 는 지도(위성 · 시드)와 고유 번호를 남겨, 다른 카탈로그로 다시 열면 없는 위성의 지도가 세이브에 실려 읽히지 않는다.
         _facility.clear();
+        _facility = ScavengerFacility{};
+        _indoorDirector.initialize( nullptr, 1u );
+        _outdoorDirector.initialize( nullptr, 1u );
         _pMoon          = nullptr;
         _hoursOnMoon    = 0.0f;
         _phase          = ScavengerPhase::InOrbit;

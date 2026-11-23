@@ -48,6 +48,12 @@ namespace sw
         bakeWorldPath();
     }
 
+    void SplineComponent::onWorldOriginShifted( const float3& delta )
+    {
+        (void)delta;
+        bakeWorldPath(); // 루트는 이미 옮겨졌다
+    }
+
     void SplineComponent::rebuildLocalPath()
     {
         if ( _localPath.initialize( _listControlPoint, _type, _bClosed, _samplesPerSegment ) == false )

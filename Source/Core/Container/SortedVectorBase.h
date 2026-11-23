@@ -53,7 +53,7 @@ namespace sw::internal
         using const_reference        = const value_type&;
         using pointer                = value_type*;
         using const_pointer          = const value_type*;
-        using Container              = std::vector<value_type, Allocator>;
+        using Container              = vector<value_type, Allocator>;
         using iterator               = typename Container::iterator;
         using const_iterator         = typename Container::const_iterator;
         using reverse_iterator       = typename Container::reverse_iterator;

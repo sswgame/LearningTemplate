@@ -173,6 +173,12 @@ namespace sw
         }
     }
 
+    void TurretComponent::onWorldOriginShifted( const float3& delta )
+    {
+        _previousTargetPosition += delta;
+        _projectiles.applyWorldOffset( delta );
+    }
+
     void TurretComponent::stepOnce()
     {
         GameObject*              pOwner   = getOwner();

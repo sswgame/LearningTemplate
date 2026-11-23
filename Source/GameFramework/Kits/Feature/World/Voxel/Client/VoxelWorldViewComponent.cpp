@@ -13,6 +13,7 @@
 #include "Engine/Object/GameObject/GameObjectManager.inl"
 #include "Engine/Object/GameObject/GameObjectManagerResolve.inl"
 #include "Engine/Object/GameObject/Tick/TickContext.h"
+#include "Engine/Object/GameObject/WorldOrigin.h"
 #include "Engine/Object/Prefab/PrefabCache.h"
 #include "Engine/Visual/Component/MeshComponent.h"
 
@@ -186,7 +187,7 @@ namespace sw
                 manager.destroyGameObject( pObject );
             return;
         }
-        pMesh->setLocalPosition( float3{ static_cast<float32>( chunkX * kVoxelChunkSize ), 0.0f, static_cast<float32>( chunkZ * kVoxelChunkSize ) } );
+        pMesh->setLocalPosition( manager.getWorldOrigin().toLocal( float3{ static_cast<float32>( chunkX * kVoxelChunkSize ), 0.0f, static_cast<float32>( chunkZ * kVoxelChunkSize ) } ) );
         pChunk->assignChunk( director.getOwner()->getHandle(), chunkX, chunkZ );
         _mapChunkView[VoxelWorld::makeChunkKey( chunkX, chunkZ )]._object = pObject->getHandle();
     }

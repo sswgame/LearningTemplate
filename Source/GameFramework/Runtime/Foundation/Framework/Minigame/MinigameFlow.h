@@ -131,7 +131,7 @@ namespace sw
 
         /** @brief 이름 @p name 의 미니게임 파일 리소스 id 입니다(`<팩>/minigames/<이름>.minigame.xml`). */
         static string makeAssetPath( const GamePackConfig& packConfig, string_view name );
-        /** @brief 하위 레벨을 사물 @p anchor 의 변환(위치는 월드)에 얹는 자리입니다 — 트리거 · 개발 명령이 쓴다. 장면 컴포넌트가 없으면 nullopt 입니다. */
+        /** @brief 하위 레벨을 사물 @p anchor 의 변환(위치는 절대 — 월드 원점을 더한다)에 얹는 자리입니다 — 트리거 · 개발 명령이 쓴다. 장면 컴포넌트가 없으면 nullopt 입니다. */
         static optional<SubLevelPlacement> makeAnchorPlacement( const GameObject& anchor );
         /**
          * @brief @p definition 이 지금 인스턴스에서 들어갈 수 있는 방식인지 봅니다 — 넷 세션이 열렸으면(@p bNetSessionActive) 씬 전환은 거절한다(폴백 없음).
@@ -169,6 +169,10 @@ namespace sw
         void activateTop();
         /** @brief 켜진 미니게임의 범위를 끕니다(칸은 그대로 둔다). 없으면 할 일이 없다. */
         void deactivateScope();
+        /** @brief 맨 위 칸을 결과 없이 버리고(범위를 끄고 저장 막기를 푼다) 덮였던 미니게임을 다시 켭니다 — 진입이 진 뒤의 되돌리기입니다. */
+        void dropTop();
+        /** @brief 맨 위 미니게임의 하위 레벨을 읽지 · 짓지 못했으면(`SubLevelState::Failed`) 오류를 남기고 진입을 되돌립니다. */
+        void dropFailedSubLevel();
         /** @brief 하위 레벨 @p returnPoint 를 바탕 씬이 아직 활성이면 뺍니다. */
         static void removeSubLevel( const MinigameSubLevelReturn& returnPoint );
         /** @brief 결과를 넘깁니다(`onFinished`). */

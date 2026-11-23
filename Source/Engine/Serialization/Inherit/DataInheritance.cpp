@@ -4,6 +4,7 @@
 
 #include "Core/Algorithm/VectorUtil.h"
 #include "Core/Concurrency/mutex.h"
+#include "Core/Container/unordered_map.h"
 #include "Core/File/FileUtil.h"
 #include "Core/Log/Logger.h"
 #include "Core/Registry/RegistrationList.h"
@@ -89,11 +90,56 @@ namespace sw
                 XMLNode _childNode;
             };
 
-            static ListEntry* findEntry( vector<ListEntry>& listEntry, string_view key )
+            /**
+             * @brief 합치는 동안의 목록입니다 — 차례는 배열, 찾기는 열쇠 색인. 열쇠는 겹치지 않는다(넣는 쪽이 먼저 찾아 오류로 멈춘다).
+             * @details 카탈로그 하나가 원소 수천 개이고 자식 파일의 원소마다 한 번 찾는다 — 훑어 찾으면 원소 수의 제곱이다. 자리를 옮기는 지움 · 자리 지정(드물다)만 색인을 다시 짓는다.
+             */
+            struct KeyedEntryList
             {
-                return VectorUtil::findIf( listEntry, [key]( ListEntry& entry )
-                { return entry._key == key; } );
-            }
+                vector<ListEntry>             _listEntry{};
+                unordered_map<string, uint32> _mapKeyToIndex{};
+
+                ListEntry* find( string_view key )
+                {
+                    const auto found = _mapKeyToIndex.find( key );
+                    return found != _mapKeyToIndex.end() ? &_listEntry[found->second] : nullptr;
+                }
+
+                void append( ListEntry&& entry )
+                {
+                    (void)_mapKeyToIndex.try_emplace( entry._key, static_cast<uint32>( _listEntry.size() ) );
+                    _listEntry.push_back( std::move( entry ) );
+                }
+
+                /** @brief 있는 열쇠의 원소를 뺍니다. */
+                void erase( string_view key )
+                {
+                    _listEntry.erase( _listEntry.begin() + ( find( key ) - _listEntry.data() ) );
+                    rebuildIndex();
+                }
+
+                /** @brief 있는 열쇠 @p key 의 원소를 있는 열쇠 @p anchor 의 앞 · 뒤로 옮깁니다. */
+                void moveNextTo( string_view key, string_view anchor, bool bAfter )
+                {
+                    ListEntry*      pEntry      = find( key );
+                    const ptrdiff_t entryIndex  = pEntry - _listEntry.data();
+                    const ptrdiff_t anchorIndex = find( anchor ) - _listEntry.data();
+                    ListEntry       moved       = *pEntry;
+                    _listEntry.erase( _listEntry.begin() + entryIndex );
+                    const ptrdiff_t shiftedAnchor = anchorIndex > entryIndex ? anchorIndex - 1 : anchorIndex;
+                    _listEntry.insert( _listEntry.begin() + shiftedAnchor + ( bAfter ? 1 : 0 ), std::move( moved ) );
+                    rebuildIndex();
+                }
+
+                void rebuildIndex()
+                {
+                    _mapKeyToIndex.clear();
+                    for ( size_t index = 0; index < _listEntry.size(); ++index )
+                    {
+                        (void)_mapKeyToIndex.try_emplace( _listEntry[index]._key, static_cast<uint32>( index ) );
+                    }
+                }
+            };
 
             /** @brief 부모 속성 위에 자식 속성을 덮어 씁니다. 파일에만 있는 속성은 옮기지 않습니다. */
             static void mergeAttributes( const XMLNode& parent, const XMLNode& child, const XMLNode& out )
@@ -191,7 +237,7 @@ namespace sw
             }
 
             /** @brief 목록 원소를 차례로 모읍니다. 열쇠가 없거나 겹치는 원소는 오류입니다 — 겹치면 합치기는 첫 원소만 고치고, 차이 적기는 목록 밖 자리를 읽는다. */
-            [[nodiscard]] static bool collectParentEntries( const XMLNode& parent, const DataInheritanceSchema& schema, vector<ListEntry>& outListEntry, string_view sourceName )
+            [[nodiscard]] static bool collectParentEntries( const XMLNode& parent, const DataInheritanceSchema& schema, KeyedEntryList& outListEntry, string_view sourceName )
             {
                 if ( parent.isValid() == false )
                     return true;
@@ -205,18 +251,18 @@ namespace sw
                         SW_LOG_ERROR_ID( "DataInheritance.ListKeyMissing", "'%#': an element of list '%#' in its base has no key '%#'", sourceName, schema._name, schema._keyAttribute );
                         return false;
                     }
-                    if ( findEntry( outListEntry, *key ) != nullptr )
+                    if ( outListEntry.find( *key ) != nullptr )
                     {
                         SW_LOG_ERROR_ID( "DataInheritance.DuplicateKey", "'%#': element '%#' is written twice in list '%#'", sourceName, *key, schema._name );
                         return false;
                     }
-                    outListEntry.push_back( ListEntry{ std::move( *key ), element, XMLNode{} } );
+                    outListEntry.append( ListEntry{ std::move( *key ), element, XMLNode{} } );
                 }
                 return true;
             }
 
             /** @brief 자식이 적은 자리(`_before` · `_after`)로 원소를 옮깁니다. 둘 다 적었거나 없는 열쇠를 가리키면 오류입니다. */
-            [[nodiscard]] static bool moveEntry( vector<ListEntry>& inoutListEntry, string_view key, const XMLNode& element, string_view sourceName )
+            [[nodiscard]] static bool moveEntry( KeyedEntryList& inoutListEntry, string_view key, const XMLNode& element, string_view sourceName )
             {
                 const utf8* pBefore = element.findAttribute( DataInheritance::kBeforeAttribute );
                 const utf8* pAfter  = element.findAttribute( DataInheritance::kAfterAttribute );
@@ -228,16 +274,12 @@ namespace sw
                     return false;
                 }
                 const string_view anchor = pBefore != nullptr ? pBefore : pAfter;
-                if ( anchor == key || findEntry( inoutListEntry, anchor ) == nullptr )
+                if ( anchor == key || inoutListEntry.find( anchor ) == nullptr )
                 {
                     SW_LOG_ERROR_ID( "DataInheritance.AnchorMissing", "'%#': element '%#' is placed next to '%#', which the list does not have", sourceName, key, anchor );
                     return false;
                 }
-                ListEntry* pEntry = findEntry( inoutListEntry, key );
-                ListEntry  moved  = *pEntry;
-                inoutListEntry.erase( inoutListEntry.begin() + ( pEntry - inoutListEntry.data() ) );
-                const ptrdiff_t anchorIndex = findEntry( inoutListEntry, anchor ) - inoutListEntry.data();
-                inoutListEntry.insert( inoutListEntry.begin() + anchorIndex + ( pAfter != nullptr ? 1 : 0 ), std::move( moved ) );
+                inoutListEntry.moveNextTo( key, anchor, pAfter != nullptr );
                 return true;
             }
 
@@ -254,7 +296,7 @@ namespace sw
             }
 
             /** @brief 자식의 목록 원소 하나를 얹습니다. */
-            [[nodiscard]] static bool applyChildEntry( const XMLNode& element, const DataInheritanceSchema& schema, vector<ListEntry>& inoutListEntry, string_view sourceName )
+            [[nodiscard]] static bool applyChildEntry( const XMLNode& element, const DataInheritanceSchema& schema, KeyedEntryList& inoutListEntry, string_view sourceName )
             {
                 const optional<string> elementKey = schema.findElementKey( element );
                 if ( elementKey.has_value() == false )
@@ -264,7 +306,7 @@ namespace sw
                 }
                 const string_view key      = *elementKey;
                 const string_view op       = element.getAttributeText( DataInheritance::kOpAttribute );
-                ListEntry*        pEntry   = findEntry( inoutListEntry, key );
+                ListEntry*        pEntry   = inoutListEntry.find( key );
                 const bool        bRemove  = op == DataInheritance::kOpRemove;
                 const bool        bReplace = op == DataInheritance::kOpReplace;
                 if ( op.empty() == false && bRemove == false && bReplace == false )
@@ -284,7 +326,7 @@ namespace sw
                 }
                 if ( bRemove )
                 {
-                    inoutListEntry.erase( inoutListEntry.begin() + ( pEntry - inoutListEntry.data() ) );
+                    inoutListEntry.erase( key );
                     return true;
                 }
                 const string* pChangedIdentity = pEntry != nullptr && bReplace == false ? findIdentityChange( pEntry->_parentNode, element, schema ) : nullptr;
@@ -296,7 +338,7 @@ namespace sw
                 }
                 if ( pEntry == nullptr )
                 {
-                    inoutListEntry.push_back( ListEntry{ string{ key }, XMLNode{}, element } );
+                    inoutListEntry.append( ListEntry{ string{ key }, XMLNode{}, element } );
                 }
                 else
                 {
@@ -310,7 +352,7 @@ namespace sw
             /** @brief 열쇠로 목록을 합칩니다. @p out 에 결과 원소를 씁니다. */
             [[nodiscard]] static bool mergeKeyedList( const XMLNode& parent, const XMLNode& child, const DataInheritanceSchema& schema, const XMLNode& out, string_view sourceName )
             {
-                vector<ListEntry> listEntry;
+                KeyedEntryList listEntry;
                 if ( collectParentEntries( parent, schema, listEntry, sourceName ) == false )
                     return false;
                 if ( child.isValid() )
@@ -322,7 +364,7 @@ namespace sw
                     }
                 }
                 appendWhenElements( parent, child, out );
-                for ( const ListEntry& entry : listEntry )
+                for ( const ListEntry& entry : listEntry._listEntry )
                 {
                     if ( entry._childNode.isValid() == false )
                     {
@@ -531,32 +573,40 @@ namespace sw
              */
             [[nodiscard]] static bool writeKeyedListDelta( const XMLNode& full, const XMLNode& parent, const DataInheritanceSchema& schema, const XMLNode& out )
             {
-                vector<ListEntry> listWorking;
-                if ( collectParentEntries( parent, schema, listWorking, "delta" ) == false )
+                KeyedEntryList parentEntries;
+                if ( collectParentEntries( parent, schema, parentEntries, "delta" ) == false )
                     return false;
-                vector<ListEntry> listFull;
-                if ( collectParentEntries( full, schema, listFull, "delta" ) == false )
+                KeyedEntryList fullEntries;
+                if ( collectParentEntries( full, schema, fullEntries, "delta" ) == false )
                     return false;
+                const vector<ListEntry>& listFull = fullEntries._listEntry;
                 if ( writeWhenDelta( full, parent, out ) == false )
                     return false;
-                for ( size_t index = listWorking.size(); index > 0; --index )
+                for ( size_t index = parentEntries._listEntry.size(); index > 0; --index )
                 {
-                    const ListEntry& entry = listWorking[index - 1];
-                    if ( findEntry( listFull, entry._key ) != nullptr )
+                    const ListEntry& entry = parentEntries._listEntry[index - 1];
+                    if ( fullEntries.find( entry._key ) != nullptr )
                         continue;
                     const XMLNode removed = out.appendChild( entry._parentNode.getName() );
                     schema.writeElementKey( removed, entry._key );
                     removed.setAttribute( DataInheritance::kOpAttribute, DataInheritance::kOpRemove );
-                    listWorking.erase( listWorking.begin() + static_cast<ptrdiff_t>( index - 1 ) );
+                }
+                // 작업 목록은 열쇠의 차례만 든다 — 원소는 부모 쪽 색인에서 찾는다(자리를 옮겨도 색인을 다시 짓지 않는다).
+                vector<string> listWorking;
+                listWorking.reserve( listFull.size() );
+                for ( const ListEntry& entry : parentEntries._listEntry )
+                {
+                    if ( fullEntries.find( entry._key ) != nullptr )
+                        listWorking.push_back( entry._key );
                 }
                 for ( size_t index = 0; index < listFull.size(); ++index )
                 {
                     const ListEntry& fullEntry = listFull[index];
-                    ListEntry*       pEntry    = findEntry( listWorking, fullEntry._key );
+                    const ListEntry* pEntry    = parentEntries.find( fullEntry._key );
                     const bool       bNew      = pEntry == nullptr;
                     if ( bNew )
-                        listWorking.push_back( ListEntry{ fullEntry._key, XMLNode{}, XMLNode{} } );
-                    const bool bInPlace = listWorking[index]._key == fullEntry._key;
+                        listWorking.push_back( fullEntry._key );
+                    const bool bInPlace = listWorking[index] == fullEntry._key;
 
                     XMLDocument   scratch;
                     const XMLNode item = scratch.appendRoot( fullEntry._parentNode.getName() );
@@ -585,11 +635,10 @@ namespace sw
                         if ( index > 0 )
                             item.setAttribute( DataInheritance::kAfterAttribute, string_view( listFull[index - 1]._key ) );
                         else
-                            item.setAttribute( DataInheritance::kBeforeAttribute, string_view( listWorking[0]._key ) );
-                        const ptrdiff_t currentIndex = findEntry( listWorking, fullEntry._key ) - listWorking.data();
-                        ListEntry       moved        = listWorking[static_cast<size_t>( currentIndex )];
-                        listWorking.erase( listWorking.begin() + currentIndex );
-                        listWorking.insert( listWorking.begin() + static_cast<ptrdiff_t>( index ), std::move( moved ) );
+                            item.setAttribute( DataInheritance::kBeforeAttribute, string_view( listWorking[0] ) );
+                        // 앞 칸들은 이미 맞았다 — 남은 칸에서 찾아 이 자리로 돌려 놓는다(새 원소는 맨 끝에 있다).
+                        const auto itCurrent = bNew ? listWorking.end() - 1 : std::find( listWorking.begin() + static_cast<ptrdiff_t>( index ), listWorking.end(), fullEntry._key );
+                        std::rotate( listWorking.begin() + static_cast<ptrdiff_t>( index ), itCurrent, itCurrent + 1 );
                     }
                     if ( hasContent( item ) == false && bNew == false )
                         continue; // 새 원소는 열쇠(글)만으로도 차이다

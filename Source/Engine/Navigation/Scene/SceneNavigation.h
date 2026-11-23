@@ -167,10 +167,11 @@ namespace sw
         /** @brief 씬 원본 경로를 받아 쿠킹한 내비메시(`<씬>.navmesh`)를 찾는 이름으로 둡니다(`setSourcePath`). */
         void onSceneLoading( string_view sourcePath ) override { setSourcePath( sourcePath ); }
         /**
-         * @brief 내비메시가 하나라도 있으면 월드 원점 옮기기를 막습니다(false) — 타일 · 군중은 절대 좌표(쿠킹 · 베이크한 자리)라 옮기면 에이전트와 어긋난다.
-         * @details Detour 의 타일 원점은 옮길 수 없다(언리얼은 엔진 사본의 `dtNavMesh::applyWorldOffset` 으로 옮긴다). 길찾기 질의를 원점 기준으로 옮겨 받는 길이 서면 풀린다.
+         * @brief 월드 원점이 옮겨졌습니다 — 에이전트가 든 자리와 링크가 알린 영역(모두 로컬)을 같은 만큼 옮긴다.
+         * @details 내비메시 타일 · 군중 · 장애물 부피 · 대략 그래프는 절대 자리(쿠킹 · 베이크한 자리)라 옮기지 않는다 — 이 클래스의 질의 · 영역 · 요청이 로컬 자리를 받아 안에서 절대로 옮기고
+         *          결과를 로컬로 돌려준다(`WorldOrigin`). Detour 의 타일 원점은 옮길 수 없고(언리얼은 엔진 사본의 `dtNavMesh::applyWorldOffset`), 스트리밍으로 오르는 쿠킹 타일도 절대라 이 길이 하나다.
          */
-        bool canShiftWorldOrigin() const override { return _listRuntime.empty(); }
+        void onWorldOriginShifted( const float3& delta ) override;
 
         // 컴포넌트 등록은 구독을 돌려준다. 컴포넌트가 들고 `onUnregister` 에서 놓으면 빠진다. nullptr 이거나 이미 등록했으면 빈 구독이다.
         [[nodiscard]] Subscription registerAgent( NavMeshAgentComponent* pAgent );
@@ -204,9 +205,9 @@ namespace sw
         uint32 rebakeAllNavMeshes();
         /** @brief 지금 마련한 에이전트 종류를 @p outListAgentType 에 채웁니다(편집기 보기 목록). */
         void collectBakedAgentTypes( vector<hashed_string>& outListAgentType ) const;
-        /** @brief 이미 마련한 내비메시입니다. 없으면 nullptr 입니다. */
+        /** @brief 이미 마련한 내비메시입니다(자리는 절대 — 로컬 자리로 묻는 길은 이 클래스의 질의다). 없으면 nullptr 입니다. */
         const INavMeshTileStore* findNavMesh( const hashed_string& agentType ) const;
-        /** @brief 이미 마련한 군중입니다. 없으면 nullptr 입니다. */
+        /** @brief 이미 마련한 군중입니다(자리는 절대). 없으면 nullptr 입니다. */
         INavCrowd* findCrowd( const hashed_string& agentType ) const;
         /** @brief 마지막 전체 베이크(또는 쿠킹본 읽기)의 숫자입니다. */
         const NavMeshBakeStats* findBakeStats( const hashed_string& agentType ) const;
@@ -308,7 +309,9 @@ namespace sw
         };
 
         /** @brief 덮어쓰기를 거름 @p inoutFilter 에 얹습니다(종류 @p agentType 의 것만). */
-        void            applyAreaCostOverrides( const hashed_string& agentType, NavQueryFilter& inoutFilter ) const;
+        void applyAreaCostOverrides( const hashed_string& agentType, NavQueryFilter& inoutFilter ) const;
+        /** @brief 경로의 점을 절대에서 로컬로 옮깁니다(질의 결과를 돌려주기 직전). */
+        void            makePathLocal( NavPath& inoutPath ) const;
         NavMeshRuntime* findRuntime( const hashed_string& agentType ) const;
         /**
          * @brief 종류의 내비메시를 마련합니다(쿠킹본 또는 베이크). 모르는 종류 · 마련 실패면 nullptr 입니다.

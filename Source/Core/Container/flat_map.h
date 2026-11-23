@@ -102,4 +102,10 @@ namespace sw
             return { it, true };
         }
     };
+
+    /** @brief 저장소(`vector`)와 비교자뿐이다. */
+    template <typename Key, typename T, typename Compare, typename Allocator>
+    struct is_bitwise_relocatable<flat_map<Key, T, Compare, Allocator>> : std::bool_constant<is_bitwise_relocatable_v<vector<pair<Key, T>, Allocator>> && std::is_empty_v<Compare>>
+    {
+    };
 } // namespace sw

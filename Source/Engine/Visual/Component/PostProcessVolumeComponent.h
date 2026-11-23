@@ -49,6 +49,8 @@ namespace sw
 
         /** @brief @p position 에서의 무게(0..1)입니다 — 모양 안 1, 블렌드 반경 동안 1 → 0, 그 밖 0 에 블렌드 무게를 곱한다. */
         float32 computeWeight( const float3& position ) const;
+        /** @brief 셀 나누기가 묻는 이 컴포넌트가 덮는 월드 상자입니다 — 피벗 셀이 아니라 덮는 자리가 로딩 반경에 들면 올라 있다. */
+        bool computeStreamingBounds( AABB& outBox ) const override;
 
         /** @brief 덮어쓰는 값입니다. */
         const PostProcessValues& getValues() const { return _values; }

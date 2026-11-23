@@ -71,6 +71,8 @@ namespace sw
         void onBeginPlay() override;
         void onEndPlay() override;
         void onTick( TickContext& context ) override;
+        /** @brief 초점 · 블렌드 스택 · 충격 · 포토 모드의 자리를 옮깁니다 — 화면이 옛 원점에서 감쇠로 끌려오지 않게. */
+        void onWorldOriginShifted( const float3& delta ) override;
 
         /** @brief 프리셋을 카탈로그의 블렌드로 켭니다. 없는 id 면 false 입니다. */
         [[nodiscard]] bool activatePreset( const hashed_string& id );
@@ -134,6 +136,8 @@ namespace sw
         void serializeState( StateIO& io );
         /** @brief `ComponentStateStore` 계약입니다. 시작 전이면 보관했다가 카탈로그를 읽은 뒤 적용하고, 시작 뒤면 바로 적용합니다. 읽지 못하면 알리고 지금 상태를 둡니다. */
         void restoreState( vector<uint8>&& bytes );
+        /** @brief 시작 전에 받아 보관한 상태입니다(`ComponentStateStore` 계약 — 있으면 그것이 곧 상태다). */
+        const vector<uint8>& getPendingStateBytes() const { return _pendingStateBytes; }
 
         /**
          * @brief @p manager 에서 화면 시점을 모는 디렉터입니다 — 게임 시점 카메라(`CameraRole::Game`)에 있거나 카메라 매니저의 뷰 타깃인 것(씬에 하나). 없으면 nullptr 입니다.

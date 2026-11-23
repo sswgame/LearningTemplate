@@ -308,11 +308,10 @@ namespace sw
             const bool                      bVisible = survivor.isStanding() && survivor._state != SurvivorState::Carried && survivor._activity != SurvivorActivity::InLocker;
             if ( bVisible == false )
                 continue;
-            AIStimulus stimulus;
-            stimulus._position    = survivor._position;
-            stimulus._id          = static_cast<uint64>( index + 1 );
-            stimulus._noiseRadius = survivor._noiseRemaining.isActive() ? survivor._noiseRadius : 0.0f;
-            outListStimulusEntry.push_back( stimulus );
+            const uint64 id = static_cast<uint64>( index + 1 );
+            outListStimulusEntry.push_back( AIStimulus::makeSight( survivor._position, id ) );
+            if ( survivor._noiseRemaining.isActive() && survivor._noiseRadius > 0.0f )
+                outListStimulusEntry.push_back( AIStimulus::makeHearing( survivor._position, id, survivor._noiseRadius ) );
         }
     }
 

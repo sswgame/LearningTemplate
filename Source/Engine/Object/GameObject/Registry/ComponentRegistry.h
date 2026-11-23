@@ -24,6 +24,7 @@
  */
 #pragma once
 #include "Core/Concurrency/mutex.h"
+#include "Core/Container/unordered_map.h"
 #include "Core/Container/vector.h"
 #include "Core/Foundation/Macros.h"
 #include "Core/Foundation/Types.h"
@@ -225,9 +226,10 @@ namespace sw
         /** @brief 한 (타입, 칸) 의 목록입니다. */
         struct Bucket
         {
-            uint32        _typeKey;
-            uint32        _channel;
-            vector<Entry> _listEntry;
+            vector<Entry>                           _listEntry{};            ///< 등록 순서
+            vector<uint64>                          _listSerial{};           ///< `_listEntry` 와 나란한 등록 순번(오름차순 — 뺄 자리를 이분 검색으로 찾는다)
+            unordered_map<const Component*, uint64> _mapComponentToSerial{}; ///< 컴포넌트 → 등록 순번. 등록 여부를 목록을 훑지 않고 안다
+            uint64                                  _nextSerial{ 0 };
         };
 
         void                 addEntry( uint32 typeKey, uint32 channel, Component* pComponent );
@@ -235,12 +237,14 @@ namespace sw
         const vector<Entry>& findEntries( uint32 typeKey, uint32 channel ) const;
         bool                 containsHandle( uint32 typeKey, uint32 channel, ComponentHandle handle ) const;
         Bucket*              findBucket( uint32 typeKey, uint32 channel ) const;
+        /** @brief (타입, 칸) 을 이은 칸 키입니다. */
+        static uint64 makeBucketKey( uint32 typeKey, uint32 channel ) { return ( static_cast<uint64>( typeKey ) << 32 ) | channel; }
         /** @brief `findUnique` 가 둘째를 만났을 때의 오류입니다(타입마다 한 번 — 프레임마다 도는 길이 쏟아내지 않는다). */
         static void reportDuplicateUnique( const TypeInfo* pType, const Component& first, const Component& second );
 
     private:
-        /** @brief (타입, 칸) 마다 하나입니다. 주소가 움직이지 않게 따로 잡습니다 — 받아 간 창이 다른 칸의 등록으로 무너지지 않는다. */
-        vector<unique_ptr<Bucket>> _listBucket;
+        /** @brief (타입, 칸) 마다 하나입니다(키 = `makeBucketKey`). 주소가 움직이지 않게 따로 잡습니다 — 받아 간 창이 다른 칸의 등록으로 무너지지 않는다. */
+        unordered_map<uint64, unique_ptr<Bucket>> _mapBucket;
         /** @brief 등록 · 해제를 지킵니다(가장 안쪽 락). */
         mutable mutex _mutex;
     };

@@ -64,7 +64,10 @@ namespace sw
         , _listKind{}
         , _listSlowest{}
         , _loadCount{ 0 }
+        , _syncLoadTotal{}
+        , _setSyncLoadPath{}
         , _bEnabled{ SW_TRUE }
+        , _bSceneUpdateActive{ SW_FALSE }
     {
     }
 
@@ -91,6 +94,36 @@ namespace sw
         if ( engine::areEngineServicesBound() )
             engine::getSubsystem<TaskManager>().ensureMainThread();
         _bEnabled.store( gv_assetLoadProfile != 0 ? SW_TRUE : SW_FALSE, std::memory_order_relaxed );
+    }
+
+    void AssetLoadProfiler::setSceneUpdateActive( bool bActive )
+    {
+        _bSceneUpdateActive.store( bActive ? SW_TRUE : SW_FALSE, std::memory_order_relaxed );
+    }
+
+    void AssetLoadProfiler::recordSyncLoad( [[maybe_unused]] const utf8* pKind, string_view path, uint64 elapsedNanoseconds )
+    {
+        if ( isEnabled() == false || _bSceneUpdateActive.load( std::memory_order_relaxed ) == SW_FALSE )
+            return;
+        // 워커의 동기 로드(씬 로드 잡 · 병렬 틱)는 게임 스레드를 멈추지 않는다.
+        if ( engine::areEngineServicesBound() && engine::getSubsystem<TaskManager>().isMainThread() == false )
+            return;
+        bool bReport = false;
+        {
+            ScopedLock<mutex> lock{ _mutex };
+            ++_syncLoadTotal._count;
+            _syncLoadTotal._nanoseconds += elapsedNanoseconds;
+            bReport = elapsedNanoseconds >= kSyncLoadLogNanoseconds && _setSyncLoadPath.insert( string( path ) ).second;
+        }
+        if ( bReport )
+            SW_LOG_INFO_ID( "AssetLoad.SyncInSceneUpdate", "[AssetLoad] %# '%#' was loaded synchronously on the game thread during the scene update (%# ms) - request it ahead (preload list) or asynchronously",
+                            pKind, path, AssetLoadProfilerInternal::toMilliseconds( elapsedNanoseconds ) );
+    }
+
+    AssetLoadProfiler::SyncLoadTotal AssetLoadProfiler::getSceneUpdateSyncLoads() const
+    {
+        ScopedLock<mutex> lock{ _mutex };
+        return _syncLoadTotal;
     }
 
     void AssetLoadProfiler::submit( const AssetLoadRecord& record )
@@ -212,6 +245,8 @@ namespace sw
                             Internal::toMilliseconds( summary._arrPhaseNanos[AssetLoadPhase::IO] ), Internal::toMilliseconds( summary._arrPhaseNanos[AssetLoadPhase::Decode] ),
                             Internal::toMilliseconds( summary._arrPhaseNanos[AssetLoadPhase::Upload] ), Internal::toMilliseconds( summary._maxTotalNanos ) );
         }
+        const SyncLoadTotal syncLoads = getSceneUpdateSyncLoads();
+        SW_LOG_INFO_ID( "AssetLoadProfiler.SceneUpdateSyncLoads", "[AssetLoad] sync loads during scene updates: %# (%# ms)", syncLoads._count, Internal::toMilliseconds( syncLoads._nanoseconds ) );
         SW_LOG_INFO_ID( "AssetLoadProfiler.SlowestTotalMsIo", "[AssetLoad] slowest — total_ms io_ms decode_ms upload_ms bytes async kind path" );
         for ( const AssetLoadRecord& record : listSlowest )
         {
@@ -234,7 +269,9 @@ namespace sw
             entry._summary._kind     = kind;
         }
         _listSlowest.clear();
-        _loadCount = 0;
+        _loadCount     = 0;
+        _syncLoadTotal = SyncLoadTotal{};
+        _setSyncLoadPath.clear();
     }
 
     // ------------------------------------------------------------------------------

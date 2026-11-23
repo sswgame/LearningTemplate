@@ -54,6 +54,7 @@ namespace sw
     struct DestructionRandom;
     struct FractureAsset;
 
+    class FractureLeafShapeTable;
     class GameObjectManager;
     class IFracturePhysics;
     class Material;
@@ -150,6 +151,8 @@ namespace sw
         void onUnregister( GameObjectManager& manager ) override;
 
         void onBeginPlay() override;
+        /** @brief 쪼갤 때의 자세와 그룹 자세를 옮깁니다(바디는 물리 씬이 옮긴다). */
+        void onWorldOriginShifted( const float3& delta ) override;
 
         /** @brief 메시 공간 피해 사건 하나를 쌓습니다. 다음 물리 프레임에 적용하며, 어느 틱에서든 부를 수 있습니다. */
         void applyDamage( const DestructionDamageEvent& event );
@@ -270,12 +273,12 @@ namespace sw
         /** @brief 오브젝트의 지금 자세(월드)를 읽습니다. 크기는 축 배율 절댓값의 평균입니다. 배율 축이 0 이면 false 입니다(`PhysicsComponent::readWorldPose`). */
         [[nodiscard]] bool readObjectPose( float3& outPosition, quaternion& outRotation, float32& outScale ) const;
         /**
-         * @brief 잎마다 충돌 셰이프(볼록 껍질)의 점을 @p scale 로 만들고 셰이프는 비웁니다. 같은 배율로 이미 만들었으면 아무것도 하지 않습니다.
+         * @brief 배율 @p scale 의 잎 충돌 셰이프(볼록 껍질) 묶음을 나눠 받습니다(`FractureLeafShapeTable` — 같은 에셋 · 배율 · 프로필 값이면 한 벌). 같은 배율로 이미 받았으면 아무것도 하지 않습니다.
          * @details 껍질 셰이프 생성이 깨지는 프레임 비용의 대부분이고(200 조각 벽 약 11 ms) 상태를 시작할 때 모두 지으면 플레이 첫 프레임이
          *          파괴물 수에 비례해 길어진다. 그래서 온전한 프레임마다 예산(`gv_fractureShapeWarmMicroseconds`)만큼 나눠 짓고, 그 전에 깨지면 남은 잎을
          *          바디를 만들며 짓는다. 깨질 때는 정적 바디와 떨어진 덩어리(`createCompoundShape`)가 만들어 둔 잎 셰이프를 나눠 쓴다.
          */
-        void prepareLeafPoints( float32 scale );
+        void prepareLeafShapes( float32 scale );
         /** @brief 처음 떨어진 조각이 생겼을 때 호출합니다. 오브젝트의 메시와 강체를 넘겨받고 조각 렌더링과 바디를 만듭니다. */
         void activate( ScenePhysics& physics );
         /** @brief 사건 하나의 결과로 그룹 바디를 고칩니다. */
@@ -361,7 +364,8 @@ namespace sw
 
         shared_ptr<const FractureAsset>        _asset;
         unique_ptr<IFracturePhysics>           _physics;
-        SharedAssetRef<DestructionProfile>     _pProfile; ///< 상태를 시작할 때 받은 프로필(공유 캐시의 한 벌). 구조 상태는 그때의 값을 따로 든다
+        FractureLeafShapeTable*                _pLeafShapeTable; ///< 등록된 씬의 잎 셰이프 표(등록되지 않았으면 nullptr)
+        SharedAssetRef<DestructionProfile>     _pProfile;        ///< 상태를 시작할 때 받은 프로필(공유 캐시의 한 벌). 구조 상태는 그때의 값을 따로 든다
         DestructionState                       _state;
         DestructionEventLog                    _eventLog;
         vector<optional<FractureGroupPose>>    _listEventGroupPose; ///< `_eventLog` 와 같은 인덱스다. 맞은 떨어진 그룹의 적용 직전 자세다(없으면 비어 있다).
@@ -379,7 +383,7 @@ namespace sw
         float3                                 _intactLinearVelocity;
         float3                                 _intactAngularVelocity;
         float32                                _objectScale;        ///< 고른 배율(축 배율의 평균)
-        float32                                _leafShapeScale;     ///< 잎 껍질 점을 만든 배율이다(0 = 아직 만들지 않았다).
+        float32                                _leafShapeScale;     ///< 쥔 잎 셰이프 묶음의 배율이다(0 = 아직 받지 않았다).
         float32                                _frameSimulatedTime; ///< 이번 물리 프레임에 진행한 고정 스텝 시간이다(수명과 페이드에 쓰며 결정적이다).
         uint32                                 _nextSpawnOrder;
         DebrisOwnerID                          _debrisOwner;     ///< 씬 파편 장부의 주인 번호(첫 바디를 올릴 때 받는다)

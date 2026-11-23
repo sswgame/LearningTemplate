@@ -161,7 +161,7 @@ namespace sw
                     const SurfaceStepResponse* pStep = pManager->getSubsystem<SurfaceFootprintSystem>().addFootstep( sample, OrientationUtil::computeYawFromWorld( root ), context._owner.getObjectID() );
                     // 튀는 효과는 이 층(표면과 VFX 를 함께 본다)이 튼다 — 표면 층은 VFX 를 include 하지 않는다. 효과마다 동시에 트는 수는 표의 데이터다.
                     if ( pStep != nullptr && pStep->_effect.isSet() )
-                        (void)pManager->getSubsystem<VFXEffectPool>().play( pStep->_effect.get(), sample._point, pTable->_stepEffectPoolSize );
+                        (void)pManager->getSubsystem<VFXEffectPool>().play( hashed_string( pStep->_effect.get() ), sample._point, pTable->_stepEffectPoolSize );
                     record( context, sample._pKind->_name, sample._point, sample._objectID, AnimationNotifyPhase::Instant );
                 }
 

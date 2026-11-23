@@ -67,8 +67,7 @@ namespace sw
      * @struct JoinCounter
      * @brief 남은 수와 대기자 하나를 **한 워드**에 담은 조인 카운터입니다.
      * @details 하위 32비트는 남은 수, 상위 32비트는 대기자 슬롯 + 1(0 이면 없음)입니다. 마지막으로 끝내는 쪽의 CAS 하나가
-     *          "0 이 됐는가" 와 "누구를 깨울까" 에 함께 답하고 대기자 슬롯을 비웁니다. 그 뒤로는 이 워드를 **다시 건드리지
-     *          않으므로** 스택에 놓인 그룹(`runParallel`)도 안전합니다. 대기자가 0 을 본 순간 스택이 사라져도 됩니다. 대기자
+     *          "0 이 됐는가" 와 "누구를 깨울까" 에 함께 답하고 대기자 슬롯을 비웁니다. 그 뒤로는 이 워드를 다시 건드리지 않습니다. 대기자
      *          등록도 같은 워드의 CAS 라서 "등록했는데 이미 끝났다" 는 경우를 놓치지 않습니다.
      */
     struct JoinCounter
@@ -95,25 +94,25 @@ namespace sw
         }
 
         /**
-         * @brief 하나를 끝냅니다. 마지막이면 대기자 칸까지 비우고, **이전** 워드를 반환합니다.
-         * @details 반환값이 `isLastFinish` 를 만족하면 이 호출이 마지막이고, `waiterSlotPlusOne` 이 깨울 대기자(+1)입니다.
+         * @brief @p count 개를 끝냅니다. 마지막이면 대기자 칸까지 비우고, **이전** 워드를 반환합니다.
+         * @details 반환값이 같은 @p count 로 `isLastFinish` 를 만족하면 이 호출이 마지막이고, `waiterSlotPlusOne` 이 깨울 대기자(+1)입니다.
          */
-        uint64 finishOne()
+        uint64 finish( uint32 count )
         {
             uint64 current = _packed.load( std::memory_order_relaxed );
             for ( ;; )
             {
                 const uint64 pending = current & kCountMask;
-                SW_ASSERT( pending > 0 );
-                const uint64 next = ( pending == 1 ) ? 0 : ( current - 1 );
+                SW_ASSERT( pending >= count );
+                const uint64 next = ( pending == count ) ? 0 : ( current - count );
                 if ( _packed.compare_exchange_weak( current, next, std::memory_order_acq_rel, std::memory_order_relaxed ) )
                     return current;
             }
         }
 
-        /** @brief `finishOne` 이 반환한 워드가 "마지막 하나를 끝냈다" 를 뜻하는지 확인합니다. */
-        static bool isLastFinish( uint64 packedBeforeFinish ) { return ( packedBeforeFinish & kCountMask ) == 1; }
-        /** @brief `finishOne` 이 반환한 워드에 적힌 대기자 슬롯 + 1 입니다(0 이면 없음). */
+        /** @brief @p count 개를 끝낸 `finish` 가 반환한 워드가 "마지막을 끝냈다" 를 뜻하는지 확인합니다. */
+        static bool isLastFinish( uint64 packedBeforeFinish, uint32 count ) { return ( packedBeforeFinish & kCountMask ) == count; }
+        /** @brief `finish` 가 반환한 워드에 적힌 대기자 슬롯 + 1 입니다(0 이면 없음). */
         static uint32 waiterSlotPlusOne( uint64 packedBeforeFinish ) { return static_cast<uint32>( packedBeforeFinish >> kWaiterShift ); }
 
         /** @brief 이 스레드(슬롯 + 1)를 대기자로 등록합니다. 남은 것이 없거나 다른 대기자가 있으면 그렇다고 알려 줍니다. */
@@ -145,15 +144,16 @@ namespace sw
 
     /**
      * @struct ParallelGroup
-     * @brief 병렬 for 하나입니다(본문 · 범위 · 다음 청크 카운터 · 티켓 조인).
+     * @brief 병렬 for 하나입니다(본문 · 범위 · 다음 청크 카운터 · 청크 조인).
      * @details 청크마다 태스크 노드를 만들지 않습니다. 큐에는 **티켓** 몇 장(워커 수 이하)만 들어가고, 티켓을 가져간 스레드는
      *          `_nextChunkStart` 를 올려 가며 남은 청크를 모두 실행합니다. 청크 하나의 비용이 원자 덧셈 하나입니다. 먼저 끝난
      *          스레드가 남은 청크를 이어서 가져가므로 부하 균형이 저절로 맞습니다(Unreal ParallelFor · TBB 와 같은 방식).
      *
-     *          `runParallel` 은 이것을 **호출 스레드의 스택에** 둡니다. 마지막 티켓이 `_join` 을 0 으로 만든 뒤에는 아무도 이
-     *          메모리를 건드리지 않습니다. 그 약속이 `JoinCounter::finishOne` 의 CAS 하나에 담겨 있습니다. `emplaceParallel*` 은
-     *          풀(바닥나면 힙)에서 꺼내고 부모 노드를 잡으며, 마지막 티켓이 부모의 의존성을 풀고 그룹을 반납합니다. 어디로
-     *          돌려줄지는 풀이 주소로 가립니다(`LockFreeObjectPool::owns`).
+     *          **합류는 청크를 셉니다 — 티켓이 아닙니다.** `_join` 은 아직 끝나지 않은 청크 수이고, 마지막 청크를 끝낸 스레드가 대기자를 깨우고 부모의 의존성을
+     *          풉니다. 아무도 집지 않은 티켓은 합류를 늦추지 않습니다. 예전에는 티켓을 세어, 워커가 모두 긴 일을 하는 동안 호출 스레드가 자기 티켓이 큐에서 나올
+     *          때까지 앞에 선 남의 일(수 ms)을 대신 돌았습니다(언리얼 `ParallelFor` 도 시작하지 않은 도우미 태스크를 기다리지 않는다).
+     *          늦게 나온 티켓은 남은 청크가 없는 것을 보고 참조만 놓으므로 그룹은 풀(바닥나면 힙)에 있고 참조 수(`_refCount`)로 삽니다. 어디로 돌려줄지는
+     *          풀이 주소로 가립니다(`LockFreeObjectPool::isOwnerOf`).
      */
     struct ParallelGroup
     {
@@ -162,19 +162,20 @@ namespace sw
         /**
          * @brief 청크마다 부를 블록 본문입니다. null 이면 `_indexBody` 를 인덱스마다 부릅니다.
          * @details `runParallel` 은 호출하는 쪽의 델리게이트(호출이 끝날 때까지 살아 있다)를, `emplaceParallelBlock` 은 자기
-         *          사본(`_blockBody`)을 가리킵니다. 그래서 청크 실행의 분기가 블록 · 인덱스 둘뿐입니다.
+         *          사본(`_blockBody`)을 가리킵니다. 그래서 청크 실행의 분기가 블록 · 인덱스 둘뿐입니다. **청크를 가져간 뒤에만** 읽습니다 — 늦은 티켓이
+         *          나올 때는 호출한 쪽의 델리게이트가 이미 없습니다.
          */
         const ParallelBlockDelegate* _pBlockBody{ nullptr };
         uint32                       _rangeEnd{ 0 };
         uint32                       _chunkSize{ 1 };
-        TaskNode*                    _pParent{ nullptr };              ///< 풀 그룹: 티켓이 모두 끝나면 의존성을 풀 부모(참조를 하나 잡는다). 스택 그룹은 null
-        MemoryTag                    _memoryTag{ MemoryTag::Unknown }; ///< 그룹을 만든 스레드의 할당 태그. 청크를 실행하는 동안 그 스레드의 태그가 된다
+        uint32                       _chunkCount{ 0 };
+        TaskPriority                 _priority{ TaskPriority::Normal }; ///< 티켓이 서는 줄(만든 태스크의 우선순위 — 언리얼 `ETaskPriority::Inherit`)
+        MemoryTag                    _memoryTag{ MemoryTag::Unknown };  ///< 그룹을 만든 스레드의 할당 태그. 청크를 실행하는 동안 그 스레드의 태그가 된다
+        TaskNode*                    _pParent{ nullptr };               ///< `emplaceParallel*`: 청크가 모두 끝나면 의존성을 풀 부모(참조를 하나 잡는다). `runParallel` 은 null
+        atomic<uint32>               _refCount{ 0 };                    ///< 큐에 든 티켓 수 + (`runParallel` 이면) 호출 스레드
         /** @brief 다음에 가져갈 청크의 시작입니다. 64비트인 이유: 티켓마다 끝을 지나서 한 번 더 더하므로 32비트는 넘칠 수 있습니다. */
         alignas( 64 ) atomic<uint64> _nextChunkStart{ 0 };
-        alignas( 64 ) JoinCounter _join; ///< 아직 끝나지 않은 티켓 수 + 기다리는 스레드
-
-        /** @brief 풀에서 왔는지 확인합니다. 부모를 잡은 그룹만 풀 · 힙에 있습니다. 스택 그룹은 마지막 티켓 뒤에 역참조하면 안 됩니다. */
-        bool isPooled() const { return _pParent != nullptr; }
+        alignas( 64 ) JoinCounter _join; ///< 아직 끝나지 않은 청크 수 + 기다리는 스레드
     };
 } // namespace sw
 

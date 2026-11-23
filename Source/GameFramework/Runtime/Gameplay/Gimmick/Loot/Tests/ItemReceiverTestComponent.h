@@ -11,6 +11,7 @@
 #include "Engine/Reflection/ReflectionMacros.h"
 
 #include "GameFramework/Runtime/Gameplay/Inventory/IItemReceiver.h"
+#include "GameFramework/Runtime/Gameplay/Inventory/Inventory.h"
 
 namespace sw
 {
@@ -33,6 +34,8 @@ namespace sw
                 owner._lastItem = item;
                 return ItemGrantResult::Granted;
             }
+
+            [[nodiscard]] ItemGrantResult receiveStack( const InventorySlot& stack ) override { return receiveItem( stack._itemID, stack._count ); }
         };
 
         int32            _room{ 0 };

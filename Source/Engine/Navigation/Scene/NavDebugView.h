@@ -14,6 +14,7 @@
 namespace sw
 {
     struct NavMeshRuntime;
+    struct WorldOrigin;
 
     class GameObjectManager;
     class IPhysicsDebugRenderer;
@@ -26,8 +27,8 @@ namespace sw
     public:
         NavDebugView() = default;
 
-        /** @brief @p flags(`NavDebugDrawFlag`)의 선(테두리 · 경로 · 속도 · 장애물 · 대략 그래프와 먼 경로)을 냅니다. */
-        static void drawLines( IPhysicsDebugRenderer& renderer, uint32 flags, const vector<unique_ptr<NavMeshRuntime>>& listRuntime,
+        /** @brief @p flags(`NavDebugDrawFlag`)의 선(테두리 · 경로 · 속도 · 장애물 · 대략 그래프와 먼 경로)을 로컬 월드로 냅니다(내비메시 · 군중의 절대 자리는 @p origin 으로 옮긴다). */
+        static void drawLines( IPhysicsDebugRenderer& renderer, uint32 flags, const WorldOrigin& origin, const vector<unique_ptr<NavMeshRuntime>>& listRuntime,
                                const vector<NavMeshObstacleComponent*>& listObstacle, const vector<NavMeshAgentComponent*>& listAgent );
         /**
          * @brief @p bShown 이고 내비메시가 있으면 걷는 면(영역 색 · 폴리곤마다 명암)과 에이전트 경로 띠를 메시 하나로 지어
@@ -38,7 +39,8 @@ namespace sw
 
     private:
         /** @brief 대략 그래프(클러스터 · 간선 — 타일 스트리밍 단계 색)와 에이전트의 먼 경로를 선으로 냅니다(`NavDebugDrawFlag::kCluster`). */
-        static void drawClusterGraph( IPhysicsDebugRenderer& renderer, const vector<unique_ptr<NavMeshRuntime>>& listRuntime, const vector<NavMeshAgentComponent*>& listAgent );
+        static void drawClusterGraph( IPhysicsDebugRenderer& renderer, const WorldOrigin& origin, const vector<unique_ptr<NavMeshRuntime>>& listRuntime,
+                                      const vector<NavMeshAgentComponent*>& listAgent );
 
     private:
         GameObjectHandle _viewObject; ///< `updateSolidView` 가 세운 오브젝트

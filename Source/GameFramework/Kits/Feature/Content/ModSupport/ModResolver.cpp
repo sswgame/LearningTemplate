@@ -3,6 +3,7 @@
 #include "GameFramework/Kits/Feature/Content/ModSupport/ModResolver.h"
 
 #include "Core/Algorithm/VectorUtil.h"
+#include "Core/Container/unordered_map.h"
 #include "Core/Foundation/Expected.h"
 #include "Core/Log/Logger.h"
 
@@ -143,24 +144,24 @@ namespace sw
         }
 
         // 같은 리소스를 덮어쓰는 두 모드 — 뒤(위) 모드가 앞 모드에 직접 의존할 때만 받는다. 아니면 어느 쪽이 이길지가 우선순위 숫자의 우연이 된다.
-        for ( size_t upper = 0; upper < outListOrder.size(); ++upper )
+        unordered_map<string, vector<size_t>> mapPathToModIndex; // 리소스 → 그것을 덮어쓰는 모드(세운 순서) — 모드 쌍마다 목록을 맞대지 않는다
+        for ( const size_t upperIndex : outListOrder )
         {
-            const ModManifest& upperMod = listManifest[outListOrder[upper]];
-            for ( size_t lower = 0; lower < upper; ++lower )
+            const ModManifest& upperMod = listManifest[upperIndex];
+            for ( const string& path : upperMod._listOverride )
             {
-                const ModManifest& lowerMod = listManifest[outListOrder[lower]];
-                if ( upperMod.findDependency( lowerMod._id ) != nullptr )
-                    continue;
-                for ( const string& path : upperMod._listOverride )
+                vector<size_t>& listModIndex = mapPathToModIndex[path];
+                for ( const size_t lowerIndex : listModIndex )
                 {
-                    if ( VectorUtil::contains( lowerMod._listOverride, path ) )
-                    {
-                        SW_LOG_ERROR_ID( "ModResolver.OverrideCollision", "Mods '%#' and '%#' both override '%#' - one must depend on the other to decide which wins", lowerMod._id,
-                                         upperMod._id, path );
-                        outListOrder.clear();
-                        return false;
-                    }
+                    const ModManifest& lowerMod = listManifest[lowerIndex];
+                    if ( lowerIndex == upperIndex || upperMod.findDependency( lowerMod._id ) != nullptr )
+                        continue; // 한 모드가 같은 경로를 두 번 적은 것은 겹침이 아니다
+                    SW_LOG_ERROR_ID( "ModResolver.OverrideCollision", "Mods '%#' and '%#' both override '%#' - one must depend on the other to decide which wins", lowerMod._id, upperMod._id,
+                                     path );
+                    outListOrder.clear();
+                    return false;
                 }
+                listModIndex.push_back( upperIndex );
             }
         }
         return true;

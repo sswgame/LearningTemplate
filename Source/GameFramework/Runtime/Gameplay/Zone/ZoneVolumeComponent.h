@@ -63,6 +63,8 @@ namespace sw
 
         /** @brief 월드 경계 상자의 수평 반 크기 중 큰 쪽(퍼짐 · 회전 · 배율 포함, m)입니다. */
         float32 getHorizontalReach() const;
+        /** @brief 셀 나누기가 묻는 이 컴포넌트가 덮는 월드 상자입니다 — 피벗 셀이 아니라 덮는 자리가 로딩 반경에 들면 올라 있다. */
+        bool computeStreamingBounds( AABB& outBox ) const override;
         /** @brief 이 볼륨이 건 효과의 출처(`volume:<오브젝트 이름>`)입니다. */
         hashed_string getSourceName() const;
         /** @brief 프로필 · 덮어쓰기를 합치고 컴파일했으면 true 입니다(실패는 시작할 때 오류로 남는다). */

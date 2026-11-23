@@ -33,6 +33,7 @@ namespace sw
         , _pDef{ nullptr }
         , _catalogReload{}
         , _appliedHighlight{}
+        , _completed{}
         , _completedCount{ 0 }
         , _bHighlightRequested{ SW_FALSE }
         , _bHasOverride{ SW_FALSE }
@@ -259,6 +260,12 @@ namespace sw
         return pDef->_highlight;
     }
 
+    InteractableComponent* InteractableComponent::findOnOwner( const Component& component )
+    {
+        const GameObject* pOwner = component.getOwner();
+        return pOwner != nullptr ? pOwner->getComponent<InteractableComponent>() : nullptr;
+    }
+
     void InteractableComponent::completeInteraction( const GameObject& interactor )
     {
         const InteractionDef* pDef   = getDefinition();
@@ -270,6 +277,7 @@ namespace sw
         if ( findBlockReason( interactor ) != InteractionBlockReason::None )
             return;
         _cooldownRemaining = pDef->_cooldown;
+        _lastInteractor    = interactor.getHandle(); // 완료 수보다 먼저 — 수가 늘어난 것을 본 기믹(채집 · 밀기 · 숨기)이 끝낸 쪽을 읽는다
         _completedCount.fetch_add( 1, std::memory_order_relaxed );
         InteractionCompletedEvent event;
         event._request._interactor        = interactor.getHandle();
@@ -279,5 +287,6 @@ namespace sw
         if ( pAuthority != nullptr )
             pAuthority->notifyInteractionCompleted( event._request );
         GameEventUtil::send( event );
+        _completed.broadcast( interactor );
     }
 } // namespace sw

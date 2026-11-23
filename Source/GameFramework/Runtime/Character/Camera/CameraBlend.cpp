@@ -106,6 +106,12 @@ namespace sw
         return _outputPose;
     }
 
+    void CameraPoseBlender::applyWorldOffset( const float3& delta )
+    {
+        _fromPose._position += delta;
+        _outputPose._position += delta;
+    }
+
     bool CameraPoseBlender::consumeCut()
     {
         const bool bCut = _bCutQueued == SW_TRUE;

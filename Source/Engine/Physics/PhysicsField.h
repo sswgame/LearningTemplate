@@ -16,14 +16,15 @@
 
 namespace sw
 {
-    /** @brief 캐릭터 이동기가 필드로 고른 이동 방식입니다(진단 · 애니메이션이 읽는다). */
+    /** @brief 캐릭터 이동기가 필드 · 오르기 요청으로 고른 이동 방식입니다(진단 · 애니메이션이 읽는다 — 언리얼 `EMovementMode`, 오르기는 그 `MOVE_Custom` 자리). */
     ENUM()
     enum class CharacterMovementMode : uint8
     {
         Walking = 0, ///< 딛고 걷는다
         Falling,     ///< 떠 있고 중력을 받는다
         Swimming,    ///< 유체에 잠겨 부력 · 저항을 받는다(수직 속도가 수면 쪽으로 간다)
-        Floating     ///< 중력이 거의 없다(무중력) — 수직 속도는 가속 · 흐름만 바꾼다
+        Floating,    ///< 중력이 거의 없다(무중력) — 수직 속도는 가속 · 흐름만 바꾼다
+        Climbing     ///< 사다리 · 벽에 매달렸다 — 중력 · 필드 없이 이동기가 준 속도(`applyClimbVelocity`)로만 움직인다
     };
 
     /** @struct PhysicsFieldSample @brief 물리 필드 표본 하나입니다(파일 머리말 참고). 기본값이 중립(아무것도 바꾸지 않음)입니다. */

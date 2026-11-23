@@ -214,6 +214,7 @@ namespace
             _mansion.writeState( mansionBytes );
             written.writeBytes( mansionBytes.getData(), StateIO::kReflectedHeaderBytes );
             written << static_cast<uint32>( 0 ); // 맡아 둔 열쇠
+            written << static_cast<uint32>( 0 ); // 동전을 준 유령
             StateIO::writeName( written, currentRoom );
             written << static_cast<uint32>( 5 ); // 씨앗
             _mansion.getEncounter().writeState( written );
@@ -839,6 +840,27 @@ SW_TEST_CASE_F( GhostHuntRulesTest, LeavingRightAfterCatchKeepsTheCatch )
     vector<GhostEvent> listGhostEvent;
     _mansion.pollGhostEvents( listGhostEvent );
     SW_EXPECT_EQUAL( 1, VectorUtil::countBy<&GhostEvent::_type>( listGhostEvent, GhostEventKind::Caught ) );
+}
+
+/**
+ * @brief [GhostHuntRulesTest] 잡은 뒤 `update` 앞에 저장해도 불러온 쪽이 동전과 불을 주고, 이미 준 동전은 다시 주지 않는다
+ */
+SW_TEST_CASE_F( GhostHuntRulesTest, SavingRightAfterCatchKeepsTheCatch )
+{
+    SW_REQUIRE_TRUE( _mansion.enterRoom( "foyer" ) == 1 );
+    catchRoomGhosts();
+    GhostMansion restored;
+    SW_REQUIRE_TRUE( open( restored, 77u ) );
+    SW_REQUIRE_TRUE( StateBytesTestUtil::roundTrips( _mansion, restored ) );
+    restored.update( 0.01f );
+    SW_EXPECT_EQUAL( int64{ 10 }, _wallet.getBalance( "Souls" ) );
+    SW_EXPECT_TRUE( restored.isRoomLit( "foyer" ) );
+
+    GhostMansion again;
+    SW_REQUIRE_TRUE( open( again, 77u ) );
+    SW_REQUIRE_TRUE( StateBytesTestUtil::roundTrips( restored, again ) );
+    again.update( 0.01f );
+    SW_EXPECT_EQUAL( int64{ 10 }, _wallet.getBalance( "Souls" ) );
 }
 
 /**

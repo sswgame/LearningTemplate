@@ -11,6 +11,7 @@
 #include "Engine/Object/Component/SceneComponent.h"
 #include "Engine/Object/Component/SceneTransformHierarchy.h"
 #include "Engine/Object/GameObject/GameObject.h"
+#include "Engine/Object/GameObject/WorldOrigin.h"
 #include "Engine/Physics/Component/CharacterControllerComponent.h"
 
 namespace sw
@@ -180,6 +181,16 @@ namespace sw
         outListPoint.push_back( end );
     }
 
+    void NavStreamRoute::collectAgentRoutePoints( NavMeshAgentComponent& agent, const NavMeshRuntime& runtime, const NavRoutePlan& route, uint32 firstIndex )
+    {
+        const WorldOrigin& origin = agent.getWorldOrigin();
+        collectCoarsePoints( runtime, route, firstIndex, origin.toAbsolute( agent._destination ), agent._listRoutePoint );
+        for ( float3& point : agent._listRoutePoint )
+        {
+            point = origin.toLocal( point );
+        }
+    }
+
     void NavStreamRoute::refreshAgent( NavMeshAgentComponent& agent, NavMeshRuntime& runtime, const float3& currentPosition )
     {
         if ( usesRoutes( runtime ) == false || agent._bHasDestination == SW_FALSE || agent._bDestinationDirty == SW_TRUE )
@@ -189,7 +200,7 @@ namespace sw
         if ( agent._bVirtualMove == SW_TRUE )
         {
             // 지나는 자리의 타일이 새로 올랐거나(판이 바뀌었거나) 오른 타일에 막 들었으면, 세밀 이동으로 돌아갈 수 있는지 다시 본다.
-            const bool bLoaded        = isPositionLoaded( runtime, currentPosition );
+            const bool bLoaded        = isPositionLoaded( runtime, agent.getWorldOrigin().toAbsolute( currentPosition ) );
             const bool bJustEntered   = bLoaded && agent._bVirtualOverLoaded == SW_FALSE;
             agent._bVirtualOverLoaded = bLoaded ? SW_TRUE : SW_FALSE;
             if ( bLoaded && ( bRevisionChanged || bJustEntered ) )
@@ -203,19 +214,22 @@ namespace sw
 
     void NavStreamRoute::requestAgentMove( NavMeshAgentComponent& agent, NavMeshRuntime& runtime, const float3& currentPosition )
     {
-        using Internal       = NavStreamRouteInternal;
-        INavCrowd&   crowd   = *runtime._pCrowd;
-        const float3 end     = agent._destination;
-        agent._routeRevision = runtime._pNavMesh->getRevision();
+        using Internal = NavStreamRouteInternal;
+        // 계획 · 군중은 절대, 에이전트가 드는 자리(`_routeTarget` · `_listRoutePoint`)는 로컬이다.
+        INavCrowd&         crowd  = *runtime._pCrowd;
+        const WorldOrigin& origin = agent.getWorldOrigin();
+        const float3       start  = origin.toAbsolute( currentPosition );
+        const float3       end    = origin.toAbsolute( agent._destination );
+        agent._routeRevision      = runtime._pNavMesh->getRevision();
         NavRoutePlan route;
-        if ( plan( runtime, currentPosition, end, route ) == false || route.isLoadedToGoal() )
+        if ( plan( runtime, start, end, route ) == false || route.isLoadedToGoal() )
         {
             // 대략 그래프 밖이거나 다 올라 있다 — 세밀 경로 하나다(내려간 목적지면 군중이 `Failed` 로 알린다).
             const bool bWasVirtual = agent._bVirtualMove == SW_TRUE;
             clearAgentRoute( agent );
             NavCrowdAgentState state;
             if ( bWasVirtual || ( crowd.findAgentState( agent._crowdAgentID, state ) && state._bOnNavMesh == false ) )
-                crowd.teleportAgent( agent._crowdAgentID, currentPosition ); // 내려갔다 다시 오른 타일 위의 에이전트는 Detour 가 스스로 되살리지 않는다
+                crowd.teleportAgent( agent._crowdAgentID, start ); // 내려갔다 다시 오른 타일 위의 에이전트는 Detour 가 스스로 되살리지 않는다
             agent._moveStatus = crowd.requestMoveTarget( agent._crowdAgentID, end ) ? NavMoveStatus::Moving : NavMoveStatus::Failed;
             return;
         }
@@ -234,10 +248,10 @@ namespace sw
             return; // 오른 타일 하나를 지나는 중이다 — 그 너머가 이어질 때까지 가상 이동을 잇는다
         NavCrowdAgentState state;
         if ( agent._bVirtualMove == SW_TRUE || ( crowd.findAgentState( agent._crowdAgentID, state ) && state._bOnNavMesh == false ) )
-            crowd.teleportAgent( agent._crowdAgentID, currentPosition );
+            crowd.teleportAgent( agent._crowdAgentID, start );
         agent._bVirtualMove = SW_FALSE;
         const float3 target = computeFrontierTarget( runtime, route, end, runtime._searchExtent, runtime._filter );
-        if ( route._frontier == 0 && float3::getHorizontalDistance( currentPosition, target ) <= Internal::computeArrivalRadius( agent ) )
+        if ( route._frontier == 0 && float3::getHorizontalDistance( start, target ) <= Internal::computeArrivalRadius( agent ) )
         {
             // 앞선 가장자리에 닿았는데 그 너머가 아직 내려가 있다.
             if ( bCanVirtualMove )
@@ -246,10 +260,11 @@ namespace sw
                 agent._moveStatus = NavMoveStatus::Moving;
             return;
         }
-        const bool bSameTarget    = agent._bRouteIntermediate == SW_TRUE && float3::getDistance( target, agent._routeTarget ) < Internal::kSameTargetDistance;
-        agent._routeTarget        = target;
+        const float3 localTarget  = origin.toLocal( target );
+        const bool   bSameTarget  = agent._bRouteIntermediate == SW_TRUE && float3::getDistance( localTarget, agent._routeTarget ) < Internal::kSameTargetDistance;
+        agent._routeTarget        = localTarget;
         agent._bRouteIntermediate = SW_TRUE;
-        collectCoarsePoints( runtime, route, route._frontier + 1, end, agent._listRoutePoint );
+        collectAgentRoutePoints( agent, runtime, route, route._frontier + 1 );
         if ( bSameTarget )
             return;
         ++agent._routeReplanCount;
@@ -313,7 +328,7 @@ namespace sw
         if ( agent._listRoutePoint.empty() )
         {
             // 내려간 구역 안의 목적지에 대략 그래프로 닿았다. 군중 쪽 몸도 여기로 옮긴다 — 다음 갱신부터 쓰는 군중 자리가 첫 대략 점으로 되돌아가지 않게.
-            runtime._pCrowd->teleportAgent( agent._crowdAgentID, position );
+            runtime._pCrowd->teleportAgent( agent._crowdAgentID, agent.getWorldOrigin().toAbsolute( position ) );
             clearAgentRoute( agent );
             agent._moveStatus = NavMoveStatus::Arrived;
         }
@@ -352,13 +367,14 @@ namespace sw
             ++agent._routeReplanCount;
             ++runtime._routeReplanCount;
         }
-        NavStreamRoute::collectCoarsePoints( runtime, route, firstIndex, agent._destination, agent._listRoutePoint );
+        collectAgentRoutePoints( agent, runtime, route, firstIndex );
         // 군중 쪽 몸은 내려간 구역(첫 대략 점)으로 보낸다 — 붙을 폴리곤이 없어 걷지 않고(`INVALID`), 앞선 가장자리에 남아 다른 에이전트를 막지 않는다.
-        runtime._pCrowd->teleportAgent( agent._crowdAgentID, agent._listRoutePoint.front() );
+        const WorldOrigin& origin = agent.getWorldOrigin();
+        runtime._pCrowd->teleportAgent( agent._crowdAgentID, origin.toAbsolute( agent._listRoutePoint.front() ) );
         agent._agentPosition      = currentPosition;
         agent._bVirtualMove       = SW_TRUE;
         agent._bRouteIntermediate = SW_FALSE;
-        agent._bVirtualOverLoaded = NavStreamRoute::isPositionLoaded( runtime, currentPosition ) ? SW_TRUE : SW_FALSE;
+        agent._bVirtualOverLoaded = NavStreamRoute::isPositionLoaded( runtime, origin.toAbsolute( currentPosition ) ) ? SW_TRUE : SW_FALSE;
         agent._moveStatus         = NavMoveStatus::Moving;
     }
 } // namespace sw

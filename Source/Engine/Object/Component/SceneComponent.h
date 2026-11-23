@@ -197,6 +197,13 @@ namespace sw
          *          콜라이더면 오프셋 크기"를 따로 계산하면 부모가 키운 오브젝트, 단위 상자가 아닌 메시, 키운 콜라이더를 틀리게 측정한다.
          */
         virtual bool getWorldBox( AABB& outBox ) const;
+        /**
+         * @brief 셀 나누기(쿠킹 · 소스 셀 나누기)가 묻는 월드 상자입니다 — 그리거나 부딪히는 것을 덮는다. 크기가 없으면 false 입니다.
+         * @details `getWorldBox` 와 달리 에셋이 아직 없으면 그 자리에서 읽어 잰다(나누기는 결과를 그 자리에서 쓴다, 워커에서도 부른다). 런타임 프레임 경로에서는 부르지 않는다.
+         */
+        virtual bool computeStreamingBounds( AABB& outBox ) const { return getWorldBox( outBox ); }
+        /** @brief HLOD 대리 굽기(`SceneCellSplitter`)가 묻는, 메시를 그리는 월드 자리들을 @p inoutListWorld 끝에 더합니다 — 자기 월드 행렬 하나이고, 인스턴스 메시는 인스턴스마다 하나다. */
+        virtual void collectDrawnTransforms( vector<float4x4>& inoutListWorld ) const { inoutListWorld.push_back( getWorldMatrix() ); }
 
         /**
          * @brief 부모 캐시가 이미 유효하다고 보고 이 노드의 월드 캐시를 갱신합니다.

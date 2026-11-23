@@ -438,6 +438,11 @@ namespace sw
          * @details 계층 활성에 따라 무언가를 켜고 끄는 컴포넌트가 쓴다. 예를 들어 렌더 프리미티브는 자기 슬롯을 더티로 표시한다.
          */
         virtual void onOwnerActiveInHierarchyChanged() {}
+        /**
+         * @brief 월드 원점이 옮겨졌습니다 — 오브젝트 트랜스폼 밖에 든 로컬 월드 자리(지난 프레임 자리 · 날아가는 탄 · 카메라 포즈)를 @p delta 만큼 옮깁니다(게임 스레드 · 틱 밖, `Scene::shiftWorldOrigin`).
+         * @details 저장하는 자리와 데이터가 적은 자리는 절대로 두고 쓸 때 `WorldOrigin` 으로 옮긴다 — 뜬 때와 되돌릴 때의 원점이 다를 수 있다. 언리얼 `UActorComponent::ApplyWorldOffset` 자리다.
+         */
+        virtual void onWorldOriginShifted( const float3& delta ) { (void)delta; }
         /** @brief 컴포넌트가 파괴될 때 불리는 콜백입니다. */
         virtual void onDestroy();
         /** @brief 프로퍼티가 바뀌었을 때 불리는 콜백입니다. */
