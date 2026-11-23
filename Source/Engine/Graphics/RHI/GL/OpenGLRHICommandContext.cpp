@@ -238,6 +238,10 @@ namespace sw
         if ( _pDevice->_bInitialized == SW_FALSE || ( src == kRHIBackBufferTexture && dst == kRHIBackBufferTexture ) )
             return;
 
+        // 기본 프레임버퍼(fbo 0)는 걸린 창의 것이다 — 앞 패스가 다른 창을 걸어 두었으면 메인 창으로 돌아온 뒤 옮긴다.
+        const bool bUsesBackBuffer = src == kRHIBackBufferTexture || dst == kRHIBackBufferTexture;
+        if ( bUsesBackBuffer && _pDevice->useSwapChain( nullptr ) == nullptr )
+            return;
         const ScopedScissorTestOff scissorOff{ _pDevice->_recordingState };
         if ( src == kRHIBackBufferTexture )
         {

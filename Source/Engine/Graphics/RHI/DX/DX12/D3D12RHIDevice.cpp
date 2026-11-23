@@ -58,6 +58,8 @@ namespace sw
         , _freeOnlineBlock{}
         , _frameRing{}
         , _timestampFrequency{ 0 }
+        , _computeClockOffsetTick{ 0 }
+        , _computeClockAgeFrames{ 0 }
         , _bComputeTimestampComparable{ SW_FALSE }
         , _timestampRing{}
         , _gpuBuffers{}
@@ -1758,16 +1760,20 @@ namespace sw
             _timestampHeap.Reset();
             return;
         }
-        _timestampFrequency = frequency;
-        _bComputeTimestampComparable.store( compareComputeQueueClock( frequency ) ? SW_TRUE : SW_FALSE, std::memory_order_relaxed );
+        _timestampFrequency    = frequency;
+        const bool bComparable = measureComputeQueueClock( frequency );
+        if ( bComparable )
+            SW_LOG_INFO_ID( "D3D12.ComputeTimestampClock", "Async compute pass timings are on: compute queue ticks move by %# to the direct queue clock (%# ticks/s)", _computeClockOffsetTick, frequency );
+        _bComputeTimestampComparable.store( bComparable ? SW_TRUE : SW_FALSE, std::memory_order_relaxed );
     }
 
-    bool D3D12RHIDevice::compareComputeQueueClock( uint64 directFrequency ) const
+    bool D3D12RHIDevice::measureComputeQueueClock( uint64 directFrequency )
     {
         if ( _computeQueue == nullptr || _commandQueue == nullptr || directFrequency == 0 )
             return false;
-        // 두 표본을 붙여 찍는 사이의 시간 · 호출 잡음보다 넉넉하고, 패스 하나(수십 µs 이상)보다 작은 어긋남만 같은 시계로 본다.
-        constexpr float64 kComputeClockSkewToleranceMicros = 100.0;
+        // 표본의 중앙값에 남는 호출 잡음보다 넉넉한 어긋남은 같은 시계로 본다 — 잡음을 패스 시간에 더하지 않는다.
+        constexpr float64 kSameClockToleranceMicros = 100.0;
+        constexpr uint32  kSampleCount              = 5; // 중앙값 — 한 표본이 두 호출 사이에 선점돼도 남는다
         UINT64            computeFrequency{ 0 };
         if ( FAILED( _computeQueue->GetTimestampFrequency( &computeFrequency ) ) || computeFrequency != directFrequency )
         {
@@ -1775,23 +1781,26 @@ namespace sw
                             computeFrequency, directFrequency );
             return false;
         }
-        UINT64        directGPUTick{ 0 };
-        UINT64        directCPUTick{ 0 };
-        UINT64        computeGPUTick{ 0 };
-        UINT64        computeCPUTick{ 0 };
         LARGE_INTEGER cpuFrequency{};
-        const bool    bSampled = SUCCEEDED( _commandQueue->GetClockCalibration( &directGPUTick, &directCPUTick ) ) &&
-                              SUCCEEDED( _computeQueue->GetClockCalibration( &computeGPUTick, &computeCPUTick ) ) && QueryPerformanceFrequency( &cpuFrequency ) != FALSE &&
-                              cpuFrequency.QuadPart > 0;
-        if ( bSampled == false )
+        if ( QueryPerformanceFrequency( &cpuFrequency ) == FALSE || cpuFrequency.QuadPart <= 0 )
             return false;
-        const float64 gpuDeltaMicros = static_cast<float64>( static_cast<int64>( computeGPUTick - directGPUTick ) ) * constant::time::kMicrosecondsPerSecond / static_cast<float64>( directFrequency );
-        const float64 cpuDeltaMicros = static_cast<float64>( static_cast<int64>( computeCPUTick - directCPUTick ) ) * constant::time::kMicrosecondsPerSecond / static_cast<float64>( cpuFrequency.QuadPart );
-        const float64 skewMicros     = MathUtil::abs( gpuDeltaMicros - cpuDeltaMicros );
-        const bool    bComparable    = skewMicros <= kComputeClockSkewToleranceMicros;
-        SW_LOG_INFO_ID( "D3D12.ComputeTimestampClock", "Async compute pass timings are %#: compute and direct queue clocks differ by %# us (tolerance %# us, %# ticks/s)",
-                        bComparable ? "on" : "off", skewMicros, kComputeClockSkewToleranceMicros, directFrequency );
-        return bComparable;
+        vector<RHIQueueClockSample> listSample;
+        listSample.reserve( kSampleCount );
+        for ( uint32 sampleIndex = 0; sampleIndex < kSampleCount; ++sampleIndex )
+        {
+            UINT64     directGPUTick{ 0 };
+            UINT64     directCPUTick{ 0 };
+            UINT64     computeGPUTick{ 0 };
+            UINT64     computeCPUTick{ 0 };
+            const bool bSampled = SUCCEEDED( _commandQueue->GetClockCalibration( &directGPUTick, &directCPUTick ) ) &&
+                                  SUCCEEDED( _computeQueue->GetClockCalibration( &computeGPUTick, &computeCPUTick ) );
+            if ( bSampled == false )
+                return false;
+            listSample.push_back( RHIQueueClockSample{ directGPUTick, directCPUTick, computeGPUTick, computeCPUTick } );
+        }
+        _computeClockOffsetTick = RHITimestampFrame::computeComputeQueueTickOffset( listSample, directFrequency, static_cast<uint64>( cpuFrequency.QuadPart ), kSameClockToleranceMicros );
+        _computeClockAgeFrames  = 0;
+        return true;
     }
 
     void D3D12RHIDevice::collectTimestampsForSlot()
@@ -1813,9 +1822,24 @@ namespace sw
 
         // DX12 는 쿼리 힙을 리셋하지 않는다. 안 적은 칸에는 **지난 사이클의 값**이 그대로 남는다.
         // 그래서 어느 칸이 이번 것인지 비트로 가려야 한다. 안 그러면 건너뛴 패스가 0us 로 보고된다.
-        const uint64* pTicks = reinterpret_cast<const uint64*>( static_cast<const uint8*>( pMapped ) + byteOffset );
+        uint64 arrTick[constant::render::kMaxGPUTimestampSlot]{};
+        Memory::copy( arrTick, static_cast<const uint8*>( pMapped ) + byteOffset, sizeof( arrTick ) );
+        // 컴퓨트 큐의 시계가 다른 장치는 그 큐의 틱을 직접 큐 시계로 옮긴다(같은 장치는 0 이라 할 일이 없다).
+        const GPUTimestampSlotMask& computeQueueMask = _timestampRing.getComputeQueueMask( _frameRing.currentIndex() );
+        if ( _computeClockOffsetTick != 0 && computeQueueMask.any() )
+        {
+            constexpr uint32 kResyncFrameInterval = 240; // 시계가 흐르는 속도에 비해 드물고, 호출 비용(커널 열 번)이 프레임에 묻히는 간격
+            if ( ++_computeClockAgeFrames >= kResyncFrameInterval )
+                (void)measureComputeQueueClock( _timestampFrequency ); // 못 재면 지난 값을 그대로 쓴다
+            for ( uint32 slotIndex = 0; slotIndex < constant::render::kMaxGPUTimestampSlot; ++slotIndex )
+            {
+                if ( computeQueueMask.test( slotIndex ) )
+                    arrTick[slotIndex] += static_cast<uint64>( _computeClockOffsetTick ); // 부호는 2 의 보수 덧셈이 지킨다
+            }
+        }
         // 그래서 writtenMask 가 곧 준비 비트다. 이 슬롯은 방금 펜스를 통과했다.
-        RHITimestampFrame::resolve( pTicks, writtenMask, constant::time::kNanosecondsPerSecond / static_cast<float64>( _timestampFrequency ), _timestampFrame );
+        RHITimestampFrame::resolve( arrTick, writtenMask, _timestampRing.getComputeQueueMask( _frameRing.currentIndex() ), constant::time::kNanosecondsPerSecond / static_cast<float64>( _timestampFrequency ),
+                                    _timestampFrame );
 
         const D3D12_RANGE emptyRange{ 0, 0 };
         _timestampReadback->Unmap( 0, &emptyRange );

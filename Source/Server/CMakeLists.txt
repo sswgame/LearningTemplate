@@ -15,6 +15,9 @@ if(SW_SHIPPING_BUILD)
 	sw_remove_excluded_sources(SERVER_SOURCES ${SW_DEV_ONLY_SOURCE_PATTERNS})
 endif()
 
+# 플랫폼 폴더(`Windows/` 의 서비스 호스트)는 그 플랫폼에서만 짓는다 — Core · Engine · App 과 같은 규칙.
+sw_filter_platform_sources(SERVER_SOURCES)
+
 sw_add_executable(Server ${SERVER_SOURCES})
 sw_apply_target_layer_guard(Server server)
 set_target_properties(Server PROPERTIES FOLDER "Source/Server")

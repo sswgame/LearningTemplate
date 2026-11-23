@@ -36,7 +36,7 @@ namespace sw
     public:
         using AssetType = const ShaderCompileResult;
 
-        ShaderLoadOperation( ShaderCache* pCache, const ShaderCompileDesc& desc, string cacheKey );
+        ShaderLoadOperation( ShaderCache* pCache, const ShaderCompileDesc& desc, string cacheKey, uint64 replaceCountAtStart );
 
         /** @brief 바이트코드입니다. `Ready` 일 때만 쓸 수 있습니다(`AssetHandle::get` 이 상태를 본다). */
         const shared_ptr<const ShaderCompileResult>& getAsset() const { return _pResult; }
@@ -52,6 +52,7 @@ namespace sw
         ShaderCache*                          _pCache;
         ShaderCompileDesc                     _desc;
         string                                _cacheKey;
+        uint64                                _replaceCountAtStart; ///< 넣을 때의 `ShaderCache::_replaceCount` — 그 뒤에 바뀐 항목은 이 로드보다 새것이다
         shared_ptr<const ShaderCompileResult> _pResult;
     };
 
@@ -66,6 +67,7 @@ namespace sw
     {
         /** @brief 이 항목을 만든 컴파일 요청. 수동 리로드가 이것으로 다시 컴파일합니다. */
         ShaderCompileDesc _desc;
+        uint64            _replaceSerial{ 0 }; ///< 재컴파일이 이 항목을 바꾼 번호입니다(`ShaderCache::replaceCompiled`). 로드가 넣은 항목은 0.
         /** @brief 컴파일 결과입니다. 지금도 맞는지는 공급자가 본다(`IShaderBytecodeProvider::isCurrent` — 실행 중 컴파일은 결과의 쿠킹 기록으로). */
         ShaderCompileResult _result;
     };
@@ -130,6 +132,7 @@ namespace sw
          * @brief 지금까지 컴파일한 셰이더들의 요청을 모읍니다.
          * @details **"이 실행에서 실제로 쓰이는 셰이더"의 기준이 여기입니다.** 수동 리로드는 따로 등록 목록을
          *          두지 않고 이것을 씁니다(따로 채우는 목록은 채우는 쪽을 빠뜨리면 리로드 단축키가 빈 목록을 돕니다).
+         *          **컴파일 중인 요청도 든다** — 편집 앞의 소스를 읽은 컴파일이 편집 뒤에 끝나면 옛 바이트코드가 캐시에 남는다. 목록에 들어야 다시 컴파일해 견준다.
          */
         void collectCompiledDescs( vector<ShaderCompileDesc>& outListDesc ) const;
 
@@ -142,6 +145,7 @@ namespace sw
          * @brief 재컴파일(`ShaderRecompiler`)이 새로 낸 바이트코드로 이 요청의 항목 하나만 바꿉니다. 성공한 결과가 아니면 오류를 남기고 false 입니다.
          * @details 캐시를 통째로 비우지 않는다 — 비우면 이번 묶음에서 컴파일이 깨진 셰이더의 마지막 성공 판까지 사라져 다음 요청이 깨진 소스를 다시 컴파일하다 진다.
          *          언리얼은 재컴파일이 실패한 셰이더의 이전 셰이더 맵을 그대로 쓴다 — 같은 규칙이다.
+         *          이 앞에 시작한 로드는 옛 소스를 읽었을 수 있다 — 그 로드는 이 항목을 덮지 않고 이 항목을 답으로 돌려준다.
          */
         [[nodiscard]] bool replaceCompiled( const ShaderCompileDesc& desc, const ShaderCompileResult& result );
         /**
@@ -186,9 +190,7 @@ namespace sw
         /** @brief `request` 와 `getOrCompile` 의 본문입니다. 새 로드를 @p start 대로 시작합니다(`AssetLoadStart`). */
         ShaderHandle requestWith( const ShaderCompileDesc& desc, AssetLoadStart start );
         /** @brief 로드 단계 본문입니다 — 인메모리 캐시 다음, 쿠킹본 정책은 팩의 쿠킹본만, 소스 정책은 컴파일(셰이더 DDC 를 먼저 본다)입니다(이 스레드). */
-        ShaderCompileResult loadOrCompile( const ShaderCompileDesc& desc, const string& cacheKey );
-        /** @brief 인메모리 캐시에 넣습니다. */
-        void storeEntry( string&& cacheKey, const ShaderCompileDesc& desc, const ShaderCompileResult& result );
+        ShaderCompileResult loadOrCompile( const ShaderCompileDesc& desc, const string& cacheKey, uint64 replaceCountAtStart );
         /** @brief 기동 때 고른 공급자입니다. 초기화 전에 부르면 멈춘다. */
         const IShaderBytecodeProvider& getProvider() const;
         /** @brief 진행 중인 로드를 모두 기다립니다(종료 — 워커의 로드가 사라진 캐시에 쓰지 않게). */
@@ -205,6 +207,7 @@ namespace sw
         unordered_map<string, weak_ptr<ShaderLoadOperation>> _mapLoading SW_GUARDED_BY( _mutexCache ); ///< 읽거나 컴파일 중인 로드(같은 요청은 같은 로드 작업). `_mutexCache` 로 지킨다
         mutable mutex                                                    _mutexCache;
         optional<ShaderEnginePolicy> _enginePolicy                       SW_GUARDED_BY( _mutexCache ); ///< 요청에 싣는 엔진 설정 사본(`findEnginePolicy`) — 워커가 설정을 직접 읽지 않게 요청을 받는 자리에서 싣는다
+        uint64 _replaceCount                                             SW_GUARDED_BY( _mutexCache ); ///< `replaceCompiled` 수. 로드가 시작할 때의 값보다 뒤에 바뀐 항목을 가린다
         ShaderRequestLog _requestLog                                     SW_GUARDED_BY( _mutexCache ); ///< 이 실행이 공급자까지 간 요청(백엔드 교체로 메모리 캐시를 비워도 남는다) — `_requestLogPath` 가 있을 때만 모은다
         string                                                           _requestLogPath;              ///< `-shader-request-log` 의 파일. 비면 기록하지 않는다. 기동(`initialize`)에서만 쓰고 로드 워커는 읽기만 한다
         Subscription                                                     _configReloadedSubscription;  ///< 설정 다시 읽기 알림 구독(`onConfigReloaded`)
