@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="utf-8"?>
+<?asset guid="a48f28a8845809bf6b8022b7f5894fcc"?>
+<!--
+  허브(maps/hub — 옛 게임 LanternVale 을 허브 서버로 흡수했다)를 혼자 띄운 클라이언트 — 씬의 허브 규칙(단계표 · 놓을 것 · 경계)이 허브를 세울 수 있고, 세션이 없으니 서버 · 클라이언트 링크를 세우지 않는다.
+  허브 서버 자체(전투 · 채집 · 성장 · 파티 · 저장 후 재접속)는 두 프로세스 시나리오(`py -3 -m Scripts net-pair mmo` — automation/netpair/)와 단위 테스트(`UnitTests.Playground` 의 Hub*)가 본다.
+  실행: App -scenario=game/playground/automation/hubserver_rules.scenario.xml -unattended (체인: ctest -R Scenario.playground)
+-->
+<Scenario name="game.playground.hubserver_rules" fixedDelta="0.0166667" timeoutFrames="600" startAfter="ScenePlaying" startTimeoutFrames="900" input="exclusive">
+	<Launch variable="gv_firstScene" value="game/playground/maps/hub.scene.xml"/>
+	<WaitUntil watch="Hub.RulesValid" equals="1" timeoutFrames="30"/> <!-- 규칙 표를 읽었다 -->
+	<Expect watch="Hub.NetRole" equals="0"/>
+	<Pass/>
+</Scenario>

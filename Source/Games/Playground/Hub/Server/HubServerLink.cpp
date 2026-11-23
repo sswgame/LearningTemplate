@@ -1,6 +1,6 @@
 #include "pch.h"
 
-#include "Games/LanternVale/Server/ValeServerLink.h"
+#include "Games/Playground/Hub/Server/HubServerLink.h"
 
 #include "Core/Network/Connection/NetEndpoint.h"
 #include "Core/Serialization/BitStream.h"
@@ -10,12 +10,12 @@
 
 namespace sw
 {
-    static_assert( ValeEntityType::kAvatar == 1 && ValeEntityType::kHerb == 3, "ValeEntityNetState::_typeID 의 Min · Max 를 엔티티 종류 번호와 맞춘다" );
+    static_assert( HubEntityType::kAvatar == 1 && HubEntityType::kHerb == 3, "HubEntityNetState::_typeID 의 Min · Max 를 엔티티 종류 번호와 맞춘다" );
 
     // ------------------------------------------------------------------------------
-    // ValeServerLink
+    // HubServerLink
     // ------------------------------------------------------------------------------
-    ValeServerLink::ValeServerLink()
+    HubServerLink::HubServerLink()
         : _world{}
         , _profiles{}
         , _netEvents{ *this }
@@ -34,18 +34,18 @@ namespace sw
     {
     }
 
-    ValeServerLink::~ValeServerLink()
+    HubServerLink::~HubServerLink()
     {
         shutdown();
     }
 
-    bool ValeServerLink::initialize( INetPeers& peers, NetMessageRouter& router, const ValeRules& rules, const StreamingCellGridDef& gridDef, ValeServiceStoreSource storeSource )
+    bool HubServerLink::initialize( INetPeers& peers, NetMessageRouter& router, const HubRules& rules, const StreamingCellGridDef& gridDef, HubServiceStoreSource storeSource )
     {
         if ( storeSource.isBound() == false || _world.initialize( rules ) == false )
             return false;
         if ( StreamingCellGrid::tryCreate( gridDef, _grid ) == false )
         {
-            SW_LOG_ERROR_ID( "LanternVale.InterestGridInvalid", "[LanternVale] the interest grid (cell %# m, loading radius %# m) cannot be built", gridDef._cellSize, gridDef._loadingRadius );
+            SW_LOG_ERROR_ID( "Hub.InterestGridInvalid", "[Hub] the interest grid (cell %# m, loading radius %# m) cannot be built", gridDef._cellSize, gridDef._loadingRadius );
             return false;
         }
         if ( _replicator.initialize( &peers, MMOReplicatorConfig{}, _grid ) == false )
@@ -60,7 +60,7 @@ namespace sw
         {
             if ( subscription.isActive() )
                 continue;
-            SW_LOG_ERROR_ID( "LanternVale.ServerRouterTaken", "[LanternVale] a message range of the vale server is already handled - the server link does not start" );
+            SW_LOG_ERROR_ID( "Hub.ServerRouterTaken", "[Hub] a message range of the hub server is already handled - the server link does not start" );
             _listSubscription.clear();
             return false;
         }
@@ -74,11 +74,11 @@ namespace sw
         {
             onConnectionOpened( connectionID );
         }
-        SW_LOG_INFO_ID( "LanternVale.ServerStarted", "[LanternVale] vale server started - %# creatures and herbs", static_cast<uint32>( _world.getPlacements().size() ) );
+        SW_LOG_INFO_ID( "Hub.ServerStarted", "[Hub] hub server started - %# creatures and herbs", static_cast<uint32>( _world.getPlacements().size() ) );
         return true;
     }
 
-    void ValeServerLink::shutdown()
+    void HubServerLink::shutdown()
     {
         if ( _pPeers == nullptr )
             return;
@@ -97,18 +97,18 @@ namespace sw
         _mapPendingAccount.clear();
         _listSubscription.clear();
         // 맡긴 쓰기는 저장소가 끝내고 그 일이 결과를 로그로 남긴다 — 저장소는 온라인 조립의 것이라 여기서 닫지 않는다.
-        _profiles.bindSource( ValeServiceStoreSource{} );
+        _profiles.bindSource( HubServiceStoreSource{} );
         _pPeers = nullptr;
     }
 
-    void ValeServerLink::update( float32 deltaSeconds )
+    void HubServerLink::update( float32 deltaSeconds )
     {
         if ( _pPeers == nullptr )
             return;
         _world.update( deltaSeconds );
         _listLoadScratch.clear();
         _profiles.poll( _listLoadScratch );
-        for ( const ValeProfileLoad& load : _listLoadScratch )
+        for ( const HubProfileLoad& load : _listLoadScratch )
         {
             completeAdmission( load );
         }
@@ -127,7 +127,7 @@ namespace sw
         _replicator.update( deltaSeconds );
     }
 
-    void ValeServerLink::acceptConnection( int32 connectionID, uint64 accountID )
+    void HubServerLink::acceptConnection( int32 connectionID, uint64 accountID )
     {
         // 이미 들였거나 읽는 중인 연결은 다시 들이지 않는다(열림 사건과 핫 리로드의 `collectConnected` 가 겹칠 수 있다).
         const bool bKnownConnection = _mapAgent.find( connectionID ) != _mapAgent.end() || _mapPendingAccount.find( connectionID ) != _mapPendingAccount.end();
@@ -136,16 +136,15 @@ namespace sw
         if ( accountID == 0 )
         {
             ++_stats._refusedCount;
-            SW_LOG_WARNING_ID( "LanternVale.NoAccount", "[LanternVale] connection %# has no account - the vale needs a game connect ticket (server config _bGameConnectTicket); disconnecting it",
-                               connectionID );
-            _pPeers->disconnect( connectionID );
+            // 티켓 서버의 연결에는 늘 주체가 있다. 주체가 없는 것은 티켓을 받지 않는 서버(리슨 호스트 · 개발 세션)의 연결이라 끊지 않는다 — 세션 대상이 없어 허브 행동은 부르지 못한다.
+            SW_LOG_INFO_ID( "Hub.NoAccount", "[Hub] connection %# has no account (no game connect ticket - server config _bGameConnectTicket) - it gets no avatar", connectionID );
             return;
         }
         // 같은 계정이 이미 들어와 있거나 읽는 중이면 앞 연결을 저장하고 끊는다 — 저장이 읽기보다 먼저 맡겨지므로 새 연결은 그 진행을 읽는다.
         int32 previousConnectionID = -1;
         for ( const auto& entry : _mapAgent )
         {
-            const ValeAvatar* pAvatar = _world.findAvatar( entry.second->_avatarID );
+            const HubAvatar* pAvatar = _world.findAvatar( entry.second->_avatarID );
             if ( pAvatar != nullptr && pAvatar->_accountID == accountID )
                 previousConnectionID = entry.first;
         }
@@ -157,7 +156,7 @@ namespace sw
         if ( previousConnectionID >= 0 && previousConnectionID != connectionID )
         {
             ++_stats._replacedCount;
-            SW_LOG_INFO_ID( "LanternVale.SessionReplaced", "[LanternVale] account %# connected again on %# - the session on %# is saved and closed", accountID, connectionID, previousConnectionID );
+            SW_LOG_INFO_ID( "Hub.SessionReplaced", "[Hub] account %# connected again on %# - the session on %# is saved and closed", accountID, connectionID, previousConnectionID );
             releaseAgent( previousConnectionID );
             _mapPendingAccount.erase( previousConnectionID );
             _pPeers->disconnect( previousConnectionID );
@@ -166,7 +165,7 @@ namespace sw
         _profiles.requestLoad( accountID );
     }
 
-    void ValeServerLink::reportAction( ValeAvatarAgent& agent, ValeActionResult result )
+    void HubServerLink::reportAction( HubAvatarAgent& agent, HubActionResult result )
     {
         ++_stats._actionCount;
         (void)_remoteCalls.callSession( agent._connectionID, "receiveActionResult", { ReflectedValue::make( result ) } );
@@ -174,27 +173,27 @@ namespace sw
             sendProgress( agent );
     }
 
-    NetHandleResult ValeServerLink::NetEvents::handleNetMessage( const NetMessageContext& context, BitReader& body )
+    NetHandleResult HubServerLink::NetEvents::handleNetMessage( const NetMessageContext& context, BitReader& body )
     {
         (void)context;
         (void)body;
         return NetHandleResult::NotMine; // 마스크 0 — 사건만 받는다
     }
 
-    void ValeServerLink::onConnectionOpened( int32 connectionID )
+    void HubServerLink::onConnectionOpened( int32 connectionID )
     {
         if ( _pPeers != nullptr )
             acceptConnection( connectionID, _pPeers->getConnectionPrincipal( connectionID ) );
     }
 
-    void ValeServerLink::onConnectionClosed( int32 connectionID, NetDisconnectReason reason )
+    void HubServerLink::onConnectionClosed( int32 connectionID, NetDisconnectReason reason )
     {
         (void)reason;
         _mapPendingAccount.erase( connectionID );
         releaseAgent( connectionID );
     }
 
-    void ValeServerLink::completeAdmission( const ValeProfileLoad& load )
+    void HubServerLink::completeAdmission( const HubProfileLoad& load )
     {
         int32 connectionID = -1;
         for ( const auto& entry : _mapPendingAccount )
@@ -211,15 +210,15 @@ namespace sw
             _pPeers->disconnect( connectionID );
             return;
         }
-        ValeProfile profile = load._profile;
+        HubProfile profile = load._profile;
         if ( load._bFound == SW_FALSE )
             profile._position = _world.getRules()._avatarSpawn; // 새 계정은 나는 자리에서 시작한다
-        unique_ptr<ValeAvatarAgent> pAgent = make_unique<ValeAvatarAgent>();
-        pAgent->_pWorld                    = &_world;
-        pAgent->_onAction                  = SW_DELEGATE_METHOD( decltype( pAgent->_onAction ), &ValeServerLink::reportAction, this );
-        pAgent->_connectionID              = connectionID;
-        pAgent->_avatarID                  = _world.addAvatar( load._accountID, profile );
-        if ( _remoteCalls.registerSessionTarget( connectionID, *ValeAvatarAgent::StaticType(), pAgent.get() ) == false )
+        unique_ptr<HubAvatarAgent> pAgent = make_unique<HubAvatarAgent>();
+        pAgent->_pWorld                   = &_world;
+        pAgent->_onAction                 = SW_DELEGATE_METHOD( decltype( pAgent->_onAction ), &HubServerLink::reportAction, this );
+        pAgent->_connectionID             = connectionID;
+        pAgent->_avatarID                 = _world.addAvatar( load._accountID, profile );
+        if ( _remoteCalls.registerSessionTarget( connectionID, *HubAvatarAgent::StaticType(), pAgent.get() ) == false )
         {
             _world.removeAvatar( pAgent->_avatarID );
             ++_stats._refusedCount;
@@ -228,21 +227,21 @@ namespace sw
         }
         _replicator.setObserver( connectionID, pAgent->_avatarID );
         ++_stats._admittedCount;
-        SW_LOG_INFO_ID( "LanternVale.Admitted", "[LanternVale] account %# entered the vale as avatar %# on connection %# (level %#, %#)", load._accountID, pAgent->_avatarID, connectionID,
+        SW_LOG_INFO_ID( "Hub.Admitted", "[Hub] account %# entered the hub as avatar %# on connection %# (level %#, %#)", load._accountID, pAgent->_avatarID, connectionID,
                         profile._level, load._bFound != SW_FALSE ? "stored progress" : "new account" );
         sendProgress( *pAgent );
         (void)_world.consumeDirtyFlag( pAgent->_avatarID );
         _mapAgent[connectionID] = std::move( pAgent );
     }
 
-    void ValeServerLink::releaseAgent( int32 connectionID )
+    void HubServerLink::releaseAgent( int32 connectionID )
     {
         const auto iter = _mapAgent.find( connectionID );
         if ( iter == _mapAgent.end() )
             return;
         _remoteCalls.unregisterSessionTarget( connectionID );
         _replicator.removeObserver( connectionID );
-        const ValeAvatar* pAvatar = _world.findAvatar( iter->second->_avatarID );
+        const HubAvatar* pAvatar = _world.findAvatar( iter->second->_avatarID );
         if ( pAvatar != nullptr )
         {
             _profiles.requestSave( pAvatar->_accountID, pAvatar->_profile );
@@ -253,52 +252,52 @@ namespace sw
         _mapAgent.erase( iter );
     }
 
-    void ValeServerLink::sendProgress( const ValeAvatarAgent& agent )
+    void HubServerLink::sendProgress( const HubAvatarAgent& agent )
     {
-        const ValeAvatar* pAvatar = _world.findAvatar( agent._avatarID );
+        const HubAvatar* pAvatar = _world.findAvatar( agent._avatarID );
         if ( pAvatar == nullptr )
             return;
-        const ValeProfile& profile = pAvatar->_profile;
+        const HubProfile& profile = pAvatar->_profile;
         (void)_remoteCalls.callSession( agent._connectionID, "receiveProgress",
                                         { ReflectedValue::make( pAvatar->_avatarID ), ReflectedValue::make( profile._level ), ReflectedValue::make( profile._experience ),
                                           ReflectedValue::make( profile._coins ), ReflectedValue::make( profile._herbCount ), ReflectedValue::make( profile._defeatCount ),
                                           ReflectedValue::make( _world.getPartySize( pAvatar->_avatarID ) ), ReflectedValue::make( pAvatar->_inviteFromID ) } );
     }
 
-    void ValeServerLink::saveAll()
+    void HubServerLink::saveAll()
     {
-        _world.forEachAvatar( [this]( const ValeAvatar& avatar )
+        _world.forEachAvatar( [this]( const HubAvatar& avatar )
         {
             _profiles.requestSave( avatar._accountID, avatar._profile );
         } );
     }
 
-    void ValeServerLink::publishEntities()
+    void HubServerLink::publishEntities()
     {
         // 매 틱 모두를 다시 싣지 않는다 — 위치 · 상태 값이 지난번 올린 것과 다른 엔티티만 올린다(가만히 있는 아바타 · 짐승 · 버섯은 건너뛴다).
-        _world.forEachAvatar( [this]( const ValeAvatar& avatar )
+        _world.forEachAvatar( [this]( const HubAvatar& avatar )
         {
-            publishEntity( avatar._avatarID, ValePublishedEntity{ avatar._profile._position, avatar._profile._level, ValeEntityType::kAvatar }, 2.0f ); // 다른 플레이어는 짐승보다 먼저 보인다
+            publishEntity( avatar._avatarID, HubPublishedEntity{ avatar._profile._position, avatar._profile._level, HubEntityType::kAvatar }, 2.0f ); // 다른 플레이어는 짐승보다 먼저 보인다
         } );
-        for ( const ValePlacementState& spawn : _world.getPlacements() )
+        for ( const HubPlacementState& spawn : _world.getPlacements() )
         {
             if ( spawn._bPresent == SW_FALSE )
             {
                 removePublishedEntity( spawn._placementID );
                 continue;
             }
-            const uint32 typeID = spawn._def._kind == ValePlacementKind::Creature ? ValeEntityType::kCreature : ValeEntityType::kHerb;
-            publishEntity( spawn._placementID, ValePublishedEntity{ spawn._def._position, spawn._health, typeID }, 1.0f );
+            const uint32 typeID = spawn._def._kind == HubPlacementKind::Creature ? HubEntityType::kCreature : HubEntityType::kHerb;
+            publishEntity( spawn._placementID, HubPublishedEntity{ spawn._def._position, spawn._health, typeID }, 1.0f );
         }
     }
 
-    void ValeServerLink::publishEntity( uint32 entityID, const ValePublishedEntity& value, float32 importance )
+    void HubServerLink::publishEntity( uint32 entityID, const HubPublishedEntity& value, float32 importance )
     {
         const auto iter = _mapPublished.find( entityID );
         if ( iter != _mapPublished.end() && iter->second == value )
             return;
-        // 상태 바이트는 칸 선언(`ValeEntityNetState`)이 정한다. 위치는 엔티티 칸이 싣는다.
-        ValeEntityNetState state;
+        // 상태 바이트는 칸 선언(`HubEntityNetState`)이 정한다. 위치는 엔티티 칸이 싣는다.
+        HubEntityNetState state;
         state._typeID     = value._typeID;
         state._stateValue = value._stateValue;
         BitWriter writer( std::move( _listStateScratch ) );
@@ -307,7 +306,7 @@ namespace sw
         _listStateScratch   = writer.releaseBytes();
         if ( bWritten == false )
         {
-            SW_LOG_ERROR_ID( "ValeServerLink.EntityStateOutOfRange", "ValeServerLink: entity %# has a state outside the replicated range (type %#) - not published", entityID, value._typeID );
+            SW_LOG_ERROR_ID( "HubServerLink.EntityStateOutOfRange", "HubServerLink: entity %# has a state outside the replicated range (type %#) - not published", entityID, value._typeID );
             return;
         }
         MMOEntity entity;
@@ -321,7 +320,7 @@ namespace sw
         ++_stats._publishCount;
     }
 
-    void ValeServerLink::removePublishedEntity( uint32 entityID )
+    void HubServerLink::removePublishedEntity( uint32 entityID )
     {
         if ( _mapPublished.erase( entityID ) != 0 )
             _replicator.removeEntity( entityID );

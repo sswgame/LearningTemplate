@@ -1,7 +1,7 @@
 /**
- * @file ValeProfileStore.h
- * @brief 서버가 계정마다 진행(`ValeProfile`)을 쓰고 읽는 자리입니다 — 저장소 계약(`ServiceStore`) 위에 계정 id 하나가 레코드 하나(`vale_profile` 표, 키 `a<16자 id>`)입니다.
- * @details - 저장소는 전용 서버의 온라인 조립 저장소다. 맡길 때마다 찾는다(`ValeServiceStoreSource` — 조립은 리로드 · 종료마다 다시 서므로 들고 있지 않는다).
+ * @file HubProfileStore.h
+ * @brief 서버가 계정마다 진행(`HubProfile`)을 쓰고 읽는 자리입니다 — 저장소 계약(`ServiceStore`) 위에 계정 id 하나가 레코드 하나(`vale_profile` 표, 키 `a<16자 id>`)입니다.
+ * @details - 저장소는 전용 서버의 온라인 조립 저장소다. 맡길 때마다 찾는다(`HubServiceStoreSource` — 조립은 리로드 · 종료마다 다시 서므로 들고 있지 않는다).
  *            서버 여럿이 같은 DB 를 쓰면 같은 레코드를 본다 — 쓰기는 읽었거나 마지막으로 쓴 판(`ServiceRecord::_version`)을 조건으로 걸어, 다른 서버가 그새 쓴 진행을 덮지 않는다.
  *          - 계정마다 쓰기는 하나씩만 맡긴다. 쓰는 중에 또 저장하면 가장 새 바이트만 들고 있다가 앞 쓰기가 끝나면 그 판으로 맡긴다(쓰기 합치기). 같은 계정의 읽기는
  *            남은 쓰기가 끝난 뒤에 맡긴다 — 끊긴 접속의 저장 뒤 재접속 읽기가 새 값을 읽는다.
@@ -20,36 +20,36 @@
 
 #include "GameFramework/Runtime/Online/Store/Server/ServiceStore.h"
 
-#include "Games/LanternVale/ValeWorld.h"
+#include "Games/Playground/Hub/HubWorld.h"
 
 namespace sw
 {
     /** @brief 진행 저장소를 찾는 곳입니다. 지금 저장소가 없으면(조립이 서 있지 않다) nullptr 을 돌려준다. */
-    using ValeServiceStoreSource = Delegate<ServiceStore*()>;
+    using HubServiceStoreSource = Delegate<ServiceStore*()>;
 
     /** @brief 끝난 읽기 하나입니다. */
-    struct ValeProfileLoad
+    struct HubProfileLoad
     {
-        ValeProfile _profile{};
-        uint64      _accountID{ 0 };
-        uint8       _bOk{ SW_FALSE };    ///< 읽었거나 새 계정이다. 거짓이면 그 접속을 받지 않는다
-        uint8       _bFound{ SW_FALSE }; ///< 저장된 진행이 있었다(거짓이면 새 계정 — `_profile` 은 기본값)
+        HubProfile _profile{};
+        uint64     _accountID{ 0 };
+        uint8      _bOk{ SW_FALSE };    ///< 읽었거나 새 계정이다. 거짓이면 그 접속을 받지 않는다
+        uint8      _bFound{ SW_FALSE }; ///< 저장된 진행이 있었다(거짓이면 새 계정 — `_profile` 은 기본값)
     };
 
     /**
-     * @class ValeProfileStore
+     * @class HubProfileStore
      * @brief 저장소에 계정 진행 읽기 · 쓰기를 맡기고 끝난 것을 꺼냅니다. 게임 스레드(서버 루프)에서 씁니다. 파일 머리말 참고.
      */
-    class ValeProfileStore final
+    class HubProfileStore final
     {
     public:
-        /** @brief 진행 레코드의 표 이름입니다. */
+        /** @brief 진행 레코드의 표 이름입니다. 저장된 계정 진행의 열쇠라 바꾸지 않는다 — 흡수한 게임 LanternVale 이 쓴 진행을 허브가 이어 읽는다. */
         static constexpr const utf8* kTableName = "vale_profile";
 
-        ValeProfileStore();
+        HubProfileStore();
 
         /** @brief 저장소를 찾는 곳을 겁니다. 빈 것을 걸면 새 일을 맡기지 않습니다(맡긴 일은 저장소가 끝낸다). */
-        void bindSource( ValeServiceStoreSource source ) { _source = std::move( source ); }
+        void bindSource( HubServiceStoreSource source ) { _source = std::move( source ); }
         bool isBound() const { return _source.isBound(); }
 
         /** @brief 계정의 진행 읽기를 맡깁니다. 그 계정의 쓰기가 남았으면 끝난 뒤에 맡깁니다. 저장소가 없으면 받지 않는 읽기 결과가 다음 `poll` 에 나온다. */
@@ -58,11 +58,11 @@ namespace sw
          * @brief 진행을 쓰도록 맡깁니다. 그 계정이 저장소에 있다고 아는 바이트(쓰는 중이면 기다리는 바이트)와 같으면 맡기지 않고 false 입니다.
          * @details 읽은 적이 없는 계정(판을 모른다)은 쓰지 않고 오류를 남긴다 — 조건 없이 쓰면 다른 서버의 진행을 덮는다.
          */
-        bool requestSave( uint64 accountID, const ValeProfile& profile );
+        bool requestSave( uint64 accountID, const HubProfile& profile );
         /** @brief 계정의 세션이 끝났습니다 — 그 계정의 쓰기가 모두 끝나면 기억(바이트 · 판)을 지웁니다(쓰는 중이 아니면 바로). */
         void releaseAccount( uint64 accountID );
         /** @brief 끝난 일을 거둬 끝난 읽기를 @p outListLoad 뒤에 붙입니다. 기다리던 쓰기 · 읽기를 이어 맡깁니다. 쓰기 결과는 일이 로그로 남겼다. */
-        void poll( vector<ValeProfileLoad>& outListLoad );
+        void poll( vector<HubProfileLoad>& outListLoad );
 
         /** @brief 맡긴 뒤 아직 거두지 않은 일 수입니다. */
         int32  getPendingCount() const { return _pendingJobCount; }
@@ -74,10 +74,10 @@ namespace sw
 
         /** @brief 계정 id 의 레코드 키입니다(`a` + 16자 16 진수 — 키 규칙 `[0-9a-z_./-]` 안). */
         static string makeRecordKey( uint64 accountID );
-        /** @brief 레코드 바이트입니다 — 진행의 바이트(`ValeProfile::write` — 판 뒤에 칸) 그대로. 칸이 선언 범위 밖이면 false 이고 @p outBytes 는 비웁니다. */
-        [[nodiscard]] static bool encodeRecord( const ValeProfile& profile, vector<uint8>& outBytes );
+        /** @brief 레코드 바이트입니다 — 진행의 바이트(`HubProfile::write` — 판 뒤에 칸) 그대로. 칸이 선언 범위 밖이면 false 이고 @p outBytes 는 비웁니다. */
+        [[nodiscard]] static bool encodeRecord( const HubProfile& profile, vector<uint8>& outBytes );
         /** @brief 레코드 바이트를 읽습니다. 판 1(손 배치) 레코드도 읽는다. 판을 모르거나 깨졌거나 값이 범위 밖이면 false 입니다. */
-        [[nodiscard]] static bool decodeRecord( const vector<uint8>& bytes, ValeProfile& outProfile );
+        [[nodiscard]] static bool decodeRecord( const vector<uint8>& bytes, HubProfile& outProfile );
 
         /** @brief 일이 결과를 두는 곳입니다(일과 저장소가 함께 든다 — 파일 머리말). */
         struct Completion
@@ -134,7 +134,7 @@ namespace sw
         bool settleAccount( uint64 accountID, AccountState& state );
 
     private:
-        ValeServiceStoreSource              _source;
+        HubServiceStoreSource               _source;
         shared_ptr<Inbox>                   _pInbox;
         unordered_map<uint64, AccountState> _mapAccount;
         vector<Completion>                  _listCompletionScratch;

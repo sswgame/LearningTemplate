@@ -10,7 +10,8 @@
  *          장르 키트 시연(`KitDemo/`)은 씬 하나씩이고 미니게임(`minigames` 의 `.minigame.xml`, `MinigameFlow`)으로 들어간다 — 키트가 범위에 걸 것(액션 룸의 몬스터 정의)은
  *          미니게임이 게임 기능으로 켜고 끈다(`SW_GAME_FEATURE`, 들어갈 때 걸고 나올 때 거둔다).
  *          도시 건설 미니게임(`FrontierTown/` — 키트 둘의 디렉터를 한 씬에 섞는다)의 도시 쪽은 키트, RTS 쪽(일꾼 · 순찰)은 이 게임의 디렉터다.
- *          마을(`maps/hub`)은 팩의 시작 맵이다. 지역 효과 시연 · 마을의 이펙트 · 세트(`data/abilities.xml`)와 기본 어빌리티 클래스는 gamesettings `gameFeatures` 의
+ *          마을(`maps/hub`)은 팩의 시작 맵이다 — 전용 서버가 띄우면 허브 서버(`Hub/` — 계정마다 진행을 저장하는 공유 월드, NetMMO 복제)가 서고, 클라이언트는
+ *          `net.ticketconnect <로그인 주소> <계정> <비밀번호> <서버 이름> <게임 주소>` 로 붙는다(`py -3 -m Scripts net-pair mmo`). 지역 효과 시연 · 마을의 이펙트 · 세트(`data/abilities.xml`)와 기본 어빌리티 클래스는 gamesettings `gameFeatures` 의
  *          게임 기능(`PlaygroundAbilitiesGameFeature.cpp`)이 게임 범위에 건다.
  */
 #include "pch.h"
@@ -19,6 +20,7 @@
 
 #include "Engine/Asset/AssetManager.h"
 #include "Engine/Config/GameConfig.h"
+#include "Engine/Net/NetMessageChannel.h"
 
 #include "GameFramework/Kits/Feature/Content/ModSupport/ModSession.h"
 #include "GameFramework/Runtime/Foundation/Framework/Flow/GameInstance.h"
@@ -27,6 +29,8 @@
 #include "GameFramework/Runtime/Foundation/Framework/GameModeComponent.h"
 #include "GameFramework/Runtime/Foundation/Framework/GameService.h"
 #include "GameFramework/Runtime/Foundation/Framework/Save/GameStateSnapshot.h"
+
+#include "Games/Playground/Hub/HubNetLink.h"
 
 #include "ModuleAPI/Export/GameModuleExports.h"
 
@@ -44,6 +48,8 @@ namespace sw
         /** @brief 클라이언트 부분(벤치)이 자기 장면을 띄웠으면 첫 씬을 열지 않습니다. */
         void startFirstScene() override;
         void onUpdate( float32 deltaTime ) override;
+        /** @brief 허브 엔티티 상태 칸(`HubEntityNetState`)의 복제 스키마를 종류 번호마다 핸드셰이크에 올린다 — 칸이 다른 빌드는 접속에서 갈린다. */
+        [[nodiscard]] bool onRegisterReplicatedTypes( NetMessageChannel& outChannel ) override;
         /** @brief 상태 스냅샷을 만들기 직전에 부릅니다. 벤치는 절차적으로 생성한 오브젝트라서 정리해 스냅샷에 싣지 않습니다. */
         void onBeforeStateSerialize() override;
         /** @brief 상태 복원이 씬을 교체한 뒤에 부릅니다. 벤치는 스냅샷에 없으므로 다시 만듭니다. */
@@ -101,6 +107,13 @@ namespace sw
 
         if ( _clientPart != nullptr )
             _clientPart->update( deltaTime );
+    }
+
+    bool PlaygroundGame::onRegisterReplicatedTypes( NetMessageChannel& outChannel )
+    {
+        return outChannel.registerReplicatedType<HubEntityNetState>( static_cast<uint8>( HubEntityType::kAvatar ) ) &&
+               outChannel.registerReplicatedType<HubEntityNetState>( static_cast<uint8>( HubEntityType::kCreature ) ) &&
+               outChannel.registerReplicatedType<HubEntityNetState>( static_cast<uint8>( HubEntityType::kHerb ) );
     }
 
     void PlaygroundGame::onBeforeStateSerialize()

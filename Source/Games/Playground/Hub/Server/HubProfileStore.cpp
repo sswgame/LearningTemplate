@@ -1,6 +1,6 @@
 #include "pch.h"
 
-#include "Games/LanternVale/Server/ValeProfileStore.h"
+#include "Games/Playground/Hub/Server/HubProfileStore.h"
 
 #include "Core/Log/Logger.h"
 #include "Core/Serialization/BitStream.h"
@@ -12,17 +12,17 @@ namespace sw
 {
     namespace
     {
-        struct ValeProfileStoreInternal
+        struct HubProfileStoreInternal
         {
             static constexpr uint64 kFormat1 = 1; ///< 손 배치 판 — 레코드가 판을 두 번 실었다(저장소 · 진행이 따로 썼다)
 
             /** @brief 판 1 레코드(판 · 판 · 레벨 · 경험 · 동전 · 약초 · 쓰러뜨린 수(가변 정수) · 자리(실수 셋))를 읽습니다. 옛 레코드를 잃지 않게 읽기만 둔다. */
-            [[nodiscard]] static bool decodeFormat1( const vector<uint8>& bytes, ValeProfile& outProfile )
+            [[nodiscard]] static bool decodeFormat1( const vector<uint8>& bytes, HubProfile& outProfile )
             {
                 BitReader reader( bytes.data(), static_cast<int32>( bytes.size() ) );
                 if ( reader.readVarUint() != kFormat1 || reader.readVarUint() != kFormat1 )
                     return false;
-                ValeProfile loaded;
+                HubProfile loaded;
                 loaded._level        = reader.readVarInt32();
                 loaded._experience   = reader.readVarInt32();
                 loaded._coins        = reader.readVarInt32();
@@ -41,7 +41,7 @@ namespace sw
 
             static const hashed_string& getTable()
             {
-                static const hashed_string table{ ValeProfileStore::kTableName };
+                static const hashed_string table{ HubProfileStore::kTableName };
                 return table;
             }
 
@@ -49,7 +49,7 @@ namespace sw
             class ReadJob final : public ServiceStoreJob
             {
             public:
-                ReadJob( shared_ptr<ValeProfileStore::Inbox> pInbox, uint64 accountID )
+                ReadJob( shared_ptr<HubProfileStore::Inbox> pInbox, uint64 accountID )
                     : _pInbox{ std::move( pInbox ) }
                     , _completion{}
                 {
@@ -62,21 +62,21 @@ namespace sw
                 void run( ServiceReadSetConnection& connection ) override
                 {
                     ServiceRecord record;
-                    _completion._result  = connection.readRecord( getTable(), ValeProfileStore::makeRecordKey( _completion._accountID ), record );
+                    _completion._result  = connection.readRecord( getTable(), HubProfileStore::makeRecordKey( _completion._accountID ), record );
                     _completion._bytes   = std::move( record._bytes );
                     _completion._version = record._version;
                 }
 
             private:
-                shared_ptr<ValeProfileStore::Inbox> _pInbox;
-                ValeProfileStore::Completion        _completion;
+                shared_ptr<HubProfileStore::Inbox> _pInbox;
+                HubProfileStore::Completion        _completion;
             };
 
             /** @brief 진행 하나를 판 조건으로 쓰는 일입니다. 결과는 여기서 로그로 남긴다 — 링크가 먼저 내려가도 저장 여부가 남는다. */
             class WriteJob final : public ServiceStoreJob
             {
             public:
-                WriteJob( shared_ptr<ValeProfileStore::Inbox> pInbox, uint64 accountID, vector<uint8> bytes, uint64 expectedVersion )
+                WriteJob( shared_ptr<HubProfileStore::Inbox> pInbox, uint64 accountID, vector<uint8> bytes, uint64 expectedVersion )
                     : _pInbox{ std::move( pInbox ) }
                     , _completion{}
                     , _expectedVersion{ expectedVersion }
@@ -89,9 +89,9 @@ namespace sw
                 void complete() override
                 {
                     if ( _completion._result == ServiceStoreResult::Ok )
-                        SW_LOG_INFO_ID( "LanternVale.ProfileSaved", "[LanternVale] profile of account %# saved", _completion._accountID );
+                        SW_LOG_INFO_ID( "Hub.ProfileSaved", "[Hub] profile of account %# saved", _completion._accountID );
                     else if ( isCancelled() == false ) // 종료 중 취소는 저장소가 내려가는 길이다 — 고장과 가른다
-                        SW_LOG_ERROR_ID( "LanternVale.ProfileSaveFailed", "[LanternVale] profile of account %# was not saved (store result %#)", _completion._accountID,
+                        SW_LOG_ERROR_ID( "Hub.ProfileSaveFailed", "[Hub] profile of account %# was not saved (store result %#)", _completion._accountID,
                                          static_cast<int32>( _completion._result ) );
                     _pInbox->push( std::move( _completion ) );
                 }
@@ -100,21 +100,21 @@ namespace sw
                 void run( ServiceReadSetConnection& connection ) override
                 {
                     ServiceTransaction transaction;
-                    transaction.put( getTable(), ValeProfileStore::makeRecordKey( _completion._accountID ), _completion._bytes, _expectedVersion );
+                    transaction.put( getTable(), HubProfileStore::makeRecordKey( _completion._accountID ), _completion._bytes, _expectedVersion );
                     ServiceCommitInfo info;
                     _completion._result  = connection.commit( transaction, &info );
                     _completion._version = info._commitVersion;
                 }
 
             private:
-                shared_ptr<ValeProfileStore::Inbox> _pInbox;
-                ValeProfileStore::Completion        _completion;
-                uint64                              _expectedVersion;
+                shared_ptr<HubProfileStore::Inbox> _pInbox;
+                HubProfileStore::Completion        _completion;
+                uint64                             _expectedVersion;
             };
         };
     } // namespace
 
-    ValeProfileStore::ValeProfileStore()
+    HubProfileStore::HubProfileStore()
         : _source{}
         , _pInbox{ make_shared<Inbox>() }
         , _mapAccount{}
@@ -125,14 +125,14 @@ namespace sw
     {
     }
 
-    string ValeProfileStore::makeRecordKey( uint64 accountID )
+    string HubProfileStore::makeRecordKey( uint64 accountID )
     {
         string key = "a";
         ServiceKeyUtil::appendHex64( key, accountID );
         return key;
     }
 
-    bool ValeProfileStore::encodeRecord( const ValeProfile& profile, vector<uint8>& outBytes )
+    bool HubProfileStore::encodeRecord( const HubProfile& profile, vector<uint8>& outBytes )
     {
         BitWriter  writer( std::move( outBytes ) );
         const bool bWritten = profile.write( writer );
@@ -142,25 +142,25 @@ namespace sw
         return bWritten;
     }
 
-    bool ValeProfileStore::decodeRecord( const vector<uint8>& bytes, ValeProfile& outProfile )
+    bool HubProfileStore::decodeRecord( const vector<uint8>& bytes, HubProfile& outProfile )
     {
         BitReader probe( bytes.data(), static_cast<int32>( bytes.size() ) );
-        if ( probe.readVarUint() == ValeProfileStoreInternal::kFormat1 )
-            return ValeProfileStoreInternal::decodeFormat1( bytes, outProfile );
+        if ( probe.readVarUint() == HubProfileStoreInternal::kFormat1 )
+            return HubProfileStoreInternal::decodeFormat1( bytes, outProfile );
         BitReader reader( bytes.data(), static_cast<int32>( bytes.size() ) );
         return outProfile.read( reader );
     }
 
-    ServiceStore* ValeProfileStore::findStore( const utf8* pPurpose, uint64 accountID ) const
+    ServiceStore* HubProfileStore::findStore( const utf8* pPurpose, uint64 accountID ) const
     {
         ServiceStore* const pStore = _source.isBound() ? _source() : nullptr;
         if ( pStore == nullptr )
-            SW_LOG_ERROR_ID( "LanternVale.ProfileStoreMissing", "[LanternVale] no profile store for the %# of account %# - the dedicated server's online services (store) are not running", pPurpose,
+            SW_LOG_ERROR_ID( "Hub.ProfileStoreMissing", "[Hub] no profile store for the %# of account %# - the dedicated server's online services (store) are not running", pPurpose,
                              accountID );
         return pStore;
     }
 
-    void ValeProfileStore::requestLoad( uint64 accountID )
+    void HubProfileStore::requestLoad( uint64 accountID )
     {
         AccountState& state = _mapAccount[accountID];
         state._bReleased    = SW_FALSE; // 다시 들어왔다 — 읽기가 기억을 다시 채운다
@@ -172,7 +172,7 @@ namespace sw
         submitRead( accountID );
     }
 
-    void ValeProfileStore::submitRead( uint64 accountID )
+    void HubProfileStore::submitRead( uint64 accountID )
     {
         ++_pendingJobCount;
         ServiceStore* const pStore = findStore( "read", accountID );
@@ -183,21 +183,21 @@ namespace sw
             _pInbox->push( std::move( failed ) ); // 다음 `poll` 이 받지 않는 읽기로 낸다
             return;
         }
-        pStore->submit( make_unique<ValeProfileStoreInternal::ReadJob>( _pInbox, accountID ) );
+        pStore->submit( make_unique<HubProfileStoreInternal::ReadJob>( _pInbox, accountID ) );
     }
 
-    bool ValeProfileStore::requestSave( uint64 accountID, const ValeProfile& profile )
+    bool HubProfileStore::requestSave( uint64 accountID, const HubProfile& profile )
     {
         const auto iter = _mapAccount.find( accountID );
         if ( iter == _mapAccount.end() || iter->second._bKnown == SW_FALSE )
         {
-            SW_LOG_ERROR_ID( "LanternVale.ProfileSaveUnread", "[LanternVale] profile of account %# was not saved - it was never read, so its stored version is unknown", accountID );
+            SW_LOG_ERROR_ID( "Hub.ProfileSaveUnread", "[Hub] profile of account %# was not saved - it was never read, so its stored version is unknown", accountID );
             return false;
         }
         vector<uint8> bytes;
         if ( encodeRecord( profile, bytes ) == false )
         {
-            SW_LOG_ERROR_ID( "LanternVale.ProfileOutOfRange", "[LanternVale] profile of account %# was not saved - a value is outside its declared range (level %#, coins %#)", accountID,
+            SW_LOG_ERROR_ID( "Hub.ProfileOutOfRange", "[Hub] profile of account %# was not saved - a value is outside its declared range (level %#, coins %#)", accountID,
                              profile._level, profile._coins );
             return false;
         }
@@ -220,7 +220,7 @@ namespace sw
         return true;
     }
 
-    void ValeProfileStore::submitWrite( uint64 accountID, AccountState& state, vector<uint8> bytes )
+    void HubProfileStore::submitWrite( uint64 accountID, AccountState& state, vector<uint8> bytes )
     {
         state._bWriting     = SW_TRUE;
         state._writingBytes = bytes;
@@ -234,10 +234,10 @@ namespace sw
             _pInbox->push( std::move( failed ) );
             return;
         }
-        pStore->submit( make_unique<ValeProfileStoreInternal::WriteJob>( _pInbox, accountID, std::move( bytes ), state._version ) );
+        pStore->submit( make_unique<HubProfileStoreInternal::WriteJob>( _pInbox, accountID, std::move( bytes ), state._version ) );
     }
 
-    void ValeProfileStore::releaseAccount( uint64 accountID )
+    void HubProfileStore::releaseAccount( uint64 accountID )
     {
         const auto iter = _mapAccount.find( accountID );
         if ( iter == _mapAccount.end() )
@@ -247,7 +247,7 @@ namespace sw
             _mapAccount.erase( iter );
     }
 
-    bool ValeProfileStore::settleAccount( uint64 accountID, AccountState& state )
+    bool HubProfileStore::settleAccount( uint64 accountID, AccountState& state )
     {
         if ( state._bWriting )
             return false;
@@ -260,7 +260,7 @@ namespace sw
         return state._bReleased == SW_TRUE;
     }
 
-    void ValeProfileStore::poll( vector<ValeProfileLoad>& outListLoad )
+    void HubProfileStore::poll( vector<HubProfileLoad>& outListLoad )
     {
         _listCompletionScratch.clear();
         {
@@ -299,7 +299,7 @@ namespace sw
                     _mapAccount.erase( iter );
                 continue;
             }
-            ValeProfileLoad load;
+            HubProfileLoad load;
             load._accountID = completion._accountID;
             if ( completion._result == ServiceStoreResult::NotFound )
                 load._bOk = SW_TRUE; // 새 계정 — 기본 진행
@@ -316,7 +316,7 @@ namespace sw
                 state._storedBytes  = std::move( completion._bytes );
             }
             if ( load._bOk == SW_FALSE )
-                SW_LOG_ERROR_ID( "LanternVale.ProfileLoadFailed", "[LanternVale] profile of account %# could not be read (store result %#) - the login is refused so the stored progress is not overwritten",
+                SW_LOG_ERROR_ID( "Hub.ProfileLoadFailed", "[Hub] profile of account %# could not be read (store result %#) - the login is refused so the stored progress is not overwritten",
                                  load._accountID, static_cast<int32>( completion._result ) );
             outListLoad.push_back( load );
         }

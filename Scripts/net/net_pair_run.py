@@ -3,7 +3,7 @@
 
   py -3 -m Scripts net-pair run --preset Ninja-Debug      # 서버 · 클라이언트를 띄워 접속이 열리는지 본다
   py -3 -m Scripts net-pair check <서버 로그> <클라이언트 로그>   # 이미 있는 두 로그만 판정한다
-  py -3 -m Scripts net-pair mmo --preset Ninja-Debug      # LanternVale 액션 MMO: 첫 접속 시나리오 → 나감(서버 저장) → 재접속 시나리오(같은 진행)
+  py -3 -m Scripts net-pair mmo --preset Ninja-Debug      # 허브 서버(Playground): 첫 접속 시나리오 → 나감(서버 저장) → 재접속 시나리오(같은 진행)
 
 준비(`run` 이 `Saved/NetPairRun/` 아래에 쓴다): 서버 설정(`NetPair.json` — 게임 포트 · 서비스 포트 · `_bGameConnectTicket`)과 옆 온라인 설정(`NetPair.online.json` —
 계정 키트의 개발용 시드 계정 설정 `_listSeedTestAccount`, 게임 접속 조립 `gameConnect`). 서버는 `-server-config=<경로>` 로 그 설정을 읽는다.
@@ -122,16 +122,16 @@ def _run(argument: argparse.Namespace) -> int:
     return _print(check_logs(server.text(), client.text()), server.log, client.log)
 
 
-# LanternVale 액션 MMO 두 프로세스(T10). 계정 · 서버 이름 · 포트는 클라이언트 시나리오의 `net.ticketconnect` 줄과 같아야 한다(game/lanternvale/automation/netpair/).
-_MMO_GAME = "LanternVale"
-_MMO_ACCOUNT = "vale_netpair"
-_MMO_PASSWORD = "vale_netpair_pw_1"
-_MMO_SERVER_NAME = "lanternvale"
+# Playground 허브 서버 두 프로세스(T10) — 시작 맵이 허브(maps/hub)다. 계정 · 서버 이름 · 포트는 클라이언트 시나리오의 `net.ticketconnect` 줄과 같아야 한다(game/playground/automation/netpair/).
+_MMO_GAME = _GAME
+_MMO_ACCOUNT = "hub_netpair"
+_MMO_PASSWORD = "hub_netpair_pw_1"
+_MMO_SERVER_NAME = "playground_hub"
 _MMO_GAME_PORT = 17877
 _MMO_SERVICE_PORT = 17880
-_MMO_SCENARIOS = ("game/lanternvale/automation/netpair/first.scenario.xml", "game/lanternvale/automation/netpair/return.scenario.xml")
-_MMO_ACCEPTED = re.compile(r"entered the vale as avatar \d+ on connection \d+ \(level (\d+), (new account|stored progress)\)")
-_MMO_SAVED = re.compile(r"\[LanternVale\] profile of account \d+ saved")
+_MMO_SCENARIOS = ("game/playground/automation/netpair/hub_first.scenario.xml", "game/playground/automation/netpair/hub_return.scenario.xml")
+_MMO_ACCEPTED = re.compile(r"entered the hub as avatar \d+ on connection \d+ \(level (\d+), (new account|stored progress)\)")
+_MMO_SAVED = re.compile(r"\[Hub\] profile of account \d+ saved")
 
 
 def check_mmo_logs(server_text: str, list_client_text: list[str]) -> CheckResult:
@@ -184,7 +184,7 @@ def _run_mmo(argument: argparse.Namespace) -> int:
         return group.fail(f"the server exited with code {server.return_code} (log: {server.log})")
     result = check_mmo_logs(server.text(), [client.text() for client in list_client])
     return report("net-pair", result.problems, [server.log, *(client.log for client in list_client)],
-                  "LanternVale login -> combat/gathering -> level 2 -> leave (saved) -> return with the same progress, no errors or warnings")
+                  "hub server login -> combat/gathering -> level 2 -> leave (saved) -> return with the same progress, no errors or warnings")
 
 
 def _print(result: CheckResult, server_log: Path, client_log: Path) -> int:
@@ -196,7 +196,7 @@ def main(list_argument: list[str]) -> int:
     sub = parser.add_subparsers(dest="mode", required=True)
     run_parser = sub.add_parser("run", help="서버와 클라이언트를 띄워 로그인 → 티켓 → 게임 접속을 돈다")
     run_parser.add_argument("--preset", default="Ninja-Debug", help="빌드 프리셋(build/<프리셋>/Bin 의 Server · App 을 쓴다)")
-    mmo_parser = sub.add_parser("mmo", help="LanternVale 서버와 클라이언트 둘(첫 접속 → 재접속)을 차례로 띄워 서버 권위 행동 · 저장 후 재접속을 본다")
+    mmo_parser = sub.add_parser("mmo", help="허브 서버(Playground)와 클라이언트 둘(첫 접속 → 재접속)을 차례로 띄워 서버 권위 행동 · 저장 후 재접속을 본다")
     mmo_parser.add_argument("--preset", default="Ninja-Debug", help="빌드 프리셋(build/<프리셋>/Bin 의 Server · App 을 쓴다)")
     check_parser = sub.add_parser("check", help="이미 있는 서버 · 클라이언트 로그를 판정한다")
     check_parser.add_argument("server_log")
