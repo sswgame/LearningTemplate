@@ -155,3 +155,36 @@ SW_TEST_CASE( ModelImportSectionsTest, UntexturedMultiMaterialGltfStaysOneMesh )
 
     SW_EXPECT_TRUE( FileUtil::removeDirectory( root ) );
 }
+
+/**
+ * @brief [ModelImportSectionsTest] 옆 폴더 아래에 결과를 두는 다른 원본의 결과는 이 모델의 것이 아니다 — 모으기 · 해시에 들지 않고, 이 모델만 다시 임포트해도 지워지지 않는다
+ */
+SW_TEST_CASE( ModelImportSectionsTest, SideFolderKeepsNestedSourceResults )
+{
+    const AbsolutePath root  = test::makeScratchPath( "ModelImportNested" );
+    const auto         write = [&root]( string_view path )
+    { return FileUtil::ensureParentDirectoryExists( root.join( path ) ) && FileUtil::writeTextFile( root.join( path ), path ); };
+    SW_REQUIRE_TRUE( write( "models_raw/hero.glb" ) && write( "models_raw/hero/sword.glb" ) && write( "models_raw/hero/readme.txt" ) );
+    SW_REQUIRE_TRUE( write( "models/hero.mesh" ) && write( "models/hero/hero.animset.xml" ) && write( "models/hero/parts/cape.mesh" ) );
+    SW_REQUIRE_TRUE( write( "models/hero/sword.mesh" ) && write( "models/hero/sword.fracture" ) && write( "models/hero/sword/materials/steel.material" ) );
+
+    const string   heroMesh = root.join( "models/hero.mesh" ).str();
+    vector<string> listSide;
+    ModelImporter::collectSideFiles( heroMesh, listSide );
+    SW_REQUIRE_EQUAL( size_t{ 2 }, listSide.size() );
+    SW_EXPECT_TRUE( listSide[0].find( "hero/hero.animset.xml" ) != string::npos );
+    SW_EXPECT_TRUE( listSide[1].find( "hero/parts/cape.mesh" ) != string::npos );
+
+    const uint64 before = ModelImporter::computeImportedHash( heroMesh );
+    SW_REQUIRE_TRUE( FileUtil::writeTextFile( root.join( "models/hero/sword.mesh" ), "again" ) );
+    SW_EXPECT_EQUAL( before, ModelImporter::computeImportedHash( heroMesh ) );
+
+    SW_EXPECT_TRUE( ModelImporter::clearSideFiles( heroMesh ) );
+    SW_EXPECT_FALSE( FileUtil::exists( root.join( "models/hero/hero.animset.xml" ) ) );
+    SW_EXPECT_FALSE( FileUtil::exists( root.join( "models/hero/parts/cape.mesh" ) ) );
+    SW_EXPECT_TRUE( FileUtil::exists( root.join( "models/hero/sword.mesh" ) ) );
+    SW_EXPECT_TRUE( FileUtil::exists( root.join( "models/hero/sword.fracture" ) ) );
+    SW_EXPECT_TRUE( FileUtil::exists( root.join( "models/hero/sword/materials/steel.material" ) ) );
+
+    SW_EXPECT_TRUE( FileUtil::removeDirectory( root ) );
+}

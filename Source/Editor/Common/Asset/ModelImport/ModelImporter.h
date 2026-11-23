@@ -226,6 +226,13 @@ namespace sw::editor
         static string makeImportedModelPath( string_view rawModelPath );
         /** @brief 임포트된 메시 경로의 옆 폴더를 만듭니다(`<x>/models/<y>.mesh` → `<x>/models/<y>`). 스킨드 모델의 나머지 출력이 이 폴더에 들어갑니다. */
         static string makeImportedSideFolder( string_view importedMeshPath );
+        /**
+         * @brief 옆 폴더의 파일 가운데 이 모델이 쓴 것을 경로 순으로 모읍니다 — 옆 폴더 아래에 결과를 두는 다른 원본(`<y>.glb` 의 `<y>/` 아래 `<y>/z.glb`)의 결과는 뺍니다.
+         * @details 옆 폴더를 통째로 자기 것으로 보면 `<y>.glb` 만 다시 임포트할 때 `z` 의 결과를 지우고, `z` 를 임포트할 때마다 `<y>` 가 어긋난 것으로 보였다.
+         */
+        static void collectSideFiles( string_view importedMeshPath, vector<string>& outListPath );
+        /** @brief 다시 임포트하기 앞서 이 모델이 옆 폴더에 쓴 파일을 지웁니다(규칙에서 빠진 클립 · 사라진 부착 메시가 남지 않게). 못 지우면 오류를 남기고 false 입니다. */
+        [[nodiscard]] static bool clearSideFiles( string_view importedMeshPath );
         /** @brief 원본 경로에서 부가 데이터 경로를 만듭니다(`<y>.glb` → `<y>.clips.json`). */
         static string makeClipDataPath( string_view sourcePath );
 

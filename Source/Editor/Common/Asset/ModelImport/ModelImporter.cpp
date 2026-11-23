@@ -633,6 +633,48 @@ namespace sw::editor
                 return true;
             }
 
+            /** @brief 결과 자리의 비교 열쇠입니다(확장자를 뗀 소문자 경로 — 파일 이름의 대소문자는 OS 가 구분하지 않는다). */
+            static string makeFootprint( string_view path ) { return StringUtil::toLower( FileUtil::normalizeSeparators( FileUtil::removeExtension( path ) ).c_str() ); }
+
+            /** @brief @p importedMeshPath 의 옆 폴더 아래에 결과를 두는 다른 원본들의 자리를 모읍니다(원본 폴더 `<x>/models_raw/<y>/` 의 모델 파일). */
+            static unordered_set<string> collectNestedFootprints( string_view importedMeshPath )
+            {
+                unordered_set<string>                   uniqueFootprint;
+                const string                            sideFolder = FileUtil::normalizeSeparators( FileUtil::removeExtension( importedMeshPath ) );
+                StringBuilder<constant::buffer::kMax64> marker;
+                marker.appendFormat( "/%#/", ModelImportUtil::kImportedModelFolder );
+                const size_t folderAt = sideFolder.rfind( marker.view() );
+                if ( folderAt == string::npos )
+                    return uniqueFootprint;
+                StringBuilder<constant::buffer::kMax512> rawFolder;
+                rawFolder.appendFormat( "%#/%#/%#", string_view( sideFolder ).substr( 0, folderAt ), ModelImportUtil::kRawModelFolder, string_view( sideFolder ).substr( folderAt + marker.size() ) );
+                if ( FileUtil::isDirectory( FileUtil::toDiskPath( rawFolder.view() ) ) == false )
+                    return uniqueFootprint;
+                vector<string> listSource;
+                (void)EditorContentScan::collectFiles( rawFolder.view(), "", listSource, true ); // 도중에 멈춘 목록은 훑기가 알린다
+                for ( const string& source : listSource )
+                {
+                    if ( ModelImportUtil::isSourceModel( source ) )
+                        uniqueFootprint.insert( makeFootprint( ModelImporter::makeImportedModelPath( FileUtil::normalizeSeparators( source ) ) ) );
+                }
+                return uniqueFootprint;
+            }
+
+            /** @brief 결과 파일 @p path 가 @p uniqueFootprint 가운데 한 원본의 것(`.mesh` · `.fracture` · 옆 폴더 안)인지 봅니다. */
+            static bool isInFootprint( const string& path, const unordered_set<string>& uniqueFootprint )
+            {
+                const bool bMeshFile = MeshAssetFormat::isMeshAssetPath( path ) || StringUtil::endsWith( path, FractureAsset::kExtension );
+                if ( bMeshFile && uniqueFootprint.contains( makeFootprint( path ) ) )
+                    return true;
+                const string key = StringUtil::toLower( path.c_str() );
+                for ( size_t slash = key.rfind( '/' ); slash != string::npos && slash > 0; slash = key.rfind( '/', slash - 1 ) )
+                {
+                    if ( uniqueFootprint.contains( key.substr( 0, slash ) ) )
+                        return true;
+                }
+                return false;
+            }
+
             /** @brief 부착 메시를 옆 폴더에 쓰고 부착 표를 만듭니다(모델마다 다르므로 공용 스켈레톤이 아니라 모델 옆 파일에 든다). 쓰기에 실패하면 오류를 남기고 false 입니다. */
             [[nodiscard]] static bool writeAttachments( const AssetPaths& assetPaths, const ModelImportResult& result, const string& sideFolder, vector<SkeletonAttachment>& outListAttachment )
             {
@@ -908,11 +950,8 @@ namespace sw::editor
 
         // 옆 폴더는 임포트할 때마다 새로 쓴다. 규칙에서 빠진 클립과 사라진 부착 메시가 이전 파일로 남지 않게 하기 위해서다.
         const string sideFolder = makeImportedSideFolder( outputPath );
-        if ( FileUtil::removeDirectory( FileUtil::toDiskPath( sideFolder ) ) == false )
-        {
-            SW_LOG_ERROR_ID( "ModelImporter.FailedClearImportedModel", "Failed to clear the imported model folder %#", sideFolder.c_str() );
+        if ( clearSideFiles( outputPath ) == false )
             return false;
-        }
         const optional<AbsolutePath> outputFile = FileUtil::requireAbsolutePath( outputPath );
         if ( outputFile.has_value() == false || MeshAssetFormat::saveToFile( *outputFile, result._mesh ) == false )
         {
@@ -1092,6 +1131,40 @@ namespace sw::editor
         return FileUtil::removeExtension( importedMeshPath );
     }
 
+    void ModelImporter::collectSideFiles( string_view importedMeshPath, vector<string>& outListPath )
+    {
+        outListPath.clear();
+        const string sideFolder = FileUtil::normalizeSeparators( makeImportedSideFolder( importedMeshPath ) );
+        if ( FileUtil::isDirectory( FileUtil::toDiskPath( sideFolder ) ) == false )
+            return;
+        (void)FileUtil::collectFiles( FileUtil::toDiskPath( sideFolder ), "", outListPath, true ); // 폴더는 위에서 확인했다 — 도중에 멈춘 목록은 collectFiles 가 알리고 해시가 달라져 다음 대조가 다시 임포트한다
+        for ( string& path : outListPath )
+        {
+            path = FileUtil::normalizeSeparators( path );
+        }
+        const unordered_set<string> uniqueNested = ModelImporterInternal::collectNestedFootprints( importedMeshPath );
+        if ( uniqueNested.empty() == false )
+        {
+            VectorUtil::removeIf( outListPath, [&uniqueNested]( const string& path )
+            { return ModelImporterInternal::isInFootprint( path, uniqueNested ); } );
+        }
+        VectorUtil::sort( outListPath );
+    }
+
+    bool ModelImporter::clearSideFiles( string_view importedMeshPath )
+    {
+        vector<string> listFile;
+        collectSideFiles( importedMeshPath, listFile );
+        for ( const string& path : listFile )
+        {
+            if ( FileUtil::removeFile( FileUtil::toDiskPath( path ) ) )
+                continue;
+            SW_LOG_ERROR_ID( "ModelImporter.FailedClearImportedModel", "Failed to clear the imported model file %#", path.c_str() );
+            return false;
+        }
+        return true;
+    }
+
     string ModelImporter::makeClipDataPath( string_view sourcePath )
     {
         StringBuilder<constant::buffer::kMax256> pathBuilder;
@@ -1175,15 +1248,12 @@ namespace sw::editor
         const string fracturePath = FractureAsset::makePathForMesh( importedMeshPath );
         if ( FileUtil::isRegularFile( FileUtil::toDiskPath( fracturePath ) ) )
             outListPath.push_back( fracturePath );
-        const string sideFolder = FileUtil::normalizeSeparators( makeImportedSideFolder( importedMeshPath ) );
-        if ( FileUtil::isDirectory( FileUtil::toDiskPath( sideFolder ) ) == false )
-            return;
         vector<string> listFile;
-        (void)FileUtil::collectFiles( FileUtil::toDiskPath( sideFolder ), "", listFile, true ); // 도중에 멈춘 목록은 빠진 파일이 DDC 히트 뒤에 없을 뿐이다 — 해시가 달라 다음 대조가 다시 임포트한다
+        collectSideFiles( importedMeshPath, listFile );
         unordered_set<string> uniqueShared;
         for ( const string& file : listFile )
         {
-            outListPath.push_back( FileUtil::normalizeSeparators( file ) );
+            outListPath.push_back( file );
             string text;
             if ( ImportedAssetStore::isReferrer( file ) && FileUtil::readTextFile( FileUtil::toDiskPath( file ), text ) )
             {
@@ -1211,16 +1281,9 @@ namespace sw::editor
             hash                      = HashUtil::computeStringHash64( reinterpret_cast<const utf8*>( &fractureHash ), sizeof( fractureHash ), false, hash );
         }
         // 옆 폴더의 파일을 이름 순서로 섞는다. 이름도 섞으므로 파일이 사라지거나 바뀌면 다른 값이 된다.
-        const string sideFolder = FileUtil::normalizeSeparators( makeImportedSideFolder( importedMeshPath ) );
-        if ( FileUtil::isDirectory( FileUtil::toDiskPath( sideFolder ) ) == false )
-            return hash;
+        const string   sideFolder = FileUtil::normalizeSeparators( makeImportedSideFolder( importedMeshPath ) );
         vector<string> listFile;
-        (void)FileUtil::collectFiles( FileUtil::toDiskPath( sideFolder ), "", listFile, true ); // 폴더는 위에서 확인했다 — 도중에 멈춘 목록은 collectFiles 가 알리고 해시가 달라져 다시 임포트한다
-        for ( string& file : listFile )
-        {
-            file = FileUtil::normalizeSeparators( file );
-        }
-        VectorUtil::sort( listFile );
+        collectSideFiles( importedMeshPath, listFile );
         for ( const string& file : listFile )
         {
             string relative = file;
