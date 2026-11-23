@@ -11,6 +11,7 @@
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
 #include "Engine/Object/GameObject/GameObjectManagerResolve.inl"
+#include "Engine/Object/GameObject/WorldOrigin.h"
 #include "Engine/Serialization/Format/Archive.h"
 #include "Engine/Serialization/Format/StateIO.h"
 #include "Engine/Visual/Component/MeshComponent.h"
@@ -68,7 +69,7 @@ namespace sw
                 GameObjectManager* pManager = &manager;
                 AbilityEffectSpec  spec     = cargoSpec;
                 HitInfo            hit;
-                hit._point     = event._hit._position;
+                hit._point     = manager.getWorldOrigin().toLocal( event._hit._position );
                 hit._normal    = event._hit._normal;
                 hit._direction = event._projectile.getSpeed() > MathUtil::kEpsilon ? event._projectile._velocity.normalize() : float3{};
                 spec.setHit( hit );
@@ -447,7 +448,7 @@ namespace sw
             (void)pAbilitySystem->setAttributeBaseValue( CombatAttributes::attackPower(), *attackPower * levelScale );
         }
 
-        pMesh->setLocalPosition( request._position );
+        pMesh->setLocalPosition( manager.getWorldOrigin().toLocal( request._position ) );
         const float3 facing = ArenaUnitComponent::flattenDirection( float3{ 0.0f, 0.0f, 0.0f } - request._position, float3{ 0.0f, 0.0f, 1.0f } );
         pUnitComponent->assignGameMode( getOwner()->getHandle(), facing );
 
@@ -659,11 +660,11 @@ namespace sw
         // 이번 프레임의 스냅샷이다. 유닛과 투사체가 뒤 그룹에서 읽으며 틱 전 위치다(틱 안의 쓰기는 틱이 끝난 뒤에 보인다). 이번 프레임 위치가 필요한 쪽은
         // 트랜스폼을 읽는다. 조종자의 판단은 다음 틱 전에(`findUnitPosition`), 카메라는 물리 뒤 단계에서 읽는다.
         _listUnitView.clear();
-        _playerFocus                = float3{ 0.0f, 0.0f, 0.0f };
         _playerObject               = GameObjectHandle{};
         GameObjectManager* pManager = getObjectManager();
         if ( pManager == nullptr )
             return;
+        _playerFocus   = pManager->getWorldOrigin().toLocal( float3{ 0.0f, 0.0f, 0.0f } );
         bool bFocusSet = false;
         for ( const ArenaUnit& unit : _listUnit )
         {
@@ -675,7 +676,7 @@ namespace sw
             ArenaUnitView view;
             view._object      = unit._object;
             view._unitID      = unit._unitID;
-            view._position    = pMesh->getWorldPosition();
+            view._position    = pManager->getWorldOrigin().toAbsolute( pMesh->getWorldPosition() );
             view._kind        = unit._kind;
             view._bAlive      = unit._deathTimer < 0.0f && pAbilitySystem->getOwnedTagCounts().hasMatchingTag( CombatAttributeSet::getDeadTag() ) == false ? SW_TRUE : SW_FALSE;
             view._bPlayerTeam = pAbilitySystem->getOwnedTagCounts().hasMatchingTag( "Team.Player"_tag ) ? SW_TRUE : SW_FALSE;
@@ -683,7 +684,7 @@ namespace sw
             _listUnitView.push_back( view );
             if ( unit._kind == ArenaUnitKind::Player && bFocusSet == false )
             {
-                _playerFocus  = view._position;
+                _playerFocus  = pMesh->getWorldPosition();
                 _playerObject = view._object;
                 bFocusSet     = true;
             }
