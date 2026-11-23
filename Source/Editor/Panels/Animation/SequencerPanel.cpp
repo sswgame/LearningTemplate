@@ -568,6 +568,7 @@ namespace sw::editor
                                                       : nullptr;
         const SequenceItemKindInfo* pSelectedKind = pSelected != nullptr ? SequenceAsset::findItemKindInfo( pSelected->_kind ) : nullptr;
         const bool                  bCutSelected  = pSelectedKind != nullptr && pSelectedKind->_bCutsCamera;
+        const uint32                cutBinding    = bCutSelected ? pSelected->_binding : kSequenceNoBinding; // 아래 지우기가 항목을 없앤다 - 그 뒤에는 항목을 보지 않는다
 
         const utf8* const pDelete = SW_LOCKEY( "EditorSequencer", "DeleteCut" );
         EditorChrome::sameLineIfFits( EditorChrome::measureSmallButton( pDelete ) );
@@ -582,7 +583,7 @@ namespace sw::editor
 
         const utf8* const pCamera = SW_LOCKEY( "EditorSequencer", "CutCamera" );
         EditorChrome::sameLineIfFits( EditorChrome::measureSmallButton( pCamera ) );
-        ImGui::BeginDisabled( bCutSelected == false || pSelected->_binding == _document._selectedBinding || _document._asset.findBinding( _document._selectedBinding ) == nullptr );
+        ImGui::BeginDisabled( bCutSelected == false || cutBinding == _document._selectedBinding || _document._asset.findBinding( _document._selectedBinding ) == nullptr );
         if ( ImGui::Button( pCamera ) && _document.setCutCamera( _document._selectedItem, _document._selectedBinding ) )
         {
             previewCurrentFrame();
