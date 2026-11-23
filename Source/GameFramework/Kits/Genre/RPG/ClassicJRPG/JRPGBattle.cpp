@@ -61,7 +61,7 @@ namespace sw
         _pJudge   = pJudge;
         _settings = settings;
         _random.setSeed( seed );
-        _turnOrder.initialize( TurnOrderMode::Rounds, seed ^ 0x27d4eb2fu );
+        _turnOrder.initialize( TurnOrderMode::Rounds, GameRandom::deriveSeed( seed, 0x27d4eb2fu ) );
     }
 
     bool JRPGBattle::start( JRPGParty* pParty, const vector<hashed_string>& listEnemyID )

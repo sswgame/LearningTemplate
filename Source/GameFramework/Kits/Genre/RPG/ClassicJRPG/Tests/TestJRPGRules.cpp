@@ -1370,3 +1370,13 @@ SW_TEST_CASE_F( JRPGRulesTest, BattleDeterminism )
     };
     SW_EXPECT_TRUE( sw::StateBytesTestUtil::isDeterministic<JRPGBattleRun>( setup, step, 120 ) );
 }
+
+/**
+ * @brief [JRPGTest] 차례 난수의 씨앗이 `시드 ^ 상수` 이면 시드가 그 상수일 때 0(난수의 고정점)이라 단언에 걸린다 — 어느 시드로도 연다
+ */
+SW_TEST_CASE( JRPGTest, SurvivesSeedEqualToMixConstant )
+{
+    sw::JRPGBattle battle;
+    battle.initialize( nullptr, nullptr, sw::JRPGBattleSettings{}, 0x27d4eb2fu );
+    SW_EXPECT_TRUE( battle.getResult() == sw::JRPGBattleResult::Ongoing );
+}
