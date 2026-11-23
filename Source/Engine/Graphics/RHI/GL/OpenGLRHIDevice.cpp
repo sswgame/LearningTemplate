@@ -1088,15 +1088,21 @@ namespace sw
     OpenGLRHISwapChain* OpenGLRHIDevice::useSwapChain( IRHISwapChain* pSwapChain )
     {
         OpenGLRHISwapChain* const pTarget = pSwapChain != nullptr ? static_cast<OpenGLRHISwapChain*>( pSwapChain ) : &_swapChain;
-        if ( pTarget != _pCurrentSwapChain )
-        {
-            if ( _platformContext == nullptr || _platformContext->makeCurrentOnWindowSurface( pTarget->getSurface() ) == false )
-                return nullptr;
-            _pCurrentSwapChain = pTarget;
-        }
+        if ( bindSwapChain( *pTarget ) == false )
+            return nullptr;
         if ( pTarget != &_swapChain )
             (void)_windowSwapChains.markUsedThisFrame( *pTarget );
         return pTarget;
+    }
+
+    bool OpenGLRHIDevice::bindSwapChain( OpenGLRHISwapChain& swapChain )
+    {
+        if ( &swapChain == _pCurrentSwapChain )
+            return true;
+        if ( _platformContext == nullptr || _platformContext->makeCurrentOnWindowSurface( swapChain.getSurface() ) == false )
+            return false;
+        _pCurrentSwapChain = &swapChain;
+        return true;
     }
 
     void OpenGLRHIDevice::beginFrameInternal()
@@ -1106,7 +1112,7 @@ namespace sw
 
         if ( _platformContext != nullptr )
             _platformContext->reacquireForFrame();
-        _pCurrentSwapChain = &_swapChain;
+        (void)bindSwapChain( _swapChain ); // 지난 프레임 끝에 메인 창으로 돌아오지 못했으면 다시 건다(`reacquireForFrame` 은 WGL 만 건다)
 
         // 백버퍼(FBO 0) 바인딩과 클리어는 여기서 하지 않는다. beginFrame 은 프레임 수명주기(GL 은
         // 컨텍스트 확보)만 맡고, 백버퍼를 바인딩하고 클리어하는 것은 RenderThread 가 여는 명시적
@@ -1130,13 +1136,11 @@ namespace sw
         // 이 프레임에 그린 다른 창을 먼저 내보내고 메인 창으로 돌아간다(아래 present 가 메인 창을 다시 건다).
         for ( OpenGLRHISwapChain* pWindow : _windowSwapChains.getFrameList() )
         {
-            if ( bPresent && _platformContext != nullptr && _platformContext->makeCurrentOnWindowSurface( pWindow->getSurface() ) )
+            if ( bPresent && bindSwapChain( *pWindow ) )
                 _platformContext->presentWindowSurface( pWindow->getSurface() );
         }
         _windowSwapChains.clearFrame();
-        if ( _pCurrentSwapChain != &_swapChain && _platformContext != nullptr )
-            (void)_platformContext->makeCurrent(); // 실패는 다음 프레임의 reacquireForFrame 이 다시 본다
-        _pCurrentSwapChain = &_swapChain;
+        (void)bindSwapChain( _swapChain ); // 실패는 다음 프레임 시작이 다시 건다
 
         if ( bPresent == false )
         {

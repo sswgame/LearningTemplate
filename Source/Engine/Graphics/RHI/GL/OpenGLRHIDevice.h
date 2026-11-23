@@ -131,6 +131,11 @@ namespace sw
          * @details 다른 창은 `endFrame` 의 표시 목록에 오른다. 프레임 끝에는 메인 창으로 돌아간다(다음 프레임 · 다른 스레드의 바인딩이 메인 창을 본다).
          */
         OpenGLRHISwapChain* useSwapChain( IRHISwapChain* pSwapChain );
+        /**
+         * @brief @p swapChain 창에 컨텍스트를 걸고 그 창을 걸린 창으로 적습니다(표시 목록에는 올리지 않는다). 이미 걸려 있으면 할 일이 없습니다. 실패하면 false 이고 적지 않습니다.
+         * @details 창을 바꾸는 길은 이것 하나다 — 플랫폼 문맥을 바로 부르면 걸린 창의 기록(`_pCurrentSwapChain`)과 어긋나 다음 프레임의 백버퍼가 다른 창에 그려진다(GLX 는 프레임 시작에 다시 걸지 않는다).
+         */
+        [[nodiscard]] bool bindSwapChain( OpenGLRHISwapChain& swapChain );
 
         /** @brief 프레임을 엽니다(컨텍스트 되찾기, 뷰포트, 타임스탬프 수거). 백버퍼 클리어는 beginRenderPass(`kRHIBackBufferTexture`)가 합니다. */
         void beginFrameInternal() override;
