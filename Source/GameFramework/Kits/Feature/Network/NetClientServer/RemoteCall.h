@@ -141,20 +141,39 @@ namespace sw
         /** @brief 연결의 세션 객체를 가리키는 id 입니다. `registerTarget` 으로는 등록하지 못합니다(서버는 `registerSessionTarget`). */
         static constexpr uint32 kSessionTargetID = 0;
 
-        unordered_map<uint32, Target> _mapTarget{};
+        /** @brief 와이어 번호 하나가 가리키는 함수와 그 검증 짝입니다. */
+        struct RemoteFunction
+        {
+            const FunctionInfo* _pFunction{ nullptr };  ///< 없는 번호면 nullptr
+            const FunctionInfo* _pValidator{ nullptr }; ///< `Validate` 함수의 짝(`validate<이름>`). 아니거나 없으면 nullptr
+        };
+
+        /**
+         * @brief 타입 하나의 와이어 번호 → 함수 색인입니다. 타입마다 한 번 짓고 호출은 해시 조회 하나입니다(언리얼 `FClassNetCache` 와 같은 자리).
+         * @details 반사 타입의 함수 목록은 모듈이 다시 읽히면 바뀌므로 지은 때의 타입 테이블 세대를 적고, 세대가 다르면 다시 짓는다.
+         */
+        struct FunctionTable
+        {
+            unordered_map<uint32, RemoteFunction> _mapFunction{};
+            uint32                                _typeTableGeneration{ 0 };
+            uint32                                _contractGeneration{ 0 }; ///< 원격 호출 계약을 확인한 세대. 같은 타입의 대상이 많아도 세대마다 한 번이다(0 = 아직)
+        };
+
+        unordered_map<uint32, Target>                 _mapTarget{};
+        unordered_map<const TypeInfo*, FunctionTable> _mapFunctionTable{}; ///< 등록했거나 호출을 받은 타입마다 하나
 
         const Target* findTarget( uint32 targetID ) const;
         /**
          * @brief @p type 의 함수 가운데 @p role 의 원격 함수가 원격 호출 계약을 지키는지 봅니다 — 인자는 글 · 수 · bool · 열거형, `Validate` 면 짝 `validate<이름>` 이 bool 을 돌려주고 인자 타입이 같다.
          * @details 어긴 함수마다 오류를 남기고 false 를 반환합니다. 등록이 부른다 — 실행 중에 부를 수 없는 함수를 발견하는 일이 없게.
          */
-        static bool validateRemoteCallContract( const TypeInfo& type, FunctionNetRole role );
+        bool validateRemoteCallContract( const TypeInfo& type, FunctionNetRole role );
         /** @brief 함수의 와이어 번호입니다(이름 해시). */
         static uint32 getFunctionID( const FunctionInfo& function );
-        /** @brief @p type 의 계층에서 와이어 번호가 @p functionID 인 함수를 찾습니다(파생부터). 없으면 nullptr 입니다. */
-        static const FunctionInfo* findFunctionByID( const TypeInfo& type, uint32 functionID );
-        /** @brief @p function 의 검증 짝(`validate<이름>`)을 @p type 의 계층에서 찾습니다. 없으면 nullptr 입니다. */
-        static const FunctionInfo* findValidator( const TypeInfo& type, const FunctionInfo& function );
+        /** @brief @p type 의 계층에서 와이어 번호가 @p functionID 인 함수를 찾습니다(파생이 이긴다). 없으면 빈 값입니다. 값으로 받아 함수 몸이 대상을 더 등록해도 그대로다. */
+        RemoteFunction findFunctionByID( const TypeInfo& type, uint32 functionID );
+        /** @brief @p type 의 지금 세대 색인입니다. 없거나 낡았으면 짓습니다. */
+        FunctionTable& getOrBuildFunctionTable( const TypeInfo& type );
     };
 } // namespace sw
 

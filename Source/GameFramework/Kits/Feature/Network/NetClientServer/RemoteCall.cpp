@@ -12,6 +12,7 @@
 #include "Engine/Reflection/ReflectionInvoke.h"
 #include "Engine/Reflection/ReflectionMetadata.h"
 #include "Engine/Reflection/TypeInfo.h"
+#include "Engine/Reflection/TypeLookupCache.h"
 #include "Engine/Reflection/TypeRegistry.h"
 
 #include "GameFramework/Runtime/Foundation/Framework/GameService.h"
@@ -217,6 +218,16 @@ namespace sw
                 return name.empty() ? nullptr : type.findMethodInHierarchy( name );
             }
 
+            /** @brief @p function 의 검증 짝(`validate<이름>`)을 @p type 의 계층에서 찾습니다. 없으면 nullptr 입니다. */
+            static const FunctionInfo* findValidator( const TypeInfo& type, const FunctionInfo& function )
+            {
+                if ( function._name.empty() )
+                    return nullptr;
+                StringBuilder<constant::buffer::kMax128> validatorName;
+                validatorName.appendFormat( "validate%#%#", StringUtil::toUpperChar( function._name[0] ), function._name.c_str() + 1 );
+                return findFunction( type, validatorName.view() );
+            }
+
             /** @brief 호출 메시지 하나를 씁니다. 함수의 `Reliable` 로 채널을 고르고, 비신뢰가 한 조각(1 KB)을 넘으면 `TooLarge` 입니다. */
             [[nodiscard]] static WriteResult writeCall( NetMessageWriter& messageWriter, uint32 sequence, uint32 targetID, const FunctionInfo& function, const vector<ReflectedValue>& listArg,
                                                         NetChannelKind& outChannel )
@@ -293,30 +304,37 @@ namespace sw
         return function._hashName.getHash();
     }
 
-    const FunctionInfo* RemoteCallTargets::findFunctionByID( const TypeInfo& type, uint32 functionID )
+    RemoteCallTargets::RemoteFunction RemoteCallTargets::findFunctionByID( const TypeInfo& type, uint32 functionID )
     {
+        const FunctionTable& table = getOrBuildFunctionTable( type );
+        const auto           iter  = table._mapFunction.find( functionID );
+        return iter != table._mapFunction.end() ? iter->second : RemoteFunction{};
+    }
+
+    RemoteCallTargets::FunctionTable& RemoteCallTargets::getOrBuildFunctionTable( const TypeInfo& type )
+    {
+        const uint32   generation = getTypeTableGeneration(); // 짓기 앞에서 읽는다 — 짓는 사이 바뀌면 다음 조회가 다시 짓는다
+        FunctionTable& table      = _mapFunctionTable[&type];
+        if ( table._typeTableGeneration == generation )
+            return table;
+        table                      = FunctionTable{};
+        table._typeTableGeneration = generation;
         for ( const TypeInfo* pLevel : type.getTypeChain() )
         {
             for ( const FunctionInfo& function : pLevel->_listMethod )
             {
-                if ( getFunctionID( function ) == functionID )
-                    return &function;
+                const FunctionInfo* pValidator = function._metadata->_bValidate != SW_FALSE ? RemoteCallInternal::findValidator( type, function ) : nullptr;
+                (void)table._mapFunction.emplace( getFunctionID( function ), RemoteFunction{ &function, pValidator } ); // 파생부터라 먼저 들어간 것이 이긴다
             }
         }
-        return nullptr;
-    }
-
-    const FunctionInfo* RemoteCallTargets::findValidator( const TypeInfo& type, const FunctionInfo& function )
-    {
-        if ( function._name.empty() )
-            return nullptr;
-        StringBuilder<constant::buffer::kMax128> validatorName;
-        validatorName.appendFormat( "validate%#%#", StringUtil::toUpperChar( function._name[0] ), function._name.c_str() + 1 );
-        return RemoteCallInternal::findFunction( type, validatorName.view() );
+        return table;
     }
 
     bool RemoteCallTargets::validateRemoteCallContract( const TypeInfo& type, FunctionNetRole role )
     {
+        FunctionTable& table = getOrBuildFunctionTable( type );
+        if ( table._contractGeneration == table._typeTableGeneration )
+            return true;
         bool bValid = true;
         for ( const TypeInfo* pLevel : type.getTypeChain() )
         {
@@ -333,7 +351,8 @@ namespace sw
                     bValid = false;
                 }
                 // 와이어는 이름 해시로 함수를 가리킨다 — 사슬에서 먼저 찾히는 함수가 이 함수(또는 같은 이름의 재정의)가 아니면 번호가 겹친 것이다.
-                const FunctionInfo* pByID = findFunctionByID( type, getFunctionID( function ) );
+                const RemoteFunction byID  = findFunctionByID( type, getFunctionID( function ) );
+                const FunctionInfo*  pByID = byID._pFunction;
                 if ( pByID == nullptr || pByID->_name != function._name )
                 {
                     SW_LOG_ERROR_ID( "RemoteCall.FunctionIDCollision", "Remote function %#::%# has the same wire id (name hash) as %# - rename one of them", type._name.c_str(),
@@ -350,7 +369,7 @@ namespace sw
                 }
                 if ( function._metadata->_bValidate == SW_FALSE )
                     continue;
-                const FunctionInfo* pValidator      = findValidator( type, function );
+                const FunctionInfo* pValidator      = RemoteCallInternal::findValidator( type, function );
                 const bool          bReturnsBool    = pValidator != nullptr && pValidator->_pReturnType != nullptr && pValidator->_pReturnType->_pGetTypeName() == getReflectTypeName<bool>();
                 bool                bSameParameters = pValidator != nullptr && pValidator->_listParameter.size() == function._listParameter.size();
                 for ( size_t index = 0; bSameParameters && index < function._listParameter.size(); ++index )
@@ -364,6 +383,8 @@ namespace sw
                 bValid = false;
             }
         }
+        if ( bValid ) // 어긴 타입은 적지 않는다 — 다시 등록하면 다시 알린다
+            table._contractGeneration = table._typeTableGeneration;
         return bValid;
     }
 
@@ -443,7 +464,7 @@ namespace sw
                              type._name.c_str() );
             return false;
         }
-        if ( RemoteCallTargets::validateRemoteCallContract( type, FunctionNetRole::Server ) == false )
+        if ( _targets.validateRemoteCallContract( type, FunctionNetRole::Server ) == false )
             return false;
         _targets._mapTarget[targetID] = RemoteCallTargets::Target{ &type, pInstance, ownerConnectionID };
         return true;
@@ -462,7 +483,7 @@ namespace sw
                              type._name.c_str() );
             return false;
         }
-        if ( RemoteCallTargets::validateRemoteCallContract( type, FunctionNetRole::Server ) == false )
+        if ( _targets.validateRemoteCallContract( type, FunctionNetRole::Server ) == false )
             return false;
         _mapSession[connectionID] = RemoteCallTargets::Target{ &type, pInstance, connectionID };
         return true;
@@ -539,7 +560,8 @@ namespace sw
             disconnectViolator( context._connectionID, call._functionID, "it does not own the target" );
             return NetHandleResult::Handled;
         }
-        const FunctionInfo* pFunction = RemoteCallTargets::findFunctionByID( *pTarget->_pType, call._functionID );
+        const RemoteCallTargets::RemoteFunction remoteFunction = _targets.findFunctionByID( *pTarget->_pType, call._functionID );
+        const FunctionInfo*                     pFunction      = remoteFunction._pFunction;
         if ( pFunction == nullptr )
         {
             sendRejected( context._connectionID, call._sequence, RemoteCallError::UnknownFunction );
@@ -577,7 +599,7 @@ namespace sw
         if ( pFunction->_metadata->_bValidate != SW_FALSE )
         {
             // 짝은 등록이 확인했다(`validateRemoteCallContract`) — 여기서 없으면 등록 뒤 모듈이 바뀐 것이라 부르지 않는다.
-            const FunctionInfo* pValidator = RemoteCallTargets::findValidator( *pTarget->_pType, *pFunction );
+            const FunctionInfo* pValidator = remoteFunction._pValidator;
             ReflectedValue      validatorResult;
             const bool          bCalled = pValidator != nullptr && ReflectionInvoke::call( *pValidator, pTarget->_pInstance, listArgument, &validatorResult ) == ReflectCallResult::Ok;
             if ( bCalled == false )
@@ -666,7 +688,7 @@ namespace sw
             SW_LOG_ERROR_ID( "RemoteCall.ClientTargetRefused", "Remote call target %# (%#) was not registered - the instance is null or the id is already taken", targetID, type._name.c_str() );
             return false;
         }
-        if ( RemoteCallTargets::validateRemoteCallContract( type, FunctionNetRole::Client ) == false )
+        if ( _targets.validateRemoteCallContract( type, FunctionNetRole::Client ) == false )
             return false;
         _targets._mapTarget[targetID] = RemoteCallTargets::Target{ &type, pInstance, 0 };
         return true;
@@ -709,7 +731,7 @@ namespace sw
         if ( RemoteCallInternal::readHead( body, call ) == false )
             return NetHandleResult::Malformed;
         const RemoteCallTargets::Target* pTarget   = _targets.findTarget( call._targetID );
-        const FunctionInfo*              pFunction = pTarget != nullptr ? RemoteCallTargets::findFunctionByID( *pTarget->_pType, call._functionID ) : nullptr;
+        const FunctionInfo*              pFunction = pTarget != nullptr ? _targets.findFunctionByID( *pTarget->_pType, call._functionID )._pFunction : nullptr;
         if ( pFunction == nullptr || RemoteCallInternal::isRoleReceivedBy( pFunction->_metadata->_netRole, false ) == false )
         {
             // 클라이언트는 서버를 끊지 않는다 — 대상이 이미 사라졌을 수 있다(서버가 먼저 보냈다). 로그만 남긴다.

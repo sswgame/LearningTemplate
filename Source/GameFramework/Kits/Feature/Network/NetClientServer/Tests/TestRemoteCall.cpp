@@ -282,6 +282,31 @@ SW_TEST_CASE( RemoteCallTest, RegistrationChecksTheContract )
     SW_EXPECT_FALSE( server.registerTarget( 3, *RemoteCallTestAvatar::StaticType(), &avatar, 0 ) );
 }
 
+/** @brief [RemoteCallTest] 와이어 번호는 타입마다 한 번 지은 색인으로 찾는다 — 검증 짝이 함께 들고, 타입 테이블 세대가 바뀌면 다시 짓는다. */
+SW_TEST_CASE( RemoteCallTest, FunctionTableIsBuiltOncePerTypeGeneration )
+{
+    RemoteCallTargets targets;
+    const TypeInfo&   type = *RemoteCallTestAvatar::StaticType();
+    SW_REQUIRE_TRUE( targets.validateRemoteCallContract( type, FunctionNetRole::Server ) );
+    SW_REQUIRE_EQUAL( targets._mapFunctionTable.size(), size_t{ 1 } );
+
+    const uint32                            functionID = hashed_string::computeHash( "attackTarget" );
+    const RemoteCallTargets::RemoteFunction attack     = targets.findFunctionByID( type, functionID );
+    SW_REQUIRE_NOT_NULL( attack._pFunction );
+    SW_EXPECT_EQUAL( attack._pFunction, type.findMethodInHierarchy( hashed_string( "attackTarget" ) ) );
+    SW_EXPECT_EQUAL( attack._pValidator, type.findMethodInHierarchy( hashed_string( "validateAttackTarget" ) ) );
+    SW_EXPECT_TRUE( targets.findFunctionByID( type, hashed_string::computeHash( "noSuchRemoteFunction" ) )._pFunction == nullptr );
+
+    // 같은 세대면 지은 색인을 그대로 쓰고(비운 칸이 다시 차지 않는다), 세대가 다르면 다시 짓는다.
+    RemoteCallTargets::FunctionTable& table = targets.getOrBuildFunctionTable( type );
+    SW_EXPECT_EQUAL( table._contractGeneration, table._typeTableGeneration );
+    table._mapFunction.clear();
+    SW_EXPECT_TRUE( targets.findFunctionByID( type, functionID )._pFunction == nullptr );
+    --table._typeTableGeneration;
+    SW_EXPECT_EQUAL( targets.findFunctionByID( type, functionID )._pFunction, attack._pFunction );
+    SW_EXPECT_NOT_EQUAL( table._contractGeneration, table._typeTableGeneration );
+}
+
 /** @brief [RemoteCallTest] 세션 대상(id 0)은 연결마다 하나다 — 클라이언트가 서버 번호를 몰라도 양쪽이 서로 부르고, 연결이 닫히면 지워진다. */
 SW_TEST_CASE( RemoteCallTest, SessionTargetIsPerConnection )
 {
