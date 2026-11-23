@@ -153,7 +153,7 @@
 							</PhysicsShapeDesc3D>
 						</_listShape>
 					</RigidBodyComponent>
-					<CueTriggerComponent _localID="9539312581633076328" _cue="Cue.Scare" _sound="game/playground/sounds/click.ogg" _bOnce="true" _cooldown="1" />
+					<CueTriggerComponent _localID="9539312581633076328" _cue="Cue.Scare" _sound="common/sounds/kenney_interface_sounds/click_002.ogg" _bOnce="true" _cooldown="1" />
 				</_listComponent>
 			</GameObject>
 		</entity>
