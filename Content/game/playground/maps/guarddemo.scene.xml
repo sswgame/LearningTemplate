@@ -1,0 +1,125 @@
+<?asset guid="789f2064e4b4bbfe74e18e50e467a147"?>
+<Scene formatVersion="3" name="GuardDemo">
+	<!-- AI 인지 · 록온 시나리오(automation/perception · lockon)의 무대. Guard(팀 1, 앞은 +Z, 눈 (0.5,0,0.5))가 1 m 격자에서 보고, x 2.5 ~ 8.5 · z 5.5 의 벽 일곱이 시선을 막는다.
+	     Runner · TargetLeft · TargetRight 는 다른 팀(0)의 자극 원천이고 시나리오가 object.place 로 옮긴다. Friend 는 같은 팀이라 늘 무시된다. -->
+	<SceneSettings _bStreaming="false" _unloadMargin="0" _maxCellLoadsPerFrame="0" _addToWorldBudgetMicroseconds="0">
+		<_cellGrid _cellSize="0" _loadingRadius="0" />
+	</SceneSettings>
+	<entities>
+		<entity id="1" name="GameCamera">
+			<GameObject _schemaVersion="0" _name="GameCamera" _bActive="true">
+				<_listComponent>
+					<CameraComponent _localID="17709685451340727998" _localPosition="0.5,14,-14" _localRotation="0.7,0,0" _localScale="1,1,1" _attachOwner="None" _attachComponent="None" _fovY="51.5662" _nearZ="0.05" _farZ="100" _orthoHeight="10" _priority="0" _role="Game" _bOrthographic="false" />
+				</_listComponent>
+			</GameObject>
+		</entity>
+		<entity id="2" name="Sun">
+			<GameObject _schemaVersion="0" _name="Sun" _bActive="true">
+				<_listComponent>
+					<DirectionalLightComponent _localID="51927904365891271" _localPosition="0,0,0" _localRotation="0.356582,-2.338715,0" _localScale="1,1,1" _attachOwner="None" _attachComponent="None" _color="1,1,1" _intensity="1.2" _ambient="0.5" _shadowExtent="8" _shadowDistance="20" _bCastShadow="false" />
+				</_listComponent>
+			</GameObject>
+		</entity>
+		<entity id="3" name="Guard">
+			<GameObject _schemaVersion="0" _name="Guard" _bActive="true">
+				<_listComponent>
+					<SceneComponent _localID="12574257654564749349" _localPosition="0.5,0,0.5" _localRotation="0,0,0" _localScale="1,1,1" _attachOwner="None" _attachComponent="None" />
+					<MeshComponent _localID="163493842152903304" _localPosition="0,0,0" _localRotation="0,0,0" _localScale="0.6,1.6,0.6" _attachOwner="None" _attachComponent="#ae80bcb72e918025" _meshID="Cube" _materialPath="engine/materials/defaultmaterial.material" _boundsRadius="0.866" _gpuSpinSeed="0" _bVisible="true" />
+					<GuardDemoComponent _localID="372360266995641431" _team="1" _wallName="Wall" />
+				</_listComponent>
+			</GameObject>
+		</entity>
+		<entity id="4" name="Runner">
+			<GameObject _schemaVersion="0" _name="Runner" _bActive="true">
+				<_listComponent>
+					<SceneComponent _localID="12574257654564749349" _localPosition="0.5,0,-8.5" _localRotation="0,0,0" _localScale="1,1,1" _attachOwner="None" _attachComponent="None" />
+					<MeshComponent _localID="163493842152903304" _localPosition="0,0,0" _localRotation="0,0,0" _localScale="0.5,0.5,0.5" _attachOwner="None" _attachComponent="#ae80bcb72e918025" _meshID="Cube" _materialPath="engine/materials/defaultmaterial.material" _boundsRadius="0.866" _gpuSpinSeed="0" _bVisible="true" />
+					<AIStimulusSourceComponent _localID="2847006017237846958" _team="0" _bVisible="true" />
+				</_listComponent>
+			</GameObject>
+		</entity>
+		<entity id="5" name="TargetLeft">
+			<GameObject _schemaVersion="0" _name="TargetLeft" _bActive="true">
+				<_listComponent>
+					<SceneComponent _localID="12574257654564749349" _localPosition="-60,0,0" _localRotation="0,0,0" _localScale="1,1,1" _attachOwner="None" _attachComponent="None" />
+					<MeshComponent _localID="163493842152903304" _localPosition="0,0,0" _localRotation="0,0,0" _localScale="0.5,0.5,0.5" _attachOwner="None" _attachComponent="#ae80bcb72e918025" _meshID="Cube" _materialPath="engine/materials/defaultmaterial.material" _boundsRadius="0.866" _gpuSpinSeed="0" _bVisible="true" />
+					<AIStimulusSourceComponent _localID="2847006017237846958" _team="0" _bVisible="true" />
+				</_listComponent>
+			</GameObject>
+		</entity>
+		<entity id="6" name="TargetRight">
+			<GameObject _schemaVersion="0" _name="TargetRight" _bActive="true">
+				<_listComponent>
+					<SceneComponent _localID="12574257654564749349" _localPosition="60,0,0" _localRotation="0,0,0" _localScale="1,1,1" _attachOwner="None" _attachComponent="None" />
+					<MeshComponent _localID="163493842152903304" _localPosition="0,0,0" _localRotation="0,0,0" _localScale="0.5,0.5,0.5" _attachOwner="None" _attachComponent="#ae80bcb72e918025" _meshID="Cube" _materialPath="engine/materials/defaultmaterial.material" _boundsRadius="0.866" _gpuSpinSeed="0" _bVisible="true" />
+					<AIStimulusSourceComponent _localID="2847006017237846958" _team="0" _bVisible="true" />
+				</_listComponent>
+			</GameObject>
+		</entity>
+		<entity id="7" name="Friend">
+			<GameObject _schemaVersion="0" _name="Friend" _bActive="true">
+				<_listComponent>
+					<SceneComponent _localID="12574257654564749349" _localPosition="1.5,0,4.5" _localRotation="0,0,0" _localScale="1,1,1" _attachOwner="None" _attachComponent="None" />
+					<MeshComponent _localID="163493842152903304" _localPosition="0,0,0" _localRotation="0,0,0" _localScale="0.5,0.5,0.5" _attachOwner="None" _attachComponent="#ae80bcb72e918025" _meshID="Cube" _materialPath="engine/materials/defaultmaterial.material" _boundsRadius="0.866" _gpuSpinSeed="0" _bVisible="true" />
+					<AIStimulusSourceComponent _localID="2847006017237846958" _team="1" _bVisible="true" />
+				</_listComponent>
+			</GameObject>
+		</entity>
+		<entity id="8" name="Wall">
+			<GameObject _schemaVersion="0" _name="Wall" _bActive="true">
+				<_listComponent>
+					<SceneComponent _localID="12574257654564749349" _localPosition="2.5,0,5.5" _localRotation="0,0,0" _localScale="1,1,1" _attachOwner="None" _attachComponent="None" />
+					<MeshComponent _localID="163493842152903304" _localPosition="0,0,0" _localRotation="0,0,0" _localScale="1,2,1" _attachOwner="None" _attachComponent="#ae80bcb72e918025" _meshID="Cube" _materialPath="engine/materials/defaultmaterial.material" _boundsRadius="0.866" _gpuSpinSeed="0" _bVisible="true" />
+				</_listComponent>
+			</GameObject>
+		</entity>
+		<entity id="9" name="Wall_2">
+			<GameObject _schemaVersion="0" _name="Wall_2" _bActive="true">
+				<_listComponent>
+					<SceneComponent _localID="12574257654564749349" _localPosition="3.5,0,5.5" _localRotation="0,0,0" _localScale="1,1,1" _attachOwner="None" _attachComponent="None" />
+					<MeshComponent _localID="163493842152903304" _localPosition="0,0,0" _localRotation="0,0,0" _localScale="1,2,1" _attachOwner="None" _attachComponent="#ae80bcb72e918025" _meshID="Cube" _materialPath="engine/materials/defaultmaterial.material" _boundsRadius="0.866" _gpuSpinSeed="0" _bVisible="true" />
+				</_listComponent>
+			</GameObject>
+		</entity>
+		<entity id="10" name="Wall_3">
+			<GameObject _schemaVersion="0" _name="Wall_3" _bActive="true">
+				<_listComponent>
+					<SceneComponent _localID="12574257654564749349" _localPosition="4.5,0,5.5" _localRotation="0,0,0" _localScale="1,1,1" _attachOwner="None" _attachComponent="None" />
+					<MeshComponent _localID="163493842152903304" _localPosition="0,0,0" _localRotation="0,0,0" _localScale="1,2,1" _attachOwner="None" _attachComponent="#ae80bcb72e918025" _meshID="Cube" _materialPath="engine/materials/defaultmaterial.material" _boundsRadius="0.866" _gpuSpinSeed="0" _bVisible="true" />
+				</_listComponent>
+			</GameObject>
+		</entity>
+		<entity id="11" name="Wall_4">
+			<GameObject _schemaVersion="0" _name="Wall_4" _bActive="true">
+				<_listComponent>
+					<SceneComponent _localID="12574257654564749349" _localPosition="5.5,0,5.5" _localRotation="0,0,0" _localScale="1,1,1" _attachOwner="None" _attachComponent="None" />
+					<MeshComponent _localID="163493842152903304" _localPosition="0,0,0" _localRotation="0,0,0" _localScale="1,2,1" _attachOwner="None" _attachComponent="#ae80bcb72e918025" _meshID="Cube" _materialPath="engine/materials/defaultmaterial.material" _boundsRadius="0.866" _gpuSpinSeed="0" _bVisible="true" />
+				</_listComponent>
+			</GameObject>
+		</entity>
+		<entity id="12" name="Wall_5">
+			<GameObject _schemaVersion="0" _name="Wall_5" _bActive="true">
+				<_listComponent>
+					<SceneComponent _localID="12574257654564749349" _localPosition="6.5,0,5.5" _localRotation="0,0,0" _localScale="1,1,1" _attachOwner="None" _attachComponent="None" />
+					<MeshComponent _localID="163493842152903304" _localPosition="0,0,0" _localRotation="0,0,0" _localScale="1,2,1" _attachOwner="None" _attachComponent="#ae80bcb72e918025" _meshID="Cube" _materialPath="engine/materials/defaultmaterial.material" _boundsRadius="0.866" _gpuSpinSeed="0" _bVisible="true" />
+				</_listComponent>
+			</GameObject>
+		</entity>
+		<entity id="13" name="Wall_6">
+			<GameObject _schemaVersion="0" _name="Wall_6" _bActive="true">
+				<_listComponent>
+					<SceneComponent _localID="12574257654564749349" _localPosition="7.5,0,5.5" _localRotation="0,0,0" _localScale="1,1,1" _attachOwner="None" _attachComponent="None" />
+					<MeshComponent _localID="163493842152903304" _localPosition="0,0,0" _localRotation="0,0,0" _localScale="1,2,1" _attachOwner="None" _attachComponent="#ae80bcb72e918025" _meshID="Cube" _materialPath="engine/materials/defaultmaterial.material" _boundsRadius="0.866" _gpuSpinSeed="0" _bVisible="true" />
+				</_listComponent>
+			</GameObject>
+		</entity>
+		<entity id="14" name="Wall_7">
+			<GameObject _schemaVersion="0" _name="Wall_7" _bActive="true">
+				<_listComponent>
+					<SceneComponent _localID="12574257654564749349" _localPosition="8.5,0,5.5" _localRotation="0,0,0" _localScale="1,1,1" _attachOwner="None" _attachComponent="None" />
+					<MeshComponent _localID="163493842152903304" _localPosition="0,0,0" _localRotation="0,0,0" _localScale="1,2,1" _attachOwner="None" _attachComponent="#ae80bcb72e918025" _meshID="Cube" _materialPath="engine/materials/defaultmaterial.material" _boundsRadius="0.866" _gpuSpinSeed="0" _bVisible="true" />
+				</_listComponent>
+			</GameObject>
+		</entity>
+	</entities>
+</Scene>
