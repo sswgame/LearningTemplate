@@ -121,7 +121,9 @@ SW_TEST_CASE( AssetImportStampTest, RemovingASourceKeepsFilesTheImporterDoesNotO
     const AbsolutePath root = test::makeScratchPath( "AssetImportStampHandFile" );
     SW_REQUIRE_TRUE( writeText( FileUtil::joinPath( root.str(), "pack/things_raw/gone.src" ), "a" ) );
     const FakeThingImporter importer;
-    const DerivedDataCache  cache{ vector<DerivedDataLayer>{ DerivedDataLayer{ test::makeScratchPath( "ImportDDC" ), DerivedDataAccess::ReadWrite } } };
+    const DerivedDataCache  cache = DerivedDataCacheTestAccess::make( vector<DerivedDataLayer>{
+        DerivedDataLayer{ test::makeScratchPath( "ImportDDC" ), DerivedDataAccess::ReadWrite }
+    } );
     SW_REQUIRE_TRUE( AssetImportStampUtil::importAll( root.str(), importer, AssetImportMode::ImportStale, nullptr, cache ).isClean() );
     SW_REQUIRE_TRUE( writeText( FileUtil::joinPath( root.str(), "pack/things/gone/hand.txt" ), "hand" ) ); // 커밋한 손 데이터 — 결과가 아니다
 
@@ -165,8 +167,10 @@ SW_TEST_CASE( AssetImportStampTest, StaleSourceIsServedFromCache )
  */
 SW_TEST_CASE( AssetImportStampTest, SourceChangedWhileImportingIsNotRecorded )
 {
-    const DerivedDataCache     cache{ vector<DerivedDataLayer>{ DerivedDataLayer{ test::makeScratchPath( "ImportDDC" ), DerivedDataAccess::ReadWrite } } };
-    const string               root = makeCheckout( "ImportSourceChanged" );
+    const DerivedDataCache     cache = DerivedDataCacheTestAccess::make( vector<DerivedDataLayer>{
+        DerivedDataLayer{ test::makeScratchPath( "ImportDDC" ), DerivedDataAccess::ReadWrite }
+    } );
+    const string               root  = makeCheckout( "ImportSourceChanged" );
     const EditedSourceImporter edited;
     SW_EXPECT_FALSE( AssetImportStampUtil::importAll( root, edited, AssetImportMode::ImportStale, nullptr, cache ).isClean() );
 
@@ -184,8 +188,10 @@ SW_TEST_CASE( AssetImportStampTest, SourceChangedWhileImportingIsNotRecorded )
  */
 SW_TEST_CASE( AssetImportStampTest, SourcesWritingOneResultAreReported )
 {
-    const DerivedDataCache cache{ vector<DerivedDataLayer>{ DerivedDataLayer{ test::makeScratchPath( "ImportDDC" ), DerivedDataAccess::ReadWrite } } };
-    const string           root = makeCheckout( "ImportCollision" );
+    const DerivedDataCache cache = DerivedDataCacheTestAccess::make( vector<DerivedDataLayer>{
+        DerivedDataLayer{ test::makeScratchPath( "ImportDDC" ), DerivedDataAccess::ReadWrite }
+    } );
+    const string           root  = makeCheckout( "ImportCollision" );
     SW_REQUIRE_TRUE( writeText( FileUtil::joinPath( root, "pack/things_raw/a.alt" ), "alt" ) );
     const FakeThingImporter  importer;
     const AssetImportSummary imported = AssetImportStampUtil::importAll( root, importer, AssetImportMode::ImportStale, nullptr, cache );
