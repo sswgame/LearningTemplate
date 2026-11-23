@@ -2012,6 +2012,9 @@
     "ActionPlatformerDemoComponentInternal": "ActionPlatformerGameModeComponentInternal — 키트 셋 가르기: 시연 컴포넌트가 키트 디렉터(Component/*GameModeComponent)가 됐다(2026-11-21)",
     "previewStreamingCells": "StreamingCellPreview::build — 쿠커를 DevTools 로 옮기며 셀 나누기를 엔진 SceneCellSplitter 로 갈랐다(2026-11-24)",
     "splitStreamingCells": "SceneCellSplitter::split — 쿠커를 DevTools 로 옮기며 셀 나누기를 엔진에 남겼다(2026-11-24)",
-    "cookAllPrefabs": "PrefabCooker::cookAll — 프리팹 쿠킹은 DevTools/Cook 이다(2026-11-24)"
+    "cookAllPrefabs": "PrefabCooker::cookAll — 프리팹 쿠킹은 DevTools/Cook 이다(2026-11-24)",
+    "ShaderCookStamp": "CookRecord — 셰이더 최신 판정은 쿠킹 기록 하나다(`ShaderCompiler::findCurrentRecord`)(2026-11-24)",
+    "ShaderCookStampCache": "CookRecord — 셰이더 최신 판정은 쿠킹 기록 하나다(2026-11-24)",
+    "FileWatchDispatcher": "FileWatchService — OS 파일 감시자는 프로세스의 서비스 하나가 나눠 쓴다(2026-11-24)"
   }
 }
