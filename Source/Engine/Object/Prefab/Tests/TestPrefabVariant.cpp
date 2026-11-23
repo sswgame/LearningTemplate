@@ -141,6 +141,30 @@ SW_TEST_CASE( PrefabVariantTest, SaveOmitsDefaultValues )
     SW_EXPECT_EQUAL( before, after );
 }
 
+/** @brief [PrefabVariantTest] JSON 저장도 형식 기본값과 같은 칸을 쓰지 않고, 다시 읽으면 같은 값이다(예전에는 모든 칸을 썼다) */
+SW_TEST_CASE( PrefabVariantTest, JSONSaveOmitsDefaultValues )
+{
+    const test::ScopedScratchDomain domain;
+    SW_REQUIRE_TRUE( FileUtil::writeTextFile( domain.makeDiskPath( "base.prefab.xml" ), Util::makeBase( "1,2,3" ) ) );
+    PrefabAsset asset;
+    SW_REQUIRE_TRUE( asset.loadFromDiskFile( domain.makeDiskPath( "base.prefab.xml" ).str() ) );
+    const AbsolutePath savedPath = domain.makeDiskPath( "saved.prefab.json" );
+    SW_REQUIRE_TRUE( asset.saveToFile( Util::makeAbsolute( savedPath.str() ) ) );
+
+    string savedText;
+    SW_REQUIRE_TRUE( FileUtil::readTextFile( savedPath, savedText ) );
+    SW_EXPECT_TRUE( savedText.find( "\"_localPosition\"" ) != string::npos );
+    SW_EXPECT_TRUE( savedText.find( "\"_bActive\"" ) == string::npos ); // 기본값(켜짐)이다
+
+    PrefabAsset reread;
+    SW_REQUIRE_TRUE( reread.loadFromDiskFile( savedPath.str() ) );
+    string before;
+    string after;
+    SW_REQUIRE_TRUE( PrefabOverrides::makeBaseState( asset, before ) );
+    SW_REQUIRE_TRUE( PrefabOverrides::makeBaseState( reread, after ) );
+    SW_EXPECT_EQUAL( before, after );
+}
+
 /** @brief [PrefabVariantTest] 없는 부모 · 순환 · 없는 대상은 로드 오류다. 본문과 부모를 함께 적은 파일도 오류다 */
 SW_TEST_CASE( PrefabVariantTest, BadVariantsFailToLoad )
 {
