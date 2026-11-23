@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <?asset guid="78f5b7d531117fa25596b595bcd1ae3d"?>
-<!-- FrontierTown 의 도시 데이터(GF_CityBuilder 의 CityCatalog 형식) — 조립 시험이라 최소다. 신전(4 칸)은 첫 틱에 놓는 기념 건물이고 막힌 땅이 된다.
+<!-- 도시 건설 미니게임(minigames/frontiertown)의 도시 데이터(GF_CityBuilder 의 CityCatalog 형식) — 조립 시험이라 최소다. 신전(4 칸)은 첫 틱에 놓는 기념 건물이고 막힌 땅이 된다.
      형식 설명은 game/nilecity/data/city.xml 머리말에 있다. -->
 <CityCatalog roadCost="1">
 	<!-- 규칙(CitySettings) — 모든 칸이 필수다 -->

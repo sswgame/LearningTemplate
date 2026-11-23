@@ -2033,6 +2033,10 @@
     "isChunkDirty": "VoxelChunk::_revision — 낡은 청크는 월드의 깃발이 아니라 판 번호로 알고 뷰가 지은 때의 번호와 견준다(2026-11-24)",
     "clearChunkDirty": "VoxelChunk::_revision — 낡은 청크는 월드의 깃발이 아니라 판 번호로 알고 뷰가 지은 때의 번호와 견준다(2026-11-24)",
     "markChunkDirty": "VoxelWorld::advanceChunkRevision — VoxelChunk::_revision — 낡은 청크는 월드의 깃발이 아니라 판 번호로 알고 뷰가 지은 때의 번호와 견준다(2026-11-24)",
-    "canDrawBlockMeshes": "VoxelAtlasGridGate::canDraw — 청크 그리기는 디렉터가 아니라 클라이언트의 VoxelWorldViewComponent 가 정한다(2026-11-24)"
+    "canDrawBlockMeshes": "VoxelAtlasGridGate::canDraw — 청크 그리기는 디렉터가 아니라 클라이언트의 VoxelWorldViewComponent 가 정한다(2026-11-24)",
+    "FrontierCityGameModeComponent": "CityGameModeComponent — FrontierTown 을 Playground 미니게임으로 흡수하며 도시 디렉터를 CityBuilder 키트로 옮겼다(NEXT 7 절 6 단계)(2026-11-24)",
+    "FrontierTownGame": "PlaygroundGame — 게임 FrontierTown 을 Playground 미니게임 frontiertown 으로 흡수했다(NEXT 7 절 6 단계)(2026-11-24)",
+    "FrontierTownData": "CityGameModeComponent 의 씬 데이터(_landSize · _secondsPerDay · _startHour) — 게임 FrontierTown 을 Playground 미니게임 frontiertown 으로 흡수했다(NEXT 7 절 6 단계)(2026-11-24)",
+    "gv_frontierAutoPlay": "gv_playgroundAutoPlay — 게임 FrontierTown 을 Playground 미니게임 frontiertown 으로 흡수했다(NEXT 7 절 6 단계)(2026-11-24)"
   }
 }

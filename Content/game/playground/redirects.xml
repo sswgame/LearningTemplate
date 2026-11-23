@@ -41,4 +41,9 @@
 	<Redirect from="game/playground/voxelcraft/data/blocks.xml" to="game/playground/data/blocks.xml" />
 	<Redirect from="game/playground/voxelcraft/data/voxel.settings.xml" to="game/playground/data/playground.settings.xml" />
 	<Redirect from="game/playground/voxelcraft/shaders/voxel_blocks.hlsl" to="game/playground/shaders/voxel_blocks.hlsl" />
+	<PrefixRedirect from="game/frontiertown" to="game/playground/frontiertown" />
+	<Redirect from="game/playground/frontiertown/automation/month.scenario.xml" to="game/playground/automation/frontiertown_month.scenario.xml" />
+	<Redirect from="game/playground/frontiertown/automation/autoplayclock.scenario.xml" to="game/playground/automation/frontiertown_autoplayclock.scenario.xml" />
+	<Redirect from="game/playground/frontiertown/automation/slice.scenario.xml" to="game/playground/automation/frontiertown_slice.scenario.xml" />
+	<Redirect from="game/playground/frontiertown/data/frontier.settings.xml" to="game/playground/data/playground.settings.xml" />
 </Redirects>

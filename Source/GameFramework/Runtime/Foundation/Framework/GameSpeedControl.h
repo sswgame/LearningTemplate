@@ -12,7 +12,7 @@ namespace sw
 {
     /**
      * @class GameSpeedControl
-     * @brief 배속(0.25 ~ 8 배, 단계는 2 배)과 일시정지입니다. 게임마다 따로 들던 배속 · 일시정지 코드(Nile · Skirmish 의 같은 코드, FrontierTown 의 시계 배율)를 하나로 모은다(감사 K-10).
+     * @brief 배속(0.25 ~ 8 배, 단계는 2 배)과 일시정지입니다. 게임마다 따로 들던 배속 · 일시정지 코드(Nile · Skirmish 의 같은 코드, 개척 마을의 시계 배율)를 하나로 모은다(감사 K-10).
      * @details 유니티 `Time.timeScale` · 언리얼 `SetGlobalTimeDilation` 과 같은 자리지만 엔진 전역이 아니라 디렉터 하나가 쥔다 — 시뮬레이션만 느려지고 UI · 카메라는 그대로다.
      *          범위 밖 배율은 자르지 않고 거절한다(폴백 금지). 저장은 쓰는 디렉터가 자기 상태 순서대로 `getTimeScale` · `isPaused` 를 싣고 `restore` 로 되돌린다.
      */

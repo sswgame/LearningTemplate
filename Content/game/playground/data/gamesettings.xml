@@ -34,6 +34,8 @@
   <!-- 복셀 광산 미니게임(minigames/voxelcraft) — 달리기 · 시선은 공통, 부수기 · 놓기 · 핫바는 Voxel 레이어(미니게임이 켠다) -->
   <inputMap path="common/input/look.input.xml"/>
   <inputMap path="game/playground/voxelcraft/data/voxel.input.xml"/>
+  <!-- 도시 건설 미니게임(minigames/frontiertown)의 빨리 감기 — 제 레이어(FastForward)라 시연 점프 · 말 걸기의 Space 와 겹치지 않는다. -->
+  <inputMap path="common/input/fastforward.input.xml"/>
   <localizationProject>game/playground/data/localization/playground.locproject.xml</localizationProject>
   <loadingScreen>engine/ui/loading.ui.xml</loadingScreen>
   <!-- 시네마틱 시퀀스의 소리 구간 · 허브 농장의 도구가 내는 이벤트 -->
