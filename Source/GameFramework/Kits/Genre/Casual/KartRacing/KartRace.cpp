@@ -373,13 +373,17 @@ namespace sw
         // 문: 다음 체크포인트(앞), 지난 체크포인트(뒤), 결승선 순서로 확인한다.
         const int32 checkpointCount = _pTrack->getCheckpointCount();
         // 한 걸음에 여러 문을 지날 수 있다(가까이 놓인 문, 같은 자리의 문). 하나만 세면 뒤의 문은 다시 지날 길이 없어 그 바퀴를 끝낼 수 없다.
-        bool bPassedForward = false;
-        while ( kart._nextCheckpoint < checkpointCount && _pTrack->computeGateCrossing( kart._nextCheckpoint + 1, kart._previousPosition, position ) > 0 )
+        bool       bPassedForward  = false;
+        const auto passCheckpoints = [&]()
         {
-            ++kart._nextCheckpoint;
-            bPassedForward = true;
-            pushEvent( KartRaceEvent::Kind::CheckpointPassed, racer, nullopt, kart._nextCheckpoint, _raceTime );
-        }
+            while ( kart._nextCheckpoint < checkpointCount && _pTrack->computeGateCrossing( kart._nextCheckpoint + 1, kart._previousPosition, position ) > 0 )
+            {
+                ++kart._nextCheckpoint;
+                bPassedForward = true;
+                pushEvent( KartRaceEvent::Kind::CheckpointPassed, racer, nullopt, kart._nextCheckpoint, _raceTime );
+            }
+        };
+        passCheckpoints();
         while ( bPassedForward == false && kart._nextCheckpoint > 0 && _pTrack->computeGateCrossing( kart._nextCheckpoint, kart._previousPosition, position ) < 0 )
         {
             --kart._nextCheckpoint;
@@ -389,7 +393,10 @@ namespace sw
         if ( finishCrossing > 0 )
         {
             if ( kart._nextCheckpoint >= checkpointCount )
+            {
                 completeLap( racer );
+                passCheckpoints(); // 결승선 바로 뒤의 문도 같은 걸음에 지난다
+            }
             else
                 pushEvent( KartRaceEvent::Kind::CheckpointMissed, racer, nullopt, kart._nextCheckpoint, _raceTime );
         }

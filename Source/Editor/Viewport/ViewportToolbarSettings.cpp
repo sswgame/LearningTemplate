@@ -234,7 +234,7 @@ namespace sw::editor
             {
                 const ViewportToolbarState::BookmarkRow& bookmark = state._arrBookmark[slot];
                 fixed_string<constant::buffer::kMax64>   arrLabel;
-                formatstring( arrLabel.data(), arrLabel.capacity(), "Slot %u: %s", slot + 1, bookmark._bValid ? bookmark._name.c_str() : "<Empty>" );
+                formatstring( arrLabel.data(), arrLabel.capacity(), "Slot %#: %#", slot + 1, bookmark._bValid ? bookmark._name.c_str() : "<Empty>" );
                 if ( ImGui::Selectable( arrLabel.c_str(), false ) && bookmark._bValid )
                     settings._requestedBookmarkSlot = static_cast<uint32>( slot );
                 if ( ImGui::IsItemHovered() && bookmark._bValid )

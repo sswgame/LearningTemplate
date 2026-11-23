@@ -316,3 +316,57 @@ SW_TEST_CASE( PrefabSpawnTemplateTest, PartOverrideFollowsNodeWhenAnEarlierNodeI
     SW_REQUIRE_NOT_NULL( pWheelB );
     SW_EXPECT_TRUE( Util::saveState( pWheelB ).find( "_localPosition=\"7,7,7\"" ) != string::npos );
 }
+
+/**
+ * @brief [PrefabSpawnTemplateTest] 씬에 놓은 인스턴스의 부품이 쥔 바깥 오브젝트의 핸들은 파일 id 로 적히고, 씬 배치로 다시 스폰하면 그 오브젝트로 이어진다 — 표가 없으면(프리팹) 적지 않는다
+ * @details 예전에는 부품의 바깥 핸들을 늘 빈 값으로 적어 저장할 때마다 조용히 사라졌다.
+ */
+SW_TEST_CASE( PrefabSpawnTemplateTest, PartOverrideKeepsHandleToSceneObject )
+{
+    constexpr uint64                kTargetFileID = 77;
+    constexpr uint64                kIDScope      = 0x5a00000000000000ull;
+    const test::ScopedScratchDomain domain;
+    const string                    wheelID = test::ScopedScratchDomain::makeID( "wheel.prefab.xml" ).str();
+    SW_REQUIRE_TRUE( FileUtil::writeTextFile( domain.makeDiskPath( "wheel.prefab.xml" ),
+                                              "<Prefab formatVersion=\"0\" name=\"Wheel\"><GameObject _schemaVersion=\"0\" _name=\"Wheel\" _bActive=\"true\"><_listComponent>"
+                                              "<SceneComponent _localID=\"1\" /><HandleHolderTestComponent _localID=\"2\" /></_listComponent></GameObject></Prefab>" ) );
+    StringBuilder<constant::buffer::kMax256> wheelNode;
+    wheelNode.appendFormat( "<PrefabInstance name=\"Wheel\" prefab=\"%#\" localID=\"#0000000000000001\" />", wheelID );
+    SW_REQUIRE_TRUE( FileUtil::writeTextFile( domain.makeDiskPath( "cart.prefab.xml" ), Util::makePrefab( "Cart", "1,2,3", wheelNode.view() ) ) );
+    const string                        cartID = test::ScopedScratchDomain::makeID( "cart.prefab.xml" ).str();
+    PrefabCache                         cache;
+    const shared_ptr<const PrefabAsset> pCart = cache.loadPrefab( cartID );
+    SW_REQUIRE_NOT_NULL( pCart.get() );
+
+    GameObjectManager          authored;
+    GameObject*                pTargetObject = authored.createGameObject( hashed_string( "Target" ) );
+    HandleTargetTestComponent* pTarget       = pTargetObject->addComponent<HandleTargetTestComponent>();
+    GameObject*                pRoot         = cache.spawn( &authored, cartID );
+    SW_REQUIRE_NOT_NULL( pRoot );
+    GameObject* pWheel = authored.findGameObjectByName( hashed_string( "Wheel" ) );
+    SW_REQUIRE_TRUE( pWheel != nullptr && pWheel->getComponent<HandleHolderTestComponent>() != nullptr );
+    pWheel->getComponent<HandleHolderTestComponent>()->_target = TComponentHandle<HandleTargetTestComponent>{ pTarget };
+
+    vector<PrefabPartOverride> listPart;
+    SW_REQUIRE_TRUE( cache.collectPartOverrides( *pRoot, *pCart, nullptr, listPart ) );
+    SW_EXPECT_TRUE( listPart.empty() ); // 프리팹에는 바깥이 없다
+    ObjectSavedIDMap mapSavedID;
+    mapSavedID.emplace( pTargetObject->getObjectID(), kTargetFileID ^ kIDScope );
+    SW_REQUIRE_TRUE( cache.collectPartOverrides( *pRoot, *pCart, &mapSavedID, listPart ) );
+    SW_REQUIRE_EQUAL( size_t{ 1 }, listPart.size() );
+
+    // 다시 열기: 대상은 같은 상태(같은 컴포넌트 지역 id)로 다른 매니저에 서고 배치가 파일 id 로 안다.
+    GameObjectManager opened;
+    GameObject*       pOpenedTarget = opened.createGameObject( hashed_string( "Target" ) );
+    SW_REQUIRE_TRUE( ObjectStateSerializer::loadFromXMLString( pOpenedTarget, Util::saveState( pTargetObject ), ObjectLoadContext{ SerializePurpose::Authoring } ) );
+    ObjectStateBatch batch( ObjectIDSpace::Saved );
+    batch.addReferenceTarget( pOpenedTarget, kTargetFileID, hashed_string( "Target" ) );
+    SW_REQUIRE_TRUE( batch.finish() );
+    GameObject* pOpenedRoot = opened.createGameObject( hashed_string( "Cart" ) );
+    SW_REQUIRE_NOT_NULL( pOpenedRoot->addComponent<SceneComponent>() );
+    SW_EXPECT_EQUAL( 1u, cache.spawnNestedInstances( pOpenedRoot, *pCart, listPart, &batch, kIDScope ) );
+    const GameObject* pOpenedWheel = opened.findGameObjectByName( hashed_string( "Wheel" ) );
+    SW_REQUIRE_TRUE( pOpenedWheel != nullptr && pOpenedWheel->getComponent<HandleHolderTestComponent>() != nullptr );
+    SW_EXPECT_TRUE( opened.resolveComponent( pOpenedWheel->getComponent<HandleHolderTestComponent>()->_target ) == pOpenedTarget->getComponent<HandleTargetTestComponent>() );
+    SW_EXPECT_TRUE( pOpenedWheel->getParent() == pOpenedRoot );
+}

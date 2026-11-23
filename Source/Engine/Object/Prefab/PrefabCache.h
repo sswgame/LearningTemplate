@@ -21,6 +21,11 @@
 
 namespace sw
 {
+    class ObjectStateBatch;
+} // namespace sw
+
+namespace sw
+{
     /**
      * @class PrefabLoadOperation
      * @brief 프리팹 로드 하나의 공유 상태입니다. 로드 단계에서 파일을 읽고 중첩 원본을 확인해 캐시에 넣습니다(완료 단계 없음).
@@ -96,18 +101,21 @@ namespace sw
          *          구조 변경이 막힌 틱 안에서는 부르지 않는다(`spawn` 은 틱 뒤로 미룬 자리에서 부른다).
          *          노드 오버라이드 안의 `<Part>` 는 그 노드 아래 부품에, @p listPartOverride 는 @p pRoot 아래 부품에 얹는다 — 바깥 것이 나중에 얹혀 이긴다.
          * @param listPartOverride 인스턴스가 부품에 덮어쓴 것(씬 엔티티의 `<Part>`, `PrefabOverrides::collectPartOverrides`)입니다. 스폰한 부품에 닿지 않은 항목은 경고합니다.
+         * @param pOwnerBatch 부품에 덮어쓴 것이 가리키는 다른 오브젝트를 저장된 id 로 찾을 배치(@p pRoot 를 읽은 씬 로드)입니다. 없으면 바깥 참조가 없는 스폰이다(nullptr).
+         * @param savedIDScope 덮어쓴 것의 참조 id 에 XOR 하는 값입니다(`SceneObjectNode::_idScope`). @p pOwnerBatch 가 있을 때만 뜻이 있다.
          * @return 만든 오브젝트 수입니다.
          */
-        uint32 spawnNestedInstances( GameObject* pRoot, const PrefabAsset& asset, const vector<PrefabPartOverride>& listPartOverride );
+        uint32 spawnNestedInstances( GameObject* pRoot, const PrefabAsset& asset, const vector<PrefabPartOverride>& listPartOverride, const ObjectStateBatch* pOwnerBatch, uint64 savedIDScope );
         /**
          * @brief @p root(@p asset 의 인스턴스 루트) 아래 부품 가운데 스폰한 그대로가 아닌 것의 덮어쓴 것을 모읍니다(비우고 채웁니다, 경로 순서는 스폰 순서).
          * @details 기준은 같은 프리팹을 씬 밖 임시 매니저에 덮어쓴 것 없이 스폰한 부품이다 — 노드 오버라이드 · 안쪽 `<Part>` 까지 스폰과 같은 식이라
          *          고치지 않은 부품은 적히지 않는다. 씬 저장(인스턴스 엔티티의 `<Part>`)과 Apply to Prefab(바깥 프리팹 노드의 `<Part>`)이 쓴다.
          *          옮긴 부품(`isAttachedNestedPart` 가 false)과 부품 키가 없는 부품(에디터가 프리팹을 만들며 들인 것)은 적지 않는다.
          *          구조 변경이 막힌 순회(`forEachGameObject`) 안에서는 부르지 않는다 — 임시 매니저에 오브젝트를 만든다.
+         * @param pSavedIDMap 부품이 가리키는 다른 오브젝트를 이 표의 id 로 적습니다(씬 저장 — 부품의 핸들을 씬 오브젝트로 이은 것). 없으면 바깥 참조를 적지 않습니다(프리팹 — 바깥이 없다).
          * @return 기준 스폰이나 비교에 실패하면 false 입니다.
          */
-        [[nodiscard]] bool collectPartOverrides( const GameObject& root, const PrefabAsset& asset, vector<PrefabPartOverride>& outListPartOverride );
+        [[nodiscard]] bool collectPartOverrides( const GameObject& root, const PrefabAsset& asset, const unordered_map<uint64, uint64>* pSavedIDMap, vector<PrefabPartOverride>& outListPartOverride );
         /**
          * @brief @p inoutAsset 의 중첩 인스턴스를 쿠킹본 형식으로 펼칩니다 — 노드마다 원본에 오버라이드를 얹은 최종 상태를 싣고, 원본의 중첩 인스턴스를 뒤 노드로 덧붙입니다.
          * @details 쿠킹은 펼친다. 로드 시간 기준이다 — 참조를 남기면 배포본이 스폰할 때마다 원본 프리팹을 하나씩 열고 원형 상태를 만들어 오버라이드를
@@ -183,7 +191,7 @@ namespace sw
          * @param inoutListSpawnedPath 스폰한 부품의 경로를 끝에 더합니다(닿지 않은 `<Part>` 를 알리는 데 씁니다).
          */
         uint32 spawnNestedInstancesUnder( GameObject* pRoot, const PrefabAsset& asset, string_view rootPath, const vector<PrefabPartOverride>& listPartOverride,
-                                          vector<string>& inoutListSpawnedPath );
+                                          const ObjectStateBatch* pOwnerBatch, uint64 savedIDScope, vector<string>& inoutListSpawnedPath );
 
     private:
         mutable shared_mutex                                             _mapCacheMutex;

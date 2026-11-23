@@ -93,7 +93,8 @@ namespace sw
     {
         _random.setSeed( _seed );
         _builtinModel.reset();
-        _spawnDirector.initialize( _pSpawnTable, _seed ^ AIDirectorInternal::kSpawnSeedSalt );
+        const uint32 spawnSeed = _seed ^ AIDirectorInternal::kSpawnSeedSalt;
+        _spawnDirector.initialize( _pSpawnTable, spawnSeed != 0 ? spawnSeed : GameRandom::kDefaultSeed ); // 시드가 소금값이면 0(난수의 고정점)이 된다. 나온 스폰 수열을 지키려고 deriveSeed 로 바꾸지 않는다
         _eventBuffer.clear();
         _listTrace.clear();
         _time       = 0.0f;

@@ -60,6 +60,8 @@ namespace sw
         /** @brief 탄이 끝난 자리(마지막 명중 뒤의 벽 · 사거리 끝)입니다. */
         void finish( const float3& end );
 
+        /** @brief 기록한 자리를 모두 @p delta 만큼 옮깁니다(월드 원점 이동). */
+        void                      applyWorldOffset( const float3& delta );
         const float3&             getOrigin() const { return _origin; }
         const float3&             getDirection() const { return _direction; }
         const float3&             getEnd() const { return _end; }

@@ -365,4 +365,10 @@ namespace sw
             return { iterator( this, slot.first ), slot.second };
         }
     };
+
+    /** @brief 버킷 · 밀집 배열(`vector` 둘)과 함수 객체뿐이다. */
+    template <typename Key, typename T, typename Hash, typename KeyEqual, typename Allocator>
+    struct is_bitwise_relocatable<unordered_map<Key, T, Hash, KeyEqual, Allocator>> : std::bool_constant<std::is_empty_v<Hash> && std::is_empty_v<KeyEqual>>
+    {
+    };
 } // namespace sw

@@ -32,6 +32,7 @@
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
 #include "Engine/Object/GameObject/Service/SceneServiceRegistry.h"
+#include "Engine/Object/GameObject/WorldOrigin.h"
 #include "Engine/Physics/PhysicsDebugDraw.h"
 #include "Engine/Profiling/FrameProfiler.h"
 #include "Engine/Scene/Scene.h"
@@ -108,6 +109,33 @@ namespace sw
         _listRuntime.clear();
         _tileRebaker.clear();
         _listAreaCostOverride.clear(); // 지역 프로필이 정한 비용은 그 씬의 것이다
+    }
+
+    void SceneNavigation::onWorldOriginShifted( const float3& delta )
+    {
+        for ( NavMeshAgentComponent* pAgent : _listAgent )
+        {
+            pAgent->shiftOrigin( delta );
+        }
+        for ( NavMeshLinkComponent* pLink : _listLink )
+        {
+            if ( pLink->_reportedBounds.isValid() )
+                pLink->_reportedBounds = AABB{ pLink->_reportedBounds._min + delta, pLink->_reportedBounds._max + delta };
+        }
+    }
+
+    void SceneNavigation::makePathLocal( NavPath& inoutPath ) const
+    {
+        const WorldOrigin& origin = _pManager->getWorldOrigin();
+        if ( origin.isZero() )
+            return;
+        for ( vector<float3>* pListPoint : { &inoutPath._listPoint, &inoutPath._listCoarsePoint } )
+        {
+            for ( float3& point : *pListPoint )
+            {
+                point = origin.toLocal( point );
+            }
+        }
     }
 
     void SceneNavigation::setSettings( const NavMeshSettings& settings )
@@ -266,7 +294,7 @@ namespace sw
 
     void SceneNavigation::invalidateArea( const AABB& bounds, bool bGeometryChanged )
     {
-        _tileRebaker.invalidateArea( bounds, bGeometryChanged );
+        _tileRebaker.invalidateArea( _pManager->getWorldOrigin().toAbsolute( bounds ), bGeometryChanged );
     }
 
     const NavAgentTypeDef* SceneNavigation::resolveAgentType( const hashed_string& agentType )
@@ -640,7 +668,7 @@ namespace sw
             outPath = NavPath{};
             return NavPathStatus::Failed;
         }
-        return pRuntime->_pNavMesh->findPath( start, end, pRuntime->_searchExtent, pRuntime->_filter, outPath );
+        return findPath( agentType, start, end, pRuntime->_filter, outPath );
     }
 
     NavPathStatus SceneNavigation::findPath( const hashed_string& agentType, const float3& start, const float3& end, const NavQueryFilter& filter,
@@ -652,7 +680,10 @@ namespace sw
             outPath = NavPath{};
             return NavPathStatus::Failed;
         }
-        return pRuntime->_pNavMesh->findPath( start, end, pRuntime->_searchExtent, filter, outPath );
+        const WorldOrigin&  origin = _pManager->getWorldOrigin();
+        const NavPathStatus status = pRuntime->_pNavMesh->findPath( origin.toAbsolute( start ), origin.toAbsolute( end ), pRuntime->_searchExtent, filter, outPath );
+        makePathLocal( outPath );
+        return status;
     }
 
     NavPathStatus SceneNavigation::findStreamingPath( const hashed_string& agentType, const float3& start, const float3& end, NavPath& outPath ) const
@@ -663,7 +694,10 @@ namespace sw
             outPath = NavPath{};
             return NavPathStatus::Failed;
         }
-        return NavStreamRoute::findPath( *pRuntime, start, end, pRuntime->_searchExtent, pRuntime->_filter, outPath );
+        const WorldOrigin&  origin = _pManager->getWorldOrigin();
+        const NavPathStatus status = NavStreamRoute::findPath( *pRuntime, origin.toAbsolute( start ), origin.toAbsolute( end ), pRuntime->_searchExtent, pRuntime->_filter, outPath );
+        makePathLocal( outPath );
+        return status;
     }
 
     void SceneNavigation::collectStreamStats( vector<NavStreamStats>& outListStats ) const
@@ -699,8 +733,8 @@ namespace sw
     {
         NavPathJob job;
         job._agentType = agentType;
-        job._start     = start;
-        job._end       = end;
+        job._start     = _pManager->getWorldOrigin().toAbsolute( start ); // 풀이는 절대 자리에서 한다 — 원점이 그 사이 옮겨져도 같은 길이다
+        job._end       = _pManager->getWorldOrigin().toAbsolute( end );
         return _pathQueue.request( std::move( job ) );
     }
 
@@ -708,8 +742,8 @@ namespace sw
     {
         NavPathJob job;
         job._agentType     = agentType;
-        job._start         = start;
-        job._end           = end;
+        job._start         = _pManager->getWorldOrigin().toAbsolute( start );
+        job._end           = _pManager->getWorldOrigin().toAbsolute( end );
         job._filter        = filter;
         job._bCustomFilter = true;
         return _pathQueue.request( std::move( job ) );
@@ -720,7 +754,10 @@ namespace sw
         NavPathJob             job;
         const PathRequestState state = _pathQueue.takeResult( inoutTicket, job );
         if ( state == PathRequestState::Ready )
+        {
             outPath = std::move( job._path );
+            makePathLocal( outPath );
+        }
         return state;
     }
 
@@ -729,7 +766,11 @@ namespace sw
         const NavMeshRuntime* pRuntime = findRuntime( agentType );
         if ( pRuntime == nullptr )
             return false;
-        return pRuntime->_pNavMesh->findNearestPoint( position, pRuntime->_searchExtent, pRuntime->_filter, outLocation );
+        const WorldOrigin& origin = _pManager->getWorldOrigin();
+        if ( pRuntime->_pNavMesh->findNearestPoint( origin.toAbsolute( position ), pRuntime->_searchExtent, pRuntime->_filter, outLocation ) == false )
+            return false;
+        outLocation._position = origin.toLocal( outLocation._position );
+        return true;
     }
 
     bool SceneNavigation::raycast( const hashed_string& agentType, const float3& start, const float3& end, NavRaycastHit& outHit ) const
@@ -737,7 +778,11 @@ namespace sw
         const NavMeshRuntime* pRuntime = findRuntime( agentType );
         if ( pRuntime == nullptr )
             return false;
-        return pRuntime->_pNavMesh->raycast( start, end, pRuntime->_searchExtent, pRuntime->_filter, outHit );
+        const WorldOrigin& origin = _pManager->getWorldOrigin();
+        if ( pRuntime->_pNavMesh->raycast( origin.toAbsolute( start ), origin.toAbsolute( end ), pRuntime->_searchExtent, pRuntime->_filter, outHit ) == false )
+            return false;
+        outHit._position = origin.toLocal( outHit._position );
+        return true;
     }
 
     uint32 SceneNavigation::getPendingTileCount() const
@@ -823,21 +868,18 @@ namespace sw
         const span<const StreamingSource> listSource       = streaming.getActiveSources();
         const float32                     unloadMargin     = streaming.getUnloadMargin();
         const bool                        bFinishEachFrame = engine::getSubsystem<DeterministicRun>().getPolicy()._bFinishAssetJobsEachFrame == SW_TRUE;
-        const float32                     cellSize         = streaming.getGrid().getCellSize();
 
         // 셀이 오르내렸으면 그 구역의 입력이 바뀌었다 — 기하를 다시 모으고 닿은 타일의 입력 해시를 다시 잰다(언리얼 내비 타일 무효화).
-        vector<StreamingCellCoord> listChangedCell;
-        const uint64               changeSerial = streaming.getChangeSerial();
+        vector<StreamingCellBounds> listChangedBounds;
+        const uint64                changeSerial = streaming.getChangeSerial();
         if ( changeSerial != _streamingChangeSerial )
-            streaming.collectCellsChangedSince( _streamingChangeSerial, listChangedCell );
+            streaming.collectBoundsChangedSince( _streamingChangeSerial, listChangedBounds );
         bool       bChangeConsumed     = true;
-        const auto overlapsChangedCell = [&listChangedCell, cellSize]( const AABB& region )
+        const auto overlapsChangedCell = [&listChangedBounds]( const AABB& region )
         {
-            for ( const StreamingCellCoord& cell : listChangedCell )
+            for ( const StreamingCellBounds& bounds : listChangedBounds )
             {
-                const float32 minX = static_cast<float32>( cell._x ) * cellSize;
-                const float32 minZ = static_cast<float32>( cell._z ) * cellSize;
-                if ( minX <= region._max._x && minX + cellSize >= region._min._x && minZ <= region._max._z && minZ + cellSize >= region._min._z )
+                if ( bounds._minX <= region._max._x && bounds._maxX >= region._min._x && bounds._minZ <= region._max._z && bounds._maxZ >= region._min._z )
                     return true;
             }
             return false;
@@ -851,7 +893,7 @@ namespace sw
             const NavTileGrid& grid = runtime._pNavMesh->getTileGrid();
 
             bool bGeometryRefreshed = false;
-            if ( listChangedCell.empty() == false )
+            if ( listChangedBounds.empty() == false )
             {
                 shared_ptr<NavMeshGeometry> pGeometry        = make_shared<NavMeshGeometry>();
                 const uint32                pendingMeshCount = NavGeometryCollector::collectGeometry( SceneIterationKey{}, *_pManager, runtime._pSurface, _settings, _listGeometrySource.getItems(),
@@ -896,9 +938,10 @@ namespace sw
                 return true;
             };
             // 타일의 입력이 쿠킹 때와 같으면 쿠킹본 타일을 읽고, 다르면 그 타일만 지금 기하로 다시 굽는다(이웃 타일은 쿠킹본 그대로).
-            const auto resolveTileInput = [&runtime, &startCookedRead, &streaming]( NavStreamTile& tile, const AABB& region )
+            const WorldOrigin& worldOrigin      = _pManager->getWorldOrigin();
+            const auto         resolveTileInput = [&runtime, &startCookedRead, &streaming, &worldOrigin]( NavStreamTile& tile, const AABB& region )
             {
-                const StreamingSourcePriority priority = streaming.computePriorityAt( region.getCenter() ); // 내비메시가 있는 씬은 원점을 옮기지 않아 타일 자리가 곧 로컬 자리다
+                const StreamingSourcePriority priority = streaming.computePriorityAt( worldOrigin.toLocal( region.getCenter() ) ); // 타일은 절대, 묻는 자리는 로컬이다
                 tile._geometryHash                     = runtime._pGeometry != nullptr ? runtime._pGeometry->computeRegionHash( region ) : 0;
                 if ( tile._cookedInputHash != 0 && tile._geometryHash == tile._cookedInputHash )
                 {
@@ -1114,7 +1157,7 @@ namespace sw
 
     void SceneNavigation::drawDebug( IPhysicsDebugRenderer& renderer, uint32 flags ) const
     {
-        NavDebugView::drawLines( renderer, flags, _listRuntime, _listObstacle, _listAgent );
+        NavDebugView::drawLines( renderer, flags, _pManager->getWorldOrigin(), _listRuntime, _listObstacle, _listAgent );
     }
 
     void SceneNavigation::updateDebugView( bool bShown )

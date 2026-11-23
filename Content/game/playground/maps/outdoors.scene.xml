@@ -1,0 +1,294 @@
+<?asset guid="f7c4a4b8e8324effb3b0c729e405db26"?>
+<Scene formatVersion="3" name="Outdoors">
+	<!-- 야외 활동 장소 — 이동 방식(사다리 · 등반 벽 · 밧줄 · 헤엄) · 텔레포트 · 상자 · 줍기 · 나무 베기 · 낚시 · 이모트 · 미니맵. 시나리오 automation/outdoors · outdoorsloot 가 쓴다.
+	     플레이어(Player)는 로컬 조종자(PlayerController — 가방)가 쥐고 공용 액션 Move · Jump · Interact 와 이 장소의 액션(data/outdoors.input.xml)으로 움직인다.
+	     사다리(Ladder, z 6) · 등반 벽(ClimbWall, x 10, 옆으로도 간다) · 밧줄(Rope, x -10, 가는 쪽으로 뛰어내린다) 뒤에 3 m · 5 m 발판. 앞(+Z)이 벽 쪽이다.
+	     Pool(x 30)은 높이 4 m 의 물 상자(zones/pool.zone.xml). PortalA(x -30) ↔ PortalB(x -30, z 20)는 짝 텔레포트 볼륨이다.
+	     Chest(z -6, 한 번 여는 상자) · Potion(x 4, 써서 줍기) · Coin(x 8, 닿아서 줍기) · Tree(x 12, 도끼 태그로 베면 벤 쪽 반대로 쓰러지고 다시 선다) · FishingSpot(x 16, 던지기 → 입질 → 감기). -->
+	<SceneSettings _bStreaming="false" _unloadMargin="0" _maxCellLoadsPerFrame="0" _addToWorldBudgetMicroseconds="0">
+		<_cellGrid _cellSize="0" _loadingRadius="0" />
+	</SceneSettings>
+	<entities>
+		<entity id="1" name="GameCamera">
+			<GameObject _schemaVersion="0" _name="GameCamera" _bActive="true">
+				<_listComponent>
+					<CameraComponent _localID="17709685451340727998" _localPosition="0,16,-22" _localRotation="0.6,0,0" _localScale="1,1,1" _attachOwner="None" _attachComponent="None" _fovY="51.5662" _nearZ="0.1" _farZ="300" _orthoHeight="10" _priority="10" _role="Game" _bOrthographic="false" />
+				</_listComponent>
+			</GameObject>
+		</entity>
+		<entity id="2" name="Sun">
+			<GameObject _schemaVersion="0" _name="Sun" _bActive="true">
+				<_listComponent>
+					<DirectionalLightComponent _localID="51927904365891271" _localPosition="0,10,0" _localRotation="0.356582,-2.138715,0" _localScale="1,1,1" _attachOwner="None" _attachComponent="None" _color="1,0.95,0.85" _intensity="1.2" _ambient="0.5" _shadowExtent="30" _shadowDistance="60" _bCastShadow="false" />
+				</_listComponent>
+			</GameObject>
+		</entity>
+		<entity id="3" name="Ground">
+			<GameObject _schemaVersion="0" _name="Ground" _bActive="true">
+				<_listComponent>
+					<RigidBodyComponent _localID="7198733165449302788" _localPosition="0,-0.5,0" _localRotation="0,0,0" _localScale="1,1,1" _attachOwner="None" _attachComponent="None" _bodyType="Static" _layer="Default" _material="Default" _mass="0">
+						<_listShape>
+							<PhysicsShapeDesc3D _type="Box" _halfExtents="80,0.5,80" _radius="0.5" _halfHeight="0.5" _localPosition="0,0,0" _localRotation="0,0,0" _material="Default">
+								<_listPoint />
+								<_listIndex />
+							</PhysicsShapeDesc3D>
+						</_listShape>
+					</RigidBodyComponent>
+					<MeshComponent _localID="163493842152903304" _localPosition="0,0.5,0" _localRotation="0,0,0" _localScale="160,1,160" _attachOwner="None" _attachComponent="#63e709ac676dd304" _meshID="Plane" _materialPath="engine/materials/prototypegrid_dark.material" _boundsRadius="120" />
+				</_listComponent>
+			</GameObject>
+		</entity>
+		<entity id="4" name="Platform">
+			<GameObject _schemaVersion="0" _name="Platform" _bActive="true">
+				<_listComponent>
+					<RigidBodyComponent _localID="7198733165449302788" _localPosition="0,1.5,8.25" _localRotation="0,0,0" _localScale="1,1,1" _attachOwner="None" _attachComponent="None" _bodyType="Static" _layer="Default" _material="Default" _mass="0">
+						<_listShape>
+							<PhysicsShapeDesc3D _type="Box" _halfExtents="2,1.5,2" _radius="0.5" _halfHeight="0.5" _localPosition="0,0,0" _localRotation="0,0,0" _material="Default">
+								<_listPoint />
+								<_listIndex />
+							</PhysicsShapeDesc3D>
+						</_listShape>
+					</RigidBodyComponent>
+					<MeshComponent _localID="163493842152903304" _localPosition="0,0,0" _localRotation="0,0,0" _localScale="4,3,4" _attachOwner="None" _attachComponent="#63e709ac676dd304" _meshID="Cube" _materialPath="engine/materials/prototypegrid_light.material" _boundsRadius="4" />
+				</_listComponent>
+			</GameObject>
+		</entity>
+		<entity id="5" name="Ladder">
+			<GameObject _schemaVersion="0" _name="Ladder" _bActive="true">
+				<_listComponent>
+					<RigidBodyComponent _localID="7198733165449302788" _localPosition="0,1.6,6" _localRotation="0,0,0" _localScale="1,1,1" _attachOwner="None" _attachComponent="None" _bodyType="Static" _layer="Trigger" _material="Default" _mass="0" _bTrigger="true">
+						<_listShape>
+							<PhysicsShapeDesc3D _type="Box" _halfExtents="0.5,1.6,0.25" _radius="0.5" _halfHeight="0.5" _localPosition="0,0,0" _localRotation="0,0,0" _material="Default">
+								<_listPoint />
+								<_listIndex />
+							</PhysicsShapeDesc3D>
+						</_listShape>
+					</RigidBodyComponent>
+					<MeshComponent _localID="163493842152903304" _localPosition="0,0,0.2" _localRotation="0,0,0" _localScale="0.8,3.2,0.05" _attachOwner="None" _attachComponent="#63e709ac676dd304" _meshID="Cube" _materialPath="engine/materials/prototypegrid_orange.material" _boundsRadius="2" />
+					<GimmickSensorComponent _localID="5906677949702648734" _defaultWeight="1" _bCountTriggers="false" />
+					<ClimbZoneComponent _localID="9868195776723156160" _axis="0,1,0" _climbSpeed="3" _lateralSpeed="0" _bSwing="false" />
+				</_listComponent>
+			</GameObject>
+		</entity>
+		<entity id="6" name="Cliff">
+			<GameObject _schemaVersion="0" _name="Cliff" _bActive="true">
+				<_listComponent>
+					<RigidBodyComponent _localID="7198733165449302788" _localPosition="10,2.5,8.25" _localRotation="0,0,0" _localScale="1,1,1" _attachOwner="None" _attachComponent="None" _bodyType="Static" _layer="Default" _material="Default" _mass="0">
+						<_listShape>
+							<PhysicsShapeDesc3D _type="Box" _halfExtents="3,2.5,2" _radius="0.5" _halfHeight="0.5" _localPosition="0,0,0" _localRotation="0,0,0" _material="Default">
+								<_listPoint />
+								<_listIndex />
+							</PhysicsShapeDesc3D>
+						</_listShape>
+					</RigidBodyComponent>
+					<MeshComponent _localID="163493842152903304" _localPosition="0,0,0" _localRotation="0,0,0" _localScale="6,5,4" _attachOwner="None" _attachComponent="#63e709ac676dd304" _meshID="Cube" _materialPath="engine/materials/prototypegrid_light.material" _boundsRadius="5" />
+				</_listComponent>
+			</GameObject>
+		</entity>
+		<entity id="7" name="ClimbWall">
+			<GameObject _schemaVersion="0" _name="ClimbWall" _bActive="true">
+				<_listComponent>
+					<RigidBodyComponent _localID="7198733165449302788" _localPosition="10,2.6,6" _localRotation="0,0,0" _localScale="1,1,1" _attachOwner="None" _attachComponent="None" _bodyType="Static" _layer="Trigger" _material="Default" _mass="0" _bTrigger="true">
+						<_listShape>
+							<PhysicsShapeDesc3D _type="Box" _halfExtents="3,2.6,0.25" _radius="0.5" _halfHeight="0.5" _localPosition="0,0,0" _localRotation="0,0,0" _material="Default">
+								<_listPoint />
+								<_listIndex />
+							</PhysicsShapeDesc3D>
+						</_listShape>
+					</RigidBodyComponent>
+					<MeshComponent _localID="163493842152903304" _localPosition="0,0,0.22" _localRotation="0,0,0" _localScale="6,5.2,0.02" _attachOwner="None" _attachComponent="#63e709ac676dd304" _meshID="Cube" _materialPath="engine/materials/prototypegrid_orange.material" _boundsRadius="4" />
+					<GimmickSensorComponent _localID="5906677949702648734" _defaultWeight="1" _bCountTriggers="false" />
+					<ClimbZoneComponent _localID="9868195776723156160" _axis="0,1,0" _climbSpeed="2" _lateralSpeed="1.5" _bSwing="false" />
+				</_listComponent>
+			</GameObject>
+		</entity>
+		<entity id="8" name="Rope">
+			<GameObject _schemaVersion="0" _name="Rope" _bActive="true">
+				<_listComponent>
+					<RigidBodyComponent _localID="7198733165449302788" _localPosition="-10,3,6" _localRotation="0,0,0" _localScale="1,1,1" _attachOwner="None" _attachComponent="None" _bodyType="Static" _layer="Trigger" _material="Default" _mass="0" _bTrigger="true">
+						<_listShape>
+							<PhysicsShapeDesc3D _type="Box" _halfExtents="0.3,3,0.3" _radius="0.5" _halfHeight="0.5" _localPosition="0,0,0" _localRotation="0,0,0" _material="Default">
+								<_listPoint />
+								<_listIndex />
+							</PhysicsShapeDesc3D>
+						</_listShape>
+					</RigidBodyComponent>
+					<MeshComponent _localID="163493842152903304" _localPosition="0,0,0" _localRotation="0,0,0" _localScale="0.1,6,0.1" _attachOwner="None" _attachComponent="#63e709ac676dd304" _meshID="Cube" _materialPath="engine/materials/prototypegrid_orange.material" _boundsRadius="3" />
+					<GimmickSensorComponent _localID="5906677949702648734" _defaultWeight="1" _bCountTriggers="false" />
+					<ClimbZoneComponent _localID="9868195776723156160" _axis="0,1,0" _climbSpeed="3" _lateralSpeed="0" _bSwing="true" />
+				</_listComponent>
+			</GameObject>
+		</entity>
+		<entity id="9" name="Pool">
+			<GameObject _schemaVersion="0" _name="Pool" _bActive="true">
+				<_listComponent>
+					<SceneComponent _localID="12574257654564749349" _localPosition="30,2,0" _localRotation="0,0,0" _localScale="1,1,1" _attachOwner="None" _attachComponent="None" />
+					<ZoneVolumeComponent _localID="4170813354090212695" _zoneProfile="game/playground/zones/pool.zone.xml" _shape="Box" _halfExtents="5,2,5" _pullCenterOffset="0,0,0" _lifetime="0" _growthRate="0" _maxGrowth="0" />
+					<MeshComponent _localID="163493842152903304" _localPosition="0,0,0" _localRotation="0,0,0" _localScale="10,0.02,10" _attachOwner="None" _attachComponent="#ae80bcb72e918025" _meshID="Cube" _materialPath="engine/materials/prototypegrid_dark.material" _boundsRadius="8" />
+				</_listComponent>
+			</GameObject>
+		</entity>
+		<entity id="10" name="PortalA">
+			<GameObject _schemaVersion="0" _name="PortalA" _bActive="true">
+				<_listComponent>
+					<RigidBodyComponent _localID="7198733165449302788" _localPosition="-30,1,0" _localRotation="0,0,0" _localScale="1,1,1" _attachOwner="None" _attachComponent="None" _bodyType="Static" _layer="Trigger" _material="Default" _mass="0" _bTrigger="true">
+						<_listShape>
+							<PhysicsShapeDesc3D _type="Box" _halfExtents="0.8,1,0.8" _radius="0.5" _halfHeight="0.5" _localPosition="0,0,0" _localRotation="0,0,0" _material="Default">
+								<_listPoint />
+								<_listIndex />
+							</PhysicsShapeDesc3D>
+						</_listShape>
+					</RigidBodyComponent>
+					<MeshComponent _localID="163493842152903304" _localPosition="0,0,0" _localRotation="0,0,0" _localScale="1.6,2,0.1" _attachOwner="None" _attachComponent="#63e709ac676dd304" _meshID="Cube" _materialPath="engine/materials/prototypegrid_orange.material" _boundsRadius="2" />
+					<TeleportTriggerComponent _localID="4021243564544822838" _activatorTag="Player" _bOnce="false" _destination="11" _bMatchFacing="true" />
+					<MinimapMarkerComponent _localID="15882014908331153694" _color="0.4,0.7,1,1" _size="10" _bClampToEdge="true" />
+				</_listComponent>
+			</GameObject>
+		</entity>
+		<entity id="11" name="PortalB">
+			<GameObject _schemaVersion="0" _name="PortalB" _bActive="true">
+				<_listComponent>
+					<RigidBodyComponent _localID="7198733165449302788" _localPosition="-30,1,20" _localRotation="0,1.5707964,0" _localScale="1,1,1" _attachOwner="None" _attachComponent="None" _bodyType="Static" _layer="Trigger" _material="Default" _mass="0" _bTrigger="true">
+						<_listShape>
+							<PhysicsShapeDesc3D _type="Box" _halfExtents="0.8,1,0.8" _radius="0.5" _halfHeight="0.5" _localPosition="0,0,0" _localRotation="0,0,0" _material="Default">
+								<_listPoint />
+								<_listIndex />
+							</PhysicsShapeDesc3D>
+						</_listShape>
+					</RigidBodyComponent>
+					<MeshComponent _localID="163493842152903304" _localPosition="0,0,0" _localRotation="0,0,0" _localScale="1.6,2,0.1" _attachOwner="None" _attachComponent="#63e709ac676dd304" _meshID="Cube" _materialPath="engine/materials/prototypegrid_orange.material" _boundsRadius="2" />
+					<TeleportTriggerComponent _localID="4021243564544822838" _activatorTag="Player" _bOnce="false" _destination="10" _bMatchFacing="true" />
+				</_listComponent>
+			</GameObject>
+		</entity>
+		<entity id="12" name="Chest">
+			<GameObject _schemaVersion="0" _name="Chest" _bActive="true">
+				<_listComponent>
+					<SceneComponent _localID="12574257654564749349" _localPosition="0,0,-6" _localRotation="0,0,0" _localScale="1,1,1" _attachOwner="None" _attachComponent="None" />
+					<MeshComponent _localID="163493842152903304" _localPosition="0,0.4,0" _localRotation="0,0,0" _localScale="1,0.8,0.7" _attachOwner="None" _attachComponent="#ae80bcb72e918025" _meshID="Cube" _materialPath="engine/materials/prototypegrid_orange.material" _boundsRadius="1" />
+					<InteractableComponent _localID="10644522701805113517" _interactionID="OpenChest" _catalogPath="game/playground/data/outdoors.interactions.xml" _priority="0" _bEnabled="true" />
+					<ItemBoxComponent _localID="811355330383306693" _openBy="Use" _maxOpenCount="1" _bHideWhenOpened="false" _respawnDelay="0" _seed="3">
+						<_listChoice>
+							<ItemBoxChoice _item="potion_health" _weight="1" _count="2" />
+						</_listChoice>
+					</ItemBoxComponent>
+					<MinimapMarkerComponent _localID="15882014908331153694" _color="1,0.82,0.25,1" _size="8" _bClampToEdge="false" />
+				</_listComponent>
+			</GameObject>
+		</entity>
+		<entity id="13" name="Potion">
+			<GameObject _schemaVersion="0" _name="Potion" _bActive="true">
+				<_listComponent>
+					<SceneComponent _localID="12574257654564749349" _localPosition="4,0,-6" _localRotation="0,0,0" _localScale="1,1,1" _attachOwner="None" _attachComponent="None" />
+					<MeshComponent _localID="163493842152903304" _localPosition="0,0.3,0" _localRotation="0,0,0" _localScale="0.3,0.5,0.3" _attachOwner="None" _attachComponent="#ae80bcb72e918025" _meshID="Cube" _materialPath="engine/materials/prototypegrid_orange.material" _boundsRadius="0.6" />
+					<InteractableComponent _localID="10644522701805113517" _interactionID="PickUp" _catalogPath="game/playground/data/outdoors.interactions.xml" _priority="0" _bEnabled="true" />
+					<PickupComponent _localID="6323976741138821867" _itemID="potion_health" _count="1" _bPickUpOnTouch="false" />
+				</_listComponent>
+			</GameObject>
+		</entity>
+		<entity id="14" name="Coin">
+			<GameObject _schemaVersion="0" _name="Coin" _bActive="true">
+				<_listComponent>
+					<RigidBodyComponent _localID="7198733165449302788" _localPosition="8,0.5,-6" _localRotation="0,0,0" _localScale="1,1,1" _attachOwner="None" _attachComponent="None" _bodyType="Static" _layer="Trigger" _material="Default" _mass="0" _bTrigger="true">
+						<_listShape>
+							<PhysicsShapeDesc3D _type="Box" _halfExtents="0.5,0.5,0.5" _radius="0.5" _halfHeight="0.5" _localPosition="0,0,0" _localRotation="0,0,0" _material="Default">
+								<_listPoint />
+								<_listIndex />
+							</PhysicsShapeDesc3D>
+						</_listShape>
+					</RigidBodyComponent>
+					<MeshComponent _localID="163493842152903304" _localPosition="0,0,0" _localRotation="0,0,0" _localScale="0.3,0.3,0.05" _attachOwner="None" _attachComponent="#63e709ac676dd304" _meshID="Cube" _materialPath="engine/materials/prototypegrid_orange.material" _boundsRadius="0.6" />
+					<PickupComponent _localID="6323976741138821867" _itemID="herb_wild" _count="3" _bPickUpOnTouch="true" />
+				</_listComponent>
+			</GameObject>
+		</entity>
+		<entity id="15" name="Tree">
+			<GameObject _schemaVersion="0" _name="Tree" _bActive="true">
+				<_listComponent>
+					<SceneComponent _localID="12574257654564749349" _localPosition="12,0,-6" _localRotation="0,0,0" _localScale="1,1,1" _attachOwner="None" _attachComponent="None" />
+					<RigidBodyComponent _localID="7198733165449302788" _localPosition="0,2,0" _localRotation="0,0,0" _localScale="1,1,1" _attachOwner="None" _attachComponent="#ae80bcb72e918025" _bodyType="Static" _layer="Default" _material="Default" _mass="0">
+						<_listShape>
+							<PhysicsShapeDesc3D _type="Box" _halfExtents="0.25,2,0.25" _radius="0.5" _halfHeight="0.5" _localPosition="0,0,0" _localRotation="0,0,0" _material="Default">
+								<_listPoint />
+								<_listIndex />
+							</PhysicsShapeDesc3D>
+						</_listShape>
+					</RigidBodyComponent>
+					<MeshComponent _localID="163493842152903304" _localPosition="0,2,0" _localRotation="0,0,0" _localScale="0.5,4,0.5" _attachOwner="None" _attachComponent="#ae80bcb72e918025" _meshID="Cube" _materialPath="engine/materials/prototypegrid_light.material" _boundsRadius="3" />
+					<MeshComponent _localID="163494941664531515" _localPosition="0,4.2,0" _localRotation="0,0,0" _localScale="2,1.6,2" _attachOwner="None" _attachComponent="#ae80bcb72e918025" _meshID="Cube" _materialPath="engine/materials/prototypegrid_orange.material" _boundsRadius="2" />
+					<InteractableComponent _localID="10644522701805113517" _interactionID="Chop" _catalogPath="game/playground/data/outdoors.interactions.xml" _priority="0" _bEnabled="true" />
+					<GatheringNodeComponent _localID="17749173230493077954" _item="wood_log" _count="2" _uses="2" _respawnDelay="2" _fallDuration="1" />
+					<MinimapMarkerComponent _localID="15882014908331153694" _color="0.4,0.9,0.4,1" _size="8" _bClampToEdge="false" />
+				</_listComponent>
+			</GameObject>
+		</entity>
+		<entity id="16" name="FishingSpot">
+			<GameObject _schemaVersion="0" _name="FishingSpot" _bActive="true">
+				<_listComponent>
+					<SceneComponent _localID="12574257654564749349" _localPosition="16,0,-6" _localRotation="0,0,0" _localScale="1,1,1" _attachOwner="None" _attachComponent="None" />
+					<MeshComponent _localID="163493842152903304" _localPosition="0,0.02,0" _localRotation="0,0,0" _localScale="3,0.04,3" _attachOwner="None" _attachComponent="#ae80bcb72e918025" _meshID="Cube" _materialPath="engine/materials/prototypegrid_dark.material" _boundsRadius="3" />
+					<InteractableComponent _localID="10644522701805113517" _interactionID="Fish" _catalogPath="game/playground/data/outdoors.interactions.xml" _priority="0" _bEnabled="true" />
+					<ItemBoxComponent _localID="811355330383306693" _openBy="Use" _maxOpenCount="0" _bHideWhenOpened="false" _respawnDelay="0" _seed="11">
+						<_listChoice>
+							<ItemBoxChoice _item="fish_trout" _weight="1" _count="1" />
+						</_listChoice>
+					</ItemBoxComponent>
+					<MinimapMarkerComponent _localID="15882014908331153694" _color="0.4,0.6,1,1" _size="8" _bClampToEdge="false" />
+				</_listComponent>
+			</GameObject>
+		</entity>
+		<entity id="17" name="Player">
+			<GameObject _schemaVersion="0" _name="Player" _bActive="true">
+				<_listComponent>
+					<CharacterControllerComponent _localID="1851894784675401076" _localPosition="0,0.05,0" _localRotation="0,0,0" _localScale="1,1,1" _attachOwner="None" _attachComponent="None" _radius="0.3" _halfHeight="0.6" _stepHeight="0.3" _maxSlopeAngle="45" _gravityScale="1" _mass="70" _layer="Character" />
+					<SkeletalMeshComponent _localID="15127961318995883145" _localPosition="0,0,0" _localRotation="0,0,0" _localScale="1,1,1" _attachOwner="None" _attachComponent="#19b3407eb1f9cd74" _meshID="common/models/kaykit/knight.mesh" _materialPath="common/materials/kaykit_knight.material" _boundsRadius="2" _skeletonPath="common/models/kaykit/knight/knight.skeleton.xml" _visibilityBasedTickOption="AlwaysTickPoseAndRefreshBones" />
+					<SkeletalAnimatorComponent _localID="6157124105282015569" _animationGraphPath="common/data/anim/adventurer.animgraph.xml" _animationSetPath="common/models/kaykit/knight/knight.animset.xml" _initialState="Idle" _playRate="1" _blendSeconds="0.2" _bExtractRootMotion="false" _bPlayOnBegin="true" />
+					<PawnComponent _localID="11149290121538025405" _moveAction="Move" _lookAction="None" _upAction="Playground.MoveUp" _inputLayer="Outdoors" _aiControllerPrefab="" _maxPitch="80.21409" _autoPossess="Player0" _bLockMouse="false">
+						<_listButton>
+							<item>Jump</item>
+							<item>Interact</item>
+							<item>Playground.Cheer</item>
+							<item>Playground.Greet</item>
+						</_listButton>
+						<_listAnalog />
+					</PawnComponent>
+					<CharacterMovementComponent _localID="16355992322027375659" _sprintButton="None" _jumpButton="Jump" _walkSpeed="3.5" _sprintSpeed="3.5" _acceleration="30" _deceleration="40" _jumpSpeed="5" _swimSpeed="2.5" _climbPushOffSpeed="3" _climbReleaseSeconds="0.3" _turnRate="12" _facingMode="MoveDirection" />
+					<InteractorComponent _localID="16055325405208558630" _space="Space3D" _eyeOffset="0,1.6,0" _facing2D="1,0,0" _interactButton="Interact" _bUseLineOfSight="false" _keepDistanceScale="1.25" />
+					<EmoteComponent _localID="17215208849472457045">
+						<_listEmote>
+							<EmoteDef _button="Playground.Cheer" _state="Cheer" _bLoop="true" />
+							<EmoteDef _button="Playground.Greet" _state="Interact" _bLoop="false" />
+						</_listEmote>
+					</EmoteComponent>
+					<TagComponent _localID="5249839963692551013">
+						<_tags>
+							<_listTag>
+								<item>Player</item>
+								<item>Tool.Axe</item>
+							</_listTag>
+						</_tags>
+					</TagComponent>
+					<HUDControllerComponent _localID="17122754535480611078" _documentPath="game/playground/ui/outdoors.ui.xml" />
+					<MinimapComponent _localID="14348804441869400080" _panelName="Minimap" _range="20" _bRotateWithView="false" _captureCamera="19" />
+				</_listComponent>
+			</GameObject>
+		</entity>
+		<entity id="18" name="PlayerController">
+			<GameObject _schemaVersion="0" _name="PlayerController" _bActive="true">
+				<_listComponent>
+					<PlayerControllerComponent _localID="4811566279812111972" _playerIndex="0" />
+					<InventoryComponent _localID="14102407417471272785" _openSlotCount="12" />
+				</_listComponent>
+			</GameObject>
+		</entity>
+		<entity id="19" name="MinimapCamera">
+			<GameObject _schemaVersion="0" _name="MinimapCamera" _bActive="true">
+				<_listComponent>
+					<CameraComponent _localID="17709685451340727998" _localPosition="0,40,0" _localRotation="1.5707964,0,0" _localScale="1,1,1" _attachOwner="None" _attachComponent="None" _fovY="40.107045" _nearZ="0.1" _farZ="80" _orthoHeight="40" _priority="0" _role="Capture" _bOrthographic="true">
+						<_renderOutput _screenRect="0,0,1,1" _renderTexture="rendertarget/outdoors_minimap" _renderTextureWidth="256" _renderTextureHeight="256" _resolutionScale="1" _updateRate="10" _target="RenderTexture" _bShadows="false" _bPostProcess="false" />
+					</CameraComponent>
+				</_listComponent>
+			</GameObject>
+		</entity>
+	</entities>
+</Scene>

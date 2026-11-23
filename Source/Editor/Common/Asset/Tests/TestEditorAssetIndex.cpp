@@ -201,3 +201,33 @@ SW_TEST_CASE( EditorAssetIndexTest, DisplayPathKeepsDiskSpelling )
     SW_EXPECT_EQUAL( string( "game/a/HeroIcon.png" ), listPath[0] );
     SW_EXPECT_EQUAL( string( "game/a/LaterIcon.png" ), listPath[1] );
 }
+
+/**
+ * @brief [EditorAssetIndexTest] 같은 GUID 를 든 복사본이 생겼다가 새 GUID 를 받거나 지워져도 원본은 그 GUID 의 자리로 남는다(GUID 참조의 의존이 끊기지 않는다).
+ */
+SW_TEST_CASE( EditorAssetIndexTest, CopiedIdentityDoesNotLoseTheOriginal )
+{
+    using Internal             = EditorAssetIndexTestInternal;
+    const AbsolutePath root    = sw::test::makeScratchPath( "copied" );
+    const AssetGUID    guid    = AssetGUID::create();
+    const string       text    = AssetGUIDHeader::write( "<Prefab/>\n", guid );
+    const string       newText = AssetGUIDHeader::write( "<Prefab>\n</Prefab>\n", AssetGUID::create() );
+    Internal::write( root.str(), "game/a/hero.prefab.xml", text );
+    StringBuilder<constant::buffer::kMax256> sceneText;
+    sceneText.appendFormat( "<Scene>\n  <Spawn _prefab=\"%#\"/>\n</Scene>\n", AssetRegistry::makeReferenceText( guid ) );
+    Internal::write( root.str(), "game/a/map.scene.xml", sceneText.view() );
+    EditorAssetIndex index = Internal::scan( root.str() );
+
+    // 탐색기에서 복사한 파일은 같은 GUID 를 든다 — 주인은 원본이다.
+    Internal::write( root.str(), "game/a/copy.prefab.xml", text );
+    index.applyChanges( root.str(), { "game/a/copy.prefab.xml" } );
+    SW_EXPECT_EQUAL( string( "game/a/hero.prefab.xml" ), index.findPath( guid ).value_or( string{} ) );
+
+    // 복사본이 새 GUID 를 받는다(글이 길어 갱신이 보인다).
+    Internal::write( root.str(), "game/a/copy.prefab.xml", newText );
+    index.applyChanges( root.str(), { "game/a/copy.prefab.xml" } );
+    SW_EXPECT_EQUAL( string( "game/a/hero.prefab.xml" ), index.findPath( guid ).value_or( string{} ) );
+    vector<EditorAssetReference> listDependency;
+    index.findDependencies( "game/a/map.scene.xml", listDependency );
+    SW_EXPECT_EQUAL( size_t{ 1 }, listDependency.size() );
+}

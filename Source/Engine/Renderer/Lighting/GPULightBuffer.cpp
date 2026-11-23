@@ -161,10 +161,11 @@ namespace sw
                 const float3 center     = probe.getWorldPosition();
                 const float3 halfExtent = probe.getExtent() * 0.5f;
                 const uint32 firstTexel = inoutProbeElement.appendReflectionProbe( probe.getComponentID(), probe.getProbeDataRevision(), data );
+                const float3 captured   = probe.computeLocalCapturePosition( data );
                 GPULight     element{};
                 element._positionRadius = float4{ center._x, center._y, center._z, halfExtent.getLength() };
                 element._colorIntensity = float4{ halfExtent._x, halfExtent._y, halfExtent._z, probe.getBlendDistance() };
-                element._directionType  = float4{ data._capturePosition._x, data._capturePosition._y, data._capturePosition._z, static_cast<float32>( shaderslot::kLightTypeReflectionProbe ) };
+                element._directionType  = float4{ captured._x, captured._y, captured._z, static_cast<float32>( shaderslot::kLightTypeReflectionProbe ) };
                 element._params         = float4{ static_cast<float32>( data._resolution ), static_cast<float32>( data._levelCount ), static_cast<float32>( firstTexel ), 0.0f };
                 return element;
             }

@@ -2,6 +2,7 @@
 
 #include "Editor/Common/Asset/Texture/TextureImportConfig.h"
 
+#include "Core/Container/pair.h"
 #include "Core/File/FileUtil.h"
 #include "Core/Log/Logger.h"
 #include "Core/String/StringBuilder.h"
@@ -10,7 +11,6 @@
 #include "Core/String/formatString.h"
 
 #include "Engine/Asset/AssetDatabase.h"
-#include "Engine/Config/ConfigManager.h"
 #include "Engine/Serialization/JSON/JSONDocument.h"
 #include "Engine/Serialization/JSON/JSONFields.h"
 
@@ -63,18 +63,15 @@ namespace sw::editor
     {
     }
 
-    ConfigReadResult TextureImportConfig::loadFromFile( string_view configPath )
+    bool TextureImportConfig::loadFromFile( string_view configPath )
     {
-        string                 text;
-        const OptionalFileRead read = FileUtil::readOptionalTextFile( FileUtil::toDiskPath( configPath ), text );
-        if ( read == OptionalFileRead::Missing )
-            return ConfigReadResult::Missing;
-        if ( read == OptionalFileRead::Failed || text.empty() )
+        string text;
+        if ( FileUtil::readOptionalTextFile( FileUtil::toDiskPath( configPath ), text ) != OptionalFileRead::Read || text.empty() )
         {
             SW_LOG_ERROR_ID( "TextureImportConfig.FailedReadTextureImportConfigFile", "Failed to read TextureImportConfig file: %#", configPath );
-            return ConfigReadResult::Invalid;
+            return false;
         }
-        return loadFromJSONString( text ) ? ConfigReadResult::Loaded : ConfigReadResult::Invalid;
+        return loadFromJSONString( text );
     }
 
     bool TextureImportConfig::loadFromJSONString( string_view jsonString )
@@ -276,6 +273,27 @@ namespace sw::editor
         StringBuilder<constant::buffer::kMax256> pathBuilder;
         pathBuilder.appendFormat( "%#/textures_raw/%#/%#/%#%#", domainFolder, kSharedFolderName, rule, key, extension );
         return string( pathBuilder.view() );
+    }
+
+    string TextureImportConfig::makeSelectionText() const
+    {
+        StringBuilder<constant::buffer::kMax4096> text;
+        for ( const TextureImportRule& rule : _listRule )
+        {
+            text.appendFormat( "rule=%#\n", rule._name );
+            const pair<const utf8*, const vector<string>*> arrList[] = {
+                {"includePattern", &rule._filter._listIncludePattern},
+                {"excludePattern", &rule._filter._listExcludePattern},
+                {   "includePath",    &rule._filter._listIncludePath},
+                {   "excludePath",    &rule._filter._listExcludePath}
+            };
+            for ( const pair<const utf8*, const vector<string>*>& list : arrList )
+            {
+                for ( const string& value : *list.second )
+                    text.appendFormat( "%#=%#\n", list.first, value );
+            }
+        }
+        return string( text.view() );
     }
 
     string TextureImportConfig::findSharedRuleName( string_view relativePath )

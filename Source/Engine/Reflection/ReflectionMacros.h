@@ -76,7 +76,7 @@ namespace sw::generated
      * @brief 컨테이너 타입을 선언할 때 씁니다. 파서가 타입 선언에서 읽어 Sequence/Map 으로 인식합니다.
      * @details 쓰는 쪽(필드)은 PROPERTY() 만 쓰면 됩니다(UPROPERTY + TArray 와 같은 감각).
      *   REFLECT_CONTAINER(Sequence)        → VectorWrapper
-     *   REFLECT_CONTAINER(Sequence, List)  → ListWrapper
+     *   REFLECT_CONTAINER(Sequence, Deque) → DequeWrapper
      *   REFLECT_CONTAINER(Map)             → MapWrapper
      * std:: 등 수정할 수 없는 타입은 ReflectBuiltins.xxx 에 등록합니다.
      */

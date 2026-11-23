@@ -159,11 +159,10 @@ namespace sw
     {
         SW_ASSERT( pComponent != nullptr && pFunction != nullptr );
         ScopedLock<mutex> lock{ _mutex };
-        for ( AssetWaiter& waiter : _listAssetWaiter )
+        const auto        inserted = _mapAssetWaiterToIndex.try_emplace( pComponent, static_cast<uint32>( _listAssetWaiter.size() ) );
+        if ( inserted.second == false )
         {
-            if ( waiter._pComponent != pComponent )
-                continue;
-            waiter._pFunction = pFunction;
+            _listAssetWaiter[inserted.first->second]._pFunction = pFunction;
             return;
         }
         AssetWaiter& added = _listAssetWaiter.emplace_back();
@@ -179,17 +178,23 @@ namespace sw
 
     void PrimitiveRegistry::removeAssetWaiterLocked( const Component* pComponent )
     {
-        for ( size_t waiterIndex = 0; waiterIndex < _listAssetWaiter.size(); ++waiterIndex )
-        {
-            if ( _listAssetWaiter[waiterIndex]._pComponent != pComponent )
-                continue;
-            // 도는 중(`updateAssetWaiters`)에는 자리를 당기지 않고 비워 둔다 — 당기면 도는 쪽의 번호가 다른 대기자를 가리켜, 그 대기자를 부르지 않고 빼 버린다.
-            if ( _bWalkingAssetWaiters != SW_FALSE )
-                _listAssetWaiter[waiterIndex] = AssetWaiter{};
-            else
-                VectorUtil::removeAtSwap( _listAssetWaiter, waiterIndex );
+        const auto found = _mapAssetWaiterToIndex.find( pComponent );
+        if ( found == _mapAssetWaiterToIndex.end() )
             return;
-        }
+        const size_t waiterIndex = found->second;
+        _mapAssetWaiterToIndex.erase( found );
+        // 도는 중(`updateAssetWaiters`)에는 자리를 당기지 않고 비워 둔다 — 당기면 도는 쪽의 번호가 다른 대기자를 가리켜, 그 대기자를 부르지 않고 빼 버린다.
+        if ( _bWalkingAssetWaiters != SW_FALSE )
+            _listAssetWaiter[waiterIndex] = AssetWaiter{};
+        else
+            removeAssetWaiterSlotLocked( waiterIndex );
+    }
+
+    void PrimitiveRegistry::removeAssetWaiterSlotLocked( size_t waiterIndex )
+    {
+        VectorUtil::removeAtSwap( _listAssetWaiter, waiterIndex );
+        if ( waiterIndex < _listAssetWaiter.size() && _listAssetWaiter[waiterIndex]._pComponent != nullptr )
+            _mapAssetWaiterToIndex.insert_or_assign( _listAssetWaiter[waiterIndex]._pComponent, static_cast<uint32>( waiterIndex ) );
     }
 
     void PrimitiveRegistry::addLODPrimitive( PrimitiveComponent* pPrimitive )
@@ -227,7 +232,10 @@ namespace sw
                 ++waiterIndex;
                 continue;
             }
-            VectorUtil::removeAtSwap( _listAssetWaiter, waiterIndex );
+            // 이 자리의 대기자가 아직 걸려 있으면(더 기다리지 않는다) 번호도 지운다. 비운 자리는 빼기가 이미 지웠다.
+            if ( _listAssetWaiter[waiterIndex]._pComponent != nullptr )
+                (void)_mapAssetWaiterToIndex.erase( _listAssetWaiter[waiterIndex]._pComponent );
+            removeAssetWaiterSlotLocked( waiterIndex );
         }
         ScopedLock<mutex> lock{ _mutex };
         _bWalkingAssetWaiters = SW_FALSE;

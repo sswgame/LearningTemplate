@@ -133,4 +133,25 @@ namespace sw
             outListObjectID.push_back( entry.second );
         }
     }
+
+    void PrefabInstanceRegistry::collectAttachedPartsOf( unordered_set<uint64>& inoutUniqueObjectID, vector<uint64>& inoutListObjectID ) const
+    {
+        // 스폰 순서로 돈다 — 부모 부품이 먼저 들어가야 그 부품의 부품을 알아본다(해시 표의 순회 순서는 정해져 있지 않다).
+        vector<pair<uint64, uint64>> listOrdered;
+        listOrdered.reserve( _mapNestedPart.size() );
+        for ( const auto& [objectID, part] : _mapNestedPart )
+        {
+            listOrdered.emplace_back( part._registrationOrder, objectID );
+        }
+        VectorUtil::sort( listOrdered );
+        for ( const pair<uint64, uint64>& entry : listOrdered )
+        {
+            const PrefabNestedPart& part    = _mapNestedPart.find( entry.second )->second;
+            const bool              bPartOf = inoutUniqueObjectID.find( part._ownerObjectID ) != inoutUniqueObjectID.end() && inoutUniqueObjectID.find( entry.second ) == inoutUniqueObjectID.end();
+            if ( bPartOf == false || isAttachedNestedPart( _pManager->findGameObjectByID( entry.second ) ) == false )
+                continue;
+            inoutUniqueObjectID.insert( entry.second );
+            inoutListObjectID.push_back( entry.second );
+        }
+    }
 } // namespace sw

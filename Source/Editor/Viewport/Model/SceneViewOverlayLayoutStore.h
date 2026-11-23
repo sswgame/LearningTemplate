@@ -46,6 +46,7 @@ namespace sw::editor
         /** @brief 저장된 배치를 읽고 기본 바를 등록합니다. 깨진 파일은 키와 함께 경고를 남기고 기본 배치로 둔다(다음 저장이 다시 쓴다). */
         SubsystemInitResult initializeSubsystem() override;
         const utf8*         getSubsystemName() const override { return kSubsystemName; }
+        void                resetToFreshEditor() override { _layout.resetToDefault(); } // 쓰지 않는다 — 자동화의 편집기 상태 폴더는 프로세스마다 비어 있어 새 프로세스도 기본 배치다
 
         /** @brief @p barID 의 고정 정보입니다. 씬 뷰 바가 아니면 nullptr 입니다. */
         [[nodiscard]] static const SceneViewOverlayBarDesc* findBarDesc( string_view barID );

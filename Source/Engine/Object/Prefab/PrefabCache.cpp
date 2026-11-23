@@ -519,7 +519,7 @@ namespace sw
             }
             pGameObject->setName( hashed_string( string( instanceName ).c_str() ) );
         }
-        (void)spawnNestedInstances( pGameObject, asset, {} ); // 건너뛴 노드는 노드마다 경고했다 — 바깥 인스턴스는 남는다
+        (void)spawnNestedInstances( pGameObject, asset, {}, nullptr, 0 ); // 건너뛴 노드는 노드마다 경고했다 — 바깥 인스턴스는 남는다
         return true;
     }
 
@@ -560,13 +560,14 @@ namespace sw
         return true;
     }
 
-    uint32 PrefabCache::spawnNestedInstances( GameObject* pRoot, const PrefabAsset& asset, const vector<PrefabPartOverride>& listPartOverride )
+    uint32 PrefabCache::spawnNestedInstances( GameObject* pRoot, const PrefabAsset& asset, const vector<PrefabPartOverride>& listPartOverride, const ObjectStateBatch* pOwnerBatch,
+                                              const uint64 savedIDScope )
     {
         // 변형이 물려받은 부품에 덮어쓴 것이 앞이다 — 인스턴스가 덮어쓴 것이 나중에 얹혀 이긴다.
         vector<PrefabPartOverride> listAllPart = asset.getVariantPartOverrides();
         listAllPart.insert( listAllPart.end(), listPartOverride.begin(), listPartOverride.end() );
         vector<string> listSpawnedPath;
-        const uint32   createdCount = spawnNestedInstancesUnder( pRoot, asset, {}, listAllPart, listSpawnedPath );
+        const uint32   createdCount = spawnNestedInstancesUnder( pRoot, asset, {}, listAllPart, pOwnerBatch, savedIDScope, listSpawnedPath );
         for ( const PrefabPartOverride& part : listAllPart )
         {
             if ( PrefabCacheInternal::isNodeKeyPath( part._partPath ) == false )
@@ -583,7 +584,7 @@ namespace sw
     }
 
     uint32 PrefabCache::spawnNestedInstancesUnder( GameObject* pRoot, const PrefabAsset& asset, string_view rootPath, const vector<PrefabPartOverride>& listPartOverride,
-                                                   vector<string>& inoutListSpawnedPath )
+                                                   const ObjectStateBatch* pOwnerBatch, const uint64 savedIDScope, vector<string>& inoutListSpawnedPath )
     {
         const vector<PrefabInstanceNode>& listNode = asset.getNestedInstances();
         GameObjectManager*                pManager = pRoot != nullptr ? pRoot->getMutableManager() : nullptr;
@@ -638,7 +639,24 @@ namespace sw
                 continue;
             ObjectLoadContext context{ SerializePurpose::Authoring };
             context._bExternalParentAllowed = false; // 부모는 노드의 자리가 정한다(아래에서 붙인다)
-            const bool bStateRead           = bUseTemplate ? asset.applyNestedSpawnTemplateTo( pPart, index ) : ObjectStateSerializer::loadFromXMLString( pPart, state, context );
+            // 덮어쓴 것이 씬의 다른 오브젝트를 가리키면(부품의 핸들) 저장된 id 로 적혀 있다 — 바깥 인스턴스를 읽은 배치에 묻는다. 원형은 바깥 참조가 없다.
+            ObjectStateBatch partBatch( ObjectIDSpace::Saved );
+            const bool       bLinkOutside = bUseTemplate == false && pOwnerBatch != nullptr;
+            if ( bLinkOutside )
+            {
+                partBatch.setExternalResolver( SW_DELEGATE_LAMBDA( SavedObjectResolver, [pOwnerBatch]( uint64 savedID, hashed_string savedName ) -> GameObject*
+                {
+                    (void)savedName;
+                    return savedID != 0 ? pOwnerBatch->findBySavedID( savedID ) : nullptr;
+                } ) );
+                context._pBatch       = &partBatch;
+                context._savedIDScope = savedIDScope;
+            }
+            bool bStateRead = bUseTemplate ? asset.applyNestedSpawnTemplateTo( pPart, index ) : ObjectStateSerializer::loadFromXMLString( pPart, state, context );
+            if ( bLinkOutside && bStateRead )
+                bStateRead = partBatch.finish();
+            else
+                partBatch.abandon();
             if ( bStateRead == false )
             {
                 SW_LOG_WARNING_ID( "PrefabAsset.NestedPrefabInstanceState", "Nested prefab instance '%#' (%#) state could not be applied - it is skipped", node._name, node._prefabPath );
@@ -662,17 +680,17 @@ namespace sw
                 const PrefabPathStack::Scope scope{ spawnStack, sourceKey };
                 if ( listInnerPart.empty() )
                 {
-                    createdCount += spawnNestedInstancesUnder( pPart, *pSource, partPath, listPartOverride, inoutListSpawnedPath );
+                    createdCount += spawnNestedInstancesUnder( pPart, *pSource, partPath, listPartOverride, pOwnerBatch, savedIDScope, inoutListSpawnedPath );
                     continue;
                 }
                 PrefabCacheInternal::prependInnerParts( partPath, listInnerPart, listPartOverride );
-                createdCount += spawnNestedInstancesUnder( pPart, *pSource, partPath, listInnerPart, inoutListSpawnedPath );
+                createdCount += spawnNestedInstancesUnder( pPart, *pSource, partPath, listInnerPart, pOwnerBatch, savedIDScope, inoutListSpawnedPath );
             }
         }
         return createdCount;
     }
 
-    bool PrefabCache::collectPartOverrides( const GameObject& root, const PrefabAsset& asset, vector<PrefabPartOverride>& outListPartOverride )
+    bool PrefabCache::collectPartOverrides( const GameObject& root, const PrefabAsset& asset, const unordered_map<uint64, uint64>* pSavedIDMap, vector<PrefabPartOverride>& outListPartOverride )
     {
         outListPartOverride.clear();
         GameObjectManager* pManager = root.getMutableManager();
@@ -719,8 +737,13 @@ namespace sw
             const auto baseIt = mapBaseState.find( partPath );
             if ( baseIt == mapBaseState.end() )
                 continue; // 프리팹이 더는 스폰하지 않는 부품 — 다음 로드에 다시 생기지 않는다
-            PrefabPartOverride     part{ partPath, {} };
-            const expected<string> partState = ObjectStateSerializer::saveToXMLString( pPart, options );
+            PrefabPartOverride part{ partPath, {} };
+            ObjectSaveOptions  partOptions{ SerializePurpose::Authoring };
+            partOptions._pSavedIDMap         = pSavedIDMap;
+            partOptions._bOmitExternalParent = pSavedIDMap == nullptr ? SW_TRUE : SW_FALSE;
+            if ( pPart->getParent() != nullptr )
+                partOptions._omitAttachToObjectID = pPart->getParent()->getObjectID(); // 부모는 노드의 자리가 정한다
+            const expected<string> partState = ObjectStateSerializer::saveToXMLString( pPart, partOptions );
             if ( const expected<void> overrides = partState.has_value() ? PrefabOverrides::computeOverrides( *partState, baseIt->second, part._overrideXML ) : expected<void>{ unexpected( partState.error() ) };
                  overrides.has_value() == false )
             {

@@ -13,6 +13,7 @@
 
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
+#include "Engine/Object/GameObject/GameObjectManager.inl"
 #include "Engine/Sequencer/SequencePlayerComponent.h"
 
 namespace sw::editor
@@ -44,25 +45,27 @@ namespace sw::editor
         GameObjectManager* pManager = editor::getActiveObjectManager();
         if ( pManager == nullptr || documentPath.empty() )
             return nullptr;
+        // 리소스 id 는 대소문자를 가리지 않는다.
+        const auto isPlayerOfDocument = [documentPath]( const SequencePlayerComponent* pPlayer )
+        { return pPlayer != nullptr && pPlayer->getOwner() != nullptr && StringUtil::equals( pPlayer->getSequencePath(), documentPath, true ); };
+        GameObject* const              pContextOwner = pManager->resolveGameObject( _contextPlayer );
+        SequencePlayerComponent* const pContext      = pContextOwner != nullptr ? pContextOwner->getComponent<SequencePlayerComponent>() : nullptr;
+        if ( isPlayerOfDocument( pContext ) )
+            return pContext;
+        // 고른 것이 없거나 사라졌으면 첫 것(오브젝트 id 가 가장 작은 것 — 타입 순회는 순서를 약속하지 않는다). 오브젝트 전체가 아니라 플레이어만 훑는다.
         SequencePlayerComponent* pFirst = nullptr;
-        for ( GameObject* pObject : pManager->getAllGameObjects( editor::EditorSceneIterationAccess::getKey() ) )
+        pManager->forEachComponentOfType<SequencePlayerComponent>( editor::EditorSceneIterationAccess::getKey(), [&]( SequencePlayerComponent* pPlayer )
         {
-            SequencePlayerComponent* pPlayer = pObject != nullptr ? pObject->getComponent<SequencePlayerComponent>() : nullptr;
-            // 리소스 id 는 대소문자를 가리지 않는다.
-            if ( pPlayer == nullptr || StringUtil::equals( pPlayer->getSequencePath(), documentPath, true ) == false )
-                continue;
-            if ( pObject->getHandle() == _contextPlayer )
-                return pPlayer;
-            if ( pFirst == nullptr )
+            const bool bFirst = isPlayerOfDocument( pPlayer ) && ( pFirst == nullptr || pPlayer->getOwner()->getObjectID() < pFirst->getOwner()->getObjectID() );
+            if ( bFirst )
                 pFirst = pPlayer;
-        }
+        } );
         return pFirst;
     }
 
-    SequenceBindingView SequencerViewModel::makeBindingView( const SequenceAsset& asset, string_view documentPath ) const
+    SequenceBindingView SequencerViewModel::makeBindingView( const SequenceAsset& asset, const SequencePlayerComponent* pContext ) const
     {
-        const SequencePlayerComponent* pContext = findBindingContext( documentPath );
-        SequenceBindingView            view;
+        SequenceBindingView view;
         view._pAsset       = &asset;
         view._pListSlot    = pContext != nullptr ? &pContext->getBindings() : &_listNoSlot;
         view._pListSpawned = &_listPreviewSpawn;
@@ -84,7 +87,7 @@ namespace sw::editor
         if ( pSelected != nullptr )
             outState._selectionName = pSelected->getName().c_str();
 
-        const SequenceBindingView view     = makeBindingView( asset, documentPath );
+        const SequenceBindingView view     = makeBindingView( asset, pContext );
         GameObjectManager*        pManager = editor::getActiveObjectManager();
         for ( const SequenceBinding& binding : asset._listBinding )
         {
@@ -118,7 +121,7 @@ namespace sw::editor
 
     uint32 SequencerViewModel::countUnboundBindings( const SequenceAsset& asset, string_view documentPath ) const
     {
-        const SequenceBindingView view     = makeBindingView( asset, documentPath );
+        const SequenceBindingView view     = makeBindingView( asset, findBindingContext( documentPath ) );
         GameObjectManager*        pManager = editor::getActiveObjectManager();
         uint32                    unbound  = 0;
         for ( const SequenceBinding& binding : asset._listBinding )
@@ -132,7 +135,7 @@ namespace sw::editor
 
     bool SequencerViewModel::readTrackValues( const SequenceAsset& asset, string_view documentPath, const SequenceKeyTrack& track, float32* pOutArrValue, const uint32 valueCapacity ) const
     {
-        GameObject* pTarget = SequenceTimelineUtil::findTarget( editor::getActiveObjectManager(), makeBindingView( asset, documentPath ), track._binding );
+        GameObject* pTarget = SequenceTimelineUtil::findTarget( editor::getActiveObjectManager(), makeBindingView( asset, findBindingContext( documentPath ) ), track._binding );
         return SequenceTimelineUtil::readTrackValues( pTarget, track, pOutArrValue, valueCapacity );
     }
 
@@ -140,13 +143,13 @@ namespace sw::editor
     {
         const SequencePlayerComponent* pContext = findBindingContext( documentPath );
         const float32                  fps      = pContext != nullptr ? pContext->getFramesPerSecond() : SequencerViewModelInternal::kDefaultFramesPerSecond;
-        EditorViewportPreview::applySequenceFrame( asset, makeBindingView( asset, documentPath ), frame, fps, _listPreviewSpan );
+        EditorViewportPreview::applySequenceFrame( asset, makeBindingView( asset, pContext ), frame, fps, _listPreviewSpan );
     }
 
     void SequencerViewModel::releasePreview( const SequenceAsset& asset, string_view documentPath )
     {
         GameObjectManager* pManager = editor::getActiveObjectManager();
-        SequenceTimelineUtil::releaseSpans( pManager, asset, makeBindingView( asset, documentPath ), SequencerViewModelInternal::kDefaultFramesPerSecond, _listPreviewSpan );
+        SequenceTimelineUtil::releaseSpans( pManager, asset, makeBindingView( asset, findBindingContext( documentPath ) ), SequencerViewModelInternal::kDefaultFramesPerSecond, _listPreviewSpan );
         SequenceTimelineUtil::releaseCameraCut( pManager, asset );
     }
 

@@ -36,7 +36,7 @@ namespace sw::editor
     CameraPresetViewModel::CameraPresetViewModel()
         : _pCatalog{ make_shared<CameraPresetCatalog>() }
         , _selectedIndex{ -1 }
-        , _targetYawDegrees{ 0.0f }
+        , _targetYawDegrees{ kDefaultTargetYawDegrees }
         , _bViewportDirty{ SW_FALSE }
         , _status{}
     {

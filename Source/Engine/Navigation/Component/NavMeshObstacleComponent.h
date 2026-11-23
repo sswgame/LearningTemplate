@@ -45,9 +45,9 @@ namespace sw
         void onUnregister( GameObjectManager& manager ) override;
         void onPropertyChanged( hashed_string propertyName ) override;
 
-        /** @brief 지금 오브젝트 자세의 뚫는 부피입니다(월드). 오브젝트가 없으면 false 입니다. */
+        /** @brief 지금 오브젝트 자세의 뚫는 부피입니다(로컬 월드). 오브젝트가 없으면 false 입니다. */
         [[nodiscard]] bool makeVolume( NavConvexVolume& outVolume ) const;
-        /** @brief 지금 오브젝트 자세의 장애물 캐시 장애물입니다(월드, `NavObstacleMode::TileCache`). 오브젝트가 없으면 false 입니다. */
+        /** @brief 지금 오브젝트 자세의 장애물 캐시 장애물입니다(내비메시와 같은 절대 자리, `NavObstacleMode::TileCache`). 오브젝트가 없으면 false 입니다. */
         [[nodiscard]] bool makeCacheObstacle( NavCacheObstacleDesc& outDesc ) const;
         /** @brief 지금 자세의 월드 경계입니다. */
         [[nodiscard]] bool computeWorldBounds( AABB& outBounds ) const;
@@ -84,7 +84,7 @@ namespace sw
          */
         bool refreshVolume();
 
-        NavConvexVolume        _volume;       ///< 마지막으로 만든 지금 자세의 뚫는 부피(버퍼를 다시 쓴다)
+        NavConvexVolume        _volume;       ///< 마지막으로 만든 지금 자세의 뚫는 부피(절대 자리 — 내비메시에 넣는 값, 버퍼를 다시 쓴다)
         const SceneComponent*  _pSeenScene;   ///< `_volume` 을 만든 씬 컴포넌트(비교만 한다 — 번호는 같은 칸끼리만 견준다)
         AABB                   _carvedBounds; ///< 지금 내비메시에 뚫린 자리(마지막으로 알린 것)
         float3                 _carvedPosition;

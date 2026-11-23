@@ -1,6 +1,7 @@
 // 콘텐츠 브라우저 저장 검색 · 컬렉션 — 줄 텍스트 왕복, 범위(로컬 · 공유) 분리, 같은 이름 덮기, 중복 에셋 거절.
 #include "pch.h"
 
+#include "Core/File/FileUtil.h"
 #include "Core/Testing/TestFramework.h"
 
 #include "Editor/Panels/ContentBrowser/Model/ContentBrowserCollectionStore.h"
@@ -23,21 +24,21 @@ SW_TEST_CASE( ContentBrowserCollectionStoreTest, RoundTripKeepsScopes )
     SW_EXPECT_FALSE( source.createCollection( "Empty Shared", true ) ); // 같은 범위 · 같은 이름
 
     ContentBrowserCollectionStore loaded;
-    loaded.fromText( source.toText( false ), false );
-    loaded.fromText( source.toText( true ), true );
+    SW_EXPECT_TRUE( loaded.fromText( source.toText( false ), false ) );
+    SW_EXPECT_TRUE( loaded.fromText( source.toText( true ), true ) );
     SW_REQUIRE_EQUAL( static_cast<size_t>( 2 ), loaded.getSavedSearches().size() );
     SW_REQUIRE_EQUAL( static_cast<size_t>( 2 ), loaded.getCollections().size() );
     const ContentBrowserCollection* pKit = loaded.findCollection( "Level Kit", false );
     SW_REQUIRE_NOT_NULL( pKit );
-    SW_REQUIRE_EQUAL( static_cast<size_t>( 1 ), pKit->_listAssetID.size() );
-    SW_EXPECT_EQUAL( string( "game/playground/models/crate_medium.mesh" ), pKit->_listAssetID[0] );
+    SW_REQUIRE_EQUAL( static_cast<size_t>( 1 ), pKit->getAssetIDs().size() );
+    SW_EXPECT_EQUAL( string( "game/playground/models/crate_medium.mesh" ), pKit->getAssetIDs()[0] );
     const ContentBrowserCollection* pShared = loaded.findCollection( "Empty Shared", true );
     SW_REQUIRE_NOT_NULL( pShared );
-    SW_EXPECT_TRUE( pShared->_listAssetID.empty() );
+    SW_EXPECT_TRUE( pShared->getAssetIDs().empty() );
     SW_EXPECT_TRUE( loaded.findCollection( "Empty Shared", false ) == nullptr );
 
     // 한 범위를 다시 읽으면 그 범위만 바뀐다
-    loaded.fromText( "", true );
+    SW_EXPECT_TRUE( loaded.fromText( "", true ) );
     SW_EXPECT_EQUAL( static_cast<size_t>( 1 ), loaded.getSavedSearches().size() );
     SW_EXPECT_TRUE( loaded.findCollection( "Level Kit", false ) != nullptr );
 }
@@ -54,11 +55,62 @@ SW_TEST_CASE( ContentBrowserCollectionStoreTest, OverwriteRemoveAndSanitize )
     SW_EXPECT_EQUAL( string( "Mesh" ), collections.getSavedSearches()[0]._typeFilterLabel );
 
     ContentBrowserCollectionStore loaded;
-    loaded.fromText( collections.toText( false ), false );
+    SW_EXPECT_TRUE( loaded.fromText( collections.toText( false ), false ) );
     SW_REQUIRE_EQUAL( static_cast<size_t>( 1 ), loaded.getSavedSearches().size() );
     SW_EXPECT_EQUAL( string( "rock big" ), loaded.getSavedSearches()[0]._searchText );
 
     SW_EXPECT_TRUE( collections.removeSearch( "Rocks", false ) );
     SW_EXPECT_FALSE( collections.removeSearch( "Rocks", false ) );
     SW_EXPECT_FALSE( collections.saveSearch( ContentBrowserSavedSearch{ "", "", "x", false } ) );
+}
+
+/**
+ * @brief [ContentBrowserCollectionStoreTest] 뺀 에셋은 다시 더할 수 있고(목록과 색인이 함께 바뀐다), 파일에 겹쳐 적힌 줄은 한 번만 남는다
+ */
+SW_TEST_CASE( ContentBrowserCollectionStoreTest, RemovedAssetCanBeAddedAgain )
+{
+    ContentBrowserCollectionStore collections;
+    SW_EXPECT_TRUE( collections.fromText( "collection\tKit\t\ncollection\tKit\ta.mesh\ncollection\tKit\tb.mesh\ncollection\tKit\ta.mesh\n", false ) );
+    const ContentBrowserCollection* pKit = collections.findCollection( "Kit", false );
+    SW_REQUIRE_NOT_NULL( pKit );
+    SW_REQUIRE_EQUAL( static_cast<size_t>( 2 ), pKit->getAssetIDs().size() );
+
+    SW_EXPECT_TRUE( collections.removeFromCollection( "Kit", false, "a.mesh" ) );
+    SW_EXPECT_FALSE( collections.removeFromCollection( "Kit", false, "a.mesh" ) );
+    SW_EXPECT_TRUE( collections.addToCollection( "Kit", false, "a.mesh" ) );
+    SW_EXPECT_FALSE( collections.addToCollection( "Kit", false, "b.mesh" ) );
+    pKit = collections.findCollection( "Kit", false );
+    SW_REQUIRE_NOT_NULL( pKit );
+    SW_REQUIRE_EQUAL( static_cast<size_t>( 2 ), pKit->getAssetIDs().size() );
+    SW_EXPECT_EQUAL( string( "b.mesh" ), pKit->getAssetIDs()[0] );
+    SW_EXPECT_EQUAL( string( "a.mesh" ), pKit->getAssetIDs()[1] );
+}
+
+/**
+ * @brief [ContentBrowserCollectionStoreTest] 다 읽지 못한 파일(모르는 줄)은 덮지 않고, 고친 뒤 다시 읽으면 쓴다. 다른 범위와 없는 파일은 쓴다
+ */
+SW_TEST_CASE( ContentBrowserCollectionStoreTest, PartlyReadFileIsNotOverwritten )
+{
+    const AbsolutePath root   = test::makeScratchPath( "CollectionsUnread" );
+    const AbsolutePath local  = root.join( "local.txt" );
+    const AbsolutePath shared = root.join( "shared.txt" );
+    SW_REQUIRE_TRUE( FileUtil::ensureDirectoryExists( root ) );
+    constexpr string_view kConflicted = "collection\tKit\ta.mesh\n<<<<<<< HEAD\ncollection\tKit\tb.mesh\n";
+    SW_REQUIRE_TRUE( FileUtil::writeTextFile( shared, kConflicted ) );
+
+    ContentBrowserCollectionStore collections;
+    SW_EXPECT_LOG( "ContentBrowserCollectionStore.NotRead" );
+    collections.loadFiles( local.str(), shared.str() );
+    SW_EXPECT_TRUE( collections.createCollection( "Mine", false ) );
+    SW_EXPECT_TRUE( collections.saveFile( local.str(), false ) );
+    SW_EXPECT_LOG( "ContentBrowserCollectionStore.NotOverwritten" );
+    SW_EXPECT_FALSE( collections.saveFile( shared.str(), true ) );
+    string text;
+    SW_EXPECT_TRUE( FileUtil::readTextFile( shared, text ) && text == kConflicted );
+
+    SW_REQUIRE_TRUE( FileUtil::writeTextFile( shared, "collection\tKit\ta.mesh\n\n" ) );
+    collections.loadFiles( local.str(), shared.str() );
+    SW_EXPECT_TRUE( collections.saveFile( shared.str(), true ) );
+
+    SW_EXPECT_TRUE( FileUtil::removeDirectory( root ) );
 }

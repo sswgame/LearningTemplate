@@ -1,0 +1,38 @@
+<?xml version="1.0" encoding="utf-8"?>
+<?asset guid="0d8b1be02f0c4d6c9c31f4ce5a7b9e62"?>
+<!--
+  에디터 시나리오 — 빈 상태의 다음 행동: 새 씬의 Hierarchy 는 빈 트리 대신 이유와 오브젝트 만들기 단추(toolbar.scene.object.create)를 보이고, 누르면 오브젝트가 하나 생기며 단추가 사라진다.
+  Map Check 에 결과가 있으면 다음 행동 한 줄, 첫 패키징 전의 Packaging 창은 로그 상자에 할 일을 보인다 — 글은 캡처로 본다.
+  실행: App -EnableEditor -scenario=engine/automation/editor/emptystates.scenario.xml -unattended
+-->
+<Scenario name="editor.emptystates" fixedDelta="0.0166667" timeoutFrames="1200" startAfter="Immediately" input="exclusive">
+	<ResizeWindow width="1920" height="1080"/>
+	<Variable name="gv_editorUiScale" value="1"/>
+	<DevCommand line="layout.reset"/>
+	<EditorWaitStable/>
+	<DevCommand line="editor scene.new"/>
+	<EditorWaitStable/>
+	<WaitUntil watch="Scene.Transitioning" equals="0" timeoutWallSeconds="60"/>
+	<WaitUntil watch="Scene.ObjectCount" equals="0" timeoutFrames="60"/>
+	<EditorWaitStable/>
+	<CaptureEditorUI file="emptystates/newscene.png" maxMagentaFraction="0"/>
+	<EditorClick mark="toolbar.scene.object.create" state="Down"/>
+	<AdvanceSimulation frames="3"/> <!-- 누름 · 뗌을 다른 프레임에 둔다(프레임 경계) -->
+	<EditorClick mark="toolbar.scene.object.create" state="Up"/>
+	<WaitUntil watch="Scene.ObjectCount" equals="1" timeoutFrames="60"/>
+	<Expect watch="Editor.UndoCount" atLeast="1"/>
+	<EditorWaitStable/>
+	<DevCommand line="panel.focus packaging"/>
+	<EditorWaitStable/>
+	<CaptureEditorUI file="emptystates/packaging.png" maxMagentaFraction="0"/>
+	<DevCommand line="scene.open engine/automation/editor/mapcheck/mapcheck_expect_error.scene.xml"/>
+	<EditorWaitStable/>
+	<WaitUntil watch="Scene.Transitioning" equals="0" timeoutWallSeconds="60"/>
+	<DevCommand line="panel.focus map_check"/>
+	<EditorWaitStable/>
+	<WaitUntil watch="Editor.MapCheckFixableRows" equals="1" timeoutFrames="60"/>
+	<EditorWaitStable/>
+	<CaptureEditorUI file="emptystates/mapcheck.png" maxMagentaFraction="0"/>
+	<Variable name="gv_editorUiScale" value="0"/>
+	<Pass/>
+</Scenario>

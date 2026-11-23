@@ -33,16 +33,18 @@ namespace sw
 {
     Equipment::Equipment()
         : _listSlot{}
-        , _context{}
         , _pCatalog{ nullptr }
         , _pSetLookup{ nullptr }
+        , _pCharacter{ nullptr }
         , _revision{ 0 }
     {
     }
 
-    void Equipment::initialize( const ItemCatalog* pCatalog, string_view slotLayout )
+    void Equipment::initialize( const ItemCatalog* pCatalog, string_view slotLayout, const IEquipmentSetLookup* pSetLookup, const EquipmentCharacterContext* pCharacter )
     {
-        _pCatalog = pCatalog;
+        _pCatalog   = pCatalog;
+        _pSetLookup = pSetLookup;
+        _pCharacter = pCharacter;
         _listSlot.clear();
         StringUtil::forEachToken( slotLayout, ", ", [&]( string_view token )
         {
@@ -63,9 +65,11 @@ namespace sw
 
     bool Equipment::areConditionsMet( const ItemDef& def, const vector<EquipmentSlot>& listSlot, int32 slotIndex ) const
     {
+        const EquipmentCharacterContext  noCharacter;
+        const EquipmentCharacterContext& character = _pCharacter != nullptr ? *_pCharacter : noCharacter;
         for ( const EquipmentCondition& condition : def._listEquipCondition )
         {
-            if ( EquipmentCondition::isMet( condition, listSlot, slotIndex, *_pCatalog, _pSetLookup, _context ) == false )
+            if ( EquipmentCondition::isMet( condition, listSlot, slotIndex, *_pCatalog, _pSetLookup, character ) == false )
                 return false;
         }
         return true;
@@ -156,13 +160,16 @@ namespace sw
             ++_revision;
     }
 
-    void Equipment::setCharacterContext( const EquipmentCharacterContext& context, vector<InventorySlot>& outListRemoved )
+    void Equipment::settleCharacterChange( Inventory& inventory )
     {
-        outListRemoved.clear();
-        _context                        = context;
         vector<EquipmentSlot> listTrial = _listSlot;
+        vector<InventorySlot> listRemoved;
         // 캐릭터 쪽 변화는 거부할 수 없다. 거부 정책인 아이템도 숨김으로 둔다.
-        (void)settleConditions( listTrial, false, outListRemoved );
+        (void)settleConditions( listTrial, false, listRemoved );
+        for ( const InventorySlot& removed : listRemoved )
+        {
+            inventory.addStackOrOverflow( removed );
+        }
         commitSlots( std::move( listTrial ) );
     }
 
@@ -285,6 +292,37 @@ namespace sw
             }
         }
         return true;
+    }
+
+    void Equipment::restoreWorn( const vector<EquipmentSlot>& listWorn, Inventory& inventory )
+    {
+        vector<EquipmentSlot> listRestored = _listSlot;
+        for ( EquipmentSlot& slot : listRestored )
+        {
+            slot._item        = InventorySlot{};
+            slot._bSuppressed = SW_FALSE;
+        }
+        vector<InventorySlot> listRemoved;
+        for ( const EquipmentSlot& worn : listWorn )
+        {
+            const optional<int32> foundSlot = findSlotIndex( worn._name );
+            const ItemDef*        pDef      = _pCatalog != nullptr ? _pCatalog->find( worn._item._itemID ) : nullptr;
+            EquipmentSlot*        pTarget   = foundSlot.has_value() ? &listRestored[static_cast<size_t>( *foundSlot )] : nullptr;
+            if ( pTarget == nullptr || pDef == nullptr || pDef->_equipSlot != pTarget->_accept || pTarget->_item.isEmpty() == false )
+                listRemoved.push_back( worn._item );
+            else
+            {
+                pTarget->_item        = worn._item;
+                pTarget->_item._count = 1; // `equip` 과 같다 — 칸에는 하나만 낀다
+            }
+        }
+        (void)settleConditions( listRestored, false, listRemoved ); // 불러오기는 거부할 수 없다 — 거부 정책인 아이템도 숨김으로 둔다
+        for ( const InventorySlot& removed : listRemoved )
+        {
+            SW_LOG_WARNING_ID( "Equipment.SavedItemNotWorn", "Saved '%#' cannot be worn now - it goes to the bag", removed._itemID.c_str() );
+            inventory.addStackOrOverflow( removed );
+        }
+        commitSlots( std::move( listRestored ) );
     }
 
     bool Equipment::setEquippedInstance( const hashed_string& slot, const InventorySlot& item )

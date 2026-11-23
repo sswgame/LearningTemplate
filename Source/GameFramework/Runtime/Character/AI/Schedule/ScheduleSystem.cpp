@@ -253,13 +253,9 @@ namespace sw
 
     void ScheduleSystem::shutdown()
     {
-        for ( NPCRuntime& npc : _listNPC )
+        for ( const NPCRuntime& npc : _listNPC )
         {
-            for ( const ScheduleSegment& segment : npc._listSegment )
-            {
-                if ( segment._reservationID != 0 )
-                    _services._pLocator->release( segment._reservationID );
-            }
+            releaseUnused( npc._listSegment, vector<ScheduleSegment>{} );
         }
         _listNPC.clear();
         _eventBuffer.clear();
@@ -283,7 +279,19 @@ namespace sw
 
     void ScheduleSystem::setActivityLocator( IScheduleActivityLocator* pLocator )
     {
-        _services._pLocator = pLocator != nullptr ? pLocator : &_defaultLocator;
+        IScheduleActivityLocator* const pNext = pLocator != nullptr ? pLocator : &_defaultLocator;
+        if ( pNext == _services._pLocator )
+            return;
+        // 예약 id 는 준 제공자의 것이다 — 바꾸기 전에 옛 제공자에 돌려주고 잊는다(남기면 새 제공자의 같은 번호를 지운다).
+        for ( NPCRuntime& npc : _listNPC )
+        {
+            releaseUnused( npc._listSegment, vector<ScheduleSegment>{} );
+            for ( ScheduleSegment& segment : npc._listSegment )
+            {
+                segment._reservationID = 0;
+            }
+        }
+        _services._pLocator = pNext;
         if ( _listNPC.empty() == false )
             _bConditionsDirty = SW_TRUE;
     }
@@ -1525,12 +1533,16 @@ namespace sw
             }
             outState._listNPC.push_back( npcState );
         }
-        for ( const int32 appointmentIndex : _listBrokenAppointment )
+        const auto fillAppointments = [this]( const vector<int32>& listIndex, vector<string>& outListID )
         {
-            outState._listBrokenAppointment.push_back( string( _pCatalog->getAppointments()[static_cast<size_t>( appointmentIndex )]._id.c_str() ) );
-        }
-        if ( _services._pLocator == &_defaultLocator )
-            _defaultLocator.fillState( outState._listReservation );
+            for ( const int32 appointmentIndex : listIndex )
+            {
+                outListID.push_back( string( _pCatalog->getAppointments()[static_cast<size_t>( appointmentIndex )]._id.c_str() ) );
+            }
+        };
+        fillAppointments( _listBrokenAppointment, outState._listBrokenAppointment );
+        fillAppointments( _listMetAppointment, outState._listMetAppointment );
+        _services._pLocator->fillState( outState._listReservation );
     }
 
     void ScheduleSystem::restoreSaveState( const ScheduleSaveState& state )
@@ -1549,15 +1561,18 @@ namespace sw
         _settings._seed = state._seed;
         _weather        = state._weather;
         _eventBuffer.clear();
-        _listMetAppointment.clear();
-        _listBrokenAppointment.clear();
-        for ( const string& appointmentID : state._listBrokenAppointment )
+        const auto restoreAppointments = [this]( const vector<string>& listID, vector<int32>& outListIndex )
         {
-            if ( const optional<int32> appointmentIndex = _pCatalog->findAppointmentIndex( hashed_string( appointmentID ) ); appointmentIndex.has_value() )
-                _listBrokenAppointment.push_back( *appointmentIndex );
-        }
-        if ( _services._pLocator == &_defaultLocator )
-            _defaultLocator.restoreState( state._listReservation );
+            outListIndex.clear();
+            for ( const string& appointmentID : listID )
+            {
+                if ( const optional<int32> appointmentIndex = _pCatalog->findAppointmentIndex( hashed_string( appointmentID ) ); appointmentIndex.has_value() )
+                    outListIndex.push_back( *appointmentIndex );
+            }
+        };
+        restoreAppointments( state._listBrokenAppointment, _listBrokenAppointment );
+        restoreAppointments( state._listMetAppointment, _listMetAppointment );
+        _services._pLocator->restoreState( state._listReservation );
 
         vector<uint8> listRestored( _listNPC.size(), SW_FALSE );
         for ( const NPCScheduleSaveState& npcState : state._listNPC )

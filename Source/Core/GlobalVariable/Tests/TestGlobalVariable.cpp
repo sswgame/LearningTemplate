@@ -474,3 +474,20 @@ SW_TEST_CASE( GlobalVariableTest, RegistrationGenerationTracksRegisterAndUnload 
     SW_REQUIRE_EQUAL( 1u, static_cast<uint32>( listVariable.size() ) );
     SW_EXPECT_EQUAL( sw::string( "gv_genCore" ), listVariable[0]->_name );
 }
+
+/** @brief [GlobalSecretTest] 비밀 값은 글로 바꾸면 가린 글이고, 빈 값은 빈 글이다. 가린 글을 도로 쓰면 거절해 값이 그대로다 */
+SW_TEST_CASE( GlobalSecretTest, TextFormIsMaskedAndMaskIsRejected )
+{
+    sw::GlobalVariableManager manager;
+    sw::GlobalSecret          value;
+    SW_REQUIRE_TRUE( manager.registerVariable( "gv_testSecret", sw::GlobalVariableType::Secret, &value, sw::string{}, "test" ) );
+    const sw::GlobalVariableInfo* pInfo = manager.findVariable( "gv_testSecret" );
+    SW_REQUIRE_NOT_NULL( pInfo );
+    SW_EXPECT_TRUE( pInfo->getValueAsString().empty() );
+    SW_EXPECT_TRUE( pInfo->isAtDefault() );
+    SW_REQUIRE_TRUE( manager.setValueFromString( "gv_testSecret", "token-1" ) );
+    SW_EXPECT_EQUAL( sw::string( "***" ), pInfo->getValueAsString() );
+    SW_EXPECT_FALSE( pInfo->isAtDefault() );
+    SW_EXPECT_FALSE( manager.setValueFromString( "gv_testSecret", pInfo->getValueAsString() ) );
+    SW_EXPECT_EQUAL( sw::string( "token-1" ), value.get() );
+}

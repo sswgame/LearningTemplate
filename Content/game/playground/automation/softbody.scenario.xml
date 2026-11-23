@@ -1,0 +1,26 @@
+<?xml version="1.0" encoding="utf-8"?>
+<?asset guid="d27ba1dd3e267114a7ec26ce426fa95d"?>
+<!--
+  소프트 바디(Jolt SoftBody — ClothComponent) — 무대 maps/softbody. 정점의 월드 높이로 판정한다(골든 없음).
+  ① 윗변을 건 천은 늘어나지 않고 매달린다(윗변 y 3, 아랫변 약 y 2) ② 거는 자리를 옮기면 윗변이 따라온다 ③ 고정 없는 천은 떨어져 판(윗면 y 1)에 걸치고 양 끝이 판 아래로 늘어지되 바닥(y 0)을 뚫지 않는다
+  실행: App -scenario=game/playground/automation/softbody.scenario.xml -unattended (체인: ctest -R Scenario.playground)
+-->
+<Scenario name="game.playground.softbody" fixedDelta="0.0166667" timeoutFrames="1200" startAfter="ScenePlaying" startTimeoutFrames="900" input="exclusive">
+	<Launch variable="gv_firstScene" value="game/playground/maps/softbody.scene.xml"/>
+	<WaitUntil watch="Assets.Pending" equals="0" timeoutWallSeconds="60"/>
+
+	<!-- ① 매달림 -->
+	<WaitUntil watch="Cloth.HighestY" target="Curtain" near="3" tolerance="0.02" timeoutFrames="30"/>
+	<AdvanceSimulation frames="60"/> <!-- 1 초 — 중력이 당겨도 윗변은 그대로다(시간이 내용) -->
+	<Expect watch="Cloth.HighestY" target="Curtain" near="3" tolerance="0.02"/>
+	<Expect watch="Cloth.LowestY" target="Curtain" near="2" tolerance="0.1"/>
+	<!-- ② 옮기기 -->
+	<DevCommand line="object.place Curtain 4 4 0"/>
+	<WaitUntil watch="Cloth.HighestY" target="Curtain" near="4" tolerance="0.02" timeoutFrames="30"/>
+	<WaitUntil watch="Cloth.LowestY" target="Curtain" near="3" tolerance="0.15" timeoutSeconds="2"/>
+	<!-- ③ 걸침 -->
+	<WaitUntil watch="Cloth.LowestY" target="Sheet" atMost="0.75" timeoutSeconds="4"/> <!-- 양 끝이 판(윗면 1) 아래로 늘어졌다 -->
+	<Expect watch="Cloth.HighestY" target="Sheet" near="1" tolerance="0.15"/> <!-- 가운데는 판 위다 -->
+	<Expect watch="Cloth.LowestY" target="Sheet" atLeast="-0.05"/>
+	<Pass/>
+</Scenario>

@@ -74,6 +74,8 @@ namespace sw
 
         void onBeginPlay() override;
         void onEndPlay() override;
+        /** @brief 지난 프레임 자리를 옮깁니다. */
+        void onWorldOriginShifted( const float3& delta ) override;
 
         /** @brief 마지막 프레임의 방향 보정 각(라디안)입니다. */
         float32 getOrientationAngle() const { return _orientationAngle; }

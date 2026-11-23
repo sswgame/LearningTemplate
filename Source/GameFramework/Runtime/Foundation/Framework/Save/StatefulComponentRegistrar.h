@@ -21,13 +21,19 @@ namespace sw
     class SW_GF_API StatefulComponentRegistration
     {
     public:
-        using CaptureFn = void ( * )( SceneIterationKey key, ComponentStateStore& store, GameObjectManager& manager );
-        using RestoreFn = void ( * )( SceneIterationKey key, const ComponentStateStore& store, GameObjectManager& manager );
-        using DespawnFn = void ( * )( SceneIterationKey key, GameObjectManager& manager );
+        using CaptureFn       = void ( * )( SceneIterationKey key, ComponentStateStore& store, GameObjectManager& manager );
+        using RestoreFn       = void ( * )( SceneIterationKey key, const ComponentStateStore& store, GameObjectManager& manager );
+        using DespawnFn       = void ( * )( SceneIterationKey key, GameObjectManager& manager );
+        using TypeFn          = const TypeInfo* (*)();
+        using WriteFn         = void ( * )( Component& component, vector<uint8>& outBytes );
+        using RestoreObjectFn = void ( * )( Component& component, vector<uint8>&& bytes );
 
-        /** @param pDespawn 상태 저장 전에 세운 런타임 오브젝트를 걷는 일입니다(`GameStateSnapshot::registerViewOwner` 와 같은 일). 세운 것이 없는 타입은 nullptr 입니다. */
-        StatefulComponentRegistration( const utf8* pTypeName, CaptureFn pCapture, RestoreFn pRestore, DespawnFn pDespawn, SourceLocation site );
-        ~StatefulComponentRegistration()                                                 = default;
+        /**
+         * @param pDespawn 상태 저장 전에 세운 런타임 오브젝트를 걷는 일입니다(`GameStateSnapshot::registerViewOwner` 와 같은 일). 세운 것이 없는 타입은 nullptr 입니다.
+         * @param pWrite · pRestoreObject 컴포넌트 하나의 상태를 뜨고 되돌리는 함수입니다 — 스트리밍 셀 · 레이어 묶음 · 하위 레벨이 쓰는 엔진 코덱(`ComponentStateCodec`)에 오른다. 상태가 없는 타입은 nullptr 입니다.
+         */
+        StatefulComponentRegistration( const utf8* pTypeName, CaptureFn pCapture, RestoreFn pRestore, DespawnFn pDespawn, TypeFn pGetType, WriteFn pWrite, RestoreObjectFn pRestoreObject, SourceLocation site );
+        ~StatefulComponentRegistration();
         StatefulComponentRegistration( const StatefulComponentRegistration& )            = delete;
         StatefulComponentRegistration& operator=( const StatefulComponentRegistration& ) = delete;
 
@@ -47,6 +53,7 @@ namespace sw
         CaptureFn                                       _pCapture;
         RestoreFn                                       _pRestore;
         DespawnFn                                       _pDespawn;
+        unique_ptr<ComponentStateCodec>                 _pCodec;    ///< 엔진에 올린 코덱(상태가 없는 타입은 nullptr)
         StaticRegistrar<StatefulComponentRegistration*> _registrar; ///< 마지막에 만들어 먼저 사라진다 — 칸이 선 뒤에 오르고 칸보다 먼저 내린다
     };
 } // namespace sw
@@ -91,11 +98,25 @@ namespace sw
 
     public:
         explicit StatefulComponentRegistrar( const utf8* pTypeName, SourceLocation site = SourceLocation::current() )
-            : StatefulComponentRegistration( pTypeName, selectCapture(), selectRestore(), selectDespawn(), site )
+            : StatefulComponentRegistration( pTypeName, selectCapture(), selectRestore(), selectDespawn(), &TComponent::StaticType, selectWrite(), selectRestoreObject(), site )
         {
         }
 
     private:
+        static WriteFn selectWrite()
+        {
+            if constexpr ( ComponentStateStoreTraits::HasRestoreState<TComponent>::value )
+                return &ComponentStateStore::writeComponent<TComponent>;
+            else
+                return nullptr;
+        }
+        static RestoreObjectFn selectRestoreObject()
+        {
+            if constexpr ( ComponentStateStoreTraits::HasRestoreState<TComponent>::value )
+                return &ComponentStateStore::restoreComponent<TComponent>;
+            else
+                return nullptr;
+        }
         static CaptureFn selectCapture()
         {
             if constexpr ( ComponentStateStoreTraits::HasRestoreState<TComponent>::value )

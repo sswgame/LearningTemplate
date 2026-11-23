@@ -13,6 +13,7 @@
 #include "Core/Math/Math.h"
 
 #include "Engine/Navigation/NavigationTypes.h"
+#include "Engine/Object/GameObject/WorldOrigin.h"
 
 namespace sw
 {
@@ -64,8 +65,14 @@ namespace sw
     public:
         NavMeshGeometry();
 
-        /** @brief 모두 비웁니다. */
+        /** @brief 모두 비웁니다(원점은 그대로). */
         void clear();
+        /**
+         * @brief 이 뒤에 더하는 것의 월드 자리가 기준한 원점을 정합니다 — 더하는 쪽은 씬의 로컬 월드 자리를 넘기고, 입력은 절대 자리로 든다(내비메시 · 쿠킹본은 절대 좌표).
+         * @details 더하는 길이 모두 이 형식을 지나므로 기하를 내는 쪽(`INavGeometrySource` · `NavGeometryContribution`)은 원점을 몰라도 된다.
+         */
+        void               setWorldOrigin( const WorldOrigin& origin ) { _worldOrigin = origin; }
+        const WorldOrigin& getWorldOrigin() const { return _worldOrigin; }
 
         /**
          * @brief 삼각형을 추가합니다. 점은 @p world(행 벡터, 로컬 × 월드)로 옮기고, 번호는 이 목록의 점 번호입니다.
@@ -129,6 +136,7 @@ namespace sw
         vector<uint8>           _listTriangleArea; ///< 삼각형마다 하나를 가진다.
         vector<NavConvexVolume> _listVolume;
         vector<NavOffMeshLink>  _listLink;
+        WorldOrigin             _worldOrigin;   ///< 더하는 자리의 원점(`setWorldOrigin`)
         vector<uint32>          _listCellStart; ///< 셀마다 `_listCellTriangle` 의 시작 위치다(셀 수 + 1).
         vector<uint32>          _listCellTriangle;
         AABB                    _bounds;

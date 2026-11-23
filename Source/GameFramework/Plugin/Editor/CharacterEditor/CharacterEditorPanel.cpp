@@ -1542,7 +1542,7 @@ namespace sw::editor
 
         if ( ImGui::BeginChild( "##PresetList", EditorChrome::measureTextExtent( EditorTextExtent::ofText( 0.0f, CharacterEditorPanelInternal::kPresetListLines ) ), ImGuiChildFlags_Borders ) )
         {
-            for ( const UserAppearancePreset& preset : _document.getPresetStore().getPresets() )
+            for ( const UserAppearancePresetRecord& preset : _document.getPresetStore().getPresets() )
             {
                 if ( ImGui::Selectable( preset._name.c_str() ) )
                     _document.applyPreset( string_view( preset._name ) );

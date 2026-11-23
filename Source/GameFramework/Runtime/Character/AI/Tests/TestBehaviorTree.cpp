@@ -406,6 +406,27 @@ SW_TEST_CASE( BehaviorTreeTest, LowerPriorityAbortLetsAHigherBranchIn )
     SW_EXPECT_TRUE( string_view( rig._runner.getActiveLeafName() ) == "Fight" );
 }
 
+// 바로 끝나는 작업을 되풀이하는 뒤 가지는 도는 잎이 없다 — 그래도 앞 가지의 조건이 참이 되면 멈춘다.
+SW_TEST_CASE( BehaviorTreeTest, LowerPriorityAbortStopsARepeatOfInstantTasks )
+{
+    BehaviorFixture     rig;
+    const hashed_string key( "Enemy" );
+    const int32         root   = rig._tree.addSelector( nullopt ).value();
+    const int32         guard  = rig._tree.addBlackboardCondition( root, key, BlackboardCompare::IsSet, 0.0f, BehaviorAbortMode::Both ).value();
+    const int32         fight  = rig.addAction( guard, BehaviorStatus::Running, "Fight" );
+    const int32         repeat = rig._tree.addRepeat( root, 0 ).value();
+    const int32         patrol = rig.addAction( repeat, BehaviorStatus::Success, "Patrol" );
+    rig.build();
+    SW_EXPECT_TRUE( rig.tick() == BehaviorStatus::Running );
+    SW_EXPECT_EQUAL( 1u, rig._probe._arrTick[patrol] );
+
+    rig._blackboard.setBool( key, true );
+    SW_EXPECT_TRUE( rig.tick() == BehaviorStatus::Running );
+    SW_EXPECT_EQUAL( 1u, rig._probe._arrStart[fight] );
+    SW_EXPECT_EQUAL( 1u, rig._probe._arrTick[patrol] );
+    SW_EXPECT_FALSE( rig._runner.isNodeActive( repeat ) );
+}
+
 SW_TEST_CASE( BehaviorTreeTest, ResetAbortsWhatIsRunning )
 {
     BehaviorFixture rig;
@@ -505,6 +526,41 @@ SW_TEST_CASE( BehaviorMoveToTest, AbortStopsTheMover )
     (void)rig.tick();
     rig._runner.reset();
     SW_EXPECT_EQUAL( 1u, mover._stopCount );
+}
+
+// 반응 셀렉터는 앞 가지를 돌려 본 뒤에 옛 가지를 중단한다 — 옛 이동의 중단이 방금 낸 새 이동을 멈추면 안 된다(슬롯 트리 안의 이동도).
+SW_TEST_CASE( BehaviorMoveToTest, PreemptedMoveDoesNotStopTheNewMove )
+{
+    const hashed_string chase( "Chase" );
+    const hashed_string patrol( "Patrol" );
+    const hashed_string slot( "Combat" );
+    BehaviorTree        slotTree;
+    (void)slotTree.addMoveTo( nullopt, chase );
+    for ( const bool bThroughSlot : { false, true } )
+    {
+        BehaviorFixture rig;
+        const int32     root  = rig._tree.addSelector( nullopt, "Root", true ).value();
+        const int32     guard = rig._tree.addBlackboardCondition( root, chase, BlackboardCompare::IsSet, 0.0f, BehaviorAbortMode::Self ).value();
+        if ( bThroughSlot )
+            (void)rig._tree.addSubTreeSlot( guard, "Combat", slot );
+        else
+            (void)rig._tree.addMoveTo( guard, chase );
+        (void)rig._tree.addMoveTo( root, patrol );
+        rig.build();
+        rig._runner.setSlotTree( slot, &slotTree );
+        FakeMover mover;
+        rig._runner.setMover( &mover );
+        rig._blackboard.setVector( patrol, float3{ 5.0f, 0.0f, 0.0f } );
+        SW_REQUIRE_TRUE( rig.tick() == BehaviorStatus::Running );
+
+        rig._blackboard.setVector( chase, float3{ 0.0f, 0.0f, 7.0f } );
+        SW_EXPECT_TRUE( rig.tick() == BehaviorStatus::Running );
+        SW_EXPECT_NEAR( 7.0f, mover._destination._z, 1.0e-4f );
+        SW_EXPECT_TRUE( mover._status == NavMoveStatus::Moving );
+        SW_EXPECT_EQUAL( 0u, mover._stopCount );
+        rig._runner.reset();
+        SW_EXPECT_EQUAL( 1u, mover._stopCount );
+    }
 }
 
 // 도는 중에 목적지가 사라지면 트리만 실패로 넘어가고 몸은 옛 목적지로 계속 가면 안 된다.

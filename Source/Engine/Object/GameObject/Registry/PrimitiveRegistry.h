@@ -20,6 +20,7 @@
 #include "Core/Concurrency/atomic.h"
 #include "Core/Concurrency/mutex.h"
 #include "Core/Container/span.h"
+#include "Core/Container/unordered_map.h"
 #include "Core/Container/unordered_set.h"
 #include "Core/Container/vector.h"
 #include "Core/Foundation/Macros.h"
@@ -209,6 +210,8 @@ namespace sw
 
         /** @brief `_mutex` 를 이미 쥔 채로 기다리는 컴포넌트를 뺍니다. */
         void removeAssetWaiterLocked( const Component* pComponent ) SW_REQUIRES_LOCK( _mutex );
+        /** @brief 대기자 자리를 끝 자리로 메우고 옮겨 온 대기자의 번호를 고칩니다. 부르는 쪽이 이 자리의 번호 칸을 먼저 지운다. */
+        void removeAssetWaiterSlotLocked( size_t waiterIndex ) SW_REQUIRES_LOCK( _mutex );
 
         /** @brief 메시 칸 영역의 처음 크기입니다(그 뒤로 두 배씩). 더티 비트 워드 하나(64 칸)와 같다. */
         static constexpr uint32 kInitialMeshSlotCount = 64;
@@ -267,14 +270,16 @@ namespace sw
         vector<PrimitiveComponent*> _listPrimitive;
         /** @brief `_listPrimitive` 와 같은 위치의 트랜스폼 슬롯 번호입니다(`getTransformSlots`). 빈 칸은 무효 번호입니다. */
         vector<uint32>                             _listPrimitiveTransformSlot;
-        vector<uint32>                             _listPrimitiveSerial;                ///< 메시 칸마다 들어온 차례(`getPrimitiveSerials`)
-        vector<uint32> _listFreePrimitiveSlot      SW_GUARDED_BY( _mutex );             ///< 메시 칸 프리리스트(스택 — 끝에서 꺼낸다). 늘릴 때 작은 번호가 끝에 오게 넣는다
-        vector<EntrySpan> _listFreeEntrySpan       SW_GUARDED_BY( _mutex );             ///< 빈 인스턴스 항목 구간(자리 순, 이웃끼리 합쳐 둔다)
-        vector<PrimitiveInstanceEntry>             _listInstanceEntry;                  ///< 배치 순서대로 이어 붙은 항목들
-        vector<PrimitiveBatch*> _listInstanceBatch SW_GUARDED_BY( _mutex );             ///< 등록된 배치. 빼기와 자리 당기기에 씁니다
-        vector<AssetWaiter>                        _listAssetWaiter;                    ///< 에셋 로드를 기다리는 컴포넌트(`addAssetWaiter`). 게임 스레드만 씁니다
-        uint8 _bWalkingAssetWaiters                SW_GUARDED_BY( _mutex ){ SW_FALSE }; ///< `updateAssetWaiters` 가 도는 중 — 빼기는 자리를 비우기만 한다
-        unordered_set<PrimitiveComponent*>         _setLODPrimitive;                    ///< LOD 단계가 여럿인 메시의 프리미티브(`addLODPrimitive`). 밀집 배열 집합이라 걸기 · 떼기가 O(1) 이고 씬 로드가 O(N^2) 가 되지 않습니다. 게임 스레드만 씁니다
+        vector<uint32>                             _listPrimitiveSerial;    ///< 메시 칸마다 들어온 차례(`getPrimitiveSerials`)
+        vector<uint32> _listFreePrimitiveSlot      SW_GUARDED_BY( _mutex ); ///< 메시 칸 프리리스트(스택 — 끝에서 꺼낸다). 늘릴 때 작은 번호가 끝에 오게 넣는다
+        vector<EntrySpan> _listFreeEntrySpan       SW_GUARDED_BY( _mutex ); ///< 빈 인스턴스 항목 구간(자리 순, 이웃끼리 합쳐 둔다)
+        vector<PrimitiveInstanceEntry>             _listInstanceEntry;      ///< 배치 순서대로 이어 붙은 항목들
+        vector<PrimitiveBatch*> _listInstanceBatch SW_GUARDED_BY( _mutex ); ///< 등록된 배치. 빼기와 자리 당기기에 씁니다
+        vector<AssetWaiter>                        _listAssetWaiter;        ///< 에셋 로드를 기다리는 컴포넌트(`addAssetWaiter`). 게임 스레드만 씁니다
+        /// @brief 컴포넌트 → `_listAssetWaiter` 자리. 씬을 올리는 동안 걸기 · 풀기가 대기자 수만큼 훑지 않는다.
+        unordered_map<const Component*, uint32> _mapAssetWaiterToIndex SW_GUARDED_BY( _mutex );
+        uint8 _bWalkingAssetWaiters                                    SW_GUARDED_BY( _mutex ){ SW_FALSE }; ///< `updateAssetWaiters` 가 도는 중 — 빼기는 자리를 비우기만 한다
+        unordered_set<PrimitiveComponent*>                             _setLODPrimitive;                    ///< LOD 단계가 여럿인 메시의 프리미티브(`addLODPrimitive`). 밀집 배열 집합이라 걸기 · 떼기가 O(1) 이고 씬 로드가 O(N^2) 가 되지 않습니다. 게임 스레드만 씁니다
         /**
          * @brief 슬롯마다 "바뀌었다" 비트입니다. **워드 하나가 슬롯 64 개**입니다. 원자값이라 워커 여럿이 동시에 표시해도 됩니다.
          * @details `consumeDirty` 는 워드마다 exchange 한 번(8000 슬롯이면 125 번)이고 켜진 비트만 골라 순회한다. 슬롯마다 원자 바이트로 두면

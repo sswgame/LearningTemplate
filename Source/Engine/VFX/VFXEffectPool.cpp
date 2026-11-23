@@ -59,7 +59,7 @@ namespace sw
         _mapPool.clear();
     }
 
-    bool VFXEffectPool::play( const string& effectPath, const float3& position, uint32 poolLimit ) const
+    bool VFXEffectPool::play( const hashed_string& effectPath, const float3& position, uint32 poolLimit ) const
     {
         if ( build::kWithClientCode == false || effectPath.empty() || poolLimit == 0 )
             return false;
@@ -69,9 +69,9 @@ namespace sw
         return true;
     }
 
-    void VFXEffectPool::playNow( const string& effectPath, const float3& position, uint32 poolLimit )
+    void VFXEffectPool::playNow( const hashed_string& effectPath, const float3& position, uint32 poolLimit )
     {
-        EffectPool&   pool    = _mapPool[hashed_string( effectPath )];
+        EffectPool&   pool    = _mapPool[effectPath];
         VFXComponent* pEffect = acquireEffect( pool, effectPath, poolLimit );
         if ( pEffect == nullptr )
             return;
@@ -92,7 +92,7 @@ namespace sw
         return found != _mapPool.end() ? static_cast<uint32>( found->second._listEffect.size() ) : 0;
     }
 
-    VFXComponent* VFXEffectPool::acquireEffect( EffectPool& pool, const string& effectPath, uint32 poolLimit )
+    VFXComponent* VFXEffectPool::acquireEffect( EffectPool& pool, const hashed_string& effectPath, uint32 poolLimit )
     {
         for ( const TComponentHandle<VFXComponent>& handle : pool._listEffect )
         {
@@ -119,7 +119,7 @@ namespace sw
         return pEffect;
     }
 
-    VFXComponent* VFXEffectPool::createEffect( const string& effectPath )
+    VFXComponent* VFXEffectPool::createEffect( const hashed_string& effectPath )
     {
         GameObject* pObject = _pManager->createGameObject( hashed_string( VFXEffectPoolInternal::kObjectName ) );
         if ( pObject == nullptr )
@@ -127,7 +127,7 @@ namespace sw
         pObject->setTransient( true ); // 효과를 튼 쪽이 다시 세우는 파생 — 세이브 · 상태 해시에 넣지 않는다(`GameObject::setTransient`)
         VFXComponent* pEffect = pObject->addComponent<VFXComponent>();
         if ( pEffect != nullptr )
-            pEffect->setEffectPath( effectPath ); // 효과 정의는 공유 캐시의 한 벌이라 풀이 커져도 파일은 한 번 읽는다
+            pEffect->setEffectPath( effectPath.view() ); // 효과 정의는 공유 캐시의 한 벌이라 풀이 커져도 파일은 한 번 읽는다
         return pEffect;
     }
 } // namespace sw

@@ -3,6 +3,7 @@
 #include "Engine/Object/Component/TagComponent.h"
 
 #include "Engine/Object/GameObject/GameObject.h"
+#include "Engine/Object/GameObject/GameObjectEvents.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
 #include "Engine/Object/GameObject/Registry/TagIndex.h"
 
@@ -80,8 +81,10 @@ namespace sw
 
     void TagComponent::syncTagIndex()
     {
-        if ( _pTagIndex != nullptr )
-            _pTagIndex->update( *this, getOwner(), _tags );
+        if ( _pTagIndex == nullptr )
+            return;
+        _pTagIndex->update( *this, getOwner(), _tags );
+        GameObjectEvents::broadcast( *getOwner(), &GameObjectEvents::_tagsChanged, _tags );
     }
 
     bool TagComponent::isStructureFrozen() const

@@ -111,7 +111,7 @@ namespace sw::editor
 
     bool PropertyShapeHandle::isSameHandle( const PropertyShapeHandle& other ) const
     {
-        return _componentID == other._componentID && _property == other._property && _kind == other._kind && _axis == other._axis && _sign == other._sign;
+        return _componentID == other._componentID && _property == other._property && _kind == other._kind && _elementIndex == other._elementIndex && _axis == other._axis && _sign == other._sign;
     }
 
     float32 PropertyShapeHandle::computeDraggedNumber( const Ray& ray ) const
@@ -148,9 +148,14 @@ namespace sw::editor
             result.data()[_axis] = MathUtil::max( Ray::computeClosestAxisParameter( ray, _center, _direction ), PropertyShapeValue::kMinExtent ) / _vectorScale.data()[_axis];
             return result;
         }
-        // 화살표: 잡은 끝을 지나 레이에 수직인 평면 위로 끈다(레이에서 잡은 끝에 가장 가까운 점) — 원점에서 그 점 쪽이 새 방향이다.
-        const float32 alongRay  = ( _position - ray._origin ).dot( ray._direction );
-        const float3  target    = ray.getPoint( alongRay );
+        // 화살표 · 점: 잡은 자리를 지나 레이에 수직인 평면 위로 끈다(레이에서 잡은 자리에 가장 가까운 점). 화살표는 원점에서 그 점 쪽이 새 방향이다.
+        const float32 alongRay = ( _position - ray._origin ).dot( ray._direction );
+        const float3  target   = ray.getPoint( alongRay );
+        if ( _kind == PropertyShapeHandleKind::Point )
+        {
+            const float3 local = _frame.toLocalVector( target - _frame._origin );
+            return float3{ local._x / _vectorScale._x, local._y / _vectorScale._y, local._z / _vectorScale._z };
+        }
         const float3  worldDir  = ( target - _frame._origin ).normalizeOr( _direction, PropertyShapeValue::kMinExtent );
         const float32 length    = _vector.getLength();
         const float32 keptScale = length > MathUtil::kEpsilon ? length : 1.0f;
@@ -272,7 +277,18 @@ namespace sw::editor
                 Internal::addSegment( tip, headBase - headSideB * headWidth, prototype, outDrawList );
                 break;
             }
+            case PropertyShapeKind::Points:
+                for ( uint32 index = 1; index < static_cast<uint32>( _listPoint.size() ); ++index )
+                {
+                    Internal::addSegment( computeWorldPoint( index - 1 ), computeWorldPoint( index ), prototype, outDrawList );
+                }
+                break;
         }
+    }
+
+    float3 PropertyShapeValue::computeWorldPoint( uint32 index ) const
+    {
+        return _frame._origin + _frame.toWorldVector( float3::multiply( _listPoint[index], _vectorScale ) );
     }
 
     void PropertyShapeValue::collectHandles( uint64 componentID, const hashed_string& property, const hashed_string& rangeProperty, vector<PropertyShapeHandle>& outListHandle ) const
@@ -345,6 +361,15 @@ namespace sw::editor
                 break;
             case PropertyShapeKind::Arrow:
                 outListHandle.push_back( Internal::makeHandle( *this, componentID, property, PropertyShapeHandleKind::ArrowTip, 2, 1.0f, origin, computeArrowDirection(), kArrowLength ) );
+                break;
+            case PropertyShapeKind::Points:
+                for ( uint32 index = 0; index < static_cast<uint32>( _listPoint.size() ); ++index )
+                {
+                    PropertyShapeHandle handle = Internal::makeHandle( *this, componentID, property, PropertyShapeHandleKind::Point, 0, 1.0f, computeWorldPoint( index ), _frame._axisX, 0.0f );
+                    handle._vector             = _listPoint[index];
+                    handle._elementIndex       = index;
+                    outListHandle.push_back( handle );
+                }
                 break;
         }
     }

@@ -82,6 +82,8 @@ namespace sw
         PROPERTY( Required )
         vector<string> _listSourceExtension;
         PROPERTY( Required )
+        vector<string> _listOutputSuffix; ///< 그 원본에서 나오는 산출물의 접미사 — 나오지 않는 종류(손으로 적은 글)는 이 폴더에서 풀리지 않는다
+        PROPERTY( Required )
         bool _bGeneratedReferrers{ false }; ///< 산출물 안의 글 에셋(임포터가 쓴 머티리얼 · 프리팹)은 참조자로 훑지 않는다 — 임포터의 몫이다 NOLINT(sw-bool-flag): 집합체다(중괄호 · 지정 초기화로 만든다) — C++17 비트필드는 기본값을 둘 수 없어 `T x;` 가 값을 남기지 않는다
     };
 

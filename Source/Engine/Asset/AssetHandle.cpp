@@ -4,7 +4,9 @@
 
 #include "Core/Concurrency/Futex.h"
 #include "Core/Memory/Memory.h"
+#include "Core/Time/MonotonicClock.h"
 
+#include "Engine/Asset/AssetLoadProfiler.h"
 #include "Engine/Asset/AssetManager.h"
 #include "Engine/Content/CookJob.h"
 #include "Engine/Foundation/EngineServices.h"
@@ -108,7 +110,10 @@ namespace sw
             if ( engine::areEngineServicesBound() )
             {
                 SW_PROFILE_SCOPE( "GT.Load.sync" );
+                const Stopwatch watch;
                 pOperation->runLoadIfUnclaimed();
+                if ( AssetLoadProfiler* const pLoadProfiler = engine::findSubsystem<AssetLoadProfiler>(); pLoadProfiler != nullptr && start == AssetLoadStart::OnCallingThread )
+                    pLoadProfiler->recordSyncLoad( pOperation->getKindName(), pOperation->getPath(), static_cast<uint64>( watch.getElapsedNanoseconds() ) );
                 return;
             }
             pOperation->runLoadIfUnclaimed();

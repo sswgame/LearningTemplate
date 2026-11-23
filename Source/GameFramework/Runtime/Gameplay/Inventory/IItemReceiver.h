@@ -13,6 +13,7 @@
 namespace sw
 {
     class GameObject;
+    struct InventorySlot;
 
     /** @brief `IItemReceiver::receiveItem` 의 결과입니다. 넣거나 하나도 넣지 않는다(일부만 넣지 않는다). */
     enum class ItemGrantResult : uint8
@@ -23,7 +24,7 @@ namespace sw
 
     /**
      * @class IItemReceiver
-     * @brief 가방(`Inventory`) 하나에 아이템을 넣는 계약입니다. 가방 주인(`InventoryComponent`)이 포트 멤버로 내보내고(`REFLECT_INTERFACE( IItemReceiver, _itemReceiverPort )`), 주는 쪽은
+     * @brief 가방(`Inventory`) 하나에 아이템을 넣는 계약입니다. 가방 주인(조종자의 `InventoryComponent` · 캐릭터의 `CharacterEquipmentComponent`)이 포트 멤버로 내보내고(`REFLECT_INTERFACE( IItemReceiver, _itemReceiverPort )`), 주는 쪽은
      *        `findForTarget` 으로 찾는다. 지갑 · 퀘스트 같은 다른 상태는 이 계약에 넣지 않는다.
      * @details 언리얼 Lyra 의 `ULyraInventoryManagerComponent::AddItemDefinition` 을 픽업이 부르는 자리이고, 찾기는 유니티 `GetComponent<IItemReceiver>()` 와 같다.
      *          모두 넣거나 하나도 넣지 않으므로 주는 쪽은 거절이면 아이템을 소비하지 않는다(상자는 닫힌 채, 채집 횟수는 그대로).
@@ -37,6 +38,8 @@ namespace sw
 
         /** @brief @p item × @p count 를 모두 넣습니다. 다 들어가지 않으면 아무것도 넣지 않고 그 까닭을 돌려줍니다. */
         [[nodiscard]] virtual ItemGrantResult receiveItem( const hashed_string& item, int32 count ) = 0;
+        /** @brief 조각 @p stack 을 개체 상태(내구도 · 꾸미기)째 모두 넣습니다. 다 들어가지 않으면 아무것도 넣지 않습니다. 월드에 놓인 아이템(`PickupComponent`)을 주울 때 쓴다 — id 로 다시 넣으면 닳은 장비가 새것이 된다. */
+        [[nodiscard]] virtual ItemGrantResult receiveStack( const InventorySlot& stack ) = 0;
 
         /**
          * @brief @p target 이 받을 가방입니다. @p target 자신이 내보내면 그것, 아니면 @p target 의 폰을 쥔 조종자 오브젝트가 내보내는 것입니다(가방은 조종자 쪽 — 언리얼 PlayerState 자리).

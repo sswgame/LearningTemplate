@@ -24,6 +24,7 @@ namespace sw::editor
         Smooth,     ///< 높이를 이웃 3 × 3 평균으로 당긴다(언리얼 Smooth)
         CutHole,    ///< 셀에 구멍을 낸다(언리얼 Visibility 의 칠하기)
         FillHole,   ///< 셀의 구멍을 메운다
+        EraseLayer, ///< 레이어 하나의 가중치를 내리고 합을 1 로 맞춘다(폴리지 밀도 지우기)
         Count
     };
 
@@ -42,7 +43,7 @@ namespace sw::editor
         float32          _radius{ 4.0f };   ///< 월드 반경(m)
         float32          _strength{ 1.0f }; ///< 초당 변화량(높이는 m/s, 가중치는 1/s)
         float32          _falloff{ 0.5f };  ///< 0 = 가장자리까지 가득, 1 = 중심에서부터 줄어든다
-        uint32           _layerIndex{ 0 };  ///< `PaintLayer` 가 올리는 레이어(0..7)
+        uint32           _layerIndex{ 0 };  ///< `PaintLayer` 가 올리고 `EraseLayer` 가 내리는 레이어(0..7)
     };
 } // namespace sw::editor
 
@@ -98,7 +99,8 @@ namespace sw::editor
                                                const TerrainBrushSettings& settings, float32 flattenHeight, float32 deltaTime );
 
         /**
-         * @brief 샘플별 레이어 가중치(합 1) 배열에 `PaintLayer` 한 프레임을 적용합니다. 칠한 샘플은 합이 1 로 다시 맞춰집니다.
+         * @brief 샘플별 레이어 가중치(합 1) 배열에 `PaintLayer` · `EraseLayer` 한 프레임을 적용합니다. 칠한 샘플은 합이 1 로 다시 맞춰집니다.
+         * @details 지울 때 그 레이어가 전부였던 샘플은 덮을 레이어가 없으므로 바탕(레이어 0)이 받는다. 바탕 자신이 전부면 지우지 않는다.
          * @return 바뀐 샘플이 있으면 true 입니다.
          */
         [[nodiscard]] static bool applyLayerWeight( vector<SurfaceLayerWeights>& inOutListWeight, uint32 resolution, const vector<TerrainBrushSample>& listSample,

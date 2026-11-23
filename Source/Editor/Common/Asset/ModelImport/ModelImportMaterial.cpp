@@ -9,6 +9,7 @@
 #include "Core/Algorithm/VectorUtil.h"
 #include "Core/Container/unordered_map.h"
 #include "Core/Container/unordered_set.h"
+#include "Core/Encoding/Base64Util.h"
 #include "Core/File/FileUtil.h"
 #include "Core/Log/Logger.h"
 #include "Core/String/StringBuilder.h"
@@ -25,7 +26,6 @@
 #include "Editor/Common/Asset/Texture/TextureImporter.h"
 
 #include "Engine/Asset/AssetFormat.h"
-#include "Engine/Config/ConfigManager.h"
 #include "Engine/Config/EngineDefaultAssets.h"
 #include "Engine/Content/AssetIO.h"
 #include "Engine/Content/AssetPaths.h"
@@ -262,40 +262,6 @@ namespace sw::editor
             ModelImportGeometry::optimizeTriangleRange( inoutBody, begin, triangleCount );
     }
 
-    uint32 ModelImportMaterial::keepPreviousSectionNames( vector<ModelImportSection>& inoutListSection, const vector<MeshSection>& listPrevious )
-    {
-        uint32 keptCount = 0;
-        // 지금 구간 이름마다 그 이름인 구간 수 — 이름이 쓰였는지 볼 때 구간 목록을 훑지 않는다(구간 수 × 앞 구간 수 × 구간 수). 이름을 바꿀 때 함께 고친다.
-        unordered_map<string, uint32> mapNameCount;
-        for ( const ModelImportSection& section : inoutListSection )
-        {
-            ++mapNameCount[section._sectionName];
-        }
-        for ( ModelImportSection& section : inoutListSection )
-        {
-            if ( section._sourceMaterial.empty() )
-                continue;
-            for ( const MeshSection& previous : listPrevious )
-            {
-                // 날 이름 · 가시성이 같은 앞 구간 — 머티리얼 파일 이름(번호)이 바뀌어도 같은 구간이다.
-                const bool bSameSource = previous.hasSourceNames() && previous._personVisibility == section._personVisibility &&
-                                         StringUtil::equals( previous._sourceMaterial.c_str(), section._sourceMaterial ) && StringUtil::equals( previous._sourceNode.c_str(), section._sourceNode );
-                if ( bSameSource == false || StringUtil::equals( previous._name.c_str(), section._sectionName ) )
-                    continue;
-                const string previousName( previous._name.c_str() );
-                const auto   takenIter = mapNameCount.find( previousName );
-                if ( takenIter != mapNameCount.end() && takenIter->second > 0 )
-                    continue; // 다른 새 구간이 이미 그 이름이다 — 이름이 겹치는 메시는 구간이 없어진다(`Mesh::setSections`)
-                --mapNameCount[section._sectionName];
-                ++mapNameCount[previousName];
-                section._sectionName = previousName;
-                ++keptCount;
-                break;
-            }
-        }
-        return keptCount;
-    }
-
     bool ModelImportMaterial::collectSectionTextures( const cgltf_data& data, string_view sourcePath, ModelImportResult& inoutResult )
     {
         vector<uint8> listUsed( data.textures_count, SW_FALSE );
@@ -422,14 +388,27 @@ namespace sw::editor
                 outTexture._bytes.assign( pBytes, pBytes + image.buffer_view->size );
             return true;
         }
-        if ( image.uri == nullptr || StringUtil::startsWith( image.uri, "data:" ) )
+        if ( image.uri == nullptr )
             return true;
-        outTexture._extension = FileUtil::getExtension( image.uri );
+        if ( ModelImportUtil::isExternalURI( image.uri ) == false )
+        {
+            // 본문에 든 이미지(`data:image/png;base64,…` — glTF Embedded 내보내기). 풀지 못하면 흰 텍스처로 임포트하지 않고 실패한다.
+            const string_view uri{ image.uri };
+            const size_t      comma = uri.find( ',' );
+            const string_view head  = uri.substr( 0, comma == string_view::npos ? 0 : comma );
+            const bool        bRead = StringUtil::endsWith( head, ";base64" ) && Base64Util::decode( uri.substr( comma + 1 ), outTexture._bytes );
+            if ( bRead == false )
+            {
+                SW_LOG_ERROR_ID( "ModelImport.ImageDataUnreadable", "glTF '%#': an embedded image is not base64 data", sourcePath );
+                return false;
+            }
+            if ( StringUtil::contains( head, "image/jpeg" ) )
+                outTexture._extension = ".jpg";
+            return true;
+        }
         // 원본이 가리키는 바깥 파일을 못 읽으면 흰 텍스처로 임포트하지 않고 실패한다(빠진 파일이 결과에 말없이 묻힌다).
-        string imagePath = FileUtil::joinPath( FileUtil::getDirectoryPart( sourcePath ), image.uri );
-        string canonicalPath;
-        if ( FileUtil::makeCanonicalPath( FileUtil::toDiskPath( imagePath ), canonicalPath ) ) // `../` 을 푼다 — 원본 옆이 아닌 textures_raw 의 이미지를 가리키는 glTF
-            imagePath = FileUtil::normalizeSeparators( canonicalPath );
+        const string imagePath = ModelImportUtil::resolveURI( sourcePath, image.uri );
+        outTexture._extension  = FileUtil::getExtension( imagePath );
         outTexture._sourcePath = imagePath;
         if ( FileUtil::readFile( FileUtil::toDiskPath( imagePath ), outTexture._bytes ) == false )
         {
@@ -598,8 +577,8 @@ namespace sw::editor
     {
         // 규칙은 모델 옆에 꺼냈을 경로로 고른다(이름 꼬리 `_normal` · 모델 폴더 패턴). 고른 규칙을 저장소 폴더 이름에 남겨 텍스처 임포트가 같은 규칙으로 임포트한다(`TextureImportConfig::findMatchingRule`).
         TextureImportConfig config{};
-        if ( config.loadFromFile( TextureImporter::makeDefaultImportConfigPath() ) == ConfigReadResult::Invalid )
-            return false; // 로드가 오류를 남겼다 — 깨진 설정을 기본 규칙으로 읽지 않는다
+        if ( config.loadFromFile( TextureImporter::makeDefaultImportConfigPath() ) == false )
+            return false; // 로드가 오류를 남겼다 — 없거나 깨진 설정을 기본 규칙으로 읽지 않는다
         fixed_string<constant::buffer::kMax256> fileName;
         formatstring( fileName.data(), fileName.capacity(), "%#%#", texture._fileStem, texture._extension );
         const string           logicalPath = FileUtil::joinPath( rawTextureFolder, fileName );

@@ -130,12 +130,6 @@ namespace sw
 
                 bool readText( const string& assetID, string& outText ) const override
                 {
-                    // 씬 청크 나누기는 씬마다 다시 훑는다 — 같은 글(카탈로그 · 공용 데이터)을 디스크에서 씬 수만큼 읽지 않게 담아 둔다.
-                    if ( const auto itCached = _mapText.find( assetID ); itCached != _mapText.end() )
-                    {
-                        outText = itCached->second;
-                        return true;
-                    }
                     const auto itPath = _mapAbsolutePath.find( assetID );
                     if ( itPath == _mapAbsolutePath.end() )
                         return false;
@@ -143,12 +137,8 @@ namespace sw
                     if ( AssetIO::readBinaryFile( itPath->second, bytes ) == false )
                         return false;
                     outText = string( string_view( reinterpret_cast<const utf8*>( bytes.data() ), bytes.size() ) );
-                    _mapText.emplace( assetID, outText );
                     return true;
                 }
-
-            private:
-                mutable unordered_map<string, string> _mapText; ///< 읽은 글(고르기 한 번 동안 — 한 스레드)
             };
 
             /** @brief 도메인 하나의 후보 파일(정규화 id · 절대 경로)입니다. 요약 로그가 담은 수 · 크기를 센다. */
@@ -304,8 +294,10 @@ namespace sw
 
                 AssetCookRoot::appendRoots( files._listCodeRoot );
                 files._automation = params._automationContent;
+                // 그래프 하나를 전체 고르기 · 기동 필수 · 씬마다의 고르기가 함께 걷는다 — 글마다 한 번 읽고 푼다.
+                PackReachGraph  graph( properties, config._cookRules, files, source );
                 PackReachResult reach;
-                const bool      bReached = PackReachResult::collect( properties, config._cookRules, files, source, reach );
+                const bool      bReached = PackReachResult::collect( graph, {}, reach );
                 logSelection( listCandidates, reach );
                 if ( bReached == false )
                 {
@@ -324,7 +316,7 @@ namespace sw
                 outSelection._staged.build( listSources, reach );
                 outSelection._setIncluded           = std::move( reach._setIncluded );
                 outSelection._setReferencedExcluded = std::move( reach._setReferencedExcluded );
-                return planSceneChunks( config, properties, files, source, outSelection );
+                return planSceneChunks( config, graph, outSelection );
             }
 
             /**
@@ -332,25 +324,24 @@ namespace sw
              * @details 기동 필수는 씬 패턴에 맞는 씬을 뿌리로 쓰지 않고 다시 고른 집합이다 — 게임 설정의 첫 씬처럼 다른 뿌리가 참조로 닿는 씬은 그 안에 든다.
              *          남은 씬마다 그 씬에서만 다시 훑어 닿음을 얻는다.
              */
-            [[nodiscard]] static bool planSceneChunks( const PackConfig& config, const AssetReferenceFields& properties, const PackReachFiles& files, const IPackReachSource& source,
-                                                       PackSelection& inoutSelection )
+            [[nodiscard]] static bool planSceneChunks( const PackConfig& config, PackReachGraph& graph, PackSelection& inoutSelection )
             {
                 if ( config._split._listScenePattern.empty() )
                     return true;
-                PackReachFiles startupFiles = files;
+                unordered_set<string> setDeferredRoot;
                 for ( const string& assetID : inoutSelection._setIncluded )
                 {
                     if ( matchesAnyPattern( config._split._listScenePattern, assetID ) )
-                        startupFiles._setDeferredRoot.insert( assetID );
+                        setDeferredRoot.insert( assetID );
                 }
                 PackReachResult startupReach;
-                if ( PackReachResult::collect( properties, config._cookRules, startupFiles, source, startupReach ) == false )
+                if ( PackReachResult::collect( graph, setDeferredRoot, startupReach ) == false )
                 {
                     SW_LOG_ERROR_ID( "PackCooker.SceneChunkEssentialFailed", "Pack cook: following references without the deferred scenes failed (reasons above) - no pack is written" );
                     return false;
                 }
                 vector<string> listScene;
-                for ( const string& sceneID : startupFiles._setDeferredRoot )
+                for ( const string& sceneID : setDeferredRoot )
                 {
                     if ( startupReach._setIncluded.contains( sceneID ) == false )
                         listScene.push_back( sceneID );
@@ -359,7 +350,7 @@ namespace sw
                 for ( const string& sceneID : listScene )
                 {
                     PackReachResult sceneReach;
-                    if ( PackReachResult::collectFromRoots( properties, config._cookRules, files, source, { sceneID }, sceneReach ) == false )
+                    if ( PackReachResult::collectFromRoots( graph, { sceneID }, sceneReach ) == false )
                     {
                         SW_LOG_ERROR_ID( "PackCooker.SceneChunkReachFailed", "Pack cook: following references from scene '%#' failed (reasons above) - no pack is written", sceneID );
                         return false;

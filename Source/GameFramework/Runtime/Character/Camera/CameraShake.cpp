@@ -6,6 +6,8 @@
 #include "Core/Hash/HashUtil.h"
 #include "Core/Math/MathUtil.h"
 
+#include "Engine/Object/GameObject/Registry/CameraShakeChannel.h"
+
 #include "GameFramework/Runtime/Character/Camera/CameraPreset.h"
 
 namespace sw
@@ -120,6 +122,24 @@ namespace sw
         impulse._def    = def;
         impulse._origin = origin;
         _listImpulse.push_back( impulse );
+    }
+
+    void CameraImpulseListener::addRequest( const CameraShakeRequest& request )
+    {
+        CameraImpulseDef def;
+        def._amplitude     = request._amplitude;
+        def._duration      = request._duration;
+        def._frequency     = request._frequency;
+        def._falloffRadius = request._falloffRadius;
+        addImpulse( def, request._origin );
+    }
+
+    void CameraImpulseListener::applyWorldOffset( const float3& delta )
+    {
+        for ( CameraImpulse& impulse : _listImpulse )
+        {
+            impulse._origin += delta;
+        }
     }
 
     void CameraImpulseListener::step( float32 deltaTime )

@@ -9,6 +9,7 @@
 #include "Core/Encoding/HexUtil.h"
 #include "Core/File/FileUtil.h"
 #include "Core/File/ProcessRoots.h"
+#include "Core/GlobalVariable/GlobalVariableManager.h"
 #include "Core/Log/Logger.h"
 #include "Core/Log/ParsedLogLine.h"
 #include "Core/Math/SecureRandom.h"
@@ -395,17 +396,20 @@ namespace sw::editor
             listArgument.push_back( string( traceArgument.view() ) );
         }
         // 자동화 실행의 자식도 자동화 실행이다(EngineChildProcess) — 빠지면 약한 GPU 의 클라이언트가 품질 low 를 골라 서버와 합성이 갈려 접속이 끊겼다(editor.netresourcedigest, Linux).
-        const ProcessCommand command = EngineChildProcess::makeCommand( editor::getSubsystem<CommandLineManager>(), executablePath, std::move( listArgument ) );
-        ProcessOptions       options;
+        const ProcessCommand command     = EngineChildProcess::makeCommand( editor::getSubsystem<CommandLineManager>(), executablePath, std::move( listArgument ) );
+        string               commandText = command.toCommandLine(); // 로그용 — 디버그 채널 토큰은 남기지 않는다(`GlobalSecret`)
+        if ( _debugChannelToken.empty() == false )
+            commandText = StringUtil::replace( commandText, _debugChannelToken, GlobalSecret::kMask );
+        ProcessOptions options;
         options._bPipeStandardInput = true; // `quit` 과 `pause` 를 보내는 채널
         options._bEndWithParent     = true; // 에디터가 죽으면 서버 · 클라이언트도 끝난다 — 고아가 포트를 쥐고 남지 않게(감사 E-15, 언리얼 PIE 별도 프로세스와 같다)
         if ( FileUtil::exists( FileUtil::toDiskPath( executablePath ) ) == false || pChild->_process.launch( command, options ) == false )
         {
-            SW_LOG_ERROR_ID( "NetPlay.CouldNotLaunch", "Could not launch %#: %#", label, command.toCommandLine() );
+            SW_LOG_ERROR_ID( "NetPlay.CouldNotLaunch", "Could not launch %#: %#", label, commandText );
             return false;
         }
         pChild->_processID = pChild->_process.getProcessID();
-        SW_LOG_INFO_ID( "NetPlay.LaunchedPid", "Launched %# (pid %#): %#", label, pChild->_processID, command.toCommandLine() );
+        SW_LOG_INFO_ID( "NetPlay.LaunchedPid", "Launched %# (pid %#): %#", label, pChild->_processID, commandText );
         pChild->_reader = sw::thread( ThreadCreationKey{}, &EditorNetPlaySession::readChildOutput, pChild.get() );
         _listProcess.push_back( std::move( pChild ) );
         return true;

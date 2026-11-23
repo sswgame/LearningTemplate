@@ -68,6 +68,34 @@ namespace sw
                 return length;
             }
 
+            /** @brief 비밀 값 변수(`GlobalSecret`)면 true 입니다. 모르는 이름이면 false 입니다. */
+            static bool isSecretVariable( GlobalVariableManager* pVariables, string_view name )
+            {
+                const GlobalVariableInfo* pInfo = pVariables != nullptr ? pVariables->findVariable( name ) : nullptr;
+                return pInfo != nullptr && pInfo->_type == GlobalVariableType::Secret;
+            }
+
+            /**
+             * @brief 남길(기록 · 출력 · 로그) 줄입니다 — 비밀 인자를 받는 명령이면 그 자리를(`DevCommandRegistry::makeMaskedLine`), 비밀 값 변수에 쓰는 줄이면 값을 가린다.
+             */
+            static string makeMaskedLine( GlobalVariableManager* pVariables, string_view line )
+            {
+                const vector<string> listToken = StringUtil::splitQuotedTokens( line );
+                if ( listToken.empty() )
+                    return string( line );
+                // 차례는 `execute` 와 같다 — 내장 set, 명령, 변수.
+                const bool                    bSet     = StringUtil::equals( listToken[0], "set", true );
+                const DevCommandRegistration* pCommand = bSet ? nullptr : engine::getSubsystem<DevCommandRegistry>().findCommand( listToken[0] );
+                if ( pCommand != nullptr )
+                    return DevCommandRegistry::makeMaskedLine( *pCommand, line );
+                const size_t nameIndex = bSet ? 1 : 0;
+                if ( listToken.size() <= nameIndex + 1 || isSecretVariable( pVariables, listToken[nameIndex] ) == false )
+                    return string( line );
+                StringBuilder<constant::buffer::kMax256> maskedLine;
+                maskedLine.appendFormat( "%#%# %#", bSet ? "set " : "", listToken[nameIndex], GlobalSecret::kMask );
+                return string( maskedLine.view() );
+            }
+
             static DevConsoleResult readVariable( GlobalVariableManager* pVariables, string_view name, string& outReply )
             {
                 GlobalVariableInfo*                      pInfo = pVariables != nullptr ? pVariables->findVariable( name ) : nullptr;
@@ -95,7 +123,7 @@ namespace sw
                 }
                 if ( pInfo->setValueFromString( value ) == false )
                 {
-                    reply.appendFormat( "could not set %# to '%#'", name, value );
+                    reply.appendFormat( "could not set %# to '%#'", name, pInfo->_type == GlobalVariableType::Secret ? GlobalSecret::kMask : value );
                     outReply = string( reply.view() );
                     return DevConsoleResult::Failed;
                 }
@@ -204,8 +232,10 @@ namespace sw
         if ( trimmed.empty() )
             return DevConsoleResult::Empty;
 
-        if ( _listHistory.empty() || _listHistory.back() != trimmed )
-            _listHistory.push_back( string( trimmed ) );
+        // 친 줄은 기록 · 출력 · 로그 세 곳에 남는다 — 모두 비밀 인자를 가린 이 줄만 쓴다(실행은 원래 줄).
+        const string maskedLine = DevConsoleInternal::makeMaskedLine( getVariables(), trimmed );
+        if ( _listHistory.empty() || _listHistory.back() != maskedLine )
+            _listHistory.push_back( maskedLine );
         if ( _listHistory.size() > kMaxHistoryCount )
             _listHistory.erase( _listHistory.begin() );
         resetHistoryCursor();
@@ -218,7 +248,7 @@ namespace sw
         }
 
         StringBuilder<constant::buffer::kMax256> echo;
-        echo.appendFormat( "> %#", trimmed );
+        echo.appendFormat( "> %#", maskedLine );
         appendOutput( echo.view(), false );
         string                 reply;
         const DevConsoleResult result = execute( trimmed, reply );
@@ -226,7 +256,7 @@ namespace sw
         if ( reply.empty() == false )
             appendOutput( reply, bError );
         // 로그로 나가는 줄은 머리까지 포함해 한 줄 답의 상한을 넘지 않는다 - 개별 명령이 상한을 기억하지 않아도 되고 새 명령도 우회하지 못한다. 오버레이에는 전체가 남는다.
-        const string logLine = makeLogLine( trimmed, reply );
+        const string logLine = makeLogLine( maskedLine, reply );
         if ( bError )
             SW_LOG_WARNING_ID( "DevCommand.Failed", "%#", logLine.c_str() ); // 시나리오 `<DevCommand>` 단계와 같은 사건 id 다(개발 명령의 답)
         else

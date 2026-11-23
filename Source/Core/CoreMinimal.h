@@ -7,7 +7,6 @@
 #include "Core/Container/deque.h"
 #include "Core/Container/flat_map.h"
 #include "Core/Container/flat_set.h"
-#include "Core/Container/list.h"
 #include "Core/Container/pair.h"
 #include "Core/Container/string.h"
 #include "Core/Container/unordered_map.h"

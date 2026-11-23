@@ -101,7 +101,7 @@ namespace sw::editor
         bookmark._rotation      = _rotation;
         bookmark._orbitDistance = _orbitDistance;
         fixed_string<constant::buffer::kMax32> name;
-        formatstring( name.data(), name.capacity(), "POI %u", slot + 1 );
+        formatstring( name.data(), name.capacity(), "POI %#", slot + 1 );
         bookmark._name = name.c_str();
         editor::getSubsystem<EditorContext>().getSubsystem<EditorWorkspace>().setCameraBookmark( slot, bookmark );
     }

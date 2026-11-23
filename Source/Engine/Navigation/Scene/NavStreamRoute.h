@@ -38,7 +38,11 @@ namespace sw
         bool isLoadedToGoal() const { return _bStartLoaded && _listCluster.empty() == false && _frontier + 1 == _listCluster.size(); }
     };
 
-    /** @class NavStreamRoute @brief 파일 머리말 참고. 상태가 없는 정적 함수 묶음입니다(에이전트 상태는 에이전트가 든다). */
+    /**
+     * @class NavStreamRoute
+     * @brief 파일 머리말 참고. 상태가 없는 정적 함수 묶음입니다(에이전트 상태는 에이전트가 든다).
+     * @details 경로 · 계획 함수의 자리는 내비메시와 같은 절대 자리이고, 에이전트 함수의 자리(@p currentPosition)는 오브젝트와 같은 로컬이다.
+     */
     class NavStreamRoute
     {
     public:
@@ -76,6 +80,8 @@ namespace sw
         static void writeVirtualResult( NavMeshAgentComponent& agent, NavMeshRuntime& runtime, float32 deltaTime, vector<SceneTransformWrite>& inoutListWrite );
 
     private:
+        /** @brief 에이전트의 먼 경로 점(`_listRoutePoint`, 로컬)을 @p route 의 @p firstIndex 부터의 대략 점으로 채웁니다(마지막은 목적지). */
+        static void collectAgentRoutePoints( NavMeshAgentComponent& agent, const NavMeshRuntime& runtime, const NavRoutePlan& route, uint32 firstIndex );
         /** @brief 가상 이동으로 바꿉니다 — 군중 목표를 지우고 @p route 의 @p firstIndex 너머 대략 점을 따라간다. */
         static void enterVirtualMove( NavMeshAgentComponent& agent, NavMeshRuntime& runtime, const NavRoutePlan& route, uint32 firstIndex, const float3& currentPosition );
     };

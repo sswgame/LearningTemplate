@@ -63,6 +63,8 @@ namespace sw
 
         /** @brief 월드 경계 상자의 수평 반 크기 중 큰 쪽(퍼짐 · 회전 · 배율 포함, m)입니다. */
         float32 getHorizontalReach() const;
+        /** @brief 셀 나누기가 묻는 이 컴포넌트가 덮는 월드 상자입니다 — 피벗 셀이 아니라 덮는 자리가 로딩 반경에 들면 올라 있다. */
+        bool computeStreamingBounds( AABB& outBox ) const override;
         /** @brief 이 볼륨이 건 효과의 출처(`volume:<오브젝트 이름>`)입니다. */
         hashed_string getSourceName() const;
         /** @brief 프로필 · 덮어쓰기를 합치고 컴파일했으면 true 입니다(실패는 시작할 때 오류로 남는다). */
@@ -116,7 +118,7 @@ namespace sw
         float3 _halfExtents;
         PROPERTY( Category = "Shape", DisplayName = "Pull Center", Units = m, Tooltip = "Offset of the pull center from the owner (zone values distanceToCenter, ToCenter and Swirl fields)" )
         float3 _pullCenterOffset;
-        PROPERTY( Category = "Shape", DisplayName = "Flow Points", Units = m, Tooltip = "Path of the flow relative to the owner (Flow fields follow the nearest segment)" )
+        PROPERTY( Category = "Shape", DisplayName = "Flow Points", Units = m, Tooltip = "Path of the flow relative to the owner (Flow fields follow the nearest segment)", Meta = "Shape=Points,ShapeScale=Transform" )
         vector<float3> _listFlowPoint;
         PROPERTY( Category = "Zone", DisplayName = "Spawn Inside", Tooltip = "A body that appears already inside (spawn, login, respawn, load, the volume turning on): Activate counts it as entering, Ignore waits until it leaves and comes back" )
         TriggerSpawnInside _spawnInside;

@@ -74,13 +74,15 @@ namespace sw
         void                     setSettings( const PhotoModeSettings& settings ) { _settings = settings; }
         const PhotoModeSettings& getSettings() const { return _settings; }
         const float3&            getPosition() const { return _position; }
-        float32                  getYaw() const { return _yaw; }
-        float32                  getPitch() const { return _pitch; }
-        float32                  getRoll() const { return _roll; }
-        const quaternion&        getRotation() const { return _rotation; }
-        float32                  getFieldOfViewY() const { return _fieldOfViewY; }
-        float32                  getOrthoHeight() const { return _orthoHeight; }
-        float32                  getExposureOffset() const { return _exposureOffset; }
+        /** @brief 자리를 @p delta 만큼 옮깁니다(월드 원점 이동). */
+        void              applyWorldOffset( const float3& delta ) { _position += delta; }
+        float32           getYaw() const { return _yaw; }
+        float32           getPitch() const { return _pitch; }
+        float32           getRoll() const { return _roll; }
+        const quaternion& getRotation() const { return _rotation; }
+        float32           getFieldOfViewY() const { return _fieldOfViewY; }
+        float32           getOrthoHeight() const { return _orthoHeight; }
+        float32           getExposureOffset() const { return _exposureOffset; }
 
     private:
         PhotoModeSettings _settings;

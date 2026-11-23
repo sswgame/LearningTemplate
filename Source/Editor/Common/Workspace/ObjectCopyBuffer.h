@@ -42,6 +42,7 @@ namespace sw::editor
     public:
         static constexpr const utf8* kSubsystemName = "ObjectCopyBuffer";
         const utf8*                  getSubsystemName() const override { return kSubsystemName; }
+        void                         resetToFreshEditor() override { clear(); }
         /** @brief 앞선 인스턴스가 맡긴 버퍼를 되찾습니다. */
         SubsystemInitResult initializeSubsystem() override;
         /** @brief 다음 인스턴스를 위해 버퍼를 맡깁니다. */

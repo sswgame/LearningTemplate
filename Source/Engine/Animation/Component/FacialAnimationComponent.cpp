@@ -278,6 +278,11 @@ namespace sw
             _pSkeletalMesh->markPoseDirty();
     }
 
+    void FacialAnimationComponent::onWorldOriginShifted( const float3& delta )
+    {
+        _lookAtWorld += delta;
+    }
+
     void FacialAnimationComponent::setLookAtTarget( const float3& worldPosition )
     {
         _lookAtWorld = worldPosition;

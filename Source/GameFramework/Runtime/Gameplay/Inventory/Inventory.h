@@ -90,6 +90,8 @@ namespace sw
         int32 addItem( const hashed_string& itemID, int32 count );
         /** @brief 슬롯 하나(내구도 포함)를 통째로 넣습니다. 모두 들어갔으면 true 입니다. */
         [[nodiscard]] bool addStack( const InventorySlot& stack );
+        /** @brief `addStack` 으로 넣고, 자리가 없으면 넘침 목록에 둡니다(버릴 수 없는 아이템 — 불러오기가 벗긴 장비). */
+        void addStackOrOverflow( const InventorySlot& stack );
         /**
          * @brief @p count 개가 모두 있으면 소비(파괴)합니다. 뒤쪽 슬롯부터 빼고 개체 상태는 버립니다. 모자라면 아무것도 빼지 않고 false 입니다.
          * @details 탄약 · 열쇠 · 재료 · 씨앗처럼 사라지는 쓰임에만 쓴다. 옮기거나 되돌릴 수 있는 거래(판매 · 제작 대기열 · 상자)는 `takeItem` 조각을 `addStack` 으로 돌려준다 — id 로 다시 넣으면 닳은 장비가 새것이 된다(Lyra `ConsumeItemsByDefinition`).

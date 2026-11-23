@@ -105,6 +105,20 @@ namespace sw::editor
         /** @brief cgltf 가 sw 할당자를 쓰게 하는 옵션을 만듭니다. 할당량이 메모리 태그에 잡힙니다. */
         static cgltf_options makeOptions();
 
+        /** @brief glTF 의 바깥 파일 URI 인지입니다(`data:` 로 본문에 든 것과 빈 것은 아니다). */
+        static bool isExternalURI( const utf8* pURI );
+        /**
+         * @brief 원본 @p sourcePath 옆 URI @p pURI 의 디스크 경로입니다 — 퍼센트 표기(`%20`)와 `../` 를 풉니다.
+         * @details glTF 의 URI 는 RFC 3986 이라 공백 · 한글이 든 파일 이름이 퍼센트 표기로 온다. 버퍼 · 이미지를 여는 곳과 해시를 재는 곳이 모두 이것을 지난다.
+         */
+        [[nodiscard]] static string resolveURI( string_view sourcePath, const utf8* pURI );
+        /**
+         * @brief 원본 바이트 @p listByte 가 가리키는 바깥 파일(버퍼 · 이미지)의 내용을 @p hash 에 섞습니다.
+         * @details 텍스처 원본 폴더(`textures_raw/`)의 이미지는 섞지 않는다 — 결과는 그 텍스처의 경로만 적고 내용은 텍스처 임포트가 따라간다. 없는 파일은 임포트가 오류로 알린다.
+         * @param imageRuleText 꺼내는 이미지의 텍스처 규칙을 고르는 글 — 이미지를 꺼내는 모델(내장 · 텍스처 원본 폴더 밖 이미지)에만 섞는다(꺼낸 자리가 고른 규칙의 폴더다).
+         */
+        [[nodiscard]] static uint64 mixExternalFiles( string_view sourcePath, const vector<uint8>& listByte, string_view imageRuleText, uint64 hash );
+
         /** @brief 메시의 @p targetIndex 번째 모프 타깃 이름을 만듭니다. `extras.targetNames` 를 쓰고(cgltf 는 `target_names` 로 읽는다), 없으면 "target<번호>" 입니다. */
         static hashed_string makeMorphTargetName( const cgltf_mesh* pMesh, cgltf_size targetIndex );
 

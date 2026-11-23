@@ -3,11 +3,24 @@
 #include "Engine/Reflection/ReflectValueBinding.h"
 
 #include "Engine/Reflection/ReflectedValue.h"
+#include "Engine/Reflection/TypeInfo.h"
 #include "Engine/Reflection/TypeLookupCache.h"
 #include "Engine/Reflection/TypeRegistry.h"
 
 namespace sw
 {
+    const TypeInfo* ReflectValueFacts::findStructType() const
+    {
+        return _pType != nullptr && _pType->isPrimitive() == false ? _pType : nullptr;
+    }
+
+    ReflectValueFacts ReflectValueFacts::find( const hashed_string& name, const TypeRegistry& registry )
+    {
+        if ( name.empty() )
+            return ReflectValueFacts{ nullptr, nullptr, ReflectBuiltinIndex::kNone };
+        return ReflectValueFacts{ registry.findType( name ), registry.findEnum( name ), ReflectedValueUtil::findBuiltinIndex( name ) };
+    }
+
     bool ReflectValueBinding::tryRead( const uint32 generation, const uint32 nameHash, ReflectValueFacts& outFacts ) const
     {
         const uint32 sequenceBefore = _sequence.load( std::memory_order_acquire );
@@ -50,9 +63,7 @@ namespace sw
         ReflectValueFacts facts{ nullptr, nullptr, ReflectBuiltinIndex::kNone };
         if ( tryRead( generation, nameHash, facts ) )
             return facts;
-        facts._builtinIndex = ReflectedValueUtil::findBuiltinIndex( name );
-        facts._pEnum        = registry.findEnum( name );
-        facts._pType        = registry.findType( name );
+        facts = ReflectValueFacts::find( name, registry );
         // 찾는 동안 세대가 올랐으면(다른 스레드의 등록) 묶지 않는다 — 다음 조회가 새 세대로 다시 찾는다.
         if ( getTypeTableGeneration() == generation )
             write( generation, nameHash, facts );

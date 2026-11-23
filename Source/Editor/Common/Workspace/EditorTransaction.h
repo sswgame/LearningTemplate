@@ -116,6 +116,7 @@ namespace sw::editor
     public:
         static constexpr const utf8* kSubsystemName = "EditorObjectEditBindings";
         const utf8*                  getSubsystemName() const override { return kSubsystemName; }
+        void                         resetToFreshEditor() override { _selectionUpdates = EditorSelectionUpdateQueue{}; }
         void                         shutdownSubsystem() override { _listSubscription.clear(); }
 
         /** @brief @p stack 의 알림 칸이 비어 있으면 이 모듈의 처리기를 겁니다(이미 걸려 있으면 아무것도 하지 않는다). */

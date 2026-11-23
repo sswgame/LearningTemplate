@@ -151,8 +151,16 @@ namespace sw::editor
              */
             [[nodiscard]] static bool drawItemField( const utf8* pLabel, string& text, const utf8* pTooltip, const utf8* pExpectedExt, const utf8* pMark )
             {
+                EditorWidgets::beginResetToDefaultGroup();
                 (void)EditorWidgets::drawTextField( pLabel, text ); // 적용은 칸을 떠날 때다 — 치는 동안 비는 값은 사본에만 있다
-                bool   bEdited = ImGui::IsItemDeactivatedAfterEdit();
+                bool       bEdited  = ImGui::IsItemDeactivatedAfterEdit();
+                bool       bHovered = false;
+                const bool bReset   = EditorWidgets::endResetToDefaultGroup( text.empty() == false, bHovered ); // R10 — 휠클릭은 빈 글로(필수 칸이면 커밋이 거절해 값이 돌아온다)
+                if ( bReset )
+                {
+                    text.clear();
+                    bEdited = true;
+                }
                 string droppedPath;
                 if ( pExpectedExt != nullptr && EditorWidgets::acceptAssetDrop( droppedPath, pExpectedExt ) )
                 {
@@ -568,6 +576,7 @@ namespace sw::editor
                                                       : nullptr;
         const SequenceItemKindInfo* pSelectedKind = pSelected != nullptr ? SequenceAsset::findItemKindInfo( pSelected->_kind ) : nullptr;
         const bool                  bCutSelected  = pSelectedKind != nullptr && pSelectedKind->_bCutsCamera;
+        const uint32                cutBinding    = bCutSelected ? pSelected->_binding : kSequenceNoBinding; // 아래 지우기가 항목을 없앤다 - 그 뒤에는 항목을 보지 않는다
 
         const utf8* const pDelete = SW_LOCKEY( "EditorSequencer", "DeleteCut" );
         EditorChrome::sameLineIfFits( EditorChrome::measureSmallButton( pDelete ) );
@@ -582,7 +591,7 @@ namespace sw::editor
 
         const utf8* const pCamera = SW_LOCKEY( "EditorSequencer", "CutCamera" );
         EditorChrome::sameLineIfFits( EditorChrome::measureSmallButton( pCamera ) );
-        ImGui::BeginDisabled( bCutSelected == false || pSelected->_binding == _document._selectedBinding || _document._asset.findBinding( _document._selectedBinding ) == nullptr );
+        ImGui::BeginDisabled( bCutSelected == false || cutBinding == _document._selectedBinding || _document._asset.findBinding( _document._selectedBinding ) == nullptr );
         if ( ImGui::Button( pCamera ) && _document.setCutCamera( _document._selectedItem, _document._selectedBinding ) )
         {
             previewCurrentFrame();

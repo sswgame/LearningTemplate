@@ -2,6 +2,7 @@
 
 #include "Editor/Panels/Animation/Model/SequenceDebuggerViewModel.h"
 
+#include "Core/Algorithm/VectorUtil.h"
 #include "Core/String/fixed_string.h"
 #include "Core/String/formatString.h"
 
@@ -10,6 +11,7 @@
 
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
+#include "Engine/Object/GameObject/GameObjectManager.inl"
 #include "Engine/Sequencer/SequenceAsset.h"
 #include "Engine/Sequencer/SequenceDiagnostics.h"
 #include "Engine/Sequencer/SequencePlayerComponent.h"
@@ -28,12 +30,15 @@ namespace sw::editor
                 GameObjectManager* pManager = editor::getActiveObjectManager();
                 if ( pManager == nullptr )
                     return;
-                for ( GameObject* pObject : pManager->getAllGameObjects( editor::EditorSceneIterationAccess::getKey() ) )
+                pManager->forEachComponentOfType<SequencePlayerComponent>( editor::EditorSceneIterationAccess::getKey(), [&outListPlayer]( SequencePlayerComponent* pPlayer )
                 {
-                    SequencePlayerComponent* pPlayer = pObject != nullptr ? pObject->getComponent<SequencePlayerComponent>() : nullptr;
-                    if ( pPlayer != nullptr && pPlayer->getOwner() != nullptr )
+                    if ( pPlayer->getOwner() != nullptr )
                         outListPlayer.push_back( pPlayer );
-                }
+                } );
+                VectorUtil::removeIf( outListPlayer, []( const SequencePlayerComponent* pPlayer )
+                { return pPlayer->getOwner()->getComponent<SequencePlayerComponent>() != pPlayer; } ); // 오브젝트마다 하나 — 고른 것은 오브젝트 핸들이다
+                VectorUtil::sort( outListPlayer, []( const SequencePlayerComponent* pLeft, const SequencePlayerComponent* pRight )
+                { return pLeft->getOwner()->getObjectID() < pRight->getOwner()->getObjectID(); } );
             }
 
             static const utf8* getHistoryKindLabel( SequenceHistoryKind kind )

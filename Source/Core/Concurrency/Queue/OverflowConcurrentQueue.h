@@ -69,6 +69,9 @@ namespace sw
         /** @brief 링과 넘침 목록이 모두 비었으면 true 입니다(다른 스레드가 넣고 꺼내는 중이면 잠깐의 값이다). */
         [[nodiscard]] bool empty() const { return _ring.empty() && _overflowCount.load( std::memory_order_acquire ) == 0; }
 
+        /** @brief 링과 넘침 목록에 든 항목 수의 어림값입니다(다른 스레드가 넣고 꺼내는 중이면 잠깐의 값). */
+        [[nodiscard]] uint32 getQueuedCount() const { return _ring.size() + _overflowCount.load( std::memory_order_acquire ); }
+
         /** @brief 지금 넘침 목록에 든 항목 수입니다(테스트 · 감시용, 잠깐의 값). */
         [[nodiscard]] uint32 getOverflowCount() const { return _overflowCount.load( std::memory_order_acquire ); }
 

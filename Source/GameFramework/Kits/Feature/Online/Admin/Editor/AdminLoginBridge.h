@@ -37,6 +37,7 @@ namespace sw::editor
         static constexpr const utf8* kGMToolPlatform = "editor";
         static constexpr const utf8* kGMToolBuild    = "1.0.0";
         const utf8*                  getSubsystemName() const override { return kSubsystemName; }
+        void                         resetToFreshEditor() override {} // 연결은 `AdminToolSession` 이 닫고 자격은 다음 로그인이 덮는다
 
         AdminLoginBridge();
         AdminLoginBridge( const AdminLoginBridge& )            = delete; // 서비스 클라이언트가 계정 클라이언트를 가리킨다

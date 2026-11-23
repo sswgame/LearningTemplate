@@ -3,6 +3,7 @@
  * @brief 콘텐츠 브라우저 썸네일로 쓸 텍스처를 ImGui 텍스처 id 로 보관하고 있는 작은 LRU 캐시입니다.
  */
 #pragma once
+#include "Core/Container/LRUMap.h"
 #include "Core/Container/deque.h"
 #include "Core/Container/string.h"
 #include "Core/Container/unordered_set.h"
@@ -21,7 +22,7 @@ namespace sw::editor
      * @class EditorThumbnailCache
      * @brief 텍스처 에셋을 엔진 텍스처 캐시(`TextureCache`)에서 빌려 ImGui 에 등록하고, 최근에 그린 것만 남깁니다(언리얼 썸네일 풀과 같다).
      * @details `findTexture` 는 이번 프레임에 그릴 id 를 돌려주고, 없으면 읽기를 예약합니다. 읽기는 세 단계입니다. 예약(`_listPendingID`) →
-     *          읽는 중(`_listLoading`, `TextureCache::request` 의 `Async` 핸들을 쥔다) → 등록(`_listEntry`). 디스크 읽기와 DDS 디코드는 워커에서 하므로
+     *          읽는 중(`_listLoading`, `TextureCache::request` 의 `Async` 핸들을 쥔다) → 등록(`_mapEntry`). 디스크 읽기와 DDS 디코드는 워커에서 하므로
      *          UI 스레드가 막히지 않고, 읽는 동안 `findTexture` 는 nullptr 을 돌려줘 호출한 패널이 종류 아이콘 같은 자리 표시를 그립니다.
      *          GPU 업로드는 UI 스레드가 `update` 에서 프레임마다 몇 개씩 합니다(렌더 스레드의 펌프는 주 시점이 있는 패킷에서만 돌아, 그것에 기대면 시점이 없는 동안
      *          썸네일이 영영 오지 않을 수 있다). 읽기에 실패한 경로는 기억해 두고 다시 읽지 않습니다.
@@ -52,7 +53,7 @@ namespace sw::editor
          */
         void* findTexture( string_view assetID );
         /** @brief 지금 보관하고 있는 썸네일 수입니다. */
-        uint32 getCachedCount() const { return static_cast<uint32>( _listEntry.size() ); }
+        uint32 getCachedCount() const { return static_cast<uint32>( _mapEntry.size() ); }
         /** @brief 읽기를 기다리거나 읽는 중인 썸네일이 있으면 true 입니다. 그동안 패널은 연속 프레임을 청한다(워커가 끝내도 창 메시지는 오지 않는다). */
         bool hasPendingLoads() const { return _listPendingID.empty() == false || _listLoading.empty() == false; }
 
@@ -60,7 +61,6 @@ namespace sw::editor
         /** @brief 썸네일 하나입니다. */
         struct Entry
         {
-            string                           _assetID;
             shared_ptr<TextureLoadOperation> _pOperation; ///< 끝난 로드 — 텍스처 참조 하나를 쥔다(놓으면 엔진이 참조를 놓는다)
             void*                            _pTextureID{ nullptr };
             uint64                           _textureHandle{ 0 }; ///< 등록한 RHI 텍스처 — 바뀌면(다시 읽기, 디바이스 교체) 다시 등록한다
@@ -96,7 +96,7 @@ namespace sw::editor
         void recordFailure( string assetID );
 
     private:
-        vector<Entry>         _listEntry;
+        LRUMap<string, Entry> _mapEntry;      ///< 경로 → 썸네일(그린 순서를 함께 든다 — 앞이 가장 오래 그리지 않은 것)
         deque<string>         _listPendingID; ///< 읽기를 기다리는 경로(앞에서 꺼낸다)
         vector<Loading>       _listLoading;
         deque<string>         _listFailedID;  ///< 실패한 경로, 오래된 것이 앞이다(`kMaxFailed` 까지)

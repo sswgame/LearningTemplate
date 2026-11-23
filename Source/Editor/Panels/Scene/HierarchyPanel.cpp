@@ -7,6 +7,7 @@
 #include "Core/String/fixed_string.h"
 #include "Core/String/formatString.h"
 
+#include "Editor/Common/Commands/EditorCommandIDs.h"
 #include "Editor/Common/Commands/EditorCommandRegistry.h"
 #include "Editor/Common/Config/EditorIconGlyphTable.h"
 #include "Editor/Common/GUI/EditorChrome.h"
@@ -14,6 +15,7 @@
 #include "Editor/Common/GUI/Panel/EditorPanelManager.h"
 #include "Editor/Common/GUI/Theme/EditorColorUtil.h"
 #include "Editor/Common/GUI/Theme/EditorThemeUtil.h"
+#include "Editor/Common/Input/EditorCommandGUI.h"
 #include "Editor/Common/Input/EditorInputActionNames.h"
 #include "Editor/Common/Input/EditorInputGUI.h"
 #include "Editor/Common/Widgets/EditorComponentMenu.h"
@@ -205,6 +207,9 @@ namespace sw::editor
         if ( HierarchyViewModel::hasActiveScene() == false )
         {
             EditorWidgets::drawEmptyHint( SW_LOCKEY( "EditorScene", "HierarchyNoActiveScene" ) );
+            (void)EditorCommandGUI::drawCommandButton( editorcommand::kSceneNew ); // 누르면 다음 프레임 첫머리에 실행된다
+            ImGui::SameLine();
+            (void)EditorCommandGUI::drawCommandButton( editorcommand::kSceneOpen );
             return;
         }
 
@@ -371,6 +376,12 @@ namespace sw::editor
         // 행이 모두 필터에 걸러지면 빈 상자 대신 이유를 보여 준다.
         if ( _state._visibleRootCount == 0 && _state._bFilterActive != 0 )
             EditorWidgets::drawNoSearchResultHint( EditorListFilter{ _filterBuffer.c_str() }.getText() );
+        // 새 씬의 첫 행동을 잇는다 — 빈 트리만 두면 무엇으로 시작하는지 메뉴를 뒤져야 한다.
+        if ( _state._visibleRootCount == 0 && _state._bFilterActive == 0 )
+        {
+            EditorWidgets::drawEmptyHint( SW_LOCKEY( "EditorScene", "HierarchyEmptyScene" ) );
+            (void)EditorCommandGUI::drawCommandButton( editorcommand::kSceneObjectCreate );
+        }
     }
 
     bool HierarchyPanel::drawObjectRow( const HierarchyRowEntry& entry )

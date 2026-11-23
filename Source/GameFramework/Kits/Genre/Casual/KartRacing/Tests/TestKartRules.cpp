@@ -955,6 +955,21 @@ SW_TEST_CASE_F( KartRaceTest, TwoGatesInOneStepBothCount )
 }
 
 /**
+ * @brief [KartRaceTest] 결승선을 지난 걸음에 바로 뒤의 체크포인트까지 넘으면 새 바퀴의 문으로 센다 — 세지 않으면 되돌아가 다시 넘어야 바퀴를 끝낸다
+ */
+SW_TEST_CASE_F( KartRaceTest, CheckpointRightAfterTheFinishLineCountsInTheSameStep )
+{
+    // 문은 결승선 바로 뒤(약 0.0006 m) — 페달을 밟은 어느 걸음이든 결승선과 함께 넘는다.
+    open( KartTestUtil::makeRingDef( 3, { 1.0e-6f } ), 1 );
+    SW_REQUIRE_EQUAL( 1, _track.getCheckpointCount() );
+    SW_REQUIRE_TRUE( drive( 0, 0.0f, true ) );
+    SW_EXPECT_EQUAL( 1, racer( 0 )._lap );
+    SW_EXPECT_EQUAL( 1, racer( 0 )._nextCheckpoint );
+    SW_REQUIRE_TRUE( drive( 0, 0.0f, true ) );
+    SW_EXPECT_EQUAL( 2, racer( 0 )._lap );
+}
+
+/**
  * @brief [KartRaceTest] 순위는 진행값 순이고, 진행값은 다음 문을 넘지 못한다(문을 건너뛴 차가 앞선 것처럼 보이지 않는다). 첫 결승 뒤 시한이 지나면 남은 차를 지금 순위로 끝낸다
  */
 SW_TEST_CASE_F( KartRaceTest, PlacesAndFinishTimeout )

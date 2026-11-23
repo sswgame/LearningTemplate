@@ -1,0 +1,26 @@
+<?xml version="1.0" encoding="utf-8"?>
+<?asset guid="c6989c82909b41228824fe5afa51b4ff"?>
+<!--
+  3D 파괴(FractureComponent · ExplosiveBarrelComponent) — 무대 maps/destructionshowcase. 도화선 드럼통(BarrelFuse, 1.5 s)이 터져 벽 · 상자를 깨고 이웃 드럼통(BarrelChain)으로 이어진다. 값으로 판정한다(골든 없음).
+  ① 처음엔 모두 온전하다 ② 도화선이 다 되면 벽이 깨지고 조각이 날아간다 — 바닥에 붙은 조각은 정적 바디로 남는다 ③ 연쇄 — BarrelChain 이 이웃 폭발로 터지고 반경 안의 상자가 깨진다
+  실행: App -scenario=game/playground/automation/destruction.scenario.xml -unattended (체인: ctest -R Scenario.playground)
+-->
+<Scenario name="game.playground.destruction" fixedDelta="0.0166667" timeoutFrames="1800" startAfter="ScenePlaying" startTimeoutFrames="900" input="exclusive">
+	<Launch variable="gv_firstScene" value="game/playground/maps/rendertest3d.scene.xml"/> <!-- 무대는 아래에서 연다 — 도화선이 흐르기 전 상태를 보려고 -->
+	<WaitUntil watch="Assets.Pending" equals="0" timeoutWallSeconds="60"/>
+	<LoadScene path="game/playground/maps/destructionshowcase.scene.xml" timeoutFrames="600"/>
+	<!-- ① 온전 -->
+	<Expect watch="Fracture.Fractured" target="BrickWall" equals="0"/>
+	<Expect watch="Fracture.Fractured" target="CrateRight" equals="0"/>
+	<Expect watch="Object.Property" target="BarrelFuse" key="ExplosiveBarrelComponent._bExploded" equals="0"/>
+	<!-- ② 폭발 → 벽 -->
+	<WaitUntil watch="Object.Property" target="BarrelFuse" key="ExplosiveBarrelComponent._bExploded" equals="1" timeoutSeconds="4"/>
+	<WaitUntil watch="Fracture.Fractured" target="BrickWall" equals="1" timeoutFrames="30"/>
+	<WaitUntil watch="Fracture.DynamicBodies" target="BrickWall" atLeast="1" timeoutFrames="30"/>
+	<Expect watch="Fracture.StaticBodies" target="BrickWall" atLeast="1"/> <!-- 바닥에 붙은 조각은 서 있다 -->
+	<!-- ③ 연쇄 -->
+	<WaitUntil watch="Object.Property" target="BarrelChain" key="ExplosiveBarrelComponent._bExploded" equals="1" timeoutSeconds="1"/>
+	<WaitUntil watch="Fracture.Fractured" target="CrateRight" equals="1" timeoutSeconds="1"/>
+	<WaitUntil watch="Fracture.Fractured" target="BarrelFuse" equals="1" timeoutFrames="30"/>
+	<Pass/>
+</Scenario>

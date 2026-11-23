@@ -176,6 +176,8 @@ namespace sw
          * @return 이번 걸음에 생긴 일입니다. 버퍼는 시뮬레이션이 들고 다음 `step` 까지 유효합니다 — 걸음마다 쓰는 쪽이 칸을 두고 비우던 것을 한 곳으로 모았다. 쓰지 않으면 받지 않아도 된다.
          */
         const vector<ProjectileEvent>& step( float32 deltaTime, const IProjectileWorld& world );
+        /** @brief 날아가는 탄을 모두 @p delta 만큼 옮깁니다 — 월드 원점이 옮겨질 때 씬 자리로 도는 쪽이 부른다(`Component::onWorldOriginShifted`). */
+        void applyWorldOffset( const float3& delta );
         /** @brief 쓰는 쪽이 끝낸 탄(`_bAlive` 거짓)을 뺍니다. */
         void removeDead();
         /** @brief 모든 탄을 지웁니다. id 는 이어서 셉니다(지운 탄과 새 탄이 겹치지 않게). */

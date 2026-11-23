@@ -31,6 +31,8 @@ namespace sw
 
         void onBeginPlay() override;
         void onTick( TickContext& context ) override;
+        /** @brief 지난 칼날 자리를 옮깁니다 — 옮기지 않으면 다음 쓸기가 옛 원점에서 지금 자리까지 월드를 가로질러 맞힌다. */
+        void onWorldOriginShifted( const float3& delta ) override;
 
         bool  isAttackActive() const { return _bIsAttacking; }
         int32 getDamage() const { return _damage; }

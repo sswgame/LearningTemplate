@@ -4,6 +4,8 @@
 
 #include "Core/Algorithm/UnionFindUtil.h"
 #include "Core/Algorithm/VectorUtil.h"
+#include "Core/Container/unordered_map.h"
+#include "Core/Container/unordered_set.h"
 #include "Core/Encoding/FourCCUtil.h"
 #include "Core/Foundation/Constants.h"
 #include "Core/Foundation/Expected.h"
@@ -114,6 +116,9 @@ namespace sw
                 uint32  _node;
                 float32 _strain;
             };
+
+            /** @brief 노드 번호가 더 큰가 — 이 비교의 힙은 번호가 가장 작은 노드를 먼저 낸다(퍼지는 순서가 실행마다 같다). */
+            static bool isLaterNode( const NodeStrain& lhs, const NodeStrain& rhs ) { return lhs._node > rhs._node; }
 
             /** @brief 노드가 포함한 잎들의 이번 변형 중 가장 큰 값입니다. */
             static float32 findMaxStrain( const FractureNode& node, const vector<float32>& listLeafStrain )
@@ -762,37 +767,37 @@ namespace sw
         if ( listLeafStrain.empty() )
             return false;
         _listScratchStrain.assign( graph._leafCount, 0.0f );
-        vector<uint32> listDirtyGroup;
+        vector<uint32>        listDirtyGroup; // 처음 닿은 순서 — 다시 묶는 순서가 실행마다 같다
+        unordered_set<uint32> uniqueDirtyGroup;
         for ( const DestructionLeafStrain& entry : listLeafStrain )
         {
             _listScratchStrain[entry._leaf] = entry._strain;
             const uint32 groupID            = _listLeafGroup[entry._leaf];
-            VectorUtil::addUnique( listDirtyGroup, groupID );
+            if ( uniqueDirtyGroup.insert( groupID ).second )
+                listDirtyGroup.push_back( groupID );
         }
         const uint32 brokenNodeBefore = outChange._brokenNodeCount;
         const uint32 brokenLinkBefore = outChange._brokenLinkCount;
 
         // 활성 노드마다 그 잎들의 최대 변형을 노드 번호 순으로 쌓고, 갈라지면 넘친 비율만큼 자식에게 넘긴다.
-        vector<Internal::NodeStrain> listQueue;
+        vector<Internal::NodeStrain>  listQueue; // 노드 번호가 가장 작은 것이 앞인 힙(`Internal::isLaterNode`)
+        unordered_map<uint32, uint32> mapNodeToQueueIndex;
         for ( const DestructionLeafStrain& entry : listLeafStrain )
         {
-            const uint32 node  = _listLeafActive[entry._leaf];
-            bool         bSeen = false;
-            for ( Internal::NodeStrain& queued : listQueue )
+            const uint32 node     = _listLeafActive[entry._leaf];
+            const auto   inserted = mapNodeToQueueIndex.try_emplace( node, static_cast<uint32>( listQueue.size() ) );
+            if ( inserted.second )
             {
-                if ( queued._node == node )
-                {
-                    queued._strain = MathUtil::max( queued._strain, entry._strain );
-                    bSeen          = true;
-                }
-            }
-            if ( bSeen == false )
                 listQueue.push_back( Internal::NodeStrain{ node, entry._strain } );
+                continue;
+            }
+            Internal::NodeStrain& queued = listQueue[inserted.first->second];
+            queued._strain               = MathUtil::max( queued._strain, entry._strain );
         }
+        std::make_heap( listQueue.begin(), listQueue.end(), &Internal::isLaterNode );
         while ( listQueue.empty() == false )
         {
-            VectorUtil::sort( listQueue, []( const Internal::NodeStrain& lhs, const Internal::NodeStrain& rhs )
-            { return lhs._node > rhs._node; } );
+            std::pop_heap( listQueue.begin(), listQueue.end(), &Internal::isLaterNode );
             const Internal::NodeStrain current = listQueue.back();
             listQueue.pop_back();
             const FractureNode& data       = graph._listNode[current._node];
@@ -816,7 +821,10 @@ namespace sw
             {
                 const float32 childStrain = Internal::findMaxStrain( graph._listNode[child], _listScratchStrain ) * excess;
                 if ( childStrain > 0.0f )
+                {
                     listQueue.push_back( Internal::NodeStrain{ child, childStrain } );
+                    std::push_heap( listQueue.begin(), listQueue.end(), &Internal::isLaterNode );
+                }
             }
         }
 
@@ -842,7 +850,8 @@ namespace sw
             _listLinkBroken[link] = SW_TRUE;
             ++outChange._brokenLinkCount;
             const uint32 otherGroup = _listLeafGroup[data._leafB];
-            VectorUtil::addUnique( listDirtyGroup, otherGroup );
+            if ( uniqueDirtyGroup.insert( otherGroup ).second )
+                listDirtyGroup.push_back( otherGroup );
         }
 
         const bool bChanged = outChange._brokenNodeCount != brokenNodeBefore || outChange._brokenLinkCount != brokenLinkBefore;

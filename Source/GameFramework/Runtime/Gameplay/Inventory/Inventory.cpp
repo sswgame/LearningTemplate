@@ -219,6 +219,14 @@ namespace sw
         return false;
     }
 
+    void Inventory::addStackOrOverflow( const InventorySlot& stack )
+    {
+        if ( addStack( stack ) )
+            return;
+        _listOverflow.push_back( stack );
+        ++_revision;
+    }
+
     bool Inventory::consumeItem( const hashed_string& itemID, int32 count )
     {
         vector<InventorySlot> listTaken;

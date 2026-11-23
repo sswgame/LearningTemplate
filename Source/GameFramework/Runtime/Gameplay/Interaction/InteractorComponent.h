@@ -28,8 +28,9 @@ namespace sw
         int32                _stepIndex{ 0 };
         int32                _stepCount{ 0 };
         InteractionInputMode _mode{ InteractionInputMode::Press };
-        uint8                _bVisible{ SW_FALSE };     ///< 고른 대상이 있다
-        uint8                _bInteracting{ SW_FALSE }; ///< 진행 중이다
+        uint8                _bVisible{ SW_FALSE };      ///< 고른 대상이 있다
+        uint8                _bInteracting{ SW_FALSE };  ///< 진행 중이다
+        uint8                _bReactionOpen{ SW_FALSE }; ///< 반응 단계가 열렸다 — 지금 누른다(느낌표 · 입질 표시)
     };
 } // namespace sw
 
@@ -41,7 +42,8 @@ namespace sw
      * @class InteractorComponent
      * @brief 틱마다 씬의 `InteractableComponent` 중 쓸 수 있는 것(켜짐, 쿨다운, 태그 조건)을 후보로 모아 `InteractionView` 로 고르고, 입력(`setInput`)으로
      *        `InteractionSession` 을 진행합니다. 2D 는 `_space = Space2D` 와 `setFacing2D`(좌우 보기)를 쓰며 같은 코드가 동작합니다.
-     * @details 눈의 위치는 소유자의 월드 위치에 `_eyeOffset` 을 더한 값이고, 시선은 3D 이면 소유자의 앞(+Z), 2D 이면 `_facing2D` 이다. 진행 중에는 대상을 바꾸지 않고, 대상이 쓸 수 없게
+     * @details 입력은 같은 오브젝트의 폰 의도 버튼(`_interactButton`)이다 — 플레이어 · AI · 네트워크 · 재생이 같은 길로 누른다(이동 컴포넌트와 같다). 폰 없는 쪽은 게임이 `setInput` 으로 넣는다.
+     *          눈의 위치는 소유자의 월드 위치에 `_eyeOffset` 을 더한 값이고, 시선은 3D 이면 소유자의 앞(+Z), 2D 이면 `_facing2D` 이다. 진행 중에는 대상을 바꾸지 않고, 대상이 쓸 수 없게
      *          되거나 거리의 1.25 배 밖으로 나가면 취소한다. 완료하면 틱 뒤에 대상의 `completeInteraction` 을 부른다. 대상 상태를 게임 스레드에서 바꾸기 위해서다.
      *          권한이 `Server` 인 상호작용은 권한 훅(`IInteractionAuthority`)이 등록되어 있으면 시작 전에 허락을 묻는다.
      *          단계에 페어드 애니메이션 세트가 있으면 단계가 시작될 때 틱 뒤에 하는 쪽과 대상의 애니메이터로 세션을 시작하고(`PairedAnimationSystem`), 거절되면 상호작용을
@@ -63,13 +65,15 @@ namespace sw
         void onEndPlay() override;
         void onTick( TickContext& context ) override;
 
-        /** @brief 이번 프레임의 상호작용 버튼 상태입니다. 틱 전에 게임 입력이 넣습니다. 새로 눌렀는지는 지난 값과 비교해서 정합니다. */
+        /** @brief 이번 프레임의 상호작용 버튼 상태입니다. 버튼 이름(`_interactButton`)이 비었을 때 틱 전에 게임 입력이 넣습니다. 새로 눌렀는지는 지난 값과 비교해서 정합니다. */
         void setInput( bool bHeld );
         /** @brief 2D 의 시선(좌우)입니다. */
         void setFacing2D( const float3& facing ) { _facing2D = facing; }
         /** @brief 공간을 바꿉니다. 플레이 중이면 공간 색인 층(`InteractableComponent::getSpatialLayer`)의 사용자도 옮깁니다(게임 스레드, 틱 밖). */
         void setSpace( InteractionSpace space );
         void setEyeOffset( const float3& eyeOffset ) { _eyeOffset = eyeOffset; }
+        /** @brief 누를 의도 버튼 이름을 정합니다. 코드로 만든 오브젝트 · 테스트가 시작 전에 부릅니다. 씬에 놓은 것은 PROPERTY 가 채웁니다. */
+        void setInteractButton( const hashed_string& button ) { _interactButton = button; }
         /** @brief 진행 중인 상호작용을 취소합니다. 맞았을 때나 컷신에서 씁니다. */
         void cancelInteraction();
 
@@ -117,12 +121,15 @@ namespace sw
         float3 _eyeOffset;
         PROPERTY( Category = "Interaction", DisplayName = "Facing 2D", Tooltip = "View direction in 2D (left or right)" )
         float3 _facing2D;
+        PROPERTY( Category = "Interaction", DisplayName = "Interact Button", Tooltip = "Intent button of this object's pawn that interacts (empty: the game feeds the input)" )
+        hashed_string _interactButton;
         PROPERTY( Category = "Interaction", DisplayName = "Line Of Sight", Tooltip = "Ask the physics world whether the target is visible" )
         bool _bUseLineOfSight;
         PROPERTY( Category = "Interaction", DisplayName = "Keep Distance Scale", Tooltip = "A focused target stays focused until it is this many times its reach away (hysteresis)", Min = 1.0 )
         float32 _keepDistanceScale;
 
         InteractionSession                              _session;
+        optional<int32>                                 _interactIndex;   ///< 폰 스키마의 `_interactButton` 번호(시작할 때 한 번 찾는다)
         hashed_string                                   _resumeState;     ///< 몽타주를 틀기 전 애니메이터 상태입니다. 취소하면 이 상태로 돌아갑니다(몽타주가 없었으면 비어 있다).
         int32                                           _montageStep;     ///< 이번 상호작용에서 몽타주를 튼 단계 번호입니다(상호작용이 아니면 -1).
         uint32                                          _pairedSessionID; ///< 이번 상호작용이 시작한 페어드 애니메이션 세션 id 입니다(없으면 0). 취소하면 중단한다

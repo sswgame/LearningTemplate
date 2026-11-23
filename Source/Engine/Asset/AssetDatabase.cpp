@@ -69,11 +69,13 @@ namespace sw
         bValid                    = AssetDatabaseInternal::hasNoEmptyText( loaded._listHeaderSuffix, "listHeaderSuffix", path ) && bValid;
         bValid                    = AssetDatabaseInternal::hasNoEmptyText( loaded._listSkipPattern, "listSkipPattern", path ) && bValid;
         bValid                    = AssetDatabaseInternal::hasNoEmptyText( loaded._listDerivedFolder, "listDerivedFolder", path ) && bValid;
+        bValid                    = AssetDatabaseInternal::hasNoEmptyText( loaded._listKeptDerived, "listKeptDerived", path ) && bValid;
         if ( bValid == false )
             return false;
         _listHeaderSuffix  = std::move( loaded._listHeaderSuffix );
         _listSkipPattern   = std::move( loaded._listSkipPattern );
         _listDerivedFolder = std::move( loaded._listDerivedFolder );
+        _listKeptDerived   = std::move( loaded._listKeptDerived );
         return true;
     }
 
@@ -107,6 +109,18 @@ namespace sw
                 return true;
         }
         return false;
+    }
+
+    bool AssetIdentityRules::isMisplacedInDerivedFolder( string_view assetID ) const
+    {
+        if ( classify( assetID ) != AssetIdentityKind::Header || isUnderDerivedFolder( assetID ) == false )
+            return false;
+        for ( const string& pattern : _listKeptDerived )
+        {
+            if ( StringUtil::matchesWildcard( pattern, assetID ) )
+                return false;
+        }
+        return true;
     }
 
     string AssetMeta::toXML() const

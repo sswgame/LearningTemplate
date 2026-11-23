@@ -2,10 +2,14 @@
  * @file AnimationWatches.cpp
  * @brief 애니메이션 시스템의 자동화 감시 값입니다(`Animation.*`) — 군중 공유(`AnimationCrowd`)가 유닛을 어떻게 나눴는지 시나리오가 단언합니다. 프로파일 카운터
  *        `GT.Animation.crowd*Units` 와 같은 값입니다. 감시 값 레지스트리(`Engine/Automation/Watch`)가 아래층이라 애니메이션이 자기 감시 값을 등록합니다.
- *        `Animation.BoneX` 는 대상 오브젝트의 본 하나의 월드 X 입니다(포즈 노드 `Mirror` 가 좌우를 뒤집었는지 본다). `Animation.State` 는 대상 애니메이터의 현재 상태입니다.
+ *        `Animation.BoneX` 는 대상 오브젝트의 본 하나의 월드 X 입니다(포즈 노드 `Mirror` 가 좌우를 뒤집었는지 본다). `Animation.MorphWeight` 는 모프 타깃 하나의 가중치입니다. `Animation.State` 는 대상 애니메이터의 현재 상태입니다.
+ *        개발 명령 `face.expression` · `face.speak` 는 얼굴(`FacialAnimationComponent`)의 표정 · 말하기를 건다(배포 구성은 등록하지 않는다 — `SW_DEV_COMMAND`).
  */
 #include "pch.h"
 
+#include "Core/String/StringUtil.h"
+
+#include "Engine/Animation/Component/FacialAnimationComponent.h"
 #include "Engine/Animation/Component/SkeletalAnimatorComponent.h"
 #include "Engine/Animation/Component/SkeletalMeshComponent.h"
 #include "Engine/Animation/Scene/AnimationSystem.h"
@@ -13,6 +17,8 @@
 #include "Engine/Automation/Watch/AutomationWatchComponent.h"
 #include "Engine/Console/DebugHUDRegistry.h"
 #include "Engine/Console/DebugHUDSectionFormat.h"
+#include "Engine/Console/DevCommandRegistry.h"
+#include "Engine/Content/AssetID.h"
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Object/GameObject/GameObjectManager.inl"
 #include "Engine/Scene/SceneManager.h"
@@ -112,6 +118,85 @@ namespace sw
                 return true;
             }
 
+            /** @brief 질의 감시 값 `Animation.MorphWeight` 입니다. 대상 오브젝트가 그리는 메시의 모프 타깃 `key` 의 지난 프레임 가중치입니다(표정 · 비즘 · 커브가 더해진 값). */
+            [[nodiscard]] static bool readMorphWeight( const AutomationWatchQuery& query, AutomationWatchValue& outValue )
+            {
+                const SkeletalMeshComponent* pMesh = query.findTargetComponent<SkeletalMeshComponent>( "SkeletalMeshComponent", outValue );
+                if ( pMesh == nullptr )
+                    return false;
+                const optional<uint32> targetIndex = pMesh->findMorphTargetIndex( hashed_string( query._key ) );
+                if ( targetIndex.has_value() == false || *targetIndex >= pMesh->getMorphWeights().size() )
+                {
+                    outValue.setText( query.describeMissing( "morph target" ) );
+                    return false;
+                }
+                outValue.setNumber( static_cast<float64>( pMesh->getMorphWeights()[*targetIndex] ) );
+                return true;
+            }
+
+            /** @brief 질의 감시 값 `Facial.Speaking` 입니다. 대상 오브젝트의 얼굴이 말하는 중이면 1 입니다. */
+            [[nodiscard]] static bool readSpeaking( const AutomationWatchQuery& query, AutomationWatchValue& outValue )
+            {
+                const FacialAnimationComponent* pFace = query.findTargetComponent<FacialAnimationComponent>( "FacialAnimationComponent", outValue );
+                if ( pFace == nullptr )
+                    return false;
+                outValue.setNumber( pFace->isSpeaking() ? 1.0 : 0.0 );
+                return true;
+            }
+
+            /** @brief 이름 붙은 오브젝트의 얼굴입니다. 없으면 nullptr 입니다. */
+            [[nodiscard]] static FacialAnimationComponent* findFace( const string& objectName )
+            {
+                GameObject* pObject = engine::findActiveObject( hashed_string( objectName ) );
+                return pObject != nullptr ? pObject->getComponent<FacialAnimationComponent>() : nullptr;
+            }
+
+            /** @brief 얼굴이 없다는 답입니다. */
+            static string makeNoFaceReply( const string& objectName )
+            {
+                StringBuilder<constant::buffer::kMax256> reply;
+                reply.appendFormat( "no object named '%#' with a FacialAnimationComponent in the active scene", objectName );
+                return string( reply.view() );
+            }
+
+            /** @brief `face.expression <object> <expression> <weight>` — 얼굴의 표정 가중치를 정합니다. */
+            static bool runExpression( const vector<string>& listArgument, string& outReply )
+            {
+                float32 weight = 0.0f;
+                if ( listArgument.size() != 3 || StringUtil::parseFloat( listArgument[2], weight ) == false )
+                    return false;
+                FacialAnimationComponent* pFace = findFace( listArgument[0] );
+                if ( pFace == nullptr )
+                {
+                    outReply = makeNoFaceReply( listArgument[0] );
+                    return false;
+                }
+                StringBuilder<constant::buffer::kMax256> reply;
+                if ( pFace->setExpressionWeight( hashed_string( listArgument[1] ), weight ) )
+                    reply.appendFormat( "face.expression %# %# %#", listArgument[0], listArgument[1], weight );
+                else
+                    reply.appendFormat( "face.expression: '%#' has no expression '%#'", listArgument[0], listArgument[1] );
+                outReply = string( reply.view() );
+                return true;
+            }
+
+            /** @brief `face.speak <object> <audio>` — 얼굴이 음성(비즘 트랙, 없으면 진폭)을 말합니다. */
+            static bool runSpeak( const vector<string>& listArgument, string& outReply )
+            {
+                if ( listArgument.size() != 2 )
+                    return false;
+                FacialAnimationComponent* pFace = findFace( listArgument[0] );
+                if ( pFace == nullptr )
+                {
+                    outReply = makeNoFaceReply( listArgument[0] );
+                    return false;
+                }
+                StringBuilder<constant::buffer::kMax256> reply;
+                reply.appendFormat( "face.speak %#: %#", listArgument[0], pFace->speak( AssetID{ listArgument[1] } ) ? "speaking" : "refused (see the log)" );
+                outReply = string( reply.view() );
+                return true;
+            }
+
             /** @brief 질의 감시 값 `Animation.State` 입니다. 대상 오브젝트의 애니메이터가 지금 재생하는 상태(클립) 이름입니다. */
             [[nodiscard]] static bool readState( const AutomationWatchQuery& query, AutomationWatchValue& outValue )
             {
@@ -122,7 +207,7 @@ namespace sw
                 return true;
             }
 
-            /** @brief 디버그 HUD 범주 `animation` — 군중 묶음 · 정점 애니메이션 · 예산이 예상한 평가 비용입니다(감시 값 `Animation.*` 이 아래에 붙는다). */
+            /** @brief 디버그 HUD 범주 `animation` — 군중 묶음 · 예산이 예상한 평가 비용입니다(감시 값 `Animation.*` 이 아래에 붙는다). */
             static void writeSection( DebugHUDSectionWriter& writer )
             {
                 const GameObjectManager* pManager = engine::findActiveObjectManager();
@@ -139,7 +224,6 @@ namespace sw
                 }
                 writer.addLineFormat( "crowd buckets", "%# (%# evaluated, %# visible members)", static_cast<uint32>( animation.getCrowd().getBuckets().size() ), animation.getCrowd().getEvaluatedBucketCount(),
                                       visibleMemberCount );
-                writer.addLineFormat( "vertex animation meshes", "%#", animation.getCrowd().getVertexAnimationMeshCount() );
                 writer.addLineFormat( "expected evaluation", "%.0f us", static_cast<float64>( animation.getExpectedEvaluationMicroseconds() ) );
             }
         };
@@ -158,6 +242,10 @@ namespace sw
     SW_AUTOMATION_WATCH( animationPoseEvaluatedUnits, "Animation.PoseEvaluatedSkeletalMeshes", "Skeletal skeletalMeshes that built their own pose last frame (crowd-shared skeletalMeshes do not)",
                          &AnimationWatchesInternal::readPoseEvaluatedUnits );
     SW_AUTOMATION_QUERY_WATCH( animationBoneX, "Animation.BoneX", "World X of the bone named key on the target object's skeletal mesh (m)", &AnimationWatchesInternal::readBoneX, true, true );
+    SW_AUTOMATION_QUERY_WATCH( animationMorphWeight, "Animation.MorphWeight", "Weight of the morph target named key on the target object's skeletal mesh", &AnimationWatchesInternal::readMorphWeight, true, true );
+    SW_AUTOMATION_QUERY_WATCH( facialSpeaking, "Facial.Speaking", "1 while the target object's face speaks", &AnimationWatchesInternal::readSpeaking, true, false );
+    SW_DEV_COMMAND( FaceExpression, "face.expression", "face.expression <object> <expression> <weight>", "Set an expression weight of a named object's face", &AnimationWatchesInternal::runExpression );
+    SW_DEV_COMMAND( FaceSpeak, "face.speak", "face.speak <object> <audio>", "Make a named object's face speak a voice asset", &AnimationWatchesInternal::runSpeak );
     SW_AUTOMATION_QUERY_WATCH( animationState, "Animation.State", "State (or clip) the target object's skeletal animator plays now", &AnimationWatchesInternal::readState, true, false );
     SW_AUTOMATION_WATCH( animationEvaluatedBones, "Animation.EvaluatedBones", "Bones the skeletalMeshes that built their own pose evaluated last frame (bone LOD skips the rest)",
                          &AnimationWatchesInternal::readEvaluatedBones );

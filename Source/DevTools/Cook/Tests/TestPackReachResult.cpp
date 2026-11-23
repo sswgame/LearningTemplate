@@ -29,10 +29,12 @@ namespace
         class MemorySource final : public IPackReachSource
         {
         public:
-            unordered_map<string, string> _mapText;
+            unordered_map<string, string>         _mapText;
+            mutable unordered_map<string, uint32> _mapReadCount; ///< 글마다 읽은 횟수
 
             bool readText( const string& assetID, string& outText ) const override
             {
+                ++_mapReadCount[assetID];
                 const auto itText = _mapText.find( assetID );
                 if ( itText == _mapText.end() )
                     return false;
@@ -42,6 +44,13 @@ namespace
         };
 
         static bool loadRepositoryProperties( AssetReferenceFields& outParams ) { return outParams.load( ProcessRoots::get()._project.str() ); }
+
+        /** @brief 그래프를 세워 전체를 고릅니다(미루는 뿌리 없음). */
+        static bool collect( const AssetReferenceFields& params, const PackCookRules& rules, const PackReachFiles& files, const MemorySource& source, PackReachResult& outResult )
+        {
+            PackReachGraph graph( params, rules, files, source );
+            return PackReachResult::collect( graph, {}, outResult );
+        }
 
         /** @brief 맵 폴더를 항상 담고, 필수 데이터로 외형 폴더 · 아이템 파일을 아는 규칙입니다. */
         static PackCookRules makeRules()
@@ -156,7 +165,7 @@ SW_TEST_CASE( PackReachabilityTest, FollowsReferencesFromTheRoots )
     Util::addBinary( files, "common/models/unused.mesh" );
 
     PackReachResult result;
-    SW_REQUIRE_TRUE( PackReachResult::collect( params, Util::makeRules(), files, source, result ) );
+    SW_REQUIRE_TRUE( Util::collect( params, Util::makeRules(), files, source, result ) );
     for ( const utf8* pIncluded : { "game/x/data/gamesettings.xml", "game/x/maps/a.scene.xml", "common/models/a.mesh", "common/materials/a.material", "engine/materials/base.material",
                                     "common/textures/a.dds", "engine/textures/white.dds" } )
     {
@@ -167,6 +176,45 @@ SW_TEST_CASE( PackReachabilityTest, FollowsReferencesFromTheRoots )
     SW_EXPECT_FALSE( result._setIncluded.contains( string( "common/textures/unused.dds" ) ) );
     SW_EXPECT_FALSE( result._setIncluded.contains( string( "common/models/unused.mesh" ) ) );
     SW_EXPECT_EQUAL( 1u, result._rootCount ); // 맵 하나 — 게임 설정은 필수 데이터의 출발점이라 담지만 뿌리 수는 그 줄(여기는 없다)로 센다
+}
+
+/** @brief [PackReachabilityTest] 그래프 하나로 고르기를 여러 번(전체 · 씬마다) 해도 글은 한 번만 읽히고, 씬마다의 닿음은 서로 섞이지 않는다 — 공용 카탈로그의 불린 항목도 씬마다 다르다 */
+SW_TEST_CASE( PackReachabilityTest, OneGraphServesManySelectionsWithOneRead )
+{
+    AssetReferenceFields params;
+    SW_REQUIRE_TRUE( Util::loadRepositoryProperties( params ) );
+    const PackCookRules rules = EntryUtil::makeRules();
+    PackReachFiles      files;
+    Util::MemorySource  source;
+    EntryUtil::addCatalogs( files, source, "", R"(<Scene><Item _base="common/data/appearance/itemvisuals.xml#body_farmer"/></Scene>)" );
+    Util::addText( files, source, "game/x/maps/b.scene.xml",
+                   R"(<Scene><Item _base="common/data/appearance/itemvisuals.xml#body_knight"/></Scene>)" );
+    PackReachGraph  graph( params, rules, files, source );
+    PackReachResult all;
+    PackReachResult sceneA;
+    PackReachResult sceneB;
+    PackReachResult sceneAAgain;
+    SW_REQUIRE_TRUE( PackReachResult::collect( graph, {}, all ) );
+    SW_REQUIRE_TRUE( PackReachResult::collectFromRoots( graph, { "game/x/maps/a.scene.xml" }, sceneA ) );
+    SW_REQUIRE_TRUE( PackReachResult::collectFromRoots( graph, { "game/x/maps/b.scene.xml" }, sceneB ) );
+    SW_REQUIRE_TRUE( PackReachResult::collectFromRoots( graph, { "game/x/maps/a.scene.xml" }, sceneAAgain ) );
+    SW_EXPECT_TRUE( sceneA._setIncluded.contains( string( "game/x/maps/a.scene.xml" ) ) );
+    SW_EXPECT_FALSE( sceneA._setIncluded.contains( string( "game/x/maps/b.scene.xml" ) ) );
+    SW_EXPECT_FALSE( sceneB._setIncluded.contains( string( "game/x/maps/a.scene.xml" ) ) );
+    SW_EXPECT_TRUE( sceneA._setIncluded.contains( string( "common/models/farmer.mesh" ) ) && sceneA._setIncluded.contains( string( "common/models/base.mesh" ) ) );
+    SW_EXPECT_FALSE( sceneA._setIncluded.contains( string( "common/models/knight.mesh" ) ) );
+    SW_EXPECT_TRUE( sceneB._setIncluded.contains( string( "common/models/knight.mesh" ) ) );
+    SW_EXPECT_FALSE( sceneB._setIncluded.contains( string( "common/models/farmer.mesh" ) ) );
+    for ( const string& assetID : sceneA._setIncluded )
+    {
+        SW_EXPECT_TRUE( sceneAAgain._setIncluded.contains( assetID ) && all._setIncluded.contains( assetID ) );
+    }
+    SW_EXPECT_EQUAL( sceneA._setIncluded.size(), sceneAAgain._setIncluded.size() );
+    for ( const auto& [assetID, readCount] : source._mapReadCount )
+    {
+        // 게임 설정은 필수 데이터 줄을 읽느라 한 번 더 읽는다(전체 고르기 하나뿐이다).
+        SW_EXPECT_TRUE( readCount <= ( assetID == "game/x/data/gamesettings.xml" ? 2u : 1u ) );
+    }
 }
 
 /** @brief [PackReachabilityTest] 닿는 참조가 어디에도 없는 파일을 가리키면 조용히 빼지 않고 쿠킹 오류다 */
@@ -181,7 +229,7 @@ SW_TEST_CASE( PackReachabilityTest, MissingReferenceStopsTheCook )
 
     SW_EXPECT_LOG( "PackReachability.MissingReference" );
     PackReachResult result;
-    SW_EXPECT_FALSE( PackReachResult::collect( params, Util::makeRules(), files, source, result ) );
+    SW_EXPECT_FALSE( Util::collect( params, Util::makeRules(), files, source, result ) );
 }
 
 /**
@@ -201,7 +249,7 @@ SW_TEST_CASE( PackReachabilityTest, RedirectTablesAreRootsAndNotFollowed )
     Util::addText( files, source, "common/data/redirects.xml", "<Redirects/>" );
 
     PackReachResult result;
-    SW_REQUIRE_TRUE( PackReachResult::collect( params, Util::makeRules(), files, source, result ) );
+    SW_REQUIRE_TRUE( Util::collect( params, Util::makeRules(), files, source, result ) );
     SW_EXPECT_TRUE( result._setIncluded.contains( string( "game/x/redirects.xml" ) ) );
     SW_EXPECT_TRUE( result._setIncluded.contains( string( "common/redirects.xml" ) ) );
     SW_EXPECT_FALSE( result._setIncluded.contains( string( "common/data/redirects.xml" ) ) );
@@ -221,7 +269,7 @@ SW_TEST_CASE( PackReachabilityTest, ExcludedSourceIsNotMissing )
     files._setExisting.insert( "engine/shaders/lit.hlsl" );
 
     PackReachResult result;
-    SW_REQUIRE_TRUE( PackReachResult::collect( params, Util::makeRules(), files, source, result ) );
+    SW_REQUIRE_TRUE( Util::collect( params, Util::makeRules(), files, source, result ) );
     SW_EXPECT_TRUE( result._setIncluded.contains( string( "game/x/materials/a.material" ) ) );
     SW_EXPECT_FALSE( result._setIncluded.contains( string( "engine/shaders/lit.hlsl" ) ) );
 }
@@ -243,7 +291,7 @@ SW_TEST_CASE( PackReachabilityTest, AlwaysCookRulesAreRoots )
     engine._listPattern.push_back( "engine/**" );
 
     PackReachResult result;
-    SW_REQUIRE_TRUE( PackReachResult::collect( params, rules, files, source, result ) );
+    SW_REQUIRE_TRUE( Util::collect( params, rules, files, source, result ) );
     SW_EXPECT_TRUE( result._setIncluded.contains( string( "engine/data/defaults.xml" ) ) );
     SW_EXPECT_TRUE( result._setIncluded.contains( string( "common/materials/default.material" ) ) );
     SW_EXPECT_FALSE( result._setIncluded.contains( string( "common/materials/other.material" ) ) );
@@ -265,7 +313,7 @@ SW_TEST_CASE( PackReachabilityTest, RequiredDataAddsTheNamedKindOnly )
     Util::addBinary( files, "common/models/knight.mesh" );
 
     PackReachResult result;
-    SW_REQUIRE_TRUE( PackReachResult::collect( params, Util::makeRules(), files, source, result ) );
+    SW_REQUIRE_TRUE( Util::collect( params, Util::makeRules(), files, source, result ) );
     SW_EXPECT_TRUE( result._setIncluded.contains( string( "common/data/appearance/itemvisuals.xml" ) ) );
     SW_EXPECT_TRUE( result._setIncluded.contains( string( "common/data/appearance/slots.xml" ) ) );
     SW_EXPECT_TRUE( result._setIncluded.contains( string( "common/models/knight.mesh" ) ) );
@@ -284,7 +332,7 @@ SW_TEST_CASE( PackReachabilityTest, UnknownRequiredDataKindIsAnError )
 
     SW_EXPECT_LOG( "PackReachability.RequiredDataKindUnknown" );
     PackReachResult result;
-    SW_EXPECT_FALSE( PackReachResult::collect( params, Util::makeRules(), files, source, result ) );
+    SW_EXPECT_FALSE( Util::collect( params, Util::makeRules(), files, source, result ) );
 }
 
 /** @brief [PackReachabilityTest] 따라가지 않는 칸(현지화 수집 뿌리 `assetRoots`)이 가리키는 폴더는 담지 않는다 — 런타임이 읽지 않는 도구 입력이다 */
@@ -305,7 +353,7 @@ SW_TEST_CASE( PackReachabilityTest, UnfollowedPropertiesAreNotFollowed )
     data._listPattern.push_back( "game/*/data/**" );
 
     PackReachResult result;
-    SW_REQUIRE_TRUE( PackReachResult::collect( params, rules, files, source, result ) );
+    SW_REQUIRE_TRUE( Util::collect( params, rules, files, source, result ) );
     SW_EXPECT_TRUE( result._setIncluded.contains( string( "game/x/data/x.locproject.xml" ) ) );
     SW_EXPECT_FALSE( result._setIncluded.contains( string( "common/props/crate.mesh" ) ) );
 }
@@ -326,13 +374,13 @@ SW_TEST_CASE( PackReachabilityTest, CodeRootsAreRoots )
     files._listCodeRoot.push_back( "engine/data/defaults.xml" );
 
     PackReachResult result;
-    SW_REQUIRE_TRUE( PackReachResult::collect( params, Util::makeRules(), files, source, result ) );
+    SW_REQUIRE_TRUE( Util::collect( params, Util::makeRules(), files, source, result ) );
     SW_EXPECT_TRUE( result._setIncluded.contains( string( "engine/materials/default.material" ) ) );
     SW_EXPECT_FALSE( result._setIncluded.contains( string( "engine/materials/unused.material" ) ) );
 
     files._listCodeRoot.push_back( "engine/data/gone.xml" );
     SW_EXPECT_LOG( "PackReachability.MissingReference" );
-    SW_EXPECT_FALSE( PackReachResult::collect( params, Util::makeRules(), files, source, result ) );
+    SW_EXPECT_FALSE( Util::collect( params, Util::makeRules(), files, source, result ) );
 }
 
 /** @brief [PackReachabilityTest] 자동화 전용 묶음(시나리오)은 실행기가 있는 구성에서만 뿌리다 — 자동화 없는 배포는 시나리오와 그것만 쓰는 에셋을 담지 않는다 */
@@ -354,12 +402,12 @@ SW_TEST_CASE( PackReachabilityTest, AutomationRulesNeedTheAutomationRuntime )
 
     PackReachResult result;
     files._automation = PackAutomationContent::Excluded;
-    SW_REQUIRE_TRUE( PackReachResult::collect( params, rules, files, source, result ) );
+    SW_REQUIRE_TRUE( Util::collect( params, rules, files, source, result ) );
     SW_EXPECT_FALSE( result._setIncluded.contains( string( "game/x/automation/a.scenario.xml" ) ) );
     SW_EXPECT_FALSE( result._setIncluded.contains( string( "game/x/maps/test.scene.xml" ) ) );
 
     files._automation = PackAutomationContent::Included;
-    SW_REQUIRE_TRUE( PackReachResult::collect( params, rules, files, source, result ) );
+    SW_REQUIRE_TRUE( Util::collect( params, rules, files, source, result ) );
     SW_EXPECT_TRUE( result._setIncluded.contains( string( "game/x/automation/a.scenario.xml" ) ) );
     SW_EXPECT_TRUE( result._setIncluded.contains( string( "game/x/maps/test.scene.xml" ) ) );
 }
@@ -384,7 +432,7 @@ SW_TEST_CASE( PackReachabilityTest, AlwaysCookExcludePatternSkipsEditorScenarios
 
     PackReachResult result;
     files._automation = PackAutomationContent::Included;
-    SW_REQUIRE_TRUE( PackReachResult::collect( params, rules, files, source, result ) );
+    SW_REQUIRE_TRUE( Util::collect( params, rules, files, source, result ) );
     SW_EXPECT_TRUE( result._setIncluded.contains( string( "game/x/automation/a.scenario.xml" ) ) );
     SW_EXPECT_FALSE( result._setIncluded.contains( string( "game/x/automation/editor/b.scenario.xml" ) ) );
 }
@@ -399,7 +447,7 @@ SW_TEST_CASE( PackReachabilityTest, EntryCatalogFollowsNamedEntriesOnly )
     EntryUtil::addCatalogs( files, source, R"(<RequiredData kind="appearance" pack="common"/>)", R"(<Scene><Component _presetID="Farmer"/></Scene>)" );
 
     PackReachResult result;
-    SW_REQUIRE_TRUE( PackReachResult::collect( params, EntryUtil::makeRules(), files, source, result ) );
+    SW_REQUIRE_TRUE( Util::collect( params, EntryUtil::makeRules(), files, source, result ) );
     SW_EXPECT_TRUE( result._setIncluded.contains( string( "common/data/appearance/itemvisuals.xml" ) ) );
     SW_EXPECT_TRUE( result._setIncluded.contains( string( "common/models/farmer.mesh" ) ) );
     SW_EXPECT_TRUE( result._setIncluded.contains( string( "common/models/base.mesh" ) ) );
@@ -416,7 +464,7 @@ SW_TEST_CASE( PackReachabilityTest, EntryCatalogReachedByFolderIsWhole )
     EntryUtil::addCatalogs( files, source, "", R"(<Scene><Editor appearance="common/data/appearance"/></Scene>)" );
 
     PackReachResult result;
-    SW_REQUIRE_TRUE( PackReachResult::collect( params, EntryUtil::makeRules(), files, source, result ) );
+    SW_REQUIRE_TRUE( Util::collect( params, EntryUtil::makeRules(), files, source, result ) );
     SW_EXPECT_TRUE( result._setIncluded.contains( string( "common/models/knight.mesh" ) ) );
     SW_EXPECT_TRUE( result._setIncluded.contains( string( "common/models/farmer.mesh" ) ) );
 }
@@ -431,7 +479,7 @@ SW_TEST_CASE( PackReachabilityTest, EntryCatalogFileHashIDNamesOneEntry )
     EntryUtil::addCatalogs( files, source, "", R"(<Scene><Item _base="common/data/appearance/itemvisuals.xml#body_knight"/></Scene>)" );
 
     PackReachResult result;
-    SW_REQUIRE_TRUE( PackReachResult::collect( params, EntryUtil::makeRules(), files, source, result ) );
+    SW_REQUIRE_TRUE( Util::collect( params, EntryUtil::makeRules(), files, source, result ) );
     SW_EXPECT_TRUE( result._setIncluded.contains( string( "common/models/knight.mesh" ) ) );
     SW_EXPECT_FALSE( result._setIncluded.contains( string( "common/models/farmer.mesh" ) ) );
 }
@@ -534,7 +582,7 @@ SW_TEST_CASE( PackReachabilityTest, OverriddenEngineRuleStillAppliesToOtherPacks
     rules.mergeGameRules( "game/x", gameX );
 
     PackReachResult result;
-    SW_REQUIRE_TRUE( PackReachResult::collect( params, rules, files, source, result ) );
+    SW_REQUIRE_TRUE( Util::collect( params, rules, files, source, result ) );
     SW_EXPECT_TRUE( result._setIncluded.contains( string( "game/x/levels/l.scene.xml" ) ) );
     SW_EXPECT_FALSE( result._setIncluded.contains( string( "game/x/maps/unused.scene.xml" ) ) ); // 이 게임 팩에서는 게임의 "Maps" 가 이긴다
     SW_EXPECT_TRUE( result._setIncluded.contains( string( "game/y/maps/unused.scene.xml" ) ) );  // 다른 게임 팩에는 엔진 "Maps" 가 그대로다
@@ -563,7 +611,7 @@ SW_TEST_CASE( PackReachabilityTest, GameCookRulesDoNotLeakIntoOtherGames )
     rules.mergeGameRules( "game/x", gameX );
 
     PackReachResult result;
-    SW_REQUIRE_TRUE( PackReachResult::collect( params, rules, files, source, result ) );
+    SW_REQUIRE_TRUE( Util::collect( params, rules, files, source, result ) );
     SW_EXPECT_TRUE( result._setIncluded.contains( string( "game/x/models/unit.mesh" ) ) );
     SW_EXPECT_FALSE( result._setIncluded.contains( string( "game/y/models/unit.mesh" ) ) );
 }
@@ -583,7 +631,7 @@ SW_TEST_CASE( PackReachabilityTest, ExcludedRedirectTableIsACookError )
 
     SW_EXPECT_LOG( "PackCooker.RedirectTableExcluded" );
     PackReachResult result;
-    SW_EXPECT_FALSE( PackReachResult::collect( params, Util::makeRules(), files, source, result ) );
+    SW_EXPECT_FALSE( Util::collect( params, Util::makeRules(), files, source, result ) );
 }
 
 /** @brief [PackReachabilityTest] 저장소의 실제 팩 규칙(`Config/Engine/PackConfig.json`)은 도메인 리다이렉트 표를 빼지 않는다 — 어느 빌드 타깃이든 */

@@ -37,6 +37,10 @@ namespace sw
 
         /** @brief 상자 크기(축마다 전체 길이, m)입니다. */
         const float3& getExtent() const { return _extent; }
+        /** @brief 구운 데이터 @p data 를 찍은 자리를 지금 월드 원점 기준으로 옮긴 것입니다(에셋에는 절대 자리로 적혀 있다). */
+        float3 computeLocalCapturePosition( const ReflectionProbeAsset& data ) const;
+        /** @brief 셀 나누기가 묻는 이 컴포넌트가 덮는 월드 상자입니다 — 피벗 셀이 아니라 덮는 자리가 로딩 반경에 들면 올라 있다. */
+        bool computeStreamingBounds( AABB& outBox ) const override;
         /** @brief 상자 크기를 설정합니다. 음수는 0 으로 자릅니다. */
         void setExtent( const float3& extent );
         /** @brief 상자 경계 안쪽에서 반사가 앰비언트로 섞여 사라지는 폭(m)입니다. */

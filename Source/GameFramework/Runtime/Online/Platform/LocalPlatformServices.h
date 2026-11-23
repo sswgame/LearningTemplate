@@ -36,7 +36,7 @@ namespace sw
         const utf8* getStoreName() const override { return PlatformStoreName::kLocal; }
         bool        unlockAchievement( string_view achievementID ) override;
         bool        setStat( string_view statID, int64 value ) override;
-        /** @brief @p fileName 은 폴더 밖을 가리킬 수 없습니다(`/` · `\` · `..` 는 false). */
+        /** @brief @p fileName 은 폴더 밖을 가리킬 수 없습니다(`/` · `\` · `..` 와 드라이브 · 대체 스트림의 `:` 는 false). */
         bool writeCloudFile( string_view fileName, const vector<uint8>& bytes ) override;
         bool readCloudFile( string_view fileName, vector<uint8>& outBytes ) override;
         bool setRichPresence( string_view key, string_view value ) override;
@@ -51,8 +51,13 @@ namespace sw
 
     private:
         [[nodiscard]] static bool isPlainFileName( string_view fileName );
+        /** @brief 한 줄에 하나인 글 파일의 이름 칸으로 쓸 수 있는지 봅니다 — 비지 않고, 줄바꿈 · `=` · 앞뒤 공백이 없다(있으면 다음 실행이 다른 이름으로 읽는다). */
+        [[nodiscard]] static bool isPlainKey( string_view key );
         [[nodiscard]] bool        writeKeyValueFile( const utf8* pFileName, const flat_map<string, string>& mapValue ) const;
-        void                      readKeyValueFile( const utf8* pFileName, flat_map<string, string>& outMapValue ) const;
+        /** @brief `키=값` 파일을 읽습니다. 있는데 읽지 못했으면 false 입니다(없는 것은 처음 실행이라 true). */
+        [[nodiscard]] bool readKeyValueFile( const utf8* pFileName, flat_map<string, string>& outMapValue ) const;
+        /** @brief 있는데 읽지 못한 파일을 알립니다. 이번 실행은 그 파일을 쓰지 않는다 — 쓰면 지난 실행의 기록을 빈 것으로 덮는다. */
+        void reportUnreadable( const utf8* pFileName ) const;
 
     private:
         string                   _folder;
@@ -62,6 +67,8 @@ namespace sw
         uint8                    _bAchievementsDirty : 1;
         uint8                    _bStatsDirty        : 1;
         uint8                    _bPresenceDirty     : 1;
-        [[maybe_unused]] uint8   _reserved           : 5;
+        uint8                    _bAchievementsKept  : 1; ///< 업적 파일을 읽었거나 없었다(0 이면 있는데 읽지 못해 쓰지 않는다)
+        uint8                    _bStatsKept         : 1; ///< 통계 파일을 읽었거나 없었다(0 이면 있는데 읽지 못해 쓰지 않는다)
+        [[maybe_unused]] uint8   _reserved           : 3;
     };
 } // namespace sw

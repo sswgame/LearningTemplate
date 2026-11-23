@@ -114,6 +114,11 @@ namespace sw
         _pSkeletalMesh = nullptr;
     }
 
+    void LocomotionWarpingComponent::onWorldOriginShifted( const float3& delta )
+    {
+        _previousPosition += delta;
+    }
+
     void LocomotionWarpingComponent::updateFromMovement( SkeletalMeshComponent& skeletalMesh )
     {
         GameObject*     pOwner = skeletalMesh.getOwner();

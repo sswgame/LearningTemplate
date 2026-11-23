@@ -572,6 +572,17 @@ namespace sw
         return true;
     }
 
+    bool MeshComponent::computeStreamingBounds( AABB& outBox ) const
+    {
+        shared_ptr<Mesh> mesh = _mesh;
+        if ( mesh == nullptr && MeshAssetFormat::isMeshAssetPath( _meshID.path() ) )
+            mesh = MeshCache::acquire( _meshID.path() );
+        if ( mesh == nullptr || mesh->getVertexCount() == 0 )
+            return false;
+        outBox = AABB{ mesh->getLocalBoundsMin(), mesh->getLocalBoundsMax() }.transformedBy( getWorldMatrix() );
+        return true;
+    }
+
     float3 MeshComponent::getLocalBoundsCenter() const
     {
         return ( _mesh != nullptr ) ? _mesh->getLocalBoundsCenter() : float3{};

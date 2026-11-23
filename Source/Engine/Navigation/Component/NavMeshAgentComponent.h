@@ -29,6 +29,8 @@ namespace sw
 
 namespace sw
 {
+    struct WorldOrigin;
+
     class NavMeshAgentComponent;
     class SceneNavigation;
 
@@ -67,6 +69,8 @@ namespace sw
      *          받습니다. `SteerOnly` 면 아무것도 옮기지 않고 속도만 내며, 바깥(폰 이동)이 옮긴 자리를 다음 갱신에서 받습니다 — 플레이어와 NPC 가 같은
      *          이동 컴포넌트로 걷는 길입니다(언리얼 `RequestDirectMove` · 유니티 "에이전트로 조향 · 컨트롤러로 이동"). 진행 방향으로 몸을 돌리는 것은
      *          `_bUpdateRotation` 입니다.
+     *
+     *          **자리는 모두 로컬 월드**(오브젝트와 같은 원점 기준)입니다. 내비메시 · 군중은 절대 자리라 주고받는 곳에서만 옮긴다(`WorldOrigin`).
      */
     REFLECT( Category = "Navigation", DisplayName = "NavMesh Agent", Tooltip = "Walks the navmesh to a destination with crowd avoidance; drives the transform or a character controller", Meta = "Icon=Navigation, IconColor=Navigation" )
     class SW_API NavMeshAgentComponent : public Component
@@ -151,6 +155,11 @@ namespace sw
         friend class NavDebugView;
         friend class NavStreamRoute;
         friend class SceneNavigation;
+
+        /** @brief 이 에이전트의 자리(로컬)가 기준한 월드 원점입니다 — 군중 · 내비메시(절대)와 주고받을 때 쓴다(`NavAgentCrowdSync` · `NavStreamRoute`). */
+        const WorldOrigin& getWorldOrigin() const;
+        /** @brief 월드 원점이 옮겨졌습니다 — 든 자리(모두 로컬)를 같은 만큼 옮깁니다. */
+        void shiftOrigin( const float3& delta );
 
         PROPERTY( Category = "Agent", DisplayName = "Agent Type", Tooltip = "Navmesh agent kind from the navigation settings (empty = default)" )
         hashed_string _agentType;

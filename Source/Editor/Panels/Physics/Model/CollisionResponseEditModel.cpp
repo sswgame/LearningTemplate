@@ -3,6 +3,7 @@
 #include "Editor/Panels/Physics/Model/CollisionResponseEditModel.h"
 
 #include "Core/File/FileUtil.h"
+#include "Core/String/StringUtil.h"
 
 #include "Editor/Common/Workspace/Undo/DocumentEditRecorder.h"
 #include "Editor/Panels/Catalog/Model/CatalogXMLText.h"
@@ -160,6 +161,24 @@ namespace sw::editor
         if ( _pEditRecorder != nullptr ) // 테스트는 창구 없이 부른다
             _pEditRecorder->notifyEdited( "Set Collision Response" );
         return true;
+    }
+
+    const utf8* CollisionResponseEditModel::formatResponse( CollisionResponse response )
+    {
+        return getEnumName( response );
+    }
+
+    bool CollisionResponseEditModel::parseResponse( string_view text, CollisionResponse& outResponse )
+    {
+        const string_view trimmed = StringUtil::trim( text );
+        for ( const CollisionResponse response : { CollisionResponse::Ignore, CollisionResponse::Overlap, CollisionResponse::Block } )
+        {
+            if ( trimmed != string_view{ formatResponse( response ) } )
+                continue;
+            outResponse = response;
+            return true;
+        }
+        return false;
     }
 
     bool CollisionResponseEditModel::cycleResponse( uint32 profileIndex, uint32 channelIndex )

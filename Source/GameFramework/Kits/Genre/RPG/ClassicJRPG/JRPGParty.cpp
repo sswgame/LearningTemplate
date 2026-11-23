@@ -106,7 +106,7 @@ namespace sw
         member._id      = memberID;
         member._classID = classID;
         member._name    = string( name );
-        member._equipment.initialize( _pItemCatalog, _equipLayout );
+        member._equipment.initialize( _pItemCatalog, _equipLayout, nullptr, nullptr );
         for ( int32 index = 0; index < kJRPGStatCount; ++index )
         {
             member._arrStat[index] = pClass->_arrBase[index];
@@ -282,32 +282,31 @@ namespace sw
         io.reflected( *this );
         if ( io.isOk() == false )
             return;
-        // 장비는 리플렉션 밖 값이다 — 멤버마다 슬롯 순서대로 아이템 id 만 쓴다(빈 슬롯은 빈 이름). 슬롯 구성은 `initialize` 에서 받은 것이다.
+        // 장비는 리플렉션 밖 값이다 — 멤버마다 슬롯 순서대로 아이템 인스턴스를 쓴다(id 만 쓰면 닳은 장비가 새것이 된다). 슬롯 구성은 `initialize` 에서 받은 것이다.
         for ( JRPGMember& member : _listMember )
         {
             if ( io.isReading() )
             {
-                member._equipment.initialize( _pItemCatalog, _equipLayout );
+                member._equipment.initialize( _pItemCatalog, _equipLayout, nullptr, nullptr );
             }
             const size_t slotTotal = member._equipment.getSlots().size();
             uint32       slotCount = static_cast<uint32>( slotTotal );
-            io.count( 4, slotCount );
+            io.count( Inventory::kSlotStateMinBytes, slotCount );
             if ( io.check( slotCount == slotTotal ) == false )
                 return;
-            for ( uint32 slotIndex = 0; slotIndex < slotCount; ++slotIndex )
+            vector<EquipmentSlot> listWorn = member._equipment.getSlots();
+            for ( EquipmentSlot& slot : listWorn )
             {
-                const EquipmentSlot& slot   = member._equipment.getSlots()[slotIndex];
-                hashed_string        itemID = slot._item.isEmpty() ? hashed_string{} : slot._item._itemID;
-                io.value( itemID );
-                if ( io.isReading() && io.isOk() && itemID.empty() == false )
-                {
-                    InventorySlot item;
-                    item._itemID = itemID;
-                    item._count  = 1;
-                    vector<InventorySlot> listRemoved;
-                    if ( io.check( member._equipment.equip( slot._name, item, listRemoved ) == EquipResult::Ok ) == false )
-                        return;
-                }
+                Inventory::serializeSlot( io, slot._item );
+            }
+            if ( io.isReading() && io.isOk() )
+            {
+                VectorUtil::removeIf( listWorn, []( const EquipmentSlot& slot )
+                { return slot._item.isEmpty(); } );
+                Inventory refused; // 칸이 없는 가방 — 낄 수 없는 것이 하나라도 있으면 깨진 상태다
+                member._equipment.restoreWorn( listWorn, refused );
+                if ( io.check( refused.getOverflow().empty() ) == false )
+                    return;
             }
             // 카탈로그 · 칸 사이 검사만 손으로 — 칸마다의 범위는 `PROPERTY( Min )` 이 지킨다(레벨 칸은 안쪽 구조체라 그 형식의 손 검사를 여기서 한다)
             if ( io.isReading() && io.isOk() )

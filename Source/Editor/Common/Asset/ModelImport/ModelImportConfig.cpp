@@ -15,7 +15,6 @@
 
 #include "Engine/Animation/Codec/AnimationCodec.h"
 #include "Engine/Asset/AssetDatabase.h"
-#include "Engine/Config/ConfigManager.h"
 #include "Engine/Destruction/Fracture/FractureSettings.h"
 #include "Engine/Serialization/JSON/JSONDocument.h"
 #include "Engine/Serialization/JSON/JSONFields.h"
@@ -102,19 +101,16 @@ namespace sw::editor
     {
     }
 
-    ConfigReadResult ModelImportConfig::loadFromFile( string_view configPath )
+    bool ModelImportConfig::loadFromFile( string_view configPath )
     {
         _listRule.clear();
-        string                 text;
-        const OptionalFileRead read = FileUtil::readOptionalTextFile( FileUtil::toDiskPath( configPath ), text );
-        if ( read == OptionalFileRead::Missing )
-            return ConfigReadResult::Missing;
-        if ( read == OptionalFileRead::Failed || text.empty() )
+        string text;
+        if ( FileUtil::readOptionalTextFile( FileUtil::toDiskPath( configPath ), text ) != OptionalFileRead::Read || text.empty() )
         {
             SW_LOG_ERROR_ID( "ModelImportConfig.FailedReadModelImportConfigFile", "Failed to read ModelImportConfig file: %#", configPath );
-            return ConfigReadResult::Invalid;
+            return false;
         }
-        return loadFromJSONString( text ) ? ConfigReadResult::Loaded : ConfigReadResult::Invalid;
+        return loadFromJSONString( text );
     }
 
     bool ModelImportConfig::loadFromJSONString( string_view jsonString )

@@ -6,6 +6,7 @@
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
 #include "Engine/Object/GameObject/Tick/TickContext.h"
+#include "Engine/Object/GameObject/WorldOrigin.h"
 #include "Engine/Visual/Component/MeshComponent.h"
 
 #include "GameFramework/Kits/Genre/Simulation/Farming/Client/FarmFieldViewComponent.h"
@@ -87,7 +88,7 @@ namespace sw
         pMesh->setMeshID( model );
         pMesh->setMaterialInstance( look );
         pMesh->setLocalScale( float3{ size } );
-        pMesh->setLocalPosition( FarmGameModeComponent::computeTileCenter( x, y ) + float3{ 0.0f, _soilTop + _modelFloor * size, 0.0f } );
+        pMesh->setLocalPosition( context.getManager().getWorldOrigin().toLocal( FarmGameModeComponent::computeTileCenter( x, y ) + float3{ 0.0f, _soilTop + _modelFloor * size, 0.0f } ) );
         pMesh->setVisible( true );
         _cropState = cropState;
     }

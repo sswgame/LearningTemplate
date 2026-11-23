@@ -310,8 +310,9 @@ namespace sw
 
     void ShaderCache::clearCache()
     {
-        ScopedLock<mutex> lock{ _mutexCache };
-        _mapCache.clear();
+        unordered_map<string, ShaderCacheEntry> retired; // 바이트코드는 잠금을 놓은 뒤 푼다
+        ScopedLock<mutex>                       lock{ _mutexCache };
+        std::swap( retired, _mapCache );
     }
 
     void ShaderCache::collectCompiledDescs( vector<ShaderCompileDesc>& outListDesc ) const

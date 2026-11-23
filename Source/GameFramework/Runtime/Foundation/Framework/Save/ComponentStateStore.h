@@ -3,8 +3,11 @@
  * @brief PROPERTY 가 아닌 컴포넌트 런타임 상태(디렉터의 시뮬레이션)를 게임 상태 스냅샷에 실어, 핫 리로드와 세이브를 넘기는 저장소를 정의합니다.
  */
 #pragma once
+#include "Core/Container/unordered_map.h"
 #include "Core/Container/vector.h"
 #include "Core/Foundation/Types.h"
+#include "Core/Hash/HashUtil.h"
+#include "Core/Memory/Memory.h"
 #include "Core/Name/hashed_string.h"
 
 #include "Engine/Foundation/SceneIterationKey.h"
@@ -20,15 +23,31 @@
 
 namespace sw
 {
+    struct ComponentStateCodec;
     struct ObjectIdentity;
 
+    class Component;
     class GameObject;
+
+    namespace ComponentStateStoreTraits
+    {
+        /** @brief @p T 가 시작 전에 받은 상태를 보이는 `getPendingStateBytes()` 를 가졌는지 봅니다(C++17 이라 `requires` 를 쓰지 않는다). */
+        template <typename T, typename = void>
+        struct HasPendingState : std::false_type
+        {
+        };
+        template <typename T>
+        struct HasPendingState<T, std::void_t<decltype( std::declval<const T&>().getPendingStateBytes() )>> : std::true_type
+        {
+        };
+    } // namespace ComponentStateStoreTraits
 
     /**
      * @class ComponentStateStore
      * @brief 컴포넌트마다 바이트 덩어리 하나를 (타입 이름, 컴포넌트 id) 로 보관하고, 게임 상태 봉투(`GameStateSnapshot::writeEnvelope`)의 한 섹션으로 씁니다.
      * @details 리플렉션 PROPERTY 는 씬 오브젝트 스냅샷이 이미 옮긴다.
      *          디렉터가 키트의 보통 클래스로 든 시뮬레이션(밭, 도시, 전장)은 PROPERTY 가 아니라서 여기에 싣는다.
+     *          스트리밍 셀 · 데이터 레이어 묶음 · 하위 레벨에 든 오브젝트의 것은 그 떠 둔 상태에 함께 실린다(`ComponentStateCodec` — 복원할 때 이 저장소가 찾을 오브젝트가 아직 없다).
      *          언리얼의 `UObject::Serialize` 오버라이드와 유니티의 `ISerializationCallbackReceiver` 에 해당한다.
      *
      *          컴포넌트 쪽 약속은 다음과 같다. 템플릿이 이름으로 부른다.
@@ -36,6 +55,8 @@ namespace sw
      *            손으로 짝지은 `writeState( Archive& )` 는 여기에 꽂을 수 없다 — 쓰기와 읽기의 칸 순서는 본문 하나가 정한다.
      *          - `void restoreState( vector<uint8>&& bytes )`: 다시 만든 컴포넌트가 받는다. 아직 `onBeginPlay` 전이면 보관했다가 시작할 때 적용한다.
      *            읽지 못하면(버전이나 길이가 맞지 않음) 알리고 새 판으로 시작한다.
+     *          - `const vector<uint8>& getPendingStateBytes() const`: 시작 전에 보관한 바이트다(보관하는 컴포넌트만 둔다 — `DeferredStateRestore` 를 쓰면 그 틀이 대신한다).
+     *            보관한 동안은 그 바이트가 곧 상태라 다시 뜰 때 그대로 싣는다 — 지금 값을 쓰면 세이브를 기본값으로 덮는다.
      *
      *          짝짓기는 언제나 컴포넌트 id 다. 같은 프로세스(핫 리로드)에서는 컴포넌트 id 가 복원된다.
      *          다른 실행의 세이브는 id 가 새로 나가므로, 씬 섹션을 읽은 쪽이 "저장된 id → 새 id" 표를 만들어 `remapComponentIDs` 로 바꾼다
@@ -68,7 +89,11 @@ namespace sw
 
         ComponentStateStore();
 
-        void clear() { _listEntry.clear(); }
+        void clear()
+        {
+            _listEntry.clear();
+            _mapKeyToIndex.clear();
+        }
         bool isEmpty() const { return _listEntry.empty(); }
         /** @brief 상태 하나를 더합니다. 같은 (타입, id) 가 이미 있으면 바꿉니다. */
         void add( const hashed_string& typeName, uint64 componentID, vector<uint8>&& bytes );
@@ -102,10 +127,8 @@ namespace sw
             uint32               count    = 0;
             manager.template forEachComponentOfType<TComponent>( key, [this, &typeName, &count]( TComponent* pComponent )
             {
-                Archive archive;
-                StateIO::writeObject( *pComponent, archive );
                 vector<uint8> bytes;
-                archive.writeData( bytes );
+                writeComponent<TComponent>( *pComponent, bytes );
                 add( typeName, pComponent->getComponentID(), std::move( bytes ) );
                 ++count;
             } );
@@ -130,13 +153,52 @@ namespace sw
                 if ( pEntry == nullptr )
                     continue;
                 vector<uint8> bytes = pEntry->_bytes;
-                pComponent->restoreState( std::move( bytes ) );
+                restoreComponent<TComponent>( *pComponent, std::move( bytes ) );
                 ++count;
             }
             return count;
         }
 
+        /** @brief 컴포넌트 하나의 상태를 뜹니다 — 저장소와 엔진 코덱(`ComponentStateCodec`, 스트리밍 셀)이 함께 쓴다. 시작 전에 받아 보관한 바이트(`getPendingStateBytes`)가 있으면 그것입니다. */
+        template <typename TComponent>
+        static void writeComponent( Component& component, vector<uint8>& outBytes )
+        {
+            TComponent& typed = static_cast<TComponent&>( component );
+            if constexpr ( ComponentStateStoreTraits::HasPendingState<TComponent>::value )
+            {
+                if ( typed.getPendingStateBytes().empty() == false )
+                {
+                    outBytes = typed.getPendingStateBytes();
+                    return;
+                }
+            }
+            Archive archive;
+            StateIO::writeObject( typed, archive );
+            archive.writeData( outBytes );
+        }
+        /** @brief 컴포넌트 하나에 상태를 돌려줍니다(`writeComponent` 의 짝). */
+        template <typename TComponent>
+        static void restoreComponent( Component& component, vector<uint8>&& bytes )
+        {
+            static_cast<TComponent&>( component ).restoreState( std::move( bytes ) );
+        }
+
     private:
-        vector<Entry> _listEntry;
+        /** @brief 항목의 짝짓기 키(타입 이름, 컴포넌트 id)입니다. */
+        struct EntryKey
+        {
+            hashed_string _typeName{};
+            uint64        _componentID{ 0 };
+
+            bool   operator==( const EntryKey& other ) const { return _typeName == other._typeName && _componentID == other._componentID; }
+            uint64 computeHash() const { return HashUtil::makeHash( _typeName.getHash(), _componentID ); }
+        };
+
+        /** @brief `_listEntry` 의 자리를 다시 적습니다. 같은 키가 둘이면 앞 것을 찾는다. */
+        void rebuildIndex();
+
+    private:
+        vector<Entry>                   _listEntry;     ///< 더한 순서(쓰는 순서)
+        unordered_map<EntryKey, uint32> _mapKeyToIndex; ///< 키 → `_listEntry` 자리 — 짝짓기가 컴포넌트마다 목록을 훑지 않는다
     };
 } // namespace sw

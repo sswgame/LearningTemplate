@@ -134,3 +134,29 @@ SW_TEST_CASE( EditorUIFrameOutputTest, TargetStatesReachUIAtFrameStart )
     views.clearViewDrawnMarks();
     SW_EXPECT_TRUE( views.findUIPreviewTargetState( targetID ) == nullptr );
 }
+
+/**
+ * @brief [EditorUIFrameOutputTest] 새로 띄운 에디터로 되돌리면 앞 단계가 그린 뷰 · 초점 · 미리보기 눈이 UI 쪽에도 게임 쪽에도 남지 않는다
+ */
+SW_TEST_CASE( EditorUIFrameOutputTest, ResetForgetsDrawnViews )
+{
+    EditorRenderViews views;
+    views.markViewDrawn( EditorViewKind::Game, float2{ 1.0f, 2.0f } );
+    views.setGameViewFocused( true );
+    views.submitPreviewView( views.allocatePreviewTarget(), 1u, float4x4{}, float3{} );
+    views.publishUIFrame( 0x5u );
+    views.beginFrameFocus();
+    SW_REQUIRE_TRUE( views.isViewRequested( EditorViewKind::Game ) );
+    SW_REQUIRE_TRUE( views.wasGameInputFocusedLastFrame() );
+
+    views.resetToFreshEditor();
+
+    SW_EXPECT_FALSE( views.isViewRequested( EditorViewKind::Game ) );
+    SW_EXPECT_FALSE( views.wasViewDrawn( EditorViewKind::Game ) );
+    SW_EXPECT_FALSE( views.wasGameInputFocusedLastFrame() );
+    SW_EXPECT_FALSE( views.isAnimationRequested() );
+    const EditorUIFrameOutput published = views.getPublishedUIFrame();
+    SW_EXPECT_EQUAL( 0u, published._previewCount );
+    SW_EXPECT_EQUAL( 0u, published._redrawReasons );
+    SW_EXPECT_FALSE( published.isGameInputFocused() );
+}

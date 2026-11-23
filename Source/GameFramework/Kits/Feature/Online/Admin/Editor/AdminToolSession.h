@@ -39,6 +39,7 @@ namespace sw::editor
         /** @brief 계정 이름 · 비밀번호를 받아 로그인을 맡을 쪽이 거는 처리기입니다. 받아들이면 true(계정 키트의 `AccountGMLogin::setCredentials` 가 그 모양이다). */
         using CredentialsHandler = Delegate<bool( string_view loginName, string_view password )>;
         const utf8* getSubsystemName() const override { return kSubsystemName; }
+        void        resetToFreshEditor() override;
 
         AdminToolSession();
         ~AdminToolSession() override;

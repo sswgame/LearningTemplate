@@ -1,0 +1,40 @@
+<?xml version="1.0" encoding="utf-8"?>
+<?asset guid="c5617c0f3ccb4c50bf2518c331fc2166"?>
+<!--
+  2D 오르기(maps/climb2d) — 2D 캐릭터의 속 바디가 사다리 트리거에 잡혀 위를 누르면 매달려(이동 방식 Climbing) 오르고, 놓으면 머물고, 옆으로 사다리를 벗어나 3 m 발판에 선다.
+  점프하면 놓고 잠시 다시 잡지 않는다. 값으로 판정한다(골든 없음). 실행: ctest -R Scenario.game.playground.climb2d
+-->
+<Scenario name="game.playground.climb2d" fixedDelta="0.0166667" timeoutFrames="1200" startAfter="ScenePlaying" startTimeoutFrames="900" input="exclusive">
+	<Launch variable="gv_firstScene" value="game/playground/maps/climb2d.scene.xml"/>
+	<Launch variable="gv_renderPipeline" value="engine/pipeline/forward2dpipeline.xml"/>
+	<WaitUntil watch="Character.MovementMode" target="Hero" is="Walking" timeoutFrames="60"/>
+	<!-- 사다리 밑으로 걸어가 오른다 -->
+	<Intent pawn="Hero" move="1,0" frames="30"/>
+	<WaitUntil watch="Object.X" target="Hero" atLeast="-0.4" timeoutFrames="60"/>
+	<Intent pawn="Hero" move="0,1" frames="60"/>
+	<WaitUntil watch="Character.MovementMode" target="Hero" is="Climbing" timeoutFrames="20"/>
+	<WaitUntil watch="Object.Y" target="Hero" atLeast="1" timeoutFrames="60"/>
+	<!-- 놓으면 머문다 -->
+	<Intent pawn="Hero" move="0,0" frames="60"/>
+	<AdvanceSimulation frames="5"/>
+	<Store watch="Object.Y" target="Hero" as="heldY"/>
+	<AdvanceSimulation frames="40"/> <!-- 떨어지지 않음은 시간이 내용 -->
+	<Expect watch="Object.Y" target="Hero" sameAs="heldY" tolerance="0.01"/>
+	<Expect watch="Character.MovementMode" target="Hero" is="Climbing"/>
+	<!-- 발판 높이를 넘어 오른 뒤 옆으로 — 발판에 선다 -->
+	<Intent pawn="Hero" move="0,1" frames="120"/>
+	<WaitUntil watch="Object.Y" target="Hero" atLeast="3.2" timeoutFrames="120"/>
+	<Intent pawn="Hero" move="1,0" frames="40"/>
+	<WaitUntil watch="Object.X" target="Hero" atLeast="1.2" timeoutFrames="60"/>
+	<WaitUntil watch="Character.MovementMode" target="Hero" is="Walking" timeoutFrames="60"/>
+	<Expect watch="Object.Y" target="Hero" near="3" tolerance="0.1"/>
+	<!-- 점프로 놓는다 -->
+	<DevCommand line="teleport Hero 0 1 0"/>
+	<AdvanceSimulation frames="2"/>
+	<Intent pawn="Hero" move="0,1" frames="10"/>
+	<WaitUntil watch="Character.MovementMode" target="Hero" is="Climbing" timeoutFrames="20"/>
+	<Intent pawn="Hero" buttons="Jump" frames="2"/>
+	<WaitUntil watch="Character.MovementMode" target="Hero" is="Falling" timeoutFrames="10"/>
+	<WaitUntil watch="Character.MovementMode" target="Hero" is="Walking" timeoutFrames="180"/>
+	<Pass/>
+</Scenario>

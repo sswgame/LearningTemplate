@@ -15,7 +15,6 @@
 
 #include "Engine/Animation/Component/SpriteAnimatorComponent.h"
 #include "Engine/Asset/AssetManager.h"
-#include "Engine/Automation/Scenario/AutomationStageReset.h"
 #include "Engine/Foundation/GameObjectHandle.h"
 #include "Engine/Graphics/Material/Material.h"
 #include "Engine/Graphics/Material/MaterialCache.h"
@@ -75,10 +74,19 @@ namespace sw::editor
              *          참조가 쌓여 그 머티리얼은 캐시에서 영영 지워지지 않습니다. 같은 경로면 다시 잡지 않고, 다른 경로로 갈
              *          때는 새 것을 메시에 건 **뒤에** 옛 것을 놓습니다(놓는 순간 사라질 수 있으므로 순서가 중요합니다).
              *          프로세스 정적 문자열이 아니라 에디터 범위의 상태 저장소에 둔다 — 범위마다 따로이고, 에디터 UI 스레드만 만진다(`EditorStateStore`).
+             *          사라질 때(단계 되돌리기 · 에디터 종료) 참조를 스스로 놓는다 — 저장소를 먼저 비우면 경로만 지워져 참조가 캐시에 남았다.
              */
             struct PreviewMaterialState
             {
                 string _acquiredPath;
+
+                ~PreviewMaterialState()
+                {
+                    // 선택 조회(②): 종료 경로라 호스트가 서비스 결합을 먼저 풀었을 수 있다 — 그때는 놓을 캐시도 없다.
+                    AssetManager* const pAssets = _acquiredPath.empty() ? nullptr : editor::findSubsystem<AssetManager>();
+                    if ( pAssets != nullptr )
+                        pAssets->getAssetCache<MaterialCache>().release( _acquiredPath );
+                }
             };
         };
     } // namespace
@@ -232,25 +240,4 @@ namespace sw::editor
         if ( pSprite != nullptr && assetPath.empty() == false )
             pSprite->setMaterialPath( assetPath );
     }
-
-    namespace
-    {
-        /**
-         * @brief 체인의 다음 단계 앞에서 미리보기가 쥔 머티리얼 참조를 놓습니다. 편집기 상태는 단계를 넘어 남아, 앞 단계(assetmove)가 마지막에 본
-         *        scratch 머티리얼이 캐시에 남았고 그 사본 폴더를 거둔 뒤 장치 재생성이 그 파일을 다시 읽다 졌다(flowterrain · flowboundaries).
-         */
-        void releasePreviewMaterialForNextStage()
-        {
-            EditorStateStore* pStore = editor::findSubsystem<EditorStateStore>(); // 선택: 에디터 없이 도는 체인에는 없다
-            if ( pStore == nullptr )
-                return;
-            EditorViewportPreviewInternal::PreviewMaterialState& heldMaterial = pStore->get<EditorViewportPreviewInternal::PreviewMaterialState>();
-            if ( heldMaterial._acquiredPath.empty() )
-                return;
-            editor::getSubsystem<AssetManager>().getAssetCache<MaterialCache>().release( heldMaterial._acquiredPath );
-            heldMaterial._acquiredPath.clear();
-        }
-    } // namespace
-
-    SW_AUTOMATION_STAGE_RESET( editorViewportPreviewMaterial, "viewport preview material reference", &releasePreviewMaterialForNextStage );
 } // namespace sw::editor

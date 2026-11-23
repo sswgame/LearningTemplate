@@ -45,6 +45,12 @@ namespace sw::editor
         static constexpr const utf8* kSubsystemName  = "EditorPlayLayoutState";
         static constexpr int32       kSubsystemOrder = 9610; ///< 창 제목 상태(9600) 다음 — 서로 의존하지 않는다
         const utf8*                  getSubsystemName() const override { return kSubsystemName; }
+        void                         resetToFreshEditor() override
+        {
+            _bOptionsApplied   = SW_FALSE;
+            _bMaximizedForPlay = SW_FALSE;
+            _bSeenEjected      = SW_FALSE;
+        }
 
         EditorPlayLayoutState()
             : _bOptionsApplied{ SW_FALSE }

@@ -223,6 +223,8 @@ namespace sw
         BehaviorStatus tick( Blackboard& blackboard, void* pOwner, float32 deltaTime );
         /** @brief 도는 작업을 모두 중단하고 처음 상태로 돌립니다. */
         void reset();
+        /** @brief 월드 원점이 옮겨졌습니다 — 이동 노드가 요청해 둔 목적지를 @p delta 만큼 옮깁니다(블랙보드와 함께 옮겨야 다시 길을 잡지 않는다). */
+        void shiftWorldOrigin( const float3& delta );
 
         /** @brief 도는 중(Running)인 잎 노드입니다. 없으면 비어 있습니다. */
         optional<int32> getActiveLeaf() const { return _activeLeaf; }
@@ -254,6 +256,8 @@ namespace sw
         BehaviorTreeRunner* findSlotRunner( const hashed_string& slot );
         /** @brief 이동 노드 한 틱입니다(목적지를 요청하거나 다시 요청하고, 이동 인터페이스의 상태를 노드 상태로 옮긴다). */
         BehaviorStatus tickMoveTo( int32 index, bool bFirst );
+        /** @brief 이동 노드 @p index 의 요청이 마지막 요청일 때만 이동을 멈춥니다. 반응 셀렉터는 앞 가지가 새 이동을 낸 뒤에 옛 가지를 중단한다. */
+        void stopOwnMove( int32 index );
         /** @brief 노드를 끝난 상태로 돌립니다. 커서, 타이머, 횟수를 비우되 쿨다운은 남깁니다. */
         void finishNode( int32 index );
         /** @brief 도는 노드와 그 아래를 중단합니다. 작업은 `_bAborted` 로 한 번 불립니다. */
@@ -281,6 +285,9 @@ namespace sw
         vector<uint8>       _listActive;
         vector<uint8>       _listLastCondition; ///< 관찰 중단 조건의 지난 틱 결과
         vector<float3>      _listMoveTarget;    ///< 이동 노드가 마지막으로 요청한 목적지
+        vector<uint32>      _listMoveSerial;    ///< 이동 노드가 낸 마지막 요청의 번호
+        uint32*             _pMoveSerial;       ///< 이동 인터페이스에 낸 마지막 요청의 번호. 슬롯 러너는 같은 이동 인터페이스를 쓰는 바깥 러너의 것을 가리킨다
+        uint32              _ownMoveSerial;
         float32             _elapsedTime;
         int32               _tickCount; ///< 확률 조건의 씨앗
         optional<int32>     _activeLeaf;

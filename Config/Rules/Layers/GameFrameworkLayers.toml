@@ -19,6 +19,7 @@ World = 2
 Character = 3
 "Character/AI/NoiseEmitterComponent.cpp" = 4   # 소리 내기는 AI 감각 자극이라 선언(.h)은 AI 옆이고, 밟음 감지 · 이벤트(.cpp)는 기믹 센서 · GimmickEvents(Gameplay)를 본다(언리얼 UPawnNoiseEmitterComponent 가 AIModule 옆인 자리)
 "Gameplay/Ability/MovementConstraint.h" = 3      # 이동 제약의 선언은 이동기(캐릭터)가 읽는다 — 읽기 구현(.cpp)은 어빌리티 컴포넌트를 보는 Gameplay 다(언리얼 CMC 가 GAS 를 모르고 값만 받는 나눔)
+"Gameplay/Gimmick/Traversal/ClimbZoneComponent.h" = 3 # 오르기 구역의 선언도 이동기가 읽는다 — 겹침(기믹 센서)을 보는 구현(.cpp)은 Gameplay 다
 # 4 — 게임플레이: 어빌리티 · 외형 · 인벤토리 · 퀘스트 · 판 상태 · 날씨 연출 · 기믹 · 존
 Gameplay = 4
 "Foundation/Framework/Flow/GameInstance.cpp" = 4 # 게임 인스턴스 조립(서브시스템 · 카탈로그를 만든다)은 맨 위 층이다 — 선언(.h)은 아래 층이 쓴다(엔진 표의 Module/ModuleTypeRegistry.h 와 같은 나눔)

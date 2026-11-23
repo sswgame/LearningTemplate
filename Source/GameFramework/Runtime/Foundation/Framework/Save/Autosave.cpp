@@ -158,12 +158,17 @@ namespace sw
         _saveRequest    = Subscription{};
         _infoRequest    = Subscription{};
         _restoreRequest = Subscription{};
-        scanSlots();
+        // 슬롯 기록은 첫 프레임이 읽는다(`update`) — 편집 중인 에디터는 게임 프레임이 돌지 않아 여기서 맡기면 완료가 영영 안 넘어오고 시나리오가 자리를 잡지 못했다.
+        _listSlot.assign( static_cast<size_t>( _settings._slotCount ), AutosaveSlotInfo{} );
+        _listScanRequest.clear();
+        _scanPendingCount = _settings._slotCount;
         return true;
     }
 
     void AutosaveManager::update( float32 deltaTime )
     {
+        if ( isScanning() && _listScanRequest.empty() )
+            scanSlots();
         if ( deltaTime > 0.0f )
         {
             _playTime += static_cast<float64>( deltaTime );

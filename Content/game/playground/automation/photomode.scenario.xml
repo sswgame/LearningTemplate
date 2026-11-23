@@ -1,0 +1,49 @@
+<?xml version="1.0" encoding="utf-8"?>
+<?asset guid="8548d3c641f66c8f0a369775049e1452"?>
+<!--
+  사진 모드(CameraDirectorComponent · PhotoModeCamera) — 무대 maps/photomode. 값으로 판정한다(골든 없음).
+  ① 켜면 게임이 멈추고(Runner 가 선다) HUD 층이 숨는다 ② 멈춘 동안에도 이동 키로 카메라가 앞으로 간다 ③ 줌으로 시야각이 바뀐다 ④ 끄면 카메라 · 시야각이 켜기 전으로 돌아오고 게임이 다시 흐른다
+  ⑤ 켠 채 씬을 바꿔도 정지 · 숨김이 남지 않는다.
+  실행: App -scenario=game/playground/automation/photomode.scenario.xml -unattended (체인: ctest -R Scenario.playground)
+-->
+<Scenario name="game.playground.photomode" fixedDelta="0.0166667" timeoutFrames="1500" startAfter="ScenePlaying" startTimeoutFrames="900" input="exclusive">
+	<Launch variable="gv_firstScene" value="game/playground/maps/photomode.scene.xml"/>
+	<WaitUntil watch="Assets.Pending" equals="0" timeoutWallSeconds="60"/>
+
+	<Store watch="Object.X" target="Runner" as="runnerStart"/>
+	<WaitUntil watch="Object.X" target="Runner" differsFrom="runnerStart" timeoutFrames="10"/> <!-- 게임이 흐른다 -->
+	<Expect watch="Time.Paused" equals="0"/>
+	<Expect watch="Object.Z" target="GameCamera" near="-8" tolerance="0.001"/>
+	<Store watch="Object.Property" target="GameCamera" key="CameraComponent._fovY" as="fovBefore"/>
+	<!-- ① 켜기 -->
+	<DevCommand line="photo.on"/>
+	<ExpectLog id="DevCommand.Reply" contains="photo mode: on (game paused)" atLeast="1"/>
+	<Expect watch="Time.Paused" equals="1"/>
+	<Expect watch="UI.HUDHidden" equals="1"/>
+	<AdvanceSimulation frames="2"/>
+	<Store watch="Object.X" target="Runner" as="runnerPaused"/>
+	<AdvanceSimulation frames="20"/>
+	<Expect watch="Object.X" target="Runner" sameAs="runnerPaused"/>
+	<!-- ② 이동 -->
+	<Press slot="Key.W"/>
+	<WaitUntil watch="Object.Z" target="GameCamera" atLeast="-7.5" timeoutFrames="240"/>
+	<Release slot="Key.W"/>
+	<Expect watch="Object.X" target="Runner" sameAs="runnerPaused"/>
+	<!-- ③ 줌 -->
+	<Tap slot="Gamepad.DPadUp" hold="1"/>
+	<WaitUntil watch="Object.Property" target="GameCamera" key="CameraComponent._fovY" differsFrom="fovBefore" timeoutFrames="10"/>
+	<!-- ④ 끄기 -->
+	<DevCommand line="photo.off"/>
+	<WaitUntil watch="Time.Paused" equals="0" timeoutFrames="5"/>
+	<Expect watch="UI.HUDHidden" equals="0"/>
+	<WaitUntil watch="Object.Z" target="GameCamera" near="-8" tolerance="0.001" timeoutFrames="5"/>
+	<Expect watch="Object.Property" target="GameCamera" key="CameraComponent._fovY" sameAs="fovBefore"/>
+	<WaitUntil watch="Object.X" target="Runner" differsFrom="runnerPaused" timeoutFrames="10"/>
+	<!-- ⑤ 켠 채 씬 바꾸기 -->
+	<DevCommand line="photo.on"/>
+	<Expect watch="Time.Paused" equals="1"/>
+	<LoadScene path="game/playground/maps/rendertest3d.scene.xml" timeoutFrames="600"/>
+	<WaitUntil watch="Time.Paused" equals="0" timeoutFrames="60"/>
+	<Expect watch="UI.HUDHidden" equals="0"/>
+	<Pass/>
+</Scenario>

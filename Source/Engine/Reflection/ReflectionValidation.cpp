@@ -5,6 +5,7 @@
 #include "Core/Algorithm/VectorUtil.h"
 
 #include "Engine/Foundation/EngineServices.h"
+#include "Engine/Reflection/ReflectValueBinding.h"
 #include "Engine/Reflection/ReflectionContainers.h"
 #include "Engine/Reflection/TypeInfo.h"
 #include "Engine/Reflection/TypeRegistry.h"
@@ -26,21 +27,17 @@ namespace sw
                 return pType;
             }
 
-            /** @brief 시퀀스 원소가 반사 구조체면 그 타입입니다(맵 · 중첩 컨테이너는 내려가지 않는다). */
-            static const TypeInfo* findSequenceElementType( const PropertyInfo& prop, const TypeResolver& resolver )
+            /** @brief 원소로 내려갈 시퀀스면 true 입니다(맵 · 중첩 컨테이너는 내려가지 않는다). */
+            static bool hasSequenceElement( const PropertyInfo& prop )
             {
-                const bool bNestedContainer   = prop._nestedContainer != nullptr && prop._nestedContainer->_elementNested != nullptr;
-                const bool bNoSequenceElement = prop._bIsContainer == SW_FALSE || prop._containerWrapper == nullptr || prop._containerWrapper->asSequence() == nullptr || bNestedContainer;
-                if ( bNoSequenceElement )
-                    return nullptr;
-                return findNestedType( prop._elementTypeName, resolver );
+                const bool bNestedContainer = prop._nestedContainer != nullptr && prop._nestedContainer->_elementNested != nullptr;
+                return prop._bIsContainer == SW_TRUE && prop._containerWrapper != nullptr && prop._containerWrapper->asSequence() != nullptr && bNestedContainer == false;
             }
 
-            /** @brief 공개 조회(레지스트리 잠금)로 찾는 길입니다 — 검증 실행(`validateObject`)이 쓴다. */
-            static TypeResolver makeRegistryResolver()
+            /** @brief 시퀀스 원소가 반사 구조체면 그 타입입니다. 등록 판정(`computeHasValidator`)의 길이라 준 조회(@p resolver)로 찾는다. */
+            static const TypeInfo* findSequenceElementType( const PropertyInfo& prop, const TypeResolver& resolver )
             {
-                return TypeResolver{ &engine::getSubsystem<TypeRegistry>(), []( const void* pContext, const hashed_string& name )
-                { return static_cast<const TypeRegistry*>( pContext )->findType( name ); } };
+                return hasSequenceElement( prop ) ? findNestedType( prop._elementTypeName, resolver ) : nullptr;
             }
 
             /**
@@ -68,38 +65,15 @@ namespace sw
                 return false;
             }
 
-            /**
-             * @brief 검증 한 번(`validateObject`) 동안 프로퍼티별 중첩 타입을 기억합니다. 시퀀스 원소마다 같은 프로퍼티의 타입을 레지스트리에서 다시 찾지 않게 한다.
-             * @details 호출 하나 안에서만 산다 — 등록 · 해제 무효화 계약이 필요 없다(`TypeInfo` 주소는 레지스트리 수명 동안 고정). 칸이 차면 레지스트리에서 찾는다.
-             *          측정: `ReflectionValidationTest.NestedElementCost`.
-             */
-            struct NestedTypeCache
+            /** @brief 검증이 내려갈 타입입니다 — 값 구조체 또는 시퀀스 원소 구조체. 프로퍼티의 묶음(`PropertyInfo::resolveValueFacts`)에서 읽어 원소마다 레지스트리를 찾지 않는다. */
+            static const TypeInfo* findNestedValueType( const TypeRegistry& registry, const PropertyInfo& prop )
             {
-                static constexpr uint32 kCapacity = 32;
+                if ( prop._bIsContainer == SW_FALSE )
+                    return prop.resolveValueFacts( registry ).findStructType();
+                return hasSequenceElement( prop ) ? prop.resolveElementFacts( registry ).findStructType() : nullptr;
+            }
 
-                const PropertyInfo* _arrProperty[kCapacity]{};
-                const TypeInfo*     _arrType[kCapacity]{};
-                uint32              _count{ 0 };
-
-                const TypeInfo* find( const PropertyInfo& prop )
-                {
-                    for ( uint32 index = 0; index < _count; ++index )
-                    {
-                        if ( _arrProperty[index] == &prop )
-                            return _arrType[index];
-                    }
-                    const TypeInfo* pType = prop._bIsContainer == SW_TRUE ? findSequenceElementType( prop, makeRegistryResolver() ) : findNestedType( prop._typeName, makeRegistryResolver() );
-                    if ( _count < kCapacity )
-                    {
-                        _arrProperty[_count] = &prop;
-                        _arrType[_count]     = pType;
-                        ++_count;
-                    }
-                    return pType;
-                }
-            };
-
-            static uint32 validate( const TypeInfo& type, const void* pInstance, ValidationContext& context, const uint32 depth, NestedTypeCache& cache )
+            static uint32 validate( const TypeInfo& type, const void* pInstance, ValidationContext& context, const uint32 depth, const TypeRegistry& registry )
             {
                 const bool bNothingToValidate = pInstance == nullptr || depth > constant::reflection::kMaxParentChainDepth || ReflectionValidation::hasValidator( type ) == false;
                 if ( bNothingToValidate )
@@ -116,19 +90,19 @@ namespace sw
                     if ( prop._bIsBitField == SW_TRUE )
                         continue;
                     const void*     pValue  = prop.getRawPtr( pInstance );
-                    const TypeInfo* pNested = cache.find( prop );
+                    const TypeInfo* pNested = findNestedValueType( registry, prop );
                     if ( pNested == nullptr )
                         continue;
                     if ( prop._bIsContainer == SW_FALSE )
                     {
-                        validate( *pNested, pValue, context, depth + 1, cache );
+                        validate( *pNested, pValue, context, depth + 1, registry );
                         continue;
                     }
                     const ISequenceContainerWrapper* pSequence    = prop._containerWrapper->asSequence();
                     const size_t                     elementCount = pSequence->getSize( pValue );
                     for ( size_t elementIndex = 0; elementIndex < elementCount; ++elementIndex )
                     {
-                        validate( *pNested, pSequence->getElementConst( pValue, elementIndex ), context, depth + 1, cache );
+                        validate( *pNested, pSequence->getElementConst( pValue, elementIndex ), context, depth + 1, registry );
                     }
                 }
 
@@ -219,8 +193,7 @@ namespace sw
 
     uint32 ReflectionValidation::validateObject( const TypeInfo& type, const void* pInstance, ValidationContext& context )
     {
-        ReflectionValidationInternal::NestedTypeCache cache;
-        return ReflectionValidationInternal::validate( type, pInstance, context, 0, cache );
+        return ReflectionValidationInternal::validate( type, pInstance, context, 0, engine::getSubsystem<TypeRegistry>() );
     }
 
     bool ReflectionValidation::hasValidator( const TypeInfo& type )
