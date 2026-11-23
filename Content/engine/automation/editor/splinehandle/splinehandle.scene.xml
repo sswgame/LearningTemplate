@@ -1,0 +1,29 @@
+<?asset guid="b3f0b7c25d0a4d8f9b0f6a27c1e84d35"?>
+<Scene formatVersion="3" name="SplineHandle">
+	<!-- 스플라인 손잡이 시나리오(editor/splinehandle)의 무대 — 원점 곁에 조절점 셋짜리 스플라인 하나 -->
+	<SceneSettings _bStreaming="false" _unloadMargin="0" _maxCellLoadsPerFrame="0" _addToWorldBudgetMicroseconds="0">
+		<_cellGrid _cellSize="0" _loadingRadius="0" />
+	</SceneSettings>
+	<entities>
+		<entity id="1" name="GameCamera">
+			<GameObject _schemaVersion="0" _name="GameCamera" _bActive="true">
+				<_listComponent>
+					<CameraComponent _localID="17709685451340727998" _localPosition="0,4,-12" _localRotation="0.2,0,0" _localScale="1,1,1" _attachOwner="None" _attachComponent="None" _fovY="40.107045" _nearZ="0.1" _farZ="100" _orthoHeight="10" _priority="10" _role="Game" _bOrthographic="false" />
+				</_listComponent>
+			</GameObject>
+		</entity>
+		<entity id="2" name="Path">
+			<GameObject _schemaVersion="0" _name="Path" _bActive="true">
+				<_listComponent>
+					<SplineComponent _localID="1299529188794216424" _localPosition="0,0.5,0" _localRotation="0,0,0" _localScale="1,1,1" _attachOwner="None" _attachComponent="None" _samplesPerSegment="16" _type="CatmullRom" _bClosed="false">
+						<_listControlPoint>
+							<item>-1,0,0</item>
+							<item>0,0.5,0</item>
+							<item>1,0,0</item>
+						</_listControlPoint>
+					</SplineComponent>
+				</_listComponent>
+			</GameObject>
+		</entity>
+	</entities>
+</Scene>
