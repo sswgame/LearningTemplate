@@ -1,7 +1,6 @@
 {
     "_comment": "Scripts/lint/mutable_statics.py 의 예외입니다. 주인 객체의 멤버로 둘 수 없는 가변 정적 저장소(정적 등록 틀과 서비스 표의 뿌리 · OS 와 외부 라이브러리 콜백이 문맥 없이 부르는 프로세스 바닥)와 그 까닭입니다. 키는 `경로|변수 이름`, 값은 까닭(필수)입니다.",
     "_statics": {
-        "Source/App/AppEntry.cpp|s_app": "웹(Emscripten) 주 루프 콜백은 문맥 없이 불린다 — main 이 끝난 뒤에도 앱이 살아야 해 프로세스 수명 자리에 둔다.",
         "Source/Core/Compression/CompressionCodecRegistry.cpp|s_pActiveRegistry": "압축 바닥 — CompressionStream 의 문맥 없는 정적 입구가 읽는 활성 코덱 레지스트리 칸이다(Engine · 테스트 호스트가 건다).",
         "Source/Core/Compression/CompressionStream.cpp|s_nullCodec": "정적 등록 항목 — 칸이 없는(상태 없는) 내장 코덱이다. 레지스트리가 없는 실행(Core 만 링크하는 도구)의 기본 코덱으로 이미지 수명 동안 하나다.",
         "Source/Core/Compression/CompressionStream.cpp|s_rleCodec": "정적 등록 항목 — 칸이 없는(상태 없는) 내장 코덱이다. 레지스트리가 없는 실행(Core 만 링크하는 도구)의 기본 코덱으로 이미지 수명 동안 하나다.",
