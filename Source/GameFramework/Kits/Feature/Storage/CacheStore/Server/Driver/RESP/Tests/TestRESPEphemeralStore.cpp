@@ -256,6 +256,21 @@ SW_TEST_CASE_F( RESPStoreTest, CompareAndSetUsesWatchAndExec )
     SW_EXPECT_TRUE( run( EphemeralRequest::makeCompareAndErase( "k", bytes( "a" ) ) )._result == EphemeralResult::Conflict ); // 없는 키
 }
 
+// 결함: WATCH 가 거절돼도(권한 · 프록시) 비교 후 쓰기를 이어 가, 지켜보지 않은 채 쓴 값을 Ok 로 답했다. EXEC 안의 쓰기 오류도 Ok 였다.
+SW_TEST_CASE_F( RESPStoreTest, CompareWithoutWatchDoesNotWrite )
+{
+    start();
+    _server.pushAll( { "-NOPERM no WATCH\r\n", "$1\r\na\r\n", "+OK\r\n" } );
+    SW_EXPECT_TRUE( run( EphemeralRequest::makeCompareAndSet( "k", bytes( "a" ), bytes( "b" ), 0 ) )._result == EphemeralResult::Invalid );
+    SW_EXPECT_EQUAL( takeCommands(), string( "WATCH g:k | GET g:k | UNWATCH" ) );
+
+    _server.pushAll( { "+OK\r\n", "$1\r\na\r\n", "+OK\r\n", "+QUEUED\r\n", "*1\r\n-ERR write failed\r\n" } );
+    SW_EXPECT_TRUE( run( EphemeralRequest::makeCompareAndSet( "k", bytes( "a" ), bytes( "b" ), 0 ) )._result == EphemeralResult::Invalid );
+
+    _server.pushAll( { "$1\r\nv\r\n" } ); // 뒤 요청은 막히지 않는다
+    SW_EXPECT_TRUE( run( EphemeralRequest::makeGet( "later" ) )._result == EphemeralResult::Ok );
+}
+
 // WATCH 사이에는 다른 명령이 끼지 않는다 - 뒤 요청은 GET 답을 본 뒤에 나가고, 답은 맡긴 순서다.
 SW_TEST_CASE_F( RESPStoreTest, RequestsWaitBehindACompare )
 {

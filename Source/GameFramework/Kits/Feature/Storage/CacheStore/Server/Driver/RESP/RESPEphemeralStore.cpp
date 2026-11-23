@@ -611,12 +611,19 @@ namespace sw
     void RESPEphemeralStore::handleCompareReply( Operation& operation, uint32 step, const RESPValue& value )
     {
         EphemeralReply& reply = operation._reply;
+        if ( step == RESPEphemeralStoreInternal::kStepFirst ) // WATCH 의 답이다. 지켜보지 못하면 비교와 쓰기가 한 덩어리가 아니다
+        {
+            if ( value.isText( "OK" ) == false )
+                reply._result = EphemeralResult::Invalid;
+            return;
+        }
         if ( step == RESPEphemeralStoreInternal::kStepSecond ) // GET 의 답이다. 다음 명령을 정한다
         {
             const bool bMatches = value._type == RespType::BulkString && value._bytes == operation._request._expected;
-            if ( bMatches == false )
-            {
+            if ( reply._result == EphemeralResult::Ok && bMatches == false )
                 reply._result = EphemeralResult::Conflict;
+            if ( reply._result != EphemeralResult::Ok )
+            {
                 sendCommand( operation, RESPCommand{ "UNWATCH" }, RESPEphemeralStoreInternal::kStepCompareUnwatch );
             }
             else
@@ -645,10 +652,13 @@ namespace sw
             }
             return;
         }
-        if ( step == RESPEphemeralStoreInternal::kStepCompareExec && value.isNull() )
+        if ( step != RESPEphemeralStoreInternal::kStepCompareExec )
+            return;
+        const bool bWritten = value._type == RespType::Array && value._listElement.size() == 1 && value._listElement[0].isError() == false;
+        if ( value.isNull() )
             reply._result = EphemeralResult::Conflict; // WATCH 뒤에 다른 곳에서 값을 바꿨다
-        else if ( step == RESPEphemeralStoreInternal::kStepCompareExec && value._type != RespType::Array )
-            reply._result = EphemeralResult::Invalid;
+        else if ( bWritten == false )
+            reply._result = EphemeralResult::Invalid; // 트랜잭션이 서지 않았거나 안의 쓰기가 졌다
     }
 
     void RESPEphemeralStore::finishOperation( Operation& operation, EphemeralResult result )
