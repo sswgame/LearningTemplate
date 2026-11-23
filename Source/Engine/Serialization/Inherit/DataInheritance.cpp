@@ -198,13 +198,13 @@ namespace sw
                 {
                     if ( element.isElement() == false || DataInheritance::isWhenElement( element ) )
                         continue; // 조건 원소는 목록 원소가 아니다 — 목록 원소 자신에 얹는 차이다(`appendWhenElements`)
-                    const utf8* pKey = element.findAttribute( schema._keyAttribute.c_str() );
-                    if ( pKey == nullptr )
+                    optional<string> key = schema.findElementKey( element );
+                    if ( key.has_value() == false )
                     {
                         SW_LOG_ERROR_ID( "DataInheritance.ListKeyMissing", "'%#': an element of list '%#' in its base has no key '%#'", sourceName, schema._name, schema._keyAttribute );
                         return false;
                     }
-                    outListEntry.push_back( ListEntry{ string{ pKey }, element, XMLNode{} } );
+                    outListEntry.push_back( ListEntry{ std::move( *key ), element, XMLNode{} } );
                 }
                 return true;
             }
@@ -250,13 +250,13 @@ namespace sw
             /** @brief 자식의 목록 원소 하나를 얹습니다. */
             [[nodiscard]] static bool applyChildEntry( const XMLNode& element, const DataInheritanceSchema& schema, vector<ListEntry>& inoutListEntry, string_view sourceName )
             {
-                const utf8* pKey = element.findAttribute( schema._keyAttribute.c_str() );
-                if ( pKey == nullptr )
+                const optional<string> elementKey = schema.findElementKey( element );
+                if ( elementKey.has_value() == false )
                 {
                     SW_LOG_ERROR_ID( "DataInheritance.ListKeyMissing2", "'%#': an element of list '%#' has no key '%#'", sourceName, schema._name, schema._keyAttribute );
                     return false;
                 }
-                const string_view key      = pKey;
+                const string_view key      = *elementKey;
                 const string_view op       = element.getAttributeText( DataInheritance::kOpAttribute );
                 ListEntry*        pEntry   = findEntry( inoutListEntry, key );
                 const bool        bRemove  = op == DataInheritance::kOpRemove;
@@ -325,6 +325,7 @@ namespace sw
                     }
                     const XMLNode item = out.appendChild( entry._childNode.getName() );
                     mergeAttributes( entry._parentNode, entry._childNode, item );
+                    schema.writeElementKey( item, entry._key ); // 열쇠가 글이면 속성 합치기가 옮기지 않는다
                     if ( schema._bSelfNested != SW_FALSE )
                     {
                         if ( entry._parentNode.isValid() == false )
@@ -538,7 +539,7 @@ namespace sw
                     if ( findEntry( listFull, entry._key ) != nullptr )
                         continue;
                     const XMLNode removed = out.appendChild( entry._parentNode.getName() );
-                    removed.setAttribute( schema._keyAttribute.c_str(), string_view( entry._key ) );
+                    schema.writeElementKey( removed, entry._key );
                     removed.setAttribute( DataInheritance::kOpAttribute, DataInheritance::kOpRemove );
                     listWorking.erase( listWorking.begin() + static_cast<ptrdiff_t>( index - 1 ) );
                 }
@@ -584,9 +585,9 @@ namespace sw
                         listWorking.erase( listWorking.begin() + currentIndex );
                         listWorking.insert( listWorking.begin() + static_cast<ptrdiff_t>( index ), std::move( moved ) );
                     }
-                    if ( hasContent( item ) == false )
-                        continue;
-                    item.setAttribute( schema._keyAttribute.c_str(), string_view( fullEntry._key ) );
+                    if ( hasContent( item ) == false && bNew == false )
+                        continue; // 새 원소는 열쇠(글)만으로도 차이다
+                    schema.writeElementKey( item, fullEntry._key );
                     (void)out.appendClone( item );
                 }
                 return true;
@@ -677,6 +678,25 @@ namespace sw
         , _bSelfNested{ SW_FALSE }
         , _reserved{ 0 }
     {
+    }
+
+    optional<string> DataInheritanceSchema::findElementKey( const XMLNode& element ) const
+    {
+        if ( _keyAttribute == kTextKey )
+        {
+            const string_view text = StringUtil::trim( element.getText() );
+            return text.empty() ? optional<string>{} : optional<string>{ string{ text } };
+        }
+        const utf8* pKey = element.findAttribute( _keyAttribute.c_str() );
+        return pKey != nullptr ? optional<string>{ string{ pKey } } : optional<string>{};
+    }
+
+    void DataInheritanceSchema::writeElementKey( const XMLNode& element, string_view key ) const
+    {
+        if ( _keyAttribute == kTextKey )
+            element.setValue( key );
+        else
+            element.setAttribute( _keyAttribute.c_str(), key );
     }
 
     DataInheritanceSchema DataInheritanceSchema::makeKeyedList( string_view name, string_view keyAttribute )
@@ -771,7 +791,7 @@ namespace sw
                 if ( item.isElement() == false || DataInheritance::isWhenElement( item ) )
                     continue;
                 StringBuilder<constant::buffer::kMax256> itemPathBuilder;
-                itemPathBuilder.appendFormat( "%#[%#]", path, item.getAttributeText( pField->_keyAttribute.c_str() ) );
+                itemPathBuilder.appendFormat( "%#[%#]", path, pField->findElementKey( item ).value_or( string{} ) ); // 열쇠 없는 원소는 펼치기가 이미 거절했다
                 const string_view op = item.getAttributeText( DataInheritance::kOpAttribute );
                 if ( op == DataInheritance::kOpRemove || op == DataInheritance::kOpReplace )
                     eraseUnder( string( itemPathBuilder.view() ) );

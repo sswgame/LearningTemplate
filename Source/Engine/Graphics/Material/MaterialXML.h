@@ -115,13 +115,13 @@ namespace sw
         MaterialUsageFlags _usage{ MaterialPermutationDef{}._usage };
     };
 
-    /** @brief 정적 스위치(`<_staticSwitches><item …/>`) 하나의 칸입니다. 이름을 적지 않으면 키워드가 이름이다. */
+    /** @brief 정적 스위치(`<_staticSwitches><item …/>`) 하나의 칸입니다. 이름은 필수다 — 자식 머티리얼이 이름으로 합친다(`makeInheritanceSchema`). */
     REFLECT()
     struct SW_API MaterialStaticSwitchParams
     {
         REFLECT_BODY();
 
-        PROPERTY()
+        PROPERTY( Required )
         string _name{};
         PROPERTY()
         string _keyword{};
@@ -216,7 +216,9 @@ namespace sw
 
         /**
          * @brief 머티리얼의 합치기 규칙입니다(`DataInheritance`). 머티리얼은 손으로 읽는 XML 이라 값으로 적는다 — 언리얼 Material Instance 의 "부모 + 바꾼 값만" 과 같은 일이다.
-         * @details 루트 속성(이름 · 셰이더 · 블렌드)은 자식이 적은 것만 덮고, `_properties` 는 `name` 으로 합치고(`_enumEntries` 는 자식이 적으면 통째로), `_permutations` 는 자식이 적으면 통째로 바뀐다.
+         * @details 루트 속성(이름 · 셰이더 · 블렌드)은 자식이 적은 것만 덮고, `_properties` 는 `name` 으로 합치고(`_enumEntries` 는 자식이 적으면 통째로),
+         *          `_permutations` 는 속성을 덮고 목록을 이름으로 합친다 — `_alwaysDefines` 는 define 글, `_staticSwitches` · `_multiCompiles` 는 `name` 이 열쇠다(`_options` 는 자식이 적으면 통째로).
+         *          그래서 자식은 더할 define 한 줄만 적고, 부모에 define 이 늘면 자식도 따라 받는다(빼려면 `_op="Remove"`).
          *          값 없는 깃발(`bHidden`)을 빈 글로 읽지 못하므로 부모의 값을 자식이 지울 수는 없다(`_bEmptyClears` 를 끈다).
          */
         [[nodiscard]] static DataInheritanceSchema makeInheritanceSchema();

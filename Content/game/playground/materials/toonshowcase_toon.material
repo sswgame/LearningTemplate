@@ -14,12 +14,9 @@
 		<item name="_outlineWidth" defaultValue="0.005" />
 		<item name="_outlineLightingMix" defaultValue="0.5" />
 	</_properties>
-	<_permutations quality="High" shaderLOD="300" usage="StaticMesh">
-		<_alwaysDefines>
-			<item>MATERIAL_DOMAIN_SURFACE</item>
-		</_alwaysDefines>
+	<_permutations>
 		<_staticSwitches>
-			<item name="Outline" keyword="MATERIAL_OUTLINE" bEnabled="1" bShaderFeature="0" />
+			<item name="Outline" bEnabled="1"/>
 		</_staticSwitches>
 	</_permutations>
 </MaterialDef>
