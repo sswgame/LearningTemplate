@@ -3,8 +3,8 @@
 > 결론: 할 일 · 계획은 이 문서 하나다. 끝난 줄은 지운다(기록은 git). 규칙은 `AGENTS.md` 목차의 `docs/agents/`, 절차는 스킬(`preflight` · `linux-verify` · `scenario-debug`).
 
 - 작업자는 이 문서를 고치지 않는다 — 통합 커밋이 줄을 지운다(커밋 메시지에 `감사 <ID>`, 주석의 `감사 <ID>` 는 `git log --grep`).
-- 측정 줄은 문턱을 넘을 때만 고친다. 못 넘으면 값을 커밋 메시지에 남기고 줄을 지운다. "켤 코드" 커밋은 따로 — 흔들림 안이면 그 커밋만 되돌린다.
-- 차례: 결함 · 계약 → 구조 장치(형식으로 막기) → 문턱을 넘은 성능.
+- 게임이 완성되기 전의 측정값은 고칠지를 정하는 기준이 아니다(사용자 결정). 5 절과 "측정 뒤" 줄은 상용 엔진과 구조를 견줘 정한다: 틀린 모양 · 규모에 따라 나빠지는 모양이면 재지 말고 고치고, 이미 정본이거나 상용 엔진도 하지 않으면 줄을 지운다. 측정은 조절 값(합성 벤치)과 고친 뒤 느려지지 않았는지 보는 데만 쓴다.
+- 차례: 결함 · 계약 → 구조 장치(형식으로 막기) → 정본과 다른 성능 구조.
 
 ## 0. 인계(2026-11-21 — 다음 세션은 여기부터)
 
@@ -44,7 +44,7 @@
 - **Android 실기기:** `CookAssets` → `py -3 -m Scripts android-apk --game <게임>` → 기동 · 회전 · APK 팩 읽기 · 터치 · 클립보드 · AAudio 다시 열기 · IME 조합.
 - **Fileserve 실기기:** `adb reverse` + `-fileserve` 기동이 `android-apk` 다시 묶기 + 설치의 1/2 아래가 아니면 구간 크기 · 동시 받기.
 
-## 5. 측정(문턱을 넘으면 고친다)
+## 5. 성능(상용 엔진과 구조 비교 — 줄의 문턱 숫자는 고친 뒤 확인용)
 
 - **E1 에디터 첫 패널 · Hierarchy 8000:** `-gv_editorPanelTimes=120 -gv_traceSlowTickMs=100` — 첫 그리기 50 ms 넘는 패널은 준비를 `onPanelOpened` 잡으로, 100 ms 넘는 프레임 0. 큐브 8000 정지 0.5 ms · Ctrl+A · 거르기 16 ms 미만.
 - **S8 후보(Release):** `CompletionCostByPending`(흔들림보다 크면 `_mapCall`), `NestedElementCost`(작으면 `NestedTypeCache` 되돌림), **파서 토큰화** `TokenizeStats`(10 % 넘으면 토큰 저장소 재사용), **씬 저장** `Scene.save.*`(write 16 ms 초과면 워커로), 씬 로드(`instantiate` 우세일 때만 전처리 병렬), **씬 쿠킹**(scenes 가 절반 넘으면 씬 단위 병렬), `AssetLoadProfiler` 스톨 상위 비동기, `SceneChunkPlan`(1/4 넘으면 `ReachTraversal` 표식), **GPU 업로드**(`-gv_gpuUploadQueue=0/1`, pump 가 RT 10 % 초과면 RHI Thread 시제품), **렌더 그래프 폭**(`MinWidth=2 · 3 · 4 · 99`, 빠른 쪽을 기본값), `load/navcrowd`(넘으면 지역 분할).

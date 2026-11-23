@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="utf-8"?>
+<?asset guid="fc971e7bc3e960427217eb1d6b6c18ae"?>
+<!-- 부하 시나리오 load/materialpermutation 의 큐브 — 인스턴스가 켜고 끄는 런타임 스위치 하나를 선언한다(셰이더는 읽지 않는다, 퍼뮤테이션만 갈린다). -->
+<MaterialDef formatVersion="0" name="StressTestPermutation" _base="engine/materials/defaultmaterial.material">
+	<_permutations>
+		<_staticSwitches>
+			<item name="Churn" keyword="MATERIAL_BENCH_CHURN" bShaderFeature="0"/>
+		</_staticSwitches>
+	</_permutations>
+</MaterialDef>

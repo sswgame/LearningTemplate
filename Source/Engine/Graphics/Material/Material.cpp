@@ -93,6 +93,7 @@ namespace sw
         , _elementStride{ 0 }
         , _bufferGeneration{}
         , _loadGeneration{ 0 }
+        , _layoutGeneration{ 1 }
         , _shaderLayoutCacheGeneration{ 0 }
         , _shaderLayoutBackend{}
         , _pRHIDevice{ nullptr }
@@ -373,10 +374,13 @@ namespace sw
                 binding._collection = MaterialParameterCollection::acquire( AssetID{ binding._path } );
             binding._bFailed = binding._collection == nullptr ? SW_TRUE : SW_FALSE; // 이유는 읽기가 남겼다 — 프로퍼티는 파일의 값으로 그린다
             // 레이아웃 오류로 바이트를 비웠으면 쓰지 않는다 — 틀린 바이트가 GPU 에 올라가지 않게 한 상태를 되살리지 않는다.
-            if ( binding._bFailed || binding._appliedGeneration == binding._collection->getGeneration() || _data._bytes.empty() )
+            if ( binding._bFailed || _data._bytes.empty() )
                 continue;
+            const uint32 collectionGeneration = binding._collection->getGeneration();
+            if ( binding._appliedGeneration == collectionGeneration && binding._handle._layoutGeneration == _layoutGeneration )
+                continue; // 값도 배치도 그대로다
             const float4*           pValue = binding._collection->findValue( binding._parameter );
-            const MaterialProperty* pProp  = findProperty( binding._property );
+            const MaterialProperty* pProp  = resolveProperty( binding._property, binding._handle );
             uint32                  count{ 0 };
             if ( pProp != nullptr )
             {
@@ -387,16 +391,22 @@ namespace sw
                                               : bVector                                          ? 4u
                                                                                                  : 0u;
             }
-            if ( pValue == nullptr || count == 0 )
+            if ( pValue == nullptr || count == 0 || binding._collection->isGlobal( binding._parameter ) )
             {
-                SW_LOG_ERROR_ID( "Material.CollectionBindingInvalid", "Material '%#': property '%#' binds '%#' of '%#' - no such parameter, or the property is not a float, vector or colour", _desc._name, binding._property.c_str(), binding._parameter.c_str(), binding._path );
+                SW_LOG_ERROR_ID( "Material.CollectionBindingInvalid", "Material '%#': property '%#' binds '%#' of '%#' - no such parameter, a shader global (the shader reads it from PassCB), or the property is not a float, vector or colour", _desc._name, binding._property.c_str(), binding._parameter.c_str(), binding._path );
                 binding._bFailed = SW_TRUE;
                 continue;
             }
-            if ( setParameter( binding._property, MaterialParameterCollection::makePropertyText( *pValue, count ) ) )
-                binding._appliedGeneration = binding._collection->getGeneration();
+            const float32 arrValue[4] = { pValue->_x, pValue->_y, pValue->_z, pValue->_w };
+            if ( MaterialPacking::packFloatsIntoBuffer( *pProp, arrValue, count, _data._bytes ) )
+            {
+                binding._appliedGeneration = collectionGeneration;
+                _bufferGeneration.bump( this );
+            }
             else
+            {
                 binding._bFailed = SW_TRUE; // 패커가 이유를 남겼다
+            }
         }
     }
 
@@ -425,7 +435,7 @@ namespace sw
         // 머티리얼 파라미터 레이아웃을 셰이더에서 가져온다). 로드 경로에서도 맞춰야 한다 — XML 순서로 패킹하면 stride 가 0 이고,
         // 그러면 GPUScene 이 CB 크기(256)를 stride 로 써서 원소 1 부터 어긋난다.
         //
-        // "맞췄다" 표시는 다시 로드(XML 순서로 다시 쌓는다)가 풀고(applyDescToRuntime), 리플렉션 캐시를 비우면 낡는다.
+        // "맞췄다" 표시는 다시 로드(XML 순서로 다시 쌓는다)가 풀고(applyProperties), 리플렉션 캐시를 비우면 낡는다.
         // 표시가 남으면 XML 순서 바이트와 옛 stride 가 함께 올라간다.
         if ( _desc._shaderPath.empty() )
             return false;
@@ -537,7 +547,6 @@ namespace sw
         }
         const bool bAllPacked = matchPropertiesToSchema( *pSchemaCb );
         packPropertiesIntoBytes( pSchemaCb->_totalSize );
-        _desc._listProperty = _data._listProperty;
         // 불일치는 오류다 — 일부만 맞춘 바이트(적지 않은 칸의 0 = Vulkan 의 첫 실제 텍스처)를 올리지 않는다. 바이트가 비면 렌더 사본도 비어
         // 렌더 스레드가 그 원소와 상수 버퍼를 건너뛴다(인스턴스 사본도 부모 바이트에서 만든다).
         if ( bAllPacked == false )
@@ -586,7 +595,6 @@ namespace sw
             }
         }
         packPropertiesIntoBytes( schema._totalSize );
-        _desc._listProperty = _data._listProperty;
         SW_LOG_TRACE_ID( "Material.FilledPropertiesShaderReflection", "Filled %# properties from shader reflection.", _data._listProperty.size() );
     }
 
@@ -668,6 +676,7 @@ namespace sw
 
         const uint32 alignedTotal = MathUtil::align( static_cast<uint32>( _data._bytes.size() ), 256u );
         _data._bytes.resize( alignedTotal, 0 );
+        ++_layoutGeneration;
         _bufferGeneration.bump( this );
     }
 
@@ -741,9 +750,8 @@ namespace sw
         const uint32 alignedTotal = MathUtil::align( static_cast<uint32>( _data._bytes.size() ), 256u );
         if ( alignedTotal > _data._bytes.size() )
             _data._bytes.resize( alignedTotal, 0 );
+        ++_layoutGeneration;
         _bufferGeneration.bump( this );
-
-        _desc._listProperty = _data._listProperty;
         return bAllPacked;
     }
 
@@ -755,25 +763,9 @@ namespace sw
         return setParameter( name, prop->_defaultValue );
     }
 
-    bool Material::packNamedValueIntoBuffer( hashed_string name, string_view value, vector<uint8>& inoutBuffer ) const
+    bool Material::packTextureIntoBuffer( const MaterialParameterHandle& handle, RHIDescriptorIndex descIdx, vector<uint8>& inoutBuffer ) const
     {
-        const MaterialProperty* pProp = findProperty( name );
-        if ( pProp == nullptr )
-            return false;
-        return MaterialPacking::packValueIntoBuffer( *pProp, value, inoutBuffer );
-    }
-
-    bool Material::packNamedFloatsIntoBuffer( hashed_string name, const float32* pValue, uint32 count, vector<uint8>& inoutBuffer ) const
-    {
-        const MaterialProperty* pProp = findProperty( name );
-        if ( pProp == nullptr )
-            return false;
-        return MaterialPacking::packFloatsIntoBuffer( *pProp, pValue, count, inoutBuffer );
-    }
-
-    bool Material::packTextureIntoBuffer( hashed_string name, RHIDescriptorIndex descIdx, vector<uint8>& inoutBuffer ) const
-    {
-        const MaterialProperty* pProp = findProperty( name );
+        const MaterialProperty* pProp = findProperty( handle );
         if ( pProp == nullptr || MaterialPacking::isNonBufferType( pProp->_type ) )
             return false;
 
@@ -817,7 +809,6 @@ namespace sw
             return false;
         }
         _bufferGeneration.bump( this );
-        _desc._listProperty = _data._listProperty;
 
         if ( prop->_type == MaterialPropertyKind::Keyword || prop->_type == MaterialPropertyKind::Bool )
         {
@@ -840,18 +831,7 @@ namespace sw
         if ( MaterialPacking::packPropertyIntoBuffer( *pProp, _data._bytes ) == false )
             return false;
         _bufferGeneration.bump( this );
-        _desc._listProperty = _data._listProperty;
         return true;
-    }
-
-    void Material::setQualityLevel( MaterialQualityLevel level )
-    {
-        if ( _desc._permutations._quality != level )
-        {
-            _desc._permutations._quality = level;
-            _bDefinesDirty               = SW_TRUE;
-            MaterialPermutation::recordPermutationChange( this );
-        }
     }
 
     bool Material::setStaticSwitch( hashed_string name, bool bEnabled )
@@ -879,31 +859,6 @@ namespace sw
         return false;
     }
 
-    void Material::setMultiCompile( hashed_string name, string_view selectedOption )
-    {
-        for ( MaterialMultiCompile& mc : _desc._permutations._listMultiCompile )
-        {
-            if ( hashed_string( mc._name.c_str() ) == name )
-            {
-                if ( mc._selected != selectedOption )
-                {
-                    mc._selected   = string( selectedOption );
-                    _bDefinesDirty = SW_TRUE;
-                    MaterialPermutation::recordPermutationChange( this );
-                }
-                return;
-            }
-        }
-        MaterialMultiCompile multiCompile{};
-        multiCompile._name     = name.c_str() ? name.c_str() : "";
-        multiCompile._selected = string( selectedOption );
-        if ( selectedOption.empty() == false )
-            multiCompile._listOption.push_back( string( selectedOption ) );
-        _desc._permutations._listMultiCompile.push_back( std::move( multiCompile ) );
-        _bDefinesDirty = SW_TRUE;
-        MaterialPermutation::recordPermutationChange( this );
-    }
-
     bool Material::setScalarParameter( hashed_string name, float32 value )
     {
         MaterialProperty* pProp = findProperty( name );
@@ -914,6 +869,27 @@ namespace sw
             return false;
         _bufferGeneration.bump( this );
         return true;
+    }
+
+    MaterialParameterHandle Material::findParameter( hashed_string name ) const
+    {
+        MaterialParameterHandle handle;
+        handle._index            = VectorUtil::findIndex<uint32>( _listPropertyName, name ).value_or( constant::invalid_index::kUint32 );
+        handle._layoutGeneration = _layoutGeneration;
+        return handle;
+    }
+
+    const MaterialProperty* Material::resolveProperty( hashed_string name, MaterialParameterHandle& inoutHandle ) const
+    {
+        if ( inoutHandle._layoutGeneration != _layoutGeneration )
+            inoutHandle = findParameter( name );
+        return findProperty( inoutHandle );
+    }
+
+    const MaterialProperty* Material::findProperty( const MaterialParameterHandle& handle ) const
+    {
+        const bool bCurrent = handle._layoutGeneration == _layoutGeneration && handle._index < _data._listProperty.size();
+        return bCurrent ? &_data._listProperty[handle._index] : nullptr;
     }
 
     const MaterialProperty* Material::findProperty( hashed_string name ) const
@@ -950,7 +926,7 @@ namespace sw
     {
         if ( _bDefinesDirty != SW_FALSE )
         {
-            computeShaderDefines( _desc._permutations, {}, _listCachedDefine );
+            computeShaderDefines( _desc._permutations, _listCachedDefine );
             _previousPermutationHash = _cachedPermutationHash; // 처음 만들 때는 0 이다(직전 변형이 없다)
             _cachedPermutationHash   = computePermutationHash( _listCachedDefine );
             _bDefinesDirty           = SW_FALSE;
@@ -965,7 +941,7 @@ namespace sw
         return renderPropertiesHash != 0 ? HashUtil::combine( defineHash, renderPropertiesHash ) : defineHash;
     }
 
-    void Material::computeShaderDefines( const MaterialPermutationDef& permutationDesc, const vector<pair<hashed_string, bool>>& listKeywordValueOverride, vector<string>& outListDefine ) const
+    void Material::computeShaderDefines( const MaterialPermutationDef& permutationDesc, vector<string>& outListDefine ) const
     {
         outListDefine.clear();
         for ( const string& defineStr : permutationDesc._listAlwaysDefine )
@@ -1011,16 +987,9 @@ namespace sw
                 continue;
             if ( prop._shaderKeyword.empty() )
                 continue;
-            bool                             bKeywordOn{ false };
-            const hashed_string              propName( prop._name.c_str() );
-            const pair<hashed_string, bool>* pOverride = VectorUtil::findIf( listKeywordValueOverride, [&propName]( const pair<hashed_string, bool>& entry )
-            { return entry.first == propName; } );
-            // 인스턴스 덮어쓰기는 인스턴스가 만들 때 이미 읽어 검사했다. 부모 값을 읽지 못하면 parseBoolToken 이 오류로 남긴다(로드가 이미 거부한다).
-            if ( pOverride != nullptr )
-                bKeywordOn = pOverride->second;
-            else if ( MaterialPacking::parseBoolToken( prop._value, prop._name, "Material.BooleanKeywordUnreadable", bKeywordOn ) == false )
-                bKeywordOn = false;
-            if ( bKeywordOn )
+            // 정적 종류다 — 인스턴스는 덮지 못한다(`MaterialInstance::rejectStaticValue`). 값을 읽지 못하면 parseBoolToken 이 오류로 남긴다(로드가 이미 거부한다).
+            bool bKeywordOn{ false };
+            if ( MaterialPacking::parseBoolToken( prop._value, prop._name, "Material.BooleanKeywordUnreadable", bKeywordOn ) && bKeywordOn )
                 MaterialPermutation::appendUniqueDefine( outListDefine, prop._shaderKeyword );
         }
 
@@ -1029,20 +998,14 @@ namespace sw
 
     void Material::collectRuntimeSwitchVariants( vector<vector<string>>& outListDefine, vector<uint64>& outListPermutationHash ) const
     {
-        collectRuntimeSwitchVariants( _desc._permutations, {}, outListDefine, outListPermutationHash );
-    }
-
-    void Material::collectRuntimeSwitchVariants( const MaterialPermutationDef& basePermutations, const vector<pair<hashed_string, bool>>& listKeywordValueOverride, vector<vector<string>>& outListDefine,
-                                                 vector<uint64>& outListPermutationHash ) const
-    {
         outListDefine.clear();
         outListPermutationHash.clear();
         vector<string> listBaseDefine;
-        computeShaderDefines( basePermutations, listKeywordValueOverride, listBaseDefine );
+        computeShaderDefines( _desc._permutations, listBaseDefine );
         outListPermutationHash.push_back( computePermutationHash( listBaseDefine ) );
         outListDefine.push_back( std::move( listBaseDefine ) );
         vector<size_t>                      listRuntimeSwitch;
-        const vector<MaterialStaticSwitch>& listSwitch = basePermutations._listStaticSwitch;
+        const vector<MaterialStaticSwitch>& listSwitch = _desc._permutations._listStaticSwitch;
         for ( size_t switchIndex = 0; switchIndex < listSwitch.size(); ++switchIndex )
         {
             if ( listSwitch[switchIndex]._bShaderFeature == SW_FALSE )
@@ -1056,14 +1019,14 @@ namespace sw
                              _desc._name.c_str(), listRuntimeSwitch.size(), kMaxRuntimeStaticSwitchCount );
             return;
         }
-        MaterialPermutationDef variantDesc = basePermutations;
+        MaterialPermutationDef variantDesc = _desc._permutations;
         vector<string>         listDefine;
         const uint32           comboCount = 1u << static_cast<uint32>( listRuntimeSwitch.size() );
         for ( uint32 combo = 0; combo < comboCount; ++combo )
         {
             for ( size_t bit = 0; bit < listRuntimeSwitch.size(); ++bit )
                 variantDesc._listStaticSwitch[listRuntimeSwitch[bit]]._bEnabled = ( combo & ( 1u << bit ) ) != 0 ? 1 : 0;
-            computeShaderDefines( variantDesc, listKeywordValueOverride, listDefine );
+            computeShaderDefines( variantDesc, listDefine );
             if ( VectorUtil::contains( outListDefine, listDefine ) )
                 continue;
             outListPermutationHash.push_back( computePermutationHash( listDefine ) );
@@ -1169,8 +1132,6 @@ namespace sw
 
     string Material::saveFullToString() const
     {
-        this->syncDescFromRuntime();
-
         XMLDocument doc;
         XMLNode     root = doc.appendRoot( "MaterialDef" );
 
@@ -1286,7 +1247,8 @@ namespace sw
         _desc._parentPath = parentPath;
         setShaderPath( rootParams._shaderPath );
 
-        XMLNode props = root.findChild( "_properties" );
+        vector<MaterialProperty> listProperty;
+        XMLNode                  props = root.findChild( "_properties" );
         if ( props.isValid() )
         {
             for ( XMLNode item = props.findChild( "item" ); item; item = item.findNextSibling( "item" ) )
@@ -1295,7 +1257,7 @@ namespace sw
                 if ( MaterialXML::parsePropertyNode( item, prop ) == false )
                     return false;
                 if ( prop._name.empty() == false )
-                    _desc._listProperty.push_back( std::move( prop ) );
+                    listProperty.push_back( std::move( prop ) );
             }
         }
 
@@ -1303,14 +1265,13 @@ namespace sw
             return false;
         if ( MaterialXML::parseRenderProperties( root, rootParams, sourceName, _desc ) == false )
             return false;
-        // 그리기 목록과 셰이더가 어긋난 머티리얼은 읽지 않는다 — 불투명 목록의 굴절은 사본이 없는 패스에서 빈 색을 읽고(언리얼: 불투명의 SceneColor 는 컴파일 오류),
-        // 블렌드 define 과 알파 모드가 다르면 알파가 새거나 불투명 목록에서 섞인다.
+        // 그리기 목록과 셰이더가 어긋난 머티리얼은 읽지 않는다 — 블렌드 define 과 알파 모드가 다르면 알파가 새거나 불투명 목록에서 섞인다. 나머지 기능 조합은 아래 `validateFeatures` 가 본다.
         const bool bBlend       = _desc._alphaMode == MaterialAlphaMode::Blend;
-        const bool bTranslucent = _desc._permutations.hasAlwaysDefine( kTranslucentDefine );
-        if ( bTranslucent != bBlend || ( usesSceneColorCopy() && bBlend == false ) )
+        const bool bTranslucent = _desc._permutations.hasAlwaysDefine( kMaterialTranslucentDefine );
+        if ( bTranslucent != bBlend )
         {
-            SW_LOG_ERROR_ID( "Material.DrawListMismatch", "Material '%#' (%#): alphaMode Blend %#, %# %#, %# %# - refraction needs Blend, and %# goes with Blend only", _desc._name, sourceLabel,
-                             bBlend ? "yes" : "no", kTranslucentDefine, bTranslucent ? "yes" : "no", kRefractionDefine, usesSceneColorCopy() ? "yes" : "no", kTranslucentDefine );
+            SW_LOG_ERROR_ID( "Material.DrawListMismatch", "Material '%#' (%#): alphaMode Blend %#, %# %# - the define goes with Blend and only with Blend", _desc._name, sourceLabel,
+                             bBlend ? "yes" : "no", kMaterialTranslucentDefine, bTranslucent ? "yes" : "no" );
             return false;
         }
 
@@ -1318,7 +1279,7 @@ namespace sw
         if ( root.findAttribute( "alphaCutoff" ) != nullptr )
         {
             bool bApplied = false;
-            for ( MaterialProperty& prop : _desc._listProperty )
+            for ( MaterialProperty& prop : listProperty )
             {
                 if ( string_view( prop._name ) != kAlphaCutoffProperty )
                     continue;
@@ -1336,13 +1297,22 @@ namespace sw
         ++_loadGeneration; // 인스턴스의 정의 캐시가 다시 만든다 — 부모 해시가 같아도 덮은 칸의 뜻이 바뀌었을 수 있다
         // 다시 읽기(에디터 미리보기 · 머티리얼 패널)는 같은 객체를 제자리에서 바꾼다 — 셰이더 · define 이 달라졌을 수 있다. 주인을 적어 장면 빌더가 이 머티리얼을 쓰는 칸만 다시 모은다.
         MaterialPermutation::recordPermutationChange( this );
-        applyDescToRuntime();
-        return true;
+        applyProperties( std::move( listProperty ) );
+        // 낼 수 있는 조합(에셋 상태 + 런타임 스위치)마다 본다 — 켤 수 있는 스위치가 그려지지 않는 조합을 만들면 여기서 멈춘다(배포에서 켠 뒤 사라지지 않게).
+        vector<vector<string>> listVariantDefine;
+        vector<uint64>         listVariantHash;
+        collectRuntimeSwitchVariants( listVariantDefine, listVariantHash );
+        bool bSupported = true;
+        for ( const vector<string>& listDefine : listVariantDefine )
+        {
+            bSupported = MaterialPermutation::validateFeatures( _desc, _data._listProperty, listDefine, sourceLabel ) && bSupported;
+        }
+        return bSupported;
     }
 
-    void Material::applyDescToRuntime()
+    void Material::applyProperties( vector<MaterialProperty>&& listProperty )
     {
-        _data._listProperty = _desc._listProperty;
+        _data._listProperty = std::move( listProperty );
         rebuildPropertyNames();
         // 다시 로드하면 프로퍼티가 XML 순서로 다시 쌓인다 — 셰이더 레이아웃에 맞춘 상태도 함께 풀어야 다음 ensureShaderLayout 이 다시 맞춘다.
         // 표시가 남으면 XML 순서 바이트와 옛 stride 가 함께 GPUScene 에 올라간다(셰이더가 읽는 자리에 다른 프로퍼티 값).
@@ -1362,13 +1332,6 @@ namespace sw
         {
             _listPropertyName.push_back( hashed_string( prop._name.c_str() ) );
         }
-    }
-
-    void Material::syncDescFromRuntime() const
-    {
-        auto self                 = const_cast<Material*>( this );
-        self->_desc._listProperty = _data._listProperty;
-        self->_desc._name         = _desc._name;
-        self->setShaderPath( _desc._shaderPath );
+        ++_layoutGeneration;
     }
 } // namespace sw

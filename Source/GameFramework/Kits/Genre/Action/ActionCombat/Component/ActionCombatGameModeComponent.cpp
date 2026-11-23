@@ -92,10 +92,8 @@ namespace sw
             return false;
         _room.setLayout( layout );
         _room.beginHall(); // 종이 카탈로그에 없으면 룸이 오류를 남기고 그 적을 세우지 않는다 — 시나리오의 첫 Alive 판정이 진다
-        _playerPosition = float2{ 0.0f, 0.0f };
-        _facing         = FacingDirection::Right;
-        _playerHP       = _playerMaxHP;
-        _phase          = ActionCombatPhase::Hall;
+        _facing   = FacingDirection::Right;
+        _playerHP = _playerMaxHP;
         _bossDelay.clear();
         _resultHold.clear();
         _commandMove   = float2{ 0.0f, 0.0f };

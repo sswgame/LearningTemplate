@@ -181,13 +181,9 @@ namespace sw
         startPoint._position = float3{ _startPosition._x, _startPosition._y, 0.0f };
         _listSpawnPoint.clear();
         _listSpawnPoint.push_back( startPoint );
-        _respawnCount      = 0;
-        _lastRespawnPolicy = constant::invalid_index::kInt32;
-        _lastRespawnShift  = 0.0f;
         placeBody( _startPosition );
-        _bJumpHeldLastFrame = SW_FALSE;
-        _commandMoveX       = 0.0f;
-        _bCommandJumpHeld   = SW_FALSE;
+        _commandMoveX     = 0.0f;
+        _bCommandJumpHeld = SW_FALSE;
         return true;
     }
 

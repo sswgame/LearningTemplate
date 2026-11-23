@@ -2,13 +2,12 @@
 
 #include "Server/Windows/WindowsServiceHost.h"
 
-#if defined( SW_PLATFORM_WINDOWS )
-    #include "Core/CommandLine/CommandLineManager.h"
-    #include "Core/File/FileUtil.h"
-    #include "Core/Foundation/PlatformOSHeaders.h"
-    #include "Core/Process/ShutdownSignal.h"
+#include "Core/CommandLine/CommandLineManager.h"
+#include "Core/File/FileUtil.h"
+#include "Core/Foundation/PlatformOSHeaders.h"
+#include "Core/Process/ShutdownSignal.h"
 
-    #include "Server/ServerApp.h"
+#include "Server/ServerApp.h"
 
 namespace sw
 {
@@ -93,5 +92,3 @@ namespace sw
         return WindowsServiceHostInternal::s_exitCode;
     }
 } // namespace sw
-
-#endif

@@ -23,12 +23,11 @@ namespace sw
 {
     struct RHIStructuredBuffer;
 
-    /// @brief 등록된 버퍼입니다(핸들 + bindless 인덱스 + 원소 크기).
+    /// @brief 등록된 버퍼입니다(핸들 + bindless 인덱스).
     struct RegisteredBuffer
     {
         RHIBufferHandle    _handle{ 0 };
         RHIDescriptorIndex _index{ kInvalidDescriptorIndex };
-        uint32             _elementStride{ 0 }; ///< 만들 때의 원소 바이트 수(0 = 모름 — 핸들로 등록한 버퍼). 바인더가 셰이더 선언과 견준다(`BindlessIndexValidator::validateStride`)
     };
 } // namespace sw
 
@@ -56,9 +55,9 @@ namespace sw
 
         /** @brief 텍스처를 이름으로 등록합니다. */
         void registerTexture( hashed_string name, RHITextureHandle handle, RHIDescriptorIndex srv );
-        /** @brief 버퍼를 이름으로 등록합니다. 원소 크기는 모른다(바인더가 stride 를 견주지 않는다). */
+        /** @brief 버퍼를 이름으로 등록합니다. 원소 크기는 싣지 않는다 — 바인더가 SRV 로 물어 셰이더 선언과 견준다(`BindlessIndexValidator::validateStride`). */
         void registerBuffer( hashed_string name, RHIBufferHandle handle, RHIDescriptorIndex index );
-        /** @brief 구조 버퍼를 이름으로 등록합니다. 원소 크기도 함께 들어 바인더가 셰이더 선언과 견준다(개발 구성). */
+        /** @brief 구조 버퍼를 이름으로 등록합니다(핸들 · SRV). */
         void registerBuffer( hashed_string name, const RHIStructuredBuffer& buffer );
 
         /**
