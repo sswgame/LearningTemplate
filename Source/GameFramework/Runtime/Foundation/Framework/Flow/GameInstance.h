@@ -338,7 +338,7 @@ namespace sw
          * @details 봉투 머리의 씬 정체가 활성 씬이면 바로 복원하고, 다른 씬이면 `GameSceneFlow::requestSceneThen` 으로 그 씬을 연 뒤 복원한다. 끝에 `SaveGameLoadedEvent` 를 내고 @p onApplied 를 부른다.
          *          앞의 세이브가 씬을 옮기는 중이면 적용하지 않고 실패로 끝낸다.
          */
-        void applySaveSlot( const string& slot, const vector<uint8>& bytes, const SaveAppliedFunction& onApplied );
+        void applySaveSlot( const string& slot, vector<uint8> bytes, const SaveAppliedFunction& onApplied );
         /** @brief 찍은 씬이 열린 뒤입니다(`GameSceneFlow::requestSceneThen`) — 기다리던 세이브를 적용하고 `SaveGameLoadedEvent` 를 냅니다. @p pScene 이 nullptr 이면 실패로 알린다. */
         void onSaveSceneLoaded( Scene* pScene );
         /** @brief 성공한 읽기 수를 세고 `SaveGameLoadedEvent` 를 낸 뒤 @p onApplied 가 묶였으면 부릅니다. */

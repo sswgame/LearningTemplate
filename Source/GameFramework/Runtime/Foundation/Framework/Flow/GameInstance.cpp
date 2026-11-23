@@ -744,8 +744,13 @@ namespace sw
         applySaveSlot( completion._slot, completion._bytes, {} );
     }
 
-    void GameInstance::applySaveSlot( const string& slot, const vector<uint8>& bytes, const SaveAppliedFunction& onApplied )
+    void GameInstance::applySaveSlot( const string& slot, vector<uint8> bytes, const SaveAppliedFunction& onApplied )
     {
+        if ( GameStateSnapshot::upgradeEnvelope( bytes ) == false )
+        {
+            publishSlotLoaded( slot, false, onApplied ); // 까닭은 판 올림이 남겼다
+            return;
+        }
         if ( _pendingSlotRestore.has_value() )
         {
             // 읽기 둘이 겹쳤다 — 앞의 것이 씬을 옮기는 중이라 이 세이브를 곧 내려갈 씬에 풀지 않는다.
