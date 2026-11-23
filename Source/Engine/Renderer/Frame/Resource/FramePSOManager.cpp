@@ -255,10 +255,12 @@ namespace sw
         }
 
         /** @brief PSO 를 동기로 만듭니다(셰이더 컴파일 · 드라이버 생성을 렌더 스레드가 기다리는 시간을 `RT.PSO.create` 로 잰다). */
-        [[nodiscard]] RHIPipelineStateHandle createPipelineStateTimed( IRHIDevice& device, const RHIPipelineStateDesc& desc )
+        [[nodiscard]] RHIPipelineState createPipelineStateTimed( IRHIDevice& device, const RHIPipelineStateDesc& desc )
         {
             SW_PROFILE_SCOPE( "RT.PSO.create" );
-            return device.getResourceFactory()->createPipelineState( desc );
+            RHIPipelineState pso;
+            (void)pso.createGraphics( device, desc ); // 실패는 빈 값이다 — 부르는 쪽이 이유를 남긴다
+            return pso;
         }
 
         /**
@@ -462,9 +464,9 @@ namespace sw
         // 3) PSO 생성 — 이 스레드가 차례로(드라이버 생성은 직렬이고 GL 은 컨텍스트가 이 스레드에 묶인다).
         for ( const ComputePSOJob& computeJob : listComputeJob )
         {
-            const RHIPipelineStateHandle pso = _pDevice->getResourceFactory()->createComputePipelineState( computeJob._shaderPath, string_view( computeJob._entryPoint ), computeJob._listDefine );
+            RHIPipelineState pso;
             // 다른 패스의 PSO 로 대신하지 않는다 — 이 패스는 그리지 않고 여기서 이유를 한 번 남긴다.
-            if ( pso == 0 )
+            if ( pso.createCompute( *_pDevice, computeJob._shaderPath, string_view( computeJob._entryPoint ), computeJob._listDefine ) == false )
             {
                 SW_LOG_ERROR_ID( "FramePSOManager.EnginePSOPassCould", "Engine PSO for pass %# could not be created (shader '%#') - the pass draws nothing", computeJob._passType, computeJob._shaderPath.c_str() );
                 continue;
@@ -474,45 +476,45 @@ namespace sw
             computeDesc._computeShaderPath = computeJob._shaderPath;
             computeDesc._computeEntryPoint = computeJob._entryPoint;
             computeDesc._listShaderDefine  = computeJob._listDefine;
-            _pCache->registerDesc( pso, computeDesc );
+            _pCache->registerDesc( pso._handle, computeDesc );
             if ( computeJob._pipelinePassName.empty() == false )
-                _pCache->setExtensionProgramPSO( _pDevice, computeJob._pipelinePassName, pso ); // 패스 이름이 키다 — 확장 프로그램과 같은 저장소(같이 해제한다)
+                _pCache->setExtensionProgramPSO( _pDevice, computeJob._pipelinePassName, std::move( pso ) ); // 패스 이름이 키다 — 확장 프로그램과 같은 저장소(같이 해제한다)
             else
-                _pCache->setEnginePSO( _pDevice, computeJob._passType, pso );
+                _pCache->setEnginePSO( _pDevice, computeJob._passType, std::move( pso ) );
         }
         for ( const PassPSOJob& job : listJob )
         {
-            const RHIPipelineStateHandle pso = createPipelineStateTimed( *_pDevice, job._desc );
-            registerLayout( pso, job._desc );
-            const ShaderBindingLayout* const pLayout = pso != 0 ? findLayout( pso ) : nullptr;
+            RHIPipelineState pso = createPipelineStateTimed( *_pDevice, job._desc );
+            registerLayout( pso._handle, job._desc );
+            const ShaderBindingLayout* const pLayout = pso.isValid() ? findLayout( pso._handle ) : nullptr;
             if ( pLayout != nullptr )
                 (void)validatePassInputContract( job._passType, *pLayout ); // 오류는 남겼다 — 그래도 그린다(다른 패스로 대신하지 않는다)
             if ( job._outputFormat != RHIFormat::Unknown )
             {
                 // 주 출력에 그리는 PSO 다 — 없으면 화면에 아무것도 낼 수 없고, 다른 PSO · 복사로 대신하지 않으므로 여기서 멈춘다.
-                if ( pso == 0 )
+                if ( pso.isValid() == false )
                     reportFatalError( "Output pass %# could not create its PSO for target format %# - nothing can be presented", job._passType, static_cast<uint32>( job._outputFormat ) );
-                _pCache->setOutputPSO( _pDevice, job._passType, job._outputFormat, pso );
+                _pCache->setOutputPSO( _pDevice, job._passType, job._outputFormat, std::move( pso ) );
                 continue;
             }
             // 다른 패스의 PSO 로 대신하지 않는다 — 이 패스는 그리지 않고(drawFullscreen 은 PSO 없이 그리지 않는다) 여기서 이유를 한 번 남긴다.
-            if ( pso == 0 )
+            if ( pso.isValid() == false )
             {
                 SW_LOG_ERROR_ID( "FramePSOManager.EnginePSOPassCould", "Engine PSO for pass %# could not be created (shader '%#') - the pass draws nothing", job._passType, job._desc._vertexShaderPath.c_str() );
                 continue;
             }
-            _pCache->setEnginePSO( _pDevice, job._passType, pso );
+            _pCache->setEnginePSO( _pDevice, job._passType, std::move( pso ) );
         }
         for ( const DeferredTilePSOJob& tileJob : listTileJob )
         {
             // 못 만들면 그 이유를 남기고 조명은 풀스크린 한 장(모든 엽 — 같은 그림)으로 그린다(`FramePassExecutor::executeTiledLighting` 이 종류 하나라도 없으면 타일을 쓰지 않는다).
-            const RHIPipelineStateHandle pso = createPipelineStateTimed( *_pDevice, tileJob._desc );
-            if ( pso == 0 )
+            RHIPipelineState pso = createPipelineStateTimed( *_pDevice, tileJob._desc );
+            if ( pso.isValid() == false )
                 SW_LOG_ERROR_ID( "FramePSOManager.DeferredTilePSOCould", "Deferred lighting tile PSO could not be created (shader '%#') - lighting draws one fullscreen triangle with every lobe",
                                  tileJob._desc._vertexShaderPath.c_str() );
             else
-                registerLayout( pso, tileJob._desc );
-            _pCache->setMaterialPSO( tileJob._key, RenderPSOCache::MaterialPSOEntry::ready( pso, true ) );
+                registerLayout( pso._handle, tileJob._desc );
+            _pCache->setMaterialPSO( tileJob._key, RenderPSOCache::MaterialPSOEntry::ready( std::move( pso ) ) );
         }
         // 폴백 원소는 PSO 를 모두 등록한 뒤에 만든다. 필요한 stride 를 레이아웃에서 읽어야 하고, 기록 중에는 만들 수 없다.
         ensureMaterialFallbackBuffers();
@@ -757,13 +759,13 @@ namespace sw
         if ( _pCache->hasMaterialPSO( psoKey ) == false )
         {
             // 셰이더는 셋업이 데웠다(`createPassPSOS`) — 여기는 드라이버 생성만 남는다.
-            const RHIPipelineStateDesc   desc   = makeCookieAtlasPSODesc( shaderPath, atlasFormat );
-            const RHIPipelineStateHandle handle = _pDevice->getResourceFactory()->createPipelineState( desc );
-            if ( handle == 0 )
+            const RHIPipelineStateDesc desc = makeCookieAtlasPSODesc( shaderPath, atlasFormat );
+            RHIPipelineState           pso;
+            if ( pso.createGraphics( *_pDevice, desc ) == false )
                 SW_LOG_ERROR_ID( "FramePSOManager.DLightCookieAtlas", "The 2D light cookie atlas PSO could not be created from '%#' - cookie lights draw without cookies", shaderPath );
             else
-                registerLayout( handle, desc );
-            _pCache->setMaterialPSO( psoKey, RenderPSOCache::MaterialPSOEntry::ready( handle, true ) );
+                registerLayout( pso._handle, desc );
+            _pCache->setMaterialPSO( psoKey, RenderPSOCache::MaterialPSOEntry::ready( std::move( pso ) ) );
         }
         return _pCache->findMaterialPSO( psoKey );
     }
@@ -778,20 +780,15 @@ namespace sw
         psoKey._permutationHash = HashUtil::combine( HashUtil::computeStringHash64( shaderPath, false ), FourCCUtil::make( "LBAK" ) + static_cast<uint32>( targetFormat ) );
         if ( _pCache->hasMaterialPSO( psoKey ) == false )
         {
-            const RHIPipelineStateDesc   desc   = makeLayerBakePSODesc( shaderPath, targetFormat );
-            const RHIPipelineStateHandle handle = _pDevice->getResourceFactory()->createPipelineState( desc );
-            if ( handle == 0 )
+            const RHIPipelineStateDesc desc = makeLayerBakePSODesc( shaderPath, targetFormat );
+            RHIPipelineState           pso;
+            if ( pso.createGraphics( *_pDevice, desc ) == false )
                 SW_LOG_ERROR_ID( "FramePSOManager.LayerBakePSO", "The UV layer bake PSO could not be created from '%#' - skin layers are not baked", shaderPath );
             else
-                registerLayout( handle, desc );
-            _pCache->setMaterialPSO( psoKey, RenderPSOCache::MaterialPSOEntry::ready( handle, true ) );
+                registerLayout( pso._handle, desc );
+            _pCache->setMaterialPSO( psoKey, RenderPSOCache::MaterialPSOEntry::ready( std::move( pso ) ) );
         }
         return _pCache->findMaterialPSO( psoKey );
-    }
-
-    RHIPipelineStateHandle FramePSOManager::createPSOForPassType( RenderPassKind passType, const RHIFormat* pRTVFormatOverride )
-    {
-        return createPSOForPass( passType, findPassDescByType( passType ), pRTVFormatOverride );
     }
 
     void FramePSOManager::warmExtensionPrograms( const vector<ExtensionProgramRequest>& listRequest ) const
@@ -823,23 +820,12 @@ namespace sw
 
         // 셰이더는 부르는 쪽이 이번 프레임의 프로그램과 함께 데웠다(`warmExtensionPrograms`) — 여기는 드라이버 생성만 남는다.
         const RHIPipelineStateDesc   desc   = makeExtensionProgramDesc( program, colorFormat, bDepthTest );
-        const RHIPipelineStateHandle handle = createPipelineStateTimed( *_pDevice, desc );
+        RHIPipelineState             pso    = createPipelineStateTimed( *_pDevice, desc );
+        const RHIPipelineStateHandle handle = pso._handle;
         registerLayout( handle, desc );
         if ( handle == 0 )
             SW_LOG_ERROR_ID( "FramePSOManager.ExtensionProgramCouldNot", "Extension program '%#' could not be created (see the shader error above) - passes that use it are not drawn", program._shaderPath );
-        _pCache->setExtensionProgramPSO( _pDevice, programKey, handle );
-        return handle;
-    }
-
-    RHIPipelineStateHandle FramePSOManager::createPSOForPass( RenderPassKind passType, const RenderGraphPassDesc* pPassDesc, const RHIFormat* pRTVFormatOverride )
-    {
-        if ( _pDevice == nullptr )
-            return 0;
-        RHIPipelineStateDesc desc{};
-        if ( makePassPSODesc( passType, pPassDesc, pRTVFormatOverride, desc ) == false )
-            return 0;
-        const RHIPipelineStateHandle handle = createPipelineStateTimed( *_pDevice, desc );
-        registerLayout( handle, desc );
+        _pCache->setExtensionProgramPSO( _pDevice, programKey, std::move( pso ) );
         return handle;
     }
 
@@ -1021,7 +1007,7 @@ namespace sw
 
         // 적용할 것이 없다는 것은 패스 PSO 가 이미 이 머티리얼의 셰이더이고 모드도 Lit 이고 컬 모드도 그대로라는 뜻이다. 똑같은 PSO 를 하나 더 만들 이유가 없다.
         if ( bChanged == false )
-            return RenderPSOCache::MaterialPSOEntry::ready( passPSO, false );
+            return RenderPSOCache::MaterialPSOEntry::makeFromPass( passPSO );
 
         // 셰이더 컴파일 · 드라이버 생성은 호출자가 desc 를 받아 빌더 줄에 넣는다(`Building` 으로 돌려준다). 합치는 쪽이 같은 규칙으로 `Ready` · `Failed` 를 정한다.
         if ( pOutDeferredDesc != nullptr )
@@ -1030,16 +1016,16 @@ namespace sw
             return RenderPSOCache::MaterialPSOEntry::building();
         }
 
-        const RHIPipelineStateHandle handle = createPipelineStateTimed( *_pDevice, desc );
-        if ( handle == 0 )
+        RHIPipelineState pso = createPipelineStateTimed( *_pDevice, desc );
+        if ( pso.isValid() == false )
         {
             // 컴파일 실패다. 패스 PSO(다른 셰이더 · 다른 보기 모드)로 그리면 틀린 그림이 통과하므로 이 조합은 그리지 않고 오류를 남긴다.
             SW_LOG_ERROR_ID( "FramePSOManager.MaterialPSOVariantView", "Material PSO variant '%#' (view mode %#) failed to build - these batches are not drawn", desc._vertexShaderPath,
                              RenderViewModeUtil::getInfo( viewMode )._pName );
             return RenderPSOCache::MaterialPSOEntry::failed();
         }
-        registerLayout( handle, desc );
-        return RenderPSOCache::MaterialPSOEntry::ready( handle, true );
+        registerLayout( pso._handle, desc );
+        return RenderPSOCache::MaterialPSOEntry::ready( std::move( pso ) );
     }
 
     void FramePSOManager::ensureMaterialPSOs( uint32 viewModeMask )
@@ -1058,8 +1044,9 @@ namespace sw
             return;
 
         bool bCreatedVariant{ false };
-        for ( const auto& [passType, passPSO] : _pCache->getEnginePSOs() )
+        for ( const auto& [passType, passState] : _pCache->getEnginePSOs() )
         {
+            const RHIPipelineStateHandle passPSO = passState._handle;
             if ( passPSO == 0 || getRenderPassKindInfo( passType ).shouldDrawSceneMeshes() == false )
                 continue;
             const bool                        bTransparentPass = getRenderPassKindInfo( passType ).hasFlag( RenderPassTraitFlag::kDrawsTransparentBatch );
@@ -1099,10 +1086,11 @@ namespace sw
             for ( const bool bAppearanceDither : { false, true } )
             {
                 const GPUShaderPermutation permutation = GPUMaterialRegistry::makeShaderPermutation( entry, bAppearanceDither );
-                for ( const auto& [passType, passPSO] : _pCache->getEnginePSOs() )
+                for ( const auto& [passType, passState] : _pCache->getEnginePSOs() )
                 {
-                    const bool bTransparentPass = getRenderPassKindInfo( passType ).hasFlag( RenderPassTraitFlag::kDrawsTransparentBatch );
-                    const bool bSkippedPass     = passPSO == 0 || getRenderPassKindInfo( passType ).shouldDrawSceneMeshes() == false || bTransparentPass != bTransparentMaterial;
+                    const RHIPipelineStateHandle passPSO          = passState._handle;
+                    const bool                   bTransparentPass = getRenderPassKindInfo( passType ).hasFlag( RenderPassTraitFlag::kDrawsTransparentBatch );
+                    const bool                   bSkippedPass     = passPSO == 0 || getRenderPassKindInfo( passType ).shouldDrawSceneMeshes() == false || bTransparentPass != bTransparentMaterial;
                     if ( bSkippedPass || getRenderPassKindInfo( passType ).shouldDrawMaterial( &permutation._listDefine ) == false )
                         continue;
                     const uint32 passModeMask = getPassViewModeMask( getRenderPassKindInfo( passType ), viewModeMask );
@@ -1180,14 +1168,14 @@ namespace sw
         const MaterialPSOKey key{ passPSO, permutationHash, viewMode, vertexFormat, static_cast<uint8>( bReverseCulling ? SW_TRUE : SW_FALSE ) };
         if ( _pCache->beginMaterialPSO( key ) == false )
             return false;
-        RHIPipelineStateDesc                   deferredDesc{};
-        const RenderPSOCache::MaterialPSOEntry entry = createMaterialPSOVariant( passPSO, passType, pPermutation, viewMode, bReverseCulling, vertexFormat, &deferredDesc );
+        RHIPipelineStateDesc             deferredDesc{};
+        RenderPSOCache::MaterialPSOEntry entry = createMaterialPSOVariant( passPSO, passType, pPermutation, viewMode, bReverseCulling, vertexFormat, &deferredDesc );
         if ( entry._state == RenderPSOCache::MaterialPSOState::Building )
         {
             _pCache->requestMaterialPSO( _pDevice, key, std::move( deferredDesc ), bUrgent, usesAsyncMaterialPSOBuilder() );
             return false;
         }
-        _pCache->setMaterialPSO( key, entry );
+        _pCache->setMaterialPSO( key, std::move( entry ) );
         return true;
     }
 
@@ -1237,12 +1225,12 @@ namespace sw
             return;
         }
         // 셰이더는 셋업이 투명 패스와 함께 데웠다(`createPassPSOS`) — 여기는 드라이버 생성만 남는다.
-        const RHIPipelineStateDesc   desc   = makeParticlePSODesc( transparentDesc, shaderPath );
-        const RHIPipelineStateHandle handle = createPipelineStateTimed( *_pDevice, desc );
-        if ( handle == 0 )
+        const RHIPipelineStateDesc desc = makeParticlePSODesc( transparentDesc, shaderPath );
+        RHIPipelineState           pso  = createPipelineStateTimed( *_pDevice, desc );
+        if ( pso.isValid() == false )
             SW_LOG_ERROR_ID( "FramePSOManager.FailedCreateParticlePSO", "Failed to create the particle PSO from '%#' - particles are not drawn", shaderPath );
-        registerLayout( handle, desc );
-        _pCache->setMaterialPSO( _particlePSOKey, RenderPSOCache::MaterialPSOEntry::ready( handle, true ) );
+        registerLayout( pso._handle, desc );
+        _pCache->setMaterialPSO( _particlePSOKey, RenderPSOCache::MaterialPSOEntry::ready( std::move( pso ) ) );
     }
 
     RHIPipelineStateHandle FramePSOManager::findParticlePSO() const
@@ -1294,9 +1282,10 @@ namespace sw
         _listBatchPSORow.clear();
         if ( _pDevice == nullptr )
             return;
-        for ( const auto& [passType, passPSO] : _pCache->getEnginePSOs() )
+        for ( const auto& [passType, passState] : _pCache->getEnginePSOs() )
         {
-            const RenderPassKindInfo& passInfo = getRenderPassKindInfo( passType );
+            const RHIPipelineStateHandle passPSO  = passState._handle;
+            const RenderPassKindInfo&    passInfo = getRenderPassKindInfo( passType );
             if ( passPSO == 0 || passInfo.shouldDrawSceneMeshes() == false )
                 continue;
             const bool                        bTransparentPass = passInfo.hasFlag( RenderPassTraitFlag::kDrawsTransparentBatch );

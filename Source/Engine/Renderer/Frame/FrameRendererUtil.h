@@ -244,7 +244,7 @@ namespace sw
 
         /**
          * @brief 패스의 `_listOutput` 에서 컬러 어태치먼트 포맷을 순서대로 모읍니다. 반환값은 컬러 RT 수입니다.
-         * @details PSO 생성(createPSOForPassType)과 셰이더 쿠커가 **같은 답**을 내야 하는 규칙이다. 컬러
+         * @details PSO 생성(FramePSOManager::makePassPSODesc)과 셰이더 쿠커가 **같은 답**을 내야 하는 규칙이다. 컬러
          *          출력이 하나도 없으면 뎁스만 쓰는 패스이고, 그 패스에는 픽셀 스테이지가 없다. 출력 선언이
          *          아예 없으면 여기서는 알 수 없으므로 fallbackCount 를 반환한다(호출하는 쪽이 패스 타입으로 정한 값).
          *          Swapchain 출력은 컬러 하나로 세고 포맷은 Unknown 이다(대상 포맷은 출력 패스가 정한다). 첨부에 없는 다른 이름은
@@ -293,7 +293,7 @@ namespace sw
         /**
          * @brief 이 패스에 픽셀 스테이지가 있는지 반환합니다. 컬러 출력이 하나라도 있어야 합니다.
          * @details 셰이더 쿠커가 "이 패스의 PS 를 쿠킹하는가" 를 정할 때 쓴다. 런타임은 같은 규칙을
-         *          createPSOForPassType 이 RT 수로 적용한다(RT 가 0개면 PS 경로를 비운다). 주의: 쿠커와 런타임이
+         *          FramePSOManager::makePassPSODesc 이 RT 수로 적용한다(RT 가 0개면 PS 경로를 비운다). 주의: 쿠커와 런타임이
          *          다른 규칙을 쓰면 그림자 패스에 머티리얼 define 을 적용한 변형이 PS 리플렉션을 요구하는데 매니페스트에는
          *          그 조합이 없다(Shipping 의 `리플렉션 매니페스트에 'shadow_depth.hlsl' 가 없습니다`).
          * @note 언리얼은 그림자 깊이에도 **마스크드 머티리얼일 때만** PS 를 붙인다(clip 을 위해). 알파 마스크가

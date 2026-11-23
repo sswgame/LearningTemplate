@@ -52,10 +52,10 @@ namespace sw
         return true;
     }
 
-    void MaterialPSOBuilder::pushResult( Job&& job, RHIPipelineStateHandle handle )
+    void MaterialPSOBuilder::pushResult( Job&& job, RHIPipelineState&& pso )
     {
         ScopedLock<mutex> lock{ _mutex };
-        _listResult.push_back( Result{ job._key, std::move( job._desc ), handle, job._generation } );
+        _listResult.push_back( Result{ job._key, std::move( job._desc ), std::move( pso ), job._generation } );
         --_inFlight;
     }
 
@@ -67,8 +67,9 @@ namespace sw
         IRHIDevice* pDevice{ nullptr };
         if ( popJob( job, pDevice ) == false )
             return;
-        const RHIPipelineStateHandle handle = pDevice->getResourceFactory()->createPipelineState( job._desc );
-        pushResult( std::move( job ), handle );
+        RHIPipelineState pso;
+        (void)pso.createGraphics( *pDevice, job._desc ); // 실패도 결과다 — 가져간 쪽이 실패 항목으로 적는다
+        pushResult( std::move( job ), std::move( pso ) );
     }
 
     void MaterialPSOBuilder::discardPending()
@@ -99,8 +100,9 @@ namespace sw
         IRHIDevice* pDevice{ nullptr };
         while ( popJob( job, pDevice ) )
         {
-            const RHIPipelineStateHandle handle = pDevice->getResourceFactory()->createPipelineState( job._desc );
-            pushResult( std::move( job ), handle );
+            RHIPipelineState pso;
+            (void)pso.createGraphics( *pDevice, job._desc ); // 실패도 결과다 — 가져간 쪽이 실패 항목으로 적는다
+            pushResult( std::move( job ), std::move( pso ) );
             ++builtCount;
             if ( budgetMicroseconds != 0 && MonotonicClock::nowNanoseconds() - startNanoseconds >= budgetNanoseconds )
                 break;
@@ -126,10 +128,9 @@ namespace sw
             listResult.swap( _listResult );
             _pDevice = nullptr;
         }
-        for ( const Result& result : listResult )
+        for ( Result& result : listResult )
         {
-            if ( result._handle != 0 && pDevice != nullptr && pDevice->getResourceFactory() != nullptr )
-                pDevice->releaseHandle( result._handle );
+            result._pso.release( pDevice );
         }
     }
 } // namespace sw

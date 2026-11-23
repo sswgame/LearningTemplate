@@ -14,6 +14,7 @@
 
 #include "Engine/EngineMinimal.h"
 #include "Engine/Graphics/Mesh/MeshVertex.h"
+#include "Engine/Graphics/RHI/RHIPipelineState.h"
 #include "Engine/Graphics/RHI/RHIPipelineStateDesc.h"
 #include "Engine/Graphics/Shader/Binding/ShaderBindingLayoutCache.h"
 #include "Engine/Graphics/View/RenderViewMode.h"
@@ -28,7 +29,7 @@ namespace sw
 
     /**
      * @class RenderPSOCache
-     * @brief PSO 핸들과 레이아웃의 소유자입니다. 해제 순서와 뮤텍스가 여기 한 곳에 있습니다.
+     * @brief PSO 와 레이아웃의 소유자입니다. 해제 순서와 뮤텍스가 여기 한 곳에 있습니다.
      */
     class SW_API RenderPSOCache
     {
@@ -43,31 +44,37 @@ namespace sw
         {
             Absent = 0, ///< 항목이 없다(키를 처음 본다). 저장하지 않는 값이다 — 조회가 항목 없음을 이렇게 돌려준다
             Building,   ///< 만드는 중이다(`beginMaterialPSO` 가 올렸다). 핸들이 아직 없다
-            Ready,      ///< 만들었고 핸들이 유효하다(`_bOwned` 가 0 이면 패스 PSO 그대로)
+            Ready,      ///< 만들었고 핸들이 유효하다(`_owned` 가 비면 패스 PSO 그대로)
             Failed,     ///< 만들지 못했다(오류를 남겼다). 핸들이 없고 다시 만들지 않는다
         };
 
         /**
          * @struct MaterialPSOEntry
          * @brief (패스, 머티리얼 퍼뮤테이션, 뷰 모드) 하나에 대응하는 PSO 와 그 준비 상태입니다. 값은 `building` · `ready` · `failed` 로만 만듭니다.
-         * @details `_bOwned` 가 0 이면 값은 패스 PSO 그대로입니다. 퍼뮤테이션이 아무것도 안 바꾸는 흔한 경우라
-         *          새로 만들지 않습니다. 그래서 파괴할 때 **이 PSO 는 건드리면 안 됩니다**(패스가 소유합니다).
+         * @details `_owned` 가 비고 `_pso` 만 있으면 패스 PSO 그대로입니다. 퍼뮤테이션이 아무것도 안 바꾸는 흔한 경우라
+         *          새로 만들지 않습니다 — 소유자가 패스라 이 항목은 놓을 것이 없습니다.
          */
         struct MaterialPSOEntry
         {
-            RHIPipelineStateHandle _pso{ 0 };
-            uint8                  _bOwned{ 0 };
+            RHIPipelineStateHandle _pso{ 0 }; ///< 그릴 PSO(`_owned` 또는 패스 PSO)
+            RHIPipelineState       _owned{};  ///< 이 변형을 위해 만든 PSO. 패스 PSO 를 그대로 가리키면 비어 있다
             MaterialPSOState       _state{ MaterialPSOState::Absent };
 
             /** @brief 만드는 중인 항목입니다. */
-            [[nodiscard]] static MaterialPSOEntry building() { return MaterialPSOEntry{ 0, 0, MaterialPSOState::Building }; }
-            /** @brief 만든 항목입니다. @p pso 가 0 이면 만들지 못한 것이라 `failed()` 입니다. @p bOwned 가 거짓이면 패스 PSO 를 그대로 가리킨다. */
-            [[nodiscard]] static MaterialPSOEntry ready( RHIPipelineStateHandle pso, bool bOwned )
+            [[nodiscard]] static MaterialPSOEntry building() { return MaterialPSOEntry{ 0, {}, MaterialPSOState::Building }; }
+            /** @brief 만든 항목입니다. @p pso 가 비면 만들지 못한 것이라 `failed()` 입니다. */
+            [[nodiscard]] static MaterialPSOEntry ready( RHIPipelineState&& pso )
             {
-                return pso != 0 ? MaterialPSOEntry{ pso, static_cast<uint8>( bOwned ? 1 : 0 ), MaterialPSOState::Ready } : failed();
+                const RHIPipelineStateHandle handle = pso._handle;
+                return handle != 0 ? MaterialPSOEntry{ handle, std::move( pso ), MaterialPSOState::Ready } : failed();
+            }
+            /** @brief 패스 PSO 를 그대로 가리키는 항목입니다(소유하지 않는다). 0 이면 `failed()` 입니다. */
+            [[nodiscard]] static MaterialPSOEntry makeFromPass( RHIPipelineStateHandle passPSO )
+            {
+                return passPSO != 0 ? MaterialPSOEntry{ passPSO, {}, MaterialPSOState::Ready } : failed();
             }
             /** @brief 만들지 못한 항목입니다. */
-            [[nodiscard]] static MaterialPSOEntry failed() { return MaterialPSOEntry{ 0, 0, MaterialPSOState::Failed }; }
+            [[nodiscard]] static MaterialPSOEntry failed() { return MaterialPSOEntry{ 0, {}, MaterialPSOState::Failed }; }
         };
 
         /** @brief 등록된 PSO 하나와 그 바인딩 레이아웃입니다. `collectLayouts` 가 반환합니다. */
@@ -110,19 +117,19 @@ namespace sw
         // 2) 엔진 패스 PSO 와 출력 포맷별 PSO. Present 와 Canvas 처럼 주 출력에 그리는 패스는 대상 포맷마다 PSO 가 다르다
         // ------------------------------------------------------------------------------
         /** @brief 패스 타입의 엔진 PSO 를 둡니다. 다른 핸들을 덮어쓰면 옛 핸들은 @p pDevice 로 해제한다(`IRHIDevice::releaseHandle` — 쓰던 프레임 뒤로 미룬다). */
-        void setEnginePSO( IRHIDevice* pDevice, RenderPassKind passType, RHIPipelineStateHandle pso );
+        void setEnginePSO( IRHIDevice* pDevice, RenderPassKind passType, RHIPipelineState&& pso );
         /** @brief 패스 타입의 엔진 PSO 입니다. 없으면 0 입니다. */
         RHIPipelineStateHandle findEnginePSO( RenderPassKind passType ) const;
         /** @brief 엔진 PSO 모두입니다. 머티리얼 변형을 만들 때 씬 메시 패스를 고르려고 훑습니다(기록 전). */
-        const unordered_map<RenderPassKind, RHIPipelineStateHandle>& getEnginePSOs() const { return _mapEnginePSO; }
+        const unordered_map<RenderPassKind, RHIPipelineState>& getEnginePSOs() const { return _mapEnginePSO; }
 
         /** @brief 주 출력에 그리는 패스(Present, Canvas)의 대상 포맷별 PSO 를 둡니다. 실패(0)도 기록합니다. 부르는 쪽이 폴백으로 갑니다. 덮어쓴 옛 핸들은 `setEnginePSO` 와 같이 해제한다. */
-        void setOutputPSO( IRHIDevice* pDevice, RenderPassKind passType, RHIFormat targetFormat, RHIPipelineStateHandle pso );
+        void setOutputPSO( IRHIDevice* pDevice, RenderPassKind passType, RHIFormat targetFormat, RHIPipelineState&& pso );
         /** @brief 그 패스와 대상 포맷의 PSO 가 **등록돼 있으면** true 와 함께 반환합니다(값이 0 이어도 등록된 것입니다). */
         [[nodiscard]] bool findOutputPSO( RenderPassKind passType, RHIFormat targetFormat, RHIPipelineStateHandle& outPipelineState ) const;
 
         /** @brief 모듈 확장 패스 프로그램(`ExtensionProgramDesc`) 하나의 PSO 를 프로그램 키(셰이더 · 상태 · 타깃 포맷을 이은 글)로 둡니다. 실패(0)도 기록합니다(만들기를 되풀이하지 않는다). */
-        void setExtensionProgramPSO( IRHIDevice* pDevice, const hashed_string& programKey, RHIPipelineStateHandle pso );
+        void setExtensionProgramPSO( IRHIDevice* pDevice, const hashed_string& programKey, RHIPipelineState&& pso );
         /** @brief 모듈 프로그램의 PSO 가 **등록돼 있으면** true 와 함께 반환합니다(값이 0 이어도 등록된 것입니다). */
         [[nodiscard]] bool findExtensionProgramPSO( const hashed_string& programKey, RHIPipelineStateHandle& outPipelineState ) const;
 
@@ -138,7 +145,7 @@ namespace sw
          */
         [[nodiscard]] bool beginMaterialPSO( const MaterialPSOKey& key );
         /** @brief 변형을 둡니다(있으면 덮어씁니다). `Absent` 항목은 둘 수 없습니다(assert) — 만드는 중이면 `building()`, 끝났으면 `ready` · `failed` 를 넘깁니다. */
-        void setMaterialPSO( const MaterialPSOKey& key, const MaterialPSOEntry& entry );
+        void setMaterialPSO( const MaterialPSOKey& key, MaterialPSOEntry&& entry );
         /** @brief 그 키의 준비 상태입니다. 항목이 없으면 `Absent` 입니다. */
         MaterialPSOState findMaterialPSOState( const MaterialPSOKey& key ) const;
         /**
@@ -169,7 +176,7 @@ namespace sw
         /**
          * @brief 모두 파괴하고 비웁니다. 디바이스가 **살아 있을 때** 부릅니다.
          * @details 순서가 규칙입니다: 머티리얼 변형(소유한 것만) → 엔진 PSO → 출력 포맷별 PSO → 레이아웃 테이블.
-         *          `_bOwned` 가 0 인 변형은 패스 PSO 를 그대로 담고 있을 뿐이라 먼저 걸러야 두 번 파괴하지 않습니다.
+         *          `_owned` 가 빈 변형은 패스 PSO 를 그대로 가리킬 뿐이라 놓을 것이 없습니다.
          */
         void releaseAll( IRHIDevice* pDevice );
         /** @brief 디바이스가 이미 사라졌을 때 부릅니다. 핸들만 잊습니다. */
@@ -177,7 +184,7 @@ namespace sw
         /**
          * @brief 셰이더 핫 리로드: 그 셰이더로 만든 PSO 만 파괴하고 비웁니다(레이아웃 캐시도 그 셰이더 것만). 빈 자리는 `FramePSOManager::createPassPSOs` · 지연 생성이 다시 채웁니다.
          * @details 언리얼 셰이더 핫 리로드처럼 바뀐 셰이더를 쓰는 PSO 만 다시 만든다 — 패스 자원(상수 버퍼 · 풀 · 그리기 캐시)은 그대로다.
-         *          엔진 패스 PSO 를 하나라도 놓으면 머티리얼 변형을 모두 놓는다: 변형 키에 패스 PSO 핸들이 들어 있어 남기면 쓰이지 않는 채로 쌓이고, `_bOwned` 가 0 인 변형은 놓은 패스 PSO 를 가리킨다.
+         *          엔진 패스 PSO 를 하나라도 놓으면 머티리얼 변형을 모두 놓는다: 변형 키에 패스 PSO 핸들이 들어 있어 남기면 쓰이지 않는 채로 쌓이고, `_owned` 가 빈 변형은 놓은 패스 PSO 를 가리킨다.
          *          `Failed` 변형과 실패(0)로 적힌 모듈 프로그램도 지운다 — 고친 셰이더로 다시 만들어 본다.
          *          만드는 중(`Building`)인 변형도 지우고 빌더의 작업을 무효로 한다(`MaterialPSOBuilder::discardPending`) — 옛 바이트코드로 만든 PSO 를 받지 않는다.
          * @return 파괴한 PSO 수입니다.
@@ -186,10 +193,10 @@ namespace sw
 
     private:
         /**
-         * @brief 덮어쓴 엔진 · 출력 · 모듈 PSO 를 놓습니다 — 옛 핸들이 0 이 아니고 새 핸들과 다르면 장치로 해제하고, 그 핸들의 레이아웃 · desc 와 그 핸들을 그대로 가리키던 머티리얼 항목을 잊는다.
+         * @brief 덮어쓸 엔진 · 출력 · 모듈 PSO 를 놓습니다 — 비지 않았으면 장치로 해제하고, 그 핸들의 레이아웃 · desc 와 그 핸들을 그대로 가리키던 머티리얼 항목을 잊는다.
          * @details 예전에는 덮어쓰기가 옛 핸들을 잊기만 해 PSO 가 샜다(해제 경로는 `releasePSOsUsingShader` · 장치 종료뿐이었다).
          */
-        void releaseReplacedPSO( IRHIDevice* pDevice, RHIPipelineStateHandle previous, RHIPipelineStateHandle next );
+        void releaseReplacedPSO( IRHIDevice* pDevice, RHIPipelineState& previous );
         /** @brief (패스 << 32 | 대상 포맷) 키입니다. */
         static uint64 makeOutputPSOKey( RenderPassKind passType, RHIFormat targetFormat )
         {
@@ -202,11 +209,11 @@ namespace sw
         unordered_map<RHIPipelineStateHandle, RHIPipelineStateDesc> _mapPSODesc         SW_GUARDED_BY( _layoutMutex );
         mutable mutex                                                                   _layoutMutex;
         /// @brief 엔진이 만들어 둔 패스별 PSO 입니다. 키가 enum 이라 조회에 문자열을 만들지 않습니다.
-        unordered_map<RenderPassKind, RHIPipelineStateHandle> _mapEnginePSO;
+        unordered_map<RenderPassKind, RHIPipelineState> _mapEnginePSO;
         /// @brief 주 출력에 그리는 패스의 PSO 를 대상 렌더 타깃 포맷별로 둡니다(키 = makeOutputPSOKey). 백버퍼와 에디터 뷰 RT 는 포맷이 다를 수 있습니다.
-        unordered_map<uint64, RHIPipelineStateHandle> _mapOutputPSO;
+        unordered_map<uint64, RHIPipelineState> _mapOutputPSO;
         /// @brief 모듈 프로그램의 PSO 입니다(키 = 프로그램 키). 모듈 패스는 셰이더가 패스마다 달라 패스 종류 하나로 둘 수 없습니다.
-        unordered_map<hashed_string, RHIPipelineStateHandle>                                _mapExtensionProgramPSO;
+        unordered_map<hashed_string, RHIPipelineState>                                      _mapExtensionProgramPSO;
         unordered_map<MaterialPSOKey, MaterialPSOEntry, MaterialPSOKeyHash> _mapMaterialPSO SW_GUARDED_BY( _materialPSOMutex );
         mutable mutex                                                                       _materialPSOMutex;
         /// @brief 머티리얼 변형의 생성 줄과 전용 스레드입니다. 캐시가 소유해 미리보기 렌더러와 함께 씁니다(해제는 `releaseAll` 이 스레드부터 합류합니다).

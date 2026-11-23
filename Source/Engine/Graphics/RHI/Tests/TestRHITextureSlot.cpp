@@ -11,6 +11,7 @@
 #include "Engine/Graphics/RHI/RHIConstantBuffer.h"
 #include "Engine/Graphics/RHI/RHIDescriptors.h"
 #include "Engine/Graphics/RHI/RHIGeometryBuffer.h"
+#include "Engine/Graphics/RHI/RHIPipelineState.h"
 #include "Engine/Graphics/RHI/RHIStructuredBuffer.h"
 #include "Engine/Graphics/RHI/RHITextureSlot.h"
 #include "Engine/Graphics/RHI/Tests/RHIFakeDevice.h"
@@ -94,6 +95,7 @@ SW_TEST_CASE( RHITextureSlotTest, MoveLeavesTheSourceEmpty )
 {
     static_assert( std::is_copy_constructible_v<RHITextureSlot> == false && std::is_copy_constructible_v<RHIStructuredBuffer> == false );
     static_assert( std::is_copy_constructible_v<RHIConstantBuffer> == false && std::is_copy_constructible_v<RHIGeometryBuffer> == false );
+    static_assert( std::is_copy_constructible_v<RHIPipelineState> == false );
     static_assert( std::is_default_constructible_v<RHIResourceCreateKey> == false && std::is_aggregate_v<RHIResourceCreateKey> == false );
 
     RHITextureSlot slot;

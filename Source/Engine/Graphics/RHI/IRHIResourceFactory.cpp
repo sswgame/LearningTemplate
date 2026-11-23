@@ -68,7 +68,7 @@ namespace sw
         _pStartupCapabilities = &startupCapabilities;
     }
 
-    RHIPipelineStateHandle IRHIResourceFactory::createPipelineState( const RHIPipelineStateDesc& desc )
+    RHIPipelineStateHandle IRHIResourceFactory::createPipelineState( RHIResourceCreateKey, const RHIPipelineStateDesc& desc )
     {
         if ( _pStartupCapabilities == nullptr )
         {
@@ -85,7 +85,7 @@ namespace sw
         return pso;
     }
 
-    RHIPipelineStateHandle IRHIResourceFactory::createComputePipelineState( string_view shaderPath, string_view entryPoint, const vector<string>& listDefine )
+    RHIPipelineStateHandle IRHIResourceFactory::createComputePipelineState( RHIResourceCreateKey, string_view shaderPath, string_view entryPoint, const vector<string>& listDefine )
     {
         if ( _pStartupCapabilities == nullptr )
         {

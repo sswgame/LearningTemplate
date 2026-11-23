@@ -136,7 +136,7 @@ namespace sw::editor
     ImGuiRenderer::ImGuiRenderer()
         : _pDevice{ nullptr }
         , _pDrawHandoff{ nullptr }
-        , _pso{ 0 }
+        , _pso{}
         , _wordBuffer{}
         , _listWord{}
         , _mapListBase{}
@@ -167,8 +167,7 @@ namespace sw::editor
         desc._depthStencilFormat             = RHIFormat::Unknown;
         desc._renderState._bEnableDepthWrite = SW_FALSE;
         desc._renderState.setAllBlendTargets( BlendTargetState::makeStraightAlpha() );
-        _pso = pRHIDevice->getResourceFactory()->createPipelineState( desc );
-        if ( _pso == 0 )
+        if ( _pso.createGraphics( *pRHIDevice, desc ) == false )
         {
             SW_LOG_ERROR_ID( "ImGuiRenderer.PSOFailed", "The editor UI pipeline (%#) could not be created - see the shader error above", Internal::kShaderPath );
             _pDevice = nullptr;
@@ -231,9 +230,7 @@ namespace sw::editor
         }
         _mapForeignSRV.clear();
         _wordBuffer.release( _pDevice );
-        if ( _pso != 0 && _pDevice->getResourceFactory() != nullptr )
-            _pDevice->releaseHandle( _pso );
-        _pso = 0;
+        _pso.release( _pDevice );
 
         if ( ImGui::GetCurrentContext() != nullptr )
         {
@@ -349,12 +346,12 @@ namespace sw::editor
         IRHICommandContext* const pCmd           = device.getFrameStreamContext();
         const float32             framebufferW   = drawData.DisplaySize.x * drawData.FramebufferScale.x;
         const float32             framebufferH   = drawData.DisplaySize.y * drawData.FramebufferScale.y;
-        const bool                bNothingToDraw = pCmd == nullptr || _pso == 0 || _wordBuffer.isValid() == false || framebufferW <= 0.0f || framebufferH <= 0.0f;
+        const bool                bNothingToDraw = pCmd == nullptr || _pso.isValid() == false || _wordBuffer.isValid() == false || framebufferW <= 0.0f || framebufferH <= 0.0f;
         if ( bNothingToDraw )
             return;
 
         // 정점은 셰이더가 구조 버퍼에서 꺼낸다 — 셰이더가 정점 입력을 받지 않아 PSO 의 입력 레이아웃이 비어 있다(정점 버퍼를 걸지 않는다).
-        pCmd->setPipelineState( _pso );
+        pCmd->setPipelineState( _pso._handle );
         pCmd->bindStructuredBuffer( _wordBuffer._srv, shaderslot::kPassBuffer ); // setPipelineState 가 슬롯 상태를 비운다 — PSO 뒤에 건다
 
         // 화면 좌표(DisplayPos 기준) → NDC. y 는 아래가 + 다(ImGui 와 RHI 의 화면 규약이 같다 — GL 은 클립 원점으로 맞춘다).

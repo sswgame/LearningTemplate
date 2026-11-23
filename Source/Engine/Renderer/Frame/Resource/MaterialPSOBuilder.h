@@ -18,6 +18,7 @@
 #include "Core/Task/DedicatedWorker.h"
 
 #include "Engine/Graphics/RHI/RHIHandles.h"
+#include "Engine/Graphics/RHI/RHIPipelineState.h"
 #include "Engine/Graphics/RHI/RHIPipelineStateDesc.h"
 
 namespace sw
@@ -68,14 +69,14 @@ namespace sw
             uint64               _generation{ 0 }; ///< 넣을 때의 세대(`submit` 이 적는다)
         };
 
-        /** @brief 만든 결과입니다. `_handle` 이 0 이면 실패입니다. 가져간 쪽이 소유합니다. */
+        /** @brief 만든 결과입니다. `_pso` 가 비면 실패입니다. 가져간 쪽이 소유합니다. */
         struct Result
         {
-            MaterialPSOKey         _key{};
-            RHIPipelineStateDesc   _desc{};
-            RHIPipelineStateHandle _handle{ 0 };
-            uint64                 _generation{ 0 };
-            bool                   _bDiscarded{ false }; ///< NOLINT(sw-bool-flag): 집합체 칸. 버린 세대의 결과 — 캐시에 넣지 않고 핸들만 놓는다(`discardPending`)
+            MaterialPSOKey       _key{};
+            RHIPipelineStateDesc _desc{};
+            RHIPipelineState     _pso{};
+            uint64               _generation{ 0 };
+            bool                 _bDiscarded{ false }; ///< NOLINT(sw-bool-flag): 집합체 칸. 버린 세대의 결과 — 캐시에 넣지 않고 PSO 만 놓는다(`discardPending`)
         };
 
         MaterialPSOBuilder() = default;
@@ -117,7 +118,7 @@ namespace sw
         void buildOneOnWorker( uint8& signal, bool bStopping );
         /** @brief 급한 줄 먼저 하나 꺼냅니다. 없으면 false 입니다. 꺼낸 작업은 만드는 중으로 셉니다(`_inFlight`). */
         bool popJob( Job& outJob, IRHIDevice*& outDevice );
-        void pushResult( Job&& job, RHIPipelineStateHandle handle );
+        void pushResult( Job&& job, RHIPipelineState&& pso );
 
     private:
         mutable mutex              _mutex;

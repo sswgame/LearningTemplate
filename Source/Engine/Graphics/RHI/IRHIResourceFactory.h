@@ -18,6 +18,7 @@ namespace sw
     class TransientAttachmentPool;
     struct RHIConstantBuffer;
     struct RHIGeometryBuffer;
+    struct RHIPipelineState;
     struct RHIStructuredBuffer;
     struct RHITextureSlot;
 
@@ -31,7 +32,7 @@ namespace sw
      * @class RHIResourceCreateKey
      * @brief `IRHIResourceFactory` 의 자원 생성이 받는 빈 값입니다 — 아래 소유 형식만 만들 수 있습니다.
      * @details 생성이 날 핸들을 돌려주므로, 아무나 부르면 자리마다 놓는 순서(뷰 등록 해제 → 자원) · 실패 때 되돌리기 · 다시 만들기를 손으로 적는다(빠뜨리면 자원이 새거나 bindless 표에
-     *          죽은 번호가 남는다). 새 자리는 소유 형식(`RHITextureSlot` · `RHIStructuredBuffer` · `RHIConstantBuffer` · `RHIGeometryBuffer`)을 쓰고, 이 목록에는 수명 규칙이 다른
+     *          죽은 번호가 남는다). 새 자리는 소유 형식(`RHITextureSlot` · `RHIStructuredBuffer` · `RHIConstantBuffer` · `RHIGeometryBuffer` · `RHIPipelineState`)을 쓰고, 이 목록에는 수명 규칙이 다른
      *          풀 · 에셋만 더한다. 생성자를 본문과 함께 적는 것은 `= default` 면 C++17 에서 집합체라 누구나 `{}` 로 만들기 때문이다.
      */
     class RHIResourceCreateKey
@@ -48,6 +49,7 @@ namespace sw
         friend class TransientAttachmentPool;
         friend struct RHIConstantBuffer;
         friend struct RHIGeometryBuffer;
+        friend struct RHIPipelineState;
         friend struct RHIStructuredBuffer;
         friend struct RHITextureSlot;
     };
@@ -74,13 +76,13 @@ namespace sw
          *          **셰이더는 여기서 한 번 컴파일한다**: 서술체 해석 → 기동 능력으로 선택 스테이지 거절 → 컴파일 → 정점 리플렉션(실패면 끊는다) → 정점 속성 마스크.
          *          백엔드는 그 바이트코드 서술(`RHICompiledGraphicsStages`)만 받는다(`createPipelineStateNative`). 실패는 오류 로그와 핸들 0 이다.
          */
-        RHIPipelineStateHandle createPipelineState( const RHIPipelineStateDesc& desc );
+        RHIPipelineStateHandle createPipelineState( RHIResourceCreateKey, const RHIPipelineStateDesc& desc );
 
         /**
          * @brief 컴퓨트 파이프라인 상태(PSO)를 만듭니다.
          * @param listDefine 컴파일 매크로("NAME" 또는 "NAME=VALUE")입니다 — 그래픽스 PSO 의 `RHIPipelineStateDesc::_listShaderDefine` 과 같은 퍼뮤테이션입니다(셰이더 assert 변형이 쓴다).
          */
-        RHIPipelineStateHandle createComputePipelineState( string_view shaderPath, string_view entryPoint = {}, const vector<string>& listDefine = {} );
+        RHIPipelineStateHandle createComputePipelineState( RHIResourceCreateKey, string_view shaderPath, string_view entryPoint = {}, const vector<string>& listDefine = {} );
         /** @brief 컴퓨트 PSO @p pso 의 셰이더가 선언한 스레드 그룹 크기입니다. 이 팩터리가 만든 컴퓨트 PSO 가 아니면 0 입니다(`IRHICommandContext::setComputePipelineState`). */
         RHIThreadGroupSize getThreadGroupSize( RHIPipelineStateHandle pso ) const;
 

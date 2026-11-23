@@ -24,6 +24,14 @@ namespace
         return desc;
     }
 
+    /** @brief 핸들 @p handle 을 소유한 PSO 입니다(만들지 않고 값만 넣는다). */
+    RHIPipelineState makePSO( RHIPipelineStateHandle handle )
+    {
+        RHIPipelineState pso;
+        pso._handle = handle;
+        return pso;
+    }
+
     /** @brief 서로 다른 변형 키입니다(퍼뮤테이션 해시만 다르다). */
     MaterialPSOKey makeVariantKey( uint64 permutationHash )
     {
@@ -52,17 +60,17 @@ SW_TEST_CASE( RenderPSOCacheShaderReleaseTest, ReleasesOnlyPSOsOfTheChangedShade
 
     RenderPSOCache cache;
     cache.registerDesc( kForwardPSO, makeGraphicsDesc( "shaders/forward.hlsl" ) );
-    cache.setEnginePSO( &device, RenderPassKind::ForwardOpaque, kForwardPSO );
+    cache.setEnginePSO( &device, RenderPassKind::ForwardOpaque, makePSO( kForwardPSO ) );
     cache.registerDesc( kShadowPSO, makeGraphicsDesc( "shaders/shadow.hlsl" ) );
-    cache.setEnginePSO( &device, RenderPassKind::Shadow, kShadowPSO );
+    cache.setEnginePSO( &device, RenderPassKind::Shadow, makePSO( kShadowPSO ) );
     RHIPipelineStateDesc computeDesc{};
     computeDesc._computeShaderPath = "shaders/blur_cs.hlsl";
     cache.registerDesc( kBlurPSO, computeDesc );
     const hashed_string computePassName{ "Blur" };
-    cache.setExtensionProgramPSO( &device, computePassName, kBlurPSO );
+    cache.setExtensionProgramPSO( &device, computePassName, makePSO( kBlurPSO ) );
     // 머티리얼 변형: 만든 것(4 — 그림자 셰이더) · 실패한 것 · 만드는 중인 것.
     cache.registerDesc( kVariantPSO, makeGraphicsDesc( "shaders/shadow.hlsl" ) );
-    cache.setMaterialPSO( makeVariantKey( 100 ), RenderPSOCache::MaterialPSOEntry::ready( kVariantPSO, true ) );
+    cache.setMaterialPSO( makeVariantKey( 100 ), RenderPSOCache::MaterialPSOEntry::ready( makePSO( kVariantPSO ) ) );
     cache.setMaterialPSO( makeVariantKey( 101 ), RenderPSOCache::MaterialPSOEntry::failed() );
     cache.setMaterialPSO( makeVariantKey( 102 ), RenderPSOCache::MaterialPSOEntry::building() );
 
@@ -91,8 +99,8 @@ SW_TEST_CASE( RenderPSOCacheShaderReleaseTest, ReleasesOnlyPSOsOfTheChangedShade
 }
 
 /**
- * @brief [RenderPSOCacheShaderReleaseTest] 엔진 · 출력 · 모듈 PSO 를 다른 핸들로 덮어쓰면 옛 핸들을 장치의 해제 진입점으로 놓는다 — 같은 핸들을 다시 두면 놓지 않는다
- * @details 변이: 덮어쓰기가 옛 핸들을 잊기만 하면(예전) 파괴 목록이 비어 진다. 같은 핸들도 놓으면 쓰는 PSO 를 놓아 둘째 단언이 진다.
+ * @brief [RenderPSOCacheShaderReleaseTest] 엔진 · 출력 · 모듈 PSO 를 덮어쓰면 옛 핸들을 장치의 해제 진입점으로 놓는다
+ * @details 변이: 덮어쓰기가 옛 핸들을 잊기만 하면(예전) 파괴 목록이 비어 진다.
  */
 SW_TEST_CASE( RenderPSOCacheShaderReleaseTest, OverwriteReleasesThePreviousPSO )
 {
@@ -104,18 +112,17 @@ SW_TEST_CASE( RenderPSOCacheShaderReleaseTest, OverwriteReleasesThePreviousPSO )
     const RHIPipelineStateHandle kNew{ 12 };
     const hashed_string          programKey{ "Program" };
     RenderPSOCache               cache;
-    cache.setEnginePSO( &device, RenderPassKind::Shadow, kOld );
-    cache.setEnginePSO( &device, RenderPassKind::Shadow, kOld ); // 같은 핸들 — 놓지 않는다
+    cache.setEnginePSO( &device, RenderPassKind::Shadow, makePSO( kOld ) );
     SW_EXPECT_TRUE( factory._listDestroyedPipelineState.empty() );
-    cache.setEnginePSO( &device, RenderPassKind::Shadow, kNew );
+    cache.setEnginePSO( &device, RenderPassKind::Shadow, makePSO( kNew ) );
     SW_EXPECT_TRUE( factory._listDestroyedPipelineState == vector<RHIPipelineStateHandle>{ kOld } );
     SW_EXPECT_EQUAL( kNew, cache.findEnginePSO( RenderPassKind::Shadow ) );
 
     factory._listDestroyedPipelineState.clear();
-    cache.setOutputPSO( &device, RenderPassKind::Present, RHIFormat::R8G8B8A8_UNORM, kOld );
-    cache.setOutputPSO( &device, RenderPassKind::Present, RHIFormat::R8G8B8A8_UNORM, kNew );
-    cache.setExtensionProgramPSO( &device, programKey, kOld );
-    cache.setExtensionProgramPSO( &device, programKey, RHIPipelineStateHandle{} ); // 실패(0)로 덮어도 옛 핸들은 놓는다
+    cache.setOutputPSO( &device, RenderPassKind::Present, RHIFormat::R8G8B8A8_UNORM, makePSO( kOld ) );
+    cache.setOutputPSO( &device, RenderPassKind::Present, RHIFormat::R8G8B8A8_UNORM, makePSO( kNew ) );
+    cache.setExtensionProgramPSO( &device, programKey, makePSO( kOld ) );
+    cache.setExtensionProgramPSO( &device, programKey, makePSO( RHIPipelineStateHandle{} ) ); // 실패(0)로 덮어도 옛 핸들은 놓는다
     SW_EXPECT_TRUE( factory._listDestroyedPipelineState == ( vector<RHIPipelineStateHandle>{ kOld, kOld } ) );
 }
 

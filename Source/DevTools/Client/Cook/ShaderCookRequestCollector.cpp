@@ -284,7 +284,7 @@ namespace sw
 
                     for ( const RenderGraphPassDesc& pass : pipelineResource.getGraphPass() )
                     {
-                        // 셰이더 경로와 define 은 런타임 PSO 생성(createPSOForPassType)과 **같은 함수**로 정한다. 경로는 XML 의
+                        // 셰이더 경로와 define 은 런타임 PSO 생성(FramePSOManager::makePassPSODesc)과 **같은 함수**로 정한다. 경로는 XML 의
                         // `_shaderPath`, 비어 있으면 패스 종류 표의 기본 셰이더다. define 은 XML 퍼뮤테이션 + 패스 define(G버퍼의
                         // `SW_PASS_GBUFFER=1` 처럼 C++ 이 얹는 것)이다. 패스 종류는 로드 때 enum 으로 해석한 값을 본다.
                         const RenderPassShaderSelection passShader = selectRenderPassShader( pass._type, &pass, &pass, engineDefaultAssets );

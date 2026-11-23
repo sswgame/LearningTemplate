@@ -114,13 +114,6 @@ namespace sw
         /** @brief 이 레이아웃의 머티리얼 폴백 버퍼입니다(`ensureMaterialFallbackBuffers` 가 셋업에서 만든다). 없으면 nullptr 입니다. */
         const RHIStructuredBuffer* findMaterialFallback( const ShaderBindingLayout* pLayout ) const;
 
-        /**
-         * @brief 패스 종류 테이블(RenderPassKindInfo)과 파이프라인 XML 의 패스 서술로 패스 PSO 를 만듭니다.
-         * @param pRTVFormatOverride 컬러 RT 포맷을 이 배열로 고정합니다(Present 변형). nullptr 이면 테이블의 고정 포맷을 쓰고, 없으면 출력 선언 순서를 따릅니다.
-         */
-        RHIPipelineStateHandle createPSOForPassType( RenderPassKind passType, const RHIFormat* pRTVFormatOverride = nullptr );
-        /** @brief `createPSOForPassType` 의 몸체입니다. 패스 서술을 직접 받습니다 — 같은 종류의 패스가 여럿인 모듈 패스가 패스마다 부릅니다. */
-        RHIPipelineStateHandle createPSOForPass( RenderPassKind passType, const RenderGraphPassDesc* pPassDesc, const RHIFormat* pRTVFormatOverride );
         /** @brief 모듈 확장 패스 프로그램 PSO 하나의 요청입니다(키 = 셰이더 · 고정 상태 · 타깃 포맷 · 깊이 테스트). 프로그램은 부르는 쪽 것을 빌린다. */
         struct ExtensionProgramRequest
         {
