@@ -63,7 +63,7 @@ REGISTER_ANNOTATION_FIELD_FN( Reflect, Version, _version, applyTypeVersion, Manu
 
 // ── ENUM ─────────────────────────────────────────────────────────
 REGISTER_ANNOTATION_FIELD_FN( Enum, Meta, _listCustomMeta, appendCustomMeta, Display )
-// TypeRegistry::enumToString / enumFromString 이 쓰는 Invalid 센티널과 (배타적) Count 센티널. 끝 열거자 `Count` 는 적지 않아도 Count 센티널이다(비트 플래그 제외)
+// TypeRegistry::enumToString · tryParseEnum 이 쓰는 Invalid 센티널과 (배타적) Count 센티널. 끝 열거자 `Count` 는 적지 않아도 Count 센티널이다(비트 플래그 제외)
 REGISTER_ANNOTATION_FIELD( Enum, Invalid, _invalidEnumerator, Manual )
 REGISTER_ANNOTATION_FIELD( Enum, Count, _countEnumerator, Manual )
 // 비트 플래그 연산자(|, &, ^, ~)를 만든다. 직렬화용 EnumInfo::_bIsBitFlag 도 켠다

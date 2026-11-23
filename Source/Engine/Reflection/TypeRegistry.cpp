@@ -1052,20 +1052,6 @@ namespace sw
         return pInfo != nullptr ? pInfo->valueToCString( value ) : nullptr;
     }
 
-    bool TypeRegistry::enumFromString( const hashed_string& enumName, string_view name, int64& outValue ) const
-    {
-        const EnumInfo* pInfo = findEnum( enumName );
-        if ( pInfo == nullptr )
-        {
-            outValue = 0;
-            return false;
-        }
-        if ( pInfo->tryParse( name, outValue ) && pInfo->isValidValue( outValue ) )
-            return true;
-        outValue = ( pInfo->_bHasInvalid != SW_FALSE ) ? pInfo->_invalidValue : 0;
-        return false;
-    }
-
     bool TypeRegistry::hasFlag( const hashed_string& enumName, int64 flags, int64 contains ) const
     {
         const EnumInfo* pInfo = findEnum( enumName );
