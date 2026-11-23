@@ -4,6 +4,7 @@
  */
 #pragma once
 #include "Core/Container/string.h"
+#include "Core/Container/unordered_set.h"
 #include "Core/Container/vector.h"
 #include "Core/Delegate/Delegate.h"
 #include "Core/Foundation/Constants.h"
@@ -268,20 +269,20 @@ namespace sw::editor
     private:
         ax::NodeEditor::EditorContext*         _pEditor;
         string                                 _settingsPath;
-        string                                 _markScope;          ///< 이번 캔버스의 레이블 앞부분(beginCanvas 가 정한다)
-        float2                                 _previousCanvasSize; ///< 앞 프레임의 캔버스 크기(beginCanvas 가 측정한다)
-        float2                                 _canvasSize;         ///< 이번 프레임의 캔버스 크기
-        vector<Color>                          _listPinTypeColor;   ///< 핀 타입 번호에 대응하는 색
-        vector<EditorGraphNodeIssue>           _listNodeIssue;      ///< 이번 프레임의 문제 노드
-        fixed_string<constant::buffer::kMax64> _addNodeFilter;      ///< 노드 검색어
-        float2                                 _addNodePosition;    ///< 노드 검색 팝업을 연 위치(캔버스 좌표)
-        float2                                 _canvasOrigin;       ///< 이번 프레임 캔버스의 화면 왼쪽 위(beginCanvas 가 잰다)
-        vector<int32>                          _listFrameNode;      ///< 이번 프레임에 연 노드(beginNode)
-        vector<FramePin>                       _listFramePin;       ///< 이번 프레임에 연 핀과 그 노드(beginPin)
-        vector<EditorGraphNodeRect>            _listMinimapRect;    ///< 미니맵에 그릴 노드(캔버스 좌표, collectMinimap)
-        vector<int32>                          _listSelectedNode;   ///< 고른 노드(collectMinimap)
-        vector<int32>                          _listAutoLinkBefore; ///< 핀에서 노드를 고른 순간의 노드 — 새로 나타난 노드를 가린다
-        float2                                 _viewMin;            ///< 보이는 범위(캔버스 좌표)
+        string                                 _markScope;            ///< 이번 캔버스의 레이블 앞부분(beginCanvas 가 정한다)
+        float2                                 _previousCanvasSize;   ///< 앞 프레임의 캔버스 크기(beginCanvas 가 측정한다)
+        float2                                 _canvasSize;           ///< 이번 프레임의 캔버스 크기
+        vector<Color>                          _listPinTypeColor;     ///< 핀 타입 번호에 대응하는 색
+        vector<EditorGraphNodeIssue>           _listNodeIssue;        ///< 이번 프레임의 문제 노드
+        fixed_string<constant::buffer::kMax64> _addNodeFilter;        ///< 노드 검색어
+        float2                                 _addNodePosition;      ///< 노드 검색 팝업을 연 위치(캔버스 좌표)
+        float2                                 _canvasOrigin;         ///< 이번 프레임 캔버스의 화면 왼쪽 위(beginCanvas 가 잰다)
+        unordered_set<int32>                   _uniqueFrameNode;      ///< 이번 프레임에 연 노드(beginNode). 노드마다 자리를 물어 목록이면 노드 수의 제곱이다
+        vector<FramePin>                       _listFramePin;         ///< 이번 프레임에 연 핀과 그 노드(beginPin)
+        vector<EditorGraphNodeRect>            _listMinimapRect;      ///< 미니맵에 그릴 노드(캔버스 좌표, collectMinimap)
+        unordered_set<int32>                   _uniqueSelectedNode;   ///< 고른 노드(collectMinimap)
+        unordered_set<int32>                   _uniqueAutoLinkBefore; ///< 핀에서 노드를 고른 순간의 노드 — 새로 나타난 노드를 가린다
+        float2                                 _viewMin;              ///< 보이는 범위(캔버스 좌표)
         float2                                 _viewMax;
         float2                                 _viewBarSize;        ///< 앞 프레임 보기 막대 크기 — 오른쪽 끝에 붙인다
         EditorGraphAlign                       _pendingAlign;       ///< 다음 프레임에 할 정렬(`Count` 면 없다)
@@ -303,6 +304,6 @@ namespace sw::editor
         float2                                 _commentSize;           ///< 새 주석 상자의 영역 크기
         int32                                  _renameCommentID;       ///< 이름을 바꾸는 주석 id. 0 이면 없다
         fixed_string<constant::buffer::kMax64> _renameText;            ///< 이름 바꾸기 칸의 글
-        vector<int32>                          _listSeededComment;     ///< 자리 · 크기를 캔버스에 넣은 주석 id
+        unordered_set<int32>                   _uniqueSeededComment;   ///< 자리 · 크기를 캔버스에 넣은 주석 id
     };
 } // namespace sw::editor
