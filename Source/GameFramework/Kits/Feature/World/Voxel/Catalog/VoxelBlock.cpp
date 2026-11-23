@@ -141,17 +141,8 @@ namespace sw
         static constexpr Element kArrElement[] = {
             Element::of<&VoxelBlockCatalog::loadBlock>( "Block" ),
         };
-        const XMLCatalogReadResult result = XMLCatalogReadResult::readInDocumentOrder( *this, root, sourceName, kArrElement );
-        // 얻는 블록은 같은 카탈로그의 블록이어야 한다 — 모든 블록을 읽은 뒤에 본다(앞 블록이 뒤 블록을 가리킬 수 있다).
-        bool bDropsKnown = true;
-        for ( const VoxelBlockDef& block : getBlocks() )
-        {
-            if ( block._dropID.empty() || findBlockIndex( block._dropID ).has_value() )
-                continue;
-            SW_LOG_ERROR_ID( "VoxelBlockCatalog.BlockDropsWhichNot", "%#: block '%#' drops '%#', which is not a block in this catalog", sourceName, block._id.c_str(), block._dropID.c_str() );
-            bDropsKnown = false;
-        }
-        return bDropsKnown ? result._loadedCount : 0;
+        // 얻는 블록(`drop`)이 같은 카탈로그의 블록인지는 참조 표(`datacatalogreferences.xml`)가 본다 — 틀리면 카탈로그 읽기와 쿠킹이 실패한다.
+        return XMLCatalogReadResult::readInDocumentOrder( *this, root, sourceName, kArrElement )._loadedCount;
     }
 
     bool VoxelBlockCatalog::loadBlock( const XMLNode& node, string_view sourceName )

@@ -9,6 +9,7 @@
   inEntry="true" 면 target 을 루트가 아니라 같은 항목(owner 의 첫 원소)의 자식에서 찾습니다(퀘스트 안의 단계).
   <Unique owner attribute> 는 owner 원소의 attribute 값이 한 파일 안에서 겹치면 오류인 줄입니다(코드가 같은 id 를 교체로 받는 카탈로그의 파일 오타를 막는다).
   file="X" 면 target 을 이 파일이 아니라 루트의 X 속성이 적은 리소스(그 루트의 자식)에서 찾습니다. 루트가 X 를 적지 않았으면 그 줄은 보지 않습니다(필수인지는 읽는 코드가 안다).
+  absent="true" 면 값이 가리키는 원소가 없어야 합니다(지운 항목의 id 를 이어받는 칸).
   defaultAttribute="Y" 면 attribute 를 적지 않은 원소는 Y 의 값을 id 로 봅니다(기술의 frames 가 없으면 자기 id).
 
   카탈로그 밖의 칸(씬 · 프리팹의 컴포넌트 · 구조체 칸 `CatalogKey<Tag>`):
@@ -105,6 +106,14 @@
 	<!-- 격투 캐릭터의 기술은 루트 moves 가 가리키는 기술 카탈로그(MoveCatalog)의 프레임 데이터다 — frames 를 적지 않으면 자기 id. -->
 	<Catalog root="FighterCatalog">
 		<Reference owner="Fighter/Move" attribute="frames" defaultAttribute="id" target="Move" file="moves"/>
+	</Catalog>
+	<!-- 부수면 얻는 블록은 같은 카탈로그의 블록이다. -->
+	<Catalog root="VoxelBlockCatalog">
+		<Reference owner="Block" attribute="drop" target="Block"/>
+	</Catalog>
+	<!-- 이어받은 부품의 id 는 지운 부품의 것이다 — 아직 있는 부품을 이어받으면 그 부품의 세이브가 다른 부품이 된다. -->
+	<Catalog root="HousingPartCatalog">
+		<Reference owner="Part" attribute="replaces" target="Part" absent="true"/>
 	</Catalog>
 	<Catalog root="SRPGCatalog">
 		<Reference owner="Unit" attribute="weapons" target="Weapon"/>

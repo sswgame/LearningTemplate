@@ -167,6 +167,23 @@ SW_TEST_CASE( DataCatalogReferencesTest, InEntryReferencesStayInTheEntry )
     SW_EXPECT_FALSE( validateText( rules, R"(<Quests><Quest id="q"><Stage id="a" next="b"/></Quest><Quest id="r"><Stage id="b"/></Quest></Quests>)" ) );
 }
 
+/** @brief [DataCatalogReferencesTest] 지운 항목의 id(`absent`)는 이 파일에 없어야 한다 — 아직 있으면 하나마다 알리고 false 다. `optional` 과 함께 적으면 표 오류다 */
+SW_TEST_CASE( DataCatalogReferencesTest, AbsentReferencesMustNameRemovedEntries )
+{
+    DataCatalogReferenceRules rules;
+    SW_REQUIRE_TRUE( rules.loadFromXMLText( R"(<DataCatalogReferenceTable><Catalog root="Parts">
+  <Reference owner="Part" attribute="replaces" target="Part" absent="true"/>
+</Catalog></DataCatalogReferenceTable>)",
+                                            "table" ) );
+    SW_EXPECT_TRUE( validateText( rules, R"(<Parts><Part id="bed" replaces="cot"/><Part id="wall"/></Parts>)" ) );
+    SW_EXPECT_LOG( "XMLCatalog.RemovedIDStillPresent" );
+    SW_EXPECT_FALSE( validateText( rules, R"(<Parts><Part id="bed" replaces="cot"/><Part id="cot"/></Parts>)" ) );
+    SW_EXPECT_LOG( "DataCatalogReferences.RuleInvalid" );
+    DataCatalogReferenceRules broken;
+    SW_EXPECT_FALSE( broken.loadFromXMLText( R"(<DataCatalogReferenceTable><Catalog root="A"><Reference owner="X" attribute="a" target="Y" absent="true" optional="true"/></Catalog></DataCatalogReferenceTable>)",
+                                             "table" ) );
+}
+
 /**
  * @brief [DataCatalogReferencesTest] 다른 파일의 원소(`file`)는 루트가 적은 리소스에서 찾고, 값을 적지 않으면 `defaultAttribute` 의 값을 id 로 본다
  * @details 격투 캐릭터의 기술(`Fighter/Move`)이 루트 `moves` 의 기술 카탈로그를 가리키는 모양이다. 대상 파일로 엔진 팩의 실제 표를 쓴다(루트의 자식 `<Catalog root>`).

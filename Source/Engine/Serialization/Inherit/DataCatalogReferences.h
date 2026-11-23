@@ -16,6 +16,7 @@
  *         <Reference owner="Site" attribute="garrison" target="Unit" named="true"/> <!-- `id:수` 꼴 -->
  *         <Reference owner="Quest/Stage" attribute="next" target="Stage" inEntry="true"/> <!-- 같은 퀘스트 안의 단계 -->
  *         <Unique owner="Ghost" attribute="id"/>                                    <!-- 한 파일 안에서 겹치면 오류 -->
+ *         <Reference owner="Part" attribute="replaces" target="Part" absent="true"/> <!-- 지운 항목의 id — 아직 있으면 오류 -->
  *       </Catalog>
  *       <Catalog root="FighterCatalog">
  *         <Reference owner="Fighter/Move" attribute="frames" defaultAttribute="id" target="Move" file="moves"/> <!-- 루트의 moves 가 가리키는 다른 파일 -->
@@ -56,6 +57,7 @@ namespace sw
         bool           _bNamed{ false };    ///< 값이 `id:수` 꼴이다(콜론 앞이 id) NOLINT(sw-bool-flag): 집합체다(중괄호 · 지정 초기화로 만든다) — C++17 비트필드는 기본값을 둘 수 없어 `T x;` 가 값을 남기지 않는다
         bool           _bOptional{ false }; ///< 깨져도 경고만 한다 NOLINT(sw-bool-flag): 집합체다(중괄호 · 지정 초기화로 만든다) — C++17 비트필드는 기본값을 둘 수 없어 `T x;` 가 값을 남기지 않는다
         bool           _bInEntry{ false };  ///< 가리키는 원소를 루트가 아니라 같은 항목(owner 경로의 첫 원소)의 자식에서 찾는다(퀘스트 안의 단계 · 트리 안의 스킬) NOLINT(sw-bool-flag): 집합체다(중괄호 · 지정 초기화로 만든다) — C++17 비트필드는 기본값을 둘 수 없어 `T x;` 가 값을 남기지 않는다
+        bool           _bAbsent{ false };   ///< 값이 가리키는 원소가 **없어야** 한다(`absent="true"` — 지운 항목의 id 를 이어받는 칸, 부품의 `replaces`) NOLINT(sw-bool-flag): 집합체다(중괄호 · 지정 초기화로 만든다) — C++17 비트필드는 기본값을 둘 수 없어 `T x;` 가 값을 남기지 않는다
         bool           _bUnique{ false };   ///< 겹침 규칙(`<Unique owner attribute>`) — owner 원소의 attribute 값이 한 파일 안에서 겹치면 오류다 NOLINT(sw-bool-flag): 집합체다(중괄호 · 지정 초기화로 만든다) — C++17 비트필드는 기본값을 둘 수 없어 `T x;` 가 값을 남기지 않는다
     };
 
@@ -131,8 +133,8 @@ namespace sw
         [[nodiscard]] bool isRootMentioned( string_view text ) const;
         /**
          * @brief 문서 루트 @p root 의 규칙을 모두 봅니다. 없는 id 마다 `XMLCatalog.UnknownReference`(필수) · `XMLCatalog.UnknownOptionalReference`(선택)를,
-         *        겹침 규칙의 겹친 값마다 `XMLCatalog.DuplicateID` 를 남긴다.
-         * @return 필수 참조가 깨졌거나 겹침이 있으면 false 입니다. 규칙이 없는 루트는 true 입니다.
+         *        `absent` 규칙의 값이 아직 있는 항목이면 `XMLCatalog.RemovedIDStillPresent` 를, 겹침 규칙의 겹친 값마다 `XMLCatalog.DuplicateID` 를 남긴다.
+         * @return 필수 참조가 깨졌거나 지운 id 가 남아 있거나 겹침이 있으면 false 입니다. 규칙이 없는 루트는 true 입니다.
          */
         [[nodiscard]] bool validateDocument( const XMLNode& root, string_view sourceName ) const;
         /** @brief 표를 읽고(`loadFromAsset`) @p root 를 봅니다 — 카탈로그 읽기의 입구다. 표를 읽지 못하면 false 입니다. */

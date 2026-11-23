@@ -150,6 +150,16 @@ SW_TEST_CASE( VoxelBlockCatalogTest, IndexStartsAfterAirAndDuplicateIsRefused )
     SW_EXPECT_FALSE( rig._catalog.isOpaque( rig._glass ) );
 }
 
+/** @brief [VoxelBlockCatalogTest] 얻는 블록(`drop`)은 같은 카탈로그의 블록이어야 한다 — 참조 표가 읽기를 막는다(쿠킹도 같은 표로 실패한다) */
+SW_TEST_CASE( VoxelBlockCatalogTest, UnknownDropFailsTheLoad )
+{
+    VoxelBlockCatalog known;
+    SW_EXPECT_TRUE( known.loadFromXMLText( R"(<VoxelBlockCatalog><Block id="grass" name="Grass" tile="0" drop="dirt"/><Block id="dirt" name="Dirt" tile="2"/></VoxelBlockCatalog>)", "known" ) );
+    VoxelBlockCatalog unknown;
+    SW_EXPECT_LOG( "XMLCatalog.UnknownReference" );
+    SW_EXPECT_FALSE( unknown.loadFromXMLText( R"(<VoxelBlockCatalog><Block id="grass" name="Grass" tile="0" drop="dirt"/></VoxelBlockCatalog>)", "unknown" ) );
+}
+
 // 블록 머티리얼의 아틀라스 칸(_atlasGrid)은 카탈로그를 따라야 한다 — 메셔는 카탈로그 열 수로 타일 칸 UV 를 싣고 셰이더는 머티리얼 값으로 푼다.
 // 검사는 월드당 한 번: 머티리얼이 준비되기 전에는 그리지 않고, 다르면 오류 한 줄 뒤 계속 그리지 않는다(맞춰 쓰지 않는다).
 SW_TEST_CASE( VoxelBlockCatalogTest, MaterialAtlasGridMustMatchTheCatalog )

@@ -46,7 +46,7 @@ namespace sw
             [[nodiscard]] static bool readRule( const XMLNode& row, string_view rootName, string_view sourceName, DataCatalogReferenceRule& outRule )
             {
                 const bool                   bUnique           = StringUtil::equals( row.getName(), kUniqueElement );
-                static constexpr const utf8* kArrKnown[]       = { "owner", "attribute", "target", "targetKey", "named", "optional", "inEntry", "defaultAttribute", "file" };
+                static constexpr const utf8* kArrKnown[]       = { "owner", "attribute", "target", "targetKey", "named", "optional", "inEntry", "defaultAttribute", "file", "absent" };
                 static constexpr const utf8* kArrUniqueKnown[] = { "owner", "attribute" };
                 bool                         bValid            = true;
                 for ( XMLAttribute attribute = row.getFirstAttribute(); attribute; attribute = attribute.getNext() )
@@ -81,6 +81,13 @@ namespace sw
                 bValid = readFlag( row, "named", sourceName, outRule._bNamed ) && bValid;
                 bValid = readFlag( row, "optional", sourceName, outRule._bOptional ) && bValid;
                 bValid = readFlag( row, "inEntry", sourceName, outRule._bInEntry ) && bValid;
+                bValid = readFlag( row, "absent", sourceName, outRule._bAbsent ) && bValid;
+                // 지운 id 는 "없음" 을 요구한다 — 없어도 된다(optional)는 뜻을 함께 적을 자리가 없다.
+                if ( outRule._bAbsent && outRule._bOptional )
+                {
+                    SW_LOG_ERROR_ID( "DataCatalogReferences.RuleInvalid", "%#: a <%#> of <%#> has both absent and optional", sourceName, row.getName(), rootName );
+                    bValid = false;
+                }
                 // 다른 파일의 원소는 그 파일 루트의 자식이다 — 같은 항목 안(`inEntry`)과 함께 적을 자리가 없다.
                 if ( outRule._bInEntry && outRule._fileAttribute.empty() == false )
                 {
@@ -483,7 +490,17 @@ namespace sw
                         value = owner.getAttributeText( rule._defaultAttribute.c_str() );
                     Internal::visitIDs( value, rule._bNamed, [&]( string_view id )
                     {
-                        if ( std::binary_search( listTargetID.begin(), listTargetID.end(), id ) )
+                        const bool bFound = std::binary_search( listTargetID.begin(), listTargetID.end(), id );
+                        if ( rule._bAbsent )
+                        {
+                            if ( bFound == false )
+                                return; // 지운 id 다 — 그래야 한다
+                            SW_LOG_ERROR_ID( "XMLCatalog.RemovedIDStillPresent", "%#: <%#> '%#' %#=\"%#\" must name a removed <%#>, but this catalog still has it - the catalog does not load", sourceName,
+                                             owner.getName(), ownerName, rule._attribute.c_str(), id, rule._target.c_str() );
+                            bValid = false;
+                            return;
+                        }
+                        if ( bFound )
                             return;
                         if ( rule._bOptional )
                         {
