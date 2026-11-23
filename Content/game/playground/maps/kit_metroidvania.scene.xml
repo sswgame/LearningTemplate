@@ -26,8 +26,7 @@
 			<GameObject _schemaVersion="0" _name="Director" _bActive="true">
 				<_listComponent>
 					<MetroidvaniaDemoComponent _localID="6972011623690166927" _componentName="MetroidvaniaDemoComponent"
-					                           _bActive="true"
-					                           _catalogPath="game/playground/data/kitdemo/demo.metroidvania.xml" />
+					                           _bActive="true" />
 				</_listComponent>
 			</GameObject>
 		</entity>

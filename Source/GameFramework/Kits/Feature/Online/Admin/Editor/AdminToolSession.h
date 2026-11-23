@@ -157,7 +157,6 @@ namespace sw::editor
         int32                            _completedCount;
         int32                            _pendingCount;
         AccountID                        _lookupAccountID;
-        AccountID                        _actedAccountID; ///< 마지막 지급 · 회수 · 제재의 대상. shortcut: 답에 계정이 없어 마지막 것만 안다, 답이 계정을 담으면 그 값으로
         AdminServiceResult               _lastResult;
         uint16                           _lastMethod;
         uint8                            _bHasLookup    : 1;

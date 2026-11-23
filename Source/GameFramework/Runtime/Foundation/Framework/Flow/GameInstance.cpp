@@ -95,6 +95,7 @@ namespace sw
         , _pGameFeatureScope{}
         , _pDevPart{}
         , _loadedAudioEvents{}
+        , _listBoundCatalog{}
         , _listFollowedService{}
         , _bStarted{ SW_FALSE }
         , _bDerivedEntered{ SW_FALSE }

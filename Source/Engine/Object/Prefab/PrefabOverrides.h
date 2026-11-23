@@ -97,6 +97,8 @@ namespace sw
          *          그래서 코드의 기본값을 바꾸면 적지 않은 칸의 값도 바뀝니다(`docs/agents/DataInheritance.md`). 읽지 못하면 false 입니다.
          */
         [[nodiscard]] static bool omitDefaultValues( string_view stateXML, string& outStateXML );
+        /** @brief JSON 오브젝트 상태에서 형식 기본값과 같은 칸을 뺍니다. 규칙은 `omitDefaultValues` 와 같습니다. */
+        [[nodiscard]] static bool omitDefaultValuesFromJSON( string_view stateJSON, string& outStateJSON );
 
         /**
          * @brief @p inoutOverrideXML 에 부품 항목(`<Part>`)들을 더합니다. @p inoutOverrideXML 이 비었으면 루트를 만듭니다. 더할 것이 없으면 그대로입니다.

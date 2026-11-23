@@ -208,3 +208,19 @@ SW_TEST_CASE( ProjectSettingsEntryTest, OtherGamePresetsAreTyped )
     for ( const ProjectSettingsEntry& table : listTable )
         SW_EXPECT_FALSE( StringUtil::startsWith( table._relativePath, "Config/Game/" ) );
 }
+
+/** @brief [ProjectSettingsJSONDocumentTest] 자동 저장 사본 글을 입히면 값은 사본이고 저장 기준은 디스크 글이라 바뀐 상태다. 틀린 글은 문서를 건드리지 않는다 */
+SW_TEST_CASE( ProjectSettingsJSONDocumentTest, RestoredCopyIsAnUnsavedEdit )
+{
+    const string                text     = "{\n  \"limit\": 0.5,\n  \"names\": [\n    \"a\"\n  ]\n}\n";
+    const string                copyText = "{\n  \"limit\": 0.25,\n  \"names\": [\n    \"a\"\n  ]\n}\n";
+    ProjectSettingsJSONDocument document;
+    SW_REQUIRE_TRUE( document.openText( "D:/Repo/Config/Rules/Lint/Sample.json", text ).has_value() );
+    SW_REQUIRE_TRUE( document.restoreText( copyText ) );
+    SW_EXPECT_EQUAL( document.makeText(), copyText );
+    SW_EXPECT_TRUE( document.isModified() );
+    SW_EXPECT_FALSE( document.undo() );
+
+    SW_REQUIRE_TRUE( document.restoreText( text ) );
+    SW_EXPECT_FALSE( document.isModified() ); // 디스크와 같은 글이면 바뀐 것이 없다
+}

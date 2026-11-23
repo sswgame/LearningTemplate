@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="utf-8"?>
+<?asset guid="72ee80e5cd4944678b0bc5e12850cfa9"?>
+<!--
+  플레이 중 리로드 시나리오(desktop/editor/playreload)의 가게 카탈로그. 깨진 판(shop_broken)을 덮었다가 이 글의 사본(shop_good)으로 되돌린다.
+-->
+<ShopCatalog>
+	<Shop id="general" currency="Gold" buybackLimit="0">
+		<Stock item="potion_health" price="20"/>
+	</Shop>
+</ShopCatalog>

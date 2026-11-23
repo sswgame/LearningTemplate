@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
 <?asset guid="6df081e8b0d94aa09569a06750e2477a"?>
 <!--
-  장르 키트 시연 미니게임 — ActionPlatformer 키트. 키트는 게임 기능으로 걸 것이 없다(등록하지 않는다) — 맵의 시연 컴포넌트(GameModeComponent 파생)가 판을 돌린다.
+  장르 키트 시연 미니게임 — ActionPlatformer 키트. 맵의 디렉터(GameModeComponent 파생)가 읽는 스테이지(data/actionplatformer.xml)를 게임 기능 ActionPlatformer 가 미니게임 범위에 건다.
   시나리오 automation/kitdemo_actionplatformer.scenario.xml 이 실행 전역 변수 gv_firstMinigame 로 들어간다.
 -->
-<Minigame name="kitdemo_actionplatformer" map="game/playground/maps/kitdemo_actionplatformer.scene.xml" entry="SceneSwitch"/>
+<Minigame name="kitdemo_actionplatformer" map="game/playground/maps/kitdemo_actionplatformer.scene.xml" entry="SceneSwitch" features="ActionPlatformer" catalogs="ActionPlatformerCatalog"/>

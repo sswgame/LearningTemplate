@@ -38,8 +38,7 @@ namespace sw
                                 &BattleRoyaleDemoComponent::getRemainingPlayers );
 
     BattleRoyaleDemoComponent::BattleRoyaleDemoComponent()
-        : _catalogPath{}
-        , _pCatalog{}
+        : _pCatalog{}
         , _winningTeam{ BattleRoyaleDemoComponentInternal::kNoWinningTeam }
         , _winnerKills{ 0 }
         , _remainingPlayers{ 0 }
@@ -87,7 +86,7 @@ namespace sw
 
     bool BattleRoyaleDemoComponent::startGame()
     {
-        if ( acquireRequired( _catalogPath, _pCatalog ) == false )
+        if ( acquireBoundCatalog( _pCatalog ) == false )
             return false;
         return runMatch();
     }

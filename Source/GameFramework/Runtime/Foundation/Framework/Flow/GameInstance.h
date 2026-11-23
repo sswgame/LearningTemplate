@@ -272,11 +272,13 @@ namespace sw
         void followScopedService( const SharedAssetRef<TCatalog>& ref )
         {
             const SharedAssetRef<TCatalog>* const pRef = &ref;
+            _listBoundCatalog.push_back( ref.snapshot() );
             _listFollowedService.push_back( SW_DELEGATE_LAMBDA( Delegate<void()>, [this, pRef]()
             {
                 const TCatalog* const pLatest = pRef->get();
                 if ( pLatest == nullptr || _gameScope.find<const TCatalog>() == pLatest )
                     return;
+                _listBoundCatalog.push_back( pRef->snapshot() ); // 앞 판도 쥔 채로 둔다 — 칸에서 찾은 날 포인터를 든 쪽(퀘스트 · 가방 · 평판)이 끊기지 않게
                 _gameScope.unbind<const TCatalog>();
                 (void)_gameScope.bind( pLatest ); // 방금 푼 칸이라 겹치지 않는다
             } ) );
@@ -349,6 +351,7 @@ namespace sw
         unique_ptr<GameFeatureScope>      _pGameFeatureScope;   ///< gamesettings `gameFeatures` 의 게임 범위 기능(`activateGameFeatures` 가 켜고 서브시스템 종료 뒤에 끈다)
         unique_ptr<IGameDevPart>          _pDevPart;            ///< 게임 `Dev/` 의 개발 전용 부분(`IGameDevPartFactory` — 배포 구성에는 공장이 없어 비었다). `onInitialize` 뒤에 서고 `onShutdown` 앞에 진다
         string                            _loadedAudioEvents;   ///< `loadAudioEvents` 가 올린 사운드 이벤트 파일 — `shutdown` 이 내린다(비면 올린 것 없음)
+        vector<shared_ptr<const void>>    _listBoundCatalog;    ///< 범위의 칸에 건 카탈로그의 판들(`followScopedService` — 인스턴스와 함께 놓는다. 다시 읽기는 개발 구성에만 있다)
         vector<Delegate<void()>>          _listFollowedService; ///< 다시 읽힌 카탈로그를 범위의 칸에 다시 거는 일(`followScopedService`)
         uint8                             _bStarted        : 1; ///< `initialize` 가 끝까지 섰다 — 종료 저장 · 세션 명령은 이때만
         uint8                             _bDerivedEntered : 1; ///< `onInitialize` 에 들어갔다 — `onShutdown` 은 이때만(파생은 자기 부분 실패를 스스로 거둔다)

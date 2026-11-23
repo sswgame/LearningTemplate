@@ -15,6 +15,7 @@
 #include "Engine/Object/Prefab/PrefabAsset.h"
 #include "Engine/Reflection/TypeRegistry.h"
 #include "Engine/Serialization/Inherit/DataInheritance.h"
+#include "Engine/Serialization/JSON/JSONDocument.h"
 #include "Engine/Serialization/Serializer/SchemaMigrate.h"
 #include "Engine/Serialization/XML/XMLDocument.h"
 
@@ -118,6 +119,53 @@ namespace sw
             static bool isRootOnlyField( const utf8* pName )
             {
                 return StringUtil::equals( pName, sw::kSchemaVersionKey, false ) || StringUtil::equals( pName, kObjectName, false ) || StringUtil::equals( pName, kComponentList, false );
+            }
+
+            /**
+             * @brief 형식 기본값의 저장 글입니다 — @p scratch 에 새로 만든 오브젝트(@p componentType 이 있으면 그 컴포넌트를 붙인 것)를 저장과 같은 직렬화기로 쓴 글입니다(언리얼 CDO 자리).
+             * @details 빈 필수 칸 경고는 남기지 않는다(`_bSkipValidation` — 견본은 형식의 초기값이다). 만들지 못하는 타입이면 오류입니다.
+             */
+            static expected<string> saveDefaultText( GameObjectManager& scratch, hashed_string componentType, PrefabStateFormat format )
+            {
+                GameObject* pObject = scratch.createGameObject( hashed_string( kBaseName ) );
+                if ( pObject == nullptr )
+                    return unexpected( Error{ ErrorKind::Unsupported, "the default sample object could not be made" } );
+                if ( componentType.empty() == false && scratch.addComponentByName( pObject, componentType, false ) == nullptr )
+                    return unexpected( Error{ ErrorKind::NotFound, "the component type could not be made", componentType.c_str() } );
+                ObjectSaveOptions options{ SerializePurpose::Authoring };
+                options._bOmitExternalParent = SW_TRUE;
+                options._bSkipValidation     = SW_TRUE;
+                return format == PrefabStateFormat::JSON ? ObjectStateSerializer::saveToJSONString( pObject, options ) : ObjectStateSerializer::saveToXMLString( pObject, options );
+            }
+
+            /** @brief 기본값과 같아도 저장이 남기는 칸(필수 칸)입니다. 타입을 모르면 비어 있습니다. */
+            static vector<string> collectKeptPropertyNames( hashed_string typeName )
+            {
+                const TypeInfo* pTypeInfo = engine::getSubsystem<TypeRegistry>().findType( typeName );
+                return pTypeInfo != nullptr ? DataInheritanceSchema::makeFromType( *pTypeInfo )._listKeptAttribute : vector<string>{};
+            }
+
+            /** @brief 두 JSON 값의 저장 글이 같으면 true 입니다. 쓸 수 없는 값은 같지 않은 것으로 봅니다(칸을 남긴다). */
+            static bool isSameText( const JSONValue& lhs, const JSONValue& rhs )
+            {
+                if ( lhs.isValid() == false || rhs.isValid() == false )
+                    return false;
+                const expected<string> left  = lhs.dump();
+                const expected<string> right = rhs.dump();
+                return left.has_value() && right.has_value() && *left == *right;
+            }
+
+            /** @brief JSON 컴포넌트 목록에서 타입 @p typeName 의 본문입니다. 없으면 무효입니다. */
+            static JSONValue findComponentBody( const JSONValue& root, string_view typeName )
+            {
+                const JSONValue list = root.get( kComponentList );
+                for ( size_t index = 0; index < list.size(); ++index )
+                {
+                    const JSONValue body = list.at( index ).get( typeName );
+                    if ( body.isValid() )
+                        return body;
+                }
+                return {};
             }
 
             /** @brief 인스턴스 원소에서 기준 원소와 다른 속성 · 자식 원소를 모읍니다. */
@@ -606,16 +654,9 @@ namespace sw
             return false;
         const XMLNode stateRoot = stateDoc.getRoot();
 
-        // 기본값은 씬 밖에서 새로 만든 오브젝트 · 컴포넌트를 같은 직렬화기로 쓴 글이다(언리얼 CDO 자리).
-        GameObjectManager scratch;
-        ObjectSaveOptions options{ SerializePurpose::Authoring };
-        options._bOmitExternalParent = SW_TRUE;
-        options._bSkipValidation     = SW_TRUE; // 견본은 형식의 초기값이다 — 빈 필수 칸 경고가 거짓으로 남지 않게
-        GameObject* pDefaultObject   = scratch.createGameObject( hashed_string( PrefabOverridesInternal::kBaseName ) );
-        if ( pDefaultObject == nullptr )
-            return false;
+        GameObjectManager      scratch;
         XMLDocument            defaultDoc;
-        const expected<string> defaultState = ObjectStateSerializer::saveToXMLString( pDefaultObject, options );
+        const expected<string> defaultState = PrefabOverridesInternal::saveDefaultText( scratch, hashed_string{}, PrefabStateFormat::XML );
         if ( defaultState.has_value() == false || defaultDoc.parse( *defaultState ) == false || defaultDoc.getRoot().isValid() == false )
             return false;
 
@@ -647,11 +688,9 @@ namespace sw
             if ( component.isElement() == false )
                 continue;
             const hashed_string    typeName( component.getName() );
-            GameObject*            pHolder    = scratch.createGameObject( hashed_string( PrefabOverridesInternal::kBaseName ) );
-            Component*             pComponent = pHolder != nullptr ? scratch.addComponentByName( pHolder, typeName, false ) : nullptr;
             XMLDocument            holderDoc;
-            const expected<string> holderState    = ObjectStateSerializer::saveToXMLString( pHolder, options );
-            const XMLNode          defaultElement = pComponent != nullptr && holderState.has_value() && holderDoc.parse( *holderState )
+            const expected<string> holderState    = PrefabOverridesInternal::saveDefaultText( scratch, typeName, PrefabStateFormat::XML );
+            const XMLNode          defaultElement = holderState.has_value() && holderDoc.parse( *holderState )
                                                       ? PrefabOverridesInternal::findChildElement( PrefabOverridesInternal::findChildElement( holderDoc.getRoot(), PrefabOverridesInternal::kComponentList ), component.getName() )
                                                       : XMLNode{};
             if ( defaultElement.isValid() == false )
@@ -665,15 +704,11 @@ namespace sw
             // 빼면 다시 읽은 컴포넌트의 id 가 0 이라 부착 키(#16진)를 찾지 못해 기본값 빼기 대조가 늘 졌다(PrefabAsset.DefaultOmitMismatch).
             if ( const utf8* pLocalID = component.findAttribute( PrefabOverridesInternal::kLocalID ); pLocalID != nullptr )
                 element.appendAttribute( PrefabOverridesInternal::kLocalID, pLocalID );
-            const TypeInfo* pTypeInfo = engine::getSubsystem<TypeRegistry>().findType( typeName );
-            if ( pTypeInfo != nullptr )
+            for ( const string& required : PrefabOverridesInternal::collectKeptPropertyNames( typeName ) )
             {
-                for ( const string& required : DataInheritanceSchema::makeFromType( *pTypeInfo )._listKeptAttribute )
-                {
-                    const utf8* pValue = component.findAttribute( required.c_str() );
-                    if ( pValue != nullptr && defaultElement.findAttribute( required.c_str() ) != nullptr && StringUtil::equals( pValue, defaultElement.findAttribute( required.c_str() ) ) )
-                        element.appendAttribute( required.c_str(), pValue );
-                }
+                const utf8* pValue = component.findAttribute( required.c_str() );
+                if ( pValue != nullptr && defaultElement.findAttribute( required.c_str() ) != nullptr && StringUtil::equals( pValue, defaultElement.findAttribute( required.c_str() ) ) )
+                    element.appendAttribute( required.c_str(), pValue );
             }
             for ( const XMLAttribute& attribute : listAttribute )
             {
@@ -686,6 +721,73 @@ namespace sw
         }
         outStateXML = outRoot.toString();
         return outStateXML.empty() == false;
+    }
+
+    bool PrefabOverrides::omitDefaultValuesFromJSON( string_view stateJSON, string& outStateJSON )
+    {
+        outStateJSON.clear();
+        JSONDocument stateDoc;
+        if ( stateDoc.parse( stateJSON ) == false || stateDoc.getRoot().isObject() == false )
+            return false;
+        const JSONValue stateRoot = stateDoc.getRoot();
+
+        GameObjectManager      scratch;
+        JSONDocument           defaultDoc;
+        const expected<string> defaultState = PrefabOverridesInternal::saveDefaultText( scratch, hashed_string{}, PrefabStateFormat::JSON );
+        if ( defaultState.has_value() == false || defaultDoc.parse( *defaultState ) == false )
+            return false;
+
+        JSONDocument    outDoc;
+        const JSONValue outRoot = outDoc.makeObject();
+        for ( const string& fieldName : stateRoot.getMemberNames() )
+        {
+            if ( fieldName == PrefabOverridesInternal::kComponentList )
+                continue;                                                                           // 아래에서 원소마다 줄인다
+            const bool bAlwaysKept = PrefabOverridesInternal::isRootOnlyField( fieldName.c_str() ); // 판 · 이름은 읽기가 찾는다
+            if ( bAlwaysKept || PrefabOverridesInternal::isSameText( stateRoot.get( fieldName ), defaultDoc.getRoot().get( fieldName ) ) == false )
+                outRoot.set( fieldName ).assignFrom( stateRoot.get( fieldName ) );
+        }
+
+        const JSONValue outList = outRoot.set( PrefabOverridesInternal::kComponentList );
+        outList.setArray();
+        const JSONValue list = stateRoot.get( PrefabOverridesInternal::kComponentList );
+        for ( size_t index = 0; index < list.size(); ++index )
+        {
+            // 컴포넌트 원소는 `{ "타입이름": { 칸 } }` 하나다. 그 모양이 아니거나 만들지 못하는 타입(맡아 둔 원문)은 기본값을 모르므로 그대로 둔다.
+            const JSONValue      element  = list.at( index );
+            const vector<string> listType = element.getMemberNames();
+            const JSONValue      body     = listType.size() == 1 ? element.get( listType[0] ) : JSONValue{};
+            JSONDocument         holderDoc;
+            JSONValue            defaultBody{};
+            if ( body.isObject() )
+            {
+                const expected<string> holderState = PrefabOverridesInternal::saveDefaultText( scratch, hashed_string( listType[0].c_str() ), PrefabStateFormat::JSON );
+                if ( holderState.has_value() && holderDoc.parse( *holderState ) )
+                    defaultBody = PrefabOverridesInternal::findComponentBody( holderDoc.getRoot(), listType[0] );
+            }
+            const JSONValue outElement = outList.pushBack();
+            if ( defaultBody.isObject() == false )
+            {
+                outElement.assignFrom( element );
+                continue;
+            }
+            outElement.setObject();
+            const JSONValue outBody = outElement.set( listType[0] );
+            outBody.setObject();
+            const vector<string> listKeptProperty = PrefabOverridesInternal::collectKeptPropertyNames( hashed_string( listType[0].c_str() ) );
+            for ( const string& fieldName : body.getMemberNames() )
+            {
+                // 지역 id 는 컴포넌트의 정체라 늘 남긴다(XML 과 같다).
+                const bool bKept = fieldName == PrefabOverridesInternal::kLocalID || VectorUtil::contains( listKeptProperty, fieldName );
+                if ( bKept || PrefabOverridesInternal::isSameText( body.get( fieldName ), defaultBody.get( fieldName ) ) == false )
+                    outBody.set( fieldName ).assignFrom( body.get( fieldName ) );
+            }
+        }
+        expected<string> text = outDoc.dump( 0 );
+        if ( text.has_value() == false )
+            return false;
+        outStateJSON = std::move( *text );
+        return true;
     }
 
     bool PrefabOverrides::appendPartOverrides( string& inoutOverrideXML, const vector<PrefabPartOverride>& listPartOverride )

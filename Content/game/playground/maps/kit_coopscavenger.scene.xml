@@ -26,8 +26,7 @@
 			<GameObject _schemaVersion="0" _name="Director" _bActive="true">
 				<_listComponent>
 					<CoopScavengerDemoComponent _localID="9056476861607060833" _componentName="CoopScavengerDemoComponent"
-					                            _bActive="true"
-					                            _catalogPath="game/playground/data/kitdemo/demo.scavenger.xml" />
+					                            _bActive="true" />
 				</_listComponent>
 			</GameObject>
 		</entity>

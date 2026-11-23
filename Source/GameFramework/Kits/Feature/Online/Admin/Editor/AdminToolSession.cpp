@@ -30,7 +30,6 @@ namespace sw::editor
         , _completedCount{ 0 }
         , _pendingCount{ 0 }
         , _lookupAccountID{ kInvalidAccountID }
-        , _actedAccountID{ kInvalidAccountID }
         , _lastResult{ AdminResult::Ok }
         , _lastMethod{ 0 }
         , _bHasLookup{ SW_FALSE }
@@ -132,7 +131,6 @@ namespace sw::editor
         request._amount    = amount;
         request._bRefund   = bRefund ? SW_TRUE : SW_FALSE;
         request._memo      = string( memo );
-        _actedAccountID    = accountID;
         send( AdminMethod::AdjustAsset::kID, request, NetIdempotencyKey::makeRandom() );
     }
 
@@ -149,7 +147,6 @@ namespace sw::editor
             rejectLocally( AdminMethod::SetSanction::kID );
             return;
         }
-        _actedAccountID = accountID;
         send( AdminMethod::SetSanction::kID, request, NetIdempotencyKey::makeRandom() );
     }
 
@@ -312,7 +309,7 @@ namespace sw::editor
         else if ( reply._method == AdminMethod::AdjustAsset::kID || reply._method == AdminMethod::SetSanction::kID )
         {
             // 명령의 대상을 다시 읽는다. 예전에는 보이던 계정을 읽어, 다른 계정에 지급하면 화면이 그 결과를 보이지 않았고 조회 전이면 아무것도 읽지 않았다. 공지 · 점검 뒤에도 쓸데없이 읽었다.
-            sendRefresh( AdminMethod::LookupAccount::kID, makeLookupRequest( _actedAccountID ) );
+            sendRefresh( AdminMethod::LookupAccount::kID, makeLookupRequest( reply._reply._targetAccountID ) );
         }
     }
 

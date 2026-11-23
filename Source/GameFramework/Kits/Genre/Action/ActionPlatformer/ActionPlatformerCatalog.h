@@ -221,12 +221,15 @@ namespace sw
         friend class XMLCatalog<ActionPlatformerCatalog>;
 
     public:
+        /** @brief 데이터 종류 이름입니다. 게임 기능이 팩의 `data/actionplatformer.xml` 을 게임 범위에 건다(`GameFeatureScope::loadCatalog`). */
+        static constexpr const utf8* kDataKind = "ActionPlatformerCatalog";
         /** @brief 이 에셋 종류의 접미사입니다(종류 표 `AssetTypeRegistry`). 타입 있는 참조 `AssetRef<ActionPlatformerCatalog>` 가 접미사로 가른다. */
         static constexpr AssetSuffix kArrAssetSuffix[] = {
             { ".actionplatformer.xml", AssetSuffixRole::Plain },
         };
-        /** @brief 이 에셋 종류입니다(등록은 `ActionPlatformerCatalog.cpp` 의 줄이 로더를 더한다). */
-        static constexpr AssetTypeDef kAssetType{ "ActionPlatformerCatalog", kArrAssetSuffix, static_cast<uint32>( SW_COUNT_OF( kArrAssetSuffix ) ), {}, 0, {} };
+        /** @brief 이 에셋 종류입니다(등록은 `ActionPlatformerCatalog.cpp` 의 줄이 로더를 더한다). 팩의 `data/actionplatformer.xml` 은 경로 규칙으로 가른다. */
+        static constexpr AssetTypeDef kAssetType =
+            AssetTypeDef{ kDataKind, kArrAssetSuffix, static_cast<uint32>( SW_COUNT_OF( kArrAssetSuffix ) ), {}, 0, {} }.withPathRule( AssetPathRule{ "game/", {}, "/data/actionplatformer.xml" } );
 
         ActionPlatformerCatalog();
 

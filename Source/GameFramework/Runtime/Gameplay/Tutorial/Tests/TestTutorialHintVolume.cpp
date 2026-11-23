@@ -26,13 +26,15 @@ namespace
     class CountingNotificationSink final : public IPlayerNotificationSink
     {
     public:
-        uint32 _postCount{ 0 };
+        string                 _lastText{};
+        PlayerNotificationKind _lastKind{};
+        uint32                 _postCount{ 0 };
 
         void postNotification( const string& text, float32 durationSeconds, PlayerNotificationKind kind ) override
         {
-            (void)text;
             (void)durationSeconds;
-            (void)kind;
+            _lastText = text;
+            _lastKind = kind;
             ++_postCount;
         }
     };
@@ -153,4 +155,31 @@ SW_TEST_CASE( TutorialHintVolumeTest, ClientWorldShowsHintsOnlyForItsLocalPlayer
         SW_EXPECT_FALSE( rig._pVolume->activate( pRemotePlayer ) );
     }
     SW_EXPECT_EQUAL( 2u, rig._sink._postCount );
+}
+
+/** @brief [TutorialHintVolumeTest] 한 번 볼륨: 튜토리얼을 끈 동안 · 글이 빈 동안은 띄우지 않고 발동으로 치지도 않는다 — 다시 켜면 그때 힌트 종류로 한 번 띄운다 */
+SW_TEST_CASE( TutorialHintVolumeTest, SuppressedHintIsNotSpent )
+{
+    HintVolumeRig         rig( 50.0f );
+    game::ScopedGameScope scopedScope( rig._scope );
+    rig._pVolume->setOnce( true );
+    UserSettingsManager* const pSettings = rig._scope.find<UserSettingsManager>();
+    SW_REQUIRE_NOT_NULL( pSettings );
+    const hashed_string showTutorials( "gameplay.showTutorials" );
+    SW_REQUIRE_TRUE( pSettings->setPendingValue( showTutorials, "false" ) == UserSettingSetResult::Accepted );
+    (void)pSettings->applyPending(); // 대상 없는 설정이라 적용할 곳이 없다 — 확정 값만 바뀐다
+    SW_EXPECT_FALSE( rig._pVolume->activate( rig._pWalker ) );
+
+    SW_REQUIRE_TRUE( pSettings->setPendingValue( showTutorials, "true" ) == UserSettingSetResult::Accepted );
+    (void)pSettings->applyPending();
+    rig._pVolume->configure( "", TagID{} );
+    SW_EXPECT_FALSE( rig._pVolume->activate( rig._pWalker ) );
+    SW_EXPECT_EQUAL( 0u, rig._sink._postCount );
+
+    rig._pVolume->configure( "[action=Interact] opens the door", TagID{} );
+    SW_EXPECT_TRUE( rig._pVolume->activate( rig._pWalker ) );
+    SW_EXPECT_FALSE( rig._pVolume->activate( rig._pWalker ) ); // 한 번 했다
+    SW_EXPECT_EQUAL( 1u, rig._sink._postCount );
+    SW_EXPECT_EQUAL( string( "[action=Interact] opens the door" ), rig._sink._lastText );
+    SW_EXPECT_TRUE( rig._sink._lastKind == PlayerNotificationKind::Hint );
 }

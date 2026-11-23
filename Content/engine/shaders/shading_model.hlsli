@@ -12,6 +12,7 @@
  * | 투과 MATERIAL_LOBE_TRANSMISSION | 뒤에서 오는 빛의 감싼 확산 × 투과색                                  | Two Sided Foliage · Thin Translucent    |
  * | 비등방 MATERIAL_LOBE_ANISOTROPY | Burley 비등방 GGX · Heitz 가시성, 반사 프로브는 굽힌 노멀로          | Anisotropy 핀                           |
  * | 박막 MATERIAL_LOBE_THIN_FILM    | 빛마다 V·H 에서 잰 에어리 반사율을 프레넬로(파장 셋), 환경은 N·V    | Substrate Thin Film                     |
+ * | 홍채 MATERIAL_LOBE_IRIS         | 확산만 오목한 홍채 노멀로(각막 반사 · 코트는 표면 노멀)              | Eye 의 Iris Normal                      |
  * | 머리결 MATERIAL_LOBE_STRAND     | Marschner R · TT · TRT(hair_shading.hlsli — 머리카락과 한 식) — 털   | Hair(Marschner)                         |
  *
  * 형식 · 멤버 이름은 lighting.hlsli 의 기본 SurfaceBRDF 와 같다(빛 고리가 부르는 다섯 + makePBR). 엽을 더하면 칸 · 설정 함수 · 엽 함수 하나를 더하고
@@ -25,7 +26,8 @@
 
 #include "hair_shading.hlsli"
 
-static const float kCoatF0 = 0.04f; // 코트(기름 · 니스 · 물) 층의 수직 반사율 — 굴절률 1.5 근처
+static const float kCoatF0              = 0.04f; // 코트(기름 · 니스 · 물) 층의 수직 반사율 — 굴절률 1.5 근처
+static const float kIrisLightAcceptance = 0.35f; // 홍채 벽의 기울기만큼 표면 노멀의 그늘에서도 빛을 받는다
 // 박막 간섭을 재는 파장(nm) — R · G · B 를 대표하는 셋(스펙트럼 적분 대신 값싼 판).
 static const float3 kThinFilmWavelengthNm = float3( 650.0f, 532.0f, 450.0f );
 
@@ -56,6 +58,8 @@ struct SurfaceBRDF
     float       _filmIor;         ///< 박막 굴절률
     float       _filmBaseIor;     ///< 막 아래 바탕 굴절률
     float       _filmWeight;      ///< 0 이면 막 없음
+    float3      _irisNormal;      ///< 각막 아래 홍채의 노멀 — 확산만 이것으로 잰다
+    float       _irisWeight;      ///< 0 이면 홍채 없음
     HairSurface _strand;          ///< 머리결 엽(털)의 Marschner 값 — 반사 배율 0 이면 꺼진다
 
     static SurfaceBRDF makePBR( float3 albedo, float3 worldPosition, float3 normal, float roughness, float metallic );
@@ -67,6 +71,7 @@ struct SurfaceBRDF
     void setAnisotropy( float3 tangent, float anisotropy );
     void setThinFilm( float thicknessNm, float filmIor, float baseIor, float weight );
     void setStrand( float3 tangent, float shift, float roughness, float3 color );
+    void setIris( float3 normal, float weight );
 
     // 빛 고리가 부르는 다섯(lighting.hlsli 의 기본 SurfaceBRDF 와 같은 이름).
     bool receivesLight( float normalDotLight );
@@ -82,6 +87,7 @@ struct SurfaceBRDF
 
     // 엽 — define 이 정의를 고른다(꺼지면 0 · 그대로).
     float3 computeDiffuse( float normalDotLight );
+    float computeDiffuseNormalDotLight( float3 toLight, float normalDotLight );
     float3 computeBaseFresnel( float cosine );
     float3 computeBaseEnvironmentSpecular();
     float3 computeBaseSpecular( float3 toLight, float3 halfway, float normalDotLight, float normalDotHalf, float viewDotHalf );
@@ -120,6 +126,8 @@ static SurfaceBRDF SurfaceBRDF::makePBR( float3 albedo, float3 worldPosition, fl
     brdf._filmIor           = 1.0f;
     brdf._filmBaseIor       = 1.0f;
     brdf._filmWeight        = 0.0f;
+    brdf._irisNormal        = normal;
+    brdf._irisWeight        = 0.0f;
     brdf._strand._baseColor = float3( 0.0f, 0.0f, 0.0f );
     brdf._strand._roughness = 1.0f;
     brdf._strand._shift     = 0.0f;
@@ -196,6 +204,14 @@ void SurfaceBRDF::setStrand( float3 tangent, float shift, float roughness, float
     _strand._scatter        = 0.0f;
 }
 
+/** @brief 홍채 — 각막 아래 오목한 면의 노멀 @p normal 과 그 무게(홍채 마스크)를 싣는다. 빛 쪽이 아닌 홍채 벽도 빛을 받으므로 빛 받는 범위를 넓힌다. */
+void SurfaceBRDF::setIris( float3 normal, float weight )
+{
+    _irisNormal      = normal;
+    _irisWeight      = saturate( weight );
+    _lightAcceptance = max( _lightAcceptance, _irisWeight * kIrisLightAcceptance );
+}
+
 bool SurfaceBRDF::receivesLight( float normalDotLight )
 {
     return normalDotLight > -_lightAcceptance;
@@ -216,6 +232,19 @@ float3 SurfaceBRDF::computeDiffuse( float normalDotLight )
 float3 SurfaceBRDF::computeDiffuse( float normalDotLight )
 {
     return _pbr._diffuseColor * saturate( normalDotLight );
+}
+#endif
+
+#if defined( MATERIAL_LOBE_IRIS )
+/** @brief 확산이 쓰는 N·L — 홍채는 각막 노멀이 아니라 오목한 홍채 노멀로 잰다(빛 맞은편 홍채 벽이 밝다 — 언리얼 Eye 의 Iris Normal). */
+float SurfaceBRDF::computeDiffuseNormalDotLight( float3 toLight, float normalDotLight )
+{
+    return lerp( normalDotLight, dot( _irisNormal, toLight ), _irisWeight );
+}
+#else
+float SurfaceBRDF::computeDiffuseNormalDotLight( float3 toLight, float normalDotLight )
+{
+    return normalDotLight;
 }
 #endif
 
@@ -387,7 +416,7 @@ float3 SurfaceBRDF::evaluateLight( float3 toLight, float normalDotLight )
     const float  viewDotHalf           = saturate( dot( _toView, halfway ) );
     const float3 specular              = lerp( computeBaseSpecular( toLight, halfway, clampedNormalDotLight, normalDotHalf, viewDotHalf ),
                                                computeSheenSpecular( clampedNormalDotLight, normalDotHalf ), _sheenWeight );
-    const float3 under                 = computeDiffuse( normalDotLight ) + specular + computeStrandSpecular( toLight, clampedNormalDotLight );
+    const float3 under                 = computeDiffuse( computeDiffuseNormalDotLight( toLight, normalDotLight ) ) + specular + computeStrandSpecular( toLight, clampedNormalDotLight );
     return applyCoat( under, clampedNormalDotLight, normalDotHalf, viewDotHalf ) + computeTransmission( normalDotLight );
 }
 

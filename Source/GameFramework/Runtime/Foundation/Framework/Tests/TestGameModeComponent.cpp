@@ -1,8 +1,11 @@
 // GameModeTest — 디렉터(`GameModeComponent`)가 판을 열 때 상태 칸(`PROPERTY( RuntimeState )`)을 기본값으로 되돌리고, 복원 바이트는 그 뒤에 적용한다(nogpu, 에셋 없음).
 #include "pch.h"
 
+#include "Core/File/FileUtil.h"
 #include "Core/Testing/TestFramework.h"
 
+#include "Engine/Asset/Cache/SharedAssetCache.h"
+#include "Engine/Content/Tests/ScopedScratchDomain.h"
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
 #include "Engine/Serialization/Format/Archive.h"
@@ -53,5 +56,54 @@ SW_TEST_CASE( GameModeTest, RestoredStateIsAppliedAfterTheReset )
     SW_REQUIRE_TRUE( pGameMode->isStarted() );
     SW_EXPECT_EQUAL( 7, pGameMode->_roundCount );
     SW_EXPECT_EQUAL( 3, pGameMode->_winner );
+    manager.endPlay();
+}
+
+/**
+ * @brief [GameModeTest] 받은 카탈로그가 다시 읽히면 상태를 왕복시켜 규칙 객체를 새 판에 묶는다 — 판은 새로 열지 않고(라운드 · 우승자 그대로) 앞 판의 날 포인터도 끊기지 않는다
+ * @details 새 판이 지금 판에 맞지 않으면(빌린 항목이 없다) 복원 실패로 알리고 앞 판에 묶인 채로 돈다.
+ */
+SW_TEST_CASE( GameModeTest, ReloadedCatalogRebindsTheRunningGame )
+{
+    const test::ScopedScratchDomain domain;
+    const string                    id         = test::ScopedScratchDomain::makeID( "reload.views.xml" ).str();
+    const auto                      writeViews = [&domain]( string_view xml )
+    { return FileUtil::writeTextFile( domain.makeDiskPath( "reload.views.xml" ), xml ); };
+    SW_REQUIRE_TRUE( writeViews( R"(<RuleViewCatalog><View id="marine" mesh="game/x/a.mesh" width="3"/></RuleViewCatalog>)" ) );
+
+    GameObjectManager      manager;
+    GameModeTestComponent* pGameMode = manager.createGameObject( hashed_string( "Director" ) )->addComponent<GameModeTestComponent>();
+    SW_REQUIRE_NOT_NULL( pGameMode );
+    pGameMode->_viewPath = id;
+    manager.beginPlay();
+    SW_REQUIRE_TRUE( pGameMode->isStarted() );
+    const RuleViewCatalog* const pFirst     = pGameMode->_pBound;
+    const RuleViewDef* const     pFirstView = pGameMode->_pView;
+    SW_REQUIRE_NOT_NULL( pFirstView );
+    manager.update( 1.0f / 60.0f );
+    SW_EXPECT_EQUAL( 0u, pGameMode->_restoredCount );
+
+    SW_REQUIRE_TRUE( writeViews( R"(<RuleViewCatalog><View id="marine" mesh="game/x/a.mesh" width="5"/></RuleViewCatalog>)" ) );
+    SW_REQUIRE_TRUE( SharedAssetCache<RuleViewCatalog>::reloadShared( id ) );
+    manager.update( 1.0f / 60.0f );
+    SW_EXPECT_EQUAL( 1u, pGameMode->_restoredCount );
+    SW_EXPECT_TRUE( pGameMode->_pBound != pFirst );
+    SW_REQUIRE_NOT_NULL( pGameMode->_pView );
+    SW_EXPECT_NEAR( 5.0f, pGameMode->_pView->_width, 1.0e-5f );
+    SW_EXPECT_NEAR( 3.0f, pFirstView->_width, 1.0e-5f ); // 앞 판은 다음 판을 열 때까지 산다
+    SW_EXPECT_EQUAL( 1, pGameMode->_roundCount );
+    SW_EXPECT_EQUAL( 1, pGameMode->_winner );
+    manager.update( 1.0f / 60.0f );
+    SW_EXPECT_EQUAL( 1u, pGameMode->_restoredCount ); // 한 번 읽기에 한 번
+
+    SW_EXPECT_LOG( "GameMode.ReloadedAssetRefused" );
+    SW_REQUIRE_TRUE( writeViews( R"(<RuleViewCatalog><View id="tank" mesh="game/x/a.mesh" width="5"/></RuleViewCatalog>)" ) );
+    SW_REQUIRE_TRUE( SharedAssetCache<RuleViewCatalog>::reloadShared( id ) );
+    const RuleViewDef* const pKept = pGameMode->_pView;
+    manager.update( 1.0f / 60.0f );
+    SW_EXPECT_EQUAL( 1u, pGameMode->_refusedCount );
+    SW_EXPECT_TRUE( pGameMode->_pView == pKept );
+    SW_EXPECT_NEAR( 5.0f, pKept->_width, 1.0e-5f );
+    SW_EXPECT_EQUAL( 1, pGameMode->_winner );
     manager.endPlay();
 }
