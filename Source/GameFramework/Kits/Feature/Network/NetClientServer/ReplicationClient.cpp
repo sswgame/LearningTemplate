@@ -217,7 +217,7 @@ namespace sw
         return true;
     }
 
-    bool ReplicationClient::sendIntent( uint32 tick, const ControlIntent& intent, vector_reference<const MeleeHitClaim> listClaim )
+    bool ReplicationClient::sendIntent( uint32 tick, const ControlIntent& intent, vector_reference<const MeleeHitClaim> listClaim, uint32 pawnEntityID )
     {
         if ( static_cast<int32>( listClaim.size() ) > NetClientServerMessage::kMaxClaimsPerIntent )
         {
@@ -236,6 +236,7 @@ namespace sw
         {
             claim.write( intentWriter );
         }
+        intentWriter.writeVarUint( pawnEntityID );
         const uint8*        pBytes = intentWriter.getBytes().data();
         const vector<uint8> listInput( pBytes, pBytes + intentWriter.getByteCount() );
         return sendInput( tick, listInput );
