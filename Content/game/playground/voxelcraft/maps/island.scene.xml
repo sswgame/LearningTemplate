@@ -1,0 +1,178 @@
+<?asset guid="feafd225e659cb5347214199397b981d"?>
+<Scene formatVersion="3" name="VoxelCraft">
+	<SceneSettings _bStreaming="false" _unloadMargin="0" _maxCellLoadsPerFrame="0" _addToWorldBudgetMicroseconds="0">
+		<_cellGrid _cellSize="0" _loadingRadius="0" />
+	</SceneSettings>
+	<entities>
+		<entity id="2" name="Sun">
+			<GameObject _schemaVersion="0" _name="Sun" _bActive="true">
+				<_listComponent>
+					<DirectionalLightComponent _localID="51927904365891271" _componentName="DirectionalLightComponent"
+					                           _bActive="true"
+					                           _localPosition="0,0,0"
+					                           _localRotation="0.402503,-2.230821,0"
+					                           _localScale="1,1,1"
+					                           _attachOwner="None"
+					                           _attachOwnerID="0"
+					                           _attachComponent="None"
+					                           _color="1,0.82,0.62"
+					                           _intensity="1.4"
+					                           _ambient="0.28"
+					                           _shadowExtent="60"
+					                           _shadowDistance="120"
+					                           _bCastShadow="true" />
+				</_listComponent>
+			</GameObject>
+		</entity>
+		<entity id="3" name="Player">
+			<GameObject _schemaVersion="0" _name="Player" _bActive="true">
+				<_listComponent>
+					<CameraComponent _localID="17709685451340727998" _componentName="CameraComponent"
+					                 _bActive="true"
+					                 _localPosition="64.5,40,64.5"
+					                 _localRotation="0,0,0"
+					                 _localScale="1,1,1"
+					                 _attachOwner="None"
+					                 _attachOwnerID="0"
+					                 _attachComponent="None"
+					                 _fovY="75"
+					                 _nearZ="0.05"
+					                 _farZ="220"
+					                 _orthoHeight="10"
+					                 _priority="0"
+					                 _role="Game"
+					                 _bOrthographic="false" />
+					<PawnComponent _localID="11149290121538025405" _componentName="PawnComponent"
+					               _bActive="true"
+					               _moveAction="Move"
+					               _lookAction="Look"
+					               _upAction="None"
+					               _inputLayer="None"
+					               _aiControllerPrefab=""
+					               _maxPitch="85"
+					               _autoPossess="Player0"
+					               _bLockMouse="true">
+						<_listButton>
+							<item>Voxel.Jump</item>
+							<item>Sprint</item>
+							<item>Voxel.Break</item>
+							<item>Voxel.Place</item>
+							<item>Voxel.Slot1</item>
+							<item>Voxel.Slot2</item>
+							<item>Voxel.Slot3</item>
+							<item>Voxel.Slot4</item>
+							<item>Voxel.Slot5</item>
+							<item>Voxel.Slot6</item>
+							<item>Voxel.Slot7</item>
+							<item>Voxel.Slot8</item>
+							<item>Voxel.Slot9</item>
+						</_listButton>
+						<_listAnalog>
+							<item>Voxel.HotbarScroll</item>
+						</_listAnalog>
+					</PawnComponent>
+					<FirstPersonCameraComponent _localID="17347683538408078309" _componentName="FirstPersonCameraComponent"
+					                            _bActive="true"
+					                            _yaw="34.37747"
+					                            _pitch="-11.459156"
+					                            _maxPitch="85"
+					                            _fieldOfViewY="75"
+					                            _nearPlane="0.05"
+					                            _farPlane="220"
+					                            _viewModelName="None"
+					                            _viewModelOffset="0,0,0"
+					                            _viewModelYawOffset="0">
+						<_headBob _verticalAmplitude="0.025"
+						          _lateralAmplitude="0.012"
+						          _strideLength="1.6"
+						          _referenceSpeed="4"
+						          _blendTime="0.15" />
+					</FirstPersonCameraComponent>
+					<VoxelPlayerComponent _localID="14680213321896483494" _componentName="VoxelPlayerComponent"
+					                      _bActive="true"
+					                      _gameMode="5"
+					                      _reachDistance="6"
+					                      _placeInterval="0.25"
+					                      _startYaw="34.37747"
+					                      _startPitch="-11.459156"
+					                      _jumpButton="Voxel.Jump"
+					                      _sprintButton="Sprint"
+					                      _breakButton="Voxel.Break"
+					                      _placeButton="Voxel.Place"
+					                      _hotbarScrollAnalog="Voxel.HotbarScroll"
+					                      _waterBlock="water">
+						<_listSlotButton>
+							<item>Voxel.Slot1</item>
+							<item>Voxel.Slot2</item>
+							<item>Voxel.Slot3</item>
+							<item>Voxel.Slot4</item>
+							<item>Voxel.Slot5</item>
+							<item>Voxel.Slot6</item>
+							<item>Voxel.Slot7</item>
+							<item>Voxel.Slot8</item>
+							<item>Voxel.Slot9</item>
+						</_listSlotButton>
+						<_listStartBlock>
+							<item>planks</item>
+							<item>cobblestone</item>
+							<item>brick</item>
+							<item>log</item>
+							<item>sand</item>
+							<item>leaves</item>
+						</_listStartBlock>
+					</VoxelPlayerComponent>
+				</_listComponent>
+			</GameObject>
+		</entity>
+		<entity id="4" name="BlockHighlight">
+			<GameObject _schemaVersion="0" _name="BlockHighlight" _bActive="true">
+				<_listComponent>
+					<MeshComponent _localID="163493842152903304" _componentName="MeshComponent"
+					               _bActive="true"
+					               _localPosition="0,0,0"
+					               _localRotation="0,0,0"
+					               _localScale="1.02,1.02,1.02"
+					               _attachOwner="None"
+					               _attachOwnerID="0"
+					               _attachComponent="None"
+					               _meshID="Cube"
+					               _materialPath="engine/materials/glassmaterial.material"
+					               _boundsRadius="0.866"
+					               _gpuSpinSeed="0"
+					               _bVisible="false" />
+					<VoxelHighlightComponent _localID="15788862186009154187" _componentName="VoxelHighlightComponent" _bActive="true" _player="3" />
+				</_listComponent>
+			</GameObject>
+		</entity>
+		<entity id="5" name="VoxelGameMode">
+			<GameObject _schemaVersion="0" _name="VoxelGameMode" _bActive="true">
+				<_listComponent>
+					<VoxelGameModeComponent _localID="6698898816640166858" _componentName="VoxelGameModeComponent"
+					                        _bActive="true"
+					                        _autoPlayPrefab="game/playground/voxelcraft/prefabs/autoplay_ai.prefab.xml"
+					                        _player="3"
+					                        _terrainSeed="20261003"
+					                        _chunkCountX="8"
+					                        _chunkCountZ="8"
+					                        _residentChunkRadius="5"
+					                        _chunkLoadsPerFrame="4"
+					                        _waterBlock="water"
+					                        _stoneBlock="stone"
+					                        _grassBlock="grass"
+					                        _snowBlock="snow"
+					                        _coalOreBlock="coal_ore"
+					                        _ironOreBlock="iron_ore"
+					                        _snowHeight="34"
+					                        _coalOreChance="0.012"
+					                        _ironOreChance="0.006"
+					                        _ironOreMaxHeight="12"
+					                        _bAutoPlay="false" />
+					<VoxelWorldViewComponent _localID="7325518840021963471" _componentName="VoxelWorldViewComponent"
+					                         _bActive="true"
+					                         _chunkPrefab="game/playground/voxelcraft/prefabs/chunk.prefab.xml"
+					                         _chunkBuildsPerFrame="4" />
+				</_listComponent>
+			</GameObject>
+		</entity>
+	</entities>
+</Scene>

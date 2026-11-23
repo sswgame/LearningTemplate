@@ -1,0 +1,47 @@
+<?xml version="1.0" encoding="utf-8"?>
+<?asset guid="a5904e9861ee2a5d0388f2eab906dc54"?>
+<!--
+  복셀 광산 미니게임(voxelcraft — 옛 게임 VoxelCraft) 조종 시나리오 — 입력 층(가상 키 · 마우스) → 플레이어 조종자(입력 맵) → 폰의 의도 → 몸(걷기 · 핫바 · 시선 · 부수기),
+  자동 플레이 스위치를 켜고 끄면 플레이어 폰의 빙의가 AI 조종자 ↔ 플레이어 조종자로 오간다.
+  실행: ctest -R Scenario.playground · App -scenario=game/playground/automation/voxelcraft_control.scenario.xml -unattended
+-->
+<Scenario name="game.playground.voxelcraft_control" fixedDelta="0.0166667" timeoutFrames="1200" startAfter="ScenePlaying" startTimeoutFrames="900" input="exclusive">
+	<Launch variable="gv_firstMinigame" value="voxelcraft"/>
+	<Variable name="gv_playgroundAutoPlay" value="0"/>
+	<!-- 몸이 땅에 내려앉을 때까지(걷기 거리를 그 뒤부터 잰다). -->
+	<WaitUntil watch="Voxel.OnGround" equals="1" timeoutFrames="120"/>
+	<Expect watch="Voxel.ControllerKind" equals="0"/>
+	<WaitUntil watch="Object.Exists" target="VoxelChunk" equals="1" timeoutFrames="120"/> <!-- 월드 뷰(GF_Client_Voxel)가 청크를 세웠다 -->
+
+	<!-- 걷기: W 를 1 초 — 몸이 1 m 넘게 간다. -->
+	<Press slot="Key.W"/>
+	<AdvanceSimulation frames="60"/> <!-- 누른 채인 1 초가 시험 내용이다 -->
+	<Release slot="Key.W"/>
+	<WaitUntil watch="Voxel.WalkedDistance" atLeast="1" timeoutFrames="30"/>
+
+	<!-- 핫바: 3 을 한 번 — 셋째 칸. -->
+	<Tap slot="Key.Digit3" hold="1"/>
+	<WaitUntil watch="Voxel.HotbarSlot" equals="2" timeoutFrames="30"/>
+
+	<!-- 시선: 마우스 오른쪽 100 px — 조종 요가 시작 0.6 에서 100 × 0.0022 만큼 돈다. -->
+	<MouseDelta x="100" y="0"/>
+	<WaitUntil watch="Voxel.ControlYaw" near="0.82" tolerance="0.01" timeoutFrames="30"/>
+
+	<!-- 부수기: 아래를 보고 왼쪽 버튼을 4 초 — 블록이 하나 넘게 부서진다. -->
+	<MouseDelta x="0" y="400"/>
+	<WaitUntil watch="Voxel.ControlPitch" atMost="-0.5" timeoutFrames="30"/> <!-- 시선이 아래로 돌았다 -->
+	<Press slot="Mouse.Left"/>
+	<WaitUntil watch="Voxel.BrokenCount" atLeast="1" timeoutSeconds="6"/> <!-- 누른 채 블록이 부서질 때까지 -->
+	<Release slot="Mouse.Left"/>
+	<WaitUntil watch="Voxel.BrokenCount" atLeast="1" timeoutFrames="30"/>
+
+	<!-- 자동 플레이 = AI 조종자의 빙의. 얼마 동안 AI 가 몸을 움직이게 둔 뒤 끄면 플레이어 조종자가 다시 쥐고 키가 먹는다. -->
+	<Variable name="gv_playgroundAutoPlay" value="1"/>
+	<WaitUntil watch="Voxel.ControllerKind" equals="1" timeoutFrames="30"/>
+	<WaitUntil watch="AI.State" target="VoxelAutoPlay" is="Break" timeoutSeconds="12"/> <!-- AI 가 몸을 움직여 부수기에 들어갔다 -->
+	<Variable name="gv_playgroundAutoPlay" value="0"/>
+	<WaitUntil watch="Voxel.ControllerKind" equals="0" timeoutFrames="30"/>
+	<Tap slot="Key.Digit5" hold="1"/>
+	<WaitUntil watch="Voxel.HotbarSlot" equals="4" timeoutFrames="30"/>
+	<Pass/>
+</Scenario>

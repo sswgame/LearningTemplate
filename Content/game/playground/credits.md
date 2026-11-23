@@ -13,6 +13,8 @@
 | `models_raw/brick_wall.gltf` · `models_raw/barrel.gltf` | 이 저장소에서 만든 상자 · 원기둥(파괴 쇼케이스) | 이 저장소 |
 | `textures_raw/postprocess/*.png` → `textures/postprocess/*.dds` | 일회성 파이썬 스크립트로 만든 후처리 시나리오 텍스처(원본 PNG 가 정본 — 스크립트는 지웠다)(컬러 그레이딩 LUT 띠 · 블룸 먼지 마스크) | 이 저장소 |
 | `textures/twod/*.dds` | 이 저장소에서 코드로 그린 2D 데모 픽셀 아트(스프라이트 · 타일 · 노멀 맵, 커밋 `1fb09535c`) | 이 저장소 |
+| `voxelcraft/textures_raw/blocks.png` | Kenney "Voxel Pack" (<https://kenney.nl/assets/voxel-pack>) — 128 px 타일 열여섯을 4 × 4 아틀라스로 모은 것(칸 순서와 블록의 짝은 `data/blocks.xml`) | CC0 1.0 |
+| `voxelcraft/sounds/*.ogg` | Kenney "Impact Sounds" (<https://kenney.nl/assets/impact-sounds>) — `footstep_grass_000` · `impactPlank_medium_001` · `impactSoft_medium_000`(파일 이름은 소문자 `_` 로) | CC0 1.0 |
 
 - `AudioServiceTest` 가 OGG 디코드를 실제 파일로 확인하는 테스트 자료입니다.
 - CC0 는 표기 의무가 없지만 고마움을 적어 둡니다 — Kenney (www.kenney.nl).
