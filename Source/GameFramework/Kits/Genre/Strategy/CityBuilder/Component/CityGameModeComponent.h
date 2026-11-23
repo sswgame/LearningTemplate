@@ -2,23 +2,18 @@
  * @file CityGameModeComponent.h
  * @brief 도시 건설 키트(`GF_CityBuilder`)의 디렉터 — 월드 상태(`GameStateComponent`)를 열고 플레이어 지갑(조종자의 `WalletComponent`)에 시작 돈을 넣은 뒤, 도시(`CitySimulation`)를 공유 땅 · 지갑 · 시계 위에 돌립니다.
  * @details 키트 세 갈래의 가운데다: 규칙(키트 루트, 엔진 시계 · 렌더를 모른다)을 들고 씬과 잇는다. 빨리 감기 입력과 건물 · 도로 모습은 클라이언트 모듈
- *          (`GF_Client_CityBuilder` 의 `CityViewComponent`)이 이 디렉터의 명령 · 읽기 API 로만 다룬다 — 전용 서버는 그 모듈을 짓지 않는다.
+ *          (`GF_Client_CityBuilder` 의 `CityFastForwardInputComponent` · `CityViewComponent`)이 이 디렉터의 명령 · 읽기 API 로만 다룬다 — 전용 서버는 그 모듈을 짓지 않는다.
  *          땅을 나누는 다른 키트의 디렉터(RTS 등)는 같은 오브젝트에서 이 디렉터 뒤에 붙는다 — 판을 여는 설정은 이 디렉터의 씬 데이터 하나다.
  */
 #pragma once
 #include "Core/Encoding/FourCCUtil.h"
 #include "Core/Foundation/Types.h"
 
-#include "Engine/Asset/AssetRef.h"
-#include "Engine/Asset/Cache/SharedAssetRef.h"
 #include "Engine/Reflection/ReflectionMacros.h"
 #include "Engine/Serialization/Serializer/CatalogKey.h"
 
 #include "GameFramework/GameFrameworkExports.h"
-#include "GameFramework/Kits/Genre/Strategy/CityBuilder/CityCatalog.h"
-#include "GameFramework/Kits/Genre/Strategy/CityBuilder/CitySimulation.h"
-#include "GameFramework/Runtime/Foundation/Framework/GameModeComponent.h"
-#include "GameFramework/Runtime/Foundation/Framework/GameSpeedControl.h"
+#include "GameFramework/Kits/Genre/Strategy/CityBuilder/Component/CityBuilderGameModeComponent.h"
 
 namespace sw
 {
@@ -33,7 +28,7 @@ namespace sw
      *          시계를 미는 것은 이 디렉터 하나다. 상태는 도시 하나(구간 'CITY')와 배치를 마쳤는지이고, 돈 · 시계 · 땅은 공유 상태에 있다.
      */
     REFLECT( Category = "CityBuilder", DisplayName = "City Game Mode", Tooltip = "Opens the shared land, wallet and clock, lays out the town and runs the city kit on them" )
-    class SW_KIT_API CityGameModeComponent : public GameModeComponent
+    class SW_KIT_API CityGameModeComponent : public CityBuilderGameModeComponent
     {
     public:
         REFLECT_BODY();
@@ -49,11 +44,11 @@ namespace sw
         // ---- 명령(판이 열린 동안만 받는다, 게임 스레드) ----
         /** @brief 빨리 감기를 누르고 있는지 넘깁니다 — 다음 걸음이 쓴다(놓을 때까지 다시 넘기지 않아도 유지된다). 판이 열리기 전이면 false 입니다. */
         [[nodiscard]] bool submitFastForward( bool bHeld );
+        /** @brief 시계는 빨리 감기(`submitFastForward`)로만 민다 — 일시정지 · 배속 입력은 거절합니다. */
+        [[nodiscard]] bool submitTimeInput( bool bPause, bool bFaster, bool bSlower ) override;
 
-        // ---- 읽기(클라이언트 모듈) ----
-        const CitySimulation& getCity() const { return _city; }
-        /** @brief 도시 배치(건물 · 도로)의 판입니다 — 놓거나 복원할 때마다 오르고, 열린 판은 1 이상입니다. 뷰는 이 값이 바뀐 때만 맞춘다. */
-        uint32 getLayoutRevision() const { return _layoutRevision; }
+        /** @brief 도시 금고는 플레이어 지갑입니다. 없으면 nullptr 입니다. */
+        const Wallet* findCityWallet() const override;
 
     protected:
         [[nodiscard]] bool startGame() override;
@@ -69,16 +64,12 @@ namespace sw
         void layOutTown();
 
     private:
-        PROPERTY( Category = "Data", DisplayName = "City Data", Tooltip = "City catalog XML" )
-        AssetRef<CityCatalog> _cityDataPath;
         PROPERTY( Category = "World", DisplayName = "Land Size", Tooltip = "Cells on one side of the square shared land (1 cell = 1 m); required", Min = 1 )
         int32 _landSize;
         PROPERTY( Category = "World", DisplayName = "Seconds Per Day", Tooltip = "Real seconds in one day of the shared clock (one city month) at normal speed; required", Min = 1, Units = s )
         float32 _secondsPerDay;
         PROPERTY( Category = "World", DisplayName = "Start Hour", Tooltip = "Hour of the shared clock when a fresh game opens", Min = 0, Max = 23.99 )
         float32 _startHour;
-        PROPERTY( Category = "Economy", DisplayName = "Starting Money", Tooltip = "City money a fresh game starts with (the city catalog's currency)", Min = 0 )
-        int32 _startingMoney;
         PROPERTY( Required, Category = "Layout", DisplayName = "Landmark Building", Tooltip = "City catalog id of the building laid out on the first tick" )
         CatalogKey<CityBuildingDef> _landmarkBuilding;
         PROPERTY( Category = "Layout", DisplayName = "Landmark X", Min = 0 )
@@ -96,10 +87,6 @@ namespace sw
         PROPERTY( Category = "Time", DisplayName = "Fast Time Scale", Tooltip = "Clock speed while fast forward is held (up to the game speed limit)", Min = 1.0, Max = 8.0 )
         float32 _fastTimeScale;
 
-        SharedAssetRef<CityCatalog> _pCatalog;
-        CitySimulation              _city;
-        GameSpeedControl            _speed;          ///< 배속(빨리 감기를 누르는 동안 `_fastTimeScale`) — 공유 시계와 시뮬레이션이 같은 값을 받는다
-        uint32                      _layoutRevision; ///< `getLayoutRevision`
         PROPERTY( RuntimeState )
         uint8                  _bLaidOut     : 1;
         uint8                  _bFastForward : 1; ///< 지금 빨리 감기 명령(`submitFastForward`)

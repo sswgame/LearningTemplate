@@ -10,24 +10,24 @@
 	<Variable name="gv_nileAutoPlay" value="1"/>
 	<AdvanceSimulation frames="20"/> <!-- 자동 계획이 돌 시간 — 기록 프레임이 시험 내용 -->
 	<Action name="Nile.NextTool"/>
-	<WaitUntil watch="Nile.Tool" equals="1" timeoutFrames="10"/> <!-- 다음 도구를 골랐다 -->
+	<WaitUntil watch="City.Tool" equals="1" timeoutFrames="10"/> <!-- 다음 도구를 골랐다 -->
 	<Action name="Nile.RoadTool"/>
-	<WaitUntil watch="Nile.Tool" equals="0" timeoutFrames="10"/> <!-- 도로 도구로 돌아왔다 -->
-	<ExpectLog id="Nile.ToolSelected" atLeast="2"/>
+	<WaitUntil watch="City.Tool" equals="0" timeoutFrames="10"/> <!-- 도로 도구로 돌아왔다 -->
+	<ExpectLog id="City.ToolSelected" atLeast="2"/>
 	<!-- 도구를 바꾼 뒤 272 프레임(약 5 초) -->
 	<AdvanceSimulation frames="272"/>
 	<Record watch="Nile.Month"/>
-	<Record watch="Nile.Population"/>
-	<Record watch="Nile.Money"/>
+	<Record watch="City.Population"/>
+	<Record watch="City.Money"/>
 	<Record watch="Scene.ObjectCount"/>
 	<Record watch="Scene.TransformHash"/>
 	<!-- 그 뒤 900 프레임(약 20 초) -->
 	<AdvanceSimulation frames="900"/>
 	<WaitUntil watch="Nile.Month" atLeast="1" timeoutFrames="120"/> <!-- 첫 달(20 초)이 끝났다 — 위 진행은 19.9 초라 달 경계 바로 앞이다 -->
-	<Expect watch="Nile.Population" atLeast="1"/>
+	<Expect watch="City.Population" atLeast="1"/>
 	<Record watch="Nile.Month"/>
-	<Record watch="Nile.Population"/>
-	<Record watch="Nile.Money"/>
+	<Record watch="City.Population"/>
+	<Record watch="City.Money"/>
 	<Record watch="Scene.ObjectCount"/>
 	<Record watch="Scene.TransformHash"/>
 	<Pass/>

@@ -2133,6 +2133,9 @@
     "VelmoraSiteAttributeDef": "AdventureSiteAttributeDef — Velmora 흡수로 디렉터 · 규칙을 ActionAdventure 키트로 옮겼다(NEXT 7 절 12 단계)(2026-11-24)",
     "VelmoraSpawnAttributeDef": "AdventureSpawnAttributeDef — Velmora 흡수로 디렉터 · 규칙을 ActionAdventure 키트로 옮겼다(NEXT 7 절 12 단계)(2026-11-24)",
     "VelmoraGame": "PlaygroundGame — 게임 Velmora 를 Playground 미니게임 velmora 로 흡수했다(NEXT 7 절 12 단계)(2026-11-24)",
-    "MeadowFarmGameModeComponent": "FarmPlotGameModeComponent — 한 키트만 쓰는 밭 디렉터를 Farming 키트로 옮겼다(흡수 8 의 남은 몫)(2026-11-24)"
+    "MeadowFarmGameModeComponent": "FarmPlotGameModeComponent — 한 키트만 쓰는 밭 디렉터를 Farming 키트로 옮겼다(흡수 8 의 남은 몫)(2026-11-24)",
+    "NileBuildingComponent": "CityBuildingViewComponent — 도시 건물 뷰는 키트 클라이언트(GF_Client_CityBuilder)의 것이다 — 게임 접두를 뗀다(2026-11-24)",
+    "NileWalkerComponent": "CityWalkerViewComponent — 도시 일꾼 뷰는 키트 클라이언트(GF_Client_CityBuilder)의 것이다 — 게임 접두를 뗀다(2026-11-24)",
+    "NileCursorComponent": "CityBuildCursorComponent — 도시 짓기 뷰는 키트 클라이언트(GF_Client_CityBuilder)의 것이다 — 게임 접두를 뗀다(2026-11-24)"
   }
 }
