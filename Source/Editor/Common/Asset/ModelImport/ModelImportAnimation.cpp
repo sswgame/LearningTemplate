@@ -22,6 +22,8 @@
 #include "Engine/Serialization/JSON/JSONDocument.h"
 #include "Engine/Serialization/JSON/JSONFields.h"
 
+#include <algorithm>
+
 namespace sw::editor
 {
     BoneTransform ModelImportAnimation::readNodeLocal( const cgltf_node& node )
@@ -86,11 +88,8 @@ namespace sw::editor
         if ( channel._listValue.size() < keyCount * valueStride )
             return false;
 
-        size_t nextKey = 0;
-        while ( nextKey < keyCount && channel._listTime[nextKey] <= time )
-        {
-            ++nextKey;
-        }
+        // 키 시각은 순증가다(glTF 명세) — 표본마다 앞에서부터 훑으면 긴 클립의 비용이 표본 수 × 키 수다.
+        const size_t nextKey = static_cast<size_t>( std::upper_bound( channel._listTime.begin(), channel._listTime.end(), time ) - channel._listTime.begin() );
         if ( nextKey == 0 || nextKey == keyCount )
         {
             const size_t key = nextKey == 0 ? 0 : keyCount - 1;
