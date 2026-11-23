@@ -138,7 +138,7 @@ namespace sw
         /** @brief 칸 스택입니다(읽기). */
         const MinigameStack& getStack() const { return _stack; }
         /** @brief 켰고 미니게임 맵이 서기를 기다리는 중이면 true 입니다. */
-        bool isEntering() const { return _bEntering == SW_TRUE; }
+        bool isEntering() const { return _awaitedLoad != 0 && isLeaving() == false; }
         /** @brief 나가며 돌아갈 씬이 서기를 기다리는 중이면 true 입니다. */
         bool isLeaving() const { return _pReturning != nullptr; }
         /** @brief 이 인스턴스에서 끈 범위들이 남긴 것(해제 검사)의 합입니다. 감시 값 `Minigame.LeakCount` 가 읽는다. */
@@ -170,22 +170,13 @@ namespace sw
             MinigameFrame  _frame;  ///< 나간 칸
             MinigameResult _result; ///< 복원 뒤에 넘길 결과
         };
-        /** @brief 세이브의 미니게임 맵이 서기를 기다리는 동안 쥐는 것입니다(`travelToSavedMinigame`). */
-        struct PendingSavedTravel
-        {
-            MinigameStack                   _previous;     ///< 세이브로 바꾸기 전의 칸 스택 — 맵이 서지 않으면 되돌린다
-            Delegate<void( Scene* pScene )> _onLoaded;     ///< 씬이 선 뒤 부를 함수
-            uint8                           _bDropped : 1; ///< 장치 밖 이동이 이 여행을 버렸다 — 끝을 알리기만 한다
 
-            PendingSavedTravel( MinigameStack previous, const Delegate<void( Scene* pScene )>& onLoaded )
-                : _previous{ std::move( previous ) }
-                , _onLoaded{ onLoaded }
-                , _bDropped{ SW_FALSE }
-            {
-            }
-        };
-
-        /** @brief 진입한 미니게임 맵이 섰습니다(`GameSceneFlow::requestSceneThen`). @p pScene 이 nullptr 이면 실패로 알리고 그 칸을 꺼낸다. */
+        /**
+         * @brief @p scenePath 를 이 흐름의 요청으로 맡기고, 그 로드를 아직 기다리고 있을 때 끝나면 @p pHandler 를 부릅니다. @p onLoaded 는 그 로드가 끝나면 늘 부릅니다(졌거나 밀려났으면 nullptr).
+         * @return 요청이 지면 false 입니다.
+         */
+        [[nodiscard]] bool requestAwaitedScene( const string& scenePath, void ( MinigameFlow::*pHandler )( Scene* pScene ), const Delegate<void( Scene* pScene )>& onLoaded = {} );
+        /** @brief 진입한 미니게임 맵이 섰습니다(`requestAwaitedScene`). @p pScene 이 nullptr 이면 실패로 알리고 그 칸을 꺼낸다. */
         void onMapLoaded( Scene* pScene );
         /** @brief 세이브의 미니게임 맵이 섰습니다(`travelToSavedMinigame`). 졌으면 바꾸기 전 칸 스택을 되돌립니다. */
         void onSavedMapLoaded( Scene* pScene );
@@ -229,24 +220,25 @@ namespace sw
         [[nodiscard]] static bool openLocalUsers( GameFeatureScope& scope, const MinigameDefinition& definition );
 
     private:
-        SubsystemScope&                _gameScope;             ///< 기능이 서비스를 거는 게임 범위
-        const GamePackConfig&          _packConfig;            ///< 미니게임 · 카탈로그 경로의 팩 설정
-        GameInstance&                  _owner;                 ///< 돌아올 씬을 찍고 복원하는 인스턴스
-        MinigameStack                  _stack;                 ///< 칸 스택 — 맨 위만 켜져 있다
-        unique_ptr<GameFeatureScope>   _pActive;               ///< 맨 위 칸의 범위(없으면 nullptr)
-        unique_ptr<PendingReturn>      _pReturning;            ///< 나가며 돌아갈 씬을 기다리는 중이면 그 자리와 결과(없으면 nullptr)
-        unique_ptr<PendingSavedTravel> _pSavedTravel;          ///< 세이브의 미니게임 맵을 기다리는 중이면 바꾸기 전 칸 스택(없으면 nullptr)
-        string                         _pendingEnter;          ///< 틱 뒤 작업에서 맡긴 진입(`requestEnter`) — 비었으면 없음
-        optional<SubLevelPlacement>    _pendingPlacement;      ///< 맡긴 진입의 얹을 자리
-        optional<MinigameResult>       _pendingLeave;          ///< 틱 뒤 작업에서 맡긴 나가기(`requestLeave` — 이름 칸은 비워 두고 `leave` 가 채운다). 없으면 nullopt
-        FinishedDelegate               _onFinished;            ///< 결과를 받는 함수 목록
-        MinigameResult                 _lastResult;            ///< 마지막으로 넘긴 결과
-        Subscription                   _sceneLoadRequested;    ///< 씬 로드 받아들임 알림의 구독(초기화가 걸고 종료가 푼다)
-        Subscription                   _worldPlayChanged;      ///< 월드 플레이 알림의 구독(초기화가 걸고 종료가 푼다)
-        uint32                         _leakCount;             ///< 끈 범위들이 남긴 것의 합
-        optional<MinigameResult>       _pendingRestoredResult; ///< 찍은 씬을 되살린 프레임의 결과 — 되살린 오브젝트의 상태 적용 · 시작(onBeginPlay) 뒤인 다음 `update` 에 알린다
-        uint32                         _restoreCount;          ///< 돌아올 자리 복원 수
-        uint8                          _bEntering        : 1;  ///< 맨 위 미니게임의 맵을 기다리는 중이면 1(하나만 — 겹친 진입은 거절한다)
-        uint8                          _bRequestingScene : 1;  ///< 이 흐름이 씬 로드를 요청하는 동안 1(받아들임 알림이 동기로 온다)
+        SubsystemScope&              _gameScope;             ///< 기능이 서비스를 거는 게임 범위
+        const GamePackConfig&        _packConfig;            ///< 미니게임 · 카탈로그 경로의 팩 설정
+        GameInstance&                _owner;                 ///< 돌아올 씬을 찍고 복원하는 인스턴스
+        MinigameStack                _stack;                 ///< 칸 스택 — 맨 위만 켜져 있다
+        unique_ptr<GameFeatureScope> _pActive;               ///< 맨 위 칸의 범위(없으면 nullptr)
+        unique_ptr<PendingReturn>    _pReturning;            ///< 나가며 돌아갈 씬을 기다리는 중이면 그 자리와 결과(없으면 nullptr)
+        unique_ptr<MinigameStack>    _pPreviousStack;        ///< 세이브의 미니게임 맵을 기다리는 중이면 바꾸기 전 칸 스택(없으면 nullptr) — 맵이 서지 않으면 되돌린다
+        string                       _pendingEnter;          ///< 틱 뒤 작업에서 맡긴 진입(`requestEnter`) — 비었으면 없음
+        optional<SubLevelPlacement>  _pendingPlacement;      ///< 맡긴 진입의 얹을 자리
+        optional<MinigameResult>     _pendingLeave;          ///< 틱 뒤 작업에서 맡긴 나가기(`requestLeave` — 이름 칸은 비워 두고 `leave` 가 채운다). 없으면 nullopt
+        FinishedDelegate             _onFinished;            ///< 결과를 받는 함수 목록
+        MinigameResult               _lastResult;            ///< 마지막으로 넘긴 결과
+        Subscription                 _sceneLoadRequested;    ///< 씬 로드 받아들임 알림의 구독(초기화가 걸고 종료가 푼다)
+        Subscription                 _worldPlayChanged;      ///< 월드 플레이 알림의 구독(초기화가 걸고 종료가 푼다)
+        uint32                       _leakCount;             ///< 끈 범위들이 남긴 것의 합
+        optional<MinigameResult>     _pendingRestoredResult; ///< 찍은 씬을 되살린 프레임의 결과 — 되살린 오브젝트의 상태 적용 · 시작(onBeginPlay) 뒤인 다음 `update` 에 알린다
+        uint32                       _restoreCount;          ///< 돌아올 자리 복원 수
+        uint32                       _lastLoad;              ///< 마지막으로 맡긴 로드의 번호(`requestAwaitedScene`)
+        uint32                       _awaitedLoad;           ///< 끝을 기다리는 로드의 번호(0 이면 없음 — 하나만 기다린다, 겹친 진입은 거절한다)
+        uint8                        _bRequestingScene : 1;  ///< 이 흐름이 씬 로드를 요청하는 동안 1(받아들임 알림이 동기로 온다)
     };
 } // namespace sw

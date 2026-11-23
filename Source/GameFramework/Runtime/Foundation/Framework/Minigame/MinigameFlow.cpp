@@ -260,7 +260,7 @@ namespace sw
         , _stack{}
         , _pActive{ nullptr }
         , _pReturning{ nullptr }
-        , _pSavedTravel{ nullptr }
+        , _pPreviousStack{ nullptr }
         , _pendingEnter{}
         , _pendingPlacement{}
         , _pendingLeave{}
@@ -271,7 +271,8 @@ namespace sw
         , _leakCount{ 0 }
         , _pendingRestoredResult{}
         , _restoreCount{ 0 }
-        , _bEntering{ SW_FALSE }
+        , _lastLoad{ 0 }
+        , _awaitedLoad{ 0 }
         , _bRequestingScene{ SW_FALSE }
     {
     }
@@ -298,7 +299,7 @@ namespace sw
         _pendingLeave          = nullopt;
         _pendingRestoredResult = nullopt;
         _pReturning.reset();
-        _pSavedTravel.reset();
+        _pPreviousStack.reset();
         deactivateScope(); // 게임 범위 기능은 게임 인스턴스가 이 뒤에 끈다(미니게임의 해제 검사는 그것이 켜진 채로 찍었다)
         _stack.clear();
     }
@@ -415,6 +416,25 @@ namespace sw
         return bRequest;
     }
 
+    bool MinigameFlow::requestAwaitedScene( const string& scenePath, void ( MinigameFlow::*pHandler )( Scene* pScene ), const Delegate<void( Scene* pScene )>& onLoaded )
+    {
+        // 로드마다 번호가 다르다 — 장치 밖 이동에 밀려난 로드의 끝(nullptr)이 그 뒤에 맡긴 로드의 것으로 오인되지 않게 한다.
+        const uint32 load       = ++_lastLoad;
+        const bool   bRequested = requestScene( scenePath, SW_DELEGATE_LAMBDA( GameSceneFlow::SceneLoadedFunction, [this, load, pHandler, onLoaded]( Scene* pScene )
+          {
+            if ( load == _awaitedLoad )
+            {
+                _awaitedLoad = 0;
+                ( this->*pHandler )( pScene );
+            }
+            if ( onLoaded.isBound() )
+                onLoaded( pScene );
+        } ) );
+        if ( bRequested )
+            _awaitedLoad = load;
+        return bRequested;
+    }
+
     bool MinigameFlow::makeSceneReturn( const MinigameDefinition& definition, MinigameReturnPoint& outReturnPoint )
     {
         const utf8* const pName  = definition._name.c_str();
@@ -507,13 +527,12 @@ namespace sw
             }
             return true;
         }
-        if ( requestScene( mapPath, SW_DELEGATE_METHOD( GameSceneFlow::SceneLoadedFunction, &MinigameFlow::onMapLoaded, this ) ) == false )
+        if ( requestAwaitedScene( mapPath, &MinigameFlow::onMapLoaded ) == false )
         {
             SW_LOG_ERROR_ID( "MinigameFlow.MapRequestRefused", "Minigame '%#': the map '%#' could not be requested", name, mapPath.c_str() );
             dropTop();
             return false;
         }
-        _bEntering = SW_TRUE;
         return true;
     }
 
@@ -551,7 +570,7 @@ namespace sw
         pTop->updateSaveBlock( _owner.getSaveLock() );
         _pActive             = std::move( pScope );
         const string mapPath = pTop->_definition._map.get();
-        if ( requestScene( mapPath, SW_DELEGATE_METHOD( GameSceneFlow::SceneLoadedFunction, &MinigameFlow::onMapLoaded, this ) ) == false )
+        if ( requestAwaitedScene( mapPath, &MinigameFlow::onMapLoaded ) == false )
         {
             SW_LOG_ERROR_ID( "MinigameFlow.MapRequestRefused", "Minigame '%#': the map '%#' could not be requested", name, mapPath.c_str() );
             deactivateScope();
@@ -561,7 +580,6 @@ namespace sw
             return false;
         }
         SW_LOG_INFO_ID( "MinigameFlow.Switched", "Minigame '%#' replaces '%#' (the scene to return to is kept)", name, previous._name.c_str() );
-        _bEntering = SW_TRUE;
         return true;
     }
 
@@ -601,7 +619,7 @@ namespace sw
             }
         },
             frame._returnPoint );
-        if ( scenePath.empty() || requestScene( scenePath, SW_DELEGATE_METHOD( GameSceneFlow::SceneLoadedFunction, &MinigameFlow::onReturnLoaded, this ) ) == false )
+        if ( scenePath.empty() || requestAwaitedScene( scenePath, &MinigameFlow::onReturnLoaded ) == false )
         {
             SW_LOG_ERROR_ID( "MinigameFlow.ReturnRequestRefused", "Leaving minigame '%#' is refused - the scene to return to '%#' could not be requested (an entry with no scene to return to needs GameSettings entranceScene or startMap)",
                              result._minigame.c_str(), scenePath.c_str() );
@@ -662,41 +680,30 @@ namespace sw
             activateTop();
             return false;
         }
-        _pSavedTravel = make_unique<PendingSavedTravel>( std::move( _stack ), onLoaded );
-        _stack        = std::move( saved );
-        _pActive      = std::move( pScope );
-        if ( requestScene( scenePath, SW_DELEGATE_METHOD( GameSceneFlow::SceneLoadedFunction, &MinigameFlow::onSavedMapLoaded, this ) ) == false )
+        _pPreviousStack = make_unique<MinigameStack>( std::move( _stack ) );
+        _stack          = std::move( saved );
+        _pActive        = std::move( pScope );
+        if ( requestAwaitedScene( scenePath, &MinigameFlow::onSavedMapLoaded, onLoaded ) == false )
         {
             SW_LOG_ERROR_ID( "MinigameFlow.MapRequestRefused", "Minigame '%#': the saved scene '%#' could not be requested", _stack.findTop()->_definition._name.c_str(), scenePath.c_str() );
             deactivateScope();
-            _stack = std::move( _pSavedTravel->_previous );
-            _pSavedTravel.reset();
+            _stack = std::move( *_pPreviousStack );
+            _pPreviousStack.reset();
             activateTop();
             return false;
         }
-        _bEntering = SW_TRUE;
         return true;
     }
 
     void MinigameFlow::onSavedMapLoaded( Scene* pScene )
     {
-        if ( _pSavedTravel == nullptr )
-            return; // 종료가 거뒀다
-        const unique_ptr<PendingSavedTravel> pPending = std::move( _pSavedTravel );
-        // 장치 밖 이동이 칸을 버렸으면(`clearForOutsideTravel`) 되돌릴 것이 없다 — 부른 쪽에 끝만 알린다.
-        if ( pPending->_bDropped == SW_FALSE )
-        {
-            _bEntering = SW_FALSE;
-            if ( pScene == nullptr )
-            {
-                SW_LOG_ERROR_ID( "MinigameFlow.SavedMapNotOpened", "The saved minigame scene did not open (failed or replaced by a later request) - the minigames before the load are active again" );
-                deactivateScope();
-                _stack = std::move( pPending->_previous );
-                activateTop();
-            }
-        }
-        if ( pPending->_onLoaded.isBound() )
-            pPending->_onLoaded( pScene );
+        const unique_ptr<MinigameStack> pPrevious = std::move( _pPreviousStack );
+        if ( pScene != nullptr )
+            return;
+        SW_LOG_ERROR_ID( "MinigameFlow.SavedMapNotOpened", "The saved minigame scene did not open (failed or replaced by a later request) - the minigames before the load are active again" );
+        deactivateScope();
+        _stack = std::move( *pPrevious );
+        activateTop();
     }
 
     void MinigameFlow::requestLeave( const hashed_string& resultName, vector<MinigameResultValue> listValue )
@@ -781,7 +788,7 @@ namespace sw
 
     void MinigameFlow::deactivateScope()
     {
-        _bEntering = SW_FALSE; // 기다리던 맵의 완료 알림이 와도 할 일이 없다
+        _awaitedLoad = 0; // 기다리던 맵의 완료 알림이 와도 할 일이 없다
         if ( _pActive == nullptr )
             return;
         const uint32 leakCount = _pActive->deactivate(); // 범위가 건 역순으로 거두고 남은 것을 알린다
@@ -900,34 +907,25 @@ namespace sw
     {
         SW_LOG_INFO_ID( "MinigameFlow.ClearedByTravel", "Travel to '%#' was requested outside the minigame flow - the stacked minigames and the scenes to return to are dropped",
                         scenePath.c_str() );
-        _pReturning.reset(); // 저장 막기도 풀린다 — 새 씬(세이브 · 타이틀)이 바깥 진행이다
-        if ( _pSavedTravel != nullptr )
-            _pSavedTravel->_bDropped = SW_TRUE; // 세이브의 맵을 기다리던 부름은 밀려난 로드의 끝(nullptr)으로 답한다
-        _pendingLeave = nullopt;                // 맡긴 나가기의 칸은 방금 버렸다
+        _pReturning.reset();     // 저장 막기도 풀린다 — 새 씬(세이브 · 타이틀)이 바깥 진행이다
+        _pPreviousStack.reset(); // 세이브의 맵을 기다리던 부른 쪽은 밀려난 로드의 끝(nullptr)을 받는다
+        _pendingLeave = nullopt; // 맡긴 나가기의 칸은 방금 버렸다
         deactivateScope();
         _stack.clear();
     }
 
     void MinigameFlow::onMapLoaded( Scene* pScene )
     {
-        if ( isEntering() == false || _pActive == nullptr )
-            return;
-        _bEntering = SW_FALSE;
         if ( pScene != nullptr )
             return;
         const MinigameFrame* const pTop = _stack.findTop();
         SW_LOG_ERROR_ID( "MinigameFlow.MapNotOpened", "Minigame '%#': the map '%#' did not open (failed or replaced by a later request) - the minigame is left without restoring",
                          pTop->_definition._name.c_str(), pTop->_definition._map.c_str() );
-        deactivateScope();
-        MinigameFrame dropped;
-        (void)_stack.pop( dropped ); // 바탕 씬이 그대로 섰다 — 덮였던 미니게임을 다시 켠다
-        activateTop();
+        dropTop(); // 바탕 씬이 그대로 섰다 — 덮였던 미니게임을 다시 켠다
     }
 
     void MinigameFlow::onReturnLoaded( Scene* pScene )
     {
-        if ( isLeaving() == false )
-            return;
         const unique_ptr<PendingReturn> pReturn = std::move( _pReturning ); // 끝나면 저장 막기가 풀린다
         if ( pScene == nullptr )
         {
