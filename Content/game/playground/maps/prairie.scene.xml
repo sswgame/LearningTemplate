@@ -107,6 +107,8 @@
 			<GameObject _schemaVersion="0" _name="PlayerController" _bActive="true" _bAlwaysLoaded="true">
 				<_listComponent>
 					<PlayerControllerComponent _localID="4811566279812111972" _componentName="PlayerControllerComponent" _bActive="true" _playerIndex="0" _bManageViewTarget="false" />
+					<WalletComponent _localID="5291973908594363156" _componentName="WalletComponent" _bActive="true" />
+					<ReputationComponent _localID="8045878249316176025" _componentName="ReputationComponent" _bActive="true" />
 				</_listComponent>
 			</GameObject>
 		</entity>
@@ -533,13 +535,12 @@
 			<GameObject _schemaVersion="0" _name="Ranch" _bActive="true" _bAlwaysLoaded="true">
 				<_listComponent>
 					<GameStateComponent _localID="6673597520240684436" _componentName="GameStateComponent" _bActive="true" />
-					<WalletComponent _localID="5291973908594363156" _componentName="WalletComponent" _bActive="true" />
-					<ReputationComponent _localID="8045878249316176025" _componentName="ReputationComponent" _bActive="true" />
 					<WesternGameModeComponent _localID="17445800879317630793" _componentName="WesternGameModeComponent"
 					                          _bActive="true"
 					                          _bAutoPlay="false"
 					                          _westernDataPath="game/playground/wildwest/data/western.xml"
 					                          _player="4"
+					                          _playerState="115"
 					                          _whistleButton="West.Whistle"
 					                          _useButton="West.Use"
 					                          _weatherDataPath="game/playground/wildwest/data/prairie.weather.xml"

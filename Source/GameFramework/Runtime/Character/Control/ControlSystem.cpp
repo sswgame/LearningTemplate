@@ -257,9 +257,10 @@ namespace sw
             PawnComponent* pPawn = manager.resolveComponent( handle );
             if ( pPawn == nullptr || pPawn->isPossessed() )
                 continue;
-            ControllerComponent* pController = nullptr;
-            if ( pPawn->getAutoPossess() == PawnAutoPossess::Player0 )
-                pController = getOrCreatePlayerController( manager, 0 );
+            ControllerComponent*   pController = nullptr;
+            const optional<uint32> playerIndex = PawnComponent::findPlayerIndex( pPawn->getAutoPossess() );
+            if ( playerIndex.has_value() )
+                pController = getOrCreatePlayerController( manager, *playerIndex );
             else if ( pPawn->getAutoPossess() == PawnAutoPossess::AI )
                 pController = ControlSystemInternal::createAIController( manager, *pPawn );
             if ( pController == nullptr )

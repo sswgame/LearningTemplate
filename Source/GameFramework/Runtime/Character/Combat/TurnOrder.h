@@ -9,6 +9,7 @@
 #pragma once
 #include "Core/Container/vector.h"
 #include "Core/Foundation/Constants.h"
+#include "Core/Foundation/Expected.h"
 #include "Core/Foundation/Macros.h"
 #include "Core/Foundation/Types.h"
 
@@ -78,8 +79,8 @@ namespace sw
         /** @brief 라운드제에서 지금 라운드의 순서를 버리고 다음 `next` 에서 다시 정합니다. 모두 행동을 고른 뒤 부릅니다. */
         void restartRound();
 
-        /** @brief 다음 차례의 행위자입니다. 아무도 없으면 -1 입니다. */
-        int32 next();
+        /** @brief 다음 차례의 행위자입니다. 아무도 없으면 없음입니다. */
+        optional<int32> next();
         /** @brief 앞으로 올 차례 @p count 개를 미리 봅니다. 상태는 바꾸지 않습니다. */
         void  previewOrder( int32 count, vector<int32>& outListActor ) const;
         int32 getRound() const { return _round; }

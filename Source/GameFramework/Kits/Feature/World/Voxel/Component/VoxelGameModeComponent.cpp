@@ -52,6 +52,7 @@ namespace sw
         , _coalOreChance{ 0.0f }
         , _ironOreChance{ 0.0f }
         , _ironOreMaxHeight{ 0 }
+        , _pCatalog{}
         , _world{}
         , _autoPlayController{}
         , _statusTimer{ 0.0f }
@@ -160,8 +161,13 @@ namespace sw
         io.header( VoxelGameModeComponentInternal::kStateTag, VoxelGameModeComponentInternal::kStateVersion );
         if ( io.isOk() == false )
             return;
+        const VoxelBlockCatalog* const pBoundCatalog = _world.getCatalog();
+        if ( io.isReading() && _pCatalog != nullptr )
+            _world.rebindCatalog( *_pCatalog ); // 다시 읽힌 카탈로그면 새 판으로 읽는다
         io.value( _world );
         io.end();
+        if ( io.isReading() && io.isOk() == false && pBoundCatalog != nullptr )
+            _world.rebindCatalog( *pBoundCatalog ); // 거절했다 — 블록 번호는 앞 판의 것이다(앞 판은 베이스가 쥐고 있다)
     }
 
     void VoxelGameModeComponent::onStateRestored( bool bRestored )
@@ -177,23 +183,24 @@ namespace sw
     // ------------------------------------------------------------------------------
     bool VoxelGameModeComponent::startGame()
     {
-        const VoxelBlockCatalog* pCatalog = game::findSubsystem<const VoxelBlockCatalog>();
-        if ( pCatalog == nullptr || pCatalog->getBlocks().empty() )
+        if ( acquireBoundCatalog( _pCatalog ) == false )
+            return false;
+        if ( _pCatalog->getBlocks().empty() )
         {
-            SW_LOG_ERROR_ID( "VoxelGameMode.BlockCatalogNotLoaded", "[Voxel] the block catalog is not loaded - the world cannot start" );
+            SW_LOG_ERROR_ID( "VoxelGameMode.BlockCatalogEmpty", "[Voxel] the block catalog lists no block - the world cannot start" );
             return false;
         }
         bool bBlocksKnown = true;
         for ( const CatalogKey<VoxelBlockDef>* pBlockID : { &_waterBlock, &_stoneBlock, &_grassBlock, &_snowBlock, &_coalOreBlock, &_ironOreBlock } )
         {
-            if ( pCatalog->findBlockIndex( pBlockID->key() ).has_value() )
+            if ( _pCatalog->findBlockIndex( pBlockID->key() ).has_value() )
                 continue;
             SW_LOG_ERROR_ID( "VoxelGameMode.DirectorBlockNotBlock", "[Voxel] the game mode's block '%#' is not in the block catalog - the world cannot start", pBlockID->c_str() );
             bBlocksKnown = false;
         }
         if ( bBlocksKnown == false )
             return false;
-        if ( _world.initialize( _chunkCountX, _chunkCountZ, pCatalog ) == false )
+        if ( _world.initialize( _chunkCountX, _chunkCountZ, _pCatalog.get() ) == false )
             return false;
         // 광석 · 눈도 지형 생성기가 같은 씨앗으로 놓는다(감사 K-8). 깊을수록 철이다.
         VoxelTerrainSettings settings;

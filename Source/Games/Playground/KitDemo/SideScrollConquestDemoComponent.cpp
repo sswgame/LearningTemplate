@@ -51,10 +51,10 @@ namespace sw
     {
         ConquestWorld world;
         world.initialize( _pCatalog.get() );
-        const hashed_string unitID{ SideScrollConquestDemoComponentInternal::kUnitID };
-        const int32         outpostUnit = world.spawnUnit( unitID, ConquestTeam::Player, SideScrollConquestDemoComponentInternal::kOutpostX, ConquestOrder::Hold );
-        const int32         keepUnit    = world.spawnUnit( unitID, ConquestTeam::Player, SideScrollConquestDemoComponentInternal::kKeepX, ConquestOrder::Hold );
-        if ( outpostUnit < 0 || keepUnit < 0 )
+        const hashed_string   unitID{ SideScrollConquestDemoComponentInternal::kUnitID };
+        const optional<int32> outpostUnit = world.spawnUnit( unitID, ConquestTeam::Player, SideScrollConquestDemoComponentInternal::kOutpostX, ConquestOrder::Hold );
+        const optional<int32> keepUnit    = world.spawnUnit( unitID, ConquestTeam::Player, SideScrollConquestDemoComponentInternal::kKeepX, ConquestOrder::Hold );
+        if ( outpostUnit.has_value() == false || keepUnit.has_value() == false )
         {
             SW_LOG_ERROR_ID( "KitDemo.ConquestUnknownUnit", "Side scroll conquest demo: unit '%#' is not in the catalog - the match does not open", unitID.c_str() );
             return false;

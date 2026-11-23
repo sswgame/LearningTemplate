@@ -255,11 +255,11 @@ namespace sw
         }
     }
 
-    int32 RestaurantSimulation::admitCustomer( const hashed_string& typeID )
+    optional<int32> RestaurantSimulation::admitCustomer( const hashed_string& typeID )
     {
         const CustomerTypeDef* pType = _pCatalog != nullptr ? _pCatalog->findCustomerType( typeID ) : nullptr;
         if ( pType == nullptr )
-            return constant::invalid_index::kInt32;
+            return nullopt;
         RestaurantCustomer customer;
         customer._typeID   = typeID;
         customer._id       = _nextCustomerID++;

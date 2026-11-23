@@ -147,6 +147,9 @@ SW_TEST_CASE( SceneSubLevelTest, AddBuildsUnderAnchorAndRemoveUnloads )
     SW_EXPECT_EQUAL( 1.0f, Util::worldPosition( objects, "Shop/Box" )._y );
     SW_EXPECT_TRUE( subLevels.isSubLevelObject( pLid->getObjectID() ) );
     SW_EXPECT_FALSE( subLevels.isSubLevelObject( objects.findGameObjectByName( hashed_string( "Ground" ) )->getObjectID() ) );
+    SW_EXPECT_TRUE( subLevels.isObjectInSubLevel( "Shop", pLid->getObjectID() ) );
+    SW_EXPECT_FALSE( subLevels.isObjectInSubLevel( "other", pLid->getObjectID() ) );
+    SW_EXPECT_FALSE( subLevels.isObjectInSubLevel( "Shop", objects.findGameObjectByName( hashed_string( "Ground" ) )->getObjectID() ) );
     // 앵커의 넓은 id 는 다음 파일 id 를 끌어올리지 않는다.
     SW_EXPECT_EQUAL( SceneSubLevelSubsystem::computeAnchorFileID( "Shop" ), scene.findFileID( pAnchor->getObjectID() ) );
     GameObject* pSpawned = objects.createGameObject( hashed_string( "Spawned" ) );

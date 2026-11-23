@@ -1,0 +1,52 @@
+<?xml version="1.0" encoding="utf-8"?>
+<?asset guid="90459f4d2a06cb7fd14602588d38a6f1"?>
+<!--
+  테마파크 미니게임(minigames/themepark)의 입력 차이 — Playground 공통 묶음(data/gamesettings.xml 의 <inputMap> 줄) 위에 얹힌다. 게임 코드는 키를 묻지 않고 액션 이름만 묻는다(씬의 ParkViewComponent 칸).
+  공원 액션(접두 Park.)은 꺼져 있는 레이어 ThemePark 이고 미니게임의 inputContexts 가 켠다 — 허브 · 다른 미니게임과 같은 키(Tab · G · V)를 써도 함께 발화하지 않는다.
+-->
+<InputMap>
+	<layers>
+		<layer name="ThemePark" enabled="0" blockLower="0"/>
+	</layers>
+
+	<action name="Park.NextRide" layer="ThemePark" trigger="Pressed">
+		<bind source="Key" code="Tab"/>
+	</action>
+
+	<action name="Park.ToggleOpen" layer="ThemePark" trigger="Pressed">
+		<bind source="Key" code="O"/>
+	</action>
+
+	<action name="Park.PriceDown" layer="ThemePark" trigger="Pressed">
+		<bind source="Key" code="LeftBracket"/>
+	</action>
+
+	<action name="Park.PriceUp" layer="ThemePark" trigger="Pressed">
+		<bind source="Key" code="RightBracket"/>
+	</action>
+
+	<action name="Park.FeeDown" layer="ThemePark" trigger="Pressed">
+		<bind source="Key" code="Minus"/>
+	</action>
+
+	<action name="Park.FeeUp" layer="ThemePark" trigger="Pressed">
+		<bind source="Key" code="Equal"/>
+	</action>
+
+	<action name="Park.Build" layer="ThemePark" trigger="Pressed">
+		<bind source="Key" code="B"/>
+	</action>
+
+	<action name="Park.Ride" layer="ThemePark" trigger="Pressed">
+		<bind source="Key" code="V"/>
+	</action>
+
+	<action name="Park.Thoughts" layer="ThemePark" trigger="Pressed">
+		<bind source="Key" code="G"/>
+	</action>
+
+	<!-- 현황은 공통 메뉴의 Status 가 아니라 공원 액션이다 — Playground 의 Status 는 Tab(농장)이라 다음 놀이기구와 겹친다. -->
+	<action name="Park.Status" layer="ThemePark" trigger="Pressed">
+		<bind source="Key" code="F1"/>
+	</action>
+</InputMap>

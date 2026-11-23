@@ -18,6 +18,7 @@
 #include "GameFramework/Runtime/Foundation/Framework/GameModeComponent.h"
 #include "GameFramework/Runtime/Foundation/Framework/Minigame/MinigameDefinition.h"
 #include "GameFramework/Runtime/Foundation/Framework/Minigame/MinigameFlow.h"
+#include "GameFramework/Runtime/Foundation/Framework/Minigame/MinigamePortalSpawnerComponent.h"
 #include "GameFramework/Runtime/Foundation/Framework/Minigame/MinigameStack.h"
 #include "GameFramework/Runtime/Foundation/Framework/Save/SaveLock.h"
 
@@ -37,7 +38,8 @@ namespace
     public:
         int64 _roundMoney{ 0 }; ///< 한 판 임시 지갑 — 바탕 판에 쓰지 않는다
 
-        void collectResultForTest( vector<MinigameResultValue>& outListValue ) const { collectMinigameResult( outListValue ); }
+        void        collectMinigameResult( vector<MinigameResultValue>& outListValue ) const override { outListValue.push_back( MinigameResultValue{ hashed_string( "gold" ), _roundMoney } ); }
+        static void addMoneyResultForTest( vector<MinigameResultValue>& outListValue, int64 profit ) { addMoneyResult( outListValue, profit ); }
 
     protected:
         void serializeGameState( StateIO& io ) override { (void)io; }
@@ -47,10 +49,6 @@ namespace
         {
             (void)manager;
             (void)bRespawnViews;
-        }
-        void collectMinigameResult( vector<MinigameResultValue>& outListValue ) const override
-        {
-            outListValue.push_back( MinigameResultValue{ hashed_string( "gold" ), _roundMoney } );
         }
     };
 
@@ -72,6 +70,34 @@ SW_TEST_CASE( MinigameTest, ReadsDefinition )
     SW_EXPECT_TRUE( definition._listInputContext[1] == hashed_string( "menu" ) );
     SW_REQUIRE_TRUE( definition._listUI.size() == 1 );
     SW_REQUIRE_TRUE( definition._listCatalog.size() == 1 );
+}
+
+/** @brief [MinigameTest] 허브 입구: portalSlot 을 적은 정의만 입구를 가지고, 자리 순으로 들며, 겹친 자리는 오류를 남기고 뺀다 */
+SW_TEST_CASE( MinigameTest, PortalSlotsAreOrderedAndUnique )
+{
+    MinigameDefinition plain;
+    SW_REQUIRE_TRUE( MinigameDefinition::loadFromXMLText( kValidXML, "arcade.minigame.xml", plain ) );
+    SW_EXPECT_FALSE( plain.hasPortal() );
+    MinigameDefinition second;
+    MinigameDefinition first;
+    SW_REQUIRE_TRUE( MinigameDefinition::loadFromXMLText( R"(<Minigame name="b" map="a/b.scene.xml" entry="SceneSwitch" portalSlot="9"/>)", "b.minigame.xml", second ) );
+    SW_REQUIRE_TRUE( MinigameDefinition::loadFromXMLText( R"(<Minigame name="a" map="a/a.scene.xml" entry="SceneSwitch" portalSlot="0"/>)", "a.minigame.xml", first ) );
+    SW_EXPECT_TRUE( second.hasPortal() );
+    vector<MinigameDefinition> listPortal;
+    SW_EXPECT_TRUE( MinigameDefinition::insertPortal( listPortal, second ) );
+    SW_EXPECT_TRUE( MinigameDefinition::insertPortal( listPortal, first ) );
+    SW_EXPECT_LOG( "MinigameDefinition.PortalSlotTaken" );
+    SW_EXPECT_FALSE( MinigameDefinition::insertPortal( listPortal, second ) );
+    SW_REQUIRE_TRUE( listPortal.size() == 2 );
+    SW_EXPECT_TRUE( listPortal[0]._name == hashed_string( "a" ) );
+
+    // 자리: 열(기본 8)을 넘으면 다음 줄(Z)이다.
+    const MinigamePortalSpawnerComponent spawner;
+    const float3                         firstPosition  = spawner.computeSlotPosition( listPortal[0]._portalSlot );
+    const float3                         secondPosition = spawner.computeSlotPosition( listPortal[1]._portalSlot );
+    SW_EXPECT_EQUAL( 0.0f, firstPosition._x );
+    SW_EXPECT_EQUAL( 7.0f, secondPosition._x );
+    SW_EXPECT_EQUAL( 7.0f, secondPosition._z );
 }
 
 /** @brief [MinigameTest] 필수 칸(map)이 빠진 파일은 읽지 않는다 */
@@ -149,14 +175,24 @@ namespace
         return definition;
     }
 
-    /** @brief 저장 막기를 쥔 씬 전환 칸의 돌아올 자리입니다. */
-    MinigameReturnPoint makeSuspendedScene( SaveLock& saveLock, string_view scenePath )
+    /** @brief 찍은 씬을 쥔 씬 전환 칸의 돌아올 자리입니다. @p bSaveSnapshot 이면 세이브에 실을 봉투도 찍었다. */
+    MinigameReturnPoint makeSuspendedScene( string_view scenePath, bool bSaveSnapshot )
     {
         MinigameSuspendedScene suspended;
         suspended._scenePath = string( scenePath );
         suspended._snapshot  = { 1, 2, 3 };
-        suspended._saveBlock = saveLock.block( hashed_string( MinigameFlow::kSaveBlockReason ) );
+        if ( bSaveSnapshot )
+            suspended._saveSnapshot = { 4, 5 };
         return MinigameReturnPoint{ std::move( suspended ) };
+    }
+
+    /** @brief 저장을 막는 정의의 씬 전환 칸을 쌓습니다(`MinigameFlow::enter` 의 쌓기). */
+    void pushBlockingFrame( MinigameStack& stack, SaveLock& saveLock, string_view name, string_view scenePath )
+    {
+        MinigameDefinition definition = makeMinigame( name, MinigameEntry::SceneSwitch );
+        definition._savePolicy        = MinigameSavePolicy::Blocked;
+        stack.push( MinigameFrame{ std::move( definition ), makeSuspendedScene( scenePath, false ) } );
+        stack.findTop()->updateSaveBlock( saveLock );
     }
 } // namespace
 
@@ -204,30 +240,35 @@ SW_TEST_CASE( MinigameTest, SwitchKeepsTheReturnPoint )
 {
     SaveLock      saveLock;
     MinigameStack stack;
-    stack.push( MinigameFrame{ makeMinigame( "round1", MinigameEntry::SceneSwitch ), makeSuspendedScene( saveLock, "game/test/maps/board.scene.xml" ) } );
+    pushBlockingFrame( stack, saveLock, "round1", "game/test/maps/board.scene.xml" );
     MinigameFrame* const pTop = stack.findTop();
     SW_REQUIRE_NOT_NULL( pTop );
     pTop->_definition = makeMinigame( "round2", MinigameEntry::SceneSwitch ); // MinigameFlow::switchTo 가 하는 바꿈
+    pTop->updateSaveBlock( saveLock );
     SW_EXPECT_EQUAL( 1u, stack.getDepth() );
-    SW_EXPECT_TRUE( saveLock.isBlocked() );
+    SW_EXPECT_TRUE( saveLock.isBlocked() ); // 새 정의는 저장을 허락하지만 들어올 때 세이브에 실을 봉투를 찍지 않았다
     const MinigameSuspendedScene* const pSuspended = std::get_if<MinigameSuspendedScene>( &stack.findTop()->_returnPoint );
     SW_REQUIRE_NOT_NULL( pSuspended );
     SW_EXPECT_EQUAL( string( "game/test/maps/board.scene.xml" ), pSuspended->_scenePath );
     SW_EXPECT_TRUE( stack.findTop()->_definition._name == hashed_string( "round2" ) );
 }
 
-/** @brief [MinigameTest] 저장 막기: 씬 전환 칸이 있는 동안만 막히고, 그 칸을 꺼내 돌아올 자리를 다 쓰면(복원 끝) 풀린다. 하위 레벨 칸은 막지 않는다 */
-SW_TEST_CASE( MinigameTest, SaveLockIsHeldWhileASceneSwitchFrameExists )
+/** @brief [MinigameTest] 저장 막기: 저장을 막는 정의의 칸이 있는 동안만 막히고, 그 칸을 꺼내 돌아올 자리를 다 쓰면(복원 끝) 풀린다. 허락하는 정의의 칸은 막지 않는다 */
+SW_TEST_CASE( MinigameTest, SaveLockIsHeldWhileABlockingFrameExists )
 {
     SaveLock      saveLock;
     MinigameStack stack;
     stack.push( MinigameFrame{ makeMinigame( "cardtable", MinigameEntry::SubLevel ), MinigameReturnPoint{ MinigameSubLevelReturn{ "game/test/maps/town.scene.xml", hashed_string( "cardtable" ) } } } );
+    stack.findTop()->updateSaveBlock( saveLock );
     SW_EXPECT_FALSE( saveLock.isBlocked() );
     SW_EXPECT_FALSE( stack.hasSuspendedScene() );
-    stack.push( MinigameFrame{ makeMinigame( "arcade", MinigameEntry::SceneSwitch ), makeSuspendedScene( saveLock, "game/test/maps/town.scene.xml" ) } );
+    stack.push( MinigameFrame{ makeMinigame( "farm", MinigameEntry::SceneSwitch ), makeSuspendedScene( "game/test/maps/town.scene.xml", true ) } );
+    stack.findTop()->updateSaveBlock( saveLock );
+    SW_EXPECT_FALSE( saveLock.isBlocked() );
+    pushBlockingFrame( stack, saveLock, "arcade", "game/test/maps/farm.scene.xml" );
     SW_EXPECT_TRUE( saveLock.isBlocked() );
     SW_REQUIRE_NOT_NULL( saveLock.findBlockReason() );
-    SW_EXPECT_TRUE( *saveLock.findBlockReason() == hashed_string( MinigameFlow::kSaveBlockReason ) );
+    SW_EXPECT_TRUE( *saveLock.findBlockReason() == hashed_string( MinigameFrame::kSaveBlockReason ) );
     SW_EXPECT_TRUE( stack.hasSuspendedScene() );
     {
         MinigameFrame leaving;
@@ -242,12 +283,62 @@ SW_TEST_CASE( MinigameTest, OutsideTravelClearsTheStack )
 {
     SaveLock      saveLock;
     MinigameStack stack;
-    stack.push( MinigameFrame{ makeMinigame( "arcade", MinigameEntry::SceneSwitch ), makeSuspendedScene( saveLock, "game/test/maps/town.scene.xml" ) } );
-    stack.push( MinigameFrame{ makeMinigame( "pinball", MinigameEntry::SceneSwitch ), makeSuspendedScene( saveLock, "game/test/maps/arcade.scene.xml" ) } );
+    pushBlockingFrame( stack, saveLock, "arcade", "game/test/maps/town.scene.xml" );
+    pushBlockingFrame( stack, saveLock, "pinball", "game/test/maps/arcade.scene.xml" );
     SW_EXPECT_TRUE( saveLock.isBlocked() );
     stack.clear(); // MinigameFlow::clearForOutsideTravel 가 하는 비우기
     SW_EXPECT_TRUE( stack.isEmpty() );
     SW_EXPECT_FALSE( saveLock.isBlocked() );
+}
+
+/** @brief [MinigameTest] 세이브: 칸마다 미니게임 이름 · 돌아올 자리가 왕복하고(찍은 씬은 세이브 봉투만), 같은 미니게임 안인지 견주며, 깨진 바이트는 읽지 않는다 */
+SW_TEST_CASE( MinigameTest, SaveStateRoundTripsTheFrames )
+{
+    SaveLock      saveLock;
+    MinigameStack stack;
+    vector<uint8> bytes;
+    stack.writeSaveState( bytes );
+    SW_EXPECT_TRUE( bytes.empty() ); // 미니게임 밖의 세이브
+    stack.push( MinigameFrame{ makeMinigame( "farm", MinigameEntry::SceneSwitch ), makeSuspendedScene( "game/test/maps/town.scene.xml", true ) } );
+    stack.push( MinigameFrame{ makeMinigame( "cardtable", MinigameEntry::SubLevel ), MinigameReturnPoint{ MinigameSubLevelReturn{ "game/test/maps/farm.scene.xml", hashed_string( "cardtable" ) } } } );
+    stack.push( MinigameFrame{ makeMinigame( "pond", MinigameEntry::SceneSwitch ), MinigameReturnPoint{ MinigameEntranceReturn{} } } );
+    stack.writeSaveState( bytes );
+
+    vector<MinigameSavedFrame> listFrame;
+    SW_REQUIRE_TRUE( MinigameStack::readSaveState( bytes, listFrame ) );
+    SW_REQUIRE_TRUE( listFrame.size() == 3 );
+    SW_EXPECT_TRUE( listFrame[0]._minigame == hashed_string( "farm" ) );
+    const MinigameSuspendedScene* const pSuspended = std::get_if<MinigameSuspendedScene>( &listFrame[0]._returnPoint );
+    SW_REQUIRE_NOT_NULL( pSuspended );
+    SW_EXPECT_EQUAL( string( "game/test/maps/town.scene.xml" ), pSuspended->_scenePath );
+    SW_EXPECT_TRUE( pSuspended->_snapshot.empty() ); // 스냅숏 목적의 봉투는 다른 실행에서 쓰지 않는다
+    SW_EXPECT_TRUE( pSuspended->_saveSnapshot == vector<uint8>{ 4, 5 } );
+    const MinigameSubLevelReturn* const pSubLevel = std::get_if<MinigameSubLevelReturn>( &listFrame[1]._returnPoint );
+    SW_REQUIRE_NOT_NULL( pSubLevel );
+    SW_EXPECT_TRUE( pSubLevel->_subLevelName == hashed_string( "cardtable" ) );
+    SW_EXPECT_TRUE( std::holds_alternative<MinigameEntranceReturn>( listFrame[2]._returnPoint ) );
+
+    // 같은 미니게임 안이면 씬을 다시 열지 않고 돌아올 자리만 바꾼다. 칸이 다르면 같은 미니게임이 아니다.
+    SW_EXPECT_TRUE( stack.matches( listFrame ) );
+    stack.applyReturnPoints( listFrame, saveLock );
+    const MinigameSuspendedScene* const pApplied = std::get_if<MinigameSuspendedScene>( &stack.findCovered()->_returnPoint );
+    SW_EXPECT_NULL( pApplied ); // 맨 위 바로 아래는 하위 레벨 칸이다
+    SW_EXPECT_FALSE( saveLock.isBlocked() );
+    MinigameFrame popped;
+    SW_REQUIRE_TRUE( stack.pop( popped ) );
+    SW_EXPECT_FALSE( stack.matches( listFrame ) );
+    SW_EXPECT_FALSE( MinigameStack{}.matches( listFrame ) );
+    SW_EXPECT_TRUE( MinigameStack{}.matches( vector<MinigameSavedFrame>{} ) );
+
+    // 잘린 바이트 · 모르는 갈래는 읽지 않고 받은 목록도 그대로다.
+    SW_EXPECT_LOG( "MinigameStack.SaveStateNotRead" );
+    vector<uint8> truncated = bytes;
+    truncated.pop_back();
+    SW_EXPECT_FALSE( MinigameStack::readSaveState( truncated, listFrame ) );
+    vector<uint8> unknownKind = bytes;
+    unknownKind.back()        = 0xFFu; // 마지막 칸(입구)의 갈래 번호
+    SW_EXPECT_FALSE( MinigameStack::readSaveState( unknownKind, listFrame ) );
+    SW_EXPECT_TRUE( listFrame.size() == 3 );
 }
 
 /** @brief [MinigameTest] 결과 통로: 꺼낸 칸의 이름이 결과의 미니게임이 되고, 결과는 받는 쪽(onFinished)이 구독하는 동안만 닿는다 */
@@ -276,7 +367,7 @@ SW_TEST_CASE( MinigameTest, ResultCarriesDirectorOwnedValues )
     MinigameDirectorTestComponent director;
     director._roundMoney = 120;
     vector<MinigameResultValue> listValue;
-    director.collectResultForTest( listValue );
+    director.collectMinigameResult( listValue );
     MinigameFlow::FinishedDelegate finished;
     vector<MinigameResult>         listReceived;
     Subscription                   subscription = finished.add( SW_DELEGATE_LAMBDA( Delegate<void( const MinigameResult& )>, [&listReceived]( const MinigameResult& result )
@@ -286,6 +377,19 @@ SW_TEST_CASE( MinigameTest, ResultCarriesDirectorOwnedValues )
     SW_REQUIRE_TRUE( listReceived[0]._listValue.size() == 1 );
     SW_EXPECT_TRUE( listReceived[0]._listValue[0]._name == hashed_string( "gold" ) );
     SW_EXPECT_TRUE( listReceived[0]._listValue[0]._amount == 120 );
+}
+
+/** @brief [MinigameTest] 번 돈은 공통 값 이름으로 나가고 손해 · 본전은 나가지 않는다 — 통화 보상은 0 보다 커야 한다 */
+SW_TEST_CASE( MinigameTest, MoneyResultSkipsLoss )
+{
+    vector<MinigameResultValue> listValue;
+    MinigameDirectorTestComponent::addMoneyResultForTest( listValue, -30 );
+    MinigameDirectorTestComponent::addMoneyResultForTest( listValue, 0 );
+    SW_EXPECT_TRUE( listValue.empty() );
+    MinigameDirectorTestComponent::addMoneyResultForTest( listValue, 45 );
+    SW_REQUIRE_TRUE( listValue.size() == 1 );
+    SW_EXPECT_TRUE( listValue[0]._name == hashed_string( MinigameResultValue::kMoneyName ) );
+    SW_EXPECT_TRUE( listValue[0]._amount == 45 );
 }
 
 /** @brief [MinigameTest] 디렉터 계약 ③: 켜진 미니게임이 없는 판(허브 · 미니게임 흐름 없음)에서 끝내기는 오류로 거절된다(조용히 무시하지 않는다) */

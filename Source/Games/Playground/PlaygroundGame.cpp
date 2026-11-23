@@ -12,6 +12,7 @@
  *          도시 건설 미니게임(`FrontierTown/` — 키트 둘의 디렉터를 한 씬에 섞는다)의 도시 쪽은 키트, RTS 쪽(일꾼 · 순찰)은 이 게임의 디렉터다.
  *          RTS 매치 미니게임(`StarSkirmish/`)의 디렉터는 RTS 키트의 1 대 1 디렉터에 락스텝 키트를 섞은 파생이다(키트끼리는 서로 모른다).
  *          액션 어드벤처 미니게임(`Velmora/` — 지역을 걷는 키트와 룸 전투 키트를 한 씬에 섞는다)도 지역 전투만 이 게임의 디렉터다.
+ *          초원 마을 미니게임(`MeadowVillage/`)은 하우징 · 생물 · 농장 키트를 한 씬에 섞는다 — 집 자동 짓기 디렉터와 한 프로세스 재생(`MeadowNetSimGame`)이 이 게임의 몫이다.
  *          마을(`maps/hub`)은 팩의 시작 맵이다 — 전용 서버가 띄우면 허브 서버(`Hub/` — 계정마다 진행을 저장하는 공유 월드, NetMMO 복제)가 서고, 클라이언트는
  *          `net.ticketconnect <로그인 주소> <계정> <비밀번호> <서버 이름> <게임 주소>` 로 붙는다(`py -3 -m Scripts net-pair mmo`). 지역 효과 시연 · 마을의 이펙트 · 세트(`data/abilities.xml`)와 기본 어빌리티 클래스는 gamesettings `gameFeatures` 의
  *          게임 기능(`PlaygroundAbilitiesGameFeature.cpp`)이 게임 범위에 건다.

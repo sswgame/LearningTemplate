@@ -109,15 +109,24 @@
 				</_listComponent>
 			</GameObject>
 		</entity>
-		<!-- 디렉터 — 판 상태(퀘스트 일지 · 깃발 · 지갑)를 맨 앞에 두고 지역 디렉터 → 지역 전투 → 입력 · 그리기(클라이언트) 순서로 붙인다. 새 판은 난롯마을의 일어설 자리(0, 0)에서 시작한다. -->
+		<!-- 플레이어 상태 — 조종자 오브젝트가 지갑 · 퀘스트 일지를 쥔다(디렉터의 _playerState). -->
+		<entity id="11" name="PlayerController">
+			<GameObject _schemaVersion="0" _name="PlayerController" _bActive="true">
+				<_listComponent>
+					<PlayerControllerComponent _localID="4811566279812111972" _playerIndex="0" />
+					<WalletComponent _localID="5369660221649138481" _componentName="WalletComponent" _bActive="true" />
+					<QuestLogComponent _localID="8809746743272749268" _componentName="QuestLogComponent" _bActive="true" />
+				</_listComponent>
+			</GameObject>
+		</entity>
+		<!-- 디렉터 — 월드 상태(깃발)를 맨 앞에 두고 지역 디렉터 → 지역 전투 → 입력 · 그리기(클라이언트) 순서로 붙인다. 새 판은 난롯마을의 일어설 자리(0, 0)에서 시작한다. -->
 		<entity id="10" name="Valley">
 			<GameObject _schemaVersion="0" _name="Valley" _bActive="true">
 				<_listComponent>
 					<GameStateComponent _localID="6673597520240684436" _componentName="GameStateComponent" _bActive="true" />
-					<WalletComponent _localID="5369660221649138481" _componentName="WalletComponent" _bActive="true" />
-					<QuestLogComponent _localID="8809746743272749268" _componentName="QuestLogComponent" _bActive="true" />
 					<AdventureGameModeComponent _localID="1556202676166432652" _componentName="AdventureGameModeComponent"
 					                            _bActive="true"
+					                            _playerState="11"
 					                            _startRegion="hearth"
 					                            _flagPrefix="velmora"
 					                            _moveSpeed="6"

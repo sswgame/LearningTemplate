@@ -16,7 +16,7 @@ namespace sw
         struct PauseMenuScreenInternal
         {
             /** @brief 전역 명령 표에 있을 때만 보이는 버튼입니다. 위젯 이름이 명령 이름과 같습니다. */
-            static constexpr const utf8* kArrSessionButton[] = { UIGlobalCommandRegistry::kReturnToTitle, UIGlobalCommandRegistry::kQuitGame };
+            static constexpr const utf8* kArrSessionButton[] = { UIGlobalCommandRegistry::kLeaveMinigame, UIGlobalCommandRegistry::kReturnToTitle, UIGlobalCommandRegistry::kQuitGame };
         };
     } // namespace
 } // namespace sw
@@ -65,7 +65,8 @@ namespace sw
         if ( getUISystem() == nullptr )
             return;
         const UIGlobalCommandRegistry& commands          = engine::getSubsystem<UIGlobalCommandRegistry>();
-        static const hashed_string     s_arrButtonName[] = { hashed_string( PauseMenuScreenInternal::kArrSessionButton[0] ), hashed_string( PauseMenuScreenInternal::kArrSessionButton[1] ) };
+        static const hashed_string     s_arrButtonName[] = { hashed_string( PauseMenuScreenInternal::kArrSessionButton[0] ), hashed_string( PauseMenuScreenInternal::kArrSessionButton[1] ),
+                                                             hashed_string( PauseMenuScreenInternal::kArrSessionButton[2] ) };
         static_assert( SW_COUNT_OF( s_arrButtonName ) == SW_COUNT_OF( PauseMenuScreenInternal::kArrSessionButton ) );
         for ( const hashed_string& buttonName : s_arrButtonName )
         {

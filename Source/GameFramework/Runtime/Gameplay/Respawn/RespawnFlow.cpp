@@ -216,9 +216,10 @@ namespace sw
             return RespawnRequestResult::NotInSelection;
         if ( kind != RespawnPolicyKind::PlayerChoice )
         {
-            const int32 entryIndex = _rules.findPolicyIndex( kind );
-            if ( entryIndex < 0 )
+            const optional<int32> found = _rules.findPolicyIndex( kind );
+            if ( found.has_value() == false )
                 return RespawnRequestResult::PolicyNotAllowed;
+            const int32                entryIndex = *found;
             RespawnCandidate           candidate;
             const RespawnRequestResult result = resolveEntry( entryIndex, context, candidate );
             if ( result == RespawnRequestResult::Accepted )
@@ -333,8 +334,8 @@ namespace sw
 
     int32 RespawnFlow::getPolicyUses( RespawnPolicyKind kind ) const
     {
-        const int32 index = _rules.findPolicyIndex( kind );
-        return index >= 0 ? _listUses[static_cast<size_t>( index )] : 0;
+        const optional<int32> index = _rules.findPolicyIndex( kind );
+        return index.has_value() ? _listUses[static_cast<size_t>( *index )] : 0;
     }
 
     bool RespawnFlow::isStateConsistent() const

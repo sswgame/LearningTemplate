@@ -11,7 +11,6 @@
 #include "Engine/Object/GameObject/WorldOrigin.h"
 #include "Engine/Serialization/Format/StateIO.h"
 
-#include "GameFramework/Kits/Genre/Action/ActionAdventure/AdventureRegionCatalog.h"
 #include "GameFramework/Runtime/Foundation/Framework/GameService.h"
 #include "GameFramework/Runtime/Foundation/Framework/Save/Autosave.h"
 #include "GameFramework/Runtime/Gameplay/GameState/GameStateComponent.h"
@@ -61,6 +60,8 @@ namespace sw
         , _moveSpeed{ 6.0f }
         , _useRadius{ 1.5f }
         , _vitalsSettings{}
+        , _pRegions{}
+        , _pQuests{}
         , _campaign{}
         , _playerPosition{ 0.0f, 0.0f }
         , _commandMove{ 0.0f, 0.0f }
@@ -82,22 +83,18 @@ namespace sw
 
     AdventureGameModeComponent::~AdventureGameModeComponent() = default;
 
-    const AdventureRegionCatalog* AdventureGameModeComponent::findRegions() const
-    {
-        return game::findSubsystem<const AdventureRegionCatalog>();
-    }
-
     bool AdventureGameModeComponent::startGame()
     {
-        const AdventureRegionCatalog* const pRegions = findRegions();
-        const QuestCatalog* const           pQuests  = game::findSubsystem<const QuestCatalog>();
-        if ( pRegions == nullptr || pQuests == nullptr )
-        {
-            SW_LOG_ERROR_ID( "Adventure.NoData", "Adventure: the region (%#) or quest (%#) catalog service is missing - the game does not open", pRegions != nullptr ? "ok" : "missing",
-                             pQuests != nullptr ? "ok" : "missing" );
+        if ( acquireBoundCatalog( _pRegions ) == false )
             return false;
+        if ( _pQuests == nullptr )
+        {
+            SharedAssetRef<QuestCatalog> quests;
+            if ( acquireBoundCatalog( quests ) == false )
+                return false;
+            _pQuests = quests.snapshot();
         }
-        const AdventureRegionDef* const pStart = pRegions->find( _startRegion );
+        const AdventureRegionDef* const pStart = _pRegions->find( _startRegion );
         if ( pStart == nullptr )
         {
             SW_LOG_ERROR_ID( "Adventure.NoStartRegion", "Adventure: start region '%#' is not in the region catalog - the game does not open", _startRegion.c_str() );
@@ -105,8 +102,10 @@ namespace sw
         }
         if ( GameStateComponent::openOnOwner( *this, GameStateSettings{} ) == nullptr )
             return false;
-        if ( PlayerComponentUtil::openOnOwner<QuestLogComponent>( *this, pQuests ) == nullptr || PlayerComponentUtil::requireOnOwner<WalletComponent>( *this ) == nullptr )
-            return false;
+        const GameObject* const pPlayerState = requirePlayerState();
+        if ( pPlayerState == nullptr || PlayerComponentUtil::openOn<QuestLogComponent>( *pPlayerState, _pQuests.get() ) == nullptr ||
+             PlayerComponentUtil::requireOn<WalletComponent>( *pPlayerState ) == nullptr )
+            return false; // 까닭은 찾기가 남겼다
         if ( _campaign.initialize( _vitalsSettings, _startRegion.key(), _flagPrefix ) == false )
             return false;
         _playerPosition   = pStart->_respawn;
@@ -203,8 +202,8 @@ namespace sw
     {
         const AdventureRegionCatalog* const pRegions  = findRegions();
         GameStateComponent* const           pState    = GameStateComponent::findOnOwner( *this );
-        QuestLogComponent* const            pQuestLog = PlayerComponentUtil::findOnOwner<QuestLogComponent>( *this );
-        WalletComponent* const              pWallet   = PlayerComponentUtil::findOnOwner<WalletComponent>( *this );
+        QuestLogComponent* const            pQuestLog = findOnPlayerState<QuestLogComponent>();
+        WalletComponent* const              pWallet   = findOnPlayerState<WalletComponent>();
         const AdventureRegionDef* const     pRegion   = pRegions != nullptr ? pRegions->find( _encounterRegion ) : nullptr;
         if ( pRegion == nullptr || pState == nullptr || pQuestLog == nullptr || pWallet == nullptr )
             return;
@@ -277,8 +276,8 @@ namespace sw
             return;
         const AdventureRegionCatalog* const pRegions  = findRegions();
         GameStateComponent* const           pState    = GameStateComponent::findOnOwner( *this );
-        QuestLogComponent* const            pQuestLog = PlayerComponentUtil::findOnOwner<QuestLogComponent>( *this );
-        WalletComponent* const              pWallet   = PlayerComponentUtil::findOnOwner<WalletComponent>( *this );
+        QuestLogComponent* const            pQuestLog = findOnPlayerState<QuestLogComponent>();
+        WalletComponent* const              pWallet   = findOnPlayerState<WalletComponent>();
         if ( pRegions == nullptr || pState == nullptr || pQuestLog == nullptr || pWallet == nullptr )
             return;
         const bool bUse = _bUseQueued == SW_TRUE;

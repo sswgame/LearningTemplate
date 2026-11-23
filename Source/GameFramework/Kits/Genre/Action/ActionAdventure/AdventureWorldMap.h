@@ -6,6 +6,7 @@
  */
 #pragma once
 #include "Core/Container/vector.h"
+#include "Core/Foundation/Expected.h"
 #include "Core/Foundation/Macros.h"
 #include "Core/Foundation/Types.h"
 #include "Core/Name/hashed_string.h"
@@ -105,7 +106,7 @@ namespace sw
         SW_DECLARE_STATE_IO();
 
         /** @brief 탑을 깨웁니다. 지역의 방을 드러내고, 새로 드러난 수를 반환합니다. 탑이 아니거나 이미 깨운 탑이면 −1 을 반환합니다. */
-        int32 activateTower( const hashed_string& towerID, AreaGraph& areaGraph );
+        optional<int32> activateTower( const hashed_string& towerID, AreaGraph& areaGraph );
         /** @brief 사당을 찾았습니다(순간 이동 지점이 됩니다). 처음이면 true 를 반환합니다. */
         bool discoverShrine( const hashed_string& shrineID );
         /** @brief 사당을 마쳤습니다. 처음이면 증표 하나를 주고 true 를 반환합니다(찾은 것으로도 처리합니다). */

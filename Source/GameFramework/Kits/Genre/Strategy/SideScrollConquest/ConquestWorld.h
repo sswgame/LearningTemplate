@@ -183,7 +183,7 @@ namespace sw
          * @brief 병사를 바로 생성합니다(스크립트와 테스트용). 플레이어 병사는 지휘관 부대에 들어갑니다.
          * @return 병사 번호이다. 모르는 병종이면 -1 이다.
          */
-        int32 spawnUnit( const hashed_string& unitID, ConquestTeam team, float32 x, ConquestOrder order );
+        optional<int32> spawnUnit( const hashed_string& unitID, ConquestTeam team, float32 x, ConquestOrder order );
         /** @brief 자원을 더합니다. 음수이면 오류를 남기고 더하지 않습니다(쓰기는 비용으로만 합니다 — 음수 자원은 세이브가 거절합니다). */
         void addResource( const hashed_string& resource, float32 amount );
 

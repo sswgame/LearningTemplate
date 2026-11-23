@@ -103,12 +103,12 @@ namespace sw
         return false;
     }
 
-    int32 GridInventory::placeItem( const hashed_string& itemID, int32 count, int32 x, int32 y, bool bRotated )
+    optional<int32> GridInventory::placeItem( const hashed_string& itemID, int32 count, int32 x, int32 y, bool bRotated )
     {
         GridItemShape shape;
         const bool    bCannotAddItem = findShape( itemID, shape ) == false || count <= 0 || count > shape._maxStack || canPlace( itemID, x, y, bRotated ) == false;
         if ( bCannotAddItem )
-            return constant::invalid_index::kInt32;
+            return nullopt;
         GridItem item;
         item._itemID     = itemID;
         item._instanceID = _nextInstanceID++;
@@ -146,7 +146,7 @@ namespace sw
             if ( findFreeSpot( itemID, x, y, bRotated ) == false )
                 break;
             const int32 stackCount = MathUtil::min( remaining, shape._maxStack );
-            if ( placeItem( itemID, stackCount, x, y, bRotated ) < 0 )
+            if ( placeItem( itemID, stackCount, x, y, bRotated ).has_value() == false )
                 break;
             remaining -= stackCount;
         }

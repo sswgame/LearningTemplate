@@ -493,15 +493,15 @@ namespace sw
 
 namespace sw
 {
-    void RigConstraintNodes::registerNodes( RigNodeRegistry& registry )
+    bool RigConstraintNodes::registerNodes( RigNodeRegistry& registry )
     {
-        registry.registerNode( "CopyTransform", &RigConstraintNodesFactory::createCopyTransform );
-        registry.registerNode( "Position", &RigConstraintNodesFactory::createPosition );
-        registry.registerNode( "Rotation", &RigConstraintNodesFactory::createRotation );
-        registry.registerNode( "ParentSwitch", &RigConstraintNodesFactory::createParentSwitch );
-        registry.registerNode( "Distance", &RigConstraintNodesFactory::createDistance );
-        registry.registerNode( "LimitRotation", &RigConstraintNodesFactory::createLimitRotation );
-        registry.registerNode( "TwistDistribution", &RigConstraintNodesFactory::createTwistDistribution );
-        registry.registerNode( "ScaleBone", &RigConstraintNodesFactory::createScaleBone );
+        return registry.registerNode( "CopyTransform", &RigConstraintNodesFactory::createCopyTransform ) &&
+               registry.registerNode( "Position", &RigConstraintNodesFactory::createPosition ) &&
+               registry.registerNode( "Rotation", &RigConstraintNodesFactory::createRotation ) &&
+               registry.registerNode( "ParentSwitch", &RigConstraintNodesFactory::createParentSwitch ) &&
+               registry.registerNode( "Distance", &RigConstraintNodesFactory::createDistance ) &&
+               registry.registerNode( "LimitRotation", &RigConstraintNodesFactory::createLimitRotation ) &&
+               registry.registerNode( "TwistDistribution", &RigConstraintNodesFactory::createTwistDistribution ) &&
+               registry.registerNode( "ScaleBone", &RigConstraintNodesFactory::createScaleBone );
     }
 } // namespace sw

@@ -18,6 +18,8 @@
 #include "GameFramework/Runtime/Foundation/Framework/GameEventUtil.h"
 #include "GameFramework/Runtime/Foundation/Framework/GameEvents.h"
 #include "GameFramework/Runtime/Foundation/Framework/GameService.h"
+#include "GameFramework/Runtime/Foundation/Framework/Minigame/MinigameFlow.h"
+#include "GameFramework/Runtime/Foundation/Framework/Minigame/MinigameStack.h"
 #include "GameFramework/Runtime/Foundation/Framework/Save/GameLocalStore.h"
 #include "GameFramework/Runtime/Foundation/Framework/Save/GameStateSnapshot.h"
 #include "GameFramework/Runtime/Foundation/Framework/Save/SaveLock.h"
@@ -133,7 +135,8 @@ namespace sw
             SW_LOG_ERROR_ID( "GameSaveSlots.BrokenSceneNotReopened", "The broken scene has no source to reopen - saving stays blocked until a restore succeeds" );
             return;
         }
-        if ( _owner.getSubsystem<GameSceneFlow>().requestSceneThen( scenePath, SW_DELEGATE_METHOD( GameSceneFlow::SceneLoadedFunction, &GameSaveSlots::onBrokenSceneReopened, this ) ) == false )
+        // 미니게임 안이면 칸 스택을 둔 채 다시 연다 — 같은 미니게임의 맵이다.
+        if ( _owner.getSubsystem<MinigameFlow>().requestScene( scenePath, SW_DELEGATE_METHOD( GameSceneFlow::SceneLoadedFunction, &GameSaveSlots::onBrokenSceneReopened, this ) ) == false )
             SW_LOG_ERROR_ID( "GameSaveSlots.BrokenSceneNotRequested", "The broken scene '%#' could not be requested again - saving stays blocked until a restore succeeds", scenePath.c_str() );
     }
 
@@ -249,21 +252,33 @@ namespace sw
             publishSlotLoaded( slot, false, onApplied );
             return;
         }
-        // 머리만 읽어 찍은 씬을 본다. 같은 씬(또는 씬 없이 찍은 세이브)이면 바로 적용하고, 아니면 그 씬을 연 뒤 적용한다 —
-        // 언리얼 게임이 세이브의 맵 이름으로 `OpenLevel` 한 뒤 적용하는 것과 같다(유니티는 `LoadSceneAsync` 의 완료에서 적용).
-        const optional<string> savedSceneID = GameStateSnapshot::readSceneID( bytes.data(), static_cast<uint32>( bytes.size() ) );
-        if ( savedSceneID.has_value() == false )
+        // 머리만 읽어 찍은 씬과 미니게임을 본다. 같은 씬 · 같은 미니게임(또는 씬 없이 찍은 세이브)이면 바로 적용하고, 아니면 그 미니게임을 켜고 그 씬을 연 뒤 적용한다 —
+        // 언리얼 게임이 세이브의 맵 이름으로 `OpenLevel` 한 뒤 적용하는 것과 같다(유니티는 `LoadSceneAsync` 의 완료에서 적용). 미니게임은 URL 로 경험 · 게임 모드를 함께 싣는 자리다.
+        const optional<string>        savedSceneID  = GameStateSnapshot::readSceneID( bytes.data(), static_cast<uint32>( bytes.size() ) );
+        const optional<vector<uint8>> minigameBytes = GameStateSnapshot::readMinigameBytes( bytes.data(), static_cast<uint32>( bytes.size() ) );
+        vector<MinigameSavedFrame>    listFrame;
+        const bool                    bHeaderRead = savedSceneID.has_value() && minigameBytes.has_value() && MinigameStack::readSaveState( *minigameBytes, listFrame );
+        if ( bHeaderRead == false )
         {
             publishSlotLoaded( slot, false, onApplied ); // 머리가 틀린 까닭은 읽기가 남겼다
             return;
         }
-        if ( savedSceneID->empty() || *savedSceneID == GameSaveSlotsInternal::findActiveSceneID() )
+        MinigameFlow& minigameFlow = _owner.getSubsystem<MinigameFlow>();
+        const bool    bInMinigame  = minigameFlow.isInSavedMinigame( listFrame );
+        if ( savedSceneID->empty() || ( bInMinigame && *savedSceneID == GameSaveSlotsInternal::findActiveSceneID() ) )
         {
-            publishSlotLoaded( slot, _owner.restoreSnapshot( SerializePurpose::SaveGame, bytes ), onApplied );
+            const bool bRestored = _owner.restoreSnapshot( SerializePurpose::SaveGame, bytes );
+            if ( bRestored && bInMinigame )
+                minigameFlow.applySavedMinigame( std::move( listFrame ) );
+            publishSlotLoaded( slot, bRestored, onApplied );
             return;
         }
         _pendingSlotRestore = PendingSlotRestore{ slot, bytes, onApplied };
-        if ( _owner.getSubsystem<GameSceneFlow>().requestSceneThen( *savedSceneID, SW_DELEGATE_METHOD( GameSceneFlow::SceneLoadedFunction, &GameSaveSlots::onSaveSceneLoaded, this ) ) == false )
+        // 미니게임 밖의 세이브는 장치 밖 이동이다 — 켜진 미니게임이 있으면 흐름이 비운다.
+        const GameSceneFlow::SceneLoadedFunction onLoaded   = SW_DELEGATE_METHOD( GameSceneFlow::SceneLoadedFunction, &GameSaveSlots::onSaveSceneLoaded, this );
+        const bool                               bRequested = listFrame.empty() ? _owner.getSubsystem<GameSceneFlow>().requestSceneThen( *savedSceneID, onLoaded )
+                                                                                : minigameFlow.travelToSavedMinigame( std::move( listFrame ), *savedSceneID, onLoaded );
+        if ( bRequested == false )
         {
             SW_LOG_ERROR_ID( "GameSaveSlots.SaveSceneNotRequested", "Save slot '%#' was made in scene '%#', which could not be requested - nothing is loaded", slot.c_str(), savedSceneID->c_str() );
             _pendingSlotRestore = nullopt;

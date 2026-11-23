@@ -65,15 +65,15 @@ SW_TEST_CASE( AdventureWorldMapTest, TowersRevealTheirRegionOnce )
     SW_REQUIRE_TRUE( AdventureWorldTestUtil::addArea( graph, "c", "Other" ) );
 
     SW_EXPECT_FALSE( world.canWarpTo( kTower ) );
-    SW_EXPECT_EQUAL( 2, world.activateTower( kTower, graph ) );
+    SW_EXPECT_TRUE( world.activateTower( kTower, graph ) == 2 );
     SW_EXPECT_TRUE( graph.isDiscovered( sw::hashed_string( "a" ) ) );
     SW_EXPECT_FALSE( graph.isDiscovered( sw::hashed_string( "c" ) ) );
     SW_EXPECT_TRUE( world.canWarpTo( kTower ) );
 
-    SW_EXPECT_EQUAL( -1, world.activateTower( kTower, graph ) );
-    SW_EXPECT_EQUAL( -1, world.activateTower( kShrineA, graph ) );
-    SW_EXPECT_EQUAL( -1, world.activateTower( sw::hashed_string( "nothing" ), graph ) );
-    SW_EXPECT_EQUAL( 0, world.activateTower( kFarTower, graph ) );
+    SW_EXPECT_FALSE( world.activateTower( kTower, graph ).has_value() );
+    SW_EXPECT_FALSE( world.activateTower( kShrineA, graph ).has_value() );
+    SW_EXPECT_FALSE( world.activateTower( sw::hashed_string( "nothing" ), graph ).has_value() );
+    SW_EXPECT_TRUE( world.activateTower( kFarTower, graph ) == 0 );
     SW_EXPECT_TRUE( world.canWarpTo( kFarTower ) );
 }
 
@@ -279,7 +279,7 @@ SW_TEST_CASE( AdventureWorldMapTest, StateRoundTripsAndRefusesBrokenBytes )
     SW_REQUIRE_TRUE( world.loadFromXMLText( kWorldXML, "AdventureWorldMapTest" ) );
     sw::AreaGraph graph;
     SW_REQUIRE_TRUE( AdventureWorldTestUtil::addArea( graph, "a", "Plateau" ) );
-    SW_EXPECT_TRUE( world.activateTower( kTower, graph ) >= 0 );
+    SW_EXPECT_TRUE( world.activateTower( kTower, graph ).has_value() );
     SW_EXPECT_TRUE( world.completeShrine( kShrineA ) );
 
     sw::Archive writer;

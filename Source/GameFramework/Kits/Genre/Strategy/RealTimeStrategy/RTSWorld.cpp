@@ -1721,7 +1721,7 @@ namespace sw
             return;
         }
         const bool bOrdered    = pOrder != nullptr && pOrder->_type == RTSOrderKind::Attack;
-        const bool bLostTarget = unit.isMobile() == false || bHold || ( bOrdered == false && distance > unit._pDef->_sight * 1.5f );
+        const bool bLostTarget = unit.isMobile() == false || bHold || ( bOrdered == false && distance > unit._pDef->_sight * _settings._autoTargetLeashScale );
         if ( bLostTarget )
         {
             unit._attackTarget = RTSUnitID{}; // 목표를 놓쳤다. 자동으로 고른 목표에만 해당하며, 명령한 목표는 끝까지 쫓는다

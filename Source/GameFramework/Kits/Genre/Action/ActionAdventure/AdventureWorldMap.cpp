@@ -135,15 +135,15 @@ namespace sw
         }
     }
 
-    int32 AdventureWorldMap::activateTower( const hashed_string& towerID, AreaGraph& areaGraph )
+    optional<int32> AdventureWorldMap::activateTower( const hashed_string& towerID, AreaGraph& areaGraph )
     {
         const optional<int32> found = _catalog.findIndex( towerID );
         if ( found.has_value() == false )
-            return constant::invalid_index::kInt32;
+            return nullopt;
         const int32 index                = *found;
         const bool  bTowerNotActivatable = _catalog.getAt( static_cast<size_t>( index ) )._kind != AdventureLandmarkKind::Tower || _listActivated[static_cast<size_t>( index )] == SW_TRUE;
         if ( bTowerNotActivatable )
-            return constant::invalid_index::kInt32;
+            return nullopt;
         _listActivated[static_cast<size_t>( index )] = SW_TRUE;
         return areaGraph.discoverRegion( _catalog.getAt( static_cast<size_t>( index ) )._region );
     }

@@ -31,6 +31,7 @@
 #include "Core/Container/unordered_map.h"
 #include "Core/Container/vector.h"
 #include "Core/Foundation/Constants.h"
+#include "Core/Foundation/Expected.h"
 #include "Core/Foundation/Macros.h"
 #include "Core/Foundation/Types.h"
 #include "Core/Memory/Memory.h"
@@ -94,7 +95,9 @@ namespace sw
         /** @brief 하위 레벨 이름을 더한 순서로 채웁니다(비우고 채운다). */
         void collectSubLevelNames( vector<string>& outListName ) const;
         /** @brief 오브젝트(또는 그 조상)가 하위 레벨의 앵커 · 멤버면 true 입니다 — 세이브의 씬 섹션 · 씬 문서 쓰기가 빼는 오브젝트입니다. */
-        bool isSubLevelObject( uint64 objectID ) const;
+        bool isSubLevelObject( uint64 objectID ) const { return findAnchorObjectID( objectID ).has_value(); }
+        /** @brief 오브젝트(또는 그 조상)가 이름 @p name 의 하위 레벨의 앵커 · 멤버면 true 입니다. 그 하위 레벨이 없거나 아직 서지 않았으면 false 입니다. */
+        bool isObjectInSubLevel( string_view name, uint64 objectID ) const;
         /** @brief 오브젝트 자신이 이 서비스의 목록에 들어 있으면 true 입니다(조상은 보지 않는다) — 조상이 다른 묶음에 든 오브젝트를 두 번 뜨지 않게 가린다(`Scene::collectCellGroup`). */
         bool isListedObject( uint64 objectID ) const;
 
@@ -169,6 +172,8 @@ namespace sw
         void unloadSubLevel( SubLevel& subLevel );
         /** @brief 오브젝트 표(`_mapObjectSubLevel`)를 하위 레벨의 id 목록으로 다시 만듭니다. */
         void rebuildObjectMap();
+        /** @brief 오브젝트(또는 그 조상)가 든 하위 레벨의 앵커 오브젝트 id 입니다. 하위 레벨에 들지 않았으면 nullopt 입니다. */
+        optional<uint64> findAnchorObjectID( uint64 objectID ) const;
 
     private:
         Scene*                        _pScene;    ///< 하위 레벨을 받은 씬(빌림). 첫 더하기 · 복원이 정하고 `endScene` 이 놓는다

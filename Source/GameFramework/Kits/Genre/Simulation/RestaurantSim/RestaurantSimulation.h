@@ -288,7 +288,7 @@ namespace sw
         /** @brief 시간(게임 분)을 진행합니다. 닫는 시각이 지나도 안에 있는 손님은 계속 받습니다. */
         void update( float32 deltaMinutes );
         /** @brief 손님 하나를 바로 들입니다(예약과 테스트용). 손님 id 를 반환하고, 모르는 성향이면 -1 입니다. */
-        int32 admitCustomer( const hashed_string& typeID );
+        optional<int32> admitCustomer( const hashed_string& typeID );
         /** @brief 닫습니다. 남은 손님을 정리하고 급여를 낸 뒤 결산을 @p outSummary 에 적습니다. */
         void closeDay( RestaurantDaySummary& outSummary );
         /** @brief 밤을 넘깁니다. 재료가 하루 늙어 상한 것은 버리고(다음 결산에 반영됩니다), 시세와 평판이 바뀝니다. */

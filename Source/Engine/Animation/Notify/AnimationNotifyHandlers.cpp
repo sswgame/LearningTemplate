@@ -378,13 +378,12 @@ namespace sw
 {
     bool AnimationNotifyHandlerRegistry::registerBuiltInHandlers( AnimationNotifyHandlerRegistry& registry )
     {
-        registry.registerHandler( hashed_string( "PlaySound" ), make_unique<AnimationNotifyHandlersInternal::PlaySoundHandler>() );
-        registry.registerHandler( hashed_string( "SpawnPrefab" ), make_unique<AnimationNotifyHandlersInternal::SpawnPrefabHandler>() );
-        registry.registerHandler( hashed_string( "Footstep" ), make_unique<AnimationNotifyHandlersInternal::FootstepHandler>() );
-        registry.registerHandler( hashed_string( "HitWindow" ), make_unique<AnimationNotifyHandlersInternal::HitWindowHandler>() );
-        registry.registerHandler( hashed_string( "CameraShake" ), make_unique<AnimationNotifyHandlersInternal::CameraShakeHandler>() );
-        registry.registerHandler( hashed_string( "AbilityEvent" ), make_unique<AnimationNotifyHandlersInternal::AbilityEventHandler>() );
-        registry.registerHandler( hashed_string( "MotionWarp" ), make_unique<AnimationNotifyHandlersInternal::MotionWarpHandler>() );
-        return true;
+        return registry.registerHandler( hashed_string( "PlaySound" ), make_unique<AnimationNotifyHandlersInternal::PlaySoundHandler>() ) &&
+               registry.registerHandler( hashed_string( "SpawnPrefab" ), make_unique<AnimationNotifyHandlersInternal::SpawnPrefabHandler>() ) &&
+               registry.registerHandler( hashed_string( "Footstep" ), make_unique<AnimationNotifyHandlersInternal::FootstepHandler>() ) &&
+               registry.registerHandler( hashed_string( "HitWindow" ), make_unique<AnimationNotifyHandlersInternal::HitWindowHandler>() ) &&
+               registry.registerHandler( hashed_string( "CameraShake" ), make_unique<AnimationNotifyHandlersInternal::CameraShakeHandler>() ) &&
+               registry.registerHandler( hashed_string( "AbilityEvent" ), make_unique<AnimationNotifyHandlersInternal::AbilityEventHandler>() ) &&
+               registry.registerHandler( hashed_string( "MotionWarp" ), make_unique<AnimationNotifyHandlersInternal::MotionWarpHandler>() );
     }
 } // namespace sw

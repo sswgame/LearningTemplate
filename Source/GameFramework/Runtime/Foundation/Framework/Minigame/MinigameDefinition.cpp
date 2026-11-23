@@ -41,6 +41,23 @@ namespace sw
         return true;
     }
 
+    bool MinigameDefinition::insertPortal( vector<MinigameDefinition>& inoutListPortal, MinigameDefinition definition )
+    {
+        size_t index = 0;
+        while ( index < inoutListPortal.size() && inoutListPortal[index]._portalSlot < definition._portalSlot )
+        {
+            ++index;
+        }
+        if ( index < inoutListPortal.size() && inoutListPortal[index]._portalSlot == definition._portalSlot )
+        {
+            SW_LOG_ERROR_ID( "MinigameDefinition.PortalSlotTaken", "Minigame '%#': portalSlot %# is already taken by '%#' - pick a free slot, this entrance is not built", definition._name.c_str(),
+                             definition._portalSlot, inoutListPortal[index]._name.c_str() );
+            return false;
+        }
+        inoutListPortal.insert( inoutListPortal.begin() + static_cast<ptrdiff_t>( index ), std::move( definition ) );
+        return true;
+    }
+
     bool MinigameDefinition::loadRoot( const XMLCatalogRoot& root, string_view sourceName )
     {
         // 루트 속성은 스키마(빠진 필수 · 모르는 속성 · 깨진 값은 오류)다. 자식 원소는 없다 — 적힌 것은 모두 오타로 알린다.

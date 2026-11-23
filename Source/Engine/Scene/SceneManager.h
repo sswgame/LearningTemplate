@@ -50,6 +50,9 @@ namespace sw
     using SceneLoadRequestedHandler  = Delegate<void( const string& scenePath, SceneLoadKind kind, const TaskFuture<Scene*>& future )>;
     using SceneLoadRequestedDelegate = MulticastDelegate<void( const string& scenePath, SceneLoadKind kind, const TaskFuture<Scene*>& future )>;
 
+    /** @brief 월드의 플레이가 바뀐다는 알림입니다 — 시작은 활성 씬의 `beginPlay` 앞, 끝은 `endPlay` 뒤에 옵니다(`SceneManager::setWorldPlaying`). */
+    using WorldPlayChangedDelegate = MulticastDelegate<void( bool bPlaying )>;
+
     /** @brief 미리보기 씬이 아닌 씬(또는 없는 키)을 가리키는 키입니다. */
     inline constexpr uint32 kInvalidSceneKey = 0;
 
@@ -133,6 +136,12 @@ namespace sw
          *          스트리밍 큐가 미리 읽는다. 로드가 끝난 뒤에도 잠시(`gv_scenePreloadHoldFrames`) 붙들어 씬이 에셋을 잡을 때까지 캐시가 비지 않게 한다. 로딩 화면 진행률이 이것을 읽는다.
          */
         [[nodiscard]] bool tryGetLoadProgress( float32& outProgress ) const;
+        /**
+         * @brief 열기 전에 씬 @p path 의 프리로드 목록(`ScenePreloadList`)을 열어 그 씬이 쓸 파일을 미리 읽고 붙듭니다(문 앞 · 로비 — 언리얼 레벨 프리스트리밍, 유니티 `DownloadDependenciesAsync` 자리).
+         * @details 하나만 둔다 — 다른 씬을 미리 읽거나 열면 앞의 것을 놓는다. 이 씬을 열면 로드가 그 세트를 이어받아 처음부터 다시 읽지 않는다. 열지 않고 `gv_scenePreloadAheadFrames` 가 지나면 놓는다.
+         * @return 미리 읽는 중이면 true, 목록이 없거나(쿠킹 전 Dev 실행) 비었거나 프리로드를 껐으면 false 입니다(그 씬은 열 때 읽는다).
+         */
+        [[nodiscard]] bool preloadScene( string_view path );
         /** @brief 활성 씬을 그 씬이 온 리소스(소스 id)에 저장합니다. 소스가 없으면(새 씬) 쓰지 않고 false 입니다 — `saveActiveSceneAs` 로 자리를 정한다. */
         [[nodiscard]] bool saveActiveScene();
         /**
@@ -214,6 +223,8 @@ namespace sw
         void setWorldPlaying( bool bPlaying );
         /** @brief 월드가 플레이 중이면 true 입니다. */
         bool isWorldPlaying() const { return _bWorldPlaying; }
+        /** @brief 월드의 플레이가 바뀔 때 부를 함수 목록입니다(언리얼 `FWorldDelegates::OnWorldBeginPlay` · `FEditorDelegates::EndPIE` 자리) — 씬의 컴포넌트가 시작하기 앞 · 끝난 뒤에 범위를 켜고 끈다. */
+        WorldPlayChangedDelegate& onWorldPlayChanged() { return _onWorldPlayChanged; }
         /**
          * @brief 에디터 모듈을 리로드하는 동안 플레이 전 편집 씬의 롤백 스냅샷을 맡습니다. 앞에 맡긴 것은 버립니다.
          * @details 월드는 리로드 너머로 계속 돈다 — 새 에디터 이미지가 `takePlaySnapshot` 으로 되찾아 Stop 이 편집 씬을 되돌린다. 형이 엔진 것이라
@@ -339,7 +350,9 @@ namespace sw
          * @details 언리얼 청크 설치를 기다린 뒤 맵을 여는 흐름 · 유니티 Addressables 의 `LoadSceneAsync` 가 의존 번들을 먼저 받는 것과 같은 자리다.
          */
         void updateChunkWait();
-        /** @brief 요청한 씬의 프리로드 목록을 열어 파일을 미리 읽기 시작합니다. 목록이 없으면 아무것도 하지 않습니다(`tryGetLoadProgress` 참고). */
+        /** @brief 씬 @p path 의 프리로드 목록으로 세트를 만듭니다(붙들기 포함). 목록이 없거나 비었거나 껐으면 nullptr 입니다. */
+        unique_ptr<PreloadSet> makeScenePreload( string_view path );
+        /** @brief 요청한 씬의 프리로드를 시작합니다 — 미리 읽던 씬(`preloadScene`)이면 그 세트를 이어받는다. 목록이 없으면 아무것도 하지 않습니다(`tryGetLoadProgress` 참고). */
         void beginScenePreload( string_view path );
         /** @brief 프리로드 세트를 한 프레임 진행하고, 로드가 끝난 뒤 붙든 프레임이 차면 놓습니다(`updateTransitions` 가 부른다). */
         void updateScenePreload();
@@ -370,10 +383,14 @@ namespace sw
         string                          _saveBlockReason;           ///< 비어 있지 않으면 씬 저장을 막는다(`setSaveBlockReason`)
         SceneObjectsInvalidatedDelegate _onSceneObjectsInvalidated; ///< `onSceneObjectsInvalidated`
         SceneLoadRequestedDelegate      _onSceneLoadRequested;      ///< `onSceneLoadRequested`
+        WorldPlayChangedDelegate        _onWorldPlayChanged;        ///< `onWorldPlayChanged`
         NetLinkValue                    _netLink;                   ///< 새로 받아들이는 씬에 올릴 넷 링크(`setNetLink`). 비어 있으면 올리지 않는다
 
         unique_ptr<PreloadSet>        _pScenePreload;     ///< 로드 중이거나 끝난 지 얼마 안 된 씬의 프리로드. 없으면 nullptr
         uint32                        _preloadHeldFrames; ///< 로드가 끝난 뒤 프리로드를 붙들고 지난 프레임 수
+        unique_ptr<PreloadSet>        _pAheadPreload;     ///< 열기 전에 미리 읽는 씬의 프리로드(`preloadScene`). 없으면 nullptr
+        string                        _aheadPreloadPath;  ///< 미리 읽는 씬 경로
+        uint32                        _aheadHeldFrames;   ///< 미리 읽기를 시작하고 지난 프레임 수
         SceneLoadLeakCheck            _leakCheck;         ///< 씬 로드 누수 곡선 감시 값(`startLoadLeakCheck`)
         unique_ptr<ScenePlaySnapshot> _heldPlaySnapshot;  ///< 에디터 모듈 리로드 동안 맡은 롤백 스냅샷(`holdPlaySnapshot`). 없으면 nullptr
 

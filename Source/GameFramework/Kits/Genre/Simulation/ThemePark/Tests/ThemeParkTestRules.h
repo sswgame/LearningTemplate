@@ -1,6 +1,6 @@
 /**
  * @file ThemeParkTestRules.h
- * @brief 테마파크 테스트가 쓰는 공원 규칙 줄(`<Rules>`)과 그 값의 설정입니다. 게임 데이터(`game/themepark/data/rides.xml`)와 같은 값이다.
+ * @brief 테마파크 테스트가 쓰는 공원 규칙 줄(`<Rules>`)과 그 값의 설정, 코스터 회로 하나입니다. 게임 데이터(`game/playground/data/rides.xml` · `coasters.xml`)와 같은 값이다.
  */
 #pragma once
 #include "Core/Foundation/Constants.h"
@@ -15,6 +15,21 @@ namespace sw
 {
     /** @brief 공원 규칙 한 줄입니다(모든 칸이 필수). */
     inline constexpr const utf8* kParkRules = R"(<Rules guestArrivalPerMinute="12.0" walkSpeed="2.5" wanderRadius="6.0" queuePatience="90.0" energyDrainPerSecond="0.0020833333333333333" nauseaRecoveryPerSecond="0.008333333333333333" queueSpacing="0.6" leaveEnergy="0.1" leaveHappiness="0.15" nauseaPerRating="0.06" queueUnhappinessPerSecond="0.002" maxGuests="150" randomSeed="12345" guestCashMin="20" guestCashMax="80" guestMinIntensityMax="3.0" guestMaxIntensityMin="3.0" guestMaxIntensityMax="9.0" guestNauseaToleranceMin="0.3" guestNauseaToleranceMax="0.9" arrivalBaseFactor="0.4" arrivalRatingScale="1000.0" noRideArrivalFactor="0.2" noArrivalEntryFee="100.0" rideFunBase="0.04" rideFunPerExcitement="0.025" greatRideExcitement="6.0" tameRideFunScale="0.5" sickFunPenalty="0.1" rideEnergyCost="0.04" queueGiveUpUnhappiness="0.1" nothingToRideUnhappiness="0.05" leaveNausea="0.95" fairPriceValueScale="2.0" fairPriceSlack="0.5" rideChoiceJitter="1.5" tameRideChoicePenalty="2.0" repeatRideChoicePenalty="1.5" minWalkSeconds="0.5" ratingPerOpenRide="25.0" ratedOpenRideCount="8" emptyParkRating="400.0" ratingBase="200.0" ratingPerHappiness="600.0" ratingPerNausea="300.0" ratingPerQueueComplaint="100.0" fixedStep="0.25" maxFrameTime="5.0" currency="Cash"/>)";
+
+    /** @brief 실제 데이터(`coasters.xml` 의 family)와 같은 회로 하나입니다. */
+    inline constexpr const utf8* kParkCoasters = R"(<CoasterLayoutCatalog>
+  <Physics gravity="9.81" rollingResistance="0.012" dragCoefficient="0.0004" liftSpeed="4" stationSpeed="3" boosterSpeed="22" boosterAcceleration="9" brakeSpeed="5" brakeDeceleration="10" fixedStep="0.00416667" stallSpeed="0.3" stallSeconds="3" gForceWarmupSeconds="0.5"/>
+  <Rating maxRating="10" intensityPerPositiveG="0.9" intensityPerNegativeG="1.5" intensityPerLateralG="1.2" intensitySpeedScale="15" nauseaPerLateralG="1.5" nauseaPerInversion="1" nauseaPerAirtime="0.3" nauseaPerIntensity="0.25" excitementSpeedScale="10" excitementPerAirtime="0.6" excitementPerInversion="0.8" excitementPerDrop="0.3" excitementDropHeightScale="15" excitementLengthScale="400" excitementIntensityLimit="8"/>
+  <Layout id="family" name="Little Dipper" startHeight="1">
+    <Piece type="Station" length="10"/>
+    <Piece type="LiftHill" length="16" height="8"/>
+    <Piece type="Drop" length="16" height="8"/>
+    <Piece type="TurnLeft" radius="10" angle="179.99985" bank="20"/>
+    <Piece type="Straight" length="54"/>
+    <Piece type="TurnLeft" radius="10" angle="179.99985" bank="15"/>
+    <Piece type="Brakes" length="8"/>
+  </Layout>
+</CoasterLayoutCatalog>)";
 
     /** @brief 규칙 줄을 읽은 설정입니다. 테스트가 C++ 기본값 대신 데이터 길로 공원을 연다. */
     struct ThemeParkTestRules

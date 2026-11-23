@@ -24,6 +24,7 @@
 #include "Engine/Content/AssetID.h"
 #include "Engine/Input/GamepadButtonUtil.h"
 #include "Engine/Input/IInputDevice.h"
+#include "Engine/Input/InputUserDevices.h"
 #include "Engine/Input/KeyCodeUtil.h"
 #include "Engine/Input/Map/InputAccessibilitySettings.h"
 #include "Engine/Input/Map/InputActionBuffer.h"
@@ -307,6 +308,12 @@ namespace sw
         // 8) 입력 장치 연결, 임계값, 디버그
         // ------------------------------------------------------------------------------
         void setInputManager( InputManager* pInput ) { _pInput = pInput; }
+        /**
+         * @brief 이 맵이 입력 사용자 한 명의 장치만 읽게 합니다(로컬 멀티 — `InputManager::openLocalUsers`). 없음이면 모든 장치를 읽습니다(혼자 하는 게임의 기본).
+         * @details 바인딩의 패드 번호 0("내 패드")은 짝지은 패드로 읽는다 — 사용자마다 맵 파일을 따로 두지 않는다(유니티 `InputUser.AssociateActionsWithUser` 가 장치로 거르는 자리).
+         *          사용자의 것이 아닌 장치의 바인딩은 "안 눌림" 이다. `AnyKey` 바인딩은 사용자를 가리지 않는다("아무 키나 눌러 시작").
+         */
+        void setUserDevices( const optional<InputUserDevices>& devices ) { _userDevices = devices; }
         /**
          * @brief true 면 이 맵은 키보드 포커스(`InputManager::setKeyboardFocus`)와 상관없이 키를 읽습니다. 기본은 false 이며 게임 쪽 맵이 이 값을 씁니다.
          * @details 디버그 키 맵(개발 콘솔, 리로드 단축키)만 켠다. 콘솔이 키보드를 가진 동안에도 닫는 키와 편집 키를 받아야 하기 때문이다.
@@ -617,6 +624,10 @@ namespace sw
         bool isToolKeyboardHidden() const;
         /** @brief 슬롯 하나의 눌림입니다. 키보드 슬롯은 `isKeyboardKeyDown` 과 같은 규칙을 따릅니다. */
         bool isSlotDown( const InputSlot& slot, SlotRead read = SlotRead::Game ) const;
+        /** @brief 이 맵의 사용자가 쓰는 슬롯입니다(`setUserDevices` — 패드는 짝지은 패드로 바꾼다). 사용자의 장치가 아니면 없음입니다. */
+        optional<InputSlot> findUserSlot( const InputSlot& slot ) const;
+        /** @brief 이 맵의 사용자가 키보드 · 마우스를 쓰면 true 입니다. */
+        bool usesKeyboardMouse() const { return _userDevices.has_value() == false || _userDevices->_bKeyboardMouse == SW_TRUE; }
         bool wasSlotPressed( const InputSlot& slot, SlotRead read = SlotRead::Game ) const;
         /**
          * @brief 슬롯이 이 프레임에 눌려 있었는지입니다(`isSlotDown` 이거나 `wasSlotPressed`).
@@ -713,6 +724,7 @@ namespace sw
         float32                              _totalElapsedTime;
         float32                              _lastDeltaSeconds;   ///< 가장 최근 `update` 의 프레임 시간. 프레임 시간 곱 바인딩이 쓴다.
         InputMapVirtualCursor                _virtualCursorStick; ///< 맵 전체가 켜는 가상 커서(`<InputMap virtualCursor>` — 레이어 값은 `LayerDef`)
+        optional<InputUserDevices>           _userDevices;        /**< 이 맵이 읽는 사용자 장치입니다. 없음이면 모든 장치입니다(`setUserDevices`). */
         uint8                                _bSuppressBaseActionOnChord : 1;
         uint8                                _bKeyboardFocusIgnored      : 1; /**< 키보드 포커스와 상관없이 키를 읽습니다(디버그 키 맵). */
         uint8                                _bReadsToolKeyboard         : 1; /**< 도구 포커스 동안에도 키를 읽습니다(에디터 맵). */

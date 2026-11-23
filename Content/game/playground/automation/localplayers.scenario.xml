@@ -1,0 +1,37 @@
+<?xml version="1.0" encoding="utf-8"?>
+<?asset guid="bd05692754764d6aadc73f631aff8e09"?>
+<!--
+  로컬 멀티 — 미니게임이 켜는 동안 입력 사용자 둘을 연다(minigames/localplayers, InputManager::openLocalUsers). 무대 maps/localplayers: 폰 Player0(x -2) · Player1(x 2).
+  ① 키보드 W 는 사용자 0 의 폰만 앞(z+)으로 움직인다.
+  ② 패드 0 의 왼쪽 스틱은 짝지은 사용자 1 의 폰만 움직인다(맵의 패드 0 바인딩이 "내 패드").
+  ③ 나가면 입력 사용자가 닫힌다 — 남은 것이 없다(Minigame.LeakCount).
+  실행: App -scenario=game/playground/automation/localplayers.scenario.xml -unattended (체인: ctest -R Scenario.playground)
+-->
+<Scenario name="game.playground.localplayers" fixedDelta="0.0166667" timeoutFrames="1200" startAfter="ScenePlaying" startTimeoutFrames="900" input="exclusive">
+	<Launch variable="gv_firstMinigame" value="localplayers"/>
+	<WaitUntil watch="Minigame.Active" is="localplayers" timeoutWallSeconds="60"/>
+	<WaitUntil watch="Assets.Pending" equals="0" timeoutWallSeconds="60"/>
+	<WaitUntil watch="Pawn.Controller" target="Player0" is="PlayerController" timeoutFrames="60"/> <!-- 빙의는 두 폰이 같은 프레임이다 -->
+	<ExpectLog id="InputManager.LocalUsersOpened" contains="2 local users" count="1"/>
+	<ExpectLog id="Control.NoLocalUser" count="0"/>
+
+	<!-- ① 키보드 — 사용자 0 -->
+	<Store watch="Object.Z" target="Player1" as="secondZ"/>
+	<Tap slot="Key.W" hold="30"/>
+	<WaitUntil watch="Object.Z" target="Player0" atLeast="0.5" timeoutFrames="90"/>
+	<Expect watch="Object.Z" target="Player1" sameAs="secondZ" tolerance="0.02"/>
+
+	<!-- ② 패드 — 사용자 1 -->
+	<WaitUntil watch="Object.Speed" target="Player0" atMost="0.01" timeoutFrames="60"/>
+	<Store watch="Object.Z" target="Player0" as="firstZ"/>
+	<GamepadAxis axis="1" value="1" pad="0"/>
+	<WaitUntil watch="Object.Z" target="Player1" atLeast="0.5" timeoutFrames="90"/>
+	<GamepadAxis axis="1" value="0" pad="0"/>
+	<Expect watch="Object.Z" target="Player0" sameAs="firstZ" tolerance="0.02"/>
+
+	<!-- ③ 나가기 -->
+	<DevCommand line="minigame.leave"/>
+	<WaitUntil watch="Minigame.Depth" equals="0" timeoutWallSeconds="60"/>
+	<Expect watch="Minigame.LeakCount" equals="0"/>
+	<Pass/>
+</Scenario>

@@ -172,6 +172,16 @@ namespace sw
         float32 _serviceDuration{}; ///< 서비스를 받은 뒤 그 효과가 남아 있는 시간(초)
         PROPERTY( Required, Min = 0.0 )
         float32 _immigrationInterval{}; ///< 빈 집 하나에 한 사람이 들어오는 간격
+        PROPERTY( Required, Min = 0 )
+        int32 _immigrationJobMargin{}; ///< 일할 사람이 일자리 + 이 수보다 적으면 사람이 온다
+        PROPERTY( Required, Min = 0.0, Max = 1.0 )
+        float32 _immigrationMaxIdleRatio{}; ///< 실업률이 이보다 낮아도 사람이 온다
+        PROPERTY( Required, Min = 0.0 )
+        float32 _floodFertilityStart{}; ///< 첫 범람 앞의 땅 힘(범람원 농지의 수확 비율)
+        PROPERTY( Required, Min = 0.0 )
+        float32 _floodFertilityMin{}; ///< 범람 한 번이 정하는 땅 힘의 하한
+        PROPERTY( Required, Min = 0.0 )
+        float32 _floodFertilityMax{}; ///< 범람 한 번이 정하는 땅 힘의 상한
         PROPERTY( Required, Min = 0.0 )
         float32 _evolveDelay{}; ///< 조건이 이만큼 이어져야 집 단계가 오르내린다
         PROPERTY( Required, Min = 0.0 )

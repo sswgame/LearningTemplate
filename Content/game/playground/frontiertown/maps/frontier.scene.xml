@@ -53,13 +53,22 @@
 				</_listComponent>
 			</GameObject>
 		</entity>
+		<!-- 플레이어 상태 — 조종자 오브젝트가 지갑을 쥔다(디렉터의 _playerState). -->
+		<entity id="4" name="PlayerController">
+			<GameObject _schemaVersion="0" _name="PlayerController" _bActive="true">
+				<_listComponent>
+					<PlayerControllerComponent _localID="4811566279812111972" _playerIndex="0" />
+					<WalletComponent _localID="4858843171092172793" _componentName="WalletComponent" _bActive="true" />
+				</_listComponent>
+			</GameObject>
+		</entity>
 		<entity id="3" name="TownState">
 			<GameObject _schemaVersion="0" _name="TownState" _bActive="true">
 				<_listComponent>
 					<GameStateComponent _localID="6673597520240684436" _componentName="GameStateComponent" _bActive="true" />
-					<WalletComponent _localID="4858843171092172793" _componentName="WalletComponent" _bActive="true" />
 					<CityGameModeComponent _localID="3335784716462595506" _componentName="CityGameModeComponent"
 					                       _bActive="true"
+					                       _playerState="4"
 					                       _bAutoPlay="false"
 					                       _cityDataPath="game/playground/frontiertown/data/city.xml"
 					                       _landSize="32"
@@ -82,6 +91,7 @@
 					                   _roadColor="0.45,0.42,0.38,1" />
 					<FrontierSkirmishGameModeComponent _localID="2994829835520867295" _componentName="FrontierSkirmishGameModeComponent"
 					                                   _bActive="true"
+					                                   _playerState="4"
 					                                   _bAutoPlay="false"
 					                                   _unitDataPath="game/playground/frontiertown/data/units.xml"
 					                                   _startMinerals="500"

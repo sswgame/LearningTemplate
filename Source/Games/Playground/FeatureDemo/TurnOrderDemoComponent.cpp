@@ -143,7 +143,7 @@ namespace sw
 
     void TurnOrderDemoComponent::advanceTurn()
     {
-        _currentActor = _order.next();
+        _currentActor = _order.next().value_or( constant::invalid_index::kInt32 );
         refreshState();
     }
 

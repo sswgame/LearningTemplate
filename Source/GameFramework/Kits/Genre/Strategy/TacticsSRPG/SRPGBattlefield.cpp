@@ -278,7 +278,7 @@ namespace sw
         _activeUnit = constant::invalid_index::kInt32;
         while ( _turnOrder.getActorCount() > 0 )
         {
-            const int32 unitIndex = _turnOrder.next();
+            const int32 unitIndex = _turnOrder.next().value(); // 행위자가 있는 동안만 돈다
             SRPGUnit*   pUnit     = findUnit( unitIndex );
             if ( _turnOrder.getRound() > _turn )
             {

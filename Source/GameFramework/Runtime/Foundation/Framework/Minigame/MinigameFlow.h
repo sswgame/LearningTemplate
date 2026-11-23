@@ -7,14 +7,17 @@
  *          칸 스택(`MinigameStack`): `enter` 는 쌓고(미니게임 안의 미니게임 — 덮인 미니게임의 범위는 끄고 돌아올 때 씬 복원 **전에** 다시 켠다, 컴포넌트가 `beginPlay` 에서 서비스를 찾는다),
  *          `switchTo` 는 맨 위를 바꾼다(돌아올 자리를 그대로 두고 다음 씬 전환 미니게임으로 — 마리오 파티식). 깊이 한도는 엔진 설정 `_minigame._stackDepthLimit`(없으면 진입이 진다).
  *          켜기는 맵을 요청하기 전이다 — 맵의 컴포넌트는 씬이 적용될 때(`beginPlay`, 맵 로드 완료 알림보다 앞) 기능 서비스 · 카탈로그를 찾는다. 진입은 원자적이다 — 지면 덮었던 미니게임을 다시 켠다.
- *          들어가기: `SceneSwitch` 는 들어갈 때의 활성 씬을 돌아올 자리(씬 경로 + `GameStateSnapshot` 목적 `Snapshot`)로 찍고 맵을 바꾼다. 찍기 직전에 자동 저장을
- *          한 번 맡기고, 씬 전환 칸이 있는 동안 저장을 막는다(`SaveLock` 까닭 `minigame` — 미니게임 맵이 세이브의 씬으로 적히지 않게, 컷씬 막기와 같은 길).
+ *          들어가기: `SceneSwitch` 는 들어갈 때의 활성 씬을 돌아올 자리(씬 경로 + `GameStateSnapshot` 목적 `Snapshot`)로 찍고 맵을 바꾼다. 찍기 직전에 자동 저장을 한 번 맡긴다.
+ *          저장: 정의가 허락하면(`MinigameSavePolicy::Allowed`) 세이브가 칸 스택(미니게임 이름 · 덮인 씬의 세이브 봉투)을 머리에 담고, 불러오면 그 미니게임을 켠 뒤 그 맵을 열어 되살린다
+ *          (`travelToSavedMinigame` — 언리얼이 세이브의 맵으로 `OpenLevel` 할 때 URL 로 경험 · 게임 모드를 함께 싣는 자리). 막는 미니게임의 칸은 있는 동안 저장을 막는다(`SaveLock` 까닭 `minigame`).
  *          나올 때 그 씬을 연 뒤 복원하고 결과(`MinigameResult`)를 넘긴다. 돌아올 씬이 없으면(첫 진입이 미니게임 — `gv_firstMinigame`) gamesettings 입구 씬으로 간다.
  *          넷 세션이 열린 인스턴스에서 씬 전환 진입은 오류로 거절한다(세션의 모든 피어가 같은 씬을 돌아야 한다 — 세션 이동 갈래는 돌아올 자리 형식에 더할 자리만 둔다).
  *          `SubLevel` 은 들어갈 때의 활성 씬에 맵을 하위 레벨(이름 = 미니게임 이름)로 더하고 나올 때 뺀다. 자리는 진입을 건 사물(트리거)의 변환이다 — 언리얼 레벨 인스턴스 액터 자리,
  *          얹을 자리 없이는 들어가지 않는다(원점에 엉뚱하게 얹히지 않게). 바탕 틱은 멈추지 않는다 — 미니게임 입력은 `inputContexts` 레이어가 위에서 가린다.
  *          장치 밖 씬 이동(세이브 불러오기 · 타이틀로 · 시나리오의 씬 열기)이 오면 칸 스택과 미니게임 범위를 비운다 — 씬 매니저의 받아들임 알림으로 이 흐름이 요청하지 않은 게임 이동을 듣는다.
- *          진입: 개발 명령 `minigame.enter <이름> [얹을 사물]` · `minigame.switch <이름>` · `minigame.leave [결과]`, 사물의 `MinigameTriggerComponent`(틱 뒤에 맡기고 `update` 가
+ *          월드가 플레이를 시작할 때 활성 씬이 씬 전환 미니게임의 맵이면(에디터가 미니게임 맵을 편집하다 플레이 · 모듈 리로드 뒤 다시 시작) 그 미니게임 안으로 시작하고, 멈추면 비운다 —
+ *          언리얼 Lyra 가 월드 설정의 기본 경험으로 에디터 플레이를 여는 자리다. 실행 전역 변수로 들어간 것과 같은 칸(돌아올 씬 없음)이다.
+ *          진입: 개발 명령 `minigame.enter <이름> [얹을 사물]` · `minigame.switch <이름>` · `minigame.leave [결과]` · `minigame.quit`, 사물의 `MinigameTriggerComponent`(틱 뒤에 맡기고 `update` 가
  *          틱 밖에서 처리 — 스냅숏은 씬을 도는 동안 찍지 않는다), 실행 전역 변수 `-gv_firstMinigame=<이름>`(첫 씬 `gv_firstScene` 보다 위 — `enterFirstMinigame`).
  */
 #pragma once
@@ -56,8 +59,9 @@ namespace sw
         static constexpr const utf8* kMinigameFolder = "minigames/";
         /** @brief 미니게임 파일의 접미입니다. */
         static constexpr const utf8* kMinigameSuffix = ".minigame.xml";
-        /** @brief 씬 전환 칸이 있는 동안 쥐는 저장 막기의 까닭입니다. */
-        static constexpr const utf8* kSaveBlockReason = "minigame";
+
+        /** @brief 플레이어가 그만두고 나온 결과의 이름입니다(`requestQuit`). */
+        static constexpr const utf8* kQuitResult = "quit";
 
         /** @brief 미니게임이 끝나 결과를 넘길 때 부르는 함수 목록입니다(돌아올 자리를 복원한 뒤). */
         using FinishedDelegate = MulticastDelegate<void( const MinigameResult& result )>;
@@ -93,16 +97,40 @@ namespace sw
          * @return 칸이 없거나, 다른 진입 · 나가기가 맵을 기다리는 중이거나, 씬 요청이 거절되면 알리고 false 입니다(거절이면 칸은 그대로다).
          */
         [[nodiscard]] bool leave( const hashed_string& resultName = hashed_string{}, vector<MinigameResultValue> listValue = {} );
+        /** @brief 세이브 봉투의 머리에 실을 칸 스택을 씁니다(`MinigameStack::writeSaveState`). 미니게임 밖이면 빈 바이트입니다. */
+        void writeSaveState( vector<uint8>& outBytes ) const { _stack.writeSaveState( outBytes ); }
+        /** @brief 지금 켜진 칸이 세이브의 @p listFrame 과 같고 기다리는 맵이 없으면 true 입니다 — 씬을 다시 열지 않고 되살린다. */
+        bool isInSavedMinigame( const vector<MinigameSavedFrame>& listFrame ) const;
+        /** @brief 같은 미니게임 안에서 세이브를 되살린 뒤 칸의 돌아올 자리를 세이브의 것으로 바꿉니다(`isInSavedMinigame` 인 목록만). */
+        void applySavedMinigame( vector<MinigameSavedFrame> listFrame );
+        /**
+         * @brief 세이브의 칸 스택(@p listFrame, 비지 않는다)으로 바꾸고 맨 위 미니게임을 켠 뒤 세이브의 씬 @p scenePath 를 엽니다. 씬이 선 뒤(졌으면 nullptr) @p onLoaded 를 부릅니다.
+         * @return 정의를 읽지 못하거나 검사 · 깊이 한도 · 넷 세션에 걸리거나, 다른 진입 · 나가기가 맵을 기다리거나, 켜기 · 씬 요청이 지면 알리고 false 입니다 — 지금 칸은 그대로다.
+         */
+        [[nodiscard]] bool travelToSavedMinigame( vector<MinigameSavedFrame> listFrame, const string& scenePath, const Delegate<void( Scene* pScene )>& onLoaded );
+        /** @brief @p scenePath 를 이 흐름의 요청으로 맡깁니다 — 칸 스택을 둔 채 씬을 다시 연다(받아들임 알림이 장치 밖 이동으로 보지 않게). */
+        [[nodiscard]] bool requestScene( const string& scenePath, const Delegate<void( Scene* pScene )>& onLoaded );
         /**
          * @brief 틱 뒤 작업(디렉터의 `finishMinigame`)에서 나가기를 맡깁니다 — 다음 `update`(틱 밖)가 `leave` 합니다. 맡긴 나가기가 이미 있으면 경고하고 이것을 버립니다.
          * @details 하위 레벨 나가기는 그 자리에서 하위 레벨을 빼므로 그 안 디렉터의 규칙 중에 부르면 자기를 지운다 — 진입(`requestEnter`)과 같은 줄로 미룬다.
          */
         void requestLeave( const hashed_string& resultName, vector<MinigameResultValue> listValue );
         /**
+         * @brief 플레이어가 맨 위 미니게임을 그만두게 합니다 — 그 미니게임의 열린 디렉터들이 모은 값(`GameModeComponent::collectMinigameResult`)을 결과 `kQuitResult` 로 맡긴다(`requestLeave`).
+         * @details 스스로 끝나지 않는 미니게임(농장 · 도시 · 공원)의 나가기다 — 일시정지 메뉴의 "미니게임 나가기"(UI 전역 명령 `LeaveMinigame`)와 개발 명령 `minigame.quit` 가 부른다.
+         *          칸이 없거나 다른 진입 · 나가기가 맵을 기다리는 중이면 알리고 아무 일도 하지 않습니다.
+         */
+        void requestQuit();
+        /**
          * @brief 틱 뒤 작업(트리거)에서 진입을 맡깁니다 — 다음 `update`(틱 밖)가 `enter` 합니다. 이미 맡긴 것이 있으면 경고하고 이것을 버립니다.
          * @details 씬 전환의 스냅숏은 씬을 도는 동안 찍지 않는다(자동 저장과 같은 자리 — `GameInstance::update`).
          */
         void requestEnter( string_view name, const optional<SubLevelPlacement>& placement );
+        /**
+         * @brief 미니게임 @p name 의 맵이 쓸 파일을 들어가기 전에 미리 읽습니다(`SceneManager::preloadScene` — 하나만 두고, 들어가면 로드가 이어받는다). 게임 상태는 바꾸지 않는다.
+         * @return 정의를 읽었으면 true 입니다(쿠킹 전 Dev 실행은 프리로드 목록이 없어 읽을 것이 없다). 정의를 읽지 못했거나 씬 매니저가 없으면 false 입니다.
+         */
+        [[nodiscard]] bool preload( string_view name );
         /** @brief 켜진 범위의 다시 읽힌 카탈로그를 새 판으로 걸고(`GameFeatureScope::rebindReloadedCatalogs`) 맡긴 나가기 · 진입을 처리합니다 — `GameInstance::update` 앞머리(틱 밖)가 부른다. */
         void update();
         /**
@@ -119,7 +147,7 @@ namespace sw
         /** @brief 칸 스택입니다(읽기). */
         const MinigameStack& getStack() const { return _stack; }
         /** @brief 켰고 미니게임 맵이 서기를 기다리는 중이면 true 입니다. */
-        bool isEntering() const { return _bEntering == SW_TRUE; }
+        bool isEntering() const { return _awaitedLoad != 0 && isLeaving() == false; }
         /** @brief 나가며 돌아갈 씬이 서기를 기다리는 중이면 true 입니다. */
         bool isLeaving() const { return _pReturning != nullptr; }
         /** @brief 이 인스턴스에서 끈 범위들이 남긴 것(해제 검사)의 합입니다. 감시 값 `Minigame.LeakCount` 가 읽는다. */
@@ -131,6 +159,11 @@ namespace sw
 
         /** @brief 이름 @p name 의 미니게임 파일 리소스 id 입니다(`<팩>/minigames/<이름>.minigame.xml`). */
         static string makeAssetPath( const GamePackConfig& packConfig, string_view name );
+        /**
+         * @brief 팩의 미니게임 정의 가운데 허브 입구 자리(`portalSlot`)를 적은 것을 자리 순으로 @p outListPortal 에 모읍니다(먼저 비운다) — `MinigamePortalSpawnerComponent` 가 부른다.
+         * @details 파일마다 들어갈 때와 같은 읽기 · 검사를 한다. 못 읽은 정의와 자리가 겹친 뒤의 정의는 오류를 남기고 빼며, 나머지 입구는 그대로 선다.
+         */
+        void collectPortals( vector<MinigameDefinition>& outListPortal ) const;
         /** @brief 하위 레벨을 사물 @p anchor 의 변환(위치는 절대 — 월드 원점을 더한다)에 얹는 자리입니다 — 트리거 · 개발 명령이 쓴다. 장면 컴포넌트가 없으면 nullopt 입니다. */
         static optional<SubLevelPlacement> makeAnchorPlacement( const GameObject& anchor );
         /**
@@ -140,31 +173,42 @@ namespace sw
         [[nodiscard]] static bool validateEntry( const MinigameDefinition& definition, bool bNetSessionActive );
 
     private:
-        /** @brief 나가며 돌아갈 씬을 기다리는 동안 쥐는 것입니다 — 나간 칸의 돌아올 자리(씬 전환이면 스냅숏 · 저장 막기를 복원까지 쥔다)와 넘길 결과. */
+        /** @brief 나가며 돌아갈 씬을 기다리는 동안 쥐는 것입니다 — 나간 칸(찍은 씬 · 저장 막기를 복원까지 쥔다)과 넘길 결과. */
         struct PendingReturn
         {
-            MinigameReturnPoint _returnPoint; ///< 나간 칸의 돌아올 자리
-            MinigameResult      _result;      ///< 복원 뒤에 넘길 결과
+            MinigameFrame  _frame;  ///< 나간 칸
+            MinigameResult _result; ///< 복원 뒤에 넘길 결과
         };
 
-        /** @brief 진입한 미니게임 맵이 섰습니다(`GameSceneFlow::requestSceneThen`). @p pScene 이 nullptr 이면 실패로 알리고 그 칸을 꺼낸다. */
+        /**
+         * @brief @p scenePath 를 이 흐름의 요청으로 맡기고, 그 로드를 아직 기다리고 있을 때 끝나면 @p pHandler 를 부릅니다. @p onLoaded 는 그 로드가 끝나면 늘 부릅니다(졌거나 밀려났으면 nullptr).
+         * @return 요청이 지면 false 입니다.
+         */
+        [[nodiscard]] bool requestAwaitedScene( const string& scenePath, void ( MinigameFlow::*pHandler )( Scene* pScene ), const Delegate<void( Scene* pScene )>& onLoaded = {} );
+        /** @brief 진입한 미니게임 맵이 섰습니다(`requestAwaitedScene`). @p pScene 이 nullptr 이면 실패로 알리고 그 칸을 꺼낸다. */
         void onMapLoaded( Scene* pScene );
+        /** @brief 세이브의 미니게임 맵이 섰습니다(`travelToSavedMinigame`). 졌으면 바꾸기 전 칸 스택을 되돌립니다. */
+        void onSavedMapLoaded( Scene* pScene );
         /** @brief 나가며 돌아갈 씬(찍은 씬 또는 입구)이 섰습니다. 찍어 둔 씬이 있으면 복원하고 결과를 넘깁니다. */
         void onReturnLoaded( Scene* pScene );
         /** @brief 씬 로드 받아들임 알림입니다. 이 흐름이 요청하지 않은 게임 이동이면 칸 스택과 미니게임을 비웁니다(`clearForOutsideTravel`). */
         void onSceneLoadRequested( const string& scenePath, SceneLoadKind kind, const TaskFuture<Scene*>& future );
+        /** @brief 월드의 플레이가 시작(활성 씬의 `beginPlay` 앞) · 끝(`endPlay` 뒤)났습니다. 시작이면 활성 씬의 맵을 가진 미니게임을 켜고, 끝이면 모두 비웁니다. */
+        void onWorldPlayChanged( bool bPlaying );
+        /** @brief 활성 씬이 씬 전환 미니게임 하나의 맵이면 그 미니게임을 칸(돌아올 씬 없음)으로 켭니다. 여러 미니게임의 맵이면 경고하고 켜지 않습니다. */
+        void enterMinigameOfActiveScene();
+        /** @brief 팩의 미니게임 이름을 모읍니다(파일 이름순). 폴더를 나열하지 못하면 까닭은 나열이 남기고 빈 목록입니다. */
+        void collectNames( vector<string>& outListName ) const;
         /** @brief 장치 밖 씬 이동 — 기다리던 진입 · 나가기, 칸 스택, 켜진 미니게임을 모두 버린다(맵은 바꾸지 않는다 — 이동이 이미 들어왔다). */
         void clearForOutsideTravel( const string& scenePath );
-        /** @brief @p scenePath 를 이 흐름의 요청으로 맡깁니다(받아들임 알림이 장치 밖 이동으로 보지 않게). */
-        [[nodiscard]] bool requestScene( const string& scenePath, const Delegate<void( Scene* pScene )>& onLoaded );
         /** @brief @p name 의 정의를 읽고 이름 · 참조를 봅니다. 지면 알리고 false 입니다. */
         [[nodiscard]] bool loadDefinition( string_view name, MinigameDefinition& outDefinition ) const;
         /** @brief 엔진 설정의 쌓기 깊이 한도를 보고 하나 더 쌓을 수 있으면 true 입니다. 한도가 없거나 닿았으면 알리고 false 입니다. */
         [[nodiscard]] bool validateDepth( string_view name ) const;
         /** @brief @p definition 을 켭니다 — 게임 기능(적은 순서) → 카탈로그 맞춤 → 입력 문맥 → UI. 하나라도 지면 그때까지 건 것을 거두고(해제 검사 포함) nullptr 입니다. */
         [[nodiscard]] unique_ptr<GameFeatureScope> activate( const MinigameDefinition& definition );
-        /** @brief 씬 전환 칸의 돌아올 자리를 만듭니다 — 활성 씬이 있으면 자동 저장을 한 번 맡기고 찍은 뒤 저장을 막는다, 없으면 입구 씬. 찍지 못하면 알리고 false 입니다. */
-        [[nodiscard]] bool makeSceneReturn( string_view name, MinigameReturnPoint& outReturnPoint );
+        /** @brief 씬 전환 칸의 돌아올 자리를 만듭니다 — 활성 씬이 있으면 자동 저장을 한 번 맡기고 찍는다(저장을 허락하는 미니게임이면 세이브 봉투도), 없으면 입구 씬. 찍지 못하면 알리고 false 입니다. */
+        [[nodiscard]] bool makeSceneReturn( const MinigameDefinition& definition, MinigameReturnPoint& outReturnPoint );
         /** @brief 맨 위 칸의 미니게임을 켭니다(덮였다 돌아올 때 · 진입이 져 되돌릴 때). 칸이 없으면 할 일이 없다. 켜지 못하면 알리고 켜진 미니게임 없이 둔다. */
         void activateTop();
         /** @brief 켜진 미니게임의 범위를 끕니다(칸은 그대로 둔다). 없으면 할 일이 없다. */
@@ -175,12 +219,16 @@ namespace sw
         void dropFailedSubLevel();
         /** @brief 하위 레벨 @p returnPoint 를 바탕 씬이 아직 활성이면 뺍니다. */
         static void removeSubLevel( const MinigameSubLevelReturn& returnPoint );
+        /** @brief 맨 위 미니게임의 열린 디렉터들이 모은 결과 값입니다 — 하위 레벨이면 그 하위 레벨의 디렉터만, 씬 전환이면 활성 씬의 디렉터 모두. */
+        void collectDirectorResults( vector<MinigameResultValue>& outListValue ) const;
         /** @brief 결과를 넘깁니다(`onFinished`). */
         void deliverResult( const MinigameResult& result );
         /** @brief 다른 진입 · 나가기가 맵을 기다리는 중이면 @p name 의 요청을 거절한다고 알리고 true 입니다. */
         bool rejectIfLoadPending( string_view name ) const;
         /** @brief 입력 맵 레이어를 스택에 넣어 켜고(`InputMap::pushLayer`) 끌 때 빼서 넣기 전의 켬으로 되돌립니다(`popLayer` — 한 쌍). 없는 레이어 · 입력 서비스가 없는 호스트에 적은 레이어는 오류입니다. */
         [[nodiscard]] static bool pushInputLayers( GameFeatureScope& scope, const MinigameDefinition& definition );
+        /** @brief 로컬 멀티 미니게임이면 입력 사용자를 열고 끌 때 닫습니다(레이어를 넣은 뒤 — 사용자마다의 맵이 그 레이어를 베낀다). 입력 서비스가 없는 호스트(전용 서버)는 할 일이 없다. */
+        [[nodiscard]] static bool openLocalUsers( GameFeatureScope& scope, const MinigameDefinition& definition );
 
     private:
         SubsystemScope&              _gameScope;             ///< 기능이 서비스를 거는 게임 범위
@@ -189,16 +237,19 @@ namespace sw
         MinigameStack                _stack;                 ///< 칸 스택 — 맨 위만 켜져 있다
         unique_ptr<GameFeatureScope> _pActive;               ///< 맨 위 칸의 범위(없으면 nullptr)
         unique_ptr<PendingReturn>    _pReturning;            ///< 나가며 돌아갈 씬을 기다리는 중이면 그 자리와 결과(없으면 nullptr)
+        unique_ptr<MinigameStack>    _pPreviousStack;        ///< 세이브의 미니게임 맵을 기다리는 중이면 바꾸기 전 칸 스택(없으면 nullptr) — 맵이 서지 않으면 되돌린다
         string                       _pendingEnter;          ///< 틱 뒤 작업에서 맡긴 진입(`requestEnter`) — 비었으면 없음
         optional<SubLevelPlacement>  _pendingPlacement;      ///< 맡긴 진입의 얹을 자리
         optional<MinigameResult>     _pendingLeave;          ///< 틱 뒤 작업에서 맡긴 나가기(`requestLeave` — 이름 칸은 비워 두고 `leave` 가 채운다). 없으면 nullopt
         FinishedDelegate             _onFinished;            ///< 결과를 받는 함수 목록
         MinigameResult               _lastResult;            ///< 마지막으로 넘긴 결과
         Subscription                 _sceneLoadRequested;    ///< 씬 로드 받아들임 알림의 구독(초기화가 걸고 종료가 푼다)
+        Subscription                 _worldPlayChanged;      ///< 월드 플레이 알림의 구독(초기화가 걸고 종료가 푼다)
         uint32                       _leakCount;             ///< 끈 범위들이 남긴 것의 합
         optional<MinigameResult>     _pendingRestoredResult; ///< 찍은 씬을 되살린 프레임의 결과 — 되살린 오브젝트의 상태 적용 · 시작(onBeginPlay) 뒤인 다음 `update` 에 알린다
         uint32                       _restoreCount;          ///< 돌아올 자리 복원 수
-        uint8                        _bEntering        : 1;  ///< 맨 위 미니게임의 맵을 기다리는 중이면 1(하나만 — 겹친 진입은 거절한다)
+        uint32                       _lastLoad;              ///< 마지막으로 맡긴 로드의 번호(`requestAwaitedScene`)
+        uint32                       _awaitedLoad;           ///< 끝을 기다리는 로드의 번호(0 이면 없음 — 하나만 기다린다, 겹친 진입은 거절한다)
         uint8                        _bRequestingScene : 1;  ///< 이 흐름이 씬 로드를 요청하는 동안 1(받아들임 알림이 동기로 온다)
     };
 } // namespace sw

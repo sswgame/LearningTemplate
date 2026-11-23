@@ -117,7 +117,7 @@ namespace sw
     {
         using Internal                               = AdventureAvatarComponentInternal;
         DebugDrawQueue* const               pDraw    = game::findSubsystem<DebugDrawQueue>();
-        const AdventureRegionCatalog* const pRegions = game::findSubsystem<const AdventureRegionCatalog>();
+        const AdventureRegionCatalog* const pRegions = director.findRegions();
         const GameStateComponent* const     pState   = GameStateComponent::findOnOwner( director );
         if ( pDraw == nullptr || pRegions == nullptr || pState == nullptr )
             return;

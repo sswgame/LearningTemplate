@@ -45,11 +45,11 @@ namespace sw
             outWindowEndMs   = definition._endMs;
             return true;
         }
-        const int64 occurrenceMs = ServiceScheduler::computeLatestOccurrence( makeSchedule( definition ), nowMs );
-        if ( occurrenceMs < 0 || nowMs >= occurrenceMs + definition._activeDurationMs )
+        const optional<int64> occurrenceMs = ServiceScheduler::computeLatestOccurrence( makeSchedule( definition ), nowMs );
+        if ( occurrenceMs.has_value() == false || nowMs >= *occurrenceMs + definition._activeDurationMs )
             return false;
-        outWindowStartMs = MathUtil::max( occurrenceMs, definition._startMs );
-        outWindowEndMs   = MathUtil::min( occurrenceMs + definition._activeDurationMs, definition._endMs );
+        outWindowStartMs = MathUtil::max( *occurrenceMs, definition._startMs );
+        outWindowEndMs   = MathUtil::min( *occurrenceMs + definition._activeDurationMs, definition._endMs );
         return true;
     }
 

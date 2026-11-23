@@ -8,7 +8,7 @@
      AI 는 worker · command_center · supply_depot · barracks · marine 을 쓴다(SkirmishMatch). -->
 <RTSCatalog supplyMax="200">
 	<!-- 규칙(RTSSettings) — 모든 칸이 필수다. 걸음 20 Hz, 시간은 게임 초 -->
-	<Rules fixedStep="0.05" minimumDamage="0.5" repathInterval="0.5" visionInterval="0.25" interactSlack="0.35" resourceSearchRadius="8" constructionStartRatio="0.1" underAttackCooldown="10" productionQueueMax="5" flowFieldGroupSize="6" bucketSize="4" mineralCurrency="Minerals" gasCurrency="Gas"/>
+	<Rules fixedStep="0.05" minimumDamage="0.5" repathInterval="0.5" visionInterval="0.25" interactSlack="0.35" resourceSearchRadius="8" constructionStartRatio="0.1" underAttackCooldown="10" autoTargetLeashScale="1.5" productionQueueMax="5" flowFieldGroupSize="6" bucketSize="4" mineralCurrency="Minerals" gasCurrency="Gas"/>
   <!-- 자원 -->
   <Unit id="minerals" name="Mineral Field" kind="Resource" resource="Minerals" amount="1500" footprint="1"/>
   <Unit id="rich_minerals" _base="minerals" name="Rich Mineral Field" amount="900"/>

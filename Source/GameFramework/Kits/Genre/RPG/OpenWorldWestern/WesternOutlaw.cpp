@@ -90,6 +90,12 @@ namespace sw
         return true;
     }
 
+    void WesternOutlaw::rebindCatalog( const WesternCatalog& catalog )
+    {
+        _pCatalog = &catalog;
+        _honor.initialize( &catalog, _pReputation );
+    }
+
     float32 WesternOutlaw::computeAirTemperature() const
     {
         return _pWeather != nullptr ? WesternSurvival::computeAirTemperature( *_pWeather, _regionBaseTemperature ) : _regionBaseTemperature;

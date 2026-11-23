@@ -40,14 +40,15 @@ namespace sw
              *          다른 실행에서 나간 id 를 복원하면 이 실행에서 이미 나간 id 와 겹칠 수 있기 때문이다.
              *          머리의 씬 정체는 찍을 때 활성 씬의 리소스 id(`Scene::getSourcePath`)다 — 읽을 때 지금 활성 씬과 다르면 섞지 않고 거절한다.
              */
-            static constexpr uint32 kVersion = 10; // 5: 머리에 콘텐츠 구성(켠 모드) 글이 실린다, 6: 머리에 씬 정체(활성 씬 리소스 id)가 실린다, 7: 넷째 섹션 씬 몫(파일 id · 스트리밍 셀), 8: 씬 몫에 런타임 하위 레벨, 9: 하위 레벨에 읽음 표시(읽는 중에 저장한 것은 복원이 문서를 다시 읽는다), 10: 씬 몫의 엔티티마다 PROPERTY 밖 컴포넌트 상태
+            static constexpr uint32 kVersion = 11; // 5: 머리에 콘텐츠 구성(켠 모드) 글이 실린다, 6: 머리에 씬 정체(활성 씬 리소스 id)가 실린다, 7: 넷째 섹션 씬 몫(파일 id · 스트리밍 셀), 8: 씬 몫에 런타임 하위 레벨, 9: 하위 레벨에 읽음 표시(읽는 중에 저장한 것은 복원이 문서를 다시 읽는다), 10: 씬 몫의 엔티티마다 PROPERTY 밖 컴포넌트 상태, 11: 머리에 미니게임 칸 스택
 
             /** @brief 봉투 머리(매직 · 판 뒤의 칸)입니다. */
             struct Header
             {
-                uint64 _processToken{ 0 }; ///< 찍은 프로세스의 토큰 — 같으면 id 를 복원한다
-                string _sceneID;           ///< 찍을 때 활성 씬의 지금 리소스 id(옮긴 씬의 옛 id 는 읽을 때 푼다 — 씬이 없었으면 빈 글)
-                string _contentText;       ///< 찍을 때 콘텐츠 구성(켠 모드) 글
+                uint64        _processToken{ 0 }; ///< 찍은 프로세스의 토큰 — 같으면 id 를 복원한다
+                string        _sceneID;           ///< 찍을 때 활성 씬의 지금 리소스 id(옮긴 씬의 옛 id 는 읽을 때 푼다 — 씬이 없었으면 빈 글)
+                string        _contentText;       ///< 찍을 때 콘텐츠 구성(켠 모드) 글
+                vector<uint8> _minigameBytes;     ///< 찍을 때의 미니게임 칸 스택(`MinigameStack::writeSaveState`, 밖이면 빈 바이트)
             };
 
             /**
@@ -76,12 +77,14 @@ namespace sw
                     return false;
                 }
                 arch >> outHeader._processToken;
-                auto loadedSceneID     = arch.readString();
-                auto loadedContentText = arch.readString();
-                if ( arch.isError() )
+                auto          loadedSceneID     = arch.readString();
+                auto          loadedContentText = arch.readString();
+                vector<uint8> loadedMinigameBytes;
+                if ( arch.isError() || arch.readSection( loadedMinigameBytes ) == false )
                     return false;
-                outHeader._sceneID     = AssetRedirect::toCurrentID( loadedSceneID ); // 씬을 옮긴(팩을 흡수한) 뒤에도 옛 세이브가 제 씬을 찾는다
-                outHeader._contentText = std::move( loadedContentText );
+                outHeader._minigameBytes = std::move( loadedMinigameBytes );
+                outHeader._sceneID       = AssetRedirect::toCurrentID( loadedSceneID ); // 씬을 옮긴(팩을 흡수한) 뒤에도 옛 세이브가 제 씬을 찾는다
+                outHeader._contentText   = std::move( loadedContentText );
                 return arch.isError() == false;
             }
 
@@ -301,7 +304,8 @@ namespace sw
         }
     }
 
-    bool GameStateSnapshot::writeEnvelope( SerializePurpose purpose, const TypeInfo* pStateType, const void* pStateInstance, vector<uint8>& outBytes )
+    bool GameStateSnapshot::writeEnvelope( SerializePurpose purpose, const TypeInfo* pStateType, const void* pStateInstance, const vector<uint8>& minigameBytes,
+                                           vector<uint8>& outBytes )
     {
         Archive arch;
         arch << StateEnvelopeInternal::kMagic;
@@ -312,6 +316,8 @@ namespace sw
         // 이 세이브를 만든 콘텐츠 구성(켠 모드) — 읽는 쪽이 같은 구성인지 봉투를 풀기 전에 본다(없으면 빈 글).
         const IContentConfiguration* const pContent = StateEnvelopeInternal::findContent();
         arch.writeString( pContent != nullptr ? pContent->makeContentConfigText() : string{} );
+        // 이 세이브를 찍은 미니게임 — 읽는 쪽이 씬을 열기 전에 켠다(미니게임 밖이면 빈 섹션).
+        arch.writeSection( minigameBytes.data(), static_cast<uint32>( minigameBytes.size() ) );
 
         // 1) 씬 오브젝트 바이너리 스냅샷
         //
@@ -472,6 +478,15 @@ namespace sw
         if ( StateEnvelopeInternal::readHeader( pInBuffer, size, arch, header ) == false )
             return nullopt;
         return header._sceneID;
+    }
+
+    optional<vector<uint8>> GameStateSnapshot::readMinigameBytes( const void* pInBuffer, uint32 size )
+    {
+        Archive                       arch( static_cast<const uint8*>( pInBuffer ), size );
+        StateEnvelopeInternal::Header header;
+        if ( StateEnvelopeInternal::readHeader( pInBuffer, size, arch, header ) == false )
+            return nullopt;
+        return std::move( header._minigameBytes );
     }
 
     void GameStateSnapshot::endRestore()

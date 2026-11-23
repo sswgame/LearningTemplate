@@ -246,7 +246,7 @@ namespace
             return pEvent != nullptr ? sw::optional<int32>{ pEvent->_value } : sw::nullopt;
         }
 
-        int32 spawn( const sw::hashed_string& unitID, sw::ConquestTeam team, float32 x, sw::ConquestOrder order = sw::ConquestOrder::Hold ) { return _world.spawnUnit( unitID, team, x, order ); }
+        int32 spawn( const sw::hashed_string& unitID, sw::ConquestTeam team, float32 x, sw::ConquestOrder order = sw::ConquestOrder::Hold ) { return _world.spawnUnit( unitID, team, x, order ).value(); }
 
         bool readFixture( const ConquestFixtureWorld& fixture )
         {
@@ -682,8 +682,8 @@ SW_TEST_CASE_F( ConquestRulesTest, DefeatWhenEverySiteFalls )
  */
 SW_TEST_CASE_F( ConquestRulesTest, BrokenInput )
 {
-    SW_EXPECT_EQUAL( -1, _world.spawnUnit( "nope", sw::ConquestTeam::Player, 0.0f, sw::ConquestOrder::Hold ) );
-    SW_EXPECT_EQUAL( -1, _world.spawnUnit( "spear", sw::ConquestTeam::Neutral, 0.0f, sw::ConquestOrder::Hold ) );
+    SW_EXPECT_FALSE( _world.spawnUnit( "nope", sw::ConquestTeam::Player, 0.0f, sw::ConquestOrder::Hold ).has_value() );
+    SW_EXPECT_FALSE( _world.spawnUnit( "spear", sw::ConquestTeam::Neutral, 0.0f, sw::ConquestOrder::Hold ).has_value() );
 
     SW_EXPECT_LOG( "ConquestWorld.NegativeResource" );
     _world.addResource( "gold", -5.0f );
@@ -696,7 +696,7 @@ SW_TEST_CASE_F( ConquestRulesTest, BrokenInput )
     empty.update( 1.0f );
     SW_EXPECT_EQUAL( 0, empty.computePopulationCap() );
     SW_EXPECT_EQUAL( 0, empty.computeWaveSize() );
-    SW_EXPECT_EQUAL( -1, empty.spawnUnit( "spear", sw::ConquestTeam::Player, 0.0f, sw::ConquestOrder::Hold ) );
+    SW_EXPECT_FALSE( empty.spawnUnit( "spear", sw::ConquestTeam::Player, 0.0f, sw::ConquestOrder::Hold ).has_value() );
     SW_EXPECT_EQUAL( sw::ConquestResult::UnknownDef, empty.placeBuilding( "mill", "home" ) );
     SW_EXPECT_EQUAL( sw::ConquestResult::InvalidBuilding, empty.assignWorkers( 0, 1 ) );
     SW_EXPECT_EQUAL( sw::ConquestResult::InvalidBuilding, empty.trainUnit( 0, "spear" ) );

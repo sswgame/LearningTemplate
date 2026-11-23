@@ -135,6 +135,8 @@ namespace sw
         float32 _constructionStartRatio{}; ///< 건설을 시작한 건물이 처음 가지는 체력 비율
         PROPERTY( Required, Min = 0.0 )
         float32 _underAttackCooldown{}; ///< "공격받고 있다" 알림의 간격(플레이어마다 적용)
+        PROPERTY( Required, Min = 0.0 )
+        float32 _autoTargetLeashScale{}; ///< 자동으로 고른 목표가 시야의 이 배율보다 멀어지면 놓는다(명령한 목표는 끝까지 쫓는다)
         PROPERTY( Required, Min = 1 )
         int32 _productionQueueMax{};
         PROPERTY( Required, Min = 1 )

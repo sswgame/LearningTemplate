@@ -2277,6 +2277,12 @@ msgid "Keep these display settings?"
 msgstr "이 디스플레이 설정을 유지할까요?"
 
 #. Context: TextWidget._text
+#: engine/ui/pause.ui.xml
+msgctxt "Leave Minigame"
+msgid "Leave Minigame"
+msgstr "미니게임 나가기"
+
+#. Context: TextWidget._text
 #: engine/ui/loading.ui.xml
 msgctxt "Loading"
 msgid "Loading"

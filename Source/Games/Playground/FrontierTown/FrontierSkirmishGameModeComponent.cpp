@@ -34,7 +34,7 @@ namespace sw
     void FrontierSkirmishGameModeComponent::serializeGameState( StateIO& io )
     {
         GameStateComponent* pState  = io.isReading() ? GameStateComponent::findOnOwner( *this ) : nullptr;
-        WalletComponent*    pWallet = io.isReading() ? PlayerComponentUtil::findOnOwner<WalletComponent>( *this ) : nullptr;
+        WalletComponent*    pWallet = io.isReading() ? findOnPlayerState<WalletComponent>() : nullptr;
         if ( io.check( pState != nullptr && pWallet != nullptr ) == false )
             return;
         io.header( kStateTag, kStateVersion );
@@ -78,9 +78,10 @@ namespace sw
             SW_LOG_ERROR_ID( "FrontierSkirmish.StateNotOpen", "[Frontier] the skirmish cannot start - no game mode in front of it on this object opened the shared state" );
             return false;
         }
-        WalletComponent* pWallet = PlayerComponentUtil::requireOnOwner<WalletComponent>( *this );
+        const GameObject* const pPlayerState = requirePlayerState();
+        WalletComponent* const  pWallet      = pPlayerState != nullptr ? PlayerComponentUtil::requireOn<WalletComponent>( *pPlayerState ) : nullptr;
         if ( pWallet == nullptr )
-            return false;
+            return false; // 까닭은 찾기가 남겼다
         if ( initializeWorld( _world, *pState, *pWallet ) == false )
         {
             SW_LOG_ERROR_ID( "FrontierSkirmish.WorldNotOpen", "[Frontier] the skirmish cannot start - the RTS world does not open on the shared land" );

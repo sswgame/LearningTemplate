@@ -46,6 +46,34 @@
 	<Redirect from="game/playground/frontiertown/automation/autoplayclock.scenario.xml" to="game/playground/automation/frontiertown_autoplayclock.scenario.xml" />
 	<Redirect from="game/playground/frontiertown/automation/slice.scenario.xml" to="game/playground/automation/frontiertown_slice.scenario.xml" />
 	<Redirect from="game/playground/frontiertown/data/frontier.settings.xml" to="game/playground/data/playground.settings.xml" />
+	<PrefixRedirect from="game/meadowvillage" to="game/playground/meadowvillage" />
+	<Redirect from="game/playground/meadowvillage/automation/autoplayclock.scenario.xml" to="game/playground/automation/meadowvillage_autoplayclock.scenario.xml" />
+	<Redirect from="game/playground/meadowvillage/automation/day.scenario.xml" to="game/playground/automation/meadowvillage_day.scenario.xml" />
+	<Redirect from="game/playground/meadowvillage/automation/housing.scenario.xml" to="game/playground/automation/meadowvillage_housing.scenario.xml" />
+	<Redirect from="game/playground/meadowvillage/automation/questmarker.scenario.xml" to="game/playground/automation/meadowvillage_questmarker.scenario.xml" />
+	<Redirect from="game/playground/meadowvillage/automation/slice.scenario.xml" to="game/playground/automation/meadowvillage_slice.scenario.xml" />
+	<Redirect from="game/playground/meadowvillage/automation/editor/nethousing.scenario.xml" to="game/playground/automation/editor/meadowvillage_nethousing.scenario.xml" />
+	<Redirect from="game/playground/meadowvillage/data/meadow.settings.xml" to="game/playground/data/playground.settings.xml" />
+	<PrefixRedirect from="game/themepark" to="game/playground/themepark" />
+	<Redirect from="game/playground/themepark/automation/guests.scenario.xml" to="game/playground/automation/themepark_guests.scenario.xml" />
+	<Redirect from="game/playground/themepark/automation/shadow.scenario.xml" to="game/playground/automation/themepark_shadow.scenario.xml" />
+	<Redirect from="game/playground/themepark/automation/slice.scenario.xml" to="game/playground/automation/themepark_slice.scenario.xml" />
+	<Redirect from="game/playground/themepark/automation/editor/audioevents.scenario.xml" to="game/playground/automation/editor/themepark_audioevents.scenario.xml" />
+	<Redirect from="game/playground/themepark/automation/editor/parklayout.scenario.xml" to="game/playground/automation/editor/themepark_parklayout.scenario.xml" />
+	<Redirect from="game/playground/themepark/data/rides.xml" to="game/playground/data/rides.xml" />
+	<Redirect from="game/playground/themepark/data/coasters.xml" to="game/playground/data/coasters.xml" />
+	<Redirect from="game/playground/themepark/audio/themepark.audioevents.xml" to="game/playground/audio/playground.audioevents.xml" />
+	<Redirect from="game/playground/themepark/data/park.settings.xml" to="game/playground/data/playground.settings.xml" />
+	<PrefixRedirect from="game/abilityarena" to="game/playground/abilityarena" />
+	<Redirect from="game/playground/abilityarena/automation/ai.scenario.xml" to="game/playground/automation/abilityarena_ai.scenario.xml" />
+	<Redirect from="game/playground/abilityarena/automation/control.scenario.xml" to="game/playground/automation/abilityarena_control.scenario.xml" />
+	<Redirect from="game/playground/abilityarena/automation/slice.scenario.xml" to="game/playground/automation/abilityarena_slice.scenario.xml" />
+	<Redirect from="game/playground/abilityarena/automation/editor/abilitydebugger.scenario.xml" to="game/playground/automation/editor/abilityarena_abilitydebugger.scenario.xml" />
+	<Redirect from="game/playground/abilityarena/automation/editor/scenesave.scenario.xml" to="game/playground/automation/editor/abilityarena_scenesave.scenario.xml" />
+	<Redirect from="game/playground/abilityarena/data/projectiles.xml" to="game/playground/data/projectiles.xml" />
+	<Redirect from="game/playground/abilityarena/audio/abilityarena.audioevents.xml" to="game/playground/audio/playground.audioevents.xml" />
+	<Redirect from="game/playground/abilityarena/data/abilities.xml" to="game/playground/data/abilities.xml" />
+	<Redirect from="game/playground/abilityarena/data/arena.settings.xml" to="game/playground/data/playground.settings.xml" />
 	<Redirect from="game/playground/data/kitdemo/demo.fighters.xml" to="game/playground/data/fighters.xml" />
 	<Redirect from="game/playground/data/kitdemo/demo.restaurant.xml" to="game/playground/data/restaurant.xml" />
 	<Redirect from="game/playground/data/kitdemo/demo.recipes.xml" to="game/playground/data/recipes.xml" />
