@@ -1,6 +1,6 @@
 #include "pch.h"
 
-#include "Engine/Environment/Foliage/WindComponent.h"
+#include "Engine/Environment/Wind/WindComponent.h"
 
 #include "Core/Math/MathUtil.h"
 
@@ -42,6 +42,14 @@ namespace sw
     {
         manager.getComponentRegistry().remove<WindComponent>( this );
         Component::onUnregister( manager );
+    }
+
+    float3 WindSettings::computeVelocity( const float3& position, float32 time ) const
+    {
+        const float32 along = position._x * _direction._x + position._z * _direction._y;
+        const float32 gust  = MathUtil::sin( time * _gustFrequency * MathUtil::kTwoPi + along * kGustPhasePerMeter ) * 0.5f + 0.5f;
+        const float32 speed = _speed * ( 1.0f + _gustStrength * gust );
+        return float3{ _direction._x * speed, 0.0f, _direction._y * speed };
     }
 
     bool WindComponent::findWind( const GameObjectManager& manager, WindSettings& outSettings )
