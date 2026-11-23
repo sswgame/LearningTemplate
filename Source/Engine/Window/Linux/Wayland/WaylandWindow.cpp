@@ -1315,6 +1315,7 @@ namespace sw
     void WaylandWindow::destroy()
     {
         State& state = *_pState;
+        state.dropDragOffer(); // 끌리는 중에 닫은 창의 제안도 놓는다(소개된 제안을 넘겨받은 것이라 아래가 놓지 않는다)
         state.dropIntroducedOffer();
         state.dropSelectionOffer();
         if ( state._pDataSource != nullptr )
@@ -1430,7 +1431,7 @@ namespace sw
             if ( input._kind == WaylandInputKind::FocusGained || input._kind == WaylandInputKind::FocusLost )
                 setFocusState( input._kind == WaylandInputKind::FocusGained );
             if ( _customHandler.isBound() == false )
-                break;
+                continue; // 뒤에 줄 선 글 · 포커스 바뀜은 처리기가 없어도 넘긴다
             NativeWindowEvent windowEvent{};
             windowEvent.setNativeWindow( NativeSurfaceKind::Wayland, state._pSurface );
             windowEvent._message = NativeWindowEvent::kMessageWayland;
