@@ -3,6 +3,7 @@
 #include "GameFramework/Kits/Feature/Network/NetClientServer/RemoteCall.h"
 
 #include "Core/Math/MathUtil.h"
+#include "Core/Memory/Memory.h"
 #include "Core/Network/Connection/NetEndpoint.h"
 #include "Core/Serialization/BitStream.h"
 #include "Core/String/StringUtil.h"
@@ -15,27 +16,190 @@
 
 #include "GameFramework/Runtime/Foundation/Framework/GameService.h"
 
+#include <cmath>
 #include <limits>
 
 namespace sw
 {
     namespace
     {
-        /** @brief 메시지 본문의 글 칸과 함수 찾기입니다. */
+        /** @brief 메시지 본문의 인자 꼴과 함수 찾기입니다. */
         struct RemoteCallInternal
         {
-            static void writeText( BitWriter& writer, string_view text )
+            /** @brief 인자 하나의 이진 꼴입니다. 함수의 인자 타입이 정합니다(`findArgumentKind`). */
+            enum class ArgumentKind : uint8
             {
-                writer.writeBlob( reinterpret_cast<const uint8*>( text.data() ), static_cast<int32>( text.size() ) );
+                None,     ///< 실을 수 없다(구조체 · 벡터 · 핸들) — 등록이 거절한다
+                Bool,     ///< 1 비트
+                Integer,  ///< 가변 길이 부호 있는 정수(uint64 밖의 정수)
+                Unsigned, ///< 가변 길이 부호 없는 정수(uint64)
+                Float32,  ///< float32 비트(유한만) — float32 · 성분이 하나인 압축 타입
+                Float64,  ///< float64 비트(유한만)
+                Text,     ///< 길이 + 바이트(string · hashed_string)
+                Enum,     ///< 가변 길이 정수 — 받는 쪽이 등록된 열거자만 받는다
+            };
+
+            /** @brief 호출 쓰기의 결과입니다. */
+            enum class WriteResult : uint8
+            {
+                Ok,
+                BadArgument, ///< 인자가 함수보다 많거나, 그 타입으로 바뀌지 않거나, 글이 상한을 넘거나, 실수가 유한하지 않다
+                TooLarge     ///< 메시지가 그 채널의 상한을 넘는다
+            };
+
+            /** @brief 받은 호출의 인자 읽기 결과입니다. */
+            enum class ReadResult : uint8
+            {
+                Ok,
+                Mismatch, ///< 함수의 인자보다 많다
+                Malformed ///< 잘렸거나, 범위 밖이거나, 뒤에 남는 바이트가 있다
+            };
+
+            static ArgumentKind findArgumentKind( const FunctionParameterInfo& parameter )
+            {
+                if ( parameter._pType == nullptr )
+                    return ArgumentKind::None;
+                const hashed_string       typeName     = parameter._pType->_pGetTypeName();
+                const ReflectBuiltinIndex builtinIndex = ReflectedValueUtil::findBuiltinIndex( typeName );
+                if ( builtinIndex == ReflectBuiltinIndex::kNone )
+                    return game::getSubsystem<TypeRegistry>().findEnum( typeName ) != nullptr ? ArgumentKind::Enum : ArgumentKind::None;
+                switch ( ReflectedValueUtil::getBuiltinClass( builtinIndex ) )
+                {
+                    case ReflectBuiltinClass::Bool:
+                        return ArgumentKind::Bool;
+                    case ReflectBuiltinClass::Text:
+                        return ArgumentKind::Text;
+                    case ReflectBuiltinClass::Number:
+                    {
+                        if ( builtinIndex == ReflectBuiltinIndex::kuint64 )
+                            return ArgumentKind::Unsigned;
+                        if ( ReflectedValueUtil::isBuiltinInteger( builtinIndex ) )
+                            return ArgumentKind::Integer;
+                        return builtinIndex == ReflectBuiltinIndex::kfloat64 ? ArgumentKind::Float64 : ArgumentKind::Float32;
+                    }
+                    case ReflectBuiltinClass::Other:
+                        break;
+                }
+                return ArgumentKind::None;
             }
 
-            [[nodiscard]] static bool readText( BitReader& reader, int32 maxBytes, string& outText )
+            /** @brief 인자 하나를 그 타입으로 바꿔 씁니다. 바꿀 수 없거나 실을 수 없는 값이면 false 입니다. */
+            [[nodiscard]] static bool writeArgument( BitWriter& writer, const FunctionParameterInfo& parameter, const ReflectedValue& argument )
             {
-                vector<uint8> bytes;
-                if ( reader.readBlob( bytes, maxBytes ) == false )
+                const ArgumentKind kind = findArgumentKind( parameter );
+                TaskValue          value;
+                if ( kind == ArgumentKind::None || parameter._pType->_pConvert( argument, value ) == false )
                     return false;
-                outText.assign( reinterpret_cast<const utf8*>( bytes.data() ), bytes.size() );
-                return true;
+                const hashed_string       typeName     = parameter._pType->_pGetTypeName();
+                const ReflectBuiltinIndex builtinIndex = ReflectedValueUtil::findBuiltinIndex( typeName );
+                switch ( kind )
+                {
+                    case ArgumentKind::Bool:
+                    {
+                        writer.writeBool( *value.getPtr<bool>() );
+                        return true;
+                    }
+                    case ArgumentKind::Integer:
+                    {
+                        int64 integer = 0;
+                        if ( ReflectedValueUtil::readInteger( builtinIndex, value.getRawPtr(), integer ) == false )
+                            return false;
+                        writer.writeVarInt( integer );
+                        return true;
+                    }
+                    case ArgumentKind::Unsigned:
+                    {
+                        writer.writeVarUint( *value.getPtr<uint64>() );
+                        return true;
+                    }
+                    case ArgumentKind::Float32:
+                    {
+                        float64 number = 0.0;
+                        if ( ReflectedValueUtil::readNumber( builtinIndex, value.getRawPtr(), number ) == false || std::isfinite( number ) == false )
+                            return false;
+                        writer.writeFloat( static_cast<float32>( number ) );
+                        return true;
+                    }
+                    case ArgumentKind::Float64:
+                    {
+                        const float64 number = *value.getPtr<float64>();
+                        if ( std::isfinite( number ) == false )
+                            return false;
+                        uint64 bits = 0;
+                        Memory::copy( &bits, &number, sizeof( bits ) );
+                        writer.writeUint32( static_cast<uint32>( bits ) );
+                        writer.writeUint32( static_cast<uint32>( bits >> 32 ) );
+                        return true;
+                    }
+                    case ArgumentKind::Text:
+                    {
+                        const string text = ReflectedValueUtil::formatBuiltin( builtinIndex, value.getRawPtr() );
+                        if ( text.size() > static_cast<size_t>( NetRemoteCallMessage::kMaxArgumentBytes ) )
+                            return false;
+                        writer.writeBlob( reinterpret_cast<const uint8*>( text.data() ), static_cast<int32>( text.size() ) );
+                        return true;
+                    }
+                    case ArgumentKind::Enum:
+                    {
+                        int64 raw = 0;
+                        if ( ReflectedValueUtil::readEnumValue( ReflectedValue( typeName, std::move( value ) ), typeName, raw ) == false )
+                            return false;
+                        writer.writeVarInt( raw );
+                        return true;
+                    }
+                    case ArgumentKind::None:
+                        break;
+                }
+                return false;
+            }
+
+            /** @brief 인자 하나를 읽습니다. 잘렸거나 실을 수 없는 값이면 false 입니다. 타입 안의 범위(int32 · 등록된 열거자)는 부를 때 인자 변환이 봅니다. */
+            [[nodiscard]] static bool readArgument( BitReader& reader, const FunctionParameterInfo& parameter, ReflectedValue& outValue )
+            {
+                switch ( findArgumentKind( parameter ) )
+                {
+                    case ArgumentKind::Bool:
+                    {
+                        outValue = ReflectedValue::make( reader.readBool() );
+                        return reader.hasOverflowed() == false;
+                    }
+                    case ArgumentKind::Integer:
+                    case ArgumentKind::Enum:
+                    {
+                        outValue = ReflectedValue::make( reader.readVarInt() );
+                        return reader.hasOverflowed() == false;
+                    }
+                    case ArgumentKind::Unsigned:
+                    {
+                        outValue = ReflectedValue::make( reader.readVarUint() );
+                        return reader.hasOverflowed() == false;
+                    }
+                    case ArgumentKind::Float32:
+                    {
+                        outValue = ReflectedValue::make( reader.readFiniteFloat() );
+                        return reader.hasOverflowed() == false;
+                    }
+                    case ArgumentKind::Float64:
+                    {
+                        const uint64 low    = reader.readUint32();
+                        const uint64 bits   = low | ( static_cast<uint64>( reader.readUint32() ) << 32 );
+                        float64      number = 0.0;
+                        Memory::copy( &number, &bits, sizeof( number ) );
+                        outValue = ReflectedValue::make( number );
+                        return reader.hasOverflowed() == false && std::isfinite( number );
+                    }
+                    case ArgumentKind::Text:
+                    {
+                        vector<uint8> bytes;
+                        if ( reader.readBlob( bytes, NetRemoteCallMessage::kMaxArgumentBytes ) == false )
+                            return false;
+                        outValue = ReflectedValue::makeText( string_view( reinterpret_cast<const utf8*>( bytes.data() ), bytes.size() ) );
+                        return true;
+                    }
+                    case ArgumentKind::None:
+                        break;
+                }
+                return false;
             }
 
             /** @brief 받는 쪽이 이 역할의 함수를 받는지 봅니다 — 서버는 `Server`, 클라이언트는 `Client` · `Multicast` 다. */
@@ -46,18 +210,6 @@ namespace sw
                 return role == FunctionNetRole::Client || role == FunctionNetRole::Multicast;
             }
 
-            /** @brief 인자 타입이 글로 오갈 수 있는지(글 · 수 · bool · 열거형) 봅니다. */
-            static bool isWireParameter( const FunctionParameterInfo& parameter )
-            {
-                if ( parameter._pType == nullptr )
-                    return false;
-                const hashed_string       typeName     = parameter._pType->_pGetTypeName();
-                const ReflectBuiltinIndex builtinIndex = ReflectedValueUtil::findBuiltinIndex( typeName );
-                if ( builtinIndex != ReflectBuiltinIndex::kNone )
-                    return ReflectedValueUtil::getBuiltinClass( builtinIndex ) != ReflectBuiltinClass::Other;
-                return game::getSubsystem<TypeRegistry>().findEnum( typeName ) != nullptr;
-            }
-
             /** @brief 받은 이름으로 함수를 찾습니다. 이름을 전역 표에 넣지 않습니다(남이 보낸 글이다). */
             static const FunctionInfo* findFunction( const TypeInfo& type, string_view functionName )
             {
@@ -65,68 +217,61 @@ namespace sw
                 return name.empty() ? nullptr : type.findMethodInHierarchy( name );
             }
 
-            /** @brief 인자를 글로 바꿉니다. 글로 나타낼 수 없는 값(구조체 · 벡터)이 있으면 false 입니다. */
-            [[nodiscard]] static bool formatArguments( const FunctionInfo& function, const vector<ReflectedValue>& listArg, vector<string>& outListText )
+            /** @brief 호출 메시지 하나를 씁니다. 함수의 `Reliable` 로 채널을 고르고, 비신뢰가 한 조각(1 KB)을 넘으면 `TooLarge` 입니다. */
+            [[nodiscard]] static WriteResult writeCall( NetMessageWriter& messageWriter, uint32 sequence, uint32 targetID, const FunctionInfo& function, const vector<ReflectedValue>& listArg,
+                                                        NetChannelKind& outChannel )
             {
-                outListText.clear();
                 if ( listArg.size() > function._listParameter.size() || listArg.size() > static_cast<size_t>( NetRemoteCallMessage::kMaxArgumentCount ) )
-                    return false;
-                for ( const ReflectedValue& argument : listArg )
-                {
-                    const bool bBuiltinText = ReflectedValueUtil::getBuiltinClass( argument._typeName ) != ReflectBuiltinClass::Other;
-                    const bool bEnum        = bBuiltinText == false && game::getSubsystem<TypeRegistry>().findEnum( argument._typeName ) != nullptr;
-                    if ( bBuiltinText == false && bEnum == false )
-                        return false;
-                    outListText.push_back( argument.toText() );
-                    if ( outListText.back().size() > static_cast<size_t>( NetRemoteCallMessage::kMaxArgumentBytes ) )
-                        return false;
-                }
-                return true;
-            }
-
-            /** @brief 호출 메시지 하나를 씁니다. 함수의 `Reliable` 로 채널을 고르고, 비신뢰가 한 조각(1 KB)을 넘으면 false 입니다. */
-            [[nodiscard]] static bool writeCall( NetMessageWriter& messageWriter, uint32 sequence, uint32 targetID, const FunctionInfo& function, const vector<string>& listText,
-                                                 NetChannelKind& outChannel )
-            {
+                    return WriteResult::BadArgument;
                 outChannel        = function._metadata->_bReliable != SW_FALSE ? NetChannelKind::ReliableOrdered : NetChannelKind::Unreliable;
                 BitWriter& writer = messageWriter.beginMessage<NetRemoteCallMessage::Table, NetRemoteCallMessage::Call>( outChannel );
                 writer.writeVarUint( sequence );
                 writer.writeVarUint( targetID );
                 writer.writeUint32( RemoteCallTargets::getFunctionID( function ) );
-                writer.writeVarUint( listText.size() );
-                for ( const string& text : listText )
+                writer.writeVarUint( listArg.size() );
+                for ( size_t index = 0; index < listArg.size(); ++index )
                 {
-                    writeText( writer, text );
+                    if ( writeArgument( writer, function._listParameter[index], listArg[index] ) == false )
+                        return WriteResult::BadArgument;
                 }
                 const int32 maxBytes = outChannel == NetChannelKind::ReliableOrdered ? NetConnection::kMaxReliableMessageSize : NetConnection::kMaxSingleMessageSize;
-                return messageWriter.getByteCount() <= maxBytes;
+                return messageWriter.getByteCount() <= maxBytes ? WriteResult::Ok : WriteResult::TooLarge;
             }
 
-            /** @brief 받은 호출 하나의 머리와 인자입니다. */
-            struct ReadCall
+            /** @brief 받은 호출 하나의 머리입니다. 인자는 함수를 찾은 뒤에 읽습니다(`readArguments`). */
+            struct CallHead
             {
                 uint32 _sequence{ 0 };
                 uint32 _targetID{ 0 };
                 uint32 _functionID{ 0 };
+                uint32 _argumentCount{ 0 };
             };
 
-            /** @brief 호출 메시지를 읽습니다. 상한을 넘거나 깨졌으면 false 입니다. */
-            [[nodiscard]] static bool readCall( BitReader& body, ReadCall& outCall, vector<string>& outListText )
+            /** @brief 호출의 머리를 읽습니다. 상한을 넘거나 깨졌으면 false 입니다. 인자가 없다면 여기가 본문의 끝이다. */
+            [[nodiscard]] static bool readHead( BitReader& body, CallHead& outHead )
             {
-                outCall._sequence    = body.readVarUint32();
-                outCall._targetID    = body.readVarUint32();
-                outCall._functionID  = body.readUint32();
-                uint32 argumentCount = 0;
-                argumentCount        = body.readCount( static_cast<uint32>( NetRemoteCallMessage::kMaxArgumentCount ) );
+                outHead._sequence      = body.readVarUint32();
+                outHead._targetID      = body.readVarUint32();
+                outHead._functionID    = body.readUint32();
+                outHead._argumentCount = body.readCount( static_cast<uint32>( NetRemoteCallMessage::kMaxArgumentCount ) );
                 if ( body.hasOverflowed() )
                     return false;
-                outListText.resize( static_cast<size_t>( argumentCount ) );
-                for ( string& text : outListText )
+                return outHead._argumentCount > 0 || body.readEnd();
+            }
+
+            /** @brief @p function 의 인자 타입대로 인자를 읽습니다. 인자 뒤 남는 바이트도 깨진 호출이다. */
+            [[nodiscard]] static ReadResult readArguments( BitReader& body, const CallHead& head, const FunctionInfo& function, vector<ReflectedValue>& outListArg )
+            {
+                outListArg.clear();
+                if ( head._argumentCount > function._listParameter.size() )
+                    return ReadResult::Mismatch;
+                outListArg.resize( head._argumentCount );
+                for ( uint32 index = 0; index < head._argumentCount; ++index )
                 {
-                    if ( readText( body, NetRemoteCallMessage::kMaxArgumentBytes, text ) == false )
-                        return false;
+                    if ( readArgument( body, function._listParameter[index], outListArg[index] ) == false )
+                        return ReadResult::Malformed;
                 }
-                return body.readEnd(); // 인자 뒤 남는 바이트도 깨진 호출이다
+                return head._argumentCount == 0 || body.readEnd() ? ReadResult::Ok : ReadResult::Malformed;
             }
         };
     } // namespace
@@ -197,9 +342,9 @@ namespace sw
                 }
                 for ( const FunctionParameterInfo& parameter : function._listParameter )
                 {
-                    if ( RemoteCallInternal::isWireParameter( parameter ) )
+                    if ( RemoteCallInternal::findArgumentKind( parameter ) != RemoteCallInternal::ArgumentKind::None )
                         continue;
-                    SW_LOG_ERROR_ID( "RemoteCall.ParameterNotWire", "Remote function %#::%# takes '%#' %# - remote arguments travel as text and must be a string, number, bool or enum",
+                    SW_LOG_ERROR_ID( "RemoteCall.ParameterNotWire", "Remote function %#::%# takes '%#' %# - remote arguments must be a string, number, bool or enum",
                                      type._name.c_str(), function._name.c_str(), parameter._typeName.c_str(), parameter._name.c_str() );
                     bValid = false;
                 }
@@ -233,8 +378,6 @@ namespace sw
         , _config{}
         , _stats{}
         , _messageWriter{}
-        , _listReceivedScratch{}
-        , _listSendScratch{}
         , _pPeers{ nullptr }
         , _pClock{ []() -> int64
     { return MonotonicClock::nowNanoseconds() / constant::time::kNanosecondsPerMillisecond; } }
@@ -350,16 +493,19 @@ namespace sw
 
     bool RemoteCallServer::sendClientCall( const RemoteCallTargets::Target* pTarget, uint32 targetID, string_view functionName, const vector<ReflectedValue>& listArg )
     {
-        const FunctionInfo* pFunction       = pTarget != nullptr ? RemoteCallInternal::findFunction( *pTarget->_pType, functionName ) : nullptr;
-        const bool          bClientFunction = pFunction != nullptr && RemoteCallInternal::isRoleReceivedBy( pFunction->_metadata->_netRole, false );
-        if ( _pPeers == nullptr || bClientFunction == false || RemoteCallInternal::formatArguments( *pFunction, listArg, _listSendScratch ) == false )
+        const FunctionInfo*                   pFunction       = pTarget != nullptr ? RemoteCallInternal::findFunction( *pTarget->_pType, functionName ) : nullptr;
+        const bool                            bClientFunction = pFunction != nullptr && RemoteCallInternal::isRoleReceivedBy( pFunction->_metadata->_netRole, false );
+        NetChannelKind                        channel         = NetChannelKind::ReliableOrdered;
+        const bool                            bWritable       = _pPeers != nullptr && bClientFunction;
+        const RemoteCallInternal::WriteResult written =
+            bWritable ? RemoteCallInternal::writeCall( _messageWriter, 0, targetID, *pFunction, listArg, channel ) : RemoteCallInternal::WriteResult::BadArgument;
+        if ( written == RemoteCallInternal::WriteResult::BadArgument )
         {
-            SW_LOG_ERROR_ID( "RemoteCall.ClientCallRefused", "Remote call to client function '%#' on target %# was not sent - no such target or Client function, or an argument cannot travel as text",
+            SW_LOG_ERROR_ID( "RemoteCall.ClientCallRefused", "Remote call to client function '%#' on target %# was not sent - no such target or Client function, or an argument does not fit its parameter",
                              functionName, targetID );
             return false;
         }
-        NetChannelKind channel = NetChannelKind::ReliableOrdered;
-        if ( RemoteCallInternal::writeCall( _messageWriter, 0, targetID, *pFunction, _listSendScratch, channel ) == false )
+        if ( written == RemoteCallInternal::WriteResult::TooLarge )
         {
             SW_LOG_ERROR_ID( "RemoteCall.ClientCallTooLarge", "Remote call to client function '%#' is %# bytes - an unreliable call must fit one %#-byte message", functionName,
                              _messageWriter.getByteCount(), NetConnection::kMaxSingleMessageSize );
@@ -370,8 +516,8 @@ namespace sw
 
     NetHandleResult RemoteCallServer::receive( NetRemoteCallMessage::Call, const NetMessageContext& context, BitReader& body )
     {
-        RemoteCallInternal::ReadCall call;
-        if ( RemoteCallInternal::readCall( body, call, _listReceivedScratch ) == false )
+        RemoteCallInternal::CallHead call;
+        if ( RemoteCallInternal::readHead( body, call ) == false )
             return NetHandleResult::Malformed;
         // 상한은 대상 · 함수 찾기 앞에서 본다 — 없는 대상 · 함수를 쏟아붓는 호출도 같은 버킷을 쓴다.
         const int64 nowMs = _pClock();
@@ -415,12 +561,25 @@ namespace sw
             sendRejected( context._connectionID, call._sequence, RemoteCallError::RateLimited );
             return NetHandleResult::Handled;
         }
+        vector<ReflectedValue> listArgument; // 함수 몸이 다시 부르거나 보내도(`callSession`) 이 호출의 인자는 그대로다
+        switch ( RemoteCallInternal::readArguments( body, call, *pFunction, listArgument ) )
+        {
+            case RemoteCallInternal::ReadResult::Malformed:
+                return NetHandleResult::Malformed;
+            case RemoteCallInternal::ReadResult::Mismatch:
+            {
+                sendRejected( context._connectionID, call._sequence, RemoteCallError::ArgumentMismatch );
+                return NetHandleResult::Handled;
+            }
+            case RemoteCallInternal::ReadResult::Ok:
+                break;
+        }
         if ( pFunction->_metadata->_bValidate != SW_FALSE )
         {
             // 짝은 등록이 확인했다(`validateRemoteCallContract`) — 여기서 없으면 등록 뒤 모듈이 바뀐 것이라 부르지 않는다.
             const FunctionInfo* pValidator = RemoteCallTargets::findValidator( *pTarget->_pType, *pFunction );
             ReflectedValue      validatorResult;
-            const bool          bCalled = pValidator != nullptr && ReflectionInvoke::callWithText( *pValidator, pTarget->_pInstance, _listReceivedScratch, &validatorResult ) == ReflectCallResult::Ok;
+            const bool          bCalled = pValidator != nullptr && ReflectionInvoke::call( *pValidator, pTarget->_pInstance, listArgument, &validatorResult ) == ReflectCallResult::Ok;
             if ( bCalled == false )
             {
                 sendRejected( context._connectionID, call._sequence, RemoteCallError::ArgumentMismatch );
@@ -437,7 +596,7 @@ namespace sw
                 return NetHandleResult::Handled;
             }
         }
-        if ( ReflectionInvoke::callWithText( *pFunction, pTarget->_pInstance, _listReceivedScratch ) != ReflectCallResult::Ok )
+        if ( ReflectionInvoke::call( *pFunction, pTarget->_pInstance, listArgument ) != ReflectCallResult::Ok )
         {
             sendRejected( context._connectionID, call._sequence, RemoteCallError::ArgumentMismatch );
             return NetHandleResult::Handled;
@@ -494,8 +653,6 @@ namespace sw
         : _targets{}
         , _rejections{}
         , _messageWriter{}
-        , _listReceivedScratch{}
-        , _listSendScratch{}
         , _pPeers{ nullptr }
         , _invokedCount{ 0 }
         , _nextSequence{ 1 }
@@ -522,17 +679,21 @@ namespace sw
 
     uint32 RemoteCallClient::callServer( uint32 targetID, const TypeInfo& type, string_view functionName, const vector<ReflectedValue>& listArg )
     {
-        const FunctionInfo* pFunction       = RemoteCallInternal::findFunction( type, functionName );
-        const bool          bServerFunction = pFunction != nullptr && RemoteCallInternal::isRoleReceivedBy( pFunction->_metadata->_netRole, true );
-        if ( _pPeers == nullptr || bServerFunction == false || RemoteCallInternal::formatArguments( *pFunction, listArg, _listSendScratch ) == false )
+        const FunctionInfo*                   pFunction       = RemoteCallInternal::findFunction( type, functionName );
+        const bool                            bServerFunction = pFunction != nullptr && RemoteCallInternal::isRoleReceivedBy( pFunction->_metadata->_netRole, true );
+        const uint32                          sequence        = _nextSequence;
+        NetChannelKind                        channel         = NetChannelKind::ReliableOrdered;
+        const bool                            bWritable       = _pPeers != nullptr && bServerFunction;
+        const RemoteCallInternal::WriteResult written =
+            bWritable ? RemoteCallInternal::writeCall( _messageWriter, sequence, targetID, *pFunction, listArg, channel ) : RemoteCallInternal::WriteResult::BadArgument;
+        if ( written == RemoteCallInternal::WriteResult::BadArgument )
         {
-            SW_LOG_ERROR_ID( "RemoteCall.ServerCallRefused", "Remote call to %#::%# was not sent - no such Server function, too many arguments, or an argument cannot travel as text",
+            SW_LOG_ERROR_ID( "RemoteCall.ServerCallRefused", "Remote call to %#::%# was not sent - no such Server function, too many arguments, or an argument does not fit its parameter",
                              type._name.c_str(), functionName );
             return 0;
         }
-        const uint32   sequence = _nextSequence++;
-        NetChannelKind channel  = NetChannelKind::ReliableOrdered;
-        if ( RemoteCallInternal::writeCall( _messageWriter, sequence, targetID, *pFunction, _listSendScratch, channel ) == false )
+        ++_nextSequence;
+        if ( written == RemoteCallInternal::WriteResult::TooLarge )
         {
             SW_LOG_ERROR_ID( "RemoteCall.ServerCallTooLarge", "Remote call %# is %# bytes - an unreliable call must fit one %#-byte message", functionName, _messageWriter.getByteCount(),
                              NetConnection::kMaxSingleMessageSize );
@@ -544,8 +705,8 @@ namespace sw
     NetHandleResult RemoteCallClient::receive( NetRemoteCallMessage::Call, const NetMessageContext& context, BitReader& body )
     {
         (void)context;
-        RemoteCallInternal::ReadCall call;
-        if ( RemoteCallInternal::readCall( body, call, _listReceivedScratch ) == false )
+        RemoteCallInternal::CallHead call;
+        if ( RemoteCallInternal::readHead( body, call ) == false )
             return NetHandleResult::Malformed;
         const RemoteCallTargets::Target* pTarget   = _targets.findTarget( call._targetID );
         const FunctionInfo*              pFunction = pTarget != nullptr ? RemoteCallTargets::findFunctionByID( *pTarget->_pType, call._functionID ) : nullptr;
@@ -555,7 +716,10 @@ namespace sw
             SW_LOG_WARNING_ID( "RemoteCall.ClientCallDropped", "Remote call (function id %#) for target %# was dropped - no such target or Client function here", call._functionID, call._targetID );
             return NetHandleResult::Handled;
         }
-        if ( ReflectionInvoke::callWithText( *pFunction, pTarget->_pInstance, _listReceivedScratch ) != ReflectCallResult::Ok )
+        vector<ReflectedValue> listArgument;
+        if ( RemoteCallInternal::readArguments( body, call, *pFunction, listArgument ) != RemoteCallInternal::ReadResult::Ok )
+            return NetHandleResult::Malformed;
+        if ( ReflectionInvoke::call( *pFunction, pTarget->_pInstance, listArgument ) != ReflectCallResult::Ok )
             return NetHandleResult::Malformed;
         ++_invokedCount;
         return NetHandleResult::Handled;

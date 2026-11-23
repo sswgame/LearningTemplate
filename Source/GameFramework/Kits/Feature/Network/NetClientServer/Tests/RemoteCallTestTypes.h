@@ -3,6 +3,7 @@
  * @brief 반사 함수 호출(`RemoteCall`) 테스트의 대상 형식입니다. 리플렉션 파서가 헤더만 읽으므로 테스트 `.cpp` 밖에 둡니다.
  */
 #pragma once
+#include "Core/Container/string.h"
 #include "Core/Foundation/Types.h"
 #include "Core/Math/VectorMath.h"
 
@@ -10,6 +11,14 @@
 
 namespace sw
 {
+    /** @brief 열거형 인자의 왕복을 보는 열거형입니다. */
+    ENUM()
+    enum class RemoteCallTestMode : uint8
+    {
+        Quiet,
+        Loud,
+    };
+
     /** @brief 서버 쪽 대상 — 신뢰 · 검증 함수, 비신뢰 함수, 원격으로 부를 수 없는 로컬 함수, 서버가 부르는 클라이언트 함수를 하나씩 둡니다. */
     REFLECT()
     struct RemoteCallTestAvatar
@@ -28,6 +37,27 @@ namespace sw
         int32 _shownHealth{ 0 };
         PROPERTY()
         int32 _lastMarkerID{ 0 };
+        PROPERTY()
+        uint64 _lastBigID{ 0 };
+        PROPERTY()
+        float64 _lastNumber{ 0.0 };
+        PROPERTY()
+        string _lastText{};
+        PROPERTY()
+        RemoteCallTestMode _lastMode{ RemoteCallTestMode::Quiet };
+        PROPERTY()
+        bool _bLastFlag{ false }; // NOLINT(sw-bool-flag): 집합체다(중괄호로 만든다)
+
+        /** @brief 모든 인자 꼴을 하나씩 받아 적습니다. */
+        FUNCTION( Server, Reliable )
+        void recordArguments( uint64 bigID, float64 number, const string& text, bool bFlag, RemoteCallTestMode mode )
+        {
+            _lastBigID  = bigID;
+            _lastNumber = number;
+            _lastText   = text;
+            _bLastFlag  = bFlag;
+            _lastMode   = mode;
+        }
 
         /** @brief 검증을 지난 공격 — 대상과 힘을 적습니다. */
         FUNCTION( Server, Reliable, Validate )
@@ -72,7 +102,7 @@ namespace sw
         void act( int32 value ) { _value = value; }
     };
 
-    /** @brief 글로 싣지 못하는 인자(벡터)를 받는 원격 함수 — 등록이 거절해야 합니다. */
+    /** @brief 실을 수 없는 인자(벡터)를 받는 원격 함수 — 등록이 거절해야 합니다. */
     REFLECT()
     struct RemoteCallTestVectorArgument
     {

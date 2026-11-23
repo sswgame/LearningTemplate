@@ -1,5 +1,6 @@
 #include "pch.h"
 
+#include "Core/Memory/Memory.h"
 #include "Core/Network/Connection/NetEndpoint.h"
 #include "Core/Network/Tests/LoopbackCluster.h"
 #include "Core/Serialization/BitStream.h"
@@ -9,6 +10,8 @@
 
 #include "GameFramework/Kits/Feature/Network/NetClientServer/RemoteCall.h"
 #include "GameFramework/Kits/Feature/Network/NetClientServer/Tests/RemoteCallTestTypes.h"
+
+#include <limits>
 
 // 반사 함수 호출 — `FUNCTION( Server · Client · Reliable · Validate )` 메타데이터가 주인 · 역할 · 채널 · 검증 정책으로 실제 선을 지나 지켜지는가.
 
@@ -68,18 +71,34 @@ namespace
         }
 
         /** @brief 클라이언트를 거치지 않고 손으로 짠 호출을 서버에 넘깁니다(조작한 클라이언트의 흉내). */
-        NetHandleResult craftCall( uint32 targetID, string_view functionName, const vector<string>& listArgText, NetChannelKind channel )
+        NetHandleResult craftCall( uint32 targetID, string_view functionName, const vector<int64>& listInteger, NetChannelKind channel )
+        {
+            return craftCallWith( targetID, functionName, static_cast<uint32>( listInteger.size() ), channel, [&listInteger]( BitWriter& writer )
+            {
+                for ( const int64 integer : listInteger )
+                {
+                    writer.writeVarInt( integer );
+                }
+            } );
+        }
+
+        /** @brief 실수 하나를 받는 함수(`moveStep`)의 손 호출입니다. */
+        NetHandleResult craftFloatCall( uint32 targetID, string_view functionName, float32 number, NetChannelKind channel )
+        {
+            return craftCallWith( targetID, functionName, 1u, channel, [number]( BitWriter& writer )
+            { writer.writeFloat( number ); } );
+        }
+
+        template <typename TWriteArguments>
+        NetHandleResult craftCallWith( uint32 targetID, string_view functionName, uint32 argumentCount, NetChannelKind channel, TWriteArguments&& writeArguments )
         {
             NetMessageWriter messageWriter;
             BitWriter&       writer = messageWriter.begin( NetRemoteCallMessage::kCall );
             writer.writeVarUint( 1 );
             writer.writeVarUint( targetID );
             writer.writeUint32( hashed_string::computeHash( functionName ) ); // 함수 번호 = 이름 해시(`RemoteCallTargets::getFunctionID`)
-            writer.writeVarUint( listArgText.size() );
-            for ( const string& text : listArgText )
-            {
-                writer.writeBlob( reinterpret_cast<const uint8*>( text.data() ), static_cast<int32>( text.size() ) );
-            }
+            writer.writeVarUint( argumentCount );
+            writeArguments( writer );
             const vector<uint8>& bytes = messageWriter.getBytes();
             return _server.handleMessage( _connectionID, bytes.data(), messageWriter.getByteCount(), channel );
         }
@@ -112,6 +131,44 @@ SW_TEST_CASE( RemoteCallTest, UnreliableFunctionTravelsUnreliable )
     SW_EXPECT_NEAR( 2.5, rig._serverAvatar._movedDistance, 1e-4 );
 }
 
+/** @brief [RemoteCallTest] 인자는 타입별 이진 꼴로 오간다 — 정수 끝값 · uint64 · float64 · 글 · bool · 열거형이 바이트 손실 없이 같은 값으로 닿는다. */
+SW_TEST_CASE( RemoteCallTest, ArgumentsTravelAsTypedBinary )
+{
+    RemoteCallTestRig rig;
+    SW_REQUIRE_TRUE( rig._server.registerTarget( kAvatarID, *RemoteCallTestAvatar::StaticType(), &rig._serverAvatar, rig._connectionID ) );
+    const uint64  bigID  = 0xFEDCBA9876543210ull;
+    const float64 number = 0.1 + 0.2; // 글로는 짧게 줄던 값이다
+    SW_EXPECT_NOT_EQUAL( 0u, rig._client.callServer( kAvatarID, *RemoteCallTestAvatar::StaticType(), "recordArguments",
+                                                     { ReflectedValue::make( bigID ), ReflectedValue::make( number ), ReflectedValue::makeText( "가 나" ), ReflectedValue::make( true ),
+                                                       ReflectedValue::make( RemoteCallTestMode::Loud ) } ) );
+    rig.pollUntilDelivered();
+    SW_EXPECT_EQUAL( bigID, rig._serverAvatar._lastBigID );
+    SW_EXPECT_TRUE( number == rig._serverAvatar._lastNumber );
+    SW_EXPECT_TRUE( rig._serverAvatar._lastText == "가 나" );
+    SW_EXPECT_TRUE( rig._serverAvatar._lastMode == RemoteCallTestMode::Loud );
+    SW_EXPECT_TRUE( rig._serverAvatar._bLastFlag );
+
+    // 등록되지 않은 열거자 · 유한하지 않은 실수는 몸에 닿지 않는다(거절 · 깨진 호출).
+    const auto writeAll = [bigID]( int64 mode, float64 value )
+    {
+        return [bigID, mode, value]( BitWriter& writer )
+        {
+            uint64 bits = 0;
+            Memory::copy( &bits, &value, sizeof( bits ) );
+            writer.writeVarUint( bigID );
+            writer.writeUint32( static_cast<uint32>( bits ) );
+            writer.writeUint32( static_cast<uint32>( bits >> 32 ) );
+            writer.writeVarUint( 0 ); // 빈 글의 길이
+            writer.writeBool( false );
+            writer.writeVarInt( mode );
+        };
+    };
+    SW_EXPECT_TRUE( rig.craftCallWith( kAvatarID, "recordArguments", 5u, NetChannelKind::ReliableOrdered, writeAll( 99, 1.0 ) ) == NetHandleResult::Handled );
+    SW_EXPECT_TRUE( rig.craftCallWith( kAvatarID, "recordArguments", 5u, NetChannelKind::ReliableOrdered, writeAll( 0, std::numeric_limits<float64>::infinity() ) ) == NetHandleResult::Malformed );
+    SW_EXPECT_EQUAL( uint64{ 1 }, rig._server.getStats()._invokedCount );
+    SW_EXPECT_EQUAL( uint64{ 1 }, rig._server.getStats()._rejectedCount );
+}
+
 /** @brief [RemoteCallTest] 검증 짝이 거짓이면 몸을 부르지 않고 그 연결을 끊는다(언리얼 WithValidation). */
 SW_TEST_CASE( RemoteCallTest, FailedValidationDisconnects )
 {
@@ -119,7 +176,7 @@ SW_TEST_CASE( RemoteCallTest, FailedValidationDisconnects )
     SW_REQUIRE_TRUE( rig._server.registerTarget( kAvatarID, *RemoteCallTestAvatar::StaticType(), &rig._serverAvatar, rig._connectionID ) );
     SW_EXPECT_LOG( "RemoteCall.ValidationFailed" );
     // 정직한 클라이언트도 이 호출을 보낼 수 있다(검증은 서버 몫) — 망을 더 돌리지 않고 서버 쪽만 본다.
-    SW_EXPECT_TRUE( rig.craftCall( kAvatarID, "attackTarget", { "7", "99" }, NetChannelKind::ReliableOrdered ) == NetHandleResult::Handled );
+    SW_EXPECT_TRUE( rig.craftCall( kAvatarID, "attackTarget", { 7, 99 }, NetChannelKind::ReliableOrdered ) == NetHandleResult::Handled );
     SW_EXPECT_EQUAL( 0, rig._serverAvatar._totalPower );
     SW_EXPECT_EQUAL( uint64{ 1 }, rig._server.getStats()._validationFailedCount );
     SW_EXPECT_EQUAL( uint64{ 0 }, rig._server.getStats()._invokedCount );
@@ -132,7 +189,7 @@ SW_TEST_CASE( RemoteCallTest, NonOwnerIsDisconnected )
     RemoteCallTestRig rig;
     SW_REQUIRE_TRUE( rig._server.registerTarget( kAvatarID, *RemoteCallTestAvatar::StaticType(), &rig._serverAvatar, rig._connectionID + 1000 ) );
     SW_EXPECT_LOG( "RemoteCall.Violation" );
-    SW_EXPECT_TRUE( rig.craftCall( kAvatarID, "attackTarget", { "7", "20" }, NetChannelKind::ReliableOrdered ) == NetHandleResult::Handled );
+    SW_EXPECT_TRUE( rig.craftCall( kAvatarID, "attackTarget", { 7, 20 }, NetChannelKind::ReliableOrdered ) == NetHandleResult::Handled );
     SW_EXPECT_EQUAL( 0, rig._serverAvatar._totalPower );
     SW_EXPECT_EQUAL( uint64{ 1 }, rig._server.getStats()._violationCount );
 }
@@ -145,7 +202,7 @@ SW_TEST_CASE( RemoteCallTest, OnlyServerFunctionsAreCallable )
     SW_EXPECT_LOG( "RemoteCall.ServerCallRefused" );
     SW_EXPECT_EQUAL( 0u, rig._client.callServer( kAvatarID, *RemoteCallTestAvatar::StaticType(), "applyLocal", { ReflectedValue::make( int32{ 5 } ) } ) );
     SW_EXPECT_LOG( "RemoteCall.Violation" );
-    SW_EXPECT_TRUE( rig.craftCall( kAvatarID, "applyLocal", { "5" }, NetChannelKind::ReliableOrdered ) == NetHandleResult::Handled );
+    SW_EXPECT_TRUE( rig.craftCall( kAvatarID, "applyLocal", { 5 }, NetChannelKind::ReliableOrdered ) == NetHandleResult::Handled );
     SW_EXPECT_EQUAL( 0, rig._serverAvatar._localApplyCount );
     SW_EXPECT_EQUAL( uint64{ 1 }, rig._server.getStats()._violationCount );
 }
@@ -156,11 +213,11 @@ SW_TEST_CASE( RemoteCallTest, ReliableFunctionOnUnreliableChannelIsRefused )
     RemoteCallTestRig rig;
     SW_REQUIRE_TRUE( rig._server.registerTarget( kAvatarID, *RemoteCallTestAvatar::StaticType(), &rig._serverAvatar, rig._connectionID ) );
     SW_EXPECT_LOG( "RemoteCall.Violation" );
-    SW_EXPECT_TRUE( rig.craftCall( kAvatarID, "attackTarget", { "7", "20" }, NetChannelKind::Unreliable ) == NetHandleResult::Handled );
+    SW_EXPECT_TRUE( rig.craftCall( kAvatarID, "attackTarget", { 7, 20 }, NetChannelKind::Unreliable ) == NetHandleResult::Handled );
     SW_EXPECT_EQUAL( 0, rig._serverAvatar._totalPower );
 }
 
-/** @brief [RemoteCallTest] 없는 대상 · 함수 · 읽지 못하는 인자는 끊지 않고 같은 순번으로 거절을 알린다. */
+/** @brief [RemoteCallTest] 없는 대상 · 함수 · 그 타입에 들지 않는 인자(int32 밖)는 끊지 않고 같은 순번으로 거절을 알린다. */
 SW_TEST_CASE( RemoteCallTest, UnknownTargetAndBadArgumentsAreRejected )
 {
     RemoteCallTestRig rig;
@@ -168,7 +225,7 @@ SW_TEST_CASE( RemoteCallTest, UnknownTargetAndBadArgumentsAreRejected )
     const uint32 sequence = rig._client.callServer( 999, *RemoteCallTestAvatar::StaticType(), "moveStep", { ReflectedValue::make( 1.0f ) } );
     SW_REQUIRE_TRUE( sequence != 0u );
     rig.pollUntilDelivered();
-    SW_EXPECT_TRUE( rig.craftCall( kAvatarID, "attackTarget", { "seven", "20" }, NetChannelKind::ReliableOrdered ) == NetHandleResult::Handled );
+    SW_EXPECT_TRUE( rig.craftCall( kAvatarID, "attackTarget", { int64{ 1 } << 40, 20 }, NetChannelKind::ReliableOrdered ) == NetHandleResult::Handled );
     SW_EXPECT_TRUE( rig.craftCall( kAvatarID, "noSuchFunction", {}, NetChannelKind::ReliableOrdered ) == NetHandleResult::Handled );
     rig.pollUntilDelivered();
 
@@ -188,8 +245,8 @@ SW_TEST_CASE( RemoteCallTest, TooManyArgumentsAreMalformed )
 {
     RemoteCallTestRig rig;
     SW_REQUIRE_TRUE( rig._server.registerTarget( kAvatarID, *RemoteCallTestAvatar::StaticType(), &rig._serverAvatar, rig._connectionID ) );
-    vector<string> listText( static_cast<size_t>( NetRemoteCallMessage::kMaxArgumentCount + 1 ), string( "1" ) );
-    SW_EXPECT_TRUE( rig.craftCall( kAvatarID, "attackTarget", listText, NetChannelKind::ReliableOrdered ) == NetHandleResult::Malformed );
+    const vector<int64> listInteger( static_cast<size_t>( NetRemoteCallMessage::kMaxArgumentCount + 1 ), int64{ 1 } );
+    SW_EXPECT_TRUE( rig.craftCall( kAvatarID, "attackTarget", listInteger, NetChannelKind::ReliableOrdered ) == NetHandleResult::Malformed );
 }
 
 /** @brief [RemoteCallTest] 서버가 주인 클라이언트의 `Client` 함수를 부른다. 서버는 `Server` 함수를 클라이언트에 보내지 않는다. */
@@ -206,7 +263,7 @@ SW_TEST_CASE( RemoteCallTest, ServerCallsTheOwnerClientFunction )
     SW_EXPECT_EQUAL( uint64{ 1 }, rig._client.getInvokedCount() );
 }
 
-/** @brief [RemoteCallTest] 계약을 어긴 타입(검증 짝 없음 · 글로 못 싣는 인자)은 등록되지 않는다 — 실행 중에 부를 수 없는 함수를 발견하지 않는다. */
+/** @brief [RemoteCallTest] 계약을 어긴 타입(검증 짝 없음 · 실을 수 없는 인자)은 등록되지 않는다 — 실행 중에 부를 수 없는 함수를 발견하지 않는다. */
 SW_TEST_CASE( RemoteCallTest, RegistrationChecksTheContract )
 {
     RemoteCallServer               server;
@@ -264,7 +321,7 @@ SW_TEST_CASE( RemoteCallTest, CallsOverTheRateLimitAreRejected )
     SW_REQUIRE_TRUE( rig._server.registerTarget( kAvatarID, *RemoteCallTestAvatar::StaticType(), &rig._serverAvatar, rig._connectionID ) );
     for ( int32 index = 0; index < 5; ++index )
     {
-        SW_EXPECT_TRUE( rig.craftCall( kAvatarID, "moveStep", { "1" }, NetChannelKind::Unreliable ) == NetHandleResult::Handled );
+        SW_EXPECT_TRUE( rig.craftFloatCall( kAvatarID, "moveStep", 1.0f, NetChannelKind::Unreliable ) == NetHandleResult::Handled );
     }
     SW_EXPECT_EQUAL( uint64{ 3 }, rig._server.getStats()._invokedCount );
     SW_EXPECT_EQUAL( uint64{ 2 }, rig._server.getStats()._rateLimitedCount );
@@ -298,11 +355,11 @@ SW_TEST_CASE( RemoteCallTest, PerFunctionRateLimitRejectsOnlyThatFunction )
     SW_REQUIRE_TRUE( rig._server.registerTarget( kAvatarID, *RemoteCallTestAvatar::StaticType(), &rig._serverAvatar, rig._connectionID ) );
     for ( int32 index = 0; index < 4; ++index )
     {
-        SW_EXPECT_TRUE( rig.craftCall( kAvatarID, "placeMarker", { "9" }, NetChannelKind::Unreliable ) == NetHandleResult::Handled );
+        SW_EXPECT_TRUE( rig.craftCall( kAvatarID, "placeMarker", { 9 }, NetChannelKind::Unreliable ) == NetHandleResult::Handled );
     }
     for ( int32 index = 0; index < 4; ++index )
     {
-        SW_EXPECT_TRUE( rig.craftCall( kAvatarID, "moveStep", { "1" }, NetChannelKind::Unreliable ) == NetHandleResult::Handled );
+        SW_EXPECT_TRUE( rig.craftFloatCall( kAvatarID, "moveStep", 1.0f, NetChannelKind::Unreliable ) == NetHandleResult::Handled );
     }
     SW_EXPECT_EQUAL( 9, rig._serverAvatar._lastMarkerID );
     SW_EXPECT_EQUAL( uint64{ 2 }, rig._server.getStats()._rateLimitedCount ); // placeMarker 넷 가운데 둘(한꺼번에 2)
