@@ -9,9 +9,8 @@
 		<item name="_patternScale" defaultValue="6" />
 		<item name="_patternAmount" defaultValue="0.6" />
 	</_properties>
-	<_permutations quality="High" shaderLOD="300" usage="StaticMesh">
+	<_permutations>
 		<_alwaysDefines>
-			<item>MATERIAL_DOMAIN_SURFACE</item>
 			<item>MATERIAL_PATTERN_STONE</item>
 		</_alwaysDefines>
 	</_permutations>

@@ -281,41 +281,6 @@ namespace sw
                 return {};
             }
 
-            /**
-             * @brief `<Screenshot stability>` 의 값입니다 — 찍기 전에 무엇을 기다리는가.
-             * @details `None` 은 찍는 프레임이 정해져야 하는 시나리오(디더 등장의 중간 단계, 프레임마다 움직이는 카메라)가 쓴다 — 자리 잡기를 기다리면 등장이 끝나거나 카메라가 멈춘 뒤를 찍는다.
-             *          그런 시나리오는 앞에서 `<WaitRenderStable/>` · `<WaitUntil watch="Assets.Pending" equals="0">` 로 자리를 잡아 둔다.
-             */
-            enum class ScreenshotStabilityMode : uint8
-            {
-                Render, ///< 에셋 일 · 화면 덮개 + 렌더 정착 조건(`AutomationBlockScope::RenderStable` — TAA 기록 · 노출 적응). 기본
-                Assets, ///< 에셋 일 · 화면 덮개만(카메라가 움직이는 장면 — TAA 조건은 끝내 서지 않는다)
-                None,   ///< 그 프레임 그대로
-            };
-
-            [[nodiscard]] static expected<ScreenshotStabilityMode> parseScreenshotStability( const AutomationStep& step )
-            {
-                AutomationScreenshotParams params;
-                const expected<void>       read = step.readProperties( params );
-                if ( read.has_value() == false )
-                    return unexpected( read.error() );
-                if ( params._stability == "render" )
-                    return ScreenshotStabilityMode::Render;
-                if ( params._stability == "assets" )
-                    return ScreenshotStabilityMode::Assets;
-                if ( params._stability == "none" )
-                    return ScreenshotStabilityMode::None;
-                return unexpected( Error{ ErrorKind::InvalidArgument, "stability is render (default), assets or none", params._stability } );
-            }
-
-            static expected<void> validateScreenshot( const AutomationStep& step )
-            {
-                const expected<ScreenshotStabilityMode> stability = parseScreenshotStability( step );
-                if ( stability.has_value() == false )
-                    return unexpected( stability.error() );
-                return {};
-            }
-
             static expected<void> validateExpectImagesDiffer( const AutomationStep& step )
             {
                 AutomationExpectImagesDifferParams params;
@@ -695,7 +660,7 @@ namespace sw
          * @return 섰으면 Run(이 프레임은 붙잡지 않고 붙잡기를 놓았다 — `holdUntilReady`), 아직이면 Hold, 정지 시한 · 벽시계 상한에 걸려 시나리오를 끝냈으면 Skip
          * @details 정지 시한은 그린 프레임(`RenderPresentCounter`)으로 센다 — 장치를 다시 만드는 동안처럼 그리지 않는 프레임에는 조건이 나아갈 기회가 없다. 에셋 일은 바깥 일(워커 로드)이라
          *          진척을 세지 않고 벽시계 상한(`kMaxRenderStableWallSeconds`)만 본다. 카메라가 계속 움직이면 TAA 조건의 진척(정지 프레임)이 0 에 머물러 정지 시한에 바로 진다 —
-         *          움직이는 장면은 `stability="assets"` 로 찍는다. `<Screenshot stability="render">` 와 `<WaitRenderStable/>` 가 같이 쓴다.
+         *          움직이는 장면은 `stability="Assets"` 로 찍는다. `<Screenshot stability="Render">` 와 `<WaitRenderStable/>` 가 같이 쓴다.
          */
         static AutomationStepHold holdForRenderStable( AutomationRunner& runner, const AutomationStep& step, InputManager& input )
         {
@@ -754,28 +719,22 @@ namespace sw
         }
 
         /**
-         * @brief 사진 앞에서 화면이 자리 잡을 때까지 스크린샷을 미룹니다(`stability` — `AutomationRunnerStepsInternal::ScreenshotStabilityMode`).
-         *        `render`(기본)는 먼저 렌더 정착(`holdForRenderStable`)을 기다리고, 선 프레임을 하나 붙잡은 뒤 화면 덮개 · 에셋 일 · 뒤 프레임을 기다린다 — 옛
+         * @brief 사진 앞에서 화면이 자리 잡을 때까지 스크린샷을 미룹니다(`stability` — `AutomationScreenshotStability`).
+         *        `Render`(기본)는 먼저 렌더 정착(`holdForRenderStable`)을 기다리고, 선 프레임을 하나 붙잡은 뒤 화면 덮개 · 에셋 일 · 뒤 프레임을 기다린다 — 옛
          *        정착 감시 값 `<WaitUntil>` 뒤의 `<Screenshot>` 과 같은 프레임에 찍는다(그 대기는 제 프레임을 혼자 가졌고 사진은 다음 프레임에 돌았다).
-         *        `assets` 는 화면 덮개 · 에셋 일 · 뒤 프레임만 기다린다. 어느 대기든 시한 · 정지 시한에 걸리면 시나리오를 끝낸다(`AutomationRunner::giveUpWait`).
+         *        `Assets` 는 화면 덮개 · 에셋 일 · 뒤 프레임만 기다린다. 어느 대기든 시한 · 정지 시한에 걸리면 시나리오를 끝낸다(`AutomationRunner::giveUpWait`).
          * @details 메시 · 텍스처는 워커가 읽고 페이드는 실제 시간으로 걷힌다 — 첫 프레임을 찍으면 빈 메시 · 로드 중 회색 · 어두운 화면이 찍힌다. 시나리오마다 기다림을 적지 않고 찍는 단계가 기다린다.
          *          기다리는 동안은 `WaitUntil` 처럼 시나리오 시계를 붙잡는다 — 세면 뒤 단계의 프레임이 지나 버려 사진을 요청한 프레임에 한꺼번에 돌고,
          *          그 변화(순간이동 · 변수)가 다음 패킷이 찍는 사진에 들어간다. 상용 엔진 비교: 언리얼 스크린샷 기능 테스트는 흔들리는 기능을 끄고 지연 뒤 찍는다 — 여기서는 끄지 않고 정착을 기다린다.
          */
         static AutomationStepHold holdScreenshot( IAutomationStepContext& context, const AutomationStep& step, InputManager& input )
         {
-            using Stability                     = AutomationRunnerStepsInternal::ScreenshotStabilityMode;
-            AutomationRunner&         runner    = asRunner( context );
-            const expected<Stability> stability = AutomationRunnerStepsInternal::parseScreenshotStability( step );
-            if ( stability.has_value() == false ) // 검사 뒤 단계가 바뀌었다(핫 리로드)
-            {
-                runner.finish( AutomationRunResult::failed( AutomationFailureKind::LoadError, AutomationStep::describeReason( stability.error() ), step.describe() ) );
-                return AutomationStepHold::Skip;
-            }
-            if ( *stability == Stability::None )
+            AutomationRunner&                   runner    = asRunner( context );
+            const AutomationScreenshotStability stability = step.readValidatedProperties<AutomationScreenshotParams>()._stability;
+            if ( stability == AutomationScreenshotStability::None )
                 return AutomationStepHold::Run;
             AutomationStepTimeline& run = runner._run;
-            if ( *stability == Stability::Render && run._stableHoldFrame == AutomationStepTimeline::kNotStable )
+            if ( stability == AutomationScreenshotStability::Render && run._stableHoldFrame == AutomationStepTimeline::kNotStable )
             {
                 // 같은 프레임에 앞 단계가 있으면 첫 프레임은 보지 않고 붙잡는다 — 옛 대기 단계는 제 프레임을 혼자 가져(`AutomationScenario` 의 프레임 배정) 앞 단계 다음 프레임부터 봤다.
                 if ( run._holdFrameCount == 0 && hasEarlierStepInItsFrame( runner, step ) )
@@ -817,7 +776,7 @@ namespace sw
             return hold;
         }
 
-        /** @brief `<WaitRenderStable/>` — 렌더 정착(`holdForRenderStable`)을 기다립니다. 사진이 아닌 단계(백엔드 교체 · 창 크기 · 값 단언) 앞이나 프레임이 정해진 사진(`stability="none"`) 앞에 둔다. */
+        /** @brief `<WaitRenderStable/>` — 렌더 정착(`holdForRenderStable`)을 기다립니다. 사진이 아닌 단계(백엔드 교체 · 창 크기 · 값 단언) 앞이나 프레임이 정해진 사진(`stability="None"`) 앞에 둔다. */
         static AutomationStepHold holdWaitRenderStable( IAutomationStepContext& context, const AutomationStep& step, InputManager& input )
         {
             return holdForRenderStable( asRunner( context ), step, input );
@@ -845,7 +804,7 @@ namespace sw
     SW_AUTOMATION_STEP( runnerRecord, "Record", &AutomationRunnerEngineSteps::runRecord, &AutomationRunnerStepsInternal::validateRecord, AutomationStepOptions{} );
     SW_AUTOMATION_STEP( runnerStore, "Store", &AutomationRunnerEngineSteps::runStore, &AutomationRunnerStepsInternal::validateStore, AutomationStepOptions{} );
     SW_AUTOMATION_STEP( runnerExpectLog, "ExpectLog", &AutomationRunnerEngineSteps::runExpectLog, &AutomationRunnerStepsInternal::validateExpectLog, AutomationStepOptions{} );
-    SW_AUTOMATION_STEP( runnerScreenshot, "Screenshot", &AutomationRunnerEngineSteps::runScreenshot, &AutomationRunnerStepsInternal::validateScreenshot, AutomationStepOptions{}.withHold( &AutomationRunnerEngineSteps::holdScreenshot ) );
+    SW_AUTOMATION_STEP( runnerScreenshot, "Screenshot", &AutomationRunnerEngineSteps::runScreenshot, &AutomationStep::validateProperties<AutomationScreenshotParams>, AutomationStepOptions{}.withHold( &AutomationRunnerEngineSteps::holdScreenshot ) );
     SW_AUTOMATION_STEP( runnerWaitRenderStable, "WaitRenderStable", nullptr, &AutomationStep::validateProperties<AutomationNoParams>,
                         AutomationStepOptions{}.withPrepare( &AutomationRunnerEngineSteps::prepareWaitUntil ).withHold( &AutomationRunnerEngineSteps::holdWaitRenderStable ).withWallBudget( AutomationTimeLimits::kMaxRenderStableWallSeconds ) );
     SW_AUTOMATION_STEP( runnerExpectImage, "ExpectImage", &AutomationRunnerEngineSteps::runExpectImage, &AutomationRunnerStepsInternal::validateExpectImage, AutomationStepOptions{} );

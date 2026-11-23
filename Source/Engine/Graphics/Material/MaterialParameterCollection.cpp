@@ -4,64 +4,13 @@
 
 #include "Core/Algorithm/VectorUtil.h"
 #include "Core/Log/Logger.h"
-#include "Core/String/StringBuilder.h"
 #include "Core/String/StringUtil.h"
 
 #include "Engine/Asset/AssetManager.h"
 #include "Engine/Asset/Cache/BuiltInAssetCache.h"
-#include "Engine/Console/DevCommandRegistry.h"
 #include "Engine/Foundation/EngineServices.h"
 #include "Engine/Serialization/Format/ReflectedXMLFile.h"
 #include "Engine/Serialization/Serializer/ReloadResult.h"
-
-namespace sw
-{
-    namespace
-    {
-        struct MaterialParameterCollectionInternal
-        {
-            /** @brief `matparam <경로> <이름> <x> [y] [z] [w]` — 묶음의 값을 바꿉니다. 시나리오가 런타임 변경을 확인할 때 쓴다. */
-            static bool runSetValue( const vector<string>& listArgument, string& outReply )
-            {
-                if ( listArgument.size() < 3 || listArgument.size() > 6 )
-                {
-                    outReply = "usage: matparam <collection> <name> <x> [y] [z] [w]";
-                    return false;
-                }
-                float4 value{};
-                for ( size_t index = 2; index < listArgument.size(); ++index )
-                {
-                    float32 component{ 0.0f };
-                    if ( StringUtil::parseFloat( listArgument[index], component ) == false )
-                    {
-                        StringBuilder<constant::buffer::kMax256> builder;
-                        builder.appendFormat( "not a number: %#", listArgument[index] );
-                        outReply = builder.view();
-                        return false;
-                    }
-                    ( index == 2 ? value._x : index == 3 ? value._y
-                                          : index == 4   ? value._z
-                                                         : value._w ) = component;
-                }
-                const shared_ptr<MaterialParameterCollection> pCollection = MaterialParameterCollection::acquire( AssetID{ listArgument[0] } );
-                if ( pCollection == nullptr || pCollection->setValue( hashed_string( string_view( listArgument[1] ) ), value ) == false )
-                {
-                    StringBuilder<constant::buffer::kMax256> builder;
-                    builder.appendFormat( "could not set %# of %#", listArgument[1], listArgument[0] );
-                    outReply = builder.view();
-                    return false;
-                }
-                StringBuilder<constant::buffer::kMax256> builder;
-                builder.appendFormat( "set %#", listArgument[1] );
-                outReply = builder.view();
-                return true;
-            }
-        };
-    } // namespace
-
-    SW_DEV_COMMAND( MaterialParameter, "matparam", "matparam <collection> <name> <x> [y] [z] [w]", "Set a value of a material parameter collection; every material bound to it follows",
-                    &MaterialParameterCollectionInternal::runSetValue );
-} // namespace sw
 
 namespace sw
 {
@@ -74,6 +23,12 @@ namespace sw
             for ( size_t otherIndex = 0; otherIndex < index; ++otherIndex )
             {
                 bBadName = bBadName || _listParameter[otherIndex]._name == _listParameter[index]._name;
+                if ( _listParameter[index]._global != MaterialGlobalSlot::None && _listParameter[otherIndex]._global == _listParameter[index]._global )
+                {
+                    SW_LOG_ERROR_ID( "MaterialParameterCollection.GlobalRepeated", "Material parameter collection '%#': '%#' and '%#' feed the same shader global", sourceLabel,
+                                     _listParameter[otherIndex]._name, _listParameter[index]._name );
+                    bValid = false;
+                }
             }
             if ( bBadName )
             {
@@ -96,7 +51,7 @@ namespace sw
         _listEntry.reserve( desc._listParameter.size() );
         for ( const MaterialCollectionParameterDef& parameter : desc._listParameter )
         {
-            _listEntry.push_back( Entry{ hashed_string( string_view( parameter._name ) ), parameter._value } );
+            _listEntry.push_back( Entry{ hashed_string( string_view( parameter._name ) ), parameter._value, parameter._global } );
         }
     }
 
@@ -106,7 +61,7 @@ namespace sw
         _listEntry.reserve( desc._listParameter.size() );
         for ( const MaterialCollectionParameterDef& parameter : desc._listParameter )
         {
-            _listEntry.push_back( Entry{ hashed_string( string_view( parameter._name ) ), parameter._value } );
+            _listEntry.push_back( Entry{ hashed_string( string_view( parameter._name ) ), parameter._value, parameter._global } );
         }
         _generation.bump( nullptr ); // 묶음 값은 그것을 읽는 머티리얼 모두에 닿는다 — 주인을 모르는 변경이라 읽는 쪽이 전부 다시 본다
     }
@@ -129,22 +84,44 @@ namespace sw
         if ( bSame == false )
         {
             pEntry->_value = value;
+            if ( pEntry->_global != MaterialGlobalSlot::None )
+                return true;             // 전역 값은 프레임 상수로 간다 — 다시 볼 머티리얼이 없다
             _generation.bump( nullptr ); // 묶음 값은 그것을 읽는 머티리얼 모두에 닿는다 — 주인을 모르는 변경이라 읽는 쪽이 전부 다시 본다
         }
         return true;
     }
 
-    string MaterialParameterCollection::makePropertyText( const float4& value, uint32 componentCount )
+    bool MaterialParameterCollection::isGlobal( const hashed_string& name ) const
     {
-        const float32                            arrComponent[] = { value._x, value._y, value._z, value._w };
-        StringBuilder<constant::buffer::kMax128> builder;
-        for ( uint32 index = 0; index < componentCount && index < 4u; ++index )
+        const Entry* pEntry = VectorUtil::findBy<&Entry::_name>( _listEntry, name );
+        return pEntry != nullptr && pEntry->_global != MaterialGlobalSlot::None;
+    }
+
+    bool MaterialParameterCollection::writeGlobals( MaterialGlobals& inoutGlobals ) const
+    {
+        bool bWeather{ false };
+        bool bRain{ false };
+        for ( const Entry& entry : _listEntry )
         {
-            if ( index > 0 )
-                builder.append( ' ' );
-            builder.appendFormat( "%#", arrComponent[index] );
+            switch ( entry._global )
+            {
+                case MaterialGlobalSlot::None:
+                    break;
+                case MaterialGlobalSlot::Weather:
+                {
+                    inoutGlobals._weather = entry._value;
+                    bWeather              = true;
+                    break;
+                }
+                case MaterialGlobalSlot::Rain:
+                {
+                    inoutGlobals._rain = entry._value;
+                    bRain              = true;
+                    break;
+                }
+            }
         }
-        return string( builder.view() );
+        return bWeather && bRain;
     }
 } // namespace sw
 
@@ -216,6 +193,6 @@ namespace sw
         return reloadLive( AssetID{ relativePath } );
     }
 
-    SW_BUILT_IN_ASSET_CACHE( MaterialParameterCollectionCache );
+    SW_BUILT_IN_ASSET_CACHE( MaterialParameterCollectionCache, MaterialParameterCollectionCache );
     SW_ASSET_TYPE( MaterialParameterCollection, MaterialParameterCollectionDef::kAssetType );
 } // namespace sw

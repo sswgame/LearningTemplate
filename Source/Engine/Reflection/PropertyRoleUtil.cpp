@@ -136,7 +136,7 @@ namespace sw
     const TypeInfo& PropertyRoleUtil::requireType( const TypeInfo* pType )
     {
         if ( pType == nullptr )
-            SW_FATAL( "PropertyRoleUtil::blendValues: the value type is not registered with reflection" );
+            reportFatalError( "PropertyRoleUtil::blendValues: the value type is not registered with reflection" );
         return *pType;
     }
 } // namespace sw

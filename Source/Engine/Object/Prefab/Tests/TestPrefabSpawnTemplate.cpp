@@ -232,7 +232,7 @@ SW_TEST_CASE( PrefabSpawnTemplateTest, CookedFlattenedNodeSpawnsFromTemplate )
     wheelNode.appendFormat( "<PrefabInstance name=\"Wheel\" prefab=\"%#\" localID=\"#0000000000000001\" />", wheelID );
     SW_REQUIRE_TRUE( FileUtil::writeTextFile( domain.makeDiskPath( "cart.prefab.xml" ), Util::makePrefab( "Cart", "1,2,3", wheelNode.view() ) ) );
 
-    // 쿠커의 길: 펼쳐서 이진으로 쓴다(`PrefabCache::cookAllPrefabs`).
+    // 쿠커의 길: 펼쳐서 이진으로 쓴다(`PrefabCooker::cookAll`).
     PrefabAsset source;
     SW_REQUIRE_TRUE( source.loadFromDiskFile( domain.makeDiskPath( "cart.prefab.xml" ).str() ) );
     PrefabCache cooker;

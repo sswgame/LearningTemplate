@@ -8,7 +8,7 @@
 | --- | --- | --- |
 | `Core` | 엔진 · 게임을 모르는 기반(형식 · 컨테이너 · 글자 · 수학 · 스레드 · 파일 · 로그 · 네트워크 전송) | 씬 · 에셋 · 리플렉션 · 게임 낱말 |
 | `Engine` | 런타임 제품 기능과 그 확장점 | 에디터만 부르는 함수(`WITH_EDITOR` 없음), 개발 도구 구현 |
-| `DevTools` | 엔진 확장점에 스스로 붙는 개발 도구(배포 제외). 클라이언트 전용은 `DevTools/Client`, 머티리얼 그래프 컴파일러는 `DevTools/Material` | 게임 · GF · ModuleManager 내부를 아는 것 |
+| `DevTools` | 엔진 확장점에 스스로 붙는 개발 도구(배포 제외). 클라이언트 전용은 `DevTools/Client`, 머티리얼 그래프 컴파일러는 `DevTools/Material`, 쿠킹 명령 · 쿠커는 `DevTools/Cook`(셰이더는 `DevTools/Client/Cook`) | 게임 · GF · ModuleManager 내부를 아는 것 |
 | `ModuleManager` | 모듈 로드 · 매니페스트 · 호스트 공용 기동. 개발 전용 핫 리로드는 `Dev/LiveReload` | 엔진 기능 |
 | `ModuleAPI` | 모듈 C-ABI 계약(헤더만) | 구현 |
 | `App` · `Server` | 그 실행 파일에만 있는 호스트 배선 | 엔진 기능, 개발 도구 구현(붙이는 줄만) |

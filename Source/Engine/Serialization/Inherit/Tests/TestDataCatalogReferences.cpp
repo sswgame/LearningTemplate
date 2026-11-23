@@ -134,7 +134,7 @@ SW_TEST_CASE( DataCatalogReferencesTest, RootMentionPrefilter )
 /** @brief [DataCatalogReferencesTest] 엔진 팩의 실제 표가 읽히고 엔진 팩에 담긴다(쿠커 · 배포 런타임이 같은 표를 본다) */
 SW_TEST_CASE( DataCatalogReferencesTest, ShippedTableLoads )
 {
-    SW_EXPECT_TRUE( AssetCookRootRegistry::hasRoot( DataCatalogReferenceRules::kTableAssetID ) );
+    SW_EXPECT_TRUE( AssetCookRoot::hasRoot( DataCatalogReferenceRules::kTableAssetID ) );
     DataCatalogReferenceRules rules;
     SW_REQUIRE_TRUE( rules.loadFromAsset() );
     SW_EXPECT_TRUE( rules.hasRulesFor( "JRPGCatalog" ) );

@@ -19,7 +19,7 @@ namespace sw
         // (클래스 · 이름공간 범위 hashed_string 상수)이 그 모양이다: 모듈을 나중에 올리는 개발 빌드에서는 숨고, 한 실행 파일로 정적 링크한 배포본(Client)
         // 에서만 main 전에 널을 짚어 메시지 없이 죽었다. 모든 구성에서 까닭을 말하고 멈춘다 — 상수는 주인 객체의 멤버나 `constexpr` 글로 둔다.
         if ( s_pInstance == nullptr )
-            SW_FATAL( "hashed_string was built before the name pool started (a class- or namespace-scope hashed_string constant runs at static init) - keep the text as constexpr and build the name in the owner" );
+            reportFatalError( "hashed_string was built before the name pool started (a class- or namespace-scope hashed_string constant runs at static init) - keep the text as constexpr and build the name in the owner" );
         return *s_pInstance;
     }
 

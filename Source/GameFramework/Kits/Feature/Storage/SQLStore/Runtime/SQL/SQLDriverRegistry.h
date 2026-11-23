@@ -11,6 +11,7 @@
 #pragma once
 #include "Core/Container/string.h"
 #include "Core/Container/vector.h"
+#include "Core/Registry/RegistrationList.h"
 
 #include "GameFramework/GameFrameworkExports.h"
 
@@ -32,10 +33,10 @@ namespace sw
         static void                                getDriverNames( vector<string>& outListName );
 
     private:
-        /** @brief 드라이버를 올립니다. 같은 이름이 이미 있으면 오류다(앞 것을 덮지 않는다). */
-        static void registerDriver( ISQLDriver& driver );
-        /** @brief @p driver 를 내립니다. 언로드 리스너가 이미 지웠으면 할 일이 없다. */
-        static void unregisterDriver( ISQLDriver& driver );
+        /** @brief 드라이버를 올립니다. 같은 이름이 이미 있으면 오류 로그를 남기고 false 입니다(앞 것을 덮지 않는다). */
+        [[nodiscard]] static bool registerDriver( ISQLDriver* pDriver );
+        /** @brief @p pDriver 를 내립니다. 올라 있지 않으면 할 일이 없다. */
+        static void unregisterDriver( ISQLDriver* pDriver );
     };
 } // namespace sw
 
@@ -49,17 +50,15 @@ namespace sw
     class SQLDriverRegistration
     {
     public:
-        explicit SQLDriverRegistration( ISQLDriver& driver )
-            : _driver{ driver }
+        explicit SQLDriverRegistration( ISQLDriver& driver, SourceLocation site = SourceLocation::current() )
+            : _registrar{ &driver, &SQLDriverRegistry::registerDriver, &SQLDriverRegistry::unregisterDriver, site }
         {
-            SQLDriverRegistry::registerDriver( _driver );
         }
-        ~SQLDriverRegistration() { SQLDriverRegistry::unregisterDriver( _driver ); }
 
         SQLDriverRegistration( const SQLDriverRegistration& )            = delete;
         SQLDriverRegistration& operator=( const SQLDriverRegistration& ) = delete;
 
     private:
-        ISQLDriver& _driver;
+        StaticRegistrar<ISQLDriver*> _registrar;
     };
 } // namespace sw

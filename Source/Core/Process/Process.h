@@ -276,7 +276,7 @@ namespace sw
         /**
          * @brief 이 프로세스를 정리 없이 곧바로 끝냅니다(멈춤 감시 · 테스트 시한 — 멈춘 스레드가 잠금을 쥐고 있을 수 있는 자리).
          * @details `std::_Exit` 는 Windows(UCRT)에서 `ExitProcess` 로 모든 DLL 의 분리 처리(모듈 정적 소멸자)를 부르는 스레드에서 돌려, 멈춤 감시 스레드가 에디터 모듈의
-         *          정적 소멸자를 돌다 `SW_FATAL`(에디터 상태를 다른 스레드에서 읽음)로 끝났다. Windows 는 `TerminateProcess`, POSIX 는 `_exit` 다.
+         *          정적 소멸자를 돌다 `reportFatalError`(에디터 상태를 다른 스레드에서 읽음)로 끝났다. Windows 는 `TerminateProcess`, POSIX 는 `_exit` 다.
          */
         [[noreturn]] static void exitImmediately( int32 exitCode );
 

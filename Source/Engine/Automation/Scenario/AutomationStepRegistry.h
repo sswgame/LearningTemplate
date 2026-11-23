@@ -153,7 +153,7 @@ namespace sw
     enum class AutomationBlockScope : uint8
     {
         Finish,       ///< `<Pass/>` 만 미룹니다 - 단계는 막지 않는 뒤의 일(편집기 UI 캡처의 파일 쓰기)이 시나리오 끝 전에 마치게 한다. 넓은 범위에 들지 않는다(같은 범위만 본다).
-        RenderStable, ///< 사진 앞 렌더 정착(`<Screenshot stability="render">` · `<WaitRenderStable/>`)만 기다립니다 — TAA 기록 · 노출 적응. 넓은 범위에 들지 않는다(같은 범위만 본다).
+        RenderStable, ///< 사진 앞 렌더 정착(`<Screenshot stability="Render">` · `<WaitRenderStable/>`)만 기다립니다 — TAA 기록 · 노출 적응. 넓은 범위에 들지 않는다(같은 범위만 본다).
         Capture,      ///< 화면 캡처만 미룹니다(화면 페이드 — 입력은 막지 않으므로 시작은 미루지 않는다).
         Start,        ///< `ScenePlaying` 시작과 캡처를 미룹니다(로딩 화면).
         Clock,        ///< 시작 · 캡처를 미루고 도는 시나리오의 시계도 멈춥니다(`SW_AUTOMATION_CLOCK_HOLDER`).

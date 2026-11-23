@@ -1126,7 +1126,7 @@ namespace sw
 
     bool PrefabAsset::saveToFile( const AbsolutePath& absPath ) const
     {
-        // 형식은 경로가 정한다 — 쿠커(`cookAllPrefabs`)와 로더(`loadPrefab`)가 읽는 규칙과 같다. 늘 XML 로 쓰면 `.prefab.json` 에 XML 이
+        // 형식은 경로가 정한다 — 쿠커(`PrefabCooker::cookAll`)와 로더(`loadPrefab`)가 읽는 규칙과 같다. 늘 XML 로 쓰면 `.prefab.json` 에 XML 이
         // 들어가 그 프리팹이 다시는 읽히지 않는다. 프리팹이 아닌 경로(씬 · 머티리얼)는 덮지 않는다.
         if ( StringUtil::endsWith( absPath.str(), ".prefab.json", true ) )
             return saveToJSONFile( absPath );

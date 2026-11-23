@@ -69,5 +69,5 @@ namespace sw
 
 namespace sw
 {
-    SW_BUILT_IN_ASSET_CACHE( AudioReloadCache );
+    SW_BUILT_IN_ASSET_CACHE( AudioReloadCache, AudioReloadCache );
 } // namespace sw

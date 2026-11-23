@@ -11,7 +11,7 @@
 	<Launch variable="gv_displayOutput" value="HDR10"/>
 	<SkipUnless watch="Display.SDRFallback" reason="this monitor takes HDR10 - the SDR fall-back check needs a backend or monitor without HDR output"/>
 	<WaitRenderStable/> <!-- 사진 앞 렌더 안정(TAA · 노출 · 에셋) -->
-	<Screenshot file="sdr.ppm" stability="none"/>
+	<Screenshot file="sdr.ppm" stability="None"/>
 	<!-- SDR 로 떨어진 그림은 SDR 출력과 같다 — 톤 곡선 어깨 1 · 인코딩 패스 없음(SDR 골든 불변) -->
 	<ExpectImage file="sdr.ppm" golden="sdr"/>
 	<ExpectLog id="Display.OutputUnsupported" atLeast="1"/>

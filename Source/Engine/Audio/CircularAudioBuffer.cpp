@@ -16,7 +16,7 @@ namespace sw
             {
                 constexpr uint32 kMaxCapacity = 1u << 31;
                 if ( capacity == 0 || capacity > kMaxCapacity )
-                    SW_FATAL( "CircularAudioBuffer capacity %# is outside [1, 2^31]", capacity );
+                    reportFatalError( "CircularAudioBuffer capacity %# is outside [1, 2^31]", capacity );
                 uint32 rounded = 1;
                 while ( rounded < capacity )
                 {

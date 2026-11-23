@@ -373,16 +373,16 @@ namespace sw::test
     {
         TestRunnerInternal::Registry& registry = TestRunnerInternal::getRegistry();
         RegistrationResult            result   = RegistrationResult::Added;
-        RegistrationSite              existing{};
+        SourceLocation                existing{};
         {
             ScopedLock<mutex> lock{ registry._mutex };
             result = registry._registration.add( pRegistration, pRegistration->_pName );
             if ( const TestCaseRegistration* pExisting = result == RegistrationResult::DuplicateName ? registry._registration.findByName( pRegistration->_pName ) : nullptr; pExisting != nullptr )
-                existing = RegistrationSite{ pExisting->_pFile, pExisting->_line };
+                existing = SourceLocation{ pExisting->_pFile, pExisting->_line };
         }
         // 케이스는 늘 정적 등록이다 — 겹친 이름은 두 자리를 찍고 시작 단계(`run`)가 로드 오류로 멈춘다.
         if ( result == RegistrationResult::DuplicateName )
-            reportDuplicateRegistration( "Test case", pRegistration->_pName, existing, RegistrationSite{ pRegistration->_pFile, pRegistration->_line } );
+            reportDuplicateRegistration( "Test case", pRegistration->_pName, existing, SourceLocation{ pRegistration->_pFile, pRegistration->_line } );
         else
             reportRegistrationRejected( result, "Test case", pRegistration->_pName );
         _bRegistered = result == RegistrationResult::Added;

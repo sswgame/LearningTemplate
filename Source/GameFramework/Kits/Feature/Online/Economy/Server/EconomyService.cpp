@@ -30,6 +30,7 @@ namespace sw
             static constexpr int32 kHistoryIndex  = EconomyMethod::toIndex( EconomyMethod::GetHistory::kID );
             static constexpr int32 kPurchaseIndex = EconomyMethod::toIndex( EconomyMethod::Purchase::kID );
             static constexpr int32 kRedeemIndex   = EconomyMethod::toIndex( EconomyMethod::RedeemReceipt::kID );
+            static constexpr int32 kWithdrawIndex = EconomyMethod::toIndex( EconomyMethod::WithdrawPurchase::kID );
 
             /** @brief 호스트 호출의 공통 칸을 채운 요청입니다. */
             template <typename TMethod>
@@ -41,7 +42,6 @@ namespace sw
                 call._idempotencyKey = context._idempotencyKey;
                 return call;
             }
-            static constexpr int32 kWithdrawIndex = EconomyMethod::toIndex( EconomyMethod::WithdrawPurchase::kID );
         };
 
         /** @brief 환불 회수 한 번이 완료로 넘기는 값입니다. */
@@ -382,21 +382,6 @@ namespace sw
             failCallByID( callID, refused._errorCode );
             return;
         }
-        if ( call._method == EconomyMethod::RedeemReceipt::kID )
-        {
-            const uint64 ticket = _settings._pReceiptRegistry != nullptr
-                                    ? _settings._pReceiptRegistry->submitValidation( call._redeem._storeName, call._redeem._payload, call._accountID, call._nowMs )
-                                    : 0;
-            if ( ticket == 0 )
-            {
-                EconomyRedeemReply invalid;
-                invalid._result = EconomyResult::ReceiptInvalid;
-                completeCall( callID, EconomyServiceResult{ EconomyResult::ReceiptInvalid }, invalid );
-                return;
-            }
-            _mapTicketToCall[ticket] = EconomyReceiptCall{ callID, call._accountID }; // 지급 작업은 검증 결과가 오면 맡긴다(pollReceipts)
-            return;
-        }
         const AccountID                      accountID   = call._accountID;
         const int64                          nowMs       = call._nowMs.count();
         const CurrencyCatalog*               pCurrencies = _settings._pCurrencyCatalog;         // 저장소 스레드는 서비스 멤버를 만지지 않으므로 값을 잡는다
@@ -427,6 +412,21 @@ namespace sw
                 { return EconomyStoreLogic::purchase( connection, *pCurrencies, *pOffers, purchase, outReply ); } );
                 return;
             }
+            case EconomyServiceInternal::kRedeemIndex:
+            {
+                const uint64 ticket = _settings._pReceiptRegistry != nullptr
+                                        ? _settings._pReceiptRegistry->submitValidation( call._redeem._storeName, call._redeem._payload, accountID, call._nowMs )
+                                        : 0;
+                if ( ticket == 0 )
+                {
+                    EconomyRedeemReply invalid;
+                    invalid._result = EconomyResult::ReceiptInvalid;
+                    completeCall( callID, EconomyServiceResult{ EconomyResult::ReceiptInvalid }, invalid );
+                    return;
+                }
+                _mapTicketToCall[ticket] = EconomyReceiptCall{ callID, accountID }; // 지급 작업은 검증 결과가 오면 맡긴다(pollReceipts)
+                return;
+            }
             case EconomyServiceInternal::kWithdrawIndex:
             {
                 EconomyWithdrawInput withdraw;
@@ -441,7 +441,7 @@ namespace sw
             }
             default:
             {
-                failCallByID( callID, OnlineError::kInvalidRequest ); // 지급은 위에서 검증으로 갔다
+                failCallByID( callID, OnlineError::kInvalidRequest );
                 return;
             }
         }

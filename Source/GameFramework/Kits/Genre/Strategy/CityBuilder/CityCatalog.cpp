@@ -6,7 +6,7 @@
 
 #include "Engine/Content/AssetTypeRegistry.h"
 #include "Engine/Module/ModuleSharedAssetCache.h"
-#include "Engine/Reflection/TypeRegistry.h"
+#include "Engine/Reflection/EnumName.h"
 #include "Engine/Serialization/XML/XMLDocument.h"
 #include "Engine/Serialization/XML/XMLReadUtil.h"
 
@@ -91,8 +91,13 @@ namespace sw
         const string_view terrainText = node.getAttributeText( "terrain" );
         if ( terrainText.empty() == false )
         {
-            building._bRequiresTerrain = game::getSubsystem<TypeRegistry>().enumFromString( terrainText, building._requiredTerrain );
-            if ( building._bRequiresTerrain == false )
+            const optional<CityTerrain> terrain = tryParseEnum<CityTerrain>( terrainText );
+            building._bRequiresTerrain          = terrain.has_value();
+            if ( terrain.has_value() )
+            {
+                building._requiredTerrain = *terrain;
+            }
+            else
             {
                 SW_LOG_ERROR_ID( "CityCatalog.BuildingNeedsUnknownTerrain", "%#: building '%#' needs an unknown terrain '%#'", sourceName, building._id.c_str(), terrainText );
                 bValid = false;
@@ -115,9 +120,10 @@ namespace sw
         bool              bValid = XMLFields::readProperties( node, level, sourceName, { "services" } );
         StringUtil::forEachToken( node.getAttributeText( "services" ), XMLReadUtil::kListSeparators, [&]( string_view token )
         {
-            CityService service = CityService::Count;
-            if ( game::getSubsystem<TypeRegistry>().enumFromString( token, service ) && service != CityService::Count )
-                level._serviceMask = static_cast<uint8>( level._serviceMask | makeCityServiceBit( service ) );
+            if ( const optional<CityService> service = tryParseEnum<CityService>( token ) )
+            {
+                level._serviceMask = static_cast<uint8>( level._serviceMask | makeCityServiceBit( *service ) );
+            }
             else
             {
                 SW_LOG_ERROR_ID( "CityCatalog.HouseLevelNeedsUnknown", "%#: house level '%#' needs an unknown service '%#'", sourceName, level._name.c_str(), token );

@@ -1,6 +1,6 @@
 /**
  * @file EnumName.h
- * @brief 리플렉션 `ENUM()` 열거자의 이름을 로그 · 진단 · 화면 표시용으로 읽습니다.
+ * @brief 리플렉션 `ENUM()` 열거자의 이름을 읽고(`getEnumName`), 이름 글을 열거자로 되돌립니다(`tryParseEnum`).
  * @details 열거형마다 이름 배열과 `toString` 을 손으로 두지 않습니다. `ENUM()` 을 붙이면 코드 생성기가 이름을 등록하고, 이 함수가 그 이름을 돌려줍니다.
  *          언리얼 `UEnum::GetValueAsString`, Godot 의 `VARIANT_ENUM_CAST` + ClassDB 열거 상수와 같은 자리입니다.
  *          철자가 열거자 이름과 다른 와이어 · 데이터 문자열(`AdminRole` 의 `"viewer"`, 지표 라벨)은 이 함수가 아니라 그 형식의 이름 표가 기준입니다.
@@ -10,6 +10,7 @@
  *          열거자 값이 `0..N-1` 로 빈틈없으면 이름도 목록 인덱스로 찾습니다(`EnumInfo::_listDenseName`).
  */
 #pragma once
+#include "Core/Foundation/Expected.h"
 #include "Core/Foundation/Types.h"
 #include "Core/Name/hashed_string.h"
 
@@ -59,5 +60,21 @@ namespace sw
         const EnumInfo*            pInfo = s_cache.find( typeFqn<E>() );
         const utf8*                pName = pInfo != nullptr ? pInfo->valueToCString( static_cast<int64>( value ) ) : nullptr;
         return pName != nullptr ? pName : EnumNameCache::kUnknownName;
+    }
+
+    /**
+     * @brief 열거자 이름 글(철자 그대로, 비트플래그는 `A|B`)을 값으로 읽습니다. 모르는 이름 · 표식 열거자(`Invalid` · `Count`) · 등록되지 않은 열거형이면 빈 값입니다.
+     * @details 예전 `TypeRegistry` 의 문자열 → 열거자 함수는 실패하면 Invalid(없으면 0)를 채워 돌려줘, 결과를 버린 자리가 모르는 이름을 조용히 첫 열거자로 읽었다.
+     */
+    template <typename E>
+    [[nodiscard]] optional<E> tryParseEnum( string_view text )
+    {
+        static_assert( std::is_enum_v<E>, "tryParseEnum requires an enum type" );
+        static const EnumNameCache s_cache;
+        const EnumInfo*            pInfo = s_cache.find( typeFqn<E>() );
+        int64                      value{ 0 };
+        if ( pInfo == nullptr || pInfo->tryParse( text, value ) == false )
+            return nullopt;
+        return static_cast<E>( value );
     }
 } // namespace sw

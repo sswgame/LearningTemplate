@@ -38,12 +38,12 @@ namespace sw
         }
     } // namespace
 
-    unique_ptr<FileWatcher> FileWatcher::createNative()
+    unique_ptr<FileWatcher> FileWatcher::createNative( FileWatcherKey key )
     {
-        return make_unique<WindowsFileWatcher>();
+        return make_unique<WindowsFileWatcher>( key );
     }
 
-    WindowsFileWatcher::WindowsFileWatcher()
+    WindowsFileWatcher::WindowsFileWatcher( FileWatcherKey /*key*/ )
         : _hDirectory{ nullptr }
         , _hCompletionPort{ nullptr }
         , _workerThread{}

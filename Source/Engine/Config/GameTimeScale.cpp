@@ -6,10 +6,7 @@
 #include "Core/GlobalVariable/GlobalVariableManager.h"
 #include "Core/Log/Logger.h"
 #include "Core/Math/MathUtil.h"
-#include "Core/String/StringBuilder.h"
-#include "Core/String/StringUtil.h"
 
-#include "Engine/Console/DevCommandRegistry.h"
 #include "Engine/Foundation/EngineServices.h"
 #include "Engine/Foundation/EngineSubsystemRegistration.h"
 
@@ -73,35 +70,10 @@ namespace sw
 #if !defined( SW_DO_CHECKS )
         // 단언이 없는 구성에서도 적지 않은 값(-1)을 경과로 내보내지 않는다 — 음수 경과는 움직임을 조용히 멈추거나 거꾸로 돌린다.
         if ( _unscaledDeltaSeconds < 0.0f )
-            SW_FATAL( "GameTimeScale::getUnscaledDeltaTime before setUnscaledDeltaTime (Engine::beginFrame or the test must set it)" );
+            reportFatalError( "GameTimeScale::getUnscaledDeltaTime before setUnscaledDeltaTime (Engine::beginFrame or the test must set it)" );
 #endif
         return _unscaledDeltaSeconds;
     }
-
-    namespace
-    {
-        bool runTimeScale( const vector<string>& listArgument, string& outReply )
-        {
-            if ( listArgument.size() > 1 )
-                return false;
-            if ( listArgument.size() == 1 )
-            {
-                float32 scale = 1.0f;
-                if ( StringUtil::parseFloat( listArgument[0], scale ) == false )
-                    return false;
-                engine::getSubsystem<GameTimeScale>().set( scale );
-            }
-            // 정한 배율을 답한다 — 정지 요청(정지 메뉴 · 로딩 화면)이 걸려 있으면 실효 배율은 0 이라 그것을 덧붙인다.
-            const GameTimeScale&                     timeScale = engine::getSubsystem<GameTimeScale>();
-            StringBuilder<constant::buffer::kMax256> replyBuilder;
-            replyBuilder.appendFormat( "time scale = %#%#", timeScale.getSetting(), timeScale.isPaused() ? " (paused)" : "" );
-            outReply = string( replyBuilder.view() );
-            return true;
-        }
-    } // namespace
-
-    SW_DEV_COMMAND( TimeScale, "timescale", "timescale [scale]", "Show or set the game time scale (gv_timeScale, 0 = frozen)",
-                    &runTimeScale );
 } // namespace sw
 
 namespace sw

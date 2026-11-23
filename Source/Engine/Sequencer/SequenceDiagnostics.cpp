@@ -57,7 +57,7 @@ namespace sw
     const SequenceHistoryEntry& SequencePlaybackHistory::getEntry( uint32 index ) const
     {
         if ( index >= _count )
-            SW_FATAL( "Sequence history entry %# is outside %# entries", index, _count );
+            reportFatalError( "Sequence history entry %# is outside %# entries", index, _count );
         const uint32 oldest = ( _head + kCapacity - _count ) % kCapacity;
         return _arrEntry[( oldest + index ) % kCapacity];
     }

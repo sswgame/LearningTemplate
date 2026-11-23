@@ -21,6 +21,7 @@
 #include "Editor/Panels/Dialogue/Model/DialogueGraphEdit.h"
 #include "Editor/SelfTest/EditorSelfTestInput.h"
 
+#include "Engine/Behavior/ActionRegistry.h"
 #include "Engine/Dialogue/DialogueCursor.h"
 #include "Engine/Dialogue/DialogueGraphAsset.h"
 #include "Engine/Localization/LocText.h"

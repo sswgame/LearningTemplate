@@ -19,6 +19,7 @@ namespace sw
     struct ModuleResolution;
 
     class DebugKeyActions;
+    class FileWatchService;
     class LiveReloadManager;
     class ModuleCatalog;
     class ModuleLoaderSubsystem;
@@ -49,7 +50,7 @@ namespace sw
          *          아무것도 하지 않고 true 다(@p outCatalog · @p outResolution 은 비어 있다).
          * @return 매니페스트를 읽거나 해석하지 못하면 false 입니다(기동 실패).
          */
-        [[nodiscard]] bool initialize( uint8 targetMask, SubsystemScope& hostScope, ModuleLoaderSubsystem& moduleLibraryHost, ModuleCatalog& outCatalog,
+        [[nodiscard]] bool initialize( uint8 targetMask, SubsystemScope& hostScope, ModuleLoaderSubsystem& moduleLibraryHost, FileWatchService& fileWatch, ModuleCatalog& outCatalog,
                                        ModuleResolution& outResolution );
         /**
          * @brief 리로드 배치 직전 콜백을 겁니다(전용 서버가 모듈 안의 서버 서비스를 먼저 멈춘다). 배치 콜백은 나중에 건 것이 먼저 불립니다.

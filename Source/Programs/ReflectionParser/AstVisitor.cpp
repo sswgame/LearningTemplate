@@ -382,7 +382,7 @@ namespace sw
 
         BLOCK( "Parse REFLECT Annotation" )
         {
-            if ( AnnotationLookup::applyAnnotation( spelling, typeInfo, *_pSession, typeInfo._fullyQualifiedName ) == false )
+            if ( AnnotationLookup::applyAnnotation( spelling, typeInfo, typeInfo._fullyQualifiedName ) == false )
             {
                 markHeaderError( outHeader );
                 return;
@@ -486,7 +486,7 @@ namespace sw
             ParsedEnumeratorInfo&                    enumerator = inoutEnum._listEnumerator[index];
             StringBuilder<constant::buffer::kMax256> owner;
             owner.appendFormat( "%#::%#", inoutEnum._fullyQualifiedName, enumerator._name );
-            bValid = AnnotationLookup::applyAnnotation( spelling, enumerator, *_pSession, owner.view() ) && bValid;
+            bValid = AnnotationLookup::applyAnnotation( spelling, enumerator, owner.view() ) && bValid;
         }
         return bValid;
     }
@@ -531,7 +531,7 @@ namespace sw
 
         BLOCK( "Parse ENUM annotation (Alias / …)" )
         {
-            if ( AnnotationLookup::applyAnnotation( spelling, enumInfo, *_pSession, enumInfo._fullyQualifiedName ) == false )
+            if ( AnnotationLookup::applyAnnotation( spelling, enumInfo, enumInfo._fullyQualifiedName ) == false )
             {
                 markHeaderError( outHeader );
                 return;

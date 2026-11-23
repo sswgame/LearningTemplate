@@ -12,6 +12,7 @@
                     _faceTalkClip="Talk"
                     _faceExpression="Happy"
                     _glassMaterial="engine/materials/glassmaterial.material"
+                    _permutationMaterial="game/playground/materials/stresstest_permutation.material"
                     _rigAimState="2H_Ranged_Aiming"
                     _rigWeaponMesh="common/models/kaykit/rogue/parts/2h_crossbow.mesh"
                     _rigWeaponMaterial="common/materials/kaykit_rogue.material"

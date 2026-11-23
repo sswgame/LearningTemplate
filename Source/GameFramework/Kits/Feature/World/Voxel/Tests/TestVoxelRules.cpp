@@ -67,16 +67,25 @@ namespace
             }
         }
 
-        static void clearDirty( VoxelWorld& world )
+        /** @brief 2 x 2 청크의 판 번호입니다 — 바뀜을 앞뒤로 견준다. */
+        struct ChunkRevisionSnapshot
         {
-            for ( int32 z = 0; z < world.getChunkCountZ(); ++z )
+            uint32 _arrRevision[2][2]{};
+
+            explicit ChunkRevisionSnapshot( const VoxelWorld& world )
             {
-                for ( int32 x = 0; x < world.getChunkCountX(); ++x )
+                for ( int32 z = 0; z < 2; ++z )
                 {
-                    world.clearChunkDirty( x, z );
+                    for ( int32 x = 0; x < 2; ++x )
+                    {
+                        _arrRevision[z][x] = world.findChunk( x, z )->_revision;
+                    }
                 }
             }
-        }
+
+            /** @brief 찍은 뒤 청크 ( @p x, @p z ) 가 새 판이 됐으면 true 입니다. */
+            bool hasChanged( const VoxelWorld& world, int32 x, int32 z ) const { return world.findChunk( x, z )->_revision > _arrRevision[z][x]; }
+        };
 
         /** @brief 세이브에서 첫 청크의 첫 구간이 시작하는 바이트 자리입니다. 머리 · 청크 수 · 팔레트 · 실린 청크 수 · 첫 청크 좌표를 같은 칸 함수로 써서 잰다. */
         static size_t measureRunsOffset( const VoxelWorld& world )
@@ -194,30 +203,42 @@ SW_TEST_CASE( VoxelWorldTest, OutsideReadsAirAndRefusesWrites )
     SW_EXPECT_EQUAL( uint32( 1 ), rig._world.countBlocks( rig._water ) );
 }
 
-SW_TEST_CASE( VoxelWorldTest, BoundaryBlockAlsoDirtiesItsNeighbor )
+SW_TEST_CASE( VoxelWorldTest, BoundaryBlockAlsoAdvancesItsNeighborRevision )
 {
-    VoxelFixture rig;
-    VoxelFixture::clearDirty( rig._world );
-    const uint32 revision = rig._world.findChunk( 0, 0 )->_revision;
-
+    VoxelFixture                              rig;
+    const VoxelFixture::ChunkRevisionSnapshot loaded( rig._world );
     SW_REQUIRE_TRUE( rig._world.setBlock( 5, 0, 5, rig._stone ) );
-    SW_EXPECT_TRUE( rig._world.isChunkDirty( 0, 0 ) );
-    SW_EXPECT_FALSE( rig._world.isChunkDirty( 1, 0 ) );
-    SW_EXPECT_EQUAL( revision + 1, rig._world.findChunk( 0, 0 )->_revision );
+    SW_EXPECT_TRUE( loaded.hasChanged( rig._world, 0, 0 ) );
+    SW_EXPECT_FALSE( loaded.hasChanged( rig._world, 1, 0 ) );
 
-    VoxelFixture::clearDirty( rig._world );
-    SW_REQUIRE_TRUE( rig._world.setBlock( 5, 0, 5, rig._stone ) ); // 같은 값은 표시하지 않는다
-    SW_EXPECT_FALSE( rig._world.isChunkDirty( 0, 0 ) );
+    const VoxelFixture::ChunkRevisionSnapshot inner( rig._world );
+    SW_REQUIRE_TRUE( rig._world.setBlock( 5, 0, 5, rig._stone ) ); // 같은 값은 판을 올리지 않는다
+    SW_EXPECT_FALSE( inner.hasChanged( rig._world, 0, 0 ) );
 
     SW_REQUIRE_TRUE( rig._world.setBlock( kVoxelChunkSize - 1, 0, 3, rig._stone ) );
-    SW_EXPECT_TRUE( rig._world.isChunkDirty( 1, 0 ) );
-    SW_EXPECT_FALSE( rig._world.isChunkDirty( 0, 1 ) );
+    SW_EXPECT_TRUE( inner.hasChanged( rig._world, 1, 0 ) );
+    SW_EXPECT_FALSE( inner.hasChanged( rig._world, 0, 1 ) );
 
-    VoxelFixture::clearDirty( rig._world );
+    const VoxelFixture::ChunkRevisionSnapshot edge( rig._world );
     SW_REQUIRE_TRUE( rig._world.setBlock( kVoxelChunkSize, 0, kVoxelChunkSize, rig._stone ) ); // 청크 (1, 1) 의 모서리
-    SW_EXPECT_TRUE( rig._world.isChunkDirty( 0, 1 ) );
-    SW_EXPECT_TRUE( rig._world.isChunkDirty( 1, 0 ) );
-    SW_EXPECT_FALSE( rig._world.isChunkDirty( 0, 0 ) );
+    SW_EXPECT_TRUE( edge.hasChanged( rig._world, 0, 1 ) );
+    SW_EXPECT_TRUE( edge.hasChanged( rig._world, 1, 0 ) );
+    SW_EXPECT_FALSE( edge.hasChanged( rig._world, 0, 0 ) );
+}
+
+// 내렸다 다시 올리거나 월드를 다시 연 청크는 앞 판의 번호를 되풀이하지 않는다 — 뷰가 옛 메시를 같은 판으로 보지 않게.
+SW_TEST_CASE( VoxelWorldTest, RevisionIsNeverReused )
+{
+    VoxelFixture                              rig;
+    const VoxelFixture::ChunkRevisionSnapshot loaded( rig._world );
+    rig._world.unloadChunk( 0, 0 );
+    SW_REQUIRE_TRUE( rig._world.loadChunk( 0, 0 ) );
+    SW_EXPECT_TRUE( loaded.hasChanged( rig._world, 0, 0 ) );
+
+    const VoxelFixture::ChunkRevisionSnapshot reloaded( rig._world );
+    SW_REQUIRE_TRUE( rig._world.initialize( 2, 2, &rig._catalog ) );
+    VoxelFixture::loadAll( rig._world );
+    SW_EXPECT_TRUE( reloaded.hasChanged( rig._world, 1, 1 ) );
 }
 
 SW_TEST_CASE( VoxelWorldTest, RefusesEmptyWorld )
@@ -234,15 +255,13 @@ SW_TEST_CASE( VoxelWorldTest, StateRoundTripsAndBumpsRevisions )
     SW_REQUIRE_TRUE( rig._world.setBlock( 20, 9, 20, rig._glass ) );
     const vector<uint8> listSaved = VoxelFixture::save( rig._world );
 
-    VoxelFixture restored;
-    VoxelFixture::clearDirty( restored._world );
-    const uint32 revision = restored._world.findChunk( 1, 1 )->_revision;
-    Archive      reading( listSaved.data(), listSaved.size() );
+    VoxelFixture                              restored;
+    const VoxelFixture::ChunkRevisionSnapshot before( restored._world );
+    Archive                                   reading( listSaved.data(), listSaved.size() );
     SW_REQUIRE_TRUE( restored._world.readState( reading ) );
     SW_EXPECT_TRUE( restored._world.getBlock( 20, 9, 20 ) == restored._glass );
     SW_EXPECT_EQUAL( uint32( 32 * 32 ), restored._world.countBlocks( restored._stone ) );
-    SW_EXPECT_TRUE( restored._world.isChunkDirty( 1, 1 ) );
-    SW_EXPECT_EQUAL( revision + 1, restored._world.findChunk( 1, 1 )->_revision ); // 이미 만든 메시가 낡은 것이 된다
+    SW_EXPECT_TRUE( before.hasChanged( restored._world, 1, 1 ) ); // 이미 만든 메시가 낡은 것이 된다
     SW_EXPECT_TRUE( VoxelFixture::save( restored._world ) == listSaved );
 }
 

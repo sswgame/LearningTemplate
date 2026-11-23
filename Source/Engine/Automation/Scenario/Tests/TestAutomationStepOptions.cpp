@@ -2,6 +2,7 @@
 
 #include "Core/Testing/TestFramework.h"
 
+#include "Engine/Automation/Scenario/AutomationRunnerParams.h"
 #include "Engine/Automation/Scenario/AutomationScenario.h"
 #include "Engine/Automation/Scenario/AutomationStepParams.h"
 #include "Engine/Automation/Scenario/AutomationStepRegistry.h"
@@ -57,4 +58,24 @@ SW_TEST_CASE( AutomationStepOptionsTest, ValidatePropertiesFollowsTheSchema )
     const expected<void> rejected = AutomationStep::validateProperties<AutomationNoParams>( step );
     SW_REQUIRE_FALSE( rejected.has_value() );
     SW_EXPECT_TRUE( rejected.error().detail().find( "unknown" ) != string_view::npos );
+}
+
+/**
+ * @brief [AutomationStepOptionsTest] `<Screenshot stability>` 는 열거자 철자 그대로만 받고, 적지 않으면 Render 다 — 모르는 값은 읽기에서 진다
+ */
+SW_TEST_CASE( AutomationStepOptionsTest, ScreenshotStabilityReadsEnumeratorNames )
+{
+    AutomationStep step;
+    step._kind = "Screenshot";
+    step._listAttribute.push_back( { "file", "a.ppm" } );
+    AutomationScreenshotParams params;
+    SW_REQUIRE_TRUE( step.readProperties( params ).has_value() );
+    SW_EXPECT_TRUE( params._stability == AutomationScreenshotStability::Render );
+
+    step._listAttribute.push_back( { "stability", "None" } );
+    SW_REQUIRE_TRUE( step.readProperties( params ).has_value() );
+    SW_EXPECT_TRUE( params._stability == AutomationScreenshotStability::None );
+
+    step._listAttribute.back()._value = "assets";
+    SW_EXPECT_FALSE( step.readProperties( params ).has_value() );
 }

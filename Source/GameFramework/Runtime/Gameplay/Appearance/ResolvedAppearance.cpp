@@ -11,6 +11,7 @@
 #include "Core/Math/NormalizedInt.h"
 #include "Core/String/formatString.h"
 
+#include "Engine/Behavior/ConditionRegistry.h"
 #include "Engine/Reflection/EnumName.h"
 
 #include "GameFramework/Runtime/Foundation/Condition/GameConditions.h"

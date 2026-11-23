@@ -37,7 +37,7 @@ namespace sw
         if ( pRegistrar == nullptr )
             return nullptr;
         if ( pRegistrar->_pNext != nullptr )
-            SW_FATAL( "Two UI accessibility bridges are registered (%#, %#) - one platform build links one", pRegistrar->_pName, pRegistrar->_pNext->_pName );
+            reportFatalError( "Two UI accessibility bridges are registered (%#, %#) - one platform build links one", pRegistrar->_pName, pRegistrar->_pNext->_pName );
         return pRegistrar->_pCreate( ui, window );
     }
 } // namespace sw
