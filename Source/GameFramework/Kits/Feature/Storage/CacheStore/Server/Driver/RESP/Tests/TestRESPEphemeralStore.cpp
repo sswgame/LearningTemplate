@@ -557,20 +557,7 @@ SW_TEST_CASE( RESPConnectionTest, SubscribeConnectionHoldsItsUnconfirmedCommands
     poll();
     SW_EXPECT_EQUAL( 2, peer._connection.getAwaitingCount() );
 
-    server.send( server._lastHandle, "*3
-$9
-subscribe
-$1
-a
-:1
-*3
-$7
-message
-$1
-a
-$2
-hi
-" );
+    server.send( server._lastHandle, "*3\r\n$9\r\nsubscribe\r\n$1\r\na\r\n:1\r\n*3\r\n$7\r\nmessage\r\n$1\r\na\r\n$2\r\nhi\r\n" );
     poll();
     SW_EXPECT_EQUAL( 1, peer._connection.getAwaitingCount() ); // 메시지는 확인이 아니다
     vector<RESPValue> listValue;
