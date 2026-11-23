@@ -379,12 +379,14 @@ namespace sw
             {
                 static constexpr const utf8* kMeshTypeName      = "MeshComponent";
                 static constexpr const utf8* kInstancedTypeName = "InstancedMeshComponent";
+                static constexpr const utf8* kMergedTypeName    = "HLODMeshComponent";
                 const TypeInfo* const        pMeshType          = services._pTypeRegistry != nullptr ? services._pTypeRegistry->findType( hashed_string( kMeshTypeName ) ) : nullptr;
                 const TypeInfo* const        pInstancedType     = services._pTypeRegistry != nullptr ? services._pTypeRegistry->findType( hashed_string( kInstancedTypeName ) ) : nullptr;
-                if ( pMeshType == nullptr || pInstancedType == nullptr )
+                const TypeInfo* const        pMergedType        = services._pTypeRegistry != nullptr ? services._pTypeRegistry->findType( hashed_string( kMergedTypeName ) ) : nullptr;
+                if ( pMeshType == nullptr || pInstancedType == nullptr || pMergedType == nullptr )
                 {
-                    SW_LOG_ERROR_ID( "SceneCooker.HLODTypesMissing", "Scene cook: '%#' streams but '%#' or '%#' is not in the type table - its HLOD proxies cannot be built", scenePath, kMeshTypeName,
-                                     kInstancedTypeName );
+                    SW_LOG_ERROR_ID( "SceneCooker.HLODTypesMissing", "Scene cook: '%#' streams but '%#', '%#' or '%#' is not in the type table - its HLOD proxies cannot be built", scenePath, kMeshTypeName,
+                                     kInstancedTypeName, kMergedTypeName );
                     return false;
                 }
                 static constexpr const utf8* kArrMeshKey[HLODMeshTypes::kKeyCount] = { "_meshID", "_materialPath", "_sectionName", "_bStatic", "_bVisible" };
@@ -412,6 +414,7 @@ namespace sw
                 string         _materialText;
                 string         _sectionText;
                 vector<string> _listTransformText;
+                vector<float3> _listPosition; ///< 인스턴스마다 월드 위치(합칠 때 중심을 뺀다)
             };
 
             /**
@@ -448,7 +451,8 @@ namespace sw
                         pGroup = pGroup == nullptr && bSame ? &group : pGroup;
                     }
                     if ( pGroup == nullptr )
-                        pGroup = &inoutListGroup.emplace_back( HLODGroup{ arrText[HLODMeshTypes::kMesh], arrText[HLODMeshTypes::kMaterial], arrText[HLODMeshTypes::kSection], {} } );
+                        pGroup = &inoutListGroup.emplace_back( HLODGroup{ arrText[HLODMeshTypes::kMesh], arrText[HLODMeshTypes::kMaterial], arrText[HLODMeshTypes::kSection], {}, {} } );
+                    pGroup->_listPosition.push_back( position );
                     pGroup->_listTransformText.push_back( SerializerUtil::formatValueText( ValueAddress{ &position }, types._vectorTypeName, context ) );
                     pGroup->_listTransformText.push_back( SerializerUtil::formatValueText( ValueAddress{ &euler }, types._vectorTypeName, context ) );
                     pGroup->_listTransformText.push_back( SerializerUtil::formatValueText( ValueAddress{ &scale }, types._vectorTypeName, context ) );
@@ -463,9 +467,70 @@ namespace sw
             }
 
             /**
+             * @brief 한 조각에 @p maxInstanceCount 이하로 놓인 묶음을 머티리얼마다 `HLODMeshComponent` 하나로 씁니다(@p appendComponent 가 컴포넌트 노드를 만든다).
+             * @details 머티리얼 하나에 합칠 자리가 하나뿐이면 합치지 않는다 — 인스턴스로 그려도 그리기 하나다.
+             * @return 묶음마다 합쳤으면 1 입니다.
+             */
+            template <typename AppendComponent>
+            [[nodiscard]] static vector<uint8> appendMergedGroups( const vector<HLODGroup>& listGroup, const uint32 maxInstanceCount, const HLODMeshTypes& types, const AppendComponent& appendComponent )
+            {
+                static constexpr const utf8* kMergedTypeName    = "HLODMeshComponent";
+                static constexpr const utf8* kPartTypeName      = "HLODMeshPart";
+                static constexpr const utf8* kTransformTypeName = "InstancedMeshTransform";
+                const SerializeContext&      context            = SerializeContext::getDefault( SerializePurpose::Authoring );
+                vector<uint8>                listMerged( listGroup.size(), 0 );
+                for ( size_t firstIndex = 0; firstIndex < listGroup.size(); ++firstIndex )
+                {
+                    // 같은 머티리얼의 아직 합치지 않은 묶음을 모은다(묶음 차례 — 결정적).
+                    vector<size_t> listMember;
+                    float3         center{};
+                    uint32         partCount = 0;
+                    for ( size_t groupIndex = firstIndex; groupIndex < listGroup.size(); ++groupIndex )
+                    {
+                        const HLODGroup& group  = listGroup[groupIndex];
+                        const bool       bMerge = listMerged[groupIndex] == 0 && group._materialText == listGroup[firstIndex]._materialText && group._listPosition.size() <= maxInstanceCount;
+                        if ( bMerge == false )
+                            continue;
+                        listMember.push_back( groupIndex );
+                        for ( const float3& position : group._listPosition )
+                        {
+                            center = center + position;
+                            ++partCount;
+                        }
+                    }
+                    // 첫 묶음이 많이 놓인 메시면 그 머티리얼의 나머지는 뒤 차례가 모은다.
+                    if ( partCount < 2 || listMember.front() != firstIndex )
+                        continue;
+                    center            = center * ( 1.0f / static_cast<float32>( partCount ) );
+                    XMLNode component = appendComponent( kMergedTypeName );
+                    component.setAttribute( "_materialPath", string_view( listGroup[firstIndex]._materialText ) );
+                    const XMLNode instance = component.appendChild( "_listInstance" ).appendChild( kTransformTypeName );
+                    instance.setAttribute( "_position", string_view( SerializerUtil::formatValueText( ValueAddress{ &center }, types._vectorTypeName, context ) ) );
+                    const XMLNode listPart = component.appendChild( "_listPart" );
+                    for ( const size_t groupIndex : listMember )
+                    {
+                        const HLODGroup& group = listGroup[groupIndex];
+                        listMerged[groupIndex] = 1;
+                        for ( size_t instanceIndex = 0; instanceIndex < group._listPosition.size(); ++instanceIndex )
+                        {
+                            const float3  relative = group._listPosition[instanceIndex] - center;
+                            const XMLNode part     = listPart.appendChild( kPartTypeName );
+                            part.setAttribute( "_meshID", string_view( group._meshText ) );
+                            part.setAttribute( "_sectionName", string_view( group._sectionText ) );
+                            part.setAttribute( "_position", string_view( SerializerUtil::formatValueText( ValueAddress{ &relative }, types._vectorTypeName, context ) ) );
+                            part.setAttribute( "_rotation", string_view( group._listTransformText[instanceIndex * 3 + 1] ) );
+                            part.setAttribute( "_scale", string_view( group._listTransformText[instanceIndex * 3 + 2] ) );
+                        }
+                    }
+                }
+                return listMerged;
+            }
+
+            /**
              * @brief 셀 조각마다 정적 메시를 인스턴스 메시로 모은 HLOD 대리 엔티티를 기본 목록(늘 올라 있음)에 더하고 조각에 그 파일 id 를 적습니다(설계 "씬 스트리밍 (라)").
-             * @details 언리얼 World Partition HLOD 의 Instancing 레이어(셀마다 대리 액터 하나 — 원본 메시를 인스턴스로)와 같은 꼴이다. 대리는 원점의 씬 컴포넌트 아래
-             *          (메시, 머티리얼, 구간)마다 `InstancedMeshComponent` 하나이고 인스턴스 자리는 월드 자리다. 조각의 레이어를 물려받아 레이어가 꺼지면 대리도 없다.
+             * @details 언리얼 World Partition HLOD 레이어 둘과 같은 꼴이다 — 한 조각에 `_hlodMergeMaxInstanceCount` 보다 많이 놓인 메시는 원본 메시를 인스턴스로(Instancing), 그 이하로 놓인 메시는
+             *          머티리얼마다 메시 하나로 합친다(MeshMerge, `HLODMeshComponent`). 대리는 원점의 씬 컴포넌트 아래 (메시, 머티리얼, 구간)마다 `InstancedMeshComponent` 하나 · 머티리얼마다
+             *          `HLODMeshComponent` 하나이고 자리는 월드 자리다(합치는 것은 부품들의 중심에 둔다 — 정점이 중심 둘레라 경계 구가 작다). 조각의 레이어를 물려받아 레이어가 꺼지면 대리도 없다.
              *          정적 메시가 없는 조각은 대리가 없다. @p mapObjectByFileID 는 나누기 전에 지은 배치 씬의 오브젝트다.
              */
             static void buildHLODProxies( const HLODMeshTypes& types, const unordered_map<uint64, GameObject*>& mapObjectByFileID, SceneDocument& inoutDoc, string_view scenePath )
@@ -522,12 +587,21 @@ namespace sw
                     XMLNode          listComponent = root.appendChild( "_listComponent" );
                     XMLNode          rootComponent = listComponent.appendChild( "SceneComponent" );
                     rootComponent.setAttribute( "_localID", kRootLocalID );
-                    for ( const HLODGroup& group : listGroup )
+                    const auto appendComponent = [&listComponent, &nextLocalID, &rootKey]( const utf8* pTypeName )
                     {
-                        XMLNode component = listComponent.appendChild( kInstancedTypeName );
+                        XMLNode component = listComponent.appendChild( pTypeName );
                         component.setAttribute( "_localID", nextLocalID++ );
                         component.setAttribute( "_attachOwner", "None" );
                         component.setAttribute( "_attachComponent", string_view( rootKey ) );
+                        return component;
+                    };
+                    const vector<uint8> listMerged = appendMergedGroups( listGroup, inoutDoc._sceneSettings._hlodMergeMaxInstanceCount, types, appendComponent );
+                    for ( size_t groupIndex = 0; groupIndex < listGroup.size(); ++groupIndex )
+                    {
+                        if ( listMerged[groupIndex] != 0 )
+                            continue;
+                        const HLODGroup& group     = listGroup[groupIndex];
+                        XMLNode          component = appendComponent( kInstancedTypeName );
                         component.setAttribute( "_meshID", string_view( group._meshText ) );
                         component.setAttribute( "_materialPath", string_view( group._materialText ) );
                         component.setAttribute( "_sectionName", string_view( group._sectionText ) );

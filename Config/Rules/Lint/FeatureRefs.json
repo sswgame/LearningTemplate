@@ -1,7 +1,9 @@
 {
     "_comment": "참조 0 · 낡은 기대 로그 id 린트(Scripts/lint/feature_references.py)의 예외 — 칸마다 이름(폴더 · 컴포넌트 · 감시 값 · 개발 명령 · 기대 로그 id) → 까닭. 이제 참조가 생겼거나 정의가 사라진 줄은 낡은 예외로 진다.",
     "_folders": {},
-    "_components": {},
+    "_components": {
+        "HLODMeshComponent": "쿠커의 셀 나누기만 만든다(SceneCooker — 형식 이름으로 대리 엔티티의 상태에 적는다, 층이 아래라 형식을 모른다). 소스 씬에 놓지 않는다"
+    },
     "_watches": {
         "Audio.OutputUnderruns": "측정 장치 — 오디오 실시간 스레드의 최악 값(문턱 0)을 허브 부하 시나리오에서 판정할 때 읽는다(docs/NEXT.md 측정 오디오 실시간 스레드, 판정은 측정 뒤)",
         "Audio.RealtimeAllocations": "측정 장치 — 오디오 실시간 스레드의 최악 값(문턱 0)을 허브 부하 시나리오에서 판정할 때 읽는다(docs/NEXT.md 측정 오디오 실시간 스레드, 판정은 측정 뒤)",

@@ -82,6 +82,20 @@ namespace sw
         /** @brief 인스턴스 자리 @p transform 의 컴포넌트 공간 행렬입니다(스케일 → 회전 → 이동, 행 벡터). */
         [[nodiscard]] static float4x4 makeLocalMatrix( const InstancedMeshTransform& transform );
 
+    protected:
+        /** @brief 배치가 그릴 메시를 얻는 결과입니다(`acquireMesh`). */
+        enum class MeshArrival : uint8
+        {
+            Ready,   ///< 메시를 받았다
+            Loading, ///< 워커가 읽는 중이다 — 다 오면 다시 묻는다
+            Failed,  ///< 읽지 못했다(까닭을 남겼다) — 그리지 않는다
+        };
+
+        /** @brief 배치가 그릴 메시를 @p outMesh 에 얻습니다. 여기서는 `_meshID` 하나이고, 합친 메시(`HLODMeshComponent`)는 부품들을 합친 것입니다. */
+        [[nodiscard]] virtual MeshArrival acquireMesh( shared_ptr<Mesh>& outMesh );
+        /** @brief `acquireMesh` 가 건 읽기가 아직 끝나지 않았으면 true 입니다. */
+        virtual bool isMeshPending() const { return _meshLoad.isLoading(); }
+
     private:
         /** @brief 배치를 놓고 다시 짓습니다. 메시가 읽히는 중이면 도착을 기다린다(`updateMeshArrival`). */
         void rebuildBatch();

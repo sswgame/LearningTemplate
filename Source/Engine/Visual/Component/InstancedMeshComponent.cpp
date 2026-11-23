@@ -129,28 +129,15 @@ namespace sw
         if ( _pPrimitiveRegistry == nullptr || _listInstance.empty() || engine::areEngineServicesBound() == false )
             return;
         // 메시는 워커가 읽는다 — 다 올 때까지 배치 없이 두고 씬 프레임의 도착 단계가 다시 짓는다(언리얼 ISM 도 메시가 스트리밍되기 전에는 그리지 않는다).
-        const string&    meshID = _meshID.path();
-        shared_ptr<Mesh> mesh;
-        if ( MeshAssetFormat::isMeshAssetPath( meshID ) )
+        shared_ptr<Mesh>  mesh;
+        const MeshArrival arrival = acquireMesh( mesh );
+        if ( arrival == MeshArrival::Loading )
         {
-            _meshLoad = MeshCache::request( meshID );
-            if ( _meshLoad.isLoading() )
-            {
-                _pPrimitiveRegistry->addAssetWaiter( this, &InstancedMeshComponent::updateMeshArrival );
-                return;
-            }
-            mesh = _meshLoad.isValid() ? _meshLoad.get() : nullptr;
-        }
-        else
-        {
-            _meshLoad = MeshHandle{};
-            mesh      = MeshUtil::acquirePrimitive( meshID );
-        }
-        if ( mesh == nullptr )
-        {
-            SW_LOG_WARNING_ID( "InstancedMeshComponent.MeshNotAcquired", "Instanced mesh '%#' could not be acquired - its %# instances are not drawn", meshID, static_cast<uint32>( _listInstance.size() ) );
+            _pPrimitiveRegistry->addAssetWaiter( this, &InstancedMeshComponent::updateMeshArrival );
             return;
         }
+        if ( arrival == MeshArrival::Failed )
+            return;
 
         // 머티리얼은 메시 컴포넌트와 같은 규칙이다 — 빈 경로는 씬 기본, 없는 파일은 경고 뒤 씬 기본.
         const string& materialPath = _materialPath.path();
@@ -174,6 +161,27 @@ namespace sw
         _pPrimitiveRegistry->addInstanceBatch( _pBatch.get() );
     }
 
+    InstancedMeshComponent::MeshArrival InstancedMeshComponent::acquireMesh( shared_ptr<Mesh>& outMesh )
+    {
+        const string& meshID = _meshID.path();
+        if ( MeshAssetFormat::isMeshAssetPath( meshID ) )
+        {
+            _meshLoad = MeshCache::request( meshID );
+            if ( _meshLoad.isLoading() )
+                return MeshArrival::Loading;
+            outMesh = _meshLoad.isValid() ? _meshLoad.get() : nullptr;
+        }
+        else
+        {
+            _meshLoad = MeshHandle{};
+            outMesh   = MeshUtil::acquirePrimitive( meshID );
+        }
+        if ( outMesh != nullptr )
+            return MeshArrival::Ready;
+        SW_LOG_WARNING_ID( "InstancedMeshComponent.MeshNotAcquired", "Instanced mesh '%#' could not be acquired - its %# instances are not drawn", meshID, static_cast<uint32>( _listInstance.size() ) );
+        return MeshArrival::Failed;
+    }
+
     void InstancedMeshComponent::writeEntryWorlds()
     {
         if ( _pBatch == nullptr )
@@ -194,9 +202,9 @@ namespace sw
     {
         // 이 함수를 거는 것은 이 컴포넌트 자신뿐이다(`rebuildBatch`).
         InstancedMeshComponent& self = static_cast<InstancedMeshComponent&>( component );
-        if ( self._meshLoad.isLoading() )
+        if ( self.isMeshPending() )
             return true;
         self.rebuildBatch();
-        return self._meshLoad.isLoading();
+        return self.isMeshPending();
     }
 } // namespace sw

@@ -1,6 +1,6 @@
 <?asset guid="efba2ec29be47bca685fe4f466e144fa"?>
 <Scene formatVersion="3" name="WildWest">
-	<SceneSettings _bStreaming="true" _unloadMargin="8" _maxCellLoadsPerFrame="2" _addToWorldBudgetMicroseconds="2000">
+	<SceneSettings _bStreaming="true" _unloadMargin="8" _maxCellLoadsPerFrame="2" _addToWorldBudgetMicroseconds="2000" _hlodMergeMaxInstanceCount="4">
 		<_cellGrid _cellSize="16" _loadingRadius="32" />
 	</SceneSettings>
 	<entities>

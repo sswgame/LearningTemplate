@@ -83,6 +83,14 @@ namespace sw
         PROPERTY( Min = 0.0, Units = m, Tooltip = "The world origin moves to the game camera once it is this far away (XZ); 0 never moves it" )
         float32 _originRebaseDistance{ 0.0f };
 
+        /**
+         * @brief 셀 조각의 HLOD 대리에서, 한 조각에 이 수 이하로 놓인 메시는 머티리얼마다 메시 하나로 합칩니다(`HLODMeshComponent` — 언리얼 HLOD 레이어 `MeshMerge`). 더 많이 놓인 메시는 인스턴스로 둔다(`Instancing`).
+         * @details 0 이면 합치지 않는다(모두 인스턴스). 합치면 그리기가 (메시, 머티리얼)마다에서 머티리얼마다로 줄고 정점은 놓인 수만큼 는다 — 여러 벌 놓인 메시는 인스턴스가 싸다.
+         *          월드 설정에 두는 까닭: 셀 크기 · 셀당 메시 수가 월드마다 다르다(격자 · 여유 반경과 같은 자리).
+         */
+        PROPERTY( Min = 0, Tooltip = "HLOD proxies merge meshes placed at most this many times in a cell into one mesh per material; meshes placed more often stay instanced (0 merges nothing)" )
+        uint32 _hlodMergeMaxInstanceCount{ 0 };
+
         /** @brief `_packing` 이 정적 메시를 묶는다는 값입니다. */
         static constexpr const utf8* kPackStaticMeshes = "StaticMeshes";
         /** @brief 쿠킹이 정적 메시를 묶으면 true 입니다. */
