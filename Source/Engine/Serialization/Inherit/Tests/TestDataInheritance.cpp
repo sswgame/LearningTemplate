@@ -242,6 +242,17 @@ SW_TEST_CASE( DataInheritanceTest, BadListEntriesAreErrors )
         SW_EXPECT_FALSE( Util::flatten( source, R"(<Doc _base="base.xml"><_listPass><Pass _name="A" /><Pass _name="A" /></_listPass></Doc>)", flat ) );
     }
     {
+        // 부모 안의 겹침도 오류다 — 자식이 고친 값은 첫 원소에만 닿고 읽기는 뒤의 것을 쓴다
+        source.add( "twice.xml", R"(<Doc><_listPass><Pass _name="A" _cull="Back" /><Pass _name="A" _cull="None" /></_listPass></Doc>)" );
+        SW_EXPECT_FALSE( Util::flatten( source, R"(<Doc _base="twice.xml"><_listPass><Pass _name="A" _cull="Front" /></_listPass></Doc>)", flat ) );
+    }
+    {
+        // 저장할 목록이 겹치면 차이를 적지 않는다(결함: 맞출 자리가 목록 끝을 넘어 밖을 읽었다)
+        string delta;
+        SW_EXPECT_FALSE( DataInheritance::makeDelta( R"(<Doc><_listPass><Pass _name="A" /><Pass _name="A" /></_listPass></Doc>)", R"(<Doc><_listPass><Pass _name="A" /></_listPass></Doc>)",
+                                                     Util::makeSchema(), "base.xml", delta ) );
+    }
+    {
         SW_EXPECT_LOG( "DataInheritance.UnknownOp" );
         SW_EXPECT_FALSE( Util::flatten( source, R"(<Doc _base="base.xml"><_listPass><Pass _name="A" _op="Delete" /></_listPass></Doc>)", flat ) );
     }
