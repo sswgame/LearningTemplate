@@ -4352,9 +4352,9 @@ namespace sw
         if ( oldLayout == VK_IMAGE_LAYOUT_UNDEFINED && newLayout == VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL )
         {
             barrier.srcAccessMask = 0;
-            barrier.dstAccessMask = VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT;
+            barrier.dstAccessMask = VulkanRHIUtil::kColorAttachmentAccess;
             srcStage              = VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT;
-            dstStage              = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
+            dstStage              = VulkanRHIUtil::kColorAttachmentStages;
         }
         else if ( oldLayout == VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL && newLayout == VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL )
         {
@@ -4366,9 +4366,9 @@ namespace sw
         else if ( oldLayout == VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL && newLayout == VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL )
         {
             barrier.srcAccessMask = VK_ACCESS_SHADER_READ_BIT;
-            barrier.dstAccessMask = VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT;
+            barrier.dstAccessMask = VulkanRHIUtil::kColorAttachmentAccess; // 이어 그리는 패스(LOAD · 블렌드)는 앞 그림을 읽는다
             srcStage              = kShaderReadStages;
-            dstStage              = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
+            dstStage              = VulkanRHIUtil::kColorAttachmentStages;
         }
         else if ( oldLayout == VK_IMAGE_LAYOUT_UNDEFINED && newLayout == VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL )
         {
@@ -4379,18 +4379,18 @@ namespace sw
         }
         else if ( oldLayout == VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL && newLayout == VK_IMAGE_LAYOUT_DEPTH_STENCIL_READ_ONLY_OPTIMAL )
         {
-            // 그림자맵: 깊이 쓰기(late fragment tests) 가 끝난 뒤 프래그먼트 셰이더가 샘플한다.
+            // 그림자맵: 깊이 쓰기(이른 · 늦은 프래그먼트 테스트)가 끝난 뒤 셰이더가 샘플한다.
             barrier.srcAccessMask = VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_WRITE_BIT;
             barrier.dstAccessMask = VK_ACCESS_SHADER_READ_BIT;
-            srcStage              = VK_PIPELINE_STAGE_LATE_FRAGMENT_TESTS_BIT;
+            srcStage              = VulkanRHIUtil::kDepthAttachmentStages;
             dstStage              = kShaderReadStages;
         }
         else if ( oldLayout == VK_IMAGE_LAYOUT_DEPTH_STENCIL_READ_ONLY_OPTIMAL && newLayout == VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL )
         {
             barrier.srcAccessMask = VK_ACCESS_SHADER_READ_BIT;
-            barrier.dstAccessMask = VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_READ_BIT | VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_WRITE_BIT;
+            barrier.dstAccessMask = VulkanRHIUtil::kDepthAttachmentAccess;
             srcStage              = kShaderReadStages;
-            dstStage              = VK_PIPELINE_STAGE_EARLY_FRAGMENT_TESTS_BIT;
+            dstStage              = VulkanRHIUtil::kDepthAttachmentStages;
         }
         else
         {
