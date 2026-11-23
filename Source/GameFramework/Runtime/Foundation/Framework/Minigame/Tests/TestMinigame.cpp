@@ -191,13 +191,14 @@ SW_TEST_CASE( MinigameTest, SwitchKeepsTheReturnPoint )
     SW_EXPECT_TRUE( stack.findTop()->_definition._name == hashed_string( "round2" ) );
 }
 
-/** @brief [MinigameTest] 저장 막기: 씬 전환 칸이 있는 동안만 막히고, 그 칸을 꺼내 돌아올 자리를 다 쓰면(복원 끝) 풀린다. 하위 레벨 칸은 막지 않는다 */
-SW_TEST_CASE( MinigameTest, SaveLockIsHeldWhileASceneSwitchFrameExists )
+/** @brief [MinigameTest] 저장 막기: 씬 전환 · 하위 레벨 칸이 있는 동안 막히고, 칸을 꺼내 돌아올 자리를 다 쓰면(복원 끝) 풀린다 */
+SW_TEST_CASE( MinigameTest, SaveLockIsHeldWhileAFrameExists )
 {
     SaveLock      saveLock;
     MinigameStack stack;
-    stack.push( MinigameFrame{ makeMinigame( "cardtable", MinigameEntry::SubLevel ), MinigameReturnPoint{ MinigameSubLevelReturn{ "game/test/maps/town.scene.xml", hashed_string( "cardtable" ) } } } );
-    SW_EXPECT_FALSE( saveLock.isBlocked() );
+    stack.push( MinigameFrame{ makeMinigame( "cardtable", MinigameEntry::SubLevel ),
+                               MinigameReturnPoint{ MinigameSubLevelReturn{ "game/test/maps/town.scene.xml", hashed_string( "cardtable" ), saveLock.block( hashed_string( MinigameFlow::kSaveBlockReason ) ) } } } );
+    SW_EXPECT_TRUE( saveLock.isBlocked() );
     SW_EXPECT_FALSE( stack.hasSuspendedScene() );
     stack.push( MinigameFrame{ makeMinigame( "arcade", MinigameEntry::SceneSwitch ), makeSuspendedScene( saveLock, "game/test/maps/town.scene.xml" ) } );
     SW_EXPECT_TRUE( saveLock.isBlocked() );
@@ -208,6 +209,11 @@ SW_TEST_CASE( MinigameTest, SaveLockIsHeldWhileASceneSwitchFrameExists )
         MinigameFrame leaving;
         SW_REQUIRE_TRUE( stack.pop( leaving ) );
         SW_EXPECT_TRUE( saveLock.isBlocked() ); // 나가는 동안(돌아갈 씬을 기다리는 동안) 꺼낸 칸이 막기를 쥔다
+    }
+    SW_EXPECT_TRUE( saveLock.isBlocked() ); // 아래 하위 레벨 칸이 아직 있다
+    {
+        MinigameFrame leaving;
+        SW_REQUIRE_TRUE( stack.pop( leaving ) );
     }
     SW_EXPECT_FALSE( saveLock.isBlocked() ); // 복원이 끝나 돌아올 자리를 버렸다
 }

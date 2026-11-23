@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="utf-8"?>
+<?asset guid="7468961ecaa3205a573fac8d95855349"?>
+<!--
+  테마파크 미니게임(놀이공원 경영) — ThemePark 키트, 하위 레벨 진입(들어갈 때의 활성 씬에 진입을 건 사물의 변환으로 공원을 얹는다 — 바탕 씬이 보이고 그대로 돈다). 옛 게임 ThemeParkTycoon 을 미니게임으로 흡수했다.
+  키트는 게임 기능으로 걸 것이 없다(등록하지 않는다) — 배치(data/rides.xml)와 코스터 카탈로그(data/coasters.xml)는 맵의 디렉터가 공유 캐시에서 받는다.
+  맵의 ParkGameMode 오브젝트에 ParkGameModeComponent(시뮬레이션 · 건설) → ParkViewComponent(GF_Client_ThemePark — 모습 · 입력 · 탑승 시점)가 그 순서로 붙는다.
+  입력은 내려다보는 카메라(Camera · CameraPan)와 공원 레이어(ThemePark, themepark/data/park.input.xml)만 켠다 — 바탕 플레이어는 움직이지 않는다.
+  하위 레벨 칸이 있는 동안 저장은 막힌다(공원은 한 판 임시 상태다). 시나리오 automation/themepark_guests · themepark_shadow · themepark_sublevel 이 개발 명령 minigame.enter 로 들어간다.
+-->
+<Minigame name="themepark" map="game/playground/themepark/maps/park.scene.xml" entry="SubLevel" inputContexts="Camera,CameraPan,ThemePark"/>

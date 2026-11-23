@@ -1,8 +1,0 @@
-<?asset guid="b38ec3a8bcbecad1365b6ca61355b745"?>
-<Prefab formatVersion="1" _base="game/themepark/prefabs/coasterrail.prefab.xml" name="CoasterStation">
-	<PrefabOverrides>
-		<Override key="#0244d8c8807cd288">
-			<MeshComponent _localScale="2,2,2.1" _meshID="game/themepark/models/station.mesh" />
-		</Override>
-	</PrefabOverrides>
-</Prefab>

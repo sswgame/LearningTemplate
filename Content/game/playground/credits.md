@@ -22,6 +22,8 @@
 | `meadowvillage/prefabs/tree` · `grass` · `sprout`(마을 오브젝트 · 생물 모습) | Quaternius "Stylized Nature MegaKit" — 공용 원본 `common/models_raw/quaternius/nature/` 의 CommonTree_1 · Grass_Common_Tall · Plant_1(출처는 `common/credits.md`) | CC0 1.0 |
 | `voxelcraft/textures_raw/blocks.png` | Kenney "Voxel Pack" (<https://kenney.nl/assets/voxel-pack>) — 128 px 타일 열여섯을 4 × 4 아틀라스로 모은 것(칸 순서와 블록의 짝은 `data/blocks.xml`) | CC0 1.0 |
 | `voxelcraft/sounds/*.ogg` | Kenney "Impact Sounds" (<https://kenney.nl/assets/impact-sounds>) — `footstep_grass_000` · `impactPlank_medium_001` · `impactSoft_medium_000`(파일 이름은 소문자 `_` 로) | CC0 1.0 |
+| `themepark/models_raw/*.glb` · `themepark/textures_raw/coaster_colormap.png` | Kenney "Coaster Kit" (<https://kenney.nl/assets/coaster-kit>) — 강철 레일 · 열차 · 승강장 · 기둥 · 매점 · 길 · 입구 · 휴지통. 모델은 모두 한 장의 팔레트 텍스처(`coaster_colormap`)에서 색을 읽는다(`themepark/materials/palette.material`) | CC0 1.0 |
+| `themepark/sounds/*.ogg` | Kenney "Interface Sounds" (<https://kenney.nl/assets/interface-sounds>) — `confirmation_001` · `error_001` · `select_001` | CC0 1.0 |
 
 - `AudioServiceTest` 가 OGG 디코드를 실제 파일로 확인하는 테스트 자료입니다.
 - CC0 는 표기 의무가 없지만 고마움을 적어 둡니다 — Kenney (www.kenney.nl).
@@ -29,3 +31,4 @@
 - 서부 평원(`maps/prairie.scene.xml`)의 선인장 · 울타리 · 말은 `wildwest/models_raw/` 의 모델이고(Farm Animals 라이선스 근거: 묶음의 `License.txt` 원문 "License: (Creative Commons Zero, CC0)"),
   땅 · 목장 · 기수는 아직 엔진 기본 도형과 색만 바꾼 머티리얼이다. 말 클립 이름에는 임포트가 `armature_` 접두어를 붙인다.
 - 허브 농장의 Nature Kit 모델(`harvestvalley/models_raw/`)은 내려받은 그대로다 — UniGLTF 출력이라 씬 루트로 자식 노드를 적어 glTF 2.0 을 어기지만 임포터가 맨 위 조상(`tmpParent`)으로 바꿔 읽고 경고한다. 텍스처가 없고 색은 임포터가 정점 색으로 굽는다.
+- 테마파크 가장자리 나무 · 꽃 덤불(`themepark/maps/park.scene.xml` 의 PropScatter)은 공용 Quaternius "Stylized Nature MegaKit" 의 구간 모델이다(출처는 `common/credits.md`).

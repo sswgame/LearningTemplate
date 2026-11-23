@@ -107,5 +107,20 @@
 				<AudioClipEntry _path="game/playground/voxelcraft/sounds/impact_plank_medium_001.ogg" />
 			</_listClip>
 		</AudioEventDef>
+		<AudioEventDef _name="ParkSelect" _bus="ui" _priority="70" _cooldownSeconds="0.05" _maxInstances="1" _steal="Oldest">
+			<_listClip>
+				<AudioClipEntry _path="game/playground/themepark/sounds/select_001.ogg" />
+			</_listClip>
+		</AudioEventDef>
+		<AudioEventDef _name="ParkBuilt" _bus="ui" _priority="70" _maxInstances="2">
+			<_listClip>
+				<AudioClipEntry _path="game/playground/themepark/sounds/confirmation_001.ogg" />
+			</_listClip>
+		</AudioEventDef>
+		<AudioEventDef _name="ParkBlocked" _bus="ui" _priority="70" _cooldownSeconds="0.5" _maxInstances="1" _steal="Reject">
+			<_listClip>
+				<AudioClipEntry _path="game/playground/themepark/sounds/error_001.ogg" />
+			</_listClip>
+		</AudioEventDef>
 	</_listEvent>
 </AudioEventLibrary>
