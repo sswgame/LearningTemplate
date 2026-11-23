@@ -21,6 +21,7 @@ namespace
   <Place id="saloon" area="town" position="34 0 18" radius="2"/>
   <Place id="home_a" area="town" position="22 0 2"/>
   <Place id="home_b" area="town" position="32 0 8"/>
+  <Interrupt id="talk" priority="10"/>
   <Appointment id="drinks" place="saloon" start="19:00" end="21:00" wait="30" priority="40"/>
   <Archetype id="villager">
     <Routine id="sleep">
@@ -49,6 +50,18 @@ namespace
     {
         SW_REQUIRE_TRUE( outCatalog.loadFromXMLText( kCatalogXML, "ScheduleSystemTest" ) );
         SW_REQUIRE_EQUAL( size_t( 2 ), outCatalog.getNPCs().size() );
+    }
+
+    int32 countEvents( sw::ScheduleSystem& schedule, sw::ScheduleEvent::Kind kind )
+    {
+        sw::vector<sw::ScheduleEvent> listEvent;
+        schedule.pollEvents( listEvent );
+        int32 count = 0;
+        for ( const sw::ScheduleEvent& event : listEvent )
+        {
+            count += event._kind == kind ? 1 : 0;
+        }
+        return count;
     }
 } // namespace
 
@@ -80,6 +93,37 @@ SW_TEST_CASE( ScheduleSystemTest, SaveRestoreKeepsTheDay )
     restored.advanceTo( 30 * kHour );
     SW_EXPECT_EQUAL( original.computeStateHash(), restored.computeStateHash() );
     SW_EXPECT_EQUAL( original.isAppointmentMet( sw::hashed_string( "drinks" ) ), restored.isAppointmentMet( sw::hashed_string( "drinks" ) ) );
+}
+
+/**
+ * @brief [ScheduleSystemTest] 이미 모인 약속은 불러온 뒤 끼어들기에서 돌아와도 "모임" 을 다시 내지 않는다
+ * @details 모인 약속 목록이 저장에 없으면 복원한 시스템은 처음 모인 것으로 보고 보상 · 대화를 두 번 부른다.
+ */
+SW_TEST_CASE( ScheduleSystemTest, RestoredAppointmentIsNotMetTwice )
+{
+    sw::ScheduleCatalog catalog;
+    loadCatalog( catalog );
+    const sw::ScheduleSystemSettings settings;
+    const sw::hashed_string          talk( "talk" );
+
+    sw::ScheduleSystem original;
+    SW_REQUIRE_TRUE( original.initialize( &catalog, settings, 6 * kHour ) );
+    const int32 guest = original.findNPCIndex( sw::hashed_string( "a" ) ).value();
+    original.advanceTo( 19 * kHour + 20 );
+    SW_REQUIRE_EQUAL( 1, countEvents( original, sw::ScheduleEvent::Kind::AppointmentMet ) );
+    SW_REQUIRE_TRUE( original.pushInterruption( guest, talk ) );
+
+    sw::ScheduleSaveState saved;
+    original.fillSaveState( saved );
+    sw::ScheduleSystem restored;
+    SW_REQUIRE_TRUE( restored.initialize( &catalog, settings, 0 ) );
+    restored.restoreSaveState( saved );
+
+    SW_REQUIRE_TRUE( original.popInterruption( guest, talk ) );
+    SW_EXPECT_EQUAL( 0, countEvents( original, sw::ScheduleEvent::Kind::AppointmentMet ) );
+    SW_REQUIRE_TRUE( restored.popInterruption( guest, talk ) );
+    SW_EXPECT_TRUE( restored.isAppointmentMet( sw::hashed_string( "drinks" ) ) );
+    SW_EXPECT_EQUAL( 0, countEvents( restored, sw::ScheduleEvent::Kind::AppointmentMet ) );
 }
 
 /**

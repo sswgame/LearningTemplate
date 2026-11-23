@@ -102,6 +102,8 @@ namespace sw
         PROPERTY()
         vector<string> _listBrokenAppointment{}; ///< 오늘 깨진 약속
         PROPERTY()
+        vector<string> _listMetAppointment{}; ///< 오늘 모인 약속 — 빠지면 불러온 뒤 끼어들기에서 돌아온 참가자가 "모임" 을 다시 낸다
+        PROPERTY()
         vector<ScheduleReservationSaveState> _listReservation{};
         PROPERTY()
         int32 _minute{ 0 }; ///< 0 일 0:00 부터 센 분

@@ -1525,10 +1525,15 @@ namespace sw
             }
             outState._listNPC.push_back( npcState );
         }
-        for ( const int32 appointmentIndex : _listBrokenAppointment )
+        const auto fillAppointments = [this]( const vector<int32>& listIndex, vector<string>& outListID )
         {
-            outState._listBrokenAppointment.push_back( string( _pCatalog->getAppointments()[static_cast<size_t>( appointmentIndex )]._id.c_str() ) );
-        }
+            for ( const int32 appointmentIndex : listIndex )
+            {
+                outListID.push_back( string( _pCatalog->getAppointments()[static_cast<size_t>( appointmentIndex )]._id.c_str() ) );
+            }
+        };
+        fillAppointments( _listBrokenAppointment, outState._listBrokenAppointment );
+        fillAppointments( _listMetAppointment, outState._listMetAppointment );
         if ( _services._pLocator == &_defaultLocator )
             _defaultLocator.fillState( outState._listReservation );
     }
@@ -1549,13 +1554,17 @@ namespace sw
         _settings._seed = state._seed;
         _weather        = state._weather;
         _eventBuffer.clear();
-        _listMetAppointment.clear();
-        _listBrokenAppointment.clear();
-        for ( const string& appointmentID : state._listBrokenAppointment )
+        const auto restoreAppointments = [this]( const vector<string>& listID, vector<int32>& outListIndex )
         {
-            if ( const optional<int32> appointmentIndex = _pCatalog->findAppointmentIndex( hashed_string( appointmentID ) ); appointmentIndex.has_value() )
-                _listBrokenAppointment.push_back( *appointmentIndex );
-        }
+            outListIndex.clear();
+            for ( const string& appointmentID : listID )
+            {
+                if ( const optional<int32> appointmentIndex = _pCatalog->findAppointmentIndex( hashed_string( appointmentID ) ); appointmentIndex.has_value() )
+                    outListIndex.push_back( *appointmentIndex );
+            }
+        };
+        restoreAppointments( state._listBrokenAppointment, _listBrokenAppointment );
+        restoreAppointments( state._listMetAppointment, _listMetAppointment );
         if ( _services._pLocator == &_defaultLocator )
             _defaultLocator.restoreState( state._listReservation );
 
