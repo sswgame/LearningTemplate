@@ -152,6 +152,8 @@ REGISTER_ANNOTATION_FIELD( Function, Category, _category, Display )
 REGISTER_ANNOTATION_FIELD( Function, DisplayName, _displayName, Display )
 REGISTER_ANNOTATION_FIELD( Function, Tooltip, _tooltip, Display )
 REGISTER_ANNOTATION_FIELD( Function, CallInEditor, _bCallInEditor, Editor )
+// 콘솔 명령 `exec <오브젝트> <메서드> [인자…]` 로 부를 수 있는 메서드다(`ExecFunctionCommand`, 언리얼 UFUNCTION(Exec)). 에디터 메타데이터라 배포에는 없다
+REGISTER_ANNOTATION_FIELD( Function, Exec, _bExec, Editor )
 // 에디터 뷰포트 미리보기가 타입 이름 대신 이 값으로 메서드를 찾는다(EditorViewportPreview). 예: EditorPreview = "DialogueLine"
 REGISTER_ANNOTATION_FIELD( Function, EditorPreview, _editorPreview, Editor )
 REGISTER_ANNOTATION_FIELD_FN( Function, Meta, _listCustomMeta, appendCustomMeta, Display )

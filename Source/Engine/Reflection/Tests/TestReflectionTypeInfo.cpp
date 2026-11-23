@@ -646,7 +646,7 @@ SW_TEST_CASE( ReflectionMetadataTest, PropertyMetadataQuery )
 }
 
 /**
- * @brief [ReflectionMetadataTest] FunctionMetadata (DisplayName, Category, Tooltip, CallInEditor, EditorPreview, CustomMeta) 검증
+ * @brief [ReflectionMetadataTest] FunctionMetadata (DisplayName, Category, Tooltip, CallInEditor, Exec, EditorPreview, CustomMeta) 검증
  */
 SW_TEST_CASE( ReflectionMetadataTest, FunctionMetadataQuery )
 {
@@ -657,6 +657,7 @@ SW_TEST_CASE( ReflectionMetadataTest, FunctionMetadataQuery )
     SW_REQUIRE_NOT_NULL( pMethod );
 
     SW_EXPECT_TRUE( pMethod->_metadata->getEditor()._bCallInEditor == SW_TRUE );
+    SW_EXPECT_TRUE( pMethod->_metadata->getEditor()._bExec == SW_TRUE );
     SW_EXPECT_TRUE( pMethod->_metadata->getEditor()._displayName == "Reset Health" );
     SW_EXPECT_TRUE( pMethod->_metadata->getEditor()._category == "Actions" );
     SW_EXPECT_TRUE( pMethod->_metadata->getEditor()._tooltip == "Resets health to 100" );
