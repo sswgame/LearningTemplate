@@ -473,7 +473,7 @@ namespace sw::editor
 
             /**
              * @brief 같은 자리에 쓰는 원본들을 한 사슬로 묶어 @p outListChain 에 담습니다. 사슬 안은 파일 순서이고 사슬은 첫 파일 순서입니다.
-             * @details 한 원본의 임포트는 자기 결과 파일과 같은 이름의 옆 폴더를 지우고 다시 씁니다. 그래서 결과 경로가 같거나(`a.glb` · `a.gltf` → `a.mesh`),
+             * @details 한 원본의 임포트는 자기 결과 파일과 같은 이름의 옆 폴더를 지우고 다시 씁니다. 그래서 확장자만 다른 결과를 쓰거나(`x.png` → `x.heightfield` · `x_splat.png` → `x.layerweights`),
              *          한 쪽의 자리가 다른 쪽의 옆 폴더 아래이면(`x.glb` 의 `x/` 아래 `x/y.glb` 의 `y.mesh`) 병렬로 돌리면 서로 지우고 씁니다. 그 원본들을 한 사슬로 묶는다.
              */
             static void makeChains( const vector<SourceFile>& listFile, vector<vector<uint32>>& outListChain )
@@ -537,7 +537,8 @@ namespace sw::editor
                 (void)EditorContentScan::collectFiles( rawFolder, "", listPath, true ); // 폴더는 방금 훑어서 찾았다
                 VectorUtil::sort( listPath );
 
-                vector<SourceFile> listFile;
+                vector<SourceFile>            listFile;
+                unordered_map<string, string> mapImportedOwner; // 결과 경로(소문자) → 먼저 나온 원본
                 for ( const string& path : listPath )
                 {
                     SourceFile file;
@@ -548,9 +549,20 @@ namespace sw::editor
 
                     file._relativePath = file._sourcePath.substr( rawFolder.size() + 1 );
                     file._assetPath    = file._sourcePath.substr( rootDir.size() + 1 );
-                    if ( pScope != nullptr && pScope->find( makeScopeKey( file._assetPath ) ) == pScope->end() )
-                        continue; // 범위 밖 원본은 읽지도 해시하지도 않는다
                     file._importedPath = importer.makeImportedPath( file._sourcePath );
+                    // 두 원본이 한 결과에 쓰면(`a.jpg` · `a.png` → `a.dds`) 돌 때마다 서로 덮어 둘 다 영원히 어긋난다 — 뒤의 것을 문제로 알리고 임포트하지 않는다.
+                    const auto owner       = mapImportedOwner.emplace( makeImportedKey( file._importedPath ), file._assetPath );
+                    const bool bOutOfScope = pScope != nullptr && pScope->find( makeScopeKey( file._assetPath ) ) == pScope->end();
+                    if ( bOutOfScope )
+                        continue; // 범위 밖 원본은 읽지도 해시하지도 않는다
+                    if ( file._importedPath.empty() == false && owner.second == false )
+                    {
+                        ++inoutSummary._sourceCount;
+                        StringBuilder<constant::buffer::kMax512> problemBuilder;
+                        problemBuilder.appendFormat( "%#: '%#' 와 같은 결과에 씁니다 - 이름을 바꾸거나 하나를 지웁니다", file._assetPath, owner.first->second );
+                        inoutSummary._listProblem.push_back( string( problemBuilder.view() ) );
+                        continue;
+                    }
                     listFile.push_back( std::move( file ) );
                 }
 
@@ -633,12 +645,16 @@ namespace sw::editor
                         inoutSummary._listProblem.push_back( string( problemBuilder.view() ) );
                         continue;
                     }
+                    const string importedPath = importer.makeImportedPath( sourcePath );
+                    if ( mapImportedOwner.contains( makeImportedKey( importedPath ) ) )
+                        continue; // 남은 원본이 그 결과의 주인이다(`a.png` 를 지우고 `a.jpg` 를 두었다)
                     if ( bLiveAncestorBuilt == false )
                     {
-                        collectFootprintAncestors( listFile, uniqueLiveAncestor );
+                        for ( const auto& [importedKey, ownerPath] : mapImportedOwner )
+                            collectFootprintAncestors( importedKey, uniqueLiveAncestor );
                         bLiveAncestorBuilt = true;
                     }
-                    removeOrphanedResult( importer, importer.makeImportedPath( sourcePath ), uniqueLiveAncestor, inoutSummary );
+                    removeOrphanedResult( importer, importedPath, uniqueLiveAncestor, inoutSummary );
                 }
 
                 if ( mode == AssetImportMode::CheckOnly )
@@ -646,15 +662,15 @@ namespace sw::editor
                 writeStampIfChanged( stampPath, importer.getStampHeader(), mapCurrent, inoutSummary );
             }
 
-            /** @brief 남은 원본의 결과 자리(`makeFootprintKey`)마다 그 조상 자리(`a/b/c` → `a/b` · `a`)를 모읍니다. */
-            static void collectFootprintAncestors( const vector<SourceFile>& listLiveFile, unordered_set<string>& outUniqueAncestor )
+            /** @brief 결과 경로의 비교 열쇠입니다(구분자를 `/` 로 맞춘 소문자 — 파일 이름의 대소문자는 OS 가 구분하지 않는다). */
+            static string makeImportedKey( const string& importedPath ) { return StringUtil::toLower( FileUtil::normalizeSeparators( importedPath ).c_str() ); }
+
+            /** @brief 남은 원본의 결과 @p importedPath 의 자리(`makeFootprintKey`)에서 그 조상 자리(`a/b/c` → `a/b` · `a`)를 모읍니다. */
+            static void collectFootprintAncestors( const string& importedPath, unordered_set<string>& outUniqueAncestor )
             {
-                for ( const SourceFile& file : listLiveFile )
-                {
-                    const string key = makeFootprintKey( file._importedPath );
-                    for ( size_t slash = key.rfind( '/' ); slash != string::npos && slash > 0; slash = key.rfind( '/', slash - 1 ) )
-                        outUniqueAncestor.insert( key.substr( 0, slash ) );
-                }
+                const string key = makeFootprintKey( importedPath );
+                for ( size_t slash = key.rfind( '/' ); slash != string::npos && slash > 0; slash = key.rfind( '/', slash - 1 ) )
+                    outUniqueAncestor.insert( key.substr( 0, slash ) );
             }
 
             /**

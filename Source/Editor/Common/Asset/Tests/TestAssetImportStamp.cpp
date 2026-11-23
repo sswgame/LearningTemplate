@@ -34,7 +34,7 @@ namespace
         string_view getRawFolderName() const override { return "things_raw"; }
         string_view getStampHeader() const override { return "fake-things 1"; }
         string_view getImportedLabel() const override { return "thing"; }
-        bool        isSourceFile( string_view path ) const override { return FileUtil::hasExtension( path, ".src" ); }
+        bool        isSourceFile( string_view path ) const override { return FileUtil::hasAnyExtension( path, { ".src", ".alt" } ); }
         string      makeImportedPath( string_view sourcePath ) const override { return AssetImportStampUtil::makeImportedPath( sourcePath, "things_raw", "things", ".out" ); }
         uint64      computeSourceHash( string_view sourcePath, string_view /*assetPath*/ ) const override
         {
@@ -172,6 +172,32 @@ SW_TEST_CASE( AssetImportStampTest, SourceChangedWhileImportingIsNotRecorded )
 
     SW_EXPECT_TRUE( AssetImportStampUtil::importAll( root, edited, AssetImportMode::ImportStale, nullptr, cache ).isClean() );
     SW_EXPECT_TRUE( AssetImportStampUtil::importAll( root, edited, AssetImportMode::CheckOnly, nullptr, cache ).isClean() );
+}
+
+/**
+ * @brief [AssetImportStampTest] 확장자만 다른 두 원본이 한 결과에 쓰면 뒤의 원본을 문제로 알리고(대조 · 임포트 모두) 앞의 원본만 임포트한다
+ */
+SW_TEST_CASE( AssetImportStampTest, SourcesWritingOneResultAreReported )
+{
+    const DerivedDataCache cache{ vector<DerivedDataLayer>{ DerivedDataLayer{ test::makeScratchPath( "ImportDDC" ), DerivedDataAccess::ReadWrite } } };
+    const string           root = makeCheckout( "ImportCollision" );
+    SW_REQUIRE_TRUE( writeText( FileUtil::joinPath( root, "pack/things_raw/a.alt" ), "alt" ) );
+    const FakeThingImporter  importer;
+    const AssetImportSummary imported = AssetImportStampUtil::importAll( root, importer, AssetImportMode::ImportStale, nullptr, cache );
+    SW_REQUIRE_EQUAL( static_cast<size_t>( 1 ), imported._listProblem.size() );
+    SW_EXPECT_TRUE( imported._listProblem[0].find( "pack/things_raw/a.src" ) != string::npos );
+    SW_EXPECT_EQUAL( 1u, importer.getImportCount() );
+    // 다시 돌아도 앞 원본을 서로 덮어 다시 임포트하지 않는다.
+    SW_EXPECT_EQUAL( static_cast<size_t>( 1 ), AssetImportStampUtil::importAll( root, importer, AssetImportMode::ImportStale, nullptr, cache )._listProblem.size() );
+    SW_EXPECT_EQUAL( 1u, importer.getImportCount() );
+    // 앞 원본을 지우면 결과는 남은 원본의 것이다 — 사라진 원본의 결과로 지우지 않는다.
+    SW_REQUIRE_TRUE( FileUtil::removeFile( FileUtil::toDiskPath( FileUtil::joinPath( root, "pack/things_raw/a.alt" ) ) ) );
+    SW_EXPECT_TRUE( AssetImportStampUtil::importAll( root, importer, AssetImportMode::ImportStale, nullptr, cache ).isClean() );
+    SW_EXPECT_TRUE( FileUtil::exists( FileUtil::toDiskPath( FileUtil::joinPath( root, "pack/things/a.out" ) ) ) );
+    SW_REQUIRE_TRUE( writeText( FileUtil::joinPath( root, "pack/things_raw/a.alt" ), "alt" ) );
+    // 범위를 정한 임포트(핫 리로드)도 범위 밖 원본의 결과를 덮지 않는다.
+    SW_EXPECT_EQUAL( static_cast<size_t>( 1 ), AssetImportStampUtil::importSources( root, importer, vector<string>{ "pack/things_raw/a.src" }, nullptr, cache )._listProblem.size() );
+    SW_EXPECT_EQUAL( 2u, importer.getImportCount() ); // 앞에서 a.src 를 한 번 더 임포트했다
 }
 
 /**
