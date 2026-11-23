@@ -36,6 +36,7 @@ namespace sw
         {
             uint64               _key{ 0 };
             RHIPipelineStateDesc _desc{};
+            uint32               _shaderGeneration{ 0 }; ///< 청할 때의 셰이더 세대(`RenderPSOCache`) — 만드는 사이 셰이더가 바뀌었으면 결과를 버린다
         };
 
         /** @brief 만든 결과입니다. `_handle` 이 0 이면 실패입니다. 가져간 쪽이 소유합니다. */
@@ -44,6 +45,7 @@ namespace sw
             uint64                 _key{ 0 };
             RHIPipelineStateDesc   _desc{};
             RHIPipelineStateHandle _handle{ 0 };
+            uint32                 _shaderGeneration{ 0 }; ///< `Job` 의 것 그대로
         };
 
         MaterialPSOBuilder() = default;
