@@ -177,11 +177,6 @@ namespace sw
         [[nodiscard]] static bool readSaveState( const uint8* pData, size_t size, SaveState& outState );
         /** @brief 세이브의 상태를 조각에 얹습니다(없는 조각은 만든다). 매니저를 비운 뒤(`onSceneCleared` — 조각이 문서 내용으로 돌아왔다) 부릅니다. 올라 있는 조각은 먼저 상태 없이 내립니다. */
         void applySaveState( SaveState state );
-        /**
-         * @brief 셀이 들고 있을 수 있는 엔티티(읽지 않은 쿠킹 내용 · 떠 둔 상태 · 들어온 엔티티, 인스턴스 멤버 제외)의 가장 큰 파일 id 입니다. 스트리밍하지 않으면 0 입니다.
-         * @details 씬이 새 오브젝트에 파일 id 를 줄 때(`Scene::computeNextFileID`) 이 위에서 고른다 — 내려간 셀의 엔티티와 겹치면 그 셀이 오를 때 참조가 엉뚱한 오브젝트에 붙는다.
-         */
-        uint64 getMaxCellFileID() const;
         /** @brief 오브젝트(또는 그 조상)가 셀에 들어 있으면 true 입니다 — 세이브의 씬 섹션이 빼는 오브젝트입니다(셀 몫은 `writeSaveState` 가 싣는다). */
         bool isCellObject( uint64 objectID ) const;
         /** @brief 오브젝트 자신이 이 서비스의 목록에 들어 있으면 true 입니다(조상은 보지 않는다) — 조상이 다른 묶음에 든 오브젝트를 두 번 뜨지 않게 가린다(`Scene::collectCellGroup`). */
@@ -347,7 +342,6 @@ namespace sw
         vector<uint32>                        _listHLODDirty;        ///< 대리를 다시 맞출 조각(올랐거나 내려갔다 · 대리가 아직 서지 않았다)
         vector<uint32>                        _listLayeredHLOD;      ///< 레이어가 있고 대리가 있는 조각 — 레이어를 껐다 켜면 대리가 다시 서므로 프레임마다 본다
         unordered_map<uint64, uint32>         _mapObjectSlot;        ///< 다 지었거나 옮겨 온 오브젝트 id → 든 조각(`_listObjectID` 의 거울)
-        uint64                                _maxFileCellFileID;    ///< 파일에 남은 셀 엔티티의 가장 큰 파일 id(`beginWorld`)
         vector<StreamingSource>               _listExternalSource;   ///< `setExternalSources`
         StreamingSource                       _cameraSource;         ///< `setCameraSource`. 반경은 월드 설정의 로딩 반경
         uint8                                 _bCameraSourceSet : 1; ///< 카메라 원점을 한 번이라도 받았다

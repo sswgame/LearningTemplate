@@ -2,13 +2,107 @@
 
 #include "Engine/Graphics/Shader/Compile/ShaderSource.h"
 
+#include "Core/Algorithm/VectorUtil.h"
+#include "Core/Container/unordered_set.h"
 #include "Core/File/FileUtil.h"
+#include "Core/String/StringBuilder.h"
 #include "Core/String/StringUtil.h"
 
 #include "Engine/Content/AssetPaths.h"
+#include "Engine/Content/CookJob.h"
 #include "Engine/Foundation/EngineDefines.h"
-#include "Engine/Graphics/Shader/Compile/ShaderCookStamp.h"
 #include "Engine/Graphics/Shader/Compile/ShaderCooker.h"
+
+namespace sw
+{
+    namespace
+    {
+        struct ShaderSourceInternal
+        {
+            /** @brief 문제 한 줄을 서식으로 만들어 더합니다. */
+            template <typename... Args>
+            static void appendProblem( vector<string>& outListProblem, const utf8* pFormat, const Args&... args )
+            {
+                StringBuilder<constant::buffer::kMax512> sb;
+                sb.appendFormat( pFormat, args... );
+                outListProblem.emplace_back( sb.c_str(), sb.size() );
+            }
+
+            /** @brief 소스 절대 경로를 @p shadersDir 기준 소문자 상대 경로로 바꿉니다. 그 아래가 아니면 빈 글입니다. */
+            static string makeRelativeKey( string_view absSourcePath, const string& shadersDir )
+            {
+                const string norm = FileUtil::normalizeSeparators( absSourcePath );
+                if ( norm.size() <= shadersDir.size() + 1 )
+                    return string{};
+                return StringUtil::toLower( norm.substr( shadersDir.size() + 1 ).c_str() );
+            }
+
+            /** @brief 도메인 발견의 기준인 우선순위 설정이 쓸 수 있으면 true 입니다. 비었거나 도메인 종류(engine · common)가 빠졌으면 오류를 남깁니다. */
+            [[nodiscard]] static bool validatePriority( const vector<string>& listPriority )
+            {
+                if ( listPriority.empty() )
+                {
+                    SW_LOG_ERROR_ID( "ShaderSource.ShaderDomainsCannotFound", "Shader domains cannot be found: _listResourcePriority (EngineConfig.json) is empty" );
+                    return false;
+                }
+                for ( const utf8* pKind : { constant::path::kEnginePack, constant::path::kCommonPack } )
+                {
+                    if ( VectorUtil::contains( listPriority, string( pKind ) ) == false )
+                    {
+                        SW_LOG_ERROR_ID( "ShaderSource.ShaderDomainsCannotFound2", "Shader domains cannot be found: _listResourcePriority (EngineConfig.json) has no '%#' (the shader include root kind)", pKind );
+                        return false;
+                    }
+                }
+                return true;
+            }
+
+            /** @brief @p shadersDir(`<도메인>/shaders`)의 `.hlsli` 가 include 루트 도메인의 `.hlsli` 와 같은 상대 경로이면 그 쌍을 적습니다. 문제가 없으면 true 입니다. */
+            [[nodiscard]] static bool findShadowedInDir( const vector<ShaderIncludeRootDomain>& listRootDomain, const string& shadersDir, vector<string>& outListProblem )
+            {
+                vector<string> listOwn;
+                if ( FileUtil::isDirectory( FileUtil::toDiskPath( shadersDir ) ) && FileUtil::collectFiles( FileUtil::toDiskPath( shadersDir ), ".hlsli", listOwn, true ) == false )
+                {
+                    appendProblem( outListProblem, "%#: the headers could not all be listed - shadowing is not known", shadersDir );
+                    return false;
+                }
+                unordered_set<string> setOwnKey;
+                for ( const string& ownPath : listOwn )
+                {
+                    const string normOwn = FileUtil::normalizeSeparators( ownPath );
+                    if ( normOwn.find( "/bin/" ) == string::npos )
+                        setOwnKey.insert( makeRelativeKey( normOwn, shadersDir ) );
+                }
+
+                const string ownDirLower = StringUtil::toLower( shadersDir.c_str() );
+                bool         bClean      = true;
+                for ( const ShaderIncludeRootDomain& rootDomain : listRootDomain )
+                {
+                    const string& rootDir = rootDomain._shadersFolder.str();
+                    if ( StringUtil::toLower( rootDir.c_str() ) == ownDirLower )
+                        continue;
+                    vector<string> listRootHeader;
+                    if ( FileUtil::collectFiles( FileUtil::toDiskPath( rootDir ), ".hlsli", listRootHeader, true ) == false )
+                    {
+                        appendProblem( outListProblem, "%#: the headers could not all be listed - shadowing is not known", rootDir );
+                        bClean = false;
+                        continue;
+                    }
+                    for ( const string& headerPath : listRootHeader )
+                    {
+                        const string normHeader = FileUtil::normalizeSeparators( headerPath );
+                        const string key        = normHeader.find( "/bin/" ) == string::npos ? makeRelativeKey( normHeader, rootDir ) : string{};
+                        if ( key.empty() == false && setOwnKey.find( key ) != setOwnKey.end() )
+                        {
+                            appendProblem( outListProblem, "%#: header '%#' has the same name as '%#/shaders/%#' and would hide it (rename it)", shadersDir, key, rootDomain._domain, key );
+                            bClean = false;
+                        }
+                    }
+                }
+                return bClean;
+            }
+        };
+    } // namespace
+} // namespace sw
 
 namespace sw
 {
@@ -72,7 +166,7 @@ namespace sw
     {
     }
 
-    optional<AbsolutePath> ShaderIncludeResolver::findInclude( const ShaderCompileInput& input, string_view includeName, vector<uint8>& outBytes, vector<string>& outListAbsentCandidate ) const
+    optional<AbsolutePath> ShaderIncludeResolver::findInclude( const ShaderCompileInput& input, string_view includeName, vector<uint8>& outBytes ) const
     {
         for ( const AbsolutePath& root : input._listIncludeRoot )
         {
@@ -80,26 +174,30 @@ namespace sw
             const optional<AbsolutePath> found     = readInclude( candidate, outBytes );
             if ( found.has_value() )
                 return found;
-            if ( isAbsentCandidate( candidate ) )
-                outListAbsentCandidate.push_back( candidate );
         }
         return nullopt;
-    }
-
-    bool ShaderIncludeResolver::isAbsentCandidate( string_view candidatePath )
-    {
-        return FileUtil::isAbsolutePath( candidatePath ) && FileUtil::exists( FileUtil::toDiskPath( candidatePath ) ) == false;
     }
 
     optional<AbsolutePath> ShaderIncludeResolver::readInclude( string_view candidatePath, vector<uint8>& outBytes ) const
     {
         outBytes.clear();
         const optional<AbsolutePath> candidate = AbsolutePath::tryMake( candidatePath );
-        if ( candidate.has_value() == false || FileUtil::isRegularFile( *candidate ) == false )
+        if ( candidate.has_value() == false )
             return nullopt;
-        if ( FileUtil::readFile( *candidate, outBytes ) == false ) // 실패 로그는 readFile 이 남긴다
+        if ( FileUtil::isRegularFile( *candidate ) == false )
+        {
+            CookJob::allowMissingDiskRead( candidate->str() ); // 작업이 없으면 적지 않는다
+            return nullopt;
+        }
+        // 실패 로그는 readFile 이, 입력으로 적지 못한 까닭은 작업이 남긴다.
+        if ( FileUtil::readFile( *candidate, outBytes ) == false || CookJob::allowDiskRead( candidate->str(), outBytes.data(), outBytes.size() ) == false )
             return nullopt;
         return candidate;
+    }
+
+    bool ShaderIncludeResolver::findShadowedHeaders( const AbsolutePath& shadersFolder, vector<string>& outListProblem ) const
+    {
+        return ShaderSourceInternal::findShadowedInDir( _listRootDomain, shadersFolder.str(), outListProblem );
     }
 
     ShaderSourceResolver::ShaderSourceResolver( const AssetPaths& assetPaths, ShaderIncludeResolver includeResolver )
@@ -108,10 +206,20 @@ namespace sw
     {
     }
 
+    bool ShaderSourceResolver::collectIncludeRootDomains( const vector<string>& listPriority, vector<string>& outListDomain )
+    {
+        outListDomain.clear();
+        if ( ShaderSourceInternal::validatePriority( listPriority ) == false )
+            return false;
+        outListDomain.emplace_back( constant::path::kEnginePack );
+        outListDomain.emplace_back( constant::path::kCommonPack );
+        return true;
+    }
+
     optional<ShaderSourceResolver> ShaderSourceResolver::make( const AssetPaths& assetPaths )
     {
         vector<string> listDomain;
-        if ( ShaderCookStamp::collectIncludeRootDomains( assetPaths.getSearchPriority(), listDomain ) == false )
+        if ( collectIncludeRootDomains( assetPaths.getSearchPriority(), listDomain ) == false )
             return nullopt; // 오류는 위 함수가 남겼다
         vector<ShaderIncludeRootDomain> listRootDomain;
         for ( string& domain : listDomain )

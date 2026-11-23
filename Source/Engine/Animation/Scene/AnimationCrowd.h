@@ -19,6 +19,7 @@
 #include "Core/Math/MatrixMath.h"
 #include "Core/Memory/IdentityToken.h"
 #include "Core/Memory/Memory.h"
+#include "Core/Task/TaskTypes.h"
 #include "Core/Time/TimeRollover.h"
 
 #include "Engine/Animation/Scene/AnimationSkinSlot.h"
@@ -33,6 +34,8 @@ namespace sw
 
 namespace sw
 {
+    struct MeshVertexAnimation;
+
     class AnimationClip;
     class Mesh;
     class Skeleton;
@@ -294,13 +297,13 @@ namespace sw
 
         /**
          * @brief 스킨 원본, 스켈레톤, 클립의 VAT 메시입니다. 쿠킹본(`<메시 경로>.<클립>.vat`, 배포본의 팩)이 있으면 읽고, 없으면 처음 쓸 때 베이크합니다
-         *        (`MeshVertexAnimationBaker`. 쿠커와 같은 함수입니다). 베이크하지 못하면 nullptr 입니다.
-         * @details 같은 (원본, 클립)을 쓰는 먼 캐릭터가 모두 이 메시 하나를 그려 한 배치가 된다.
+         *        (`MeshVertexAnimationBaker`. 쿠커와 같은 함수입니다). 아직 준비되지 않았거나 베이크하지 못하면 nullptr 입니다 — 유닛은 그동안 묶음 포즈로 그린다.
+         * @details 같은 (원본, 클립)을 쓰는 먼 캐릭터가 모두 이 메시 하나를 그려 한 배치가 된다. 읽기 · 베이크(프레임 × 정점)는 워커가 하고 게임 스레드는 끝난 결과만 받는다 —
+         *          처음 멀어진 군중이 그 프레임을 멈추지 않는다(언리얼이 준비되지 않은 자원 대신 다음 단계를 그리는 자리). 결정적 실행이면 그 자리에서 끝낸다.
          * @param meshPath 스킨 원본의 메시 경로(`.mesh`)입니다. 쿠킹본 이름을 만드는 데 씁니다. 비었으면 베이크만 합니다.
          */
-        shared_ptr<Mesh> findVertexAnimationMesh( const shared_ptr<Mesh>& sourceMesh, const Skeleton& skeleton, const AnimationClip& clip, bool bAnchorRootMotion,
-                                                  string_view meshPath );
-        /** @brief 쿠킹본에서 읽은 VAT 수입니다(진단과 테스트용). */
+        shared_ptr<Mesh> findVertexAnimationMesh( const shared_ptr<Mesh>& sourceMesh, const shared_ptr<const Skeleton>& skeleton, const shared_ptr<const AnimationClip>& clip,
+                                                  bool bAnchorRootMotion, string_view meshPath );
 
         /** @brief 군중 시계(초)입니다. 셰이더로는 접어 보낸다(`getShaderClock`). */
         float64 getClock() const { return _clock; }
@@ -315,21 +318,37 @@ namespace sw
         const vector<unique_ptr<AnimationCrowdBucket>>& getBuckets() const { return _listBucket; }
         /** @brief 지난 `evaluateBuckets` 가 평가한 묶음 수입니다. */
         uint32 getEvaluatedBucketCount() const { return _evaluatedBucketCount; }
-        /** @brief 베이크해 둔 VAT 메시 수입니다. */
-        uint32 getVertexAnimationMeshCount() const { return static_cast<uint32>( _listVertexAnimation.size() ); }
-        /** @brief 모두 비웁니다(묶음을 가리키는 유닛이 없을 때, 시스템이 종료할 때 부릅니다). */
+        /** @brief 모두 비웁니다(묶음을 가리키는 유닛이 없을 때, 시스템이 종료할 때 부릅니다). 굽는 중인 VAT 는 끝나기를 기다린다. */
         void clear();
 
     private:
-        /** @brief 베이크한 VAT 메시 하나입니다. */
+        /** @brief VAT 하나의 읽기 · 베이크 일입니다. 워커는 여기 든 사본 · 공유 자원만 읽고 결과를 제 칸에 쓴다(원본 메시를 다시 읽어도 겹치지 않는다). */
+        struct VertexAnimationBake
+        {
+            shared_ptr<Mesh>                _skinMesh; ///< 스킨이 든 원본의 사본(게임 스레드가 뜬다)
+            shared_ptr<const Skeleton>      _skeleton;
+            shared_ptr<const AnimationClip> _clip;
+            shared_ptr<MeshVertexAnimation> _animation; ///< 워커가 채운다
+            string                          _cookedPath;
+            TaskHandle                      _task;
+            float32                         _framesPerSecond{ 0.0f };
+            uint8                           _bAnchorRootMotion{ SW_FALSE };
+            uint8                           _bReady{ SW_FALSE }; ///< 워커가 쓰고, 태스크가 끝난 뒤 게임 스레드가 읽는다
+
+            void run();
+        };
+        /** @brief VAT 메시 하나입니다. 키가 가리키는 스켈레톤 · 클립을 함께 들어 지운 자원의 주소가 다른 자원의 키로 다시 쓰이지 않는다. */
         struct VertexAnimationEntry
         {
-            IdentityToken        _skinDataID{};
-            const Skeleton*      _pSkeleton{ nullptr };
-            const AnimationClip* _pClip{ nullptr };
-            uint8                _bAnchorRootMotion{ SW_FALSE };
-            shared_ptr<Mesh>     _mesh;
+            shared_ptr<const Skeleton>      _skeleton;
+            shared_ptr<const AnimationClip> _clip;
+            shared_ptr<Mesh>                _mesh; ///< 끝났고 성공했을 때만 있다
+            unique_ptr<VertexAnimationBake> _bake; ///< 굽는 중일 때만 있다
         };
+        /** @brief 끝난 일의 결과로 VAT 메시를 만들고 일을 놓습니다(게임 스레드). */
+        static void finishVertexAnimation( VertexAnimationEntry& inoutEntry );
+        /** @brief 굽는 중인 일이 끝나기를 기다립니다(게임 스레드 — 비우기 · 해제). */
+        void waitForVertexAnimations();
         /** @brief 클립 한 바퀴 안에서 유닛 시간에 가장 가까운 변형 구간을 고릅니다. */
         uint32 selectVariation( const AnimationSharedPoseRequest& request, float32 duration ) const;
         /** @brief 키의 묶음을 찾고, 없으면 스킨 원본의 사본 메시로 만듭니다. 새로 만들었으면 @p outbCreated 가 true 입니다(부르는 쪽이 같은 키를 한 번 더 찾지 않는다). */
@@ -341,7 +360,8 @@ namespace sw
         vector<unique_ptr<AnimationCrowdBucket>>                                                   _listBucket;
         unordered_map<AnimationCrowdBucketKey, AnimationCrowdBucket*, AnimationCrowdBucketKeyHash> _mapBucket;
         vector<AnimationCrowdBucket*>                                                              _listScratchEvaluate;
-        vector<VertexAnimationEntry>                                                               _listVertexAnimation;
+        unordered_map<AnimationCrowdBucketKey, VertexAnimationEntry, AnimationCrowdBucketKeyHash>  _mapVertexAnimation;
+        TaskStageHandle                                                                            _vertexAnimationStage; ///< VAT 읽기 · 베이크 태스크
         float64                                                                                    _clock;
         uint32                                                                                     _frameIndex; ///< `beginFrame` 마다 오른다(섞기 묶음의 시작 프레임)
         uint32                                                                                     _evaluatedBucketCount;

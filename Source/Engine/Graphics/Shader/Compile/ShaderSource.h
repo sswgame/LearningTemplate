@@ -24,7 +24,7 @@ namespace sw
      * @class ShaderSourceID
      * @brief 셰이더 소스 하나의 리소스 경로입니다(`<도메인>/…/shaders/<상대>.hlsl` — `engine/shaders/forward_lit.hlsl`). 빈 값은 "소스 없음" 입니다.
      * @details 디스크 경로가 아니다 — 문자열에서 암시적으로 만들 수 없어(`AssetID` 와 같다) 쿠커가 절대 경로를 넣던 자리가 컴파일을 지나지 못한다.
-     *          경로 첫 칸(도메인) 뒤에 `shaders` 라는 폴더 칸이 있어야 한다(`getShadersFolder`). 그 폴더가 include 검색 · 쿠킹 스탬프 · 바이너리 자리의 기준이다.
+     *          경로 첫 칸(도메인) 뒤에 `shaders` 라는 폴더 칸이 있어야 한다(`getShadersFolder`). 그 폴더가 include 검색 · 바이너리 자리의 기준이다.
      */
     class SW_API ShaderSourceID
     {
@@ -92,7 +92,7 @@ namespace sw
     struct ShaderCompileInput
     {
         AbsolutePath         _source;          ///< 주 소스 파일(`.hlsl`)
-        AbsolutePath         _shadersFolder;   ///< 소스가 든 도메인의 `shaders` 폴더 — 쿠킹 스탬프 키 · 가림 검사의 기준
+        AbsolutePath         _shadersFolder;   ///< 소스가 든 도메인의 `shaders` 폴더 — 가림 검사의 기준
         vector<AbsolutePath> _listIncludeRoot; ///< `#include` 검색 순서: 소스 폴더 → include 루트 도메인(engine · common)의 `shaders`
     };
 
@@ -102,14 +102,14 @@ namespace sw
      */
     struct ShaderIncludeRootDomain
     {
-        string       _domain;        ///< 도메인 이름(스탬프 헤더 키의 `<도메인>:` 앞부분)
+        string       _domain;        ///< 도메인 이름(문제 글의 이름)
         AbsolutePath _shadersFolder; ///< 그 도메인의 `shaders` 폴더
     };
 
     /**
      * @class ShaderIncludeResolver
-     * @brief `#include` 를 푸는 규칙 하나입니다. DXC include 처리기 · FXC include 처리기 · 쿠킹 스탬프 · 가림 검사가 같은 루트 목록을 함께 씁니다.
-     * @details 예전에는 include 루트를 셋이 따로 풀었다 — 컴파일러는 리소스 경로로, 스탬프 · 가림 검사는 "리소스 루트/<도메인>/shaders" 로 이어 붙여 붙인 디스크 도메인의 헤더가 스탬프에 안 보였다.
+     * @brief `#include` 를 푸는 규칙 하나입니다. DXC include 처리기 · FXC include 처리기 · 가림 검사가 같은 루트 목록을 함께 씁니다.
+     * @details 예전에는 include 루트를 셋이 따로 풀었다 — 컴파일러는 리소스 경로로, 쿠킹 판정 · 가림 검사는 "리소스 루트/<도메인>/shaders" 로 이어 붙여 붙인 디스크 도메인의 헤더가 판정에 안 보였다.
      *          값 형식이라 병렬 컴파일 · 쿠킹에서 함께 읽어도 된다(읽기 전용).
      */
     class SW_API ShaderIncludeResolver
@@ -121,15 +121,19 @@ namespace sw
         [[nodiscard]] const vector<ShaderIncludeRootDomain>& getRootDomains() const { return _listRootDomain; }
         /**
          * @brief 이름 그대로 적힌 include @p includeName 을 @p input 의 검색 순서로 찾아 읽습니다(FXC — 이름만 준다). 못 찾으면 빈 값입니다.
-         * @param outListAbsentCandidate 찾은 자리보다 앞에서 찾아봤지만 없던 후보(절대 경로)를 뒤에 붙입니다 — 거기에 헤더가 생기면 가려지므로 의존이다(`ShaderCompileResult::_listIncludedFile`).
+         * @details 읽은 파일과 찾아봤지만 없던 앞자리 후보를 이 스레드의 작업(`CookJob`)에 입력으로 적는다 — 그 자리에 헤더가 생기면 가려지므로 "없음" 도 의존이다.
          */
-        [[nodiscard]] optional<AbsolutePath> findInclude( const ShaderCompileInput& input, string_view includeName, vector<uint8>& outBytes, vector<string>& outListAbsentCandidate ) const;
-        /** @brief @p candidatePath 가 없는 자리를 가리키는 절대 경로이면 true 입니다(include 처리기가 없던 후보를 의존으로 적을지 정한다). */
-        [[nodiscard]] static bool isAbsentCandidate( string_view candidatePath );
+        [[nodiscard]] optional<AbsolutePath> findInclude( const ShaderCompileInput& input, string_view includeName, vector<uint8>& outBytes ) const;
         /**
          * @brief 컴파일러가 고른 후보 경로 @p candidatePath 를 읽습니다(DXC — 검색 폴더마다 후보를 묻는다). 엄격한 절대 경로인 정규 파일만 받습니다. 없는 후보는 로그 없이 빈 값입니다(다음 폴더로 넘어간다).
          */
         [[nodiscard]] optional<AbsolutePath> readInclude( string_view candidatePath, vector<uint8>& outBytes ) const;
+        /**
+         * @brief 소스 도메인의 `shaders` 폴더 @p shadersFolder 의 헤더가 include 루트(engine · common)의 헤더와 같은 상대 경로를 가지면 그 쌍을 @p outListProblem 에 적습니다.
+         * @details include 검색은 자기 폴더가 먼저라 같은 이름의 헤더가 엔진 헤더를 조용히 가린다. 가림은 고르지 않고 오류로 멈춘다. 컴파일과 쿠킹본 판정이 부른다.
+         * @return 문제가 없으면 true 입니다. 헤더 목록을 다 얻지 못했을 때도 false 입니다.
+         */
+        [[nodiscard]] bool findShadowedHeaders( const AbsolutePath& shadersFolder, vector<string>& outListProblem ) const;
 
     private:
         vector<ShaderIncludeRootDomain> _listRootDomain;
@@ -155,6 +159,11 @@ namespace sw
 
     private:
         ShaderSourceResolver( const AssetPaths& assetPaths, ShaderIncludeResolver includeResolver );
+        /**
+         * @brief 셰이더 `#include` 가 자기 폴더 다음으로 찾는 도메인 **종류**(`engine`, `common` 순)를 돌려줍니다(`<도메인>/shaders`).
+         * @return @p listPriority 에 두 종류 중 하나라도 없으면 오류를 남기고 false 입니다.
+         */
+        [[nodiscard]] static bool collectIncludeRootDomains( const vector<string>& listPriority, vector<string>& outListDomain );
 
     private:
         const AssetPaths*     _pAssetPaths;

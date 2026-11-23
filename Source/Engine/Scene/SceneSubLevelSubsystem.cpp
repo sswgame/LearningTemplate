@@ -270,6 +270,7 @@ namespace sw
     void SceneSubLevelSubsystem::beginBuild( SubLevel& subLevel )
     {
         // 떠 둔 상태(세이브)에는 앵커가 엔티티로 들어 있다 — 그때는 짓기가 앵커를 함께 세운다.
+        _pScene->recordWideFileID( subLevel._anchorFileID ); // 떠 둔 상태의 앵커는 인스턴스 멤버가 아니라 짓기가 넓은 id 인 줄 모른다
         bool bAnchorInNodes{ false };
         for ( const SceneDocument::SceneObjectNode& node : subLevel._listNode )
         {
@@ -378,30 +379,6 @@ namespace sw
         return false;
     }
 
-    uint64 SceneSubLevelSubsystem::getMaxHeldFileID() const
-    {
-        uint64 maxFileID = 0;
-        for ( const unique_ptr<SubLevel>& pSubLevel : _listSubLevel )
-        {
-            for ( const SceneDocument::SceneObjectNode& node : pSubLevel->_listNode )
-            {
-                if ( node._instanceAnchorFileID == 0 && node._fileID != pSubLevel->_anchorFileID )
-                    maxFileID = MathUtil::max( maxFileID, node._fileID );
-            }
-        }
-        return maxFileID;
-    }
-
-    bool SceneSubLevelSubsystem::isAnchorFileID( const uint64 fileID ) const
-    {
-        for ( const unique_ptr<SubLevel>& pSubLevel : _listSubLevel )
-        {
-            if ( pSubLevel->_anchorFileID == fileID )
-                return true;
-        }
-        return false;
-    }
-
     void SceneSubLevelSubsystem::writeSaveState( vector<uint8>& outBytes ) const
     {
         Archive                 arch;
@@ -480,6 +457,8 @@ namespace sw
                 continue;
             }
             SubLevel& subLevel = pushSubLevel( saved._name, saved._scenePath, saved._placement, std::move( saved._listNode ) );
+            scene.recordWideFileID( subLevel._anchorFileID );
+            scene.recordHeldFileIDs( subLevel._listNode ); // 떠 두며 준 파일 id(중첩 부품 · 붙은 자손) — 짓기 전에 새 id 와 겹치지 않게
             if ( saved._bRead == false )
                 requestDocument( subLevel );
         }

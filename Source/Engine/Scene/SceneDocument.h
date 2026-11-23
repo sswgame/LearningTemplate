@@ -183,7 +183,7 @@ namespace sw
             uint64                  _contentOffset{ 0 };  ///< 쿠킹본 안 셀 내용(엔티티 목록)의 시작 바이트(`readStreamingCellContent` 로 푼다)
             uint64                  _contentSize{ 0 };    ///< 셀 내용의 바이트 수. 0 이면 내용이 `_listSceneObjectNode` 에 있다(메모리에서 나눈 문서)
             /// 이 조각의 HLOD 대리 엔티티(기본 목록 `_listSceneObjectNode` 에 든 늘 올라 있는 엔티티)의 파일 id — 쿠커가 조각의 정적 메시를 인스턴스 메시로 모아 굽는다
-            /// (`SceneCooker::splitStreamingCells`). 0 이면 대리가 없다(정적 메시가 없는 조각). 스트리밍은 조각이 올라 있지 않을 때만 대리를 켠다
+            /// (`SceneCellSplitter::split`). 0 이면 대리가 없다(정적 메시가 없는 조각). 스트리밍은 조각이 올라 있지 않을 때만 대리를 켠다
             uint64 _hlodFileID{ 0 };
             /// 이 조각 엔티티들의 경계(셀 사각형은 넣지 않은 값) — 쿠커가 나눌 때 잰다. 크기 있는 엔티티가 없으면 빈 경계이고, 스트리밍은 셀 사각형과 합쳐 쓴다
             StreamingCellBounds _contentBounds{};
@@ -201,7 +201,7 @@ namespace sw
         /**
          * @brief 셀 엔티티(인스턴스 멤버 제외)의 가장 큰 파일 id 입니다 — 쿠킹본 머리에 실린다(`saveBinary` 가 셀 내용에서 세고 `loadBinary` 가 읽는다).
          * @details 색인만 읽은 셀은 내용을 모른다. 씬이 새 오브젝트에 줄 파일 id(`Scene::computeNextFileID`)가 내려간 셀의 엔티티와 겹치지 않게 이 값 위에서 고른다.
-         *          메모리에 든 셀(쿠커가 나눈 문서 · 테스트)은 0 이어도 된다 — 스트리밍이 내용에서 다시 센다(`SceneStreamingSubsystem::getMaxCellFileID`).
+         *          메모리에 든 셀(쿠커가 나눈 문서 · 테스트)은 0 이어도 된다 — 스트리밍이 내용에서 다시 센다(`SceneStreamingSubsystem::beginWorld`).
          */
         uint64 _maxCellFileID{ 0 };
         bool   _bValid{ false }; ///< NOLINT(sw-bool-flag): 집합체다(중괄호 · 지정 초기화로 만든다) — C++17 비트필드는 기본값을 둘 수 없어 `T x;` 가 값을 남기지 않는다

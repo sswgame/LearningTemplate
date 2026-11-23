@@ -32,6 +32,7 @@ namespace sw
     {
         _pScene   = &scene;
         _settings = settings;
+        scene.recordHeldFileIDs( listLayeredNode ); // 켜지 않은 레이어의 엔티티는 오브젝트가 없다
         _listGroup.clear();
         _uniqueActiveLayer.clear();
         _mapObjectGroup.clear();
@@ -320,6 +321,7 @@ namespace sw
                 pGroup->_listObjectID.clear();
                 pGroup->_bBuilt = SW_FALSE;
             }
+            _pScene->recordHeldFileIDs( saved._listHeldNode );
             pGroup->_listHeldNode = std::move( saved._listHeldNode );
             pGroup->_bStateHeld   = saved._bStateHeld;
             pGroup->_bFailed      = SW_FALSE;

@@ -7,7 +7,7 @@
  * - 앵커: 하위 레벨마다 씬 컴포넌트 하나를 가진 오브젝트를 놓은 자리(위치 · 회전)에 세운다. 늘 올라 있음(`GameObject::_bAlwaysLoaded`)이라 스트리밍 셀이 삼키지 않는다.
  * - 파일 id: 앵커는 이름에서 정한 넓은 값(`computeAnchorFileID`)이고 멤버는 내부 파일 id ^ 앵커 범위(`SceneDocument::computeInstanceIDScope`)다 — 파일 안 씬 인스턴스와 같은 규칙이라
  *   부착 · 핸들이 자기 하위 레벨 안에서 이어지고, 같은 씬을 두 번 더해도 겹치지 않는다. 이름이 같으면 프로세스가 달라도 id 가 같다(서버 · 클라이언트가 같은 하위 레벨을 각자 더해도
- *   MMO 정적 엔티티 `_staticID` · 넷 씬 번호가 맞는다). 앵커 id 는 씬의 다음 파일 id 셈에서 뺀다(`Scene::computeNextFileID` 가 묻는다).
+ *   MMO 정적 엔티티 `_staticID` · 넷 씬 번호가 맞는다). 앵커 id 는 짓기 앞에 넓은 id 로 알려 씬의 다음 파일 id 셈에서 뺀다(`Scene::recordWideFileID`).
  * - 이름: 멤버는 `<하위 레벨 이름>/<엔티티 이름>` 이다(씬 인스턴스와 같다).
  *
  * [읽기] 씬 문서는 더하는 순간 워커가 읽어 멤버 노드까지 만든다(언리얼 `LoadLevelInstance` · 유니티 `LoadSceneAsync` · Godot `load_threaded_request` 도 비동기다) — 게임 스레드는 디스크 · 파싱을
@@ -95,12 +95,8 @@ namespace sw
         void collectSubLevelNames( vector<string>& outListName ) const;
         /** @brief 오브젝트(또는 그 조상)가 하위 레벨의 앵커 · 멤버면 true 입니다 — 세이브의 씬 섹션 · 씬 문서 쓰기가 빼는 오브젝트입니다. */
         bool isSubLevelObject( uint64 objectID ) const;
-        /** @brief 아직 짓지 않은 하위 레벨의 엔티티(세이브에서 되돌린 것)가 든 좁은 파일 id 의 최댓값입니다(없으면 0) — 앵커 · 멤버의 넓은 id 는 세지 않는다. 새 파일 id 는 이 위에서 고른다. */
-        uint64 getMaxHeldFileID() const;
         /** @brief 오브젝트 자신이 이 서비스의 목록에 들어 있으면 true 입니다(조상은 보지 않는다) — 조상이 다른 묶음에 든 오브젝트를 두 번 뜨지 않게 가린다(`Scene::collectCellGroup`). */
         bool isListedObject( uint64 objectID ) const;
-        /** @brief 파일 id 가 하위 레벨 앵커의 것이면 true 입니다 — 씬이 다음 파일 id 를 셀 때 그 넓은 id 를 뺀다(앵커를 떠 둔 상태로 짓는 동안에도). */
-        bool isAnchorFileID( uint64 fileID ) const;
 
         /** @brief 이름 @p name 의 하위 레벨 앵커의 파일 id 입니다 — 넓은 값이라 씬 파일의 작은 id 와 겹치지 않고, 프로세스가 달라도 같다. */
         [[nodiscard]] static uint64 computeAnchorFileID( string_view name );

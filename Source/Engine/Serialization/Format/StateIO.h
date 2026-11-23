@@ -245,7 +245,11 @@ namespace sw
         /** @brief 개수 하나입니다. 읽을 때 원소마다 적어도 @p minBytesPerElement 바이트라 남은 바이트로 담을 수 없는 개수를 거절합니다. @p inoutCount 는 쓸 값을 넣어 부릅니다. */
         void count( uint32 minBytesPerElement, uint32& inoutCount );
 
-        /** @brief 개수 + 원소들입니다. 읽을 때 목록을 비우고 개수만큼 기본값으로 만든 뒤 원소마다 @p element 를 부릅니다. 거절되면 그 자리에서 멈춥니다. */
+        /**
+         * @brief 개수 + 원소들입니다. 읽을 때 목록을 비우고 기본값 원소를 하나 더할 때마다 @p element 를 부릅니다. 거절되면 그 자리에서 멈춥니다.
+         * @details 원소는 읽는 만큼만 만든다(`reflected` 의 목록과 같다) — 개수를 먼저 믿고 다 만들면 위조된 개수 하나가 남은 바이트 ÷ @p minBytesPerElement × 원소 크기만큼 메모리를 잡는다.
+         *          @p element 안에서 @p inoutList 를 바꾸지 않는다(지금 원소까지만 들어 있다).
+         */
         template <typename T, typename TElement>
         void list( vector<T>& inoutList, uint32 minBytesPerElement, TElement&& element )
         {
@@ -256,17 +260,12 @@ namespace sw
                 return;
             }
             if ( isReading() )
-            {
                 inoutList.clear();
-                inoutList.resize( elementCount );
-            }
-            for ( T& entry : inoutList )
+            for ( uint32 index = 0; index < elementCount && isOk(); ++index )
             {
-                element( entry );
-                if ( isOk() == false )
-                {
-                    return;
-                }
+                if ( isReading() )
+                    inoutList.emplace_back();
+                element( inoutList[index] );
             }
         }
         /** @brief 정수 · 이름 같은 값의 목록입니다. */

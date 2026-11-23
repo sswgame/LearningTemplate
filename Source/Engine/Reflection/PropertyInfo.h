@@ -47,6 +47,9 @@ namespace sw
 {
     struct PropertyDesc;
     struct PropertyValueBindings;
+    struct ReflectValueFacts;
+
+    class TypeRegistry;
 
     /// @brief 프로퍼티 하나의 리플렉션 정보입니다. 오프셋, 타입, 별칭, 컨테이너 래퍼를 담습니다.
     struct SW_API PropertyInfo
@@ -173,6 +176,13 @@ namespace sw
         const ReflectValueBinding* findValueBinding() const noexcept;
         const ReflectValueBinding* findElementBinding() const noexcept;
         const ReflectValueBinding* findKeyBinding() const noexcept;
+        /**
+         * @brief 값(`_typeName`) · 원소(`_elementTypeName`) 형식의 레지스트리 사실(형식 · 열거형 · 내장형 자리)입니다. 값마다 이름으로 형식을 찾는 자리가 이것 하나를 쓴다.
+         * @details 엔진 레지스트리면 세대 묶음에서 원자 읽기로 답한다(이름 해시 조회 · 공유 잠금이 없다). 묶음이 없거나(기본 생성) 레지스트리를 따로 준 자리는 이름으로 찾는다 —
+         *          묶음은 엔진 레지스트리의 사실이다. 언리얼 `FStructProperty::Struct` · `FEnumProperty::Enum` 처럼 프로퍼티가 풀린 형식을 들고 있는 자리다.
+         */
+        ReflectValueFacts resolveValueFacts( const TypeRegistry& registry ) const;
+        ReflectValueFacts resolveElementFacts( const TypeRegistry& registry ) const;
 
         /**
          * @brief 상태 직렬화 · 상태 해시가 원소 차례대로 싣는 시퀀스 래퍼입니다 — 중첩이 아니고, 원소를 제자리에서 쓰는(차례가 정해진) 시퀀스.

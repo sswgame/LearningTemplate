@@ -1,13 +1,21 @@
 # ==============================================================================
 # @file cmake/Modules/Build/HostTools.cmake
-# @brief 교차 빌드(웹 · Android)가 빌드 중에 쓰는 호스트 쪽 것(ReflectionParser · 쿠커 도구 판 기록)을 호스트 빌드에서 가져온다
-# @details 대상 툴체인으로 지은 도구는 이 기계에서 돌지 않는다 — 호스트 프리셋 빌드의 실행 파일을 IMPORTED 타깃으로 세운다
-#          (CMake 공식 교차 빌드 모양, 언리얼 UHT · 유니티 IL2CPP 도 호스트 도구다). 반사 단계 앞에 호스트 빌드의 그 타깃을 다시 지어
+# @brief 교차 빌드(웹 · Android)와 배포 빌드가 빌드 중에 쓰는 호스트 쪽 것(쿠킹하는 App · Server, 교차 빌드는 ReflectionParser · 쿠커 도구 판 기록도)을 호스트 개발 빌드에서 가져온다
+# @details 대상 툴체인으로 지은 도구는 이 기계에서 돌지 않고, 배포 구성에는 쿠커(DevTools)가 없다 — 호스트 프리셋 빌드의 실행 파일을 쓴다
+#          (CMake 공식 교차 빌드 모양, 언리얼 UHT · 쿡 커맨드렛 · 유니티 IL2CPP 도 호스트 · 에디터 도구다). 반사 단계 앞에 호스트 빌드의 그 타깃을 다시 지어
 #          (`SwHostReflectionParser`) 파서 소스 · 틀이 바뀌어도 낡은 파서로 돌지 않는다(언리얼 UBT 가 UHT 를 먼저 짓는 것과 같다).
 #          호스트 빌드가 구성되지 않았으면 구성이 멈춘다(폴백 없음).
 # ==============================================================================
 
-set(SW_HOST_BUILD_DIR "${CMAKE_SOURCE_DIR}/build/Ninja-Release" CACHE PATH "Host preset build folder whose ReflectionParser and vcpkg record cross builds use")
+# 전용 서버 팩은 서버 구성의 쿠커(Server)가 굽는다 — 서버가 모르는 형식은 그 실행 파일이 안다(`ClientOnlyTypes.json`). 그래서 서버 배포의 호스트는 서버 개발 빌드다.
+if(SW_TARGET_TYPE STREQUAL "Server")
+	set(default_host_preset "Ninja-Release-Server")
+elseif(CMAKE_HOST_WIN32)
+	set(default_host_preset "Ninja-Release")
+else()
+	set(default_host_preset "Linux-Release")
+endif()
+set(SW_HOST_BUILD_DIR "${CMAKE_SOURCE_DIR}/build/${default_host_preset}" CACHE PATH "Host development build folder that cooks shipping packs (and whose ReflectionParser and vcpkg record cross builds use)")
 
 if(CMAKE_HOST_WIN32)
 	set(host_exe_suffix ".exe")
@@ -18,8 +26,15 @@ else()
 endif()
 
 if(NOT EXISTS "${SW_HOST_BUILD_DIR}/CMakeCache.txt")
-	message(FATAL_ERROR "[HostTools] cross build needs a configured host build at '${SW_HOST_BUILD_DIR}'.\n"
-		"  Configure it first: cmake --preset Ninja-Release   (or set SW_HOST_BUILD_DIR to another host build folder)")
+	message(FATAL_ERROR "[HostTools] cross and shipping builds need a configured host development build at '${SW_HOST_BUILD_DIR}'.\n"
+		"  Configure it first: cmake --preset ${default_host_preset}   (or set SW_HOST_BUILD_DIR to another host build folder)")
+endif()
+unset(default_host_preset)
+
+# 배포 빌드(교차 아님)의 ReflectionParser · 쿠커 도구 판은 이 빌드의 것이다 — 쿠커 실행 파일만 호스트 빌드에서 빌린다(AssetAndToolTargets.cmake).
+if(NOT CMAKE_CROSSCOMPILING)
+	unset(host_exe_suffix)
+	return()
 endif()
 
 set(host_reflection_parser "${SW_HOST_BUILD_DIR}/BuildTools/ReflectionParser${host_exe_suffix}")

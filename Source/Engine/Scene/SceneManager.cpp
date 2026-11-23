@@ -32,7 +32,7 @@
 #include "Engine/Reflection/TypeRegistry.h"
 #include "Engine/Scene/ISceneRenderBinding.h"
 #include "Engine/Scene/Scene.h"
-#include "Engine/Scene/SceneCooker.h"
+#include "Engine/Scene/SceneCellSplitter.h"
 #include "Engine/Scene/SceneDocument.h"
 #include "Engine/Scene/ScenePlaySnapshot.h"
 #include "Engine/Scene/ScenePreloadList.h"
@@ -425,7 +425,7 @@ namespace sw
         }
         // 소스 문서는 셀이 없다 — 켜 두면 쿠커와 같은 나누기로 셀을 만든다(셀 내용은 메모리에 든다). 나누지 못하면 쿠킹과 같은 오류이고 씬을 짓지 않는다.
         const bool bSplitSourceCells = ok && gv_sceneStreamSourceCells && doc._sceneSettings._bStreaming && doc._listStreamingCell.empty();
-        if ( bSplitSourceCells && SceneCooker::splitStreamingCells( slot->_services, doc, doc._name ) == false )
+        if ( bSplitSourceCells && SceneCellSplitter::split( slot->_services, doc, doc._name ) == false )
         {
             SW_LOG_ERROR_ID( "SceneManager.SourceCellsNotSplit", "[SceneLoad] '%#' could not be split into streaming cells (gv_sceneStreamSourceCells) - it is not loaded", pathStr );
             ok = false;
@@ -561,7 +561,7 @@ namespace sw
             SW_LOG_WARNING_ID( "SceneManager.SceneSaveNoActive", "Scene save: no active scene" );
             return false;
         }
-        // 단계별 시간(비동기 저장 판단 — docs/NEXT.md 측정 씬 저장): 스냅숏(`serialize`)은 게임 스레드에 남고, 그 뒤 `base` · `write` 는 독립 값(`SceneDocument`)만 읽어 워커로 옮길 수 있는 몫이다.
+        // 씬 저장은 에디터 명령이라 끝날 때까지 기다린다(언리얼 · 유니티의 씬 저장도 동기다 — 저장이 끝난 것을 명령이 보고한다). 단계별 시간은 시나리오 `scenesave` 가 본다.
         SceneDocument doc{};
         {
             ScopedTimer serializeTimer{ "Scene.save.serialize" };

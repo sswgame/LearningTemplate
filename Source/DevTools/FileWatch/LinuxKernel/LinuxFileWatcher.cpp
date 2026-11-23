@@ -28,12 +28,12 @@ namespace sw
 
 namespace sw
 {
-    unique_ptr<FileWatcher> FileWatcher::createNative()
+    unique_ptr<FileWatcher> FileWatcher::createNative( FileWatcherKey key )
     {
-        return make_unique<LinuxFileWatcher>();
+        return make_unique<LinuxFileWatcher>( key );
     }
 
-    LinuxFileWatcher::LinuxFileWatcher()
+    LinuxFileWatcher::LinuxFileWatcher( FileWatcherKey /*key*/ )
         : _workerThread{}
         , _watchMutex{}
         , _mapWatchDescriptorToPath{}

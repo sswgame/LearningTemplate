@@ -25,7 +25,9 @@ namespace sw
 
         [[nodiscard]] bool initializeWindow( const utf8* pTitle, uint32 width, uint32 height ) override;
         void               destroy() override;
-        NativeSurfaceKind  getSurfaceKind() const override { return NativeSurfaceKind::WebCanvas; }
+        /** @brief DOM 콜백이 적어 둔 캔버스 크기 · 보임을 먼저 적용한 뒤 모은 입력을 넘깁니다. */
+        bool              processMessages() override;
+        NativeSurfaceKind getSurfaceKind() const override { return NativeSurfaceKind::WebCanvas; }
         /** @brief 캔버스는 Pointer Lock API 로 포인터를 잠근다(https://developer.mozilla.org/docs/Web/API/Pointer_Lock_API). 가두기(Confined)는 브라우저에 없다. */
         [[nodiscard]] bool supportsPointerLock() const override { return true; }
         /**
@@ -34,9 +36,8 @@ namespace sw
          */
         [[nodiscard]] bool setPointerLock( WindowPointerLock lock ) override;
         /**
-         * @brief 메인 스레드를 재우지 않고 다음 프레임 콜백을 마감 간격 뒤로 미룹니다(`emscripten_set_main_loop_timing` — 간격이 있으면 setTimeout, 없으면 requestAnimationFrame).
-         * @details Emscripten 의 메인 스레드 잠은 바쁜 대기라 배경 상한이 브라우저 메인 스레드를 막았다(감사 P-5). setTimeout 간격은 프레임 시작부터 잰다(Emscripten 이 지난 시간을 뺀다).
-         *          https://emscripten.org/docs/api_reference/emscripten.h.html#c.emscripten_set_main_loop_timing
+         * @brief 메인 스레드를 재우지 않고 다음 프레임을 마감 간격 뒤로 미룹니다(`WebFrame.js` — 간격이 있으면 setTimeout, 없으면 requestAnimationFrame). 기다림은 루프(`AppEntry`)가 한다.
+         * @details Emscripten 의 메인 스레드 잠은 바쁜 대기라 배경 상한이 브라우저 메인 스레드를 막았다(감사 P-5). 간격은 프레임 시작부터 잰다.
          */
         void waitForNextFrame( int64 frameStartNanoseconds, int64 deadlineNanoseconds ) override;
         /** @brief 캔버스 CSS `cursor` 로 모양을 바꾼다(`CursorShapeUtil::toCSSName`). */
@@ -59,6 +60,8 @@ namespace sw
     private:
         /** @brief 캔버스의 CSS 크기 · 화면 배율 · 안전 여백을 다시 읽어 캔버스 물리 크기를 맞춥니다(창 크기 · 회전 · 배율 변경). */
         void syncCanvasSize();
+        /** @brief 탭의 보임이 바뀌었으면 앱 멈춤 · 돌아옴으로 알립니다(`_bPageHidden`). */
+        void applyPageVisibility();
         /** @brief 지금 모양 · 숨김을 캔버스 style.cursor 에 겁니다. */
         void applyCursor() const;
         /** @brief DOM 콜백을 겁니다(마우스 · 바퀴 · 키 · 손가락 · 크기 · 보임 · 포커스). */
@@ -80,12 +83,14 @@ namespace sw
 
     private:
         float32                _devicePixelRatio;
-        int32                  _mainLoopIntervalMilliseconds; ///< 지금 건 프레임 콜백 간격(0 이면 requestAnimationFrame — `emscripten_set_main_loop_arg` 의 fps 0 과 같다)
-        CursorShape            _cursorShape;                  ///< 마지막 `setCursorShape`
-        uint8                  _bCallbacksBound : 1;
-        uint8                  _bPointerLocked  : 1; ///< 브라우저가 캔버스에 포인터를 잠갔다(`pointerlockchange` 가 정한다 — 요청이 아니라 결과)
-        uint8                  _bCursorHidden   : 1; ///< 마지막 `setCursorVisible( false )`
-        [[maybe_unused]] uint8 _reserved        : 5;
+        CursorShape            _cursorShape; ///< 마지막 `setCursorShape`
+        uint8                  _bCallbacksBound        : 1;
+        uint8                  _bPointerLocked         : 1; ///< 브라우저가 캔버스에 포인터를 잠갔다(`pointerlockchange` 가 정한다 — 요청이 아니라 결과)
+        uint8                  _bCursorHidden          : 1; ///< 마지막 `setCursorVisible( false )`
+        uint8                  _bCanvasSizeChanged     : 1; ///< 크기 이벤트가 왔다 — 다음 `processMessages` 가 캔버스를 맞춘다
+        uint8                  _bPageHidden            : 1; ///< 마지막 `visibilitychange`
+        uint8                  _bPageVisibilityChanged : 1; ///< 보임이 바뀌었고 아직 알리지 않았다
+        [[maybe_unused]] uint8 _reserved               : 2;
     };
 } // namespace sw
 

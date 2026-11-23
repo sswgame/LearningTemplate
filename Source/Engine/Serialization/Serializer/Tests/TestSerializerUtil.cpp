@@ -526,6 +526,13 @@ SW_TEST_CASE( SerializerUtilTest, ValueBindingMatchesNameLookup )
     const ReflectValueFacts modeFacts = mode.findValueBinding()->resolve( mode._typeName, registry );
     SW_EXPECT_TRUE( modeFacts._pEnum != nullptr && modeFacts._pEnum == registry.findEnum( mode._typeName ) );
     SW_EXPECT_TRUE( modeFacts._builtinIndex == ReflectBuiltinIndex::kNone );
+    // 프로퍼티가 답하는 사실은 묶음의 것과 같고, 레지스트리를 따로 준 자리는 그 레지스트리에서 찾는다(묶음이 다른 레지스트리의 답을 담지 않는다).
+    SW_EXPECT_TRUE( count.resolveValueFacts( registry )._builtinIndex == countFacts._builtinIndex );
+    SW_EXPECT_TRUE( mode.resolveValueFacts( registry )._pEnum == modeFacts._pEnum );
+    SW_EXPECT_TRUE( mode.resolveValueFacts( registry ).findStructType() == nullptr );
+    const TypeRegistry emptyRegistry;
+    SW_EXPECT_TRUE( mode.resolveValueFacts( emptyRegistry )._pEnum == nullptr );
+    SW_EXPECT_TRUE( mode.resolveValueFacts( registry )._pEnum == modeFacts._pEnum );
     const ReflectValueFacts modeAgain = mode.findValueBinding()->resolve( mode._typeName, registry );
     SW_EXPECT_TRUE( modeAgain._pEnum == modeFacts._pEnum );
 

@@ -15,7 +15,6 @@
 #include "Engine/Config/EngineDefaultAssets.h"
 #include "Engine/Console/DebugHUDRegistry.h"
 #include "Engine/Console/DebugHUDSectionFormat.h"
-#include "Engine/Console/DevCommandRegistry.h"
 #include "Engine/Content/AssetIO.h"
 #include "Engine/Foundation/DeterministicRun.h"
 #include "Engine/Foundation/EngineServices.h"
@@ -1428,53 +1427,9 @@ namespace sw
                 writer.addLine( "agent route", pMode );
                 writer.addLineFormat( "agent replans", "%# (%# coarse points)", pAgent->getRouteReplanCount(), static_cast<uint32>( pAgent->getCoarseRoutePoints().size() ) );
             }
-
-            /** @brief 개발 명령 `nav.moveto <agent> <target>` · `nav.moveto <agent> <x> <y> <z>` — 이름 붙은 오브젝트의 내비메시 에이전트에 목적지를 겁니다(시나리오가 NPC 를 먼 셀로 보낸다). */
-            static bool runMoveTo( const vector<string>& listArgument, string& outReply )
-            {
-                if ( listArgument.size() != 2 && listArgument.size() != 4 )
-                    return false;
-                GameObject*            pObject = engine::findActiveObject( hashed_string( listArgument[0] ) );
-                NavMeshAgentComponent* pAgent  = pObject != nullptr ? pObject->getComponent<NavMeshAgentComponent>() : nullptr;
-                if ( pAgent == nullptr )
-                {
-                    StringBuilder<constant::buffer::kMax256> reply;
-                    reply.appendFormat( "no object named '%#' with a navmesh agent in the active scene", listArgument[0] );
-                    outReply.assign( reply.view() );
-                    return false;
-                }
-                float3 destination{};
-                if ( listArgument.size() == 4 )
-                {
-                    const bool bParsed = StringUtil::parseFloat( listArgument[1], destination._x ) && StringUtil::parseFloat( listArgument[2], destination._y ) &&
-                                         StringUtil::parseFloat( listArgument[3], destination._z );
-                    if ( bParsed == false )
-                        return false;
-                }
-                else
-                {
-                    const GameObject*     pGoal  = engine::findActiveObject( hashed_string( listArgument[1] ) );
-                    const SceneComponent* pScene = pGoal != nullptr ? pGoal->getPrimarySceneComponent() : nullptr;
-                    if ( pScene == nullptr )
-                    {
-                        StringBuilder<constant::buffer::kMax256> reply;
-                        reply.appendFormat( "no object named '%#' with a scene component in the active scene", listArgument[1] );
-                        outReply.assign( reply.view() );
-                        return false;
-                    }
-                    destination = pScene->getWorldPosition();
-                }
-                pAgent->setDestination( destination );
-                StringBuilder<constant::buffer::kMax128> reply;
-                reply.appendFormat( "moving %#", listArgument[0] );
-                outReply.assign( reply.view() );
-                return true;
-            }
         };
     } // namespace
 
     SW_DEBUG_HUD_SECTION( navstream, "navstream", "Navigation streaming (tiles, coarse graph, routes)", SceneNavigationDebugInternal::kStreamSectionOrder, DebugHUDSectionFlag::kNone,
                           &SceneNavigationDebugInternal::writeStreamSection );
-    SW_DEV_COMMAND( NavMoveTo, "nav.moveto", "nav.moveto <agent> <target object> | nav.moveto <agent> <x> <y> <z>",
-                    "Send a named navmesh agent of the active scene to an object or a world position (long routes over streamed-out cells)", &SceneNavigationDebugInternal::runMoveTo );
 } // namespace sw

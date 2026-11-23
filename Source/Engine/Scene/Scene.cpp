@@ -7,14 +7,11 @@
 #include "Core/Diagnostics/ScopedTimer.h"
 #include "Core/GlobalVariable/GlobalVariableManager.h"
 #include "Core/Math/MathUtil.h"
-#include "Core/Name/TagID.h"
 #include "Core/String/StringBuilder.h"
-#include "Core/String/StringUtil.h"
 #include "Core/Time/MonotonicClock.h"
 
 #include "Engine/Asset/AssetManager.h"
 #include "Engine/Config/EngineDefaultAssets.h"
-#include "Engine/Console/DevCommandRegistry.h"
 #include "Engine/Foundation/EngineServices.h"
 #include "Engine/Graphics/Material/MaterialCache.h"
 #include "Engine/Object/Component/CameraComponent.h"
@@ -31,10 +28,8 @@
 #include "Engine/Object/Prefab/PrefabCache.h"
 #include "Engine/Object/Prefab/PrefabInstanceRegistry.h"
 #include "Engine/Object/Prefab/PrefabOverrides.h"
-#include "Engine/Scene/SceneCooker.h"
 #include "Engine/Scene/SceneDataLayerSubsystem.h"
 #include "Engine/Scene/SceneDocument.h"
-#include "Engine/Scene/SceneManager.h"
 #include "Engine/Scene/SceneStreamingSubsystem.h"
 #include "Engine/Scene/SceneSubLevelSubsystem.h"
 
@@ -379,265 +374,6 @@ namespace sw
                 return outNode._embeddedXML.empty() == false || outNode._prefab.empty() == false;
             }
         };
-
-        struct SceneDevCommandsInternal
-        {
-            /** @brief `<object> <x> <y> <z>` 인자를 활성 씬 오브젝트의 루트 트랜스폼과 위치로 풉니다. 못 풀면 nullptr 이고 @p outReply 에 까닭을 적습니다. */
-            static SceneComponent* resolveMoveTarget( const vector<string>& listArgument, float3& outPosition, string& outReply )
-            {
-                const bool bInvalidMoveArguments = listArgument.size() != 4 || StringUtil::parseFloat( listArgument[1], outPosition._x ) == false ||
-                                                   StringUtil::parseFloat( listArgument[2], outPosition._y ) == false || StringUtil::parseFloat( listArgument[3], outPosition._z ) == false;
-                if ( bInvalidMoveArguments )
-                    return nullptr;
-                GameObject*     pObject   = engine::findActiveObject( hashed_string( listArgument[0] ) );
-                SceneComponent* pRootNode = pObject != nullptr ? pObject->getComponent<SceneComponent>() : nullptr;
-                if ( pRootNode == nullptr )
-                {
-                    StringBuilder<constant::buffer::kMax256> reply;
-                    reply.appendFormat( "no object named '%#' with a transform in the active scene", listArgument[0] );
-                    outReply = string( reply.view() );
-                }
-                return pRootNode;
-            }
-
-            static bool runTeleport( const vector<string>& listArgument, string& outReply )
-            {
-                float3          position{};
-                SceneComponent* pRootNode = resolveMoveTarget( listArgument, position, outReply );
-                if ( pRootNode == nullptr )
-                    return false;
-                pRootNode->teleportTo( position );
-                StringBuilder<constant::buffer::kMax256> reply;
-                reply.appendFormat( "teleported %#", listArgument[0] );
-                outReply = string( reply.view() );
-                return true;
-            }
-
-            /** @brief `move <object> <x> <y> <z>` — 순간이동이 아니라 이어진 움직임으로 옮깁니다. 화면 속도 · 물리의 이동 경로 기록이 남는다(시나리오가 이어진 카메라 움직임을 만든다). */
-            static bool runMove( const vector<string>& listArgument, string& outReply )
-            {
-                float3          position{};
-                SceneComponent* pRootNode = resolveMoveTarget( listArgument, position, outReply );
-                if ( pRootNode == nullptr )
-                    return false;
-                pRootNode->setWorldPosition( position );
-                StringBuilder<constant::buffer::kMax256> reply;
-                reply.appendFormat( "moved %#", listArgument[0] );
-                outReply = string( reply.view() );
-                return true;
-            }
-
-            /** @brief `scene.layer <name> <on|off>` — 활성 씬의 데이터 레이어를 켜고 끕니다. 인자가 없으면 켜진 레이어를 알립니다. */
-            static bool runDataLayer( const vector<string>& listArgument, string& outReply )
-            {
-                SceneManager* pManager = engine::findSubsystem<SceneManager>();
-                Scene*        pScene   = pManager != nullptr ? pManager->getActiveScene() : nullptr;
-                if ( pScene == nullptr || pScene->getObjectManager() == nullptr )
-                {
-                    outReply = "no active scene";
-                    return false;
-                }
-                SceneDataLayerSubsystem& layers = pScene->getObjectManager()->getSubsystem<SceneDataLayerSubsystem>();
-                if ( listArgument.empty() )
-                {
-                    vector<string> listActive;
-                    layers.collectActiveLayers( listActive );
-                    StringBuilder<constant::buffer::kMax512> reply;
-                    reply.append( "active data layers:" );
-                    for ( const string& layer : listActive )
-                    {
-                        reply.appendFormat( " %#", layer );
-                    }
-                    outReply = string( reply.view() );
-                    return true;
-                }
-                const bool bOn = listArgument.size() == 2 && listArgument[1] == "on";
-                if ( listArgument.size() != 2 || ( bOn == false && listArgument[1] != "off" ) )
-                    return false;
-                StringBuilder<constant::buffer::kMax256> reply;
-                if ( layers.setLayerActive( listArgument[0], bOn ) == false )
-                {
-                    reply.appendFormat( "the active scene does not declare data layer '%#'", listArgument[0] );
-                    outReply = string( reply.view() );
-                    return false;
-                }
-                reply.appendFormat( "data layer %# %#", listArgument[0], listArgument[1] );
-                outReply = string( reply.view() );
-                return true;
-            }
-
-            /**
-             * @brief `scene.sublevel add <name> <scene> <x> <y> <z> [yaw]` · `scene.sublevel remove <name>` — 활성 씬에 하위 레벨을 더하고 뺍니다(다음 프레임에 짓는다). 인자가 없으면 하위 레벨과 단계를 알립니다.
-             */
-            static bool runSubLevel( const vector<string>& listArgument, string& outReply )
-            {
-                SceneManager* pManager = engine::findSubsystem<SceneManager>();
-                Scene*        pScene   = pManager != nullptr ? pManager->getActiveScene() : nullptr;
-                if ( pScene == nullptr || pScene->getObjectManager() == nullptr )
-                {
-                    outReply = "no active scene";
-                    return false;
-                }
-                SceneSubLevelSubsystem& subLevels = pScene->getObjectManager()->getSubsystem<SceneSubLevelSubsystem>();
-                if ( listArgument.empty() )
-                {
-                    static constexpr const utf8* kArrStateName[] = { "loading", "queued", "building", "loaded", "failed", "removing" };
-                    vector<string>               listName;
-                    subLevels.collectSubLevelNames( listName );
-                    StringBuilder<constant::buffer::kMax512> reply;
-                    reply.append( "sub-levels:" );
-                    for ( const string& name : listName )
-                    {
-                        SubLevelState state{ SubLevelState::Queued };
-                        (void)subLevels.findSubLevelState( name, state ); // 방금 모은 이름이다
-                        reply.appendFormat( " %#(%#)", name, kArrStateName[static_cast<uint32>( state )] );
-                    }
-                    outReply = string( reply.view() );
-                    return true;
-                }
-                StringBuilder<constant::buffer::kMax256> reply;
-                if ( listArgument[0] == "remove" && listArgument.size() == 2 )
-                {
-                    if ( subLevels.removeSubLevel( listArgument[1] ) == false )
-                    {
-                        reply.appendFormat( "no sub-level named '%#'", listArgument[1] );
-                        outReply = string( reply.view() );
-                        return false;
-                    }
-                    reply.appendFormat( "removing sub-level %#", listArgument[1] );
-                    outReply = string( reply.view() );
-                    return true;
-                }
-                SceneSubLevelSubsystem::Placement placement{};
-                float32                           yawDegrees{ 0.0f };
-                const bool                        bParsed = listArgument[0] == "add" && ( listArgument.size() == 6 || listArgument.size() == 7 ) && StringUtil::parseFloat( listArgument[3], placement._position._x ) &&
-                                     StringUtil::parseFloat( listArgument[4], placement._position._y ) && StringUtil::parseFloat( listArgument[5], placement._position._z ) &&
-                                     ( listArgument.size() == 6 || StringUtil::parseFloat( listArgument[6], yawDegrees ) );
-                if ( bParsed == false )
-                    return false;
-                placement._rotation._y = yawDegrees * MathUtil::kDegreeToRadian;
-                if ( subLevels.addSubLevel( *pScene, listArgument[1], listArgument[2], placement ) == false )
-                {
-                    reply.appendFormat( "sub-level '%#' was not added (see the log)", listArgument[1] );
-                    outReply = string( reply.view() );
-                    return false;
-                }
-                reply.appendFormat( "adding sub-level %#", listArgument[1] );
-                outReply = string( reply.view() );
-                return true;
-            }
-
-            /** @brief `world.origin <x> <z>` — 활성 씬의 월드 원점을 절대 자리 (x, z) 로 옮깁니다(자동 옮기기와 같은 길). 인자가 없으면 지금 원점을 알립니다. */
-            static bool runWorldOrigin( const vector<string>& listArgument, string& outReply )
-            {
-                SceneManager* pManager = engine::findSubsystem<SceneManager>();
-                Scene*        pScene   = pManager != nullptr ? pManager->getActiveScene() : nullptr;
-                if ( pScene == nullptr )
-                {
-                    outReply = "no active scene";
-                    return false;
-                }
-                float32 x{ 0.0f };
-                float32 z{ 0.0f };
-                if ( listArgument.empty() == false )
-                {
-                    if ( listArgument.size() != 2 || StringUtil::parseFloat( listArgument[0], x ) == false || StringUtil::parseFloat( listArgument[1], z ) == false )
-                        return false;
-                    if ( pScene->shiftWorldOrigin( double3{ static_cast<float64>( x ), 0.0, static_cast<float64>( z ) } ) == false )
-                    {
-                        outReply = "the world origin cannot move now (see the log)";
-                        return false;
-                    }
-                }
-                const double3& origin = pScene->getWorldOrigin();
-                outReply              = "world origin ";
-                StringUtil::appendNumber( outReply, origin._x );
-                outReply += ' ';
-                StringUtil::appendNumber( outReply, origin._z );
-                return true;
-            }
-
-            static bool runTagAdd( const vector<string>& listArgument, string& outReply )
-            {
-                if ( listArgument.size() != 2 || listArgument[1].empty() )
-                    return false;
-                GameObject*                              pObject = engine::findActiveObject( hashed_string( listArgument[0] ) );
-                StringBuilder<constant::buffer::kMax256> reply;
-                if ( pObject == nullptr )
-                {
-                    reply.appendFormat( "no object named '%#' in the active scene", listArgument[0] );
-                    outReply = string( reply.view() );
-                    return false;
-                }
-                pObject->addTag( TagID::request( listArgument[1] ) );
-                reply.appendFormat( "tagged %# with %#", listArgument[0], listArgument[1] );
-                outReply = string( reply.view() );
-                return true;
-            }
-
-            /**
-             * @brief `world.cells` — 스트리밍 중이면 올라 있는 셀 수를, 아니면 활성 씬을 쿠커처럼 셀로 나눠 셀 수 · 늘 올라 있는 엔티티 수를 알립니다.
-             * @details 나누지 못하면(셀을 넘는 참조) 쿠커와 같은 오류가 엔티티마다 로그에 남는다 — 쿠킹 전에 에디터에서 위반을 본다.
-             */
-            static bool runStreamingCells( const vector<string>& listArgument, string& outReply )
-            {
-                if ( listArgument.empty() == false )
-                    return false;
-                SceneManager* pManager = engine::findSubsystem<SceneManager>();
-                Scene*        pScene   = pManager != nullptr ? pManager->getActiveScene() : nullptr;
-                if ( pScene == nullptr || pScene->getObjectManager() == nullptr )
-                {
-                    outReply = "no active scene";
-                    return false;
-                }
-                const SceneStreamingSubsystem& streaming = pScene->getObjectManager()->getSubsystem<SceneStreamingSubsystem>();
-                if ( streaming.isStreaming() )
-                {
-                    StringBuilder<constant::buffer::kMax256> replyBuilder;
-                    replyBuilder.appendFormat( "streaming: %# of %# cells loaded", streaming.getLoadedCellCount(), streaming.getCellCount() );
-                    outReply = string( replyBuilder.view() );
-                    return true;
-                }
-                if ( pScene->getSceneSettings()._bStreaming == false )
-                {
-                    outReply = "the active scene does not stream";
-                    return true;
-                }
-                StreamingCellPreview preview{};
-                if ( SceneCooker::previewStreamingCells( *pScene, preview ) == false )
-                {
-                    outReply = "the active scene could not be split into cells - see the log";
-                    return false;
-                }
-                StringBuilder<constant::buffer::kMax256> textBuilder;
-                if ( preview._listViolation.empty() == false )
-                {
-                    textBuilder.appendFormat( "the cook would fail - %# cross-cell references (see the log or the Streaming Cells window)", static_cast<uint32>( preview._listViolation.size() ) );
-                    outReply = string( textBuilder.view() );
-                    return false;
-                }
-                textBuilder.appendFormat( "%# cells, %# entities always loaded", static_cast<uint32>( preview._listCell.size() ), static_cast<uint32>( preview._listAlwaysLoadedID.size() ) );
-                outReply = string( textBuilder.view() );
-                return true;
-            }
-
-            static bool runSceneLeakCurve( const vector<string>& listArgument, string& outReply )
-            {
-                constexpr int32 kDefaultMeasuredRounds = 8;
-                int32           measuredRounds         = kDefaultMeasuredRounds;
-                const bool      bInvalidArguments      = listArgument.empty() || listArgument.size() > 2 || ( listArgument.size() == 2 && StringUtil::parseInt( listArgument[1], measuredRounds ) == false ) || measuredRounds < 1;
-                if ( bInvalidArguments )
-                    return false;
-                SceneManager* pManager = &engine::getSubsystem<SceneManager>();
-                if ( pManager->startLoadLeakCheck( listArgument[0], static_cast<uint32>( measuredRounds ) ) == false )
-                {
-                    outReply = "could not start (see the log)";
-                    return false;
-                }
-                outReply = "scene leak probe started - the verdict goes to the log when the rounds finish";
-                return true;
-            }
-        };
     } // namespace
 } // namespace sw
 
@@ -795,9 +531,9 @@ namespace sw
             return CellBuildResult::InProgress;
         }
 
-        // 다 지었다 — 앞 프레임에 숨긴 것을 대기 목록으로 되돌리고, 지금 씬의 늘 올라 있는 오브젝트를 기록해 잇는다. 기록을 끝에 하는 까닭: 짓는 사이에 지워진 오브젝트를 배치가 들지 않게.
+        // 다 지었다 — 앞 프레임에 숨긴 것을 대기 목록으로 되돌리고 잇는다. 늘 올라 있는 오브젝트는 이을 때 씬에 묻는다 — 짓는 사이에 지워진 오브젝트를 배치가 들지 않는다.
         manager.releaseStagedGameObjects( span<const uint64>( inoutListObjectID.data(), firstObjectIndex ) );
-        addReferenceTargets( build._context, &inoutListObjectID );
+        bindReferenceResolver( build._context );
         const bool bFinished = finishNodeBuild( listNode, build._context );
         build._bDone         = true;
         // 셀이 든 등록 줄을 미룬 줄 뒤에 붙인다 — 바깥 짝이 끝날 때(보통 바로 아래) 붙은 순서로 부른다.
@@ -872,7 +608,7 @@ namespace sw
         collectCellGroup( listObjectID, listGroup );
         for ( const uint64 objectID : listGroup )
         {
-            _mapObjectIDToFileID.erase( objectID );
+            _fileIDTable.erase( objectID );
             _mapPrefabSource.erase( objectID );
             _mapSceneInstancePath.erase( objectID );
             _mapInstanceMember.erase( objectID );
@@ -891,30 +627,26 @@ namespace sw
         // 함께 내려가는 것을 모두 엔티티로 뜬다(중첩 프리팹 부품 · 플레이 중 붙인 것) — 파일 id 가 없으면 준다. 다시 지을 때 부착 · 핸들이 그 id 로 이어진다.
         vector<uint64> listGroup;
         collectCellGroup( listObjectID, listGroup );
-        uint64 nextFileID = 0;
         for ( const uint64 objectID : listGroup )
         {
-            const bool bNeedsFileID = _mapObjectIDToFileID.find( objectID ) == _mapObjectIDToFileID.end() && _objectManager->findGameObjectByID( objectID ) != nullptr;
-            if ( bNeedsFileID == false )
-                continue;
-            nextFileID = nextFileID == 0 ? computeNextFileID() : nextFileID + 1;
-            _mapObjectIDToFileID.emplace( objectID, nextFileID );
+            if ( _fileIDTable.findFileID( objectID ) == 0 && _objectManager->findGameObjectByID( objectID ) != nullptr )
+                _fileIDTable.set( objectID, computeNextFileID() );
         }
 
         // 셀 몫만 준비한다 — 원형 상태를 씬 전체가 아니라 이 셀의 프리팹 엔티티로 만든다. 참조는 씬의 파일 id 표 전체로 적는다(늘 올라 있는 오브젝트를 가리킨다).
         SceneInternal::SaveInputs inputs;
         for ( const uint64 objectID : listGroup )
         {
-            const auto fileIDIt = _mapObjectIDToFileID.find( objectID );
-            if ( fileIDIt != _mapObjectIDToFileID.end() )
-                inputs._mapSavedID.emplace( objectID, fileIDIt->second );
+            const uint64 fileID = _fileIDTable.findFileID( objectID );
+            if ( fileID != 0 )
+                inputs._mapSavedID.emplace( objectID, fileID );
             const auto prefabIt = _mapPrefabSource.find( objectID );
             if ( prefabIt != _mapPrefabSource.end() && _services._pAssetManager != nullptr )
                 (void)SceneInternal::findPrefabBaseState( *_services._pAssetManager, inputs._mapPrefabBaseState, prefabIt->second ); // 캐시를 채운다 — 못 만든 원형은 쓰는 쪽이 전체 상태로 적는다
         }
         // 런타임 칸(`RuntimeState` — 볼륨 발동 수 · AI 블랙보드)까지 뜬다 — 저작 목적이면 내렸다 올린 셀이 처음 상태로 돌아간다. 파생 칸(`Transient`)은 뜨지 않는다.
         ObjectSaveOptions saveOptions{ SerializePurpose::Snapshot };
-        saveOptions._pSavedIDMap = &_mapObjectIDToFileID;
+        saveOptions._pSavedIDMap = &_fileIDTable.getFileIDs();
 
         const PrefabInstanceRegistry& nestedParts = _objectManager->getSubsystem<PrefabInstanceRegistry>();
         outListNode.reserve( listGroup.size() );
@@ -992,9 +724,9 @@ namespace sw
                 DeferredRegistrationScope( const DeferredRegistrationScope& )            = delete;
                 DeferredRegistrationScope& operator=( const DeferredRegistrationScope& ) = delete;
             } deferScope{ *_objectManager };
-            // 레이어 묶음은 이미 지은 늘 올라 있는 엔티티를 파일 id 로 가리킨다 — 그 오브젝트를 같은 배치에 기록해 둔다(상태는 읽지 않는다).
+            // 레이어 묶음은 이미 지은 늘 올라 있는 엔티티를 파일 id 로 가리킨다 — 배치에 없는 id 는 씬에 묻는다.
             if ( build != NodeBuild::Document )
-                addReferenceTargets( context, nullptr );
+                bindReferenceResolver( context );
 
             for ( const SceneDocument::SceneObjectNode& entity : listNode )
             {
@@ -1013,28 +745,28 @@ namespace sw
         return true;
     }
 
-    void Scene::addReferenceTargets( NodeBuildContext& context, const vector<uint64>* pExcludedObjectID ) const
+    void Scene::bindReferenceResolver( NodeBuildContext& context ) const
     {
-        unordered_set<uint64> uniqueExcluded;
-        if ( pExcludedObjectID != nullptr )
-        {
-            uniqueExcluded.reserve( pExcludedObjectID->size() );
-            for ( const uint64 objectID : *pExcludedObjectID )
-                uniqueExcluded.insert( objectID );
-        }
-        for ( const auto& [objectID, fileID] : _mapObjectIDToFileID )
-        {
-            if ( uniqueExcluded.find( objectID ) != uniqueExcluded.end() )
-                continue;
-            GameObject* pExisting = _objectManager->findGameObjectByID( objectID );
-            if ( pExisting != nullptr && pExisting->isPendingDestroy() == false )
-                context._batch.addReferenceTarget( pExisting, fileID, pExisting->getName() );
-        }
+        context._batch.setExternalResolver( SW_DELEGATE_LAMBDA( SavedObjectResolver, [this]( uint64 fileID, hashed_string name )
+        { return findReferenceTarget( fileID, name ); } ) );
+    }
+
+    GameObject* Scene::findReferenceTarget( uint64 fileID, const hashed_string& name ) const
+    {
+        GameObject* const pObject = fileID != 0 ? _objectManager->findGameObjectByID( _fileIDTable.findObjectID( fileID ) ) : _objectManager->findGameObjectByName( name );
+        if ( pObject == nullptr || pObject->isPendingDestroy() || _fileIDTable.findFileID( pObject->getObjectID() ) == 0 )
+            return nullptr;
+        return pObject;
     }
 
     void Scene::buildEntityNode( const SceneDocument::SceneObjectNode& entity, const NodeBuild build, NodeBuildContext& context, vector<uint64>* pOutListObjectID )
     {
         SW_LOG_TRACE_ID( "Scene.SpawningEntityPrefab", "Spawning entity '%#' prefab '%#'", entity._name, entity._prefab );
+        // 짓지 못해 문서로 남는 엔티티도 파일 id 를 쓴다 — 짓기 앞에서 알린다. 인스턴스 멤버의 평평한 id 는 앵커 범위에서 온 넓은 값이다.
+        if ( entity._instanceAnchorFileID != 0 )
+            _fileIDTable.recordWide( entity._fileID );
+        else
+            _fileIDTable.recordUsed( entity._fileID );
         string      prefabInstanceState; // 프리팹 원형에 덮어쓴 값을 얹어 만든 상태(프리팹 엔티티만)
         GameObject* pGo = SceneInternal::createEntityObject( *_objectManager, _services._pAssetManager, context._mapPrefabBaseState, entity, build != NodeBuild::Cell, _listUnresolvedEntity,
                                                              prefabInstanceState );
@@ -1046,7 +778,7 @@ namespace sw
         if ( entity._prefab.empty() == false )
             _mapPrefabSource[pGo->getObjectID()] = entity._prefab;
         if ( entity._fileID != 0 )
-            _mapObjectIDToFileID[pGo->getObjectID()] = entity._fileID;
+            _fileIDTable.set( pGo->getObjectID(), entity._fileID );
         if ( entity._sceneInstance.empty() == false )
             _mapSceneInstancePath[pGo->getObjectID()] = entity._sceneInstance;
         if ( entity._instanceAnchorFileID != 0 )
@@ -1372,6 +1104,21 @@ namespace sw
         }
     }
 
+    void Scene::collectObjectsByFileID( unordered_map<uint64, GameObject*>& outMap ) const
+    {
+        outMap.clear();
+        if ( _objectManager == nullptr )
+            return;
+        ObjectSavedIDMap mapSavedID;
+        collectSavedIDMap( mapSavedID );
+        for ( const auto& [objectID, fileID] : mapSavedID )
+        {
+            GameObject* const pObject = _objectManager->findGameObjectByID( objectID );
+            if ( pObject != nullptr )
+                outMap.emplace( fileID, pObject );
+        }
+    }
+
     void Scene::collectSavedIDMap( ObjectSavedIDMap& outMap ) const
     {
         outMap.clear();
@@ -1386,13 +1133,13 @@ namespace sw
         {
             if ( pGo == nullptr )
                 continue;
-            const auto mapIt = _mapObjectIDToFileID.find( pGo->getObjectID() );
-            if ( mapIt != _mapObjectIDToFileID.end() )
+            const uint64 knownFileID = _fileIDTable.findFileID( pGo->getObjectID() );
+            if ( knownFileID != 0 )
             {
-                outMap.emplace( pGo->getObjectID(), mapIt->second );
+                outMap.emplace( pGo->getObjectID(), knownFileID );
                 continue;
             }
-            _mapObjectIDToFileID.emplace( pGo->getObjectID(), nextFileID );
+            _fileIDTable.set( pGo->getObjectID(), nextFileID );
             outMap.emplace( pGo->getObjectID(), nextFileID );
             ++nextFileID;
         }
@@ -1407,61 +1154,22 @@ namespace sw
         // 프리팹 쪽에서 오브젝트가 씬 파일 밖으로 옮겨진 모양이라 참조를 만들 수 없게 막는다.
         if ( _objectManager->getSubsystem<PrefabInstanceRegistry>().isAttachedNestedPart( pObject ) )
             return 0;
-        const auto mapIt = _mapObjectIDToFileID.find( objectID );
-        if ( mapIt != _mapObjectIDToFileID.end() )
-            return mapIt->second;
+        const uint64 knownFileID = _fileIDTable.findFileID( objectID );
+        if ( knownFileID != 0 )
+            return knownFileID;
         const uint64 nextFileID = computeNextFileID();
-        _mapObjectIDToFileID.emplace( objectID, nextFileID );
+        _fileIDTable.set( objectID, nextFileID );
         return nextFileID;
     }
 
     uint64 Scene::findFileID( uint64 objectID ) const
     {
-        const auto mapIt = _mapObjectIDToFileID.find( objectID );
-        return mapIt != _mapObjectIDToFileID.end() ? mapIt->second : 0;
+        return _fileIDTable.findFileID( objectID );
     }
 
-    uint64 Scene::computeNextFileID() const
+    void Scene::recordHeldFileIDs( const vector<SceneDocument::SceneObjectNode>& listNode )
     {
-        // 새 id 는 이 씬이 지금껏 쓴 어느 파일 id 보다 크다. 사라진 오브젝트나 해석하지 못한 엔티티의 id 를 다시 주면 그것을 가리키던 참조가
-        // (파일을 넘는 참조 `SceneObjectReference` 를 포함해) 새 오브젝트에 붙는다.
-        uint64 nextFileID = 1;
-        // 인스턴스 멤버 · 런타임 하위 레벨 앵커의 넓은 id 는 세지 않는다(앵커 범위에서 온 값이다).
-        const SceneSubLevelSubsystem* pSubLevels = _objectManager != nullptr ? &_objectManager->getSubsystem<SceneSubLevelSubsystem>() : nullptr;
-        for ( const auto& [objectID, fileID] : _mapObjectIDToFileID )
-        {
-            const bool bWide = _mapInstanceMember.find( objectID ) != _mapInstanceMember.end() || ( pSubLevels != nullptr && pSubLevels->isAnchorFileID( fileID ) );
-            if ( bWide == false )
-                nextFileID = MathUtil::max( nextFileID, fileID + 1 );
-        }
-        const auto recordHeldNode = [&nextFileID]( const SceneDocument::SceneObjectNode& node )
-        {
-            if ( node._instanceAnchorFileID == 0 )
-                nextFileID = MathUtil::max( nextFileID, node._fileID + 1 );
-        };
-        for ( const SceneDocument::SceneObjectNode& unresolved : _listUnresolvedEntity )
-        {
-            recordHeldNode( unresolved );
-        }
-        if ( _objectManager != nullptr )
-        {
-            for ( const SceneDataLayerSubsystem::Group& group : _objectManager->getSubsystem<SceneDataLayerSubsystem>().getGroups() )
-            {
-                for ( const SceneDocument::SceneObjectNode& node : group._listNode )
-                {
-                    recordHeldNode( node );
-                }
-                for ( const SceneDocument::SceneObjectNode& node : group._listHeldNode )
-                {
-                    recordHeldNode( node ); // 떠 두며 새로 준 id(묶음에 붙은 런타임 오브젝트 · 중첩 부품)
-                }
-            }
-            nextFileID = MathUtil::max( nextFileID, pSubLevels->getMaxHeldFileID() + 1 );
-        }
-        // 스트리밍 셀이 든 엔티티(읽지 않은 쿠킹 내용 — 쿠킹본 머리의 최대값, 떠 둔 상태)와 겹치지 않는다.
-        if ( _objectManager != nullptr )
-            nextFileID = MathUtil::max( nextFileID, _objectManager->getSubsystem<SceneStreamingSubsystem>().getMaxCellFileID() + 1 );
-        return nextFileID;
+        _fileIDTable.recordUsed( SceneDocument::computeMaxFileID( listNode ) );
     }
 
     void Scene::rebindRestoredFileIDs( const vector<SavedFileID>& listFileID )
@@ -1469,7 +1177,7 @@ namespace sw
         if ( _objectManager == nullptr )
             return;
         // 매니저를 비우고 다시 만든 오브젝트다 — 사라진 id 의 기록은 버린다(남기면 `findObjectIDByFileID` 가 같은 파일 id 의 옛 오브젝트를 먼저 찾는다).
-        const auto dropGone = [this]( auto& mapByObjectID )
+        const auto dropGoneFrom = [this]( const auto& mapByObjectID, auto& inoutTable )
         {
             vector<uint64> listGone;
             for ( const auto& entry : mapByObjectID )
@@ -1479,10 +1187,12 @@ namespace sw
             }
             for ( const uint64 objectID : listGone )
             {
-                mapByObjectID.erase( objectID );
+                inoutTable.erase( objectID );
             }
         };
-        dropGone( _mapObjectIDToFileID );
+        const auto dropGone = [&dropGoneFrom]( auto& mapByObjectID )
+        { dropGoneFrom( mapByObjectID, mapByObjectID ); };
+        dropGoneFrom( _fileIDTable.getFileIDs(), _fileIDTable );
         dropGone( _mapPrefabSource );
         dropGone( _mapSceneInstancePath );
         dropGone( _mapInstanceMember );
@@ -1490,20 +1200,67 @@ namespace sw
         for ( const SavedFileID& entry : listFileID )
         {
             if ( entry._fileID != 0 && _objectManager->findGameObjectByID( entry._objectID ) != nullptr )
-                _mapObjectIDToFileID[entry._objectID] = entry._fileID;
+                _fileIDTable.set( entry._objectID, entry._fileID );
         }
+    }
+
+    void SceneFileIDTable::set( uint64 objectID, uint64 fileID )
+    {
+        SW_ASSERT( objectID != 0 && fileID != 0 );
+        erase( objectID );
+        _mapObjectIDToFileID.emplace( objectID, fileID );
+        _mapFileIDToObjectID[fileID] = objectID;
+        recordUsed( fileID );
+    }
+
+    void SceneFileIDTable::recordUsed( uint64 fileID )
+    {
+        if ( fileID > _maxUsedFileID && _uniqueWideFileID.find( fileID ) == _uniqueWideFileID.end() )
+            _maxUsedFileID = fileID;
+    }
+
+    void SceneFileIDTable::recordWide( uint64 fileID )
+    {
+        _uniqueWideFileID.insert( fileID );
+    }
+
+    void SceneFileIDTable::erase( uint64 objectID )
+    {
+        const auto fileIter = _mapObjectIDToFileID.find( objectID );
+        if ( fileIter == _mapObjectIDToFileID.end() )
+            return;
+        const auto objectIter = _mapFileIDToObjectID.find( fileIter->second );
+        if ( objectIter != _mapFileIDToObjectID.end() && objectIter->second == objectID )
+            _mapFileIDToObjectID.erase( objectIter ); // 그 파일 id 를 나중에 받은 오브젝트가 있으면 그것을 둔다
+        _mapObjectIDToFileID.erase( fileIter );
+    }
+
+    void SceneFileIDTable::clear()
+    {
+        _mapObjectIDToFileID.clear();
+        _mapFileIDToObjectID.clear();
+        _uniqueWideFileID.clear();
+        _maxUsedFileID = 0;
+    }
+
+    uint64 SceneFileIDTable::findFileID( uint64 objectID ) const
+    {
+        const auto fileIter = _mapObjectIDToFileID.find( objectID );
+        return fileIter != _mapObjectIDToFileID.end() ? fileIter->second : 0;
+    }
+
+    uint64 SceneFileIDTable::findObjectID( uint64 fileID ) const
+    {
+        const auto objectIter = _mapFileIDToObjectID.find( fileID );
+        return objectIter != _mapFileIDToObjectID.end() ? objectIter->second : 0;
     }
 
     uint64 Scene::findObjectIDByFileID( uint64 fileID ) const
     {
         if ( fileID == 0 || _objectManager == nullptr )
             return 0;
-        for ( const auto& [objectID, knownFileID] : _mapObjectIDToFileID )
-        {
-            if ( knownFileID == fileID && _objectManager->resolveGameObject( GameObjectHandle::make( objectID ) ) != nullptr )
-                return objectID;
-        }
-        return 0;
+        const uint64 objectID = _fileIDTable.findObjectID( fileID );
+        return objectID != 0 && _objectManager->resolveGameObject( GameObjectHandle::make( objectID ) ) != nullptr ? objectID : 0;
     }
 
     bool Scene::assignFileID( const uint64 objectID, const uint64 fileID )
@@ -1511,7 +1268,8 @@ namespace sw
         const uint64 holderID = findObjectIDByFileID( fileID );
         if ( fileID == 0 || objectID == 0 || ( holderID != 0 && holderID != objectID ) )
             return false;
-        _mapObjectIDToFileID[objectID] = fileID;
+        _fileIDTable.recordWide( fileID ); // 바깥이 정한 id 는 넓은 값이다
+        _fileIDTable.set( objectID, fileID );
         return true;
     }
 
@@ -1532,7 +1290,7 @@ namespace sw
         _mapSceneInstancePath.clear();
         _mapInstanceMember.clear();
         _mapObjectDataLayer.clear();
-        _mapObjectIDToFileID.clear();
+        _fileIDTable.clear();
         _listUnresolvedEntity.clear();
         if ( _objectManager != nullptr )
         {
@@ -1769,7 +1527,7 @@ namespace sw
         snapshot._mapSceneInstancePath = _mapSceneInstancePath;
         snapshot._mapInstanceMember    = _mapInstanceMember;
         snapshot._mapObjectDataLayer   = _mapObjectDataLayer;
-        snapshot._mapObjectIDToFileID  = _mapObjectIDToFileID;
+        snapshot._fileIDTable          = _fileIDTable;
         snapshot._listUnresolvedEntity = _listUnresolvedEntity;
         if ( _objectManager != nullptr )
         {
@@ -1787,7 +1545,7 @@ namespace sw
         _mapSceneInstancePath = std::move( snapshot._mapSceneInstancePath );
         _mapInstanceMember    = std::move( snapshot._mapInstanceMember );
         _mapObjectDataLayer   = std::move( snapshot._mapObjectDataLayer );
-        _mapObjectIDToFileID  = std::move( snapshot._mapObjectIDToFileID );
+        _fileIDTable          = std::move( snapshot._fileIDTable );
         _listUnresolvedEntity = std::move( snapshot._listUnresolvedEntity );
         restoreWorldOrigin( snapshot._worldOrigin ); // 오브젝트는 찍은 때의 자리(그 원점 기준)로 돌아온다
         if ( _objectManager != nullptr )
@@ -1830,18 +1588,4 @@ namespace sw
             return it->second;
         return {};
     }
-
-    SW_DEV_COMMAND( SceneLeakCurve, "scene.leakcurve", "scene.leakcurve <scene> [measuredRounds]",
-                    "Load a scene again and again (1 warmup + N measured, default 8) and judge whether leftover memory grows (leak detection L3)",
-                    &SceneDevCommandsInternal::runSceneLeakCurve );
-    SW_DEV_COMMAND( Teleport, "teleport", "teleport <object> <x> <y> <z>", "Teleport a named object of the active scene", &SceneDevCommandsInternal::runTeleport );
-    SW_DEV_COMMAND( Move, "move", "move <object> <x> <y> <z>", "Move a named object of the active scene without teleporting (keeps motion history)", &SceneDevCommandsInternal::runMove );
-    SW_DEV_COMMAND( StreamingCells, "world.cells", "world.cells", "Show loaded streaming cells, or split the active scene into cells as the cooker would",
-                    &SceneDevCommandsInternal::runStreamingCells );
-    SW_DEV_COMMAND( DataLayer, "scene.layer", "scene.layer [<name> <on|off>]", "Turn a data layer of the active scene on or off, or list the active layers", &SceneDevCommandsInternal::runDataLayer );
-    SW_DEV_COMMAND( SubLevel, "scene.sublevel", "scene.sublevel [add <name> <scene> <x> <y> <z> [yaw] | remove <name>]",
-                    "Add a scene to the active scene as a runtime sub-level at a position, remove one, or list them with their state", &SceneDevCommandsInternal::runSubLevel );
-    SW_DEV_COMMAND( WorldOrigin, "world.origin", "world.origin [<x> <z>]", "Move the world origin of the active scene to an absolute XZ position (all root objects shift), or print it",
-                    &SceneDevCommandsInternal::runWorldOrigin );
-    SW_DEV_COMMAND( TagAdd, "tag.add", "tag.add <object> <tag>", "Add a gameplay tag to a named object of the active scene", &SceneDevCommandsInternal::runTagAdd );
 } // namespace sw

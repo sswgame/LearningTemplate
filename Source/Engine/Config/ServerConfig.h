@@ -98,6 +98,20 @@ namespace sw
          */
         PROPERTY()
         bool _bGameConnectTicket{ false };
+        /**
+         * @brief 게임 세션의 스트림(TCP · WebSocket) 포트입니다 — UDP 소켓이 없는 브라우저 클라이언트가 붙습니다. 0 이면 열지 않습니다.
+         * @details UDP 샤드마다 스트림 샤드 하나가 `_gameStreamPort + 샤드` 에 섭니다(`_bGamePortReuse` 면 하나). 배정(`ServerDescriptor::pickPort`)은 UDP 포트를 알려 주므로
+         *          클라이언트가 닿는 바깥 TCP 포트는 UDP 와 같은 번호여야 한다 — 이 값을 `_gamePort` 와 같게 두거나, TLS 종단 프록시가 그 번호로 받아 이 포트로 넘긴다
+         *          (https 페이지는 `wss://` 만 연다 — `deploy/haproxy/web-tls.cfg`). 암호화 · 접속 티켓은 UDP 와 같다(`_bGameConnectTicket`).
+         */
+        PROPERTY( Min = 0, Max = 65535 )
+        int32 _gameStreamPort{ 0 };
+        /** @brief 스트림 포트에 한 호스트가 열 수 있는 연결 수입니다 — 한 주소가 연결만 열어 자리를 채우지 못하게 한다. 프록시 뒤면 `_listGameStreamTrustedProxy` 가 있어야 실제 주소로 센다. */
+        PROPERTY( Min = 1, Max = 4096 )
+        int32 _maxGameStreamConnectionsPerRemote{ 16 };
+        /** @brief 스트림 포트 앞의 L4 · TLS 종단 프록시 IPv4 주소 목록입니다. 적으면 이 주소에서 온 연결만 받고 PROXY protocol v2 머리로 실제 주소를 얻습니다. 비면 클라이언트가 바로 붙습니다. */
+        PROPERTY()
+        vector<string> _listGameStreamTrustedProxy{};
         /** @brief 서비스(TCP — 로그인 · 채팅 · 거래) 포트입니다. 0 이면 서비스 서버를 열지 않습니다. */
         PROPERTY( Min = 0, Max = 65535 )
         int32 _servicePort{ 7780 };

@@ -12,6 +12,7 @@
 #pragma once
 #include "Engine/EngineMinimal.h"
 #include "Engine/Reflection/PropertyInfo.h"
+#include "Engine/Reflection/ReflectValueBinding.h"
 #include "Engine/Reflection/ReflectionContainers.h"
 #include "Engine/Reflection/ReflectionMetadata.h"
 #include "Engine/Reflection/TypeInfo.h"
@@ -136,14 +137,10 @@ namespace sw
             return *_pRegistry;
         }
 
-        /** @brief 값으로 든 반사 구조체의 타입입니다(내장 타입 · 열거형 · 등록되지 않은 이름은 nullptr). */
-        const TypeInfo* findStructType( const hashed_string& typeName ) const
-        {
-            if ( typeName.empty() )
-                return nullptr;
-            const TypeInfo* pType = getRegistry().findType( typeName );
-            return pType != nullptr && pType->isPrimitive() == false ? pType : nullptr;
-        }
+        /** @brief @p prop 의 값이 반사 구조체면 그 타입입니다(내장 타입 · 열거형 · 등록되지 않은 이름은 nullptr). 프로퍼티의 묶음에서 읽어 값마다 이름을 찾지 않는다. */
+        const TypeInfo* findValueStructType( const PropertyInfo& prop ) const { return prop.resolveValueFacts( getRegistry() ).findStructType(); }
+        /** @brief @p prop 의 시퀀스 원소가 반사 구조체면 그 타입입니다. */
+        const TypeInfo* findElementStructType( const PropertyInfo& prop ) const { return prop.resolveElementFacts( getRegistry() ).findStructType(); }
 
     private:
         template <typename TObject, typename TVisitor>
@@ -174,12 +171,12 @@ namespace sw
         {
             if ( prop._bIsContainer == SW_FALSE )
             {
-                const TypeInfo* pStruct = findStructType( prop._typeName );
+                const TypeInfo* pStruct = findValueStructType( prop );
                 return pStruct != nullptr ? visitObject<TObject>( *pStruct, pValue, visitor, depth + 1 ) : ReflectVisitFlow::Continue;
             }
             const bool                       bNested   = prop._nestedContainer != nullptr && prop._nestedContainer->_elementNested != nullptr;
             const ISequenceContainerWrapper* pSequence = prop._containerWrapper != nullptr && bNested == false ? prop._containerWrapper->asSequence() : nullptr;
-            const TypeInfo*                  pElement  = pSequence != nullptr ? findStructType( prop._elementTypeName ) : nullptr;
+            const TypeInfo*                  pElement  = pSequence != nullptr ? findElementStructType( prop ) : nullptr;
             if ( pElement == nullptr )
                 return ReflectVisitFlow::Continue;
             const size_t elementCount = pSequence->getSize( pValue );

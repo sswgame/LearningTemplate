@@ -386,16 +386,11 @@ namespace sw
                 const uint32 propCount = header & kTaggedCountMask;
                 for ( uint32 propIndex = 0; propIndex < propCount; ++propIndex )
                 {
-                    uint32 tagHash{ 0 };
-                    uint32 wireTypeHash{ 0 };
-                    uint32 payloadSize{ 0 };
-                    tagHash                        = reader.readPod<uint32>();
-                    wireTypeHash                   = reader.readPod<uint32>();
-                    payloadSize                    = reader.readPod<uint32>();
-                    const bool bTruncatedTagHeader = reader.hasOverflowed();
-                    if ( bTruncatedTagHeader )
+                    // 이름 해시와 타입 해시는 읽는 쪽(`deserialize`)이 본다 — 크기만 세는 여기서는 건너뛴다.
+                    if ( reader.skipBytes( sizeof( uint32 ) * 2 ) == false )
                         return false;
-                    if ( reader.skipBytes( payloadSize ) == false )
+                    const uint32 payloadSize = reader.readPod<uint32>();
+                    if ( reader.hasOverflowed() || reader.skipBytes( payloadSize ) == false )
                         return false;
                 }
                 outStreamSize = reader.getOffset();

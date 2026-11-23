@@ -2,14 +2,11 @@
 
 #include "Engine/Graphics/Shader/Compile/ShaderCompiler.h"
 
-#include "Core/Algorithm/VectorUtil.h"
-#include "Core/CommandLine/CommandLineManager.h"
 #include "Core/Concurrency/atomic.h"
 #include "Core/Concurrency/mutex.h"
 #include "Core/Container/EnumArray.h"
 #include "Core/Diagnostics/ScopedProgressReport.h"
 #include "Core/File/FileUtil.h"
-#include "Core/File/ProcessRoots.h"
 #include "Core/Hash/HashUtil.h"
 #include "Core/Module/ModuleLibraryUtil.h"
 #include "Core/Path/AbsolutePath.h"
@@ -21,12 +18,13 @@
 #include "Engine/Config/EngineConfig.h"
 #include "Engine/Content/AssetPaths.h"
 #include "Engine/Content/ContentHash.h"
+#include "Engine/Content/CookCodeFingerprint.h"
+#include "Engine/Content/CookJob.h"
 #include "Engine/Foundation/EnginePlatformHeaders.h"
 #include "Engine/Foundation/EngineServices.h"
 #include "Engine/Graphics/RHI/RHIDescriptors.h"
 #include "Engine/Graphics/Shader/Binding/ShaderBindingSlots.h"
 #include "Engine/Graphics/Shader/Compile/SPIRVOpenGLPatch.h"
-#include "Engine/Graphics/Shader/Compile/ShaderCookStamp.h"
 #include "Engine/Graphics/Shader/Compile/ShaderCooker.h"
 #include "Engine/Graphics/Shader/Compile/WebGPUShaderContainer.h"
 
@@ -47,13 +45,6 @@ namespace sw
     {
         struct ShaderCompilerInternal
         {
-            /** @brief 컴파일러가 연 파일 목록을 정렬하고 중복을 없앱니다(`ShaderCompileResult::_listIncludedFile` 의 규칙). */
-            [[nodiscard]] static vector<string> sortUniqueIncludedFile( vector<string> listFile )
-            {
-                VectorUtil::sortUnique( listFile );
-                return listFile;
-            }
-
 #if defined( SW_PLATFORM_WINDOWS )
             /**
              * @brief FXC 의 `#include` 를 include 규칙(`ShaderIncludeResolver`)으로 푸는 ID3DInclude 입니다. 연 파일을 적어 둡니다.
@@ -65,12 +56,8 @@ namespace sw
                 ResolverD3DInclude( const ShaderIncludeResolver& resolver, const ShaderCompileInput& input )
                     : _resolver{ resolver }
                     , _input{ input }
-                    , _listIncludedFile{}
                 {
                 }
-
-                /** @brief 지금까지 연 파일을 정렬 · 중복 제거해 돌려주고 기록을 비웁니다. */
-                [[nodiscard]] vector<string> takeIncludedFiles() { return sortUniqueIncludedFile( std::move( _listIncludedFile ) ); }
 
                 STDMETHOD( Open )
                 ( D3D_INCLUDE_TYPE includeType, LPCSTR pFileName, LPCVOID pParentData,
@@ -83,9 +70,8 @@ namespace sw
                         return E_FAIL;
 
                     vector<uint8>                bytes;
-                    const optional<AbsolutePath> found = _resolver.findInclude( _input, pFileName, bytes, _listIncludedFile ); // 앞자리의 없던 후보도 의존이다(가림)
-                    if ( found.has_value() == false || bytes.empty() )
-                        return E_FAIL;
+                    const optional<AbsolutePath> found = _resolver.findInclude( _input, pFileName, bytes );
+                    ( 가림 ) if ( found.has_value() == false || bytes.empty() ) return E_FAIL;
 
                     uint8* pHeap = static_cast<uint8*>( Memory::allocate( bytes.size() ) );
                     if ( pHeap == nullptr )
@@ -93,7 +79,6 @@ namespace sw
                     Memory::copy( pHeap, bytes.data(), bytes.size() );
                     *ppData = pHeap;
                     *pBytes = static_cast<UINT>( bytes.size() );
-                    _listIncludedFile.push_back( found->str() ); // 읽은 파일 — 앞자리의 없던 후보는 `findInclude` 가 적었다
                     return S_OK;
                 }
 
@@ -108,7 +93,6 @@ namespace sw
             private:
                 const ShaderIncludeResolver& _resolver;
                 const ShaderCompileInput&    _input;
-                vector<string>               _listIncludedFile;
             };
 #endif
 
@@ -163,75 +147,42 @@ namespace sw
 #endif
 
             /**
-             * @brief 셰이더 DDC 폴더입니다 — 구성이 함께 쓰는 파생물 자리(`ProcessRoots::_derivedData` = `<프로젝트>/Saved`)의 `ShaderCompileCache`(언리얼 공유 DerivedDataCache). 셰이더 디스크 캐시는 이것 하나다.
-             * @details 예전에는 실행 파일 폴더의 `Saved`(빌드 폴더마다 하나)라 Release · ASan · 배포 쿠킹이 같은 셰이더 약 2 만 개를 각자 처음부터 컴파일했다(배포 쿠킹 한 번 15 분).
-             *          키에 소스 · define · 형식 · 도구 지문(엔진 define 포함) · 코드젠이 들어 있어 구성끼리 나눠도 엉뚱한 바이트를 돌려주지 않는다 — 쿠킹 DDC(`<프로젝트>/Saved/DDC`)와 같은 자리 규칙이다.
-             * @details 콘텐츠 트리(`Content/`)에 두지 않는다 — 올리는 단위가 아니고, 자동화 실행은 콘텐츠 아래 쓰기를 막아 캐시를 채우지 못한 채 매번 다시 컴파일했다.
-             *          예전에는 실행 중 컴파일 결과를 따로 담는 둘째 캐시(`Saved/ShaderCache`)가 있어 같은 바이트를 두 번 쓰고 낡음 판정도 두 벌이었다.
+             * @brief 셰이더 컴파일의 DDC(`DerivedDataCache` 의 `Shader` 버킷)입니다. 처음 쓸 때 한 번 연다 — 층 설정은 프로세스 동안 같다.
+             * @details 예전에는 실행 파일 폴더, 그다음은 자기 폴더 층 하나였다 — 정리 규칙 · 공유 층이 없었고 최신 판정(의존 기록 `.deps`)이 쿠킹 스탬프 · 메모리 지문과 따로였다.
              */
-            static string getShaderCacheDirectory()
+            static const expected<DerivedDataCache>& getDerivedDataCache()
             {
-                // `-shader-ddc-dir=<폴더>` 가 있으면 그 폴더다 — 빈 캐시 굽기 테스트(ShaderCache.RebuildFromEmpty)가 함께 쓰는 DDC 를 지우면 그 뒤의 시나리오가 모두 빈 캐시로 돌았다.
-                string ddcDir;
-                if ( engine::areEngineServicesBound() && engine::getSubsystem<CommandLineManager>().getArgument( CommandLineArgument::SHADER_DDC_DIR, ddcDir ) && ddcDir.empty() == false )
-                    return FileUtil::normalizeSeparators( ddcDir );
-                return FileUtil::normalizeSeparators( FileUtil::joinPath( ProcessRoots::get()._derivedData.str(), "ShaderCompileCache" ) );
+                static const expected<DerivedDataCache> s_cache = DerivedDataCache::open( DerivedDataBucket::Shader );
+                return s_cache;
             }
 
-            /**
-             * @struct ShaderCacheSlot
-             * @brief 셰이더 하나의 DDC 자리 — 폴더(층 하나), 키 서술, 키입니다. 항목은 쿠킹 · 임포트 DDC 와 같은 형식이다(`DerivedDataCache` — 머리의 서술 · 본문 해시가
-             *        맞을 때만 히트, 어긋나면 미스 + 경고). 예전 `<키>.bin` 은 바이트만 담아 64 비트 키 충돌 · 깨진 파일을 바이트코드 해시(의존 기록)로만 걸렀다.
-             */
-            struct ShaderCacheSlot
+            /** @brief 컴파일 한 건의 동작 — 작업 키의 쿠커 쪽 값과 기록을 찾는 동작 키입니다. */
+            struct CompileAction
             {
-                string _directory;   ///< 비면 디스크 캐시를 쓰지 않는다
-                string _description; ///< 키 서술(사람이 읽는 글 — 항목 머리에 그대로 적힌다)
-                uint64 _key{ 0 };
-
-                DerivedDataCache makeCache() const { return DerivedDataCache{ vector<DerivedDataLayer>{ DerivedDataLayer{ FileUtil::toDiskPath( _directory ), DerivedDataAccess::ReadWrite } } }; }
-                /** @brief 의존 기록(연 헤더와 내용 해시) 파일 — 항목 옆이다. */
-                string makeRecordPath() const
-                {
-                    string path = makeCache().makePath( 0, _key ).str();
-                    path += ShaderCookStamp::kIncludeRecordSuffix;
-                    return path;
-                }
+                CookJobDesc _jobDesc;            ///< 요청 · 도구가 정하는 값(소스 내용은 작업의 입력이라 들지 않는다)
+                uint64      _actionKey{ 0 };     ///< 기록을 찾는 키 — 주 소스의 내용까지 든다(가지를 오가도 판마다 기록이 남는다)
+                bool        _bUseCache{ false }; ///< 거짓이면 DDC 를 쓰지 않는다(실린 FXC 의 판을 모른다) NOLINT(sw-bool-flag): 집합체다(중괄호로 만든다)
             };
 
-            /** @brief 셰이더 DDC 폴더가 DDC 항목 배치로 옮겨졌다는 표지 파일 이름입니다(폴더 맨 위). 있으면 옛 `<키>.bin` 을 찾지 않는다. */
-            static constexpr const utf8* kLayoutMarkerName = "layout.swddc1";
-
-            /**
-             * @brief 옛 배치(`<키>.bin` · `<키>.bin.deps` — 폴더 맨 위)의 파일을 지우고 표지를 남깁니다. 옛 배치는 다시 쓰이지 않는다(새 자리는 `<키 앞 두 글자>/<키>`).
-             * @details 프로세스 상태 없이 표지 파일 하나로 한 번만 돈다 — 백엔드 넷이 함께 떠도 지우기는 조용한 시도(`tryRemoveFile`)라 겹쳐도 된다.
-             */
-            static void removeLegacyCacheFiles( const string& cacheDir )
+            /** @brief `compileHLSL` 이 실제로 컴파일하는 요청입니다 — 엔진 define 과 단계 매크로를 더한다. */
+            static ShaderCompileDesc makeFullDesc( const ShaderCompileDesc& requestDesc )
             {
-                const string marker = FileUtil::joinPath( cacheDir, kLayoutMarkerName );
-                if ( FileUtil::exists( FileUtil::toDiskPath( marker ) ) )
-                    return;
-                vector<string> listLegacy;
-                (void)FileUtil::forEachDirectoryEntry( FileUtil::toDiskPath( cacheDir ), false, [&listLegacy]( const DirectoryEntry& entry )
-                {
-                    if ( entry._bDirectory == false && ( StringUtil::endsWith( entry._path, ".bin" ) || StringUtil::endsWith( entry._path, ".bin.deps" ) ) )
-                        listLegacy.push_back( string( entry._path ) );
-                    return true;
-                } ); // 폴더가 없으면 지울 것이 없다
-                for ( const string& path : listLegacy )
-                {
-                    (void)FileUtil::tryRemoveFile( FileUtil::toDiskPath( path ) ); // 다른 프로세스가 먼저 지웠을 수 있다
-                }
-                const string_view markerText{ "SWDDC 1\n" };
-                if ( FileUtil::ensureParentDirectoryExists( FileUtil::toDiskPath( marker ) ) )
-                    (void)FileUtil::tryWriteFile( FileUtil::toDiskPath( marker ), reinterpret_cast<const uint8*>( markerText.data() ), markerText.size() ); // 못 쓰면 다음 실행이 다시 훑는다
+                // 엔진 define 은 모든 컴파일에 더한다(appendEngineDefines) — 값이 도구 지문에 섞여 표를 바꾸면 모든 셰이더 캐시가 다시 컴파일된다.
+                ShaderCompileDesc desc = requestDesc;
+                ShaderCompiler::appendEngineDefines( desc._listDefine, *desc._enginePolicy );
+                // 단계 매크로 — 네 백엔드 컴파일 경로(DXC → DXIL · SPIR-V → GL · WGSL, FXC → DXBC)가 모두 이 함수를 지나므로 여기 한 곳에서 넣는다.
+                ShaderMacroDefine stageDefine;
+                stageDefine._name  = getShaderStageInfo( desc._stage )._pStageMacro;
+                stageDefine._value = "1";
+                desc._listDefine.push_back( std::move( stageDefine ) );
+                return desc;
             }
 
 #if defined( SW_PLATFORM_WINDOWS )
             /**
              * @brief FXC 판 — 이 프로세스가 실은 d3dcompiler(System32 — vcpkg 기록에 없고 OS 업데이트로 바뀐다)의 내용 해시입니다. 못 읽으면 0 이고 오류를 한 번 남긴다.
-             * @details DXBC 캐시 키에만 든다(언리얼이 셰이더 형식마다 컴파일러 판을 셰이더 맵 키에 넣는 자리). 도구 지문(`ShaderCookStamp::getToolchainFingerprint`)에 넣지 않는 것은
-             *          쿠킹 스탬프가 기계마다(OS 판마다) 갈려 모든 셰이더를 다시 굽지 않게다. d3dcompiler 는 일반 import 라 기동 때 이미 실려 있다.
+             * @details DXBC 캐시 키에만 든다(언리얼이 셰이더 형식마다 컴파일러 판을 셰이더 맵 키에 넣는 자리). 도구 지문(`getToolchainFingerprint`)에 넣지 않는 것은
+             *          쿠킹 기록이 기계마다(OS 판마다) 갈려 모든 셰이더를 다시 굽지 않게다. d3dcompiler 는 일반 import 라 기동 때 이미 실려 있다.
              */
             [[nodiscard]] static uint64 getFxcLibraryHash()
             {
@@ -253,71 +204,62 @@ namespace sw
             }
 #endif
 
-            static ShaderCacheSlot computeCacheSlot( const ShaderCompileDesc& desc, const ShaderCompileInput& input )
+            /** @brief 컴파일 동작을 만듭니다. @p desc 는 `makeFullDesc` 를 지난 것이고 @p sourceHash 는 주 소스의 내용 해시입니다. */
+            static CompileAction makeCompileAction( const ShaderCompileDesc& desc, uint64 sourceHash )
             {
-                ShaderCacheSlot slot;
-                slot._directory = getShaderCacheDirectory();
-                if ( slot._directory.empty() )
-                    return slot;
-                removeLegacyCacheFiles( slot._directory );
-
-                // 못 읽으면 내용 없이(해시 0) 적는다 — 컴파일도 같은 파일을 읽다 실패하므로 그 캐시 자리는 쓰이지 않는다.
-                vector<uint8> sourceBytes;
-                (void)FileUtil::readFile( FileUtil::toDiskPath( input._source.str() ), sourceBytes ); // 못 읽으면 내용 없이 적는다(위 설명)
-
-                string& text = slot._description;
+                CompileAction action;
+                action._bUseCache = true;
+                // define 은 정본(정렬)으로 적는다 — 받은 차례로 적으면 같은 조합이 차례만 달라 두 벌이 쌓인다. 헤더는 키에 넣지 않는다 — 어느 헤더를 열었는지는
+                // 컴파일하고 나서야 알아(키는 컴파일 전에 필요하다) 작업의 입력으로 기록하고, 맞출 때 그 기록의 입력이 지금도 같은지 본다(`CookRecord::isFresh`).
+                string text;
                 text.append( "source=" ).append( desc._source.str() ).append( "\nentry=" ).append( desc._entryPoint );
-                text.append( "\nstage=" ).append( to_string( static_cast<uint32>( desc._stage ) ) ).append( "\nformat=" ).append( to_string( static_cast<uint32>( desc._targetFormat ) ) );
+                text.append( "\nstage=" ).append( to_string( static_cast<uint32>( desc._stage ) ) );
                 for ( const string& define : ShaderCooker::makeCanonicalDefines( desc._listDefine ) )
                 {
                     text.append( "\ndefine=" ).append( define );
                 }
-                text.append( "\nsourceHash=" ).append( to_string( sourceBytes.empty() ? uint64( 0 ) : ContentHash::computeBytes( sourceBytes ) ) );
-                // 주 소스 바이트만 키에 넣으면 **include 된 .hlsli 는 키에 없다**. common.hlsli 의 상수버퍼 바인딩을 고쳐도
-                // 이 캐시가 옛 바이트를 그대로 돌려줬고, ShaderCache 는 그것을 "새로 컴파일한 것" 으로 알고 라이브 캐시에
-                // 다시 써서 GL 이 set 10 짜리 옛 SPIR-V 를 계속 썼다. 헤더는 키에 넣지 않는다 — 어느 헤더를 열었는지는 컴파일하고 나서야 알아서
-                // (키는 컴파일 전에 필요하다), 컴파일할 때 연 헤더와 그 내용 해시를 항목 옆의 의존 기록에 적고 맞출 때 그 기록이 지금 헤더와 같은지 본다
-                // (`ShaderCookStamp::readIncludeRecord`). 전역 헤더 해시를 키에 섞으면 헤더 하나에 모든 셰이더의 캐시가 무효가 된다.
-                // 도구 지문은 키에 넣는다 — DXC 나 옵션을 바꾸면 옛 바이트를 돌려주면 안 된다. 디버그 코드젠 여부도 키다(같은 소스라도 바이트코드가 다르다).
-                text.append( "\ntoolchain=" ).append( to_string( ShaderCookStamp::getToolchainFingerprint( *desc._enginePolicy ) ) );
+                // 디버그 코드젠 여부도 키다(같은 소스의 다른 바이트다).
                 text.append( "\ncodegen=" ).append( desc._bDebugCodegen != SW_FALSE ? "dbg" : "opt" ).append( "\n" );
 #if defined( SW_PLATFORM_WINDOWS )
-                // FXC 는 OS 의 것이라 도구 지문(vcpkg 기록)에 없다 — DXBC 항목만 실린 d3dcompiler 의 내용을 키에 더한다. 못 읽으면 판을 모르니 디스크 캐시를 쓰지 않는다.
+                // FXC 는 OS 의 것이라 도구 지문(vcpkg 기록)에 없다 — DXBC 항목만 실린 d3dcompiler 의 내용을 키에 더한다. 못 읽으면 판을 모르므로 캐시하지 않는다.
                 const ShaderTargetFormatInfo* const pTargetInfo = ShaderTargetFormatTable::find( desc._targetFormat );
                 if ( pTargetInfo != nullptr && pTargetInfo->_tool == ShaderCompilerTool::Fxc )
                 {
                     const uint64 fxcHash = getFxcLibraryHash();
-                    if ( fxcHash == 0 )
-                    {
-                        slot._directory.clear();
-                        return slot;
-                    }
+                    action._bUseCache    = fxcHash != 0;
                     text.append( "fxc=" ).append( to_string( fxcHash ) ).append( "\n" );
                 }
 #endif
-                slot._key = HashUtil::computeStringHash64( string_view{ text }, false );
-                return slot;
+                action._jobDesc._cookerName      = "Shader";
+                action._jobDesc._codeFingerprint = ShaderCompiler::getToolchainFingerprint( *desc._enginePolicy ); // 도구 지문 — DXC 나 옵션을 바꾸면 옛 바이트를 돌려주면 안 된다
+                action._jobDesc._target          = string( ShaderCooker::getSubfolderForFormat( desc._targetFormat ) );
+                action._jobDesc._settingsHash    = HashUtil::computeStringHash64( string_view{ text }, false );
+
+                text.append( "target=" ).append( action._jobDesc._target ).append( "\ntoolchain=" ).append( to_string( action._jobDesc._codeFingerprint ) );
+                text.append( "\nsourceHash=" ).append( to_string( sourceHash ) );
+                action._actionKey = HashUtil::computeStringHash64( string_view{ text }, false );
+                return action;
             }
 
-            /**
-             * @brief 디스크 캐시가 켜져 있고 자리가 있으면 바이트코드 항목과 의존 기록(연 헤더와 내용 해시)을 씁니다. 못 쓰면 경고만 남깁니다(다음 컴파일이 다시 만든다).
-             * @details 둘은 따로 원자적으로 쓴다(임시 파일 바꿔치기). 같은 항목이 이미 있으면 DDC 가 다시 쓰지 않는다 — 같은 셰이더를 함께 컴파일하는 프로세스(ctest 의 백엔드 넷)가
-             *          한 파일을 다투지 않는다. 기록이 바이트코드의 내용 해시를 실어 짝이 맞지 않으면 읽는 쪽이 버리므로 옛 기록을 먼저 지우지 않는다.
-             */
-            static void saveToCacheIfEnabled( const ShaderCacheSlot& slot, const ShaderCompileResult& result )
+            /** @brief DDC 에서 동작의 기록을 찾아 새것이면 바이트코드까지 읽습니다. 둘 다 맞을 때만 true 입니다. */
+            [[nodiscard]] static bool findCached( const DerivedDataCache& cache, const CompileAction& action, CookRecord& outRecord, vector<uint8>& outBytecode )
             {
-                const bool bDiskCacheWritable = slot._directory.empty() == false && result._bytecode.empty() == false;
-                if ( bDiskCacheWritable == false )
+                // 기록의 입력 중 하나라도 달라졌으면 맞은 것이 아니다 — 그 셰이더만 다시 컴파일한다(다른 헤더를 쓰는 셰이더는 그대로다).
+                // 항목은 키(입력까지 든 작업 키)와 서술 · 본문 해시가 맞을 때만 읽힌다. 다른 프로세스가 둘 중 하나만 바꾼 순간은 해시가 어긋나 다시 컴파일한다.
+                return cache.readRecord( action._actionKey, outRecord ) && outRecord.isFresh( action._jobDesc ) &&
+                       cache.find( outRecord._key, CookJob::makeKeyDescription( action._jobDesc, outRecord._listInput ), outBytecode ) && outBytecode.empty() == false &&
+                       ContentHash::computeBytes( outBytecode ) == outRecord._outputHash;
+            }
+
+            /** @brief 컴파일한 결과에 작업의 기록을 달고, 동작을 캐시할 수 있으면 바이트코드 항목과 기록을 DDC 에 씁니다. 못 쓰면 경고하고 넘어갑니다(다음에 다시 컴파일한다). */
+            static void finishCompile( const DerivedDataCache& cache, const CompileAction& action, const CookJob& job, ShaderCompileResult& inoutResult )
+            {
+                inoutResult._record = CookRecord::make( job, ContentHash::computeBytes( inoutResult._bytecode ) );
+                if ( action._bUseCache == false || inoutResult._bytecode.empty() )
                     return;
-                const DerivedDataCache cache = slot.makeCache();
-                if ( cache.store( slot._key, slot._description, result._bytecode ) == false )
-                {
-                    SW_LOG_WARNING_ID( "ShaderCompiler.CouldNotWriteShader", "Could not write the shader cache '%#'", cache.makePath( 0, slot._key ).str() );
-                    return;
-                }
-                const string recordPath = slot.makeRecordPath();
-                if ( ShaderCookStamp::writeIncludeRecord( recordPath, result._listIncludedFile, ContentHash::computeBytes( result._bytecode ) ) == false )
-                    SW_LOG_WARNING_ID( "ShaderCompiler.CouldNotWriteShader2", "Could not write the shader cache record '%#'", recordPath );
+                // 기록은 항목을 쓴 뒤에 쓴다 — 기록이 있으면 항목이 있다.
+                if ( cache.store( inoutResult._record._key, job.makeKeyDescription(), inoutResult._bytecode ) == false || cache.writeRecord( action._actionKey, inoutResult._record ) == false )
+                    SW_LOG_WARNING_ID( "ShaderCompiler.CouldNotWriteShader", "Could not write the shader DDC entry or record of key %#", action._actionKey );
             }
 
 #if defined( SW_PLATFORM_WINDOWS )
@@ -371,8 +313,7 @@ namespace sw
 
                 const uint8* pData = static_cast<const uint8*>( codeBlob->GetBufferPointer() );
                 outResult._bytecode.assign( pData, pData + codeBlob->GetBufferSize() );
-                outResult._listIncludedFile = includeHandler.takeIncludedFiles();
-                outResult._bSuccess         = true;
+                outResult._bSuccess = true;
                 SW_LOG_TRACE_ID( "ShaderCompiler.TargetD3D11DXBCRow", "Target: D3D11 (DXBC Row-Major), Size: %# bytes", static_cast<uint32>( outResult._bytecode.size() ) );
                 return true;
             }
@@ -394,22 +335,18 @@ namespace sw
              *          전이 include 도 DXC 가 이 처리기를 거쳐 읽으므로 모두 잡힌다. 참조 수로 사는 COM 객체다 — `make_unique(...).release()` 로 만들어
              *          `Attach` 로 소유권을 `DxcComPtr` 에 넘기고, 마지막 `Release()` 가 푼다. 기록은 소유자가 살아 있는 동안 읽는다. 해석기는 컴파일 호출보다 오래 산다.
              */
-            class RecordingDXCInclude final : public IDxcIncludeHandler
+            class ResolverDXCInclude final : public IDxcIncludeHandler
             {
             public:
-                RecordingDXCInclude( DxcComPtr<IDxcUtils> pUtils, const ShaderIncludeResolver& resolver )
+                ResolverDXCInclude( DxcComPtr<IDxcUtils> pUtils, const ShaderIncludeResolver& resolver )
                     : _pUtils{ std::move( pUtils ) }
                     , _resolver{ resolver }
-                    , _listIncludedFile{}
                     , _refCount{ 1 }
                 {
                 }
 
-                RecordingDXCInclude( const RecordingDXCInclude& )            = delete;
-                RecordingDXCInclude& operator=( const RecordingDXCInclude& ) = delete;
-
-                /** @brief 지금까지 연 파일을 정렬 · 중복 제거해 돌려주고 기록을 비웁니다. */
-                [[nodiscard]] vector<string> takeIncludedFiles() { return sortUniqueIncludedFile( std::move( _listIncludedFile ) ); }
+                ResolverDXCInclude( const ResolverDXCInclude& )            = delete;
+                ResolverDXCInclude& operator=( const ResolverDXCInclude& ) = delete;
 
                 HRESULT STDMETHODCALLTYPE LoadSource( LPCWSTR pFilename, IDxcBlob** ppIncludeSource ) override
                 {
@@ -422,18 +359,12 @@ namespace sw
                     const string                 candidate = FileUtil::normalizeSeparators( StringUtil::utf16ToUTF8( pFilename ) );
                     const optional<AbsolutePath> found     = _resolver.readInclude( candidate, bytes );
                     if ( found.has_value() == false )
-                    {
-                        // 없던 후보도 의존이다 — 검색 순서의 앞자리에 같은 이름이 생기면 다음 컴파일은 그것을 연다(가림). 쿠킹 스탬프가 "없어야 한다" 로 적는다.
-                        if ( ShaderIncludeResolver::isAbsentCandidate( candidate ) )
-                            _listIncludedFile.push_back( candidate );
-                        return E_FAIL;
-                    }
+                        return E_FAIL; // 연 파일 · 없던 후보는 include 규칙이 작업(`CookJob`)에 적었다
                     DxcComPtr<IDxcBlobEncoding> blob;
                     const HRESULT               hr = _pUtils->CreateBlob( bytes.data(), static_cast<UINT32>( bytes.size() ), DXC_CP_UTF8, getDxcAddressOf( blob ) );
                     if ( FAILED( hr ) )
                         return hr;
                     *ppIncludeSource = blob.Detach();
-                    _listIncludedFile.push_back( found->str() ); // DXC 가 찾아 읽은 이름이다
                     return S_OK;
                 }
 
@@ -463,7 +394,6 @@ namespace sw
             private:
                 DxcComPtr<IDxcUtils>         _pUtils;
                 const ShaderIncludeResolver& _resolver;
-                vector<string>               _listIncludedFile;
                 atomic<uint32>               _refCount;
             };
 
@@ -714,10 +644,8 @@ namespace sw
                 if ( utils == nullptr || compiler == nullptr )
                     return DxcResult::NoOutput;
 
-                // 소유권은 includeHandler 로 넘기고, 기록은 pIncludeRecorder 로 읽는다(둘 다 이 호출 안에서만 산다).
-                RecordingDXCInclude*          pIncludeRecorder = make_unique<RecordingDXCInclude>( utils, resolver ).release();
                 DxcComPtr<IDxcIncludeHandler> includeHandler;
-                includeHandler.Attach( pIncludeRecorder );
+                includeHandler.Attach( make_unique<ResolverDXCInclude>( utils, resolver ).release() );
 
                 // 소스는 엔진 파일 입구로 읽는다(DXC `LoadFile` 은 자기 파일 API 다). 실패 로그는 readFile 이 남긴다.
                 const wstring wPath = StringUtil::utf8ToUTF16( input._source.c_str() );
@@ -818,8 +746,7 @@ namespace sw
                     outResult._bytecode.clear();
                     return DxcResult::Rejected;
                 }
-                outResult._listIncludedFile = pIncludeRecorder->takeIncludedFiles();
-                outResult._bSuccess         = true;
+                outResult._bSuccess = true;
                 SW_LOG_TRACE_ID( "ShaderCompiler.Target", "Target: %#", getDxcTargetRow( desc._targetFormat )._pLogName ); // Trace 를 컴파일하지 않는 구성은 인자를 평가하지 않는다(SW_LOG_DISCARDED)
                 return DxcResult::Compiled;
             }
@@ -901,6 +828,62 @@ namespace sw
 #endif
     }
 
+    uint64 ShaderCompiler::getToolchainFingerprint( const ShaderEnginePolicy& enginePolicy )
+    {
+        static const uint64 s_baseFingerprint = []
+        {
+            // SPIR-V 타깃 환경(-fspv-target-env)은 Vulkan 요구 판이다.
+            constexpr uint32 kVulkanTargetVersion = constant::render::kVulkanRequiredMajor * 1000 + constant::render::kVulkanRequiredMinor;
+            return makeToolchainFingerprint( CookCodeFingerprint::find( "ShaderCompiler" ), kVulkanTargetVersion, CookCodeFingerprint::getShaderCompilerVersion() );
+        }();
+        // 엔진이 모든 컴파일에 넣는 define 도 도구 입력이다 — 렌더 정책 값은 설정을 다시 읽으면 바뀌므로 부를 때마다 요청의 사본으로 섞는다
+        // (한 번 잡아 두면 새 값으로 컴파일한 바이트와 옛 값의 바이트를 구별하지 못한다).
+        uint64                    hash = s_baseFingerprint;
+        vector<ShaderMacroDefine> listDefine;
+        appendEngineDefines( listDefine, enginePolicy );
+        for ( const ShaderMacroDefine& define : listDefine )
+        {
+            hash = HashUtil::computeStringHash64( define._name, false, hash );
+            hash = HashUtil::computeStringHash64( define._value, false, hash );
+        }
+        return hash;
+    }
+
+    uint64 ShaderCompiler::makeToolchainFingerprint( uint64 compilerCodeFingerprint, uint32 vulkanTargetVersion, string_view compilerVersion )
+    {
+        uint64 hash = HashUtil::computeStringHash64( to_string( compilerCodeFingerprint ), false );
+        hash        = HashUtil::computeStringHash64( to_string( vulkanTargetVersion ), false, hash );
+        return HashUtil::computeStringHash64( string( compilerVersion ), false, hash );
+    }
+
+    optional<CookRecord> ShaderCompiler::findCurrentRecord( const ShaderCompileDesc& requestDesc )
+    {
+        using Internal = ShaderCompilerInternal;
+        if ( requestDesc._enginePolicy.has_value() == false )
+            return nullopt;
+        const optional<ShaderSourceResolver> resolver = ShaderSourceResolver::make( engine::getSubsystem<AssetPaths>() );
+        if ( resolver.has_value() == false )
+            return nullopt;
+        const expected<ShaderCompileInput> input = resolver->resolve( requestDesc._source );
+        const expected<DerivedDataCache>&  cache = Internal::getDerivedDataCache();
+        if ( input.has_value() == false || cache.has_value() == false )
+            return nullopt;
+        const Internal::CompileAction action = Internal::makeCompileAction( Internal::makeFullDesc( requestDesc ), ContentHash::computeFile( input->_source.str() ) );
+        CookRecord                    record;
+        if ( cache->readRecord( action._actionKey, record ) == false || record.isFresh( action._jobDesc ) == false )
+            return nullopt;
+        return record;
+    }
+
+    bool ShaderCompiler::isResultCurrent( const ShaderCompileResult& result, const ShaderCompileDesc& requestDesc )
+    {
+        using Internal = ShaderCompilerInternal;
+        if ( result._record._listInput.empty() || requestDesc._enginePolicy.has_value() == false )
+            return false;
+        // 소스 내용은 동작 키에만 들고 기록의 입력이 따로 본다 — 여기서는 작업 키의 값만 있으면 된다.
+        return result._record.isFresh( Internal::makeCompileAction( Internal::makeFullDesc( requestDesc ), 0 )._jobDesc );
+    }
+
     ShaderCompileResult ShaderCompiler::compileHLSL( const ShaderCompileDesc& requestDesc )
     {
         using Internal = ShaderCompilerInternal;
@@ -913,14 +896,7 @@ namespace sw
             SW_LOG_ERROR_ID( "ShaderCompiler.EnginePolicyMissing", "%# ('%#')", result._errorMessage, requestDesc._source.c_str() );
             return result;
         }
-        // 엔진 define 은 모든 컴파일에 더한다(appendEngineDefines) — 값이 도구 지문에 섞여 표를 바꾸면 모든 셰이더 캐시가 다시 컴파일된다.
-        ShaderCompileDesc desc = requestDesc;
-        appendEngineDefines( desc._listDefine, *desc._enginePolicy );
-        // 단계 매크로 — 네 백엔드 컴파일 경로(DXC → DXIL · SPIR-V → GL · WGSL, FXC → DXBC)가 모두 이 함수를 지나므로 여기 한 곳에서 넣는다.
-        ShaderMacroDefine stageDefine;
-        stageDefine._name  = getShaderStageInfo( desc._stage )._pStageMacro;
-        stageDefine._value = "1";
-        desc._listDefine.push_back( std::move( stageDefine ) );
+        const ShaderCompileDesc desc = Internal::makeFullDesc( requestDesc );
         result._bytecode.reserve( 4096 );
 
         // 소스는 리소스 경로 하나로 푼다(`ShaderSourceResolver`) - 절대 경로 · 작업 폴더로 추측하지 않는다.
@@ -940,32 +916,36 @@ namespace sw
             return result;
         }
 
-        result._sourceFile                        = input->_source.str();
-        const Internal::ShaderCacheSlot cacheSlot = Internal::computeCacheSlot( desc, *input );
-        if ( cacheSlot._directory.empty() == false ) // 의존 기록이 없으면(없는 항목 · 쓰는 중) 읽기 한 번이 "없음" 으로 답한다
+        const expected<DerivedDataCache>& derivedDataCache = Internal::getDerivedDataCache();
+        if ( derivedDataCache.has_value() == false )
         {
-            // 의존 기록이 없거나 연 헤더 중 하나라도 달라졌으면 맞은 것이 아니다 — 그 셰이더만 다시 컴파일한다(다른 헤더를 쓰는 셰이더의 캐시는 그대로다).
-            // 바이트코드가 기록의 짝인지 내용 해시로 본다 — 다른 프로세스가 둘 중 하나만 바꾼 순간을 읽으면 맞지 않아 다시 컴파일한다.
-            vector<string> listIncludedFile;
-            vector<uint8>  cachedBytes;
-            uint64         recordedBytecodeHash = 0;
-            const bool     bRecordCurrent       = ShaderCookStamp::readIncludeRecord( cacheSlot.makeRecordPath(), listIncludedFile, recordedBytecodeHash );
-            // 기록은 항목을 쓴 뒤에 쓴다 — 기록이 있으면 항목이 있다. 항목은 머리의 서술 · 본문 해시가 맞을 때만 읽힌다(키 충돌 · 깨진 파일은 미스 + 경고).
-            const bool bBytesRead = bRecordCurrent && cacheSlot.makeCache().find( cacheSlot._key, cacheSlot._description, cachedBytes );
-            if ( bBytesRead && cachedBytes.empty() == false && ContentHash::computeBytes( cachedBytes ) == recordedBytecodeHash )
-            {
-                result._bytecode         = std::move( cachedBytes );
-                result._listIncludedFile = std::move( listIncludedFile );
-                result._bSuccess         = true;
-                return result;
-            }
+            result._errorMessage = "The shader DDC could not be opened (Config/Dev/DerivedData.json)";
+            SW_LOG_ERROR_ID( "ShaderCompiler.DerivedDataUnavailable", "%#: %# (%#)", result._errorMessage, derivedDataCache.error().message(), derivedDataCache.error().detail() );
+            return result;
+        }
+        const uint64                  sourceHash = ContentHash::computeFile( input->_source.str() ); // 못 읽으면 0 — 컴파일도 같은 파일을 읽다 실패한다
+        const Internal::CompileAction action     = Internal::makeCompileAction( desc, sourceHash );
+        if ( action._bUseCache && Internal::findCached( *derivedDataCache, action, result._record, result._bytecode ) )
+        {
+            result._bSuccess = true;
+            return result;
+        }
+        result._record = CookRecord{};
+        result._bytecode.clear();
+
+        // 이 컴파일의 작업 — 주 소스와 include 규칙이 읽은 것(없던 후보 포함)이 입력으로 적힌다. 컴파일러의 include 처리기는 이 스레드에서 불린다.
+        CookJob job{ action._jobDesc };
+        if ( job.recordDiskInput( input->_source.str(), sourceHash ) == false )
+        {
+            result._errorMessage = "The shader source could not be recorded as a cook input (see the error above).";
+            return result;
         }
 
         // 같은 이름의 헤더가 엔진 헤더를 가리면 어느 쪽이 쓰였는지 알 수 없다 — 실제로 컴파일하기 전에 오류로 멈춘다. DDC 적중 뒤에 본다: 폴더를 재귀로 훑는 검사라
-        // 요청마다 하면 적중도 느려지고, 맞은 항목의 의존 기록은 없던 후보 자리까지 적어 가리는 헤더가 새로 생기면 이미 낡음이다(`readIncludeRecord`). 쿠킹 스탬프는 따로 막는다.
+        // 요청마다 하면 적중도 느려지고, 맞은 항목의 기록은 없던 후보 자리까지 적어 가리는 헤더가 새로 생기면 이미 낡음이다(`CookRecord::isFresh`).
         // 언리얼도 셰이더 맵 DDC 조회가 컴파일 준비(include 검사)보다 먼저다.
         vector<string> listShadowed;
-        if ( ShaderCookStamp::findShadowedHeaders( resolver->getIncludeResolver(), input->_shadersFolder, listShadowed ) == false )
+        if ( resolver->getIncludeResolver().findShadowedHeaders( input->_shadersFolder, listShadowed ) == false )
         {
             for ( const string& problem : listShadowed )
             {
@@ -1000,7 +980,7 @@ namespace sw
         if ( bFxcTarget )
         {
             if ( Internal::compileDxbc( desc, resolver->getIncludeResolver(), *input, profile, result ) )
-                Internal::saveToCacheIfEnabled( cacheSlot, result );
+                Internal::finishCompile( *derivedDataCache, action, job, result );
             reportCompiled( result );
             return result;
         }
@@ -1023,7 +1003,7 @@ namespace sw
         const Internal::DxcResult serviceResult = Internal::compileDXC( desc, resolver->getIncludeResolver(), *input, profile, result );
         if ( serviceResult == Internal::DxcResult::Compiled )
         {
-            Internal::saveToCacheIfEnabled( cacheSlot, result );
+            Internal::finishCompile( *derivedDataCache, action, job, result );
             reportCompiled( result );
             return result;
         }
