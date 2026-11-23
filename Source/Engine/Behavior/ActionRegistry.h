@@ -12,6 +12,7 @@
 #include "Core/Foundation/Macros.h"
 #include "Core/Foundation/Types.h"
 #include "Core/Memory/Memory.h"
+#include "Core/Registry/NamedEntryRegistry.h"
 
 #include "Engine/Behavior/GameplayContext.h"
 #include "Engine/Behavior/RegisteredParams.h"
@@ -45,9 +46,15 @@ namespace sw
     /** @brief 동작 이름 하나의 등록 줄입니다. 글자는 등록한 이미지의 정적 저장소에 있습니다. */
     struct ActionEntry
     {
+        static constexpr const utf8* kEntryKind = "Game action";
+
         const utf8*               _pName;
         const InstancedStructOps* _pParamsOps;
         ActionFunction            _function;
+
+        const utf8* getEntryName() const { return _pName; }
+        /** @brief 등록 목록입니다(Engine 이미지의 함수 정적 — 까닭은 `ConditionEntry::getEntries` 와 같다). 이름은 대소문자를 보지 않는다. */
+        SW_API static LockedRegistrationList<const ActionEntry>& getEntries();
     };
 
     /** @brief `ActionResult( ActionContext&, const TParams& )` 함수를 형식을 지운 함수로 옮깁니다. */
@@ -60,29 +67,8 @@ namespace sw
         }
     };
 
-    /**
-     * @struct ActionRegistry
-     * @brief 이름 → 동작 표입니다(대소문자 무시). Engine 이미지의 함수 정적입니다. 까닭은 `ConditionRegistry` 와 같습니다.
-     */
-    struct SW_API ActionRegistry
-    {
-        static void               registerAction( const ActionEntry* pEntry );
-        static void               unregisterAction( const ActionEntry* pEntry );
-        static const ActionEntry* find( string_view name );
-        /**
-         * @brief 등록 줄이 빠질 때마다 오르는 세대입니다(모듈을 내리거나 바꿔 올릴 때). 컴파일한 호출은 읽을 때의 값을 들고, 다르면 부르기 전에 줄이 아직 있는지 본다.
-         * @details 배포 빌드는 등록을 빼지 않아 늘 0 이다 — 부르기는 원자 읽기 하나로 끝난다.
-         */
-        static uint32 getRemovalGeneration();
-        /** @brief @p pEntry 가 지금 등록되어 있는지입니다(잠금 · 훑기 — 세대가 바뀐 뒤 처음 부를 때만). 내린 이미지의 줄을 가리키는 호출을 부르지 않게 한다. */
-        static bool isRegistered( const ActionEntry* pEntry );
-        /** @brief 위 둘을 칸 값 보관자(`RegisteredParams`)에 넘기는 표입니다. */
-        static const RegistryEntryOps& getEntryOps();
-        /** @brief 등록된 이름을 등록 순서대로 뒤에 붙입니다(편집기의 고르기 목록). */
-        static void collectNames( vector<string>& outListName );
-        /** @brief 등록된 모든 이름을 ", " 로 이은 글입니다(모르는 이름 오류에 보인다). */
-        static string joinNames();
-    };
+    /** @brief 이름 → 동작 표입니다(대소문자 무시). */
+    using ActionRegistry = NamedEntryRegistry<ActionEntry>;
 
     /** @brief 동작 호출 하나의 추적 줄입니다(범용 Action 런타임 디버거 — HUD 섹션 `action`). 이름은 베껴 둔다(모듈을 내려도 남는다). */
     struct ActionTraceEntry
@@ -117,17 +103,7 @@ namespace sw
     };
 
     /** @brief `SW_GAME_ACTION` 이 두는 정적 등록자입니다. */
-    class SW_API ActionRegistrar
-    {
-    public:
-        explicit ActionRegistrar( const ActionEntry* pEntry );
-        ~ActionRegistrar();
-        ActionRegistrar( const ActionRegistrar& )            = delete;
-        ActionRegistrar& operator=( const ActionRegistrar& ) = delete;
-
-    private:
-        const ActionEntry* _pEntry;
-    };
+    SW_DEFINE_NAMED_ENTRY_REGISTRAR( ActionRegistrar, ActionEntry );
 } // namespace sw
 
 namespace sw
@@ -178,9 +154,5 @@ namespace sw
  * @param TParams   칸 구조체. 없으면 `VocabularyNoParams`
  * @param pFunction `ActionResult( ActionContext&, const TParams& )` 함수의 주소
  */
-#define SW_GAME_ACTION( varName, pName, TParams, pFunction )                                                                                                     \
-    static const ::sw::ActionEntry     sw_gameAction_##varName{ pName, &::sw::InstancedStructOps::of<TParams>(), &::sw::ActionThunk<TParams, pFunction>::call }; \
-    static const ::sw::ActionRegistrar sw_gameActionRegistrar_##varName                                                                                          \
-    {                                                                                                                                                            \
-        &sw_gameAction_##varName                                                                                                                                 \
-    }
+#define SW_GAME_ACTION( varName, pName, TParams, pFunction ) \
+    SW_STATIC_REGISTRATION( gameAction, ::sw::ActionEntry, ::sw::ActionRegistrar, varName, pName, &::sw::InstancedStructOps::of<TParams>(), &::sw::ActionThunk<TParams, pFunction>::call )

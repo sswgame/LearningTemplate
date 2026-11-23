@@ -863,19 +863,40 @@ namespace sw
 namespace sw
 {
     /**
+     * @class LockedRegistrationListBase
+     * @brief 항목 형식을 모르고 "그 항목이 아직 올라 있는가" 를 묻는 면입니다 — 항목이 만든 값을 쥔 쪽(`RegisteredParams`)이 항목 형식마다의 함수 표 없이 묻는다.
+     */
+    class LockedRegistrationListBase
+    {
+    public:
+        LockedRegistrationListBase( const LockedRegistrationListBase& )            = delete;
+        LockedRegistrationListBase& operator=( const LockedRegistrationListBase& ) = delete;
+
+        /** @brief 항목이 빠질 때만 오르는 번호입니다(잠금 없이 읽는다). */
+        virtual uint32 getRemovalGeneration() const = 0;
+        /** @brief 그 주소의 항목이 지금 올라 있는지입니다(잠금 · 훑기 — 번호가 바뀐 뒤에만 부른다). */
+        virtual bool containsAddress( const void* pItem ) const = 0;
+
+    protected:
+        LockedRegistrationListBase()  = default;
+        ~LockedRegistrationListBase() = default;
+    };
+
+    /**
      * @class LockedRegistrationList
      * @brief 자기 잠금을 든 `RegistrationList` 입니다. 모듈 로더 스레드의 정적 등록자와 런타임 조회가 겹치는 정적 등록 표(로컬 저장 바닥 · SQL 드라이버)가 쓴다.
      * @details 표마다 "잠금 + 목록 + 함수 정적 홀더" 를 손으로 짜던 것을 한 벌로 둔다 — 잠금이 목록 옆에 있어야 둘이 함께 정적 초기화 순서를 타지 않는다.
      *          목록은 `withLock` 안에서만 만진다(잠금이 "가장 안쪽" — 람다 안에서 다른 잠금을 잡지 않는다). 함수 정적으로 둘 때는 `SW_DEFINE_LOCKED_REGISTRATION_LIST`.
      */
     template <typename T>
-    class LockedRegistrationList final
+    class LockedRegistrationList final : public LockedRegistrationListBase
     {
     public:
         /** @brief 인자는 `RegistrationList` 생성자 인자(목록 이름 · 순서 · 이름 필수 · 대소문자)입니다. */
         template <typename... TArgs>
         explicit LockedRegistrationList( TArgs&&... args )
-            : _mutex{}
+            : LockedRegistrationListBase{}
+            , _mutex{}
             , _list{ std::forward<TArgs>( args )... }
         {
         }
@@ -950,7 +971,8 @@ namespace sw
             return joined;
         }
         /** @brief `RegistrationList::getRemovalGeneration` 입니다. 잠금 없이 읽는다 — 빠질 때만 오른다. */
-        uint32 getRemovalGeneration() const { return _list.getRemovalGeneration(); }
+        uint32 getRemovalGeneration() const override { return _list.getRemovalGeneration(); }
+        bool   containsAddress( const void* pItem ) const override { return contains( static_cast<const T*>( pItem ) ); }
 
     private:
         mutable mutex       _mutex;

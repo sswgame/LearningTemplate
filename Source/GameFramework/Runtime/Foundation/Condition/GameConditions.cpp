@@ -5,6 +5,7 @@
 #include "Core/Algorithm/VectorUtil.h"
 #include "Core/Hash/HashUtil.h"
 
+#include "Engine/Behavior/ConditionRegistry.h"
 #include "Engine/Object/Component/TagSystem.h"
 
 #include "GameFramework/Runtime/Foundation/Condition/GameFlags.h"

@@ -4,6 +4,7 @@
 
 #include "Core/Math/MathUtil.h"
 
+#include "Engine/Behavior/ConditionRegistry.h"
 #include "Engine/Navigation/INavMover.h"
 
 #include "GameFramework/Runtime/Character/AI/BehaviorTreeNodeParams.h"
