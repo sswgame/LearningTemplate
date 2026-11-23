@@ -83,7 +83,7 @@ namespace sw
 
         /**
          * @brief 저장 형식 판입니다. 키는 형식 이름이라 컴포넌트 이름을 바꾸면 올린다. 옛 판은 읽지 않는다 — 옛 이름 표는 두지 않는다.
-         * @details 2: 게임 규칙 컴포넌트 *DirectorComponent → *GameModeComponent. 3: 플레이어 진행 묶음을 기능마다 컴포넌트(지갑 · 가방 · 퀘스트 일지 · 평판)로 나눴다. 4: 허브 흡수로 게임 디렉터가 키트 디렉터가 됐다(`CityGameModeComponent` 등). 5: 같은 까닭(`CreatureTownGameModeComponent` · `AdventureGameModeComponent`).
+         * @details 2: 게임 규칙 컴포넌트 *DirectorComponent → *GameModeComponent. 3: 플레이어 진행 묶음을 기능마다 컴포넌트(지갑 · 가방 · 퀘스트 일지 · 평판)로 나눴다. 4: 허브 흡수로 게임 디렉터가 키트 디렉터가 됐다(`CityGameModeComponent` 등). 5: 같은 까닭(`CreatureTownGameModeComponent` · `AdventureGameModeComponent` · `FarmPlotGameModeComponent`).
          */
         static constexpr uint32 kVersion = 5;
 

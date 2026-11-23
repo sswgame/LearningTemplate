@@ -2117,7 +2117,7 @@
     "MeadowTownObjectView": "CreatureTownObjectView — MeadowVillage 를 Playground 미니게임으로 흡수하며 마을 디렉터를 CreatureLife 키트로 옮겼다(NEXT 7 절 8 단계)(2026-11-24)",
     "MeadowTownCreatureView": "CreatureTownCreatureView — MeadowVillage 를 Playground 미니게임으로 흡수하며 마을 디렉터를 CreatureLife 키트로 옮겼다(NEXT 7 절 8 단계)(2026-11-24)",
     "MeadowVillageGame": "PlaygroundGame — 게임 MeadowVillage 를 Playground 미니게임 meadowvillage 로 흡수했다(NEXT 7 절 8 단계)(2026-11-24)",
-    "MeadowVillageData": "MeadowFarmGameModeComponent · CreatureTownGameModeComponent 의 씬 데이터 — 게임 MeadowVillage 를 Playground 미니게임 meadowvillage 로 흡수했다(NEXT 7 절 8 단계)(2026-11-24)",
+    "MeadowVillageData": "FarmPlotGameModeComponent · CreatureTownGameModeComponent 의 씬 데이터 — 게임 MeadowVillage 를 Playground 미니게임 meadowvillage 로 흡수했다(NEXT 7 절 8 단계)(2026-11-24)",
     "gv_meadowAutoPlay": "gv_playgroundAutoPlay — 게임 MeadowVillage 를 Playground 미니게임 meadowvillage 로 흡수했다(NEXT 7 절 8 단계)(2026-11-24)",
     "VelmoraGameModeComponent": "AdventureGameModeComponent — Velmora 흡수로 디렉터 · 규칙을 ActionAdventure 키트로 옮겼다(NEXT 7 절 12 단계)(2026-11-24)",
     "VelmoraCampaignTest": "AdventureCampaignTest — Velmora 흡수로 디렉터 · 규칙을 ActionAdventure 키트로 옮겼다(NEXT 7 절 12 단계)(2026-11-24)",
@@ -2128,6 +2128,7 @@
     "VelmoraRegionAttributeDef": "AdventureRegionAttributeDef — Velmora 흡수로 디렉터 · 규칙을 ActionAdventure 키트로 옮겼다(NEXT 7 절 12 단계)(2026-11-24)",
     "VelmoraSiteAttributeDef": "AdventureSiteAttributeDef — Velmora 흡수로 디렉터 · 규칙을 ActionAdventure 키트로 옮겼다(NEXT 7 절 12 단계)(2026-11-24)",
     "VelmoraSpawnAttributeDef": "AdventureSpawnAttributeDef — Velmora 흡수로 디렉터 · 규칙을 ActionAdventure 키트로 옮겼다(NEXT 7 절 12 단계)(2026-11-24)",
-    "VelmoraGame": "PlaygroundGame — 게임 Velmora 를 Playground 미니게임 velmora 로 흡수했다(NEXT 7 절 12 단계)(2026-11-24)"
+    "VelmoraGame": "PlaygroundGame — 게임 Velmora 를 Playground 미니게임 velmora 로 흡수했다(NEXT 7 절 12 단계)(2026-11-24)",
+    "MeadowFarmGameModeComponent": "FarmPlotGameModeComponent — 한 키트만 쓰는 밭 디렉터를 Farming 키트로 옮겼다(흡수 8 의 남은 몫)(2026-11-24)"
   }
 }
