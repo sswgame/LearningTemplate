@@ -5,6 +5,16 @@
 				<item>game/playground/data/cinematic.seq.xml</item>
 			</origins>
 		</entry>
+		<entry key="ArrivalCutA" source="ArrivalCutA" context="SequenceBinding._name">
+			<origins>
+				<item>game/playground/wildwest/data/arrival.seq.xml</item>
+			</origins>
+		</entry>
+		<entry key="ArrivalCutB" source="ArrivalCutB" context="SequenceBinding._name">
+			<origins>
+				<item>game/playground/wildwest/data/arrival.seq.xml</item>
+			</origins>
+		</entry>
 		<entry key="CutA" source="CutA" context="SequenceBinding._name">
 			<origins>
 				<item>game/playground/data/cinematic.seq.xml</item>
@@ -28,6 +38,18 @@
 		<entry key="Mind the pond - nobody swims in it." source="Mind the pond - nobody swims in it." context="Dialogue line">
 			<origins>
 				<item>game/playground/pixeltown/dialogue/elder.dialogue.xml</item>
+			</origins>
+		</entry>
+		<entry key="Press [action=Farm.Use] to work the soil with your tool"
+		       source="Press [action=Farm.Use] to work the soil with your tool"
+		       context="TutorialHintTriggerComponent._text">
+			<origins>
+				<item>game/playground/harvestvalley/maps/farm.scene.xml</item>
+			</origins>
+		</entry>
+		<entry key="Stamina" source="Stamina" context="TextWidget._text">
+			<origins>
+				<item>game/playground/wildwest/ui/hud.ui.xml</item>
 			</origins>
 		</entry>
 		<entry key="Subtitle.Guide" source="Guide" context="Subtitle speaker (audio event SubtitleGuideLine)">
@@ -60,6 +82,11 @@
 		<entry key="The warrior wakes." source="The warrior wakes." context="SequenceTrackItem._text">
 			<origins>
 				<item>game/playground/data/cinematic.seq.xml</item>
+			</origins>
+		</entry>
+		<entry key="Welcome to Dry Gulch." source="Welcome to Dry Gulch." context="SequenceTrackItem._text">
+			<origins>
+				<item>game/playground/wildwest/data/arrival.seq.xml</item>
 			</origins>
 		</entry>
 		<entry key="Welcome to Pixel Town, traveller." source="Welcome to Pixel Town, traveller." context="Dialogue line">
