@@ -57,6 +57,8 @@ namespace sw
         void FreeJob( Job* pJob ) override;
 
     private:
+        /** @brief 잡의 참조를 잡아 큐에 넣습니다. 큐가 가득 차면 멈춥니다. */
+        void enqueueJob( Job* pJob );
         /** @brief 엔진 태스크 하나의 본문입니다. 큐에서 잡 하나를 꺼내 실행하고 참조를 해제합니다. */
         void runQueuedJob();
         /** @brief 큐에서 잡 하나를 꺼내 실행합니다. 꺼낸 잡이 있었으면 true 입니다(`WaitForJobs` 의 돕기). */

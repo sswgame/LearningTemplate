@@ -1790,28 +1790,114 @@ SW_TEST_CASE( TaskManagerTest, DescribeUnfinishedTaskIgnoresUnsubmittedTask )
 #endif
 
 /**
- * @brief 잠든 풀에 깨우지 않고(submitWithoutWake) High 큐 용량(1024)보다 많이 넣어도 끝난다(감사 C-4)
- * @details 큐가 가득 차면 넣는 스레드가 yield 만 하며 기다렸다 — 워커가 모두 잠들어 아무도 비우지 않아 영원히 돌았다. 지금은 가득 차면 잠든 워커를 깨운다.
+ * @brief 잠든 풀에 깨우지 않고(`SubmitBatch`) High 큐 용량(1024)보다 많이 넣어도 끝난다(감사 C-4) — 범위가 끝날 때 한 번 깨운다
+ * @details 큐가 가득 차면 넣는 스레드가 yield 만 하며 기다렸다 — 워커가 모두 잠들어 아무도 비우지 않아 영원히 돌았다. 지금은 넘침 목록이 받는다.
  */
-SW_TEST_CASE( TaskManagerTest, SubmitWithoutWakePastQueueCapacityFinishes )
+SW_TEST_CASE( TaskManagerTest, SubmitBatchPastQueueCapacityFinishes )
 {
     sw::TaskManager manager;
     SW_REQUIRE_TRUE( manager.initialize( kWorkerCount ) );
     manager.waitAll( "TaskManagerTest" ); // 워커가 잠들게 둔다
     constexpr int32   kTaskCount = 2000;
     sw::atomic<int32> ranCount{ 0 };
-    for ( int32 index = 0; index < kTaskCount; ++index )
     {
-        sw::TaskHandle handle = manager.emplaceTask( "Unit", SW_DELEGATE_LAMBDA( sw::TaskDelegate, [&ranCount]()
+        sw::TaskManager::SubmitBatch batch{ manager };
+        for ( int32 index = 0; index < kTaskCount; ++index )
         {
-            ranCount.fetch_add( 1, std::memory_order_relaxed );
-        } ) );
-        handle.setPriority( sw::TaskPriority::High );
-        manager.submitWithoutWake( handle );
+            sw::TaskHandle handle = manager.emplaceTask( "Unit", SW_DELEGATE_LAMBDA( sw::TaskDelegate, [&ranCount]()
+            {
+                ranCount.fetch_add( 1, std::memory_order_relaxed );
+            } ) );
+            handle.setPriority( sw::TaskPriority::High );
+            batch.submit( handle );
+        }
     }
-    manager.wakeSleepingWorkers();
     manager.waitAll( "TaskManagerTest" );
     SW_EXPECT_EQUAL( kTaskCount, ranCount.load() );
+    manager.shutdown();
+}
+
+/**
+ * @brief `runParallel` 의 합류는 아무도 집지 않은 티켓을 기다리지 않는다 — 워커가 모두 다른 일에 붙들려 있어도 호출 스레드가 혼자 끝내고, 줄 앞에 선 남의 태스크를 대신 돌지 않는다
+ * @details 예전에는 합류가 티켓을 세어, 호출 스레드가 자기 티켓이 나올 때까지 앞에 선 태스크(여기서는 표식을 켜는 태스크)를 돌았다. 워커는 합류가 돌아온 뒤에야 놓아준다.
+ */
+SW_TEST_CASE( TaskManagerTest, RunParallelDoesNotWaitForUnclaimedTickets )
+{
+    sw::TaskManager manager;
+    SW_REQUIRE_TRUE( manager.initialize( 1 ) );
+
+    sw::atomic<bool> bWorkerHeld{ false };
+    sw::atomic<bool> bReleaseWorker{ false };
+    sw::TaskHandle   holder = manager.emplaceTask( "HoldWorker", SW_DELEGATE_LAMBDA( sw::TaskDelegate, [&bWorkerHeld, &bReleaseWorker]()
+      {
+        bWorkerHeld.store( true, std::memory_order_release );
+        while ( bReleaseWorker.load( std::memory_order_acquire ) == false )
+        {
+            sw::ThreadUtil::yield();
+        }
+    } ) );
+    holder.submit();
+    while ( bWorkerHeld.load( std::memory_order_acquire ) == false )
+    {
+        sw::ThreadUtil::yield();
+    }
+
+    sw::atomic<bool> bQueuedTaskRan{ false };
+    sw::TaskHandle   queued = manager.emplaceTask( "QueuedAhead", SW_DELEGATE_LAMBDA( sw::TaskDelegate, [&bQueuedTaskRan]()
+      {
+        bQueuedTaskRan.store( true, std::memory_order_release );
+    } ) );
+    queued.submit(); // 티켓보다 앞에 선다
+
+    sw::atomic<uint32> coveredCount{ 0 };
+    manager.runParallel( 64, 1, SW_DELEGATE_LAMBDA( sw::ParallelBlockDelegate, [&coveredCount]( uint32 start, uint32 end )
+    {
+        coveredCount.fetch_add( end - start, std::memory_order_relaxed );
+    } ) );
+    SW_EXPECT_EQUAL( 64u, coveredCount.load() );
+    SW_EXPECT_FALSE( bQueuedTaskRan.load( std::memory_order_acquire ) );
+
+    bReleaseWorker.store( true, std::memory_order_release );
+    manager.waitAll( "TaskManagerTest" );
+    SW_EXPECT_TRUE( bQueuedTaskRan.load( std::memory_order_acquire ) );
+    SW_EXPECT_EQUAL( 0u, manager.getActiveTaskCount() );
+    manager.shutdown(); // 남은 티켓은 그룹 참조만 놓는다 — 풀 단언(나간 그룹 0)이 지킨다
+}
+
+/**
+ * @brief 어느 우선순위의 태스크 안에서 부른 `runParallel` 이든 구간을 빠짐없이 한 번씩 덮고 돌아온다(티켓은 그 태스크의 줄에 선다 — 세 줄 모두 다른 길이다)
+ */
+SW_TEST_CASE( TaskManagerTest, RunParallelInsideEachPriorityCoversEveryIndex )
+{
+    sw::TaskManager manager;
+    SW_REQUIRE_TRUE( manager.initialize( 2 ) );
+
+    constexpr uint32              kCount = 256;
+    sw::vector<sw::atomic<int32>> listHit( kCount );
+    sw::atomic<int32>*            pHit = listHit.data();
+    const sw::TaskPriority        arrPriority[]{ sw::TaskPriority::High, sw::TaskPriority::Normal, sw::TaskPriority::Low };
+    for ( const sw::TaskPriority priority : arrPriority )
+    {
+        sw::TaskHandle outer = manager.emplaceTask( "PriorityParallel", SW_DELEGATE_LAMBDA( sw::TaskDelegate, [&manager, pHit]()
+        {
+            manager.runParallel( kCount, 1, SW_DELEGATE_LAMBDA( sw::ParallelBlockDelegate, [pHit]( uint32 start, uint32 end )
+            {
+                for ( uint32 index = start; index < end; ++index )
+                {
+                    pHit[index].fetch_add( 1, std::memory_order_relaxed );
+                }
+            } ) );
+        } ) );
+        outer.setPriority( priority );
+        outer.submit();
+        manager.waitAll( "TaskManagerTest" );
+    }
+    uint32 wrongCount = 0;
+    for ( uint32 index = 0; index < kCount; ++index )
+    {
+        wrongCount += pHit[index].load() != 3 ? 1u : 0u;
+    }
+    SW_EXPECT_EQUAL( 0u, wrongCount );
     manager.shutdown();
 }
 
