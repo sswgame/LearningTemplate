@@ -379,8 +379,9 @@ namespace sw
      */
     struct SW_GF_API OnlineServerKitRegistry
     {
-        static void registerFactory( OnlineServerKitFactory* pFactory );
-        static void unregisterFactory( OnlineServerKitFactory* pFactory );
+        /** @brief 팩토리를 올립니다. 만들기 함수가 없거나 같은 이름이 있으면(오류 로그) 올리지 않고 false 입니다. */
+        [[nodiscard]] static bool registerFactory( OnlineServerKitFactory* pFactory );
+        static void               unregisterFactory( OnlineServerKitFactory* pFactory );
         /** @brief 이름 순으로 @p outListFactory 에 담습니다. 비운 뒤 채웁니다. */
         static void collectFactories( vector<OnlineServerKitFactory*>& outListFactory );
         /** @brief 이름으로 찾습니다. 없으면 nullptr 입니다. */
@@ -398,22 +399,27 @@ namespace sw
     class OnlineServerKitRegistrar
     {
     public:
-        explicit OnlineServerKitRegistrar( const utf8* pName )
-            : _factory{}
+        explicit OnlineServerKitRegistrar( const utf8* pName, SourceLocation site = SourceLocation::current() )
+            : _factory{ makeFactory( pName ) }
+            , _registrar{ &_factory, &OnlineServerKitRegistry::registerFactory, &OnlineServerKitRegistry::unregisterFactory, site }
         {
-            _factory._pName   = pName;
-            _factory._pCreate = &OnlineServerKitRegistrar::create;
-            OnlineServerKitRegistry::registerFactory( &_factory );
         }
-        ~OnlineServerKitRegistrar() { OnlineServerKitRegistry::unregisterFactory( &_factory ); }
 
         OnlineServerKitRegistrar( const OnlineServerKitRegistrar& )            = delete;
         OnlineServerKitRegistrar& operator=( const OnlineServerKitRegistrar& ) = delete;
 
     private:
         static unique_ptr<IOnlineServerKit> create() { return make_unique<TKit>(); }
+        static OnlineServerKitFactory       makeFactory( const utf8* pName )
+        {
+            OnlineServerKitFactory factory;
+            factory._pName   = pName;
+            factory._pCreate = &OnlineServerKitRegistrar::create;
+            return factory;
+        }
 
-        OnlineServerKitFactory _factory;
+        OnlineServerKitFactory                   _factory;   ///< 목록에 오르는 줄(이 등록자와 수명이 같다)
+        StaticRegistrar<OnlineServerKitFactory*> _registrar; ///< 줄 다음에 만들어 줄보다 먼저 사라진다
     };
 } // namespace sw
 

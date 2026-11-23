@@ -149,7 +149,7 @@ SW_TEST_CASE( TextureFormatSelectionTest, CompanionsCoverEveryFamilySuffix )
     const JSONValue families = table.get( "_listFamily" );
     SW_REQUIRE_TRUE( families.isArray() );
     vector<string> listCompanion;
-    AssetCompanionRegistry::appendCompanionPaths( "engine/textures/a.dds", listCompanion );
+    AssetCompanionRule::appendCompanionPaths( "engine/textures/a.dds", listCompanion );
     for ( size_t index = 0; index < families.size(); ++index )
     {
         const string suffix = families.at( index ).get( "_suffix" ).asString();
@@ -161,7 +161,7 @@ SW_TEST_CASE( TextureFormatSelectionTest, CompanionsCoverEveryFamilySuffix )
         SW_EXPECT_TRUE_MSG( VectorUtil::contains( listCompanion, variant ), message );
         // 변형 자신은 곁 파일이 없다(`a.astc.astc.dds` 를 찾지 않는다).
         vector<string> listNested;
-        AssetCompanionRegistry::appendCompanionPaths( variant, listNested );
+        AssetCompanionRule::appendCompanionPaths( variant, listNested );
         SW_EXPECT_FALSE( VectorUtil::contains( listNested, TextureFormatFamily::makeVariantPath( variant, suffix ) ) );
     }
     SW_EXPECT_TRUE( TextureFormatFamily::makeVariantPath( "engine/textures/a.png", ".astc" ).empty() );

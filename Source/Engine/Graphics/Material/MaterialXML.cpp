@@ -14,6 +14,7 @@
 #include "Engine/Reflection/EnumName.h"
 #include "Engine/Reflection/TypeInfo.h"
 #include "Engine/Reflection/TypeRegistry.h"
+#include "Engine/Serialization/Inherit/DataInheritanceSchemaRegistry.h"
 #include "Engine/Serialization/XML/XMLDocument.h"
 #include "Engine/Serialization/XML/XMLFields.h"
 #include "Engine/Serialization/XML/XMLNameCheck.h"

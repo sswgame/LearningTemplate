@@ -62,14 +62,13 @@ namespace sw
         return unique_ptr<ILocalStore>( sw::make_unique<ThreadedLocalStore>( std::move( *storage ), sealContext ) );
     }
 
-    void LocalStoreBackend::registerBackend( const LocalStoreBackend& backend )
+    bool LocalStoreBackend::registerBackend( const LocalStoreBackend* pBackend )
     {
-        [[maybe_unused]] const RegistrationResult result = getBackends().addLogged( &backend, "Local store backend", backend._pName );
-        SW_ASSERT( result == RegistrationResult::Added );
+        return getBackends().addLogged( pBackend, "Local store backend", pBackend->_pName ) == RegistrationResult::Added;
     }
 
-    void LocalStoreBackend::unregisterBackend( const LocalStoreBackend& backend )
+    void LocalStoreBackend::unregisterBackend( const LocalStoreBackend* pBackend )
     {
-        (void)getBackends().remove( &backend ); // 거절된 등록이면 올라 있지 않다
+        (void)getBackends().remove( pBackend ); // 거절된 등록이면 올라 있지 않다
     }
 } // namespace sw

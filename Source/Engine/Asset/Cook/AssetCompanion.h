@@ -12,58 +12,34 @@
 #include "Core/Container/vector.h"
 #include "Core/Foundation/Macros.h"
 #include "Core/Foundation/Types.h"
+#include "Core/Registry/RegistrationList.h"
 
 namespace sw
 {
     /** @brief 리소스 id 에서 곁 파일의 리소스 id 를 만드는 함수입니다. 이 규칙이 다루지 않는 파일이면 빈 글을 돌려줍니다. */
     using AssetCompanionPathFunction = string ( * )( string_view assetID );
 
-    /** @struct AssetCompanionRule @brief 곁 파일 규칙 하나입니다. */
-    struct AssetCompanionRule
+    /**
+     * @struct AssetCompanionRule
+     * @brief 곁 파일 규칙 하나의 등록 줄과 그 표입니다. 표는 프로세스 값이고 정적 등록자가 채웁니다.
+     */
+    struct SW_API AssetCompanionRule
     {
         const utf8*                _pName{ nullptr };     ///< 규칙 이름(로그 · 테스트)
         AssetCompanionPathFunction _pMakePath{ nullptr }; ///< 경로 함수
-    };
-} // namespace sw
 
-namespace sw
-{
-    class AssetCompanionRegistrar;
-    template <typename T>
-    class RegistrationList;
+        /** @brief 규칙을 올립니다. 이름이 비었거나 같은 이름이 있으면 오류 로그를 남기고 false 입니다. */
+        [[nodiscard]] static bool add( const AssetCompanionRule* pRule );
+        static void               remove( const AssetCompanionRule* pRule );
 
-    /**
-     * @struct AssetCompanionRegistry
-     * @brief 등록된 곁 파일 규칙의 표입니다. 표는 프로세스 값이고 정적 등록자가 채웁니다.
-     */
-    struct SW_API AssetCompanionRegistry
-    {
         /** @brief @p assetID 의 곁 파일 후보(규칙마다 하나, 빈 글은 뺀다)를 @p outListPath 끝에 더합니다. 있는지는 부르는 쪽이 본다. */
         static void appendCompanionPaths( string_view assetID, vector<string>& outListPath );
         /** @brief 이름이 @p name 인 규칙이 있으면 true 입니다(테스트). */
         static bool hasRule( string_view name );
-
-    private:
-        friend class AssetCompanionRegistrar;
-        /** @brief 정적 등록 표입니다(공통 틀 `SW_DEFINE_REGISTRATION_LIST`). */
-        static RegistrationList<const AssetCompanionRegistrar>& getRegistrars();
     };
 
-    /** @brief `SW_ASSET_COMPANION` 이 두는 정적 등록자입니다. 만들 때 올리고 사라질 때 내립니다. */
-    class SW_API AssetCompanionRegistrar
-    {
-    public:
-        explicit AssetCompanionRegistrar( const AssetCompanionRule& rule );
-        ~AssetCompanionRegistrar();
-        AssetCompanionRegistrar( const AssetCompanionRegistrar& )            = delete;
-        AssetCompanionRegistrar& operator=( const AssetCompanionRegistrar& ) = delete;
-
-        /** @brief 등록한 규칙입니다. */
-        const AssetCompanionRule& getRule() const { return _rule; }
-
-    private:
-        AssetCompanionRule _rule;
-    };
+    /** @brief `SW_ASSET_COMPANION` 이 두는 정적 등록자입니다(공통 틀 `StaticRegistrar`). */
+    SW_DEFINE_STATIC_REGISTRAR( AssetCompanionRegistrar, const AssetCompanionRule*, &AssetCompanionRule::add, &AssetCompanionRule::remove );
 } // namespace sw
 
 /**
@@ -72,11 +48,4 @@ namespace sw
  *     SW_ASSET_COMPANION( MeshFracture, &FractureAsset::makeCompanionPath );
  * @endcode
  */
-#define SW_ASSET_COMPANION( id, makePath )                                     \
-    static const ::sw::AssetCompanionRegistrar sw_assetCompanionRegistrar_##id \
-    {                                                                          \
-        ::sw::AssetCompanionRule                                               \
-        {                                                                      \
-            #id, makePath                                                      \
-        }                                                                      \
-    }
+#define SW_ASSET_COMPANION( id, makePath ) SW_STATIC_REGISTRATION( assetCompanion, ::sw::AssetCompanionRule, ::sw::AssetCompanionRegistrar, id, #id, makePath )
