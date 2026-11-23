@@ -310,7 +310,7 @@ namespace sw::editor
             return false;
         // 바뀐 파일이 영향을 주는 원본만 임포트한다(루트 전체를 훑지 않는다). 스탬프를 적는 길은 명령줄 임포트와 같은 한 곳이다. 구멍 마스크 · 곁 스플랫도 원본 해시에 들어간다.
         const HeightfieldRawImporter     importer;
-        const expected<DerivedDataCache> derivedDataCache = DerivedDataCache::loadFromConfig();
+        const expected<DerivedDataCache> derivedDataCache = DerivedDataCache::open( DerivedDataBucket::Import );
         if ( derivedDataCache.has_value() == false )
         {
             SW_LOG_ERROR_ID( "HeightfieldImporter.DerivedDataConfigUnreadable", "Heightfield import skipped: %# (%#)", derivedDataCache.error().message(), derivedDataCache.error().detail() );
@@ -418,7 +418,7 @@ namespace sw::editor
     AssetImportSummary HeightfieldImporter::importAllHeightfields( string_view resourceRoot, AssetImportMode mode )
     {
         const HeightfieldRawImporter     importer;
-        const expected<DerivedDataCache> derivedDataCache = DerivedDataCache::loadFromConfig();
+        const expected<DerivedDataCache> derivedDataCache = DerivedDataCache::open( DerivedDataBucket::Import );
         if ( derivedDataCache.has_value() == false )
         {
             StringBuilder<constant::buffer::kMax512> problemBuilder;

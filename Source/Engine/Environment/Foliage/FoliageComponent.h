@@ -164,8 +164,6 @@ namespace sw
         uint32 getBatchCount() const;
         /** @brief 지금 보이는 셀 배치 수입니다. */
         uint32 getVisibleBatchCount() const;
-        /** @brief 마지막 배치 계산(통째 또는 지형 편집 뒤의 부분)이 새로 만든 인스턴스 배치 수입니다. 바뀌지 않은 셀을 다시 만들지 않는지 테스트가 봅니다. */
-        uint32 getLastRebuiltBatchCount() const { return _lastRebuiltBatchCount; }
 
         /**
          * @brief @p foliageMesh 의 구간 목록이 @p mesh 를 그릴 수 있는 모양인지 봅니다. 문제가 있으면 첫 문제를 @p outError 에 담고 false 입니다.
@@ -266,7 +264,7 @@ namespace sw
         PrimitiveRegistry*                 _pPrimitiveRegistry;     ///< 등록된 매니저의 레지스트리다(구조 링크라 생포인터를 쓴다).
         uint32                             _terrainStabilityFrames; ///< 지형 세대가 마지막으로 바뀐 뒤 지난 프레임 수 — 칠하는 동안 다시 계산하지 않는다
         uint32                             _instanceCount;
-        uint32                             _lastRebuiltBatchCount;  ///< `getLastRebuiltBatchCount`
+        uint32                             _lastRebuiltBatchCount;  ///< 마지막 배치 계산이 새로 만든 인스턴스 배치 수(로그)
         uint32                             _builtTerrainGeneration; ///< 배치를 계산할 때 지형의 높이장 세대(`TerrainComponent::getHeightfieldGeneration`)
         uint32                             _builtSplatRevision;     ///< 배치를 계산할 때 지형의 스플랫 세대(`TerrainComponent::getSplatRevision`)
         uint32                             _seenTerrainGeneration;  ///< 지난 틱에 본 높이장 세대

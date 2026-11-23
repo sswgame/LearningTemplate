@@ -63,7 +63,6 @@ namespace sw
         , _pipelinePath{}
         , _argumentPipelinePath{}
         , _pipelineRequest{}
-        , _lastIndirectDrawCallCount{ 0 }
         , _lastPendingPSOBatchCount{ 0 }
         , _bOffscreenRenderer{ SW_FALSE }
         , _capture{ _pDevice, _state._mainView._transientPool, _pipelineResource }
@@ -641,8 +640,7 @@ namespace sw
         if ( _passExecutor.prepareCommandList( pDevice, pCallerName ) == false )
             return false;
 
-        const bool bOk             = _passExecutor.submitGraph( pDevice );
-        _lastIndirectDrawCallCount = _passExecutor.getIndirectDrawCallCount();
+        const bool bOk = _passExecutor.submitGraph( pDevice );
         _publishedOcclusionTilesBuilt.store( _state._mainView._bOcclusionTilesThisFrame == SW_TRUE ? 1u : 0u );
         _publishedOcclusionTwoPhase.store( _passExecutor.getFrameGraphExecutor().isTwoPhaseOcclusionEnabled() ? 1u : 0u );
         _publishedOcclusionLatePhase.store( _passExecutor.getFrameGraphExecutor().hasLatePhaseRun() ? 1u : 0u );

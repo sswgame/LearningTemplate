@@ -118,8 +118,6 @@ namespace sw
         static void unregisterFactory( ServerServiceFactory* pFactory );
         /** @brief 올라온 팩토리를 시작 순서(같으면 이름 순)로 @p outListFactory 에 담습니다. 비운 뒤 채웁니다. */
         static void collectFactories( vector<ServerServiceFactory*>& outListFactory );
-        /** @brief 올라 있는 팩토리 수입니다. */
-        static int32 getFactoryCount();
     };
 } // namespace sw
 

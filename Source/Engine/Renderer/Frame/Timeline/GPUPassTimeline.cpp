@@ -181,9 +181,13 @@ namespace sw
             int64      gpuNow{ 0 };
             const bool bClockRead = pTimestamps->readGPUClockNanos( gpuNow );
             // 뷰어가 큐 이름 옆에 GPU API 종류를 보여 준다.
-            const RHIBackendInfo* pInfo   = RHIBackendInfoTable::find( pDevice->getBackendType() );
-            const bool            bOpened = bClockRead && pInfo != nullptr &&
-                                 _exporter.openContext( *pBackend, pInfo->_profilerAPI, pDevice->getBackendName(), pDevice, gpuNow );
+            const RHIBackendInfo* pInfo = RHIBackendInfoTable::find( pDevice->getBackendType() );
+            // 비동기 컴퓨트 큐를 재는 백엔드(DX12 · Vulkan)는 그 큐의 줄을 따로 연다 — 그래픽스 큐와 겹치는 구간은 한 트리에 담을 수 없다.
+            StringBuilder<constant::buffer::kMax128> computeQueueName;
+            computeQueueName.appendFormat( "%# async compute", pDevice->getBackendName() );
+            const bool bOpened = bClockRead && pInfo != nullptr &&
+                                 _exporter.openContext( *pBackend, pInfo->_profilerAPI, pDevice->getBackendName(),
+                                                        pTimestamps->isComputeQueueTimestampComparable() ? computeQueueName.c_str() : nullptr, pDevice, gpuNow );
             if ( bOpened == false )
             {
                 _pFailedDevice = pDevice;

@@ -166,8 +166,6 @@ namespace sw
         void update( float32 deltaTime ) override;
         /** @brief 미리보기 정책의 고정 스텝(`ScenePreviewPolicy::_fixedStepOverride`)을 적용합니다. */
         void applyPreviewPolicy( const ScenePreviewPolicy& policy ) override;
-        /** @brief `gv_physicsDebugDraw` 가 켜져 있으면 바디 · 캐릭터를 디버그 선으로 그립니다. */
-        void drawDebug( DebugDrawQueue& queue ) override;
 
         /**
          * @brief 프레임 시간만큼 물리를 진행하고 이벤트를 모읍니다(나눠 주기는 `deliverFrameEvents`). 파일 머리말의 순서입니다.

@@ -36,6 +36,7 @@ namespace sw
         {
             uint64               _key{ 0 };
             RHIPipelineStateDesc _desc{};
+            uint64               _generation{ 0 }; ///< 넣을 때의 세대(`submit` 이 적는다)
         };
 
         /** @brief 만든 결과입니다. `_handle` 이 0 이면 실패입니다. 가져간 쪽이 소유합니다. */
@@ -44,6 +45,8 @@ namespace sw
             uint64                 _key{ 0 };
             RHIPipelineStateDesc   _desc{};
             RHIPipelineStateHandle _handle{ 0 };
+            uint64                 _generation{ 0 };
+            bool                   _bDiscarded{ false }; ///< NOLINT(sw-bool-flag): 집합체 칸. 버린 세대의 결과 — 캐시에 넣지 않고 핸들만 놓는다(`discardPending`)
         };
 
         MaterialPSOBuilder() = default;
@@ -60,6 +63,11 @@ namespace sw
          * @param bThread true 이면 빌더 스레드가 만듭니다(처음 넣을 때 시작합니다). false 이면 `buildOnCaller` 가 만듭니다.
          */
         void submit( IRHIDevice* pDevice, Job&& job, bool bUrgent, bool bThread );
+        /**
+         * @brief 지금까지 넣은 작업을 모두 무효로 합니다 — 줄은 비우고, 만드는 중이거나 끝난 것은 결과에 버림 표시(`Result::_bDiscarded`)가 붙습니다.
+         * @details 셰이더 핫 리로드가 부른다: 만드는 중인 작업이 옛 바이트코드를 이미 집었을 수 있어 그 PSO 를 받으면 안 된다.
+         */
+        void discardPending();
         /** @brief 완료된 결과를 @p outListResult 로 옮깁니다(앞의 내용은 지웁니다). */
         void takeResults( vector<Result>& outListResult );
         /**
@@ -89,6 +97,7 @@ namespace sw
         vector<Result> _listResult SW_GUARDED_BY( _mutex );
         IRHIDevice* _pDevice       SW_GUARDED_BY( _mutex ){ nullptr };
         uint32 _inFlight           SW_GUARDED_BY( _mutex ){ 0 };
+        uint64 _generation         SW_GUARDED_BY( _mutex ){ 0 }; ///< `discardPending` 이 올린다. 앞 세대의 결과는 버린다
         /** @brief 빌더 스레드입니다. 일은 신호(값은 쓰지 않는다)이고 작업 자체는 위 줄에서 급한 것부터 꺼낸다. 처음 넣을 때 띄운다. */
         DedicatedWorker<uint8> _worker;
     };

@@ -2,14 +2,11 @@
 
 #include "GameFramework/Runtime/Foundation/Framework/Flow/GameInstance.h"
 
-#include "Core/Algorithm/VectorUtil.h"
 #include "Core/GlobalVariable/GlobalVariableManager.h"
 #include "Core/Memory/Memory.h"
-#include "Core/String/StringBuilder.h"
 
 #include "Engine/Automation/Watch/AutomationWatch.h"
 #include "Engine/Config/GameConfig.h"
-#include "Engine/Console/DevCommandRegistry.h"
 #include "Engine/Content/AssetIO.h"
 #include "Engine/Input/IInputCaptureQuery.h"
 #include "Engine/Input/InputManager.h"
@@ -23,20 +20,19 @@
 #include "Engine/Profiling/FrameProfiler.h"
 #include "Engine/Scene/Scene.h"
 #include "Engine/Scene/SceneManager.h"
-#include "Engine/Serialization/Inherit/AssetRedirect.h"
 #include "Engine/UserSettings/UserSettingsManager.h"
 
 #include "GameFramework/Runtime/Foundation/Framework/Flow/GameInstanceClientHook.h"
 #include "GameFramework/Runtime/Foundation/Framework/Flow/GameSceneFlow.h"
 #include "GameFramework/Runtime/Foundation/Framework/Flow/IContentConfiguration.h"
 #include "GameFramework/Runtime/Foundation/Framework/Flow/IGameDevPart.h"
-#include "GameFramework/Runtime/Foundation/Framework/GameEventUtil.h"
 #include "GameFramework/Runtime/Foundation/Framework/GameFeature/GameFeatureScope.h"
 #include "GameFramework/Runtime/Foundation/Framework/GameService.h"
 #include "GameFramework/Runtime/Foundation/Framework/Minigame/MinigameFlow.h"
 #include "GameFramework/Runtime/Foundation/Framework/Presentation/GameSound.h"
 #include "GameFramework/Runtime/Foundation/Framework/Save/Autosave.h"
 #include "GameFramework/Runtime/Foundation/Framework/Save/GameLocalStore.h"
+#include "GameFramework/Runtime/Foundation/Framework/Save/GameSaveSlots.h"
 #include "GameFramework/Runtime/Foundation/GameData/GameSettingsOverride.h"
 #include "GameFramework/Runtime/Gameplay/Appearance/AppearanceDataWatcher.h"
 #include "GameFramework/Runtime/Gameplay/Appearance/AppearanceDatabase.h"
@@ -52,66 +48,10 @@ namespace sw
     {
         struct GameInstanceInternal
         {
-            /** @brief 게임 상태 세이브 슬롯의 형식 버전입니다(봉투에 적힌다). 스냅샷 봉투(`GameStateSnapshot`)의 바이트 형식을 바꾸면 올린다. */
-            static constexpr uint32 kSaveSlotFormatVersion = 1;
             /** @brief 세이브 찍기(`captureSnapshot( SaveGame )`)의 프로파일러 구간 이름입니다 — 감시 값 `Save.CaptureMs` · `Save.CapturePeakMs` 의 재료(배포에는 재는 일도 칸도 없다). */
             static constexpr const utf8* kSaveCaptureScopeName = "GT.Save.capture";
             /** @brief `Save.CapturePeakMs` 가 읽는 백분위입니다 — p100(창 안 최대). */
             static constexpr uint32 kPeakPercent = 100;
-
-            /** @brief `game.save [슬롯]` · `game.load [슬롯]` 의 몸통입니다. 슬롯을 비우면 기본 슬롯입니다. 맡기기만 하고 끝은 감시 값 `Save.Written` · `Save.Loaded` 로 본다. */
-            template <bool bSave>
-            static bool runSlotCommand( const vector<string>& listArgument, string& outReply )
-            {
-                if ( listArgument.size() > 1 )
-                    return false;
-                GameInstance* const pInstance = GameInstance::findRunningInstance();
-                const string_view   slot      = listArgument.empty() ? string_view{} : string_view( listArgument[0] );
-                const utf8* const   pVerb     = bSave ? "game.save" : "game.load";
-                if ( pInstance == nullptr )
-                {
-                    StringBuilder<constant::buffer::kMax256> replyBuilder;
-                    replyBuilder.appendFormat( "%#: no game is running", pVerb );
-                    outReply = string( replyBuilder.view() );
-                    return true;
-                }
-                const bool                               bQueued = bSave ? pInstance->saveGameToSlot( slot ) : pInstance->loadGameFromSlot( slot );
-                StringBuilder<constant::buffer::kMax256> replyBuilder;
-                replyBuilder.appendFormat( "%#: %# '%#'", pVerb, bQueued ? "queued" : "refused", slot.empty() ? string_view( "<default>" ) : slot );
-                outReply = string( replyBuilder.view() );
-                return true;
-            }
-
-            /** @brief 활성 씬의 지금 리소스 id(`Scene::getSourcePath` 를 리다이렉트로 푼 것)입니다. 씬 매니저나 활성 씬이 없으면 빈 글입니다 — 세이브 머리의 씬 정체와 같은 뜻이다. */
-            static string findActiveSceneID()
-            {
-                const SceneManager* const pSceneManager = game::findSubsystem<SceneManager>();
-                const Scene* const        pScene        = pSceneManager != nullptr ? pSceneManager->getActiveScene() : nullptr;
-                return pScene != nullptr ? AssetRedirect::toCurrentID( pScene->getSourcePath() ) : string{};
-            }
-
-            /** @brief 감시 값 `Save.Blocked` 입니다 — 세이브 막기 문이 들렸으면 1(씬 로드 · 깨진 복원 · 연출). */
-            [[nodiscard]] static bool readSaveBlocked( const GameObjectManager* pManager, float64& outValue )
-            {
-                (void)pManager;
-                GameInstance* const pInstance = GameInstance::findRunningInstance();
-                if ( pInstance == nullptr )
-                    return false;
-                outValue = pInstance->getSaveLock().isBlocked() ? 1.0 : 0.0;
-                return true;
-            }
-
-            template <bool bWritten>
-            [[nodiscard]] static bool readSlotCount( const GameObjectManager* pManager, float64& outValue )
-            {
-                (void)pManager;
-                const GameInstance* const pInstance = GameInstance::findRunningInstance();
-                if ( pInstance == nullptr )
-                    return false;
-                const SaveSlotCounts& counts = pInstance->getSaveSlotCounts();
-                outValue                     = static_cast<float64>( bWritten ? counts._written : counts._loaded );
-                return true;
-            }
 
             /**
              * @brief 감시 값 `Save.CaptureMs` · `Save.CapturePeakMs` 입니다 — 세이브 찍기 구간의 마지막 프레임 시간 · 측정 창 p100(밀리초).
@@ -156,10 +96,6 @@ namespace sw
         , _pDevPart{}
         , _loadedAudioEvents{}
         , _listFollowedService{}
-        , _listSlotRequest{}
-        , _saveSlotCounts{}
-        , _pendingSlotRestore{}
-        , _brokenRestoreBlock{}
         , _bStarted{ SW_FALSE }
         , _bDerivedEntered{ SW_FALSE }
         , _bSecuritySet{ SW_FALSE }
@@ -173,6 +109,8 @@ namespace sw
         _gameScope.emplaceSubsystem<GameSceneFlow>( _packConfig._data, screenTransition, pLoadingScreen, _saveLock );
         // 로컬 저장소(세이브 슬롯)는 게임 범위 하나다 - 게임 상태 세이브 · 자동 저장 · 계정 장치 비밀이 함께 쓴다.
         (void)_gameScope.addSubsystem( std::move( localStore ) );
+        // 게임 상태 세이브 슬롯(저장 · 불러오기 · 깨진 복원의 세이브 막기)은 저장소 · 씬 흐름 위에 선다.
+        _gameScope.emplaceSubsystem<GameSaveSlots>( *this, _packConfig._data, _saveLock );
         // 온라인 세션은 키트 클라이언트를 묶을 뿐 연결은 게임이 연다 - 온라인을 쓰지 않는 게임에는 비용이 없다.
         _gameScope.emplaceSubsystem<OnlineSession>( _packConfig._data );
         // 텔레메트리 · 크래시 업로드는 gamesettings 에 끝점이 있을 때만 엔진 업로더에 HTTP 클라이언트를 끼운다 - 없으면 아무 일도 하지 않는다.
@@ -374,7 +312,6 @@ namespace sw
         if ( _pGameFeatureScope != nullptr )
             (void)_pGameFeatureScope->deactivate(); // 남은 것은 해제 검사가 오류로 알렸다
         _pGameFeatureScope.reset();
-        _pendingSlotRestore = nullopt; // 씬 흐름이 맡긴 로드를 잊었다 — 기다리던 세이브(와 그 완료 함수)도 잊는다
         // 제공자는 GameFramework 의 것이라 이 인스턴스가 내려가면 거둔다(다시 서는 인스턴스가 다시 넣는다). 열린 세션은 이미 받은 포인터로 계속 돈다.
         GameNetSession* const pNetSession = game::findSubsystem<GameNetSession>();
         if ( _bSecuritySet == SW_TRUE && pNetSession != nullptr )
@@ -472,7 +409,7 @@ namespace sw
         { return captureSnapshot( SerializePurpose::SaveGame, outBytes ); } ),
                                      SW_DELEGATE_LAMBDA( AutosaveManager::LoadDelegate, [this]( const string& slot, const vector<uint8>& bytes, const AutosaveManager::RestoreCompletedFunction& onCompleted )
         {
-            applySaveSlot( slot, bytes, onCompleted ); // 슬롯 불러오기와 같은 길 — 찍은 씬으로 옮긴 뒤 적용한다(감사 G-7)
+            getSubsystem<GameSaveSlots>().applySlot( slot, bytes, onCompleted ); // 슬롯 불러오기와 같은 길 — 찍은 씬으로 옮긴 뒤 적용한다(감사 G-7)
             return true;
         } ) ) == false )
             return false; // 까닭은 관리자가 남겼다
@@ -544,7 +481,7 @@ namespace sw
 
     void GameInstance::update( float32 deltaTime )
     {
-        // 프레임 순서: 다시 읽힌 카탈로그 칸(게임 범위 기능 포함) → 맡긴 미니게임 진입 → 씬 흐름(페이드 · 로딩 화면 · 끝난 로드 알림) → 넷 세션 → 파생 프레임 훅.
+        // 프레임 순서(계약 테스트 `GameInstanceTest.UpdateOrder`): 다시 읽힌 카탈로그 칸(게임 범위 기능 포함) → 맡긴 미니게임 진입 → 씬 흐름(페이드 · 로딩 화면 · 끝난 로드 알림) → 넷 세션 → 파생 프레임 훅.
         for ( const Delegate<void()>& follow : _listFollowedService )
         {
             follow();
@@ -608,42 +545,13 @@ namespace sw
         {
             // 교체 중에 졌다 — 일부만 선 씬을 세이브에 쓰지 않는다. 검증에서 진 것(씬이 그대로)은 막지 않는다 — 간격 저장이 계속 마지막 좋은 상태를 남긴다.
             if ( result.error() == SnapshotRestoreFailure::SceneBroken )
-            {
-                SW_LOG_ERROR_ID( "GameInstance.RestoreBrokeScene", "The restore failed after the scene was cleared - saving is blocked until a restore succeeds or the scene is reopened" );
-                _brokenRestoreBlock = _saveLock.block( "restore.broken" );
-                // 세이브 불러오기(슬롯 · 자동 저장)는 씬을 디스크에서 다시 연다 — 핫 리로드 스냅샷은 저장하지 않은 편집이 든 씬이라 다시 열지 않고 막기만 둔다.
-                if ( purpose == SerializePurpose::SaveGame )
-                    reopenBrokenScene();
-            }
+                getSubsystem<GameSaveSlots>().notifySceneBroken( purpose );
             return result;
         }
-        _brokenRestoreBlock.reset(); // 성공한 복원이 깨진 씬을 덮었다
+        getSubsystem<GameSaveSlots>().notifySceneRestored(); // 성공한 복원이 깨진 씬을 덮었다
         onAfterStateDeserialize();
         _stateSnapshot.endRestore();
         return result;
-    }
-
-    void GameInstance::reopenBrokenScene()
-    {
-        const string scenePath = GameInstanceInternal::findActiveSceneID();
-        if ( scenePath.empty() )
-        {
-            SW_LOG_ERROR_ID( "GameInstance.BrokenSceneNotReopened", "The broken scene has no source to reopen - saving stays blocked until a restore succeeds" );
-            return;
-        }
-        if ( getSubsystem<GameSceneFlow>().requestSceneThen( scenePath, SW_DELEGATE_METHOD( GameSceneFlow::SceneLoadedFunction, &GameInstance::onBrokenSceneReopened, this ) ) == false )
-            SW_LOG_ERROR_ID( "GameInstance.BrokenSceneNotRequested", "The broken scene '%#' could not be requested again - saving stays blocked until a restore succeeds", scenePath.c_str() );
-    }
-
-    void GameInstance::onBrokenSceneReopened( Scene* pScene )
-    {
-        if ( pScene == nullptr )
-        {
-            SW_LOG_ERROR_ID( "GameInstance.BrokenSceneReopenFailed", "Reopening the broken scene failed - saving stays blocked until a restore succeeds" );
-            return;
-        }
-        _brokenRestoreBlock.reset(); // 디스크에서 다시 선 씬이다 — 일부만 선 씬이 아니다
-        SW_LOG_INFO_ID( "GameInstance.BrokenSceneReopened", "The broken scene '%#' was reopened - saving is allowed again", pScene->getSourcePath().c_str() );
     }
 
     bool GameInstance::restoreSnapshot( SerializePurpose purpose, const vector<uint8>& inBytes )
@@ -653,171 +561,9 @@ namespace sw
         return readStateEnvelope( purpose, inBytes.data(), static_cast<uint32>( inBytes.size() ) ).has_value();
     }
 
-    bool GameInstance::resolveSaveSlot( string_view slot, string& outSlot ) const
-    {
-        const string& defaultSaveSlot = _packConfig._data._defaultSaveSlot;
-        if ( slot.empty() && defaultSaveSlot.empty() )
-        {
-            SW_LOG_ERROR_ID( "GameInstance.NoSaveSlotGiven", "No save slot was given and GameSettings has no defaultSaveSlot - nothing is saved or loaded" );
-            return false;
-        }
-        // 세이브는 로컬 저장 슬롯이다 - 자리(사용자 데이터 폴더)는 `GameLocalStore` 가 정하고 여기는 이름만 고른다(언리얼 `SaveGameToSlot` 의 슬롯 이름).
-        const string_view chosenSlot = slot.empty() ? string_view( defaultSaveSlot ) : slot;
-        if ( ILocalStore::isValidSlotName( chosenSlot ) == false )
-        {
-            SW_LOG_ERROR_ID( "GameInstance.SaveSlotBreaksSlot", "Save slot '%#' breaks the slot name rule ([0-9a-z_.-], at most one '/' group, 64 characters)", chosenSlot );
-            return false;
-        }
-        outSlot = string( chosenSlot );
-        return true;
-    }
-
-    void GameInstance::holdSlotRequest( Subscription request )
-    {
-        (void)VectorUtil::removeIf( _listSlotRequest, []( const Subscription& held )
-        { return held.isActive() == false; } );
-        _listSlotRequest.push_back( std::move( request ) );
-    }
-
-    bool GameInstance::saveGameToSlot( string_view slot )
-    {
-        string slotName;
-        if ( resolveSaveSlot( slot, slotName ) == false )
-            return false;
-        vector<uint8> snapshotBytes;
-        if ( captureSnapshot( SerializePurpose::SaveGame, snapshotBytes ) == false )
-        {
-            SaveGameSavedEvent event{};
-            event._slot     = slotName;
-            event._bSuccess = false;
-            GameEventUtil::send( event );
-            return false;
-        }
-        LocalStoreWriteOptions options{};
-        options._formatVersion = GameInstanceInternal::kSaveSlotFormatVersion;
-        holdSlotRequest( getSubsystem<GameLocalStore>().submitWrite( slotName, std::move( snapshotBytes ), options,
-                                                                     SW_DELEGATE_METHOD( GameLocalStore::CompletionFunction, &GameInstance::onSaveSlotWritten, this ) ) );
-        return true;
-    }
-
-    void GameInstance::onSaveSlotWritten( const LocalStoreCompletion& completion )
-    {
-        if ( completion._result != LocalStoreResult::Ok )
-            SW_LOG_ERROR_ID( "GameInstance.SaveSlotCouldNot", "Save slot '%#' could not be written (local store result %#)", completion._slot.c_str(), static_cast<int32>( completion._result ) );
-        else
-            ++_saveSlotCounts._written;
-        SaveGameSavedEvent event{};
-        event._slot     = completion._slot;
-        event._bSuccess = completion._result == LocalStoreResult::Ok;
-        GameEventUtil::send( event );
-    }
-
-    bool GameInstance::loadGameFromSlot( string_view slot )
-    {
-        if ( _pendingSlotRestore.has_value() )
-        {
-            SW_LOG_WARNING_ID( "GameInstance.LoadWhileTravelling", "A save is already waiting for its scene - this load is refused (slot '%#')", _pendingSlotRestore->_slot.c_str() );
-            return false;
-        }
-        string slotName;
-        if ( resolveSaveSlot( slot, slotName ) == false )
-            return false;
-        holdSlotRequest( getSubsystem<GameLocalStore>().submitRead( slotName, SW_DELEGATE_METHOD( GameLocalStore::CompletionFunction, &GameInstance::onSaveSlotRead, this ) ) );
-        return true;
-    }
-
-    void GameInstance::onSaveSlotRead( const LocalStoreCompletion& completion )
-    {
-        if ( completion._result != LocalStoreResult::Ok )
-        {
-            SW_LOG_ERROR_ID( "GameInstance.SaveSlotCouldNot2", "Save slot '%#' could not be read (local store result %#)", completion._slot.c_str(), static_cast<int32>( completion._result ) );
-            publishSlotLoaded( completion._slot, false, {} );
-            return;
-        }
-        if ( completion._formatVersion != GameInstanceInternal::kSaveSlotFormatVersion )
-        {
-            // 옛 형식 리더는 두지 않는다 - 다른 판의 세이브는 거절한다.
-            SW_LOG_ERROR_ID( "GameInstance.SaveSlotFormatVersion", "Save slot '%#' has format version %#, this build reads %#", completion._slot.c_str(), completion._formatVersion,
-                             GameInstanceInternal::kSaveSlotFormatVersion );
-            publishSlotLoaded( completion._slot, false, {} );
-            return;
-        }
-        applySaveSlot( completion._slot, completion._bytes, {} );
-    }
-
-    void GameInstance::applySaveSlot( const string& slot, const vector<uint8>& bytes, const SaveAppliedFunction& onApplied )
-    {
-        if ( _pendingSlotRestore.has_value() )
-        {
-            // 읽기 둘이 겹쳤다 — 앞의 것이 씬을 옮기는 중이라 이 세이브를 곧 내려갈 씬에 풀지 않는다.
-            SW_LOG_WARNING_ID( "GameInstance.SlotReadWhileTravelling", "Save slot '%#' was read while another save waits for its scene - it is not applied", slot.c_str() );
-            publishSlotLoaded( slot, false, onApplied );
-            return;
-        }
-        // 머리만 읽어 찍은 씬을 본다. 같은 씬(또는 씬 없이 찍은 세이브)이면 바로 적용하고, 아니면 그 씬을 연 뒤 적용한다 —
-        // 언리얼 게임이 세이브의 맵 이름으로 `OpenLevel` 한 뒤 적용하는 것과 같다(유니티는 `LoadSceneAsync` 의 완료에서 적용).
-        const optional<string> savedSceneID = GameStateSnapshot::readSceneID( bytes.data(), static_cast<uint32>( bytes.size() ) );
-        if ( savedSceneID.has_value() == false )
-        {
-            publishSlotLoaded( slot, false, onApplied ); // 머리가 틀린 까닭은 읽기가 남겼다
-            return;
-        }
-        if ( savedSceneID->empty() || *savedSceneID == GameInstanceInternal::findActiveSceneID() )
-        {
-            publishSlotLoaded( slot, restoreSnapshot( SerializePurpose::SaveGame, bytes ), onApplied );
-            return;
-        }
-        _pendingSlotRestore = PendingSlotRestore{ slot, bytes, onApplied };
-        if ( getSubsystem<GameSceneFlow>().requestSceneThen( *savedSceneID, SW_DELEGATE_METHOD( GameSceneFlow::SceneLoadedFunction, &GameInstance::onSaveSceneLoaded, this ) ) == false )
-        {
-            SW_LOG_ERROR_ID( "GameInstance.SaveSceneNotRequested", "Save slot '%#' was made in scene '%#', which could not be requested - nothing is loaded", slot.c_str(), savedSceneID->c_str() );
-            _pendingSlotRestore = nullopt;
-            publishSlotLoaded( slot, false, onApplied );
-        }
-    }
-
-    void GameInstance::onSaveSceneLoaded( Scene* pScene )
-    {
-        if ( _pendingSlotRestore.has_value() == false )
-            return; // 종료가 거뒀다
-        const PendingSlotRestore pending = std::move( *_pendingSlotRestore );
-        _pendingSlotRestore              = nullopt;
-        if ( pScene == nullptr )
-        {
-            SW_LOG_ERROR_ID( "GameInstance.SaveSceneNotOpened", "The scene of save slot '%#' did not open (failed or replaced by a later request) - nothing is loaded", pending._slot.c_str() );
-            publishSlotLoaded( pending._slot, false, pending._onApplied );
-            return;
-        }
-        publishSlotLoaded( pending._slot, restoreSnapshot( SerializePurpose::SaveGame, pending._bytes ), pending._onApplied );
-    }
-
-    void GameInstance::publishSlotLoaded( const string& slot, bool bLoaded, const SaveAppliedFunction& onApplied )
-    {
-        if ( bLoaded )
-            ++_saveSlotCounts._loaded;
-        SaveGameLoadedEvent event{};
-        event._slot     = slot;
-        event._bSuccess = bLoaded;
-        GameEventUtil::send( event );
-        if ( onApplied.isBound() )
-            onApplied( bLoaded );
-    }
-
-    // 세이브 메뉴 자리의 개발 명령 — 시나리오가 플레이어의 "저장 · 불러오기" 를 같은 창구(`saveGameToSlot` · `loadGameFromSlot`)로 부른다. 메뉴 화면은 아직 없다.
-    SW_DEV_COMMAND( GameSave, "game.save", "game.save [slot]", "Save the scene and game state to a save slot (empty: the default slot of gamesettings)",
-                    &GameInstanceInternal::runSlotCommand<true> );
-    SW_DEV_COMMAND( GameLoad, "game.load", "game.load [slot]", "Load the scene and game state from a save slot (empty: the default slot of gamesettings)",
-                    &GameInstanceInternal::runSlotCommand<false> );
-
-    SW_AUTOMATION_WATCH( saveWritten, "Save.Written", "Game state save slots written successfully by the running game", &GameInstanceInternal::readSlotCount<true> );
-    // 막기는 씬 로드(워커)와 세이브 읽기(저장소)의 끝을 따르므로 벽시계 감시 값이다.
-    // 활동 수 없음: 저장 잠금은 게임 상태(씬 로드 · 깨진 복원 · 컷신)가 풀어 주는 문이다 — 셀 수 있는 일의 양이 아니다.
-    SW_AUTOMATION_WALL_WATCH( saveBlocked, "Save.Blocked", "1 while the running game's save gate refuses saving (scene loading, broken restore, cutscene)", &GameInstanceInternal::readSaveBlocked,
-                              nullptr );
     // 측정 문턱(Android 4 ms)을 재는 자리 — 넘기 전에는 감시 값만 둔다(`docs/NEXT.md` 측정 게임 프레임워크).
     SW_AUTOMATION_WATCH( saveCaptureMs, "Save.CaptureMs", "Game-thread milliseconds of the save-game capture in the last profiled frame (profiler scope GT.Save.capture; no value while the profiler is off)",
                          &GameInstanceInternal::readCaptureMilliseconds<false> );
     SW_AUTOMATION_WATCH( saveCapturePeakMs, "Save.CapturePeakMs", "Longest save-game capture in game-thread milliseconds over the profiler window (p100 of GT.Save.capture; no value while the profiler is off)",
                          &GameInstanceInternal::readCaptureMilliseconds<true> );
-    SW_AUTOMATION_WATCH( saveLoaded, "Save.Loaded", "Game state save slots read and restored successfully by the running game", &GameInstanceInternal::readSlotCount<false> );
 } // namespace sw

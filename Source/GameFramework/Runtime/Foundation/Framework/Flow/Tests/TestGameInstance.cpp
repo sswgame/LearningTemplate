@@ -7,6 +7,7 @@
 #include "Engine/Net/GameNetSession.h"
 
 #include "GameFramework/Runtime/Foundation/Framework/Flow/GameInstance.h"
+#include "GameFramework/Runtime/Foundation/Framework/Flow/IGameDevPart.h"
 #include "GameFramework/Runtime/Foundation/Framework/GameService.h"
 #include "GameFramework/Runtime/Foundation/Framework/Save/GameLocalStore.h"
 #include "GameFramework/Runtime/Foundation/Framework/Save/Local/MemoryLocalStore.h"
@@ -50,6 +51,8 @@ namespace
         bool                      wasContentConfigVisibleAtInitialize() const { return _pContentAtInitialize == &_contentConfig; }
         uint32                    getShutdownCount() const { return _shutdownCount; }
         const sw::SubsystemScope& getOwnScope() { return getGameScope(); }
+        /** @brief 파생 프레임 훅이 불린 차례를 @p pOrder 에 적습니다. */
+        void recordUpdateOrder( sw::vector<sw::string>* pOrder ) { _pUpdateOrder = pOrder; }
 
     protected:
         bool loadGameSettings() override
@@ -85,6 +88,12 @@ namespace
         /** @brief 수명 훅만 센다 — 씬 매니저가 없는 테스트라 첫 씬(바탕의 기본)을 요청하지 않는다. */
         void startFirstScene() override {}
         void onShutdown() override { ++_shutdownCount; }
+        void onUpdate( float32 deltaTime ) override
+        {
+            (void)deltaTime;
+            if ( _pUpdateOrder != nullptr )
+                _pUpdateOrder->push_back( "derived" );
+        }
 
     private:
         /** @brief 구성 하나(해시 0x5eed)입니다. 준비 훅이 게임 범위에 건다. */
@@ -106,6 +115,34 @@ namespace
         uint32                           _initializeCount;
         uint32                           _shutdownCount;
         LifecycleTestStep                _step;
+        sw::vector<sw::string>*          _pUpdateOrder{ nullptr };
+    };
+
+    /** @brief 개발 부분이 불린 차례를 적습니다. */
+    class RecordingDevPart final : public sw::IGameDevPart
+    {
+    public:
+        explicit RecordingDevPart( sw::vector<sw::string>& order )
+            : _order{ order }
+        {
+        }
+        void update( float32 /*deltaTime*/ ) override { _order.push_back( "devPart" ); }
+
+    private:
+        sw::vector<sw::string>& _order;
+    };
+
+    class RecordingDevPartFactory final : public sw::IGameDevPartFactory
+    {
+    public:
+        explicit RecordingDevPartFactory( sw::vector<sw::string>& order )
+            : _order{ order }
+        {
+        }
+        [[nodiscard]] sw::unique_ptr<sw::IGameDevPart> createDevPart() override { return sw::make_unique<RecordingDevPart>( _order ); }
+
+    private:
+        sw::vector<sw::string>& _order;
     };
 
     /** @brief 지금 게임 범위와 넷 세션의 보안 제공자입니다 — 인스턴스가 서고 진 뒤에 같아야 하는 프로세스 상태다. */
@@ -244,4 +281,26 @@ SW_TEST_CASE( GameInstanceTest, ContentIsPreparedBeforeDeclaredData )
     SW_EXPECT_EQUAL( 2u, game.getInitializeOrder() );
     SW_EXPECT_TRUE( game.wasContentConfigVisibleAtInitialize() );
     game.shutdown();
+}
+
+/** @brief [GameInstanceTest] 프레임 순서 계약 — 끝난 세이브 요청의 완료가 파생 프레임 훅보다 먼저, 개발 부분은 파생 훅 뒤다(`GameInstance::update`) */
+SW_TEST_CASE( GameInstanceTest, UpdateOrder )
+{
+    vector<string>          order;
+    RecordingDevPartFactory devFactory{ order };
+    SubsystemScope          testScope;
+    SW_REQUIRE_TRUE( testScope.bind<IGameDevPartFactory>( &devFactory ) );
+    const game::ScopedGameScope scoped{ testScope };
+    MemoryLocalDatabase         database;
+    LifecycleTestGame           game{ database, LifecycleTestStep::Succeed };
+    game.recordUpdateOrder( &order );
+    SW_REQUIRE_TRUE( game.initialize( nullptr ) );
+    const Subscription request = game.getSubsystem<GameLocalStore>().submitRead( "save/none", SW_DELEGATE_LAMBDA( GameLocalStore::CompletionFunction, [&order]( const LocalStoreCompletion& /*completion*/ )
+    { order.push_back( "saveCompletion" ); } ) );
+    game.update( 1.0f / 60.0f );
+    game.shutdown();
+    SW_REQUIRE_EQUAL( size_t( 3 ), order.size() );
+    SW_EXPECT_EQUAL( string( "saveCompletion" ), order[0] );
+    SW_EXPECT_EQUAL( string( "derived" ), order[1] );
+    SW_EXPECT_EQUAL( string( "devPart" ), order[2] );
 }

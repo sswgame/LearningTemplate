@@ -19,7 +19,7 @@ target_link_options(sw_platform_web INTERFACE
 	-sALLOW_MEMORY_GROWTH=1
 	-sMAXIMUM_MEMORY=4GB
 	-sPTHREAD_POOL_SIZE=navigator.hardwareConcurrency
-	# 어댑터 · 장치 요청을 기다린다(`wgpuInstanceWaitAny` — WebGPURHIDevice::waitForFuture). JSPI 가 없는 브라우저면 -sASYNCIFY=1 로 바꾼다.
+	# 어댑터 · 장치 요청 · 프레임 펜스(`wgpuInstanceWaitAny` — WebGPURHIDevice::waitForFuture)와 다음 프레임(`WebFrame.js`)을 기다린다. JSPI 가 없는 브라우저면 -sASYNCIFY=1 로 바꾼다.
 	-sJSPI=1
 	# 콘텐츠: 쿠킹한 팩을 가상 파일 시스템에 얹는다(--preload-file 은 패키징 스크립트가 붙인다 — Scripts/package).
 	-sFORCE_FILESYSTEM=1

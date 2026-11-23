@@ -8,7 +8,7 @@
 
 - **웹 제약은 웹 깃발로만.** 웹이 못 하는 것은 능력 깃발 · 플랫폼 사슬 설정 값 · 쿠킹 변형(`CookContract.json` 백엔드 줄) 가운데 하나로 웹만 가른다. `SW_PLATFORM_WEB` 컴파일 갈래는 최후 수단. 공용 상수 · 셰이더 · 예산을 웹 한도에 맞춰 낮추지 않는다.
 - 새 GPU 기능(64 비트 · 실수 · 텍스처 아토믹, 웨이브 연산 등)을 웹 때문에 막지 않는다 — 능력 깃발로 웹(과 못 주는 장치)만 다른 길로 보내고 아래 표에 줄을 더한다.
-- 브라우저는 GPU 를 동기로 기다릴 수 없다 — 새 `waitIdle` 을 두지 않는다. 씬 활성화 · 핫 리로드 · 캡처는 `flushRenderThread` + 펜스 지연 해제, 도구 · 수명 길은 `RHIWaitIdleReason` 을 붙인다(시나리오 `empty/noidlewait` · `editor/assetcascade` 가 `RHI.GPUIdleWaits` 를 본다). 되읽기는 늘 `mapAsync` 콜백.
+- 브라우저는 DOM 콜백 안에서 GPU 를 기다릴 수 없다(JSPI 는 `main` 의 스택만 멈춘다) — 창 콜백은 값만 적고 프레임이 처리하며, 새 `waitIdle` 을 두지 않는다. 씬 활성화 · 핫 리로드 · 캡처는 `flushRenderThread` + 펜스 지연 해제, 도구 · 수명 길은 `RHIWaitIdleReason` 을 붙인다(시나리오 `empty/noidlewait` · `editor/assetcascade` 가 `RHI.GPUIdleWaits` 를 본다). 되읽기는 늘 `mapAsync` 콜백.
 - 웹 장치는 만든 스레드에서만 쓴다 — `_bParallelCommandRecording` · `_bThreadSafeResourceCreation` 거짓, 렌더 스레드를 띄우지 않는다(`gv_useRenderThread` 기본값은 플랫폼 사슬로).
 - 네트워크는 IPv6 를 지원한다: 서버 `_listenAddress="::"` 는 이중 스택, 클라이언트는 서버 주소의 군으로 연다, 이름은 A 먼저 없으면 AAAA(`PlatformSocketUtil::resolveAddress`).
 - Android 팩은 APK `assets/Packs` 에 **압축하지 않고** 담는다(fd + 구간으로 읽는다 — 압축된 파일은 오류). GameActivity 로 바꾸지 않는다(액티비티 수명 · 글루 전체가 바뀐다).

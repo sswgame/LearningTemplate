@@ -202,7 +202,7 @@ namespace sw
 
         /**
          * @brief 캐시해 둔 리소스 경로 해석 결과를 모두 비우고 그 저장소까지 해제합니다.
-         * @details 부르는 때: 검색 목록이 바뀔 때, 에디터의 파일 감시가 리소스 트리의 변경을 알릴 때(`FileWatchDispatcher`). 이 프로세스의 `FileUtil` 이 만들거나 지운 파일은
+         * @details 부르는 때: 검색 목록이 바뀔 때, 에디터의 파일 감시가 리소스 트리의 변경을 알릴 때(`FileWatchService`). 이 프로세스의 `FileUtil` 이 만들거나 지운 파일은
          *          부르지 않아도 된다 — 캐시 칸이 `FileUtil::getCreationEpoch` · `getRemovalEpoch` 로 스스로 낡음을 안다. 바깥 프로세스가 바꾼 파일만 이 호출이 필요하다.
          */
         void clearPathCache();

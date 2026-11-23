@@ -366,6 +366,36 @@ SW_TEST_CASE( RealtimeProbeTest, HistoryKeepsStandingVolumesWhenOneLeaves )
 }
 
 /**
+ * @brief [RealtimeProbeTest] 갱신을 중간에 그만둔 프레임(버퍼 할당 실패) 뒤에도 용량 늘기와 새 구간을 다시 알린다 — `advanceFrame` 이 온 뒤에만 이어진다
+ * @details 변이: 한 번만 알리면 다음 프레임이 0 으로 채우지 않은 구간 · 옛 크기 버퍼를 쓴다(예전 — 복셀 버퍼 할당이 실패한 프레임).
+ */
+SW_TEST_CASE( RealtimeProbeTest, HistoryReportsAgainUntilTheFrameIsUpdated )
+{
+    sw::vector<sw::RealtimeProbeRequest> listRequest( 1 );
+    listRequest[0]._volumeID   = 100u;
+    listRequest[0]._probeCount = 4;
+    sw::RealtimeProbeHistoryAllocator history;
+    SW_EXPECT_TRUE( history.assign( listRequest ) );
+    SW_EXPECT_TRUE( history.assign( listRequest ) ); // 앞 프레임이 그만뒀다 — 버퍼는 아직 없다
+    SW_EXPECT_TRUE( history.isFresh( 0 ) );
+    history.advanceFrame();
+    SW_EXPECT_FALSE( history.assign( listRequest ) );
+    SW_EXPECT_FALSE( history.isFresh( 0 ) );
+
+    // 새 볼륨이 들어온 프레임도 같다 — 서 있는 볼륨은 이어지고 새 볼륨만 다시 알린다.
+    sw::vector<sw::RealtimeProbeRequest> listSwapped( 1 );
+    listSwapped[0]._volumeID   = 200u;
+    listSwapped[0]._probeCount = 4;
+    SW_EXPECT_FALSE( history.assign( listSwapped ) ); // 빠진 구간에 든다
+    SW_EXPECT_TRUE( history.isFresh( 0 ) );
+    SW_EXPECT_FALSE( history.assign( listSwapped ) );
+    SW_EXPECT_TRUE( history.isFresh( 0 ) );
+    history.advanceFrame();
+    SW_EXPECT_FALSE( history.assign( listSwapped ) );
+    SW_EXPECT_FALSE( history.isFresh( 0 ) );
+}
+
+/**
  * @brief [RealtimeProbeTest] 한 색 하늘의 SH 투영은 L0 계수만 2√π × 색이다. 하늘이 없으면 0 이다(폴백 없음)
  */
 SW_TEST_CASE( RealtimeProbeTest, ProjectSkyConstantRadiance )

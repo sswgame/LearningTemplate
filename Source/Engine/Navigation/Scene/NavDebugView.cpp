@@ -164,12 +164,12 @@ namespace sw
         }
     }
 
-    void NavDebugView::updateSolidView( GameObjectManager& manager, uint32 flags, const vector<unique_ptr<NavMeshRuntime>>& listRuntime,
+    void NavDebugView::updateSolidView( GameObjectManager& manager, bool bShown, const vector<unique_ptr<NavMeshRuntime>>& listRuntime,
                                         const vector<NavMeshAgentComponent*>& listAgent )
     {
         using Internal      = NavDebugViewInternal;
         GameObject* pView   = manager.resolveGameObject( _viewObject );
-        const bool  bWanted = ( flags & NavDebugDrawFlag::kSolidView ) != 0 && listRuntime.empty() == false;
+        const bool  bWanted = bShown && listRuntime.empty() == false;
         if ( bWanted == false )
         {
             if ( pView != nullptr )

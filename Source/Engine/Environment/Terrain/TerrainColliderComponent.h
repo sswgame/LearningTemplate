@@ -61,8 +61,6 @@ namespace sw
 
         /** @brief 살아 있는 청크 바디 수입니다(시작 전이거나 지형이 없으면 0). */
         uint32 getBodyCount() const;
-        /** @brief 지금 청크 바디들의 삼각형 수 합입니다(테스트와 진단). */
-        uint32 getCollisionTriangleCount() const { return _triangleCount; }
         /** @brief 바디를 만든(다시 만든) 청크 수의 누계입니다(테스트와 진단 — 높이 쓰기가 닿은 청크만 다시 만드는지 본다). */
         const DevCounter& getChunkBuildCount() const { return _chunkBuildCount; }
 

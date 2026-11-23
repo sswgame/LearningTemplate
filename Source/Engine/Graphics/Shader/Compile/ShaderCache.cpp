@@ -36,29 +36,34 @@ namespace sw
         return liveDesc;
     }
 
-    ShaderLoadOperation::ShaderLoadOperation( ShaderCache* pCache, const ShaderCompileDesc& desc, string cacheKey )
+    ShaderLoadOperation::ShaderLoadOperation( ShaderCache* pCache, const ShaderCompileDesc& desc, string cacheKey, uint64 replaceCountAtStart )
         : AssetLoadOperation{ "Shader", desc._source.str(), MemoryTag::Shader }
         , _pCache{ pCache }
         , _desc{ desc }
         , _cacheKey{ std::move( cacheKey ) }
+        , _replaceCountAtStart{ replaceCountAtStart }
         , _pResult{}
     {
     }
 
     expected<void> ShaderLoadOperation::runLoad()
     {
-        shared_ptr<ShaderCompileResult> pResult = sw::make_shared<ShaderCompileResult>( _pCache->loadOrCompile( _desc, _cacheKey ) );
-        expected<void>                  loaded  = {};
-        if ( pResult->_bSuccess == false )
-            loaded = unexpected( Error{ ErrorKind::ExternalFailure, "the shader could not be compiled or found", pResult->_errorMessage } ); // 컴파일러 글은 대상(앞 `Error::kDetailCapacity` 바이트)
-        _pResult = std::move( pResult );
+        shared_ptr<ShaderCompileResult> pResult = sw::make_shared<ShaderCompileResult>( _pCache->loadOrCompile( _desc, _cacheKey, _replaceCountAtStart ) );
         {
             // 이 로드 작업의 칸일 때만 뺀다(캐시를 비운 뒤 같은 요청이 새 로드 작업을 넣었을 수 있다).
             ScopedLock<mutex> lock{ _pCache->_mutexCache };
             const auto        it = _pCache->_mapLoading.find( _cacheKey );
             if ( it != _pCache->_mapLoading.end() && ( it->second.expired() || it->second.lock().get() == this ) )
                 _pCache->_mapLoading.erase( it );
+            // 읽는 동안 재컴파일이 이 항목을 바꿨다(핫 리로드) — 이 로드는 옛 소스를 읽었을 수 있어 바뀐 항목을 답으로 쓴다. 칸을 빼는 것과 한 잠금이라 합류한 요청도 새 답을 받는다.
+            const auto entryIt = _pCache->_mapCache.find( _cacheKey );
+            if ( entryIt != _pCache->_mapCache.end() && entryIt->second._replaceSerial > _replaceCountAtStart )
+                *pResult = entryIt->second._result;
         }
+        expected<void> loaded = {};
+        if ( pResult->_bSuccess == false )
+            loaded = unexpected( Error{ ErrorKind::ExternalFailure, "the shader could not be compiled or found", pResult->_errorMessage } ); // 컴파일러 글은 대상(앞 `Error::kDetailCapacity` 바이트)
+        _pResult = std::move( pResult );
         return loaded;
     }
 
@@ -69,6 +74,7 @@ namespace sw
         , _mapLoading{}
         , _mutexCache{}
         , _enginePolicy{}
+        , _replaceCount{ 0 }
         , _requestLog{}
         , _requestLogPath{}
         , _configReloadedSubscription{}
@@ -194,7 +200,7 @@ namespace sw
             ShaderCompileDesc loadDesc = desc;
             if ( loadDesc._enginePolicy.has_value() == false )
                 loadDesc._enginePolicy = _enginePolicy;
-            pOperation            = sw::make_shared<ShaderLoadOperation>( this, loadDesc, cacheKey );
+            pOperation            = sw::make_shared<ShaderLoadOperation>( this, loadDesc, cacheKey, _replaceCount );
             _mapLoading[cacheKey] = pOperation;
         }
         AssetLoadOperation::startLoad( pOperation, start );
@@ -246,13 +252,13 @@ namespace sw
         return getProvider().getReflection( *this, desc, outReflection );
     }
 
-    ShaderCompileResult ShaderCache::loadOrCompile( const ShaderCompileDesc& desc, const string& inCacheKey )
+    ShaderCompileResult ShaderCache::loadOrCompile( const ShaderCompileDesc& desc, const string& inCacheKey, uint64 replaceCountAtStart )
     {
         const ScopedMemoryTag          memoryScope{ kSubsystemMemoryTag };
         const IShaderBytecodeProvider& provider = getProvider();
         string                         cacheKey = inCacheKey;
 
-        // 0) 인메모리 캐시 조회 — 넣을 때의 지문(공급자가 센다 - 실행 중 컴파일은 소스와 연 헤더의 내용)이 지금도 같아야 맞다. 파일을 읽는 계산이라 잠금 밖에서 한다(항목을 복사해 나온다).
+        // 0) 인메모리 캐시 조회 — 공급자가 지금도 맞다고 할 때만(실행 중 컴파일은 기록의 입력이 모두 그대로인지). 파일을 보는 일이라 잠금 밖에서 한다.
         ShaderCacheEntry cachedEntry{};
         bool             bCached = false;
         {
@@ -266,8 +272,7 @@ namespace sw
         }
         if ( bCached )
         {
-            const uint64 currentFingerprint = provider.computeFingerprint( cachedEntry._result, desc );
-            if ( currentFingerprint != 0 && currentFingerprint == cachedEntry._sourceFingerprint )
+            if ( provider.isCurrent( cachedEntry._result, desc ) )
             {
                 _memoryHitCount.add();
                 return cachedEntry._result;
@@ -283,7 +288,15 @@ namespace sw
         }
         if ( result._bSuccess )
         {
-            storeEntry( std::move( cacheKey ), desc, result );
+            ShaderCacheEntry  entry{ desc, 0, result };
+            ScopedLock<mutex> lock{ _mutexCache };
+            // 읽는 동안 재컴파일이 바꾼 항목은 덮지 않는다(답은 `ShaderLoadOperation::runLoad` 가 그 항목으로 바꾼다).
+            const auto iter = _mapCache.find( cacheKey );
+            if ( iter != _mapCache.end() && iter->second._replaceSerial > replaceCountAtStart )
+                return result;
+            if ( _requestLogPath.empty() == false )
+                (void)_requestLog.add( desc ); // 이미 적은 요청이면 할 일이 없다
+            _mapCache.insert_or_assign( std::move( cacheKey ), std::move( entry ) );
             return result;
         }
         // 낡은 항목이 있으면(편집하다 깨진 소스) 마지막 성공 판으로 그린다 — 언리얼 · 유니티도 컴파일이 깨진 셰이더는 이전 판을 쓴다. 오류는 위에서 이미 남겼다.
@@ -312,6 +325,13 @@ namespace sw
             if ( entry.second._desc._source.isEmpty() == false )
                 outListDesc.push_back( entry.second._desc );
         }
+        for ( const auto& [cacheKey, weakOperation] : _mapLoading )
+        {
+            const shared_ptr<ShaderLoadOperation> pOperation = weakOperation.lock();
+            const bool                            bListed    = pOperation == nullptr || pOperation->_desc._source.isEmpty() || _mapCache.find( cacheKey ) != _mapCache.end();
+            if ( bListed == false )
+                outListDesc.push_back( pOperation->_desc );
+        }
     }
 
     bool ShaderCache::findCachedBytecode( const ShaderCompileDesc& desc, vector<uint8>& outBytecode ) const
@@ -332,22 +352,14 @@ namespace sw
             SW_LOG_ERROR_ID( "ShaderCache.ReplaceWithFailedResult", "Shader '%#' (%#): only a successful compile result can replace a cache entry", desc._source.c_str(), desc._entryPoint.c_str() );
             return false;
         }
-        storeEntry( makeCacheKey( desc ), desc, result );
-        return true;
-    }
-
-    void ShaderCache::storeEntry( string&& cacheKey, const ShaderCompileDesc& desc, const ShaderCompileResult& result )
-    {
-        // 지문은 파일을 읽는 계산이라 잠금 밖에서 한다.
-        ShaderCacheEntry entry{};
-        entry._sourceFingerprint = getProvider().computeFingerprint( result, desc );
-        entry._desc              = desc;
-        entry._result            = result;
-
+        ShaderCacheEntry  entry{ desc, 0, result };
+        string            cacheKey = makeCacheKey( desc );
         ScopedLock<mutex> lock{ _mutexCache };
+        entry._replaceSerial = ++_replaceCount;
         if ( _requestLogPath.empty() == false )
             (void)_requestLog.add( desc ); // 이미 적은 요청이면 할 일이 없다
         _mapCache.insert_or_assign( std::move( cacheKey ), std::move( entry ) );
+        return true;
     }
 
     void ShaderCache::writeRequestLog()

@@ -1,0 +1,58 @@
+<?xml version="1.0" encoding="utf-8"?>
+<?asset guid="12a1693fade7145d3a0fc8a288fbeb3a"?>
+<!--
+  웹 입력 길 전체 — 페이지에 DOM 이벤트(`DispatchDOMEvent`)를 내 창 콜백(WebWindow) · 숨은 글 칸(WebTextInput.js) · 입력 관리자 · UI 까지 닿는지 본다.
+  포인터 이동이 마우스 자리로, 탭 키가 UI 포커스로, 한글 조합(compositionupdate)이 조합 글로, compositionend 가 확정 글로(두 번 들지 않는다), 백스페이스가 글자 하나 지우기로 온다.
+  가상 입력(<Tap> · <Text>)은 쓰지 않는다 — 데스크톱의 같은 흐름은 textinput 이 본다. 웹 밖에서는 건너뜀(13)이다.
+  실행: py -3 -m Scripts web-check (game Playground, scenario game/playground/automation/web/dominput.scenario.xml)
+-->
+<Scenario name="game.playground.dominput" fixedDelta="0.0166667" timeoutFrames="900" startAfter="ScenePlaying" startTimeoutFrames="1800" input="mixed">
+	<Launch variable="gv_firstScene" value="game/playground/maps/rendertest3d.scene.xml"/>
+	<DispatchDOMEvent kind="PointerMove" x="0.25" y="0.25"/>
+	<WaitUntil watch="Input.MouseX" atLeast="1" timeoutFrames="60"/>
+	<DispatchDOMEvent kind="PointerMove" x="0" y="0.25"/>
+	<WaitUntil watch="Input.MouseX" atMost="0" timeoutFrames="60"/>
+
+	<Variable name="gv_uiDemo" value="1"/>
+	<WaitUntil watch="UI.FocusedWidget" is="Start" timeoutFrames="60"/>
+	<DispatchDOMEvent kind="KeyDown" value="Tab"/>
+	<WaitUntil watch="UI.FocusedWidget" is="Continue" timeoutFrames="60"/>
+	<DispatchDOMEvent kind="KeyUp" value="Tab"/>
+	<DispatchDOMEvent kind="KeyDown" value="Tab"/>
+	<WaitUntil watch="UI.FocusedWidget" is="Options" timeoutFrames="60"/>
+	<DispatchDOMEvent kind="KeyUp" value="Tab"/>
+	<DispatchDOMEvent kind="KeyDown" value="Tab"/>
+	<WaitUntil watch="UI.FocusedWidget" is="Credits" timeoutFrames="60"/>
+	<DispatchDOMEvent kind="KeyUp" value="Tab"/>
+	<DispatchDOMEvent kind="KeyDown" value="Tab"/>
+	<WaitUntil watch="UI.FocusedWidget" is="Quit" timeoutFrames="60"/>
+	<DispatchDOMEvent kind="KeyUp" value="Tab"/>
+	<DispatchDOMEvent kind="KeyDown" value="Tab"/>
+	<WaitUntil watch="UI.FocusedWidget" is="VolumeSlider" timeoutFrames="60"/>
+	<DispatchDOMEvent kind="KeyUp" value="Tab"/>
+	<DispatchDOMEvent kind="KeyDown" value="Tab"/>
+	<WaitUntil watch="UI.FocusedWidget" is="VSyncCheck" timeoutFrames="60"/>
+	<DispatchDOMEvent kind="KeyUp" value="Tab"/>
+	<DispatchDOMEvent kind="KeyDown" value="Tab"/>
+	<WaitUntil watch="UI.FocusedWidget" is="QualityCombo" timeoutFrames="60"/>
+	<DispatchDOMEvent kind="KeyUp" value="Tab"/>
+	<DispatchDOMEvent kind="KeyDown" value="Tab"/>
+	<WaitUntil watch="UI.FocusedWidget" is="NameInput" timeoutFrames="60"/>
+	<DispatchDOMEvent kind="KeyUp" value="Tab"/>
+
+	<DispatchDOMEvent kind="Text" value="Ann"/>
+	<WaitUntil watch="UI.FocusedText" is="Ann" timeoutFrames="60"/>
+	<DispatchDOMEvent kind="Composition" value="ㅎ"/>
+	<WaitUntil watch="UI.FocusedComposition" is="ㅎ" timeoutFrames="60"/>
+	<DispatchDOMEvent kind="Composition" value="한"/>
+	<WaitUntil watch="UI.FocusedComposition" is="한" timeoutFrames="60"/>
+	<Expect watch="UI.FocusedText" is="Ann"/> <!-- 조합은 확정 전이라 글에 들지 않는다 -->
+	<DispatchDOMEvent kind="CompositionEnd" value="한"/>
+	<WaitUntil watch="UI.FocusedText" is="Ann한" timeoutFrames="60"/>
+	<Expect watch="UI.FocusedComposition" is=""/>
+	<DispatchDOMEvent kind="KeyDown" value="Backspace"/>
+	<WaitUntil watch="UI.FocusedText" is="Ann" timeoutFrames="60"/>
+	<DispatchDOMEvent kind="KeyUp" value="Backspace"/>
+	<Variable name="gv_uiDemo" value="0"/>
+	<Pass/>
+</Scenario>

@@ -18,6 +18,7 @@
 #include "Engine/Graphics/RHI/RHIRenderResource.h"
 #include "Engine/Graphics/RHI/Tests/RHIFakeDevice.h"
 #include "Engine/Graphics/RHI/Vulkan/VulkanMemoryAccount.h"
+#include "Engine/Graphics/RHI/Vulkan/VulkanPhysicalDeviceRank.h"
 #include "Engine/Graphics/RHI/Vulkan/VulkanPipelineCacheFile.h"
 #include "Engine/Graphics/RHI/Vulkan/VulkanRHIRequiredVersion.h"
 
@@ -450,6 +451,10 @@ SW_TEST_CASE( RHIAvailabilityTest, OtherBackendFitsThePlatform )
     SW_EXPECT_TRUE( other == sw::RHIBackend::OpenGL );
     SW_REQUIRE_TRUE( sw::RHIAvailability::findOtherBackend( sw::RHIBackend::OpenGL, other ) );
     SW_EXPECT_TRUE( other == sw::RHIBackend::Vulkan );
+#elif defined( SW_PLATFORM_ANDROID ) || defined( SW_PLATFORM_WEB )
+    // 백엔드가 하나뿐인 플랫폼(Android Vulkan · 웹 WebGPU)은 건너갈 곳이 없다.
+    SW_EXPECT_EQUAL( size_t{ 1 }, static_cast<size_t>( sw::RHIAvailability::getPlatformBackendOrder().size() ) );
+    SW_EXPECT_FALSE( sw::RHIAvailability::findOtherBackend( sw::RHIAvailability::getPlatformBackendOrder()[0], other ) );
 #else
     #error "Unsupported platform"
 #endif
@@ -526,4 +531,23 @@ SW_TEST_CASE( RHIReleaseHandleTest, DeferredReleaseWaitsForTheFrameFence )
     device.notifyRenderFrameRetired(); // 프레임 2 끝 — 이제 놓는다
     SW_EXPECT_TRUE( factory._listDestroyedBuffer == vector<RHIBufferHandle>{ buffer } );
     SW_EXPECT_EQUAL( 0u, assertCapture.getCount() );
+}
+
+/**
+ * @brief [VulkanPhysicalDeviceRankTest] 선호 종류가 먼저이고 CPU 구현은 늘 마지막이다 — 외장 GPU 가 없어도 내장 GPU 가 lavapipe 보다 앞선다
+ * @details 예전에는 선호 종류만 앞으로 옮기고 나머지는 열거 순서라, lavapipe 가 먼저 열거되는 내장 GPU 머신이 소프트웨어로 그렸다.
+ */
+SW_TEST_CASE( VulkanPhysicalDeviceRankTest, CPUIsAlwaysLast )
+{
+    using Rank = VulkanPhysicalDeviceRank;
+    for ( const bool bPreferMinimumPower : { false, true } )
+    {
+        for ( const uint32 type : { Rank::kOther, Rank::kIntegratedGPU, Rank::kDiscreteGPU, Rank::kVirtualGPU } )
+        {
+            SW_EXPECT_TRUE( Rank::compute( type, bPreferMinimumPower ) < Rank::compute( Rank::kCPU, bPreferMinimumPower ) );
+        }
+    }
+    SW_EXPECT_TRUE( Rank::compute( Rank::kDiscreteGPU, false ) < Rank::compute( Rank::kIntegratedGPU, false ) );
+    SW_EXPECT_TRUE( Rank::compute( Rank::kIntegratedGPU, true ) < Rank::compute( Rank::kDiscreteGPU, true ) );
+    SW_EXPECT_TRUE( Rank::compute( Rank::kIntegratedGPU, false ) < Rank::compute( Rank::kVirtualGPU, false ) );
 }

@@ -52,6 +52,34 @@ namespace sw
         _listPendingText.push_back( std::move( pending ) );
     }
 
+    void CallbackInputWindow::queueTextActions( const vector<AndroidTextAction>& listAction )
+    {
+        for ( const AndroidTextAction& action : listAction )
+        {
+            switch ( action._kind )
+            {
+                case AndroidTextActionKind::Composition:
+                    queueTextInput( WindowTextInputKind::Composition, action._text );
+                    break;
+                case AndroidTextActionKind::Commit:
+                    queueTextInput( WindowTextInputKind::Commit, action._text );
+                    break;
+                case AndroidTextActionKind::BackspaceKey:
+                case AndroidTextActionKind::DeleteKey:
+                {
+                    // 입력기의 지우기는 키 누름 · 뗌 한 쌍이다 — 하드웨어 키(AKEYCODE_DEL · FORWARD_DEL)와 같은 길로 간다.
+                    PlatformInputEvent input{};
+                    input._keyCode = action._kind == AndroidTextActionKind::BackspaceKey ? AndroidInputConnectionState::kBackspaceKeyCode : AndroidInputConnectionState::kForwardDeleteKeyCode;
+                    input._kind    = PlatformInputKind::KeyDown;
+                    queueInput( input );
+                    input._kind = PlatformInputKind::KeyUp;
+                    queueInput( input );
+                    break;
+                }
+            }
+        }
+    }
+
     void CallbackInputWindow::applyPlatformFocus( bool bFocused )
     {
         if ( hasFocus() == bFocused )

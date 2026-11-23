@@ -17,6 +17,7 @@
 #include "Engine/Config/EngineDefaultAssets.h"
 #include "Engine/Config/RHIBackendType.h"
 #include "Engine/Content/AssetPaths.h"
+#include "Engine/Content/ContentHash.h"
 #include "Engine/Graphics/Shader/Binding/ShaderBindingSlots.h"
 #include "Engine/Graphics/Shader/Binding/ShaderBindingValidatorIssue.h"
 #include "Engine/Graphics/Shader/Compile/ShaderCompiler.h"
@@ -229,65 +230,56 @@ namespace sw
         return ShaderTargetFormat::Count;
     }
 
-    bool ShaderCooker::cookShader( const ShaderSourceID& source, string_view outputPath, string_view entryPoint,
-                                   ShaderStage stage, ShaderTargetFormat targetFormat, const ShaderEnginePolicy& enginePolicy,
-                                   const vector<string>* pListPermutation,
-                                   ShaderCookResult*     pOutResult )
+    ShaderCompileDesc ShaderCooker::makeCompileDesc( const ShaderSourceID& source, string_view entryPoint, ShaderStage stage, ShaderTargetFormat targetFormat,
+                                                     const ShaderEnginePolicy& enginePolicy, const vector<string>& listPermutation )
     {
-        if ( pOutResult != nullptr )
-        {
-            pOutResult->_sourcePath   = source.str();
-            pOutResult->_outputPath   = string( outputPath );
-            pOutResult->_entryPoint   = string( entryPoint );
-            pOutResult->_stage        = stage;
-            pOutResult->_targetFormat = targetFormat;
-            pOutResult->_byteCodeSize = 0;
-            pOutResult->_bSuccess     = SW_FALSE;
-            pOutResult->_listIncludedFile.clear();
-        }
-
         ShaderCompileDesc desc{};
         desc._source       = source;
         desc._entryPoint   = entryPoint;
         desc._stage        = stage;
         desc._targetFormat = targetFormat;
         desc._enginePolicy = enginePolicy;
-
-        if ( pListPermutation != nullptr )
+        for ( const string& permutationDefine : listPermutation )
         {
-            for ( const string& permutationDefine : *pListPermutation )
-            {
-                if ( permutationDefine.empty() )
-                    continue;
+            if ( permutationDefine.empty() == false )
                 desc._listDefine.push_back( ShaderMacroDefine::parse( permutationDefine ) );
-            }
         }
+        return desc;
+    }
+
+    bool ShaderCooker::cookShader( const ShaderCompileDesc& desc, string_view outputPath, ShaderCookResult& outResult )
+    {
+        outResult               = ShaderCookResult{};
+        outResult._sourcePath   = desc._source.str();
+        outResult._outputPath   = string( outputPath );
+        outResult._entryPoint   = desc._entryPoint;
+        outResult._stage        = desc._stage;
+        outResult._targetFormat = desc._targetFormat;
 
         ShaderCompileResult compileResult = ShaderCompiler::compileHLSL( desc );
         if ( compileResult._bSuccess == false || compileResult._bytecode.empty() )
         {
-            SW_LOG_WARNING_ID( "ShaderCooker.FailedCompileShader", "Failed to compile shader '%#' [%#] for %#: %#",
-                               source.c_str(), entryPoint.data(),
-                               getSubfolderForFormat( targetFormat ).data(),
+            SW_LOG_WARNING_ID( "ShaderCooker.FailedCompileShader", "Failed to compile shader '%#' [%#] for %#: %#", desc._source.c_str(), desc._entryPoint, getSubfolderForFormat( desc._targetFormat ),
                                compileResult._errorMessage.c_str() );
             return false;
         }
 
-        if ( FileUtil::ensureParentDirectoryExists( FileUtil::toDiskPath( outputPath ) ) == false || FileUtil::writeFile( FileUtil::toDiskPath( outputPath ), compileResult._bytecode.data(), compileResult._bytecode.size() ) == false )
+        // 무변경 재쿠킹이 파일을 건드리지 않는다 — 내용 해시는 도장(크기 · 시각)이 그대로면 파일을 다시 읽지 않는다.
+        const AbsolutePath outputFile = FileUtil::toDiskPath( outputPath );
+        const bool         bCurrent   = FileUtil::isRegularFile( outputFile ) && ContentHash::computeFile( outputPath ) == compileResult._record._outputHash;
+        if ( bCurrent == false )
         {
-            SW_LOG_ERROR_ID( "ShaderCooker.FailedWriteCookedBytecode", "Failed to write cooked bytecode to %#", outputPath );
-            return false;
+            if ( FileUtil::ensureParentDirectoryExists( outputFile ) == false || FileUtil::writeFile( outputFile, compileResult._bytecode.data(), compileResult._bytecode.size() ) == false )
+            {
+                SW_LOG_ERROR_ID( "ShaderCooker.FailedWriteCookedBytecode", "Failed to write cooked bytecode to %#", outputPath );
+                return false;
+            }
+            SW_LOG_INFO_ID( "ShaderCooker.CookedShaderUBytes", "Cooked shader '%#' [%#] -> '%#' (%# bytes)", desc._source.c_str(), desc._entryPoint, outputPath,
+                            static_cast<uint64>( compileResult._bytecode.size() ) );
+            outResult._bWritten = SW_TRUE;
         }
-
-        if ( pOutResult != nullptr )
-        {
-            pOutResult->_byteCodeSize     = compileResult._bytecode.size();
-            pOutResult->_listIncludedFile = std::move( compileResult._listIncludedFile ); // 쿠킹 스탬프가 소스별 의존 목록으로 적는다
-            pOutResult->_bSuccess         = SW_TRUE;
-        }
-
-        SW_LOG_INFO_ID( "ShaderCooker.CookedShaderUBytes", "Cooked shader '%#' [%#] -> '%#' (%# bytes)",
-                        source.c_str(), entryPoint.data(), outputPath.data(), compileResult._bytecode.size() );
+        outResult._bytecode = std::move( compileResult._bytecode );
+        outResult._bSuccess = SW_TRUE;
         return true;
     }
 } // namespace sw

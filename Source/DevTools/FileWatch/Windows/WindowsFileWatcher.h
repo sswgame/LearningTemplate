@@ -31,7 +31,7 @@ namespace sw
     {
     public:
         /** @brief 핸들과 큐가 빈 상태로 만듭니다. */
-        WindowsFileWatcher();
+        explicit WindowsFileWatcher( FileWatcherKey key );
         /** @brief 감시를 멈추고 워커 스레드를 조인합니다. */
         virtual ~WindowsFileWatcher() override;
 

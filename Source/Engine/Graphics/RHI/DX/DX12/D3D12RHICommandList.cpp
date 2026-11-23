@@ -39,7 +39,10 @@ namespace sw
         if ( bCannotWriteTimestamp )
             return;
         _entry._list->EndQuery( pHeap, D3D12_QUERY_TYPE_TIMESTAMP, _pDevice->getTimestampBase() + slotIndex );
-        _pDevice->markTimestampWritten( slotIndex );
+        if ( _type == D3D12_COMMAND_LIST_TYPE_COMPUTE )
+            _pDevice->markComputeQueueTimestampWritten( slotIndex );
+        else
+            _pDevice->markTimestampWritten( slotIndex );
     }
 
     void D3D12RHICommandList::detachFromDevice()

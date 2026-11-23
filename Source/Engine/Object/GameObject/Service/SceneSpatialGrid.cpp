@@ -26,7 +26,7 @@ namespace sw
         , _jobLayerCount{ 0 }
         , _jobStage{}
         , _nextSequence{ 0 }
-        , _appliedChangeCount{ 0 }
+        , _appliedChangeCount{}
         , _frontIndex{ 0 }
         , _bJobLaunched{ SW_FALSE }
         , _bJobOnWorkers{ SW_FALSE }
@@ -357,7 +357,7 @@ namespace sw
             engine::getSubsystem<TaskManager>().waitStage( _jobStage, "SceneSpatialGrid" );
         _bJobOnWorkers = SW_FALSE;
         _bJobLaunched  = SW_FALSE;
-        _appliedChangeCount += _listChange.size();
+        _appliedChangeCount.add( _listChange.size() );
         _listChange.clear();
         // 뒤 버퍼에서도 뺐다 — 칸을 다시 쓸 수 있다(세대를 올려 옛 핸들을 무효로).
         for ( const uint32 entryIndex : _listRemovedEntry )

@@ -5,6 +5,7 @@
 
 #include "DevTools/Console/ExecFunctionCommand.h"
 
+#include "Engine/Animation/Component/SkeletalAnimatorComponent.h"
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
 #include "Engine/Physics/Component/CharacterControllerComponent.h"
@@ -29,4 +30,19 @@ SW_TEST_CASE( ExecFunctionCommandTest, OnlyExecFunctionsAreCalled )
     SW_EXPECT_FALSE( ExecFunctionCommand::run( *pObject, "jump", { "high" }, reply ) );             // 수가 아니다
     SW_EXPECT_FALSE( ExecFunctionCommand::run( *pObject, "jump", { "4", "5" }, reply ) );           // 인자가 많다
     SW_EXPECT_FALSE( ExecFunctionCommand::run( *pObject, "setMoveVelocity", { "0 0 0" }, reply ) ); // FUNCTION 이 아니다
+}
+
+/**
+ * @brief [ExecFunctionCommandTest] bool 을 돌려주는 Exec 메서드가 false 를 돌려주면 명령도 실패다 — 클립이 없는 애니메이터의 재생
+ */
+SW_TEST_CASE( ExecFunctionCommandTest, FalseReturnFailsTheCommand )
+{
+    GameObjectManager manager;
+    GameObject*       pObject = manager.createGameObject( hashed_string( "ExecAnimator" ) );
+    SW_REQUIRE_NOT_NULL( pObject );
+    SW_REQUIRE_NOT_NULL( pObject->addComponent<SkeletalAnimatorComponent>() );
+    SW_EXPECT_LOG( "SkeletalAnimator.AnimationClipNotFound" );
+    string reply;
+    SW_EXPECT_FALSE( ExecFunctionCommand::run( *pObject, "play", { "NoSuchClip" }, reply ) ); // loop · blendSeconds 는 기본 인자다
+    SW_EXPECT_TRUE( reply.find( "SkeletalAnimatorComponent.play" ) != string::npos );
 }
