@@ -167,7 +167,6 @@ namespace sw
         , _streamMinSeconds{ kDefaultStreamMinSeconds }
         , _budgetBytes{ 0 }
         , _cachedBytes{ 0 }
-        , _listPathByUse{}
         , _mutex{}
         , _bSubmittedDecode{ false }
     {
@@ -196,33 +195,28 @@ namespace sw
     shared_ptr<const AudioClipData> AudioClipCache::findClip( const hashed_string& path ) const
     {
         ScopedLock<mutex> lock{ _mutex };
-        const auto        it = _mapPathToEntry.find( path );
-        if ( it == _mapPathToEntry.end() || it->second._status != AssetLoadState::Ready )
+        const Entry*      pEntry = _mapPathToEntry.touch( path );
+        if ( pEntry == nullptr || pEntry->_status != AssetLoadState::Ready )
             return nullptr;
-        markUsedLocked( it->second );
-        return it->second._pClip;
+        return pEntry->_pClip;
     }
 
     optional<AssetLoadState> AudioClipCache::findLoadState( const hashed_string& path ) const
     {
         ScopedLock<mutex> lock{ _mutex };
-        const auto        it = _mapPathToEntry.find( path );
-        if ( it == _mapPathToEntry.end() )
+        const Entry*      pEntry = _mapPathToEntry.touch( path ); // 클립을 기다리는 보이스가 블록마다 묻는다 — 기다리는 동안 LRU 맨 끝으로 밀려 빠지지 않는다
+        if ( pEntry == nullptr )
             return nullopt;
-        markUsedLocked( it->second ); // 클립을 기다리는 보이스가 블록마다 묻는다 — 기다리는 동안 LRU 맨 끝으로 밀려 빠지지 않는다
-        return it->second._status;
+        return pEntry->_status;
     }
 
     shared_ptr<const AudioClipData> AudioClipCache::loadClip( const hashed_string& path )
     {
         {
             ScopedLock<mutex> lock{ _mutex };
-            const auto        it = _mapPathToEntry.find( path );
-            if ( it != _mapPathToEntry.end() && it->second._status == AssetLoadState::Ready )
-            {
-                markUsedLocked( it->second );
-                return it->second._pClip;
-            }
+            const Entry*      pEntry = _mapPathToEntry.touch( path );
+            if ( pEntry != nullptr && pEntry->_status == AssetLoadState::Ready )
+                return pEntry->_pClip;
         }
         shared_ptr<const AudioClipData> pClip = decodeClip( path );
         storeResult( path, pClip );
@@ -236,12 +230,9 @@ namespace sw
         {
             ScopedLock<mutex> lock{ _mutex };
             // 새 엔트리는 `Loading` 으로 생긴다 — 있던 엔트리가 준비됐거나 디코드 중이면 다시 띄우지 않는다(실패한 것만 다시 시도한다).
-            const auto it = _mapPathToEntry.find( path );
-            if ( it != _mapPathToEntry.end() && it->second._status != AssetLoadState::Failed )
-            {
-                markUsedLocked( it->second );
+            const Entry* pEntry = _mapPathToEntry.touch( path );
+            if ( pEntry != nullptr && pEntry->_status != AssetLoadState::Failed )
                 return;
-            }
             getOrCreateLocked( path )._status = AssetLoadState::Loading;
         }
 
@@ -274,10 +265,10 @@ namespace sw
         ScopedLock<mutex> lock{ _mutex };
         for ( const auto& entry : _mapPathToEntry )
         {
-            const bool bSamePath = entry.second._status == AssetLoadState::Ready && StringUtil::equals( FileUtil::normalizeSeparators( entry.first.view() ), wanted, true );
+            const bool bSamePath = entry._value._status == AssetLoadState::Ready && StringUtil::equals( FileUtil::normalizeSeparators( entry._key.view() ), wanted, true );
             if ( bSamePath )
             {
-                outPath = entry.first;
+                outPath = entry._key;
                 return true;
             }
         }
@@ -293,15 +284,15 @@ namespace sw
     {
         ScopedLock<mutex> lock{ _mutex };
         _mapPathToEntry.clear();
-        _listPathByUse.clear();
         _cachedBytes = 0;
     }
 
     void AudioClipCache::setBudgetBytes( uint64 budgetBytes )
     {
-        ScopedLock<mutex> lock{ _mutex };
+        vector<shared_ptr<const AudioClipData>> listEvicted; // 잠금보다 먼저 선언한다 — 잠금을 놓은 뒤 푼다
+        ScopedLock<mutex>                       lock{ _mutex };
         _budgetBytes = budgetBytes;
-        evictOverBudgetLocked( hashed_string{} );
+        evictOverBudgetLocked( hashed_string{}, listEvicted );
     }
 
     uint64 AudioClipCache::getCachedBytes() const
@@ -310,43 +301,31 @@ namespace sw
         return _cachedBytes;
     }
 
-    void AudioClipCache::evictOverBudgetLocked( const hashed_string& keepPath )
+    void AudioClipCache::evictOverBudgetLocked( const hashed_string& keepPath, vector<shared_ptr<const AudioClipData>>& outListEvicted )
     {
-        // 최근 사용 목록을 앞(가장 오래 안 쓴 것)부터 한 번 걷는다 — 재생 중이라 못 빼는 것만 건너뛴다.
-        auto itPath = _listPathByUse.begin();
-        while ( _budgetBytes != 0 && _cachedBytes > _budgetBytes && itPath != _listPathByUse.end() )
+        // 가장 오래 안 쓴 것부터 한 번 걷는다 — 재생 중이라 못 빼는 것만 건너뛴다.
+        auto it = _mapPathToEntry.begin();
+        while ( _budgetBytes != 0 && _cachedBytes > _budgetBytes && it != _mapPathToEntry.end() )
         {
-            const auto it = _mapPathToEntry.find( *itPath );
-            SW_ASSERT( it != _mapPathToEntry.end() );
             // 캐시만 잡은 클립만 뺀다(use_count 1). 재생 중인 보이스가 잡은 것은 빼도 메모리가 줄지 않고, 다음 재생이 같은 소리를 한 벌 더 푼다.
             // 다른 쪽은 잠금 아래 `findClip` 으로만 참조를 얻으므로 이 잠금 안에서 1 은 다시 늘지 않는다.
-            const bool bEvictable = it->second._status == AssetLoadState::Ready && it->second._pClip.use_count() == 1 && it->first != keepPath;
+            const bool bEvictable = it->_value._status == AssetLoadState::Ready && it->_value._pClip.use_count() == 1 && it->_key != keepPath;
             if ( bEvictable == false )
             {
-                ++itPath;
+                ++it;
                 continue;
             }
-            _cachedBytes -= it->second._byteCount;
-            itPath = _listPathByUse.erase( itPath );
-            _mapPathToEntry.erase( it );
+            _cachedBytes -= it->_value._byteCount;
+            outListEvicted.push_back( it->_value._pClip );
+            it = _mapPathToEntry.erase( it );
         }
         // 다 걸었는데도 넘으면 남은 것은 모두 재생 중이다 — 예산을 넘긴 채 둔다
     }
 
     AudioClipCache::Entry& AudioClipCache::getOrCreateLocked( const hashed_string& path )
     {
-        const auto inserted = _mapPathToEntry.try_emplace( path );
-        Entry&     entry    = inserted.first->second;
-        if ( inserted.second )
-            entry._itPathByUse = _listPathByUse.insert( _listPathByUse.end(), path );
-        else
-            markUsedLocked( entry );
-        return entry;
-    }
-
-    void AudioClipCache::markUsedLocked( const Entry& entry ) const
-    {
-        _listPathByUse.splice( _listPathByUse.end(), _listPathByUse, entry._itPathByUse );
+        Entry* pEntry = _mapPathToEntry.touch( path );
+        return pEntry != nullptr ? *pEntry : _mapPathToEntry.insertOrAssign( path, Entry{} );
     }
 
     shared_ptr<const AudioClipData> AudioClipCache::decodeClip( const hashed_string& path ) const
@@ -442,14 +421,15 @@ namespace sw
 
     void AudioClipCache::storeResult( const hashed_string& path, shared_ptr<const AudioClipData> pClip )
     {
-        const uint64      byteCount = pClip != nullptr ? static_cast<uint64>( pClip->getByteCount() ) : 0u;
-        ScopedLock<mutex> lock{ _mutex };
-        Entry&            entry = getOrCreateLocked( path );
-        _cachedBytes            = _cachedBytes - entry._byteCount + byteCount;
-        entry._status           = pClip != nullptr ? AssetLoadState::Ready : AssetLoadState::Failed;
-        entry._pClip            = std::move( pClip );
-        entry._byteCount        = byteCount;
-        evictOverBudgetLocked( path );
+        const uint64                            byteCount = pClip != nullptr ? static_cast<uint64>( pClip->getByteCount() ) : 0u;
+        vector<shared_ptr<const AudioClipData>> listEvicted; // 잠금보다 먼저 선언한다 — 잠금을 놓은 뒤 푼다
+        ScopedLock<mutex>                       lock{ _mutex };
+        Entry&                                  entry = getOrCreateLocked( path );
+        _cachedBytes                                  = _cachedBytes - entry._byteCount + byteCount;
+        entry._status                                 = pClip != nullptr ? AssetLoadState::Ready : AssetLoadState::Failed;
+        entry._pClip.swap( pClip ); // 바뀐 옛 클립은 인자가 들고 나가 잠금 밖에서 놓인다
+        entry._byteCount = byteCount;
+        evictOverBudgetLocked( path, listEvicted );
     }
 
     bool AudioClipCache::reloadClip( const hashed_string& path )

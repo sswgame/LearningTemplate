@@ -5,8 +5,7 @@
 #include "Core/Algorithm/VectorUtil.h"
 #include "Core/Concurrency/DevCounter.h"
 #include "Core/Concurrency/mutex.h"
-#include "Core/Container/list.h"
-#include "Core/Container/unordered_map.h"
+#include "Core/Container/LRUMap.h"
 #include "Core/Foundation/Constants.h"
 #include "Core/Foundation/Macros.h"
 #include "Core/Log/Logger.h"
@@ -45,7 +44,6 @@ namespace sw
                 vector<shared_ptr<Mesh>> _listSource{};        ///< 키에 섞은 원본 메시 — 쥐어 두어 다음 씬도 같은 원본 객체(같은 내용 토큰 → 같은 키)를 받는다
                 vector<IdentityToken>    _listSourceContent{}; ///< 구울 때의 원본 내용 토큰 — 원본이 다시 읽혀(핫 리로드) 토큰이 바뀌면 낡은 항목이다
                 uint64                   _byteCount{ 0 };      ///< 구운 메시와 쥔 원본의 정점 · 인덱스 바이트(예산 계산 — 원본을 여러 항목이 나누면 겹쳐 센다)
-                list<uint64>::iterator   _itKeyByUse{};        ///< 표의 `_listKeyByUse` 에서 이 항목의 자리(앞이 가장 오래 안 쓴 것)
             };
 
             /** @brief 원본마다 지금 내용 토큰이 구울 때와 같으면 true 입니다(다시 읽힌 원본의 낡은 결과를 내주지 않는다). */
@@ -181,11 +179,10 @@ namespace sw
         public:
             static constexpr const utf8* kSubsystemName = "AppearanceBakedMeshTable";
 
-            mutex                                                                       _mutex;
-            unordered_map<uint64, AppearanceMeshAssemblyInternal::BakedEntry> _mapEntry SW_GUARDED_BY( _mutex );
-            uint64 _cachedBytes                                                         SW_GUARDED_BY( _mutex ){ 0 }; ///< 항목 바이트의 합
-            list<uint64> _listKeyByUse                                                  SW_GUARDED_BY( _mutex );      ///< 쓴 순서(앞이 가장 오래 안 씀) — 넣기 · 꺼내기가 끝으로 옮긴다(`AssetPinSet` · `AudioClipCache` 와 같은 모양)
-            DevCounter                                                                  _hitCount;                    ///< `tryGet` 이 내준 횟수(감시 값만 읽는 개발 전용 칸 — 원자라 잠금 밖에서도 된다)
+            mutex                                                                _mutex;
+            LRUMap<uint64, AppearanceMeshAssemblyInternal::BakedEntry> _mapEntry SW_GUARDED_BY( _mutex );      ///< 쓴 순서를 함께 든다 — 넣기 · 꺼내기가 가장 최근으로 옮긴다
+            uint64 _cachedBytes                                                  SW_GUARDED_BY( _mutex ){ 0 }; ///< 항목 바이트의 합
+            DevCounter                                                           _hitCount;                    ///< `tryGet` 이 내준 횟수(감시 값만 읽는 개발 전용 칸 — 원자라 잠금 밖에서도 된다)
 
             // Subsystem — 세울 것이 없다(처음 구운 차림부터 채운다). 예산은 남길 때 읽는다 — 모듈 서브시스템 초기화 때는 게임 서비스가 아직 걸리지 않았을 수 있다.
             SubsystemInitResult initializeSubsystem() override { return SubsystemInitResult::Succeeded; }
@@ -193,7 +190,6 @@ namespace sw
             {
                 ScopedLock<mutex> lock{ _mutex };
                 _mapEntry.clear(); // 메시를 엔진 서비스보다 먼저 놓는다
-                _listKeyByUse.clear();
                 _cachedBytes = 0;
             }
             const utf8* getSubsystemName() const override { return kSubsystemName; }
@@ -203,38 +199,25 @@ namespace sw
             {
                 ScopedLock<mutex> lock{ _mutex };
                 _mapEntry.clear();
-                _listKeyByUse.clear();
                 _cachedBytes = 0;
                 _hitCount.reset();
-            }
-
-            /** @brief @p entry 를 가장 최근에 쓴 것으로 옮깁니다(목록 끝). */
-            void markUsedLocked( const AppearanceMeshAssemblyInternal::BakedEntry& entry ) SW_REQUIRES_LOCK( _mutex )
-            {
-                _listKeyByUse.splice( _listKeyByUse.end(), _listKeyByUse, entry._itKeyByUse );
-            }
-
-            /** @brief 항목을 표와 쓴 순서 목록에서 빼고 바이트 합을 줄입니다. */
-            void eraseLocked( unordered_map<uint64, AppearanceMeshAssemblyInternal::BakedEntry>::iterator it ) SW_REQUIRES_LOCK( _mutex )
-            {
-                _cachedBytes -= it->second._byteCount;
-                _listKeyByUse.erase( it->second._itKeyByUse );
-                _mapEntry.erase( it );
             }
 
             /** @brief @p budgetBytes 를 넘는 동안 그리는 쪽이 없는 항목을 가장 오래 안 쓴 것부터 뺍니다. @p keepKey 는 방금 넣은 항목이다. */
             void evictOverBudgetLocked( uint64 keepKey, uint64 budgetBytes ) SW_REQUIRES_LOCK( _mutex )
             {
-                // 쓴 순서 목록을 앞(가장 오래 안 쓴 것)부터 한 번 걷는다 — 그리는 쪽이 있는 것만 건너뛴다.
-                auto itKey = _listKeyByUse.begin();
-                while ( _cachedBytes > budgetBytes && itKey != _listKeyByUse.end() )
+                // 가장 오래 안 쓴 것부터 한 번 걷는다 — 그리는 쪽이 있는 것만 건너뛴다.
+                auto it = _mapEntry.begin();
+                while ( _cachedBytes > budgetBytes && it != _mapEntry.end() )
                 {
-                    const auto it = _mapEntry.find( *itKey );
-                    SW_ASSERT( it != _mapEntry.end() );
-                    ++itKey; // 빼기 전에 다음으로 — `eraseLocked` 가 지금 자리를 지운다
-                    const bool bEvictable = it->first != keepKey && AppearanceMeshAssemblyInternal::isHeldOutside( it->second ) == false;
-                    if ( bEvictable )
-                        eraseLocked( it );
+                    const bool bEvictable = it->_key != keepKey && AppearanceMeshAssemblyInternal::isHeldOutside( it->_value ) == false;
+                    if ( bEvictable == false )
+                    {
+                        ++it;
+                        continue;
+                    }
+                    _cachedBytes -= it->_value._byteCount;
+                    it = _mapEntry.erase( it );
                 }
                 // 다 걸었는데도 넘으면 남은 것은 모두 그리는 중이다 — 예산을 넘긴 채 둔다
             }
@@ -402,18 +385,18 @@ namespace sw
         AppearanceBakedMeshTable* const pTable = game::findSubsystem<AppearanceBakedMeshTable>();
         if ( pTable == nullptr )
             return false; // 게임 서비스가 없는 실행 — 표가 없어 매번 굽는다
-        ScopedLock<mutex> lock{ pTable->_mutex };
-        const auto        found = pTable->_mapEntry.find( key );
-        if ( found == pTable->_mapEntry.end() )
+        ScopedLock<mutex>           lock{ pTable->_mutex };
+        const Internal::BakedEntry* pEntry = pTable->_mapEntry.touch( key );
+        if ( pEntry == nullptr )
             return false;
-        if ( Internal::isCurrent( found->second ) == false )
+        if ( Internal::isCurrent( *pEntry ) == false )
         {
-            pTable->eraseLocked( found ); // 원본이 다시 읽혔다 — 낡은 결과를 내주지 않고 치운다
+            pTable->_cachedBytes -= pEntry->_byteCount; // 원본이 다시 읽혔다 — 낡은 결과를 내주지 않고 치운다
+            (void)pTable->_mapEntry.erase( key );
             return false;
         }
         pTable->_hitCount.add();
-        pTable->markUsedLocked( found->second );
-        outListMesh = found->second._listMesh;
+        outListMesh = pEntry->_listMesh;
         return true;
     }
 
@@ -445,19 +428,12 @@ namespace sw
         }
         entry._listSource        = listSource;
         entry._listSourceContent = listSourceContent;
-        ScopedLock<mutex> lock{ pTable->_mutex };
-        if ( const auto found = pTable->_mapEntry.find( key ); found != pTable->_mapEntry.end() )
-        {
-            pTable->_cachedBytes -= found->second._byteCount; // 같은 차림을 둘이 지었다 — 뒤의 것으로 바꾼다
-            pTable->markUsedLocked( found->second );
-            entry._itKeyByUse = found->second._itKeyByUse;
-        }
-        else
-        {
-            entry._itKeyByUse = pTable->_listKeyByUse.insert( pTable->_listKeyByUse.end(), key );
-        }
+        ScopedLock<mutex>           lock{ pTable->_mutex };
+        const Internal::BakedEntry* pReplaced = pTable->_mapEntry.find( key );
+        if ( pReplaced != nullptr )
+            pTable->_cachedBytes -= pReplaced->_byteCount; // 같은 차림을 둘이 지었다 — 뒤의 것으로 바꾼다
         pTable->_cachedBytes += entry._byteCount;
-        pTable->_mapEntry[key] = std::move( entry );
+        pTable->_mapEntry.insertOrAssign( key, std::move( entry ) );
         pTable->evictOverBudgetLocked( key, budgetBytes );
     }
 

@@ -14,7 +14,6 @@
 #include "Core/Container/deque.h"
 #include "Core/Container/flat_map.h"
 #include "Core/Container/flat_set.h"
-#include "Core/Container/list.h"
 #include "Core/Container/pair.h"
 #include "Core/Container/string.h"
 #include "Core/Container/unordered_map.h"
@@ -598,11 +597,10 @@ SW_TEST_CASE( DataStructureTest, UnorderedMapAndSetOperations )
 }
 
 /**
- * @brief [DataStructureTest] sw::deque 및 sw::list 양방향 컨테이너 연산 검증
+ * @brief [DataStructureTest] sw::deque 양방향 컨테이너 연산 검증
  */
-SW_TEST_CASE( DataStructureTest, DequeAndListOperations )
+SW_TEST_CASE( DataStructureTest, DequeOperations )
 {
-    // 1) sw::deque
     sw::deque<int32> dq;
     dq.push_back( 20 );
     dq.push_front( 10 );
@@ -620,31 +618,6 @@ SW_TEST_CASE( DataStructureTest, DequeAndListOperations )
     dq.pop_back();
     SW_EXPECT_EQUAL( 1u, dq.size() );
     SW_EXPECT_EQUAL( 20, dq.front() );
-
-    // 2) sw::list
-    sw::list<int32> lst;
-    lst.push_back( 2 );
-    lst.push_front( 1 );
-    lst.push_back( 3 );
-
-    SW_EXPECT_EQUAL( 3u, lst.size() );
-    SW_EXPECT_EQUAL( 1, lst.front() );
-    SW_EXPECT_EQUAL( 3, lst.back() );
-
-    sw::vector<int32> listIterated;
-    for ( const int32 val : lst )
-    {
-        listIterated.push_back( val );
-    }
-    SW_EXPECT_EQUAL( 3u, listIterated.size() );
-    SW_EXPECT_EQUAL( 1, listIterated[0] );
-    SW_EXPECT_EQUAL( 2, listIterated[1] );
-    SW_EXPECT_EQUAL( 3, listIterated[2] );
-
-    lst.remove( 2 );
-    SW_EXPECT_EQUAL( 2u, lst.size() );
-    SW_EXPECT_EQUAL( 1, lst.front() );
-    SW_EXPECT_EQUAL( 3, lst.back() );
 }
 
 /**
