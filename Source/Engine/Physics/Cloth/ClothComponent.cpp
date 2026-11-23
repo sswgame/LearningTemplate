@@ -5,6 +5,7 @@
 #include "Engine/Animation/Component/SkeletalMeshComponent.h"
 #include "Engine/Automation/Watch/AutomationComponentWatch.h"
 #include "Engine/Automation/Watch/AutomationWatch.h"
+#include "Engine/Automation/Watch/AutomationWatchComponent.h"
 #include "Engine/Graphics/Mesh/Mesh.h"
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Object/GameObject/Tick/FixedStepContext.h"
@@ -36,8 +37,26 @@ namespace sw
             vertex._arrColor[3]    = 1.0f;
             return vertex;
         }
+
+        /** @brief 감시 값 `Cloth.HighestY` · `Cloth.LowestY` 입니다 — 대상 천의 정점 월드 높이(m) 가운데 가장 높은 · 낮은 값. 천이 없으면(아직 만들지 않았거나 실패) 값이 없습니다. */
+        template <bool bHighest>
+        [[nodiscard]] bool readClothHeight( const AutomationWatchQuery& query, AutomationWatchValue& outValue )
+        {
+            const ClothComponent* pCloth = query.findTargetComponent<ClothComponent>( "cloth", outValue );
+            if ( pCloth == nullptr || pCloth->getVertices().empty() )
+                return false;
+            float32 height = pCloth->getVertices().front()._y;
+            for ( const float3& vertex : pCloth->getVertices() )
+            {
+                height = bHighest ? MathUtil::max( height, vertex._y ) : MathUtil::min( height, vertex._y );
+            }
+            outValue.setNumber( static_cast<float64>( height ) );
+            return true;
+        }
     } // namespace
 
+    SW_AUTOMATION_QUERY_WATCH( clothHighestY, "Cloth.HighestY", "World height (m) of the target cloth's highest vertex", &readClothHeight<true>, true, false );
+    SW_AUTOMATION_QUERY_WATCH( clothLowestY, "Cloth.LowestY", "World height (m) of the target cloth's lowest vertex", &readClothHeight<false>, true, false );
     // 천 LOD 감시 값(시나리오 `game/playground/automation/clothlod`) — 씬의 첫 천을 읽는다.
     SW_AUTOMATION_GETTER_WATCH( clothIterationCount, "Cloth.IterationCount", "Solver iterations given to the first cloth's soft body (0: no soft body, e.g. suspended by LOD)", ClothComponent, &ClothComponent::getAppliedIterationCount );
     SW_AUTOMATION_GETTER_WATCH( clothLODSuspended, "Cloth.LODSuspended", "1 while the first cloth is suspended by its LOD (_maxLOD) and shows its rest grid", ClothComponent, &ClothComponent::isLODSuspended );

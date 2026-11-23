@@ -1,0 +1,69 @@
+<?asset guid="2588ea876aafb85cfd92510d2947ed34"?>
+<Scene formatVersion="3" name="SoftBody">
+	<!-- 소프트 바디 시나리오(automation/softbody)의 무대 — 윗변을 건 천(Curtain, y 3)과 고정 없이 판 위로 떨어지는 천(Sheet, 2 m × 1 m, y 1.6). 판(Table)은 윗면 y 1, 폭 0.6 m 라 천의 양 끝이 늘어진다. -->
+	<SceneSettings _bStreaming="false" _unloadMargin="0" _maxCellLoadsPerFrame="0" _addToWorldBudgetMicroseconds="0">
+		<_cellGrid _cellSize="0" _loadingRadius="0" />
+	</SceneSettings>
+	<entities>
+		<entity id="1" name="GameCamera">
+			<GameObject _schemaVersion="0" _name="GameCamera" _bActive="true">
+				<_listComponent>
+					<CameraComponent _localID="17709685451340727998" _localPosition="0,2,-6" _localRotation="0.1,0,0" _localScale="1,1,1" _attachOwner="None" _attachComponent="None" _fovY="51.5662" _nearZ="0.05" _farZ="100" _orthoHeight="10" _priority="0" _role="Game" _bOrthographic="false" />
+				</_listComponent>
+			</GameObject>
+		</entity>
+		<entity id="2" name="Sun">
+			<GameObject _schemaVersion="0" _name="Sun" _bActive="true">
+				<_listComponent>
+					<DirectionalLightComponent _localID="51927904365891271" _localPosition="0,0,0" _localRotation="0.356582,-2.338715,0" _localScale="1,1,1" _attachOwner="None" _attachComponent="None" _color="1,1,1" _intensity="1.2" _ambient="0.5" _shadowExtent="8" _shadowDistance="20" _bCastShadow="false" />
+				</_listComponent>
+			</GameObject>
+		</entity>
+		<entity id="3" name="Ground">
+			<GameObject _schemaVersion="0" _name="Ground" _bActive="true">
+				<_listComponent>
+					<RigidBodyComponent _localID="7198733165449302788" _localPosition="0,-0.5,0" _localRotation="0,0,0" _localScale="1,1,1" _attachOwner="None" _attachComponent="None" _bodyType="Static" _layer="Default" _material="None" _mass="0">
+						<_listShape>
+							<PhysicsShapeDesc3D _type="Box" _halfExtents="20,0.5,20" _radius="0.5" _halfHeight="0.5" _localPosition="0,0,0" _localRotation="0,0,0" _material="None">
+								<_listPoint />
+								<_listIndex />
+							</PhysicsShapeDesc3D>
+						</_listShape>
+					</RigidBodyComponent>
+					<MeshComponent _localID="163493842152903304" _localPosition="0,0,0" _localRotation="0,0,0" _localScale="40,1,40" _attachOwner="None" _attachComponent="#63e709ac676dd304" _meshID="Cube" _materialPath="engine/materials/prototypegrid_dark.material" _boundsRadius="0.866" _gpuSpinSeed="0" _bVisible="true" />
+				</_listComponent>
+			</GameObject>
+		</entity>
+		<entity id="4" name="Table">
+			<GameObject _schemaVersion="0" _name="Table" _bActive="true">
+				<_listComponent>
+					<RigidBodyComponent _localID="7198733165449302788" _localPosition="0,0.5,0" _localRotation="0,0,0" _localScale="1,1,1" _attachOwner="None" _attachComponent="None" _bodyType="Static" _layer="Default" _material="None" _mass="0">
+						<_listShape>
+							<PhysicsShapeDesc3D _type="Box" _halfExtents="0.3,0.5,3" _radius="0.5" _halfHeight="0.5" _localPosition="0,0,0" _localRotation="0,0,0" _material="None">
+								<_listPoint />
+								<_listIndex />
+							</PhysicsShapeDesc3D>
+						</_listShape>
+					</RigidBodyComponent>
+					<MeshComponent _localID="163493842152903304" _localPosition="0,0,0" _localRotation="0,0,0" _localScale="0.6,1,6" _attachOwner="None" _attachComponent="#63e709ac676dd304" _meshID="Cube" _materialPath="engine/materials/defaultmaterial.material" _boundsRadius="0.866" _gpuSpinSeed="0" _bVisible="true" />
+				</_listComponent>
+			</GameObject>
+		</entity>
+		<entity id="5" name="Curtain">
+			<GameObject _schemaVersion="0" _name="Curtain" _bActive="true">
+				<_listComponent>
+					<MeshComponent _localID="163493842152903304" _localPosition="4,3,0" _localRotation="0,0,0" _localScale="1,1,1" _attachOwner="None" _attachComponent="None" _meshID="" _materialPath="game/playground/materials/toonshowcase_lit.material" _boundsRadius="2" _gpuSpinSeed="0" _bVisible="true" />
+					<ClothComponent _localID="10065198837581336125" _width="1" _height="1" _columnCount="9" _rowCount="9" _pinMode="TopEdge" _mass="0.5" _stretchCompliance="0" _shearCompliance="0" _bendCompliance="0.001" _linearDamping="0.1" _friction="0.6" _gravityFactor="1" _vertexRadius="0.02" _iterationCount="8" _layer="Default" />
+				</_listComponent>
+			</GameObject>
+		</entity>
+		<entity id="6" name="Sheet">
+			<GameObject _schemaVersion="0" _name="Sheet" _bActive="true">
+				<_listComponent>
+					<MeshComponent _localID="163493842152903304" _localPosition="0,1.6,0" _localRotation="1.5707963,0,0" _localScale="1,1,1" _attachOwner="None" _attachComponent="None" _meshID="" _materialPath="game/playground/materials/toonshowcase_lit.material" _boundsRadius="2" _gpuSpinSeed="0" _bVisible="true" />
+					<ClothComponent _localID="10065198837581336125" _width="2" _height="1" _columnCount="17" _rowCount="9" _pinMode="None" _mass="0.5" _stretchCompliance="0" _shearCompliance="0" _bendCompliance="0.001" _linearDamping="0.1" _friction="0.6" _gravityFactor="1" _vertexRadius="0.02" _iterationCount="8" _layer="Default" />
+				</_listComponent>
+			</GameObject>
+		</entity>
+	</entities>
+</Scene>
