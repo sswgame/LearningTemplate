@@ -54,8 +54,8 @@ FONT_FILE = 'LiberationSans-Regular.ttf'  # 카탈로그가 찾는 Linux 글꼴(
 XVFB_DEBS = ('git-lfs xvfb xserver-common x11-xkb-utils xkb-data libxfont2 libfontenc1 libunwind8 libxkbfile1 libxtst6 libgl1 libgl1-mesa-dri '
              'libtirpc3t64 libxshmfence1 libpixman-1-0 libxcvt0 libglvnd0 libgbm1 libepoxy0 libxau6 libxdmcp6').split()
 SCREEN = '2560x1440x24'  # 체인의 큰 창이 화면 안에 들어오고, 실제 포인터가 창 밖 가운데에 머문다
-ALL_CHAINS = ('editor playground lanternvale nilecity shooter3d starskirmish velmora '
-              'playground.editor shooter3d.editor').split()
+ALL_CHAINS = ('editor playground nilecity playground.shooter3d '
+              'playground.editor').split()
 PARALLEL_CHAINS = 4  # --gpu software(lavapipe)는 코어를 나눠 쓰므로 많이 띄우면 벽시계 시한을 넘긴다
 WALL_SCALE = '4'  # 소프트웨어 렌더링이라 벽시계 시한을 늘린다(gv_scenarioWallScale)
 # Windows PATH 가 끼면 Windows 도구를 잡는다. 끝의 폴더는 setup 이 sudo 없이 푼 도구(git-lfs — 클론의 reset 이 부르는 필터)다.
@@ -345,7 +345,7 @@ def chain(arguments):
     record = '--record' in arguments
     names = [a for a in arguments if a != '--record']
     if not names:
-        sys.exit('체인 이름을 적는다 (예: chain editor shooter3d)')
+        sys.exit('체인 이름을 적는다 (예: chain editor playground.shooter3d)')
     require_current_build()
     code = 0
     # 표시 번호를 한 줄에 하나씩 받아 Xvfb 가 겹치지 않는다. 표시 번호 = 99 + 작업 순번

@@ -514,10 +514,10 @@ SW_TEST_CASE( PushKitAssemblyTest, KitOptionsSelectTheProviders )
     SW_EXPECT_TRUE( rig._runtime.getKitScope().find<IOfflinePushSender>() != nullptr );
 }
 
-/** @brief [PushKitAssemblyTest] 저장소에 든 견본(`Shooter3D.push.json`)이 같은 읽기를 지난다 - 견본이 코드와 어긋나 낡지 않게 한다 */
+/** @brief [PushKitAssemblyTest] 저장소에 든 견본(`Playground.push.json`)이 같은 읽기를 지난다 - 견본이 코드와 어긋나 낡지 않게 한다 */
 SW_TEST_CASE( PushKitAssemblyTest, ExternalSampleConfigReads )
 {
-    const optional<AbsolutePath> providersFile = AbsolutePath::tryResolve( "Config/Server/Online/Providers/Shooter3D.push.json", ProcessRoots::get()._project );
+    const optional<AbsolutePath> providersFile = AbsolutePath::tryResolve( "Config/Server/Online/Providers/Playground.push.json", ProcessRoots::get()._project );
     SW_REQUIRE_TRUE( providersFile.has_value() );
     vector<PushProviderConfig> listConfig;
     const expected<void>       read = OnlineProviderFile::read<PushProviderConfig>( providersFile, sw::nullopt, "pushProvidersFile", "pushTrustFile", &PushProviderManager::readEntry, listConfig );

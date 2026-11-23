@@ -37,18 +37,11 @@ namespace sw::editor
         [[nodiscard]] static string findDomainFolder( string_view sourcePath );
 
         /**
-         * @brief 디스크 경로 @p diskPath 에 쓸 임포트 결과 글 @p text 에, 그 리소스 id 에서 결정적으로 만든 GUID 머리(`<?asset guid="…"?>`)를 씌운 글입니다.
-         *        우리 형식 글(`.material` · `*.xml`) 결과는 모두 이것(또는 `writeTextWithIdentity`)을 지나 쓴다 — 머리 없는 결과는 에셋 색인이 결함으로 센다.
-         * @details 결과는 커밋하지 않으므로 무작위 GUID 를 둘 곳이 없다 — 다시 임포트해도 · 다른 컴퓨터에서도 같도록 id 에서 만든다(`AssetGUID::fromName`).
-         *          결과 경로가 이미 (원본 자리, 결과 종류, 결과 안 이름) · 공유 저장소는 (도메인, 종류, 키)에서 정해지므로 id 하나가 같은 정보를 담고, 공유 결과처럼
-         *          원본이 하나가 아닌 것도 같은 규칙이다. 유니티가 임포트한 하위 에셋의 fileID 를 이름에서 결정적으로 만드는 것과 같은 자리다.
-         *          원본을 옮기면 결과 경로와 함께 GUID 도 바뀐다 — 결과를 가리키는 참조가 아직 경로라 지금은 잃는 것이 없다.
-         * @return @p diskPath 가 리소스 루트 · 붙인 도메인 밖이라 id 가 없으면 오류를 남기고 없음입니다(빈 id 로 만든 GUID 는 모든 결과가 겹친다).
+         * @brief 임포트 결과 글 @p text 를 @p diskPath 에 씁니다(부모 폴더를 만든다). 실패하면 false 입니다 — 쓰기 실패 오류는 부르는 쪽이 자기 결과 이름으로 남긴다.
+         * @details 결과에는 정체성 머리를 쓰지 않는다 — 결과의 GUID 는 원본 GUID 와 결과 이름에서 나오고(`AssetGUID::fromName`), 색인이 산출물마다 줄을 적는다(`AssetDatabase::build`).
+         *          글에 적으면 원본을 옮길 때 글의 GUID 와 색인의 GUID 가 갈린다(유니티 Library · Godot `.godot/imported` 의 산출물도 자기 정체성이 없다).
          */
-        [[nodiscard]] static optional<string> makeTextWithIdentity( const AssetPaths& assetPaths, string_view diskPath, string_view text );
-
-        /** @brief `makeTextWithIdentity` 의 글을 @p diskPath 에 씁니다(부모 폴더를 만든다). 실패하면 false 입니다 — 쓰기 실패 오류는 부르는 쪽이 자기 결과 이름으로 남긴다. */
-        [[nodiscard]] static bool writeTextWithIdentity( const AssetPaths& assetPaths, string_view diskPath, string_view text );
+        [[nodiscard]] static bool writeResultText( string_view diskPath, string_view text );
 
         /** @brief 저장소 파일 경로입니다(`<x>/models/_shared/<kind>/<key><extension>`). */
         [[nodiscard]] static string makeStorePath( string_view domainFolder, string_view kind, string_view key, string_view extension );
@@ -58,6 +51,13 @@ namespace sw::editor
          * @return 쓰기에 실패했거나 같은 이름의 파일 바이트가 다르면(해시 충돌 · 손댄 파일) 오류를 남기고 false 입니다 — 다른 모델이 쓰는 파일을 덮어쓰지 않는다.
          */
         [[nodiscard]] static bool writeIfAbsent( string_view storePath, const void* pBytes, size_t byteCount );
+
+        /**
+         * @brief 원본 폴더의 내용 주소 파일(`textures_raw/_shared/…` — 커밋한다)을 쓰고 곁의 `.meta` 가 없으면 함께 씁니다(`writeIfAbsent` 와 같은 쓰기 규칙).
+         * @details 정체성은 리소스 id 의 이름 GUID(`AssetGUID::fromName`)다 — 경로가 곧 내용이라 두 사람이 같은 모델을 따로 임포트해도 같은 `.meta` 가 생긴다(무작위면 더하기 · 더하기 충돌).
+         *          있던 `.meta` 는 그대로 둔다. 리소스 트리 밖(테스트 폴더)은 정체성이 없다.
+         */
+        [[nodiscard]] static bool writeSourceIfAbsent( const AssetPaths& assetPaths, string_view sourcePath, const void* pBytes, size_t byteCount );
 
         /** @brief 글 @p text 에서 저장소를 가리키는 리소스 경로(`"…/models/_shared/…"` 따옴표 안)를 모두 찾아 @p outListPath 에 더합니다. */
         static void collectReferences( string_view text, vector<string>& outListPath );

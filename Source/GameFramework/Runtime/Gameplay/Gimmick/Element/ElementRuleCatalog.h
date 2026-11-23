@@ -12,7 +12,7 @@
  *       <Status id="Burning" kind="Age"/>
  *       <Status id="Charged" kind="Countdown" steps="2"/>
  *       <Stimulus id="Fire">
- *         <On material="Ice" setMaterial="Water" event="Melted"/>
+ *         <On elementMaterial="Ice" setMaterial="Water" event="Melted"/>
  *         <On flag="Flammable" without="Burning" addStatus="Burning" event="Ignited"/>
  *       </Stimulus>
  *       <Step>
@@ -127,7 +127,7 @@ namespace sw
         REFLECT_BODY();
 
         PROPERTY()
-        hashed_string _material{};
+        hashed_string _elementMaterial{}; ///< 원소 재질 이름(이 표의 `<Material id>`) — 머티리얼 참조 칸 `material` 과 이름을 가른다
         PROPERTY()
         hashed_string _flag{};
         PROPERTY()

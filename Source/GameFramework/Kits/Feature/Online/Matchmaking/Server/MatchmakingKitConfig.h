@@ -7,9 +7,11 @@
 #include "Core/Container/vector.h"
 #include "Core/Foundation/Types.h"
 
+#include "Engine/Asset/AssetRef.h"
 #include "Engine/Reflection/ReflectionMacros.h"
 
 #include "GameFramework/Kits/Feature/Online/Matchmaking/Runtime/MatchmakingTypes.h"
+#include "GameFramework/Kits/Feature/Online/Matchmaking/Server/Rule/MatchModeCatalog.h"
 
 namespace sw
 {
@@ -18,9 +20,9 @@ namespace sw
     struct MatchmakingKitConfig
     {
         REFLECT_BODY();
-        /** @brief 모드 정의입니다(리소스 경로, `<MatchModeCatalog>`). */
+        /** @brief 모드 정의(`<MatchModeCatalog>`)입니다 — 글 칸이었을 때는 같은 이름의 참조 칸과 GUID 이전 도구가 가르지 못했다. */
         PROPERTY()
-        string _catalog{};
+        AssetRef<MatchModeCatalog> _catalog{};
         /** @brief 설정에 바로 적는 모드입니다. 데이터 파일 없이 도는 도구 · 테스트용이며 카탈로그와 같은 형식입니다. */
         PROPERTY()
         vector<MatchModeDef> _listMode{};

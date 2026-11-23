@@ -10,5 +10,5 @@
   `App --import-textures` 가 만든다(스탬프는 각 폴더의 `import.stamp`). 파일 이름은 원본의 `-` 를 `_` 로 바꾼 것이다.
 - 모델은 모두 한 장의 팔레트 텍스처(`suburban_colormap`)에서 색을 읽는다 — 게임은 `PrimitiveLook::_texturePath` 로 그것을 걸고,
   서비스 건물은 색을 곱해 종류를 보인다. Nature Kit 모델(조각상 · 밭)은 텍스처 없이 키트 머티리얼 색을 정점 색으로 굽는다.
-  게임 코드는 아직 밭 · 조각상을 색 상자로 그린다 — 건물 표(`NileBuildingComponent::hasModel`)에 이 메시를 이어야 쓰인다.
+  게임 코드는 아직 밭 · 조각상을 색 상자로 그린다 — 건물 표(`CityBuildingViewComponent::hasModel`)에 이 메시를 이어야 쓰인다.
 - CC0 는 표기 의무가 없지만 고마움을 적어 둡니다 — Kenney (www.kenney.nl).

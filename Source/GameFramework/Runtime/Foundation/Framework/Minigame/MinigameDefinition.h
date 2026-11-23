@@ -25,6 +25,7 @@ namespace sw
 {
     class AssetID;
     class GameFeatureRegistry;
+    class InputMap;
     class XMLCatalogRoot;
 
     /** @brief 미니게임에 들어가는 방식입니다. */
@@ -64,6 +65,12 @@ namespace sw
         DataPath _map; ///< 들어갈 맵 씬(리소스 id)
         PROPERTY( Required )
         MinigameEntry _entry{ MinigameEntry::SceneSwitch }; ///< 들어가는 방식
+        PROPERTY()
+        string _matchMode{}; ///< 매치형이면 매칭 모드(서버 매칭 키트 `MatchModeCatalog` 의 id) — 적으면 배정받은 매치로만 들어간다(`MinigameFlow::enterMatch`). 아래 둘과 함께 적는다
+        PROPERTY()
+        string _matchBoard{}; ///< 매치 결과를 낼 순위표(서버 순위표 키트 `LeaderboardCatalog` 의 id)
+        PROPERTY()
+        hashed_string _matchScore{}; ///< 순위표에 낼 결과 값 이름(디렉터의 `collectMinigameResult`) — 이 값은 바탕 판의 보상으로 넘기지 않는다
         PROPERTY( Name = "features" )
         vector<hashed_string> _listFeature{}; ///< 켤 게임 기능 이름(`SW_GAME_FEATURE` 의 이름, 적은 순서로 켜고 역순으로 끈다)
         PROPERTY( Name = "inputContexts" )
@@ -86,6 +93,9 @@ namespace sw
         /** @brief 입구를 가진 정의를 자리 순 목록 @p inoutListPortal 의 제자리에 넣습니다. 자리가 이미 찼으면 오류를 남기고 넣지 않습니다(false). */
         [[nodiscard]] static bool insertPortal( vector<MinigameDefinition>& inoutListPortal, MinigameDefinition definition );
 
+        /** @brief 매치형이면 true 입니다 — 매칭 줄에 서고 배정받아 매치 세션으로 들어간다. */
+        bool isMatch() const { return _matchMode.empty() == false; }
+
         /** @brief 리소스 @p assetID 의 XML 을 읽습니다. 실패하면 이유를 알리고 false 이며, @p outDefinition 은 그대로입니다. */
         [[nodiscard]] static bool loadFromAsset( const AssetID& assetID, MinigameDefinition& outDefinition );
         /** @brief `loadFromAsset` 의 글 버전입니다(테스트). @p sourceName 은 오류에 적는 이름입니다. */
@@ -96,6 +106,11 @@ namespace sw
          * @return 틀린 것을 모두 알리고(첫 오류에서 멈추지 않는다) 하나라도 있으면 false 입니다.
          */
         [[nodiscard]] bool validate( const GameFeatureRegistry& features, string_view sourceName ) const;
+        /**
+         * @brief 입력 문맥을 게임 입력 맵 @p inputMap 에 견줘 봅니다 — 함께 켜면 한 입력이 두 입력이 되는 조합(가상 커서 레이어와 그 스틱 · 패드 버튼을 묶은 레이어)을 거절한다.
+         * @return 틀린 것을 모두 알리고 하나라도 있으면 false 입니다. 없는 레이어는 켤 때 거절한다(`MinigameFlow`).
+         */
+        [[nodiscard]] bool validateInputLayers( const InputMap& inputMap, string_view sourceName ) const;
 
     private:
         /** @brief 루트 읽기입니다(`GameDataXML::loadFromAsset` · `loadFromXMLText`). */

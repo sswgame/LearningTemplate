@@ -313,7 +313,8 @@ namespace sw
 
         /**
          * @brief 소켓을 열고 역할을 시작합니다(서버는 샤드마다 listen, 클라이언트는 connectAsync). 하나라도 실패하면 연 것을 모두 닫고 로그를 남긴 뒤 false 를 반환합니다.
-         * @details 송신 상한과 속도 조절 계수는 @p requested 의 값 대신 `Config/Engine/NetSendThrottle.json` 이 정한다(`NetSendThrottleSettings`). 없거나 틀리면 열지 않는다.
+         * @details 와이어 버전에 이 실행의 와이어 내용(`openFromLaunch` 가 받은 것)을 섞는다 — 티켓으로 여는 세션이 빠뜨리면 같은 빌드의 서버와 `VersionMismatch` 로 갈린다.
+         *          송신 상한과 속도 조절 계수는 @p requested 의 값 대신 `Config/Engine/NetSendThrottle.json` 이 정한다(`NetSendThrottleSettings`). 없거나 틀리면 열지 않는다.
          */
         [[nodiscard]] bool initialize( const GameNetSessionParams& requested );
         /** @brief 모든 연결을 끊고 네트워크 스레드와 소켓을 닫습니다. 두 번 불러도 됩니다. */
@@ -323,6 +324,10 @@ namespace sw
 
         bool        isActive() const { return _role != GameNetRole::None; }
         GameNetRole getRole() const { return _role; }
+        /** @brief 클라이언트가 붙은(붙는 중인) 서버 주소입니다. 클라이언트가 아니면 빈 주소입니다 — 다른 세션으로 옮겼다 돌아올 자리를 적어 둘 때 읽는다. */
+        const NetAddress& getServerAddress() const { return _serverAddress; }
+        /** @brief 클라이언트가 접속 티켓으로 붙은 세션이면 true 입니다 — 돌아올 때 새 티켓이 있어야 한다(티켓은 되쓰지 않는다). */
+        bool isTicketBound() const { return _bTicketBound == SW_TRUE; }
         /** @brief 서버면 첫 샤드가 연 UDP 포트를 반환합니다(샤드 `n` 은 이 포트 + n, 한 포트를 나누면 모두 이 포트). 포트로 0 을 줬으면 운영체제가 고른 포트입니다. 클라이언트면 0 입니다. */
         uint16 getListenPort() const { return _listenPort; }
         /** @brief 포트 샤드 수입니다. 클라이언트와 샤딩하지 않는 서버는 1, 세션을 열지 않았으면 0 입니다. */
@@ -340,7 +345,11 @@ namespace sw
          * @brief 이 세션의 창구 · 라우터 · 역할을 씬의 넷 링크 값(`SceneNetLink`)으로 묶습니다. 게임 인스턴스가 씬 매니저에 건다(`SceneManager::setNetLink`) —
          *        네트워크 컴포넌트는 전역 세션이 아니라 자기 씬의 링크를 읽는다. 세션이 열려 있지 않으면(`isActive` 거짓) 쓰면 안 됩니다.
          */
-        [[nodiscard]] NetLinkValue makeNetLink() { return NetLinkValue{ &_peers, &_router, _role == GameNetRole::Server ? NetLinkRole::Server : NetLinkRole::Client }; }
+        [[nodiscard]] NetLinkValue makeNetLink()
+        {
+            const bool bServer = _role == GameNetRole::Server;
+            return NetLinkValue{ &_peers, &_router, bServer ? NetLinkRole::Server : NetLinkRole::Client, bServer ? _bTicketBound : uint8{ SW_FALSE } };
+        }
         /** @brief 키트와 게임이 메시지 처리기를 다는 라우터입니다. `update` 가 모든 샤드를 poll 합니다. */
         NetMessageRouter& getRouter() { return _router; }
         /**
@@ -524,10 +533,11 @@ namespace sw
         NetAddress                        _serverAddress;
         NetConnectCredentials             _credentials;      ///< 클라이언트 — 내미는 접속 티켓. 거절되면 지운다(옛 비밀을 들고 있지 않는다)
         uint64                            _latestServerTick; ///< 클라이언트 — 받은 가장 새 서버 틱(`_bServerTickKnown` 일 때만 뜻이 있다)
-        GameNetWireContent                _wireContent;      ///< 세션을 연 와이어 내용(`openFromLaunch`)
+        GameNetWireContent                _runWireContent;   ///< 이 실행의 와이어 내용(`openFromLaunch` 가 적는다) — `initialize` 가 어느 길로 연 세션에든 섞는다
+        GameNetWireContent                _wireContent;      ///< 열린 세션에 섞은 와이어 내용(닫으면 비운다)
         uint16                            _listenPort;
         GameNetRole                       _role;
-        uint8                             _bTicketBound;            ///< 클라이언트 — 티켓을 내미는 세션이다(티켓이 지워진 뒤에는 새 티켓 없이 다시 붙지 않는다)
+        uint8                             _bTicketBound;            ///< 티켓에 묶인 세션이다 — 서버는 모든 연결에 티켓을 요구하고, 클라이언트는 티켓을 내민다(티켓이 지워진 뒤에는 새 티켓 없이 다시 붙지 않는다)
         uint8                             _bConnectFailureReported; ///< 클라이언트 — 연결 실패를 한 번 알렸다(다시 시도하는 시간 초과는 처음만 알린다)
         MetricRegistry*                   _pMetricRegistry;         ///< 서버 — 운영 지표(`bindMetricRegistry`, 전용 서버가 소유). nullptr 이면 세지 않는다
         ResourceDigestComparer            _digestComparer;          ///< 서버 — 클라이언트마다 받은 합성 줄과 자기 합성을 맞댄다

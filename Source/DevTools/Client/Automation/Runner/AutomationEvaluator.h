@@ -216,7 +216,7 @@ namespace sw
     private:
         AutomationLogCapture             _logCapture;                                           ///< 시나리오 동안의 로그 줄(`<ExpectLog>`, 로그 게이트)
         shared_ptr<AutomationLogPolicy>  _pLogPolicy;                                           ///< 로그 게이트의 선언 · 허용(`<ExpectLog>` · `<AllowLog>`) — 세션이 든 한 벌을 빌린다
-        vector<string>                   _listFailure;                                          ///< "frame 40 <Expect> #7: Shooter3D.WeaponIndex == 1, got 2"
+        vector<string>                   _listFailure;                                          ///< "frame 40 <Expect> #7: Shooter.WeaponIndex == 1, got 2"
         AutomationFailureKind            _firstFailureKind{ AutomationFailureKind::Assertion }; ///< 첫 실패 줄의 종류(`addFailure`)
         vector<string>                   _listUpdatedGolden;                                    ///< 이 실행이 쓴 골든(리소스 id)
         vector<ReferencedGolden>         _listReferencedGolden;                                 ///< 이 실행의 이미지 단언이 가리킨 골든 — 처음 가리킨 단언만 그 골든을 쓴다

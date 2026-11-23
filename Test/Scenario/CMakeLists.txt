@@ -134,7 +134,7 @@ if(active_game_target)
 	list(PREPEND list_built_game ${SW_ACTIVE_GAME})
 endif()
 
-set(sequential_scenario_packs shooter3d) # 백엔드를 차례로 돌릴 게임 팩 체인(아래 `Scenario.<팩>`)
+set(sequential_scenario_prefixes shooter3d) # 백엔드를 차례로 돌릴 미니게임의 시나리오 이름 앞붙이(`<앞붙이>_*`) — 게임 체인에서 떼어 제 체인 `Scenario.<팩>.<앞붙이>` 로(아래)
 foreach(game IN LISTS list_built_game)
 	# Debug 가 함께 짓는 게임은 키트가 컴파일되는지와 단위 테스트(`UnitTests.<게임>`)를 보려는 것이다 - 시나리오 체인은 Release 가 돈다(텍스처 임포트가 Debug 보다 훨씬 빠르다).
 	if(CMAKE_BUILD_TYPE STREQUAL "Debug" AND NOT game STREQUAL SW_ACTIVE_GAME)
@@ -155,13 +155,15 @@ foreach(game IN LISTS list_built_game)
 		list(APPEND list_chain_glob "${scenario_root}/engine/automation/*.scenario.xml" "${scenario_root}/engine/automation/render/*.scenario.xml") # render/ — 렌더 출력 시나리오(HDR 출력 떨어짐 등)
 	endif()
 	sw_glob_source_tree(list_scenario RELATIVE "${scenario_root}" ${list_chain_glob})
-	# GPU 가 무거운 체인은 백엔드를 차례로 돌린다 — 넷을 함께 돌려도 빨라지지 않고(Shooter3D 225 초 대 차례로 227 초) 프레임만 7 → 100 ms 로 느려져
-	# 시한(crowd 150 초)에 닿고 골든이 흔들렸다(2026-11-02 측정, NEXT 6.2). 다른 체인은 함께 도는 편이 기동을 겹쳐 빠르다.
-	set(chain_slot "")
-	if(pack IN_LIST sequential_scenario_packs)
-		set(chain_slot SLOTS 1)
-	endif()
-	sw_add_scenario_chain(Scenario.${pack} 300 ${chain_slot} SCENARIOS ${list_scenario} ARGS ${game_argument})
+	# GPU 가 무거운 미니게임의 시나리오는 제 체인에서 백엔드를 차례로 돌린다 — 넷을 함께 돌려도 빨라지지 않고(사격장 225 초 대 차례로 227 초) 프레임만 7 → 100 ms 로 느려져
+	# 시한(crowd 150 초)에 닿고 골든이 흔들렸다(2026-11-02 측정, NEXT 6.2). 다른 시나리오는 함께 도는 편이 기동을 겹쳐 빠르다.
+	foreach(prefix IN LISTS sequential_scenario_prefixes)
+		set(list_sequential_scenario ${list_scenario})
+		list(FILTER list_sequential_scenario INCLUDE REGEX "/${prefix}_[^/]*$")
+		list(FILTER list_scenario EXCLUDE REGEX "/${prefix}_[^/]*$")
+		sw_add_scenario_chain(Scenario.${pack}.${prefix} 300 SLOTS 1 SCENARIOS ${list_sequential_scenario} ARGS ${game_argument})
+	endforeach()
+	sw_add_scenario_chain(Scenario.${pack} 300 SCENARIOS ${list_scenario} ARGS ${game_argument})
 
 	# 쇼케이스 — 쇼케이스 씬 하나를 정해진 시각에 찍는 시나리오. 게임 체인과 같은 길(백엔드 넷)이되 제 씬 · 제 골든(`showcase/golden/`)을 두는 묶음이라 따로 항목이 된다.
 	sw_glob_source_tree(list_showcase_scenario RELATIVE "${scenario_root}" "${automation_dir}/showcase/*.scenario.xml")
@@ -210,7 +212,7 @@ foreach(game IN LISTS list_built_game)
 		set(sequence_test_name Scenario.${pack}.sequence.${pair_name})
 		set(sequence_state_dir "${CMAKE_BINARY_DIR}/Testing/StateDir/${pack}.${pair_name}")
 		add_test(NAME ${sequence_test_name}
-			COMMAND ${CMAKE_COMMAND} -DAPP=$<TARGET_FILE:App> -DPAIR=${pair_path} -DSTATE_DIR=${sequence_state_dir} "-DSTATE_ARG=-gv_userSettingsFile=${sequence_state_dir}/usersettings.json"
+			COMMAND ${CMAKE_COMMAND} -DAPP=$<TARGET_FILE:App> -DSCENARIO_ROOT=${scenario_root} -DPAIR=${pair_path} -DSTATE_DIR=${sequence_state_dir} "-DSTATE_ARG=-gv_userSettingsFile=${sequence_state_dir}/usersettings.json"
 				-DUSER_DATA_DIR=$<TARGET_FILE_DIR:App>/Saved/Automation/UserData/sequence.${pack}.${pair_name}
 				"-DGAME_ARG=${game_argument}" -DLOG_NAME=${sequence_test_name} -DLOG_DIR=${CMAKE_BINARY_DIR}/Testing/Logs -DSKIP_CODE=${SW_EXIT_CODE_Skipped} -P ${CMAKE_CURRENT_SOURCE_DIR}/RunStateDirPair.cmake
 			WORKING_DIRECTORY "${CMAKE_BINARY_DIR}/Bin")
@@ -241,7 +243,7 @@ if(TARGET EditorModule)
 		string(REGEX REPLACE "\\.1\\.scenario\\.xml$" "" pair_path "${first_path}")
 		get_filename_component(pair_name "${pair_path}" NAME)
 		add_test(NAME Scenario.editor.statedir.${pair_name}
-			COMMAND ${CMAKE_COMMAND} -DAPP=$<TARGET_FILE:App> -DPAIR=${pair_path} -DSTATE_DIR=${CMAKE_BINARY_DIR}/Testing/StateDir/${pair_name}
+			COMMAND ${CMAKE_COMMAND} -DAPP=$<TARGET_FILE:App> -DSCENARIO_ROOT=${scenario_root} -DPAIR=${pair_path} -DSTATE_DIR=${CMAKE_BINARY_DIR}/Testing/StateDir/${pair_name}
 				"-DSTATE_ARG=-gv_editorStateDir=${CMAKE_BINARY_DIR}/Testing/StateDir/${pair_name}" -DUSER_DATA_DIR=$<TARGET_FILE_DIR:App>/Saved/Automation/UserData/statedir.${pair_name} -DEDITOR=ON -DLOG_NAME=Scenario.editor.statedir.${pair_name} -DLOG_DIR=${CMAKE_BINARY_DIR}/Testing/Logs -DSKIP_CODE=${SW_EXIT_CODE_Skipped} -P ${CMAKE_CURRENT_SOURCE_DIR}/RunStateDirPair.cmake
 			WORKING_DIRECTORY "${CMAKE_BINARY_DIR}/Bin")
 		set_tests_properties(Scenario.editor.statedir.${pair_name} PROPERTIES LABELS hostgpu TIMEOUT 600 SKIP_RETURN_CODE ${SW_EXIT_CODE_Skipped})

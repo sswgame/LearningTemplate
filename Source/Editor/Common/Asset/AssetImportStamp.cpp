@@ -17,6 +17,7 @@
 #include "Core/String/StringUtil.h"
 #include "Core/Task/TaskManager.h"
 
+#include "Editor/Common/Asset/AssetSourceLocator.h"
 #include "Editor/Common/Asset/EditorContentScan.h"
 #include "Editor/Common/Asset/ImportedAssetStore.h"
 #include "Editor/Common/Workspace/EditorService.h"
@@ -535,6 +536,7 @@ namespace sw::editor
 
                 vector<string> listPath;
                 (void)EditorContentScan::collectFiles( rawFolder, "", listPath, true ); // 폴더는 방금 훑어서 찾았다
+                AssetSourceLocator::collectStoredSources( rawFolder, listPath );
                 VectorUtil::sort( listPath );
 
                 vector<SourceFile>            listFile;
@@ -795,6 +797,7 @@ namespace sw::editor
                 continue;
             vector<string> listPath;
             (void)EditorContentScan::collectFiles( normalizedFolder, "", listPath, true );
+            AssetSourceLocator::collectStoredSources( normalizedFolder, listPath );
             for ( const string& path : listPath )
             {
                 const string sourcePath = FileUtil::normalizeSeparators( path );

@@ -13,14 +13,14 @@ SW_TEST_CASE( RuleViewCatalogTest, ReadsViewsAndRefusesBrokenRows )
 {
     sw::RuleViewCatalog catalog;
     SW_REQUIRE_TRUE( catalog.loadFromXMLText( R"(<RuleViewCatalog>
-  <View id="minerals" mesh="game/starskirmish/models/rock_crystals.mesh" width="0.85"/>
-  <View id="rich_minerals" mesh="game/starskirmish/models/rock_crystals.mesh" width="0.85"/>
-  <View id="marine" mesh="game/starskirmish/models/craft_speeder_a.mesh" width="2.1"/>
+  <View id="minerals" mesh="game/playground/starskirmish/models/rock_crystals.mesh" width="0.85"/>
+  <View id="rich_minerals" mesh="game/playground/starskirmish/models/rock_crystals.mesh" width="0.85"/>
+  <View id="marine" mesh="game/playground/starskirmish/models/craft_speeder_a.mesh" width="2.1"/>
 </RuleViewCatalog>)",
                                               "RuleViewCatalogTest" ) );
     const sw::RuleViewDef* pMarine = catalog.find( sw::hashed_string( "marine" ) );
     SW_REQUIRE_NOT_NULL( pMarine );
-    SW_EXPECT_EQUAL( sw::string( "game/starskirmish/models/craft_speeder_a.mesh" ), pMarine->_mesh.path() );
+    SW_EXPECT_EQUAL( sw::string( "game/playground/starskirmish/models/craft_speeder_a.mesh" ), pMarine->_mesh.path() );
     SW_EXPECT_NEAR( 2.1f, pMarine->_width, 1.0e-5f );
     SW_EXPECT_EQUAL( size_t( 2 ), catalog.makeAllMeshPaths().size() );
 
@@ -28,7 +28,7 @@ SW_TEST_CASE( RuleViewCatalogTest, ReadsViewsAndRefusesBrokenRows )
     SW_EXPECT_LOG( "XMLFields.RequiredFieldMissing" );
     sw::RuleViewCatalog broken;
     SW_EXPECT_FALSE( broken.loadFromXMLText( R"(<RuleViewCatalog>
-  <View id="marine" mesh="game/starskirmish/models/craft_speeder_a.mesh"/>
+  <View id="marine" mesh="game/playground/starskirmish/models/craft_speeder_a.mesh"/>
 </RuleViewCatalog>)",
                                              "RuleViewCatalogTest" ) );
 }

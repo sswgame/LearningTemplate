@@ -1,0 +1,27 @@
+<?xml version="1.0" encoding="utf-8"?>
+<?asset guid="b29605851fb2da8051f701b526e8a50f"?>
+<!--
+  RTS 매치 미니게임(starskirmish — 옛 게임 StarSkirmish)의 조작 시나리오 — 명령 입력(RTSCommandInputComponent)은 마우스 버튼이 아니라 액션(Skirmish.Select · Skirmish.Order)을 읽는다.
+  커서 자리만 포인터 위치(MousePosition)로 두고, 누르는 것은 마우스 버튼 슬롯(왼쪽 = 고르기, 오른쪽 = 명령)으로 낸다(패드 A · B 는 가상 커서가 마우스 버튼으로 바꾼다) — 마우스 원시 조회가 남아 있으면 아무것도 고르지 못한다.
+  실행: ctest -R Scenario.playground · App -scenario=game/playground/automation/starskirmish_control.scenario.xml -unattended
+-->
+<Scenario name="game.playground.starskirmish_control" fixedDelta="0.0166667" timeoutFrames="600" startAfter="ScenePlaying" startTimeoutFrames="900" input="exclusive">
+	<Launch variable="gv_firstMinigame" value="starskirmish"/>
+	<Launch variable="gv_playgroundAutoPlay" value="0"/>
+	<WaitUntil watch="Input.VirtualCursorEnabled" equals="1" timeoutFrames="60"/> <!-- 미니게임이 켠 레이어 Skirmish 가 가상 커서를 켠다 -->
+	<Expect watch="Skirmish.SelectedCount" equals="0"/>
+	<!-- 본진(10, 10)을 덮는 사각형 — 리그 초점 (14, 14) · 직교 높이 30 에서 화면 왼쪽 가운데 아래. 끌기는 누른 채 프레임이 지나야 한다. -->
+	<MousePosition x="0.3" y="0.45"/>
+	<Press slot="Mouse.Left"/>
+	<AdvanceSimulation frames="5"/> <!-- 끌기 몸짓의 누른 채인 구간이 시험 내용이다 -->
+	<MousePosition x="0.6" y="0.85"/>
+	<AdvanceSimulation frames="4"/>
+	<Release slot="Mouse.Left"/>
+	<WaitUntil watch="Skirmish.SelectedCount" atLeast="1" timeoutFrames="30"/>
+	<!-- 빈 땅으로 명령 — 고른 일꾼이 그 자리로 무리 이동한다. -->
+	<MousePosition x="0.7" y="0.3"/>
+	<AdvanceSimulation frames="2"/> <!-- 커서 옮김과 누름을 다른 프레임에 둔다(프레임 경계) -->
+	<Tap slot="Mouse.Right" hold="1"/>
+	<WaitUntil watch="Skirmish.SelectedMovingCount" atLeast="1" timeoutFrames="30"/>
+	<Pass/>
+</Scenario>

@@ -1,0 +1,82 @@
+// HubWorldComponentTest — 허브 서버는 세션이 접속 티켓을 요구할 때만 선다(세션 설정이 씬 넷 링크의 `_bTicketRequired` 로 온다). 공장은 세는 가짜다(nogpu, 연결 없음).
+#include "pch.h"
+
+#include "Core/Subsystem/SubsystemScope.h"
+#include "Core/Testing/TestFramework.h"
+
+#include "Engine/Object/GameObject/GameObject.h"
+#include "Engine/Object/GameObject/GameObjectManager.h"
+#include "Engine/Reflection/PropertyInfo.h"
+#include "Engine/Reflection/TypeRegistry.h"
+
+#include "GameFramework/Runtime/Foundation/Framework/GameService.h"
+#include "GameFramework/Runtime/Foundation/Framework/Tests/SceneNetLinkTestBinding.h"
+
+#include "Games/Playground/Hub/HubWorldComponent.h"
+
+using namespace sw;
+
+namespace
+{
+    class FakeHubServer final : public IHubServer
+    {
+    public:
+        void            update( float32 ) override {}
+        void            shutdown() override {}
+        void            collectAvatars( vector<HubAvatarSession>& outListSession ) const override { outListSession.clear(); }
+        HubActionResult moveAvatar( uint32, const float3&, bool ) override { return HubActionResult::Ok; }
+    };
+
+    class CountingHubServerFactory final : public IHubServerFactory
+    {
+    public:
+        int32 _createCount{ 0 };
+
+        unique_ptr<IHubServer> createServer( INetPeers&, NetMessageRouter&, const HubRules&, const StreamingCellGridDef& ) override
+        {
+            ++_createCount;
+            return make_unique<FakeHubServer>();
+        }
+    };
+
+    /** @brief 서버 링크를 올린 월드에서 허브 오브젝트를 시작하고, 시작한 뒤의 역할 값(`Hub.NetRole`)을 돌려줍니다. */
+    int32 startHubAndReadRole( bool bTicketRequired, CountingHubServerFactory& factory )
+    {
+        HubRules rules;
+        rules._listLevelExperience = { 100 };
+        rules._moveSpeed           = 6.0f;
+        rules._rideSpeed           = 12.0f;
+        rules._listAvatarStart.push_back( RespawnSpawnPoint{} );
+        rules._remoteCallBurstCount         = 20;
+        rules._remoteCallRefillMilliseconds = 50;
+        rules._listPlacement.push_back( HubPlacement{} );
+
+        SubsystemScope scope;
+        SW_EXPECT_TRUE( scope.bind<IHubServerFactory>( &factory ) );
+        game::ScopedGameScope   scopedScope( scope );
+        GameObjectManager       manager;
+        SceneNetLinkTestBinding link( manager, NetLinkRole::Server, bTicketRequired );
+        HubWorldComponent*      pHub                                                              = manager.createGameObject( hashed_string( "HubServer" ) )->addComponent<HubWorldComponent>();
+        *HubWorldComponent::StaticType()->findProperty( "_rules" )->getValuePtr<HubRules>( pHub ) = rules;
+        manager.beginPlay();
+        manager.update( 1.0f / 60.0f );
+        SW_EXPECT_EQUAL( 1, pHub->getRulesValid() );
+        return pHub->getNetRoleValue();
+    }
+} // namespace
+
+/** @brief [HubWorldComponentTest] 티켓을 요구하는 서버 세션에서는 허브 서버가 한 번 선다 */
+SW_TEST_CASE( HubWorldComponentTest, TicketSessionStartsTheHubServer )
+{
+    CountingHubServerFactory factory;
+    SW_EXPECT_EQUAL( 1, startHubAndReadRole( true, factory ) );
+    SW_EXPECT_EQUAL( 1, factory._createCount );
+}
+
+/** @brief [HubWorldComponentTest] 티켓을 요구하지 않는 서버 세션(개발 · 리슨 호스트)에서는 허브 서버가 서지 않고 오류도 없다 — 서버 코드(공장)를 찾지 않는다 */
+SW_TEST_CASE( HubWorldComponentTest, SessionWithoutTicketsHasNoHubServer )
+{
+    CountingHubServerFactory factory;
+    SW_EXPECT_EQUAL( 0, startHubAndReadRole( false, factory ) );
+    SW_EXPECT_EQUAL( 0, factory._createCount );
+}

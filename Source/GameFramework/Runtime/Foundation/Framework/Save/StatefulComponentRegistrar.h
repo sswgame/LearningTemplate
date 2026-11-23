@@ -29,7 +29,7 @@ namespace sw
         using RestoreObjectFn = void ( * )( Component& component, vector<uint8>&& bytes );
 
         /**
-         * @param pDespawn 상태 저장 전에 세운 런타임 오브젝트를 걷는 일입니다(`GameStateSnapshot::registerViewOwner` 와 같은 일). 세운 것이 없는 타입은 nullptr 입니다.
+         * @param pDespawn 상태 저장 전에 세운 런타임 오브젝트를 걷는 일입니다(세운 것은 상태에서 파생된 결과라 스냅샷에 실으면 다시 세운 것과 겹친다). 세운 것이 없는 타입은 nullptr 입니다.
          * @param pWrite · pRestoreObject 컴포넌트 하나의 상태를 뜨고 되돌리는 함수입니다 — 스트리밍 셀 · 레이어 묶음 · 하위 레벨이 쓰는 엔진 코덱(`ComponentStateCodec`)에 오른다. 상태가 없는 타입은 nullptr 입니다.
          */
         StatefulComponentRegistration( const utf8* pTypeName, CaptureFn pCapture, RestoreFn pRestore, DespawnFn pDespawn, TypeFn pGetType, WriteFn pWrite, RestoreObjectFn pRestoreObject, SourceLocation site );

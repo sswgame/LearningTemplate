@@ -448,7 +448,7 @@ namespace sw
             {
                 if ( root.empty() )
                     return {};
-                // 빈 키는 도메인 루트 자신이다(`game/shooter3d` 처럼 팩 폴더를 가리키는 id — `mapGlobalIDToRoot` 가 빈 키로 돌려준다).
+                // 빈 키는 도메인 루트 자신이다(`game/playground` 처럼 팩 폴더를 가리키는 id — `mapGlobalIDToRoot` 가 빈 키로 돌려준다).
                 const string base         = relFolder.empty() ? string( root ) : FileUtil::joinPath( root, relFolder );
                 const string absolutePath = relFile.empty() ? base : FileUtil::joinPath( base, relFile );
                 if ( FileUtil::exists( FileUtil::toDiskPath( absolutePath ) ) )

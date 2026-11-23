@@ -203,3 +203,80 @@ SW_TEST_CASE( ReplicationIntentTest, ViewTickIsClampedOnTheServerClock )
     SW_REQUIRE_TRUE( rig._server.popIntent( rig._connectionID, 2, received, bExact, listClaim ) );
     SW_EXPECT_NEAR( 968.0f, rig._server.getClientViewTick( rig._connectionID ), 0.01f );
 }
+
+/** @brief [ReplicationIntentTest] 의도를 낸 폰의 엔티티 id 가 함께 온다 — 빙의가 바뀌는 사이의 의도를 다른 폰의 버튼으로 읽지 않게. */
+SW_TEST_CASE( ReplicationIntentTest, PawnEntityTravelsWithTheIntent )
+{
+    ReplicationIntentTestRig rig;
+    SW_REQUIRE_TRUE( rig._client.sendIntent( 1, ReplicationIntentTestRig::makeIntent(), {}, 200001u ) );
+    rig.pollUntilDelivered();
+    rig._server.beginTick( 10 );
+    rig._server.accumulateInputBudget( 1.0f );
+    ControlIntent              received;
+    uint32                     pawnEntityID = 0;
+    vector<MeleeHitClaim>      listClaim;
+    const sw::optional<uint32> tick = rig._server.popNextIntent( rig._connectionID, received, pawnEntityID, listClaim );
+    SW_REQUIRE_TRUE( tick.has_value() );
+    SW_EXPECT_EQUAL( 1u, *tick );
+    SW_EXPECT_EQUAL( 200001u, pawnEntityID );
+}
+
+/** @brief [ReplicationIntentTest] 입력은 흐른 시간의 몫만큼만 꺼낸다 — 빠른 시계로 입력을 몰아 보낸 클라이언트(속도 치트)도 걸음 수는 시간이 정한다. */
+SW_TEST_CASE( ReplicationIntentTest, InputBudgetBoundsTheStepRate )
+{
+    ReplicationIntentTestRig rig;
+    for ( uint32 tick = 1; tick <= 20; ++tick )
+    {
+        SW_REQUIRE_TRUE( rig._client.sendIntent( tick, ReplicationIntentTestRig::makeIntent(), {} ) );
+        rig.poll();
+    }
+    rig.pollUntilDelivered();
+    rig._server.beginTick( 10 );
+    ControlIntent         received;
+    uint32                pawnEntityID = 0;
+    vector<MeleeHitClaim> listClaim;
+    SW_EXPECT_FALSE( rig._server.popNextIntent( rig._connectionID, received, pawnEntityID, listClaim ).has_value() ); // 시간이 흐르지 않았다
+
+    const ReplicationServerConfig settings;
+    rig._server.accumulateInputBudget( settings._tickInterval * 4.0f ); // 여유 5 % 는 한 틱에 못 미친다
+    int32 popCount = 0;
+    while ( rig._server.popNextIntent( rig._connectionID, received, pawnEntityID, listClaim ).has_value() )
+    {
+        ++popCount;
+    }
+    SW_EXPECT_EQUAL( 4, popCount );
+    SW_EXPECT_EQUAL( 5u, *rig._server.findOldestInputTick( rig._connectionID ) ); // 남은 입력은 버리지 않고 다음 몫을 기다린다
+
+    rig._server.accumulateInputBudget( 100.0f ); // 오래 멈췄다 와도 몫은 상한까지다
+    popCount = 0;
+    while ( rig._server.popNextIntent( rig._connectionID, received, pawnEntityID, listClaim ).has_value() )
+    {
+        ++popCount;
+    }
+    SW_EXPECT_EQUAL( settings._maxInputCatchUpTicks, popCount );
+}
+
+/** @brief [ReplicationIntentTest] 클라이언트가 멈췄다 다시 보내면(서버 틱은 그 사이 흘렀다) 늦은 입력이 버려지지 않고 이어 꺼내진다. */
+SW_TEST_CASE( ReplicationIntentTest, LateInputIsConsumedAfterAStall )
+{
+    ReplicationIntentTestRig rig;
+    SW_REQUIRE_TRUE( rig._client.sendIntent( 1, ReplicationIntentTestRig::makeIntent(), {} ) );
+    rig.pollUntilDelivered();
+    rig._server.beginTick( 10 );
+    rig._server.accumulateInputBudget( 0.1f );
+    ControlIntent         received;
+    uint32                pawnEntityID = 0;
+    vector<MeleeHitClaim> listClaim;
+    SW_REQUIRE_TRUE( rig._server.popNextIntent( rig._connectionID, received, pawnEntityID, listClaim ).has_value() );
+    for ( uint32 serverTick = 11; serverTick < 60; ++serverTick )
+    {
+        rig._server.beginTick( serverTick );
+        rig._server.accumulateInputBudget( 1.0f / 30.0f );
+        SW_EXPECT_FALSE( rig._server.popNextIntent( rig._connectionID, received, pawnEntityID, listClaim ).has_value() );
+    }
+    SW_REQUIRE_TRUE( rig._client.sendIntent( 2, ReplicationIntentTestRig::makeIntent(), {} ) );
+    rig.pollUntilDelivered();
+    const sw::optional<uint32> tick = rig._server.popNextIntent( rig._connectionID, received, pawnEntityID, listClaim );
+    SW_REQUIRE_TRUE( tick.has_value() );
+    SW_EXPECT_EQUAL( 2u, *tick );
+}

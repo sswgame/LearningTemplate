@@ -67,8 +67,8 @@ SW_TEST_CASE( InputMapBundleTest, SettingsFileStacksMapsInOrder )
  */
 SW_TEST_CASE( InputMapBundleTest, SettingsFileIsRecognizedByItsPlace )
 {
-    SW_EXPECT_TRUE( InputMapBundle::isSettingsFile( "game/shooter3d/data/gamesettings.xml" ) );
-    SW_EXPECT_FALSE( InputMapBundle::isSettingsFile( "game/shooter3d/data/shooter.input.xml" ) );
+    SW_EXPECT_TRUE( InputMapBundle::isSettingsFile( "game/playground/data/gamesettings.xml" ) );
+    SW_EXPECT_FALSE( InputMapBundle::isSettingsFile( "game/playground/shooter3d/data/shooter.input.xml" ) );
     SW_EXPECT_FALSE( InputMapBundle::isSettingsFile( "gamesettings.xml" ) );
 }
 
@@ -162,6 +162,38 @@ SW_TEST_CASE( InputMapBundleTest, VirtualCursorIsCheckedAgainstTheWholeBundle )
     SW_EXPECT_LOG( "InputMap.InputMapActionBindsVirtual" );
     SW_EXPECT_LOG( "InputMap.BundleRejected" );
     SW_EXPECT_FALSE( map.loadBundle( Util::makeList( { "base", "cursorclash", "cursor" } ) ) );
+}
+
+/**
+ * @brief [InputMapBundleTest] 레이어에 적은 가상 커서는 그 레이어가 발화하는 동안만 켜지고, 함께 발화하지 않는 레이어의 패드 바인딩은 막지 않는다 — 같은 레이어의 패드 A 는 거절한다
+ */
+SW_TEST_CASE( InputMapBundleTest, LayerVirtualCursorFollowsItsLayer )
+{
+    InputMap map;
+    SW_REQUIRE_TRUE( map.loadFromXMLText( R"(<InputMap>
+  <layers><layer name="Command" enabled="0" virtualCursor="LeftStick"/></layers>
+  <action name="Game.Accept" layer="Gameplay" trigger="Pressed"><bind source="Gamepad" code="A"/></action>
+  <action name="Command.Select" layer="Command" trigger="Pressed"><bind source="Mouse" code="Left"/></action>
+</InputMap>)",
+                                          "InputMapBundleTest" ) );
+    const hashed_string command( "Command" );
+    SW_EXPECT_TRUE( map.getVirtualCursorStick() == InputMapVirtualCursor::Off );
+    map.pushLayer( command );
+    SW_EXPECT_TRUE( map.getVirtualCursorStick() == InputMapVirtualCursor::LeftStick );
+    map.popLayer();
+    SW_EXPECT_TRUE( map.getVirtualCursorStick() == InputMapVirtualCursor::Off );
+
+    // 함께 켤 묶음은 쌓기 전에 본다 — 커서 레이어와 패드 A 를 묶은 레이어는 함께 켜지 못한다.
+    SW_EXPECT_LOG( "InputMap.InputMapActionBindsVirtual" );
+    SW_EXPECT_TRUE( map.canStackLayers( { command }, "InputMapBundleTest" ) );
+    SW_EXPECT_TRUE( map.canStackLayers( { hashed_string( "Gameplay" ) }, "InputMapBundleTest" ) );
+    SW_EXPECT_FALSE( map.canStackLayers( { hashed_string( "Gameplay" ), command }, "InputMapBundleTest" ) );
+
+    SW_EXPECT_FALSE( map.loadFromXMLText( R"(<InputMap>
+  <layers><layer name="Command" enabled="0" virtualCursor="LeftStick"/></layers>
+  <action name="Command.Select" layer="Command" trigger="Pressed"><bind source="Gamepad" code="A"/></action>
+</InputMap>)",
+                                          "InputMapBundleTest" ) );
 }
 
 /**

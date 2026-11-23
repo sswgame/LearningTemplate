@@ -104,8 +104,18 @@ namespace sw
         /** @brief 앞뒤 스텝 자세를 둘 다 @p position · @p rotation 으로 둡니다(바디를 만들거나 순간이동 — 보간을 끊는다). */
         void resetPose( uint32 pageIndex, const Vector& position, const Rotation& rotation )
         {
+            resetPosition( pageIndex, position );
+            resetRotation( pageIndex, rotation );
+        }
+        /** @brief 앞뒤 스텝 자리만 @p position 으로 둡니다(회전의 보간은 잇는다). */
+        void resetPosition( uint32 pageIndex, const Vector& position )
+        {
             _arrPreviousPosition[pageIndex] = position;
             _arrCurrentPosition[pageIndex]  = position;
+        }
+        /** @brief 앞뒤 스텝 회전만 @p rotation 으로 둡니다(자리의 보간은 잇는다). */
+        void resetRotation( uint32 pageIndex, const Rotation& rotation )
+        {
             _arrPreviousRotation[pageIndex] = rotation;
             _arrCurrentRotation[pageIndex]  = rotation;
         }

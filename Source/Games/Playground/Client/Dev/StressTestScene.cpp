@@ -181,7 +181,7 @@ namespace sw
     /**
      * @brief `-gv_stressTestCharacters=N`: 스킨드 캐릭터(KayKit 기사) N 명을 한 줄로 스폰하고, 짝수 번째는 Idle, 홀수 번째는 Walking_A 를 재생합니다.
      * @details GPU 스키닝(모프 풀의 스킨 구간, mesh_skin.hlsl)과 애니메이션 시스템을 실제 에셋으로 실행하는 스위치입니다. `-gv_screenshotFrame` 을 둘
-     *          다르게 주고 찍으면 포즈가 달라야 합니다. 개발 빌드 전용입니다. 에셋이 Shooter3D 의 리소스에 있어서 Playground 게임의 배포 팩에는 없습니다.
+     *          다르게 주고 찍으면 포즈가 달라야 합니다. 개발 빌드 전용입니다. 에셋은 공용 팩(common)에 있습니다.
      */
     SW_TEST_GLOBAL_VARIABLE( int32, gv_stressTestCharacters, 0, "벤치 스킨드 캐릭터 수 (0=사용 안 함, KayKit 기사 · Idle/Walking_A)" );
 
@@ -236,7 +236,7 @@ namespace sw
     /**
      * @brief `-gv_stressTestCombat=1`: KayKit 스켈레톤 적이 걸으며(발소리 알림, 바닥 재질) 무기 레이캐스트를 맞고(히트 존, 움찔), 180 프레임에 치명적인 피격으로 래그돌이 되고
      *        오른손 소켓의 칼이 물리로 떨어진 뒤 900 프레임에 일어납니다(`StressTestCombatComponent`). 로그 `[StressTestCombat]` 이 피격, 발소리, 래그돌 상태를 기록합니다.
-     * @details 개발 빌드 전용입니다. 에셋이 Shooter3D 의 리소스에 있어서 Playground 게임의 배포 팩에는 없습니다(`gv_stressTestCharacters` 와 같습니다).
+     * @details 개발 빌드 전용입니다. 에셋은 공용 팩(common)에 있습니다(`gv_stressTestCharacters` 와 같습니다).
      */
     SW_TEST_GLOBAL_VARIABLE( int32, gv_stressTestCombat, 0, "벤치 전투 연출 (0=사용 안 함, KayKit 스켈레톤 — 알림 · 히트 존 · 래그돌 · 칼 떨어뜨리기)" );
 

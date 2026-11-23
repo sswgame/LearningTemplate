@@ -11,7 +11,9 @@
 #include "Engine/Object/GameObject/GameObjectManager.h"
 #include "Engine/Object/GameObject/GameObjectManagerResolve.inl"
 #include "Engine/Object/GameObject/Tick/TickContext.h"
+#include "Engine/Object/GameObject/WorldOrigin.h"
 
+#include "GameFramework/Kits/Genre/Action/ActionCombat/Client/ActionRoomDebugDraw.h"
 #include "GameFramework/Kits/Genre/Action/ActionCombat/Component/ActionCombatGameModeComponent.h"
 #include "GameFramework/Runtime/Character/Combat/Health/RuleHealthViewComponent.h"
 #include "GameFramework/Runtime/Foundation/Framework/GameService.h"
@@ -20,14 +22,12 @@ namespace sw
 {
     namespace
     {
-        /** @brief 룸 디버그 그리기 색 · 높이입니다(Velmora 디렉터와 같은 값). */
         struct ActionCombatAvatarComponentInternal
         {
-            static constexpr float4  kRoomActorColor       = float4( 1.0f, 0.55f, 0.2f, 1.0f ); ///< 홀 적
-            static constexpr float4  kRoomBossColor        = float4( 1.0f, 0.25f, 0.2f, 1.0f ); ///< 보스 룸 적
-            static constexpr float4  kRoomProjectileColor  = float4( 1.0f, 0.9f, 0.2f, 1.0f );  ///< 적 투사체
-            static constexpr float32 kRoomActorHeight      = 0.5f;                              ///< 적 공을 띄우는 높이
-            static constexpr float32 kRoomProjectileHeight = 0.4f;                              ///< 투사체 공을 띄우는 높이
+            static constexpr float4  kPlayerColor             = float4( 0.2f, 0.6f, 1.0f, 1.0f );
+            static constexpr float4  kInvulnerablePlayerColor = float4( 0.6f, 0.9f, 1.0f, 1.0f );
+            static constexpr float32 kPlayerHeight            = 0.5f; ///< 플레이어 공을 띄우는 높이(m)
+            static constexpr float32 kPlayerRadius            = 0.28f;
         };
     } // namespace
 
@@ -96,7 +96,7 @@ namespace sw
             (void)pDirector->submitPlayerInput( input.getVector2D( _moveAction ), input.wasActionTriggered( _attackAction ), input.wasActionTriggered( _dashAction ) );
         }
         pushPlayerHealthView( manager, *pDirector ); // 시간이 멈춘 프레임 · 복원 직후에도 넣는다
-        draw( *pDirector );
+        draw( *pDirector, manager );
     }
 
     void ActionCombatAvatarComponent::pushPlayerHealthView( GameObjectManager& manager, const ActionCombatGameModeComponent& director )
@@ -120,25 +120,18 @@ namespace sw
         pView->applySnapshot( static_cast<float32>( director.getPlayerHP() ), static_cast<float32>( director.getPlayerMaxHP() ) );
     }
 
-    void ActionCombatAvatarComponent::draw( const ActionCombatGameModeComponent& director ) const
+    void ActionCombatAvatarComponent::draw( const ActionCombatGameModeComponent& director, const GameObjectManager& manager )
     {
-        DebugDrawQueue* pDraw = game::findSubsystem<DebugDrawQueue>();
+        DebugDrawQueue* const pDraw = game::findSubsystem<DebugDrawQueue>();
         if ( pDraw == nullptr )
             return;
-        const ActionRoom&       room  = director.getRoom();
-        const ActionCombatPhase phase = director.getCombatPhase();
-        if ( ( phase == ActionCombatPhase::Hall || phase == ActionCombatPhase::Boss ) && room.isActive() )
-        {
-            const float4 actorColor = room.getKind() == ActionRoomKind::Boss ? ActionCombatAvatarComponentInternal::kRoomBossColor : ActionCombatAvatarComponentInternal::kRoomActorColor;
-            room.forEachLiveActor( [pDraw, &actorColor]( const float2& position, float32 radius )
-            { pDraw->drawSphere( float3( position._x, ActionCombatAvatarComponentInternal::kRoomActorHeight, position._y ), radius, actorColor ); } );
-            for ( const ProjectileState& projectile : room.getProjectiles() )
-            {
-                pDraw->drawSphere( float3( projectile._position._x, ActionCombatAvatarComponentInternal::kRoomProjectileHeight, projectile._position._y ), projectile._radius, ActionCombatAvatarComponentInternal::kRoomProjectileColor );
-            }
-        }
-        const float2& position = director.getPlayerPosition();
-        const float4  color    = director.getRoom().isPlayerInvulnerable() ? float4( 0.6f, 0.9f, 1.0f, 1.0f ) : float4( 0.2f, 0.6f, 1.0f, 1.0f );
-        pDraw->drawSphere( float3( position._x, 0.5f, position._y ), 0.28f, color );
+        using Internal                 = ActionCombatAvatarComponentInternal;
+        const WorldOrigin&      origin = manager.getWorldOrigin();
+        const ActionRoom&       room   = director.getRoom();
+        const ActionCombatPhase phase  = director.getCombatPhase();
+        if ( phase == ActionCombatPhase::Hall || phase == ActionCombatPhase::Boss )
+            ActionRoomDebugDraw::draw( *pDraw, origin, room );
+        pDraw->drawSphere( ActionRoomDebugDraw::toScene( origin, director.getPlayerPosition(), Internal::kPlayerHeight ), Internal::kPlayerRadius,
+                           room.isPlayerInvulnerable() ? Internal::kInvulnerablePlayerColor : Internal::kPlayerColor );
     }
 } // namespace sw

@@ -1,0 +1,29 @@
+<?xml version="1.0" encoding="utf-8"?>
+<?asset guid="b87fb0d5474e4cd0df43cc1e9cf10964"?>
+<!--
+  사격장 온라인 세션 끝단 — 프로세스 안 서버(Config/Server/Online/Playground.json, 전용 서버와 같은 파일)에 붙어 로그인 → 우편 목록 → 모두 받기 → 지갑을 값으로 본다.
+  세션이 키트 클라이언트를 정적 등록에서 만들었는지(수), 프로토콜 표로 옮긴 우편함이 끝까지 도는지(수 · 잔액), 수령 응답의 잔액이 경제 클라이언트에 닿는지(금화)를 판정한다.
+  실행: App -scenario=game/playground/automation/shooter3d_onlinesession.scenario.xml -unattended (체인: ctest -R Scenario.playground.shooter3d)
+-->
+<Scenario name="game.playground.shooter3d_onlinesession" fixedDelta="0.0166667" timeoutFrames="3600" startAfter="ScenePlaying" startTimeoutFrames="900" requiresModule="GF_Server_Mailbox">
+	<Launch variable="gv_firstMinigame" value="shooter3d"/>
+	<AllowLog id="LoginTicketKey.AccountKitNoTicketKeySecretEnvironment" reason="프로세스 안 개발 서버는 티켓 주 키 없이 개발 키를 쓴다 - 게임 접속 티켓을 쓰지 않는다"/>
+	<Variable name="gv_playgroundAutoPlay" value="0"/>
+	<Expect watch="Online.SessionClientCount" atLeast="4"/>
+	<Expect watch="Online.SessionState" equals="0"/>
+	<DevCommand line="online.local.start Config/Server/Online/Playground.json"/>
+	<WaitUntil watch="Online.SessionState" atLeast="3" timeoutSeconds="20"/>
+	<Expect watch="Online.SessionState" equals="3"/>
+	<DevCommand line="playground.online.login"/>
+	<WaitUntil watch="Playground.OnlineLoggedIn" equals="1" timeoutSeconds="20"/>
+	<DevCommand line="playground.online.sendmail 5"/>
+	<WaitUntil watch="Playground.OnlineSelfMailSent" equals="1" timeoutSeconds="10"/>
+	<DevCommand line="playground.online.listmail"/>
+	<WaitUntil watch="Playground.OnlineMailCount" equals="1" timeoutSeconds="10"/>
+	<DevCommand line="playground.online.claimall"/>
+	<WaitUntil watch="Playground.OnlineGold" equals="5" timeoutSeconds="10"/>
+	<DevCommand line="online.disconnect"/>
+	<Expect watch="Online.SessionState" equals="0"/>
+	<DevCommand line="online.status"/>
+	<Pass/>
+</Scenario>

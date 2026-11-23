@@ -1,0 +1,25 @@
+<?xml version="1.0" encoding="utf-8"?>
+<?asset guid="fe5567b6bbbe91e0664814b1089ae9f5"?>
+<!--
+  원시 마우스 시선(감사 P-1) — 1인칭 카메라가 커서를 잠그면 Win32 원시 입력(WM_INPUT)을 등록하고, 잠긴 동안 시선은 원시 델타로 돈다.
+  SendInput 으로 상대 마우스 이동을 OS 입력 큐에 넣어(실제 마우스와 같은 길 — 창 메시지가 아니다) 원시 보고가 왔는지(Input.RawMouseEvents)와
+  게임 카메라가 돌았는지(Scene.CameraYaw)를 본다. 원시 보고가 오지 않는 환경(원격 제어 · 터치)에서는 등록이 성공해도 커서 위치 차이가 시선이다(MouseDevice::getMovementDelta,
+  단위 MouseDeviceTest.RawSourceNeedsAReportBeforeIgnoringPositionDelta) — 이 시나리오는 보고가 오는 길을 본다.
+  SendInput 은 전경 창에만 가고 OS 입력을 쓰므로 input="mixed" · requireForeground — 도는 동안 키보드 · 마우스를 만지지 말 것. 전경을 못 얻으면 13(건너뜀) — UIPI 에 막히면 SendInput 이 알리지 않아 WaitUntil 이 시한으로 진다,
+  Windows 밖에서도 13. 데스크톱 전역 상태를 쓰므로 desktop/ 에 둔다(CTest 가 하나씩 혼자 돌린다).
+  실행: App -scenario=game/playground/automation/desktop/rawmouselook.scenario.xml -unattended (ctest -R Scenario.playground.desktop.rawmouselook)
+-->
+<Scenario name="game.playground.rawmouselook" requireForeground="true" fixedDelta="0.0166667" timeoutFrames="600" startAfter="ScenePlaying" startTimeoutFrames="900" input="mixed">
+	<Launch variable="gv_firstMinigame" value="shooter3d"/>
+	<Variable name="gv_playgroundAutoPlay" value="0"/>
+	<!-- 1인칭 카메라가 첫 틱에 잠금을 켠다 — 전경이면 바로 잡고 원시 입력을 등록한다 -->
+	<WaitUntil watch="Input.MouseLockActive" equals="1" timeoutFrames="30"/>
+	<ExpectCursorClip state="Locked"/>
+	<Store watch="Input.RawMouseEvents" as="rawBefore"/>
+	<Store watch="Scene.CameraYaw" as="yawBefore"/>
+	<!-- 오른쪽으로 10 번 x 40 — 원시 보고가 오고 시선이 돈다 -->
+	<SendInput dx="40" dy="0" count="10"/>
+	<WaitUntil watch="Input.RawMouseEvents" differsFrom="rawBefore" timeoutFrames="60"/>
+	<WaitUntil watch="Scene.CameraYaw" differsFrom="yawBefore" timeoutFrames="30"/> <!-- 시선이 돌았다 -->
+	<Pass/>
+</Scenario>

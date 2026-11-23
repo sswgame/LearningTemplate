@@ -3,7 +3,12 @@
 <!-- NileCity 팩의 설정 — 시작 맵은 나일 도시 씬이다(게임마다 팩의 data/gamesettings.xml 하나다). -->
 <GameSettings>
   <!-- 엔진이 읽는 칸(PackEngineSettings) — 창 제목 · 렌더 파이프라인 · 사용자 설정과 텔레메트리 스키마 · UI 규칙 -->
-  <Engine _windowTitle="Nile City" _userSettingsSchema="game/nilecity/data/nile.settings.xml" _bUIPauseMenu="true" />
+  <Engine _windowTitle="Nile City" _userSettingsSchema="game/nilecity/data/nile.settings.xml" _bUIPauseMenu="true">
+    <!-- 팩이 사용자 설정의 기본값을 바꾸는 길(automation/fieldofview) — 이 팩의 카메라는 내려다보는 도시라 시야각 설정을 쓰지 않는다 -->
+    <_mapUserSettingDefault>
+      <entry key="gameplay.fieldOfView">80</entry>
+    </_mapUserSettingDefault>
+  </Engine>
   <startMap>game/nilecity/maps/nile.scene.xml</startMap>
   <inputMap path="common/input/base.input.xml"/>
   <inputMap path="common/input/virtualcursor.input.xml"/>

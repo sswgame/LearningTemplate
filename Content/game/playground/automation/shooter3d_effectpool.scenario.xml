@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="utf-8"?>
+<?asset guid="2dc6eb06db5b1b0c68fb73ca649d4e98"?>
+<!--
+  사격장 효과 풀 — 탄착 구 · 탄도선은 `PrefabPool` 에서 꺼내 쓴다. 판을 열 때 미리 만든 수(씬의 _effectPoolSize 32 + _tracerPoolSize 24)에서 쏘는 내내 늘지 않아야 한다.
+  자동 플레이가 쏘게 두고 값만 본다.
+  실행: App -scenario=game/playground/automation/shooter3d_effectpool.scenario.xml -unattended (체인: ctest -R Scenario.playground.shooter3d)
+-->
+<Scenario name="game.playground.shooter3d_effectpool" fixedDelta="0.0166667" timeoutFrames="1500" startAfter="ScenePlaying" startTimeoutFrames="900" input="exclusive">
+	<Launch variable="gv_firstMinigame" value="shooter3d"/>
+	<WaitUntil watch="Shooter.EffectCreatedCount" equals="56" timeoutFrames="60"/>
+	<Variable name="gv_playgroundAutoPlay" value="1"/>
+	<WaitUntil watch="Shooter.ShotCount" atLeast="4" timeoutSeconds="15"/>
+	<Expect watch="Shooter.EffectCreatedCount" equals="56"/>
+	<Pass/>
+</Scenario>

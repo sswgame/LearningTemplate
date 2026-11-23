@@ -313,7 +313,7 @@ namespace sw::editor
         const optional<uint32> rootBaseIndex = root.findAttribute( DataInheritance::kBaseAttribute );
         if ( rootBaseIndex.has_value() )
         {
-            _rootBase = root._listAttribute[*rootBaseIndex]._value;
+            _rootBase = DataInheritance::resolveBaseText( root._listAttribute[*rootBaseIndex]._value );
             addParentFile( _rootBase );
         }
         for ( const int32 rowIndex : parsed.getRowIndices() )
@@ -322,10 +322,10 @@ namespace sw::editor
             const optional<uint32>   baseIndex = row.findAttribute( DataInheritance::kBaseAttribute );
             if ( baseIndex.has_value() == false )
                 continue;
-            const string_view base      = row._listAttribute[*baseIndex]._value;
-            const size_t      separator = base.find( DataCatalogInheritance::kFileSeparator );
-            if ( separator != string_view::npos )
-                addParentFile( base.substr( 0, separator ) );
+            const string base      = DataInheritance::resolveBaseText( row._listAttribute[*baseIndex]._value );
+            const size_t separator = base.find( DataCatalogInheritance::kFileSeparator );
+            if ( separator != string::npos )
+                addParentFile( string_view( base ).substr( 0, separator ) );
         }
     }
 
@@ -359,11 +359,13 @@ namespace sw::editor
         if ( pKey == nullptr )
             return {};
         const optional<uint32> baseIndex = row.findAttribute( DataInheritance::kBaseAttribute );
+        string                 baseText; // 아래 두 조각이 가리키는 글
         string_view            filePart;
         string_view            entryPart;
         if ( baseIndex.has_value() )
         {
-            const string_view base      = row._listAttribute[*baseIndex]._value;
+            baseText                    = DataInheritance::resolveBaseText( row._listAttribute[*baseIndex]._value );
+            const string_view base      = baseText;
             const size_t      separator = base.find( DataCatalogInheritance::kFileSeparator );
             filePart                    = separator != string_view::npos ? base.substr( 0, separator ) : string_view{};
             entryPart                   = separator != string_view::npos ? base.substr( separator + 1 ) : base;

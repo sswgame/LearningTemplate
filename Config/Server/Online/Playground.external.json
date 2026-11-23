@@ -1,0 +1,21 @@
+{
+    "_listenAddress": "127.0.0.1",
+    "_gamePort": 17790,
+    "_servicePort": 17793,
+    "_listStore": [
+        {
+            "_name": "main",
+            "_driver": "postgres",
+            "_connection": "host=127.0.0.1 port=5432 dbname=playground user=playground",
+            "_secretEnvironment": "SW_PLAYGROUND_DB_PASSWORD"
+        }
+    ],
+    "_listCache": [
+        {
+            "_name": "main",
+            "_driver": "resp",
+            "_endpoint": "127.0.0.1:6379?prefix=playground:",
+            "_secretEnvironment": "SW_PLAYGROUND_CACHE_PASSWORD"
+        }
+    ]
+}

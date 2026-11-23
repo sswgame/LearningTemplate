@@ -1,8 +1,12 @@
+<?asset guid="01f81ee7bc934e9f7f85119639e0cdb1"?>
 <LocalizationProject name="playground" sourceCulture="en">
 	<!-- Playground(테스트 무대) 게임의 문자열 — 시네마틱 자막 · 화자, 시연 UI 글. 원문 표는 App --gather-text -loc-project=<이 파일> 이 채운다. -->
 	<cultures>
 		<item>ko</item>
 	</cultures>
+	<stagedCultures>
+		<item>ko</item>
+	</stagedCultures>
 	<stringTables>
 		<item>playground.strings.xml</item>
 	</stringTables>
@@ -11,5 +15,18 @@
 	</codeRoots>
 	<assetRoots>
 		<item>game/playground</item>
+		<item>common/data</item> <!-- 아이템 이름(items.xml)은 캐릭터 키트와 함께 common 에 있다 -->
 	</assetRoots>
+	<assetRules>
+		<rule files="items.xml" attribute="name" kind="text" context="Item name">
+			<elements>
+				<item>Item</item>
+			</elements>
+		</rule>
+		<rule files="weapons.xml" attribute="name" kind="text" context="Weapon name">
+			<elements>
+				<item>Weapon</item>
+			</elements>
+		</rule>
+	</assetRules>
 </LocalizationProject>

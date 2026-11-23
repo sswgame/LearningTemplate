@@ -30,7 +30,7 @@
  *          발자국은 표면 변형 층(`SurfaceDeformSystem`)의 도장이다 — 눈 전용 오브젝트가 없고, 어느 종류든 반응에 `_footprint` 를 적으면 자국이 남는다.
  *          물에서 나온 발(`_feetWetness`)은 그 뒤 `_wetFeetSteps` 걸음 동안 마른 땅에 젖은 자국을 남기고(같은 층의 젖음 채널), 자국은 `_wetPrintDrySpeed` 로 마른다.
  *          변형 층의 격자 크기 · 창 너비 · 깊이 범위도 이 표가 정한다(지면 머티리얼이 읽는 텍스처 하나).
- *          소리는 오디오 이벤트 이름이라 이벤트 라이브러리를 가진 게임이 덮어쓰기 층으로 적는다 — 엔진 표는 비워 둔다(Shooter3D: layers/footsteps).
+ *          소리는 오디오 이벤트 이름이라 이벤트 라이브러리를 가진 게임이 덮어쓰기 층으로 적는다 — 엔진 표는 비워 둔다(Playground: shooter3d/layers/footsteps).
  */
 #pragma once
 #include "Core/Container/vector.h"

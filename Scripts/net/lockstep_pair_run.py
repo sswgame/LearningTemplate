@@ -1,5 +1,5 @@
 """
-락스텝 2 인 대전 실행 — StarSkirmish 를 리슨 호스트(0 번)와 클라이언트(1 번) 두 프로세스로 띄워, 명령만 나누는 락스텝이 같은 판을 같은 걸음으로 돌리는지 본다(K3).
+락스텝 2 인 대전 실행 — Playground 의 RTS 매치 미니게임(starskirmish)을 리슨 호스트(0 번)와 클라이언트(1 번) 두 프로세스로 띄워, 명령만 나누는 락스텝이 같은 판을 같은 걸음으로 돌리는지 본다(K3).
 
   py -3 -m Scripts lockstep-pair run                 # 기본: Ninja-Debug, 자동 플레이(두 AI 가 양쪽 프로세스에서 같은 판 규칙으로 돈다)
   py -3 -m Scripts lockstep-pair run --seconds 90
@@ -24,7 +24,8 @@ from common.process_group import CheckResult, ProcessGroup, problem_lines, repor
 _OPENED = re.compile(r"\[Skirmish\] lockstep match - you are player (\d)")
 _STATUS = re.compile(r"skirmish lockstep: player (\d) tick (\d+) stalls (\d+) desynced (\d) applied (\d+) (\d+)")
 _PRESET = "Ninja-Debug"  # build/<프리셋>/Bin 의 App 을 쓴다
-_GAME = "StarSkirmish"
+_GAME = "Playground"
+_MINIGAME = "starskirmish"
 _TIMEOUT_SECONDS = 90.0  # 락스텝 시작 줄을 기다리는 최대 초
 
 
@@ -86,7 +87,7 @@ def _run(argument: argparse.Namespace) -> int:
         port = _free_port()
         # -unattended: 무인 실행이라 세이브 · 사용자 데이터는 프로세스마다 Saved/Automation/UserData 아래로 간다(사람의 폴더를 쓰지 않는다 — AutomationUserDataRoot).
         common = [app_exe, app_arguments.option("game", _GAME), app_arguments.flag("unattended"), app_arguments.variable("gv_standardInputCommands", "1"),
-                  app_arguments.variable("gv_skirmishAutoPlay", "1")]
+                  app_arguments.variable("gv_firstMinigame", _MINIGAME), app_arguments.variable("gv_playgroundAutoPlay", "1")]
         host = group.start("host", [*common, app_arguments.variable("gv_netListenPort", port),
                                     app_arguments.variable("gv_userSettingsFile", group.out_dir / "host.usersettings.json")])
         client = group.start("client", [*common, app_arguments.variable("gv_netConnectAddress", f"127.0.0.1:{port}"),

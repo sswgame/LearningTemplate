@@ -27,7 +27,6 @@
 #include "Engine/Scene/Scene.h"
 #include "Engine/Scene/SceneManager.h"
 #include "Engine/Scene/SceneSubLevelSubsystem.h"
-#include "Engine/Serialization/Inherit/AssetRedirect.h"
 #include "Engine/Serialization/Serializer/SerializePurpose.h"
 
 #include "GameFramework/Runtime/Foundation/Framework/Flow/GameInstance.h"
@@ -37,6 +36,7 @@
 #include "GameFramework/Runtime/Foundation/Framework/GameFeature/GameFeatureScope.h"
 #include "GameFramework/Runtime/Foundation/Framework/GameModeComponent.h"
 #include "GameFramework/Runtime/Foundation/Framework/GameService.h"
+#include "GameFramework/Runtime/Foundation/Framework/Minigame/IMinigameMatchmaking.h"
 #include "GameFramework/Runtime/Foundation/Framework/Save/Autosave.h"
 #include "GameFramework/Runtime/Foundation/Framework/Save/SaveLock.h"
 #include "GameFramework/Runtime/Foundation/GameData/GameSettings.h"
@@ -69,6 +69,20 @@ namespace sw
             {
                 const GameNetSession* const pNetSession = game::findSubsystem<GameNetSession>();
                 return pNetSession != nullptr && pNetSession->isActive();
+            }
+
+            /** @brief 지금 씬을 바꾸면 세션의 피어가 갈리는지입니다. 씬이 서기 전 첫 진입(`gv_firstMinigame`)은 피어마다 처음 여는 씬이라 `gv_firstScene` 과 같다 — 갈리지 않는다. */
+            static bool wouldSceneSwitchSplitSession()
+            {
+                const Scene* const pScene = findActivePlayScene();
+                return pScene != nullptr && pScene->getSourcePath().empty() == false && isNetSessionActive();
+            }
+
+            /** @brief 이 프로세스가 첫 씬을 매치로 띄우는 서버인지입니다 — 매치를 여는 쪽이라 줄을 서지 않는다(`Server -gv_firstMinigame=<매치형>`). */
+            static bool isOpeningMatchServer()
+            {
+                const GameNetSession* const pNetSession = game::findSubsystem<GameNetSession>();
+                return pNetSession != nullptr && pNetSession->getRole() == GameNetRole::Server && findActivePlayScene() == nullptr;
             }
 
             /** @brief 활성 씬의 사물 @p objectName 의 변환을 하위 레벨 자리로 만듭니다. 없으면 nullopt 입니다. */
@@ -394,7 +408,11 @@ namespace sw
             return false;
         }
         // 등록부는 GameFramework 의 모듈 서브시스템이다 — 없으면 호스트가 모듈을 올리지 않은 것이라 멈춘다.
-        return outDefinition.validate( game::getSubsystem<GameFeatureRegistry>(), assetPath );
+        if ( outDefinition.validate( game::getSubsystem<GameFeatureRegistry>(), assetPath ) == false )
+            return false;
+        // 입력 서비스가 없는 실행(전용 서버)은 켤 입력이 없다.
+        const InputManager* const pInput = game::findSubsystem<InputManager>();
+        return pInput == nullptr || outDefinition.validateInputLayers( pInput->getInputMap(), assetPath );
     }
 
     bool MinigameFlow::validateDepth( string_view name ) const
@@ -496,8 +514,48 @@ namespace sw
             return false;
         }
         MinigameDefinition definition;
-        if ( loadDefinition( name, definition ) == false || validateEntry( definition, MinigameFlowInternal::isNetSessionActive() ) == false || validateDepth( name ) == false )
+        if ( loadDefinition( name, definition ) == false )
             return false;
+        if ( definition.isMatch() && MinigameFlowInternal::isOpeningMatchServer() == false )
+        {
+            IMinigameMatchmaking* const pMatchmaking = game::findSubsystem<IMinigameMatchmaking>();
+            if ( pMatchmaking != nullptr )
+                return pMatchmaking->requestMatch( definition ); // 배정되면 창구가 매치 세션으로 옮긴 뒤 `enterMatch` 를 부른다
+            SW_LOG_ERROR_ID( "MinigameFlow.NoMatchmaking", "Minigame '%#' is a match (matchMode '%#') but this game binds no matchmaking (IMinigameMatchmaking) - nothing is entered", name,
+                             definition._matchMode.c_str() );
+            return false;
+        }
+        if ( validateEntry( definition, MinigameFlowInternal::wouldSceneSwitchSplitSession() ) == false || validateDepth( name ) == false )
+            return false;
+        return enterDefinition( std::move( definition ), placement );
+    }
+
+    bool MinigameFlow::isMatchMinigame( string_view name ) const
+    {
+        MinigameDefinition definition;
+        return loadDefinition( name, definition ) && definition.isMatch();
+    }
+
+    bool MinigameFlow::enterMatch( string_view name, uint64 matchID )
+    {
+        MinigameDefinition definition;
+        if ( rejectIfLoadPending( name ) || loadDefinition( name, definition ) == false || validateDepth( name ) == false )
+            return false;
+        if ( definition.isMatch() == false || matchID == 0 || _stack.findMatchID() != 0 )
+        {
+            SW_LOG_ERROR_ID( "MinigameFlow.MatchRefused", "Match %# for minigame '%#' is refused - %#", matchID, name,
+                             _stack.findMatchID() != 0 ? "another match is still running" : "it is not a match minigame or carries no match id" );
+            return false;
+        }
+        if ( enterDefinition( std::move( definition ), nullopt ) == false )
+            return false;
+        _stack.findTop()->_matchID = matchID;
+        return true;
+    }
+
+    bool MinigameFlow::enterDefinition( MinigameDefinition definition, const optional<SubLevelPlacement>& placement )
+    {
+        const string name{ definition._name.view() }; // 정의를 칸으로 옮긴 뒤에도 쓴다
         Scene* const pScene = MinigameFlowInternal::findActivePlayScene();
         if ( definition._entry == MinigameEntry::SubLevel && ( pScene == nullptr || placement.has_value() == false ) )
         {
@@ -570,6 +628,12 @@ namespace sw
             SW_LOG_ERROR_ID( "MinigameFlow.AlreadyActive", "Minigame '%#' is already active - leave it first", name );
             return false;
         }
+        // 매치는 배정(`enterMatch`)으로만 들어가고 결과를 보고하며 나간다 — 교체는 둘 다 건너뛴다.
+        if ( definition.isMatch() || pTop->_matchID != 0 )
+        {
+            SW_LOG_ERROR_ID( "MinigameFlow.SwitchMatch", "Minigame switch to '%#' is refused - a match is entered through matchmaking and left with a result", name );
+            return false;
+        }
         deactivateScope();
         unique_ptr<GameFeatureScope> pScope = activate( definition );
         if ( pScope == nullptr )
@@ -608,6 +672,7 @@ namespace sw
         }
         deactivateScope();
         MinigameResult result{ frame._definition._name, resultName, std::move( listValue ) };
+        frame.takeMatchResult( result );
         // 하위 레벨은 그 자리에서 끝난다 — 빼고, 덮였던 미니게임을 다시 켜고, 결과를 넘긴다.
         if ( const MinigameSubLevelReturn* const pSubLevel = std::get_if<MinigameSubLevelReturn>( &frame._returnPoint ) )
         {
@@ -914,7 +979,7 @@ namespace sw
         const Scene* const pScene = MinigameFlowInternal::findActivePlayScene();
         if ( pScene == nullptr || pScene->getSourcePath().empty() || _stack.isEmpty() == false || isEntering() || isLeaving() )
             return;
-        const string   sceneID = AssetRedirect::toCurrentID( pScene->getSourcePath() );
+        const string   sceneID = pScene->getSourcePath();
         string         found;
         vector<string> listName;
         collectNames( listName );
@@ -922,7 +987,7 @@ namespace sw
         {
             MinigameDefinition definition;
             const bool         bSameMap = MinigameDefinition::loadFromAsset( AssetID{ makeAssetPath( _packConfig, name ) }, definition ) && definition._entry == MinigameEntry::SceneSwitch &&
-                                  definition._map.isSet() && AssetRedirect::toCurrentID( definition._map.get() ) == sceneID;
+                                  definition.isMatch() == false && definition._map.isSet() && definition._map.get() == sceneID; // 매치는 배정으로만 들어간다 — 혼자 하는 미니게임과 맵을 나눠도 이 씬은 하나로 정해진다
             if ( bSameMap == false )
                 continue;
             if ( found.empty() == false )
@@ -960,9 +1025,12 @@ namespace sw
 
     void MinigameFlow::onMapLoaded( Scene* pScene )
     {
-        if ( pScene != nullptr )
-            return;
         const MinigameFrame* const pTop = _stack.findTop();
+        if ( pScene != nullptr )
+        {
+            SW_LOG_INFO_ID( "MinigameFlow.Entered", "Minigame '%#' is entered (%#)", pTop->_definition._name.c_str(), pTop->_definition._map.c_str() );
+            return;
+        }
         SW_LOG_ERROR_ID( "MinigameFlow.MapNotOpened", "Minigame '%#': the map '%#' did not open (failed or replaced by a later request) - the minigame is left without restoring",
                          pTop->_definition._name.c_str(), pTop->_definition._map.c_str() );
         dropTop(); // 바탕 씬이 그대로 섰다 — 덮였던 미니게임을 다시 켠다

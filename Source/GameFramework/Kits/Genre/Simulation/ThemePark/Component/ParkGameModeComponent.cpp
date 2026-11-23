@@ -11,6 +11,7 @@
 #include "Engine/Object/Component/SceneComponent.h"
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
+#include "Engine/Object/GameObject/WorldOrigin.h"
 #include "Engine/Serialization/Format/Archive.h"
 #include "Engine/Serialization/Format/StateIO.h"
 
@@ -188,14 +189,16 @@ namespace sw
             SW_LOG_ERROR_ID( "ParkGameMode.OriginMissing", "[Park] '%#' has no scene component - the park has no origin and cannot open", pOwner != nullptr ? pOwner->getName().c_str() : "?" );
             return false;
         }
-        const float4x4 world    = pOrigin->getWorldMatrix();
-        _parkYaw                = OrientationUtil::computeYawFromWorld( world );
-        _settings._gatePosition = float3::transform( layout.getGatePosition(), world );
+        // 놀이공원 시뮬레이션(손님 · 트랙)은 절대 자리에서 돈다 — 월드 원점이 옮겨져도 시뮬레이션 자리는 그대로이고 모습만 로컬로 옮긴다.
+        const WorldOrigin& worldOrigin = pOwner->getManager()->getWorldOrigin();
+        const float4x4     world       = worldOrigin.toAbsolute( pOrigin->getWorldMatrix() );
+        _parkYaw                       = OrientationUtil::computeYawFromWorld( world );
+        _settings._gatePosition        = float3::transform( layout.getGatePosition(), world );
         // 씬에 놓인 정문이 있으면 그 위치가 정문이다. 에디터에서 옮기면 손님 경로가 따라온다.
         const GameObject* const     pGate      = findGameObject( _gate );
         const SceneComponent* const pGateScene = pGate != nullptr ? pGate->getPrimarySceneComponent() : nullptr;
         if ( pGateScene != nullptr )
-            _settings._gatePosition = pGateScene->getWorldPosition();
+            _settings._gatePosition = worldOrigin.toAbsolute( pGateScene->getWorldPosition() );
         _listPlacement.clear();
         _listPlacement.reserve( layout.getPlacements().size() );
         for ( const ParkRidePlacement& placement : layout.getPlacements() )

@@ -4,9 +4,11 @@
 
 #include "Core/Log/Logger.h"
 
+#include "Engine/Content/AssetRegistry.h"
 #include "Engine/Serialization/Format/Archive.h"
 #include "Engine/Serialization/Inherit/AssetRedirect.h"
 
+#include "GameFramework/Runtime/Foundation/Framework/Save/GameStateSnapshot.h"
 #include "GameFramework/Runtime/Foundation/Framework/Save/SaveLock.h"
 
 #include <type_traits>
@@ -19,6 +21,12 @@ namespace sw
         {
             static constexpr uint32 kMinBytesPerFrame = sizeof( uint32 ) + sizeof( uint8 ); ///< 이름 길이 + 갈래 번호
 
+            /** @brief 씬을 GUID 참조로 적습니다 — 세이브가 남은 뒤 씬을 옮겨도 풀린다. */
+            static void writeScene( Archive& arch, const string& scenePath )
+            {
+                arch.writeString( AssetRegistry::makeReferenceText( scenePath, AssetRegistry::resolveGUID( scenePath ) ) );
+            }
+
             /** @brief 돌아올 자리 하나를 갈래 번호와 함께 씁니다. */
             static void writeReturnPoint( Archive& arch, const MinigameReturnPoint& returnPoint )
             {
@@ -28,12 +36,12 @@ namespace sw
                     using T = std::decay_t<decltype( value )>;
                     if constexpr ( std::is_same_v<T, MinigameSuspendedScene> )
                     {
-                        arch.writeString( value._scenePath );
+                        writeScene( arch, value._scenePath );
                         arch.writeSection( value._saveSnapshot.data(), static_cast<uint32>( value._saveSnapshot.size() ) );
                     }
                     else if constexpr ( std::is_same_v<T, MinigameSubLevelReturn> )
                     {
-                        arch.writeString( value._scenePath );
+                        writeScene( arch, value._scenePath );
                         arch.writeString( value._subLevelName.view() );
                     }
                     else
@@ -41,7 +49,7 @@ namespace sw
                 }, returnPoint );
             }
 
-            /** @brief `writeReturnPoint` 의 짝입니다. 모르는 갈래거나 잘렸으면 없음입니다. */
+            /** @brief `writeReturnPoint` 의 짝입니다. 모르는 갈래거나 잘렸거나 씬이 없으면 없음입니다. 안에 든 옛 판 봉투는 바깥 봉투처럼 한 번 올린다. */
             static optional<MinigameReturnPoint> readReturnPoint( Archive& arch )
             {
                 uint8 kind = 0;
@@ -50,7 +58,10 @@ namespace sw
                     return nullopt;
                 if ( kind == MinigameReturnPoint{ MinigameEntranceReturn{} }.index() )
                     return MinigameReturnPoint{ MinigameEntranceReturn{} };
-                const string scenePath = AssetRedirect::toCurrentID( arch.readString() ); // 씬을 옮긴 뒤에도 옛 세이브가 제 씬을 찾는다
+                const expected<AssetReferenceTarget> scene = AssetRedirect::readSavedReference( arch.readString() ); // 씬을 옮긴 뒤에도 옛 세이브가 제 씬을 찾는다
+                if ( scene.has_value() == false )
+                    return nullopt;
+                const string& scenePath = scene->_path;
                 if ( kind == MinigameReturnPoint{ MinigameSubLevelReturn{} }.index() )
                 {
                     const string subLevelName = arch.readString();
@@ -64,6 +75,8 @@ namespace sw
                 suspended._scenePath = scenePath;
                 if ( arch.readSection( suspended._saveSnapshot ) == false || arch.isError() || scenePath.empty() || suspended._saveSnapshot.empty() )
                     return nullopt;
+                if ( GameStateSnapshot::upgradeEnvelope( suspended._saveSnapshot ) == false )
+                    return nullopt; // 까닭은 판 올림이 남겼다
                 return MinigameReturnPoint{ std::move( suspended ) };
             }
         };
@@ -148,6 +161,22 @@ namespace sw
         }
     }
 
+    void MinigameFrame::takeMatchResult( MinigameResult& inoutResult ) const
+    {
+        if ( _matchID == 0 )
+            return;
+        inoutResult._matchID    = _matchID;
+        inoutResult._matchBoard = _definition._matchBoard;
+        for ( size_t index = 0; index < inoutResult._listValue.size(); ++index )
+        {
+            if ( inoutResult._listValue[index]._name != _definition._matchScore )
+                continue;
+            inoutResult._matchScore = inoutResult._listValue[index]._amount;
+            inoutResult._listValue.erase( inoutResult._listValue.begin() + static_cast<ptrdiff_t>( index ) );
+            return;
+        }
+    }
+
     void MinigameStack::push( MinigameFrame frame )
     {
         _listFrame.push_back( std::move( frame ) );
@@ -160,6 +189,16 @@ namespace sw
         outFrame = std::move( _listFrame.back() );
         _listFrame.pop_back();
         return true;
+    }
+
+    uint64 MinigameStack::findMatchID() const
+    {
+        for ( const MinigameFrame& frame : _listFrame )
+        {
+            if ( frame._matchID != 0 )
+                return frame._matchID;
+        }
+        return 0;
     }
 
     bool MinigameStack::hasSuspendedScene() const

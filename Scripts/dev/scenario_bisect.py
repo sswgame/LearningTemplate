@@ -8,9 +8,9 @@
   py -3 Scripts/dev/scenario_bisect.py empty surfacefootprint                      # Ninja-Debug, dx12, 무인
   py -3 Scripts/dev/scenario_bisect.py editor focusloss --preset Ninja-Release --show
   py -3 Scripts/dev/scenario_bisect.py --self-check
-  py -3 Scripts/dev/scenario_bisect.py shooter3d --rerun-failed --preset Ninja-Release   # 마지막 체인에서 진 단계: 혼자 → 앞을 붙여 → 이분 탐색
-  py -3 Scripts/dev/scenario_bisect.py shooter3d --from-stage enemydeath --backend vk     # 그 단계부터 끝까지만
-  py -3 Scripts/dev/scenario_bisect.py shooter3d --advances                              # 진행(AdvanceSimulation) 목록(condition · photo · other, render)
+  py -3 Scripts/dev/scenario_bisect.py playground.shooter3d --rerun-failed --preset Ninja-Release   # 마지막 체인에서 진 단계: 혼자 → 앞을 붙여 → 이분 탐색
+  py -3 Scripts/dev/scenario_bisect.py playground.shooter3d --from-stage shooter3d_enemydeath --backend vk     # 그 단계부터 끝까지만
+  py -3 Scripts/dev/scenario_bisect.py playground.shooter3d --advances                              # 진행(AdvanceSimulation) 목록(condition · photo · other, render)
   py -3 Scripts/dev/scenario_bisect.py --golden-margins [보고 폴더…]                # 흔들리는 골든: 보고의 goldenSamples[] 를 모아 골든별 최대 · 여유
   py -3 Scripts/dev/scenario_bisect.py --golden-coverage                            # 플랫폼 · 백엔드마다 골든 수(체인 백엔드 표와 대조)
 

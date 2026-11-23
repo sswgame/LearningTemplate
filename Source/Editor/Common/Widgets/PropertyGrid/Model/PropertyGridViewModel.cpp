@@ -51,6 +51,7 @@
 #include "Engine/Scene/Scene.h"
 #include "Engine/Serialization/Inherit/DataCatalogReferences.h"
 #include "Engine/Serialization/Serializer/AssetRefBase.h"
+#include "Engine/Serialization/Serializer/DataPath.h"
 #include "Engine/Serialization/Serializer/SerializerUtil.h"
 #include "Engine/Serialization/XML/XMLDocument.h"
 
@@ -274,12 +275,19 @@ namespace sw::editor
                 outText = buf.c_str();
             }
 
-            /** @brief 맵 키 · 시퀀스 원소의 값 글입니다(값 주소 쪽 변환). */
-            /** @brief 칸 값의 표시 글입니다. 에셋 참조는 경로를 보인다 — 저장 꼴(`guid:<32자>`)은 사람이 읽지 못하고, 고친 글은 경로로 다시 넣는다(`AssetRefBase::assign`). */
+            /** @brief 저장 꼴이 GUID 참조인 칸 형식(`AssetRef<T>` · `DataPath`)이면 true 입니다. */
+            static bool isAssetReference( const hashed_string& typeName ) { return typeName == hashed_string( AssetRefBase::kTypeName ) || typeName == hashed_string( "DataPath" ); }
+
+            /** @brief 칸 값(맵 키 · 시퀀스 원소도)의 표시 글입니다. 에셋 참조는 경로를 보인다 — 저장 꼴(`guid:<32자>`)은 사람이 읽지 못하고, 고친 글은 경로로 다시 넣는다(`AssetRegistry::readReferenceText`). */
             static string formatValueText( const void* pValue, const hashed_string& typeName )
             {
                 if ( typeName == hashed_string( AssetRefBase::kTypeName ) )
                     return static_cast<const AssetRefBase*>( pValue )->path();
+                if ( isAssetReference( typeName ) )
+                {
+                    const DataPath& path = *static_cast<const DataPath*>( pValue );
+                    return path.isSet() ? path.get() : string{};
+                }
                 return SerializerUtil::formatValueText( ValueAddress{ pValue }, typeName, SerializeContext::getDefault( SerializePurpose::Authoring ) );
             }
         };
@@ -578,10 +586,11 @@ namespace sw::editor
         if ( getPropertyManager().find( prop._typeName.c_str() ) != nullptr )
         {
             // 확장(`IInspectorProperty`)이 맡는 타입 — 값은 글로 넘긴다(확장이 자기 형식으로 읽는다).
-            row._kind                = PropertyRowKind::Text;
-            const AssetRefBase* pRef = prop._typeName == hashed_string( AssetRefBase::kTypeName ) ? prop.getValuePtr<AssetRefBase>( instance.get() ) : nullptr;
-            row._valueText           = pRef != nullptr ? pRef->path() : SerializerUtil::formatPropertyText( prop, instance, SerializeContext::getDefault( SerializePurpose::Authoring ) );
-            row._bAssetPath          = ( prop._metadata->_bAssetPath != SW_FALSE || prop._metadata->_assetType.empty() == false ) ? SW_TRUE : SW_FALSE;
+            row._kind             = PropertyRowKind::Text;
+            const void* pAssetRef = PropertyGridViewModelInternal::isAssetReference( prop._typeName ) ? prop.getValuePtr<void>( instance.get() ) : nullptr;
+            row._valueText        = pAssetRef != nullptr ? PropertyGridViewModelInternal::formatValueText( pAssetRef, prop._typeName )
+                                                         : SerializerUtil::formatPropertyText( prop, instance, SerializeContext::getDefault( SerializePurpose::Authoring ) );
+            row._bAssetPath       = ( prop._metadata->_bAssetPath != SW_FALSE || prop._metadata->_assetType.empty() == false ) ? SW_TRUE : SW_FALSE;
             return;
         }
 

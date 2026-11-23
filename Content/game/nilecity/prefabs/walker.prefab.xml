@@ -15,7 +15,7 @@
 			               _boundsRadius="0.866"
 			               _gpuSpinSeed="0"
 			               _bVisible="false" />
-			<NileWalkerComponent _localID="17769358192364824167" _componentName="NileWalkerComponent"
+			<CityWalkerViewComponent _localID="17769358192364824167" _componentName="CityWalkerViewComponent"
 			                     _bActive="true"
 			                     _gameMode="0"
 			                     _walkerIndex="-1"

@@ -1844,7 +1844,17 @@ namespace sw
             return PhysicsCharacterState3D{};
         // 일괄 이동과 같은 두 단계를 바로 잇는다 — 다음 캐릭터는 이 캐릭터의 새 자리를 본다.
         runCharacterMove( *pRecord, velocity, deltaTime, _tempAllocator );
-        commitCharacterMove( *pRecord, deltaTime );
+        commitCharacterMove( *pRecord, deltaTime, true );
+        return pRecord->_state;
+    }
+
+    PhysicsCharacterState3D JoltPhysicsScene::replayCharacterMove( PhysicsCharacterHandle character, const float3& velocity, float32 deltaTime )
+    {
+        CharacterRecord* pRecord = _characters.get( character.getSlot() );
+        if ( pRecord == nullptr || pRecord->_pCharacter == nullptr )
+            return PhysicsCharacterState3D{};
+        runCharacterMove( *pRecord, velocity, deltaTime, _tempAllocator );
+        commitCharacterMove( *pRecord, deltaTime, false );
         return pRecord->_state;
     }
 
@@ -1879,10 +1889,10 @@ namespace sw
                                          _system.GetDefaultLayerFilter( objectLayer ), bodyFilter, shapeFilter, allocator );
     }
 
-    void JoltPhysicsScene::commitCharacterMove( CharacterRecord& record, float32 deltaTime )
+    void JoltPhysicsScene::commitCharacterMove( CharacterRecord& record, float32 deltaTime, bool bPushBodies )
     {
         JPH::CharacterVirtual& virtualCharacter = *record._pCharacter;
-        if ( deltaTime > 0.0f )
+        if ( bPushBodies && deltaTime > 0.0f )
         {
             // 닿은 동적 바디를 민다 — Jolt 5.6.0 `CharacterVirtual::HandleContact` 의 셈 그대로(속도 차를 감쇠, 겹침을 덜고, 힘 상한으로 자르고, 아래로는 밀지 않는다).
             // 원본과 다른 곳 하나: 해석 중 닿는 순간의 속도 대신 이동 뒤 접촉 · 이번 이동에 준 속도로 셈한다 — 청크 사이 바디 쓰기를 끝으로 미뤄 차례를 고정하려는 것이다.
@@ -1976,7 +1986,7 @@ namespace sw
                              SW_DELEGATE_METHOD( ParallelBlockDelegate, &JoltPhysicsScene::runCharacterChunks, this ) );
         for ( const CharacterMoveJob& job : _listCharacterMoveJob )
         {
-            commitCharacterMove( *job._pRecord, deltaTime );
+            commitCharacterMove( *job._pRecord, deltaTime, true );
         }
         _listCharacterMoveJob.clear();
     }
@@ -2042,6 +2052,24 @@ namespace sw
         pRecord->_pMirror->SetPosition( JoltUtil::toJolt( position ) );
         pRecord->_state._position   = position;
         pRecord->_state._groundBody = PhysicsBodyHandle{};
+    }
+
+    void JoltPhysicsScene::refreshCharacterContacts( PhysicsCharacterHandle character )
+    {
+        CharacterRecord* pRecord = _characters.get( character.getSlot() );
+        if ( pRecord == nullptr || pRecord->_pCharacter == nullptr )
+            return;
+        // 속도를 먼저 지운다 — 접촉 찾기는 속도의 방향을 보므로, 남아 있으면 같은 자리의 접촉이 앞 이동에 따라 갈린다.
+        pRecord->_pCharacter->SetLinearVelocity( JPH::Vec3::sZero() );
+        pRecord->_movedVelocity                                         = float3{};
+        pRecord->_carriedVelocity                                       = float3{};
+        pRecord->_groundYawRate                                         = 0.0f;
+        const JPH::ObjectLayer                              objectLayer = JoltLayerUtil::makeObjectLayer( pRecord->_desc._layer, true );
+        const JoltPhysicsSceneInternal::CharacterBodyFilter bodyFilter{ *this };
+        const JPH::ShapeFilter                              shapeFilter;
+        pRecord->_pCharacter->RefreshContacts( _system.GetDefaultBroadPhaseLayerFilter( objectLayer ), _system.GetDefaultLayerFilter( objectLayer ), bodyFilter, shapeFilter,
+                                               _tempAllocator );
+        commitCharacterMove( *pRecord, 0.0f, false );
     }
 
     bool JoltPhysicsScene::isCharacterInnerBody( PhysicsBodyHandle body ) const

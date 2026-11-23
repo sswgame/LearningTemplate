@@ -5,7 +5,7 @@
 #include "Core/Log/Logger.h"
 
 #include "Engine/Content/AssetIO.h"
-#include "Engine/Serialization/Inherit/AssetRedirect.h"
+#include "Engine/Content/AssetRegistry.h"
 #include "Engine/Serialization/Inherit/ResourceComposer.h"
 #include "Engine/Serialization/Serializer/ReloadResult.h"
 
@@ -45,7 +45,7 @@ namespace sw
 
     expected<shared_ptr<const void>> UITextAssetCache::acquireAsset( string_view path, const ResourceTagSet& tagOverride )
     {
-        const string normalized = AssetRedirect::toCacheKey( path );
+        const string normalized = AssetRegistry::toCacheKey( path );
         const string key        = makeKey( normalized, tagOverride );
         const auto   iter       = _mapKeyToEntry.find( key );
         if ( iter != _mapKeyToEntry.end() )
@@ -66,7 +66,7 @@ namespace sw
 
     void UITextAssetCache::registerMemoryText( string_view path, string_view text )
     {
-        const string key          = AssetRedirect::toCacheKey( path );
+        const string key          = AssetRegistry::toCacheKey( path );
         _mapPathToMemoryText[key] = string( text );
         for ( auto iter = _mapKeyToEntry.begin(); iter != _mapKeyToEntry.end(); )
         {
@@ -79,7 +79,7 @@ namespace sw
 
     bool UITextAssetCache::isCached( string_view relativePath ) const
     {
-        const string key = AssetRedirect::toCacheKey( relativePath );
+        const string key = AssetRegistry::toCacheKey( relativePath );
         for ( const auto& [entryKey, entry] : _mapKeyToEntry )
         {
             if ( entry._path == key )
@@ -110,7 +110,7 @@ namespace sw
     ReloadResult UITextAssetCache::reload( const AssetID& assetID )
     {
         const string_view relativePath = assetID.view();
-        const string      key          = AssetRedirect::toCacheKey( relativePath );
+        const string      key          = AssetRegistry::toCacheKey( relativePath );
         string            text;
         if ( readText( key, assetID, text ) == false )
         {

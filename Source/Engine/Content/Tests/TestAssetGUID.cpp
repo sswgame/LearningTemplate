@@ -41,6 +41,20 @@ SW_TEST_CASE( AssetGUIDTest, FromNameIsDeterministicAndDistinct )
     SW_EXPECT_TRUE( *parsed == first );
 }
 
+/**
+ * @brief [AssetGUIDTest] 이름공간 + 이름의 GUID(임포트 산출물)는 원본 GUID 와 산출물 이름만 본다 — 값은 파이썬 도구(`asset_identity.py` 의 자체 검사)와 같은 글이다
+ */
+SW_TEST_CASE( AssetGUIDTest, OutputIdentityComesFromSourceAndOutputName )
+{
+    const AssetGUID source = *AssetGUID::tryParse( "0123456789abcdef0011223344556677" );
+    const AssetGUID mesh   = AssetGUID::fromName( source, ".mesh" );
+    SW_EXPECT_TRUE( mesh == AssetGUID::fromName( source, ".MESH" ) );
+    SW_EXPECT_TRUE( mesh != AssetGUID::fromName( source, "/materials/mi_eyes.material" ) );
+    SW_EXPECT_TRUE( mesh != AssetGUID::fromName( AssetGUID::create(), ".mesh" ) );
+    SW_EXPECT_TRUE( mesh == AssetGUID::fromName( "0123456789abcdef0011223344556677.mesh" ) );
+    SW_EXPECT_EQUAL( string( "28016f06802dfbf1a257d90c3347b2fb" ), mesh.toString() );
+}
+
 SW_TEST_CASE( AssetGUIDTest, RejectsOtherSpellingsAndTheZeroValue )
 {
     SW_EXPECT_FALSE( AssetGUID::tryParse( "0123456789ABCDEF0011223344556677" ).has_value() );     // 대문자

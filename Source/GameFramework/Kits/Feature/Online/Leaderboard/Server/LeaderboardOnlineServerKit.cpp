@@ -41,12 +41,11 @@ namespace sw
                 LeaderboardKitConfig kitConfig;
                 if ( expected<void> result = entry.readSettings( kitConfig ); result.has_value() == false )
                     return result;
-                const string& catalogPath = kitConfig._catalog;
-                _listInlineBoardID        = std::move( kitConfig._listBoardID );
-                _pCatalog                 = catalogPath.empty() ? nullptr : SharedAssetCache<LeaderboardCatalog>::acquire( catalogPath );
-                if ( catalogPath.empty() == false && _pCatalog == nullptr )
-                    return unexpected( Error{ ErrorKind::NotFound, "the leaderboard catalog could not be read", catalogPath } );
-                if ( catalogPath.empty() && _listInlineBoardID.empty() )
+                _listInlineBoardID = std::move( kitConfig._listBoardID );
+                _pCatalog          = kitConfig._catalog.acquire();
+                if ( kitConfig._catalog.empty() == false && _pCatalog == nullptr )
+                    return unexpected( Error{ ErrorKind::NotFound, "the leaderboard catalog could not be read", kitConfig._catalog.path() } );
+                if ( kitConfig._catalog.empty() && _listInlineBoardID.empty() )
                     SW_LOG_WARNING_ID( "LeaderboardOnlineServerKit.LeaderboardKitNeitherCatalog", "Leaderboard kit: neither _catalog nor _listBoardID - no boards are registered" );
                 // 옛 점수 · 시즌 결과의 백필은 카탈로그 보드의 사본으로 줄 시각을 잰다. 인라인 보드(_listBoardID)는 초기화가 없어 지울 것이 없다
                 const vector<LeaderboardDef> listCatalogBoard = _pCatalog != nullptr ? _pCatalog->getBoards() : vector<LeaderboardDef>{};

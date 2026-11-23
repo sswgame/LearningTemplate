@@ -337,8 +337,8 @@ namespace sw
             _triggerRules._navRepeatDelay = delaySeconds;
             _triggerRules._navRepeatRate  = rateSeconds;
         }
-        /** @brief 이 맵이 켜는 가상 커서입니다. `InputManager` 가 매 프레임 읽어 켜고 끕니다. */
-        InputMapVirtualCursor getVirtualCursorStick() const { return _virtualCursorStick; }
+        /** @brief 지금 켜는 가상 커서입니다 — 맵 전체 값이 없으면 발화하는 레이어가 적은 값입니다. `InputManager` 가 매 프레임 읽어 켜고 끕니다. */
+        InputMapVirtualCursor getVirtualCursorStick() const;
         void                  setVirtualCursorStick( InputMapVirtualCursor stick ) { _virtualCursorStick = stick; }
         InputManager*         getInputManager() const { return _pInput; }
         float32               getDoubleClickTime() const { return _triggerRules._doubleClickTime; }
@@ -359,6 +359,11 @@ namespace sw
 
         bool hasLayer( const hashed_string& layer ) const;
         bool isLayerEnabled( const hashed_string& layer ) const;
+        /**
+         * @brief 레이어 @p listLayer 를 함께 켜도(스택에 쌓아도) 되는지 봅니다 — 그 가운데 하나가 켜는 가상 커서의 스틱 · 버튼을 다른 레이어(늘 켜진 레이어 포함)가 액션에 묶었으면 모두 알리고 false 입니다.
+         * @details 맵 읽기는 지금 켜진 레이어만 본다 — 함께 켤 묶음은 그것을 정한 데이터(미니게임 정의)가 읽힐 때 이것으로 본다. 모르는 레이어 이름은 보지 않는다(켤 때 거절된다).
+         */
+        [[nodiscard]] bool canStackLayers( const vector<hashed_string>& listLayer, string_view sourceName ) const;
         /**
          * @brief 두 레이어의 바인딩이 한 번의 누름에 함께 발화할 수 있으면 true 입니다 — 같은 레이어이거나, 둘 다 지금 켜져 있습니다.
          * @details 묶음의 레이어는 파일의 겹침을 나누려고 있어서 게임에서는 함께 켜져 있다. 그래서 플레이어 재배치의 겹침은 같은 레이어만 보면 놓친다(Interact 를 W 로 옮기면 이동과 함께 돈다).
@@ -664,7 +669,7 @@ namespace sw
 
     private:
         /**
-         * @brief 가상 커서(`_virtualCursorStick`)가 마우스로 바꾸는 스틱 · 패드 버튼(기본 설정의 A · B, 0 번 패드)을 따로 묶은 바인딩마다 알리고 그 수를 반환합니다.
+         * @brief 가상 커서(맵 전체 값 · 레이어 값)가 마우스로 바꾸는 스틱 · 패드 버튼(기본 설정의 A · B, 0 번 패드)을 따로 묶은 바인딩마다 알리고 그 수를 반환합니다.
          * @details 가상 커서가 꺼져 있으면 0 이다. 읽기(`loadFromAsset`)가 0 이 아니면 실패로 돌린다.
          */
         [[nodiscard]] uint32 countVirtualCursorConflicts( string_view sourceName ) const;
@@ -673,6 +678,10 @@ namespace sw
          * @details 맵 읽기(`countVirtualCursorConflicts`)와 사용자 바인딩 읽기(`InputRemapSerializer::load`)가 같은 검사를 쓴다 — 한쪽만 고치면 다른 길로 같은 충돌이 들어온다.
          */
         [[nodiscard]] bool reportVirtualCursorConflict( string_view sourceName, const hashed_string& action, const ActionBinding& binding ) const;
+        /** @brief @p cursor 가 켜져 있을 때 바인딩 하나가 한 입력을 두 입력으로 만드는지 보고, 그러면 알리고 true 를 반환합니다. @p cursor 가 끔이면 false 입니다. */
+        [[nodiscard]] static bool reportCursorBinding( InputMapVirtualCursor cursor, string_view sourceName, const hashed_string& action, const ActionBinding& binding );
+        /** @brief 바인딩 하나와 함께 켜질 수 있는 가상 커서입니다 — 맵 전체 값이 없으면 그 바인딩의 레이어와 함께 발화하는 레이어(`canLayersFireTogether`)의 값입니다. */
+        InputMapVirtualCursor findVirtualCursorBeside( const hashed_string& layer ) const;
         /**
          * @brief 액션 @p action 의 바인딩 중 @p firstIndex 부터 가상 커서와 겹치는 것(`reportVirtualCursorConflict`)을 알리고 지운 뒤 지운 수를 반환합니다.
          * @details 바인딩 · 기본값 · 상태 세 목록을 함께 지운다 — 세 목록의 인덱스가 같다는 규칙은 맵이 지킨다(`commitBinding`).
@@ -714,7 +723,7 @@ namespace sw
         InputTriggerRules                    _triggerRules; ///< 시간 · 거리 문턱과 바인딩 상태 진행(홀드 · 탭 · 연타 · 끌기 · 반복)
         float32                              _totalElapsedTime;
         float32                              _lastDeltaSeconds;   ///< 가장 최근 `update` 의 프레임 시간. 프레임 시간 곱 바인딩이 쓴다.
-        InputMapVirtualCursor                _virtualCursorStick; ///< 이 맵이 켜는 가상 커서(`<InputMap virtualCursor>`)
+        InputMapVirtualCursor                _virtualCursorStick; ///< 맵 전체가 켜는 가상 커서(`<InputMap virtualCursor>` — 레이어 값은 `LayerDef`)
         optional<InputUserDevices>           _userDevices;        /**< 이 맵이 읽는 사용자 장치입니다. 없음이면 모든 장치입니다(`setUserDevices`). */
         uint8                                _bSuppressBaseActionOnChord : 1;
         uint8                                _bKeyboardFocusIgnored      : 1; /**< 키보드 포커스와 상관없이 키를 읽습니다(디버그 키 맵). */

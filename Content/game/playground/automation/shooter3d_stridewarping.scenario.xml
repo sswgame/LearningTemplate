@@ -1,0 +1,34 @@
+<?xml version="1.0" encoding="utf-8"?>
+<?asset guid="74ff44aed35d3169dfd35cabe6d01629"?>
+<!--
+  사격장 보폭 워핑 — 몸 프리팹의 리그(rigs/player_body.rig.xml 의 노드 Stride)가 몸 메시에 묶인 뒤에만 값이 들어가고(감시 값 StrideAppliedCount 가 오르는 때가 isRigReady 이후다),
+  서 있으면 배율 1(포즈가 바뀌지 않는다)이다. 이동 중 배율(이동 속도 / 재생한 발 속도)은 노드가 min_scale 0.6 ~ max_scale 1.6 으로 자르므로 감시 값은 그 범위 밖일 수 있다 —
+  값 자체는 클립의 발 속도에 달렸으니 서 있는 사진과 뒷걸음 달리기 사진을 골든과 견준다(발이 덜 미끄러지는지, 연속 사진은 -gv_shooterMotionTrace).
+  자동 플레이를 끄고 걷는다(시작 (0, -16) 에서 +Z 를 본다. 뒷걸음은 -Z 쪽 한 걸음 거리). 사진은 정해진 시각에 찍으므로 고정 대기다.
+  실행: App -scenario=game/playground/automation/shooter3d_stridewarping.scenario.xml -unattended (체인: ctest -R Scenario.playground.shooter3d)
+-->
+<Scenario name="game.playground.shooter3d_stridewarping" fixedDelta="0.0166667" timeoutFrames="600" startAfter="ScenePlaying" startTimeoutFrames="900" input="exclusive">
+	<Launch variable="gv_firstMinigame" value="shooter3d"/>
+	<Variable name="gv_cameraFieldOfView" value="80"/> <!-- 골든은 시야각 80 으로 찍었다(옛 게임 팩의 기본값) -->
+	<Variable name="gv_playgroundAutoPlay" value="0"/>
+	<!-- 서 있다: 리그가 묶였고(값이 들어간다) 배율은 1 이다. -->
+	<WaitUntil watch="Shooter.StrideAppliedCount" atLeast="10" timeoutFrames="120"/>
+	<Expect watch="Shooter.StrideScale" near="1" tolerance="0.001"/>
+	<Screenshot file="standing.ppm"/>
+	<!-- 뒷걸음 + 달리기 키: 재생 속도 범위에 막힌 몫이 보폭으로 간다. -->
+	<Press slot="Key.S"/>
+	<Press slot="Key.LeftShift"/>
+	<WaitUntil watch="Shooter.StrideAppliedCount" atLeast="100" timeoutFrames="120"/> <!-- 뒷걸음 달리기의 보폭이 걸렸다 -->
+	<WaitUntil watch="Shooter.StrideScale" atLeast="0.1" timeoutFrames="60"/>
+	<Screenshot file="backward_run.ppm" stability="Assets"/>
+	<!-- 아레나 바닥(Stone)의 발걸음 — 플레이어 몸은 발 닿음 감지로 발걸음을 내고(common/characters/ubc/ubc_body.notifies.xml) 돌의 반응(소리 Footstep.Stone)이 난다. -->
+	<WaitUntil watch="Surface.ObjectFootstepCount" target="PlayerBody" key="Stone" atLeast="1" timeoutFrames="60"/>
+	<Expect watch="Surface.ObjectLastFootstepSound" target="PlayerBody" is="Footstep.Stone"/>
+	<Release slot="Key.S"/>
+	<Release slot="Key.LeftShift"/>
+	<!-- 멈춘 뒤 다시 1 로 돌아온다. -->
+	<WaitUntil watch="Shooter.StrideScale" near="1" tolerance="0.001" timeoutFrames="80"/>
+	<ExpectImage file="standing.ppm" golden="standing"/>
+	<ExpectImage file="backward_run.ppm" golden="backward_run"/>
+	<Pass/>
+</Scenario>

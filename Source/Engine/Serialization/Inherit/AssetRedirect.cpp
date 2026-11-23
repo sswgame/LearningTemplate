@@ -2,7 +2,7 @@
 
 #include "Engine/Serialization/Inherit/AssetRedirect.h"
 
-#include "Core/Concurrency/atomic.h"
+#include "Core/Algorithm/VectorUtil.h"
 #include "Core/Concurrency/mutex.h"
 #include "Core/Container/unordered_map.h"
 #include "Core/File/FileUtil.h"
@@ -25,31 +25,24 @@ namespace sw
         struct AssetRedirectInternal
         {
             static constexpr const utf8* kRedirectElement = "Redirect";
-            /** @brief 폴더 접두 리다이렉트 원소입니다 — 팩 · 폴더를 통째로 옮기면 파일마다가 아니라 한 줄(언리얼 `[CoreRedirects]` PackageRedirects 의 접두 꼴). */
+            /** @brief 폴더 접두 원소입니다 — 팩 · 폴더를 통째로 옮긴 한 줄(언리얼 `[CoreRedirects]` PackageRedirects 의 접두 꼴). */
             static constexpr const utf8* kPrefixRedirectElement = "PrefixRedirect";
+            /** @brief 정체성 대체 원소입니다(GUID → GUID). */
+            static constexpr const utf8* kIdentityRedirectElement = "IdentityRedirect";
 
-            /** @brief 줄의 종류입니다 — 원소 이름 하나에 하나. */
-            enum class EntryKind : uint8
+            /** @brief 폴더 접두 줄 하나입니다 — `_from` 폴더 아래 id 를 `_to` 폴더 아래로. */
+            struct PrefixRow
             {
-                Exact,  ///< `<Redirect>` — id 하나
-                Prefix, ///< `<PrefixRedirect>` — `_from` 폴더 아래 id 를 `_to` 폴더 아래로
+                string _from;
+                string _to;
             };
 
-            /** @brief 표의 한 줄입니다(글 순서를 지키려고 맵이 아니라 목록에 둔다). */
-            struct Entry
-            {
-                string    _from;
-                string    _to;
-                EntryKind _kind = EntryKind::Exact;
-            };
-
-            /** @brief 표 전체입니다(`AssetRedirectTable` 이 든다). 옛 id → 끝 id(사슬을 접은 것). */
+            /** @brief 프로세스의 옛 경로 표입니다(`AssetRedirectTable` 이 든다). 사슬은 끝으로 접었다. */
             struct State
             {
                 mutex                         _mutex{};
                 unordered_map<string, string> _mapOldToNew{};
-                vector<Entry>                 _listPrefix{};    ///< 폴더 접두 줄 — 정확한 id 줄에 없을 때만 본다
-                atomic<uint32>                _entryCount{ 0 }; ///< 표가 비었는지 잠금 없이 묻는다 — 모든 리소스 읽기가 지나는 자리다
+                vector<PrefixRow>             _listPrefix{}; ///< 정확한 줄에 없을 때만 본다
             };
 
             /** @brief id 글이 맞춤 꼴(`AssetPaths::normalizeAssetID` 그대로)인지 봅니다. 아니면 오류를 남기고 false 입니다 — 표기가 갈리면 같은 에셋이 두 이름이 된다. */
@@ -62,62 +55,90 @@ namespace sw
                 return false;
             }
 
-            /** @brief 표 글 하나를 @p inoutMap(정확한 id 줄) · @p inoutListPrefix(폴더 접두 줄)에 더합니다. 틀리면 오류를 남기고 false 입니다. */
-            static bool parseInto( string_view text, string_view sourceName, unordered_map<string, string>& inoutMap, vector<Entry>& inoutListPrefix )
+            /** @brief 표 글 하나 이상을 읽은 것입니다. */
+            struct Rows
             {
-                XMLDocument doc;
-                if ( doc.parse( text, sourceName ) == false )
+                unordered_map<string, string> _mapOldToNew; ///< 옛 경로 → 경로(정확한 줄)
+                vector<PrefixRow>             _listPrefix;
+                vector<AssetIdentityRedirect> _listIdentity;
+
+                /** @brief 정체성 대체 줄 하나를 더합니다. 틀리면 오류를 남기고 false 입니다. */
+                [[nodiscard]] bool parseIdentityRow( const XMLNode& node, string_view sourceName )
                 {
-                    SW_LOG_ERROR_ID( "AssetRedirect.NotXML", "Asset redirect table '%#' could not be parsed: %#", sourceName, doc.getLastError() );
-                    return false;
-                }
-                const XMLNode root = doc.getRoot( AssetRedirect::kRootElement );
-                if ( root.isValid() == false )
-                {
-                    SW_LOG_ERROR_ID( "AssetRedirect.WrongRoot", "Asset redirect table '%#' has no <%#> root", sourceName, AssetRedirect::kRootElement );
-                    return false;
-                }
-                for ( XMLNode node = root.findChild(); node.isValid(); node = node.findNextSibling() )
-                {
-                    if ( StringUtil::isNullOrEmpty( node.getName() ) )
-                        continue;
-                    const bool bPrefix = string_view( node.getName() ) == kPrefixRedirectElement;
-                    if ( bPrefix == false && string_view( node.getName() ) != kRedirectElement )
+                    const optional<AssetGUID> from = AssetGUID::tryParse( node.getAttributeText( "from" ) );
+                    const optional<AssetGUID> to   = AssetGUID::tryParse( node.getAttributeText( "to" ) );
+                    const bool                bBad = from.has_value() == false || to.has_value() == false || *from == *to;
+                    const bool                bTwice =
+                        bBad == false && VectorUtil::containsIf( _listIdentity, [&from]( const AssetIdentityRedirect& row )
+                    { return row._from == *from; } );
+                    if ( bBad || bTwice )
                     {
-                        SW_LOG_ERROR_ID( "AssetRedirect.UnknownElement", "Asset redirect table '%#': <%#> is not <%#> or <%#>", sourceName, node.getName(), kRedirectElement,
-                                         kPrefixRedirectElement );
+                        SW_LOG_ERROR_ID( "AssetRedirect.IdentityRowInvalid", "Asset redirect table '%#': <%# from='%#' to='%#'> needs two different GUIDs and one row per 'from'", sourceName, kIdentityRedirectElement,
+                                         node.getAttributeText( "from" ), node.getAttributeText( "to" ) );
                         return false;
                     }
-                    const string_view from = node.getAttributeText( "from" );
-                    const string_view to   = node.getAttributeText( "to" );
-                    if ( isCanonical( from, sourceName, "from" ) == false || isCanonical( to, sourceName, "to" ) == false )
-                        return false;
-                    if ( from == to )
+                    _listIdentity.push_back( AssetIdentityRedirect{ *from, *to } );
+                    return true;
+                }
+
+                /** @brief 표 글 하나를 더합니다. 틀리면 오류를 남기고 false 입니다. */
+                [[nodiscard]] bool parse( string_view text, string_view sourceName )
+                {
+                    XMLDocument doc;
+                    if ( doc.parse( text, sourceName ) == false )
                     {
-                        SW_LOG_ERROR_ID( "AssetRedirect.SelfRedirect", "Asset redirect table '%#': '%#' is redirected to itself", sourceName, from );
+                        SW_LOG_ERROR_ID( "AssetRedirect.NotXML", "Asset redirect table '%#' could not be parsed: %#", sourceName, doc.getLastError() );
                         return false;
                     }
-                    if ( bPrefix )
+                    const XMLNode root = doc.getRoot( AssetRedirect::kRootElement );
+                    if ( root.isValid() == false )
                     {
-                        for ( const Entry& entry : inoutListPrefix )
+                        SW_LOG_ERROR_ID( "AssetRedirect.WrongRoot", "Asset redirect table '%#' has no <%#> root", sourceName, AssetRedirect::kRootElement );
+                        return false;
+                    }
+                    for ( XMLNode node = root.findChild(); node.isValid(); node = node.findNextSibling() )
+                    {
+                        if ( StringUtil::isNullOrEmpty( node.getName() ) )
+                            continue;
+                        const string_view name = node.getName();
+                        if ( name == kIdentityRedirectElement )
                         {
-                            if ( entry._from == from )
-                            {
-                                SW_LOG_ERROR_ID( "AssetRedirect.DuplicateFrom", "Asset redirect table '%#': '%#' is redirected twice", sourceName, from );
+                            if ( parseIdentityRow( node, sourceName ) == false )
                                 return false;
-                            }
+                            continue;
                         }
-                        inoutListPrefix.push_back( Entry{ string{ from }, string{ to }, EntryKind::Prefix } );
-                        continue;
+                        const bool bPrefix = name == kPrefixRedirectElement;
+                        if ( bPrefix == false && name != kRedirectElement )
+                        {
+                            SW_LOG_ERROR_ID( "AssetRedirect.UnknownElement", "Asset redirect table '%#': <%#> is not <%#>, <%#> or <%#>", sourceName, node.getName(), kRedirectElement,
+                                             kPrefixRedirectElement, kIdentityRedirectElement );
+                            return false;
+                        }
+                        const string_view from = node.getAttributeText( "from" );
+                        const string_view to   = node.getAttributeText( "to" );
+                        if ( isCanonical( from, sourceName, "from" ) == false || isCanonical( to, sourceName, "to" ) == false )
+                            return false;
+                        if ( from == to )
+                        {
+                            SW_LOG_ERROR_ID( "AssetRedirect.SelfRedirect", "Asset redirect table '%#': '%#' is redirected to itself", sourceName, from );
+                            return false;
+                        }
+                        const bool bTwice = bPrefix ? VectorUtil::containsIf( _listPrefix, [from]( const PrefixRow& row )
+                        { return row._from == from; } )
+                                                    : _mapOldToNew.find( from ) != _mapOldToNew.end();
+                        if ( bTwice )
+                        {
+                            SW_LOG_ERROR_ID( "AssetRedirect.DuplicateFrom", "Asset redirect table '%#': '%#' is redirected twice", sourceName, from );
+                            return false;
+                        }
+                        if ( bPrefix )
+                            _listPrefix.push_back( PrefixRow{ string{ from }, string{ to } } );
+                        else
+                            _mapOldToNew.emplace( string{ from }, string{ to } );
                     }
-                    if ( inoutMap.emplace( string{ from }, string{ to } ).second == false )
-                    {
-                        SW_LOG_ERROR_ID( "AssetRedirect.DuplicateFrom", "Asset redirect table '%#': '%#' is redirected twice", sourceName, from );
-                        return false;
-                    }
+                    return true;
                 }
-                return true;
-            }
+            };
 
             /** @brief 사슬(A→B, B→C)을 끝(A→C)으로 접습니다. 순환이면 오류를 남기고 false 입니다. */
             static bool collapseChains( unordered_map<string, string>& inoutMap )
@@ -146,7 +167,7 @@ namespace sw
 
     /**
      * @class AssetRedirectTable
-     * @brief 지금 읽은 리다이렉트 표입니다(엔진 서비스 서브시스템 — `ResourceRemapTable` 과 같은 자리). `AssetRedirect` 의 정적 창구가 이것을 쓴다.
+     * @brief 지금 읽은 옛 경로 표입니다(엔진 서비스 서브시스템 — `ResourceRemapTable` 과 같은 자리). `AssetRedirect` 의 정적 창구가 이것을 쓴다.
      */
     class AssetRedirectTable final : public Subsystem
     {
@@ -174,23 +195,29 @@ namespace sw
 
 namespace sw
 {
+    expected<vector<AssetIdentityRedirect>> AssetRedirect::parseIdentityRows( string_view text, string_view sourceName )
+    {
+        AssetRedirectInternal::Rows rows;
+        if ( rows.parse( text, sourceName ) == false )
+            return unexpected( Error{ ErrorKind::InvalidArgument, "the asset redirect table is malformed", sourceName } );
+        return std::move( rows._listIdentity );
+    }
+
     bool AssetRedirect::loadFromXMLTexts( const vector<string>& listText, const vector<string>& listSourceName )
     {
         SW_ASSERT( listText.size() == listSourceName.size() );
-        unordered_map<string, string>        mapOldToNew;
-        vector<AssetRedirectInternal::Entry> listPrefix;
+        AssetRedirectInternal::Rows rows;
         for ( size_t index = 0; index < listText.size(); ++index )
         {
-            if ( AssetRedirectInternal::parseInto( listText[index], listSourceName[index], mapOldToNew, listPrefix ) == false )
+            if ( rows.parse( listText[index], listSourceName[index] ) == false )
                 return false;
         }
-        if ( AssetRedirectInternal::collapseChains( mapOldToNew ) == false )
+        if ( AssetRedirectInternal::collapseChains( rows._mapOldToNew ) == false )
             return false;
         AssetRedirectInternal::State& state = engine::getSubsystem<AssetRedirectTable>().getState();
         ScopedLock<mutex>             lock{ state._mutex };
-        state._mapOldToNew = std::move( mapOldToNew );
-        state._listPrefix  = std::move( listPrefix );
-        state._entryCount.store( static_cast<uint32>( state._mapOldToNew.size() + state._listPrefix.size() ) );
+        state._mapOldToNew = std::move( rows._mapOldToNew );
+        state._listPrefix  = std::move( rows._listPrefix );
         return true;
     }
 
@@ -208,54 +235,6 @@ namespace sw
         return FileUtil::getFileNamePart( assetID ) == kFileName;
     }
 
-    expected<string> AssetRedirect::addToXMLText( string_view tableText, string_view sourceName, const vector<string>& listFrom, const vector<string>& listTo )
-    {
-        using Internal = AssetRedirectInternal;
-        SW_ASSERT( listFrom.size() == listTo.size() );
-        // 틀린 표에 줄을 더하지 않는다 — 기동이 멈출 표를 키우지 않게. 이유는 parseInto 가 로그에 남겼다.
-        unordered_map<string, string> mapCheck;
-        vector<Internal::Entry>       listPrefixCheck;
-        if ( Internal::parseInto( tableText, sourceName, mapCheck, listPrefixCheck ) == false )
-            return unexpected( Error{ ErrorKind::InvalidArgument, "the asset redirect table is malformed", sourceName } );
-        XMLDocument document;
-        if ( document.parse( tableText, sourceName ) == false )
-            return unexpected( Error{ ErrorKind::InvalidArgument, "the asset redirect table is malformed", sourceName } );
-        vector<Internal::Entry> listEntry;
-        for ( XMLNode node = document.getRoot( kRootElement ).findChild(); node.isValid(); node = node.findNextSibling() )
-        {
-            if ( StringUtil::isNullOrEmpty( node.getName() ) == false )
-                listEntry.push_back( Internal::Entry{ string{ node.getAttributeText( "from" ) }, string{ node.getAttributeText( "to" ) },
-                                                      string_view( node.getName() ) == Internal::kPrefixRedirectElement ? Internal::EntryKind::Prefix
-                                                                                                                        : Internal::EntryKind::Exact } );
-        }
-        for ( size_t index = 0; index < listFrom.size(); ++index )
-        {
-            const string&           from = listFrom[index];
-            const string&           to   = listTo[index];
-            vector<Internal::Entry> listKept;
-            for ( Internal::Entry& entry : listEntry )
-            {
-                if ( entry._kind == Internal::EntryKind::Prefix || ( entry._from != from && entry._from != to ) ) // 접두 줄은 파일 옮기기가 바꾸지 않는다
-                    listKept.push_back( std::move( entry ) );
-            }
-            listKept.push_back( Internal::Entry{ from, to } );
-            listEntry = std::move( listKept );
-        }
-        StringBuilder<constant::buffer::kMax4096> textBuilder;
-        textBuilder.appendFormat( "<%#>\n", kRootElement );
-        for ( const Internal::Entry& entry : listEntry )
-            textBuilder.appendFormat( "\t<%# from=\"%#\" to=\"%#\" />\n", entry._kind == Internal::EntryKind::Prefix ? Internal::kPrefixRedirectElement : Internal::kRedirectElement, entry._from,
-                                      entry._to );
-        textBuilder.appendFormat( "</%#>\n", kRootElement );
-        string text( textBuilder.view() );
-        // 쓸 글을 런타임과 같은 규칙으로 다시 읽는다 — 맞춤 꼴이 아닌 id · 자기 자신으로 · 순환이면 쓰지 않는다.
-        unordered_map<string, string> mapResult;
-        vector<Internal::Entry>       listPrefixResult;
-        if ( Internal::parseInto( text, sourceName, mapResult, listPrefixResult ) == false || Internal::collapseChains( mapResult ) == false )
-            return unexpected( Error{ ErrorKind::InvalidArgument, "the asset redirect table would not load after the move", sourceName } );
-        return text;
-    }
-
     bool AssetRedirect::loadFromSearchDomains()
     {
         // 검색 순서의 도메인마다 뿌리의 표 하나 — "game" 은 활성 팩 도메인이다(다른 팩의 표는 그 팩이 활성일 때만 뜻이 있다).
@@ -269,7 +248,7 @@ namespace sw
                 continue;
             const AssetID tableID{ FileUtil::joinPath( domain, kFileName ) };
             if ( AssetIO::hasAsset( tableID ) == false )
-                continue; // 그 도메인에는 옮긴 에셋이 없다
+                continue; // 그 도메인에는 줄이 없다
             string text;
             if ( AssetIO::readTextAsset( tableID, text ) == false )
             {
@@ -288,59 +267,39 @@ namespace sw
         ScopedLock<mutex>             lock{ state._mutex };
         state._mapOldToNew.clear();
         state._listPrefix.clear();
-        state._entryCount.store( 0 );
     }
 
-    bool AssetRedirect::resolve( string_view assetID, string& outAssetID )
+    expected<AssetReferenceTarget> AssetRedirect::readSavedReference( string_view text )
     {
-        // 모든 파일 읽기가 지난다 — 엔진이 서기 전(설정 · 기동 파일)에는 표도 없다.
         AssetRedirectTable* const pTable = engine::findSubsystem<AssetRedirectTable>();
-        if ( pTable == nullptr || pTable->getState()._entryCount.load() == 0 )
-            return false;
-        AssetRedirectInternal::State& state = pTable->getState();
-        ScopedLock<mutex>             lock{ state._mutex };
-        const auto                    it = state._mapOldToNew.find( assetID );
-        if ( it != state._mapOldToNew.end() )
+        if ( pTable == nullptr || AssetRegistry::isReferenceText( text ) )
+            return AssetRegistry::readReferenceText( text );
+        string current{ text };
         {
-            outAssetID = it->second;
-            return true;
+            AssetRedirectInternal::State& state = pTable->getState();
+            ScopedLock<mutex>             lock{ state._mutex };
+            // 정확한 줄이 없으면 폴더 접두 줄 — 바뀐 경로가 정확한 줄의 옛 경로면 한 번 더 푼다(팩 안에서 옮긴 뒤 팩을 옮긴 사슬).
+            if ( state._mapOldToNew.find( current ) == state._mapOldToNew.end() )
+            {
+                for ( const AssetRedirectInternal::PrefixRow& row : state._listPrefix )
+                {
+                    if ( text.size() <= row._from.size() || text[row._from.size()] != '/' || text.substr( 0, row._from.size() ) != string_view{ row._from } )
+                        continue;
+                    current = row._to;
+                    current.append( text.substr( row._from.size() ) );
+                    break;
+                }
+            }
+            const auto it = state._mapOldToNew.find( current );
+            if ( it != state._mapOldToNew.end() )
+                current = it->second;
         }
-        // 정확한 줄이 없으면 폴더 접두 줄 — 옮긴 팩 아래 id 를 새 팩 아래로. 바뀐 id 가 정확한 줄의 옛 id 면 한 번 더 푼다(팩 안에서 옮긴 뒤 팩을 옮긴 사슬).
-        for ( const AssetRedirectInternal::Entry& entry : state._listPrefix )
-        {
-            if ( assetID.size() <= entry._from.size() || assetID[entry._from.size()] != '/' || assetID.substr( 0, entry._from.size() ) != string_view{ entry._from } )
-                continue;
-            outAssetID = entry._to;
-            outAssetID.append( assetID.substr( entry._from.size() ) );
-            const auto itNext = state._mapOldToNew.find( outAssetID );
-            if ( itNext != state._mapOldToNew.end() )
-                outAssetID = itNext->second;
-            return true;
-        }
-        return false;
-    }
-
-    string AssetRedirect::toCurrentID( string_view assetID )
-    {
-        string current;
-        if ( resolve( assetID, current ) )
-            return current;
-        return string{ assetID };
-    }
-
-    string AssetRedirect::toCacheKey( string_view path )
-    {
-        // 접은 글을 그대로 돌려준다 — 리다이렉트가 없으면(대부분) 복사 없이 옮긴다(텍스처 화면 크기 기록이 프레임마다 부른다).
-        string key = FileUtil::normalizePath( path ).str();
-        string current;
-        if ( resolve( key, current ) )
-            return current;
-        return key;
+        return AssetRegistry::readReferenceText( current );
     }
 } // namespace sw
 
 namespace sw
 {
-    // 리다이렉트 표 — 팩 설정(`PackEngineSettingsSubsystem`)이 채우고 파일 읽기(`AssetIO`)가 묻는다.
+    // 옛 경로 표 — 팩 설정(`PackEngineSettingsSubsystem`)이 채우고 저장된 기록을 읽는 쪽(`readSavedReference`)이 묻는다.
     SW_ENGINE_SERVICE_SUBSYSTEM( AssetRedirectTable, HostOnly, Services, (), SW_ENGINE_DEFAULT_FACTORY( AssetRedirectTable ) );
 } // namespace sw

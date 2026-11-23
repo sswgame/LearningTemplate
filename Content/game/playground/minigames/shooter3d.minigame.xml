@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="utf-8"?>
+<?asset guid="9628cfd433854b41afc5177d6a7e4457"?>
+<!--
+  사격장 미니게임(1 · 3인칭 웨이브 사격) — 옛 게임 Shooter3D 를 미니게임으로 흡수했다(코드 Source/Games/Playground/Shooter3D). 혼자 하는 판이고 접속한 허브에서는 온라인 매치(shooter3d_match)로 들어간다.
+  무기 표(data/weapons.xml)는 게임 범위 기능 Shooter3D, 탄 표(data/projectiles.xml)는 PlaygroundAbilities 가 건다 — 한 프로세스 재생(에디터 넷 시뮬)의 월드도 찾는다.
+  입력은 걷기 · 시선 · 카메라 공통 레이어와 Shooter 레이어(shooter3d/data/shooter.input.xml)만 켠다 — 입력 레이어 스택에 든 레이어만 발화한다.
+  시나리오 automation/shooter3d_* 가 실행 전역 변수 gv_firstMinigame 로 들어간다.
+-->
+<Minigame name="shooter3d" map="game/playground/shooter3d/maps/arena.scene.xml" entry="SceneSwitch" portalSlot="9" inputContexts="Movement,Traversal,Look,Camera,CameraOrbit,Shooter"/>

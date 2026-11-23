@@ -141,11 +141,11 @@ namespace sw
             releasePhysics( physics );
 
         // 트랜스폼의 바깥 변화는 칸의 변경 번호로 안다 — 같으면 월드 행렬을 풀지 않는다(3D 컨트롤러와 같은 규칙).
-        const bool bTransformChanged = consumeTransformChange();
-        const bool bCreate           = _character.isValid() == false;
-        const bool bTeleported       = consumeTeleport();
+        const PhysicsTransformChange change      = consumeTransformChange();
+        const bool                   bCreate     = _character.isValid() == false;
+        const bool                   bTeleported = consumeTeleport();
         // 배율은 끝 훅(`onPhysicsFrameEnd`)이 먼저 읽었을 수 있다 — 변경 번호만이 아니라 지은 배율과의 값 비교로도 본다(3D 컨트롤러와 같다).
-        const bool bUnchanged = bCreate == false && bTransformChanged == false && bTeleported == false && isShapeScaleStale( _worldScale ) == false;
+        const bool bUnchanged = bCreate == false && change.hasChanged() == false && bTeleported == false && isShapeScaleStale( _worldScale ) == false;
         if ( bUnchanged )
             return;
         if ( PhysicsComponent::readWorldPose( *this, _worldPosition, _worldRotation, _worldScale ) == false )
@@ -187,6 +187,9 @@ namespace sw
             _previousPosition = position;
             return;
         }
+        // 깊이(Z) · 회전 · 배율만 바뀌었으면 자리는 시뮬레이션의 것이다 — 그린 자리로 옮기면 걸은 만큼이 되돌아간다(3D 와 같다).
+        if ( bTeleported == false && change.hasPlanePosition() == false )
+            return;
         pScene->setCharacterPosition( _character, position );
         _state._position  = position;
         _previousPosition = position;
@@ -255,7 +258,7 @@ namespace sw
             return;
         const float2 position = float2::lerp( _previousPosition, _state._position, alpha );
         // Z · 회전 · 배율은 트랜스폼의 것이다. 이 프레임 시작 뒤에 누가 옮겼을 때만 다시 읽는다.
-        if ( consumeTransformChange() && PhysicsComponent::readWorldPose( *this, _worldPosition, _worldRotation, _worldScale ) == false )
+        if ( consumeTransformChange().hasChanged() && PhysicsComponent::readWorldPose( *this, _worldPosition, _worldRotation, _worldScale ) == false )
             return; // 배율 0 — 트랜스폼을 덮어쓰지 않는다(다음 프레임 시작 훅이 캐릭터를 놓는다)
         // 강체와 같이 모아 한 번에 쓴다 — 적용 · 변경 번호 맞추기는 `ScenePhysics::queuePoseWrite` 가 한다.
         physics.queuePoseWrite( *this, float3{ position._x, position._y, _worldPosition._z }, _worldRotation, _worldScale );

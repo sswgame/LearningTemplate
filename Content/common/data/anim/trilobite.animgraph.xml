@@ -1,5 +1,5 @@
 <?asset guid="5b49acf9e250618c8b0aa7c5eb24e2e5"?>
-<!-- Shooter3D 적 Trilobite(Quaternius Sci-Fi Essentials 클립) — 해골 그래프(skeleton.animgraph.xml)와 같은 상태 · 전이(Move · Dead · Attack · Hit 매개변수)에 이 생물의 클립을 건다. 나올 때 둘러보고(Look), 죽으면 꺼진다(TurnOff). -->
+<!-- 사격장 적 Trilobite(Quaternius Sci-Fi Essentials 클립) — 해골 그래프(skeleton.animgraph.xml)와 같은 상태 · 전이(Move · Dead · Attack · Hit 매개변수)에 이 생물의 클립을 건다. 나올 때 둘러보고(Look), 죽으면 꺼진다(TurnOff). -->
 <AnimationGraphAsset>
 	<nodes>
 		<node id="1" name="Look" x="40.0" y="40.0" loop="false" />

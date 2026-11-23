@@ -1,0 +1,114 @@
+<?xml version="1.0" encoding="utf-8"?>
+<?asset guid="ee108b20f6b4471282d02a53b936b2fa"?>
+<!--
+  게임 중 꾸미기 ⑥ 부품 가시성 규칙 — 무대 maps/customizationshowcase 의 Hero(부품 합침) · Twin. 규칙은 데이터(rules.xml)다:
+  CapeHidesPauldron(5, 망토 → 어깨받이) · SlimHidesPauldron(3, 캐릭터 태그 Build.Slim) · ShieldHidesPauldron(1, 방패) · HelmetHidesHair(5) · RangerHoodHidesHair(10).
+  ⑴ 장비 조합: 망토를 걸치면 레인저 옷의 어깨받이 부품만 꺼진다. ⑵ 겹침: 망토 + 방패면 이유는 우선순위가 높은 망토, 망토를 벗으면 방패 규칙이 남아 여전히 숨고, 방패도 벗으면 처음 모습.
+  ⑶ 순서 무관: 망토 → 방패와 방패 → 망토가 같은 값 · 같은 사진. ⑷ 투구 · 머리카락 규칙과 1인칭 숨김 칸(setSlotHidden)이 함께여도 맞다.
+  ⑸ 캐릭터 조건: 마른 체형(CustomizeTownsfolkSlim)의 Twin 은 장비 없이 어깨받이가 꺼지고, 같은 옷의 Hero 는 보인다(음성 대조).
+  ⑹ 숨김 조합이 다르면 구운 메시 캐시 항목이 다르다(어깨받이는 합치는 스킨드 부품 — 메시 해시에 든다). ⑺ 게임 세이브 · 불러오기 뒤 같은 숨김.
+  판정 로직의 음성 대조 단위 테스트: AppearanceResolverTest.PartHideRulesIgnoreWearOrderAndReleaseOnlyTheirOwn. 골든은 통합 담당이 뜬다.
+  실행: App -scenario=game/playground/automation/showcase/customizevisibility.scenario.xml -unattended
+-->
+<Scenario name="game.playground.customizevisibility" fixedDelta="0.0166667" timeoutFrames="3600" startAfter="ScenePlaying" startTimeoutFrames="900" input="exclusive">
+	<Launch variable="gv_firstScene" value="game/playground/shooter3d/maps/customizationshowcase.scene.xml"/>
+	<Variable name="gv_playgroundAutoPlay" value="0"/>
+	<WaitUntil watch="Assets.Pending" equals="0" timeoutWallSeconds="60"/>
+	<WaitUntil watch="Appearance.Idle" target="Hero" equals="1" timeoutFrames="300"/>
+	<WaitUntil watch="Appearance.Idle" target="Twin" equals="1" timeoutFrames="300"/>
+	<Expect watch="Appearance.HiddenBy" target="Hero" key="Outfit.Pauldron" is="(visible)"/>
+	<WaitRenderStable/> <!-- 사진 앞 렌더 안정(TAA · 노출 · 에셋) -->
+	<Screenshot file="vis_base.ppm"/>
+	<ExpectImage file="vis_base.ppm" golden="vis_base"/>
+	<Store watch="Appearance.BakedMeshEntries" as="entriesBase"/>
+
+	<!-- ⑴ 망토 → ⑵ 방패 -->
+	<DevCommand line="exec Hero setSlotItem Back cape_rogue"/>
+	<WaitUntil watch="Appearance.HiddenBy" target="Hero" key="Outfit.Pauldron" is="CapeHidesPauldron" timeoutFrames="10"/>
+	<WaitUntil watch="Assets.Pending" equals="0" timeoutWallSeconds="60"/>
+	<WaitUntil watch="Appearance.Idle" target="Hero" equals="1" timeoutFrames="300"/>
+	<Expect watch="Appearance.BakedMeshEntries" increaseFrom="entriesBase" increaseBy="1"/> <!-- ⑹ 다른 숨김 조합은 다른 캐시 항목 -->
+	<Expect watch="Appearance.HiddenBy" target="Hero" key="Outfit.Arms" is="(visible)"/> <!-- 다른 부품은 그대로 -->
+	<WaitRenderStable/> <!-- 사진 앞 렌더 안정(TAA · 노출 · 에셋) -->
+	<Screenshot file="vis_cape.ppm"/>
+	<ExpectImagesDiffer first="vis_base.ppm" second="vis_cape.ppm" region="0.18,0.25,0.4,0.75" minDiffering="0.005"/>
+	<DevCommand line="exec Hero setSlotItem OffHand shield_round"/>
+	<WaitUntil watch="Appearance.SlotItem" target="Hero" key="OffHand" is="shield_round" timeoutFrames="10"/>
+	<WaitUntil watch="Assets.Pending" equals="0" timeoutWallSeconds="60"/>
+	<WaitUntil watch="Appearance.Idle" target="Hero" equals="1" timeoutFrames="300"/>
+	<Expect watch="Appearance.HiddenBy" target="Hero" key="Outfit.Pauldron" is="CapeHidesPauldron"/> <!-- 우선순위 5 > 1 -->
+	<WaitRenderStable/> <!-- 사진 앞 렌더 안정(TAA · 노출 · 에셋) -->
+	<Screenshot file="vis_cape_shield.ppm"/>
+	<ExpectImage file="vis_cape_shield.ppm" golden="vis_cape_shield"/>
+	<!-- 망토만 벗는다 — 방패 규칙이 남는다 -->
+	<DevCommand line="exec Hero setSlotItem Back"/>
+	<WaitUntil watch="Appearance.HiddenBy" target="Hero" key="Outfit.Pauldron" is="ShieldHidesPauldron" timeoutFrames="10"/>
+	<WaitUntil watch="Appearance.Idle" target="Hero" equals="1" timeoutFrames="300"/>
+	<!-- 방패도 벗으면 처음 모습 -->
+	<DevCommand line="exec Hero setSlotItem OffHand"/>
+	<WaitUntil watch="Appearance.HiddenBy" target="Hero" key="Outfit.Pauldron" is="(visible)" timeoutFrames="10"/>
+	<WaitUntil watch="Appearance.Idle" target="Hero" equals="1" timeoutFrames="300"/>
+	<WaitRenderStable/> <!-- 사진 앞 렌더 안정(TAA · 노출 · 에셋) -->
+	<Screenshot file="vis_clear.ppm"/>
+	<ExpectImagesDiffer first="vis_base.ppm" second="vis_clear.ppm" minDiffering="0" maxDiffering="0.002"/>
+
+	<!-- ⑶ 반대 순서: 방패 → 망토 — 같은 값 · 같은 사진 -->
+	<DevCommand line="exec Hero setSlotItem OffHand shield_round"/>
+	<WaitUntil watch="Appearance.HiddenBy" target="Hero" key="Outfit.Pauldron" is="ShieldHidesPauldron" timeoutFrames="10"/>
+	<WaitUntil watch="Appearance.Idle" target="Hero" equals="1" timeoutFrames="300"/>
+	<DevCommand line="exec Hero setSlotItem Back cape_rogue"/>
+	<WaitUntil watch="Appearance.HiddenBy" target="Hero" key="Outfit.Pauldron" is="CapeHidesPauldron" timeoutFrames="10"/>
+	<WaitUntil watch="Assets.Pending" equals="0" timeoutWallSeconds="60"/>
+	<WaitUntil watch="Appearance.Idle" target="Hero" equals="1" timeoutFrames="300"/>
+	<WaitRenderStable/> <!-- 사진 앞 렌더 안정(TAA · 노출 · 에셋) -->
+	<Screenshot file="vis_shield_cape.ppm"/>
+	<ExpectImagesDiffer first="vis_cape_shield.ppm" second="vis_shield_cape.ppm" minDiffering="0" maxDiffering="0.002"/>
+
+	<!-- ⑷ 투구(머리카락 숨김 규칙) + 1인칭 숨김 칸 -->
+	<DevCommand line="exec Hero setSlotItem Head helmet_knight"/>
+	<WaitUntil watch="Appearance.HiddenBy" target="Hero" key="Hair.Hair" is="HelmetHidesHair" timeoutFrames="10"/>
+	<WaitUntil watch="Assets.Pending" equals="0" timeoutWallSeconds="60"/>
+	<WaitUntil watch="Appearance.Idle" target="Hero" equals="1" timeoutFrames="300"/>
+	<DevCommand line="exec Hero setSlotHidden Head true"/>
+	<DevCommand line="exec Hero setSlotHidden Back true"/>
+	<WaitRenderStable/> <!-- 사진 앞 렌더 안정(TAA · 노출 · 에셋) -->
+	<Screenshot file="vis_firstperson.ppm"/>
+	<ExpectImagesDiffer first="vis_shield_cape.ppm" second="vis_firstperson.ppm" region="0.18,0.2,0.4,0.75" minDiffering="0.002"/>
+	<!-- 숨김 칸은 그리기만 끈다 — 규칙 판정은 그대로다(투구가 안 보여도 머리카락은 투구 규칙으로 숨고, 망토가 안 보여도 어깨받이는 망토 규칙으로 숨는다) -->
+	<Expect watch="Appearance.HiddenBy" target="Hero" key="Hair.Hair" is="HelmetHidesHair"/>
+	<Expect watch="Appearance.HiddenBy" target="Hero" key="Outfit.Pauldron" is="CapeHidesPauldron"/>
+	<DevCommand line="exec Hero setSlotHidden Head false"/>
+	<DevCommand line="exec Hero setSlotHidden Back false"/>
+
+	<!-- ⑸ 캐릭터 조건 — 마른 체형은 장비 없이 어깨받이가 꺼진다 -->
+	<Expect watch="Appearance.HiddenBy" target="Twin" key="Outfit.Pauldron" is="(visible)"/>
+	<DevCommand line="exec Twin setPreset CustomizeTownsfolkSlim 0"/>
+	<WaitUntil watch="Appearance.HiddenBy" target="Twin" key="Outfit.Pauldron" is="SlimHidesPauldron" timeoutFrames="10"/>
+	<WaitUntil watch="Appearance.Idle" target="Twin" equals="1" timeoutFrames="300"/>
+	<WaitRenderStable/> <!-- 사진 앞 렌더 안정(TAA · 노출 · 에셋) -->
+	<Screenshot file="vis_slim.ppm"/>
+	<ExpectImage file="vis_slim.ppm" golden="vis_slim"/>
+	<ExpectImagesDiffer first="vis_shield_cape.ppm" second="vis_slim.ppm" region="0.4,0.25,0.6,0.75" minDiffering="0.003"/>
+
+	<!-- ⑺ 세이브 · 불러오기 — 세이브 뒤 바꿔 두고 불러오면 같은 숨김 -->
+	<Store watch="Save.Written" as="writtenBefore"/>
+	<DevCommand line="game.save customize/visibility"/>
+	<WaitUntil watch="Save.Written" differsFrom="writtenBefore" timeoutWallSeconds="10"/>
+	<DevCommand line="exec Hero setSlotItem Back"/>
+	<DevCommand line="exec Hero setSlotItem OffHand"/>
+	<DevCommand line="exec Twin setPreset CustomizeTownsfolk 0"/>
+	<WaitUntil watch="Appearance.HiddenBy" target="Hero" key="Outfit.Pauldron" is="(visible)" timeoutFrames="10"/>
+	<Store watch="Save.Loaded" as="loadedBefore"/>
+	<DevCommand line="game.load customize/visibility"/>
+	<WaitUntil watch="Save.Loaded" differsFrom="loadedBefore" timeoutWallSeconds="60"/>
+	<WaitUntil watch="Assets.Pending" equals="0" timeoutWallSeconds="60"/>
+	<WaitUntil watch="Appearance.Idle" target="Hero" equals="1" timeoutFrames="300"/>
+	<WaitUntil watch="Appearance.Idle" target="Twin" equals="1" timeoutFrames="300"/>
+	<Expect watch="Appearance.HiddenBy" target="Hero" key="Outfit.Pauldron" is="CapeHidesPauldron"/>
+	<Expect watch="Appearance.HiddenBy" target="Hero" key="Hair.Hair" is="HelmetHidesHair"/>
+	<Expect watch="Appearance.HiddenBy" target="Twin" key="Outfit.Pauldron" is="SlimHidesPauldron"/>
+	<WaitRenderStable/> <!-- 사진 앞 렌더 안정(TAA · 노출 · 에셋) -->
+	<Screenshot file="vis_loaded.ppm"/>
+	<ExpectImagesDiffer first="vis_slim.ppm" second="vis_loaded.ppm" minDiffering="0" maxDiffering="0.002"/>
+	<Pass/>
+</Scenario>

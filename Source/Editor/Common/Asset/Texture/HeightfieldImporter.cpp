@@ -12,6 +12,7 @@
 #include "Core/Task/TaskManager.h"
 
 #include "Editor/Common/Asset/AssetImportStamp.h"
+#include "Editor/Common/Asset/AssetSourceLocator.h"
 #include "Editor/Common/Asset/Texture/RawImageData.h"
 #include "Editor/Common/Workspace/EditorService.h"
 
@@ -109,7 +110,7 @@ namespace sw::editor
             [[nodiscard]] static bool readSplatImage( string_view path, RawImageData& outImage )
             {
                 vector<uint8> bytes;
-                if ( FileUtil::readFile( FileUtil::toDiskPath( path ), bytes ) == false || bytes.empty() )
+                if ( AssetSourceLocator::readBytes( path, bytes ) == false )
                 {
                     SW_LOG_ERROR_ID( "HeightfieldImporter.FailedReadSplatSource", "Failed to read splat source '%#'", path );
                     return false;
@@ -337,7 +338,7 @@ namespace sw::editor
     {
         using Internal = HeightfieldImporterInternal;
         vector<uint8> bytes;
-        if ( FileUtil::readFile( FileUtil::toDiskPath( sourcePath ), bytes ) == false || bytes.empty() )
+        if ( AssetSourceLocator::readBytes( sourcePath, bytes ) == false )
             return 0;
         StringBuilder<constant::buffer::kMax64> versionText;
         uint64                                  hash = HashUtil::computeStringHash64( reinterpret_cast<const utf8*>( bytes.data() ), bytes.size(), false );
@@ -369,7 +370,7 @@ namespace sw::editor
         using Internal = HeightfieldImporterInternal;
         outData        = HeightfieldAsset{};
         vector<uint8> bytes;
-        if ( FileUtil::readFile( FileUtil::toDiskPath( sourcePath ), bytes ) == false || bytes.empty() )
+        if ( AssetSourceLocator::readBytes( sourcePath, bytes ) == false )
         {
             SW_LOG_ERROR_ID( "HeightfieldImporter.FailedReadHeightfieldSource", "Failed to read heightfield source '%#'", sourcePath );
             return false;

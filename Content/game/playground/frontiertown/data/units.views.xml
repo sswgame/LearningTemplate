@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="utf-8"?>
+<?asset guid="59476f5f8088b5bec3b4317a83b9829e"?>
+<!-- 도시 건설 미니게임(minigames/frontiertown)의 유닛 id → 모델(규칙 → 뷰 카탈로그 RuleViewCatalog). 모델은 RTS 매치 미니게임(starskirmish)의 것을 나눠 쓴다.
+     units.xml 의 모든 유닛이 한 줄씩 있어야 한다(없으면 아무것도 세우지 않는다). 칸의 뜻은 game/playground/starskirmish/data/units.views.xml 머리말에 있다. -->
+<RuleViewCatalog>
+  <View id="base" mesh="game/playground/starskirmish/models/hangar_large_a.mesh" width="3.0"/>
+  <View id="worker" mesh="game/playground/starskirmish/models/craft_miner.mesh" width="2.6"/>
+  <View id="barracks" mesh="game/playground/starskirmish/models/hangar_small_a.mesh" width="2.0"/>
+  <View id="marine" mesh="game/playground/starskirmish/models/craft_speeder_a.mesh" width="2.1"/>
+</RuleViewCatalog>

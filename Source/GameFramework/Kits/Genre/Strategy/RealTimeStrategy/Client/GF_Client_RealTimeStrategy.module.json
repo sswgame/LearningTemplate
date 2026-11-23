@@ -1,0 +1,22 @@
+{
+    "_name": "GF_Client_RealTimeStrategy",
+    "_version": "1.0.0",
+    "_kind": "Kit",
+    "_description": "실시간 전략 키트(클라이언트) — 디렉터의 월드를 유닛 · 절벽 모습으로 세우고 고르기(부대 지정) · 명령 입력을 디렉터 명령으로 바꾼다(뷰 · 입력). 규칙 · 디렉터는 GF_RealTimeStrategy",
+    "_listDependency": [
+        {
+            "_name": "GameFramework"
+        },
+        {
+            "_name": "GF_RealTimeStrategy"
+        }
+    ],
+    "_listConfiguration": [
+        "Dev",
+        "Shipping"
+    ],
+    "_listTarget": [
+        "Client"
+    ],
+    "_bEnabledByDefault": true
+}

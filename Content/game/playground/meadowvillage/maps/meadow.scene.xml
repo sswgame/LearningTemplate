@@ -77,13 +77,15 @@
 					                _attachComponent="None" />
 					<GameStateComponent _localID="6673597520240684436" _componentName="GameStateComponent" _bActive="true" />
 					<!-- _stateSettings: 하루 2 분(1 초 = 게임 12 분), 계절 넷 × 28 일, 공유 땅 40 x 40 칸(칸 1 m — 하우징 카탈로그의 칸과 같다, 밭 · 마을 · 집 부지를 덮는다) -->
-					<MeadowFarmGameModeComponent _localID="8448271495034838971" _componentName="MeadowFarmGameModeComponent"
-					                             _bActive="true"
-					                             _playerState="9"
-					                             _bAutoPlay="false"
-					                             _cropDataPath="game/playground/meadowvillage/data/crops.xml"
-					                             _crop="turnip"
-					                             _tilePrefab="game/playground/meadowvillage/prefabs/tile.prefab.xml">
+					<FarmPlotGameModeComponent _localID="8448271495034838971" _componentName="FarmPlotGameModeComponent"
+					                           _bActive="true"
+					                           _playerState="9"
+					                           _bAutoPlay="false"
+					                           _cropDataPath="game/playground/meadowvillage/data/crops.xml"
+					                           _crop="turnip"
+					                           _harvestedFlag="farm.harvested"
+					                           _fieldWidth="4"
+					                           _fieldHeight="2">
 						<_stateSettings _landWidth="40" _landHeight="40" _landCellSize="1" _landOrigin="-20,0,-20">
 							<_clock _secondsPerDay="120" _startHour="6" _daysPerSeason="28">
 								<_listSeason>
@@ -94,7 +96,11 @@
 								</_listSeason>
 							</_clock>
 						</_stateSettings>
-					</MeadowFarmGameModeComponent>
+					</FarmPlotGameModeComponent>
+					<FarmPlotViewComponent _localID="3017754986120443581" _componentName="FarmPlotViewComponent"
+					                       _bActive="true"
+					                       _fastForwardAction="FastForward"
+					                       _tilePrefab="game/playground/meadowvillage/prefabs/tile.prefab.xml" />
 					<CreatureTownGameModeComponent _localID="5244519647496677059" _componentName="CreatureTownGameModeComponent"
 					                               _bActive="true"
 					                               _playerState="9"

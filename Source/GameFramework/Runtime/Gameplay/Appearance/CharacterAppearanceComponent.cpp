@@ -47,6 +47,7 @@
 #include "GameFramework/Runtime/Gameplay/Appearance/CharacterAppearance.h"
 #include "GameFramework/Runtime/Gameplay/Appearance/CharacterBodyDynamicsComponent.h"
 #include "GameFramework/Runtime/Gameplay/Appearance/CharacterEquipmentComponent.h"
+#include "GameFramework/Runtime/Gameplay/Appearance/CustomizationSchema.h"
 
 namespace sw
 {
@@ -496,6 +497,57 @@ namespace sw
             requestAssemble(); // 시작 전이면 `onBeginPlay` 가 조립한다
     }
 
+    bool CharacterAppearanceComponent::applySliderValue( const hashed_string& parameter, float32 value )
+    {
+        CustomizationValue changed;
+        changed._parameter = parameter;
+        changed._number._x = value;
+        return applyCustomization( changed, CustomizationKind::Slider );
+    }
+
+    bool CharacterAppearanceComponent::applyColorValue( const hashed_string& parameter, const float4& color )
+    {
+        CustomizationValue changed;
+        changed._parameter = parameter;
+        changed._number    = color;
+        return applyCustomization( changed, CustomizationKind::Color );
+    }
+
+    bool CharacterAppearanceComponent::applyOptionValue( const hashed_string& parameter, const hashed_string& option )
+    {
+        CustomizationValue changed;
+        changed._parameter = parameter;
+        changed._option    = option;
+        return applyCustomization( changed, CustomizationKind::Choice );
+    }
+
+    bool CharacterAppearanceComponent::applyCustomization( const CustomizationValue& value, CustomizationKind kind )
+    {
+        const utf8* const   pOwnerName = getOwner() != nullptr ? getOwner()->getName().c_str() : "?";
+        AppearanceSelection selection;
+        captureSelection( selection );
+        if ( selection._basePresetID.empty() )
+        {
+            SW_LOG_WARNING_ID( "CharacterAppearance.NotDressed", "Appearance of '%#' is not dressed yet - the value '%#' is not changed", pOwnerName, value._parameter.c_str() );
+            return false;
+        }
+        const AppearanceDatabase*     pDatabase = findDatabase();
+        const CustomizationSchemaDef* pSchema   = pDatabase != nullptr ? pDatabase->getSchemas().findSchema( selection._schema ) : nullptr;
+        const CustomizationParamDef*  pParam    = pSchema != nullptr ? pSchema->findParameter( value._parameter ) : nullptr;
+        // 고르기 · 부착은 값이 같은 모양(항목 이름)이다 — 항목이 스키마에 있어야 한다.
+        const bool bOption  = kind == CustomizationKind::Choice;
+        const bool bKind    = pParam != nullptr && ( pParam->_kind == kind || ( bOption && pParam->_kind == CustomizationKind::Attachment ) );
+        const bool bApplied = bKind && ( bOption == false || pParam->findOption( value._option ) != nullptr ) && pSchema->applyValue( value, true, selection._customization );
+        if ( bApplied == false )
+        {
+            SW_LOG_WARNING_ID( "CharacterAppearance.ValueRejected", "Appearance of '%#': schema '%#' takes no such value for '%#' (unknown parameter, another kind or an unknown option)", pOwnerName,
+                               selection._schema.c_str(), value._parameter.c_str() );
+            return false;
+        }
+        applySelection( selection );
+        return true;
+    }
+
     void CharacterAppearanceComponent::serializeState( StateIO& io )
     {
         io.header( kStateTag, kStateVersion );
@@ -639,6 +691,15 @@ namespace sw
         pManager->executeOrDeferPostTickOnComponent( *this,
                                                      []( CharacterAppearanceComponent& appearance, GameObjectManager& manager )
         { appearance.applyVisibility( manager ); } );
+    }
+
+    void CharacterAppearanceComponent::setSlotHidden( const hashed_string& slot, bool bHidden )
+    {
+        vector<hashed_string> listSlot = _listHiddenSlot;
+        VectorUtil::removeValue( listSlot, slot );
+        if ( bHidden )
+            listSlot.push_back( slot );
+        setHiddenSlots( listSlot );
     }
 
     void CharacterAppearanceComponent::despawnParts()

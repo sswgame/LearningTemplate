@@ -43,6 +43,9 @@ namespace sw
     class SW_GF_API GameStateSnapshot
     {
     public:
+        /** @brief 판 올림 사슬의 종류 이름입니다(`FormatUpgradeDomain::SaveBytes`). 바꾸지 않는다 — 바꾸면 옛 세이브의 단계를 찾지 못한다. */
+        static constexpr const utf8* kFormatKind = "GameStateSnapshot";
+
         /** @brief 엔진 컴포넌트(지형)와 정적으로 등록된 프레임워크 컴포넌트를 올립니다. */
         GameStateSnapshot();
         ~GameStateSnapshot();
@@ -64,19 +67,6 @@ namespace sw
             type._pRestore = &GameStateSnapshot::restoreComponentStates<TComponent>;
             _listStatefulType.push_back( type );
             addCodec( TComponent::StaticType()->_name.c_str(), &TComponent::StaticType, &ComponentStateStore::writeComponent<TComponent>, &ComponentStateStore::restoreComponent<TComponent> );
-        }
-        /**
-         * @brief 상태 저장 전에 세운 런타임 오브젝트를 걷을 컴포넌트 타입 하나를 올립니다(`despawnViews()` 를 부른다).
-         * @details 세운 것은 상태에서 파생된 결과일 뿐이라, 스냅샷에 실으면 복원된 것이 다시 세운 것과 겹친다.
-         *          걷어 두면(삭제 대기는 스냅샷이 건너뛴다) 다시 만든 컴포넌트가 시작하면서 세우고, 남은 컴포넌트는 다음 틱에 다시 세운다.
-         *          걷기는 모든 타입의 상태를 실은 뒤에 돈다.
-         */
-        template <typename TComponent>
-        void registerViewOwner()
-        {
-            StatefulComponentType type;
-            type._pDespawn = &GameStateSnapshot::despawnComponentViews<TComponent>;
-            _listStatefulType.push_back( type );
         }
         /** @brief 디렉터(`GameModeComponent` 파생) 하나를 올립니다. 상태를 싣고 돌려주며, 저장하기 전에 세운 것을 걷습니다. */
         template <typename TDirector>
@@ -119,7 +109,12 @@ namespace sw
         [[nodiscard]] expected<void, SnapshotRestoreFailure> readEnvelope( SerializePurpose purpose, const TypeInfo* pStateType, void* pStateInstance, const void* pInBuffer,
                                                                            uint32 size );
         /**
-         * @brief 봉투의 머리만 읽어 찍을 때 활성 씬의 리소스 id 를 돌려줍니다(씬 없이 찍었으면 빈 글). 머리가 없거나 판이 다르거나 잘렸으면 없음입니다(까닭은 알린다).
+         * @brief 옛 판 봉투 @p inoutBytes 를 이 빌드의 판까지 제자리에서 올립니다(`SW_SAVE_FORMAT_UPGRADE`) — 슬롯에서 읽은 바이트를 풀기 전에 한 번 부른다. 이 판이면 할 일이 없다.
+         * @return 빠진 단계 · 단계 실패면 오류를 남기고 false 입니다. 머리가 없거나 새 판인 바이트는 true 다(읽기가 까닭을 남기고 거절한다).
+         */
+        [[nodiscard]] static bool upgradeEnvelope( vector<uint8>& inoutBytes );
+        /**
+         * @brief 봉투의 머리만 읽어 찍을 때 활성 씬의 지금 리소스 id 를 돌려줍니다(씬 없이 찍었으면 빈 글). 머리가 없거나 판이 다르거나 잘렸거나 그 씬이 없으면 없음입니다(까닭은 알린다).
          * @details 섹션은 풀지 않는다 — 불러오기가 그 씬을 먼저 열지 정하는 자리다(언리얼 게임이 세이브의 맵 이름을 보고 `OpenLevel` 하는 것과 같다).
          */
         [[nodiscard]] static optional<string> readSceneID( const void* pInBuffer, uint32 size );

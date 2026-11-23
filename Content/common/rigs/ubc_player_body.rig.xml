@@ -1,5 +1,5 @@
 <?asset guid="da4c4d9ba9049f1730c2c0edc61b4520"?>
-<!-- Shooter3D 플레이어 몸(Quaternius UBC). 보폭 워핑 뒤 발 디딤이 발을 땅(물리 광선, 제 몸 바디는 거른다)에 올리고, 시선은 등뼈 · 목 · 머리가 나눠 카메라 앞 10 m 를 본다.
+<!-- 사격장 플레이어 몸(Quaternius UBC). 보폭 워핑 뒤 발 디딤이 발을 땅(물리 광선, 제 몸 바디는 거른다)에 올리고, 시선은 등뼈 · 목 · 머리가 나눠 카메라 앞 10 m 를 본다.
      LookSource 는 ShooterPlayerComponent 가 몸을 세울 때 bindObject 로 플레이어 오브젝트(1인칭 카메라가 주 장면 컴포넌트)를 건다 — 이름이 같은 다른 오브젝트를 찾지 않게 명시로 건다.
      UBC 뼈의 로컬 축을 가정하지 않으려고 조준 축은 모델 공간(+Z 앞, aim_axis_in_model)으로 적는다.
      두 손 무기(weapons.xml twoHanded)는 슬롯 TwoHandHold 가 켠다: 상체를 오른쪽으로 돌려 왼어깨를 내밀고(TwoHandTorso), 오른손을 가슴 앞 견착 자리(spine_03 기준)에 총열이 앞(+Z)을 보게 두면(RightHandHold),
@@ -8,7 +8,7 @@
      1인칭(슬롯 FirstPersonHands)은 두 손이 카메라 자식인 시점 총(ViewWeapon)의 Grip · SupportHand 를 잡는다. 시점 총은 카메라 앞 0.42 m 라 소총 SupportHand 가
      서 있는 몸의 왼어깨에서 팔 길이(0.55 m)보다 0.17 m 멀다 — ViewTorso 가 상체를 숙이고(20 도) 돌려(30 도) 왼어깨를 총 쪽으로 낸다(언리얼 True First Person 의
      1인칭 몸 보정 자리). 머리를 숨겨 1인칭에서는 돌린 상체가 거의 보이지 않는다. 시점 총을 당기면 총이 화면 아래로 빠져 그 길은 버렸다.
-     값은 bodyviews 의 Shooter3D.HandReachError(≤ 0.03 m)와 아래 보기 사진으로 맞췄다. -->
+     값은 bodyviews 의 Shooter.HandReachError(≤ 0.03 m)와 아래 보기 사진으로 맞췄다. -->
 <RigAsset>
 	<targets>
 		<item name="LookTarget" object="LookSource" translation="0,0,10" />

@@ -75,8 +75,10 @@ namespace sw
          * @brief 폰을 조종하는 게임의 입력입니다 — 의도 하나와 이 입력 틱의 근접 맞음 주장을 한 형식으로 써서 `sendInput` 으로 보냅니다.
          * @details 바이트를 게임이 직접 짓지 않으므로 서버의 `ReplicationServer::popIntent` 와 형식이 어긋날 수 없습니다. 주장의 `_frame` 은 입력 틱이다 — 서버 프레임은 서버만 안다.
          *          쓰지 못하거나 주장이 `NetClientServerMessage::kMaxClaimsPerIntent` 를 넘으면 알리고 false 입니다.
+         * @param pawnEntityID 이 의도를 낸 폰의 엔티티 id 입니다(폰이 하나인 게임은 0). 버튼 비트는 폰 스키마의 차례라, 빙의가 바뀌는 사이(탈것에 타고 내림)의 의도를
+         *        서버가 다른 폰의 버튼으로 읽지 않게 한다 — 언리얼이 확인되지 않은 폰(`AcknowledgedPawn`)의 이동을 받지 않는 자리다.
          */
-        [[nodiscard]] bool sendIntent( uint32 tick, const ControlIntent& intent, vector_reference<const MeleeHitClaim> listClaim );
+        [[nodiscard]] bool sendIntent( uint32 tick, const ControlIntent& intent, vector_reference<const MeleeHitClaim> listClaim, uint32 pawnEntityID = 0 );
 
         /**
          * @brief 렌더 시각의 엔티티를 앞뒤 스냅샷의 상태와 그 사이 비율(0~1)로 돌려줍니다. 앞 스냅샷에만 있으면 그것 하나만 돌려주고 @p pOutTo 도 같은 것을 가리킵니다.

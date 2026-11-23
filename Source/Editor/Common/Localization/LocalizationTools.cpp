@@ -22,6 +22,7 @@
 
 #include "Engine/Config/EngineDefaultAssets.h"
 #include "Engine/Config/GameConfig.h"
+#include "Engine/Content/AssetGUID.h"
 #include "Engine/Content/AssetPaths.h"
 #include "Engine/Dialogue/DialogueGraphAsset.h"
 #include "Engine/Foundation/EngineDefines.h"
@@ -49,7 +50,7 @@ namespace sw
             /**
              * @brief 리소스 id(파일 · 폴더) 또는 절대 경로를 디스크의 절대 경로로 바꿉니다. 둘 중 무엇인지는 글의 모양이 정한다(엄격한 절대 경로인지). 못 풀면 빈 글이다.
              * @details 예전에는 작업 폴더에 그 이름이 있는지 먼저 보고, 리소스로 찾아보고, 그래도 없으면 받은 글을 그대로 돌려줬다(작업 폴더 상대 경로로 읽혔다).
-             *          전역 id(`game/shooter3d/…`)는 활성 게임과 상관없이 그 위치다. 도구는 모든 팩을 다룬다 — 붙인 도메인도 같은 입구로 푼다.
+             *          전역 id(`game/playground/…`)는 활성 게임과 상관없이 그 위치다. 도구는 모든 팩을 다룬다 — 붙인 도메인도 같은 입구로 푼다.
              */
             static string resolveAbsolutePath( string_view path )
             {
@@ -582,7 +583,7 @@ namespace sw
         outResult._report    = gatherer.mergeInto( gatherTable, listOtherTable );
         const string newText = gatherTable.saveToXMLText();
         string       diskText;
-        const bool   bSameOnDisk = FileUtil::readOptionalTextFile( FileUtil::toDiskPath( outResult._gatherTablePath ), diskText ) == OptionalFileRead::Read && diskText == newText;
+        const bool   bSameOnDisk = FileUtil::readOptionalTextFile( FileUtil::toDiskPath( outResult._gatherTablePath ), diskText ) == OptionalFileRead::Read && diskText == AssetGUIDHeader::carryOver( diskText, newText ); // 머리는 글 수집의 것이 아니다
         if ( bSameOnDisk == false )
         {
             if ( bWrite )

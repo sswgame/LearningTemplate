@@ -18,7 +18,7 @@ namespace sw
     /**
      * @brief @p TComponent 들을 적은 순서로 단 오브젝트를 스폰하는 풀을 만듭니다. 컴포넌트가 없으면 빈 오브젝트입니다.
      * @code
-     *     PrefabPool pool = PrefabPoolComponentSpawner<MeshComponent, SkirmishUnitComponent>::makePool( 4 );
+     *     PrefabPool pool = PrefabPoolComponentSpawner<MeshComponent, RTSUnitViewComponent>::makePool( 4 );
      * @endcode
      */
     template <typename... TComponent>

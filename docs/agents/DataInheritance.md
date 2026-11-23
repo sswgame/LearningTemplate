@@ -98,7 +98,7 @@
 
 입력은 기능 여럿을 게임마다 골라 얹어야 해 부모 사슬이 아니라 레이어 쌓기다. 게임은 `gamesettings.xml` 의 `<inputMap path="…"/>` 줄로 기본 맵 → 공통 파일 → 게임 차이를 쌓는다(읽는 차례: 기본 맵 → 키트 맵(id 순) → 나머지 줄). 차이 파일은 `<action>`(새 액션) · `<override>`(바인딩을 통째로) · `<remove>` 를 적는다. 키트는 그 기능 `.cpp` 에 `SW_INPUT_MAP_EXTENSION( 이름, "id", "경로" )` 한 줄.
 
-- 맵 전체 값(시간 · 거리 · 기본 레이어)은 기본 맵에만 적는다. 예외 `virtualCursor`(`common/input/virtualcursor.input.xml`, 묶음에 한 번).
+- 맵 전체 값(시간 · 거리 · 기본 레이어)은 기본 맵에만 적는다. 예외 `virtualCursor`(`common/input/virtualcursor.input.xml`, 묶음에 한 번). 미니게임 하나만 쓰는 가상 커서는 그 미니게임의 레이어에 적는다(`<layer virtualCursor>`).
 - 레이어는 한 파일이 정의하고, 공통 파일은 자기 레이어를 하나 갖는다(공통 파일이 게임 키를 막지 않게).
 - `<override>` 는 `layer` 를 적지 않으면 덮는 액션의 레이어에 남는다. 한 액션은 묶음에서 한 번만 덮거나 지운다.
 - 같은 레이어 · 발화 규칙 · 입력의 두 액션, 없는 액션을 가리킨 차이, 깨진 묶음은 오류로 게임을 띄우지 않는다(`InputMap::loadBundle` — 게임 시작 · 쿠킹 · `InputMapBundleTest` · 패널 다시 읽기 강제).

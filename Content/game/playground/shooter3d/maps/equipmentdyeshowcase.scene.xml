@@ -1,0 +1,50 @@
+<?asset guid="ca549587d37240d78c54a552f9ad29e0"?>
+<Scene formatVersion="3" name="EquipmentDyeShowcase">
+	<!-- 장비 염색 쇼케이스(시나리오 showcase/equipmentdye) — KnightA · KnightB 는 같은 마을 사람 프리셋에 장비 컴포넌트(장비 칸 + 가방)를 단다. 시나리오가 개발 명령(equipment.*)으로
+	     같은 투구(helmet_knight_tinted)의 인스턴스를 가방에 넣고 염색하고 바꿔 낀다. 장비 칸이 프리셋의 장비 구성을 덮으므로 처음에는 손에 아무것도 없다.
+	     애니메이터가 없다(바인드 포즈). 16:9 창에서 카메라(0,1.1,-5.5, fovY 0.9)가 x = -1 · 1 을 가로 0.39 · 0.61 에, 머리(1.6 ~ 1.9 m)를 세로 0.3 ~ 0.4 에 놓는다. -->
+	<SceneSettings _bStreaming="false" _unloadMargin="0" _maxCellLoadsPerFrame="0" _addToWorldBudgetMicroseconds="0">
+		<_cellGrid _cellSize="0" _loadingRadius="0" />
+	</SceneSettings>
+	<entities>
+		<entity id="1" name="Floor">
+			<GameObject _schemaVersion="0" _name="Floor" _bActive="true">
+				<_listComponent>
+					<MeshComponent _localID="163493842152903304" _componentName="MeshComponent" _bActive="true" _localPosition="0,0,0" _localRotation="0,0,0" _localScale="12,1,12" _attachOwner="None" _attachOwnerID="0" _attachComponent="None" _meshID="Plane" _materialPath="game/playground/shooter3d/materials/floor.material" _boundsRadius="0.866" _gpuSpinSeed="0" _bVisible="true" />
+				</_listComponent>
+			</GameObject>
+		</entity>
+		<entity id="2" name="Sun">
+			<GameObject _schemaVersion="0" _name="Sun" _bActive="true">
+				<_listComponent>
+					<DirectionalLightComponent _localID="51927904365891271" _componentName="DirectionalLightComponent" _bActive="true" _localPosition="0,0,0" _localRotation="0.310517,-2.045455,0" _localScale="1,1,1" _attachOwner="None" _attachOwnerID="0" _attachComponent="None" _color="1,0.95,0.9" _intensity="1.8" _ambient="0.45" _shadowExtent="8" _shadowDistance="16" _bCastShadow="true" />
+				</_listComponent>
+			</GameObject>
+		</entity>
+		<entity id="3" name="ViewCamera">
+			<GameObject _schemaVersion="0" _name="ViewCamera" _bActive="true">
+				<_listComponent>
+					<CameraComponent _localID="17709685451340727998" _componentName="CameraComponent" _bActive="true" _localPosition="0,1.1,-5.5" _localRotation="0,0,0" _localScale="1,1,1" _attachOwner="None" _attachOwnerID="0" _attachComponent="None" _fovY="51.5662" _nearZ="0.05" _farZ="60" _orthoHeight="10" _priority="10" _role="Game" _bOrthographic="false" />
+				</_listComponent>
+			</GameObject>
+		</entity>
+		<entity id="4" name="KnightA">
+			<GameObject _schemaVersion="0" _name="KnightA" _bActive="true">
+				<_listComponent>
+					<SkeletalMeshComponent _localID="15127961318995883145" _componentName="SkeletalMeshComponent" _bActive="true" _localPosition="-1,0,0" _localRotation="0,3.1415927,0" _localScale="1,1,1" _attachOwner="None" _attachOwnerID="0" _attachComponent="None" _meshID="" _materialPath="" _boundsRadius="2" _gpuSpinSeed="0" _bVisible="true" _skeletonPath="" _updateRateDivisor="1" _bFollowParentPose="false" _visibilityBasedTickOption="AlwaysTickPose" />
+					<CharacterAppearanceComponent _localID="13827364293183997314" _componentName="CharacterAppearanceComponent" _bActive="true" _presetID="CustomizeTownsfolk" _seed="0" _bMergeParts="true" />
+					<CharacterEquipmentComponent _localID="14928403153068946980" _componentName="CharacterEquipmentComponent" _bActive="true" _bagSlotCount="8" />
+				</_listComponent>
+			</GameObject>
+		</entity>
+		<entity id="5" name="KnightB">
+			<GameObject _schemaVersion="0" _name="KnightB" _bActive="true">
+				<_listComponent>
+					<SkeletalMeshComponent _localID="15127961318995883145" _componentName="SkeletalMeshComponent" _bActive="true" _localPosition="1,0,0" _localRotation="0,3.1415927,0" _localScale="1,1,1" _attachOwner="None" _attachOwnerID="0" _attachComponent="None" _meshID="" _materialPath="" _boundsRadius="2" _gpuSpinSeed="0" _bVisible="true" _skeletonPath="" _updateRateDivisor="1" _bFollowParentPose="false" _visibilityBasedTickOption="AlwaysTickPose" />
+					<CharacterAppearanceComponent _localID="13827364293183997314" _componentName="CharacterAppearanceComponent" _bActive="true" _presetID="CustomizeTownsfolk" _seed="0" _bMergeParts="false" />
+					<CharacterEquipmentComponent _localID="14928403153068946980" _componentName="CharacterEquipmentComponent" _bActive="true" _bagSlotCount="8" />
+				</_listComponent>
+			</GameObject>
+		</entity>
+	</entities>
+</Scene>

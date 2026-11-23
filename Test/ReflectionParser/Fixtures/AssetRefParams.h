@@ -6,8 +6,10 @@
 // EXPECT-ASSET-FIELD: _annotated - path
 // EXPECT-ASSET-FIELD: single FixtureAsset ref
 // EXPECT-ASSET-FIELD: annotated - path
+// EXPECT-ASSET-FIELD: _dataPath - data
 // EXPECT-ASSET-FIELD: _notAPath - text
 // EXPECT-ASSET-FIELD: notAPath - text
+// EXPECT-NOT-ASSET-FIELD: _namedBySource - text
 // EXPECT-NOT-GEN: AssetRef<FixtureAsset>"
 #pragma once
 #include "Core/Container/string.h"
@@ -15,6 +17,7 @@
 
 #include "Engine/Asset/AssetRef.h"
 #include "Engine/Reflection/ReflectionMacros.h"
+#include "Engine/Serialization/Serializer/DataPath.h"
 
 namespace sw::fixture
 {
@@ -27,7 +30,7 @@ namespace sw::fixture
         static constexpr AssetTypeDef kAssetType{ "FixtureAsset", kArrAssetSuffix, 1, {}, 0, {} };
     };
 
-    /** @brief 값 하나 · 한 겹 시퀀스 · 형식 없는 경로 칸이 모두 생성 목록에 든다. */
+    /** @brief 값 하나 · 한 겹 시퀀스 · 형식 없는 경로 칸 · 데이터 경로 칸이 모두 생성 목록에 든다. 이름 출처를 선언한 이름 칸은 들지 않는다. */
     REFLECT()
     struct FixtureAssetUser
     {
@@ -40,6 +43,10 @@ namespace sw::fixture
         PROPERTY( AssetPath )
         string _annotated;
         PROPERTY()
+        DataPath _dataPath;
+        PROPERTY()
         string _notAPath;
+        PROPERTY( Meta = "NameSource=PhysicsMaterial" )
+        hashed_string _namedBySource;
     };
 } // namespace sw::fixture

@@ -5,6 +5,7 @@
 #include "Core/String/StringBuilder.h"
 #include "Core/Testing/TestFramework.h"
 
+#include "Engine/Content/AssetRegistry.h"
 #include "Engine/Reflection/ReflectValueBinding.h"
 #include "Engine/Reflection/ReflectedValue.h"
 #include "Engine/Reflection/TypeInfo.h"
@@ -546,12 +547,36 @@ SW_TEST_CASE( DataPathTest, TextHandlerTrimsAndEmptyTextClears )
     DataPath            path;
     SW_EXPECT_FALSE( path.isSet() );
     SW_EXPECT_TRUE( path == "" );
-    SW_REQUIRE_TRUE( SerializerUtil::parseTextValue( MutableValueAddress{ &path }, typeName, "  engine/shaders/toon.hlsl \t", getContext() ) );
+    SW_REQUIRE_TRUE( SerializerUtil::parseTextValue( MutableValueAddress{ &path }, typeName, "  engine/shaders/unindexed.hlsl \t", getContext() ) );
     SW_REQUIRE_TRUE( path.isSet() );
-    SW_EXPECT_EQUAL( string( "engine/shaders/toon.hlsl" ), path.get() );
-    SW_EXPECT_EQUAL( string( "engine/shaders/toon.hlsl" ), SerializerUtil::formatValueText( ValueAddress{ &path }, typeName, getContext() ) );
+    SW_EXPECT_EQUAL( string( "engine/shaders/unindexed.hlsl" ), path.get() );
+    SW_EXPECT_EQUAL( string( "engine/shaders/unindexed.hlsl" ), SerializerUtil::formatValueText( ValueAddress{ &path }, typeName, getContext() ) );
     SW_REQUIRE_TRUE( SerializerUtil::parseTextValue( MutableValueAddress{ &path }, typeName, "   ", getContext() ) );
     SW_EXPECT_FALSE( path.isSet() );
+}
+
+/** @brief [DataPathTest] 저장 꼴은 정체성이다 — GUID 글을 지금 경로로 읽고, 색인에 있는 경로 글도 GUID 로 쓴다. 색인에 없는 GUID 는 읽기 오류이고 값은 그대로다 */
+SW_TEST_CASE( DataPathTest, ReferenceIsStoredAsAGUID )
+{
+    const hashed_string           typeName( "DataPath" );
+    const AssetGUID               guid     = *AssetGUID::tryParse( "0000000000000000000000000000da7a" );
+    const expected<AssetRegistry> registry = AssetRegistry::merge( vector<AssetRegistryLayer>{
+        AssetRegistryLayer{ "one", { AssetRegistryEntry{ guid, "engine/shaders/moved/toon.hlsl" } } }
+    } );
+    SW_REQUIRE_TRUE( registry.has_value() );
+    AssetRegistry previous = AssetRegistry::install( *registry );
+
+    DataPath path;
+    SW_EXPECT_TRUE( SerializerUtil::parseTextValue( MutableValueAddress{ &path }, typeName, "guid:0000000000000000000000000000da7a", getContext() ) );
+    SW_EXPECT_TRUE( path == "engine/shaders/moved/toon.hlsl" );
+    DataPath fromPath;
+    SW_EXPECT_TRUE( SerializerUtil::parseTextValue( MutableValueAddress{ &fromPath }, typeName, "engine/shaders/moved/toon.hlsl", getContext() ) );
+    SW_EXPECT_EQUAL( string( "guid:0000000000000000000000000000da7a" ), SerializerUtil::formatValueText( ValueAddress{ &fromPath }, typeName, getContext() ) );
+    SW_EXPECT_LOG( "DataPath.ReferenceNotResolved" );
+    SW_EXPECT_FALSE( SerializerUtil::parseTextValue( MutableValueAddress{ &path }, typeName, "guid:0000000000000000000000000000dead", getContext() ) );
+    SW_EXPECT_TRUE( path == "engine/shaders/moved/toon.hlsl" );
+
+    (void)AssetRegistry::install( std::move( previous ) );
 }
 
 /** @brief [DataPathTest] 데이터 경로 칸은 세 형식(JSON · 바이너리)으로 왕복하고, 문서에 없으면 읽지 않은 칸으로 남는다 */

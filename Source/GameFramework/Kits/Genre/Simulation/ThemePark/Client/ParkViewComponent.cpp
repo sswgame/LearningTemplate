@@ -16,6 +16,7 @@
 #include "Engine/Object/GameObject/GameObjectManager.h"
 #include "Engine/Object/GameObject/GameObjectManagerResolve.inl"
 #include "Engine/Object/GameObject/Tick/TickContext.h"
+#include "Engine/Object/GameObject/WorldOrigin.h"
 #include "Engine/Object/Prefab/PrefabCache.h"
 #include "Engine/Reflection/EnumName.h"
 #include "Engine/Visual/Component/MeshComponent.h"
@@ -52,13 +53,13 @@ namespace sw
             static constexpr float32 kPathThickness     = 0.3f;
             static constexpr float32 kMinPathLength     = 0.5f; ///< 이보다 짧은 길은 깔지 않는다(m)
 
-            /** @brief 오브젝트의 메시를 위치, 회전으로 둡니다. 메시가 없으면 nullptr 입니다. */
+            /** @brief 오브젝트의 메시를 시뮬레이션 자리(절대) · 회전으로 둡니다. 메시가 없으면 nullptr 입니다. */
             static MeshComponent* placeMesh( GameObject* pObject, const float3& position, const float3& rotation )
             {
                 MeshComponent* pMesh = pObject != nullptr ? pObject->getComponent<MeshComponent>() : nullptr;
                 if ( pMesh == nullptr )
                     return nullptr;
-                pMesh->setLocalPosition( position );
+                pMesh->setLocalPosition( pObject->getManager()->getWorldOrigin().toLocal( position ) );
                 pMesh->setLocalRotation( rotation );
                 return pMesh;
             }
@@ -452,6 +453,6 @@ namespace sw
         }
         // 맨 앞 차량에 탄 시점이다. 롤까지 따라간다(루프에서 하늘이 아래로 온다).
         const CoasterTrackFrame frame = pTrain->getFrame();
-        pRig->setViewOverride( frame._position + frame._up * _rideEyeHeight, OrientationUtil::computeEulerFromForwardUp( frame._forward, frame._up ), _rideFieldOfView.radians(), _rideFarPlane );
+        pRig->setViewOverride( manager.getWorldOrigin().toLocal( frame._position + frame._up * _rideEyeHeight ), OrientationUtil::computeEulerFromForwardUp( frame._forward, frame._up ), _rideFieldOfView.radians(), _rideFarPlane );
     }
 } // namespace sw

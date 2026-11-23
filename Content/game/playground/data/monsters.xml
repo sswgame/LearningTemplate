@@ -1,9 +1,10 @@
 <?xml version="1.0" encoding="utf-8"?>
 <?asset guid="c9af8efa8d9ae611e85c423caa3f34e1"?>
 <!--
-  Playground 의 몬스터 정의(MonsterCatalog — 게임의 필수 데이터, PlaygroundGame 이 게임 서비스로 건다). 장르 키트 시연 액션 룸(maps/kitdemo_actioncombat)이 종 id 로 찾는다.
+  Playground 의 몬스터 정의(MonsterCatalog — 게임 기능 ActionCombat 가 미니게임 범위에 건다). 장르 키트 시연 액션 룸(maps/kitdemo_actioncombat) · 액션 어드벤처 미니게임(minigames/velmora)의 지역 전투가 종 id 로 찾는다.
   수치는 시연 시나리오(automation/kitdemo_actioncombat)가 기대는 값이다: 플레이어 공격 34 - 방어 4 = 30 이라 졸개(HP 50)는 두 번, 보스(HP 120)는 네 번에 쓰러진다.
   속도 0 이라 제자리에 서고(닿은 피해가 들지 않는 자리에 둔다), 쏘지 않아 탄 카탈로그가 필요 없다.
+  벨모라의 종(ember_imp · ashen_warden)의 atk 는 닿은 피해이고 단위는 4분의 1 하트다. 보상은 지역 클리어가 진행시키는 퀘스트가 준다(처치 드롭은 쓰지 않는다). 확장 팩이 층으로 종을 더한다.
 -->
 <MonsterCatalog>
 	<Monster id="demo_grunt" name="Demo Grunt" archetype="MeleePatrol">
@@ -13,5 +14,11 @@
 	<Monster id="demo_boss" name="Demo Boss" archetype="ChargerRush">
 		<Stats hp="120" maxHP="120" atk="12" def="4" speed="0" radius="0.7" invincibility="0"/>
 		<Drop exp="40" gold="20"/>
+	</Monster>
+	<Monster id="ember_imp" name="Ember Imp" archetype="MeleePatrol">
+		<Stats hp="50" maxHP="50" atk="2" def="4" speed="0" radius="0.5" invincibility="0"/>
+	</Monster>
+	<Monster id="ashen_warden" name="Ashen Warden" archetype="ChargerRush">
+		<Stats hp="120" maxHP="120" atk="4" def="4" speed="0" radius="0.7" invincibility="0"/>
 	</Monster>
 </MonsterCatalog>

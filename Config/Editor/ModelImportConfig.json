@@ -2,15 +2,15 @@
   "rules": [
     {
       "name": "StarSkirmish_KayKitSpaceBase",
-      "filter": { "includePatterns": ["*/starskirmish/models_raw/kaykit_space/**"] }
+      "filter": { "includePatterns": ["*/playground/starskirmish/models_raw/kaykit_space/**"] }
     },
     {
       "name": "StarSkirmish_KitLayoutOffset",
-      "filter": { "includePatterns": ["*/starskirmish/models_raw/**"], "excludePatterns": ["*/starskirmish/models_raw/kaykit_space/**"] },
+      "filter": { "includePatterns": ["*/playground/starskirmish/models_raw/**"], "excludePatterns": ["*/playground/starskirmish/models_raw/kaykit_space/**"] },
       "translation": [-2.0, 0.0, -1.5]
     },
     {
-      "name": "Shooter3D_KayKitDungeon",
+      "name": "Shooter_KayKitDungeon",
       "filter": { "includePatterns": ["*/shooter3d/models_raw/kaykit_dungeon/**"] },
       "importMaterials": false
     },

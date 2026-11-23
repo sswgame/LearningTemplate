@@ -61,6 +61,8 @@ namespace sw
         bool _bBlockLower{ false };
         PROPERTY()
         bool _bAlwaysOn{ false };
+        PROPERTY()
+        InputMapVirtualCursor _virtualCursor{ InputMapVirtualCursor::Off };
     };
 
     /** @brief 묶음의 차이 파일이 앞 파일의 액션을 지우는 `<remove>` 입니다. 바꾸기는 `<override>` 이고 칸은 `<action>` 과 같다(`InputMapActionParams`). */

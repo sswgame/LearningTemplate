@@ -6,8 +6,9 @@
 #   // EXPECT-GEN: <글>        파서가 성공하고 <이름>.gen.cpp 에 이 글이 있다.
 #   // EXPECT-NOT-GEN: <글>    <이름>.gen.cpp 에 이 글이 없다.
 #   // EXPECT-META: <글>       <이름>.gen.meta.cpp(개발 전용 에디터 메타데이터 단위)에 이 글이 있다.
+#   // EXPECT-NOT-ASSET-FIELD: <이름> <대상> <ref|data|path|text>  AssetReferenceFields.list 에 그 줄이 없다.
 #   // EXPECT-TYPE: <FQN>      ReflectedTypes.list 에 `<FQN>\t<모듈>` 줄이 있다.
-#   // EXPECT-ASSET-FIELD: <이름> <대상> <ref|path|text>  AssetReferenceFields.list 에 `<이름>\t<대상>\t<ref|path|text>` 줄이 있다.
+#   // EXPECT-ASSET-FIELD: <이름> <대상> <ref|data|path|text>  AssetReferenceFields.list 에 `<이름>\t<대상>\t<ref|data|path|text>` 줄이 있다.
 # 입력: TARGET_ARGS · PARSER · FIXTURE · WORK_DIR · SOURCE_ROOT · GENERATED_DIR · BUILTINS · TEMPLATES · CONFIG · TYPES_LIST_NAME · ASSET_FIELDS_LIST_NAME · GEN_CPP_SUFFIX · GEN_META_CPP_SUFFIX
 foreach(required TARGET_ARGS PARSER FIXTURE WORK_DIR SOURCE_ROOT GENERATED_DIR BUILTINS TEMPLATES CONFIG TYPES_LIST_NAME ASSET_FIELDS_LIST_NAME GEN_CPP_SUFFIX GEN_META_CPP_SUFFIX)
 	if(NOT DEFINED ${required})
@@ -25,6 +26,7 @@ set(list_expect_not_gen "")
 set(list_expect_meta "")
 set(list_expect_type "")
 set(list_expect_asset_field "")
+set(list_expect_not_asset_field "")
 file(STRINGS "${FIXTURE}" list_expect_line REGEX "^// EXPECT-")
 foreach(line IN LISTS list_expect_line)
 	string(REGEX MATCH "^// EXPECT-([A-Z-]+): (.*)$" matched "${line}")
@@ -43,6 +45,8 @@ foreach(line IN LISTS list_expect_line)
 		list(APPEND list_expect_type "${CMAKE_MATCH_2}")
 	elseif(CMAKE_MATCH_1 STREQUAL "ASSET-FIELD")
 		list(APPEND list_expect_asset_field "${CMAKE_MATCH_2}")
+	elseif(CMAKE_MATCH_1 STREQUAL "NOT-ASSET-FIELD")
+		list(APPEND list_expect_not_asset_field "${CMAKE_MATCH_2}")
 	else()
 		message(FATAL_ERROR "${FIXTURE}: unknown expectation: ${line}")
 	endif()
@@ -138,5 +142,12 @@ foreach(asset_field IN LISTS list_expect_asset_field)
 	string(FIND "${asset_fields_text}" "${asset_field_line}\n" found)
 	if(found EQUAL -1)
 		message(FATAL_ERROR "${fixture_name}: '${asset_field_line}' is not in ${ASSET_FIELDS_LIST_NAME}\n${asset_fields_text}")
+	endif()
+endforeach()
+foreach(asset_field IN LISTS list_expect_not_asset_field)
+	string(REPLACE " " "\t" asset_field_line "${asset_field}")
+	string(FIND "${asset_fields_text}" "${asset_field_line}\n" found)
+	if(NOT found EQUAL -1)
+		message(FATAL_ERROR "${fixture_name}: '${asset_field_line}' must not be in ${ASSET_FIELDS_LIST_NAME}\n${asset_fields_text}")
 	endif()
 endforeach()

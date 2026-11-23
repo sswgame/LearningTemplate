@@ -28,8 +28,8 @@ SW_TEST_CASE( ShaderBinaryLocationTest, BinFolderSitsUnderTheFirstShadersCompone
     expected.appendFormat( "engine/shaders/bin/%#", rhi );
     SW_EXPECT_EQUAL( makeDX12BinDirectory( "engine/shaders/sub/x.hlsl" ), string( expected.view() ) );
     expected.clear();
-    expected.appendFormat( "game/shooter3d/shaders/bin/%#", rhi );
-    SW_EXPECT_EQUAL( makeDX12BinDirectory( "game/shooter3d/shaders/x.hlsl" ), string( expected.view() ) );
+    expected.appendFormat( "game/playground/shaders/bin/%#", rhi );
+    SW_EXPECT_EQUAL( makeDX12BinDirectory( "game/playground/shaders/x.hlsl" ), string( expected.view() ) );
     expected.clear();
     expected.appendFormat( "mounted/myshaders/shaders/bin/%#", rhi );
     SW_EXPECT_EQUAL( makeDX12BinDirectory( "mounted/myshaders/shaders/x.hlsl" ), string( expected.view() ) ); // `myshaders` 는 shaders 칸이 아니다
@@ -46,8 +46,8 @@ SW_TEST_CASE( ShaderBinaryLocationTest, IDWithoutADomainShadersFolderHasNoLocati
 SW_TEST_CASE( ShaderBinaryLocationTest, DomainFolderMatchesTheSourceRule )
 {
     // 쿠킹 판정(도메인마다)과 쿠커 출력(소스마다)이 같은 자리를 본다.
-    const ShaderBinaryLocation domain = ShaderBinaryLocation::makeForDomain( "game/shooter3d", ShaderTargetFormat::DXIL_D3D12 );
-    SW_EXPECT_EQUAL( domain._binDirectory, makeDX12BinDirectory( "game/shooter3d/shaders/x.hlsl" ) );
+    const ShaderBinaryLocation domain = ShaderBinaryLocation::makeForDomain( "game/playground", ShaderTargetFormat::DXIL_D3D12 );
+    SW_EXPECT_EQUAL( domain._binDirectory, makeDX12BinDirectory( "game/playground/shaders/x.hlsl" ) );
 }
 
 /**

@@ -1,14 +1,15 @@
 """
 온라인 로컬 실행 — 전용 서버와 게임 클라이언트를 두 프로세스로 띄워 TLS 서비스 연결 · 공지(로그인 전) · 로그인 · 라이브 이벤트 · 우편함 호출 · 매칭 배정 · 순위표 제출과 조회를 끝까지 돌린다(온라인 조사 단계 1, K4).
 
-  py -3 -m Scripts online-local run                                   # 기본: Shooter3D, 메모리 저장소
+  py -3 -m Scripts online-local run                                   # 기본: Playground, 메모리 저장소
   py -3 -m Scripts online-local run --server-config <서버 설정 경로>   # 저장소 · 캐시 · 키트 · 제공자를 그 설정이 고른다(sqlite · postgres · resp 도 같은 길)
   py -3 -m Scripts online-local check <서버 로그> <클라이언트 로그>     # 이미 있는 두 로그만 판정한다
 
-설정은 코드가 만들지 않고 파일을 그대로 쓴다(`Config/Server/Online/<게임>.json` 과 옆 `.online.json`). 저장 키트(`GF_Server_SQLStore` · `GF_Server_CacheStore`)는 Shooter3D 매니페스트가 켠다(`_listModuleOverride`).
-`Config/Server/Online/Shooter3D.external.json` 이 Postgres · RESP · 영수증 · 푸시를 모두 고른 견본이다 - 끝점과 환경 변수의 값은 운영자가 준다. 없으면 서버가 까닭을 남기고 기동하지 못한다.
-매칭은 혼자 서는 모드(`arena_solo`)라 줄을 서면 바로 이 서버(`_publicAddress` 로 디렉터리에 등록한 게임 서버)로 배정된다. 순위표는 `arena_kills` 에 처치 수를 내고 상위 목록을 받는다.
-판정: 클라이언트 로그에 공지 · 로그인 · 라이브 이벤트 · 우편 목록 · 매칭 배정 · 점수 제출 · 상위 목록(1 항목) 줄이 있고, 두 로그에 허용 밖 `[Error]` · `[Warning]` 가 없고, 서버가 종료 코드 0 으로 끝난다.
+설정은 코드가 만들지 않고 파일을 그대로 쓴다(`Config/Server/Online/<게임>.json` 과 옆 `.online.json`). 저장 키트(`GF_Server_SQLStore` · `GF_Server_CacheStore`)는 Playground 매니페스트가 켠다(`_listModuleOverride`).
+`Config/Server/Online/Playground.external.json` 이 Postgres · RESP · 영수증 · 푸시를 모두 고른 견본이다 - 끝점과 환경 변수의 값은 운영자가 준다. 없으면 서버가 까닭을 남기고 기동하지 못한다.
+매칭은 허브에서 매치형 미니게임(`shooter3d_match`)으로 들어가 선다 - 혼자 서는 모드(`arena_solo`)라 줄을 서면 바로 이 서버(`_publicAddress` 로 디렉터리에 등록한 게임 서버)로 배정되고 매치에 들어간다.
+나오면 결과의 처치 수가 순위표 `arena_kills` 에 가고 상위 목록을 받는다.
+판정: 클라이언트 로그에 공지 · 로그인 · 라이브 이벤트 · 우편 목록 · 매칭 배정 · 매치 진입 · 결과 보고 · 점수 제출 · 상위 목록(1 항목) 줄이 있고, 두 로그에 허용 밖 `[Error]` · `[Warning]` 가 없고, 서버가 종료 코드 0 으로 끝난다.
 허용 줄: 개발 티켓 키 경고(기본 설정은 게임 접속 티켓을 쓰지 않아 주 키를 두지 않는다).
 """
 
@@ -25,9 +26,9 @@ from common.exit_code import ExitCode
 from common.paths import get_project_root
 from common.process_group import CheckResult, ProcessGroup, problem_lines, read_log, report
 
-_DEFAULT_CONFIG = "Config/Server/Online/Shooter3D.json"
+_DEFAULT_CONFIG = "Config/Server/Online/Playground.json"
 _PRESET = "Ninja-Debug"  # build/<프리셋>/Bin 의 Server · App 을 쓴다
-_GAME = "Shooter3D"
+_GAME = "Playground"
 _CLIENT_DELAY_SECONDS = 8.0  # 클라이언트를 띄운 뒤 명령을 보낼 때까지
 _TIMEOUT_SECONDS = 60.0  # 서버 기동 · 응답을 기다리는 최대 초
 _LISTENING = re.compile(r"Online services listening on port")
@@ -36,6 +37,8 @@ _SERVICE_STATUS = re.compile(r"online service status: \d+ announcements")
 _LIVE_EVENTS = re.compile(r"online live events: \d+ events")
 _MAIL_LIST = re.compile(r"online mail list: \d+ mails")
 _MATCH_FOUND = re.compile(r"online match found")
+_MATCH_ENTERED = re.compile(r"Minigame 'shooter3d_match' is entered")
+_MATCH_REPORTED = re.compile(r"match \d+ reported: arena_kills = 5")
 _SCORE_SUBMITTED = re.compile(r"online score submitted")
 _TOP_SCORES = re.compile(r"online top scores: 1 entries")
 _ALLOWED_PROBLEM = re.compile(r"no ticketKeySecretEnvironment")
@@ -54,6 +57,10 @@ def check_logs(server_text: str, client_text: str) -> CheckResult:
         result.problems.append("the client log has no mail list line - the mailbox kit call never finished")
     if _MATCH_FOUND.search(client_text) is None:
         result.problems.append("the client log has no match found line - the matchmaking kit did not assign the solo arena match")
+    if _MATCH_ENTERED.search(client_text) is None:
+        result.problems.append("the client log has no line that the match map was entered - the assigned match minigame never started")
+    if _MATCH_REPORTED.search(client_text) is None:
+        result.problems.append("the client log has no match report line - the finished match did not hand its score over")
     if _SCORE_SUBMITTED.search(client_text) is None:
         result.problems.append("the client log has no score submitted line - the leaderboard kit did not take the score")
     if _TOP_SCORES.search(client_text) is None:
@@ -79,19 +86,21 @@ def _run(argument: argparse.Namespace) -> int:
         try:
             client.send("online.connect")
             time.sleep(2.0)  # Hello 앞의 요청은 세션이 모았다가 보내지만, 연결 실패를 로그인 실패와 가르기 위해 잠깐 둔다
-            client.send("shooter.online.servicestatus")  # 로그인 전에 되는 호출이다
+            client.send("playground.online.servicestatus")  # 로그인 전에 되는 호출이다
             client.wait_for(_SERVICE_STATUS, _TIMEOUT_SECONDS)
-            client.send("shooter.online.login")
+            client.send("playground.online.login")
             if client.wait_for(_LOGGED_IN, _TIMEOUT_SECONDS):
-                client.send("shooter.online.liveevents")
+                client.send("playground.online.liveevents")
                 client.wait_for(_LIVE_EVENTS, _TIMEOUT_SECONDS)
-                client.send("shooter.online.listmail")
+                client.send("playground.online.listmail")
                 client.wait_for(_MAIL_LIST, _TIMEOUT_SECONDS)
-                client.send("shooter.online.match")
+                client.send("minigame.enter shooter3d_match")
                 client.wait_for(_MATCH_FOUND, _TIMEOUT_SECONDS)
-                client.send("shooter.online.submitkills 5")
+                client.wait_for(_MATCH_ENTERED, _TIMEOUT_SECONDS)
+                client.send("minigame.leave down kills=5")  # 판 끝 — 점수는 매치 결과로 순위표에 간다
+                client.wait_for(_MATCH_REPORTED, _TIMEOUT_SECONDS)
                 if client.wait_for(_SCORE_SUBMITTED, _TIMEOUT_SECONDS):
-                    client.send("shooter.online.topkills")
+                    client.send("playground.online.topkills")
                     client.wait_for(_TOP_SCORES, _TIMEOUT_SECONDS)
             time.sleep(1.0)  # 늦게 나는 경고도 잡는다
         except OSError:

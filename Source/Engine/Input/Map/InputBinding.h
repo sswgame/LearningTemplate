@@ -33,11 +33,12 @@ namespace sw
     };
 
     /**
-     * @brief 입력 맵이 켜는 패드 가상 커서입니다(`<InputMap virtualCursor="RightStick">`, 적지 않으면 끔).
+     * @brief 입력 맵이 켜는 패드 가상 커서입니다(`<InputMap virtualCursor="RightStick">` 는 맵 전체, `<layer virtualCursor="LeftStick">` 은 그 레이어가 발화하는 동안, 적지 않으면 끔).
      * @details 명령형 게임(RTS · 도시 건설)이 패드만으로 커서를 쓰게 한다. 맵을 들고 있는 `InputManager` 가 매 프레임 이 값대로 켜고 끈다 —
      *          게임 코드가 켜고 끄지 않으므로 서비스가 묶이는 시점 · 오브젝트 시작 순서에 기대지 않는다.
      *          가상 커서는 그 스틱과 패드 A · B 를 마우스 이동 · 왼쪽 · 오른쪽 버튼으로 바꾸므로, 맵이 같은 스틱 · 버튼을 액션에 따로 묶으면
-     *          한 입력이 두 입력이 된다. 그래서 읽기가 그런 바인딩을 오류로 거절한다(`loadFromAsset`).
+     *          한 입력이 두 입력이 된다. 그래서 읽기가 그런 바인딩을 오류로 거절한다(`loadFromAsset`). 레이어에 적은 커서는 그 레이어와 함께 발화하는 바인딩만 본다 —
+     *          허브 게임 하나에서 명령형 미니게임만 커서를 켠다(유니티 가상 마우스가 UI 모드에서만 도는 자리).
      */
     ENUM()
     enum class InputMapVirtualCursor : uint8
@@ -214,7 +215,8 @@ namespace sw
     {
         hashed_string          _name;
         int32                  _priority;
-        uint32                 _sourceIndex; /**< 이 레이어를 정의한 묶음 파일의 번호입니다(`InputMap::getSourceAssetPath`). 패널 저장이 원래 파일로 돌려보낸다. */
+        InputMapVirtualCursor  _virtualCursor; ///< 이 레이어가 발화하는 동안 켜는 가상 커서(`InputMap::getVirtualCursorStick`)
+        uint32                 _sourceIndex;   /**< 이 레이어를 정의한 묶음 파일의 번호입니다(`InputMap::getSourceAssetPath`). 패널 저장이 원래 파일로 돌려보낸다. */
         uint8                  _bEnabled    : 1;
         uint8                  _bBlockLower : 1; /**< 켜져 있으면 우선순위가 낮거나 스택 아래에 있는 레이어를 비활성화합니다. */
         uint8                  _bAlwaysOn   : 1; /**< 스택이나 enableOnlyLayer 에 영향받지 않고 항상 활성입니다. */
@@ -223,6 +225,7 @@ namespace sw
         LayerDef()
             : _name{}
             , _priority{ 0 }
+            , _virtualCursor{ InputMapVirtualCursor::Off }
             , _sourceIndex{ 0 }
             , _bEnabled{ SW_TRUE }
             , _bBlockLower{ SW_FALSE }

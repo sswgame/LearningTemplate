@@ -268,6 +268,11 @@ namespace sw
         return connectTo( _transport.get(), OnlineClientSecurity::plaintextLoopback(), NetAddress::makeLoopback( _localServer->getListenPort() ) );
     }
 
+    const string& OnlineSession::getHubServerID() const
+    {
+        return _settings._onlineHubServerID;
+    }
+
     void OnlineSession::disconnect()
     {
         _client.shutdown();

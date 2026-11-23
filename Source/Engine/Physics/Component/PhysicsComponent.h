@@ -45,6 +45,32 @@ namespace sw
         Count
     };
 
+    /**
+     * @brief 바깥(코드 · 부모)이 바꾼 트랜스폼의 몫입니다(`PhysicsComponent::consumeTransformChange`). 바꾸지 않은 몫은 시뮬레이션의 것을 잇는다.
+     * @details 그린 자리 · 회전은 두 스텝 사이를 보간한 값이라, 회전만 쓴 코드의 트랜스폼에서 자리까지 바디로 옮기면 걸은 · 날아간 만큼이 되돌아간다(반대도 같다).
+     *          "바뀌었다" 하나만 돌려주면 받는 쪽이 몫을 가리지 않고 통째로 옮길 수 있어 몫마다 답한다.
+     */
+    struct PhysicsTransformChange
+    {
+        uint8 _bAny{ SW_FALSE };           ///< 무엇이든(배율 포함) 바뀌었다
+        uint8 _bPlanePosition{ SW_FALSE }; ///< 자리 X · Y
+        uint8 _bDepth{ SW_FALSE };         ///< 자리 Z
+        uint8 _bTilt{ SW_FALSE };          ///< 회전 X · Y
+        uint8 _bPlaneAngle{ SW_FALSE };    ///< 회전 Z
+
+        /** @brief 순간이동처럼 모두 바깥의 것입니다. */
+        static PhysicsTransformChange makeWhole() { return PhysicsTransformChange{ SW_TRUE, SW_TRUE, SW_TRUE, SW_TRUE, SW_TRUE }; }
+
+        bool hasChanged() const { return _bAny == SW_TRUE; }
+        bool hasPosition() const { return _bPlanePosition == SW_TRUE || _bDepth == SW_TRUE; }
+        bool hasRotation() const { return _bTilt == SW_TRUE || _bPlaneAngle == SW_TRUE; }
+        bool hasPlanePosition() const { return _bPlanePosition == SW_TRUE; }
+        bool hasPlaneAngle() const { return _bPlaneAngle == SW_TRUE; }
+    };
+} // namespace sw
+
+namespace sw
+{
     REFLECT( Abstract, Category = "Physics", DisplayName = "Physics Component", Tooltip = "Base of rigid body, joint and character components", Meta = "Icon=Physics, IconColor=Physics" )
     class SW_API PhysicsComponent : public SceneComponent
     {
@@ -138,19 +164,14 @@ namespace sw
             return bRebuild;
         }
         /**
-         * @brief 마지막으로 맞춘 뒤 월드 트랜스폼이 바뀌었는지(칸의 변경 번호, `getWorldTransformVersion`) 보고 지금 번호로 맞춥니다.
-         * @details 바뀌지 않았으면 월드 행렬을 풀지 않는다 — 정적 · 잠든 바디 대부분이 이 비교 하나로 끝난다. 자기 쓰기는 `markTransformSynced` 로
-         *          맞춰 두므로 바깥(코드 · 부모)이 옮긴 것만 참이다.
+         * @brief 마지막으로 맞춘 뒤 바깥이 바꾼 트랜스폼의 몫을 보고(칸의 변경 번호, `getWorldTransformVersion`) 지금 값으로 맞춥니다.
+         * @details 번호가 같으면 로컬 값도 월드 행렬도 보지 않는다 — 정적 · 잠든 바디 대부분이 이 비교 하나로 끝난다. 자기 쓰기는 `markTransformSynced` 로
+         *          맞춰 두므로 바깥(코드 · 부모)이 옮긴 것만 답한다. 몫은 맞출 때 적어 둔 로컬 값과의 값 비교다(적은 값을 그대로 다시 읽으므로 허용치가 없다).
+         *          부모가 있으면(붙거나 떨어졌어도) 월드가 바뀐 까닭을 로컬 값으로 가를 수 없어 모두 바깥의 것이다.
          */
-        bool consumeTransformChange()
-        {
-            const uint32 version    = getWorldTransformVersion();
-            const bool   bChanged   = version != _syncedTransformVersion;
-            _syncedTransformVersion = version;
-            return bChanged;
-        }
+        [[nodiscard]] PhysicsTransformChange consumeTransformChange();
         /** @brief 이 컴포넌트가 트랜스폼에 쓴 뒤 부릅니다 — 자기 쓰기를 다음 프레임에 바깥 이동으로 보지 않게. */
-        void markTransformSynced() { _syncedTransformVersion = getWorldTransformVersion(); }
+        void markTransformSynced();
         /**
          * @brief 백엔드 셰이프를 지은 월드 배율과 @p worldScale 이 다른지입니다(축마다 상대 허용치 — 회전한 행렬을 풀 때의 반올림은 같다고 본다).
          * @details 셰이프는 지을 때 배율을 굽는다. 배율은 호출 순서(세터 · 재생성 요청)가 아니라 값으로 다룬다 — 물리 프레임 시작 훅이 마지막으로 읽은
@@ -200,10 +221,13 @@ namespace sw
         ScenePhysics*         _pScenePhysics;
         uint32                _physicsIndex;           ///< `ScenePhysics` 의 단계 목록 자리. 없으면 `kNotRegistered`
         uint32                _syncedTransformVersion; ///< 마지막으로 맞춘 월드 변경 번호(`consumeTransformChange`). 처음 0 — 칸의 번호는 받을 때 1 이상이라 첫 비교는 "바뀜"
+        float3                _syncedLocalPosition;    ///< 마지막으로 맞춘 때의 로컬 자리(`consumeTransformChange` 가 바깥이 바꾼 몫을 가른다)
+        float3                _syncedLocalRotation;    ///< 마지막으로 맞춘 때의 로컬 회전
         float3                _shapeScale;             ///< 백엔드 셰이프를 지은 월드 배율(`isShapeScaleStale`). 바디 · 캐릭터가 없으면 뜻이 없다
         PhysicsComponentPhase _phase;
         bool                  _bRebuildPending;  ///< 게임 스레드에서만 읽고 쓴다(속성 변경 → 다음 물리 프레임)
         bool                  _bStreamingHeld;   ///< 물리 서비스만 쓴다(`ScenePhysics::updateStreamingHolds`, 게임 스레드 — 단계 훅보다 앞)
+        bool                  _bSyncedParented;  ///< 마지막으로 맞춘 때 부모가 있었다
         bool                  _bBodyCreated;     ///< 등록 뒤 백엔드 객체를 한 번이라도 만들었다(`markBodyCreated` — 첫 바디만 나타남이다)
         atomic<bool>          _bTeleportPending; ///< 틱 중 다른 워커가 세울 수 있어 원자값이다
         SlotHandle            _spatialEntry;     ///< 씬 공간 색인 항목(3D 캐릭터 · 강체만, 등록 ~ 해제)

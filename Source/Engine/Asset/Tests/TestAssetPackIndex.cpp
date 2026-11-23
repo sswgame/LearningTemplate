@@ -13,6 +13,7 @@ SW_TEST_CASE( AssetPackIndexTest, TextIsSortedByGUIDAndReadsBack )
     AssetPackIndex  index;
     index._listEntry.push_back( AssetPackIndexEntry{ high, "prefabs/b.prefab.xml" } );
     index._listEntry.push_back( AssetPackIndexEntry{ low, "textures_raw/a.png" } );
+    index._listRedirect.push_back( AssetIdentityRedirect{ AssetGUID::create(), low } );
     const expected<string> text = index.makeText();
     SW_REQUIRE_TRUE( text.has_value() );
     SW_EXPECT_TRUE( text->find( "00000000000000000000000000000001" ) < text->find( "ff000000000000000000000000000000" ) ); // 같은 입력은 같은 바이트
@@ -23,6 +24,9 @@ SW_TEST_CASE( AssetPackIndexTest, TextIsSortedByGUIDAndReadsBack )
     SW_EXPECT_TRUE( read->_listEntry[0]._guid == low );
     SW_EXPECT_EQUAL( string( "textures_raw/a.png" ), read->_listEntry[0]._path );
     SW_EXPECT_EQUAL( string( "prefabs/b.prefab.xml" ), read->_listEntry[1]._path );
+    SW_REQUIRE_EQUAL( size_t{ 1 }, read->_listRedirect.size() ); // 정체성 대체 줄도 색인이 나른다
+    SW_EXPECT_TRUE( read->_listRedirect[0]._from == index._listRedirect[0]._from );
+    SW_EXPECT_TRUE( read->_listRedirect[0]._to == low );
 }
 
 SW_TEST_CASE( AssetPackIndexTest, RefusesRepeatedLinesAndOtherShapes )

@@ -87,6 +87,9 @@ namespace sw
         string _onlineServerAddress; ///< 온라인 서비스 서버 `주소:포트`(`OnlineSession::connect`). 적지 않으면 온라인을 쓰지 않는 게임이다. 개발 구성은 `-gv_onlineServerAddress` 가 덮어쓴다
 
         PROPERTY()
+        string _onlineHubServerID; ///< 매치를 마친 클라이언트가 돌아올 허브 서버의 접속 티켓 이름(서버 조립 `gameConnect` 의 `_serverName`). 접속한 허브가 없는 게임은 적지 않는다
+
+        PROPERTY()
         string _onlineTrustFile; ///< 온라인 서버 인증서를 믿을 CA 번들 PEM(프로젝트 루트 기준). 비면 개발 구성만 개발 인증서를 못 박아 믿고 배포 구성은 연결 오류다
 
         PROPERTY()

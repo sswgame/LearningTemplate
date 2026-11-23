@@ -1,0 +1,151 @@
+<?asset guid="b4aad35143683c01659085eec0970d79"?>
+<Scene formatVersion="3" name="VelmoraVale">
+	<SceneSettings _bStreaming="false" _unloadMargin="0" _maxCellLoadsPerFrame="0" _addToWorldBudgetMicroseconds="0">
+		<_cellGrid _cellSize="0" _loadingRadius="0" />
+	</SceneSettings>
+	<entities>
+		<!-- 화면 카메라 — 디렉터가 답하는 초점(플레이어)을 비스듬히 위에서 따라간다(FollowCameraComponent). -->
+		<entity id="1" name="GameCamera">
+			<GameObject _schemaVersion="0" _name="GameCamera" _bActive="true">
+				<_listComponent>
+					<CameraComponent _localID="17709685451340727998" _componentName="CameraComponent"
+					                 _bActive="true"
+					                 _localPosition="0,14,-10"
+					                 _localRotation="0.9505468,0,0"
+					                 _localScale="1,1,1"
+					                 _attachOwner="None"
+					                 _attachOwnerID="0"
+					                 _attachComponent="None"
+					                 _fovY="40.107045"
+					                 _nearZ="0.1"
+					                 _farZ="120"
+					                 _orthoHeight="10"
+					                 _priority="0"
+					                 _role="Game"
+					                 _bOrthographic="false" />
+					<FollowCameraComponent _localID="15357652970512560881" _componentName="FollowCameraComponent"
+					                      _bActive="true"
+					                      _gameMode="10"
+					                      _offset="0,14,-10"
+					                      _minFarPlane="120" />
+				</_listComponent>
+			</GameObject>
+		</entity>
+		<entity id="2" name="Sun">
+			<GameObject _schemaVersion="0" _name="Sun" _bActive="true">
+				<_listComponent>
+					<DirectionalLightComponent _localID="51927904365891271" _componentName="DirectionalLightComponent"
+					                           _bActive="true"
+					                           _localPosition="0,0,0"
+					                           _localRotation="0.448254,-2.121679,0"
+					                           _localScale="1,1,1"
+					                           _attachOwner="None"
+					                           _attachOwnerID="0"
+					                           _attachComponent="None"
+					                           _color="1,0.92,0.8"
+					                           _intensity="1.4"
+					                           _ambient="0.35"
+					                           _shadowExtent="30"
+					                           _shadowDistance="60"
+					                           _bCastShadow="true" />
+				</_listComponent>
+			</GameObject>
+		</entity>
+		<!-- 지역마다 땅 한 장 — 경계는 data/regions.xml 과 같다(난롯마을 x -10..10, 고사리숲 10..30, 재의 요새 30..50, z -8..8). -->
+		<entity id="3" name="Ground_Hearth">
+			<GameObject _schemaVersion="0" _name="Ground_Hearth" _bActive="true">
+				<_listComponent>
+					<MeshComponent _localID="163493842152903304" _componentName="MeshComponent"
+					               _bActive="true"
+					               _localPosition="0,0,0"
+					               _localRotation="0,0,0"
+					               _localScale="20,1,16"
+					               _attachOwner="None"
+					               _attachOwnerID="0"
+					               _attachComponent="None"
+					               _meshID="Plane"
+					               _materialPath="game/playground/velmora/materials/hearth.material"
+					               _boundsRadius="0.866"
+					               _gpuSpinSeed="0"
+					               _bVisible="true" />
+				</_listComponent>
+			</GameObject>
+		</entity>
+		<entity id="4" name="Ground_Fernwood">
+			<GameObject _schemaVersion="0" _name="Ground_Fernwood" _bActive="true">
+				<_listComponent>
+					<MeshComponent _localID="163493842152903304" _componentName="MeshComponent"
+					               _bActive="true"
+					               _localPosition="20,0,0"
+					               _localRotation="0,0,0"
+					               _localScale="20,1,16"
+					               _attachOwner="None"
+					               _attachOwnerID="0"
+					               _attachComponent="None"
+					               _meshID="Plane"
+					               _materialPath="game/playground/velmora/materials/fernwood.material"
+					               _boundsRadius="0.866"
+					               _gpuSpinSeed="0"
+					               _bVisible="true" />
+				</_listComponent>
+			</GameObject>
+		</entity>
+		<entity id="5" name="Ground_Cinderhold">
+			<GameObject _schemaVersion="0" _name="Ground_Cinderhold" _bActive="true">
+				<_listComponent>
+					<MeshComponent _localID="163493842152903304" _componentName="MeshComponent"
+					               _bActive="true"
+					               _localPosition="40,0,0"
+					               _localRotation="0,0,0"
+					               _localScale="20,1,16"
+					               _attachOwner="None"
+					               _attachOwnerID="0"
+					               _attachComponent="None"
+					               _meshID="Plane"
+					               _materialPath="game/playground/velmora/materials/cinderhold.material"
+					               _boundsRadius="0.866"
+					               _gpuSpinSeed="0"
+					               _bVisible="true" />
+				</_listComponent>
+			</GameObject>
+		</entity>
+		<!-- 플레이어 상태 — 조종자 오브젝트가 지갑 · 퀘스트 일지를 쥔다(디렉터의 _playerState). -->
+		<entity id="11" name="PlayerController">
+			<GameObject _schemaVersion="0" _name="PlayerController" _bActive="true">
+				<_listComponent>
+					<PlayerControllerComponent _localID="4811566279812111972" _playerIndex="0" />
+					<WalletComponent _localID="5369660221649138481" _componentName="WalletComponent" _bActive="true" />
+					<QuestLogComponent _localID="8809746743272749268" _componentName="QuestLogComponent" _bActive="true" />
+				</_listComponent>
+			</GameObject>
+		</entity>
+		<!-- 디렉터 — 월드 상태(깃발)를 맨 앞에 두고 지역 디렉터 → 지역 전투 → 입력 · 그리기(클라이언트) 순서로 붙인다. 새 판은 난롯마을의 일어설 자리(0, 0)에서 시작한다. -->
+		<entity id="10" name="Valley">
+			<GameObject _schemaVersion="0" _name="Valley" _bActive="true">
+				<_listComponent>
+					<GameStateComponent _localID="6673597520240684436" _componentName="GameStateComponent" _bActive="true" />
+					<AdventureGameModeComponent _localID="1556202676166432652" _componentName="AdventureGameModeComponent"
+					                            _bActive="true"
+					                            _playerState="11"
+					                            _startRegion="hearth"
+					                            _flagPrefix="velmora"
+					                            _moveSpeed="6"
+					                            _useRadius="1.5">
+						<_vitalsSettings _maxHeartCount="10" _startHeartCount="3" />
+					</AdventureGameModeComponent>
+					<VelmoraEncounterGameModeComponent _localID="4127093356280147511" _componentName="VelmoraEncounterGameModeComponent"
+					                                   _bActive="true"
+					                                   _bossDelaySeconds="1" />
+					<AdventureAvatarComponent _localID="2290617745103849062" _componentName="AdventureAvatarComponent"
+					                          _bActive="true"
+					                          _moveAction="Move"
+					                          _useAction="Velmora.Use" />
+					<VelmoraEncounterViewComponent _localID="5883340216079361947" _componentName="VelmoraEncounterViewComponent"
+					                               _bActive="true"
+					                               _attackAction="Velmora.Attack"
+					                               _dashAction="Velmora.Dash" />
+				</_listComponent>
+			</GameObject>
+		</entity>
+	</entities>
+</Scene>

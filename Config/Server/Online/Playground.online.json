@@ -1,0 +1,88 @@
+{
+    "_storeName": "local",
+    "_cacheName": "local",
+    "_auditRetention": { "_expireAfterDays": 365, "_maxScanPerSweep": 20000, "_maxDeletePerSweep": 5000 },
+    "_ledgerRetention": { "_expireAfterDays": 400, "_maxScanPerSweep": 5000, "_maxDeletePerSweep": 500 },
+    "_closedReportTTL": { "_expireAfterDays": 90, "_maxScanPerSweep": 2000, "_maxDeletePerSweep": 500 },
+    "_mailSentTTL": { "_expireAfterDays": 90, "_maxScanPerSweep": 20000, "_maxDeletePerSweep": 5000 },
+    "_scheduleRunTTL": { "_expireAfterDays": 30, "_maxScanPerSweep": 20000, "_maxDeletePerSweep": 5000 },
+    "_ttlSweepMinuteOfDay": 300,
+    "_ttlBackfillRolloutHours": 24,
+    "_maxPendingCallsPerService": 1024,
+    "_listTrustedProxy": [],
+    "_seatReservationSeconds": 30,
+    "_publicAddress": "127.0.0.1",
+    "_listKit": [
+        {
+            "_name": "account",
+            "_settings": {
+                "_expiredSessionTTL": { "_expireAfterDays": 30, "_maxScanPerSweep": 20000, "_maxDeletePerSweep": 5000 },
+                "_maxConcurrentPasswordHashes": 2,
+                "_maxQueuedPasswordHashes": 64,
+                "_sharedAttemptLimit": 60,
+                "_sharedAttemptWindowSeconds": 60,
+                "_loginNonceLifetimeSeconds": 300,
+                "_bLightPasswordHash": true,
+                "_listSeedTestAccount": [
+                    {
+                        "_loginName": "playground_dev",
+                        "_password": "playground_dev_pw"
+                    }
+                ]
+            }
+        },
+        {
+            "_name": "chat",
+            "_settings": {
+                "_historyTTL": { "_expireAfterDays": 30, "_maxScanPerSweep": 5000, "_maxDeletePerSweep": 20000 },
+                "_bannedWordsFile": "Config/Server/chat_banned_words.txt",
+                "_ignoredCharactersFile": "Config/Server/chat_ignored_characters.txt",
+                "_spam": { "_refillIntervalMs": 1000, "_repeatWindowMs": 10000, "_burstCount": 5, "_maxRepeatCount": 2, "_maxTrackedAccount": 65536 }
+            }
+        },
+        {
+            "_name": "directory",
+            "_settings": {
+                "_endedAnnouncementTTL": { "_expireAfterDays": 30, "_maxScanPerSweep": 1000, "_maxDeletePerSweep": 500 }
+            }
+        },
+        {
+            "_name": "economy",
+            "_settings": {
+                "_currencyCatalog": "game/playground/data/playground.currencies.xml",
+                "_offerCatalog": "game/playground/data/playground.offers.xml",
+                "_refundRecovery": "Debt"
+            }
+        },
+        {
+            "_name": "leaderboard",
+            "_settings": {
+                "_pastScoreTTL": { "_expireAfterDays": 30, "_maxScanPerSweep": 20000, "_maxDeletePerSweep": 5000 },
+                "_seasonResultTTL": { "_expireAfterDays": 365, "_maxScanPerSweep": 5000, "_maxDeletePerSweep": 1000 },
+                "_catalog": "game/playground/data/playground.leaderboards.xml"
+            }
+        },
+        {
+            "_name": "liveops",
+            "_settings": {
+                "_pushClaimTTL": { "_expireAfterDays": 30, "_maxScanPerSweep": 1000, "_maxDeletePerSweep": 500 }
+            }
+        },
+        {
+            "_name": "mailbox",
+            "_settings": {
+                "_claimedRetentionDays": 30,
+                "_endedCampaignTTL": { "_expireAfterDays": 30, "_maxScanPerSweep": 20000, "_maxDeletePerSweep": 5000 }
+            }
+        },
+        {
+            "_name": "matchmaking",
+            "_settings": {
+                "_catalog": "game/playground/data/playground.matchmodes.xml",
+                "_reconnectGraceMs": 60000,
+                "_cancelConfirmWaitMs": 3000,
+                "_bGameServer": true
+            }
+        }
+    ]
+}

@@ -85,17 +85,20 @@
 					                       _fastTimeScale="8" />
 					<CityViewComponent _localID="7240113358861402917" _componentName="CityViewComponent"
 					                   _bActive="true"
-					                   _tilePrefab="game/playground/frontiertown/prefabs/tile.prefab.xml"
-					                   _fastForwardAction="FastForward"
-					                   _buildingColor="0.85,0.72,0.45,1"
-					                   _roadColor="0.45,0.42,0.38,1" />
+					                   _roadPrefab="game/playground/frontiertown/prefabs/tile.prefab.xml"
+					                   _blockBuildingPrefab="game/playground/frontiertown/prefabs/building.prefab.xml"
+					                   _roadColor="0.45,0.42,0.38,1"
+					                   _houseBlockColor="0.85,0.72,0.45,1"
+					                   _decorationBlockColor="0.85,0.72,0.45,1" />
+					<CityFastForwardInputComponent _localID="9109597637461480568" _componentName="CityFastForwardInputComponent"
+					                               _bActive="true"
+					                               _fastForwardAction="FastForward" />
 					<FrontierSkirmishGameModeComponent _localID="2994829835520867295" _componentName="FrontierSkirmishGameModeComponent"
 					                                   _bActive="true"
 					                                   _playerState="4"
 					                                   _bAutoPlay="false"
 					                                   _unitDataPath="game/playground/frontiertown/data/units.xml"
 					                                   _startMinerals="500"
-					                                   _unitPrefab="game/playground/frontiertown/prefabs/tile.prefab.xml"
 					                                   _workerUnit="worker"
 					                                   _soldierUnit="marine"
 					                                   _barracksUnit="barracks"
@@ -104,6 +107,12 @@
 					                                   _workerStart="2.5,0,2.5"
 					                                   _patrolA="2.5,0,6.5"
 					                                   _patrolB="10.5,0,6.5" />
+					<RTSBattlefieldViewComponent _localID="12821698634257031784" _componentName="RTSBattlefieldViewComponent"
+					                             _bActive="true"
+					                             _unitModelPath="game/playground/frontiertown/data/units.views.xml"
+					                             _unitPrefab="game/playground/starskirmish/prefabs/unit.prefab.xml">
+						<_unitPool _maxIdleCount="8" />
+					</RTSBattlefieldViewComponent>
 				</_listComponent>
 			</GameObject>
 		</entity>

@@ -12,9 +12,11 @@
 #include "Core/String/StringUtil.h"
 #include "Core/Subsystem/Subsystem.h"
 
+#include "Engine/Asset/AssetDatabase.h"
 #include "Engine/Automation/Scenario/AutomationScenario.h"
 #include "Engine/Automation/Scenario/AutomationScratch.h"
 #include "Engine/Content/AssetPaths.h"
+#include "Engine/Content/AssetRegistry.h"
 #include "Engine/Foundation/EngineServices.h"
 
 namespace sw
@@ -34,6 +36,49 @@ namespace sw
              * @details 프로젝트 설정 창(`Config/Game` · `Config/Engine`)의 저장은 허락하지 않는다 — 시나리오가 그 파일을 고치려면 사본으로 돌려야 한다.
              */
             static constexpr string_view kAllowedConfigWrites[] = { "Config/Editor" };
+
+            /** @brief 사본 파일 하나의 정체성입니다. */
+            struct CopiedIdentity
+            {
+                AssetGUID _guid;
+                string    _assetID;
+            };
+
+            /**
+             * @brief 원본 파일들의 GUID 마다 사본의 GUID 를 정해 @p outMapGUID(원본 → 사본) · @p outListIdentity(사본 → 사본 id)에 담습니다.
+             * @details 자기 정체성(머리 · `.meta`)은 사본 폴더 id 를 이름으로, 임포트 산출물은 사본 원본의 GUID 와 산출물 이름으로 — 사본을 디스크에서 읽을 때(`readIdentity`)와 같은 규칙이다.
+             */
+            static void collectIdentities( const AssetIdentityRules& rules, string_view sourceDir, const vector<string>& listSourceFile, const AutomationScratchFolder& folder,
+                                           unordered_map<AssetGUID, AssetGUID>& outMapGUID, vector<CopiedIdentity>& outListIdentity )
+            {
+                for ( const string& sourceFile : listSourceFile )
+                {
+                    string relative;
+                    if ( FileUtil::makeRelativePath( sourceDir, sourceFile, relative ) == false )
+                        continue; // 복사가 그 파일에서 오류로 멈춘다
+                    const string              sourceID = FileUtil::joinPath( folder._sourceID, FileUtil::normalizeSeparators( relative ) );
+                    const optional<AssetGUID> guid     = rules.readIdentity( sourceFile, sourceID );
+                    if ( guid.has_value() == false )
+                        continue;
+                    AssetGUID                   copy = AssetGUID::fromName( *guid, folder._scratchID );
+                    vector<AssetImportedSource> listSource;
+                    if ( rules.isUnderDerivedFolder( sourceID ) )
+                        rules.collectImportedSources( sourceID, listSource );
+                    for ( const AssetImportedSource& source : listSource )
+                    {
+                        // 산출물이면 사본 원본의 GUID 에서 난다. 원본이 사본 폴더 밖이면 산출물 사본은 새 원본 없는 파일이라 자기 이름을 갖는다.
+                        string                    sourceRelative;
+                        const bool                bCopiedSource = FileUtil::tryMakePathUnderRoot( folder._sourceID, source._sourceID, sourceRelative );
+                        const optional<AssetGUID> owner         = bCopiedSource ? rules.readIdentity( FileUtil::joinPath( sourceDir, sourceRelative ), source._sourceID ) : optional<AssetGUID>{};
+                        if ( owner.has_value() == false || AssetGUID::fromName( *owner, source._outputName ) != *guid )
+                            continue;
+                        copy = AssetGUID::fromName( AssetGUID::fromName( *owner, folder._scratchID ), source._outputName );
+                        break;
+                    }
+                    outMapGUID.insert_or_assign( *guid, copy );
+                    outListIdentity.push_back( CopiedIdentity{ copy, FileUtil::joinPath( folder._scratchID, FileUtil::normalizeSeparators( relative ) ) } );
+                }
+            }
 
             /** @brief `FileUtil::WriteFilter` — 리소스 루트 아래 쓰기(사본은 실행 뿌리 아래라 루트 밖이다)와 프로젝트의 `docs/` · `Config/`(허용 목록 밖) 쓰기를 거절합니다. 그 밖(Saved · 임시 폴더)은 시나리오의 몫이라 막지 않는다. */
             static expected<void> allowWrite( string_view path )
@@ -118,6 +163,12 @@ namespace sw
         {
             return unexpected( Error{ ErrorKind::ExternalFailure, "could not list the scratch source folder", sourceDir } );
         }
+        AssetIdentityRules identityRules;
+        if ( identityRules.load( ProcessRoots::get()._project.str() ) == false )
+            return unexpected( Error{ ErrorKind::InvalidArgument, "the asset identity rules could not be read", AssetIdentityRules::kConfigFile } );
+        unordered_map<AssetGUID, AssetGUID>                        mapGUID;
+        vector<AutomationScratchWorkspaceInternal::CopiedIdentity> listIdentity;
+        AutomationScratchWorkspaceInternal::collectIdentities( identityRules, sourceDir, listSourceFile, folder, mapGUID, listIdentity );
         for ( const string& sourceFile : listSourceFile )
         {
             string relative;
@@ -135,7 +186,7 @@ namespace sw
             {
                 return unexpected( Error{ ErrorKind::ExternalFailure, "could not read a scratch source file", sourceFile } );
             }
-            // NUL 이 든 파일은 바이너리다 — 그대로 복사한다. 글 파일은 원본 id 를 사본 id 로 바꾼다(에셋은 경로 하나로 가리키므로 id 를 바꾸면 사본끼리 이어진다).
+            // NUL 이 든 파일은 바이너리다 — 그대로 복사한다. 글 파일은 원본 id 를 사본 id 로, 원본 GUID 를 사본 GUID 로 바꾼다(경로로도 GUID 로도 사본끼리 이어진다).
             const bool bBinary = std::find( bytes.begin(), bytes.end(), uint8{ 0 } ) != bytes.end();
             if ( bBinary )
             {
@@ -147,15 +198,43 @@ namespace sw
             }
             const string_view sourceText( reinterpret_cast<const utf8*>( bytes.data() ), bytes.size() );
             // 픽스처가 시나리오의 별칭(`as=` — `scratch/tilesetedit/…`)으로 서로를 가리키면 그 id 는 사본 id 그대로라 바꿀 것이 없다(tilesetedit · uiaudit).
-            const string text = AutomationScratch::rebaseText( sourceText, folder._sourceID, folder._scratchID );
+            const string text = rebaseIdentities( AutomationScratch::rebaseText( sourceText, folder._sourceID, folder._scratchID ), mapGUID );
             if ( FileUtil::writeTextFile( FileUtil::toDiskPath( targetFile ), text ) == false )
             {
                 return unexpected( Error{ ErrorKind::ExternalFailure, "could not write a scratch file", targetFile } );
             }
         }
+        for ( const AutomationScratchWorkspaceInternal::CopiedIdentity& identity : listIdentity )
+            AssetRegistry::record( identity._guid, identity._assetID ); // 사본끼리의 GUID 참조가 파일 감시를 기다리지 않고 풀린다
         if ( AutomationScratchCounter* const pCounter = engine::findSubsystem<AutomationScratchCounter>() )
             (void)pCounter->_prepareCount.fetch_add( 1 );
         return {};
+    }
+
+    string AutomationScratchWorkspace::rebaseIdentities( string_view text, const unordered_map<AssetGUID, AssetGUID>& mapGUID )
+    {
+        const auto isWordCharacter = []( utf8 character )
+        { return ( 'a' <= character && character <= 'z' ) || ( 'A' <= character && character <= 'Z' ) || ( '0' <= character && character <= '9' ); };
+        string result;
+        result.reserve( text.size() );
+        size_t cursor = 0;
+        while ( cursor < text.size() )
+        {
+            size_t end = cursor;
+            while ( end < text.size() && isWordCharacter( text[end] ) )
+                ++end;
+            const string_view         word = text.substr( cursor, end - cursor );
+            const optional<AssetGUID> guid = AssetGUID::tryParse( word );
+            const auto                copy = guid.has_value() ? mapGUID.find( *guid ) : mapGUID.end();
+            if ( copy != mapGUID.end() )
+                result.append( copy->second.toString() );
+            else
+                result.append( word );
+            if ( end < text.size() )
+                result.push_back( text[end] );
+            cursor = end + 1;
+        }
+        return result;
     }
 
     FileUtil::WriteFilterRegistration AutomationScratchWorkspace::acquireWriteFilter()

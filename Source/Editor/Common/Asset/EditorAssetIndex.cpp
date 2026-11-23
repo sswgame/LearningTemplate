@@ -479,7 +479,7 @@ namespace sw::editor
     {
         const auto itPath = _data._mapGUIDToPath.find( guid );
         if ( itPath == _data._mapGUIDToPath.end() )
-            return nullopt;
+            return AssetRegistry::resolve( guid ); // 임포트 산출물은 파일에 정체성이 없다 — 줄은 런타임 색인이 원본에서 만든다
         return itPath->second.front();
     }
 
@@ -487,7 +487,7 @@ namespace sw::editor
     {
         const auto itGUID = _data._mapPathToGUID.find( FileUtil::normalizePath( assetID ).str() );
         if ( itGUID == _data._mapPathToGUID.end() )
-            return nullopt;
+            return AssetRegistry::resolveGUID( assetID ); // 임포트 산출물(위와 같다)
         return itGUID->second;
     }
 
