@@ -161,7 +161,7 @@ namespace sw
         cmd.draw( 3, 0 );
         cmd.endRenderPass();
         // 같은 패스의 RCAS 가 읽는다 — 쓰기로 선언한 중간 RT 를 패스 안에서 셰이더 읽기로 옮긴다.
-        context._pGraphPass->transition( ViewGraphResource::upscaleIntermediate(), RHITextureState::ShaderResource );
+        context._pGraphPass->transition( ViewGraphResource::upscaleIntermediate(), RenderGraphAccess::ShaderRead );
         // PSO · 슬롯을 직접 바꿨다 — 뒤의 그리기가 바인딩 캐시를 믿고 PSO 를 건너뛰지 않게 지운다.
         context.resetBindingCache();
         return true;

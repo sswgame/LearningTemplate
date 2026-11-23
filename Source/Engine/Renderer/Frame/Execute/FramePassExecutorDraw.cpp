@@ -243,7 +243,7 @@ namespace sw
             cache.markRebuilt();
             // 층은 이 패스가 깊이 쓰기로 선언했고 다시 그리는 프레임에만 등록했다(`registerViewResources`) — 복원이 읽도록 셰이더 읽기로 옮긴다.
             // 다시 그리지 않는 프레임은 지난번 다시 그린 뒤의 셰이더 읽기 그대로다(전이 없음).
-            context._pGraphPass->transition( ViewGraphResource::shadowCacheLayer(), RHITextureState::ShaderResource );
+            context._pGraphPass->transition( ViewGraphResource::shadowCacheLayer(), RenderGraphAccess::ShaderRead );
         }
         return true;
     }

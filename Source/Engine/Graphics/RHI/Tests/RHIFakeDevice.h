@@ -136,6 +136,7 @@ namespace sw::test
         vector<RHIDescriptorIndex>         _listLiveBufferIndex;                                                       /**< `isBindlessIndexLive` 가 살아 있다고 답할 버퍼 번호 */
         vector<RHIFormat>                  _listUnsupportedFormat;                                                     /**< `supportsTextureFormat` 이 거짓으로 답할 형식(나머지는 참) */
         uint8                              _bAsyncCompute{ SW_FALSE };                                                 /**< 능력 `_bAsyncCompute` 로 답할 값 */
+        uint8                              _bParallelRecording{ SW_TRUE };                                             /**< 능력 `_bParallelCommandRecording` */
         RHIFormat                          _sdrBackBufferFormatForTest{ constant::render::kBackBufferFormat };         /**< SDR 백버퍼 포맷(BGRA8 설정을 흉내 낸다) */
         RHIColorSpace                      _colorSpace{ RHIColorSpace::SRGBNonLinear };                                /**< 지금 색 공간 — `setBackBufferColorSpaceInternal` 이 바꾼다 */
         uint8                              _displayOutputSupport{ makeColorSpaceBit( RHIColorSpace::SRGBNonLinear ) }; /**< 능력 `_displayOutputSupport` 로 답할 값 */
@@ -175,7 +176,7 @@ namespace sw::test
         RHICapabilities getCapabilities() const override
         {
             RHICapabilities caps{};
-            caps._bParallelCommandRecording = SW_TRUE;
+            caps._bParallelCommandRecording = _bParallelRecording;
             caps._bWireframeFill            = SW_TRUE; // 그리지 않으므로 모든 보기 모드를 받는다
             caps._bAsyncCompute             = _bAsyncCompute;
             caps._displayOutputSupport      = _displayOutputSupport;

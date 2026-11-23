@@ -69,8 +69,8 @@ namespace sw
             void end() const
             {
                 // 컬링(t2) · 화면 공간 반사(t11)가 같은 패스 안에서 읽는다. 쓰기가 끝났음을 알린다(빠지면 DX12 · Vulkan 에서 지난 피라미드를 읽는다).
-                _context.transition( ViewGraphResource::hzb(), RHIBufferState::ShaderResource );
-                _context.transition( ViewGraphResource::occlusionTiles(), RHIBufferState::ShaderResource );
+                _context.transition( ViewGraphResource::hzb(), RenderGraphAccess::ShaderRead );
+                _context.transition( ViewGraphResource::occlusionTiles(), RenderGraphAccess::ShaderRead );
             }
         };
     } // namespace

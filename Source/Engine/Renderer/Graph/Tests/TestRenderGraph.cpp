@@ -9,7 +9,9 @@
 #include "Core/Testing/TestFramework.h"
 
 #include "Engine/Foundation/EngineServices.h"
+#include "Engine/Graphics/RHI/RHIStructuredBuffer.h"
 #include "Engine/Graphics/RHI/Tests/RHIFakeDevice.h"
+#include "Engine/Renderer/Graph/FrameBufferTable.h"
 #include "Engine/Renderer/Graph/RenderGraph.h"
 
 using namespace sw;
@@ -245,7 +247,7 @@ SW_TEST_CASE( RenderGraphTest, ParallelExecutionRecordsEachPassOnceInLevelOrder 
 
     test::FakeRHIDevice         device;
     RenderGraphExecutionContext context;
-    SW_REQUIRE_TRUE( graph.executeParallel( context, &engine::getSubsystem<TaskManager>(), &device ) );
+    SW_REQUIRE_TRUE( graph.executeParallel( context, engine::getSubsystem<TaskManager>(), device ) );
 
     SW_EXPECT_EQUAL( 1, countA.load() );
     SW_EXPECT_EQUAL( 1, countB.load() );
@@ -282,7 +284,7 @@ SW_TEST_CASE( RenderGraphTest, ParallelExecutionChainsSinglePassLevelsIntoOneLis
 
     test::FakeRHIDevice         device;
     RenderGraphExecutionContext context;
-    SW_REQUIRE_TRUE( graph.executeParallel( context, &engine::getSubsystem<TaskManager>(), &device ) );
+    SW_REQUIRE_TRUE( graph.executeParallel( context, engine::getSubsystem<TaskManager>(), device ) );
 
     for ( const atomic<int32>* pCount : { &countA, &countB, &countC, &countD, &countE } )
     {
@@ -318,7 +320,7 @@ SW_TEST_CASE( RenderGraphTest, ParallelExecutionSubmitsNothingWhenACommandListCa
     test::FakeRHIDevice device;
     device._maxCreatable = 2; // 레벨 0 의 둘은 만들고, 레벨 1 의 B 에서 실패한다
     RenderGraphExecutionContext context;
-    SW_EXPECT_FALSE( graph.executeParallel( context, &engine::getSubsystem<TaskManager>(), &device ) );
+    SW_EXPECT_FALSE( graph.executeParallel( context, engine::getSubsystem<TaskManager>(), device ) );
     SW_EXPECT_EQUAL( size_t( 0 ), device._listExecuted.size() );
     SW_EXPECT_EQUAL( 0, countA.load() );
     SW_EXPECT_EQUAL( 0, countB.load() );
@@ -346,7 +348,7 @@ SW_TEST_CASE( RenderGraphTest, ParallelExecutionRecordsInlineWhenTasksCannotBeQu
 
     test::FakeRHIDevice         device;
     RenderGraphExecutionContext context;
-    SW_REQUIRE_TRUE( graph.executeParallel( context, &stoppedTaskManager, &device ) );
+    SW_REQUIRE_TRUE( graph.executeParallel( context, stoppedTaskManager, device ) );
     SW_EXPECT_EQUAL( 1, countA.load() );
     SW_EXPECT_EQUAL( 1, countB.load() );
     SW_EXPECT_EQUAL( 1, countC.load() );
@@ -640,7 +642,7 @@ SW_TEST_CASE( RenderGraphTest, ChainedUnorderedAccessGetsUAVBarrier )
 }
 
 /**
- * @brief [RenderGraphTest] 들인 자원(`importResource`)은 처음 접근에서 시작한다 — 같은 접근으로 읽으면 전이가 없고, 다른 접근이면 그 첫 사용에서 전이 하나, 끝 접근을 내보낸다(언리얼 RegisterExternalBuffer · 추출).
+ * @brief [RenderGraphTest] 들인 버퍼(`importResource`)는 처음 접근에서 시작해 그 접근으로 끝난다 — 같은 접근으로 읽으면 전이가 없고, 다른 접근이면 첫 사용과 끝에 전이 하나씩이다(언리얼 RegisterExternalBuffer · 끝 접근).
  *        결함이면 그래프 밖 버퍼가 프레임마다 첫 사용에서 쓸데없는 전이를 받거나, 다음 사용자가 끝 상태를 모른다
  */
 SW_TEST_CASE( RenderGraphTest, ImportedResourceStartsInItsInitialAccess )
@@ -660,16 +662,153 @@ SW_TEST_CASE( RenderGraphTest, ImportedResourceStartsInItsInitialAccess )
     SW_REQUIRE_TRUE( graph.execute( context ) );
     SW_EXPECT_EQUAL( size_t{ 0 }, findBarriersFor( listBarrier, grid ).size() ); // 이미 그 접근
     const vector<RenderGraphBarrier> listArgs = findBarriersFor( listBarrier, args );
-    SW_REQUIRE_EQUAL( size_t{ 1 }, listArgs.size() );
+    SW_REQUIRE_EQUAL( size_t{ 2 }, listArgs.size() );
     SW_EXPECT_TRUE( listArgs[0]._before == RenderGraphResourceState::Read );
     SW_EXPECT_TRUE( listArgs[0]._access == RenderGraphAccess::IndirectArgs );
+    SW_EXPECT_TRUE( listArgs[1]._access == RenderGraphAccess::ShaderRead ); // 끝에 들인 접근으로 되돌린다
     SW_EXPECT_TRUE( context.findAccess( grid ) == RenderGraphAccess::ShaderRead );
-    SW_EXPECT_TRUE( context.findAccess( args ) == RenderGraphAccess::IndirectArgs );
+    SW_EXPECT_TRUE( context.findAccess( args ) == RenderGraphAccess::ShaderRead );
 
     // 다음 프레임도 들인 접근에서 다시 시작한다.
     listBarrier.clear();
     SW_REQUIRE_TRUE( graph.execute( context ) );
-    SW_EXPECT_EQUAL( size_t{ 1 }, findBarriersFor( listBarrier, args ).size() );
+    SW_EXPECT_EQUAL( size_t{ 2 }, findBarriersFor( listBarrier, args ).size() );
+}
+
+/**
+ * @brief [RenderGraphTest] 들인 텍스처의 첫 사용은 처음 접근과 같아도 전이를 요구한다 — 새로 만든 텍스처의 레이아웃은 백엔드만 안다. UAV 로 이어지는 들인 버퍼의 첫 사용은 UAV 배리어다
+ * @details 결함이면 자동 노출 기록처럼 막 만든 텍스처를 DX12 COMMON · Vulkan UNDEFINED 그대로 읽거나, 프레임 그래프가 쓴 차례 표시를 뷰 그래프의 뒤 단계가 쓰기를 기다리지 않고 읽는다
+ *          (같은 상태의 버퍼 전이는 백엔드가 건너뛴다). 변이: 텍스처도 심으면 첫 단언이, 버퍼를 심지 않으면 UAV 배리어 단언이 진다.
+ */
+SW_TEST_CASE( RenderGraphTest, ImportedTextureAlwaysTransitionsAndBufferChainsUAV )
+{
+    RenderGraph         graph;
+    const hashed_string history( "AutoExposureHistory" );
+    const hashed_string orders( "OccludedOrders" );
+    graph.importResource( history, RenderGraphViewableKind::Texture, RenderGraphAccess::ShaderRead );
+    graph.importResource( orders, RenderGraphViewableKind::Buffer, RenderGraphAccess::UnorderedAccess );
+    SW_REQUIRE_TRUE( graph.addPass( hashed_string( "Tonemap" ), { RenderGraphTextureSRV{ history }, RenderGraphBufferUAV{ orders } } ) );
+    SW_REQUIRE_TRUE( graph.compile() );
+
+    vector<RenderGraphBarrier> listBarrier;
+    collectIssuedBarriers( graph, listBarrier );
+    RenderGraphExecutionContext context;
+    SW_REQUIRE_TRUE( graph.execute( context ) );
+    SW_EXPECT_EQUAL( size_t{ 1 }, findBarriersFor( listBarrier, history ).size() );
+    const vector<RenderGraphBarrier> listOrders = findBarriersFor( listBarrier, orders );
+    SW_REQUIRE_EQUAL( size_t{ 1 }, listOrders.size() );
+    SW_EXPECT_EQUAL( uint8{ 1 }, listOrders[0]._bUAVBarrier );
+}
+
+/**
+ * @brief [RenderGraphTest] 패스 안 전이의 끝 접근이 그래프의 추적 상태가 된다 — 다음 패스는 선언 접근이 아니라 남긴 접근에서 이어지고, 끝 접근이 들인 접근과 같으면 되돌림이 없다(직렬 · 병렬 · 이어 기록 같음)
+ * @details 2 단계 가림의 뒤 단계가 HZB 를 셰이더 읽기로 남기고 화면 공간 반사가 다시 UAV 로 짓는 모양이다. 결함이면 그래프는 HZB 가 아직 UAV 라고 믿어 전이 대신 UAV 배리어만 내고,
+ *          반사의 디스패치가 셰이더 읽기 상태의 버퍼에 쓴다(DX12 검증 오류). 변이: `applyExitAccesses` 를 빼면 두 실행 모두 UAV 전이 단언이 진다.
+ */
+SW_TEST_CASE( RenderGraphTest, InPassTransitionBecomesTheTrackedAccess )
+{
+    const hashed_string hzb( "HZB" );
+    RHIStructuredBuffer buffer{};
+    buffer._buffer           = RHIBufferHandle{ 11 };
+    buffer._elementSize      = 8;
+    buffer._capacityElements = 16;
+    FrameBufferTable table;
+    table.registerBuffer( hzb, 0, buffer, RenderGraphAccess::ShaderRead );
+
+    for ( const bool bParallel : { false, true } )
+    {
+        RenderGraph graph;
+        const auto  buildAndRead = SW_DELEGATE_LAMBDA( RenderGraphPassExecuteFn, [&table, &hzb]( const RenderGraphPassContext& context )
+         {
+            RenderGraphPassContext passContext = context;
+            passContext._pResourceTable        = &table;
+            passContext.transition( RenderGraphBufferUAV{ hzb }, RenderGraphAccess::ShaderRead );
+        } );
+        SW_REQUIRE_TRUE( graph.addPass( hashed_string( "LateOcclusion" ), { RenderGraphBufferUAV{ hzb } }, buildAndRead ) );
+        SW_REQUIRE_TRUE( graph.addPass( hashed_string( "Reflection" ), { RenderGraphBufferUAV{ hzb } }, buildAndRead ) );
+        graph.importResources( table );
+        SW_REQUIRE_TRUE( graph.compile() );
+        vector<RenderGraphBarrier> listBarrier;
+        collectIssuedBarriers( graph, listBarrier );
+        RenderGraphExecutionContext context;
+        test::FakeRHIDevice         device;
+        test::FakeRHICommandList    cmd( 0 );
+        SW_REQUIRE_TRUE( bParallel ? graph.executeParallel( context, engine::getSubsystem<TaskManager>(), device ) : graph.execute( context, &cmd ) );
+        const vector<RenderGraphBarrier> listHZB = findBarriersFor( listBarrier, hzb );
+        SW_REQUIRE_EQUAL( size_t{ 2 }, listHZB.size() ); // 짓기마다 전이 하나 — 끝 접근이 등록 접근이라 되돌림이 없다
+        for ( const RenderGraphBarrier& barrier : listHZB )
+        {
+            SW_EXPECT_TRUE( barrier._access == RenderGraphAccess::UnorderedAccess );
+            SW_EXPECT_EQUAL( uint8{ 0 }, barrier._bUAVBarrier );
+        }
+        SW_EXPECT_TRUE( context.findAccess( hzb ) == RenderGraphAccess::ShaderRead );
+    }
+}
+
+/**
+ * @brief [RenderGraphTest] 마지막 레벨이 병렬이면 들인 자원의 되돌림은 따로 연 리스트로 마지막에 낸다 — 첨부 등록(`registerAttachment`)은 들이지 않아 되돌리지 않는다
+ * @details 결함이면 되돌림 전이가 앞 레벨의 닫힌 리스트에 들어가거나(기록 오류) 사라져 다음 프레임의 사용자가 다른 상태를 본다.
+ *          변이: 되돌림 리스트를 제출하지 않으면 제출 수 단언이, 첨부를 들이면 되돌림 수 단언이 진다.
+ */
+SW_TEST_CASE( RenderGraphTest, ParallelExecutionReturnsImportsAfterAParallelLevel )
+{
+    const hashed_string grid( "LightGrid" );
+    const hashed_string depth( "SceneDepth" );
+    RHIStructuredBuffer buffer{};
+    buffer._buffer           = RHIBufferHandle{ 21 };
+    buffer._elementSize      = 8;
+    buffer._capacityElements = 16;
+    FrameBufferTable table;
+    table.registerBuffer( grid, 0, buffer, RenderGraphAccess::ShaderRead );
+    table.registerAttachment( depth, RHITextureHandle{ 22 } );
+
+    atomic<int32> countA{ 0 };
+    atomic<int32> countB{ 0 };
+    RenderGraph   graph;
+    SW_REQUIRE_TRUE( graph.addPass( hashed_string( "A" ), { RenderGraphBufferUAV{ grid }, RenderGraphDepthWrite{ depth } }, makeCountingPass( countA ) ) );
+    SW_REQUIRE_TRUE( graph.addPass( hashed_string( "B" ), { RenderGraphRenderTarget{ hashed_string( "OutB" ) } }, makeCountingPass( countB ) ) );
+    graph.importResources( table );
+    SW_REQUIRE_TRUE( graph.compile() );
+    SW_REQUIRE_EQUAL( size_t{ 1 }, graph.getExecutionLevels().size() );
+    vector<RenderGraphBarrier> listBarrier;
+    collectIssuedBarriers( graph, listBarrier );
+    test::FakeRHIDevice         device;
+    RenderGraphExecutionContext context;
+    SW_REQUIRE_TRUE( graph.executeParallel( context, engine::getSubsystem<TaskManager>(), device ) );
+    SW_EXPECT_EQUAL( size_t( 3 ), device._listExecuted.size() ); // A · B · 되돌림
+    const vector<RenderGraphBarrier> listGrid = findBarriersFor( listBarrier, grid );
+    SW_REQUIRE_EQUAL( size_t{ 2 }, listGrid.size() );
+    SW_EXPECT_TRUE( listGrid[1]._access == RenderGraphAccess::ShaderRead );
+    SW_EXPECT_EQUAL( size_t{ 1 }, findBarriersFor( listBarrier, depth ).size() ); // 첨부 — 첫 쓰기만
+    for ( const test::FakeRHICommandList* pList : device._listExecuted )
+    {
+        SW_EXPECT_FALSE( pList->_bOpen );
+    }
+}
+
+/**
+ * @brief [RenderGraphTest] 병렬 기록을 못 하는 디바이스도 `executeParallel` 이 모든 패스를 리스트 하나에 이어 기록해 낸다 — 패스가 리스트 없이 돌지 않는다
+ * @details 예전에는 리스트 없는 `execute` 로 빠져 패스 몸통이 nullptr 리스트를 받고 조용히 아무것도 그리지 않았다.
+ *          변이: 리스트 없이 부르면 이름을 적은 리스트가 없어 제출 수 단언이 진다.
+ */
+SW_TEST_CASE( RenderGraphTest, ExecuteParallelWithoutParallelRecordingChainsOneList )
+{
+    atomic<int32> countA{ 0 };
+    atomic<int32> countB{ 0 };
+    atomic<int32> countC{ 0 };
+    RenderGraph   graph;
+    addLevelGraph( graph, countA, countB, countC );
+    SW_REQUIRE_TRUE( graph.compile() );
+    test::FakeRHIDevice device;
+    device._bParallelRecording = SW_FALSE;
+    RenderGraphExecutionContext context;
+    SW_REQUIRE_TRUE( graph.executeParallel( context, engine::getSubsystem<TaskManager>(), device ) );
+    SW_EXPECT_EQUAL( 1, countA.load() );
+    SW_EXPECT_EQUAL( 1, countB.load() );
+    SW_EXPECT_EQUAL( 1, countC.load() );
+    SW_REQUIRE_EQUAL( size_t( 1 ), device._listExecuted.size() );
+    SW_EXPECT_TRUE( device._listExecuted[0]->_passName == hashed_string( "B" ) );
+    SW_EXPECT_FALSE( device._listExecuted[0]->_bOpen );
 }
 
 /**

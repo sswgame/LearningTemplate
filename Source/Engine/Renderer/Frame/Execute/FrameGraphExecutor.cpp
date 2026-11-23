@@ -221,7 +221,7 @@ namespace sw
             }
             case RenderPassKind::VFXSimulation:
             {
-                // 빌보드 · 띠는 투명 패스가 렌더 입력과 간접 인자를 읽는다(그 상태는 그래프 끝에 표가 되돌린다 — `FrameBufferTable::forEachChangedAccess`).
+                // 빌보드 · 띠는 투명 패스가 렌더 입력과 간접 인자를 읽는다(그 상태는 그래프 끝에 그래프가 되돌린다 — `RenderGraph::importResources`).
                 _state._particleRenderer.getGPUSimulation().recordSimulation( graphContext, _psoManager.getEnginePSO( RenderPassKind::VFXSimulation ) );
                 break;
             }
@@ -745,13 +745,13 @@ namespace sw
     void FrameGraphExecutor::registerDepthHistoryResources( FrameBufferTable& table ) const
     {
         // 깊이 히스토리 패스가 이번 프레임에 옮기는 뷰만(`canCopyDepthHistory` — 짓기 · 복사가 같은 판정을 본다). 처음 접근: 지난 장면 깊이는 뷰 그래프가 남긴 깊이 쓰기,
-        // 히스토리는 읽는 쪽 상태(RW 텍스처) — 그래프 끝에 표가 그 상태로 되돌린다(`FrameBufferTable::forEachChangedAccess`).
+        // 히스토리는 읽는 쪽 상태(RW 텍스처) — 그래프 끝에 그 상태로 되돌린다(`RenderGraph::importResources`).
         const auto registerView = [this, &table]( const FrameViewTarget& view, uint32 slot )
         {
             if ( canCopyDepthHistory( view ) == false )
                 return;
             table.registerTexture( FrameResource::previousSceneDepth()._name, slot, view._transientPool.find( attachmentNames()._sceneDepth )._texture, RenderGraphAccess::DepthWrite );
-            table.registerTexture( FrameResource::depthHistory()._name, slot, view._depthHistory, RenderGraphAccess::UnorderedAccess );
+            table.registerTexture( FrameResource::depthHistory()._name, slot, view._depthHistory, RenderGraphAccess::UnorderedAccessRead );
         };
         registerView( _state._mainView, 0 );
         for ( uint32 extraIndex = 0; extraIndex < static_cast<uint32>( _state._listExtraView.size() ); ++extraIndex )
@@ -802,7 +802,7 @@ namespace sw
             return;
         drawSceneDepthCopy( *_pCmd, target );
         // 읽는 쪽(HZB 짓기 · GPU 입자 — UAV 읽기로 선언)의 상태로 넘겨 둔다 — 함수 머리말 참고. 이 패스가 쓰기로 선언한 자원이라 패스 안에서 옮긴다.
-        graphContext.transition( FrameResource::depthHistory(), RHITextureState::UnorderedAccess, slot );
+        graphContext.transition( FrameResource::depthHistory(), RenderGraphAccess::UnorderedAccessRead, slot );
     }
 
     void FrameGraphExecutor::drawSceneDepthCopy( IRHIPassCommandList& cmd, const FrameViewTarget& target ) const
@@ -1062,10 +1062,10 @@ namespace sw
         if ( bMainView )
             _bLatePhaseRan = bLateOcclusion ? 1u : 0u;
         // 이번 장면 깊이로 HZB 를 짓는 패스(뒤 단계 · 화면 공간 반사)가 쓰는 깊이 사본 · 피라미드 · 가림 타일 — 짓는 패스가 없는 뷰는 등록하지 않는다(그래프가 쓰지 않는 자원에 전이를 내지 않게).
-        // 처음 접근은 뷰 그래프가 심지 않는다(뷰 그래프는 들인 자원이 없다) — 이 표는 이름 → 핸들만 준다.
+        // 등록 접근은 프레임 그래프가 남긴 상태다 — 뷰 그래프가 들이고 끝에 되돌린다(`RenderGraph::importResources`).
         if ( ( bLateOcclusion || bBuildsSceneDepthHZB ) && bHZBReady )
         {
-            table.registerTexture( ViewGraphResource::depthHistory()._name, 0, view._depthHistory, RenderGraphAccess::UnorderedAccess );
+            table.registerTexture( ViewGraphResource::depthHistory()._name, 0, view._depthHistory, RenderGraphAccess::UnorderedAccessRead );
             table.registerBuffer( ViewGraphResource::hzb()._name, 0, view._hzb, RenderGraphAccess::ShaderRead );
             table.registerBuffer( ViewGraphResource::occlusionTiles()._name, 0, view._occlusionTiles, RenderGraphAccess::ShaderRead );
         }
@@ -1079,7 +1079,7 @@ namespace sw
         if ( _state._gpuScene.hasLODState( cullViewIndex ) )
             table.registerBuffer( ViewGraphResource::cullLODState()._name, 0, cullView._lodState, RenderGraphAccess::UnorderedAccess );
         table.registerBuffer( ViewGraphResource::occludedOrders()._name, 0, _occludedOrders, RenderGraphAccess::UnorderedAccess );
-        table.registerTexture( attachmentNames()._sceneDepth, 0, view._transientPool.find( attachmentNames()._sceneDepth )._texture, RenderGraphAccess::DepthWrite );
+        table.registerAttachment( attachmentNames()._sceneDepth, view._transientPool.find( attachmentNames()._sceneDepth )._texture );
     }
 
     bool FrameGraphExecutor::recordCurrentDepthHZB( const RenderGraphPassContext& graphContext, FrameViewTarget& view ) const
@@ -1095,7 +1095,7 @@ namespace sw
         // 깊이 히스토리 텍스처를 사본 자리로 다시 쓴다 — 지난 깊이는 프레임 처음 프레임 패스(입자 충돌 · 지난 HZB)가 다 읽었고, 다음 프레임 처음에 다시 채운다.
         // 장면 깊이는 셰이더 읽기, 사본은 렌더 타깃이다(레벨 콜백 · 부르는 패스가 옮겼다). 그린 뒤 사본을 짓기가 읽는 RW 텍스처로 옮긴다.
         drawSceneDepthCopy( *graphContext.getCommandList(), view );
-        graphContext.transition( ViewGraphResource::depthHistory(), RHITextureState::UnorderedAccess );
+        graphContext.transition( ViewGraphResource::depthHistory(), RenderGraphAccess::UnorderedAccessRead );
         // 이번 프레임 사각형만 읽는다(자동 렌더 배율 — 사각형 밖은 옛 깊이다).
         const TransientAttachmentPool::Attachment depth = view._transientPool.find( attachmentNames()._sceneDepth );
         return _occlusion.recordInViewPass( graphContext, *_pDevice, _psoManager.getEnginePSO( RenderPassKind::HZBBuild ), view.scaleToRect( depth, true ), view.scaleToRect( depth, false ),
@@ -1117,9 +1117,9 @@ namespace sw
 
         // 1) 이번 프레임 깊이(앞 단계가 그린 것)로 HZB 를 다시 짓는다. 못 지으면 판정 없이(발자국 0) 돌아 적힌 차례를 모두 그린다 — 빠뜨리는 것보다 더 그리는 쪽이다.
         //    장면 깊이는 이 패스가 깊이 쓰기로 선언했다 — 복사 동안만 셰이더 읽기로 옮기고 끝나면 되돌려 그래프가 아는 상태(깊이 쓰기)와 맞춘다. 뒤 단계가 돌지 않는 프레임에는 전이가 없다.
-        graphContext.transition( sceneDepth, RHITextureState::ShaderResource );
+        graphContext.transition( sceneDepth, RenderGraphAccess::ShaderRead );
         std::ignore = recordCurrentDepthHZB( graphContext, view );
-        graphContext.transition( sceneDepth, RHITextureState::RenderTarget );
+        graphContext.transition( sceneDepth, RenderGraphAccess::DepthWrite );
 
         // 2) 적힌 차례만 다시 판정한다. 개수는 되돌리지 않는다 — 앞 단계 개수 위에 InterlockedAdd 로 더해 같은 간접 인자가 둘을 함께 그린다. 정렬은 다시 돌지 않는다(투명은 더하지 않는다).
         //    컬링 인자 · 가시 목록 · LOD 상태 · 차례 표시는 레벨 콜백이 UAV 로 옮겼다(이 패스의 선언).
@@ -1148,8 +1148,8 @@ namespace sw
         cmd.dispatchThreads( _lateInstanceCount, 1, 1, FrameRendererUtil::kLinearThreadGroupSize, 1, 1 );
 
         // 3) 그리는 쪽이 읽는 상태(등록 접근)로 — 뒤 패스(G버퍼 · 포워드 불투명)가 더한 개수로 그린다. LOD 상태 · 차례 표시는 등록 접근이 UAV 라 그대로 둔다.
-        graphContext.transition( ViewGraphResource::cullArgs(), RHIBufferState::IndirectArgument );
-        graphContext.transition( ViewGraphResource::cullVisibleInstances(), RHIBufferState::ShaderResource );
+        graphContext.transition( ViewGraphResource::cullArgs(), RenderGraphAccess::IndirectArgs );
+        graphContext.transition( ViewGraphResource::cullVisibleInstances(), RenderGraphAccess::ShaderRead );
     }
 
     bool FrameGraphExecutor::shouldUpdateRealtimeProbes() const

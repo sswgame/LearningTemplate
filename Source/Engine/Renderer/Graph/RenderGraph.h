@@ -84,6 +84,18 @@ namespace sw
         return access == RenderGraphAccess::RenderTarget || access == RenderGraphAccess::DepthRead || access == RenderGraphAccess::DepthWrite;
     }
 
+    /**
+     * @struct RenderGraphAccessUtil
+     * @brief 그래프 접근 → RHI 상태 표입니다. 레벨 배리어 · 패스 안 전이 · 버퍼 보기의 되돌릴 상태가 이 표 하나를 본다.
+     */
+    struct SW_API RenderGraphAccessUtil
+    {
+        /** @brief 버퍼 RHI 상태입니다. 첨부 접근(렌더 타깃 · 깊이)은 버퍼에 없다 — 없음입니다. */
+        static optional<RHIBufferState> findBufferState( RenderGraphAccess access );
+        /** @brief 텍스처 RHI 상태입니다(깊이는 형식이 DSV · 깊이 읽기 전용을 고른다). 복사 · 간접 인자는 없음 — 복사는 `blitTexture` 가 스스로 옮긴다. */
+        static optional<RHITextureState> findTextureState( RenderGraphAccess access );
+    };
+
     /** @brief 그래프 자원의 종류입니다. 받는 쪽(레벨 콜백)이 이름을 텍스처 표와 버퍼 표 중 어디서 찾을지 정한다. 파이프라인 XML 의 `_listResource` 가 `_viewable` 로 적는다. */
     ENUM()
     enum class RenderGraphViewableKind : uint8
@@ -158,7 +170,7 @@ namespace sw
      *          Adria `RGPassContext::GetReadWriteBuffer` 자리다. 선언하지 않은 이름 · 접근은 오류를 남기고 무효 핸들(0)이라 손으로 묶을 길이 없다. 전이는 레벨 콜백이 냈다.
      *          패스 안 왕복(UAV ↔ 셰이더 읽기 — 그림자 캐시 층 · 자동 노출 · 가림 컬링 인자)은 **쓰기로 선언한 자원만** `transition` 으로 한다. 쓰기 선언은 그래프가
      *          레벨 안 독점으로 가르므로(간선) 같은 레벨의 다른 패스가 그 자원을 만지지 않는다 — 병렬 기록의 추적 상태 경합이 없다. 패스를 그래프 패스로 쪼개지 않는다
-     *          (레벨 고정 비용 ~20 µs, `RenderGraph::executeParallel`).
+     *          (레벨 고정 비용 ~20 µs, `RenderGraph::executeParallel`). 옮긴 접근은 노드에 적혀 그래프의 추적 상태가 된다 — 다음 소비자가 선언 접근이 아니라 실제 끝 접근에서 이어진다.
      */
     struct SW_API RenderGraphPassContext
     {
@@ -199,23 +211,19 @@ namespace sw
         IRHIPassCommandList* getCommandList() const;
         /** @brief 이 패스를 기록할 리스트를 싣습니다 — 그래프 실행(`recordPassBody`) · 실행기 · 테스트가 부른다. 다시 꺼내는 길은 패스 기록 면(`getCommandList`)뿐이다. */
         void setCommandList( IRHICommandList* pCmdList ) { _pCmdList = pCmdList; }
+        /** @brief 패스 안 전이의 끝 접근을 적을 자리(선언 순서, `RenderGraphNode::_listExitAccess`)를 싣습니다 — 그래프 실행(`recordPassBody`)이 부른다. */
+        void setExitAccesses( vector<RenderGraphAccess>* pListExitAccess ) { _pListExitAccess = pListExitAccess; }
         /**
-         * @brief 이 패스가 **쓰기로** 선언한 텍스처 @p handle(뷰 칸 @p slot)을 패스 안에서 @p state 로 옮깁니다 — 패스 안 왕복(UAV 로 쓰고 같은 패스가 셰이더 읽기로 읽는다).
+         * @brief 이 패스가 **쓰기로** 선언한 자원 @p handle(뷰 칸 @p slot)을 패스 안에서 접근 @p access 로 옮깁니다 — 패스 안 왕복(UAV 로 쓰고 같은 패스가 셰이더 읽기로 읽는다).
          * @details 읽기 접근 핸들로는 부를 수 없다(형식 — 읽기 선언은 그래프가 레벨 앞에서 옮긴다). 선언하지 않은 이름은 `getTexture` 와 같은 오류를 남기고 아무것도 내지 않는다.
-         *          전이는 이 패스의 리스트(`_pCmdList`)에 들어간다. 패스 기록 면(`IRHIPassCommandList`)에는 텍스처 전이가 없어 이 길 하나다.
+         *          전이는 이 패스의 리스트(`_pCmdList`)에 들어가고, 그래프는 이 접근을 자원의 끝 접근으로 이어 받는다(이름마다 하나 — 칸이 여럿이면 모든 칸을 같은 접근으로 남긴다).
+         *          패스 기록 면(`IRHIPassCommandList`)에는 전이가 없어 이 길 하나다.
          */
-        template <RenderGraphAccess kAccess>
-        void transition( RenderGraphHandle<RenderGraphViewableKind::Texture, kAccess> handle, RHITextureState state, uint32 slot = 0 ) const
+        template <RenderGraphViewableKind kViewable, RenderGraphAccess kAccess>
+        void transition( RenderGraphHandle<kViewable, kAccess> handle, RenderGraphAccess access, uint32 slot = 0 ) const
         {
             static_assert( isRenderGraphWriteAccess( kAccess ), "a pass transitions only resources it declared as written - the graph transitions read declarations" );
-            transitionTexture( handle, state, slot );
-        }
-        /** @brief 이 패스가 **쓰기로** 선언한 버퍼 @p handle(뷰 칸 @p slot)을 패스 안에서 @p state 로 옮깁니다. 규칙은 텍스처 판과 같다. */
-        template <RenderGraphAccess kAccess>
-        void transition( RenderGraphHandle<RenderGraphViewableKind::Buffer, kAccess> handle, RHIBufferState state, uint32 slot = 0 ) const
-        {
-            static_assert( isRenderGraphWriteAccess( kAccess ), "a pass transitions only resources it declared as written - the graph transitions read declarations" );
-            transitionBuffer( handle, state, slot );
+            transitionDeclared( handle, access, slot );
         }
         /**
          * @brief 이 패스가 선언한 @p handle 의 뷰 칸 @p slot 이 이번 프레임 표에 등록됐으면 true 입니다 — 오류를 남기지 않고 묻는다.
@@ -234,13 +242,13 @@ namespace sw
         uint64 findRegisteredHandle( const RenderGraphResourceAccess& access, uint32 slot ) const;
         /** @brief 선언한 접근이면 표에서 핸들을 찾습니다. 선언하지 않았거나 표에 없으면 오류를 남기고 0 입니다. */
         uint64 findDeclaredHandle( const RenderGraphResourceAccess& access, uint32 slot ) const;
-        void   transitionTexture( const RenderGraphResourceAccess& access, RHITextureState state, uint32 slot ) const;
-        void   transitionBuffer( const RenderGraphResourceAccess& access, RHIBufferState state, uint32 slot ) const;
+        void   transitionDeclared( const RenderGraphResourceAccess& declared, RenderGraphAccess target, uint32 slot ) const;
 
     private:
         /// @brief 실행기의 개발 보기(`FramePassExecutor::prepareVisualizedAttachment` — `gpu.show` 가 선언 밖 첨부를 읽는 유일한 길)만 전체 리스트에 닿는다. 패스 몸통은 닿지 않는다.
         friend class FramePassExecutor;
-        IRHICommandList* _pCmdList{ nullptr }; ///< 이 패스의 리스트(전체) — 전이 · UAV 배리어가 쓴다. 밖에는 패스 기록 면으로만 내준다
+        IRHICommandList*           _pCmdList{ nullptr };        ///< 이 패스의 리스트(전체) — 전이 · UAV 배리어가 쓴다. 밖에는 패스 기록 면으로만 내준다
+        vector<RenderGraphAccess>* _pListExitAccess{ nullptr }; ///< 선언(`_pListAccess`)마다 이 패스가 남긴 끝 접근. 이 패스를 기록하는 스레드만 쓴다
     };
 } // namespace sw
 
@@ -332,7 +340,7 @@ namespace sw
             return TrackedAccess{};
         }
 
-        /** @brief 그래프 밖에서 온 자원의 처음 접근을 적습니다(`RenderGraph::importResource` — 실행이 프레임 시작에 부른다). 전이로 세지 않습니다. */
+        /** @brief 그래프가 내지 않은 접근을 적습니다 — 들인 버퍼의 처음 접근(`RenderGraph::importResource`)과 패스 안 전이의 끝 접근. 전이로 세지 않습니다. */
         void seedAccess( hashed_string resource, RenderGraphAccess access )
         {
             const TrackedAccess tracked{ isRenderGraphWriteAccess( access ) ? RenderGraphResourceState::Write : RenderGraphResourceState::Read, access };
@@ -369,6 +377,7 @@ namespace sw
         vector<hashed_string>             _listInput;                       ///< 입력으로 읽는 자원 해시 목록(쓰기가 아닌 접근)
         vector<hashed_string>             _listOutput;                      ///< 출력으로 만드는 자원 해시 목록(쓰기 접근)
         vector<RenderGraphResourceAccess> _listAccess;                      ///< 선언한 접근 전부 — 전이는 이것에서 추론한다
+        vector<RenderGraphAccess>         _listExitAccess;                  ///< 이번 기록이 남긴 끝 접근(`_listAccess` 와 같은 번호). 패스 안 전이(`RenderGraphPassContext::transition`)가 고친다
         RenderGraphPassExecuteFn          _execute;                         ///< 컴파일된 순서대로 부르는 패스 콜백(선택)
         RHIQueueKind                      _queue{ RHIQueueKind::Graphics }; ///< 선언한 큐입니다. 비동기 컴퓨트를 지원하지 않는 그래프에서는 그래픽스로 계획한다(`setAsyncComputeSupported`)
         uint32                            _payload{ 0 };                    ///< 받는 쪽의 패스 번호 — 패스 문맥(`RenderGraphPassContext::_payload`)으로 그대로 넘긴다
@@ -458,10 +467,14 @@ namespace sw
                       RHIQueueKind queue = RHIQueueKind::Graphics, uint32 payload = 0 );
         /**
          * @brief 그래프 밖에서 사는 자원(GPUScene 컬링 인자 · HZB · 라이트 그리드 · 입자)을 처음 접근 @p initialAccess 로 들입니다 — 언리얼 `RegisterExternalBuffer` 자리.
-         * @details 실행이 프레임 시작에 그 접근을 추적 상태로 심는다 — 첫 사용이 같은 접근이면 전이가 없다. 끝 접근은 `RenderGraphExecutionContext::findAccess` 로 내보낸다.
+         * @details 처음 접근이 곧 끝 접근이다 — 실행이 끝에 다른 접근으로 남은 자원을 되돌린다(언리얼 RDG 외부 자원의 끝 접근 `SetBufferAccessFinal` 자리).
+         *          버퍼는 처음 접근을 추적 상태로 심는다 — 첫 사용이 같은 접근이면 전이가 없고, UAV 로 이어지면 UAV 배리어다. 텍스처는 심지 않는다: 새로 만든 텍스처의 레이아웃은
+         *          백엔드만 안다(DX12 COMMON · Vulkan UNDEFINED) — 첫 사용은 늘 전이를 요구하고 같은 상태면 백엔드가 건너뛴다.
          *          수명 종류는 선언하지 않았으면 External 로 선언된다(Persistent 로 선언한 자원은 그대로).
          */
         void importResource( hashed_string name, RenderGraphViewableKind type, RenderGraphAccess initialAccess );
+        /** @brief 들인 자원을 표 @p table 의 등록으로 바꿉니다(첨부 등록 `FrameBufferTable::registerAttachment` 은 그래프의 것이라 빼고) — 프레임 · 뷰마다 실행 앞에 부른다. */
+        void importResources( const FrameBufferTable& table );
 
         /**
          * @brief 이 그래프를 돌릴 디바이스가 비동기 컴퓨트 큐를 갖는지 알립니다(능력 `RHICapabilities::_bAsyncCompute`). 컴파일 전에 부릅니다. 기본은 거짓입니다.
@@ -520,11 +533,11 @@ namespace sw
         /**
          * @brief TaskManager 워커 스레드로 렌더 패스 명령을 병렬로 기록하고 제출합니다.
          * @param context 실행 중 자원 상태를 관리하는 임시 메모리 컨텍스트입니다.
-         * @param pTaskManager 백그라운드 태스크 매니저입니다. nullptr 이면 직렬 execute() 로 폴백합니다.
-         * @param pDevice RHI 디바이스입니다(커맨드 리스트 생성과 제출에 씁니다).
+         * @param taskManager 백그라운드 태스크 매니저입니다.
+         * @param device RHI 디바이스입니다(커맨드 리스트 생성과 제출에 씁니다). 병렬 기록을 못 하는 디바이스면 모든 레벨을 리스트 하나에 이어 기록해 냅니다.
          * @return 실행에 성공하면 true 입니다.
          */
-        [[nodiscard]] bool executeParallel( RenderGraphExecutionContext& context, TaskManager* pTaskManager, IRHIDevice* pDevice );
+        [[nodiscard]] bool executeParallel( RenderGraphExecutionContext& context, TaskManager& taskManager, IRHIDevice& device );
 
         /** @brief 컴파일된 위상 정렬 패스의 실행 순서를 반환합니다. */
         const vector<hashed_string>& getExecutionOrder() const { return _listCompiledExecutionOrder; }
@@ -583,8 +596,12 @@ namespace sw
         void appendPassBarriers( RenderGraphExecutionContext& context, const RenderGraphNode& node );
         /** @brief 자원 하나를 접근 @p access 로 요구합니다. 같은 자원을 여러 패스가 요구해도 레벨의 배리어는 한 번만 냅니다(읽기와 쓰기가 겹치면 쓰기를 남깁니다). */
         void requestBarrier( RenderGraphExecutionContext& context, const RenderGraphResourceAccess& access, RHIQueueKind queue );
-        /** @brief 실행 시작에 문맥을 비우고 들인 자원의 처음 접근을 심습니다. */
+        /** @brief 실행 시작에 문맥을 비우고 들인 버퍼의 처음 접근을 심습니다. */
         void beginExecution( RenderGraphExecutionContext& context ) const;
+        /** @brief 기록한 패스 @p node 가 패스 안에서 옮긴 자원의 끝 접근을 추적 상태로 잇습니다. 기록(병렬이면 합류) 뒤 한 스레드에서 부릅니다. */
+        static void applyExitAccesses( RenderGraphExecutionContext& context, const RenderGraphNode& node );
+        /** @brief 처음 접근과 다른 접근으로 남은 들인 자원을 되돌리는 전이를 `_listLevelBarrier` 에 모읍니다(마지막 패스 뒤). */
+        void collectReturnBarriers( RenderGraphExecutionContext& context );
         /** @brief 패스 @p passIndex 가 자원을 읽거나 썼음을 수명 표에 적습니다. 처음 보는 자원이면 항목을 만듭니다. */
         void touchResourceLifetime( hashed_string resource, size_t passIndex, bool bWritten );
         /** @brief 추려 낸 배리어를 레벨 콜백에 넘깁니다. 콜백이 없거나 낼 것이 없으면 아무 일도 하지 않습니다. */
@@ -596,11 +613,11 @@ namespace sw
         /** @brief compile() 끝에서 큐 계획(`_listQueueStep` · 끝 조인 · 묶음 수)을 채웁니다. @p mapAdjacency 는 생산자 → 소비자 간선입니다. */
         void computeQueuePlan( const unordered_map<size_t, vector<size_t>>& mapAdjacency );
         /** @brief 병렬 기록 전에 모든 레벨의 패스 커맨드 리스트를 마련합니다(디바이스가 바뀌면 지난 것을 놓는다). 하나라도 못 만들면 false 이고 아무것도 내지 않습니다. */
-        [[nodiscard]] bool prepareParallelCommandLists( IRHIDevice* pDevice );
+        [[nodiscard]] bool prepareParallelCommandLists( IRHIDevice& device );
         /** @brief 레벨 하나의 배리어를 `_listLevelBarrier` 에, 기록할 패스를 병렬 스크래치의 엔트리 목록에 모읍니다. 모르는 패스면 false 입니다. */
         [[nodiscard]] bool collectLevelPasses( RenderGraphExecutionContext& context, const vector<hashed_string>& listLevelPass );
         /** @brief 모은 레벨(패스 둘 이상)의 배리어를 첫 리스트 앞머리에 발행하고, 패스들을 병렬로 기록한 뒤 큐 순서대로 제출합니다. */
-        void recordAndSubmitParallelLevel( TaskManager* pTaskManager, IRHIDevice* pDevice );
+        void recordAndSubmitParallelLevel( TaskManager& taskManager, IRHIDevice& device );
 
     private:
         vector<RenderGraphNode> _listNode;

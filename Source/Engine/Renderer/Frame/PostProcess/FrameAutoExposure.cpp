@@ -287,13 +287,13 @@ namespace sw
             cmd.setComputePipelineState( histogramPSO );
             cmd.setComputeRootConstants( 0, sizeof( constants ) / sizeof( uint32 ), &constants );
             cmd.dispatchCompute( 1, 1, 1 );
-            graphPass.transition( ViewGraphResource::autoExposureTarget(), RHITextureState::ShaderResource );
+            graphPass.transition( ViewGraphResource::autoExposureTarget(), RenderGraphAccess::ShaderRead );
             context.resetBindingCache();
             context._resourceRegistry.registerTexture( attachmentNames()._autoExposure, target, view._arrAutoExposureSRV[writeSlot] );
             return;
         }
         // 1 px 그리기 판 — 이번 칸을 렌더 타깃으로 옮긴다(선언은 UAV — 컴퓨트 판이 기본이다).
-        graphPass.transition( ViewGraphResource::autoExposureTarget(), RHITextureState::RenderTarget );
+        graphPass.transition( ViewGraphResource::autoExposureTarget(), RenderGraphAccess::RenderTarget );
 
         RHIRenderPassBeginInfo beginInfo{};
         beginInfo._bBindColor        = SW_TRUE;
@@ -316,7 +316,7 @@ namespace sw
         cmd.setGraphicsRootConstants( 0, sizeof( constants ) / sizeof( uint32 ), &constants );
         cmd.draw( 3, 0 );
         cmd.endRenderPass();
-        graphPass.transition( ViewGraphResource::autoExposureTarget(), RHITextureState::ShaderResource );
+        graphPass.transition( ViewGraphResource::autoExposureTarget(), RenderGraphAccess::ShaderRead );
         // 측정 그리기는 PSO · 슬롯을 직접 바꿨다 — 톤맵 그리기가 바인딩 캐시를 믿고 PSO 를 건너뛰지 않게 지운다.
         context.resetBindingCache();
         context._resourceRegistry.registerTexture( attachmentNames()._autoExposure, target, view._arrAutoExposureSRV[writeSlot] );

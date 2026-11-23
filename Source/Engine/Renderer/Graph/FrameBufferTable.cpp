@@ -27,6 +27,13 @@ namespace sw
         registerEntry( Entry{ name, slot, texture.getPacked(), RenderGraphViewableKind::Texture, initialAccess } );
     }
 
+    void FrameBufferTable::registerAttachment( hashed_string name, RHITextureHandle texture )
+    {
+        Entry entry{ name, 0, texture.getPacked(), RenderGraphViewableKind::Texture };
+        entry._bAttachment = true;
+        registerEntry( entry );
+    }
+
     void FrameBufferTable::registerEntry( const Entry& entry )
     {
         if ( entry._handle == 0 )

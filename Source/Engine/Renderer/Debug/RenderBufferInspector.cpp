@@ -7,8 +7,7 @@
 
 namespace sw
 {
-    void RenderBufferInspector::service( IRHICommandList& cmd, IRHIDevice* pDevice, const FrameBufferTable& table, const RenderGraphExecutionContext& context, BufferStateFn findState,
-                                         RenderDebugRegistry& registry )
+    void RenderBufferInspector::service( IRHICommandList& cmd, IRHIDevice* pDevice, const FrameBufferTable& table, const RenderGraphExecutionContext& context, RenderDebugRegistry& registry )
     {
         if ( registry.takeBufferListRequest() )
         {
@@ -53,7 +52,7 @@ namespace sw
                 continue;
             failure._entry                            = RenderBufferEntry{ name, slot, entry._elementSize, entry._elementCount };
             const RenderGraphAccess        lastAccess = context.findAccess( entry._name ).value_or( entry._initialAccess );
-            const optional<RHIBufferState> stateAfter = findState( lastAccess );
+            const optional<RHIBufferState> stateAfter = RenderGraphAccessUtil::findBufferState( lastAccess );
             const bool                     bReadable  = stateAfter.has_value() &&
                                    _readback.initialize( pDevice, entry._elementSize, entry._elementCount );
             if ( bReadable && _readback.request( cmd, entry.getBuffer(), *stateAfter, ++_tag ) )

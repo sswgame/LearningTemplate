@@ -27,15 +27,11 @@ namespace sw
     class SW_API RenderBufferInspector
     {
     public:
-        /** @brief 그래프 접근 → 버퍼 RHI 상태입니다(실행기의 규칙 — 첨부 접근은 없음). */
-        using BufferStateFn = optional<RHIBufferState> ( * )( RenderGraphAccess access );
-
         /**
          * @brief 목록 요청 · 읽기 요청을 처리하고 도착한 결과를 공개합니다. 프레임 그래프를 다 기록한 리스트 @p cmd 에 복사를 넣는다.
          * @param context 프레임 그래프 실행 문맥 — 버퍼의 마지막 접근(복사 뒤 되돌릴 상태)을 읽는다.
          */
-        void service( IRHICommandList& cmd, IRHIDevice* pDevice, const FrameBufferTable& table, const RenderGraphExecutionContext& context, BufferStateFn findState,
-                      RenderDebugRegistry& registry );
+        void service( IRHICommandList& cmd, IRHIDevice* pDevice, const FrameBufferTable& table, const RenderGraphExecutionContext& context, RenderDebugRegistry& registry );
         /** @brief 읽기 버퍼를 놓습니다(렌더러가 장치 자원을 놓을 때). 여러 번 불러도 된다. */
         void release();
 

@@ -1027,7 +1027,7 @@ namespace sw
                 // 사본은 이 패스가 복사 대상으로 선언했다(`ViewGraphResource` — 이어 그리는 머티리얼이 있는 뷰만 등록) — 다음 머티리얼이 읽도록 셰이더 읽기로 옮긴다.
                 context._pGraphPass->transition( location == PostProcessBlendableLocation::BeforeTonemap ? ViewGraphResource::postProcessChainBeforeTonemap()
                                                                                                          : ViewGraphResource::postProcessChainAfterTonemap(),
-                                                 RHITextureState::ShaderResource );
+                                                 RenderGraphAccess::ShaderRead );
                 context._resourceRegistry.registerTexture( attachmentNames()._sourceColor, draw._pChainSource->getTexture(), draw._pChainSource->getSRV() );
                 if ( beginColorPass( context, target, hashed_string{}, getTargetClearColor( target ), RHIRenderPassLoadOp::Load, RHIRenderPassLoadOp::Load ) == false )
                     return;
