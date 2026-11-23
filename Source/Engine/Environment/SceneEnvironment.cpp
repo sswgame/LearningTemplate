@@ -2,6 +2,8 @@
 
 #include "Engine/Environment/SceneEnvironment.h"
 
+#include "Core/Log/LogOnce.h"
+
 #include "Engine/Config/EngineDefaultAssets.h"
 #include "Engine/Content/AssetID.h"
 #include "Engine/Environment/EnvironmentUtil.h"
