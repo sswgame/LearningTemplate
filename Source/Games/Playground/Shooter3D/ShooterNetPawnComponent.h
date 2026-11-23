@@ -6,7 +6,7 @@
  *          **선의 입력은 폰 의도(`ControlIntent`) 하나다**(언리얼 `PlayerController` → 서버 RPC · 유니티 Netcode `ICommandData` 자리). 예전의 자기 입력 바이트(이동 · 달리기 · 점프)는 지웠다 —
  *          사격 · 무기 버튼과 시선이 몸 이동과 같은 길로 서버에 닿는다.
  *          - 서버: 이 몸의 조종 연결은 처음 붙은 클라이언트 하나다(아레나에 플레이어 몸이 하나라서 — 여럿은 몸 스폰과 함께 할 일). 틱마다 그 연결의 다음 입력 틱을 꺼내
- *            (`ReplicationServer::popIntent`, 늦으면 지난 의도를 되풀이) `ShooterBodyMovementComponent::simulate` 로 움직이고, 상태를 소유자 상태(그 입력 틱과 한 쌍)와
+ *            (`ReplicationServer::popNextIntent`, 온 만큼 흐른 시간의 몫 안에서 — 오지 않았으면 그 자리) `ShooterBodyMovementComponent::simulate` 로 움직이고, 상태를 소유자 상태(그 입력 틱과 한 쌍)와
  *            엔티티로 싣는다. 꺼낸 의도는 원격 조종자(`RemoteControllerComponent`)에도 넣어 서버의 폰이 그 의도로 쏘고 무기를 바꾼다. 엔티티 자리는 관심 영역 정책(`InterestReplicationPolicy`)에 알린다.
  *          - 클라이언트: 틱마다 폰 의도를 보내고(`ReplicationClient::sendIntent`) 바로 같은 함수로 예측한다(`ClientPrediction::record`).
  *            새 소유자 상태가 오면 그 입력 틱의 기록과 비교해(`reconcile`) 다르면 남은 입력을 다시 시뮬레이션하고, 보정 전후 자리 차이를 `PredictionSmoother` 로 녹인다.
@@ -188,6 +188,8 @@ namespace sw
             float32       _viewTick{ 0.0f };
         };
 
+        /** @brief 의도 하나로 몸을 한 걸음 옮기고 새 상태를 돌려줍니다(서버). */
+        ShooterMoveState                stepMovement( ShooterBodyMovementComponent& movement, const vector<ShooterArenaBox>& listBox, const ControlIntent& intent ) const;
         void                            stepServer( ShooterBodyMovementComponent& movement, const vector<ShooterArenaBox>& listBox );
         void                            stepClient( ShooterBodyMovementComponent& movement, const vector<ShooterArenaBox>& listBox );
         ShooterBodyMovementComponent*   findMovement() const;
@@ -243,7 +245,7 @@ namespace sw
         float32                                           _pendingTriggerPitch; ///< 클라이언트 — 모은 발동 순간의 시선
         uint32                                            _pendingTriggered;    ///< 클라이언트 — 다음 입력 틱에 실을 발동 비트
         uint32                                            _tick;                ///< 서버 — 시뮬레이션 틱, 클라이언트 — 예측한 입력 틱
-        uint32                                            _nextInputTick;       ///< 서버 — 조종 연결에서 다음에 꺼낼 입력 틱
+        uint32                                            _nextInputTick;       ///< 서버 — 조종 연결에서 마지막으로 꺼낸 입력 틱의 다음
         uint32                                            _reconciledTick;      ///< 클라이언트 — 마지막으로 맞춘 소유자 상태의 입력 틱
         uint32                                            _rewoundShotCount;    ///< 서버 — 랙 보정으로 판정한 광선 수
         uint32                                            _rewoundHitCount;     ///< 서버 — 되감아 맞힌 광선 수

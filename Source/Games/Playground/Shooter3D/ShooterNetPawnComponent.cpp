@@ -270,6 +270,9 @@ namespace sw
             context.deferPostTickOnComponent( *this, []( ShooterNetPawnComponent& netPawn )
             { netPawn.possessRemote(); } );
         }
+        // 입력 몫도 틱과 같은 시계(게임 시간)로 채운다 — 클라이언트의 입력 틱이 이 시계로 돌고, 고정 간격으로 되풀이하는 넷 재생에서도 같은 몫이 된다.
+        if ( _role == Role::Server )
+            _server.accumulateInputBudget( context.getDeltaTime() );
         _accumulator += context.getDeltaTime();
         int32 tickCount = 0;
         while ( _accumulator >= _tickInterval && tickCount < ShooterNetPawnComponentInternal::kMaxTicksPerFrame )
@@ -339,29 +342,24 @@ namespace sw
                     pRemote->transferToConnection( _controllerID ); // 다음 클라이언트가 맡는다 — 폰의 소유 연결도 따라간다
             }
         }
-        // 클라이언트는 접속 전에도 틱을 센다 — 조종을 맡은 뒤 처음 받은 틱에서 시작한다.
-        if ( _controllerID >= 0 && _nextInputTick == kInputTickUnknown )
+        const MeleeSweepHistory* pLedger = MeleeSweepHistory::find( *getOwner()->getManager() );
+        ShooterMoveState         next    = movement.getState();
+        ControlIntent            intent;
+        uint32                   pawnEntityID = 0; // 이 서버의 폰은 하나다
+        optional<uint32>         lastTick{};
+        optional<uint32>         inputTick = _controllerID >= 0 ? _server.popNextIntent( _controllerID, intent, pawnEntityID, _listClaim ) : nullopt;
+        while ( inputTick.has_value() )
         {
-            const optional<uint32> oldestTick = _server.findOldestInputTick( _controllerID );
-            if ( oldestTick.has_value() )
-            {
-                _nextInputTick = *oldestTick;
-                if ( pRemote != nullptr )
-                    pRemote->setNextInputTick( _nextInputTick );
-            }
-        }
-        ControlIntent intent;
-        bool          bExact    = false;
-        uint32        inputTick = 0;
-        const bool    bHasInput = _nextInputTick != kInputTickUnknown && _server.popIntent( _controllerID, _nextInputTick, intent, bExact, _listClaim );
-        if ( bHasInput )
-        {
-            inputTick = _nextInputTick;
-            ++_nextInputTick;
+            lastTick = inputTick;
             if ( pRemote != nullptr )
-                pRemote->receiveIntent( inputTick, intent ); // 서버의 폰은 이 의도로 쏘고 무기를 바꾼다(다음 조종 시스템 틱)
-            _viewTickByInput.acquire( inputTick ) = _server.getClientViewTick( _controllerID );
-            const MeleeSweepHistory* pLedger      = MeleeSweepHistory::find( *getOwner()->getManager() );
+            {
+                // 클라이언트는 접속 전에도 틱을 센다 — 조종을 맡은 뒤 처음 받은 틱에서 시작한다.
+                if ( _nextInputTick == kInputTickUnknown )
+                    pRemote->setNextInputTick( *inputTick );
+                pRemote->receiveIntent( *inputTick, intent ); // 서버의 폰은 이 의도로 쏘고 무기를 바꾼다(다음 조종 시스템 틱)
+            }
+            _nextInputTick                         = *inputTick + 1u;
+            _viewTickByInput.acquire( *inputTick ) = _server.getClientViewTick( _controllerID );
             for ( const MeleeHitClaim& claim : _listClaim )
             {
                 PendingClaim& pending = _listPendingClaim.emplace_back();
@@ -369,10 +367,12 @@ namespace sw
                 pending._claim._frame = pLedger != nullptr ? pLedger->getFrame() : 0u;
                 pending._viewTick     = _server.getClientViewTick( _controllerID );
             }
+            next      = stepMovement( movement, listBox, intent );
+            inputTick = _server.popNextIntent( _controllerID, intent, pawnEntityID, _listClaim );
         }
-        const ShooterMoveState before = movement.getState();
-        const ShooterMoveState next   = ShooterNetPawnComponentInternal::simulateTick( movement, listBox, before, intent, _tickInterval );
-        movement.setState( next, float3{ next._position._x - before._position._x, 0.0f, next._position._z - before._position._z } * ( 1.0f / _tickInterval ) );
+        // 조종자가 있는데 입력이 오지 않았으면 그 자리다(언리얼 서버의 원격 폰 — 온 입력은 다음 틱에 몰아서 걷는다). 조종자가 없는 몸은 빈 의도로 계속 돈다(떨어지던 몸이 공중에 남지 않게).
+        if ( _controllerID < 0 )
+            next = stepMovement( movement, listBox, ControlIntent{} );
 
         recordEnemies();
         if ( writeState( next, _bytesScratch ) )
@@ -385,17 +385,25 @@ namespace sw
         if ( _controllerID >= 0 )
         {
             _interest.setObserver( _controllerID, next._position );
-            if ( bHasInput )
+            if ( lastTick.has_value() )
             {
                 const ShooterPlayerComponent*   pPlayer   = getOwner()->getComponent<ShooterPlayerComponent>();
                 const ShooterGameModeComponent* pGameMode = findGameMode();
                 if ( writeOwnerState( next, pPlayer != nullptr ? pPlayer->getHitCount() : 0u, pGameMode != nullptr ? pGameMode->getKillCount() : 0u, pPlayer != nullptr ? pPlayer->getHealth() : 0.0f,
                                       _bytesScratch ) )
-                    (void)_server.setOwnerState( _controllerID, inputTick, _bytesScratch ); // 상태는 상한(작은 고정 크기) 안이다
+                    (void)_server.setOwnerState( _controllerID, *lastTick, _bytesScratch ); // 상태는 상한(작은 고정 크기) 안이다
             }
         }
         _interest.updateRelevancy();
         _server.sendSnapshots();
+    }
+
+    ShooterMoveState ShooterNetPawnComponent::stepMovement( ShooterBodyMovementComponent& movement, const vector<ShooterArenaBox>& listBox, const ControlIntent& intent ) const
+    {
+        const ShooterMoveState before = movement.getState();
+        const ShooterMoveState next   = ShooterNetPawnComponentInternal::simulateTick( movement, listBox, before, intent, _tickInterval );
+        movement.setState( next, float3{ next._position._x - before._position._x, 0.0f, next._position._z - before._position._z } * ( 1.0f / _tickInterval ) );
+        return next;
     }
 
     void ShooterNetPawnComponent::stepClient( ShooterBodyMovementComponent& movement, const vector<ShooterArenaBox>& listBox )
