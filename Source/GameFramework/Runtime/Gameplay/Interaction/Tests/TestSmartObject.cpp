@@ -8,8 +8,8 @@
 #include "Engine/Object/Component/TagSystem.h"
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
+#include "Engine/Scene/Scene.h"
 
-#include "GameFramework/Runtime/Character/AI/Schedule/ScheduleSaveState.h"
 #include "GameFramework/Runtime/Gameplay/Interaction/InteractionCatalog.h"
 #include "GameFramework/Runtime/Gameplay/Interaction/SmartObjectComponent.h"
 #include "GameFramework/Runtime/Gameplay/Interaction/SmartObjectScheduleLocator.h"
@@ -170,7 +170,9 @@ SW_TEST_CASE( SmartObjectTest, LocatorReservesTimeWindows )
 /** @brief [SmartObjectTest] 예약한 자리를 플레이어가 먼저 차지했으면 점유를 거절하고, 놓은 뒤에는 점유한다. 저장한 예약은 같은 자리로 돌아오고 사라진 오브젝트의 예약은 버린다 */
 SW_TEST_CASE( SmartObjectTest, LocatorClaimsAndRestores )
 {
-    GameObjectManager          manager;
+    Scene scene( "SmartObjectReservation" );
+    scene.setSourcePath( "game/test/maps/reservation.scene.xml" );
+    GameObjectManager&         manager = *scene.getObjectManager();
     SmartObjectComponent*      pSmart  = Util::makeObject( manager, "Bench", float3{} );
     GameObject*                pPlayer = manager.createGameObject( hashed_string( "Player" ) );
     GameObject*                pFirst  = manager.createGameObject( hashed_string( "anna" ) );
@@ -189,12 +191,13 @@ SW_TEST_CASE( SmartObjectTest, LocatorClaimsAndRestores )
     SW_EXPECT_FALSE( locator.releaseClaim( reservationID, *pFirst ) );
     SW_EXPECT_FALSE( locator.claimReserved( reservationID + 1, *pFirst ) ); // 모르는 예약
 
-    vector<ScheduleReservationSaveState> listSaved;
-    locator.fillState( listSaved );
+    vector<SmartObjectReservationSaveState> listSaved;
+    SW_REQUIRE_TRUE( locator.fillState( scene, listSaved ) );
     SW_REQUIRE_EQUAL( size_t{ 1 }, listSaved.size() );
+    SW_EXPECT_EQUAL( scene.findFileID( pSmart->getOwner()->getObjectID() ), listSaved[0]._object._fileID ); // 런타임 id 가 아니라 파일 id 다
     SmartObjectScheduleLocator restored;
     restored.initialize( &manager );
-    restored.restoreState( listSaved );
+    restored.restoreState( scene, listSaved );
     SW_EXPECT_EQUAL( size_t{ 1 }, restored.getReservationCount() );
     ScheduleLocation restoredSpot;
     uint32           restoredID = 0;
@@ -204,6 +207,48 @@ SW_TEST_CASE( SmartObjectTest, LocatorClaimsAndRestores )
     pSmart->getOwner()->destroy();
     SmartObjectScheduleLocator orphaned;
     orphaned.initialize( &manager );
-    orphaned.restoreState( listSaved );
+    orphaned.restoreState( scene, listSaved );
     SW_EXPECT_EQUAL( size_t{ 0 }, orphaned.getReservationCount() );
+}
+
+/** @brief [SmartObjectTest] 다른 실행에서 런타임 id 가 달라져도 파일 id 로 같은 오브젝트의 예약이 돌아온다. 저장한 적 없는 씬의 예약은 오류를 남기고 저장하지 않는다 */
+SW_TEST_CASE( SmartObjectTest, LocatorReservationSurvivesNewRuntimeIDs )
+{
+    Scene first( "SmartObjectFirstRun" );
+    first.setSourcePath( "game/test/maps/reservation.scene.xml" );
+    SmartObjectComponent*      pFirstBench = Util::makeObject( *first.getObjectManager(), "Bench", float3{} );
+    SmartObjectScheduleLocator locator;
+    locator.initialize( first.getObjectManager() );
+    ScheduleLocation spot;
+    uint32           reservationID = 0;
+    SW_REQUIRE_TRUE( locator.reserve( Util::makeRequest( "anna", 600, 720, float3{} ), spot, reservationID ) );
+    vector<SmartObjectReservationSaveState> listSaved;
+    SW_REQUIRE_TRUE( locator.fillState( first, listSaved ) );
+
+    // 다른 실행 — 저장할 때의 런타임 id 는 다른 벤치가 받고, 예약한 벤치는 새 id 를 받는다.
+    Scene second( "SmartObjectSecondRun" );
+    second.setSourcePath( "game/test/maps/reservation.scene.xml" );
+    GameObjectManager& manager = *second.getObjectManager();
+    GameObject*        pOther  = manager.createGameObjectWithID( hashed_string( "Other" ), pFirstBench->getOwner()->getObjectID() );
+    pOther->addComponent<SceneComponent>()->setLocalPosition( float3{ 50.0f, 0.0f, 0.0f } );
+    pOther->addComponent<SmartObjectComponent>()->setDefinition( Util::makeDefinition( "Bench" ) );
+    SmartObjectComponent* pSecondBench = Util::makeObject( manager, "Bench", float3{ 10.0f, 0.0f, 0.0f } );
+    second.rebindRestoredFileIDs( {
+        Scene::SavedFileID{ pSecondBench->getOwner()->getObjectID(), listSaved[0]._object._fileID }
+    } );
+
+    SmartObjectScheduleLocator restored;
+    restored.initialize( &manager );
+    restored.restoreState( second, listSaved );
+    SW_REQUIRE_EQUAL( size_t{ 1 }, restored.getReservationCount() );
+    ScheduleLocation restoredSpot;
+    uint32           restoredID = 0;
+    SW_REQUIRE_TRUE( restored.reserve( Util::makeRequest( "anna", 600, 720, float3{} ), restoredSpot, restoredID ) );
+    SW_EXPECT_EQUAL( reservationID, restoredID );
+    SW_EXPECT_NEAR( spot._position._x + 10.0f, restoredSpot._position._x, 1.0e-4f );
+
+    second.setSourcePath( "" );
+    SW_EXPECT_LOG( "SmartObject.ReservationHasNoIdentity" );
+    SW_EXPECT_FALSE( restored.fillState( second, listSaved ) );
+    SW_EXPECT_TRUE( listSaved.empty() );
 }
