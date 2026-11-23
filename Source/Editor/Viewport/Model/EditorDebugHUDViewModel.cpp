@@ -3,6 +3,7 @@
 #include "Editor/Viewport/Model/EditorDebugHUDViewModel.h"
 
 #include "DevTools/Client/DebugHUD/DebugHUD.h"
+#include "DevTools/Console/DebugHUDSectionLines.h"
 
 #include "Editor/Common/EditorSceneIterationAccess.h"
 #include "Editor/Common/Workspace/EditorSelection.h"
@@ -98,7 +99,7 @@ namespace sw::editor
                 ++_skippedProfilerSectionCount;
                 continue;
             }
-            slot._pRegistration->_pFunc( *slot._pWriter );
+            DebugHUDSectionLines::write( *slot._pRegistration, *slot._pWriter );
         }
     }
 } // namespace sw::editor

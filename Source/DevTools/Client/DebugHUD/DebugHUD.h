@@ -4,6 +4,7 @@
  */
 #pragma once
 #include "Core/Container/string.h"
+#include "Core/Container/vector.h"
 #include "Core/Foundation/Macros.h"
 #include "Core/Foundation/Types.h"
 #include "Core/GlobalVariable/GlobalVariableManager.h"
@@ -147,19 +148,26 @@ namespace sw
         void readRunVisibility();
         /** @brief 보이는 섹션이 프로파일러를 쓰면 켜고, HUD 가 켠 것을 더 쓰지 않으면 끕니다. */
         void syncFrameProfiler();
+        /** @brief 등록(판 번호)이나 켜짐 글이 바뀌었으면 섹션 목록을 다시 가릅니다(켜진 것 · 꺼졌어도 부를 것 · 프로파일러를 쓰는가). */
+        void refreshSectionCache();
+        /** @brief 켜진 섹션의 도형과 비주얼 로거의 같은 분류 기록(이번 프레임)을 디버그 드로우 큐에 넣습니다. HUD 가 꺼진 첫 프레임에 세운 것을 걷는다. */
+        void drawSections();
 
     private:
-        UISystem*              _pUI;
-        UserSettingsManager*   _pSettings;
-        hashed_string          _toggleAction;
-        UIScreenHandle         _screen;                    ///< HUD 화면입니다(오버레이 레이어이며, 없으면 무효).
-        UIScreenHandle         _window;                    ///< 설정 창입니다(모달이며, 없으면 무효).
-        string                 _profilerSeenState;         ///< `syncFrameProfiler` 가 마지막으로 본 `gv_debugHUDSections` 입니다.
-        uint64                 _profilerSeenRevision;      ///< `syncFrameProfiler` 가 마지막으로 본 레지스트리 판 번호입니다(처음은 아무 판과도 다른 값).
-        uint8                  _bProfilerEnabledByHUD : 1; ///< HUD 가 프로파일러를 켰는지 나타냅니다(감출 때 끕니다).
-        uint8                  _bSectionsNeedProfiler : 1; ///< 켜진 섹션 중 프로파일러를 쓰는 것이 있는지의 캐시입니다(판 번호 · 상태 글이 같으면 다시 세지 않습니다).
-        uint8                  _bRunVisibilityRead    : 1; ///< `readRunVisibility` 가 읽었다
-        uint8                  _bOffScreenRun         : 1; ///< 창을 띄우지 않는 무인 실행이다 — 실행 상태 섹션을 그리지 않는다
-        [[maybe_unused]] uint8 _reserved              : 4;
+        UISystem*                                  _pUI;
+        UserSettingsManager*                       _pSettings;
+        hashed_string                              _toggleAction;
+        UIScreenHandle                             _screen;                    ///< HUD 화면입니다(오버레이 레이어이며, 없으면 무효).
+        UIScreenHandle                             _window;                    ///< 설정 창입니다(모달이며, 없으면 무효).
+        string                                     _seenSectionState;          ///< `refreshSectionCache` 가 마지막으로 본 `gv_debugHUDSections` 입니다.
+        uint64                                     _seenSectionRevision;       ///< `refreshSectionCache` 가 마지막으로 본 레지스트리 판 번호입니다(처음은 아무 판과도 다른 값).
+        vector<const DebugHUDSectionRegistration*> _listShownSection;          ///< 켜진 사용자 섹션입니다(`refreshSectionCache`).
+        vector<const DebugHUDSectionRegistration*> _listHiddenSection;         ///< 꺼졌지만 걷는 부름을 받는 섹션입니다(`DebugHUDSectionFlag::kDrawsWhileHidden`).
+        uint8                                      _bProfilerEnabledByHUD : 1; ///< HUD 가 프로파일러를 켰는지 나타냅니다(감출 때 끕니다).
+        uint8                                      _bSectionsNeedProfiler : 1; ///< 켜진 섹션 중 프로파일러를 쓰는 것이 있는지의 캐시입니다(판 번호 · 상태 글이 같으면 다시 세지 않습니다).
+        uint8                                      _bRunVisibilityRead    : 1; ///< `readRunVisibility` 가 읽었다
+        uint8                                      _bOffScreenRun         : 1; ///< 창을 띄우지 않는 무인 실행이다 — 실행 상태 섹션을 그리지 않는다
+        uint8                                      _bSectionsDrawn        : 1; ///< 지난 프레임에 섹션을 그렸다(HUD 가 켜져 있었다)
+        [[maybe_unused]] uint8                     _reserved              : 3;
     };
 } // namespace sw

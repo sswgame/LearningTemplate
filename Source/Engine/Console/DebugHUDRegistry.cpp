@@ -6,7 +6,6 @@
 #include "Core/String/StringUtil.h"
 #include "Core/Subsystem/SubsystemScope.h"
 
-#include "Engine/Console/DevCommandRegistry.h"
 #include "Engine/Foundation/EngineServices.h"
 #include "Engine/Foundation/EngineSubsystemRegistration.h"
 
@@ -49,36 +48,6 @@ namespace sw
                 if ( StringUtil::equals( bareName, name, true ) == false )
                     return false;
                 outShown = bOff == false;
-                return true;
-            }
-
-            /**
-             * @brief `hud.print <섹션>` — 섹션 본문을 한 번 돌려 줄마다 로그(`DebugHUD.PrintLine`)와 답으로 낸다. HUD 를 켜지 않고 Output Log · 시나리오가 읽는다.
-             * @details 본문은 HUD 가 부를 때와 같다(읽기만 한다). 게임 스레드에서 돈다(개발 명령은 게임 스레드에서 실행된다).
-             */
-            static bool runPrint( SceneIterationKey key, const vector<string>& listArgument, string& outReply )
-            {
-                if ( listArgument.size() != 1 || engine::areEngineServicesBound() == false )
-                    return false;
-                const DebugHUDSectionRegistration* const pSection = engine::getSubsystem<DebugHUDRegistry>().findSection( listArgument[0] );
-                if ( pSection == nullptr )
-                {
-                    StringBuilder<constant::buffer::kMax256> reply;
-                    reply.appendFormat( "hud.print: no section '%#' (hud list)", listArgument[0] );
-                    outReply.assign( reply.view() );
-                    return false;
-                }
-                DebugHUDSectionWriter writer{ key };
-                pSection->_pFunc( writer );
-                StringBuilder<constant::buffer::kMax2048> reply;
-                reply.appendFormat( "[%#]", pSection->_pTitle );
-                for ( uint32 index = 0; index < writer.getLineCount(); ++index )
-                {
-                    const DebugHUDLine& line = writer.getLineAt( index );
-                    SW_LOG_INFO_ID( "DebugHUD.PrintLine", "[%#] %#: %#", pSection->_pName, line._label, line._value );
-                    reply.appendFormat( "\n  %#: %#", line._label, line._value );
-                }
-                outReply.assign( reply.view() );
                 return true;
             }
         };
@@ -163,7 +132,7 @@ namespace sw
 
     bool DebugHUDRegistry::registerEntry( const DebugHUDSectionRegistration* pRegistration )
     {
-        const bool bInvalidRegistration = pRegistration == nullptr || StringUtil::isNullOrEmpty( pRegistration->_pName ) || pRegistration->_pFunc == nullptr;
+        const bool bInvalidRegistration = pRegistration == nullptr || StringUtil::isNullOrEmpty( pRegistration->_pName ) || ( pRegistration->_pFunc == nullptr && pRegistration->_pDrawFunc == nullptr );
         if ( bInvalidRegistration )
             return false;
         const string_view name          = pRegistration->_pName;
@@ -275,7 +244,5 @@ namespace sw
 
 namespace sw
 {
-    SW_DEV_SCENE_COMMAND( DebugHUDPrint, "hud.print", "hud.print <section>", "Run one debug HUD section once and print its lines to the log (no HUD needed; Output Log and scenarios read it)",
-                          &DebugHUDRegistryInternal::runPrint );
     SW_ENGINE_SERVICE_SUBSYSTEM( DebugHUDRegistry, GameVisible, Services, (), SW_ENGINE_DEFAULT_FACTORY( DebugHUDRegistry ) );
 } // namespace sw

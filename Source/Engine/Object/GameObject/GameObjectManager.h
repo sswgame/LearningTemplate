@@ -70,7 +70,6 @@ namespace sw
     class CameraRegistry;
     class Component;
     class ComponentRegistry;
-    class DebugDrawQueue;
     class FixedStepContext;
     class FixedStepTickList;
     class GameObject;
@@ -567,8 +566,6 @@ namespace sw
         [[nodiscard]] const utf8* findWorldOriginShiftBlocker() const;
         /** @brief 모든 씬 서비스에 미리보기 정책을 적용합니다(`ISceneService::applyPreviewPolicy`). */
         void applyPreviewPolicy( const ScenePreviewPolicy& policy );
-        /** @brief 모든 씬 서비스가 디버그 선을 그립니다(`ISceneService::drawDebug`, `SceneDebugDraw` 가 씬 틱 뒤에 부른다). */
-        void drawServiceDebug( DebugDrawQueue& queue );
         /** @brief 모든 씬 서비스가 @p phase 자리의 라이트 원소를 붙입니다(`ISceneService::contributeLights`). */
         void collectServiceLights( SceneLightPhase phase, vector<GPULight>& inoutList ) const;
         /** @brief 모든 씬 서비스가 입자 그리기를 냅니다(`ISceneService::contributeParticles`). */

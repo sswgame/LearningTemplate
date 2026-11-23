@@ -686,14 +686,6 @@ namespace sw
         }
     }
 
-    void GameObjectManager::drawServiceDebug( DebugDrawQueue& queue )
-    {
-        for ( SceneServiceEntry& entry : _pState->_listSceneService )
-        {
-            entry._pService->drawDebug( queue );
-        }
-    }
-
     void GameObjectManager::collectServiceLights( const SceneLightPhase phase, vector<GPULight>& inoutList ) const
     {
         for ( const SceneServiceEntry& entry : _pState->_listSceneService )

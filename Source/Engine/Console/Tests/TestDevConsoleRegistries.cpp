@@ -146,6 +146,17 @@ SW_TEST_CASE( DevConsoleRegistryTest, HUDSectionRegistration )
     SW_EXPECT_EQUAL( revision + 1, registry.getRevision() );
 }
 
+/** @brief [DevConsoleRegistryTest] HUD 범주: 줄 본문 없이 그리기만 해도 받고, 둘 다 없으면 받지 않는다 */
+SW_TEST_CASE( DevConsoleRegistryTest, HUDCategoryDrawOnly )
+{
+    DebugHUDRegistry                  registry;
+    const DebugHUDSectionRegistration drawOnly{ "navmesh", "Title", nullptr, 0, DebugHUDSectionFlag::kNone, []( const DebugHUDSectionDraw& /*draw*/ ) {}, "Nav" };
+    const DebugHUDSectionRegistration empty{ "empty", "Title", nullptr, 0, DebugHUDSectionFlag::kNone };
+    SW_EXPECT_TRUE( registry.registerEntry( &drawOnly ) );
+    SW_EXPECT_FALSE( registry.registerEntry( &empty ) );
+    SW_EXPECT_TRUE( registry.findSection( "navmesh" ) == &drawOnly );
+}
+
 /** @brief [DevConsoleRegistryTest] HUD 상태 글: 없으면 기본값, 낱말이 정하고 마지막이 이긴다. 고쳐 쓰기는 기본값과 같으면 낱말을 빼고 다른 낱말은 둔다 */
 SW_TEST_CASE( DevConsoleRegistryTest, HUDStateText )
 {

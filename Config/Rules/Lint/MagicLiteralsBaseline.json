@@ -572,7 +572,7 @@
     "Source/Engine/Renderer/Scene/GPUVertexAnimationPool.cpp": {"integer": 1},
     "Source/Engine/Renderer/VFX/VFXGPUSimulation.cpp": {"integer": 4},
     "Source/Engine/Scene/Scene.cpp": {"float": 2},
-    "Source/Engine/Scene/SceneDebugDraw.cpp": {"float": 7},
+    "Source/Engine/Scene/StreamingCellDebugSections.cpp": {"float": 7},
     "Source/Engine/Scene/SceneDocument.cpp": {"integer": 1, "hex": 3},
     "Source/Engine/Scene/SceneManager.cpp": {"integer": 3},
     "Source/Engine/Scene/SceneObjectHash.cpp": {"minus-one": 3, "integer": 12, "hex": 2},

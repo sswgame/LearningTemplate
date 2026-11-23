@@ -20,6 +20,7 @@
 #include "Engine/Console/DebugHUDSectionFormat.h"
 #include "Engine/Console/DebugOverlayState.h"
 #include "Engine/Foundation/EngineServices.h"
+#include "Engine/Graphics/Debug/DebugDrawQueue.h"
 #include "Engine/Graphics/RHI/Diagnostics/RHIMemoryTracker.h"
 #include "Engine/Graphics/RHI/IRHIDevice.h"
 #include "Engine/Graphics/RHI/RHI.h"
@@ -31,6 +32,7 @@
 #include "Engine/Object/GameObject/Registry/CameraRegistry.h"
 #include "Engine/Object/GameObject/Registry/PrimitiveRegistry.h"
 #include "Engine/Physics/IPhysicsScene.h"
+#include "Engine/Physics/PhysicsDebugDraw.h"
 #include "Engine/Physics/Scene/ScenePhysics.h"
 #include "Engine/Profiling/FrameProfiler.h"
 #include "Engine/Reflection/EnumName.h"
@@ -231,6 +233,13 @@ namespace sw
                 writer.addLineFormat( "steps", "%#", physics.getStepCount() );
             }
 
+            /** @brief 강체 물리의 바디 셰이프 · 캐릭터 캡슐을 선으로 그립니다. */
+            static void drawPhysics( const DebugHUDSectionDraw& draw )
+            {
+                PhysicsDebugQueueRenderer renderer{ draw._queue, hashed_string( "physics" ) };
+                draw._scene.getObjectManager()->getSubsystem<sw::ScenePhysics>().drawDebug( renderer );
+            }
+
             static void writeAudio( DebugHUDSectionWriter& writer )
             {
                 const AudioService* pAudio = engine::findSubsystem<AudioService>();
@@ -353,9 +362,9 @@ namespace sw
     SW_DEBUG_HUD_SECTION( draw, "draw", "Rendering", 20, DebugHUDSectionFlag::kUsesFrameProfiler, &DebugHUDEngineSectionsInternal::writeDraw );
     SW_DEBUG_HUD_SECTION( memory, "memory", "Memory", 30, DebugHUDSectionFlag::kNone, &DebugHUDEngineSectionsInternal::writeMemory );
     SW_DEBUG_HUD_SECTION( objects, "objects", "Scene", 40, DebugHUDSectionFlag::kDefaultOn, &DebugHUDEngineSectionsInternal::writeObjects );
-    SW_DEBUG_HUD_SECTION( physics, "physics", "Physics", 50, DebugHUDSectionFlag::kNone, &DebugHUDEngineSectionsInternal::writePhysics );
-    SW_DEBUG_HUD_SECTION( audio, "audio", "Audio", 60, DebugHUDSectionFlag::kNone, &DebugHUDEngineSectionsInternal::writeAudio );
-    SW_DEBUG_HUD_SECTION( input, "input", "Input", 70, DebugHUDSectionFlag::kNone, &DebugHUDEngineSectionsInternal::writeInput );
+    SW_DEBUG_HUD_CATEGORY( physics, "physics", "Physics", 50, DebugHUDSectionFlag::kNone, &DebugHUDEngineSectionsInternal::writePhysics, &DebugHUDEngineSectionsInternal::drawPhysics, "Physics" );
+    SW_DEBUG_HUD_CATEGORY( audio, "audio", "Audio", 60, DebugHUDSectionFlag::kNone, &DebugHUDEngineSectionsInternal::writeAudio, nullptr, "Audio" );
+    SW_DEBUG_HUD_CATEGORY( input, "input", "Input", 70, DebugHUDSectionFlag::kNone, &DebugHUDEngineSectionsInternal::writeInput, nullptr, "Input" );
     SW_DEBUG_HUD_SECTION( camera, "camera", "Camera", 80, DebugHUDSectionFlag::kNone, &DebugHUDEngineSectionsInternal::writeCamera );
     SW_DEBUG_HUD_SECTION( overlay, "overlay", "Game values", 90, DebugHUDSectionFlag::kDefaultOn, &DebugHUDEngineSectionsInternal::writeOverlay );
     // 맨 위 — 지켜보는 사람이 가장 먼저 읽는 줄이다. 실행이 켠다(사용자 켬 · 끔 · 설정 파일과 무관).

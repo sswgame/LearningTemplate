@@ -2,7 +2,7 @@
  * @file PhysicsDebugDraw.h
  * @brief 물리 디버그 그리기의 출구(`IPhysicsDebugRenderer`)와 셰이프 와이어프레임 도우미입니다.
  * @details 물리는 그리는 쪽을 모른다(티어가 아래다). 씬이 `drawDebug( renderer )` 로 바디마다 셰이프를 선으로 내보내고, 조립 지점의 어댑터가 그것을
- *          `DebugDrawQueue` 로 옮긴다(`SceneDebugDraw.cpp` 의 `SceneDebugDrawLineAdapter`, `gv_physicsDebugDraw`). 셰이프를 선으로 푸는
+ *          `DebugDrawQueue` 로 옮긴다(`PhysicsDebugQueueRenderer`, 디버그 HUD 범주 `physics`). 셰이프를 선으로 푸는
  *          일은 백엔드와 무관하므로 여기 한 곳에 둔다. 두 백엔드는 바디 자세만 넘긴다.
  */
 #pragma once
@@ -79,19 +79,22 @@ namespace sw
 namespace sw
 {
     /**
-     * @brief 받은 선을 디버그 드로우 큐로 옮기는 출구입니다. 씬 서비스(물리 · 내비)가 `ISceneService::drawDebug` 에서 쓴다.
+     * @brief 받은 선을 디버그 드로우 큐로 옮기는 출구입니다. 디버그 HUD 범주(물리 · 내비)의 그리기가 쓴다.
      */
     class PhysicsDebugQueueRenderer final : public IPhysicsDebugRenderer
     {
     public:
-        explicit PhysicsDebugQueueRenderer( DebugDrawQueue& queue )
+        /** @brief @p category 는 선의 분류(범주 이름)입니다 — 에디터의 디버그 드로우 분류 토글이 먹는다. */
+        PhysicsDebugQueueRenderer( DebugDrawQueue& queue, const hashed_string& category )
             : _queue{ queue }
+            , _category{ category }
         {
         }
 
-        void drawLine( const float3& from, const float3& to, const float4& color ) override { _queue.drawLine( from, to, color ); }
+        void drawLine( const float3& from, const float3& to, const float4& color ) override { _queue.drawLine( from, to, color, 0.0f, _category ); }
 
     private:
         DebugDrawQueue& _queue;
+        hashed_string   _category;
     };
 } // namespace sw

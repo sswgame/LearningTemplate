@@ -338,11 +338,13 @@ namespace sw
     {
         outListEntry.clear();
         ScopedLock<mutex> lock{ _mutex };
-        for ( const VisualLogEntry& entry : _listEntry )
+        // 기록은 프레임 순으로 쌓인다 — HUD 범주가 프레임마다 이번 프레임만 묻는다.
+        const auto first = std::lower_bound( _listEntry.begin(), _listEntry.end(), firstFrame, []( const VisualLogEntry& entry, uint64 frame )
+        { return entry._frame < frame; } );
+        for ( auto iterator = first; iterator != _listEntry.end() && iterator->_frame <= lastFrame; ++iterator )
         {
-            const bool bInRange = firstFrame <= entry._frame && entry._frame <= lastFrame;
-            if ( bInRange && matchesFilter( entry, objectID, category ) )
-                outListEntry.push_back( entry );
+            if ( matchesFilter( *iterator, objectID, category ) )
+                outListEntry.push_back( *iterator );
         }
     }
 
