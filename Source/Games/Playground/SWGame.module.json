@@ -2,7 +2,7 @@
     "_name": "SWGame",
     "_version": "1.0.0",
     "_kind": "Game",
-    "_description": "Playground — 엔진 기능 쇼케이스 · 자동화 시험대인 최소 SWGame. 키트는 콘텐츠가 쓰는 것만(넷 파괴 · 넷 페어드 애니메이션의 두 프로세스 확인 씬, 컷씬 재생 복제 본보기(넷 시뮬레이션 하니스), 근접 판정 · 유닛 스탯의 meleeduel 씬, 하우징 시연 씬, 모드 시연, 장르 키트 시연 K1 · 키트 규칙 시연 K-14, 타일 걸음 마을 미니게임 pixeltown, 허브 맵 바탕인 서부 평원 — 말 · 날씨 · 도착 컷씬, 허브 농장 미니게임 harvestvalley, 복셀 광산 미니게임 voxelcraft, 도시 건설 미니게임 frontiertown, 테마파크 하위 레벨 미니게임 themepark)",
+    "_description": "Playground — 엔진 기능 쇼케이스 · 자동화 시험대인 최소 SWGame. 키트는 콘텐츠가 쓰는 것만(넷 파괴 · 넷 페어드 애니메이션의 두 프로세스 확인 씬, 컷씬 재생 복제 본보기(넷 시뮬레이션 하니스), 근접 판정 · 유닛 스탯의 meleeduel 씬, 하우징 시연 씬, 모드 시연, 장르 키트 시연 K1 · 키트 규칙 시연 K-14, 타일 걸음 마을 미니게임 pixeltown, 허브 맵 바탕인 서부 평원 — 말 · 날씨 · 도착 컷씬, 허브 농장 미니게임 harvestvalley, 복셀 광산 미니게임 voxelcraft, 도시 건설 미니게임 frontiertown, 하우징 · 생물 미니게임 meadowvillage, 테마파크 미니게임 themepark, 아레나 미니게임 abilityarena)",
     "_listDependency": [
         {
             "_name": "GameFramework"
@@ -108,6 +108,9 @@
         },
         {
             "_name": "GF_ThemePark"
+        },
+        {
+            "_name": "GF_AbilityArena"
         }
     ],
     "_listConfiguration": [

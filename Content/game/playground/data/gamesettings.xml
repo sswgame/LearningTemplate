@@ -42,9 +42,11 @@
   <inputMap path="common/input/camera.input.xml"/>
   <inputMap path="common/input/camerapan.input.xml"/>
   <inputMap path="game/playground/themepark/data/park.input.xml"/>
+  <!-- 아레나 미니게임(minigames/abilityarena)의 근접 · 화염구 · 회복 · 대시 — 꺼진 레이어 Arena(미니게임이 켠다). -->
+  <inputMap path="game/playground/abilityarena/data/arena.input.xml"/>
   <localizationProject>game/playground/data/localization/playground.locproject.xml</localizationProject>
   <loadingScreen>engine/ui/loading.ui.xml</loadingScreen>
-  <!-- 시네마틱 시퀀스의 소리 구간 · 허브 농장의 도구가 내는 이벤트 -->
+  <!-- 시네마틱 시퀀스의 소리 구간 · 허브 농장의 도구 · 미니게임(광산 · 아레나)이 내는 이벤트 -->
   <audioEvents>game/playground/audio/playground.audioevents.xml</audioEvents>
   <!-- 벤치 캐릭터 프리팹(-gv_stressTestCharacterPrefab — 부하 시나리오 load/townsfolk)의 외형은 공용 팩(common)의 외형 데이터다. 외형이 장비 아이템을 참조하므로 아이템도 함께 -->
   <RequiredData kind="items" pack="common"/>

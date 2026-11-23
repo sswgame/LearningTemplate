@@ -126,16 +126,25 @@ namespace sw
     {
         registerAttributeSetClass<AttributeSet>( "Generic" );
         registerAttributeSetClass<CombatAttributeSet>( "Combat" );
-        registerAbilityClass<ApplyEffectsAbility>( "ApplyEffects" );
+        (void)registerAbilityClass<ApplyEffectsAbility>( "ApplyEffects" ); // 빈 표의 첫 이름이라 겹치지 않는다
     }
 
     AbilityClassRegistry::~AbilityClassRegistry() = default;
 
-    void AbilityClassRegistry::registerAbilityClass( const hashed_string& className, AbilityFactoryFunc factory )
+    bool AbilityClassRegistry::registerAbilityClass( const hashed_string& className, AbilityFactoryFunc factory )
     {
-        if ( className.empty() || factory == nullptr )
-            return;
+        if ( className.empty() || factory == nullptr || _mapAbilityFactory.contains( className ) )
+        {
+            SW_LOG_ERROR_ID( "AbilityCatalog.AbilityClassRejected", "registerAbilityClass: class '%#' has no name, no factory or is already registered", className.c_str() );
+            return false;
+        }
         _mapAbilityFactory.insert_or_assign( className, factory );
+        return true;
+    }
+
+    void AbilityClassRegistry::unregisterAbilityClass( const hashed_string& className )
+    {
+        _mapAbilityFactory.erase( className );
     }
 
     void AbilityClassRegistry::registerAttributeSetClass( const hashed_string& className, AttributeSetFactoryFunc factory )

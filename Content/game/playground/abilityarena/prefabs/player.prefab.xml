@@ -1,0 +1,80 @@
+<?asset guid="854851d5eb244fbfa021730c14beb584"?>
+<Prefab formatVersion="1" name="ArenaPlayer">
+	<GameObject _schemaVersion="0" _name="ArenaPlayer" _bActive="true">
+		<_listComponent>
+			<MeshComponent _localID="163493842152903304" _componentName="MeshComponent"
+			               _bActive="true"
+			               _localPosition="0,0,0"
+			               _localRotation="0,0,0"
+			               _localScale="2,2,2"
+			               _attachOwner="None"
+			               _attachOwnerID="0"
+			               _attachComponent="None"
+			               _meshID="game/playground/abilityarena/models/character_human.mesh"
+			               _materialPath="game/playground/abilityarena/materials/palette.material"
+			               _boundsRadius="0.866"
+			               _gpuSpinSeed="0"
+			               _bVisible="true" />
+			<AbilitySystemComponent _localID="2238906797121419031" _componentName="AbilitySystemComponent"
+			                        _bActive="true"
+			                        _abilitySetID=""
+			                        _healthAttribute="Health"
+			                        _maxHealthAttribute="MaxHealth"
+			                        _damageNumberOffset="0,0.6,0"
+			                        _bShowDamageNumbers="true" />
+			<WidgetComponent _localID="11339505928329980331" _componentName="WidgetComponent"
+			                 _bActive="true"
+			                 _documentPath=""
+			                 _space="Screen"
+			                 _drawSize="64,8"
+			                 _pivot="0.5,1"
+			                 _worldSize="1,0.5"
+			                 _screenOffset="0,0"
+			                 _worldOffset="0,2.2,0"
+			                 _maxDistance="0"
+			                 _referenceDistance="10"
+			                 _bClampToScreenEdge="false"
+			                 _bScaleWithDistance="false" />
+			<HealthBarComponent _localID="13661083042096604780" _componentName="HealthBarComponent"
+			                    _bActive="true"
+			                    _hpRatio="0"
+			                    _remainRatio="0"
+			                    _targetRatio="0"
+			                    _lerpSpeed="5"
+			                    _fillColor="0.25,0.85,0.3,1"
+			                    _trailColor="0.95,0.8,0.25,1"
+			                    _backgroundColor="0.08,0.08,0.1,0.8"
+			                    _bVisible="true" />
+			<PawnComponent _localID="11149290121538025405" _componentName="PawnComponent"
+			               _bActive="true"
+			               _moveAction="Move"
+			               _lookAction="None"
+			               _upAction="None"
+			               _inputLayer="None"
+			               _aiControllerPrefab=""
+			               _maxPitch="80.21409"
+			               _autoPossess="Player0">
+				<_listButton>
+					<item>Arena.Melee</item>
+					<item>Arena.Fireball</item>
+					<item>Arena.Heal</item>
+					<item>Arena.Dash</item>
+				</_listButton>
+				<_listAnalog />
+			</PawnComponent>
+			<ArenaUnitComponent _localID="13572843437497516486" _componentName="ArenaUnitComponent"
+			                    _bActive="true"
+			                    _gameMode="0"
+			                    _kind="Player"
+			                    _facingMode="MoveDirection"
+			                    _unitRadius="0.5" />
+			<ArenaDeathSquashComponent _localID="13332575997216625941" _componentName="ArenaDeathSquashComponent"
+			                           _bActive="true"
+			                           _minSquashRatio="0.05" />
+			<NavMeshModifierComponent _localID="7476001263293725082" _componentName="NavMeshModifierComponent"
+			                          _bActive="true"
+			                          _areaName=""
+			                          _bIgnoreFromBuild="true" />
+		</_listComponent>
+	</GameObject>
+</Prefab>

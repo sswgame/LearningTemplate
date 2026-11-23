@@ -27,4 +27,8 @@
 	<Setting id="controls.parkRide" category="controls" type="KeyBinding" action="Park.Ride" bindIndex="0" default=""/>
 	<Setting id="controls.parkThoughts" category="controls" type="KeyBinding" action="Park.Thoughts" bindIndex="0" default=""/>
 	<Setting id="controls.parkStatus" category="controls" type="KeyBinding" action="Park.Status" bindIndex="0" default=""/>
+	<Setting id="controls.arenaMelee" category="controls" type="KeyBinding" action="Arena.Melee" bindIndex="0" default=""/>
+	<Setting id="controls.arenaFireball" category="controls" type="KeyBinding" action="Arena.Fireball" bindIndex="0" default=""/>
+	<Setting id="controls.arenaHeal" category="controls" type="KeyBinding" action="Arena.Heal" bindIndex="0" default=""/>
+	<Setting id="controls.arenaDash" category="controls" type="KeyBinding" action="Arena.Dash" bindIndex="0" default=""/>
 </UserSettingsSchema>
