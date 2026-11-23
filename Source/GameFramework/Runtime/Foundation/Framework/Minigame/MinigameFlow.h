@@ -131,7 +131,7 @@ namespace sw
 
         /** @brief 이름 @p name 의 미니게임 파일 리소스 id 입니다(`<팩>/minigames/<이름>.minigame.xml`). */
         static string makeAssetPath( const GamePackConfig& packConfig, string_view name );
-        /** @brief 하위 레벨을 사물 @p anchor 의 변환(위치는 월드)에 얹는 자리입니다 — 트리거 · 개발 명령이 쓴다. 장면 컴포넌트가 없으면 nullopt 입니다. */
+        /** @brief 하위 레벨을 사물 @p anchor 의 변환(위치는 절대 — 월드 원점을 더한다)에 얹는 자리입니다 — 트리거 · 개발 명령이 쓴다. 장면 컴포넌트가 없으면 nullopt 입니다. */
         static optional<SubLevelPlacement> makeAnchorPlacement( const GameObject& anchor );
         /**
          * @brief @p definition 이 지금 인스턴스에서 들어갈 수 있는 방식인지 봅니다 — 넷 세션이 열렸으면(@p bNetSessionActive) 씬 전환은 거절한다(폴백 없음).

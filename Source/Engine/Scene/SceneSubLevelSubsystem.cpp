@@ -13,6 +13,7 @@
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
 #include "Engine/Object/GameObject/Service/SceneServiceRegistry.h"
+#include "Engine/Object/GameObject/WorldOrigin.h"
 #include "Engine/Serialization/Format/Archive.h"
 
 namespace sw
@@ -222,10 +223,7 @@ namespace sw
                 return;
             }
             // 자리는 절대 좌표다 — 원점을 옮긴 월드에서는 그 원점 기준으로 놓는다(세이브 · 서버 · 다른 프로세스와 같은 자리).
-            const double3& origin = _pScene->getWorldOrigin();
-            pRoot->setLocalPosition( float3{ static_cast<float32>( static_cast<float64>( subLevel._placement._position._x ) - origin._x ),
-                                             static_cast<float32>( static_cast<float64>( subLevel._placement._position._y ) - origin._y ),
-                                             static_cast<float32>( static_cast<float64>( subLevel._placement._position._z ) - origin._z ) } );
+            pRoot->setLocalPosition( _pManager->getWorldOrigin().toLocal( subLevel._placement._position ) );
             pRoot->setLocalRotation( subLevel._placement._rotation );
             pAnchor->setAlwaysLoaded( true );                  // 스트리밍 셀이 런타임 스폰으로 삼키지 않는다 — 하위 레벨은 자기 단위로 오르내린다
             subLevel._anchorObjectID = pAnchor->getObjectID(); // 목록에는 짓기 뒤에 든다 — 셀 짓기는 목록을 "이 셀이 지은 것" 으로 보고 참조 대상에서 빼, 멤버가 앵커를 찾지 못한다

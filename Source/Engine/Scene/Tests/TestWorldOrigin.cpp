@@ -186,3 +186,18 @@ SW_TEST_CASE( WorldOriginTest, ShiftRefreshesTheSceneSpatialGrid )
     grid.removeLayerReader( kLayer );
     grid.remove( entry );
 }
+
+/** @brief [WorldOriginTest] 아직 합치지 않은(이번 프레임에 만든) 오브젝트도 원점과 함께 옮겨진다 — 프레임 끝 스폰이 옛 원점 자리에 남지 않는다 */
+SW_TEST_CASE( WorldOriginTest, ShiftMovesObjectsCreatedThisFrame )
+{
+    Scene scene{ "Origin" };
+    SW_REQUIRE_TRUE( scene.instantiate( Util::makeDocument() ) );
+    GameObject* pSpawned = scene.getObjectManager()->createGameObject( hashed_string( "Spawned" ) );
+    SW_REQUIRE_NOT_NULL( pSpawned );
+    SceneComponent* pRoot = pSpawned->addComponent<SceneComponent>();
+    SW_REQUIRE_NOT_NULL( pRoot );
+    pRoot->setWorldPosition( float3{ 1010.0f, 0.0f, 500.0f } );
+    SW_REQUIRE_TRUE( scene.shiftWorldOrigin( double3{ 1000.0, 0.0, 500.0 } ) );
+    SW_EXPECT_EQUAL( 10.0f, pRoot->getWorldPosition()._x );
+    SW_EXPECT_EQUAL( 0.0f, pRoot->getWorldPosition()._z );
+}

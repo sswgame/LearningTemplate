@@ -25,6 +25,7 @@
 #include "Engine/Object/GameObject/GameObjectManagerResolve.inl"
 #include "Engine/Object/GameObject/Registry/CameraRegistry.h"
 #include "Engine/Object/GameObject/Serialization/ObjectStateSerializer.h"
+#include "Engine/Object/GameObject/WorldOrigin.h"
 #include "Engine/Object/Prefab/PrefabAsset.h"
 #include "Engine/Object/Prefab/PrefabCache.h"
 #include "Engine/Object/Prefab/PrefabInstanceRegistry.h"
@@ -706,7 +707,6 @@ namespace sw
         , _sourcePath{}
         , _defaultMaterialPath{}
         , _sceneSettings{}
-        , _worldOrigin{}
         , _services{ services }
         , _objectManager{ make_unique<GameObjectManager>( services ) }
         , _pMaterial{ nullptr }
@@ -716,7 +716,6 @@ namespace sw
         , _mapObjectDataLayer{}
         , _bRegistrationHeld{ SW_FALSE }
         , _bBuildAllDataLayers{ SW_FALSE }
-        , _bOriginRebaseBlocked{ SW_FALSE }
         , _activeGameCamera{}
         , _gameCameraOverride{}
     {
@@ -928,7 +927,7 @@ namespace sw
                 continue; // 플레이 중 지웠다 — 다시 올려도 없다
             SceneDocument::SceneObjectNode node{};
             node._statePurpose = SerializePurpose::Snapshot;
-            node._worldOrigin  = _worldOrigin; // 상태의 자리는 지금 원점 기준이다 — 원점이 옮겨진 뒤 다시 지으면 그 차이만큼 옮긴다
+            node._worldOrigin  = getWorldOrigin(); // 상태의 자리는 지금 원점 기준이다 — 원점이 옮겨진 뒤 다시 지으면 그 차이만큼 옮긴다
             if ( SceneInternal::writeEntityNode( pGo, _mapPrefabSource, inputs, saveOptions, node ) == false )
                 continue;
             const auto layerIt = _mapObjectDataLayer.find( objectID );
@@ -1079,10 +1078,11 @@ namespace sw
 
         // 월드 원점: 상태의 자리는 적힌 때의 원점 기준이다(파일 · 쿠킹본은 0, 떠 둔 상태는 뜬 때의 원점). 루트 오브젝트만 지금 원점으로 옮긴다 — 붙은 것은 부모를 따른다.
         // 등록(물리 바디 · 내비 · 셀 소속) 앞이라 처음부터 맞는 자리에 선다.
+        const double3& origin = getWorldOrigin();
         for ( const SceneDocument::SceneObjectNode& entity : listNode )
         {
-            const float3    shift{ static_cast<float32>( entity._worldOrigin._x - _worldOrigin._x ), static_cast<float32>( entity._worldOrigin._y - _worldOrigin._y ),
-                                static_cast<float32>( entity._worldOrigin._z - _worldOrigin._z ) };
+            const float3    shift{ static_cast<float32>( entity._worldOrigin._x - origin._x ), static_cast<float32>( entity._worldOrigin._y - origin._y ),
+                                static_cast<float32>( entity._worldOrigin._z - origin._z ) };
             GameObject*     pObject = shift == float3{} || entity._fileID == 0 ? nullptr : batch.findBySavedID( entity._fileID );
             SceneComponent* pRoot   = pObject != nullptr && pObject->getParent() == nullptr ? pObject->getPrimarySceneComponent() : nullptr;
             if ( pRoot != nullptr )
@@ -1538,21 +1538,28 @@ namespace sw
         _objectManager->update( deltaTime );
     }
 
+    const double3& Scene::getWorldOrigin() const
+    {
+        return _objectManager->getWorldOrigin()._position; // 매니저는 씬과 함께 나고 사라진다
+    }
+
+    void Scene::restoreWorldOrigin( const double3& origin )
+    {
+        _objectManager->setWorldOrigin( origin );
+    }
+
     bool Scene::shiftWorldOrigin( const double3& newOrigin )
     {
         if ( _objectManager == nullptr )
             return false;
-        const utf8* const pBlocker = _objectManager->findWorldOriginShiftBlocker();
-        if ( pBlocker != nullptr )
-        {
-            SW_LOG_WARNING_ID( "Scene.WorldOriginShiftBlocked", "Scene '%#' keeps its world origin - service '%#' holds world positions it cannot move", _name.c_str(), pBlocker );
-            return false;
-        }
         // Y 는 옮기지 않는다 — 높이는 좁고, 옮기면 물 · 하늘 · 고도 설정이 절대 높이를 다시 재야 한다(언리얼도 높이 범위가 좁은 월드는 XZ 만 옮기는 설정이 흔하다).
-        const double3 target{ newOrigin._x, _worldOrigin._y, newOrigin._z };
-        const float3  delta{ static_cast<float32>( _worldOrigin._x - target._x ), 0.0f, static_cast<float32>( _worldOrigin._z - target._z ) };
+        const double3 previous = getWorldOrigin();
+        const double3 target{ newOrigin._x, previous._y, newOrigin._z };
+        const float3  delta{ static_cast<float32>( previous._x - target._x ), 0.0f, static_cast<float32>( previous._z - target._z ) };
         if ( delta == float3{} )
             return true;
+        // 지난 프레임 끝에 생겨 아직 합치지 않은 오브젝트도 옛 원점 기준이다 — 합쳐야 순회가 옮긴다(짓는 중인 셀은 숨겨 두어 합쳐지지 않고, 다 지을 때 그 원점으로 맞춘다).
+        _objectManager->mergePendingAdds();
         // 순회 안에서는 옮기지 않는다(계층 · 등록 줄을 건드린다) — 루트를 먼저 모은다.
         vector<SceneComponent*> listRoot;
         _objectManager->forEachGameObject( SceneIterationKey{}, [&listRoot]( GameObject* pObject )
@@ -1565,7 +1572,7 @@ namespace sw
         {
             pRoot->teleportTo( pRoot->getWorldPosition() + delta, TeleportType::TeleportPhysics ); // 속도는 잇는다 — 떨어지던 몸은 계속 떨어진다
         }
-        _worldOrigin = target;
+        _objectManager->setWorldOrigin( target );
         _objectManager->flushSceneTransforms();
         _objectManager->notifyWorldOriginShifted( delta );
         SW_LOG_INFO_ID( "Scene.WorldOriginShifted", "Scene '%#' moved its world origin to (%#, %#) - %# root objects moved", _name.c_str(), target._x, target._z, static_cast<uint32>( listRoot.size() ) );
@@ -1587,14 +1594,10 @@ namespace sw
         if ( MathUtil::abs( local._x ) <= distance && MathUtil::abs( local._z ) <= distance )
             return;
         // 거리의 배수로 옮긴다 — 경계에서 왔다 갔다 해도 다음 옮기기까지 거리만큼 여유가 있다.
-        const float64 step = static_cast<float64>( distance );
-        const double3 origin{ _worldOrigin._x + MathUtil::round( static_cast<float64>( local._x ) / step ) * step, _worldOrigin._y,
-                              _worldOrigin._z + MathUtil::round( static_cast<float64>( local._z ) / step ) * step };
-        // 막는 서비스가 있으면 한 번만 경고한다(프레임마다 같은 경고를 쌓지 않는다) — 막힘이 풀리면 다음 프레임에 옮긴다.
-        const bool bBlocked = _objectManager->findWorldOriginShiftBlocker() != nullptr;
-        if ( bBlocked && _bOriginRebaseBlocked == SW_TRUE )
-            return;
-        _bOriginRebaseBlocked = bBlocked ? SW_TRUE : SW_FALSE;
+        const float64 step     = static_cast<float64>( distance );
+        const double3 previous = getWorldOrigin();
+        const double3 origin{ previous._x + MathUtil::round( static_cast<float64>( local._x ) / step ) * step, previous._y,
+                              previous._z + MathUtil::round( static_cast<float64>( local._z ) / step ) * step };
         (void)shiftWorldOrigin( origin );
     }
 
@@ -1736,7 +1739,7 @@ namespace sw
             snapshot._dataLayers = _objectManager->getSubsystem<SceneDataLayerSubsystem>().captureState();
             snapshot._subLevels  = _objectManager->getSubsystem<SceneSubLevelSubsystem>().captureState();
         }
-        snapshot._worldOrigin = _worldOrigin;
+        snapshot._worldOrigin = getWorldOrigin();
         return snapshot;
     }
 
@@ -1749,7 +1752,7 @@ namespace sw
         _mapObjectDataLayer   = std::move( snapshot._mapObjectDataLayer );
         _mapObjectIDToFileID  = std::move( snapshot._mapObjectIDToFileID );
         _listUnresolvedEntity = std::move( snapshot._listUnresolvedEntity );
-        _worldOrigin          = snapshot._worldOrigin; // 오브젝트는 찍은 때의 자리(그 원점 기준)로 돌아온다
+        restoreWorldOrigin( snapshot._worldOrigin ); // 오브젝트는 찍은 때의 자리(그 원점 기준)로 돌아온다
         if ( _objectManager != nullptr )
         {
             _objectManager->getSubsystem<SceneDataLayerSubsystem>().restoreState( *this, _sceneSettings, std::move( snapshot._dataLayers ) );

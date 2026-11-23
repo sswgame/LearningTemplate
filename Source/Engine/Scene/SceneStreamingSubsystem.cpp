@@ -16,6 +16,7 @@
 #include "Engine/Object/GameObject/GameObjectManager.inl"
 #include "Engine/Object/GameObject/Service/NetObjectTable.h"
 #include "Engine/Object/GameObject/Service/SceneServiceRegistry.h"
+#include "Engine/Object/GameObject/WorldOrigin.h"
 #include "Engine/Scene/Scene.h"
 #include "Engine/Scene/SceneDataLayerSubsystem.h"
 #include "Engine/Serialization/Format/Archive.h"
@@ -647,11 +648,7 @@ namespace sw
 
     float3 SceneStreamingSubsystem::toAbsolute( const float3& local ) const
     {
-        if ( _pScene == nullptr )
-            return local;
-        const double3& origin = _pScene->getWorldOrigin();
-        return float3{ static_cast<float32>( static_cast<float64>( local._x ) + origin._x ), static_cast<float32>( static_cast<float64>( local._y ) + origin._y ),
-                       static_cast<float32>( static_cast<float64>( local._z ) + origin._z ) };
+        return _pScene != nullptr ? _pScene->getObjectManager()->getWorldOrigin().toAbsolute( local ) : local;
     }
 
     bool SceneStreamingSubsystem::computeObjectCell( const GameObject& object, StreamingCellCoord& outCell ) const
