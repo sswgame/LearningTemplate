@@ -80,7 +80,7 @@ namespace sw
                              getOwner() != nullptr ? getOwner()->getName().c_str() : "?" );
             return;
         }
-        _equipment.initialize( pCatalog, pDatabase->getSlotCatalog().makeEquipmentLayout() );
+        _equipment.initialize( pCatalog, pDatabase->getSlotCatalog().makeEquipmentLayout(), &pDatabase->getSets() );
         if ( _bag.initialize( pCatalog, _bagSlotCount, _bagMaxWeight ) == false )
         {
             SW_LOG_ERROR_ID( "CharacterEquipment.BagInvalid", "'%#' bag of %# slots could not be made", getOwner() != nullptr ? getOwner()->getName().c_str() : "?", _bagSlotCount );

@@ -40,9 +40,10 @@ namespace sw
     {
     }
 
-    void Equipment::initialize( const ItemCatalog* pCatalog, string_view slotLayout )
+    void Equipment::initialize( const ItemCatalog* pCatalog, string_view slotLayout, const IEquipmentSetLookup* pSetLookup )
     {
-        _pCatalog = pCatalog;
+        _pCatalog   = pCatalog;
+        _pSetLookup = pSetLookup;
         _listSlot.clear();
         StringUtil::forEachToken( slotLayout, ", ", [&]( string_view token )
         {

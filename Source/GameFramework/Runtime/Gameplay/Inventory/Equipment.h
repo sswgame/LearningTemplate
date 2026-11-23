@@ -55,16 +55,18 @@ namespace sw
      *
      *          장착 조건: 끼기는 "끼운 뒤의 상태" 에서 그 아이템의 조건을 판정한다. 끼기, 벗기, 캐릭터 태그 변경, 체형 변경 같은 모든 변화 뒤에는 다른 장비의 조건을
      *          다시 검사하고, 깨진 것을 아이템의 정책대로 처리한다. 정책은 함께 벗기(@p outListRemoved 로 돌려줌), 낀 채 숨기기, 거부하기 중 하나이다.
-     *          조건끼리 순환하는 데이터는 로드 오류이므로(`EquipmentCondition::findConditionCycle`) 이 처리는 항상 끝난다. 세트 조건은 `setSetLookup` 으로 받은 세트 정보로 검사한다.
+     *          조건끼리 순환하는 데이터는 로드 오류이므로(`EquipmentCondition::findConditionCycle`) 이 처리는 항상 끝난다. 세트 조건은 `initialize` 로 받은 세트 정보로 검사한다.
      */
     class SW_GF_API Equipment
     {
     public:
         Equipment();
 
-        void initialize( const ItemCatalog* pCatalog, string_view slotLayout );
-        /** @brief 세트 조건이 참조할 세트 정보입니다. 소유하지 않고 참조만 하며, 없으면 세트 조건은 맞지 않습니다. */
-        void setSetLookup( const IEquipmentSetLookup* pSetLookup ) { _pSetLookup = pSetLookup; }
+        /**
+         * @brief 칸 구성을 정하고 모두 비웁니다. 카탈로그와 세트 정보는 소유하지 않고 참조만 합니다.
+         * @param pSetLookup 세트 조건이 참조할 세트 정보입니다. 세트가 없는 게임은 nullptr 를 적는다 — 그때 세트 조건은 맞지 않습니다.
+         */
+        void initialize( const ItemCatalog* pCatalog, string_view slotLayout, const IEquipmentSetLookup* pSetLookup );
         /** @brief 캐릭터의 태그와 체형을 바꾸고 조건을 다시 검사합니다. 함께 벗겨진 것은 @p outListRemoved 로 나옵니다. */
         void setCharacterContext( const EquipmentCharacterContext& context, vector<InventorySlot>& outListRemoved );
 

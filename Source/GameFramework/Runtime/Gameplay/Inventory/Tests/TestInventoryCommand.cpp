@@ -2,8 +2,12 @@
 
 #include "Core/Testing/TestFramework.h"
 
+#include "Engine/Serialization/XML/XMLDocument.h"
+
 #include "GameFramework/Runtime/Foundation/GameData/StatBlock.h"
+#include "GameFramework/Runtime/Gameplay/Appearance/AppearanceTypes.h"
 #include "GameFramework/Runtime/Gameplay/Appearance/CharacterEquipmentComponent.h"
+#include "GameFramework/Runtime/Gameplay/Appearance/EquipmentSetCatalog.h"
 #include "GameFramework/Runtime/Gameplay/Inventory/Equipment.h"
 #include "GameFramework/Runtime/Gameplay/Inventory/Inventory.h"
 #include "GameFramework/Runtime/Gameplay/Inventory/InventoryCommand.h"
@@ -30,7 +34,7 @@ namespace
 </ItemCatalog>)",
                                                      "InventoryCommandTest" ) );
             SW_REQUIRE_TRUE( _bag.initialize( &_items, 4 ) );
-            _equipment.initialize( &_items, "Head,MainHand" );
+            _equipment.initialize( &_items, "Head,MainHand", nullptr );
         }
 
         sw::InventoryCommandResult run( sw::InventoryCommandKind kind, int32 from, int32 to = sw::InventoryCommand::kNoSlot, int32 count = 0, const utf8* pEquipSlot = "" )
@@ -133,7 +137,7 @@ SW_TEST_CASE( InventoryCommandTest, RestoredWornItemsDoNotDependOnSlotOrderAndAr
 </ItemCatalog>)",
                                             "InventoryCommandTest" ) );
     sw::Equipment equipment;
-    equipment.initialize( &items, "Head,Back,Body" );
+    equipment.initialize( &items, "Head,Back,Body", nullptr );
     sw::Inventory bag;
     SW_REQUIRE_TRUE( bag.initialize( &items, 1 ) );
     SW_REQUIRE_EQUAL( 1, bag.addItem( sw::hashed_string( "plate" ), 1 ) ); // 가방이 찼다
@@ -154,6 +158,33 @@ SW_TEST_CASE( InventoryCommandTest, RestoredWornItemsDoNotDependOnSlotOrderAndAr
     SW_EXPECT_NOT_NULL( equipment.findEquipped( sw::hashed_string( "Body" ) ) );
     SW_REQUIRE_EQUAL( size_t( 1 ), bag.getOverflow().size() );
     SW_EXPECT_TRUE( bag.getOverflow()[0]._itemID == sw::hashed_string( "plate" ) );
+}
+
+/**
+ * @brief [InventoryCommandTest] 세트 조건은 초기화에 준 세트 정보로 판정한다 — 조각을 낀 뒤에야 낄 수 있다
+ */
+SW_TEST_CASE( InventoryCommandTest, SetConditionUsesTheLookupGivenAtInitialize )
+{
+    sw::ItemCatalog items;
+    SW_REQUIRE_TRUE( items.loadFromXMLText( R"(<ItemCatalog>
+  <Item id="helm" category="Armor" slot="Head" maxStack="1"/>
+  <Item id="cape" category="Armor" slot="Back" maxStack="1"><Requires set="Knight" pieces="1"/></Item>
+</ItemCatalog>)",
+                                            "InventoryCommandTest" ) );
+    sw::AppearanceLoadReport report;
+    sw::XMLDocument          doc;
+    SW_REQUIRE_TRUE( doc.parseData( R"(<EquipmentSetCatalog><Set id="Knight"><Piece slot="Head" items="helm"/></Set></EquipmentSetCatalog>)", "InventoryCommandTest" ) );
+    sw::EquipmentSetCatalog sets;
+    SW_REQUIRE_TRUE( sets.loadFromXML( doc.getRoot(), report, "InventoryCommandTest" ) );
+    sw::Equipment equipment;
+    equipment.initialize( &items, "Head,Back", &sets );
+    SW_EXPECT_TRUE( equipment.evaluateEquip( sw::hashed_string( "Back" ), sw::hashed_string( "cape" ) ) == sw::EquipResult::ConditionNotMet );
+    sw::InventorySlot helm;
+    helm._itemID = sw::hashed_string( "helm" );
+    helm._count  = 1;
+    sw::vector<sw::InventorySlot> listRemoved;
+    SW_REQUIRE_TRUE( equipment.equip( sw::hashed_string( "Head" ), helm, listRemoved ) == sw::EquipResult::Ok );
+    SW_EXPECT_TRUE( equipment.canEquip( sw::hashed_string( "Back" ), sw::hashed_string( "cape" ) ) );
 }
 
 /**
