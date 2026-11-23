@@ -2,6 +2,7 @@
 #include "pch.h"
 
 #include "Core/Algorithm/VectorUtil.h"
+#include "Core/GlobalVariable/GlobalVariableManager.h"
 #include "Core/Testing/TestFramework.h"
 
 #include "DevTools/Console/DevConsole.h"
@@ -57,6 +58,37 @@ SW_TEST_CASE( DevConsoleTest, SecretArgumentStaysOutOfHistoryAndOutput )
     SW_REQUIRE_EQUAL( size_t{ 2 }, console.getOutput().size() );
     SW_EXPECT_EQUAL( string( "> test.secretlogin alice ***" ), console.getOutput()[0]._text );
     SW_EXPECT_EQUAL( string( "accepted" ), console.getOutput()[1]._text );
+}
+
+/**
+ * @brief [DevConsoleTest] 비밀 값 변수에 쓴 줄과 그 값을 읽은 답에는 값이 남지 않고, 값은 변수에 들어간다. 보통 글 변수의 줄은 그대로다
+ */
+SW_TEST_CASE( DevConsoleTest, SecretVariableStaysOutOfHistoryAndOutput )
+{
+    // 틀리면: 변수 줄을 가리지 않거나 글로 바꾸는 길이 값을 내면 "hunter2" 를 찾는 단언이, 가린 줄로 쓰면 값 단언이 진다.
+    GlobalVariableManager variables;
+    GlobalSecret          token;
+    GlobalString          label;
+    SW_REQUIRE_TRUE( variables.registerVariable( "gv_testToken", GlobalVariableType::Secret, &token, string{}, "test" ) );
+    SW_REQUIRE_TRUE( variables.registerVariable( "gv_testLabel", GlobalVariableType::String, &label, string{}, "test" ) );
+    DevConsole console( &variables );
+    SW_EXPECT_TRUE( console.submit( "gv_testToken hunter2" ) == DevConsoleResult::Ok );
+    SW_EXPECT_EQUAL( string( "hunter2" ), token.get() );
+    SW_EXPECT_TRUE( console.submit( "set gv_testToken \"hunter2 more\"" ) == DevConsoleResult::Ok );
+    SW_EXPECT_EQUAL( string( "hunter2 more" ), token.get() );
+    SW_EXPECT_TRUE( console.submit( "get gv_testToken" ) == DevConsoleResult::Ok );
+    SW_EXPECT_TRUE( console.submit( "gv_testLabel visible" ) == DevConsoleResult::Ok );
+
+    const string arrHistory[] = { string( "gv_testToken ***" ), string( "set gv_testToken ***" ), string( "get gv_testToken" ), string( "gv_testLabel visible" ) };
+    SW_REQUIRE_EQUAL( size_t{ SW_COUNT_OF( arrHistory ) }, console.getHistory().size() );
+    for ( size_t lineIndex = 0; lineIndex < SW_COUNT_OF( arrHistory ); ++lineIndex )
+    {
+        SW_EXPECT_EQUAL( arrHistory[lineIndex], console.getHistory()[lineIndex] );
+    }
+    for ( const auto& line : console.getOutput() )
+    {
+        SW_EXPECT_TRUE( line._text.find( "hunter2" ) == string::npos );
+    }
 }
 
 /**

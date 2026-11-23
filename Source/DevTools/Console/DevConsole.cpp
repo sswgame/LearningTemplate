@@ -68,12 +68,32 @@ namespace sw
                 return length;
             }
 
-            /** @brief 남길(기록 · 출력 · 로그) 줄입니다 — 비밀 인자를 받는 명령이면 그 자리를 가린다(`DevCommandRegistry::makeMaskedLine`). */
-            static string makeMaskedLine( string_view line )
+            /** @brief 비밀 값 변수(`GlobalSecret`)면 true 입니다. 모르는 이름이면 false 입니다. */
+            static bool isSecretVariable( GlobalVariableManager* pVariables, string_view name )
             {
-                const vector<string>          listToken = StringUtil::splitQuotedTokens( line );
-                const DevCommandRegistration* pCommand  = listToken.empty() ? nullptr : engine::getSubsystem<DevCommandRegistry>().findCommand( listToken[0] );
-                return pCommand != nullptr ? DevCommandRegistry::makeMaskedLine( *pCommand, line ) : string( line );
+                const GlobalVariableInfo* pInfo = pVariables != nullptr ? pVariables->findVariable( name ) : nullptr;
+                return pInfo != nullptr && pInfo->_type == GlobalVariableType::Secret;
+            }
+
+            /**
+             * @brief 남길(기록 · 출력 · 로그) 줄입니다 — 비밀 인자를 받는 명령이면 그 자리를(`DevCommandRegistry::makeMaskedLine`), 비밀 값 변수에 쓰는 줄이면 값을 가린다.
+             */
+            static string makeMaskedLine( GlobalVariableManager* pVariables, string_view line )
+            {
+                const vector<string> listToken = StringUtil::splitQuotedTokens( line );
+                if ( listToken.empty() )
+                    return string( line );
+                // 차례는 `execute` 와 같다 — 내장 set, 명령, 변수.
+                const bool                    bSet     = StringUtil::equals( listToken[0], "set", true );
+                const DevCommandRegistration* pCommand = bSet ? nullptr : engine::getSubsystem<DevCommandRegistry>().findCommand( listToken[0] );
+                if ( pCommand != nullptr )
+                    return DevCommandRegistry::makeMaskedLine( *pCommand, line );
+                const size_t nameIndex = bSet ? 1 : 0;
+                if ( listToken.size() <= nameIndex + 1 || isSecretVariable( pVariables, listToken[nameIndex] ) == false )
+                    return string( line );
+                StringBuilder<constant::buffer::kMax256> maskedLine;
+                maskedLine.appendFormat( "%#%# %#", bSet ? "set " : "", listToken[nameIndex], GlobalSecret::kMask );
+                return string( maskedLine.view() );
             }
 
             static DevConsoleResult readVariable( GlobalVariableManager* pVariables, string_view name, string& outReply )
@@ -103,7 +123,7 @@ namespace sw
                 }
                 if ( pInfo->setValueFromString( value ) == false )
                 {
-                    reply.appendFormat( "could not set %# to '%#'", name, value );
+                    reply.appendFormat( "could not set %# to '%#'", name, pInfo->_type == GlobalVariableType::Secret ? GlobalSecret::kMask : value );
                     outReply = string( reply.view() );
                     return DevConsoleResult::Failed;
                 }
@@ -213,7 +233,7 @@ namespace sw
             return DevConsoleResult::Empty;
 
         // 친 줄은 기록 · 출력 · 로그 세 곳에 남는다 — 모두 비밀 인자를 가린 이 줄만 쓴다(실행은 원래 줄).
-        const string maskedLine = DevConsoleInternal::makeMaskedLine( trimmed );
+        const string maskedLine = DevConsoleInternal::makeMaskedLine( getVariables(), trimmed );
         if ( _listHistory.empty() || _listHistory.back() != maskedLine )
             _listHistory.push_back( maskedLine );
         if ( _listHistory.size() > kMaxHistoryCount )
