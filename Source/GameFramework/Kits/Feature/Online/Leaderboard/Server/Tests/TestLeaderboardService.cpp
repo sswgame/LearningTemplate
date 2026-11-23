@@ -7,6 +7,7 @@
 #include "Core/Time/Clock.h"
 
 #include "GameFramework/Kits/Feature/Online/Leaderboard/Runtime/LeaderboardProtocol.h"
+#include "GameFramework/Kits/Feature/Online/Leaderboard/Server/LeaderboardScoreSender.h"
 #include "GameFramework/Kits/Feature/Online/Leaderboard/Server/LeaderboardService.h"
 #include "GameFramework/Runtime/Online/Cache/Server/EphemeralStore.h"
 #include "GameFramework/Runtime/Online/Cache/Server/EphemeralStoreRouter.h"
@@ -42,6 +43,21 @@ namespace
         }
     };
 
+    /** @brief 저장된 이름이 하나뿐인 이름 색인입니다. */
+    struct LeaderboardTestNames final : public IAccountNameIndex
+    {
+        [[nodiscard]] ServiceStoreResult readIdentityByDisplayName( IServiceStoreConnection& /*connection*/, string_view /*displayName*/, AccountIdentity& /*outIdentity*/ ) const override
+        {
+            return ServiceStoreResult::NotFound;
+        }
+        [[nodiscard]] ServiceStoreResult readIdentity( IServiceStoreConnection& /*connection*/, AccountID accountID, AccountIdentity& outIdentity ) const override
+        {
+            outIdentity._accountID   = accountID;
+            outIdentity._displayName = "stored name";
+            return ServiceStoreResult::Ok;
+        }
+    };
+
     /** @brief 서버 하나입니다. 캐시는 자기 것이고 영속 데이터는 빌립니다 — 같은 데이터로 둘째를 만들면 "캐시를 잃고 다시 뜬 서버" 입니다. */
     struct LeaderboardFixture
     {
@@ -52,7 +68,7 @@ namespace
         LeaderboardService      _service;
         uint64                  _nextTag{ 1 };
 
-        LeaderboardFixture( ManualClock& clock, MemoryServiceDatabase& database )
+        LeaderboardFixture( ManualClock& clock, MemoryServiceDatabase& database, const IAccountNameIndex* pNameIndex = nullptr )
             : _cacheData{ clock }
             , _cache{ &_cacheData }
             , _router{}
@@ -61,8 +77,9 @@ namespace
         {
             _router.initialize( &_cache );
             LeaderboardServiceDependencies dependencies;
-            dependencies._pStore  = &_store;
-            dependencies._pRouter = &_router;
+            dependencies._pStore     = &_store;
+            dependencies._pRouter    = &_router;
+            dependencies._pNameIndex = pNameIndex;
             _service.initialize( dependencies );
         }
 
@@ -368,6 +385,32 @@ SW_TEST_CASE( LeaderboardServiceTest, RetriedSumWithSameKeyCountsOnce )
     SW_EXPECT_EQUAL( int64( 3 ), rig.submit( "latest", 1, 3 )._score );
     SW_EXPECT_EQUAL( int64( 7 ), rig.submit( "latest", 1, 7, kNowMs, "name", latestKey )._score ); // 늦게 온 재시도가 새 값을 덮지 않는다
     SW_EXPECT_EQUAL( 0, rig._service.getPendingCount() );
+}
+
+/** @brief [LeaderboardServiceTest] 게임 서버의 제출: 등록하지 않은 보드 · 빈 계정 · 빈 키는 맡기지 않고, 맡긴 점수는 순위와 이름(계정 이름 색인)까지 남으며 같은 키의 재시도는 두 번 세지 않는다 */
+SW_TEST_CASE( LeaderboardServiceTest, GameServerScoresCarryTheAccountName )
+{
+    ManualClock           clock{ MonotonicMilliseconds{ 1000 } };
+    MemoryServiceDatabase database;
+    LeaderboardTestNames  names;
+    LeaderboardFixture    rig{ clock, database, &names };
+    rig.addBoard( "sum", LeaderboardOrder::Descending, LeaderboardUpdate::Sum );
+    LeaderboardScoreSender  sender{ rig._service };
+    const NetIdempotencyKey key = NetIdempotencyKey::makeRandom();
+
+    SW_EXPECT_TRUE( sender.submitScore( "nope", 7, 3, key, UnixMilliseconds{ kNowMs } ) == LeaderboardResult::UnknownBoard );
+    SW_EXPECT_TRUE( sender.submitScore( "sum", kInvalidAccountID, 3, key, UnixMilliseconds{ kNowMs } ) == LeaderboardResult::NotAllowed );
+    SW_EXPECT_TRUE( sender.submitScore( "sum", 7, 3, NetIdempotencyKey{}, UnixMilliseconds{ kNowMs } ) == LeaderboardResult::NotAllowed );
+
+    SW_REQUIRE_TRUE( sender.submitScore( "sum", 7, 3, key, UnixMilliseconds{ kNowMs } ) == LeaderboardResult::Ok );
+    SW_EXPECT_TRUE( rig.take( LeaderboardScoreSender::kRequestTag )._result == LeaderboardResult::Ok );
+    SW_REQUIRE_TRUE( sender.submitScore( "sum", 7, 3, key, UnixMilliseconds{ kNowMs } ) == LeaderboardResult::Ok );
+    SW_EXPECT_EQUAL( int64( 3 ), rig.take( LeaderboardScoreSender::kRequestTag )._score );
+
+    const LeaderboardCompletion top = rig.top( "sum" );
+    SW_REQUIRE_TRUE( top._listEntry.size() == 1 );
+    SW_EXPECT_EQUAL( int64( 3 ), top._listEntry[0]._score );
+    SW_EXPECT_EQUAL( string( "stored name" ), top._listEntry[0]._displayName );
 }
 
 /** @brief [LeaderboardServiceTest] 갱신 방식: Best 는 정렬 방향으로 더 좋을 때만, Latest 는 덮어쓰기, Sum 은 더하되 상한에서 멈춘다 */

@@ -402,6 +402,7 @@ namespace sw
         /** @brief 쓰기 일이 완료로 넘기는 값입니다. */
         struct LeaderboardWriteResult
         {
+            string                   _displayName{}; ///< 점수와 함께 남긴 표시 이름이다(제출이 비웠으면 이름 색인이 채운 것)
             int64                    _finalValue{ 0 };
             LeaderboardServiceResult _result{ LeaderboardServiceResult::fail( OnlineError::kUnavailable ) };
             uint8                    _bChanged{ SW_FALSE };
@@ -1113,10 +1114,17 @@ namespace sw
     void LeaderboardService::submitWrite( const LeaderboardWriteInput& input, const string& boardID, AccountID accountID, uint64 periodID, uint64 requestTag,
                                           LeaderboardOperation operation )
     {
-        _store.submit( [input]( IServiceStoreConnection& connection )
-        { return LeaderboardStoreRun::writeValue( connection, input ); },
-                       [this, boardID, displayName = input._displayName, nowMs = input._nowMs, accountID, periodID, requestTag, operation]( const LeaderboardWriteResult& write )
-        { applyScoreWrite( boardID, periodID, accountID, displayName, write._finalValue, write._bChanged == SW_TRUE, write._result, requestTag, operation, nowMs ); } );
+        _store.submit( [input, accountID, pNameIndex = _dependencies._pNameIndex]( IServiceStoreConnection& connection )
+        {
+            LeaderboardWriteInput named = input;
+            AccountIdentity       identity;
+            if ( named._displayName.empty() && pNameIndex != nullptr && pNameIndex->readIdentity( connection, accountID, identity ) == ServiceStoreResult::Ok )
+                named._displayName = identity._displayName;
+            LeaderboardWriteResult write = LeaderboardStoreRun::writeValue( connection, named );
+            write._displayName           = std::move( named._displayName );
+            return write; },
+                       [this, boardID, nowMs = input._nowMs, accountID, periodID, requestTag, operation]( const LeaderboardWriteResult& write )
+        { applyScoreWrite( boardID, periodID, accountID, write._displayName, write._finalValue, write._bChanged == SW_TRUE, write._result, requestTag, operation, nowMs ); } );
     }
 
     void LeaderboardService::changeStat( AccountID accountID, string_view displayName, string_view statName, int64 value, LeaderboardUpdate update,

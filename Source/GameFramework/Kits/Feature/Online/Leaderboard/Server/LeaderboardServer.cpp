@@ -5,6 +5,7 @@
 #include "Core/Serialization/BitStream.h"
 
 #include "GameFramework/Kits/Feature/Online/Leaderboard/Runtime/LeaderboardProtocol.h"
+#include "GameFramework/Kits/Feature/Online/Leaderboard/Server/LeaderboardScoreSender.h"
 #include "GameFramework/Kits/Feature/Online/OnlineCore/Server/Identity/AccountPresence.h"
 #include "GameFramework/Kits/Feature/Online/OnlineCore/Server/Identity/OnlinePushRelay.h"
 #include "GameFramework/Runtime/Online/Identity/Server/AccountDirectory.h"
@@ -179,6 +180,16 @@ namespace sw
         _pService->takeCompletions( _listCompletionScratch );
         for ( LeaderboardCompletion& completion : _listCompletionScratch )
         {
+            if ( completion._requestTag == LeaderboardScoreSender::kRequestTag )
+            {
+                // 게임 서버의 제출이라 답할 호출이 없다 — 남지 못한 점수를 소리 없이 잃지 않게 로그에 남긴다.
+                if ( completion._result == LeaderboardResult::Ok )
+                    SW_LOG_INFO_ID( "Leaderboard.ServerScoreStored", "Leaderboard: the game server's score is stored - best %#", completion._score );
+                else
+                    SW_LOG_ERROR_ID( "Leaderboard.ServerScoreLost", "Leaderboard: the game server's score could not be stored (error %#, result %#)", completion._result._errorCode,
+                                     static_cast<int32>( completion._result._result ) );
+                continue;
+            }
             respondCompletion( completion ); // 요청 태그가 0이면(내부에서 건 작업) 버린다. 연결이 닫혔으면 호스트가 버린다
         }
 

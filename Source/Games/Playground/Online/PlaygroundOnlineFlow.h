@@ -5,15 +5,14 @@
  * @details 게임이 쓰는 것은 세션 하나와 키트 클라이언트의 `call<>` 뿐입니다. 연결 · 틱 · 키트 묶기는 세션이 맡습니다.
  *          우편 수령으로 바뀐 잔액은 서버가 잔액 변경 알림으로 보내 지갑(`EconomyClient`)이 스스로 맞는다 — 게임은 응답의 잔액을 옮기지 않습니다.
  *          **매치 세션**: 매치형 미니게임(`minigames/shooter3d_match`)의 매칭 창구(`IMinigameMatchmaking`)다. 입구가 열면 정의의 매칭 모드(`playground.matchmodes.xml`)에 줄을 서고, 배정 알림
- *          (`MatchAssignment`)을 받으면 허브 세션을 떠나 매치 세션으로 옮긴 뒤 그 미니게임으로 들어간다. 접속한 허브의 클라이언트는 배정된 게임 서버의 접속 티켓을 받아 그 서버에 붙고,
- *          혼자 하는 허브는 옮길 세션이 없어 이 프로세스에서 판을 돈다(혼자 서는 모드). 판이 끝나면 점수를 정의의 순위표에 내고, 접속했던 허브로 새 티켓을 받아 돌아온다.
- *          줄 · 배정 · 접속 허가(티켓 · 명단)는 서버가 판정한다 — 이 흐름은 요청하고 옮길 뿐이다.
+ *          (`MatchAssignment`)을 받으면 배정된 게임 서버의 접속 티켓을 청해 허브 세션을 떠나 그 서버에 붙은 뒤 그 미니게임으로 들어간다. 혼자 하는 허브도 같다 — 판은 늘 매치 서버가 돈다.
+ *          붙지 못하거나 판 도중 서버를 잃으면 허브로 돌아온다. 판이 끝나면 점수는 매치 서버가 정의의 순위표에 내고(`ILeaderboardScoreSender` — 클라이언트 제출은 그 보드가 거절한다),
+ *          접속했던 허브로 새 티켓을 받아 돌아온다. 줄 · 배정 · 접속 허가(티켓 · 명단) · 점수는 서버가 판정한다 — 이 흐름은 요청하고 옮길 뿐이다.
  *          화면은 아직 없고 개발 명령(`playground.online.*`)과 감시 값(`Playground.Online*`)으로 시나리오가 끝단을 판정합니다(`automation/shooter3d_onlinesession.scenario.xml` · `shooter3d_onlinematch.scenario.xml`).
  */
 #pragma once
 #include "Core/Container/string.h"
 #include "Core/Container/vector.h"
-#include "Core/Delegate/Subscription.h"
 #include "Core/Event/ConsumerLock.h"
 #include "Core/Foundation/Types.h"
 #include "Core/Memory/Memory.h"
@@ -32,21 +31,20 @@ namespace sw
 {
     class EconomyShopPurchaseProvider;
     class GameNetSession;
-    class MinigameFlow;
     class OfferCatalog;
     class OnlineSession;
-    struct MinigameResult;
     struct NetGameTicket;
 
     /** @brief 매치 세션 하나의 걸음입니다. 매치는 한 번에 하나다. */
     enum class PlaygroundMatchState : uint8
     {
-        None = 0,    ///< 매치가 없다
-        Queued,      ///< 줄에 섰다 — 배정을 기다린다(허브에 그대로 있다)
-        MatchTicket, ///< 배정됐다 — 매치 서버의 접속 티켓을 기다린다(접속한 허브에서만)
-        Playing,     ///< 매치 미니게임 안이다
-        Leaving,     ///< 판이 끝났다 — 허브 씬이 서기를 기다린다
-        HubTicket,   ///< 허브 씬이 섰다 — 허브 서버의 접속 티켓을 기다린다
+        None = 0,     ///< 매치가 없다
+        Queued,       ///< 줄에 섰다 — 배정을 기다린다(허브에 그대로 있다)
+        MatchTicket,  ///< 배정됐다 — 매치 서버의 접속 티켓을 기다린다
+        MatchConnect, ///< 허브 세션을 떠났다 — 매치 서버에 붙기를 기다린다
+        Playing,      ///< 매치 미니게임 안이다
+        Leaving,      ///< 판이 끝났다 — 허브 씬이 서기를 기다린다
+        HubTicket,    ///< 허브 씬이 섰다 — 허브 서버의 접속 티켓을 기다린다
     };
 
     /**
@@ -56,18 +54,17 @@ namespace sw
     class PlaygroundOnlineFlow final : public IMinigameMatchmaking
     {
     public:
-        static constexpr const utf8* kAssetGold    = "cur.gold";
-        static constexpr const utf8* kAssetGem     = "cur.gem";
-        static constexpr const utf8* kMatchRegion  = "local";                                      ///< 서버 온라인 설정의 `_region` 기본값
-        static constexpr const utf8* kBoardKills   = "arena_kills";                                ///< `game/playground/data/playground.leaderboards.xml`
-        static constexpr const utf8* kOfferCatalog = "game/playground/data/playground.offers.xml"; ///< 상점 화면의 상품(서버 경제 키트와 같은 파일 — `Config/Server/Online/Playground.online.json`)
-        static constexpr int32       kTopCount     = 10;
+        static constexpr const utf8* kAssetGold          = "cur.gold";
+        static constexpr const utf8* kAssetGem           = "cur.gem";
+        static constexpr const utf8* kMatchRegion        = "local";                                      ///< 서버 온라인 설정의 `_region` 기본값
+        static constexpr const utf8* kBoardKills         = "arena_kills";                                ///< `game/playground/data/playground.leaderboards.xml`
+        static constexpr const utf8* kOfferCatalog       = "game/playground/data/playground.offers.xml"; ///< 상점 화면의 상품(서버 경제 키트와 같은 파일 — `Config/Server/Online/Playground.online.json`)
+        static constexpr int32       kTopCount           = 10;
+        static constexpr const utf8* kResultDisconnected = "disconnected"; ///< 판 도중 서버를 잃고 나온 결과 이름
 
         PlaygroundOnlineFlow();
         ~PlaygroundOnlineFlow() override;
 
-        /** @brief 매치 결과를 받게 미니게임 흐름에 겁니다. 게임이 초기화에서 한 번 부릅니다. */
-        void initialize( MinigameFlow& minigames );
         /** @brief 계정 응답을 꺼내 실패를 알리고, 매칭 배정과 매치 세션의 걸음을 돌립니다. 게임이 프레임마다(틱 밖) 부릅니다. */
         void update( OnlineSession& session );
 
@@ -78,7 +75,9 @@ namespace sw
         void requestLogin( OnlineSession& session, string_view loginName, string_view password );
         void requestMailList( OnlineSession& session );
         void requestClaimAll( OnlineSession& session );
-        /** @brief 한 판의 처치 수를 순위표 `kBoardKills` 에 냅니다(가장 좋은 기록이 남는다). */
+        /** @brief 허브 서버 @p address 에 접속 티켓(gamesettings `onlineHubServerID`)으로 붙습니다 — 티켓을 청하고 답이 오면 세션을 엽니다. 허브 이름이 없거나 매치 중이면 알리고 false 입니다. */
+        [[nodiscard]] bool requestJoinHub( OnlineSession& session, const NetAddress& address );
+        /** @brief 처치 수를 순위표 `kBoardKills` 에 클라이언트로서 냅니다 — 그 보드는 서버 제출만 받아 거절된다(거절을 보는 개발 명령이 부른다). */
         void requestSubmitKills( OnlineSession& session, int64 kills );
         /** @brief 순위표 `kBoardKills` 의 상위 `kTopCount` 를 받습니다. */
         void requestTopKills( OnlineSession& session );
@@ -102,25 +101,25 @@ namespace sw
         const vector<LeaderboardEntry>& getTopKills() const { return _listTopKills; }
         /** @brief 서버가 적용했다고 답한 점수 제출 수입니다. */
         int32 getSubmittedScoreCount() const { return _submittedScoreCount; }
+        /** @brief 순위표가 클라이언트 제출이라 거절한 수입니다. */
+        int32 getRefusedScoreCount() const { return _refusedScoreCount; }
 
     private:
         void onClaimAll( const OnlineResult<MailboxClaimReply>& result );
         void onScoreSubmitted( const OnlineResult<LeaderboardSubmitReply>& result );
         void onTopKills( const OnlineResult<LeaderboardEntriesReply>& result );
         void onQueueJoined( const OnlineResult<MatchmakingTicketReply>& result );
-        /** @brief 미니게임이 끝났습니다(돌아올 자리를 복원한 뒤). 매치면 점수를 정의의 순위표에 냅니다 — 점수 없이 나왔으면 내지 않는다. */
-        void onMinigameFinished( const MinigameResult& result );
         /** @brief 매칭 클라이언트의 배정 알림을 꺼냅니다. 처음 부를 때 알림 표를 받습니다. */
         void pollMatches( OnlineSession& session );
-        /** @brief 배정된 매치로 옮기기 시작합니다 — 접속한 허브면 매치 서버의 티켓을 청하고, 혼자 하는 허브면 바로 들어갑니다. */
+        /** @brief 배정된 매치로 옮기기 시작합니다 — 지금 허브를 적어 두고 매치 서버의 티켓을 청합니다. */
         void beginMatch( OnlineSession& session );
-        /** @brief 배정된 매치의 미니게임으로 들어갑니다. 지면 매치를 버리고 허브로 돌아갑니다. */
-        void enterMatch( OnlineSession& session );
+        /** @brief 매치 서버에 붙었는지 봅니다 — 붙었으면 미니게임으로 들어가고, 붙지 못했으면 허브로 돌아갑니다. */
+        void updateMatchConnect( OnlineSession& session );
         /** @brief 티켓이 왔습니다 — 기다리던 세션(매치 · 허브)에 붙습니다. */
         void onGameTicket( OnlineSession& session, const NetGameTicket& ticket );
         /** @brief 티켓을 받지 못했습니다 — 매치 전이면 허브에 남고, 돌아오는 길이면 혼자 하는 허브로 남습니다. */
         void onGameTicketRefused();
-        /** @brief 매치 미니게임에서 나왔는지 보고 허브 세션으로 돌아갑니다. */
+        /** @brief 매치 미니게임에서 나왔는지 보고(판 도중 서버를 잃으면 나오게 하고) 허브 세션으로 돌아갑니다. */
         void updateMatchExit( OnlineSession& session );
         /** @brief 떠나온 허브에 다시 붙습니다(티켓으로 붙었던 허브면 새 티켓을 청한다). 떠나온 허브가 없으면 매치를 끝낸다. */
         void reconnectHub( OnlineSession& session );
@@ -131,14 +130,14 @@ namespace sw
         vector<AccountClientReply>              _listReplyScratch;
         vector<MatchAssignment>                 _listAssignmentScratch;
         vector<LeaderboardEntry>                _listTopKills;
-        shared_ptr<const OfferCatalog>          _offers;               ///< 상점 상품(처음 상점을 열 때 읽는다)
-        unique_ptr<EconomyShopPurchaseProvider> _shopProvider;         ///< 상점 화면의 온라인 공급자(`findShopProvider`)
-        ConsumerLease                           _matchLease;           ///< 매칭 클라이언트의 알림 표(세션의 클라이언트가 먼저 사라지면 게이트가 표를 놓는다)
-        Subscription                            _finishedSubscription; ///< 미니게임 결과 구독(`initialize`)
-        MatchAssignment                         _assignment;           ///< 받은 배정(`_matchID` 가 0 이면 없다)
-        hashed_string                           _matchMinigame;        ///< 줄에 선 매치형 미니게임
-        NetAddress                              _hubAddress;           ///< 매치로 옮기며 떠나온 허브 서버(혼자 하는 허브면 빈 주소)
+        shared_ptr<const OfferCatalog>          _offers;        ///< 상점 상품(처음 상점을 열 때 읽는다)
+        unique_ptr<EconomyShopPurchaseProvider> _shopProvider;  ///< 상점 화면의 온라인 공급자(`findShopProvider`)
+        ConsumerLease                           _matchLease;    ///< 매칭 클라이언트의 알림 표(세션의 클라이언트가 먼저 사라지면 게이트가 표를 놓는다)
+        MatchAssignment                         _assignment;    ///< 받은 배정(`_matchID` 가 0 이면 없다)
+        hashed_string                           _matchMinigame; ///< 줄에 선 매치형 미니게임
+        NetAddress                              _hubAddress;    ///< 매치로 옮기며 떠나온 허브 서버(혼자 하는 허브면 빈 주소)
         int32                                   _submittedScoreCount;
+        int32                                   _refusedScoreCount;
         int32                                   _selfMailSentCount;
         PlaygroundMatchState                    _matchState;
         uint8                                   _bHubTicket : 1; ///< 떠나온 허브에 접속 티켓으로 붙어 있었다

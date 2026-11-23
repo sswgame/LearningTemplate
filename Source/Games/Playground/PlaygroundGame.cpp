@@ -31,7 +31,7 @@
 #include "GameFramework/Runtime/Foundation/Framework/Flow/IGameClientPart.h"
 #include "GameFramework/Runtime/Foundation/Framework/GameModeComponent.h"
 #include "GameFramework/Runtime/Foundation/Framework/GameService.h"
-#include "GameFramework/Runtime/Foundation/Framework/Minigame/MinigameFlow.h"
+#include "GameFramework/Runtime/Foundation/Framework/Minigame/IMinigameMatchmaking.h"
 #include "GameFramework/Runtime/Foundation/Framework/Save/GameStateSnapshot.h"
 #include "GameFramework/Runtime/Online/Service/OnlineSession.h"
 
@@ -103,7 +103,6 @@ namespace sw
 
     bool PlaygroundGame::onInitialize()
     {
-        _onlineFlow.initialize( getSubsystem<MinigameFlow>() );
         return bindScopedService( &_onlineFlow ) && bindScopedService<IMinigameMatchmaking>( &_onlineFlow );
     }
 

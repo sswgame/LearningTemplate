@@ -5,6 +5,7 @@
 #include "Core/Algorithm/VectorUtil.h"
 #include "Core/Math/MathUtil.h"
 #include "Core/Network/Connection/NetEndpoint.h"
+#include "Core/Network/Message/NetRequest.h"
 #include "Core/Serialization/BitStream.h"
 #include "Core/Time/WallClock.h"
 
@@ -15,12 +16,14 @@
 #include "Engine/Object/GameObject/Service/SceneNetLink.h"
 #include "Engine/Serialization/Fixed/ReplicatedLayout.h"
 
+#include "GameFramework/Kits/Feature/Online/Leaderboard/Runtime/LeaderboardScoreSender.h"
 #include "GameFramework/Kits/Feature/Online/Matchmaking/Runtime/MatchBackfill.h"
 #include "GameFramework/Runtime/Character/Control/ControlSystem.h"
 #include "GameFramework/Runtime/Character/Control/Controller/RemoteControllerComponent.h"
 #include "GameFramework/Runtime/Character/Control/Pawn/PawnComponent.h"
 #include "GameFramework/Runtime/Foundation/Framework/GameModeComponent.h"
 #include "GameFramework/Runtime/Foundation/Framework/GameService.h"
+#include "GameFramework/Runtime/Foundation/Framework/Minigame/MinigameFlow.h"
 
 #include "Games/Playground/Shooter3D/ShooterEnemyComponent.h"
 #include "Games/Playground/Shooter3D/ShooterGameModeComponent.h"
@@ -34,8 +37,8 @@ namespace sw
 {
     namespace
     {
-        /** @brief 슈터 서버가 받는 서버 키트 인터페이스 형식 목록입니다. 백필은 매칭 키트가 `gameServer` 로 선 서버에만 있어 선택이다. */
-        using ShooterServerKits = ServerKitDependencies<ServerKitRequired<>, ServerKitOptional<IMatchBackfillSender>>;
+        /** @brief 슈터 서버가 받는 서버 키트 인터페이스 형식 목록입니다. 백필은 매칭 키트가 `gameServer` 로 선 서버에, 점수 제출은 순위표 키트가 선 서버에만 있어 선택이다. */
+        using ShooterServerKits = ServerKitDependencies<ServerKitRequired<>, ServerKitOptional<IMatchBackfillSender, ILeaderboardScoreSender>>;
 
         struct ShooterNetPawnComponentInternal
         {
@@ -159,11 +162,14 @@ namespace sw
         , _confirmedClaimCount{ 0 }
         , _rejectedClaimCount{ 0 }
         , _controllerAccountID{ 0 }
+        , _leftAccountID{ 0 }
         , _controllerID{ -1 }
         , _role{ Role::None }
         , _bPendingTriggerLook{ SW_FALSE }
         , _bRemoteRequested{ SW_FALSE }
         , _bClaimsScheduled{ SW_FALSE }
+        , _bLeaveScheduled{ SW_FALSE }
+        , _bScoreReported{ SW_FALSE }
         , _reserved{ 0 }
     {
         setCanEverTick( true );
@@ -226,7 +232,9 @@ namespace sw
         _nextInputTick       = kInputTickUnknown;
         _reconciledTick      = 0;
         _controllerAccountID = 0;
+        _leftAccountID       = 0;
         _controllerID        = -1;
+        _bScoreReported      = SW_FALSE;
         pMovement->setNetDriven( true );
         // 서버 틱을 읽는 바닥이 이 틱 뒤에 돌게 한다(바닥 서브틱의 선행 조건).
         if ( ControlSystem* pControl = ControlSystem::find( *getOwner()->getMutableManager() ) )
@@ -292,6 +300,12 @@ namespace sw
             context.deferPostTickOnComponent( *this, []( ShooterNetPawnComponent& netPawn )
             { netPawn.resolveClaims(); } );
         }
+        if ( _leftAccountID != 0 && _bLeaveScheduled == SW_FALSE )
+        {
+            _bLeaveScheduled = SW_TRUE;
+            context.deferPostTickOnComponent( *this, []( ShooterNetPawnComponent& netPawn )
+            { netPawn.finishLeftPlayer(); } );
+        }
         if ( _role == Role::Client )
         {
             _client.update( context.getDeltaTime() );
@@ -310,20 +324,22 @@ namespace sw
         INetPeers&                 peers   = *pLink->_pPeers;
         RemoteControllerComponent* pRemote = findRemoteController();
         _server.beginTick( _tick ); // 입력을 꺼내기 전에 — 보던 틱은 서버의 지금 틱으로 자른다(`getClientViewTick`)
-        // 조종 연결 — 처음 붙은 클라이언트가 이 몸을 맡고, 끊기면 다음 클라이언트가 처음부터 맡는다.
-        const bool bControllerGone = _controllerID < 0 || peers.getConnectionState( _controllerID ) != NetConnectionState::Connected;
+        // 조종 연결 — 처음 붙은 클라이언트가 이 몸을 맡고, 끊기면 나감 처리(점수 · 판 다시 열기)가 끝난 뒤 다음 클라이언트가 처음부터 맡는다.
+        const bool bControllerGone = _leftAccountID == 0 && ( _controllerID < 0 || peers.getConnectionState( _controllerID ) != NetConnectionState::Connected );
         if ( bControllerGone )
         {
             // 연결 목록은 조종자를 새로 고를 때만 쓴다 — 틱마다 모으지 않는다(목록 할당 · 순회가 조종자가 붙어 있는 틱에서 빠진다).
             vector<int32> listConnection;
             peers.collectConnected( listConnection );
-            if ( _controllerAccountID != 0 )
-                ShooterNetPawnComponentInternal::reportPlayerLeft( _controllerAccountID ); // 끊긴 연결의 주체는 이 틱에 이미 0 이라 맡을 때 적어 둔 계정을 쓴다
+            if ( _controllerAccountID != 0 && _leftAccountID == 0 )
+                _leftAccountID = _controllerAccountID; // 나감 처리(점수 · 빈 자리)는 틱 뒤다 — 끊긴 연결의 주체는 이 틱에 이미 0 이라 맡을 때 적어 둔 계정을 쓴다
             // 주체는 접속 티켓이 정한 계정이다 — 클라이언트가 보낸 값이 아니다. 매칭이 배정한 서버에서는 주체 없는 연결(티켓 없이 들어온 것)에 몸을 맡기지 않는다 —
             // 세션 역할만 보면 티켓을 요구하지 않는 설정의 매치 서버가 아무 연결에나 배정받은 사람의 몸을 넘긴다. 매칭 없는 서버(개발 접속 · 한 프로세스 재생)는 그대로 첫 연결이다.
             const bool bAccountRequired = ShooterNetPawnComponentInternal::findBackfillSender() != nullptr;
             _controllerID               = -1;
             _controllerAccountID        = 0;
+            if ( _leftAccountID != 0 )
+                listConnection.clear(); // 앞사람의 나감 처리가 먼저다 — 다음 틱에 고른다
             for ( const int32 connectionID : listConnection )
             {
                 const uint64 accountID = peers.getConnectionPrincipal( connectionID );
@@ -331,6 +347,7 @@ namespace sw
                     continue;
                 _controllerID        = connectionID;
                 _controllerAccountID = accountID;
+                _bScoreReported      = SW_FALSE;
                 break;
             }
             _nextInputTick = kInputTickUnknown;
@@ -608,6 +625,49 @@ namespace sw
     {
         MeleeHitClaim& claim = _listClaim.emplace_back();
         claim._targetID      = enemyEntityID;
+    }
+
+    void ShooterNetPawnComponent::reportMatchScore( uint64 accountID )
+    {
+        const MinigameFlow* const       pFlow   = game::findSubsystem<MinigameFlow>();
+        const MinigameDefinition* const pActive = pFlow != nullptr ? pFlow->findActiveDefinition() : nullptr;
+        const optional<int64>           score   = pFlow != nullptr ? pFlow->findMatchScore() : nullopt;
+        if ( score.has_value() == false || accountID == 0 || _bScoreReported == SW_TRUE )
+            return; // 매치 서버가 아니거나(개발 접속 포함) 이 사람의 판을 이미 냈다
+        _bScoreReported                           = SW_TRUE;
+        const optional<ShooterServerKits> kits    = ShooterServerKits::resolve( game::findSubsystem<IServerKitLocator>() );
+        ILeaderboardScoreSender* const    pSender = kits.has_value() ? kits->find<ILeaderboardScoreSender>() : nullptr;
+        if ( pSender == nullptr )
+        {
+            SW_LOG_ERROR_ID( "Shooter.MatchScoreNoLeaderboard", "[Shooter] the match score %# for the board '%#' is lost - the server config lists no leaderboard kit", *score, pActive->_matchBoard.c_str() );
+            return;
+        }
+        const LeaderboardResult result = pSender->submitScore( pActive->_matchBoard, static_cast<AccountID>( accountID ), *score, NetIdempotencyKey::makeRandom(), WallClock::nowUnixMilliseconds() );
+        if ( result == LeaderboardResult::Ok )
+            SW_LOG_INFO_ID( "Shooter.MatchScoreReported", "[Shooter] match score of account %# reported: %# = %#", accountID, pActive->_matchBoard.c_str(), *score );
+        else
+            SW_LOG_ERROR_ID( "Shooter.MatchScoreRefused", "[Shooter] the match score %# for the board '%#' was refused (result %#)", *score, pActive->_matchBoard.c_str(), static_cast<int32>( result ) );
+    }
+
+    void ShooterNetPawnComponent::reportMatchScore()
+    {
+        if ( _role == Role::Server )
+            reportMatchScore( _controllerAccountID );
+    }
+
+    void ShooterNetPawnComponent::finishLeftPlayer()
+    {
+        _bLeaveScheduled                 = SW_FALSE;
+        const uint64 accountID           = _leftAccountID;
+        _leftAccountID                   = 0;
+        const MinigameFlow* const pFlow  = game::findSubsystem<MinigameFlow>();
+        const bool                bMatch = pFlow != nullptr && pFlow->findMatchScore().has_value();
+        reportMatchScore( accountID );
+        ShooterNetPawnComponentInternal::reportPlayerLeft( accountID );
+        // 매치 서버의 판은 다음에 배정받은 사람이 처음부터 잇는다 — 앞사람의 처치 수 · 적을 물려받지 않는다.
+        ShooterPlayerComponent* const pPlayer = getOwner()->getComponent<ShooterPlayerComponent>();
+        if ( bMatch && pPlayer != nullptr )
+            pPlayer->restartRound();
     }
 
     void ShooterNetPawnComponent::resolveClaims()

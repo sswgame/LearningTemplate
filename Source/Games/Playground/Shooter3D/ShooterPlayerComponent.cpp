@@ -1060,6 +1060,17 @@ namespace sw
         pViewModel->setItemName( itemName );
     }
 
+    void ShooterPlayerComponent::restartRound()
+    {
+        GameObject*               pOwner    = getOwner();
+        GameObjectManager*        pManager  = pOwner != nullptr ? pOwner->getMutableManager() : nullptr;
+        GameObject*               pObject   = pManager != nullptr ? pManager->resolveGameObject( getGameMode() ) : nullptr;
+        ShooterGameModeComponent* pGameMode = pObject != nullptr ? pObject->getComponent<ShooterGameModeComponent>() : nullptr;
+        if ( pGameMode != nullptr )
+            pGameMode->restartRound();
+        resetRound();
+    }
+
     void ShooterPlayerComponent::resetRound()
     {
         _healthMachine.respawn();
@@ -1147,13 +1158,12 @@ namespace sw
         // 쓰러짐 클립이 끝났다. 디렉터가 적을 정리하고 감독을 처음부터 다시 돌리며, 플레이어는 처음 위치에서 다시 시작한다.
         if ( _healthMachine.isAlive() == false && _downTimer >= _downTime )
         {
-            const bool bMatchEnded = pGameMode != nullptr && pGameMode->endMatch( pGameMode->getKillCount() ); // 매치는 쓰러지면 끝난다 — 결과를 내고 돌아간다
+            const bool                     bMatchEnded = pGameMode != nullptr && pGameMode->endMatch( pGameMode->getKillCount() ); // 매치는 쓰러지면 끝난다 — 결과를 내고 돌아간다
+            ShooterNetPawnComponent* const pNetPawn    = getOwner()->getComponent<ShooterNetPawnComponent>();
+            if ( pNetPawn != nullptr )
+                pNetPawn->reportMatchScore(); // 매치 서버는 판을 다시 열기 전에 점수를 낸다
             if ( bMatchEnded == false )
-            {
-                if ( pGameMode != nullptr )
-                    pGameMode->restartRound();
-                resetRound();
-            }
+                restartRound();
         }
         // 접속한 매치의 쓰러짐은 서버가 정한다 — 서버가 센 처치 수로 끝내고 돌아간다(매치가 아니면 서버가 판을 다시 연다).
         if ( _bServerHealth == SW_TRUE && _serverHealth <= 0.0f && pGameMode != nullptr )
@@ -1262,6 +1272,7 @@ namespace sw
     SW_DEV_COMMAND( ShooterProjectile, "cheat.shooter.projectile", "cheat.shooter.projectile [projectile id]",
                     "Load a projectile into the current weapon of every shooter player (no id: the weapon's own projectile)", &ShooterDevCommandsInternal::runProjectile );
     SW_AUTOMATION_GETTER_WATCH( shooterEnemyHitCount, "Shooter.EnemyHitCount", "Shots of the first shooter player that hit an enemy", ShooterPlayerComponent, &ShooterPlayerComponent::getHitCount );
+    SW_AUTOMATION_GETTER_WATCH( shooterServerKillCount, "Shooter.ServerKillCount", "Kills the match server last reported to the first shooter player (0 without a server)", ShooterPlayerComponent, &ShooterPlayerComponent::getServerKillCount );
     SW_AUTOMATION_COMPONENT_WATCH( shooterPlayerControllerKind, "Shooter.PlayerControllerKind", "Who possesses the first shooter player: 0 the player, 1 an AI (auto play), -1 none", ShooterPlayerComponent, &ShooterPlayerComponentInternal::readControllerKind );
 
     void ShooterPlayerComponent::onRegister( GameObjectManager& manager )

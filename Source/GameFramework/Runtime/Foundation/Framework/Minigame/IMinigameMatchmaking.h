@@ -3,7 +3,7 @@
  * @brief 매치형 미니게임(`MinigameDefinition::isMatch`)의 매칭 창구입니다 — 게임의 온라인 흐름이 구현해 게임 범위에 겁니다.
  * @details 미니게임 흐름(기반)은 매칭 · 순위표 키트를 모른다. 입구가 매치형을 열면 흐름이 이 창구로 줄을 서고, 구현은 배정을 받아 허브 세션을 떠나 매치 세션으로 옮긴 뒤
  *          `MinigameFlow::enterMatch` 로 들어간다. 줄 · 배정 · 접속 허가는 서버(매칭 키트)가 판정한다 — 클라이언트는 요청만 한다.
- *          언리얼 Lyra 의 매치메이킹 → `ClientTravel`(매치 서버로 옮겨 가고 끝나면 프런트엔드로 돌아온다)과 같은 자리다. 결과는 `MinigameFlow::onFinished` 로 받는다(`MinigameResult::_matchID`).
+ *          언리얼 Lyra 의 매치메이킹 → `ClientTravel`(매치 서버로 옮겨 가고 끝나면 프런트엔드로 돌아온다)과 같은 자리다. 점수는 매치 서버가 순위표에 낸다(`MinigameFlow::findMatchScore`).
  */
 #pragma once
 

@@ -51,6 +51,13 @@
             }
         },
         {
+            "_name": "gameConnect",
+            "_settings": {
+                "_serverName": "0000000000000001",
+                "_ticketKeySecretEnvironment": "SW_PLAYGROUND_TICKET_KEY"
+            }
+        },
+        {
             "_name": "leaderboard",
             "_settings": {
                 "_pastScoreTTL": { "_expireAfterDays": 30, "_maxScanPerSweep": 20000, "_maxDeletePerSweep": 5000 },

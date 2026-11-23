@@ -90,6 +90,8 @@ namespace sw
 
         /** @brief 적에게 맞았습니다(틱이 끝난 뒤 게임 스레드에서 부릅니다). 디렉터의 긴장도 신호가 되고, 쓰러지면 쓰러짐 클립이 끝난 뒤 판을 처음부터 다시 시작합니다. */
         void takeDamage( float32 amount );
+        /** @brief 판을 처음부터 다시 엽니다(틱 뒤 · 게임 스레드) — 디렉터가 적을 걷고 감독을 다시 돌리며, 플레이어는 처음 자리에서 다시 시작합니다. */
+        void restartRound();
         /**
          * @brief 서버 판정 결과를 받습니다(클라이언트의 넷 폰이 소유자 상태에서 부른다). 맞힌 발 수가 오르면 맞음 표시 · 소리를 내고, HUD 체력은 이 값을 보입니다.
          * @details 클라이언트의 사격은 탄도선 · 탄착만 예측한다 — 맞음을 전달하지 않고 표시도 서버가 인정한 뒤에 낸다(언리얼 Lyra 의 서버 확인 맞음 표시와 같은 자리, 기억에 의존).
@@ -156,6 +158,8 @@ namespace sw
         /** @brief 위와 같되 쓰기 가능한 몸입니다 — 틱 밖 · 틱 뒤(`flushPending`)에서만 부른다(쓰기 가능한 매니저를 꺼낸다). */
         GameObject* findMutableBodyObject();
         uint32      getHitCount() const { return _hitCount; }
+        /** @brief 매치 서버가 알려 준 이 판의 처치 수입니다(접속하지 않았으면 0). */
+        uint32 getServerKillCount() const { return _serverKillCount; }
 
     private:
         /** @brief 이번 발의 탄도선 하나입니다. 틱이 끝난 뒤 디렉터의 풀에서 꺼냅니다. */

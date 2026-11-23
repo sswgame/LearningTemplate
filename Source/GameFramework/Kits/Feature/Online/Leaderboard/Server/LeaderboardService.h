@@ -51,8 +51,9 @@ namespace sw
     /** @brief 빌려 쓰는 객체들입니다. */
     struct LeaderboardServiceDependencies
     {
-        ServiceStore*         _pStore{ nullptr };  ///< 필수
-        EphemeralStoreRouter* _pRouter{ nullptr }; ///< 필수이다. 순위에 쓴다
+        ServiceStore*            _pStore{ nullptr };     ///< 필수
+        EphemeralStoreRouter*    _pRouter{ nullptr };    ///< 필수이다. 순위에 쓴다
+        const IAccountNameIndex* _pNameIndex{ nullptr }; ///< 이름 없이 낸 점수(게임 서버의 제출 — 이 프로세스에 로그인하지 않은 계정)의 표시 이름을 저장소에서 찾는다. null 이면 빈 이름으로 남는다
     };
 } // namespace sw
 
