@@ -11,7 +11,7 @@
 	<!-- 몸이 땅에 내려앉을 때까지(걷기 거리를 그 뒤부터 잰다). -->
 	<WaitUntil watch="Voxel.OnGround" equals="1" timeoutFrames="120"/>
 	<Expect watch="Voxel.ControllerKind" equals="0"/>
-	<WaitUntil watch="Object.Exists" target="VoxelChunk" equals="1" timeoutFrames="120"/> <!-- 월드 뷰(GF_Client_Voxel)가 청크를 세웠다 -->
+	<WaitUntil watch="Object.Exists" target="VoxelChunk[0]" equals="1" timeoutFrames="120"/> <!-- 월드 뷰(GF_Client_Voxel)가 청크를 세웠다 -->
 
 	<!-- 걷기: W 를 1 초 — 몸이 1 m 넘게 간다. -->
 	<Press slot="Key.W"/>

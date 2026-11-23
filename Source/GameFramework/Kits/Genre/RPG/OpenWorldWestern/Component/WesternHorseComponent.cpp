@@ -96,7 +96,7 @@ namespace sw
     void WesternHorseComponent::onTick( TickContext& context )
     {
         Component::onTick( context );
-        if ( _bFailed == SW_TRUE )
+        if ( _bFailed == SW_TRUE || hasBegunPlay() == false ) // 편집 중인 에디터도 틱을 부른다 — 디렉터가 열리기 전이라 카탈로그가 없다
             return;
         if ( _bOpened == SW_FALSE )
         {
