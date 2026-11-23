@@ -221,6 +221,37 @@ SW_TEST_CASE( SpriteClipViewModelTest, RemovingAFrameShiftsAnimationRanges )
     SW_EXPECT_FALSE( model.removeSelectedFrame() );
 }
 
+// 앞 구간이 비어 사라져도 고른 구간은 그대로다 - 번호를 두어 다음 구간이 골라졌다.
+SW_TEST_CASE( SpriteClipViewModelTest, RemovingAFrameKeepsTheSelectedAnimation )
+{
+    SpriteClipAsset clip;
+    clip._listFrame.resize( 6 );
+    const int32 arrRange[][2] = {
+        {1, 1},
+        {3, 2},
+        {5, 1}
+    };
+    const utf8* const arrName[] = { "single", "late", "tail" };
+    for ( size_t index = 0; index < 3; ++index )
+    {
+        SpriteClipAnimation animation{};
+        animation._name       = arrName[index];
+        animation._firstFrame = arrRange[index][0];
+        animation._frameCount = arrRange[index][1];
+        clip._listAnimation.push_back( animation );
+    }
+    const DocumentEditRecorder modelRecorder{ SW_DELEGATE_LAMBDA( DocumentEditRecorder::RecordDelegate, []( string_view ) {} ) }; // 편집 연산은 알린다 — 문서 패널 대신 받는다
+    SpriteClipViewModel        model;
+    model.bindDocumentEditRecorder( modelRecorder );
+    model.applyText( clip.toXML() );
+    model.selectAnimation( 1 ); // late
+    model.selectFrame( 1 );     // single 의 하나뿐인 프레임
+    SW_REQUIRE_TRUE( model.removeSelectedFrame() );
+    SW_REQUIRE_EQUAL( size_t{ 2 }, model.getAnimations().size() );
+    SW_EXPECT_EQUAL( 0, model.getSelectedAnimation() );
+    SW_EXPECT_EQUAL( string( "late" ), model.getAnimations()[0]._name );
+}
+
 SW_TEST_CASE( SpriteClipViewModelTest, DuplicatingAFrameGrowsTheRangeItIsIn )
 {
     const DocumentEditRecorder modelRecorder{ SW_DELEGATE_LAMBDA( DocumentEditRecorder::RecordDelegate, []( string_view ) {} ) }; // 편집 연산은 알린다 — 문서 패널 대신 받는다
