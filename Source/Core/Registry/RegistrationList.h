@@ -1,7 +1,7 @@
 /**
  * @file RegistrationList.h
  * @brief 레지스트리의 공통 구조 둘입니다. `RegistrationList` 는 소유하지 않는 포인터 목록(중복 거절 · 정렬 · 이름 찾기 · 훑기 · 이름 사본),
- *        `NameRegistry` 는 이름 → 값을 소유하는 테이블(중복 거절 또는 덮어쓰기 · 이름 찾기 · 등록 순서 훑기 · 조건 제거)입니다.
+ *        `NameRegistry` 는 이름 → 값을 소유하는 테이블(중복 거절 또는 주인 있는 덮기 · 이름 찾기 · 등록 순서 훑기 · 조건 제거)입니다.
  */
 #pragma once
 #include "Core/Concurrency/atomic.h"
@@ -609,8 +609,9 @@ namespace sw
      * @class NameRegistry
      * @brief 이름(`hashed_string`, 대소문자 무시) → 값을 **소유하는** 레지스트리입니다. 값은 등록 순서로 연속 배열에 둡니다.
      * @details 값을 보관해야 하는 테이블(변환기 · 활동 종류 · 연산 · 패널 그리기 함수)가 같은 구조로 씁니다. 빈 이름은 받지 않습니다.
-     *          `find` 가 돌려준 포인터는 다음 `add` · `addOrReplace`(새 이름) · `addOwned` · `removeIf` · `clear` · 구독 해제까지만 유효합니다.
+     *          `find` 가 돌려준 포인터는 다음 `add` · `addLogged` · `addOwned` · `removeIf` · `clear` · 구독 해제까지만 유효합니다.
      *          잠금은 들지 않습니다 — 여러 스레드가 만지면 쓰는 쪽이 자기 잠금 안에서 부릅니다(`addOwned` 의 구독도 같은 스레드에서 놓는다).
+     *          소리 없이 덮는 길은 없다 — 주인 없는 값은 겹치면 거절하고, 덮어야 하면 주인이 풀 때 앞 값으로 돌아가는 `addOwned` 다.
      *          **주인 있는 등록(`addOwned`)**: 모듈 · 게임이 건 값을 구독이 소유한다. 같은 이름을 덮으면 앞 값을 그림자로 두고, 구독이 풀리면 그림자로 돌아간다
      *          (언리얼 모듈 등록의 Register/Unregister 짝을 소유 구독 하나로). 레지스트리마다 손으로 두던 "이름 → 주인 번호" 표와 번호 카운터를 대신한다.
      */
@@ -648,31 +649,12 @@ namespace sw
         }
 
         /** @brief `add` 하고 거절되면 공용 오류 로그(`Registration.EmptyName` · `Registration.DuplicateName`)를 남깁니다. @param pWhat 로그에 나오는 등록 대상의 영문 이름(문자열 리터럴)입니다. */
-        bool addLogged( const hashed_string& name, T value, const utf8* pWhat )
+        [[nodiscard]] bool addLogged( const hashed_string& name, T value, const utf8* pWhat )
         {
             if ( add( name, std::move( value ) ) )
                 return true;
             reportRegistrationRejected( name.empty() ? RegistrationResult::EmptyName : RegistrationResult::DuplicateName, pWhat, name.c_str() );
             return false;
-        }
-
-        /** @brief 값을 올립니다. 같은 이름이 있으면 그 위치(순서)에서 값을 바꿉니다. 빈 이름은 공용 오류 로그(`Registration.EmptyName`)를 남기고 올리지 않습니다. @param pWhat 로그에 나오는 등록 대상의 영문 이름(문자열 리터럴)입니다. */
-        void addOrReplace( const hashed_string& name, T value, const utf8* pWhat )
-        {
-            if ( name.empty() )
-            {
-                reportRegistrationRejected( RegistrationResult::EmptyName, pWhat, string_view{} );
-                return;
-            }
-            if ( const optional<size_t> index = findIndex( name ) )
-            {
-                _listName[*index]    = name;
-                _listValue[*index]   = std::move( value );
-                _listOwnerID[*index] = 0; // 주인 없는 값이 덮었다 — 앞 주인의 구독은 이제 아무것도 거두지 않는다
-                ++_revision;
-                return;
-            }
-            pushEntry( name, std::move( value ), 0 );
         }
 
         /**

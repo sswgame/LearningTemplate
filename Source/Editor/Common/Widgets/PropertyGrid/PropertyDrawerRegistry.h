@@ -5,6 +5,7 @@
 #pragma once
 #include "Core/Container/string.h"
 #include "Core/Container/vector.h"
+#include "Core/Delegate/Subscription.h"
 #include "Core/Foundation/Types.h"
 #include "Core/Memory/Memory.h"
 #include "Core/Registry/RegistrationList.h"
@@ -18,7 +19,6 @@ namespace sw
 
 namespace sw::editor
 {
-    struct EditorPropertyDrawerRegistration;
     struct InspectorComponentChoice;
     struct InspectorMethodArgSlot;
 
@@ -45,8 +45,6 @@ namespace sw::editor
         PropertyDrawerRegistry( const PropertyDrawerRegistry& )            = delete;
         PropertyDrawerRegistry& operator=( const PropertyDrawerRegistry& ) = delete;
 
-        /** @brief 타입 이름에 위젯을 겁니다. 같은 이름이 있으면 바꿉니다. */
-        void                registerType( string_view typeName, unique_ptr<IInspectorProperty> pProperty );
         IInspectorProperty* find( string_view typeName ) const;
         /** @brief `ReflectBuiltins.xxx` 의 내장 타입마다 위젯을 등록합니다(`InspectorWidgetFor<T>` 가 분기를 정합니다). */
         void registerDefaults();
@@ -63,12 +61,12 @@ namespace sw::editor
                                    vector<InspectorComponentChoice>& inoutListChoice );
 
     private:
-        /** @brief 내장 표(`ReflectBuiltins.xxx`)의 위젯을 모두 다시 겁니다. */
+        /** @brief 내장 표(`ReflectBuiltins.xxx`)의 위젯을 모두 겁니다(빈 표에 한 번). */
         void registerBuiltins();
 
     private:
-        NameRegistry<unique_ptr<IInspectorProperty>>    _registry;         ///< 프로퍼티 타입 이름 → 위젯
-        vector<const EditorPropertyDrawerRegistration*> _listRegistration; ///< 지금 걸려 있는 그리기 확장 등록 줄
-        uint32                                          _syncedGeneration; ///< 마지막으로 맞춘 등록 세대
+        NameRegistry<unique_ptr<IInspectorProperty>> _registry;               ///< 프로퍼티 타입 이름 → 위젯. 내장은 주인 없는 값, 확장은 주인 있는 값(풀리면 가렸던 내장으로 돌아간다)
+        vector<Subscription>                         _listDrawerSubscription; ///< 지금 걸려 있는 그리기 확장의 등록(`_registry` 뒤 — 먼저 사라진다)
+        uint32                                       _syncedGeneration;       ///< 마지막으로 맞춘 등록 세대
     };
 } // namespace sw::editor

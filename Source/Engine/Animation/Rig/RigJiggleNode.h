@@ -48,8 +48,8 @@ namespace sw
         static RigSpringSettings makeSettings( const RigJiggleGroupParams& group, float32 motionScale );
         /** @brief @p instance 의 모든 `Jiggle` 노드가 가리키는 묶음이 몸 입력에 있는지 봅니다. 없는 묶음마다 오류를 남기고 false 입니다(조용히 흔들리지 않게 하지 않는다). */
         [[nodiscard]] static bool validateGroups( const RigInstance& instance, string_view label );
-        /** @brief 노드를 등록합니다(`RigNodeLibrary::registerEngineNodes`). */
-        static void registerNodes( RigNodeRegistry& registry );
+        /** @brief 노드를 등록합니다(`RigNodeLibrary::registerEngineNodes`). 이름이 겹치면 레지스트리가 알리고 false 입니다. */
+        [[nodiscard]] static bool registerNodes( RigNodeRegistry& registry );
 
     private:
         vector<hashed_string> _listBoneName;

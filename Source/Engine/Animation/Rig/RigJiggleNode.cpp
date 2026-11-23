@@ -108,8 +108,8 @@ namespace sw
         return bValid;
     }
 
-    void RigJiggleNode::registerNodes( RigNodeRegistry& registry )
+    bool RigJiggleNode::registerNodes( RigNodeRegistry& registry )
     {
-        registry.registerNode( hashed_string( kTypeName ), &RigJiggleNodeFactory::create );
+        return registry.registerNode( hashed_string( kTypeName ), &RigJiggleNodeFactory::create );
     }
 } // namespace sw

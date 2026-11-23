@@ -44,8 +44,8 @@ namespace sw
         void                shutdownSubsystem() override {}
         const utf8*         getSubsystemName() const override { return kSubsystemName; }
 
-        /** @brief 종류를 등록합니다. 같은 이름이 있으면 바꿉니다. */
-        void registerNode( const hashed_string& typeName, RigNodeFactory factory );
+        /** @brief 종류를 등록합니다. 이름이 비었거나 같은 이름이 이미 있으면 알리고(`Registration.*`) false 입니다(먼저 것을 둔다). */
+        [[nodiscard]] bool registerNode( const hashed_string& typeName, RigNodeFactory factory );
         /** @brief 이름의 노드를 만듭니다. 모르는 이름이면 nullptr 입니다. */
         unique_ptr<RigNode> createNode( const hashed_string& typeName ) const;
         /** @brief 등록된 종류 이름들을 등록 순서로 반환합니다(진단과 에디터용). */
