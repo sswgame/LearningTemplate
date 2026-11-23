@@ -83,11 +83,12 @@ namespace sw
         }
 
         /**
-         * @brief 이음매 누름입니다 — 이음매 꼭짓점(`RHIVertex::isOnSeam`)과 두 끝점이 모두 이음매인 변에서 0, 테셀레이션 한 칸 안쪽부터 1 입니다. 변위 길이에 곱합니다.
+         * @brief 이음매 누름입니다 — 이음매 꼭짓점(`RHIVertex::isOnSeam`)과 이음매 변(`RHIVertex::isSeamEdge`)에서 0, 테셀레이션 한 칸 안쪽부터 1 입니다. 변위 길이에 곱합니다.
          * @details 이음매 양쪽의 패치는 UV 가 달라 다른 높이를 읽는다 — 변위를 0 으로 눌러 같은 자리에 둔다. 변 위의 값은 그 변의 두 끝점 표시와 변 계수만 읽어, 변을 나누는 두 패치가 같다.
          * @param seam 꼭짓점마다 이음매면 1, 아니면 0 입니다.
+         * @param edgeSeam 변마다(변 i 는 꼭짓점 i 의 맞은편) 이음매면 1, 아니면 0 입니다.
          */
-        [[nodiscard]] static float32 computeSeamFade( const float3& barycentric, const float3& seam, float32 edgeFactor0, float32 edgeFactor1, float32 edgeFactor2 ) noexcept
+        [[nodiscard]] static float32 computeSeamFade( const float3& barycentric, const float3& seam, const float3& edgeSeam, float32 edgeFactor0, float32 edgeFactor1, float32 edgeFactor2 ) noexcept
         {
             const float32 factor = blendEdges( barycentric, edgeFactor0, edgeFactor1, edgeFactor2 );
             float32       fade   = 1.0f;
@@ -96,9 +97,9 @@ namespace sw
             press( 1.0f - barycentric._x, seam._x );
             press( 1.0f - barycentric._y, seam._y );
             press( 1.0f - barycentric._z, seam._z );
-            press( barycentric._x, seam._y * seam._z );
-            press( barycentric._y, seam._z * seam._x );
-            press( barycentric._z, seam._x * seam._y );
+            press( barycentric._x, edgeSeam._x );
+            press( barycentric._y, edgeSeam._y );
+            press( barycentric._z, edgeSeam._z );
             return fade;
         }
 

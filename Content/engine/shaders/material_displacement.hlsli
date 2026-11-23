@@ -21,7 +21,8 @@
  * 노멀 맵이 있으면 그 맵이 높이 맵과 짝이라 보고 메시 노멀에 맵을 얹는다 — 둘을 함께 쓰면 같은 디테일이 두 번 든다(언리얼 · HDRP 변위도 노멀 맵으로 셰이딩한다).
  * 이음매(같은 위치에 노멀 · UV 가 다른 정점이 둘 이상 — 정점 탄젠트 w 의 크기)에서는 변위를 0 으로 눌러 양쪽이 같은 자리에 온다(Displacement::computeSeamFade). 누르는 폭은
  * 테셀레이션 한 칸이고, 변 위의 값은 그 변의 두 끝점 표시 · 변 계수만으로 정해 변을 나누는 두 패치가 같다. 양쪽이 다른 높이를 읽어 틈이 나던 자리다 —
- * 언리얼 Nanite 변위는 이 제약을 데이터에 맡긴다(기억에 의존). 면 안쪽 변도 두 끝점이 모두 이음매면 눌린다(꼭짓점 표시라 변을 가르지 못한다 — 큐브 면의 대각선).
+ * 언리얼 Nanite 변위는 이 제약을 데이터에 맡긴다(기억에 의존). 변은 두 끝점의 변 묶음이 겹치면 이음매다(C++ RHIVertex::isSeamEdge) — 두 끝이 이음매여도
+ * 안쪽 변(큐브 면의 대각선)은 눌리지 않는다. 런타임에 지은 메시는 변을 가르지 않아 그런 변도 눌린다.
  * 헐 · 도메인은 머티리얼 버퍼를 읽는다 — OpenGL 은 그 링크를 거절해(binding.hlsli 9 절) 이 변형을 만들지 않는다(`RHICapabilities::_bMaterialTessellation`).
  */
 
@@ -47,7 +48,7 @@ struct MaterialControlPoint
     float2 _uv : TEXCOORD0;
     float4 _color : COLOR;
     float4 _tangent : TEXCOORD3;   ///< 탄젠트를 쓰지 않는 셰이더는 0
-    float  _seam : TEXCOORD7;      ///< 이음매 꼭짓점이면 1(정점 탄젠트 w 의 크기)
+    float  _seam : TEXCOORD7;      ///< 이음매 꼭짓점이면 1 + 변 묶음, 아니면 0(정점 탄젠트 w 의 크기)
     float  _viewDepth : TEXCOORD6; ///< 카메라 뷰 깊이(카메라 뷰-투영의 w) — 변 계수만 읽는다
     uint   _materialIndex : TEXCOORD4;
     uint   _instanceSlot : TEXCOORD5;
@@ -72,7 +73,9 @@ struct Displacement
     static float computeEdgeHeightMipLevel( float2 uvA, float2 uvB, float edgeFactor, float2 textureSize );
     static float blendEdgeHeightMipLevels( float3 barycentric, float edgeMip0, float edgeMip1, float edgeMip2 );
     static void computeUVTangentFrame( float3 position0, float3 position1, float3 position2, float2 uv0, float2 uv1, float2 uv2, out float3 outTangent, out float3 outBitangent );
-    static float computeSeamFade( float3 barycentric, float3 seam, float edgeFactor0, float edgeFactor1, float edgeFactor2 );
+    static float readSeamCode( float tangentW );
+    static float computeEdgeSeam( float seamCodeA, float seamCodeB );
+    static float computeSeamFade( float3 barycentric, float3 seam, float3 edgeSeam, float edgeFactor0, float edgeFactor1, float edgeFactor2 );
     static float blendEdges( float3 barycentric, float edge0, float edge1, float edge2 );
     static float3 computeDisplacementNormal( float3 normal, float3 tangent, float3 bitangent, float heightSlopeU, float heightSlopeV, float scale );
 };
@@ -113,17 +116,32 @@ static float Displacement::blendEdges( float3 barycentric, float edge0, float ed
     return sum > kDisplacementMinWeight ? dot( weight, float3( edge0, edge1, edge2 ) ) / sum : 0.0f;
 }
 
+/** @brief 정점 탄젠트 w 의 이음매 표시(1 + 변 묶음). 이음매가 아니면 0. */
+static float Displacement::readSeamCode( float tangentW )
+{
+    const float magnitude = abs( tangentW );
+    return magnitude < kSeamTangentThreshold ? round( magnitude * kSeamCodeScale ) : 0.0f;
+}
+
+/** @brief 두 끝점의 변 묶음이 겹치면 1(이음매 변). */
+static float Displacement::computeEdgeSeam( float seamCodeA, float seamCodeB )
+{
+    const uint edgeMaskA = (uint)max( seamCodeA - 0.5f, 0.0f ); // 1 + 묶음 → 묶음(내림)
+    const uint edgeMaskB = (uint)max( seamCodeB - 0.5f, 0.0f );
+    return ( edgeMaskA & edgeMaskB ) != 0u ? 1.0f : 0.0f;
+}
+
 /**
- * @brief 이음매 누름 — 이음매 꼭짓점과 두 끝점이 모두 이음매인 변에서 0, 테셀레이션 한 칸 안쪽부터 1.
+ * @brief 이음매 누름 — 이음매 꼭짓점과 이음매 변에서 0, 테셀레이션 한 칸 안쪽부터 1.
  * @details 변 위의 값은 그 변의 두 끝점 표시와 변 계수만 읽는다 — 변을 나누는 두 패치가 같은 값이라 틈이 없다.
  * @param seam 꼭짓점마다 이음매면 1.
+ * @param edgeSeam 변마다(변 i 는 꼭짓점 i 의 맞은편) 이음매면 1.
  */
-static float Displacement::computeSeamFade( float3 barycentric, float3 seam, float edgeFactor0, float edgeFactor1, float edgeFactor2 )
+static float Displacement::computeSeamFade( float3 barycentric, float3 seam, float3 edgeSeam, float edgeFactor0, float edgeFactor1, float edgeFactor2 )
 {
     const float  factor     = Displacement::blendEdges( barycentric, edgeFactor0, edgeFactor1, edgeFactor2 );
     const float3 vertexFade = saturate( ( 1.0f - barycentric ) * factor );
     const float3 edgeFade   = saturate( barycentric * factor );
-    const float3 edgeSeam   = seam.yzx * seam.zxy; // 변 i(꼭짓점 i 의 맞은편)의 두 끝점이 모두 이음매
     const float3 vertexTerm = lerp( float3( 1.0f, 1.0f, 1.0f ), vertexFade, seam );
     const float3 edgeTerm   = lerp( float3( 1.0f, 1.0f, 1.0f ), edgeFade, edgeSeam );
     const float3 term       = min( vertexTerm, edgeTerm );
@@ -183,7 +201,7 @@ MaterialControlPoint VSMain( MaterialVertexInput input, SW_INSTANCE_SLOT_INPUT( 
     output._color                  = context._input._color;
     output._tangent                = computeControlPointTangent( context );
     output._viewDepth              = mul( worldPosition, g_ViewProj ).w;
-    output._seam                   = abs( context._input._tangent.w ) < kSeamTangentThreshold ? 1.0f : 0.0f;
+    output._seam                   = Displacement::readSeamCode( context._input._tangent.w );
     output._materialIndex          = context._instance._materialIndex;
     output._instanceSlot           = instanceSlot;
     output._appearance             = context._instance._appearance;
@@ -297,8 +315,10 @@ void storeDisplacedVaryings( inout MaterialInterpolants output, MaterialControlP
     const float  edgeMip2      = Displacement::computeEdgeHeightMipLevel( patch[0]._uv, patch[1]._uv, constants._arrEdge[2], heightSize );
     const float  heightMip     = Displacement::blendEdgeHeightMipLevels( barycentric, edgeMip0, edgeMip1, edgeMip2 );
     const float  height        = MaterialTexture::sampleLevel( material._displacementMap, controlPoint._uv, heightMip ).r;
-    const float3 seam          = float3( patch[0]._seam, patch[1]._seam, patch[2]._seam );
-    const float  seamFade      = Displacement::computeSeamFade( barycentric, seam, constants._arrEdge[0], constants._arrEdge[1], constants._arrEdge[2] );
+    const float3 seam          = saturate( float3( patch[0]._seam, patch[1]._seam, patch[2]._seam ) );
+    const float3 edgeSeam      = float3( Displacement::computeEdgeSeam( patch[1]._seam, patch[2]._seam ), Displacement::computeEdgeSeam( patch[2]._seam, patch[0]._seam ),
+                                         Displacement::computeEdgeSeam( patch[0]._seam, patch[1]._seam ) );
+    const float  seamFade      = Displacement::computeSeamFade( barycentric, seam, edgeSeam, constants._arrEdge[0], constants._arrEdge[1], constants._arrEdge[2] );
     const float  offset        = Displacement::computeOffset( height, material._displacementScale, material._displacementMidLevel ) * seamFade;
     const float3 meshNormal    = normalize( controlPoint._normal );
     const float4 worldPosition = float4( controlPoint._worldPosition + meshNormal * offset, 1.0f );

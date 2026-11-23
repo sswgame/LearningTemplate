@@ -124,19 +124,21 @@ SW_TEST_CASE( MaterialDisplacementTest, DisplacementNormalTiltsAwayFromSlope )
 SW_TEST_CASE( MaterialDisplacementTest, SeamFadePressesSeamEdges )
 {
     const float3 noSeam( 0.0f, 0.0f, 0.0f );
-    const float3 seamEdge( 0.0f, 1.0f, 1.0f ); // 변 0(꼭짓점 1 · 2)이 이음매다
-    SW_EXPECT_EQUAL( 1.0f, MaterialDisplacement::computeSeamFade( float3( 0.0f, 0.5f, 0.5f ), noSeam, 8.0f, 8.0f, 8.0f ) );
-    SW_EXPECT_EQUAL( 0.0f, MaterialDisplacement::computeSeamFade( float3( 0.0f, 0.5f, 0.5f ), seamEdge, 8.0f, 8.0f, 8.0f ) );
-    SW_EXPECT_EQUAL( 0.0f, MaterialDisplacement::computeSeamFade( float3( 0.0f, 1.0f, 0.0f ), seamEdge, 8.0f, 8.0f, 8.0f ) );
-    SW_EXPECT_EQUAL( 1.0f, MaterialDisplacement::computeSeamFade( float3( 0.4f, 0.3f, 0.3f ), seamEdge, 8.0f, 8.0f, 8.0f ) );
+    const float3 seamEdge( 0.0f, 1.0f, 1.0f ); // 꼭짓점 1 · 2 가 이음매다
+    const float3 edge0( 1.0f, 0.0f, 0.0f );    // 변 0(꼭짓점 1 · 2)이 이음매다
+    SW_EXPECT_EQUAL( 1.0f, MaterialDisplacement::computeSeamFade( float3( 0.0f, 0.5f, 0.5f ), noSeam, noSeam, 8.0f, 8.0f, 8.0f ) );
+    SW_EXPECT_EQUAL( 0.0f, MaterialDisplacement::computeSeamFade( float3( 0.0f, 0.5f, 0.5f ), seamEdge, edge0, 8.0f, 8.0f, 8.0f ) );
+    SW_EXPECT_EQUAL( 0.0f, MaterialDisplacement::computeSeamFade( float3( 0.0f, 1.0f, 0.0f ), seamEdge, edge0, 8.0f, 8.0f, 8.0f ) );
+    SW_EXPECT_EQUAL( 1.0f, MaterialDisplacement::computeSeamFade( float3( 0.4f, 0.3f, 0.3f ), seamEdge, edge0, 8.0f, 8.0f, 8.0f ) );
+    SW_EXPECT_EQUAL( 1.0f, MaterialDisplacement::computeSeamFade( float3( 0.0f, 0.5f, 0.5f ), seamEdge, noSeam, 8.0f, 8.0f, 8.0f ) ); // 두 끝이 이음매여도 안쪽 변은 눌리지 않는다
 }
 
 /** @brief [MaterialDisplacementTest] 변 위의 누름은 그 변의 두 끝점 표시와 변 계수만 읽는다 — 맞은편 꼭짓점 · 다른 변 계수가 달라도 같다(이웃 패치와 틈이 없다) */
 SW_TEST_CASE( MaterialDisplacementTest, SeamFadeOnAnEdgeIgnoresTheOppositeVertex )
 {
     const float3  onEdge2( 0.8f, 0.2f, 0.0f ); // 변 2(꼭짓점 0 · 1) 위의 점
-    const float32 fade      = MaterialDisplacement::computeSeamFade( onEdge2, float3( 1.0f, 0.0f, 0.0f ), 3.0f, 9.0f, 2.0f );
-    const float32 neighbour = MaterialDisplacement::computeSeamFade( onEdge2, float3( 1.0f, 0.0f, 1.0f ), 21.0f, 5.0f, 2.0f );
+    const float32 fade      = MaterialDisplacement::computeSeamFade( onEdge2, float3( 1.0f, 0.0f, 0.0f ), float3( 0.0f, 0.0f, 0.0f ), 3.0f, 9.0f, 2.0f );
+    const float32 neighbour = MaterialDisplacement::computeSeamFade( onEdge2, float3( 1.0f, 0.0f, 1.0f ), float3( 0.0f, 1.0f, 0.0f ), 21.0f, 5.0f, 2.0f );
     SW_EXPECT_NEAR( 0.4f, fade, 1.0e-6f ); // 꼭짓점 0 에서 0.2 × 변 계수 2
     SW_EXPECT_NEAR( fade, neighbour, 1.0e-6f );
 }

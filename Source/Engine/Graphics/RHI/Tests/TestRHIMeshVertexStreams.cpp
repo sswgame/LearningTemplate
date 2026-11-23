@@ -55,11 +55,11 @@ SW_TEST_CASE( RHIMeshVertexStreamsTest, PackedSplitsPositionAndAttributes )
 
 SW_TEST_CASE( RHIMeshVertexStreamsTest, PackedKeepsTheSeamMark )
 {
-    const RHIVertex arrVertex[2] = { makeVertex( 1.0f, 1.0f, -RHIVertex::kSeamTangentWeight, 0.5f ), makeVertex( 4.0f, 1.0f, RHIVertex::kSeamTangentWeight, 0.0f ) };
+    const RHIVertex arrVertex[2] = { makeVertex( 1.0f, 1.0f, RHIVertex::makeSeamTangentW( -1.0f, 5u ), 0.5f ), makeVertex( 4.0f, 1.0f, RHIVertex::makeSeamTangentW( 1.0f, RHIVertex::kSeamEdgeMaskAll ), 0.0f ) };
     vector<uint8>   listByte( RHIMeshVertexStreams::computeBufferBytes( RHIMeshVertexFormat::Packed, 2 ) );
     RHIMeshVertexStreams::write( RHIMeshVertexFormat::Packed, arrVertex, 2, 0, 2, listByte.data() );
     const RHIPackedMeshAttributes* pAttributes = reinterpret_cast<const RHIPackedMeshAttributes*>( listByte.data() + RHIMeshVertexStreams::computeAttributeOffset( 2 ) );
-    SW_EXPECT_EQUAL( int8{ -64 }, pAttributes[0]._arrTangent[3] );
+    SW_EXPECT_EQUAL( int8{ -6 }, pAttributes[0]._arrTangent[3] ); // 1 + 변 묶음 5
     SW_EXPECT_EQUAL( int8{ 64 }, pAttributes[1]._arrTangent[3] );
 }
 

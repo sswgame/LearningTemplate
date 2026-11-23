@@ -16,10 +16,22 @@ namespace sw
      */
     struct RHIVertex
     {
-        /** @brief 이음매 정점의 탄젠트 w 크기입니다(`_arrTangent` 설명). 읽는 쪽은 `kSeamTangentThreshold` 로 가른다. */
-        static constexpr float32 kSeamTangentWeight = 0.5f;
-        /** @brief 탄젠트 w 의 크기가 이보다 작으면 이음매 정점입니다(0.5 와 1 사이 — 셰이더 짝은 common.hlsli `kSeamTangentThreshold`). */
+        /** @brief 이음매 변 묶음의 비트 수와 모두 켠 값입니다(`getSeamEdgeMask`). */
+        static constexpr uint32 kSeamEdgeGroupCount = 6;
+        static constexpr uint32 kSeamEdgeMaskAll    = ( 1u << kSeamEdgeGroupCount ) - 1u;
+        /** @brief 이음매 정점의 탄젠트 w 크기는 (1 + 변 묶음) / 이 값입니다 — GPU 스트림의 snorm8 에서 정확히 왕복한다(셰이더 짝은 common.hlsli `kSeamCodeScale`). */
+        static constexpr float32 kSeamCodeScale = 127.0f;
+        /** @brief 탄젠트 w 의 크기가 이보다 작으면(0 은 아니다) 이음매 정점입니다(가장 큰 이음매 크기 64/127 과 1 사이 — 셰이더 짝은 common.hlsli `kSeamTangentThreshold`). */
         static constexpr float32 kSeamTangentThreshold = 0.75f;
+
+        /** @brief 이음매 정점의 탄젠트 w 입니다. 부호는 @p handedness 의 것, 크기는 변 묶음 @p edgeMask 입니다. */
+        [[nodiscard]] static constexpr float32 makeSeamTangentW( float32 handedness, uint32 edgeMask )
+        {
+            const float32 magnitude = static_cast<float32>( 1u + ( edgeMask & kSeamEdgeMaskAll ) ) / kSeamCodeScale;
+            return handedness < 0.0f ? -magnitude : magnitude;
+        }
+        /** @brief 두 정점을 잇는 변이 이음매면 true 입니다 — 둘 다 이음매 정점이고 같은 변 묶음에 든다. 두 끝이 이음매여도 이음매가 아닌 안쪽 변(큐브 면의 대각선)은 false 다. */
+        [[nodiscard]] static bool isSeamEdge( const RHIVertex& lhs, const RHIVertex& rhs ) { return ( lhs.getSeamEdgeMask() & rhs.getSeamEdgeMask() ) != 0u; }
 
         float32 _arrPosition[3]; ///< 정점 위치 (X, Y, Z)
         /**
@@ -39,13 +51,20 @@ namespace sw
          * @brief 탄젠트 (X, Y, Z)와 바이탄젠트 부호(W 의 부호)입니다. 노멀 맵이 탄젠트 공간을 세울 때 씁니다(glTF · MikkTSpace 규약 — 바이탄젠트 = cross( N, T ) × W).
          * @details 위치 · 노멀 · UV 에서 나오는 값이라 손으로 채우지 않는다. `Mesh::setVertices` 가 `Mesh::computeTangents` 로 구하고,
          *          `.mesh` 는 임포트 때 구한 값을 싣는다(`Mesh::setVerticesWithTangents`). 노멀과 같은 함정 — 셰이더가 다른 값에서 지어내지 않는다.
-         *          W 의 크기는 **이음매 표시**다 — 같은 위치에 노멀이나 UV 가 다른 정점이 있으면 `kSeamTangentWeight`, 없으면 1 이다. 부호만 손잡이이므로 읽는 쪽은 부호로만 쓴다.
+         *          W 의 크기는 **이음매 표시**다 — 이음매 정점(같은 위치에 노멀이나 UV 가 다른 정점이 있거나 이음매 변의 끝)이면 `makeSeamTangentW`, 아니면 1 이다. 부호만 손잡이이므로 읽는 쪽은 부호로만 쓴다.
+         *          변 묶음은 변이 이음매인지 두 끝점만으로 가르게 하는 비트다(`Mesh::refineSeamEdges`). 고르지 않은 메시(런타임 생성)는 모든 비트라 두 끝이 이음매인 변을 모두 이음매로 본다.
          *          변위(material_displacement.hlsli)가 이음매에서 높이를 눌러 틈을 막는다.
          */
         float32 _arrTangent[4];
 
         /** @brief 이음매 정점이면 true 입니다(W 의 크기). 탄젠트 칸에 다른 데이터를 싣는 메시(지형)에서는 뜻이 없다. */
-        [[nodiscard]] bool isOnSeam() const { return -kSeamTangentThreshold < _arrTangent[3] && _arrTangent[3] < kSeamTangentThreshold; }
+        [[nodiscard]] bool isOnSeam() const { return _arrTangent[3] != 0.0f && -kSeamTangentThreshold < _arrTangent[3] && _arrTangent[3] < kSeamTangentThreshold; }
+        /** @brief 이음매 정점이 든 변 묶음의 비트입니다(`kSeamEdgeGroupCount` 개). 이음매가 아니면 0 입니다. */
+        [[nodiscard]] uint32 getSeamEdgeMask() const
+        {
+            const float32 magnitude = _arrTangent[3] < 0.0f ? -_arrTangent[3] : _arrTangent[3];
+            return isOnSeam() ? static_cast<uint32>( magnitude * kSeamCodeScale + 0.5f ) - 1u : 0u;
+        }
     };
 
     /**

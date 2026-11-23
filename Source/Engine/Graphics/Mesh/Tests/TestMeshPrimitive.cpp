@@ -248,7 +248,7 @@ SW_TEST_CASE( MeshPrimitiveTest, PrimitiveTangentsAreOrthonormalToNormals )
             const sw::float3 tangent{ vertex._arrTangent[0], vertex._arrTangent[1], vertex._arrTangent[2] };
             const bool       bUnit       = sw::MathUtil::abs( tangent.getLength() - 1.0f ) <= 0.001f;
             const bool       bOrthogonal = sw::MathUtil::abs( tangent.dot( normal ) ) <= 0.001f;
-            const bool       bSign       = sw::MathUtil::abs( vertex._arrTangent[3] ) == ( vertex.isOnSeam() ? sw::RHIVertex::kSeamTangentWeight : 1.0f );
+            const bool       bSign       = sw::MathUtil::abs( vertex._arrTangent[3] ) == ( vertex.isOnSeam() ? sw::RHIVertex::makeSeamTangentW( 1.0f, vertex.getSeamEdgeMask() ) : 1.0f );
             const bool       bValid      = bUnit && bOrthogonal && bSign;
             if ( bValid == false )
                 ++badCount;
@@ -259,8 +259,24 @@ SW_TEST_CASE( MeshPrimitiveTest, PrimitiveTangentsAreOrthonormalToNormals )
     // 이음매 표시: 평면은 이음매가 없고, 면마다 노멀이 갈린 큐브의 정점은 모두 이음매다.
     for ( const sw::RHIVertex& vertex : sw::MeshUtil::createPrimitive( "Plane" )->getCPUView().getVertices() )
         SW_EXPECT_FALSE( vertex.isOnSeam() );
-    for ( const sw::RHIVertex& vertex : sw::MeshUtil::createPrimitive( "Cube" )->getCPUView().getVertices() )
+    const sw::shared_ptr<sw::Mesh>   cube           = sw::MeshUtil::createPrimitive( "Cube" );
+    const sw::vector<sw::RHIVertex>& listCubeVertex = cube->getCPUView().getVertices();
+    const sw::vector<uint32>&        listCubeIndex  = cube->getIndices();
+    for ( const sw::RHIVertex& vertex : listCubeVertex )
         SW_EXPECT_TRUE( vertex.isOnSeam() );
+    // 이음매 변: 큐브의 모서리(길이 1)만 이음매다 — 면의 대각선은 두 끝이 이음매여도 아니다.
+    uint32 wrongEdgeCount = 0;
+    for ( size_t corner = 0; corner < listCubeIndex.size(); ++corner )
+    {
+        const size_t         next = corner % 3 == 2 ? corner - 2 : corner + 1;
+        const sw::RHIVertex& from = listCubeVertex[listCubeIndex[corner]];
+        const sw::RHIVertex& to   = listCubeVertex[listCubeIndex[next]];
+        const sw::float3     edge{ to._arrPosition[0] - from._arrPosition[0], to._arrPosition[1] - from._arrPosition[1], to._arrPosition[2] - from._arrPosition[2] };
+        const bool           bCubeEdge = edge.getLength() < 1.2f;
+        if ( sw::RHIVertex::isSeamEdge( from, to ) != bCubeEdge )
+            ++wrongEdgeCount;
+    }
+    SW_EXPECT_EQUAL( 0u, wrongEdgeCount );
 
     // 평면(XZ, 노멀 +Y): 탄젠트가 위치의 u 기울기 방향이고, 바이탄젠트가 v 가 줄어드는 쪽이다.
     sw::shared_ptr<sw::Mesh> plane = sw::MeshUtil::createPrimitive( "Plane" );
