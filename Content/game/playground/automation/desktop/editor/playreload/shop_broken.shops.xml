@@ -1,0 +1,4 @@
+<?xml version="1.0" encoding="utf-8"?>
+<?asset guid="78dadea4926d417db0ab070bf4bdcf30"?>
+<!-- 플레이 중 리로드 시나리오의 깨진 카탈로그 — 뿌리 요소가 틀렸다(Xml.MissingRoot). 사본 shop.shops.xml 에 덮으면 공유 캐시가 다시 읽기에 실패하고 이전 판을 지킨다. -->
+<BrokenShopCatalog />

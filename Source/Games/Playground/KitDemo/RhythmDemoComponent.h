@@ -46,8 +46,9 @@ namespace sw
         [[nodiscard]] bool runChart();
 
     private:
+        // 채보는 노래 하나의 에셋이라(언리얼 · 유니티도 곡 에셋을 맵 · 곡 목록이 가리킨다) 팩 카탈로그가 아니라 이 칸이 고른다.
         PROPERTY( Category = "Data", DisplayName = "Chart", Tooltip = "Rhythm chart XML (lanes, bpm, notes)" )
-        AssetRef<RhythmChart> _catalogPath;
+        AssetRef<RhythmChart> _chart;
 
         SharedAssetRef<RhythmChart> _pChart;
         PROPERTY( RuntimeState )

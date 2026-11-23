@@ -7,7 +7,6 @@
 #pragma once
 #include "Core/Foundation/Types.h"
 
-#include "Engine/Asset/AssetRef.h"
 #include "Engine/Asset/Cache/SharedAssetRef.h"
 #include "Engine/Reflection/ReflectionMacros.h"
 
@@ -46,9 +45,6 @@ namespace sw
         [[nodiscard]] bool runBattle();
 
     private:
-        PROPERTY( Category = "Data", DisplayName = "Catalog", Tooltip = "Classic JRPG catalog XML (experience curve, class, enemy)" )
-        AssetRef<JRPGCatalog> _catalogPath;
-
         SharedAssetRef<JRPGCatalog> _pCatalog;
         PROPERTY( RuntimeState )
         int32 _battleResult; ///< `JRPGBattleResult` 값(0 진행, 1 승리, 2 패배, 3 도망)

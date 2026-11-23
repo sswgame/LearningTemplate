@@ -38,8 +38,7 @@ namespace sw
                                 &ClassicJRPGDemoComponent::getGold );
 
     ClassicJRPGDemoComponent::ClassicJRPGDemoComponent()
-        : _catalogPath{}
-        , _pCatalog{}
+        : _pCatalog{}
         , _battleResult{ 0 }
         , _heroExp{ 0 }
         , _gold{ 0 }
@@ -81,7 +80,7 @@ namespace sw
 
     bool ClassicJRPGDemoComponent::startGame()
     {
-        if ( acquireRequired( _catalogPath, _pCatalog ) == false )
+        if ( acquireBoundCatalog( _pCatalog ) == false )
             return false;
         return runBattle();
     }

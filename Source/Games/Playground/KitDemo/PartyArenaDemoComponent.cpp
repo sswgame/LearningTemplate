@@ -39,8 +39,7 @@ namespace sw
                                 &PartyArenaDemoComponent::getRoundsPlayed );
 
     PartyArenaDemoComponent::PartyArenaDemoComponent()
-        : _catalogPath{}
-        , _pCatalog{}
+        : _pCatalog{}
         , _winner{ PartyArenaDemoComponentInternal::kNoWinner }
         , _winnerTotal{ 0 }
         , _roundsPlayed{ 0 }
@@ -79,7 +78,7 @@ namespace sw
 
     bool PartyArenaDemoComponent::startGame()
     {
-        if ( acquireRequired( _catalogPath, _pCatalog ) == false )
+        if ( acquireBoundCatalog( _pCatalog ) == false )
             return false;
         return runSeries();
     }

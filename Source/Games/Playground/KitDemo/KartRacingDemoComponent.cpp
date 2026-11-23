@@ -70,8 +70,7 @@ namespace sw
     SW_AUTOMATION_GETTER_WATCH( kitDemoKartRacingLast, "KitDemo.KartRacing.Last", "Racer index placed third (-1 none)", KartRacingDemoComponent, &KartRacingDemoComponent::getLast );
 
     KartRacingDemoComponent::KartRacingDemoComponent()
-        : _catalogPath{}
-        , _pCatalog{}
+        : _pCatalog{}
         , _winner{ KartRacingDemoComponentInternal::kNoRacer }
         , _runnerUp{ KartRacingDemoComponentInternal::kNoRacer }
         , _last{ KartRacingDemoComponentInternal::kNoRacer }
@@ -137,7 +136,7 @@ namespace sw
 
     bool KartRacingDemoComponent::startGame()
     {
-        if ( acquireRequired( _catalogPath, _pCatalog ) == false )
+        if ( acquireBoundCatalog( _pCatalog ) == false )
             return false;
         return runRace();
     }
