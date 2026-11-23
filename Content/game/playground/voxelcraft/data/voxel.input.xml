@@ -1,0 +1,64 @@
+<?xml version="1.0" encoding="utf-8"?>
+<?asset guid="bb1d2a4d11a76f92b88d1fc819943a1c"?>
+<!--
+  복셀 광산 미니게임(minigames/voxelcraft)의 입력 차이 — Playground 공통 묶음(data/gamesettings.xml 의 <inputMap> 줄) 위에 얹힌다. 게임 코드는 키를 묻지 않고 액션 이름만 묻는다.
+  한 게임만 쓰는 이름은 게임 접두(Voxel.)다. 레이어 Voxel 은 꺼져 있고 미니게임의 inputContexts 가 들어가 있는 동안만 켠다 — 다른 미니게임의 같은 키와 겹치지 않는다.
+-->
+<InputMap>
+	<layers>
+		<layer name="Voxel" enabled="0" blockLower="0"/>
+	</layers>
+	<!-- 바라보는 블록 부수기(누르고 있기) · 놓기(누르고 있으면 간격마다). -->
+	<action name="Voxel.Break" layer="Voxel" trigger="Down">
+		<bind source="Mouse" code="Left"/>
+	</action>
+
+	<action name="Voxel.Place" layer="Voxel" trigger="Down">
+		<bind source="Mouse" code="Right"/>
+	</action>
+
+	<!-- 핫바 넘기기 — 휠 위(+)가 앞 칸. 폰의 아날로그 칸이다. -->
+	<action name="Voxel.HotbarScroll" layer="Voxel">
+		<mouseWheel scale="1"/>
+	</action>
+
+	<action name="Voxel.Slot1" layer="Voxel" trigger="Pressed">
+		<bind source="Key" code="Digit1"/>
+	</action>
+
+	<action name="Voxel.Slot2" layer="Voxel" trigger="Pressed">
+		<bind source="Key" code="Digit2"/>
+	</action>
+
+	<action name="Voxel.Slot3" layer="Voxel" trigger="Pressed">
+		<bind source="Key" code="Digit3"/>
+	</action>
+
+	<action name="Voxel.Slot4" layer="Voxel" trigger="Pressed">
+		<bind source="Key" code="Digit4"/>
+	</action>
+
+	<action name="Voxel.Slot5" layer="Voxel" trigger="Pressed">
+		<bind source="Key" code="Digit5"/>
+	</action>
+
+	<action name="Voxel.Slot6" layer="Voxel" trigger="Pressed">
+		<bind source="Key" code="Digit6"/>
+	</action>
+
+	<action name="Voxel.Slot7" layer="Voxel" trigger="Pressed">
+		<bind source="Key" code="Digit7"/>
+	</action>
+
+	<action name="Voxel.Slot8" layer="Voxel" trigger="Pressed">
+		<bind source="Key" code="Digit8"/>
+	</action>
+
+	<action name="Voxel.Slot9" layer="Voxel" trigger="Pressed">
+		<bind source="Key" code="Digit9"/>
+	</action>
+	<!-- 누르고 있으면 계속 뛴다 · 물에서는 헤엄친다(공용 Jump 는 누를 때 한 번이라 쓰지 않는다). 패드는 묶지 않았다. -->
+	<action name="Voxel.Jump" layer="Voxel" trigger="Down">
+		<bind source="Key" code="Space"/>
+	</action>
+</InputMap>

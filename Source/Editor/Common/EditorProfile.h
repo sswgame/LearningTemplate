@@ -6,6 +6,8 @@
  *          포인터를 들지 않는다. 지점은 함수 지역 static 이라 모듈을 다시 올리면 다시 등록되고, 같은 이름은 같은 슬롯이다.
  */
 #pragma once
+#include "Core/Foundation/Macros.h"
+
 #include "Editor/Common/Workspace/EditorService.h"
 
 #include "Engine/Profiling/FrameProfiler.h"
@@ -33,9 +35,9 @@ namespace sw::editor
 
 /** @brief 이 스코프의 CPU 시간을 name 구간에 쌓습니다(에디터 모듈용 `SW_PROFILE_SCOPE`). */
 #define SW_EDITOR_PROFILE_SCOPE( name )                                                                              \
-    static const ::sw::ProfileScopeID SW_PROFILE_CONCAT( swEditorProfileSlot_, __LINE__ ) =                          \
+    static const ::sw::ProfileScopeID SW_CONCAT( swEditorProfileSlot_, __LINE__ ) =                                  \
         ::sw::editor::EditorProfileUtil::registerScope( name, __func__, __FILE__, static_cast<uint32>( __LINE__ ) ); \
-    ::sw::ScopedFrameProfile SW_PROFILE_CONCAT( swEditorProfileScope_, __LINE__ )                                    \
+    ::sw::ScopedFrameProfile SW_CONCAT( swEditorProfileScope_, __LINE__ )                                            \
     {                                                                                                                \
-        SW_PROFILE_CONCAT( swEditorProfileSlot_, __LINE__ )                                                          \
+        SW_CONCAT( swEditorProfileSlot_, __LINE__ )                                                                  \
     }

@@ -302,7 +302,7 @@ namespace sw
                         files._listGameDomain.push_back( FileUtil::normalizePath( domain ).str() );
                 }
 
-                AssetCookRootRegistry::appendRoots( files._listCodeRoot );
+                AssetCookRoot::appendRoots( files._listCodeRoot );
                 files._automation = params._automationContent;
                 PackReachResult reach;
                 const bool      bReached = PackReachResult::collect( properties, config._cookRules, files, source, reach );

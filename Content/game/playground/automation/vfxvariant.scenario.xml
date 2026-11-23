@@ -9,13 +9,13 @@
 	<Launch variable="gv_firstScene" value="game/playground/maps/vfxvariant.scene.xml"/>
 	<WaitUntil watch="Assets.Pending" equals="0" timeoutWallSeconds="60"/>
 	<AdvanceSimulation frames="60"/>
-	<Screenshot file="vfxvariant_off.ppm" stability="none"/>
+	<Screenshot file="vfxvariant_off.ppm" stability="None"/>
 	<LoadScene path="game/playground/maps/vfxvariant_tinted.scene.xml" timeoutFrames="600"/>
 	<WaitUntil watch="Scene.Transitioning" equals="0" timeoutWallSeconds="60"/>
 	<WaitUntil watch="Assets.Pending" equals="0" timeoutWallSeconds="60"/>
 	<WaitUntil watch="Scene.ObjectCount" atLeast="1" timeoutFrames="60"/>
 	<AdvanceSimulation frames="60"/>
-	<Screenshot file="vfxvariant_on.ppm" stability="none"/>
+	<Screenshot file="vfxvariant_on.ppm" stability="None"/>
 	<ExpectImagesDiffer first="vfxvariant_off.ppm" second="vfxvariant_on.ppm" region="0.2,0,0.8,0.8" minDiffering="0.005"/>
 	<Pass/>
 </Scenario>

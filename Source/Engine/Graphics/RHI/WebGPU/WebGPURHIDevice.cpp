@@ -1240,7 +1240,7 @@ namespace sw
         // 칸은 beginFrame 이 비웠다. 비지 않았으면 앞 프레임의 콜백이 이 칸을 아직 가리킨다 — 덮으면 그 콜백이 새 프레임의 셈을 깎는다.
         const uint64 busySerial = _frameFenceRing.getRecordingSlotBusySerial();
         if ( busySerial != 0 )
-            SW_FATAL( "WebGPU: frame %# is submitted into a ring slot still held by frame %#", _frameFenceRing.getRecordingSerial(), busySerial );
+            reportFatalError( "WebGPU: frame %# is submitted into a ring slot still held by frame %#", _frameFenceRing.getRecordingSerial(), busySerial );
         WebGPUFrameFence* const pFence = &_arrFrameFence[_frameFenceRing.getRecordingSlot()];
         pFence->arm( _frameFenceRing.getRecordingSerial(), this );
         WGPUQueueWorkDoneCallbackInfo doneInfo{};

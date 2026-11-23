@@ -207,7 +207,7 @@ namespace sw
             if ( row._format == format )
                 return row._folder;
         }
-        SW_FATAL( "ShaderCooker::getSubfolderForFormat: unknown shader target format %#", static_cast<uint32>( format ) );
+        reportFatalError( "ShaderCooker::getSubfolderForFormat: unknown shader target format %#", static_cast<uint32>( format ) );
     }
 
     string_view ShaderCooker::getExtensionForFormat( ShaderTargetFormat format )
@@ -215,7 +215,7 @@ namespace sw
         const ShaderTargetFormatInfo* const pInfo = ShaderTargetFormatTable::find( format );
         if ( pInfo != nullptr )
             return pInfo->_pExtension;
-        SW_FATAL( "ShaderCooker::getExtensionForFormat: unknown shader target format %#", static_cast<uint32>( format ) );
+        reportFatalError( "ShaderCooker::getExtensionForFormat: unknown shader target format %#", static_cast<uint32>( format ) );
     }
 
     ShaderTargetFormat ShaderCooker::getFormatForSubfolder( string_view subfolder )

@@ -13,22 +13,19 @@
 #include "Engine/Object/Component/SceneComponent.h"
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Physics/Asset/PhysicsAsset.h"
-#include "Engine/Physics/Component/CharacterControllerComponent.h"
 #include "Engine/Scene/SceneManager.h"
 
 namespace sw
 {
     namespace
     {
-        /** @brief 캐릭터 개발 명령(맞힘 · 점프 · 애니메이션 재생 · 내비 이동)입니다. */
+        /** @brief 캐릭터 개발 명령(맞힘 · 애니메이션 재생 · 내비 이동)입니다. */
         struct CharacterCommandsInternal
         {
             /** @brief 명령이 보내는 맞음의 충격량(N·s)입니다. */
             static constexpr float32 kHitImpulse = 40.0f;
             /** @brief `combat.fatalhit` 의 피해입니다. */
             static constexpr float32 kFatalHitDamage = 100.0f;
-            /** @brief `character.jump` 의 기본 속도(m/s)입니다. */
-            static constexpr float32 kDefaultJumpSpeed = 5.0f;
 
             /**
              * @brief 이름 붙은 오브젝트의 래그돌에서 뼈 @p boneName 의 바디를 맞힙니다 — 때린 쪽 없이 맞음 길(래그돌 반응 · 체력 · 절단)을 그대로 지나게 한다(시나리오).
@@ -84,29 +81,6 @@ namespace sw
                 if ( listArgument.size() != 3 || StringUtil::parseFloat( listArgument[2], damage ) == false )
                     return false;
                 return deliverBoneHit( listArgument[0], listArgument[1], damage, false, outReply );
-            }
-
-            /** @brief `character.jump <object> [speed]` — 오브젝트의 캐릭터 컨트롤러가 위로 뜁니다(기본 5 m/s). 시나리오가 점프 · 탈출 입력을 흉내 낸다. */
-            static bool runJump( const vector<string>& listArgument, string& outReply )
-            {
-                float32    speed   = kDefaultJumpSpeed;
-                const bool bParsed = ( listArgument.size() == 1 || listArgument.size() == 2 ) && ( listArgument.size() == 1 || StringUtil::parseFloat( listArgument[1], speed ) );
-                if ( bParsed == false || speed <= 0.0f )
-                    return false;
-                GameObject*                   pObject     = engine::findActiveObject( hashed_string( listArgument[0] ) );
-                CharacterControllerComponent* pController = pObject != nullptr ? pObject->getComponent<CharacterControllerComponent>() : nullptr;
-                if ( pController == nullptr )
-                {
-                    StringBuilder<constant::buffer::kMax256> reply;
-                    reply.appendFormat( "character.jump: no object named '%#' with a CharacterControllerComponent in the active scene", listArgument[0] );
-                    outReply.assign( reply.view() );
-                    return true;
-                }
-                pController->jump( speed );
-                StringBuilder<constant::buffer::kMax128> reply;
-                reply.appendFormat( "character.jump %#", listArgument[0] );
-                outReply.assign( reply.view() );
-                return true;
             }
 
             /** @brief `anim.play <object> <state>` — 이름 붙은 오브젝트의 애니메이터로 상태(그래프가 없으면 클립)를 반복 재생합니다. */
@@ -183,7 +157,6 @@ namespace sw
     SW_DEV_COMMAND( CombatFatalHit, "combat.fatalhit", "combat.fatalhit <name> <bone>", "Deliver a fatal hit to the ragdoll body on a bone of a named object of the active scene", &CharacterCommandsInternal::runFatalHit );
     SW_DEV_COMMAND( CombatHit, "combat.hit", "combat.hit <name> <bone> <damage>", "Deliver an unmarked hit to the ragdoll body on a bone of a named object - the target's health decides whether it is fatal",
                     &CharacterCommandsInternal::runHit );
-    SW_DEV_COMMAND( CharacterJump, "character.jump", "character.jump <object> [speed]", "Make an object's character controller jump (speed in m/s, default 5)", &CharacterCommandsInternal::runJump );
     SW_DEV_COMMAND( AnimationPlay, "anim.play", "anim.play <object> <state>", "Play a state (or a clip when there is no graph) on a named object's skeletal animator, looping",
                     &CharacterCommandsInternal::runPlay );
     SW_DEV_COMMAND( NavMoveTo, "nav.moveto", "nav.moveto <agent> <target object> | nav.moveto <agent> <x> <y> <z>",

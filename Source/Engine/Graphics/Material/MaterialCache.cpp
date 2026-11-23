@@ -90,7 +90,7 @@ namespace sw
                     ++_impl._initDepth;
                     return;
                 }
-                SW_FATAL( "Materials are initialized on two threads at once - initialize them on the game thread (MaterialCache::acquire with a device, reload, initializePending)" );
+                reportFatalError( "Materials are initialized on two threads at once - initialize them on the game thread (MaterialCache::acquire with a device, reload, initializePending)" );
             }
 
             ~DeviceInitScope()
@@ -406,7 +406,7 @@ namespace sw
 
 namespace sw
 {
-    SW_BUILT_IN_ASSET_CACHE( MaterialCache );
+    SW_BUILT_IN_ASSET_CACHE( MaterialCache, MaterialCache );
     SW_ASSET_TYPE( Material, Material::kAssetType );
 
     void MaterialCache::bindDevice( IRHIDevice* pDevice )

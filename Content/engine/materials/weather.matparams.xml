@@ -1,13 +1,13 @@
 <?xml version="1.0" encoding="utf-8"?>
 <?asset guid="d4a6dcfaefbfafcfd96263788f8a8e54"?>
-<!-- 날씨 파라미터 묶음 — 지형(terrain.material) · 환경 표면(environmentsurface.material)의 칸 _weather 가 여기 Weather 에 묶인다(언리얼 MPC 로 날씨를 돌리는 방식).
+<!-- 날씨 파라미터 묶음 — 셰이더 전역 값이다(_global → PassCB g_MaterialGlobalWeather · g_MaterialGlobalRain, 엔진 기본 에셋 _materialGlobals). 지형 · 환경 표면 · 변형 지면 · 물이 읽는다(언리얼 MPC 로 날씨를 돌리는 방식).
      Weather: x = 젖음(0..1), y = 웅덩이(0..1), z = 눈(0..1), w = 설선 높이(m — 이 높이 위에 눈이 쌓인다).
      Rain: x = 비 세기(0..1 — 웅덩이 · 꺼진 자리의 빗방울 링이 이 세기에 비례하고 머티리얼 시계로 돈다), yzw = 0(예비). 기본은 맑음.
      Weather.x 는 발걸음도 읽는다(표면 종류 표 _wetnessCollection — 젖은 땅의 발걸음 반응) — 보이는 젖음과 들리는 젖음이 같은 값이다.
-     런타임에 값을 바꾸면(MaterialParameterCollection::setValue) 묶은 모든 머티리얼이 다음 프레임에 함께 바뀐다. 계절 · 지역 변형은 _base 로 이 파일을 가리키고 값만 적는다. -->
+     런타임에 값을 바꾸면(MaterialParameterCollection::setValue) 다음 프레임에 모든 셰이더가 함께 따른다 — 머티리얼을 다시 패킹하지 않는다. -->
 <MaterialParameterCollectionDef>
 	<_listParameter>
-		<MaterialCollectionParameterDef _name="Weather" _value="0, 0, 0, 0" />
-		<MaterialCollectionParameterDef _name="Rain" _value="0, 0, 0, 0" />
+		<MaterialCollectionParameterDef _name="Weather" _value="0, 0, 0, 0" _global="Weather" />
+		<MaterialCollectionParameterDef _name="Rain" _value="0, 0, 0, 0" _global="Rain" />
 	</_listParameter>
 </MaterialParameterCollectionDef>

@@ -33,15 +33,14 @@ namespace sw
 
 namespace sw
 {
-    void SQLDriverRegistry::registerDriver( ISQLDriver& driver )
+    bool SQLDriverRegistry::registerDriver( ISQLDriver* pDriver )
     {
-        [[maybe_unused]] const RegistrationResult result = getDrivers().addLogged( &driver, "SQL driver", driver.getName() );
-        SW_ASSERT( result == RegistrationResult::Added );
+        return getDrivers().addLogged( pDriver, "SQL driver", pDriver->getName() ) == RegistrationResult::Added;
     }
 
-    void SQLDriverRegistry::unregisterDriver( ISQLDriver& driver )
+    void SQLDriverRegistry::unregisterDriver( ISQLDriver* pDriver )
     {
-        (void)getDrivers().remove( &driver ); // 거절된 등록이면 올라 있지 않다
+        (void)getDrivers().remove( pDriver ); // 거절된 등록이면 올라 있지 않다
     }
 
     expected<ISQLDriver*> SQLDriverRegistry::findDriver( string_view driverName )

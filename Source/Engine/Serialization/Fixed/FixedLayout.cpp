@@ -383,7 +383,7 @@ namespace sw
                     case FixedNumberType::Float64:
                         break;
                 }
-                SW_FATAL( "fixed layout descriptor has a floating-point type in an integer slot (%#)", static_cast<int32>( type ) );
+                reportFatalError( "fixed layout descriptor has a floating-point type in an integer slot (%#)", static_cast<int32>( type ) );
             }
 
             template <typename Target, typename T>
@@ -446,7 +446,7 @@ namespace sw
                 const TypeInfo*               pType      = dependency._cache.find( dependency._fqn );
                 const FixedCodec*             pNested    = pType != nullptr ? pType->_pFixedCodec : nullptr;
                 if ( pNested == nullptr || pNested->isEligible() == false )
-                    SW_FATAL( "'%#' has no fixed layout codec: nested codec is missing although its owner was checked (module unloaded?)", dependency._fqn.c_str() );
+                    reportFatalError( "'%#' has no fixed layout codec: nested codec is missing although its owner was checked (module unloaded?)", dependency._fqn.c_str() );
                 return *pNested;
             }
 
@@ -918,7 +918,7 @@ namespace sw
     void FixedLayout::stopForMissingCodec( const hashed_string& fqn, string_view reason, string_view detail )
     {
         // 대체 값(0 해시, 빈 결과)을 돌려주면 그 값이 핸드셰이크 해시나 롤백 상태에 섞입니다. 고칠 곳은 선언이므로 멈춥니다.
-        SW_FATAL( "'%#' has no fixed layout codec: %# (%#)", fqn.c_str(), reason, detail );
+        reportFatalError( "'%#' has no fixed layout codec: %# (%#)", fqn.c_str(), reason, detail );
     }
 
     bool FixedLayout::writeWithCodec( const FixedCodec& codec, const void* pObject, BitWriter& writer )

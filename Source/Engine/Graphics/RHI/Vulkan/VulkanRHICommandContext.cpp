@@ -351,7 +351,7 @@ namespace sw
         // 부르는 쪽이 디스패치를 건너뛰는 것이 렌더러의 규칙이라, 여기 닿은 것은 부르는 쪽의 결함이다(지운 핸들 · 컴퓨트 PSO 를 걸지 않은 디스패치).
         const VulkanRHIDevice::VulkanPipelineStateRecord* pRecord = _pDevice->_pipelineStates.get( _pState->_activeComputePSO );
         if ( pRecord == nullptr || pRecord->_pipeline == VK_NULL_HANDLE )
-            SW_FATAL( "Vulkan dispatch without a registered compute PSO (handle %#)", _pState->_activeComputePSO.getPacked() );
+            reportFatalError( "Vulkan dispatch without a registered compute PSO (handle %#)", _pState->_activeComputePSO.getPacked() );
     }
 
     // 길이 유지(긴 함수 정리 기준): 첨부 전이 · 렌더링 정보 채우기 · 시작 · 뷰포트의 순서가 곧 의미라 나누지 않는다.
@@ -913,7 +913,7 @@ namespace sw
         // 부르는 쪽이 드로우를 건너뛰는 것이 렌더러의 규칙이라, 여기 닿은 것은 부르는 쪽의 결함이다(지운 핸들 · PSO 를 걸지 않은 드로우).
         const VulkanRHIDevice::VulkanPipelineStateRecord* pRecord = _pDevice->_pipelineStates.get( _pState->_activeGraphicsPSO );
         if ( pRecord == nullptr || pRecord->_pipeline == VK_NULL_HANDLE )
-            SW_FATAL( "Vulkan draw without a registered graphics PSO (handle %#)", _pState->_activeGraphicsPSO.getPacked() );
+            reportFatalError( "Vulkan draw without a registered graphics PSO (handle %#)", _pState->_activeGraphicsPSO.getPacked() );
 
         vkCmdBindPipeline( cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, pRecord->_pipeline );
         // 슬롯 세트(set 0)는 여기서 굳힌다. 드로우 진입점 모두가 이 함수를 거치므로 각자 다시 부를 일이 없다.

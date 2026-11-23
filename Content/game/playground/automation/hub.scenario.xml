@@ -2,7 +2,8 @@
 <?asset guid="ec76a0b6bdbc4d04a124e01a21784c70"?>
 <!--
   마을 → 미니게임 둘 들어갔다 나오기 → 마을 상태 그대로(docs/agents/Gameplay.md "게임 기능 · 미니게임"). 무대 maps/hub(팩 시작 맵).
-  ① 마을: -gv_firstScene 가 마을 맵을 연다. 게임 범위 기능(gamesettings gameFeatures)은 기동 때 이미 켜졌다 — 미니게임은 없다.
+  ① 마을: -gv_firstScene 가 마을 맵(서부 평원을 물려받는다)을 연다. 게임 범위 기능(gamesettings gameFeatures)은 기동 때 이미 켜졌다 — 미니게임은 없다.
+     바탕의 서부극 판이 열렸고(시작 돈 · 말 AI), 낯선 이를 도와 명예 25 를 얻는다(G — ③ 의 복원이 서부극 판도 되살리는지 본다).
   ② 하위 레벨: CardTableGate(MinigameTriggerComponent)에 들어가면 minigames/cardtable 이 켜지고 maps/hub_cardtable 이 마을 씬에 더해진다(씬은 그대로).
      minigame.leave 가 하위 레벨을 빼고 끈다. 안에 머물러도 다시 들어가지 않는다.
   ③ 씬 전환: ArcadeGate 에 들어가면 마을을 돌아올 자리로 찍고 minigames/kitdemo_actioncombat 의 맵으로 바꾼다. minigame.leave 가 마을 맵을 열고 찍은 마을을 복원한다 —
@@ -23,6 +24,12 @@
 	<Expect watch="Minigame.LeakCount" equals="0"/>
 	<Expect watch="Scene.SubLevelCount" equals="0"/>
 	<Expect watch="Ability.Attribute" target="Player" key="Health" equals="100"/>
+	<WaitUntil watch="Pawn.Controller" target="Bessie" is="BessieAI" timeoutFrames="60"/>
+	<Expect watch="Western.Money" target="Ranch" equals="20"/>
+	<DevCommand line="teleport Player 52 0.05 1.5"/>
+	<WaitUntil watch="Object.X" target="Player" near="52" tolerance="0.05" timeoutFrames="10"/> <!-- 순간이동이 들었다 -->
+	<Tap slot="Key.G" hold="1"/>
+	<WaitUntil watch="Western.Honor" target="Ranch" equals="25" timeoutFrames="30"/>
 	<DevCommand line="ability.apply GE_HubStumble"/> <!-- 들어가기 전 체력 50 — 복원이 이것으로 되감고 보상이 그 위에 얹힌다 -->
 	<WaitUntil watch="Ability.Attribute" target="Player" key="Health" equals="50" timeoutFrames="5"/>
 	<DevCommand line="teleport Marker 2 0.5 -4"/> <!-- 마을 상태를 바꾼다 — 복원이 맵을 새로 연 것과 갈린다 -->
@@ -64,6 +71,8 @@
 	<Expect watch="Object.Property" target="ArcadeGate" key="MinigameTriggerComponent._fireCount" equals="1"/>
 	<Expect watch="Minigame.LeakCount" equals="0"/>
 	<ExpectLog id="MinigameFlow.Restored" count="1"/>
+	<Expect watch="Western.Honor" target="Ranch" equals="25"/> <!-- 서부극 판(명예 · 지갑)도 찍은 대로 돌아왔다 -->
+	<Expect watch="Western.Money" target="Ranch" equals="20"/>
 
 	<!-- ④ 결과 값은 복원 뒤 플레이어의 어빌리티 이펙트로 걸렸다 -->
 	<Expect watch="Minigame.LastResult" is="win"/>

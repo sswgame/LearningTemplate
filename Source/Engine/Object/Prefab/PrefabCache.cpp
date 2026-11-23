@@ -179,7 +179,7 @@ namespace sw
 
 namespace sw
 {
-    SW_BUILT_IN_ASSET_CACHE( PrefabCache );
+    SW_BUILT_IN_ASSET_CACHE( PrefabCache, PrefabCache );
 
     string PrefabCache::makeCacheKey( string_view assetRelativePath )
     {

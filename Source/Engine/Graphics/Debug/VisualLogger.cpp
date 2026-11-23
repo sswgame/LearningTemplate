@@ -11,7 +11,6 @@
 #include "Engine/Foundation/EngineSubsystemRegistration.h"
 #include "Engine/Graphics/Debug/DebugDrawQueue.h"
 #include "Engine/Reflection/EnumName.h"
-#include "Engine/Reflection/TypeRegistry.h"
 #include "Engine/Serialization/JSON/JSONDocument.h"
 
 namespace sw
@@ -55,9 +54,11 @@ namespace sw
                                        text.has_value() == false || radius.has_value() == false;
             if ( bMissingField )
                 return false;
-            VisualLogEntry entry;
-            if ( engine::getSubsystem<TypeRegistry>().enumFromString( *shapeTxt, entry._shape ) == false )
+            VisualLogEntry                 entry;
+            const optional<VisualLogShape> shape = tryParseEnum<VisualLogShape>( *shapeTxt );
+            if ( shape.has_value() == false )
                 return false;
+            entry._shape = *shape;
             float32    arrA[3]{};
             float32    arrB[3]{};
             float32    arrColor[4]{};

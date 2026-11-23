@@ -329,7 +329,7 @@ namespace sw
         if ( pData == nullptr || num32BitValues == 0 )
             return;
         if ( destOffsetIn32BitValues + num32BitValues > shaderslot::kRootConstantDwords )
-            SW_FATAL( "WebGPU root constants overflow: offset %# + %# dwords > %#", destOffsetIn32BitValues, num32BitValues, shaderslot::kRootConstantDwords );
+            reportFatalError( "WebGPU root constants overflow: offset %# + %# dwords > %#", destOffsetIn32BitValues, num32BitValues, shaderslot::kRootConstantDwords );
         Memory::copy( &slots._arrRootConstant[destOffsetIn32BitValues], pData, num32BitValues * sizeof( uint32 ) );
         slots._bRootConstantSet = SW_TRUE;
         slots._bRootSliceDirty  = SW_TRUE;
@@ -520,7 +520,7 @@ namespace sw
         const WebGPUPipelineRecord* pPipeline = _pDevice->_pipelines.get( _state._graphicsPSO );
         // 백엔드 계약(다섯 백엔드 같음): 등록된 그래픽스 PSO 없이 그리면 오류로 멈춘다(부르는 쪽의 결함).
         if ( pPipeline == nullptr || pPipeline->_renderPipeline == nullptr )
-            SW_FATAL( "WebGPU draw without a registered graphics PSO (handle %#)", _state._graphicsPSO.getPacked() );
+            reportFatalError( "WebGPU draw without a registered graphics PSO (handle %#)", _state._graphicsPSO.getPacked() );
         if ( _state._boundRenderPSO != _state._graphicsPSO )
         {
             wgpuRenderPassEncoderSetPipeline( _state._renderPass, pPipeline->_renderPipeline );
@@ -582,7 +582,7 @@ namespace sw
         // 멀티 드로우 · count 버퍼가 없다(`_bMultiDrawIndirect` 거짓) — 인자마다 한 번씩 낸다(DX11 의 루프와 같다). count 버퍼를 넘긴 호출은 능력을 무시한 결함이다.
         (void)countBufferOffset;
         if ( countBuffer != 0 )
-            SW_FATAL( "WebGPU drawIndirect with a count buffer - the backend reports no multi-draw-indirect" );
+            reportFatalError( "WebGPU drawIndirect with a count buffer - the backend reports no multi-draw-indirect" );
         const WebGPUBufferRecord* pArgs = _pDevice->findBuffer( argumentBuffer );
         if ( _state._renderPass == nullptr || pArgs == nullptr || prepareDraw() == false )
             return;
@@ -597,7 +597,7 @@ namespace sw
     {
         (void)countBufferOffset;
         if ( countBuffer != 0 )
-            SW_FATAL( "WebGPU drawIndexedIndirect with a count buffer - the backend reports no multi-draw-indirect" );
+            reportFatalError( "WebGPU drawIndexedIndirect with a count buffer - the backend reports no multi-draw-indirect" );
         const WebGPUBufferRecord* pArgs = _pDevice->findBuffer( argumentBuffer );
         if ( _state._renderPass == nullptr || pArgs == nullptr || prepareDraw() == false || prepareIndexBuffer() == false )
             return;
@@ -614,7 +614,7 @@ namespace sw
     {
         const WebGPUPipelineRecord* pPipeline = _pDevice != nullptr ? _pDevice->_pipelines.get( _state._computePSO ) : nullptr;
         if ( pPipeline == nullptr || pPipeline->_computePipeline == nullptr )
-            SW_FATAL( "WebGPU dispatch without a registered compute PSO (handle %#)", _state._computePSO.getPacked() );
+            reportFatalError( "WebGPU dispatch without a registered compute PSO (handle %#)", _state._computePSO.getPacked() );
         const WGPUComputePassEncoder pass = ensureComputePass();
         if ( pass == nullptr )
             return nullptr;

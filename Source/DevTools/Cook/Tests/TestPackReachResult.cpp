@@ -162,7 +162,7 @@ SW_TEST_CASE( PackReachabilityTest, FollowsReferencesFromTheRoots )
     {
         SW_EXPECT_TRUE( result._setIncluded.contains( string( pIncluded ) ) );
     }
-    SW_EXPECT_TRUE( AssetCompanionRegistry::hasRule( "MeshFracture" ) );
+    SW_EXPECT_TRUE( AssetCompanionRule::hasRule( "MeshFracture" ) );
     SW_EXPECT_TRUE( result._setIncluded.contains( string( "common/models/a.fracture" ) ) );
     SW_EXPECT_FALSE( result._setIncluded.contains( string( "common/textures/unused.dds" ) ) );
     SW_EXPECT_FALSE( result._setIncluded.contains( string( "common/models/unused.mesh" ) ) );
@@ -313,8 +313,8 @@ SW_TEST_CASE( PackReachabilityTest, UnfollowedPropertiesAreNotFollowed )
 /** @brief [PackReachabilityTest] 코드가 상수로 읽는 에셋(`SW_ASSET_COOK_ROOT`)은 뿌리이고 그 참조도 따라간다. 어디에도 없으면 빠진 참조와 같은 오류다. 엔진 기본 에셋 표가 등록돼 있다 */
 SW_TEST_CASE( PackReachabilityTest, CodeRootsAreRoots )
 {
-    SW_EXPECT_TRUE( AssetCookRootRegistry::hasRoot( "engine/data/enginedefaultassets.xml" ) );
-    SW_EXPECT_TRUE( AssetCookRootRegistry::hasRoot( "engine/physics/physicssettings.xml" ) );
+    SW_EXPECT_TRUE( AssetCookRoot::hasRoot( "engine/data/enginedefaultassets.xml" ) );
+    SW_EXPECT_TRUE( AssetCookRoot::hasRoot( "engine/physics/physicssettings.xml" ) );
 
     AssetReferenceFields params;
     SW_REQUIRE_TRUE( Util::loadRepositoryProperties( params ) );

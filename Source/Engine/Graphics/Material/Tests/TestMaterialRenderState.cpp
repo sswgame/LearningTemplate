@@ -312,6 +312,7 @@ SW_TEST_CASE( MaterialRenderStateTest, OrderDependentStatesDrawInALaterBand )
 SW_TEST_CASE( MaterialRenderStateTest, DrawListMustMatchTheShader )
 {
     SW_EXPECT_LOG( "Material.DrawListMismatch" );
+    SW_EXPECT_LOG( "Material.UnsupportedFeature" );
     const utf8* const kRefraction  = "<_permutations><_alwaysDefines><item>MATERIAL_REFRACTION</item></_alwaysDefines></_permutations>";
     const utf8* const kTranslucent = "<_permutations><_alwaysDefines><item>MATERIAL_BLEND_TRANSLUCENT</item></_alwaysDefines></_permutations>";
     const utf8* const kGlass       = "<_permutations><_alwaysDefines><item>MATERIAL_BLEND_TRANSLUCENT</item><item>MATERIAL_REFRACTION</item></_alwaysDefines></_permutations>";
@@ -321,6 +322,34 @@ SW_TEST_CASE( MaterialRenderStateTest, DrawListMustMatchTheShader )
     shared_ptr<Material> glass = Material::create();
     SW_REQUIRE_TRUE( RenderStateTestUtil::load( *glass, "alphaMode=\"Blend\"", kGlass ) );
     SW_EXPECT_TRUE( glass->usesSceneColorCopy() );
+}
+
+/**
+ * @brief [MaterialRenderStateTest] 어느 패스도 그리지 않는 기능 조합은 읽기 오류다 — 불투명 왜곡, 반투명 외곽선(런타임에 켤 수 있는 스위치도), 높이 프로퍼티 없는 변위, 표면과 섞인 후처리 영역
+ * @details 변이: 에셋 상태만 보면 꺼 둔 런타임 외곽선 스위치의 반투명 머티리얼이 읽혀, 배포에서 켠 뒤 외곽선이 조용히 없다.
+ */
+SW_TEST_CASE( MaterialRenderStateTest, UnsupportedFeatureCombinationsAreLoadErrors )
+{
+    SW_EXPECT_LOG( "Material.UnsupportedFeature" );
+    const utf8* const kDistortion        = "<_permutations><_alwaysDefines><item>MATERIAL_DISTORTION</item></_alwaysDefines></_permutations>";
+    const utf8* const kBlendedDistortion = "<_permutations><_alwaysDefines><item>MATERIAL_BLEND_TRANSLUCENT</item><item>MATERIAL_DISTORTION</item></_alwaysDefines></_permutations>";
+    const utf8* const kRuntimeOutline    = "<_permutations><_staticSwitches><item name=\"Outline\" keyword=\"MATERIAL_OUTLINE\" bShaderFeature=\"0\"/></_staticSwitches></_permutations>";
+    const utf8* const kBlendedOutline    = "<_permutations><_alwaysDefines><item>MATERIAL_BLEND_TRANSLUCENT</item></_alwaysDefines><_staticSwitches>"
+                                           "<item name=\"Outline\" keyword=\"MATERIAL_OUTLINE\" bShaderFeature=\"0\"/></_staticSwitches></_permutations>";
+    const utf8* const kDisplacement      = "<_permutations><_alwaysDefines><item>MATERIAL_DISPLACEMENT</item></_alwaysDefines></_permutations>";
+    const utf8* const kDisplacementMap   = "<_properties><item name=\"_displacementMap\" type=\"Texture2D\"/></_properties>"
+                                           "<_permutations><_alwaysDefines><item>MATERIAL_DISPLACEMENT</item></_alwaysDefines></_permutations>";
+    const utf8* const kPostProcess       = "<_permutations><_alwaysDefines><item>MATERIAL_DOMAIN_POST_PROCESS</item></_alwaysDefines></_permutations>";
+    const utf8* const kMixedDomain       = "<_permutations><_alwaysDefines><item>MATERIAL_DOMAIN_POST_PROCESS</item><item>MATERIAL_DOMAIN_SURFACE</item></_alwaysDefines></_permutations>";
+    SW_EXPECT_FALSE( RenderStateTestUtil::load( *Material::create(), "", kDistortion ) );
+    SW_EXPECT_TRUE( RenderStateTestUtil::load( *Material::create(), "alphaMode=\"Blend\"", kBlendedDistortion ) );
+    SW_EXPECT_TRUE( RenderStateTestUtil::load( *Material::create(), "", kRuntimeOutline ) );
+    SW_EXPECT_FALSE( RenderStateTestUtil::load( *Material::create(), "alphaMode=\"Blend\"", kBlendedOutline ) );
+    SW_EXPECT_FALSE( RenderStateTestUtil::load( *Material::create(), "", kDisplacement ) );
+    SW_EXPECT_TRUE( RenderStateTestUtil::load( *Material::create(), "", kDisplacementMap ) );
+    SW_EXPECT_TRUE( RenderStateTestUtil::load( *Material::create(), "", kPostProcess ) );
+    SW_EXPECT_FALSE( RenderStateTestUtil::load( *Material::create(), "alphaMode=\"Mask\"", kPostProcess ) );
+    SW_EXPECT_FALSE( RenderStateTestUtil::load( *Material::create(), "", kMixedDomain ) );
 }
 
 /**

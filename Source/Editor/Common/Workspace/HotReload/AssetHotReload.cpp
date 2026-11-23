@@ -740,7 +740,7 @@ namespace sw::editor
         const AssetCacheReloadFunction pReload = pResources->findReloadFunction( pCache );
         if ( pReload == nullptr )
         {
-            SW_LOG_ERROR_ID( "AssetHotReload.HotReloadAssetCache", "Hot reload: asset cache '%#' has no reload function (registered without SW_ASSET_CACHE_RELOAD_FUNCTION) - %# is not reloaded", route._pCacheKindName, relativePath );
+            SW_LOG_ERROR_ID( "AssetHotReload.HotReloadAssetCache", "Hot reload: asset cache '%#' has no reload function (registered without getAssetCacheReloadFunction) - %# is not reloaded", route._pCacheKindName, relativePath );
             outReason = "its asset cache has no reload function";
             return ReloadResult::Failed;
         }

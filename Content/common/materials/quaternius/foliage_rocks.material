@@ -5,10 +5,4 @@
 	<_properties>
 		<item name="_albedoMap" assetPath="common/textures/quaternius/nature/rocks_diffuse.dds" />
 	</_properties>
-	<_permutations quality="High" shaderLOD="300" usage="StaticMesh">
-		<_alwaysDefines>
-			<item>MATERIAL_DOMAIN_SURFACE</item>
-			<item>MATERIAL_VERTEX_DEFORM</item>
-		</_alwaysDefines>
-	</_permutations>
 </MaterialDef>

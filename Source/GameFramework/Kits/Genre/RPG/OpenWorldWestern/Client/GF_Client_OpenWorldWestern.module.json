@@ -1,0 +1,22 @@
+{
+    "_name": "GF_Client_OpenWorldWestern",
+    "_version": "1.0.0",
+    "_kind": "Kit",
+    "_description": "오픈월드 서부극 키트(클라이언트) — 기수를 따르는 카메라 초점과 HUD(탑승 상태 · 말 스태미나 · 무법자 글). 규칙 · 디렉터는 GF_OpenWorldWestern",
+    "_listDependency": [
+        {
+            "_name": "GameFramework"
+        },
+        {
+            "_name": "GF_OpenWorldWestern"
+        }
+    ],
+    "_listConfiguration": [
+        "Dev",
+        "Shipping"
+    ],
+    "_listTarget": [
+        "Client"
+    ],
+    "_bEnabledByDefault": true
+}

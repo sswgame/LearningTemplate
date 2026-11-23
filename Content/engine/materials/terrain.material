@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
 <?asset guid="f8349c02da55a1d5c28265c9247af3a9"?>
 <!-- 지형(TerrainComponent). 레이어 색 · 규칙 · 디테일 · 3 축 투영 · 거칠기 · 다공성 · 늘 젖음 · 스플랫 · 디테일 맵은 컴포넌트가 인스턴스에 싣는다 — 여기 값은 기본값이다.
-     _weather 는 파라미터 묶음 engine/materials/weather.matparams.xml 의 Weather 에 묶는다 — 날씨가 값을 바꾸면 모든 지형 · 환경 머티리얼이 함께 젖고 눈이 쌓인다.
+     날씨는 셰이더 전역 값이다(파라미터 묶음 engine/materials/weather.matparams.xml) — 날씨가 값을 바꾸면 모든 지형 · 환경 머티리얼이 함께 젖고 눈이 쌓인다.
      표면 변형 층(발자국 · 바퀴 자국 · 깔때기 — 엔진 텍스처 칸 SurfaceDeform)이 정점을 내리므로 MATERIAL_VERTEX_DEFORM 이다(깊이 프리패스에서 빠지고 그림자는 같은 오프셋으로 그린다).
      프로퍼티 이름 · 타입은 terrain.hlsl 의 SW_MATERIAL 구조체와 같다. -->
 <MaterialDef formatVersion="0" name="Terrain" shaderPath="engine/shaders/terrain.hlsl" surfaceModel="Lit" alphaMode="Opaque">
@@ -42,8 +42,6 @@
 		<item name="_layerWetness1" type="Vector4" defaultValue="0 0 0 0" displayName="Layer 4-7 Always Wet" group="Layers"/>
 		<item name="_terrainParams" type="Vector4" defaultValue="0.0 0.25 0.0 0.0" displayName="Splat Width, Detail Tiling, Height Blend Depth, Reserved" group="Terrain"/>
 		<item name="_terrainSurface" type="Vector4" defaultValue="6.0 40.0 0.04 0.0" displayName="Puddle Scale (m), Sparkle Density (cells/m), Snow Sparkle, Reserved" group="Terrain"/>
-		<item name="_weather" collection="engine/materials/weather.matparams.xml" collectionParameter="Weather" type="Vector4" defaultValue="0 0 0 0" displayName="Weather (wet, puddle, snow, snow line)" group="Weather"/>
-		<item name="_rain" collection="engine/materials/weather.matparams.xml" collectionParameter="Rain" type="Vector4" defaultValue="0 0 0 0" displayName="Rain (strength: rain rings on puddles)" group="Weather"/>
 		<item name="_splatMap" type="Texture2D" displayName="Splat Map (layers 0-3)" group="Terrain" bSrgb="0"/>
 		<item name="_splatMap1" type="Texture2D" displayName="Splat Map (layers 4-7)" group="Terrain" bSrgb="0"/>
 		<item name="_detailMap" type="Texture2D" displayName="Detail Map" group="Terrain" bSrgb="0"/>
