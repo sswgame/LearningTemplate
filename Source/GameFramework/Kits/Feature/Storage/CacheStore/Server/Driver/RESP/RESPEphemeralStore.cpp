@@ -3,7 +3,6 @@
 #include "GameFramework/Kits/Feature/Storage/CacheStore/Server/Driver/RESP/RESPEphemeralStore.h"
 
 #include "Core/Algorithm/VectorUtil.h"
-#include "Core/Math/MathUtil.h"
 #include "Core/Network/Security/INetSecurityProvider.h"
 #include "Core/Time/MonotonicClock.h"
 
@@ -15,7 +14,8 @@ namespace sw
     {
         struct RESPEphemeralStoreInternal
         {
-            static constexpr int64 kFirstBackoffMs = 100; ///< 두 번째 실패부터의 첫 대기(`ExponentialBackoff`)
+            static constexpr int64 kFirstBackoffMs        = 100;   ///< 두 번째 실패부터의 첫 대기(`ExponentialBackoff`)
+            static constexpr int64 kSubscribePingPeriodMs = 15000; ///< 구독 연결이 이만큼 말이 없으면 PING 을 보낸다(방화벽 · NAT 의 유휴 시한보다 짧게)
 
             // 단계 번호다. 한 요청의 몇 번째 명령인지를 나타내며, 답 순서는 연결이 지킨다.
             static constexpr uint32 kStepFirst          = 0;
@@ -53,6 +53,7 @@ namespace sw
         , _tlsContext{}
         , _nextCommandConnectNanoseconds{ 0 }
         , _nextSubscribeConnectNanoseconds{ 0 }
+        , _subscribeActivityNanoseconds{ 0 }
         , _commandBackoff{ ExponentialBackoff::createWithRandomSeed( RESPEphemeralStoreInternal::kFirstBackoffMs ) }
         , _subscribeBackoff{ ExponentialBackoff::createWithRandomSeed( RESPEphemeralStoreInternal::kFirstBackoffMs ) }
         , _requestIDAllocator{}
@@ -173,7 +174,7 @@ namespace sw
             }
             else
             {
-                (void)_subscribeConnection.sendCommand( *_transport.get(), RESPCommand{ "SUBSCRIBE" }.addText( makeKey( channel ) ), RESPCommandTag{} ); // 지면 연결이 끊기고 다음 펌프가 다시 구독한다
+                sendSubscribeCommand( RESPCommand{ "SUBSCRIBE" }.addText( makeKey( channel ) ) );
             }
         }
         waitForSubscriptionAck();
@@ -187,7 +188,7 @@ namespace sw
                 return;
             if ( _subscribeConnection.getState() == RESPConnectionState::Closed )
                 return;
-            (void)_subscribeConnection.sendCommand( *_transport.get(), RESPCommand{ "UNSUBSCRIBE" }.addText( makeKey( channel ) ), RESPCommandTag{} ); // 지면 연결이 끊긴다 — 구독도 함께 사라진다
+            sendSubscribeCommand( RESPCommand{ "UNSUBSCRIBE" }.addText( makeKey( channel ) ) );
         }
         waitForSubscriptionAck();
     }
@@ -201,7 +202,7 @@ namespace sw
             {
                 ScopedLock<mutex> lock{ _mutex };
                 if ( _listChannel.empty() == false )
-                    (void)ensureSubscribeConnection(); // 연결 실패는 물러섬 뒤 다음 펌프가 다시 시도한다
+                    maintainSubscribeConnection();
                 _subscribeConnection.takePushValues( listValue );
             }
             for ( const RESPValue& value : listValue )
@@ -263,6 +264,7 @@ namespace sw
         }
         if ( _subscribeConnection.handleReceived( *_transport.get(), handle, pData, size ) == false )
             return;
+        _subscribeActivityNanoseconds = nowNanoseconds;
         if ( _subscribeConnection.getState() == RESPConnectionState::Closed )
             _nextSubscribeConnectNanoseconds = nowNanoseconds + _subscribeBackoff.takeDelayMs( _settings->_maxBackoffMs ) * constant::time::kNanosecondsPerMillisecond;
         else
@@ -686,12 +688,40 @@ namespace sw
             _nextSubscribeConnectNanoseconds = _clock.nowNanoseconds() + _subscribeBackoff.takeDelayMs( _settings->_maxBackoffMs ) * constant::time::kNanosecondsPerMillisecond;
             return false;
         }
+        _subscribeActivityNanoseconds = _clock.nowNanoseconds();
         // 새 연결에는 구독이 없으므로 채널을 모두 다시 구독한다. 끊긴 동안의 메시지는 받지 못하며, 배달은 최대 한 번이다.
         for ( const string& channel : _listChannel )
         {
-            (void)_subscribeConnection.sendCommand( *_transport.get(), RESPCommand{ "SUBSCRIBE" }.addText( makeKey( channel ) ), RESPCommandTag{} ); // 연결 중이라 모아 둔다
+            sendSubscribeCommand( RESPCommand{ "SUBSCRIBE" }.addText( makeKey( channel ) ) ); // 연결 중이라 모아 둔다
         }
         return true;
+    }
+
+    void RESPEphemeralStore::maintainSubscribeConnection()
+    {
+        if ( _subscribeConnection.getState() != RESPConnectionState::Closed )
+        {
+            const int64 nowNanoseconds = _clock.nowNanoseconds();
+            const int64 silentMs       = ( nowNanoseconds - _subscribeActivityNanoseconds ) / constant::time::kNanosecondsPerMillisecond;
+            if ( _subscribeConnection.getAwaitingCount() == 0 )
+            {
+                if ( silentMs >= RESPEphemeralStoreInternal::kSubscribePingPeriodMs )
+                    sendSubscribeCommand( RESPCommand{ "PING" } ); // 구독 중에도 받는 명령이다(RESP2 의 답은 `pong` 배열)
+            }
+            else if ( silentMs > _settings->_timeoutMs )
+            {
+                _subscribeConnection.abort( *_transport.get(), "subscription commands timed out" );
+                _nextSubscribeConnectNanoseconds = nowNanoseconds + _subscribeBackoff.takeDelayMs( _settings->_maxBackoffMs ) * constant::time::kNanosecondsPerMillisecond;
+            }
+        }
+        (void)ensureSubscribeConnection(); // 연결 실패는 물러섬 뒤 다음 펌프가 다시 시도한다
+    }
+
+    void RESPEphemeralStore::sendSubscribeCommand( const RESPCommand& command )
+    {
+        if ( _subscribeConnection.getAwaitingCount() == 0 )
+            _subscribeActivityNanoseconds = _clock.nowNanoseconds(); // 답을 기다리기 시작한다
+        (void)_subscribeConnection.sendCommand( *_transport.get(), command, RESPCommandTag{} );
     }
 
     void RESPEphemeralStore::abortTimedOutRequests()

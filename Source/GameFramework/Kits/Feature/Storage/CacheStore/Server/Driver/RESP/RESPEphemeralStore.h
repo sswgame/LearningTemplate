@@ -6,6 +6,8 @@
  *            WATCH 는 연결 상태이므로 그 사이에 다른 명령이 끼면 안 되기 때문이다. 임대는 드물어서 이 제약의 비용이 작다.
  *          - 답은 요청을 맡긴 순서대로 회수한다(계약). 연결이 끊기거나 시한(`_timeoutMs`)을 넘기면 기다리던 요청은 모두 정확히 한 번 `Unavailable` 로 끝난다.
  *            다음 요청이 다시 연결하며, 다시 연결할 때는 백오프를 둔다.
+ *          - 구독 연결은 요청이 없어 요청 시한이 지켜 주지 않는다. 구독 확인(과 연결 · 핸드셰이크)이 시한 안에 오지 않으면 끊고 다시 연결하고, 말이 없으면 PING 으로 살아 있는지 묻는다 —
+ *            반쯤 끊긴 연결(NAT · 방화벽이 흘린 연결)은 쓰지 않는 쪽에 닫힘이 오지 않아, 묻지 않으면 메시지를 영영 잃는다.
  *          - 키와 채널 앞에 `_keyPrefix` 를 붙인다. DB 번호 대신 접두어로 한 서버를 여러 배포가 나눠 쓰게 하려는 것이다. 받은 메시지의 채널에서는 접두어를 뗀다.
  *          - 쓰지 않는 것은 Lua, `SELECT`, RESP3, Redis 6.2 이상의 옵션(`SET … GET`, `GETEX`, `PEXPIRE NX`)이다. Garnet 과 동작이 갈리기 때문이다.
  *          - 전송의 `_ioThreadCount` 가 0이면(루프백 테스트) `pollReplies`, `pollMessages`, 구독 대기가 전송을 직접 돌린다.
@@ -134,8 +136,12 @@ namespace sw
         /** @brief 명령 연결이 열려 있거나 연결 중이면 true 입니다. 아니면 백오프가 지났을 때 다시 연결합니다. */
         [[nodiscard]] bool ensureCommandConnection() SW_REQUIRES_LOCK( _mutex );
         [[nodiscard]] bool ensureSubscribeConnection() SW_REQUIRES_LOCK( _mutex );
-        void               abortTimedOutRequests();
-        void               handlePushValue( const RESPValue& value );
+        /** @brief 답이 늦은 구독 연결을 끊고, 말이 없으면 PING 을 보내고, 끊겨 있으면 다시 연결합니다. 구독한 채널이 있을 때 펌프마다 부릅니다. */
+        void maintainSubscribeConnection() SW_REQUIRES_LOCK( _mutex );
+        /** @brief 구독 연결에 명령 하나를 보냅니다. 보내지 못하면 연결이 끊기고 다음 펌프가 채널을 모두 다시 구독합니다. */
+        void sendSubscribeCommand( const RESPCommand& command ) SW_REQUIRES_LOCK( _mutex );
+        void abortTimedOutRequests();
+        void handlePushValue( const RESPValue& value );
         /** @brief 구독 연결이 보낸 명령의 확인을 모두 받을 때까지(또는 끊길 때까지) 기다립니다. 전송이 별도 스레드 없이 돌면 직접 돌립니다. */
         void        waitForSubscriptionAck();
         string      makeKey( string_view key ) const;
@@ -158,6 +164,7 @@ namespace sw
         OnceInit<unique_ptr<ITLSContext>>      _tlsContext;
         int64 _nextCommandConnectNanoseconds   SW_GUARDED_BY( _mutex );
         int64 _nextSubscribeConnectNanoseconds SW_GUARDED_BY( _mutex );
+        int64 _subscribeActivityNanoseconds    SW_GUARDED_BY( _mutex ); ///< 구독 연결이 마지막으로 받았거나, 기다리는 것 없이 명령을 보낸 시각
         ExponentialBackoff _commandBackoff     SW_GUARDED_BY( _mutex );
         ExponentialBackoff _subscribeBackoff   SW_GUARDED_BY( _mutex );
         IDAllocator<uint64>                    _requestIDAllocator;

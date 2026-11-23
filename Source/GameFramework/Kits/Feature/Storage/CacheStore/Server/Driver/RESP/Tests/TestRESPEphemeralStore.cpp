@@ -563,6 +563,59 @@ hi
     server._transport->shutdown();
 }
 
+// 결함: 구독 확인에 시한이 없어, 답하지 않는 서버(핸드셰이크 · 프록시에서 멎음)에 붙은 구독 연결이 그대로 남아 메시지를 영영 잃었다.
+SW_TEST_CASE_F( RESPStoreTest, UnconfirmedSubscriptionReconnects )
+{
+    RESPStoreConfig config;
+    config._timeoutMs = 1;
+    start( config );
+    SW_EXPECT_LOG( "RespEphemeralStore.RESPSubscriptionNotConfirmed" );
+    SW_EXPECT_LOG( "RespConnection.RESPConnectionAborted" );
+    _store.subscribe( "a" );
+    (void)collectMessages();
+    const int32 opened = _server._openedCount;
+    SW_EXPECT_EQUAL( takeCommands(), string( "SUBSCRIBE g:a" ) );
+
+    _clock.advanceMilliseconds( 2 ); // 확인 시한을 넘긴다
+    (void)collectMessages();
+    _clock.advanceMilliseconds( 6000 ); // 물러섬이 지난다
+    (void)collectMessages();
+    SW_EXPECT_EQUAL( _server._openedCount, opened + 1 );
+    SW_EXPECT_EQUAL( takeCommands(), string( "SUBSCRIBE g:a" ) );
+}
+
+// 결함: 말이 없는 구독 연결을 묻지 않아, 반쯤 끊긴 연결을 알아채지 못했다.
+SW_TEST_CASE_F( RESPStoreTest, SilentSubscriptionIsPingedAndReplaced )
+{
+    RESPStoreConfig config;
+    config._timeoutMs = 1;
+    start( config );
+    SW_EXPECT_LOG( "RespEphemeralStore.RESPSubscriptionNotConfirmed" );
+    SW_EXPECT_LOG( "RespConnection.RESPConnectionAborted" );
+    _store.subscribe( "a" );
+    (void)collectMessages();
+    const StreamConnectionHandle subscribed = _server._lastHandle;
+    _server.send( subscribed, "*3\r\n$9\r\nsubscribe\r\n$3\r\ng:a\r\n:1\r\n" );
+    (void)collectMessages();
+    (void)takeCommands();
+
+    _server.pushAll( { "*2\r\n$4\r\npong\r\n$0\r\n\r\n" } );
+    _clock.advanceMilliseconds( 15000 );
+    (void)collectMessages();
+    SW_EXPECT_EQUAL( takeCommands(), string( "PING" ) ); // 한 번 묻고, 답이 왔으니 그대로 쓴다
+    const int32 opened = _server._openedCount;
+
+    _clock.advanceMilliseconds( 15000 );
+    (void)collectMessages();
+    SW_EXPECT_EQUAL( takeCommands(), string( "PING" ) ); // 이번에는 답이 없다
+    _clock.advanceMilliseconds( 2 );
+    (void)collectMessages();
+    _clock.advanceMilliseconds( 6000 );
+    (void)collectMessages();
+    SW_EXPECT_EQUAL( _server._openedCount, opened + 1 );
+    SW_EXPECT_EQUAL( takeCommands(), string( "SUBSCRIBE g:a" ) );
+}
+
 // 끝내면 기다리던 요청은 실패로 끝나고, 뒤 요청은 바로 실패다. 두 번 끝내도 된다.
 SW_TEST_CASE_F( RESPStoreTest, ShutdownFailsEverything )
 {
