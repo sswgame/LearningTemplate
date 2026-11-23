@@ -4,6 +4,7 @@
  */
 #pragma once
 #include "Core/Container/vector.h"
+#include "Core/Delegate/Subscription.h"
 #include "Core/Delegate/WeakRef.h"
 #include "Core/Encoding/FourCCUtil.h"
 #include "Core/Foundation/Macros.h"
@@ -16,12 +17,14 @@
 
 #include "GameFramework/GameFrameworkExports.h"
 #include "GameFramework/Runtime/Gameplay/Inventory/Equipment.h"
+#include "GameFramework/Runtime/Gameplay/Inventory/EquipmentCondition.h"
 #include "GameFramework/Runtime/Gameplay/Inventory/Inventory.h"
 #include "GameFramework/Runtime/Gameplay/Inventory/InventoryCommand.h"
 
 namespace sw
 {
     class AppearanceDatabase;
+    struct CharacterAppearanceSpec;
     struct CustomizationSchemaDef;
 
     /**
@@ -45,8 +48,12 @@ namespace sw
         CharacterEquipmentComponent();
         virtual ~CharacterEquipmentComponent() override;
 
+        void onRegister( GameObjectManager& manager ) override;
         void onBeginPlay() override;
         void onEndPlay() override;
+
+        /** @brief 외형이 조립할 전개 @p spec 을 알립니다(`CharacterAppearanceComponent` 가 조립 앞에서 부른다). 몸 종류 · 체형 · 프리셋 태그가 바뀌었으면 장착 조건을 다시 봅니다. */
+        void setCharacterSpec( const CharacterAppearanceSpec& spec );
 
         /** @brief 가방에 아이템 인스턴스를 넣습니다. 가방이 없거나(시작 전) 자리가 없으면 false 입니다. */
         [[nodiscard]] bool addToBag( const InventorySlot& item );
@@ -88,15 +95,22 @@ namespace sw
         void restoreState( vector<uint8>&& bytes );
 
     private:
+        /** @brief 오브젝트의 태그가 바뀌었습니다(`GameObjectEvents::_tagsChanged`). */
+        void handleTagsChanged( const TagContainer& tags );
+        /** @brief 조건이 볼 캐릭터 정보를 오브젝트 태그와 외형 전개에서 다시 모읍니다. */
+        void rebuildCharacter( const TagContainer& ownerTags );
         /** @brief 외형에 장비를 다시 빌려 줍니다 — 장비의 판이 바뀌었으면 다시 해석한다. */
         void updateAppearance();
         /** @brief 보관한 상태를 겁니다. 건 것이 없으면 false 입니다. */
         bool applyPendingState();
 
     private:
-        Equipment     _equipment;
-        Inventory     _bag;
-        vector<uint8> _pendingStateBytes; ///< 시작 전에 받은 상태(`restoreState`)
+        EquipmentCharacterContext _character; ///< 장착 조건이 보는 캐릭터 정보(장비가 빌린다 — 장비보다 먼저 선언)
+        TagContainer              _specTags;  ///< 외형 전개(프리셋)가 준 태그. 오브젝트 태그와 합쳐 `_character` 가 된다
+        Subscription              _tagSubscription;
+        Equipment                 _equipment;
+        Inventory                 _bag;
+        vector<uint8>             _pendingStateBytes; ///< 시작 전에 받은 상태(`restoreState`)
         PROPERTY( Category = "Equipment", DisplayName = "Bag Slots", Min = 1, Max = 256, Tooltip = "Item instances the character carries besides what it wears" )
         int32 _bagSlotCount;
         PROPERTY( Category = "Equipment", DisplayName = "Bag Max Weight", Min = 0.0, Tooltip = "Most weight the bag carries (0: no limit)" )

@@ -33,17 +33,18 @@ namespace sw
 {
     Equipment::Equipment()
         : _listSlot{}
-        , _context{}
         , _pCatalog{ nullptr }
         , _pSetLookup{ nullptr }
+        , _pCharacter{ nullptr }
         , _revision{ 0 }
     {
     }
 
-    void Equipment::initialize( const ItemCatalog* pCatalog, string_view slotLayout, const IEquipmentSetLookup* pSetLookup )
+    void Equipment::initialize( const ItemCatalog* pCatalog, string_view slotLayout, const IEquipmentSetLookup* pSetLookup, const EquipmentCharacterContext* pCharacter )
     {
         _pCatalog   = pCatalog;
         _pSetLookup = pSetLookup;
+        _pCharacter = pCharacter;
         _listSlot.clear();
         StringUtil::forEachToken( slotLayout, ", ", [&]( string_view token )
         {
@@ -64,9 +65,11 @@ namespace sw
 
     bool Equipment::areConditionsMet( const ItemDef& def, const vector<EquipmentSlot>& listSlot, int32 slotIndex ) const
     {
+        const EquipmentCharacterContext  noCharacter;
+        const EquipmentCharacterContext& character = _pCharacter != nullptr ? *_pCharacter : noCharacter;
         for ( const EquipmentCondition& condition : def._listEquipCondition )
         {
-            if ( EquipmentCondition::isMet( condition, listSlot, slotIndex, *_pCatalog, _pSetLookup, _context ) == false )
+            if ( EquipmentCondition::isMet( condition, listSlot, slotIndex, *_pCatalog, _pSetLookup, character ) == false )
                 return false;
         }
         return true;
@@ -157,13 +160,16 @@ namespace sw
             ++_revision;
     }
 
-    void Equipment::setCharacterContext( const EquipmentCharacterContext& context, vector<InventorySlot>& outListRemoved )
+    void Equipment::settleCharacterChange( Inventory& inventory )
     {
-        outListRemoved.clear();
-        _context                        = context;
         vector<EquipmentSlot> listTrial = _listSlot;
+        vector<InventorySlot> listRemoved;
         // 캐릭터 쪽 변화는 거부할 수 없다. 거부 정책인 아이템도 숨김으로 둔다.
-        (void)settleConditions( listTrial, false, outListRemoved );
+        (void)settleConditions( listTrial, false, listRemoved );
+        for ( const InventorySlot& removed : listRemoved )
+        {
+            inventory.addStackOrOverflow( removed );
+        }
         commitSlots( std::move( listTrial ) );
     }
 

@@ -34,7 +34,7 @@ namespace
 </ItemCatalog>)",
                                                      "InventoryCommandTest" ) );
             SW_REQUIRE_TRUE( _bag.initialize( &_items, 4 ) );
-            _equipment.initialize( &_items, "Head,MainHand", nullptr );
+            _equipment.initialize( &_items, "Head,MainHand", nullptr, nullptr );
         }
 
         sw::InventoryCommandResult run( sw::InventoryCommandKind kind, int32 from, int32 to = sw::InventoryCommand::kNoSlot, int32 count = 0, const utf8* pEquipSlot = "" )
@@ -137,7 +137,7 @@ SW_TEST_CASE( InventoryCommandTest, RestoredWornItemsDoNotDependOnSlotOrderAndAr
 </ItemCatalog>)",
                                             "InventoryCommandTest" ) );
     sw::Equipment equipment;
-    equipment.initialize( &items, "Head,Back,Body", nullptr );
+    equipment.initialize( &items, "Head,Back,Body", nullptr, nullptr );
     sw::Inventory bag;
     SW_REQUIRE_TRUE( bag.initialize( &items, 1 ) );
     SW_REQUIRE_EQUAL( 1, bag.addItem( sw::hashed_string( "plate" ), 1 ) ); // 가방이 찼다
@@ -177,7 +177,7 @@ SW_TEST_CASE( InventoryCommandTest, SetConditionUsesTheLookupGivenAtInitialize )
     sw::EquipmentSetCatalog sets;
     SW_REQUIRE_TRUE( sets.loadFromXML( doc.getRoot(), report, "InventoryCommandTest" ) );
     sw::Equipment equipment;
-    equipment.initialize( &items, "Head,Back", &sets );
+    equipment.initialize( &items, "Head,Back", &sets, nullptr );
     SW_EXPECT_TRUE( equipment.evaluateEquip( sw::hashed_string( "Back" ), sw::hashed_string( "cape" ) ) == sw::EquipResult::ConditionNotMet );
     sw::InventorySlot helm;
     helm._itemID = sw::hashed_string( "helm" );
@@ -185,6 +185,45 @@ SW_TEST_CASE( InventoryCommandTest, SetConditionUsesTheLookupGivenAtInitialize )
     sw::vector<sw::InventorySlot> listRemoved;
     SW_REQUIRE_TRUE( equipment.equip( sw::hashed_string( "Head" ), helm, listRemoved ) == sw::EquipResult::Ok );
     SW_EXPECT_TRUE( equipment.canEquip( sw::hashed_string( "Back" ), sw::hashed_string( "cape" ) ) );
+}
+
+/**
+ * @brief [InventoryCommandTest] 캐릭터 조건은 빌린 캐릭터 정보로 판정하고, 정보가 바뀌면 함께 벗겨진 것이 가방(차면 넘침)으로 간다
+ */
+SW_TEST_CASE( InventoryCommandTest, CharacterConditionFollowsTheBorrowedContext )
+{
+    sw::ItemCatalog items;
+    SW_REQUIRE_TRUE( items.loadFromXMLText( R"(<ItemCatalog>
+  <Item id="crown" category="Armor" slot="Head" maxStack="1"><Requires characterTag="InventoryCommandTest.Royal"/></Item>
+  <Item id="belt" category="Armor" slot="Waist" maxStack="1" breakPolicy="KeepHidden"><Requires bodyShape="Slim,Average"/></Item>
+</ItemCatalog>)",
+                                            "InventoryCommandTest" ) );
+    sw::EquipmentCharacterContext character;
+    character._tags.addTag( sw::TagID::request( "InventoryCommandTest.Royal" ) );
+    character._bodyShape = sw::hashed_string( "Slim" );
+    sw::Equipment equipment;
+    equipment.initialize( &items, "Head,Waist", nullptr, &character );
+    sw::Inventory bag;
+    SW_REQUIRE_TRUE( bag.initialize( &items, 0 ) );
+    sw::InventorySlot item;
+    item._count  = 1;
+    item._itemID = sw::hashed_string( "crown" );
+    sw::vector<sw::InventorySlot> listRemoved;
+    SW_REQUIRE_TRUE( equipment.equip( sw::hashed_string( "Head" ), item, listRemoved ) == sw::EquipResult::Ok );
+    item._itemID = sw::hashed_string( "belt" );
+    SW_REQUIRE_TRUE( equipment.equip( sw::hashed_string( "Waist" ), item, listRemoved ) == sw::EquipResult::Ok );
+
+    character._tags.clear();
+    character._bodyShape = sw::hashed_string( "Heavy" );
+    equipment.settleCharacterChange( bag );
+    SW_EXPECT_NULL( equipment.findEquipped( sw::hashed_string( "Head" ) ) );
+    SW_REQUIRE_EQUAL( size_t( 1 ), bag.getOverflow().size() );
+    SW_EXPECT_TRUE( bag.getOverflow()[0]._itemID == sw::hashed_string( "crown" ) );
+    SW_EXPECT_TRUE( equipment.isSuppressed( sw::hashed_string( "Waist" ) ) );
+
+    character._bodyShape = sw::hashed_string( "Average" );
+    equipment.settleCharacterChange( bag );
+    SW_EXPECT_FALSE( equipment.isSuppressed( sw::hashed_string( "Waist" ) ) );
 }
 
 /**

@@ -65,10 +65,11 @@ namespace sw
         /**
          * @brief 칸 구성을 정하고 모두 비웁니다. 카탈로그와 세트 정보는 소유하지 않고 참조만 합니다.
          * @param pSetLookup 세트 조건이 참조할 세트 정보입니다. 세트가 없는 게임은 nullptr 를 적는다 — 그때 세트 조건은 맞지 않습니다.
+         * @param pCharacter 캐릭터 조건(태그 · 체형)이 참조할 정보입니다. 그런 조건이 없는 게임은 nullptr 를 적는다 — 그때 태그와 체형은 비어 있습니다.
          */
-        void initialize( const ItemCatalog* pCatalog, string_view slotLayout, const IEquipmentSetLookup* pSetLookup );
-        /** @brief 캐릭터의 태그와 체형을 바꾸고 조건을 다시 검사합니다. 함께 벗겨진 것은 @p outListRemoved 로 나옵니다. */
-        void setCharacterContext( const EquipmentCharacterContext& context, vector<InventorySlot>& outListRemoved );
+        void initialize( const ItemCatalog* pCatalog, string_view slotLayout, const IEquipmentSetLookup* pSetLookup, const EquipmentCharacterContext* pCharacter );
+        /** @brief 빌린 캐릭터 정보가 바뀌었습니다 — 조건을 다시 검사합니다. 함께 벗겨진 것은 @p inventory 로 가고, 자리가 없으면 그 넘침 목록으로 간다. */
+        void settleCharacterChange( Inventory& inventory );
 
         /**
          * @brief @p slot 에 @p item 을 낍니다. 원래 끼고 있던 것과 조건이 깨져 함께 벗겨진 것은 @p outListRemoved 로 나옵니다. 원래 끼고 있던 것이 먼저 나옵니다.
@@ -97,12 +98,11 @@ namespace sw
         hashed_string        findSlotFor( const hashed_string& itemID ) const;
         const InventorySlot* findEquipped( const hashed_string& slot ) const;
         /** @brief 슬롯의 아이템이 조건이 깨져 숨김 상태이면 true 입니다. */
-        bool                             isSuppressed( const hashed_string& slot ) const;
-        void                             computeStats( StatBlock& outStats ) const;
-        const vector<EquipmentSlot>&     getSlots() const { return _listSlot; }
-        const EquipmentCharacterContext& getCharacterContext() const { return _context; }
-        const ItemCatalog*               getCatalog() const { return _pCatalog; }
-        const IEquipmentSetLookup*       getSetLookup() const { return _pSetLookup; }
+        bool                         isSuppressed( const hashed_string& slot ) const;
+        void                         computeStats( StatBlock& outStats ) const;
+        const vector<EquipmentSlot>& getSlots() const { return _listSlot; }
+        const ItemCatalog*           getCatalog() const { return _pCatalog; }
+        const IEquipmentSetLookup*   getSetLookup() const { return _pSetLookup; }
         /** @brief 슬롯, 아이템, 숨김 상태가 바뀔 때마다 늘어납니다. 외형 해석이 이 값을 보고 다시 계산합니다. */
         uint32 getRevision() const { return _revision; }
 
@@ -120,10 +120,10 @@ namespace sw
         void commitSlots( vector<EquipmentSlot>&& listSlot );
 
     private:
-        vector<EquipmentSlot>      _listSlot;
-        EquipmentCharacterContext  _context;
-        const ItemCatalog*         _pCatalog;
-        const IEquipmentSetLookup* _pSetLookup;
-        uint32                     _revision;
+        vector<EquipmentSlot>            _listSlot;
+        const ItemCatalog*               _pCatalog;
+        const IEquipmentSetLookup*       _pSetLookup;
+        const EquipmentCharacterContext* _pCharacter; ///< 캐릭터가 든 조건 정보(빌림)
+        uint32                           _revision;
     };
 } // namespace sw

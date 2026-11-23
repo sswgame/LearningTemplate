@@ -10,6 +10,7 @@
 #include "Engine/Automation/Watch/AutomationWatchComponent.h"
 #include "Engine/Console/DevCommandRegistry.h"
 #include "Engine/Object/GameObject/GameObject.h"
+#include "Engine/Object/GameObject/GameObjectEvents.h"
 #include "Engine/Object/GameObject/GameObjectManager.inl"
 #include "Engine/Scene/SceneManager.h"
 #include "Engine/Serialization/Format/Archive.h"
@@ -19,6 +20,7 @@
 #include "GameFramework/Runtime/Foundation/Framework/Save/StatefulComponentRegistrar.h"
 #include "GameFramework/Runtime/Foundation/GameData/StatBlock.h"
 #include "GameFramework/Runtime/Gameplay/Appearance/AppearanceDatabase.h"
+#include "GameFramework/Runtime/Gameplay/Appearance/CharacterAppearance.h"
 #include "GameFramework/Runtime/Gameplay/Appearance/CharacterAppearanceComponent.h"
 #include "GameFramework/Runtime/Gameplay/Appearance/CustomizationSchema.h"
 #include "GameFramework/Runtime/Gameplay/Appearance/ItemVisual.h"
@@ -58,7 +60,10 @@ namespace sw
     SW_STATE_FORMAT_UPGRADE( characterEquipment1To2, "CEQP", 1, 2, &CharacterEquipmentStateInternal::upgradeStateFrom1 );
 
     CharacterEquipmentComponent::CharacterEquipmentComponent()
-        : _equipment{}
+        : _character{}
+        , _specTags{}
+        , _tagSubscription{}
+        , _equipment{}
         , _bag{}
         , _pendingStateBytes{}
         , _bagSlotCount{ 16 }
@@ -68,6 +73,12 @@ namespace sw
     }
 
     CharacterEquipmentComponent::~CharacterEquipmentComponent() = default;
+
+    void CharacterEquipmentComponent::onRegister( GameObjectManager& manager )
+    {
+        Component::onRegister( manager );
+        _tagSubscription = GameObjectEvents::listen<&CharacterEquipmentComponent::handleTagsChanged>( *this, &GameObjectEvents::_tagsChanged );
+    }
 
     void CharacterEquipmentComponent::onBeginPlay()
     {
@@ -80,13 +91,19 @@ namespace sw
                              getOwner() != nullptr ? getOwner()->getName().c_str() : "?" );
             return;
         }
-        _equipment.initialize( pCatalog, pDatabase->getSlotCatalog().makeEquipmentLayout(), &pDatabase->getSets() );
+        _equipment.initialize( pCatalog, pDatabase->getSlotCatalog().makeEquipmentLayout(), &pDatabase->getSets(), &_character );
         if ( _bag.initialize( pCatalog, _bagSlotCount, _bagMaxWeight ) == false )
         {
             SW_LOG_ERROR_ID( "CharacterEquipment.BagInvalid", "'%#' bag of %# slots could not be made", getOwner() != nullptr ? getOwner()->getName().c_str() : "?", _bagSlotCount );
             return;
         }
         _bStarted = SW_TRUE;
+        // 세이브의 차림을 놓기 전에 캐릭터를 안다 — 외형이 아직 조립하지 않아도 전개는 알 수 있다.
+        CharacterAppearanceComponent* pAppearance = getOwner()->getComponent<CharacterAppearanceComponent>();
+        CharacterAppearanceSpec       spec;
+        if ( pAppearance != nullptr && pAppearance->computeSpec( spec ) )
+            setCharacterSpec( spec );
+        rebuildCharacter( getOwner()->getTags() );
         (void)applyPendingState();
         updateAppearance();
     }
@@ -99,6 +116,37 @@ namespace sw
             pAppearance->setEquipment( nullptr );
         _bStarted = SW_FALSE;
         Component::onEndPlay();
+    }
+
+    void CharacterEquipmentComponent::setCharacterSpec( const CharacterAppearanceSpec& spec )
+    {
+        _character._bodyType  = spec._bodyType;
+        _character._bodyShape = spec._bodyShape;
+        _specTags             = spec._tags;
+        if ( _bStarted == SW_FALSE )
+            return;
+        rebuildCharacter( getOwner()->getTags() );
+        _equipment.settleCharacterChange( _bag );
+    }
+
+    void CharacterEquipmentComponent::handleTagsChanged( const TagContainer& tags )
+    {
+        if ( _bStarted == SW_FALSE )
+            return;
+        const uint32 revision = _equipment.getRevision();
+        rebuildCharacter( tags );
+        _equipment.settleCharacterChange( _bag );
+        if ( _equipment.getRevision() != revision )
+            updateAppearance();
+    }
+
+    void CharacterEquipmentComponent::rebuildCharacter( const TagContainer& ownerTags )
+    {
+        _character._tags = ownerTags;
+        for ( const TagID& tag : _specTags.getTags() )
+        {
+            _character._tags.addTag( tag );
+        }
     }
 
     bool CharacterEquipmentComponent::addToBag( const InventorySlot& item )
