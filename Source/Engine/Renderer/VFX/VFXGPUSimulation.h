@@ -179,8 +179,6 @@ namespace sw
         uint64 getPendingStepCount() const { return _pendingStepCount; }
         /** @brief 이번 프레임에 인스턴스 칸을 쓰는 GPU 메시 방출기마다 되읽기 출처를 @p outListSource 에 채웁니다(앞의 내용은 지운다). 실린 칸이 없는 방출기는 넣지 않는다. */
         void collectMeshProbeSources( vector<MeshProbeSource>& outListSource ) const;
-        /** @brief 지금 든 GPU 방출기 상태의 수입니다(테스트와 진단용). */
-        uint32 getEmitterStateCount() const { return static_cast<uint32>( _mapState.size() ); }
 
     private:
         /** @brief 재생 한 번의 GPU 상태입니다. */

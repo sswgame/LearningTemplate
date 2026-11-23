@@ -5,6 +5,7 @@
  *          - **끈 채 시작한다**(`setEnabled`). 꺼져 있으면 적는 호출은 첫 줄에서 돌아온다(문자열을 만들기 전에 `isEnabled` 로 먼저 물을 수 있다).
  *          - **고리 버퍼**: 용량(`setCapacity`, 기본 `kDefaultCapacity`)을 넘으면 가장 오래된 기록부터 버린다. 프레임 번호는 `endFrame` 이 올린다(엔진 루프가 프레임마다 한 번).
  *          - 적기는 어느 스레드에서 해도 된다(병렬 틱). 질의 · 다시 보기 · 저장은 게임 스레드에서 부른다.
+ *          - **범주**: 분류 이름이 디버그 HUD 섹션 이름과 같으면 그 섹션을 켠 동안 이번 프레임의 기록을 바로 그린다(`DebugHUD::drawSections`).
  *          - **다시 보기**(`replayFrame`)는 그 프레임의 기록을 한 프레임짜리 디버그 드로우로 넣는다 — 에디터가 슬라이더로 프레임을 옮기며 부르면 도형이 따라 움직인다.
  *          - 파일(`*.vlog.json`)로 저장해 다른 사람에게 보낼 수 있다(버그 재현 첨부).
  *          개발 명령은 `visuallog.on` · `visuallog.off` · `visuallog.status` · `visuallog.clear` · `visuallog.save <파일>` · `visuallog.replay <프레임>` 이다.

@@ -31,7 +31,6 @@ namespace sw
     ButtonWidget::ButtonWidget()
         : BorderPanel{}
         , _onClicked{}
-        , _clickCount{ 0 }
         , _hoveredBrush{ ButtonWidgetInternal::makeBrush( 0.24f, 0.95f ) }
         , _pressedBrush{ ButtonWidgetInternal::makeBrush( 0.10f, 0.95f ) }
         , _disabledBrush{ ButtonWidgetInternal::makeBrush( 0.16f, 0.4f ) }
@@ -113,7 +112,6 @@ namespace sw
 
     void ButtonWidget::handleClick()
     {
-        ++_clickCount;
         _onClicked.broadcast( getID() );
         UIScreen* pScreen = getTree() != nullptr ? getTree()->getScreen() : nullptr;
         if ( pScreen != nullptr )

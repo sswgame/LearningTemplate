@@ -93,6 +93,7 @@ namespace sw
         /** @brief 집습니다. 이미 쥐고 있거나 자기 자신이면 false 입니다. 게임 스레드에서 부릅니다. */
         [[nodiscard]] bool grab( GameObject& target );
         /** @brief 든 것을 @p velocity 로 던집니다. 든 것이 없으면 false 입니다. */
+        FUNCTION( Category = "Grab", Exec )
         bool throwHeld( const float3& velocity );
         /** @brief 든 것을 내려놓습니다. */
         bool dropHeld() { return throwHeld( float3{} ); }

@@ -137,22 +137,22 @@ SW_TEST_CASE( FileServeContentSourceTest, MirrorsInChunksAndReusesFreshStamp )
         vector<uint8> bytes;
         SW_REQUIRE_TRUE( source.readFile( packPath, bytes ) );
         SW_EXPECT_TRUE( bytes == pattern );
-        SW_EXPECT_EQUAL( 3u, source.getReceivedChunkCount() );
+        SW_EXPECT_EQUAL( uint64{ 3 }, source.getReceivedChunkCount().get() );
         SW_EXPECT_TRUE( source.open( packPath ).isValid() ); // 이미 받은 거울 — 다시 받지 않는다
-        SW_EXPECT_EQUAL( 3u, source.getReceivedChunkCount() );
+        SW_EXPECT_EQUAL( uint64{ 3 }, source.getReceivedChunkCount().get() );
     }
     {
         const FileServeContentSource source{ client, FakeFileServeClient::kBase, mountRoot.str(), mirrorRoot.str() };
         vector<uint8>                bytes;
         SW_REQUIRE_TRUE( source.readFile( packPath, bytes ) );
-        SW_EXPECT_EQUAL( 0u, source.getReceivedChunkCount() );
+        SW_EXPECT_EQUAL( uint64{ 0 }, source.getReceivedChunkCount().get() );
     }
     client._mapFile["game.pack"]._modifiedNanos = 8;
     {
         const FileServeContentSource source{ client, FakeFileServeClient::kBase, mountRoot.str(), mirrorRoot.str() };
         vector<uint8>                bytes;
         SW_REQUIRE_TRUE( source.readFile( packPath, bytes ) );
-        SW_EXPECT_EQUAL( 3u, source.getReceivedChunkCount() );
+        SW_EXPECT_EQUAL( uint64{ 3 }, source.getReceivedChunkCount().get() );
     }
 }
 

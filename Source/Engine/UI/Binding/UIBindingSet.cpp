@@ -90,7 +90,6 @@ namespace sw
         , _pSettings{ nullptr }
         , _settingsSubscription{}
         , _seenSerial{ 0 }
-        , _writeCount{}
         , _polledCount{ 0 }
         , _bBound{ SW_FALSE }
         , _bApplying{ SW_FALSE }
@@ -153,7 +152,7 @@ namespace sw
             bind( listBinding, context );
             for ( ActiveBinding& binding : _listBinding )
             {
-                (void)apply( binding, context ); // 필드가 바뀌었는지는 쓴 횟수(`_writeCount`)로 센다
+                (void)apply( binding, context ); // 필드가 바뀌었는지는 위젯이 알림(`onBoundPropertyChanged`)으로 안다
             }
             return;
         }
@@ -170,7 +169,7 @@ namespace sw
                         break;
                     const uint64 fieldSerial = _pViewModel->findFieldChangeSerial( binding._sourceField );
                     if ( bReformat || ( fieldSerial > _seenSerial && fieldSerial != binding._skipSerial ) )
-                        (void)apply( binding, context ); // 필드가 바뀌었는지는 쓴 횟수(`_writeCount`)로 센다
+                        (void)apply( binding, context ); // 필드가 바뀌었는지는 위젯이 알림(`onBoundPropertyChanged`)으로 안다
                     break;
                 }
                 case UIBindingSource::Poll:
@@ -181,7 +180,7 @@ namespace sw
                     const bool           bPollUnchanged = binding._bPollKnown && binding._lastPollValue.isSameValue( polled ) && bReformat == false;
                     if ( bPollUnchanged )
                         break;
-                    (void)apply( binding, context ); // 필드가 바뀌었는지는 쓴 횟수(`_writeCount`)로 센다
+                    (void)apply( binding, context ); // 필드가 바뀌었는지는 위젯이 알림(`onBoundPropertyChanged`)으로 안다
                     break;
                 }
                 case UIBindingSource::Setting:
@@ -189,7 +188,7 @@ namespace sw
                     const bool bReformat   = context._bTextRevisionChanged && binding._expression._format.empty() == false;
                     const bool bNeedsApply = _bSettingsChanged || binding._bDirty || bReformat;
                     if ( bNeedsApply )
-                        (void)apply( binding, context ); // 필드가 바뀌었는지는 쓴 횟수(`_writeCount`)로 센다
+                        (void)apply( binding, context ); // 필드가 바뀌었는지는 위젯이 알림(`onBoundPropertyChanged`)으로 안다
                     break;
                 }
             }
@@ -515,10 +514,7 @@ namespace sw
         _bApplying          = SW_TRUE;
         const bool bChanged = UIBindingValue::writeValue( binding._target, pWidget, value );
         if ( bChanged )
-        {
-            _writeCount.add();
             pWidget->onBoundPropertyChanged( binding._target.getRootProperty() );
-        }
         _bApplying = SW_FALSE;
         return bChanged;
     }

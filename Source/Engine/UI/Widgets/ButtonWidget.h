@@ -36,9 +36,7 @@ namespace sw
 
         bool             supportsFocus() const override { return true; }
         ClickedDelegate& getOnClicked() { return _onClicked; }
-        /** @brief 지금까지 클릭된 횟수입니다(테스트와 디버그용). */
-        uint32 getClickCount() const { return _clickCount; }
-        bool   isPressed() const { return _bPressed; }
+        bool             isPressed() const { return _bPressed; }
         /** @brief 클릭하면 화면에 보낼 명령입니다. 비면 명령을 내지 않습니다. */
         const hashed_string& getCommand() const { return _command; }
         void                 setCommand( const hashed_string& command ) { _command = command; }
@@ -62,7 +60,6 @@ namespace sw
 
     private:
         ClickedDelegate _onClicked;
-        uint32          _clickCount;
         PROPERTY( DisplayName = "Hovered Brush" )
         UIBrush _hoveredBrush;
         PROPERTY( DisplayName = "Pressed Brush" )

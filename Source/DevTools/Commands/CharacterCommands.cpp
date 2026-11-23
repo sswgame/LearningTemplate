@@ -4,7 +4,6 @@
 #include "Core/String/StringBuilder.h"
 #include "Core/String/StringUtil.h"
 
-#include "Engine/Animation/Component/SkeletalAnimatorComponent.h"
 #include "Engine/Character/Hit/CharacterHit.h"
 #include "Engine/Character/Hit/RagdollComponent.h"
 #include "Engine/Console/DevCommandRegistry.h"
@@ -19,7 +18,7 @@ namespace sw
 {
     namespace
     {
-        /** @brief 캐릭터 개발 명령(맞힘 · 애니메이션 재생 · 내비 이동)입니다. */
+        /** @brief 캐릭터 개발 명령(맞힘 · 내비 이동)입니다. */
         struct CharacterCommandsInternal
         {
             /** @brief 명령이 보내는 맞음의 충격량(N·s)입니다. */
@@ -83,33 +82,6 @@ namespace sw
                 return deliverBoneHit( listArgument[0], listArgument[1], damage, false, outReply );
             }
 
-            /** @brief `anim.play <object> <state>` — 이름 붙은 오브젝트의 애니메이터로 상태(그래프가 없으면 클립)를 반복 재생합니다. */
-            static bool runPlay( const vector<string>& listArgument, string& outReply )
-            {
-                if ( listArgument.size() != 2 )
-                    return false;
-                GameObject*                pObject   = engine::findActiveObject( hashed_string( listArgument[0] ) );
-                SkeletalAnimatorComponent* pAnimator = pObject != nullptr ? pObject->getComponent<SkeletalAnimatorComponent>() : nullptr;
-                if ( pAnimator == nullptr )
-                {
-                    StringBuilder<constant::buffer::kMax256> builder;
-                    builder.appendFormat( "no object named '%#' with a SkeletalAnimatorComponent in the active scene", listArgument[0] );
-                    outReply = string( builder.view() );
-                    return true;
-                }
-                if ( pAnimator->play( hashed_string( listArgument[1] ) ) == false )
-                {
-                    StringBuilder<constant::buffer::kMax256> builder;
-                    builder.appendFormat( "anim.play: '%#' has no state or clip '%#'", listArgument[0], listArgument[1] );
-                    outReply = string( builder.view() );
-                    return true;
-                }
-                StringBuilder<constant::buffer::kMax256> builder;
-                builder.appendFormat( "anim.play %# %#", listArgument[0], listArgument[1] );
-                outReply = string( builder.view() );
-                return true;
-            }
-
             /** @brief 개발 명령 `nav.moveto <agent> <target>` · `nav.moveto <agent> <x> <y> <z>` — 이름 붙은 오브젝트의 내비메시 에이전트에 목적지를 겁니다(시나리오가 NPC 를 먼 셀로 보낸다). */
             static bool runMoveTo( const vector<string>& listArgument, string& outReply )
             {
@@ -157,8 +129,6 @@ namespace sw
     SW_DEV_COMMAND( CombatFatalHit, "combat.fatalhit", "combat.fatalhit <name> <bone>", "Deliver a fatal hit to the ragdoll body on a bone of a named object of the active scene", &CharacterCommandsInternal::runFatalHit );
     SW_DEV_COMMAND( CombatHit, "combat.hit", "combat.hit <name> <bone> <damage>", "Deliver an unmarked hit to the ragdoll body on a bone of a named object - the target's health decides whether it is fatal",
                     &CharacterCommandsInternal::runHit );
-    SW_DEV_COMMAND( AnimationPlay, "anim.play", "anim.play <object> <state>", "Play a state (or a clip when there is no graph) on a named object's skeletal animator, looping",
-                    &CharacterCommandsInternal::runPlay );
     SW_DEV_COMMAND( NavMoveTo, "nav.moveto", "nav.moveto <agent> <target object> | nav.moveto <agent> <x> <y> <z>",
                     "Send a named navmesh agent of the active scene to an object or a world position (long routes over streamed-out cells)", &CharacterCommandsInternal::runMoveTo );
 } // namespace sw

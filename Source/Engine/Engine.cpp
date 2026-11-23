@@ -81,7 +81,6 @@
 #include "Engine/Profiling/ProfilerBackend.h"
 #include "Engine/Reflection/TypeRegistry.h"
 #include "Engine/Scene/Scene.h"
-#include "Engine/Scene/SceneDebugDraw.h"
 #include "Engine/Scene/SceneManager.h"
 #include "Engine/Serialization/Inherit/ResourceTags.h"
 #include "Engine/Telemetry/TelemetryService.h"
@@ -562,14 +561,12 @@ namespace sw
         // 답할 수 없다. 그 답이 없으면 다음 최적화 대상을 고르는 근거도 없다.
         SW_PROFILE_SCOPE( "GT.Frame" );
 
-        // 프레임 순서가 곧 의미다: 서비스 → 씬 틱 → 디버그 그리기 → 관찰자 → 런타임 UI → 렌더 패킷.
+        // 프레임 순서가 곧 의미다: 서비스 → 씬 틱 → 관찰자 → 런타임 UI → 렌더 패킷.
         updateFrameServices();
         updateScenes( deltaTime, views, vpWidth, vpHeight, sceneTick );
 
-        // 물리 · 내비 디버그 선 — 씬 틱이 이번 프레임의 바디 · 경로를 정한 **뒤**, 관찰자 · UI · 패킷 **앞**이다(이번 프레임에 넣은 선이 endFrame 에서 확정된다).
-        if ( _pSceneManager != nullptr )
-            SceneDebugDraw::update( _pSceneManager->getActiveScene(), engine::getSubsystem<DebugDrawQueue>() );
-        // 관찰자 훅 `onAfterSceneTick` — 이 프레임의 게임 상태가 정해진 뒤(씬 틱 · 디버그 그리기 뒤), 런타임 UI · 렌더 패킷 앞이라는 순서가 뜻이 있다(텔레메트리의 장면별 프레임 시간).
+        // 관찰자 훅 `onAfterSceneTick` — 이 프레임의 게임 상태가 정해진 뒤(씬 틱 뒤), 런타임 UI · 렌더 패킷 앞이라는 순서가 뜻이 있다(텔레메트리의 장면별 프레임 시간,
+        // 디버그 HUD 범주의 그리기 — 이번 프레임에 넣은 선이 endFrame 에서 확정된다).
         if ( _frameHooks.isBound() )
             _frameHooks.notifyAfterSceneTick( makeFrameContext() );
 

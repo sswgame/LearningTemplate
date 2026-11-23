@@ -1,9 +1,10 @@
+/**
+ * @file StreamingCellDebugSections.cpp
+ * @brief 디버그 HUD 범주 `worldcells` — 월드 스트리밍 격자를 활성 게임 카메라 둘레에 선으로 그립니다(올라 있는 셀 초록, 로딩 반경 안 노랑, 그 밖 회색).
+ */
 #include "pch.h"
 
-#include "Engine/Scene/SceneDebugDraw.h"
-
-#include "Core/GlobalVariable/GlobalVariableManager.h"
-
+#include "Engine/Console/DebugHUDRegistry.h"
 #include "Engine/Graphics/Debug/DebugDrawQueue.h"
 #include "Engine/Object/Component/CameraComponent.h"
 #include "Engine/Object/GameObject/GameObject.h"
@@ -14,25 +15,23 @@
 
 namespace sw
 {
-    /** @brief 씬의 월드 스트리밍 격자를 활성 게임 카메라 둘레에 선으로 그립니다(올라 있는 셀 초록, 로딩 반경 안 노랑, 그 밖 회색). */
-    SW_GLOBAL_VARIABLE( bool, gv_worldCellDebugDraw, false, "월드 스트리밍 격자를 카메라 둘레에 그린다 — 올라 있는 셀 초록, 로딩 반경 안 노랑, 그 밖 회색" );
-} // namespace sw
-
-namespace sw
-{
     namespace
     {
-        struct SceneDebugDrawInternal
+        struct StreamingCellDebugSectionsInternal
         {
             /** @brief 카메라 둘레에서 그리는 셀 수(로딩 반경 밖으로 더 보이는 칸)입니다. */
             static constexpr int32 kExtraCellCount = 2;
+            /** @brief HUD 섹션 순서 — 씬 섹션(40) 바로 아래다. */
+            static constexpr int32 kSectionOrder = 41;
 
             /**
              * @brief 씬의 격자(`SceneSettings::_cellGrid`)를 카메라 둘레에 그립니다. 격자가 없는 씬(셀 크기 0)이면 그리지 않습니다.
              * @details 에디터에서 연 씬(XML)은 셀을 나누지 않았으므로 노랑 · 회색만 나온다 — 쿠킹이 나눌 자리의 미리보기다.
              */
-            static void drawStreamingCells( Scene& scene, DebugDrawQueue& queue )
+            static void drawStreamingCells( const DebugHUDSectionDraw& draw )
             {
+                Scene&               scene    = draw._scene;
+                const hashed_string  category = hashed_string( "worldcells" );
                 const SceneSettings& settings = scene.getSceneSettings();
                 StreamingCellGrid    grid;
                 if ( settings._cellGrid._cellSize <= 0.0f || StreamingCellGrid::tryCreate( settings._cellGrid, grid ) == false )
@@ -72,29 +71,16 @@ namespace sw
                         const float32            maxX     = minX + cellSize;
                         const float32            maxZ     = minZ + cellSize;
                         // 바닥(높이 0)에 셀 테두리를 그린다. 이웃 셀과 겹치는 변은 두 번 그려지지만 색이 같은 경우가 많고 디버그 선이라 둔다.
-                        queue.drawLine( float3( minX, 0.0f, minZ ), float3( maxX, 0.0f, minZ ), color );
-                        queue.drawLine( float3( maxX, 0.0f, minZ ), float3( maxX, 0.0f, maxZ ), color );
-                        queue.drawLine( float3( maxX, 0.0f, maxZ ), float3( minX, 0.0f, maxZ ), color );
-                        queue.drawLine( float3( minX, 0.0f, maxZ ), float3( minX, 0.0f, minZ ), color );
+                        draw._queue.drawLine( float3( minX, 0.0f, minZ ), float3( maxX, 0.0f, minZ ), color, 0.0f, category );
+                        draw._queue.drawLine( float3( maxX, 0.0f, minZ ), float3( maxX, 0.0f, maxZ ), color, 0.0f, category );
+                        draw._queue.drawLine( float3( maxX, 0.0f, maxZ ), float3( minX, 0.0f, maxZ ), color, 0.0f, category );
+                        draw._queue.drawLine( float3( minX, 0.0f, maxZ ), float3( minX, 0.0f, minZ ), color, 0.0f, category );
                     }
                 }
             }
         };
     } // namespace
-} // namespace sw
 
-namespace sw
-{
-    void SceneDebugDraw::update( Scene* pScene, DebugDrawQueue& queue )
-    {
-        if ( pScene == nullptr || pScene->getObjectManager() == nullptr )
-            return;
-        GameObjectManager& objectManager = *pScene->getObjectManager();
-
-        // 물리 · 내비 같은 기능은 자기 서비스가 그린다(`ISceneService::drawDebug`) — 씬은 기능을 모른다.
-        objectManager.drawServiceDebug( queue );
-
-        if ( gv_worldCellDebugDraw )
-            SceneDebugDrawInternal::drawStreamingCells( *pScene, queue );
-    }
+    SW_DEBUG_HUD_CATEGORY( worldcells, "worldcells", "World streaming cells around the camera", StreamingCellDebugSectionsInternal::kSectionOrder, DebugHUDSectionFlag::kNone, nullptr,
+                           &StreamingCellDebugSectionsInternal::drawStreamingCells, nullptr );
 } // namespace sw

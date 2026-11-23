@@ -2,9 +2,14 @@
 
 #include "GameFramework/Runtime/Character/Control/Controller/AIControllerComponent.h"
 
+#include "Core/Foundation/BuildConfig.h"
+#include "Core/Foundation/Constants.h"
 #include "Core/Math/MathUtil.h"
 #include "Core/Math/OrientationUtil.h"
+#include "Core/String/StringBuilder.h"
 
+#include "Engine/Foundation/EngineServices.h"
+#include "Engine/Graphics/Debug/VisualLogger.h"
 #include "Engine/Navigation/Component/NavMeshAgentComponent.h"
 #include "Engine/Object/Component/SceneComponent.h"
 #include "Engine/Object/GameObject/GameObject.h"
@@ -20,6 +25,21 @@ namespace sw
         {
             /** @brief 이보다 짧은 이동 방향은 "서 있다" 로 봅니다(바라보기를 바꾸지 않는다). */
             static constexpr float32 kMinMoveLength = 1.0e-3f;
+
+            /** @brief 방금 한 판단(상태 이름 · 행동 트리의 머문 잎)을 비주얼 로거에 적습니다. 로거가 꺼져 있으면 하는 일이 없다. */
+            static void logDecision( const AIControllerComponent& controller, const PawnComponent& pawn )
+            {
+                VisualLogger* const         pLogger    = engine::findSubsystem<VisualLogger>();
+                const GameObject* const     pPawnOwner = pawn.getOwner();
+                const SceneComponent* const pScene     = pPawnOwner != nullptr ? pPawnOwner->getPrimarySceneComponent() : nullptr;
+                if ( pLogger == nullptr || pLogger->isEnabled() == false || pScene == nullptr )
+                    return;
+                const BehaviorTreeRunner* const          pRunner = controller.getBehaviorTreeRunner();
+                const utf8* const                        pLeaf   = pRunner != nullptr ? pRunner->getActiveLeafName() : nullptr;
+                StringBuilder<constant::buffer::kMax256> text;
+                text.appendFormat( "%# / %#", controller.getStateName().c_str(), pLeaf != nullptr ? pLeaf : "-" );
+                pLogger->logText( pPawnOwner->getObjectID(), hashed_string( AIControllerComponent::kDebugCategoryName ), pScene->getWorldPosition(), text.view(), float4( 1.0f, 1.0f, 1.0f, 1.0f ) );
+            }
         };
     } // namespace
 } // namespace sw
@@ -118,6 +138,8 @@ namespace sw
             return;
         updateBlackboard( thinkContext, pawn );
         (void)_runner.tick( _blackboard, this, thinkContext._deltaTime ); // 루트의 결과는 쓰지 않는다 — 잎이 이미 목표를 정했다
+        if constexpr ( build::kShipping == false )
+            AIControllerComponentInternal::logDecision( *this, pawn );
     }
 
     void AIControllerComponent::produceIntent( const ControlFrameContext& context, const PawnComponent& pawn, ControlIntent& outIntent )

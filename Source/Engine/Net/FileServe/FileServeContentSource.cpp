@@ -144,7 +144,7 @@ namespace sw
             url.appendFormat( "%#/file?path=%#&offset=%#&size=%#", _baseURL, encodeQueryValue( relative ), offset, size );
             if ( fetch( string( url.view() ), chunk, bMissing ) == false || chunk.size() != size || writer.append( chunk.data(), chunk.size() ).has_value() == false )
                 return false; // writer 가 소멸하며 임시 파일을 지운다 — 반쯤 받은 거울은 남지 않는다
-            _receivedChunkCount.fetch_add( 1 );
+            _receivedChunkCount.add();
         }
         return writer.commit().has_value();
     }

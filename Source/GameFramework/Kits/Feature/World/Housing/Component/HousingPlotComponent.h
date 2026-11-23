@@ -66,7 +66,9 @@ namespace sw
         HousingPlaceResult place( const HousingCandidate& candidate, uint32& outPlacementID );
         HousingPlaceResult remove( uint32 placementID );
         HousingPlaceResult move( uint32 placementID, const HousingTransform& rawTransform, HousingPlacementMode mode );
+        FUNCTION( Category = "Edit", Exec )
         HousingPlaceResult undo();
+        FUNCTION( Category = "Edit", Exec )
         HousingPlaceResult redo();
         /** @brief 부지를 차지합니다. 네트워크가 없으면 늘 내 것이라 `Ok`, 클라이언트는 서버에 요청하고 `Pending`, 서버 월드는 사람이 없어 `NotOwner` 입니다. */
         HousingPlaceResult claim();
