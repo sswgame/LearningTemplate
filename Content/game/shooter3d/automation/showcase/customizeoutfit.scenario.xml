@@ -25,7 +25,7 @@
 
 	<!-- ⑴ 머리 모양 -->
 	<Store watch="Appearance.AssembleCount" target="Hero" as="heroAssembles"/>
-	<DevCommand line="appearance.value Hero Hair Bearded"/>
+	<DevCommand line="exec Hero applyOptionValue Hair Bearded"/>
 	<WaitUntil watch="Appearance.AssembleCount" target="Hero" increaseFrom="heroAssembles" increaseBy="1" timeoutFrames="10"/>
 	<WaitUntil watch="Assets.Pending" equals="0" timeoutWallSeconds="60"/>
 	<WaitUntil watch="Appearance.Idle" target="Hero" equals="1" timeoutFrames="300"/>
@@ -37,7 +37,7 @@
 	<ExpectImagesDiffer first="outfit_base.ppm" second="outfit_hair.ppm" region="0.25,0.28,0.33,0.45" minDiffering="0.01"/>
 
 	<!-- ⑵ 투구가 머리카락만 감춘다 -->
-	<DevCommand line="appearance.slot Hero Head helmet_knight"/>
+	<DevCommand line="exec Hero setSlotItem Head helmet_knight"/>
 	<WaitUntil watch="Appearance.SlotItem" target="Hero" key="Head" is="helmet_knight" timeoutFrames="10"/>
 	<WaitUntil watch="Assets.Pending" equals="0" timeoutWallSeconds="60"/>
 	<WaitUntil watch="Appearance.Idle" target="Hero" equals="1" timeoutFrames="300"/>
@@ -48,7 +48,7 @@
 	<ExpectImagesDiffer first="outfit_hair.ppm" second="outfit_helmet.ppm" region="0.25,0.28,0.33,0.45" minDiffering="0.01"/>
 
 	<!-- ⑶ 옷 교체 — 덮는 몸을 피팅이 다시 뺀다 -->
-	<DevCommand line="appearance.value Hero Outfit Peasant"/>
+	<DevCommand line="exec Hero applyOptionValue Outfit Peasant"/>
 	<WaitUntil watch="Appearance.Value" target="Hero" key="Outfit" is="Peasant" timeoutFrames="2"/>
 	<WaitUntil watch="Assets.Pending" equals="0" timeoutWallSeconds="60"/>
 	<WaitUntil watch="Appearance.Idle" target="Hero" equals="1" timeoutFrames="300"/>
@@ -60,8 +60,8 @@
 	<ExpectImagesDiffer first="outfit_helmet.ppm" second="outfit_peasant.ppm" region="0.18,0.25,0.4,0.75" minDiffering="0.01"/>
 
 	<!-- ⑷ 무기 바꾸기 · 투구 벗기 — 머리카락이 돌아온다 -->
-	<DevCommand line="appearance.slot Hero MainHand scifi_rifle"/>
-	<DevCommand line="appearance.slot Hero Head"/>
+	<DevCommand line="exec Hero setSlotItem MainHand scifi_rifle"/>
+	<DevCommand line="exec Hero setSlotItem Head"/>
 	<WaitUntil watch="Appearance.SlotItem" target="Hero" key="Head" is="(empty)" timeoutFrames="10"/>
 	<WaitUntil watch="Assets.Pending" equals="0" timeoutWallSeconds="60"/>
 	<WaitUntil watch="Appearance.Idle" target="Hero" equals="1" timeoutFrames="300"/>
@@ -73,11 +73,11 @@
 	<ExpectImagesDiffer first="outfit_peasant.ppm" second="outfit_rifle.ppm" region="0.18,0.25,0.4,0.75" minDiffering="0.002"/>
 
 	<!-- ⑸ 숨김 칸 — 1인칭처럼 손 무기만 숨기고 몸은 그린다. 다시 보이면 앞 사진과 같다 -->
-	<DevCommand line="appearance.hide Hero MainHand"/>
+	<DevCommand line="exec Hero setSlotHidden MainHand true"/>
 	<WaitRenderStable/> <!-- 사진 앞 렌더 안정(TAA · 노출 · 에셋) -->
 	<Screenshot file="outfit_hidden.ppm"/>
 	<ExpectImagesDiffer first="outfit_rifle.ppm" second="outfit_hidden.ppm" region="0.18,0.25,0.4,0.75" minDiffering="0.001"/>
-	<DevCommand line="appearance.hide Hero"/>
+	<DevCommand line="exec Hero setSlotHidden MainHand false"/>
 	<WaitRenderStable/> <!-- 사진 앞 렌더 안정(TAA · 노출 · 에셋) -->
 	<Screenshot file="outfit_shown.ppm"/>
 	<ExpectImagesDiffer first="outfit_rifle.ppm" second="outfit_shown.ppm" minDiffering="0" maxDiffering="0.002"/>

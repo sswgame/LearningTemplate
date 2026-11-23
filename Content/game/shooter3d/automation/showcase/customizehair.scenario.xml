@@ -15,9 +15,9 @@
 	<Launch variable="gv_firstScene" value="game/shooter3d/maps/customizationshowcase.scene.xml"/>
 	<Variable name="gv_shooterAutoPlay" value="0"/>
 	<WaitUntil watch="Assets.Pending" equals="0" timeoutWallSeconds="60"/>
-	<DevCommand line="appearance.preset Twin TownsfolkFemale 0"/>
+	<DevCommand line="exec Twin setPreset TownsfolkFemale 0"/>
 	<WaitUntil watch="Appearance.Preset" target="Twin" is="TownsfolkFemale" timeoutFrames="10"/>
-	<DevCommand line="appearance.value Twin Hair Long"/>
+	<DevCommand line="exec Twin applyOptionValue Hair Long"/>
 	<WaitUntil watch="Appearance.Value" target="Twin" key="Hair" is="Long" timeoutFrames="2"/>
 	<WaitUntil watch="Assets.Pending" equals="0" timeoutWallSeconds="60"/>
 	<WaitUntil watch="Appearance.Idle" target="Twin" equals="1" timeoutFrames="300"/>
@@ -27,14 +27,14 @@
 	<ExpectImage file="hair_long.ppm" golden="hair_long"/>
 
 	<!-- ⑴ 묶은 머리(리그 없음)로 바꿨다가 긴 머리로 돌아온다 -->
-	<DevCommand line="appearance.value Twin Hair Buns"/>
+	<DevCommand line="exec Twin applyOptionValue Hair Buns"/>
 	<WaitUntil watch="Appearance.Value" target="Twin" key="Hair" is="Buns" timeoutFrames="2"/>
 	<WaitUntil watch="Assets.Pending" equals="0" timeoutWallSeconds="60"/>
 	<WaitUntil watch="Appearance.Idle" target="Twin" equals="1" timeoutFrames="300"/>
 	<WaitRenderStable/> <!-- 사진 앞 렌더 안정(TAA · 노출 · 에셋) -->
 	<Screenshot file="hair_buns.ppm"/>
 	<ExpectImagesDiffer first="hair_long.ppm" second="hair_buns.ppm" region="0.42,0.28,0.58,0.46" minDiffering="0.01"/>
-	<DevCommand line="appearance.value Twin Hair Long"/>
+	<DevCommand line="exec Twin applyOptionValue Hair Long"/>
 	<WaitUntil watch="Appearance.Value" target="Twin" key="Hair" is="Long" timeoutFrames="2"/>
 	<WaitUntil watch="Appearance.Idle" target="Twin" equals="1" timeoutFrames="300"/>
 	<WaitUntil watch="Appearance.PartRigOutput" target="Twin" key="Hair.Hair.offset" atLeast="0" timeoutFrames="60"/> <!-- 새 부품의 리그가 묶였다 -->
@@ -51,11 +51,11 @@
 	<ExpectImagesDiffer first="hair_long.ppm" second="hair_long_again.ppm" minDiffering="0" maxDiffering="0.002"/> <!-- 새 바인드 포즈에서 시작해 처음 모습으로 쉰다 -->
 
 	<!-- ⑵ 투구를 썼다 벗는다 — 규칙이 머리카락을 거뒀다가 새로 세운다 -->
-	<DevCommand line="appearance.slot Twin Head helmet_knight"/>
+	<DevCommand line="exec Twin setSlotItem Head helmet_knight"/>
 	<WaitUntil watch="Appearance.HiddenBy" target="Twin" key="Hair.Hair" is="HelmetHidesHair" timeoutFrames="10"/>
 	<WaitUntil watch="Assets.Pending" equals="0" timeoutWallSeconds="60"/>
 	<WaitUntil watch="Appearance.Idle" target="Twin" equals="1" timeoutFrames="300"/>
-	<DevCommand line="appearance.slot Twin Head"/>
+	<DevCommand line="exec Twin setSlotItem Head"/>
 	<WaitUntil watch="Appearance.HiddenBy" target="Twin" key="Hair.Hair" is="(visible)" timeoutFrames="10"/>
 	<WaitUntil watch="Appearance.Idle" target="Twin" equals="1" timeoutFrames="300"/>
 	<WaitUntil watch="Appearance.PartRigOutput" target="Twin" key="Hair.Hair.offset" atLeast="0" timeoutFrames="60"/>
@@ -74,7 +74,7 @@
 	     (다시 시작하지 않으면 감쇠 0.2 로 몇 프레임 동안 0.3 m/s 를 넘는다 — 위 대조) -->
 	<Store watch="Appearance.AssembleCount" target="Twin" as="assembledBeforeLeg"/>
 	<DevCommand line="object.turn Twin -150"/>
-	<DevCommand line="appearance.value Twin LegLength 1"/>
+	<DevCommand line="exec Twin applySliderValue LegLength 1"/>
 	<WaitUntil watch="Appearance.Value" target="Twin" key="LegLength" near="1" timeoutFrames="2"/>
 	<WaitUntil watch="Appearance.AssembleCount" target="Twin" increaseFrom="assembledBeforeLeg" increaseBy="1" timeoutFrames="10"/>
 	<AdvanceSimulation frames="2" render="true"/> <!-- 다시 시작한 평가가 출력 사본에 오른다(준비 단계가 지난 평가를 옮긴다) -->

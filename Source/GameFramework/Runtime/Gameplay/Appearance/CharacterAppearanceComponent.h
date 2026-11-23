@@ -40,6 +40,8 @@
 
 namespace sw
 {
+    enum class CustomizationKind : uint8; // GameFramework/Runtime/Gameplay/Appearance/CustomizationSchema.h
+
     struct CharacterAppearanceDef;
     struct CharacterAppearanceMeshBuild;
     struct CharacterAppearanceSpec;
@@ -174,13 +176,15 @@ namespace sw
         }
 
         /** @brief 프리셋과 시드를 바꾸고 다시 조립합니다. 슬롯 덮어쓰기는 그대로 둡니다. 선택으로 입히던 것(`applySelection` · `previewSelection`)은 풀고 프리셋 길로 돌아갑니다. */
-        void setPreset( const hashed_string& presetID, uint32 seed );
+        FUNCTION( Category = "Appearance", Exec )
+        void setPreset( const hashed_string& presetID, uint32 seed = 0 );
         /** @brief 지금 입히려는 프리셋 id 입니다(`setPreset` 이나 프로퍼티가 정한 값 — 조립이 끝났는지와 상관없다). */
         const hashed_string& getPresetID() const { return _presetID.key(); }
         /** @brief 프리셋의 무작위 선택 시드입니다. */
         int32 getSeed() const { return _seed; }
         /** @brief 슬롯의 아이템을 덮어쓰고 다시 조립합니다. 빈 아이템이면 슬롯을 비웁니다. 같은 값이면 아무것도 하지 않습니다. */
-        void setSlotItem( const hashed_string& slot, const hashed_string& itemID );
+        FUNCTION( Category = "Appearance", Exec )
+        void setSlotItem( const hashed_string& slot, const hashed_string& itemID = hashed_string{} );
         /**
          * @brief 미리보기 입히기 — 프리셋 id 대신 외형 선택 @p selection 을 데이터 @p database 로 조립합니다. 게임 서비스가 없는 씬(에디터 미리보기 창)이 씁니다.
          * @details 게임과 같은 길로 조립한다 — 미리보기 씬도 플레이하고 틱해야 한다(`ScenePreviewPolicy::_bPlay`, 언리얼 FPreviewScene). 플레이하지 않는 씬이면 오류를 남기고 입히지 않는다.
@@ -196,6 +200,18 @@ namespace sw
          *          시작 전이면 `onBeginPlay` 가 조립한다. 슬롯 덮어쓰기(`setSlotItem`)는 그 위에 그대로 덮는다.
          */
         void applySelection( const AppearanceSelection& selection );
+        /**
+         * @brief 슬라이더 값 하나를 바꿔 게임 선택으로 입힙니다(캐릭터 생성 화면). 대칭 짝도 함께 바뀝니다.
+         * @return 아직 조립하지 않아 담을 선택이 없거나, 스키마에 없는 매개변수거나, 슬라이더가 아니면 알리고 false 입니다(입은 모습은 그대로다).
+         */
+        FUNCTION( Category = "Appearance", Exec )
+        bool applySliderValue( const hashed_string& parameter, float32 value );
+        /** @brief 색(rgba) 값 하나를 바꿔 게임 선택으로 입힙니다(염색). 실패는 `applySliderValue` 와 같습니다. */
+        FUNCTION( Category = "Appearance", Exec )
+        bool applyColorValue( const hashed_string& parameter, const float4& color );
+        /** @brief 고르기 · 부착 값 하나를 항목 @p option 으로 바꿔 게임 선택으로 입힙니다(머리 모양 · 옷). 없는 항목이면 알리고 false 이고, 나머지 실패는 `applySliderValue` 와 같습니다. */
+        FUNCTION( Category = "Appearance", Exec )
+        bool applyOptionValue( const hashed_string& parameter, const hashed_string& option );
         /**
          * @brief 지금 입히려는 모습을 전체 선택으로 담습니다(저장 · 공유 코드 · 편집의 입력). 선택 길이면 요청한 선택 위에 슬롯 덮어쓰기를 얹은 것이라 조립 전에도 맞고,
          *        프리셋 길이면 지난 조립의 펼친 프리셋(덮어쓰기 포함)이라 아직 조립하지 않았으면 빈 선택입니다.
@@ -220,7 +236,10 @@ namespace sw
          * @brief 이 칸(부품 주인 — 슬롯 또는 꾸미기 매개변수)들의 부품을 숨깁니다. 몸과 다른 칸은 `setPartsVisible` 을 따릅니다. 빈 목록이면 숨기는 칸이 없습니다.
          * @details 1인칭에서 몸은 보이고 머리 칸 · 손 무기 칸만 숨길 때 쓴다. 다시 조립해도(장비 바꿈) 목록을 지킨다.
          */
-        void                         setHiddenSlots( const vector<hashed_string>& listSlot );
+        void setHiddenSlots( const vector<hashed_string>& listSlot );
+        /** @brief 칸 하나를 숨기거나 다시 보입니다(`setHiddenSlots` 목록의 한 칸만 바꾼다). */
+        FUNCTION( Category = "Appearance", Exec )
+        void                         setSlotHidden( const hashed_string& slot, bool bHidden );
         const vector<hashed_string>& getHiddenSlots() const { return _listHiddenSlot; }
         /** @brief 스폰한 부품 오브젝트를 모두 지웁니다. 상태를 저장하기 전에 부릅니다(풀에도 남기지 않는다). 다음 조립에서 다시 스폰합니다. */
         void despawnParts();
@@ -302,6 +321,10 @@ namespace sw
         GameObjectHandle findSlotPartObject( const hashed_string& slot ) const;
         /** @brief 이름이 @p partName 인 첫 부품 오브젝트입니다(몸에 합친 부품은 오브젝트가 없다). 없으면 빈 손잡이입니다 — 감시 값이 부품의 리그를 읽는다. */
         GameObjectHandle findPartObject( const hashed_string& partName ) const;
+
+    private:
+        /** @brief 꾸미기 값 하나를 스키마에 맞춰 지금 선택에 넣고 입힙니다. 매개변수의 종류가 @p kind 가 아니면(고르기는 부착도 받는다) 알리고 false 입니다. */
+        [[nodiscard]] bool applyCustomization( const CustomizationValue& value, CustomizationKind kind );
 
     private:
         /** @brief 스폰한 부품 하나입니다. */

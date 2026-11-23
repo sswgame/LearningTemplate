@@ -69,7 +69,7 @@
 	<ExpectImagesDiffer first="eqdye_red.ppm" second="eqdye_swapred.ppm" minDiffering="0" maxDiffering="0.002"/>
 
 	<!-- ⑶ 벗어 가방에 넣었다 다시 낀다 — 인스턴스 색이 남는다 -->
-	<DevCommand line="equipment.unequip KnightA Head"/>
+	<DevCommand line="exec KnightA unequipToBag Head"/>
 	<WaitUntil watch="Appearance.SlotItem" target="KnightA" key="Head" is="(empty)" timeoutFrames="10"/>
 	<Expect watch="Equipment.BagItem" target="KnightA" key="1" is="helmet_knight_tinted +1"/>
 	<DevCommand line="equipment.equip KnightA 1 Head"/>
@@ -80,9 +80,9 @@
 	<DevCommand line="equipment.dye KnightB Head Tint 0.1 0.2 0.9"/>
 	<WaitUntil watch="Appearance.PartMaterial" target="KnightB" key="Head._color" differsFrom="plainColor" timeoutFrames="10"/>
 	<Store watch="Appearance.PartMaterial" target="KnightB" key="Head._color" as="blueColor"/>
-	<DevCommand line="equipment.unequip KnightB Head"/>
+	<DevCommand line="exec KnightB unequipToBag Head"/>
 	<WaitUntil watch="Appearance.SlotItem" target="KnightB" key="Head" is="(empty)" timeoutFrames="10"/>
-	<DevCommand line="appearance.value KnightA Hair Bearded"/>
+	<DevCommand line="exec KnightA applyOptionValue Hair Bearded"/>
 	<WaitUntil watch="Appearance.Value" target="KnightA" key="Hair" is="Bearded" timeoutFrames="2"/>
 	<WaitUntil watch="Assets.Pending" equals="0" timeoutWallSeconds="60"/>
 	<WaitUntil watch="Appearance.Idle" target="KnightA" equals="1" timeoutFrames="300"/>
@@ -95,7 +95,7 @@
 	<WaitUntil watch="Save.Written" differsFrom="writtenBefore" timeoutWallSeconds="10"/>
 	<!-- 세이브 뒤 바꾼다 — 불러오기가 정말 되돌리는지 가리려고 사진이 먼저 달라야 한다 -->
 	<DevCommand line="equipment.dye KnightA Head Tint 0.2 0.9 0.2"/>
-	<DevCommand line="appearance.value KnightA Hair Buzzed"/>
+	<DevCommand line="exec KnightA applyOptionValue Hair Buzzed"/>
 	<DevCommand line="equipment.equip KnightB 0 Head"/>
 	<WaitUntil watch="Appearance.Value" target="KnightA" key="Hair" is="Buzzed" timeoutFrames="2"/>
 	<WaitUntil watch="Assets.Pending" equals="0" timeoutWallSeconds="60"/>

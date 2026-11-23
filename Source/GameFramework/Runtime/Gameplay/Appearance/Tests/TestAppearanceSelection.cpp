@@ -6,8 +6,12 @@
 #include "Core/Serialization/BitStream.h"
 #include "Core/Testing/TestFramework.h"
 
+#include "Engine/Object/GameObject/GameObject.h"
+#include "Engine/Object/GameObject/GameObjectManager.h"
+
 #include "GameFramework/Runtime/Gameplay/Appearance/AppearanceDatabase.h"
 #include "GameFramework/Runtime/Gameplay/Appearance/AppearanceSelection.h"
+#include "GameFramework/Runtime/Gameplay/Appearance/CharacterAppearanceComponent.h"
 #include "GameFramework/Runtime/Gameplay/Inventory/ItemCatalog.h"
 
 using namespace sw;
@@ -533,4 +537,16 @@ SW_TEST_CASE_F( AppearanceSelectionTest, ShareCodeReadsTheOlderVersion )
     const expected<void> future = AppearanceSelection::decode( makeCode( AppearanceSelection::kShareCodeVersion + 1 ), _database, decoded );
     SW_EXPECT_FALSE( future );
     SW_EXPECT_EQUAL( string( "unsupported share code version" ), future.has_value() ? string{} : string( future.error().message() ) );
+}
+
+/** @brief [AppearanceSelectionTest] 아직 조립하지 않은 외형은 담을 선택이 없어 꾸미기 값을 바꾸지 않고 false 로 답한다(`exec` 명령도 실패다) */
+SW_TEST_CASE( AppearanceSelectionTest, ValueBeforeDressingIsRefused )
+{
+    SW_EXPECT_LOG( "CharacterAppearance.NotDressed" );
+    GameObjectManager manager;
+    GameObject*       pObject = manager.createGameObject( hashed_string( "Undressed" ) );
+    SW_REQUIRE_NOT_NULL( pObject );
+    CharacterAppearanceComponent* pAppearance = pObject->addComponent<CharacterAppearanceComponent>();
+    SW_REQUIRE_NOT_NULL( pAppearance );
+    SW_EXPECT_FALSE( pAppearance->applySliderValue( "Height", 1.0f ) );
 }

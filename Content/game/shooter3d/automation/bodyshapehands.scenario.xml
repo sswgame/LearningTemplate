@@ -18,7 +18,7 @@
 
 	<!-- ⑴ 긴 팔 · 3인칭 걷기 — 시작 카메라는 1인칭이라 3인칭으로 바꾼다(1인칭 손 IK 가 켜져 있으면 시점 총을 잡는 손을 본다) -->
 	<DevCommand line="camera.preset thirdperson"/>
-	<DevCommand line="appearance.value PlayerBody ArmLength 1"/>
+	<DevCommand line="exec PlayerBody applySliderValue ArmLength 1"/>
 	<WaitUntil watch="Appearance.Value" target="PlayerBody" key="ArmLength" near="1" timeoutFrames="2"/>
 	<WaitUntil watch="Appearance.Idle" target="PlayerBody" equals="1" timeoutFrames="300"/>
 	<Press slot="Key.W"/>
@@ -26,7 +26,7 @@
 	<Expect watch="Shooter3D.HandReachError" atMost="0.03"/>
 	<Release slot="Key.W"/>
 	<!-- ⑵ 짧은 팔 -->
-	<DevCommand line="appearance.value PlayerBody ArmLength -1"/>
+	<DevCommand line="exec PlayerBody applySliderValue ArmLength -1"/>
 	<WaitUntil watch="Appearance.Value" target="PlayerBody" key="ArmLength" near="-1" timeoutFrames="2"/>
 	<WaitUntil watch="Appearance.Idle" target="PlayerBody" equals="1" timeoutFrames="300"/>
 	<Press slot="Key.S"/>
@@ -34,12 +34,12 @@
 	<Expect watch="Shooter3D.HandReachError" atMost="0.03"/>
 	<Release slot="Key.S"/>
 	<!-- ⑶ 어깨 폭 극값(짧은 팔 그대로 — 가장 멀다. 넓은 쪽 2.5 cm 가 이 조합에서 닿는 한도다) -->
-	<DevCommand line="appearance.value PlayerBody ShoulderWidth 1"/>
+	<DevCommand line="exec PlayerBody applySliderValue ShoulderWidth 1"/>
 	<WaitUntil watch="Appearance.Value" target="PlayerBody" key="ShoulderWidth" near="1" timeoutFrames="2"/>
 	<WaitUntil watch="Appearance.Idle" target="PlayerBody" equals="1" timeoutFrames="300"/>
 	<AdvanceSimulation frames="20"/>
 	<Expect watch="Shooter3D.HandReachError" atMost="0.03"/>
-	<DevCommand line="appearance.value PlayerBody ShoulderWidth -1"/>
+	<DevCommand line="exec PlayerBody applySliderValue ShoulderWidth -1"/>
 	<WaitUntil watch="Appearance.Value" target="PlayerBody" key="ShoulderWidth" near="-1" timeoutFrames="2"/>
 	<WaitUntil watch="Appearance.Idle" target="PlayerBody" equals="1" timeoutFrames="300"/>
 	<AdvanceSimulation frames="20"/>
@@ -48,13 +48,13 @@
 	<!-- ⑷ 다리 길이 극값 — 서서 발바닥 틈을 본다(창 1 ~ 2 초가 바뀐 몸의 값으로 찬 뒤). 기준은 다리를 바꾸기 전 몸의 틈 최댓값이다(대기 클립의 무게 옮김도 발을 잠깐 든다) -->
 	<AdvanceSimulation frames="130"/>
 	<Store watch="Rig.Output" target="PlayerBody" key="Feet.sole_gap_peak" as="soleGapBase"/>
-	<DevCommand line="appearance.value PlayerBody LegLength 1"/>
+	<DevCommand line="exec PlayerBody applySliderValue LegLength 1"/>
 	<WaitUntil watch="Appearance.Value" target="PlayerBody" key="LegLength" near="1" timeoutFrames="2"/>
 	<WaitUntil watch="Appearance.Idle" target="PlayerBody" equals="1" timeoutFrames="300"/>
 	<WaitUntil watch="Rig.Output" target="PlayerBody" key="Feet.leg_lift" atLeast="0.03" timeoutFrames="30"/>
 	<AdvanceSimulation frames="70"/>
 	<WaitUntil watch="Rig.Output" target="PlayerBody" key="Feet.sole_gap_peak" sameAs="soleGapBase" tolerance="0.015" timeoutFrames="120"/>
-	<DevCommand line="appearance.value PlayerBody LegLength -1"/>
+	<DevCommand line="exec PlayerBody applySliderValue LegLength -1"/>
 	<WaitUntil watch="Appearance.Value" target="PlayerBody" key="LegLength" near="-1" timeoutFrames="2"/>
 	<WaitUntil watch="Appearance.Idle" target="PlayerBody" equals="1" timeoutFrames="300"/>
 	<WaitUntil watch="Rig.Output" target="PlayerBody" key="Feet.leg_lift" atMost="-0.03" timeoutFrames="30"/>
@@ -65,14 +65,14 @@
 	<DevCommand line="camera.preset firstperson"/>
 	<!-- 다리는 ⑷ 의 짧은 다리 그대로 — 1인칭 눈높이가 몸(rest_leg_lift)을 따라 내려가 시점 총도 함께 내려간다 -->
 	<WaitUntil watch="Rig.Output" target="PlayerBody" key="Feet.rest_leg_lift" atMost="-0.03" timeoutFrames="10"/>
-	<DevCommand line="appearance.value PlayerBody ArmLength 1"/>
+	<DevCommand line="exec PlayerBody applySliderValue ArmLength 1"/>
 	<WaitUntil watch="Appearance.Value" target="PlayerBody" key="ArmLength" near="1" timeoutFrames="2"/>
 	<WaitUntil watch="Appearance.Idle" target="PlayerBody" equals="1" timeoutFrames="300"/>
 	<Press slot="Key.W"/>
 	<AdvanceSimulation frames="60"/>
 	<Expect watch="Shooter3D.HandReachError" atMost="0.03"/>
 	<Release slot="Key.W"/>
-	<DevCommand line="appearance.value PlayerBody ArmLength -1"/>
+	<DevCommand line="exec PlayerBody applySliderValue ArmLength -1"/>
 	<WaitUntil watch="Appearance.Value" target="PlayerBody" key="ArmLength" near="-1" timeoutFrames="2"/>
 	<WaitUntil watch="Appearance.Idle" target="PlayerBody" equals="1" timeoutFrames="300"/>
 	<Press slot="Key.S"/>
