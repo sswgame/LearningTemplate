@@ -7,9 +7,13 @@
  */
 #include "pch.h"
 
+#include "Core/Log/Logger.h"
+#include "Core/Module/ModuleLibraryUtil.h"
+#include "Core/Path/AbsolutePath.h"
 #include "Core/Subsystem/SubsystemScope.h"
 
 #include "Engine/Engine.h"
+#include "Engine/Module/ModuleTypeRegistry.h"
 
 #include "ModuleManager/ModuleLoaderSubsystem.h"
 
@@ -24,6 +28,8 @@ namespace sw
             FuzzEngineScope()
                 : _host{}
                 , _engine{}
+                , _listLoadedModule{}
+                , _unloadSubscription{}
                 , _bEngineStarted{ SW_FALSE }
             {
             }
@@ -42,21 +48,57 @@ namespace sw
             /** @brief 엔진을 세웁니다. 엔진 인자는 프로그램 이름뿐이다 — libFuzzer 인자(`-runs=` …)가 엔진 인자로 풀리지 않게. 서지 못하면 false 입니다. */
             [[nodiscard]] bool initialize( utf8* pProgramName )
             {
-                if ( ModuleLoaderSubsystem::initializeHostScope( _host, SW_DELEGATE_METHOD( ModuleTypeLoaderDelegate, &FuzzEngineScope::loadModules, this ), "Fuzz" ) == nullptr )
+                ModuleLoaderSubsystem* pModuleLoader =
+                    ModuleLoaderSubsystem::initializeHostScope( _host, SW_DELEGATE_METHOD( ModuleTypeLoaderDelegate, &FuzzEngineScope::loadModules, this ), "Fuzz" );
+                if ( pModuleLoader == nullptr )
                     return false;
+                _unloadSubscription = pModuleLoader->bindScenesReleasedHook( SW_DELEGATE_METHOD( Delegate<void()>, &FuzzEngineScope::unregisterModules, this ) );
                 utf8* arrArgument[] = { pProgramName, nullptr };
                 _bEngineStarted     = SW_TRUE;
                 return _engine.initialize( 1, arrArgument, EngineHostRole::DedicatedServer, &_host );
             }
 
         private:
-            /** @brief 올릴 모듈이 없다 — 퍼저 타깃은 Core · Engine 의 파서만 부른다(GameFramework 타깃이 생기면 부하 봇처럼 이름으로 올린다). */
-            [[nodiscard]] bool loadModules() { return true; }
+            /**
+             * @brief 타깃이 부르는 모듈을 의존 순서대로 올리고 타입을 등록합니다(`sw_add_fuzz_target( … MODULES )` 이 `SW_FUZZ_MODULES` 로 준다).
+             * @details Core · Engine 의 파서만 부르는 타깃은 목록이 없다. GameFramework 는 정적 초기화에서 이름 풀을 써서 엔진 기동 뒤에만 올라올 수 있다 — 부하 봇과 같은 모양이다.
+             */
+            [[nodiscard]] bool loadModules()
+            {
+#if defined( SW_FUZZ_MODULES )
+                static constexpr const utf8* kArrModule[] = { SW_FUZZ_MODULES };
+                for ( const utf8* pModule : kArrModule )
+                {
+                    const optional<AbsolutePath> libraryPath = AbsolutePath::tryMake( ModuleLibraryUtil::findModuleLibraryPath( pModule ) );
+                    if ( libraryPath.has_value() == false || ModuleLibraryUtil::loadLibraryAt( *libraryPath ) == nullptr )
+                    {
+                        SW_LOG_ERROR_ID( "Fuzz.CannotLoadModule", "Fuzz: cannot load the module %#", pModule );
+                        return false;
+                    }
+                    _listLoadedModule.push_back( pModule );
+                    if ( engine::registerModuleTypes( pModule ) == false )
+                        return false;
+                }
+#endif
+                return true;
+            }
+
+            /** @brief 올린 모듈의 등록을 역순으로 거둡니다. 라이브러리는 프로세스가 끝날 때까지 둔다(정적 소멸자가 그 코드를 부른다). */
+            void unregisterModules()
+            {
+                for ( auto moduleIt = _listLoadedModule.rbegin(); moduleIt != _listLoadedModule.rend(); ++moduleIt )
+                {
+                    engine::unregisterModuleTypes( *moduleIt );
+                }
+                _listLoadedModule.clear();
+            }
 
         private:
-            SubsystemScope _host;
-            Engine         _engine;
-            uint8          _bEngineStarted;
+            SubsystemScope      _host;
+            Engine              _engine;
+            vector<const utf8*> _listLoadedModule;
+            Subscription        _unloadSubscription;
+            uint8               _bEngineStarted;
         };
     } // namespace
 } // namespace sw

@@ -562,7 +562,7 @@ namespace sw
             const size_t   identityBytes = ObjectStateSerializer::readIdentity( pData + offset, size - offset, identity );
             if ( identityBytes == 0 )
             {
-                SW_LOG_ERROR_ID( "GameStateSnapshot.FailedReadObjectIdentity", "Failed to read object identity at index %u", objectIndex );
+                SW_LOG_ERROR_ID( "GameStateSnapshot.FailedReadObjectIdentity", "Failed to read object identity at index %#", objectIndex );
                 bComplete = false;
                 break;
             }
@@ -576,7 +576,7 @@ namespace sw
             const size_t readBytes = ObjectStateSerializer::loadFromBinaryBuffer( pObj, pData + offset, size - offset, context );
             if ( readBytes == 0 )
             {
-                SW_LOG_ERROR_ID( "GameStateSnapshot.FailedLoadBinaryObject", "Failed to load binary object state at index %u", objectIndex );
+                SW_LOG_ERROR_ID( "GameStateSnapshot.FailedLoadBinaryObject", "Failed to load binary object state at index %#", objectIndex );
                 pObjectManager->destroyGameObject( pObj ); // 읽지 못한 자리에 빈 오브젝트를 남기지 않는다.
                 bComplete = false;
                 break;

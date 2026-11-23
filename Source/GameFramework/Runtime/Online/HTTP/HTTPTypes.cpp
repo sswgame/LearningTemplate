@@ -6,6 +6,7 @@
 #include "Core/Encoding/HexUtil.h"
 #include "Core/Foundation/Constants.h"
 #include "Core/Math/MathUtil.h"
+#include "Core/Network/NetTypes.h"
 #include "Core/String/StringBuilder.h"
 #include "Core/String/StringUtil.h"
 
@@ -123,12 +124,12 @@ namespace sw
         if ( url.substr( 0, 8 ) == "https://" )
         {
             outAddress._bSecure = SW_TRUE;
-            outAddress._port    = 443;
+            outAddress._port    = kDefaultHTTPSPort;
             rest                = url.substr( 8 );
         }
         else if ( url.substr( 0, 7 ) == "http://" )
         {
-            outAddress._port = 80;
+            outAddress._port = kDefaultHTTPPort;
             rest             = url.substr( 7 );
         }
         else
@@ -141,12 +142,29 @@ namespace sw
         const string_view authority = rest.substr( 0, slash );
         if ( authority.empty() || authority.find( '@' ) != string_view::npos )
             return false;
-        const size_t colon = authority.rfind( ':' );
-        outAddress._host   = string( authority.substr( 0, colon ) );
-        if ( colon != string_view::npos )
+        // 호스트와 그 뒤(`:포트` 또는 없음)로 가른다. IPv6 의 쌍점은 대괄호 안에서만 나온다.
+        string_view afterHost;
+        if ( authority.front() == '[' )
+        {
+            const size_t close = authority.find( ']' );
+            NetAddress   literal{};
+            if ( close == string_view::npos || NetAddress::parse( authority.substr( 0, close + 1 ), 0, literal ) == false )
+                return false;
+            outAddress._host = string( authority.substr( 1, close - 1 ) );
+            afterHost        = authority.substr( close + 1 );
+        }
+        else
+        {
+            const string_view host = authority.substr( 0, authority.find( ':' ) );
+            if ( host.find_first_of( "[]" ) != string_view::npos )
+                return false;
+            outAddress._host = string( host );
+            afterHost        = authority.substr( host.size() );
+        }
+        if ( afterHost.empty() == false )
         {
             int64      port         = 0;
-            const bool bInvalidPort = HTTPTypesInternal::parseUnsigned( authority.substr( colon + 1 ), 10, port ) == false || port <= 0 || port > 65535;
+            const bool bInvalidPort = afterHost.front() != ':' || HTTPTypesInternal::parseUnsigned( afterHost.substr( 1 ), 10, port ) == false || port <= 0 || port > 65535;
             if ( bInvalidPort )
                 return false;
             outAddress._port = static_cast<uint16>( port );
@@ -160,6 +178,16 @@ namespace sw
                 outAddress._target.insert( outAddress._target.begin(), '/' );
         }
         return true;
+    }
+
+    string HTTPAddress::makeAuthority() const
+    {
+        const bool                               bIpv6 = _host.find( ':' ) != string::npos;
+        StringBuilder<constant::buffer::kMax256> authority;
+        authority.appendFormat( "%#%#%#", bIpv6 ? "[" : "", _host, bIpv6 ? "]" : "" );
+        if ( _port != ( _bSecure == SW_TRUE ? kDefaultHTTPSPort : kDefaultHTTPPort ) )
+            authority.appendFormat( ":%#", static_cast<int32>( _port ) );
+        return string( authority.view() );
     }
 
     string HTTPUtil::encodePercent( string_view text )
@@ -563,11 +591,7 @@ namespace sw
         Internal::appendText( outBytes, " " );
         Internal::appendText( outBytes, url._target );
         Internal::appendText( outBytes, " HTTP/1.1\r\n" );
-        StringBuilder<constant::buffer::kMax256> host;
-        host.append( url._host );
-        if ( ( url._bSecure == SW_TRUE && url._port != 443 ) || ( url._bSecure == SW_FALSE && url._port != 80 ) )
-            host.appendFormat( ":%#", static_cast<int32>( url._port ) );
-        Internal::appendHeader( outBytes, "Host", host.view() );
+        Internal::appendHeader( outBytes, "Host", url.makeAuthority() );
         Internal::appendHeader( outBytes, "Connection", "close" );
         if ( request._method == HTTPMethod::Post || request._bodyBytes.empty() == false )
             Internal::appendHeader( outBytes, "Content-Length", to_string( static_cast<int64>( request._bodyBytes.size() ) ) );

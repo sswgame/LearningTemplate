@@ -7,6 +7,7 @@
 #pragma once
 #include "Core/Container/string.h"
 #include "Core/Container/vector.h"
+#include "Core/Delegate/Delegate.h"
 #include "Core/Foundation/Types.h"
 #include "Core/Math/Radians.h"
 #include "Core/Memory/Memory.h"
@@ -29,6 +30,8 @@
 
 namespace sw
 {
+    struct CameraShakeRequest;
+
     class ICameraCollisionProbe;
     class InputMap;
 
@@ -66,6 +69,7 @@ namespace sw
         void onRegister( GameObjectManager& manager ) override;
         void onUnregister( GameObjectManager& manager ) override;
         void onBeginPlay() override;
+        void onEndPlay() override;
         void onTick( TickContext& context ) override;
 
         /** @brief 프리셋을 카탈로그의 블렌드로 켭니다. 없는 id 면 false 입니다. */
@@ -203,6 +207,8 @@ namespace sw
         void gatherPhotoModeInput( float32 unscaledDeltaTime );
         /** @brief 포토 모드가 건 UI 레이어 숨김 요청을 풉니다(건 적 없으면 아무 일도 하지 않습니다). */
         void releasePhotoModeUILayers();
+        /** @brief 씬의 흔들림 채널이 카메라 충격을 요청했습니다(카메라 매니저 없이 도는 게임도 흔들린다). */
+        void onCameraShakeRequested( const CameraShakeRequest& request );
         /** @brief 포즈 계산과 쓰기를 합니다(게임 스레드, 틱 밖 — 암 충돌이 물리를 쓸어 본다). */
         void resolveCamera();
         /** @brief 시작 프리셋을 고릅니다. 순환 액션이 있으면 플레이어가 고른 프리셋(카탈로그에 있을 때), 아니면 `_initialPreset`, 그것도 아니면 첫 프리셋을 씁니다. */
@@ -269,6 +275,8 @@ namespace sw
 
         SharedAssetRef<CameraPresetCatalog> _pCatalog; ///< 공유 캐시의 한 벌(`SharedAssetCache<CameraPresetCatalog>`). 경로가 없으면 빈 표다
         CameraDirector                      _director;
+        CameraImpulseListener               _channelImpulse;    ///< 흔들림 채널의 충격. 이 카메라를 뷰 타깃으로 읽는 매니저가 있으면 매니저가 더하므로 쓰지 않는다(두 번 더하지 않는다)
+        Subscription                        _shakeSubscription; ///< 흔들림 채널 구독(플레이 동안)
         vector<uint8>                       _pendingStateBytes; ///< 시작 전에 받은 상태(`restoreState`). 카탈로그를 읽은 뒤 적용한다
         const ICameraCollisionProbe*        _pExternalProbe;
         hashed_string                       _inputCheckedPresetID; ///< 액션을 입력 맵에 대어 본 마지막 프리셋(`warnMissingPresetActions`)

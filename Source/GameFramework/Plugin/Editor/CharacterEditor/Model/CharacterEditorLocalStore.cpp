@@ -58,7 +58,7 @@ namespace sw::editor
         for ( uint32 number = 0;; ++number )
         {
             fixed_string<constant::buffer::kMax64> slot;
-            formatstring( slot.data(), slot.capacity(), "%s%u", CharacterEditorLocalStoreInternal::kThumbnailSlotPrefix, number );
+            formatstring( slot.data(), slot.capacity(), "%#%#", CharacterEditorLocalStoreInternal::kThumbnailSlotPrefix, number );
             bool bTaken = false;
             for ( const UserAppearancePreset& preset : listPreset )
                 bTaken = bTaken || string_view( preset._thumbnailSlot.c_str() ) == string_view( slot.c_str() );

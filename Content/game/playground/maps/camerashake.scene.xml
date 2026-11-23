@@ -1,0 +1,41 @@
+<?asset guid="c67980500a3cf0dd3fb173dfab4eae37"?>
+<Scene formatVersion="3" name="CameraShake">
+	<!-- 카메라 흔들림 시나리오(automation/camerashake)의 무대 — 화면 카메라(GameCamera)는 카메라 매니저로 View 를 본다. Fighter 의 베기 클립 알림(data/camerashake.notifies.xml)이 흔들림을 낸다. -->
+	<SceneSettings _bStreaming="false" _unloadMargin="0" _maxCellLoadsPerFrame="0" _addToWorldBudgetMicroseconds="0">
+		<_cellGrid _cellSize="0" _loadingRadius="0" />
+	</SceneSettings>
+	<entities>
+		<entity id="1" name="GameCamera">
+			<GameObject _schemaVersion="0" _name="GameCamera" _bActive="true">
+				<_listComponent>
+					<CameraComponent _localID="17709685451340727998" _localPosition="0,20,-30" _localRotation="0,0,0" _localScale="1,1,1" _attachOwner="None" _attachComponent="None" _fovY="51.5662" _nearZ="0.05" _farZ="100" _orthoHeight="10" _priority="10" _role="Game" _bOrthographic="false" />
+					<CameraManagerComponent _localID="3555541265262269731" _viewTarget="2" _localPlayerIndex="0" />
+				</_listComponent>
+			</GameObject>
+		</entity>
+		<entity id="2" name="View">
+			<GameObject _schemaVersion="0" _name="View" _bActive="true">
+				<_listComponent>
+					<CameraComponent _localID="17709685451340727998" _localPosition="0,1.5,-5" _localRotation="0,0,0" _localScale="1,1,1" _attachOwner="None" _attachComponent="None" _fovY="51.5662" _nearZ="0.05" _farZ="100" _orthoHeight="10" _priority="0" _role="Custom" _bOrthographic="false" />
+				</_listComponent>
+			</GameObject>
+		</entity>
+		<entity id="3" name="Sun">
+			<GameObject _schemaVersion="0" _name="Sun" _bActive="true">
+				<_listComponent>
+					<DirectionalLightComponent _localID="51927904365891271" _localPosition="0,0,0" _localRotation="0.356582,-2.338715,0" _localScale="1,1,1" _attachOwner="None" _attachComponent="None" _color="1,1,1" _intensity="1.2" _ambient="0.5" _shadowExtent="8" _shadowDistance="20" _bCastShadow="false" />
+				</_listComponent>
+			</GameObject>
+		</entity>
+		<entity id="4" name="Fighter">
+			<GameObject _schemaVersion="0" _name="Fighter" _bActive="true">
+				<_listComponent>
+					<SkeletalMeshComponent _localID="15127961318995883145" _localPosition="0,0,0" _localRotation="0,0,0" _localScale="1,1,1" _attachOwner="None" _attachComponent="None" _meshID="" _materialPath="" _boundsRadius="2" _visibilityBasedTickOption="AlwaysTickPoseAndRefreshBones" />
+					<SkeletalAnimatorComponent _localID="6157124105282015569" _animationSetPath="common/models/kaykit/skeleton_warrior/skeleton_warrior.animset.xml" _initialState="Idle" _bPlayOnBegin="true" />
+					<CharacterAppearanceComponent _localID="13827364293183997314" _presetID="SkeletonWarrior" _seed="0" _bMergeParts="true" _surfaceChannelsPath="engine/character/default.surfacechannels.xml" />
+					<AnimationNotifyComponent _localID="3803990792213876096" _notifyTablePath="game/playground/data/camerashake.notifies.xml" />
+				</_listComponent>
+			</GameObject>
+		</entity>
+	</entities>
+</Scene>

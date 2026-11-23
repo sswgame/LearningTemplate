@@ -356,6 +356,22 @@ namespace sw::editor
                 return loadIdentityRules( rules ) && rules.assignNewIdentity( absPath, assetID );
             }
 
+            /** @brief 손으로 적는 글을 임포트 산출물 폴더에 만들려 하면(`AssetIdentityRules::isMisplacedInDerivedFolder`) 이유를 알리고 true 입니다. 규칙을 읽지 못해도 만들지 않는다. */
+            [[nodiscard]] static bool refuseDerivedFolder( string_view folderAbs, string_view stem, string_view suffix )
+            {
+                // 이름을 잡기(`makeUniquePath` — 빈 파일을 만든다) 전에 묻는다. 겹쳐서 번호가 붙어도 폴더와 접미사는 같다.
+                StringBuilder<constant::buffer::kMax256> fileName;
+                fileName.appendFormat( "%#%#", stem, suffix );
+                const string       assetID = editor::getSubsystem<AssetPaths>().toAssetID( FileUtil::joinPath( folderAbs, fileName.view() ) );
+                AssetIdentityRules rules;
+                if ( assetID.empty() )
+                    return false;
+                if ( loadIdentityRules( rules ) && rules.isMisplacedInDerivedFolder( assetID ) == false )
+                    return false;
+                SW_LOG_ERROR_ID( "EditorAssetFileCommands.DerivedFolder", "Not created - '%#' is in an import output folder that is deleted and rebuilt, use another folder (data, prefabs)", assetID );
+                return true;
+            }
+
             /** @brief @p absolutePath 가 읽기 전용(`EditorContentWrite::findReadOnlyAtOrUnder`)이면 계획의 실패 이유를 적고 true 입니다 — 옮기기 계획은 알림 대신 `_failure` 로 이유를 돌려준다. */
             [[nodiscard]] static bool failOnReadOnly( string_view absolutePath, EditorAssetMovePlan& inoutPlan )
             {
@@ -490,6 +506,8 @@ namespace sw::editor
                 return false;
             }
         }
+        if ( EditorAssetFileCommandsInternal::refuseDerivedFolder( folderAbs, assetTemplate._pStem, assetTemplate._pSuffix ) )
+            return false;
         outAssetAbs = makeUniquePath( folderAbs, assetTemplate._pStem, assetTemplate._pSuffix );
         if ( assetTemplate._pNameAttribute != nullptr )
         {
@@ -515,6 +533,8 @@ namespace sw::editor
         string stem;
         string suffix;
         splitAssetName( FileUtil::getFileNamePart( sourceAbs ), stem, suffix );
+        if ( EditorAssetFileCommandsInternal::refuseDerivedFolder( FileUtil::getDirectoryPart( sourceAbs ), stem, suffix ) )
+            return false;
         outAssetAbs = makeUniquePath( FileUtil::getDirectoryPart( sourceAbs ), stem, suffix );
         // 복제는 새 에셋이다 — 베낀 머리 GUID 는 새 것으로 바꾸고, 원본이면 곁의 .meta 를 베끼지 않고 새로 쓴다(겹친 GUID 는 참조를 엉뚱한 쪽으로 푼다).
         return FileUtil::copyFile( FileUtil::toDiskPath( sourceAbs ), FileUtil::toDiskPath( outAssetAbs ) ) && EditorAssetFileCommandsInternal::assignNewIdentity( outAssetAbs );
@@ -531,6 +551,14 @@ namespace sw::editor
         if ( index.isReady() == false )
         {
             outPlan._failure = "the reference index is still building - try again in a moment";
+            return false;
+        }
+        AssetIdentityRules identityRules;
+        if ( EditorAssetFileCommandsInternal::loadIdentityRules( identityRules ) == false )
+        {
+            StringBuilder<constant::buffer::kMax256> failureBuilder;
+            failureBuilder.appendFormat( "could not read %#", AssetIdentityRules::kConfigFile );
+            outPlan._failure = string( failureBuilder.view() );
             return false;
         }
         const AssetPaths& assetPaths = editor::getSubsystem<AssetPaths>();
@@ -554,6 +582,13 @@ namespace sw::editor
             {
                 StringBuilder<constant::buffer::kMax256> failureBuilder;
                 failureBuilder.appendFormat( "'%#' is not a resource name - use lowercase letters, digits, '_', '-' and '.'", FileUtil::getFileNamePart( normalized._destinationAbs ) );
+                outPlan._failure = string( failureBuilder.view() );
+                return false;
+            }
+            if ( identityRules.isMisplacedInDerivedFolder( newID ) && identityRules.isUnderDerivedFolder( oldID ) == false )
+            {
+                StringBuilder<constant::buffer::kMax512> failureBuilder;
+                failureBuilder.appendFormat( "'%#' is in an import output folder that is deleted and rebuilt - nothing was moved", newID );
                 outPlan._failure = string( failureBuilder.view() );
                 return false;
             }

@@ -114,7 +114,7 @@ namespace sw::editor
             static void measureBadge( const utf8* pCategory, float32& inoutWidest )
             {
                 fixed_string<constant::buffer::kMax32> badge;
-                formatstring( badge.data(), badge.capacity(), "[%s]", pCategory );
+                formatstring( badge.data(), badge.capacity(), "[%#]", pCategory );
                 inoutWidest = MathUtil::max( inoutWidest, ImGui::CalcTextSize( badge.c_str() ).x );
             }
 
@@ -159,7 +159,7 @@ namespace sw::editor
 
                 const Color                            categoryColor = getCategoryColor( item );
                 fixed_string<constant::buffer::kMax32> badge;
-                formatstring( badge.data(), badge.capacity(), "[%s]", item._category.c_str() );
+                formatstring( badge.data(), badge.capacity(), "[%#]", item._category.c_str() );
 
                 pDrawList->AddText( ImVec2( cursor.x + layout._badgeX, textY ), EditorColorUtil::toImU32( categoryColor ), badge.c_str() );
 

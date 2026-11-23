@@ -265,7 +265,7 @@ namespace sw
             offscreen._scratch._targetSize = viewport._physicalSize;
             CanvasPainter painter( offscreen._scratch, viewport._uiScale );
             (void)UIPaintContext::paint( tree, paint, painter, offscreen._scratch );
-            if ( offscreen._scratch.isSameContent( offscreen._canvas ) && offscreen._scratch._targetSize == offscreen._canvas._targetSize )
+            if ( offscreen._scratch.isSameContent( offscreen._canvas ) )
                 continue;
             std::swap( offscreen._canvas, offscreen._scratch );
             ++offscreen._revision;

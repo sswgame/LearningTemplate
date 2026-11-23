@@ -5,51 +5,15 @@
 #include "Core/Algorithm/CompareUtil.h"
 #include "Core/Algorithm/VectorUtil.h"
 #include "Core/Foundation/Constants.h"
+#include "Core/Log/Logger.h"
 #include "Core/Math/MathUtil.h"
-#include "Core/String/StringUtil.h"
 
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
 #include "Engine/Object/GameObject/Registry/ComponentRegistry.h"
+#include "Engine/Scene/Scene.h"
 
-#include "GameFramework/Runtime/Character/AI/Schedule/ScheduleSaveState.h"
 #include "GameFramework/Runtime/Gameplay/Interaction/SmartObjectComponent.h"
-
-namespace sw
-{
-    namespace
-    {
-        struct SmartObjectScheduleLocatorInternal
-        {
-            static constexpr utf8 kKeySeparator = ':';
-
-            /** @brief 저장 키(`<오브젝트 id>:<슬롯>`)입니다. */
-            static string makeKey( uint64 objectID, int32 slot )
-            {
-                StringBuilder<constant::buffer::kMax64> key;
-                key.appendFormat( "%#%#%#", objectID, kKeySeparator, static_cast<int64>( slot ) );
-                return string( key.view() );
-            }
-
-            /** @brief 저장 키를 읽습니다. 틀리면 false 입니다. */
-            [[nodiscard]] static bool parseKey( string_view key, uint64& outObjectID, int32& outSlot )
-            {
-                const size_t separatorPos = key.find( kKeySeparator );
-                if ( separatorPos == string_view::npos )
-                    return false;
-                int64 objectID{ 0 };
-                int32 slot{ 0 };
-                if ( StringUtil::parseInt64( key.substr( 0, separatorPos ), objectID ) == false || objectID <= 0 )
-                    return false;
-                if ( StringUtil::parseInt( key.substr( separatorPos + 1 ), slot ) == false || slot < 0 )
-                    return false;
-                outObjectID = static_cast<uint64>( objectID );
-                outSlot     = slot;
-                return true;
-            }
-        };
-    } // namespace
-} // namespace sw
 
 namespace sw
 {
@@ -228,42 +192,54 @@ namespace sw
         return false;
     }
 
-    void SmartObjectScheduleLocator::fillState( vector<ScheduleReservationSaveState>& outListReservation ) const
+    bool SmartObjectScheduleLocator::fillState( const Scene& scene, vector<SmartObjectReservationSaveState>& outListReservation ) const
     {
         outListReservation.clear();
         for ( const Reservation& reservation : _listReservation )
         {
-            ScheduleReservationSaveState state;
-            state._spot        = hashed_string( SmartObjectScheduleLocatorInternal::makeKey( reservation._objectID, reservation._slot ) );
-            state._npc         = reservation._npc;
-            state._kind        = reservation._kind;
-            state._id          = reservation._id;
-            state._day         = reservation._day;
-            state._startMinute = reservation._startMinute;
-            state._endMinute   = reservation._endMinute;
-            outListReservation.push_back( state );
-        }
-    }
-
-    void SmartObjectScheduleLocator::restoreState( const vector<ScheduleReservationSaveState>& listReservation )
-    {
-        clear();
-        for ( const ScheduleReservationSaveState& state : listReservation )
-        {
-            Reservation reservation;
-            if ( SmartObjectScheduleLocatorInternal::parseKey( state._spot.view(), reservation._objectID, reservation._slot ) == false )
-                continue;
-            reservation._npc         = state._npc;
-            reservation._kind        = state._kind;
-            reservation._id          = state._id;
-            reservation._day         = state._day;
-            reservation._startMinute = state._startMinute;
-            reservation._endMinute   = state._endMinute;
             float3 position{};
             if ( computeReservationPosition( reservation, position ) == false )
-                continue; // 사라진 오브젝트 — 다시 세운 계획이 새 자리를 고른다
+                continue; // 사라진 오브젝트 — 복원도 버린다
+            SmartObjectReservationSaveState state;
+            if ( SceneObjectReference::makeReference( scene, reservation._objectID, state._object ) == false )
+            {
+                SW_LOG_ERROR_ID( "SmartObject.ReservationHasNoIdentity", "The smart object reserved by '%#' has no saved identity in scene '%#' - the reservations are not saved",
+                                 reservation._npc.c_str(), scene.getSourcePath() );
+                outListReservation.clear();
+                return false;
+            }
+            state._reservation._npc         = reservation._npc;
+            state._reservation._kind        = reservation._kind;
+            state._reservation._id          = reservation._id;
+            state._reservation._day         = reservation._day;
+            state._reservation._startMinute = reservation._startMinute;
+            state._reservation._endMinute   = reservation._endMinute;
+            state._slot                     = reservation._slot;
+            outListReservation.push_back( std::move( state ) );
+        }
+        return true;
+    }
+
+    void SmartObjectScheduleLocator::restoreState( const Scene& scene, const vector<SmartObjectReservationSaveState>& listReservation )
+    {
+        clear();
+        for ( const SmartObjectReservationSaveState& state : listReservation )
+        {
+            Reservation reservation;
+            if ( SceneObjectReference::resolveInScene( scene, state._object, reservation._objectID ) != SceneObjectResolveResult::Resolved )
+                continue; // 지운 오브젝트 — 다시 세운 계획이 새 자리를 고른다
+            reservation._npc         = state._reservation._npc;
+            reservation._kind        = state._reservation._kind;
+            reservation._id          = state._reservation._id;
+            reservation._day         = state._reservation._day;
+            reservation._startMinute = state._reservation._startMinute;
+            reservation._endMinute   = state._reservation._endMinute;
+            reservation._slot        = state._slot;
+            float3 position{};
+            if ( computeReservationPosition( reservation, position ) == false )
+                continue;
             _listReservation.push_back( reservation );
-            _nextID = MathUtil::max( _nextID, state._id + 1 );
+            _nextID = MathUtil::max( _nextID, reservation._id + 1 );
         }
     }
 } // namespace sw

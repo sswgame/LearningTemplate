@@ -1,0 +1,74 @@
+<?asset guid="b4c8f610e90b8bdf47937581e352e433"?>
+<Scene formatVersion="3" name="SmartObject">
+	<!-- 스마트 오브젝트 시나리오(automation/smartobject)의 무대 — Bench(자리 둘: 왼쪽 0 · 오른쪽 1, Activity.Sit)를 anna · ben 의 일정(data/smartobject.schedules.xml)과 Player 가 함께 쓴다.
+	     anna 의 집은 왼쪽이라 왼쪽 자리를, ben 은 남은 오른쪽 자리를 예약한다. 시각은 개발 명령 schedule.advance 로만 흐른다. -->
+	<SceneSettings _bStreaming="false" _unloadMargin="0" _maxCellLoadsPerFrame="0" _addToWorldBudgetMicroseconds="0">
+		<_cellGrid _cellSize="0" _loadingRadius="0" />
+	</SceneSettings>
+	<entities>
+		<entity id="1" name="GameCamera">
+			<GameObject _schemaVersion="0" _name="GameCamera" _bActive="true">
+				<_listComponent>
+					<CameraComponent _localID="17709685451340727998" _localPosition="0,6,-6" _localRotation="0.5,0,0" _localScale="1,1,1" _attachOwner="None" _attachComponent="None" _fovY="51.5662" _nearZ="0.05" _farZ="100" _orthoHeight="10" _priority="0" _role="Game" _bOrthographic="false" />
+				</_listComponent>
+			</GameObject>
+		</entity>
+		<entity id="2" name="Sun">
+			<GameObject _schemaVersion="0" _name="Sun" _bActive="true">
+				<_listComponent>
+					<DirectionalLightComponent _localID="51927904365891271" _localPosition="0,0,0" _localRotation="0.356582,-2.338715,0" _localScale="1,1,1" _attachOwner="None" _attachComponent="None" _color="1,1,1" _intensity="1.2" _ambient="0.5" _shadowExtent="8" _shadowDistance="20" _bCastShadow="false" />
+				</_listComponent>
+			</GameObject>
+		</entity>
+		<entity id="3" name="Bench">
+			<GameObject _schemaVersion="0" _name="Bench" _bActive="true">
+				<_listComponent>
+					<SceneComponent _localID="12574257654564749349" _localPosition="0,0,6" _localRotation="0,0,0" _localScale="1,1,1" _attachOwner="None" _attachComponent="None" />
+					<MeshComponent _localID="163493842152903304" _localPosition="0,0,0" _localRotation="0,0,0" _localScale="2,0.5,0.6" _attachOwner="None" _attachComponent="#ae80bcb72e918025" _meshID="Cube" _materialPath="engine/materials/defaultmaterial.material" _boundsRadius="0.866" _gpuSpinSeed="0" _bVisible="true" />
+					<SmartObjectComponent _localID="5375787612174973679" _smartObjectID="Bench" _catalogPath="common/data/interactions/default.interactions.xml">
+						<_listClaimant />
+					</SmartObjectComponent>
+				</_listComponent>
+			</GameObject>
+		</entity>
+		<entity id="4" name="anna">
+			<GameObject _schemaVersion="0" _name="anna" _bActive="true">
+				<_listComponent>
+					<SceneComponent _localID="12574257654564749349" _localPosition="-4,0,0" _localRotation="0,0,0" _localScale="1,1,1" _attachOwner="None" _attachComponent="None" />
+					<MeshComponent _localID="163493842152903304" _localPosition="0,0,0" _localRotation="0,0,0" _localScale="0.5,1.6,0.5" _attachOwner="None" _attachComponent="#ae80bcb72e918025" _meshID="Cube" _materialPath="engine/materials/defaultmaterial.material" _boundsRadius="0.866" _gpuSpinSeed="0" _bVisible="true" />
+				</_listComponent>
+			</GameObject>
+		</entity>
+		<entity id="5" name="ben">
+			<GameObject _schemaVersion="0" _name="ben" _bActive="true">
+				<_listComponent>
+					<SceneComponent _localID="12574257654564749349" _localPosition="4,0,0" _localRotation="0,0,0" _localScale="1,1,1" _attachOwner="None" _attachComponent="None" />
+					<MeshComponent _localID="163493842152903304" _localPosition="0,0,0" _localRotation="0,0,0" _localScale="0.5,1.6,0.5" _attachOwner="None" _attachComponent="#ae80bcb72e918025" _meshID="Cube" _materialPath="engine/materials/defaultmaterial.material" _boundsRadius="0.866" _gpuSpinSeed="0" _bVisible="true" />
+				</_listComponent>
+			</GameObject>
+		</entity>
+		<entity id="6" name="Player">
+			<GameObject _schemaVersion="0" _name="Player" _bActive="true">
+				<_listComponent>
+					<SceneComponent _localID="12574257654564749349" _localPosition="0,0,2" _localRotation="0,0,0" _localScale="1,1,1" _attachOwner="None" _attachComponent="None" />
+					<MeshComponent _localID="163493842152903304" _localPosition="0,0,0" _localRotation="0,0,0" _localScale="0.5,1.6,0.5" _attachOwner="None" _attachComponent="#ae80bcb72e918025" _meshID="Cube" _materialPath="engine/materials/defaultmaterial.material" _boundsRadius="0.866" _gpuSpinSeed="0" _bVisible="true" />
+				</_listComponent>
+			</GameObject>
+		</entity>
+		<entity id="7" name="Latecomer">
+			<GameObject _schemaVersion="0" _name="Latecomer" _bActive="true">
+				<_listComponent>
+					<SceneComponent _localID="12574257654564749349" _localPosition="0,0,-2" _localRotation="0,0,0" _localScale="1,1,1" _attachOwner="None" _attachComponent="None" />
+					<MeshComponent _localID="163493842152903304" _localPosition="0,0,0" _localRotation="0,0,0" _localScale="0.5,1.6,0.5" _attachOwner="None" _attachComponent="#ae80bcb72e918025" _meshID="Cube" _materialPath="engine/materials/defaultmaterial.material" _boundsRadius="0.866" _gpuSpinSeed="0" _bVisible="true" />
+				</_listComponent>
+			</GameObject>
+		</entity>
+		<entity id="8" name="SmartObjectDemo">
+			<GameObject _schemaVersion="0" _name="SmartObjectDemo" _bActive="true">
+				<_listComponent>
+					<SmartObjectDemoComponent _localID="1513042426502960458" _scheduleDataPath="game/playground/data/smartobject.schedules.xml" _startMinute="480" />
+				</_listComponent>
+			</GameObject>
+		</entity>
+	</entities>
+</Scene>

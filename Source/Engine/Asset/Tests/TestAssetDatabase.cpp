@@ -18,6 +18,7 @@ namespace
             rules._listHeaderSuffix  = { ".xml", ".material" };
             rules._listSkipPattern   = { "*/golden/*", "*.md" };
             rules._listDerivedFolder = { "models", "textures" };
+            rules._listKeptDerived   = { "*/models/*.mirrortable.xml" };
             return rules;
         }
 
@@ -46,6 +47,18 @@ SW_TEST_CASE( AssetDatabaseTest, ClassifiesByRuleTable )
     SW_EXPECT_TRUE( rules.classify( "common/credits.md" ) == AssetIdentityKind::Skipped );
     SW_EXPECT_TRUE( rules.isUnderDerivedFolder( "common/models/barrel.mesh" ) );
     SW_EXPECT_FALSE( rules.isUnderDerivedFolder( "common/models_raw/barrel.glb" ) );
+}
+
+/** @brief [AssetDatabaseTest] 손으로 적는 글은 임포트 산출물 폴더에 두지 못한다 — 허락한 곁 파일 · 산출물 바이트 · 폴더 밖은 괜찮다 */
+SW_TEST_CASE( AssetDatabaseTest, HandAuthoredTextIsMisplacedInDerivedFolders )
+{
+    const AssetIdentityRules rules = AssetDatabaseTestUtil::makeRules();
+    SW_EXPECT_TRUE( rules.isMisplacedInDerivedFolder( "game/x/models/head/head.facial.xml" ) );
+    SW_EXPECT_TRUE( rules.isMisplacedInDerivedFolder( "game/x/textures/wall.material" ) );
+    SW_EXPECT_FALSE( rules.isMisplacedInDerivedFolder( "game/x/models/head/head.mirrortable.xml" ) );
+    SW_EXPECT_FALSE( rules.isMisplacedInDerivedFolder( "game/x/models/head.mesh" ) );
+    SW_EXPECT_FALSE( rules.isMisplacedInDerivedFolder( "game/x/data/head.facial.xml" ) );
+    SW_EXPECT_FALSE( rules.isMisplacedInDerivedFolder( "game/x/models_raw/head.facial.xml" ) );
 }
 
 SW_TEST_CASE( AssetDatabaseTest, IndexesHeadersAndSidecarsBothWays )

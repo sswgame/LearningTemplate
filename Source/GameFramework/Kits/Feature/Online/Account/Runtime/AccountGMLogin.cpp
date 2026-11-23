@@ -3,6 +3,7 @@
 #include "GameFramework/Kits/Feature/Online/Account/Runtime/AccountGMLogin.h"
 
 #include "Core/String/StringBuilder.h"
+#include "Core/String/StringUtil.h"
 
 namespace sw
 {
@@ -65,7 +66,7 @@ namespace sw
             const bool bLoginReply = reply._operation == AccountMethodName::Login || reply._operation == AccountMethodName::Resume;
             if ( bLoginReply == false )
                 continue;
-            _password.clear(); // 응답이 왔으면 비밀번호는 더 쓰지 않는다
+            StringUtil::wipeSecret( _password ); // 응답이 왔으면 비밀번호는 더 쓰지 않는다
             if ( reply._errorCode == 0 && reply._result == LoginResult::Ok )
             {
                 _state = AccountGMLoginState::LoggedIn;

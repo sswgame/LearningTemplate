@@ -86,7 +86,7 @@ namespace sw
 
     /**
      * @brief 내장 표(`ReflectBuiltins.xxx`)의 State 역할 · Layout 으로 실리는 칸을 하나씩 든 상태입니다 — num(float64 · uint64) · f32(quaternion) · i32(int2 시퀀스) ·
-     *        손 처리기(GameObjectHandle · hashed_string 시퀀스).
+     *        손 처리기(hashed_string 시퀀스).
      */
     REFLECT()
     struct StateIOReflectedTestBuiltins
@@ -103,9 +103,18 @@ namespace sw
         PROPERTY( RuntimeState )
         vector<int2> _listCell;
         PROPERTY( RuntimeState )
-        GameObjectHandle _target;
-        PROPERTY( RuntimeState )
         vector<hashed_string> _listTag;
+    };
+
+    /** @brief 싣지 못하는 칸(런타임 id 인 오브젝트 핸들)을 가진 상태입니다 — 싣는 순간 멈춘다. */
+    REFLECT()
+    struct StateIOReflectedTestHandle
+    {
+        REFLECT_BODY();
+        SW_DECLARE_REFLECTED_STATE_IO();
+
+        PROPERTY( RuntimeState )
+        GameObjectHandle _target;
     };
 
     /** @brief int2 칸 하나뿐인 상태입니다 — 성분마다 싣는 바이트가 손 함수(`StateIO::writeInt2`)와 같은지 본다. */

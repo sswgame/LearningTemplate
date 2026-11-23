@@ -826,7 +826,7 @@ namespace sw::editor
             const auto                              itTo   = std::find_if( _graph._listNode.begin(), _graph._listNode.end(), [&link]( const GraphNode& node )
                                            { return node._id == link._toNode; } );
             fixed_string<constant::buffer::kMax128> label;
-            formatstring( label.data(), label.capacity(), "%s -> %s%s", itFrom != _graph._listNode.end() ? itFrom->_name.c_str() : "?", itTo != _graph._listNode.end() ? itTo->_name.c_str() : "?",
+            formatstring( label.data(), label.capacity(), "%# -> %#%#", itFrom != _graph._listNode.end() ? itFrom->_name.c_str() : "?", itTo != _graph._listNode.end() ? itTo->_name.c_str() : "?",
                           link._op != AnimationConditionOp::None ? "  [if]" : "" );
             ImGui::PushID( static_cast<int32>( link._id ) );
             if ( ImGui::Selectable( label.c_str(), link._id == _selectedLinkID ) )

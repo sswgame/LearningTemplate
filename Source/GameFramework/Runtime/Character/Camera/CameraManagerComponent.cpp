@@ -3,11 +3,13 @@
 #include "GameFramework/Runtime/Character/Camera/CameraManagerComponent.h"
 
 #include "Core/Math/MathUtil.h"
+#include "Core/String/StringUtil.h"
 
 #include "Engine/Animation/Scene/AnimationLOD.h"
 #include "Engine/Animation/Scene/AnimationSystem.h"
 #include "Engine/Automation/Watch/AutomationWatch.h"
 #include "Engine/Automation/Watch/AutomationWatchComponent.h"
+#include "Engine/Console/DevCommandRegistry.h"
 #include "Engine/Input/IInputCaptureQuery.h"
 #include "Engine/Input/InputManager.h"
 #include "Engine/Input/Map/GameInputView.h"
@@ -17,6 +19,7 @@
 #include "Engine/Object/GameObject/Registry/CameraRegistry.h"
 #include "Engine/Object/GameObject/Registry/ComponentRegistry.h"
 #include "Engine/Object/GameObject/Tick/TickContext.h"
+#include "Engine/Scene/SceneManager.h"
 #include "Engine/Visual/MeshLODSystem.h"
 
 #include "GameFramework/Runtime/Character/Camera/CameraPose.h"
@@ -56,12 +59,38 @@ namespace sw
                 outValue.setText( pPending != nullptr ? pPending->getName().c_str() : "none" );
                 return true;
             }
+
+            /** @brief `camera.shake <x> <y> <z> <amplitude> <duration> [radius]` — 활성 씬의 흔들림 채널(알림의 `CameraShake` 처리기와 같은 길)에 충격 하나를 냅니다. */
+            static bool runShake( const vector<string>& listArgument, string& outReply )
+            {
+                if ( listArgument.size() < 5 || listArgument.size() > 6 )
+                    return false;
+                CameraShakeRequest request;
+                bool               bParsed = StringUtil::parseFloat( listArgument[0], request._origin._x ) && StringUtil::parseFloat( listArgument[1], request._origin._y ) &&
+                               StringUtil::parseFloat( listArgument[2], request._origin._z ) && StringUtil::parseFloat( listArgument[3], request._amplitude ) &&
+                               StringUtil::parseFloat( listArgument[4], request._duration );
+                if ( listArgument.size() == 6 )
+                    bParsed = bParsed && StringUtil::parseFloat( listArgument[5], request._falloffRadius );
+                if ( bParsed == false )
+                    return false;
+                GameObjectManager* pManager = engine::findActiveObjectManager();
+                if ( pManager == nullptr )
+                {
+                    outReply = "no active scene";
+                    return true;
+                }
+                pManager->getCameraRegistry().getShakeChannel().broadcast( request );
+                outReply = "camera shake requested";
+                return true;
+            }
         };
     } // namespace
 
     SW_AUTOMATION_QUERY_WATCH( cameraManagerBlending, "CameraManager.Blending", "1 while the target's camera manager blends between views", &CameraManagerComponentInternal::readBlending, true, false );
     SW_AUTOMATION_QUERY_WATCH( cameraManagerPendingCamera, "CameraManager.PendingCamera", "Name of the object the target's camera manager is about to look through; none without a pending view",
                                &CameraManagerComponentInternal::readPendingCamera, true, false );
+    SW_DEV_COMMAND( CameraShakeCommand, "camera.shake", "camera.shake <x> <y> <z> <amplitude> <duration> [radius]", "Request a camera shake at a world point of the active scene",
+                    &CameraManagerComponentInternal::runShake );
 } // namespace sw
 
 namespace sw
@@ -119,12 +148,7 @@ namespace sw
 
     void CameraManagerComponent::onCameraShakeRequested( const CameraShakeRequest& request )
     {
-        CameraImpulseDef def;
-        def._amplitude     = request._amplitude;
-        def._duration      = request._duration;
-        def._frequency     = request._frequency;
-        def._falloffRadius = request._falloffRadius;
-        _impulseListener.addImpulse( def, request._origin );
+        _impulseListener.addRequest( request );
     }
 
     void CameraManagerComponent::onTick( TickContext& context )

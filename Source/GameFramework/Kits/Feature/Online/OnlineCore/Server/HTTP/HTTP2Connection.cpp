@@ -3,7 +3,6 @@
 #include "GameFramework/Kits/Feature/Online/OnlineCore/Server/HTTP/HTTP2Connection.h"
 
 #include "Core/Math/MathUtil.h"
-#include "Core/String/StringBuilder.h"
 #include "Core/String/StringUtil.h"
 
 #include <algorithm>
@@ -14,7 +13,6 @@ namespace sw
     {
         struct HTTP2ConnectionInternal
         {
-            static constexpr uint16 kDefaultHTTPSPort         = 443;
             static constexpr uint32 kWindowMask               = 0x7FFFFFFFu; ///< WINDOW_UPDATE 증가량의 예약 비트를 뺀 마스크
             static constexpr size_t kPaddingLengthSize        = 1;
             static constexpr size_t kPrioritySize             = 5;
@@ -32,15 +30,10 @@ namespace sw
             /** @brief `:method` · `:scheme` · `:authority` · `:path` 다음에 소문자 머리, 본문이 있으면 `content-length` 를 놓습니다. */
             static vector<HTTPHeader> makeRequestHeaders( const HTTPClientRequest& request, const HTTPAddress& url )
             {
-                vector<HTTPHeader>                       listHeader;
-                StringBuilder<constant::buffer::kMax256> authorityBuilder;
-                authorityBuilder.append( url._host );
-                if ( url._port != kDefaultHTTPSPort )
-                    authorityBuilder.appendFormat( ":%#", static_cast<int32>( url._port ) );
-                const string authority( authorityBuilder.view() );
+                vector<HTTPHeader> listHeader;
                 listHeader.push_back( HTTPHeader{ ":method", toString( request._method ) } );
                 listHeader.push_back( HTTPHeader{ ":scheme", "https" } );
-                listHeader.push_back( HTTPHeader{ ":authority", authority } );
+                listHeader.push_back( HTTPHeader{ ":authority", url.makeAuthority() } );
                 listHeader.push_back( HTTPHeader{ ":path", url._target } );
                 for ( const HTTPHeader& header : request._listHeader )
                 {

@@ -52,6 +52,7 @@ class ImportedFolder:
     folder: str
     source_folder: str
     list_source_extension: tuple[str, ...]
+    list_output_suffix: tuple[str, ...]   # 그 원본에서 나오는 산출물의 접미사 — 나오지 않는 종류(손으로 적은 표정 · 리그 표)는 이 폴더에서 참조하지 못한다
     generated_referrers: bool   # 산출물 안의 글 에셋(임포터가 쓴 머티리얼 · 프리팹)은 참조자로 훑지 않는다 — 임포터의 몫이다
 
 
@@ -95,7 +96,8 @@ def load_config(project_root: Path) -> FieldConfig:
     list_imported = []
     for entry in _require(document, "listImportedFolder", list):
         list_imported.append(ImportedFolder(_require(entry, "folder", str), _require(entry, "sourceFolder", str),
-                                           tuple(_require(entry, "listSourceExtension", list)), _require(entry, "generatedReferrers", bool)))
+                                           tuple(_require(entry, "listSourceExtension", list)), tuple(_require(entry, "listOutputSuffix", list)),
+                                           _require(entry, "generatedReferrers", bool)))
     return FieldConfig(tuple(_require(document, "listDomain", list)), tuple(_require(document, "listUncheckedDomain", list)),
                        tuple(_require(document, "listTextExtension", list)), frozenset(set_field), tuple(list_imported),
                        tuple(_require(document, "listCMakeFile", list)), tuple(_require(document, "listCMakeArgument", list)))
@@ -277,8 +279,14 @@ class AssetSet:
 
 
 def is_imported_from_source(asset_id: str, assets: AssetSet, config: FieldConfig) -> bool:
-    """`<…>/models/a/b/c.mesh` 처럼 임포트 산출물 자리면, 같은 자리의 원본(`<…>/models_raw/a/b/c.glb` → `a/b.glb` → `a.glb`)이 있는지 봅니다."""
+    """
+    `<…>/models/a/b/c.mesh` 처럼 임포트 산출물 자리면, 같은 자리의 원본(`<…>/models_raw/a/b/c.glb` → `a/b.glb` → `a.glb`)이 있는지 봅니다.
+    그 원본에서 나오지 않는 종류의 파일(`listOutputSuffix` 밖)은 원본이 있어도 산출물이 아니다 — 손으로 적은 파일이 원본 이름을 빌려 지나가지 않게 한다. 폴더는 접미사를 보지 않는다.
+    """
+    file_name = asset_id.rsplit("/", 1)[-1]
     for imported in config.list_imported:
+        if "." in file_name and not file_name.endswith(imported.list_output_suffix):
+            continue
         marker = "/" + imported.folder + "/"
         position = asset_id.find(marker)
         while position >= 0:
@@ -505,6 +513,10 @@ def run_self_check() -> None:
     assert prefixed == '<Redirects>\n\t<PrefixRedirect from="game/oldpack" to="game/newpack" />\n</Redirects>\n', prefixed
     kept = add_redirects(prefixed, [("game/newpack/a.xml", "game/newpack/b.xml")])
     assert kept == prefixed.replace("</Redirects>", '\t<Redirect from="game/newpack/a.xml" to="game/newpack/b.xml" />\n</Redirects>'), kept
+    config = load_config(Path(__file__).resolve().parents[2])   # C++ `AssetReferenceFieldsTest.ImportedOutputsResolveFromTheirSource` 와 같은 사례
+    assets = AssetSet(["game/x/models_raw/head.gltf", "game/x/models_raw/avatar.vrm"])
+    assert is_imported_from_source("game/x/models/head.mesh", assets, config) and is_imported_from_source("game/x/models/head/clips", assets, config)
+    assert not is_imported_from_source("game/x/models/head.facial.xml", assets, config) and is_imported_from_source("game/x/models/avatar/avatar.facial.xml", assets, config)
     for bad in (lambda: add_redirects("<Moves/>", [("common/a.xml", "common/b.xml")]), lambda: add_redirects(None, [("Common/A.xml", "common/b.xml")]),
                 lambda: add_redirects(None, [("common/a.xml", "common/a.xml")]), lambda: add_redirects(None, [], [("game/a/", "game/b")])):
         try:

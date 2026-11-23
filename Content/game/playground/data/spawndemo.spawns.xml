@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="utf-8"?>
+<?asset guid="6b3049a9496aa1ae1bc01969ac141258"?>
+<!-- 스폰 감독 시나리오(automation/spawndirector)의 표 — 1 초에 예산 1, 시작 2, 상한 3. grunt 는 값 1 로 둘까지, brute 는 값 3 으로 4 초 뒤 하나까지다. 죽어도 예산을 돌려주지 않는다. -->
+<SpawnTable budgetPerMinute="60" maxBudget="3" startBudget="2" refund="false">
+	<Entry id="grunt" cost="1" weight="1" max="2"/>
+	<Entry id="brute" cost="3" weight="1" max="1" minTime="4"/>
+</SpawnTable>

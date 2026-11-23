@@ -66,18 +66,18 @@ namespace sw::editor
     void PrefabOverridesViewModel::applyAllToTemplate()
     {
         if ( EditorToolAssetCommands::applyPrefabOverridesToTemplate( PrefabOverridesViewModelInternal::getPrefabTargetInstance() ) )
-            SW_LOG_TRACE_ID( "PrefabTool.AppliedAllInstanceOverrides", "Applied all instance overrides back to template %s", _selectedPrefabPath.c_str() );
+            SW_LOG_TRACE_ID( "PrefabTool.AppliedAllInstanceOverrides", "Applied all instance overrides back to template %#", _selectedPrefabPath.c_str() );
         else
-            SW_LOG_ERROR_ID( "PrefabTool.CouldNotApplyOverrides", "Could not apply overrides to template %s", _selectedPrefabPath.c_str() );
+            SW_LOG_ERROR_ID( "PrefabTool.CouldNotApplyOverrides", "Could not apply overrides to template %#", _selectedPrefabPath.c_str() );
         rescan();
     }
 
     void PrefabOverridesViewModel::revertAll()
     {
         if ( EditorToolAssetCommands::revertAllPrefabOverrides( PrefabOverridesViewModelInternal::getPrefabTargetInstance() ) )
-            SW_LOG_TRACE_ID( "PrefabTool.RevertedAllOverrides", "Reverted all overrides on %s", _selectedInstanceName.c_str() );
+            SW_LOG_TRACE_ID( "PrefabTool.RevertedAllOverrides", "Reverted all overrides on %#", _selectedInstanceName.c_str() );
         else
-            SW_LOG_ERROR_ID( "PrefabTool.CouldNotRevertOverrides", "Could not revert overrides on %s", _selectedInstanceName.c_str() );
+            SW_LOG_ERROR_ID( "PrefabTool.CouldNotRevertOverrides", "Could not revert overrides on %#", _selectedInstanceName.c_str() );
         rescan();
     }
 
@@ -85,7 +85,7 @@ namespace sw::editor
     {
         PrefabOverrideItem& item = _listOverride[overrideIndex];
         EditorToolAssetCommands::revertPrefabOverride( PrefabOverridesViewModelInternal::getPrefabTargetInstance(), item );
-        SW_LOG_TRACE_ID( "PrefabTool.Reverted", "Reverted %s.%s to %s", item._componentName.c_str(), item._propertyName.c_str(), item._defaultValue.c_str() );
+        SW_LOG_TRACE_ID( "PrefabTool.Reverted", "Reverted %#.%# to %#", item._componentName.c_str(), item._propertyName.c_str(), item._defaultValue.c_str() );
         rescan();
     }
 } // namespace sw::editor
