@@ -151,13 +151,21 @@ namespace sw
     /** @brief 나눈 URL 입니다. */
     struct SW_GF_API HTTPAddress
     {
-        string _host{};
+        static constexpr uint16 kDefaultHTTPPort  = 80;
+        static constexpr uint16 kDefaultHTTPSPort = 443;
+
+        string _host{};        ///< 이름 · IPv4 · 대괄호 없는 IPv6(TLS 서버 이름 · 주소 풀이가 그대로 쓴다). 머리에 쓸 때는 `makeAuthority`
         string _target{ "/" }; ///< 경로 + 쿼리(요청 줄에 그대로)
         uint16 _port{ 0 };
         uint8  _bSecure{ SW_FALSE };
 
-        /** @brief `http(s)://호스트[:포트][/경로][?쿼리]` 를 나눕니다. 사용자 정보, 조각(`#`), 빈 호스트, 틀린 포트가 있으면 false 입니다. */
+        /**
+         * @brief `http(s)://호스트[:포트][/경로][?쿼리]` 를 나눕니다. 사용자 정보, 조각(`#`), 빈 호스트, 틀린 포트가 있으면 false 입니다.
+         * @details IPv6 호스트는 대괄호로 감싼다(`https://[2001:db8::1]:8443/`, RFC 3986) — 대괄호 없는 쌍점 여럿 · 닫지 않은 대괄호 · IPv6 가 아닌 대괄호 글은 false 다.
+         */
         [[nodiscard]] static bool parse( string_view url, HTTPAddress& outAddress );
+        /** @brief `Host` · `:authority` 머리의 글입니다 — IPv6 는 대괄호로 감싸고, 그 방식의 기본 포트면 포트를 뺍니다. */
+        [[nodiscard]] string makeAuthority() const;
     };
 } // namespace sw
 

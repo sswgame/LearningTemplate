@@ -581,7 +581,7 @@ namespace sw::editor
             ImGui::SetClipboardText( full.c_str() );
         }
         fixed_string<constant::buffer::kMax64> copySelectedLabel;
-        formatstring( copySelectedLabel.data(), copySelectedLabel.capacity(), "Copy Selected (%u lines)", _selection.getCount() );
+        formatstring( copySelectedLabel.data(), copySelectedLabel.capacity(), "Copy Selected (%# lines)", _selection.getCount() );
         if ( ImGui::MenuItem( copySelectedLabel.c_str(), "Ctrl+C", false, _selection.hasSelection() ) )
             copySelectedRows();
         ImGui::EndPopup();

@@ -3,6 +3,7 @@
 #include "Editor/Common/Commands/Asset/EditorAssetFileCommands.h"
 
 #include "Core/Algorithm/VectorUtil.h"
+#include "Core/Container/unordered_map.h"
 #include "Core/Container/unordered_set.h"
 #include "Core/Container/vector.h"
 #include "Core/File/FileUtil.h"
@@ -147,17 +148,6 @@ namespace sw::editor
                 return string( assetID.substr( 0, secondSlash == string_view::npos ? assetID.size() : secondSlash ) );
             }
 
-            /** @brief @p id 가 옮기는 원본이면 그 새 id, 아니면 그대로입니다. */
-            static string mapMovedID( const EditorAssetMovePlan& plan, string_view id )
-            {
-                for ( size_t index = 0; index < plan._listOldID.size(); ++index )
-                {
-                    if ( plan._listOldID[index] == id )
-                        return plan._listNewID[index];
-                }
-                return string( id );
-            }
-
             /**
              * @brief 참조 파일마다 옮긴 뒤 쓸 글을 만듭니다. 경로 칸 밖에서 옮기는 에셋을 적은 곳(고칠 수 없는 참조)은 @p inoutPlan 의 목록에 남긴다.
              * @return 읽지 못한 참조 파일이 있으면 false 입니다(`_failure` 에 이유).
@@ -171,16 +161,22 @@ namespace sw::editor
                     const vector<AssetReferenceRewriteRule> listMoveRule = params.makeRewriteRules( inoutPlan._listOldID[moveIndex], inoutPlan._listNewID[moveIndex], false );
                     listRule.insert( listRule.end(), listMoveRule.begin(), listMoveRule.end() );
                 }
+                // 폴더를 옮기면 옮기는 수 · 참조 파일 수가 함께 는다 — 참조 파일마다 옮기기 목록을 훑지 않게 옛 id 로 찾는다.
+                unordered_map<string, size_t> mapMoveIndex;
+                mapMoveIndex.reserve( inoutPlan._listOldID.size() );
+                for ( size_t moveIndex = 0; moveIndex < inoutPlan._listOldID.size(); ++moveIndex )
+                    mapMoveIndex.emplace( inoutPlan._listOldID[moveIndex], moveIndex );
                 // 참조자 파일 목록(지금 id) — 파일 하나가 여러 원본을 적어도 한 번 고친다
-                vector<string> listReferrerID;
+                vector<string>        listReferrerID;
+                unordered_set<string> uniqueReferrerID;
                 for ( const string& oldID : inoutPlan._listOldID )
                 {
                     vector<EditorAssetReference> listReference;
                     index.findReferrers( oldID, listReference );
                     for ( const EditorAssetReference& reference : listReference )
                     {
-                        if ( reference._bByGUID == false ) // GUID 로 적은 참조는 옮겨도 그대로 맞다 — 고칠 글이 없다
-                            VectorUtil::addUnique( listReferrerID, reference._referrerPath );
+                        if ( reference._bByGUID == false && uniqueReferrerID.insert( reference._referrerPath ).second ) // GUID 로 적은 참조는 옮겨도 그대로 맞다 — 고칠 글이 없다
+                            listReferrerID.push_back( reference._referrerPath );
                     }
                 }
                 for ( const string& referrerID : listReferrerID )
@@ -196,20 +192,17 @@ namespace sw::editor
                         inoutPlan._failure = string( failureBuilder.view() );
                         return false;
                     }
-                    rewrite._referrerID    = mapMovedID( inoutPlan, referrerID );
-                    const bool bMovedToo   = rewrite._referrerID != referrerID;
-                    rewrite._referrerAbs   = referrerFile->str();
                     rewrite._rewrittenText = rewrite._originalText;
-                    if ( bMovedToo )
+                    const auto itMove      = mapMoveIndex.find( referrerID );
+                    if ( itMove != mapMoveIndex.end() )
                     {
-                        for ( const EditorAssetMove& move : inoutPlan._listMove )
-                        {
-                            if ( FileUtil::isSameDiskPath( move._sourceAbs, rewrite._referrerAbs ) )
-                                rewrite._referrerAbs = move._destinationAbs;
-                        }
+                        rewrite._referrerID  = inoutPlan._listNewID[itMove->second];
+                        rewrite._referrerAbs = inoutPlan._listMove[itMove->second]._destinationAbs; // 옮기기 · 옛 id · 새 id 목록은 같은 차례다(planAssetMoves)
                     }
                     else
                     {
+                        rewrite._referrerID  = referrerID;
+                        rewrite._referrerAbs = referrerFile->str();
                         VectorUtil::addUnique( inoutPlan._listOutsideDomain, getDomainOf( referrerID ) );
                     }
                     if ( params.rewrite( rewrite._rewrittenText, AssetReferenceFields::getSyntaxOf( referrerID ), listRule ) == 0 )
@@ -363,6 +356,22 @@ namespace sw::editor
                 return loadIdentityRules( rules ) && rules.assignNewIdentity( absPath, assetID );
             }
 
+            /** @brief 손으로 적는 글을 임포트 산출물 폴더에 만들려 하면(`AssetIdentityRules::isMisplacedInDerivedFolder`) 이유를 알리고 true 입니다. 규칙을 읽지 못해도 만들지 않는다. */
+            [[nodiscard]] static bool refuseDerivedFolder( string_view folderAbs, string_view stem, string_view suffix )
+            {
+                // 이름을 잡기(`makeUniquePath` — 빈 파일을 만든다) 전에 묻는다. 겹쳐서 번호가 붙어도 폴더와 접미사는 같다.
+                StringBuilder<constant::buffer::kMax256> fileName;
+                fileName.appendFormat( "%#%#", stem, suffix );
+                const string       assetID = editor::getSubsystem<AssetPaths>().toAssetID( FileUtil::joinPath( folderAbs, fileName.view() ) );
+                AssetIdentityRules rules;
+                if ( assetID.empty() )
+                    return false;
+                if ( loadIdentityRules( rules ) && rules.isMisplacedInDerivedFolder( assetID ) == false )
+                    return false;
+                SW_LOG_ERROR_ID( "EditorAssetFileCommands.DerivedFolder", "Not created - '%#' is in an import output folder that is deleted and rebuilt, use another folder (data, prefabs)", assetID );
+                return true;
+            }
+
             /** @brief @p absolutePath 가 읽기 전용(`EditorContentWrite::findReadOnlyAtOrUnder`)이면 계획의 실패 이유를 적고 true 입니다 — 옮기기 계획은 알림 대신 `_failure` 로 이유를 돌려준다. */
             [[nodiscard]] static bool failOnReadOnly( string_view absolutePath, EditorAssetMovePlan& inoutPlan )
             {
@@ -497,6 +506,8 @@ namespace sw::editor
                 return false;
             }
         }
+        if ( EditorAssetFileCommandsInternal::refuseDerivedFolder( folderAbs, assetTemplate._pStem, assetTemplate._pSuffix ) )
+            return false;
         outAssetAbs = makeUniquePath( folderAbs, assetTemplate._pStem, assetTemplate._pSuffix );
         if ( assetTemplate._pNameAttribute != nullptr )
         {
@@ -522,6 +533,8 @@ namespace sw::editor
         string stem;
         string suffix;
         splitAssetName( FileUtil::getFileNamePart( sourceAbs ), stem, suffix );
+        if ( EditorAssetFileCommandsInternal::refuseDerivedFolder( FileUtil::getDirectoryPart( sourceAbs ), stem, suffix ) )
+            return false;
         outAssetAbs = makeUniquePath( FileUtil::getDirectoryPart( sourceAbs ), stem, suffix );
         // 복제는 새 에셋이다 — 베낀 머리 GUID 는 새 것으로 바꾸고, 원본이면 곁의 .meta 를 베끼지 않고 새로 쓴다(겹친 GUID 는 참조를 엉뚱한 쪽으로 푼다).
         return FileUtil::copyFile( FileUtil::toDiskPath( sourceAbs ), FileUtil::toDiskPath( outAssetAbs ) ) && EditorAssetFileCommandsInternal::assignNewIdentity( outAssetAbs );
@@ -538,6 +551,14 @@ namespace sw::editor
         if ( index.isReady() == false )
         {
             outPlan._failure = "the reference index is still building - try again in a moment";
+            return false;
+        }
+        AssetIdentityRules identityRules;
+        if ( EditorAssetFileCommandsInternal::loadIdentityRules( identityRules ) == false )
+        {
+            StringBuilder<constant::buffer::kMax256> failureBuilder;
+            failureBuilder.appendFormat( "could not read %#", AssetIdentityRules::kConfigFile );
+            outPlan._failure = string( failureBuilder.view() );
             return false;
         }
         const AssetPaths& assetPaths = editor::getSubsystem<AssetPaths>();
@@ -561,6 +582,13 @@ namespace sw::editor
             {
                 StringBuilder<constant::buffer::kMax256> failureBuilder;
                 failureBuilder.appendFormat( "'%#' is not a resource name - use lowercase letters, digits, '_', '-' and '.'", FileUtil::getFileNamePart( normalized._destinationAbs ) );
+                outPlan._failure = string( failureBuilder.view() );
+                return false;
+            }
+            if ( identityRules.isMisplacedInDerivedFolder( newID ) && identityRules.isUnderDerivedFolder( oldID ) == false )
+            {
+                StringBuilder<constant::buffer::kMax512> failureBuilder;
+                failureBuilder.appendFormat( "'%#' is in an import output folder that is deleted and rebuilt - nothing was moved", newID );
                 outPlan._failure = string( failureBuilder.view() );
                 return false;
             }

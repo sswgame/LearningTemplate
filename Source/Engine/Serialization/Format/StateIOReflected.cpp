@@ -5,7 +5,6 @@
 #include "Core/Log/Logger.h"
 
 #include "Engine/Foundation/EngineServices.h"
-#include "Engine/Foundation/GameObjectHandle.h"
 #include "Engine/Reflection/EnumInfo.h"
 #include "Engine/Reflection/ReflectVisit.h"
 #include "Engine/Reflection/ReflectedValue.h"
@@ -29,7 +28,9 @@ namespace sw
             /**
              * @brief 잎 칸의 종류입니다. 칸마다 한 번 가른다.
              * @details 내장 타입은 `ReflectBuiltins.xxx` 의 State 역할 · Layout 이 정한다 — num 은 그 타입 그대로(`StateIO::value`), f32 · i32 는 성분마다,
-             *          none 은 아래 손 처리기(bool · string · hashed_string · GameObjectHandle)다. 바이트는 옛 이름 표 때와 같다(float 벡터 · int2 는 성분 순서 그대로).
+             *          none 은 아래 손 처리기(bool · string · hashed_string)다. 바이트는 옛 이름 표 때와 같다(float 벡터 · int2 는 성분 순서 그대로).
+             *          오브젝트 핸들은 싣지 않는다 — 이 바이트는 세이브에도 실리는데(`ComponentStateStore`) 핸들은 런타임 id 라 다른 실행에서 남의 오브젝트를 가리킨다. 컴포넌트의
+             *          핸들 PROPERTY 는 씬 오브젝트 스냅샷이 파일 id 로 옮기고(`ObjectStateBatch`), 상태 바이트에 들 참조는 `SceneObjectReference`(씬 경로 + 파일 id)로 적는다.
              */
             enum class LeafKind : uint8
             {
@@ -40,7 +41,6 @@ namespace sw
                 Int32s,   ///< i32 Layout — int32 를 성분 수만큼
                 String,
                 Name,
-                ObjectHandle, ///< GameObjectHandle — objectID(uint64). 다시 만든 오브젝트는 같은 objectID 를 받는다(`GameObjectHandle`)
                 Enum,
                 Struct,
             };
@@ -101,7 +101,7 @@ namespace sw
                     case ReflectBuiltinLayout::None:
                         break;
                 }
-                switch ( builtinIndex ) // 손 처리기 — 목록은 `ReflectBuiltinTraitTable::hasStateHandHandler` 하나다
+                switch ( builtinIndex ) // 손 처리기 — `ReflectBuiltinTraitTable::hasStateHandHandler` 의 줄에서 오브젝트 핸들만 뺀다(상태 해시는 싣는다)
                 {
                     case ReflectBuiltinIndex::kbool:
                         return LeafKind::Bool;
@@ -109,8 +109,6 @@ namespace sw
                         return LeafKind::String;
                     case ReflectBuiltinIndex::khashed_string:
                         return LeafKind::Name;
-                    case ReflectBuiltinIndex::kGameObjectHandle:
-                        return LeafKind::ObjectHandle;
                     default:
                         return LeafKind::Unsupported;
                 }
@@ -143,7 +141,8 @@ namespace sw
             [[noreturn]] static void stopForUnsupportedField( const TypeInfo& owner, const PropertyInfo& prop )
             {
                 reportFatalError( "state field '%#::%#' (%#) cannot be carried by StateIO::reflected - use a builtin with the State role (ReflectBuiltins.xxx), an enum, a reflected struct "
-                                  "or a sequence of those, or take the field out of RuntimeState and carry it with io.value in serializeState",
+                                  "or a sequence of those, or take the field out of RuntimeState and carry it with io.value in serializeState; an object reference is a SceneObjectReference, "
+                                  "not a runtime handle",
                                   owner._fullyQualifiedName.c_str(), prop._name.c_str(), prop._typeName.c_str() );
             }
 
@@ -207,16 +206,6 @@ namespace sw
                 {
                     io.value( pComponent[index] );
                 }
-            }
-
-            /** @brief objectID 로 싣습니다. 읽으면 같은 objectID 의 핸들이다. */
-            static void valueObjectHandle( StateIO& io, void* pValue )
-            {
-                GameObjectHandle& handle   = *static_cast<GameObjectHandle*>( pValue );
-                uint64            objectID = handle.objectID();
-                io.value( objectID );
-                if ( io.isReading() )
-                    handle = GameObjectHandle::make( objectID );
             }
 
             static void valueEnum( StateIO& io, const EnumInfo& info, void* pValue )
@@ -359,9 +348,6 @@ namespace sw
                     return;
                 case LeafKind::Name:
                     value( *static_cast<hashed_string*>( pValue ) );
-                    return;
-                case LeafKind::ObjectHandle:
-                    Internal::valueObjectHandle( *this, pValue );
                     return;
                 case LeafKind::Enum:
                     Internal::valueEnum( *this, *registry.findEnum( leafType ), pValue );

@@ -39,7 +39,7 @@ namespace sw::editor
 
     void PrefabOverridesPanel::drawContent()
     {
-        _model.refreshIfFocusChanged();
+        _model.refreshIfChanged();
         const string& prefabPath   = _model.getPrefabPath();
         const string& instanceName = _model.getInstanceName();
 
@@ -84,10 +84,8 @@ namespace sw::editor
 
         const bool bEditsAllowed = EditorPanel::areSceneEditsAllowed();
         if ( bEditsAllowed == false )
-        {
             ImGui::TextDisabled( "%s", SW_LOCKEY( "EditorScene", "SceneEditsLocked" ) );
-            ImGui::BeginDisabled();
-        }
+        ImGui::BeginDisabled( bEditsAllowed == false || _model.hasInstance() == false );
 
         if ( ImGui::Button( SW_LOCKEY( "EdText", "ApplyAllOverridesToTemplate" ) ) )
             _model.applyAllToTemplate();
@@ -97,9 +95,7 @@ namespace sw::editor
         if ( ImGui::Button( SW_LOCKEY( "EdText", "RevertAllOverrides" ) ) )
             _model.revertAll();
         EditorWidgets::drawTooltip( SW_LOCKEY( "EditorScene", "RevertAllOverrides" ) );
-
-        if ( bEditsAllowed == false )
-            ImGui::EndDisabled();
+        ImGui::EndDisabled();
     }
 
     void PrefabOverridesPanel::drawNestedPrefabSection()

@@ -401,6 +401,15 @@ namespace sw::editor
                             outResult._problem = string( problemBuilder.view() );
                             return;
                         }
+                        // 임포트하는 동안 원본이 바뀌었으면 이 결과는 앞 원본 해시의 것이 아니다 — 적으면 스탬프 · DDC 가 앞 내용의 자리에 새 내용의 결과를 남겨,
+                        // 원본을 되돌렸을 때 다른 결과를 "맞다" 로 답한다(유니티도 임포트 뒤 원본 해시를 다시 견준다).
+                        if ( _pImporter->computeSourceHash( file._sourcePath, file._assetPath ) != current._sourceHash )
+                        {
+                            StringBuilder<constant::buffer::kMax512> problemBuilder;
+                            problemBuilder.appendFormat( "%#: 임포트하는 동안 원본이 바뀌었습니다 - 다음 임포트가 다시 만듭니다", file._assetPath );
+                            outResult._problem = string( problemBuilder.view() );
+                            return;
+                        }
                         if ( cacheKeyDescription.empty() == false )
                             storeInCache( *_pImporter, *_pDerivedDataCache, file, cacheKeyDescription );
                     }
@@ -464,7 +473,7 @@ namespace sw::editor
 
             /**
              * @brief 같은 자리에 쓰는 원본들을 한 사슬로 묶어 @p outListChain 에 담습니다. 사슬 안은 파일 순서이고 사슬은 첫 파일 순서입니다.
-             * @details 한 원본의 임포트는 자기 결과 파일과 같은 이름의 옆 폴더를 지우고 다시 씁니다. 그래서 결과 경로가 같거나(`a.glb` · `a.gltf` → `a.mesh`),
+             * @details 한 원본의 임포트는 자기 결과 파일과 같은 이름의 옆 폴더를 지우고 다시 씁니다. 그래서 확장자만 다른 결과를 쓰거나(`x.png` → `x.heightfield` · `x_splat.png` → `x.layerweights`),
              *          한 쪽의 자리가 다른 쪽의 옆 폴더 아래이면(`x.glb` 의 `x/` 아래 `x/y.glb` 의 `y.mesh`) 병렬로 돌리면 서로 지우고 씁니다. 그 원본들을 한 사슬로 묶는다.
              */
             static void makeChains( const vector<SourceFile>& listFile, vector<vector<uint32>>& outListChain )
@@ -528,7 +537,8 @@ namespace sw::editor
                 (void)EditorContentScan::collectFiles( rawFolder, "", listPath, true ); // 폴더는 방금 훑어서 찾았다
                 VectorUtil::sort( listPath );
 
-                vector<SourceFile> listFile;
+                vector<SourceFile>            listFile;
+                unordered_map<string, string> mapImportedOwner; // 결과 경로(소문자) → 먼저 나온 원본
                 for ( const string& path : listPath )
                 {
                     SourceFile file;
@@ -539,9 +549,20 @@ namespace sw::editor
 
                     file._relativePath = file._sourcePath.substr( rawFolder.size() + 1 );
                     file._assetPath    = file._sourcePath.substr( rootDir.size() + 1 );
-                    if ( pScope != nullptr && pScope->find( makeScopeKey( file._assetPath ) ) == pScope->end() )
-                        continue; // 범위 밖 원본은 읽지도 해시하지도 않는다
                     file._importedPath = importer.makeImportedPath( file._sourcePath );
+                    // 두 원본이 한 결과에 쓰면(`a.jpg` · `a.png` → `a.dds`) 돌 때마다 서로 덮어 둘 다 영원히 어긋난다 — 뒤의 것을 문제로 알리고 임포트하지 않는다.
+                    const auto owner       = mapImportedOwner.emplace( makeImportedKey( file._importedPath ), file._assetPath );
+                    const bool bOutOfScope = pScope != nullptr && pScope->find( makeScopeKey( file._assetPath ) ) == pScope->end();
+                    if ( bOutOfScope )
+                        continue; // 범위 밖 원본은 읽지도 해시하지도 않는다
+                    if ( file._importedPath.empty() == false && owner.second == false )
+                    {
+                        ++inoutSummary._sourceCount;
+                        StringBuilder<constant::buffer::kMax512> problemBuilder;
+                        problemBuilder.appendFormat( "%#: '%#' 와 같은 결과에 씁니다 - 이름을 바꾸거나 하나를 지웁니다", file._assetPath, owner.first->second );
+                        inoutSummary._listProblem.push_back( string( problemBuilder.view() ) );
+                        continue;
+                    }
                     listFile.push_back( std::move( file ) );
                 }
 
@@ -604,7 +625,7 @@ namespace sw::editor
                     }
                 }
 
-                // 원본이 사라진 줄 — 그 결과(파일과 같은 이름의 옆 폴더)도 지운다. 결과는 생성물이라 깨끗한 클론에는 없다. 남겨 두면 지운 원본을 아직 가리키는 코드 · 데이터가
+                // 원본이 사라진 줄 — 그 결과(임포터가 답한 파일)도 지운다. 결과는 생성물이라 깨끗한 클론에는 없다. 남겨 두면 지운 원본을 아직 가리키는 코드 · 데이터가
                 // 이 PC 에서만 그려져 숨는다(2026-11-02 — 지운 원본의 `nilecity/models/tree_large.mesh` 를 C++ 표가 계속 읽었다). 옆 폴더 아래에 남은 원본의 자리가 있으면
                 // (`x.glb` 를 지웠는데 `x/y.glb` 는 있다) 옆 폴더는 두고 결과 파일만 지운다.
                 // 남은 원본의 자리마다 조상 자리를 한 번 색인한다 — 지울 결과마다 남은 원본 전체를 훑으면 지운 수 × 남은 수다. 지울 것이 있을 때만 만든다.
@@ -624,12 +645,16 @@ namespace sw::editor
                         inoutSummary._listProblem.push_back( string( problemBuilder.view() ) );
                         continue;
                     }
+                    const string importedPath = importer.makeImportedPath( sourcePath );
+                    if ( mapImportedOwner.contains( makeImportedKey( importedPath ) ) )
+                        continue; // 남은 원본이 그 결과의 주인이다(`a.png` 를 지우고 `a.jpg` 를 두었다)
                     if ( bLiveAncestorBuilt == false )
                     {
-                        collectFootprintAncestors( listFile, uniqueLiveAncestor );
+                        for ( const auto& [importedKey, ownerPath] : mapImportedOwner )
+                            collectFootprintAncestors( importedKey, uniqueLiveAncestor );
                         bLiveAncestorBuilt = true;
                     }
-                    removeOrphanedResult( importer.makeImportedPath( sourcePath ), uniqueLiveAncestor, inoutSummary );
+                    removeOrphanedResult( importer, importedPath, uniqueLiveAncestor, inoutSummary );
                 }
 
                 if ( mode == AssetImportMode::CheckOnly )
@@ -637,32 +662,47 @@ namespace sw::editor
                 writeStampIfChanged( stampPath, importer.getStampHeader(), mapCurrent, inoutSummary );
             }
 
-            /** @brief 남은 원본의 결과 자리(`makeFootprintKey`)마다 그 조상 자리(`a/b/c` → `a/b` · `a`)를 모읍니다. */
-            static void collectFootprintAncestors( const vector<SourceFile>& listLiveFile, unordered_set<string>& outUniqueAncestor )
+            /** @brief 결과 경로의 비교 열쇠입니다(구분자를 `/` 로 맞춘 소문자 — 파일 이름의 대소문자는 OS 가 구분하지 않는다). */
+            static string makeImportedKey( const string& importedPath ) { return StringUtil::toLower( FileUtil::normalizeSeparators( importedPath ).c_str() ); }
+
+            /** @brief 남은 원본의 결과 @p importedPath 의 자리(`makeFootprintKey`)에서 그 조상 자리(`a/b/c` → `a/b` · `a`)를 모읍니다. */
+            static void collectFootprintAncestors( const string& importedPath, unordered_set<string>& outUniqueAncestor )
             {
-                for ( const SourceFile& file : listLiveFile )
-                {
-                    const string key = makeFootprintKey( file._importedPath );
-                    for ( size_t slash = key.rfind( '/' ); slash != string::npos && slash > 0; slash = key.rfind( '/', slash - 1 ) )
-                        outUniqueAncestor.insert( key.substr( 0, slash ) );
-                }
+                const string key = makeFootprintKey( importedPath );
+                for ( size_t slash = key.rfind( '/' ); slash != string::npos && slash > 0; slash = key.rfind( '/', slash - 1 ) )
+                    outUniqueAncestor.insert( key.substr( 0, slash ) );
             }
 
-            /** @brief 원본이 사라진 결과 파일과 옆 폴더를 지웁니다. 옆 폴더 아래에 남은 원본의 결과 자리가 있으면(@p uniqueLiveAncestor — 남은 자리의 조상 `collectFootprintAncestors`) 옆 폴더는 둡니다. 못 지우면 문제로 남깁니다. */
-            static void removeOrphanedResult( const string& importedPath, const unordered_set<string>& uniqueLiveAncestor, AssetImportSummary& inoutSummary )
+            /**
+             * @brief 원본이 사라진 결과를 지웁니다 — 임포터가 자기 결과라고 답한 파일(`collectImportedFiles`)만 지우고, 비게 된 옆 폴더를 거둡니다. 못 지우면 문제로 남깁니다.
+             * @details 이름이 같다고 옆 폴더를 통째로 지우지 않는다 — 텍스처처럼 옆 폴더를 만들지 않는 종류의 같은 이름 폴더(`textures/rock/`)에는 커밋한 파일이 있을 수 있다.
+             *          공유 저장소 파일은 다른 원본도 쓰므로 두고(`ImportedAssetStore::removeUnreferenced` 가 거둔다), 옆 폴더 아래에 남은 원본의 결과 자리가 있으면
+             *          (@p uniqueLiveAncestor — 남은 자리의 조상 `collectFootprintAncestors`) 옆 폴더 안은 두고 나머지만 지운다.
+             */
+            static void removeOrphanedResult( const IRawAssetImporter& importer, const string& importedPath, const unordered_set<string>& uniqueLiveAncestor, AssetImportSummary& inoutSummary )
             {
                 const string footprint = makeFootprintKey( importedPath );
                 if ( footprint.empty() )
                     return;
-                if ( FileUtil::removeFile( FileUtil::toDiskPath( importedPath ) ) == false )
+                const string sideFolder = FileUtil::normalizeSeparators( FileUtil::removeExtension( importedPath ) );
+                const bool   bSideInUse = uniqueLiveAncestor.contains( footprint );
+
+                vector<string> listResult;
+                importer.collectImportedFiles( importedPath, listResult );
+                for ( const string& result : listResult )
                 {
+                    const bool bInSideFolder = FileUtil::isPathAtOrUnderRoot( sideFolder, FileUtil::normalizeSeparators( result ) );
+                    if ( isSharedStorePath( result ) || ( bSideInUse && bInSideFolder ) || FileUtil::removeFile( FileUtil::toDiskPath( result ) ) )
+                        continue;
                     StringBuilder<constant::buffer::kMax512> problemBuilder;
-                    problemBuilder.appendFormat( "%#: 원본이 사라진 결과를 지우지 못했습니다", importedPath );
+                    problemBuilder.appendFormat( "%#: 원본이 사라진 결과를 지우지 못했습니다", result );
                     inoutSummary._listProblem.push_back( string( problemBuilder.view() ) );
                 }
-                const string sideFolder = FileUtil::removeExtension( importedPath );
-                const bool   bShared    = uniqueLiveAncestor.contains( footprint );
-                if ( bShared == false && FileUtil::isDirectory( FileUtil::toDiskPath( sideFolder ) ) && FileUtil::removeDirectory( FileUtil::toDiskPath( sideFolder ) ) == false )
+
+                vector<string> listRemaining;
+                const bool     bSideFolder = FileUtil::isDirectory( FileUtil::toDiskPath( sideFolder ) );
+                const bool     bSideEmpty  = bSideFolder && EditorContentScan::collectFiles( sideFolder, "", listRemaining, true ) && listRemaining.empty();
+                if ( bSideEmpty && FileUtil::removeDirectory( FileUtil::toDiskPath( sideFolder ) ) == false )
                 {
                     StringBuilder<constant::buffer::kMax512> problemBuilder;
                     problemBuilder.appendFormat( "%#: 원본이 사라진 결과의 옆 폴더를 지우지 못했습니다", sideFolder );

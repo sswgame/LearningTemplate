@@ -58,6 +58,7 @@ namespace sw::editor
     public:
         static constexpr const utf8* kSubsystemName = "EditorSelectionSync";
         const utf8*                  getSubsystemName() const override { return kSubsystemName; }
+        void                         resetToFreshEditor() override { _arrEntry = EnumArray<EditorSelectionContext, EditorSelectionSyncEntry>{}; }
 
         /** @brief 선택 @p selection 이 바뀌었다. 미리보기에 묶인 선택이면 미리보기 문맥, 아니면 메인 씬 문맥의 칸을 고칩니다(고른 첫 오브젝트의 애셋). */
         void onSelectionChanged( const EditorSelection& selection );

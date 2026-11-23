@@ -83,7 +83,7 @@ namespace sw::editor
          * @return 채널 접근자를 읽지 못하면 false 입니다.
          */
         [[nodiscard]] static bool resampleAnimation( const cgltf_animation& animation, const Skeleton& skeleton, const unordered_map<const cgltf_node*, int32>& mapJointBone,
-                                                     const vector<BoneTransform>& listRest, const vector<float4x4>& listRootParent, float32 sampleRate, float32 minimumDuration,
+                                                     const vector<BoneTransform>& listRest, const vector<float4x4>& listParentOffset, float32 sampleRate, float32 minimumDuration,
                                                      AnimationRawClip& outRawClip );
 
         /**

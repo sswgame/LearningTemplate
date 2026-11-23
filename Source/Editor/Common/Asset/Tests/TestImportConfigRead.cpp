@@ -1,6 +1,7 @@
 // 임포트 규칙 JSON 이 `PROPERTY` 스키마(`JSONFields`)로 읽히는지 본다 — 적은 키만 읽기(프리셋 상속), 모르는 키 · 값 · 범위 거절.
 #include "pch.h"
 
+#include "Core/File/FileUtil.h"
 #include "Core/Testing/TestFramework.h"
 
 #include "Editor/Common/Asset/ModelImport/ModelImportConfig.h"
@@ -39,6 +40,20 @@ SW_TEST_CASE( ImportConfigReadTest, TextureRuleOverridesOnlyWrittenKeys )
     SW_EXPECT_EQUAL( size_t{ 1 }, rule._filter._listExcludePath.size() );
     SW_EXPECT_TRUE( rule._filter.matchesPath( "game/textures_raw/brick_n.png" ) );
     SW_EXPECT_FALSE( rule._filter.matchesPath( "game/ui/brick_n.png" ) );
+}
+
+/**
+ * @brief [ImportConfigReadTest] 규칙 파일이 없으면 기본 규칙으로 넘어가지 않고 오류다 — 에디터 핫 리로드와 헤드리스 임포트가 같은 답을 받는다.
+ */
+SW_TEST_CASE( ImportConfigReadTest, MissingRuleFilesAreErrors )
+{
+    const sw::AbsolutePath missing = sw::test::makeScratchPath( "NoImportConfig.json" );
+    SW_EXPECT_LOG( "TextureImportConfig.FailedReadTextureImportConfigFile" );
+    sw::editor::TextureImportConfig textureConfig;
+    SW_EXPECT_FALSE( textureConfig.loadFromFile( missing.str() ) );
+    SW_EXPECT_LOG( "ModelImportConfig.FailedReadModelImportConfigFile" );
+    sw::editor::ModelImportConfig modelConfig;
+    SW_EXPECT_FALSE( modelConfig.loadFromFile( missing.str() ) );
 }
 
 /**
@@ -182,4 +197,21 @@ SW_TEST_CASE( ModelImportConfigTest, SingleFilePatternIsRejected )
 
     sw::editor::TextureImportConfig textureConfig;
     SW_EXPECT_FALSE( textureConfig.loadFromJSONString( R"({ "rules": [ { "name": "One", "filter": { "includePatterns": ["game/textures_raw/blocks.png"] } } ] })" ) );
+}
+
+/**
+ * @brief [ImportConfigReadTest] 텍스처 규칙을 고르는 글은 이름 · 조건이 바뀌면 바뀌고, 압축 설정만 바뀌면 그대로다
+ */
+SW_TEST_CASE( ImportConfigReadTest, SelectionTextFollowsNamesAndFilters )
+{
+    const auto makeText = []( sw::string_view rules )
+    {
+        sw::editor::TextureImportConfig config;
+        SW_EXPECT_TRUE( config.loadFromJSONString( rules ) );
+        return config.makeSelectionText();
+    };
+    const sw::string base = makeText( R"({ "rules": [ { "name": "Normal", "format": "BC5", "filter": { "includePatterns": ["*_n.*"] } } ] })" );
+    SW_EXPECT_EQUAL( base, makeText( R"({ "rules": [ { "name": "Normal", "format": "BC7", "filter": { "includePatterns": ["*_n.*"] } } ] })" ) );
+    SW_EXPECT_TRUE( base != makeText( R"({ "rules": [ { "name": "Normal2", "format": "BC5", "filter": { "includePatterns": ["*_n.*"] } } ] })" ) );
+    SW_EXPECT_TRUE( base != makeText( R"({ "rules": [ { "name": "Normal", "format": "BC5", "filter": { "excludePatterns": ["*_n.*"] } } ] })" ) );
 }

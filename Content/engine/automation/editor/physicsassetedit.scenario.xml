@@ -1,0 +1,82 @@
+<?xml version="1.0" encoding="utf-8"?>
+<?asset guid="2fa9b0d4d1c84f67a3c0b8f1e7d25a90"?>
+<!--
+  에디터 시나리오 — 물리 에셋 편집: 물리 에셋 사본(사슬 견본)을 열고 몸을 놓지 않은 채 바디를 골라 질량을 고치면 문서가 dirty 가 되고 Ctrl+Z · Ctrl+Y 로 되돌리고 다시 한다.
+  바디를 빼면 표가 하나 줄고 Ctrl+Z 로 돌아온다. Ctrl+S 로 저장하면 dirty 가 풀린다. 이어 skeleton_warrior 를 열어 몸을 놓고 바디를 고르면 셰이프 크기 손잡이가 서고,
+  손잡이를 끌면 문서가 dirty 가 되며 Ctrl+Z 하나로 돌아온다(저장하지 않는다 — 저장소 파일은 그대로다).
+  실행: App -EnableEditor -scenario=engine/automation/editor/physicsassetedit.scenario.xml -unattended
+-->
+<Scenario name="editor.physicsassetedit" fixedDelta="0.0166667" timeoutFrames="3000" startAfter="Immediately" input="exclusive">
+	<Scratch from="engine/physics/samples" as="scratch/physicsassetedit"/>
+	<ResizeWindow width="1920" height="1080"/>
+	<Variable name="gv_editorUiScale" value="1"/>
+	<DevCommand line="layout.reset"/>
+	<EditorWaitStable/>
+	<DevCommand line="panel.focus ragdoll_preview"/>
+	<EditorWaitStable/>
+	<DevCommand line="asset.openScratch scratch/physicsassetedit/chain.physics.xml"/>
+	<WaitUntil watch="Editor.RagdollPreviewDocumentBodies" equals="3" timeoutFrames="600"/>
+	<EditorWaitStable/>
+	<EditorClick mark="ragdoll.body.1" state="Down"/>
+	<AdvanceSimulation frames="3"/> <!-- 누름 · 뗌을 다른 프레임에 둔다(프레임 경계) -->
+	<EditorClick mark="ragdoll.body.1" state="Up"/>
+	<EditorWaitStable/>
+	<CaptureEditorUI file="physicsassetedit/selected.png" maxMagentaFraction="0"/>
+	<EditorClick mark="ragdoll.search"/>
+	<EditorWaitStable/>
+	<EditorText value="_mass"/>
+	<EditorWaitStable/>
+	<EditorClick mark="inspector.property.PhysicsAssetBodyDef._mass" mods="ctrl"/>
+	<EditorWaitStable/>
+	<EditorKey key="Ctrl+A"/>
+	<EditorWaitStable/>
+	<EditorText value="25"/>
+	<EditorWaitStable/>
+	<EditorKey key="Enter"/>
+	<WaitUntil watch="Editor.DirtyDocumentCount" equals="1" timeoutFrames="60"/>
+	<EditorWaitStable/>
+	<EditorKey key="Ctrl+Z"/>
+	<WaitUntil watch="Editor.DirtyDocumentCount" equals="0" timeoutFrames="60"/>
+	<EditorKey key="Ctrl+Y"/>
+	<WaitUntil watch="Editor.DirtyDocumentCount" equals="1" timeoutFrames="60"/>
+	<EditorWaitStable/>
+	<EditorClick mark="ragdoll.removeBody" state="Down"/>
+	<AdvanceSimulation frames="3"/> <!-- 누름 · 뗌을 다른 프레임에 둔다(프레임 경계) -->
+	<EditorClick mark="ragdoll.removeBody" state="Up"/>
+	<WaitUntil watch="Editor.RagdollPreviewDocumentBodies" equals="2" timeoutFrames="60"/>
+	<EditorWaitStable/>
+	<EditorKey key="Ctrl+Z"/>
+	<WaitUntil watch="Editor.RagdollPreviewDocumentBodies" equals="3" timeoutFrames="60"/>
+	<EditorWaitStable/>
+	<EditorKey key="Ctrl+S"/>
+	<WaitUntil watch="Editor.DirtyDocumentCount" equals="0" timeoutFrames="120"/>
+	<EditorWaitStable/>
+	<!-- 셰이프 손잡이 — 뼈대가 있는 몸 위에 선다 -->
+	<EditorKey key="Ctrl+P"/>
+	<EditorWaitStable/>
+	<EditorText value="skeleton_warrior.physics.xml"/>
+	<EditorWaitStable/>
+	<EditorKey key="Enter"/>
+	<WaitUntil watch="Editor.RagdollPreviewDocumentBodies" atLeast="4" timeoutFrames="600"/>
+	<EditorWaitStable/>
+	<EditorClick mark="ragdoll.bodyField"/>
+	<EditorText value="common/prefabs/kaykit/skeleton_warrior.prefab.xml"/>
+	<EditorWaitStable/>
+	<EditorClick mark="ragdoll.spawn"/>
+	<WaitUntil watch="Editor.RagdollPreviewBuiltBodies" atLeast="2" timeoutFrames="600"/>
+	<EditorWaitStable/>
+	<EditorClick mark="ragdoll.body.0" state="Down"/>
+	<AdvanceSimulation frames="3"/> <!-- 누름 · 뗌을 다른 프레임에 둔다(프레임 경계) -->
+	<EditorClick mark="ragdoll.body.0" state="Up"/>
+	<WaitUntil watch="Editor.RagdollShapeHandleCount" equals="6" timeoutFrames="120"/>
+	<EditorWaitStable/>
+	<EditorDrag mark="ragdoll.shapeHandle.0" dx="30" dy="0"/>
+	<WaitUntil watch="Editor.DirtyDocumentCount" equals="1" timeoutFrames="150"/>
+	<EditorWaitStable/>
+	<CaptureEditorUI file="physicsassetedit/handles.png" maxMagentaFraction="0"/>
+	<EditorKey key="Ctrl+Z"/>
+	<WaitUntil watch="Editor.DirtyDocumentCount" equals="0" timeoutFrames="60"/>
+	<EditorWaitStable/>
+	<Variable name="gv_editorUiScale" value="0"/>
+	<Pass/>
+</Scenario>

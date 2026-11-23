@@ -62,6 +62,7 @@ namespace sw::editor
         /** @brief 타입으로 찾지 못합니다. 메인과 창마다 여럿이므로 `editor::getMainSceneSelection`, `getFocusedSelection`, `findSelectionOf` 로 얻습니다(`kIsAccessorOnlySubsystem`). */
         static constexpr bool kAccessorOnly = true;
         const utf8*           getSubsystemName() const override { return kSubsystemName; }
+        void                  resetToFreshEditor() override { clearAll(); }
 
         // ------------------------------------------------------------------------------
         // 멤버 메서드

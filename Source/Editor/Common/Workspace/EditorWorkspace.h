@@ -92,6 +92,7 @@ namespace sw::editor
         /** @brief 서브시스템 이름입니다(다른 선언의 의존 칸이 이 상수를 가리킨다). */
         static constexpr const utf8* kSubsystemName = "EditorWorkspace";
         const utf8*                  getSubsystemName() const override { return kSubsystemName; }
+        void                         resetToFreshEditor() override;
         span<const utf8* const>      getSubsystemDependencies() const override;
 
         // ------------------------------------------------------------------------------

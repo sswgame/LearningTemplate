@@ -1,0 +1,69 @@
+<?xml version="1.0" encoding="utf-8"?>
+<?asset guid="b8a1835f93c6739715c487654fe95ee3"?>
+<!--
+  스마트 오브젝트(SmartObjectComponent · SmartObjectScheduleLocator) — 무대 maps/smartobject. 일정이 예약한 자리와 플레이어가 차지한 자리가 같은 슬롯이다. 값으로 판정한다(골든 없음).
+  ① 플레이어가 왼쪽 자리를 차지한다 ② 10:30 — anna 는 예약한 왼쪽 자리를 거절당하고 ben 은 오른쪽에 앉는다 ③ 자리가 없으면 거절 ④ 플레이어가 놓으면 빈다 ⑤ 13:00 — ben 이 일어나 모두 빈다
+  ⑥ 14:30 — 둘 다 앉는다 ⑦ 세이브 · 불러오기 뒤에도 같은 자리 ⑧ 앉은 이가 사라지면 다음에 찾는 이가 그 자리를 얻는다.
+  실행: App -scenario=game/playground/automation/smartobject.scenario.xml -unattended (체인: ctest -R Scenario.playground)
+-->
+<Scenario name="game.playground.smartobject" fixedDelta="0.0166667" timeoutFrames="1200" startAfter="ScenePlaying" startTimeoutFrames="900" input="exclusive">
+	<Launch variable="gv_firstScene" value="game/playground/maps/smartobject.scene.xml"/>
+	<WaitUntil watch="Assets.Pending" equals="0" timeoutWallSeconds="60"/>
+	<Expect watch="SmartObject.FreeSlots" target="Bench" equals="2"/>
+	<!-- ① 플레이어 -->
+	<DevCommand line="smartobject.claim Player Bench Activity.Sit"/>
+	<Expect watch="SmartObject.SlotOf" target="Bench" key="Player" equals="0"/>
+	<Expect watch="SmartObject.FreeSlots" target="Bench" equals="1"/>
+	<DevCommand line="schedule.advance SmartObjectDemo 9"/> <!-- 아직 집 -->
+	<Expect watch="Object.Property" target="SmartObjectDemo" key="SmartObjectDemoComponent._claimCount" equals="0"/>
+	<Expect watch="Object.X" target="ben" near="4" tolerance="0.01"/>
+	<!-- ② 10:30 -->
+	<DevCommand line="schedule.advance SmartObjectDemo 10.5"/>
+	<Expect watch="Object.Property" target="SmartObjectDemo" key="SmartObjectDemoComponent._refusedCount" equals="1"/>
+	<Expect watch="Object.Property" target="SmartObjectDemo" key="SmartObjectDemoComponent._claimCount" equals="1"/>
+	<Expect watch="SmartObject.SlotOf" target="Bench" key="ben" equals="1"/>
+	<Expect watch="SmartObject.SlotOf" target="Bench" key="anna" is="none"/>
+	<Expect watch="SmartObject.SlotOf" target="Bench" key="Player" equals="0"/>
+	<Expect watch="SmartObject.FreeSlots" target="Bench" equals="0"/>
+	<Expect watch="Object.X" target="ben" near="0.5" tolerance="0.05"/>
+	<Expect watch="Object.Z" target="ben" near="6.3" tolerance="0.05"/>
+	<!-- ③ 만석 -->
+	<DevCommand line="smartobject.claim Latecomer Bench Activity.Sit"/>
+	<Expect watch="SmartObject.SlotOf" target="Bench" key="Latecomer" is="none"/>
+	<!-- ④ 놓기 -->
+	<DevCommand line="smartobject.release Player Bench"/>
+	<Expect watch="SmartObject.SlotOf" target="Bench" key="Player" is="none"/>
+	<Expect watch="SmartObject.FreeSlots" target="Bench" equals="1"/>
+	<!-- ⑤ 13:00 -->
+	<DevCommand line="schedule.advance SmartObjectDemo 13"/>
+	<Expect watch="Object.Property" target="SmartObjectDemo" key="SmartObjectDemoComponent._releaseCount" equals="1"/>
+	<Expect watch="SmartObject.FreeSlots" target="Bench" equals="2"/>
+	<!-- ⑥ 14:30 -->
+	<DevCommand line="schedule.advance SmartObjectDemo 14.5"/>
+	<Expect watch="Object.Property" target="SmartObjectDemo" key="SmartObjectDemoComponent._claimCount" equals="3"/>
+	<Expect watch="SmartObject.SlotOf" target="Bench" key="anna" equals="0"/>
+	<Expect watch="SmartObject.SlotOf" target="Bench" key="ben" equals="1"/>
+	<!-- ⑦ 세이브 → 새 무대 → 불러오기 -->
+	<Store watch="Save.Written" as="writtenBefore"/>
+	<DevCommand line="game.save playground/smartobject"/>
+	<WaitUntil watch="Save.Written" differsFrom="writtenBefore" timeoutWallSeconds="10"/>
+	<LoadScene path="game/playground/maps/smartobject.scene.xml" timeoutFrames="600"/>
+	<WaitUntil watch="SmartObject.FreeSlots" target="Bench" equals="2" timeoutFrames="30"/> <!-- 새 판 — 불러오기가 정말 되돌리는지 가린다 -->
+	<Store watch="Save.Loaded" as="loadedBefore"/>
+	<DevCommand line="game.load playground/smartobject"/>
+	<WaitUntil watch="Save.Loaded" differsFrom="loadedBefore" timeoutWallSeconds="60"/>
+	<WaitUntil watch="SmartObject.FreeSlots" target="Bench" equals="0" timeoutFrames="30"/>
+	<Expect watch="SmartObject.SlotOf" target="Bench" key="anna" equals="0"/>
+	<Expect watch="SmartObject.SlotOf" target="Bench" key="ben" equals="1"/>
+	<Expect watch="Object.Property" target="SmartObjectDemo" key="SmartObjectDemoComponent._claimCount" equals="3"/>
+	<!-- ⑧ 사라진 이의 자리 · 불러온 일정이 자기 자리를 비운다 -->
+	<DevCommand line="object.destroy anna"/>
+	<WaitUntil watch="Object.Exists" target="anna" equals="0" timeoutFrames="10"/>
+	<DevCommand line="smartobject.claim Latecomer Bench Activity.Sit"/>
+	<Expect watch="SmartObject.SlotOf" target="Bench" key="Latecomer" equals="0"/>
+	<DevCommand line="schedule.advance SmartObjectDemo 16"/>
+	<Expect watch="SmartObject.SlotOf" target="Bench" key="ben" is="none"/>
+	<Expect watch="Object.Property" target="SmartObjectDemo" key="SmartObjectDemoComponent._releaseCount" equals="2"/>
+	<Expect watch="SmartObject.FreeSlots" target="Bench" equals="1"/>
+	<Pass/>
+</Scenario>

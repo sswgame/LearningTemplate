@@ -43,6 +43,11 @@ namespace sw::editor
         // EditorSubsystem — EditorContext 가 의존 순서로 초기화하고 역순으로 종료 · 소멸한다.
         static constexpr const utf8* kSubsystemName = "EditorInputActions";
         const utf8*                  getSubsystemName() const override { return kSubsystemName; }
+        void                         resetToFreshEditor() override
+        {
+            _listQueuedCommand.clear();
+            _bCommandsSuspended = SW_FALSE;
+        }
 
         /**
          * @brief 지금 에디터 컨텍스트의 입력 어댑터입니다. 컨텍스트가 없으면(에디터 밖 테스트 · 종료 뒤) nullptr 입니다.

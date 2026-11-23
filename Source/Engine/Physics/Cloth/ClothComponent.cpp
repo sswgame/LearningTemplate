@@ -58,10 +58,27 @@ namespace sw
             outValue.setNumber( static_cast<float64>( float2{ offset._x, offset._z }.getLength() / static_cast<float32>( columns ) ) );
             return true;
         }
+
+        /** @brief 감시 값 `Cloth.HighestY` · `Cloth.LowestY` 입니다 — 대상 천의 정점 월드 높이(m) 가운데 가장 높은 · 낮은 값. 천이 없으면(아직 만들지 않았거나 실패) 값이 없습니다. */
+        template <bool bHighest>
+        [[nodiscard]] bool readClothHeight( const AutomationWatchQuery& query, AutomationWatchValue& outValue )
+        {
+            const ClothComponent* pCloth = query.findTargetComponent<ClothComponent>( "cloth", outValue );
+            if ( pCloth == nullptr || pCloth->getVertices().empty() )
+                return false;
+            float32 height = pCloth->getVertices().front()._y;
+            for ( const float3& vertex : pCloth->getVertices() )
+            {
+                height = bHighest ? MathUtil::max( height, vertex._y ) : MathUtil::min( height, vertex._y );
+            }
+            outValue.setNumber( static_cast<float64>( height ) );
+            return true;
+        }
     } // namespace
 
     SW_AUTOMATION_QUERY_WATCH( clothHorizontalOffset, "Cloth.HorizontalOffset", "Horizontal distance (m) from the top edge centre to the bottom edge centre of the target's cloth", &readClothHorizontalOffset, true, false );
-
+    SW_AUTOMATION_QUERY_WATCH( clothHighestY, "Cloth.HighestY", "World height (m) of the target cloth's highest vertex", &readClothHeight<true>, true, false );
+    SW_AUTOMATION_QUERY_WATCH( clothLowestY, "Cloth.LowestY", "World height (m) of the target cloth's lowest vertex", &readClothHeight<false>, true, false );
     // 천 LOD 감시 값(시나리오 `game/playground/automation/clothlod`) — 씬의 첫 천을 읽는다.
     SW_AUTOMATION_GETTER_WATCH( clothIterationCount, "Cloth.IterationCount", "Solver iterations given to the first cloth's soft body (0: no soft body, e.g. suspended by LOD)", ClothComponent, &ClothComponent::getAppliedIterationCount );
     SW_AUTOMATION_GETTER_WATCH( clothLODSuspended, "Cloth.LODSuspended", "1 while the first cloth is suspended by its LOD (_maxLOD) and shows its rest grid", ClothComponent, &ClothComponent::isLODSuspended );

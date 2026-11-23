@@ -196,6 +196,7 @@ namespace sw
                 outMatched = string_view{ info.getValueAsString() } == expected;
                 return true;
             }
+            case GlobalVariableType::Secret: // 값을 글로 견줄 수 없다(늘 가린 글이다) — 읽지 못한 기대값으로 알린다
             case GlobalVariableType::Count:
             {
                 break;

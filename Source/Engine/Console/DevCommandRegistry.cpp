@@ -5,6 +5,7 @@
 #include "Core/Algorithm/VectorUtil.h"
 #include "Core/Log/Logger.h"
 #include "Core/Path/AbsolutePath.h"
+#include "Core/String/StringBuilder.h"
 #include "Core/String/StringUtil.h"
 #include "Core/Subsystem/SubsystemScope.h"
 
@@ -12,6 +13,15 @@
 
 namespace sw
 {
+    namespace
+    {
+        /** @brief 사용법의 자리 이름(`<password>`)이 비밀인지입니다. */
+        bool isSecretUsageToken( string_view usageToken )
+        {
+            return StringUtil::contains( usageToken, "password", true ) || StringUtil::contains( usageToken, "secret", true );
+        }
+    } // namespace
+
     bool DevCommandRegistry::readDiskPathArgument( string_view argument, string& outAbsolutePath, string& outReply )
     {
         const optional<AbsolutePath> absolutePath = AbsolutePath::tryMake( argument );
@@ -53,6 +63,28 @@ namespace sw
     bool DevCommandRegistry::run( const DevCommandRegistration& command, const vector<string>& listArgument, string& outReply )
     {
         return command._pSceneFunc != nullptr ? command._pSceneFunc( SceneIterationKey{}, listArgument, outReply ) : command._pFunc( listArgument, outReply );
+    }
+
+    string DevCommandRegistry::makeMaskedLine( const DevCommandRegistration& command, string_view line )
+    {
+        // 사용법과 줄을 같은 규칙으로 나눈다 — 0 번은 명령 이름, i 번은 i 번째 인자다.
+        const vector<string> listUsage   = StringUtil::splitQuotedTokens( StringUtil::isNullOrEmpty( command._pUsage ) ? string_view{} : string_view{ command._pUsage } );
+        size_t               firstSecret = 1;
+        while ( firstSecret < listUsage.size() && isSecretUsageToken( listUsage[firstSecret] ) == false )
+        {
+            ++firstSecret;
+        }
+        const vector<string> listToken = StringUtil::splitQuotedTokens( line );
+        if ( firstSecret >= listUsage.size() || firstSecret >= listToken.size() )
+            return string( line );
+        const bool                               bShifted = listToken.size() > listUsage.size(); // 낱말이 밀렸다 — 어느 것이 비밀의 조각인지 알 수 없다
+        StringBuilder<constant::buffer::kMax256> maskedLine;
+        for ( size_t tokenIndex = 0; tokenIndex < listToken.size(); ++tokenIndex )
+        {
+            const bool bSecret = tokenIndex >= firstSecret && ( bShifted || isSecretUsageToken( listUsage[tokenIndex] ) );
+            maskedLine.appendFormat( "%#%#", tokenIndex == 0 ? "" : " ", bSecret ? string_view{ "***" } : string_view{ listToken[tokenIndex] } );
+        }
+        return string( maskedLine.view() );
     }
 
     bool DevCommandRegistry::registerEntry( const DevCommandRegistration* pRegistration )

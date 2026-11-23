@@ -69,6 +69,14 @@ namespace sw::editor
         _syncedGeneration = 0; // 다음 sync 가 다시 만든다
     }
 
+    void EditorExtensionSubsystems::resetToFreshEditor()
+    {
+        for ( size_t index = _listEntry.size(); index-- > 0; )
+        {
+            _listEntry[index]._pSubsystem->resetToFreshEditor();
+        }
+    }
+
     void EditorExtensionSubsystems::releaseAt( size_t index )
     {
         Entry& entry = _listEntry[index];

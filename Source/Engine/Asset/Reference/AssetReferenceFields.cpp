@@ -7,6 +7,7 @@
 #include "Engine/Asset/Reference/AssetReferenceFields.h"
 
 #include "Core/Algorithm/VectorUtil.h"
+#include "Core/Container/unordered_map.h"
 #include "Core/File/FileUtil.h"
 #include "Core/Foundation/StdHeaders.h"
 #include "Core/Log/Logger.h"
@@ -176,6 +177,7 @@ namespace sw
         for ( const AssetImportedFolder& folder : listImported )
         {
             bValid = Internal::hasNoEmptyText( folder._listSourceExtension, "listSourceExtension", path ) && bValid;
+            bValid = Internal::hasNoEmptyText( folder._listOutputSuffix, "listOutputSuffix", path ) && bValid;
         }
         if ( bValid == false )
             return false;
@@ -522,8 +524,16 @@ namespace sw
 
     bool AssetReferenceFields::isImportedFromSource( string_view assetID, const AssetIDSet& assets ) const
     {
+        string_view fileName;
+        FileUtil::getFileNamePart( assetID, fileName );
+        const bool bFile = fileName.find( '.' ) != string_view::npos; // 폴더는 접미사를 보지 않는다
         for ( const AssetImportedFolder& imported : _listImported )
         {
+            // 그 원본에서 나오지 않는 종류의 파일은 원본이 있어도 산출물이 아니다 — 손으로 적은 글이 원본 이름을 빌려 지나가지 않게 한다.
+            const bool bOutput = std::any_of( imported._listOutputSuffix.begin(), imported._listOutputSuffix.end(), [fileName]( const string& suffix )
+            { return StringUtil::endsWith( fileName, suffix ); } );
+            if ( bFile && bOutput == false )
+                continue;
             StringBuilder<constant::buffer::kMax256> markerBuilder;
             markerBuilder.appendFormat( "/%#/", imported._folder );
             const string_view marker   = markerBuilder.view();
@@ -617,26 +627,38 @@ namespace sw
         // 뒤에서부터 바꿔 앞 참조의 자리가 밀리지 않게 한다. CMake 는 인자마다 따로 뽑아 글 순서가 아니므로 자리로 정렬한다.
         VectorUtil::sort( listReference, []( const AssetReference& left, const AssetReference& right )
         { return left._offset < right._offset; } );
+        // 폴더를 옮기면 규칙 수와 참조 수가 함께 는다 — 참조마다 규칙을 훑지 않고 같은 글 · 접두(`/` · `.` 앞까지)를 해시로 찾는다. 여럿이 맞으면 앞 규칙이다.
+        unordered_map<string_view, size_t> mapExactRule;
+        unordered_map<string_view, size_t> mapPrefixRule;
+        mapExactRule.reserve( listRule.size() );
+        for ( size_t ruleIndex = 0; ruleIndex < listRule.size(); ++ruleIndex )
+        {
+            mapExactRule.emplace( listRule[ruleIndex]._oldPath, ruleIndex );
+            if ( listRule[ruleIndex]._bPrefix )
+                mapPrefixRule.emplace( listRule[ruleIndex]._oldPath, ruleIndex );
+        }
         uint32 rewriteCount{ 0 };
         for ( auto itReference = listReference.rbegin(); itReference != listReference.rend(); ++itReference )
         {
             // GUID 참조는 옮겨도 그대로다 — 글이 경로가 아니다.
             if ( AssetRegistry::isReferenceText( string_view{ inoutText }.substr( itReference->_offset, itReference->_length ) ) )
                 continue;
-            const string& path = itReference->_path;
-            for ( const AssetReferenceRewriteRule& rule : listRule )
+            const string_view path      = itReference->_path;
+            const auto        itExact   = mapExactRule.find( path );
+            size_t            ruleIndex = itExact != mapExactRule.end() ? itExact->second : listRule.size();
+            for ( size_t boundary = path.find_first_of( "/." ); boundary != string_view::npos; boundary = path.find_first_of( "/.", boundary + 1 ) )
             {
-                const bool bExact  = path == rule._oldPath;
-                const bool bPrefix = rule._bPrefix && path.size() > rule._oldPath.size() && StringUtil::startsWith( path, rule._oldPath ) &&
-                                     ( path[rule._oldPath.size()] == '/' || path[rule._oldPath.size()] == '.' );
-                if ( bExact == false && bPrefix == false )
-                    continue;
-                StringBuilder<constant::buffer::kMax512> rewritten;
-                rewritten.appendFormat( "%#%#", rule._newPath, string_view( path ).substr( rule._oldPath.size() ) );
-                inoutText.replace( itReference->_offset, itReference->_length, rewritten.view() );
-                ++rewriteCount;
-                break;
+                const auto itPrefix = mapPrefixRule.find( path.substr( 0, boundary ) );
+                if ( itPrefix != mapPrefixRule.end() && itPrefix->second < ruleIndex )
+                    ruleIndex = itPrefix->second;
             }
+            if ( ruleIndex == listRule.size() )
+                continue;
+            const AssetReferenceRewriteRule&         rule = listRule[ruleIndex];
+            StringBuilder<constant::buffer::kMax512> rewritten;
+            rewritten.appendFormat( "%#%#", rule._newPath, path.substr( rule._oldPath.size() ) );
+            inoutText.replace( itReference->_offset, itReference->_length, rewritten.view() );
+            ++rewriteCount;
         }
         return rewriteCount;
     }

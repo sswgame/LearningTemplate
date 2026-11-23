@@ -81,6 +81,11 @@ namespace sw::editor
 
     void EditorUICommandQueue::shutdownSubsystem()
     {
+        resetToFreshEditor();
+    }
+
+    void EditorUICommandQueue::resetToFreshEditor()
+    {
         _queue.clear();
         _listTaken.clear();
         _listDue.clear();

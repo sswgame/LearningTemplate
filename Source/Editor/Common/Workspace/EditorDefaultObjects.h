@@ -39,6 +39,7 @@ namespace sw::editor
         /** @brief 서브시스템 이름입니다(다른 선언의 의존 칸이 이 상수를 가리킨다). */
         static constexpr const utf8* kSubsystemName = "EditorDefaultObjects";
         const utf8*                  getSubsystemName() const override { return kSubsystemName; }
+        void                         resetToFreshEditor() override {} // 타입마다의 기본값 사본이라 단계와 무관하다
         EditorDefaultObjects( const EditorDefaultObjects& )            = delete;
         EditorDefaultObjects& operator=( const EditorDefaultObjects& ) = delete;
 

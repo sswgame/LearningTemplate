@@ -165,6 +165,9 @@ namespace sw::editor
         beginPreviewFrame();
         drawDocumentOpenBar( "prefabwindow" );
         syncDocumentRoot();
+        // 중첩 단계의 저장은 그 단계의 프리팹 하나만 쓰고 문서를 깨끗하게 표시한다 — 바깥 단계의 편집을 든 채 들어가면 저장 뒤에 그 편집이 확인 없이 사라진다.
+        if ( isDocumentDirty() )
+            _viewModel.refusePendingNested();
         _viewModel.enterPendingNested( getPreviewScene(), getPreviewSelection() );
         gatherViewState( _viewModel, getPreviewScene(), getPreviewSelection(), _viewState );
 

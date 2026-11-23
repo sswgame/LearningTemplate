@@ -1,0 +1,23 @@
+<?xml version="1.0" encoding="utf-8"?>
+<?asset guid="46ad7d46077d2a7625d4253c2efec39e"?>
+<!--
+  립싱크(VisemeTrack · FacialAnimationComponent::speak) — 무대 maps/facial. 음성(voice/testline.wav)의 비즘 트랙이 입을 연다. 그리는 메시의 모프 가중치로 판정한다(골든 없음).
+  ① 말하기 전 입은 닫혀 있다 ② 말하면 턱이 열린다(AA 구간) ③ 트랙이 끝나면 말하기가 끝나고 입이 닫힌다
+  실행: App -scenario=game/playground/automation/lipsync.scenario.xml -unattended (체인: ctest -R Scenario.playground)
+-->
+<Scenario name="game.playground.lipsync" fixedDelta="0.0166667" timeoutFrames="1800" startAfter="ScenePlaying" startTimeoutFrames="900" input="exclusive">
+	<Launch variable="gv_firstScene" value="game/playground/maps/facial.scene.xml"/>
+	<WaitUntil watch="Assets.Pending" equals="0" timeoutWallSeconds="60"/>
+	<Expect watch="Facial.Speaking" target="Head" equals="0"/>
+	<Expect watch="Animation.MorphWeight" target="Head" key="jawOpen" equals="0"/>
+	<!-- ② -->
+	<DevCommand line="face.speak Head game/playground/voice/testline.wav"/>
+	<Expect watch="Facial.Speaking" target="Head" equals="1"/>
+	<WaitUntil watch="Animation.MorphWeight" target="Head" key="jawOpen" atLeast="0.2" timeoutSeconds="2"/>
+	<WaitUntil watch="Animation.MorphWeight" target="Head" key="mouthWide" atLeast="0.05" timeoutSeconds="3"/> <!-- 다른 비즘(EE)도 온다 — 한 비즘만 여닫는 진폭 립싱크가 아니다 -->
+	<!-- ③ -->
+	<WaitUntil watch="Facial.Speaking" target="Head" equals="0" timeoutSeconds="20"/>
+	<WaitUntil watch="Animation.MorphWeight" target="Head" key="jawOpen" equals="0" timeoutFrames="10"/>
+	<Expect watch="Animation.MorphWeight" target="Head" key="mouthWide" equals="0"/>
+	<Pass/>
+</Scenario>

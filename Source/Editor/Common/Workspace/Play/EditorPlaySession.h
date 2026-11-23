@@ -197,6 +197,12 @@ namespace sw::editor
     public:
         static constexpr const utf8* kSubsystemName = "EditorPlaySession";
         const utf8*                  getSubsystemName() const override { return kSubsystemName; }
+        /** @brief 다음 Play 의 시작 위치와 거절 기록을 비웁니다. 도는 세션은 쓰기 열쇠를 쥔 쪽(단계 되돌리기)이 먼저 멈춘다. */
+        void resetToFreshEditor() override
+        {
+            _data._bStartAtPosition = SW_FALSE;
+            _data._lastRefusedAction.clear();
+        }
 
         /** @brief 앞선 에디터 인스턴스가 맡긴 플레이 세션을 되찾습니다(`carryIn`) — 에디터 모듈 리로드 · 백엔드 교체 너머로 PIE 가 이어진다. */
         SubsystemInitResult initializeSubsystem() override;

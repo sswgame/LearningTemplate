@@ -215,7 +215,7 @@ namespace sw::editor
             // 오래된 것부터 — 다음에 쓸 항목이 가장 오래된 항목이다.
             for ( uint32 offset = 0; offset < _windowFrame; ++offset )
             {
-                formatstring( number.data(), number.capacity(), "%s%.3f", offset == 0 ? "" : ",",
+                formatstring( number.data(), number.capacity(), "%#%.3f", offset == 0 ? "" : ",",
                               static_cast<float64>( track._listValue[( _writeIndex + offset ) % _windowFrame] ) );
                 text += number.c_str();
             }

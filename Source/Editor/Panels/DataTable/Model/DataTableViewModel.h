@@ -9,6 +9,7 @@
 #include "Core/Container/string.h"
 #include "Core/Container/vector.h"
 #include "Core/Foundation/Types.h"
+#include "Core/Memory/Memory.h"
 
 #include "Editor/Common/Commands/Asset/EditorLocalizationSheet.h"
 #include "Editor/Common/Commands/EditorBackgroundIO.h"
@@ -29,6 +30,15 @@ namespace sw::editor
 
 namespace sw::editor
 {
+    /** @brief 문화권 하나의 상태별 번역 수입니다. */
+    struct LocalizationCultureProgress
+    {
+        uint32 _currentCount{ 0 };
+        uint32 _staleCount{ 0 };
+        uint32 _reviewCount{ 0 };
+        uint32 _missingCount{ 0 };
+    };
+
     /**
      * @class DataTableViewModel
      * @brief 데이터 테이블 창의 상태와 명령입니다. 파일 머리말 참고.
@@ -40,6 +50,9 @@ namespace sw::editor
     public:
         /** @param recorder 편집 알림 창구입니다(문서 패널이 쥔다). 게임 데이터 표를 고친 뒤 이리 알려 문서 되돌리기 한 단계가 된다(감사 E-13). */
         explicit DataTableViewModel( const DocumentEditRecorder& recorder );
+        ~DataTableViewModel();
+        DataTableViewModel( const DataTableViewModel& )            = delete;
+        DataTableViewModel& operator=( const DataTableViewModel& ) = delete;
 
         /** @brief 백그라운드 읽기 잡의 결과를 받고, 아직 읽지 않은 문서는 읽기를 겁니다. 패널이 그리기마다 부릅니다. */
         void pollBackgroundJobs();
@@ -73,6 +86,38 @@ namespace sw::editor
          *        고친 것이 남았어도 버린다.
          */
         bool acceptLoadedSheet( int32 requestedProjectIndex, LocalizationSheet&& sheet );
+        // ------------------------------------------------------------------------------
+        // 현지화 되돌리기 — 레코드 하나의 전 · 후가 한 단계다(연 문서가 아니라 문서 스택에 들지 않는다). 프로젝트를 바꾸거나 다시 읽으면 비운다.
+        // ------------------------------------------------------------------------------
+        /** @brief 현지화 탭의 Ctrl+Z 가 갈 스택입니다. */
+        CommandStack& getLocalizationStack();
+        /** @brief 칸이 활성이 됐습니다 — 이 레코드의 지금 값을 편집 전 값으로 쥔다(칸을 고치기 전에 부른다). */
+        void beginRecordEdit( const LocalizationRecord& record );
+        /** @brief 위젯이 풀렸으면 쥔 레코드 편집을 한 단계로 올립니다. 패널이 그리기마다 부릅니다. */
+        void flushRecordEdit( bool bInteracting );
+
+        // ------------------------------------------------------------------------------
+        // 현지화 도구 — App 의 헤드리스 작업(`--gather-text` · `--check-text` · `--export-po` · `--import-po`)을 프로세스로 띄운다(소스 트리 전체를 읽어 UI 를 멈춘다).
+        // ------------------------------------------------------------------------------
+        /** @brief 도구 종류입니다. */
+        enum class LocalizationTool : uint8
+        {
+            GatherText, ///< 소스 · 에셋에서 원문을 모아 표를 고친다
+            CheckText,  ///< 표가 최신인지, 빠지거나 낡은 번역이 없는지 본다(고치지 않는다)
+            ExportPo,   ///< 문화권마다 `po/<문화권>.po` 를 쓴다
+            ImportPo,   ///< `po/<문화권>.po` 를 번역 표로 읽어 들인다
+        };
+        /** @brief 도구를 띄웁니다. 도는 중이거나 저장하지 않은 편집이 있거나 프로젝트가 없으면 false 입니다(도구가 파일을 고쳐 편집과 부딪힌다). @p cultureIndex 는 `ImportPo` 만 본다. */
+        bool startLocalizationTool( LocalizationTool tool, size_t cultureIndex );
+        /** @brief 도구를 띄울 수 있으면 true 입니다. */
+        [[nodiscard]] bool canStartLocalizationTool() const;
+        /** @brief 도구가 도는 중이면 true 입니다. */
+        [[nodiscard]] bool isLocalizationToolRunning() const;
+        /** @brief 마지막 도구의 결과 한 줄입니다. 돌린 적이 없으면 비어 있습니다. */
+        const string& getLocalizationToolStatus() const { return _localizationToolStatus; }
+        /** @brief 문화권 @p cultureIndex 의 상태별 번역 수입니다(머리의 진행도 줄). */
+        LocalizationCultureProgress countCultureProgress( size_t cultureIndex ) const;
+
         /** @brief 레코드 표입니다. 칸을 고친 쪽은 `markSourceEdited` · `markTranslationEdited` 를 부릅니다. */
         LocalizationSheet&       editSheet() { return _localizationSheet; }
         const LocalizationSheet& getSheet() const { return _localizationSheet; }
@@ -145,22 +190,40 @@ namespace sw::editor
         void openGameDataText( string&& text );
 
     private:
-        const DocumentEditRecorder* _pRecorder; ///< 편집 알림 창구(문서 패널이 쥔다)
-        LocalizationSheet           _localizationSheet;
-        vector<string>              _listLocalizationProject;
-        vector<GameDataFileEntry>   _listGameDataFile;
-        string                      _gameDataPath; ///< 열린 게임 데이터 파일의 디스크 경로(문서 패널이 정한 문서를 푼 자리)
-        string                      _selectedGameDataRawText;
-        string                      _savedGameDataRawText;
-        CatalogDocument             _gameDataDocument;
-        EditorLocalizationLoadJob   _localizationJob;
-        EditorGameDataScanJob       _gameDataJob;
-        int32                       _selectedProjectIndex;
-        int32                       _requestedProjectIndex; ///< 돌고 있는 읽기를 건 때의 프로젝트 번호(`acceptLoadedSheet`)
-        uint32                      _gameDataLoadCount;
-        uint8                       _bLocalizationLoaded : 1;
-        uint8                       _bGameDataLoaded     : 1;
-        uint8                       _bLocalizationDirty  : 1;
-        uint8                       _bGameDataDirty      : 1;
+        /** @brief 레코드 @p key 의 전(@p before — 없으면 더한 키) · 후(@p after — 없으면 지운 키)를 한 단계로 올립니다. */
+        void pushRecordStep( string_view label, const optional<LocalizationRecord>& before, const optional<LocalizationRecord>& after, size_t recordIndex );
+        /** @brief 레코드 @p key 를 @p pRecord 로 둡니다(없으면 지운다). @p recordIndex 는 다시 넣을 자리다. */
+        void applyRecord( const string& key, const shared_ptr<const LocalizationRecord>& pRecord, size_t recordIndex );
+        /** @brief 키 @p key 의 자리입니다. 없으면 비어 있습니다. */
+        optional<size_t> findRecordIndex( string_view key ) const;
+        /** @brief 현지화 되돌리기 기록과 쥔 편집을 버립니다(표를 새로 읽을 때). */
+        void clearLocalizationHistory();
+        /** @brief 끝난 도구의 결과를 받아 상태 줄을 적고, 파일을 고친 도구면 표를 다시 읽습니다. */
+        void collectLocalizationToolResult();
+
+    private:
+        unique_ptr<EditorStateTextHistory> _pLocalizationHistory;
+        unique_ptr<EditorExternalToolJob>  _pLocalizationToolJob;
+        optional<LocalizationRecord>       _pendingRecord;      ///< 칸이 활성이 될 때의 값(편집 전)
+        string                             _pendingRecordLabel; ///< 쥔 편집의 되돌리기 이름(비면 아직 고치지 않았다)
+        string                             _localizationToolStatus;
+        LocalizationTool                   _runningTool;
+        const DocumentEditRecorder*        _pRecorder; ///< 편집 알림 창구(문서 패널이 쥔다)
+        LocalizationSheet                  _localizationSheet;
+        vector<string>                     _listLocalizationProject;
+        vector<GameDataFileEntry>          _listGameDataFile;
+        string                             _gameDataPath; ///< 열린 게임 데이터 파일의 디스크 경로(문서 패널이 정한 문서를 푼 자리)
+        string                             _selectedGameDataRawText;
+        string                             _savedGameDataRawText;
+        CatalogDocument                    _gameDataDocument;
+        EditorLocalizationLoadJob          _localizationJob;
+        EditorGameDataScanJob              _gameDataJob;
+        int32                              _selectedProjectIndex;
+        int32                              _requestedProjectIndex; ///< 돌고 있는 읽기를 건 때의 프로젝트 번호(`acceptLoadedSheet`)
+        uint32                             _gameDataLoadCount;
+        uint8                              _bLocalizationLoaded : 1;
+        uint8                              _bGameDataLoaded     : 1;
+        uint8                              _bLocalizationDirty  : 1;
+        uint8                              _bGameDataDirty      : 1;
     };
 } // namespace sw::editor

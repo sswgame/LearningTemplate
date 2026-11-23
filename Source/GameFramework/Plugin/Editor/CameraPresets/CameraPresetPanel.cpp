@@ -117,8 +117,17 @@ namespace sw::editor
             if ( preset._lens._bOrthographic || preset._view._mode == CameraPresetMode::OrthoTopDown )
                 ImGui::TextDisabled( "%s", SW_LOCKEY( "EdPlugin", "OrthographicPresetThePreviewDrawsItInPerspective" ) );
             EditorWidgets::drawPropertyRowLabel( SW_LOCKEY( "EdPluginField", "TargetYaw" ) );
+            EditorWidgets::beginResetToDefaultGroup();
             if ( EditorWidgets::sliderFloat( SW_WIDGET_ID( "##Targetyaw" ), &_model.editTargetYawDegrees(), -180.0f, 180.0f, "%.0f deg" ) )
                 _model.markViewportDirty();
+            bool       bHovered  = false;
+            const bool bResetYaw = EditorWidgets::endResetToDefaultGroup( _model.editTargetYawDegrees() != CameraPresetViewModel::kDefaultTargetYawDegrees, bHovered ); // R10 — 휠클릭은 기본 요로
+            if ( bResetYaw )
+            {
+                _model.editTargetYawDegrees() = CameraPresetViewModel::kDefaultTargetYawDegrees;
+                _model.markViewportDirty();
+            }
+            EditorSelfTestMarks::record( "camerapreset.targetYaw" );
             EditorWidgets::drawTooltip( SW_LOCKEY( "EdPluginTip", "DirectionTheTargetFacesFollowFirstPersonAnd" ) );
         }
 

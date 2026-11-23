@@ -168,6 +168,8 @@ namespace sw::editor
         void recordFolderDropRect( const AssetEntry& entry );
         /** @brief 현재 폴더의 브레드크럼 경로를 그립니다. */
         void drawBreadcrumbs();
+        /** @brief 빈 폴더의 다음 행동입니다 — 무엇을 할 수 있는지 한 줄과 Import 단추. 임포트할 폴더를 골랐고 목록을 다 읽었을 때만 그린다. */
+        void drawEmptyFolder();
         /** @brief 보이는 항목의 타일 그리드를 그립니다. */
         void drawTilesView( const vector<const AssetEntry*>& listVisible );
         /** @brief 보이는 항목의 리스트 행을 그립니다. */

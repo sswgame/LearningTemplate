@@ -201,6 +201,29 @@ namespace sw
             }
         };
 
+        /** @brief 비밀 값 변수(`GlobalSecret`)의 처리입니다. 저장은 글과 같고, 글로 바꾸면 가린 글이며 가린 글은 받지 않는다. */
+        struct GlobalVariableSecretOps
+        {
+            static string formatValue( const GlobalVariableInfo& info )
+            {
+                return GlobalVariableStringOps::formatValue( info ).empty() ? string{} : string( GlobalSecret::kMask );
+            }
+
+            [[nodiscard]] static bool parseValue( GlobalVariableInfo& info, string_view text )
+            {
+                return text != GlobalSecret::kMask && GlobalVariableStringOps::parseValue( info, text );
+            }
+
+            static void writeDefault( GlobalVariableInfo& info ) { GlobalVariableStringOps::writeDefault( info ); }
+
+            static void addCommandLineArgument( CommandLineManager& commandLine, const GlobalVariableInfo& info ) { GlobalVariableStringOps::addCommandLineArgument( commandLine, info ); }
+
+            [[nodiscard]] static bool readCommandLineArgument( const CommandLineManager& commandLine, GlobalVariableInfo& info, string& outPendingText )
+            {
+                return GlobalVariableStringOps::readCommandLineArgument( commandLine, info, outPendingText );
+            }
+        };
+
         /**
          * @brief enum 변수의 처리입니다. int32 로 읽고 쓰며 실제 크기(`_typeSize`)만큼만 씁니다.
          * @details 글은 열거자 이름(`Vulkan`)이다. 숫자(`2`)는 에디터 · 프리셋 · 사용자 설정이 값을 주고받는 안쪽 글(`formatValue` 도 숫자)이라
@@ -278,6 +301,7 @@ namespace sw
                 makeGlobalVariableTypeRow<GlobalVariableStringOps>( GlobalVariableType::String, "String" ),
                 makeGlobalVariableTypeRow<GlobalVariableEnumOps>( GlobalVariableType::Enum, "Enum" ),
                 makeGlobalVariableTypeRow<GlobalVariableDiskPathOps>( GlobalVariableType::DiskPath, "DiskPath" ),
+                makeGlobalVariableTypeRow<GlobalVariableSecretOps>( GlobalVariableType::Secret, "Secret" ),
             };
 
             static constexpr bool isInTypeOrder()

@@ -890,7 +890,7 @@ namespace sw::editor
         {
             const InputReplayFrame&                 frame = replay.getFrames()[currentFrame];
             fixed_string<constant::buffer::kMax128> frameBuf;
-            formatstring( frameBuf.data(), frameBuf.capacity(), "Frame #%u | DeltaTime: %#s | Events: %d", currentFrame,
+            formatstring( frameBuf.data(), frameBuf.capacity(), "Frame #%# | DeltaTime: %#s | Events: %#", currentFrame,
                           Fmt( static_cast<float64>( frame._deltaTime ), Format().precision( 4 ) ), static_cast<int32>( frame._listRawEvent.size() ) );
             EditorThemeUtil::textInfo( frameBuf.c_str() );
         }

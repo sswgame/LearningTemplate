@@ -53,7 +53,7 @@ namespace sw
         void applyTick( uint32 tick );
 
     private:
-        PROPERTY( Category = "Path", DisplayName = "Waypoints", Tooltip = "Offsets from the start position, visited in order", Units = m )
+        PROPERTY( Category = "Path", DisplayName = "Waypoints", Tooltip = "Offsets from the start position, visited in order", Units = m, Meta = "Shape=Points,ShapeAxes=World" )
         vector<float3> _listWaypoint;
         PROPERTY( Category = "Path", DisplayName = "Segment Time", Min = 0.01, Tooltip = "Seconds between two waypoints", Units = s )
         float32 _segmentSeconds;

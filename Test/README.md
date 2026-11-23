@@ -95,7 +95,7 @@ SW_TEST_CASE( LogTest, ConsoleReachesStdout, ._timeoutSeconds = 90 )            
 - 그 밖: `AnimationTestUtil` · `RHIFakeDevice` · `FakeFontRasterizer`, 자식 프로세스는 `Core/Process` · 크래시 보고.
 - 온라인 키트는 싣는 게임이 없어 `UnitTests.OnlineKits`(OnlineLoadBot `-test`, Release — 봇이 온라인 키트를 모두 싣는다)가 돌린다.
 - 화면이 있어야 하는 것은 시나리오가 맡는다: `UIPreviewViewModel`(`editor/uipreview` · `uipreviewdesigner`), 섀도 복사본의 성공 길(핫 리로드 시나리오), 화면이 뜨는 게임 흐름(`loadingscreen`), `Editor/Common` · `Editor/Panels` 의 그리기 코드.
-- 폴더 집계 `py -3 Scripts/dev/test_coverage.py` 는 테스트가 다른 폴더에 있어도 "없음" 으로 센다 — 실제로 비었는지는 클래스 이름을 테스트에서 찾아 본다.
+- 폴더 집계 `py -3 Scripts/dev/test_coverage.py` 는 타입 이름이 나오는 다른 폴더의 테스트 · 시나리오도 센다 — 이름이 나온다고 동작을 검증한다는 뜻은 아니다.
 
 ## 리플렉션 파서
 

@@ -3,11 +3,14 @@
  * @brief 콘텐츠 브라우저의 저장 검색과 에셋 컬렉션입니다. 줄 단위 텍스트로 읽고 쓰며 ImGui 에 의존하지 않습니다(단위 테스트가 본다).
  * @details 언리얼 콘텐츠 브라우저의 Collections(로컬 · 공유) · 유니티 Project 창의 Saved Searches 와 같은 자리다.
  *          로컬 것은 에디터 상태 폴더의 `ContentBrowserCollectionStore.txt`, 공유 것은 프로젝트의 `Config/Editor/ContentCollections.txt`(커밋한다)에 둔다.
- *          줄 형식: `search<TAB>이름<TAB>종류 필터 라벨<TAB>검색 글` · `collection<TAB>이름<TAB>에셋 id`(에셋마다 한 줄). 빈 줄 · 모르는 줄은 건너뛴다.
+ *          줄 형식: `search<TAB>이름<TAB>종류 필터 라벨<TAB>검색 글` · `collection<TAB>이름<TAB>에셋 id`(에셋마다 한 줄). 빈 줄은 건너뛴다.
+ *          읽지 못했거나 모르는 줄(병합 충돌 표시 · 새 판의 줄)이 있는 파일은 덮지 않는다 — 읽은 것만 다시 쓰면 나머지를 잃는다.
  */
 #pragma once
 #include "Core/Container/string.h"
+#include "Core/Container/unordered_set.h"
 #include "Core/Container/vector.h"
+#include "Core/Foundation/Macros.h"
 #include "Core/Foundation/Types.h"
 
 namespace sw::editor
@@ -21,12 +24,32 @@ namespace sw::editor
         bool   _bShared{ false }; ///< 프로젝트와 함께 커밋하는 공유 목록이다 NOLINT(sw-bool-flag): 집합체다(중괄호 · 지정 초기화로 만든다) — C++17 비트필드는 기본값을 둘 수 없어 `T x;` 가 값을 남기지 않는다
     };
 
-    /** @brief 에셋 컬렉션 하나 — 폴더와 상관없이 모은 에셋 id 목록입니다(파일을 옮기지 않는다). */
-    struct ContentBrowserCollection
+    /** @brief 에셋 컬렉션 하나 — 폴더와 상관없이 모은 에셋 id 목록입니다(파일을 옮기지 않는다). 목록과 색인은 `add` · `remove` 로만 함께 바뀐다. */
+    class ContentBrowserCollection
     {
-        string         _name;
-        vector<string> _listAssetID;
-        bool           _bShared{ false }; ///< NOLINT(sw-bool-flag): 위와 같다
+    public:
+        ContentBrowserCollection( string_view name, bool bShared )
+            : _name{ name }
+            , _listAssetID{}
+            , _uniqueAssetID{}
+            , _bShared{ bShared ? SW_TRUE : SW_FALSE }
+        {
+        }
+
+        const string&         getName() const { return _name; }
+        bool                  isShared() const { return _bShared == SW_TRUE; }
+        const vector<string>& getAssetIDs() const { return _listAssetID; }
+
+        /** @brief 에셋 id 를 끝에 더합니다. 이미 있으면 false 입니다. */
+        bool add( string_view assetID );
+        /** @brief 에셋 id 를 뺍니다. 있었으면 true 입니다. */
+        bool remove( string_view assetID );
+
+    private:
+        string                _name;
+        vector<string>        _listAssetID;   ///< 더한 순서(저장 · 표시 순서)
+        unordered_set<string> _uniqueAssetID; ///< `_listAssetID` 와 같은 원소의 색인 — 더할 때마다 목록을 훑지 않는다(파일 읽기가 에셋 수의 제곱이었다)
+        uint8                 _bShared;       ///< 프로젝트와 함께 커밋하는 공유 목록이다
     };
 } // namespace sw::editor
 
@@ -61,12 +84,12 @@ namespace sw::editor
 
         /** @brief 한 범위(@p bShared)의 목록을 줄 텍스트로 만듭니다. */
         string toText( bool bShared ) const;
-        /** @brief 줄 텍스트를 읽어 그 범위(@p bShared)의 목록을 바꿉니다. 다른 범위의 목록은 그대로 둡니다. */
-        void fromText( string_view text, bool bShared );
+        /** @brief 줄 텍스트를 읽어 그 범위(@p bShared)의 목록을 바꿉니다. 다른 범위의 목록은 그대로 둡니다. 모르는 줄이 있으면 그 줄 말고는 읽고 false 입니다. */
+        [[nodiscard]] bool fromText( string_view text, bool bShared );
 
-        /** @brief 두 파일을 읽습니다. 없는 파일은 빈 목록이다(처음 실행). */
+        /** @brief 두 파일을 읽습니다. 없는 파일은 빈 목록이다(처음 실행). 다 읽지 못한 파일은 오류를 남기고 그 범위의 쓰기를 막습니다(`saveFile`). */
         void loadFiles( string_view localFilePath, string_view sharedFilePath );
-        /** @brief 한 범위의 파일을 씁니다. 실패하면 경고하고 false 입니다. */
+        /** @brief 한 범위의 파일을 씁니다. 실패했거나 그 파일을 다 읽지 못했으면(덮으면 읽지 못한 내용을 잃는다) 알리고 false 입니다. */
         [[nodiscard]] bool saveFile( string_view filePath, bool bShared ) const;
         /** @brief 로컬 파일 경로입니다(에디터 상태 폴더의 `kLocalFileName`). */
         static string getLocalFilePath();
@@ -77,7 +100,16 @@ namespace sw::editor
         static constexpr const utf8* kSharedFileName = "Config/Editor/ContentCollections.txt";
 
     private:
+        /** @brief `findCollection` 의 고칠 수 있는 짝입니다. */
+        ContentBrowserCollection* findCollectionMutable( string_view name, bool bShared );
+        /** @brief 한 범위의 파일을 읽습니다. 있는데 다 읽지 못했으면 오류를 남기고 false 입니다. */
+        [[nodiscard]] bool loadFile( string_view filePath, bool bShared );
+
+    private:
         vector<ContentBrowserSavedSearch> _listSavedSearch;
         vector<ContentBrowserCollection>  _listCollection;
+        uint8                             _bLocalUnread  : 1; ///< 로컬 파일을 다 읽지 못했다 — 쓰지 않는다
+        uint8                             _bSharedUnread : 1; ///< 공유 파일을 다 읽지 못했다 — 쓰지 않는다
+        [[maybe_unused]] uint8            _reserved      : 6;
     };
 } // namespace sw::editor

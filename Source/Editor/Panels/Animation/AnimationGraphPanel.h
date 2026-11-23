@@ -47,6 +47,10 @@ namespace sw::editor
         uint32 getBoneMaskCount() const { return static_cast<uint32>( _graph._listBoneMask.size() ); }
         /** @brief 모든 본 마스크의 항목 수입니다. 감시 값 `Editor.AnimationGraphMaskEntryCount` 가 읽습니다(칠하기 · 초기화가 바꾼다). */
         uint32 countBoneMaskEntries() const;
+        /** @brief 분기가 있는 몽타주 섹션 수입니다. 감시 값 `Editor.AnimationGraphBranchSectionCount` 가 읽습니다. */
+        uint32 countBranchSections() const;
+        /** @brief 가장 늦은 몽타주 섹션의 시작(밀리초)입니다. 감시 값 `Editor.AnimationGraphSectionStartMs` 가 읽습니다(시작 칸을 끌면 는다). */
+        uint32 computeLastSectionStartMs() const;
         /** @brief 레이어 탭 계층 보기의 본 줄 수입니다. 감시 값 `Editor.AnimationGraphMaskBoneRowCount` 가 읽습니다. */
         uint32 getMaskBoneRowCount() const { return _layerEditor.getBoneRowCount(); }
 
@@ -87,6 +91,8 @@ namespace sw::editor
         /**
          * @brief 포즈 노드 상태의 정의 편집입니다 — 입력, 그리고 종류의 첫 값이 쓴 칸(가중치 파라미터 · 미러 축 · 몽타주 섹션)만 그린다(종류 이름으로 가르지 않는다).
          * @details 편집은 사본에 하고 종류의 계약(`AnimationPoseNodeRegistry::isSatisfiedBy`)을 지킬 때만 들인다 — 저장 · 되돌리기 글이 읽히지 않는 상태를 만들지 않는다.
+         *          끄는 중인 시작 칸과 아직 짝이 안 찬 분기(파라미터 · 분기는 둘 다 있거나 둘 다 없다)는 초안(`_poseDraft`)에 쌓는다 — 프레임마다 새 사본에서 시작하면
+         *          끌기가 쌓이지 않고, 한 칸씩 적는 분기는 늘 계약에 걸려 적을 수 없었다.
          */
         void drawPoseNodeInspector( GraphNode& node );
         /** @brief 이름 칸 하나입니다. 치는 동안은 패널 버퍼에 두고 칸을 떠날 때 @p inoutName 에 씁니다. 바뀌었으면 true 입니다. */
@@ -119,6 +125,8 @@ namespace sw::editor
         string                         _nameFieldShown;      ///< 치지 않는 이름 칸이 보이는 텍스트(프레임마다 값에서 다시 쓴다)
         vector<hashed_string>          _listPoseTypeName;    ///< 노드 더하기 메뉴의 포즈 노드 종류(`collectAddKinds` 가 채운다)
         uint32                         _nameFieldID;         ///< 치는 중인 이름 칸의 ImGui id(0 = 없음)
+        AnimationGraphPoseNodeDef      _poseDraft;           ///< 아직 들이지 않은 포즈 노드 정의(`_poseDraftNodeID` 가 0 이면 없다)
+        int32                          _poseDraftNodeID;     ///< 초안의 노드 id(0 = 초안 없음)
         vector<int32>                  _listSelectionOrder;  ///< 캔버스에서 선택한 노드를 선택한 순서대로 담는다
         int32                          _selectedNodeID;
         int32                          _selectedLinkID;

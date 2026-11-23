@@ -127,4 +127,9 @@ namespace sw::editor
         outSaved._themeFrameRounding  = EditorThemeConfigInternal::readSavedRadius( theme, hashed_string( EditorThemeConfigInternal::kRadiusFrameKey ) );
         outSaved._themeTabRounding    = EditorThemeConfigInternal::readSavedRadius( theme, hashed_string( EditorThemeConfigInternal::kRadiusTabKey ) );
     }
+
+    EditorTheme& EditorTheme::getActive()
+    {
+        return getSubsystem<EditorTheme>();
+    }
 } // namespace sw::editor

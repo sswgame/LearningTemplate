@@ -411,6 +411,11 @@ namespace sw::editor
         return CatalogXMLTextInternal::joinPieces( text.substr( 0, parent._closeBegin ), middle, text.substr( parent._closeBegin ) );
     }
 
+    string CatalogXMLText::replaceElement( string_view text, const CatalogXMLElement& element, string_view elementText )
+    {
+        return CatalogXMLTextInternal::joinPieces( text.substr( 0, element._begin ), elementText, text.substr( element._end ) );
+    }
+
     expected<string> CatalogXMLText::removeElement( string_view text, const CatalogXMLElement& element )
     {
         if ( element._parent.has_value() == false )

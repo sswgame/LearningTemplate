@@ -1,6 +1,6 @@
 /**
  * @file FractureWatches.cpp
- * @brief 파괴 컴포넌트의 자동화 감시 값입니다. `Fracture.Fractured`(부서졌는가) · `Fracture.DynamicBodies`(날아가는 조각 바디 수).
+ * @brief 파괴 컴포넌트의 자동화 감시 값입니다. `Fracture.Fractured`(부서졌는가) · `Fracture.DynamicBodies`(날아가는 조각 바디 수) · `Fracture.StaticBodies`(붙어 선 조각 바디 수).
  */
 #include "pch.h"
 
@@ -38,9 +38,19 @@ namespace sw
                 outValue.setNumber( static_cast<float64>( pFracture->getDynamicBodyCount() ) );
                 return true;
             }
+
+            [[nodiscard]] static bool readStaticBodies( const AutomationWatchQuery& query, AutomationWatchValue& outValue )
+            {
+                const FractureBaseComponent* pFracture = findTargetFracture( query, outValue );
+                if ( pFracture == nullptr )
+                    return false;
+                outValue.setNumber( static_cast<float64>( pFracture->getStaticBodyCount() ) );
+                return true;
+            }
         };
     } // namespace
 
     SW_AUTOMATION_QUERY_WATCH( fractureFractured, "Fracture.Fractured", "1 once the fracture component on target has broken", &FractureWatchesInternal::readFractured, true, false );
     SW_AUTOMATION_QUERY_WATCH( fractureDynamicBodies, "Fracture.DynamicBodies", "Flying piece bodies of the fracture component on target", &FractureWatchesInternal::readDynamicBodies, true, false );
+    SW_AUTOMATION_QUERY_WATCH( fractureStaticBodies, "Fracture.StaticBodies", "Static bodies of the pieces still anchored on the fracture component on target", &FractureWatchesInternal::readStaticBodies, true, false );
 } // namespace sw

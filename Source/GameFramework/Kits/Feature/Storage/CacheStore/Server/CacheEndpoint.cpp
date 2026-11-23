@@ -30,6 +30,18 @@ namespace sw
                 return s_clock;
             }
 
+            /** @brief `host[:port]` 의 호스트입니다(`NetAddress::parse` 와 같은 꼴). `[IPv6]` 는 대괄호를 벗기고, 쌍점이 둘 이상인 글은 포트 없는 IPv6 다 — TLS 서버 이름으로 쓰인다. */
+            static string_view extractHost( string_view address )
+            {
+                if ( address.empty() == false && address.front() == '[' )
+                {
+                    const size_t close = address.find( ']' );
+                    return close == string_view::npos ? string_view{} : address.substr( 1, close - 1 );
+                }
+                const size_t colon = address.find( ':' );
+                return colon != address.rfind( ':' ) ? address : address.substr( 0, colon );
+            }
+
             [[nodiscard]] static expected<void> applyQueryArgument( string_view name, string_view value, CacheEndpoint& outEndpoint )
             {
                 if ( name == "prefix" )
@@ -143,10 +155,13 @@ namespace sw
             tlsContext = std::move( *created );
         }
         RESPStoreConfig settings;
-        settings._address   = parsed._address;
-        settings._keyPrefix = parsed._keyPrefix;
-        settings._timeoutMs = parsed._timeoutMs;
-        const size_t colon  = secret.find( ':' );
+        settings._address                      = parsed._address;
+        settings._keyPrefix                    = parsed._keyPrefix;
+        settings._timeoutMs                    = parsed._timeoutMs;
+        unique_ptr<IStreamTransport> transport = StreamTransportFactory::createPlatformTransport();
+        if ( transport == nullptr )
+            return unexpected( Error{ ErrorKind::Unsupported, "cache driver resp: this platform has no stream transport" } );
+        const size_t colon = secret.find( ':' );
         if ( colon == string_view::npos )
         {
             settings._password = string( secret );
@@ -156,15 +171,14 @@ namespace sw
             settings._userName = string( secret.substr( 0, colon ) );
             settings._password = string( secret.substr( colon + 1 ) );
         }
-        unique_ptr<IStreamTransport> transport = StreamTransportFactory::createPlatformTransport();
-        if ( transport == nullptr )
-            return unexpected( Error{ ErrorKind::Unsupported, "cache driver resp: this platform has no stream transport" } );
         StreamTransportConfig transportSettings;
-        transportSettings._ioThreadCount      = 1;
-        transportSettings._maxConnections     = 4;
-        transportSettings._idleTimeoutSeconds = 0.0; // 캐시 연결은 조용해도 유지한다. 구독 연결이 그렇다
-        unique_ptr<RESPEphemeralStore> store  = make_unique<RESPEphemeralStore>( CacheStoreFactoryInternal::getRESPClock() );
-        if ( expected<void> initialized = store->initialize( std::move( transport ), transportSettings, settings, std::move( tlsContext ) ); initialized.has_value() == false )
+        transportSettings._ioThreadCount           = 1;
+        transportSettings._maxConnections          = 4;
+        transportSettings._idleTimeoutSeconds      = 0.0; // 캐시 연결은 조용해도 유지한다. 구독 연결이 그렇다
+        unique_ptr<RESPEphemeralStore> store       = make_unique<RESPEphemeralStore>( CacheStoreFactoryInternal::getRESPClock() );
+        const expected<void>           initialized = store->initialize( std::move( transport ), transportSettings, settings, std::move( tlsContext ) );
+        StringUtil::wipeSecret( settings._password ); // 다시 이을 때 쓰는 사본은 저장소가 지닌다
+        if ( initialized.has_value() == false )
             return unexpected( initialized.error() );
         return unique_ptr<IEphemeralStore>( std::move( store ) );
     }
@@ -174,8 +188,7 @@ namespace sw
         outEndpoint               = CacheEndpoint{};
         const size_t      query   = endpoint.find( '?' );
         const string_view address = endpoint.substr( 0, query );
-        const size_t      colon   = address.rfind( ':' );
-        outEndpoint._host         = string( address.substr( 0, colon ) );
+        outEndpoint._host         = string( CacheStoreFactoryInternal::extractHost( address ) );
         if ( outEndpoint._host.empty() )
             return unexpected( Error{ ErrorKind::InvalidArgument, "cache endpoint needs host:port" } );
         if ( PlatformSocketUtil::resolveAddress( address, kDefaultRESPPort, outEndpoint._address ) == false )

@@ -1,0 +1,31 @@
+<?asset guid="5115bc2de5be1882c6519acafd5089cf"?>
+<Scene formatVersion="3" name="Facial">
+	<!-- 표정 · 립싱크 시나리오(automation/facial · lipsync)의 무대 — 시험 머리(models_raw/testhead.gltf, 모프 일곱)에 얼굴 리그(data/testhead.facial.xml)를 건다. 깜빡임 · 사카드는 끈다(값이 시간에 흔들리지 않게). -->
+	<SceneSettings _bStreaming="false" _unloadMargin="0" _maxCellLoadsPerFrame="0" _addToWorldBudgetMicroseconds="0">
+		<_cellGrid _cellSize="0" _loadingRadius="0" />
+	</SceneSettings>
+	<entities>
+		<entity id="1" name="GameCamera">
+			<GameObject _schemaVersion="0" _name="GameCamera" _bActive="true">
+				<_listComponent>
+					<CameraComponent _localID="17709685451340727998" _localPosition="0,1.62,-0.8" _localRotation="0,0,0" _localScale="1,1,1" _attachOwner="None" _attachComponent="None" _fovY="51.5662" _nearZ="0.05" _farZ="100" _orthoHeight="10" _priority="0" _role="Game" _bOrthographic="false" />
+				</_listComponent>
+			</GameObject>
+		</entity>
+		<entity id="2" name="Sun">
+			<GameObject _schemaVersion="0" _name="Sun" _bActive="true">
+				<_listComponent>
+					<DirectionalLightComponent _localID="51927904365891271" _localPosition="0,0,0" _localRotation="0.356582,-2.338715,0" _localScale="1,1,1" _attachOwner="None" _attachComponent="None" _color="1,1,1" _intensity="1.2" _ambient="0.5" _shadowExtent="8" _shadowDistance="20" _bCastShadow="false" />
+				</_listComponent>
+			</GameObject>
+		</entity>
+		<entity id="3" name="Head">
+			<GameObject _schemaVersion="0" _name="Head" _bActive="true">
+				<_listComponent>
+					<SkeletalMeshComponent _localID="15127961318995883145" _localPosition="0,0,0" _localRotation="0,3.1415927,0" _localScale="1,1,1" _attachOwner="None" _attachComponent="None" _meshID="game/playground/models/testhead.mesh" _materialPath="engine/materials/defaultmaterial.material" _boundsRadius="1" _gpuSpinSeed="0" _bVisible="true" _skeletonPath="game/playground/models/testhead/testhead.skeleton.xml" _updateRateDivisor="1" _bFollowParentPose="false" _visibilityBasedTickOption="AlwaysTickPose" />
+					<FacialAnimationComponent _localID="11666666369737208355" _facialRigPath="game/playground/data/testhead.facial.xml" _bBlink="false" _bSaccades="false" />
+				</_listComponent>
+			</GameObject>
+		</entity>
+	</entities>
+</Scene>

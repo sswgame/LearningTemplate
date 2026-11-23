@@ -545,7 +545,7 @@ namespace sw::editor
         for ( const TagID tag : pObj->getTags().getTags() )
         {
             fixed_string<constant::buffer::kMax128> label;
-            formatstring( label.data(), label.capacity(), "Tag %s", tag.getString() );
+            formatstring( label.data(), label.capacity(), "Tag %#", tag.getString() );
             outMenu._listLabel.emplace_back( label.view() );
         }
     }

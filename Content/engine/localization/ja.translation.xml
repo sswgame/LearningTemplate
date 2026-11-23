@@ -570,6 +570,10 @@
 		<entry key="EdPluginVisualizer.ParkLayoutTip"
 		       text="ThemePark 配置ファイル(rides.xml)のアトラクションの足跡、入口、コースターのトラック"
 		       sourceHash="40b20210c0343418" />
+		<entry key="EdPluginVisualizer.SplinesLabel" text="スプライン" sourceHash="c80e88bdeab5993d" />
+		<entry key="EdPluginVisualizer.SplinesTip"
+		       text="シーンの各スプラインの曲線 - 選択中のスプラインは制御点のハンドルをドラッグ（Shapes）"
+		       sourceHash="f23fe5163d0d582d" />
 		<entry key="EdPluginWidget.Account" text="アカウント" sourceHash="846b3790b6e25c1c" />
 		<entry key="EdPluginWidget.AccountIdHex" text="アカウント id(16進数)" sourceHash="b6db0ef22675ed05" />
 		<entry key="EdPluginWidget.ActingRole" text="担当ロール" sourceHash="25bba11d3a172de3" />
