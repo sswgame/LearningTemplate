@@ -225,7 +225,7 @@ namespace sw
         unique_ptr<IRHICommandList> createCommandList() override;
 
         /** @brief 커맨드 리스트를 제출합니다. GL 은 기록이 곧 실행이라 즉시 모드에서만 glFlush 합니다. */
-        void executeCommandList( IRHICommandList* pCmdList ) override;
+        void executeCommandListInternal( IRHICommandList* pCmdList ) override;
 
     private:
         /** @brief 타임스탬프 계측 능력입니다. 디바이스의 같은 이름 함수로 넘깁니다(수명은 디바이스와 같다). */

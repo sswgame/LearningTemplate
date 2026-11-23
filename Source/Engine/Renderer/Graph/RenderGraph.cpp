@@ -46,17 +46,17 @@ namespace sw
             node._execute( passContext );
         }
 
-        void recordRenderPass( RenderGraphNode* pNode, const vector<RenderGraphResourceAccess>& listAccess, IRHICommandList* pCmdList, bool bAlreadyBegun )
+        RHIClosedCommandList recordRenderPass( RenderGraphNode* pNode, const vector<RenderGraphResourceAccess>& listAccess, IRHICommandList* pCmdList, bool bAlreadyBegun )
         {
             const bool bNodeNotRecordable = pNode == nullptr || pCmdList == nullptr || pNode->_execute.isBound() == false;
             if ( bNodeNotRecordable )
-                return;
+                return pCmdList != nullptr && bAlreadyBegun ? pCmdList->closeCommandList() : RHIClosedCommandList{}; // 레벨 배리어는 이미 이 리스트에 있다
 
             // 레벨의 첫 리스트는 렌더 스레드가 이미 열어 배리어를 앞머리에 기록해 뒀다. 이어서 기록한다.
             if ( bAlreadyBegun == false )
                 pCmdList->beginCommandList();
             recordPassBody( *pNode, listAccess, pCmdList );
-            pCmdList->endCommandList();
+            return pCmdList->closeCommandList();
         }
 
         /**
@@ -244,9 +244,10 @@ namespace sw
         IRHICommandList*                         _pPassCmdList{ nullptr };
         const vector<RenderGraphResourceAccess>* _pListAccess{ nullptr }; ///< 이번 계획의 접근
         /// @brief 렌더 스레드가 이미 열고 레벨 배리어를 기록한 리스트인지 나타냅니다(레벨의 첫 엔트리입니다).
-        bool _bAlreadyBegun{ false }; ///< NOLINT(sw-bool-flag): 집합체다(중괄호 · 지정 초기화로 만든다) — C++17 비트필드는 기본값을 둘 수 없어 `T x;` 가 값을 남기지 않는다
+        bool                 _bAlreadyBegun{ false }; ///< NOLINT(sw-bool-flag): 집합체다(중괄호 · 지정 초기화로 만든다) — C++17 비트필드는 기본값을 둘 수 없어 `T x;` 가 값을 남기지 않는다
+        RHIClosedCommandList _closed{};               ///< 기록을 닫은 값(기록하지 못했으면 빈 값)
 
-        void record() { recordRenderPass( _pNode, *_pListAccess, _pPassCmdList, _bAlreadyBegun ); }
+        void record() { _closed = recordRenderPass( _pNode, *_pListAccess, _pPassCmdList, _bAlreadyBegun ); }
     };
 } // namespace sw
 
@@ -816,16 +817,14 @@ namespace sw
         // 그래픽스 리스트를 닫아 넘기고 다시 연다 — 포크의 신호와 조인의 대기는 큐에 넘긴 일에만 걸리므로 그 자리까지의 기록을 먼저 넘긴다.
         const auto handOffGraphics = [&device, &graphicsList]()
         {
-            graphicsList.endCommandList();
-            device.executeCommandList( &graphicsList );
+            device.executeCommandList( graphicsList.closeCommandList() );
             graphicsList.beginCommandList();
         };
         const auto joinBatches = [&]( const vector<uint32>& listBatch )
         {
             if ( listBatch.empty() )
                 return;
-            graphicsList.endCommandList();
-            device.executeCommandList( &graphicsList );
+            device.executeCommandList( graphicsList.closeCommandList() );
             for ( uint32 batch : listBatch )
             {
                 device.waitForAsyncCompute( listBatchPoint[batch] );
@@ -861,9 +860,9 @@ namespace sw
 
             if ( step._queue == RHIQueueKind::AsyncCompute && step._bEndsBatch != 0 )
             {
-                pAsyncList->endCommandList();
+                RHIClosedCommandList closedBatch = pAsyncList->closeCommandList();
                 handOffGraphics(); // 포크 지점 — 이 묶음은 여기까지의 그래픽스 일 뒤에 시작한다
-                listBatchPoint[step._batch] = device.submitAsyncCompute( pAsyncList );
+                listBatchPoint[step._batch] = device.submitAsyncCompute( std::move( closedBatch ) );
             }
         }
         joinBatches( _listFinalJoinBatch );
@@ -942,8 +941,7 @@ namespace sw
         {
             if ( pSerialList == nullptr )
                 return;
-            pSerialList->endCommandList();
-            device.executeCommandList( pSerialList );
+            device.executeCommandList( pSerialList->closeCommandList() );
             pSerialList = nullptr;
         };
         // 레벨 폭 계측: 병렬로 기록한 레벨 · 패스 수, 이어 기록한 패스 수, 가장 넓은 레벨. 병렬 레벨의 시간은 `RT.Graph.parallelLevel`(기록 · 합류 · 제출)이다.
@@ -1127,8 +1125,7 @@ namespace sw
 
         for ( ParallelPassEntry& entry : listPassEntry )
         {
-            if ( entry._pPassCmdList != nullptr )
-                device.executeCommandList( entry._pPassCmdList );
+            device.executeCommandList( std::move( entry._closed ) ); // 기록하지 못한 패스는 빈 값이다
         }
     }
 

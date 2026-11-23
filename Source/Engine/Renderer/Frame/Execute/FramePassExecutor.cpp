@@ -258,8 +258,7 @@ namespace sw
 
         // 프리패스 리스트를 먼저 닫아 큐에 낸다. 뷰마다의 리스트와 병렬 패스 리스트보다 인다이렉트 인자 준비가 GPU 타임라인에서 먼저 끝나게 하려는 것이다
         // (같은 큐의 ExecuteCommandLists 호출 순서가 곧 실행 순서다).
-        _pCmd->endCommandList();
-        pDevice->executeCommandList( _pCmd );
+        pDevice->executeCommandList( _pCmd->closeCommandList() );
         _pCmd = nullptr;
 
         // 주 시점이 읽는 렌더 텍스처(CCTV 모니터)를 먼저 그린다. 주 시점의 패스 시드는 추가 뷰가 덮어쓰므로 보존해 둔다.
@@ -307,8 +306,7 @@ namespace sw
             return;
         pCmd->beginCommandList();
         _state._gpuFrameClock.writeFrameEnd( *pCmd );
-        pCmd->endCommandList();
-        pDevice->executeCommandList( pCmd );
+        pDevice->executeCommandList( pCmd->closeCommandList() );
     }
 
     uint32 FramePassExecutor::renderExtraViewsOfKind( IRHIDevice* pDevice, RenderViewOutputKind outputKind )
@@ -364,8 +362,7 @@ namespace sw
         // 직렬 경로도 그래프가 패스 문맥에 이 리스트를 싣는다(`RenderGraph::execute` — 병렬과 같은 `recordPassBody`).
         pMainCmd->beginCommandList();
         const bool bOk = _state._graph.execute( _graphContext, pMainCmd );
-        pMainCmd->endCommandList();
-        pDevice->executeCommandList( pMainCmd );
+        pDevice->executeCommandList( pMainCmd->closeCommandList() );
         return bOk;
     }
 
@@ -397,8 +394,7 @@ namespace sw
             pCmd->prepareTextureForShaderRead( view._pOutputTexture->getHandle() );
         else if ( view._outputKind == RenderViewOutputKind::ViewportTarget && view._viewportTarget != 0 )
             pCmd->prepareTextureForShaderRead( view._viewportTarget );
-        pCmd->endCommandList();
-        pDevice->executeCommandList( pCmd );
+        pDevice->executeCommandList( pCmd->closeCommandList() );
 
         _pActiveView = &_state.getMainView();
     }
@@ -737,8 +733,7 @@ namespace sw
             }
         }
         _nanCheck.requestReadback( *pCmd );
-        pCmd->endCommandList();
-        pDevice->executeCommandList( pCmd );
+        pDevice->executeCommandList( pCmd->closeCommandList() );
     }
 
     bool FramePassExecutor::bindPassCallbacks()

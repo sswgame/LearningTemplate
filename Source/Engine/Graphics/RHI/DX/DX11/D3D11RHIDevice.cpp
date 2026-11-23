@@ -1295,7 +1295,7 @@ namespace sw
         (void)VectorUtil::removeSingleSwap( _listLiveCmd, pCmdList ); // 등록되지 않은 리스트면 뺄 것이 없다
     }
 
-    void D3D11RHIDevice::executeCommandList( IRHICommandList* pCmdList )
+    void D3D11RHIDevice::executeCommandListInternal( IRHICommandList* pCmdList )
     {
         if ( pCmdList == nullptr || _immediateContext.isValid() == false )
             return;

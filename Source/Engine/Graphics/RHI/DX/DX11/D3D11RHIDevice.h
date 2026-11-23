@@ -262,7 +262,7 @@ namespace sw
         unique_ptr<IRHICommandList> createCommandList() override;
 
         /** @brief 커맨드 리스트를 즉시 컨텍스트의 현재 위치에서 실행합니다(ExecuteCommandList). */
-        void executeCommandList( IRHICommandList* pCmdList ) override;
+        void executeCommandListInternal( IRHICommandList* pCmdList ) override;
 
         /** @brief 살아 있는 커맨드 리스트를 등록합니다(소유하지 않는 참조). */
         void registerCommandList( D3D11RHICommandList* pCmdList );

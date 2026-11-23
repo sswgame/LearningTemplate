@@ -314,12 +314,12 @@ namespace sw
         void                         destroySwapChainInternal( IRHISwapChain& swapChain ) override;
         [[nodiscard]] bool           acquireSwapChainImageInternal( IRHISwapChain& swapChain ) override { return useSwapChain( &swapChain ).isBackBufferReady(); }
 
-        void executeCommandList( IRHICommandList* pCmdList ) override;
-        void executeCommandListImmediate( IRHICommandList* pCmdList ) override;
+        void executeCommandListInternal( IRHICommandList* pCmdList ) override;
+        void executeCommandListImmediateInternal( IRHICommandList* pCmdList ) override;
         /** @brief COMPUTE 종류의 리스트를 만듭니다. 컴퓨트 큐가 없으면(만들지 못한 장치) 오류를 남기고 nullptr 입니다. */
         unique_ptr<IRHICommandList> createAsyncComputeCommandList() override;
         /** @brief 그래픽스 일을 큐에 내고 신호 → 컴퓨트 큐가 기다리고 실행 → 컴퓨트 펜스 신호. 그 값을 돌려준다. */
-        RHIQueueSyncPoint submitAsyncCompute( IRHICommandList* pCmdList ) override;
+        RHIQueueSyncPoint submitAsyncComputeInternal( IRHICommandList* pCmdList ) override;
         /** @brief 그 전 그래픽스 일을 큐에 낸 뒤 그래픽스 큐가 컴퓨트 펜스 값을 기다리게 합니다. */
         void waitForAsyncCompute( RHIQueueSyncPoint point ) override;
         /**

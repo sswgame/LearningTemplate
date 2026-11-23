@@ -1163,7 +1163,7 @@ namespace sw
         _listPendingCommandBuffer.clear();
     }
 
-    void WebGPURHIDevice::executeCommandList( IRHICommandList* pCmdList )
+    void WebGPURHIDevice::executeCommandListInternal( IRHICommandList* pCmdList )
     {
         WebGPURHICommandList* const pList = static_cast<WebGPURHICommandList*>( pCmdList );
         if ( pList == nullptr )
@@ -1178,7 +1178,7 @@ namespace sw
         openFrameEncoder();
     }
 
-    void WebGPURHIDevice::executeCommandListImmediate( IRHICommandList* pCmdList )
+    void WebGPURHIDevice::executeCommandListImmediateInternal( IRHICommandList* pCmdList )
     {
         WebGPURHICommandList* const pList    = static_cast<WebGPURHICommandList*>( pCmdList );
         const WGPUCommandBuffer     commands = pList != nullptr ? pList->takeFinishedCommandBuffer() : nullptr;

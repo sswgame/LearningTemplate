@@ -1425,7 +1425,7 @@ namespace sw
         return make_unique<OpenGLRHICommandList>( this );
     }
 
-    void OpenGLRHIDevice::executeCommandList( IRHICommandList* pCmdList )
+    void OpenGLRHIDevice::executeCommandListInternal( IRHICommandList* pCmdList )
     {
         // 기록이 이미 GL 호출로 즉시 나갔으므로(beginCommandList 에서 컨텍스트 재바인딩까지 마침)
         // 순서를 맞출 일은 없다. 다만 GL 도 커맨드를 모아 뒀다가 보내므로, 즉시 모드에서는

@@ -564,7 +564,7 @@ namespace sw
          *          [지금까지의 세그먼트][이 리스트][새 세그먼트] 순서로 연결하고 endFrame 에서 한 번에
          *          큐로 넘긴다. 같은 큐의 제출 순서가 곧 실행 순서다. 그래픽스 실행 스레드 전용이다.
          */
-        virtual void executeCommandList( IRHICommandList* pCmdList ) = 0;
+        void executeCommandList( RHIClosedCommandList list ) { executeCommandListInternal( list.get() ); }
 
         /**
          * @brief 프레임 스트림과 무관하게 **곧바로** 큐에 제출합니다.
@@ -573,7 +573,7 @@ namespace sw
          *          프레임 중에 부르면 스트림 순서를 건너뛰므로 렌더 결과가 어긋난다.
          *          기본 구현은 executeCommandList 로 넘긴다(DX11/GL 처럼 기록이 곧 실행인 백엔드).
          */
-        virtual void executeCommandListImmediate( IRHICommandList* pCmdList ) { executeCommandList( pCmdList ); }
+        void executeCommandListImmediate( RHIClosedCommandList list ) { executeCommandListImmediateInternal( list.get() ); }
 
         /**
          * @brief 비동기 컴퓨트 큐에 낼 커맨드 리스트를 만듭니다. 컴퓨트 명령(디스패치 · 버퍼 배리어 · 복사)만 기록합니다.
@@ -586,7 +586,7 @@ namespace sw
          * @details 그래픽스 대기열과 프레임 스트림을 먼저 큐에 내고 그래픽스 큐가 신호한 값을 컴퓨트 큐가 기다린다. 돌려준 값은 `waitForAsyncCompute` 에 넘긴다.
          *          프레임 끝(`endFrame`)은 기다리지 않은 값을 모두 기다린 뒤 프레임 펜스를 신호한다 — 리스트 얼로케이터 · 지연 해제가 프레임 펜스 하나로 충분하다.
          */
-        virtual RHIQueueSyncPoint submitAsyncCompute( IRHICommandList* pCmdList );
+        RHIQueueSyncPoint submitAsyncCompute( RHIClosedCommandList list ) { return submitAsyncComputeInternal( list.get() ); }
         /**
          * @brief 그래픽스 큐가 @p point 까지의 비동기 컴퓨트 일을 기다리게 합니다(조인). 이 뒤에 넘기는 그래픽스 리스트부터 기다린다.
          * @details 그 전까지 넘긴 그래픽스 리스트는 기다리지 않도록 먼저 큐에 낸다 — 포크와 조인 사이의 그래픽스 일이 컴퓨트와 겹치는 자리다.
@@ -747,6 +747,12 @@ namespace sw
         [[nodiscard]] virtual bool restoreSurfaceInternal() { return true; }
         /** @brief `acquireSwapChainImage` 의 백엔드 훅입니다(렌더 스레드, 프레임 안). */
         [[nodiscard]] virtual bool acquireSwapChainImageInternal( IRHISwapChain& swapChain ) = 0;
+        /** @brief `executeCommandList` 의 백엔드 몸통입니다. 빈 값(nullptr)은 무시한다. */
+        virtual void executeCommandListInternal( IRHICommandList* pCmdList ) = 0;
+        /** @brief `executeCommandListImmediate` 의 백엔드 몸통입니다. 기본은 `executeCommandListInternal` 이다(기록이 곧 실행인 백엔드). */
+        virtual void executeCommandListImmediateInternal( IRHICommandList* pCmdList ) { executeCommandListInternal( pCmdList ); }
+        /** @brief `submitAsyncCompute` 의 백엔드 몸통입니다. */
+        virtual RHIQueueSyncPoint submitAsyncComputeInternal( IRHICommandList* pCmdList );
 
         /**
          * @brief `initializeInternal` 안에서 단계 하나가 끝났음을 찍습니다(이름은 문자열 상수). `initialize` 가 끝나면 단계별 ms 를 한 줄(`RHI.InitPhasesMs`)로 남긴다.

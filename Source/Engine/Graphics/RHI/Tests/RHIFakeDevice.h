@@ -196,7 +196,7 @@ namespace sw::test
             return make_unique<FakeRHICommandList>( _createdCount++ );
         }
 
-        void executeCommandList( IRHICommandList* pCmdList ) override
+        void executeCommandListInternal( IRHICommandList* pCmdList ) override
         {
             _listExecuted.push_back( static_cast<FakeRHICommandList*>( pCmdList ) );
             _listQueueEvent.push_back( QueueEvent{ 'G', 0 } );
@@ -204,7 +204,7 @@ namespace sw::test
 
         unique_ptr<IRHICommandList> createAsyncComputeCommandList() override { return createCommandList(); }
 
-        RHIQueueSyncPoint submitAsyncCompute( IRHICommandList* ) override
+        RHIQueueSyncPoint submitAsyncComputeInternal( IRHICommandList* ) override
         {
             const uint64 value = ++_asyncSubmitCount;
             _listQueueEvent.push_back( QueueEvent{ 'F', value } );

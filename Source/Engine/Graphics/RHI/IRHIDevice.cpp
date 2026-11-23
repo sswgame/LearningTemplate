@@ -192,7 +192,7 @@ namespace sw
         return nullptr;
     }
 
-    RHIQueueSyncPoint IRHIDevice::submitAsyncCompute( [[maybe_unused]] IRHICommandList* pCmdList )
+    RHIQueueSyncPoint IRHIDevice::submitAsyncComputeInternal( [[maybe_unused]] IRHICommandList* pCmdList )
     {
         SW_LOG_ERROR_ONCE_ID( "RHI.AsyncComputeUnsupported", "%# has no async compute queue (_bAsyncCompute is false) - the caller must check the capability", getBackendName() );
         return RHIQueueSyncPoint{};

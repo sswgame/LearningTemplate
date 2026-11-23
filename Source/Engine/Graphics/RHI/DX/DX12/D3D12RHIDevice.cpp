@@ -1253,7 +1253,7 @@ namespace sw
         return pList;
     }
 
-    void D3D12RHIDevice::executeCommandListImmediate( IRHICommandList* pCmdList )
+    void D3D12RHIDevice::executeCommandListImmediateInternal( IRHICommandList* pCmdList )
     {
         auto* pNative = static_cast<D3D12RHICommandList*>( pCmdList );
         if ( pNative == nullptr || _commandQueue == nullptr )
@@ -1272,7 +1272,7 @@ namespace sw
         _commandQueue->ExecuteCommandLists( 1, arr );
     }
 
-    void D3D12RHIDevice::executeCommandList( IRHICommandList* pCmdList )
+    void D3D12RHIDevice::executeCommandListInternal( IRHICommandList* pCmdList )
     {
         auto*      pNative                  = static_cast<D3D12RHICommandList*>( pCmdList );
         const bool bCannotSubmitCommandList = pNative == nullptr || _commandQueue == nullptr || _pActiveFrameList == nullptr;
@@ -1386,11 +1386,11 @@ namespace sw
         return list;
     }
 
-    RHIQueueSyncPoint D3D12RHIDevice::submitAsyncCompute( IRHICommandList* pCmdList )
+    RHIQueueSyncPoint D3D12RHIDevice::submitAsyncComputeInternal( IRHICommandList* pCmdList )
     {
         auto* pNative = static_cast<D3D12RHICommandList*>( pCmdList );
         if ( _computeQueue == nullptr )
-            return IRHIDevice::submitAsyncCompute( pCmdList );
+            return IRHIDevice::submitAsyncComputeInternal( pCmdList );
         if ( pNative == nullptr || pNative->getNativeCommandList() == nullptr )
             return RHIQueueSyncPoint{};
         // 포크: 지금까지 넘긴 그래픽스 일(프레임 스트림 · 리스트 · 구조 버퍼 복사)을 큐에 내고 그 끝을 신호한다. 컴퓨트 큐는 그 신호를 기다린 뒤 이 리스트를 실행한다.

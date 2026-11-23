@@ -323,12 +323,12 @@ namespace sw
         unique_ptr<IRHICommandList> createCommandList() override;
 
         /** @brief 커맨드 리스트를 프레임 스트림의 제출 순서에 연결합니다. 즉시 모드면 바로 제출합니다. */
-        void executeCommandList( IRHICommandList* pCmdList ) override;
-        void executeCommandListImmediate( IRHICommandList* pCmdList ) override;
+        void executeCommandListInternal( IRHICommandList* pCmdList ) override;
+        void executeCommandListImmediateInternal( IRHICommandList* pCmdList ) override;
         /** @brief 그래픽스 패밀리의 두 번째 큐에 낼 리스트를 만듭니다(패밀리가 같아 일반 리스트와 같은 풀 · 같은 바인딩이다). 그 큐가 없으면 오류를 남기고 nullptr 입니다. */
         unique_ptr<IRHICommandList> createAsyncComputeCommandList() override;
         /** @brief 그래픽스 일을 큐에 내며 세마포어를 신호하고, 두 번째 큐가 그것을 기다려 리스트를 실행한 뒤 다른 세마포어를 신호합니다. 그 세마포어의 번호를 돌려준다. */
-        RHIQueueSyncPoint submitAsyncCompute( IRHICommandList* pCmdList ) override;
+        RHIQueueSyncPoint submitAsyncComputeInternal( IRHICommandList* pCmdList ) override;
         /** @brief 그 전 그래픽스 일을 큐에 낸 뒤, 다음 그래픽스 제출이 그 세마포어를 기다리게 합니다. */
         void waitForAsyncCompute( RHIQueueSyncPoint point ) override;
 

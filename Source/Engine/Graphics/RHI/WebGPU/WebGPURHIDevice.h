@@ -319,8 +319,8 @@ namespace sw
         bool                        supportsInstancedSceneDraw() const override { return true; }
         const utf8*                 getBackendName() const override { return "WebGPU"; }
         unique_ptr<IRHICommandList> createCommandList() override;
-        void                        executeCommandList( IRHICommandList* pCmdList ) override;
-        void                        executeCommandListImmediate( IRHICommandList* pCmdList ) override;
+        void                        executeCommandListInternal( IRHICommandList* pCmdList ) override;
+        void                        executeCommandListImmediateInternal( IRHICommandList* pCmdList ) override;
 
         /** @brief 타임스탬프 계측을 켜고 끕니다(`IRHITimestampProvider` — 어느 스레드에서나 부른다). 쿼리 세트는 켠 뒤 첫 프레임 시작에 만든다. */
         void setTimestampEnabled( bool bEnabled ) { _bTimestampEnabled.store( bEnabled ? SW_TRUE : SW_FALSE, std::memory_order_relaxed ); }

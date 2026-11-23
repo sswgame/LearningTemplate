@@ -2840,7 +2840,7 @@ namespace sw
         return make_unique<VulkanRHICommandList>( this );
     }
 
-    void VulkanRHIDevice::executeCommandListImmediate( IRHICommandList* pCmdList )
+    void VulkanRHIDevice::executeCommandListImmediateInternal( IRHICommandList* pCmdList )
     {
         VulkanRHICommandList* pList = static_cast<VulkanRHICommandList*>( pCmdList );
         if ( pList == nullptr || _graphicsQueue == VK_NULL_HANDLE )
@@ -2879,7 +2879,7 @@ namespace sw
         }
     }
 
-    void VulkanRHIDevice::executeCommandList( IRHICommandList* pCmdList )
+    void VulkanRHIDevice::executeCommandListInternal( IRHICommandList* pCmdList )
     {
         VulkanRHICommandList* pList                    = static_cast<VulkanRHICommandList*>( pCmdList );
         const bool            bCannotSubmitCommandList = pList == nullptr || _bFrameStarted == SW_FALSE || _activeFrameBuffer == VK_NULL_HANDLE;
@@ -3206,10 +3206,10 @@ namespace sw
         return list;
     }
 
-    RHIQueueSyncPoint VulkanRHIDevice::submitAsyncCompute( IRHICommandList* pCmdList )
+    RHIQueueSyncPoint VulkanRHIDevice::submitAsyncComputeInternal( IRHICommandList* pCmdList )
     {
         if ( _asyncComputeQueue == VK_NULL_HANDLE )
-            return IRHIDevice::submitAsyncCompute( pCmdList );
+            return IRHIDevice::submitAsyncComputeInternal( pCmdList );
         VulkanRHICommandList* pList = static_cast<VulkanRHICommandList*>( pCmdList );
         if ( pList == nullptr || pList->nativeCommandBuffer() == VK_NULL_HANDLE || _bFrameStarted == SW_FALSE )
             return RHIQueueSyncPoint{};

@@ -241,6 +241,46 @@ namespace sw
         virtual void writeBreadcrumb( uint32 markerID ) = 0;
     };
 
+    class IRHICommandList;
+
+    /**
+     * @class RHIClosedCommandList
+     * @brief 닫은 커맨드 리스트 하나입니다 — 제출 입구(`IRHIDevice::executeCommandList` · `submitAsyncCompute`)가 받는 유일한 값이고 `IRHICommandList::closeCommandList` 만 만듭니다.
+     * @details 리스트 포인터를 그대로 받으면 닫지 않은 리스트 · 이미 낸 리스트를 내도 컴파일된다(DX12 는 장치가 죽고 Vulkan 은 검증 오류, GL 은 조용하다). 옮기기만 되므로 한 번 닫은 것을 두 번 낼 수 없다.
+     *          기본값은 빈 값이고 제출이 무시한다(기록하지 못한 패스).
+     */
+    class RHIClosedCommandList
+    {
+    public:
+        RHIClosedCommandList() = default;
+        RHIClosedCommandList( RHIClosedCommandList&& other ) noexcept
+            : _pList{ other._pList }
+        {
+            other._pList = nullptr;
+        }
+        RHIClosedCommandList& operator=( RHIClosedCommandList&& other ) noexcept
+        {
+            _pList       = other._pList;
+            other._pList = nullptr;
+            return *this;
+        }
+        RHIClosedCommandList( const RHIClosedCommandList& )            = delete;
+        RHIClosedCommandList& operator=( const RHIClosedCommandList& ) = delete;
+
+        /** @brief 닫은 리스트입니다. 빈 값이면 nullptr 입니다. */
+        IRHICommandList* get() const { return _pList; }
+
+    private:
+        friend class IRHICommandList;
+        explicit RHIClosedCommandList( IRHICommandList& list )
+            : _pList{ &list }
+        {
+        }
+
+    private:
+        IRHICommandList* _pList{ nullptr };
+    };
+
     /**
      * @class IRHICommandList
      * @brief GPU 그래픽스 명령과 컴퓨트 명령을 기록하는 커맨드 리스트입니다 — 패스 기록 면(`IRHIPassCommandList`)에 기록 범위와 자원 상태 전이 · 버퍼 복사를 더한다.
@@ -256,7 +296,12 @@ namespace sw
         // 기록 범위
         // ------------------------------------------------------------------------------
         virtual void beginCommandList() = 0;
-        virtual void endCommandList()   = 0;
+        /** @brief 기록을 닫고 제출할 값을 돌려줍니다. 다시 기록하려면 `beginCommandList` 다(돌려받은 값을 낸 뒤). */
+        [[nodiscard]] RHIClosedCommandList closeCommandList()
+        {
+            endCommandList();
+            return RHIClosedCommandList{ *this };
+        }
 
         // ------------------------------------------------------------------------------
         // 텍스처 상태 전이 (`kRHIBackBufferTexture` 는 스왑체인, 0 은 오류)
@@ -360,5 +405,9 @@ namespace sw
          *          DX11 · WebGPU 는 디스패치 · 패스가 순서를 지켜 할 일이 없다.
          */
         virtual void uavBarrierTexture( RHITextureHandle texture ) = 0;
+
+    protected:
+        /** @brief 네이티브 기록을 닫습니다. 부르는 쪽은 `closeCommandList` 를 쓴다. */
+        virtual void endCommandList() = 0;
     };
 } // namespace sw
