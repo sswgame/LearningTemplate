@@ -242,25 +242,8 @@ namespace sw
                     return;
             }
         }
-        Equipment equipment = _equipment;
-        for ( const EquipmentSlot& slot : _equipment.getSlots() )
-        {
-            vector<InventorySlot> listRemoved;
-            (void)equipment.unequip( slot._name, listRemoved ); // 빈 칸은 EmptySlot — 지금 차림을 모두 벗긴다
-        }
-        for ( const EquipmentSlot& slot : listWorn )
-        {
-            vector<InventorySlot> listRemoved;
-            const EquipResult     result = equipment.equip( slot._name, slot._item, listRemoved );
-            if ( result != EquipResult::Ok )
-            {
-                SW_LOG_WARNING_ID( "CharacterEquipment.SavedItemNotWorn", "Saved '%#' in slot '%#' cannot be worn now (%#) - it goes to the bag", slot._item._itemID.c_str(), slot._name.c_str(),
-                                   static_cast<uint32>( result ) );
-                (void)bag.addStack( slot._item );
-            }
-        }
-        _equipment = equipment;
-        _bag       = std::move( bag );
+        _equipment.restoreWorn( listWorn, bag );
+        _bag = std::move( bag );
     }
 
     void CharacterEquipmentComponent::restoreState( vector<uint8>&& bytes )

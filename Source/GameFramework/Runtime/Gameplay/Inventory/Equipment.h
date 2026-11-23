@@ -79,6 +79,12 @@ namespace sw
         EquipResult equipFromInventory( Inventory& inventory, int32 inventorySlot, const hashed_string& slot = hashed_string{} );
         /** @brief 함께 벗겨진 것까지 포함해 벗고 인벤토리에 넣습니다. 공간이 없거나 거부되면 그대로 두고 false 를 반환합니다. */
         [[nodiscard]] bool unequipToInventory( const hashed_string& slot, Inventory& inventory );
+        /**
+         * @brief 차림을 저장된 @p listWorn 으로 통째로 바꿉니다(이름과 아이템만 봅니다). 지금 낀 것은 사라진다 — 저장 이전의 차림이다.
+         * @details 모두 놓은 뒤 조건을 한 번 정리한다 — 하나씩 `equip` 하면 아직 놓지 않은 칸에 기대는 조건이 깨진 것으로 보이고, 낀 채 숨김인 아이템은 늘 거부된다.
+         *          낄 수 없는 것(없어진 칸 · 아이템, 받지 않는 칸, 조건이 깨져 함께 벗는 것)은 @p inventory 로 가고, 자리가 없으면 그 넘침 목록으로 간다(잃지 않는다).
+         */
+        void restoreWorn( const vector<EquipmentSlot>& listWorn, Inventory& inventory );
         /** @brief 낀 아이템의 인스턴스 상태(피해, 떨어져 나간 부품, 꾸미기 값)를 바꿉니다. 슬롯이 비어 있으면 false 입니다. */
         [[nodiscard]] bool setEquippedInstance( const hashed_string& slot, const InventorySlot& item );
 

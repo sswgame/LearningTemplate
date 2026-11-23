@@ -121,6 +121,42 @@ SW_TEST_CASE( InventoryCommandTest, DropEquipUnequipAndUse )
 }
 
 /**
+ * @brief [InventoryCommandTest] 저장된 차림을 놓을 때 칸 차례와 상관없이 조건이 맞고, 낀 채 숨김인 것은 숨김으로 남고, 낄 수 없는 것은 가방이 차도 잃지 않는다
+ */
+SW_TEST_CASE( InventoryCommandTest, RestoredWornItemsDoNotDependOnSlotOrderAndAreNeverLost )
+{
+    sw::ItemCatalog items;
+    SW_REQUIRE_TRUE( items.loadFromXMLText( R"(<ItemCatalog>
+  <Item id="helm" category="Armor" slot="Head" maxStack="1"><Requires equippedTag="InventoryCommandTest.Plate"/></Item>
+  <Item id="cape" category="Armor" slot="Back" maxStack="1" breakPolicy="KeepHidden"><Requires equippedTag="InventoryCommandTest.Missing"/></Item>
+  <Item id="plate" category="Armor" slot="Body" maxStack="1" tags="InventoryCommandTest.Plate"/>
+</ItemCatalog>)",
+                                            "InventoryCommandTest" ) );
+    sw::Equipment equipment;
+    equipment.initialize( &items, "Head,Back,Body" );
+    sw::Inventory bag;
+    SW_REQUIRE_TRUE( bag.initialize( &items, 1 ) );
+    SW_REQUIRE_EQUAL( 1, bag.addItem( sw::hashed_string( "plate" ), 1 ) ); // 가방이 찼다
+
+    const auto makeWorn = []( const utf8* pSlot, const utf8* pItem )
+    {
+        sw::EquipmentSlot worn;
+        worn._name         = sw::hashed_string( pSlot );
+        worn._item._itemID = sw::hashed_string( pItem );
+        worn._item._count  = 1;
+        return worn;
+    };
+    SW_EXPECT_LOG( "Equipment.SavedItemNotWorn" );
+    equipment.restoreWorn( { makeWorn( "Head", "helm" ), makeWorn( "Back", "cape" ), makeWorn( "Body", "plate" ), makeWorn( "Gone", "plate" ) }, bag );
+    SW_EXPECT_NOT_NULL( equipment.findEquipped( sw::hashed_string( "Head" ) ) ); // 하나씩 끼면 Body 를 놓기 전이라 조건이 깨진다
+    SW_EXPECT_NOT_NULL( equipment.findEquipped( sw::hashed_string( "Back" ) ) );
+    SW_EXPECT_TRUE( equipment.isSuppressed( sw::hashed_string( "Back" ) ) );
+    SW_EXPECT_NOT_NULL( equipment.findEquipped( sw::hashed_string( "Body" ) ) );
+    SW_REQUIRE_EQUAL( size_t( 1 ), bag.getOverflow().size() );
+    SW_EXPECT_TRUE( bag.getOverflow()[0]._itemID == sw::hashed_string( "plate" ) );
+}
+
+/**
  * @brief [InventoryCommandTest] 인벤토리 화면이 드는 장비 컴포넌트 약한 참조는 컴포넌트가 사라지면 빈다
  * @details 화면은 엔진 UI 가 소유해 씬 · 게임 인스턴스보다 오래 산다 — 날 포인터면 캐릭터가 지워진 뒤 다음 틱이 사라진 컴포넌트를 읽는다(상점 공급자와 같은 모양).
  */
