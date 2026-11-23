@@ -41,6 +41,7 @@ namespace sw
         , _cloudWindSpeedKmPerSecond{ 0.01f }
         , _cloudSoftness{ 0.15f }
         , _cloudColor{ 1.0f, 1.0f, 1.0f }
+        , _intensityScale{ 1.0f }
     {
     }
 
@@ -50,7 +51,7 @@ namespace sw
         gradient._zenithColor     = _zenithColor;
         gradient._horizonColor    = _horizonColor;
         gradient._groundColor     = _groundColor;
-        gradient._intensity       = _intensity;
+        gradient._intensity       = _intensity * _intensityScale;
         gradient._horizonExponent = _horizonExponent;
         gradient._mode            = _mode;
         gradient._hdriRotation    = _hdriRotation.radians();

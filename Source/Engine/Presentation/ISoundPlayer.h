@@ -47,6 +47,8 @@ namespace sw
         virtual SoundPlayingID postEventOn( GameObject& target, const hashed_string& eventName ) = 0;
         /** @brief @p object 의 소리 자리(에미터) 모두에 이 파라미터 값을 겁니다. 반복 소리(바람 · 마찰 · 엔진)의 크기 · 음높이를 게임 값이 움직입니다. */
         virtual void setObjectParameter( const GameObject& object, const hashed_string& name, float32 value ) = 0;
+        /** @brief 전역 게임 파라미터(RTPC)를 겁니다. 라이브러리의 범위로 묶고 `_seekSpeed` 로 따라갑니다. 날씨 · 시간대처럼 자리 없는 값이 2D 소리를 움직입니다. */
+        virtual void setParameter( const hashed_string& name, float32 value ) = 0;
         /** @brief 낸 소리를 멈춥니다. @p fadeSeconds 가 음수면 이벤트의 페이드입니다. 0 이나 끝난 번호는 아무 일도 하지 않습니다. */
         virtual void stop( SoundPlayingID playingID, float32 fadeSeconds ) = 0;
 

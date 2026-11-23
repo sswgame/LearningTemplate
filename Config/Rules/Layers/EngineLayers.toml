@@ -64,6 +64,7 @@ Server = 6                           # 전용 서버 운영(HTTP 끝점 · 관�
 "Animation/Sprite" = 6               # 스프라이트 클립 · 라이브러리 에셋 — Visual 의 SpriteComponent 가 든다(언리얼 Paper2D 의 Flipbook 이 스프라이트 컴포넌트 곁에 있는 것과 같다)
 # 7 — 애니메이션 단: 스켈레탈 메시 · 애니메이터와 그것을 따르는 것
 Animation = 7
+"Environment/Wind" = 6               # 씬의 바람(방향 · 풍속)은 천(7) · 식생 · 돛(8)이 함께 읽는다 — 월드 코어만 본다(언리얼 WindDirectionalSource 가 Engine 에 있는 자리)
 "Physics/Cloth" = 7                  # 천은 조상 스켈레탈 메시의 뼈 · 애니메이션 LOD 를 따른다(언리얼 ClothingSystemRuntime 이 Engine 위)
 "Visual/2D/Shadow" = 7               # 2D 그림자 가림막은 타일맵 외곽선을 읽는다(유니티 ShadowCaster2D 는 Tilemap 위 URP 2D)
 # 8 — 합성 기능: 애니메이션 · 물리 · 비주얼을 묶는 기능

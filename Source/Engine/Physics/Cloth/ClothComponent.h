@@ -70,6 +70,8 @@ namespace sw
         uint32 getColumnCount() const { return _columnCount; }
         /** @brief 세로 정점 수입니다. */
         uint32 getRowCount() const { return _rowCount; }
+        /** @brief 바람 항력 계수입니다. 0 이면 바람을 받지 않습니다(다음 고정 스텝부터). */
+        void setWindDrag( float32 windDrag ) { _windDrag = windDrag; }
         /** @brief 고정 방식을 바꿉니다. 다음 물리 프레임에 천을 다시 만듭니다. */
         void setPinMode( ClothPinMode pinMode );
         /**
@@ -103,6 +105,8 @@ namespace sw
         /** @brief 쓰는 고정 스텝 그룹마다 메서드를 등록합니다(`registerFixedStep`). */
         void onRegister( GameObjectManager& manager ) override;
         void onPhysicsFrameBegin( const FixedStepContext& context );
+        /** @brief 씬의 바람(`WindComponent`)을 이번 고정 스텝만큼 천에 겁니다. 바람 컴포넌트가 없는 씬은 바람이 없다. */
+        void onPrePhysicsStep( const FixedStepContext& context );
         /** @brief 스텝이 끝난 정점 위치를 읽어 둡니다. */
         void onPhysicsFrameEnd( const FixedStepContext& context );
         void releasePhysics( ScenePhysics& physics ) override;
@@ -168,6 +172,8 @@ namespace sw
         float32 _vertexRadius;
         PROPERTY( Category = "Simulation", Min = 1, Max = 32, Tooltip = "Constraint solver iterations per step" )
         uint32 _iterationCount;
+        PROPERTY( Category = "Simulation", Min = 0.0, Tooltip = "Air drag coefficient of the scene wind on each face; 0 ignores the wind (indoor cloth)" )
+        float32 _windDrag;
         PROPERTY( Category = "Simulation", DisplayName = "Collision Profile", Tooltip = "Collision profile name from the physics settings (object channel and responses)", Validate = validateLayer, Meta = "NameSource=CollisionProfile" )
         hashed_string _layer;
         PROPERTY( Category = "LOD", Tooltip = "Highest animation LOD grade of the ancestor skeletal mesh that still simulates the cloth (-1: every grade). Above it the cloth shows its rest grid" )
@@ -178,6 +184,7 @@ namespace sw
         vector<float3>         _listVertex;       ///< 마지막 물리 프레임 끝의 정점 월드 위치(게임 스레드가 쓴다). LOD 로 내린 동안은 쉬는 격자다
         vector<float4x4>       _listPinBoneWorld; ///< 스킨 고정이 프레임마다 넘기는 뼈 월드 행렬(`applySkinningPose` 의 임시 — 할당을 재사용한다)
         PhysicsSoftBodyHandle  _softBody;
+        float32                _windTime;                  ///< 돌풍의 시각(고정 스텝으로 흐른다 — 저장하지 않는다)
         uint32                 _appliedIterationCount;     ///< 지금 소프트 바디에 준 반복 수(천이 없으면 0)
         uint8                  _bPinBoneErrorReported : 1; ///< 설정 오류(본 없음 · 스켈레탈 메시 덮어쓰기)를 이미 냈다(본을 바꾸면 다시 낸다)
         uint8                  _bLODSuspended         : 1; ///< LOD 등급이 `_maxLOD` 를 넘어 천을 내렸다

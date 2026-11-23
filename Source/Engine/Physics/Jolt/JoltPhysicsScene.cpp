@@ -1563,6 +1563,11 @@ namespace sw
         _softBodies.setIterationCount( softBody, iterationCount );
     }
 
+    void JoltPhysicsScene::applySoftBodyWind( PhysicsSoftBodyHandle softBody, const float3& windVelocity, float32 dragDensity, float32 seconds )
+    {
+        _softBodies.applyWind( softBody, windVelocity, dragDensity, seconds );
+    }
+
 } // namespace sw
 
 namespace sw

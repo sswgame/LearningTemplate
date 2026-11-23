@@ -47,6 +47,13 @@ namespace sw
          * @details 정점 · 구속은 그대로 두고 다음 스텝부터 반복 수만 바뀐다(Jolt `SoftBodyMotionProperties::SetNumIterations`). 다시 만들지 않으므로 튀지 않는다.
          */
         virtual void setSoftBodyIterationCount( PhysicsSoftBodyHandle softBody, uint32 iterationCount ) = 0;
+        /**
+         * @brief 한 스텝(@p seconds)의 바람을 면마다 겁니다 — 면에 대한 공기의 상대 속도가 면 법선 쪽으로 미는 힘을 세 정점의 속도에 더합니다. 무효 핸들이면 아무것도 하지 않습니다.
+         * @details 힘은 ½ · @p dragDensity · 넓이 · |v·n| · (v·n) · n 이다(언리얼 Chaos Cloth 의 Drag 자리). 한 정점이 한 스텝에 받는 속도 변화는 공기에 대한 상대 속도를 넘지 않는다
+         *          (가벼운 천이 바람보다 빨리 튀지 않게). 자는 바디는 깨운다.
+         * @param dragDensity 공기 밀도 × 항력 계수(kg/m³)입니다.
+         */
+        virtual void applySoftBodyWind( PhysicsSoftBodyHandle softBody, const float3& windVelocity, float32 dragDensity, float32 seconds ) = 0;
     };
 } // namespace sw
 

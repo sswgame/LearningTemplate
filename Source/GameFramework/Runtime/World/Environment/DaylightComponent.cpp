@@ -15,7 +15,6 @@ namespace sw
 {
     DaylightComponent::DaylightComponent()
         : _gameMode{}
-        , _rainDimming{ 0.55f }
         , _nightIntensity{ 0.2f }
         , _sunriseHour{ 6.0f }
         , _sunsetHour{ 20.0f }
@@ -44,15 +43,14 @@ namespace sw
         DirectionalLightComponent* pSun   = pOwner != nullptr ? pOwner->getComponent<DirectionalLightComponent>() : nullptr;
         if ( pSun == nullptr )
             return;
-        const GameModeComponent* pGameMode    = GameModeComponent::resolve<GameModeComponent>( context.getManager(), _gameMode );
-        float32                  hour         = 0.0f;
-        bool                     bPrecipitate = false;
-        if ( pGameMode == nullptr || pGameMode->readDaylight( hour, bPrecipitate ) == false )
+        const GameModeComponent* pGameMode = GameModeComponent::resolve<GameModeComponent>( context.getManager(), _gameMode );
+        float32                  hour      = 0.0f;
+        if ( pGameMode == nullptr || pGameMode->readHourOfDay( hour ) == false )
             return;
         const float32 dayLength  = MathUtil::max( _sunsetHour - _sunriseHour, MathUtil::kEpsilon );
         const float32 dayRatio   = MathUtil::clamp( ( hour - _sunriseHour ) / dayLength, 0.0f, 1.0f );
         const float32 height     = MathUtil::sin( dayRatio * MathUtil::kPi );
-        const float32 light      = MathUtil::lerp( _horizonIntensity, _noonIntensity, height ) * ( bPrecipitate ? _rainDimming : 1.0f );
+        const float32 light      = MathUtil::lerp( _horizonIntensity, _noonIntensity, height );
         const bool    bNightTime = hour > _sunsetHour || hour < _nightEndHour; // 자정을 넘긴 밤(밤 끝 시각까지)도 밤
         pSun->setIntensity( bNightTime ? _nightIntensity : light );
         pSun->setLocalRotation( float3{ MathUtil::lerp( _horizonPitch.radians(), _noonPitch.radians(), height ), MathUtil::lerp( _morningYaw.radians(), _eveningYaw.radians(), dayRatio ), 0.0f } );

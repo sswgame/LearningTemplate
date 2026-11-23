@@ -34,7 +34,6 @@
 #include "GameFramework/Runtime/Gameplay/Appearance/BodyProfile.h"
 #include "GameFramework/Runtime/Gameplay/Appearance/CharacterAppearanceComponent.h"
 #include "GameFramework/Runtime/Gameplay/Appearance/CharacterSurfaceBinding.h"
-#include "GameFramework/Runtime/Gameplay/GameState/GameStateComponent.h"
 
 namespace sw
 {
@@ -85,7 +84,6 @@ namespace sw
     CharacterBodyDynamicsComponent::CharacterBodyDynamicsComponent()
         : _hitImpulseScale{ 0.02f }
         , _sunTraceDistance{ 50.0f }
-        , _skyLightValue{}
         , _wipeEvent{}
         , _fluidSmearStrength{ 0.6f }
         , _listFluid{}
@@ -251,20 +249,17 @@ namespace sw
     {
         float32      luminance = 0.0f;
         const uint64 ownerID   = getOwner()->getObjectID();
-        // 날씨: 판 상태의 날씨 값(`_skyLightValue` — 맑음 1, 흐림 · 비 · 안개는 낮다)이 직사광을 줄인다. 날씨가 없는 씬은 맑은 하늘이다.
-        const GameStateComponent* pSession = _skyLightValue.empty() ? nullptr : GameStateComponent::findOpen( &manager );
-        const float32             skyLight = pSession != nullptr ? MathUtil::saturate( pSession->getWeather().computeValue( _skyLightValue ) ) : 1.0f;
         for ( LightComponent* pLight : manager.getComponentRegistry().getAll<LightComponent>( LightComponent::getRegistryIndex( LightKind::Directional ) ) )
         {
             const DirectionalLightComponent* pSun = static_cast<const DirectionalLightComponent*>( pLight );
             if ( pSun == nullptr || pSun->isActive() == false )
                 continue;
-            // 해 쪽으로 쏜 광선이 막히면 그늘 · 실내다 — 주변광만 받는다. 시간대 · 날씨는 해 세기(`DaylightComponent`)에 이미 들어 있다.
+            // 해 쪽으로 쏜 광선이 막히면 그늘 · 실내다 — 주변광만 받는다. 시간대(`DaylightComponent`) · 날씨(카탈로그의 SunIntensity 바인딩)는 해 세기에 이미 들어 있다.
             const float3    towardSun = -pSun->getLightDirection();
             CharacterRayHit blocker;
             const bool      bShaded = _sunTraceDistance > 0.0f && CharacterRayHit::raycast3D( manager, eye, towardSun, _sunTraceDistance, CharacterBodyDynamicsInternal::kAllLayers, ownerID, blocker );
             const float32   ambient = pSun->getAmbient() * pSun->getIntensity();
-            luminance += ( bShaded ? 0.0f : pSun->getIntensity() * skyLight ) + ambient;
+            luminance += ( bShaded ? 0.0f : pSun->getIntensity() ) + ambient;
         }
         for ( LightComponent* pLight : manager.getComponentRegistry().getAll<LightComponent>( LightComponent::getRegistryIndex( LightKind::Point ) ) )
         {
