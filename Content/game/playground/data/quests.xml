@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
 <?asset guid="303ab1f11945fa0218a42f1f1f910801"?>
 <!--
-  벨모라의 퀘스트(QuestCatalog — 공유 퀘스트 일지). 목표의 종류는 디렉터가 알리는 일이다: Enter(지역) · Light(봉화) · Clear(지역) · Defeat(보스 종).
+  Playground 미니게임들의 퀘스트(QuestCatalog — 공유 퀘스트 일지, 미니게임의 게임 기능이 범위에 건다). 지금은 액션 어드벤처 미니게임(minigames/velmora)의 것이다. 목표의 종류는 디렉터가 알리는 일이다: Enter(지역) · Light(봉화) · Clear(지역) · Defeat(보스 종).
   끝 단계의 보상 값: gold(지갑의 기본 통화) · heart(하트 그릇). 확장 팩이 층으로 퀘스트를 더한다.
 -->
 <QuestCatalog>

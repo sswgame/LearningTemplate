@@ -1,15 +1,16 @@
 <?xml version="1.0" encoding="utf-8"?>
 <?asset guid="cf73852cf97c0710162a72caf4586ad4"?>
 <!--
-  오픈월드 싱글 수직 슬라이스 한 판 — 지역 진입 → 탐험(봉화) → 야영지(체크포인트) → 지역 전투(홀 → 보스) → 퀘스트 보상 → 저장 → 다른 곳으로 걸은 뒤 불러오기.
+  액션 어드벤처 미니게임(velmora — 옛 게임 Velmora)의 수직 슬라이스 한 판 — 지역 진입 → 탐험(봉화) → 야영지(체크포인트) → 지역 전투(홀 → 보스) → 퀘스트 보상 → 저장 → 다른 곳으로 걸은 뒤 불러오기.
   플레이어와 같은 입력 맵 액션(Move · Velmora.Use · Velmora.Attack)과 세이브 메뉴 자리의 개발 명령(game.save · game.load)만 쓴다(테스트 전용 경로 없음).
   자리: 난롯마을(0,0)에서 시작 — 6 m/s 로 동쪽 2 초(고사리숲 x 12) → 1.333 초(x 20) → 북 0.667 초(봉화 20,4) → 남 1.333 초(야영지 20,-4) → 북 0.667 초(z 0)
         → 동 1.75 초(x 30.5, 재의 요새에 들어서 게이트가 닫힌다). 도깨비(31.7) 두 번, 파수꾼(32.1) 네 번(공격 34 - 방어 4 = 30).
   감시 값: Velmora.Phase(0 탐험, 1 홀, 2 보스 대기, 3 보스) · Adventure.Region · Adventure.Respawn · Adventure.PlayerX/Z · Adventure.Hearts · Adventure.Health(4분의 1 하트)
           · Velmora.Alive · Adventure.Falls · Quest.Status · Session.Money · Autosave.LastCheckpoint · Save.Written · Save.Loaded.
-  실행: ctest -R Scenario.velmora (SW_ACTIVE_GAME=Velmora 또는 SW_GAMES 에 Velmora) · App -game=Velmora -scenario=game/velmora/automation/vale.scenario.xml -unattended
+  실행: ctest -R Scenario.playground · App -scenario=game/playground/automation/velmora_vale.scenario.xml -unattended
 -->
-<Scenario name="game.velmora.vale" fixedDelta="0.0166667" timeoutFrames="3000" startAfter="ScenePlaying" startTimeoutFrames="900" input="exclusive">
+<Scenario name="game.playground.velmora_vale" fixedDelta="0.0166667" timeoutFrames="3000" startAfter="ScenePlaying" startTimeoutFrames="900" input="exclusive">
+	<Launch variable="gv_firstMinigame" value="velmora"/>
 	<WaitUntil watch="Adventure.Region" is="hearth" timeoutFrames="120"/>
 	<Expect watch="Quest.Status" target="ember_oath" is="Active"/>
 	<Expect watch="Velmora.Phase" equals="0"/>

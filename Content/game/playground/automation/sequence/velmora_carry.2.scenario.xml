@@ -1,12 +1,13 @@
 <?xml version="1.0" encoding="utf-8"?>
 <?asset guid="9315a43375468c8059b7fdb78369f6f0"?>
 <!--
-  확장 팩 세이브 승계 두 번 기동 ② — 확장 팩 velmora_tidecaves 를 켜고 기동해(지역 · 퀘스트 · 몬스터 표에 층으로 항목이 더해진다) ① 의 세이브(velmora/carry)를 불러 잇는다.
+  액션 어드벤처 미니게임(velmora — 옛 게임 Velmora)의 확장 팩 세이브 승계 두 번 기동 ② — 확장 팩 velmora_tidecaves 를 켜고 기동해(지역 · 퀘스트 · 몬스터 표에 층으로 항목이 더해진다) ① 의 세이브(velmora/carry)를 불러 잇는다.
   기본 진행(ember_oath 완료 · 금 50 · 하트 4)이 그대로이고, 서쪽으로 7 초(6 m/s, x 30.5 → -11.5) 걸어 확장 지역 tidecaves 에 들어서면 확장 퀘스트(tide_whispers — 선행 ember_oath)를 받고
   보스(소금물 잠복자, x -13.1 — 1.6 m 서쪽)를 네 번 쳐 끝낸다(금 +80). 서쪽으로 걸었으니 바라보는 쪽이 서쪽이다.
-  CTest 항목 Scenario.velmora.sequence.carry 가 ① → ② 를 잇는다.
+  CTest 항목 Scenario.playground.sequence.velmora_carry 가 ① → ② 를 잇는다.
 -->
-<Scenario name="game.velmora.carry.2" fixedDelta="0.0166667" timeoutFrames="2400" startAfter="ScenePlaying" startTimeoutFrames="900" input="exclusive">
+<Scenario name="game.playground.velmora_carry.2" fixedDelta="0.0166667" timeoutFrames="2400" startAfter="ScenePlaying" startTimeoutFrames="900" input="exclusive">
+	<Launch variable="gv_firstMinigame" value="velmora"/>
 	<Launch variable="gv_modList" value="velmora_tidecaves"/>
 	<ExpectLog id="ModSession.Applied" contains="Mods applied: 1 [velmora_tidecaves@1.0.0#" atLeast="1"/>
 	<WaitUntil watch="Mods.ActiveCount" equals="1" timeoutWallSeconds="10"/>

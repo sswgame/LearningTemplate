@@ -1,12 +1,13 @@
 <?xml version="1.0" encoding="utf-8"?>
 <?asset guid="43d0e68b5ae4e92d87b62696bcb55d9a"?>
 <!--
-  확장 팩 세이브 승계 두 번 기동 ① — 확장 팩 없이 기본 퀘스트(ember_oath)를 끝내고 슬롯 velmora/carry 에 저장하고 끝낸다.
-  ② carry.2 가 확장 팩(velmora_tidecaves)을 켜고 다시 기동해 이 세이브를 불러 잇는다. 혼자 돌면 ② 의 전제를 만들 뿐이라 게임 체인은 이 폴더(sequence/)를 줍지 않는다.
-  CTest 항목 Scenario.velmora.sequence.carry 가 ① → ② 를 잇는다(Test/Scenario/RunStateDirPair.cmake). 세이브 슬롯은 사용자 데이터 폴더의 velmora/ 그룹이다.
-  길은 automation/vale 과 같다(자리 · 공격 수는 그 머리말).
+  액션 어드벤처 미니게임(velmora — 옛 게임 Velmora)의 확장 팩 세이브 승계 두 번 기동 ① — 확장 팩 없이 기본 퀘스트(ember_oath)를 끝내고 슬롯 velmora/carry 에 저장하고 끝낸다.
+  ② velmora_carry.2 가 확장 팩(velmora_tidecaves)을 켜고 다시 기동해 이 세이브를 불러 잇는다. 혼자 돌면 ② 의 전제를 만들 뿐이라 게임 체인은 이 폴더(sequence/)를 줍지 않는다.
+  CTest 항목 Scenario.playground.sequence.velmora_carry 가 ① → ② 를 잇는다(Test/Scenario/RunStateDirPair.cmake). 세이브 슬롯은 사용자 데이터 폴더의 velmora/ 그룹이다.
+  길은 automation/velmora_vale 과 같다(자리 · 공격 수는 그 머리말).
 -->
-<Scenario name="game.velmora.carry.1" fixedDelta="0.0166667" timeoutFrames="2400" startAfter="ScenePlaying" startTimeoutFrames="900" input="exclusive">
+<Scenario name="game.playground.velmora_carry.1" fixedDelta="0.0166667" timeoutFrames="2400" startAfter="ScenePlaying" startTimeoutFrames="900" input="exclusive">
+	<Launch variable="gv_firstMinigame" value="velmora"/>
 	<WaitUntil watch="Adventure.Region" is="hearth" timeoutFrames="120"/>
 	<Expect watch="Mods.ActiveCount" equals="0"/>
 	<ActionAxis name="Move" x="1" seconds="3.3333"/>

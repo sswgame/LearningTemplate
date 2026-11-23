@@ -22,8 +22,6 @@
 #include "GameFramework/Runtime/Foundation/Framework/GameService.h"
 #include "GameFramework/Runtime/Gameplay/Quest/QuestCatalog.h"
 
-#include "Games/Velmora/VelmoraEncounterGameModeComponent.h"
-
 #include "ModuleAPI/Export/GameModuleExports.h"
 
 namespace sw
@@ -61,7 +59,6 @@ namespace sw
     {
         // 판 상태(퀘스트 일지 · 깃발 · 지갑)는 판 상태 컴포넌트가, 몸 · 자리 · 일어설 지역은 디렉터가 싣는다.
         getStateSnapshot().registerGameMode<AdventureGameModeComponent>();
-        getStateSnapshot().registerGameMode<VelmoraEncounterGameModeComponent>();
     }
 
     VelmoraGame::~VelmoraGame() = default;

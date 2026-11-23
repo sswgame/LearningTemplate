@@ -1,6 +1,6 @@
 #include "pch.h"
 
-#include "Games/Velmora/Client/VelmoraEncounterViewComponent.h"
+#include "Games/Playground/Velmora/Client/VelmoraEncounterViewComponent.h"
 
 #include "Core/Log/Logger.h"
 
@@ -17,7 +17,7 @@
 #include "GameFramework/Runtime/Foundation/Framework/GameService.h"
 #include "GameFramework/Runtime/Gameplay/GameState/PlayerComponentUtil.h"
 
-#include "Games/Velmora/VelmoraEncounterGameModeComponent.h"
+#include "Games/Playground/Velmora/VelmoraEncounterGameModeComponent.h"
 
 namespace sw
 {

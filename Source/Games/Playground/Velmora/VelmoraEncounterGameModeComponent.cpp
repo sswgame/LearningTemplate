@@ -1,6 +1,6 @@
 #include "pch.h"
 
-#include "Games/Velmora/VelmoraEncounterGameModeComponent.h"
+#include "Games/Playground/Velmora/VelmoraEncounterGameModeComponent.h"
 
 #include "Core/Log/Logger.h"
 

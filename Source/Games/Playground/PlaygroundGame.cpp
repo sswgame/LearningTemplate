@@ -10,6 +10,7 @@
  *          장르 키트 시연(`KitDemo/`)은 씬 하나씩이고 미니게임(`minigames` 의 `.minigame.xml`, `MinigameFlow`)으로 들어간다 — 키트가 범위에 걸 것(액션 룸의 몬스터 정의)은
  *          미니게임이 게임 기능으로 켜고 끈다(`SW_GAME_FEATURE`, 들어갈 때 걸고 나올 때 거둔다).
  *          도시 건설 미니게임(`FrontierTown/` — 키트 둘의 디렉터를 한 씬에 섞는다)의 도시 쪽은 키트, RTS 쪽(일꾼 · 순찰)은 이 게임의 디렉터다.
+ *          액션 어드벤처 미니게임(`Velmora/` — 지역을 걷는 키트와 룸 전투 키트를 한 씬에 섞는다)도 지역 전투만 이 게임의 디렉터다.
  *          마을(`maps/hub`)은 팩의 시작 맵이다. 지역 효과 시연 · 마을의 이펙트 · 세트(`data/abilities.xml`)와 기본 어빌리티 클래스는 gamesettings `gameFeatures` 의
  *          게임 기능(`PlaygroundAbilitiesGameFeature.cpp`)이 게임 범위에 건다.
  */
@@ -51,7 +52,7 @@ namespace sw
 
     private:
         /**
-         * @brief 이 세션의 모드(`-gv_modList`, 시연 모드 `Test/Mods/demo_lantern`)입니다. 첫 씬을 열기 전에 적용하고 인스턴스와 함께 뗀다(시나리오 체인의 다음 단계에 남지 않는다).
+         * @brief 이 세션의 모드(`-gv_modList`, 시연 모드 `Test/Mods/demo_lantern` · 벨모라 확장 팩 `Test/Mods/velmora_tidecaves`)입니다. 첫 씬을 열기 전에 적용하고 인스턴스와 함께 뗀다(시나리오 체인의 다음 단계에 남지 않는다).
          *        서버 구성에도 있다 — 서버도 같은 모드 구성으로 서야 클라이언트와 구성 해시가 맞는다.
          */
         unique_ptr<ModSession> _mods;
@@ -76,7 +77,7 @@ namespace sw
     bool PlaygroundGame::onPrepareContent( const ContentPreparationToken& token )
     {
         // 모드는 시작 때 한 번 고정한다 — 넷 세션을 열기 전(구성 해시가 와이어 버전에 섞인다) · 첫 씬과 그 리소스를 읽기 전이라 덮어쓴 리소스를 쥔 캐시가 없다.
-        // 켠 모드가 없으면 아무것도 하지 않는다. 요청한 모드를 적용하지 못하면 게임을 띄우지 않는다(요청과 다른 구성으로 조용히 돌지 않는다).
+        // 확장 팩의 층을 카탈로그가 읽기 전이기도 하다(카탈로그는 미니게임에 들어갈 때 읽는다). 켠 모드가 없으면 아무것도 하지 않는다. 요청한 모드를 적용하지 못하면 게임을 띄우지 않는다(요청과 다른 구성으로 조용히 돌지 않는다).
         // 키트 명령(mod.status)은 ModSession 으로, 기동 · 세이브는 IContentConfiguration 으로 찾는다.
         _mods = make_unique<ModSession>( game::getSubsystem<AssetManager>() );
         return _mods->applyForGame( token, game::getSubsystem<const GameConfig>()._packRoot.get() ) && getGameScope().bind( _mods.get() ) &&
