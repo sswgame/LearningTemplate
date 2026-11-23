@@ -699,6 +699,11 @@ namespace sw
     void Scene::buildEntityNode( const SceneDocument::SceneObjectNode& entity, const NodeBuild build, NodeBuildContext& context, vector<uint64>* pOutListObjectID )
     {
         SW_LOG_TRACE_ID( "Scene.SpawningEntityPrefab", "Spawning entity '%#' prefab '%#'", entity._name, entity._prefab );
+        // 짓지 못해 문서로 남는 엔티티도 파일 id 를 쓴다 — 짓기 앞에서 알린다. 인스턴스 멤버의 평평한 id 는 앵커 범위에서 온 넓은 값이다.
+        if ( entity._instanceAnchorFileID != 0 )
+            _fileIDTable.recordWide( entity._fileID );
+        else
+            _fileIDTable.recordUsed( entity._fileID );
         string      prefabInstanceState; // 프리팹 원형에 덮어쓴 값을 얹어 만든 상태(프리팹 엔티티만)
         GameObject* pGo = SceneInternal::createEntityObject( *_objectManager, _services._pAssetManager, context._mapPrefabBaseState, entity, build != NodeBuild::Cell, _listUnresolvedEntity,
                                                              prefabInstanceState );
@@ -1088,42 +1093,9 @@ namespace sw
         return _fileIDTable.findFileID( objectID );
     }
 
-    uint64 Scene::computeNextFileID() const
+    void Scene::recordHeldFileIDs( const vector<SceneDocument::SceneObjectNode>& listNode )
     {
-        // 새 id 는 이 씬이 지금껏 쓴 어느 파일 id 보다 크다. 사라진 오브젝트나 해석하지 못한 엔티티의 id 를 다시 주면 그것을 가리키던 참조가
-        // (파일을 넘는 참조 `SceneObjectReference` 를 포함해) 새 오브젝트에 붙는다.
-        uint64 nextFileID = 1;
-        // 인스턴스 멤버 · 런타임 하위 레벨 앵커의 넓은 id 는 세지 않는다(앵커 범위에서 온 값이다).
-        const SceneSubLevelSubsystem* pSubLevels = _objectManager != nullptr ? &_objectManager->getSubsystem<SceneSubLevelSubsystem>() : nullptr;
-        for ( const auto& [objectID, fileID] : _fileIDTable.getFileIDs() )
-        {
-            const bool bWide = _mapInstanceMember.find( objectID ) != _mapInstanceMember.end() || ( pSubLevels != nullptr && pSubLevels->isAnchorFileID( fileID ) );
-            if ( bWide == false )
-                nextFileID = MathUtil::max( nextFileID, fileID + 1 );
-        }
-        const auto recordHeldNode = [&nextFileID]( const SceneDocument::SceneObjectNode& node )
-        {
-            if ( node._instanceAnchorFileID == 0 )
-                nextFileID = MathUtil::max( nextFileID, node._fileID + 1 );
-        };
-        for ( const SceneDocument::SceneObjectNode& unresolved : _listUnresolvedEntity )
-        {
-            recordHeldNode( unresolved );
-        }
-        if ( _objectManager != nullptr )
-        {
-            for ( const SceneDataLayerSubsystem::Group& group : _objectManager->getSubsystem<SceneDataLayerSubsystem>().getGroups() )
-            {
-                for ( const SceneDocument::SceneObjectNode& node : group._listNode )
-                {
-                    recordHeldNode( node );
-                }
-            }
-        }
-        // 스트리밍 셀이 든 엔티티(읽지 않은 쿠킹 내용 — 쿠킹본 머리의 최대값, 떠 둔 상태)와 겹치지 않는다.
-        if ( _objectManager != nullptr )
-            nextFileID = MathUtil::max( nextFileID, _objectManager->getSubsystem<SceneStreamingSubsystem>().getMaxCellFileID() + 1 );
-        return nextFileID;
+        _fileIDTable.recordUsed( SceneDocument::computeMaxFileID( listNode ) );
     }
 
     void Scene::rebindRestoredFileIDs( const vector<SavedFileID>& listFileID )
@@ -1164,6 +1136,18 @@ namespace sw
         erase( objectID );
         _mapObjectIDToFileID.emplace( objectID, fileID );
         _mapFileIDToObjectID[fileID] = objectID;
+        recordUsed( fileID );
+    }
+
+    void SceneFileIDTable::recordUsed( uint64 fileID )
+    {
+        if ( fileID > _maxUsedFileID && _uniqueWideFileID.find( fileID ) == _uniqueWideFileID.end() )
+            _maxUsedFileID = fileID;
+    }
+
+    void SceneFileIDTable::recordWide( uint64 fileID )
+    {
+        _uniqueWideFileID.insert( fileID );
     }
 
     void SceneFileIDTable::erase( uint64 objectID )
@@ -1181,6 +1165,8 @@ namespace sw
     {
         _mapObjectIDToFileID.clear();
         _mapFileIDToObjectID.clear();
+        _uniqueWideFileID.clear();
+        _maxUsedFileID = 0;
     }
 
     uint64 SceneFileIDTable::findFileID( uint64 objectID ) const
@@ -1208,6 +1194,7 @@ namespace sw
         const uint64 holderID = findObjectIDByFileID( fileID );
         if ( fileID == 0 || objectID == 0 || ( holderID != 0 && holderID != objectID ) )
             return false;
+        _fileIDTable.recordWide( fileID ); // 바깥이 정한 id 는 넓은 값이다
         _fileIDTable.set( objectID, fileID );
         return true;
     }

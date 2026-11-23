@@ -2,6 +2,7 @@
 #include "Core/Concurrency/StopToken.h"
 #include "Core/Container/string.h"
 #include "Core/Container/unordered_map.h"
+#include "Core/Container/unordered_set.h"
 #include "Core/Container/vector.h"
 #include "Core/Foundation/Macros.h"
 #include "Core/Foundation/Types.h"
@@ -30,24 +31,35 @@ namespace sw
      * @class SceneFileIDTable
      * @brief 런타임 오브젝트 id 와 파일 id 를 양쪽으로 잇는 표입니다. 두 방향은 여기서만 함께 바뀝니다 — 파일 id 로 찾기가 오브젝트 수만큼 훑지 않게.
      * @details 같은 파일 id 를 다시 걸면 나중 것이 그 파일 id 의 오브젝트입니다(사라진 오브젝트의 기록이 남아 있어도 다시 지은 오브젝트를 찾는다).
+     *          지금껏 쓴 가장 큰 파일 id 도 듭니다 — 올라가기만 하므로 지운 오브젝트의 id 를 다시 주지 않고, 새 id 를 줄 때 씬 전체를 훑지 않는다(언리얼 `GUObjectArray` 일련번호 ·
+     *          유니티 로컬 파일 id 처럼 세는 값). 오브젝트 없이 든 엔티티(해석하지 못한 것 · 짓지 않은 레이어 · 스트리밍 셀)의 id 는 든 쪽이 `recordUsed` 로 알린다.
+     *          앵커 범위에서 온 넓은 id(씬 인스턴스 멤버 · 하위 레벨 앵커)는 `recordWide` 로 알려 세지 않는다. 한 번 넓은 것으로 알린 id 는 다시 걸어도(세이브 복원) 세지 않는다.
      */
     class SW_API SceneFileIDTable
     {
     public:
         /** @brief @p objectID 에 @p fileID 를 겁니다. 이미 다른 파일 id 가 있으면 바꿉니다. 둘 다 0 이 아니어야 합니다. */
         void set( uint64 objectID, uint64 fileID );
-        void erase( uint64 objectID );
-        void clear();
+        /** @brief 오브젝트 없이 쓰는 파일 id 를 알립니다 — 새 id 가 이보다 크다. 0 과 넓은 id 는 세지 않습니다. */
+        void recordUsed( uint64 fileID );
+        /** @brief @p fileID 가 넓은 id 라고 알립니다. 걸기(`set`) 앞에 부릅니다. */
+        void recordWide( uint64 fileID );
+        /** @brief 지금껏 쓴 가장 큰 파일 id 입니다(넓은 id 제외). 없으면 0 입니다. */
+        uint64 getMaxUsedFileID() const { return _maxUsedFileID; }
+        void   erase( uint64 objectID );
+        void   clear();
         /** @brief 오브젝트의 파일 id 입니다. 없으면 0 입니다. */
         uint64 findFileID( uint64 objectID ) const;
         /** @brief 파일 id 의 오브젝트 id 입니다. 없으면 0 입니다. 그 오브젝트가 살아 있는지는 보지 않습니다. */
         uint64 findObjectID( uint64 fileID ) const;
-        /** @brief 오브젝트 id → 파일 id 표입니다(저장 · 새 id 정하기가 훑는다). */
+        /** @brief 오브젝트 id → 파일 id 표입니다(저장이 훑는다). */
         const ObjectSavedIDMap& getFileIDs() const { return _mapObjectIDToFileID; }
 
     private:
-        ObjectSavedIDMap _mapObjectIDToFileID;
-        ObjectSavedIDMap _mapFileIDToObjectID;
+        ObjectSavedIDMap      _mapObjectIDToFileID;
+        ObjectSavedIDMap      _mapFileIDToObjectID;
+        unordered_set<uint64> _uniqueWideFileID;
+        uint64                _maxUsedFileID{ 0 };
     };
 
     /**
@@ -158,6 +170,15 @@ namespace sw
          * @return id 가 0 이거나 다른 살아 있는 오브젝트가 그 id 를 쓰면 false 입니다(붙이지 않는다). 막 만든(병합 전) 오브젝트에도 붙일 수 있다.
          */
         [[nodiscard]] bool assignFileID( uint64 objectID, uint64 fileID );
+        /**
+         * @brief 오브젝트 없이 들게 된 엔티티 @p listNode 의 파일 id 를 알립니다(짓지 않은 레이어 묶음 · 스트리밍 셀). 새 오브젝트의 파일 id 가 이와 겹치지 않습니다.
+         * @details 겹치면 그 엔티티가 오를 때 참조가 엉뚱한 오브젝트에 붙는다. 인스턴스 멤버의 넓은 id 는 세지 않는다(`SceneDocument::computeMaxFileID`).
+         */
+        void recordHeldFileIDs( const vector<SceneDocument::SceneObjectNode>& listNode );
+        /** @brief 파일에 남은(색인만 읽은) 엔티티의 가장 큰 파일 id 를 알립니다(`SceneDocument::_maxCellFileID`). */
+        void recordHeldFileID( uint64 maxFileID ) { _fileIDTable.recordUsed( maxFileID ); }
+        /** @brief 바깥이 정한 넓은 파일 id(하위 레벨 앵커)를 알립니다 — 새 파일 id 셈에서 뺀다. 그 id 로 짓거나 붙이기 앞에 부릅니다. */
+        void recordWideFileID( uint64 fileID ) { _fileIDTable.recordWide( fileID ); }
         /** @brief 파일 id 의 살아 있는 오브젝트 id 입니다. 이 씬에 없으면(지운 오브젝트 · 내려간 스트리밍 셀) 0 입니다. */
         [[nodiscard]] uint64 findObjectIDByFileID( uint64 fileID ) const;
 
@@ -291,8 +312,8 @@ namespace sw
         void shutdown();
         /** @brief 기본 머티리얼 참조를 해제합니다. */
         void releaseDefaultMaterial();
-        /** @brief 새 오브젝트에 줄 파일 id 입니다 — 이 씬이 쓴 어느 파일 id(해석하지 못한 엔티티 · 짓지 않은 레이어 엔티티 · 스트리밍 셀이 든 엔티티 포함)보다 큽니다. 인스턴스 멤버의 평평한 id 는 넓은 값이라 세지 않습니다. */
-        uint64 computeNextFileID() const;
+        /** @brief 새 오브젝트에 줄 파일 id 입니다 — 이 씬이 쓴 어느 파일 id(해석하지 못한 엔티티 · 짓지 않은 레이어 엔티티 · 스트리밍 셀이 든 엔티티 포함)보다 큽니다. 인스턴스 멤버의 평평한 id 는 넓은 값이라 세지 않습니다(`SceneFileIDTable`). */
+        uint64 computeNextFileID() const { return _fileIDTable.getMaxUsedFileID() + 1; }
         /**
          * @brief 맨 위 앵커의 파일 id 마다 멤버에 덮어쓴 것(`<Part>` 항목)을 모읍니다(비우고 채웁니다).
          * @details 살아 있는 멤버는 내부 씬을 임시로 지어 같은 직렬화기로 쓴 상태와 비교합니다(프리팹 원형 `makeBaseState` 와 같은 까닭 — 손으로 쓴 글과 비교하면 값이 같아도 다르다).

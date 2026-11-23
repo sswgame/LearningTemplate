@@ -204,6 +204,7 @@ namespace sw
     void SceneSubLevelSubsystem::beginBuild( SubLevel& subLevel )
     {
         // 떠 둔 상태(세이브)에는 앵커가 엔티티로 들어 있다 — 그때는 짓기가 앵커를 함께 세운다.
+        _pScene->recordWideFileID( subLevel._anchorFileID ); // 떠 둔 상태의 앵커는 인스턴스 멤버가 아니라 짓기가 넓은 id 인 줄 모른다
         bool bAnchorInNodes{ false };
         for ( const SceneDocument::SceneObjectNode& node : subLevel._listNode )
         {
@@ -305,16 +306,6 @@ namespace sw
         for ( const GameObject* pObject = _pManager->findGameObjectByID( objectID ); pObject != nullptr; pObject = pObject->getParent() )
         {
             if ( _mapObjectSubLevel.find( pObject->getObjectID() ) != _mapObjectSubLevel.end() )
-                return true;
-        }
-        return false;
-    }
-
-    bool SceneSubLevelSubsystem::isAnchorFileID( const uint64 fileID ) const
-    {
-        for ( const unique_ptr<SubLevel>& pSubLevel : _listSubLevel )
-        {
-            if ( pSubLevel->_anchorFileID == fileID )
                 return true;
         }
         return false;

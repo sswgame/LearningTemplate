@@ -458,6 +458,62 @@ SW_TEST_CASE( SceneFileIDTableTest, BothDirectionsChangeTogether )
     SW_EXPECT_EQUAL( uint64{ 0 }, table.findObjectID( 3 ) );
 }
 
+/** @brief [SceneFileIDTableTest] 지금껏 쓴 가장 큰 파일 id 는 올라가기만 하고, 넓은 id 는 걸기 앞에 알렸으면 다시 걸어도 세지 않는다 */
+SW_TEST_CASE( SceneFileIDTableTest, MaxUsedIDNeverDropsAndSkipsWideIDs )
+{
+    constexpr uint64 kWideFileID = 0xF000000000000001ull;
+    SceneFileIDTable table;
+    SW_EXPECT_EQUAL( uint64{ 0 }, table.getMaxUsedFileID() );
+    table.set( 10, 5 );
+    table.erase( 10 ); // 지운 오브젝트의 id 를 다시 주지 않는다
+    SW_EXPECT_EQUAL( uint64{ 5 }, table.getMaxUsedFileID() );
+    table.recordUsed( 3 );
+    SW_EXPECT_EQUAL( uint64{ 5 }, table.getMaxUsedFileID() );
+    table.recordUsed( 9 ); // 오브젝트 없이 든 엔티티(내려간 셀 · 끈 레이어)
+    SW_EXPECT_EQUAL( uint64{ 9 }, table.getMaxUsedFileID() );
+    table.recordWide( kWideFileID );
+    table.set( 11, kWideFileID );
+    table.erase( 11 );
+    table.set( 12, kWideFileID ); // 세이브 복원이 다시 만든 오브젝트에 다시 건다
+    table.recordUsed( kWideFileID );
+    SW_EXPECT_EQUAL( uint64{ 9 }, table.getMaxUsedFileID() );
+
+    const SceneFileIDTable copy = table; // 되돌리기 스냅숏이 함께 든다
+    table.clear();
+    SW_EXPECT_EQUAL( uint64{ 0 }, table.getMaxUsedFileID() );
+    SW_EXPECT_EQUAL( uint64{ 9 }, copy.getMaxUsedFileID() );
+}
+
+/** @brief [SceneAssemblyTest] 씬 인스턴스 멤버의 넓은 파일 id 는 세이브 복원이 다시 붙여도 다음 파일 id 를 끌어올리지 않는다 */
+SW_TEST_CASE( SceneAssemblyTest, RestoredInstanceMembersDoNotRaiseTheNextFileID )
+{
+    const test::ScopedScratchDomain domain;
+    Util::write( domain, "inner.scene.xml", Util::makeInnerScene() );
+    Util::write( domain, "outer.scene.xml", Util::makeScene( "Outer", { Util::makeEntity( "4", "House", "0,0,0", Util::instanceAttribute( "inner.scene.xml" ).c_str() ) } ) );
+    SceneDocument doc{};
+    SW_REQUIRE_TRUE( doc.loadXMLFromDiskFile( domain.makeDiskPath( "outer.scene.xml" ).str() ) );
+    const SceneDocument::SceneObjectNode* pLid = Util::findNode( doc, "House/Lid" );
+    SW_REQUIRE_TRUE( pLid != nullptr && pLid->_instanceAnchorFileID != 0 );
+    const uint64 lidFileID = pLid->_fileID;
+    Scene        scene{ "Restored" };
+    SW_REQUIRE_TRUE( scene.instantiate( doc ) );
+    GameObjectManager& objects = *scene.getObjectManager();
+    objects.mergePendingAdds();
+
+    objects.clear();
+    GameObject* pLidObject = objects.createGameObject( hashed_string( "House/Lid" ) );
+    SW_REQUIRE_NOT_NULL( pLidObject );
+    objects.mergePendingAdds();
+    scene.rebindRestoredFileIDs( {
+        Scene::SavedFileID{ pLidObject->getObjectID(), lidFileID }
+    } );
+    SW_EXPECT_EQUAL( lidFileID, scene.findFileID( pLidObject->getObjectID() ) );
+    GameObject* pSpawned = objects.createGameObject( hashed_string( "Spawned" ) );
+    SW_REQUIRE_NOT_NULL( pSpawned );
+    objects.mergePendingAdds();
+    SW_EXPECT_EQUAL( uint64{ 5 }, scene.getOrAssignFileID( pSpawned->getObjectID() ) );
+}
+
 /** @brief [ObjectStateBatchTest] 배치에 든 저장 id · 이름은 해석기에 묻지 않고, 없는 것만 묻는다 — 이미 올라 있는 오브젝트를 배치마다 기록하지 않는다 */
 SW_TEST_CASE( ObjectStateBatchTest, ResolverIsAskedOnlyForWhatTheBatchLacks )
 {

@@ -72,7 +72,6 @@ namespace sw
         , _listCell{}
         , _mapCellIndex{}
         , _mapObjectSlot{}
-        , _maxFileCellFileID{ 0 }
         , _listExternalSource{}
         , _cameraSource{}
         , _bCameraSourceSet{ SW_FALSE }
@@ -118,11 +117,16 @@ namespace sw
             listSeenIndex.push_back( cellIndex );
         }
         _listSourceCell              = listCell;
-        _maxFileCellFileID           = maxFileCellFileID;
         _settings                    = settings;
         _contentPath                 = contentPath;
         _pScene                      = &scene;
         _cameraSource._loadingRadius = settings._cellGrid._loadingRadius;
+        // 내려간 셀의 엔티티는 오브젝트가 없다 — 색인만 읽은 셀은 머리의 최대값, 메모리 문서의 셀은 내용의 파일 id 를 알린다.
+        scene.recordHeldFileID( maxFileCellFileID );
+        for ( const SceneDocument::StreamingCell& cell : listCell )
+        {
+            scene.recordHeldFileIDs( cell._listSceneObjectNode );
+        }
         resetCells();
         SW_LOG_INFO_ID( "SceneStreaming.SceneStreamsCellsCell", "Scene '%#' streams %# cells (cell %# m, radius %# m)", scene.getName(), static_cast<uint32>( _listCell.size() ),
                         _settings._cellGrid._cellSize, _settings._cellGrid._loadingRadius );
@@ -142,7 +146,6 @@ namespace sw
         _mapCellIndex.clear();
         _mapObjectSlot.clear();
         _listSourceCell.clear();
-        _maxFileCellFileID = 0;
         _contentPath.clear();
         _pScene = nullptr;
     }
@@ -282,20 +285,6 @@ namespace sw
                 return true;
         }
         return false;
-    }
-
-    uint64 SceneStreamingSubsystem::getMaxCellFileID() const
-    {
-        if ( _pScene == nullptr )
-            return 0;
-        // 올라 있는 셀의 오브젝트는 씬의 파일 id 표가 이미 센다 — 여기는 오브젝트가 없는 엔티티(읽지 않은 내용 · 떠 둔 상태 · 들어온 엔티티)만 센다.
-        uint64 maxFileID = _maxFileCellFileID;
-        for ( const unique_ptr<CellSlot>& pSlot : _listCell )
-        {
-            maxFileID = MathUtil::max( maxFileID, SceneDocument::computeMaxFileID( pSlot->_listNode ) );
-            maxFileID = MathUtil::max( maxFileID, SceneDocument::computeMaxFileID( pSlot->_listArrivedNode ) );
-        }
-        return maxFileID;
     }
 
     bool SceneStreamingSubsystem::isCellObject( const uint64 objectID ) const
@@ -1021,6 +1010,8 @@ namespace sw
         {
             const uint32 slotIndex = findOrAddSlot( saved._cell, saved._listDataLayer );
             CellSlot&    slot      = getSlot( slotIndex );
+            _pScene->recordHeldFileIDs( saved._listNode );
+            _pScene->recordHeldFileIDs( saved._listArrivedNode );
             unloadCell( slot, false ); // 복원은 비운 매니저 위다 — 남은 오브젝트가 있으면 세이브의 상태로 갈아 끼운다
             slot._state = CellState::Unloaded;
             // 메모리 문서의 조각은 늘 내용을 든다 — 든 표시가 없는 세이브라도 문서 내용을 지우지 않는다(읽을 파일 구간이 없다).
