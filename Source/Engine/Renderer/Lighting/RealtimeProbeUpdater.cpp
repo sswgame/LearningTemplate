@@ -169,6 +169,17 @@ namespace sw
         return result;
     }
 
+    float32 RealtimeProbeUpdater::computeError( const vector<RealtimeProbeRequest>& listRequest, uint32 accumulatedFrames )
+    {
+        float32 error = 0.0f;
+        for ( const RealtimeProbeRequest& request : listRequest )
+        {
+            const uint32 updateCount = accumulatedFrames / MathUtil::max( request._updatePeriod, 1u );
+            error                    = MathUtil::max( error, MathUtil::pow( 1.0f - MathUtil::saturate( request._blend ), static_cast<float32>( updateCount ) ) );
+        }
+        return error;
+    }
+
     vector<float4> RealtimeProbeUpdater::makeParamRows( const vector<RealtimeProbeRequest>& listRequest, const RealtimeProbeLayout& layout, const vector<uint32>& listWarmup,
                                                         const SH9Color& sky, uint32 frameIndex, uint32 lightCount )
     {
@@ -297,6 +308,7 @@ namespace sw
         ++_frameCounter;
         _historyAllocator.advanceFrame();
         ++_framesSinceInputChange;
+        _error   = computeError( listRequest, _framesSinceInputChange );
         _bActive = SW_TRUE;
     }
 

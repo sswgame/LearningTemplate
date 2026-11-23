@@ -667,6 +667,26 @@ SW_TEST_CASE( RealtimeProbeTest, EmissionWordsFollowOccupancy )
 }
 
 /**
+ * @brief [RealtimeProbeTest] 기록에 남은 옛 값의 몫은 갱신마다 (1 − 섞는 비율)을 곱한 값이고, 볼륨이 여럿이면 가장 큰 값이다(사진 앞 정착 조건 `RenderRealtimeGI`)
+ */
+SW_TEST_CASE( RealtimeProbeTest, ErrorDecaysPerUpdate )
+{
+    sw::vector<sw::RealtimeProbeRequest> listRequest( 1 );
+    listRequest[0]._updatePeriod = 4;
+    listRequest[0]._blend        = 0.25f;
+    SW_EXPECT_NEAR( 1.0f, sw::RealtimeProbeUpdater::computeError( listRequest, 3u ), 0.0f ); // 아직 한 바퀴도 돌지 않았다
+    SW_EXPECT_NEAR( 0.75f, sw::RealtimeProbeUpdater::computeError( listRequest, 4u ), 1.0e-6f );
+    SW_EXPECT_NEAR( 0.5625f, sw::RealtimeProbeUpdater::computeError( listRequest, 11u ), 1.0e-6f );
+    SW_EXPECT_TRUE( sw::RealtimeProbeUpdater::computeError( listRequest, 119u ) > 0.0002f ); // 문턱 — 30 번째 갱신에서 선다
+    SW_EXPECT_TRUE( sw::RealtimeProbeUpdater::computeError( listRequest, 120u ) <= 0.0002f );
+    const sw::RealtimeProbeRequest slower = listRequest[0];
+    listRequest.push_back( slower );
+    listRequest[1]._updatePeriod = 8;
+    SW_EXPECT_NEAR( 0.75f, sw::RealtimeProbeUpdater::computeError( listRequest, 8u ), 1.0e-6f ); // 느린 볼륨이 정한다
+    SW_EXPECT_NEAR( 0.0f, sw::RealtimeProbeUpdater::computeError( {}, 8u ), 0.0f );
+}
+
+/**
  * @brief [RealtimeProbeTest] 하늘 가림 · 발광 배율의 기본값은 0 이다 — 설정을 적지 않은 씬은 이전 그림 그대로다. 볼륨 원소의 colorIntensity.w 가 하늘 가림 세기를 싣는다
  */
 SW_TEST_CASE( RealtimeProbeTest, GIExtrasDefaultToOff )

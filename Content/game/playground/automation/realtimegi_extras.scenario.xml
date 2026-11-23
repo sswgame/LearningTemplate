@@ -9,13 +9,15 @@
 <Scenario name="game.playground.realtimegi_extras" fixedDelta="0.0166667" timeoutFrames="900" startAfter="ScenePlaying" startTimeoutFrames="900" input="exclusive">
 	<Launch variable="gv_firstScene" value="game/playground/maps/realtimegi_extras_off.scene.xml"/>
 	<WaitUntil watch="Assets.Pending" equals="0" timeoutWallSeconds="60"/>
-	<WaitUntil watch="Render.GIAccumulatedFrames" atLeast="120" timeoutFrames="300"/> <!-- 프로브 GI 가 30 번(주기 4, 섞기 0.25 — 남은 몫 0.75^30) 쌓였다 -->
-	<Screenshot file="realtimegi_extras_off.ppm" stability="assets"/>
+	<WaitUntil watch="Render.GIError" atMost="1" timeoutFrames="300"/> <!-- 실시간 프로브가 돌기 시작했다(그 전에는 값이 없다 — 정착 조건이 해당 없음으로 지나가지 않게) -->
+	<Screenshot file="realtimegi_extras_off.ppm" stability="render"/>
+	<Expect watch="Render.GIError" atMost="0.0002"/> <!-- 사진이 실시간 GI 정착(RenderRealtimeGI — 30 번 갱신, 주기 4 · 섞기 0.25 의 남은 몫 0.75^30)을 기다렸다 -->
 	<LoadScene path="game/playground/maps/realtimegi_extras.scene.xml" timeoutFrames="600"/>
 	<WaitUntil watch="Scene.Transitioning" equals="0" timeoutWallSeconds="60"/>
 	<WaitUntil watch="Assets.Pending" equals="0" timeoutWallSeconds="60"/>
-	<WaitUntil watch="Render.GIAccumulatedFrames" atLeast="120" timeoutFrames="300"/> <!-- 프로브 GI 가 30 번(주기 4, 섞기 0.25 — 남은 몫 0.75^30) 쌓였다 -->
-	<Screenshot file="realtimegi_extras_on.ppm" stability="assets"/>
+	<WaitUntil watch="Render.GIError" atMost="1" timeoutFrames="300"/> <!-- 실시간 프로브가 돌기 시작했다(그 전에는 값이 없다 — 정착 조건이 해당 없음으로 지나가지 않게) -->
+	<Screenshot file="realtimegi_extras_on.ppm" stability="render"/>
+	<Expect watch="Render.GIError" atMost="0.0002"/> <!-- 사진이 실시간 GI 정착(RenderRealtimeGI — 30 번 갱신, 주기 4 · 섞기 0.25 의 남은 몫 0.75^30)을 기다렸다 -->
 	<!-- 발광이 물들이는 자리는 발광 큐브 둘레 바닥(화면 아래 y 0.6~0.95)이다 — 위쪽 띠(0.3~0.7)는 그 끝만 걸쳐 0.5% 였다. -->
 	<ExpectImagesDiffer first="realtimegi_extras_off.ppm" second="realtimegi_extras_on.ppm" region="0,0.6,1,0.95" minDiffering="0.05"/>
 	<ExpectImage file="realtimegi_extras_on.ppm" golden="realtimegi_extras"/>

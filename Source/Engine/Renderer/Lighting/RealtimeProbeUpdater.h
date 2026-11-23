@@ -145,10 +145,17 @@ namespace sw
         /** @brief 프로브 기록 버퍼(컴퓨트 u0 — 프레임을 넘어 남는다)입니다. 프레임 그래프 표가 크기와 함께 등록한다(`ProbeHistory`). */
         const RHIStructuredBuffer& getHistoryBuffer() const { return _historyBuffer; }
         /**
-         * @brief 기록을 0 에서 다시 쌓거나 복셀(점유 · 발광)이 바뀐 뒤 갱신한 프레임 수입니다(그린 프레임만 센다). 이번 프레임에 돌지 않으면 0 입니다 — 감시 값 `Render.GIAccumulatedFrames`.
+         * @brief 기록을 0 에서 다시 쌓거나 복셀(점유 · 발광)이 바뀐 뒤 갱신한 프레임 수입니다(그린 프레임만 센다). 이번 프레임에 돌지 않으면 0 입니다 — 렌더 정착 조건 `RenderRealtimeGI` 의 진척.
          * @details 복셀이 바뀌어도 기록은 0 으로 돌리지 않고 섞어 따라간다 — 그래서 섞는 비율의 초기 가속(`_framesSinceReset`)과 따로 센다.
          */
         [[nodiscard]] uint32 getAccumulatedFrames() const { return _bActive == SW_TRUE ? _framesSinceInputChange : 0u; }
+        /** @brief 기록에 남은 옛 값의 몫입니다(`computeError` — 이번 프레임까지). 이번 프레임에 돌지 않으면 0 입니다 — 감시 값 `Render.GIError`. */
+        [[nodiscard]] float32 getError() const { return _bActive == SW_TRUE ? _error : 0.0f; }
+        /**
+         * @brief 입력이 바뀐 뒤 @p accumulatedFrames 프레임을 갱신했을 때 기록에 남은 옛 값의 몫입니다 — 볼륨마다 (1 − 섞는 비율)^(갱신 횟수), 그 가운데 가장 큰 값. 요청이 없으면 0 입니다.
+         * @details 갱신 횟수는 프레임 수 ÷ 갱신 주기(내림)다. 새로 시작한 볼륨은 실제로 더 빨리 채워지므로(섞는 비율의 초기 가속) 상한이다.
+         */
+        [[nodiscard]] static float32 computeError( const vector<RealtimeProbeRequest>& listRequest, uint32 accumulatedFrames );
         /** @brief 컴퓨트를 기록합니다(라이트 업로드 뒤 · 조명 패스 앞). @p placeholderSRV 는 라이트가 없는 프레임에 t0 에 거는 자리표입니다. */
         void dispatch( IRHIPassCommandList& cmd, RHIPipelineStateHandle pso, const GPULightBuffer& lightBuffer, RHIDescriptorIndex placeholderSRV );
         /** @brief 버퍼를 놓습니다. */
@@ -194,6 +201,7 @@ namespace sw
         RealtimeProbeHistoryAllocator _historyAllocator;            ///< 볼륨 정체마다의 기록 구간(드나든 볼륨만 새로 시작한다)
         uint32                        _framesSinceInputChange{ 0 }; ///< 기록을 되돌리거나 복셀이 바뀐 뒤의 갱신 프레임 수(`getAccumulatedFrames`)
         uint32                        _frameCounter{ 0 };
+        float32                       _error{ 0.0f }; ///< `getError`
         uint32                        _totalProbes{ 0 };
         uint32                        _clearThreadCount{ 0 };
         uint32                        _paintThreadCount{ 0 };
