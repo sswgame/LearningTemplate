@@ -19,6 +19,7 @@
 #include "Engine/Graphics/Mesh/MeshCache.h"
 #include "Engine/Object/Component/SceneComponent.h"
 #include "Engine/Reflection/ReflectionMacros.h"
+#include "Engine/Serialization/Format/StateIO.h"
 
 namespace sw
 {
@@ -163,7 +164,7 @@ namespace sw
         /**
          * @brief 구 @p center · @p radius 에 닿는 인스턴스를 벱니다(벨 수 있는 레이어만 — `FoliageLayer::_bAllowCut`). 게임 스레드, 틱 밖에서 부릅니다.
          * @details 벤 인스턴스는 숨긴다(인스턴스 배치의 항목 하나씩 — 배치를 다시 만들지 않는다). `_regrowSeconds` 뒤에 다시 자라고, 배치를 다시 계산해도(지형 편집) 벤 자리는 벤 채다.
-         *          저장하지 않는다. 언리얼 폴리지의 인스턴스 제거, 유니티 지형 디테일 맵 지우기 자리다.
+         *          벤 자리는 PROPERTY 밖 상태라 상태 스냅샷(세이브 · 핫 리로드 · 스트리밍 셀)이 싣는다(`serializeState`). 언리얼 폴리지의 인스턴스 제거, 유니티 지형 디테일 맵 지우기 자리다.
          * @return 이번에 새로 벤 인스턴스 수입니다.
          */
         uint32 cut( const float3& center, float32 radius );
@@ -171,6 +172,13 @@ namespace sw
         static uint32 cutAll( GameObjectManager& manager, const float3& center, float32 radius );
         /** @brief 뿌리 @p root · 키 @p height 인 식물이 구 @p center · @p radius 에 닿는지입니다 — 수평 거리와 키 구간으로 본다. */
         [[nodiscard]] static bool isTouchedByCut( const float3& root, float32 height, const float3& center, float32 radius );
+        /**
+         * @brief 벤 자리들(이 컴포넌트 기준 자리 · 반지름 · 남은 시간)을 씁니다 · 읽습니다(`TerrainComponent` 의 편집과 같은 자리 — 등록은 GameFramework 의 `StatefulComponentRegistrar`).
+         * @details 컴포넌트 기준이라 월드 원점 옮기기 · 다른 판 번호의 배치에서도 맞는다. 배치는 규칙에서 다시 계산하므로 싣지 않는다.
+         */
+        SW_DECLARE_STATE_IO_IN_PLACE();
+        /** @brief `writeState` 의 바이트로 벤 자리를 되돌리고 셀 보이기를 맞춥니다. 맞지 않는 바이트는 알리고 지금 값으로 둡니다. 게임 스레드, 틱 밖에서 부릅니다. */
+        void restoreState( vector<uint8>&& bytes );
         /** @brief 지금 베여 숨은 인스턴스 수입니다. */
         uint32 getCutInstanceCount() const { return _cutInstanceCount; }
 
@@ -227,10 +235,12 @@ namespace sw
         /** @brief 벤 자리 하나입니다. */
         struct CutArea
         {
-            float3  _center{};
+            float3  _offset{}; ///< 이 컴포넌트의 월드 자리에서 잰 구 중심
             float32 _radius{ 0.0f };
             float32 _remaining{ 0.0f }; ///< 다시 자라기까지 남은 시간(초, `_regrowSeconds` 가 0 이면 쓰지 않는다)
         };
+
+        static constexpr uint32 kStateVersion = 1;
 
         /** @brief 셀 @p cell 의 항목 보이기를 지금 벤 자리들에 맞춥니다. 새로 만든 셀과 다시 자란 뒤에 부릅니다. */
         void applyCuts( Cell& cell ) const;
@@ -291,7 +301,7 @@ namespace sw
         PROPERTY( Category = "Foliage", DisplayName = "Regrow Time", Min = 0.0, Units = s, Tooltip = "Seconds until cut instances grow back; 0 leaves them cut" )
         float32 _regrowSeconds;
 
-        vector<CutArea>                    _listCutArea; ///< 벤 자리들(저장하지 않는다)
+        vector<CutArea>                    _listCutArea; ///< 벤 자리들(상태 스냅샷이 싣는다)
         vector<Cell>                       _listCell;
         vector<LayerMaterials>             _listLayerMaterial;      ///< 레이어마다 하나다(바람 값을 레이어마다 싣는다).
         vector<vector<PlacementCandidate>> _listLayerCandidate;     ///< 레이어마다 후보의 표면 판정(지형 위일 때만, 지형 편집 뒤 부분 계산용)

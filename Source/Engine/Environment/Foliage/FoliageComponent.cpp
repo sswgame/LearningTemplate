@@ -27,6 +27,7 @@
 #include "Engine/Object/GameObject/Registry/ComponentRegistry.h"
 #include "Engine/Object/GameObject/Registry/PrimitiveRegistry.h"
 #include "Engine/Profiling/FrameProfiler.h"
+#include "Engine/Serialization/Format/Archive.h"
 #include "Engine/Visual/MeshInstanceBatch.h"
 
 namespace sw
@@ -672,13 +673,14 @@ namespace sw
         const FoliageLayer& layer = _listLayer[cell._layerIndex];
         if ( layer._bAllowCut == false )
             return;
+        const float3 origin = getWorldPosition();
         for ( uint32 entry = 0; entry < cell._instanceCount; ++entry )
         {
             const float4x4& world  = cell._listBatch.front()->getEntry( entry )._world;
             const float32   height = layer._swayHeight * float3{ world._21, world._22, world._23 }.getLength(); // 흔들림이 다 차는 높이가 식물의 키다
             bool            bCut   = false;
             for ( const CutArea& area : _listCutArea )
-                bCut = bCut || isTouchedByCut( world.getTranslation(), height, area._center, area._radius );
+                bCut = bCut || isTouchedByCut( world.getTranslation(), height, origin + area._offset, area._radius );
             for ( const unique_ptr<MeshInstanceBatch>& pBatch : cell._listBatch )
                 pBatch->setEntryVisible( entry, bCut == false );
         }
@@ -718,9 +720,41 @@ namespace sw
         }
         // 새로 벤 것이 있는 자리만 적는다 — 같은 자리를 거듭 베어도 목록이 자라지 않는다.
         if ( newlyCutCount > 0 )
-            _listCutArea.push_back( CutArea{ center, radius, _regrowSeconds } );
+            _listCutArea.push_back( CutArea{ center - getWorldPosition(), radius, _regrowSeconds } );
         _cutInstanceCount += newlyCutCount;
         return newlyCutCount;
+    }
+
+    void FoliageComponent::serializeState( StateIO& io )
+    {
+        uint32 version = kStateVersion;
+        io.value( version );
+        if ( io.isReading() && ( io.isOk() == false || version != kStateVersion ) )
+        {
+            SW_LOG_WARNING_ID( "FoliageComponent.CutStateVersion", "Foliage cut state (version %#) did not read - keeping the current cuts", version );
+            io.fail();
+            return;
+        }
+        // 사본에 받아 끝까지 맞을 때만 옮긴다.
+        vector<CutArea> listArea = _listCutArea;
+        io.list( listArea, static_cast<uint32>( sizeof( float32 ) * 5 ), [&io]( CutArea& area )
+        {
+            io.value( area._offset );
+            io.value( area._radius );
+            io.value( area._remaining );
+        } );
+        if ( io.isReading() && io.isOk() )
+            _listCutArea = std::move( listArea );
+    }
+
+    void FoliageComponent::restoreState( vector<uint8>&& bytes )
+    {
+        Archive archive( bytes.data(), static_cast<uint64>( bytes.size() ) );
+        if ( readState( archive ) == false )
+            return; // 까닭은 읽기가 남겼다
+        for ( Cell& cell : _listCell )
+            applyCuts( cell );
+        countCutInstances();
     }
 
     uint32 FoliageComponent::cutAll( GameObjectManager& manager, const float3& center, float32 radius )

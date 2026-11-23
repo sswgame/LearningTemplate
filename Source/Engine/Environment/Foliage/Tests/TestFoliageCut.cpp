@@ -7,6 +7,7 @@
 #include "Engine/Environment/Foliage/FoliageComponent.h"
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
+#include "Engine/Serialization/Format/Archive.h"
 
 using namespace sw;
 
@@ -31,4 +32,26 @@ SW_TEST_CASE( FoliageCutTest, EmptyFoliageCutsNothing )
     SW_REQUIRE_NOT_NULL( pFoliage );
     SW_EXPECT_EQUAL( 0u, FoliageComponent::cutAll( manager, float3{}, 10.0f ) );
     SW_EXPECT_EQUAL( 0u, pFoliage->getCutInstanceCount() );
+}
+
+/** @brief [FoliageCutTest] 벤 자리는 상태로 실려 다시 만든 식생에 그대로 돌아오고, 깨진 바이트는 지금 값을 바꾸지 않는다 */
+SW_TEST_CASE( FoliageCutTest, CutAreasRoundTrip )
+{
+    GameObjectManager manager;
+    GameObject*       pObject = manager.createGameObject( hashed_string( "Grass" ) );
+    SW_REQUIRE_NOT_NULL( pObject );
+    FoliageComponent* pFoliage = pObject->addComponent<FoliageComponent>();
+    SW_REQUIRE_NOT_NULL( pFoliage );
+    Archive source; // 판 1, 벤 자리 하나(기준 자리 1 2 3, 반지름 0.5, 남은 2 초)
+    source << uint32{ 1 } << uint32{ 1 } << float3{ 1.0f, 2.0f, 3.0f } << 0.5f << 2.0f;
+    const vector<uint8> bytes( source.getData(), source.getData() + source.getSize() );
+    pFoliage->restoreState( vector<uint8>( bytes ) );
+    Archive written;
+    pFoliage->writeState( written );
+    SW_EXPECT_TRUE( bytes == vector<uint8>( written.getData(), written.getData() + written.getSize() ) );
+
+    pFoliage->restoreState( vector<uint8>( bytes.begin(), bytes.end() - 2 ) );
+    Archive kept;
+    pFoliage->writeState( kept );
+    SW_EXPECT_TRUE( bytes == vector<uint8>( kept.getData(), kept.getData() + kept.getSize() ) );
 }
