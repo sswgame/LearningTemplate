@@ -1,6 +1,6 @@
 #include "pch.h"
 
-#include "Games/ThemeParkTycoon/ParkGuestComponent.h"
+#include "GameFramework/Kits/Genre/Simulation/ThemePark/Client/ParkGuestComponent.h"
 
 #include "Engine/Graphics/Material/MaterialInstance.h"
 #include "Engine/Object/GameObject/GameObject.h"
@@ -8,7 +8,8 @@
 #include "Engine/Object/GameObject/Tick/TickContext.h"
 #include "Engine/Visual/Component/MeshComponent.h"
 
-#include "Games/ThemeParkTycoon/ParkGameModeComponent.h"
+#include "GameFramework/Kits/Genre/Simulation/ThemePark/Client/ParkViewComponent.h"
+#include "GameFramework/Kits/Genre/Simulation/ThemePark/Component/ParkGameModeComponent.h"
 
 namespace sw
 {
@@ -42,7 +43,9 @@ namespace sw
         if ( pMesh == nullptr )
             return;
         const ParkGameModeComponent* pGameMode = findGameMode<ParkGameModeComponent>();
-        if ( pGameMode == nullptr )
+        // 모습을 나눠 주는 공원 뷰는 디렉터와 같은 오브젝트다(공원 뷰가 손님을 세우며 그 오브젝트를 적는다).
+        const ParkViewComponent* pParkView = findGameMode<ParkViewComponent>();
+        if ( pGameMode == nullptr || pParkView == nullptr )
             return;
 
         // 같은 그룹의 다른 손님과 함께 읽는다 — 첨자 대신 포인터로(쓰기로 잡히지 않게).
@@ -55,10 +58,10 @@ namespace sw
         if ( bShown == false )
             return;
         pMesh->setLocalPosition( pGuest->_position + float3{ 0.0f, _heightOffset, 0.0f } );
-        const int32 bucket = ParkGameModeComponent::computeHappinessBucket( pGuest->_happiness );
+        const int32 bucket = ParkViewComponent::computeHappinessBucket( pGuest->_happiness );
         if ( bucket == _colorBucket )
             return;
-        const shared_ptr<MaterialInstance>& look = pGameMode->getGuestLook( bucket );
+        const shared_ptr<MaterialInstance>& look = pParkView->getGuestLook( bucket );
         if ( look == nullptr )
             return;
         pMesh->setMaterialInstance( look );

@@ -402,28 +402,49 @@
 				</_listComponent>
 			</GameObject>
 		</entity>
+		<!-- 공원 원점은 ParkGameMode 의 씬 컴포넌트다 — 배치 데이터(rides.xml)는 이 자리 기준이고, 하위 레벨로 얹으면 앵커를 따라간다. 모습 · 입력은 뒤의 ParkViewComponent(GF_Client_ThemePark). -->
 		<entity id="18" name="ParkGameMode">
 			<GameObject _schemaVersion="0" _name="ParkGameMode" _bActive="true">
 				<_listComponent>
+					<SceneComponent _localID="12574257654564749349" _componentName="SceneComponent"
+					                _bActive="true"
+					                _localPosition="0,0,0"
+					                _localRotation="0,0,0"
+					                _localScale="1,1,1"
+					                _attachOwner="None"
+					                _attachOwnerID="0"
+					                _attachComponent="None" />
 					<ParkGameModeComponent _localID="7846510615290749096" _componentName="ParkGameModeComponent"
 					                       _bActive="true"
 					                       _parkDataPath="game/themepark/data/rides.xml"
-					                       _guestPrefab="game/themepark/prefabs/guest.prefab.xml"
-					                       _carFrontPrefab="game/themepark/prefabs/coastercarfront.prefab.xml"
-					                       _carPrefab="game/themepark/prefabs/coastercar.prefab.xml"
-					                       _railPrefab="game/themepark/prefabs/coasterrail.prefab.xml"
-					                       _supportPrefab="game/themepark/prefabs/coastersupport.prefab.xml"
-					                       _stationPrefab="game/themepark/prefabs/coasterstation.prefab.xml"
-					                       _rideEntrancePrefab="game/themepark/prefabs/rideentrance.prefab.xml"
-					                       _pathPrefab="game/themepark/prefabs/path.prefab.xml"
-					                       _flatRidePrefab="game/themepark/prefabs/flatride.prefab.xml"
-					                       _happyColor="0.3,0.85,0.35,1"
-					                       _contentColor="0.95,0.85,0.25,1"
-					                       _unhappyColor="0.9,0.25,0.2,1"
-					                       _cameraRig="1"
 					                       _gate="4"
 					                       _autoBuildInterval="20"
 					                       _bAutoPlay="false" />
+					<ParkViewComponent _localID="6184027395518830417" _componentName="ParkViewComponent"
+					                   _bActive="true"
+					                   _guestPrefab="game/themepark/prefabs/guest.prefab.xml"
+					                   _carFrontPrefab="game/themepark/prefabs/coastercarfront.prefab.xml"
+					                   _carPrefab="game/themepark/prefabs/coastercar.prefab.xml"
+					                   _railPrefab="game/themepark/prefabs/coasterrail.prefab.xml"
+					                   _supportPrefab="game/themepark/prefabs/coastersupport.prefab.xml"
+					                   _stationPrefab="game/themepark/prefabs/coasterstation.prefab.xml"
+					                   _rideEntrancePrefab="game/themepark/prefabs/rideentrance.prefab.xml"
+					                   _pathPrefab="game/themepark/prefabs/path.prefab.xml"
+					                   _flatRidePrefab="game/themepark/prefabs/flatride.prefab.xml"
+					                   _happyColor="0.3,0.85,0.35,1"
+					                   _contentColor="0.95,0.85,0.25,1"
+					                   _unhappyColor="0.9,0.25,0.2,1"
+					                   _cameraRig="1"
+					                   _nextRideAction="Park.NextRide"
+					                   _toggleOpenAction="Park.ToggleOpen"
+					                   _priceDownAction="Park.PriceDown"
+					                   _priceUpAction="Park.PriceUp"
+					                   _feeDownAction="Park.FeeDown"
+					                   _feeUpAction="Park.FeeUp"
+					                   _buildAction="Park.Build"
+					                   _rideAction="Park.Ride"
+					                   _thoughtsAction="Park.Thoughts"
+					                   _statusAction="Status" />
 				</_listComponent>
 			</GameObject>
 		</entity>

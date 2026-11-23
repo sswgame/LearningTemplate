@@ -9,6 +9,7 @@
 #include "Engine/Object/Component/Component.h"
 #include "Engine/Reflection/ReflectionMacros.h"
 
+#include "GameFramework/GameFrameworkExports.h"
 #include "GameFramework/Runtime/Foundation/Framework/GameFrameworkComponent.h"
 
 namespace sw
@@ -18,7 +19,7 @@ namespace sw
      * @brief `TickGroup::PostUpdate` 에서 디렉터 시뮬레이션의 탑승자 수를 읽기만 하고 자기 오브젝트의 메시만 돌립니다.
      */
     REFLECT( Category = "ThemePark", DisplayName = "Flat Ride View", Tooltip = "Spins a flat ride while the park game mode's simulation has riders on it" )
-    class FlatRideComponent : public GameFrameworkComponent
+    class SW_KIT_CLIENT_API FlatRideComponent : public GameFrameworkComponent
     {
     public:
         REFLECT_BODY();
@@ -29,8 +30,8 @@ namespace sw
         void onBeginPlay() override;
         void onTick( TickContext& context ) override;
 
-        /** @brief 따라갈 디렉터 · 놀이기구 번호 · 도는 빠르기(rad/s)를 정합니다. */
-        void assignRide( GameObjectHandle gameMode, int32 rideIndex, float32 spin );
+        /** @brief 따라갈 디렉터 · 놀이기구 번호 · 도는 빠르기(rad/s) · 처음 각(공원 원점의 요, rad)을 정합니다. */
+        void assignRide( GameObjectHandle gameMode, int32 rideIndex, float32 spin, float32 startAngle );
 
     private:
         PROPERTY( Category = "Ride", DisplayName = "Ride Index", Tooltip = "Ride slot in the simulation" )

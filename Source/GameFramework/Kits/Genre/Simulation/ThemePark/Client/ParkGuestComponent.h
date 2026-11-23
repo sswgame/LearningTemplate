@@ -9,6 +9,7 @@
 #include "Engine/Object/Component/Component.h"
 #include "Engine/Reflection/ReflectionMacros.h"
 
+#include "GameFramework/GameFrameworkExports.h"
 #include "GameFramework/Runtime/Foundation/Framework/GameFrameworkComponent.h"
 
 namespace sw
@@ -19,7 +20,7 @@ namespace sw
      * @details 손님 수가 줄면 남는 칸은 숨깁니다(오브젝트를 만들고 지우지 않는 풀). 탄 손님 · 떠난 손님도 숨깁니다.
      */
     REFLECT( Category = "ThemePark", DisplayName = "Park Guest View", Tooltip = "Follows one guest of the park game mode's simulation" )
-    class ParkGuestComponent : public GameFrameworkComponent
+    class SW_KIT_CLIENT_API ParkGuestComponent : public GameFrameworkComponent
     {
     public:
         REFLECT_BODY();
@@ -30,7 +31,7 @@ namespace sw
         void onBeginPlay() override;
         void onTick( TickContext& context ) override;
 
-        /** @brief 따라갈 디렉터와 손님 번호를 정합니다(디렉터가 스폰한 뒤 부른다). */
+        /** @brief 따라갈 디렉터와 손님 번호를 정합니다(공원 뷰가 스폰한 뒤 부른다). */
         void assignGuest( GameObjectHandle gameMode, int32 guestIndex );
 
     private:

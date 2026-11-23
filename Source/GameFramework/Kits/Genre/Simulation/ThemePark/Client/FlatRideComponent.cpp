@@ -1,13 +1,13 @@
 #include "pch.h"
 
-#include "Games/ThemeParkTycoon/FlatRideComponent.h"
+#include "GameFramework/Kits/Genre/Simulation/ThemePark/Client/FlatRideComponent.h"
 
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
 #include "Engine/Object/GameObject/Tick/TickContext.h"
 #include "Engine/Visual/Component/MeshComponent.h"
 
-#include "Games/ThemeParkTycoon/ParkGameModeComponent.h"
+#include "GameFramework/Kits/Genre/Simulation/ThemePark/Component/ParkGameModeComponent.h"
 
 namespace sw
 {
@@ -26,11 +26,12 @@ namespace sw
         setTickGroup( TickGroup::PostUpdate );
     }
 
-    void FlatRideComponent::assignRide( GameObjectHandle gameMode, int32 rideIndex, float32 spin )
+    void FlatRideComponent::assignRide( GameObjectHandle gameMode, int32 rideIndex, float32 spin, float32 startAngle )
     {
         bindGameMode( gameMode );
         _rideIndex = rideIndex;
         _spin      = spin;
+        _angle     = startAngle;
     }
 
     void FlatRideComponent::onTick( TickContext& context )

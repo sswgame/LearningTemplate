@@ -1,6 +1,6 @@
 #include "pch.h"
 
-#include "Games/ThemeParkTycoon/CoasterCarComponent.h"
+#include "GameFramework/Kits/Genre/Simulation/ThemePark/Client/CoasterCarComponent.h"
 
 #include "Core/Math/OrientationUtil.h"
 
@@ -9,7 +9,7 @@
 #include "Engine/Object/GameObject/Tick/TickContext.h"
 #include "Engine/Visual/Component/MeshComponent.h"
 
-#include "Games/ThemeParkTycoon/ParkGameModeComponent.h"
+#include "GameFramework/Kits/Genre/Simulation/ThemePark/Component/ParkGameModeComponent.h"
 
 namespace sw
 {

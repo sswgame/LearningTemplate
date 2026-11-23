@@ -11,9 +11,8 @@
 
 #include "Engine/Object/GameObject/GameObjectManager.h"
 
+#include "GameFramework/Kits/Genre/Simulation/ThemePark/Component/ParkGameModeComponent.h"
 #include "GameFramework/Runtime/Foundation/Framework/Flow/GameInstance.h"
-
-#include "Games/ThemeParkTycoon/ParkGameModeComponent.h"
 
 #include "ModuleAPI/Export/GameModuleExports.h"
 

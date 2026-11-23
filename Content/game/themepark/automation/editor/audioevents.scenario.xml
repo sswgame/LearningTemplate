@@ -20,7 +20,7 @@
 	<DevCommand line="panel.focus audioevents"/>
 	<WaitUntil watch="Editor.AudioEventCount" atLeast="3" timeoutFrames="60"/>
 	<Expect watch="Editor.AudioEventSelected" equals="0"/>
-	<EditorClick mark="audioevents.event.Built"/>
+	<EditorClick mark="audioevents.event.ParkBuilt"/>
 	<EditorWaitStable/>
 	<Expect watch="Editor.AudioEventSelected" equals="1"/>
 	<!-- ② Post Event — 오디오 스레드가 받는다 -->
