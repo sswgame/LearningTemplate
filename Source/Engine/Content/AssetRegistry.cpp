@@ -5,6 +5,7 @@
 #include "Core/Concurrency/ScopedLock.h"
 #include "Core/Concurrency/mutex.h"
 #include "Core/Container/unordered_set.h"
+#include "Core/File/FileUtil.h"
 #include "Core/String/StringUtil.h"
 #include "Core/Subsystem/ServiceSlot.h"
 #include "Core/Subsystem/Subsystem.h"
@@ -39,7 +40,7 @@ namespace sw
 
     /**
      * @class AssetRegistryTable
-     * @brief 프로세스의 색인입니다(엔진 서비스 서브시스템 — `AssetRedirectTable` 과 같은 자리). `AssetRegistry` 의 정적 창구가 이것을 쓴다.
+     * @brief 프로세스의 색인입니다(엔진 서비스 서브시스템). `AssetRegistry` 의 정적 창구가 이것을 쓴다.
      * @details 기동 · 마운트 때 한 번 바꾸고 모든 참조 읽기가 묻는다 — 읽기가 많아 공유 잠금이다.
      */
     class AssetRegistryTable final : public Subsystem
@@ -110,7 +111,26 @@ namespace sw
             {
                 registry.put( entry._guid, entry._assetID );
             }
+            for ( const AssetIdentityRedirect& redirect : layer._listRedirect )
+            {
+                registry._mapRedirect.insert_or_assign( redirect._from, redirect._to );
+            }
         }
+        // 사슬(A→B, B→C)을 끝(A→C)으로 접는다 — 두 번 합친 에셋의 첫 GUID 도 한 번에 풀린다.
+        unordered_map<AssetGUID, AssetGUID> mapCollapsed;
+        for ( const auto& [from, firstTo] : registry._mapRedirect )
+        {
+            AssetGUID target = firstTo;
+            size_t    steps  = 0;
+            for ( auto it = registry._mapRedirect.find( target ); it != registry._mapRedirect.end(); it = registry._mapRedirect.find( target ) )
+            {
+                target = it->second;
+                if ( ++steps > registry._mapRedirect.size() )
+                    return unexpected( Error{ ErrorKind::InvalidArgument, "asset identity redirects loop", from.toString() } );
+            }
+            mapCollapsed.emplace( from, target );
+        }
+        registry._mapRedirect = std::move( mapCollapsed );
         return registry;
     }
 
@@ -132,7 +152,13 @@ namespace sw
 
     optional<string> AssetRegistry::findPath( const AssetGUID& guid ) const
     {
-        const auto found = _mapGUIDToPath.find( guid );
+        auto found = _mapGUIDToPath.find( guid );
+        if ( found == _mapGUIDToPath.end() )
+        {
+            const auto redirect = _mapRedirect.find( guid );
+            if ( redirect != _mapRedirect.end() )
+                found = _mapGUIDToPath.find( redirect->second );
+        }
         if ( found == _mapGUIDToPath.end() )
             return nullopt;
         return found->second;
@@ -198,6 +224,42 @@ namespace sw
         if ( isReferenceText( text ) == false )
             return nullopt;
         return AssetGUID::tryParse( text.substr( kReferencePrefix.size() ) );
+    }
+
+    expected<AssetReferenceTarget> AssetRegistry::readReferenceText( string_view text )
+    {
+        const string_view    trimmed = StringUtil::trim( text );
+        AssetReferenceTarget target;
+        if ( isReferenceText( trimmed ) == false )
+        {
+            target._path = string{ trimmed };
+            if ( trimmed.empty() == false )
+                target._guid = resolveGUID( trimmed );
+            return target;
+        }
+        target._guid = parseReferenceText( trimmed );
+        if ( target._guid.has_value() == false )
+            return unexpected( Error{ ErrorKind::InvalidArgument, "not a GUID reference (guid: and 32 lowercase hex digits)", trimmed } );
+        optional<string> resolved = resolve( *target._guid );
+        if ( resolved.has_value() == false )
+            return unexpected( Error{ ErrorKind::NotFound, "not in the asset index - the asset was deleted or the index is not installed", trimmed } );
+        target._path = std::move( *resolved );
+        if ( const optional<AssetGUID> current = resolveGUID( target._path ); current.has_value() )
+            target._guid = current; // 정체성 대체로 풀렸으면 남은 쪽의 GUID 다 — 다시 저장하면 그것이 적힌다
+        return target;
+    }
+
+    string AssetRegistry::makeReferenceText( string_view path, const optional<AssetGUID>& guid )
+    {
+        return guid.has_value() ? makeReferenceText( *guid ) : string{ path };
+    }
+
+    string AssetRegistry::toCacheKey( string_view path )
+    {
+        if ( isReferenceText( path ) == false )
+            return FileUtil::normalizePath( path ).str();
+        const expected<AssetReferenceTarget> target = readReferenceText( path );
+        return FileUtil::normalizePath( target.has_value() ? string_view{ target->_path } : path ).str(); // 풀리지 않는 글은 그 글의 칸이다 — 읽기가 "없음" 을 낸다
     }
 } // namespace sw
 

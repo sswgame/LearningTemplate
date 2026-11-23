@@ -22,6 +22,7 @@
 
 #include "Engine/Config/EngineDefaultAssets.h"
 #include "Engine/Config/GameConfig.h"
+#include "Engine/Content/AssetGUID.h"
 #include "Engine/Content/AssetPaths.h"
 #include "Engine/Dialogue/DialogueGraphAsset.h"
 #include "Engine/Foundation/EngineDefines.h"
@@ -582,7 +583,7 @@ namespace sw
         outResult._report    = gatherer.mergeInto( gatherTable, listOtherTable );
         const string newText = gatherTable.saveToXMLText();
         string       diskText;
-        const bool   bSameOnDisk = FileUtil::readOptionalTextFile( FileUtil::toDiskPath( outResult._gatherTablePath ), diskText ) == OptionalFileRead::Read && diskText == newText;
+        const bool   bSameOnDisk = FileUtil::readOptionalTextFile( FileUtil::toDiskPath( outResult._gatherTablePath ), diskText ) == OptionalFileRead::Read && diskText == AssetGUIDHeader::carryOver( diskText, newText ); // 머리는 글 수집의 것이 아니다
         if ( bSameOnDisk == false )
         {
             if ( bWrite )

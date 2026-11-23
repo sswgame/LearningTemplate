@@ -4,13 +4,14 @@
  * @details 값의 기준은 데이터 파일이고 헤더는 형식만 갖는다. 그래서 이 형식은
  *          문자열 · 리터럴로 만들 수 없다 — `DataPath _shaderForwardLit{ "engine/shaders/…" }` 는 컴파일되지 않는다. 값은 리플렉션 데이터 읽기
  *          (`XMLSerializer` · `JSONSerializer` 가 부르는 텍스트 처리기, `SerializeContext` 의 "DataPath" 처리기)만 넣는다.
+ *          저장 꼴은 정체성이다 — `guid:<32자>`(`AssetRegistry::readReferenceText`). 종류를 가르지 않는 것만 `AssetRef<T>` 와 다르다. 에셋이 아닌 경로(팩 뿌리 폴더)는 경로 글이다.
  *          만든 직후의 칸은 "읽지 않음" 이다. 칸을 가진 구조체는 `PROPERTY( Required )` 로 두고, 읽기가 빠진 칸을 오류로 알린다
  *          (예: `EngineDefaultAssets::load`). 읽지 않은 칸을 쓰면 Debug 에서 어서션이 난다.
  *
  *          쓰는 법:
  *            PROPERTY( Required )
  *            DataPath _shaderToon;                                  // 헤더 — 값 없음
- *            <EngineDefaultAssets _shaderToon="engine/shaders/toon.hlsl" />   // 데이터 — 값의 기준
+ *            <EngineDefaultAssets _shaderToon="guid:<32자>" />     // 데이터 — 값의 기준
  *            createPipelineState( assets._shaderToon.get() );       // 읽는 쪽
  */
 #pragma once

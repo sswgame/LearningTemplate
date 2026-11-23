@@ -8,6 +8,8 @@
 #include "Core/Math/MathUtil.h"
 #include "Core/Memory/Memory.h"
 
+#include "Editor/Common/Asset/AssetSourceLocator.h"
+
 namespace sw::editor
 {
     namespace
@@ -47,7 +49,7 @@ namespace sw::editor
     bool RawImageData::loadImage( string_view filePath, RawImageData& outImage )
     {
         vector<uint8> bytes;
-        if ( FileUtil::readFile( FileUtil::toDiskPath( filePath ), bytes ) == false || bytes.empty() )
+        if ( AssetSourceLocator::readBytes( filePath, bytes ) == false )
         {
             SW_LOG_ERROR_ID( "RawImageData.FailedReadImageFile", "Failed to read image file: %#", filePath );
             return false;

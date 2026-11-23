@@ -11,7 +11,6 @@
 #include "Engine/Console/DevCommandRegistry.h"
 #include "Engine/Scene/Scene.h"
 #include "Engine/Scene/SceneManager.h"
-#include "Engine/Serialization/Inherit/AssetRedirect.h"
 
 #include "GameFramework/Runtime/Foundation/Framework/Flow/GameInstance.h"
 #include "GameFramework/Runtime/Foundation/Framework/Flow/GameSceneFlow.h"
@@ -56,12 +55,12 @@ namespace sw
                 return true;
             }
 
-            /** @brief 활성 씬의 지금 리소스 id(`Scene::getSourcePath` 를 리다이렉트로 푼 것)입니다. 씬 매니저나 활성 씬이 없으면 빈 글입니다 — 세이브 머리의 씬 정체와 같은 뜻이다. */
+            /** @brief 활성 씬의 리소스 id(`Scene::getSourcePath`)입니다. 씬 매니저나 활성 씬이 없으면 빈 글입니다 — 세이브 머리의 씬 정체와 같은 뜻이다. */
             static string findActiveSceneID()
             {
                 const SceneManager* const pSceneManager = game::findSubsystem<SceneManager>();
                 const Scene* const        pScene        = pSceneManager != nullptr ? pSceneManager->getActiveScene() : nullptr;
-                return pScene != nullptr ? AssetRedirect::toCurrentID( pScene->getSourcePath() ) : string{};
+                return pScene != nullptr ? pScene->getSourcePath() : string{};
             }
 
             /** @brief 감시 값 `Save.Blocked` 입니다 — 세이브 막기 문이 들렸으면 1(씬 로드 · 깨진 복원 · 연출). */
@@ -243,8 +242,13 @@ namespace sw
         applySlot( completion._slot, completion._bytes, {} );
     }
 
-    void GameSaveSlots::applySlot( const string& slot, const vector<uint8>& bytes, const AppliedFunction& onApplied )
+    void GameSaveSlots::applySlot( const string& slot, vector<uint8> bytes, const AppliedFunction& onApplied )
     {
+        if ( GameStateSnapshot::upgradeEnvelope( bytes ) == false )
+        {
+            publishSlotLoaded( slot, false, onApplied ); // 까닭은 판 올림이 남겼다
+            return;
+        }
         if ( _pendingSlotRestore.has_value() )
         {
             // 읽기 둘이 겹쳤다 — 앞의 것이 씬을 옮기는 중이라 이 세이브를 곧 내려갈 씬에 풀지 않는다.
@@ -273,7 +277,7 @@ namespace sw
             publishSlotLoaded( slot, bRestored, onApplied );
             return;
         }
-        _pendingSlotRestore = PendingSlotRestore{ slot, bytes, onApplied };
+        _pendingSlotRestore = PendingSlotRestore{ slot, std::move( bytes ), onApplied };
         // 미니게임 밖의 세이브는 장치 밖 이동이다 — 켜진 미니게임이 있으면 흐름이 비운다.
         const GameSceneFlow::SceneLoadedFunction onLoaded   = SW_DELEGATE_METHOD( GameSceneFlow::SceneLoadedFunction, &GameSaveSlots::onSaveSceneLoaded, this );
         const bool                               bRequested = listFrame.empty() ? _owner.getSubsystem<GameSceneFlow>().requestSceneThen( *savedSceneID, onLoaded )

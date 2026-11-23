@@ -17,6 +17,7 @@
 #include "Core/String/fixed_string.h"
 #include "Core/String/formatString.h"
 
+#include "Editor/Common/Asset/AssetSourceLocator.h"
 #include "Editor/Common/Asset/ImportedAssetStore.h"
 #include "Editor/Common/Asset/ModelImport/ModelImportGeometry.h"
 #include "Editor/Common/Asset/ModelImport/ModelImportUtil.h"
@@ -410,7 +411,7 @@ namespace sw::editor
         const string imagePath = ModelImportUtil::resolveURI( sourcePath, image.uri );
         outTexture._extension  = FileUtil::getExtension( imagePath );
         outTexture._sourcePath = imagePath;
-        if ( FileUtil::readFile( FileUtil::toDiskPath( imagePath ), outTexture._bytes ) == false )
+        if ( AssetSourceLocator::readBytes( imagePath, outTexture._bytes ) == false )
         {
             SW_LOG_ERROR_ID( "ModelImport.ImageFileMissing", "glTF '%#': cannot read its image file %#", sourcePath, imagePath.c_str() );
             return false;
@@ -593,7 +594,7 @@ namespace sw::editor
         const string domain  = logicalPath.substr( 0, logicalPath.find( rawMarker.view() ) );
         const string key     = ImportedAssetStore::makeKey( texture._bytes.data(), texture._bytes.size(), string_view{} );
         const string rawPath = TextureImportConfig::makeSharedSourcePath( domain, match._rule._name, key, texture._extension );
-        if ( ImportedAssetStore::writeIfAbsent( rawPath, texture._bytes.data(), texture._bytes.size() ) == false )
+        if ( ImportedAssetStore::writeSourceIfAbsent( assetPaths, rawPath, texture._bytes.data(), texture._bytes.size() ) == false )
             return false;
         outAssetPath = assetPaths.toAssetID( TextureImporter::makeImportedTexturePath( rawPath ) );
         return true;
@@ -613,7 +614,7 @@ namespace sw::editor
         // 이름은 슬롯의 것이라 키에서 뺀다 — 값이 같으면 이름이 달라도 한 파일이다.
         root.setAttribute( "name", "" );
         const string nameless = document.saveToString();
-        // 설정 글에 임포터 판을 섞는다 — 판이 바뀌면 결과 바이트(예: 판 9 의 GUID 머리)가 바뀌므로 옛 판의 같은 키 파일과 부딪히지 않는다(언리얼 DDC 키의 판 GUID 자리).
+        // 설정 글에 임포터 판을 섞는다 — 판이 바뀌면 결과 바이트(예: 판 10 이 뺀 GUID 머리)가 바뀌므로 옛 판의 같은 키 파일과 부딪히지 않는다(언리얼 DDC 키의 판 GUID 자리).
         StringBuilder<constant::buffer::kMax32> settings;
         settings.appendFormat( "importer=%#", static_cast<uint64>( ModelImportUtil::kImporterVersion ) );
         outShared._key = ImportedAssetStore::makeKey( nameless.data(), nameless.size(), settings.view() );
@@ -644,15 +645,14 @@ namespace sw::editor
             SW_LOG_ERROR_ID( "ModelImporter.MaterialSourceNotUnderRaw", "'%#' is not under %#/ - there is no shared store for its material", sourcePath, ModelImportUtil::kRawModelFolder.data() );
             return false;
         }
-        const string           sharedPath = ImportedAssetStore::makeStorePath( domain, kSharedMaterialKind, shared._key, ".material" );
-        const optional<string> sharedText = ImportedAssetStore::makeTextWithIdentity( assetPaths, sharedPath, shared._text );
-        if ( sharedText.has_value() == false || ImportedAssetStore::writeIfAbsent( sharedPath, sharedText->data(), sharedText->size() ) == false )
+        const string sharedPath = ImportedAssetStore::makeStorePath( domain, kSharedMaterialKind, shared._key, ".material" );
+        if ( ImportedAssetStore::writeIfAbsent( sharedPath, shared._text.data(), shared._text.size() ) == false )
             return false;
         // 손 데이터(씬 · 프리팹)가 부르는 슬롯 주소는 그대로 둔다 — 값은 공유 파일 한 벌이고 슬롯 파일은 그것을 가리키는 한 줄이다(언리얼 Redirector · 덮어쓰기 없는 Material Instance).
         StringBuilder<constant::buffer::kMax256> fileNameBuilder;
         fileNameBuilder.appendFormat( "%#.material", fileStem );
         const string slotPath = FileUtil::joinPath( FileUtil::joinPath( sideFolder, ModelImportUtil::kMaterialFolder ), fileNameBuilder.view() );
-        return ImportedAssetStore::writeTextWithIdentity( assetPaths, slotPath, makeSlotMaterialText( fileStem, assetPaths.toAssetID( sharedPath ) ) );
+        return ImportedAssetStore::writeResultText( slotPath, makeSlotMaterialText( fileStem, assetPaths.toAssetID( sharedPath ) ) );
     }
 
     string ModelImportMaterial::findSharedMaterial( string_view sideFolder, string_view fileStem )

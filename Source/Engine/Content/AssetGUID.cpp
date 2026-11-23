@@ -116,9 +116,23 @@ namespace sw
     AssetGUID AssetGUID::fromName( string_view name )
     {
         // 두 반쪽은 씨앗이 다른 FNV-1a 64 를 섞은 값이다 — 같은 이름이면 같고, 다른 이름이 128 비트 모두 겹칠 일은 없다(색인이 겹친 GUID 를 결함으로 잡는다).
-        const uint64 high = HashUtil::mix64( HashUtil::computeStringHash64( name.data(), name.size(), true, HashUtil::kFNVOffset64 ) );
-        const uint64 low  = HashUtil::mix64( HashUtil::computeStringHash64( name.data(), name.size(), true, HashUtil::kFNVOffset64 ^ HashUtil::kGoldenRatio64 ) );
-        // 모두 0 은 글 표기가 받지 않는다(2^-128) — 정해진 값으로 비켜 결정성을 지킨다.
+        return fromNameHash( HashUtil::computeStringHash64( name.data(), name.size(), true, HashUtil::kFNVOffset64 ),
+                             HashUtil::computeStringHash64( name.data(), name.size(), true, HashUtil::kFNVOffset64 ^ HashUtil::kGoldenRatio64 ) );
+    }
+
+    AssetGUID AssetGUID::fromName( const AssetGUID& nameSpace, string_view name )
+    {
+        // 이름공간 글 표기 뒤에 이름을 이어 섞는다 — 이은 글 하나의 해시와 같은 값이다(글을 잇지 않는다).
+        const string space = nameSpace.toString();
+        const uint64 high  = HashUtil::computeStringHash64( space.data(), space.size(), true, HashUtil::kFNVOffset64 );
+        const uint64 low   = HashUtil::computeStringHash64( space.data(), space.size(), true, HashUtil::kFNVOffset64 ^ HashUtil::kGoldenRatio64 );
+        return fromNameHash( HashUtil::computeStringHash64( name.data(), name.size(), true, high ), HashUtil::computeStringHash64( name.data(), name.size(), true, low ) );
+    }
+
+    AssetGUID AssetGUID::fromNameHash( uint64 highHash, uint64 lowHash )
+    {
+        const uint64 high = HashUtil::mix64( highHash );
+        const uint64 low  = HashUtil::mix64( lowHash );
         return ( high == 0 && low == 0 ) ? AssetGUID{ 0, HashUtil::kGoldenRatio64 } : AssetGUID{ high, low };
     }
 

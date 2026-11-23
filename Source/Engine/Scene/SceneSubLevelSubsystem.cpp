@@ -10,6 +10,7 @@
 #include "Core/Time/MonotonicClock.h"
 
 #include "Engine/Content/AssetID.h"
+#include "Engine/Content/AssetRegistry.h"
 #include "Engine/Foundation/DeterministicRun.h"
 #include "Engine/Foundation/EngineServices.h"
 #include "Engine/Object/Component/SceneComponent.h"
@@ -18,6 +19,7 @@
 #include "Engine/Object/GameObject/Service/SceneServiceRegistry.h"
 #include "Engine/Object/GameObject/WorldOrigin.h"
 #include "Engine/Serialization/Format/Archive.h"
+#include "Engine/Serialization/Inherit/AssetRedirect.h"
 
 namespace sw
 {
@@ -403,7 +405,9 @@ namespace sw
         arch << static_cast<uint32>( listSaved.size() );
         for ( const SubLevel* pSubLevel : listSaved )
         {
-            arch << string_view( pSubLevel->_name ) << string_view( pSubLevel->_scenePath ) << pSubLevel->_placement._position << pSubLevel->_placement._rotation;
+            // 씬은 GUID 로 적는다 — 세이브가 남은 뒤 씬을 옮겨도 풀린다.
+            const string sceneReference = AssetRegistry::makeReferenceText( pSubLevel->_scenePath, AssetRegistry::resolveGUID( pSubLevel->_scenePath ) );
+            arch << string_view( pSubLevel->_name ) << string_view( sceneReference ) << pSubLevel->_placement._position << pSubLevel->_placement._rotation;
             // 다 지었으면 지금 떠서(앵커 포함 — 앵커가 옮겨졌을 수 있다), 짓는 중이면 아직 지을 내용 그대로다(앵커는 다시 세울 때 만든다).
             vector<SceneDocument::SceneObjectNode> listCaptured;
             const bool                             bLoaded = pSubLevel->_state == SubLevelState::Loaded && _pScene != nullptr;
@@ -430,13 +434,18 @@ namespace sw
         outState._listSubLevel.resize( count );
         for ( SavedSubLevel& saved : outState._listSubLevel )
         {
-            arch >> saved._name >> saved._scenePath >> saved._placement._position >> saved._placement._rotation;
+            string sceneReference;
+            arch >> saved._name >> sceneReference >> saved._placement._position >> saved._placement._rotation;
+            expected<AssetReferenceTarget> scene = AssetRedirect::readSavedReference( sceneReference ); // 경로를 적던 때의 세이브도 여기서 한 번 풀린다
+            if ( scene.has_value() )
+                saved._scenePath = std::move( scene->_path );
             vector<uint8> bytes;
             uint8         read{ 0 };
             const bool    bSection = arch.readSection( bytes );
             arch >> read;
             saved._bRead = read != 0;
-            if ( bSection == false || arch.isError() || saved._name.empty() || SceneDocument::readSavedNodes( bytes.data(), bytes.size(), saved._listNode, "save game (sub-levels)" ) == false )
+            if ( bSection == false || arch.isError() || saved._name.empty() || scene.has_value() == false ||
+                 SceneDocument::readSavedNodes( bytes.data(), bytes.size(), saved._listNode, "save game (sub-levels)" ) == false )
             {
                 SW_LOG_ERROR_ID( "SceneSubLevels.SaveCorrupted", "Save game sub-levels could not be read - the save is not used" );
                 outState = SaveState{};

@@ -16,6 +16,7 @@
 #include "Editor/Common/Asset/EditorContentScan.h"
 #include "Editor/Common/Asset/ModelImport/ModelImportUtil.h"
 
+#include "Engine/Asset/AssetDatabase.h"
 #include "Engine/Content/AssetGUID.h"
 #include "Engine/Content/AssetPaths.h"
 
@@ -45,21 +46,9 @@ namespace sw::editor
         return string( text.c_str(), text.size() );
     }
 
-    optional<string> ImportedAssetStore::makeTextWithIdentity( const AssetPaths& assetPaths, string_view diskPath, string_view text )
+    bool ImportedAssetStore::writeResultText( string_view diskPath, string_view text )
     {
-        const string assetID = assetPaths.toAssetID( diskPath );
-        if ( assetID.empty() )
-        {
-            SW_LOG_ERROR_ID( "ImportedAssetStore.OutsideContent", "Imported file '%#' is outside the content roots - it has no resource id to derive its asset GUID from", diskPath );
-            return nullopt;
-        }
-        return AssetGUIDHeader::write( text, AssetGUID::fromName( assetID ) );
-    }
-
-    bool ImportedAssetStore::writeTextWithIdentity( const AssetPaths& assetPaths, string_view diskPath, string_view text )
-    {
-        const optional<string> withIdentity = makeTextWithIdentity( assetPaths, diskPath, text );
-        return withIdentity.has_value() && FileUtil::ensureParentDirectoryExists( FileUtil::toDiskPath( diskPath ) ) && FileUtil::writeTextFile( FileUtil::toDiskPath( diskPath ), *withIdentity );
+        return FileUtil::ensureParentDirectoryExists( FileUtil::toDiskPath( diskPath ) ) && FileUtil::writeTextFile( FileUtil::toDiskPath( diskPath ), text );
     }
 
     string ImportedAssetStore::findDomainFolder( string_view sourcePath )
@@ -97,6 +86,20 @@ namespace sw::editor
             return false;
         }
         return true;
+    }
+
+    bool ImportedAssetStore::writeSourceIfAbsent( const AssetPaths& assetPaths, string_view sourcePath, const void* pBytes, size_t byteCount )
+    {
+        if ( writeIfAbsent( sourcePath, pBytes, byteCount ) == false )
+            return false;
+        const string       assetID  = assetPaths.toAssetID( sourcePath );
+        const AbsolutePath metaPath = AssetMeta::makePath( FileUtil::toDiskPath( sourcePath ) );
+        if ( assetID.empty() || FileUtil::isRegularFile( metaPath ) )
+            return true;
+        if ( FileUtil::writeTextFile( metaPath, AssetMeta::makeText( assetID, AssetGUID::fromName( assetID ) ) ) )
+            return true;
+        SW_LOG_ERROR_ID( "ImportedAssetStore.MetaWriteFailed", "Failed to write the asset identity beside '%#'", sourcePath );
+        return false;
     }
 
     void ImportedAssetStore::collectReferences( string_view text, vector<string>& outListPath )
