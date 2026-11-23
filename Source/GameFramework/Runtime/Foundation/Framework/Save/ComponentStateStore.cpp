@@ -8,6 +8,7 @@
 
 #include "Engine/Object/Component/Component.h"
 #include "Engine/Object/Component/ComponentStableKey.h"
+#include "Engine/Object/Component/ComponentStateCodec.h"
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Object/GameObject/Serialization/ObjectStateSerializer.h"
 #include "Engine/Reflection/Reflection.h"
@@ -29,17 +30,25 @@ namespace sw
 
 namespace sw
 {
-    StatefulComponentRegistration::StatefulComponentRegistration( const utf8* pTypeName, CaptureFn pCapture, RestoreFn pRestore, DespawnFn pDespawn )
+    StatefulComponentRegistration::StatefulComponentRegistration( const utf8* pTypeName, CaptureFn pCapture, RestoreFn pRestore, DespawnFn pDespawn, TypeFn pGetType, WriteFn pWrite,
+                                                                  RestoreObjectFn pRestoreObject )
         : _pTypeName{ pTypeName }
         , _pCapture{ pCapture }
         , _pRestore{ pRestore }
         , _pDespawn{ pDespawn }
+        , _pCodec{}
     {
         (void)ComponentStateStoreInternal::getRegistrationList().addLogged( this, "Stateful component type", string_view( pTypeName ) );
+        if ( pWrite == nullptr )
+            return;
+        _pCodec = make_unique<ComponentStateCodec>( ComponentStateCodec{ pTypeName, pGetType, pWrite, pRestoreObject } );
+        (void)ComponentStateCodec::add( _pCodec.get() ); // 거절은 등록부가 알렸다
     }
 
     StatefulComponentRegistration::~StatefulComponentRegistration()
     {
+        if ( _pCodec != nullptr )
+            ComponentStateCodec::remove( _pCodec.get() );
         (void)ComponentStateStoreInternal::getRegistrationList().remove( this ); // 거절된 중복 등록은 목록에 없다
     }
 

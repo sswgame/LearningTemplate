@@ -1,10 +1,14 @@
 #include "pch.h"
 
+#include "Core/Container/span.h"
 #include "Core/Testing/TestFramework.h"
 
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
 #include "Engine/Object/GameObject/Registry/ComponentRegistry.h"
+#include "Engine/Scene/Scene.h"
+#include "Engine/Scene/SceneDocument.h"
+#include "Engine/Scene/SceneStreamingSubsystem.h"
 #include "Engine/Serialization/Format/Archive.h"
 
 #include "GameFramework/Runtime/Character/Control/Controller/PlayerControllerComponent.h"
@@ -193,4 +197,76 @@ SW_TEST_CASE( PlayerStateComponentsTest, OptionalWorldStateIsNullWhenNotOpened )
     SW_REQUIRE_NOT_NULL( pWorld );
     SW_REQUIRE_TRUE( pWorld->initialize( GameStateSettings{} ) == GameStateInitResult::Fresh );
     SW_EXPECT_NULL( pWorld->findWeather() );
+}
+
+/**
+ * @brief [PlayerStateComponentsTest] 스트리밍 셀에 든 오브젝트의 PROPERTY 밖 상태(지갑)는 셀을 내렸다 올려도, 세이브를 지나 비운 매니저에 다시 지어도 남는다
+ * @details 세이브의 컴포넌트 저장소(`ComponentStateStore`)는 컴포넌트 id 로 짝짓는데 셀은 복원 뒤에 지어져 찾을 컴포넌트가 없다 — 떠 둔 엔티티가 함께 싣는다(`ComponentStateCodec`).
+ */
+SW_TEST_CASE( PlayerStateComponentsTest, StreamingCellKeepsWalletAcrossUnloadAndSave )
+{
+    SceneDocument doc{};
+    doc._name                                        = "Cells";
+    doc._sceneSettings._bStreaming                   = true;
+    doc._sceneSettings._cellGrid._cellSize           = 10.0f;
+    doc._sceneSettings._cellGrid._loadingRadius      = 6.0f;
+    doc._sceneSettings._unloadMargin                 = 0.0f;
+    doc._sceneSettings._maxCellLoadsPerFrame         = 4;
+    doc._sceneSettings._addToWorldBudgetMicroseconds = 1'000'000'000u;
+    doc._bValid                                      = true;
+    SceneDocument::StreamingCell cell{};
+    cell._cell = StreamingCellCoord{ 0, 0 };
+    SceneDocument::SceneObjectNode node{};
+    node._fileID      = 1;
+    node._name        = "Chest";
+    node._embeddedXML = "<GameObject _schemaVersion=\"0\" _name=\"Chest\" _bActive=\"true\"><_listComponent><SceneComponent _localID=\"1\" _localPosition=\"2,0,2\" />"
+                        "<WalletComponent _localID=\"2\" /></_listComponent></GameObject>";
+    cell._listSceneObjectNode.push_back( node );
+    doc._listStreamingCell.push_back( std::move( cell ) );
+
+    Scene scene{ "Cells" };
+    SW_REQUIRE_TRUE( scene.instantiate( doc ) );
+    GameObjectManager&       objects   = *scene.getObjectManager();
+    SceneStreamingSubsystem& streaming = objects.getSubsystem<SceneStreamingSubsystem>();
+    const auto               moveTo    = [&objects, &streaming]( const float3& position )
+    {
+        const StreamingSource source{ position, streaming.getLoadingRadius(), StreamingSourcePriority::Normal };
+        SW_EXPECT_TRUE( streaming.setExternalSources( span<const StreamingSource>( &source, 1 ) ) );
+        streaming.update( 0.0f );
+        objects.processDeferredDestruction();
+        objects.mergePendingAdds();
+    };
+    const auto findWallet = [&objects]() -> WalletComponent*
+    {
+        GameObject* pChest = objects.findGameObjectByName( hashed_string( "Chest" ) );
+        return pChest != nullptr ? pChest->getComponent<WalletComponent>() : nullptr;
+    };
+    const float3 nearPosition{ 2.0f, 0.0f, 2.0f };
+    const float3 farPosition{ 500.0f, 0.0f, 500.0f };
+    moveTo( nearPosition );
+    SW_REQUIRE_NOT_NULL( findWallet() );
+    findWallet()->getWallet().add( Wallet::getDefaultCurrency(), 70 );
+
+    moveTo( farPosition );
+    SW_REQUIRE_TRUE( findWallet() == nullptr );
+    moveTo( nearPosition );
+    SW_REQUIRE_NOT_NULL( findWallet() );
+    SW_EXPECT_EQUAL( int64{ 70 }, findWallet()->getWallet().getBalance( Wallet::getDefaultCurrency() ) );
+
+    findWallet()->getWallet().add( Wallet::getDefaultCurrency(), 5 );
+    vector<uint8> bytes;
+    streaming.writeSaveState( bytes ); // 올라 있는 셀을 지금 떠서 싣는다
+    SceneStreamingSubsystem::SaveState state;
+    SW_REQUIRE_TRUE( SceneStreamingSubsystem::readSaveState( bytes.data(), bytes.size(), state ) );
+    SW_REQUIRE_EQUAL( size_t{ 1 }, state._listCell.size() );
+    SW_REQUIRE_EQUAL( size_t{ 1 }, state._listCell[0]._listNode.size() );
+    SW_EXPECT_FALSE( state._listCell[0]._listNode[0]._componentStateBytes.empty() );
+    findWallet()->getWallet().add( Wallet::getDefaultCurrency(), 1000 ); // 저장 뒤의 것 — 복원이 덮는다
+
+    objects.clear();
+    scene.rebindRestoredFileIDs( {} );
+    streaming.applySaveState( std::move( state ) );
+    moveTo( nearPosition );
+    SW_REQUIRE_NOT_NULL( findWallet() );
+    SW_EXPECT_EQUAL( int64{ 75 }, findWallet()->getWallet().getBalance( Wallet::getDefaultCurrency() ) );
 }

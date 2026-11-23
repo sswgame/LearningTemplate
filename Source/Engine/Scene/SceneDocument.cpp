@@ -839,6 +839,7 @@ namespace sw
         {
             // 런타임 칸도 함께 싣는다 — 하위 레벨의 쿠킹 상태 범위, 상태가 적힌 월드 원점(`_worldOrigin`).
             arch << static_cast<uint8>( node._statePurpose ) << node._cookedStateIDScope << node._worldOrigin._x << node._worldOrigin._y << node._worldOrigin._z;
+            arch << node._componentStateBytes;
         }
         outBytes.assign( arch.getData(), arch.getData() + arch.getSize() );
     }
@@ -864,6 +865,13 @@ namespace sw
                 return false;
             }
             node._statePurpose = static_cast<SerializePurpose>( purpose );
+            arch >> node._componentStateBytes;
+            if ( arch.isError() )
+            {
+                SW_LOG_ERROR_ID( "SceneDocument.SavedNodeStateInvalid", "Saved entity '%#' has component state that cannot be read in %# - it is not used", node._name, sourcePath );
+                outListNode.clear();
+                return false;
+            }
         }
         return true;
     }

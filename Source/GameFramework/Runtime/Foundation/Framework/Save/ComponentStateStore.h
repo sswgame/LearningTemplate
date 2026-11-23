@@ -5,6 +5,7 @@
 #pragma once
 #include "Core/Container/vector.h"
 #include "Core/Foundation/Types.h"
+#include "Core/Memory/Memory.h"
 #include "Core/Name/hashed_string.h"
 
 #include "Engine/Foundation/SceneIterationKey.h"
@@ -20,8 +21,10 @@
 
 namespace sw
 {
+    struct ComponentStateCodec;
     struct ObjectIdentity;
 
+    class Component;
     class GameObject;
 
     /**
@@ -29,6 +32,7 @@ namespace sw
      * @brief 컴포넌트마다 바이트 덩어리 하나를 (타입 이름, 컴포넌트 id) 로 보관하고, 게임 상태 봉투(`GameStateSnapshot::writeEnvelope`)의 한 섹션으로 씁니다.
      * @details 리플렉션 PROPERTY 는 씬 오브젝트 스냅샷이 이미 옮긴다.
      *          디렉터가 키트의 보통 클래스로 든 시뮬레이션(밭, 도시, 전장)은 PROPERTY 가 아니라서 여기에 싣는다.
+     *          스트리밍 셀 · 데이터 레이어 묶음 · 하위 레벨에 든 오브젝트의 것은 그 떠 둔 상태에 함께 실린다(`ComponentStateCodec` — 복원할 때 이 저장소가 찾을 오브젝트가 아직 없다).
      *          언리얼의 `UObject::Serialize` 오버라이드와 유니티의 `ISerializationCallbackReceiver` 에 해당한다.
      *
      *          컴포넌트 쪽 약속은 다음과 같다. 템플릿이 이름으로 부른다.
@@ -102,10 +106,8 @@ namespace sw
             uint32               count    = 0;
             manager.template forEachComponentOfType<TComponent>( key, [this, &typeName, &count]( TComponent* pComponent )
             {
-                Archive archive;
-                StateIO::writeObject( *pComponent, archive );
                 vector<uint8> bytes;
-                archive.writeData( bytes );
+                writeComponent<TComponent>( *pComponent, bytes );
                 add( typeName, pComponent->getComponentID(), std::move( bytes ) );
                 ++count;
             } );
@@ -130,10 +132,25 @@ namespace sw
                 if ( pEntry == nullptr )
                     continue;
                 vector<uint8> bytes = pEntry->_bytes;
-                pComponent->restoreState( std::move( bytes ) );
+                restoreComponent<TComponent>( *pComponent, std::move( bytes ) );
                 ++count;
             }
             return count;
+        }
+
+        /** @brief 컴포넌트 하나의 상태를 뜹니다 — 저장소와 엔진 코덱(`ComponentStateCodec`, 스트리밍 셀)이 함께 쓴다. */
+        template <typename TComponent>
+        static void writeComponent( Component& component, vector<uint8>& outBytes )
+        {
+            Archive archive;
+            StateIO::writeObject( static_cast<TComponent&>( component ), archive );
+            archive.writeData( outBytes );
+        }
+        /** @brief 컴포넌트 하나에 상태를 돌려줍니다(`writeComponent` 의 짝). */
+        template <typename TComponent>
+        static void restoreComponent( Component& component, vector<uint8>&& bytes )
+        {
+            static_cast<TComponent&>( component ).restoreState( std::move( bytes ) );
         }
 
     private:
@@ -155,12 +172,18 @@ namespace sw
     class SW_GF_API StatefulComponentRegistration
     {
     public:
-        using CaptureFn = void ( * )( SceneIterationKey key, ComponentStateStore& store, GameObjectManager& manager );
-        using RestoreFn = void ( * )( SceneIterationKey key, const ComponentStateStore& store, GameObjectManager& manager );
-        using DespawnFn = void ( * )( SceneIterationKey key, GameObjectManager& manager );
+        using CaptureFn       = void ( * )( SceneIterationKey key, ComponentStateStore& store, GameObjectManager& manager );
+        using RestoreFn       = void ( * )( SceneIterationKey key, const ComponentStateStore& store, GameObjectManager& manager );
+        using DespawnFn       = void ( * )( SceneIterationKey key, GameObjectManager& manager );
+        using TypeFn          = const TypeInfo* (*)();
+        using WriteFn         = void ( * )( Component& component, vector<uint8>& outBytes );
+        using RestoreObjectFn = void ( * )( Component& component, vector<uint8>&& bytes );
 
-        /** @param pDespawn 상태 저장 전에 세운 런타임 오브젝트를 걷는 일입니다(`GameStateSnapshot::registerViewOwner` 와 같은 일). 세운 것이 없는 타입은 nullptr 입니다. */
-        StatefulComponentRegistration( const utf8* pTypeName, CaptureFn pCapture, RestoreFn pRestore, DespawnFn pDespawn );
+        /**
+         * @param pDespawn 상태 저장 전에 세운 런타임 오브젝트를 걷는 일입니다(`GameStateSnapshot::registerViewOwner` 와 같은 일). 세운 것이 없는 타입은 nullptr 입니다.
+         * @param pWrite · pRestoreObject 컴포넌트 하나의 상태를 뜨고 되돌리는 함수입니다 — 스트리밍 셀 · 레이어 묶음 · 하위 레벨이 쓰는 엔진 코덱(`ComponentStateCodec`)에 오른다. 상태가 없는 타입은 nullptr 입니다.
+         */
+        StatefulComponentRegistration( const utf8* pTypeName, CaptureFn pCapture, RestoreFn pRestore, DespawnFn pDespawn, TypeFn pGetType, WriteFn pWrite, RestoreObjectFn pRestoreObject );
         ~StatefulComponentRegistration();
         StatefulComponentRegistration( const StatefulComponentRegistration& )            = delete;
         StatefulComponentRegistration& operator=( const StatefulComponentRegistration& ) = delete;
@@ -174,10 +197,11 @@ namespace sw
         DespawnFn   getDespawn() const { return _pDespawn; }
 
     private:
-        const utf8* _pTypeName;
-        CaptureFn   _pCapture;
-        RestoreFn   _pRestore;
-        DespawnFn   _pDespawn;
+        const utf8*                     _pTypeName;
+        CaptureFn                       _pCapture;
+        RestoreFn                       _pRestore;
+        DespawnFn                       _pDespawn;
+        unique_ptr<ComponentStateCodec> _pCodec; ///< 엔진에 올린 코덱(상태가 없는 타입은 nullptr)
     };
 } // namespace sw
 
@@ -221,11 +245,25 @@ namespace sw
 
     public:
         explicit StatefulComponentRegistrar( const utf8* pTypeName )
-            : StatefulComponentRegistration( pTypeName, selectCapture(), selectRestore(), selectDespawn() )
+            : StatefulComponentRegistration( pTypeName, selectCapture(), selectRestore(), selectDespawn(), &TComponent::StaticType, selectWrite(), selectRestoreObject() )
         {
         }
 
     private:
+        static WriteFn selectWrite()
+        {
+            if constexpr ( ComponentStateStoreTraits::HasRestoreState<TComponent>::value )
+                return &ComponentStateStore::writeComponent<TComponent>;
+            else
+                return nullptr;
+        }
+        static RestoreObjectFn selectRestoreObject()
+        {
+            if constexpr ( ComponentStateStoreTraits::HasRestoreState<TComponent>::value )
+                return &ComponentStateStore::restoreComponent<TComponent>;
+            else
+                return nullptr;
+        }
         static CaptureFn selectCapture()
         {
             if constexpr ( ComponentStateStoreTraits::HasRestoreState<TComponent>::value )

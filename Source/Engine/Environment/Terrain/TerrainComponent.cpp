@@ -17,6 +17,7 @@
 #include "Engine/Graphics/Texture/Texture2D.h"
 #include "Engine/Graphics/Texture/TextureCache.h"
 #include "Engine/Navigation/Scene/SceneNavigation.h"
+#include "Engine/Object/Component/ComponentStateCodec.h"
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Object/GameObject/GameObjectManagerResolve.inl"
 #include "Engine/Object/GameObject/Registry/ComponentRegistry.h"
@@ -721,6 +722,8 @@ namespace sw
         if ( writeLayerWeights( listWeight, all ) == false )
             SW_LOG_WARNING_ID( "TerrainComponent.TerrainCouldNotWrite", "Terrain '%#': could not write back the unsaved splat edits", _heightfieldPath.c_str() );
     }
+
+    SW_COMPONENT_STATE_CODEC( TerrainComponent )
 
     void TerrainComponent::restoreState( vector<uint8>&& bytes )
     {

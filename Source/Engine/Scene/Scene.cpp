@@ -19,6 +19,7 @@
 #include "Engine/Graphics/Material/MaterialCache.h"
 #include "Engine/Graphics/Texture/TextureCache.h"
 #include "Engine/Object/Component/CameraComponent.h"
+#include "Engine/Object/Component/ComponentStateCodec.h"
 #include "Engine/Object/Component/SceneComponent.h"
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Object/GameObject/GameObjectManager.inl"
@@ -860,7 +861,19 @@ namespace sw
         build._listRegister.clear();
         build._listPostLoad.clear();
         manager.endDeferredRegistration();
+        if ( bFinished )
+            restoreComponentStates( listNode, build._context );
         return bFinished ? CellBuildResult::Done : CellBuildResult::Failed;
+    }
+
+    void Scene::restoreComponentStates( const vector<SceneDocument::SceneObjectNode>& listNode, const NodeBuildContext& context ) const
+    {
+        for ( const SceneDocument::SceneObjectNode& entity : listNode )
+        {
+            GameObject* pObject = entity._componentStateBytes.empty() ? nullptr : context._batch.findBySavedID( entity._fileID );
+            if ( pObject != nullptr )
+                ComponentStateCodec::restoreObject( *pObject, entity._componentStateBytes );
+        }
     }
 
     bool Scene::instantiateLayerNodes( const vector<SceneDocument::SceneObjectNode>& listNode, vector<uint64>& outListObjectID )
@@ -930,6 +943,8 @@ namespace sw
             node._worldOrigin  = getWorldOrigin(); // 상태의 자리는 지금 원점 기준이다 — 원점이 옮겨진 뒤 다시 지으면 그 차이만큼 옮긴다
             if ( SceneInternal::writeEntityNode( pGo, _mapPrefabSource, inputs, saveOptions, node ) == false )
                 continue;
+            // PROPERTY 밖 상태도 함께 뜬다 — 내렸다 올린 셀 · 세이브가 지형 편집 · 시뮬레이션을 잃지 않게. shortcut: 중첩 프리팹 부품의 것은 뜨지 않는다, 부품에 이런 컴포넌트가 생기면 부품 경로로 싣는다.
+            ComponentStateCodec::captureObject( *pGo, node._componentStateBytes );
             const auto layerIt = _mapObjectDataLayer.find( objectID );
             if ( layerIt != _mapObjectDataLayer.end() )
                 node._listDataLayer = layerIt->second;
@@ -970,35 +985,40 @@ namespace sw
 
     bool Scene::instantiateNodes( const vector<SceneDocument::SceneObjectNode>& listNode, const NodeBuild build, vector<uint64>* pOutListObjectID, const StopToken& stopToken )
     {
-        // 배치가 끝날 때까지 등록 · 로드 뒤 처리를 미룬다 — 값을 다 읽고 연결한 뒤 등록한다(쥔 미루기가 있으면 그것이 받을 때까지 더 미룬다).
-        struct DeferredRegistrationScope
-        {
-            GameObjectManager& _manager;
-            explicit DeferredRegistrationScope( GameObjectManager& manager )
-                : _manager{ manager }
-            {
-                _manager.beginDeferredRegistration();
-            }
-            ~DeferredRegistrationScope() { _manager.endDeferredRegistration(); }
-            DeferredRegistrationScope( const DeferredRegistrationScope& )            = delete;
-            DeferredRegistrationScope& operator=( const DeferredRegistrationScope& ) = delete;
-        } deferScope{ *_objectManager };
         NodeBuildContext context;
-        // 레이어 묶음은 이미 지은 늘 올라 있는 엔티티를 파일 id 로 가리킨다 — 그 오브젝트를 같은 배치에 기록해 둔다(상태는 읽지 않는다).
-        if ( build != NodeBuild::Document )
-            addReferenceTargets( context, nullptr );
-
-        for ( const SceneDocument::SceneObjectNode& entity : listNode )
         {
-            // 종료 신호(`SceneManager::requestAsyncLoadStop`) — 중간에 멈추면 false 다. 이미 지은 오브젝트는 부른 쪽이 씬을 버리며 정리한다(비동기 로드 잡이 신호를 다시 읽고 씬을 소멸시킨다).
-            if ( stopToken.isStopRequested() )
+            // 배치가 끝날 때까지 등록 · 로드 뒤 처리를 미룬다 — 값을 다 읽고 연결한 뒤 등록한다(쥔 미루기가 있으면 그것이 받을 때까지 더 미룬다).
+            struct DeferredRegistrationScope
             {
-                context._batch.abandon();
-                return false;
+                GameObjectManager& _manager;
+                explicit DeferredRegistrationScope( GameObjectManager& manager )
+                    : _manager{ manager }
+                {
+                    _manager.beginDeferredRegistration();
+                }
+                ~DeferredRegistrationScope() { _manager.endDeferredRegistration(); }
+                DeferredRegistrationScope( const DeferredRegistrationScope& )            = delete;
+                DeferredRegistrationScope& operator=( const DeferredRegistrationScope& ) = delete;
+            } deferScope{ *_objectManager };
+            // 레이어 묶음은 이미 지은 늘 올라 있는 엔티티를 파일 id 로 가리킨다 — 그 오브젝트를 같은 배치에 기록해 둔다(상태는 읽지 않는다).
+            if ( build != NodeBuild::Document )
+                addReferenceTargets( context, nullptr );
+
+            for ( const SceneDocument::SceneObjectNode& entity : listNode )
+            {
+                // 종료 신호(`SceneManager::requestAsyncLoadStop`) — 중간에 멈추면 false 다. 이미 지은 오브젝트는 부른 쪽이 씬을 버리며 정리한다(비동기 로드 잡이 신호를 다시 읽고 씬을 소멸시킨다).
+                if ( stopToken.isStopRequested() )
+                {
+                    context._batch.abandon();
+                    return false;
+                }
+                buildEntityNode( entity, build, context, pOutListObjectID );
             }
-            buildEntityNode( entity, build, context, pOutListObjectID );
+            if ( finishNodeBuild( listNode, context ) == false )
+                return false;
         }
-        return finishNodeBuild( listNode, context );
+        restoreComponentStates( listNode, context ); // 등록을 마친 뒤 — 문서의 엔티티에는 떠 둔 상태가 없다(레이어 묶음만)
+        return true;
     }
 
     void Scene::addReferenceTargets( NodeBuildContext& context, const vector<uint64>* pExcludedObjectID ) const

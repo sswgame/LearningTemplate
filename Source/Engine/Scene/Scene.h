@@ -293,6 +293,8 @@ namespace sw
         /** @brief 엔티티 하나의 오브젝트를 만들고 상태를 배치에 읽습니다(연결은 `finishNodeBuild`). 프리팹을 찾지 못하면 만들지 않습니다. */
         void buildEntityNode( const SceneDocument::SceneObjectNode& entity, NodeBuild build, NodeBuildContext& context, vector<uint64>* pOutListObjectID );
         /** @brief 배치를 잇고(부착 · 핸들), 인스턴스 멤버를 앵커에 붙이고, 중첩 프리팹 부품을 스폰한 뒤 병합합니다. 잇지 못하면 오류를 남기고 false 입니다. */
+        /** @brief 떠 둔 엔티티(@p listNode)의 PROPERTY 밖 컴포넌트 상태를 다시 지은 오브젝트에 돌려줍니다(등록을 마친 뒤). */
+        void               restoreComponentStates( const vector<SceneDocument::SceneObjectNode>& listNode, const NodeBuildContext& context ) const;
         [[nodiscard]] bool finishNodeBuild( const vector<SceneDocument::SceneObjectNode>& listNode, NodeBuildContext& context );
 
         /** @brief 컴포넌트 핸들로 카메라를 다시 찾습니다. */

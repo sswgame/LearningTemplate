@@ -156,6 +156,11 @@ namespace sw
              *          세이브에 실을 때는 스트리밍이 엔티티마다 따로 적는다(`SceneStreamingSubsystem::writeSaveState`).
              */
             SerializePurpose _statePurpose{ SerializePurpose::Authoring };
+            /**
+             * @brief **런타임 칸.** 컴포넌트의 PROPERTY 밖 상태(지형 편집 · 시뮬레이션)를 뜬 바이트입니다(`ComponentStateCodec::captureObject`) — 떠 둔 엔티티(`Scene::captureCellNodes`)에만 있고 다시 지은 뒤 컴포넌트에 돌려준다.
+             * @details 파일에는 쓰지 않고 세이브에 싣는다(`writeSavedNodes`).
+             */
+            vector<uint8> _componentStateBytes;
         };
 
         /**
@@ -233,7 +238,7 @@ namespace sw
         /** @brief 엔티티 목록을 셀 내용 형식으로 씁니다(`readStreamingCellContent` 의 짝 — 비우고 채운다). 읽을 목적(`_statePurpose`)은 쓰지 않습니다. */
         SW_API static void writeStreamingCellContent( const vector<SceneObjectNode>& listNode, vector<uint8>& outBytes );
         /**
-         * @brief 세이브에 싣는 엔티티 목록을 씁니다(비우고 채운다) — 셀 내용 형식에 엔티티마다 런타임 칸(읽을 목적 `_statePurpose` · 쿠킹 상태 범위 · 월드 원점)을 더한다. 떠 둔 상태(스냅숏)와 문서 내용(저작)이 섞여도 제 목적으로 읽힌다.
+         * @brief 세이브에 싣는 엔티티 목록을 씁니다(비우고 채운다) — 셀 내용 형식에 엔티티마다 런타임 칸(읽을 목적 `_statePurpose` · 쿠킹 상태 범위 · 월드 원점 · 컴포넌트 상태)을 더한다. 떠 둔 상태(스냅숏)와 문서 내용(저작)이 섞여도 제 목적으로 읽힌다.
          * @details 스트리밍 셀(`SceneStreamingSubsystem::writeSaveState`)과 데이터 레이어 묶음(`SceneDataLayerSubsystem::writeSaveState`)이 같은 형식을 쓴다.
          */
         SW_API static void writeSavedNodes( const vector<SceneObjectNode>& listNode, vector<uint8>& outBytes );
