@@ -384,6 +384,8 @@ namespace sw
             _platformContext.reset();
             return false;
         }
+        _contextOwnerThread.store( std::this_thread::get_id(), std::memory_order_release ); // 초기화가 문맥을 이 스레드에 걸었다 — 다른 스레드는 이 스레드가 놓은 뒤에 건다
+        _contextOwnedStartNanos.store( static_cast<uint64>( MonotonicClock::nowNanoseconds() ), std::memory_order_relaxed );
         _pHDC = contextHandles._pDeviceContext;
         _pHRC = contextHandles._pRenderContext;
         markInitPhase( "context" );
@@ -919,9 +921,20 @@ namespace sw
 
     bool OpenGLRHIDevice::tryMakeCurrentAndRecordOwner()
     {
-        if ( _platformContext->makeCurrent() == false )
+        // 먼저 주인 칸을 잡고 건다 — 다른 스레드가 쥔 문맥에 거는 것은 WGL · EGL 은 실패 반환이지만 GLX 는 X 오류(BadAccess)라 Xlib 기본 처리기가 프로세스를 끝낸다.
+        // https://registry.khronos.org/OpenGL-Refpages/gl2.1/xhtml/glXMakeCurrent.xml ("BadAccess is generated if ctx was current to another thread")
+        const std::thread::id thisThread = std::this_thread::get_id();
+        std::thread::id       owner      = _contextOwnerThread.load( std::memory_order_acquire );
+        const bool            bHeldHere  = owner == thisThread;
+        owner                            = std::thread::id{};
+        if ( bHeldHere == false && _contextOwnerThread.compare_exchange_strong( owner, thisThread, std::memory_order_acq_rel ) == false )
             return false;
-        _contextOwnerThread.store( std::this_thread::get_id(), std::memory_order_relaxed );
+        if ( _platformContext->makeCurrent() == false )
+        {
+            if ( bHeldHere == false )
+                _contextOwnerThread.store( std::thread::id{}, std::memory_order_release );
+            return false;
+        }
         _contextOwnedStartNanos.store( static_cast<uint64>( MonotonicClock::nowNanoseconds() ), std::memory_order_relaxed );
         return true;
     }
@@ -974,8 +987,11 @@ namespace sw
     {
         if ( _bInitialized == SW_FALSE || _platformContext == nullptr )
             return;
-        _contextOwnerThread.store( std::thread::id{}, std::memory_order_relaxed );
+        // 쥔 스레드만 놓는다. 놓은 **뒤에** 주인 칸을 비운다 — 먼저 비우면 그 사이 다른 스레드가 아직 걸린 문맥에 건다.
+        if ( _contextOwnerThread.load( std::memory_order_acquire ) != std::this_thread::get_id() )
+            return;
         _platformContext->clearCurrent();
+        _contextOwnerThread.store( std::thread::id{}, std::memory_order_release );
     }
 
     uint32 OpenGLRHIDevice::getTimestampSlotCount() const
@@ -1061,7 +1077,7 @@ namespace sw
             readyMask.set( slotIndex );
         }
         // GL 타임스탬프는 나노초다.
-        RHITimestampFrame::resolve( arrTick, readyMask, 1.0, _timestampFrame );
+        RHITimestampFrame::resolve( arrTick, readyMask, _timestampRing.getComputeQueueMask( ringSlot ), 1.0, _timestampFrame );
     }
 
     IRHISwapChain* OpenGLRHIDevice::createSwapChainInternal( const RHISwapChainDesc& desc )
@@ -1082,21 +1098,29 @@ namespace sw
         OpenGLRHISwapChain& window = static_cast<OpenGLRHISwapChain&>( swapChain );
         if ( _platformContext != nullptr )
             _platformContext->destroyWindowSurface( window.getSurface() );
+        if ( _pCurrentSwapChain == &window )
+            _pCurrentSwapChain = nullptr; // 사라진 창이다 — 다음 걸기가 새로 건다(같은 주소에 새 창이 와도 걸린 것으로 보지 않는다)
         _windowSwapChains.remove( window );
     }
 
     OpenGLRHISwapChain* OpenGLRHIDevice::useSwapChain( IRHISwapChain* pSwapChain )
     {
         OpenGLRHISwapChain* const pTarget = pSwapChain != nullptr ? static_cast<OpenGLRHISwapChain*>( pSwapChain ) : &_swapChain;
-        if ( pTarget != _pCurrentSwapChain )
-        {
-            if ( _platformContext == nullptr || _platformContext->makeCurrentOnWindowSurface( pTarget->getSurface() ) == false )
-                return nullptr;
-            _pCurrentSwapChain = pTarget;
-        }
+        if ( bindSwapChain( *pTarget ) == false )
+            return nullptr;
         if ( pTarget != &_swapChain )
             (void)_windowSwapChains.markUsedThisFrame( *pTarget );
         return pTarget;
+    }
+
+    bool OpenGLRHIDevice::bindSwapChain( OpenGLRHISwapChain& swapChain )
+    {
+        if ( &swapChain == _pCurrentSwapChain )
+            return true;
+        if ( _platformContext == nullptr || _platformContext->makeCurrentOnWindowSurface( swapChain.getSurface() ) == false )
+            return false;
+        _pCurrentSwapChain = &swapChain;
+        return true;
     }
 
     void OpenGLRHIDevice::beginFrameInternal()
@@ -1106,7 +1130,7 @@ namespace sw
 
         if ( _platformContext != nullptr )
             _platformContext->reacquireForFrame();
-        _pCurrentSwapChain = &_swapChain;
+        (void)bindSwapChain( _swapChain ); // 지난 프레임 끝에 메인 창으로 돌아오지 못했으면 다시 건다(`reacquireForFrame` 은 WGL 만 건다)
 
         // 백버퍼(FBO 0) 바인딩과 클리어는 여기서 하지 않는다. beginFrame 은 프레임 수명주기(GL 은
         // 컨텍스트 확보)만 맡고, 백버퍼를 바인딩하고 클리어하는 것은 RenderThread 가 여는 명시적
@@ -1130,13 +1154,11 @@ namespace sw
         // 이 프레임에 그린 다른 창을 먼저 내보내고 메인 창으로 돌아간다(아래 present 가 메인 창을 다시 건다).
         for ( OpenGLRHISwapChain* pWindow : _windowSwapChains.getFrameList() )
         {
-            if ( bPresent && _platformContext != nullptr && _platformContext->makeCurrentOnWindowSurface( pWindow->getSurface() ) )
+            if ( bPresent && bindSwapChain( *pWindow ) )
                 _platformContext->presentWindowSurface( pWindow->getSurface() );
         }
         _windowSwapChains.clearFrame();
-        if ( _pCurrentSwapChain != &_swapChain && _platformContext != nullptr )
-            (void)_platformContext->makeCurrent(); // 실패는 다음 프레임의 reacquireForFrame 이 다시 본다
-        _pCurrentSwapChain = &_swapChain;
+        (void)bindSwapChain( _swapChain ); // 실패는 다음 프레임 시작이 다시 건다
 
         if ( bPresent == false )
         {

@@ -3,6 +3,7 @@
 #include "Engine/Asset/Cook/CookRecord.h"
 
 #include "Core/Algorithm/VectorUtil.h"
+#include "Core/CommandLine/CommandLineManager.h"
 #include "Core/Encoding/HexUtil.h"
 #include "Core/File/FileUtil.h"
 #include "Core/File/ProcessRoots.h"
@@ -33,6 +34,55 @@ namespace sw
             [[nodiscard]] static bool parseHex( string_view text, uint64& outValue )
             {
                 return text.size() == HexDigitUtil::kMaxDigitCount && HexDigitUtil::tryParseFixed( text, outValue );
+            }
+
+            /** @brief 버킷의 폴더 이름입니다. */
+            static string_view getBucketName( DerivedDataBucket bucket )
+            {
+                static constexpr string_view kArrBucketName[] = { "Cook", "Import", "Shader" };
+                static_assert( SW_COUNT_OF( kArrBucketName ) == static_cast<size_t>( DerivedDataBucket::Count ), "every DDC bucket needs a folder name" );
+                return kArrBucketName[static_cast<size_t>( bucket )];
+            }
+
+            /** @brief 설정의 버킷 상한(`_listBucket` 의 `_maxSizeGB`)입니다. 버킷 줄이 없거나 0 이면 빈 값입니다. */
+            static optional<uint32> readBucketMaxGB( const JSONValue& root, string_view bucketName )
+            {
+                const JSONValue buckets = root.get( "_listBucket" );
+                for ( size_t index = 0; buckets.isArray() && index < buckets.size(); ++index )
+                {
+                    const JSONValue        entry = buckets.at( index );
+                    const optional<string> name  = entry.readRequired<string>( "_name" );
+                    if ( name.has_value() == false || *name != bucketName )
+                        continue;
+                    const optional<uint32> maxGB = entry.readRequired<uint32>( "_maxSizeGB" );
+                    return maxGB.has_value() && *maxGB != 0 ? maxGB : nullopt;
+                }
+                return nullopt;
+            }
+
+            /** @brief 정리 규칙이 있는 층의 루트(버킷 폴더의 부모)에서 버킷이 아닌 폴더를 지웁니다 — 버킷이 없던 때의 항목 폴더(`<키 앞 두 글자>`)는 아무도 열지 않는다. */
+            static uint32 removeForeignFolders( const DerivedDataLayer& layer )
+            {
+                const string root = FileUtil::getDirectoryPart( layer._rootPath.str() );
+                if ( layer._evictionPolicy.has_value() == false || FileUtil::isDirectory( FileUtil::toDiskPath( root ) ) == false )
+                    return 0;
+                vector<string> listForeign;
+                (void)FileUtil::forEachDirectoryEntry( FileUtil::toDiskPath( root ), false, [&listForeign]( const DirectoryEntry& entry )
+                {
+                    const string name    = FileUtil::getFileNamePart( entry._path );
+                    bool         bBucket = false;
+                    for ( uint32 index = 0; index < static_cast<uint32>( DerivedDataBucket::Count ); ++index )
+                        bBucket = bBucket || name == getBucketName( static_cast<DerivedDataBucket>( index ) );
+                    if ( entry._bDirectory && bBucket == false )
+                        listForeign.push_back( string( entry._path ) );
+                    return true;
+                } ); // 도중에 멈추면 남은 폴더는 다음 정리가 지운다
+                uint32 removed = 0;
+                for ( const string& folder : listForeign )
+                    removed += FileUtil::removeDirectory( FileUtil::toDiskPath( folder ) ) ? 1u : 0u;
+                if ( removed > 0 )
+                    SW_LOG_INFO_ID( "DDC.ForeignFoldersRemoved", "DDC '%#': removed %# folders that belong to no bucket", root, removed );
+                return removed;
             }
 
             /** @brief DDC 항목 머리 크기입니다: "SWDDC 1 <서술 길이 hex16> <본문 해시 hex16>\n" — 고정 폭이라 서술 앞까지 글자 수가 정해져 있다. */
@@ -297,13 +347,12 @@ namespace sw
     {
     }
 
-    AbsolutePath DerivedDataCache::makeLocalRootPath()
+    expected<DerivedDataCache> DerivedDataCache::open( DerivedDataBucket bucket )
     {
-        return ProcessRoots::get()._derivedData.join( "DDC" );
-    }
-
-    expected<DerivedDataCache> DerivedDataCache::loadFromConfig()
-    {
+        const string_view bucketName = CookRecordInternal::getBucketName( bucket );
+        string            overrideRoot;
+        if ( engine::areEngineServicesBound() && engine::getSubsystem<CommandLineManager>().getArgument( CommandLineArgument::DDC_DIR, overrideRoot ) )
+            return DerivedDataCache{ vector<DerivedDataLayer>{ DerivedDataLayer{ FileUtil::toDiskPath( overrideRoot ).join( bucketName ), DerivedDataAccess::ReadWrite } } };
         const AbsolutePath path = ProcessRoots::get()._project.join( kConfigFile );
         JSONDocument       document;
         if ( document.loadFromFile( path.str() ) == false )
@@ -311,6 +360,9 @@ namespace sw
         const JSONValue layers = document.getRoot().get( "_listLayer" );
         if ( layers.isArray() == false || layers.size() == 0 )
             return unexpected( Error{ ErrorKind::InvalidArgument, "the DDC layer config needs a non-empty _listLayer array", path.str() } );
+        const optional<uint32> bucketMaxGB = CookRecordInternal::readBucketMaxGB( document.getRoot(), bucketName );
+        if ( bucketMaxGB.has_value() == false )
+            return unexpected( Error{ ErrorKind::InvalidArgument, "the DDC config needs a _listBucket entry with _maxSizeGB of at least 1 for every bucket", bucketName } );
         vector<DerivedDataLayer> listLayer;
         for ( size_t index = 0; index < layers.size(); ++index )
         {
@@ -329,10 +381,9 @@ namespace sw
             {
                 // 쓰는 층은 정리 규칙이 필수다 — 없으면 쿠킹 팩 항목이 코드 지문마다 쌓여 디스크를 채운다(2026-11-19 로컬 111 GB).
                 const optional<uint32> ageDays = entry.readRequired<uint32>( "_unusedFileAgeDays" );
-                const optional<uint32> maxGB   = entry.readRequired<uint32>( "_maxSizeGB" );
-                if ( ageDays.has_value() == false || maxGB.has_value() == false || *ageDays == 0 || *maxGB == 0 )
-                    return unexpected( Error{ ErrorKind::InvalidArgument, "a ReadWrite DDC layer needs _unusedFileAgeDays and _maxSizeGB of at least 1", path.str() } );
-                evictionPolicy = DerivedDataEvictionPolicy{ *ageDays, uint64{ *maxGB } * constant::memory::kBytesPerGigabyte };
+                if ( ageDays.has_value() == false || *ageDays == 0 )
+                    return unexpected( Error{ ErrorKind::InvalidArgument, "a ReadWrite DDC layer needs _unusedFileAgeDays of at least 1", path.str() } );
+                evictionPolicy = DerivedDataEvictionPolicy{ *ageDays, uint64{ *bucketMaxGB } * constant::memory::kBytesPerGigabyte };
             }
             string environmentRoot;
             if ( root->empty() && ProcessEnvironment::tryReadNonEmpty( *environment, environmentRoot ) == false )
@@ -341,10 +392,31 @@ namespace sw
                 continue;
             }
             // 환경 변수는 머신마다 다른 절대 경로다 — 상대 글이면 toDiskPath 가 오류를 남기고 빈 경로라 그 층의 I/O 가 실패한다(폴백 없음).
-            AbsolutePath rootPath = root->empty() ? FileUtil::toDiskPath( environmentRoot ) : ProcessRoots::get()._derivedData.join( *root );
-            listLayer.push_back( DerivedDataLayer{ std::move( rootPath ), layerAccess, std::move( evictionPolicy ) } );
+            const AbsolutePath rootPath = root->empty() ? FileUtil::toDiskPath( environmentRoot ) : ProcessRoots::get()._derivedData.join( *root );
+            listLayer.push_back( DerivedDataLayer{ rootPath.join( bucketName ), layerAccess, std::move( evictionPolicy ) } );
         }
         return DerivedDataCache{ std::move( listLayer ) };
+    }
+
+    uint32 DerivedDataCache::evictAllBuckets()
+    {
+        uint32 removed = 0;
+        for ( uint32 bucketIndex = 0; bucketIndex < static_cast<uint32>( DerivedDataBucket::Count ); ++bucketIndex )
+        {
+            const expected<DerivedDataCache> cache = open( static_cast<DerivedDataBucket>( bucketIndex ) );
+            if ( cache.has_value() == false )
+            {
+                SW_LOG_ERROR_ID( "DDC.EvictionSkipped", "DDC eviction skipped: %# (%#)", cache.error().message(), cache.error().detail() );
+                return removed;
+            }
+            if ( bucketIndex == 0 )
+            {
+                for ( const DerivedDataLayer& layer : cache->_listLayer )
+                    removed += CookRecordInternal::removeForeignFolders( layer );
+            }
+            removed += cache->evictUnusedEntries();
+        }
+        return removed;
     }
 
     uint32 DerivedDataCache::evictUnusedEntries() const
@@ -404,6 +476,38 @@ namespace sw
     {
         const string hex = CookRecordInternal::toHex( key );
         return _listLayer[layerIndex]._rootPath.join( string_view( hex ).substr( 0, 2 ) ).join( hex );
+    }
+
+    AbsolutePath DerivedDataCache::makeRecordPath( size_t layerIndex, uint64 actionKey ) const
+    {
+        StringBuilder<constant::buffer::kMax64> name;
+        const string                            hex = CookRecordInternal::toHex( actionKey );
+        name.appendFormat( "%#.cookrec", hex );
+        return _listLayer[layerIndex]._rootPath.join( string_view( hex ).substr( 0, 2 ) ).join( name.view() );
+    }
+
+    bool DerivedDataCache::readRecord( uint64 actionKey, CookRecord& outRecord ) const
+    {
+        for ( size_t layerIndex = 0; layerIndex < _listLayer.size(); ++layerIndex )
+        {
+            const AbsolutePath path = makeRecordPath( layerIndex, actionKey );
+            if ( CookRecord::read( path.str(), outRecord ) == false )
+                continue;
+            CookRecordInternal::touchEntry( _listLayer[layerIndex], path );
+            return true;
+        }
+        return false;
+    }
+
+    bool DerivedDataCache::writeRecord( uint64 actionKey, const CookRecord& record ) const
+    {
+        bool bAllWritten = true;
+        for ( size_t layerIndex = 0; layerIndex < _listLayer.size(); ++layerIndex )
+        {
+            if ( _listLayer[layerIndex]._access == DerivedDataAccess::ReadWrite )
+                bAllWritten = record.write( makeRecordPath( layerIndex, actionKey ).str() ) && bAllWritten;
+        }
+        return bAllWritten;
     }
 
     bool DerivedDataCache::find( uint64 key, string_view keyDescription, vector<uint8>& outBytes ) const

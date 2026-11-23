@@ -53,7 +53,6 @@ namespace sw
             it = _mapSlot.erase( it ); // 마지막 원소가 이 자리로 온다 — 같은 자리를 다시 본다
         }
         // 2) 새로 든 볼륨에 구간을 준다. 모자라면 용량을 두 배로 — 버퍼를 다시 만들므로 모두 새로 시작한다.
-        bool bGrew = false;
         _listOffset.resize( requestCount );
         _listFramesSinceReset.resize( requestCount );
         _listFresh.assign( requestCount, SW_FALSE );
@@ -69,31 +68,29 @@ namespace sw
                 {
                     _span.grow( MathUtil::max( _span.getCapacity() * 2u, _span.getCapacity() + count ) );
                     offset = _span.allocate( count );
-                    bGrew  = true;
+                    for ( auto& entry : _mapSlot )
+                    {
+                        entry.second._framesSinceReset = 0; // 버퍼를 다시 만든다 — 모두 새로 시작한다
+                    }
+                    _bGrowPending = SW_TRUE;
                 }
-                it                       = _mapSlot.insert_or_assign( request._volumeID, HistorySlot{ offset, count, 0u } ).first;
-                _listFresh[requestIndex] = SW_TRUE;
+                it = _mapSlot.insert_or_assign( request._volumeID, HistorySlot{ offset, count, 0u } ).first;
             }
             _listOffset[requestIndex] = it->second._offset;
-        }
-        if ( bGrew )
-        {
-            for ( auto& entry : _mapSlot )
-            {
-                entry.second._framesSinceReset = 0;
-            }
-            _listFresh.assign( requestCount, SW_TRUE );
         }
         for ( size_t requestIndex = 0; requestIndex < requestCount; ++requestIndex )
         {
             _listActiveID.push_back( listRequest[requestIndex]._volumeID );
-            _listFramesSinceReset[requestIndex] = _mapSlot.find( listRequest[requestIndex]._volumeID )->second._framesSinceReset;
+            const uint32 framesSinceReset       = _mapSlot.find( listRequest[requestIndex]._volumeID )->second._framesSinceReset;
+            _listFramesSinceReset[requestIndex] = framesSinceReset;
+            _listFresh[requestIndex]            = framesSinceReset == 0 ? SW_TRUE : SW_FALSE; // 갱신한 적 없는 구간은 0 으로 채워야 한다(앞 프레임이 중간에 그만둔 구간 포함)
         }
-        return bGrew;
+        return _bGrowPending != SW_FALSE;
     }
 
     void RealtimeProbeHistoryAllocator::advanceFrame()
     {
+        _bGrowPending = SW_FALSE;
         for ( const uint64 volumeID : _listActiveID )
         {
             const auto it = _mapSlot.find( volumeID );
@@ -110,6 +107,7 @@ namespace sw
         _listOffset.clear();
         _listFramesSinceReset.clear();
         _listFresh.clear();
+        _bGrowPending = SW_FALSE;
     }
 
     RealtimeProbeLayout RealtimeProbeUpdater::planLayout( const vector<RealtimeProbeRequest>& listRequest, const RealtimeProbeHistoryAllocator& history )

@@ -10,6 +10,7 @@
 #include "Editor/Common/Asset/AssetImportStamp.h"
 
 #include "Engine/Asset/Cook/CookRecord.h"
+#include "Engine/Asset/Cook/Tests/DerivedDataCacheTestAccess.h"
 
 using namespace sw;
 using namespace sw::editor;
@@ -84,7 +85,9 @@ SW_TEST_CASE( AssetImportStampTest, RemovingASourceRemovesItsResult )
     SW_REQUIRE_TRUE( writeText( FileUtil::joinPath( root.str(), "pack/things_raw/gone.src" ), "a" ) );
     SW_REQUIRE_TRUE( writeText( FileUtil::joinPath( root.str(), "pack/things_raw/kept.src" ), "b" ) );
     const FakeThingImporter importer;
-    const DerivedDataCache  cache{ vector<DerivedDataLayer>{ DerivedDataLayer{ test::makeScratchPath( "ImportDDC" ), DerivedDataAccess::ReadWrite } } }; // 프로젝트 DDC 에 쓰지 않는다
+    const DerivedDataCache  cache = DerivedDataCacheTestAccess::make( vector<DerivedDataLayer>{
+        DerivedDataLayer{ test::makeScratchPath( "ImportDDC" ), DerivedDataAccess::ReadWrite }
+    } ); // 프로젝트 DDC 에 쓰지 않는다
     SW_REQUIRE_TRUE( AssetImportStampUtil::importAll( root.str(), importer, AssetImportMode::ImportStale, nullptr, cache ).isClean() );
     SW_REQUIRE_TRUE( FileUtil::exists( root.join( "pack/things/gone.out" ) ) );
     SW_REQUIRE_TRUE( FileUtil::exists( root.join( "pack/things/gone/side.txt" ) ) );
@@ -104,7 +107,9 @@ SW_TEST_CASE( AssetImportStampTest, RemovingASourceRemovesItsResult )
  */
 SW_TEST_CASE( AssetImportStampTest, StaleSourceIsServedFromCache )
 {
-    const DerivedDataCache  cache{ vector<DerivedDataLayer>{ DerivedDataLayer{ test::makeScratchPath( "ImportDDC" ), DerivedDataAccess::ReadWrite } } };
+    const DerivedDataCache  cache     = DerivedDataCacheTestAccess::make( vector<DerivedDataLayer>{
+        DerivedDataLayer{ test::makeScratchPath( "ImportDDC" ), DerivedDataAccess::ReadWrite }
+    } );
     const string            firstRoot = makeCheckout( "ImportCacheFirst" );
     const FakeThingImporter first;
     SW_REQUIRE_TRUE( AssetImportStampUtil::importAll( firstRoot, first, AssetImportMode::ImportStale, nullptr, cache ).isClean() );
@@ -128,7 +133,9 @@ SW_TEST_CASE( AssetImportStampTest, StaleSourceIsServedFromCache )
  */
 SW_TEST_CASE( AssetImportStampTest, DifferentSettingsMiss )
 {
-    const DerivedDataCache  cache{ vector<DerivedDataLayer>{ DerivedDataLayer{ test::makeScratchPath( "ImportDDC" ), DerivedDataAccess::ReadWrite } } };
+    const DerivedDataCache  cache = DerivedDataCacheTestAccess::make( vector<DerivedDataLayer>{
+        DerivedDataLayer{ test::makeScratchPath( "ImportDDC" ), DerivedDataAccess::ReadWrite }
+    } );
     const FakeThingImporter first( "fast" );
     SW_REQUIRE_TRUE( AssetImportStampUtil::importAll( makeCheckout( "ImportSettingsFirst" ), first, AssetImportMode::ImportStale, nullptr, cache ).isClean() );
 

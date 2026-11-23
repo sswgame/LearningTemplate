@@ -5,11 +5,18 @@
 #include "Core/Algorithm/VectorUtil.h"
 #include "Core/Concurrency/ScopedLock.h"
 #include "Core/Foundation/Constants.h"
+#include "Core/Network/Transport/NativeSocketAddress.h"
 #include "Core/Network/Transport/WebSocketProtocol.h"
 #include "Core/String/fixed_string.h"
 #include "Core/String/formatString.h"
 
+#include <emscripten/proxying.h>
+#include <emscripten/threading.h>
 #include <emscripten/websocket.h>
+#include <netdb.h>
+
+// 브라우저 쪽 본문은 WebSocketPage.js(Emscripten JS 라이브러리)다.
+extern "C" int swWebSocketIsSecurePage();
 
 namespace sw
 {
@@ -42,6 +49,22 @@ namespace sw
                 (void)eventType;
                 static_cast<WebSocketStreamTransport*>( pUserData )->onSocketClose( pEvent->socket, pEvent->wasClean );
                 return true;
+            }
+
+            /**
+             * @brief 주소의 호스트 글입니다 — 이름을 푼 가짜 주소면 그 이름, 아니면 숫자 주소입니다.
+             * @details Emscripten 은 이름을 풀지 못해 이름마다 172.29.x.x 를 주고 `getnameinfo` 로 되찾게 한다(6.0.13 `src/lib/libcore.js` 의 `$DNS`). 숫자 주소는 `NI_NAMEREQD` 가 실패로 알린다.
+             */
+            static void formatURL( const NetAddress& remote, fixed_string<constant::buffer::kMax512>& outURL )
+            {
+                const utf8* const         pScheme = swWebSocketIsSecurePage() != 0 ? "wss" : "ws";
+                const NativeSocketAddress native  = NativeSocketAddress::toNative( remote );
+                utf8                      arrHost[NI_MAXHOST];
+                const bool                bNamed = getnameinfo( native.get(), static_cast<socklen_t>( native._length ), arrHost, sizeof( arrHost ), nullptr, 0, NI_NAMEREQD ) == 0;
+                if ( bNamed )
+                    formatstring( outURL.data(), outURL.capacity(), "%#://%#:%#/", pScheme, arrHost, remote._port );
+                else
+                    formatstring( outURL.data(), outURL.capacity(), "%#://%#/", pScheme, remote.toString() ); // IPv6 는 대괄호를 두른다
             }
         };
     } // namespace
@@ -98,8 +121,28 @@ namespace sw
 
     StreamConnectionHandle WebSocketStreamTransport::connect( const NetAddress& remote )
     {
-        fixed_string<constant::buffer::kMax128> url;
-        formatstring( url.data(), url.capacity(), "ws://%#/", remote.toString() );
+        if ( emscripten_is_main_runtime_thread() )
+            return connectOnMainThread( remote );
+        // 네트워크 스레드(게임 세션의 다시 걸기)에서도 온다. 소켓은 메인 스레드에 생기므로 여기서 나눠 부르면 콜백을 걸기 전 · 칸을 올리기 전에 열림 이벤트가 올 수 있다.
+        struct Request
+        {
+            WebSocketStreamTransport* _pTransport;
+            const NetAddress*         _pRemote;
+            StreamConnectionHandle    _handle;
+        };
+        Request    request{ this, &remote, {} };
+        const bool bDone = emscripten_proxy_sync( emscripten_proxy_get_system_queue(), emscripten_main_runtime_thread_id(), []( void* pArgument )
+        {
+            Request& call = *static_cast<Request*>( pArgument );
+            call._handle  = call._pTransport->connectOnMainThread( *call._pRemote );
+        }, &request );
+        return bDone ? request._handle : StreamConnectionHandle{};
+    }
+
+    StreamConnectionHandle WebSocketStreamTransport::connectOnMainThread( const NetAddress& remote )
+    {
+        fixed_string<constant::buffer::kMax512> url;
+        WebSocketStreamTransportInternal::formatURL( remote, url );
         EmscriptenWebSocketCreateAttributes attributes;
         emscripten_websocket_init_create_attributes( &attributes );
         attributes.url                      = url.c_str();

@@ -19,6 +19,9 @@ Scripts/dev/shipping_check.py
 배포 실행 파일에 테스트용 전역 변수 이름(`SW_TEST_GLOBAL_VARIABLE` 의 `gv_…`)이 하나라도 남아 있으면 실패다 — 배포 구성에서 그 변수는 상수라
 등록(이름 글)도 읽는 분기도 접혀 사라져야 한다. 남았다면 상수 접기가 안 되는 자리(주소를 넘기는 곳 · 쓰는 곳)이니 그 자리를 배포 구성에서 뺀다.
 
+배포 도메인(engine · common · 활성 게임)의 리다이렉트 표(`Content/<도메인>/redirects.xml`)가 그 도메인의 팩에 들어 있는지도 본다 — 빠지면 옮긴 에셋의 옛 id 가 배포본에서만 풀리지 않고,
+런타임은 표가 없는 도메인을 정상으로 본다(`AssetRedirect::loadFromSearchDomains`).
+
 로그는 `build/<프리셋>/Testing/Logs/ShippingCheck.<이름>.log` 이다. 끝에 로그마다 [Error] · [Warning] 줄을 모아 찍는다 — 기대한 줄이 아닌 [Error] 가 있으면 실패다.
 
 사용법:
@@ -45,6 +48,8 @@ from common.exit_code import ExitCode  # noqa: E402
 from common.host_platform import executable_name, is_windows_host  # noqa: E402
 from common.paths import get_bin_dir, get_build_dir, get_project_root  # noqa: E402
 from common.run_process import run_cmake, run_process  # noqa: E402
+from package.pack import LIST_SHARED_PACK_NAME, PACK_FOLDER_NAME, list_pack_name_of_game  # noqa: E402
+from package.pack_index import PackIndexError, read_pack_paths  # noqa: E402
 
 #: 배포 App 을 살려 두는 시간(초) — 기동 · 첫 씬 · 몇 프레임이 지나기에 넉넉하다.
 APP_RUN_SECONDS = 8.0
@@ -211,6 +216,49 @@ def check_no_test_variables(project_root: Path) -> SmokeResult:
     return SmokeResult("NoTestVariables", get_bin_dir("Ninja-Shipping", project_root), not list_left, reason)
 
 
+def find_active_game(project_root: Path, preset: str) -> str:
+    """구성된 배포 프리셋의 활성 게임(`SW_ACTIVE_GAME`)입니다."""
+    match = re.search(r"^SW_ACTIVE_GAME:[A-Z]+=(.+)$", (get_build_dir(preset, project_root) / "CMakeCache.txt").read_text(encoding="utf-8"), re.M)
+    if match is None:
+        raise PackIndexError(f"{preset} has no SW_ACTIVE_GAME in its CMake cache")
+    return match.group(1).strip()
+
+
+def find_missing_redirect_tables(content_root: Path, pack_dir: Path, list_pack_name: list[str]) -> tuple[int, list[str]]:
+    """배포 도메인의 리다이렉트 표 수와, 그 도메인 팩(나눈 팩 포함)에 없는 표의 목록입니다. 팩 이름 `game_<폴더>.pack` 은 `game/<폴더>` 도메인이다."""
+    table_count = 0
+    list_missing: list[str] = []
+    for pack_name in list_pack_name:
+        stem = Path(pack_name).stem
+        domain = stem if pack_name in LIST_SHARED_PACK_NAME else stem.replace("game_", "game/", 1)
+        if (content_root / domain / "redirects.xml").is_file() is False:
+            continue
+        table_count += 1
+        set_path: set[str] = set()
+        for pack in [pack_dir / pack_name, *sorted(pack_dir.glob(f"{stem}.*.pack"))]:
+            set_path |= read_pack_paths(pack)
+        if "redirects.xml" not in set_path:
+            list_missing.append(f"{domain}/redirects.xml ({pack_name})")
+    return table_count, list_missing
+
+
+def check_redirect_tables(project_root: Path) -> SmokeResult:
+    """배포 프리셋 둘의 팩에 배포 도메인의 리다이렉트 표가 모두 들었는지 본다."""
+    list_problem: list[str] = []
+    table_count = 0
+    for preset in ("Ninja-Shipping", "Ninja-Shipping-Server"):
+        pack_dir = get_bin_dir(preset, project_root) / PACK_FOLDER_NAME
+        try:
+            list_pack_name = list_pack_name_of_game(project_root, find_active_game(project_root, preset))
+            count, list_missing = find_missing_redirect_tables(project_root / "Content", pack_dir, list_pack_name)
+            table_count += count
+            list_problem += [f"{preset}: {missing}" for missing in list_missing]
+        except (PackIndexError, OSError) as error:
+            list_problem.append(f"{preset}: {error}")
+    reason = f"{table_count} redirect tables are in the shipping packs" if not list_problem else f"not in the shipping packs: {', '.join(list_problem)}"
+    return SmokeResult("RedirectTables", get_bin_dir("Ninja-Shipping", project_root) / PACK_FOLDER_NAME, not list_problem, reason)
+
+
 def report_log_lines(result: SmokeResult) -> int:
     """로그의 [Error] · [Warning] 줄을 같은 줄끼리 세어 찍고, 기대하지 않은 [Error] 줄 수를 돌려준다."""
     if result.log_path.is_file() is False:
@@ -246,9 +294,10 @@ def main(argv: list[str] | None = None) -> int:
             return ExitCode.VIOLATION
 
     all_passed = True
-    variable_check = check_no_test_variables(project_root)
-    print(f"[shipping-check] {variable_check.name}: {'PASS' if variable_check.passed else 'FAIL'} - {variable_check.reason}", flush=True)
-    all_passed = variable_check.passed
+    for check in (check_no_test_variables, check_redirect_tables):
+        result = check(project_root)
+        print(f"[shipping-check] {result.name}: {'PASS' if result.passed else 'FAIL'} - {result.reason}", flush=True)
+        all_passed = all_passed and result.passed
     list_failed_preset: list[str] = []
     for run, preset in list_run:
         result = run(project_root)

@@ -7,6 +7,8 @@
 #include "Engine/Graphics/RHI/Diagnostics/RHITimestampFrame.h"
 #include "Engine/Renderer/Frame/Timeline/GPUTimestampSlotLayout.h"
 
+#include <limits>
+
 namespace sw
 {
     namespace
@@ -47,9 +49,11 @@ namespace sw
     GPUTimelineExporter::GPUTimelineExporter()
         : _listScratchSpan{}
         , _listScratchChildSpan{}
+        , _listScratchComputeSpan{}
         , _pDeviceIdentity{ nullptr }
         , _pBackend{ nullptr }
         , _gpuContext{ IProfilerGPUTimeline::kInvalidGPUContext }
+        , _computeQueueContext{ IProfilerGPUTimeline::kInvalidGPUContext }
         , _framesSinceSync{ 0 }
     {
     }
@@ -59,10 +63,13 @@ namespace sw
         return _gpuContext != IProfilerGPUTimeline::kInvalidGPUContext && _pDeviceIdentity == pDeviceIdentity && _pBackend == pBackend;
     }
 
-    bool GPUTimelineExporter::openContext( IProfilerGPUTimeline& backend, ProfilerGraphicsAPI api, const utf8* pName, const void* pDeviceIdentity,
+    bool GPUTimelineExporter::openContext( IProfilerGPUTimeline& backend, ProfilerGraphicsAPI api, const utf8* pName, const utf8* pComputeQueueName, const void* pDeviceIdentity,
                                            int64 gpuNowNanos )
     {
-        _gpuContext      = backend.createGPUContext( api, pName, gpuNowNanos );
+        _gpuContext          = backend.createGPUContext( api, pName, gpuNowNanos );
+        _computeQueueContext = IProfilerGPUTimeline::kInvalidGPUContext;
+        if ( pComputeQueueName != nullptr && _gpuContext != IProfilerGPUTimeline::kInvalidGPUContext )
+            _computeQueueContext = backend.createGPUContext( api, pComputeQueueName, gpuNowNanos ); // 슬롯 값은 이미 그래픽스 큐 시계다 — 같은 기준점
         _pDeviceIdentity = pDeviceIdentity;
         _pBackend        = &backend;
         _framesSinceSync = 0;
@@ -71,10 +78,11 @@ namespace sw
 
     void GPUTimelineExporter::removeContext()
     {
-        _gpuContext      = IProfilerGPUTimeline::kInvalidGPUContext;
-        _pDeviceIdentity = nullptr;
-        _pBackend        = nullptr;
-        _framesSinceSync = 0;
+        _gpuContext          = IProfilerGPUTimeline::kInvalidGPUContext;
+        _computeQueueContext = IProfilerGPUTimeline::kInvalidGPUContext;
+        _pDeviceIdentity     = nullptr;
+        _pBackend            = nullptr;
+        _framesSinceSync     = 0;
     }
 
     bool GPUTimelineExporter::advanceAndCheckResync()
@@ -88,7 +96,23 @@ namespace sw
         if ( _gpuContext == IProfilerGPUTimeline::kInvalidGPUContext )
             return;
         backend.syncGPUClock( _gpuContext, gpuNowNanos );
+        if ( _computeQueueContext != IProfilerGPUTimeline::kInvalidGPUContext )
+            backend.syncGPUClock( _computeQueueContext, gpuNowNanos );
         _framesSinceSync = 0;
+    }
+
+    uint32 GPUTimelineExporter::exportSiblings( IProfilerGPUTimeline& backend, uint32 gpuContext, const vector<Span>& listSpan, int64 beginNanos, int64 endNanos )
+    {
+        int64 previousEnd = beginNanos;
+        for ( const Span& span : listSpan )
+        {
+            const int64 spanBegin = MathUtil::min( MathUtil::max( span._beginNanos, previousEnd ), endNanos );
+            const int64 spanEnd   = MathUtil::min( MathUtil::max( span._endNanos, spanBegin ), endNanos );
+            backend.beginGPUZone( gpuContext, *span._pSite, spanBegin );
+            backend.endGPUZone( gpuContext, spanEnd );
+            previousEnd = spanEnd;
+        }
+        return static_cast<uint32>( listSpan.size() );
     }
 
     uint32 GPUTimelineExporter::exportFrame( IProfilerGPUTimeline& backend, const RHITimestampFrame& frame, const ProfileZoneSite& frameSite,
@@ -123,8 +147,9 @@ namespace sw
         if ( _listScratchSpan.empty() )
             return 0;
         // 프레임 패스(컬링 · 그리드 · 스킨 …)는 프레임 그래프 구간 안의 조각이다 — 형제가 아니라 그 구간의 자식으로 낸다(형제로 내면 겹쳐 잘린다).
-        // 비동기 컴퓨트 큐의 프레임 패스는 아직 칸을 쓰지 않으므로(FramePassExecutor::onFrameGraphPassExecute) 여기 오지 않는다.
+        // 비동기 컴퓨트 큐의 프레임 패스는 그 구간과 겹치거나 구간 뒤에 끝나므로 컴퓨트 큐 컨텍스트에 낸다. 그 컨텍스트가 없으면 내지 않는다(트리를 깨지 않는다).
         _listScratchChildSpan.clear();
+        _listScratchComputeSpan.clear();
         for ( size_t framePassIndex = 0; framePassIndex < listFramePassSite.size(); ++framePassIndex )
         {
             const uint32 beginSlot = GPUTimestampSlotLayout::findFramePassSlot( framePassIndex );
@@ -134,13 +159,16 @@ namespace sw
             int64      endNanos{ 0 };
             const bool bWritten = listFramePassSite[framePassIndex] != nullptr && findSlotNanos( frame, beginSlot, beginNanos ) &&
                                   findSlotNanos( frame, beginSlot + 1u, endNanos ) && endNanos >= beginNanos;
-            if ( bWritten )
-                _listScratchChildSpan.push_back( Span{ beginNanos, endNanos, listFramePassSite[framePassIndex] } );
+            if ( bWritten == false )
+                continue;
+            vector<Span>& listQueueSpan = frame._computeQueueMask.test( beginSlot ) ? _listScratchComputeSpan : _listScratchChildSpan;
+            listQueueSpan.push_back( Span{ beginNanos, endNanos, listFramePassSite[framePassIndex] } );
         }
 
         // 2) 시작 순으로 정렬한다.
         sortSpanByBegin( _listScratchSpan );
         sortSpanByBegin( _listScratchChildSpan );
+        sortSpanByBegin( _listScratchComputeSpan );
 
         // 3) 프레임 구간 = 프레임 첫 명령 ~ 가장 늦은 끝. 첫 명령 슬롯이 없으면 가장 이른 시작으로 둔다.
         int64 frameBegin{ 0 };
@@ -162,26 +190,18 @@ namespace sw
             const int64 beginNanos = MathUtil::max( span._beginNanos, previousEnd );
             const int64 endNanos   = MathUtil::max( span._endNanos, beginNanos );
             backend.beginGPUZone( _gpuContext, *span._pSite, beginNanos );
-            uint32 childCount{ 0 };
-            if ( span._pSite == &computeSite )
-            {
-                // 자식도 같은 규칙이다 — 앞 형제의 끝과 부모(프레임 그래프) 범위로 자른다.
-                int64 previousChildEnd = beginNanos;
-                for ( const Span& child : _listScratchChildSpan )
-                {
-                    const int64 childBegin = MathUtil::min( MathUtil::max( child._beginNanos, previousChildEnd ), endNanos );
-                    const int64 childEnd   = MathUtil::min( MathUtil::max( child._endNanos, childBegin ), endNanos );
-                    backend.beginGPUZone( _gpuContext, *child._pSite, childBegin );
-                    backend.endGPUZone( _gpuContext, childEnd );
-                    previousChildEnd = childEnd;
-                    ++childCount;
-                }
-            }
+            // 자식도 같은 규칙이다 — 앞 형제의 끝과 부모(프레임 그래프) 범위로 자른다.
+            const uint32 childCount = span._pSite == &computeSite ? exportSiblings( backend, _gpuContext, _listScratchChildSpan, beginNanos, endNanos ) : 0u;
             backend.endGPUZone( _gpuContext, endNanos );
             previousEnd = endNanos;
             exportedCount += 1u + childCount;
         }
         backend.endGPUZone( _gpuContext, frameEnd );
+        // 5) 컴퓨트 큐 줄. 부모 구간이 없다 — 같은 큐 안의 형제끼리만 자른다.
+        if ( _computeQueueContext != IProfilerGPUTimeline::kInvalidGPUContext && _listScratchComputeSpan.empty() == false )
+        {
+            exportedCount += exportSiblings( backend, _computeQueueContext, _listScratchComputeSpan, _listScratchComputeSpan.front()._beginNanos, std::numeric_limits<int64>::max() );
+        }
         return exportedCount + 1u;
     }
 } // namespace sw

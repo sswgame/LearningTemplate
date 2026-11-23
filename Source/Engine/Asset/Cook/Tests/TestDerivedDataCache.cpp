@@ -6,6 +6,7 @@
 #include "Core/Testing/TestFramework.h"
 
 #include "Engine/Asset/Cook/CookRecord.h"
+#include "Engine/Asset/Cook/Tests/DerivedDataCacheTestAccess.h"
 
 using namespace sw;
 
@@ -19,12 +20,15 @@ namespace
         /** @brief 로컬(쓰기) + 공유(@p sharedAccess) 두 층입니다. */
         DerivedDataCache makeLayered( DerivedDataAccess sharedAccess ) const
         {
-            return DerivedDataCache{
-                vector<DerivedDataLayer>{ DerivedDataLayer{ _localRoot, DerivedDataAccess::ReadWrite }, DerivedDataLayer{ _sharedRoot, sharedAccess } }
-            };
+            return DerivedDataCacheTestAccess::make( vector<DerivedDataLayer>{
+                DerivedDataLayer{ _localRoot, DerivedDataAccess::ReadWrite},
+                DerivedDataLayer{_sharedRoot,                 sharedAccess}
+            } );
         }
         /** @brief 공유 층 하나만 쓰는 캐시입니다(다른 머신이 공유 층을 채운 것). */
-        DerivedDataCache makeSharedWriter() const { return DerivedDataCache{ vector<DerivedDataLayer>{ DerivedDataLayer{ _sharedRoot, DerivedDataAccess::ReadWrite } } }; }
+        DerivedDataCache makeSharedWriter() const { return DerivedDataCacheTestAccess::make( vector<DerivedDataLayer>{
+            DerivedDataLayer{ _sharedRoot, DerivedDataAccess::ReadWrite }
+ } ); }
     };
 
     const vector<uint8> kPayload{ 1, 2, 3, 4, 5 };
@@ -49,7 +53,9 @@ SW_TEST_CASE( DerivedDataCacheTest, SharedHitFillsLocal )
     SW_EXPECT_TRUE( FileUtil::exists( cache.makePath( 0, kKey ) ) );
 
     // 채운 로컬 항목만으로도 히트다(공유 층이 사라져도).
-    const DerivedDataCache localOnly{ vector<DerivedDataLayer>{ DerivedDataLayer{ fixture._localRoot, DerivedDataAccess::ReadWrite } } };
+    const DerivedDataCache localOnly = DerivedDataCacheTestAccess::make( vector<DerivedDataLayer>{
+        DerivedDataLayer{ fixture._localRoot, DerivedDataAccess::ReadWrite }
+    } );
     vector<uint8>          localBytes;
     SW_REQUIRE_TRUE( localOnly.find( kKey, "job-a", localBytes ) );
     SW_EXPECT_TRUE( localBytes == kPayload );
@@ -147,7 +153,9 @@ SW_TEST_CASE( DerivedDataCacheTest, EvictsUnusedThenOldestOverLimit )
     constexpr int64               kDayTicks  = constant::time::kSecondsPerDay * FileUtil::kFileTimeTicksPerSecond;
     const int64                   now        = FileUtil::getCurrentFileWriteTime();
     const uint64                  keyExpired = 1, keyOld = 2, keyHit = 3, keyNew = 4;
-    DerivedDataCache              writer{ vector<DerivedDataLayer>{ DerivedDataLayer{ fixture._localRoot, DerivedDataAccess::ReadWrite } } };
+    DerivedDataCache              writer = DerivedDataCacheTestAccess::make( vector<DerivedDataLayer>{
+        DerivedDataLayer{ fixture._localRoot, DerivedDataAccess::ReadWrite }
+    } );
     for ( const uint64 key : { keyExpired, keyOld, keyHit, keyNew } )
     {
         SW_REQUIRE_TRUE( writer.store( key, "job", kPayload ) );
@@ -159,8 +167,9 @@ SW_TEST_CASE( DerivedDataCacheTest, EvictsUnusedThenOldestOverLimit )
     SW_REQUIRE_TRUE( FileUtil::tryGetFileSize( writer.makePath( 0, keyNew ), entryBytes ) );
 
     // 상한은 항목 둘 — 나이로 하나(10 일), 상한으로 하나(남은 셋 중 가장 오래 안 쓴 3 일)가 지워진다. 4 일 전 항목은 찾기 히트로 지금 시각이 됐다.
-    const DerivedDataCache cache{ vector<DerivedDataLayer>{
-        DerivedDataLayer{ fixture._localRoot, DerivedDataAccess::ReadWrite, DerivedDataEvictionPolicy{ 7, entryBytes * 2 } } } };
+    const DerivedDataCache cache = DerivedDataCacheTestAccess::make( vector<DerivedDataLayer>{
+        DerivedDataLayer{ fixture._localRoot, DerivedDataAccess::ReadWrite, DerivedDataEvictionPolicy{ 7, entryBytes * 2 } }
+    } );
     vector<uint8>          bytes;
     SW_REQUIRE_TRUE( cache.find( keyHit, "job", bytes ) );
     SW_EXPECT_EQUAL( 2u, cache.evictUnusedEntries() );
@@ -169,4 +178,25 @@ SW_TEST_CASE( DerivedDataCacheTest, EvictsUnusedThenOldestOverLimit )
     SW_EXPECT_TRUE( FileUtil::isRegularFile( cache.makePath( 0, keyHit ) ) );
     SW_EXPECT_TRUE( FileUtil::isRegularFile( cache.makePath( 0, keyNew ) ) );
     SW_EXPECT_EQUAL( 0u, cache.evictUnusedEntries() );
+}
+
+/**
+ * @brief [DerivedDataCacheTest] 동작 키의 기록을 쓰고 다시 읽는다 — 항목과 다른 파일이라 서로를 덮지 않는다
+ */
+SW_TEST_CASE( DerivedDataCacheTest, RecordsRoundTripBesideEntries )
+{
+    const DerivedDataCacheFixture fixture;
+    const DerivedDataCache        cache = fixture.makeLayered( DerivedDataAccess::ReadOnly );
+    CookRecord                    record;
+    SW_EXPECT_FALSE( cache.readRecord( 9, record ) );
+    record._key        = 0x1234u;
+    record._outputHash = 0x5678u;
+    record._listInput.push_back( CookInput{ CookInputKind::Resource, "engine/shaders/x.hlsli", "", 0 } );
+    SW_REQUIRE_TRUE( cache.writeRecord( 9, record ) );
+    SW_REQUIRE_TRUE( cache.store( 9, "job", kPayload ) );
+    CookRecord read;
+    SW_REQUIRE_TRUE( cache.readRecord( 9, read ) );
+    SW_EXPECT_EQUAL( record._key, read._key );
+    SW_EXPECT_EQUAL( record._outputHash, read._outputHash );
+    SW_EXPECT_TRUE( read._listInput == record._listInput );
 }

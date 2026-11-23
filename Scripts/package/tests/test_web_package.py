@@ -15,7 +15,7 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[2]))   # Scripts
 
-from package.web_check import RunReport, evaluate_run, AUDIO_STARTED_LINE, PROBE_PATH, write_check_page  # noqa: E402
+from package.web_check import RunReport, evaluate_run, evaluate_scenario, AUDIO_STARTED_LINE, PROBE_PATH, write_check_page, write_scenario_page  # noqa: E402
 from package.web_package import IsolatedRequestHandler, WebPackageError, INDEX_HTML, PACK_LOADER_NAME, make_web_package  # noqa: E402
 
 PROJECT_ROOT = Path(__file__).resolve().parents[3]
@@ -71,6 +71,21 @@ class WebPackageTest(unittest.TestCase):
         silent = RunReport(list_line=["O booted"], gpu="yes", adapter="yes")
         silent.done.set()
         self.assertEqual(1, len(evaluate_run("run3", silent)))  # 워클릿이 링을 당기지 않으면 진다
+
+    def test_scenario_page_passes_arguments_and_exit_code_decides(self) -> None:
+        scenario = "game/playground/automation/web/dominput.scenario.xml"
+        self.assertTrue((PROJECT_ROOT / "Content" / scenario).is_file())
+        with tempfile.TemporaryDirectory() as folder:
+            write_scenario_page(Path(folder), "Playground", scenario)
+            page = (Path(folder) / "check.html").read_text(encoding="utf-8")
+        self.assertIn(f'"-scenario={scenario}"', page)
+        self.assertLess(page.index("Module.arguments"), page.index('"App.js"'))
+        report = RunReport(gpu="yes", adapter="yes", exit="exit 0")
+        report.done.set()
+        self.assertEqual([], evaluate_scenario(report))
+        report.exit = "exit 13"  # 웹에서 건너뛴 시나리오는 본 것이 없다
+        self.assertEqual(1, len(evaluate_scenario(report)))
+        self.assertEqual(3, len(evaluate_scenario(RunReport())))
 
 
 if __name__ == "__main__":

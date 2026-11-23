@@ -4,28 +4,27 @@
 
 #include "Core/Log/Logger.h"
 
-#include "DevTools/AssetReload/FileWatchDispatcher.h"
-#include "DevTools/FileWatch/FileWatcher.h"
+#include "DevTools/FileWatch/FileWatchService.h"
 
 #include "Engine/Content/AssetPaths.h"
 #include "Engine/Foundation/EngineServices.h"
 
 namespace sw
 {
-    /** @struct ContentFolderWatchService::Watch @brief 감시 하나 — 디스크 폴더마다의 분배기 · 경로 구독, 알릴 델리게이트, 이번 프레임에 바뀌었는지입니다. */
+    /** @struct ContentFolderWatchService::Watch @brief 감시 하나 — 디스크 폴더마다의 구독, 알릴 델리게이트, 이번 프레임에 바뀌었는지입니다. */
     struct ContentFolderWatchService::Watch
     {
-        uint64                                  _id{ 0 };
-        vector<unique_ptr<FileWatchDispatcher>> _listDispatcher{};
-        vector<Subscription>                    _listMatch{};
-        ChangedDelegate                         _onChanged{};
-        bool                                    _bChanged{ SW_FALSE }; ///< NOLINT(sw-bool-flag): 집합체다(중괄호 · 지정 초기화로 만든다) — C++17 비트필드는 기본값을 둘 수 없어 `T x;` 가 값을 남기지 않는다
+        uint64               _id{ 0 };
+        vector<Subscription> _listMatch{};
+        ChangedDelegate      _onChanged{};
+        bool                 _bChanged{ SW_FALSE }; ///< NOLINT(sw-bool-flag): 집합체다(중괄호 · 지정 초기화로 만든다) — C++17 비트필드는 기본값을 둘 수 없어 `T x;` 가 값을 남기지 않는다
 
-        void onFileChanged( const FileChangeEvent& /*changeEvent*/ ) { _bChanged = SW_TRUE; } // 확장자는 분배기가 거른다 — 바뀌었다는 사실만 쓴다
+        void onFileChanged( const FileChangeEvent& /*changeEvent*/ ) { _bChanged = SW_TRUE; } // 확장자는 감시 창구가 거른다 — 바뀌었다는 사실만 쓴다
     };
 
-    ContentFolderWatchService::ContentFolderWatchService()
-        : _listWatch{}
+    ContentFolderWatchService::ContentFolderWatchService( FileWatchService& fileWatch )
+        : _fileWatch{ fileWatch }
+        , _listWatch{}
         , _watchIDAllocator{}
     {
     }
@@ -44,11 +43,10 @@ namespace sw
         unique_ptr<Watch> watch = make_unique<Watch>();
         for ( const string& diskFolder : listDiskFolder )
         {
-            unique_ptr<FileWatchDispatcher> pDispatcher = make_unique<FileWatchDispatcher>();
-            if ( pDispatcher->initialize( diskFolder ) == false )
-                return {}; // 감시자가 이유를 남겼다
-            watch->_listMatch.push_back( pDispatcher->registerWatch( diskFolder, listExtension, SW_DELEGATE_METHOD( FileWatchMatchDelegate, &Watch::onFileChanged, watch.get() ) ) );
-            watch->_listDispatcher.push_back( std::move( pDispatcher ) );
+            Subscription match = _fileWatch.watch( diskFolder, FileWatchDepth::Tree, listExtension, SW_DELEGATE_METHOD( FileChangeDelegate, &Watch::onFileChanged, watch.get() ) );
+            if ( match.isActive() == false )
+                return {}; // 감시 창구가 이유를 남겼다
+            watch->_listMatch.push_back( std::move( match ) );
         }
         watch->_id        = _watchIDAllocator.allocate();
         watch->_onChanged = onChanged;
@@ -62,10 +60,6 @@ namespace sw
         for ( size_t index = 0; index < _listWatch.size(); ++index )
         {
             Watch& watch = *_listWatch[index];
-            for ( const unique_ptr<FileWatchDispatcher>& pDispatcher : watch._listDispatcher )
-            {
-                pDispatcher->update();
-            }
             if ( watch._bChanged == false )
                 continue;
             watch._bChanged = SW_FALSE;
@@ -80,12 +74,6 @@ namespace sw
         {
             if ( _listWatch[index]->_id != id )
                 continue;
-            Watch& watch = *_listWatch[index];
-            watch._listMatch.clear();
-            for ( const unique_ptr<FileWatchDispatcher>& pDispatcher : watch._listDispatcher )
-            {
-                pDispatcher->shutdown();
-            }
             _listWatch.erase( _listWatch.begin() + static_cast<ptrdiff_t>( index ) );
             return;
         }

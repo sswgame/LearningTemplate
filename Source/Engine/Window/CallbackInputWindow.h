@@ -10,6 +10,7 @@
 #include "Core/Container/vector.h"
 #include "Core/Foundation/Types.h"
 
+#include "Engine/Window/AndroidInputConnectionState.h"
 #include "Engine/Window/GenericWindow.h"
 #include "Engine/Window/PlatformInputEvent.h"
 #include "Engine/Window/WindowMonitor.h"
@@ -78,6 +79,8 @@ namespace sw
          *          글은 길이 제한 없이 담는다 — 플랫폼 입력 한 칸에 실으면 고정 크기에서 잘린다(감사 P-4).
          */
         void queueTextInput( WindowTextInputKind kind, string_view text );
+        /** @brief Android 입력 연결이 옮긴 동작들(조합 · 확정 글과 지우기 키)을 받은 차례대로 모읍니다. 여기 두어 데스크톱 테스트(`WindowTextInputTest`)가 Android 창 없이 같은 길을 본다. */
+        void queueTextActions( const vector<AndroidTextAction>& listAction );
         /**
          * @brief 창 포커스가 바뀌었습니다. 상태(`hasFocus` — 프레임 페이싱)를 적고, 값이 바뀌었으면 입력 관리자가 받을 포커스 입력을 모읍니다.
          * @details 상태만 적으면 입력 관리자가 몰라 포커스를 잃기 전에 눌린 키가 눌린 채 남는다(감사 P-3). 그래서 콜백 창에서는 `setFocusState` 를 숨기고 이것만 연다.

@@ -50,3 +50,20 @@ SW_TEST_CASE( RHIRingBoundsTest, TimestampRingSlotIsChecked )
         SW_EXPECT_EQUAL( 1u, assertCapture.getCount() );
     }
 }
+
+/**
+ * @brief [RHIRingBoundsTest] RHITimestampRing — 컴퓨트 큐 리스트가 적은 슬롯은 두 마스크에 함께 남고, 칸을 다시 쓰면 둘 다 빈다
+ */
+SW_TEST_CASE( RHIRingBoundsTest, TimestampRingSeparatesComputeQueueSlots )
+{
+    RHITimestampRing ring;
+    ring.markWritten( 3 );
+    ring.markComputeQueueWritten( 7 );
+    (void)ring.closeFrame( 1 );
+    SW_EXPECT_TRUE( ring.getSlotMask( 1 ).test( 3 ) && ring.getSlotMask( 1 ).test( 7 ) );
+    SW_EXPECT_FALSE( ring.getComputeQueueMask( 1 ).test( 3 ) );
+    SW_EXPECT_TRUE( ring.getComputeQueueMask( 1 ).test( 7 ) );
+    ring.beginFrame( 1 );
+    SW_EXPECT_FALSE( ring.getSlotMask( 1 ).any() );
+    SW_EXPECT_FALSE( ring.getComputeQueueMask( 1 ).any() );
+}

@@ -6,10 +6,7 @@
 #include "Core/GlobalVariable/GlobalVariableManager.h"
 #include "Core/Log/Logger.h"
 #include "Core/Math/MathUtil.h"
-#include "Core/String/StringBuilder.h"
-#include "Core/String/StringUtil.h"
 
-#include "Engine/Console/DevCommandRegistry.h"
 #include "Engine/Foundation/EngineServices.h"
 #include "Engine/Foundation/EngineSubsystemRegistration.h"
 
@@ -77,31 +74,6 @@ namespace sw
 #endif
         return _unscaledDeltaSeconds;
     }
-
-    namespace
-    {
-        bool runTimeScale( const vector<string>& listArgument, string& outReply )
-        {
-            if ( listArgument.size() > 1 )
-                return false;
-            if ( listArgument.size() == 1 )
-            {
-                float32 scale = 1.0f;
-                if ( StringUtil::parseFloat( listArgument[0], scale ) == false )
-                    return false;
-                engine::getSubsystem<GameTimeScale>().set( scale );
-            }
-            // 정한 배율을 답한다 — 정지 요청(정지 메뉴 · 로딩 화면)이 걸려 있으면 실효 배율은 0 이라 그것을 덧붙인다.
-            const GameTimeScale&                     timeScale = engine::getSubsystem<GameTimeScale>();
-            StringBuilder<constant::buffer::kMax256> replyBuilder;
-            replyBuilder.appendFormat( "time scale = %#%#", timeScale.getSetting(), timeScale.isPaused() ? " (paused)" : "" );
-            outReply = string( replyBuilder.view() );
-            return true;
-        }
-    } // namespace
-
-    SW_DEV_COMMAND( TimeScale, "timescale", "timescale [scale]", "Show or set the game time scale (gv_timeScale, 0 = frozen)",
-                    &runTimeScale );
 } // namespace sw
 
 namespace sw

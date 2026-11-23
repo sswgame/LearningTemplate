@@ -72,7 +72,7 @@ namespace sw
         /** @brief GPU 가 쉬는 것을 확인했을 때(대기 성공) 남은 해제를 모두 실행하고 통지를 `Completed` 로 보냅니다. */
         void releaseAllCompleted();
         /**
-         * @brief 끝났는지 모른 채 비울 때(잃은 장치 · 시간 초과 · 종료 · 웹 `waitIdle`) 남은 해제를 모두 실행하고 통지를 `Abandoned` 로 보냅니다.
+         * @brief 끝났는지 모른 채 비울 때(잃은 장치 · 시간 초과 · 종료) 남은 해제를 모두 실행하고 통지를 `Abandoned` 로 보냅니다.
          * @details 해제는 놓아도 된다 — 잃은 장치는 GPU 가 더 돌지 않고, WebGPU 는 GPU 가 쓰는 객체를 놓아도 구현이 끝날 때까지 살린다(명세).
          */
         void abandonAll();

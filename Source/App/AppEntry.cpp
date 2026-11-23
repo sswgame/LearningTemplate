@@ -20,6 +20,8 @@ namespace
 extern "C" void swMountWebPersistentRoot( const char* pRoot );
 // 영속 폴더를 IndexedDB 로 내리기 시작한다(기다리지 않는다 — 페이지가 남아 있어 끝난다). 앱이 끝날 때 부른다: 숨김 · 닫힘 없이 끝난 세션의 마지막 세이브를 잃지 않게.
 extern "C" void swFlushWebPersistentRoot();
+// 브라우저의 다음 프레임까지 멈춘다(JSPI) — 본문은 Engine/Window/Web/WebFrame.js 다.
+extern "C" void swWebFrameWait();
 #endif
 
 namespace sw
@@ -30,24 +32,25 @@ namespace sw
         // 세이브 · 설정 자리 — 브라우저에는 사용자 폴더가 없어 부팅이 영속 마운트를 정한다(UserDataPath).
         swMountWebPersistentRoot( kWebPersistentRoot );
         (void)::setenv( kUserDataRootVariable, kWebPersistentRoot, 1 );
-        // 브라우저는 `main` 이 돌아와야 화면을 그린다 — 앱은 힙에 두고 프레임 콜백이 루프를 돈다(emscripten_set_main_loop, 언리얼 HTML5 와 같은 모양, 기억).
-        unique_ptr<App>& app = getWebApp();
-        app                  = make_unique<App>();
+        unique_ptr<App> app = make_unique<App>(); // 웹의 C 스택은 작다 — 힙에 둔다
         if ( app->initialize( argc, pArgv ) == false )
         {
             const int32 exitCode = app->getInitFailureExitCode();
             app->shutdown();
-            app.reset();
             return exitCode;
         }
-        if ( app->beginMainLoop() == false )
+        // 루프는 데스크톱처럼 여기서 돈다 — 프레임 사이를 JSPI 로 멈춰 브라우저가 그린다. `main` 은 promising 호출이라 프레임 안의 GPU 대기(`waitFrameFence`)도 멈출 수 있다.
+        if ( app->beginMainLoop() )
         {
-            const int32 exitCode = app->finishMainLoop();
-            app.reset();
-            return exitCode;
+            while ( app->updateMainLoop() )
+            {
+                swWebFrameWait();
+            }
         }
-        emscripten_set_main_loop_arg( &AppEntry::updateWebFrame, nullptr, 0, true ); // 돌아오지 않는다(simulate_infinite_loop)
-        return 0;
+        const int32 exitCode = app->finishMainLoop();
+        app.reset();
+        swFlushWebPersistentRoot();        // 앱이 다 내린 뒤(세이브 · 설정 쓰기가 끝난 뒤) 한 번
+        emscripten_force_exit( exitCode ); // 오디오 · 소켓이 런타임을 붙들고 있어도 끝난다
 #elif defined( SW_PLATFORM_WINDOWS ) || defined( SW_PLATFORM_LINUX ) || defined( SW_PLATFORM_ANDROID )
         App app{};
         if ( app.initialize( argc, pArgv ) == false )
@@ -69,23 +72,4 @@ namespace sw
     #error "Unsupported platform"
 #endif
     }
-#if defined( SW_PLATFORM_WEB )
-    void AppEntry::updateWebFrame( void* pUserData )
-    {
-        (void)pUserData;
-        if ( getWebApp()->updateMainLoop() )
-            return;
-        emscripten_cancel_main_loop();
-        const int32 exitCode = getWebApp()->finishMainLoop();
-        getWebApp().reset();
-        swFlushWebPersistentRoot(); // 앱이 다 내린 뒤(세이브 · 설정 쓰기가 끝난 뒤) 한 번
-        emscripten_force_exit( exitCode );
-    }
-
-    unique_ptr<App>& AppEntry::getWebApp()
-    {
-        static unique_ptr<App> s_app;
-        return s_app;
-    }
-#endif
 } // namespace sw
