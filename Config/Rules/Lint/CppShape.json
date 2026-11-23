@@ -4,8 +4,7 @@
     "_stateMutator": {
         "Source/Editor/Common/Asset/ModelImport/MeshFracture.cpp|CapState": "규칙 10 전 코드 — 단면 메움 단계(묶기 · 고리 · 표시 · 다시 짓기)가 CapState 를 차례로 바꾼다. CapState 의 멤버로 옮길 때 지운다",
         "Source/DevTools/Cook/PackCooker.cpp|PackCookTiming": "규칙 10 전 코드 — 파일 넣기 · 묶음 굽기가 시간 누적을 손으로 더한다. PackCookTiming::add… 멤버로 옮길 때 지운다",
-        "Source/Engine/Navigation/Recast/RecastNavMesh.cpp|BuildScratch": "규칙 10 전 코드 — Recast 높이장 · 윤곽 단계가 작업 버퍼를 채운다. BuildScratch 의 멤버로 옮길 때 지운다",
-        "Source/DevTools/Client/Cook/ShaderCookDriver.cpp|CookState": "규칙 10 전 코드 — 요청 계획 · 결과 합치기 · 목록 쓰기가 굽기 상태를 차례로 바꾼다. CookState 의 멤버로 옮길 때 지운다"
+        "Source/Engine/Navigation/Recast/RecastNavMesh.cpp|BuildScratch": "규칙 10 전 코드 — Recast 높이장 · 윤곽 단계가 작업 버퍼를 채운다. BuildScratch 의 멤버로 옮길 때 지운다"
     },
     "_multipleBase": {
         "Source/Core/Container/pair.h|CompressedPair": "빈 기반 최적화(EBO) — 빈 타입 칸이 바이트를 먹지 않게 하는 표준 기법이다. 멤버로 들면 [[no_unique_address]] 가 MSVC 에서 듣지 않는다",
