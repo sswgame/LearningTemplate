@@ -148,12 +148,7 @@ namespace sw
 
     void CameraManagerComponent::onCameraShakeRequested( const CameraShakeRequest& request )
     {
-        CameraImpulseDef def;
-        def._amplitude     = request._amplitude;
-        def._duration      = request._duration;
-        def._frequency     = request._frequency;
-        def._falloffRadius = request._falloffRadius;
-        _impulseListener.addImpulse( def, request._origin );
+        _impulseListener.addRequest( request );
     }
 
     void CameraManagerComponent::onTick( TickContext& context )

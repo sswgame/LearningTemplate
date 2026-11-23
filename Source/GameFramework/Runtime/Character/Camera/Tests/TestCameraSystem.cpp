@@ -5,9 +5,11 @@
 #include "Engine/Object/Component/CameraComponent.h"
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
+#include "Engine/Object/GameObject/Registry/CameraRegistry.h"
 
 #include "GameFramework/Runtime/Character/Camera/CameraDirectorComponent.h"
 #include "GameFramework/Runtime/Character/Camera/CameraManagerComponent.h"
+#include "GameFramework/Runtime/Character/Camera/CameraPose.h"
 #include "GameFramework/Runtime/Character/Camera/CameraSystem.h"
 
 using namespace sw;
@@ -68,4 +70,41 @@ SW_TEST_CASE( CameraSystemTest, ViewDirectorIsUnique )
     pSecondRig->addComponent<CameraComponent>()->setRole( CameraRole::Game );
     SW_REQUIRE_NOT_NULL( pSecondRig->addComponent<CameraDirectorComponent>() );
     SW_EXPECT_NULL( CameraDirectorComponent::findViewDirector( manager ) );
+}
+
+/** @brief [CameraSystemTest] 카메라 매니저 없이 디렉터만 있는 씬도 흔들림 채널을 듣는다. 그 카메라를 보는 매니저가 생기면 매니저만 더하고, 플레이가 끝나면 듣지 않는다 */
+SW_TEST_CASE( CameraSystemTest, DirectorAloneHearsTheShakeChannel )
+{
+    GameObjectManager manager;
+    GameObject*       pRig    = manager.createGameObject( hashed_string( "Rig" ) );
+    CameraComponent*  pCamera = pRig->addComponent<CameraComponent>();
+    pCamera->setRole( CameraRole::Game );
+    CameraDirectorComponent* pDirector = pRig->addComponent<CameraDirectorComponent>();
+    SW_REQUIRE_NOT_NULL( pDirector );
+    manager.beginPlay();
+    pDirector->updateCamera( 0.0f );
+    const float3 restPosition = CameraPose::makePoseFromCamera( *pCamera )._position;
+
+    CameraShakeRequest request;
+    request._origin    = restPosition;
+    request._amplitude = 1.0f;
+    request._duration  = 1.0f;
+    request._frequency = 30.0f;
+    manager.getCameraRegistry().getShakeChannel().broadcast( request );
+    pDirector->updateCamera( 0.05f );
+    SW_EXPECT_TRUE( ( CameraPose::makePoseFromCamera( *pCamera )._position - restPosition ).getLength() > 0.1f );
+
+    GameObject* pPlayer = manager.createGameObject( hashed_string( "Player" ) );
+    (void)pPlayer->addComponent<CameraComponent>();
+    CameraManagerComponent* pCameraManager = pPlayer->addComponent<CameraManagerComponent>();
+    SW_REQUIRE_NOT_NULL( pCameraManager );
+    pCameraManager->setViewTarget( pRig->getHandle() );
+    pDirector->updateCamera( 0.0f );
+    SW_EXPECT_NEAR( 0.0f, ( CameraPose::makePoseFromCamera( *pCamera )._position - restPosition ).getLength(), 1.0e-4f ); // 매니저가 자기 몫으로 더한다
+
+    pCameraManager->setViewTarget( GameObjectHandle{} );
+    pRig->endPlay();
+    manager.getCameraRegistry().getShakeChannel().broadcast( request );
+    pDirector->updateCamera( 0.05f );
+    SW_EXPECT_NEAR( 0.0f, ( CameraPose::makePoseFromCamera( *pCamera )._position - restPosition ).getLength(), 1.0e-4f );
 }
