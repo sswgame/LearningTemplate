@@ -52,7 +52,7 @@ namespace sw
         REFLECT_BODY();
 
         PROPERTY( Units = m )
-        float3 _position{};
+        float3 _position{}; ///< `getZeroOriginPosition` — 루트면 절대 자리다(월드 원점을 옮겨도 쉬는 자리가 그대로)
         PROPERTY( Units = rad )
         float3 _rotation{};
         PROPERTY()

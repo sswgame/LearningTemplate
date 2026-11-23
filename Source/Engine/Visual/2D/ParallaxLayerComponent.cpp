@@ -10,6 +10,7 @@
 #include "Engine/Object/GameObject/GameObjectManager.h"
 #include "Engine/Object/GameObject/Registry/CameraRegistry.h"
 #include "Engine/Object/GameObject/Tick/TickContext.h"
+#include "Engine/Object/GameObject/WorldOrigin.h"
 
 namespace sw
 {
@@ -50,7 +51,7 @@ namespace sw
         GameObject*     pOwner = getOwner();
         SceneComponent* pRoot  = ( pOwner != nullptr ) ? pOwner->getPrimarySceneComponent() : nullptr;
         if ( pRoot != nullptr && _bHasOrigin == SW_TRUE )
-            pRoot->setLocalPosition( _origin );
+            pRoot->setZeroOriginPosition( _origin );
         _bHasOrigin = SW_FALSE;
         Component::onEndPlay();
     }
@@ -61,7 +62,7 @@ namespace sw
         const CameraComponent* pCamera = context.getManager().getCameraRegistry().selectCamera( CameraRole::Game );
         if ( pCamera == nullptr )
             return;
-        const float3 cameraPosition = pCamera->getCameraPosition();
+        const float3 cameraPosition = context.getManager().getWorldOrigin().toAbsolute( pCamera->getCameraPosition() ); // 저작한 자리 · 기준점과 같은 원점 0 기준
         applyCamera( float2{ cameraPosition._x, cameraPosition._y } );
     }
 
@@ -78,7 +79,7 @@ namespace sw
             return;
         SceneComponent* pRoot    = getOwner()->getPrimarySceneComponent();
         const float2    position = computeLayerPosition( float2{ _origin._x, _origin._y }, camera, _referencePoint, _scrollFactor, _repeatSize );
-        pRoot->setLocalPosition( float3{ position._x, position._y, _origin._z } );
+        pRoot->setZeroOriginPosition( float3{ position._x, position._y, _origin._z } );
     }
 
     bool ParallaxLayerComponent::captureOrigin()
@@ -89,7 +90,7 @@ namespace sw
         const SceneComponent* pRoot  = ( pOwner != nullptr ) ? pOwner->getPrimarySceneComponent() : nullptr;
         if ( pRoot == nullptr )
             return false;
-        _origin     = pRoot->getLocalPosition();
+        _origin     = pRoot->getZeroOriginPosition();
         _bHasOrigin = SW_TRUE;
         return true;
     }

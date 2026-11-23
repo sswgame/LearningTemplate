@@ -388,7 +388,7 @@ namespace sw
             const SceneComponent* pScene = pTarget->getPrimarySceneComponent();
             if ( pose._bCaptured == false && pScene != nullptr )
             {
-                pose._position               = pScene->getLocalPosition();
+                pose._position               = pScene->getZeroOriginPosition();
                 pose._rotation               = pScene->getLocalRotation();
                 pose._bCaptured              = true;
                 const LightComponent* pLight = pTarget->getComponent<LightComponent>();
@@ -586,14 +586,14 @@ namespace sw
             {
                 if ( pScene == nullptr )
                     break;
-                pScene->setLocalPosition( pose._position + _circuit.readParamVector( node, "openOffset" ) * value );
+                pScene->setZeroOriginPosition( pose._position + _circuit.readParamVector( node, "openOffset" ) * value );
                 pScene->setLocalRotation( pose._rotation + Internal::toRadians( _circuit.readParamVector( node, "openRotation" ) ) * value );
                 break;
             }
             case Binding::Elevator:
             {
                 if ( pScene != nullptr )
-                    pScene->setLocalPosition( pose._position + _circuit.readParamVector( node, "axis" ) * value );
+                    pScene->setZeroOriginPosition( pose._position + _circuit.readParamVector( node, "axis" ) * value );
                 break;
             }
             case Binding::Rotator:

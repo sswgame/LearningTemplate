@@ -50,11 +50,11 @@ namespace sw
         void applySinkDepth();
 
     private:
-        /** @brief 내리는 메시 하나와 원래 로컬 자리입니다. */
+        /** @brief 내리는 메시 하나와 원래 자리입니다. */
         struct SunkVisual
         {
             TComponentHandle<MeshComponent> _mesh;
-            float3                          _localPosition;
+            float3                          _restPosition; ///< `getZeroOriginPosition` — 메시가 루트면 절대 자리다
         };
 
         /** @brief @p component 위로 메시가 있는지 봅니다(있으면 그 메시를 따라 내려간다). */
