@@ -45,7 +45,7 @@ namespace sw
 {
     /**
      * @class RuleViewCatalog
-     * @brief `<RuleViewCatalog><View id="marine" mesh="game/starskirmish/models/craft_speeder_a.mesh" width="2.1"/></RuleViewCatalog>` 를 읽습니다(`*.views.xml`).
+     * @brief `<RuleViewCatalog><View id="marine" mesh="game/playground/starskirmish/models/craft_speeder_a.mesh" width="2.1"/></RuleViewCatalog>` 를 읽습니다(`*.views.xml`).
      * @details 줄이 없는 규칙 id 를 어떻게 그릴지(그리지 않음 · 색 상자)는 쓰는 게임이 정한다. 모든 규칙이 줄을 가져야 하는 게임은 시작할 때 맞춰 본다.
      */
     class SW_GF_API RuleViewCatalog : public GameCatalog<RuleViewDef, XMLCatalog<RuleViewCatalog>>

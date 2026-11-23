@@ -342,6 +342,18 @@ SW_TEST_CASE( ModSupportSettingsTest, EveryLimitIsRequired )
     SW_EXPECT_EQUAL( uint64{ 5000000000ull }, settings._maxPackBytes );
     SW_EXPECT_TRUE( settings.isOverridable( "game/test/data/welcome.xml" ) );
     SW_EXPECT_FALSE( settings.isOverridable( "game/test/database.xml" ) );
+    SW_EXPECT_FALSE( settings.isOverridable( "game/test/tables/quests.xml" ) );
+    // 파일 하나만 여는 줄 — 같은 폴더의 다른 표는 열리지 않는다
+    SW_REQUIRE_TRUE( ModSupportSettings::parseXMLText(
+        R"(<ModSupportSettings contentVersion="1" maxModCount="2" maxManifestBytes="100" maxPackBytes="5" maxEntryCount="3" maxEntryBytes="4" packBlockSize="65536"><Overridable path="game/test/tables/quests.xml"/><Stored extension=".dds"/></ModSupportSettings>)",
+        "test", settings ) );
+    SW_EXPECT_TRUE( settings.isOverridable( "game/test/tables/quests.xml" ) );
+    SW_EXPECT_FALSE( settings.isOverridable( "game/test/tables/quests.xml.bak" ) );
+    SW_EXPECT_FALSE( settings.isOverridable( "game/test/tables/gamesettings.xml" ) );
+    SW_EXPECT_LOG( "ModSupportSettings.BadPath" ); // 접두와 파일을 한 줄에 적었다
+    SW_EXPECT_FALSE( ModSupportSettings::parseXMLText(
+        R"(<ModSupportSettings contentVersion="1" maxModCount="1" maxManifestBytes="1" maxPackBytes="1" maxEntryCount="1" maxEntryBytes="1" packBlockSize="65536"><Overridable prefix="game/test/data/" path="game/test/tables/quests.xml"/></ModSupportSettings>)",
+        "test", settings ) );
     SW_EXPECT_LOG( "XMLFields.RequiredFieldMissing" ); // 한계는 리플렉션 필수 칸이다(XMLFields)
     SW_EXPECT_FALSE( ModSupportSettings::parseXMLText( R"(<ModSupportSettings contentVersion="1"/>)", "test", settings ) );
     SW_EXPECT_LOG( "XMLFields.ValueOutOfRange" ); // 0 인 한계는 Min = 1 밖이다

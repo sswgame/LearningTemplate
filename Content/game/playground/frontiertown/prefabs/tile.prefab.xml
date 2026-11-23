@@ -4,7 +4,7 @@
 		<_listComponent>
 			<MeshComponent _localID="163493842152903304" _componentName="MeshComponent"
 			               _bActive="true"
-			               _localPosition="0,0,0"
+			               _localPosition="0,0.05,0"
 			               _localRotation="0,0,0"
 			               _localScale="0.96,0.1,0.96"
 			               _attachOwner="None"

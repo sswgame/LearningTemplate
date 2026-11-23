@@ -1,36 +1,18 @@
 /**
  * @file NileGameModeComponent.h
- * @brief NileCity 의 규칙을 돌리는 컴포넌트입니다. 도시 시뮬레이션, 자동 계획, 마우스 건설과 철거, 속도, 월별 로그를 맡고 땅, 도로, 건물, 일꾼(프리팹) 스폰을 지시합니다.
- * @details 언리얼의 GameMode/GameState 에 해당합니다. 씬에 하나만 둡니다. 규칙(노동, 순회 일꾼, 물자 사슬, 집 진화, 범람)은 키트의 `CitySimulation` 이,
- *          땅 형태와 자동 계획은 `NileCityPlanner` 가 맡는다. 이 컴포넌트는 무엇을 언제 건설하는지와 그 모습(프리팹)을 어디에 스폰하는지를 안다.
- *          모습을 매 프레임 맞추는 일은 뷰 컴포넌트(`NileBuildingComponent`, `NileWalkerComponent`, `NileCursorComponent`)가 이 컴포넌트를 **읽기만** 해서 처리한다.
- *
- *          틱 규칙은 다음과 같다. 디렉터는 `TickGroup::PrePhysics` 에서 상태를 쓰고, 뷰와 카메라 리그는 `PostUpdate` 에서 읽는다(그룹은 차례로 돈다).
- *          바뀐 도로 타일과 건물 타일을 쌓아 두면 베이스 `GameModeComponent` 가 틱이 끝난 뒤 `onFlush` 로 스폰한다. 효과음도 그때 낸다.
+ * @brief NileCity 의 규칙을 돌리는 컴포넌트입니다 — 나일 강 땅(`NileCityPlanner`), 자동 계획, 열두 달 나일 달력(해가 바뀌면 범람), 도시 금고와 월별 로그를 맡습니다.
+ * @details 도시 규칙(노동, 순회 일꾼, 물자 사슬, 집 진화, 범람)은 키트의 `CitySimulation` 이, 짓기 · 시간 명령과 알림은 키트 디렉터 바탕(`CityBuilderGameModeComponent`)이 맡는다.
+ *          입력 · 커서 · 모습은 키트 클라이언트(`CityBuildInputComponent` · `CityViewComponent`)가 같은 오브젝트에서 이 디렉터를 읽고 명령해 처리한다 — 이 게임 코드는 그것을 모른다.
  */
 #pragma once
-#include "Core/Concurrency/DevCounter.h"
 #include "Core/Container/string.h"
 #include "Core/Container/vector.h"
 #include "Core/Foundation/Types.h"
-#include "Core/Math/Math.h"
 #include "Core/Math/Radians.h"
-#include "Core/Memory/Memory.h"
 
-#include "Engine/Asset/AssetRef.h"
-#include "Engine/Asset/Cache/SharedAssetRef.h"
-#include "Engine/Foundation/GameObjectHandle.h"
-#include "Engine/Graphics/Mesh/MeshCache.h"
-#include "Engine/Object/Prefab/PrefabAsset.h"
 #include "Engine/Reflection/ReflectionMacros.h"
 
-#include "GameFramework/Kits/Genre/Strategy/CityBuilder/CityCatalog.h"
-#include "GameFramework/Kits/Genre/Strategy/CityBuilder/CitySimulation.h"
-#include "GameFramework/Runtime/Foundation/Framework/GameModeComponent.h"
-#include "GameFramework/Runtime/Foundation/Framework/GameSpeedControl.h"
-#include "GameFramework/Runtime/Foundation/Framework/Presentation/RuleViewCatalog.h"
-#include "GameFramework/Runtime/Foundation/Framework/Presentation/SimulationViewSync.h"
-#include "GameFramework/Runtime/Gameplay/Appearance/MaterialTintCache.h"
+#include "GameFramework/Kits/Genre/Strategy/CityBuilder/Component/CityBuilderGameModeComponent.h"
 #include "GameFramework/Runtime/Gameplay/Inventory/Wallet.h"
 #include "GameFramework/Runtime/World/Environment/WorldClock.h"
 
@@ -38,21 +20,15 @@
 
 namespace sw
 {
-    class Archive;
-    class GameObject;
     class GameObjectManager;
-    class InputManager;
-    class Material;
-    class MaterialInstance;
-    class MeshComponent;
 
     /**
      * @class NileGameModeComponent
-     * @brief 도시 한 판을 진행합니다. 플레이가 시작되면 도시 데이터를 읽고 땅을 칠한 새 도시를 엽니다.
-     * @details 도시는 PROPERTY 가 아닌 런타임 상태이므로 핫 리로드 뒤 처음부터 다시 만든다. 스폰한 오브젝트는 핸들로 보관하고, 상태를 저장하기 전에 정리한다.
+     * @brief 나일 도시 한 판입니다. 플레이가 시작되면 도시 데이터를 읽고 땅을 칠한 새 도시를 엽니다.
+     * @details 도시는 PROPERTY 가 아닌 런타임 상태이므로 세이브 · 핫 리로드가 본문(`serializeGameState`)으로 넘긴다. 금고 · 달력은 키트 하나만 쓰는 게임이라 디렉터가 보관한다.
      */
-    REFLECT( Category = "CityBuilder", DisplayName = "Nile Game Mode", Tooltip = "Runs the Nile city simulation, the auto plan and mouse building, and spawns the city views" )
-    class NileGameModeComponent : public GameModeComponent
+    REFLECT( Category = "CityBuilder", DisplayName = "Nile Game Mode", Tooltip = "Runs the Nile city: the river land, the auto plan, the Nile calendar and the city treasury" )
+    class NileGameModeComponent : public CityBuilderGameModeComponent
     {
     public:
         REFLECT_BODY();
@@ -60,32 +36,15 @@ namespace sw
         NileGameModeComponent();
         virtual ~NileGameModeComponent() override;
 
-        /** @brief 판을 열고 패드 가상 커서를 켭니다(왼쪽 스틱 = 커서, A/B = 마우스 왼쪽/오른쪽, 오른쪽 스틱 = 카메라 이동). 패드만으로 놓기 · 헐기를 씁니다. */
-        void onBeginPlay() override;
-        /** @brief 가상 커서를 끄고 판을 닫습니다. */
-        void onEndPlay() override;
-
-        /** @brief 도시 상태(시뮬레이션, 자동 계획 진행, 월 수, 속도, 선택한 도구)를 씁니다. `ComponentStateStore::capture` 가 부릅니다. */
+        /** @brief 도시 상태(시뮬레이션, 자동 계획 진행, 금고, 달력, 배속)를 씁니다. `ComponentStateStore::capture` 가 부릅니다. */
         void serializeGameState( StateIO& io ) override;
+        /** @brief 자동 계획을 켜고 끕니다(설정 PROPERTY 와 전역 변수와는 별개인 실행 상태다). 판이 열리기 전이면 false 입니다. */
+        [[nodiscard]] bool submitAutoPlanToggle() override;
 
-        // ---- 자동화 감시 값이 읽는 것(게임 스레드, 틱 뒤) ----
-        int32             getPopulation() const;
-        int64             getMoney() const;
-        int32             getMonthCount() const { return _monthCount; }
-        int32             getSelectedTool() const { return _selectedTool; }   ///< 0 은 도로, 그 뒤는 카탈로그 건물 순서다
-        const DevCounter& getBuildCount() const { return _buildCount; }       ///< 이번 판에 깔거나 지은 수(도로 · 건물, 성공만 — 감시 값만 읽는 개발 전용 칸)
-        const DevCounter& getDemolishCount() const { return _demolishCount; } ///< 이번 판에 허문 수(개발 전용 칸)
-        /** @brief 커서가 땅 위 타일에 있으면 true 를 반환하고 @p outTile 에 그 타일을 채웁니다(지난 틱의 판정). */
-        [[nodiscard]] bool findCursorTile( int2& outTile ) const;
-
-        // ---- 뷰가 읽는 것(PostUpdate. 디렉터가 쓰지 않는 그룹) ----
-        const CitySimulation& getCity() const { return _city; }
-        /** @brief 건물 id → 모델 표입니다. 판을 열기 전에는 nullptr 입니다. */
-        const RuleViewCatalog* getBuildingViews() const { return _pBuildingViews.get(); }
-        /** @brief 커서가 땅 위에 있으면 true 를 반환하고, @p outTile 과 @p outSize 에 타일과 선택한 것의 크기(타일 수)를 채웁니다. */
-        [[nodiscard]] bool findCursor( int2& outTile, int32& outSize ) const;
-        /** @brief 일꾼 종류와 서비스의 모습을 반환합니다. 아직 없으면 비어 있습니다. */
-        const shared_ptr<MaterialInstance>& findWalkerLook( const CityWalker& walker ) const;
+        const Wallet* findCityWallet() const override { return &_wallet; }
+        /** @brief 해 · 달 · 자동 계획 진행을 더한 도시 현황입니다. */
+        void  logStatus() const override;
+        int32 getMonthCount() const { return _monthCount; } ///< 감시 값 `Nile.Month`
 
     protected:
         /** @brief 도시 데이터를 읽고 땅을 칠한 새 도시를 엽니다. */
@@ -93,74 +52,23 @@ namespace sw
         void               onStateRestored( bool bRestored ) override;
         void               onGameStarted() override;
         void               updateGame( float32 deltaTime ) override;
-        void               onFlush( GameObjectManager& manager, bool bRespawnViews ) override;
-        void               onViewsDespawned() override;
-        bool               hasPendingSpawn() const override;
+        /** @brief 모습은 키트 클라이언트(`CityViewComponent`)가 세운다 — 여기서 세울 것이 없다. */
+        void onFlush( GameObjectManager& manager, bool bRespawnViews ) override;
 
     private:
-    private:
-        /** @brief 이 도시의 시뮬레이션 설정입니다(`startGame` 과 복원이 같은 설정으로 `initialize` 합니다). */
         /** @brief 나일 달력입니다. 아케트, 페레트, 셰무가 각각 네 달씩(열두 달)이며, 계절 하루가 한 달입니다. */
         WorldClockSettings makeClockSettings() const;
         /** @brief 이번 틱의 달력 알림에서 달이 넘어갈 때마다 도시를 결산합니다(같은 시점에 해가 바뀌었으면 범람이 일어납니다). */
         void settleMonths();
-        /** @brief 처음이거나 정리한 뒤에 땅, 모든 도로, 모든 건물, 일꾼 풀을 스폰합니다. */
-        void spawnAll( GameObjectManager& manager );
-        /** @brief 바뀐 도로 · 건물 슬롯의 오브젝트를 지우고 다시 스폰합니다(틱 뒤, 게임 스레드). */
-        void             flushViews( GameObjectManager& manager );
-        void             spawnTerrain( GameObjectManager& manager );
-        GameObjectHandle spawnRoad( GameObjectManager& manager, size_t tileIndex );
-        /** @brief 건물 하나의 오브젝트를 스폰합니다. 단계 · 사람에 따른 모델 · 높이는 뷰가 맞춘다. */
-        GameObjectHandle spawnBuilding( GameObjectManager& manager, size_t buildingIndex, const CityBuildingDef& def );
-        void             spawnWalkers( GameObjectManager& manager, size_t count );
-        /** @brief 일꾼 종류와 서비스마다 모습 인스턴스를 만듭니다(뷰가 워커에서 고릅니다). */
-        void prepareWalkerLooks( Material* pMaterial );
-        /** @brief 건물 모델 로드를 미리 맡겨 둡니다(워커가 읽는다 — 집 단계가 바뀔 때 뷰가 받는 메시가 이미 읽혀 있거나 읽는 중이다). */
-        void preloadModels();
-
-        void updateInput( float32 deltaTime, const InputManager& input );
-        void updateCursor( const InputManager& input );
-        void placeSelected();
-        void pollEvents();
-        /** @brief 시뮬레이션과 스폰한 모습을 비교해 바뀐 도로 타일, 건물 타일, 모자란 일꾼 수를 쌓습니다(PrePhysics). */
-        void        collectViewChanges();
-        void        logStatus() const;
-        const utf8* getToolName() const;
-        bool        isAutoPlanOn() const;
+        /** @brief 이번 걸음의 도시 알림에서 달 · 진화 · 범람을 세고 달마다 로그를 남깁니다. */
+        void logCityEvents();
+        bool isAutoPlanOn() const;
         /** @brief 땅 모양 · 자동 계획 PROPERTY 를 플래너에 넘길 설정으로 모읍니다. */
         NileCityLayout makeCityLayout() const;
 
-        float4 computeServiceColor( CityService service ) const;
-        /** @brief 모델에 곱할 색입니다. 서비스는 서비스 색을 흰색 쪽으로 반쯤 섞어 벽이 그 색으로 보이게 하고, 집, 나무, 화분은 팔레트 그대로입니다. */
-        float4 computeModelTint( const CityBuildingDef& def ) const;
-        /** @brief 내장 도형으로 남는 건물(밭 · 조각상)의 색입니다. 집은 늘 모델이라 단계 색을 쓰지 않는다. */
-        float4 computeBlockColor( const CityBuildingDef& def ) const;
-        float4 computeTerrainColor( CityTerrain terrain ) const;
-        float4 computeWalkerColor( CityWalkerKind kind, CityService service ) const;
-
     private:
-        PROPERTY( Category = "Data", DisplayName = "City Data", Tooltip = "City catalog XML" )
-        AssetRef<CityCatalog> _cityDataPath;
-        PROPERTY( Category = "Data", DisplayName = "Building Views", Tooltip = "Building id to kit model table (*.views.xml); a building without a row is drawn as a coloured block" )
-        AssetRef<RuleViewCatalog> _buildingViewPath;
         PROPERTY( Category = "Data", DisplayName = "Auto Plan", AssetPath, Tooltip = "Build order the auto plan follows (roads, buildings and population thresholds); required" )
         string _autoPlanPath;
-        PROPERTY( Category = "Prefabs" )
-        AssetRef<PrefabAsset> _groundPrefab;
-        PROPERTY( Category = "Prefabs" )
-        AssetRef<PrefabAsset> _roadPrefab;
-        PROPERTY( Category = "Prefabs", Tooltip = "Building drawn with a kit model (palette material)" )
-        AssetRef<PrefabAsset> _modelBuildingPrefab;
-        PROPERTY( Category = "Prefabs", Tooltip = "Building drawn as a coloured block (fields, statues)" )
-        AssetRef<PrefabAsset> _blockBuildingPrefab;
-        PROPERTY( Category = "Prefabs" )
-        AssetRef<PrefabAsset> _walkerPrefab;
-        PROPERTY( Category = "Scene", DisplayName = "Camera Rig", Tooltip = "Object with the CameraDirectorComponent the mouse cursor is picked through" )
-        GameObjectHandle _cameraRig;
-        PROPERTY( Category = "City", DisplayName = "Starting Money", Min = 0 )
-        int32 _startingMoney;
-        PROPERTY( Category = "Look", DisplayName = "Road Tile Scale", Tooltip = "Scale of the path piece so one road tile fills a cell", Min = 0.0 )
-        float32 _roadTileScale;
         PROPERTY( Category = "City", DisplayName = "Seconds Per Month", Tooltip = "Real seconds in one city month before the time scale", Min = 1.0, Units = s )
         float32 _secondsPerMonth;
 
@@ -193,81 +101,16 @@ namespace sw
         PROPERTY( Category = "Auto Plan", DisplayName = "Third Block Population", Tooltip = "Population at which the auto plan starts the third block", Min = 0 )
         int32 _thirdBlockPeople;
 
-        PROPERTY( Category = "Look", DisplayName = "Water Service Color", Tooltip = "Colour of the water service (walkers, blocks, half of the model tint)" )
-        float4 _waterServiceColor;
-        PROPERTY( Category = "Look", DisplayName = "Religion Service Color" )
-        float4 _religionServiceColor;
-        PROPERTY( Category = "Look", DisplayName = "Entertainment Service Color" )
-        float4 _entertainmentServiceColor;
-        PROPERTY( Category = "Look", DisplayName = "Health Service Color" )
-        float4 _healthServiceColor;
-        PROPERTY( Category = "Look", DisplayName = "Education Service Color" )
-        float4 _educationServiceColor;
-        PROPERTY( Category = "Look", DisplayName = "Tax Service Color" )
-        float4 _taxServiceColor;
-        PROPERTY( Category = "Look", DisplayName = "Producer Model Tint", Tooltip = "Tint multiplied into a producer's kit model" )
-        float4 _producerModelTint;
-        PROPERTY( Category = "Look", DisplayName = "Storage Model Tint" )
-        float4 _storageModelTint;
-        PROPERTY( Category = "Look", DisplayName = "Market Model Tint" )
-        float4 _marketModelTint;
-        PROPERTY( Category = "Look", DisplayName = "House Block Color", Tooltip = "Colour of a house drawn as a block" )
-        float4 _houseBlockColor;
-        PROPERTY( Category = "Look", DisplayName = "Field Block Color", Tooltip = "Colour of a producer that needs floodplain (a field)" )
-        float4 _fieldBlockColor;
-        PROPERTY( Category = "Look", DisplayName = "Workshop Block Color", Tooltip = "Colour of a producer that stands on any ground" )
-        float4 _workshopBlockColor;
-        PROPERTY( Category = "Look", DisplayName = "Storage Block Color" )
-        float4 _storageBlockColor;
-        PROPERTY( Category = "Look", DisplayName = "Market Block Color" )
-        float4 _marketBlockColor;
-        PROPERTY( Category = "Look", DisplayName = "Decoration Block Color" )
-        float4 _decorationBlockColor;
-        PROPERTY( Category = "Look", DisplayName = "Grass Color" )
-        float4 _grassColor;
-        PROPERTY( Category = "Look", DisplayName = "Sand Color" )
-        float4 _sandColor;
-        PROPERTY( Category = "Look", DisplayName = "Floodplain Color" )
-        float4 _floodplainColor;
-        PROPERTY( Category = "Look", DisplayName = "Water Color" )
-        float4 _waterColor;
-        PROPERTY( Category = "Look", DisplayName = "Rock Color" )
-        float4 _rockColor;
-        PROPERTY( Category = "Look", DisplayName = "Trader Color", Tooltip = "Colour of a trader walker" )
-        float4 _traderColor;
-        PROPERTY( Category = "Look", DisplayName = "Cart Color", Tooltip = "Colour of a cart walker" )
-        float4 _cartColor;
-
-        SharedAssetRef<CityCatalog>                _pCatalog;
-        SharedAssetRef<RuleViewCatalog>            _pBuildingViews; ///< 건물 id → 모델(`_buildingViewPath`)
-        CitySimulation                             _city;
-        ConsumerLease                              _cityEventLease; ///< 도시 이벤트를 꺼내는 표(이 디렉터 하나만 꺼낸다).
-        Wallet                                     _wallet;         ///< 도시 금고. 키트 하나만 쓰는 게임이라 디렉터가 보관하고 빌려 준다.
-        WorldClock                                 _clock;          ///< 달력. 하루가 한 달이다(계절 열둘 x 하루). 디렉터가 보관하고 시간을 흘린다.
-        NileCityPlanner                            _planner;
-        vector<CityEvent>                          _listEvent;
-        vector<WorldClockEvent>                    _listClockEvent; ///< 이번 틱의 달력 알림(스크래치).
-        vector<const CityBuildingDef*>             _listTool;       ///< 0은 도로(nullptr)다.
-        SimulationViewSync<uint8>                  _roadViews;      ///< 타일 번호 → 도로(1)이면 보도 조각 하나.
-        SimulationViewSync<const CityBuildingDef*> _buildingViews;  ///< 건물 번호 → 지금 건물 정의(허물렸으면 nullptr). 다른 건물로 다시 쓰이면 오브젝트를 바꾼다.
-        vector<GameObjectHandle>                   _listWalkerObject;
-        MaterialTintCache                          _tintCache;         ///< 땅, 건물, 일꾼 색(같은 색은 나눠 쓴다).
-        vector<shared_ptr<MaterialInstance>>       _listWalkerLook;    ///< 일꾼 종류 x 16 + 서비스.
-        vector<MeshHandle>                         _listModelMesh;     ///< 건물 모델 로드를 계속 쥔다(준비되면 메시를 참조한다 — 집 단계가 바뀔 때 뷰가 다시 읽지 않게 한다).
-        size_t                                     _wantedWalkerCount; ///< 스폰할 일꾼 풀 크기(틱이 쓴다).
-        int2                                       _cursorTile;
-        GameSpeedControl                           _speed; ///< 배속 · 일시정지(디렉터가 쥐고 도시 · 달력이 받는다)
-        PROPERTY( RuntimeState )
-        int32 _selectedTool;
+        Wallet                  _wallet; ///< 도시 금고. 키트 하나만 쓰는 게임이라 디렉터가 보관하고 빌려 준다.
+        WorldClock              _clock;  ///< 달력. 하루가 한 달이다(계절 열둘 x 하루). 디렉터가 보관하고 시간을 흘린다.
+        NileCityPlanner         _planner;
+        vector<WorldClockEvent> _listClockEvent; ///< 이번 틱의 달력 알림(스크래치).
         PROPERTY( RuntimeState )
         int32 _monthCount;
         PROPERTY( RuntimeState )
-        int32      _evolvedCount;  ///< 이번 달 올라간 집 수(월말 로그).
-        DevCounter _buildCount;    ///< 자동화 감시 값 `Nile.BuildCount` — 저장하지 않는 이번 판 수
-        DevCounter _demolishCount; ///< 자동화 감시 값 `Nile.DemolishCount` — 저장하지 않는 이번 판 수
-        uint8      _bCursorValid : 1;
+        int32 _evolvedCount; ///< 이번 달 올라간 집 수(월말 로그).
         PROPERTY( RuntimeState )
         uint8                  _bAutoPlanToggle : 1; ///< P 로 켠 자동 계획(설정 PROPERTY 와 전역 변수와는 별개인 실행 상태다).
-        [[maybe_unused]] uint8 _reserved        : 6;
+        [[maybe_unused]] uint8 _reserved        : 7;
     };
 } // namespace sw

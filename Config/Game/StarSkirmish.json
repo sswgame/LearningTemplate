@@ -1,8 +1,0 @@
-{
-    "_packRoot": "game/starskirmish",
-    "_cookRules": {
-        "_listAlwaysCook": [
-            { "_name": "UnitModels_JoinedFromName", "_listPattern": [ "models/**" ], "_bAutomationOnly": false }
-        ]
-    }
-}

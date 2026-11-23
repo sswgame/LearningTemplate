@@ -2,6 +2,7 @@
 
 #include "GameFramework/Kits/Feature/Content/ModSupport/ModSupportSettings.h"
 
+#include "Core/Algorithm/VectorUtil.h"
 #include "Core/Log/Logger.h"
 #include "Core/String/StringUtil.h"
 
@@ -58,6 +59,20 @@ namespace sw
     bool ModSupportSettings::readOverridable( const XMLNode& node, string_view sourceName )
     {
         const string_view prefix = node.getAttributeText( "prefix" );
+        const string_view path   = node.getAttributeText( "path" );
+        if ( path.empty() == false )
+        {
+            // 파일 하나 — 폴더(끝 `/`)나 정규형이 아닌 글은 받지 않는다(검사는 정확히 같은 id 만 연다). 접두와 함께 적으면 어느 쪽인지 알 수 없다.
+            const bool bFile = prefix.empty() && StringUtil::endsWith( path, "/" ) == false && AssetPaths::normalizeAssetID( path ) == path;
+            if ( bFile == false || StringUtil::startsWith( path, "mods/" ) )
+            {
+                SW_LOG_ERROR_ID( "ModSupportSettings.BadPath", "Mod support settings '%#': overridable path '%#' must be one normal-form resource file outside 'mods/', without a prefix on the same line", sourceName,
+                                 path );
+                return false;
+            }
+            _listOverridablePath.emplace_back( path );
+            return true;
+        }
         // 접두는 정규형 폴더(끝 `/`)만 받는다 — `game/playground/data` 가 `game/playground/database/…` 까지 열지 않게.
         const string_view folder  = prefix.empty() ? prefix : prefix.substr( 0, prefix.size() - 1 );
         const bool        bFolder = prefix.size() > 1 && StringUtil::endsWith( prefix, "/" ) && AssetPaths::normalizeAssetID( folder ) == folder;
@@ -108,7 +123,7 @@ namespace sw
             if ( StringUtil::startsWith( assetID, prefix ) )
                 return true;
         }
-        return false;
+        return VectorUtil::contains( _listOverridablePath, assetID );
     }
 
     /** @brief 모드 정책 데이터 종류입니다 — 게임 팩마다 `game/<팩>/data/modsupport.xml`(`GamePackDataUtil::tryMakeKindPath`). 데이터 검사가 이 로더로 읽는다. */

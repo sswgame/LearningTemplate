@@ -93,6 +93,26 @@
 	<Redirect from="game/playground/data/kitdemo/demo.monsterhunt.xml" to="game/playground/data/monsterhunt.xml" />
 	<Redirect from="game/playground/data/kitdemo/demo.partyrounds.xml" to="game/playground/data/partyrounds.xml" />
 	<Redirect from="game/playground/data/kitdemo/demo.horror.xml" to="game/playground/data/horror.xml" />
+	<PrefixRedirect from="game/starskirmish" to="game/playground/starskirmish" />
+	<Redirect from="game/playground/starskirmish/automation/ai.scenario.xml" to="game/playground/automation/starskirmish_ai.scenario.xml" />
+	<Redirect from="game/playground/starskirmish/automation/control.scenario.xml" to="game/playground/automation/starskirmish_control.scenario.xml" />
+	<Redirect from="game/playground/starskirmish/automation/slice.scenario.xml" to="game/playground/automation/starskirmish_slice.scenario.xml" />
+	<Redirect from="game/playground/starskirmish/automation/viewsync.scenario.xml" to="game/playground/automation/starskirmish_viewsync.scenario.xml" />
+	<Redirect from="game/playground/starskirmish/automation/load/aiskirmish.scenario.xml" to="game/playground/automation/load/starskirmish_aiskirmish.scenario.xml" />
+	<Redirect from="game/playground/starskirmish/audio/starskirmish.audioevents.xml" to="game/playground/audio/playground.audioevents.xml" />
+	<Redirect from="game/playground/starskirmish/data/skirmish.settings.xml" to="game/playground/data/playground.settings.xml" />
+	<Redirect from="game/playground/starskirmish/data/unitmodels.xml" to="game/playground/starskirmish/data/units.views.xml" />
+	<PrefixRedirect from="game/velmora" to="game/playground/velmora" />
+	<Redirect from="game/playground/velmora/automation/vale.scenario.xml" to="game/playground/automation/velmora_vale.scenario.xml" />
+	<Redirect from="game/playground/velmora/automation/sequence/carry.1.scenario.xml" to="game/playground/automation/sequence/velmora_carry.1.scenario.xml" />
+	<Redirect from="game/playground/velmora/automation/sequence/carry.2.scenario.xml" to="game/playground/automation/sequence/velmora_carry.2.scenario.xml" />
+	<Redirect from="game/playground/velmora/automation/sequence/release.1.scenario.xml" to="game/playground/automation/sequence/velmora_release.1.scenario.xml" />
+	<Redirect from="game/playground/velmora/automation/sequence/release.2.scenario.xml" to="game/playground/automation/sequence/velmora_release.2.scenario.xml" />
+	<Redirect from="game/playground/velmora/data/regions.xml" to="game/playground/data/regions.xml" />
+	<Redirect from="game/playground/velmora/data/quests.xml" to="game/playground/data/quests.xml" />
+	<Redirect from="game/playground/velmora/data/monsters.xml" to="game/playground/data/monsters.xml" />
+	<Redirect from="game/playground/velmora/data/autosave.xml" to="game/playground/data/autosave.xml" />
+	<Redirect from="game/playground/velmora/data/modsupport.xml" to="game/playground/data/modsupport.xml" />
 	<PrefixRedirect from="game/lanternvale" to="game/playground/lanternvale" />
 	<Redirect from="game/playground/lanternvale/automation/rules.scenario.xml" to="game/playground/automation/hubserver_rules.scenario.xml" />
 	<Redirect from="game/playground/lanternvale/automation/slice.scenario.xml" to="game/playground/automation/hubserver_slice.scenario.xml" />

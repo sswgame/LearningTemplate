@@ -1,6 +1,9 @@
 {
     "_packRoot": "game/playground",
     "_cookRules": {
+        "_listAlwaysCook": [
+            { "_name": "UnitModels_JoinedFromName", "_listPattern": [ "starskirmish/models/**" ], "_bAutomationOnly": false }
+        ],
         "_listEntryIDField": [
             { "_field": "_listVillagerPreset", "_kind": "preset" }
         ]

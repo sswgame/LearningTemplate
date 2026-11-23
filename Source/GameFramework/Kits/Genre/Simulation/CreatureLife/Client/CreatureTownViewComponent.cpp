@@ -11,6 +11,7 @@
 #include "Engine/Object/GameObject/GameObjectManager.h"
 #include "Engine/Object/GameObject/GameObjectManagerResolve.inl"
 #include "Engine/Object/GameObject/Tick/TickContext.h"
+#include "Engine/Object/GameObject/WorldOrigin.h"
 #include "Engine/Object/Prefab/PrefabCache.h"
 
 #include "GameFramework/Kits/Genre/Simulation/CreatureLife/Component/CreatureTownGameModeComponent.h"
@@ -253,7 +254,7 @@ namespace sw
             return GameObjectHandle{}; // 읽지 못한 까닭은 프리팹 캐시가 남겼다
         SceneComponent* const pRoot = pView->getComponent<SceneComponent>();
         if ( pRoot != nullptr )
-            pRoot->setLocalPosition( float3{ _townOrigin._x + center._x, _townOrigin._y, _townOrigin._z + center._y } );
+            pRoot->setLocalPosition( manager.getWorldOrigin().toLocal( float3{ _townOrigin._x + center._x, _townOrigin._y, _townOrigin._z + center._y } ) ); // 마을 자리는 절대 자리다
         return pView->getHandle();
     }
 } // namespace sw

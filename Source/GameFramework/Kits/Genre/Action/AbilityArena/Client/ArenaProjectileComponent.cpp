@@ -5,6 +5,7 @@
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
 #include "Engine/Object/GameObject/Tick/TickContext.h"
+#include "Engine/Object/GameObject/WorldOrigin.h"
 #include "Engine/Visual/Component/MeshComponent.h"
 
 #include "GameFramework/Kits/Genre/Action/AbilityArena/Component/ArenaGameModeComponent.h"
@@ -59,7 +60,7 @@ namespace sw
         GameObject*    pOwner = getOwner();
         MeshComponent* pMesh  = pOwner != nullptr ? pOwner->getComponent<MeshComponent>() : nullptr;
         if ( pMesh != nullptr )
-            pMesh->setLocalPosition( position + float3{ 0.0f, _visualLift, 0.0f } );
+            pMesh->setLocalPosition( pOwner->getManager()->getWorldOrigin().toLocal( position + float3{ 0.0f, _visualLift, 0.0f } ) ); // 탄은 절대 자리다
     }
 
     void ArenaProjectileComponent::setMeshVisible( bool bVisible ) const

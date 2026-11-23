@@ -220,6 +220,8 @@ namespace sw
         void rebindCatalog( const RTSCatalog& catalog ) { _pCatalog = &catalog; }
         /** @brief 지형이 막힌 곳(절벽, 물)을 지정합니다. 유닛을 놓기 전에 칠합니다. */
         void setTerrainBlocked( int32 x, int32 y, bool bBlocked );
+        /** @brief 지형이 막힌 칸(절벽 · 물)이면 true 입니다 — 건물 · 남의 땅은 세지 않는다. 격자 밖은 false 입니다(뷰가 절벽을 놓는 자리). */
+        bool isTerrainBlocked( int32 x, int32 y ) const;
         /**
          * @brief 공유 땅을 빌립니다. 월드 셀 (0, 0) 이 땅 셀 @p origin 에 해당합니다. 이후 건물은 놓을 때 땅을 얻고(막힘) 부서지면 반납합니다.
          * @details 다른 키트가 막아 둔 땅은 땅 격자에서 막힌 곳이다. 땅 리비전이 바뀌면 `update` 머리에서 땅 격자를 다시 칠한다(하늘 격자는 그대로 둔다).

@@ -6,6 +6,7 @@
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
 #include "Engine/Object/GameObject/Tick/TickContext.h"
+#include "Engine/Object/GameObject/WorldOrigin.h"
 #include "Engine/Visual/Component/MeshComponent.h"
 
 #include "GameFramework/Kits/Genre/Simulation/ThemePark/Client/ParkViewComponent.h"
@@ -57,7 +58,7 @@ namespace sw
             pMesh->setVisible( bShown );
         if ( bShown == false )
             return;
-        pMesh->setLocalPosition( pGuest->_position + float3{ 0.0f, _heightOffset, 0.0f } );
+        pMesh->setLocalPosition( pOwner->getManager()->getWorldOrigin().toLocal( pGuest->_position + float3{ 0.0f, _heightOffset, 0.0f } ) );
         const int32 bucket = ParkViewComponent::computeHappinessBucket( pGuest->_happiness );
         if ( bucket == _colorBucket )
             return;

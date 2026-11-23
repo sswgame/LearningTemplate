@@ -5,6 +5,7 @@
 	Subtitle* 는 자막 시나리오(automation/subtitles)가 개발 명령 audio.post 로 내는 대사다 — 클립의 자막 키 · 이벤트의 화자 키가 자막 서비스로 간다(키는 data/localization/playground.strings.xml).
 	Farm* 는 허브 농장(minigames/harvestvalley)의 디렉터가 낸다 — 위에서 내려다보는 농장이라 모두 2D 다. 동작이 연달아 나올 수 있어 쿨다운으로 겹침을 줄이고 볼륨 · 피치를 조금씩 흔든다.
 	Voxel* 는 복셀 광산 미니게임(voxelcraft)에서 플레이어 자신의 동작(착지 · 블록 부수기 · 놓기)이라 2D 다 — 연달아 부수고 놓아도 겹치지 않게 쿨다운을 두고 볼륨 · 피치를 조금씩 흔든다.
+	RTS* 는 RTS 매치 미니게임(starskirmish)의 명령 입력이 낸다 — 선택 · 완성 · 막힘은 ui 버스의 2D 이고, 유닛이 부서진 소리만 자리에서 낸다(위에서 보는 직교 카메라라 리스너가 화면 평면 — 화면 좌우로 팬된다).
 	Arena* 는 아레나 미니게임(abilityarena)의 디렉터와 피격 연출(data/abilities.xml 의 AbilityPresentation)이 낸다 — 3D 아레나지만 모두 2D 다. 피격은 투사체가 한꺼번에 닿을 수 있어 쿨다운과 동시 재생 상한으로 겹침을 줄인다.
 -->
 <AudioEventLibrary>
@@ -13,6 +14,9 @@
 		<AudioParameterDef _name="WeatherWind" _minValue="0" _maxValue="1" _defaultValue="0" _seekSpeed="1" />
 		<AudioParameterDef _name="WeatherOpenness" _minValue="0" _maxValue="1" _defaultValue="1" _seekSpeed="2" />
 	</_listParameter>
+	<_listAttenuation>
+		<AudioAttenuationDef _name="RTSBattlefield" _curve="Linear" _minDistance="8" _maxDistance="60" _bOcclusion="false" />
+	</_listAttenuation>
 	<_listEvent>
 		<AudioEventDef _name="Weather.Rain" _bus="ambient" _priority="40" _fadeInSeconds="1" _fadeOutSeconds="1.5" _maxInstances="1" _steal="Oldest" _bLoop="true">
 			<_listClip>
@@ -158,6 +162,36 @@
 		                _pitchMax="2">
 			<_listClip>
 				<AudioClipEntry _path="game/playground/voxelcraft/sounds/impact_plank_medium_001.ogg" />
+			</_listClip>
+		</AudioEventDef>
+		<AudioEventDef _name="RTSSelect" _bus="ui" _priority="70" _cooldownSeconds="0.05" _maxInstances="1" _steal="Oldest">
+			<_listClip>
+				<AudioClipEntry _path="game/playground/starskirmish/sounds/select_004.ogg" />
+			</_listClip>
+		</AudioEventDef>
+		<AudioEventDef _name="RTSBuilt" _bus="ui" _priority="70" _maxInstances="2">
+			<_listClip>
+				<AudioClipEntry _path="game/playground/starskirmish/sounds/confirmation_003.ogg" />
+			</_listClip>
+		</AudioEventDef>
+		<AudioEventDef _name="RTSBlocked" _bus="ui" _priority="70" _cooldownSeconds="1" _maxInstances="1" _steal="Reject">
+			<_listClip>
+				<AudioClipEntry _path="game/playground/starskirmish/sounds/error_003.ogg" />
+			</_listClip>
+		</AudioEventDef>
+		<AudioEventDef _name="RTSUnitDied"
+		                _bus="sfx"
+		                _attenuation="RTSBattlefield"
+		                _priority="50"
+		                _maxInstances="4"
+		                _steal="Quietest"
+		                _volumeDbMin="-3"
+		                _volumeDbMax="0"
+		                _pitchMin="-2"
+		                _pitchMax="1"
+		                _virtual="Stop">
+			<_listClip>
+				<AudioClipEntry _path="game/playground/starskirmish/sounds/impact_metal_heavy_000.ogg" />
 			</_listClip>
 		</AudioEventDef>
 		<AudioEventDef _name="ParkSelect" _bus="ui" _priority="70" _cooldownSeconds="0.05" _maxInstances="1" _steal="Oldest">

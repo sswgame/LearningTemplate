@@ -1,0 +1,134 @@
+<?xml version="1.0" encoding="utf-8"?>
+<?asset guid="3edf4481128b17ccbe8e542bbaae84d9"?>
+<!--
+  RTS 매치 미니게임(minigames/starskirmish)의 입력 차이 — Playground 공통 묶음(data/gamesettings.xml 의 <inputMap> 줄) 위에 얹힌다. 게임 코드는 키를 직접 묻지 않고 액션 이름만 묻는다. 한 게임만 쓰는 이름은 게임 접두(Skirmish.)다.
+  레이어 Skirmish 는 꺼져 있고 미니게임의 inputContexts 가 들어가 있는 동안만 켠다. 켜진 동안 패드 가상 커서(왼쪽 스틱 = 커서, A · B = 마우스 왼쪽 · 오른쪽)도 켜진다.
+  커서 아래 땅은 포인터 위치(InputManager::getMousePositionNormalized)로 고르고, 누르는 것은 액션(Skirmish.Select · Skirmish.Order)이다.
+-->
+<InputMap>
+	<layers>
+		<layer name="Skirmish" enabled="0" blockLower="0" virtualCursor="LeftStick"/>
+	</layers>
+
+	<!-- 플레이할 때 WASD 는 명령 단축키라 카메라는 방향키만, AI 끼리 관전할 때는 공통 Camera.Pan(WASD 도)으로 민다. 회전은 없다 — 카메라 프리셋이 회전을 받지 않는다(Q · E 가 명령). -->
+	<action name="Skirmish.PlayerPan" layer="Skirmish">
+		<vector2d up="Up" down="Down" left="Left" right="Right"/>
+		<stick stick="Right" deadzone="0.15"/>
+	</action>
+
+	<!-- 고르기 — 누른 자리에서 놓은 자리까지(짧으면 클릭 한 유닛, 길면 사각형). 누름 · 누르는 중 · 뗌을 디렉터가 읽는다. -->
+	<action name="Skirmish.Select" layer="Skirmish" trigger="Pressed">
+		<bind source="Mouse" code="Left"/>
+	</action>
+
+	<!-- 명령 — 커서 자리로 이동 · 공격 · 채취 · 집결(똑똑한 명령). -->
+	<action name="Skirmish.Order" layer="Skirmish" trigger="Pressed">
+		<bind source="Mouse" code="Right"/>
+	</action>
+
+	<action name="Skirmish.AddToSelection" layer="Skirmish" trigger="Down">
+		<bind source="Key" code="LeftShift"/>
+		<bind source="Key" code="RightShift"/>
+	</action>
+
+	<action name="Skirmish.GroupModifier" layer="Skirmish" trigger="Down">
+		<bind source="Key" code="LeftControl"/>
+		<bind source="Key" code="RightControl"/>
+	</action>
+
+	<action name="Skirmish.AttackMove" layer="Skirmish" trigger="Pressed">
+		<bind source="Key" code="A"/>
+	</action>
+
+	<action name="Skirmish.Stop" layer="Skirmish" trigger="Pressed">
+		<bind source="Key" code="S"/>
+	</action>
+
+	<action name="Skirmish.Hold" layer="Skirmish" trigger="Pressed">
+		<bind source="Key" code="H"/>
+	</action>
+
+	<action name="Skirmish.Command1" layer="Skirmish" trigger="Pressed">
+		<bind source="Key" code="Q"/>
+	</action>
+
+	<action name="Skirmish.Command2" layer="Skirmish" trigger="Pressed">
+		<bind source="Key" code="W"/>
+	</action>
+
+	<action name="Skirmish.Command3" layer="Skirmish" trigger="Pressed">
+		<bind source="Key" code="E"/>
+	</action>
+
+	<action name="Skirmish.Build.SupplyDepot" layer="Skirmish" trigger="Pressed">
+		<bind source="Key" code="B"/>
+	</action>
+
+	<action name="Skirmish.Build.Barracks" layer="Skirmish" trigger="Pressed">
+		<bind source="Key" code="N"/>
+	</action>
+
+	<action name="Skirmish.Build.Refinery" layer="Skirmish" trigger="Pressed">
+		<bind source="Key" code="G"/>
+	</action>
+
+	<action name="Skirmish.Build.Academy" layer="Skirmish" trigger="Pressed">
+		<bind source="Key" code="Y"/>
+	</action>
+
+	<action name="Skirmish.Build.Factory" layer="Skirmish" trigger="Pressed">
+		<bind source="Key" code="F"/>
+	</action>
+
+	<action name="Skirmish.Build.Starport" layer="Skirmish" trigger="Pressed">
+		<bind source="Key" code="T"/>
+	</action>
+
+	<action name="Skirmish.Build.Bunker" layer="Skirmish" trigger="Pressed">
+		<bind source="Key" code="U"/>
+	</action>
+
+	<action name="Skirmish.Group0" layer="Skirmish" trigger="Pressed">
+		<bind source="Key" code="Digit0"/>
+	</action>
+
+	<action name="Skirmish.Group1" layer="Skirmish" trigger="Pressed">
+		<bind source="Key" code="Digit1"/>
+	</action>
+
+	<action name="Skirmish.Group2" layer="Skirmish" trigger="Pressed">
+		<bind source="Key" code="Digit2"/>
+	</action>
+
+	<action name="Skirmish.Group3" layer="Skirmish" trigger="Pressed">
+		<bind source="Key" code="Digit3"/>
+	</action>
+
+	<action name="Skirmish.Group4" layer="Skirmish" trigger="Pressed">
+		<bind source="Key" code="Digit4"/>
+	</action>
+
+	<action name="Skirmish.Group5" layer="Skirmish" trigger="Pressed">
+		<bind source="Key" code="Digit5"/>
+	</action>
+
+	<action name="Skirmish.Group6" layer="Skirmish" trigger="Pressed">
+		<bind source="Key" code="Digit6"/>
+	</action>
+
+	<action name="Skirmish.Group7" layer="Skirmish" trigger="Pressed">
+		<bind source="Key" code="Digit7"/>
+	</action>
+
+	<action name="Skirmish.Group8" layer="Skirmish" trigger="Pressed">
+		<bind source="Key" code="Digit8"/>
+	</action>
+
+	<action name="Skirmish.Group9" layer="Skirmish" trigger="Pressed">
+		<bind source="Key" code="Digit9"/>
+	</action>
+
+	<action name="Skirmish.JumpToSelection" layer="Skirmish" trigger="Pressed">
+		<bind source="Key" code="Space"/>
+	</action>
+</InputMap>

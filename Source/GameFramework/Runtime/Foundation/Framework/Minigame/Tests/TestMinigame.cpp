@@ -7,6 +7,7 @@
 
 #define SW_TEST_INTERNAL // 임시 리소스 도메인 픽스처(`ScopedScratchDomain`)가 엔진 서비스를 직접 쓴다
 #include "Engine/Content/Tests/ScopedScratchDomain.h"
+#include "Engine/Input/Map/InputMap.h"
 #include "Engine/Object/Component/SceneComponent.h"
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
@@ -142,6 +143,25 @@ SW_TEST_CASE( MinigameTest, ValidatesFeaturesAndMap )
                                                           "x.minigame.xml", broken ) );
     SW_EXPECT_FALSE( broken.validate( features, "x.minigame.xml" ) );
     features.unregisterEntry( &s_testFeature );
+}
+
+/** @brief [MinigameTest] 가상 커서 레이어와 그 스틱을 묶은 레이어를 함께 켜는 정의는 거절하고, 커서 레이어만 켜는 정의는 받는다 */
+SW_TEST_CASE( MinigameTest, RefusesCursorLayerBesideTheLayerThatBindsItsStick )
+{
+    InputMap inputMap;
+    SW_REQUIRE_TRUE( inputMap.loadFromXMLText( R"(<InputMap>
+  <layers><layer name="Movement" enabled="1"/><layer name="Command" enabled="0" virtualCursor="LeftStick"/></layers>
+  <action name="Walk" layer="Movement"><stick stick="Left" deadzone="0.15"/></action>
+  <action name="Command.Select" layer="Command" trigger="Pressed"><bind source="Mouse" code="Left"/></action>
+</InputMap>)",
+                                               "MinigameTest" ) );
+    MinigameDefinition definition;
+    definition._listInputContext = { hashed_string( "Command" ) };
+    SW_EXPECT_TRUE( definition.validateInputLayers( inputMap, "x.minigame.xml" ) );
+    SW_EXPECT_LOG( "InputMap.InputMapActionBindsVirtual" );
+    SW_EXPECT_LOG( "MinigameDefinition.InputContextsConflict" );
+    definition._listInputContext.push_back( hashed_string( "Movement" ) );
+    SW_EXPECT_FALSE( definition.validateInputLayers( inputMap, "x.minigame.xml" ) );
 }
 
 namespace

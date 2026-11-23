@@ -262,7 +262,7 @@
 	<Catalog root="SpawnTable">
 		<Entry name="Entry" key="id"/>
 	</Catalog>
-	<Catalog root="VelmoraRegionCatalog">
+	<Catalog root="AdventureRegionCatalog">
 		<Entry name="Region" key="id"/>
 	</Catalog>
 	<Catalog root="WeaponCatalog">

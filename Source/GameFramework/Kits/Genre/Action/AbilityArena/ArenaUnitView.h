@@ -29,7 +29,7 @@ namespace sw
     struct ArenaUnitView
     {
         GameObjectHandle _object{};
-        float3           _position{};
+        float3           _position{};                                ///< 절대 자리(틱 전) — 탄 시뮬레이션 · 아레나 경계와 같은 공간이다. 월드 원점이 옮겨져도 그대로다
         int32            _unitID{ constant::invalid_index::kInt32 }; ///< 판 안에서 겹치지 않는 유닛 번호(`ArenaUnit::_unitID`) — 탄의 맞은 대상 번호다. 다른 유닛이 빠져도 밀리지 않는다
         ArenaUnitKind    _kind{ ArenaUnitKind::Grunt };
         uint8            _bAlive{ SW_FALSE };      ///< 쓰러지지 않았다(Dead 태그 없음).
