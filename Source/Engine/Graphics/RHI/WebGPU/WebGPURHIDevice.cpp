@@ -430,7 +430,6 @@ namespace sw
         , _buffers{}
         , _textures{}
         , _pipelines{}
-        , _renderPasses{}
         , _bindlessMutex{}
         , _textureTable{}
         , _bufferTable{}

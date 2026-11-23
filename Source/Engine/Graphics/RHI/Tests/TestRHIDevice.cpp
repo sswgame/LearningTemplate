@@ -483,7 +483,6 @@ SW_TEST_CASE( RHIDeviceTest, UITargetFormatStaysSDRUnderHDR )
 // 값은 `uint64` 와 같은 크기 · 복사 비용이다(성능 하락 없음).
 static_assert( std::is_convertible_v<RHITextureHandle, RHIBufferHandle> == false, "a texture handle must not pass as a buffer handle" );
 static_assert( std::is_convertible_v<RHIBufferHandle, RHITextureHandle> == false, "a buffer handle must not pass as a texture handle" );
-static_assert( std::is_convertible_v<RHIPipelineStateHandle, RHIRenderPassHandle> == false, "a PSO handle must not pass as a render pass handle" );
 static_assert( std::is_convertible_v<RHITransientHeapHandle, RHITextureHandle> == false, "a heap handle must not pass as a texture handle" );
 static_assert( std::is_convertible_v<uint64, RHIBufferHandle> == false, "an integer must not become a handle implicitly" );
 static_assert( std::is_convertible_v<RHIBufferHandle, uint64> == false, "a handle must not become an integer implicitly" );

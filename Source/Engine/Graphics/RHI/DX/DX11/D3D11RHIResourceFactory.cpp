@@ -1142,15 +1142,5 @@ namespace sw
         _pDevice->removePipelineStateInRecordingStates( pso );
         return bLive;
     }
-
-    RHIRenderPassHandle D3D11RHIResourceFactory::createRenderPass( const RHIRenderPassDesc& desc )
-    {
-        return _pDevice->_renderPassRegistry.add( desc );
-    }
-
-    bool D3D11RHIResourceFactory::destroyRenderPassNative( RHIRenderPassHandle pass )
-    {
-        return _pDevice->_renderPassRegistry.retire( pass );
-    }
 } // namespace sw
 #endif

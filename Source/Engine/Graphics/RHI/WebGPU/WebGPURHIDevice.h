@@ -480,7 +480,6 @@ namespace sw
         RHIHandleTable<RHIBufferHandle, WebGPUBufferRecord>          _buffers;
         RHIHandleTable<RHITextureHandle, WebGPUTextureRecord>        _textures;
         RHIHandleTable<RHIPipelineStateHandle, WebGPUPipelineRecord> _pipelines;
-        RHIHandleTable<RHIRenderPassHandle, RHIRenderPassDesc>       _renderPasses;
 
         /// @brief 세 번호 공간을 지킨다. 등록은 게임 스레드, 읽기는 기록 스레드 · 진단(`isBindlessIndexLive`)이라 읽기는 공유 잠금이다.
         mutable shared_mutex _bindlessMutex;

@@ -272,17 +272,6 @@ namespace sw
         return true;
     }
 
-    RHIRenderPassHandle WebGPURHIResourceFactory::createRenderPass( const RHIRenderPassDesc& desc )
-    {
-        // WebGPU 에는 패스 객체가 없다 — 패스는 `beginRenderPass` 가 그때의 첨부로 연다. 서술만 들고 핸들을 준다(다른 백엔드와 같은 수명).
-        return _pDevice->_renderPasses.insert( desc );
-    }
-
-    bool WebGPURHIResourceFactory::destroyRenderPassNative( RHIRenderPassHandle pass )
-    {
-        return _pDevice->_renderPasses.erase( pass );
-    }
-
     // ------------------------------------------------------------------------------
     // 버퍼
     // ------------------------------------------------------------------------------

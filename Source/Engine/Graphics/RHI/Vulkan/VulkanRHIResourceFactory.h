@@ -16,8 +16,6 @@ namespace sw
         RHIPipelineStateHandle createPipelineStateNative( const RHIPipelineStateDesc& desc, const RHICompiledGraphicsStages& stages ) override;
         RHIPipelineStateHandle createComputePipelineStateNative( const RHICompiledShaderStage& computeStage, string_view label ) override;
         [[nodiscard]] bool     destroyPipelineStateNative( RHIPipelineStateHandle pso ) override;
-        RHIRenderPassHandle    createRenderPass( const RHIRenderPassDesc& desc ) override;
-        [[nodiscard]] bool     destroyRenderPassNative( RHIRenderPassHandle pass ) override;
         RHIBufferHandle        createConstantBuffer( uint32 size ) override;
         void                   updateConstantBuffer( RHIBufferHandle buffer, const void* pData, uint32 size ) override;
         RHIBufferHandle        createConstantBufferPage( uint32 size ) override;

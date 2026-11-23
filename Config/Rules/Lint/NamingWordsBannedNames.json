@@ -2069,6 +2069,9 @@
     "FrontierTownGame": "PlaygroundGame — 게임 FrontierTown 을 Playground 미니게임 frontiertown 으로 흡수했다(NEXT 7 절 6 단계)(2026-11-24)",
     "FrontierTownData": "CityGameModeComponent 의 씬 데이터(_landSize · _secondsPerDay · _startHour) — 게임 FrontierTown 을 Playground 미니게임 frontiertown 으로 흡수했다(NEXT 7 절 6 단계)(2026-11-24)",
     "gv_frontierAutoPlay": "gv_playgroundAutoPlay — 게임 FrontierTown 을 Playground 미니게임 frontiertown 으로 흡수했다(NEXT 7 절 6 단계)(2026-11-24)",
+    "RHIRenderPassHandle": "지움 — 만드는 곳이 없었다. 패스는 RHIRenderPassBeginInfo 로 열고 Vulkan 호환 렌더 패스는 VulkanRHIRenderPassCache 가 든다(2026-11-24)",
+    "RHIRenderPassDesc": "RHIRenderPassBeginInfo — 렌더 패스 객체를 만들던 서술(쓰는 곳이 없었다)(2026-11-24)",
+    "RHIRenderPassRegistry": "지움 — 렌더 패스 객체를 만드는 곳이 없었다(2026-11-24)",
     "MaterialTextureIndex": "RHIDescriptorIndex — SRV 번호는 강타입, 셰이더가 읽는 값(번호 또는 칸 서수)은 uint32 다(2026-11-24)",
     "ProjectSettingsTableHistory": "ProjectSettingsHistory — 표 페이지만이 아니라 형식 페이지 편집 단계도 든다(2026-11-24)",
     "ProjectSettingsTableMovedDelegate": "ProjectSettingsMovedDelegate — 표 페이지만이 아니라 형식 페이지 편집 단계도 든다(2026-11-24)"

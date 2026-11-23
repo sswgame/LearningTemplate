@@ -70,7 +70,6 @@ namespace
         void                   discardTextureReadback( RHITransferTicket ) override {}
         RHIPipelineStateHandle createPipelineStateNative( const RHIPipelineStateDesc&, const RHICompiledGraphicsStages& ) override { return 0; }
         RHIPipelineStateHandle createComputePipelineStateNative( const RHICompiledShaderStage&, string_view ) override { return 0; }
-        RHIRenderPassHandle    createRenderPass( const RHIRenderPassDesc& ) override { return 0; }
         RHIBufferHandle        createConstantBuffer( uint32 ) override { return 0; }
         void                   updateConstantBuffer( RHIBufferHandle, const void*, uint32 ) override {}
         RHIBufferHandle        createStructuredBuffer( uint32, uint32 ) override { return 0; }
@@ -97,7 +96,6 @@ namespace
         }
         [[nodiscard]] bool destroyTextureNative( RHITextureHandle ) override { return true; }
         [[nodiscard]] bool destroyPipelineStateNative( RHIPipelineStateHandle ) override { return true; }
-        [[nodiscard]] bool destroyRenderPassNative( RHIRenderPassHandle ) override { return true; }
     };
 
     /** @brief 적힌 사건이 @p listExpected 와 같은지 봅니다. */

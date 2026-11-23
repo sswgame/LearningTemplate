@@ -20,7 +20,6 @@
 #include "Engine/Graphics/RHI/Backend/RHIReleaseQueue.h"
 #include "Engine/Graphics/RHI/Backend/RHISwapChainSet.h"
 #include "Engine/Graphics/RHI/Backend/RHITimestampRing.h"
-#include "Engine/Graphics/RHI/Diagnostics/RHIRenderPassRegistry.h"
 #include "Engine/Graphics/RHI/Diagnostics/RHITimestampFrame.h"
 #include "Engine/Graphics/RHI/GL/OpenGLRHISwapChain.h"
 #include "Engine/Graphics/RHI/GL/OpenGLVertexAttribShadow.h"
@@ -570,7 +569,6 @@ namespace sw
         uint32 _arrComputeRootConstantShadow[shaderslot::kRootConstantDwords];
 
         RHIHandleTable<RHIPipelineStateHandle, OpenGLPipelineStateRecord> _pipelineStates;
-        RHIRenderPassRegistry                                             _renderPassRegistry; ///< 렌더 패스 핸들 등록부. 자기 뮤텍스로 직렬화해 어느 스레드에서나 부른다.
 
         RHIReleaseQueue _releaseQueue;
         /// @brief 프레임마다 끝에 내는 펜스 링입니다(`retireFrameOnGPU`). `GLsync` 는 불투명 포인터라 `void*` 로 둔다. 칸은 `RHIFrameFenceRing::getSlot` 이고, 비면 nullptr 입니다.

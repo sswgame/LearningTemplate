@@ -119,7 +119,6 @@ namespace
         void                   discardTextureReadback( RHITransferTicket ) override {}
         RHIPipelineStateHandle createPipelineStateNative( const RHIPipelineStateDesc&, const RHICompiledGraphicsStages& ) override { return 0; }
         RHIPipelineStateHandle createComputePipelineStateNative( const RHICompiledShaderStage&, string_view ) override { return 0; }
-        RHIRenderPassHandle    createRenderPass( const RHIRenderPassDesc& ) override { return 0; }
         RHIBufferHandle        createConstantBuffer( uint32 ) override { return 0; }
         void                   updateConstantBuffer( RHIBufferHandle, const void*, uint32 ) override {}
         RHIBufferHandle        createConstantBufferPage( uint32 ) override { return 0; }
@@ -145,7 +144,6 @@ namespace
         [[nodiscard]] bool destroyBufferNative( RHIBufferHandle ) override { return true; }
         [[nodiscard]] bool destroyTextureNative( RHITextureHandle ) override { return true; }
         [[nodiscard]] bool destroyPipelineStateNative( RHIPipelineStateHandle ) override { return true; }
-        [[nodiscard]] bool destroyRenderPassNative( RHIRenderPassHandle ) override { return true; }
     };
 
     /** @brief 아래쪽 밉 하나를 버릴 수 있는 RGBA8 이미지(128 → 64)입니다 — 스트리밍 기반은 밉 1 만 먼저 올린다. */

@@ -1678,15 +1678,5 @@ namespace sw
         _pDevice->_releaseQueue.enqueueGPUKeepAlive( record._pso, _pDevice->_fenceValue );
         return true;
     }
-
-    RHIRenderPassHandle D3D12RHIResourceFactory::createRenderPass( const RHIRenderPassDesc& desc )
-    {
-        return _pDevice->_renderPassRegistry.add( desc );
-    }
-
-    bool D3D12RHIResourceFactory::destroyRenderPassNative( RHIRenderPassHandle pass )
-    {
-        return _pDevice->_renderPassRegistry.retire( pass );
-    }
 } // namespace sw
 #endif

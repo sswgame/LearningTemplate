@@ -45,7 +45,6 @@ namespace sw
         Buffer,               ///< `RHIBufferHandle`
         Texture,              ///< `RHITextureHandle`
         PipelineState,        ///< `RHIPipelineStateHandle`
-        RenderPass,           ///< `RHIRenderPassHandle`
         TransientHeap         ///< `RHITransientHeapHandle`
     };
 
@@ -84,11 +83,6 @@ namespace sw
             {
                 bLive = factory.destroyPipelineStateNative( RHIPipelineStateHandle{ packed } );
                 factory.removeThreadGroupSize( RHIPipelineStateHandle{ packed } );
-                break;
-            }
-            case RHIHandleKind::RenderPass:
-            {
-                bLive = factory.destroyRenderPassNative( RHIRenderPassHandle{ packed } );
                 break;
             }
             case RHIHandleKind::TransientHeap:
@@ -427,11 +421,6 @@ namespace sw
     void IRHIDevice::releaseHandle( RHIPipelineStateHandle pso )
     {
         releaseHandleInternal( RHIHandleKind::PipelineState, pso.getPacked() );
-    }
-
-    void IRHIDevice::releaseHandle( RHIRenderPassHandle pass )
-    {
-        releaseHandleInternal( RHIHandleKind::RenderPass, pass.getPacked() );
     }
 
     void IRHIDevice::releaseHandle( RHITransientHeapHandle heap )

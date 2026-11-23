@@ -71,7 +71,6 @@ namespace sw
         , _freeOffscreenDSV{}
         , _constantBufferMirror{}
         , _pipelineStates{}
-        , _renderPassRegistry{}
         , _swapChain{}
         , _bBindlessRootSignature{ SW_FALSE }
         , _bValidationLayer{ SW_FALSE }
@@ -988,7 +987,6 @@ namespace sw
             track = BreadcrumbTrack{};
         }
         _pipelineStates.clear();
-        _renderPassRegistry.clear();
         _srvRegistry.clear();
         _uavRegistry.clear();
         {

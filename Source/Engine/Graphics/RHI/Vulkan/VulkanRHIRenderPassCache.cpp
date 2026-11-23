@@ -93,8 +93,6 @@ namespace sw
         , _mapComposite{}
         , _pipelineMutex{}
         , _mapPipelineRenderPass{}
-        , _recordMutex{}
-        , _listRenderPassRecord{}
     {
     }
 
@@ -255,37 +253,7 @@ namespace sw
         }
     }
 
-    RHIRenderPassHandle VulkanRHIRenderPassCache::addRenderPassRecord( VkRenderPass renderPass, bool bOwned )
-    {
-        RenderPassRecord record{};
-        record._renderPass = renderPass;
-        record._bOwned     = bOwned ? SW_TRUE : SW_FALSE;
-        ScopedLock<mutex> lock{ _recordMutex };
-        _listRenderPassRecord.push_back( record );
-        return RHIRenderPassHandle{ _listRenderPassRecord.size() };
-    }
-
-    bool VulkanRHIRenderPassCache::detachRenderPassRecord( RHIRenderPassHandle handle, VkRenderPass swapchainRenderPass, VkRenderPass& outOwnedRenderPass )
-    {
-        outOwnedRenderPass = VK_NULL_HANDLE;
-        RenderPassRecord record{};
-        {
-            ScopedLock<mutex> lock{ _recordMutex };
-            const uint64      packed = handle.getPacked();
-            if ( packed == 0 || packed > _listRenderPassRecord.size() )
-                return false;
-            record                            = _listRenderPassRecord[packed - 1];
-            _listRenderPassRecord[packed - 1] = RenderPassRecord{};
-        }
-        if ( record._renderPass == VK_NULL_HANDLE )
-            return false; // 이미 비운 칸이다
-        const bool bOwnedRenderPass = record._bOwned != SW_FALSE && record._renderPass != swapchainRenderPass;
-        if ( bOwnedRenderPass )
-            outOwnedRenderPass = record._renderPass;
-        return true;
-    }
-
-    void VulkanRHIRenderPassCache::destroyAll( VkDevice device, VkRenderPass swapchainRenderPass )
+    void VulkanRHIRenderPassCache::destroyAll( VkDevice device )
     {
         {
             ScopedLock<mutex> lock{ _compositeMutex };
@@ -307,13 +275,5 @@ namespace sw
             }
             _mapPipelineRenderPass.clear();
         }
-        ScopedLock<mutex> lock{ _recordMutex };
-        for ( RenderPassRecord& record : _listRenderPassRecord )
-        {
-            const bool bOwnedRenderPass = record._bOwned != SW_FALSE && record._renderPass != VK_NULL_HANDLE && record._renderPass != swapchainRenderPass;
-            if ( bOwnedRenderPass )
-                vkDestroyRenderPass( device, record._renderPass, nullptr );
-        }
-        _listRenderPassRecord.clear();
     }
 } // namespace sw

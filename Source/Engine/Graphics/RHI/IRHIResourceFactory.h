@@ -91,9 +91,6 @@ namespace sw
          */
         void bindPipelineFront( ShaderTargetFormat shaderTargetFormat, const RHICapabilities& startupCapabilities );
 
-        /** @brief 렌더 패스 객체를 만듭니다. */
-        [[nodiscard]] virtual RHIRenderPassHandle createRenderPass( const RHIRenderPassDesc& desc ) = 0;
-
         /** @brief 상수 버퍼를 만듭니다. */
         [[nodiscard]] RHIBufferHandle createConstantBuffer( RHIResourceCreateKey, uint32 size ) { return createConstantBuffer( size ); }
 
@@ -450,8 +447,6 @@ namespace sw
         [[nodiscard]] virtual bool destroyPipelineStateNative( RHIPipelineStateHandle pso ) = 0;
         /** @brief 놓은 PSO 의 스레드 그룹 크기를 지웁니다(장치가 `destroyPipelineStateNative` 뒤에 부른다). */
         void removeThreadGroupSize( RHIPipelineStateHandle pso );
-        /** @brief 렌더 패스 객체를 놓습니다. */
-        [[nodiscard]] virtual bool destroyRenderPassNative( RHIRenderPassHandle pass ) = 0;
         /** @brief 힙 핸들을 놓습니다. 그 위에 놓인 텍스처는 각자 힙을 붙들므로(텍스처 파괴가 끝날 때까지) 텍스처보다 먼저 불러도 된다. 힙이 없는 백엔드는 핸들을 내지 않는다. */
         [[nodiscard]] virtual bool destroyTransientHeapNative( RHITransientHeapHandle heap )
         {

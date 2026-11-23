@@ -28,7 +28,6 @@
 #include "Engine/Graphics/RHI/DX/DXGIFormat.h"
 #include "Engine/Graphics/RHI/DX/RHIDxResultCheck.h"
 #include "Engine/Graphics/RHI/Diagnostics/RHIMemoryTracker.h"
-#include "Engine/Graphics/RHI/Diagnostics/RHIRenderPassRegistry.h"
 #include "Engine/Graphics/RHI/Diagnostics/RHITimestampFrame.h"
 #include "Engine/Graphics/RHI/IRHIDevice.h"
 #include "Engine/Graphics/RHI/IRHITimestampProvider.h"
@@ -907,7 +906,6 @@ namespace sw
         RHIConstantBufferMirror                                                    _constantBufferMirror;           ///< 한 번 쓴 상수 버퍼를 나머지 링 슬롯에도 채운다.
 
         RHIHandleTable<RHIPipelineStateHandle, D3D12PipelineStateRecord> _pipelineStates;
-        RHIRenderPassRegistry                                            _renderPassRegistry; ///< 렌더 패스 핸들 등록부. 자기 뮤텍스로 직렬화해 어느 스레드에서나 부른다.
 
         /// @brief 메인 창의 백버퍼 묶음입니다. 백버퍼, 인덱스, 리소스 상태, Present 가 모두 여기 모여 있습니다.
         D3D12RHISwapChain _swapChain;

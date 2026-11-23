@@ -46,7 +46,6 @@ namespace sw
         , _timestampFrame{}
         , _arrComputeRootConstantShadow{}
         , _pipelineStates{}
-        , _renderPassRegistry{}
         , _releaseQueue{}
         , _arrFrameDoneSync{}
         , _frameFenceRing{}
@@ -834,7 +833,6 @@ namespace sw
             }
         } );
         _pipelineStates.clear();
-        _renderPassRegistry.clear();
 
         _gpuBuffers.forEach( []( OpenGLBufferRecord& record )
         {

@@ -299,8 +299,6 @@ namespace sw
         void releaseHandle( RHITextureHandle texture );
         /** @brief PSO 하나를 해제합니다. 시점 규칙은 버퍼와 같다. */
         void releaseHandle( RHIPipelineStateHandle pso );
-        /** @brief 렌더 패스 객체 하나를 해제합니다. 시점 규칙은 버퍼와 같다. */
-        void releaseHandle( RHIRenderPassHandle pass );
         /** @brief 겹침 힙 하나를 해제합니다. 시점 규칙은 버퍼와 같다. */
         void releaseHandle( RHITransientHeapHandle heap );
         /**

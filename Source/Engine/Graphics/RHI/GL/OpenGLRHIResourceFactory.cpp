@@ -1248,16 +1248,6 @@ namespace sw
         return true;
     }
 
-    RHIRenderPassHandle OpenGLRHIResourceFactory::createRenderPass( const RHIRenderPassDesc& desc )
-    {
-        return _pDevice->_renderPassRegistry.add( desc );
-    }
-
-    bool OpenGLRHIResourceFactory::destroyRenderPassNative( RHIRenderPassHandle pass )
-    {
-        return _pDevice->_renderPassRegistry.retire( pass );
-    }
-
     bool OpenGLRHIResourceFactory::linkProgram( uint32 program, const utf8* pLabel )
     {
         GLint isLinked{ 0 };

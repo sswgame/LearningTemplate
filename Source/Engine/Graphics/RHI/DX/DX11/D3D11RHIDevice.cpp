@@ -109,7 +109,6 @@ namespace sw
         , _textureRegistry{}
         , _uavRegistry{}
         , _pipelineStates{}
-        , _renderPassRegistry{}
         , _arrStaticSampler{}
         , _pHWnd{ nullptr }
         , _releaseQueue{}

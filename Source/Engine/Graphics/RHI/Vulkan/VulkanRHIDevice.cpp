@@ -493,7 +493,7 @@ namespace sw
                 publishBufferReadSlot( index, true, 0 );
             }
             // 합성 프레임버퍼 · PSO 호환 RP · desc RP 는 캐시가 한 번에 놓는다. 스왑체인 RP 는 아래에서 스왑체인이 놓는다.
-            _renderPassCache.destroyAll( _device, _swapChain.getRenderPass() );
+            _renderPassCache.destroyAll( _device );
             _textureRegistry.clear();
 
             for ( VkDescriptorSet& textureSet : _arrTextureSet )
