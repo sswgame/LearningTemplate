@@ -151,8 +151,16 @@ namespace sw::editor
              */
             [[nodiscard]] static bool drawItemField( const utf8* pLabel, string& text, const utf8* pTooltip, const utf8* pExpectedExt, const utf8* pMark )
             {
+                EditorWidgets::beginResetToDefaultGroup();
                 (void)EditorWidgets::drawTextField( pLabel, text ); // 적용은 칸을 떠날 때다 — 치는 동안 비는 값은 사본에만 있다
-                bool   bEdited = ImGui::IsItemDeactivatedAfterEdit();
+                bool       bEdited  = ImGui::IsItemDeactivatedAfterEdit();
+                bool       bHovered = false;
+                const bool bReset   = EditorWidgets::endResetToDefaultGroup( text.empty() == false, bHovered ); // R10 — 휠클릭은 빈 글로(필수 칸이면 커밋이 거절해 값이 돌아온다)
+                if ( bReset )
+                {
+                    text.clear();
+                    bEdited = true;
+                }
                 string droppedPath;
                 if ( pExpectedExt != nullptr && EditorWidgets::acceptAssetDrop( droppedPath, pExpectedExt ) )
                 {
