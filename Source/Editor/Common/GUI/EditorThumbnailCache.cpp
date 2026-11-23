@@ -118,7 +118,7 @@ namespace sw::editor
         {
             Entry&           entry    = _listEntry[entryIndex - 1];
             const Texture2D* pTexture = textures.find( entry._assetID );
-            const bool       bValid   = pTexture != nullptr && pTexture->isRHIValid() && pTexture->getHandle().getPacked() == entry._textureHandle;
+            const bool       bValid   = pTexture != nullptr && pTexture->isRHIValid() && pTexture->getHandle() == entry._textureHandle;
             if ( bValid )
                 continue;
             releaseEntry( entry );
@@ -186,8 +186,8 @@ namespace sw::editor
         Entry entry{};
         entry._assetID       = assetID;
         entry._pOperation    = pOperation;
-        entry._textureHandle = pTexture->getHandle().getPacked();
-        entry._pTextureID    = pBackend->registerTexture( RHITextureHandle{ entry._textureHandle } );
+        entry._textureHandle = pTexture->getHandle();
+        entry._pTextureID    = pBackend->registerTexture( entry._textureHandle );
         entry._lastUsedFrame = _frame;
         if ( entry._pTextureID == nullptr )
             return false;

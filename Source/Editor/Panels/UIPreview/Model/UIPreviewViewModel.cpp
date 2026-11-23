@@ -994,11 +994,11 @@ namespace sw::editor
         }
     }
 
-    uint64 UIPreviewViewModel::findTargetTexture() const
+    RHITextureHandle UIPreviewViewModel::findTargetTexture() const
     {
         AssetManager* const    pAssets  = editor::findSubsystem<AssetManager>();
         const Texture2D* const pTexture = pAssets != nullptr && _targetPath.empty() == false ? pAssets->getAssetCache<TextureCache>().find( _targetPath ) : nullptr;
-        return pTexture != nullptr && pTexture->isRHIValid() ? pTexture->getHandle().getPacked() : 0;
+        return pTexture != nullptr && pTexture->isRHIValid() ? pTexture->getHandle() : RHITextureHandle{ 0 };
     }
 
     UISystem* UIPreviewViewModel::findUISystem()
