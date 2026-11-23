@@ -5,8 +5,12 @@
 #include "Core/Testing/TestFramework.h"
 
 #include "Engine/Input/InputManager.h"
+#include "Engine/Input/Map/InputKeyTable.h"
+#include "Engine/Window/AndroidInputConnectionState.h"
+#include "Engine/Window/CallbackInputWindow.h"
 #include "Engine/Window/GenericWindow.h"
 #include "Engine/Window/NativeWindowEvent.h"
+#include "Engine/Window/PlatformInputEvent.h"
 #include "Engine/Window/Tests/FakeWindow.h"
 #include "Engine/Window/WindowTextInput.h"
 
@@ -52,6 +56,37 @@ namespace
         WindowTextComposition _composition;
     };
 
+    /** @brief Android 창의 글 길만 있는 콜백 창입니다 — 입력 연결(`InputConnection`) 호출을 테스트가 내고, 옮기기 · 모으기 · 넘기기는 실제 코드다. */
+    class FakeAndroidTextWindow final : public CallbackInputWindow
+    {
+    public:
+        AndroidInputConnectionState _connection;
+
+        bool                  initializeWindow( const utf8* /*pTitle*/, uint32 /*width*/, uint32 /*height*/ ) override { return true; }
+        void                  destroy() override {}
+        NativeSurfaceKind     getSurfaceKind() const override { return NativeSurfaceKind::WebCanvas; }
+        bool                  supportsPointerLock() const override { return false; }
+        bool                  setPointerLock( WindowPointerLock lock ) override { return lock == WindowPointerLock::Released; }
+        bool                  supportsCursorShape() const override { return false; }
+        bool                  setCursorShape( CursorShape /*shape*/ ) override { return false; }
+        bool                  setCursorVisible( bool /*bVisible*/ ) override { return false; }
+        WindowFileDropSupport getFileDropSupport() const override { return WindowFileDropSupport::None; }
+
+        /** @brief 입력 연결 호출 하나(@p call 이 동작을 쌓는다)를 창에 모읍니다. */
+        template <typename TCall>
+        void callConnection( TCall&& call )
+        {
+            vector<AndroidTextAction> listAction;
+            call( _connection, listAction );
+            queueTextActions( listAction );
+        }
+
+    protected:
+        void* getNativeHandle() const override { return nullptr; }
+        void  applyTextInputWanted( bool /*bWanted*/ ) override {}
+        void  applyTextInputArea( const WindowTextInputArea& /*area*/ ) override {}
+    };
+
     /** @brief 창 → 입력 관리자 → 글 콜백을 잇고 받은 글을 적어 둡니다. 실제 경로의 `App::onWindowMessage` · `processNativeEvent` 자리입니다. */
     struct WindowTextInputTestUtil
     {
@@ -59,9 +94,16 @@ namespace
         vector<string> _listComposition;
         string         _committed;
         uint32         _commitCount{ 0 };
+        vector<Key>    _listKeyDown; ///< 콜백 창이 낸 키(Android 키 번호를 실제 키 표로 옮긴 것)
 
         bool onWindowMessage( const NativeWindowEvent& event )
         {
+            if ( event._message == NativeWindowEvent::kMessagePlatformInput )
+            {
+                const PlatformInputEvent& input = *reinterpret_cast<const PlatformInputEvent*>( event._lParam );
+                if ( input._kind == PlatformInputKind::KeyDown )
+                    _listKeyDown.push_back( InputKeyTable::mapAndroidKeyCode( input._keyCode ) );
+            }
             if ( event._message == NativeWindowEvent::kMessageTextInput )
                 _pInput->postWindowTextInput( *reinterpret_cast<const WindowTextInputEvent*>( event._lParam ) );
             return false;
@@ -253,6 +295,64 @@ SW_TEST_CASE( WindowTextInputTest, LongCompositionArrivesWholeOnce )
     SW_REQUIRE_EQUAL( size_t{ 2 }, util._listComposition.size() );
     SW_EXPECT_TRUE( util._listComposition[0] == longText );
     SW_EXPECT_TRUE( util._listComposition[1].empty() );
+
+    input.shutdown();
+}
+
+/**
+ * @brief [WindowTextInputTest] Android 입력 연결의 한글 조합 → 확정 → 지우기가 창에서 입력 관리자의 글 콜백과 키까지 간다(감사 P-4).
+ *        조합은 확정 글에 들지 않고, 확정 뒤 빈 조합이 오며, 지우기는 백스페이스 키 하나다. 입력기가 닫히면(취소) 조합만 지우고 확정하지 않는다
+ */
+SW_TEST_CASE( WindowTextInputTest, AndroidConnectionReachesTheFocusOwner )
+{
+    InputManager input;
+    SW_REQUIRE_TRUE( input.initialize() );
+    WindowTextInputTestUtil util;
+    util._pInput = &input;
+
+    FakeAndroidTextWindow window;
+    const Subscription    windowSubscription = window.bindCustomMessageHandler( SW_DELEGATE_METHOD( WindowMessageHandlerDelegate, &WindowTextInputTestUtil::onWindowMessage, &util ) );
+    const Subscription    compositionSubscription =
+        input.bindTextCompositionCallback( SW_DELEGATE_METHOD( InputManager::TextInputDelegate, &WindowTextInputTestUtil::onComposition, &util ), InputKeyboardFocus::UI );
+    const Subscription commitSubscription = input.bindTextInputCallback( SW_DELEGATE_METHOD( InputManager::TextInputDelegate, &WindowTextInputTestUtil::onCommit, &util ), InputKeyboardFocus::UI );
+    input.setKeyboardFocus( InputKeyboardFocus::UI );
+
+    using Connection = AndroidInputConnectionState;
+    using ActionList = vector<AndroidTextAction>;
+    window.callConnection( []( Connection& connection, ActionList& outListAction )
+    { connection.setComposingText( "\xE3\x85\x8E", outListAction ); } ); // ㅎ
+    window.callConnection( []( Connection& connection, ActionList& outListAction )
+    { connection.setComposingText( "\xED\x95\x9C", outListAction ); } ); // 한
+    SW_EXPECT_TRUE( window.processMessages() );
+    input.beginFrame();
+    input.endFrame();
+    SW_REQUIRE_EQUAL( size_t{ 2 }, util._listComposition.size() );
+    SW_EXPECT_TRUE( util._listComposition[1] == "\xED\x95\x9C" );
+    SW_EXPECT_TRUE( util._committed.empty() );
+
+    window.callConnection( []( Connection& connection, ActionList& outListAction )
+    { connection.commitText( "\xED\x95\x9C", outListAction ); } );
+    window.callConnection( []( Connection& connection, ActionList& outListAction )
+    { connection.deleteSurroundingText( 1, 0, outListAction ); } );
+    SW_EXPECT_TRUE( window.processMessages() );
+    input.beginFrame();
+    input.endFrame();
+    SW_EXPECT_TRUE( util._committed == "\xED\x95\x9C" );
+    SW_REQUIRE_EQUAL( size_t{ 3 }, util._listComposition.size() );
+    SW_EXPECT_TRUE( util._listComposition[2].empty() );
+    SW_REQUIRE_EQUAL( size_t{ 1 }, util._listKeyDown.size() );
+    SW_EXPECT_TRUE( util._listKeyDown[0] == Key::Backspace );
+
+    window.callConnection( []( Connection& connection, ActionList& outListAction )
+    { connection.setComposingText( "\xEA\xB0\x80", outListAction ); } ); // 가
+    window.callConnection( []( Connection& connection, ActionList& outListAction )
+    { connection.cancelComposition( outListAction ); } );
+    SW_EXPECT_TRUE( window.processMessages() );
+    input.beginFrame();
+    input.endFrame();
+    SW_REQUIRE_EQUAL( size_t{ 5 }, util._listComposition.size() );
+    SW_EXPECT_TRUE( util._listComposition[4].empty() );
+    SW_EXPECT_TRUE( util._committed == "\xED\x95\x9C" );
 
     input.shutdown();
 }
