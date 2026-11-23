@@ -1265,14 +1265,13 @@ namespace sw
             return false;
         if ( MaterialXML::parseRenderProperties( root, rootParams, sourceName, _desc ) == false )
             return false;
-        // 그리기 목록과 셰이더가 어긋난 머티리얼은 읽지 않는다 — 불투명 목록의 굴절은 사본이 없는 패스에서 빈 색을 읽고(언리얼: 불투명의 SceneColor 는 컴파일 오류),
-        // 블렌드 define 과 알파 모드가 다르면 알파가 새거나 불투명 목록에서 섞인다.
+        // 그리기 목록과 셰이더가 어긋난 머티리얼은 읽지 않는다 — 블렌드 define 과 알파 모드가 다르면 알파가 새거나 불투명 목록에서 섞인다. 나머지 기능 조합은 아래 `validateFeatures` 가 본다.
         const bool bBlend       = _desc._alphaMode == MaterialAlphaMode::Blend;
-        const bool bTranslucent = _desc._permutations.hasAlwaysDefine( kTranslucentDefine );
-        if ( bTranslucent != bBlend || ( usesSceneColorCopy() && bBlend == false ) )
+        const bool bTranslucent = _desc._permutations.hasAlwaysDefine( kMaterialTranslucentDefine );
+        if ( bTranslucent != bBlend )
         {
-            SW_LOG_ERROR_ID( "Material.DrawListMismatch", "Material '%#' (%#): alphaMode Blend %#, %# %#, %# %# - refraction needs Blend, and %# goes with Blend only", _desc._name, sourceLabel,
-                             bBlend ? "yes" : "no", kTranslucentDefine, bTranslucent ? "yes" : "no", kRefractionDefine, usesSceneColorCopy() ? "yes" : "no", kTranslucentDefine );
+            SW_LOG_ERROR_ID( "Material.DrawListMismatch", "Material '%#' (%#): alphaMode Blend %#, %# %# - the define goes with Blend and only with Blend", _desc._name, sourceLabel,
+                             bBlend ? "yes" : "no", kMaterialTranslucentDefine, bTranslucent ? "yes" : "no" );
             return false;
         }
 
@@ -1299,7 +1298,16 @@ namespace sw
         // 다시 읽기(에디터 미리보기 · 머티리얼 패널)는 같은 객체를 제자리에서 바꾼다 — 셰이더 · define 이 달라졌을 수 있다. 주인을 적어 장면 빌더가 이 머티리얼을 쓰는 칸만 다시 모은다.
         MaterialPermutation::recordPermutationChange( this );
         applyProperties( std::move( listProperty ) );
-        return true;
+        // 낼 수 있는 조합(에셋 상태 + 런타임 스위치)마다 본다 — 켤 수 있는 스위치가 그려지지 않는 조합을 만들면 여기서 멈춘다(배포에서 켠 뒤 사라지지 않게).
+        vector<vector<string>> listVariantDefine;
+        vector<uint64>         listVariantHash;
+        collectRuntimeSwitchVariants( listVariantDefine, listVariantHash );
+        bool bSupported = true;
+        for ( const vector<string>& listDefine : listVariantDefine )
+        {
+            bSupported = MaterialPermutation::validateFeatures( _desc, _data._listProperty, listDefine, sourceLabel ) && bSupported;
+        }
+        return bSupported;
     }
 
     void Material::applyProperties( vector<MaterialProperty>&& listProperty )

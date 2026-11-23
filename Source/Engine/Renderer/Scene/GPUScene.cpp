@@ -434,7 +434,7 @@ namespace sw
     void GPUScene::refreshScreenEffectBatches()
     {
         const string distortionDefine{ kMaterialDistortionDefine };
-        const string refractionDefine{ Material::kRefractionDefine };
+        const string refractionDefine{ kMaterialRefractionDefine };
         _bDistortionBatches = SW_FALSE;
         _bRefractionBatches = SW_FALSE;
         for ( const GPUMeshBatch& batch : _snapshot.getAllBatches() )

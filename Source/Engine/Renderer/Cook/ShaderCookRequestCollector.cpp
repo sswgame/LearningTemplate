@@ -444,6 +444,7 @@ namespace sw
                 // 폴더가 없으면 요청이 없다. 도중에 멈춘 목록은 머티리얼 변형을 빠뜨린 채 쿠킹하므로 실패다(경로는 collectContentFiles 가 알린다 — 작업 도메인 `scratch` 는 콘텐츠가 아니라 뺀다).
                 if ( FileUtil::isDirectory( FileUtil::toDiskPath( rootDir ) ) && AssetPaths::collectContentFiles( rootDir, ".material", listMaterialFile ) == false )
                     return false;
+                bool bAllRead = true;
                 for ( const string& matPath : listMaterialFile )
                 {
                     // **머티리얼을 직접 읽어 런타임과 같은 define 목록을 얻는다.** 주의: XML 의 `_alwaysDefines` 만
@@ -451,7 +452,12 @@ namespace sw
                     // 쿠킹된 변형이 런타임이 **한 번도 요청하지 않는** 해시가 된다. 같은 함수를 부르면 어긋날 자리가 없다.
                     const shared_ptr<Material> material = Material::create();
                     if ( material->loadFromDiskFile( matPath ) == false )
+                    {
+                        // 못 읽은 머티리얼(미지원 조합 포함)을 건너뛰면 그 변형이 빠진 채 쿠킹이 성공한다 — 배포에서만 물체가 사라진다. 남은 파일도 읽어 오류를 한 번에 모은다.
+                        SW_LOG_ERROR_ID( "ShaderCooker.MaterialUnreadable", "Shader cook: material '%#' could not be read - the cook fails instead of dropping its variants", matPath );
+                        bAllRead = false;
                         continue;
+                    }
                     if ( material->getShaderPath().empty() )
                         continue;
 
@@ -460,7 +466,7 @@ namespace sw
                     collectMaterialRuntimeDefines( *material, listRuntimeDefine );
                     appendMaterialVariants( *material, listRuntimeDefine, makeOriginID( matPath ), outListMaterialVariant, outListRequest );
                 }
-                return true;
+                return bAllRead;
             }
 
             /** @brief 머티리얼 하나의 define 목록마다 변형과 VS · PS 요청을 더합니다(불투명이면 등장 디더 변형도, define 없는 레이아웃 변형도). */

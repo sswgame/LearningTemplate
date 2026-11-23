@@ -59,6 +59,40 @@ namespace sw
     inline constexpr const utf8* kMaterialAlphaCutoffDefine = "MATERIAL_ALPHA_CUTOFF";
     /// @brief 머티리얼 변형의 텍스처 칸 수 define 의 이름입니다(`MATERIAL_TEXTURE_COUNT=N`, `Material::getTextureSlotCount`). 웹 에뮬 셰이더가 이 칸만 선언한다.
     inline constexpr const utf8* kMaterialTextureCountDefine = "MATERIAL_TEXTURE_COUNT";
+    /**
+     * @brief 화면 왜곡을 그리는 머티리얼의 define 입니다(`.material` 의 `_alwaysDefines`). 왜곡 누적 패스는 이것이 있는 반투명 배치만 그린다(`RenderPassKindInfo::_pRequiredMaterialDefine`).
+     * @details 이 define 을 적는 머티리얼의 셰이더는 왜곡 훅을 정의한다(`SW_MATERIAL_CUSTOM_DISTORTION` — 없으면 material_shader.hlsli 의 `#error`). 본보기는 engine/shaders/distortion.hlsl 이다.
+     *          VFX 메시 입자는 방출기의 메시 머티리얼이 이 머티리얼이면 같은 길로 왜곡을 그린다.
+     */
+    inline constexpr const utf8* kMaterialDistortionDefine = "MATERIAL_DISTORTION";
+    /**
+     * @brief 메시 외곽선 패스가 그리는 불투명 배치의 머티리얼 define 입니다. 퍼뮤테이션에 이것이 없는 배치는 그 패스에서 빠집니다.
+     * @details 머티리얼의 정적 스위치(`Outline`)가 켭니다. 외곽선을 아는 셰이더만 이 스위치를 가지므로 다른 셰이더가 외곽선 define 으로
+     *          그려질 일이 없습니다(언리얼이 메시 패스 프로세서에서 머티리얼의 성질로 드로우를 거르는 것에 해당합니다).
+     */
+    inline constexpr const utf8* kMaterialOutlineDefine = "MATERIAL_OUTLINE";
+    /** @brief 정점 셰이더가 정점을 옮기는 머티리얼(바람)의 define 입니다. 그림자 패스는 머티리얼 셰이더로 그리고 깊이 프리패스는 그 배치를 뺀다. */
+    inline constexpr const utf8* kMaterialVertexDeformDefine = "MATERIAL_VERTEX_DEFORM";
+    /**
+     * @brief 높이 맵으로 표면을 노멀 방향으로 옮기는 머티리얼(`material_displacement.hlsli`)의 define 입니다. 그 배치는 헐 · 도메인 스테이지가 붙은 변형 PSO 로 그린다.
+     * @details 깊이 패스(그림자 · 깊이 프리패스)도 머티리얼 셰이더로 같은 변위를 그린다(`RenderPassKindInfo::usesMaterialShaderForDepth`) — 패스 셰이더로 그리면 윤곽이 평면으로 남는다.
+     *          테셀레이션이 없는 백엔드(`RHICapabilities::_bMaterialTessellation`)에서는 변형을 만들지 않고 오류를 남긴다 — 평면으로 대신 그리지 않는다.
+     */
+    inline constexpr const utf8* kMaterialDisplacementDefine = "MATERIAL_DISPLACEMENT";
+    /// @brief 메시 표면 영역의 define 입니다. 후처리 영역과 함께 적지 않습니다(읽기 오류).
+    inline constexpr const utf8* kMaterialDomainSurfaceDefine = "MATERIAL_DOMAIN_SURFACE";
+    /**
+     * @brief 후처리 머티리얼(PostProcess 영역)의 define 입니다(`.material` 의 `_alwaysDefines`). 메시에 붙이지 않고 블렌더블 목록에 넣는 머티리얼이다.
+     * @details 게임 스레드가 블렌더블을 풀 때 이 define 이 없는 머티리얼은 오류로 거절하고(`PostProcessMaterialSet`), 쿠커는 메시 패스 변형을 굽지 않는다(풀스크린 VS · PS 한 벌만).
+     *          메시 패스의 기능(왜곡 · 외곽선 · 변형 · 변위 · 굴절 · 반투명)과 함께 적지 않는다(읽기 오류 — 그려지지 않는 기능이다). 언리얼 Material Domain = Post Process 와 같다.
+     */
+    inline constexpr const utf8* kMaterialDomainPostProcessDefine = "MATERIAL_DOMAIN_POST_PROCESS";
+    /// @brief 장면 색 사본을 굴절해 읽는 머티리얼의 define 입니다 — 렌더러가 굴절 배치를 가른다(`GPUScene::hasRefractionBatches`, scene_refraction.hlsli 를 쓰는 셰이더 — 물 · 외형 유리).
+    inline constexpr const utf8* kMaterialRefractionDefine = "MATERIAL_REFRACTION";
+    /// @brief 반투명 블렌드 define 입니다 — `alphaMode="Blend"` 와 함께 움직인다(하나만 있으면 알파가 새거나 불투명 목록에서 섞인다).
+    inline constexpr const utf8* kMaterialTranslucentDefine = "MATERIAL_BLEND_TRANSLUCENT";
+    /// @brief 변위 머티리얼이 높이를 읽는 텍스처 프로퍼티의 이름입니다(`MATERIAL_DISPLACEMENT` 의 필수 입력).
+    inline constexpr const utf8* kMaterialDisplacementMapProperty = "_displacementMap";
     /** @brief `twoSidedLighting="true"` 머티리얼의 define 입니다. 셰이더가 뒷면 노멀을 뒤집습니다. 머티리얼 XML 에 직접 적지 않습니다(읽기 오류). */
     inline constexpr const utf8* kMaterialTwoSidedDefine = "MATERIAL_TWO_SIDED";
 

@@ -4,6 +4,7 @@
 
 #include "Core/Algorithm/VectorUtil.h"
 #include "Core/Hash/HashUtil.h"
+#include "Core/Math/BitUtil.h"
 
 #include "Engine/Graphics/Material/Material.h"
 #include "Engine/Graphics/Material/MaterialCache.h"
@@ -12,6 +13,74 @@
 
 namespace sw
 {
+    namespace
+    {
+        /** @brief 기능 define 하나의 조건입니다. 조건이 없는 칸은 비운다. */
+        struct MaterialFeatureRule
+        {
+            static constexpr uint32 kMaxConflictCount = 7;
+            static constexpr uint32 kAnyAlphaMode     = BitUtil::bit( static_cast<uint32>( MaterialAlphaMode::Opaque ) ) | BitUtil::bit( static_cast<uint32>( MaterialAlphaMode::Mask ) ) |
+                                                    BitUtil::bit( static_cast<uint32>( MaterialAlphaMode::Blend ) );
+            static constexpr uint32 kBlendOnly  = BitUtil::bit( static_cast<uint32>( MaterialAlphaMode::Blend ) );
+            static constexpr uint32 kOpaqueOnly = BitUtil::bit( static_cast<uint32>( MaterialAlphaMode::Opaque ) );
+            static constexpr uint32 kNotBlend   = kAnyAlphaMode & ~kBlendOnly;
+
+            const utf8* _pDefine{ nullptr };
+            uint32      _alphaModeMask{ kAnyAlphaMode };         ///< 받는 알파 모드(비트 = `MaterialAlphaMode`)
+            const utf8* _pReason{ nullptr };                     ///< 다른 알파 모드가 안 되는 까닭
+            const utf8* _pRequiredProperty{ nullptr };           ///< 셰이더가 읽는 필수 프로퍼티
+            const utf8* _arrConflictDefine[kMaxConflictCount]{}; ///< 함께 쓸 수 없는 기능 define
+        };
+
+        /** @brief 기능 define 표입니다 — 새 기능은 여기 한 줄이다. */
+        constexpr MaterialFeatureRule kArrFeatureRule[] = {
+            {       kMaterialRefractionDefine,MaterialFeatureRule::kBlendOnly,"refraction reads the scene colour copy, which exists only for the transparent pass",nullptr,                                                                                                                                           {}                                                                                                                                                                                                          },
+            {       kMaterialDistortionDefine,    MaterialFeatureRule::kBlendOnly,                                 "the distortion pass draws transparent batches only",                          nullptr,                                                                                                                                                                             {}},
+            {          kMaterialOutlineDefine,     MaterialFeatureRule::kNotBlend,                                    "the mesh outline pass draws opaque batches only",                          nullptr,                                                                                                                                                                             {}},
+            {     kMaterialDisplacementDefine, MaterialFeatureRule::kAnyAlphaMode,                                                                              nullptr, kMaterialDisplacementMapProperty,                                                                                                                                                     { kMaterialOutlineDefine }},
+            {kMaterialDomainPostProcessDefine,
+             MaterialFeatureRule::kOpaqueOnly,
+             "a post process material is a fullscreen draw without alpha",
+             nullptr,
+             { kMaterialDomainSurfaceDefine, kMaterialDistortionDefine, kMaterialOutlineDefine, kMaterialVertexDeformDefine, kMaterialDisplacementDefine, kMaterialRefractionDefine, kMaterialTranslucentDefine }                                                                                                                                                                        },
+        };
+    } // namespace
+
+    bool MaterialPermutation::validateFeatures( const MaterialDef& desc, const vector<MaterialProperty>& listProperty, const vector<string>& listDefine, string_view sourceLabel )
+    {
+        const auto hasDefine = [&listDefine]( string_view define )
+        {
+            return VectorUtil::containsIf( listDefine, [define]( const string& item )
+            { return string_view( item ) == define; } );
+        };
+        bool bSupported = true;
+        for ( const MaterialFeatureRule& rule : kArrFeatureRule )
+        {
+            if ( hasDefine( rule._pDefine ) == false )
+                continue;
+            if ( ( rule._alphaModeMask & BitUtil::bit( static_cast<uint32>( desc._alphaMode ) ) ) == 0u )
+            {
+                SW_LOG_ERROR_ID( "Material.UnsupportedFeature", "Material '%#' (%#): %# does not work with alphaMode %# - %#", desc._name, sourceLabel, rule._pDefine, getEnumName( desc._alphaMode ), rule._pReason );
+                bSupported = false;
+            }
+            for ( const utf8* pConflict : rule._arrConflictDefine )
+            {
+                if ( pConflict == nullptr || hasDefine( pConflict ) == false )
+                    continue;
+                SW_LOG_ERROR_ID( "Material.UnsupportedFeature", "Material '%#' (%#): %# and %# cannot be drawn together", desc._name, sourceLabel, rule._pDefine, pConflict );
+                bSupported = false;
+            }
+            const bool bPropertyMissing = rule._pRequiredProperty != nullptr && VectorUtil::containsIf( listProperty, [&rule]( const MaterialProperty& prop )
+            { return string_view( prop._name ) == rule._pRequiredProperty; } ) == false;
+            if ( bPropertyMissing )
+            {
+                SW_LOG_ERROR_ID( "Material.UnsupportedFeature", "Material '%#' (%#): %# needs the property '%#'", desc._name, sourceLabel, rule._pDefine, rule._pRequiredProperty );
+                bSupported = false;
+            }
+        }
+        return bSupported;
+    }
+
     uint64 MaterialPermutation::getPermutationGeneration()
     {
         const MaterialCache* const pCache = MaterialCache::findBound();
