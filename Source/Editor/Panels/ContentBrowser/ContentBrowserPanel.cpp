@@ -400,7 +400,7 @@ namespace sw::editor
     int32 ContentBrowserPanel::getActiveCollectionItemCount() const
     {
         const ContentBrowserCollection* pCollection = _activeCollectionName.empty() ? nullptr : _collections.findCollection( _activeCollectionName, _bActiveCollectionShared == SW_TRUE );
-        return pCollection != nullptr ? static_cast<int32>( pCollection->_listAssetID.size() ) : -1;
+        return pCollection != nullptr ? static_cast<int32>( pCollection->getAssetIDs().size() ) : -1;
     }
 
     void ContentBrowserPanel::saveCollections( bool bShared )
@@ -447,20 +447,20 @@ namespace sw::editor
         string droppedAssetID;
         for ( const ContentBrowserCollection& collection : _collections.getCollections() )
         {
-            const bool                               bActive = collection._name == _activeCollectionName && collection._bShared == ( _bActiveCollectionShared == SW_TRUE );
+            const bool                               bActive = collection.getName() == _activeCollectionName && collection.isShared() == ( _bActiveCollectionShared == SW_TRUE );
             StringBuilder<constant::buffer::kMax256> labelBuilder;
-            labelBuilder.appendFormat( "%#  %# (%#)%#", SW_EDITOR_ICON( "Bookmark" ), collection._name, collection._listAssetID.size(), collection._bShared ? "  shared" : "" );
+            labelBuilder.appendFormat( "%#  %# (%#)%#", SW_EDITOR_ICON( "Bookmark" ), collection.getName(), collection.getAssetIDs().size(), collection.isShared() ? "  shared" : "" );
             const string label{ labelBuilder.view() };
             if ( ImGui::Selectable( label.c_str(), bActive ) )
             {
-                _activeCollectionName    = collection._name;
-                _bActiveCollectionShared = collection._bShared ? SW_TRUE : SW_FALSE;
+                _activeCollectionName    = collection.getName();
+                _bActiveCollectionShared = collection.isShared() ? SW_TRUE : SW_FALSE;
             }
-            EditorSelfTestMarks::recordFormat( "contentBrowser.collection.%#", collection._name );
+            EditorSelfTestMarks::recordFormat( "contentBrowser.collection.%#", collection.getName() );
             if ( addTargetName.empty() && EditorWidgets::acceptAssetDrop( droppedAssetID ) )
             {
-                addTargetName    = collection._name;
-                bAddTargetShared = collection._bShared;
+                addTargetName    = collection.getName();
+                bAddTargetShared = collection.isShared();
             }
         }
         if ( addTargetName.empty() == false && _collections.addToCollection( addTargetName, bAddTargetShared, droppedAssetID ) )
@@ -555,7 +555,7 @@ namespace sw::editor
 
     void ContentBrowserPanel::drawCollectionView( const ContentBrowserCollection& collection )
     {
-        ImGui::TextUnformatted( collection._name.c_str() );
+        ImGui::TextUnformatted( collection.getName().c_str() );
         ImGui::SameLine();
         if ( ImGui::SmallButton( SW_LOCKEY( "EdButton", "BackToFolders" ) ) )
         {
@@ -566,8 +566,8 @@ namespace sw::editor
         ImGui::SameLine();
         if ( ImGui::SmallButton( SW_LOCKEY( "EdButton", "DeleteCollection" ) ) )
         {
-            const bool   bShared = collection._bShared;
-            const string name    = collection._name; // 지우는 원소를 가리키는 글로 비교하지 않게 먼저 복사한다
+            const bool   bShared = collection.isShared();
+            const string name    = collection.getName(); // 지우는 원소를 가리키는 글로 비교하지 않게 먼저 복사한다
             (void)_collections.removeCollection( name, bShared );
             _activeCollectionName.clear();
             saveCollections( bShared );
@@ -575,36 +575,42 @@ namespace sw::editor
         }
         EditorWidgets::drawTooltip( SW_LOCKEY( "EditorContentBrowser", "DeleteCollectionTooltip" ) );
         ImGui::Separator();
-        if ( collection._listAssetID.empty() )
+        if ( collection.getAssetIDs().empty() )
         {
             EditorWidgets::drawEmptyHint( SW_LOCKEY( "EditorContentBrowser", "EmptyCollection" ) );
             return;
         }
-        string removeID;
-        for ( uint32 rowIndex = 0; rowIndex < static_cast<uint32>( collection._listAssetID.size() ); ++rowIndex )
+        string            removeID;
+        EditorVirtualList virtualList( static_cast<int32>( collection.getAssetIDs().size() ) ); // 길이가 묶이지 않는다 — 보이는 줄만 디스크에 있는지 묻고 그린다
+        while ( virtualList.step() )
         {
-            const string& assetID = collection._listAssetID[rowIndex];
-            ImGui::PushID( static_cast<int32>( rowIndex ) );
-            // 옮기거나 지운 에셋은 회색과 이유 글로 남긴다 — 줄을 말없이 지우지 않는다
-            const bool bExists = EditorPaths::getAssetPaths().findLooseFile( assetID ).has_value();
-            if ( bExists )
+            for ( int32 rowIndex = virtualList.getBegin(); rowIndex < virtualList.getEnd(); ++rowIndex )
             {
-                ImGui::Selectable( assetID.c_str(), false, ImGuiSelectableFlags_AllowDoubleClick );
-                if ( EditorInputGUI::wasItemDoubleClicked() )
-                    (void)ContentBrowserViewModel::openAsset( assetID ); // 실패는 openPath 가 알린다
-                EditorWidgets::drawAssetDragSource( assetID.c_str() );
+                const string& assetID = collection.getAssetIDs()[static_cast<size_t>( rowIndex )];
+                ImGui::PushID( rowIndex );
+                // 옮기거나 지운 에셋은 회색과 이유 글로 남긴다 — 줄을 말없이 지우지 않는다
+                const bool bExists = EditorPaths::getAssetPaths().findLooseFile( assetID ).has_value();
+                if ( bExists )
+                {
+                    // 줄이 폭 전체를 받는다 — 겹침을 허락하지 않으면 줄 위의 Remove 단추가 마우스를 받지 못한다.
+                    ImGui::Selectable( assetID.c_str(), false, ImGuiSelectableFlags_AllowDoubleClick | ImGuiSelectableFlags_AllowOverlap );
+                    if ( EditorInputGUI::wasItemDoubleClicked() )
+                        (void)ContentBrowserViewModel::openAsset( assetID ); // 실패는 openPath 가 알린다
+                    EditorWidgets::drawAssetDragSource( assetID.c_str() );
+                }
+                else
+                {
+                    ImGui::TextDisabled( "%s", SW_LOCKEYFORMAT( "EdFormat", "CollectionItemMissing", TextArgumentList().addText( "asset", assetID.c_str() ) ).c_str() );
+                }
+                ImGui::SameLine();
+                if ( ImGui::SmallButton( SW_LOCKEY( "EdVerb", "Remove" ) ) )
+                    removeID = assetID;
+                EditorSelfTestMarks::recordFormat( "contentBrowser.collection.remove.%#", assetID );
+                ImGui::PopID();
             }
-            else
-            {
-                ImGui::TextDisabled( "%s", SW_LOCKEYFORMAT( "EdFormat", "CollectionItemMissing", TextArgumentList().addText( "asset", assetID.c_str() ) ).c_str() );
-            }
-            ImGui::SameLine();
-            if ( ImGui::SmallButton( SW_LOCKEY( "EdVerb", "Remove" ) ) )
-                removeID = assetID;
-            ImGui::PopID();
         }
-        if ( removeID.empty() == false && _collections.removeFromCollection( collection._name, collection._bShared, removeID ) )
-            saveCollections( collection._bShared );
+        if ( removeID.empty() == false && _collections.removeFromCollection( collection.getName(), collection.isShared(), removeID ) )
+            saveCollections( collection.isShared() );
     }
 
     void ContentBrowserPanel::requestDeleteAsset( string_view absolutePath )

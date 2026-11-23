@@ -2,6 +2,7 @@
 
 #include "Editor/Panels/ContentBrowser/Model/ContentBrowserCollectionStore.h"
 
+#include "Core/Algorithm/VectorUtil.h"
 #include "Core/File/FileUtil.h"
 #include "Core/File/ProcessRoots.h"
 #include "Core/Log/Logger.h"
@@ -49,6 +50,24 @@ namespace sw::editor
         };
     } // namespace
 
+    bool ContentBrowserCollection::add( string_view assetID )
+    {
+        const string key{ assetID };
+        if ( _uniqueAssetID.insert( key ).second == false )
+            return false;
+        _listAssetID.push_back( key );
+        return true;
+    }
+
+    bool ContentBrowserCollection::remove( string_view assetID )
+    {
+        const string key{ assetID };
+        if ( _uniqueAssetID.erase( key ) == 0 )
+            return false;
+        (void)VectorUtil::removeValue( _listAssetID, key ); // 색인에 있었으니 목록에도 있다
+        return true;
+    }
+
     ContentBrowserCollectionStore::ContentBrowserCollectionStore()
         : _listSavedSearch{}
         , _listCollection{}
@@ -84,10 +103,7 @@ namespace sw::editor
     {
         if ( name.empty() || findCollection( name, bShared ) != nullptr )
             return false;
-        ContentBrowserCollection collection{};
-        collection._name    = ContentBrowserCollectionStoreInternal::sanitize( name );
-        collection._bShared = bShared;
-        _listCollection.push_back( std::move( collection ) );
+        _listCollection.push_back( ContentBrowserCollection{ ContentBrowserCollectionStoreInternal::sanitize( name ), bShared } );
         return true;
     }
 
@@ -95,49 +111,36 @@ namespace sw::editor
     {
         const size_t sizeBefore = _listCollection.size();
         _listCollection.erase( std::remove_if( _listCollection.begin(), _listCollection.end(), [name, bShared]( const ContentBrowserCollection& collection )
-        { return collection._name == name && collection._bShared == bShared; } ),
+        { return collection.getName() == name && collection.isShared() == bShared; } ),
                                _listCollection.end() );
         return _listCollection.size() != sizeBefore;
     }
 
     bool ContentBrowserCollectionStore::addToCollection( string_view name, bool bShared, string_view assetID )
     {
-        for ( ContentBrowserCollection& collection : _listCollection )
-        {
-            if ( collection._name != name || collection._bShared != bShared )
-                continue;
-            for ( const string& existing : collection._listAssetID )
-            {
-                if ( existing == assetID )
-                    return false;
-            }
-            collection._listAssetID.push_back( string( assetID ) );
-            return true;
-        }
-        return false;
+        ContentBrowserCollection* const pCollection = findCollectionMutable( name, bShared );
+        return pCollection != nullptr && pCollection->add( assetID );
     }
 
     bool ContentBrowserCollectionStore::removeFromCollection( string_view name, bool bShared, string_view assetID )
     {
-        for ( ContentBrowserCollection& collection : _listCollection )
-        {
-            if ( collection._name != name || collection._bShared != bShared )
-                continue;
-            const size_t sizeBefore = collection._listAssetID.size();
-            collection._listAssetID.erase( std::remove( collection._listAssetID.begin(), collection._listAssetID.end(), string( assetID ) ), collection._listAssetID.end() );
-            return collection._listAssetID.size() != sizeBefore;
-        }
-        return false;
+        ContentBrowserCollection* const pCollection = findCollectionMutable( name, bShared );
+        return pCollection != nullptr && pCollection->remove( assetID );
     }
 
     const ContentBrowserCollection* ContentBrowserCollectionStore::findCollection( string_view name, bool bShared ) const
     {
         for ( const ContentBrowserCollection& collection : _listCollection )
         {
-            if ( collection._name == name && collection._bShared == bShared )
+            if ( collection.getName() == name && collection.isShared() == bShared )
                 return &collection;
         }
         return nullptr;
+    }
+
+    ContentBrowserCollection* ContentBrowserCollectionStore::findCollectionMutable( string_view name, bool bShared )
+    {
+        return const_cast<ContentBrowserCollection*>( findCollection( name, bShared ) );
     }
 
     string ContentBrowserCollectionStore::toText( bool bShared ) const
@@ -152,12 +155,12 @@ namespace sw::editor
         }
         for ( const ContentBrowserCollection& collection : _listCollection )
         {
-            if ( collection._bShared != bShared )
+            if ( collection.isShared() != bShared )
                 continue;
             // 빈 컬렉션도 남도록 머리 줄을 하나 둔다(에셋 칸이 빈 줄)
-            const string name = Internal::sanitize( collection._name );
+            const string name = Internal::sanitize( collection.getName() );
             text.appendFormat( "collection\t%#\t\n", name );
-            for ( const string& assetID : collection._listAssetID )
+            for ( const string& assetID : collection.getAssetIDs() )
                 text.appendFormat( "collection\t%#\t%#\n", name, Internal::sanitize( assetID ) );
         }
         return string( text.view() );
@@ -169,7 +172,7 @@ namespace sw::editor
         { return search._bShared == bShared; } ),
                                 _listSavedSearch.end() );
         _listCollection.erase( std::remove_if( _listCollection.begin(), _listCollection.end(), [bShared]( const ContentBrowserCollection& collection )
-        { return collection._bShared == bShared; } ),
+        { return collection.isShared() == bShared; } ),
                                _listCollection.end() );
         vector<string_view> listField;
         size_t              lineStart = 0;

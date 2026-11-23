@@ -7,7 +7,9 @@
  */
 #pragma once
 #include "Core/Container/string.h"
+#include "Core/Container/unordered_set.h"
 #include "Core/Container/vector.h"
+#include "Core/Foundation/Macros.h"
 #include "Core/Foundation/Types.h"
 
 namespace sw::editor
@@ -21,12 +23,32 @@ namespace sw::editor
         bool   _bShared{ false }; ///< 프로젝트와 함께 커밋하는 공유 목록이다 NOLINT(sw-bool-flag): 집합체다(중괄호 · 지정 초기화로 만든다) — C++17 비트필드는 기본값을 둘 수 없어 `T x;` 가 값을 남기지 않는다
     };
 
-    /** @brief 에셋 컬렉션 하나 — 폴더와 상관없이 모은 에셋 id 목록입니다(파일을 옮기지 않는다). */
-    struct ContentBrowserCollection
+    /** @brief 에셋 컬렉션 하나 — 폴더와 상관없이 모은 에셋 id 목록입니다(파일을 옮기지 않는다). 목록과 색인은 `add` · `remove` 로만 함께 바뀐다. */
+    class ContentBrowserCollection
     {
-        string         _name;
-        vector<string> _listAssetID;
-        bool           _bShared{ false }; ///< NOLINT(sw-bool-flag): 위와 같다
+    public:
+        ContentBrowserCollection( string_view name, bool bShared )
+            : _name{ name }
+            , _listAssetID{}
+            , _uniqueAssetID{}
+            , _bShared{ bShared ? SW_TRUE : SW_FALSE }
+        {
+        }
+
+        const string&         getName() const { return _name; }
+        bool                  isShared() const { return _bShared == SW_TRUE; }
+        const vector<string>& getAssetIDs() const { return _listAssetID; }
+
+        /** @brief 에셋 id 를 끝에 더합니다. 이미 있으면 false 입니다. */
+        bool add( string_view assetID );
+        /** @brief 에셋 id 를 뺍니다. 있었으면 true 입니다. */
+        bool remove( string_view assetID );
+
+    private:
+        string                _name;
+        vector<string>        _listAssetID;   ///< 더한 순서(저장 · 표시 순서)
+        unordered_set<string> _uniqueAssetID; ///< `_listAssetID` 와 같은 원소의 색인 — 더할 때마다 목록을 훑지 않는다(파일 읽기가 에셋 수의 제곱이었다)
+        uint8                 _bShared;       ///< 프로젝트와 함께 커밋하는 공유 목록이다
     };
 } // namespace sw::editor
 
@@ -75,6 +97,10 @@ namespace sw::editor
 
         static constexpr const utf8* kLocalFileName  = "ContentBrowserCollectionStore.txt";
         static constexpr const utf8* kSharedFileName = "Config/Editor/ContentCollections.txt";
+
+    private:
+        /** @brief `findCollection` 의 고칠 수 있는 짝입니다. */
+        ContentBrowserCollection* findCollectionMutable( string_view name, bool bShared );
 
     private:
         vector<ContentBrowserSavedSearch> _listSavedSearch;
