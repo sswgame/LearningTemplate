@@ -26,8 +26,7 @@
 			<GameObject _schemaVersion="0" _name="Director" _bActive="true">
 				<_listComponent>
 					<MechArenaDemoComponent _localID="11172691584527447860" _componentName="MechArenaDemoComponent"
-					                        _bActive="true"
-					                        _catalogPath="game/playground/data/kitdemo/demo.mechs.xml" />
+					                        _bActive="true" />
 				</_listComponent>
 			</GameObject>
 		</entity>

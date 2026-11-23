@@ -39,8 +39,7 @@ namespace sw
                                 &MonsterHuntRPGDemoComponent::getKnowledge );
 
     MonsterHuntRPGDemoComponent::MonsterHuntRPGDemoComponent()
-        : _catalogPath{}
-        , _pCatalog{}
+        : _pCatalog{}
         , _solved{ 0 }
         , _reward{ 0 }
         , _knowledge{ 0 }
@@ -88,7 +87,7 @@ namespace sw
 
     bool MonsterHuntRPGDemoComponent::startGame()
     {
-        if ( acquireRequired( _catalogPath, _pCatalog ) == false )
+        if ( acquireBoundCatalog( _pCatalog ) == false )
             return false;
         return runContract();
     }

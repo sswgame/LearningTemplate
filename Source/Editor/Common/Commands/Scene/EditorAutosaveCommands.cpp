@@ -236,10 +236,10 @@ namespace sw::editor
                 state._bMounted = editor::getSubsystem<AssetPaths>().mountDiskDomain( EditorAutosaveCommands::kDomain, folder.str() ); // 거절하면 이유를 로그로 남긴다(복원만 막힌다)
             }
 
-            /** @brief 세션 폴더들의 문서 사본을 복구 후보로 모읍니다(다른 프로젝트 · 바뀐 원본은 거절 이유를 단다). 원본 해시는 씬과 같은 `EditorAutosaveCommands::computeSourceHash` 다. */
+            /** @brief 세션 폴더들의 문서 사본을 복구 후보로 모읍니다(다른 프로젝트 · 바뀐 원본은 거절 이유를 단다). 원본 해시는 `EditorAutosaveCommands::computeDocumentSourceHash` 다. */
             static void scanRecoverableDocuments( const vector<string>& listSessionFolder, vector<EditorDocumentAutosaveEntry>& outListEntry )
             {
-                EditorDocumentAutosaveEntry::scan( listSessionFolder, ProcessRoots::get()._project.str(), &EditorAutosaveCommands::computeSourceHash, outListEntry );
+                EditorDocumentAutosaveEntry::scan( listSessionFolder, ProcessRoots::get()._project.str(), &EditorAutosaveCommands::computeDocumentSourceHash, outListEntry );
             }
 
             /** @brief 지금 씬의 사본 폴더에서 @p keepCount 를 넘는 오래된 세대를 지웁니다. */
@@ -582,9 +582,14 @@ namespace sw::editor
             return false;
         }
         // 문서 열기와 같은 길(워크스페이스 포커스)이다 — 맞는 문서 패널이 받아 읽고, 읽은 직후 이 청을 꺼내 사본 글을 적용한다(takePendingDocumentRestore).
+        // 상태 문서는 연 에셋이 없다 — 그 패널을 열면 패널이 자기 파일의 사본을 적용한다(`EditorStateDocumentPanel`).
         state._pendingDocumentPath = entry._documentPath;
         state._pendingDocumentText = std::move( text );
-        editor::getSubsystem<EditorWorkspace>().setFocusedAssetPath( state._pendingDocumentPath.c_str() );
+        EditorWorkspace& workspace = editor::getSubsystem<EditorWorkspace>();
+        if ( entry._panelID.empty() )
+            workspace.setFocusedAssetPath( state._pendingDocumentPath.c_str() );
+        else
+            workspace.requestOpenPanelByID( entry._panelID );
         return true;
     }
 
@@ -596,6 +601,23 @@ namespace sw::editor
         (void)FileUtil::tryRemoveFile( FileUtil::toDiskPath( listEntry[index]._textAbs ) );
         SW_LOG_INFO_ID( "EditorAutosaveCommands.DocumentDiscarded", "Autosave: discarded the copy of document '%#'", listEntry[index]._documentPath );
         listEntry.erase( listEntry.begin() + static_cast<ptrdiff_t>( index ) );
+    }
+
+    bool EditorAutosaveCommands::peekPendingDocumentRestore( string_view& outDocumentPath, string_view& outText )
+    {
+        if ( editor::findSubsystem<EditorStateStore>() == nullptr )
+            return false;
+        const EditorAutosaveCommandsInternal::State& state = EditorAutosaveCommandsInternal::getState();
+        outDocumentPath                                    = state._pendingDocumentPath;
+        outText                                            = state._pendingDocumentText;
+        return state._pendingDocumentPath.empty() == false;
+    }
+
+    void EditorAutosaveCommands::cancelPendingDocumentRestore()
+    {
+        EditorAutosaveCommandsInternal::State& state = EditorAutosaveCommandsInternal::getState();
+        state._pendingDocumentPath.clear();
+        state._pendingDocumentText.clear();
     }
 
     bool EditorAutosaveCommands::takePendingDocumentRestore( string_view documentPath, string& outText )
@@ -757,5 +779,13 @@ namespace sw::editor
     {
         const optional<AbsolutePath> sourcePath = editor::getSubsystem<AssetPaths>().toDiskPath( sourceID );
         return sourcePath.has_value() ? ContentHash::computeFile( sourcePath->str() ) : 0;
+    }
+
+    uint64 EditorAutosaveCommands::computeDocumentSourceHash( const EditorDocumentAutosaveEntry& entry )
+    {
+        if ( entry._panelID.empty() )
+            return computeSourceHash( entry._documentPath );
+        const optional<AbsolutePath> filePath = EditorDocumentAutosaveEntry::resolveFileID( entry._documentPath );
+        return filePath.has_value() ? ContentHash::computeFile( filePath->str() ) : 0;
     }
 } // namespace sw::editor

@@ -138,6 +138,42 @@ namespace sw::editor
         }
     }
 
+    ProjectSettingsPage* ProjectSettingsPanel::findPage( string_view absolutePath ) const
+    {
+        for ( const unique_ptr<Page>& pPage : _listPage )
+        {
+            if ( FileUtil::isSameDiskPath( pPage->_absolutePath, absolutePath ) )
+                return pPage.get();
+        }
+        return nullptr;
+    }
+
+    expected<string> ProjectSettingsPanel::tryMakeFileText( string_view absolutePath ) const
+    {
+        const Page* pPage = findPage( absolutePath );
+        if ( pPage == nullptr )
+            return unexpected( Error{ ErrorKind::NotFound, "no settings page saves this file", absolutePath } );
+        return pPage->tryMakeText();
+    }
+
+    bool ProjectSettingsPanel::isEditingFile( string_view absolutePath )
+    {
+        if ( _bCatalogLoaded == false )
+            reloadCatalog(); // 복원이 이 창을 막 열었다 — 목록은 그리기가 처음 만든다
+        return findPage( absolutePath ) != nullptr;
+    }
+
+    bool ProjectSettingsPanel::applyFileText( string_view absolutePath, const string& text )
+    {
+        Page* pPage = findPage( absolutePath );
+        if ( pPage == nullptr || pPage->restoreText( text ) == false )
+            return false;
+        selectPage( *pPage );
+        _tableHistory.clear(); // 갈아 끼운 문서의 단계는 남지 않는다
+        refreshDirtyState();
+        return true;
+    }
+
     void ProjectSettingsPanel::revertDocument()
     {
         for ( const unique_ptr<Page>& pPage : _listPage )

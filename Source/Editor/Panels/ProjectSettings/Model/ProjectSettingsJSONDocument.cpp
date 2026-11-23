@@ -206,6 +206,20 @@ namespace sw::editor
         return {};
     }
 
+    bool ProjectSettingsJSONDocument::restoreText( string_view text )
+    {
+        ProjectSettingsJSONDocument restored;
+        if ( isOpen() == false || isReadOnly() || restored.openText( _absolutePath, text ).has_value() == false || restored.isReadOnly() )
+            return false;
+        // 저장 기준(마지막으로 읽은 글)은 지금 문서의 것이다 — 사본 글은 디스크와 다른 편집이라 바뀐 상태가 된다.
+        _listNode         = std::move( restored._listNode );
+        _sourceText       = std::move( restored._sourceText );
+        _indent           = restored._indent;
+        _bTrailingNewLine = restored._bTrailingNewLine;
+        _state.reset( string{ _state.getSaved() } ); // 갈아 끼운 트리의 되돌리기 단계는 남지 않는다
+        return true;
+    }
+
     expected<void> ProjectSettingsJSONDocument::revert()
     {
         const string path = _absolutePath;

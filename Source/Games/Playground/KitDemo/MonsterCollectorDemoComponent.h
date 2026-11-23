@@ -7,7 +7,6 @@
 #pragma once
 #include "Core/Foundation/Types.h"
 
-#include "Engine/Asset/AssetRef.h"
 #include "Engine/Asset/Cache/SharedAssetRef.h"
 #include "Engine/Reflection/ReflectionMacros.h"
 
@@ -46,9 +45,6 @@ namespace sw
         [[nodiscard]] bool runBattleAndCapture();
 
     private:
-        PROPERTY( Category = "Data", DisplayName = "Catalog", Tooltip = "Monster collector catalog XML (moves, species)" )
-        AssetRef<MonsterCollectorCatalog> _catalogPath;
-
         SharedAssetRef<MonsterCollectorCatalog> _pCatalog;
         PROPERTY( RuntimeState )
         int32 _wonExp; ///< 이긴 전투에서 받은 경험치(이기지 못하면 0)

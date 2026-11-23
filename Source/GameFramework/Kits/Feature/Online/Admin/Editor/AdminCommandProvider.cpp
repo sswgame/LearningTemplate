@@ -137,6 +137,7 @@ namespace sw::editor
 
         const AdminServiceResult result = execute( method, request, reply );
         reply._result                   = result._result;
+        reply._targetAccountID          = request._accountID;
         if ( bMutating && result == AdminResult::Ok )
         {
             RecordedReply recorded;

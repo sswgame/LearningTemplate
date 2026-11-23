@@ -36,8 +36,7 @@ namespace sw
                                 &SurvivalHorrorDemoComponent::getHealth );
 
     SurvivalHorrorDemoComponent::SurvivalHorrorDemoComponent()
-        : _catalogPath{}
-        , _pCatalog{}
+        : _pCatalog{}
         , _sanity{ 0 }
         , _health{ 0 }
     {
@@ -81,7 +80,7 @@ namespace sw
 
     bool SurvivalHorrorDemoComponent::startGame()
     {
-        if ( acquireRequired( _catalogPath, _pCatalog ) == false )
+        if ( acquireBoundCatalog( _pCatalog ) == false )
             return false;
         return runSession();
     }

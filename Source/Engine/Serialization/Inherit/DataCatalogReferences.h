@@ -16,12 +16,14 @@
  *         <Reference owner="Site" attribute="garrison" target="Unit" named="true"/> <!-- `id:수` 꼴 -->
  *         <Reference owner="Quest/Stage" attribute="next" target="Stage" inEntry="true"/> <!-- 같은 퀘스트 안의 단계 -->
  *         <Unique owner="Ghost" attribute="id"/>                                    <!-- 한 파일 안에서 겹치면 오류 -->
+ *         <Reference owner="Part" attribute="replaces" target="Part" absent="true"/> <!-- 지운 항목의 id — 아직 있으면 오류 -->
  *       </Catalog>
  *       <Catalog root="FighterCatalog">
  *         <Reference owner="Fighter/Move" attribute="frames" defaultAttribute="id" target="Move" file="moves"/> <!-- 루트의 moves 가 가리키는 다른 파일 -->
  *       </Catalog>
  *       <CatalogKey tag="AbilitySetDef" catalog="AbilityCatalog" entry="AbilitySet"/> <!-- 항목 종류 → 카탈로그 루트 · 원소 -->
  *       <Field owner="AbilitySystemComponent" field="_abilitySetID" tag="AbilitySetDef"/>  <!-- `CatalogKey<AbilitySetDef>` 칸 -->
+ *       <Derived type="BossAbilityComponent" base="AbilitySystemComponent"/>               <!-- 칸을 물려받은 형식 -->
  *     </DataCatalogReferenceTable>
  * @endcode
  *          `<CatalogKey>` · `<Field>` 는 카탈로그 밖(씬 · 프리팹의 컴포넌트 · 구조체 칸 `CatalogKey<Tag>`)에서 항목을 가리키는 칸이다. 쿠커는 쿠킹하는 팩들의
@@ -56,6 +58,7 @@ namespace sw
         bool           _bNamed{ false };    ///< 값이 `id:수` 꼴이다(콜론 앞이 id) NOLINT(sw-bool-flag): 집합체다(중괄호 · 지정 초기화로 만든다) — C++17 비트필드는 기본값을 둘 수 없어 `T x;` 가 값을 남기지 않는다
         bool           _bOptional{ false }; ///< 깨져도 경고만 한다 NOLINT(sw-bool-flag): 집합체다(중괄호 · 지정 초기화로 만든다) — C++17 비트필드는 기본값을 둘 수 없어 `T x;` 가 값을 남기지 않는다
         bool           _bInEntry{ false };  ///< 가리키는 원소를 루트가 아니라 같은 항목(owner 경로의 첫 원소)의 자식에서 찾는다(퀘스트 안의 단계 · 트리 안의 스킬) NOLINT(sw-bool-flag): 집합체다(중괄호 · 지정 초기화로 만든다) — C++17 비트필드는 기본값을 둘 수 없어 `T x;` 가 값을 남기지 않는다
+        bool           _bAbsent{ false };   ///< 값이 가리키는 원소가 **없어야** 한다(`absent="true"` — 지운 항목의 id 를 이어받는 칸, 부품의 `replaces`) NOLINT(sw-bool-flag): 집합체다(중괄호 · 지정 초기화로 만든다) — C++17 비트필드는 기본값을 둘 수 없어 `T x;` 가 값을 남기지 않는다
         bool           _bUnique{ false };   ///< 겹침 규칙(`<Unique owner attribute>`) — owner 원소의 attribute 값이 한 파일 안에서 겹치면 오류다 NOLINT(sw-bool-flag): 집합체다(중괄호 · 지정 초기화로 만든다) — C++17 비트필드는 기본값을 둘 수 없어 `T x;` 가 값을 남기지 않는다
     };
 
@@ -108,6 +111,16 @@ namespace sw
     };
 
     /**
+     * @struct DataCatalogKeyDerived
+     * @brief 물려받은 형식 한 줄입니다(표의 `<Derived type base>`) — 씬 · 프리팹의 원소 이름은 가장 아래 형식이라, 바탕의 키 칸 줄(`<Field owner>` · `<Struct owner>`)을 찾으려면 이 연결이 필요하다.
+     */
+    struct DataCatalogKeyDerived
+    {
+        string _type; ///< 물려받은 리플렉션 형식 이름
+        string _base; ///< 바탕 형식 이름(다시 물려받은 형식일 수 있다)
+    };
+
+    /**
      * @class DataCatalogReferenceRules
      * @brief 참조 규칙 표 한 벌입니다. 읽은 뒤에는 바꾸지 않는다(`validateDocument` 는 const — 쿠킹 작업이 나란히 불러도 된다).
      */
@@ -131,8 +144,8 @@ namespace sw
         [[nodiscard]] bool isRootMentioned( string_view text ) const;
         /**
          * @brief 문서 루트 @p root 의 규칙을 모두 봅니다. 없는 id 마다 `XMLCatalog.UnknownReference`(필수) · `XMLCatalog.UnknownOptionalReference`(선택)를,
-         *        겹침 규칙의 겹친 값마다 `XMLCatalog.DuplicateID` 를 남긴다.
-         * @return 필수 참조가 깨졌거나 겹침이 있으면 false 입니다. 규칙이 없는 루트는 true 입니다.
+         *        `absent` 규칙의 값이 아직 있는 항목이면 `XMLCatalog.RemovedIDStillPresent` 를, 겹침 규칙의 겹친 값마다 `XMLCatalog.DuplicateID` 를 남긴다.
+         * @return 필수 참조가 깨졌거나 지운 id 가 남아 있거나 겹침이 있으면 false 입니다. 규칙이 없는 루트는 true 입니다.
          */
         [[nodiscard]] bool validateDocument( const XMLNode& root, string_view sourceName ) const;
         /** @brief 표를 읽고(`loadFromAsset`) @p root 를 봅니다 — 카탈로그 읽기의 입구다. 표를 읽지 못하면 false 입니다. */
@@ -154,6 +167,10 @@ namespace sw
         const vector<DataCatalogKeyElement>& getElementRows() const { return _listKeyElement; }
         /** @brief 형식 @p owner 의 구조체 칸 @p field 줄입니다. 없으면 nullptr 입니다. */
         [[nodiscard]] const DataCatalogKeyStruct* findKeyStruct( string_view owner, string_view field ) const;
+        /** @brief 물려받은 형식 줄입니다(표 순서). */
+        const vector<DataCatalogKeyDerived>& getDerivedRows() const { return _listKeyDerived; }
+        /** @brief 형식 @p type 의 물려받음 줄입니다. 없으면 nullptr 입니다. */
+        [[nodiscard]] const DataCatalogKeyDerived* findKeyDerived( string_view type ) const;
         /** @brief 정의 형식 @p type 의 첫 원소 줄입니다(한 정의가 여러 자리에 놓이면 줄이 여럿이다). 없으면 nullptr 입니다. */
         [[nodiscard]] const DataCatalogKeyElement* findKeyElement( string_view type ) const;
         /** @brief 칸 줄 @p field 가 카탈로그 원소에서 쓰는 속성 이름입니다(`_attribute`, 비면 칸 이름에서 `_` 를 뗀 것). */
@@ -171,6 +188,7 @@ namespace sw
         vector<DataCatalogKeyField>      _listKeyField;   ///< 카탈로그 키 칸 줄
         vector<DataCatalogKeyStruct>     _listKeyStruct;  ///< 구조체 칸 줄
         vector<DataCatalogKeyElement>    _listKeyElement; ///< 정의 형식 ↔ 카탈로그 원소 줄
+        vector<DataCatalogKeyDerived>    _listKeyDerived; ///< 물려받은 형식 줄
     };
 
     /**
@@ -207,7 +225,7 @@ namespace sw
         /** @brief @p node 와 그 아래 원소를 모두 훑어 칸 주인 원소의 값을 모읍니다. */
         void collectUses( const XMLNode& node, string_view sourceName );
         /**
-         * @brief 형식 @p typeName 의 원소 @p node 에서 칸 줄의 값을 모읍니다. 구조체 칸 줄(`<Struct>`)이면 그 자식 원소를 그 형식으로 다시 본다.
+         * @brief 형식 @p typeName 과 그 바탕 형식들(`<Derived>`)의 원소 @p node 에서 칸 줄의 값을 모읍니다. 구조체 칸 줄(`<Struct>`)이면 그 자식 원소를 그 형식으로 다시 본다.
          * @param bCatalogElement 카탈로그 정의 원소(`<Element>`)다 — 칸은 속성 이름(`findElementAttribute`)으로 찾고 목록은 쉼표 목록이다.
          */
         void collectTypedUses( const XMLNode& node, string_view typeName, bool bCatalogElement, string_view sourceName );

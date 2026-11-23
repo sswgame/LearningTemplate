@@ -7,7 +7,6 @@
 #pragma once
 #include "Core/Foundation/Types.h"
 
-#include "Engine/Asset/AssetRef.h"
 #include "Engine/Asset/Cache/SharedAssetRef.h"
 #include "Engine/Reflection/ReflectionMacros.h"
 
@@ -46,9 +45,6 @@ namespace sw
         [[nodiscard]] bool runLoop();
 
     private:
-        PROPERTY( Category = "Data", DisplayName = "Catalog", Tooltip = "Metroidvania catalog XML (rules, sites, enemies)" )
-        AssetRef<MetroidvaniaCatalog> _catalogPath;
-
         SharedAssetRef<MetroidvaniaCatalog> _pCatalog;
         PROPERTY( RuntimeState )
         int32 _corpseCurrency; ///< 죽을 때 시체에 떨어진 통화

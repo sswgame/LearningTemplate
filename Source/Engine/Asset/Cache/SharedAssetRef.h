@@ -42,7 +42,7 @@ namespace sw
          */
         explicit SharedAssetRef( shared_ptr<const T> pAsset )
         {
-            const WeakInternVersion<const T>* const pVersion = SharedAssetCache<T>::findVersion( pAsset );
+            const WeakInternVersion<const T>* const pVersion = SharedAssetCache<T>::findVersion( pAsset.get() );
             attach( std::move( pAsset ), pVersion );
         }
         /** @brief 판을 이미 아는 쪽(캐시 · 표)이 씁니다. @p pVersion 은 @p pAsset 의 판이어야 한다(nullptr 면 따라가지 않는다). */
@@ -57,6 +57,15 @@ namespace sw
             SharedAssetRef ref;
             ref._pForeign = pAsset;
             return ref;
+        }
+        /**
+         * @brief 남이 쥔 산 에셋(@p pLive — 게임 범위에 걸린 카탈로그 칸)을 같이 쥐고 따라가는 참조입니다. 공유 캐시에서 온 객체가 아니면(테스트가 지은 값) 빌린다(`borrow`).
+         * @details 날 포인터를 멤버로 들면 건 쪽이 놓은 뒤 끊긴다 — 쥐는 쪽은 이 참조로 받는다. 부르는 동안 @p pLive 는 쥔 쪽이 살려 둔다.
+         */
+        [[nodiscard]] static SharedAssetRef shareLive( const T* pLive )
+        {
+            const WeakInternVersion<const T>* const pVersion = SharedAssetCache<T>::findVersion( pLive );
+            return pVersion != nullptr ? SharedAssetRef( pVersion->_pSelf.lock(), pVersion ) : borrow( pLive );
         }
 
         SharedAssetRef( const SharedAssetRef& other ) { copyFrom( other ); }

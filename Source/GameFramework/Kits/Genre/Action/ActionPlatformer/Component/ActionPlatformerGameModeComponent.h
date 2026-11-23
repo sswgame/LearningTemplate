@@ -16,7 +16,6 @@
 #include "Core/Memory/Memory.h"
 #include "Core/Name/hashed_string.h"
 
-#include "Engine/Asset/AssetRef.h"
 #include "Engine/Asset/Cache/SharedAssetRef.h"
 #include "Engine/Reflection/ReflectionMacros.h"
 #include "Engine/Serialization/Serializer/CatalogKey.h"
@@ -96,8 +95,6 @@ namespace sw
         void updateRespawn( float32 deltaTime );
 
     private:
-        PROPERTY( Category = "Data", DisplayName = "Catalog", Tooltip = "Action platformer catalog XML (stages, grading, body settings)" )
-        AssetRef<ActionPlatformerCatalog> _catalogPath;
         PROPERTY( Category = "Data", DisplayName = "Stage", Tooltip = "Stage id in the catalog" )
         CatalogKey<ActionStageDef> _stageID;
         PROPERTY( Category = "Stage", DisplayName = "Terrain Rows", Tooltip = "Terrain text rows, top first ('#' wall, '-' one-way, 'D' dirt, 'O' grapple point, anything else empty)" )

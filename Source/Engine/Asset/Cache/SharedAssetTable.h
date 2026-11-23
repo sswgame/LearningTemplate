@@ -102,7 +102,7 @@ namespace sw
         }
 
         /** @brief 이 표가 나눠 준 @p pAsset 의 판입니다(`SharedAssetRef` 가 따라갈 사슬의 머리). 이 표에서 오지 않았으면 nullptr 입니다. */
-        const WeakInternVersion<const AssetType>* findVersion( const shared_ptr<const AssetType>& pAsset ) const { return _table.findVersion( pAsset ); }
+        const WeakInternVersion<const AssetType>* findVersion( const AssetType* pAsset ) const { return _table.findVersion( pAsset ); }
 
         /** @brief 따라가는 참조를 모두 최신 판으로 옮깁니다(사슬 정리 — 다시 읽은 직후 · 게임 스레드, 틱 밖). 옮긴 수를 돌려줍니다. */
         uint32 followRefs() { return _table.followRefs(); }

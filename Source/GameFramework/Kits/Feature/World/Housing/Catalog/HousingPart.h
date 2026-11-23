@@ -86,7 +86,7 @@ namespace sw
         PROPERTY( Min = 1 )
         int32 _minLoadVersion{ 1 }; ///< 이 판 이상으로 저장한 배치만 읽는다(`_version` 이하)
         PROPERTY( Name = "replaces" )
-        hashed_string _replacedID{}; ///< 이 부품이 이어받은 지운 부품의 id
+        hashed_string _replacedID{}; ///< 이 부품이 이어받은 지운 부품의 id(아직 있는 부품이면 참조 표가 읽기를 막는다)
         PROPERTY( Name = "snapTo" )
         hashed_string _snapKind{}; ///< 가까이 있으면 붙을 소켓 종류(비면 격자만)
         PROPERTY()
@@ -122,7 +122,7 @@ namespace sw
      *        `<HousingPartCatalog currency="Gold" cellSize="1" levelHeight="3"><Part id="wall" name="Wall" prefab="…" layer="Structure" cost="10">
      *        <Socket kind="wallEnd" position="0.5,0,0"/></Part></HousingPartCatalog>`
      * @details 읽을 때 스냅 지점을 검사한다(에디터 저작 검증의 정본): 소켓은 부품의 점유 상자 안이어야 하고, `snapTo` 는 이 카탈로그의 어떤 소켓 종류여야 하며,
-     *          `minLoadVersion` 은 `version` 이하, `replaces` 는 지금 카탈로그에 없는 id 여야 한다. 틀린 부품은 넣지 않고 오류다.
+     *          `minLoadVersion` 은 `version` 이하, `replaces` 는 지금 카탈로그에 없는 id 여야 한다(참조 표). 틀린 부품은 넣지 않고 오류다.
      */
     class SW_KIT_API HousingPartCatalog : public XMLCatalog<HousingPartCatalog>
     {

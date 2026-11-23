@@ -6,7 +6,7 @@
  *          정의에 게임 모드 칸을 두지 않는다(어디에도 적용되지 않던 `<GameMode>` 원소를 지웠다). 읽기는 루트 속성을 리플렉션 스키마로(`XMLFields::readProperties`), 자식 원소는 없다.
  * @code
  *     <Minigame name="kitdemo_actionplatformer" map="game/playground/maps/kitdemo_actionplatformer.scene.xml" entry="SceneSwitch"
- *               features="ActionPlatformer" inputContexts="platformer" ui="game/playground/ui/platformer_hud.ui.xml" catalogs="actionplatformer"/>
+ *               features="ActionPlatformer" inputContexts="platformer" ui="game/playground/ui/platformer_hud.ui.xml" catalogs="ActionPlatformerCatalog"/>
  * @endcode
  */
 #pragma once

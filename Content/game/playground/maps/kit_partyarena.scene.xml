@@ -26,8 +26,7 @@
 			<GameObject _schemaVersion="0" _name="Director" _bActive="true">
 				<_listComponent>
 					<PartyArenaDemoComponent _localID="13341411199306977855" _componentName="PartyArenaDemoComponent"
-					                         _bActive="true"
-					                         _catalogPath="game/playground/data/kitdemo/demo.partyrounds.xml" />
+					                         _bActive="true" />
 				</_listComponent>
 			</GameObject>
 		</entity>

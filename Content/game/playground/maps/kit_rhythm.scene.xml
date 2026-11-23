@@ -27,7 +27,7 @@
 				<_listComponent>
 					<RhythmDemoComponent _localID="17956553957758675698" _componentName="RhythmDemoComponent"
 					                     _bActive="true"
-					                     _catalogPath="game/playground/data/kitdemo/demo.chart.xml" />
+					                     _chart="game/playground/data/kitdemo/demo.chart.xml" />
 				</_listComponent>
 			</GameObject>
 		</entity>

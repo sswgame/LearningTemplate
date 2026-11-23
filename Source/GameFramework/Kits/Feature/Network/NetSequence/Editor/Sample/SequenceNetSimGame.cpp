@@ -90,8 +90,7 @@ namespace sw
                     (void)SequenceNetSimGame::activateTrigger( world, SequenceNetSimGame::kPlayerTrigger, 1 );
                     return;
                 }
-                const SequencePlayerComponent* pPlayer    = SequenceNetSimGame::findDirector( world, SequenceNetSimGame::kPlayerDirector );
-                const bool                     bFirstDone = world.getLocalTick() > _scheduleTick && pPlayer != nullptr && pPlayer->isPlaying() == false;
+                const bool bFirstDone = world.getLocalTick() > _scheduleTick && SequenceNetSimGame::isTriggerPlaying( world, SequenceNetSimGame::kPlayerTrigger ) == false;
                 if ( bFirstDone && _bSecondOpened == SW_FALSE )
                 {
                     (void)SequenceNetSimGame::activateTrigger( world, SequenceNetSimGame::kPlayerTrigger, 2 );
@@ -172,6 +171,23 @@ namespace sw
     unique_ptr<INetSimGame> SequenceNetSimGame::create()
     {
         return make_unique<SequenceNetSimGame>( SequenceNetSimSchedule::Scheduled );
+    }
+
+    bool SequenceNetSimGame::isTriggerPlaying( NetSimWorld& world, const utf8* triggerName )
+    {
+        const GameObjectManager&        manager  = world.getObjectManager();
+        const GameObject*               pObject  = manager.findGameObjectByName( hashed_string( triggerName ) );
+        const SequenceTriggerComponent* pTrigger = pObject != nullptr ? pObject->getComponent<SequenceTriggerComponent>() : nullptr;
+        if ( pTrigger == nullptr )
+            return false;
+        for ( const SequenceTriggerPlay& play : pTrigger->getPlays() )
+        {
+            const GameObject*              pDirector = manager.resolveGameObject( play._director );
+            const SequencePlayerComponent* pPlayer   = pDirector != nullptr ? pDirector->getComponent<SequencePlayerComponent>() : nullptr;
+            if ( pPlayer != nullptr && pPlayer->isPlaying() )
+                return true;
+        }
+        return false;
     }
 
     string SequenceNetSimGame::makePawnName( int32 playerNumber )
