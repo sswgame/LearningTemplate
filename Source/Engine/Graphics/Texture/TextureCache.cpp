@@ -193,7 +193,6 @@ namespace sw
         bool _bStreamingParked                          SW_GUARDED_BY( _streamingMutex ) = false; ///< 지난 `updateStreaming` 이 풀 예산에 막혔다 — 줄은 예산이 날 때까지 쉰다(`countLoadsInFlight` 가 세지 않는다) NOLINT(sw-bool-flag): 잠금이 지키는 칸 하나다
         TextureStreamingRetireList                      _retired;                                 ///< 바꿔 끼운 옛 GPU 자원(`releaseRetiredTextures` 가 해제한다)
         atomic<int32>                                   _qualityMipDrop{ 0 };                     ///< 텍스처 품질이 버리는 위쪽 밉 수 — 게임 스레드가 뜬 사본(`refreshQualitySettings`)이라 워커 · 렌더 스레드는 이것만 읽는다
-        atomic<uint8>                                   _bStreamingEnabled{ SW_TRUE };            ///< 비동기 로드를 아래쪽 밉부터 올린다(`-gv_textureStreaming`) — 같은 사본
         vector<string> _listUpgrading                   SW_GUARDED_BY( _streamingMutex );         ///< 위쪽 밉 업로드를 제출했고 끝남 확인을 기다리는 텍스처의 키(`updateStreaming` 이 폴링한다)
         unordered_map<string, TextureStreamingDemand>   _mapStreamingDemand;                      ///< 이번 프레임에 알린 요구(`recordStreamingDemand`, `_streamingMutex`) — `updateStreaming` 이 꺼내 항목의 필요한 밉에 적고 줄을 정렬한다
 
@@ -396,13 +395,8 @@ namespace sw
 
     namespace
     {
-        // 텍스처 캐시가 만들 때 한 번 읽는 변수 — 익명 이름공간이라 로드 워커 · 렌더 스레드가 도는 다른 번역 단위는 이름을 볼 수 없다(사본 `Impl::_qualityMipDrop` · `_bStreamingEnabled` 만 읽는다).
+        // 텍스처 캐시가 만들 때 한 번 읽는 변수 — 익명 이름공간이라 로드 워커 · 렌더 스레드가 도는 다른 번역 단위는 이름을 볼 수 없다(사본 `Impl::_qualityMipDrop` 만 읽는다).
 
-        /**
-         * @brief `-gv_textureStreaming=0` — 비동기로 읽는 텍스처를 처음부터 밉 사슬 전부로 업로드합니다(밉 스트리밍을 끈다). 비교 측정 · 진단용입니다.
-         * @details 켜져 있으면 비동기 로드는 아래쪽 밉만 먼저 업로드하고 위쪽 밉은 렌더 스레드가 프레임 예산 안에서 뒤에 업로드한다(`TextureCache::updateStreaming`).
-         */
-        SW_GLOBAL_VARIABLE( bool, gv_textureStreaming, true, "Upload async-loaded textures with their low mips first and stream the top mips in later (false = upload every mip at once)" );
         /**
          * @brief 텍스처를 읽을 때 버리는 위쪽 밉 수입니다. 사용자 설정 `graphics.textureQuality` 선택지의 `targetValue` 가 넣는다(`engine.settings.xml`, 다시 시작해야 반영).
          * @details Graphics 가 UserSettings 보다 아래 층이라 이 변수는 읽는 쪽인 여기에 둔다(설정은 이름으로 넣는다). 언리얼 `r.Streaming.MipBias` 처럼 기동 때 정한다.
@@ -425,7 +419,6 @@ namespace sw
         if ( engine::areEngineServicesBound() )
             engine::getSubsystem<TaskManager>().ensureMainThread();
         _impl->_qualityMipDrop.store( gv_textureMipDrop, std::memory_order_relaxed );
-        _impl->_bStreamingEnabled.store( gv_textureStreaming ? SW_TRUE : SW_FALSE, std::memory_order_relaxed );
     }
 
     int32 TextureCache::getQualityMipDrop() const
@@ -568,7 +561,7 @@ namespace sw
             source = TextureLoadOperation::Source::CPUBytes;
         shared_ptr<TextureLoadOperation> pOperation = sw::make_shared<TextureLoadOperation>( key, pDevice, source, pTexture, _impl );
         // 비동기 로드(씬의 머티리얼)는 아래쪽 밉부터 — 위쪽 밉은 렌더 스레드가 뒤에 업로드한다. 동기 로드(도구 · 미리보기)는 받는 자리에서 밉 전부를 쓴다.
-        const bool bStreamed   = start == AssetLoadStart::Async && _impl->_bStreamingEnabled.load( std::memory_order_relaxed ) != SW_FALSE && _impl->_mapEntry[key]._streamingGroup == TextureStreamingGroup::Streamable;
+        const bool bStreamed   = start == AssetLoadStart::Async && _impl->_mapEntry[key]._streamingGroup == TextureStreamingGroup::Streamable;
         pOperation->_residency = bStreamed ? TextureResidency::StreamingBase : TextureResidency::Full;
         if ( source == TextureLoadOperation::Source::RenderTarget )
         {

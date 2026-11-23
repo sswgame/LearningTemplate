@@ -32,10 +32,6 @@
 
 namespace sw
 {
-    /**
-     * @brief `-gv_gpuInstanceLod=0`: GPU 컬링이 인스턴스마다 메시 LOD 단계를 고르는 길을 끕니다(CPU `MeshLODSystem` 이 컴포넌트마다 고른다). 능력이 없는 백엔드(DX11)는 이 값과 상관없이 CPU 선택이다.
-     */
-    SW_GLOBAL_VARIABLE( bool, gv_gpuInstanceLod, true, "GPU 컬링이 인스턴스마다 메시 LOD 단계를 고른다 (false=CPU 가 컴포넌트마다 고른다)" );
     SW_GLOBAL_VARIABLE( float32, gv_lodCrossfadeSeconds, 0.25f, "GPU 인스턴스 LOD 단계 전환의 상보 디더 크로스페이드 시간(초) — 0 이하면 크로스페이드 없이 바로 바꾼다" );
 } // namespace sw
 
@@ -229,7 +225,7 @@ namespace sw
 
     void RenderPacketSceneCollector::populateGPUSceneSnapshot( RenderFramePacket& packet, Scene* pActiveScene, GPUUploadQueue* pUploadQueue )
     {
-        _gpuSceneBuilder->setGPUInstanceLODEnabled( _bGPUInstanceLODCapable && gv_gpuInstanceLod );
+        _gpuSceneBuilder->setGPUInstanceLODEnabled( _bGPUInstanceLODCapable != SW_FALSE );
         _gpuSceneBuilder->setGPUInstanceLODCrossfadeSeconds( gv_lodCrossfadeSeconds );
         populateSnapshot( packet, pActiveScene, pUploadQueue );
     }

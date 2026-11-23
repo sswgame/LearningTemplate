@@ -889,8 +889,8 @@ namespace sw
         vector<GPUTransparentSortKey> _listScratchViewParticleKey;
         /// @brief 방출기(정렬 뒤 `_listParticleBatch` 번호)마다 나이 순서 구간입니다. 뷰와 무관해 한 번만 만든다(`assignParticleOrders`).
         vector<VFXParticleOrder> _listScratchAgeOrder;
-        /// @brief `ViewDepth` 정렬의 입자 깊이 작업 버퍼입니다(`VFXParticleOrder::appendViewDepth` — 방출기 · 뷰마다 다시 쓴다, 힙을 다시 잡지 않는다).
-        vector<float32> _listScratchParticleDepth;
+        /// @brief 입자 정렬의 작업 버퍼입니다(`VFXParticleOrder` — 방출기 · 뷰마다 다시 쓴다, 힙을 다시 잡지 않는다).
+        VFXParticleSortScratch _particleSortScratch;
         /// @brief 주 시점 구간까지의 순서 목록 길이입니다. 추가 뷰 순서를 다시 만들 때 그 뒤를 잘라 쌓이지 않게 한다.
         uint32 _mainParticleOrderSize{ 0 };
         /// @brief 주 시점까지의 GPU 정렬 일 수와 GPU 순서 칸 수입니다(`_mainParticleOrderSize` 와 같은 까닭).
