@@ -1,8 +1,12 @@
 #include "pch.h"
 
+#include "Core/File/FileUtil.h"
 #include "Core/Testing/TestFramework.h"
 
 #include "Editor/Common/Localization/TranslationMemory.h"
+
+#include "Engine/Content/AssetGUID.h"
+#include "Engine/Localization/LocalizationDocuments.h"
 
 // TranslationMemoryTest — 번역 메모리의 일치: 같은 원문은 그대로, 정규화가 같거나 비슷한 원문은 근사 일치, 너무 다르면 없음. 유사도는 글자 단위, XML 왕복(nogpu).
 
@@ -38,4 +42,33 @@ SW_TEST_CASE( TranslationMemoryTest, ExactNormalizedAndFuzzyMatches )
     SW_REQUIRE_TRUE( reloaded.loadFromXMLText( memory.saveToXMLText(), "tm" ) );
     SW_EXPECT_EQUAL( size_t( 2 ), reloaded.getEntryCount() );
     SW_EXPECT_EQUAL( memory.getCulture(), reloaded.getCulture() );
+}
+
+/**
+ * @brief [TranslationMemoryTest] 번역 메모리 · 원문 표를 다시 써도 파일의 정체성 머리는 그대로다 — 글 수집이 문서를 통째로 다시 쓰고, 같은 내용이면 쓰지 않는다
+ */
+SW_TEST_CASE( TranslationMemoryTest, SavingKeepsTheAssetIdentityHeader )
+{
+    const sw::AssetGUID    guid       = sw::AssetGUID::create();
+    const sw::AbsolutePath memoryPath = sw::test::makeScratchPath( "ko.tm.xml" );
+    const sw::AbsolutePath tablePath  = sw::test::makeScratchPath( "test.strings.xml" );
+
+    sw::TranslationMemory memory;
+    memory.setCulture( "ko" );
+    SW_REQUIRE_TRUE( sw::FileUtil::writeTextFile( memoryPath, sw::AssetGUIDHeader::write( memory.saveToXMLText(), guid ) ) );
+    (void)memory.addPair( "Open the door", "문을 연다" );
+    SW_REQUIRE_TRUE( memory.saveToFile( memoryPath.str() ) );
+
+    sw::SourceStringTable table;
+    SW_REQUIRE_TRUE( sw::FileUtil::writeTextFile( tablePath, sw::AssetGUIDHeader::write( table.saveToXMLText(), guid ) ) );
+    table.getOrAddEntry( "Door.Open" )._source = "Open the door";
+    SW_REQUIRE_TRUE( table.saveToFile( tablePath ) );
+
+    for ( const sw::AbsolutePath* pPath : { &memoryPath, &tablePath } )
+    {
+        sw::string text;
+        SW_REQUIRE_TRUE( sw::FileUtil::readTextFile( *pPath, text ) );
+        SW_EXPECT_TRUE( sw::AssetGUIDHeader::read( text )._guid == guid );
+        SW_EXPECT_TRUE( text.find( "Open the door" ) != sw::string::npos );
+    }
 }

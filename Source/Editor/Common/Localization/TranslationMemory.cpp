@@ -7,6 +7,7 @@
 #include "Core/String/StringBuilder.h"
 #include "Core/String/StringUtil.h"
 
+#include "Engine/Content/AssetGUID.h"
 #include "Engine/Localization/CultureInfo.h"
 #include "Engine/Serialization/XML/XMLDocument.h"
 #include "Engine/Serialization/XML/XMLReadUtil.h"
@@ -94,10 +95,11 @@ namespace sw
 
     bool TranslationMemory::saveToFile( string_view absolutePath ) const
     {
-        const string text = saveToXMLText();
+        // 정체성 머리는 있던 파일의 것을 옮겨 쓴다(문서를 통째로 다시 쓰면 잃는다).
         string       existing;
-        const bool   bFileContentUnchanged = FileUtil::readOptionalTextFile( FileUtil::toDiskPath( absolutePath ), existing ) == OptionalFileRead::Read && existing == text;
-        if ( bFileContentUnchanged )
+        const bool   bExisting = FileUtil::readOptionalTextFile( FileUtil::toDiskPath( absolutePath ), existing ) == OptionalFileRead::Read;
+        const string text      = bExisting ? AssetGUIDHeader::carryOver( existing, saveToXMLText() ) : saveToXMLText();
+        if ( bExisting && existing == text )
             return true;
         return FileUtil::ensureParentDirectoryExists( FileUtil::toDiskPath( absolutePath ) ) && FileUtil::writeTextFile( FileUtil::toDiskPath( absolutePath ), text );
     }
