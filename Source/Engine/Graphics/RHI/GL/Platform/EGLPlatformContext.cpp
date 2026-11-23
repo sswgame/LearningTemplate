@@ -5,6 +5,7 @@
 #include "Core/Foundation/BuildInfo.h"
 
 #if defined( SW_PLATFORM_LINUX ) && defined( SW_WITH_WAYLAND )
+    #include "Core/Container/vector.h"
     #include "Core/Log/Logger.h"
 
     #include "Engine/Graphics/RHI/RHIDescriptors.h"
@@ -54,7 +55,7 @@ namespace sw
             return false;
         }
         _pEGLDisplay = display;
-        // 데스크톱 GL 을 쓴다(기본 API 는 GLES). 이 호출은 부른 스레드에만 걸린다.
+        // 데스크톱 GL 을 쓴다(기본 API 는 GLES). 이 호출은 부른 스레드에만 걸린다 — 다른 스레드는 `makeCurrent` 가 묶는다.
         if ( eglBindAPI( EGL_OPENGL_API ) == EGL_FALSE )
         {
             SW_LOG_ERROR_ID( "OpenGL.EglBindAPIEGLOPENGLAPI", "eglBindAPI(EGL_OPENGL_API) failed - the EGL driver has no desktop OpenGL" );
@@ -62,13 +63,35 @@ namespace sw
             return false;
         }
 
-        // 깊이 · 스텐실은 GLX 가 고르는 창 비주얼처럼 24/8 이상을 요구한다. 알파는 요구하지 않는다(없으면 컴포지터가 불투명으로 합친다).
-        const EGLint arrConfigAttrib[] = { EGL_SURFACE_TYPE, EGL_WINDOW_BIT, EGL_RENDERABLE_TYPE, EGL_OPENGL_BIT, EGL_RED_SIZE, 8, EGL_GREEN_SIZE, 8, EGL_BLUE_SIZE, 8, EGL_DEPTH_SIZE, 24, EGL_STENCIL_SIZE, 8, EGL_NONE };
-        EGLConfig    config{ nullptr };
-        EGLint       configCount{ 0 };
-        if ( eglChooseConfig( display, arrConfigAttrib, &config, 1, &configCount ) == EGL_FALSE || configCount <= 0 )
+        // 깊이 · 스텐실은 GLX 가 고르는 창 비주얼처럼 24/8 이상을 요구한다. 색은 8/8/8 을 **정확히** 고른다: eglChooseConfig 는 요청한 색 비트의 합이 큰
+        // 설정을 앞에 두어 10 비트 설정이 먼저 온다(https://registry.khronos.org/EGL/sdk/docs/man/html/eglChooseConfig.xhtml). 알파는 요구하지 않는다 — 같은 색 비트에서는 버퍼가 작은(알파 없는) 설정이 먼저다.
+        const EGLint      arrConfigAttrib[] = { EGL_SURFACE_TYPE, EGL_WINDOW_BIT, EGL_RENDERABLE_TYPE, EGL_OPENGL_BIT, EGL_RED_SIZE, 8, EGL_GREEN_SIZE, 8, EGL_BLUE_SIZE, 8, EGL_DEPTH_SIZE, 24, EGL_STENCIL_SIZE, 8, EGL_NONE };
+        EGLint            configCount{ 0 };
+        vector<EGLConfig> listConfig;
+        if ( eglChooseConfig( display, arrConfigAttrib, nullptr, 0, &configCount ) != EGL_FALSE && configCount > 0 )
         {
-            SW_LOG_ERROR_ID( "OpenGL.EglChooseConfigFoundNoWindow", "eglChooseConfig found no window config for desktop OpenGL (EGL error %#)", static_cast<int32>( eglGetError() ) );
+            listConfig.resize( static_cast<size_t>( configCount ) );
+            if ( eglChooseConfig( display, arrConfigAttrib, listConfig.data(), configCount, &configCount ) == EGL_FALSE )
+                configCount = 0;
+            listConfig.resize( static_cast<size_t>( configCount ) );
+        }
+        EGLConfig config{ nullptr };
+        for ( const EGLConfig candidate : listConfig )
+        {
+            EGLint     redSize{ 0 };
+            EGLint     greenSize{ 0 };
+            EGLint     blueSize{ 0 };
+            const bool bRead = eglGetConfigAttrib( display, candidate, EGL_RED_SIZE, &redSize ) != EGL_FALSE && eglGetConfigAttrib( display, candidate, EGL_GREEN_SIZE, &greenSize ) != EGL_FALSE &&
+                               eglGetConfigAttrib( display, candidate, EGL_BLUE_SIZE, &blueSize ) != EGL_FALSE;
+            if ( bRead && redSize == 8 && greenSize == 8 && blueSize == 8 )
+            {
+                config = candidate;
+                break;
+            }
+        }
+        if ( config == nullptr )
+        {
+            SW_LOG_ERROR_ID( "OpenGL.EglChooseConfigFoundNoWindow", "eglChooseConfig found no 8-bit window config for desktop OpenGL (EGL error %#)", static_cast<int32>( eglGetError() ) );
             destroy();
             return false;
         }
@@ -165,6 +188,10 @@ namespace sw
         if ( _pEGLDisplay == nullptr || _pEGLContext == nullptr )
             return false;
 
+        // 현재 API 는 **스레드마다** 따로이고 기본값은 GLES 다 — 렌더 스레드가 묶지 않으면 eglGetCurrentContext · eglSwapInterval · 문맥 놓기가 GLES 의 것을 본다.
+        // https://registry.khronos.org/EGL/sdk/docs/man/html/eglBindAPI.xhtml ("defines the current rendering API for EGL in the thread it is called from")
+        if ( eglBindAPI( EGL_OPENGL_API ) == EGL_FALSE )
+            return false;
         // 로그를 남기지 않는다. 경합은 정상이고(다른 스레드가 쥐면 EGL_BAD_ACCESS) 알릴 책임은 부르는 쪽에 있다(WGL · GLX 와 같은 규약).
         return eglMakeCurrent( static_cast<EGLDisplay>( _pEGLDisplay ), static_cast<EGLSurface>( _pEGLSurface ), static_cast<EGLSurface>( _pEGLSurface ), static_cast<EGLContext>( _pEGLContext ) ) != EGL_FALSE;
     }
