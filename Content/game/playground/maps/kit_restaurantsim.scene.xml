@@ -26,9 +26,7 @@
 			<GameObject _schemaVersion="0" _name="Director" _bActive="true">
 				<_listComponent>
 					<RestaurantSimDemoComponent _localID="2697400789169086014" _componentName="RestaurantSimDemoComponent"
-					                            _bActive="true"
-					                            _catalogPath="game/playground/data/kitdemo/demo.restaurant.xml"
-					                            _catalog="game/playground/data/kitdemo/demo.recipes.xml" />
+					                            _bActive="true" />
 				</_listComponent>
 			</GameObject>
 		</entity>

@@ -34,8 +34,7 @@ namespace sw
     SW_AUTOMATION_GETTER_WATCH( srpgLevelUps, "SRPG.LevelUps", "Level-ups left in the battle growth log (pilot and unit)", SRPGGameModeComponent, &SRPGGameModeComponent::getLevelUps );
 
     SRPGGameModeComponent::SRPGGameModeComponent()
-        : _catalogPath{}
-        , _width{ 6 }
+        : _width{ 6 }
         , _height{ 3 }
         , _defaultTerrain{}
         , _seed{ 7 }
@@ -87,7 +86,7 @@ namespace sw
 
     bool SRPGGameModeComponent::startGame()
     {
-        if ( acquireRequired( _catalogPath, _pCatalog ) == false )
+        if ( acquireBoundCatalog( _pCatalog ) == false )
             return false;
         if ( openField( _field ) == false )
             return false;

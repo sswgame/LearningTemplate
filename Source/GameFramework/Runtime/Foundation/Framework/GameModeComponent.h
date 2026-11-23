@@ -18,6 +18,7 @@
 #include "Engine/Serialization/Format/StateIO.h"
 
 #include "GameFramework/GameFrameworkExports.h"
+#include "GameFramework/Runtime/Foundation/Framework/GameService.h"
 #include "GameFramework/Runtime/Foundation/Framework/PrefabPool.h"
 #include "GameFramework/Runtime/Foundation/Framework/Presentation/GameSound.h"
 
@@ -251,6 +252,19 @@ namespace sw
             reportMissingAsset( path );
             return false;
         }
+        /**
+         * @brief 게임 기능 범위가 건 카탈로그(`GameFeatureScope::loadCatalog`)를 같이 쥡니다. 걸려 있지 않으면 오류를 남기고 false 입니다 — 경로 칸으로 따로 읽지 않는다.
+         * @details 씬을 나가는 동안(범위를 끈 뒤 새 씬이 서기 전) 디렉터가 더 돈다 — 날 포인터 대신 참조로 쥐어 그동안 끊기지 않는다.
+         */
+        template <typename TCatalog>
+        [[nodiscard]] bool acquireBoundCatalog( SharedAssetRef<TCatalog>& outCatalog ) const
+        {
+            outCatalog = SharedAssetRef<TCatalog>::shareLive( game::findSubsystem<const TCatalog>() );
+            if ( outCatalog != nullptr )
+                return true;
+            reportMissingCatalog( TCatalog::kDataKind );
+            return false;
+        }
         /** @brief 입력 맵의 동작이 눌려 있으면 true 입니다. 위젯이 받은 입력은 게임으로 새지 않습니다(`UIInputMapView`). */
         [[nodiscard]] bool isActionDown( const hashed_string& action ) const;
         /** @brief 입력 맵의 동작이 이번 프레임에 발동했으면 true 입니다(`UIInputMapView`). */
@@ -269,6 +283,8 @@ namespace sw
     private:
         /** @brief 필수 에셋을 받지 못했다는 오류를 남깁니다(`GameMode.RequiredAssetMissing`). 템플릿 밖에 두어 헤더가 로그를 끌어오지 않게 한다. */
         static void reportMissingAsset( string_view path );
+        /** @brief 게임 범위에 카탈로그가 걸려 있지 않다는 오류를 남깁니다(`GameMode.BoundCatalogMissing`). */
+        static void reportMissingCatalog( string_view kind );
         /** @brief 걷혀 있으면 다시 세울 플러시를 잡고 `tickGame` 을 부릅니다. 끝에 쌓인 스폰이나 소리가 있으면 플러시를 잡습니다. */
         void runRules( float32 deltaTime );
         /** @brief 틱은 시간만 쌓고 규칙(`runRules`)은 틱 뒤에 돌게 겁니다 — `updateGame` 은 틱 밖(게임 스레드)에서 돈다. */

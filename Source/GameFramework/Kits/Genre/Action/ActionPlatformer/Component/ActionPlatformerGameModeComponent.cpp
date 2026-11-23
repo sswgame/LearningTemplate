@@ -93,8 +93,7 @@ namespace sw
                                 &ActionPlatformerGameModeComponent::getInPlaceUses );
 
     ActionPlatformerGameModeComponent::ActionPlatformerGameModeComponent()
-        : _catalogPath{}
-        , _stageID{}
+        : _stageID{}
         , _listTerrainRow{}
         , _listCheckpointX{}
         , _listSecretPosition{}
@@ -162,7 +161,7 @@ namespace sw
 
     bool ActionPlatformerGameModeComponent::startGame()
     {
-        if ( acquireRequired( _catalogPath, _pCatalog ) == false )
+        if ( acquireBoundCatalog( _pCatalog ) == false )
             return false;
         if ( _run.start( _pCatalog.get(), _stageID.key() ) == false )
         {

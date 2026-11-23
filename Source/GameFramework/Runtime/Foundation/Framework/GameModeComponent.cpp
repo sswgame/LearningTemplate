@@ -386,6 +386,12 @@ namespace sw
         SW_LOG_ERROR_ID( "GameMode.RequiredAssetMissing", "GameMode: the required asset '%#' could not be loaded - the game cannot start", path );
     }
 
+    void GameModeComponent::reportMissingCatalog( string_view kind )
+    {
+        SW_LOG_ERROR_ID( "GameMode.BoundCatalogMissing",
+                         "GameMode: catalog '%#' is not bound in the game scope - the minigame (features, catalogs) or gamesettings gameFeatures must load it; the game cannot start", kind );
+    }
+
     bool GameModeComponent::isActionDown( const hashed_string& action ) const
     {
         const InputManager* pInput = game::findSubsystem<InputManager>();

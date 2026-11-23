@@ -63,7 +63,7 @@ namespace sw
     SharedAssetRef<AssetType> SharedAssetCache<AssetType>::acquire( string_view path )
     {
         shared_ptr<const AssetType>                     pAsset   = requestWith( path, AssetLoadStart::OnCallingThread ).wait();
-        const WeakInternVersion<const AssetType>* const pVersion = pAsset != nullptr ? getTable().findVersion( pAsset ) : nullptr;
+        const WeakInternVersion<const AssetType>* const pVersion = pAsset != nullptr ? getTable().findVersion( pAsset.get() ) : nullptr;
         return SharedAssetRef<AssetType>{ std::move( pAsset ), pVersion };
     }
 
@@ -108,7 +108,7 @@ namespace sw
     }
 
     template <typename AssetType>
-    const WeakInternVersion<const AssetType>* SharedAssetCache<AssetType>::findVersion( const shared_ptr<const AssetType>& pAsset )
+    const WeakInternVersion<const AssetType>* SharedAssetCache<AssetType>::findVersion( const AssetType* pAsset )
     {
         if ( pAsset == nullptr )
             return nullptr;

@@ -41,8 +41,7 @@ namespace sw
                                 &FightingDemoComponent::getWinnerRounds );
 
     FightingDemoComponent::FightingDemoComponent()
-        : _catalogPath{}
-        , _pCatalog{}
+        : _pCatalog{}
         , _matchWinner{ FightingDemoComponentInternal::kNoWinner }
         , _loserHealth{ 0 }
         , _winnerRounds{ 0 }
@@ -83,7 +82,7 @@ namespace sw
 
     bool FightingDemoComponent::startGame()
     {
-        if ( acquireRequired( _catalogPath, _pCatalog ) == false )
+        if ( acquireBoundCatalog( _pCatalog ) == false )
             return false;
         return runMatch();
     }

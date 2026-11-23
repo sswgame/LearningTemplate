@@ -7,4 +7,10 @@
 	<PrefixRedirect from="game/pixeltown" to="game/playground/pixeltown" />
 	<Redirect from="game/playground/pixeltown/automation/talk.scenario.xml" to="game/playground/automation/pixeltown_talk.scenario.xml" />
 	<Redirect from="game/playground/pixeltown/automation/slice.scenario.xml" to="game/playground/automation/pixeltown_slice.scenario.xml" />
+	<Redirect from="game/playground/data/kitdemo/demo.fighters.xml" to="game/playground/data/fighters.xml" />
+	<Redirect from="game/playground/data/kitdemo/demo.restaurant.xml" to="game/playground/data/restaurant.xml" />
+	<Redirect from="game/playground/data/kitdemo/demo.recipes.xml" to="game/playground/data/recipes.xml" />
+	<Redirect from="game/playground/data/kitdemo/demo.conquest.xml" to="game/playground/data/conquest.xml" />
+	<Redirect from="game/playground/data/kitdemo/demo.actionplatformer.xml" to="game/playground/data/actionplatformer.xml" />
+	<Redirect from="game/playground/data/kitdemo/demo.srpg.xml" to="game/playground/data/srpg.xml" />
 </Redirects>
