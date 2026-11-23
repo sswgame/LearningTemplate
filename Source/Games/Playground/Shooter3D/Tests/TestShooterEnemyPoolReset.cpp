@@ -7,6 +7,7 @@
 #include "Engine/Animation/Component/SkeletalAnimatorComponent.h"
 #include "Engine/Character/Hit/CharacterHit.h"
 #include "Engine/Character/Hit/RagdollComponent.h"
+#include "Engine/Object/Component/SceneComponent.h"
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
 
@@ -107,11 +108,9 @@ SW_TEST_CASE( ShooterEnemyPoolResetTest, ShiftedOriginMovesOnlyTheView )
 {
     GameObjectManager manager;
     manager.setWorldOrigin( double3{ 100.0, 0.0, -50.0 } );
-    PrefabPool  pool    = Util::makePool();
-    GameObject* pObject = pool.acquire( manager, "QuadShell" );
-    SW_REQUIRE_NOT_NULL( pObject );
-    ShooterEnemyComponent* pEnemy = pObject->getComponent<ShooterEnemyComponent>();
-    SceneComponent*        pScene = pObject->getPrimarySceneComponent();
+    GameObject* const      pObject = manager.createGameObject( hashed_string( "Enemy" ) );
+    SceneComponent* const  pScene  = pObject->addComponent<SceneComponent>();
+    ShooterEnemyComponent* pEnemy  = pObject->addComponent<ShooterEnemyComponent>();
     SW_REQUIRE_TRUE( pEnemy != nullptr && pScene != nullptr );
 
     SW_REQUIRE_TRUE( pEnemy->launch( GameObjectHandle{

@@ -119,8 +119,7 @@ namespace sw
     }
 
     ShooterGameModeComponent::ShooterGameModeComponent()
-        : _effectPrefab{
-    }
+        : _effectPrefab{}
         , _tracerPrefab{}
         , _autoPlayPrefab{}
         , _listEnemyKind{}
@@ -152,20 +151,20 @@ namespace sw
         , _listPendingReplica{}
         , _tintCache{}
         , _autoPlayController{}
-        , _playerFeet{ float3{ 0.0f, 0.0f, -16.0f } },
-        _statusTimer{ 0.0f },
-        _pendingHeal{ 0.0f },
-        _spawnCursor{ 0 },
-        _killCount{ 0 },
-        _profileReload{},
-        _nextEnemyNetID{ ShooterNetPawnComponent::kPawnEntityID + 1u },
-        _appliedAutoPlay{ -1 },
-        _bAmmoPending{ SW_FALSE },
-        _bPacingReady{ SW_FALSE },
-        _bPlayerAlive{ SW_TRUE },
-        _bReplica{ SW_FALSE },
-        _bMatchEnded{ SW_FALSE },
-        _reserved{ 0 }
+        , _playerFeet{}
+        , _statusTimer{ 0.0f }
+        , _pendingHeal{ 0.0f }
+        , _spawnCursor{ 0 }
+        , _killCount{ 0 }
+        , _profileReload{}
+        , _nextEnemyNetID{ ShooterNetPawnComponent::kPawnEntityID + 1u }
+        , _appliedAutoPlay{ -1 }
+        , _bAmmoPending{ SW_FALSE }
+        , _bPacingReady{ SW_FALSE }
+        , _bPlayerAlive{ SW_TRUE }
+        , _bReplica{ SW_FALSE }
+        , _bMatchEnded{ SW_FALSE }
+        , _reserved{ 0 }
     {
     }
 
