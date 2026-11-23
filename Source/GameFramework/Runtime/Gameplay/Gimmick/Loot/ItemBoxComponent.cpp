@@ -10,6 +10,7 @@
 
 #include "GameFramework/Runtime/Foundation/Random/GameRandom.h"
 #include "GameFramework/Runtime/Gameplay/Gimmick/GimmickUtil.h"
+#include "GameFramework/Runtime/Gameplay/Interaction/InteractableComponent.h"
 #include "GameFramework/Runtime/Gameplay/Inventory/IItemReceiver.h"
 
 namespace sw
@@ -23,11 +24,15 @@ namespace sw
                 float32 operator()( const ItemBoxChoice& choice ) const { return choice._weight; }
             };
 
+            static bool hasTags( const GameObject& target, const TagContainer& requiredTags )
+            {
+                return requiredTags.getTagCount() == 0 || target.getTags().hasAllTags( requiredTags );
+            }
+
             static bool canAccept( const OverlapInfo& overlap, const TagContainer& requiredTags )
             {
                 // 받을 가방이 없는 몸(발판 · 통 · 탄)은 닿아도 줄 대상이 아니다 — 조용히 건너뛴다(언리얼 줍기 아이템이 폰만 받는 자리, docs/agents/Gameplay.md 지역 효과 예외).
-                return overlap._pOther != nullptr && overlap._bOtherTrigger == SW_FALSE &&
-                       ( requiredTags.getTagCount() == 0 || overlap._pOther->getTags().hasAllTags( requiredTags ) ) &&
+                return overlap._pOther != nullptr && overlap._bOtherTrigger == SW_FALSE && hasTags( *overlap._pOther, requiredTags ) &&
                        IItemReceiver::findForTarget( *overlap._pOther ) != nullptr;
             }
         };
@@ -37,7 +42,10 @@ namespace sw
 namespace sw
 {
     ItemBoxComponent::ItemBoxComponent()
-        : _listChoice{}
+        : _openBy{ ItemBoxOpenBy::Touch }
+        , _maxOpenCount{ 0 }
+        , _bHideWhenOpened{ true }
+        , _listChoice{}
         , _requiredTags{}
         , _respawnDelay{ 3.0f }
         , _seed{ 1u }
@@ -55,11 +63,33 @@ namespace sw
 
     void ItemBoxComponent::handleOverlapBegin( const OverlapInfo& overlap )
     {
-        if ( ItemBoxComponentInternal::canAccept( overlap, _requiredTags ) )
+        if ( _openBy == ItemBoxOpenBy::Touch && ItemBoxComponentInternal::canAccept( overlap, _requiredTags ) )
             (void)open( *overlap._pOther ); // 뽑힌 이름은 쓰지 않는다. 비어 있으면 열리지 않을 뿐이다
     }
 
-    hashed_string ItemBoxComponent::open( GameObject& target )
+    void ItemBoxComponent::onBeginPlay()
+    {
+        Component::onBeginPlay();
+        if ( _openBy != ItemBoxOpenBy::Use )
+            return;
+        GameObject*            pOwner        = getOwner();
+        InteractableComponent* pInteractable = pOwner != nullptr ? pOwner->getComponent<InteractableComponent>() : nullptr;
+        if ( pInteractable == nullptr )
+        {
+            SW_LOG_ERROR_ID( "ItemBox.UseNeedsInteractable", "Item box '%#' opens by use but has no InteractableComponent - it never opens", pOwner != nullptr ? pOwner->getName().c_str() : "" );
+            return;
+        }
+        _usedSubscription = pInteractable->getCompletedDelegate().add( [this]( const GameObject& user )
+        { handleUsed( user ); } );
+    }
+
+    void ItemBoxComponent::handleUsed( const GameObject& user )
+    {
+        if ( ItemBoxComponentInternal::hasTags( user, _requiredTags ) )
+            (void)open( user ); // 못 주면 giveItem 이 경고를 남긴다
+    }
+
+    hashed_string ItemBoxComponent::open( const GameObject& target )
     {
         GameObject* pOwner      = getOwner();
         const bool  bCannotOpen = pOwner == nullptr || isAvailable() == false || _listChoice.empty();
@@ -78,11 +108,14 @@ namespace sw
         if ( GimmickUtil::giveItem( *pOwner, target, choice._item, choice._count ) == false )
             return hashed_string{};
         ++_openCount;
-        if ( _respawnDelay > 0.0f )
-        {
+        const bool bSpent = _maxOpenCount > 0 && _openCount >= _maxOpenCount;
+        if ( bSpent == false && _respawnDelay > 0.0f )
             _respawnStepsLeft = _clock.secondsToSteps( _respawnDelay, 1 );
+        if ( isAvailable() )
+            return choice._item; // 늘 있는 상자(낚시터)
+        if ( _bHideWhenOpened )
             GimmickUtil::setBodyActive( *pOwner, false, this );
-        }
+        GimmickUtil::setInteractableEnabled( *pOwner, false );
         return choice._item;
     }
 
@@ -102,7 +135,9 @@ namespace sw
             return;
         --_respawnStepsLeft;
         GameObject* pOwner = getOwner();
-        if ( _respawnStepsLeft == 0 && pOwner != nullptr )
-            GimmickUtil::setBodyActive( *pOwner, true, this );
+        if ( _respawnStepsLeft > 0 || pOwner == nullptr )
+            return;
+        GimmickUtil::setBodyActive( *pOwner, true, this );
+        GimmickUtil::setInteractableEnabled( *pOwner, true );
     }
 } // namespace sw

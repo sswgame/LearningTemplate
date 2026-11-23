@@ -4,14 +4,18 @@
 #include "Core/Name/hashed_string.h"
 #include "Core/Testing/TestFramework.h"
 
+#include "Engine/Object/Component/SceneComponent.h"
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
 
 #include "GameFramework/Runtime/Character/Control/Controller/PlayerControllerComponent.h"
 #include "GameFramework/Runtime/Character/Control/Pawn/PawnComponent.h"
+#include "GameFramework/Runtime/Gameplay/Gimmick/Loot/GatheringNodeComponent.h"
 #include "GameFramework/Runtime/Gameplay/Gimmick/Loot/ItemBoxComponent.h"
 #include "GameFramework/Runtime/Gameplay/Gimmick/Loot/Tests/ItemReceiverTestComponent.h"
+#include "GameFramework/Runtime/Gameplay/Interaction/InteractableComponent.h"
 #include "GameFramework/Runtime/Gameplay/Inventory/InventoryComponent.h"
+#include "GameFramework/Runtime/Gameplay/Inventory/PickupComponent.h"
 
 using namespace sw;
 
@@ -82,4 +86,91 @@ SW_TEST_CASE( LootGrantTest, ItemBoxUsesTheItemContract )
     SW_EXPECT_TRUE( pBoxB->open( *pCart ).empty() ); // 2 개 더는 자리(3)를 넘는다 — 거절, 상자는 닫힌 채
     SW_EXPECT_TRUE( pBoxB->isAvailable() );
     SW_EXPECT_EQUAL( 2, pReceiver->_received );
+}
+
+/** @brief [LootGrantTest] 써서 여는 상자(보물 상자)는 상호작용을 끝낸 쪽에 한 번만 열리고 상호작용이 꺼진다 — 끝낸 쪽도 남는다(`getLastInteractor`) */
+SW_TEST_CASE( LootGrantTest, ChestOpensOnceForWhoUsesIt )
+{
+    GameObjectManager          manager;
+    GameObject*                pWho      = manager.createGameObject( hashed_string( "Who" ) );
+    ItemReceiverTestComponent* pReceiver = pWho->addComponent<ItemReceiverTestComponent>();
+    pReceiver->_room                     = 9;
+    GameObject*            pChest        = manager.createGameObject( hashed_string( "Chest" ) );
+    InteractableComponent* pInteractable = pChest->addComponent<InteractableComponent>();
+    ItemBoxComponent*      pBox          = pChest->addComponent<ItemBoxComponent>();
+    InteractionDef         def;
+    def._id = hashed_string( "open" );
+    pInteractable->setDefinition( def );
+    ItemBoxChoice choice;
+    choice._item  = hashed_string( "Gem" );
+    choice._count = 2;
+    pBox->setChoices( vector<ItemBoxChoice>{ choice } );
+    pBox->setOpenBy( ItemBoxOpenBy::Use );
+    pBox->setMaxOpenCount( 1 );
+    manager.beginPlay();
+
+    pInteractable->completeInteraction( *pWho );
+    SW_EXPECT_EQUAL( 2, pReceiver->_received );
+    SW_EXPECT_FALSE( pBox->isAvailable() );
+    SW_EXPECT_FALSE( pInteractable->isEnabled() );
+    SW_EXPECT_TRUE( pInteractable->getLastInteractor() == pWho->getHandle() );
+    pInteractable->completeInteraction( *pWho ); // 꺼졌다 — 다시 주지 않는다
+    SW_EXPECT_EQUAL( 2, pReceiver->_received );
+}
+
+/** @brief [LootGrantTest] 월드 아이템은 상호작용을 끝낸 쪽의 가방에 모두 들어가면 사라지고, 자리가 없으면 남는다(경고) */
+SW_TEST_CASE( LootGrantTest, WorldItemIsPickedUpByUse )
+{
+    SW_EXPECT_LOG( "Pickup.NotGranted" );
+    GameObjectManager          manager;
+    GameObject*                pWho      = manager.createGameObject( hashed_string( "Who" ) );
+    ItemReceiverTestComponent* pReceiver = pWho->addComponent<ItemReceiverTestComponent>();
+    InventorySlot              stack;
+    stack._itemID     = hashed_string( "Ore" );
+    stack._count      = 3;
+    GameObject* pItem = PickupComponent::spawn( manager, stack, float3{} );
+    SW_REQUIRE_NOT_NULL( pItem );
+    InteractableComponent* pInteractable = pItem->addComponent<InteractableComponent>();
+    InteractionDef         def;
+    def._id = hashed_string( "pickup" );
+    pInteractable->setDefinition( def );
+    manager.beginPlay();
+    const GameObjectHandle item = pItem->getHandle();
+
+    pReceiver->_room = 2;
+    pInteractable->completeInteraction( *pWho );
+    SW_EXPECT_EQUAL( 0, pReceiver->_received );
+    SW_EXPECT_NOT_NULL( manager.resolveGameObject( item ) );
+
+    pReceiver->_room = 3;
+    pInteractable->completeInteraction( *pWho );
+    SW_EXPECT_EQUAL( 3, pReceiver->_received );
+    manager.update( 1.0f / 60.0f );
+    SW_EXPECT_NULL( manager.resolveGameObject( item ) );
+}
+
+/** @brief [LootGrantTest] 다 벤 나무는 벤 쪽의 반대로 쓰러져 눕는다 — 누운 뒤 위 축이 벤 쪽에서 멀어지는 쪽이다 */
+SW_TEST_CASE( LootGrantTest, DepletedTreeFallsAwayFromWhoFelledIt )
+{
+    GameObjectManager manager;
+    GameObject*       pWho = manager.createGameObject( hashed_string( "Who" ) );
+    pWho->addComponent<SceneComponent>()->setLocalPosition( float3{ -2.0f, 0.0f, 0.0f } );
+    pWho->addComponent<ItemReceiverTestComponent>()->_room = 9;
+    GameObject*             pTree                          = manager.createGameObject( hashed_string( "Tree" ) );
+    SceneComponent*         pRoot                          = pTree->addComponent<SceneComponent>();
+    GatheringNodeComponent* pNode                          = pTree->addComponent<GatheringNodeComponent>();
+    pNode->configure( hashed_string( "Log" ), 2, 1 );
+    pNode->setFallDuration( 0.5f );
+    manager.beginPlay();
+
+    SW_EXPECT_TRUE( pNode->gather( *pWho ) );
+    SW_EXPECT_TRUE( pNode->isFalling() );
+    for ( int32 step = 0; step < 120 && pNode->isFalling(); ++step )
+    {
+        pNode->stepOnce();
+    }
+    SW_EXPECT_FALSE( pNode->isFalling() );
+    const float3 up = float3::transformVector( float3{ 0.0f, 1.0f, 0.0f }, pRoot->getWorldMatrix() );
+    SW_EXPECT_NEAR( 1.0f, up._x, 1.0e-2f ); // 벤 쪽(-X)의 반대
+    SW_EXPECT_NEAR( 0.0f, up._y, 1.0e-2f );
 }

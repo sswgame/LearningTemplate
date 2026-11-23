@@ -3,6 +3,7 @@
  * @brief 월드에 놓인 아이템(떨어뜨린 것 · 씬에 둔 것)입니다. 캐릭터 가방이 주워 가면 오브젝트가 사라지고, 가방에 자리가 없으면 그대로 남습니다.
  */
 #pragma once
+#include "Core/Delegate/Subscription.h"
 #include "Core/Foundation/Types.h"
 #include "Core/Math/Math.h"
 #include "Core/Name/hashed_string.h"
@@ -22,7 +23,8 @@ namespace sw
      * @class PickupComponent
      * @brief 아이템 조각 하나를 월드에 둡니다(언리얼 Lyra 의 `ALyraWorldCollectable` · 유니티 픽업 프리팹 자리).
      * @details 씬 데이터는 `_itemID` · `_count` 를 적고, 버리기(`InventoryCommandKind::Drop`)로 생긴 것은 `spawn` 이 꺼낸 조각(내구도 · 꾸미기째)을 그대로 든다.
-     *          줍기(`pickUp`)는 전부 들어갈 때만 한다(겹치는 것은 칸 · 무게, 개체는 빈 칸) — 반만 주워 바닥에 남은 수가 갈라지지 않는다.
+     *          주인은 같은 오브젝트의 상호작용(`InteractableComponent`)을 끝낸 쪽, `_bPickUpOnTouch` 면 닿은 쪽이다 — 그 가방(`IItemReceiver`)에 조각째 넣는다(`giveTo`).
+     *          줍기(`giveTo` · `pickUp`)는 전부 들어갈 때만 한다(겹치는 것은 칸 · 무게, 개체는 빈 칸) — 반만 주워 바닥에 남은 수가 갈라지지 않는다.
      */
     REFLECT( Category = "Gameplay", DisplayName = "World Item", Tooltip = "An item stack lying in the world that a character bag can pick up" )
     class SW_GF_API PickupComponent : public Component
@@ -35,8 +37,10 @@ namespace sw
         PickupComponent();
         ~PickupComponent() override;
 
-        /** @brief 씬 데이터의 아이템(`_itemID` · `_count`)을 조각으로 세웁니다(`spawn` 이 넣은 조각이 있으면 그대로 둔다). */
+        /** @brief 씬 데이터의 아이템(`_itemID` · `_count`)을 조각으로 세우고(`spawn` 이 넣은 조각이 있으면 그대로 둔다) 같은 오브젝트의 상호작용 완료를 듣습니다. */
         void onBeginPlay() override;
+        /** @brief 겹침 진입 사건을 구독합니다. */
+        void onRegister( GameObjectManager& manager ) override;
 
         /**
          * @brief @p manager 에 아이템 조각 @p item 을 든 오브젝트를 @p position 에 만듭니다(작은 상자 메시 + 이 컴포넌트). 빈 조각이면 만들지 않고 nullptr 입니다.
@@ -46,14 +50,28 @@ namespace sw
 
         /** @brief 가방 @p bag(캐릭터의 것 — `CharacterEquipmentComponent::getBagForTrade`)에 이 조각을 모두 넣고 오브젝트를 없앱니다. 다 들어가지 않으면 아무것도 바꾸지 않고 false 입니다. */
         [[nodiscard]] bool pickUp( Inventory& bag );
+        /**
+         * @brief @p target 이 받을 가방(`IItemReceiver::findForTarget`)에 이 조각을 모두 넣고 오브젝트를 없앱니다. 받을 가방이 없거나 차면 경고를 남기고 그대로 둡니다(false).
+         * @details 게임 스레드(틱 밖)에서 부른다 — 가방은 다른 오브젝트의 상태다.
+         */
+        [[nodiscard]] bool giveTo( const GameObject& target );
 
         const InventorySlot& getItem() const { return _item; }
 
     private:
-        InventorySlot _item; ///< 든 조각(개체 상태째)
+        /** @brief 닿은 몸이 줍습니다(`_bPickUpOnTouch`, 받을 가방이 있는 몸만). */
+        void handleOverlapBegin( const OverlapInfo& overlap );
+        /** @brief 조각을 비우고 오브젝트를 없앱니다. */
+        void consume();
+
+        Subscription  _overlapSubscription; ///< 겹침 진입 구독(`handleOverlapBegin`)
+        Subscription  _usedSubscription;    ///< 같은 오브젝트의 상호작용 완료 구독
+        InventorySlot _item;                ///< 든 조각(개체 상태째)
         PROPERTY( DisplayName = "Item", Tooltip = "Item id of the stack (scene data; a dropped stack keeps its own instance)" )
         hashed_string _itemID;
         PROPERTY( DisplayName = "Count", Min = 1 )
         int32 _count;
+        PROPERTY( DisplayName = "Pick Up On Touch", Tooltip = "Touching it picks it up (needs a trigger body); off: only this object's interaction" )
+        bool _bPickUpOnTouch;
     };
 } // namespace sw
