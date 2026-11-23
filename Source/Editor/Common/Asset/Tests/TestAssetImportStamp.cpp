@@ -65,6 +65,17 @@ namespace
         mutable atomic<uint32> _importCount{ 0 }; ///< 테스트 계수 — 임포터가 불린 수(병렬 임포트에서도 센다)
     };
 
+    /** @brief 임포트하는 동안 원본이 바뀌는 것을 흉내 냅니다 — 결과를 쓴 뒤 원본에 다른 글을 씁니다(한 번만). */
+    class EditedSourceImporter final : public FakeThingImporter
+    {
+    public:
+        bool importSource( string_view sourcePath, string_view importedPath, string_view assetPath ) const override
+        {
+            const bool bImported = FakeThingImporter::importSource( sourcePath, importedPath, assetPath );
+            return bImported && ( getImportCount() > 1 || writeText( string( sourcePath ), "edited while importing" ) );
+        }
+    };
+
     /** @brief 같은 원본(`pack/things_raw/a.src`)을 둔 새 체크아웃 폴더입니다(결과 · 스탬프 없음). */
     string makeCheckout( string_view name )
     {
@@ -142,6 +153,25 @@ SW_TEST_CASE( AssetImportStampTest, StaleSourceIsServedFromCache )
     SW_EXPECT_TRUE( FileUtil::readTextFile( FileUtil::toDiskPath( FileUtil::joinPath( secondRoot, "pack/things/a/side.txt" ) ), text ) && text == "side" );
     // 받은 결과로 스탬프도 맞았다 — 다음 대조는 깨끗하다.
     SW_EXPECT_TRUE( AssetImportStampUtil::importAll( secondRoot, second, AssetImportMode::CheckOnly, nullptr, cache ).isClean() );
+}
+
+/**
+ * @brief [AssetImportStampTest] 임포트하는 동안 원본이 바뀌면 그 결과를 스탬프 · DDC 에 앞 원본의 것으로 남기지 않고, 다음 임포트가 다시 만든다
+ */
+SW_TEST_CASE( AssetImportStampTest, SourceChangedWhileImportingIsNotRecorded )
+{
+    const DerivedDataCache     cache{ vector<DerivedDataLayer>{ DerivedDataLayer{ test::makeScratchPath( "ImportDDC" ), DerivedDataAccess::ReadWrite } } };
+    const string               root = makeCheckout( "ImportSourceChanged" );
+    const EditedSourceImporter edited;
+    SW_EXPECT_FALSE( AssetImportStampUtil::importAll( root, edited, AssetImportMode::ImportStale, nullptr, cache ).isClean() );
+
+    // 원본을 처음 내용으로 되돌린 다른 체크아웃은 DDC 에서 바뀐 원본의 결과를 받지 않는다.
+    const FakeThingImporter clean;
+    SW_EXPECT_TRUE( AssetImportStampUtil::importAll( makeCheckout( "ImportSourceChangedClean" ), clean, AssetImportMode::ImportStale, nullptr, cache ).isClean() );
+    SW_EXPECT_EQUAL( 1u, clean.getImportCount() );
+
+    SW_EXPECT_TRUE( AssetImportStampUtil::importAll( root, edited, AssetImportMode::ImportStale, nullptr, cache ).isClean() );
+    SW_EXPECT_TRUE( AssetImportStampUtil::importAll( root, edited, AssetImportMode::CheckOnly, nullptr, cache ).isClean() );
 }
 
 /**

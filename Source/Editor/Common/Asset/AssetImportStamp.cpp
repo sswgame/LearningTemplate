@@ -401,6 +401,15 @@ namespace sw::editor
                             outResult._problem = string( problemBuilder.view() );
                             return;
                         }
+                        // 임포트하는 동안 원본이 바뀌었으면 이 결과는 앞 원본 해시의 것이 아니다 — 적으면 스탬프 · DDC 가 앞 내용의 자리에 새 내용의 결과를 남겨,
+                        // 원본을 되돌렸을 때 다른 결과를 "맞다" 로 답한다(유니티도 임포트 뒤 원본 해시를 다시 견준다).
+                        if ( _pImporter->computeSourceHash( file._sourcePath, file._assetPath ) != current._sourceHash )
+                        {
+                            StringBuilder<constant::buffer::kMax512> problemBuilder;
+                            problemBuilder.appendFormat( "%#: 임포트하는 동안 원본이 바뀌었습니다 - 다음 임포트가 다시 만듭니다", file._assetPath );
+                            outResult._problem = string( problemBuilder.view() );
+                            return;
+                        }
                         if ( cacheKeyDescription.empty() == false )
                             storeInCache( *_pImporter, *_pDerivedDataCache, file, cacheKeyDescription );
                     }
