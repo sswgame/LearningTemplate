@@ -6,6 +6,7 @@
 #include "Core/Concurrency/atomic.h"
 #include "Core/Container/SlotHandle.h"
 #include "Core/Container/string.h"
+#include "Core/Delegate/Delegate.h"
 #include "Core/Foundation/Types.h"
 #include "Core/Math/Math.h"
 #include "Core/Memory/Memory.h"
@@ -106,6 +107,8 @@ namespace sw
 
         /** @brief 상호작용이 끝났을 때 부릅니다. 쿨다운, 완료 수, 이벤트, 권한 훅을 처리합니다. 게임 스레드에서 부릅니다. */
         void completeInteraction( const GameObject& interactor );
+        /** @brief 끝날 때마다 끝낸 쪽을 알리는 델리게이트입니다 — 같은 오브젝트의 상자 · 줍기가 듣는다(상호작용은 그것들을 모른다). 게임 스레드에서 온다. */
+        MulticastDelegate<void( const GameObject& )>& getCompletedDelegate() { return _completed; }
         /** @brief 지금까지 끝난 횟수입니다. 아무 스레드에서 읽어도 됩니다. 기믹 센서가 지난번에 읽은 수와 비교해서 사용 횟수로 셉니다. */
         uint32 getCompletedCount() const { return _completedCount.load( std::memory_order_relaxed ); }
         /** @brief 마지막으로 끝낸 쪽입니다. 밀기 방향과 채집 보상 대상을 정하는 데 씁니다. */
@@ -139,14 +142,15 @@ namespace sw
         PROPERTY( Category = "Interaction", DisplayName = "Enabled" )
         bool _bEnabled;
 
-        InteractionDef                       _overrideDef;
-        shared_ptr<const InteractionCatalog> _pCatalog; ///< `_pDef` 가 든 공유 테이블(쥔 동안 산다)
-        const InteractionDef*                _pDef;
-        AssetReloadWatch<InteractionCatalog> _catalogReload;    ///< 정의를 찾았을 때의 `SharedAssetCache<InteractionCatalog>::getReloadCount` 값. 달라지면 다시 찾는다
-        InstanceHighlight                    _appliedHighlight; ///< 메시에 마지막으로 옮긴 강조(같으면 다시 옮기지 않는다)
-        atomic<uint32>                       _completedCount;   ///< 끝난 횟수. 같은 오브젝트의 기믹 센서가 읽어 간다
-        atomic<uint8>                        _bHighlightRequested;
-        uint8                                _bHasOverride;
-        SlotHandle                           _arrSpatialEntry[2]; ///< 공간(3D · 2D)마다의 색인 항목(등록 ~ 해제)
+        InteractionDef                               _overrideDef;
+        shared_ptr<const InteractionCatalog>         _pCatalog; ///< `_pDef` 가 든 공유 테이블(쥔 동안 산다)
+        const InteractionDef*                        _pDef;
+        AssetReloadWatch<InteractionCatalog>         _catalogReload;    ///< 정의를 찾았을 때의 `SharedAssetCache<InteractionCatalog>::getReloadCount` 값. 달라지면 다시 찾는다
+        InstanceHighlight                            _appliedHighlight; ///< 메시에 마지막으로 옮긴 강조(같으면 다시 옮기지 않는다)
+        MulticastDelegate<void( const GameObject& )> _completed;        ///< 끝남 알림(`getCompletedDelegate`)
+        atomic<uint32>                               _completedCount;   ///< 끝난 횟수. 같은 오브젝트의 기믹 센서가 읽어 간다
+        atomic<uint8>                                _bHighlightRequested;
+        uint8                                        _bHasOverride;
+        SlotHandle                                   _arrSpatialEntry[2]; ///< 공간(3D · 2D)마다의 색인 항목(등록 ~ 해제)
     };
 } // namespace sw
