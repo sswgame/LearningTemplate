@@ -1115,6 +1115,53 @@ SW_TEST_CASE( MatchQueueServiceTest, LeaveReleasesTicketOfDeadServer )
     SW_EXPECT_TRUE( world._pair._serverB.takeCompletion()._result == MatchmakingResult::NotQueued );
 }
 
+/**
+ * @brief [MatchQueueServiceTest] 낸 서버가 파티 기록에 잡은 티켓을 아직 대기열에 넣지 않았을 때 다른 서버의 빠지기가 닿아도 티켓이 남지 않는다
+ * @details 결함: 취소가 권한 서버에만 가 "없는 표" 로 사라지고, 낸 서버(B, 권한 아님)가 뒤늦게 넣은 티켓에 떠난 사람이 묶였다. 낸 서버에 취소와 잡기의 답 중 무엇이 먼저 닿아도 같다.
+ */
+SW_TEST_CASE( MatchQueueServiceTest, CancelFromAnotherServerReachesAReservedTicket )
+{
+    for ( const bool bCancelFirst : { true, false } )
+    {
+        PartyPairWorld world;
+        world.makePartyOnA( kAlice, kBob );
+        QueueServer& serverA = world._pair._serverA;
+        QueueServer& serverB = world._pair._serverB;
+        serverB._queue.joinQueue( kAlice, "duel", "kr", UnixMilliseconds{ kNowMs }, 7 );
+        for ( int32 step = 0; step < 3; ++step ) // 계정의 파티 → 파티 기록 → 잡기(읽고 비교해 쓰기). 쓰기의 답은 아직 받지 않았다
+        {
+            (void)serverB._router.poll();
+        }
+        SW_EXPECT_EQUAL( 0, serverB._queue.getLocalTicketCount() );
+
+        serverA._queue.leaveQueue( kAlice, 8 );
+        serverA.poll( kNowMs );
+        const MatchQueueCompletion left = serverA.takeCompletion();
+        SW_EXPECT_TRUE( left._result == MatchmakingResult::Ok );
+        SW_REQUIRE_EQUAL( kServerB, left._ticketID >> 32 ); // 기록에 잡힌 B 의 티켓이다
+
+        if ( bCancelFirst )
+        {
+            vector<ServerBusMessage> listMessage;
+            (void)serverB._transport->pollMessages( listMessage );
+            for ( const ServerBusMessage& message : listMessage )
+            {
+                serverB._queue.handleBusMessage( message, UnixMilliseconds{ kNowMs } );
+            }
+            SW_EXPECT_TRUE( serverB.takeCompletion()._result == MatchmakingResult::NotQueued );
+        }
+        world._pair.updateBoth( kNowMs );
+        SW_EXPECT_EQUAL( 0, serverA._queue.getQueuedTicketCount( "duel" ) );
+        SW_EXPECT_EQUAL( 0, serverB._queue.getLocalTicketCount() );
+
+        vector<MatchQueueCompletion> listCompletion;
+        serverB._queue.takeCompletions( listCompletion );
+        serverB._queue.joinQueue( kAlice, "duel", "kr", UnixMilliseconds{ kNowMs + 1 }, 9 );
+        serverB.poll( kNowMs + 1 );
+        SW_EXPECT_TRUE( serverB.takeCompletion()._result == MatchmakingResult::Ok ); // 다시 설 수 있다
+    }
+}
+
 /** @brief [MatchQueueServiceTest] 메모리에 통계가 없는 계정은 올려 달라고 한 뒤 기다렸다 줄을 선다 — 다른 서버의 파티원도 실력 모드에 설 수 있다. 끝나면 내려 달라고 한다 */
 SW_TEST_CASE( MatchQueueServiceTest, MissingRatingIsLoadedBeforeQueueing )
 {

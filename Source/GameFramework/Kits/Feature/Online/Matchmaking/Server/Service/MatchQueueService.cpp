@@ -81,6 +81,11 @@ namespace sw
         return MatchQueueBus::kResultTopic.makeTopic( ServiceKeyUtil::makeHex64( serverID ) );
     }
 
+    string MatchQueueService::makeOriginCancelTopic( uint64 serverID )
+    {
+        return MatchQueueBus::kOriginCancelTopic.makeTopic( ServiceKeyUtil::makeHex64( serverID ) );
+    }
+
     string MatchQueueService::makeAssignTopic( uint64 serverID )
     {
         return MatchQueueBus::kAssignTopic.makeTopic( ServiceKeyUtil::makeHex64( serverID ) );
@@ -244,7 +249,10 @@ namespace sw
                 state._bAuthority = SW_TRUE; // 서버가 한 대이므로 항상 권한을 가진다
         }
         if ( dependencies._pBus != nullptr )
+        {
             _topicBuffer.push( MatchQueueTopicChange{ makeResultTopic( dependencies._serverID ), SW_TRUE } );
+            _topicBuffer.push( MatchQueueTopicChange{ makeOriginCancelTopic( dependencies._serverID ), SW_TRUE } );
+        }
         return true;
     }
 
@@ -943,6 +951,13 @@ namespace sw
                 (void)submitBackfill( request ); // 거절은 로그에 남겼다. 권한을 잃은 사이에 왔으면 다시 보내지 않고 게임 서버의 재요청을 기다린다
             return;
         }
+        if ( message.getTopic() == makeOriginCancelTopic( _dependencies._serverID ) )
+        {
+            MatchTicketCancel cancel;
+            if ( MatchQueueBus::kOriginCancelTopic.read( message, cancel ) == ServerBusReadResult::Read )
+                (void)cancelOwnTicket( cancel._ticketID ); // 이미 끝난 티켓이면 할 일이 없다
+            return;
+        }
         if ( message.getTopic() == makeResultTopic( _dependencies._serverID ) )
         {
             MatchAssignment assignment;
@@ -975,8 +990,7 @@ namespace sw
         {
             if ( reservation._bDropped != SW_FALSE || VectorUtil::containsBy<&MatchMember::_accountID>( reservation._ticket._listMember, accountID ) == false )
                 continue;
-            reservation._bDropped = SW_TRUE; // 잡기는 이미 나갔다. 답이 오면 푼다(`onPartyTicketReserved`)
-            _completionBuffer.push( MatchQueueCompletion{ reservation._join._requestTag, 0, MatchmakingResult::NotQueued } );
+            dropReservation( reservation );
             return true;
         }
         return false;
@@ -1030,14 +1044,37 @@ namespace sw
         _completionBuffer.push( MatchQueueCompletion{ leave._requestTag, ticketID, MatchmakingResult::Ok } );
     }
 
-    void MatchQueueService::cancelTicket( uint64 ticketID )
+    bool MatchQueueService::cancelOwnTicket( uint64 ticketID )
     {
         if ( _mapLocalTicket.find( ticketID ) != _mapLocalTicket.end() )
         {
             requestCancel( ticketID, 0 ); // 권한 서버가 뺀 뒤에 멤버에게 Cancelled 가 간다
-            return;
+            return true;
         }
-        // 다른 서버가 낸 파티 티켓이다. 모드를 모르므로 모든 모드의 권한에서 뺀다 — 실제로 뺀 권한 서버가 티켓을 낸 서버(티켓 id 의 위쪽 32비트)에 Cancelled 를 알린다
+        const auto reservationIt = _mapTicketToReservation.find( ticketID );
+        if ( reservationIt == _mapTicketToReservation.end() )
+            return false;
+        dropReservation( reservationIt->second );
+        return true;
+    }
+
+    void MatchQueueService::dropReservation( PartyReservation& reservation )
+    {
+        if ( reservation._bDropped != SW_FALSE )
+            return;
+        reservation._bDropped = SW_TRUE; // 잡기는 이미 나갔다. 답이 오면 푼다(`onPartyTicketReserved`)
+        _completionBuffer.push( MatchQueueCompletion{ reservation._join._requestTag, 0, MatchmakingResult::NotQueued } );
+    }
+
+    void MatchQueueService::cancelTicket( uint64 ticketID )
+    {
+        if ( cancelOwnTicket( ticketID ) )
+            return;
+        // 다른 서버가 낸 파티 티켓이다. 파티 기록에 잡힌 뒤 대기열에 넣기 전이면 권한 서버는 그 티켓을 모르므로, 낸 서버(티켓 id 의 위쪽 32비트)가 제 순서대로 빼게 한다
+        const uint64 originServerID = ticketID >> kMatchQueueIDShift;
+        if ( _dependencies._pBus != nullptr && originServerID != _dependencies._serverID )
+            (void)MatchQueueBus::kOriginCancelTopic.publish( *_dependencies._pBus, ServiceKeyUtil::makeHex64( originServerID ), MatchTicketCancel{ ticketID } ); // 실패는 발행이 로그에 남겼다 — 아래 권한 서버의 취소와 티켓의 시한이 남는다
+        // 낸 서버가 죽었을 수 있으므로 권한에서도 뺀다. 모드를 모르므로 모든 모드의 권한에서 뺀다 — 실제로 뺀 권한 서버가 낸 서버에 Cancelled 를 알린다
         for ( const auto& [modeID, mode] : _mapMode )
         {
             removeFromQueue( modeID, ticketID );
