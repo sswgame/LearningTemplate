@@ -2,7 +2,6 @@
 
 #include "GameFramework/Runtime/Foundation/Framework/Save/ComponentStateStore.h"
 
-#include "Core/Algorithm/VectorUtil.h"
 #include "Core/Log/Logger.h"
 #include "Core/Registry/RegistrationList.h"
 
@@ -53,18 +52,17 @@ namespace sw
 {
     ComponentStateStore::ComponentStateStore()
         : _listEntry{}
+        , _mapKeyToIndex{}
     {
     }
 
     void ComponentStateStore::add( const hashed_string& typeName, uint64 componentID, vector<uint8>&& bytes )
     {
-        for ( Entry& entry : _listEntry )
+        const auto inserted = _mapKeyToIndex.try_emplace( EntryKey{ typeName, componentID }, static_cast<uint32>( _listEntry.size() ) );
+        if ( inserted.second == false )
         {
-            if ( entry._typeName == typeName && entry._componentID == componentID )
-            {
-                entry._bytes = std::move( bytes );
-                return;
-            }
+            _listEntry[inserted.first->second]._bytes = std::move( bytes );
+            return;
         }
         Entry entry{};
         entry._typeName    = typeName;
@@ -75,26 +73,40 @@ namespace sw
 
     const ComponentStateStore::Entry* ComponentStateStore::findEntry( const hashed_string& typeName, uint64 componentID ) const
     {
-        return VectorUtil::findIf( _listEntry, [&]( const Entry& entry )
-        { return entry._typeName == typeName && entry._componentID == componentID; } );
+        const auto found = _mapKeyToIndex.find( EntryKey{ typeName, componentID } );
+        return found != _mapKeyToIndex.end() ? &_listEntry[found->second] : nullptr;
+    }
+
+    void ComponentStateStore::rebuildIndex()
+    {
+        _mapKeyToIndex.clear();
+        _mapKeyToIndex.reserve( _listEntry.size() );
+        for ( size_t index = 0; index < _listEntry.size(); ++index )
+        {
+            (void)_mapKeyToIndex.try_emplace( EntryKey{ _listEntry[index]._typeName, _listEntry[index]._componentID }, static_cast<uint32>( index ) );
+        }
     }
 
     void ComponentStateStore::remapComponentIDs( const vector<SavedComponentID>& listRemap )
     {
+        unordered_map<uint64, uint64> mapSavedToLive;
+        mapSavedToLive.reserve( listRemap.size() );
+        for ( const SavedComponentID& remap : listRemap )
+        {
+            (void)mapSavedToLive.try_emplace( remap._savedID, remap._liveID ); // 같은 저장 id 가 둘이면 앞 것
+        }
         vector<Entry> listRemapped;
         listRemapped.reserve( _listEntry.size() );
         for ( Entry& entry : _listEntry )
         {
-            for ( const SavedComponentID& remap : listRemap )
-            {
-                if ( remap._savedID != entry._componentID )
-                    continue;
-                entry._componentID = remap._liveID;
-                listRemapped.push_back( std::move( entry ) );
-                break;
-            }
+            const auto found = mapSavedToLive.find( entry._componentID );
+            if ( found == mapSavedToLive.end() )
+                continue;
+            entry._componentID = found->second;
+            listRemapped.push_back( std::move( entry ) );
         }
         _listEntry = std::move( listRemapped );
+        rebuildIndex();
     }
 
     void ComponentStateStore::appendComponentIDRemap( const ObjectIdentity& identity, const GameObject& object, vector<SavedComponentID>& outListRemap )
@@ -130,7 +142,7 @@ namespace sw
 
     bool ComponentStateStore::read( Archive& archive )
     {
-        _listEntry.clear();
+        clear();
         uint32 version = 0;
         uint32 count   = 0;
         archive >> version;
@@ -156,6 +168,7 @@ namespace sw
             entry._typeName = hashed_string( typeName );
             _listEntry.push_back( std::move( entry ) );
         }
+        rebuildIndex();
         return true;
     }
 } // namespace sw
