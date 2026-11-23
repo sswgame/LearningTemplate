@@ -389,3 +389,33 @@ SW_TEST_CASE( PhysicsCharacterTest, HeightReductionShortensTheCapsuleInPlace )
     manager.update( Internal::kFrame );
     SW_EXPECT_NEAR( before, pWalker->getScaledCapsule()._halfHeight, 1.0e-4f );
 }
+
+/**
+ * @brief [PhysicsCharacterTest] 걷는 동안 몸(회전)을 돌려도 걸은 만큼 간다 — 회전만 바뀐 트랜스폼을 옮긴 것으로 보지 않는다
+ * @details 그린 자리는 두 스텝 사이라(스텝과 프레임이 같으면 지난 스텝 자리), 예전에는 몸을 돌리는 프레임마다 캐릭터가 그린 자리로 되돌아가 도는 동안 제자리였다.
+ *          변이: `onPhysicsFrameBegin` 의 같은 자리 검사를 빼면 도는 쪽이 가지 못한다.
+ */
+SW_TEST_CASE( PhysicsCharacterTest, TurningDoesNotPullTheWalkerBack )
+{
+    using Internal = TestPhysicsScene3DInternal;
+    float32 arrDistance[2]{};
+    for ( uint32 run = 0; run < 2; ++run )
+    {
+        GameObjectManager manager;
+        SW_REQUIRE_NOT_NULL( Internal::addFloor( manager ) );
+        CharacterControllerComponent* pWalker = Internal::addWalker( manager, "Turner", float3{ 0.0f, 0.05f, 0.0f } );
+        SW_REQUIRE_NOT_NULL( pWalker );
+        manager.beginPlay();
+        manager.update( Internal::kFrame );
+        pWalker->setMoveVelocity( float3{ 0.0f, 0.0f, 3.0f } );
+        for ( uint32 frame = 0; frame < 30; ++frame )
+        {
+            if ( run == 1 )
+                pWalker->setLocalRotation( float3{ 0.0f, 0.05f * static_cast<float32>( frame + 1u ), 0.0f } );
+            manager.update( Internal::kFrame );
+        }
+        arrDistance[run] = pWalker->getSimulatedPosition()._z;
+    }
+    SW_EXPECT_TRUE( arrDistance[0] > 1.0f );
+    SW_EXPECT_NEAR( arrDistance[0], arrDistance[1], 1.0e-3f );
+}

@@ -344,7 +344,9 @@ namespace sw
         void                    destroyCharacter( PhysicsCharacterHandle character ) override;
         PhysicsCharacterState3D moveCharacter( PhysicsCharacterHandle character, const float3& velocity, float32 deltaTime ) override;
         void                    moveCharacters( span<const PhysicsCharacterMove3D> listMove, float32 deltaTime ) override;
+        PhysicsCharacterState3D replayCharacterMove( PhysicsCharacterHandle character, const float3& velocity, float32 deltaTime ) override;
         void                    setCharacterPosition( PhysicsCharacterHandle character, const float3& position ) override;
+        void                    refreshCharacterContacts( PhysicsCharacterHandle character ) override;
         bool                    setCharacterSize( PhysicsCharacterHandle character, float32 radius, float32 halfHeight ) override;
         bool                    getCharacterState( PhysicsCharacterHandle character, PhysicsCharacterState3D& outState ) const override;
         /** @brief @p body 가 캐릭터의 속 바디인지입니다(캐릭터 이동이 속 바디에 막히지 않게 거른다). */
@@ -496,8 +498,8 @@ namespace sw
          * @details 중력은 넘기지 않는다(Jolt 는 그것으로 디딘 바디를 누른다 — 바디 쓰기다). 누르기와 미는 충격량은 `commitCharacterMove` 가 준다.
          */
         void runCharacterMove( CharacterRecord& record, const float3& velocity, float32 deltaTime, JPH::TempAllocator& allocator ) const;
-        /** @brief 옮긴 캐릭터를 확정합니다(게임 스레드, 목록 차례): 바디에 미는 · 누르는 충격량, 엔진 상태, 사본 옮기기. */
-        void commitCharacterMove( CharacterRecord& record, float32 deltaTime );
+        /** @brief 옮긴 캐릭터를 확정합니다(게임 스레드, 목록 차례): 바디에 미는 · 누르는 충격량(@p bPushBodies 일 때만), 엔진 상태, 사본 옮기기. */
+        void commitCharacterMove( CharacterRecord& record, float32 deltaTime, bool bPushBodies );
         /** @brief 일괄 이동의 청크 [chunkStart, chunkEnd) 를 돕니다(`engine::runParallel` 본문). 청크마다 제 임시 블록을 쓴다. */
         void runCharacterChunks( uint32 chunkStart, uint32 chunkEnd );
 

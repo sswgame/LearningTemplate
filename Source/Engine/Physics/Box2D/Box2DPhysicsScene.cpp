@@ -1511,6 +1511,16 @@ namespace sw
             setBodyTransform( pRecord->_innerBody, position, 0.0f );
     }
 
+    PhysicsCharacterState2D Box2DPhysicsScene::replayCharacterMove( PhysicsCharacterHandle character, const float2& velocity, float32 deltaTime )
+    {
+        return moveCharacter( character, velocity, deltaTime ); // 무버는 바디를 밀지 않는다(쓸기뿐이다) — 다시 돌려도 세계가 바뀌지 않는다
+    }
+
+    void Box2DPhysicsScene::refreshCharacterContacts( PhysicsCharacterHandle character )
+    {
+        (void)moveCharacter( character, float2{}, 0.0f ); // 길이 0 의 이동은 자리를 두고 디딤만 다시 찾는다(무버는 접촉을 이어 쓰지 않는다)
+    }
+
     bool Box2DPhysicsScene::getCharacterState( PhysicsCharacterHandle character, PhysicsCharacterState2D& outState ) const
     {
         const CharacterRecord* pRecord = _characters.get( character.getSlot() );

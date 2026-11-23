@@ -6,6 +6,7 @@
 #include "Core/Foundation/Expected.h"
 #include "Core/Foundation/Macros.h"
 #include "Core/Foundation/Types.h"
+#include "Core/Math/Math.h"
 #include "Core/Name/hashed_string.h"
 
 #include "Engine/Object/Component/Component.h"
@@ -30,6 +31,41 @@ namespace sw
 
 namespace sw
 {
+    struct ControlIntent;
+
+    /**
+     * @brief 탈것 걸음이 다음 걸음으로 이어 가는 것 전부입니다 — 같은 (상태, 의도)면 같은 다음 상태다(`MountMovementComponent::simulate`). 칸 선언이 네트워크 바이트다(`ReplicatedLayout`, 양자화하지 않는다).
+     * @details 걸음새 상한 · 질주 허용(스태미나 · 유대)은 키트가 정하는 값이지만 걸음에 들므로 상태로 싣는다 — 다시 돌리는 걸음이 지금 값이 아니라 그 걸음의 값을 쓴다.
+     */
+    REFLECT()
+    struct SW_GF_API MountMoveState
+    {
+        REFLECT_BODY();
+
+        PROPERTY( Replicated, Min = -1000000, Max = 1000000 )
+        float3 _position{}; ///< 루트(월드)
+
+        PROPERTY( Replicated, Min = -3.2, Max = 3.2 )
+        float32 _facingYaw{ 0.0f }; ///< [-π, π] 로 감은 값
+
+        PROPERTY( Replicated, Min = -1000, Max = 1000 )
+        float32 _forwardSpeed{ 0.0f };
+
+        PROPERTY( Replicated, Min = 0, Max = 4 )
+        uint8 _gait{ 0 }; ///< `MountGait`. 범위는 cpp 의 static_assert 가 열거의 끝 값과 맞춘다
+
+        PROPERTY( Replicated, Min = 0, Max = 4 )
+        uint8 _maxGait{ 4 };
+
+        PROPERTY( Replicated, Min = 0, Max = 1 )
+        uint8 _bGallopAllowed{ SW_TRUE };
+
+        MountGait getGait() const { return static_cast<MountGait>( _gait ); }
+    };
+} // namespace sw
+
+namespace sw
+{
     /**
      * @class MountMovementComponent
      * @brief 말 오브젝트(폰, 캐릭터 컨트롤러, 외형과 애니메이터, 좌석)에 붙어서 의도를 걸음새로 바꿉니다. 의도의 월드 이동(조종 요 기준이며 3인칭과 같음)의
@@ -43,6 +79,8 @@ namespace sw
      *          걸음새의 가속 · 감속이 경사의 당김보다 크면 걸음새 속도를 지키고, 가파르면 오르막에서 처지고 내리막에서 빨라진다. 표면은 이동 계수(`GroundSurfaceComponent`)가 이미 줄이므로
      *          구름 저항 배율은 기본 0 이다(발굽은 바퀴가 아니다).
      *          언리얼 CharacterMovement 위의 말 이동과 같은 구조이다. 같은 의도이면 플레이어가 타든 AI 가 몰든 같은 궤적이 나온다.
+     *          **네트워크 예측**(`setNetDriven`): 캐릭터 컨트롤러 없이 루트를 옮기는 탈것은 걸음이 (상태, 의도)만의 순수 함수(`simulate`)라, 탄 클라이언트가 말의 이동을 자기 몸처럼 예측한다.
+     *          컨트롤러가 있는 탈것은 켤 수 없다(오류) — 물리 이동은 서버 권위 + 보간으로 둔다(언리얼 Chaos 차량의 기본 복제와 같다).
      */
     REFLECT( Category = "Vehicle", DisplayName = "Mount Movement", Tooltip = "Control intent -> gait (idle, walk, trot, canter, gallop), steering and root motion for a ridden animal" )
     class SW_GF_API MountMovementComponent : public Component
@@ -73,6 +111,25 @@ namespace sw
         float32 computeGaitTurnRate( MountGait gait ) const;
         /** @brief 이동 크기(0..1)와 질주 버튼을 걸음새로 바꿉니다. 상한과 질주 허용은 아직 적용하지 않은 값입니다. */
         static MountGait computeRequestedGait( float32 moveAmount, bool bSprint );
+
+        /**
+         * @brief 고정 넷 틱이 이 탈것을 움직이는가입니다. 켜면 틱이 아무것도 하지 않고 `simulate` · `setState` 로 움직인다. 게임 스레드, 틱 밖에서 부릅니다.
+         * @return 캐릭터 컨트롤러가 있거나 루트 모션으로 가는 탈것이면 오류를 남기고 false 입니다(켜지지 않는다).
+         */
+        [[nodiscard]] bool setNetDriven( bool bNetDriven );
+        bool               isNetDriven() const { return _bNetDriven == SW_TRUE; }
+        /** @brief 지금 이동 상태입니다. */
+        MountMoveState getState() const;
+        /** @brief 이동 상태를 바꾸고 루트를 @p displayPosition(그릴 자리 — 예측 보정 · 보간이 든다)에 둡니다. 애니메이터 파라미터도 맞춥니다. 네트가 움직이는 탈것만, 게임 스레드 · 틱 밖에서 부릅니다. */
+        void setState( const MountMoveState& state, const float3& displayPosition );
+        /** @brief @p state 에서 의도 @p intent 로 한 걸음(@p deltaTime)의 다음 상태입니다(순수 — 멤버를 바꾸지 않는다). */
+        MountMoveState simulate( const MountMoveState& state, const ControlIntent& intent, float32 deltaTime ) const;
+
+    private:
+        /** @brief 걸음새 · 조향 · 속도를 한 걸음 나아갑니다(자리는 옮기지 않는다). @p slopeSin 은 진행 방향 오르막 사인, @p outTurn 은 조향(-1..1)입니다. */
+        void advance( MountMoveState& inoutState, const ControlIntent& intent, float32 slopeSin, float32 deltaTime, float32& outTurn ) const;
+        /** @brief 애니메이터 파라미터(걸음새 · 조향)를 씁니다. */
+        void applyAnimatorParameters( float32 turn ) const;
 
     private:
         PROPERTY( Category = "Mount", DisplayName = "Sprint Button", Tooltip = "Intent button that asks for a gallop while held; empty = this mount cannot be asked to gallop" )
@@ -113,7 +170,9 @@ namespace sw
         optional<int32>        _sprintIndex;
         MountGait              _gait;
         MountGait              _maxGait;
+        float3                 _netPosition; ///< 네트가 움직이는 동안의 시뮬레이션 자리(트랜스폼은 그릴 자리다)
         uint8                  _bGallopAllowed : 1;
-        [[maybe_unused]] uint8 _reserved       : 7;
+        uint8                  _bNetDriven     : 1; ///< 고정 넷 틱이 움직인다(`setNetDriven`)
+        [[maybe_unused]] uint8 _reserved       : 6;
     };
 } // namespace sw

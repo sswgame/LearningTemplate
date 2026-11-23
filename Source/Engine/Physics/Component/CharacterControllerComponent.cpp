@@ -57,8 +57,13 @@ namespace sw
         , _appliedHeightReduction{ 0.0f }
         , _listStepHistory{}
         , _stepHistoryCount{ 0 }
+        , _motionDisplayOffset{}
+        , _motionDisplayAlpha{ 1.0f }
+        , _writtenPosition{}
         , _bFrameClimb{ SW_FALSE }
         , _bStepClimb{ SW_FALSE }
+        , _bManualSimulation{ SW_FALSE }
+        , _bPositionWritten{ SW_FALSE }
         , _reserved{ 0 }
     {
         _commandSlot = engine::getSubsystem<PhysicsPoseStore>().getCommandStore<CharacterCommand3D>().allocateSlot( this, _pCommandPage );
@@ -277,21 +282,38 @@ namespace sw
         IPhysicsScene3D* pScene = physics.getScene3D();
         if ( pScene == nullptr )
             return;
+        _physicsStep.assumeHeld(); // 프레임 시작 훅은 스텝 훅과 겹치지 않는다(`onPrePhysicsStep` 과 같은 규칙)
         // 이번 게임 프레임에 모인 필드를 이 물리 프레임의 것으로 옮긴다 — 스텝이 없는 프레임이 끼어도 한 프레임의 필드가 두 번 쌓이지 않는다.
         PhysicsFieldSample field{};
         float3             climbVelocity{};
         bool               bClimb = false;
-        editCommand( [&field, &climbVelocity, &bClimb]( CharacterCommand3D& command )
+        float3             surfaceVelocity{};
+        float32            moveScale = 1.0f;
+        const bool         bManual   = _bManualSimulation == SW_TRUE;
+        editCommand( [&field, &climbVelocity, &bClimb, &surfaceVelocity, &moveScale, bManual]( CharacterCommand3D& command )
         {
             field                  = command._pendingField;
             command._pendingField  = PhysicsFieldSample{};
             climbVelocity          = command._pendingClimbVelocity;
             bClimb                 = command._bPendingClimb;
             command._bPendingClimb = false;
+            if ( bManual == false )
+                return;
+            // 손으로 돌리는 걸음은 프레임과 걸음 크기가 다르다 — 면 속도 · 이동 계수도 필드처럼 프레임마다 옮겨 두고 걸음이 그 값을 쓴다(걸음 없는 프레임에 쌓이지 않게).
+            surfaceVelocity                 = command._pendingSurfaceVelocity;
+            moveScale                       = command._pendingMoveScale;
+            command._pendingSurfaceVelocity = float3{};
+            command._pendingMoveScale       = 1.0f;
         } );
         _frameField         = field;
         _frameClimbVelocity = climbVelocity;
         _bFrameClimb        = bClimb ? SW_TRUE : SW_FALSE;
+        if ( bManual )
+        {
+            _frameSurfaceVelocity = surfaceVelocity;
+            _frameMoveScale       = moveScale;
+            _reportedMoveScale.store( moveScale, std::memory_order_relaxed );
+        }
         if ( consumeRebuild() )
             releasePhysics( physics );
 
@@ -346,11 +368,21 @@ namespace sw
             _state._bGrounded = _bGrounded;
             _state._position  = position;
             _previousPosition = position;
+            _writtenPosition  = position;
+            _bPositionWritten = SW_TRUE;
             return;
         }
+        // 자리가 마지막에 쓴 그대로면 회전 · 배율만 바뀐 것이다 — 그린 자리는 두 스텝 사이(`getAlpha`)라, 그것으로 캐릭터를 옮기면 몸을 돌리는 프레임마다 걸은 만큼이 되돌아간다.
+        const bool bSamePosition = bTeleported == false && _bPositionWritten == SW_TRUE &&
+                                   ( position - _writtenPosition ).getLengthSquared() <= kSamePositionTolerance * kSamePositionTolerance;
+        if ( bSamePosition )
+            return;
         pScene->setCharacterPosition( _character, position );
-        _state._position  = position;
-        _previousPosition = position;
+        _state._position     = position;
+        _previousPosition    = position;
+        _motionDisplayOffset = float3{};
+        _writtenPosition     = position;
+        _bPositionWritten    = SW_TRUE;
         if ( bTeleported )
             _verticalSpeed = 0.0f;
     }
@@ -363,7 +395,7 @@ namespace sw
         const uint32  stepCount      = context.getStepCount();
         _physicsStep.assumeHeld(); // 물리 스텝은 이 컴포넌트마다 한 번에 한 스레드가 돈다
         IPhysicsScene3D* pScene = physics.findScene3D();
-        if ( pScene == nullptr || _character.isValid() == false )
+        if ( pScene == nullptr || _character.isValid() == false || _bManualSimulation == SW_TRUE )
             return;
         // 입력 칸에서 꺼낸다(잠금 안에서는 복사 · 비우기만). 루트 모션 · 면 속도 · 이동 계수는 프레임의 첫 스텝에만 꺼낸다.
         CharacterCommand3D command{};
@@ -380,18 +412,10 @@ namespace sw
                 pending._pendingMoveScale       = 1.0f;
             }
         } );
-        if ( command._bPendingStop )
-        {
-            _verticalSpeed           = 0.0f;
-            _walkVelocity            = float3{};
-            _fieldVelocity           = float3{};
-            _airVelocity             = float3{};
-            _frameRootMotionVelocity = float3{};
-        }
-        float3  moveVelocity = command._moveVelocity;
-        float32 jumpSpeed    = command._pendingJumpSpeed;
-        bool    bLaunched    = false;
         // 루트 모션은 프레임의 첫 스텝에 꺼내 이 프레임의 스텝 수로 나눈다 — 프레임이 끝날 때 다 간다. 면 속도도 프레임마다 꺼낸다.
+        // 멈춤 요청은 앞 프레임에서 남은 루트 모션을 지운다 — 이번에 꺼내는 것은 멈춤 뒤에 쌓인 것이다.
+        if ( command._bPendingStop )
+            _frameRootMotionVelocity = float3{};
         if ( stepIndex == 0 )
         {
             const float32 frameSeconds = fixedDeltaTime * static_cast<float32>( stepCount > 0 ? stepCount : 1 );
@@ -400,6 +424,25 @@ namespace sw
             _frameMoveScale            = command._pendingMoveScale;
             _reportedMoveScale.store( _frameMoveScale, std::memory_order_relaxed );
         }
+        _previousPosition   = _state._position;
+        _queuedStepVelocity = beginStep( command, _frameMoveScale, pScene->getGravity()._y, fixedDeltaTime );
+        _queuedStepSeconds  = fixedDeltaTime;
+        // 옮기기는 씬이 모든 캐릭터를 모아 한 번에 한다(이 스텝의 모든 `onPrePhysicsStep` 뒤, 월드 스텝 앞) — 결과는 `onPostPhysicsStep` 이 잇는다.
+        physics.queueCharacterMove( _character, _queuedStepVelocity );
+    }
+
+    float3 CharacterControllerComponent::beginStep( const CharacterCommand3D& command, float32 moveScale, float32 gravityY, float32 fixedDeltaTime )
+    {
+        _physicsStep.assumeHeld(); // 부르는 쪽(물리 스텝 · 게임 스레드의 손 걸음)은 서로 겹치지 않는다
+        if ( command._bPendingStop )
+        {
+            _verticalSpeed = 0.0f;
+            _walkVelocity  = float3{};
+            _fieldVelocity = float3{};
+            _airVelocity   = float3{};
+        }
+        float32 jumpSpeed = command._pendingJumpSpeed;
+        bool    bLaunched = false;
         if ( command._pendingLaunch.getLengthSquared() > 0.0f )
         {
             jumpSpeed    = command._pendingLaunch._y;
@@ -408,7 +451,7 @@ namespace sw
         }
         // 이동 계수는 걷는 몫(요청 · 루트 모션)에만 든다 — 면이 나르는 속도와 공중 관성은 환경 저항과 상관없다.
         const PhysicsFieldSample& field         = _frameField;
-        const float3              requestedWalk = ( moveVelocity + _frameRootMotionVelocity ) * _frameMoveScale;
+        const float3              requestedWalk = ( command._moveVelocity + _frameRootMotionVelocity ) * moveScale;
         // 접지(빙판): 디딘 채로 접지가 보통보다 낮으면 걷는 속도가 요청으로 천천히 간다(미끄러진다). 보통 접지 · 공중은 요청 그대로다(필드가 없을 때와 같다).
         const bool bSlippery = _state._bGrounded && field._friction < 1.0f;
         _walkVelocity        = bSlippery ? float3::lerp( _walkVelocity, requestedWalk, MathUtil::saturate( field._friction * kFrictionResponse * fixedDeltaTime ) ) : requestedWalk;
@@ -422,11 +465,10 @@ namespace sw
         // 흔들리는 갑판에서 떴다 내렸다 할 때마다 그렇게 앞서 나가 선원이 배보다 빨리 가 떨어졌다(boat). 이번 스텝의 발사만 남긴다.
         if ( _state._bGrounded && bLaunched == false )
             _airVelocity = float3{};
-        moveVelocity = _walkVelocity + _fieldVelocity + _frameSurfaceVelocity + _airVelocity;
+        float3 moveVelocity = _walkVelocity + _fieldVelocity + _frameSurfaceVelocity + _airVelocity;
         // 서 있으면 떨어지는 속도를 지우고, 떠 있으면 중력을 쌓는다(필드의 중력 배율 · 부력 · 가속 · 저항). 점프는 그 위에 덮는다.
         if ( _state._bGrounded && _verticalSpeed < 0.0f )
             _verticalSpeed = 0.0f;
-        const float32 gravityY = pScene->getGravity()._y;
         _verticalSpeed += gravityY * _gravityScale * field._gravityScale * fixedDeltaTime;
         _verticalSpeed += ( field.computeBuoyancy( MathUtil::abs( gravityY ), kBodyDensity ) + field._acceleration._y ) * fixedDeltaTime;
         if ( field._drag > 0.0f )
@@ -447,12 +489,7 @@ namespace sw
             moveVelocity   = float3{ _frameClimbVelocity._x, 0.0f, _frameClimbVelocity._z };
             _verticalSpeed = _frameClimbVelocity._y;
         }
-
-        _previousPosition   = _state._position;
-        _queuedStepVelocity = float3{ moveVelocity._x, _verticalSpeed, moveVelocity._z };
-        _queuedStepSeconds  = fixedDeltaTime;
-        // 옮기기는 씬이 모든 캐릭터를 모아 한 번에 한다(이 스텝의 모든 `onPrePhysicsStep` 뒤, 월드 스텝 앞) — 결과는 `onPostPhysicsStep` 이 잇는다.
-        physics.queueCharacterMove( _character, _queuedStepVelocity );
+        return float3{ moveVelocity._x, _verticalSpeed, moveVelocity._z };
     }
 
     void CharacterControllerComponent::onPostPhysicsStep( const FixedStepContext& context )
@@ -464,6 +501,12 @@ namespace sw
         const IPhysicsScene3D* pScene = physics.findScene3D();
         if ( fixedDeltaTime <= 0.0f || pScene == nullptr || pScene->getCharacterState( _character, _state ) == false )
             return; // 이번 스텝에 넣은 이동이 없다
+        finishStep( fixedDeltaTime );
+    }
+
+    void CharacterControllerComponent::finishStep( float32 fixedDeltaTime )
+    {
+        _physicsStep.assumeHeld(); // `beginStep` 과 같다
         if ( isStepHistoryEnabled() )
         {
             // 진단 기록 — 켰을 때만 칸을 만들고 쓴다(꺼져 있으면 이 분기 하나).
@@ -501,10 +544,11 @@ namespace sw
     void CharacterControllerComponent::onPhysicsFrameEnd( const FixedStepContext& context )
     {
         ScenePhysics& physics = context.getPhysics();
-        const float32 alpha   = context.getAlpha();
+        const bool    bManual = _bManualSimulation == SW_TRUE;
+        const float32 alpha   = bManual ? _motionDisplayAlpha : context.getAlpha();
         if ( _character.isValid() == false )
             return;
-        const float3 position = float3::lerp( _previousPosition, _state._position, alpha );
+        const float3 position = float3::lerp( _previousPosition, _state._position, alpha ) + ( bManual ? _motionDisplayOffset : float3{} );
         // 회전 · 배율은 트랜스폼의 것이다. 이 프레임 시작 뒤에 누가 옮겼을 때만 다시 읽는다(자리는 아래에서 캐릭터 자리로 덮는다 — 전에도 그랬다).
         float3 current{};
         if ( consumeTransformChange() && PhysicsComponent::readWorldPose( *this, current, _worldRotation, _worldScale ) == false )
@@ -516,6 +560,137 @@ namespace sw
         }
         // 강체와 같이 모아 한 번에 쓴다 — 적용 · 변경 번호 맞추기는 `ScenePhysics::queuePoseWrite` 가 한다.
         physics.queuePoseWrite( *this, position, _worldRotation, _worldScale );
+        _writtenPosition  = position;
+        _bPositionWritten = SW_TRUE;
+    }
+
+    static_assert( static_cast<uint8>( CharacterMovementMode::Climbing ) == 4, "CharacterMotionState::_movementMode 의 Max 를 열거의 끝 값과 맞춘다" );
+
+    void CharacterControllerComponent::setManualSimulation( bool bManual )
+    {
+        const uint8 bNewManual = bManual ? SW_TRUE : SW_FALSE;
+        if ( _bManualSimulation == bNewManual )
+            return;
+        _bManualSimulation   = bNewManual;
+        _previousPosition    = _state._position;
+        _motionDisplayOffset = float3{};
+        _motionDisplayAlpha  = 1.0f;
+    }
+
+    CharacterMotionState CharacterControllerComponent::getMotionState() const
+    {
+        CharacterMotionState state;
+        state._position      = _character.isValid() ? _state._position : getWorldPosition();
+        state._walkVelocity  = _walkVelocity;
+        state._fieldVelocity = _fieldVelocity;
+        state._airVelocity   = _airVelocity;
+        state._verticalSpeed = _verticalSpeed;
+        state._movementMode  = static_cast<uint8>( _movementMode );
+        state._bGrounded     = _bGrounded ? SW_TRUE : SW_FALSE;
+        return state;
+    }
+
+    void CharacterControllerComponent::setMotionState( const CharacterMotionState& state )
+    {
+        _walkVelocity                   = state._walkVelocity;
+        _fieldVelocity                  = state._fieldVelocity;
+        _airVelocity                    = state._airVelocity;
+        _verticalSpeed                  = state._verticalSpeed;
+        _movementMode                   = state.getMovementMode();
+        _bGrounded                      = state._bGrounded == SW_TRUE;
+        ScenePhysics* const    pPhysics = getScenePhysics();
+        IPhysicsScene3D* const pScene   = pPhysics != nullptr ? pPhysics->findScene3D() : nullptr;
+        if ( pScene == nullptr || _character.isValid() == false )
+        {
+            teleportTo( state._position );
+            return;
+        }
+        pScene->setCharacterPosition( _character, state._position );
+        pScene->refreshCharacterContacts( _character );
+        (void)pScene->getCharacterState( _character, _state ); // 핸들은 위에서 살아 있음을 봤다
+        _state._bGrounded = _bGrounded;                        // 걸음 계산의 "디딤" 은 앞 걸음의 결과다(찾은 접촉은 백엔드의 붙기 · 바닥 속도만 쓴다)
+    }
+
+    CharacterMotionState CharacterControllerComponent::simulateMotion( const CharacterMotionState& state, const CharacterMotionInput& input, float32 deltaTime, CharacterMotionPass pass )
+    {
+        SW_ASSERT( _bManualSimulation == SW_TRUE ); // 고정 스텝이 함께 옮기면 한 프레임에 두 번 걷는다
+        _physicsStep.assumeHeld();                  // 게임 스레드, 물리 스텝 밖 — 스텝 훅과 겹치지 않는다
+        ScenePhysics* const    pPhysics = getScenePhysics();
+        IPhysicsScene3D* const pScene   = pPhysics != nullptr ? pPhysics->findScene3D() : nullptr;
+        if ( pScene == nullptr || _character.isValid() == false || deltaTime <= 0.0f )
+            return state;
+        setMotionState( state );
+        CharacterCommand3D command{};
+        _frameRootMotionVelocity = float3{};
+        if ( pass == CharacterMotionPass::Live )
+        {
+            // 밖에서 쌓은 충격은 실제 걸음이 한 번 쓴다 — 다시 돌리는 걸음은 보지 않는다.
+            editCommand( [&command]( CharacterCommand3D& pending )
+            {
+                command._pendingJumpSpeed  = pending._pendingJumpSpeed;
+                command._pendingLaunch     = pending._pendingLaunch;
+                command._pendingRootMotion = pending._pendingRootMotion;
+                command._bPendingStop      = pending._bPendingStop;
+                pending._pendingJumpSpeed  = 0.0f;
+                pending._pendingLaunch     = float3{};
+                pending._pendingRootMotion = float3{};
+                pending._bPendingStop      = false;
+            } );
+            _frameRootMotionVelocity = command._pendingRootMotion * ( 1.0f / deltaTime );
+            _previousPosition        = state._position;
+        }
+        command._moveVelocity      = float3{ input._moveVelocity._x, 0.0f, input._moveVelocity._z };
+        command._verticalMoveSpeed = input._verticalMoveSpeed;
+        if ( input._jumpSpeed > 0.0f )
+            command._pendingJumpSpeed = input._jumpSpeed;
+        if ( input._launchVelocity.getLengthSquared() > 0.0f )
+            command._pendingLaunch = input._launchVelocity;
+        _bFrameClimb        = input._bClimb;
+        _frameClimbVelocity = input._climbVelocity;
+        _queuedStepVelocity = beginStep( command, MathUtil::min( _frameMoveScale, MathUtil::max( input._moveScale, 0.0f ) ), pScene->getGravity()._y, deltaTime );
+        _state              = pass == CharacterMotionPass::Live ? pScene->moveCharacter( _character, _queuedStepVelocity, deltaTime )
+                                                                : pScene->replayCharacterMove( _character, _queuedStepVelocity, deltaTime );
+        finishStep( deltaTime );
+        return getMotionState();
+    }
+
+    void CharacterControllerComponent::applyMotionInput( const CharacterMotionInput& input )
+    {
+        editCommand( [&input]( CharacterCommand3D& command )
+        {
+            command._moveVelocity      = float3{ input._moveVelocity._x, 0.0f, input._moveVelocity._z };
+            command._verticalMoveSpeed = input._verticalMoveSpeed;
+            command._pendingMoveScale  = MathUtil::min( command._pendingMoveScale, MathUtil::max( input._moveScale, 0.0f ) );
+            if ( input._jumpSpeed > 0.0f )
+                command._pendingJumpSpeed = input._jumpSpeed;
+            if ( input._launchVelocity.getLengthSquared() > 0.0f )
+                command._pendingLaunch = input._launchVelocity;
+            if ( input._bClimb == SW_TRUE )
+            {
+                command._pendingClimbVelocity = input._climbVelocity;
+                command._bPendingClimb        = true;
+            }
+        } );
+    }
+
+    void CharacterControllerComponent::setMotionDisplay( const float3& previousPosition, float32 alpha, const float3& offset )
+    {
+        _previousPosition    = previousPosition;
+        _motionDisplayAlpha  = alpha;
+        _motionDisplayOffset = offset;
+    }
+
+    void CharacterControllerComponent::copyTuning( const CharacterControllerComponent& source )
+    {
+        _radius        = source._radius;
+        _halfHeight    = source._halfHeight;
+        _stepHeight    = source._stepHeight;
+        _maxSlopeAngle = source._maxSlopeAngle;
+        _gravityScale  = source._gravityScale;
+        _mass          = source._mass;
+        _layer         = source._layer;
+        _bInnerBody    = source._bInnerBody;
+        requestRebuild();
     }
 
     void CharacterControllerComponent::collectStreamingFloorShapes( const float3& scale, vector<PhysicsShapeDesc3D>& outListShape ) const

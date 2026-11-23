@@ -28,12 +28,76 @@ namespace sw
 
 namespace sw
 {
+    /** @brief 손으로 돌리는 걸음(`CharacterControllerComponent::simulateMotion`)이 실제 걸음인지 되감아 다시 돌리는 걸음인지입니다. */
+    enum class CharacterMotionPass : uint8
+    {
+        Live = 0, ///< 실제 걸음 — 밖에서 쌓은 충격(점프 · 발사 · 루트 모션 · 멈춤)을 꺼내 쓰고 닿은 바디를 민다
+        Replay    ///< 되감은 입력을 다시 돌린다 — 밖의 충격은 이미 그 입력의 실제 걸음이 썼고, 세계를 다시 밀지 않는다
+    };
+
+    /**
+     * @brief 한 걸음의 이동 입력입니다 — 이동기가 의도에서 만든다. 걸음 하나가 (상태, 입력)만의 함수가 되게, 컨트롤러에 남는 요청(`setMoveVelocity` …)과 같은 값을 걸음마다 통째로 준다.
+     */
+    struct CharacterMotionInput
+    {
+        float3  _moveVelocity{};            ///< 원하는 수평 속도(`setMoveVelocity`)
+        float3  _launchVelocity{};          ///< 0 이 아니면 이 걸음에 쏜다(`launch`)
+        float3  _climbVelocity{};           ///< 오르기 속도(`_bClimb` 일 때, `applyClimbVelocity`)
+        float32 _verticalMoveSpeed{ 0.0f }; ///< 헤엄의 위아래 속도(`setVerticalMoveSpeed`)
+        float32 _jumpSpeed{ 0.0f };         ///< 0 보다 크면 이 걸음에 뛴다(`jump`)
+        float32 _moveScale{ 1.0f };         ///< 이동 계수(`applyMoveScale`)
+        uint8   _bClimb{ SW_FALSE };
+    };
+} // namespace sw
+
+namespace sw
+{
+    /**
+     * @brief 캐릭터가 다음 걸음으로 이어 가는 운동 전부입니다 — 같은 상태 · 입력 · 세계면 같은 다음 상태가 난다(`CharacterControllerComponent::simulateMotion`).
+     * @details 언리얼 `FSavedMove_Character` 의 시작 상태(자리 · 속도 · 이동 방식 · 바닥) 자리다. 디딘 바디 · 바닥 법선은 싣지 않는다 — 걸음 앞에 자리에서 다시 찾는다
+     *          (`IPhysicsCharacterScene::refreshCharacterContacts`). 바디 핸들은 서버와 클라이언트에서 다르다.
+     *          칸 선언(`Replicated` · 범위)이 곧 네트워크 바이트다(`ReplicatedLayout`). 예측이 서버와 같은 값에서 시작해야 하므로 실수는 양자화하지 않고, 범위는 NaN · 무한대를 거절하는 경계다.
+     */
+    REFLECT()
+    struct SW_API CharacterMotionState
+    {
+        REFLECT_BODY();
+
+        PROPERTY( Replicated, Min = -1000000, Max = 1000000 )
+        float3 _position{}; ///< 발(월드)
+
+        PROPERTY( Replicated, Min = -10000, Max = 10000 )
+        float3 _walkVelocity{}; ///< 지난 걸음에 낸 걷는 속도(빙판 — 접지가 낮으면 천천히 바뀐다)
+
+        PROPERTY( Replicated, Min = -10000, Max = 10000 )
+        float3 _fieldVelocity{}; ///< 필드가 쌓은 수평 속도
+
+        PROPERTY( Replicated, Min = -10000, Max = 10000 )
+        float3 _airVelocity{}; ///< 발사 · 떠난 바닥의 수평 속도
+
+        PROPERTY( Replicated, Min = -10000, Max = 10000 )
+        float32 _verticalSpeed{ 0.0f };
+
+        PROPERTY( Replicated, Min = 0, Max = 4 )
+        uint8 _movementMode{ 0 }; ///< `CharacterMovementMode`. 범위는 cpp 의 static_assert 가 열거의 끝 값과 맞춘다
+
+        PROPERTY( Replicated, Min = 0, Max = 1 )
+        uint8 _bGrounded{ SW_FALSE };
+
+        CharacterMovementMode getMovementMode() const { return static_cast<CharacterMovementMode>( _movementMode ); }
+    };
+} // namespace sw
+
+namespace sw
+{
     /**
      * @class CharacterControllerComponent
      * @brief 3D 캐릭터 컨트롤러입니다(유니티 CharacterController · 언리얼 CharacterMovement 의 충돌 부분). 이 컴포넌트의 월드 자리가 발입니다.
      * @details 시뮬레이션 바디가 아닙니다 — 고정 스텝마다 원하는 속도(`setMoveVelocity`) + 중력으로 캡슐을 쓸어 옮깁니다. 서 있으면 수직 속도를 지우고,
      *          `jump` 가 수직 속도를 줍니다. 자리는 마지막 두 스텝 사이를 보간해 씁니다. 코드가 트랜스폼을 옮기면 순간이동입니다.
      *          이동 요청은 어느 틱에서든 부를 수 있습니다(다음 물리 프레임에 든다).
+     *          **손으로 돌리기**(`setManualSimulation`): 네트워크 예측처럼 자기 고정 틱으로 걷는 쪽이 `simulateMotion` 으로 걸음을 돌린다. 켜져 있는 동안 물리 고정 스텝은 이 캐릭터를
+     *          옮기지 않고, 트랜스폼에는 부른 쪽이 준 그리기 자리(`setMotionDisplay`)를 쓴다. 두 길이 같은 걸음 계산(`beginStep` · `finishStep`)을 쓴다.
      */
     REFLECT( Category = "Physics", DisplayName = "Character Controller", Tooltip = "Capsule character mover: slides on walls, climbs steps, blocked by steep slopes", Meta = "Icon=Character" )
     class SW_API CharacterControllerComponent : public PhysicsComponent
@@ -118,6 +182,8 @@ namespace sw
         static constexpr float32 kFrictionResponse   = 10.0f; ///< 접지 1 일 때 걷는 속도가 요청으로 가는 빠르기(1/s) — 접지에 곱한다(빙판 0.05 면 0.5/s)
         static constexpr float32 kFieldGroundDamping = 4.0f;  ///< 디딘 채로 필드가 쌓은 수평 속도가 줄어드는 빠르기(1/s, 접지에 곱한다)
         static constexpr float32 kBodyDensity        = 1.0f;  ///< 캐릭터 몸의 밀도(물 = 1) — 유체 밀도가 이보다 크면 떠오른다
+        /** @brief 트랜스폼 자리가 마지막에 쓴 자리에서 이만큼(m) 안이면 옮긴 것이 아니다 — 부모 아래 월드 합성의 반올림보다 크고 코드가 옮기는 거리보다 작다. */
+        static constexpr float32 kSamePositionTolerance = 1.0e-4f;
 
         /** @brief 스텝 기록 한 칸입니다(이동 디버거가 미끄러짐 · 벽 걸림 · 착지 판정을 전후로 본다). */
         struct StepRecord
@@ -159,6 +225,36 @@ namespace sw
         float32 getMaxSlopeAngle() const { return _maxSlopeAngle.radians(); }
         void    setMaxSlopeAngle( float32 angle );
 
+        /**
+         * @brief 이 캐릭터의 걸음을 물리 고정 스텝 대신 부른 쪽이 `simulateMotion` 으로 돌립니다(유니티 `Physics.simulationMode = Script`, Godot 의 손 `move_and_slide` 자리). 게임 스레드, 틱 밖에서 부릅니다.
+         * @details 끄면 다음 물리 프레임부터 지금 상태에서 고정 스텝이 잇는다.
+         */
+        void setManualSimulation( bool bManual );
+        bool isManualSimulation() const { return _bManualSimulation == SW_TRUE; }
+        /** @brief 지금 운동 상태입니다. 캐릭터가 아직 없으면(시작 전 · 꺼짐) 자리는 트랜스폼의 것입니다. 자기 오브젝트의 틱이나 틱 밖 게임 스레드에서 부릅니다. */
+        CharacterMotionState getMotionState() const;
+        /**
+         * @brief 운동 상태를 되돌립니다 — 자리를 옮기고 닿은 것 · 바닥을 그 자리에서 다시 찾습니다. 게임 스레드, 틱 밖에서 부릅니다.
+         * @details 캐릭터가 아직 없으면 트랜스폼을 순간이동해 다음 물리 프레임이 그 자리에 짓습니다.
+         */
+        void setMotionState( const CharacterMotionState& state );
+        /**
+         * @brief @p state 에서 @p input 으로 한 걸음(@p deltaTime) 갑니다 — 끝 상태가 이 캐릭터의 상태가 됩니다. 손으로 돌리는 캐릭터만 부릅니다(게임 스레드, 틱 · 물리 스텝 밖).
+         * @details 걸음 앞에 늘 @p state 로 되돌리므로(`setMotionState`) 같은 (상태, 입력, 세계)면 이어 돌린 것과 되감아 다시 돌린 것이 비트까지 같다. 지역 필드 · 표면 계수 · 바닥은 **지금** 세계의
+         *          것이다 — 언리얼이 저장한 이동을 지금 세계에서 다시 돌리는 것과 같다(세계가 달랐으면 서버 상태가 다시 맞춘다).
+         *          캐릭터가 아직 없으면(첫 물리 프레임 전 · 꺼짐) @p state 를 그대로 돌려준다.
+         */
+        CharacterMotionState simulateMotion( const CharacterMotionState& state, const CharacterMotionInput& input, float32 deltaTime, CharacterMotionPass pass );
+        /** @brief 이동 입력을 다음 물리 프레임의 요청으로 겁니다(`setMoveVelocity` · `jump` … 를 한 번에). 고정 스텝으로 도는 캐릭터의 이동기가 부릅니다(아무 스레드). */
+        void applyMotionInput( const CharacterMotionInput& input );
+        /** @brief 손으로 돌리는 캐릭터를 그릴 자리입니다 — 지난 걸음 자리 @p previousPosition 과 지금 자리 사이 @p alpha, 거기에 @p offset(예측 보정 녹이기)을 더합니다. 게임 스레드. */
+        void setMotionDisplay( const float3& previousPosition, float32 alpha, const float3& offset );
+        /**
+         * @brief 몸의 치수 · 이동 튜닝(반지름 · 키 · 턱 · 비탈 · 중력 · 질량 · 충돌 프로파일)을 @p source 에서 옮깁니다.
+         * @details 같은 걸음을 내야 하는 다른 몸(서버가 접속마다 세운 폰)이 데이터를 두 벌 두지 않게 한다. 다음 물리 프레임에 캐릭터를 다시 짓는다.
+         */
+        void copyTuning( const CharacterControllerComponent& source );
+
     protected:
         /** @brief `stopMovementImmediately` 입니다(`TeleportType::ResetPhysics`). */
         void resetMotion() override { stopMovementImmediately(); }
@@ -182,6 +278,13 @@ namespace sw
         /** @brief 입력 칸을 잠그고 @p function( CharacterCommand3D& ) 을 부릅니다(아무 스레드). */
         template <typename TFunction>
         void editCommand( TFunction&& function ) const;
+        /**
+         * @brief 한 걸음의 속도를 정합니다 — 요청 @p command 와 이번 프레임의 면 속도 · 루트 모션 · 필드 · 오르기(`_frame*`), 이동 계수 @p moveScale 을 이어받은 운동에 얹는다. 백엔드에 넘길 속도를 돌려준다.
+         * @details 물리 고정 스텝(`onPrePhysicsStep`)과 손으로 돌리는 걸음(`simulateMotion`)이 함께 쓴다.
+         */
+        float3 beginStep( const CharacterCommand3D& command, float32 moveScale, float32 gravityY, float32 fixedDeltaTime );
+        /** @brief 옮긴 결과(`_state`)에서 이동 방식 · 수직 속도 · 공중 관성 · 바닥 회전을 잇습니다. */
+        void finishStep( float32 fixedDeltaTime );
 
     private:
         PROPERTY( Category = "Character", Min = 0.01, Tooltip = "Capsule radius", Units = m, Meta = "Shape=Capsule, ShapeRange=_halfHeight, ShapeOrigin=Base, ShapeScale=Physics" )
@@ -236,8 +339,13 @@ namespace sw
         float32                                 _appliedHeightReduction;   ///< 백엔드 캡슐을 지은 줄인 키(m) — `getScaledCapsule` 이 뺀다
         vector<StepRecord>                      _listStepHistory;          ///< 스텝 기록 고리(`setStepHistoryEnabled` 가 켜졌을 때 처음 칸을 만든다 — 꺼져 있으면 비어 있다)
         uint32                                  _stepHistoryCount;         ///< 기록한 스텝의 누계(고리의 다음 칸은 `% kStepHistoryCapacity`)
-        uint8                                   _bFrameClimb : 1;          ///< 이번 물리 프레임에 오르기 요청이 있다
-        uint8                                   _bStepClimb  : 1;          ///< 이번 스텝을 오르기로 움직였다(점프 · 발사가 없었다)
-        [[maybe_unused]] uint8                  _reserved    : 6;
+        float3                                  _motionDisplayOffset;      ///< 손으로 돌리는 캐릭터의 그리기 자리에 더한다(`setMotionDisplay`)
+        float32                                 _motionDisplayAlpha;       ///< 손으로 돌리는 캐릭터의 그리기 보간 비
+        float3                                  _writtenPosition;          ///< 마지막에 트랜스폼에 쓴 자리 — 트랜스폼이 바뀌어도 자리가 이것이면 옮긴 것이 아니다(회전만 바뀌었다)
+        uint8                                   _bFrameClimb       : 1;    ///< 이번 물리 프레임에 오르기 요청이 있다
+        uint8                                   _bStepClimb        : 1;    ///< 이번 스텝을 오르기로 움직였다(점프 · 발사가 없었다)
+        uint8                                   _bManualSimulation : 1;    ///< 물리 고정 스텝 대신 `simulateMotion` 이 걸음을 돌린다
+        uint8                                   _bPositionWritten  : 1;    ///< `_writtenPosition` 이 채워졌다
+        [[maybe_unused]] uint8                  _reserved          : 4;
     };
 } // namespace sw
