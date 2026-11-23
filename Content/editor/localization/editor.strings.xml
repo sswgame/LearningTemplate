@@ -4381,6 +4381,23 @@
 				<item>Source/Editor/Panels/Animation/RigDebugPanel.cpp</item>
 			</origins>
 		</entry>
+		<entry key="EdVFX.InheritedEffect"
+		       source="This effect inherits from another file (_base), so its values are not all written here. Edit it in the Catalog window.">
+			<origins>
+				<item>Source/Editor/Panels/VFX/VFXPreviewPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EdVFX.NotEditable" source="The effect text could not be opened for editing - see the log.">
+			<origins>
+				<item>Source/Editor/Panels/VFX/VFXPreviewPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EdVFX.SelectEmitter"
+		       source="Select an emitter above to edit it. Save (Ctrl+S) plays the change in the preview.">
+			<origins>
+				<item>Source/Editor/Panels/VFX/VFXPreviewPanel.cpp</item>
+			</origins>
+		</entry>
 		<entry key="EdVFX.Solo" source="Solo">
 			<origins>
 				<item>Source/Editor/Panels/VFX/VFXPreviewPanel.cpp</item>
@@ -4444,6 +4461,11 @@
 				<item>Source/Editor/Panels/Animation/AnimationGraphPanel.cpp</item>
 				<item>Source/Editor/Panels/ContentBrowser/ContentBrowserPanel.cpp</item>
 				<item>Source/Editor/Panels/UIPreview/UIPreviewPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EdVerb.Duplicate" source="Duplicate">
+			<origins>
+				<item>Source/Editor/Panels/VFX/VFXPreviewPanel.cpp</item>
 			</origins>
 		</entry>
 		<entry key="EdVerb.Load" source="Load">

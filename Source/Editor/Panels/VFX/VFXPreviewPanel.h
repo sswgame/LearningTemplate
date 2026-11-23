@@ -7,6 +7,7 @@
 #include "Core/Foundation/Types.h"
 
 #include "Editor/Common/GUI/Panel/EditorPreviewPanel.h"
+#include "Editor/Common/Widgets/PropertyGrid/EditorPropertyGrid.h"
 #include "Editor/Panels/VFX/Model/VFXPreviewViewModel.h"
 
 namespace sw::editor
@@ -27,9 +28,12 @@ namespace sw::editor
 
         const utf8* getPanelTitle() const override { return "VFX Preview"; }
         void        drawDocumentContent() override;
-        /** @brief 보기 전용이라 저장하지 않습니다(효과는 카탈로그 편집기가 고친다). */
-        [[nodiscard]] bool saveDocument() override { return false; }
-        bool               canSaveDocument() const override { return false; }
+        /** @brief 고친 효과 원문을 씁니다. 저장한 파일을 공유 캐시가 다시 읽고(`onDocumentSaved`) 미리보기가 다음 그리기에 다시 건다. */
+        [[nodiscard]] bool saveDocument() override;
+        /** @brief 고른 방출기 번호입니다. 없으면 -1 입니다(감시 값 `Editor.VFXSelectedEmitter`). */
+        int32 getSelectedEmitter() const;
+        /** @brief 방출기 수입니다(편집 중인 원문, 감시 값 `Editor.VFXEmitterCount`). */
+        uint32 getEmitterCount() const { return static_cast<uint32>( _model.getEmitterRows().size() ); }
 
         /**
          * @brief 미리보기 효과가 이번 재생에서 만든 입자 수입니다(일정에서 오므로 CPU · GPU 방출기가 같다). 미리보기 씬이 없으면 false 입니다(감시 값 `Editor.VFXPreviewParticleCount`).
@@ -48,6 +52,11 @@ namespace sw::editor
     private:
         bool                canAcceptDocumentPath( string_view assetPath ) const override;
         ToolAssetLoadResult loadDocument() override;
+        string              captureDocumentText() const override { return _model.captureText(); }
+        void                applyDocumentText( string_view text ) override { _model.applyText( text ); }
+        /** @brief 방출기 편집 칸(고른 방출기의 프로퍼티 · 복사 · 빼기)을 그립니다. 고칠 수 없는 효과면 까닭을 보인다. */
+        void drawEmitterEditor();
+        void onEmitterPropertyEdited( const PropertyInfo& property );
         /** @brief 미리보기 씬에 효과 오브젝트 하나(`PreviewSubject`)를 스폰합니다. */
         void populatePreviewScene( Scene& scene ) override;
         /** @brief 맞춤(F)과 창을 처음 열 때의 카메라가 담을 구입니다. */
@@ -55,6 +64,7 @@ namespace sw::editor
 
     private:
         VFXPreviewViewModel _model;
+        EditorPropertyGrid  _grid;
         uint32              _autoReloadCount; ///< 파일이 바뀌어 다시 읽은 횟수
     };
 } // namespace sw::editor

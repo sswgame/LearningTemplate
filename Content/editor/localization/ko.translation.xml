@@ -1372,6 +1372,15 @@
 		<entry key="EdTip.WriteTheWeightsAndOnOffOf"
 		       text="이 인스턴스 노드의 가중치 · 켜짐을 리그 에셋(*.rig.xml)에 씁니다. 다른 키는 그대로입니다"
 		       sourceHash="0d8da0706fc03658" />
+		<entry key="EdVFX.InheritedEffect"
+		       text="이 효과는 다른 파일(_base)을 물려받아 값이 여기 다 적혀 있지 않습니다. Catalog 창에서 고치세요."
+		       sourceHash="62ba91ed71bb980f" />
+		<entry key="EdVFX.NotEditable"
+		       text="효과 원문을 편집용으로 열지 못했습니다. 로그를 보세요."
+		       sourceHash="1726e45c8cd75b1a" />
+		<entry key="EdVFX.SelectEmitter"
+		       text="위에서 방출기를 고르면 고칠 수 있습니다. 저장(Ctrl+S)하면 미리보기가 바뀐 효과를 재생합니다."
+		       sourceHash="16941ed94d0aecce" />
 		<entry key="EdVFX.Solo" text="솔로" sourceHash="8ac6d324f22e6d8a" />
 		<entry key="EdVFX.SoloTip"
 		       text="미리보기에서 이 방출기만 재생합니다. 효과 파일은 바뀌지 않습니다. 다시 누르면 모든 방출기를 재생합니다."
@@ -1387,6 +1396,7 @@
 		<entry key="EdVerb.Cancel" text="취소" sourceHash="2ceb11be2290bb1b" />
 		<entry key="EdVerb.Clear" text="지우기" sourceHash="b4f1dffbb6be6302" />
 		<entry key="EdVerb.Delete" text="삭제" sourceHash="dc673e73b5c13aea" />
+		<entry key="EdVerb.Duplicate" text="복제" sourceHash="fac15b89e0668996" />
 		<entry key="EdVerb.Load" text="불러오기" sourceHash="4f20edb48a6287c9" />
 		<entry key="EdVerb.Move" text="옮기기" sourceHash="379c18aec5654894" />
 		<entry key="EdVerb.Play" text="재생" sourceHash="cd105819b5a10243" />
