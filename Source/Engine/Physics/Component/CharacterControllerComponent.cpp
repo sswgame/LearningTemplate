@@ -31,6 +31,12 @@ namespace sw
         , _gravityScale{ 1.0f }
         , _mass{ 70.0f }
         , _bInnerBody{ true }
+        , _walkVelocity{}
+        , _fieldVelocity{}
+        , _airVelocity{}
+        , _verticalSpeed{ 0.0f }
+        , _movementMode{ CharacterMovementMode::Walking }
+        , _bGrounded{ false }
         , _character{}
         , _state{}
         , _pCommandPage{ nullptr }
@@ -39,18 +45,13 @@ namespace sw
         , _frameSurfaceVelocity{}
         , _frameMoveScale{ 1.0f }
         , _reportedMoveScale{ 1.0f }
-        , _airVelocity{}
         , _frameField{}
         , _frameClimbVelocity{}
-        , _walkVelocity{}
-        , _fieldVelocity{}
         , _queuedStepVelocity{}
         , _queuedStepSeconds{ 0.0f }
-        , _movementMode{ CharacterMovementMode::Walking }
         , _previousPosition{}
         , _worldScale{ 1.0f, 1.0f, 1.0f }
         , _worldRotation{}
-        , _verticalSpeed{ 0.0f }
         , _pendingGroundYaw{ 0.0f }
         , _requestedHeightReduction{ 0.0f }
         , _appliedHeightReduction{ 0.0f }
@@ -340,8 +341,9 @@ namespace sw
             if ( _character.isValid() )
                 markBodyCreated();
             markShapeScale( _worldScale );
+            // 이어받는 운동(`_verticalSpeed` · `_airVelocity` …)은 지우지 않는다 — 스냅샷에서 돌아온 값이면 그대로 잇고, 앞 캐릭터를 놓은 것이면 놓을 때 지웠다(`releasePhysics`).
             _state            = PhysicsCharacterState3D{};
-            _verticalSpeed    = 0.0f;
+            _state._bGrounded = _bGrounded;
             _state._position  = position;
             _previousPosition = position;
             return;
@@ -473,6 +475,7 @@ namespace sw
         _movementMode = _bStepClimb == SW_TRUE ? CharacterMovementMode::Climbing : _frameField.selectMovementMode( _state._bGrounded, kBodyDensity );
         // 결정: 바닥이 돌면 위치만이 아니라 방향(yaw)도 같이 돈다 — 이번 스텝에 바닥이 돈 각을 모아 두고 트랜스폼을 쓸 때 얹는다.
         _pendingGroundYaw += _state._groundYawRate * fixedDeltaTime;
+        _bGrounded = _state._bGrounded;
         if ( _bStepClimb == SW_TRUE )
             _verticalSpeed = 0.0f; // 오르던 속도는 잇지 않는다 — 구역을 벗어나면 그 자리에서 떨어지기 시작한다
         // 천장에 막혔으면 오르던 속도가 줄었다 — 실제로 난 수직 속도를 잇는다. 디디면 수직 속도는 0 이다.
@@ -531,7 +534,12 @@ namespace sw
         IPhysicsScene3D* pScene = physics.findScene3D();
         if ( pScene != nullptr )
             pScene->destroyCharacter( _character );
-        _character = PhysicsCharacterHandle{};
+        _character     = PhysicsCharacterHandle{};
+        _walkVelocity  = float3{};
+        _fieldVelocity = float3{};
+        _airVelocity   = float3{};
+        _verticalSpeed = 0.0f;
+        _bGrounded     = false;
     }
 } // namespace sw
 

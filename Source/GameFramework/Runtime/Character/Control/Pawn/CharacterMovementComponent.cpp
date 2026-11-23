@@ -57,9 +57,9 @@ namespace sw
         , _climbReleaseSeconds{ 0.3f }
         , _turnRate{ 12.0f }
         , _facingMode{ PawnFacingMode::MoveDirection }
+        , _velocity{}
         , _climbReleaseLeft{ 0.0f }
         , _bClimbing{ false }
-        , _velocity{}
         , _facingYaw{ 0.0f }
         , _sprintIndex{}
         , _jumpIndex{}

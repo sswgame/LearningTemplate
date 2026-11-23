@@ -111,12 +111,13 @@ namespace sw
         PROPERTY( Category = "Movement", DisplayName = "Facing", Tooltip = "Body faces the control yaw (shooter) or the move direction (third person, NPC)" )
         PawnFacingMode _facingMode;
 
+        PROPERTY( RuntimeState, Category = "Movement", DisplayName = "Velocity", Tooltip = "Runtime: horizontal velocity" )
+        float3 _velocity; ///< 지금 수평 속도 — 상태 칸이라 스냅샷에서 돌아와도 같은 가감속을 잇는다
         PROPERTY( RuntimeState, Category = "Movement", DisplayName = "Climb Release Left", Tooltip = "Runtime" )
         float32 _climbReleaseLeft;
         PROPERTY( RuntimeState, Category = "Movement", DisplayName = "Climbing", Tooltip = "Runtime" )
         bool _bClimbing;
 
-        float3                 _velocity;  ///< 지금 수평 속도
         float32                _facingYaw; ///< 몸의 요
         optional<int32>        _sprintIndex;
         optional<int32>        _jumpIndex;
