@@ -17,7 +17,7 @@
  *          장치 밖 씬 이동(세이브 불러오기 · 타이틀로 · 시나리오의 씬 열기)이 오면 칸 스택과 미니게임 범위를 비운다 — 씬 매니저의 받아들임 알림으로 이 흐름이 요청하지 않은 게임 이동을 듣는다.
  *          월드가 플레이를 시작할 때 활성 씬이 씬 전환 미니게임의 맵이면(에디터가 미니게임 맵을 편집하다 플레이 · 모듈 리로드 뒤 다시 시작) 그 미니게임 안으로 시작하고, 멈추면 비운다 —
  *          언리얼 Lyra 가 월드 설정의 기본 경험으로 에디터 플레이를 여는 자리다. 실행 전역 변수로 들어간 것과 같은 칸(돌아올 씬 없음)이다.
- *          진입: 개발 명령 `minigame.enter <이름> [얹을 사물]` · `minigame.switch <이름>` · `minigame.leave [결과]`, 사물의 `MinigameTriggerComponent`(틱 뒤에 맡기고 `update` 가
+ *          진입: 개발 명령 `minigame.enter <이름> [얹을 사물]` · `minigame.switch <이름>` · `minigame.leave [결과]` · `minigame.quit`, 사물의 `MinigameTriggerComponent`(틱 뒤에 맡기고 `update` 가
  *          틱 밖에서 처리 — 스냅숏은 씬을 도는 동안 찍지 않는다), 실행 전역 변수 `-gv_firstMinigame=<이름>`(첫 씬 `gv_firstScene` 보다 위 — `enterFirstMinigame`).
  */
 #pragma once
@@ -59,6 +59,9 @@ namespace sw
         static constexpr const utf8* kMinigameFolder = "minigames/";
         /** @brief 미니게임 파일의 접미입니다. */
         static constexpr const utf8* kMinigameSuffix = ".minigame.xml";
+
+        /** @brief 플레이어가 그만두고 나온 결과의 이름입니다(`requestQuit`). */
+        static constexpr const utf8* kQuitResult = "quit";
 
         /** @brief 미니게임이 끝나 결과를 넘길 때 부르는 함수 목록입니다(돌아올 자리를 복원한 뒤). */
         using FinishedDelegate = MulticastDelegate<void( const MinigameResult& result )>;
@@ -112,6 +115,12 @@ namespace sw
          * @details 하위 레벨 나가기는 그 자리에서 하위 레벨을 빼므로 그 안 디렉터의 규칙 중에 부르면 자기를 지운다 — 진입(`requestEnter`)과 같은 줄로 미룬다.
          */
         void requestLeave( const hashed_string& resultName, vector<MinigameResultValue> listValue );
+        /**
+         * @brief 플레이어가 맨 위 미니게임을 그만두게 합니다 — 그 미니게임의 열린 디렉터들이 모은 값(`GameModeComponent::collectMinigameResult`)을 결과 `kQuitResult` 로 맡긴다(`requestLeave`).
+         * @details 스스로 끝나지 않는 미니게임(농장 · 도시 · 공원)의 나가기다 — 일시정지 메뉴의 "미니게임 나가기"(UI 전역 명령 `LeaveMinigame`)와 개발 명령 `minigame.quit` 가 부른다.
+         *          칸이 없거나 다른 진입 · 나가기가 맵을 기다리는 중이면 알리고 아무 일도 하지 않습니다.
+         */
+        void requestQuit();
         /**
          * @brief 틱 뒤 작업(트리거)에서 진입을 맡깁니다 — 다음 `update`(틱 밖)가 `enter` 합니다. 이미 맡긴 것이 있으면 경고하고 이것을 버립니다.
          * @details 씬 전환의 스냅숏은 씬을 도는 동안 찍지 않는다(자동 저장과 같은 자리 — `GameInstance::update`).
@@ -210,6 +219,8 @@ namespace sw
         void dropFailedSubLevel();
         /** @brief 하위 레벨 @p returnPoint 를 바탕 씬이 아직 활성이면 뺍니다. */
         static void removeSubLevel( const MinigameSubLevelReturn& returnPoint );
+        /** @brief 맨 위 미니게임의 열린 디렉터들이 모은 결과 값입니다 — 하위 레벨이면 그 하위 레벨의 디렉터만, 씬 전환이면 활성 씬의 디렉터 모두. */
+        void collectDirectorResults( vector<MinigameResultValue>& outListValue ) const;
         /** @brief 결과를 넘깁니다(`onFinished`). */
         void deliverResult( const MinigameResult& result );
         /** @brief 다른 진입 · 나가기가 맵을 기다리는 중이면 @p name 의 요청을 거절한다고 알리고 true 입니다. */

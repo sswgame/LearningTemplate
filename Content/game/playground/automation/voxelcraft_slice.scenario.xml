@@ -52,6 +52,6 @@
 	<DevCommand line="game.load voxelcraft/slice"/>
 	<WaitUntil watch="Save.Loaded" atLeast="2" timeoutWallSeconds="10"/>
 	<ExpectStateHash key="restored"/>
-	<WaitUntil watch="Object.Exists" target="VoxelChunk" equals="1" timeoutFrames="30"/> <!-- 복원한 월드의 청크 뷰가 다시 선다 -->
+	<WaitUntil watch="Object.Exists" target="VoxelChunk[0]" equals="1" timeoutFrames="30"/> <!-- 복원한 월드의 청크 뷰가 다시 선다 -->
 	<Pass/>
 </Scenario>

@@ -123,6 +123,14 @@ namespace sw
         SW_LOG_INFO_ID( "MeadowFarm.VillageOpenHoldSpace", "[Meadow] the village is open - hold fast forward to speed up the clock, use the talk action to talk to a visitor" );
     }
 
+    void MeadowFarmGameModeComponent::collectMinigameResult( vector<MinigameResultValue>& outListValue ) const
+    {
+        const GameObject* const      pPlayerState = findPlayerState();
+        const WalletComponent* const pWallet      = pPlayerState != nullptr ? pPlayerState->getComponent<WalletComponent>() : nullptr;
+        if ( pWallet != nullptr )
+            addMoneyResult( outListValue, pWallet->getWallet().getBalance( Wallet::getDefaultCurrency() ) - _startingGold );
+    }
+
     void MeadowFarmGameModeComponent::updateGame( float32 deltaTime )
     {
         (void)deltaTime;

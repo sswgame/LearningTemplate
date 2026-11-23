@@ -22,6 +22,7 @@
 #include "Engine/Object/Component/SceneComponent.h"
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Object/GameObject/GameObjectManager.inl"
+#include "Engine/Object/GameObject/Registry/ComponentRegistry.h"
 #include "Engine/Object/GameObject/WorldOrigin.h"
 #include "Engine/Scene/Scene.h"
 #include "Engine/Scene/SceneManager.h"
@@ -34,6 +35,7 @@
 #include "GameFramework/Runtime/Foundation/Framework/Flow/GameSceneFlow.h"
 #include "GameFramework/Runtime/Foundation/Framework/GameFeature/GameFeatureRegistry.h"
 #include "GameFramework/Runtime/Foundation/Framework/GameFeature/GameFeatureScope.h"
+#include "GameFramework/Runtime/Foundation/Framework/GameModeComponent.h"
 #include "GameFramework/Runtime/Foundation/Framework/GameService.h"
 #include "GameFramework/Runtime/Foundation/Framework/Save/Autosave.h"
 #include "GameFramework/Runtime/Foundation/Framework/Save/SaveLock.h"
@@ -141,6 +143,17 @@ namespace sw
                 else
                     outReply = pFlow->leave( listArgument.empty() ? hashed_string{} : hashed_string( listArgument[0] ), std::move( listValue ) ) ? "minigame.leave: leaving"
                                                                                                                                                  : "minigame.leave: refused";
+                return true;
+            }
+
+            /** @brief `minigame.quit` 의 몸통입니다 — 일시정지 메뉴의 "미니게임 나가기" 와 같은 길이다(디렉터들이 모은 값을 결과 `quit` 로 넘긴다). */
+            static bool runQuitCommand( const vector<string>& listArgument, string& outReply )
+            {
+                (void)listArgument;
+                MinigameFlow* const pFlow = game::findSubsystem<MinigameFlow>();
+                if ( pFlow != nullptr )
+                    pFlow->requestQuit();
+                outReply = pFlow != nullptr ? "minigame.quit: requested" : "minigame.quit: no game is running";
                 return true;
             }
 
@@ -717,6 +730,37 @@ namespace sw
         _pendingLeave = MinigameResult{ hashed_string{}, resultName, std::move( listValue ) };
     }
 
+    void MinigameFlow::requestQuit()
+    {
+        if ( rejectIfLoadPending( "quit" ) )
+            return;
+        if ( _stack.isEmpty() )
+        {
+            SW_LOG_ERROR_ID( "MinigameFlow.NothingToLeave", "There is no minigame to leave" );
+            return;
+        }
+        vector<MinigameResultValue> listValue;
+        collectDirectorResults( listValue );
+        requestLeave( hashed_string( kQuitResult ), std::move( listValue ) );
+    }
+
+    void MinigameFlow::collectDirectorResults( vector<MinigameResultValue>& outListValue ) const
+    {
+        Scene* const pScene = MinigameFlowInternal::findActivePlayScene();
+        if ( pScene == nullptr )
+            return; // 맵이 없다 — 디렉터도 없다
+        GameObjectManager&                  manager   = *pScene->getObjectManager();
+        const MinigameSubLevelReturn* const pSubLevel = std::get_if<MinigameSubLevelReturn>( &_stack.findTop()->_returnPoint );
+        for ( const GameModeComponent* pGameMode : manager.getComponentRegistry().getAll<GameModeComponent>() )
+        {
+            const GameObject* const pOwner = pGameMode->getOwner();
+            const bool              bInMinigame =
+                pOwner != nullptr && ( pSubLevel == nullptr || manager.getSubsystem<SceneSubLevelSubsystem>().isObjectInSubLevel( pSubLevel->_subLevelName.view(), pOwner->getObjectID() ) );
+            if ( bInMinigame && pGameMode->isStarted() )
+                pGameMode->collectMinigameResult( outListValue );
+        }
+    }
+
     void MinigameFlow::requestEnter( string_view name, const optional<SubLevelPlacement>& placement )
     {
         if ( _pendingEnter.empty() == false )
@@ -1024,6 +1068,8 @@ namespace sw
     SW_DEV_COMMAND( MinigameLeave, "minigame.leave", "minigame.leave [result] [name=amount ...]",
                     "Leave the top minigame and return to the scene it was entered from (restored from the capture on a scene switch; the entrance scene without one), then hand over the result and its values",
                     &MinigameFlowInternal::runLeaveCommand );
+    SW_DEV_COMMAND( MinigameQuit, "minigame.quit", "minigame.quit", "Quit the top minigame like the pause menu's Leave Minigame - its game modes hand over their result values with the result 'quit'",
+                    &MinigameFlowInternal::runQuitCommand );
     SW_AUTOMATION_QUERY_WATCH( minigameActive, "Minigame.Active", "Name of the active (top) minigame; none without one (also while it waits for its map)", &MinigameFlowInternal::readActive, false,
                                false );
     SW_AUTOMATION_QUERY_WATCH( minigameLastResult, "Minigame.LastResult", "Result handed over by the last finished minigame (after its scene was restored); none before one finished",

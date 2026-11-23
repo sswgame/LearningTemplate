@@ -51,6 +51,7 @@ namespace sw
         , _statusLogInterval{ 10.0f }
         , _simulation{}
         , _wallet{}
+        , _startingCash{ 0 }
         , _pLayoutCatalog{}
         , _settings{}
         , _listPlacement{}
@@ -68,6 +69,11 @@ namespace sw
     {
         SW_LOG_INFO_ID( "ParkGameMode.ParkOpen", "[Park] park is open" );
         logStatus();
+    }
+
+    void ParkGameModeComponent::collectMinigameResult( vector<MinigameResultValue>& outListValue ) const
+    {
+        addMoneyResult( outListValue, _wallet.getBalance( _settings._currency ) - _startingCash );
     }
 
     void ParkGameModeComponent::updateGame( float32 deltaTime )
@@ -221,7 +227,8 @@ namespace sw
         if ( placeLayout( layout ) == false )
             return false;
         _wallet.clear();
-        _wallet.add( _settings._currency, layout.getStartingCash() );
+        _startingCash = layout.getStartingCash();
+        _wallet.add( _settings._currency, _startingCash );
         if ( _simulation.initialize( _settings, &_wallet ) == false )
             return false; // 까닭은 시뮬레이션이 남겼다 — 틀린 규칙으로 공원을 열지 않는다
         _listCoaster.clear();

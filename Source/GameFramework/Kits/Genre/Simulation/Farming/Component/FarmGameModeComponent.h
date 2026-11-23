@@ -134,6 +134,7 @@ namespace sw
         void               onStateRestored( bool bRestored ) override;
         void               onGameStarted() override;
         void               updateGame( float32 deltaTime ) override;
+        void               collectMinigameResult( vector<MinigameResultValue>& outListValue ) const override;
         void               onFlush( GameObjectManager& manager, bool bRespawnViews ) override;
         void               onViewsDespawned() override;
         bool               hasPendingSpawn() const override { return _bPossessionDirty == SW_TRUE; }

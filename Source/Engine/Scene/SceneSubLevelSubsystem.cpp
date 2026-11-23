@@ -366,17 +366,28 @@ namespace sw
         return _mapObjectSubLevel.find( objectID ) != _mapObjectSubLevel.end();
     }
 
-    bool SceneSubLevelSubsystem::isSubLevelObject( const uint64 objectID ) const
+    bool SceneSubLevelSubsystem::isObjectInSubLevel( string_view name, uint64 objectID ) const
+    {
+        for ( const unique_ptr<SubLevel>& pSubLevel : _listSubLevel )
+        {
+            if ( pSubLevel->_name == name )
+                return pSubLevel->_anchorObjectID != 0 && findAnchorObjectID( objectID ) == pSubLevel->_anchorObjectID;
+        }
+        return false;
+    }
+
+    optional<uint64> SceneSubLevelSubsystem::findAnchorObjectID( uint64 objectID ) const
     {
         if ( _pScene == nullptr || _mapObjectSubLevel.empty() )
-            return false;
+            return nullopt;
         // 멤버에 붙은 자식(중첩 프리팹 부품 · 게임이 붙인 것)은 하위 레벨과 함께 선다. 부모가 지워져도 남는 것(탑승자)은 조상의 몫이 아니다.
         for ( const GameObject* pObject = _pManager->findGameObjectByID( objectID ); pObject != nullptr; pObject = pObject->isKeptWhenParentDestroyed() ? nullptr : pObject->getParent() )
         {
-            if ( _mapObjectSubLevel.find( pObject->getObjectID() ) != _mapObjectSubLevel.end() )
-                return true;
+            const auto itAnchor = _mapObjectSubLevel.find( pObject->getObjectID() );
+            if ( itAnchor != _mapObjectSubLevel.end() )
+                return itAnchor->second;
         }
-        return false;
+        return nullopt;
     }
 
     void SceneSubLevelSubsystem::writeSaveState( vector<uint8>& outBytes ) const

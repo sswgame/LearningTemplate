@@ -668,6 +668,7 @@
 		<entry key="Keep these display settings?"
 		       text="この表示設定を維持しますか?"
 		       sourceHash="0048bd736e33dcdf" />
+		<entry key="Leave Minigame" text="ミニゲームをやめる" sourceHash="c1b0982e831bcd25" />
 		<entry key="Loading" text="読み込み中" sourceHash="b59d68ed12d46377" />
 		<entry key="Main Menu" text="メインメニュー" sourceHash="76813002d9c586bf" />
 		<entry key="Notification.ClipboardWriteFailed"

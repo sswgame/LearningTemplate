@@ -90,6 +90,7 @@ namespace sw
         void               onStateRestored( bool bRestored ) override;
         void               onGameStarted() override;
         void               updateGame( float32 deltaTime ) override;
+        void               collectMinigameResult( vector<MinigameResultValue>& outListValue ) const override;
         void               onFlush( GameObjectManager& manager, bool bRespawnViews ) override;
 
     private:
@@ -127,7 +128,8 @@ namespace sw
         float32 _statusLogInterval;
 
         ThemeParkSimulation                  _simulation;
-        Wallet                               _wallet; ///< 공원 금고. 한 판 임시 상태라 디렉터가 보관하고 빌려 준다(디렉터 계약 ③).
+        Wallet                               _wallet;       ///< 공원 금고. 한 판 임시 상태라 디렉터가 보관하고 빌려 준다(디렉터 계약 ③).
+        int32                                _startingCash; ///< 이 판을 연 돈(배치 데이터) — 나갈 때 번 돈을 센다
         SharedAssetRef<CoasterLayoutCatalog> _pLayoutCatalog;
         ThemeParkSettings                    _settings;
         vector<RidePlacement>                _listPlacement;

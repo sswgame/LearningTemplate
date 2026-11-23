@@ -163,6 +163,14 @@ namespace sw
         logStatus( true );
     }
 
+    void FarmGameModeComponent::collectMinigameResult( vector<MinigameResultValue>& outListValue ) const
+    {
+        const GameObject* const      pPlayerState = findPlayerState();
+        const WalletComponent* const pWallet      = pPlayerState != nullptr ? pPlayerState->getComponent<WalletComponent>() : nullptr;
+        if ( pWallet != nullptr )
+            addMoneyResult( outListValue, pWallet->getWallet().getBalance( _shipment.getCurrency() ) - _startingGold );
+    }
+
     void FarmGameModeComponent::updateGame( float32 deltaTime )
     {
         if ( deltaTime <= 0.0f )

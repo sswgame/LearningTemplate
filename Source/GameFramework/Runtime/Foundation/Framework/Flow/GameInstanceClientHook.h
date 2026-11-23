@@ -46,7 +46,7 @@ namespace sw
         /** @brief UI 가 있으면 씬 흐름 @p flow 의 세션 명령(타이틀로)을 UI 전역 명령 표에 겁니다(`onInitialize` 뒤). 거둘 때는 `GameSceneFlow::unregisterSessionCommands`. */
         virtual void bindSessionCommands( GameSceneFlow& flow ) = 0;
         /**
-         * @brief 미니게임 @p definition 의 UI 문서(`MinigameDefinition::_listUI`)를 열고, 닫기를 @p scope 의 되돌릴 일로 겁니다(`MinigameFlow` 가 켤 때). UI 가 없는 호스트(헤드리스)는 열 화면이 없어 true 다.
+         * @brief 미니게임 @p definition 의 UI 문서(`MinigameDefinition::_listUI`)를 열고 "미니게임 나가기" 명령(`UIGlobalCommandRegistry::kLeaveMinigame`)을 걸며, 닫기 · 풀기를 @p scope 의 되돌릴 일로 겁니다(`MinigameFlow` 가 켤 때). UI 가 없는 호스트(헤드리스)는 열 화면이 없어 true 다.
          * @return 문서를 열지 못하면 알리고 false 입니다(미니게임 켜기가 진다).
          */
         [[nodiscard]] virtual bool openMinigameUI( GameFeatureScope& scope, const MinigameDefinition& definition ) = 0;

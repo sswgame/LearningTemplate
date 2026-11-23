@@ -197,6 +197,12 @@ namespace sw
         return true;
     }
 
+    void GameModeComponent::addMoneyResult( vector<MinigameResultValue>& outListValue, int64 profit )
+    {
+        if ( profit > 0 )
+            outListValue.push_back( MinigameResultValue{ hashed_string( MinigameResultValue::kMoneyName ), profit } );
+    }
+
     void GameModeComponent::onTick( TickContext& context )
     {
         Component::onTick( context );
