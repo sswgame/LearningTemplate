@@ -6,14 +6,16 @@ clang_tidy 의 TU 고르기 회귀 검사 — 짝 .cpp 가 없는 헤더는 그 
 
 from __future__ import annotations
 
+import os
 import sys
 import tempfile
+import time
 import unittest
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[2]))   # Scripts
 
-from lint.clang_tidy import IncludeClosure, make_cache_key, select_entries  # noqa: E402
+from lint.clang_tidy import CACHE_MAX_AGE_DAYS, IncludeClosure, SYSTEM_INCLUDE_PATTERN, cache_path, find_compiler, make_cache_key, prune_cache, read_cache, select_entries, write_cache  # noqa: E402
 
 
 class SelectEntriesTest(unittest.TestCase):
@@ -66,6 +68,31 @@ class CacheKeyTest(unittest.TestCase):
             self.assertNotEqual(key(), first)
             (source / "Core/A.cpp").write_text('#include SW_HEADER\n', encoding="utf-8")
             self.assertIsNone(key())   # 매크로 포함은 캐시하지 않는다
+
+
+class CachePruneTest(unittest.TestCase):
+    """정리는 오래 쓰지 않은 항목만 지운다 — 적중은 시각을 올려 남긴다. 키 재료(컴파일러 · 시스템 포함)를 읽는 규칙도 본다."""
+
+    def test_prune_remove_only_old_entries(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary:
+            cache_dir, tree = Path(temporary) / "cache", Path(temporary)
+            now = time.time()
+            old = now - (CACHE_MAX_AGE_DAYS + 1) * 86400
+            for key in ("aa1", "bb2", "cc3"):
+                write_cache(cache_dir, key, "out", tree)
+            for key in ("aa1", "bb2"):
+                os.utime(cache_path(cache_dir, key), (old, old))
+            self.assertEqual(read_cache(cache_dir, "bb2", tree), "out")   # 적중이 시각을 올린다
+            self.assertEqual(prune_cache(cache_dir, now), 1)
+            self.assertIsNone(read_cache(cache_dir, "aa1", tree))
+            self.assertEqual(read_cache(cache_dir, "bb2", tree), "out")
+            self.assertEqual(read_cache(cache_dir, "cc3", tree), "out")
+
+    def test_system_include_and_compiler_are_read_from_the_driver_output(self) -> None:
+        line = ' "clang.exe" "-cc1" "-triple" "x86_64-pc-windows-msvc19.51.36260" "-internal-isystem" "C:\\VC\\14.51\\include" "-internal-externc-isystem" "/usr/include"'
+        self.assertEqual(SYSTEM_INCLUDE_PATTERN.findall(line), ["x86_64-pc-windows-msvc19.51.36260", "C:\\VC\\14.51\\include", "/usr/include"])
+        self.assertEqual(find_compiler({"command": '"C:/a b/clang-cl.exe" /c x.cpp'}), "C:/a b/clang-cl.exe")
+        self.assertEqual(find_compiler({"command": "/usr/bin/clang++ -c x.cpp"}), "/usr/bin/clang++")
 
 
 if __name__ == "__main__":
