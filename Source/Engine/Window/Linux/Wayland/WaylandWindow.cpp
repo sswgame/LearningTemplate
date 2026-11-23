@@ -2,6 +2,7 @@
 
 #include "Engine/Window/Linux/Wayland/WaylandWindow.h"
 
+#include "Core/Algorithm/VectorUtil.h"
 #include "Core/Container/vector.h"
 #include "Core/Foundation/Constants.h"
 #include "Core/String/StringUtil.h"
@@ -131,6 +132,7 @@ namespace sw
         vector<WaylandOutput>      _listOutput;                   ///< 바인드한 출력과 그 값
         bool                       _bOutputsChanged{ false };     ///< 출력 값이 바뀌었다 - `processMessages` 가 세대를 올린다 NOLINT(sw-bool-flag): 집합체다(중괄호 · 지정 초기화로 만든다) — C++17 비트필드는 기본값을 둘 수 없어 `T x;` 가 값을 남기지 않는다
         vector<WaylandQueuedInput> _listPendingInput;             ///< 리스너가 쌓고 `processMessages` 가 넘긴다
+        vector<uint32>             _listPressedButton;            ///< 누름을 넘기고 뗌을 아직 넘기지 않은 버튼(리눅스 이벤트 버튼 번호)
         uint32                     _inputSerial{ 0 };             ///< 마지막 키 · 버튼 · 들어옴의 일련번호(선택을 내놓을 때 컴포지터가 요구한다)
         bool                       _bIntroducedHasUTF8{ false };  ///< `_pIntroducedOffer` 가 text/plain;charset=utf-8 을 내놓는지 NOLINT(sw-bool-flag): 집합체다(중괄호 · 지정 초기화로 만든다) — C++17 비트필드는 기본값을 둘 수 없어 `T x;` 가 값을 남기지 않는다
         bool                       _bIntroducedHasPlain{ false }; ///< 위와 같이 text/plain NOLINT(sw-bool-flag): 집합체다(중괄호 · 지정 초기화로 만든다) — C++17 비트필드는 기본값을 둘 수 없어 `T x;` 가 값을 남기지 않는다
@@ -250,6 +252,31 @@ namespace sw
             pushInput( event );
         }
 
+        /** @brief 버튼 사건을 넘기고 눌린 버튼을 기억합니다. */
+        void pushPointerButton( uint32 button, bool bDown )
+        {
+            if ( bDown )
+                (void)VectorUtil::addUnique( _listPressedButton, button );
+            else
+                (void)VectorUtil::removeFirst( _listPressedButton, button );
+            WaylandInputEvent event;
+            event._kind   = bDown ? WaylandInputKind::PointerDown : WaylandInputKind::PointerUp;
+            event._button = button;
+            pushInput( event );
+        }
+
+        /** @brief 포인터가 표면을 떠났습니다. 눌린 버튼의 뗌은 이 표면에 더 오지 않으므로(장치가 사라짐 · 컴포지터의 창 끌기) 나감보다 먼저 넘긴다. */
+        void pushPointerLeave()
+        {
+            while ( _listPressedButton.empty() == false )
+            {
+                pushPointerButton( _listPressedButton.back(), false );
+            }
+            WaylandInputEvent event;
+            event._kind = WaylandInputKind::PointerLeave;
+            pushInput( event );
+        }
+
         /** @brief 자리에서 포인터가 사라졌습니다. 걸어 둔 잠금의 방식은 남겨 다시 생긴 포인터에 잇습니다. */
         void releasePointer()
         {
@@ -267,9 +294,7 @@ namespace sw
             _pRelativePointer   = nullptr;
             _pPointer           = nullptr;
             _pointerSerial      = 0; // 새 포인터가 들어올 때의 번호로만 커서를 바꾼다
-            WaylandInputEvent event;
-            event._kind = WaylandInputKind::PointerLeave;
-            pushInput( event );
+            pushPointerLeave();
         }
 
         void dropSelectionOffer()
@@ -894,9 +919,7 @@ namespace sw
                 (void)pPointer;
                 (void)serial;
                 (void)pSurface;
-                WaylandInputEvent event;
-                event._kind = WaylandInputKind::PointerLeave;
-                static_cast<State*>( pData )->pushInput( event );
+                static_cast<State*>( pData )->pushPointerLeave();
             }
 
             static void onPointerMotion( void* pData, wl_pointer* pPointer, uint32 time, wl_fixed_t x, wl_fixed_t y )
@@ -914,11 +937,9 @@ namespace sw
             {
                 (void)pPointer;
                 (void)time;
-                static_cast<State*>( pData )->_inputSerial = serial;
-                WaylandInputEvent event;
-                event._kind   = buttonState == WL_POINTER_BUTTON_STATE_PRESSED ? WaylandInputKind::PointerDown : WaylandInputKind::PointerUp;
-                event._button = button;
-                static_cast<State*>( pData )->pushInput( event );
+                State& state       = *static_cast<State*>( pData );
+                state._inputSerial = serial;
+                state.pushPointerButton( button, buttonState == WL_POINTER_BUTTON_STATE_PRESSED );
             }
 
             static void onPointerAxis( void* pData, wl_pointer* pPointer, uint32 time, uint32 axis, wl_fixed_t value )
