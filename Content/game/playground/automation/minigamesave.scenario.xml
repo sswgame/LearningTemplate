@@ -1,0 +1,68 @@
+<?xml version="1.0" encoding="utf-8"?>
+<?asset guid="df56080ae3eb46d691a1801e784687af"?>
+<!--
+  미니게임 안의 세이브 왕복(docs/agents/Gameplay.md "게임 기능 · 미니게임"). 무대 maps/hub.
+  ① 허브의 Marker 를 옮기고 pixeltown 에 들어가 저장한다 — 저장을 허락하는 정의라 막히지 않는다. 세이브는 칸 스택(pixeltown, 덮인 허브)을 머리에 담는다.
+  ② 허브로 나와 Marker 를 다시 옮긴 뒤 불러온다 — pixeltown 을 켠 채 그 맵으로 들어간다(카탈로그 · 기능 없이 맵만 열리지 않는다).
+  ③ 불러온 pixeltown 에서 나오면 세이브에 실린 허브가 되살아난다 — Marker 는 ① 의 자리다.
+  ④ 같은 미니게임 안에서 다시 저장 · 불러오면 씬을 다시 열지 않고 이 자리에서 되살린다(칸은 그대로 하나).
+  ⑤ 저장을 막는 미니게임(kitdemo_actioncombat, save="Blocked")은 안에서 저장이 막히고, 나오면 풀린다.
+  실행: App -scenario=game/playground/automation/minigamesave.scenario.xml -unattended (체인: ctest -R Scenario.playground)
+-->
+<Scenario name="game.playground.minigamesave" fixedDelta="0.0166667" timeoutFrames="4800" startAfter="ScenePlaying" startTimeoutFrames="900" input="exclusive">
+	<Launch variable="gv_firstScene" value="game/playground/maps/hub.scene.xml"/>
+	<Variable name="gv_playgroundAutoPlay" value="0"/>
+	<WaitUntil watch="Assets.Pending" equals="0" timeoutWallSeconds="60"/>
+
+	<!-- ① 들어가 저장 -->
+	<DevCommand line="teleport Marker 2 0.5 -4"/>
+	<WaitUntil watch="Object.X" target="Marker" near="2" tolerance="0.001" timeoutFrames="10"/>
+	<DevCommand line="minigame.enter pixeltown"/>
+	<WaitUntil watch="Minigame.Active" is="pixeltown" timeoutWallSeconds="60"/>
+	<WaitUntil watch="Assets.Pending" equals="0" timeoutWallSeconds="60"/>
+	<WaitUntil watch="Save.Blocked" equals="0" timeoutWallSeconds="10"/>
+	<DevCommand line="game.save minigamesave/a"/>
+	<WaitUntil watch="Save.Written" atLeast="1" timeoutWallSeconds="10"/>
+
+	<!-- ② 허브에서 불러온다 -->
+	<DevCommand line="minigame.leave"/>
+	<WaitUntil watch="Minigame.RestoreCount" equals="1" timeoutWallSeconds="60"/>
+	<WaitUntil watch="Assets.Pending" equals="0" timeoutWallSeconds="60"/>
+	<DevCommand line="teleport Marker 9 0.5 -4"/>
+	<WaitUntil watch="Object.X" target="Marker" near="9" tolerance="0.001" timeoutFrames="10"/>
+	<DevCommand line="game.load minigamesave/a"/>
+	<WaitUntil watch="Save.Loaded" atLeast="1" timeoutWallSeconds="60"/>
+	<ExpectActiveScene path="game/playground/pixeltown/maps/town.scene.xml"/>
+	<Expect watch="Minigame.Active" is="pixeltown"/>
+	<Expect watch="Minigame.Depth" equals="1"/>
+	<WaitUntil watch="Save.Blocked" equals="0" timeoutWallSeconds="30"/>
+	<WaitUntil watch="Assets.Pending" equals="0" timeoutWallSeconds="60"/>
+
+	<!-- ④ 같은 미니게임 안에서 저장 · 불러오기 — 씬을 다시 열지 않는다 -->
+	<Store watch="Save.Written" as="writtenBefore"/>
+	<DevCommand line="game.save minigamesave/b"/>
+	<WaitUntil watch="Save.Written" differsFrom="writtenBefore" timeoutWallSeconds="10"/>
+	<DevCommand line="game.load minigamesave/b"/>
+	<WaitUntil watch="Save.Loaded" atLeast="2" timeoutWallSeconds="10"/>
+	<Expect watch="Minigame.Active" is="pixeltown"/>
+	<Expect watch="Minigame.Depth" equals="1"/>
+
+	<!-- ③ 나오면 세이브에 실린 허브다 -->
+	<DevCommand line="minigame.leave"/>
+	<WaitUntil watch="Minigame.RestoreCount" equals="2" timeoutWallSeconds="60"/>
+	<ExpectActiveScene path="game/playground/maps/hub.scene.xml"/>
+	<Expect watch="Minigame.Active" is="none"/>
+	<Expect watch="Object.X" target="Marker" near="2" tolerance="0.001"/>
+	<WaitUntil watch="Assets.Pending" equals="0" timeoutWallSeconds="60"/>
+
+	<!-- ⑤ 저장을 막는 미니게임 -->
+	<DevCommand line="minigame.enter kitdemo_actioncombat"/>
+	<WaitUntil watch="Minigame.Active" is="kitdemo_actioncombat" timeoutWallSeconds="60"/>
+	<WaitUntil watch="Assets.Pending" equals="0" timeoutWallSeconds="60"/>
+	<Expect watch="Save.Blocked" equals="1"/>
+	<DevCommand line="minigame.leave"/>
+	<WaitUntil watch="Minigame.RestoreCount" equals="3" timeoutWallSeconds="60"/>
+	<WaitUntil watch="Save.Blocked" equals="0" timeoutWallSeconds="30"/>
+	<Expect watch="Minigame.LeakCount" equals="0"/>
+	<Pass/>
+</Scenario>

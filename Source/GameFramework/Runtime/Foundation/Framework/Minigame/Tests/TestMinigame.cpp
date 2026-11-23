@@ -153,14 +153,24 @@ namespace
         return definition;
     }
 
-    /** @brief 저장 막기를 쥔 씬 전환 칸의 돌아올 자리입니다. */
-    MinigameReturnPoint makeSuspendedScene( SaveLock& saveLock, string_view scenePath )
+    /** @brief 찍은 씬을 쥔 씬 전환 칸의 돌아올 자리입니다. @p bSaveSnapshot 이면 세이브에 실을 봉투도 찍었다. */
+    MinigameReturnPoint makeSuspendedScene( string_view scenePath, bool bSaveSnapshot )
     {
         MinigameSuspendedScene suspended;
         suspended._scenePath = string( scenePath );
         suspended._snapshot  = { 1, 2, 3 };
-        suspended._saveBlock = saveLock.block( hashed_string( MinigameFlow::kSaveBlockReason ) );
+        if ( bSaveSnapshot )
+            suspended._saveSnapshot = { 4, 5 };
         return MinigameReturnPoint{ std::move( suspended ) };
+    }
+
+    /** @brief 저장을 막는 정의의 씬 전환 칸을 쌓습니다(`MinigameFlow::enter` 의 쌓기). */
+    void pushBlockingFrame( MinigameStack& stack, SaveLock& saveLock, string_view name, string_view scenePath )
+    {
+        MinigameDefinition definition = makeMinigame( name, MinigameEntry::SceneSwitch );
+        definition._savePolicy        = MinigameSavePolicy::Blocked;
+        stack.push( MinigameFrame{ std::move( definition ), makeSuspendedScene( scenePath, false ) } );
+        stack.findTop()->updateSaveBlock( saveLock );
     }
 } // namespace
 
@@ -208,30 +218,35 @@ SW_TEST_CASE( MinigameTest, SwitchKeepsTheReturnPoint )
 {
     SaveLock      saveLock;
     MinigameStack stack;
-    stack.push( MinigameFrame{ makeMinigame( "round1", MinigameEntry::SceneSwitch ), makeSuspendedScene( saveLock, "game/test/maps/board.scene.xml" ) } );
+    pushBlockingFrame( stack, saveLock, "round1", "game/test/maps/board.scene.xml" );
     MinigameFrame* const pTop = stack.findTop();
     SW_REQUIRE_NOT_NULL( pTop );
     pTop->_definition = makeMinigame( "round2", MinigameEntry::SceneSwitch ); // MinigameFlow::switchTo 가 하는 바꿈
+    pTop->updateSaveBlock( saveLock );
     SW_EXPECT_EQUAL( 1u, stack.getDepth() );
-    SW_EXPECT_TRUE( saveLock.isBlocked() );
+    SW_EXPECT_TRUE( saveLock.isBlocked() ); // 새 정의는 저장을 허락하지만 들어올 때 세이브에 실을 봉투를 찍지 않았다
     const MinigameSuspendedScene* const pSuspended = std::get_if<MinigameSuspendedScene>( &stack.findTop()->_returnPoint );
     SW_REQUIRE_NOT_NULL( pSuspended );
     SW_EXPECT_EQUAL( string( "game/test/maps/board.scene.xml" ), pSuspended->_scenePath );
     SW_EXPECT_TRUE( stack.findTop()->_definition._name == hashed_string( "round2" ) );
 }
 
-/** @brief [MinigameTest] 저장 막기: 씬 전환 칸이 있는 동안만 막히고, 그 칸을 꺼내 돌아올 자리를 다 쓰면(복원 끝) 풀린다. 하위 레벨 칸은 막지 않는다 */
-SW_TEST_CASE( MinigameTest, SaveLockIsHeldWhileASceneSwitchFrameExists )
+/** @brief [MinigameTest] 저장 막기: 저장을 막는 정의의 칸이 있는 동안만 막히고, 그 칸을 꺼내 돌아올 자리를 다 쓰면(복원 끝) 풀린다. 허락하는 정의의 칸은 막지 않는다 */
+SW_TEST_CASE( MinigameTest, SaveLockIsHeldWhileABlockingFrameExists )
 {
     SaveLock      saveLock;
     MinigameStack stack;
     stack.push( MinigameFrame{ makeMinigame( "cardtable", MinigameEntry::SubLevel ), MinigameReturnPoint{ MinigameSubLevelReturn{ "game/test/maps/town.scene.xml", hashed_string( "cardtable" ) } } } );
+    stack.findTop()->updateSaveBlock( saveLock );
     SW_EXPECT_FALSE( saveLock.isBlocked() );
     SW_EXPECT_FALSE( stack.hasSuspendedScene() );
-    stack.push( MinigameFrame{ makeMinigame( "arcade", MinigameEntry::SceneSwitch ), makeSuspendedScene( saveLock, "game/test/maps/town.scene.xml" ) } );
+    stack.push( MinigameFrame{ makeMinigame( "farm", MinigameEntry::SceneSwitch ), makeSuspendedScene( "game/test/maps/town.scene.xml", true ) } );
+    stack.findTop()->updateSaveBlock( saveLock );
+    SW_EXPECT_FALSE( saveLock.isBlocked() );
+    pushBlockingFrame( stack, saveLock, "arcade", "game/test/maps/farm.scene.xml" );
     SW_EXPECT_TRUE( saveLock.isBlocked() );
     SW_REQUIRE_NOT_NULL( saveLock.findBlockReason() );
-    SW_EXPECT_TRUE( *saveLock.findBlockReason() == hashed_string( MinigameFlow::kSaveBlockReason ) );
+    SW_EXPECT_TRUE( *saveLock.findBlockReason() == hashed_string( MinigameFrame::kSaveBlockReason ) );
     SW_EXPECT_TRUE( stack.hasSuspendedScene() );
     {
         MinigameFrame leaving;
@@ -246,12 +261,62 @@ SW_TEST_CASE( MinigameTest, OutsideTravelClearsTheStack )
 {
     SaveLock      saveLock;
     MinigameStack stack;
-    stack.push( MinigameFrame{ makeMinigame( "arcade", MinigameEntry::SceneSwitch ), makeSuspendedScene( saveLock, "game/test/maps/town.scene.xml" ) } );
-    stack.push( MinigameFrame{ makeMinigame( "pinball", MinigameEntry::SceneSwitch ), makeSuspendedScene( saveLock, "game/test/maps/arcade.scene.xml" ) } );
+    pushBlockingFrame( stack, saveLock, "arcade", "game/test/maps/town.scene.xml" );
+    pushBlockingFrame( stack, saveLock, "pinball", "game/test/maps/arcade.scene.xml" );
     SW_EXPECT_TRUE( saveLock.isBlocked() );
     stack.clear(); // MinigameFlow::clearForOutsideTravel 가 하는 비우기
     SW_EXPECT_TRUE( stack.isEmpty() );
     SW_EXPECT_FALSE( saveLock.isBlocked() );
+}
+
+/** @brief [MinigameTest] 세이브: 칸마다 미니게임 이름 · 돌아올 자리가 왕복하고(찍은 씬은 세이브 봉투만), 같은 미니게임 안인지 견주며, 깨진 바이트는 읽지 않는다 */
+SW_TEST_CASE( MinigameTest, SaveStateRoundTripsTheFrames )
+{
+    SaveLock      saveLock;
+    MinigameStack stack;
+    vector<uint8> bytes;
+    stack.writeSaveState( bytes );
+    SW_EXPECT_TRUE( bytes.empty() ); // 미니게임 밖의 세이브
+    stack.push( MinigameFrame{ makeMinigame( "farm", MinigameEntry::SceneSwitch ), makeSuspendedScene( "game/test/maps/town.scene.xml", true ) } );
+    stack.push( MinigameFrame{ makeMinigame( "cardtable", MinigameEntry::SubLevel ), MinigameReturnPoint{ MinigameSubLevelReturn{ "game/test/maps/farm.scene.xml", hashed_string( "cardtable" ) } } } );
+    stack.push( MinigameFrame{ makeMinigame( "pond", MinigameEntry::SceneSwitch ), MinigameReturnPoint{ MinigameEntranceReturn{} } } );
+    stack.writeSaveState( bytes );
+
+    vector<MinigameSavedFrame> listFrame;
+    SW_REQUIRE_TRUE( MinigameStack::readSaveState( bytes, listFrame ) );
+    SW_REQUIRE_TRUE( listFrame.size() == 3 );
+    SW_EXPECT_TRUE( listFrame[0]._minigame == hashed_string( "farm" ) );
+    const MinigameSuspendedScene* const pSuspended = std::get_if<MinigameSuspendedScene>( &listFrame[0]._returnPoint );
+    SW_REQUIRE_NOT_NULL( pSuspended );
+    SW_EXPECT_EQUAL( string( "game/test/maps/town.scene.xml" ), pSuspended->_scenePath );
+    SW_EXPECT_TRUE( pSuspended->_snapshot.empty() ); // 스냅숏 목적의 봉투는 다른 실행에서 쓰지 않는다
+    SW_EXPECT_TRUE( pSuspended->_saveSnapshot == vector<uint8>{ 4, 5 } );
+    const MinigameSubLevelReturn* const pSubLevel = std::get_if<MinigameSubLevelReturn>( &listFrame[1]._returnPoint );
+    SW_REQUIRE_NOT_NULL( pSubLevel );
+    SW_EXPECT_TRUE( pSubLevel->_subLevelName == hashed_string( "cardtable" ) );
+    SW_EXPECT_TRUE( std::holds_alternative<MinigameEntranceReturn>( listFrame[2]._returnPoint ) );
+
+    // 같은 미니게임 안이면 씬을 다시 열지 않고 돌아올 자리만 바꾼다. 칸이 다르면 같은 미니게임이 아니다.
+    SW_EXPECT_TRUE( stack.matches( listFrame ) );
+    stack.applyReturnPoints( listFrame, saveLock );
+    const MinigameSuspendedScene* const pApplied = std::get_if<MinigameSuspendedScene>( &stack.findCovered()->_returnPoint );
+    SW_EXPECT_NULL( pApplied ); // 맨 위 바로 아래는 하위 레벨 칸이다
+    SW_EXPECT_FALSE( saveLock.isBlocked() );
+    MinigameFrame popped;
+    SW_REQUIRE_TRUE( stack.pop( popped ) );
+    SW_EXPECT_FALSE( stack.matches( listFrame ) );
+    SW_EXPECT_FALSE( MinigameStack{}.matches( listFrame ) );
+    SW_EXPECT_TRUE( MinigameStack{}.matches( vector<MinigameSavedFrame>{} ) );
+
+    // 잘린 바이트 · 모르는 갈래는 읽지 않고 받은 목록도 그대로다.
+    SW_EXPECT_LOG( "MinigameStack.SaveStateNotRead" );
+    vector<uint8> truncated = bytes;
+    truncated.pop_back();
+    SW_EXPECT_FALSE( MinigameStack::readSaveState( truncated, listFrame ) );
+    vector<uint8> unknownKind = bytes;
+    unknownKind.back()        = 0xFFu; // 마지막 칸(입구)의 갈래 번호
+    SW_EXPECT_FALSE( MinigameStack::readSaveState( unknownKind, listFrame ) );
+    SW_EXPECT_TRUE( listFrame.size() == 3 );
 }
 
 /** @brief [MinigameTest] 결과 통로: 꺼낸 칸의 이름이 결과의 미니게임이 되고, 결과는 받는 쪽(onFinished)이 구독하는 동안만 닿는다 */

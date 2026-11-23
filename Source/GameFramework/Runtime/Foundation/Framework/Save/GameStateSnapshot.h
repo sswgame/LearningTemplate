@@ -100,10 +100,11 @@ namespace sw
          * @brief 쓰기 2 단계: 봉투(머리 · 씬 오브젝트 · @p pStateInstance 의 리플렉션 상태 · 컴포넌트 상태 · 씬 몫)를 한 번 직렬화해 @p outBytes 에 담고 저장소를 비웁니다.
          * @details 씬 몫은 늘 올라 있는 오브젝트의 파일 id · 스트리밍 셀 상태 · 데이터 레이어 상태다 — 셀 · 레이어 묶음에 든 오브젝트는 씬 섹션에서 빼고 그 상태로 싣는다
          *          (`SceneStreamingSubsystem::writeSaveState` · `SceneDataLayerSubsystem::writeSaveState`).
+         * @param minigameBytes 찍은 미니게임 칸 스택(`MinigameStack::writeSaveState`) — 머리에 실어 불러오기가 씬을 열기 전에 읽는다. 미니게임 밖이거나 세이브가 아니면 빈 바이트다.
          * @details 씬이 없는 것은 실패가 아니다(빈 섹션). 리플렉션 상태를 싣지 못하면 저장소를 비우고 false 입니다(이유는 직렬화기가 알린다).
          *          @p pStateType 이나 @p pStateInstance 가 없으면 리플렉션 섹션은 비었다.
          */
-        [[nodiscard]] bool writeEnvelope( SerializePurpose purpose, const TypeInfo* pStateType, const void* pStateInstance, vector<uint8>& outBytes );
+        [[nodiscard]] bool writeEnvelope( SerializePurpose purpose, const TypeInfo* pStateType, const void* pStateInstance, const vector<uint8>& minigameBytes, vector<uint8>& outBytes );
         /**
          * @brief 읽기: 같은 목적으로 쓴 봉투를 읽어 씬 오브젝트 · 리플렉션 상태 · 컴포넌트 상태를 되살리고, 올린 타입마다 실어 둔 상태를 돌려줍니다.
          * @details 두 단계다. 1) 검증 — 봉투를 끝까지 읽고 씬은 분리된 오브젝트 매니저에, 리플렉션 상태는 새로 만든 사본에 풀어 본다. 지금 씬과 @p pStateInstance 는 건드리지 않는다.
@@ -120,6 +121,8 @@ namespace sw
          * @details 섹션은 풀지 않는다 — 불러오기가 그 씬을 먼저 열지 정하는 자리다(언리얼 게임이 세이브의 맵 이름을 보고 `OpenLevel` 하는 것과 같다).
          */
         [[nodiscard]] static optional<string> readSceneID( const void* pInBuffer, uint32 size );
+        /** @brief 봉투의 머리만 읽어 찍을 때의 미니게임 칸 스택 바이트를 돌려줍니다(미니게임 밖이면 빈 바이트). 머리를 읽지 못하면 없음입니다(`readSceneID` 와 같은 길). */
+        [[nodiscard]] static optional<vector<uint8>> readMinigameBytes( const void* pInBuffer, uint32 size );
         /** @brief 읽기 끝: 읽기 훅이 넘겨받은 뒤 저장소를 비웁니다. */
         void endRestore();
 

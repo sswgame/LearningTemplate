@@ -107,6 +107,11 @@ namespace sw
          *          봉투는 한 번 직렬화해 @p outBytes 에 담는다. C-ABI 의 `serializeState` 도 이 함수를 한 번 부른다.
          */
         bool captureSnapshot( SerializePurpose purpose, vector<uint8>& outBytes );
+        /**
+         * @brief 미니게임 칸 스택 없이 지금 씬과 게임 상태만 세이브 목적으로 찍습니다 — 미니게임 흐름이 덮을 씬을 세이브에 실을 봉투로 찍는다(칸 스택은 세이브의 머리가 따로 든다).
+         * @return 세이브가 막혔거나 찍지 못하면 false 입니다.
+         */
+        [[nodiscard]] bool captureSceneForSave( vector<uint8>& outBytes );
 
         /**
          * @brief Shipping/Gameplay: `captureSnapshot` 과 같은 목적으로 찍은 버퍼로부터 씬과 게임 상태를 즉시 복원합니다.
@@ -317,6 +322,8 @@ namespace sw
          * @details 목적과 상관없이(세이브 · 핫 리로드) 교체 중에 졌으면 세이브 막기(`_brokenRestoreBlock`)를 걸고, 성공하면 푼다. 검증에서 진 것은 막기를 바꾸지 않는다(씬이 그대로다).
          *          세이브 목적에서 교체가 졌으면 그 씬을 디스크에서 다시 열고(`reopenBrokenScene`), 다시 서면 막기를 푼다.
          */
+        /** @brief 봉투 하나를 찍습니다(`captureSnapshot` · `captureSceneForSave` 의 몸통). 세이브 목적이면 막기 문을 먼저 본다. */
+        [[nodiscard]] bool                                   captureEnvelope( SerializePurpose purpose, const vector<uint8>& minigameBytes, vector<uint8>& outBytes );
         [[nodiscard]] expected<void, SnapshotRestoreFailure> readStateEnvelope( SerializePurpose purpose, const void* pInBuffer, uint32 size );
 
     private:

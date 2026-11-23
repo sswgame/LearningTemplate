@@ -35,6 +35,17 @@ namespace sw
     };
 
     /**
+     * @brief 미니게임 안에서 세이브를 허락하는지입니다.
+     * @details 언리얼 · 유니티에는 이 자리의 엔진 기능이 없고 게임마다 "세이브 가능?" 깃발을 둔다(RDR2 · 용과 같이는 미니게임 동안 막고, 농장 · 도시 건설처럼 긴 판은 안에서 저장한다) — 정의의 값으로 둔다.
+     */
+    ENUM()
+    enum class MinigameSavePolicy : uint8
+    {
+        Allowed, ///< 안에서 저장한다 — 세이브가 이 미니게임과 덮인 바탕 씬을 함께 담고, 불러오면 이 미니게임 안으로 들어간다(`MinigameFlow::travelToSavedMinigame`)
+        Blocked, ///< 판이 끝날 때까지 저장을 막는다(`SaveLock`) — 대전 · 오락기처럼 되돌려 다시 하면 안 되는 짧은 판
+    };
+
+    /**
      * @brief 미니게임 정의 하나입니다. `loadFromAsset` · `loadFromXMLText` 가 읽고(모르는 속성 · 원소 · 깨진 값은 오류), `validate` 가 참조를 봅니다.
      * @details 읽기는 글만 보고, 참조(게임 기능 이름 · 맵 · UI 문서)는 `validate` 가 등록부 · 에셋으로 본다 — 쿠킹 · 테스트가 엔진 없이도 형식을 읽게 둘로 나눈다.
      */
@@ -60,6 +71,8 @@ namespace sw
         vector<string> _listUI{}; ///< 열 UI 문서(리소스 id). DataPath 목록은 리플렉션 글 처리기가 없어 글 목록이다 — 있는지는 `validate` 가 본다
         PROPERTY( Name = "catalogs" )
         vector<hashed_string> _listCatalog{}; ///< 기능이 읽을 데이터 종류(`kDataKind`). 기능이 적지 않은 종류를 읽거나 적은 종류를 아무도 읽지 않으면 켜기가 진다
+        PROPERTY( Name = "save" )
+        MinigameSavePolicy _savePolicy{ MinigameSavePolicy::Allowed }; ///< 안에서 세이브를 허락하는지
         PROPERTY( Min = -1 )
         int32 _portalSlot{ kNoPortalSlot }; ///< 허브 입구 자리 번호(0 부터, 팩에서 겹치지 않는다) — 적으면 허브의 `MinigamePortalSpawnerComponent` 가 그 자리에 입구를 세운다
 

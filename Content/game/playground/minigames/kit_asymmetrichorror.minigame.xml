@@ -4,4 +4,4 @@
   장르 키트 시연 미니게임 — AsymmetricHorror 키트. 키트는 게임 기능으로 걸 것이 없다(등록하지 않는다) — 맵의 시연 컴포넌트(GameModeComponent 파생)가 판을 돌린다.
   시나리오 automation/kit_asymmetrichorror.scenario.xml 이 실행 전역 변수 gv_firstMinigame 로 들어간다.
 -->
-<Minigame name="kit_asymmetrichorror" map="game/playground/maps/kit_asymmetrichorror.scene.xml" entry="SceneSwitch"/>
+<Minigame name="kit_asymmetrichorror" map="game/playground/maps/kit_asymmetrichorror.scene.xml" entry="SceneSwitch" save="Blocked"/>
