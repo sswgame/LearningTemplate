@@ -12,6 +12,8 @@
  *            폴더 참조 · 항상 담기 · `#` 없는 파일 참조로 닿으면 전부 쓰인다(캐릭터 편집 화면처럼 표 전체를 보여 주는 쪽). 언리얼은 애셋 단위라 이런 판정이 없다 — 데이터 테이블은 통째로 참조를 끈다(기억).
  *          - 스테이징 산출물: `PackStagedSelection` — 원본이 쓰일 때만 담는다.
  *          - 읽기는 `IPackReachSource` 로 받는다 — 쿠커는 디스크 입구(`AssetIO`)로, 테스트는 메모리로 읽는다.
+ *          - 파일마다의 사실(참조 · 불리는 항목 · 곁 파일)은 쿠킹 하나에 그래프 하나(`PackReachGraph`)가 한 번만 뽑는다 — 고르기마다(기동 필수, 씬마다) 같은 글을 다시 읽고
+ *            풀지 않는다. 언리얼 애셋 레지스트리의 의존 그래프 위를 청크마다 걷는 것과 같은 모양이다(기억).
  */
 #pragma once
 #include "Core/Container/string.h"
@@ -20,12 +22,16 @@
 #include "Core/Container/vector.h"
 #include "Core/Foundation/Macros.h"
 #include "Core/Foundation/Types.h"
+#include "Core/Memory/Memory.h"
 
 namespace sw
 {
     struct PackCookRules;
+    struct PackEntryCatalog;
+    struct PackEntryIDField;
 
     class AssetReferenceFields;
+    class XMLNode;
 } // namespace sw
 
 namespace sw
@@ -54,7 +60,107 @@ namespace sw
         vector<string>        _listGameDomain;                                ///< 굽는 게임 팩 도메인(`game/playground`) — 그 게임 설정이 필수 데이터 뿌리를 더한다
         PackAutomationContent _automation{ PackAutomationContent::Excluded }; ///< 자동화 전용 묶음을 뿌리로 쓰는가
         vector<string>        _listCodeRoot;                                  ///< 코드가 상수로 읽는 에셋(`AssetCookRootRegistry` — 쿠커가 채운다). 어디에도 없으면 빠진 참조와 같은 오류다
-        unordered_set<string> _setDeferredRoot;                               ///< 항상 담기에 맞아도 뿌리로 쓰지 않는 파일(씬 청크로 미루는 씬 — 기동 필수 고르기). 다른 뿌리가 참조로 닿으면 담는다
+    };
+
+    /** @brief 카탈로그 파일에 닿은 길입니다. */
+    enum class PackCatalogReach : uint8
+    {
+        Whole, ///< 폴더 · 항상 담기 · `#` 없는 파일 참조 — 모든 항목이 쓰인다
+        Named, ///< 필수 데이터 · `파일#id` — 이름이 불린 항목만 쓰인다
+    };
+
+    /** @brief 글(또는 항목)이 가리키는 참조 하나입니다. */
+    struct PackReachReference
+    {
+        string           _path;  ///< 정규화한 리소스 id(파일 또는 폴더)
+        string           _field; ///< 칸 이름(오류 문구용)
+        PackCatalogReach _reach{ PackCatalogReach::Whole };
+    };
+
+    /** @brief 글(또는 항목) 하나에서 뽑은 것입니다 — 따라갈 참조와 부르는 항목의 열쇠(`<이름 공간>\t<id>`). */
+    struct PackReachText
+    {
+        vector<PackReachReference> _listReference;
+        vector<string>             _listNamedKey;
+    };
+
+    /** @brief 항목 단위 카탈로그의 항목 하나입니다. */
+    struct PackReachEntry
+    {
+        string        _key; ///< `<이름 공간>\t<id>`
+        PackReachText _text;
+    };
+
+    /** @brief 파일 하나의 사실입니다. 항목 단위 카탈로그면 `_listEntry` 가 항목들이고 `_text` 는 항목 밖의 글이다. */
+    struct PackReachFile
+    {
+        string                 _assetID;
+        PackReachText          _text;
+        vector<PackReachEntry> _listEntry;
+        vector<string>         _listCompanion; ///< 담을 수 있는 곁 파일
+        uint8                  _bEntryCatalog : 1;
+        uint8                  _bFailed       : 1; ///< 읽지 못한 글 · 깨진 카탈로그(처음 볼 때 오류를 남겼다). 닿은 고르기는 모두 실패다
+        [[maybe_unused]] uint8 _reserved      : 6;
+
+        PackReachFile()
+            : _assetID{}
+            , _text{}
+            , _listEntry{}
+            , _listCompanion{}
+            , _bEntryCatalog{ SW_FALSE }
+            , _bFailed{ SW_FALSE }
+            , _reserved{ 0 }
+        {
+        }
+    };
+
+    /**
+     * @class PackReachGraph
+     * @brief 쿠킹 하나의 참조 그래프입니다 — 파일마다의 사실을 처음 닿을 때 한 번 뽑아 두고, 고르기들(`PackReachResult`)이 함께 걷습니다.
+     * @details 넘긴 표 · 목록 · 읽기 입구를 빌려 쓴다(그래프보다 오래 살아야 하고 그동안 바뀌지 않아야 한다). 한 스레드가 쓴다.
+     */
+    class SW_API PackReachGraph
+    {
+    public:
+        PackReachGraph( const AssetReferenceFields& params, const PackCookRules& rules, const PackReachFiles& files, const IPackReachSource& source );
+        ~PackReachGraph();
+
+        PackReachGraph( const PackReachGraph& )            = delete;
+        PackReachGraph& operator=( const PackReachGraph& ) = delete;
+
+        /** @brief 담을 수 있는 파일 @p assetID 의 사실입니다. 처음이면 읽어 뽑는다. 돌려준 참조는 그래프가 사는 동안 그대로다. */
+        const PackReachFile& getFile( const string& assetID );
+        /** @brief 폴더 @p path 아래 담을 수 있는 파일입니다. 없으면 nullptr 입니다. */
+        const vector<string>* findPackableUnder( const string& path ) const;
+        /** @brief 있는 파일이 아래에 있는 폴더면 true 입니다. */
+        bool isExistingFolder( const string& path ) const { return _setExistingFolder.contains( path ); }
+        /** @brief @p assetID 가 항목 단위 카탈로그면 그 규칙, 아니면 nullptr 입니다. */
+        const PackEntryCatalog* findCatalogRule( string_view assetID ) const;
+
+        const PackCookRules&    getRules() const { return _rules; }
+        const PackReachFiles&   getFiles() const { return _files; }
+        const IPackReachSource& getSource() const { return _source; }
+
+    private:
+        void loadFile( const string& assetID, PackReachFile& outFile );
+        void loadCatalog( const PackEntryCatalog& rule, const string& assetID, const string& text, PackReachFile& outFile );
+        /** @brief 글 @p text 의 참조 칸을 모읍니다. `파일#id` 는 그 항목을 부르고, `#` 없는 파일 참조는 파일 전부를 쓴다. */
+        void collectReferences( string_view text, const string& assetID, PackReachText& inoutText ) const;
+        /** @brief @p node 와 그 아래의 id 칸(속성 · 요소 글 · `<item>` 목록)이 부르는 항목을 모읍니다. */
+        void collectNamedEntries( XMLNode node, const string& assetID, PackReachText& inoutText ) const;
+        /** @brief 파일 @p assetID 안의 칸 @p fieldName 이 id 칸이면 그 이름 공간, 아니면 nullptr 입니다 — 그 파일의 팩에 닿는 칸만 본다(`PackRuleScope`). */
+        const string* findIDFieldKind( string_view fieldName, string_view assetID ) const;
+
+    private:
+        const AssetReferenceFields&                            _params;
+        const PackCookRules&                                   _rules;
+        const PackReachFiles&                                  _files;
+        const IPackReachSource&                                _source;
+        unordered_set<string>                                  _setUnfollowedField;
+        unordered_map<string, vector<const PackEntryIDField*>> _mapIDFieldKind;    ///< id 칸 이름 → 그 이름의 칸들(팩마다 닿는 범위가 다를 수 있다 — `PackRuleScope`)
+        unordered_map<string, vector<string>>                  _mapPackableUnder;  ///< 폴더 → 그 아래 담을 수 있는 파일(`_files._setPackable` 순서)
+        unordered_set<string>                                  _setExistingFolder; ///< 있는 파일이 아래에 있는 폴더
+        unordered_map<string, unique_ptr<PackReachFile>>       _mapFile;           ///< 뽑은 파일의 사실(주소가 고정된다)
     };
 
     /** @struct SW_API PackReachResult @brief 고르기 결과입니다. */
@@ -67,16 +173,15 @@ namespace sw
         // 파일 머리말 참고.
         /**
          * @brief 뿌리에서 닿는 파일을 모읍니다.
+         * @param setDeferredRoot 항상 담기에 맞아도 뿌리로 쓰지 않는 파일(씬 청크로 미루는 씬 — 기동 필수 고르기). 다른 뿌리가 참조로 닿으면 담는다
          * @return 빠진 참조 · 읽지 못한 글 · 모르는 필수 데이터 종류가 하나라도 있으면(모두 오류로 남긴다) false 입니다. 그때도 끝까지 훑어 문제를 한 번에 알린다.
          */
-        [[nodiscard]] static bool collect( const AssetReferenceFields& params, const PackCookRules& rules, const PackReachFiles& files, const IPackReachSource& source,
-                                           PackReachResult& outResult );
+        [[nodiscard]] static bool collect( PackReachGraph& graph, const unordered_set<string>& setDeferredRoot, PackReachResult& outResult );
         /**
          * @brief 뿌리 @p listRoot(정규화한 id — 담을 수 있는 파일)에서만 닿는 파일을 모읍니다. 씬 하나의 닿음(씬 청크 나누기 — `PackSceneChunkPlan`)에 쓴다.
          * @return `collect` 와 같은 실패 규칙입니다.
          */
-        [[nodiscard]] static bool collectFromRoots( const AssetReferenceFields& params, const PackCookRules& rules, const PackReachFiles& files, const IPackReachSource& source,
-                                                    const vector<string>& listRoot, PackReachResult& outResult );
+        [[nodiscard]] static bool collectFromRoots( PackReachGraph& graph, const vector<string>& listRoot, PackReachResult& outResult );
     };
 
     /** @struct PackDomainSources @brief 도메인 하나의 있는 모든 원본 id 입니다(스테이징 산출물의 원본을 가린다). */
