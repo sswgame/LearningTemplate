@@ -765,24 +765,30 @@ namespace sw
 
     void WebGPURHICommandContext::beginEventMarker( const utf8* pName )
     {
-        const WGPUCommandEncoder encoder = getEncoder();
+        // 표지는 연 곳에서 닫아야 한다(https://www.w3.org/TR/webgpu/#dom-gpudebugcommandsmixin-popdebuggroup — 빈 스택의 pop 은 인코더를 무효로 만든다).
+        // 계산 패스는 디스패치가 처음 나올 때 이 컨텍스트가 연다 — 표지를 연 쪽은 그 경계를 모른다. 그래서 렌더 패스 밖의 표지는 늘 **인코더**에 걸고, 열린 계산 패스는 먼저 닫는다.
         if ( _state._renderPass != nullptr )
+        {
             wgpuRenderPassEncoderPushDebugGroup( _state._renderPass, WebGPURHIUtil::toStringView( pName ) );
-        else if ( _state._computePass != nullptr )
-            wgpuComputePassEncoderPushDebugGroup( _state._computePass, WebGPURHIUtil::toStringView( pName ) );
-        else if ( encoder != nullptr )
+            return;
+        }
+        endComputePass();
+        const WGPUCommandEncoder encoder = getEncoder();
+        if ( encoder != nullptr )
             wgpuCommandEncoderPushDebugGroup( encoder, WebGPURHIUtil::toStringView( pName ) );
     }
 
     void WebGPURHICommandContext::endEventMarker()
     {
-        // 표지는 연 곳에서 닫아야 한다(검증 규칙) — 패스가 표지 사이에 열리고 닫히면 짝이 어긋나 검증 오류로 드러난다. 엔진은 표지를 패스 안에서 열고 닫는다.
-        const WGPUCommandEncoder encoder = getEncoder();
+        // 여는 쪽과 같은 규칙이다 — 렌더 패스를 걸쳐 열고 닫는 표지만 짝이 어긋난다(부르는 쪽의 결함, 검증 오류로 드러난다).
         if ( _state._renderPass != nullptr )
+        {
             wgpuRenderPassEncoderPopDebugGroup( _state._renderPass );
-        else if ( _state._computePass != nullptr )
-            wgpuComputePassEncoderPopDebugGroup( _state._computePass );
-        else if ( encoder != nullptr )
+            return;
+        }
+        endComputePass();
+        const WGPUCommandEncoder encoder = getEncoder();
+        if ( encoder != nullptr )
             wgpuCommandEncoderPopDebugGroup( encoder );
     }
 
