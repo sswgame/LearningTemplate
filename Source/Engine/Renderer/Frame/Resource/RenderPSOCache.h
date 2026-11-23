@@ -24,6 +24,7 @@ namespace sw
 {
     class IRHIDevice;
     class ShaderBindingLayout;
+    struct ShaderBindingSlot;
 
     /**
      * @class RenderPSOCache
@@ -97,6 +98,11 @@ namespace sw
         [[nodiscard]] bool findDesc( RHIPipelineStateHandle pso, RHIPipelineStateDesc& outDesc ) const;
         /** @brief 레이아웃 없이 desc 만 핸들에 적습니다 — 컴퓨트 PSO(`createComputePipelineState`)가 어느 셰이더로 만들었는지 `releasePSOsUsingShader` 가 알게 한다. 0 핸들은 무시합니다. */
         void registerDesc( RHIPipelineStateHandle pso, const RHIPipelineStateDesc& desc );
+        /**
+         * @brief 컴퓨트 PSO 의 @p slot(@p bUAV 면 u 슬롯, 아니면 t 슬롯)이 선언한 구조 버퍼 슬롯입니다. 모르는 PSO · 구조 버퍼가 아닌 슬롯이면 nullptr 입니다(버퍼 보기가 원소 형식을 읽는다).
+         * @details 컴퓨트 PSO 는 레이아웃을 등록하지 않으므로(`registerDesc`) 만든 서술로 리플렉션 레이아웃을 짓는다(캐시).
+         */
+        const ShaderBindingSlot* findComputeBufferSlot( RHIPipelineStateHandle pso, uint32 slot, bool bUAV, ShaderTargetFormat targetFormat );
         /** @brief 등록된 (PSO, 레이아웃) 모두를 복사해 반환합니다. 셋업에서 폴백 버퍼 stride 를 모을 때 씁니다. */
         void collectLayouts( vector<RegisteredLayout>& outListLayout ) const;
 

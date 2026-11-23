@@ -37,6 +37,7 @@ namespace sw
     class RHIMemoryTracker;
     class RHITransferSerials;
     class BindlessIndexReportLog;
+    class RHIComputeBindingLog;
     class ConstantBufferPagePool;
     enum class ShaderTargetFormat : uint8;
 
@@ -446,6 +447,8 @@ namespace sw
         }
         /** @brief 이 장치가 남긴 bindless 인덱스 보고 자리입니다(`BindlessIndexValidator` — 같은 자리는 한 번만). 병렬 기록 스레드에서 불러도 된다. */
         BindlessIndexReportLog& getBindlessIndexReportLog() const { return *_pBindlessIndexReportLog; }
+        /** @brief 컴퓨트 디스패치가 건 버퍼의 기록입니다(개발 구성만 채운다 — 버퍼 보기). 병렬 기록 스레드에서 불러도 된다. */
+        RHIComputeBindingLog& getComputeBindingLog() const { return *_pComputeBindingLog; }
 
         /**
          * @brief 그래픽스 VS 가 GPUScene 인스턴스 구조 버퍼(InstanceData)를 읽을 수 있으면 true 를 반환합니다.
@@ -814,6 +817,8 @@ namespace sw
         unique_ptr<RHIBindlessReservationQueue> _pBindlessReservationQueue;
         /// @brief 남긴 bindless 인덱스 보고 자리입니다(getBindlessIndexReportLog 참고). 장치와 함께 생기고 사라진다.
         unique_ptr<BindlessIndexReportLog> _pBindlessIndexReportLog;
+        /// @brief 컴퓨트 디스패치가 건 버퍼의 기록입니다(getComputeBindingLog 참고).
+        unique_ptr<RHIComputeBindingLog> _pComputeBindingLog;
         /// @brief 마지막 `initialize` 의 단계별 시간입니다(`markInitPhase`).
         RHIInitPhaseTimings _initPhaseTimings;
         /// @brief 드로우 기록 진단입니다(`getDrawDiagnostics`). 장치와 함께 생기고 사라진다 — 백엔드를 바꾸면 횟수가 다시 시작한다.

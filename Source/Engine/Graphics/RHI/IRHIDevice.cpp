@@ -19,6 +19,7 @@
 #include "Engine/Graphics/RHI/Backend/RHIRetireList.h"
 #include "Engine/Graphics/RHI/ConstantBufferPagePool.h"
 #include "Engine/Graphics/RHI/Diagnostics/BindlessIndexValidator.h"
+#include "Engine/Graphics/RHI/Diagnostics/RHIComputeBindingLog.h"
 #include "Engine/Graphics/RHI/Diagnostics/RHIDrawDiagnostics.h"
 #include "Engine/Graphics/RHI/Diagnostics/RHIMemoryTracker.h"
 #include "Engine/Graphics/RHI/IRHICommandContext.h"
@@ -559,6 +560,7 @@ namespace sw
         , _pDeferredHandleQueue{ make_unique<RHIDeferredHandleQueue>() }
         , _pBindlessReservationQueue{ make_unique<RHIBindlessReservationQueue>() }
         , _pBindlessIndexReportLog{ make_unique<BindlessIndexReportLog>() }
+        , _pComputeBindingLog{ make_unique<RHIComputeBindingLog>() }
         , _initPhaseTimings{}
         , _drawDiagnostics{ *this }
     {

@@ -53,6 +53,20 @@ namespace sw
         return true;
     }
 
+    const ShaderBindingSlot* RenderPSOCache::findComputeBufferSlot( RHIPipelineStateHandle pso, uint32 slot, bool bUAV, ShaderTargetFormat targetFormat )
+    {
+        RHIPipelineStateDesc desc{};
+        if ( findDesc( pso, desc ) == false || desc._computeShaderPath.empty() )
+            return nullptr;
+        const ShaderBindingKind kind = bUAV ? ShaderBindingKind::RwStructuredBuffer : ShaderBindingKind::StructuredBuffer;
+        for ( const ShaderBindingSlot& candidate : _bindingLayoutCache.getOrBuild( desc, targetFormat ).getSlots() )
+        {
+            if ( candidate._kind == kind && candidate._registerIndex == slot )
+                return &candidate;
+        }
+        return nullptr;
+    }
+
     void RenderPSOCache::registerDesc( RHIPipelineStateHandle pso, const RHIPipelineStateDesc& desc )
     {
         if ( pso == 0 )

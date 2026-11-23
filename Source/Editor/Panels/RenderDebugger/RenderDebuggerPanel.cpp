@@ -366,9 +366,7 @@ namespace sw::editor
             ImGui::TableSetupColumn( "#" );
             for ( uint32 column = 0; column < layout._columnCount; ++column )
             {
-                StringBuilder<constant::buffer::kMax32> header;
-                header.appendFormat( "+%#", column * BufferViewLayout::kCellBytes );
-                ImGui::TableSetupColumn( string( header.view() ).c_str() );
+                ImGui::TableSetupColumn( layout._listColumnName[column].c_str() );
             }
             ImGui::TableHeadersRow();
             vector<string>    listCell;

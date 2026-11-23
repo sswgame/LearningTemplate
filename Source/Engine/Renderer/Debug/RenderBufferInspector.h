@@ -18,6 +18,7 @@ namespace sw
     class FrameBufferTable;
     class IRHICommandList;
     class IRHIDevice;
+    class RenderPSOCache;
     struct RenderGraphExecutionContext;
 
     /**
@@ -29,9 +30,10 @@ namespace sw
     public:
         /**
          * @brief 목록 요청 · 읽기 요청을 처리하고 도착한 결과를 공개합니다. 프레임 그래프를 다 기록한 리스트 @p cmd 에 복사를 넣는다.
+         * @param psoCache 컴퓨트 PSO 의 리플렉션 — 버퍼를 거는 셰이더의 원소 배치를 싣는다(`RHIComputeBindingLog`).
          * @param context 프레임 그래프 실행 문맥 — 버퍼의 마지막 접근(복사 뒤 되돌릴 상태)을 읽는다.
          */
-        void service( IRHICommandList& cmd, IRHIDevice* pDevice, const FrameBufferTable& table, const RenderGraphExecutionContext& context, RenderDebugRegistry& registry );
+        void service( IRHICommandList& cmd, IRHIDevice* pDevice, const FrameBufferTable& table, const RenderGraphExecutionContext& context, RenderPSOCache& psoCache, RenderDebugRegistry& registry );
         /** @brief 읽기 버퍼를 놓습니다(렌더러가 장치 자원을 놓을 때). 여러 번 불러도 된다. */
         void release();
 
@@ -40,5 +42,6 @@ namespace sw
         RenderBufferEntry   _pendingEntry{};     ///< 읽는 중인 버퍼
         uint64              _tag{ 0 };           ///< 마지막 복사 요청의 tag
         uint32              _pendingSerial{ 0 }; ///< 읽는 중인 요청 번호(0 이면 없음)
+        uint32              _loggingFrames{ 0 }; ///< 컴퓨트 바인딩 기록을 켜 둘 남은 프레임(목록 요청 뒤 — 그동안 배치를 다시 공개한다)
     };
 } // namespace sw

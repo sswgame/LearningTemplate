@@ -4,6 +4,7 @@
 
 #include "Core/Math/MathUtil.h"
 
+#include "Engine/Graphics/RHI/Diagnostics/RHIComputeBindingLog.h"
 #include "Engine/Graphics/RHI/Diagnostics/RHIDrawDiagnostics.h"
 #include "Engine/Graphics/RHI/IRHIDevice.h"
 #include "Engine/Graphics/RHI/IRHIResourceFactory.h"
@@ -15,6 +16,41 @@ namespace sw
         : _bRenderPassOpen{ SW_FALSE }
         , _bRenderPassNoBackBuffer{ SW_FALSE }
     {
+        clearTrackedComputeBindings();
+    }
+
+    void IRHICommandContext::trackComputeBinding( RHIDescriptorIndex index, bool bUAV, uint32 slot )
+    {
+        if ( slot < kTrackedComputeSlotCount )
+            _arrTrackedCompute[bUAV ? 1 : 0][slot] = index;
+    }
+
+    void IRHICommandContext::clearTrackedComputeBindings()
+    {
+        for ( RHIDescriptorIndex( &arrSlot )[kTrackedComputeSlotCount] : _arrTrackedCompute )
+        {
+            for ( RHIDescriptorIndex& index : arrSlot )
+            {
+                index = kInvalidDescriptorIndex;
+            }
+        }
+    }
+
+    void IRHICommandContext::recordComputeBindings()
+    {
+        if constexpr ( build::kShipping == false )
+        {
+            RHIComputeBindingLog& log = getContextDevice().getComputeBindingLog();
+            for ( uint32 space = 0; log.isEnabled() && _computePSO != 0 && space < 2; ++space )
+            {
+                for ( uint32 slot = 0; slot < kTrackedComputeSlotCount; ++slot )
+                {
+                    if ( _arrTrackedCompute[space][slot] != kInvalidDescriptorIndex )
+                        log.record( _arrTrackedCompute[space][slot], space == 1, _computePSO, slot );
+                }
+            }
+            clearTrackedComputeBindings();
+        }
     }
 
     namespace
@@ -117,6 +153,7 @@ namespace sw
     {
         endRenderPassBefore( "setComputePipelineState" );
         setComputePipelineStateNative( pso );
+        _computePSO       = pso;
         _computeGroupSize = pso != 0 ? getContextDevice().getResourceFactory()->getThreadGroupSize( pso ) : RHIThreadGroupSize{};
     }
 
@@ -135,12 +172,14 @@ namespace sw
     void IRHICommandContext::dispatchCompute( uint32 threadGroupCountX, uint32 threadGroupCountY, uint32 threadGroupCountZ )
     {
         endRenderPassBefore( "dispatchCompute" );
+        recordComputeBindings();
         dispatchComputeNative( threadGroupCountX, threadGroupCountY, threadGroupCountZ );
     }
 
     void IRHICommandContext::dispatchIndirect( RHIBufferHandle argumentBuffer, uint32 argumentBufferOffset )
     {
         endRenderPassBefore( "dispatchIndirect" );
+        recordComputeBindings();
         dispatchIndirectNative( argumentBuffer, argumentBufferOffset );
     }
 

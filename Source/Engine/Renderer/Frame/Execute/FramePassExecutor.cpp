@@ -1073,7 +1073,7 @@ namespace sw
 #if !defined( SW_SHIPPING )
         // 버퍼 보기: 그래프가 되돌려 둔 접근(등록 접근)에서 읽고 그 상태로 되돌린다(`RenderBufferInspector`).
         if ( _state._pRenderDebug != nullptr )
-            _bufferInspector.service( *_pCmd, pDevice, _frameBufferTable, _frameGraphContext, *_state._pRenderDebug );
+            _bufferInspector.service( *_pCmd, pDevice, _frameBufferTable, _frameGraphContext, _psoManager.getCache(), *_state._pRenderDebug );
 #endif
         _frameGraphExecutor.endFrame( *_pCmd );
     }

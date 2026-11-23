@@ -64,7 +64,12 @@ namespace sw
         {
             _pContext->setComputeRootConstants( rootParameterIndex, num32BitValues, pData, destOffsetIn32BitValues );
         }
-        void bindComputeUAV( RHIDescriptorIndex index, uint32 slot ) override { _pContext->bindComputeUAV( index, slot ); }
+        void bindComputeUAV( RHIDescriptorIndex index, uint32 slot ) override
+        {
+            if constexpr ( build::kShipping == false )
+                _pContext->trackComputeBinding( index, true, slot );
+            _pContext->bindComputeUAV( index, slot );
+        }
         void bindGraphicsUAV( RHIDescriptorIndex index, uint32 slot ) override { _pContext->bindGraphicsUAV( index, slot ); }
         void bindShaderResource( RHIDescriptorIndex index, uint32 slot ) override { _pContext->bindShaderResource( index, slot ); }
         void bindConstantBuffer( RHIDescriptorIndex constantBufferIndex, uint32 slot ) override { _pContext->bindConstantBuffer( constantBufferIndex, slot ); }
@@ -73,6 +78,8 @@ namespace sw
         void bindComputeConstantBuffer( RHIDescriptorIndex constantBufferIndex, uint32 slot ) override { _pContext->bindComputeConstantBuffer( constantBufferIndex, slot ); }
         void bindComputeShaderResource( RHIDescriptorIndex index, uint32 slot ) override
         {
+            if constexpr ( build::kShipping == false )
+                _pContext->trackComputeBinding( index, false, slot );
             _pContext->bindComputeShaderResource( index, slot );
         }
         void prepareTextureForShaderRead( RHITextureHandle texture ) override { _pContext->prepareTextureForShaderRead( texture ); }

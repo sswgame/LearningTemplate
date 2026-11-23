@@ -19,6 +19,8 @@ namespace sw
         Entry entry{ name, slot, buffer._buffer.getPacked(), RenderGraphViewableKind::Buffer, initialAccess };
         entry._elementSize  = buffer._elementSize;
         entry._elementCount = buffer._capacityElements;
+        entry._srv          = buffer._srv;
+        entry._uav          = buffer._uav;
         registerEntry( entry );
     }
 

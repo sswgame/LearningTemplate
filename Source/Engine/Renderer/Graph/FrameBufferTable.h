@@ -37,6 +37,8 @@ namespace sw
             RenderGraphAccess       _initialAccess{ RenderGraphAccess::ShaderRead }; ///< 그래프 실행의 시작이자 끝의 접근 — 그래프가 들이고 끝에 되돌린다(`RenderGraph::importResources`)
             uint32                  _elementSize{ 0 };                               ///< 버퍼 원소 바이트(텍스처는 0)
             uint32                  _elementCount{ 0 };                              ///< 원소 수(버퍼 용량, 텍스처는 0)
+            RHIDescriptorIndex      _srv{ kInvalidDescriptorIndex };                 ///< 버퍼의 SRV 번호(버퍼 보기가 읽는 셰이더를 찾는다)
+            RHIDescriptorIndex      _uav{ kInvalidDescriptorIndex };                 ///< 버퍼의 UAV 번호
             bool                    _bAttachment{ false };                           ///< NOLINT(sw-bool-flag): 집합체다(중괄호 초기화) — 그래프 첨부의 핸들만 알린다(`registerAttachment`)
 
             /** @brief 버퍼 등록이면 그 버퍼, 아니면 0 입니다. */
