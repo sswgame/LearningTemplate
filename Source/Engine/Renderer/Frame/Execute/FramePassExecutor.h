@@ -106,7 +106,7 @@ namespace sw
          * @brief 파이프라인 패스 번호 @p passIndex(`getGraphPass` 의 차례)가 이번 뷰에서 비활성이면 true 입니다(꺼진 효과 · 그릴 것 없는 덧그리기 · 읽는 쪽이 없는 패스)
          *        — 뷰 패스 고르기의 결과(`FrameViewTarget::_listPassDisabled`)를 그대로 읽는다.
          * @details 덧그리는 패스(SSR · 왜곡 누적 · 왜곡 적용)의 실행이 따로 판정하지 않는다 — 판정이 둘이면 고르기가 뺀 사본을 실행이 읽거나, 실행이 쉬는데 사본을 만든다.
-         *          그래프 콜백(`onGraphPassExecute`)이 패스 문맥을 만들기 전에 맨 앞에서 본다.
+         *          실행 계획(`selectGraphPlan`)이 이 판정으로 패스를 뺀다.
          */
         bool isPassDisabledInView( uint32 passIndex ) const;
         /** @brief 종류가 @p type 인 파이프라인 패스 하나라도 이번 뷰에서 켜져 있으면 true 입니다(뷰 자원 등록 — 그 종류가 쓰는 엔진 자원을 등록할지). */
@@ -209,7 +209,7 @@ namespace sw
         // ------------------------------------------------------------------------------
         /**
          * @brief 뷰 그래프가 패스를 실행할 때 부르는 콜백입니다. 패스 번호는 문맥의 `_payload` 다(파이프라인 패스는 차례, 모듈 확장 패스는 그 뒤 — 이름으로 다시 찾지 않는다).
-         * @details 이번 뷰에서 꺼진 패스는 맨 앞에서 돌려보낸다(문맥 복사 · 상수 칸 잡기보다 먼저). 패스 몸통은 뷰 자원 표(`_viewResourceTable`)를 실은 그래프 문맥을 받는다.
+         * @details 이번 뷰에서 꺼진 패스는 실행 계획에 없어 오지 않는다(`selectGraphPlan`). 패스 몸통은 뷰 자원 표(`_viewResourceTable`)를 실은 그래프 문맥을 받는다.
          */
         void onGraphPassExecute( const RenderGraphPassContext& context );
         /** @brief 프레임 그래프가 프레임 패스를 실행할 때 부르는 콜백입니다. 패스 번호(`_payload`)의 서술 종류로 `FrameGraphExecutor::executePass` 를 부릅니다. */
@@ -220,6 +220,11 @@ namespace sw
          * @details 그 프레임 · 뷰에 일하는 자원만 등록한다 — 등록이 없으면 레벨 콜백이 전이를 내지 않고 패스 몸통은 그 일을 건너뛴다(등록 조건이 곧 실행 조건).
          */
         void registerViewResources( FrameViewTarget& view );
+        /**
+         * @brief 지금 뷰에서 빠진 패스(`FrameViewTarget::_listPassDisabled`)를 뺀 실행 계획을 뷰 그래프에서 고릅니다(없으면 만든다 — `RenderGraph::selectPlan` · `addPlan`).
+         * @details 빠진 패스는 전이도 기록도 없다. 꺼진 효과의 출력을 읽는 패스는 가리키는 원본 이름을 읽는다(`TransientAttachmentPool::resolveName`).
+         */
+        void selectGraphPlan();
         /**
          * @brief 컴파일한 뷰 그래프의 수명(레벨)으로 트랜지언트 앨리어싱 계획을 세워 `FrameRenderState::_transientAliasPlan` 에 두고 세대를 올립니다.
          * @details 깊이 · `Load` 첨부 · TAA 출력은 나누지 않고, 꺼지면 원본을 가리키는 효과(`kBypassesToSource`)는 원본과 출력을 한 구간으로 묶는다. NaN 감시를 켠 실행은 나누지 않는다.
@@ -573,6 +578,8 @@ namespace sw
          * @details 병렬 기록 중에는 읽기만 한다(등록은 그 뷰 그래프 앞에 끝났다). 첨부는 넣지 않는다 — 첨부는 풀(`activePool`)이 이름으로 준다.
          */
         FrameBufferTable _viewResourceTable;
+        /// @brief 지금 뷰의 패스 상태입니다(`selectGraphPlan` 의 실행 계획 열쇠). 용량을 뷰 · 프레임 사이에 다시 쓴다.
+        vector<uint8> _listScratchPassState;
         /// @brief 버퍼 보기(에디터 렌더 디버거 · 개발 명령)가 요청한 `_frameBufferTable` 버퍼를 프레임 그래프 끝에서 읽는다(`RenderDebugRegistry`). 읽기 버퍼는 장치 자원이라 여기서 놓는다.
         RenderBufferInspector _bufferInspector;
         /// @brief 레벨 콜백이 모은 버퍼 전이입니다(`transitionBuffers` 한 번). 레벨 콜백은 한 스레드에서만 돈다 — 용량을 프레임 사이에 다시 쓴다.

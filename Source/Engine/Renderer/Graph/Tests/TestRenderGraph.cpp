@@ -930,8 +930,8 @@ namespace
 } // namespace
 
 /**
- * @brief [RenderGraphTest] 화면 공간 반사가 꺼진 프레임에도 그 선언(HZB UAV · 깊이 사본 렌더 타깃)의 전이는 나가 끝 상태가 그 접근으로 남는다 — 다음 프레임의 소비자는 남은 상태를 믿지 않고 다시 옮긴다
- * @details 꺼진 패스의 레벨 전이(S2)는 다음 차례다. 그동안의 안전은 "다음 소비자가 선언대로 다시 옮긴다" 에 기댄다: 프레임 그래프는 프레임마다 등록 접근을 새로 심고(HZB 셰이더 읽기,
+ * @brief [RenderGraphTest] 몸통이 돌지 않은 선언(HZB UAV · 깊이 사본 렌더 타깃)이 남긴 끝 상태를 다음 프레임의 소비자는 믿지 않고 다시 옮긴다(들이지 않은 그래프 — 등록 조건이 빠진 자원)
+ * @details 안전은 "다음 소비자가 선언대로 다시 옮긴다" 에 기댄다: 프레임 그래프는 프레임마다 등록 접근을 새로 심고(HZB 셰이더 읽기,
  *          깊이 사본 RW 텍스처) 짓기(HZB UAV)와 컴퓨트 읽기(깊이 사본 UAV 읽기)마다 전이를 낸다. 뷰 그래프 쪽도 다음 실행은 처음 사용마다 전이를 낸다.
  *          변이: 실행 문맥이 지난 실행의 상태를 이어 가면(초기화를 빼면) 다음 프레임 짓기의 HZB UAV 전이가 사라져 진다.
  */
@@ -977,6 +977,99 @@ SW_TEST_CASE( RenderGraphTest, DisabledReflectionLeftoverStateIsRetransitionedBy
     SW_REQUIRE_TRUE( viewGraph.execute( viewContext ) );
     SW_EXPECT_TRUE( hasBarrier( listViewBarrier, hzb, RenderGraphAccess::UnorderedAccess ) );
     SW_EXPECT_TRUE( hasBarrier( listViewBarrier, history, RenderGraphAccess::RenderTarget ) );
+}
+
+/**
+ * @brief [RenderGraphTest] 실행 계획 — 빠진 패스는 기록도 전이도 없고, 꺼진 효과의 출력을 읽던 패스는 원본을 읽는 전이를 받는다(직렬 · 병렬 같음). 같은 상태는 계획을 다시 쓴다
+ * @details 결함이면 꺼진 블룸이 안 쓰는 타깃에 전이를 내고, 그 패스를 빼기만 하면 원본의 읽기 전이가 사라져 톤맵이 렌더 타깃 상태의 장면 색을 읽는다(DX12 · Vulkan 검증 오류).
+ *          변이: `addPlan` 의 이름 바꾸기를 빼면 장면 색 읽기 단언이, 빠진 패스를 남기면 블룸 전이 단언이 진다.
+ */
+SW_TEST_CASE( RenderGraphTest, PlanOmitsDisabledPassesAndReadsTheForwardedSource )
+{
+    const hashed_string color( "SceneColor" );
+    const hashed_string bloom( "BloomColor" );
+    const hashed_string ao( "AOColor" );
+    atomic<int32>       lightingCount{ 0 };
+    atomic<int32>       bloomCount{ 0 };
+    atomic<int32>       tonemapCount{ 0 };
+    RenderGraph         graph;
+    SW_REQUIRE_TRUE( graph.addPass( hashed_string( "Lighting" ), { RenderGraphRenderTarget{ color }, RenderGraphRenderTarget{ ao } }, makeCountingPass( lightingCount ), RHIQueueKind::Graphics, 0 ) );
+    SW_REQUIRE_TRUE( graph.addPass( hashed_string( "Bloom" ), { RenderGraphTextureSRV{ color }, RenderGraphRenderTarget{ bloom } }, makeCountingPass( bloomCount ), RHIQueueKind::Graphics, 1 ) );
+    SW_REQUIRE_TRUE( graph.addPass( hashed_string( "Tonemap" ), { RenderGraphTextureSRV{ bloom }, RenderGraphTextureSRV{ ao }, RenderGraphRenderTarget{ hashed_string( "Swapchain" ) } },
+                                    makeCountingPass( tonemapCount ), RHIQueueKind::Graphics, 2 ) );
+    SW_REQUIRE_TRUE( graph.compile() );
+
+    const vector<uint8> listState{ 0, 1, 0 };
+    SW_EXPECT_TRUE( graph.selectPlan( { 0, 0, 0 } ) ); // 전체 계획은 컴파일이 만든다
+    SW_REQUIRE_FALSE( graph.selectPlan( listState ) );
+    graph.addPlan( listState, {
+                                  {bloom,           color},
+                                  {   ao, hashed_string{}}
+    } );
+    SW_EXPECT_TRUE( graph.selectPlan( listState ) ); // 두 번째부터 다시 쓴다
+
+    for ( const bool bParallel : { false, true } )
+    {
+        vector<RenderGraphBarrier> listBarrier;
+        collectBarriers( graph, listBarrier );
+        RenderGraphExecutionContext context;
+        test::FakeRHIDevice         device;
+        test::FakeRHICommandList    cmd( 0 );
+        SW_REQUIRE_TRUE( bParallel ? graph.executeParallel( context, engine::getSubsystem<TaskManager>(), device ) : graph.execute( context, &cmd ) );
+        SW_EXPECT_TRUE( hasBarrier( listBarrier, color, RenderGraphAccess::RenderTarget ) );
+        SW_EXPECT_TRUE( hasBarrier( listBarrier, color, RenderGraphAccess::ShaderRead ) ); // 톤맵이 블룸 대신 읽는다
+        SW_EXPECT_FALSE( hasBarrier( listBarrier, bloom, RenderGraphAccess::RenderTarget ) );
+        SW_EXPECT_FALSE( hasBarrier( listBarrier, bloom, RenderGraphAccess::ShaderRead ) );
+        SW_EXPECT_FALSE( hasBarrier( listBarrier, ao, RenderGraphAccess::ShaderRead ) ); // 이번 뷰에 없는 출력 — 읽기가 빠진다
+    }
+    SW_EXPECT_EQUAL( 2, lightingCount.load() );
+    SW_EXPECT_EQUAL( 0, bloomCount.load() );
+    SW_EXPECT_EQUAL( 2, tonemapCount.load() );
+
+    // 전체 계획으로 돌아오면 블룸이 다시 돈다.
+    SW_REQUIRE_TRUE( graph.selectPlan( { 0, 0, 0 } ) );
+    RenderGraphExecutionContext context;
+    test::FakeRHICommandList    cmd( 0 );
+    SW_REQUIRE_TRUE( graph.execute( context, &cmd ) );
+    SW_EXPECT_EQUAL( 1, bloomCount.load() );
+}
+
+/**
+ * @brief [RenderGraphTest] 이름이 원본으로 바뀌어 한 레벨에서 같은 자원을 다르게 읽게 되면 레벨을 가른다 — 병렬로 기록해도 전이가 패스마다 맞다
+ * @details 컴퓨트 패스(UAV 읽기)와 그리기 패스(셰이더 읽기)가 꺼진 효과 뒤에서 같은 원본을 읽는 모양이다. 결함이면 레벨의 전이 하나가 둘 중 하나의 상태만 맞춘다.
+ *          변이: 작은 레벨로 가르지 않으면 원본의 UAV 전이가 하나도 나가지 않거나 셰이더 읽기가 빠져 진다.
+ */
+SW_TEST_CASE( RenderGraphTest, PlanSplitsLevelWithMixedForwardedReads )
+{
+    const hashed_string color( "SceneColor" );
+    const hashed_string effect( "EffectColor" );
+    atomic<int32>       callCount{ 0 };
+    RenderGraph         graph;
+    SW_REQUIRE_TRUE( graph.addPass( hashed_string( "Scene" ), { RenderGraphRenderTarget{ color } }, makeCountingPass( callCount ), RHIQueueKind::Graphics, 0 ) );
+    SW_REQUIRE_TRUE( graph.addPass( hashed_string( "Effect" ), { RenderGraphTextureSRV{ color }, RenderGraphRenderTarget{ effect } }, makeCountingPass( callCount ), RHIQueueKind::Graphics, 1 ) );
+    SW_REQUIRE_TRUE( graph.addPass( hashed_string( "Compute" ), { RenderGraphTextureUAVRead{ effect }, RenderGraphTextureUAV{ hashed_string( "OutA" ) } }, makeCountingPass( callCount ),
+                                    RHIQueueKind::Graphics, 2 ) );
+    SW_REQUIRE_TRUE( graph.addPass( hashed_string( "Gate" ), { RenderGraphRenderTarget{ hashed_string( "Gate" ) } }, makeCountingPass( callCount ), RHIQueueKind::Graphics, 3 ) );
+    SW_REQUIRE_TRUE( graph.addPass( hashed_string( "Gate2" ), { RenderGraphTextureSRV{ hashed_string( "Gate" ) }, RenderGraphRenderTarget{ hashed_string( "Gate2" ) } }, makeCountingPass( callCount ),
+                                    RHIQueueKind::Graphics, 4 ) );
+    SW_REQUIRE_TRUE( graph.addPass( hashed_string( "Draw" ), { RenderGraphTextureSRV{ color }, RenderGraphTextureSRV{ hashed_string( "Gate2" ) }, RenderGraphRenderTarget{ hashed_string( "OutB" ) } },
+                                    makeCountingPass( callCount ), RHIQueueKind::Graphics, 5 ) );
+    SW_REQUIRE_TRUE( graph.compile() );
+    SW_REQUIRE_EQUAL( size_t{ 3 }, graph.getExecutionLevels().size() );
+    SW_REQUIRE_EQUAL( size_t{ 2 }, graph.getExecutionLevels()[2].size() ); // Compute · Draw 가 한 레벨
+
+    graph.addPlan( {
+                       0, 1, 0, 0, 0, 0
+    },
+                   { { effect, color } } );
+    vector<RenderGraphBarrier> listBarrier;
+    collectBarriers( graph, listBarrier );
+    test::FakeRHIDevice         device;
+    RenderGraphExecutionContext context;
+    SW_REQUIRE_TRUE( graph.executeParallel( context, engine::getSubsystem<TaskManager>(), device ) );
+    SW_EXPECT_EQUAL( 5, callCount.load() );
+    SW_EXPECT_TRUE( hasBarrier( listBarrier, color, RenderGraphAccess::UnorderedAccessRead ) );
+    SW_EXPECT_TRUE( hasBarrier( listBarrier, color, RenderGraphAccess::ShaderRead ) );
 }
 
 /**

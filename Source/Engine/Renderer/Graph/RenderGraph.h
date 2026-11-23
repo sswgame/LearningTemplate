@@ -174,10 +174,8 @@ namespace sw
      */
     struct SW_API RenderGraphPassContext
     {
-        hashed_string                            _passName;     ///< 실행 중인 패스 이름
-        uint32                                   _payload{ 0 }; ///< `RenderGraph::addPass` 가 받은 패스 번호 — 받는 쪽이 이름 해시로 다시 찾지 않는다(파이프라인 패스 순번 등)
-        const vector<hashed_string>*             _pListInputs{ nullptr };
-        const vector<hashed_string>*             _pListOutputs{ nullptr };
+        hashed_string                            _passName;                  ///< 실행 중인 패스 이름
+        uint32                                   _payload{ 0 };              ///< `RenderGraph::addPass` 가 받은 패스 번호 — 받는 쪽이 이름 해시로 다시 찾지 않는다(파이프라인 패스 순번 등)
         const vector<RenderGraphResourceAccess>* _pListAccess{ nullptr };    ///< 이 패스가 선언한 접근 전부(이름으로 선언한 패스는 입력 = 셰이더 읽기, 출력 = 렌더 타깃)
         const FrameBufferTable*                  _pResourceTable{ nullptr }; ///< 그래프 밖 자원의 RHI 핸들 표(프레임 그래프는 프레임 자원 표, 뷰 그래프는 지금 뷰의 엔진 자원 표 — 실행기가 싣는다). 없으면 핸들 요청은 모두 무효다
 
@@ -539,6 +537,20 @@ namespace sw
          */
         [[nodiscard]] bool executeParallel( RenderGraphExecutionContext& context, TaskManager& taskManager, IRHIDevice& device );
 
+        /**
+         * @brief 패스 상태 @p listPassState(패스 번호 `addPass` 의 payload 마다 하나, 0 이 아니면 이번 실행에서 빠진다)의 실행 계획이 이미 있으면 고르고 true 입니다.
+         * @details 뷰마다 꺼진 효과 · 그릴 것 없는 패스가 다르다 — 계획은 그 조합마다 한 번 만들어 두고 다시 쓴다(`addPlan`). 고른 계획은 다음에 고를 때까지 `execute` · `executeParallel` 이 쓴다.
+         *          모두 0 이면 컴파일한 전체 계획이다. 컴파일하지 않은 그래프는 true 다(실행이 컴파일하며 전체 계획을 고른다).
+         */
+        [[nodiscard]] bool selectPlan( const vector<uint8>& listPassState );
+        /**
+         * @brief 패스 상태 @p listPassState 의 실행 계획을 만들어 고릅니다(`selectPlan` 이 false 일 때).
+         * @details 빠진 패스는 기록도 전이도 하지 않는다 — 켜진 패스의 레벨은 전체 계획의 것을 그대로 쓴다(레벨 순서가 간선과 트랜지언트 앨리어싱 계획의 근거라 다시 정렬하지 않는다).
+         * @param mapForward 빠진 패스의 출력 이름 → 이번 실행에서 그 이름이 가리키는 이름입니다(꺼진 효과의 원본, 빈 이름이면 아무것도 없다). 켜진 패스의 텍스처 읽기는 가리키는 이름의
+         *        읽기가 된다 — 원본의 읽기 전이를 빠진 패스의 선언이 아니라 읽는 패스가 낸다. 한 레벨에서 같은 자원을 다르게 읽게 되면 레벨을 둘로 가른다(서로 간선이 없어 어느 순서든 맞다).
+         */
+        void addPlan( const vector<uint8>& listPassState, const unordered_map<hashed_string, hashed_string>& mapForward );
+
         /** @brief 컴파일된 위상 정렬 패스의 실행 순서를 반환합니다. */
         const vector<hashed_string>& getExecutionOrder() const { return _listCompiledExecutionOrder; }
 
@@ -586,6 +598,18 @@ namespace sw
     private:
         /** @brief 병렬 기록이 프레임마다 다시 쓰는 데이터입니다(패스 엔트리 목록과 노드별 커맨드 리스트). 완전한 타입은 cpp 에만 있습니다. */
         struct ParallelScratch;
+        /** @brief 실행 계획의 패스 하나입니다 — 노드와 이 계획에서의 접근(꺼진 효과의 출력은 원본 이름으로 바뀐다). */
+        struct PlanPass
+        {
+            size_t                            _nodeIndex{ 0 };
+            vector<RenderGraphResourceAccess> _listAccess;
+        };
+        /** @brief 패스 상태 조합 하나의 실행 계획입니다. */
+        struct Plan
+        {
+            vector<uint8>            _listPassState; ///< 이 계획의 패스 상태(`selectPlan`)
+            vector<vector<PlanPass>> _listLevel;     ///< 돌 패스가 있는 레벨만
+        };
 
         /**
          * @brief 패스 하나가 필요로 하는 전이를 `_listLevelBarrier` 에 추가합니다.
@@ -593,13 +617,13 @@ namespace sw
          *          RAW/WAW 엣지로 그런 패스들을 다른 레벨로 갈라 놓기 때문이다. 그래도 들어오면 쓰기를
          *          택한다(더 강한 상태다). 이미 그 상태인 자원은 아예 넣지 않는다.
          */
-        void appendPassBarriers( RenderGraphExecutionContext& context, const RenderGraphNode& node );
+        void appendPassBarriers( RenderGraphExecutionContext& context, const RenderGraphNode& node, const vector<RenderGraphResourceAccess>& listAccess );
         /** @brief 자원 하나를 접근 @p access 로 요구합니다. 같은 자원을 여러 패스가 요구해도 레벨의 배리어는 한 번만 냅니다(읽기와 쓰기가 겹치면 쓰기를 남깁니다). */
         void requestBarrier( RenderGraphExecutionContext& context, const RenderGraphResourceAccess& access, RHIQueueKind queue );
         /** @brief 실행 시작에 문맥을 비우고 들인 버퍼의 처음 접근을 심습니다. */
         void beginExecution( RenderGraphExecutionContext& context ) const;
         /** @brief 기록한 패스 @p node 가 패스 안에서 옮긴 자원의 끝 접근을 추적 상태로 잇습니다. 기록(병렬이면 합류) 뒤 한 스레드에서 부릅니다. */
-        static void applyExitAccesses( RenderGraphExecutionContext& context, const RenderGraphNode& node );
+        static void applyExitAccesses( RenderGraphExecutionContext& context, const RenderGraphNode& node, const vector<RenderGraphResourceAccess>& listAccess );
         /** @brief 처음 접근과 다른 접근으로 남은 들인 자원을 되돌리는 전이를 `_listLevelBarrier` 에 모읍니다(마지막 패스 뒤). */
         void collectReturnBarriers( RenderGraphExecutionContext& context );
         /** @brief 패스 @p passIndex 가 자원을 읽거나 썼음을 수명 표에 적습니다. 처음 보는 자원이면 항목을 만듭니다. */
@@ -614,8 +638,8 @@ namespace sw
         void computeQueuePlan( const unordered_map<size_t, vector<size_t>>& mapAdjacency );
         /** @brief 병렬 기록 전에 모든 레벨의 패스 커맨드 리스트를 마련합니다(디바이스가 바뀌면 지난 것을 놓는다). 하나라도 못 만들면 false 이고 아무것도 내지 않습니다. */
         [[nodiscard]] bool prepareParallelCommandLists( IRHIDevice& device );
-        /** @brief 레벨 하나의 배리어를 `_listLevelBarrier` 에, 기록할 패스를 병렬 스크래치의 엔트리 목록에 모읍니다. 모르는 패스면 false 입니다. */
-        [[nodiscard]] bool collectLevelPasses( RenderGraphExecutionContext& context, const vector<hashed_string>& listLevelPass );
+        /** @brief 레벨 하나의 배리어를 `_listLevelBarrier` 에, 기록할 패스를 병렬 스크래치의 엔트리 목록에 모읍니다. */
+        void collectLevelPasses( RenderGraphExecutionContext& context, const vector<PlanPass>& listLevelPass );
         /** @brief 모은 레벨(패스 둘 이상)의 배리어를 첫 리스트 앞머리에 발행하고, 패스들을 병렬로 기록한 뒤 큐 순서대로 제출합니다. */
         void recordAndSubmitParallelLevel( TaskManager& taskManager, IRHIDevice& device );
 
@@ -624,6 +648,10 @@ namespace sw
         vector<hashed_string>   _listCompiledExecutionOrder;
         /** @brief _listCompiledExecutionOrder 와 같은 순서와 내용을 의존성 레벨 단위로 묶은 것입니다. */
         vector<vector<hashed_string>> _listCompiledLevel;
+
+        /// @brief 실행 계획들입니다. 0 번이 전체 계획(컴파일 결과)이고 나머지는 `addPlan` 이 더한다. 컴파일 · 비우기가 버린다.
+        vector<Plan> _listPlan;
+        size_t       _activePlanIndex{ 0 };
 
         // 핫패스에서 할당하지 않기 위한 캐시
         unordered_map<hashed_string, size_t> _mapNameToIndex;

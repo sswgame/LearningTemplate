@@ -178,7 +178,7 @@ namespace sw
             SW_LOG_ERROR_ONCE_ID( "FramePassExecutor.ExecutePassNoActiveIRHICommandList", "executePass: no active IRHICommandList" );
             return;
         }
-        // 이번 뷰에서 꺼진 패스는 그래프 콜백이 맨 앞에서 돌려보냈다(`onGraphPassExecute` — 문맥 복사 · 상수 칸 잡기 전).
+        // 이번 뷰에서 꺼진 패스는 실행 계획에 없다(`selectGraphPlan`).
 
         // 이벤트 표지(캡처의 구간 이름) + GPU 브레드크럼 시작 · 끝 표지 — 디바이스 소실 때 끝난 패스와 돌던 패스를 이름으로 싣는다. 어느 길로 돌아가도 짝이 맞는다.
         const GPUPassScope passScope{ *context._pCmd, passName };
@@ -859,7 +859,7 @@ namespace sw
 
     bool FramePassExecutor::isPassDisabledInView( uint32 passIndex ) const
     {
-        // 파이프라인 패스 목록 밖(모듈 확장 패스)은 고르기가 보지 않는다 — 부르는 쪽(`onGraphPassExecute`)이 거른다.
+        // 파이프라인 패스 목록 밖(모듈 확장 패스)은 고르기가 보지 않는다 — 고르기 결과 밖이면 돈다.
         const vector<uint8>& listPassDisabled = _pActiveView->_listPassDisabled;
         return passIndex < listPassDisabled.size() && listPassDisabled[passIndex] == SW_TRUE;
     }

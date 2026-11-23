@@ -1132,8 +1132,7 @@ namespace sw
 
         // 그래프가 **실제로 바뀌는 전이만** 추려서 준다. 여기서는 이름으로 텍스처를 찾아 레벨의 전이를 한 묶음으로 낸다(`IRHICommandList::transitionTextures` —
         // DX12 ResourceBarrier · Vulkan vkCmdPipelineBarrier 한 번, 언리얼 RDG 의 패스 앞 전이 배치와 같은 자리). 같은 자원을 여러 패스가 읽어도, 이미 맞는 상태여도 다시 내지 않는다.
-        // 꺼진 효과의 출력 이름은 원본을 가리키지만(`TransientAttachmentPool::forward`) 전이는 그 이름으로 만든 텍스처에만 낸다 — 따라가면 꺼진 패스의 "쓰기" 가
-        // 같은 레벨에서 원본을 읽는 패스와 부딪힌다. 원본의 읽기 상태는 원본을 입력으로 선언한 그 효과 패스의 레벨이 이미 냈고, 뒤에서 원본을 쓰는 패스는 로드 검증이 막는다.
+        // 이 뷰에서 빠진 패스는 실행 계획에 없고 꺼진 효과의 출력을 읽는 접근은 계획이 원본 이름으로 바꿨다(`selectGraphPlan`) — 이름은 늘 그 이름으로 만든 텍스처다.
         // 등록 자원(프레임 그래프는 `_frameBufferTable`, 뷰 그래프는 지금 뷰의 `_viewResourceTable`)은 이름의 모든 칸을 버퍼는 `transitionBuffers` 한 번으로, UAV → UAV 는 UAV 배리어로 낸다.
         // 큐: 그래프가 그 패스의 리스트를 넘긴다 — 비동기 컴퓨트 패스의 전이는 컴퓨트 리스트에 들어간다(D3D12 는 그 큐가 받는 상태로 접는다).
         IRHICommandList&                   cmd = *levelContext._pCmdList;
@@ -1234,9 +1233,8 @@ namespace sw
         SW_ASSERT( bModulePass == false || moduleIndex < _extensionHost.getPasses().size() );
         if ( bModulePass && moduleIndex >= _extensionHost.getPasses().size() )
             return;
-        // 이번 뷰에 할 일이 없는 패스(뷰 패스 고르기 — 꺼진 효과 · 그릴 것 없는 덧그리기 · 읽는 쪽이 없는 패스)는 문맥 복사 · 상수 칸 잡기보다 먼저 돌려보낸다.
-        if ( bModulePass == false && isPassDisabledInView( passIndex ) )
-            return;
+        // 이번 뷰에 할 일이 없는 패스(뷰 패스 고르기)는 이 뷰의 실행 계획에 없다(`selectGraphPlan`) — 여기 오지 않는다.
+        SW_ASSERT( bModulePass || isPassDisabledInView( passIndex ) == false );
 
         // 패스 로컬 상태를 새로 만든다. 주의: 멤버 _pCmd 를 저장하고 복원하는 방식은 "한 번에 한 패스만 돈다" 는 전제라 병렬 기록에서 서로를 덮어쓴다.
         // 패스 슬롯(= 패스 번호)의 컨텍스트에 프레임 시드를 **대입**한다. 복사본을 새로 만들면 값 목록과 레지스트리가 프레임마다 다시 늘어난다.
@@ -1329,6 +1327,37 @@ namespace sw
             _viewResourceTable.registerBuffer( ViewGraphResource::deferredTileList()._name, 0, view._deferredTileList, RenderGraphAccess::ShaderRead );
         }
         _state._graph.importResources( _viewResourceTable );
+        selectGraphPlan();
+    }
+
+    void FramePassExecutor::selectGraphPlan()
+    {
+        const vector<RenderGraphPassDesc>& listPass = _pipelineResource.getGraphPass();
+        const TransientAttachmentPool&     pool     = activePool();
+        // 칸마다 — 돈다 · 빠지고 출력은 그대로이거나 없다 · 빠지고 출력이 원본을 가리킨다. 같은 패스가 빠져도 가리키는지가 다르면 읽는 쪽의 전이가 다르다.
+        constexpr uint8 kOmitted   = 1;
+        constexpr uint8 kForwarded = 2;
+        _listScratchPassState.assign( listPass.size(), 0 );
+        for ( uint32 passIndex = 0; passIndex < static_cast<uint32>( listPass.size() ); ++passIndex )
+        {
+            if ( isPassDisabledInView( passIndex ) == false )
+                continue;
+            const bool bForwarded            = VectorUtil::containsIf( listPass[passIndex]._listResolvedColorOutput, [&pool]( const RenderGraphPassDesc::ResolvedAttachment& output )
+                       { return pool.isForwarded( output._attachment ) && pool.resolveName( output._attachment ).empty() == false; } );
+            _listScratchPassState[passIndex] = bForwarded ? kForwarded : kOmitted;
+        }
+        if ( _state._graph.selectPlan( _listScratchPassState ) )
+            return;
+        unordered_map<hashed_string, hashed_string> mapForward;
+        for ( const RenderGraphPassDesc& pass : listPass )
+        {
+            for ( const RenderGraphPassDesc::ResolvedAttachment& output : pass._listResolvedColorOutput )
+            {
+                if ( pool.isForwarded( output._attachment ) )
+                    mapForward[output._attachment] = pool.resolveName( output._attachment );
+            }
+        }
+        _state._graph.addPlan( _listScratchPassState, mapForward );
     }
 
     void FramePassExecutor::setInputRoleEnabled( RenderPassInputRole role, bool bEnabled )
