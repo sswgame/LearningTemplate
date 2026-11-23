@@ -586,6 +586,8 @@ SW_TEST_CASE( GoogleReceiptValidatorTest, OnlyUnacknowledgedPurchasesNeedConfirm
     const ReceiptValidationResult result = rig.validate();
     SW_EXPECT_FALSE( result._deliveryKey.empty() );
     SW_EXPECT_EQUAL( kNowMs + GoogleReceiptSettings::kAcknowledgeWindowMs, result._deliveryDeadlineMs ); // 구매 시각이 없으면 지금부터 잰다
+    rig._productBody = R"({"orderId":"GPA.1","purchaseState":0})";                                       // 확인했다고 말하지 않은 답이다(결함: 확인된 것으로 봐 알리지 않았다)
+    SW_EXPECT_FALSE( rig.validate()._deliveryKey.empty() );
 }
 
 /** @brief [GoogleReceiptValidatorTest] 구매 확인의 답: 5xx · 429 · 자격 거절은 Retry(토큰을 버린다), 그 밖의 4xx 는 Refused 다. 읽을 수 없는 키는 묻지 않고 Refused 다 */

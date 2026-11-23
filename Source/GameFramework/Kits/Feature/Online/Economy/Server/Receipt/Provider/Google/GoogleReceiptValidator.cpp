@@ -171,7 +171,7 @@ namespace sw
             outInfo._purchaseTimeMs = purchaseMs;
         int32      purchaseState        = constant::invalid_index::kInt32;
         int32      purchaseType         = constant::invalid_index::kInt32;
-        int32      acknowledgementState = 1;
+        int32      acknowledgementState = 0; // 말하지 않으면 확인 전으로 본다 — 확인된 구매를 다시 알리면 스토어가 거절할 뿐이지만, 알리지 않은 구매는 사흘 뒤 환불되고 지급한 재화를 거둔다
         const bool bPurchaseStateOk     = root.readOptionalInto( "purchaseState", purchaseState );
         const bool bPurchaseTypeOk      = root.readOptionalInto( "purchaseType", purchaseType );
         const bool bAcknowledgementOk   = root.readOptionalInto( "acknowledgementState", acknowledgementState );
