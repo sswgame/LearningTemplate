@@ -292,8 +292,8 @@ namespace sw
                                           int32 count = 0 );
 
     private:
-        const AdventureDungeonCatalog*     _pCatalog;
-        vector<DungeonRuntime>             _listRuntime; ///< 카탈로그의 던전 순서
-        EventBuffer<AdventureDungeonEvent> _eventBuffer;
+        const AdventureDungeonCatalog*            _pCatalog;
+        vector<DungeonRuntime>                    _listRuntime; ///< 카탈로그의 던전 순서
+        NotificationBuffer<AdventureDungeonEvent> _eventBuffer;
     };
 } // namespace sw

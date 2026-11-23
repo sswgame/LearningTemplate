@@ -11,6 +11,7 @@
 #include "Engine/Object/Component/SceneComponent.h"
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
+#include "Engine/Object/GameObject/WorldOrigin.h"
 #include "Engine/Scene/Scene.h"
 #include "Engine/Scene/SceneManager.h"
 #include "Engine/Serialization/Format/StateIO.h"
@@ -111,7 +112,7 @@ namespace sw
             GameObject*     pBody  = findBody( npcIndex );
             SceneComponent* pScene = pBody != nullptr ? pBody->getPrimarySceneComponent() : nullptr;
             if ( pScene != nullptr )
-                pScene->setWorldPosition( _schedule.getNPCView( npcIndex )._location._position );
+                pScene->setWorldPosition( getObjectManager()->getWorldOrigin().toLocal( _schedule.getNPCView( npcIndex )._location._position ) ); // 일정은 절대 자리로 산다
         }
     }
 

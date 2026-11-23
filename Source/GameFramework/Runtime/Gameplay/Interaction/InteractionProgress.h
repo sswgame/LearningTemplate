@@ -134,10 +134,10 @@ namespace sw
     private:
         InteractionConfig _config;
         PROPERTY( RuntimeState )
-        vector<uint32>                _listParticipant; ///< 붙은 순서
-        EventBuffer<InteractionEvent> _eventBuffer;
-        const TimingJudge*            _pJudge;
-        GameRandom                    _random;
+        vector<uint32>                       _listParticipant; ///< 붙은 순서
+        NotificationBuffer<InteractionEvent> _eventBuffer;
+        const TimingJudge*                   _pJudge;
+        GameRandom                           _random;
         PROPERTY( RuntimeState )
         uint32 _seed;
         PROPERTY( RuntimeState )

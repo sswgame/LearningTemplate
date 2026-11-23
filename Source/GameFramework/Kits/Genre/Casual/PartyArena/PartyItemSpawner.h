@@ -154,13 +154,13 @@ namespace sw
         float32                      rollInterval();
 
     private:
-        GameCatalog<PartyItemDef>   _catalog;
-        vector<PartyItemInstance>   _listInstance;
-        EventBuffer<PartyItemEvent> _eventBuffer;
-        PartyItemSpawnSettings      _settings;
-        GameRandom                  _random;
-        Countdown                   _spawnTimer;
-        int32                       _nextSerial;
+        GameCatalog<PartyItemDef>          _catalog;
+        vector<PartyItemInstance>          _listInstance;
+        NotificationBuffer<PartyItemEvent> _eventBuffer;
+        PartyItemSpawnSettings             _settings;
+        GameRandom                         _random;
+        Countdown                          _spawnTimer;
+        int32                              _nextSerial;
     };
 
     /** @brief 공유 캐시는 이 카탈로그의 .cpp 가 인스턴스화합니다. 쓰는 쪽은 사본을 읽지 않고 `SharedAssetCache<PartyItemSpawner>::acquire` 로 한 벌을 받습니다. */

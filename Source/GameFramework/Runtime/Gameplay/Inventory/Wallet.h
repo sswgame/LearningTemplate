@@ -88,8 +88,8 @@ namespace sw
 
     private:
         PROPERTY( RuntimeState )
-        vector<WalletBalance>    _listBalance{};
-        EventBuffer<WalletEvent> _eventBuffer{};
-        uint32                   _revision{ 0 };
+        vector<WalletBalance>           _listBalance{};
+        NotificationBuffer<WalletEvent> _eventBuffer{};
+        uint32                          _revision{ 0 };
     };
 } // namespace sw

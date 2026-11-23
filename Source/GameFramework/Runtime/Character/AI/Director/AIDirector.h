@@ -236,7 +236,7 @@ namespace sw
         SpawnDirector            _spawnDirector;
         PROPERTY( RuntimeState )
         vector<PoolState>                           _listPoolState;
-        EventBuffer<AIDirectorEvent>                _eventBuffer;
+        NotificationBuffer<AIDirectorEvent>         _eventBuffer;
         RingBuffer<AIDirectorEvent, kMaxTraceEvent> _listTrace; ///< 최근 사건. 가득 차면 가장 오래된 것을 덮는다
         vector<float32>                             _listScratchWeight;
         const AIDirectorProfile*                    _pProfile;

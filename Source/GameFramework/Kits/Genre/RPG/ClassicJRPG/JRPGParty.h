@@ -194,12 +194,12 @@ namespace sw
 
     private:
         PROPERTY( RuntimeState )
-        vector<JRPGMember>          _listMember;
-        EventBuffer<JRPGPartyEvent> _eventBuffer;
-        string                      _equipLayout;
-        const JRPGCatalog*          _pCatalog;
-        const ItemCatalog*          _pItemCatalog;
-        Inventory*                  _pInventory; ///< 플레이어 가방(빌려 온 것)
-        Wallet*                     _pWallet;    ///< 빌려 온 지갑(골드)
+        vector<JRPGMember>                 _listMember;
+        NotificationBuffer<JRPGPartyEvent> _eventBuffer;
+        string                             _equipLayout;
+        const JRPGCatalog*                 _pCatalog;
+        const ItemCatalog*                 _pItemCatalog;
+        Inventory*                         _pInventory; ///< 플레이어 가방(빌려 온 것)
+        Wallet*                            _pWallet;    ///< 빌려 온 지갑(골드)
     };
 } // namespace sw

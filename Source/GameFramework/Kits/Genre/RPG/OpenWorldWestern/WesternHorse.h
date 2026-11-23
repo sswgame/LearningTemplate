@@ -118,7 +118,7 @@ namespace sw
         [[nodiscard]] bool areAbilitiesUnlocked() const;
 
     private:
-        EventBuffer<WesternHorseEvent> _eventBuffer;
+        NotificationBuffer<WesternHorseEvent> _eventBuffer;
         PROPERTY( RuntimeState )
         vector<hashed_string>  _listAbility; ///< 지금 단계까지 열린 능력
         ResourceGauge          _health;

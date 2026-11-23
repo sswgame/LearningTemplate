@@ -276,15 +276,15 @@ namespace sw
         PROPERTY( RuntimeState )
         vector<JRPGCommand> _listCommand; ///< 멤버 인덱스마다의 명령
         PROPERTY( RuntimeState, Min = 0, Max = 1 )
-        vector<uint8>                _listDefending; ///< 이번 라운드에 방어 중인지(멤버 인덱스마다)
-        EventBuffer<JRPGBattleEvent> _eventBuffer;
-        TurnOrder                    _turnOrder;
-        GameRandom                   _random;
-        JRPGBattleSettings           _settings;
-        const JRPGCatalog*           _pCatalog;
-        const TimingJudge*           _pJudge;
-        const IJRPGTimingInput*      _pTimingInput;
-        JRPGParty*                   _pParty;
+        vector<uint8>                       _listDefending; ///< 이번 라운드에 방어 중인지(멤버 인덱스마다)
+        NotificationBuffer<JRPGBattleEvent> _eventBuffer;
+        TurnOrder                           _turnOrder;
+        GameRandom                          _random;
+        JRPGBattleSettings                  _settings;
+        const JRPGCatalog*                  _pCatalog;
+        const TimingJudge*                  _pJudge;
+        const IJRPGTimingInput*             _pTimingInput;
+        JRPGParty*                          _pParty;
         PROPERTY( RuntimeState, Min = 0 )
         int64 _rewardExp;
         PROPERTY( RuntimeState, Min = 0 )

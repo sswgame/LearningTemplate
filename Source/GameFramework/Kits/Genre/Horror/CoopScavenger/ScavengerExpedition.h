@@ -221,20 +221,20 @@ namespace sw
     private:
         vector<ScavengerCrewMember> _listCrew;
         PROPERTY( RuntimeState )
-        vector<ScavengerScrap>      _listShipScrap;
-        EventBuffer<ScavengerEvent> _eventBuffer;
-        ScavengerExpeditionData     _data;
-        ScavengerQuota              _quota;
-        ScavengerFacility           _facility;
-        SpawnDirector               _indoorDirector;
-        SpawnDirector               _outdoorDirector;
-        ShopManager                 _shop;
-        GameRandom                  _random;
-        Inventory*                  _pShipStorage; ///< 우주선 창고(빌림)
-        Wallet*                     _pWallet;      ///< 빌린 지갑(회사 돈)
-        WorldClock*                 _pClock;       ///< 빌린 시계이다. 떠나면 다음 날 도착 시각으로 넘긴다
-        WeatherSystem*              _pWeather;     ///< 빌린 날씨이다. 내리면 그 위성의 날씨로 바꾼다
-        const ScavengerMoonDef*     _pMoon;
+        vector<ScavengerScrap>             _listShipScrap;
+        NotificationBuffer<ScavengerEvent> _eventBuffer;
+        ScavengerExpeditionData            _data;
+        ScavengerQuota                     _quota;
+        ScavengerFacility                  _facility;
+        SpawnDirector                      _indoorDirector;
+        SpawnDirector                      _outdoorDirector;
+        ShopManager                        _shop;
+        GameRandom                         _random;
+        Inventory*                         _pShipStorage; ///< 우주선 창고(빌림)
+        Wallet*                            _pWallet;      ///< 빌린 지갑(회사 돈)
+        WorldClock*                        _pClock;       ///< 빌린 시계이다. 떠나면 다음 날 도착 시각으로 넘긴다
+        WeatherSystem*                     _pWeather;     ///< 빌린 날씨이다. 내리면 그 위성의 날씨로 바꾼다
+        const ScavengerMoonDef*            _pMoon;
         PROPERTY( RuntimeState )
         uint32 _seed;
         PROPERTY( RuntimeState, Min = 0 )

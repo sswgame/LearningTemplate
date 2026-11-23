@@ -181,8 +181,8 @@ namespace sw
 
     private:
         PROPERTY( RuntimeState )
-        vector<Entry>                _listEntry;
-        EventBuffer<ReputationEvent> _eventBuffer;
-        const ReputationCatalog*     _pCatalog;
+        vector<Entry>                       _listEntry;
+        NotificationBuffer<ReputationEvent> _eventBuffer;
+        const ReputationCatalog*            _pCatalog;
     };
 } // namespace sw

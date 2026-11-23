@@ -274,15 +274,15 @@ namespace sw
         vector<TownCreature>  _listCreature; ///< 온 순서
         vector<CreatureHouse> _listHouse;
         PROPERTY( RuntimeState )
-        vector<hashed_string>          _listOpenRequest; ///< 이 마을이 받은 부탁 중 아직 끝나지 않은 것이다(퀘스트 id)
-        EventBuffer<CreatureTownEvent> _eventBuffer;
-        CreatureTownSettings           _settings;
-        const CreatureLifeCatalog*     _pCatalog;
-        ReputationState*               _pReputation; ///< 빌린 평판이다(호감도이며 없으면 0)
-        QuestLog*                      _pQuestLog;   ///< 빌린 부탁 일지(없으면 부탁 없음)
-        const WorldClock*              _pClock;      ///< 빌린 시계이다(날이며 없으면 0일)
-        GridTopology                   _topology;
-        LandBinding                    _land; ///< 빌린 공유 땅(없으면 단독 동작)
+        vector<hashed_string>                 _listOpenRequest; ///< 이 마을이 받은 부탁 중 아직 끝나지 않은 것이다(퀘스트 id)
+        NotificationBuffer<CreatureTownEvent> _eventBuffer;
+        CreatureTownSettings                  _settings;
+        const CreatureLifeCatalog*            _pCatalog;
+        ReputationState*                      _pReputation; ///< 빌린 평판이다(호감도이며 없으면 0)
+        QuestLog*                             _pQuestLog;   ///< 빌린 부탁 일지(없으면 부탁 없음)
+        const WorldClock*                     _pClock;      ///< 빌린 시계이다(날이며 없으면 0일)
+        GridTopology                          _topology;
+        LandBinding                           _land; ///< 빌린 공유 땅(없으면 단독 동작)
         PROPERTY( RuntimeState, Min = 1 )
         int32 _nextHabitatID;
         PROPERTY( RuntimeState, Min = -1 )

@@ -150,16 +150,16 @@ namespace sw
         void populateRuleTable();
 
     private:
-        AdventureElementSettings           _settings;
-        ElementRuleCatalog                 _table;
-        ElementGrid                        _grid;
-        vector<ElementEvent>               _listGridEvent; ///< 격자 알림을 옮겨 담는 버퍼(재사용한다)
-        EventBuffer<AdventureElementEvent> _eventBuffer;
-        int32                              _burningStatus;
-        int32                              _chargedStatus;
-        int32                              _updraftFlag;
-        int32                              _fireStimulus;
-        int32                              _iceStimulus;
-        int32                              _electricStimulus;
+        AdventureElementSettings                  _settings;
+        ElementRuleCatalog                        _table;
+        ElementGrid                               _grid;
+        vector<ElementEvent>                      _listGridEvent; ///< 격자 알림을 옮겨 담는 버퍼(재사용한다)
+        NotificationBuffer<AdventureElementEvent> _eventBuffer;
+        int32                                     _burningStatus;
+        int32                                     _chargedStatus;
+        int32                                     _updraftFlag;
+        int32                                     _fireStimulus;
+        int32                                     _iceStimulus;
+        int32                                     _electricStimulus;
     };
 } // namespace sw
