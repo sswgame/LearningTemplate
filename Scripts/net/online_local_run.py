@@ -7,10 +7,10 @@
 
 설정은 코드가 만들지 않고 파일을 그대로 쓴다(`Config/Server/Online/<게임>.json` 과 옆 `.online.json`). 저장 키트(`GF_Server_SQLStore` · `GF_Server_CacheStore`)는 Playground 매니페스트가 켠다(`_listModuleOverride`).
 `Config/Server/Online/Playground.external.json` 이 Postgres · RESP · 영수증 · 푸시를 모두 고른 견본이다 - 끝점과 환경 변수의 값은 운영자가 준다. 없으면 서버가 까닭을 남기고 기동하지 못한다.
-매칭은 허브에서 매치형 미니게임(`shooter3d_match`)으로 들어가 선다 - 혼자 서는 모드(`arena_solo`)라 줄을 서면 바로 이 서버(`_publicAddress` 로 디렉터리에 등록한 게임 서버)로 배정되고 매치에 들어간다.
-나오면 결과의 처치 수가 순위표 `arena_kills` 에 가고 상위 목록을 받는다.
-판정: 클라이언트 로그에 공지 · 로그인 · 라이브 이벤트 · 우편 목록 · 매칭 배정 · 매치 진입 · 결과 보고 · 점수 제출 · 상위 목록(1 항목) 줄이 있고, 두 로그에 허용 밖 `[Error]` · `[Warning]` 가 없고, 서버가 종료 코드 0 으로 끝난다.
-허용 줄: 개발 티켓 키 경고(기본 설정은 게임 접속 티켓을 쓰지 않아 주 키를 두지 않는다).
+서버는 매치 서버다(`gv_firstMinigame` 이 매치 맵을 첫 씬으로 띄운다). 매칭은 허브에서 매치형 미니게임(`shooter3d_match`)으로 들어가 선다 - 혼자 서는 모드(`arena_solo`)라 줄을 서면 바로 이 서버
+(`_publicAddress` 로 디렉터리에 등록한 게임 서버)로 배정되고, 접속 티켓으로 그 게임 포트(암호화 UDP)에 붙은 뒤 매치에 들어간다. 나오면 **서버가** 순위표 `arena_kills` 에 점수를 내고, 클라이언트가 내는 점수는 거절된다.
+판정: 클라이언트 로그에 공지 · 로그인 · 라이브 이벤트 · 우편 목록 · 매칭 배정 · 매치 진입 · 상위 목록(1 항목) · 클라이언트 점수 거절 줄이, 서버 로그에 점수 제출 · 저장 줄이 있고, 두 로그에 허용 밖 `[Error]` · `[Warning]` 가 없고, 서버가 종료 코드 0 으로 끝난다.
+허용 줄: 개발 티켓 키 경고(기본 설정은 주 키를 두지 않고 개발 키로 티켓을 만든다).
 """
 
 from __future__ import annotations
@@ -29,6 +29,7 @@ from common.process_group import CheckResult, ProcessGroup, problem_lines, read_
 _DEFAULT_CONFIG = "Config/Server/Online/Playground.json"
 _PRESET = "Ninja-Debug"  # build/<프리셋>/Bin 의 Server · App 을 쓴다
 _GAME = "Playground"
+_MATCH_MINIGAME = "shooter3d_match"  # 서버의 첫 씬이자 클라이언트가 줄을 서는 매치형 미니게임
 _CLIENT_DELAY_SECONDS = 8.0  # 클라이언트를 띄운 뒤 명령을 보낼 때까지
 _TIMEOUT_SECONDS = 60.0  # 서버 기동 · 응답을 기다리는 최대 초
 _LISTENING = re.compile(r"Online services listening on port")
@@ -38,8 +39,9 @@ _LIVE_EVENTS = re.compile(r"online live events: \d+ events")
 _MAIL_LIST = re.compile(r"online mail list: \d+ mails")
 _MATCH_FOUND = re.compile(r"online match found")
 _MATCH_ENTERED = re.compile(r"Minigame 'shooter3d_match' is entered")
-_MATCH_REPORTED = re.compile(r"match \d+ reported: arena_kills = 5")
-_SCORE_SUBMITTED = re.compile(r"online score submitted")
+_SCORE_REPORTED = re.compile(r"match score of account \d+ reported: arena_kills = \d+")
+_SCORE_STORED = re.compile(r"the game server's score is stored")
+_SCORE_REFUSED = re.compile(r"online score refused")
 _TOP_SCORES = re.compile(r"online top scores: 1 entries")
 _ALLOWED_PROBLEM = re.compile(r"no ticketKeySecretEnvironment")
 
@@ -59,10 +61,10 @@ def check_logs(server_text: str, client_text: str) -> CheckResult:
         result.problems.append("the client log has no match found line - the matchmaking kit did not assign the solo arena match")
     if _MATCH_ENTERED.search(client_text) is None:
         result.problems.append("the client log has no line that the match map was entered - the assigned match minigame never started")
-    if _MATCH_REPORTED.search(client_text) is None:
-        result.problems.append("the client log has no match report line - the finished match did not hand its score over")
-    if _SCORE_SUBMITTED.search(client_text) is None:
-        result.problems.append("the client log has no score submitted line - the leaderboard kit did not take the score")
+    if _SCORE_REPORTED.search(server_text) is None or _SCORE_STORED.search(server_text) is None:
+        result.problems.append("the server log has no reported and stored match score - the match server did not submit the score of the player who left")
+    if _SCORE_REFUSED.search(client_text) is None:
+        result.problems.append("the client log has no refused score line - the board must not take a client's score")
     if _TOP_SCORES.search(client_text) is None:
         result.problems.append("the client log has no top scores line with one entry - the leaderboard kit did not return the submitted score")
     result.problems += problem_lines("server", server_text, _ALLOWED_PROBLEM) + problem_lines("client", client_text, _ALLOWED_PROBLEM)
@@ -77,7 +79,8 @@ def _run(argument: argparse.Namespace) -> int:
         server_exe, client_exe = list_exe
         server_config = (get_project_root() / argument.server_config).resolve()
         service_port = json.loads(server_config.read_text(encoding="utf-8"))["_servicePort"]
-        server = group.start("server", [server_exe, app_arguments.option("game", _GAME), app_arguments.option("server-config", server_config)])
+        server = group.start("server", [server_exe, app_arguments.option("game", _GAME), app_arguments.option("server-config", server_config),
+                                        app_arguments.variable("gv_firstMinigame", _MATCH_MINIGAME)])
         if not server.wait_for(_LISTENING, _TIMEOUT_SECONDS):
             return group.fail(f"the server never opened its service port (log: {server.log})")
         client = group.start("client", [client_exe, app_arguments.option("game", _GAME), app_arguments.variable("gv_standardInputCommands", "1"),
@@ -94,14 +97,16 @@ def _run(argument: argparse.Namespace) -> int:
                 client.wait_for(_LIVE_EVENTS, _TIMEOUT_SECONDS)
                 client.send("playground.online.listmail")
                 client.wait_for(_MAIL_LIST, _TIMEOUT_SECONDS)
-                client.send("minigame.enter shooter3d_match")
+                client.send(f"minigame.enter {_MATCH_MINIGAME}")
                 client.wait_for(_MATCH_FOUND, _TIMEOUT_SECONDS)
                 client.wait_for(_MATCH_ENTERED, _TIMEOUT_SECONDS)
-                client.send("minigame.leave down kills=5")  # 판 끝 — 점수는 매치 결과로 순위표에 간다
-                client.wait_for(_MATCH_REPORTED, _TIMEOUT_SECONDS)
-                if client.wait_for(_SCORE_SUBMITTED, _TIMEOUT_SECONDS):
+                time.sleep(2.0)  # 서버가 조종 연결을 정할 틈
+                client.send("minigame.quit")  # 나가면 매치 서버가 점수를 낸다
+                if server.wait_for(_SCORE_STORED, _TIMEOUT_SECONDS):
                     client.send("playground.online.topkills")
                     client.wait_for(_TOP_SCORES, _TIMEOUT_SECONDS)
+                client.send("playground.online.submitkills 999")
+                client.wait_for(_SCORE_REFUSED, _TIMEOUT_SECONDS)
             time.sleep(1.0)  # 늦게 나는 경고도 잡는다
         except OSError:
             print(f"[online-local] FAIL: the client exited before it took the commands (log: {client.log})")
@@ -114,7 +119,7 @@ def _run(argument: argparse.Namespace) -> int:
 
 def _print(result: CheckResult, server_log: Path, client_log: Path) -> int:
     return report("online-local", result.problems, [server_log, client_log],
-                  "TLS service connection -> service status -> login -> live events -> mailbox -> match -> leaderboard finished with no unexpected errors or warnings")
+                  "TLS service connection -> service status -> login -> live events -> mailbox -> match server -> server score -> leaderboard finished with no unexpected errors or warnings")
 
 
 def main(list_argument: list[str]) -> int:

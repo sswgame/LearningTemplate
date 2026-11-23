@@ -1,0 +1,45 @@
+<?xml version="1.0" encoding="utf-8"?>
+<?asset guid="80d5c48fedbd2bfe2841d6555f11f229"?>
+<!--
+  접속한 허브 → 매치 서버 → 허브(클라이언트). 허브 서버 · 매치 서버와 함께 세 프로세스로 돈다(`py -3 -m Scripts net-pair match`).
+  ① 로그인(허브의 서비스 포트) → 허브 티켓 → 허브 접속(Hub.AvatarID).
+  ② 매치형 미니게임으로 들어가면 줄 → 배정 → 허브를 떠나 매치 서버에 붙고(MatchState 4) 사격장에 들어간다. 자동 플레이 AI 의 의도가 매치 서버의 폰을 몰아 서버가 처치를 센다(ServerKillCount).
+  ③ 그만두면 매치 서버가 점수를 순위표에 내고, 클라이언트는 새 티켓으로 허브에 다시 붙는다(RestoreCount · Hub.NetRole 2 · AvatarID).
+  ④ 순위표의 값은 서버가 낸 것이다 — 클라이언트가 낸 999 는 거절되고 순위표는 그대로다.
+-->
+<Scenario name="game.playground.netpair.match_roundtrip" fixedDelta="0.0166667" timeoutFrames="60000" startAfter="ScenePlaying" startTimeoutFrames="900">
+	<Variable name="gv_playgroundAutoPlay" value="0"/>
+	<Expect watch="Hub.NetRole" equals="0"/>
+	<!-- ① 허브 접속 -->
+	<DevCommand line="online.connect"/>
+	<WaitUntil watch="Online.SessionState" atLeast="3" timeoutSeconds="20"/>
+	<DevCommand line="playground.online.login"/>
+	<WaitUntil watch="Playground.OnlineLoggedIn" equals="1" timeoutSeconds="20"/>
+	<DevCommand line="playground.online.joinhub 127.0.0.1:17977"/>
+	<WaitUntil watch="Hub.AvatarID" atLeast="1" timeoutSeconds="30"/>
+	<Expect watch="Playground.MatchState" equals="0"/>
+	<!-- ② 줄 → 배정 → 매치 서버 -->
+	<Variable name="gv_playgroundAutoPlay" value="1"/>
+	<DevCommand line="minigame.enter shooter3d_match"/>
+	<WaitUntil watch="Playground.OnlineMatchFound" equals="1" timeoutSeconds="30"/>
+	<WaitUntil watch="Playground.MatchState" equals="4" timeoutSeconds="60"/>
+	<WaitUntil watch="Minigame.Active" is="shooter3d_match" timeoutSeconds="30"/>
+	<WaitUntil watch="Shooter.ServerKillCount" atLeast="1" timeoutSeconds="90"/>
+	<!-- ③ 나감 → 허브 -->
+	<Variable name="gv_playgroundAutoPlay" value="0"/>
+	<DevCommand line="minigame.quit"/>
+	<WaitUntil watch="Minigame.RestoreCount" equals="1" timeoutSeconds="60"/>
+	<WaitUntil watch="Playground.MatchState" equals="0" timeoutSeconds="30"/>
+	<Expect watch="Minigame.Active" is="none"/>
+	<WaitUntil watch="Hub.NetRole" equals="2" timeoutSeconds="30"/>
+	<WaitUntil watch="Hub.AvatarID" atLeast="1" timeoutSeconds="30"/>
+	<!-- ④ 순위표는 서버의 값이다 -->
+	<DevCommand line="playground.online.submitkills 999"/>
+	<WaitUntil watch="Playground.OnlineRefusedScoreCount" equals="1" timeoutSeconds="10"/>
+	<DevCommand line="playground.online.topkills"/>
+	<WaitUntil watch="Playground.OnlineTopKillsCount" equals="1" timeoutSeconds="10"/>
+	<Expect watch="Playground.OnlineTopKillsScore" atLeast="1"/>
+	<Expect watch="Playground.OnlineTopKillsScore" atMost="998"/>
+	<DevCommand line="online.disconnect"/>
+	<Pass/>
+</Scenario>
