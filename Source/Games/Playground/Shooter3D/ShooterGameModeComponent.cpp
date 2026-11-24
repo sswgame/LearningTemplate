@@ -357,7 +357,7 @@ namespace sw
         pMesh->setLocalPosition( position );
         pMesh->setLocalRotation( float3{ 0.0f, 0.0f, 0.0f } );
         pMesh->setLocalScale( float3{ size } );
-        _tintCache.apply( *pMesh, color );
+        (void)_tintCache.apply( *pMesh, color ); // 풀에서 꺼낼 때마다 다시 칠한다
         pMesh->setVisible( true );
     }
 
@@ -378,7 +378,7 @@ namespace sw
         pMesh->setLocalPosition( from + span * 0.5f );
         pMesh->setLocalRotation( float3{ pitch, yaw, 0.0f } );
         pMesh->setLocalScale( float3{ width, width, length } );
-        _tintCache.apply( *pMesh, color );
+        (void)_tintCache.apply( *pMesh, color ); // 풀에서 꺼낼 때마다 다시 칠한다
         pMesh->setVisible( true );
     }
 

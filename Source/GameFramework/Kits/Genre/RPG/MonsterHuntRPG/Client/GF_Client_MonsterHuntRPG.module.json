@@ -1,0 +1,22 @@
+{
+    "_name": "GF_Client_MonsterHuntRPG",
+    "_version": "1.0.0",
+    "_kind": "Kit",
+    "_description": "몬스터 사냥 RPG 키트(클라이언트) — 흥정 · 조사 · 전투 입력을 디렉터 명령으로 바꾸고 단서 · 괴물을 그리며 HUD 를 채운다. 규칙 · 디렉터는 GF_MonsterHuntRPG",
+    "_listDependency": [
+        {
+            "_name": "GameFramework"
+        },
+        {
+            "_name": "GF_MonsterHuntRPG"
+        }
+    ],
+    "_listConfiguration": [
+        "Dev",
+        "Shipping"
+    ],
+    "_listTarget": [
+        "Client"
+    ],
+    "_bEnabledByDefault": true
+}

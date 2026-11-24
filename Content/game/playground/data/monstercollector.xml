@@ -1,12 +1,35 @@
 <?xml version="1.0" encoding="utf-8"?>
 <?asset guid="0d1484824d7f473c91cb747fad2e976c"?>
 <!--
-  장르 키트 시연 — 몬스터 수집 전투 · 포획 한 판씩(maps/kit_monstercollector). 명중 0 은 반드시 맞는다.
-  swift 는 스피드 200 으로 먼저 친다. normie 는 기본 경험치 70 이라 레벨 50 을 쓰러뜨리면 70 x 50 / 7 = 500 이다. flamo 는 포획률 255 다.
+  풀밭 수집 미니게임(monstercollector/maps/glade)의 기술 · 종 · 조우 표. 명중 0 은 반드시 맞는다.
+  수치가 시나리오(automation/monstercollector_slice)의 바탕이다: 시작 개체(레벨 10)는 늘 먼저 움직이고 야생(레벨 3)을 한 번에 쓰러뜨려 경험치 56 × 3 / 7 = 24 를 받는다.
+  야생의 포획률 255 에 볼 배율 3 이면 반드시 잡힌다.
 -->
 <MonsterCollectorCatalog>
-	<Move id="strike" name="Strike" type="Normal" power="40" accuracy="0" pp="30"/>
-	<Species id="swift" name="Swift" types="Normal" stats="50 50 50 50 50 200"/>
-	<Species id="normie" name="Normie" types="Normal" stats="50 50 50 50 50 50" baseExp="70"/>
-	<Species id="flamo" name="Flamo" types="Fire" stats="50 50 50 50 50 50" catchRate="255" baseExp="70"/>
+	<!-- 전투 규칙의 수치(MonsterBattleRules) — 적지 않은 칸은 초기값이다. 야생 만남이 짧은 판이라 급소는 1.5 배, 도망은 시도마다 30 씩 쉬워진다. -->
+	<Rules critDivisor="24,8,2" critPercent="150" stabPercent="150" rollMinPercent="85" escapePerAttempt="30" captureShakeCount="4"/>
+	<Move id="leafslap" name="Leaf Slap" type="Moss" power="40" accuracy="0" pp="30" useSound="MonsterCollectorMove"/>
+	<Move id="rootgrip" name="Root Grip" type="Moss" category="Status" pp="20" stat="Speed" stages="-1" target="Foe" useSound="MonsterCollectorStatusMove"/>
+	<Move id="nudge" name="Nudge" type="Spark" power="10" accuracy="0" pp="30" useSound="MonsterCollectorMove"/>
+	<Move id="splash_jab" name="Splash Jab" type="Tide" power="10" accuracy="0" pp="30" useSound="MonsterCollectorMove"/>
+	<Nature id="brisk" up="Speed" down="SpecialDefense"/>
+	<Nature id="stout" up="SpecialDefense" down="SpecialAttack"/>
+	<Species id="fernling" name="Fernling" types="Moss" stats="50 90 50 50 50 100" catchRate="45" baseExp="64">
+		<Learn level="1" move="leafslap"/>
+		<Learn level="5" move="rootgrip"/>
+		<Evolve to="fernwarden" level="16"/>
+	</Species>
+	<Species id="fernwarden" name="Fernwarden" types="Moss" stats="70 110 70 60 70 100" catchRate="45" baseExp="140">
+		<Learn level="1" move="leafslap"/>
+	</Species>
+	<Species id="glintbug" name="Glintbug" types="Spark" stats="40 30 30 30 30 30" catchRate="255" baseExp="56">
+		<Learn level="1" move="nudge"/>
+	</Species>
+	<Species id="ripplet" name="Ripplet" types="Tide" stats="40 30 30 30 30 30" catchRate="255" baseExp="56">
+		<Learn level="1" move="splash_jab"/>
+	</Species>
+	<Encounter id="glade_day" area="glade" time="Day">
+		<Slot species="glintbug" min="3" max="3" weight="2"/>
+		<Slot species="ripplet" min="3" max="3" weight="1"/>
+	</Encounter>
 </MonsterCollectorCatalog>

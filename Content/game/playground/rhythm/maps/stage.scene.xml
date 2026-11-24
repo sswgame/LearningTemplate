@@ -1,0 +1,79 @@
+<?asset guid="7d738a1880e5b2df260d1294b782fd4e"?>
+<Scene formatVersion="3" name="RhythmStage">
+	<!-- 리듬 한 곡 — 채보는 rhythm/data/stage1.chart.xml, 음악은 common/music 의 CC0 곡(rhythm/data/stage1.music.xml). 레인 · 노트는 뷰가 원시 도형 프리팹으로 세운다. -->
+	<SceneSettings _bStreaming="false" _unloadMargin="0" _maxCellLoadsPerFrame="0" _addToWorldBudgetMicroseconds="0">
+		<_cellGrid _cellSize="0" _loadingRadius="0" />
+	</SceneSettings>
+	<entities>
+		<entity id="1" name="GameCamera">
+			<GameObject _schemaVersion="0" _name="GameCamera" _bActive="true">
+				<_listComponent>
+					<CameraComponent _localID="17709685451340727998" _componentName="CameraComponent"
+					                 _bActive="true"
+					                 _localPosition="0,6,-5"
+					                 _localRotation="0.6,0,0"
+					                 _localScale="1,1,1"
+					                 _attachOwner="None"
+					                 _attachOwnerID="0"
+					                 _attachComponent="None"
+					                 _fovY="40.107045"
+					                 _nearZ="0.1"
+					                 _farZ="80"
+					                 _orthoHeight="10"
+					                 _priority="0"
+					                 _role="Game"
+					                 _bOrthographic="false" />
+				</_listComponent>
+			</GameObject>
+		</entity>
+		<entity id="2" name="Sun">
+			<GameObject _schemaVersion="0" _name="Sun" _bActive="true">
+				<_listComponent>
+					<DirectionalLightComponent _localID="51927904365891271" _componentName="DirectionalLightComponent"
+					                           _bActive="true"
+					                           _localPosition="0,0,0"
+					                           _localRotation="0.448254,-2.121679,0"
+					                           _localScale="1,1,1"
+					                           _attachOwner="None"
+					                           _attachOwnerID="0"
+					                           _attachComponent="None"
+					                           _color="1,0.95,0.88"
+					                           _intensity="1.3"
+					                           _ambient="0.35"
+					                           _shadowExtent="30"
+					                           _shadowDistance="60"
+					                           _bCastShadow="true" />
+				</_listComponent>
+			</GameObject>
+		</entity>
+		<!-- 디렉터(규칙) → 클라이언트 뷰(입력 · 모습 · HUD 값) → HUD 문서. 뷰는 같은 오브젝트에 앞서 붙은 디렉터를 찾는다. -->
+		<entity id="3" name="Director">
+			<GameObject _schemaVersion="0" _name="Director" _bActive="true">
+				<_listComponent>
+					<RhythmGameModeComponent _localID="8629025867396012359" _componentName="RhythmGameModeComponent" _bActive="true"
+					                         _chart="game/playground/rhythm/data/stage1.chart.xml"
+					                         _clock="Music"
+					                         _missLifeDelta="-4"
+					                         _maxLife="100"
+					                         _resultHoldSeconds="3"
+					                         _clearReward="30" />
+					<RhythmViewComponent _localID="5675568754244570621" _componentName="RhythmViewComponent" _bActive="true"
+					                     _music="game/playground/rhythm/data/stage1.music.xml"
+					                     _notePrefab="game/playground/prefabs/ruleviews/cube.prefab.xml"
+					                     _laneWidth="1.2"
+					                     _hiSpeed="8"
+					                     _viewLength="16">
+						<_listLaneAction>
+							<item>Rhythm.Lane1</item>
+							<item>Rhythm.Lane2</item>
+							<item>Rhythm.Lane3</item>
+							<item>Rhythm.Lane4</item>
+						</_listLaneAction>
+					</RhythmViewComponent>
+					<HUDControllerComponent _localID="17122754535480611078" _componentName="HUDControllerComponent" _bActive="true"
+					                        _documentPath="game/playground/rhythm/ui/hud.ui.xml" />
+				</_listComponent>
+			</GameObject>
+		</entity>
+	</entities>
+</Scene>

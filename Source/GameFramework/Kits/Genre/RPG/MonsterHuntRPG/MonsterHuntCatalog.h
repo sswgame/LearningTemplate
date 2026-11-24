@@ -121,6 +121,8 @@ namespace sw
         PROPERTY()
         hashed_string _element{}; ///< 속성이다(상성과 상태이상에 쓰며 기반 `ElementChart` 를 쓴다)
         PROPERTY()
+        hashed_string _castSound{}; ///< 걸 때의 사운드 이벤트(`*.audioevents.xml`). 비면 소리가 없다
+        PROPERTY()
         hashed_string _altSkill{}; ///< 이 스킬 랭크가 1 이상이면 대체 시전을 쓴다(기반 `SkillTreeState`)
         PROPERTY( Min = 0.0 )
         float32 _cost{ 30.0f };

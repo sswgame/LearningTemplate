@@ -56,6 +56,33 @@ SW_TEST_CASE( WorldClockTest, RefusesBadTimeAndNegativeScale )
     SW_EXPECT_FALSE( clock.setTimeScale( -1.0f ) );
 }
 
+/**
+ * @brief [WorldClockTest] 설정을 받지 않은 시계는 날을 넘겨도 나누기 0 없이 오류로 거절하고 그대로다(계절 목록이 비어 계절 · 해 계산의 나눗수가 0 이었다)
+ */
+SW_TEST_CASE( WorldClockTest, RefusesToRunBeforeInitialize )
+{
+    SW_EXPECT_LOG( "WorldClock.NotInitialized" );
+    WorldClock clock;
+    SW_EXPECT_FALSE( clock.isInitialized() );
+    clock.update( 10000.0f );
+    clock.advanceMinutes( 60.0f * 48.0f );
+    clock.advanceToHour( 5.0f );
+    SW_EXPECT_FALSE( clock.setTime( 3, 6.0f ) );
+    SW_EXPECT_EQUAL( 0, clock.getDay() );
+    SW_EXPECT_EQUAL( 0, clock.getSeasonIndex() );
+    SW_EXPECT_TRUE( clock.getSeasonName().empty() );
+    SW_EXPECT_EQUAL( 1, clock.getYear() );
+    vector<WorldClockEvent> listEvent;
+    clock.pollEvents( listEvent );
+    SW_EXPECT_TRUE( listEvent.empty() );
+
+    // 설정을 받으면 그때부터 흐른다.
+    SW_REQUIRE_TRUE( clock.initialize( WorldClockTestUtil::makeSettings() ) );
+    SW_EXPECT_TRUE( clock.isInitialized() );
+    clock.advanceMinutes( 60.0f * 24.0f );
+    SW_EXPECT_EQUAL( 1, clock.getDay() );
+}
+
 SW_TEST_CASE( WorldClockTest, EmptySeasonListBecomesOneDefaultSeason )
 {
     WorldClockSettings settings = WorldClockTestUtil::makeSettings();

@@ -20,14 +20,12 @@ namespace sw
     {
     }
 
-    void MonsterHuntMutagens::initialize( const MonsterHuntCatalog* pCatalog, int32 characterLevel )
+    void MonsterHuntMutagens::initialize( const MonsterHuntCatalog& catalog, int32 characterLevel )
     {
-        _pCatalog       = pCatalog;
+        _pCatalog       = &catalog;
         _characterLevel = characterLevel;
         _listGroup.clear();
-        if ( pCatalog == nullptr )
-            return;
-        for ( const MonsterHuntSlotGroupDef& def : pCatalog->getSlotGroups() )
+        for ( const MonsterHuntSlotGroupDef& def : catalog.getSlotGroups() )
         {
             Group group;
             group._listSkill.resize( static_cast<size_t>( def._slotCount ) );

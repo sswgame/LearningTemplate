@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="utf-8"?>
+<?asset guid="987d6cf72602b158423bdce5fabf78e3"?>
+<!-- 리듬 미니게임(minigames/rhythm)의 음악 — common/music 의 CC0 곡 하나(출처는 common/credits.md)를 되풀이하지 않는 구간 하나로 낸다. 박 0 이 곡의 처음이라 채보의 박과 같다. -->
+<AudioMusicDef _bus="music" _startSegment="Song" _tempo="140" _beatsPerBar="4">
+	<_listSegment>
+		<AudioMusicSegmentDef _name="Song" _bars="24" _bLoop="false">
+			<_listLayer>
+				<AudioMusicLayerDef _path="common/music/subspaceaudio_chiptune_adventures/1_stage_1.ogg" />
+			</_listLayer>
+		</AudioMusicSegmentDef>
+	</_listSegment>
+</AudioMusicDef>

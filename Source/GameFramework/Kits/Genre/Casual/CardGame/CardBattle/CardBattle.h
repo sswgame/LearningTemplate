@@ -15,6 +15,7 @@
 #include "Engine/Content/AssetTypeRegistry.h"
 #include "Engine/Reflection/ReflectionMacros.h"
 #include "Engine/Serialization/Format/StateIO.h"
+#include "Engine/Serialization/Serializer/CatalogKey.h"
 
 #include "GameFramework/GameFrameworkExports.h"
 #include "GameFramework/Kits/Genre/Casual/CardGame/CardDeck.h"
@@ -71,10 +72,44 @@ namespace sw
 
 namespace sw
 {
+    /** @brief 덱 하나입니다(`<Deck id="starter" cards="strike,strike,defend"/>`). */
+    REFLECT()
+    struct CardBattleDeckDef
+    {
+        REFLECT_BODY();
+
+        PROPERTY( Required )
+        hashed_string _id{};
+        PROPERTY( Name = "cards", Required )
+        vector<hashed_string> _listCard{}; ///< 카드 정의 id(같은 카드는 장수만큼 적는다) — 카탈로그의 카드인지는 참조 표(`datacatalogreferences.xml`)가 본다
+    };
+} // namespace sw
+
+namespace sw
+{
+    /** @brief 상대 하나입니다(`<Enemy id="slime" name="Slime" hp="30" intents="Damage:6,Block:4"/>`). */
+    REFLECT()
+    struct CardBattleEnemyDef
+    {
+        REFLECT_BODY();
+
+        PROPERTY( Required )
+        hashed_string _id{};
+        PROPERTY( Required )
+        string                   _name{};
+        vector<CardBattleEffect> _listIntent{}; ///< 턴마다 차례대로 하는 일(Damage · Block)
+        PROPERTY( Name = "hp", Required, Min = 1 )
+        int32 _hp{ 1 };
+    };
+} // namespace sw
+
+namespace sw
+{
     /**
      * @class CardBattleCatalog
-     * @brief `<CardBattleCatalog><Card id="strike" name="Strike" cost="1" effects="Damage:6"/></CardBattleCatalog>` 를 읽습니다.
-     *        `effects` 는 쉼표로 나눈 `종류:양`(Damage, Block, Draw, Energy)입니다.
+     * @brief `<CardBattleCatalog><Card id="strike" name="Strike" cost="1" effects="Damage:6"/><Deck id="starter" cards="strike,strike"/>
+     *        <Enemy id="slime" name="Slime" hp="30" intents="Damage:6"/></CardBattleCatalog>` 를 읽습니다.
+     *        `effects` · `intents` 는 쉼표로 나눈 `종류:양`(Damage, Block, Draw, Energy — 상대의 할 일은 Damage · Block)입니다. 덱과 상대는 없어도 됩니다.
      */
     class SW_KIT_API CardBattleCatalog : public GameCatalog<CardBattleCardDef, XMLCatalog<CardBattleCatalog>>
     {
@@ -93,10 +128,18 @@ namespace sw
 
         CardBattleCatalog();
 
+        const CardBattleDeckDef*  findDeck( const CatalogKey<CardBattleDeckDef>& key ) const { return _deckCatalog.find( key ); }
+        const CardBattleEnemyDef* findEnemy( const CatalogKey<CardBattleEnemyDef>& key ) const { return _enemyCatalog.find( key ); }
+
     private:
         static constexpr const utf8* kXMLRootName = "CardBattleCatalog"; ///< XML 루트 원소 이름이다(`XMLCatalog` 이 사용한다)
         uint32                       loadRoot( const XMLCatalogRoot& root, string_view sourceName );
         [[nodiscard]] bool           loadCard( const XMLNode& node, string_view sourceName );
+        [[nodiscard]] bool           loadEnemy( const XMLNode& node, string_view sourceName );
+
+    private:
+        GameCatalog<CardBattleDeckDef>  _deckCatalog;
+        GameCatalog<CardBattleEnemyDef> _enemyCatalog;
     };
 
     /** @brief 공유 캐시는 이 카탈로그의 .cpp 가 인스턴스화합니다. 쓰는 쪽은 사본을 읽지 않고 `SharedAssetCache<CardBattleCatalog>::acquire` 로 한 벌을 받습니다. */
@@ -161,10 +204,10 @@ namespace sw
         CardBattle();
 
         /**
-         * @brief 덱(@p listDeckCardID 의 정의 id 목록)을 섞어 첫 턴을 엽니다. 카탈로그에 없는 id 는 건너뜁니다.
-         * @return 덱이 비면 false 를 반환한다.
+         * @brief 덱(@p listDeckCardID 의 정의 id 목록)을 섞어 첫 턴을 엽니다. 카탈로그에 없는 id 가 있으면 오류를 남기고 열지 않습니다(빼고 열면 오타 하나가 다른 덱이 된다).
+         * @return 덱이 비거나 모르는 카드가 있으면 false 를 반환한다.
          */
-        [[nodiscard]] bool initialize( const CardBattleCatalog* pCatalog, const CardBattleSettings& settings, const vector<hashed_string>& listDeckCardID,
+        [[nodiscard]] bool initialize( const CardBattleCatalog& catalog, const CardBattleSettings& settings, const vector<hashed_string>& listDeckCardID,
                                        const CardBattleEnemy& enemy, uint32 seed );
         /** @brief 손의 @p handIndex 번째 패를 씁니다. 에너지가 모자라거나 내 턴이 아니면 false 를 반환합니다. */
         [[nodiscard]] bool playCard( int32 handIndex );

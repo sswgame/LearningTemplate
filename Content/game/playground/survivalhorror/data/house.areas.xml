@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="utf-8"?>
+<?asset guid="7e5785bd782e4033a96dccfb6a39973b"?>
+<!-- 생존 공포 미니게임의 집 — 방 사각형(미터, x 동쪽 · y 북쪽)과 연결. 잠긴 연결의 kind 가 열쇠 자물쇠 id(카탈로그 data/horror.xml)고, 지역 Dark 는 어두운 방이다. -->
+<AreaGraph>
+	<Area id="hall" region="House" x="0" y="0" w="10" h="8"/>
+	<Area id="corridor" region="Dark" x="10" y="2" w="8" h="4"/>
+	<Area id="study" region="House" x="18" y="0" w="8" h="8"/>
+	<Area id="exit" region="House" x="26" y="2" w="4" h="4"/>
+	<Link from="hall" to="corridor" kind="redDoor" requires="redDoorOpen"/>
+	<Link from="corridor" to="study" kind="Passage"/>
+	<Link from="study" to="exit" kind="Gate" requires="gateOpen"/>
+</AreaGraph>

@@ -370,7 +370,7 @@ SW_TEST_CASE( EconomyMirrorTest, InventoryFollowsTheLedger )
     ItemCatalog catalog;
     SW_REQUIRE_TRUE( catalog.loadFromXMLText( MirrorTestUtil::kCatalogXML, "EconomyMirrorTest" ) );
     Inventory inventory;
-    SW_REQUIRE_TRUE( inventory.initialize( &catalog, 1 ) );
+    SW_REQUIRE_TRUE( inventory.initialize( catalog, 1 ) );
     const hashed_string stone{ "stone" };
     const hashed_string arrow{ "arrow" };
 

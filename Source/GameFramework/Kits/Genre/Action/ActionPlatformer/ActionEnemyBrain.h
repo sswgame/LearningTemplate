@@ -53,7 +53,7 @@ namespace sw
         ActionEnemyBrain();
 
         /** @brief 패턴을 설정하고 시작 상태로 갑니다. 패턴이 없거나 시작 상태(`_start`)가 상태 목록에 없으면 false 를 반환하고 패턴 없는 상태가 됩니다. */
-        [[nodiscard]] bool initialize( const ActionPatternDef* pPattern, int32 facing = 1 );
+        [[nodiscard]] bool initialize( const ActionPatternDef& pattern, int32 facing = 1 );
         /**
          * @brief 한 프레임 진행합니다. 먼저 가까움(`onNear`)을 보고 그다음 시간(`next`)을 확인해 상태를 바꾼 뒤, 이번 프레임에 할 일을 정합니다.
          * @param playerDistance 플레이어까지의 거리(가까움 판정에 쓴다)
@@ -73,7 +73,7 @@ namespace sw
          */
         SW_DECLARE_STATE_IO();
         /** @brief 패턴을 찾을 카탈로그를 빌립니다. `readState` 하기 전에 연결해야 합니다(카탈로그는 이 객체보다 오래 삽니다). */
-        void bindCatalog( const ActionPlatformerCatalog* pCatalog ) { _pCatalog = pCatalog; }
+        void bindCatalog( const ActionPlatformerCatalog& catalog ) { _pCatalog = &catalog; }
 
     private:
         void                         enterState( int32 stateIndex );

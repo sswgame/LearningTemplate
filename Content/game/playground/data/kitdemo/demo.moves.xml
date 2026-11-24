@@ -1,9 +1,0 @@
-<?xml version="1.0" encoding="utf-8"?>
-<?asset guid="9840a0a1ab55468b89b15b0c1f4a21b5"?>
-<!--
-  장르 키트 시연 — 3D 격투 대전 하나(maps/kit_fighting)의 프레임 데이터. 하단 한 기술: 발생 3 · 지속 2 · 피해 10.
-  캐릭터(커맨드 · 체력 10)는 demo.fighters.xml 이 이 카탈로그를 moves 로 가리켜 얹는다.
--->
-<MoveCatalog>
-	<Move id="low" startup="3" active="2" recovery="6" damage="10" chip="1" hitstun="12" blockstun="6" height="Low"><Hitbox x="0.6" y="0.8" w="1.4" h="1.6"/></Move>
-</MoveCatalog>

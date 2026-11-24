@@ -281,15 +281,13 @@ namespace sw
     {
     }
 
-    void ShopManager::initialize( const ShopCatalog* pShopCatalog, const ItemCatalog* pItemCatalog )
+    void ShopManager::initialize( const ShopCatalog& shopCatalog, const ItemCatalog& itemCatalog )
     {
-        _pShopCatalog = pShopCatalog;
-        _pItemCatalog = pItemCatalog;
+        _pShopCatalog = &shopCatalog;
+        _pItemCatalog = &itemCatalog;
         _listRuntime.clear();
         _eventBuffer.clear();
-        if ( _pShopCatalog == nullptr )
-            return;
-        for ( const ShopDef& shop : _pShopCatalog->getAll() )
+        for ( const ShopDef& shop : shopCatalog.getAll() )
         {
             ShopState runtime;
             runtime._shopID = shop._id;

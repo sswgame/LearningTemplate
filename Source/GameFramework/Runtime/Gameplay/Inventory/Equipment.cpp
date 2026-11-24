@@ -40,9 +40,9 @@ namespace sw
     {
     }
 
-    void Equipment::initialize( const ItemCatalog* pCatalog, string_view slotLayout, const IEquipmentSetLookup* pSetLookup, const EquipmentCharacterContext* pCharacter )
+    void Equipment::initialize( const ItemCatalog& catalog, string_view slotLayout, const IEquipmentSetLookup* pSetLookup, const EquipmentCharacterContext* pCharacter )
     {
-        _pCatalog   = pCatalog;
+        _pCatalog   = &catalog;
         _pSetLookup = pSetLookup;
         _pCharacter = pCharacter;
         _listSlot.clear();

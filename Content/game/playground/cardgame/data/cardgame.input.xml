@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="utf-8"?>
+<?asset guid="a607d92ed9fdaceaa9ca710f14b866f8"?>
+<!--
+  덱 전투 미니게임(minigames/cardgame)의 입력 차이. 카드 고르기는 공통 Move 축의 좌우다 — Playground 공통 묶음(data/gamesettings.xml 의 <inputMap> 줄) 위에 얹힌다. 게임 코드는 키를 묻지 않고 액션 이름만 묻는다. 한 게임만 쓰는 이름은 게임 접두다.
+  레이어 CardGame 는 꺼져 있고 미니게임의 inputContexts 가 들어가 있는 동안만 켠다 — 허브 · 다른 미니게임의 같은 키와 겹치지 않는다.
+-->
+<InputMap>
+	<layers>
+		<layer name="CardGame" enabled="0" blockLower="0"/>
+	</layers>
+	<action name="Card.Confirm" layer="CardGame" trigger="Pressed">
+		<bind source="Key" code="Space"/>
+		<bind source="Gamepad" code="A"/>
+	</action>
+	<action name="Card.EndTurn" layer="CardGame" trigger="Pressed">
+		<bind source="Key" code="E"/>
+		<bind source="Gamepad" code="RightShoulder"/>
+	</action>
+</InputMap>

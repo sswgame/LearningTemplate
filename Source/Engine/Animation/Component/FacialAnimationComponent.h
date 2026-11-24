@@ -30,6 +30,7 @@ namespace sw
     class FacialRig;
     class FacialAnimationComponent;
     class IFacialLiveSource;
+    class MaterialInstance;
     class Mesh;
     class SkeletalAnimatorComponent;
     class Skeleton;
@@ -200,7 +201,8 @@ namespace sw
         vector<hashed_string>                         _listScratchExpressionName;   ///< 주름 계산의 표정 이름(리그 표정 순서)
         vector<float32>                               _listScratchExpressionWeight; ///< 주름 계산의 표정 가중치
         WrinkleWeights                                _wrinkleWeights;              ///< 이번 프레임 주름 마스크 가중치(워커가 쓰고 프레임 끝에 게임 스레드가 넣는다)
-        WrinkleWeights                                _pushedWrinkleWeights;        ///< 마지막으로 머티리얼에 넣은 값(같으면 다시 넣지 않는다)
+        WrinkleWeights                                _pushedWrinkleWeights;        ///< 마지막으로 머티리얼에 넣은 값(같은 인스턴스에 같은 값이면 다시 넣지 않는다)
+        weak_ptr<MaterialInstance>                    _pushedWrinkleInstance;       ///< 그 값을 넣은 인스턴스 — 외형이 인스턴스를 갈면 새 것에 다시 넣는다
         TComponentHandle<SkeletalAnimatorComponent>   _animator;                    ///< 같은 오브젝트의 애니메이터(표정 커브 — 게임 스레드가 프레임마다 찾아 둔다)
         SkeletalMeshComponent*                        _pSkeletalMesh;
         const Mesh*                                   _pBoundMesh;     ///< 번호를 지은 메시(정체성만)

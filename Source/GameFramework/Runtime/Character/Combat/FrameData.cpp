@@ -37,6 +37,9 @@ namespace sw
         , _name{}
         , _listHitbox{}
         , _listCancel{}
+        , _startSound{}
+        , _hitSound{}
+        , _blockSound{}
         , _damage{ 0.0f }
         , _chipDamage{ 0.0f }
         , _startup{ 1 }

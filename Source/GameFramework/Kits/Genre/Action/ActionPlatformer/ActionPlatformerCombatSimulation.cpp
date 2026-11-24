@@ -21,8 +21,8 @@ namespace sw
         class ActionRigProjectileQuery : public IProjectileWorld
         {
         public:
-            explicit ActionRigProjectileQuery( const PlatformTileMap* pMap )
-                : _pMap{ pMap }
+            explicit ActionRigProjectileQuery( const PlatformTileMap& map )
+                : _map{ map }
             {
             }
 
@@ -30,7 +30,7 @@ namespace sw
 
             bool sweep( const ProjectileState& /*projectile*/, const float3& /*from*/, const float3& to, ProjectileHit& outHit ) const override
             {
-                if ( _pMap == nullptr || _pMap->getTile( _pMap->computeTileX( to._x ), _pMap->computeTileY( to._y ) ) != PlatformTile::Solid )
+                if ( _map.getTile( _map.computeTileX( to._x ), _map.computeTileY( to._y ) ) != PlatformTile::Solid )
                     return false;
                 outHit._position = to;
                 outHit._kind     = ProjectileHitKind::Surface;
@@ -38,7 +38,7 @@ namespace sw
             }
 
         private:
-            const PlatformTileMap* _pMap;
+            const PlatformTileMap& _map;
         };
     } // namespace
 } // namespace sw
@@ -74,17 +74,17 @@ namespace sw
         return projectile;
     }
 
-    bool ActionPlatformerCombatSimulation::initialize( const ActionPlatformerCatalog* pCatalog, const MoveCatalog* pMoves, const hashed_string& comboID )
+    bool ActionPlatformerCombatSimulation::initialize( const ActionPlatformerCatalog& catalog, const MoveCatalog& moves, const hashed_string& comboID )
     {
-        _pCatalog = pCatalog;
-        _pMoves   = pMoves;
-        _pCombo   = pCatalog != nullptr ? pCatalog->findCombo( comboID ) : nullptr;
+        _pCatalog = &catalog;
+        _pMoves   = &moves;
+        _pCombo   = catalog.findCombo( comboID );
         // 기술 표에 없는 기술을 든 콤보는 받지 않는다. 받으면 그 차례의 공격이 말없이 사라진다.
-        if ( _pCombo != nullptr && _pMoves != nullptr )
+        if ( _pCombo != nullptr )
         {
             for ( const hashed_string& moveID : _pCombo->_listMove )
             {
-                if ( _pMoves->find( moveID ) != nullptr )
+                if ( moves.find( moveID ) != nullptr )
                     continue;
                 SW_LOG_ERROR_ID( "ActionPlatformerCombatSimulation.ComboMoveUnknown", "ActionPlatformerCombatSimulation: combo '%#' names an unknown move '%#'", comboID.c_str(), moveID.c_str() );
                 _pCombo = nullptr;
@@ -98,7 +98,7 @@ namespace sw
         _attackBufferFrames = 0;
         _parryFrames        = 0;
         _hitstopFrames      = 0;
-        return _pCombo != nullptr && _pMoves != nullptr;
+        return _pCombo != nullptr;
     }
 
     bool ActionPlatformerCombatSimulation::equipGun( const WeaponDef& weapon, const ProjectileDef& projectile, int32 reserveAmmo, uint32 seed )
@@ -170,7 +170,7 @@ namespace sw
         startHitstop( _timeline.getMove()._hitstop );
     }
 
-    void ActionPlatformerCombatSimulation::advanceFrame( const PlatformTileMap* pMap, const float2& playerPosition )
+    void ActionPlatformerCombatSimulation::advanceFrame( const PlatformTileMap& map, const float2& playerPosition )
     {
         // 히트스톱은 세상을 멈춘다. 기술은 자기 히트스톱만 같이 줄인다(남은 수가 같으면 함께 풀린다).
         if ( _hitstopFrames > 0 )
@@ -183,7 +183,7 @@ namespace sw
 
         // 근접 공격이다. 쉬고 있으면 첫 기술을 내고, 기술 중이면 다음 기술의 캔슬 창이 열렸을 때 이어서 낸다.
         bool       bStarted        = false;
-        const bool bCanStartAttack = _attackBufferFrames > 0 && _pCombo != nullptr && _pMoves != nullptr;
+        const bool bCanStartAttack = _attackBufferFrames > 0 && _pCombo != nullptr;
         if ( bCanStartAttack )
         {
             const int32 nextIndex = _comboIndex + 1;
@@ -230,7 +230,7 @@ namespace sw
         }
 
         // 투사체는 움직이다가, 시간 · 사거리가 다 되거나 벽에 닿으면 없앤다(공통 발사체 시뮬레이션).
-        const ActionRigProjectileQuery query( pMap );
+        const ActionRigProjectileQuery query( map );
         (void)_projectiles.step( kFrameTime, query ); // 사건은 쓰지 않는다
     }
 

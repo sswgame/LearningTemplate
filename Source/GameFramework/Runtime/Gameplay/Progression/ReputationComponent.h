@@ -45,7 +45,7 @@ namespace sw
          * @brief 평판을 엽니다. 첫 호출만 카탈로그를 쓰고, 들고 있던 복원 바이트가 있으면 그것으로 복원합니다.
          * @return 새 판, 복원, 이미 열림 중 하나입니다.
          */
-        [[nodiscard]] GameStateInitResult initialize( const ReputationCatalog* pCatalog );
+        [[nodiscard]] GameStateInitResult initialize( const ReputationCatalog& catalog );
 
         /** @brief 씬의 컴포넌트 레지스트리에 오릅니다(`PlayerComponentUtil::findOpen`). */
         void onRegister( GameObjectManager& manager ) override;

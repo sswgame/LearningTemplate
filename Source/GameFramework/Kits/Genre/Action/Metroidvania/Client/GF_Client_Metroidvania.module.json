@@ -1,0 +1,22 @@
+{
+    "_name": "GF_Client_Metroidvania",
+    "_version": "1.0.0",
+    "_kind": "Kit",
+    "_description": "메트로배니아 키트(클라이언트) — 입력 맵 액션을 디렉터 입력 명령으로 바꾸고 몸 · 적 · 줍는 것 · HUD(체력 · 물약 · 통화 · 탐색률 · 결과)를 보인다. 규칙 · 디렉터는 GF_Metroidvania",
+    "_listDependency": [
+        {
+            "_name": "GameFramework"
+        },
+        {
+            "_name": "GF_Metroidvania"
+        }
+    ],
+    "_listConfiguration": [
+        "Dev",
+        "Shipping"
+    ],
+    "_listTarget": [
+        "Client"
+    ],
+    "_bEnabledByDefault": true
+}

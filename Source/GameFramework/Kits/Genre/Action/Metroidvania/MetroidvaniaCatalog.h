@@ -274,6 +274,7 @@ namespace sw
         const MetroidvaniaPickupDef*    findPickup( const hashed_string& id ) const { return _pickupCatalog.find( id ); }
         const MetroidvaniaEnemyDef*     findEnemy( const hashed_string& id ) const { return _enemyCatalog.find( id ); }
 
+        const vector<MetroidvaniaEnemyDef>&     getEnemies() const { return _enemyCatalog.getAll(); }
         const vector<MetroidvaniaAbilityDef>&   getAbilities() const { return _abilityCatalog.getAll(); }
         const vector<MetroidvaniaTrinketDef>&   getCharms() const { return _charmCatalog.getAll(); }
         const vector<MetroidvaniaRegionMapDef>& getRegionMaps() const { return _mapCatalog.getAll(); }

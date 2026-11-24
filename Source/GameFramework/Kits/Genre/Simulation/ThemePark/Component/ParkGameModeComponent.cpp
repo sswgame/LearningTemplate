@@ -12,8 +12,11 @@
 #include "Engine/Object/Component/SceneComponent.h"
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
+#include "Engine/Physics/Component/RigidBodyComponent.h"
 #include "Engine/Serialization/Format/Archive.h"
 #include "Engine/Serialization/Format/StateIO.h"
+
+#include "GameFramework/Runtime/Character/Navigation/NavGridObstacle.h"
 
 namespace sw
 {
@@ -22,12 +25,13 @@ namespace sw
         struct ParkGameModeComponentInternal
         {
             static constexpr uint32 kStateTag     = FourCCUtil::make( "PARK" );
-            static constexpr uint32 kStateVersion = 3; ///< 3: 고른 배치를 클라이언트 뷰로 옮겼다
+            static constexpr uint32 kStateVersion = 4; ///< 3: 고른 배치를 클라이언트 뷰로 옮겼다. 4: 손님이 남은 길의 점을 싣는다
 
             // 사운드 이벤트 이름 — 클립 · 범위 · 상한은 게임의 사운드 이벤트 라이브러리(`*.audioevents.xml`)가 정한다.
             static constexpr const utf8* kEventBlocked = "ParkBlocked";
             static constexpr const utf8* kEventBuilt   = "ParkBuilt";
 
+            static constexpr float32 kWalkGridMargin         = 24.0f; ///< 걷는 격자가 정문 · 놀이기구 자리 밖으로 더 덮는 거리(m) — 코스터 줄 입구와 둘러보는 자리가 든다
             static constexpr float32 kStationCenterDistance  = 6.0f;  ///< 줄 입구를 잡는 스테이션 가운데의 트랙 거리(m)
             static constexpr float32 kEntranceSideDistance   = 5.0f;  ///< 스테이션에서 줄 입구까지 바깥쪽 거리(m)
             static constexpr int32   kCoasterBaseRunningCost = 8;     ///< 코스터의 분당 운영비 바탕
@@ -48,8 +52,12 @@ namespace sw
     ParkGameModeComponent::ParkGameModeComponent()
         : _parkDataPath{}
         , _gate{}
+        , _listWalkBlocker{}
+        , _walkCellSize{ 1.0f }
+        , _walkClearance{ 1.2f }
         , _autoBuildInterval{ 20.0f }
         , _statusLogInterval{ 10.0f }
+        , _walkGrid{}
         , _simulation{}
         , _wallet{}
         , _startingCash{ 0 }
@@ -216,6 +224,52 @@ namespace sw
         return false;
     }
 
+    bool ParkGameModeComponent::rebuildWalkGrid()
+    {
+        using Internal = ParkGameModeComponentInternal;
+        float3 minimum = _settings._gatePosition;
+        float3 maximum = _settings._gatePosition;
+        for ( const RidePlacement& placement : _listPlacement )
+        {
+            minimum = float3::min( minimum, float3::min( placement._position, placement._ride._entrance ) );
+            maximum = float3::max( maximum, float3::max( placement._position, placement._ride._entrance ) );
+        }
+        const float32 margin = Internal::kWalkGridMargin + _settings._wanderRadius;
+        const float3  origin{ minimum._x - margin, _settings._gatePosition._y, minimum._z - margin };
+        const int32   width  = static_cast<int32>( MathUtil::ceil( ( maximum._x + margin - origin._x ) / _walkCellSize ) );
+        const int32   height = static_cast<int32>( MathUtil::ceil( ( maximum._z + margin - origin._z ) / _walkCellSize ) );
+        if ( _walkGrid.initialize( width, height, _walkCellSize, origin ) == false )
+            return false; // 까닭은 격자가 남겼다
+        for ( const RidePlacement& placement : _listPlacement )
+        {
+            if ( placement._layoutID.empty() == false )
+                continue; // 코스터 레일은 머리 위를 지난다 — 막는 것은 평지 놀이기구의 땅이다(아직 짓지 않은 땅도)
+            const float32 half  = MathUtil::max( placement._size._x, placement._size._z ) * 0.5f + _walkClearance;
+            const int2    first = _walkGrid.computeCell( placement._position - float3{ half, 0.0f, half } );
+            const int2    last  = _walkGrid.computeCell( placement._position + float3{ half, 0.0f, half } );
+            _walkGrid.setAreaCost( first._x, first._y, last._x, last._y, kNavBlockedCost );
+        }
+        const GameObjectManager* const pManager = getObjectManager();
+        for ( const GameObjectHandle blocker : _listWalkBlocker )
+        {
+            const GameObject* const         pObject = findGameObject( blocker );
+            const RigidBodyComponent* const pBody   = pObject != nullptr ? pObject->getComponent<RigidBodyComponent>() : nullptr;
+            if ( pManager == nullptr || pBody == nullptr || pBody->getBodyType() != PhysicsBodyType::Static )
+            {
+                SW_LOG_ERROR_ID( "ParkGameMode.WalkBlockerNoBody", "[Park] walk blocker '%#' has no static rigid body - its size is the body's shape, the park cannot open", pObject != nullptr ? pObject->getName().c_str() : "?" );
+                return false;
+            }
+            (void)NavGridObstacle::blockBody( _walkGrid, pManager->getWorldOrigin(), *pBody, _walkClearance ); // 막은 칸 수는 쓰지 않는다
+        }
+        return true;
+    }
+
+    void ParkGameModeComponent::findGuestRoute( const float3& from, const float3& to, vector<float3>& outListPoint ) const
+    {
+        GridPathfinder pathfinder; // 놀이기구를 세울 때 한 번 부른다
+        ThemeParkSimulation::findWalkRoute( _walkGrid, pathfinder, from, to, outListPoint );
+    }
+
     bool ParkGameModeComponent::startGame()
     {
         // 배치는 공유 캐시의 한 벌이다. 코스터 레이아웃은 배치가 같은 팩에서 받아 쥔 그 한 벌을 쓴다 — 게임 모드가 코스터 경로를 따로 적지 않는다(기준 하나).
@@ -227,12 +281,12 @@ namespace sw
         _pLayoutCatalog          = layout.getCoasterLayouts();
         _settings                = layout.getRules(); // 공원 규칙은 배치 데이터의 <Rules> 다(감사 K-4)
         _settings._entryFee      = layout.getEntryFee();
-        if ( placeLayout( layout ) == false )
+        if ( placeLayout( layout ) == false || rebuildWalkGrid() == false )
             return false;
         _wallet.clear();
         _startingCash = layout.getStartingCash();
         _wallet.add( _settings._currency, _startingCash );
-        if ( _simulation.initialize( _settings, &_wallet ) == false )
+        if ( _simulation.initialize( _settings, _wallet, _walkGrid ) == false )
             return false; // 까닭은 시뮬레이션이 남겼다 — 틀린 규칙으로 공원을 열지 않는다
         _listCoaster.clear();
 
@@ -336,7 +390,7 @@ namespace sw
         if ( io.isOk() == false )
             return;
         ThemeParkSimulation restoredSimulation;
-        if ( io.isReading() && io.check( restoredSimulation.initialize( _settings, &_wallet ) ) == false )
+        if ( io.isReading() && io.check( restoredSimulation.initialize( _settings, _wallet, _walkGrid ) ) == false )
             return;
         ThemeParkSimulation& simulation = io.isWriting() ? _simulation : restoredSimulation;
         io.value( simulation );

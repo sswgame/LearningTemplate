@@ -140,7 +140,8 @@
 					               _boundsRadius="0.866"
 					               _gpuSpinSeed="0"
 					               _bVisible="false" />
-					<VoxelHighlightComponent _localID="15788862186009154187" _componentName="VoxelHighlightComponent" _bActive="true" _player="3" />
+					<VoxelHighlightComponent _localID="15788862186009154187" _componentName="VoxelHighlightComponent" _bActive="true" _player="3"
+					                         _outlinePrefab="game/playground/prefabs/ruleviews/cube.prefab.xml" />
 				</_listComponent>
 			</GameObject>
 		</entity>

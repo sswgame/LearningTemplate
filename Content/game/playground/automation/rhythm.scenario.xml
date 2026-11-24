@@ -1,0 +1,45 @@
+<?xml version="1.0" encoding="utf-8"?>
+<?asset guid="726261918ed0687b36b80a8eb4d091a0"?>
+<!--
+  리듬 미니게임(GF_Rhythm 디렉터 RhythmGameModeComponent · GF_Client_Rhythm 의 RhythmViewComponent) — 음악을 틀고 그 구간 시계(오디오 렌더 프레임)로 곡이 흐른다 → 자동 플레이가 판정 시각에 치고 롱노트를 끝까지 누른다
+  → 곡 중간에 정지 메뉴를 열면 음악과 구간 시계가 함께 서고(오디오 엔진은 계속 렌더한다), 닫으면 그 자리에서 이어진다 → 하나도 놓치지 않고 곡을 깬다 → 결과 win 으로 미니게임이 끝난다. 시각은 음악 시계라 기다림은 벽시계 시한으로 적는다(판정은 시각으로 하므로 부하와 무관하다).
+  감시 값: Audio.RenderedSeconds, Rhythm.State(0 진행, 1 깸, 2 실패) · .MusicTime · .Judged · .Missed · .MaxCombo.
+  실행: App -scenario=game/playground/automation/rhythm.scenario.xml -unattended (체인: ctest -R Scenario.playground)
+-->
+<Scenario name="game.playground.rhythm" fixedDelta="0.0166667" timeoutFrames="900" startAfter="ScenePlaying" startTimeoutFrames="900" input="exclusive">
+	<Launch variable="gv_firstMinigame" value="rhythm"/>
+	<Launch variable="gv_playgroundAutoPlay" value="1"/>
+	<WaitUntil watch="Rhythm.MusicTime" atLeast="0.1" timeoutWallSeconds="60"/> <!-- 음악이 흐르기 시작했다 -->
+	<Expect watch="Rhythm.State" equals="0"/>
+	<WaitUntil watch="Rhythm.Judged" atLeast="1" timeoutWallSeconds="60"/>
+	<Expect watch="Rhythm.Missed" equals="0"/>
+
+	<!-- 정지 → 잇기: 정지 명령이 오디오 스레드에 닿을 만큼 렌더한 뒤의 곡 시각이, 오디오 엔진이 1 초를 더 렌더해도 그대로다 -->
+	<Tap slot="Key.Escape" hold="6"/>
+	<WaitUntil watch="UI.ActiveScreen" is="engine/ui/pause.ui.xml" timeoutFrames="30"/>
+	<WaitUntil watch="Time.Paused" equals="1" timeoutFrames="10"/>
+	<WaitUntil watch="UI.FocusedWidget" is="Resume" timeoutFrames="30"/>
+	<Store watch="Audio.RenderedSeconds" as="renderedAtPause"/>
+	<WaitUntil watch="Audio.RenderedSeconds" increaseFrom="renderedAtPause" increaseBy="0.25" timeoutWallSeconds="30"/>
+	<Store watch="Rhythm.MusicTime" as="pausedMusicTime"/>
+	<WaitUntil watch="Audio.RenderedSeconds" increaseFrom="renderedAtPause" increaseBy="1.25" timeoutWallSeconds="30"/>
+	<Expect watch="Rhythm.MusicTime" sameAs="pausedMusicTime" tolerance="0.0001"/>
+	<Expect watch="Rhythm.State" equals="0"/>
+	<Tap slot="Key.Enter" hold="1"/>
+	<WaitUntil watch="Time.Paused" equals="0" timeoutFrames="60"/>
+	<WaitUntil watch="Rhythm.MusicTime" increaseFrom="pausedMusicTime" increaseBy="0.1" timeoutWallSeconds="60"/>
+
+	<WaitUntil watch="Rhythm.State" equals="1" timeoutWallSeconds="120"/>
+	<Expect watch="Rhythm.Judged" equals="34"/>
+	<Expect watch="Rhythm.Missed" equals="0"/>
+	<Expect watch="Rhythm.MaxCombo" equals="34"/>
+	<Expect watch="Rhythm.Score" equals="10200"/>
+	<ExpectLog id="Rhythm.Cleared" count="1"/>
+	<!-- 결과를 보인 뒤 스스로 끝난다 — 돌아올 자리가 없으면 입구 씬(마을)으로 간다 -->
+	<WaitUntil watch="Minigame.Active" is="none" timeoutFrames="600"/>
+	<WaitUntil watch="Scene.Transitioning" equals="0" timeoutWallSeconds="60"/>
+	<WaitUntil watch="Minigame.LastResult" is="win" timeoutWallSeconds="60"/>
+	<ExpectActiveScene path="game/playground/maps/hub.scene.xml"/>
+	<Expect watch="Minigame.LeakCount" equals="0"/>
+	<Pass/>
+</Scenario>

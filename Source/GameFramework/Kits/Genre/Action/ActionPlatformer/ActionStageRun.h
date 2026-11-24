@@ -68,7 +68,7 @@ namespace sw
         ActionStageRun();
 
         /** @brief 스테이지를 시작합니다. 모르는 스테이지면 false 를 반환합니다. */
-        [[nodiscard]] bool start( const ActionPlatformerCatalog* pCatalog, const hashed_string& stageID );
+        [[nodiscard]] bool start( const ActionPlatformerCatalog& catalog, const hashed_string& stageID );
         /** @brief 처음부터 다시 시작합니다. 목숨, 시간, 수집, 피격을 모두 되돌립니다(게임 오버 뒤 이어하기). */
         void restartStage();
         /** @brief 시간을 흘립니다(진행 중일 때만). */
@@ -112,7 +112,7 @@ namespace sw
          */
         SW_DECLARE_STATE_IO();
         /** @brief 스테이지를 찾을 카탈로그를 빌립니다. 새 객체에 `readState` 하기 전에 연결해야 합니다(`start` 도 연결합니다). */
-        void bindCatalog( const ActionPlatformerCatalog* pCatalog ) { _pCatalog = pCatalog; }
+        void bindCatalog( const ActionPlatformerCatalog& catalog ) { _pCatalog = &catalog; }
 
     private:
         void commitSecrets();

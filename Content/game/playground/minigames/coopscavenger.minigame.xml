@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="utf-8"?>
+<?asset guid="bd16db3ade924659a3d3f3889e107330"?>
+<!--
+  협동 수집 공포 미니게임(위성에 내려 고철을 싣고 회사에 팔아 할당량을 채운다) — CoopScavenger 키트. 할당량 · 위성 · 고철(data/scavenger.xml)은 게임 기능 CoopScavenger 가 미니게임 범위에 걸고,
+  위협 표(coopscavenger/data/threats.spawns.xml)와 날씨(moon.weather.xml) · 터미널 가게(terminal.shops.xml)는 맵의 디렉터가 씬 참조로 받는다.
+  맵의 Expedition 오브젝트에 GameStateComponent(시계 · 날씨) → ScavengerGameModeComponent → ScavengerAvatarComponent(GF_Client_CoopScavenger) → HUDControllerComponent 가 그 순서로 붙는다.
+  한 화면 협동 둘이다(localPlayers) — 사용자 0 은 키보드, 사용자 1 은 짝지은 패드. 사용자 1 이 입력을 내기 전에는 봇이 그 승무원을 맡는다. 여러 날 이어지는 판이라 안에서 저장한다.
+  입력은 걷기 공통 레이어와 CoopScavenger 레이어(coopscavenger/data/coopscavenger.input.xml)만 켠다. 시나리오 automation/coopscavenger_slice 가 실행 전역 변수 gv_firstMinigame 로 들어간다.
+-->
+<Minigame name="coopscavenger" map="game/playground/coopscavenger/maps/moon.scene.xml" entry="SceneSwitch" portalSlot="21" localPlayers="2" save="Allowed" features="CoopScavenger" inputContexts="Movement,CoopScavenger" catalogs="ScavengerCatalog"/>

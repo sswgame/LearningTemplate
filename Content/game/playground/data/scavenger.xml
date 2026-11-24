@@ -1,18 +1,19 @@
 <?xml version="1.0" encoding="utf-8"?>
 <?asset guid="eac9fde6ab3d48da96484a047b0fa5ed"?>
 <!--
-  장르 키트 시연 — 협동 수집 공포 원정 하나(maps/kit_coopscavenger). 할당량 20 · 마감 1 일 · 시작 크레딧 60. 첫 위성 rust 에 볼트(가치 10) 셋, 방 셋 · 잠긴 문 없음.
-  마감 날 회사 매입률 1 이라 30 을 받고, 넘긴 10 의 1/5 이 보너스이다.
+  협동 수집 공포 미니게임(minigames/coopscavenger)의 할당량 · 위성 · 고철(ScavengerCatalog — 게임 기능 CoopScavenger 가 미니게임 범위에 건다).
+  할당량 30 · 하루 뒤 마감 · 시작 크레딧 60. 첫 위성 rust 에 볼트(10 ~ 20) · 나팔(15 ~ 25, 양손) 넷이 방 넷에 흩어져 있다 — 가장 적어도 40 이라 다 실으면 채운다. 마감 날 회사 매입률은 1 이다.
 -->
 <ScavengerCatalog terminalShop="terminal" currency="Credits" crewHealth="100">
-	<Quota start="20" days="1" increase="50" steepness="16" randomness="0" overtime="5" credits="60"/>
+	<Quota start="30" days="1" increase="50" steepness="16" randomness="0" overtime="5" credits="60"/>
 	<BuyRate daysLeft="2" rate="0.5"/>
 	<BuyRate daysLeft="0" rate="1"/>
-	<Day secondsPerDay="240" arrival="6" dusk="18" depart="24"/>
+	<Day secondsPerDay="480" arrival="6" dusk="18" depart="24"/>
 	<Carry slots="2" speedPerWeight="0.01" minSpeed="0.4" bodyWeight="60"/>
 	<Penalty deathFine="0.2" recoveredFine="0.05" allDeadLoss="0.5" allDeadKeep="0"/>
-	<Facility rooms="3" roomsMax="3" lockedChance="0" loopChance="0" fireExits="1"/>
-	<Scrap id="bolt" min="10" max="10" weight="5"/>
-	<Moon id="rust" name="Rust" cost="0" scrap="3" scrapMax="3"/>
+	<Facility rooms="4" roomsMax="4" lockedChance="0.25" loopChance="0.2" fireExits="1"/>
+	<Scrap id="bolt" min="10" max="20" weight="5" spawnWeight="3"/>
+	<Scrap id="horn" min="15" max="25" weight="20" spawnWeight="1" twoHanded="true"/>
+	<Moon id="rust" name="Rust" cost="0" scrap="4" scrapMax="4"/>
 	<Moon id="company" name="Company" company="true"/>
 </ScavengerCatalog>

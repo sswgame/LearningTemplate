@@ -1,0 +1,65 @@
+<?xml version="1.0" encoding="utf-8"?>
+<?asset guid="c4776e6031d34e8da37d4e9f8b50ef64"?>
+<!--
+  협동 수집 공포 미니게임 한 주기 — 터미널에서 자물쇠 따개 구매 → 착륙 → 봇 승무원이 고철을 모두 실음 → 이륙 → 회사 착륙 → 매입 → 이륙(마감 판정) → 결과 `win`. 승무원 0 은 플레이어와 같은 입력(Move · CoopScavenger.Use · CoopScavenger.Lever)으로만 움직인다.
+  씬: 우주선은 바깥의 서쪽 한 칸이다 — Move x 를 짧게 누르면 한 칸 걷는다(_stepSeconds 0.5). 위협은 착륙 60 초(가장 나쁜 날씨면 50 초) 뒤부터라 이 판에는 나오지 않는다. 시계는 내려 있는 동안만 흐르고(하루 480 초 — 2 초에 0.1 시) 이륙하면 다음 날 6 시다. 고철 넷의 값은 시드가 정하고 합은 40 이상이다(할당량 30).
+  감시 값: Scavenger.Result(0 진행, 1 이김, 2 짐) · .Phase(0 궤도, 1 착륙, 2 게임 오버) · .Quota · .Fulfilled · .DaysLeft · .ShipValue · .Credits · .GroundScrap · .Carried · .Threats · .PlayerInShip · .CanUnlock · Clock.Hour · Clock.Day.
+  실행: App -scenario=game/playground/automation/coopscavenger_slice.scenario.xml -unattended (체인: ctest -R Scenario.playground)
+-->
+<Scenario name="game.playground.coopscavenger_slice" fixedDelta="0.0166667" timeoutFrames="6000" startAfter="ScenePlaying" startTimeoutFrames="900" input="exclusive">
+	<Launch variable="gv_firstMinigame" value="coopscavenger"/>
+	<Launch variable="gv_playgroundAutoPlay" value="0"/>
+	<WaitUntil watch="Scavenger.Quota" equals="30" timeoutFrames="120"/>
+	<Expect watch="Scavenger.Phase" equals="0"/>
+	<Expect watch="Scavenger.Credits" equals="60"/>
+	<Expect watch="Scavenger.DaysLeft" equals="1"/>
+	<!-- 터미널 — 자물쇠 따개(15)를 산다. 하나뿐이라 다시 누르면 거절한다 -->
+	<Expect watch="Scavenger.CanUnlock" equals="0"/>
+	<Expect watch="Clock.Hour" near="6" tolerance="0.01"/>
+	<Action name="CoopScavenger.Use"/>
+	<WaitUntil watch="Scavenger.CanUnlock" equals="1" timeoutFrames="10"/>
+	<Expect watch="Scavenger.Credits" equals="45"/>
+	<AdvanceSimulation frames="4"/> <!-- 쓰기 누름이 놓인 뒤에 다시 누른다(프레임 경계) -->
+	<Action name="CoopScavenger.Use"/>
+	<AdvanceSimulation frames="4"/>
+	<ExpectLog id="Scavenger.Terminal" contains="refused" count="1"/>
+	<Expect watch="Scavenger.Credits" equals="45"/>
+	<!-- 착륙 — 한 칸 나갔다 돌아온다 -->
+	<Action name="CoopScavenger.Lever"/>
+	<WaitUntil watch="Scavenger.Phase" equals="1" timeoutFrames="10"/>
+	<Expect watch="Scavenger.GroundScrap" atLeast="1"/>
+	<Expect watch="Scavenger.PlayerInShip" equals="1"/>
+	<ActionAxis name="Move" x="1" seconds="0.05"/>
+	<WaitUntil watch="Scavenger.PlayerInShip" equals="0" timeoutFrames="30"/>
+	<AdvanceSimulation frames="40"/> <!-- 걸음 하나(0.5 초)가 끝나야 다음 걸음이 든다(시간이 내용) -->
+	<ActionAxis name="Move" x="-1" seconds="0.05"/>
+	<WaitUntil watch="Scavenger.PlayerInShip" equals="1" timeoutFrames="30"/>
+	<!-- 봇이 고철을 모두 싣는다 -->
+	<WaitUntil watch="Scavenger.GroundScrap" equals="0" timeoutSeconds="55"/>
+	<WaitUntil watch="Scavenger.Carried" equals="0" timeoutSeconds="15"/>
+	<Expect watch="Scavenger.ShipValue" atLeast="40"/>
+	<Expect watch="Scavenger.Threats" equals="0"/>
+	<Expect watch="Clock.Day" equals="0"/>
+	<Expect watch="Clock.Hour" atLeast="6.1"/>
+	<!-- 이륙 → 회사 착륙 → 매입 → 이륙 -->
+	<Action name="CoopScavenger.Lever"/>
+	<WaitUntil watch="Scavenger.Phase" equals="0" timeoutFrames="10"/>
+	<Expect watch="Scavenger.DaysLeft" equals="0"/>
+	<Expect watch="Clock.Day" equals="1"/>
+	<Expect watch="Clock.Hour" near="6" tolerance="0.01"/>
+	<AdvanceSimulation frames="4"/> <!-- 레버 누름이 놓인 뒤에 다시 누른다(프레임 경계) -->
+	<Action name="CoopScavenger.Lever"/>
+	<WaitUntil watch="Scavenger.Phase" equals="1" timeoutFrames="10"/>
+	<Action name="CoopScavenger.Use"/>
+	<WaitUntil watch="Scavenger.ShipValue" equals="0" timeoutFrames="10"/>
+	<Expect watch="Scavenger.Fulfilled" atLeast="40"/>
+	<ExpectLog id="Scavenger.Sold" count="1"/>
+	<Action name="CoopScavenger.Lever"/>
+	<WaitUntil watch="Scavenger.Result" equals="1" timeoutFrames="10"/>
+	<Expect watch="Scavenger.Credits" atLeast="85"/>
+	<ExpectLog id="Scavenger.Ended" contains="quota met" count="1"/>
+	<!-- 결과를 보인 뒤 미니게임이 스스로 끝난다 -->
+	<WaitUntil watch="Minigame.LastResult" is="win" timeoutWallSeconds="60"/>
+	<Expect watch="Minigame.LeakCount" equals="0"/>
+	<Pass/>
+</Scenario>

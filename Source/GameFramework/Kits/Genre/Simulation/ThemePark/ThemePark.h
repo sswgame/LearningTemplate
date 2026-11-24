@@ -22,6 +22,7 @@
 #include "Engine/Serialization/Format/StateIO.h"
 
 #include "GameFramework/GameFrameworkExports.h"
+#include "GameFramework/Runtime/Character/Navigation/GridPathfinder.h"
 #include "GameFramework/Runtime/Foundation/Random/GameRandom.h"
 #include "GameFramework/Runtime/World/Land/LandRegistry.h"
 
@@ -30,6 +31,7 @@ namespace sw
     struct CoasterRideStats;
 
     class Archive;
+    class NavGrid;
     class Wallet;
 
     // ------------------------------------------------------------------------------
@@ -68,7 +70,8 @@ namespace sw
 
         // ---- 운행 상태(시뮬레이션이 쓴다) ----
         PROPERTY()
-        vector<uint32> _listQueue{}; ///< 줄 선 손님 id(앞에서부터)
+        vector<uint32> _listQueue{};      ///< 줄 선 손님 id(앞에서부터)
+        vector<float3> _listQueuePoint{}; ///< 줄이 늘어서는 길의 점(입구에서 정문까지)이다. 처음 줄을 설 때 걷는 격자에서 구하는 사본이라 상태 바이트에 싣지 않는다
         PROPERTY()
         vector<uint32> _listRider{};  ///< 지금 탄 손님 id
         Countdown      _cycleTimer{}; ///< 리플렉션 밖 값 — 남은 시간은 시뮬레이션 본문이 손으로 싣는다
@@ -122,7 +125,9 @@ namespace sw
         PROPERTY()
         float3 _walkFrom{};
         PROPERTY()
-        float3 _walkTo{};
+        float3 _walkTo{}; ///< 지금 걷는 다리의 끝
+        PROPERTY()
+        vector<float3> _listWalkPoint{}; ///< `_walkTo` 다음에 지날 점(마지막이 목적지)이다. 비면 `_walkTo` 가 목적지다
         PROPERTY( Min = 1 )
         uint32 _id{ 0 };
         PROPERTY( Min = 0 )
@@ -301,11 +306,12 @@ namespace sw
         ThemeParkSimulation();
 
         /**
-         * @brief 설정으로 빈 공원을 엽니다. 공원 돈은 빌린 지갑(@p pWallet — nullptr 이면 짓기 · 입장료 · 운영비가 막힌다 — 통화는 `ThemeParkSettings::_currency`)이고, 시작 자금은 게임이 넣습니다.
-         * @details 건설은 `trySpend`, 입장료와 탈것 요금은 `add`, 운영비는 `charge`(빚이 될 수 있다)로 처리한다. 지갑이 없으면 건설은 모두 거절하고 수입은 버린다.
+         * @brief 설정으로 빈 공원을 엽니다. 공원 돈은 빌린 지갑(@p wallet — 통화는 `ThemeParkSettings::_currency`)이고, 시작 자금은 게임이 넣습니다.
+         * @param walkGrid 손님이 돌아갈 장애물(가판 · 의자 · 지을 땅)의 격자입니다. 시뮬레이션보다 오래 산다. 장애물이 없는 공원은 칸이 없는 격자를 준다 — 그때 곧게 걷는다.
+         * @details 건설은 `trySpend`, 입장료와 탈것 요금은 `add`, 운영비는 `charge`(빚이 될 수 있다)로 처리한다.
          * @return 설정이 범위 밖이거나 하한이 상한보다 크면 false 이고 공원을 열지 않는다(오류 로그).
          */
-        [[nodiscard]] bool initialize( const ThemeParkSettings& settings, Wallet* pWallet );
+        [[nodiscard]] bool initialize( const ThemeParkSettings& settings, Wallet& wallet, const NavGrid& walkGrid );
         /** @brief 시간을 진행합니다. 큰 시간은 0.25초씩 나눠 처리합니다. */
         void update( float32 deltaTime );
 
@@ -314,6 +320,11 @@ namespace sw
          * @details 그 뒤로 놀이기구는 지을 때 영역(`_footprintCenter`, `_footprintSize`)을 막힘으로 얻는다.
          */
         void bindLand( LandRegistry* pLand );
+        /**
+         * @brief @p from 에서 @p to 로 걷는 길의 점(시작은 뺀다, 마지막이 @p to)을 @p outListPoint 에 채웁니다. 곧게 지날 수 있거나 격자 밖이면 @p to 하나입니다.
+         * @details 손님의 걸음과 깔리는 길의 모습이 같은 함수를 부른다 — 길은 손님이 걷는 자리에 놓인다.
+         */
+        static void findWalkRoute( const NavGrid& grid, GridPathfinder& inoutPathfinder, const float3& from, const float3& to, vector<float3>& outListPoint );
         /** @brief 놀이기구를 짓고 놀이기구 index 를 반환합니다. 지갑에 @p buildCost 가 없거나 영역의 공유 땅이 남의 것이면 짓지 않고 -1 을 반환합니다. */
         int32 buildRide( const ParkRide& ride, int32 buildCost );
         /** @brief 놀이기구를 닫거나 엽니다. 닫으면 줄 선 손님은 줄에서 나와 다른 것을 고릅니다. */
@@ -355,10 +366,15 @@ namespace sw
         void updateGuests( float32 deltaTime );
         void runRides( float32 deltaTime );
         void chooseNextRide( ParkGuest& guest );
+        /** @brief @p destination 까지의 길을 정하고 첫 다리를 걷기 시작합니다. */
         void startWalking( ParkGuest& guest, const float3& destination );
-        void sendHome( ParkGuest& guest, ParkGuestThought thought );
-        void leaveQueue( ParkGuest& guest );
-        void updateParkRating();
+        /** @brief @p to 까지의 다리 하나를 걷기 시작합니다. 아무리 짧아도 @p minSeconds 는 걸린다. */
+        void startWalkLeg( ParkGuest& guest, const float3& to, float32 minSeconds );
+        /** @brief 놀이기구 @p inoutRide 의 줄에서 앞에서 @p lineIndex 번째(0 부터) 손님의 자리입니다 — 입구에서 정문으로 가는 걷는 길을 따라 늘어서고 정문을 넘지 않는다. */
+        float3 computeQueuePosition( ParkRide& inoutRide, size_t lineIndex );
+        void   sendHome( ParkGuest& guest, ParkGuestThought thought );
+        void   leaveQueue( ParkGuest& guest );
+        void   updateParkRating();
         /** @brief id 로 손님을 찾습니다. 목록이 id 오름차순이므로(새 손님은 뒤에 붙고 지울 때 순서를 지킵니다) 이분 탐색을 씁니다. */
         ParkGuest* findGuest( uint32 guestID );
         float32    nextRandom() { return _random.nextFloat(); }
@@ -375,8 +391,10 @@ namespace sw
         float32        _elapsedTime;
         FixedStepTimer _stepTimer;
         GameRandom     _random;
-        Wallet*        _pWallet; ///< 빌린 지갑(공원 돈)
-        LandRegistry*  _pLand;   ///< 빌린 공유 땅(없으면 단독 동작)
+        Wallet*        _pWallet;    ///< 빌린 지갑(공원 돈 — `initialize` 뒤 늘 있다)
+        LandRegistry*  _pLand;      ///< 빌린 공유 땅(없으면 단독 동작)
+        const NavGrid* _pWalkGrid;  ///< 빌린 걷기 격자(`initialize` 뒤 늘 있다)
+        GridPathfinder _pathfinder; ///< 길 찾기의 작업 배열 — 싣지 않는다
         PROPERTY( RuntimeState, Min = 0, Max = ThemeParkSimulation::kMaxParkRating )
         int32  _parkRating;
         uint16 _landOwner;

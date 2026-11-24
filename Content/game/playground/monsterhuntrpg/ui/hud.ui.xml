@@ -1,0 +1,110 @@
+<?asset guid="b236fc267a9ebc57435347c5d60c73c7"?>
+<UIDocument _schemaVersion="1">
+	<!-- 늪지 사냥 미니게임(minigames/monsterhuntrpg)의 HUD — 값은 MonsterHuntHUDViewModel, 글은 이 문서(현지화 키)다. -->
+	<UIScreenDef _layer="HUD" _bTakesFocus="false" _bShowCursor="false" />
+	<SafeZonePanel _visibility="SelfHitTestInvisible">
+		<CanvasPanel _visibility="SelfHitTestInvisible">
+			<TextWidget _text="Reward" _styleClass="hud" _visibility="HitTestInvisible">
+				<_slot _anchorMin="0,0" _anchorMax="0,0" _offsetMin="48,40" _offsetMax="188,76" />
+			</TextWidget>
+			<TextWidget _name="Reward" _text="{bind:_reward}" _styleClass="hud" _visibility="HitTestInvisible" _bLocalized="false">
+				<_slot _anchorMin="0,0" _anchorMax="0,0" _offsetMin="188,40" _offsetMax="308,76" />
+			</TextWidget>
+			<CanvasPanel _visibility="{bind:_haggleVisibility}">
+				<_slot _anchorMin="0,0" _anchorMax="1,1" _offsetMin="0,0" _offsetMax="0,0" />
+				<TextWidget _text="Take the offer (J)   Ask for more (K)" _styleClass="hud" _visibility="HitTestInvisible">
+					<_slot _anchorMin="0,1" _anchorMax="0,1" _offsetMin="48,-84" _offsetMax="1048,-48" />
+				</TextWidget>
+			</CanvasPanel>
+			<CanvasPanel _visibility="{bind:_investigateVisibility}">
+				<_slot _anchorMin="0,0" _anchorMax="1,1" _offsetMin="0,0" _offsetMax="0,0" />
+				<TextWidget _text="Clues" _styleClass="hud" _visibility="HitTestInvisible">
+					<_slot _anchorMin="0,0" _anchorMax="0,0" _offsetMin="48,80" _offsetMax="188,116" />
+				</TextWidget>
+				<TextWidget _name="FoundClues" _text="{bind:_foundClueCount}" _styleClass="hud" _visibility="HitTestInvisible" _bLocalized="false">
+					<_slot _anchorMin="0,0" _anchorMax="0,0" _offsetMin="188,80" _offsetMax="268,116" />
+				</TextWidget>
+				<TextWidget _text="Skill points" _styleClass="hud" _visibility="HitTestInvisible">
+					<_slot _anchorMin="0,0" _anchorMax="0,0" _offsetMin="288,80" _offsetMax="488,116" />
+				</TextWidget>
+				<TextWidget _name="SkillPoints" _text="{bind:_skillPoints}" _styleClass="hud" _visibility="HitTestInvisible" _bLocalized="false">
+					<_slot _anchorMin="0,0" _anchorMax="0,0" _offsetMin="496,80" _offsetMax="576,116" />
+				</TextWidget>
+				<TextWidget _text="Learn (3)   Mutagen (4)" _styleClass="hud" _visibility="HitTestInvisible">
+					<_slot _anchorMin="0,1" _anchorMax="0,1" _offsetMin="48,-124" _offsetMax="648,-88" />
+				</TextWidget>
+				<TextWidget _text="Search the marsh for clues" _styleClass="hud" _visibility="HitTestInvisible">
+					<_slot _anchorMin="0,1" _anchorMax="0,1" _offsetMin="48,-84" _offsetMax="1048,-48" />
+				</TextWidget>
+			</CanvasPanel>
+			<CanvasPanel _visibility="{bind:_senseVisibility}">
+				<_slot _anchorMin="0,0" _anchorMax="1,1" _offsetMin="0,0" _offsetMax="0,0" />
+				<TextWidget _text="Something is here (E)" _styleClass="hud" _visibility="HitTestInvisible">
+					<_slot _anchorMin="0,0" _anchorMax="0,0" _offsetMin="48,120" _offsetMax="528,156" />
+				</TextWidget>
+			</CanvasPanel>
+			<CanvasPanel _visibility="{bind:_huntVisibility}">
+				<_slot _anchorMin="0,0" _anchorMax="1,1" _offsetMin="0,0" _offsetMax="0,0" />
+				<TextWidget _text="HP" _styleClass="hud" _visibility="HitTestInvisible">
+					<_slot _anchorMin="0,0" _anchorMax="0,0" _offsetMin="48,80" _offsetMax="128,116" />
+				</TextWidget>
+				<TextWidget _name="HunterHP" _text="{bind:_hunterHP}" _styleClass="hud" _visibility="HitTestInvisible" _bLocalized="false">
+					<_slot _anchorMin="0,0" _anchorMax="0,0" _offsetMin="128,80" _offsetMax="208,116" />
+				</TextWidget>
+				<TextWidget _text="Stamina" _styleClass="hud" _visibility="HitTestInvisible">
+					<_slot _anchorMin="0,0" _anchorMax="0,0" _offsetMin="228,80" _offsetMax="368,116" />
+				</TextWidget>
+				<TextWidget _name="Stamina" _text="{bind:_stamina}" _styleClass="hud" _visibility="HitTestInvisible" _bLocalized="false">
+					<_slot _anchorMin="0,0" _anchorMax="0,0" _offsetMin="368,80" _offsetMax="448,116" />
+				</TextWidget>
+				<TextWidget _text="Sign power" _styleClass="hud" _visibility="HitTestInvisible">
+					<_slot _anchorMin="0,0" _anchorMax="0,0" _offsetMin="468,80" _offsetMax="608,116" />
+				</TextWidget>
+				<TextWidget _name="SignIntensity" _text="{bind:_signIntensity}" _styleClass="hud" _visibility="HitTestInvisible" _bLocalized="false">
+					<_slot _anchorMin="0,0" _anchorMax="0,0" _offsetMin="608,80" _offsetMax="688,116" />
+				</TextWidget>
+				<TextWidget _text="Monster" _styleClass="hud" _visibility="HitTestInvisible">
+					<_slot _anchorMin="0,0" _anchorMax="0,0" _offsetMin="48,120" _offsetMax="188,156" />
+				</TextWidget>
+				<TextWidget _name="MonsterHP" _text="{bind:_monsterHP}" _styleClass="hud" _visibility="HitTestInvisible" _bLocalized="false">
+					<_slot _anchorMin="0,0" _anchorMax="0,0" _offsetMin="188,120" _offsetMax="268,156" />
+				</TextWidget>
+				<TextWidget _text="Oil" _styleClass="hud" _visibility="HitTestInvisible">
+					<_slot _anchorMin="0,0" _anchorMax="0,0" _offsetMin="288,120" _offsetMax="368,156" />
+				</TextWidget>
+				<TextWidget _name="OilHits" _text="{bind:_oilHits}" _styleClass="hud" _visibility="HitTestInvisible" _bLocalized="false">
+					<_slot _anchorMin="0,0" _anchorMax="0,0" _offsetMin="368,120" _offsetMax="448,156" />
+				</TextWidget>
+				<TextWidget _text="Toxicity" _styleClass="hud" _visibility="HitTestInvisible">
+					<_slot _anchorMin="0,0" _anchorMax="0,0" _offsetMin="468,120" _offsetMax="608,156" />
+				</TextWidget>
+				<TextWidget _name="Toxicity" _text="{bind:_toxicity}" _styleClass="hud" _visibility="HitTestInvisible" _bLocalized="false">
+					<_slot _anchorMin="0,0" _anchorMax="0,0" _offsetMin="608,120" _offsetMax="688,156" />
+				</TextWidget>
+				<TextWidget _text="Fast (J)   Strong (K)   Dodge (Shift)   Sign (Q)   Twin sign (R)   Oil (1)   Potion (2)   Brew (B)" _styleClass="hud" _visibility="HitTestInvisible">
+					<_slot _anchorMin="0,1" _anchorMax="0,1" _offsetMin="48,-84" _offsetMax="1048,-48" />
+				</TextWidget>
+			</CanvasPanel>
+			<CanvasPanel _visibility="{bind:_weaknessVisibility}">
+				<_slot _anchorMin="0,0" _anchorMax="1,1" _offsetMin="0,0" _offsetMax="0,0" />
+				<TextWidget _text="The beast fears the right oil" _styleClass="hud" _visibility="HitTestInvisible">
+					<_slot _anchorMin="0,0" _anchorMax="0,0" _offsetMin="48,160" _offsetMax="648,196" />
+				</TextWidget>
+			</CanvasPanel>
+			<CanvasPanel _visibility="{bind:_victoryVisibility}">
+				<_slot _anchorMin="0,0" _anchorMax="1,1" _offsetMin="0,0" _offsetMax="0,0" />
+				<TextWidget _text="The marsh is quiet again" _styleClass="hud" _visibility="HitTestInvisible">
+					<_slot _anchorMin="0.5,0.3" _anchorMax="0.5,0.3" _offsetMin="-400,-24" _offsetMax="400,24" />
+					<_style _alignment="Center" />
+				</TextWidget>
+			</CanvasPanel>
+			<CanvasPanel _visibility="{bind:_defeatVisibility}">
+				<_slot _anchorMin="0,0" _anchorMax="1,1" _offsetMin="0,0" _offsetMax="0,0" />
+				<TextWidget _text="The hunter has fallen" _styleClass="hud" _visibility="HitTestInvisible">
+					<_slot _anchorMin="0.5,0.3" _anchorMax="0.5,0.3" _offsetMin="-400,-24" _offsetMax="400,24" />
+					<_style _alignment="Center" />
+				</TextWidget>
+			</CanvasPanel>
+		</CanvasPanel>
+	</SafeZonePanel>
+</UIDocument>

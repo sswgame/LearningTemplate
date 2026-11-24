@@ -29,6 +29,7 @@
 #include "GameFramework/Runtime/Gameplay/Inventory/Shop.h"
 #include "GameFramework/Runtime/Gameplay/Inventory/WalletComponent.h"
 #include "GameFramework/Runtime/World/Environment/WorldClock.h"
+#include "GameFramework/Runtime/World/Query/WalkSweep.h"
 
 namespace sw
 {
@@ -114,6 +115,7 @@ namespace sw
         , _autoFarmerPrefab{}
         , _playerStart{ 6.0f, 0.0f, -1.2f }
         , _walkSpeed{ 4.0f }
+        , _bodyRadius{ 0.3f }
         , _reach{ 0.9f }
         , _nearDistance{ 1.7f }
         , _walkMarginMin{ 5.0f }
@@ -210,7 +212,9 @@ namespace sw
         FarmShippingBin restoredShipment;
         if ( io.isReading() )
         {
-            restoredField.initialize( _fieldWidth, _fieldHeight, _pCropCatalog.get() );
+            if ( io.check( _pCropCatalog != nullptr ) == false )
+                return;
+            restoredField.initialize( _fieldWidth, _fieldHeight, *_pCropCatalog );
         }
         FarmField&       field    = io.isWriting() ? _field : restoredField;
         FarmShippingBin& shipment = io.isWriting() ? _shipment : restoredShipment;
@@ -297,16 +301,15 @@ namespace sw
         if ( pState == nullptr )
             return false; // 범위 밖(하루 길이 · 계절 날 수 등)은 판 상태가 오류를 남겼다
         InventorySettings bagSettings;
-        bagSettings._pItemCatalog            = &_itemCatalog;
         bagSettings._slotCount               = kBagSlotCount;
         const GameObject* const pPlayerState = requirePlayerState();
         if ( pPlayerState == nullptr )
             return false; // 까닭은 베이스가 남겼다
-        InventoryComponent* pBag    = PlayerComponentUtil::openOn<InventoryComponent>( *pPlayerState, bagSettings );
+        InventoryComponent* pBag    = PlayerComponentUtil::openOn<InventoryComponent>( *pPlayerState, _itemCatalog, bagSettings );
         WalletComponent*    pWallet = PlayerComponentUtil::requireOn<WalletComponent>( *pPlayerState );
         if ( pBag == nullptr || pWallet == nullptr )
             return false;
-        _field.initialize( _fieldWidth, _fieldHeight, _pCropCatalog.get() );
+        _field.initialize( _fieldWidth, _fieldHeight, *_pCropCatalog );
         _shipment = FarmShippingBin{};
         // 시작 돈과 씨앗은 새 판에만 준다. 복원한 판에 덧쌓이지 않게 하기 위해서다.
         if ( pWallet->isFreshGame() )
@@ -440,9 +443,10 @@ namespace sw
         const float32 length = direction.getLength();
         if ( length < FarmGameModeComponentInternal::kMinMoveLength )
             return;
-        const float3 step  = direction * ( _walkSpeed * deltaTime * MathUtil::min( length, 1.0f ) / length );
-        _playerPosition._x = MathUtil::clamp( _playerPosition._x + step._x, -_walkMarginMin, static_cast<float32>( _field.getWidth() ) + _walkMarginMax );
-        _playerPosition._z = MathUtil::clamp( _playerPosition._z + step._z, -_walkMarginMin, static_cast<float32>( _field.getHeight() ) + _walkMarginMax );
+        const float3 wanted = direction * ( _walkSpeed * deltaTime * MathUtil::min( length, 1.0f ) / length );
+        const float2 step   = WalkSweep::walkOnGround( getObjectManager(), AbsolutePosition{ _playerPosition }, float2{ wanted._x, wanted._z }, _bodyRadius );
+        _playerPosition._x  = MathUtil::clamp( _playerPosition._x + step._x, -_walkMarginMin, static_cast<float32>( _field.getWidth() ) + _walkMarginMax );
+        _playerPosition._z  = MathUtil::clamp( _playerPosition._z + step._y, -_walkMarginMin, static_cast<float32>( _field.getHeight() ) + _walkMarginMax );
         // 네 방향으로 맞춘다. 대각선이면 더 큰 축을 쓴다.
         if ( MathUtil::abs( direction._x ) > MathUtil::abs( direction._z ) )
             _facing = float3{ direction._x > 0.0f ? 1.0f : -1.0f, 0.0f, 0.0f };

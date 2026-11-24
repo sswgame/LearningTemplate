@@ -8,6 +8,7 @@
  */
 #pragma once
 #include "Core/Container/string.h"
+#include "Core/Foundation/Expected.h"
 #include "Core/Foundation/Types.h"
 #include "Core/Math/Math.h"
 #include "Core/Name/hashed_string.h"
@@ -32,6 +33,17 @@ namespace sw
         virtual bool play( const AssetID& assetID, const hashed_string& bus ) = 0;
         /** @brief 배경 음악을 바꿉니다(같은 곡이면 다시 시작하지 않는다). */
         virtual bool playMusic( const AssetID& assetID ) = 0;
+        /** @brief 적응형 음악(`*.music.xml`)을 시작 구간부터 냅니다. 같은 음악이 나고 있으면 그대로 둡니다. 못 읽거나 검사를 통과하지 못하면 false 입니다. */
+        [[nodiscard]] virtual bool playAdaptiveMusic( const AssetID& assetID ) = 0;
+        /** @brief 나고 있는 음악(배경 음악 · 적응형)을 멈춥니다. */
+        virtual void stopMusic() = 0;
+        /** @brief 나고 있는 음악을 멈추거나 이어 냅니다. 적응형 음악의 구간 시계(`findMusicSeconds`)도 소리와 함께 서고 이어집니다. */
+        virtual void setMusicPaused( bool bPaused ) = 0;
+        /**
+         * @brief 적응형 음악의 지금 구간이 시작한 뒤로 흐른 시간(초)입니다. 나는 적응형 음악이 없으면 nullopt 입니다.
+         * @details 오디오 장치가 렌더한 프레임으로 센 구간 시계다(블록마다 게시) — 소리와 어긋나지 않아 리듬 판정이 벽시계 대신 읽는다(언리얼 Quartz 시계 자리).
+         */
+        virtual optional<float32> findMusicSeconds() const = 0;
         /** @brief 이벤트 라이브러리를 올립니다. 이름은 경로이며 같은 경로면 바꿉니다. 못 읽거나 검사를 통과하지 못하면 false 입니다. */
         [[nodiscard]] virtual bool loadEvents( const AssetID& assetID ) = 0;
         /** @brief 이벤트 라이브러리를 내립니다. */

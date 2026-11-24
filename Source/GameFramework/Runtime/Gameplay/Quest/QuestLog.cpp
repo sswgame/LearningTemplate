@@ -77,9 +77,9 @@ namespace sw
     {
     }
 
-    void QuestLog::initialize( const QuestCatalog* pCatalog )
+    void QuestLog::initialize( const QuestCatalog& catalog )
     {
-        _pCatalog = pCatalog;
+        _pCatalog = &catalog;
         _listProgress.clear();
         _eventBuffer.clear();
     }

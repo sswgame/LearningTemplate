@@ -116,7 +116,7 @@ namespace
         /** @brief @p race 를 이 판의 트랙 · 카탈로그로 엽니다(@p pTrack 이 비면 이 판의 트랙). */
         void initializeRace( sw::KartRace& race, const sw::KartRaceSettings& settings, const sw::KartTrack* pTrack = nullptr )
         {
-            SW_REQUIRE_TRUE( race.initialize( settings, pTrack != nullptr ? pTrack : &_track, &_items, &_projectiles ) );
+            SW_REQUIRE_TRUE( race.initialize( settings, pTrack != nullptr ? *pTrack : _track, &_items, &_projectiles ) );
         }
 
         void open( const sw::KartTrackDef& def, int32 racerCount, bool bAILast = false )
@@ -416,8 +416,10 @@ SW_TEST_CASE( KartTrackTest, RefusesUnusableDefinitions )
     SW_EXPECT_FALSE( track.isValid() );
     SW_EXPECT_NEAR( 0.0f, track.getLength(), kKartTolerance );
 
+    sw::KartRaceSettings noItems;
+    noItems._bItems = SW_FALSE;
     sw::KartRace race;
-    SW_EXPECT_TRUE( race.initialize( sw::KartRaceSettings{}, &track, nullptr, nullptr ) ); // 아이템이 없는 경기다
+    SW_EXPECT_TRUE( race.initialize( noItems, track, nullptr, nullptr ) );
     SW_EXPECT_FALSE( race.addRacer( sw::KinematicVehicleSettings{}, false ).has_value() );
 }
 
@@ -748,7 +750,7 @@ SW_TEST_CASE( KartGhostTest, SerializeRoundTripAndRejection )
 }
 
 /**
- * @brief [KartGhostTest] 재생: 프레임 시간을 고정 걸음으로 나누고 기록이 끝나면 멈춘다. 고스트 없이는 끝난 상태다
+ * @brief [KartGhostTest] 재생: 프레임 시간을 고정 걸음으로 나누고 기록이 끝나면 멈춘다. 열지 않은 재생은 끝난 상태다
  */
 SW_TEST_CASE( KartGhostTest, PlayerStopsAtEnd )
 {
@@ -758,8 +760,10 @@ SW_TEST_CASE( KartGhostTest, PlayerStopsAtEnd )
     {
         ghost.record( sw::KinematicVehicleInput{} );
     }
+    sw::KartTrack track;
+    SW_REQUIRE_TRUE( track.initialize( KartTestUtil::makeRingDef( 3, {} ) ) );
     sw::KartGhostPlayer player;
-    player.initialize( &ghost, sw::KinematicVehicleSettings{}, nullptr );
+    player.initialize( ghost, sw::KinematicVehicleSettings{}, track );
     SW_EXPECT_FALSE( player.isFinished() );
     SW_EXPECT_EQUAL( 2, player.advance( 0.25f ) );
     SW_EXPECT_EQUAL( 1, player.advance( 0.25f ) ); // 두 걸음 몫이지만 하나 남았다
@@ -769,7 +773,6 @@ SW_TEST_CASE( KartGhostTest, PlayerStopsAtEnd )
     SW_EXPECT_EQUAL( 0, player.advance( 0.25f ) );
 
     sw::KartGhostPlayer empty;
-    empty.initialize( nullptr, sw::KinematicVehicleSettings{}, nullptr );
     SW_EXPECT_TRUE( empty.isFinished() );
     SW_EXPECT_FALSE( empty.step() );
 }
@@ -790,7 +793,7 @@ SW_TEST_CASE_F( KartRaceTest, GhostReplaysSamePath )
     initializeRace( _race, _settings );
     SW_REQUIRE_TRUE( _race.addRacer( sw::KinematicVehicleSettings{}, false ) == 0 );
     sw::KartGhost ghost;
-    _race.startGhostRecording( 0, &ghost ); // 출발 전에 건다
+    _race.startGhostRecording( 0, ghost ); // 출발 전에 건다
     _race.start();
     SW_EXPECT_NEAR( racer( 0 )._motor.getPosition()._x, ghost.getStartPosition()._x, kKartTolerance );
     SW_EXPECT_NEAR( racer( 0 )._motor.getPosition()._z, ghost.getStartPosition()._z, kKartTolerance );
@@ -808,7 +811,7 @@ SW_TEST_CASE_F( KartRaceTest, GhostReplaysSamePath )
     SW_EXPECT_TRUE( countEvents( sw::KartRaceEvent::Kind::BoostPad ) >= 1 ); // 패드를 밟은 판이다
 
     sw::KartGhostPlayer player;
-    player.initialize( &ghost, sw::KinematicVehicleSettings{}, &_track );
+    player.initialize( ghost, sw::KinematicVehicleSettings{}, _track );
     while ( player.step() )
     {
     }
@@ -818,7 +821,7 @@ SW_TEST_CASE_F( KartRaceTest, GhostReplaysSamePath )
 }
 
 /**
- * @brief [KartRaceTest] 단계: 차가 없으면 시작하지 않고, 카운트다운 동안은 시간이 흐르지 않으며, 시작 뒤에는 차를 더하지 못한다. 트랙이 없으면 더하지 못한다
+ * @brief [KartRaceTest] 단계: 차가 없으면 시작하지 않고, 카운트다운 동안은 시간이 흐르지 않으며, 시작 뒤에는 차를 더하지 못한다. 열지 않은 경기에는 더하지 못한다
  */
 SW_TEST_CASE_F( KartRaceTest, PhasesAndCountdown )
 {
@@ -848,8 +851,7 @@ SW_TEST_CASE_F( KartRaceTest, PhasesAndCountdown )
     _race.step();
     SW_EXPECT_NEAR( 0.1f, _race.getRaceTime(), kKartTolerance );
 
-    sw::KartRace noTrack;
-    SW_EXPECT_TRUE( noTrack.initialize( _settings, nullptr, nullptr, nullptr ) );
+    sw::KartRace noTrack; // 열지 않은 경기다
     SW_EXPECT_FALSE( noTrack.addRacer( sw::KinematicVehicleSettings{}, false ).has_value() );
     SW_EXPECT_TRUE( noTrack.findRacer( 0 ) == nullptr );
     SW_EXPECT_FALSE( noTrack.findRacerAtPlace( 1 ).has_value() );
@@ -1151,7 +1153,7 @@ SW_TEST_CASE_F( KartRaceTest, ItemsFlyByTheirProjectile )
                                              "KartTest" ) );
     SW_EXPECT_TRUE( broken.find( "bare" ) == nullptr );
     SW_REQUIRE_TRUE( _track.initialize( KartTestUtil::makeRingDef( 3, {} ) ) );
-    SW_EXPECT_FALSE( _race.initialize( _settings, &_track, &broken, &_projectiles ) );
+    SW_EXPECT_FALSE( _race.initialize( _settings, _track, &broken, &_projectiles ) );
     SW_REQUIRE_TRUE( _race.addRacer( sw::KinematicVehicleSettings{}, false ) == 0 );
     _race.start();
     _race.giveItem( 0, "lost" );
@@ -1162,7 +1164,7 @@ SW_TEST_CASE_F( KartRaceTest, ItemsFlyByTheirProjectile )
     SW_EXPECT_TRUE( _race.useItem( 0 ) );
 
     // 탄의 값이 운동을 정한다: 녹색 껍질은 탄의 속력 45 로 날고 탄의 반지름만큼 앞에서 나간다.
-    SW_REQUIRE_TRUE( _race.initialize( _settings, &_track, &_items, &_projectiles ) );
+    SW_REQUIRE_TRUE( _race.initialize( _settings, _track, &_items, &_projectiles ) );
     SW_REQUIRE_TRUE( _race.addRacer( sw::KinematicVehicleSettings{}, false ) == 0 );
     _race.start();
     _race.giveItem( 0, "green" );
@@ -1331,6 +1333,21 @@ SW_TEST_CASE_F( KartRaceTest, ItemBoxesRespawn )
     plain.step();
     SW_EXPECT_TRUE( plain.isItemBoxActive( 0 ) );
     SW_EXPECT_TRUE( plain.findRacer( 0 )->_itemID.empty() );
+}
+
+/**
+ * @brief [KartRaceTest] 결함: 아이템을 켠 채 카탈로그를 주지 않으면 조용히 아이템 없는 경기가 되었다. 오류로 거절하고 경기를 둔다 — 끈 경기만 카탈로그 없이 열린다
+ */
+SW_TEST_CASE_F( KartRaceTest, ItemsOnNeedTheirCatalogs )
+{
+    SW_EXPECT_LOG( "KartRace.ItemCatalogMissing" );
+    SW_REQUIRE_TRUE( _track.initialize( KartTestUtil::makeRingDef( 3, {} ) ) );
+    sw::KartRace race;
+    SW_EXPECT_FALSE( race.initialize( _settings, _track, nullptr, &_projectiles ) );
+    SW_EXPECT_FALSE( race.initialize( _settings, _track, &_items, nullptr ) );
+    SW_EXPECT_TRUE( race.getTrack() == nullptr );
+    _settings._bItems = SW_FALSE;
+    SW_EXPECT_TRUE( race.initialize( _settings, _track, nullptr, nullptr ) );
 }
 
 /**
@@ -1503,7 +1520,7 @@ SW_TEST_CASE_F( KartRaceTest, RaceDeterminism )
 
     const auto setup = [this]( sw::KartRace& race )
     {
-        if ( race.initialize( _settings, &_track, &_items, &_projectiles ) == false )
+        if ( race.initialize( _settings, _track, &_items, &_projectiles ) == false )
             return false;
         if ( race.addRacer( sw::KinematicVehicleSettings{}, false ).has_value() == false || race.addRacer( sw::KinematicVehicleSettings{}, true ).has_value() == false )
             return false;

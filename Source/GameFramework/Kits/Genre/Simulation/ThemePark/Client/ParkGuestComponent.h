@@ -39,7 +39,5 @@ namespace sw
         int32 _guestIndex;
         PROPERTY( Category = "Guest", DisplayName = "Height Offset", Tooltip = "Lift above the walking point", Units = m )
         float32 _heightOffset;
-
-        int32 _colorBucket; ///< 지금 입은 기분 색 칸(−1 이면 아직 없다)
     };
 } // namespace sw

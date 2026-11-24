@@ -11,6 +11,7 @@
 #include "Engine/Serialization/Format/StateIO.h"
 
 #include "GameFramework/Kits/Genre/Action/BattleRoyale/BattleRoyaleCatalog.h"
+#include "GameFramework/Runtime/Gameplay/Inventory/LootTable.h"
 #include "GameFramework/Runtime/Gameplay/Match/TeamAttitude.h"
 
 #include <algorithm>
@@ -33,11 +34,20 @@ namespace sw
     {
     }
 
-    bool BattleRoyaleMatch::initialize( const BattleRoyaleCatalog* pCatalog, const ItemCatalog* pItemCatalog, const LootCatalog* pLootCatalog, uint32 seed,
-                                        const IBrZoneTerrain* pTerrain )
+    bool BattleRoyaleMatch::initialize( const BattleRoyaleCatalog& catalog, const ItemCatalog& itemCatalog, const LootCatalog* pLootCatalog, uint32 seed, const IBrZoneTerrain& terrain )
     {
-        _pCatalog     = pCatalog;
-        _pItemCatalog = pItemCatalog;
+        const BattleRoyaleSupplyDropDef& supplyDrop = catalog.getSupplyDropSettings();
+        const bool                       bNoTable   = pLootCatalog == nullptr || pLootCatalog->find( supplyDrop._tableID.key() ) == nullptr;
+        if ( supplyDrop._listTime.empty() == false && bNoTable )
+        {
+            SW_LOG_ERROR_ID( "BattleRoyaleMatch.SupplyDropNoTable", "BattleRoyaleMatch: refused - the catalog has supply drops but the loot table '%#' is %#", supplyDrop._tableID.c_str(),
+                             pLootCatalog == nullptr ? "not given (no loot catalog)" : "not in the loot catalog" );
+            return false;
+        }
+        if ( _zone.initialize( catalog.getZoneSettings(), catalog.getMapSize(), GameRandom::deriveSeed( seed, 0x5a4f4e45u ), terrain ) == false )
+            return false; // 까닭은 자기장이 남겼다
+        _pCatalog     = &catalog;
+        _pItemCatalog = &itemCatalog;
         _pLootCatalog = pLootCatalog;
         _listPlayer.clear();
         _listSupplyDrop.clear();
@@ -52,8 +62,6 @@ namespace sw
         settings._bLastTeamStandingWins = SW_TRUE;
         settings._scorePerKill          = 0;
         _matchState.initialize( settings );
-        if ( pCatalog != nullptr )
-            return _zone.initialize( pCatalog->getZoneSettings(), pCatalog->getMapSize(), GameRandom::deriveSeed( seed, 0x5a4f4e45u ), pTerrain );
         return true;
     }
 
@@ -102,12 +110,13 @@ namespace sw
         if ( player._revive.initialize( revive, nullptr, static_cast<uint32>( participant + 1 ) ) == false )
             return false;
 
-        player._loadout.initialize( _pCatalog );
-        return player._inventory.initialize( _pItemCatalog, playerSettings._slotCount, player._loadout.computeCarryLimit() );
+        player._loadout.initialize( *_pCatalog );
+        return player._inventory.initialize( *_pItemCatalog, playerSettings._slotCount, player._loadout.computeCarryLimit() );
     }
 
     void BattleRoyaleMatch::start()
     {
+        SW_ASSERT( _pCatalog != nullptr && "initialize the match before it starts" );
         _matchState.start();
         collectMatchEvents();
         pushEvent( BattleRoyaleEvent::Kind::PlayersRemaining, nullopt, nullopt, nullopt, countRemainingPlayers() );
@@ -271,14 +280,11 @@ namespace sw
                     finishRevive( static_cast<int32>( index ) );
             }
         }
-        if ( _pCatalog != nullptr )
+        const vector<float32>& listTime = _pCatalog->getSupplyDropSettings()._listTime;
+        while ( _nextSupplyDrop < static_cast<int32>( listTime.size() ) && _time >= listTime[static_cast<size_t>( _nextSupplyDrop )] )
         {
-            const vector<float32>& listTime = _pCatalog->getSupplyDropSettings()._listTime;
-            while ( _nextSupplyDrop < static_cast<int32>( listTime.size() ) && _time >= listTime[static_cast<size_t>( _nextSupplyDrop )] )
-            {
-                dropSupply();
-                ++_nextSupplyDrop;
-            }
+            dropSupply();
+            ++_nextSupplyDrop;
         }
         collectMatchEvents();
     }
@@ -392,8 +398,7 @@ namespace sw
         BattleRoyaleSupplyDrop drop;
         drop._time = _time;
         (void)_zone.pickPointInside( _random, drop._position );
-        if ( _pLootCatalog != nullptr )
-            (void)BattleRoyaleGroundItem::rollTableAt( *_pLootCatalog, _pCatalog->getSupplyDropSettings()._tableID.key(), drop._position, constant::invalid_index::kInt32, 1, _random, drop._listItem );
+        (void)BattleRoyaleGroundItem::rollTableAt( *_pLootCatalog, _pCatalog->getSupplyDropSettings()._tableID.key(), drop._position, constant::invalid_index::kInt32, 1, _random, drop._listItem );
         _listSupplyDrop.push_back( drop );
         BattleRoyaleEvent event;
         event._kind     = BattleRoyaleEvent::Kind::SupplyDropLanded;

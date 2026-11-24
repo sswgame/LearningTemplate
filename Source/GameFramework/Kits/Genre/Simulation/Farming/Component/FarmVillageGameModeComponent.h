@@ -5,7 +5,7 @@
  *          상태 바이트에는 머리 다음에 일정 시스템의 저장 상태(`ScheduleSaveState` — 시각 · 끼어들기 · 끼어든 자리 · 호감도 · 약속 결과 · 예약)를 리플렉션 바이너리로 싣는다.
  *          계획 자체는 싣지 않는다 — 그 상태로 다시 세우면 같은 계획이 나온다. 복원은 일정이 서 있으면 바로, 아직이면 `startGame` 이 일정을 세운 직후에 건다.
  *          판이 이 코드의 판과 정확히 같을 때만 읽고 다른 판은 거절한다(첫 출시 전이라 옛 판 리더를 두지 않는다).
- *          길: 마을 내비 격자(`_navOrigin` · `_navWidth` · `_navHeight` · `_navCellSize`, 장애물은 이름 목록 `_navObstacleNames` 의 씬 오브젝트 자리)를 세우고,
+ *          길: 마을 내비 격자(`_navOrigin` · `_navWidth` · `_navHeight` · `_navCellSize`, 장애물은 이름 목록 `_navObstacleNames` 의 씬 오브젝트 정적 바디 — 농부의 걷기를 막는 것과 같은 모양)를 세우고,
  *          일정의 화면 안 경로(고운 경로)를 그 격자의 A* 로 한다(`NavGridSchedulePathing`). 계획 경로는 곧은 선이라 도착 시각은 격자와 무관하다.
  *          몸은 `FarmVillagerComponent` 가 `NavAgent` 로 이 디렉터가 적은 일정상 위치를 쫓는다 — 언리얼의 "움직이는 목표로 이동" 과 같다. 시계를 감아
  *          일정상 위치가 몸에서 `_bodySnapDistance` 넘게 떨어지면 몸을 그 자리에 놓는다(잠 · 빨리 감기 · 자동화 `AdvanceGameTime`).
@@ -73,7 +73,7 @@ namespace sw
         void               onFlush( GameObjectManager& manager, bool bRespawnViews ) override;
 
     private:
-        /** @brief 내비 격자를 세우고 장애물 이름 목록의 씬 오브젝트 자리를 막습니다. 격자 크기가 없으면 false 입니다. */
+        /** @brief 내비 격자를 세우고 장애물 이름 목록의 씬 오브젝트(정적 바디) 자리를 막습니다. 격자 크기가 없거나 장애물에 정적 바디가 없으면 false 입니다. */
         [[nodiscard]] bool rebuildNavGrid();
         /** @brief 지금 일정표로 일정을 세우고 자리 · 속도 목록을 NPC 수에 맞춥니다(시작 · 다시 읽힌 일정표). 범위 밖 설정이면 일정 시스템이 오류를 남기고 false 입니다. */
         [[nodiscard]] bool openSchedule( const WorldClock& clock );
@@ -94,10 +94,10 @@ namespace sw
         int32 _navHeight;
         PROPERTY( Category = "Navigation", DisplayName = "Nav Cell Size", Tooltip = "Edge of one nav cell (required)", Min = 0.0, Units = m )
         float32 _navCellSize;
-        PROPERTY( Category = "Navigation", DisplayName = "Obstacle Names", Meta = "NotLocalizable", Tooltip = "Comma-separated object names that block the grid; Tree also blocks Tree_2, Tree_3 ..." )
+        PROPERTY( Category = "Navigation", DisplayName = "Obstacle Names", Meta = "NotLocalizable", Tooltip = "Comma-separated object names (with a static body) that block the grid; Tree also blocks Tree_2, Tree_3 ..." )
         string _navObstacleNames;
-        PROPERTY( Category = "Navigation", DisplayName = "Obstacle Radius", Tooltip = "Cells within this distance of an obstacle object are blocked", Min = 0.0, Units = m )
-        float32 _navObstacleRadius;
+        PROPERTY( Category = "Navigation", DisplayName = "Obstacle Clearance", Tooltip = "Cells within this distance of an obstacle static body are blocked", Min = 0.0, Units = m )
+        float32 _navObstacleClearance;
         PROPERTY( Category = "Navigation", DisplayName = "Body Catch Up Scale", Tooltip = "Body top speed as a multiple of the schedule walking speed at the current clock rate", Min = 1.0 )
         float32 _bodyCatchUpScale;
         PROPERTY( Category = "Navigation", DisplayName = "Body Snap Distance", Tooltip = "A body this far from its scheduled spot is placed there (clock skips)", Min = 0.0, Units = m )

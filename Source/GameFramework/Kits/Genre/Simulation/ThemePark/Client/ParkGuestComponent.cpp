@@ -17,7 +17,6 @@ namespace sw
     ParkGuestComponent::ParkGuestComponent()
         : _guestIndex{ -1 }
         , _heightOffset{ 0.45f }
-        , _colorBucket{ -1 }
     {
         setCanEverTick( true );
     }
@@ -32,8 +31,7 @@ namespace sw
     void ParkGuestComponent::assignGuest( GameObjectHandle gameMode, int32 guestIndex )
     {
         bindGameMode( gameMode );
-        _guestIndex  = guestIndex;
-        _colorBucket = -1;
+        _guestIndex = guestIndex;
     }
 
     void ParkGuestComponent::onTick( TickContext& context )
@@ -59,13 +57,8 @@ namespace sw
         if ( bShown == false )
             return;
         pMesh->setLocalPosition( pOwner->getManager()->getWorldOrigin().toLocal( pGuest->_position + float3{ 0.0f, _heightOffset, 0.0f } ) );
-        const int32 bucket = ParkViewComponent::computeHappinessBucket( pGuest->_happiness );
-        if ( bucket == _colorBucket )
-            return;
-        const shared_ptr<MaterialInstance>& look = pParkView->getGuestLook( bucket );
-        if ( look == nullptr )
-            return;
-        pMesh->setMaterialInstance( look );
-        _colorBucket = bucket;
+        const shared_ptr<MaterialInstance>& look = pParkView->getGuestLook( ParkViewComponent::computeHappinessBucket( pGuest->_happiness ) );
+        if ( look != nullptr )
+            pMesh->setMaterialInstance( look ); // 같은 모습이면 메시가 거른다
     }
 } // namespace sw

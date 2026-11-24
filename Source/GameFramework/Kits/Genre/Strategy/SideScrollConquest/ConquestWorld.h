@@ -164,8 +164,11 @@ namespace sw
 
         ConquestWorld();
 
-        /** @brief 새 판을 시작합니다. 거점, 주둔군, 시작 자원을 두고, 지휘관을 첫 플레이어 거점(가장 왼쪽)에 놓습니다. */
-        void initialize( const ConquestCatalog* pCatalog );
+        /**
+         * @brief 새 판을 시작합니다. 거점, 주둔군, 시작 자원을 두고, 지휘관을 첫 플레이어 거점(가장 왼쪽)에 놓습니다.
+         * @return 주둔군의 병종이 카탈로그에 없거나 지휘관의 부활 규칙이 틀렸으면 오류를 남기고 false 입니다(그 주둔군 없이 선 판이다).
+         */
+        [[nodiscard]] bool initialize( const ConquestCatalog& catalog );
         /** @brief 프레임 시간을 받아 고정 걸음으로 진행합니다. */
         void update( float32 deltaTime );
 

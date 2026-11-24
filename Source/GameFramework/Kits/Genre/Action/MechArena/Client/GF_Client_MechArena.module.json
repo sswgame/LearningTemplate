@@ -1,0 +1,22 @@
+{
+    "_name": "GF_Client_MechArena",
+    "_version": "1.0.0",
+    "_kind": "Kit",
+    "_description": "기체 대전 키트(클라이언트) — 입력 맵 액션을 디렉터 입력 명령으로 바꾸고 기체 · 탄 · HUD(체력 · 부스트 · 팀 게이지 · 결과)를 보인다. 규칙 · 디렉터는 GF_MechArena",
+    "_listDependency": [
+        {
+            "_name": "GameFramework"
+        },
+        {
+            "_name": "GF_MechArena"
+        }
+    ],
+    "_listConfiguration": [
+        "Dev",
+        "Shipping"
+    ],
+    "_listTarget": [
+        "Client"
+    ],
+    "_bEnabledByDefault": true
+}

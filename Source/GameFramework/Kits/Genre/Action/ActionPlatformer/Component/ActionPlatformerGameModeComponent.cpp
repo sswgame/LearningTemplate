@@ -163,7 +163,7 @@ namespace sw
     {
         if ( acquireBoundCatalog( _pCatalog ) == false )
             return false;
-        if ( _run.start( _pCatalog.get(), _stageID.key() ) == false )
+        if ( _run.start( *_pCatalog, _stageID.key() ) == false )
         {
             SW_LOG_ERROR_ID( "ActionPlatformer.UnknownStage", "Action platformer game mode: stage '%#' is not in the catalog - the stage does not open", _stageID.c_str() );
             return false;
@@ -315,7 +315,7 @@ namespace sw
         if ( io.isReading() )
         {
             restoredBody.initialize( *_pCatalog );
-            restoredRun.bindCatalog( _pCatalog.get() );
+            restoredRun.bindCatalog( *_pCatalog );
         }
         io.value( io.isWriting() ? _body : restoredBody );
         io.value( io.isWriting() ? _run : restoredRun );

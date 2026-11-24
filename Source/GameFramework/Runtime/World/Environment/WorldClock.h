@@ -84,6 +84,7 @@ namespace sw
     /**
      * @class WorldClock
      * @brief 오픈월드, 농장, 생활 장르의 시계입니다. 시간은 `update` 로만 흐르며, 한 번에 많이 흘러도 넘은 시와 날의 경계를 모두 알립니다. 잠과 빨리 감기가 그 경우입니다.
+     * @details 설정을 받기 전(`isInitialized` 가 false)에는 달력이 없다 — 시간을 흘리거나 시각을 옮기거나 계절 · 해를 물으면 오류를 남기고 아무것도 하지 않는다. 소유자(컴포넌트)가 값 멤버로 들고 나중에 여는 자리라 기본 생성은 남긴다.
      */
     REFLECT()
     class SW_GF_API WorldClock
@@ -99,8 +100,10 @@ namespace sw
 
         /** @brief 설정을 받고 시작 시각으로 옮깁니다. 설정이 선언된 범위 밖이면 오류를 남기고 false 를 반환하며, 시계는 그대로입니다. */
         [[nodiscard]] bool initialize( const WorldClockSettings& settings );
-        void               update( float32 deltaTime );
-        void               setPaused( bool bPaused ) { _bPaused = bPaused ? SW_TRUE : SW_FALSE; }
+        /** @brief 설정을 받았는지입니다. `initialize` 만 계절 목록을 하나 이상으로 채운다. */
+        bool isInitialized() const { return _settings._listSeason.empty() == false; }
+        void update( float32 deltaTime );
+        void setPaused( bool bPaused ) { _bPaused = bPaused ? SW_TRUE : SW_FALSE; }
         /** @brief 배속이 음수이면 오류를 남기고 false 입니다(조용히 0 으로 맞추지 않습니다). */
         [[nodiscard]] bool setTimeScale( float32 timeScale );
         /** @brief 그 날 그 시각으로 옮깁니다. 알림은 없으며 로드에 씁니다. */
@@ -140,6 +143,8 @@ namespace sw
     private:
         DayPhase computePhase( float32 hour ) const { return computePhaseAt( _settings, hour ); }
         void     advanceGameSeconds( float32 gameSeconds );
+        /** @brief 설정을 받았는지 보고, 받지 않았으면 @p pAction 을 거절한 오류를 남깁니다. */
+        bool validateInitialized( const utf8* pAction ) const;
 
     private:
         WorldClockSettings                  _settings;

@@ -39,7 +39,7 @@ SW_TEST_CASE( InventoryTest, FillsMatchingStacksFirst )
     sw::ItemCatalog catalog;
     loadCatalog( catalog );
     sw::Inventory inventory;
-    SW_REQUIRE_TRUE( inventory.initialize( &catalog, 3 ) );
+    SW_REQUIRE_TRUE( inventory.initialize( catalog, 3 ) );
 
     SW_EXPECT_EQUAL( 15, inventory.addItem( kArrow, 15 ) );
     SW_EXPECT_EQUAL( 1, inventory.addItem( kSword, 1 ) );
@@ -61,7 +61,7 @@ SW_TEST_CASE( InventoryTest, StopsAtTheWeightLimit )
     sw::ItemCatalog catalog;
     loadCatalog( catalog );
     sw::Inventory inventory;
-    SW_REQUIRE_TRUE( inventory.initialize( &catalog, 10, 7.0f ) );
+    SW_REQUIRE_TRUE( inventory.initialize( catalog, 10, 7.0f ) );
 
     SW_EXPECT_EQUAL( 3, inventory.addItem( kStone, 5 ) ); // 2 × 3 = 6, 넷째는 8 이라 넘는다
     SW_EXPECT_TRUE( inventory.computeWeight() <= inventory.getMaxWeight() );
@@ -77,7 +77,7 @@ SW_TEST_CASE( InventoryTest, RemovesAllOrNothing )
     sw::ItemCatalog catalog;
     loadCatalog( catalog );
     sw::Inventory inventory;
-    SW_REQUIRE_TRUE( inventory.initialize( &catalog, 4 ) );
+    SW_REQUIRE_TRUE( inventory.initialize( catalog, 4 ) );
     SW_REQUIRE_EQUAL( 25, inventory.addItem( kArrow, 25 ) );
 
     const uint32 revision = inventory.getRevision();
@@ -98,7 +98,7 @@ SW_TEST_CASE( InventoryTest, StateRoundTrips )
     sw::ItemCatalog catalog;
     loadCatalog( catalog );
     sw::Inventory original;
-    SW_REQUIRE_TRUE( original.initialize( &catalog, 3, 50.0f ) );
+    SW_REQUIRE_TRUE( original.initialize( catalog, 3, 50.0f ) );
     SW_REQUIRE_EQUAL( 12, original.addItem( kArrow, 12 ) );
     SW_REQUIRE_EQUAL( 1, original.addItem( kSword, 1 ) );
     SW_EXPECT_FALSE( original.reduceSlotDurability( original.findFirstSlot( kSword ).value(), 30.0f ) ); // 깎였지만 부서지지 않았다(70 남음)
@@ -107,7 +107,7 @@ SW_TEST_CASE( InventoryTest, StateRoundTrips )
     original.writeState( written );
 
     sw::Inventory restored;
-    SW_REQUIRE_TRUE( restored.initialize( &catalog, 3 ) );
+    SW_REQUIRE_TRUE( restored.initialize( catalog, 3 ) );
     sw::Archive reading( written.getData(), written.getSize() );
     SW_REQUIRE_TRUE( restored.readState( reading ) );
     SW_EXPECT_EQUAL( original.getMaxWeight(), restored.getMaxWeight() );
@@ -119,7 +119,7 @@ SW_TEST_CASE( InventoryTest, StateRoundTrips )
     }
 
     sw::Inventory smaller;
-    SW_REQUIRE_TRUE( smaller.initialize( &catalog, 2 ) );
+    SW_REQUIRE_TRUE( smaller.initialize( catalog, 2 ) );
     sw::Archive again( written.getData(), written.getSize() );
     SW_REQUIRE_TRUE( smaller.readState( again ) ); // 셋째 슬롯이 비어 있어 둘에 다 든다
     SW_EXPECT_EQUAL( 12, smaller.getItemCount( kArrow ) );
@@ -136,13 +136,13 @@ SW_TEST_CASE( InventoryTest, ShrunkSlotCountMovesExtraItemsToOverflow )
     sw::ItemCatalog catalog;
     loadCatalog( catalog );
     sw::Inventory original;
-    SW_REQUIRE_TRUE( original.initialize( &catalog, 10 ) );
+    SW_REQUIRE_TRUE( original.initialize( catalog, 10 ) );
     SW_REQUIRE_EQUAL( 10, original.addItem( kSword, 10 ) ); // 겹치지 않는 칼 열 자루가 슬롯 열을 채운다
     sw::Archive written;
     original.writeState( written );
 
     sw::Inventory smaller;
-    SW_REQUIRE_TRUE( smaller.initialize( &catalog, 8 ) );
+    SW_REQUIRE_TRUE( smaller.initialize( catalog, 8 ) );
     sw::Archive reading( written.getData(), written.getSize() );
     SW_REQUIRE_TRUE( smaller.readState( reading ) );
     SW_EXPECT_EQUAL( 8, smaller.getItemCount( kSword ) );
@@ -158,7 +158,7 @@ SW_TEST_CASE( InventoryTest, ShrunkSlotCountMovesExtraItemsToOverflow )
     sw::Archive rewritten;
     smaller.writeState( rewritten );
     sw::Inventory reloaded;
-    SW_REQUIRE_TRUE( reloaded.initialize( &catalog, 8 ) );
+    SW_REQUIRE_TRUE( reloaded.initialize( catalog, 8 ) );
     sw::Archive rereading( rewritten.getData(), rewritten.getSize() );
     SW_REQUIRE_TRUE( reloaded.readState( rereading ) );
     SW_EXPECT_EQUAL( size_t{ 2 }, reloaded.getOverflow().size() );
@@ -191,7 +191,7 @@ SW_TEST_CASE( InventoryTest, UpgradesVersionOneSectionBody )
     SW_REQUIRE_TRUE( sw::StateIO::upgradeSectionBody( sw::Inventory::kStateTag, 1, sw::Inventory::kStateVersion, body ) );
 
     sw::Inventory restored;
-    SW_REQUIRE_TRUE( restored.initialize( &catalog, 2 ) );
+    SW_REQUIRE_TRUE( restored.initialize( catalog, 2 ) );
     SW_REQUIRE_TRUE( restored.readState( body ) );
     SW_EXPECT_EQUAL( 50.0f, restored.getMaxWeight() );
     SW_EXPECT_EQUAL( 7, restored.getItemCount( kArrow ) );
@@ -213,7 +213,7 @@ SW_TEST_CASE( CraftingTest, CancelReturnsWornInputWithSameDurability )
     const sw::hashed_string kReforge{ "Reforge" };
 
     sw::Inventory inventory;
-    SW_REQUIRE_TRUE( inventory.initialize( &catalog, 4 ) );
+    SW_REQUIRE_TRUE( inventory.initialize( catalog, 4 ) );
     SW_REQUIRE_EQUAL( 1, inventory.addItem( kSword, 1 ) );
     SW_REQUIRE_EQUAL( 2, inventory.addItem( kStone, 2 ) );
     const int32 swordSlot = inventory.findFirstSlot( kSword ).value();
@@ -255,12 +255,12 @@ SW_TEST_CASE( ShopTest, BuyBackReturnsWornItemWithSameDurability )
     const sw::hashed_string kSmith{ "smith" };
 
     sw::Inventory inventory;
-    SW_REQUIRE_TRUE( inventory.initialize( &catalog, 2 ) );
+    SW_REQUIRE_TRUE( inventory.initialize( catalog, 2 ) );
     SW_REQUIRE_EQUAL( 1, inventory.addItem( kSword, 1 ) );
     SW_EXPECT_FALSE( inventory.reduceSlotDurability( inventory.findFirstSlot( kSword ).value(), 60.0f ) ); // 40 남음
 
     sw::ShopManager shop;
-    shop.initialize( &shops, &catalog );
+    shop.initialize( shops, catalog );
     sw::Wallet wallet;
     int64      received = 0;
     SW_REQUIRE_TRUE( shop.sell( kSmith, kSword, 1, wallet, inventory, &received ) == sw::ShopResult::Ok );
@@ -271,7 +271,7 @@ SW_TEST_CASE( ShopTest, BuyBackReturnsWornItemWithSameDurability )
     sw::Archive written;
     shop.writeState( written );
     sw::ShopManager restored;
-    restored.initialize( &shops, &catalog );
+    restored.initialize( shops, catalog );
     sw::Archive reading( written.getData(), written.getSize() );
     SW_REQUIRE_TRUE( restored.readState( reading ) );
 
@@ -301,12 +301,12 @@ SW_TEST_CASE( ShopTest, SellsChosenSlotAndReportsBuyBack )
     const sw::hashed_string kSmith{ "smith" };
 
     sw::Inventory inventory;
-    SW_REQUIRE_TRUE( inventory.initialize( &catalog, 3 ) );
+    SW_REQUIRE_TRUE( inventory.initialize( catalog, 3 ) );
     SW_REQUIRE_EQUAL( 2, inventory.addItem( kSword, 2 ) );         // 슬롯 0 · 1
     SW_EXPECT_FALSE( inventory.reduceSlotDurability( 0, 70.0f ) ); // 앞 칼만 닳았다(30 남음). id 판 `sell` 은 뒤 슬롯부터 뺀다
 
     sw::ShopManager shop;
-    shop.initialize( &shops, &catalog );
+    shop.initialize( shops, catalog );
     sw::Wallet wallet;
     SW_EXPECT_TRUE( shop.sell( kSmith, 2, 1, wallet, inventory ) == sw::ShopResult::NotOwned ); // 빈 슬롯
     SW_EXPECT_TRUE( shop.sell( kSmith, 0, 2, wallet, inventory ) == sw::ShopResult::NotOwned ); // 그 슬롯에 둘은 없다

@@ -89,11 +89,30 @@
 					               _boundsRadius="0.866"
 					               _gpuSpinSeed="0"
 					               _bVisible="true" />
+					<RigidBodyComponent _localID="7198733165449302788" _componentName="RigidBodyComponent"
+					                    _bActive="true"
+					                    _localPosition="0,0,0"
+					                    _localRotation="0,0,0"
+					                    _localScale="1,1,1"
+					                    _attachOwner="None"
+					                    _attachOwnerID="0"
+					                    _attachComponent="#0244d8c8807cd288"
+					                    _bodyType="Static"
+					                    _layer="Static"
+					                    _material="None"
+					                    _mass="0">
+						<_listShape>
+							<PhysicsShapeDesc3D _type="Box" _halfExtents="0.521,0.77,0.6" _radius="0.5" _halfHeight="0.5" _localPosition="-0.002,0.77,-0.1" _localRotation="0,0,0" _material="None">
+								<_listPoint />
+								<_listIndex />
+							</PhysicsShapeDesc3D>
+						</_listShape>
+					</RigidBodyComponent>
 				</_listComponent>
 			</GameObject>
 		</entity>
-		<entity id="6" name="StressTest1">
-			<GameObject _schemaVersion="0" _name="StressTest1" _bActive="true">
+		<entity id="6" name="Bench1">
+			<GameObject _schemaVersion="0" _name="Bench1" _bActive="true">
 				<_listComponent>
 					<MeshComponent _localID="163493842152903304" _componentName="MeshComponent"
 					               _bActive="true"
@@ -114,6 +133,25 @@
 					                      _attachComponent="#0244d8c8807cd288"
 					                      _materialPath="common/models/quaternius/props/bench/materials/mi_trim_metal.material"
 					                      _sectionName="mi_trim_metal" />
+					<RigidBodyComponent _localID="7198733165449302788" _componentName="RigidBodyComponent"
+					                    _bActive="true"
+					                    _localPosition="0,0,0"
+					                    _localRotation="0,0,0"
+					                    _localScale="1,1,1"
+					                    _attachOwner="None"
+					                    _attachOwnerID="0"
+					                    _attachComponent="#0244d8c8807cd288"
+					                    _bodyType="Static"
+					                    _layer="Static"
+					                    _material="None"
+					                    _mass="0">
+						<_listShape>
+							<PhysicsShapeDesc3D _type="Box" _halfExtents="1.388,0.267,0.267" _radius="0.5" _halfHeight="0.5" _localPosition="0,0.26,0.005" _localRotation="0,0,0" _material="None">
+								<_listPoint />
+								<_listIndex />
+							</PhysicsShapeDesc3D>
+						</_listShape>
+					</RigidBodyComponent>
 				</_listComponent>
 			</GameObject>
 		</entity>
@@ -133,6 +171,25 @@
 					               _boundsRadius="0.866"
 					               _gpuSpinSeed="0"
 					               _bVisible="true" />
+					<RigidBodyComponent _localID="7198733165449302788" _componentName="RigidBodyComponent"
+					                    _bActive="true"
+					                    _localPosition="0,0,0"
+					                    _localRotation="0,0,0"
+					                    _localScale="1,1,1"
+					                    _attachOwner="None"
+					                    _attachOwnerID="0"
+					                    _attachComponent="#0244d8c8807cd288"
+					                    _bodyType="Static"
+					                    _layer="Static"
+					                    _material="None"
+					                    _mass="0">
+						<_listShape>
+							<PhysicsShapeDesc3D _type="Box" _halfExtents="0.212,0.22,0.212" _radius="0.5" _halfHeight="0.5" _localPosition="0,0.22,0" _localRotation="0,0,0" _material="None">
+								<_listPoint />
+								<_listIndex />
+							</PhysicsShapeDesc3D>
+						</_listShape>
+					</RigidBodyComponent>
 				</_listComponent>
 			</GameObject>
 		</entity>
@@ -152,11 +209,30 @@
 					               _boundsRadius="0.866"
 					               _gpuSpinSeed="0"
 					               _bVisible="true" />
+					<RigidBodyComponent _localID="7198733165449302788" _componentName="RigidBodyComponent"
+					                    _bActive="true"
+					                    _localPosition="0,0,0"
+					                    _localRotation="0,0,0"
+					                    _localScale="1,1,1"
+					                    _attachOwner="None"
+					                    _attachOwnerID="0"
+					                    _attachComponent="#0244d8c8807cd288"
+					                    _bodyType="Static"
+					                    _layer="Static"
+					                    _material="None"
+					                    _mass="0">
+						<_listShape>
+							<PhysicsShapeDesc3D _type="Box" _halfExtents="0.5,0.94,0.6" _radius="0.5" _halfHeight="0.5" _localPosition="0,0.94,-0.1" _localRotation="0,0,0" _material="None">
+								<_listPoint />
+								<_listIndex />
+							</PhysicsShapeDesc3D>
+						</_listShape>
+					</RigidBodyComponent>
 				</_listComponent>
 			</GameObject>
 		</entity>
-		<entity id="9" name="StressTest2">
-			<GameObject _schemaVersion="0" _name="StressTest2" _bActive="true">
+		<entity id="9" name="Bench2">
+			<GameObject _schemaVersion="0" _name="Bench2" _bActive="true">
 				<_listComponent>
 					<MeshComponent _localID="163493842152903304" _componentName="MeshComponent"
 					               _bActive="true"
@@ -177,6 +253,25 @@
 					                      _attachComponent="#0244d8c8807cd288"
 					                      _materialPath="common/models/quaternius/props/bench/materials/mi_trim_metal.material"
 					                      _sectionName="mi_trim_metal" />
+					<RigidBodyComponent _localID="7198733165449302788" _componentName="RigidBodyComponent"
+					                    _bActive="true"
+					                    _localPosition="0,0,0"
+					                    _localRotation="0,0,0"
+					                    _localScale="1,1,1"
+					                    _attachOwner="None"
+					                    _attachOwnerID="0"
+					                    _attachComponent="#0244d8c8807cd288"
+					                    _bodyType="Static"
+					                    _layer="Static"
+					                    _material="None"
+					                    _mass="0">
+						<_listShape>
+							<PhysicsShapeDesc3D _type="Box" _halfExtents="1.388,0.267,0.267" _radius="0.5" _halfHeight="0.5" _localPosition="0,0.26,0.005" _localRotation="0,0,0" _material="None">
+								<_listPoint />
+								<_listIndex />
+							</PhysicsShapeDesc3D>
+						</_listShape>
+					</RigidBodyComponent>
 				</_listComponent>
 			</GameObject>
 		</entity>
@@ -196,6 +291,25 @@
 					               _boundsRadius="0.866"
 					               _gpuSpinSeed="0"
 					               _bVisible="true" />
+					<RigidBodyComponent _localID="7198733165449302788" _componentName="RigidBodyComponent"
+					                    _bActive="true"
+					                    _localPosition="0,0,0"
+					                    _localRotation="0,0,0"
+					                    _localScale="1,1,1"
+					                    _attachOwner="None"
+					                    _attachOwnerID="0"
+					                    _attachComponent="#0244d8c8807cd288"
+					                    _bodyType="Static"
+					                    _layer="Static"
+					                    _material="None"
+					                    _mass="0">
+						<_listShape>
+							<PhysicsShapeDesc3D _type="Box" _halfExtents="0.212,0.22,0.212" _radius="0.5" _halfHeight="0.5" _localPosition="0,0.22,0" _localRotation="0,0,0" _material="None">
+								<_listPoint />
+								<_listIndex />
+							</PhysicsShapeDesc3D>
+						</_listShape>
+					</RigidBodyComponent>
 				</_listComponent>
 			</GameObject>
 		</entity>
@@ -215,11 +329,30 @@
 					               _boundsRadius="0.866"
 					               _gpuSpinSeed="0"
 					               _bVisible="true" />
+					<RigidBodyComponent _localID="7198733165449302788" _componentName="RigidBodyComponent"
+					                    _bActive="true"
+					                    _localPosition="0,0,0"
+					                    _localRotation="0,0,0"
+					                    _localScale="1,1,1"
+					                    _attachOwner="None"
+					                    _attachOwnerID="0"
+					                    _attachComponent="#0244d8c8807cd288"
+					                    _bodyType="Static"
+					                    _layer="Static"
+					                    _material="None"
+					                    _mass="0">
+						<_listShape>
+							<PhysicsShapeDesc3D _type="Box" _halfExtents="0.5,0.75,0.575" _radius="0.5" _halfHeight="0.5" _localPosition="0,0.75,-0.075" _localRotation="0,0,0" _material="None">
+								<_listPoint />
+								<_listIndex />
+							</PhysicsShapeDesc3D>
+						</_listShape>
+					</RigidBodyComponent>
 				</_listComponent>
 			</GameObject>
 		</entity>
-		<entity id="12" name="StressTest3">
-			<GameObject _schemaVersion="0" _name="StressTest3" _bActive="true">
+		<entity id="12" name="Bench3">
+			<GameObject _schemaVersion="0" _name="Bench3" _bActive="true">
 				<_listComponent>
 					<MeshComponent _localID="163493842152903304" _componentName="MeshComponent"
 					               _bActive="true"
@@ -240,6 +373,25 @@
 					                      _attachComponent="#0244d8c8807cd288"
 					                      _materialPath="common/models/quaternius/props/bench/materials/mi_trim_metal.material"
 					                      _sectionName="mi_trim_metal" />
+					<RigidBodyComponent _localID="7198733165449302788" _componentName="RigidBodyComponent"
+					                    _bActive="true"
+					                    _localPosition="0,0,0"
+					                    _localRotation="0,0,0"
+					                    _localScale="1,1,1"
+					                    _attachOwner="None"
+					                    _attachOwnerID="0"
+					                    _attachComponent="#0244d8c8807cd288"
+					                    _bodyType="Static"
+					                    _layer="Static"
+					                    _material="None"
+					                    _mass="0">
+						<_listShape>
+							<PhysicsShapeDesc3D _type="Box" _halfExtents="1.388,0.267,0.267" _radius="0.5" _halfHeight="0.5" _localPosition="0,0.26,0.005" _localRotation="0,0,0" _material="None">
+								<_listPoint />
+								<_listIndex />
+							</PhysicsShapeDesc3D>
+						</_listShape>
+					</RigidBodyComponent>
 				</_listComponent>
 			</GameObject>
 		</entity>
@@ -259,6 +411,25 @@
 					               _boundsRadius="0.866"
 					               _gpuSpinSeed="0"
 					               _bVisible="true" />
+					<RigidBodyComponent _localID="7198733165449302788" _componentName="RigidBodyComponent"
+					                    _bActive="true"
+					                    _localPosition="0,0,0"
+					                    _localRotation="0,0,0"
+					                    _localScale="1,1,1"
+					                    _attachOwner="None"
+					                    _attachOwnerID="0"
+					                    _attachComponent="#0244d8c8807cd288"
+					                    _bodyType="Static"
+					                    _layer="Static"
+					                    _material="None"
+					                    _mass="0">
+						<_listShape>
+							<PhysicsShapeDesc3D _type="Box" _halfExtents="0.212,0.22,0.212" _radius="0.5" _halfHeight="0.5" _localPosition="0,0.22,0" _localRotation="0,0,0" _material="None">
+								<_listPoint />
+								<_listIndex />
+							</PhysicsShapeDesc3D>
+						</_listShape>
+					</RigidBodyComponent>
 				</_listComponent>
 			</GameObject>
 		</entity>
@@ -278,11 +449,30 @@
 					               _boundsRadius="0.866"
 					               _gpuSpinSeed="0"
 					               _bVisible="true" />
+					<RigidBodyComponent _localID="7198733165449302788" _componentName="RigidBodyComponent"
+					                    _bActive="true"
+					                    _localPosition="0,0,0"
+					                    _localRotation="0,0,0"
+					                    _localScale="1,1,1"
+					                    _attachOwner="None"
+					                    _attachOwnerID="0"
+					                    _attachComponent="#0244d8c8807cd288"
+					                    _bodyType="Static"
+					                    _layer="Static"
+					                    _material="None"
+					                    _mass="0">
+						<_listShape>
+							<PhysicsShapeDesc3D _type="Box" _halfExtents="0.5,0.7,0.53" _radius="0.5" _halfHeight="0.5" _localPosition="0,0.7,-0.03" _localRotation="0,0,0" _material="None">
+								<_listPoint />
+								<_listIndex />
+							</PhysicsShapeDesc3D>
+						</_listShape>
+					</RigidBodyComponent>
 				</_listComponent>
 			</GameObject>
 		</entity>
-		<entity id="15" name="StressTest4">
-			<GameObject _schemaVersion="0" _name="StressTest4" _bActive="true">
+		<entity id="15" name="Bench4">
+			<GameObject _schemaVersion="0" _name="Bench4" _bActive="true">
 				<_listComponent>
 					<MeshComponent _localID="163493842152903304" _componentName="MeshComponent"
 					               _bActive="true"
@@ -303,6 +493,25 @@
 					                      _attachComponent="#0244d8c8807cd288"
 					                      _materialPath="common/models/quaternius/props/bench/materials/mi_trim_metal.material"
 					                      _sectionName="mi_trim_metal" />
+					<RigidBodyComponent _localID="7198733165449302788" _componentName="RigidBodyComponent"
+					                    _bActive="true"
+					                    _localPosition="0,0,0"
+					                    _localRotation="0,0,0"
+					                    _localScale="1,1,1"
+					                    _attachOwner="None"
+					                    _attachOwnerID="0"
+					                    _attachComponent="#0244d8c8807cd288"
+					                    _bodyType="Static"
+					                    _layer="Static"
+					                    _material="None"
+					                    _mass="0">
+						<_listShape>
+							<PhysicsShapeDesc3D _type="Box" _halfExtents="1.388,0.267,0.267" _radius="0.5" _halfHeight="0.5" _localPosition="0,0.26,0.005" _localRotation="0,0,0" _material="None">
+								<_listPoint />
+								<_listIndex />
+							</PhysicsShapeDesc3D>
+						</_listShape>
+					</RigidBodyComponent>
 				</_listComponent>
 			</GameObject>
 		</entity>
@@ -322,6 +531,25 @@
 					               _boundsRadius="0.866"
 					               _gpuSpinSeed="0"
 					               _bVisible="true" />
+					<RigidBodyComponent _localID="7198733165449302788" _componentName="RigidBodyComponent"
+					                    _bActive="true"
+					                    _localPosition="0,0,0"
+					                    _localRotation="0,0,0"
+					                    _localScale="1,1,1"
+					                    _attachOwner="None"
+					                    _attachOwnerID="0"
+					                    _attachComponent="#0244d8c8807cd288"
+					                    _bodyType="Static"
+					                    _layer="Static"
+					                    _material="None"
+					                    _mass="0">
+						<_listShape>
+							<PhysicsShapeDesc3D _type="Box" _halfExtents="0.212,0.22,0.212" _radius="0.5" _halfHeight="0.5" _localPosition="0,0.22,0" _localRotation="0,0,0" _material="None">
+								<_listPoint />
+								<_listIndex />
+							</PhysicsShapeDesc3D>
+						</_listShape>
+					</RigidBodyComponent>
 				</_listComponent>
 			</GameObject>
 		</entity>
@@ -406,7 +634,24 @@
 					                       _parkDataPath="game/playground/data/rides.xml"
 					                       _gate="4"
 					                       _autoBuildInterval="20"
-					                       _bAutoPlay="false" />
+					                       _walkCellSize="1"
+					                       _walkClearance="1.2"
+					                       _bAutoPlay="false">
+						<_listWalkBlocker>
+							<item>5</item>
+							<item>6</item>
+							<item>7</item>
+							<item>8</item>
+							<item>9</item>
+							<item>10</item>
+							<item>11</item>
+							<item>12</item>
+							<item>13</item>
+							<item>14</item>
+							<item>15</item>
+							<item>16</item>
+						</_listWalkBlocker>
+					</ParkGameModeComponent>
 					<ParkViewComponent _localID="6184027395518830417" _componentName="ParkViewComponent"
 					                   _bActive="true"
 					                   _guestPrefab="game/playground/themepark/prefabs/guest.prefab.xml"

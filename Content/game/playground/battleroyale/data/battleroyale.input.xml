@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="utf-8"?>
+<?asset guid="40265e9564804dfaae65f2cec96b5da7"?>
+<!--
+  배틀로얄 미니게임(minigames/battleroyale)의 입력 차이 — Playground 공통 묶음(data/gamesettings.xml 의 <inputMap> 줄) 위에 얹힌다. 걷기 · 낙하 조종은 공통 Move 축이다.
+  레이어 BattleRoyale 은 꺼져 있고 미니게임의 inputContexts 가 들어가 있는 동안만 켠다. 쓰기는 뛰어내리기 · 낙하산 · 동료 살리기(누른 채)를 겸한다.
+-->
+<InputMap>
+	<layers>
+		<layer name="BattleRoyale" enabled="0" blockLower="0"/>
+	</layers>
+	<action name="BattleRoyale.Fire" layer="BattleRoyale" trigger="Down">
+		<bind source="Key" code="J"/>
+		<bind source="Gamepad" code="RightShoulder"/>
+	</action>
+	<action name="BattleRoyale.Use" layer="BattleRoyale" trigger="Pressed">
+		<bind source="Key" code="E"/>
+		<bind source="Gamepad" code="A"/>
+	</action>
+</InputMap>

@@ -26,11 +26,11 @@ namespace sw
     {
     }
 
-    void MonsterHuntAlchemy::initialize( const MonsterHuntCatalog* pCatalog, const RecipeCatalog* pRecipeCatalog )
+    void MonsterHuntAlchemy::initialize( const MonsterHuntCatalog& catalog, const RecipeCatalog& recipeCatalog )
     {
-        _pCatalog       = pCatalog;
-        _pRecipeCatalog = pRecipeCatalog;
-        _crafter.initialize( pRecipeCatalog );
+        _pCatalog       = &catalog;
+        _pRecipeCatalog = &recipeCatalog;
+        _crafter.initialize( &recipeCatalog );
         _listCharge.clear();
         _listEffect.clear();
         _oilID            = hashed_string{};

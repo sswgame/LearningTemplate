@@ -172,12 +172,13 @@ namespace sw
                                                                                         : InstanceHighlightStyle::None;
         const float3                 color   = pDef != nullptr ? pDef->_highlightColor : float3{};
         const InstanceHighlight      applied{ style, color };
-        if ( applied == _appliedHighlight )
+        // 강조가 없었고 지금도 없으면 할 일이 없다. 강조하는 동안은 매번 옮긴다 — 외형 조립이 뒤늦게 붙인 메시도 받고, 같은 값은 메시가 거른다(`MeshComponent::setHighlight`).
+        if ( applied == InstanceHighlight{} && _appliedHighlight == InstanceHighlight{} )
             return;
-        _appliedHighlight  = applied;
         GameObject* pOwner = getOwner();
         if ( pOwner == nullptr )
             return;
+        _appliedHighlight = applied;
         pOwner->forEachComponentOfType<MeshComponent>( [style, &color]( MeshComponent* pMesh )
         { pMesh->setHighlight( style, color ); } );
     }

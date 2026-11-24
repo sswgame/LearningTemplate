@@ -47,7 +47,7 @@ namespace sw
 
         MonsterHuntMutagens();
 
-        void                  initialize( const MonsterHuntCatalog* pCatalog, int32 characterLevel );
+        void                  initialize( const MonsterHuntCatalog& catalog, int32 characterLevel );
         void                  setCharacterLevel( int32 characterLevel ) { _characterLevel = characterLevel; }
         MonsterHuntSlotResult equipSkill( int32 group, int32 slot, const hashed_string& skillID );
         MonsterHuntSlotResult equipMutagen( int32 group, const hashed_string& mutagenID );

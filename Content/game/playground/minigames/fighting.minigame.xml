@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="utf-8"?>
+<?asset guid="fe751b952dd04a80bea0a42147c22792"?>
+<!--
+  격투 미니게임(1 대 1 — 상대는 컴퓨터, 두 라운드 먼저 이기기) — Fighting 키트. 캐릭터(data/fighters.xml)는 게임 기능 Fighting 이 미니게임 범위에 건다.
+  맵의 FightingGameMode 오브젝트에 FightingGameModeComponent → FightingViewComponent(GF_Client_Fighting) → HUDControllerComponent 가 그 순서로 붙는다.
+  입력은 걷기 공통 레이어와 Fighting 레이어(fighting/data/fighting.input.xml)만 켠다. 짧은 대전이라 안에서 저장하지 않는다.
+  시나리오 automation/fighting_slice 가 실행 전역 변수 gv_firstMinigame 로 들어간다.
+-->
+<Minigame name="fighting" map="game/playground/fighting/maps/ring.scene.xml" entry="SceneSwitch" portalSlot="11" save="Blocked" features="Fighting" inputContexts="Movement,Fighting" catalogs="FighterCatalog"/>

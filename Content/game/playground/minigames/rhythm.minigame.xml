@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="utf-8"?>
+<?asset guid="5c4cfbd120034e8d4da53b8b973f0117"?>
+<!--
+  리듬 미니게임(네 레인 한 곡) — Rhythm 키트. 키트는 게임 기능으로 걸 것이 없다(등록하지 않는다) — 채보 · 음악은 맵의 디렉터 · 뷰가 씬 참조로 받는다.
+  판은 맵의 RhythmGameModeComponent 가 돌리고 음악 · 음악 시계 · 입력 · 모습 · HUD 는 같은 오브젝트의 RhythmViewComponent(GF_Client_Rhythm)다. 소리와 함께 흐르는 판이라 저장을 막는다(되살린 판은 음악 위치가 맞지 않는다).
+  시나리오 automation/rhythm 이 실행 전역 변수 gv_firstMinigame 로 들어간다.
+-->
+<Minigame name="rhythm" map="game/playground/rhythm/maps/stage.scene.xml" entry="SceneSwitch" portalSlot="17" save="Blocked" inputContexts="Rhythm"/>

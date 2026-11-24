@@ -90,7 +90,7 @@ namespace
             window._lateWidth  = 0.1f;
             window._score      = 100;
             _judge.setWindows( { window } );
-            SW_REQUIRE_TRUE( _session.initialize( &_chart, &_judge, sw::RhythmPlaySettings{} ) );
+            SW_REQUIRE_TRUE( _session.initialize( _chart, _judge, sw::RhythmPlaySettings{} ) );
         }
     };
 } // namespace
@@ -106,7 +106,7 @@ SW_TEST_CASE_F( RhythmPlayStateTest, RealAndCraftedStatesRead )
     _session.writeState( written );
 
     sw::RhythmPlaySession restored;
-    SW_REQUIRE_TRUE( restored.initialize( &_chart, &_judge, sw::RhythmPlaySettings{} ) );
+    SW_REQUIRE_TRUE( restored.initialize( _chart, _judge, sw::RhythmPlaySettings{} ) );
     sw::Archive reading( written.getData(), written.getSize() );
     SW_REQUIRE_TRUE( restored.readState( reading ) );
     SW_EXPECT_TRUE( restored.isHolding( 0 ) );
@@ -262,7 +262,7 @@ SW_TEST_CASE_F( RhythmPlayStateTest, PlayDeterminism )
     </Chart>)",
                                             "RhythmPlayStateTest" ) );
     const auto setup = [this, &chart]( sw::RhythmPlaySession& session ) -> bool
-    { return session.initialize( &chart, &_judge, sw::RhythmPlaySettings{} ); };
+    { return session.initialize( chart, _judge, sw::RhythmPlaySettings{} ); };
     const auto step = []( sw::RhythmPlaySession& session, int32 stepIndex )
     {
         const float32 now = static_cast<float32>( stepIndex ) / 30.0f;
@@ -291,7 +291,7 @@ SW_TEST_CASE( RhythmPlayStateTest, RefusesAJudgeWithoutWindows )
     settings._bAutoPlay = SW_TRUE;
     sw::RhythmPlaySession session;
     SW_EXPECT_LOG( "RhythmPlaySession.NoTimingWindows" );
-    SW_EXPECT_FALSE( session.initialize( &chart, &judge, settings ) );
+    SW_EXPECT_FALSE( session.initialize( chart, judge, settings ) );
     session.update( 100.0f ); // 열리지 않은 판이라 할 일이 없다
     SW_EXPECT_EQUAL( 0, session.getJudgedCount() );
 }

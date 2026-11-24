@@ -1,0 +1,35 @@
+<?xml version="1.0" encoding="utf-8"?>
+<?asset guid="764dd630409765373b61ed09a3f0ec94"?>
+<!--
+  정복 미니게임(GF_SideScrollConquest 디렉터 ConquestGameModeComponent · GF_Client_SideScrollConquest 의 ConquestViewComponent) — 병사 둘을 훈련한다 → 돌격을 명령하고 지휘관을 오른쪽(D, 공통 Move 축)으로 보낸다
+  → 전초기지를 얻는다 → 요새의 성문을 부수고 수비병을 쓰러뜨려 얻는다 → 적 거점이 없어 승리 → 결과 win 으로 미니게임이 끝난다. 판은 고정 걸음이고 난수가 없어 부하와 무관하다.
+  감시 값: Conquest.Territory · .Squad · .CommanderX · .Victory · .Defeat.
+  실행: App -scenario=game/playground/automation/sidescrollconquest.scenario.xml -unattended (체인: ctest -R Scenario.playground)
+-->
+<Scenario name="game.playground.sidescrollconquest" fixedDelta="0.0166667" timeoutFrames="900" startAfter="ScenePlaying" startTimeoutFrames="900" input="exclusive">
+	<Launch variable="gv_firstMinigame" value="sidescrollconquest"/>
+	<Launch variable="gv_playgroundAutoPlay" value="0"/>
+	<WaitUntil watch="Conquest.Territory" equals="1" timeoutFrames="120"/>
+	<Action name="Conquest.Train"/>
+	<WaitUntil watch="Conquest.Squad" equals="1" timeoutFrames="600"/>
+	<Action name="Conquest.Train"/>
+	<WaitUntil watch="Conquest.Squad" equals="2" timeoutFrames="600"/>
+	<ExpectLog id="Conquest.UnitTrained" count="2"/>
+	<Action name="Conquest.Charge"/>
+	<Press slot="Key.D"/>
+	<WaitUntil watch="Conquest.CommanderX" atLeast="4" timeoutFrames="300"/>
+	<WaitUntil watch="Conquest.Territory" equals="2" timeoutFrames="1800"/>
+	<WaitUntil watch="Conquest.Victory" equals="1" timeoutFrames="7200"/>
+	<Release slot="Key.D"/>
+	<Expect watch="Conquest.Territory" equals="3"/>
+	<Expect watch="Conquest.Defeat" equals="0"/>
+	<ExpectLog id="Conquest.GateBroken" count="1"/>
+	<ExpectLog id="Conquest.Won" count="1"/>
+	<!-- 결과를 보인 뒤 스스로 끝난다 — 돌아올 자리가 없으면 입구 씬(마을)으로 간다 -->
+	<WaitUntil watch="Minigame.Active" is="none" timeoutFrames="600"/>
+	<WaitUntil watch="Scene.Transitioning" equals="0" timeoutWallSeconds="60"/>
+	<WaitUntil watch="Minigame.LastResult" is="win" timeoutWallSeconds="60"/>
+	<ExpectActiveScene path="game/playground/maps/hub.scene.xml"/>
+	<Expect watch="Minigame.LeakCount" equals="0"/>
+	<Pass/>
+</Scenario>

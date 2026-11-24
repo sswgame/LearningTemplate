@@ -22,9 +22,9 @@ namespace sw
     {
     }
 
-    void BattleRoyaleLoadout::initialize( const BattleRoyaleCatalog* pCatalog )
+    void BattleRoyaleLoadout::initialize( const BattleRoyaleCatalog& catalog )
     {
-        _pCatalog   = pCatalog;
+        _pCatalog   = &catalog;
         _helmet     = BattleRoyaleArmorSlot{};
         _vest       = BattleRoyaleArmorSlot{};
         _backpackID = hashed_string{};

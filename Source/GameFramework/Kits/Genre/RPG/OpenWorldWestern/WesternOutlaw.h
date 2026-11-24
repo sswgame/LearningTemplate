@@ -64,7 +64,7 @@ namespace sw
 {
     /**
      * @class WesternOutlaw
-     * @brief 게임 디렉터가 하나 가지는 보통 클래스입니다(세이브는 디렉터가 `writeState` 로 싣는다). 지갑 · 평판 · 시계(필수 — 참조) · 날씨 · 플래그 · 가방(선택 — 포인터)은 빌려 씁니다.
+     * @brief 게임 디렉터가 하나 가지는 보통 클래스입니다(세이브는 디렉터가 `writeState` 로 싣는다). 지갑 · 평판 · 시계 · 플래그 · 날씨는 빌려 씁니다(필수 — 참조). 전리품 표 · 가방은 동물 정의가 켠다(`loot` 를 적은 동물이 있으면 있어야 한다).
      * @details 시간은 빌린 시계로 잰다 — `update` 가 지난번 뒤로 흐른 게임 시간과 넘은 날을 구해 생존 · 사체 · 현상금에 넘긴다. 잠과 빨리 감기(`AdvanceGameTime`)도 같은 길로 닿는다.
      *          돈의 단위는 카탈로그의 통화 하나다. 가죽 값(`WesternCarcass`)은 센트이므로 팔 때 달러로 내리고 남은 센트는 다음 판매로 넘긴다. 명예 단계의 할인 비율은 파는 값에 웃돈으로 얹는다.
      *          레드 데드 리뎀션 2 의 명예 · 현상금 · 코어 흐름을 따랐다(기억에 의존한 비교).
@@ -83,11 +83,11 @@ namespace sw
         /**
          * @brief 지역 @p regionID 에서 시작합니다. @p regionBaseTemperature 는 날씨 값을 더하기 전의 기온(섭씨)이고 @p sight 는 목격자의 시야입니다.
          * @param pLoot 손질한 사체의 전리품 테이블(동물의 `loot`)을 굴릴 카탈로그입니다. 굴린 것은 빌린 가방(@p pInventory)에 든다.
-         *              전리품 테이블을 적은 동물이 없는 판은 nullptr 이어도 된다 — 적은 동물이 있는데 없으면 손질할 때 오류다.
-         * @return 카탈로그가 없거나, 지역이 카탈로그에 없거나, 생존 수치를 열지 못하면 오류를 남기고 false 입니다(시작하지 않는다).
+         *              전리품 테이블을 적은 동물이 없는 카탈로그면 둘 다 nullptr 이어도 된다 — 적은 동물이 있는데 없으면 시작하지 않는다.
+         * @return 카탈로그가 없거나, 전리품을 적은 동물이 있는데 전리품 카탈로그 · 가방이 없거나, 지역이 카탈로그에 없거나, 생존 수치를 열지 못하면 오류를 남기고 false 입니다(시작하지 않는다).
          */
-        [[nodiscard]] bool initialize( const WesternCatalog* pCatalog, const LootCatalog* pLoot, Wallet& wallet, ReputationState& reputation, WorldClock& clock, GameFlags* pFlags,
-                                       WeatherSystem* pWeather, Inventory* pInventory, const hashed_string& regionID, float32 regionBaseTemperature,
+        [[nodiscard]] bool initialize( const WesternCatalog* pCatalog, const LootCatalog* pLoot, Wallet& wallet, ReputationState& reputation, WorldClock& clock, GameFlags& flags,
+                                       WeatherSystem& weather, Inventory* pInventory, const hashed_string& regionID, float32 regionBaseTemperature,
                                        const AIPerceptionSettings& sight );
         /** @brief 빌린 카탈로그만 @p catalog 로 바꿉니다(지갑 · 평판 · 시계는 그대로). 법 · 생존 · 동물은 이어 읽는 `readState` 가 새 판으로 다시 연다 — 읽기 앞에서만 부른다. */
         void rebindCatalog( const WesternCatalog& catalog );
@@ -137,12 +137,12 @@ namespace sw
         Wallet*               _pWallet;     ///< 빌린 지갑(`initialize` 뒤 늘 있다)
         ReputationState*      _pReputation; ///< 빌린 평판(`initialize` 뒤 늘 있다)
         WorldClock*           _pClock;      ///< 빌린 시계(`initialize` 뒤 늘 있다)
-        GameFlags*            _pFlags;      ///< 빌린 플래그(없으면 nullptr)
-        WeatherSystem*        _pWeather;    ///< 빌린 날씨(없으면 nullptr)
-        Inventory*            _pInventory;  ///< 빌린 가방(없으면 nullptr)
+        GameFlags*            _pFlags;      ///< 빌린 플래그(`initialize` 뒤 늘 있다)
+        WeatherSystem*        _pWeather;    ///< 빌린 날씨(`initialize` 뒤 늘 있다)
+        Inventory*            _pInventory;  ///< 빌린 가방(전리품을 적은 동물이 없으면 nullptr 일 수 있다)
         hashed_string         _regionID;
         const WesternCatalog* _pCatalog;
-        const LootCatalog*    _pLoot;          ///< 빌린 전리품 카탈로그(없으면 nullptr)
+        const LootCatalog*    _pLoot;          ///< 빌린 전리품 카탈로그(전리품을 적은 동물이 없으면 nullptr 일 수 있다)
         float64               _lastClockHours; ///< 지난 `update` 의 시계(날 × 24 + 시)
         float32               _regionBaseTemperature;
         PROPERTY( RuntimeState )

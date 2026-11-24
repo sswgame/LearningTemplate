@@ -56,7 +56,8 @@ namespace sw
 
         MonsterHuntBestiary();
 
-        void initialize( const MonsterHuntCatalog* pCatalog, const ElementChart* pChart );
+        /** @brief 카탈로그와 상성표를 빌립니다(도감보다 오래 살아야 합니다). 상성이 없는 판은 줄이 없는 상성표를 줍니다. */
+        void initialize( const MonsterHuntCatalog& catalog, const ElementChart& chart );
         /** @brief 괴물 책을 읽었음을 알립니다. 단계가 올랐으면 true 를 반환합니다. */
         [[nodiscard]] bool readBook( const hashed_string& monsterID );
         /** @brief 처치했음을 알립니다. 단계가 올랐으면 true 를 반환합니다. */

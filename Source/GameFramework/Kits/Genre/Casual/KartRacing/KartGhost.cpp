@@ -186,19 +186,16 @@ namespace sw
     {
     }
 
-    void KartGhostPlayer::initialize( const KartGhost* pGhost, const KinematicVehicleSettings& settings, const KartTrack* pTrack )
+    void KartGhostPlayer::initialize( const KartGhost& ghost, const KinematicVehicleSettings& settings, const KartTrack& track )
     {
-        _pGhost       = pGhost;
-        _pTrack       = pTrack;
+        _pGhost       = &ghost;
+        _pTrack       = &track;
         _frameIndex   = 0;
         _lastBoostPad = constant::invalid_index::kInt32;
         _motor.setSettings( settings );
-        _motor.setGround( pTrack );
-        if ( pGhost != nullptr )
-        {
-            _motor.reset( pGhost->getStartPosition(), pGhost->getStartYaw() );
-            _timer = FixedStepTimer{ pGhost->getStep(), constant::time::kDefaultMaxFrameSeconds };
-        }
+        _motor.setGround( &track );
+        _motor.reset( ghost.getStartPosition(), ghost.getStartYaw() );
+        _timer = FixedStepTimer{ ghost.getStep(), constant::time::kDefaultMaxFrameSeconds };
     }
 
     bool KartGhostPlayer::step()
@@ -207,8 +204,7 @@ namespace sw
             return false;
         const KartGhostFrame& frame = _pGhost->getFrames()[static_cast<size_t>( _frameIndex )];
         _motor.update( KartGhost::decodeInput( frame ), _pGhost->getStep() );
-        if ( _pTrack != nullptr )
-            (void)_pTrack->applyBoostPad( _motor, _lastBoostPad ); // 걸었는지는 쓰지 않는다. 모터가 상태를 가지고 있다
+        (void)_pTrack->applyBoostPad( _motor, _lastBoostPad ); // 걸었는지는 쓰지 않는다. 모터가 상태를 가지고 있다
         ++_frameIndex;
         return true;
     }

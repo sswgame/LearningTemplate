@@ -80,7 +80,6 @@ namespace sw
         const int32 key        = pBuilding->_level * 2 + ( bInhabited ? 1 : 0 );
         if ( key == _shownKey )
             return;
-        _shownKey = key;
 
         // 모델이 있는 건물은 바닥 가운데를 칸 묶음 가운데에, 정면을 카메라(남쪽 −Z) 쪽으로 돌려 둔다. 밭 · 조각상은 색 상자 그대로다.
         const CityBuildingDef& def    = *pBuilding->_pDef;
@@ -107,5 +106,6 @@ namespace sw
             pMesh->setLocalPosition( origin.toLocal( center + float3{ 0.0f, height * 0.5f, 0.0f } ) );
         }
         pMesh->setVisible( true );
+        _shownKey = key; // 모습을 다 맞춘 뒤에 적는다
     }
 } // namespace sw

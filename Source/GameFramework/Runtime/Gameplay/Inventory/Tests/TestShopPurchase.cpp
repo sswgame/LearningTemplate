@@ -41,8 +41,8 @@ namespace
   <Stock item="key" requires="hasMasterKey"/>
 </Shop></ShopCatalog>)",
                                                      "ShopPurchaseTest" ) );
-            _shop.initialize( &_shops, &_items );
-            SW_REQUIRE_TRUE( _inventory.initialize( &_items, 4 ) );
+            _shop.initialize( _shops, _items );
+            SW_REQUIRE_TRUE( _inventory.initialize( _items, 4 ) );
         }
 
         /** @brief 목록에서 @p offerID 를 찾습니다. */

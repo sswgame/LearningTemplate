@@ -1,0 +1,63 @@
+<?xml version="1.0" encoding="utf-8"?>
+<?asset guid="f0817ff86e5a4f9891cd360084f78ba7"?>
+<!--
+  장르 완결 루프 — 몬스터 수집 미니게임(monstercollector)의 한 판: 걷기 → 조우 → 볼 포획 → 저장 · 불러오기 → 기술 승리(경험치) → 쉼터 → 둘째 포획 → 목표 달성 → 결과를 들고 허브로.
+  플레이어와 같은 입력 맵 액션(Move · MonsterCollector.*)과 세이브 메뉴 자리의 개발 명령(game.save · game.load)만 쓴다.
+  디렉터는 키트 MonsterCollectorGameModeComponent, 입력 · 그리기 · HUD 는 클라이언트 모듈 GF_Client_MonsterCollector 의 MonsterCollectorAvatarComponent.
+  자리: (0,0 — 쉼터)에서 시작, 4 m/s — 네 걸음(4 m)마다 전투. 수치의 근거는 data/monstercollector.xml 머리말.
+  감시 값: MonsterCollector.Phase(0 걷기, 1 전투, 2 승리, 3 패배) · FoeHP · BallCount · CaptureCount · PartySize · LeaderXP · BattleCount · PlayerX · Minigame.LastResult.
+  실행: ctest -R Scenario.playground
+-->
+<Scenario name="game.playground.monstercollector_slice" fixedDelta="0.0166667" timeoutFrames="3600" startAfter="ScenePlaying" startTimeoutFrames="900" input="exclusive">
+	<Launch variable="gv_firstMinigame" value="monstercollector"/>
+	<Variable name="gv_playgroundAutoPlay" value="0"/>
+	<WaitUntil watch="MonsterCollector.BallCount" equals="3" timeoutFrames="120"/>
+	<Expect watch="MonsterCollector.Phase" equals="0"/>
+	<Expect watch="MonsterCollector.PartySize" equals="1"/>
+	<Expect watch="MonsterCollector.LeaderXP" equals="1000"/>
+	<!-- 첫 조우(x 4) — 볼로 잡는다 -->
+	<ActionAxis name="Move" x="1" seconds="1.2"/>
+	<WaitUntil watch="MonsterCollector.Phase" equals="1" timeoutFrames="120"/>
+	<AdvanceSimulation frames="30"/> <!-- 누른 이동이 끝나는 시간 — 전투가 끝난 뒤 이어 걷지 않게(시간이 내용) -->
+	<Expect watch="MonsterCollector.FoeHP" atLeast="1"/>
+	<Action name="MonsterCollector.Ball"/>
+	<WaitUntil watch="MonsterCollector.CaptureCount" equals="1" timeoutFrames="30"/>
+	<Expect watch="MonsterCollector.Phase" equals="0"/>
+	<Expect watch="MonsterCollector.PartySize" equals="2"/>
+	<Expect watch="MonsterCollector.BallCount" equals="2"/>
+	<!-- 저장하고 되돌아 걸은 뒤 불러온다 -->
+	<DevCommand line="game.save monstercollector/slice"/>
+	<WaitUntil watch="Save.Written" atLeast="1" timeoutWallSeconds="10"/>
+	<ActionAxis name="Move" x="-1" seconds="0.25"/>
+	<WaitUntil watch="MonsterCollector.PlayerX" near="3" tolerance="0.2" timeoutFrames="60"/>
+	<DevCommand line="game.load monstercollector/slice"/>
+	<WaitUntil watch="Save.Loaded" atLeast="1" timeoutWallSeconds="10"/>
+	<WaitUntil watch="MonsterCollector.PlayerX" near="4" tolerance="0.1" timeoutFrames="30"/>
+	<Expect watch="MonsterCollector.PartySize" equals="2"/>
+	<Expect watch="MonsterCollector.BallCount" equals="2"/>
+	<!-- 둘째 조우(되돌아 걸어 x 0) — 기술로 이긴다. 시작 자리는 쉼터다 -->
+	<ActionAxis name="Move" x="-1" seconds="1.2"/>
+	<WaitUntil watch="MonsterCollector.Phase" equals="1" timeoutFrames="120"/>
+	<AdvanceSimulation frames="30"/> <!-- 누른 이동이 끝나는 시간(시간이 내용) -->
+	<Action name="MonsterCollector.Attack"/>
+	<WaitUntil watch="MonsterCollector.Phase" equals="0" timeoutFrames="30"/>
+	<Expect watch="MonsterCollector.LeaderXP" equals="1024"/>
+	<Expect watch="MonsterCollector.BattleCount" equals="2"/>
+	<Action name="MonsterCollector.Rest"/>
+	<WaitUntil watch="MonsterCollector.BallCount" equals="3" timeoutFrames="30"/>
+	<ExpectLog id="MonsterCollector.Rested" count="1"/>
+	<!-- 셋째 조우(x 4) — 둘째를 잡아 목표를 채운다 -->
+	<ActionAxis name="Move" x="1" seconds="1.2"/>
+	<WaitUntil watch="MonsterCollector.Phase" equals="1" timeoutFrames="120"/>
+	<AdvanceSimulation frames="30"/> <!-- 누른 이동이 끝나는 시간(시간이 내용) -->
+	<Action name="MonsterCollector.Ball"/>
+	<WaitUntil watch="MonsterCollector.Phase" equals="2" timeoutFrames="30"/>
+	<Expect watch="MonsterCollector.CaptureCount" equals="2"/>
+	<ExpectLog id="MonsterCollector.Victory" count="1"/>
+	<!-- 결과를 보여 준 뒤 스스로 끝난다 — 돌아올 씬이 없으니(첫 진입) 입구 씬(허브)으로 간다 -->
+	<WaitUntil watch="Minigame.LastResult" is="win" timeoutWallSeconds="60"/>
+	<ExpectActiveScene path="game/playground/maps/hub.scene.xml"/>
+	<Expect watch="Minigame.Active" is="none"/>
+	<Expect watch="Minigame.LeakCount" equals="0"/>
+	<Pass/>
+</Scenario>

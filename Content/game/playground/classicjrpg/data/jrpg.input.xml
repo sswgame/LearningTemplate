@@ -1,0 +1,39 @@
+<?xml version="1.0" encoding="utf-8"?>
+<?asset guid="ba657f7694adfc4d129184809dde6004"?>
+<!--
+  등불 길 미니게임(minigames/classicjrpg)의 입력 차이 — Playground 공통 묶음(data/gamesettings.xml 의 <inputMap> 줄) 위에 얹힌다. 게임 코드는 키를 묻지 않고 액션 이름만 묻는다. 걷기 · 적 고르기는 공통 `Move` 축이다.
+  레이어 JRPG 는 꺼져 있고 미니게임의 inputContexts 가 들어가 있는 동안만 켠다 — 허브 · 다른 미니게임의 같은 키와 겹치지 않는다.
+-->
+<InputMap>
+	<layers>
+		<layer name="JRPG" enabled="0" blockLower="0"/>
+	</layers>
+	<action name="JRPG.Attack" layer="JRPG" trigger="Pressed">
+		<bind source="Key" code="J"/>
+		<bind source="Gamepad" code="X"/>
+	</action>
+	<action name="JRPG.Spell" layer="JRPG" trigger="Pressed">
+		<bind source="Key" code="K"/>
+		<bind source="Gamepad" code="Y"/>
+	</action>
+	<action name="JRPG.Defend" layer="JRPG" trigger="Pressed">
+		<bind source="Key" code="L"/>
+		<bind source="Gamepad" code="LeftShoulder"/>
+	</action>
+	<action name="JRPG.Flee" layer="JRPG" trigger="Pressed">
+		<bind source="Key" code="R"/>
+		<bind source="Gamepad" code="RightShoulder"/>
+	</action>
+	<action name="JRPG.Rest" layer="JRPG" trigger="Pressed">
+		<bind source="Key" code="E"/>
+		<bind source="Gamepad" code="A"/>
+	</action>
+	<action name="JRPG.Equip" layer="JRPG" trigger="Pressed">
+		<bind source="Key" code="Q"/>
+		<bind source="Gamepad" code="DPadUp"/>
+	</action>
+	<action name="JRPG.ClassChange" layer="JRPG" trigger="Pressed">
+		<bind source="Key" code="F"/>
+		<bind source="Gamepad" code="B"/>
+	</action>
+</InputMap>

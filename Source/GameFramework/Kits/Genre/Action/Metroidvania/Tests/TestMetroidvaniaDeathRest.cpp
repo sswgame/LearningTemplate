@@ -67,11 +67,10 @@ namespace
         {
             if ( _catalog.loadFromXMLText( kDuelXML, "MetroidvaniaDeathRestTest" ) == false || _loot.loadFromXMLText( kDuelLootXML, "loot" ) == false )
                 return false;
-            _state.initialize( &_catalog, &_wallet );
-            return _healthMachine.initialize( _catalog.getRules()._health );
+            return _state.initialize( _catalog, _wallet, &_loot ) && _healthMachine.initialize( _catalog.getRules()._health );
         }
 
-        int32 kill( const sw::hashed_string& spawnID, const sw::hashed_string& enemyID ) { return _state.registerKill( spawnID, enemyID, _flags, &_loot, _random, _drops ); }
+        int32 kill( const sw::hashed_string& spawnID, const sw::hashed_string& enemyID ) { return _state.registerKill( spawnID, enemyID, _flags, _random, _drops ); }
 
         int32 countEvents( sw::MetroidvaniaDeathRestEventKind type )
         {
@@ -260,7 +259,7 @@ SW_TEST_CASE( MetroidvaniaDeathRestTest, FlaskChargesAndUpgrades )
 }
 
 /**
- * @brief [MetroidvaniaDeathRestTest] 처치는 통화 · 전리품을 주고 위치마다 한 번이다. 모르는 적은 기록도 남기지 않는다. 보스는 플래그를 켠다. 통화가 0 이어도 처치이고, 전리품 카탈로그가 없으면 전리품만 없다
+ * @brief [MetroidvaniaDeathRestTest] 처치는 통화 · 전리품을 주고 위치마다 한 번이다. 모르는 적은 기록도 남기지 않는다. 보스는 플래그를 켠다. 통화가 0 이어도 처치다
  */
 SW_TEST_CASE( MetroidvaniaDeathRestTest, KillsRewardOncePerSpawn )
 {
@@ -282,32 +281,30 @@ SW_TEST_CASE( MetroidvaniaDeathRestTest, KillsRewardOncePerSpawn )
     SW_EXPECT_EQUAL( 300, bench.kill( kSpawnB, kHornet ) );
     SW_EXPECT_TRUE( bench._flags.hasFlag( sw::hashed_string( "boss.hornet" ) ) );
     SW_EXPECT_EQUAL( 1, bench.countEvents( sw::MetroidvaniaDeathRestEventKind::BossDefeated ) );
-
-    sw::ItemStackList drops;
-    SW_EXPECT_EQUAL( 5, bench._state.registerKill( sw::hashed_string( "spawnD" ), kHusk, bench._flags, nullptr, bench._random, drops ) );
-    SW_EXPECT_TRUE( drops.isEmpty() );
 }
 
 /**
- * @brief [MetroidvaniaDeathRestTest] 지갑이 없으면 보상도 시체도 없고, 카탈로그가 없으면 쉬기 · 처치 · 되찾기가 모두 거절이다
+ * @brief [MetroidvaniaDeathRestTest] 적이 전리품 표를 적었는데 전리품 카탈로그를 주지 않거나 그 표가 없으면 열지 않고, 아무 적도 적지 않은 카탈로그는 전리품 없이 연다. 열기 전에는 쉬기 · 처치 · 되찾기가 모두 거절이다
  */
-SW_TEST_CASE( MetroidvaniaDeathRestTest, MissingWalletOrCatalogIsSafe )
+SW_TEST_CASE( MetroidvaniaDeathRestTest, LootTablesNeedALootCatalog )
 {
+    SW_EXPECT_LOG( "MetroidvaniaDeathRest.EnemyNoLootTable" );
     DeathRestBench bench;
     SW_REQUIRE_TRUE( bench.setUp() );
-    sw::MetroidvaniaDeathRestState noWallet;
-    noWallet.initialize( &bench._catalog, nullptr );
-    SW_EXPECT_EQUAL( 5, noWallet.registerKill( kSpawnA, kHusk, bench._flags, nullptr, bench._random, bench._drops ) );
-    (void)noWallet.die( kHall, sw::float2{}, bench._healthMachine );
-    SW_EXPECT_TRUE( noWallet.getCorpse()._bActive == SW_FALSE );
+    sw::MetroidvaniaDeathRestState unopened;
+    SW_EXPECT_FALSE( unopened.initialize( bench._catalog, bench._wallet, nullptr ) );
+    const sw::LootCatalog empty{};
+    SW_EXPECT_FALSE( unopened.initialize( bench._catalog, bench._wallet, &empty ) );
+    SW_EXPECT_FALSE( unopened.rest( kBench, bench._healthMachine ) );
+    SW_EXPECT_EQUAL( -1, unopened.registerKill( kSpawnA, kHusk, bench._flags, bench._random, bench._drops ) );
+    SW_EXPECT_TRUE( unopened.die( kHall, sw::float2{}, bench._healthMachine ).empty() );
+    SW_EXPECT_FALSE( unopened.drinkFlask( bench._healthMachine ) );
+    SW_EXPECT_FALSE( unopened.upgradeFlaskCharges() );
+    SW_EXPECT_NEAR( 0.0f, unopened.computeFlaskHeal(), kDuelTolerance );
 
-    sw::MetroidvaniaDeathRestState noCatalog;
-    noCatalog.initialize( nullptr, nullptr );
-    SW_EXPECT_FALSE( noCatalog.rest( kBench, bench._healthMachine ) );
-    SW_EXPECT_EQUAL( -1, noCatalog.registerKill( kSpawnA, kHusk, bench._flags, nullptr, bench._random, bench._drops ) );
-    SW_EXPECT_FALSE( noCatalog.drinkFlask( bench._healthMachine ) );
-    SW_EXPECT_FALSE( noCatalog.upgradeFlaskCharges() );
-    SW_EXPECT_NEAR( 0.0f, noCatalog.computeFlaskHeal(), kDuelTolerance );
+    const sw::MetroidvaniaCatalog  plain{}; // 적이 없다
+    sw::MetroidvaniaDeathRestState withoutLoot;
+    SW_EXPECT_TRUE( withoutLoot.initialize( plain, bench._wallet, nullptr ) );
 }
 
 /**
@@ -391,13 +388,11 @@ SW_TEST_CASE( MetroidvaniaDeathRestTest, ReadRejectsBrokenBytes )
 }
 
 /**
- * @brief [MetroidvaniaDuelistTest] 카탈로그가 없으면 초기화를 거절하고 공격 · 받기 모두 없는 일이다
+ * @brief [MetroidvaniaDuelistTest] 열기 전의 전투원은 공격 · 받기 모두 없는 일이다
  */
-SW_TEST_CASE( MetroidvaniaDuelistTest, RequiresACatalog )
+SW_TEST_CASE( MetroidvaniaDuelistTest, UnopenedDuelistDoesNothing )
 {
-    SW_EXPECT_LOG( "MetroidvaniaDuelist.MetroidvaniaDuelistRefusedNoCatalog" );
     sw::MetroidvaniaDuelist duelist;
-    SW_EXPECT_FALSE( duelist.initialize( nullptr ) );
     SW_EXPECT_FALSE( duelist.tryAttack() );
     SW_EXPECT_FALSE( duelist.tryDodge() );
     SW_EXPECT_TRUE( duelist.receiveAttack( 10.0f, 0.0f )._result == sw::MetroidvaniaDefenseResult::Ignored );
@@ -413,7 +408,7 @@ SW_TEST_CASE( MetroidvaniaDuelistTest, ActionsSpendStamina )
     sw::MetroidvaniaCatalog catalog;
     SW_REQUIRE_TRUE( catalog.loadFromXMLText( kDuelXML, "MetroidvaniaDuelistTest" ) );
     sw::MetroidvaniaDuelist duelist;
-    SW_REQUIRE_TRUE( duelist.initialize( &catalog ) );
+    SW_REQUIRE_TRUE( duelist.initialize( catalog ) );
     SW_EXPECT_TRUE( duelist.tryAttack() );
     SW_EXPECT_NEAR( 85.0f, duelist.getStamina().getValue(), kDuelTolerance );
     SW_EXPECT_TRUE( duelist.tryDodge() );
@@ -424,7 +419,7 @@ SW_TEST_CASE( MetroidvaniaDuelistTest, ActionsSpendStamina )
     SW_EXPECT_NEAR( 10.0f, duelist.getStamina().getValue(), kDuelTolerance );
 
     sw::MetroidvaniaDuelist dead;
-    SW_REQUIRE_TRUE( dead.initialize( &catalog ) );
+    SW_REQUIRE_TRUE( dead.initialize( catalog ) );
     dead.getHealthMachine().kill( sw::nullopt );
     SW_EXPECT_FALSE( dead.tryAttack() );
     SW_EXPECT_FALSE( dead.tryDodge() );
@@ -438,7 +433,7 @@ SW_TEST_CASE( MetroidvaniaDuelistTest, ParryWindowBoundaries )
     sw::MetroidvaniaCatalog catalog;
     SW_REQUIRE_TRUE( catalog.loadFromXMLText( kDuelXML, "MetroidvaniaDuelistTest" ) );
     sw::MetroidvaniaDuelist duelist;
-    SW_REQUIRE_TRUE( duelist.initialize( &catalog ) );
+    SW_REQUIRE_TRUE( duelist.initialize( catalog ) );
 
     SW_EXPECT_TRUE( duelist.receiveAttack( 10.0f, 0.0f )._result == sw::MetroidvaniaDefenseResult::Hit );
     duelist.pressParry();
@@ -471,7 +466,7 @@ SW_TEST_CASE( MetroidvaniaDuelistTest, GuardSpendsStaminaAndCanBreak )
     sw::MetroidvaniaCatalog catalog;
     SW_REQUIRE_TRUE( catalog.loadFromXMLText( kDuelXML, "MetroidvaniaDuelistTest" ) );
     sw::MetroidvaniaDuelist duelist;
-    SW_REQUIRE_TRUE( duelist.initialize( &catalog ) );
+    SW_REQUIRE_TRUE( duelist.initialize( catalog ) );
 
     duelist.setDamageTakenScale( 2.0f );
     sw::MetroidvaniaDefenseOutcome result = duelist.receiveAttack( 5.0f, 4.0f );
@@ -513,7 +508,7 @@ SW_TEST_CASE( MetroidvaniaDuelistTest, InvalidDamageDoesNotBreakTheGuard )
     sw::MetroidvaniaCatalog catalog;
     SW_REQUIRE_TRUE( catalog.loadFromXMLText( kDuelXML, "MetroidvaniaDuelistTest" ) );
     sw::MetroidvaniaDuelist duelist;
-    SW_REQUIRE_TRUE( duelist.initialize( &catalog ) );
+    SW_REQUIRE_TRUE( duelist.initialize( catalog ) );
     duelist.setGuarding( true );
 
     const float32 arrDamage[] = { -50.0f, std::numeric_limits<float32>::quiet_NaN() };
@@ -536,7 +531,7 @@ SW_TEST_CASE( MetroidvaniaDuelistTest, IgnoredAttacksCostNothing )
     sw::MetroidvaniaCatalog catalog;
     SW_REQUIRE_TRUE( catalog.loadFromXMLText( kDuelXML, "MetroidvaniaDuelistTest" ) );
     sw::MetroidvaniaDuelist duelist;
-    SW_REQUIRE_TRUE( duelist.initialize( &catalog ) );
+    SW_REQUIRE_TRUE( duelist.initialize( catalog ) );
     duelist.setGuarding( true );
     duelist.pressParry();
     duelist.getHealthMachine().setInvulnerable( 1.0f );
@@ -547,7 +542,7 @@ SW_TEST_CASE( MetroidvaniaDuelistTest, IgnoredAttacksCostNothing )
     duelist.getHealthMachine().setInvulnerable( 0.0f );
 
     sw::MetroidvaniaDuelist dead;
-    SW_REQUIRE_TRUE( dead.initialize( &catalog ) );
+    SW_REQUIRE_TRUE( dead.initialize( catalog ) );
     dead.getHealthMachine().kill( sw::nullopt );
     SW_EXPECT_TRUE( dead.receiveAttack( 10.0f, 5.0f )._result == sw::MetroidvaniaDefenseResult::Ignored );
 }
@@ -560,9 +555,9 @@ SW_TEST_CASE( MetroidvaniaDuelistTest, RiposteAndStaggerMultiplyOnce )
     sw::MetroidvaniaCatalog catalog;
     SW_REQUIRE_TRUE( catalog.loadFromXMLText( kDuelXML, "MetroidvaniaDuelistTest" ) );
     sw::MetroidvaniaDuelist attacker;
-    SW_REQUIRE_TRUE( attacker.initialize( &catalog ) );
+    SW_REQUIRE_TRUE( attacker.initialize( catalog ) );
     sw::MetroidvaniaDuelist target;
-    SW_REQUIRE_TRUE( target.initialize( &catalog ) );
+    SW_REQUIRE_TRUE( target.initialize( catalog ) );
     SW_EXPECT_NEAR( 10.0f, attacker.computeAttackDamage( 10.0f, target ), kDuelTolerance );
 
     attacker.pressParry();
@@ -599,7 +594,7 @@ SW_TEST_CASE( MetroidvaniaDuelistTest, StateRoundTripAndRejection )
     sw::MetroidvaniaCatalog catalog;
     SW_REQUIRE_TRUE( catalog.loadFromXMLText( kDuelXML, "MetroidvaniaDuelistTest" ) );
     sw::MetroidvaniaDuelist original;
-    SW_REQUIRE_TRUE( original.initialize( &catalog ) );
+    SW_REQUIRE_TRUE( original.initialize( catalog ) );
     original.update( 1.0f );
     SW_REQUIRE_TRUE( original.tryAttack() );
     (void)original.receiveAttack( 10.0f, 5.0f );
@@ -614,7 +609,7 @@ SW_TEST_CASE( MetroidvaniaDuelistTest, StateRoundTripAndRejection )
     const size_t            size   = static_cast<size_t>( written.getSize() );
     const size_t            timeAt = sw::StateIO::kReflectedHeaderBytes;
     sw::MetroidvaniaDuelist target;
-    SW_REQUIRE_TRUE( target.initialize( &catalog ) );
+    SW_REQUIRE_TRUE( target.initialize( catalog ) );
     const auto expectRejected = [&]( size_t offset, auto value )
     {
         sw::vector<uint8> listByte( written.getData(), written.getData() + size );
@@ -655,7 +650,7 @@ SW_TEST_CASE( MetroidvaniaDuelistTest, DuelistDeterminism )
     sw::MetroidvaniaCatalog catalog;
     SW_REQUIRE_TRUE( catalog.loadFromXMLText( kDuelXML, "MetroidvaniaDuelistTest" ) );
     const auto setup = [&catalog]( sw::MetroidvaniaDuelist& duelist )
-    { return duelist.initialize( &catalog ); };
+    { return duelist.initialize( catalog ); };
     const auto step = []( sw::MetroidvaniaDuelist& duelist, int32 stepIndex )
     {
         if ( stepIndex % 9 == 0 )

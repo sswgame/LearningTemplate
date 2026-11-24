@@ -34,8 +34,8 @@ namespace
   <Item id="stone" category="Material" maxStack="10" weight="1"/>
 </ItemCatalog>)",
                                                      "InventoryCommandTest" ) );
-            SW_REQUIRE_TRUE( _bag.initialize( &_items, 4 ) );
-            _equipment.initialize( &_items, "Head,MainHand", nullptr, nullptr );
+            SW_REQUIRE_TRUE( _bag.initialize( _items, 4 ) );
+            _equipment.initialize( _items, "Head,MainHand", nullptr, nullptr );
         }
 
         sw::InventoryCommandResult run( sw::InventoryCommandKind kind, int32 from, int32 to = sw::InventoryCommand::kNoSlot, int32 count = 0, const utf8* pEquipSlot = "" )
@@ -138,9 +138,9 @@ SW_TEST_CASE( InventoryCommandTest, RestoredWornItemsDoNotDependOnSlotOrderAndAr
 </ItemCatalog>)",
                                             "InventoryCommandTest" ) );
     sw::Equipment equipment;
-    equipment.initialize( &items, "Head,Back,Body", nullptr, nullptr );
+    equipment.initialize( items, "Head,Back,Body", nullptr, nullptr );
     sw::Inventory bag;
-    SW_REQUIRE_TRUE( bag.initialize( &items, 1 ) );
+    SW_REQUIRE_TRUE( bag.initialize( items, 1 ) );
     SW_REQUIRE_EQUAL( 1, bag.addItem( sw::hashed_string( "plate" ), 1 ) ); // 가방이 찼다
 
     const auto makeWorn = []( const utf8* pSlot, const utf8* pItem )
@@ -178,7 +178,7 @@ SW_TEST_CASE( InventoryCommandTest, SetConditionUsesTheLookupGivenAtInitialize )
     sw::EquipmentSetCatalog sets;
     SW_REQUIRE_TRUE( sets.loadFromXML( doc.getRoot(), report, "InventoryCommandTest" ) );
     sw::Equipment equipment;
-    equipment.initialize( &items, "Head,Back", &sets, nullptr );
+    equipment.initialize( items, "Head,Back", &sets, nullptr );
     SW_EXPECT_TRUE( equipment.evaluateEquip( sw::hashed_string( "Back" ), sw::hashed_string( "cape" ) ) == sw::EquipResult::ConditionNotMet );
     sw::InventorySlot helm;
     helm._itemID = sw::hashed_string( "helm" );
@@ -203,9 +203,9 @@ SW_TEST_CASE( InventoryCommandTest, CharacterConditionFollowsTheBorrowedContext 
     character._tags.addTag( sw::TagID::request( "InventoryCommandTest.Royal" ) );
     character._bodyShape = sw::hashed_string( "Slim" );
     sw::Equipment equipment;
-    equipment.initialize( &items, "Head,Waist", nullptr, &character );
+    equipment.initialize( items, "Head,Waist", nullptr, &character );
     sw::Inventory bag;
-    SW_REQUIRE_TRUE( bag.initialize( &items, 0 ) );
+    SW_REQUIRE_TRUE( bag.initialize( items, 0 ) );
     sw::InventorySlot item;
     item._count  = 1;
     item._itemID = sw::hashed_string( "crown" );

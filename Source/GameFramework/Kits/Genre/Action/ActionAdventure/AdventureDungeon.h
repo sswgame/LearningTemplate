@@ -230,7 +230,7 @@ namespace sw
 
         AdventureDungeonState();
 
-        void initialize( const AdventureDungeonCatalog* pCatalog );
+        void initialize( const AdventureDungeonCatalog& catalog );
 
         /** @brief 작은 열쇠를 줍습니다. 상자 밖에서 줍는 경우로, 적이 떨어뜨린 열쇠가 해당합니다. 모르는 던전이면 false 를 반환합니다. */
         bool addSmallKey( const hashed_string& dungeonID, int32 count = 1 );

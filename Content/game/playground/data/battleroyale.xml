@@ -1,9 +1,24 @@
 <?xml version="1.0" encoding="utf-8"?>
 <?asset guid="2639d4b48c3d4d25ae4e56a73e252aa3"?>
 <!--
-  장르 키트 시연 — 배틀로얄 판 하나(maps/kit_battleroyale). 체력 100 · 기절 체력 50, 자기장은 맵 전체를 덮고 오래 기다려 원 밖 피해가 없다.
+  배틀로얄 미니게임(minigames/battleroyale)의 규칙 — 게임 기능 BattleRoyale 이 미니게임 범위에 건다. 전리품 표는 battleroyale/data/island.loot.xml(디렉터의 _lootDataPath).
+  맵은 100 m 정사각형(x · z 0..100)이다. 비행은 길어야 6 초, 낙하는 3 초 남짓이고 구역은 1 분 안에 점이 된다 — 끝에 남은 사람도 구역 피해로 판이 끝난다.
+  방어구 · 가방 id 는 아이템 id(common/data/items.xml)와 같다.
 -->
 <BattleRoyaleCatalog mapSize="100">
-	<Player health="100" downedHealth="50" bleedout="10" reviveTime="2" reviveHealthRatio="0.5" revivers="2" slots="4"/>
-	<Zone startRadius="1000"><Phase wait="1000" shrink="1" ratio="1" damage="0"/></Zone>
+	<Player health="100" downedHealth="60" bleedout="6" reviveTime="3" reviveHealthRatio="0.4" revivers="2" slots="4"/>
+	<Flight speed="25" altitude="60" jumpStart="0.25" jumpEnd="0.75" offset="0.6"/>
+	<Fall freeFallSpeed="30" freeFallHorizontal="14" parachuteSpeed="10" parachuteHorizontal="8" autoOpenHeight="20"/>
+	<Zone startRadius="0">
+		<Phase wait="1" shrink="12" ratio="0.5" damage="2"/>
+		<Phase wait="4" shrink="8" ratio="0.5" damage="5"/>
+		<Phase wait="4" shrink="6" ratio="0.4" damage="10"/>
+		<Phase wait="3" shrink="6" ratio="0" damage="20"/>
+	</Zone>
+	<Armor id="helmet_knight" slot="Helmet" tier="1" reduction="0.3" durability="60"/>
+	<Armor id="helmet_skeleton" slot="Helmet" tier="1" reduction="0.2" durability="40"/>
+	<Armor id="shield_round" slot="Vest" tier="1" reduction="0.3" durability="80"/>
+	<Backpack id="cape_rogue" tier="1" capacity="50"/>
+	<LootSpot id="crate" table="crate" chance="0.9" rolls="1" rollsMax="2"/>
+	<SupplyDrop table="airdrop" times="15"/>
 </BattleRoyaleCatalog>

@@ -150,7 +150,8 @@ namespace sw
 
         ReputationState();
 
-        void initialize( const ReputationCatalog* pCatalog );
+        /** @brief 카탈로그를 빌려 모두 시작값으로 엽니다. 단계가 없는 판은 줄 없는 카탈로그를 준다. */
+        void initialize( const ReputationCatalog& catalog );
         /** @brief 값을 바꾸고 연결된 세력에도 번지게 합니다. 번짐은 한 단계만 일어나므로 서로 연결되어 있어도 반복되지 않습니다. 실제로 바뀐 값을 반환합니다. */
         int32 changeValue( const hashed_string& factionID, int32 delta );
         void  setValue( const hashed_string& factionID, int32 value );

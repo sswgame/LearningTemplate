@@ -175,11 +175,11 @@ namespace sw
         CreatureTown();
 
         /**
-         * @brief 크기를 정하고 모든 셀을 비웁니다. 규칙 수치는 @p pCatalog 의 `<Rules>` 에서만 받는다(없으면 false, 감사 K-4). @p width 나 @p height 가 1 미만이면 오류를 남기고 false 입니다(조용히 1 로 맞추지 않습니다). 평판, 부탁 일지, 시계는 없어도 됩니다(평판이 없으면 호감도 0, 일지가 없으면 부탁 없음, 시계가 없으면 0일).
-         * @param pReputation 호감도(세력 `creature.<종 id>`)를 쌓을 플레이어 평판, @p pQuestLog 부탁 일지, @p pClock 날을 셀 시계 — 빌려 쓰며 마을보다 오래 살아야 한다(선택, 없으면 nullptr).
+         * @brief 크기를 정하고 모든 셀을 비웁니다. 규칙 수치는 @p pCatalog 의 `<Rules>` 에서만 받는다(없으면 false, 감사 K-4). @p width 나 @p height 가 1 미만이면 오류를 남기고 false 입니다(조용히 1 로 맞추지 않습니다). 평판, 부탁 일지, 시계를 빌립니다.
+         * @param reputation 호감도(세력 `creature.<종 id>`)를 쌓을 플레이어 평판, @p questLog 부탁 일지, @p clock 날을 셀 시계 — 빌려 쓰며 마을보다 오래 살아야 한다.
          * @return 크기가 1 이상이면 true 입니다. 밖이면 오류를 남기고 false 이며 상태를 바꾸지 않습니다(값을 조용히 맞추지 않는다).
          */
-        [[nodiscard]] bool initialize( const CreatureLifeCatalog* pCatalog, ReputationState* pReputation, QuestLog* pQuestLog, WorldClock* pClock, int32 width, int32 height );
+        [[nodiscard]] bool initialize( const CreatureLifeCatalog* pCatalog, ReputationState& reputation, QuestLog& questLog, const WorldClock& clock, int32 width, int32 height );
 
         /**
          * @brief 공유 땅을 빌립니다. 마을 셀 (0, 0) 이 땅 셀 @p origin 에 해당합니다. 이미 놓인 오브젝트의 셀을 얻고, 그 뒤로는 오브젝트를 놓을 때 얻고 비우면 반납합니다.
@@ -202,8 +202,8 @@ namespace sw
          * @return 진행한 목표 수이다(0 이면 아무것도 빼지 않았다).
          */
         int32 deliverItem( const hashed_string& itemID, int32 count, Inventory& inventory );
-        /** @brief 능력으로 셀을 바꿉니다. 얻은 아이템은 @p pYieldInventory(없어도 됩니다)에 넣습니다. */
-        CreatureAbilityResult useAbility( const hashed_string& speciesID, const hashed_string& abilityID, int32 x, int32 y, Inventory* pYieldInventory );
+        /** @brief 능력으로 셀을 바꿉니다. 얻은 아이템은 @p yieldInventory 에 넣습니다. */
+        CreatureAbilityResult useAbility( const hashed_string& speciesID, const hashed_string& abilityID, int32 x, int32 y, Inventory& yieldInventory );
 
         /** @brief 빈 셀에 집을 짓고 집 index 를 반환합니다. 밖이거나 셀이 차 있거나 공유 땅이 남의 것이면 -1 입니다. */
         optional<int32>     placeHouse( int32 x, int32 y, int32 capacity );
@@ -278,9 +278,9 @@ namespace sw
         NotificationBuffer<CreatureTownEvent> _eventBuffer;
         CreatureTownSettings                  _settings;
         const CreatureLifeCatalog*            _pCatalog;
-        ReputationState*                      _pReputation; ///< 빌린 평판이다(호감도이며 없으면 0)
-        QuestLog*                             _pQuestLog;   ///< 빌린 부탁 일지(없으면 부탁 없음)
-        const WorldClock*                     _pClock;      ///< 빌린 시계이다(날이며 없으면 0일)
+        ReputationState*                      _pReputation; ///< 빌린 평판이다(호감도 — `initialize` 뒤 늘 있다)
+        QuestLog*                             _pQuestLog;   ///< 빌린 부탁 일지(`initialize` 뒤 늘 있다)
+        const WorldClock*                     _pClock;      ///< 빌린 시계이다(날 — `initialize` 뒤 늘 있다)
         GridTopology                          _topology;
         LandBinding                           _land; ///< 빌린 공유 땅(없으면 단독 동작)
         PROPERTY( RuntimeState, Min = 1 )

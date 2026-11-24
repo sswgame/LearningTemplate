@@ -32,8 +32,12 @@ namespace sw
 
         /** @brief @p pMaterial 위에 @p color 를 입힌 인스턴스를 찾거나 만듭니다. 머티리얼이 없거나 만들 수 없으면 nullptr 입니다. */
         shared_ptr<MaterialInstance> acquire( Material* pMaterial, const float4& color );
-        /** @brief @p mesh 의 머티리얼에서 @p color 인스턴스를 얻어 메시에 겁니다. 머티리얼이 없으면 메시를 그대로 둡니다. */
-        void apply( MeshComponent& mesh, const float4& color );
+        /**
+         * @brief @p mesh 의 머티리얼에서 @p color 인스턴스를 얻어 메시에 겁니다. 머티리얼이 없으면 메시를 그대로 두고 false 입니다.
+         * @details 이미 그 인스턴스를 건 메시면 아무 일도 하지 않으므로 프레임마다 불러도 된다 — 쓰는 쪽은 "칠했다" 를 따로 적지 않는다(적은 뒤에 머티리얼이 오거나 바뀌면 색을 잃는다).
+         *          한 번만 칠하는 쪽은 결과를 본다.
+         */
+        [[nodiscard]] bool apply( MeshComponent& mesh, const float4& color );
         /** @brief 든 인스턴스를 모두 놓습니다. */
         void clear() { _listEntry.clear(); }
 

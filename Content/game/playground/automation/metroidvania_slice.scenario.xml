@@ -1,0 +1,81 @@
+<?xml version="1.0" encoding="utf-8"?>
+<?asset guid="7ace1077f5f643f68e6ce63888d5cbe6"?>
+<!--
+  메트로배니아 미니게임(metroidvania — GF_Metroidvania 키트)의 한 판 — 쉬기 → 보통 적 → 능력 줍기 → 저장 · 불러오기 → 2단 점프로 문턱 넘기 → 보스 → 결과 보고 → 허브.
+  플레이어와 같은 입력(키 · 입력 맵 액션 Metroidvania.*)과 세이브 메뉴 자리의 개발 명령(game.save · game.load)만 쓴다.
+  자리: 시작 · 쉬는 곳 2.5, 허물 9, 날개 18, 문턱 벽 24(높이 4 m — 한 번 점프 3.2 m 로 못 넘는다), 파수꾼 33. 달리기 7 m/s, 사거리 2.2 m. 허물은 두 번(50 씩), 파수꾼은 다섯 번(받는 피해 0.4 배).
+  감시 값: Metroidvania.Phase(0 탐험, 1 죽음, 2 승리) · .PlayerX · .Abilities · .Currency · .VisitedAreas.
+  실행: ctest -R Scenario.playground · App -scenario=game/playground/automation/metroidvania_slice.scenario.xml -unattended
+-->
+<Scenario name="game.playground.metroidvania_slice" fixedDelta="0.0166667" timeoutFrames="6000" startAfter="ScenePlaying" startTimeoutFrames="900" input="exclusive">
+	<Launch variable="gv_firstMinigame" value="metroidvania"/>
+	<WaitUntil watch="Minigame.Active" is="metroidvania" timeoutWallSeconds="60"/>
+	<WaitUntil watch="Metroidvania.VisitedAreas" equals="1" timeoutFrames="120"/>
+	<Expect watch="Save.Blocked" equals="0"/>
+	<Expect watch="Metroidvania.Phase" equals="0"/>
+	<!-- 쉬는 곳에서 쉰다 -->
+	<Action name="Metroidvania.Use"/>
+	<AdvanceSimulation frames="3"/> <!-- 누름이 디렉터 걸음에 닿는다(프레임 경계) -->
+	<ExpectLog id="Metroidvania.Rested" count="1"/>
+	<!-- 허물 앞까지 가서 두 번 벤다 -->
+	<Press slot="Key.D"/>
+	<WaitUntil watch="Metroidvania.PlayerX" atLeast="7.1" timeoutFrames="120"/>
+	<Release slot="Key.D"/>
+	<Action name="Metroidvania.Attack"/>
+	<AdvanceSimulation frames="30"/> <!-- 공격 간격(0.35 초)이 지난다(시간이 내용) -->
+	<Action name="Metroidvania.Attack"/>
+	<WaitUntil watch="Metroidvania.Currency" equals="5" timeoutFrames="60"/>
+	<!-- 회랑의 날개를 줍고 문턱 벽에 선다 — 한 번 점프로는 넘지 못한다 -->
+	<Press slot="Key.D"/>
+	<WaitUntil watch="Metroidvania.Abilities" equals="1" timeoutFrames="300"/>
+	<WaitUntil watch="Metroidvania.PlayerX" atLeast="23.5" timeoutFrames="300"/>
+	<Release slot="Key.D"/>
+	<Expect watch="Metroidvania.VisitedAreas" equals="2"/>
+	<!-- 저장하고 왼쪽으로 걸은 뒤 불러오면 벽 앞이고 능력 · 통화가 그대로다 -->
+	<Store watch="Save.Written" as="writtenBefore"/>
+	<DevCommand line="game.save metroidvania/slice"/>
+	<WaitUntil watch="Save.Written" differsFrom="writtenBefore" timeoutWallSeconds="10"/>
+	<Press slot="Key.A"/>
+	<WaitUntil watch="Metroidvania.PlayerX" atMost="21" timeoutFrames="120"/>
+	<Release slot="Key.A"/>
+	<Store watch="Save.Loaded" as="loadedBefore"/>
+	<DevCommand line="game.load metroidvania/slice"/>
+	<WaitUntil watch="Save.Loaded" differsFrom="loadedBefore" timeoutWallSeconds="10"/>
+	<WaitUntil watch="Metroidvania.PlayerX" atLeast="23.5" timeoutFrames="60"/>
+	<Expect watch="Metroidvania.Abilities" equals="1"/>
+	<Expect watch="Metroidvania.Currency" equals="5"/>
+	<Expect watch="Metroidvania.VisitedAreas" equals="2"/>
+	<!-- 2단 점프로 문턱을 넘는다 — 오르는 시간(0.38 초)만큼 누르고 꼭대기에서 다시 뛴다 -->
+	<Press slot="Key.D"/>
+	<Press slot="Key.Space"/>
+	<AdvanceSimulation frames="22"/>
+	<Release slot="Key.Space"/>
+	<AdvanceSimulation frames="2"/>
+	<Press slot="Key.Space"/>
+	<WaitUntil watch="Metroidvania.PlayerX" atLeast="25.5" timeoutFrames="120"/>
+	<Release slot="Key.Space"/>
+	<WaitUntil watch="Metroidvania.VisitedAreas" equals="3" timeoutFrames="120"/>
+	<WaitUntil watch="Metroidvania.PlayerX" atLeast="31.1" timeoutFrames="300"/>
+	<Release slot="Key.D"/>
+	<!-- 파수꾼을 다섯 번 벤다(경직이 나면 더 일찍 쓰러진다 — 남은 누름은 헛친다) -->
+	<Action name="Metroidvania.Attack"/>
+	<AdvanceSimulation frames="30"/>
+	<Action name="Metroidvania.Attack"/>
+	<AdvanceSimulation frames="30"/>
+	<Action name="Metroidvania.Attack"/>
+	<AdvanceSimulation frames="30"/>
+	<Action name="Metroidvania.Attack"/>
+	<AdvanceSimulation frames="30"/>
+	<Action name="Metroidvania.Attack"/>
+	<WaitUntil watch="Metroidvania.Phase" equals="2" timeoutFrames="60"/>
+	<Expect watch="Metroidvania.Currency" equals="65"/>
+	<ExpectLog id="Metroidvania.Won" count="1"/>
+	<!-- 결과를 3 초 보인 뒤 스스로 끝나 허브(입구 씬)로 간다 -->
+	<WaitUntil watch="Minigame.Active" is="none" timeoutFrames="600"/>
+	<AdvanceSimulation frames="2"/>
+	<WaitUntil watch="Scene.Transitioning" equals="0" timeoutWallSeconds="60"/>
+	<ExpectActiveScene path="game/playground/maps/hub.scene.xml"/>
+	<ExpectLog id="MinigameFlow.Finished" contains="'metroidvania' finished (result 'win')" count="1"/>
+	<Expect watch="Minigame.LeakCount" equals="0"/>
+	<Pass/>
+</Scenario>

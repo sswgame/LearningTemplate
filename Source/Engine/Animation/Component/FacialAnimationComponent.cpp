@@ -138,6 +138,7 @@ namespace sw
         , _listScratchExpressionWeight{}
         , _wrinkleWeights{}
         , _pushedWrinkleWeights{}
+        , _pushedWrinkleInstance{}
         , _animator{}
         , _pSkeletalMesh{ nullptr }
         , _pBoundMesh{ nullptr }
@@ -585,7 +586,11 @@ namespace sw
 
     void FacialAnimationComponent::pushWrinkles( SkeletalMeshComponent& skeletalMesh )
     {
-        if ( _wrinkleWeights._maskA == _pushedWrinkleWeights._maskA && _wrinkleWeights._maskB == _pushedWrinkleWeights._maskB )
+        const WrinkleWeights noWrinkle{};
+        const bool           bSameWeights = _wrinkleWeights._maskA == _pushedWrinkleWeights._maskA && _wrinkleWeights._maskB == _pushedWrinkleWeights._maskB;
+        const bool           bNoWrinkle   = _wrinkleWeights._maskA == noWrinkle._maskA && _wrinkleWeights._maskB == noWrinkle._maskB;
+        // 값이 같아도 인스턴스가 갈렸으면(외형을 다시 조립했다) 새 인스턴스에는 아직 넣지 않았다. 주름이 없으면 새 인스턴스에 넣을 것도 없다.
+        if ( bSameWeights && ( bNoWrinkle || _pushedWrinkleInstance.lock() == skeletalMesh.getMaterialInstance() ) )
             return;
         // 외형의 표면 상태(`CharacterSurfaceBinding::acquireInstance`)와 같은 인스턴스를 나눈다 — 있으면 그것, 없으면 메시 머티리얼로 하나 만든다.
         // 메시 컴포넌트는 머티리얼 하나다(구간 머티리얼이 없다) — 얼굴이 따로 머티리얼이면 따로 메시 컴포넌트이고, 그 메시가 이 컴포넌트가 모프를 모는 얼굴 메시다.
@@ -599,7 +604,8 @@ namespace sw
             return;
         instance->setVectorParameter( hashed_string( WrinkleMap::kMaskAParameter ), _wrinkleWeights._maskA );
         instance->setVectorParameter( hashed_string( WrinkleMap::kMaskBParameter ), _wrinkleWeights._maskB );
-        _pushedWrinkleWeights = _wrinkleWeights;
+        _pushedWrinkleWeights  = _wrinkleWeights;
+        _pushedWrinkleInstance = instance;
     }
 
     void FacialAnimationComponent::applyFace( SkeletalMeshComponent& skeletalMesh )

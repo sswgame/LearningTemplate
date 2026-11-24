@@ -1,4 +1,6 @@
 {
+    "_topology": "SingleServer",
+    "_serverID": 1,
     "_storeName": "main",
     "_cacheName": "main",
     "_auditRetention": { "_expireAfterDays": 365, "_maxScanPerSweep": 20000, "_maxDeletePerSweep": 5000 },

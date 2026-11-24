@@ -8,9 +8,12 @@
 #include "GameFramework/Kits/Genre/Simulation/CreatureLife/CreatureTown.h"
 #include "GameFramework/Runtime/Gameplay/Inventory/Inventory.h"
 #include "GameFramework/Runtime/Gameplay/Inventory/ItemCatalog.h"
+#include "GameFramework/Runtime/Gameplay/Progression/Reputation.h"
+#include "GameFramework/Runtime/Gameplay/Quest/QuestLog.h"
+#include "GameFramework/Runtime/World/Environment/WorldClock.h"
 
 // CreatureTownRulesTest — 생물 마을의 플레이 규칙: 능력은 그 생물이 아는 것만, 규칙에 맞는 셀에만, 하루 횟수만큼 쓰이고 날이 넘어가면 돌아온다.
-// 선물은 가방에서 하나를 빼고 하루 한 번이다. 공유 상태(평판 · 일지 · 시계)는 빌리지 않는다 — 날은 0 이고 호감도는 움직이지 않는다. 키트 GF_CreatureLife(nogpu).
+// 선물은 가방에서 하나를 빼고 하루 한 번이다. 공유 상태(평판 · 일지 · 시계)는 카탈로그 없이 빌려 준다 — 날은 0 이고 호감도는 쌓이지만 단계는 없다. 키트 GF_CreatureLife(nogpu).
 
 namespace
 {
@@ -39,12 +42,16 @@ namespace
     struct CreatureTownRulesTest
     {
         sw::CreatureLifeCatalog _catalog{};
+        sw::ReputationState     _reputation{};
+        sw::QuestLog            _questLog{};
+        sw::WorldClock          _clock{};
+        sw::Inventory           _yieldBag{}; ///< 능력이 내는 물건을 받는다(새싹의 능력은 내는 것이 없다)
         sw::CreatureTown        _town{};
 
         CreatureTownRulesTest()
         {
             SW_REQUIRE_TRUE( _catalog.loadFromXMLText( kRulesCatalogXML, "CreatureTownRulesTest" ) );
-            SW_REQUIRE_TRUE( _town.initialize( &_catalog, nullptr, nullptr, nullptr, kRulesTownSize, kRulesTownSize ) );
+            SW_REQUIRE_TRUE( _town.initialize( &_catalog, _reputation, _questLog, _clock, kRulesTownSize, kRulesTownSize ) );
         }
 
         void attractSprout()
@@ -59,14 +66,14 @@ namespace
 /** @brief [CreatureTownRulesTest] 능력은 마을에 사는 생물이 아는 것만, 규칙에 맞는 마을 안 셀에만 쓰인다. 거절은 횟수를 쓰지 않는다. */
 SW_TEST_CASE_F( CreatureTownRulesTest, AbilityNeedsACreatureAKnownAbilityAndAMatchingCell )
 {
-    SW_EXPECT_TRUE( _town.useAbility( kSprout, kPlant, 1, 1, nullptr ) == sw::CreatureAbilityResult::UnknownCreature ); // 아직 오지 않았다
-    SW_EXPECT_EQUAL( 0, _town.countAbilityUsesLeft( kSprout, kPlant ) );                                                // 모르면 0
+    SW_EXPECT_TRUE( _town.useAbility( kSprout, kPlant, 1, 1, _yieldBag ) == sw::CreatureAbilityResult::UnknownCreature ); // 아직 오지 않았다
+    SW_EXPECT_EQUAL( 0, _town.countAbilityUsesLeft( kSprout, kPlant ) );                                                  // 모르면 0
     attractSprout();
     SW_EXPECT_EQUAL( 2, _town.countAbilityUsesLeft( kSprout, kPlant ) );
 
-    SW_EXPECT_TRUE( _town.useAbility( kSprout, "dig", 1, 1, nullptr ) == sw::CreatureAbilityResult::NotKnown );
-    SW_EXPECT_TRUE( _town.useAbility( kSprout, kPlant, kRulesTownSize, 0, nullptr ) == sw::CreatureAbilityResult::OutOfBounds );
-    SW_EXPECT_TRUE( _town.useAbility( kSprout, kPlant, 0, 0, nullptr ) == sw::CreatureAbilityResult::NoRule ); // 나무 위에는 심지 못한다
+    SW_EXPECT_TRUE( _town.useAbility( kSprout, "dig", 1, 1, _yieldBag ) == sw::CreatureAbilityResult::NotKnown );
+    SW_EXPECT_TRUE( _town.useAbility( kSprout, kPlant, kRulesTownSize, 0, _yieldBag ) == sw::CreatureAbilityResult::OutOfBounds );
+    SW_EXPECT_TRUE( _town.useAbility( kSprout, kPlant, 0, 0, _yieldBag ) == sw::CreatureAbilityResult::NoRule ); // 나무 위에는 심지 못한다
     SW_EXPECT_EQUAL( 2, _town.countAbilityUsesLeft( kSprout, kPlant ) );
     SW_EXPECT_EQUAL( 0, _town.countAbilityUsesLeft( kSprout, "dig" ) );
 }
@@ -79,16 +86,16 @@ SW_TEST_CASE_F( CreatureTownRulesTest, AbilityChangesTheCellAndSpendsDailyUses )
     _town.pollEvents( listEvent ); // 서식지 · 방문 이벤트는 버린다
     listEvent.clear();
 
-    SW_REQUIRE_TRUE( _town.useAbility( kSprout, kPlant, 1, 1, nullptr ) == sw::CreatureAbilityResult::Ok );
+    SW_REQUIRE_TRUE( _town.useAbility( kSprout, kPlant, 1, 1, _yieldBag ) == sw::CreatureAbilityResult::Ok );
     const sw::hashed_string* pPlanted = _town.findObject( 1, 1 );
     SW_REQUIRE_NOT_NULL( pPlanted );
     SW_EXPECT_TRUE( *pPlanted == sw::hashed_string( "tree" ) );
     SW_EXPECT_EQUAL( 2, _town.countHabitats( "grove" ) ); // 심은 나무도 숲이 된다
     SW_EXPECT_EQUAL( 1, _town.countAbilityUsesLeft( kSprout, kPlant ) );
 
-    SW_REQUIRE_TRUE( _town.useAbility( kSprout, kPlant, 2, 2, nullptr ) == sw::CreatureAbilityResult::Ok );
+    SW_REQUIRE_TRUE( _town.useAbility( kSprout, kPlant, 2, 2, _yieldBag ) == sw::CreatureAbilityResult::Ok );
     SW_EXPECT_EQUAL( 0, _town.countAbilityUsesLeft( kSprout, kPlant ) );
-    SW_EXPECT_TRUE( _town.useAbility( kSprout, kPlant, 3, 3, nullptr ) == sw::CreatureAbilityResult::NoUsesLeft );
+    SW_EXPECT_TRUE( _town.useAbility( kSprout, kPlant, 3, 3, _yieldBag ) == sw::CreatureAbilityResult::NoUsesLeft );
     const sw::hashed_string* pUntouched = _town.findObject( 3, 3 );
     SW_REQUIRE_NOT_NULL( pUntouched );
     SW_EXPECT_TRUE( pUntouched->empty() );
@@ -103,7 +110,7 @@ SW_TEST_CASE_F( CreatureTownRulesTest, AbilityChangesTheCellAndSpendsDailyUses )
 
     _town.advanceDay();
     SW_EXPECT_EQUAL( 2, _town.countAbilityUsesLeft( kSprout, kPlant ) );
-    SW_EXPECT_TRUE( _town.useAbility( kSprout, kPlant, 3, 3, nullptr ) == sw::CreatureAbilityResult::Ok );
+    SW_EXPECT_TRUE( _town.useAbility( kSprout, kPlant, 3, 3, _yieldBag ) == sw::CreatureAbilityResult::Ok );
 }
 
 /** @brief [CreatureTownRulesTest] 선물은 가방에서 하나를 빼고 하루 한 번이다. 없는 생물 · 없는 아이템은 거절하고 가방을 건드리지 않는다. */
@@ -112,7 +119,7 @@ SW_TEST_CASE_F( CreatureTownRulesTest, GiftTakesOneItemOncePerDay )
     sw::ItemCatalog items;
     SW_REQUIRE_TRUE( items.loadFromXMLText( kRulesItemXML, "CreatureTownRulesTest" ) );
     sw::Inventory inventory;
-    SW_REQUIRE_TRUE( inventory.initialize( &items, 2 ) );
+    SW_REQUIRE_TRUE( inventory.initialize( items, 2 ) );
     SW_REQUIRE_EQUAL( 2, inventory.addItem( kGiftItem, 2 ) );
 
     SW_EXPECT_TRUE( _town.giveGift( kSprout, kGiftItem, inventory ) == sw::CreatureInteractResult::UnknownCreature ); // 아직 오지 않았다
@@ -125,24 +132,44 @@ SW_TEST_CASE_F( CreatureTownRulesTest, GiftTakesOneItemOncePerDay )
     SW_EXPECT_TRUE( _town.giveGift( kSprout, kGiftItem, inventory ) == sw::CreatureInteractResult::AlreadyToday );
     SW_EXPECT_EQUAL( 1, inventory.getItemCount( kGiftItem ) ); // 거절된 선물은 빼지 않는다
 
-    // 빌린 평판이 없으면 호감도 단계도 없다(값을 지어내지 않는다)
+    // 빌린 평판의 카탈로그에 이 종의 세력이 없으면 호감도 단계도 없다(값을 지어내지 않는다)
     SW_EXPECT_TRUE( _town.getFriendshipTier( kSprout ).empty() );
-    SW_EXPECT_EQUAL( 0, _town.getFriendship( kSprout ) );
+    SW_EXPECT_EQUAL( 10, _town.getFriendship( kSprout ) ); // 선물 하나
 }
+
+namespace
+{
+    /** @brief 마을과 빌려 준 평판을 한 판으로 묶습니다. 평판은 마을 밖(주인이 저장한다)이라 결정성 테스트가 함께 싣습니다. */
+    struct CreatureTownRun
+    {
+        sw::ReputationState _reputation{};
+        sw::QuestLog        _questLog{};
+        sw::WorldClock      _clock{};
+        sw::Inventory       _yieldBag{};
+        sw::CreatureTown    _town{};
+
+        SW_DECLARE_STATE_IO_IN_PLACE()
+        {
+            io.value( _reputation );
+            io.value( _town );
+        }
+    };
+} // namespace
 
 /** @brief [CreatureTownRulesTest] 결정성: 물건 놓기 · 방문 굴림 · 능력 · 집 · 대화 · 날 넘김을 걸음 번호로 돌린 마을은 같은 바이트를 내고, 중간에 쓰고 읽은 마을도 같게 이어 돈다 */
 SW_TEST_CASE_F( CreatureTownRulesTest, TownDeterminism )
 {
-    const auto setup = [this]( sw::CreatureTown& town )
-    { return town.initialize( &_catalog, nullptr, nullptr, nullptr, kRulesTownSize, kRulesTownSize ); };
-    const auto step = []( sw::CreatureTown& town, int32 stepIndex )
+    const auto setup = [this]( CreatureTownRun& run )
+    { return run._town.initialize( &_catalog, run._reputation, run._questLog, run._clock, kRulesTownSize, kRulesTownSize ); };
+    const auto step = []( CreatureTownRun& run, int32 stepIndex )
     {
-        const int32 hour = stepIndex % 24;
+        sw::CreatureTown& town = run._town;
+        const int32       hour = stepIndex % 24;
         if ( stepIndex == 0 )
             (void)town.setObject( 0, 0, "tree" );
         (void)town.attractVisitorsAt( stepIndex / 24, hour, hour < 18 ? sw::DayPhase::Day : sw::DayPhase::Night, stepIndex % 5 == 0 ? "rainy" : "sunny" );
         if ( stepIndex % 6 == 2 )
-            (void)town.useAbility( kSprout, kPlant, stepIndex % kRulesTownSize, ( stepIndex / kRulesTownSize ) % kRulesTownSize, nullptr );
+            (void)town.useAbility( kSprout, kPlant, stepIndex % kRulesTownSize, ( stepIndex / kRulesTownSize ) % kRulesTownSize, run._yieldBag );
         if ( stepIndex == 30 )
             (void)town.placeHouse( kRulesTownSize - 1, kRulesTownSize - 1, 1 );
         if ( stepIndex == 31 )
@@ -152,5 +179,5 @@ SW_TEST_CASE_F( CreatureTownRulesTest, TownDeterminism )
         if ( hour == 23 )
             town.advanceDay();
     };
-    SW_EXPECT_TRUE( sw::StateBytesTestUtil::isDeterministic<sw::CreatureTown>( setup, step, 96 ) );
+    SW_EXPECT_TRUE( sw::StateBytesTestUtil::isDeterministic<CreatureTownRun>( setup, step, 96 ) );
 }

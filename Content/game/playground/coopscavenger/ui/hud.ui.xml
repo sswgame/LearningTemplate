@@ -1,0 +1,78 @@
+<?asset guid="52e008cdf55b4bb9aeb3c6bc3e56b7e3"?>
+<UIDocument _schemaVersion="1">
+	<UIScreenDef _layer="HUD" _bTakesFocus="false" _bShowCursor="false" />
+	<SafeZonePanel _visibility="SelfHitTestInvisible">
+		<CanvasPanel _visibility="SelfHitTestInvisible">
+			<TextWidget _name="Quota" _text="Quota left" _styleClass="hud" _visibility="HitTestInvisible">
+				<_slot _anchorMin="0,0" _anchorMax="0,0" _offsetMin="48,40" _offsetMax="488,76" />
+			</TextWidget>
+			<TextWidget _name="QuotaValue" _text="{bind:_quotaLeft}" _styleClass="hud" _visibility="HitTestInvisible" _bLocalized="false">
+				<_slot _anchorMin="0,0" _anchorMax="0,0" _offsetMin="496,40" _offsetMax="640,76" />
+			</TextWidget>
+			<TextWidget _name="Days" _text="Days left" _styleClass="hud" _visibility="HitTestInvisible">
+				<_slot _anchorMin="0,0" _anchorMax="0,0" _offsetMin="48,80" _offsetMax="488,116" />
+			</TextWidget>
+			<TextWidget _name="DaysValue" _text="{bind:_daysLeft}" _styleClass="hud" _visibility="HitTestInvisible" _bLocalized="false">
+				<_slot _anchorMin="0,0" _anchorMax="0,0" _offsetMin="496,80" _offsetMax="640,116" />
+			</TextWidget>
+			<TextWidget _name="Ship" _text="Scrap on the ship" _styleClass="hud" _visibility="HitTestInvisible">
+				<_slot _anchorMin="0,0" _anchorMax="0,0" _offsetMin="48,120" _offsetMax="488,156" />
+			</TextWidget>
+			<TextWidget _name="ShipValue" _text="{bind:_shipValue}" _styleClass="hud" _visibility="HitTestInvisible" _bLocalized="false">
+				<_slot _anchorMin="0,0" _anchorMax="0,0" _offsetMin="496,120" _offsetMax="640,156" />
+			</TextWidget>
+			<TextWidget _name="Credits" _text="Credits" _styleClass="hud" _visibility="HitTestInvisible">
+				<_slot _anchorMin="0,0" _anchorMax="0,0" _offsetMin="48,160" _offsetMax="488,196" />
+			</TextWidget>
+			<TextWidget _name="CreditsValue" _text="{bind:_credits}" _styleClass="hud" _visibility="HitTestInvisible" _bLocalized="false">
+				<_slot _anchorMin="0,0" _anchorMax="0,0" _offsetMin="496,160" _offsetMax="640,196" />
+			</TextWidget>
+			<TextWidget _name="Controls" _text="Use: pick up, load, sell - Lever: land or take off" _styleClass="hud" _visibility="HitTestInvisible">
+				<_slot _anchorMin="0,0" _anchorMax="0,0" _offsetMin="48,200" _offsetMax="488,236" />
+			</TextWidget>
+			<TextWidget _name="Hour" _text="Hour" _styleClass="hud" _visibility="HitTestInvisible">
+				<_slot _anchorMin="0,0" _anchorMax="0,0" _offsetMin="48,240" _offsetMax="488,276" />
+			</TextWidget>
+			<TextWidget _name="HourValue" _text="{bind:_hour}" _styleClass="hud" _visibility="HitTestInvisible" _bLocalized="false">
+				<_slot _anchorMin="0,0" _anchorMax="0,0" _offsetMin="496,240" _offsetMax="640,276" />
+			</TextWidget>
+			<TextWidget _name="Scrap" _text="Scrap value in this weather (%)" _styleClass="hud" _visibility="HitTestInvisible">
+				<_slot _anchorMin="0,0" _anchorMax="0,0" _offsetMin="48,280" _offsetMax="488,316" />
+			</TextWidget>
+			<TextWidget _name="ScrapValue" _text="{bind:_scrapPercent}" _styleClass="hud" _visibility="HitTestInvisible" _bLocalized="false">
+				<_slot _anchorMin="0,0" _anchorMax="0,0" _offsetMin="496,280" _offsetMax="640,316" />
+			</TextWidget>
+			<TextWidget _name="Threat" _text="Threat in this weather (%)" _styleClass="hud" _visibility="HitTestInvisible">
+				<_slot _anchorMin="0,0" _anchorMax="0,0" _offsetMin="48,320" _offsetMax="488,356" />
+			</TextWidget>
+			<TextWidget _name="ThreatValue" _text="{bind:_threatPercent}" _styleClass="hud" _visibility="HitTestInvisible" _bLocalized="false">
+				<_slot _anchorMin="0,0" _anchorMax="0,0" _offsetMin="496,320" _offsetMax="640,356" />
+			</TextWidget>
+			<ProgressBarWidget _name="Health" _percent="{bind:_healthRatio}" _visibility="HitTestInvisible" _fillColor="0.85,0.25,0.25,1" _backgroundColor="0,0,0,0.55">
+				<_slot _anchorMin="0,1" _anchorMax="0,1" _offsetMin="48,-76" _offsetMax="368,-56" />
+			</ProgressBarWidget>
+			<ProgressBarWidget _name="Day" _percent="{bind:_dayRatio}" _visibility="HitTestInvisible" _fillColor="0.95,0.75,0.25,1" _backgroundColor="0,0,0,0.55">
+				<_slot _anchorMin="0,1" _anchorMax="0,1" _offsetMin="48,-108" _offsetMax="368,-88" />
+			</ProgressBarWidget>
+			<TextWidget _name="Orbit" _text="In orbit - Move and Use buy from the terminal, the lever lands" _styleClass="hud" _visibility="{bind:_orbitVisibility}">
+				<_slot _anchorMin="0.5,0.4" _anchorMax="0.5,0.4" _offsetMin="-400,-24" _offsetMax="400,24" />
+				<_style _alignment="Center" />
+			</TextWidget>
+			<TextWidget _name="TerminalName" _text="{bind:_terminalName}" _styleClass="hud" _visibility="{bind:_orbitVisibility}">
+				<_slot _anchorMin="0.5,0.4" _anchorMax="0.5,0.4" _offsetMin="-400,32" _offsetMax="40,80" />
+				<_style _alignment="End" />
+			</TextWidget>
+			<TextWidget _name="TerminalPrice" _text="{bind:_terminalPrice}" _styleClass="hud" _visibility="{bind:_orbitVisibility}" _bLocalized="false">
+				<_slot _anchorMin="0.5,0.4" _anchorMax="0.5,0.4" _offsetMin="72,32" _offsetMax="400,80" />
+			</TextWidget>
+			<TextWidget _name="Win" _text="Quota met" _styleClass="hud" _visibility="{bind:_winVisibility}">
+				<_slot _anchorMin="0.5,0.4" _anchorMax="0.5,0.4" _offsetMin="-400,-24" _offsetMax="400,24" />
+				<_style _alignment="Center" />
+			</TextWidget>
+			<TextWidget _name="Lose" _text="Quota missed" _styleClass="hud" _visibility="{bind:_loseVisibility}">
+				<_slot _anchorMin="0.5,0.4" _anchorMax="0.5,0.4" _offsetMin="-400,-24" _offsetMax="400,24" />
+				<_style _alignment="Center" />
+			</TextWidget>
+		</CanvasPanel>
+	</SafeZonePanel>
+</UIDocument>

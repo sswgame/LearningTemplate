@@ -19,6 +19,7 @@
 #include "GameFramework/Runtime/Gameplay/GameState/PlayerComponentUtil.h"
 #include "GameFramework/Runtime/Gameplay/Inventory/IItemReceiver.h"
 #include "GameFramework/Runtime/Gameplay/Inventory/InventoryComponent.h"
+#include "GameFramework/Runtime/Gameplay/Inventory/ItemCatalog.h"
 #include "GameFramework/Runtime/Gameplay/Inventory/WalletComponent.h"
 #include "GameFramework/Runtime/Gameplay/Progression/ReputationComponent.h"
 #include "GameFramework/Runtime/Gameplay/Quest/QuestCatalog.h"
@@ -64,10 +65,11 @@ SW_TEST_CASE( PlayerStateComponentsTest, InventoryRestoresHeldBytesWhenOpened )
     GameObjectManager   manager;
     InventoryComponent* pBag = manager.createGameObject( hashed_string( "Player" ) )->addComponent<InventoryComponent>();
     SW_REQUIRE_NOT_NULL( pBag );
+    const ItemCatalog itemCatalog{};
     InventorySettings settings;
     settings._slotCount = 4;
-    SW_REQUIRE_TRUE( pBag->initialize( settings ) == GameStateInitResult::Fresh );
-    SW_EXPECT_TRUE( pBag->initialize( settings ) == GameStateInitResult::AlreadyInitialized );
+    SW_REQUIRE_TRUE( pBag->initialize( itemCatalog, settings ) == GameStateInitResult::Fresh );
+    SW_EXPECT_TRUE( pBag->initialize( itemCatalog, settings ) == GameStateInitResult::AlreadyInitialized );
     const hashed_string seedItem( "seed" );
     SW_REQUIRE_EQUAL( 2, pBag->getInventory().addItem( seedItem, 2 ) );
     const vector<uint8> saved = captureState( *pBag );
@@ -76,7 +78,7 @@ SW_TEST_CASE( PlayerStateComponentsTest, InventoryRestoresHeldBytesWhenOpened )
     SW_REQUIRE_NOT_NULL( pRestored );
     pRestored->restoreState( vector<uint8>( saved ) );     // 열기 전 — 들고 있다
     SW_EXPECT_TRUE( captureState( *pRestored ) == saved ); // 두 번째 캡처가 빈 판으로 세이브를 덮지 않는다
-    SW_EXPECT_TRUE( pRestored->initialize( settings ) == GameStateInitResult::Restored );
+    SW_EXPECT_TRUE( pRestored->initialize( itemCatalog, settings ) == GameStateInitResult::Restored );
     SW_EXPECT_FALSE( pRestored->isFreshGame() );
     SW_EXPECT_EQUAL( 2, pRestored->getInventory().getItemCount( seedItem ) );
 }
@@ -88,7 +90,7 @@ SW_TEST_CASE( PlayerStateComponentsTest, InventoryRefusesMissingSlotCount )
     GameObjectManager   manager;
     InventoryComponent* pBag = manager.createGameObject( hashed_string( "Player" ) )->addComponent<InventoryComponent>();
     SW_REQUIRE_NOT_NULL( pBag );
-    SW_EXPECT_TRUE( pBag->initialize( InventorySettings{} ) == GameStateInitResult::Refused );
+    SW_EXPECT_TRUE( pBag->initialize( ItemCatalog{}, InventorySettings{} ) == GameStateInitResult::Refused );
     SW_EXPECT_FALSE( pBag->isOpen() );
 }
 
@@ -104,30 +106,31 @@ SW_TEST_CASE( PlayerStateComponentsTest, QuestLogRoundTripsWithItsCatalog )
     GameObjectManager   manager;
     QuestLogComponent*  pQuestLog = manager.createGameObject( hashed_string( "Player" ) )->addComponent<QuestLogComponent>();
     SW_REQUIRE_NOT_NULL( pQuestLog );
-    SW_REQUIRE_TRUE( pQuestLog->initialize( &catalog ) == GameStateInitResult::Fresh );
+    SW_REQUIRE_TRUE( pQuestLog->initialize( catalog ) == GameStateInitResult::Fresh );
     (void)pQuestLog->getQuestLog().start( intro, 1 );
     SW_REQUIRE_TRUE( pQuestLog->getQuestLog().getStatus( intro ) == QuestStatus::Active );
 
     QuestLogComponent* pRestored = manager.createGameObject( hashed_string( "Restored" ) )->addComponent<QuestLogComponent>();
     SW_REQUIRE_NOT_NULL( pRestored );
     pRestored->restoreState( captureState( *pQuestLog ) );
-    SW_EXPECT_TRUE( pRestored->initialize( &catalog ) == GameStateInitResult::Restored );
+    SW_EXPECT_TRUE( pRestored->initialize( catalog ) == GameStateInitResult::Restored );
     SW_EXPECT_TRUE( pRestored->getQuestLog().getStatus( intro ) == QuestStatus::Active );
 }
 
 /** @brief [PlayerStateComponentsTest] 평판은 열린 뒤에 받은 복원 바이트를 바로 적용한다(핫 리로드 · 같은 씬 불러오기) */
 SW_TEST_CASE( PlayerStateComponentsTest, ReputationRestoresAfterOpen )
 {
-    const hashed_string  town( "Town" );
-    GameObjectManager    manager;
-    ReputationComponent* pReputation = manager.createGameObject( hashed_string( "Player" ) )->addComponent<ReputationComponent>();
+    const hashed_string     town( "Town" );
+    const ReputationCatalog reputationCatalog{};
+    GameObjectManager       manager;
+    ReputationComponent*    pReputation = manager.createGameObject( hashed_string( "Player" ) )->addComponent<ReputationComponent>();
     SW_REQUIRE_NOT_NULL( pReputation );
-    SW_REQUIRE_TRUE( pReputation->initialize( nullptr ) == GameStateInitResult::Fresh );
+    SW_REQUIRE_TRUE( pReputation->initialize( reputationCatalog ) == GameStateInitResult::Fresh );
     pReputation->getReputation().setValue( town, 40 );
 
     ReputationComponent* pRestored = manager.createGameObject( hashed_string( "Restored" ) )->addComponent<ReputationComponent>();
     SW_REQUIRE_NOT_NULL( pRestored );
-    SW_REQUIRE_TRUE( pRestored->initialize( nullptr ) == GameStateInitResult::Fresh );
+    SW_REQUIRE_TRUE( pRestored->initialize( reputationCatalog ) == GameStateInitResult::Fresh );
     pRestored->restoreState( captureState( *pReputation ) );
     SW_EXPECT_FALSE( pRestored->isFreshGame() );
     SW_EXPECT_EQUAL( 40, pRestored->getReputation().getValue( town ) );
@@ -145,9 +148,10 @@ SW_TEST_CASE( PlayerStateComponentsTest, NoBagMeansNoInventoryComponent )
 
     InventoryComponent* pBag = pController->addComponent<InventoryComponent>();
     SW_REQUIRE_NOT_NULL( pBag );
+    const ItemCatalog itemCatalog{};
     InventorySettings settings;
     settings._slotCount = 1;
-    SW_REQUIRE_TRUE( pBag->initialize( settings ) == GameStateInitResult::Fresh );
+    SW_REQUIRE_TRUE( pBag->initialize( itemCatalog, settings ) == GameStateInitResult::Fresh );
     IItemReceiver* const pReceiver = IItemReceiver::findForTarget( *pController );
     SW_REQUIRE_NOT_NULL( pReceiver );
     const hashed_string gem( "Gem" );
@@ -182,12 +186,13 @@ SW_TEST_CASE( PlayerStateComponentsTest, SecondOpenComponentStopsTheSingleReader
     GameObjectManager  manager;
     QuestLogComponent* pFirst  = manager.createGameObject( hashed_string( "PlayerA" ) )->addComponent<QuestLogComponent>();
     QuestLogComponent* pSecond = manager.createGameObject( hashed_string( "PlayerB" ) )->addComponent<QuestLogComponent>();
+    const QuestCatalog questCatalog{};
     SW_REQUIRE_NOT_NULL( pFirst );
     SW_REQUIRE_NOT_NULL( pSecond );
     SW_EXPECT_NULL( PlayerComponentUtil::findOpen<QuestLogComponent>( &manager ) ); // 아직 아무것도 열지 않았다
-    SW_REQUIRE_TRUE( pFirst->initialize( nullptr ) == GameStateInitResult::Fresh );
+    SW_REQUIRE_TRUE( pFirst->initialize( questCatalog ) == GameStateInitResult::Fresh );
     SW_EXPECT_TRUE( PlayerComponentUtil::findOpen<QuestLogComponent>( &manager ) == pFirst );
-    SW_REQUIRE_TRUE( pSecond->initialize( nullptr ) == GameStateInitResult::Fresh );
+    SW_REQUIRE_TRUE( pSecond->initialize( questCatalog ) == GameStateInitResult::Fresh );
     SW_EXPECT_NULL( PlayerComponentUtil::findOpen<QuestLogComponent>( &manager ) );
 }
 

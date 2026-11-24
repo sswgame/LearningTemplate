@@ -4,14 +4,14 @@
 
 namespace sw
 {
-    AudioMusicStatus AudioMusicPlayback::makeStatus( uint64 renderedFrameCount ) const
+    AudioMusicStatus AudioMusicPlayback::makeStatus( uint64 musicClock ) const
     {
         AudioMusicStatus status{};
         if ( _pDesc == nullptr || _segment.has_value() == false )
             return status;
         const uint32  segmentIndex  = static_cast<uint32>( *_segment );
         const float64 framesPerBeat = _pDesc->computeFramesPerBeat( segmentIndex );
-        const float64 elapsed       = static_cast<float64>( renderedFrameCount ) - static_cast<float64>( _segmentStart );
+        const float64 elapsed       = static_cast<float64>( musicClock ) - static_cast<float64>( _segmentStart );
         status._segment             = _pDesc->_listSegment[segmentIndex]._name;
         status._beat                = elapsed / framesPerBeat;
         status._bar                 = elapsed <= 0.0 ? 0u : static_cast<uint64>( status._beat ) / _pDesc->getBeatsPerBar( segmentIndex );

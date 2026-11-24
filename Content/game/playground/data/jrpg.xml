@@ -1,10 +1,29 @@
 <?xml version="1.0" encoding="utf-8"?>
 <?asset guid="88fd79e4364c4ce9bc3b60ba874b33da"?>
 <!--
-  장르 키트 시연 — 클래식 JRPG 전투 하나(maps/kit_classicjrpg). 용사(힘 40, 민첩 50)가 먼저 움직여 체력 1 인 frail 을 한 번에 쓰러뜨리고 경험치 31 · 골드 7 을 받는다(레벨 곡선 100 이라 레벨은 그대로).
+  등불 길 미니게임(classicjrpg/maps/trail)의 직업 · 주문 · 적 · 조우 지역. 물리 피해는 (공격 / 2 - 방어 / 4) × 0.875..1.125 다.
+  수치가 시나리오(automation/classicjrpg_slice)의 바탕이다: 두 사람은 늘 먼저 움직이고(민첩) 풀숲의 적은 한 번에, 보스(HP 100)는 두 라운드째에 쓰러진다
+  (등불의 검을 낀 등불지기 43..56 — 타이밍 공격이면 64..84, 심지술사의 불씨 37..46 · 공격 26..33, 쉼터에서 잉걸현자로 전직하면 능력치가 절반이다). 조우는 세 걸음 쉬고 네 걸음째마다다(rate 1 · grace 3).
 -->
 <JRPGCatalog>
-	<ExperienceCurve base="100" exponent="0" maxLevel="30"/>
-	<Class id="hero" name="Hero" hp="100" mp="10" str="40" agi="50" vit="20" intellect="10" luck="5" growHP="10" growMP="2" growStr="2" growAgi="1" growVit="2" growIntellect="2" growLuck="0" attackType="Sword"/>
-	<Enemy id="frail" name="Frail" hp="1" str="0" agi="1" vit="0" exp="31" gold="7"/>
+	<ExperienceCurve base="60" exponent="1.5" maxLevel="20"/>
+	<Class id="lantern_guard" name="Lantern Guard" hp="100" mp="0" str="80" agi="50" vit="20" intellect="5" luck="5" growHP="12" growMP="0" growStr="4" growAgi="2" growVit="3" growIntellect="1" growLuck="1" attackSound="JRPGBlade" attackType="Sword"/>
+	<Class id="wick_mage" name="Wick Mage" hp="80" mp="24" str="60" agi="40" vit="12" intellect="40" luck="5" growHP="7" growMP="4" growStr="2" growAgi="2" growVit="2" growIntellect="5" growLuck="1" attackSound="JRPGStaff" attackType="Blunt">
+		<Learn level="1" spell="spark"/>
+		<Learn level="3" spell="balm"/>
+	</Class>
+	<!-- 쉼터가 가르치는 직업 — 잉걸의 책(common/data/items.xml)이 있어야 한다. 전직하면 능력치가 절반에서 다시 자란다. -->
+	<Class id="ember_sage" name="Ember Sage" hp="70" mp="30" str="30" agi="36" vit="10" intellect="50" luck="5" growHP="6" growMP="6" growStr="1" growAgi="2" growVit="2" growIntellect="7" growLuck="1" attackSound="JRPGStaff" attackType="Blunt" requires="tome_ember">
+		<Learn level="1" spell="cinder_wave"/>
+	</Class>
+	<Spell id="spark" name="Spark" mp="4" power="30" type="Fire" castSound="JRPGSpark"/>
+	<Spell id="cinder_wave" name="Cinder Wave" mp="6" power="24" type="Fire" target="All" castSound="JRPGSpark"/>
+	<Spell id="balm" name="Balm" kind="Heal" mp="3" power="30" castSound="JRPGBalm"/>
+	<Spell id="gloom" name="Gloom" power="24" type="Dark" target="All"/>
+	<Enemy id="bramble_sprite" name="Bramble Sprite" hp="10" str="10" agi="4" vit="0" exp="10" gold="3"/>
+	<Enemy id="dusk_moth" name="Dusk Moth" hp="10" str="8" agi="6" vit="0" exp="14" gold="4" weak="Fire"/>
+	<Enemy id="hollow_stag" name="Hollow Stag" hp="100" str="24" agi="2" vit="0" intellect="10" exp="60" gold="30" cast="gloom" castTurns="1" castEvery="2" locks="Sword" boss="true"/>
+	<Area id="lantern_trail" rate="1" grace="3">
+		<Group enemies="bramble_sprite,dusk_moth" weight="1"/>
+	</Area>
 </JRPGCatalog>

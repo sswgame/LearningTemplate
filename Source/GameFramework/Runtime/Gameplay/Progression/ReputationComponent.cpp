@@ -27,11 +27,11 @@ namespace sw
 
     ReputationComponent::~ReputationComponent() = default;
 
-    GameStateInitResult ReputationComponent::initialize( const ReputationCatalog* pCatalog )
+    GameStateInitResult ReputationComponent::initialize( const ReputationCatalog& catalog )
     {
         if ( _restore.isOpen() )
             return GameStateInitResult::AlreadyInitialized; // 앞 디렉터가 연 평판을 다시 비우지 않는다
-        _reputation.initialize( pCatalog );
+        _reputation.initialize( catalog );
         return _restore.open( *this );
     }
 
@@ -53,8 +53,8 @@ namespace sw
         // 월드 상태와 같은 오브젝트면 붙은 순서대로 그 뒤에 돈다(디렉터 앞에 두면 디렉터가 식힌 평판을 읽는다). 다른 오브젝트면 다음 그룹에서 읽어 경쟁을 피한다.
         const GameObject* const pOwner = getOwner();
         setTickGroup( pOwner != nullptr && pOwner->getComponent<GameStateComponent>() != nullptr ? TickGroup::PrePhysics : TickGroup::PostPhysics );
-        if ( _bOpenAtBeginPlay == SW_TRUE )
-            (void)initialize( nullptr ); // 카탈로그가 없어도 거절하지 않는다 — 결과는 새 판 · 복원 · 이미 열림뿐이다
+        if ( _bOpenAtBeginPlay == SW_TRUE && _restore.isOpen() == false )
+            (void)_restore.open( *this ); // 카탈로그를 빌리지 않은 평판이다 — 결과는 새 판 · 복원뿐이다
     }
 
     void ReputationComponent::onTick( TickContext& context )

@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="utf-8"?>
+<?asset guid="00572bcfedee4f2eabd3c77f1b4c2542"?>
+<!--
+  클래식 JRPG 미니게임(등불 길 — 걸음 조우 전투를 넘어 길 끝의 보스를 이긴다) — ClassicJRPG 키트. 직업 · 주문 · 적 · 조우 지역(data/jrpg.xml)을 게임 기능 ClassicJRPG 가 미니게임 범위에 건다.
+  맵의 Director 오브젝트에 JRPGGameModeComponent → JRPGAvatarComponent(GF_Client_ClassicJRPG) → HUD 컨트롤러가 그 순서로 붙는다. 이기면 번 돈을 결과 값 money 로 내고 나온다.
+  입력은 걷기 공통 레이어와 JRPG 레이어(classicjrpg/data/jrpg.input.xml)만 켠다. 길게 걷는 판이라 안에서 저장한다(전투 중에도 파티 · 전투가 실린다).
+  시나리오 automation/classicjrpg_slice.scenario.xml 이 실행 전역 변수 gv_firstMinigame 로 들어간다.
+-->
+<Minigame name="classicjrpg" map="game/playground/classicjrpg/maps/trail.scene.xml" entry="SceneSwitch" portalSlot="24" save="Allowed" features="ClassicJRPG" inputContexts="Movement,JRPG" catalogs="JRPGCatalog"/>

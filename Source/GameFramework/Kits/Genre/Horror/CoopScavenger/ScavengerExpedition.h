@@ -105,14 +105,17 @@ namespace sw
 
 namespace sw
 {
-    /** @brief 빌려 쓰는 데이터 번들입니다. 카탈로그 말고는 없어도 되며, 없으면 날씨, 위협, 상점이 빠집니다. */
+    /**
+     * @brief 빌려 쓰는 데이터 번들입니다. 모두 있어야 하며 원정보다 오래 살아야 합니다.
+     * @details 날씨 · 위협 · 상점이 없는 판은 데이터가 정한다 — 날씨 줄이 없는 날씨 표, 항목이 없는 위협 표, 터미널 가게가 없는 가게 표를 준다.
+     */
     struct ScavengerExpeditionData
     {
-        const ScavengerCatalog* _pCatalog{ nullptr };
-        const WeatherCatalog*   _pWeatherCatalog{ nullptr }; ///< 계절 이름이 위성 id 이다(`seasons="march:2,rend:1"`)
-        const SpawnTable*       _pThreatTable{ nullptr };    ///< 태그 `Indoor` 와 `Outdoor` 로 나눈다
-        const ShopCatalog*      _pShopCatalog{ nullptr };
-        const ItemCatalog*      _pItemCatalog{ nullptr };
+        const ScavengerCatalog& _catalog;
+        const WeatherCatalog&   _weatherCatalog; ///< 계절 이름이 위성 id 이다(`seasons="march:2,rend:1"`)
+        const SpawnTable&       _threatTable;    ///< 태그 `Indoor` 와 `Outdoor` 로 나눈다
+        const ShopCatalog&      _shopCatalog;
+        const ItemCatalog&      _itemCatalog;
     };
 } // namespace sw
 
@@ -143,12 +146,12 @@ namespace sw
         ScavengerExpedition();
 
         /**
-         * @brief 새 원정을 엽니다. 회사 돈, 시계, 날씨, 플래그(시설 문 잠금 `unlocked.<방>`)는 @p pWallet · @p pClock · @p pWeather · @p pFlags 로 빌립니다(없으면 nullptr — 그 기능이 꺼진다). 지갑은 시작 크레딧으로 맞추고, 시계와 날씨는 직접 흘리지 않습니다
+         * @brief 새 원정을 엽니다. 회사 돈, 시계, 날씨, 플래그(시설 문 잠금 `unlocked.<방>`)를 @p wallet · @p clock · @p weather · @p flags 로 빌립니다. 지갑은 시작 크레딧으로 맞추고, 시계와 날씨는 직접 흘리지 않습니다
          *        (공유 상태의 주인이 흘립니다). 내리면 그 위성의 날씨로 바꾸고, 떠나면 시계를 다음 날 도착 시각으로 넘깁니다.
          *        터미널에서 산 물건은 빌린 우주선 창고(@p shipStorage)에 들어가며, 창고는 원정보다 오래 살아야 합니다.
-         *        카탈로그가 없거나 @p crewCount 가 1 보다 작거나 승무원 체력 설정이 범위 밖이면 오류를 남기고 false 를 반환합니다(승무원 수를 1 로 올려 대신 시작하지 않는다).
+         *        @p crewCount 가 1 보다 작거나 승무원 체력 설정이 범위 밖이면 오류를 남기고 false 를 반환합니다(승무원 수를 1 로 올려 대신 시작하지 않는다).
          */
-        [[nodiscard]] bool initialize( const ScavengerExpeditionData& data, Wallet* pWallet, WorldClock* pClock, WeatherSystem* pWeather, GameFlags* pFlags, Inventory& shipStorage,
+        [[nodiscard]] bool initialize( const ScavengerExpeditionData& data, Wallet& wallet, WorldClock& clock, WeatherSystem& weather, GameFlags& flags, Inventory& shipStorage,
                                        uint32 seed, int32 crewCount );
 
         /** @brief 궤도에서 위성으로 이동합니다(비용을 냅니다). 이미 그 위성이면 공짜입니다. */
@@ -190,18 +193,20 @@ namespace sw
          */
         SW_DECLARE_STATE_IO();
 
-        ScavengerPhase                getPhase() const { return _phase; }
-        const ScavengerMoonDef*       getMoon() const { return _pMoon; }
-        const ScavengerQuota&         getQuota() const { return _quota; }
-        int64                         getCredits() const;
-        const ScavengerFacility&      getFacility() const { return _facility; }
-        const Inventory&              getShipInventory() const { return *_pShipStorage; }
+        ScavengerPhase           getPhase() const { return _phase; }
+        const ScavengerMoonDef*  getMoon() const { return _pMoon; }
+        const ScavengerQuota&    getQuota() const { return _quota; }
+        int64                    getCredits() const;
+        const ScavengerFacility& getFacility() const { return _facility; }
+        const Inventory&         getShipInventory() const { return *_pShipStorage; }
+        /** @brief 터미널 상점(값 · 재고 · 살 수 있는지)입니다. 가게 id 는 카탈로그의 `getTerminalShopID` 입니다. */
+        const ShopManager&            getShop() const { return _shop; }
         const vector<ScavengerScrap>& getShipScrap() const { return _listShipScrap; }
         int32                         computeShipValue() const;
         const ScavengerCrewMember*    findCrewMember( int32 player ) const;
         int32                         getCrewCount() const { return static_cast<int32>( _listCrew.size() ); }
         int32                         countAlive() const;
-        /** @brief 빌린 시계의 날을 반환합니다(없으면 0). 그날의 배치, 위협, 날씨 시드로 씁니다. */
+        /** @brief 빌린 시계의 날을 반환합니다(열기 전이면 0). 그날의 배치, 위협, 날씨 시드로 씁니다. */
         int32 getDayIndex() const;
         /** @brief 내린 뒤 흐른 게임 시간(시)을 반환합니다. */
         float32 getHoursOnMoon() const { return _hoursOnMoon; }
@@ -223,7 +228,9 @@ namespace sw
         PROPERTY( RuntimeState )
         vector<ScavengerScrap>             _listShipScrap;
         NotificationBuffer<ScavengerEvent> _eventBuffer;
-        ScavengerExpeditionData            _data;
+        const ScavengerCatalog*            _pCatalog;        ///< 빌린 카탈로그(`initialize` 뒤 늘 있다 — 아래 빌림도 같다)
+        const WeatherCatalog*              _pWeatherCatalog; ///< 빌린 날씨 표
+        const SpawnTable*                  _pThreatTable;    ///< 빌린 위협 표
         ScavengerQuota                     _quota;
         ScavengerFacility                  _facility;
         SpawnDirector                      _indoorDirector;

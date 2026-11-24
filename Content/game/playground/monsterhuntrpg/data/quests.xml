@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="utf-8"?>
+<?asset guid="5cbbe12597864155afcacc12570792ba"?>
+<!-- 늪지 사냥 미니게임(monsterhuntrpg/maps/marsh)의 계약 퀘스트 — 조사(MonsterHuntInvestigation)가 단서(Clue) · 단계(Investigate)를 일지에 알린다. 마지막 조사 단계(lair)를 마치면 끝난다. -->
+<QuestCatalog>
+	<Quest id="silent_ferry">
+		<Stage id="net" next="lair"><Objective kind="Clue" target="torn_net"/></Stage>
+		<Stage id="lair" next="done"><Objective kind="Investigate" target="lair"/></Stage>
+		<Stage id="done" complete="true"/>
+	</Quest>
+</QuestCatalog>

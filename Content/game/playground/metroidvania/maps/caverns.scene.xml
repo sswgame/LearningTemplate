@@ -1,0 +1,186 @@
+<?asset guid="0efedf80b1bc41639e55f62b4dd7ab27"?>
+<Scene formatVersion="3" name="MetroidvaniaCaverns">
+	<!-- 메트로배니아 미니게임 판(minigames/metroidvania) — 칸 한 변 1 m, (0,0) 칸의 왼쪽 아래가 원점. 지형 줄(_listTerrainRow)과 벽 모습(Terrain*)은 같은 자리다. 몸 · 적 · 줍는 것은 MetroidvaniaViewComponent 가 옮긴다. -->
+	<SceneSettings _bStreaming="false" _unloadMargin="0" _maxCellLoadsPerFrame="0" _addToWorldBudgetMicroseconds="0">
+		<_cellGrid _cellSize="0" _loadingRadius="0" />
+	</SceneSettings>
+	<entities>
+		<entity id="1" name="Camera">
+			<GameObject _schemaVersion="0" _name="Camera" _bActive="true">
+				<_listComponent>
+					<CameraComponent _localID="17709685451340727998" _localPosition="2.5,3,-14" _localRotation="0.1,0,0" _localScale="1,1,1" _attachOwner="None" _attachComponent="None" _fovY="40.107045" _nearZ="0.1" _farZ="200" _orthoHeight="10" _priority="0" _role="Game" _bOrthographic="false" />
+					<FollowCameraComponent _localID="15357652970512560881" _gameMode="10" _offset="0,2,-14" _minFarPlane="200" />
+				</_listComponent>
+			</GameObject>
+		</entity>
+		<entity id="2" name="Sun">
+			<GameObject _schemaVersion="0" _name="Sun" _bActive="true">
+				<_listComponent>
+					<DirectionalLightComponent _localID="51927904365891271" _localPosition="0,0,0" _localRotation="0.9,-2.1,0" _localScale="1,1,1" _attachOwner="None" _attachComponent="None" _color="1,0.95,0.85" _intensity="1.4" _ambient="0.35" _shadowExtent="24" _shadowDistance="60" _bCastShadow="true" />
+				</_listComponent>
+			</GameObject>
+		</entity>
+		<entity id="3" name="Backdrop">
+			<GameObject _schemaVersion="0" _name="Backdrop" _bActive="true">
+				<_listComponent>
+					<MeshComponent _localID="163493842152903304" _localPosition="20,5,2" _localRotation="0,0,0" _localScale="44,12,0.2" _attachOwner="None" _attachComponent="None" _meshID="Cube" _materialPath="engine/materials/prototypegrid_light.material" _boundsRadius="0.866" _bVisible="true" />
+				</_listComponent>
+			</GameObject>
+		</entity>
+		<entity id="30" name="TerrainFloor">
+			<GameObject _schemaVersion="0" _name="TerrainFloor" _bActive="true">
+				<_listComponent>
+					<MeshComponent _localID="163493842152903304" _localPosition="20.0,0.5,0" _localRotation="0,0,0" _localScale="40,1,2" _attachOwner="None" _attachComponent="None" _meshID="Cube" _materialPath="engine/materials/prototypegrid_dark.material" _boundsRadius="0.866" _bVisible="true" />
+				</_listComponent>
+			</GameObject>
+		</entity>
+		<entity id="31" name="TerrainCeiling">
+			<GameObject _schemaVersion="0" _name="TerrainCeiling" _bActive="true">
+				<_listComponent>
+					<MeshComponent _localID="163493842152903304" _localPosition="20.0,9.5,0" _localRotation="0,0,0" _localScale="40,1,2" _attachOwner="None" _attachComponent="None" _meshID="Cube" _materialPath="engine/materials/prototypegrid_dark.material" _boundsRadius="0.866" _bVisible="true" />
+				</_listComponent>
+			</GameObject>
+		</entity>
+		<entity id="32" name="TerrainLeft">
+			<GameObject _schemaVersion="0" _name="TerrainLeft" _bActive="true">
+				<_listComponent>
+					<MeshComponent _localID="163493842152903304" _localPosition="0.5,5.0,0" _localRotation="0,0,0" _localScale="1,8,2" _attachOwner="None" _attachComponent="None" _meshID="Cube" _materialPath="engine/materials/prototypegrid_dark.material" _boundsRadius="0.866" _bVisible="true" />
+				</_listComponent>
+			</GameObject>
+		</entity>
+		<entity id="33" name="TerrainRight">
+			<GameObject _schemaVersion="0" _name="TerrainRight" _bActive="true">
+				<_listComponent>
+					<MeshComponent _localID="163493842152903304" _localPosition="39.5,5.0,0" _localRotation="0,0,0" _localScale="1,8,2" _attachOwner="None" _attachComponent="None" _meshID="Cube" _materialPath="engine/materials/prototypegrid_dark.material" _boundsRadius="0.866" _bVisible="true" />
+				</_listComponent>
+			</GameObject>
+		</entity>
+		<entity id="34" name="TerrainLedge">
+			<GameObject _schemaVersion="0" _name="TerrainLedge" _bActive="true">
+				<_listComponent>
+					<MeshComponent _localID="163493842152903304" _localPosition="24.5,3.0,0" _localRotation="0,0,0" _localScale="1,4,2" _attachOwner="None" _attachComponent="None" _meshID="Cube" _materialPath="engine/materials/prototypegrid_dark.material" _boundsRadius="0.866" _bVisible="true" />
+				</_listComponent>
+			</GameObject>
+		</entity>
+		<entity id="5" name="PlayerBody">
+			<GameObject _schemaVersion="0" _name="PlayerBody" _bActive="true">
+				<_listComponent>
+					<MeshComponent _localID="163493842152903304" _localPosition="2.5,1.5,0" _localRotation="0,0,0" _localScale="0.7,0.9,0.7" _attachOwner="None" _attachComponent="None" _meshID="Cube" _materialPath="engine/materials/prototypegrid_light.material" _boundsRadius="0.866" _bVisible="true" />
+				</_listComponent>
+			</GameObject>
+		</entity>
+		<entity id="6" name="CorpseBody">
+			<GameObject _schemaVersion="0" _name="CorpseBody" _bActive="true">
+				<_listComponent>
+					<MeshComponent _localID="163493842152903304" _localPosition="2.5,1.5,0" _localRotation="0,0,0" _localScale="0.5,0.5,0.5" _attachOwner="None" _attachComponent="None" _meshID="Cube" _materialPath="engine/materials/prototypegrid_dark.material" _boundsRadius="0.866" _bVisible="false" />
+				</_listComponent>
+			</GameObject>
+		</entity>
+		<entity id="7" name="Bench">
+			<GameObject _schemaVersion="0" _name="Bench" _bActive="true">
+				<_listComponent>
+					<MeshComponent _localID="163493842152903304" _localPosition="2.5,1.2,0.6" _localRotation="0,0,0" _localScale="1.2,0.4,0.6" _attachOwner="None" _attachComponent="None" _meshID="Cube" _materialPath="engine/materials/prototypegrid_orange.material" _boundsRadius="0.866" _bVisible="true" />
+				</_listComponent>
+			</GameObject>
+		</entity>
+		<entity id="8" name="LiftHall">
+			<GameObject _schemaVersion="0" _name="LiftHall" _bActive="true">
+				<_listComponent>
+					<MeshComponent _localID="163493842152903304" _localPosition="5.5,1.6,0.6" _localRotation="0,0,0" _localScale="0.6,1.2,0.4" _attachOwner="None" _attachComponent="None" _meshID="Cube" _materialPath="engine/materials/prototypegrid_light.material" _boundsRadius="0.866" _bVisible="true" />
+				</_listComponent>
+			</GameObject>
+		</entity>
+		<entity id="9" name="LiftThrone">
+			<GameObject _schemaVersion="0" _name="LiftThrone" _bActive="true">
+				<_listComponent>
+					<MeshComponent _localID="163493842152903304" _localPosition="27.5,1.6,0.6" _localRotation="0,0,0" _localScale="0.6,1.2,0.4" _attachOwner="None" _attachComponent="None" _meshID="Cube" _materialPath="engine/materials/prototypegrid_light.material" _boundsRadius="0.866" _bVisible="true" />
+				</_listComponent>
+			</GameObject>
+		</entity>
+		<entity id="20" name="Husk">
+			<GameObject _schemaVersion="0" _name="Husk" _bActive="true">
+				<_listComponent>
+					<MeshComponent _localID="163493842152903304" _localPosition="9,1.5,0" _localRotation="0,0,0" _localScale="0.9,1,0.9" _attachOwner="None" _attachComponent="None" _meshID="Cube" _materialPath="engine/materials/prototypegrid_orange.material" _boundsRadius="0.866" _bVisible="true" />
+				</_listComponent>
+			</GameObject>
+		</entity>
+		<entity id="21" name="Warden">
+			<GameObject _schemaVersion="0" _name="Warden" _bActive="true">
+				<_listComponent>
+					<MeshComponent _localID="163493842152903304" _localPosition="33,1.5,0" _localRotation="0,0,0" _localScale="0.9,1,0.9" _attachOwner="None" _attachComponent="None" _meshID="Cube" _materialPath="engine/materials/prototypegrid_orange.material" _boundsRadius="0.866" _bVisible="true" />
+				</_listComponent>
+			</GameObject>
+		</entity>
+		<entity id="22" name="WingsPickup">
+			<GameObject _schemaVersion="0" _name="WingsPickup" _bActive="true">
+				<_listComponent>
+					<MeshComponent _localID="163493842152903304" _localPosition="18,1.5,0" _localRotation="0,0,0" _localScale="0.5,0.5,0.5" _attachOwner="None" _attachComponent="None" _meshID="Sphere" _materialPath="engine/materials/prototypegrid_orange.material" _boundsRadius="0.866" _bVisible="true" />
+				</_listComponent>
+			</GameObject>
+		</entity>
+		<entity id="23" name="EdgePickup">
+			<GameObject _schemaVersion="0" _name="EdgePickup" _bActive="true">
+				<_listComponent>
+					<MeshComponent _localID="163493842152903304" _localPosition="37,1.5,0" _localRotation="0,0,0" _localScale="0.5,0.5,0.5" _attachOwner="None" _attachComponent="None" _meshID="Sphere" _materialPath="engine/materials/prototypegrid_orange.material" _boundsRadius="0.866" _bVisible="true" />
+				</_listComponent>
+			</GameObject>
+		</entity>
+		<entity id="10" name="MetroidvaniaGameMode">
+			<GameObject _schemaVersion="0" _name="MetroidvaniaGameMode" _bActive="true">
+				<_listComponent>
+					<MetroidvaniaGameModeComponent _localID="13563141952773540282" _areaDataPath="game/playground/metroidvania/data/caverns.areas.xml" _startPosition="2.5,1.5" _fallY="-3" _markerReach="1" _goalFlag="boss_warden" _playerDamage="50" _playerPoiseDamage="10" _playerReach="2.2" _playerAttackInterval="0.35" _enemyDamage="10" _bossDamage="15" _bossDamageTakenScale="0.4" _enemyReach="1.8" _enemyStartup="0.5" _enemyInterval="1" _respawnDelaySeconds="1" _resultHoldSeconds="3" _seed="7">
+						<_listTerrainRow>
+							<item>########################################</item>
+							<item>#......................................#</item>
+							<item>#......................................#</item>
+							<item>#......................................#</item>
+							<item>#......................................#</item>
+							<item>#.......................#..............#</item>
+							<item>#.......................#..............#</item>
+							<item>#.......................#..............#</item>
+							<item>#.......................#..............#</item>
+							<item>########################################</item>
+						</_listTerrainRow>
+						<_listEnemyKind>
+							<item>husk</item>
+							<item>warden</item>
+						</_listEnemyKind>
+						<_listEnemyPosition>
+							<item>9,1.5</item>
+							<item>33,1.5</item>
+						</_listEnemyPosition>
+						<_listPickup>
+							<item>wings</item>
+							<item>edge</item>
+						</_listPickup>
+						<_listPickupPosition>
+							<item>18,1.5</item>
+							<item>37,1.5</item>
+						</_listPickupPosition>
+						<_listSite>
+							<item>bench</item>
+							<item>lift_hall</item>
+							<item>lift_throne</item>
+						</_listSite>
+						<_listSitePosition>
+							<item>2.5,1.5</item>
+							<item>5.5,1.5</item>
+							<item>27.5,1.5</item>
+						</_listSitePosition>
+					</MetroidvaniaGameModeComponent>
+					<MetroidvaniaViewComponent _localID="5775214352093127445" _moveAction="Move" _jumpAction="Metroidvania.Jump" _dashAction="Metroidvania.Dash" _attackAction="Metroidvania.Attack" _guardAction="Metroidvania.Guard" _useAction="Metroidvania.Use" _flaskAction="Metroidvania.Flask" _playerBody="5" _corpseBody="6" _enemySize="0.9,1,0.9" _startupScale="1.4" _markerSize="0.5,0.5,0.5">
+						<_listEnemyBody>
+							<item>20</item>
+							<item>21</item>
+						</_listEnemyBody>
+						<_listPickupBody>
+							<item>22</item>
+							<item>23</item>
+						</_listPickupBody>
+					</MetroidvaniaViewComponent>
+					<HUDControllerComponent _localID="17122754535480611078" _documentPath="game/playground/metroidvania/ui/hud.ui.xml" />
+				</_listComponent>
+			</GameObject>
+		</entity>
+	</entities>
+</Scene>

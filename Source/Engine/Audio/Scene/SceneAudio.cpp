@@ -88,6 +88,16 @@ namespace sw
                 return true;
             }
 
+            /** @brief 감시 값 `Audio.RenderedSeconds` 입니다. 오디오 스레드가 지금까지 렌더한 시간(초)입니다 — 멈춘 소리와 견줄 벽시계 쪽 시간이다. */
+            [[nodiscard]] static bool readRenderedSeconds( const GameObjectManager* pManager, float64& outValue )
+            {
+                const AudioEngine* pEngine = pManager != nullptr ? pManager->getSubsystem<SceneAudio>().findAudioEngine() : nullptr;
+                if ( pEngine == nullptr )
+                    return false;
+                outValue = static_cast<float64>( pEngine->getStats()._renderedFrameCount ) / static_cast<float64>( audio::kSampleRate );
+                return true;
+            }
+
             /** @brief 감시 값 `Audio.ClipCacheBytes` 입니다. 클립 캐시에 든 디코드 바이트의 합입니다(예산은 `EngineConfig::_audio._clipCacheMegabytes`). */
             [[nodiscard]] static bool readClipCacheBytes( const GameObjectManager* pManager, float64& outValue )
             {
@@ -118,7 +128,7 @@ namespace sw
                 return true;
             }
 
-            /** @brief `Audio.InstanceCount` 의 활동 수 — 오디오 스레드가 지금까지 렌더한 프레임 수입니다(게시가 멈추면 값도 멈춘다). */
+            /** @brief `Audio.InstanceCount` · `Audio.RenderedSeconds` 의 활동 수 — 오디오 스레드가 지금까지 렌더한 프레임 수입니다(게시가 멈추면 값도 멈춘다). */
             [[nodiscard]] static uint64 readAudioActivity( const GameObjectManager* pManager )
             {
                 const AudioEngine* pEngine = pManager != nullptr ? pManager->getSubsystem<SceneAudio>().findAudioEngine() : nullptr;
@@ -142,6 +152,7 @@ namespace sw
                                false );
     // 오디오 스레드가 명령을 옮겨야 값이 바뀐다 — 벽시계 시한으로 기다린다.
     SW_AUTOMATION_WALL_WATCH( audioInstanceCount, "Audio.InstanceCount", "Sound event instances alive in the audio engine", &SceneAudioInternal::readInstanceCount, &SceneAudioInternal::readAudioActivity );
+    SW_AUTOMATION_WALL_WATCH( audioRenderedSeconds, "Audio.RenderedSeconds", "Seconds the audio engine rendered since it started, paused sounds included", &SceneAudioInternal::readRenderedSeconds, &SceneAudioInternal::readAudioActivity );
     // 디코드 결과는 워커가 넣는다 — 같은 까닭으로 벽시계 시한이다.
     // 장치 콜백의 할당 · 잠금은 감시 값이 아니라 단언이다(`AudioRenderThread::read` 의 실시간 구간).
     SW_AUTOMATION_WATCH( audioOutputUnderruns, "Audio.OutputUnderruns", "Underruns (xruns, glitches) the output device reported since the stream opened", &SceneAudioInternal::readOutputUnderruns );

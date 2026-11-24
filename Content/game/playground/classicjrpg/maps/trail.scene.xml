@@ -1,0 +1,132 @@
+<?asset guid="d185c9cce307440db4b4bf465d325c38"?>
+<Scene formatVersion="3" name="ClassicJRPGTrail">
+	<SceneSettings _bStreaming="false" _unloadMargin="0" _maxCellLoadsPerFrame="0" _addToWorldBudgetMicroseconds="0">
+		<_cellGrid _cellSize="0" _loadingRadius="0" />
+	</SceneSettings>
+	<entities>
+		<!-- 화면 카메라 — 디렉터가 답하는 초점(파티)을 비스듬히 위에서 따라간다. -->
+		<entity id="1" name="GameCamera">
+			<GameObject _schemaVersion="0" _name="GameCamera" _bActive="true">
+				<_listComponent>
+					<CameraComponent _localID="17709685451340727998" _localPosition="0,10,-9" _localRotation="0.85,0,0" _localScale="1,1,1" _attachOwner="None" _attachComponent="None"
+					                 _fovY="40.107045" _nearZ="0.1" _farZ="120" _orthoHeight="10" _priority="0" _role="Game" _bOrthographic="false" />
+					<FollowCameraComponent _localID="15357652970512560881" _gameMode="10" _offset="2,10,-9" _minFarPlane="120" />
+				</_listComponent>
+			</GameObject>
+		</entity>
+		<entity id="2" name="Sun">
+			<GameObject _schemaVersion="0" _name="Sun" _bActive="true">
+				<_listComponent>
+					<DirectionalLightComponent _localID="51927904365891271" _localPosition="0,0,0" _localRotation="0.448254,-2.121679,0" _localScale="1,1,1" _attachOwner="None" _attachComponent="None"
+					                           _color="1,0.94,0.85" _intensity="1.3" _ambient="0.35" _shadowExtent="30" _shadowDistance="60" _bCastShadow="true" />
+				</_listComponent>
+			</GameObject>
+		</entity>
+		<entity id="3" name="Ground">
+			<GameObject _schemaVersion="0" _name="Ground" _bActive="true">
+				<_listComponent>
+					<MeshComponent _localID="163493842152903304" _localPosition="6,0,0" _localRotation="0,0,0" _localScale="24,1,8" _attachOwner="None" _attachComponent="None"
+					               _meshID="Plane" _materialPath="engine/materials/prototypegrid_dark.material" _boundsRadius="0.866" _bVisible="true" />
+				</_listComponent>
+			</GameObject>
+		</entity>
+		<entity id="4" name="Trail">
+			<GameObject _schemaVersion="0" _name="Trail" _bActive="true">
+				<_listComponent>
+					<MeshComponent _localID="163493842152903304" _localPosition="6,0.01,0" _localRotation="0,0,0" _localScale="16,1,2" _attachOwner="None" _attachComponent="None"
+					               _meshID="Plane" _materialPath="engine/materials/prototypegrid_light.material" _boundsRadius="0.866" _bVisible="true" />
+				</_listComponent>
+			</GameObject>
+		</entity>
+		<entity id="5" name="LanternWest">
+			<GameObject _schemaVersion="0" _name="LanternWest" _bActive="true">
+				<_listComponent>
+					<MeshComponent _localID="163493842152903304" _localPosition="4,0.6,2.2" _localRotation="0,0,0" _localScale="0.4,1.2,0.4" _attachOwner="None" _attachComponent="None"
+					               _meshID="Cube" _materialPath="engine/materials/prototypegrid_orange.material" _boundsRadius="0.866" _bVisible="true" />
+					<RigidBodyComponent _localID="7198733165449302788" _localPosition="0,0,0" _localRotation="0,0,0" _localScale="1,1,1" _attachOwner="None" _attachOwnerID="0" _attachComponent="#0244d8c8807cd288"
+					                    _bodyType="Static" _layer="Static" _material="None" _mass="0">
+						<_listShape>
+							<PhysicsShapeDesc3D _type="Box" _halfExtents="0.5,0.5,0.5" _radius="0.5" _halfHeight="0.5" _localPosition="0,0,0" _localRotation="0,0,0" _material="None">
+								<_listPoint />
+								<_listIndex />
+							</PhysicsShapeDesc3D>
+						</_listShape>
+					</RigidBodyComponent>
+				</_listComponent>
+			</GameObject>
+		</entity>
+		<entity id="6" name="LanternEast">
+			<GameObject _schemaVersion="0" _name="LanternEast" _bActive="true">
+				<_listComponent>
+					<MeshComponent _localID="163493842152903304" _localPosition="8,0.6,-2.2" _localRotation="0,0,0" _localScale="0.4,1.2,0.4" _attachOwner="None" _attachComponent="None"
+					               _meshID="Cube" _materialPath="engine/materials/prototypegrid_orange.material" _boundsRadius="0.866" _bVisible="true" />
+					<RigidBodyComponent _localID="7198733165449302788" _localPosition="0,0,0" _localRotation="0,0,0" _localScale="1,1,1" _attachOwner="None" _attachOwnerID="0" _attachComponent="#0244d8c8807cd288"
+					                    _bodyType="Static" _layer="Static" _material="None" _mass="0">
+						<_listShape>
+							<PhysicsShapeDesc3D _type="Box" _halfExtents="0.5,0.5,0.5" _radius="0.5" _halfHeight="0.5" _localPosition="0,0,0" _localRotation="0,0,0" _material="None">
+								<_listPoint />
+								<_listIndex />
+							</PhysicsShapeDesc3D>
+						</_listShape>
+					</RigidBodyComponent>
+				</_listComponent>
+			</GameObject>
+		</entity>
+		<!-- 디렉터 → 입력 · 그리기(클라이언트) → HUD 순서로 붙인다. 걸음(1 m) 네 번마다 풀숲의 적을 만나고(카탈로그 rate 1 · grace 3) 길 끝(12, 0)에 보스가 있다. -->
+		<entity id="10" name="Director">
+			<GameObject _schemaVersion="0" _name="Director" _bActive="true">
+				<_listComponent>
+					<JRPGGameModeComponent _localID="7507309250333822388"
+					                       _area="lantern_trail"
+					                       _startPosition="0,0"
+					                       _goalPosition="12,0"
+					                       _restPosition="8,0.8"
+					                       _trailMin="-1,-2.5"
+					                       _trailMax="13,2.5"
+					                       _useRadius="1"
+					                       _moveSpeed="4"
+					                       _stepLength="1"
+					                       _seed="7"
+					                       _startGold="10"
+					                       _innPrice="4"
+					                       _revivePrice="10"
+					                       _timingTarget="0.4"
+					                       _timingDuration="0.7"
+					                       _bagSlotCount="8"
+					                       _restClass="ember_sage"
+					                       _classChangeLevel="1"
+					                       _resultHoldSeconds="3">
+						<_listTimingWindow>
+							<TimingWindow _grade="Hit" early="0.2" late="0.2" />
+						</_listTimingWindow>
+						<_listStartItem>
+							<item>blade_lantern</item>
+							<item>robe_wick</item>
+							<item>tome_ember</item>
+						</_listStartItem>
+						<_listHero>
+							<item>lantern_guard</item>
+							<item>wick_mage</item>
+						</_listHero>
+						<_listBoss>
+							<item>hollow_stag</item>
+						</_listBoss>
+					</JRPGGameModeComponent>
+					<JRPGAvatarComponent _localID="17968816519372616228"
+					                     _moveAction="Move"
+					                     _attackAction="JRPG.Attack"
+					                     _spellAction="JRPG.Spell"
+					                     _defendAction="JRPG.Defend"
+					                     _fleeAction="JRPG.Flee"
+					                     _restAction="JRPG.Rest"
+					                     _equipAction="JRPG.Equip"
+					                     _classChangeAction="JRPG.ClassChange"
+					                     _classChangeMember="1"
+					                     _bodyPrefab="game/playground/prefabs/ruleviews/person.prefab.xml"
+					                     _markerPrefab="game/playground/prefabs/ruleviews/cube.prefab.xml" />
+					<HUDControllerComponent _localID="17122754535480611078" _documentPath="game/playground/classicjrpg/ui/hud.ui.xml" />
+				</_listComponent>
+			</GameObject>
+		</entity>
+	</entities>
+</Scene>

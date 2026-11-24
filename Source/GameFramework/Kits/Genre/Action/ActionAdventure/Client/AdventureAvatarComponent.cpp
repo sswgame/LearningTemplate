@@ -5,7 +5,6 @@
 #include "Core/Log/Logger.h"
 
 #include "Engine/Foundation/WorldOrigin.h"
-#include "Engine/Graphics/Debug/DebugDrawQueue.h"
 #include "Engine/Input/IInputCaptureQuery.h"
 #include "Engine/Input/InputManager.h"
 #include "Engine/Input/Map/CommonInputActions.h"
@@ -22,42 +21,25 @@
 
 namespace sw
 {
-    namespace
-    {
-        /** @brief 디버그 그리기의 색 · 크기(m)입니다. */
-        struct AdventureAvatarComponentInternal
-        {
-            static constexpr float4  kBorderColor      = float4( 0.75f, 0.8f, 0.7f, 1.0f ); ///< 지역 경계
-            static constexpr float4  kLitBeaconColor   = float4( 1.0f, 0.62f, 0.18f, 1.0f );
-            static constexpr float4  kUnlitBeaconColor = float4( 0.35f, 0.35f, 0.4f, 1.0f );
-            static constexpr float4  kCampColor        = float4( 0.95f, 0.4f, 0.1f, 1.0f );
-            static constexpr float4  kPlayerColor      = float4( 0.2f, 0.6f, 1.0f, 1.0f );
-            static constexpr float32 kBorderHeight     = 0.05f; ///< 경계 선을 땅에서 띄우는 높이
-            static constexpr float32 kBeaconHalfWidth  = 0.3f;
-            static constexpr float32 kBeaconHalfHeight = 1.0f; ///< 땅 위에 선 상자라 가운데 높이이기도 하다
-            static constexpr float32 kCampHeight       = 0.2f;
-            static constexpr float32 kCampRadius       = 0.4f;
-            static constexpr float32 kPlayerHeight     = 0.5f;
-            static constexpr float32 kPlayerRadius     = 0.28f;
-
-            static void drawBorder( DebugDrawQueue& draw, const WorldOrigin& origin, const AdventureRegionDef& region )
-            {
-                const AbsolutePosition corner00{ float3( region._min._x, kBorderHeight, region._min._y ) };
-                const AbsolutePosition corner10{ float3( region._max._x, kBorderHeight, region._min._y ) };
-                const AbsolutePosition corner11{ float3( region._max._x, kBorderHeight, region._max._y ) };
-                const AbsolutePosition corner01{ float3( region._min._x, kBorderHeight, region._max._y ) };
-                draw.drawLine( origin, corner00, corner10, kBorderColor );
-                draw.drawLine( origin, corner10, corner11, kBorderColor );
-                draw.drawLine( origin, corner11, corner01, kBorderColor );
-                draw.drawLine( origin, corner01, corner00, kBorderColor );
-            }
-        };
-    } // namespace
-
     AdventureAvatarComponent::AdventureAvatarComponent()
         : _moveAction{ CommonInputActions::kMove }
         , _useAction{}
+        , _cubePrefab{}
+        , _spherePrefab{}
+        , _borderColor{ 0.75f, 0.8f, 0.7f, 1.0f }
+        , _borderWidth{ 0.1f }
+        , _beaconSize{ 0.6f, 2.0f, 0.6f }
+        , _litBeaconColor{ 1.0f, 0.62f, 0.18f, 1.0f }
+        , _unlitBeaconColor{ 0.35f, 0.35f, 0.4f, 1.0f }
+        , _campRadius{ 0.4f }
+        , _campHeight{ 0.2f }
+        , _campColor{ 0.95f, 0.4f, 0.1f, 1.0f }
+        , _playerRadius{ 0.28f }
+        , _playerHeight{ 0.5f }
+        , _playerColor{ 0.2f, 0.6f, 1.0f, 1.0f }
         , _director{}
+        , _cubeViews{}
+        , _sphereViews{}
         , _bInputLive{ SW_FALSE }
         , _bActionsValid{ SW_FALSE }
         , _reserved{ 0 }
@@ -90,6 +72,18 @@ namespace sw
             SW_LOG_ERROR_ID( "Adventure.AvatarActionMissing", "Adventure avatar: move '%#' and use '%#' actions must both be named - the avatar reads no input", _moveAction.c_str(), _useAction.c_str() );
     }
 
+    void AdventureAvatarComponent::onEndPlay()
+    {
+        GameObject* const        pOwner   = getOwner();
+        GameObjectManager* const pManager = pOwner != nullptr ? pOwner->getMutableManager() : nullptr;
+        if ( pManager != nullptr )
+        {
+            _cubeViews.destroyAll( *pManager );
+            _sphereViews.destroyAll( *pManager );
+        }
+        Component::onEndPlay();
+    }
+
     void AdventureAvatarComponent::onTick( TickContext& context )
     {
         Component::onTick( context );
@@ -110,32 +104,48 @@ namespace sw
             const GameInputView input( pInput->getInputMap(), game::findSubsystem<IInputCaptureQuery>() );
             (void)pDirector->submitPlayerInput( input.getVector2D( _moveAction ), input.wasActionTriggered( _useAction ) ); // 열린 판인지는 위에서 보았다
         }
-        draw( *pDirector, manager );
+        showWorld( *pDirector, manager );
     }
 
-    void AdventureAvatarComponent::draw( const AdventureGameModeComponent& director, const GameObjectManager& manager )
+    void AdventureAvatarComponent::showWorld( const AdventureGameModeComponent& director, GameObjectManager& manager )
     {
-        using Internal                               = AdventureAvatarComponentInternal;
-        DebugDrawQueue* const               pDraw    = game::findSubsystem<DebugDrawQueue>();
         const AdventureRegionCatalog* const pRegions = director.findRegions();
         const GameStateComponent* const     pState   = GameStateComponent::findOnOwner( director );
-        if ( pDraw == nullptr || pRegions == nullptr || pState == nullptr )
+        if ( pRegions == nullptr || pState == nullptr )
             return;
-        const WorldOrigin& origin = manager.getWorldOrigin();
+        _cubeViews.begin();
+        _sphereViews.begin();
         for ( const AdventureRegionDef& region : pRegions->getAll() )
         {
-            Internal::drawBorder( *pDraw, origin, region ); // 씬에 땅 메시가 없는 지역(확장 팩)도 어디까지 걸을 수 있는지 보인다
+            showBorder( region, manager );
             if ( region._beacon.isSet() )
             {
                 const bool             bLit = director.getCampaign().isBeaconLit( region, pState->getFlags() );
-                const AbsolutePosition center{ float3( region._beacon._position._x, Internal::kBeaconHalfHeight, region._beacon._position._y ) };
-                const float3           halfExtent( Internal::kBeaconHalfWidth, Internal::kBeaconHalfHeight, Internal::kBeaconHalfWidth );
-                pDraw->drawBox( origin, center, halfExtent, bLit ? Internal::kLitBeaconColor : Internal::kUnlitBeaconColor );
+                const AbsolutePosition center{ float3( region._beacon._position._x, _beaconSize._y * 0.5f, region._beacon._position._y ) };
+                (void)_cubeViews.show( manager, _cubePrefab, center, _beaconSize, 0.0f, bLit ? _litBeaconColor : _unlitBeaconColor );
             }
             if ( region._camp.isSet() )
-                pDraw->drawSphere( origin, AbsolutePosition{ float3( region._camp._position._x, Internal::kCampHeight, region._camp._position._y ) }, Internal::kCampRadius, Internal::kCampColor );
+            {
+                const AbsolutePosition center{ float3( region._camp._position._x, _campHeight, region._camp._position._y ) };
+                (void)_sphereViews.show( manager, _spherePrefab, center, float3{ _campRadius * 2.0f }, 0.0f, _campColor );
+            }
         }
         const float2& position = director.getPlayerPosition();
-        pDraw->drawSphere( origin, AbsolutePosition{ float3( position._x, Internal::kPlayerHeight, position._y ) }, Internal::kPlayerRadius, Internal::kPlayerColor );
+        (void)_sphereViews.show( manager, _spherePrefab, AbsolutePosition{ float3( position._x, _playerHeight, position._y ) }, float3{ _playerRadius * 2.0f }, 0.0f, _playerColor );
+        _cubeViews.end( manager );
+        _sphereViews.end( manager );
+    }
+
+    void AdventureAvatarComponent::showBorder( const AdventureRegionDef& region, GameObjectManager& manager )
+    {
+        const float32 half    = _borderWidth * 0.5f; // 땅 위에 앉힌다
+        const float32 centerX = ( region._min._x + region._max._x ) * 0.5f;
+        const float32 centerZ = ( region._min._y + region._max._y ) * 0.5f;
+        const float3  alongX( region._max._x - region._min._x, _borderWidth, _borderWidth );
+        const float3  alongZ( _borderWidth, _borderWidth, region._max._y - region._min._y );
+        (void)_cubeViews.show( manager, _cubePrefab, AbsolutePosition{ float3( centerX, half, region._min._y ) }, alongX, 0.0f, _borderColor );
+        (void)_cubeViews.show( manager, _cubePrefab, AbsolutePosition{ float3( centerX, half, region._max._y ) }, alongX, 0.0f, _borderColor );
+        (void)_cubeViews.show( manager, _cubePrefab, AbsolutePosition{ float3( region._min._x, half, centerZ ) }, alongZ, 0.0f, _borderColor );
+        (void)_cubeViews.show( manager, _cubePrefab, AbsolutePosition{ float3( region._max._x, half, centerZ ) }, alongZ, 0.0f, _borderColor );
     }
 } // namespace sw

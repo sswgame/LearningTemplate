@@ -59,7 +59,7 @@ namespace sw
 
     bool CreatureTownGameModeComponent::initializeTown( CreatureTown& outTown, GameStateComponent& state, ReputationComponent& reputation, QuestLogComponent& questLog ) const
     {
-        return _pCatalog != nullptr && outTown.initialize( _pCatalog.get(), &reputation.getReputation(), &questLog.getQuestLog(), &state.getClock(), _townSize, _townSize );
+        return _pCatalog != nullptr && outTown.initialize( _pCatalog.get(), reputation.getReputation(), questLog.getQuestLog(), state.getClock(), _townSize, _townSize );
     }
 
     bool CreatureTownGameModeComponent::startGame()
@@ -82,8 +82,8 @@ namespace sw
         const GameObject* const pPlayerState = requirePlayerState();
         if ( pPlayerState == nullptr || PlayerComponentUtil::requireOn<WalletComponent>( *pPlayerState ) == nullptr )
             return false; // 까닭은 찾기가 남겼다
-        QuestLogComponent*   pQuestLog   = PlayerComponentUtil::openOn<QuestLogComponent>( *pPlayerState, _pQuestCatalog.get() );
-        ReputationComponent* pReputation = PlayerComponentUtil::openOn<ReputationComponent>( *pPlayerState, _pFriendshipCatalog.get() );
+        QuestLogComponent*   pQuestLog   = PlayerComponentUtil::openOn<QuestLogComponent>( *pPlayerState, *_pQuestCatalog );
+        ReputationComponent* pReputation = PlayerComponentUtil::openOn<ReputationComponent>( *pPlayerState, *_pFriendshipCatalog );
         if ( pQuestLog == nullptr || pReputation == nullptr || initializeTown( _town, *pState, *pReputation, *pQuestLog ) == false )
             return false;
         if ( pState->isFreshGame() && placeObjects( _listStartObject ) == false )

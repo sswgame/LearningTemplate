@@ -99,7 +99,7 @@ SW_TEST_CASE( BattleRoyaleLoadoutTest, ArmorAbsorbsByZoneAndBreaks )
     sw::BattleRoyaleCatalog catalog;
     SW_REQUIRE_TRUE( catalog.loadFromXMLText( kGearXML, "BattleRoyaleLoadoutTest" ) );
     sw::BattleRoyaleLoadout loadout;
-    loadout.initialize( &catalog );
+    loadout.initialize( catalog );
     SW_EXPECT_NEAR( 20.0f, loadout.absorbDamage( 20.0f, sw::BattleRoyaleHitZone::Head )._damage, kGearTolerance ); // 입기 전
 
     SW_REQUIRE_TRUE( loadout.tryEquipArmor( kHelmet ) );
@@ -142,7 +142,7 @@ SW_TEST_CASE( BattleRoyaleLoadoutTest, EquipRejectsBrokenArmor )
     SW_REQUIRE_TRUE( catalog.loadFromXMLText( kGearXML, "BattleRoyaleLoadoutTest" ) );
     sw::BattleRoyaleLoadout loadout;
     SW_EXPECT_FALSE( loadout.tryEquipArmor( kHelmet ) ); // 카탈로그 없음
-    loadout.initialize( &catalog );
+    loadout.initialize( catalog );
     SW_EXPECT_FALSE( loadout.tryEquipArmor( sw::hashed_string( "hat" ) ) );
 
     SW_EXPECT_FALSE( loadout.tryEquipArmor( kHelmet, 0.0f ) );
@@ -168,12 +168,12 @@ SW_TEST_CASE( BattleRoyaleLoadoutTest, BackpackControlsCarryLimit )
     SW_REQUIRE_TRUE( items.loadFromXMLText( kGearItemXML, "items" ) );
     sw::BattleRoyaleLoadout loadout;
     SW_EXPECT_NEAR( 0.0f, loadout.computeCarryLimit(), kGearTolerance );
-    loadout.initialize( &catalog );
+    loadout.initialize( catalog );
     SW_EXPECT_NEAR( 20.0f, loadout.computeCarryLimit(), kGearTolerance );
     SW_EXPECT_NEAR( 50.0f, loadout.computeCarryLimit( kBag ), kGearTolerance );
 
     sw::Inventory inventory;
-    SW_REQUIRE_TRUE( inventory.initialize( &items, 4, loadout.computeCarryLimit() ) );
+    SW_REQUIRE_TRUE( inventory.initialize( items, 4, loadout.computeCarryLimit() ) );
     SW_EXPECT_EQUAL( 1, inventory.addItem( kRock, 2 ) ); // 무게 15 하나만 든다
 
     SW_EXPECT_FALSE( loadout.tryEquipBackpack( sw::hashed_string( "sack" ), inventory ) );
@@ -199,7 +199,7 @@ SW_TEST_CASE( BattleRoyaleLoadoutTest, ReloadTakesOnlyWhatItNeeds )
     sw::ItemCatalog items;
     SW_REQUIRE_TRUE( items.loadFromXMLText( kGearItemXML, "items" ) );
     sw::Inventory inventory;
-    SW_REQUIRE_TRUE( inventory.initialize( &items, 4 ) );
+    SW_REQUIRE_TRUE( inventory.initialize( items, 4 ) );
     SW_REQUIRE_EQUAL( 100, inventory.addItem( kAmmo, 100 ) );
     const sw::BattleRoyaleLoadout loadout;
 
@@ -226,7 +226,7 @@ SW_TEST_CASE( BattleRoyaleLoadoutTest, ReloadTakesOnlyWhatItNeeds )
     SW_EXPECT_EQUAL( 2, capped.getReserveAmmo() );
 
     sw::Inventory empty;
-    SW_REQUIRE_TRUE( empty.initialize( &items, 4 ) );
+    SW_REQUIRE_TRUE( empty.initialize( items, 4 ) );
     sw::WeaponState dry;
     SW_REQUIRE_TRUE( dry.equip( BattleRoyaleGearTestUtil::makeRifle( 50 ), sw::ProjectileDef{}, 0 ) );
     BattleRoyaleGearTestUtil::shoot( dry, 1 );
@@ -244,10 +244,10 @@ SW_TEST_CASE( BattleRoyaleLoadoutTest, StateRoundTripAndRejection )
     sw::ItemCatalog items;
     SW_REQUIRE_TRUE( items.loadFromXMLText( kGearItemXML, "items" ) );
     sw::Inventory inventory;
-    SW_REQUIRE_TRUE( inventory.initialize( &items, 4, 100.0f ) );
+    SW_REQUIRE_TRUE( inventory.initialize( items, 4, 100.0f ) );
 
     sw::BattleRoyaleLoadout original;
-    original.initialize( &catalog );
+    original.initialize( catalog );
     SW_REQUIRE_TRUE( original.tryEquipArmor( kHelmet, 12.0f ) );
     SW_REQUIRE_TRUE( original.tryEquipBackpack( kBag, inventory ) );
     sw::Archive written;
@@ -258,7 +258,7 @@ SW_TEST_CASE( BattleRoyaleLoadoutTest, StateRoundTripAndRejection )
     SW_EXPECT_FALSE( noCatalog.readState( withoutCatalog ) );
 
     sw::BattleRoyaleLoadout restored;
-    restored.initialize( &catalog );
+    restored.initialize( catalog );
     SW_REQUIRE_TRUE( restored.tryEquipArmor( kVest ) );
     const auto expectRejected = [&restored]( const sw::Archive& bytes )
     {

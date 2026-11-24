@@ -6,7 +6,7 @@
 #include "DevTools/Client/DebugDraw/DebugDrawCanvas.h"
 
 #include "Engine/Graphics/Canvas/CanvasDrawList.h"
-#include "Engine/Graphics/Debug/DebugDrawQueue.h"
+#include "Engine/Graphics/DebugDraw/DebugDrawQueue.h"
 
 using namespace sw;
 

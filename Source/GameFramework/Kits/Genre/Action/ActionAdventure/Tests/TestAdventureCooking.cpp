@@ -66,7 +66,7 @@ namespace
             if ( bLoaded == false )
                 return false;
             _crafter.initialize( &_recipes );
-            return _inventory.initialize( &_items, slotCount );
+            return _inventory.initialize( _items, slotCount );
         }
 
         sw::AdventureCookResult cook( const sw::vector<sw::hashed_string>& listIngredient, sw::AdventureDish& outDish, int32 level = 0 )

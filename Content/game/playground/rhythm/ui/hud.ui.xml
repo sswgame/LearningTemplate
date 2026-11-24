@@ -1,0 +1,38 @@
+<?asset guid="413d689669350a579af76ba0cb92af39"?>
+<UIDocument _schemaVersion="1">
+	<UIScreenDef _layer="HUD" _bTakesFocus="false" _bShowCursor="false" />
+	<SafeZonePanel _visibility="SelfHitTestInvisible">
+		<CanvasPanel _visibility="SelfHitTestInvisible">
+			<TextWidget _name="ScoreLabel" _text="Score" _styleClass="hud" _visibility="HitTestInvisible">
+				<_slot _anchorMin="0,0" _anchorMax="0,0" _offsetMin="48,40" _offsetMax="308,76" />
+			</TextWidget>
+			<TextWidget _name="Score" _text="{bind:_score}" _styleClass="hud" _visibility="HitTestInvisible" _bLocalized="false">
+				<_slot _anchorMin="0,0" _anchorMax="0,0" _offsetMin="308,40" _offsetMax="468,76" />
+			</TextWidget>
+			<TextWidget _name="ComboLabel" _text="Combo" _styleClass="hud" _visibility="HitTestInvisible">
+				<_slot _anchorMin="0,0" _anchorMax="0,0" _offsetMin="48,80" _offsetMax="308,116" />
+			</TextWidget>
+			<TextWidget _name="Combo" _text="{bind:_combo}" _styleClass="hud" _visibility="HitTestInvisible" _bLocalized="false">
+				<_slot _anchorMin="0,0" _anchorMax="0,0" _offsetMin="308,80" _offsetMax="468,116" />
+			</TextWidget>
+			<TextWidget _name="AccuracyLabel" _text="Accuracy (%)" _styleClass="hud" _visibility="HitTestInvisible">
+				<_slot _anchorMin="0,0" _anchorMax="0,0" _offsetMin="48,120" _offsetMax="308,156" />
+			</TextWidget>
+			<TextWidget _name="Accuracy" _text="{bind:_accuracy}" _styleClass="hud" _visibility="HitTestInvisible" _bLocalized="false">
+				<_slot _anchorMin="0,0" _anchorMax="0,0" _offsetMin="308,120" _offsetMax="468,156" />
+			</TextWidget>
+			<TextWidget _name="LifeLabel" _text="Life" _styleClass="hud" _visibility="HitTestInvisible">
+				<_slot _anchorMin="0,0" _anchorMax="0,0" _offsetMin="48,160" _offsetMax="308,196" />
+			</TextWidget>
+			<ProgressBarWidget _name="Life" _percent="{bind:_lifeRatio}" _visibility="HitTestInvisible" _fillColor="0.3,0.85,0.4,1" _backgroundColor="0,0,0,0.55">
+				<_slot _anchorMin="0,0" _anchorMax="0,0" _offsetMin="308,168" _offsetMax="628,188" />
+			</ProgressBarWidget>
+			<TextWidget _name="Cleared" _text="Song clear!" _styleClass="hud" _visibility="{bind:_clearedVisibility}">
+				<_slot _anchorMin="0.5,0" _anchorMax="0.5,0" _offsetMin="-200,120" _offsetMax="200,156" />
+			</TextWidget>
+			<TextWidget _name="Failed" _text="Song failed" _styleClass="hud" _visibility="{bind:_failedVisibility}">
+				<_slot _anchorMin="0.5,0" _anchorMax="0.5,0" _offsetMin="-200,160" _offsetMax="200,196" />
+			</TextWidget>
+		</CanvasPanel>
+	</SafeZonePanel>
+</UIDocument>

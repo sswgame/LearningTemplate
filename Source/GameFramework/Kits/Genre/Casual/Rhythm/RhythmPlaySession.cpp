@@ -66,9 +66,8 @@ namespace sw
     {
     }
 
-    bool RhythmPlaySession::initialize( const RhythmChart* pChart, const TimingJudge* pJudge, const RhythmPlaySettings& settings )
+    bool RhythmPlaySession::initialize( const RhythmChart& chart, const TimingJudge& judge, const RhythmPlaySettings& settings )
     {
-        SW_ASSERT( pChart != nullptr && pJudge != nullptr );
         // 목록 필드가 있어 리플렉션 범위(`PROPERTY`)로 선언하지 못한 수치만 손으로 본다. 맞추지 않고 거절한다.
         const bool bLifeValid = settings._maxLife >= 1.0f && 0.0f <= settings._initialLife && settings._initialLife <= settings._maxLife && 0 <= settings._comboBonusCap;
         if ( bLifeValid == false )
@@ -78,13 +77,13 @@ namespace sw
             return false;
         }
         // 창이 없으면 어떤 누름도 노트에 닿지 않는다 — 오토플레이는 같은 노트를 끝없이 누르고 롱노트 끝은 줄 등급이 없다.
-        if ( pJudge->getWindows().empty() )
+        if ( judge.getWindows().empty() )
         {
             SW_LOG_ERROR_ID( "RhythmPlaySession.NoTimingWindows", "RhythmPlaySession: refused - the timing judge has no windows" );
             return false;
         }
-        _pChart            = pChart;
-        _pJudge            = pJudge;
+        _pChart            = &chart;
+        _pJudge            = &judge;
         _settings          = settings;
         _life              = _settings._initialLife;
         _score             = 0;

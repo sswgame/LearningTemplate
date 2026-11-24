@@ -58,7 +58,6 @@ SW_TEST_CASE( ReflectedStateUpgradeTest, WalletAndReputationVersionOneRead )
         io.value( value );
     }
     ReputationState reputation;
-    reputation.initialize( nullptr );
     SW_REQUIRE_TRUE( ReflectedStateUpgradeTestUtil::upgradeAndRead( reputationBody, 1, reputation ) );
     SW_EXPECT_EQUAL( -7, reputation.getValue( hashed_string( "Guild" ) ) );
 }
@@ -86,8 +85,7 @@ SW_TEST_CASE( ReflectedStateUpgradeTest, QuestLogVersionOneRead )
         io.value( status );
         io.value( bAwaiting );
     }
-    QuestLog log;
-    log.initialize( nullptr ); // 카탈로그 없이 — 읽은 진행을 그대로 둔다
+    QuestLog log; // 열지 않은 일지는 읽은 진행을 그대로 둔다
     SW_REQUIRE_TRUE( ReflectedStateUpgradeTestUtil::upgradeAndRead( oldBody, 1, log ) );
     const QuestProgress* pProgress = log.findProgress( hashed_string( "wolves" ) );
     SW_REQUIRE_NOT_NULL( pProgress );

@@ -80,8 +80,8 @@ SW_TEST_CASE( RTSCommandTest, ApplyTakesOnlyTheIssuersUnits )
     sw::RTSWorld world;
     SW_REQUIRE_TRUE( world.initialize( &catalog, 32, 32 ) );
     sw::Wallet arrWallet[2];
-    (void)world.addPlayer( 0, &arrWallet[0], sw::float3{} );
-    (void)world.addPlayer( 1, &arrWallet[1], sw::float3{} );
+    (void)world.addPlayer( 0, arrWallet[0], sw::float3{} );
+    (void)world.addPlayer( 1, arrWallet[1], sw::float3{} );
     const sw::RTSUnitID mine   = world.spawnUnit( sw::hashed_string( "marine" ), 0, sw::float3{ 4.5f, 0.0f, 4.5f } );
     const sw::RTSUnitID theirs = world.spawnUnit( sw::hashed_string( "marine" ), 1, sw::float3{ 20.5f, 0.0f, 20.5f } );
     SW_REQUIRE_TRUE( mine.isValid() && theirs.isValid() );

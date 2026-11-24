@@ -84,15 +84,15 @@ namespace sw
     {
     }
 
-    void JRPGParty::initialize( const JRPGCatalog* pCatalog, const ItemCatalog* pItemCatalog, Inventory* pInventory, Wallet* pWallet, string_view equipLayout )
+    void JRPGParty::initialize( const JRPGCatalog& catalog, const ItemCatalog& itemCatalog, Inventory& inventory, Wallet& wallet, string_view equipLayout )
     {
-        _pCatalog     = pCatalog;
-        _pItemCatalog = pItemCatalog;
+        _pCatalog     = &catalog;
+        _pItemCatalog = &itemCatalog;
         _equipLayout  = string( equipLayout );
         _listMember.clear();
         _eventBuffer.clear();
-        _pInventory = pInventory;
-        _pWallet    = pWallet;
+        _pInventory = &inventory;
+        _pWallet    = &wallet;
     }
 
     expected<int32> JRPGParty::addMember( const hashed_string& memberID, string_view name, const hashed_string& classID, int32 level )
@@ -106,7 +106,7 @@ namespace sw
         member._id      = memberID;
         member._classID = classID;
         member._name    = string( name );
-        member._equipment.initialize( _pItemCatalog, _equipLayout, nullptr, nullptr );
+        member._equipment.initialize( *_pItemCatalog, _equipLayout, nullptr, nullptr );
         for ( int32 index = 0; index < kJRPGStatCount; ++index )
         {
             member._arrStat[index] = pClass->_arrBase[index];
@@ -143,7 +143,7 @@ namespace sw
             return JRPGClassChangeResult::Dead;
         if ( member._level.getLevel() < minLevel )
             return JRPGClassChangeResult::LevelTooLow;
-        if ( pClass->_requiredItem.empty() == false && ( _pInventory == nullptr || _pInventory->hasItem( pClass->_requiredItem ) == false ) )
+        if ( pClass->_requiredItem.empty() == false && _pInventory->hasItem( pClass->_requiredItem ) == false )
             return JRPGClassChangeResult::MissingItem;
 
         member._classID = classID;
@@ -181,7 +181,7 @@ namespace sw
 
     int64 JRPGParty::distributeRewards( int64 exp, int64 gold )
     {
-        if ( gold > 0 && _pWallet != nullptr )
+        if ( gold > 0 && _pWallet != nullptr ) // 열기 전의 파티는 멤버도 지갑도 없다
         {
             _pWallet->add( Wallet::getDefaultCurrency(), gold );
             pushEvent( JRPGPartyEvent::Kind::GoldGained, nullopt, static_cast<int32>( gold ) );
@@ -203,7 +203,7 @@ namespace sw
     bool JRPGParty::restAtInn( int64 pricePerMember )
     {
         const int64 price = MathUtil::max<int64>( 0, pricePerMember ) * countAlive();
-        if ( price > 0 && ( _pWallet == nullptr || _pWallet->trySpend( Wallet::getDefaultCurrency(), price ) == false ) )
+        if ( price > 0 && _pWallet->trySpend( Wallet::getDefaultCurrency(), price ) == false )
             return false;
         for ( JRPGMember& member : _listMember )
         {
@@ -224,7 +224,7 @@ namespace sw
         if ( member.isAlive() )
             return false;
         const int64 price = MathUtil::max<int64>( 0, pricePerLevel ) * member._level.getLevel();
-        if ( price > 0 && ( _pWallet == nullptr || _pWallet->trySpend( Wallet::getDefaultCurrency(), price ) == false ) )
+        if ( price > 0 && _pWallet->trySpend( Wallet::getDefaultCurrency(), price ) == false )
             return false;
         member._hp = member.getStat( JRPGStat::MaxHP );
         pushEvent( JRPGPartyEvent::Kind::Revived, memberIndex, static_cast<int32>( price ) );
@@ -287,7 +287,7 @@ namespace sw
         {
             if ( io.isReading() )
             {
-                member._equipment.initialize( _pItemCatalog, _equipLayout, nullptr, nullptr );
+                member._equipment.initialize( *_pItemCatalog, _equipLayout, nullptr, nullptr );
             }
             const size_t slotTotal = member._equipment.getSlots().size();
             uint32       slotCount = static_cast<uint32>( slotTotal );

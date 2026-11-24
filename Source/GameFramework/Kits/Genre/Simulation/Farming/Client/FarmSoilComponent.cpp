@@ -15,7 +15,6 @@ namespace sw
 {
     FarmSoilComponent::FarmSoilComponent()
         : _tileIndex{ -1 }
-        , _soilState{ -1 }
     {
         setCanEverTick( true );
     }
@@ -31,7 +30,6 @@ namespace sw
     {
         bindGameMode( gameMode );
         _tileIndex = tileIndex;
-        _soilState = -1;
     }
 
     void FarmSoilComponent::onTick( TickContext& context )
@@ -55,13 +53,9 @@ namespace sw
         const FarmTile* pTile = field.findTile( cell._x, cell._y );
         if ( pTile == nullptr )
             return;
-        const int32 soilState = pTile->_bTilled == SW_FALSE ? 0 : ( pTile->_bWatered != SW_FALSE ? 2 : 1 );
-        if ( soilState == _soilState )
-            return;
-        const shared_ptr<MaterialInstance>& look = pFieldView->getSoilLook( soilState );
-        if ( look == nullptr )
-            return;
-        pMesh->setMaterialInstance( look );
-        _soilState = soilState;
+        const int32                         soilState = pTile->_bTilled == SW_FALSE ? 0 : ( pTile->_bWatered != SW_FALSE ? 2 : 1 );
+        const shared_ptr<MaterialInstance>& look      = pFieldView->getSoilLook( soilState );
+        if ( look != nullptr )
+            pMesh->setMaterialInstance( look ); // 같은 모습이면 메시가 거른다
     }
 } // namespace sw

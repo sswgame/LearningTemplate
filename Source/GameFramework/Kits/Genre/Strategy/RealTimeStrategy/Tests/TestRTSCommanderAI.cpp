@@ -43,6 +43,7 @@ namespace
         RTSCatalog             _catalog;
         RTSWorld               _world;
         Wallet                 _wallet;
+        Wallet                 _arrOtherWallet[3];
         RTSCommanderAI         _ai;
         RTSCommanderAISettings _settings;
 
@@ -59,10 +60,10 @@ namespace
             if ( _catalog.loadFromXMLText( kCommanderUnitXML, "RTSCommanderAITest" ) == false || _world.initialize( &_catalog, 48, 48 ) == false )
                 return false;
             _wallet.add( _world.getSettings()._mineralCurrency, 1000 );
-            (void)_world.addPlayer( 0, &_wallet, float3{ 6.0f, 0.0f, 6.0f } );
-            (void)_world.addPlayer( 0, nullptr, float3{ 8.0f, 0.0f, 8.0f } );   // 같은 팀 - 가장 가깝지만 적이 아니다
-            (void)_world.addPlayer( 1, nullptr, float3{ 25.0f, 0.0f, 25.0f } ); // 가까운 적
-            (void)_world.addPlayer( 1, nullptr, float3{ 42.0f, 0.0f, 42.0f } ); // 먼 적
+            (void)_world.addPlayer( 0, _wallet, float3{ 6.0f, 0.0f, 6.0f } );
+            (void)_world.addPlayer( 0, _arrOtherWallet[0], float3{ 8.0f, 0.0f, 8.0f } );   // 같은 팀 - 가장 가깝지만 적이 아니다
+            (void)_world.addPlayer( 1, _arrOtherWallet[1], float3{ 25.0f, 0.0f, 25.0f } ); // 가까운 적
+            (void)_world.addPlayer( 1, _arrOtherWallet[2], float3{ 42.0f, 0.0f, 42.0f } ); // 먼 적
             _settings._workerID     = kWorker;
             _settings._depotID      = kDepot;
             _settings._supplyID     = kSupply;

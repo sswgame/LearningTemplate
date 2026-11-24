@@ -97,6 +97,9 @@
 		<Reference owner="Building" attribute="trains" target="Unit"/>
 		<Reference owner="Site" attribute="garrison" target="Unit" named="true"/>
 	</Catalog>
+	<Catalog root="CardBattleCatalog">
+		<Reference owner="Deck" attribute="cards" target="Card"/>
+	</Catalog>
 	<!-- 적 패턴의 시작 · 이어지는 상태는 같은 패턴 안의 상태다. 한 패턴 안의 같은 상태 id 는 읽는 코드(ActionPlatformerCatalog::loadPattern)가 본다 — 패턴마다 이름 공간이 따로라 <Unique> 로 적을 수 없다. -->
 	<Catalog root="ActionPlatformer">
 		<Reference owner="Pattern" attribute="start" target="State" inEntry="true"/>
@@ -135,8 +138,44 @@
 	<Field owner="SRPGGameModeComponent" field="_listPlayerUnit" tag="SRPGUnitDef"/>
 	<Field owner="SRPGGameModeComponent" field="_listEnemyUnit" tag="SRPGUnitDef"/>
 	<Field owner="SRPGGameModeComponent" field="_pilot" tag="SRPGPilotDef"/>
+	<CatalogKey tag="ScavengerMoonDef" catalog="ScavengerCatalog" entry="Moon"/>
+	<Field owner="ScavengerGameModeComponent" field="_companyMoon" tag="ScavengerMoonDef"/>
+	<Field owner="ScavengerGameModeComponent" field="_unlockItem" tag="ItemDef"/>
+	<Field owner="ScavengerGameModeComponent" field="_speedItem" tag="ItemDef"/>
+	<CatalogKey tag="SurvivalHorrorItemDef" catalog="SurvivalHorrorCatalog" entry="Item"/>
+	<Field owner="SurvivalHorrorGameModeComponent" field="_ammoItem" tag="SurvivalHorrorItemDef"/>
+	<CatalogKey tag="AsymmetricHorrorKillerDef" catalog="AsymmetricHorrorRules" entry="Killer"/>
+	<Field owner="AsymmetricHorrorGameModeComponent" field="_killer" tag="AsymmetricHorrorKillerDef"/>
+	<CatalogKey tag="KartTrackDef" catalog="KartTrackCatalog" entry="Track"/>
+	<Field owner="KartGameModeComponent" field="_trackID" tag="KartTrackDef"/>
+	<CatalogKey tag="CardBattleDeckDef" catalog="CardBattleCatalog" entry="Deck"/>
+	<CatalogKey tag="CardBattleEnemyDef" catalog="CardBattleCatalog" entry="Enemy"/>
+	<Field owner="CardBattleGameModeComponent" field="_deckID" tag="CardBattleDeckDef"/>
+	<Field owner="CardBattleGameModeComponent" field="_enemyID" tag="CardBattleEnemyDef"/>
+	<CatalogKey tag="ConquestBuildingDef" catalog="ConquestCatalog" entry="Building"/>
+	<CatalogKey tag="ConquestSiteDef" catalog="ConquestCatalog" entry="Site"/>
+	<CatalogKey tag="ConquestUnitDef" catalog="ConquestCatalog" entry="Unit"/>
+	<Field owner="ConquestGameModeComponent" field="_startBuilding" tag="ConquestBuildingDef"/>
+	<Field owner="ConquestGameModeComponent" field="_startSite" tag="ConquestSiteDef"/>
+	<Field owner="ConquestGameModeComponent" field="_trainUnit" tag="ConquestUnitDef"/>
+	<CatalogKey tag="FighterDef" catalog="FighterCatalog" entry="Fighter"/>
+	<Field owner="FightingGameModeComponent" field="_playerFighter" tag="FighterDef"/>
+	<Field owner="FightingGameModeComponent" field="_opponentFighter" tag="FighterDef"/>
+	<CatalogKey tag="MechDef" catalog="MechCatalog" entry="Mech"/>
+	<CatalogKey tag="MechSkillDef" catalog="MechCatalog" entry="Skill"/>
+	<Field owner="MechArenaGameModeComponent" field="_listPlayerMech" tag="MechDef"/>
+	<Field owner="MechArenaGameModeComponent" field="_listPlayerSkill" tag="MechSkillDef"/>
+	<Field owner="MechArenaGameModeComponent" field="_listAllyMech" tag="MechDef"/>
+	<Field owner="MechArenaGameModeComponent" field="_listEnemyMech" tag="MechDef"/>
+	<CatalogKey tag="MetroidvaniaEnemyDef" catalog="Metroidvania" entry="Enemy"/>
+	<CatalogKey tag="MetroidvaniaPickupDef" catalog="Metroidvania" entry="Pickup"/>
+	<CatalogKey tag="MetroidvaniaSiteDef" catalog="Metroidvania" entry="Site"/>
+	<Field owner="MetroidvaniaGameModeComponent" field="_listEnemyKind" tag="MetroidvaniaEnemyDef"/>
+	<Field owner="MetroidvaniaGameModeComponent" field="_listPickup" tag="MetroidvaniaPickupDef"/>
+	<Field owner="MetroidvaniaGameModeComponent" field="_listSite" tag="MetroidvaniaSiteDef"/>
 	<CatalogKey tag="WeaponDef" catalog="WeaponCatalog" entry="Weapon"/>
 	<Field owner="ShooterPlayerComponent" field="_listWeaponID" tag="WeaponDef"/>
+	<Field owner="BattleRoyaleGameModeComponent" field="_listWeaponID" tag="WeaponDef"/>
 	<CatalogKey tag="RTSUnitDef" catalog="RTSCatalog" entry="Unit"/>
 	<Field owner="FrontierSkirmishGameModeComponent" field="_workerUnit" tag="RTSUnitDef"/>
 	<Field owner="FrontierSkirmishGameModeComponent" field="_soldierUnit" tag="RTSUnitDef"/>
@@ -244,4 +283,32 @@
 	<CatalogKey tag="CoasterLayoutDef" catalog="CoasterLayoutCatalog" entry="Layout"/>
 	<Element type="ParkCoasterDef" catalog="ParkLayout" path="Coaster"/>
 	<Field owner="ParkCoasterDef" field="_layout" tag="CoasterLayoutDef"/>
+	<CatalogKey tag="JRPGClassDef" catalog="JRPGCatalog" entry="Class"/>
+	<CatalogKey tag="JRPGAreaDef" catalog="JRPGCatalog" entry="Area"/>
+	<CatalogKey tag="JRPGEnemyDef" catalog="JRPGCatalog" entry="Enemy"/>
+	<Field owner="JRPGGameModeComponent" field="_listHero" tag="JRPGClassDef"/>
+	<Field owner="JRPGGameModeComponent" field="_area" tag="JRPGAreaDef"/>
+	<Field owner="JRPGGameModeComponent" field="_listBoss" tag="JRPGEnemyDef"/>
+	<Field owner="JRPGGameModeComponent" field="_restClass" tag="JRPGClassDef"/>
+	<Field owner="JRPGGameModeComponent" field="_listStartItem" tag="ItemDef"/>
+	<Element type="JRPGClassDef" catalog="JRPGCatalog" path="Class"/>
+	<Field owner="JRPGClassDef" field="requires" tag="ItemDef"/>
+	<CatalogKey tag="MonsterSpeciesDef" catalog="MonsterCollectorCatalog" entry="Species"/>
+	<Field owner="MonsterCollectorGameModeComponent" field="_listStarter" tag="MonsterSpeciesDef"/>
+	<CatalogKey tag="MonsterHuntContractDef" catalog="MonsterHuntCatalog" entry="Contract"/>
+	<CatalogKey tag="MonsterHuntMonsterDef" catalog="MonsterHuntCatalog" entry="Monster"/>
+	<CatalogKey tag="MonsterHuntAlchemyDef" catalog="MonsterHuntCatalog" entry="Item"/>
+	<CatalogKey tag="MonsterHuntSignDef" catalog="MonsterHuntCatalog" entry="Sign"/>
+	<CatalogKey tag="MonsterHuntMutagenDef" catalog="MonsterHuntCatalog" entry="Mutagen"/>
+	<CatalogKey tag="SkillTreeDef" catalog="SkillTreeCatalog" entry="Tree"/>
+	<Field owner="MonsterHuntGameModeComponent" field="_contract" tag="MonsterHuntContractDef"/>
+	<Field owner="MonsterHuntGameModeComponent" field="_skillTree" tag="SkillTreeDef"/>
+	<CatalogKey tag="RecipeDef" catalog="RecipeCatalog" entry="Recipe"/>
+	<Field owner="MonsterHuntGameModeComponent" field="_brewRecipe" tag="RecipeDef"/>
+	<Field owner="MonsterHuntGameModeComponent" field="_listBrewItem" tag="ItemDef"/>
+	<Field owner="MonsterHuntGameModeComponent" field="_listMutagen" tag="MonsterHuntMutagenDef"/>
+	<Field owner="MonsterHuntGameModeComponent" field="_monster" tag="MonsterHuntMonsterDef"/>
+	<Field owner="MonsterHuntGameModeComponent" field="_oil" tag="MonsterHuntAlchemyDef"/>
+	<Field owner="MonsterHuntGameModeComponent" field="_potion" tag="MonsterHuntAlchemyDef"/>
+	<Field owner="MonsterHuntGameModeComponent" field="_sign" tag="MonsterHuntSignDef"/>
 </DataCatalogReferenceTable>

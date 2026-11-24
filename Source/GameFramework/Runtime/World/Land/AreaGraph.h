@@ -12,6 +12,7 @@
 #include "Core/Foundation/Expected.h"
 #include "Core/Foundation/Macros.h"
 #include "Core/Foundation/Types.h"
+#include "Core/Math/Math.h"
 #include "Core/Name/hashed_string.h"
 
 #include "Engine/Asset/Cache/SharedAssetCache.h"
@@ -28,7 +29,7 @@ namespace sw
     class GameFlags;
     class XMLNode;
 
-    /** @brief 방 하나입니다. 위치와 크기는 지도 그리기용이며 그래프 계산에는 쓰지 않습니다. */
+    /** @brief 방 하나입니다. 위치(왼쪽 아래 모서리)와 크기는 지도 그리기와 방 사각형 걷기(`AreaGraph::walk`)가 쓰고, 길 찾기는 쓰지 않습니다. */
     REFLECT()
     struct SW_GF_API AreaDef
     {
@@ -48,6 +49,13 @@ namespace sw
         float32 _width{ 1.0f };
         PROPERTY( Name = "h", Min = 0.0 )
         float32 _height{ 1.0f };
+
+        /** @brief 방 사각형의 가운데입니다. */
+        float2 getCenter() const { return float2{ _x + _width * 0.5f, _y + _height * 0.5f }; }
+        /** @brief @p position 이 방 사각형 안이면 true 입니다(왼쪽 · 아래 변은 안, 오른쪽 · 위 변은 이웃 방의 것). */
+        bool contains( const float2& position ) const { return _x <= position._x && position._x < _x + _width && _y <= position._y && position._y < _y + _height; }
+        /** @brief @p position 을 변에서 @p margin 안쪽의 방 사각형으로 자릅니다. */
+        float2 clamp( const float2& position, float32 margin ) const;
     };
 
     /** @brief 방 사이 연결 한 줄(`<Link from to kind oneWay requires/>`)의 칸입니다. 조건(`requires`)은 조건 글이라 그래프가 푼다. */
@@ -82,6 +90,17 @@ namespace sw
         int32         _toIndex{ 0 };                  ///< `_to` 의 방 번호
         uint8         _bOneWay{ SW_FALSE };           ///< `_from` → `_to` 로만 지난다
         uint8         _bInvalidCondition{ SW_FALSE }; ///< 조건식이 문법에 맞지 않았다. 늘 잠기며 읽을 때 한 번만 경고한다
+    };
+} // namespace sw
+
+namespace sw
+{
+    /** @brief 방 사각형 걷기 한 번의 결과입니다(`AreaGraph::walk`). 포인터는 다음 읽기까지 유효합니다. */
+    struct AreaWalk
+    {
+        float2          _position{ 0.0f, 0.0f };
+        const AreaDef*  _pEntered{ nullptr }; ///< 이번에 넘어간 방(없으면 같은 방에 있다)
+        const AreaLink* _pBlocked{ nullptr }; ///< 지날 수 없어 막은 연결(벽에 막혔거나 막히지 않았으면 nullptr)
     };
 } // namespace sw
 
@@ -148,6 +167,15 @@ namespace sw
 
         /** @brief @p fromID 에서 @p toID 로 바로 이어진 연결을 지금 지날 수 있으면 true 입니다. 방향과 잠금을 봅니다. */
         bool canTraverse( const hashed_string& fromID, const hashed_string& toID, const GameFlags& flags ) const;
+        /** @brief @p position 을 담은 첫 방입니다. 없으면 nullptr 입니다. */
+        const AreaDef* findAreaAt( const float2& position ) const;
+        /** @brief 두 방을 바로 잇는 첫 연결입니다(방향 · 잠금은 보지 않는다). 없으면 nullptr 입니다. */
+        const AreaLink* findLinkBetween( const hashed_string& firstID, const hashed_string& secondID ) const;
+        /**
+         * @brief 방 @p areaID 의 @p from 에서 @p delta 만큼 걷습니다. 사각형 밖의 자리가 지날 수 있는 이웃 방이면 넘어가고, 아니면 이 방 안에 멈춥니다(막은 연결이 있으면 답에 담는다).
+         * @details 방은 변을 맞댄 사각형으로 놓는다. 넘어간 뒤의 탐색 상태(`enterArea`)는 부르는 쪽이 정한다.
+         */
+        AreaWalk walk( const hashed_string& areaID, const float2& from, const float2& delta, const GameFlags& flags ) const;
         /**
          * @brief 지금 지날 수 있는 연결만으로 가는 가장 짧은 길(지나는 연결 수)을 찾습니다.
          * @param outListArea 출발과 도착을 포함한 방 순서이다. 길이 없으면 비운다.

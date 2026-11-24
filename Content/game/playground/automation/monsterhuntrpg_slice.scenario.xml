@@ -1,0 +1,86 @@
+<?xml version="1.0" encoding="utf-8"?>
+<?asset guid="af4c23a2723342afa64e08d6ea6a3d49"?>
+<!--
+  장르 완결 루프 — 몬스터 사냥 미니게임(monsterhuntrpg)의 한 판: 보상 흥정 → 스킬 · 변이원 → 단서 셋 → 괴물 사냥(대체 표식 · 오일 · 물약 · 공격) → 승리 → 결과를 들고 허브로.
+  플레이어와 같은 입력 맵 액션(Move · MonsterHunt.*)만 쓴다.
+  디렉터는 키트 MonsterHuntGameModeComponent, 입력 · 그리기 · HUD 는 클라이언트 모듈 GF_Client_MonsterHuntRPG 의 MonsterHuntAvatarComponent.
+  자리: (0,0)에서 시작, 4 m/s — 단서 x 4 · 8 · 12, 소굴 (16,0). 수치의 근거는 data/monsterhunt.xml 머리말.
+  감시 값: MonsterHunt.Phase(0 흥정, 1 조사, 2 사냥, 3 승리, 4 패배) · Reward · FoundClues · Knowledge · MonsterHP · PlayerHP · OilHits · Toxicity · QuestDone · LearnedSkills · SignIntensity · AttackReady · MonsterInReach · PlayerX · Minigame.LastResult.
+  실행: ctest -R Scenario.playground
+-->
+<Scenario name="game.playground.monsterhuntrpg_slice" fixedDelta="0.0166667" timeoutFrames="3600" startAfter="ScenePlaying" startTimeoutFrames="900" input="exclusive">
+	<Launch variable="gv_firstMinigame" value="monsterhuntrpg"/>
+	<Variable name="gv_playgroundAutoPlay" value="0"/>
+	<!-- 흥정 — 100 에서 30 을 더 부르면 한도(150) 안이라 받아들여진다 -->
+	<WaitUntil watch="MonsterHunt.Reward" equals="100" timeoutFrames="120"/>
+	<Expect watch="MonsterHunt.Phase" equals="0"/>
+	<Action name="MonsterHunt.Strong"/>
+	<WaitUntil watch="MonsterHunt.Phase" equals="1" timeoutFrames="30"/>
+	<Expect watch="MonsterHunt.Reward" equals="130"/>
+	<!-- 스킬 둘을 배우고(쌍바람 · 날 갈기) 바람 샘 변이원을 끼운다 — 파란 스킬 하나가 색이 맞아 표식 위력이 30 % 가 된다 -->
+	<Action name="MonsterHunt.Learn"/>
+	<WaitUntil watch="MonsterHunt.LearnedSkills" equals="1" timeoutFrames="30"/>
+	<Action name="MonsterHunt.Learn"/>
+	<WaitUntil watch="MonsterHunt.LearnedSkills" equals="2" timeoutFrames="30"/>
+	<Action name="MonsterHunt.Mutagen"/>
+	<WaitUntil watch="MonsterHunt.SignIntensity" equals="30" timeoutFrames="30"/>
+	<!-- 서쪽 그루터기(정적 바디, 앞면 x -1.1)로 걸으면 몸 반지름(0.3) 앞에서 멈춘다 — 막지 않으면 0.5 초에 x -2 다 -->
+	<ActionAxis name="Move" x="-1" seconds="0.5"/>
+	<AdvanceSimulation frames="40"/> <!-- 누른 채인 반 초가 시험 내용이다 -->
+	<Expect watch="MonsterHunt.PlayerX" near="-0.78" tolerance="0.1"/>
+	<ActionAxis name="Move" x="1" seconds="0.2"/>
+	<AdvanceSimulation frames="20"/> <!-- 시작 자리로 돌아온다(시간이 내용) -->
+	<!-- 단서 셋 — 자리에 서서 조사한다 -->
+	<ActionAxis name="Move" x="1" seconds="1"/>
+	<WaitUntil watch="MonsterHunt.PlayerX" near="4" tolerance="0.25" timeoutFrames="90"/>
+	<AdvanceSimulation frames="6"/> <!-- 누른 이동이 끝나는 시간(시간이 내용) -->
+	<Action name="MonsterHunt.Investigate"/>
+	<WaitUntil watch="MonsterHunt.FoundClues" equals="1" timeoutFrames="30"/>
+	<ActionAxis name="Move" x="1" seconds="1"/>
+	<WaitUntil watch="MonsterHunt.PlayerX" near="8" tolerance="0.25" timeoutFrames="90"/>
+	<AdvanceSimulation frames="6"/> <!-- 누른 이동이 끝나는 시간(시간이 내용) -->
+	<Action name="MonsterHunt.Investigate"/>
+	<WaitUntil watch="MonsterHunt.FoundClues" equals="2" timeoutFrames="30"/>
+	<Expect watch="MonsterHunt.Knowledge" equals="0"/>
+	<ActionAxis name="Move" x="1" seconds="1"/>
+	<WaitUntil watch="MonsterHunt.PlayerX" near="12" tolerance="0.25" timeoutFrames="90"/>
+	<AdvanceSimulation frames="6"/> <!-- 누른 이동이 끝나는 시간(시간이 내용) -->
+	<Action name="MonsterHunt.Investigate"/>
+	<WaitUntil watch="MonsterHunt.Phase" equals="2" timeoutFrames="30"/>
+	<Expect watch="MonsterHunt.FoundClues" equals="3"/>
+	<Expect watch="MonsterHunt.QuestDone" equals="1"/> <!-- 계약 퀘스트도 단서 · 단계를 세어 끝났다 -->
+	<Expect watch="MonsterHunt.Knowledge" equals="1"/>
+	<ExpectLog id="MonsterHunt.WeaknessRevealed" contains="howler_oil" atLeast="1"/>
+	<!-- 사냥 — 다가오는 괴물에게 대체 표식(39), 칼에 오일, 물약 한 모금 -->
+	<Action name="MonsterHunt.AlternateSign"/>
+	<WaitUntil watch="MonsterHunt.MonsterHP" equals="81" timeoutFrames="30"/>
+	<Action name="MonsterHunt.Oil"/>
+	<WaitUntil watch="MonsterHunt.OilHits" equals="6" timeoutFrames="30"/>
+	<Action name="MonsterHunt.Potion"/>
+	<WaitUntil watch="MonsterHunt.Toxicity" atLeast="1" timeoutFrames="30"/>
+	<WaitUntil watch="MonsterHunt.MonsterInReach" equals="1" timeoutFrames="180"/>
+	<Action name="MonsterHunt.Fast"/>
+	<WaitUntil watch="MonsterHunt.MonsterHP" equals="48" timeoutFrames="30"/>
+	<Expect watch="MonsterHunt.OilHits" equals="5"/>
+	<!-- 늪 기름 둘로 오일을 다시 만들어 칼에 새로 바른다(횟수가 다한 오일이 다시 찬다) -->
+	<Action name="MonsterHunt.Brew"/>
+	<AdvanceSimulation frames="3"/> <!-- 만든 뒤에 바른다 -->
+	<Action name="MonsterHunt.Oil"/>
+	<WaitUntil watch="MonsterHunt.OilHits" equals="6" timeoutFrames="30"/>
+	<ExpectLog id="MonsterHunt.Brewed" count="1"/>
+	<WaitUntil watch="MonsterHunt.AttackReady" equals="1" timeoutFrames="60"/>
+	<Action name="MonsterHunt.Fast"/>
+	<WaitUntil watch="MonsterHunt.MonsterHP" equals="15" timeoutFrames="30"/>
+	<WaitUntil watch="MonsterHunt.AttackReady" equals="1" timeoutFrames="60"/>
+	<Action name="MonsterHunt.Fast"/>
+	<WaitUntil watch="MonsterHunt.Phase" equals="3" timeoutFrames="30"/>
+	<Expect watch="MonsterHunt.MonsterHP" equals="0"/>
+	<Expect watch="MonsterHunt.PlayerHP" atLeast="50"/>
+	<ExpectLog id="MonsterHunt.Victory" count="1"/>
+	<!-- 결과를 보여 준 뒤 스스로 끝난다 — 돌아올 씬이 없으니(첫 진입) 입구 씬(허브)으로 간다 -->
+	<WaitUntil watch="Minigame.LastResult" is="win" timeoutWallSeconds="60"/>
+	<ExpectActiveScene path="game/playground/maps/hub.scene.xml"/>
+	<Expect watch="Minigame.Active" is="none"/>
+	<Expect watch="Minigame.LeakCount" equals="0"/>
+	<Pass/>
+</Scenario>

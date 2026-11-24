@@ -210,9 +210,10 @@ namespace sw
          */
         [[nodiscard]] bool initialize( const TrampolineSettings& settings, int32 playerCount, float32 roundTime, int32 scoreLimit, uint32 seed );
         /** @brief 튕김 판정 창을 정합니다(기본은 Perfect ±0.05, Good ±0.1). 콤보를 깨는 창(`_bBreaksCombo`)은 실패로 칩니다. */
-        void              setTimingWindows( const vector<TimingWindow>& listWindow ) { _judge.setWindows( listWindow ); }
-        PartyItemSpawner& getItemSpawner() { return _itemSpawner; }
-        void              start();
+        void                    setTimingWindows( const vector<TimingWindow>& listWindow ) { _judge.setWindows( listWindow ); }
+        PartyItemSpawner&       getItemSpawner() { return _itemSpawner; }
+        const PartyItemSpawner& getItemSpawner() const { return _itemSpawner; }
+        void                    start();
 
         void setInput( int32 player, const TrampolineInput& input );
         /** @brief 프레임 시간을 고정 걸음으로 나눠 진행하고, 진행한 걸음 수를 반환합니다. 판이 도는 동안(`start` 뒤 끝나기 전)만 시간이 흐릅니다. */

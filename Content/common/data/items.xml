@@ -29,8 +29,23 @@
   <Item id="helmet_knight_tinted" _base="helmet_knight" name="Knight Helmet (Tintable)" visual="helmet_knight_tinted"/>
   <!-- 겹치는 소모품 — 인벤토리 · 상점 시연(game/playground maps/inventorydemo)의 겹치기 · 나누기 · 사용. 외형이 없다(장비가 아니다). -->
   <Item id="potion_health" name="Health Potion" description="Restores a little health." category="Consumable" maxStack="10" weight="0.5" value="20" useEffect="Heal"/>
+  <!-- 탄 — 무기 표(weapons.xml)의 ammo 가 가리킨다(배틀로얄 미니게임의 바닥 · 보급 상자). 외형이 없다. -->
+  <Item id="ammo_light" name="Light Ammo" category="Ammo" maxStack="60" weight="0.1"/>
+  <Item id="ammo_shell" name="Shotgun Shells" category="Ammo" maxStack="30" weight="0.2"/>
+  <Item id="ammo_rifle" name="Rifle Ammo" category="Ammo" maxStack="90" weight="0.1"/>
+  <!-- 잠긴 문을 여는 도구(game/playground minigames/coopscavenger 의 터미널). 외형이 없다. -->
+  <Item id="lockpick" name="Lockpick" category="Tool" weight="0.2" value="10"/>
   <!-- 채집 · 낚시가 주는 재료(game/playground maps/outdoors). 외형이 없다. -->
   <Item id="wood_log" name="Wood Log" category="Material" maxStack="20" weight="2"/>
   <Item id="herb_wild" name="Wild Herb" category="Material" maxStack="20" weight="0.1"/>
   <Item id="fish_trout" name="Trout" category="Material" maxStack="10" weight="1"/>
+  <!-- 등불 길 미니게임(game/playground classicjrpg)의 장비(JRPG 파티의 attack · defense)와 전직에 쓰는 책. 외형이 없다. -->
+  <Item id="blade_lantern" name="Lantern Blade" category="Weapon" slot="Weapon" value="30"><Stats attack="20"/></Item>
+  <Item id="robe_wick" name="Wick Robe" category="Armor" slot="Armor" value="20"><Stats defense="12"/></Item>
+  <Item id="tome_ember" name="Ember Tome" category="Quest"/>
+  <!-- 항구 식당 미니게임(game/playground restaurantsim)의 재료(장 · 레시피가 이 id 를 가리킨다). 외형이 없다. -->
+  <Item id="broth_noodle" name="Broth Noodles" category="Food" maxStack="20"/>
+  <Item id="harbor_fish" name="Harbor Fish" category="Food" maxStack="20"/>
+  <!-- 늪지 사냥 미니게임(game/playground monsterhuntrpg)의 오일 재료. 외형이 없다. -->
+  <Item id="mire_fat" name="Mire Fat" category="Material" maxStack="10"/>
 </ItemCatalog>

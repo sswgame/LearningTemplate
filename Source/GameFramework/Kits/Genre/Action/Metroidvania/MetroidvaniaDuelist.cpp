@@ -37,19 +37,14 @@ namespace sw
     {
     }
 
-    bool MetroidvaniaDuelist::initialize( const MetroidvaniaCatalog* pCatalog )
+    bool MetroidvaniaDuelist::initialize( const MetroidvaniaCatalog& catalog )
     {
-        if ( pCatalog == nullptr )
-        {
-            SW_LOG_ERROR_ID( "MetroidvaniaDuelist.MetroidvaniaDuelistRefusedNoCatalog", "MetroidvaniaDuelist: refused - no catalog" );
-            return false;
-        }
         // 따로 만들어 둘 다 받아들여질 때만 바꾼다 — 하나라도 거절되면 상태는 그대로다.
         HealthStateMachine healthMachine;
         ResourceGauge      stamina;
-        if ( healthMachine.initialize( pCatalog->getRules()._health ) == false || stamina.initialize( pCatalog->getRules()._stamina ) == false )
+        if ( healthMachine.initialize( catalog.getRules()._health ) == false || stamina.initialize( catalog.getRules()._stamina ) == false )
             return false;
-        _pCatalog         = pCatalog;
+        _pCatalog         = &catalog;
         _healthMachine    = healthMachine;
         _stamina          = stamina;
         _time             = 0.0f;

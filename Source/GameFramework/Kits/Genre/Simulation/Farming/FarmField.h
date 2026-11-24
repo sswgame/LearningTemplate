@@ -73,7 +73,7 @@ namespace sw
         FarmField();
 
         /** @brief 크기를 정하고 모든 타일을 갈지 않은 빈 땅으로 둡니다. */
-        void initialize( int32 width, int32 height, const CropCatalog* pCatalog );
+        void initialize( int32 width, int32 height, const CropCatalog& catalog );
         /**
          * @brief 공유 땅을 빌립니다. 밭은 위치가 정해진 땅이라 밭 전체(막힘 아님)를 한 번에 얻으며, 밭 타일 (0, 0) 이 땅 셀 @p origin 에 해당합니다.
          * @return 땅의 그 위치에 남의 셀이 있으면 false 이며 땅을 묶지 않는다(밭은 단독으로 동작한다). @p pLand 가 nullptr 이면 빌린 땅을 반납하고 true 이다. `initialize` 뒤에 호출해야 한다.

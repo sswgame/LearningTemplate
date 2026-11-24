@@ -43,6 +43,7 @@ namespace sw
 
     class Archive;
     class BitWriter;
+    class GameSoundQueue;
     class NetMessageChannel;
     class NetMessageWriter;
 
@@ -136,7 +137,7 @@ namespace sw
         enum class Kind : uint8
         {
             Fired = 0,     ///< _pilot 이 쏘았다. _id 는 무기 슬롯
-            Hit,           ///< _pilot 이 맞은 쪽, _other 가 때린 쪽, _value 는 체력 피해
+            Hit,           ///< _pilot 이 맞은 쪽, _other 가 때린 쪽, _value 는 체력 피해. _id 는 근접이면 기술(탄이면 빈 이름)
             Downed,        ///< _pilot 이 다운되었다. _other 는 다운시킨 쪽
             WokeUp,        ///< _pilot 에게 기상 무적이 붙었다
             Destroyed,     ///< _pilot 이 격추되었다. _other 는 격추한 쪽
@@ -145,7 +146,7 @@ namespace sw
             Transformed,   ///< _pilot 이 변형했다. _id 는 새 형태
             SkillStarted,  ///< _pilot 이 스킬을 켰다. _id 는 스킬
             SkillEnded,    ///< _pilot 의 스킬이 끝났다. _id 는 스킬
-            ComboAdvanced, ///< _pilot 의 콤보가 다음 단으로 넘어갔다. _value 는 새 단(0부터)
+            ComboAdvanced, ///< _pilot 의 콤보가 다음 단으로 넘어갔다. _value 는 새 단(0부터), _id 는 그 단의 기술
             MechSwapped,   ///< _pilot 이 기체를 바꿨다. _value 는 덱 슬롯
             MatchEnded     ///< _other 가 이긴 팀(−1이면 무승부)
         };
@@ -213,7 +214,7 @@ namespace sw
      * @brief 서버가 돌리는 한 판입니다. 카탈로그는 빌려 쓰며, 판보다 오래 살아야 합니다.
      * @code
      *     MechArenaWorld world;
-     *     world.initialize( settings, &mechCatalog, &weaponCatalog, &projectileCatalog, &moveCatalog );
+     *     world.initialize( settings, mechCatalog, weaponCatalog, projectileCatalog, moveCatalog );
      *     const int32 amuro = world.addPilot( config ).value();
      *     world.start();
      *     world.setInput( amuro, input );
@@ -243,8 +244,8 @@ namespace sw
          * @brief 설정과 카탈로그를 받아 판을 비웁니다. 설정이 범위 밖(`MechArenaSettings` 의 `PROPERTY( Min · Max )`)이면 오류를 남기고 false 를 반환하며 판은 그대로입니다.
          * @details 주무기 슬롯은 무기(`WeaponCatalog`)의 기본 탄(`ProjectileCatalog`)을 장전한다.
          */
-        [[nodiscard]] bool initialize( const MechArenaSettings& settings, const MechCatalog* pMechCatalog, const WeaponCatalog* pWeaponCatalog,
-                                       const ProjectileCatalog* pProjectileCatalog, const MoveCatalog* pMoveCatalog );
+        [[nodiscard]] bool initialize( const MechArenaSettings& settings, const MechCatalog& mechCatalog, const WeaponCatalog& weaponCatalog, const ProjectileCatalog& projectileCatalog,
+                                       const MoveCatalog& moveCatalog );
         /** @brief 팀을 추가하고 번호를 반환합니다. */
         int32 addTeam( const hashed_string& name );
         /** @brief 조종사를 추가합니다. 덱이 비었거나, 모르는 기체 · 스킬 · 팀이거나, 덱 코스트가 상한을 넘거나, 덱 기체의 체력 설정이 범위 밖이거나, 슬롯의 무기 · 기술이 카탈로그에 없으면 이유를 돌려줍니다. */
@@ -279,6 +280,8 @@ namespace sw
          */
         SW_DECLARE_STATE_IO();
         void pollEvents( vector<MechArenaEvent>& outListEvent );
+        /** @brief 모든 주무기에서 지난번 부른 뒤 난 소리(무기 표)를 2D 로 쌓습니다(`WeaponState::queueSound`). */
+        void queueWeaponSound( GameSoundQueue& inoutQueue );
 
         const MechPilot*               findPilot( int32 pilot ) const { return isValidPilot( pilot ) ? &_listPilot[static_cast<size_t>( pilot )] : nullptr; }
         int32                          getPilotCount() const { return static_cast<int32>( _listPilot.size() ); }
@@ -313,7 +316,7 @@ namespace sw
         /** @brief 탄의 반응 번호가 가리키는 슬롯입니다. 번호가 틀리면 nullptr 입니다. */
         const MechWeaponSlotDef* findProjectileSlot( uint32 payload ) const;
         void                     resolveHit( int32 attacker, int32 victim, float32 damage, float32 downValue, float32 knockback, float32 staggerTime, bool bKnockdown,
-                                             MechWeaponKind kind );
+                                             MechWeaponKind kind, const hashed_string& moveID );
         void                     activateSkill( int32 pilot, int32 skillIndex );
         void                     triggerSkills( int32 pilot, MechSkillTrigger trigger );
         /** @brief 지금 장착한 기체로 체력, 부스트, 록온, 무기를 다시 짭니다. 기체의 체력 설정이 범위 밖이라 거절되면 false 입니다. */
@@ -348,7 +351,7 @@ namespace sw
         vector<LockOnCandidate>            _listCandidateScratch;
         MatchState                         _match;
         FixedStepTimer                     _timer;
-        const MechCatalog*                 _pMechCatalog;
+        const MechCatalog*                 _pMechCatalog; ///< 빌린 카탈로그 — 넷은 `initialize` 가 함께 정한다(조종사는 그 뒤에만 들어와 조종사가 있으면 늘 있다)
         const WeaponCatalog*               _pWeaponCatalog;
         const ProjectileCatalog*           _pProjectileCatalog;
         const MoveCatalog*                 _pMoveCatalog;

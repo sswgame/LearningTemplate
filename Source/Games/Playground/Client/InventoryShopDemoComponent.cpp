@@ -95,7 +95,7 @@ namespace sw
             SW_LOG_ERROR_ID( "InventoryShopDemo.NoItemsOrShop", "Inventory shop demo needs the item catalog (AppearanceDatabase) and the shop '%#' in %#", _shopID.c_str(), _shopsPath.c_str() );
             return false;
         }
-        _shop.initialize( _pShops.get(), pItems );
+        _shop.initialize( *_pShops, *pItems );
         _currency = _shop.getCurrency( _shopID );
         _wallet.clear();
         if ( _startingGold > 0 )
@@ -125,11 +125,12 @@ namespace sw
         }
         // 지역 사본에 읽고 끝까지 맞으면 바꾼다.
         const AppearanceDatabase* pDatabase = game::findSubsystem<AppearanceDatabase>();
-        if ( io.check( _pShops != nullptr && pDatabase != nullptr ) == false )
+        const ItemCatalog* const  pItems    = pDatabase != nullptr ? pDatabase->getItemCatalog() : nullptr;
+        if ( io.check( _pShops != nullptr && pItems != nullptr ) == false )
             return;
         Wallet      wallet = _wallet;
         ShopManager shop;
-        shop.initialize( _pShops.get(), pDatabase->getItemCatalog() ); // 다시 읽힌 카탈로그면 새 판으로 읽는다
+        shop.initialize( *_pShops, *pItems ); // 다시 읽힌 카탈로그면 새 판으로 읽는다
         io.value( wallet );
         io.value( shop );
         if ( io.isOk() == false )

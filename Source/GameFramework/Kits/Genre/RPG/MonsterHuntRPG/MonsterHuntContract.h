@@ -58,7 +58,7 @@ namespace sw
     /**
      * @class MonsterHuntInvestigation
      * @brief 계약 하나의 조사입니다. 단서를 찾으면 일지에 `notify( "Clue", 단서 id )` 를 보내고, 단계를 끝내면 `notify( "Investigate", 단계 id )` 를 보냅니다.
-     *        퀘스트 단계의 목표가 그 알림을 세게 하면 계약 퀘스트가 진행됩니다. 일지는 빌려 쓰며 없어도 됩니다.
+     *        퀘스트 단계의 목표가 그 알림을 세게 하면 계약 퀘스트가 진행됩니다. 일지는 빌려 쓰며 조사보다 오래 살아야 합니다(계약 퀘스트가 없는 판은 진행 중인 퀘스트가 없는 일지를 줍니다).
      */
     REFLECT()
     class SW_KIT_API MonsterHuntInvestigation
@@ -74,7 +74,7 @@ namespace sw
         MonsterHuntInvestigation();
 
         /** @brief 계약으로 시작합니다. 맨 앞의 단서 없는 단계는 바로 넘깁니다(단계가 하나도 없으면 바로 끝납니다). 계약이 없으면 false 를 반환합니다. */
-        [[nodiscard]] bool initialize( const MonsterHuntCatalog* pCatalog, const hashed_string& contractID, QuestLog* pQuestLog );
+        [[nodiscard]] bool initialize( const MonsterHuntCatalog& catalog, const hashed_string& contractID, QuestLog& questLog );
         /** @brief 위쳐 감각입니다. @p position 에서 @p senseRadius 안에 있는 단서 중 지금 찾을 수 있고(순서가 열려 있고) 아직 못 찾은 것을 반환합니다. */
         void senseClues( const float3& position, float32 senseRadius, vector<const MonsterHuntClueDef*>& outListClue ) const;
         /** @brief @p position 에서 단서를 조사합니다. */

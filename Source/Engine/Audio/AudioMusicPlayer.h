@@ -30,7 +30,7 @@ namespace sw
         hashed_string  _clipPath{};
         hashed_string  _bus{};
         AudioPlayingID _playingID{ 0 };
-        uint64         _startFrame{ 0 };                            ///< 소리가 시작할 렌더 프레임이다.
+        uint64         _startFrame{ 0 };                            ///< 소리가 시작할 음악 시계의 프레임이다.
         int32          _segment{ constant::invalid_index::kInt32 }; ///< 구간 번호다(스팅어는 `AudioMusicPlayer::kStingerSegment`).
         int32          _layer{ constant::invalid_index::kInt32 };   ///< 레이어 번호다(-1 = 스팅어, 게인을 따라가지 않는다).
         float32        _gain{ 1.0f };                               ///< 시작 레이어 게인(선형)
@@ -50,7 +50,7 @@ namespace sw
     public:
         virtual ~IAudioMusicVoices() = default;
 
-        /** @brief 지금까지 렌더한 프레임입니다(블록 시작 시각). */
+        /** @brief 음악 시계 — 음악이 멈춰 있지 않던 블록만 센 렌더 프레임입니다(블록 시작 시각). */
         virtual uint64 getMusicClock() const = 0;
         /** @brief 게임 파라미터의 현재 값입니다(레이어 게인 곡선). 모르는 파라미터면 0 입니다. */
         virtual float32 findMusicParameter( const hashed_string& name ) const = 0;
@@ -82,6 +82,8 @@ namespace sw
         /** @brief `IAudioMusicVoices` 의 페이드 · 놓기가 구간을 가리지 않음을 뜻합니다. */
         static constexpr int32 kAnySegment = -3;
 
+        AudioMusicPlayer();
+
         /** @brief 음악을 시작합니다. 재생 중인 음악은 @p fadeSeconds 동안 줄이고, 지금 블록에서 시작 구간을 재생합니다. */
         void start( IAudioMusicVoices& voices, shared_ptr<const AudioMusicDef> pMusic, AudioPlayingID playingID, float32 fadeSeconds );
         /** @brief 구간 전환을 전환 규칙의 맞춤 지점(박, 마디, 구간 끝)에 예약하고 스팅어를 냅니다. 같은 구간이면 아무것도 하지 않습니다. */
@@ -90,11 +92,19 @@ namespace sw
         void stop( IAudioMusicVoices& voices, float32 fadeSeconds );
         /** @brief 예약한 전환 시각이 되면 구간을 넘깁니다. 루프하지 않는 구간의 끝은 다음 구간으로 연결하고, 레이어 게인을 파라미터에 맞춥니다. */
         void update( IAudioMusicVoices& voices );
+        /**
+         * @brief 재생 @p playingID 의 음악을 멈추거나 이어 냅니다. 지금 음악이 아니면 아무것도 하지 않습니다. 보이스는 엔진이 멈춥니다.
+         * @details 멈춘 동안 음악 시계(`getMusicClock`)가 서서 구간 위치 · 예약한 전환 · 보이스 시작이 소리와 함께 그 자리에 남는다. 재생 위치가 곧 시계인 유니티 `AudioSource.Pause` · Godot `stream_paused` 의 모양이다
+         *          (언리얼은 소리 `UAudioComponent::SetPaused` 와 Quartz 시계 `PauseClock` 을 따로 멈춰야 해 한쪽만 멈출 수 있다).
+         */
+        void setPaused( AudioPlayingID playingID, bool bPaused );
+        /** @brief 음악이 멈춰 있는지 여부입니다. 멈춘 동안 시작한 보이스도 멈춘 채 시작합니다. */
+        bool isPaused() const { return _bPaused == SW_TRUE; }
         /** @brief 보이스를 건드리지 않고 상태만 비웁니다(엔진 종료 — 보이스는 엔진이 함께 지운다). */
         void reset();
 
-        /** @brief @p renderedFrameCount 시각의 음악 위치입니다(게시용). */
-        AudioMusicStatus makeStatus( uint64 renderedFrameCount ) const { return _playback.makeStatus( renderedFrameCount ); }
+        /** @brief 음악 시계 @p musicClock 의 음악 위치입니다(게시용). */
+        AudioMusicStatus makeStatus( uint64 musicClock ) const { return _playback.makeStatus( musicClock ); }
         /** @brief 레이어의 목표 게인(선형)을 반환합니다. 볼륨과 파라미터 곡선을 합친 값입니다. */
         float32 computeLayerGain( const IAudioMusicVoices& voices, int32 segmentIndex, int32 layerIndex ) const;
 
@@ -109,6 +119,8 @@ namespace sw
         hashed_string getBus() const;
 
     private:
-        AudioMusicPlayback _playback; /**< 적응형 음악의 재생 위치와 전환 예약입니다. */
+        AudioMusicPlayback     _playback;     /**< 적응형 음악의 재생 위치와 전환 예약입니다. */
+        uint8                  _bPaused  : 1; /**< 음악이 멈춰 있습니다. */
+        [[maybe_unused]] uint8 _reserved : 7;
     };
 } // namespace sw

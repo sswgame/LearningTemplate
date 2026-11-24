@@ -167,7 +167,7 @@ namespace
         {
             SW_REQUIRE_TRUE( _catalog.loadFromXMLText( kJRPGXML, "JRPGTest" ) );
             SW_REQUIRE_TRUE( _itemCatalog.loadFromXMLText( kItemXML, "JRPGTest" ) );
-            SW_REQUIRE_TRUE( _inventory.initialize( &_itemCatalog, 5 ) );
+            SW_REQUIRE_TRUE( _inventory.initialize( _itemCatalog, 5 ) );
             initializeParty( _party );
             sw::TimingWindow window;
             window._grade      = "Good";
@@ -180,7 +180,7 @@ namespace
 
         void initializeParty( sw::JRPGParty& outParty )
         {
-            outParty.initialize( &_catalog, &_itemCatalog, &_inventory, &_wallet );
+            outParty.initialize( _catalog, _itemCatalog, _inventory, _wallet );
         }
 
         /** @brief 지금 설정으로 전투를 처음부터 엽니다(멤버는 앞서 넣어 둡니다). */
@@ -188,9 +188,9 @@ namespace
         {
             sw::vector<sw::hashed_string> listEnemy;
             listEnemy.push_back( enemyID );
-            _battle.initialize( &_catalog, &_judge, _settings, 7 );
+            _battle.initialize( _catalog, _judge, _settings, 7 );
             _battle.setTimingInput( &_timing );
-            return _battle.start( &_party, listEnemy );
+            return _battle.start( _party, listEnemy );
         }
 
         int32 countBattleEvents( sw::JRPGBattleEvent::Kind kind )
@@ -332,8 +332,8 @@ SW_TEST_CASE_F( JRPGRulesTest, DamageSpells )
     sw::vector<sw::hashed_string> listEnemy;
     listEnemy.push_back( "slime" );
     listEnemy.push_back( "slime" );
-    _battle.initialize( &_catalog, &_judge, _settings, 7 );
-    SW_REQUIRE_TRUE( _battle.start( &_party, listEnemy ) );
+    _battle.initialize( _catalog, _judge, _settings, 7 );
+    SW_REQUIRE_TRUE( _battle.start( _party, listEnemy ) );
 
     SW_EXPECT_TRUE( _battle.setCommand( 0, sw::JRPGCommand::makeSpell( "flare", 1 ) ) );
     _battle.resolveRound();
@@ -438,8 +438,7 @@ SW_TEST_CASE_F( JRPGRulesTest, FailedStartDoesNotProgress )
     SW_EXPECT_FALSE( _battle.tryFlee() );
 
     sw::vector<sw::hashed_string> listNone;
-    SW_EXPECT_FALSE( _battle.start( &_party, listNone ) );
-    SW_EXPECT_FALSE( _battle.start( nullptr, listNone ) );
+    SW_EXPECT_FALSE( _battle.start( _party, listNone ) );
 
     _party.getMember( 0 )._hp = 0;
     SW_EXPECT_FALSE( startBattle( "slime" ) );
@@ -793,12 +792,14 @@ SW_TEST_CASE_F( JRPGRulesTest, InnAndChurch )
     SW_EXPECT_EQUAL( 1, _wallet.getBalance( currency ) );
     SW_EXPECT_EQUAL( _party.getMember( 1 ).getStat( sw::JRPGStat::MaxHP ), _party.getMember( 1 )._hp );
 
+    sw::Wallet    emptyWallet;
     sw::JRPGParty unfunded;
-    unfunded.initialize( &_catalog, &_itemCatalog, nullptr, nullptr );
+    unfunded.initialize( _catalog, _itemCatalog, _inventory, emptyWallet );
     SW_REQUIRE_TRUE( unfunded.addMember( "hero", "Hero", "hero" ) == 0 );
     SW_EXPECT_FALSE( unfunded.restAtInn( 1 ) );
     SW_EXPECT_TRUE( unfunded.restAtInn( 0 ) );
-    SW_EXPECT_EQUAL( 100, unfunded.distributeRewards( 100, 5 ) ); // 지갑이 없어도 경험치는 받는다
+    SW_EXPECT_EQUAL( 100, unfunded.distributeRewards( 100, 5 ) );
+    SW_EXPECT_EQUAL( 5, emptyWallet.getBalance( currency ) );
 }
 
 /**
@@ -997,7 +998,7 @@ SW_TEST_CASE_F( JRPGRulesTest, PartyStateRefusals )
     _party.writeState( written );
     sw::Archive   readingLayout( written.getData(), written.getSize() );
     sw::JRPGParty otherLayout;
-    otherLayout.initialize( &_catalog, &_itemCatalog, nullptr, nullptr, "Weapon" );
+    otherLayout.initialize( _catalog, _itemCatalog, _inventory, _wallet, "Weapon" );
     SW_EXPECT_FALSE( otherLayout.readState( readingLayout ) );
 }
 
@@ -1022,9 +1023,9 @@ SW_TEST_CASE_F( JRPGRulesTest, BattleStateRoundTrip )
     SW_REQUIRE_TRUE( restoredParty.readState( readingParty ) );
     sw::Archive    readingBattle( writtenBattle.getData(), writtenBattle.getSize() );
     sw::JRPGBattle restored;
-    restored.initialize( &_catalog, &_judge, _settings, 99 );
+    restored.initialize( _catalog, _judge, _settings, 99 );
     restored.setTimingInput( &_timing );
-    restored.bindParty( &restoredParty );
+    restored.bindParty( restoredParty );
     SW_REQUIRE_TRUE( restored.readState( readingBattle ) );
     SW_EXPECT_TRUE( JRPGTestUtil::isSameState( _battle, restored ) );
 
@@ -1040,12 +1041,12 @@ SW_TEST_CASE_F( JRPGRulesTest, BattleStateRoundTrip )
 
     // 시작 전 전투는 파티 없이 왕복한다.
     sw::JRPGBattle fresh;
-    fresh.initialize( &_catalog, &_judge, _settings, 5 );
+    fresh.initialize( _catalog, _judge, _settings, 5 );
     sw::Archive writtenFresh;
     fresh.writeState( writtenFresh );
     sw::Archive    readingFresh( writtenFresh.getData(), writtenFresh.getSize() );
     sw::JRPGBattle freshTarget;
-    freshTarget.initialize( &_catalog, &_judge, _settings, 6 );
+    freshTarget.initialize( _catalog, _judge, _settings, 6 );
     SW_EXPECT_TRUE( freshTarget.readState( readingFresh ) );
 }
 
@@ -1138,7 +1139,7 @@ SW_TEST_CASE_F( JRPGRulesTest, BattleStateRefusals )
 SW_TEST_CASE_F( JRPGRulesTest, StepEncounter )
 {
     sw::JRPGEncounterWalker walker;
-    walker.initialize( &_catalog, 5 );
+    walker.initialize( _catalog, 5 );
     SW_EXPECT_EQUAL( sw::JRPGEncounterWalker::kNoEncounterYet, walker.getStepsSinceEncounter() );
 
     const sw::JRPGEncounterGroup* pGroup = walker.step( "field" );
@@ -1159,8 +1160,7 @@ SW_TEST_CASE_F( JRPGRulesTest, StepEncounter )
     SW_EXPECT_TRUE( walker.step( "weightless" ) == nullptr );
     SW_EXPECT_EQUAL( stepsBefore + 4, walker.getTotalSteps() );
 
-    sw::JRPGEncounterWalker noCatalog;
-    noCatalog.initialize( nullptr, 5 );
+    sw::JRPGEncounterWalker noCatalog; // 열기 전의 걸음은 조우하지 않는다
     SW_EXPECT_TRUE( noCatalog.step( "field" ) == nullptr );
 }
 
@@ -1170,14 +1170,14 @@ SW_TEST_CASE_F( JRPGRulesTest, StepEncounter )
 SW_TEST_CASE_F( JRPGRulesTest, StepEncounterState )
 {
     sw::JRPGEncounterWalker walker;
-    walker.initialize( &_catalog, 5 );
+    walker.initialize( _catalog, 5 );
     (void)walker.step( "field" );
 
     sw::Archive written;
     walker.writeState( written );
     sw::Archive             reading( written.getData(), written.getSize() );
     sw::JRPGEncounterWalker restored;
-    restored.initialize( &_catalog, 77 );
+    restored.initialize( _catalog, 77 );
     SW_REQUIRE_TRUE( restored.readState( reading ) );
     SW_EXPECT_TRUE( JRPGTestUtil::isSameState( walker, restored ) );
     for ( int32 step = 0; step < 8; ++step )
@@ -1315,8 +1315,11 @@ SW_TEST_CASE( JRPGTest, CatalogReportsUnknownReferences )
                                               "JRPGTest" ) );
 
     // 모르는 주문은 배우지 않는다 - 배우면 그 멤버의 세이브가 읽히지 않는다.
-    sw::JRPGParty party;
-    party.initialize( &catalog, nullptr, nullptr, nullptr );
+    const sw::ItemCatalog itemCatalog{};
+    sw::Inventory         inventory;
+    sw::Wallet            wallet;
+    sw::JRPGParty         party;
+    party.initialize( catalog, itemCatalog, inventory, wallet );
     SW_REQUIRE_TRUE( party.addMember( "hero", "Hero", "hero" ) == 0 );
     SW_EXPECT_TRUE( party.getMember( 0 )._listSpell.empty() );
 }
@@ -1348,15 +1351,15 @@ SW_TEST_CASE_F( JRPGRulesTest, BattleDeterminism )
 {
     const auto setup = [this]( JRPGBattleRun& run ) -> bool
     {
-        if ( run._inventory.initialize( &_itemCatalog, 5 ) == false )
+        if ( run._inventory.initialize( _itemCatalog, 5 ) == false )
             return false;
-        run._party.initialize( &_catalog, &_itemCatalog, &run._inventory, &run._wallet );
+        run._party.initialize( _catalog, _itemCatalog, run._inventory, run._wallet );
         if ( run._party.addMember( "hero", "Hero", "hero" ) != 0 || run._party.addMember( "mage", "Mage", "mage" ) != 1 )
             return false;
-        run._battle.initialize( &_catalog, &_judge, _settings, 7 );
+        run._battle.initialize( _catalog, _judge, _settings, 7 );
         run._battle.setTimingInput( &_timing );
         const sw::vector<sw::hashed_string> listEnemy{ sw::hashed_string( "slime" ), sw::hashed_string( "brittle" ) };
-        return run._battle.start( &run._party, listEnemy );
+        return run._battle.start( run._party, listEnemy );
     };
     const auto step = []( JRPGBattleRun& run, int32 stepIndex )
     {
@@ -1380,7 +1383,9 @@ SW_TEST_CASE_F( JRPGRulesTest, BattleDeterminism )
  */
 SW_TEST_CASE( JRPGTest, SurvivesSeedEqualToMixConstant )
 {
-    sw::JRPGBattle battle;
-    battle.initialize( nullptr, nullptr, sw::JRPGBattleSettings{}, 0x27d4eb2fu );
+    const sw::JRPGCatalog catalog{};
+    const sw::TimingJudge judge{};
+    sw::JRPGBattle        battle;
+    battle.initialize( catalog, judge, sw::JRPGBattleSettings{}, 0x27d4eb2fu );
     SW_EXPECT_TRUE( battle.getResult() == sw::JRPGBattleResult::Ongoing );
 }

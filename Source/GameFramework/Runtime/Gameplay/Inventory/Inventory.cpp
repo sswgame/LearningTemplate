@@ -56,14 +56,14 @@ namespace sw
     {
     }
 
-    bool Inventory::initialize( const ItemCatalog* pCatalog, int32 slotCount, float32 maxWeight )
+    bool Inventory::initialize( const ItemCatalog& catalog, int32 slotCount, float32 maxWeight )
     {
         if ( slotCount < 0 || maxWeight < 0.0f )
         {
             SW_LOG_ERROR_ID( "Inventory.NegativeLimit", "Inventory: refused %# slots and max weight %# - neither may be negative", slotCount, maxWeight );
             return false;
         }
-        _pCatalog = pCatalog;
+        _pCatalog = &catalog;
         _listSlot.assign( static_cast<size_t>( slotCount ), InventorySlot{} );
         _listOverflow.clear();
         _maxWeight = maxWeight;

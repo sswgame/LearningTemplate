@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="utf-8"?>
+<?asset guid="3bfe8629c189f66bac7263017ff470aa"?>
+<!-- 늪지 사냥 미니게임의 오일 · 표식 상성 — 맞는 오일은 한 배 반, 바람 표식은 보통이다. -->
+<ElementChart>
+	<Element id="Mire"/>
+	<Element id="HowlerOil"/>
+	<Element id="Gust"/>
+	<Rule attack="HowlerOil" defend="Mire" multiplier="1.5"/>
+</ElementChart>

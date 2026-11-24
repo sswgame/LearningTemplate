@@ -94,7 +94,7 @@ SW_TEST_CASE( InventorySlotUpgradeTest, InventoryVersionTwoKeepsDye )
     Archive body( versionTwo.getData(), versionTwo.getSize() );
     SW_REQUIRE_TRUE( StateIO::upgradeSectionBody( Inventory::kStateTag, 2, Inventory::kStateVersion, body ) );
     Inventory restored;
-    SW_REQUIRE_TRUE( restored.initialize( &catalog, 2 ) );
+    SW_REQUIRE_TRUE( restored.initialize( catalog, 2 ) );
     SW_REQUIRE_TRUE( restored.readState( body ) );
     const InventorySlot& sword = restored.getSlot( 0 );
     SW_EXPECT_TRUE( sword._itemID == hashed_string( "sword" ) );
@@ -111,7 +111,7 @@ SW_TEST_CASE( InventorySlotUpgradeTest, CurrentRoundTripAndNewerRefused )
     ItemCatalog catalog;
     SW_REQUIRE_TRUE( catalog.loadFromXMLText( kCatalogXML, "InventorySlotUpgradeTest" ) );
     Inventory original;
-    SW_REQUIRE_TRUE( original.initialize( &catalog, 2 ) );
+    SW_REQUIRE_TRUE( original.initialize( catalog, 2 ) );
     InventorySlot dyed;
     dyed._itemID = hashed_string( "sword" );
     dyed._count  = 1;
@@ -123,7 +123,7 @@ SW_TEST_CASE( InventorySlotUpgradeTest, CurrentRoundTripAndNewerRefused )
     Archive written;
     original.writeState( written );
     Inventory restored;
-    SW_REQUIRE_TRUE( restored.initialize( &catalog, 2 ) );
+    SW_REQUIRE_TRUE( restored.initialize( catalog, 2 ) );
     Archive reading( written.getData(), written.getSize() );
     SW_REQUIRE_TRUE( restored.readState( reading ) );
     SW_EXPECT_EQUAL( uint32{ 7 }, restored.getSlot( 0 ).getCustomization().getSchemaVersion() );
@@ -228,12 +228,12 @@ SW_TEST_CASE( InventorySlotUpgradeTest, UnversionedValuesNeverReachBytes )
     ItemCatalog catalog;
     SW_REQUIRE_TRUE( catalog.loadFromXMLText( kCatalogXML, "InventorySlotUpgradeTest" ) );
     Inventory original;
-    SW_REQUIRE_TRUE( original.initialize( &catalog, 1 ) );
+    SW_REQUIRE_TRUE( original.initialize( catalog, 1 ) );
     SW_REQUIRE_TRUE( original.addStack( sword ) );
     Archive written;
     original.writeState( written );
     Inventory restored;
-    SW_REQUIRE_TRUE( restored.initialize( &catalog, 1 ) );
+    SW_REQUIRE_TRUE( restored.initialize( catalog, 1 ) );
     Archive reading( written.getData(), written.getSize() );
     SW_REQUIRE_TRUE( restored.readState( reading ) );
     SW_EXPECT_EQUAL( uint32{ 3 }, restored.getSlot( 0 ).getCustomization().getSchemaVersion() );

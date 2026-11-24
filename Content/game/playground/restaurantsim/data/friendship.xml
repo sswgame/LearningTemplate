@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="utf-8"?>
+<?asset guid="e52df26b4b94461e80012d3386f74c4e"?>
+<!-- 항구 식당(minigames/restaurantsim)의 손님 평판 — 공유 평판의 세력 하나(restaurant.guests, 키트 접두). 계산한 손님의 만족도가 올리고 기다리다 떠난 손님이 내린다. -->
+<ReputationCatalog>
+	<Faction id="restaurant.guests" min="0" max="1000" start="50"><Tier name="Unknown" min="0"/><Tier name="Regular" min="100"/><Tier name="Beloved" min="400"/></Faction>
+</ReputationCatalog>

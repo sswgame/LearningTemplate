@@ -86,7 +86,8 @@ namespace sw
     {
         // 순수 인터페이스라 내보내지 않는다. 인라인 생성자와 소멸자를 GameFramework.dll 이 내보내지 않으므로 dllimport 로 해석되면 키트 링크가 깨진다(C-3).
     public:
-        static constexpr const utf8* kProviderKit = OnlineServerKitName::kAccount; ///< 이 인터페이스를 내는 키트다. 받는 키트의 의존 이름이 여기서 나온다(`OnlineServerKit`)
+        static constexpr const utf8* kProviderKit           = OnlineServerKitName::kAccount; ///< 이 인터페이스를 내는 키트다. 받는 키트의 의존 이름이 여기서 나온다(`OnlineServerKit`)
+        static constexpr bool        kRequiredInMultiServer = true;                          ///< GM 서버에 없으면 정지한 계정이 다른 서버에 접속한 채 남는다
 
         IAccountSessionControl()          = default;
         virtual ~IAccountSessionControl() = default;

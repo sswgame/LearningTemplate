@@ -39,11 +39,11 @@ namespace sw
     {
     }
 
-    bool MonsterHuntInvestigation::initialize( const MonsterHuntCatalog* pCatalog, const hashed_string& contractID, QuestLog* pQuestLog )
+    bool MonsterHuntInvestigation::initialize( const MonsterHuntCatalog& catalog, const hashed_string& contractID, QuestLog& questLog )
     {
-        _pCatalog  = pCatalog;
-        _pContract = pCatalog != nullptr ? pCatalog->findContract( contractID ) : nullptr;
-        _pQuestLog = pQuestLog;
+        _pCatalog  = &catalog;
+        _pContract = catalog.findContract( contractID );
+        _pQuestLog = &questLog;
         _stepIndex = 0;
         _listFound.clear();
         _eventBuffer.clear();
@@ -97,8 +97,7 @@ namespace sw
         found._stepID = step._id;
         found._clueID = clueID;
         _eventBuffer.push( found );
-        if ( _pQuestLog != nullptr )
-            (void)_pQuestLog->notify( hashed_string( kClueNotifyKind ), clueID );
+        (void)_pQuestLog->notify( hashed_string( kClueNotifyKind ), clueID ); // 세는 퀘스트가 없으면 0 이다
         advanceFinishedSteps();
         return MonsterHuntClueResult::Found;
     }
@@ -115,8 +114,7 @@ namespace sw
             completed._kind   = MonsterHuntInvestigationEvent::Kind::StepCompleted;
             completed._stepID = stepID;
             _eventBuffer.push( completed );
-            if ( _pQuestLog != nullptr )
-                (void)_pQuestLog->notify( hashed_string( kStepNotifyKind ), stepID );
+            (void)_pQuestLog->notify( hashed_string( kStepNotifyKind ), stepID );
             ++_stepIndex;
             _listFound.clear();
         }

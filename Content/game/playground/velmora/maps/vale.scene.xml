@@ -139,11 +139,14 @@
 					<AdventureAvatarComponent _localID="2290617745103849062" _componentName="AdventureAvatarComponent"
 					                          _bActive="true"
 					                          _moveAction="Move"
-					                          _useAction="Velmora.Use" />
+					                          _useAction="Velmora.Use"
+					                          _cubePrefab="game/playground/prefabs/ruleviews/cube.prefab.xml"
+					                          _spherePrefab="game/playground/prefabs/ruleviews/sphere.prefab.xml" />
 					<VelmoraEncounterViewComponent _localID="5883340216079361947" _componentName="VelmoraEncounterViewComponent"
 					                               _bActive="true"
 					                               _attackAction="Velmora.Attack"
-					                               _dashAction="Velmora.Dash" />
+					                               _dashAction="Velmora.Dash"
+					                               _spherePrefab="game/playground/prefabs/ruleviews/sphere.prefab.xml" />
 				</_listComponent>
 			</GameObject>
 		</entity>

@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="utf-8"?>
+<?asset guid="32165336c534916bbdaac60579720456"?>
+<!-- 항구 식당 미니게임의 장 — 재료만 팔고 되사지 않는다. 재고는 무한이다. -->
+<ShopCatalog>
+	<Shop id="harbor_market" currency="Gold" buybackLimit="0">
+		<Stock item="broth_noodle" price="5"/>
+		<Stock item="harbor_fish" price="8"/>
+	</Shop>
+</ShopCatalog>

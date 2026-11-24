@@ -8,6 +8,8 @@
 #include "Core/String/StringUtil.h"
 
 #include "Engine/Module/ModuleSharedAssetCache.h"
+#include "Engine/Reflection/TypeFqn.h"
+#include "Engine/Serialization/Format/StateIO.h"
 #include "Engine/Serialization/XML/XMLDocument.h"
 #include "Engine/Serialization/XML/XMLReadUtil.h"
 
@@ -72,6 +74,14 @@ namespace sw
         }
         pushEvent( PartySeriesEvent::Kind::RoundStarted, nullopt, getRoundNumber(), 0 );
         return true;
+    }
+
+    void PartyRoundSeries::serializeState( StateIO& io )
+    {
+        const int32 playerCount = getPlayerCount();
+        io.reflected( _series ); // 우승자 범위는 `RoundSeries::validateState` 가 본다
+        if ( io.check( getPlayerCount() == playerCount ) && io.isReading() )
+            _eventBuffer.clear();
     }
 
     const PartyRoundDef* PartyRoundSeries::getCurrentRound() const

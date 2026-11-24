@@ -1,0 +1,37 @@
+<?xml version="1.0" encoding="utf-8"?>
+<?asset guid="e62d0ddecee57cae7b2d0a05e358e799"?>
+<!-- 리듬 미니게임(minigames/rhythm)의 채보 — 레인 넷, 140 BPM(곡 길이 41.14 초가 96 박이다). 박 8(3.4 초)부터 박 40(17.1 초) 앞까지 친다. 같은 박 0 은 음악(stage1.music.xml)의 구간 시작이다. -->
+<Chart title="Stage 1" artist="Juhani Junkala" level="3" lanes="4">
+	<Bpm beat="0" bpm="140"/>
+	<Note lane="0" beat="8"/>
+	<Note lane="1" beat="9"/>
+	<Note lane="2" beat="10"/>
+	<Note lane="3" beat="11"/>
+	<Note lane="2" beat="11.5"/>
+	<Note lane="1" beat="12.5"/>
+	<Note lane="0" beat="13.5"/>
+	<Note lane="2" beat="14.5" endBeat="16"/>
+	<Note lane="1" beat="16.5"/>
+	<Note lane="3" beat="17.5"/>
+	<Note lane="0" beat="18.5"/>
+	<Note lane="3" beat="19.5"/>
+	<Note lane="1" beat="20"/>
+	<Note lane="2" beat="21"/>
+	<Note lane="3" beat="22"/>
+	<Note lane="0" beat="23" endBeat="24.5"/>
+	<Note lane="0" beat="25"/>
+	<Note lane="1" beat="26"/>
+	<Note lane="2" beat="27"/>
+	<Note lane="3" beat="28"/>
+	<Note lane="2" beat="28.5"/>
+	<Note lane="1" beat="29.5"/>
+	<Note lane="0" beat="30.5"/>
+	<Note lane="2" beat="31.5" endBeat="33"/>
+	<Note lane="1" beat="33.5"/>
+	<Note lane="3" beat="34.5"/>
+	<Note lane="0" beat="35.5"/>
+	<Note lane="3" beat="36.5"/>
+	<Note lane="1" beat="37"/>
+	<Note lane="2" beat="38"/>
+	<Note lane="3" beat="39"/>
+</Chart>

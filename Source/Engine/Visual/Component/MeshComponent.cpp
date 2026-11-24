@@ -478,6 +478,8 @@ namespace sw
 
     void MeshComponent::setMaterialInstance( shared_ptr<MaterialInstance> instance )
     {
+        if ( _materialInstance == instance )
+            return; // 같은 인스턴스다 — 뷰는 무엇을 걸었는지 따로 적지 않고 프레임마다 다시 걸어도 된다
         _materialInstance = std::move( instance );
         markRenderStateDirty();
     }

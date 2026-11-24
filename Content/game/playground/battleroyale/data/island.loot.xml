@@ -1,0 +1,23 @@
+<?xml version="1.0" encoding="utf-8"?>
+<?asset guid="cff2a95cb23b4e2d97cd246c4db605a1"?>
+<!--
+  배틀로얄 미니게임의 전리품 표 — 상자(crate)와 보급 상자(airdrop). 아이템 id 는 방어구 · 가방(data/battleroyale.xml)과 총 · 탄(data/weapons.xml 의 item · ammo)이다.
+-->
+<LootCatalog>
+	<Table id="crate" rolls="1" none="2">
+		<Entry item="helmet_skeleton" weight="4"/>
+		<Entry item="shield_round" weight="3"/>
+		<Entry item="cape_rogue" weight="2"/>
+		<Entry item="scifi_shotgun" weight="3"/>
+		<Entry item="scifi_rifle" weight="3"/>
+		<Entry item="ammo_light" weight="3" min="12" max="24"/>
+		<Entry item="ammo_shell" weight="2" min="5" max="10"/>
+		<Entry item="ammo_rifle" weight="3" min="24" max="48"/>
+	</Table>
+	<Table id="airdrop" rolls="1">
+		<Entry item="helmet_knight" weight="1"/>
+		<Always item="shield_round" chance="1"/>
+		<Always item="scifi_rifle" chance="1"/>
+		<Always item="ammo_rifle" chance="1" min="48" max="72"/>
+	</Table>
+</LootCatalog>

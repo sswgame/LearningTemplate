@@ -108,10 +108,11 @@ namespace sw
         MetroidvaniaDeathRestState();
 
         /**
-         * @brief 카탈로그 규칙으로 처음 상태(물약 가득, 처치 없음)를 설정합니다. 통화는 빌려 온 지갑(@p pWallet, 없으면 nullptr)에 있는 카탈로그 통화(`MetroidvaniaRules::_currency`)입니다.
-         * @details 죽으면 그 통화의 잔액을 시체로 옮기고(지갑은 0이 된다), 되찾으면 지갑으로 돌려준다. 지갑이 없으면 처치 보상과 시체도 없다.
+         * @brief 카탈로그 규칙으로 처음 상태(물약 가득, 처치 없음)를 설정합니다. 통화는 빌려 온 지갑(@p wallet)에 있는 카탈로그 통화(`MetroidvaniaRules::_currency`)입니다.
+         * @details 죽으면 그 통화의 잔액을 시체로 옮기고(지갑은 0이 된다), 되찾으면 지갑으로 돌려준다. 빌린 것은 이 상태보다 오래 살아야 한다.
+         *          전리품(@p pLoot)은 적의 `loot` 가 켠다 — 어느 적도 적지 않은 카탈로그만 nullptr 을 줄 수 있다. 적었는데 전리품 카탈로그나 그 표가 없으면 오류를 남기고 false 이며 상태는 그대로다.
          */
-        void initialize( const MetroidvaniaCatalog* pCatalog, Wallet* pWallet );
+        [[nodiscard]] bool initialize( const MetroidvaniaCatalog& catalog, Wallet& wallet, const LootCatalog* pLoot );
 
         /**
          * @brief 쉬는 지점에서 쉽니다. 체력을 가득 채우고(`HealthStateMachine::respawn`), 물약을 충전하고, 보스가 아닌 적을 부활시키고, 되살아날 위치를 갱신합니다.
@@ -140,7 +141,7 @@ namespace sw
          * @param spawnID 그 적이 놓인 위치(같은 위치는 쉬기 전까지 다시 나오지 않는다)
          * @return 얻은 통화입니다. 모르는 적이거나 이미 쓰러뜨린 위치면 −1 을 반환합니다.
          */
-        int32 registerKill( const hashed_string& spawnID, const hashed_string& enemyID, GameFlags& flags, const LootCatalog* pLoot, GameRandom& random, ItemStackList& outDrops );
+        int32 registerKill( const hashed_string& spawnID, const hashed_string& enemyID, GameFlags& flags, GameRandom& random, ItemStackList& outDrops );
         /** @brief 그 위치의 적이 지금 살아 있는지(처치 기록이 없는지) 반환합니다. */
         bool isSpawnAlive( const hashed_string& spawnID ) const;
         /** @brief 쌓인 알림을 꺼내 갑니다. */
@@ -175,8 +176,9 @@ namespace sw
         PROPERTY( RuntimeState )
         MetroidvaniaCorpse _corpse;
         PROPERTY( RuntimeState )
-        CheckpointState _checkpoints; ///< 쉰 지점들(다시 쓸 수 있음)과 지금 되살아날 지점
-        Wallet*         _pWallet;     ///< 빌려 온 지갑
+        CheckpointState    _checkpoints; ///< 쉰 지점들(다시 쓸 수 있음)과 지금 되살아날 지점
+        Wallet*            _pWallet;     ///< 빌려 온 지갑(`initialize` 뒤 늘 있다)
+        const LootCatalog* _pLoot;       ///< 빌려 온 전리품(적이 `loot` 를 적은 카탈로그면 늘 있다)
         PROPERTY( RuntimeState, Min = 0 )
         int32 _lostCurrency; ///< 영영 잃은 통화의 합(통계)
         PROPERTY( RuntimeState, Min = 0 )

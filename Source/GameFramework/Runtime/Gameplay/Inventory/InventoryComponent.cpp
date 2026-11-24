@@ -40,7 +40,7 @@ namespace sw
 
     InventoryComponent::~InventoryComponent() = default;
 
-    GameStateInitResult InventoryComponent::initialize( const InventorySettings& settings )
+    GameStateInitResult InventoryComponent::initialize( const ItemCatalog& itemCatalog, const InventorySettings& settings )
     {
         if ( _restore.isOpen() )
             return GameStateInitResult::AlreadyInitialized; // 앞 디렉터가 연 가방을 다시 비우지 않는다
@@ -50,7 +50,7 @@ namespace sw
             SW_LOG_ERROR_ID( "InventoryComponent.RefusedOpenSettings", "InventoryComponent: refused to open - settings '%#'", rangeError.c_str() );
             return GameStateInitResult::Refused;
         }
-        if ( _inventory.initialize( settings._pItemCatalog, settings._slotCount ) == false )
+        if ( _inventory.initialize( itemCatalog, settings._slotCount ) == false )
             return GameStateInitResult::Refused;
         return _restore.open( *this );
     }
@@ -72,15 +72,15 @@ namespace sw
         Component::onBeginPlay();
         if ( _openSlotCount <= 0 )
             return;
-        InventorySettings settings;
-        settings._pItemCatalog = game::findSubsystem<const ItemCatalog>();
-        settings._slotCount    = _openSlotCount;
-        if ( settings._pItemCatalog == nullptr )
+        const ItemCatalog* const pItemCatalog = game::findSubsystem<const ItemCatalog>();
+        InventorySettings        settings;
+        settings._slotCount = _openSlotCount;
+        if ( pItemCatalog == nullptr )
         {
             SW_LOG_ERROR_ID( "InventoryComponent.NoItemCatalog", "InventoryComponent: cannot open %# slot(s) at begin play - gamesettings must declare <RequiredData kind=\"items\">", _openSlotCount );
             return;
         }
-        (void)initialize( settings ); // 거절되면 initialize 가 까닭을 남긴다
+        (void)initialize( *pItemCatalog, settings ); // 거절되면 initialize 가 까닭을 남긴다
     }
 
     void InventoryComponent::serializeState( StateIO& io )

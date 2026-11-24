@@ -88,27 +88,48 @@ namespace sw
 
 namespace sw
 {
-    /** @brief 전투 규칙의 수치입니다. */
-    struct JRPGBattleSettings
+    /** @brief 전투 규칙의 수치입니다. 디렉터가 씬 데이터로 정합니다(`JRPGGameModeComponent::_battleSettings`). */
+    REFLECT()
+    struct SW_KIT_API JRPGBattleSettings
     {
-        float32 _timedHitBonus{ 0.5f };       ///< 타이밍 공격에서 추가 타격이 주는 피해 비율
+        REFLECT_BODY();
+
+        PROPERTY( Min = 0.0 )
+        float32 _timedHitBonus{ 0.5f }; ///< 타이밍 공격에서 추가 타격이 주는 피해 비율
+        PROPERTY( Min = 0.0, Max = 1.0, Units = ratio )
         float32 _timedBlockReduction{ 0.5f }; ///< 타이밍 방어에서 받는 피해에서 빼는 비율
-        float32 _defendReduction{ 0.5f };     ///< 방어 명령에서 받는 피해에서 빼는 비율
-        float32 _weaknessMultiplier{ 1.5f };  ///< 약점 유형을 맞혔을 때의 피해 배율
+        PROPERTY( Min = 0.0, Max = 1.0, Units = ratio )
+        float32 _defendReduction{ 0.5f }; ///< 방어 명령에서 받는 피해에서 빼는 비율
+        PROPERTY( Min = 0.0 )
+        float32 _weaknessMultiplier{ 1.5f }; ///< 약점 유형을 맞혔을 때의 피해 배율
+        PROPERTY( Min = 0.0, Max = 1.0, Units = ratio )
         float32 _fleeBase{ 0.5f };
-        float32 _fleePerAgility{ 0.02f };     ///< 평균 민첩 차이 1마다 늘어나는 도망 확률
-        float32 _fleePerAttempt{ 0.1f };      ///< 실패할 때마다 오르는 도망 확률
-        float32 _fleeChanceMin{ 0.05f };      ///< 도망 확률의 하한
-        float32 _fleeChanceMax{ 0.95f };      ///< 도망 확률의 상한
-        int32   _physicalVarianceMin{ 875 };  ///< 물리 피해 흔들림의 하한(1000 분율)
-        int32   _physicalVarianceMax{ 1125 }; ///< 물리 피해 흔들림의 상한(1000 분율)
-        int32   _skillVarianceMin{ 900 };     ///< 주문 · 합체기 피해 흔들림의 하한(1000 분율)
-        int32   _skillVarianceMax{ 1100 };    ///< 주문 · 합체기 피해 흔들림의 상한(1000 분율)
-        int32   _comboPerHit{ 1 };            ///< 기본 공격 한 타마다 얻는 콤보 포인트
-        int32   _comboMax{ 9 };
-        int32   _innerPerAttack{ 10 }; ///< 무협 옵션에서 기본 공격 한 타마다 얻는 내공
-        int32   _innerPerHitTaken{ 5 };
-        bool    _bWuxia{ false }; ///< 무협 옵션이다(내공 게이지와 초식 내공 비용을 쓴다) NOLINT(sw-bool-flag): 집합체다(중괄호 · 지정 초기화로 만든다) — C++17 비트필드는 기본값을 둘 수 없어 `T x;` 가 값을 남기지 않는다
+        PROPERTY( Min = 0.0 )
+        float32 _fleePerAgility{ 0.02f }; ///< 평균 민첩 차이 1마다 늘어나는 도망 확률
+        PROPERTY( Min = 0.0 )
+        float32 _fleePerAttempt{ 0.1f }; ///< 실패할 때마다 오르는 도망 확률
+        PROPERTY( Min = 0.0, Max = 1.0, Units = ratio )
+        float32 _fleeChanceMin{ 0.05f }; ///< 도망 확률의 하한
+        PROPERTY( Min = 0.0, Max = 1.0, Units = ratio )
+        float32 _fleeChanceMax{ 0.95f }; ///< 도망 확률의 상한
+        PROPERTY( Min = 0 )
+        int32 _physicalVarianceMin{ 875 }; ///< 물리 피해 흔들림의 하한(1000 분율)
+        PROPERTY( Min = 0 )
+        int32 _physicalVarianceMax{ 1125 }; ///< 물리 피해 흔들림의 상한(1000 분율)
+        PROPERTY( Min = 0 )
+        int32 _skillVarianceMin{ 900 }; ///< 주문 · 합체기 피해 흔들림의 하한(1000 분율)
+        PROPERTY( Min = 0 )
+        int32 _skillVarianceMax{ 1100 }; ///< 주문 · 합체기 피해 흔들림의 상한(1000 분율)
+        PROPERTY( Min = 0 )
+        int32 _comboPerHit{ 1 }; ///< 기본 공격 한 타마다 얻는 콤보 포인트
+        PROPERTY( Min = 0 )
+        int32 _comboMax{ 9 };
+        PROPERTY( Min = 0 )
+        int32 _innerPerAttack{ 10 }; ///< 무협 옵션에서 기본 공격 한 타마다 얻는 내공
+        PROPERTY( Min = 0 )
+        int32 _innerPerHitTaken{ 5 };
+        PROPERTY()
+        bool _bWuxia{ false }; ///< 무협 옵션이다(내공 게이지와 초식 내공 비용을 쓴다) NOLINT(sw-bool-flag): 집합체다(중괄호 · 지정 초기화로 만든다) — C++17 비트필드는 기본값을 둘 수 없어 `T x;` 가 값을 남기지 않는다
     };
 } // namespace sw
 
@@ -211,11 +232,12 @@ namespace sw
 
         JRPGBattle();
 
-        /** @brief 카탈로그와 판정 창을 빌립니다(판정이 없으면 타이밍은 항상 실패합니다). */
-        void initialize( const JRPGCatalog* pCatalog, const TimingJudge* pJudge, const JRPGBattleSettings& settings, uint32 seed );
+        /** @brief 카탈로그와 판정 창을 빌립니다(전투보다 오래 살아야 합니다). 타이밍을 쓰지 않는 판은 창이 없는 판정을 줍니다 — 타이밍은 항상 실패합니다. */
+        void initialize( const JRPGCatalog& catalog, const TimingJudge& judge, const JRPGBattleSettings& settings, uint32 seed );
+        /** @brief 타이밍 누름을 답할 곳을 빌립니다. nullptr 은 이 라운드에 누르지 않았다는 뜻입니다. */
         void setTimingInput( const IJRPGTimingInput* pTimingInput ) { _pTimingInput = pTimingInput; }
         /** @brief 파티와 적 목록으로 전투를 시작합니다. 모르는 적이 있거나 적이 없거나 싸울 멤버가 없으면 시작하지 않고 false 를 반환합니다(그 전투의 명령과 라운드는 거절됩니다). */
-        [[nodiscard]] bool start( JRPGParty* pParty, const vector<hashed_string>& listEnemyID );
+        [[nodiscard]] bool start( JRPGParty& party, const vector<hashed_string>& listEnemyID );
         /** @brief 멤버의 이번 라운드 명령을 정합니다. 쓸 수 없는 명령(쓰러진 멤버, 모르는 주문, 없는 멤버를 고른 회복과 부활, 포인트 부족, 참여 멤버가 쓰러진 합동기)이면 false 를 반환합니다. */
         [[nodiscard]] bool setCommand( int32 memberIndex, const JRPGCommand& command );
         void               resolveRound();
@@ -232,7 +254,7 @@ namespace sw
          */
         SW_DECLARE_STATE_IO();
         /** @brief 전투가 빌려 쓸 파티를 연결합니다. 새 전투에 `readState` 하기 전에 호출해야 합니다(파티는 `JRPGParty::readState` 로 따로 읽습니다). `start` 도 파티를 연결합니다. */
-        void bindParty( JRPGParty* pParty ) { _pParty = pParty; }
+        void bindParty( JRPGParty& party ) { _pParty = &party; }
 
         /** @brief DQ 식 물리 피해를 계산합니다. */
         static int32 computePhysicalDamage( const JRPGBattleSettings& settings, int32 attack, int32 defense, GameRandom& random );
@@ -241,10 +263,12 @@ namespace sw
 
         JRPGBattleResult              getResult() const { return _result; }
         const vector<JRPGEnemyState>& getEnemies() const { return _listEnemy; }
-        int32                         getComboPoints() const { return _comboPoints; }
-        int32                         getRound() const { return _round; }
-        int64                         getRewardExp() const { return _rewardExp; }
-        int64                         getRewardGold() const { return _rewardGold; }
+        /** @brief 멤버 인덱스마다의 이번 라운드 명령입니다. */
+        const vector<JRPGCommand>& getCommands() const { return _listCommand; }
+        int32                      getComboPoints() const { return _comboPoints; }
+        int32                      getRound() const { return _round; }
+        int64                      getRewardExp() const { return _rewardExp; }
+        int64                      getRewardGold() const { return _rewardGold; }
 
     private:
         void pushEvent( JRPGBattleEvent::Kind kind, bool bEnemyActor, optional<int32> actor, optional<int32> target, int32 value = 0, const hashed_string& id = hashed_string{} );

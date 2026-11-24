@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="utf-8"?>
+<?asset guid="155c1b20b4774becbbea971c4a47527e"?>
+<!-- 늪지 사냥 미니게임(monsterhuntrpg/maps/marsh)의 사냥꾼 스킬 — 앞에서부터 배운다(점수 2). 쌍바람은 대체 표식을, 날 갈기는 무기 피해(attackPower %)를 연다. -->
+<SkillTreeCatalog>
+	<Tree id="marsh_hunter">
+		<Skill id="twin_gust"/>
+		<Skill id="edge_honing" maxRank="2" requires="twin_gust"><Stats attackPower="10"/></Skill>
+	</Tree>
+</SkillTreeCatalog>

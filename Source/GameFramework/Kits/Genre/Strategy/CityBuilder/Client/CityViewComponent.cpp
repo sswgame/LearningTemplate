@@ -2,6 +2,8 @@
 
 #include "GameFramework/Kits/Genre/Strategy/CityBuilder/Client/CityViewComponent.h"
 
+#include "Core/Log/LogOnce.h"
+
 #include "Engine/Asset/AssetManager.h"
 #include "Engine/Asset/Cache/SharedAssetCache.h"
 #include "Engine/Foundation/WorldOrigin.h"
@@ -318,7 +320,8 @@ namespace sw
             return;
         pMesh->setLocalPosition( manager.getWorldOrigin().toLocal( center ) );
         pMesh->setLocalScale( scale );
-        _tintCache.apply( *pMesh, color );
+        if ( _tintCache.apply( *pMesh, color ) == false )
+            SW_LOG_ERROR_ONCE_ID( "CityView.GroundWithoutMaterial", "[City]: prefab '%#' has a mesh without a material - it keeps the prefab colour", _groundPrefab.c_str() );
     }
 
     GameObjectHandle CityViewComponent::spawnRoad( GameObjectManager& manager, const int2& tile )
@@ -330,7 +333,8 @@ namespace sw
         {
             const float3 center{ static_cast<float32>( tile._x ) + CityViewComponentInternal::kHalfCell, 0.0f, static_cast<float32>( tile._y ) + CityViewComponentInternal::kHalfCell };
             pMesh->setLocalPosition( manager.getWorldOrigin().toLocal( center + pMesh->getLocalPosition() ) );
-            _tintCache.apply( *pMesh, _roadColor );
+            if ( _tintCache.apply( *pMesh, _roadColor ) == false )
+                SW_LOG_ERROR_ONCE_ID( "CityView.RoadWithoutMaterial", "[City]: prefab '%#' has a mesh without a material - it keeps the prefab colour", _roadPrefab.c_str() );
         }
         return pRoad != nullptr ? pRoad->getHandle() : GameObjectHandle{};
     }
@@ -344,8 +348,8 @@ namespace sw
         if ( pBuilding == nullptr )
             return GameObjectHandle{};
         MeshComponent* const pMesh = pBuilding->getComponent<MeshComponent>();
-        if ( pMesh != nullptr )
-            _tintCache.apply( *pMesh, bModel ? computeModelTint( def ) : computeBlockColor( def ) );
+        if ( pMesh != nullptr && _tintCache.apply( *pMesh, bModel ? computeModelTint( def ) : computeBlockColor( def ) ) == false )
+            SW_LOG_ERROR_ONCE_ID( "CityView.BuildingWithoutMaterial", "[City]: prefab '%#' has a mesh without a material - it keeps the prefab colour", ( bModel ? _modelBuildingPrefab : _blockBuildingPrefab ).c_str() );
         CityBuildingViewComponent* const pView = pBuilding->getComponent<CityBuildingViewComponent>();
         if ( pView != nullptr )
             pView->assignBuilding( getOwner()->getHandle(), static_cast<int32>( buildingIndex ) );
@@ -362,7 +366,7 @@ namespace sw
             if ( pWalker == nullptr )
                 return;
             MeshComponent* const pMesh = pWalker->getComponent<MeshComponent>();
-            if ( pMesh != nullptr && _listWalkerLook.empty() )
+            if ( pMesh != nullptr && pMesh->getMaterial() != nullptr && _listWalkerLook.empty() ) // 머티리얼 없이 만들면 빈 모습이 남아 다시 만들지 않는다
                 prepareWalkerLooks( pMesh->getMaterial() );
             CityWalkerViewComponent* const pView = pWalker->getComponent<CityWalkerViewComponent>();
             if ( pView != nullptr )

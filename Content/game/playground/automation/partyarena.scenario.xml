@@ -1,0 +1,29 @@
+<?xml version="1.0" encoding="utf-8"?>
+<?asset guid="b703be578cb78cd1dc88b66fe98a9096"?>
+<!--
+  파티 아레나 미니게임(GF_PartyArena 디렉터 PartyGameModeComponent · GF_Client_PartyArena 의 PartyArenaViewComponent) — 사람이 오른쪽(D, 공통 Move 축)으로만 가 무대 밖으로 떨어진다 → 라운드가 시간으로 끝나 순위를 매긴다
+  → 우승 점수나 라운드 상한에서 끝난다. 떨어지기만 한 사람은 이기지 못해 결과 lose 로 미니게임이 끝난다. 무대는 고정 걸음 · 고정 시드라 부하와 무관하다.
+  감시 값: PartyArena.Phase(0 라운드, 1 쉬는 시간, 2 끝) · .Round · .PlayerRingOuts · .PlayerTotal.
+  실행: App -scenario=game/playground/automation/partyarena.scenario.xml -unattended (체인: ctest -R Scenario.playground)
+-->
+<Scenario name="game.playground.partyarena" fixedDelta="0.0166667" timeoutFrames="900" startAfter="ScenePlaying" startTimeoutFrames="900" input="exclusive">
+	<Launch variable="gv_firstMinigame" value="partyarena"/>
+	<Launch variable="gv_playgroundAutoPlay" value="0"/>
+	<WaitUntil watch="PartyArena.Phase" equals="0" timeoutFrames="120"/>
+	<Expect watch="PartyArena.PlayerRingOuts" equals="0"/>
+	<Press slot="Key.D"/>
+	<WaitUntil watch="PartyArena.PlayerRingOuts" atLeast="1" timeoutFrames="900"/>
+	<ExpectLog id="PartyArena.RingOut" atLeast="1"/>
+	<WaitUntil watch="PartyArena.Phase" equals="1" timeoutFrames="1800"/>
+	<Expect watch="PartyArena.PlayerTotal" atLeast="1"/>
+	<WaitUntil watch="PartyArena.Phase" equals="2" timeoutFrames="5400"/>
+	<Release slot="Key.D"/>
+	<ExpectLog id="PartyArena.Finished" count="1"/>
+	<!-- 결과를 보인 뒤 스스로 끝난다 — 돌아올 자리가 없으면 입구 씬(마을)으로 간다 -->
+	<WaitUntil watch="Minigame.Active" is="none" timeoutFrames="600"/>
+	<WaitUntil watch="Scene.Transitioning" equals="0" timeoutWallSeconds="60"/>
+	<WaitUntil watch="Minigame.LastResult" is="lose" timeoutWallSeconds="60"/>
+	<ExpectActiveScene path="game/playground/maps/hub.scene.xml"/>
+	<Expect watch="Minigame.LeakCount" equals="0"/>
+	<Pass/>
+</Scenario>

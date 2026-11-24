@@ -35,11 +35,11 @@ namespace sw
 
     QuestLogComponent::~QuestLogComponent() = default;
 
-    GameStateInitResult QuestLogComponent::initialize( const QuestCatalog* pCatalog )
+    GameStateInitResult QuestLogComponent::initialize( const QuestCatalog& catalog )
     {
         if ( _restore.isOpen() )
             return GameStateInitResult::AlreadyInitialized; // 앞 디렉터가 연 일지를 다시 비우지 않는다
-        _questLog.initialize( pCatalog );
+        _questLog.initialize( catalog );
         return _restore.open( *this );
     }
 
@@ -68,8 +68,8 @@ namespace sw
     void QuestLogComponent::onBeginPlay()
     {
         Component::onBeginPlay();
-        if ( _bOpenAtBeginPlay == SW_TRUE )
-            (void)initialize( nullptr ); // 카탈로그가 없어도 거절하지 않는다 — 결과는 새 판 · 복원 · 이미 열림뿐이다
+        if ( _bOpenAtBeginPlay == SW_TRUE && _restore.isOpen() == false )
+            (void)_restore.open( *this ); // 카탈로그를 빌리지 않은 일지다 — 결과는 새 판 · 복원뿐이다
     }
 
     bool QuestLogComponent::isOwnedPawn( const GameObjectHandle actor ) const

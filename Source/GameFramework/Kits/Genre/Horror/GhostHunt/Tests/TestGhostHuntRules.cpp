@@ -12,6 +12,7 @@
 #include "GameFramework/Kits/Genre/Horror/GhostHunt/GhostMansion.h"
 #include "GameFramework/Runtime/Foundation/Condition/GameFlags.h"
 #include "GameFramework/Runtime/Gameplay/Inventory/Inventory.h"
+#include "GameFramework/Runtime/Gameplay/Inventory/ItemCatalog.h"
 #include "GameFramework/Runtime/Gameplay/Inventory/ItemStackList.h"
 #include "GameFramework/Runtime/Gameplay/Inventory/LootTable.h"
 #include "GameFramework/Runtime/Gameplay/Inventory/Wallet.h"
@@ -164,6 +165,7 @@ namespace
         LootCatalog               _loot{};
         AreaGraph                 _graph{};
         GameFlags                 _flags{};
+        ItemCatalog               _items{}; ///< 아이템 정의가 없는 판(겹침 수 1)
         Inventory                 _bag{};
         Wallet                    _wallet{};
         GhostMansion              _mansion{};
@@ -174,13 +176,13 @@ namespace
             SW_REQUIRE_TRUE( _catalog.loadFromXMLText( kGhostHuntXML, "GhostHuntRulesTest" ) );
             SW_REQUIRE_TRUE( _loot.loadFromXMLText( kGhostHuntLootXML, "GhostHuntRulesTest" ) );
             SW_REQUIRE_TRUE( _graph.loadFromXMLText( kGhostHuntGraphXML, "GhostHuntRulesTest" ) );
-            SW_REQUIRE_TRUE( _bag.initialize( nullptr, 4 ) );
+            SW_REQUIRE_TRUE( _bag.initialize( _items, 4 ) );
             SW_REQUIRE_TRUE( open( _mansion, 5u ) );
         }
 
         bool open( GhostMansion& outMansion, uint32 seed )
         {
-            return outMansion.initialize( &_catalog, &_loot, &_graph, &_flags, &_bag, &_wallet, seed );
+            return outMansion.initialize( _catalog, _loot, _graph, _flags, _bag, _wallet, seed );
         }
 
         /** @brief 쌓인 이벤트를 `_listEvent` 뒤로 모으고 @p type 의 수를 셉니다. */
@@ -759,13 +761,13 @@ SW_TEST_CASE_F( GhostHuntTest, EncounterReadRefusesCraftedBytes )
 // ── 저택 ──────────────────────────────────────────────────────────────
 
 /**
- * @brief [GhostHuntRulesTest] 시작 거절: 카탈로그 없음
+ * @brief [GhostHuntRulesTest] 시작 거절: 시드 0
  */
-SW_TEST_CASE( GhostHuntRulesTest, MansionRefusesNoCatalog )
+SW_TEST_CASE_F( GhostHuntRulesTest, MansionRefusesZeroSeed )
 {
     SW_EXPECT_LOG( "GhostEncounter.RefusedInitialize" );
     GhostMansion mansion;
-    SW_EXPECT_FALSE( mansion.initialize( nullptr, nullptr, nullptr, nullptr, nullptr, nullptr, 1u ) );
+    SW_EXPECT_FALSE( open( mansion, 0u ) );
     SW_EXPECT_EQUAL( -1, mansion.enterRoom( "foyer" ) );
 }
 
@@ -886,7 +888,7 @@ SW_TEST_CASE_F( GhostHuntRulesTest, PartialCatchKeepsRoomDark )
  */
 SW_TEST_CASE_F( GhostHuntRulesTest, FullBagKeepsTheKeyForLater )
 {
-    SW_REQUIRE_TRUE( _bag.initialize( nullptr, 0 ) );
+    SW_REQUIRE_TRUE( _bag.initialize( _items, 0 ) );
     SW_REQUIRE_TRUE( _mansion.enterRoom( "foyer" ) == 1 );
     catchRoomGhosts();
     _mansion.update( 0.01f );
@@ -894,7 +896,7 @@ SW_TEST_CASE_F( GhostHuntRulesTest, FullBagKeepsTheKeyForLater )
     SW_EXPECT_EQUAL( 0, countEvents( GhostMansionEventKind::KeyAwarded ) );
     SW_EXPECT_EQUAL( 0, _bag.getItemCount( "parlorKey" ) );
 
-    SW_REQUIRE_TRUE( _bag.initialize( nullptr, 4 ) ); // 자리가 났다
+    SW_REQUIRE_TRUE( _bag.initialize( _items, 4 ) ); // 자리가 났다
     (void)_mansion.enterRoom( "foyer" );
     SW_EXPECT_EQUAL( 1, countEvents( GhostMansionEventKind::KeyAwarded ) );
     SW_EXPECT_EQUAL( 1, _bag.getItemCount( "parlorKey" ) );

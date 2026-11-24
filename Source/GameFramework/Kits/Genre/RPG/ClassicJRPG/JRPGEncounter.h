@@ -32,7 +32,7 @@ namespace sw
 
         JRPGEncounterWalker();
 
-        void initialize( const JRPGCatalog* pCatalog, uint32 seed );
+        void initialize( const JRPGCatalog& catalog, uint32 seed );
         /** @brief @p areaID 에서 한 걸음 걷습니다. 조우하면 그 무리를 반환하고, 아니면 nullptr 을 반환합니다(모르는 지역이나 무리가 없는 지역도 nullptr 입니다). */
         const JRPGEncounterGroup* step( const hashed_string& areaID );
         /** @brief 유예를 처음부터 다시 셉니다(마을에서 나왔을 때나 성수를 썼을 때 호출합니다). */

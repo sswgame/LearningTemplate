@@ -1,13 +1,15 @@
 <?xml version="1.0" encoding="utf-8"?>
 <?asset guid="8b513f2b5f93488993f7c3e1924d7948"?>
 <!--
-  장르 키트 시연 — 횡스크롤 정복 판 하나(maps/kit_sidescrollconquest). 성문 · 성벽 · 주둔군 · 웨이브가 없어 창병이 서 있기만 해도 1 초 만에 점령한다.
-  거점: 본진(x 0, 플레이어) · 전초기지(x 20, 중립) · 요새(x 100, 적).
+  정복 미니게임(minigames/sidescrollconquest)의 규칙 · 병종 · 거점 — 본진(x 0)의 병영에서 창병을 훈련해 중립 전초기지(x 16)와 성문 · 성벽이 있는 적 요새(x 34, 수비병 둘)를 얻는다. 반격 웨이브는 없다(짧은 판).
 -->
 <ConquestCatalog>
-	<Rules fixedStep="0.5" captureTime="1" waveInterval="0"/>
-	<Unit id="spear" hp="40" damage="10" range="1" speed="2"/>
-	<Site id="home" x="0" owner="Player"/>
-	<Site id="outpost" x="20"/>
-	<Site id="keep" x="100" owner="Enemy"/>
+	<Rules fixedStep="0.05" captureTime="1.5" waveInterval="0" incomeInterval="5" commanderHealth="120" commanderDamage="10"/>
+	<Start gold="30"/>
+	<Building id="barracks" trains="spear"><Cost gold="10"/></Building>
+	<Unit id="spear" hp="40" damage="8" range="1" speed="3" train="2" structureScale="0.5"><Cost gold="10"/></Unit>
+	<Unit id="raider" hp="25" damage="4" range="1" speed="2"/>
+	<Site id="home" x="0" kind="Village" owner="Player" slots="1" housing="5"><Income gold="5"/></Site>
+	<Site id="outpost" x="16" kind="Outpost"/>
+	<Site id="keep" x="34" kind="Fortress" owner="Enemy" gate="40" wall="60" garrison="raider:2"/>
 </ConquestCatalog>

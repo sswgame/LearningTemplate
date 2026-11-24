@@ -27,6 +27,7 @@
 #include "GameFramework/Kits/Genre/Simulation/ThemePark/CoasterTrain.h"
 #include "GameFramework/Kits/Genre/Simulation/ThemePark/ParkLayout.h"
 #include "GameFramework/Kits/Genre/Simulation/ThemePark/ThemePark.h"
+#include "GameFramework/Runtime/Character/Navigation/NavGrid.h"
 #include "GameFramework/Runtime/Foundation/Framework/GameModeComponent.h"
 #include "GameFramework/Runtime/Gameplay/Inventory/Wallet.h"
 
@@ -81,6 +82,8 @@ namespace sw
         [[nodiscard]] optional<int32> findCoasterIndex( int32 placementIndex ) const;
         /** @brief 공원이 새로 열리거나 복원될 때마다 오르는 번호입니다(열린 판은 1 이상) — 뷰는 이 값이 바뀌면 모습을 모두 다시 세운다. 건설은 올리지 않는다. */
         uint32 getParkRevision() const { return _parkRevision; }
+        /** @brief 손님이 @p from 에서 @p to 로 걷는 길의 점(시작은 뺀다)입니다 — 뷰가 그 자리에 길을 깐다. */
+        void findGuestRoute( const float3& from, const float3& to, vector<float3>& outListPoint ) const;
         /** @brief 공원과 놀이기구의 지금 상태를 로그로 남깁니다. */
         void logStatus() const;
 
@@ -105,6 +108,8 @@ namespace sw
     private:
         /** @brief 배치 데이터(공원 원점 기준)를 월드 자리로 옮겨 놀이기구 목록을 만들고 정문을 정합니다. 이 오브젝트에 씬 컴포넌트가 없으면 오류를 남기고 false 입니다. */
         [[nodiscard]] bool placeLayout( const ParkLayout& layout );
+        /** @brief 손님이 걷는 격자를 세우고 막는 오브젝트(정적 바디)와 평지 놀이기구의 땅을 막습니다. 막는 오브젝트에 정적 바디가 없으면 오류를 남기고 false 입니다. */
+        [[nodiscard]] bool rebuildWalkGrid();
         /**
          * @brief 배치의 코스터(트랙, 열차)를 만들고 테스트 운행 결과를 @p outStats 에 냅니다. 배치나 설계가 없으면 nullptr 을 반환합니다.
          * @details 건설(`buildPlacement`)과 복원이 같은 트랙을 만든다. 열차는 트랙을 가리키므로 트랙째 힙에 둔다.
@@ -122,11 +127,18 @@ namespace sw
         string _parkDataPath;
         PROPERTY( Category = "Scene", DisplayName = "Gate", Tooltip = "Object whose position is the park gate; empty uses the park layout" )
         GameObjectHandle _gate;
+        PROPERTY( Category = "Park", DisplayName = "Walk Blockers", Tooltip = "Scene objects with a static body (stalls, benches, bins) that guests and paths go around" )
+        vector<GameObjectHandle> _listWalkBlocker;
+        PROPERTY( Category = "Park", DisplayName = "Walk Cell Size", Tooltip = "Edge of one cell of the guest walk grid", Min = 0.1, Units = m )
+        float32 _walkCellSize;
+        PROPERTY( Category = "Park", DisplayName = "Walk Clearance", Tooltip = "Guests keep this far from blockers and ride lots (half the path width)", Min = 0.0, Units = m )
+        float32 _walkClearance;
         PROPERTY( Category = "Build", DisplayName = "Auto Build Interval", Tooltip = "Seconds between automatic builds when auto play is on", Min = 1.0, Units = s )
         float32 _autoBuildInterval;
         PROPERTY( Category = "Debug", DisplayName = "Status Log Interval", Tooltip = "Seconds between status log lines", Min = 0.1, Units = s )
         float32 _statusLogInterval;
 
+        NavGrid                              _walkGrid; ///< 시뮬레이션이 빌린다 — 먼저 만들고 나중에 사라진다
         ThemeParkSimulation                  _simulation;
         Wallet                               _wallet;       ///< 공원 금고. 한 판 임시 상태라 디렉터가 보관하고 빌려 준다(디렉터 계약 ③).
         int32                                _startingCash; ///< 이 판을 연 돈(배치 데이터) — 나갈 때 번 돈을 센다

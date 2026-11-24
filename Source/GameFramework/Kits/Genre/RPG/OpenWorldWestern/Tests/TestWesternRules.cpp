@@ -97,7 +97,7 @@ namespace
         WesternTestSight    _sight{};
         sw::hashed_string   _region{ "lemoyne" };
 
-        WesternLawTest() { _law.initialize( &_catalog ); }
+        WesternLawTest() { _law.initialize( _catalog ); }
 
         static sw::WesternWitness makeWitness( uint64 witnessID, bool bLawman )
         {
@@ -270,8 +270,8 @@ namespace
 
         WesternHonorTest()
         {
-            _reputation.initialize( &_catalog.getHonorReputation() );
-            _honor.initialize( &_catalog, &_reputation );
+            _reputation.initialize( _catalog.getHonorReputation() );
+            _honor.initialize( _catalog, _reputation );
         }
     };
 } // namespace
@@ -343,7 +343,7 @@ SW_TEST_CASE_F( WesternLawTest, MaskedBountyAndWantedlessCrime )
     SW_EXPECT_EQUAL( 26, _law.getBounty( _region ) ); // 51 × 0.5 = 25.5
 
     sw::WesternLawState other;
-    other.initialize( &_catalog );
+    other.initialize( _catalog );
     (void)other.commitCrime( "littering", _region, sw::float3{}, { makeWitness( 2, false ) }, _sight, false );
     SW_EXPECT_EQUAL( 1, other.countPendingReports() );
     other.update( 0.01f );
@@ -424,7 +424,7 @@ SW_TEST_CASE_F( WesternLawTest, WantedCoolsWhileUnseen )
     SW_EXPECT_TRUE( _law.findPursuit( _region ) == nullptr );
 
     sw::WesternLawState fresh;
-    fresh.initialize( &_catalog );
+    fresh.initialize( _catalog );
     (void)fresh.commitCrime( "murder", _region, sw::float3{}, { makeWitness( 1, true ) }, _sight, false );
     (void)fresh.commitCrime( "murder", _region, sw::float3{}, { makeWitness( 1, true ) }, _sight, false );
     SW_REQUIRE_TRUE( fresh.findPursuit( _region ) != nullptr );
@@ -490,7 +490,7 @@ SW_TEST_CASE_F( WesternLawTest, UnknownRegionDoesNotPoisonState )
     sw::Archive written;
     _law.writeState( written );
     sw::WesternLawState restored;
-    restored.initialize( &_catalog );
+    restored.initialize( _catalog );
     sw::Archive reading( written.getData(), written.getSize() );
     SW_REQUIRE_TRUE( restored.readState( reading ) );
 
@@ -560,7 +560,7 @@ SW_TEST_CASE_F( WesternHonorTest, TierDrivesPriceAndFlags )
 }
 
 /**
- * @brief [WesternHonorDetachedTest] 빌린 평판이 없어도 멀쩡하다(값 0, 단계 없음, 배율 1)
+ * @brief [WesternHonorDetachedTest] 열기 전에 물어도 멀쩡하다(값 0, 단계 없음, 배율 1)
  */
 SW_TEST_CASE( WesternHonorDetachedTest, WorksWithoutReputation )
 {
@@ -1034,7 +1034,9 @@ SW_TEST_CASE_F( WesternHuntingTest, SkinningOnceWithLoot )
     SW_EXPECT_TRUE( rotten._bSkinned == SW_FALSE );
 
     sw::WesternCarcass noLoot = carcass( 1, 0.0f );
-    SW_EXPECT_TRUE( sw::WesternCarcass::skin( _catalog, noLoot, nullptr, random, pelt, items ) );
+    SW_EXPECT_LOG( "WesternCarcass.LootCatalogMissing" ); // 전리품을 적은 동물이다
+    SW_EXPECT_FALSE( sw::WesternCarcass::skin( _catalog, noLoot, nullptr, random, pelt, items ) );
+    SW_EXPECT_TRUE( noLoot._bSkinned == SW_FALSE );
     SW_EXPECT_EQUAL( 1, items.getItemCount( "meat" ) );
 }
 

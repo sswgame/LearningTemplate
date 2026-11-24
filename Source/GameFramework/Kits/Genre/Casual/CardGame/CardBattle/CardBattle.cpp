@@ -37,6 +37,27 @@ namespace sw
                 return true;
             }
 
+            /** @brief 원소의 쉼표 목록 속성 @p pAttribute(`종류:양`)를 읽습니다. 읽을 수 없는 칸이 있으면 오류를 남기고 false 입니다. */
+            [[nodiscard]] static bool readEffects( const XMLNode& node, const utf8* pAttribute, const hashed_string& id, string_view sourceName, vector<CardBattleEffect>& outListEffect )
+            {
+                bool bValid = true;
+                XMLReadUtil::forEachNamedNumber( node.getAttributeText( pAttribute ), 0, XMLReadUtil::MissingValue::Reject,
+                                                 [&]( string_view token, string_view kindName, int32 amount, bool bAmount )
+                {
+                    CardBattleEffect effect;
+                    const bool       bKind = parseEffectKind( kindName, effect._kind );
+                    effect._amount         = amount;
+                    if ( bKind && bAmount )
+                        outListEffect.push_back( effect );
+                    else
+                    {
+                        SW_LOG_ERROR_ID( "CardBattle.CardUnreadableEffect", "%#: '%#' has an unreadable effect '%#'", sourceName, id.c_str(), token );
+                        bValid = false;
+                    }
+                } );
+                return bValid;
+            }
+
             /** @brief 더미 넷이 덱(@p cardCount 장)을 빠짐없이 한 장씩 나눠 가지는지 반환합니다. 전투 중에 카드는 더미 사이를 옮겨 다닐 뿐 늘거나 줄지 않습니다. */
             [[nodiscard]] static bool arePilesExactlyDeck( const vector<const CardPile*>& listPile, size_t cardCount )
             {
@@ -57,6 +78,8 @@ namespace sw
 namespace sw
 {
     CardBattleCatalog::CardBattleCatalog()
+        : _deckCatalog{}
+        , _enemyCatalog{}
     {
     }
 
@@ -66,6 +89,8 @@ namespace sw
         using Element                          = XMLCatalogElement<CardBattleCatalog>;
         static constexpr Element kArrElement[] = {
             Element::of<&CardBattleCatalog::loadCard>( "Card" ),
+            Element::of<&CardBattleCatalog::_deckCatalog>( "Deck" ).uncounted(),
+            Element::of<&CardBattleCatalog::loadEnemy>( "Enemy" ).uncounted(),
         };
         return XMLCatalogReadResult::readInDocumentOrder( *this, root, sourceName, kArrElement )._loadedCount;
     }
@@ -73,22 +98,17 @@ namespace sw
     bool CardBattleCatalog::loadCard( const XMLNode& node, string_view sourceName )
     {
         CardBattleCardDef def;
-        bool              bValid = XMLFields::readProperties( node, def, sourceName, { "effects" } );
-        XMLReadUtil::forEachNamedNumber( node.getAttributeText( "effects" ), 0, XMLReadUtil::MissingValue::Reject,
-                                         [&]( string_view token, string_view kindName, int32 amount, bool bAmount )
-        {
-            CardBattleEffect effect;
-            const bool       bKind = CardBattleInternal::parseEffectKind( kindName, effect._kind );
-            effect._amount         = amount;
-            if ( bKind && bAmount )
-                def._listEffect.push_back( effect );
-            else
-            {
-                SW_LOG_ERROR_ID( "CardBattle.CardUnreadableEffect", "%#: card '%#' has an unreadable effect '%#'", sourceName, def._id.c_str(), token );
-                bValid = false;
-            }
-        } );
-        return bValid && add( def ) >= 0;
+        const bool        bRead    = XMLFields::readProperties( node, def, sourceName, { "effects" } );
+        const bool        bEffects = CardBattleInternal::readEffects( node, "effects", def._id, sourceName, def._listEffect );
+        return bRead && bEffects && add( def ) >= 0;
+    }
+
+    bool CardBattleCatalog::loadEnemy( const XMLNode& node, string_view sourceName )
+    {
+        CardBattleEnemyDef def;
+        const bool         bRead    = XMLFields::readProperties( node, def, sourceName, { "intents" } );
+        const bool         bIntents = CardBattleInternal::readEffects( node, "intents", def._id, sourceName, def._listIntent );
+        return bRead && bIntents && _enemyCatalog.add( def ) >= 0;
     }
 
     CardBattle::CardBattle()
@@ -109,10 +129,10 @@ namespace sw
     {
     }
 
-    bool CardBattle::initialize( const CardBattleCatalog* pCatalog, const CardBattleSettings& settings, const vector<hashed_string>& listDeckCardID,
+    bool CardBattle::initialize( const CardBattleCatalog& catalog, const CardBattleSettings& settings, const vector<hashed_string>& listDeckCardID,
                                  const CardBattleEnemy& enemy, uint32 seed )
     {
-        _pCatalog = pCatalog;
+        _pCatalog = &catalog;
         _settings = settings;
         _enemy    = enemy;
         _random   = GameRandom( seed );
@@ -124,13 +144,16 @@ namespace sw
         _playerHP    = settings._playerHP;
         _playerBlock = 0;
         _turn        = 0;
-        if ( pCatalog == nullptr )
-            return false;
         for ( const hashed_string& cardID : listDeckCardID )
         {
-            const optional<int32> defIndex = pCatalog->findIndex( cardID );
+            const optional<int32> defIndex = catalog.findIndex( cardID );
             if ( defIndex.has_value() == false )
-                continue;
+            {
+                SW_LOG_ERROR_ID( "CardBattle.UnknownCard", "CardBattle: refused to open - the deck names card '%#' which is not in the catalog", cardID.c_str() );
+                _listDefIndex.clear();
+                _drawPile.clear();
+                return false;
+            }
             _drawPile.push( Card{ static_cast<uint16>( _listDefIndex.size() ), 0, 0 } );
             _listDefIndex.push_back( *defIndex );
         }

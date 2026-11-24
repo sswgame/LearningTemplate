@@ -1,0 +1,47 @@
+<?asset guid="eba4db10131745e1af9a4126464fb6ac"?>
+<UIDocument _schemaVersion="1">
+	<UIScreenDef _layer="HUD" _bTakesFocus="false" _bShowCursor="false" />
+	<SafeZonePanel _visibility="SelfHitTestInvisible">
+		<CanvasPanel _visibility="SelfHitTestInvisible">
+			<ProgressBarWidget _name="Health" _percent="{bind:_healthRatio}" _visibility="HitTestInvisible" _fillColor="0.25,0.75,0.35,1" _backgroundColor="0,0,0,0.55">
+				<_slot _anchorMin="0,1" _anchorMax="0,1" _offsetMin="48,-76" _offsetMax="368,-56" />
+			</ProgressBarWidget>
+			<ProgressBarWidget _name="Boost" _percent="{bind:_boostRatio}" _visibility="HitTestInvisible" _fillColor="0.3,0.6,0.95,1" _backgroundColor="0,0,0,0.55">
+				<_slot _anchorMin="0,1" _anchorMax="0,1" _offsetMin="48,-104" _offsetMax="368,-88" />
+			</ProgressBarWidget>
+			<TextWidget _name="Ammo" _text="{bind:_ammo}" _styleClass="hud" _visibility="HitTestInvisible" _bLocalized="false">
+				<_slot _anchorMin="1,1" _anchorMax="1,1" _offsetMin="-148,-84" _offsetMax="-48,-48" />
+				<_style _alignment="End" />
+			</TextWidget>
+			<TextWidget _name="PlayerGaugeLabel" _text="Allied strength" _styleClass="hud" _visibility="HitTestInvisible">
+				<_slot _anchorMin="0,0" _anchorMax="0,0" _offsetMin="48,40" _offsetMax="308,76" />
+			</TextWidget>
+			<TextWidget _name="PlayerGauge" _text="{bind:_playerGauge}" _styleClass="hud" _visibility="HitTestInvisible" _bLocalized="false">
+				<_slot _anchorMin="0,0" _anchorMax="0,0" _offsetMin="316,40" _offsetMax="436,76" />
+			</TextWidget>
+			<TextWidget _name="EnemyGaugeLabel" _text="Enemy strength" _styleClass="hud" _visibility="HitTestInvisible">
+				<_slot _anchorMin="1,0" _anchorMax="1,0" _offsetMin="-436,40" _offsetMax="-176,76" />
+				<_style _alignment="End" />
+			</TextWidget>
+			<TextWidget _name="EnemyGauge" _text="{bind:_enemyGauge}" _styleClass="hud" _visibility="HitTestInvisible" _bLocalized="false">
+				<_slot _anchorMin="1,0" _anchorMax="1,0" _offsetMin="-168,40" _offsetMax="-48,76" />
+				<_style _alignment="End" />
+			</TextWidget>
+			<TextWidget _name="OverheatText" _text="Boost overheated" _styleClass="hud" _visibility="{bind:_overheatVisibility}">
+				<_slot _anchorMin="0,1" _anchorMax="0,1" _offsetMin="48,-144" _offsetMax="368,-108" />
+			</TextWidget>
+			<TextWidget _name="DestroyedText" _text="Mech destroyed - special picks the next mech" _styleClass="hud" _visibility="{bind:_destroyedVisibility}">
+				<_slot _anchorMin="0.5,0.5" _anchorMax="0.5,0.5" _offsetMin="-400,40" _offsetMax="400,100" />
+				<_style _alignment="Center" />
+			</TextWidget>
+			<TextWidget _name="WinText" _text="Enemy strength broken - you win" _styleClass="hud" _visibility="{bind:_winVisibility}">
+				<_slot _anchorMin="0.5,0.5" _anchorMax="0.5,0.5" _offsetMin="-400,-40" _offsetMax="400,20" />
+				<_style _alignment="Center" />
+			</TextWidget>
+			<TextWidget _name="LoseText" _text="Allied strength broken - you lose" _styleClass="hud" _visibility="{bind:_loseVisibility}">
+				<_slot _anchorMin="0.5,0.5" _anchorMax="0.5,0.5" _offsetMin="-400,-40" _offsetMax="400,20" />
+				<_style _alignment="Center" />
+			</TextWidget>
+		</CanvasPanel>
+	</SafeZonePanel>
+</UIDocument>

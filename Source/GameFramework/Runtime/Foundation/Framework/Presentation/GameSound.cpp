@@ -18,6 +18,30 @@ namespace sw
         return pPlayer != nullptr && pPlayer->playMusic( assetID );
     }
 
+    bool GameSound::playAdaptiveMusic( const AssetID& assetID )
+    {
+        ISoundPlayer* pPlayer = game::findSubsystem<ISoundPlayer>();
+        return pPlayer != nullptr && pPlayer->playAdaptiveMusic( assetID );
+    }
+
+    void GameSound::stopMusic()
+    {
+        if ( ISoundPlayer* pPlayer = game::findSubsystem<ISoundPlayer>() )
+            pPlayer->stopMusic();
+    }
+
+    void GameSound::setMusicPaused( bool bPaused )
+    {
+        if ( ISoundPlayer* pPlayer = game::findSubsystem<ISoundPlayer>() )
+            pPlayer->setMusicPaused( bPaused );
+    }
+
+    optional<float32> GameSound::findMusicSeconds()
+    {
+        const ISoundPlayer* pPlayer = game::findSubsystem<ISoundPlayer>();
+        return pPlayer != nullptr ? pPlayer->findMusicSeconds() : nullopt;
+    }
+
     bool GameSound::loadEvents( const AssetID& assetID )
     {
         // 창구가 없으면(전용 서버 — 오디오를 짓지 않는다) 할 일이 없다. 서버는 소리 파일을 읽지 않는다.

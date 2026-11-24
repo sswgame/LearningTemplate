@@ -83,7 +83,7 @@ namespace sw
         [[nodiscard]] static ProjectileState makeProjectile( const float2& position, const float2& velocity, ActionTeam team, float32 damage, float32 lifetime );
 
         /** @brief 규칙, 기술 테이블, 사용할 콤보를 설정합니다. 모르는 콤보이거나 콤보가 기술 테이블에 없는 기술을 들면 false 를 반환합니다(근접 없이 총과 패리만 씁니다). */
-        [[nodiscard]] bool initialize( const ActionPlatformerCatalog* pCatalog, const MoveCatalog* pMoves, const hashed_string& comboID );
+        [[nodiscard]] bool initialize( const ActionPlatformerCatalog& catalog, const MoveCatalog& moves, const hashed_string& comboID );
         /**
          * @brief 총에 탄 @p projectile 을 넣어 장비합니다(예비탄 @p reserveAmmo, 퍼짐 시드 @p seed).
          * @return 무기가 그 탄을 받지 않거나 탄이 광선(속도 0)이면 오류를 남기고 false 이며 장비는 그대로입니다. 2D 탄은 날아가는 것뿐이다(광선 판정은 게임의 몫이다).
@@ -105,9 +105,9 @@ namespace sw
         void registerMeleeContact( bool bBlocked );
         /**
          * @brief 한 프레임 진행합니다.
-         * @param pMap 투사체가 벽에 닿으면 없앤다(nullptr 이면 확인하지 않는다)
+         * @param map 투사체가 이 지형의 벽 칸에 닿으면 없앤다
          */
-        void advanceFrame( const PlatformTileMap* pMap, const float2& playerPosition );
+        void advanceFrame( const PlatformTileMap& map, const float2& playerPosition );
         /** @brief @p team 편의 투사체 중 @p center 를 중심으로 반경 @p radius 안에 있는 것을 꺼내고(맞은 것), 꺼낸 수를 반환합니다. */
         int32 takeProjectileHits( ActionTeam team, const float2& center, float32 radius, vector<ProjectileState>& outListHit );
         void  pollEvents( vector<ActionPlatformerCombatEvent>& outListEvent );

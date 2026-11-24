@@ -159,16 +159,13 @@ namespace sw
         static constexpr int32  kSideCount       = 2;
         static constexpr int32  kMinStage        = -6;
         static constexpr int32  kMaxStage        = 6;
-        static constexpr int32  kNonMovePriority = 7; ///< 교체, 볼, 도망의 우선도
-        static constexpr int32  kParalysisChance = 25;
-        static constexpr int32  kThawChance      = 20;
+        static constexpr int32  kNonMovePriority = 7;  ///< 교체, 볼, 도망의 우선도
         static constexpr int32  kEndlessWeather  = -1; ///< 끝나지 않는 날씨의 남은 턴(`getWeatherTurns`)
-        static constexpr int32  kMaxSleepTurns   = 3;
 
         MonsterBattle();
 
         /** @brief 카탈로그와 상성표를 빌립니다(이 전투보다 오래 살아야 합니다). */
-        void initialize( const MonsterCollectorCatalog* pCatalog, const ElementChart* pChart, uint32 seed );
+        void initialize( const MonsterCollectorCatalog& catalog, const ElementChart& chart, uint32 seed );
         /** @brief 양쪽 파티로 전투를 시작합니다. 맨 앞의 싸울 수 있는 개체가 나섭니다. @p bWild 가 true 면 볼과 도망을 쓸 수 있는 야생전입니다. */
         void start( const vector<MonsterInstance>& listPlayer, const vector<MonsterInstance>& listFoe, bool bWild );
         /** @brief 날씨를 설정합니다. @p turns 가 0 이하면 끝없이 지속되며(필드 날씨), id 가 비어 있으면 날씨를 없앱니다. 모르는 id 는 오류를 남기고 지금 날씨를 그대로 둡니다. */
@@ -186,22 +183,22 @@ namespace sw
          */
         SW_DECLARE_STATE_IO();
 
-        /** @brief 피해 공식입니다. 단계마다 내림하고, 상성이 0이 아니면 최소 1 입니다. */
-        static int32 computeDamage( const MonsterDamageInput& input );
+        /** @brief 피해 공식입니다. 단계마다 내림하고, 상성이 0이 아니면 최소 1 입니다. 수치는 카탈로그의 @p rules(`<Rules>`)다. */
+        static int32 computeDamage( const MonsterBattleRules& rules, const MonsterDamageInput& input );
         /**
          * @brief 3, 4세대 포획 공식입니다. a = ⌊(3M − 2H) × 포획률 × 볼 / 3M⌋ × 상태(수면과 얼음은 2, 마비, 독, 화상은 1.5),
-         *        b = ⌊1048560 / √√⌊16711680 / a⌋⌋ 이고, 0..65535 를 네 번 굴려 모두 b 미만이면 잡힙니다.
+         *        b = ⌊(R − 1) × √√R / √√⌊R × 255 / a⌋⌋ 이고(R = 65536), 0..R−1 을 네 번 굴려 모두 b 미만이면 잡힙니다. 수치는 카탈로그의 @p rules 다(적은 값은 초기값).
          */
-        static MonsterCaptureResult computeCapture( int32 maxHP, int32 hp, int32 catchRate, float32 ballMultiplier, MonsterStatus status, GameRandom& random );
+        static MonsterCaptureResult computeCapture( const MonsterBattleRules& rules, int32 maxHP, int32 hp, int32 catchRate, float32 ballMultiplier, MonsterStatus status, GameRandom& random );
         /** @brief 능력 변화 단계의 배율입니다. +n 은 (2+n)/2, −n 은 2/(2+n) 입니다. */
-        static float32 computeStageMultiplier( int32 stage );
-        /** @brief 급소 단계의 확률 분모입니다. 단계 0은 24, 1은 8, 2는 2, 3 이상은 1 입니다. */
-        static int32 computeCriticalDivisor( int32 critStage );
+        static float32 computeStageMultiplier( const MonsterBattleRules& rules, int32 stage );
+        /** @brief 급소 단계의 확률 분모입니다(`MonsterBattleRules::_listCritDivisor`). 표를 넘는 단계는 1 입니다. */
+        static int32 computeCriticalDivisor( const MonsterBattleRules& rules, int32 critStage );
 
         /** @brief 공격 타입이 방어 개체에 주는 상성 배율입니다(복합 타입은 곱합니다). */
         float32 computeTypeMultiplier( const hashed_string& moveType, const MonsterInstance& defender ) const;
         /**
-         * @brief 기대 피해(난수 평균 0.925, 급소 없음, 명중률 곱)입니다. 트레이너 AI 가 씁니다.
+         * @brief 기대 피해(난수 평균, 급소 없음, 명중률 곱)입니다. 트레이너 AI 가 씁니다.
          * @param attackerSide 능력 변화를 반영할 편(−1이면 변화 없음, 아직 나오지 않은 개체). @p defenderSide 도 같다.
          */
         float32 computeExpectedDamage( int32 attackerSide, const MonsterInstance& attacker, const hashed_string& moveID, int32 defenderSide,
@@ -233,6 +230,8 @@ namespace sw
             bool                    _bNeedsSwitch{ false }; ///< NOLINT(sw-bool-flag): 집합체다(중괄호 · 지정 초기화로 만든다) — C++17 비트필드는 기본값을 둘 수 없어 `T x;` 가 값을 남기지 않는다
         };
 
+        /** @brief 카탈로그의 전투 규칙입니다. 카탈로그를 빌리기 전이면 초기값입니다. */
+        const MonsterBattleRules& getRules() const;
         /** @brief 시작한 전투가 끝나지 않았는지입니다. 양쪽에 개체가 있어야 나선 개체를 쓸 수 있습니다(`start` 전에는 양쪽이 비어 있다). */
         [[nodiscard]] bool isInProgress() const;
         /** @brief 이 행동을 지금 쓸 수 있는지입니다. `setAction` 과 읽은 상태가 같은 규칙을 씁니다 — 읽은 슬롯이 범위 밖이면 라운드가 배열을 넘어 읽는다. */

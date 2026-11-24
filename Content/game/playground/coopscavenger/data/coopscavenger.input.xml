@@ -1,0 +1,21 @@
+<?xml version="1.0" encoding="utf-8"?>
+<?asset guid="9654fa8fe5534610b5c9c237e9b164a9"?>
+<!--
+  협동 수집 공포 미니게임(minigames/coopscavenger)의 입력 차이 — Playground 공통 묶음(data/gamesettings.xml 의 <inputMap> 줄) 위에 얹힌다. 게임 코드는 키를 묻지 않고 액션 이름만 묻는다. 걷기(이웃 칸으로)는 공통 `Move` 축이다.
+  레이어 CoopScavenger 는 꺼져 있고 미니게임의 inputContexts 가 들어가 있는 동안만 켠다. 로컬 사용자마다 같은 맵을 자기 장치로 읽는다(사용자 0 키보드, 1 패드).
+-->
+<InputMap>
+	<layers>
+		<layer name="CoopScavenger" enabled="0" blockLower="0"/>
+	</layers>
+	<!-- 줍기 · 싣기 · 팔기 · 잠긴 문 열기 -->
+	<action name="CoopScavenger.Use" layer="CoopScavenger" trigger="Pressed">
+		<bind source="Key" code="E"/>
+		<bind source="Gamepad" code="A"/>
+	</action>
+	<!-- 착륙 · 이륙 -->
+	<action name="CoopScavenger.Lever" layer="CoopScavenger" trigger="Pressed">
+		<bind source="Key" code="Q"/>
+		<bind source="Gamepad" code="Y"/>
+	</action>
+</InputMap>

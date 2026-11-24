@@ -93,7 +93,7 @@ SW_TEST_CASE( ActionStageRunTest, ScoreAveragesThreePartsAndGradeHasNoFallback )
     sw::ActionPlatformerCatalog catalog;
     SW_REQUIRE_TRUE( catalog.loadFromXMLText( kStageRunXML, "ActionStageRunTest" ) );
     sw::ActionStageRun run;
-    SW_REQUIRE_TRUE( run.start( &catalog, kStage1 ) );
+    SW_REQUIRE_TRUE( run.start( catalog, kStage1 ) );
 
     run.update( 20.0f ); // 기준 시간의 두 배 → 시간 점수 0.5
     SW_REQUIRE_TRUE( run.collectSecret( kSecret1 ) );
@@ -124,7 +124,7 @@ SW_TEST_CASE( ActionStageRunTest, ClearCommitsPendingSecretsAndFreezesTheRun )
     sw::ActionPlatformerCatalog catalog;
     SW_REQUIRE_TRUE( catalog.loadFromXMLText( kStageRunXML, "ActionStageRunTest" ) );
     sw::ActionStageRun run;
-    SW_REQUIRE_TRUE( run.start( &catalog, kStage1 ) );
+    SW_REQUIRE_TRUE( run.start( catalog, kStage1 ) );
     run.update( 10.0f );
     SW_REQUIRE_TRUE( run.collectSecret( kSecret1 ) );
     SW_REQUIRE_TRUE( run.collectSecret( kSecret2 ) );
@@ -154,7 +154,7 @@ SW_TEST_CASE( ActionStageRunTest, ScoresStayInsideTheirRange )
     sw::ActionPlatformerCatalog catalog;
     SW_REQUIRE_TRUE( catalog.loadFromXMLText( kStageRunXML, "ActionStageRunTest" ) );
     sw::ActionStageRun run;
-    SW_REQUIRE_TRUE( run.start( &catalog, kStageBare ) );
+    SW_REQUIRE_TRUE( run.start( catalog, kStageBare ) );
     run.update( -5.0f );
     run.update( 0.0f );
     SW_EXPECT_NEAR( 0.0f, run.getElapsed(), kStageTolerance );
@@ -177,7 +177,7 @@ SW_TEST_CASE( ActionStageRunTest, CheckpointsOnlyMoveForward )
     SW_REQUIRE_TRUE( catalog.loadFromXMLText( kStageRunXML, "ActionStageRunTest" ) );
     sw::ActionStageRun run;
     SW_EXPECT_FALSE( run.reachCheckpoint( kCheckpoint1 ) ); // 시작 전
-    SW_REQUIRE_TRUE( run.start( &catalog, kStage1 ) );
+    SW_REQUIRE_TRUE( run.start( catalog, kStage1 ) );
     SW_EXPECT_EQUAL( -1, run.getCheckpointIndex() );
 
     SW_EXPECT_TRUE( run.reachCheckpoint( kCheckpoint2 ) );
@@ -196,7 +196,7 @@ SW_TEST_CASE( ActionStageRunTest, DeathReturnsOnlyUncommittedSecrets )
     sw::ActionPlatformerCatalog catalog;
     SW_REQUIRE_TRUE( catalog.loadFromXMLText( kStageRunXML, "ActionStageRunTest" ) );
     sw::ActionStageRun run;
-    SW_REQUIRE_TRUE( run.start( &catalog, kStage1 ) );
+    SW_REQUIRE_TRUE( run.start( catalog, kStage1 ) );
     SW_EXPECT_FALSE( run.collectSecret( sw::hashed_string( "unknown" ) ) );
     SW_REQUIRE_TRUE( run.collectSecret( kSecret1 ) );
     SW_EXPECT_FALSE( run.collectSecret( kSecret1 ) );
@@ -220,7 +220,7 @@ SW_TEST_CASE( ActionStageRunTest, GameOverStopsEverythingUntilRestart )
     sw::ActionPlatformerCatalog catalog;
     SW_REQUIRE_TRUE( catalog.loadFromXMLText( kStageRunXML, "ActionStageRunTest" ) );
     sw::ActionStageRun run;
-    SW_REQUIRE_TRUE( run.start( &catalog, kStage1 ) );
+    SW_REQUIRE_TRUE( run.start( catalog, kStage1 ) );
     run.update( 3.0f );
     SW_REQUIRE_TRUE( run.collectSecret( kSecret1 ) );
     SW_REQUIRE_TRUE( run.reachCheckpoint( kCheckpoint1 ) );
@@ -263,13 +263,12 @@ SW_TEST_CASE( ActionStageRunTest, StartRejectsUnknownStage )
     run.registerHit();
     SW_EXPECT_NEAR( 0.0f, run.computeResult()._score, kStageTolerance );
 
-    SW_EXPECT_FALSE( run.start( nullptr, kStage1 ) );
-    SW_EXPECT_FALSE( run.start( &catalog, sw::hashed_string( "nowhere" ) ) );
+    SW_EXPECT_FALSE( run.start( catalog, sw::hashed_string( "nowhere" ) ) );
     SW_EXPECT_TRUE( run.getStage() == nullptr );
 
-    SW_REQUIRE_TRUE( run.start( &catalog, kStage1 ) );
+    SW_REQUIRE_TRUE( run.start( catalog, kStage1 ) );
     run.update( 2.0f );
-    SW_EXPECT_FALSE( run.start( &catalog, sw::hashed_string( "nowhere" ) ) );
+    SW_EXPECT_FALSE( run.start( catalog, sw::hashed_string( "nowhere" ) ) );
     SW_EXPECT_NEAR( 2.0f, run.getElapsed(), kStageTolerance );
     SW_EXPECT_EQUAL( kStage1, run.getStage()->_id );
 }
@@ -282,7 +281,7 @@ SW_TEST_CASE( ActionStageRunTest, StateRoundTripKeepsTheRun )
     sw::ActionPlatformerCatalog catalog;
     SW_REQUIRE_TRUE( catalog.loadFromXMLText( kStageRunXML, "ActionStageRunTest" ) );
     sw::ActionStageRun original;
-    SW_REQUIRE_TRUE( original.start( &catalog, kStage1 ) );
+    SW_REQUIRE_TRUE( original.start( catalog, kStage1 ) );
     original.update( 12.0f );
     original.registerHit();
     SW_REQUIRE_TRUE( original.collectSecret( kSecret1 ) );
@@ -297,7 +296,7 @@ SW_TEST_CASE( ActionStageRunTest, StateRoundTripKeepsTheRun )
     SW_EXPECT_FALSE( noCatalog.readState( withoutCatalog ) );
 
     sw::ActionStageRun restored;
-    restored.bindCatalog( &catalog );
+    restored.bindCatalog( catalog );
     sw::Archive reading( written.getData(), written.getSize() );
     SW_REQUIRE_TRUE( restored.readState( reading ) );
     SW_EXPECT_TRUE( restored.getState() == sw::ActionStageState::Playing );
@@ -311,7 +310,7 @@ SW_TEST_CASE( ActionStageRunTest, StateRoundTripKeepsTheRun )
     SW_EXPECT_FALSE( restored.isSecretFound( kSecret2 ) );
 
     sw::ActionStageRun truncatedTarget;
-    truncatedTarget.bindCatalog( &catalog );
+    truncatedTarget.bindCatalog( catalog );
     sw::Archive truncated( written.getData(), written.getSize() - 1 );
     SW_EXPECT_FALSE( truncatedTarget.readState( truncated ) );
     SW_EXPECT_TRUE( truncatedTarget.getState() == sw::ActionStageState::NotStarted );
@@ -330,7 +329,7 @@ SW_TEST_CASE( ActionStageRunTest, ReadRejectsARunningStateWithoutStage )
         sw::Archive written;
         ActionStageRunTestUtil::writeRunBytes( written, sw::hashed_string{}, state, -1, {}, {} );
         sw::ActionStageRun target;
-        target.bindCatalog( &catalog );
+        target.bindCatalog( catalog );
         sw::Archive reading( written.getData(), written.getSize() );
         SW_EXPECT_FALSE( target.readState( reading ) );
         SW_EXPECT_TRUE( target.getState() == sw::ActionStageState::NotStarted );
@@ -339,7 +338,7 @@ SW_TEST_CASE( ActionStageRunTest, ReadRejectsARunningStateWithoutStage )
     sw::Archive written;
     ActionStageRunTestUtil::writeRunBytes( written, sw::hashed_string{}, sw::ActionStageState::NotStarted, -1, {}, {} );
     sw::ActionStageRun target;
-    target.bindCatalog( &catalog );
+    target.bindCatalog( catalog );
     sw::Archive reading( written.getData(), written.getSize() );
     SW_EXPECT_TRUE( target.readState( reading ) );
 }
@@ -352,7 +351,7 @@ SW_TEST_CASE( ActionStageRunTest, ReadRejectsInconsistentBytes )
     sw::ActionPlatformerCatalog catalog;
     SW_REQUIRE_TRUE( catalog.loadFromXMLText( kStageRunXML, "ActionStageRunTest" ) );
     sw::ActionStageRun target;
-    SW_REQUIRE_TRUE( target.start( &catalog, kStage1 ) );
+    SW_REQUIRE_TRUE( target.start( catalog, kStage1 ) );
     target.update( 4.0f );
 
     const auto expectRejected = [&target]( const sw::Archive& written )
@@ -367,7 +366,7 @@ SW_TEST_CASE( ActionStageRunTest, ReadRejectsInconsistentBytes )
     sw::Archive consistent;
     ActionStageRunTestUtil::writeRunBytes( consistent, kStage1, sw::ActionStageState::Playing, -1, { kSecret1 }, { kSecret2 } );
     sw::ActionStageRun consistentTarget;
-    consistentTarget.bindCatalog( &catalog );
+    consistentTarget.bindCatalog( catalog );
     sw::Archive consistentReading( consistent.getData(), consistent.getSize() );
     SW_EXPECT_TRUE( consistentTarget.readState( consistentReading ) );
 

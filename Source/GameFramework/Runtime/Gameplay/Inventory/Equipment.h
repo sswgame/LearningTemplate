@@ -67,7 +67,7 @@ namespace sw
          * @param pSetLookup 세트 조건이 참조할 세트 정보입니다. 세트가 없는 게임은 nullptr 를 적는다 — 그때 세트 조건은 맞지 않습니다.
          * @param pCharacter 캐릭터 조건(태그 · 체형)이 참조할 정보입니다. 그런 조건이 없는 게임은 nullptr 를 적는다 — 그때 태그와 체형은 비어 있습니다.
          */
-        void initialize( const ItemCatalog* pCatalog, string_view slotLayout, const IEquipmentSetLookup* pSetLookup, const EquipmentCharacterContext* pCharacter );
+        void initialize( const ItemCatalog& catalog, string_view slotLayout, const IEquipmentSetLookup* pSetLookup, const EquipmentCharacterContext* pCharacter );
         /** @brief 빌린 캐릭터 정보가 바뀌었습니다 — 조건을 다시 검사합니다. 함께 벗겨진 것은 @p inventory 로 가고, 자리가 없으면 그 넘침 목록으로 간다. */
         void settleCharacterChange( Inventory& inventory );
 

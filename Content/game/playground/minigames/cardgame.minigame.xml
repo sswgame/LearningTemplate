@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="utf-8"?>
+<?asset guid="ea9cd30bea1ebd7a760a96c2def2b857"?>
+<!--
+  덱 전투 미니게임(혼자 하는 카드 판) — CardGame 키트. 카드 · 덱 · 상대(data/deckbattle.xml)는 게임 기능 CardGame 이 미니게임 범위에 건다. 둘이 하는 셰딩 카드 판은 허브의 카드 탁자(HubCardTableComponent)다.
+  판은 맵의 CardBattleGameModeComponent 가 돌리고 입력 · 모습 · HUD 는 같은 오브젝트의 CardBattleViewComponent(GF_Client_CardGame)다. 턴제라 안에서 저장하고 이어 한다.
+  시나리오 automation/cardgame 이 실행 전역 변수 gv_firstMinigame 로 들어간다.
+-->
+<Minigame name="cardgame" map="game/playground/cardgame/maps/table.scene.xml" entry="SceneSwitch" portalSlot="18" save="Allowed" features="CardGame" inputContexts="Movement,CardGame" catalogs="CardBattleCatalog"/>

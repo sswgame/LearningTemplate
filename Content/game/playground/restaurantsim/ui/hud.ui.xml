@@ -1,0 +1,120 @@
+<?asset guid="ce34c2a6849a59377c1ba4a0f44c74f3"?>
+<UIDocument _schemaVersion="1">
+	<!-- 항구 식당 미니게임(minigames/restaurantsim)의 HUD — 값은 RestaurantHUDViewModel, 글은 이 문서(현지화 키)와 카탈로그의 요리 이름이다. -->
+	<UIScreenDef _layer="HUD" _bTakesFocus="false" _bShowCursor="false" />
+	<SafeZonePanel _visibility="SelfHitTestInvisible">
+		<CanvasPanel _visibility="SelfHitTestInvisible">
+			<TextWidget _text="Day" _styleClass="hud" _visibility="HitTestInvisible">
+				<_slot _anchorMin="0,0" _anchorMax="0,0" _offsetMin="48,40" _offsetMax="128,76" />
+			</TextWidget>
+			<TextWidget _name="Day" _text="{bind:_day}" _styleClass="hud" _visibility="HitTestInvisible" _bLocalized="false">
+				<_slot _anchorMin="0,0" _anchorMax="0,0" _offsetMin="128,40" _offsetMax="168,76" />
+			</TextWidget>
+			<TextWidget _text="/" _styleClass="hud" _visibility="HitTestInvisible" _bLocalized="false">
+				<_slot _anchorMin="0,0" _anchorMax="0,0" _offsetMin="168,40" _offsetMax="188,76" />
+			</TextWidget>
+			<TextWidget _name="DayCount" _text="{bind:_dayCount}" _styleClass="hud" _visibility="HitTestInvisible" _bLocalized="false">
+				<_slot _anchorMin="0,0" _anchorMax="0,0" _offsetMin="188,40" _offsetMax="228,76" />
+			</TextWidget>
+			<TextWidget _text="Gold" _styleClass="hud" _visibility="HitTestInvisible">
+				<_slot _anchorMin="0,0" _anchorMax="0,0" _offsetMin="268,40" _offsetMax="368,76" />
+			</TextWidget>
+			<TextWidget _name="Gold" _text="{bind:_gold}" _styleClass="hud" _visibility="HitTestInvisible" _bLocalized="false">
+				<_slot _anchorMin="0,0" _anchorMax="0,0" _offsetMin="368,40" _offsetMax="488,76" />
+			</TextWidget>
+			<TextWidget _text="Profit" _styleClass="hud" _visibility="HitTestInvisible">
+				<_slot _anchorMin="0,0" _anchorMax="0,0" _offsetMin="508,40" _offsetMax="628,76" />
+			</TextWidget>
+			<TextWidget _name="TotalProfit" _text="{bind:_totalProfit}" _styleClass="hud" _visibility="HitTestInvisible" _bLocalized="false">
+				<_slot _anchorMin="0,0" _anchorMax="0,0" _offsetMin="628,40" _offsetMax="728,76" />
+			</TextWidget>
+			<TextWidget _text="/" _styleClass="hud" _visibility="HitTestInvisible" _bLocalized="false">
+				<_slot _anchorMin="0,0" _anchorMax="0,0" _offsetMin="728,40" _offsetMax="748,76" />
+			</TextWidget>
+			<TextWidget _name="TargetProfit" _text="{bind:_targetProfit}" _styleClass="hud" _visibility="HitTestInvisible" _bLocalized="false">
+				<_slot _anchorMin="0,0" _anchorMax="0,0" _offsetMin="748,40" _offsetMax="848,76" />
+			</TextWidget>
+			<TextWidget _name="DishName" _text="{bind:_dishName}" _styleClass="hud" _visibility="HitTestInvisible">
+				<_slot _anchorMin="0,0" _anchorMax="0,0" _offsetMin="48,80" _offsetMax="328,116" />
+			</TextWidget>
+			<TextWidget _text="Price" _styleClass="hud" _visibility="HitTestInvisible">
+				<_slot _anchorMin="0,0" _anchorMax="0,0" _offsetMin="328,80" _offsetMax="428,116" />
+			</TextWidget>
+			<TextWidget _name="Price" _text="{bind:_price}" _styleClass="hud" _visibility="HitTestInvisible" _bLocalized="false">
+				<_slot _anchorMin="0,0" _anchorMax="0,0" _offsetMin="428,80" _offsetMax="508,116" />
+			</TextWidget>
+			<TextWidget _text="Stock" _styleClass="hud" _visibility="HitTestInvisible">
+				<_slot _anchorMin="0,0" _anchorMax="0,0" _offsetMin="528,80" _offsetMax="628,116" />
+			</TextWidget>
+			<TextWidget _name="IngredientCount" _text="{bind:_ingredientCount}" _styleClass="hud" _visibility="HitTestInvisible" _bLocalized="false">
+				<_slot _anchorMin="0,0" _anchorMax="0,0" _offsetMin="628,80" _offsetMax="708,116" />
+			</TextWidget>
+			<TextWidget _text="Reputation" _styleClass="hud" _visibility="HitTestInvisible">
+				<_slot _anchorMin="1,0" _anchorMax="1,0" _offsetMin="-328,40" _offsetMax="-148,76" />
+			</TextWidget>
+			<TextWidget _name="Reputation" _text="{bind:_reputation}" _styleClass="hud" _visibility="HitTestInvisible" _bLocalized="false">
+				<_slot _anchorMin="1,0" _anchorMax="1,0" _offsetMin="-140,40" _offsetMax="-48,76" />
+			</TextWidget>
+			<TextWidget _text="Cook level" _styleClass="hud" _visibility="HitTestInvisible">
+				<_slot _anchorMin="1,0" _anchorMax="1,0" _offsetMin="-328,80" _offsetMax="-148,116" />
+			</TextWidget>
+			<TextWidget _name="CookLevel" _text="{bind:_cookLevel}" _styleClass="hud" _visibility="HitTestInvisible" _bLocalized="false">
+				<_slot _anchorMin="1,0" _anchorMax="1,0" _offsetMin="-140,80" _offsetMax="-48,116" />
+			</TextWidget>
+			<CanvasPanel _visibility="{bind:_prepareVisibility}">
+				<_slot _anchorMin="0,0" _anchorMax="1,1" _offsetMin="0,0" _offsetMax="0,0" />
+				<TextWidget _text="Buy (J)   Price up (K)   Price down (L)   Add station (F)   Open (Enter)" _styleClass="hud" _visibility="HitTestInvisible">
+					<_slot _anchorMin="0,1" _anchorMax="0,1" _offsetMin="48,-84" _offsetMax="1048,-48" />
+				</TextWidget>
+			</CanvasPanel>
+			<CanvasPanel _visibility="{bind:_openVisibility}">
+				<_slot _anchorMin="0,0" _anchorMax="1,1" _offsetMin="0,0" _offsetMax="0,0" />
+				<TextWidget _text="Hour" _styleClass="hud" _visibility="HitTestInvisible">
+					<_slot _anchorMin="0,0" _anchorMax="0,0" _offsetMin="48,120" _offsetMax="148,156" />
+				</TextWidget>
+				<TextWidget _name="Hour" _text="{bind:_hour}" _styleClass="hud" _visibility="HitTestInvisible" _bLocalized="false">
+					<_slot _anchorMin="0,0" _anchorMax="0,0" _offsetMin="148,120" _offsetMax="208,156" />
+				</TextWidget>
+				<TextWidget _text="Served" _styleClass="hud" _visibility="HitTestInvisible">
+					<_slot _anchorMin="0,0" _anchorMax="0,0" _offsetMin="228,120" _offsetMax="348,156" />
+				</TextWidget>
+				<TextWidget _name="Served" _text="{bind:_servedCount}" _styleClass="hud" _visibility="HitTestInvisible" _bLocalized="false">
+					<_slot _anchorMin="0,0" _anchorMax="0,0" _offsetMin="348,120" _offsetMax="408,156" />
+				</TextWidget>
+				<TextWidget _text="Seated" _styleClass="hud" _visibility="HitTestInvisible">
+					<_slot _anchorMin="0,0" _anchorMax="0,0" _offsetMin="428,120" _offsetMax="548,156" />
+				</TextWidget>
+				<TextWidget _name="Seated" _text="{bind:_seatedCount}" _styleClass="hud" _visibility="HitTestInvisible" _bLocalized="false">
+					<_slot _anchorMin="0,0" _anchorMax="0,0" _offsetMin="548,120" _offsetMax="608,156" />
+				</TextWidget>
+				<TextWidget _text="Buy more while open (J)" _styleClass="hud" _visibility="HitTestInvisible">
+					<_slot _anchorMin="0,1" _anchorMax="0,1" _offsetMin="48,-84" _offsetMax="1048,-48" />
+				</TextWidget>
+			</CanvasPanel>
+			<CanvasPanel _visibility="{bind:_closedVisibility}">
+				<_slot _anchorMin="0,0" _anchorMax="1,1" _offsetMin="0,0" _offsetMax="0,0" />
+				<TextWidget _text="The day is done" _styleClass="hud" _visibility="HitTestInvisible">
+					<_slot _anchorMin="0.5,0.3" _anchorMax="0.5,0.3" _offsetMin="-400,-24" _offsetMax="400,24" />
+					<_style _alignment="Center" />
+				</TextWidget>
+				<TextWidget _text="Next day (Enter)" _styleClass="hud" _visibility="HitTestInvisible">
+					<_slot _anchorMin="0,1" _anchorMax="0,1" _offsetMin="48,-84" _offsetMax="1048,-48" />
+				</TextWidget>
+			</CanvasPanel>
+			<CanvasPanel _visibility="{bind:_victoryVisibility}">
+				<_slot _anchorMin="0,0" _anchorMax="1,1" _offsetMin="0,0" _offsetMax="0,0" />
+				<TextWidget _text="The harbor loves this place" _styleClass="hud" _visibility="HitTestInvisible">
+					<_slot _anchorMin="0.5,0.3" _anchorMax="0.5,0.3" _offsetMin="-400,-24" _offsetMax="400,24" />
+					<_style _alignment="Center" />
+				</TextWidget>
+			</CanvasPanel>
+			<CanvasPanel _visibility="{bind:_defeatVisibility}">
+				<_slot _anchorMin="0,0" _anchorMax="1,1" _offsetMin="0,0" _offsetMax="0,0" />
+				<TextWidget _text="The books do not balance" _styleClass="hud" _visibility="HitTestInvisible">
+					<_slot _anchorMin="0.5,0.3" _anchorMax="0.5,0.3" _offsetMin="-400,-24" _offsetMax="400,24" />
+					<_style _alignment="Center" />
+				</TextWidget>
+			</CanvasPanel>
+		</CanvasPanel>
+	</SafeZonePanel>
+</UIDocument>

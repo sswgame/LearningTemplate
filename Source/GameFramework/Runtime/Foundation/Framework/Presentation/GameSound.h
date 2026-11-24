@@ -31,6 +31,14 @@ namespace sw
         static bool play( const AssetID& assetID, const hashed_string& bus = hashed_string{} );
         /** @brief 배경 음악을 바꿉니다. */
         static bool playMusic( const AssetID& assetID );
+        /** @brief 적응형 음악을 시작 구간부터 냅니다(`ISoundPlayer::playAdaptiveMusic`). 창구가 없으면 false 입니다. */
+        [[nodiscard]] static bool playAdaptiveMusic( const AssetID& assetID );
+        /** @brief 나고 있는 음악을 멈춥니다. */
+        static void stopMusic();
+        /** @brief 나고 있는 음악을 구간 시계와 함께 멈추거나 이어 냅니다(`ISoundPlayer::setMusicPaused`). */
+        static void setMusicPaused( bool bPaused );
+        /** @brief 적응형 음악의 지금 구간 시각(초)입니다(`ISoundPlayer::findMusicSeconds`). 창구 · 나는 음악이 없으면 nullopt 입니다. */
+        static optional<float32> findMusicSeconds();
 
         /**
          * @brief 이벤트 라이브러리를 올립니다. 이름은 경로이며, 같은 경로면 바꿉니다. 게임 초기화에서 부릅니다.
@@ -63,7 +71,7 @@ namespace sw
     /**
      * @class GameSoundQueue
      * @brief 틱 안(워커)에서 낼 소리를 모았다가, 틱 뒤 게임 스레드에서 쌓은 순서대로 냅니다. 오디오는 게임 스레드에서만 부릅니다.
-     * @details 이름은 포인터만 보관하므로 리터럴이나 정적 문자열을 넘겨야 한다.
+     * @details 이름은 포인터만 보관하므로 리터럴 · 정적 문자열이나 `hashed_string::c_str()`(영구 포인터)을 넘겨야 한다.
      *          언리얼은 게임 스레드에서 바로 내지만, 여기서는 컴포넌트 틱이 워커에서 돈다.
      */
     class SW_GF_API GameSoundQueue

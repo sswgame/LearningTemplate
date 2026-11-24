@@ -13,6 +13,7 @@
 #include "Engine/Object/Component/SceneComponent.h"
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
+#include "Engine/Physics/Component/RigidBodyComponent.h"
 #include "Engine/Serialization/Format/Archive.h"
 #include "Engine/Serialization/Format/BinarySerializer.h"
 #include "Engine/Serialization/Format/StateIO.h"
@@ -20,6 +21,7 @@
 
 #include "GameFramework/Kits/Genre/Simulation/Farming/Component/FarmVillagerComponent.h"
 #include "GameFramework/Runtime/Character/AI/Schedule/NPCScheduleComponent.h"
+#include "GameFramework/Runtime/Character/Navigation/NavGridObstacle.h"
 #include "GameFramework/Runtime/Gameplay/Appearance/CharacterAppearanceComponent.h"
 #include "GameFramework/Runtime/Gameplay/GameState/GameStateComponent.h"
 
@@ -52,7 +54,7 @@ namespace sw
         , _navHeight{ 0 }
         , _navCellSize{ 0.0f }
         , _navObstacleNames{}
-        , _navObstacleRadius{ 0.8f }
+        , _navObstacleClearance{ 0.4f }
         , _bodyCatchUpScale{ 1.5f }
         , _bodySnapDistance{ 3.0f }
         , _bodyAccelerationPerSpeed{ 10.0f }
@@ -85,7 +87,6 @@ namespace sw
         StringUtil::forEachToken( string_view{ _navObstacleNames }, ", ", [&listObstacleName]( string_view token )
         { listObstacleName.push_back( token ); } );
         const GameObjectManager*  pManager     = getOwner()->getManager();
-        const int32               radiusCells  = static_cast<int32>( MathUtil::ceil( _navObstacleRadius / _navCellSize ) );
         uint32                    blockedCount = 0;
         vector<const GameObject*> listObstacle;
         for ( const string_view obstacleName : listObstacleName )
@@ -94,23 +95,14 @@ namespace sw
             pManager->findGameObjectsByBaseName( obstacleName, listObstacle );
             for ( const GameObject* pObject : listObstacle )
             {
-                const SceneComponent* pScene = pObject->getPrimarySceneComponent();
-                if ( pScene == nullptr )
-                    continue;
-                const float3 position = pManager->getWorldOrigin().toAbsolute( pScene->getWorldPosition() ); // 내비 격자 · 일정은 절대 자리로 돈다
-                const int2   center   = _navGrid.computeCell( position );
-                for ( int32 offsetY = -radiusCells; offsetY <= radiusCells; ++offsetY )
+                const RigidBodyComponent* const pBody   = pObject->getComponent<RigidBodyComponent>();
+                const bool                      bStatic = pBody != nullptr && pBody->getBodyType() == PhysicsBodyType::Static;
+                if ( bStatic == false )
                 {
-                    for ( int32 offsetX = -radiusCells; offsetX <= radiusCells; ++offsetX )
-                    {
-                        const int2 cell{ center._x + offsetX, center._y + offsetY };
-                        if ( _navGrid.isInside( cell ) && float3::getHorizontalDistance( _navGrid.computeCellCenter( cell ), position ) <= _navObstacleRadius )
-                        {
-                            _navGrid.setBlocked( cell._x, cell._y, true );
-                            ++blockedCount;
-                        }
-                    }
+                    SW_LOG_ERROR_ID( "FarmVillageGameMode.ObstacleNoStaticBody", "[Village] nav obstacle '%#' has no static rigid body - its size is the body's shape, the villagers stay home", pObject->getName().c_str() );
+                    return false;
                 }
+                blockedCount += NavGridObstacle::blockBody( _navGrid, pManager->getWorldOrigin(), *pBody, _navObstacleClearance );
             }
         }
         SW_LOG_INFO_ID( "FarmVillageGameMode.NavGridXM", "[Village] nav grid %#x%# (%# m cells), %# cell(s) blocked by obstacles", _navWidth, _navHeight, _navCellSize, blockedCount );

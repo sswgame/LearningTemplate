@@ -104,6 +104,25 @@
 					               _boundsRadius="0.866"
 					               _gpuSpinSeed="0"
 					               _bVisible="true" />
+					<RigidBodyComponent _localID="7198733165449302788" _componentName="RigidBodyComponent"
+					                    _bActive="true"
+					                    _localPosition="0,0,0"
+					                    _localRotation="0,0,0"
+					                    _localScale="1,1,1"
+					                    _attachOwner="None"
+					                    _attachOwnerID="0"
+					                    _attachComponent="#0244d8c8807cd288"
+					                    _bodyType="Static"
+					                    _layer="Static"
+					                    _material="None"
+					                    _mass="0">
+						<_listShape>
+							<PhysicsShapeDesc3D _type="Box" _halfExtents="0.274,0.28,0.318" _radius="0.5" _halfHeight="0.5" _localPosition="0,0.23,0" _localRotation="0,0,0" _material="None">
+								<_listPoint />
+								<_listIndex />
+							</PhysicsShapeDesc3D>
+						</_listShape>
+					</RigidBodyComponent>
 				</_listComponent>
 			</GameObject>
 		</entity>
@@ -123,6 +142,25 @@
 					               _boundsRadius="0.866"
 					               _gpuSpinSeed="0"
 					               _bVisible="true" />
+					<RigidBodyComponent _localID="7198733165449302788" _componentName="RigidBodyComponent"
+					                    _bActive="true"
+					                    _localPosition="0,0,0"
+					                    _localRotation="0,0,0"
+					                    _localScale="1,1,1"
+					                    _attachOwner="None"
+					                    _attachOwnerID="0"
+					                    _attachComponent="#0244d8c8807cd288"
+					                    _bodyType="Static"
+					                    _layer="Static"
+					                    _material="None"
+					                    _mass="0">
+						<_listShape>
+							<PhysicsShapeDesc3D _type="Box" _halfExtents="0.5,0.5,0.5" _radius="0.5" _halfHeight="0.5" _localPosition="0,0,0" _localRotation="0,0,0" _material="None">
+								<_listPoint />
+								<_listIndex />
+							</PhysicsShapeDesc3D>
+						</_listShape>
+					</RigidBodyComponent>
 				</_listComponent>
 			</GameObject>
 		</entity>
@@ -142,6 +180,25 @@
 					               _boundsRadius="0.866"
 					               _gpuSpinSeed="0"
 					               _bVisible="true" />
+					<RigidBodyComponent _localID="7198733165449302788" _componentName="RigidBodyComponent"
+					                    _bActive="true"
+					                    _localPosition="0,0,0"
+					                    _localRotation="0,0,0"
+					                    _localScale="1,1,1"
+					                    _attachOwner="None"
+					                    _attachOwnerID="0"
+					                    _attachComponent="#0244d8c8807cd288"
+					                    _bodyType="Static"
+					                    _layer="Static"
+					                    _material="None"
+					                    _mass="0">
+						<_listShape>
+							<PhysicsShapeDesc3D _type="Box" _halfExtents="0.437,0.28,0.333" _radius="0.5" _halfHeight="0.5" _localPosition="0,0.23,-0.015" _localRotation="0,0,0" _material="None">
+								<_listPoint />
+								<_listIndex />
+							</PhysicsShapeDesc3D>
+						</_listShape>
+					</RigidBodyComponent>
 				</_listComponent>
 			</GameObject>
 		</entity>
@@ -161,6 +218,25 @@
 					               _boundsRadius="0.866"
 					               _gpuSpinSeed="0"
 					               _bVisible="true" />
+					<RigidBodyComponent _localID="7198733165449302788" _componentName="RigidBodyComponent"
+					                    _bActive="true"
+					                    _localPosition="0,0,0"
+					                    _localRotation="0,0,0"
+					                    _localScale="1,1,1"
+					                    _attachOwner="None"
+					                    _attachOwnerID="0"
+					                    _attachComponent="#0244d8c8807cd288"
+					                    _bodyType="Static"
+					                    _layer="Static"
+					                    _material="None"
+					                    _mass="0">
+						<_listShape>
+							<PhysicsShapeDesc3D _type="Box" _halfExtents="1.032,0.42,0.06" _radius="0.5" _halfHeight="0.5" _localPosition="0,0.39,0" _localRotation="0,0,0" _material="None">
+								<_listPoint />
+								<_listIndex />
+							</PhysicsShapeDesc3D>
+						</_listShape>
+					</RigidBodyComponent>
 				</_listComponent>
 			</GameObject>
 		</entity>
@@ -180,6 +256,25 @@
 					               _boundsRadius="0.866"
 					               _gpuSpinSeed="0"
 					               _bVisible="true" />
+					<RigidBodyComponent _localID="7198733165449302788" _componentName="RigidBodyComponent"
+					                    _bActive="true"
+					                    _localPosition="0,0,0"
+					                    _localRotation="0,0,0"
+					                    _localScale="1,1,1"
+					                    _attachOwner="None"
+					                    _attachOwnerID="0"
+					                    _attachComponent="#0244d8c8807cd288"
+					                    _bodyType="Static"
+					                    _layer="Static"
+					                    _material="None"
+					                    _mass="0">
+						<_listShape>
+							<PhysicsShapeDesc3D _type="Box" _halfExtents="1.032,0.42,0.06" _radius="0.5" _halfHeight="0.5" _localPosition="0,0.39,0" _localRotation="0,0,0" _material="None">
+								<_listPoint />
+								<_listIndex />
+							</PhysicsShapeDesc3D>
+						</_listShape>
+					</RigidBodyComponent>
 				</_listComponent>
 			</GameObject>
 		</entity>
@@ -199,6 +294,25 @@
 					               _boundsRadius="0.866"
 					               _gpuSpinSeed="0"
 					               _bVisible="true" />
+					<RigidBodyComponent _localID="7198733165449302788" _componentName="RigidBodyComponent"
+					                    _bActive="true"
+					                    _localPosition="0,0,0"
+					                    _localRotation="0,0,0"
+					                    _localScale="1,1,1"
+					                    _attachOwner="None"
+					                    _attachOwnerID="0"
+					                    _attachComponent="#0244d8c8807cd288"
+					                    _bodyType="Static"
+					                    _layer="Static"
+					                    _material="None"
+					                    _mass="0">
+						<_listShape>
+							<PhysicsShapeDesc3D _type="Box" _halfExtents="1.032,0.42,0.06" _radius="0.5" _halfHeight="0.5" _localPosition="0,0.39,0" _localRotation="0,0,0" _material="None">
+								<_listPoint />
+								<_listIndex />
+							</PhysicsShapeDesc3D>
+						</_listShape>
+					</RigidBodyComponent>
 				</_listComponent>
 			</GameObject>
 		</entity>
@@ -218,6 +332,25 @@
 					               _boundsRadius="0.866"
 					               _gpuSpinSeed="0"
 					               _bVisible="true" />
+					<RigidBodyComponent _localID="7198733165449302788" _componentName="RigidBodyComponent"
+					                    _bActive="true"
+					                    _localPosition="0,0,0"
+					                    _localRotation="0,0,0"
+					                    _localScale="1,1,1"
+					                    _attachOwner="None"
+					                    _attachOwnerID="0"
+					                    _attachComponent="#0244d8c8807cd288"
+					                    _bodyType="Static"
+					                    _layer="Static"
+					                    _material="None"
+					                    _mass="0">
+						<_listShape>
+							<PhysicsShapeDesc3D _type="Box" _halfExtents="1.032,0.42,0.06" _radius="0.5" _halfHeight="0.5" _localPosition="0,0.39,0" _localRotation="0,0,0" _material="None">
+								<_listPoint />
+								<_listIndex />
+							</PhysicsShapeDesc3D>
+						</_listShape>
+					</RigidBodyComponent>
 				</_listComponent>
 			</GameObject>
 		</entity>
@@ -237,6 +370,25 @@
 					               _boundsRadius="0.866"
 					               _gpuSpinSeed="0"
 					               _bVisible="true" />
+					<RigidBodyComponent _localID="7198733165449302788" _componentName="RigidBodyComponent"
+					                    _bActive="true"
+					                    _localPosition="0,0,0"
+					                    _localRotation="0,0,0"
+					                    _localScale="1,1,1"
+					                    _attachOwner="None"
+					                    _attachOwnerID="0"
+					                    _attachComponent="#0244d8c8807cd288"
+					                    _bodyType="Static"
+					                    _layer="Static"
+					                    _material="None"
+					                    _mass="0">
+						<_listShape>
+							<PhysicsShapeDesc3D _type="Box" _halfExtents="1.032,0.42,0.06" _radius="0.5" _halfHeight="0.5" _localPosition="0,0.39,0" _localRotation="0,0,0" _material="None">
+								<_listPoint />
+								<_listIndex />
+							</PhysicsShapeDesc3D>
+						</_listShape>
+					</RigidBodyComponent>
 				</_listComponent>
 			</GameObject>
 		</entity>
@@ -256,6 +408,25 @@
 					               _boundsRadius="0.866"
 					               _gpuSpinSeed="0"
 					               _bVisible="true" />
+					<RigidBodyComponent _localID="7198733165449302788" _componentName="RigidBodyComponent"
+					                    _bActive="true"
+					                    _localPosition="0,0,0"
+					                    _localRotation="0,0,0"
+					                    _localScale="1,1,1"
+					                    _attachOwner="None"
+					                    _attachOwnerID="0"
+					                    _attachComponent="#0244d8c8807cd288"
+					                    _bodyType="Static"
+					                    _layer="Static"
+					                    _material="None"
+					                    _mass="0">
+						<_listShape>
+							<PhysicsShapeDesc3D _type="Box" _halfExtents="1.032,0.42,0.06" _radius="0.5" _halfHeight="0.5" _localPosition="0,0.39,0" _localRotation="0,0,0" _material="None">
+								<_listPoint />
+								<_listIndex />
+							</PhysicsShapeDesc3D>
+						</_listShape>
+					</RigidBodyComponent>
 				</_listComponent>
 			</GameObject>
 		</entity>
@@ -275,6 +446,25 @@
 					               _boundsRadius="0.866"
 					               _gpuSpinSeed="0"
 					               _bVisible="true" />
+					<RigidBodyComponent _localID="7198733165449302788" _componentName="RigidBodyComponent"
+					                    _bActive="true"
+					                    _localPosition="0,0,0"
+					                    _localRotation="0,0,0"
+					                    _localScale="1,1,1"
+					                    _attachOwner="None"
+					                    _attachOwnerID="0"
+					                    _attachComponent="#0244d8c8807cd288"
+					                    _bodyType="Static"
+					                    _layer="Static"
+					                    _material="None"
+					                    _mass="0">
+						<_listShape>
+							<PhysicsShapeDesc3D _type="Box" _halfExtents="1.032,0.42,0.06" _radius="0.5" _halfHeight="0.5" _localPosition="0,0.39,0" _localRotation="0,0,0" _material="None">
+								<_listPoint />
+								<_listIndex />
+							</PhysicsShapeDesc3D>
+						</_listShape>
+					</RigidBodyComponent>
 				</_listComponent>
 			</GameObject>
 		</entity>
@@ -294,6 +484,25 @@
 					               _boundsRadius="0.866"
 					               _gpuSpinSeed="0"
 					               _bVisible="true" />
+					<RigidBodyComponent _localID="7198733165449302788" _componentName="RigidBodyComponent"
+					                    _bActive="true"
+					                    _localPosition="0,0,0"
+					                    _localRotation="0,0,0"
+					                    _localScale="1,1,1"
+					                    _attachOwner="None"
+					                    _attachOwnerID="0"
+					                    _attachComponent="#0244d8c8807cd288"
+					                    _bodyType="Static"
+					                    _layer="Static"
+					                    _material="None"
+					                    _mass="0">
+						<_listShape>
+							<PhysicsShapeDesc3D _type="Box" _halfExtents="1.032,0.42,0.06" _radius="0.5" _halfHeight="0.5" _localPosition="0,0.39,0" _localRotation="0,0,0" _material="None">
+								<_listPoint />
+								<_listIndex />
+							</PhysicsShapeDesc3D>
+						</_listShape>
+					</RigidBodyComponent>
 				</_listComponent>
 			</GameObject>
 		</entity>
@@ -313,6 +522,25 @@
 					               _boundsRadius="0.866"
 					               _gpuSpinSeed="0"
 					               _bVisible="true" />
+					<RigidBodyComponent _localID="7198733165449302788" _componentName="RigidBodyComponent"
+					                    _bActive="true"
+					                    _localPosition="0,0,0"
+					                    _localRotation="0,0,0"
+					                    _localScale="1,1,1"
+					                    _attachOwner="None"
+					                    _attachOwnerID="0"
+					                    _attachComponent="#0244d8c8807cd288"
+					                    _bodyType="Static"
+					                    _layer="Static"
+					                    _material="None"
+					                    _mass="0">
+						<_listShape>
+							<PhysicsShapeDesc3D _type="Box" _halfExtents="1.032,0.42,0.06" _radius="0.5" _halfHeight="0.5" _localPosition="0,0.39,0" _localRotation="0,0,0" _material="None">
+								<_listPoint />
+								<_listIndex />
+							</PhysicsShapeDesc3D>
+						</_listShape>
+					</RigidBodyComponent>
 				</_listComponent>
 			</GameObject>
 		</entity>
@@ -338,6 +566,25 @@
 					                      _attachComponent="#0244d8c8807cd288"
 					                      _materialPath="common/models/quaternius/nature/commontree_1/materials/leaves_normaltree.material"
 					                      _sectionName="leaves_normaltree" />
+					<RigidBodyComponent _localID="7198733165449302788" _componentName="RigidBodyComponent"
+					                    _bActive="true"
+					                    _localPosition="0,0,0"
+					                    _localRotation="0,0,0"
+					                    _localScale="1,1,1"
+					                    _attachOwner="None"
+					                    _attachOwnerID="0"
+					                    _attachComponent="#0244d8c8807cd288"
+					                    _bodyType="Static"
+					                    _layer="Static"
+					                    _material="None"
+					                    _mass="0">
+						<_listShape>
+							<PhysicsShapeDesc3D _type="Box" _halfExtents="0.45,1.5,0.45" _radius="0.5" _halfHeight="0.5" _localPosition="0,1.5,0" _localRotation="0,0,0" _material="None">
+								<_listPoint />
+								<_listIndex />
+							</PhysicsShapeDesc3D>
+						</_listShape>
+					</RigidBodyComponent>
 				</_listComponent>
 			</GameObject>
 		</entity>
@@ -363,6 +610,25 @@
 					                      _attachComponent="#0244d8c8807cd288"
 					                      _materialPath="common/models/quaternius/nature/commontree_4/materials/leaves_normaltree.material"
 					                      _sectionName="leaves_normaltree" />
+					<RigidBodyComponent _localID="7198733165449302788" _componentName="RigidBodyComponent"
+					                    _bActive="true"
+					                    _localPosition="0,0,0"
+					                    _localRotation="0,0,0"
+					                    _localScale="1,1,1"
+					                    _attachOwner="None"
+					                    _attachOwnerID="0"
+					                    _attachComponent="#0244d8c8807cd288"
+					                    _bodyType="Static"
+					                    _layer="Static"
+					                    _material="None"
+					                    _mass="0">
+						<_listShape>
+							<PhysicsShapeDesc3D _type="Box" _halfExtents="0.45,1.5,0.45" _radius="0.5" _halfHeight="0.5" _localPosition="0,1.5,0" _localRotation="0,0,0" _material="None">
+								<_listPoint />
+								<_listIndex />
+							</PhysicsShapeDesc3D>
+						</_listShape>
+					</RigidBodyComponent>
 				</_listComponent>
 			</GameObject>
 		</entity>
@@ -388,6 +654,25 @@
 					                      _attachComponent="#0244d8c8807cd288"
 					                      _materialPath="common/models/quaternius/nature/commontree_2/materials/leaves_normaltree.material"
 					                      _sectionName="leaves_normaltree" />
+					<RigidBodyComponent _localID="7198733165449302788" _componentName="RigidBodyComponent"
+					                    _bActive="true"
+					                    _localPosition="0,0,0"
+					                    _localRotation="0,0,0"
+					                    _localScale="1,1,1"
+					                    _attachOwner="None"
+					                    _attachOwnerID="0"
+					                    _attachComponent="#0244d8c8807cd288"
+					                    _bodyType="Static"
+					                    _layer="Static"
+					                    _material="None"
+					                    _mass="0">
+						<_listShape>
+							<PhysicsShapeDesc3D _type="Box" _halfExtents="0.45,1.5,0.45" _radius="0.5" _halfHeight="0.5" _localPosition="0,1.5,0" _localRotation="0,0,0" _material="None">
+								<_listPoint />
+								<_listIndex />
+							</PhysicsShapeDesc3D>
+						</_listShape>
+					</RigidBodyComponent>
 				</_listComponent>
 			</GameObject>
 		</entity>
@@ -413,6 +698,25 @@
 					                      _attachComponent="#0244d8c8807cd288"
 					                      _materialPath="common/models/quaternius/nature/commontree_3/materials/leaves_normaltree.material"
 					                      _sectionName="leaves_normaltree" />
+					<RigidBodyComponent _localID="7198733165449302788" _componentName="RigidBodyComponent"
+					                    _bActive="true"
+					                    _localPosition="0,0,0"
+					                    _localRotation="0,0,0"
+					                    _localScale="1,1,1"
+					                    _attachOwner="None"
+					                    _attachOwnerID="0"
+					                    _attachComponent="#0244d8c8807cd288"
+					                    _bodyType="Static"
+					                    _layer="Static"
+					                    _material="None"
+					                    _mass="0">
+						<_listShape>
+							<PhysicsShapeDesc3D _type="Box" _halfExtents="0.45,1.5,0.45" _radius="0.5" _halfHeight="0.5" _localPosition="0,1.5,0" _localRotation="0,0,0" _material="None">
+								<_listPoint />
+								<_listIndex />
+							</PhysicsShapeDesc3D>
+						</_listShape>
+					</RigidBodyComponent>
 				</_listComponent>
 			</GameObject>
 		</entity>
@@ -438,6 +742,25 @@
 					                      _attachComponent="#0244d8c8807cd288"
 					                      _materialPath="common/models/quaternius/nature/commontree_5/materials/leaves_normaltree.material"
 					                      _sectionName="leaves_normaltree" />
+					<RigidBodyComponent _localID="7198733165449302788" _componentName="RigidBodyComponent"
+					                    _bActive="true"
+					                    _localPosition="0,0,0"
+					                    _localRotation="0,0,0"
+					                    _localScale="1,1,1"
+					                    _attachOwner="None"
+					                    _attachOwnerID="0"
+					                    _attachComponent="#0244d8c8807cd288"
+					                    _bodyType="Static"
+					                    _layer="Static"
+					                    _material="None"
+					                    _mass="0">
+						<_listShape>
+							<PhysicsShapeDesc3D _type="Box" _halfExtents="0.45,1.5,0.45" _radius="0.5" _halfHeight="0.5" _localPosition="0,1.5,0" _localRotation="0,0,0" _material="None">
+								<_listPoint />
+								<_listIndex />
+							</PhysicsShapeDesc3D>
+						</_listShape>
+					</RigidBodyComponent>
 				</_listComponent>
 			</GameObject>
 		</entity>
@@ -463,6 +786,25 @@
 					                      _attachComponent="#0244d8c8807cd288"
 					                      _materialPath="common/models/quaternius/nature/commontree_1/materials/leaves_normaltree.material"
 					                      _sectionName="leaves_normaltree" />
+					<RigidBodyComponent _localID="7198733165449302788" _componentName="RigidBodyComponent"
+					                    _bActive="true"
+					                    _localPosition="0,0,0"
+					                    _localRotation="0,0,0"
+					                    _localScale="1,1,1"
+					                    _attachOwner="None"
+					                    _attachOwnerID="0"
+					                    _attachComponent="#0244d8c8807cd288"
+					                    _bodyType="Static"
+					                    _layer="Static"
+					                    _material="None"
+					                    _mass="0">
+						<_listShape>
+							<PhysicsShapeDesc3D _type="Box" _halfExtents="0.45,1.5,0.45" _radius="0.5" _halfHeight="0.5" _localPosition="0,1.5,0" _localRotation="0,0,0" _material="None">
+								<_listPoint />
+								<_listIndex />
+							</PhysicsShapeDesc3D>
+						</_listShape>
+					</RigidBodyComponent>
 				</_listComponent>
 			</GameObject>
 		</entity>
@@ -488,6 +830,25 @@
 					                      _attachComponent="#0244d8c8807cd288"
 					                      _materialPath="common/models/quaternius/nature/commontree_2/materials/leaves_normaltree.material"
 					                      _sectionName="leaves_normaltree" />
+					<RigidBodyComponent _localID="7198733165449302788" _componentName="RigidBodyComponent"
+					                    _bActive="true"
+					                    _localPosition="0,0,0"
+					                    _localRotation="0,0,0"
+					                    _localScale="1,1,1"
+					                    _attachOwner="None"
+					                    _attachOwnerID="0"
+					                    _attachComponent="#0244d8c8807cd288"
+					                    _bodyType="Static"
+					                    _layer="Static"
+					                    _material="None"
+					                    _mass="0">
+						<_listShape>
+							<PhysicsShapeDesc3D _type="Box" _halfExtents="0.45,1.5,0.45" _radius="0.5" _halfHeight="0.5" _localPosition="0,1.5,0" _localRotation="0,0,0" _material="None">
+								<_listPoint />
+								<_listIndex />
+							</PhysicsShapeDesc3D>
+						</_listShape>
+					</RigidBodyComponent>
 				</_listComponent>
 			</GameObject>
 		</entity>
@@ -513,6 +874,25 @@
 					                      _attachComponent="#0244d8c8807cd288"
 					                      _materialPath="common/models/quaternius/nature/commontree_4/materials/leaves_normaltree.material"
 					                      _sectionName="leaves_normaltree" />
+					<RigidBodyComponent _localID="7198733165449302788" _componentName="RigidBodyComponent"
+					                    _bActive="true"
+					                    _localPosition="0,0,0"
+					                    _localRotation="0,0,0"
+					                    _localScale="1,1,1"
+					                    _attachOwner="None"
+					                    _attachOwnerID="0"
+					                    _attachComponent="#0244d8c8807cd288"
+					                    _bodyType="Static"
+					                    _layer="Static"
+					                    _material="None"
+					                    _mass="0">
+						<_listShape>
+							<PhysicsShapeDesc3D _type="Box" _halfExtents="0.45,1.5,0.45" _radius="0.5" _halfHeight="0.5" _localPosition="0,1.5,0" _localRotation="0,0,0" _material="None">
+								<_listPoint />
+								<_listIndex />
+							</PhysicsShapeDesc3D>
+						</_listShape>
+					</RigidBodyComponent>
 				</_listComponent>
 			</GameObject>
 		</entity>
@@ -532,6 +912,25 @@
 					               _boundsRadius="0.866"
 					               _gpuSpinSeed="0"
 					               _bVisible="true" />
+					<RigidBodyComponent _localID="7198733165449302788" _componentName="RigidBodyComponent"
+					                    _bActive="true"
+					                    _localPosition="0,0,0"
+					                    _localRotation="0,0,0"
+					                    _localScale="1,1,1"
+					                    _attachOwner="None"
+					                    _attachOwnerID="0"
+					                    _attachComponent="#0244d8c8807cd288"
+					                    _bodyType="Static"
+					                    _layer="Static"
+					                    _material="None"
+					                    _mass="0">
+						<_listShape>
+							<PhysicsShapeDesc3D _type="Box" _halfExtents="0.117,0.087,0.355" _radius="0.5" _halfHeight="0.5" _localPosition="0.008,0.036,0" _localRotation="0,0,0" _material="None">
+								<_listPoint />
+								<_listIndex />
+							</PhysicsShapeDesc3D>
+						</_listShape>
+					</RigidBodyComponent>
 				</_listComponent>
 			</GameObject>
 		</entity>
@@ -551,6 +950,25 @@
 					               _boundsRadius="0.866"
 					               _gpuSpinSeed="0"
 					               _bVisible="true" />
+					<RigidBodyComponent _localID="7198733165449302788" _componentName="RigidBodyComponent"
+					                    _bActive="true"
+					                    _localPosition="0,0,0"
+					                    _localRotation="0,0,0"
+					                    _localScale="1,1,1"
+					                    _attachOwner="None"
+					                    _attachOwnerID="0"
+					                    _attachComponent="#0244d8c8807cd288"
+					                    _bodyType="Static"
+					                    _layer="Static"
+					                    _material="None"
+					                    _mass="0">
+						<_listShape>
+							<PhysicsShapeDesc3D _type="Box" _halfExtents="0.161,0.103,0.185" _radius="0.5" _halfHeight="0.5" _localPosition="0,0.053,0" _localRotation="0,0,0" _material="None">
+								<_listPoint />
+								<_listIndex />
+							</PhysicsShapeDesc3D>
+						</_listShape>
+					</RigidBodyComponent>
 				</_listComponent>
 			</GameObject>
 		</entity>
@@ -904,7 +1322,7 @@
 					                              _navHeight="42"
 					                              _navCellSize="1"
 					                              _navObstacleNames="FarmHouse, ShippingBin, SeedShop, Fence, Tree, Log, Stump"
-					                              _navObstacleRadius="0.8"
+					                              _navObstacleClearance="0.4"
 					                              _bodyCatchUpScale="1.5"
 					                              _bodySnapDistance="3"
 					                              _bAutoPlay="false">

@@ -1,0 +1,62 @@
+<?asset guid="98f221769b87d86e0d4114562dbe515b"?>
+<UIDocument _schemaVersion="1">
+	<UIScreenDef _layer="HUD" _bTakesFocus="false" _bShowCursor="false" />
+	<SafeZonePanel _visibility="SelfHitTestInvisible">
+		<CanvasPanel _visibility="SelfHitTestInvisible">
+			<TextWidget _name="PlayerHPLabel" _text="Your health" _styleClass="hud" _visibility="HitTestInvisible">
+				<_slot _anchorMin="0,0" _anchorMax="0,0" _offsetMin="48,40" _offsetMax="308,76" />
+			</TextWidget>
+			<TextWidget _name="PlayerHP" _text="{bind:_playerHP}" _styleClass="hud" _visibility="HitTestInvisible" _bLocalized="false">
+				<_slot _anchorMin="0,0" _anchorMax="0,0" _offsetMin="308,40" _offsetMax="468,76" />
+			</TextWidget>
+			<TextWidget _name="PlayerBlockLabel" _text="Your block" _styleClass="hud" _visibility="HitTestInvisible">
+				<_slot _anchorMin="0,0" _anchorMax="0,0" _offsetMin="48,80" _offsetMax="308,116" />
+			</TextWidget>
+			<TextWidget _name="PlayerBlock" _text="{bind:_playerBlock}" _styleClass="hud" _visibility="HitTestInvisible" _bLocalized="false">
+				<_slot _anchorMin="0,0" _anchorMax="0,0" _offsetMin="308,80" _offsetMax="468,116" />
+			</TextWidget>
+			<TextWidget _name="EnergyLabel" _text="Energy" _styleClass="hud" _visibility="HitTestInvisible">
+				<_slot _anchorMin="0,0" _anchorMax="0,0" _offsetMin="48,120" _offsetMax="308,156" />
+			</TextWidget>
+			<TextWidget _name="Energy" _text="{bind:_energy}" _styleClass="hud" _visibility="HitTestInvisible" _bLocalized="false">
+				<_slot _anchorMin="0,0" _anchorMax="0,0" _offsetMin="308,120" _offsetMax="468,156" />
+			</TextWidget>
+			<TextWidget _name="CostLabel" _text="Card cost" _styleClass="hud" _visibility="HitTestInvisible">
+				<_slot _anchorMin="0,0" _anchorMax="0,0" _offsetMin="48,160" _offsetMax="308,196" />
+			</TextWidget>
+			<TextWidget _name="Cost" _text="{bind:_cost}" _styleClass="hud" _visibility="HitTestInvisible" _bLocalized="false">
+				<_slot _anchorMin="0,0" _anchorMax="0,0" _offsetMin="308,160" _offsetMax="468,196" />
+			</TextWidget>
+			<TextWidget _name="EnemyHPLabel" _text="Enemy health" _styleClass="hud" _visibility="HitTestInvisible">
+				<_slot _anchorMin="0,0" _anchorMax="0,0" _offsetMin="48,200" _offsetMax="308,236" />
+			</TextWidget>
+			<TextWidget _name="EnemyHP" _text="{bind:_enemyHP}" _styleClass="hud" _visibility="HitTestInvisible" _bLocalized="false">
+				<_slot _anchorMin="0,0" _anchorMax="0,0" _offsetMin="308,200" _offsetMax="468,236" />
+			</TextWidget>
+			<TextWidget _name="EnemyIntentLabel" _text="Enemy intent" _styleClass="hud" _visibility="HitTestInvisible">
+				<_slot _anchorMin="0,0" _anchorMax="0,0" _offsetMin="48,240" _offsetMax="308,276" />
+			</TextWidget>
+			<TextWidget _name="EnemyIntent" _text="{bind:_enemyIntent}" _styleClass="hud" _visibility="HitTestInvisible" _bLocalized="false">
+				<_slot _anchorMin="0,0" _anchorMax="0,0" _offsetMin="308,240" _offsetMax="468,276" />
+			</TextWidget>
+			<TextWidget _name="TurnLabel" _text="Turn" _styleClass="hud" _visibility="HitTestInvisible">
+				<_slot _anchorMin="0,0" _anchorMax="0,0" _offsetMin="48,280" _offsetMax="308,316" />
+			</TextWidget>
+			<TextWidget _name="Turn" _text="{bind:_turn}" _styleClass="hud" _visibility="HitTestInvisible" _bLocalized="false">
+				<_slot _anchorMin="0,0" _anchorMax="0,0" _offsetMin="308,280" _offsetMax="468,316" />
+			</TextWidget>
+			<TextWidget _name="DrawCountLabel" _text="Draw pile" _styleClass="hud" _visibility="HitTestInvisible">
+				<_slot _anchorMin="0,0" _anchorMax="0,0" _offsetMin="48,320" _offsetMax="308,356" />
+			</TextWidget>
+			<TextWidget _name="DrawCount" _text="{bind:_drawCount}" _styleClass="hud" _visibility="HitTestInvisible" _bLocalized="false">
+				<_slot _anchorMin="0,0" _anchorMax="0,0" _offsetMin="308,320" _offsetMax="468,356" />
+			</TextWidget>
+			<TextWidget _name="Won" _text="You win the battle!" _styleClass="hud" _visibility="{bind:_wonVisibility}">
+				<_slot _anchorMin="0.5,0" _anchorMax="0.5,0" _offsetMin="-200,120" _offsetMax="200,156" />
+			</TextWidget>
+			<TextWidget _name="Lost" _text="You were defeated" _styleClass="hud" _visibility="{bind:_lostVisibility}">
+				<_slot _anchorMin="0.5,0" _anchorMax="0.5,0" _offsetMin="-200,160" _offsetMax="200,196" />
+			</TextWidget>
+		</CanvasPanel>
+	</SafeZonePanel>
+</UIDocument>

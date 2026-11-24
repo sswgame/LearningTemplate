@@ -60,7 +60,7 @@ SW_TEST_CASE( FarmingTest, FieldActionsReportWhyTheyFail )
     sw::CropCatalog catalog;
     SW_REQUIRE_TRUE( catalog.loadFromXMLText( kCropXML, "FarmingTest" ) );
     sw::FarmField field;
-    field.initialize( 3, 2, &catalog );
+    field.initialize( 3, 2, catalog );
 
     SW_EXPECT_TRUE( field.till( 3, 0 ) == sw::FarmActionResult::OutOfBounds );
     SW_EXPECT_TRUE( field.water( 0, 0 ) == sw::FarmActionResult::NotTilled );
@@ -91,7 +91,7 @@ SW_TEST_CASE( FarmingTest, CropsGrowOnlyOnWateredDays )
     sw::CropCatalog catalog;
     SW_REQUIRE_TRUE( catalog.loadFromXMLText( kCropXML, "FarmingTest" ) );
     sw::FarmField field;
-    field.initialize( 2, 2, &catalog );
+    field.initialize( 2, 2, catalog );
     SW_REQUIRE_TRUE( field.till( 0, 0 ) == sw::FarmActionResult::Done );
     SW_REQUIRE_TRUE( field.plant( 0, 0, kTurnipSeed, kSpring ) == sw::FarmActionResult::Done );
 
@@ -126,7 +126,7 @@ SW_TEST_CASE( FarmingTest, RainWatersAndRegrowingCropsStay )
     sw::CropCatalog catalog;
     SW_REQUIRE_TRUE( catalog.loadFromXMLText( kCropXML, "FarmingTest" ) );
     sw::FarmField field;
-    field.initialize( 2, 1, &catalog );
+    field.initialize( 2, 1, catalog );
     SW_REQUIRE_TRUE( field.till( 1, 0 ) == sw::FarmActionResult::Done );
     SW_REQUIRE_TRUE( field.plant( 1, 0, kTomatoSeed, kSpring ) == sw::FarmActionResult::Done );
 
@@ -162,7 +162,7 @@ SW_TEST_CASE( FarmingTest, CropsWitherOutOfSeason )
     sw::CropCatalog catalog;
     SW_REQUIRE_TRUE( catalog.loadFromXMLText( kCropXML, "FarmingTest" ) );
     sw::FarmField field;
-    field.initialize( 1, 1, &catalog );
+    field.initialize( 1, 1, catalog );
     SW_REQUIRE_TRUE( field.till( 0, 0 ) == sw::FarmActionResult::Done );
     SW_REQUIRE_TRUE( field.plant( 0, 0, kTurnipSeed, kSpring ) == sw::FarmActionResult::Done );
     field.advanceDay( kSpring, true );
@@ -190,7 +190,7 @@ SW_TEST_CASE( FarmingTest, FieldStateRoundTrips )
     sw::CropCatalog catalog;
     SW_REQUIRE_TRUE( catalog.loadFromXMLText( kCropXML, "FarmingTest" ) );
     sw::FarmField original;
-    original.initialize( 2, 2, &catalog );
+    original.initialize( 2, 2, catalog );
     SW_REQUIRE_TRUE( original.till( 1, 1 ) == sw::FarmActionResult::Done );
     SW_REQUIRE_TRUE( original.plant( 1, 1, kTomatoSeed, kSpring ) == sw::FarmActionResult::Done );
     SW_REQUIRE_TRUE( original.water( 1, 1 ) == sw::FarmActionResult::Done );
@@ -199,7 +199,7 @@ SW_TEST_CASE( FarmingTest, FieldStateRoundTrips )
     sw::Archive written;
     original.writeState( written );
     sw::FarmField restored;
-    restored.initialize( 2, 2, &catalog );
+    restored.initialize( 2, 2, catalog );
     sw::Archive reading( written.getData(), written.getSize() );
     SW_REQUIRE_TRUE( restored.readState( reading ) );
     const sw::FarmTile* pTile = restored.findTile( 1, 1 );
@@ -211,7 +211,7 @@ SW_TEST_CASE( FarmingTest, FieldStateRoundTrips )
     SW_EXPECT_TRUE( restored.findTile( 0, 0 )->_bTilled == SW_FALSE );
 
     sw::FarmField wider;
-    wider.initialize( 3, 2, &catalog );
+    wider.initialize( 3, 2, catalog );
     sw::Archive again( written.getData(), written.getSize() );
     SW_REQUIRE_TRUE( wider.readState( again ) );
     SW_REQUIRE_TRUE( wider.findTile( 1, 1 ) != nullptr );
@@ -219,7 +219,7 @@ SW_TEST_CASE( FarmingTest, FieldStateRoundTrips )
     SW_EXPECT_TRUE( wider.findTile( 2, 1 )->hasCrop() == false );
 
     sw::FarmField narrower;
-    narrower.initialize( 1, 1, &catalog );
+    narrower.initialize( 1, 1, catalog );
     sw::Archive third( written.getData(), written.getSize() );
     SW_EXPECT_FALSE( narrower.readState( third ) ); // (1, 1) 의 토마토가 줄어든 밭 밖이다 — 버리지 않는다
     SW_EXPECT_EQUAL( 0u, narrower.getCropCount() );
@@ -235,7 +235,7 @@ SW_TEST_CASE( FarmingTest, ShippingBinSellsAtCatalogPrices )
     sw::ItemCatalog items;
     catalog.fillItemCatalog( items, 99 );
     sw::Inventory bag;
-    SW_REQUIRE_TRUE( bag.initialize( &items, 4 ) );
+    SW_REQUIRE_TRUE( bag.initialize( items, 4 ) );
     SW_REQUIRE_EQUAL( 3, bag.addItem( kTurnip, 3 ) );
     SW_REQUIRE_EQUAL( 2, bag.addItem( kTurnipSeed, 2 ) );
 
@@ -263,7 +263,7 @@ SW_TEST_CASE( FarmingTest, FieldStateRefusesImpossibleTiles )
     sw::CropCatalog catalog;
     SW_REQUIRE_TRUE( catalog.loadFromXMLText( kCropXML, "FarmingTest" ) );
     sw::FarmField field;
-    field.initialize( 1, 1, &catalog );
+    field.initialize( 1, 1, catalog );
 
     SW_REQUIRE_TRUE( ( FarmFixtureTile{ kTurnip, 1, 1 } ).readInto( field ) ); // 형식은 맞다
     SW_EXPECT_EQUAL( 1, field.findTile( 0, 0 )->_growth );
@@ -326,7 +326,7 @@ SW_TEST_CASE( FarmingTest, FieldDeterminism )
     constexpr int32 kHeight = 3;
     const auto      setup   = [&catalog]( sw::FarmField& field )
     {
-        field.initialize( kWidth, kHeight, &catalog );
+        field.initialize( kWidth, kHeight, catalog );
         return true;
     };
     const auto step = []( sw::FarmField& field, int32 stepIndex )

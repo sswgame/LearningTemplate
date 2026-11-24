@@ -3,6 +3,7 @@
 #include "GameFramework/Kits/Genre/Simulation/ThemePark/Client/ParkViewComponent.h"
 
 #include "Core/Foundation/Constants.h"
+#include "Core/Log/LogOnce.h"
 #include "Core/Log/Logger.h"
 #include "Core/Math/MathUtil.h"
 #include "Core/Math/OrientationUtil.h"
@@ -336,7 +337,15 @@ namespace sw
         using Internal                                        = ParkViewComponentInternal;
         const ParkGameModeComponent::RidePlacement& placement = director.getPlacements()[static_cast<size_t>( placementIndex )];
         const float3                                parkRotation{ 0.0f, director.getParkYaw(), 0.0f };
-        spawnPath( manager, director.getSimulation().getSettings()._gatePosition, placement._ride._entrance );
+        // 길은 손님이 걷는 자리에 깔린다 — 가판과 놀이기구 땅을 돌아간다.
+        vector<float3> listRoute;
+        float3         from = director.getSimulation().getSettings()._gatePosition;
+        director.findGuestRoute( from, placement._ride._entrance, listRoute );
+        for ( const float3& point : listRoute )
+        {
+            spawnPath( manager, from, point );
+            from = point;
+        }
         (void)Internal::placeMesh( spawnView( manager, _rideEntrancePrefab, "RideEntrance" ), placement._ride._entrance, parkRotation ); // 자리만 잡는다
         if ( placement._layoutID.empty() )
         {
@@ -346,7 +355,8 @@ namespace sw
                 return;
             pMesh->setMeshID( placement._shape );
             pMesh->setLocalScale( placement._size );
-            _tintCache.apply( *pMesh, placement._color );
+            if ( _tintCache.apply( *pMesh, placement._color ) == false )
+                SW_LOG_ERROR_ONCE_ID( "ParkView.RideWithoutMaterial", "[Park]: prefab '%#' has a mesh without a material - it keeps the prefab colour", _flatRidePrefab.c_str() );
             FlatRideComponent* pView = pObject->getComponent<FlatRideComponent>();
             if ( pView != nullptr )
                 pView->assignRide( getOwner()->getHandle(), placement._rideIndex, placement._spin, director.getParkYaw() );

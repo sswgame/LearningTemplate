@@ -213,7 +213,7 @@ namespace
         ConquestRulesTest()
         {
             SW_REQUIRE_TRUE( _catalog.loadFromXMLText( kConquestXML, "ConquestTest" ) );
-            _world.initialize( &_catalog );
+            SW_REQUIRE_TRUE( _world.initialize( _catalog ) );
             SW_REQUIRE_TRUE( _world.claimEvents( _lease ) );
         }
 
@@ -221,7 +221,7 @@ namespace
         void openOther( const utf8* pXML )
         {
             SW_REQUIRE_TRUE( _otherCatalog.loadFromXMLText( pXML, "ConquestTest" ) );
-            _world.initialize( &_otherCatalog );
+            SW_REQUIRE_TRUE( _world.initialize( _otherCatalog ) );
         }
 
         void run( int32 stepCount )
@@ -658,7 +658,7 @@ SW_TEST_CASE_F( ConquestRulesTest, LosingASiteReleasesWorkers )
     _world.writeState( written );
     sw::Archive       reading( written.getData(), written.getSize() );
     sw::ConquestWorld restored;
-    restored.initialize( &_otherCatalog );
+    SW_REQUIRE_TRUE( restored.initialize( _otherCatalog ) );
     SW_EXPECT_TRUE( restored.readState( reading ) );
 }
 
@@ -692,7 +692,7 @@ SW_TEST_CASE_F( ConquestRulesTest, BrokenInput )
     SW_EXPECT_EQUAL( 105, _world.getResource( "gold" ) );
 
     sw::ConquestWorld empty;
-    empty.initialize( nullptr );
+    // 열지 않은 판이다
     empty.update( 1.0f );
     SW_EXPECT_EQUAL( 0, empty.computePopulationCap() );
     SW_EXPECT_EQUAL( 0, empty.computeWaveSize() );
@@ -728,7 +728,7 @@ SW_TEST_CASE_F( ConquestRulesTest, StateRoundTrip )
     _world.writeState( written );
     sw::Archive       reading( written.getData(), written.getSize() );
     sw::ConquestWorld restored;
-    restored.initialize( &_catalog );
+    SW_REQUIRE_TRUE( restored.initialize( _catalog ) );
     SW_REQUIRE_TRUE( restored.readState( reading ) );
     SW_EXPECT_TRUE( ConquestTestUtil::isSameState( _world, restored ) );
     SW_EXPECT_EQUAL( _world.getUnits().size(), restored.getUnits().size() );
@@ -765,7 +765,7 @@ SW_TEST_CASE_F( ConquestRulesTest, StateRoundTripWithFallenCommander )
     _world.writeState( written );
     sw::Archive       reading( written.getData(), written.getSize() );
     sw::ConquestWorld restored;
-    restored.initialize( &_catalog );
+    SW_REQUIRE_TRUE( restored.initialize( _catalog ) );
     SW_REQUIRE_TRUE( restored.readState( reading ) );
     SW_EXPECT_TRUE( ConquestTestUtil::isSameState( _world, restored ) );
 }
@@ -777,8 +777,7 @@ SW_TEST_CASE_F( ConquestRulesTest, WorldDeterminism )
 {
     const auto setup = [this]( sw::ConquestWorld& world )
     {
-        world.initialize( &_catalog );
-        return true;
+        return world.initialize( _catalog );
     };
     const auto step = []( sw::ConquestWorld& world, int32 stepIndex )
     {
@@ -1042,7 +1041,7 @@ SW_TEST_CASE( ConquestTest, CatalogRefusesBrokenElements )
 }
 
 /**
- * @brief [ConquestTest] 서로 가리키는 id: 모르는 병종을 읽은 뒤 알린다. 새 판의 모르는 주둔군은 만들지 않는다
+ * @brief [ConquestTest] 서로 가리키는 id: 모르는 병종을 읽은 뒤 알린다. 새 판은 모르는 주둔군을 만들지 않고 오류로 알린다
  */
 SW_TEST_CASE( ConquestTest, CatalogReportsUnknownReferences )
 {
@@ -1055,6 +1054,7 @@ SW_TEST_CASE( ConquestTest, CatalogReportsUnknownReferences )
 </ConquestCatalog>)",
                                               "ConquestTest" ) );
     sw::ConquestWorld world;
-    world.initialize( &catalog );
+    SW_EXPECT_LOG( "ConquestWorld.GarrisonUnitMissing" );
+    SW_EXPECT_FALSE( world.initialize( catalog ) );
     SW_EXPECT_TRUE( world.getUnits().empty() );
 }

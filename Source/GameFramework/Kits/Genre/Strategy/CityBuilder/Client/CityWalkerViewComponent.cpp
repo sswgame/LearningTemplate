@@ -17,7 +17,6 @@ namespace sw
     CityWalkerViewComponent::CityWalkerViewComponent()
         : _walkerIndex{ -1 }
         , _height{ 0.35f }
-        , _pShownLook{ nullptr }
     {
         setCanEverTick( true );
     }
@@ -33,7 +32,6 @@ namespace sw
     {
         bindGameMode( gameMode );
         _walkerIndex = walkerIndex;
-        _pShownLook  = nullptr;
     }
 
     void CityWalkerViewComponent::onTick( TickContext& context )
@@ -58,9 +56,7 @@ namespace sw
         const float2      position = CitySimulation::computeWalkerPosition( walker );
         pMesh->setLocalPosition( pOwner->getManager()->getWorldOrigin().toLocal( float3{ position._x, _height, position._y } ) );
         const shared_ptr<MaterialInstance>& look = pCityView->findWalkerLook( walker );
-        if ( look == nullptr || look.get() == _pShownLook )
-            return;
-        pMesh->setMaterialInstance( look );
-        _pShownLook = look.get();
+        if ( look != nullptr )
+            pMesh->setMaterialInstance( look ); // 같은 모습이면 메시가 거른다
     }
 } // namespace sw

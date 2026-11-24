@@ -66,7 +66,8 @@ namespace sw
 
         IngredientStock();
 
-        void initialize( Inventory* pInventory );
+        /** @brief 재료를 둘 인벤토리를 빌립니다. 재고보다 오래 살아야 합니다. */
+        void initialize( Inventory& inventory );
         /** @brief 인벤토리에 넣고 배치를 적습니다. 들어간 개수를 반환합니다. @p shelfLife 가 0 이면 상하지 않습니다. */
         int32 addFresh( const hashed_string& itemID, int32 count, int32 shelfLife, int64 unitCost );
         /** @brief 이미 인벤토리에 들어간 것(가게에서 산 것)의 배치만 적습니다. */

@@ -5,6 +5,7 @@
 #pragma once
 #include "Core/Container/string.h"
 #include "Core/Container/vector.h"
+#include "Core/Foundation/Expected.h"
 #include "Core/Foundation/Macros.h"
 #include "Core/Foundation/Types.h"
 #include "Core/Name/hashed_string.h"
@@ -16,6 +17,7 @@
 #include "GameFramework/GameFrameworkExports.h"
 #include "GameFramework/Runtime/Foundation/GameData/GameCatalog.h"
 #include "GameFramework/Runtime/Foundation/GameData/XMLCatalog.h"
+#include "GameFramework/Runtime/Gameplay/Progression/LevelProgress.h"
 
 namespace sw
 {
@@ -150,9 +152,10 @@ namespace sw
      *       <Customer id="student" weight="3" categories="Noodle" patience="30" budget="1.2" tipRate="0.1" eat="15"/>
      *       <Arrival hour="11" rate="6"/>
      *       <Weather id="rain" arrival="0.5"/>
+     *       <ExperienceCurve base="60" exponent="1.2" maxLevel="10"/>
      *     </RestaurantCatalog>
      * @endcode
-     * @details `Arrival` 은 그 시각의 시간당 손님 수이다(적지 않은 시각은 0). `window` 는 별점 이동 평균에 쓰는 손님 수이다.
+     * @details `Arrival` 은 그 시각의 시간당 손님 수이다(적지 않은 시각은 0). `ExperienceCurve` 는 직원의 경험치 곡선이다(적지 않으면 직원이 자라지 않는다). `window` 는 별점 이동 평균에 쓰는 손님 수이다.
      */
     class SW_KIT_API RestaurantCatalog : public XMLCatalog<RestaurantCatalog>
     {
@@ -190,11 +193,14 @@ namespace sw
         int32 getOpenHour() const { return _openHour; }
         int32 getCloseHour() const { return _closeHour; }
         int32 getRatingWindow() const { return _ratingWindow; }
+        /** @brief 직원의 경험치 곡선입니다. 적지 않은 식당이면 nullptr 입니다. */
+        const ExperienceCurve* findStaffCurve() const { return _staffCurve.has_value() ? &*_staffCurve : nullptr; }
 
     private:
         static constexpr const utf8* kXMLRootName = "RestaurantCatalog"; ///< XML 루트 원소 이름이다(`XMLCatalog` 이 사용한다)
         uint32                       loadRoot( const XMLCatalogRoot& root, string_view sourceName );
         [[nodiscard]] bool           loadArrival( const XMLNode& node, string_view sourceName );
+        [[nodiscard]] bool           loadStaffCurve( const XMLNode& node, string_view sourceName );
         /** @brief `<Dish>` 하나를 스키마로 읽습니다. 오류면 넣지 않고 false 입니다(오류는 이름과 함께 남긴다). */
         [[nodiscard]] bool loadDish( const XMLNode& node, string_view sourceName );
         /** @brief `<Customer>` 하나를 스키마로 읽습니다. 오류면 넣지 않고 false 입니다. */
@@ -205,6 +211,7 @@ namespace sw
         GameCatalog<IngredientDef>        _ingredientCatalog;
         GameCatalog<CustomerTypeDef>      _customerCatalog;
         GameCatalog<RestaurantWeatherDef> _weatherCatalog;
+        optional<ExperienceCurve>         _staffCurve;
         float32                           _arrArrivalRate[kHoursPerDay];
         int32                             _openHour;
         int32                             _closeHour;

@@ -1,0 +1,22 @@
+{
+    "_name": "GF_Client_GhostHunt",
+    "_version": "1.0.0",
+    "_kind": "Kit",
+    "_description": "유령 사냥 키트(클라이언트) — 입력 맵 액션을 손전등 · 스트로브 · 청소기 명령으로 바꾸고, 저택의 방 · 가구 · 유령 · 손전등 빛을 원시 도형으로 그리며 HUD 를 채웁니다. 규칙 · 디렉터는 GF_GhostHunt",
+    "_listDependency": [
+        {
+            "_name": "GameFramework"
+        },
+        {
+            "_name": "GF_GhostHunt"
+        }
+    ],
+    "_listConfiguration": [
+        "Dev",
+        "Shipping"
+    ],
+    "_listTarget": [
+        "Client"
+    ],
+    "_bEnabledByDefault": true
+}

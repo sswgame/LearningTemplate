@@ -88,9 +88,9 @@ namespace sw
     {
     }
 
-    void ReputationState::initialize( const ReputationCatalog* pCatalog )
+    void ReputationState::initialize( const ReputationCatalog& catalog )
     {
-        _pCatalog = pCatalog;
+        _pCatalog = &catalog;
         _listEntry.clear();
         _eventBuffer.clear();
     }

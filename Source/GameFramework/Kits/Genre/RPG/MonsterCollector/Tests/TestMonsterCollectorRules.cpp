@@ -148,7 +148,7 @@ namespace
             _chart.addElement( "Rock" );
             SW_REQUIRE_TRUE( _chart.setMultiplier( "Water", "Fire", 2.0f ) );
             SW_REQUIRE_TRUE( _chart.setMultiplier( "Ghost", "Normal", 0.0f ) );
-            _battle.initialize( &_catalog, &_chart, 7 );
+            _battle.initialize( _catalog, _chart, 7 );
         }
 
         /** @brief 개체값 0 · 성격 없음인 개체를 만듭니다(HP 가득). 기술은 적은 순서대로 슬롯에 들어갑니다. */
@@ -660,13 +660,13 @@ SW_TEST_CASE_F( MonsterCollectorRulesTest, DamageFormula )
     input._power   = 40;
     input._attack  = 55;
     input._defense = 55;
-    SW_EXPECT_EQUAL( 19, sw::MonsterBattle::computeDamage( input ) ); // (22 × 40 × 55 / 55) / 50 + 2
+    SW_EXPECT_EQUAL( 19, sw::MonsterBattle::computeDamage( sw::MonsterBattleRules{}, input ) ); // (22 × 40 × 55 / 55) / 50 + 2
 
     const auto with = [input]( auto mutate )
     {
         sw::MonsterDamageInput changed = input;
         mutate( changed );
-        return sw::MonsterBattle::computeDamage( changed );
+        return sw::MonsterBattle::computeDamage( sw::MonsterBattleRules{}, changed );
     };
     SW_EXPECT_EQUAL( 28, with( []( sw::MonsterDamageInput& value )
     { value._bCritical = true; } ) );
@@ -694,6 +694,14 @@ SW_TEST_CASE_F( MonsterCollectorRulesTest, DamageFormula )
         value._defense        = 9999;
         value._typeMultiplier = 0.25f;
     } ) );
+
+    // 카탈로그의 <Rules> 가 수치를 바꾼다 — 급소 두 배 · 기본 피해 10
+    sw::MonsterCollectorCatalog catalog;
+    SW_REQUIRE_TRUE( catalog.loadFromXMLText( R"(<MonsterCollectorCatalog><Rules critPercent="200" damageBase="10" critDivisor="4"/></MonsterCollectorCatalog>)", "MonsterCollectorRulesTest" ) );
+    input._bCritical = true;
+    SW_EXPECT_EQUAL( 54, sw::MonsterBattle::computeDamage( catalog.getBattleRules(), input ) ); // (17 + 10) × 2
+    SW_EXPECT_EQUAL( 4, sw::MonsterBattle::computeCriticalDivisor( catalog.getBattleRules(), 0 ) );
+    SW_EXPECT_EQUAL( 1, sw::MonsterBattle::computeCriticalDivisor( catalog.getBattleRules(), 1 ) );
 }
 
 /**
@@ -701,15 +709,15 @@ SW_TEST_CASE_F( MonsterCollectorRulesTest, DamageFormula )
  */
 SW_TEST_CASE_F( MonsterCollectorRulesTest, StagesAndTypes )
 {
-    SW_EXPECT_NEAR( 1.0, sw::MonsterBattle::computeStageMultiplier( 0 ), 1.0e-5 );
-    SW_EXPECT_NEAR( 2.0, sw::MonsterBattle::computeStageMultiplier( 2 ), 1.0e-5 );
-    SW_EXPECT_NEAR( 0.5, sw::MonsterBattle::computeStageMultiplier( -2 ), 1.0e-5 );
-    SW_EXPECT_NEAR( 4.0, sw::MonsterBattle::computeStageMultiplier( 99 ), 1.0e-5 );
-    SW_EXPECT_NEAR( 0.25, sw::MonsterBattle::computeStageMultiplier( -99 ), 1.0e-5 );
-    SW_EXPECT_EQUAL( 24, sw::MonsterBattle::computeCriticalDivisor( 0 ) );
-    SW_EXPECT_EQUAL( 8, sw::MonsterBattle::computeCriticalDivisor( 1 ) );
-    SW_EXPECT_EQUAL( 2, sw::MonsterBattle::computeCriticalDivisor( 2 ) );
-    SW_EXPECT_EQUAL( 1, sw::MonsterBattle::computeCriticalDivisor( 9 ) );
+    SW_EXPECT_NEAR( 1.0, sw::MonsterBattle::computeStageMultiplier( sw::MonsterBattleRules{}, 0 ), 1.0e-5 );
+    SW_EXPECT_NEAR( 2.0, sw::MonsterBattle::computeStageMultiplier( sw::MonsterBattleRules{}, 2 ), 1.0e-5 );
+    SW_EXPECT_NEAR( 0.5, sw::MonsterBattle::computeStageMultiplier( sw::MonsterBattleRules{}, -2 ), 1.0e-5 );
+    SW_EXPECT_NEAR( 4.0, sw::MonsterBattle::computeStageMultiplier( sw::MonsterBattleRules{}, 99 ), 1.0e-5 );
+    SW_EXPECT_NEAR( 0.25, sw::MonsterBattle::computeStageMultiplier( sw::MonsterBattleRules{}, -99 ), 1.0e-5 );
+    SW_EXPECT_EQUAL( 24, sw::MonsterBattle::computeCriticalDivisor( sw::MonsterBattleRules{}, 0 ) );
+    SW_EXPECT_EQUAL( 8, sw::MonsterBattle::computeCriticalDivisor( sw::MonsterBattleRules{}, 1 ) );
+    SW_EXPECT_EQUAL( 2, sw::MonsterBattle::computeCriticalDivisor( sw::MonsterBattleRules{}, 2 ) );
+    SW_EXPECT_EQUAL( 1, sw::MonsterBattle::computeCriticalDivisor( sw::MonsterBattleRules{}, 9 ) );
 
     const sw::MonsterInstance fire = make( "flamo", 50 );
     SW_EXPECT_NEAR( 2.0, _battle.computeTypeMultiplier( "Water", fire ), 1.0e-5 );
@@ -755,7 +763,7 @@ SW_TEST_CASE_F( MonsterCollectorRulesTest, CaptureFormula )
     sw::GameRandom random;
     random.setSeed( 3 );
     const auto capture = [&random]( int32 hp, int32 catchRate, float32 ball, sw::MonsterStatus status )
-    { return sw::MonsterBattle::computeCapture( 30, hp, catchRate, ball, status, random ); };
+    { return sw::MonsterBattle::computeCapture( sw::MonsterBattleRules{}, 30, hp, catchRate, ball, status, random ); };
 
     const sw::MonsterCaptureResult normal = capture( 30, 255, 1.0f, sw::MonsterStatus::None ); // (90 - 60) × 255 / 90 = 85
     SW_EXPECT_EQUAL( 85, normal._catchValue );
@@ -1202,7 +1210,7 @@ SW_TEST_CASE_F( MonsterCollectorRulesTest, BattleStateRoundTrip )
     _battle.writeState( written );
     sw::Archive       reading( written.getData(), written.getSize() );
     sw::MonsterBattle restored;
-    restored.initialize( &_catalog, &_chart, 99 );
+    restored.initialize( _catalog, _chart, 99 );
     SW_REQUIRE_TRUE( restored.readState( reading ) );
     SW_EXPECT_TRUE( MonsterTestUtil::isSameState( _battle, restored ) );
     SW_EXPECT_EQUAL( 2, restored.getStage( player, sw::MonsterStat::Attack ) );
@@ -1229,7 +1237,7 @@ SW_TEST_CASE_F( MonsterCollectorRulesTest, BattleStateRoundTrip )
 
     // 시작 전 전투도 왕복한다. 카탈로그 없이는 읽지 않는다.
     sw::MonsterBattle fresh;
-    fresh.initialize( &_catalog, &_chart, 5 );
+    fresh.initialize( _catalog, _chart, 5 );
     sw::Archive writtenFresh;
     fresh.writeState( writtenFresh );
     sw::Archive readingFresh( writtenFresh.getData(), writtenFresh.getSize() );
@@ -1518,7 +1526,7 @@ SW_TEST_CASE_F( MonsterCollectorRulesTest, BattleDeterminism )
     const sw::vector<sw::MonsterInstance> listFoe{ make( "flamo", 50, "strike", "burnup" ), make( "rocky", 50, "strike", "growl" ) };
     const auto                            setup = [this, &listPlayer, &listFoe]( sw::MonsterBattle& battle ) -> bool
     {
-        battle.initialize( &_catalog, &_chart, 7 );
+        battle.initialize( _catalog, _chart, 7 );
         battle.start( listPlayer, listFoe, false ); // 트레이너전 — 볼 · 도망으로 끝나지 않는다
         return battle.getResult() == sw::MonsterBattleResult::Ongoing;
     };
@@ -1547,7 +1555,9 @@ SW_TEST_CASE_F( MonsterCollectorRulesTest, BattleDeterminism )
  */
 SW_TEST_CASE( MonsterCollectorTest, SurvivesSeedEqualToMixConstant )
 {
-    sw::MonsterBattle battle;
-    battle.initialize( nullptr, nullptr, 0x5bd1e995u );
+    const sw::MonsterCollectorCatalog catalog{};
+    const sw::ElementChart            chart{};
+    sw::MonsterBattle                 battle;
+    battle.initialize( catalog, chart, 0x5bd1e995u );
     SW_EXPECT_TRUE( battle.getResult() == sw::MonsterBattleResult::Ongoing );
 }

@@ -222,7 +222,8 @@ namespace sw
 
         ShopManager();
 
-        void initialize( const ShopCatalog* pShopCatalog, const ItemCatalog* pItemCatalog );
+        /** @brief 가게 · 아이템 카탈로그를 빌려 모든 가게를 처음 재고로 엽니다. 가게가 없는 판은 줄 없는 가게 카탈로그를 준다. */
+        void initialize( const ShopCatalog& shopCatalog, const ItemCatalog& itemCatalog );
         /** @brief 잠금 조건을 평가할 문맥입니다(플래그 · 태그 칸). 빌려 씁니다. 없으면 조건이 있는 항목은 항상 잠겨 있습니다. */
         void setConditionContext( const GameplayContext* pContext ) { _pConditionContext = pContext; }
         /** @brief 가격 배율입니다. 평판, 할인, 그날의 매입률(리썰 컴퍼니)에 씁니다. 사기와 팔기를 따로 정합니다. */

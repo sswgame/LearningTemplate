@@ -18,6 +18,19 @@
   <!-- 관통탄: 한 발이 앞의 적을 꿰뚫고 뒤의 적까지 둘을 더 맞힌다(광선이라 맞은 몸 뒤에서 남은 선분을 다시 묻는다). 킬캠 시나리오(game.playground.shooter3d_pierce_killcam)가 치트로 넣는다. -->
   <Projectile id="piercing_round" _base="rifle_round" damage="60" pierceCount="2" tracerColor="1.2,2.4,3,1" tracerWidth="0.04"/>
 
+  <!-- 기체 대전 미니게임(minigames/mecharena)의 탄 — 날아가고(speed) 사거리(range)가 있다. radius 는 맞음 반지름이다(기체 몸 반지름은 data/mechs.xml). -->
+  <Projectile id="mech_beam" tags="Ammo.MechBeam" damage="24" speed="38" range="55" radius="0.3" gravityScale="0"/>
+  <Projectile id="mech_missile" tags="Ammo.MechMissile" damage="60" speed="20" range="60" radius="0.5" gravityScale="0"/>
+
+  <!-- 배틀로얄 미니게임(minigames/battleroyale)의 탄 — 사람은 바디 없는 점이라 사거리 · 피해만 쓴다(명중은 디렉터의 확률). -->
+  <Projectile id="br_light_round" tags="Ammo.RoyaleLight" damage="12" range="14" speed="0" headshotMultiplier="1.5"/>
+  <Projectile id="br_shell" _base="br_light_round" tags="Ammo.RoyaleShell" damage="9" range="10"/>
+  <Projectile id="br_rifle_round" _base="br_light_round" tags="Ammo.RoyaleRifle" damage="11" range="22"/>
+  <!-- 카트 경기(minigames/kartracing)의 아이템 탄 — 평면에서 돌아 중력이 없고, 사거리 대신 수명으로 끝난다. 놓인 것(바나나)은 속력 · 수명이 0 이다(반응은 kartracing/data/circuit.kartitems.xml). -->
+  <Projectile id="kart_banana" tags="Ammo.Kart" speed="0" lifetime="0" range="0" radius="1.2" gravityScale="0"/>
+  <Projectile id="kart_green" tags="Ammo.Kart" speed="45" lifetime="2" range="0" radius="1.2" gravityScale="0"/>
+  <Projectile id="kart_red" _base="kart_green" lifetime="4" homingRate="400"/>
+
   <Impact id="body_incendiary" surface="Body" when="Ammo.Incendiary" color="4,0.8,0.1,1" size="0.32"/>
   <Impact id="body" surface="Body" color="1,0.45,0.2,1" size="0.18"/>
   <Impact id="cover" surface="Cover" color="0.9,0.85,0.6,1" size="0.1"/>

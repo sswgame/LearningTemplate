@@ -103,7 +103,7 @@ namespace sw
         if ( GameStateComponent::openOnOwner( *this, GameStateSettings{} ) == nullptr )
             return false;
         const GameObject* const pPlayerState = requirePlayerState();
-        if ( pPlayerState == nullptr || PlayerComponentUtil::openOn<QuestLogComponent>( *pPlayerState, _pQuests.get() ) == nullptr ||
+        if ( pPlayerState == nullptr || PlayerComponentUtil::openOn<QuestLogComponent>( *pPlayerState, *_pQuests ) == nullptr ||
              PlayerComponentUtil::requireOn<WalletComponent>( *pPlayerState ) == nullptr )
             return false; // 까닭은 찾기가 남겼다
         if ( _campaign.initialize( _vitalsSettings, _startRegion.key(), _flagPrefix ) == false )

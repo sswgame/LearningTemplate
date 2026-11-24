@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="utf-8"?>
+<?asset guid="97e2692bfb7f460787ab2d75d3e05611"?>
+<!-- 협동 수집 공포 미니게임(minigames/coopscavenger)의 위협 표 — 착륙 60 초 뒤부터 실내 하나 · 실외 하나까지. 원정의 감독 둘이 태그로 나눠 쓴다(Indoor · Outdoor). -->
+<SpawnTable budgetPerMinute="6" maxBudget="6" startBudget="0" refund="false">
+	<Entry id="lurker" cost="3" weight="2" max="1" minTime="60" tags="Indoor"/>
+	<Entry id="hound" cost="3" weight="1" max="1" minTime="60" tags="Outdoor"/>
+</SpawnTable>

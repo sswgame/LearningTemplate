@@ -67,7 +67,8 @@ namespace sw
 
         MonsterHuntAlchemy();
 
-        void initialize( const MonsterHuntCatalog* pCatalog, const RecipeCatalog* pRecipeCatalog );
+        /** @brief 카탈로그와 레시피를 빌립니다(연금술보다 오래 살아야 합니다). 만들지 않는 판은 레시피 줄이 없는 카탈로그를 줍니다. */
+        void initialize( const MonsterHuntCatalog& catalog, const RecipeCatalog& recipeCatalog );
         /** @brief 레시피로 물건을 만듭니다(기반 `Crafter::craft`). 결과가 연금술 물건이면 사용 횟수를 가득 채웁니다. */
         CraftResult brew( const hashed_string& recipeID, Inventory& inoutInventory, const hashed_string& station, int32 level );
         /** @brief 마실 수 있는지 반환합니다(물약, 변이 혼합물). */

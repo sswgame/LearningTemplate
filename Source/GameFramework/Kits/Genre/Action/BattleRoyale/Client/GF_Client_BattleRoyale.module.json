@@ -1,0 +1,22 @@
+{
+    "_name": "GF_Client_BattleRoyale",
+    "_version": "1.0.0",
+    "_kind": "Kit",
+    "_description": "배틀로얄 키트(클라이언트) — 입력 맵 액션을 디렉터 입력 명령으로 바꾸고 사람 · 자기장 · 전리품 · HUD(체력 · 남은 인원 · 구역 · 결과)를 보인다. 규칙 · 디렉터는 GF_BattleRoyale",
+    "_listDependency": [
+        {
+            "_name": "GameFramework"
+        },
+        {
+            "_name": "GF_BattleRoyale"
+        }
+    ],
+    "_listConfiguration": [
+        "Dev",
+        "Shipping"
+    ],
+    "_listTarget": [
+        "Client"
+    ],
+    "_bEnabledByDefault": true
+}

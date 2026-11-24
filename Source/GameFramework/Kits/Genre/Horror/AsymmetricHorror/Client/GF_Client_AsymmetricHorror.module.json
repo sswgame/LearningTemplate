@@ -1,0 +1,22 @@
+{
+    "_name": "GF_Client_AsymmetricHorror",
+    "_version": "1.0.0",
+    "_kind": "Kit",
+    "_description": "비대칭 공포 키트(클라이언트) — 로컬 사용자마다 입력을 같은 번호의 생존자 명령으로 바꾸고, 무대 · 생존자 · 살인마를 원시 도형으로 그리며 HUD 를 채웁니다. 규칙 · 디렉터는 GF_AsymmetricHorror",
+    "_listDependency": [
+        {
+            "_name": "GameFramework"
+        },
+        {
+            "_name": "GF_AsymmetricHorror"
+        }
+    ],
+    "_listConfiguration": [
+        "Dev",
+        "Shipping"
+    ],
+    "_listTarget": [
+        "Client"
+    ],
+    "_bEnabledByDefault": true
+}

@@ -76,6 +76,14 @@ namespace sw
         return true;
     }
 
+    bool WorldClock::validateInitialized( const utf8* pAction ) const
+    {
+        if ( isInitialized() )
+            return true;
+        SW_LOG_ERROR_ID( "WorldClock.NotInitialized", "WorldClock: refused to %# - the clock has no settings yet (call initialize first)", pAction );
+        return false;
+    }
+
     bool WorldClock::setTimeScale( float32 timeScale )
     {
         if ( timeScale < 0.0f )
@@ -89,6 +97,8 @@ namespace sw
 
     bool WorldClock::setTime( int32 day, float32 hour )
     {
+        if ( validateInitialized( "set the time" ) == false )
+            return false;
         const bool bInvalid = day < 0 || hour < 0.0f || hour >= 24.0f;
         if ( bInvalid )
         {
@@ -118,16 +128,21 @@ namespace sw
 
     int32 WorldClock::getSeasonIndex() const
     {
+        if ( validateInitialized( "read the season" ) == false )
+            return 0;
         return ( _day / _settings._daysPerSeason ) % static_cast<int32>( _settings._listSeason.size() );
     }
 
     hashed_string WorldClock::getSeasonName() const
     {
-        return _settings._listSeason[static_cast<size_t>( getSeasonIndex() )];
+        const size_t seasonIndex = static_cast<size_t>( getSeasonIndex() );
+        return seasonIndex < _settings._listSeason.size() ? _settings._listSeason[seasonIndex] : hashed_string{}; // 설정 전이면 위가 오류를 남겼다
     }
 
     int32 WorldClock::getYear() const
     {
+        if ( validateInitialized( "read the year" ) == false )
+            return 1;
         return _day / ( _settings._daysPerSeason * static_cast<int32>( _settings._listSeason.size() ) ) + 1;
     }
 
@@ -184,6 +199,8 @@ namespace sw
 
     void WorldClock::advanceGameSeconds( float32 gameSeconds )
     {
+        if ( validateInitialized( "advance" ) == false )
+            return;
         constexpr int32   kHoursPerDay   = 24;
         constexpr float64 kHourEpsilon   = 1.0e-9; // 경계에 올려놓은 시각을 나눈 몫이 N 바로 아래로 반올림되지 않게
         const float64     secondsPerHour = static_cast<float64>( _settings._secondsPerDay ) / kHoursPerDay;

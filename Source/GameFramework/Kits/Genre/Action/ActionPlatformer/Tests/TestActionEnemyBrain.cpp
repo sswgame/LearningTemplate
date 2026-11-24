@@ -63,7 +63,7 @@ SW_TEST_CASE( ActionEnemyBrainTest, TimeAdvancesAndFiresOnEnteringOnly )
     sw::ActionPlatformerCatalog catalog;
     SW_REQUIRE_TRUE( catalog.loadFromXMLText( kBrainXML, "ActionEnemyBrainTest" ) );
     sw::ActionEnemyBrain brain;
-    SW_REQUIRE_TRUE( brain.initialize( catalog.findPattern( sw::hashed_string( "gunner" ) ) ) );
+    SW_REQUIRE_TRUE( brain.initialize( *catalog.findPattern( sw::hashed_string( "gunner" ) ) ) );
     SW_EXPECT_EQUAL( kPatrol, brain.getStateID() );
 
     sw::ActionEnemyAction action = brain.advanceFrame( kBrainFar ); // 들어선 프레임
@@ -101,7 +101,7 @@ SW_TEST_CASE( ActionEnemyBrainTest, NearRangeIsInclusiveAndBeatsTime )
     sw::ActionPlatformerCatalog catalog;
     SW_REQUIRE_TRUE( catalog.loadFromXMLText( kBrainXML, "ActionEnemyBrainTest" ) );
     sw::ActionEnemyBrain brain;
-    SW_REQUIRE_TRUE( brain.initialize( catalog.findPattern( sw::hashed_string( "gunner" ) ) ) );
+    SW_REQUIRE_TRUE( brain.initialize( *catalog.findPattern( sw::hashed_string( "gunner" ) ) ) );
 
     (void)brain.advanceFrame( 1.0f ); // 들어선 프레임
     SW_EXPECT_EQUAL( kPatrol, brain.getStateID() );
@@ -122,7 +122,7 @@ SW_TEST_CASE( ActionEnemyBrainTest, SelfTransitionRestartsTheClockOnly )
     sw::ActionPlatformerCatalog catalog;
     SW_REQUIRE_TRUE( catalog.loadFromXMLText( kBrainXML, "ActionEnemyBrainTest" ) );
     sw::ActionEnemyBrain brain;
-    SW_REQUIRE_TRUE( brain.initialize( catalog.findPattern( sw::hashed_string( "guard" ) ) ) );
+    SW_REQUIRE_TRUE( brain.initialize( *catalog.findPattern( sw::hashed_string( "guard" ) ) ) );
     (void)brain.advanceFrame( kBrainFar );
     for ( int32 frame = 0; frame < 5; ++frame )
     {
@@ -152,7 +152,7 @@ SW_TEST_CASE( ActionEnemyBrainTest, HitGoesToStaggerOnlyWhenTheStateHasOne )
     SW_REQUIRE_TRUE( catalog.loadFromXMLText( kBrainXML, "ActionEnemyBrainTest" ) );
     sw::ActionEnemyBrain brain;
     SW_EXPECT_FALSE( brain.notifyHit() ); // 패턴 없음
-    SW_REQUIRE_TRUE( brain.initialize( catalog.findPattern( sw::hashed_string( "gunner" ) ) ) );
+    SW_REQUIRE_TRUE( brain.initialize( *catalog.findPattern( sw::hashed_string( "gunner" ) ) ) );
     (void)brain.advanceFrame( kBrainFar );
 
     SW_EXPECT_TRUE( brain.notifyHit() );
@@ -172,7 +172,7 @@ SW_TEST_CASE( ActionEnemyBrainTest, FacingKeepsOnlyTheSign )
     sw::ActionPlatformerCatalog catalog;
     SW_REQUIRE_TRUE( catalog.loadFromXMLText( kBrainXML, "ActionEnemyBrainTest" ) );
     sw::ActionEnemyBrain brain;
-    SW_REQUIRE_TRUE( brain.initialize( catalog.findPattern( sw::hashed_string( "gunner" ) ), -7 ) );
+    SW_REQUIRE_TRUE( brain.initialize( *catalog.findPattern( sw::hashed_string( "gunner" ) ), -7 ) );
     SW_EXPECT_EQUAL( -1, brain.getFacing() );
     SW_EXPECT_NEAR( -1.0f, brain.advanceFrame( kBrainFar )._moveX, kBrainTolerance );
     brain.setFacing( 0 );
@@ -188,7 +188,7 @@ SW_TEST_CASE( ActionEnemyBrainTest, InitializeRejectsMissingStartWithoutFallback
     sw::ActionPlatformerCatalog catalog;
     SW_REQUIRE_TRUE( catalog.loadFromXMLText( kBrainXML, "ActionEnemyBrainTest" ) );
     sw::ActionEnemyBrain brain;
-    SW_REQUIRE_TRUE( brain.initialize( catalog.findPattern( sw::hashed_string( "gunner" ) ) ) );
+    SW_REQUIRE_TRUE( brain.initialize( *catalog.findPattern( sw::hashed_string( "gunner" ) ) ) );
     (void)brain.advanceFrame( kBrainFar );
     (void)brain.advanceFrame( kBrainFar );
 
@@ -199,14 +199,13 @@ SW_TEST_CASE( ActionEnemyBrainTest, InitializeRejectsMissingStartWithoutFallback
     state._id = sw::hashed_string( "only" );
     wrongStart._listState.push_back( state );
 
-    SW_EXPECT_FALSE( brain.initialize( &wrongStart ) );
+    SW_EXPECT_FALSE( brain.initialize( wrongStart ) );
     SW_EXPECT_TRUE( brain.getStateID().empty() );
     SW_EXPECT_EQUAL( 0, brain.getStateFrame() );
 
     sw::ActionPatternDef noState;
     noState._start = sw::hashed_string( "only" );
-    SW_EXPECT_FALSE( brain.initialize( &noState ) );
-    SW_EXPECT_FALSE( brain.initialize( nullptr ) );
+    SW_EXPECT_FALSE( brain.initialize( noState ) );
 
     const sw::ActionEnemyAction action = brain.advanceFrame( 0.0f );
     SW_EXPECT_TRUE( action._bFire == SW_FALSE );
@@ -223,7 +222,7 @@ SW_TEST_CASE( ActionEnemyBrainTest, StateRoundTripResumesIdentically )
     sw::ActionPlatformerCatalog catalog;
     SW_REQUIRE_TRUE( catalog.loadFromXMLText( kBrainXML, "ActionEnemyBrainTest" ) );
     sw::ActionEnemyBrain original;
-    SW_REQUIRE_TRUE( original.initialize( catalog.findPattern( sw::hashed_string( "gunner" ) ), -1 ) );
+    SW_REQUIRE_TRUE( original.initialize( *catalog.findPattern( sw::hashed_string( "gunner" ) ), -1 ) );
     (void)original.advanceFrame( kBrainFar );
     SW_REQUIRE_TRUE( original.notifyHit() ); // 들어선 프레임이 남은 상태로 쓴다
 
@@ -235,7 +234,7 @@ SW_TEST_CASE( ActionEnemyBrainTest, StateRoundTripResumesIdentically )
     SW_EXPECT_FALSE( noCatalog.readState( withoutCatalog ) );
 
     sw::ActionEnemyBrain restored;
-    restored.bindCatalog( &catalog );
+    restored.bindCatalog( catalog );
     sw::Archive reading( written.getData(), written.getSize() );
     SW_REQUIRE_TRUE( restored.readState( reading ) );
     SW_EXPECT_EQUAL( kStagger, restored.getStateID() );
@@ -260,8 +259,8 @@ SW_TEST_CASE( ActionEnemyBrainTest, ReadRejectsBadBytesAndKeepsState )
     sw::ActionPlatformerCatalog catalog;
     SW_REQUIRE_TRUE( catalog.loadFromXMLText( kBrainXML, "ActionEnemyBrainTest" ) );
     sw::ActionEnemyBrain target;
-    target.bindCatalog( &catalog );
-    SW_REQUIRE_TRUE( target.initialize( catalog.findPattern( sw::hashed_string( "gunner" ) ) ) );
+    target.bindCatalog( catalog );
+    SW_REQUIRE_TRUE( target.initialize( *catalog.findPattern( sw::hashed_string( "gunner" ) ) ) );
 
     const sw::hashed_string gunner{ "gunner" };
     const sw::hashed_string ghost{ "ghost" };

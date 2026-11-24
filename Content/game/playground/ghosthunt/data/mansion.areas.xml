@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="utf-8"?>
+<?asset guid="c0aca66a92d043a1a440b05efc6107ca"?>
+<!-- 유령 사냥 미니게임의 저택 — 방 사각형(미터, x 동쪽 · y 북쪽)과 연결. 잠긴 연결의 kind 가 카탈로그(data/ghosts.xml)의 문 id 다. gallery 는 유령이 없는 복도라 늘 밝다. -->
+<AreaGraph>
+	<Area id="foyer" region="Mansion" x="-5" y="0" w="10" h="8"/>
+	<Area id="parlor" region="Mansion" x="-5" y="8" w="10" h="8"/>
+	<Area id="gallery" region="Mansion" x="5" y="0" w="6" h="8"/>
+	<Link from="foyer" to="parlor" kind="parlorDoor" requires="door.parlor"/>
+	<Link from="foyer" to="gallery" kind="Passage"/>
+</AreaGraph>

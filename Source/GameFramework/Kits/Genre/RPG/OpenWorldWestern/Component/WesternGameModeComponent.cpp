@@ -98,16 +98,15 @@ namespace sw
         const GameObject* const pPlayerState = requirePlayerState();
         if ( pPlayerState == nullptr )
             return false; // 까닭은 베이스가 남겼다
-        const ReputationCatalog* const pHonor      = &_pWesternCatalog->getHonorReputation();
-        ReputationComponent* const     pReputation = PlayerComponentUtil::openOn<ReputationComponent>( *pPlayerState, pHonor );
-        WalletComponent* const         pWallet     = PlayerComponentUtil::requireOn<WalletComponent>( *pPlayerState );
+        ReputationComponent* const pReputation = PlayerComponentUtil::openOn<ReputationComponent>( *pPlayerState, _pWesternCatalog->getHonorReputation() );
+        WalletComponent* const     pWallet     = PlayerComponentUtil::requireOn<WalletComponent>( *pPlayerState );
         if ( pReputation == nullptr || pWallet == nullptr )
             return false;                                                                  // 까닭은 찾기 · 열기가 남겼다
         InventoryComponent* const pBag = pPlayerState->getComponent<InventoryComponent>(); // 가방은 선택이다 — 프레리 씬은 붙이지 않는다
         AIPerceptionSettings      sight{};
         sight._sightRange = _witnessSightRange;
         // 전리품 카탈로그는 없다 — 프레리 동물은 전리품 테이블을 적지 않는다(적으면 손질이 오류를 낸다).
-        if ( _outlaw.initialize( _pWesternCatalog.get(), nullptr, pWallet->getWallet(), pReputation->getReputation(), pState->getClock(), &pState->getFlags(), pState->findWeather(),
+        if ( _outlaw.initialize( _pWesternCatalog.get(), nullptr, pWallet->getWallet(), pReputation->getReputation(), pState->getClock(), pState->getFlags(), pState->getWeather(),
                                  pBag != nullptr ? &pBag->getInventory() : nullptr, _regionID.key(), _regionBaseTemperature, sight ) == false )
             return false; // 까닭은 무법자가 남겼다
         if ( pWallet->isFreshGame() && _startingMoney > 0 )

@@ -28,5 +28,23 @@
 				<item>Weapon</item>
 			</elements>
 		</rule>
+		<rule files="jrpg.xml" attribute="name" kind="text" context="JRPG name">
+			<elements>
+				<item>Class</item>
+				<item>Spell</item>
+				<item>Enemy</item>
+			</elements>
+		</rule>
+		<rule files="monstercollector.xml" attribute="name" kind="text" context="Monster name">
+			<elements>
+				<item>Move</item>
+				<item>Species</item>
+			</elements>
+		</rule>
+		<rule files="restaurant.xml" attribute="name" kind="text" context="Dish name">
+			<elements>
+				<item>Dish</item>
+			</elements>
+		</rule>
 	</assetRules>
 </LocalizationProject>

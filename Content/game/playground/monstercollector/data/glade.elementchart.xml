@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="utf-8"?>
+<?asset guid="5173e28da92f4761b80d5c26a16e1f75"?>
+<!-- 풀밭 수집 미니게임의 타입 상성 — 이끼는 물을, 물은 불꽃을, 불꽃은 이끼를 이긴다. -->
+<ElementChart>
+	<Element id="Moss"/>
+	<Element id="Tide"/>
+	<Element id="Spark"/>
+	<Rule attack="Moss" defend="Tide" multiplier="2"/>
+	<Rule attack="Tide" defend="Spark" multiplier="2"/>
+	<Rule attack="Spark" defend="Moss" multiplier="2"/>
+	<Rule attack="Moss" defend="Moss" multiplier="0.5"/>
+	<Rule attack="Tide" defend="Tide" multiplier="0.5"/>
+	<Rule attack="Spark" defend="Spark" multiplier="0.5"/>
+</ElementChart>

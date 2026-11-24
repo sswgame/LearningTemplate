@@ -242,7 +242,13 @@ namespace sw
         PROPERTY( Min = 0.0 )
         float32 _terrorRadius{ 32.0f }; ///< 심장 소리가 들리는 거리이다
         PROPERTY( Min = 0.0 )
-        float32 _abilityCooldown{ 10.0f };
+        float32 _abilityCooldown{ 10.0f }; ///< 능력을 쓴 때부터 다시 쓸 수 있을 때까지이다
+        PROPERTY( Min = 0.0, Units = s )
+        float32 _abilityDuration{ 0.0f }; ///< 능력이 이어지는 시간이다. 0 이면 능력이 없는 살인마이다
+        PROPERTY( Min = 0.0 )
+        float32 _abilitySpeedScale{ 1.0f }; ///< 능력을 쓰는 동안의 속도 배율이다
+        PROPERTY( Min = 0.0 )
+        float32 _abilityTerrorScale{ 1.0f }; ///< 능력을 쓰는 동안의 심장 소리 거리 배율이다(0 이면 들리지 않는다)
         PROPERTY( Min = 0.0 )
         float32 _carrySpeedScale{ 0.8f };
     };

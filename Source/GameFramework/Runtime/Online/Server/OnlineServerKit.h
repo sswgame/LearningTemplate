@@ -147,6 +147,8 @@ namespace sw
         virtual span<const utf8* const> getRequiredKits() const = 0;
         /** @brief 선택 형식 목록의 제공 키트 이름입니다. 설정에 있을 때만 이 키트보다 먼저 섭니다. */
         virtual span<const utf8* const> getOptionalKits() const = 0;
+        /** @brief 선택 형식 목록 가운데 서버 여러 대(`OnlineServerTopology::MultiServer`)에서는 필수인 인터페이스의 제공 키트 이름입니다. 그 구성의 설정에 없으면 기동 오류입니다. */
+        virtual span<const utf8* const> getMultiServerKits() const = 0;
 
         /** @brief 런타임이 `initialize` 단계에 부릅니다. 형식 목록의 필수 · 선택 인터페이스를 찾아 묶은 뒤 키트의 `initialize` 를 부릅니다. */
         [[nodiscard]] expected<void> initializeKit( OnlineServerKitContext& context, const OnlineServerKitEntry& entry ) { return resolveAndInitialize( context, entry ); }
@@ -210,7 +212,11 @@ namespace sw
     struct OnlineKitRequired
     {
     };
-    /** @brief 선택으로 받는 인터페이스 형식 목록입니다. 제공 키트가 설정에 있으면 먼저 서고, 없으면 null 로 받습니다. */
+    /**
+     * @brief 선택으로 받는 인터페이스 형식 목록입니다. 제공 키트가 설정에 있으면 먼저 서고, 없으면 null 로 받습니다.
+     * @details 인터페이스가 `static constexpr bool kRequiredInMultiServer = true` 를 적으면 서버 여러 대 구성에서는 필수다 — 서버끼리 나누는 인터페이스라 없으면 서버마다 따로 돈다.
+     *          받는 키트가 아니라 인터페이스가 적으므로 새로 받는 키트도 빠뜨릴 수 없다.
+     */
     template <class... TInterface>
     struct OnlineKitOptional
     {
@@ -234,6 +240,31 @@ namespace sw
 
             static span<const utf8* const> get() { return { kArrName, sizeof...( TInterface ) }; }
         };
+
+        /** @brief 인터페이스 @p T 가 서버 여러 대에서 필수인지입니다(`T::kRequiredInMultiServer`). 적지 않은 인터페이스는 false 입니다. */
+        template <class T, class = void>
+        inline constexpr bool kIsRequiredInMultiServer = false;
+        template <class T>
+        inline constexpr bool kIsRequiredInMultiServer<T, std::void_t<decltype( T::kRequiredInMultiServer )>> = T::kRequiredInMultiServer;
+
+        /** @brief 형식 목록에서 서버 여러 대에 필수인 것의 제공 키트 이름만 앞에서부터 담은 배열입니다. */
+        template <size_t TCapacity>
+        struct MultiServerKitNames
+        {
+            const utf8* _arrName[TCapacity]{};
+            size_t      _count{ 0 };
+        };
+
+        template <class... TInterface>
+        constexpr MultiServerKitNames<sizeof...( TInterface ) + 1> makeMultiServerKitNames()
+        {
+            MultiServerKitNames<sizeof...( TInterface ) + 1> names{};
+            ( ( kIsRequiredInMultiServer<TInterface> ? (void)( names._arrName[names._count++] = std::remove_const_t<TInterface>::kProviderKit ) : (void)0 ), ... );
+            return names;
+        }
+
+        template <class... TInterface>
+        inline constexpr MultiServerKitNames<sizeof...( TInterface ) + 1> kMultiServerKitNames = makeMultiServerKitNames<TInterface...>();
     } // namespace OnlineServerKitInternal
 
     template <class TRequired, class TOptional>
@@ -318,6 +349,10 @@ namespace sw
 
         span<const utf8* const> getRequiredKits() const final { return OnlineServerKitInternal::ProviderKitList<TRequired...>::get(); }
         span<const utf8* const> getOptionalKits() const final { return OnlineServerKitInternal::ProviderKitList<TOptional...>::get(); }
+        span<const utf8* const> getMultiServerKits() const final
+        {
+            return { OnlineServerKitInternal::kMultiServerKitNames<TOptional...>._arrName, OnlineServerKitInternal::kMultiServerKitNames<TOptional...>._count };
+        }
 
     protected:
         OnlineServerKit()
@@ -344,6 +379,19 @@ namespace sw
                 Error error{ ErrorKind::NotFound, "the online kit needs an interface its provider kit did not expose", entry._name };
                 error.appendDetail( " needs an interface of " ).appendDetail( pMissingKit );
                 return unexpected( error );
+            }
+            if ( context._pConfig->_topology == OnlineServerTopology::MultiServer )
+            {
+                ( ( pMissingKit = ( pMissingKit == nullptr && OnlineServerKitInternal::kIsRequiredInMultiServer<TOptional> && std::get<TOptional*>( _dependencies._optional ) == nullptr )
+                                    ? std::remove_const_t<TOptional>::kProviderKit
+                                    : pMissingKit ),
+                  ... );
+                if ( pMissingKit != nullptr )
+                {
+                    Error error{ ErrorKind::NotFound, "the multi-server topology needs an interface its provider kit did not expose", entry._name };
+                    error.appendDetail( " needs an interface of " ).appendDetail( pMissingKit );
+                    return unexpected( error );
+                }
             }
             return initialize( context, entry, _dependencies );
         }

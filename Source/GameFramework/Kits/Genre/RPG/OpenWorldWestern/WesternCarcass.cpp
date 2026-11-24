@@ -65,11 +65,16 @@ namespace sw
     {
         if ( inoutCarcass._bSkinned != SW_FALSE || isRotten( catalog, inoutCarcass ) )
             return false;
-        outPelt._animalID                     = inoutCarcass._animalID;
-        outPelt._stars                        = computeCarcassStars( catalog, inoutCarcass );
-        inoutCarcass._bSkinned                = SW_TRUE;
         const WesternAnimalDef* pAnimal       = catalog.findAnimal( inoutCarcass._animalID );
-        const bool              bHasLootTable = pLoot != nullptr && pAnimal != nullptr && pAnimal->_lootTable.empty() == false;
+        const bool              bHasLootTable = pAnimal != nullptr && pAnimal->_lootTable.empty() == false;
+        if ( bHasLootTable && pLoot == nullptr )
+        {
+            SW_LOG_ERROR_ID( "WesternCarcass.LootCatalogMissing", "[Western] animal '%#' names loot table '%#' but no loot catalog was given - the carcass is not skinned", pAnimal->_id.c_str(), pAnimal->_lootTable.c_str() );
+            return false;
+        }
+        outPelt._animalID      = inoutCarcass._animalID;
+        outPelt._stars         = computeCarcassStars( catalog, inoutCarcass );
+        inoutCarcass._bSkinned = SW_TRUE;
         if ( bHasLootTable )
             (void)pLoot->roll( pAnimal->_lootTable, random, outItems );
         return true;
