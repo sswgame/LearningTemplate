@@ -23,7 +23,7 @@ namespace sw
 {
     /**
      * @class IVirtualInputSource
-     * @brief `InputManager::attachVirtualInput` 이 붙이는 이벤트 원천입니다. `beginFrame` 이 프레임마다 한 번 `emitFrame` 을 부릅니다(게임 스레드).
+     * @brief `InputManager::attachVirtualInput` 이 붙이는 이벤트 원천입니다. 맨 위에 붙은 동안 `beginFrame` 이 프레임마다 한 번 `emitFrame` 을 부릅니다(게임 스레드).
      * @details 프레임 번호는 붙인 뒤 `beginFrame` 횟수(0 부터)다. 벽시계와 무관하므로 같은 원천은 같은 프레임에 같은 이벤트를 낸다.
      *          낸 이벤트는 그 프레임의 OS 이벤트 뒤에 낸 순서대로 적용된다(같은 프레임의 누름과 뗌은 "눌렸었다" 로 인정하며, OS 이벤트와 같은 규칙이다).
      */

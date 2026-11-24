@@ -93,9 +93,9 @@ namespace sw
         , _lastRawMouseAbsolute{ nullopt }
         , _pfnNowMicroseconds{ &MonotonicClock::nowMicroseconds }
         , _frameEndMicroseconds{ 0 }
-        , _pVirtualInput{ nullptr }
+        , _listVirtualInput{}
         , _sessionRecording{}
-        , _virtualFrameIndex{ 0 }
+        , _lastVirtualInputID{ 0 }
         , _beginFrameCount{ 0 }
         , _activeGlyphStyle{ InputGlyphStyle::KeyboardMouse }
         , _onActiveDeviceChanged{}
@@ -107,7 +107,6 @@ namespace sw
         , _arrCapturedGamepadMask{}
         , _arrSavedAccessibilityFlags{}
         , _keyboardFocus{ InputKeyboardFocus::Game }
-        , _virtualInputMode{ VirtualInputMode::Exclusive }
         , _cursorShape{ CursorShape::Arrow }
         , _pendingHighSurrogate{ 0 }
         , _consumedButtonMask{ 0 }
@@ -117,10 +116,10 @@ namespace sw
         , _bMouseLockEngaged{ SW_FALSE }
         , _bAltHeld{ SW_FALSE }
         , _bCursorHiddenApplied{ SW_FALSE }
-        , _bOSDeviceInputBlocked{ SW_FALSE }
         , _bNativeWindowFocused{ SW_FALSE }
         , _bAccessibilityShortcutsDisabled{ SW_FALSE }
         , _bBackgroundGamepadInput{ SW_TRUE }
+        , _virtualInputSubscriptions{ SW_DELEGATE_METHOD( SubscriptionList::ReleaseFunction, &InputManager::releaseVirtualInput, this ) }
     {
     }
 
@@ -176,7 +175,8 @@ namespace sw
         if ( _bInitialized == SW_FALSE )
             return;
 
-        _pVirtualInput = nullptr;
+        _virtualInputSubscriptions.detachAll();
+        _listVirtualInput.clear();
         releaseMouseLockMode();
         if ( _bCursorHiddenApplied == SW_TRUE )
         {
@@ -431,23 +431,26 @@ namespace sw
         // OS 이벤트에 프레임 안 자리를 채운다(서브틱 입력). 가상 이벤트는 녹화된 자리를 그대로 쓴다 — 재생이 녹화와 같은 순간을 본다.
         _frameEndMicroseconds = _pfnNowMicroseconds();
         assignFrameFractions( _listPolledEvent.size(), deltaSeconds );
-        // 2-1) 가상 입력 원천의 이번 프레임 이벤트를 OS 이벤트 뒤에 붙인다. 같은 재생 경로(3)를 탄다.
-        if ( _pVirtualInput != nullptr )
+        // 2-1) 맨 위 가상 입력 원천의 이번 프레임 이벤트를 OS 이벤트 뒤에 붙인다. 같은 재생 경로(3)를 탄다. 멈춘 아래 원천도 프레임은 센다.
+        if ( isVirtualInputAttached() )
         {
             const size_t firstVirtual = _listPolledEvent.size();
-            _pVirtualInput->emitFrame( _virtualFrameIndex, _listPolledEvent );
+            _listVirtualInput.back()._pSource->emitFrame( _listVirtualInput.back()._frameIndex, _listPolledEvent );
             for ( size_t eventIndex = firstVirtual; eventIndex < _listPolledEvent.size(); ++eventIndex )
             {
                 _listPolledEvent[eventIndex]._bSynthetic = SW_TRUE;
             }
-            ++_virtualFrameIndex;
+            for ( VirtualInputAttachment& attachment : _listVirtualInput )
+            {
+                ++attachment._frameIndex;
+            }
         }
 
         // 2-2) 가상 커서(패드 스틱 → 마우스 이동 · 버튼)의 이벤트를 붙인다. 가상 입력이 붙어 있어도 배타 모드(OS 입력을 버려 패드가 스크립트의 것뿐)면 돈다 —
         //      시나리오의 `GamepadAxis` 가 만든 스틱이 커서를 움직이는 길(실기와 같은 길)을 시나리오가 볼 수 있어야 한다. 배타가 아니면 사람의 패드와 스크립트가
         //      섞이므로 쉰다. 켜고 끄기와 스틱은 게임플레이 입력 맵이 정한다(`<InputMap virtualCursor>`) — 맵을 바꾸면 이 프레임부터 따른다.
         syncVirtualCursorToMap();
-        const bool bVirtualInputOwnsPad = _pVirtualInput != nullptr && _virtualInputMode != VirtualInputMode::Exclusive;
+        const bool bVirtualInputOwnsPad = isVirtualInputAttached() && isOSInputSuppressed() == false;
         const bool bVirtualCursorActive = _virtualCursor.isEnabled() && bVirtualInputOwnsPad == false && _pMouse != nullptr;
         if ( bVirtualCursorActive )
         {
@@ -530,8 +533,9 @@ namespace sw
         }
 
         // 세션 기록 재생(`bugreport.replay`)은 끝 프레임을 맵까지 흘린 뒤 뗀다(떼면 장치 상태를 지운다). 다른 원천(시나리오)은 붙인 쪽이 뗀다.
-        if ( _pVirtualInput == &_sessionRecording && _sessionRecording.isFinished( _virtualFrameIndex ) )
-            detachVirtualInput();
+        // 다른 원천에 덮인 동안에는 떼지 않는다(떼면 위도 함께 떨어진다).
+        if ( getVirtualInput() == &_sessionRecording && _sessionRecording.isFinished( getVirtualFrameIndex( _sessionRecording ) ) )
+            _sessionPlayback.reset();
     }
 
     bool InputManager::openLocalUsers( uint32 userCount )
@@ -620,7 +624,8 @@ namespace sw
     {
         if ( _sessionRecording.loadFromFile( filePath ) == false )
             return false;
-        attachVirtualInput( &_sessionRecording, VirtualInputMode::Exclusive );
+        _sessionPlayback.reset(); // 앞 재생이 아직 붙어 있으면 처음부터 다시 — 붙이기보다 먼저 푼다(풀면 위 붙임도 함께 떨어진다)
+        _sessionPlayback = attachVirtualInput( _sessionRecording, VirtualInputMode::Exclusive );
         return true;
     }
 
@@ -1253,24 +1258,80 @@ namespace sw
         syncMouseLock();
     }
 
-    void InputManager::attachVirtualInput( IVirtualInputSource* pSource, VirtualInputMode mode, bool bResetState )
+    Subscription InputManager::attachVirtualInput( IVirtualInputSource& source, VirtualInputMode mode, bool bResetState )
     {
-        if ( pSource == nullptr )
-        {
-            detachVirtualInput();
+        const uint64 id = pushVirtualInput( source, mode, bResetState );
+        return id != 0 ? _virtualInputSubscriptions.issue( id ) : Subscription{};
+    }
+
+    void InputManager::runVirtualFrames( IVirtualInputSource& source, const vector<float32>& listDeltaSeconds )
+    {
+        const size_t index = _listVirtualInput.size();
+        if ( pushVirtualInput( source, VirtualInputMode::Exclusive, true ) == 0 )
             return;
+        for ( const float32 deltaSeconds : listDeltaSeconds )
+        {
+            beginFrame( deltaSeconds );
+            endFrame();
+        }
+        popVirtualInputs( index, false );
+        for ( VirtualInputAttachment& attachment : _listVirtualInput )
+        {
+            attachment._frameIndex -= static_cast<uint32>( listDeltaSeconds.size() );
+        }
+    }
+
+    bool InputManager::isOSInputSuppressed() const
+    {
+        for ( const VirtualInputAttachment& attachment : _listVirtualInput )
+        {
+            if ( attachment._mode == VirtualInputMode::Exclusive )
+                return true;
+        }
+        return false;
+    }
+
+    bool InputManager::isOSDeviceInputBlocked() const
+    {
+        for ( const VirtualInputAttachment& attachment : _listVirtualInput )
+        {
+            if ( attachment._bOSDeviceInputBlocked )
+                return true;
+        }
+        return false;
+    }
+
+    uint32 InputManager::getVirtualFrameIndex( const IVirtualInputSource& source ) const
+    {
+        const VirtualInputAttachment* pAttachment = findVirtualInput( source );
+        return pAttachment != nullptr ? pAttachment->_frameIndex : 0u;
+    }
+
+    const InputManager::VirtualInputAttachment* InputManager::findVirtualInput( const IVirtualInputSource& source ) const
+    {
+        for ( const VirtualInputAttachment& attachment : _listVirtualInput )
+        {
+            if ( attachment._pSource == &source )
+                return &attachment;
+        }
+        return nullptr;
+    }
+
+    uint64 InputManager::pushVirtualInput( IVirtualInputSource& source, VirtualInputMode mode, bool bResetState )
+    {
+        if ( findVirtualInput( source ) != nullptr )
+        {
+            SW_LOG_ERROR_ID( "InputManager.VirtualInputAlreadyAttached", "The virtual input source is already attached - release its attachment before attaching it again" );
+            return 0;
         }
         const bool bWasExclusive = isOSInputSuppressed();
-        _pVirtualInput           = pSource;
-        _bOSDeviceInputBlocked   = SW_FALSE; // 붙이는 쪽(자동화 실행기)이 다시 켠다
-        _virtualInputMode        = mode;
-        _virtualFrameIndex       = 0;
+        _listVirtualInput.push_back( VirtualInputAttachment{ &source, ++_lastVirtualInputID, 0, mode, false } ); // OS 장치 막기는 붙이는 쪽(자동화 실행기)이 켠다
         // 사람이 누르고 있던 입력과 큐에 남은 OS 이벤트가 첫 프레임에 새지 않게 지운다.
         if ( bResetState )
             resetAllDeviceState();
-        const bool bExclusive = mode == VirtualInputMode::Exclusive;
         // 배타 모드는 사람의 장치를 버린다. 포인터도 (0, 0) 에서 시작해야(가상 입력 스크립트의 단추 이벤트 기본 위치와 같다) 붙기 전 실제 마우스 위치가
         // 커서를 따라가는 게임 상태(건설 커서 등)에 새지 않는다. 새면 같은 시나리오가 실행마다 다른 결과를 낸다.
+        const bool bExclusive = mode == VirtualInputMode::Exclusive;
         if ( bExclusive )
         {
             _queueRawEvent.clear();
@@ -1278,34 +1339,50 @@ namespace sw
             if ( bResetState && _pMouse != nullptr )
                 _pMouse->setPositionWithoutDelta( 0, 0 );
         }
-        if ( bExclusive != bWasExclusive )
-            setGamepadVirtualSession( bExclusive );
+        if ( isOSInputSuppressed() != bWasExclusive )
+            setGamepadVirtualSession( true );
         syncMouseLock();
         SW_LOG_INFO_ID( "InputManager.VirtualInputAttached", "Virtual input attached (%#)", bExclusive ? "exclusive" : "mixed" );
+        return _lastVirtualInputID;
     }
 
-    void InputManager::detachVirtualInput( bool bResetState )
+    void InputManager::popVirtualInputs( size_t index, bool bResetState )
     {
-        if ( _pVirtualInput == nullptr )
-            return;
-        const bool bWasExclusive = isOSInputSuppressed();
-        _pVirtualInput           = nullptr;
-        _bOSDeviceInputBlocked   = SW_FALSE;
+        const bool   bWasExclusive = isOSInputSuppressed();
+        const uint32 frameCount    = _listVirtualInput[index]._frameIndex;
+        while ( _listVirtualInput.size() > index )
+        {
+            _virtualInputSubscriptions.detach( _listVirtualInput.back()._id ); // 함께 떨어지는 위 붙임의 구독을 무효화한다(이미 풀린 자신의 구독은 목록에 없다)
+            _listVirtualInput.pop_back();
+        }
         if ( bResetState )
             resetAllDeviceState();
-        if ( bWasExclusive )
+        if ( isOSInputSuppressed() != bWasExclusive )
             setGamepadVirtualSession( false );
         syncMouseLock();
-        SW_LOG_INFO_ID( "InputManager.VirtualInputDetachedAfter", "Virtual input detached after %# frame(s)", _virtualFrameIndex );
+        SW_LOG_INFO_ID( "InputManager.VirtualInputDetachedAfter", "Virtual input detached after %# frame(s), %# still attached", frameCount, static_cast<uint32>( index ) );
+    }
+
+    void InputManager::releaseVirtualInput( uint64 id )
+    {
+        for ( size_t index = 0; index < _listVirtualInput.size(); ++index )
+        {
+            if ( _listVirtualInput[index]._id == id )
+            {
+                popVirtualInputs( index, true );
+                return;
+            }
+        }
     }
 
     void InputManager::setOSDeviceInputBlocked( bool bBlocked )
     {
-        // 배타 가상 입력 없이 막으면 사람도 자동화도 입력을 넣지 못한다. 붙어 있을 때만 켠다.
-        const bool bApply = bBlocked && isOSInputSuppressed();
+        // 배타 가상 입력 없이 막으면 사람도 자동화도 입력을 넣지 못한다. 맨 위 붙임이 배타일 때만 켠다.
+        const bool bApply = bBlocked && isVirtualInputAttached() && _listVirtualInput.back()._mode == VirtualInputMode::Exclusive;
         if ( bBlocked && bApply == false )
             SW_LOG_WARNING_ID( "InputManager.OSDeviceInputStays", "OS device input stays live: blocking needs an exclusive virtual input source" );
-        _bOSDeviceInputBlocked = bApply ? SW_TRUE : SW_FALSE;
+        if ( isVirtualInputAttached() )
+            _listVirtualInput.back()._bOSDeviceInputBlocked = bApply;
     }
 
     void InputManager::recordNativeEvent( const NativeWindowEvent& event )
@@ -1316,7 +1393,7 @@ namespace sw
 
     bool InputManager::shouldDropNativeEvent( const NativeWindowEvent& event ) const
     {
-        return _bOSDeviceInputBlocked == SW_TRUE && ( event.isMouseInput() || event.isKeyboardInput() );
+        return isOSDeviceInputBlocked() && ( event.isMouseInput() || event.isKeyboardInput() );
     }
 
     void InputManager::setGamepadVirtualSession( bool bVirtual )

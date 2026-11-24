@@ -8,6 +8,7 @@
 #pragma once
 #include "Core/Container/string.h"
 #include "Core/Container/vector.h"
+#include "Core/Delegate/Subscription.h"
 #include "Core/Foundation/Constants.h"
 #include "Core/Foundation/Types.h"
 #include "Core/Math/VectorMath.h"
@@ -276,6 +277,7 @@ namespace sw::editor
         const DocumentEditRecorder* _pRecorder; ///< 편집 알림 창구(문서 패널이 쥔다)
         InputMap                    _inputMap;
         InputReplay                 _replay;
+        Subscription                _replayPlayback; ///< 재생 중인 `_replay` 의 붙임이다. 풀면 재생이 멈춘다(모델이 사라질 때도)
         vector<InputMapConflict>    _listConflict;   ///< 이번 프레임의 바인딩 충돌이다. Mappings 탭이 다시 모은다
         EditableAssetPath           _inputMapPath;   ///< 편집하는 InputMap 리소스. 처음 값은 enginedefaultassets 의 디버그 키 맵, 칸에서 고친 글은 확정해야 읽기 · 쓰기에 쓰인다
         EditableAssetPath           _replayFilePath; ///< Save · Load 가 쓰는 .swreplay 리소스. 처음 값은 editortooldefaults 의 `_inputReplayFile`

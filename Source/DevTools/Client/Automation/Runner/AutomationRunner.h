@@ -5,6 +5,7 @@
 #pragma once
 #include "Core/Container/string.h"
 #include "Core/Container/vector.h"
+#include "Core/Delegate/Subscription.h"
 #include "Core/File/FileUtil.h"
 #include "Core/Foundation/Macros.h"
 #include "Core/Foundation/Types.h"
@@ -173,9 +174,9 @@ namespace sw
          * @brief 창이 닫혀 루프가 끝났습니다. `ExpectExitWithin` 을 기다리던 중이면 그 시한 안인지로, 아니면 "끝나기 전에 닫혔다" 로 끝냅니다.
          * @return 최종 결과(이미 끝났으면 그 결과)
          */
-        AutomationResult onWindowClosed( InputManager* pInput );
+        AutomationResult onWindowClosed();
         /** @brief 도는 시나리오를 바로 멈춥니다(재생을 끊을 때 — 데모 중 사람 입력 · `scenario.stop`). 결과는 건너뜀이고 가상 입력을 뗀다. 끝났으면 아무것도 하지 않는다. */
-        void stop( InputManager* pInput, string_view reason );
+        void stop( string_view reason );
 
         /** @brief `<Screenshot>` 이 요청한 경로를 하나 다음 렌더 패킷에 넘깁니다(그 패킷이 그린 이미지가 찍힙니다). 패킷 하나에 사진 하나라 앞 것이 아직 실리지 않았으면 다음 프레임에 맡깁니다. */
         void forwardPendingScreenshot();
@@ -322,7 +323,7 @@ namespace sw
         /** @brief 시작 씬(`requireStartScene`)이 아직 활성이 아니면 true 입니다 — 로드를 요청하고 기다린다. 못 열면 결과를 정하고 true 입니다. */
         [[nodiscard]] bool holdForStartScene();
         /** @brief 끝 정리를 합니다. 가상 입력과 로그 수집을 떼고 요약 줄과 보고를 씁니다. 한 번만 돕니다. */
-        void endRun( InputManager* pInput );
+        void endRun();
         /** @brief 부하 시나리오(`<Load>`)면 시작 프레임에 측정 창(`gv_profileSeconds`)을 엽니다(창 길이는 벽시계 상한 `computeWallLimitSeconds` 에 든다). 아니면 아무것도 하지 않습니다. */
         void startLoadWindow();
         /** @brief 벽시계 감시를 시작합니다(시나리오를 읽기 시작할 때 한 번). 시작 시각(단조 시계 · 유닉스 · 지역 달력 글)을 잡습니다. */
@@ -382,6 +383,7 @@ namespace sw
     private:
         AutomationScenario                _scenario;
         VirtualInputScript                _inputScript;
+        Subscription                      _virtualInput; ///< `_inputScript` 의 붙임(`InputManager::attachVirtualInput`). 끝(`endRun`)이나 소멸이 풀고, 이 실행이 부른 재생도 함께 떨어진다
         AutomationEvaluator               _evaluator;    ///< 판정 상태 · 비교(실패 · 미확정 · 로그 게이트 · 감시 값 이력). 시간 · 입력은 모른다
         AutomationStepTimeline            _run;          ///< 진행 상태(프레임 · 단계 순번 · 대기 · 시한 · 스크린샷 대기열). 판정은 읽지 않는다
         AutomationReportWriter            _reportWriter; ///< 보고 경로 · JSON 보고 쓰기
