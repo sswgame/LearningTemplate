@@ -120,6 +120,7 @@ namespace sw
         PartyRoundSeries                 _series;
         TrampolineArena                  _arena;
         vector<TrampolineEvent>          _listArenaEvent;
+        vector<PartyItemEvent>           _listItemEvent;
         vector<PartySeriesEvent>         _listSeriesEvent;
         Countdown                        _phaseTimer; ///< 쉬는 시간 · 결과를 보이는 시간
         PROPERTY( RuntimeState )

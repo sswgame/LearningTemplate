@@ -130,6 +130,7 @@ namespace sw
         : _listRacer{}
         , _projectiles{}
         , _eventBuffer{}
+        , _listVehicleEvent{}
         , _listItemBoxTimer{}
         , _listPlaceOrder{}
         , _settings{}
@@ -316,7 +317,7 @@ namespace sw
             kart._motor.update( input, deltaTime );
             if ( _pTrack->applyBoostPad( kart._motor, kart._lastBoostPad ) )
                 pushEvent( KartRaceEvent::Kind::BoostPad, racer, nullopt, kart._lastBoostPad, _raceTime );
-            kart._motor.discardEvents(); // 경기는 차 이벤트를 쓰지 않으므로 쌓이지 않게 비운다
+            pushVehicleEvents( racer );
 
             kart._spinTime.update( deltaTime );
             kart._shieldTime.update( deltaTime );
@@ -330,6 +331,45 @@ namespace sw
         updateProjectiles( deltaTime );
         updatePlaces();
         resolveRaceEnd();
+    }
+
+    void KartRace::pushVehicleEvents( int32 racer )
+    {
+        using VehicleKind = KinematicVehicleEvent::Kind;
+        _listVehicleEvent.clear();
+        _listRacer[static_cast<size_t>( racer )]._motor.pollEvents( _listVehicleEvent );
+        for ( const KinematicVehicleEvent& event : _listVehicleEvent )
+        {
+            switch ( event._kind )
+            {
+                case VehicleKind::DriftTierReached:
+                {
+                    pushEvent( KartRaceEvent::Kind::DriftCharged, racer, nullopt, event._value, _raceTime );
+                    break;
+                }
+                case VehicleKind::MiniTurbo:
+                {
+                    pushEvent( KartRaceEvent::Kind::MiniTurbo, racer, nullopt, event._value, _raceTime );
+                    break;
+                }
+                case VehicleKind::Landed:
+                {
+                    pushEvent( KartRaceEvent::Kind::Landed, racer, nullopt, 0, _raceTime );
+                    break;
+                }
+                case VehicleKind::DriftStarted: // 드리프트의 시작 · 끝과 부스트 상태는 차(`getMotor`)가 든다
+                case VehicleKind::DriftEnded:
+                case VehicleKind::BoostStarted: // 부스트 패드 · 아이템 · 미니터보가 저마다 알린다
+                case VehicleKind::BoostEnded:
+                case VehicleKind::NitroCharged:
+                case VehicleKind::Jumped:
+                case VehicleKind::LeftGround:
+                case VehicleKind::RailEnded: // 경기 트랙에는 레일이 없다
+                {
+                    break;
+                }
+            }
+        }
     }
 
     KinematicVehicleInput KartRace::resolveInput( int32 racer, bool& outUseItem )
@@ -385,7 +425,6 @@ namespace sw
             {
                 ++kart._nextCheckpoint;
                 bPassedForward = true;
-                pushEvent( KartRaceEvent::Kind::CheckpointPassed, racer, nullopt, kart._nextCheckpoint, _raceTime );
             }
         };
         passCheckpoints();
@@ -478,7 +517,6 @@ namespace sw
             finishRacer( racer );
             return;
         }
-        pushEvent( KartRaceEvent::Kind::LapStarted, racer, nullopt, kart._lap, _raceTime );
         if ( kart._lap == _pTrack->getLapCount() )
             pushEvent( KartRaceEvent::Kind::FinalLap, racer, nullopt, kart._lap, _raceTime );
     }

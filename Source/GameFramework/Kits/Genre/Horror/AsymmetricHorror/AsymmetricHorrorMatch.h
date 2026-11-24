@@ -205,8 +205,7 @@ namespace sw
             Vaulted, ///< `_actor` 가 -1 이면 살인마이고, `_target` 은 창틀이며, `_value` 가 1 이면 빠른 넘기이다
             WindowBlocked,
             LockerGrab,
-            KillerAbilityUsed, ///< `_value` 는 능력이 이어지는 시간이다
-            MatchEnded         ///< `_value` 는 희생 수, `_target` 은 탈출 수이다
+            KillerAbilityUsed ///< `_value` 는 능력이 이어지는 시간이다
         };
         float3          _position{};
         float32         _value{ 0.0f };

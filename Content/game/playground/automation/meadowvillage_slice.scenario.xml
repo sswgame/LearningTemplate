@@ -31,6 +31,7 @@
 	<Expect watch="Clock.Day" equals="8"/>
 	<WaitUntil watch="Quest.Status" target="meadow_request" is="Completed" timeoutFrames="30"/>
 	<ExpectVisited watch="Quest.Status" target="meadow_request" sequence="NotStarted, Active, Completed"/>
+	<ExpectLog id="CreatureTown.CreatureMovedIn" atLeast="1"/> <!-- 마을 알림을 디렉터가 꺼내 알린다 -->
 	<Record watch="Session.Money"/>
 	<Record watch="Clock.Day"/>
 	<!-- 저장 → 세계를 더 돌림 → 두 번 복원: 같은 슬롯을 두 번 불러온 직후의 씬 상태 해시가 같아야 한다(복원이 세계를 다 되살린다 — 저장 순간의 해시와 견주면 명령이 도는 프레임만큼 흔들린다) -->

@@ -48,6 +48,7 @@ namespace sw
             static constexpr const utf8* kEventDied            = "MetroidvaniaDied";
             static constexpr const utf8* kEventCorpseRecovered = "MetroidvaniaCorpseRecovered";
             static constexpr const utf8* kEventWon             = "MetroidvaniaWon";
+            static constexpr const utf8* kEventCurrencyLost    = "MetroidvaniaCurrencyLost";
 
             /** @brief 죽음 · 휴식 알림 @p kind 에 낼 소리입니다. 소리가 없는 알림이면 nullptr 입니다. */
             static const utf8* findSound( MetroidvaniaDeathRestEventKind kind )
@@ -78,11 +79,16 @@ namespace sw
                     {
                         return kEventBossDefeated;
                     }
-                    default:
+                    case MetroidvaniaDeathRestEventKind::CurrencyLost:
                     {
-                        return nullptr;
+                        return kEventCurrencyLost;
+                    }
+                    case MetroidvaniaDeathRestEventKind::CorpseDropped: // 같은 순간의 `Died` 가 낸다
+                    {
+                        break;
                     }
                 }
+                return nullptr;
             }
 
             /** @brief 플레이어가 공격을 받은 결과 @p result 에 낼 소리입니다. 이미 죽었으면 nullptr 입니다. */
@@ -556,6 +562,10 @@ namespace sw
                 SW_LOG_INFO_ID( "Metroidvania.Rested", "[Metroidvania] rested at '%#'", event._id.c_str() );
             else if ( event._type == MetroidvaniaDeathRestEventKind::Died )
                 SW_LOG_INFO_ID( "Metroidvania.Died", "[Metroidvania] died - back to '%#'", event._id.empty() ? "start" : event._id.c_str() );
+            else if ( event._type == MetroidvaniaDeathRestEventKind::CorpseDropped )
+                SW_LOG_INFO_ID( "Metroidvania.CorpseDropped", "[Metroidvania] dropped %# currency in '%#'", event._amount, event._id.c_str() );
+            else if ( event._type == MetroidvaniaDeathRestEventKind::CurrencyLost )
+                SW_LOG_INFO_ID( "Metroidvania.CurrencyLost", "[Metroidvania] %# currency left in '%#' is gone for good", event._amount, event._id.c_str() );
             else if ( event._type == MetroidvaniaDeathRestEventKind::CorpseRecovered )
                 SW_LOG_INFO_ID( "Metroidvania.CorpseRecovered", "[Metroidvania] recovered %# currency", event._amount );
             else if ( event._type == MetroidvaniaDeathRestEventKind::EnemyKilled )

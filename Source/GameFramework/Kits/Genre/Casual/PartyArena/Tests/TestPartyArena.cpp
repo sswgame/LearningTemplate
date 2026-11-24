@@ -751,12 +751,6 @@ SW_TEST_CASE( PartyArenaTest, SpawnerPlacesCapsAndExpires )
     spawner.pollEvents( listEvent );
     SW_EXPECT_TRUE( PartyArenaTestUtil::countEvents( listEvent, PartyItemEvent::Kind::Expired ) > 0 );
     SW_EXPECT_TRUE( PartyArenaTestUtil::countEvents( listEvent, PartyItemEvent::Kind::Spawned ) > 2 );
-
-    spawner.update( 0.5f );
-    spawner.discardEvents();
-    listEvent.clear();
-    spawner.pollEvents( listEvent );
-    SW_EXPECT_TRUE( listEvent.empty() );
 }
 
 /**
@@ -808,16 +802,17 @@ SW_TEST_CASE( PartyArenaTest, SpawnerPicksUpTheNearest )
     const float3 second = spawner.getInstances()[1]._position;
 
     PartyItemInstance item;
-    SW_EXPECT_FALSE( spawner.tryPickUp( second + float3{ 100.0f, 0.0f, 0.0f }, 1.0f, 3, item ) );
-    SW_REQUIRE_TRUE( spawner.tryPickUp( second, 0.5f, 3, item ) );
+    SW_EXPECT_FALSE( spawner.tryPickUp( second + float3{ 100.0f, 0.0f, 0.0f }, 1.0f, item ) );
+    SW_REQUIRE_TRUE( spawner.tryPickUp( second, 0.5f, item ) );
     SW_EXPECT_EQUAL( 2, item._serial );
     SW_REQUIRE_EQUAL( size_t( 1 ), spawner.getInstances().size() );
     SW_EXPECT_EQUAL( 1, spawner.getInstances()[0]._serial );
 
     vector<PartyItemEvent> listEvent;
-    spawner.pollEvents( listEvent );
-    SW_REQUIRE_EQUAL( 1, PartyArenaTestUtil::countEvents( listEvent, PartyItemEvent::Kind::PickedUp ) );
-    SW_EXPECT_TRUE( listEvent.back()._player == 3 );
+    spawner.pollEvents( listEvent ); // 줍기는 알리지 않는다 — 놓인 알림 둘뿐이고 저마다 놓인 자리를 든다
+    SW_REQUIRE_EQUAL( size_t( 2 ), listEvent.size() );
+    SW_REQUIRE_EQUAL( 2, PartyArenaTestUtil::countEvents( listEvent, PartyItemEvent::Kind::Spawned ) );
+    SW_EXPECT_NEAR( 0.0f, float3::getDistance( second, listEvent[1]._position ), kPartyTolerance );
 }
 
 /**
@@ -974,7 +969,8 @@ SW_TEST_CASE( PartyArenaTest, SeriesRanksRoundsAndFindsAWinner )
     SW_EXPECT_EQUAL( 0, series.getWinner() );
     listEvent.clear();
     series.pollEvents( listEvent );
-    SW_EXPECT_EQUAL( 1, PartyArenaTestUtil::countEvents( listEvent, PartySeriesEvent::Kind::SeriesWon ) );
+    SW_EXPECT_EQUAL( 3, PartyArenaTestUtil::countEvents( listEvent, PartySeriesEvent::Kind::RoundRanked ) ); // 마지막 라운드의 순위뿐이다 — 우승은 상태가 말한다
+    SW_EXPECT_EQUAL( size_t( 3 ), listEvent.size() );
     SW_EXPECT_FALSE( series.reportRound( { 10, 5, 1 } ) );
 }
 

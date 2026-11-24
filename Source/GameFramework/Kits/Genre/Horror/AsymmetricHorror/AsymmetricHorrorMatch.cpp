@@ -1082,7 +1082,6 @@ namespace sw
         const int32 winner = sacrificed > escaped ? _killerTeam : ( escaped > sacrificed ? _survivorTeam : constant::invalid_index::kInt32 );
         _bEndReported      = SW_TRUE;
         _match.endMatch( winner );
-        pushEvent( AsymmetricHorrorEvent::Kind::MatchEnded, nullopt, escaped, static_cast<float32>( sacrificed ), float3{} );
     }
 
     void AsymmetricHorrorMatch::syncHealthState( AsymmetricHorrorSurvivor& survivor )

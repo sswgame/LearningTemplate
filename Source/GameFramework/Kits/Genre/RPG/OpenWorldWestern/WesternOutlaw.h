@@ -109,6 +109,8 @@ namespace sw
         float32                computeAirTemperature() const;
         const WesternSurvival& getSurvival() const { return _survival; }
         bool                   isDisguised() const { return _law.isDisguised(); }
+        /** @brief 법 쪽에서 생긴 일을 꺼냅니다(로그는 `update` 가 남겼다). 디렉터가 소리로 알린다. */
+        void pollLawEvents( vector<WesternLawEvent>& outListEvent ) { _lawEventBuffer.moveAllTo( outListEvent ); }
 
         /**
          * @brief 법 · 생존 · 사체 · 가죽 · 넘긴 센트 · 전리품 난수 · 지난 `update` 의 시계를 씁니다. 지갑 · 평판 · 시계는 판 상태가 싣는다.
@@ -121,15 +123,16 @@ namespace sw
         [[nodiscard]] bool hunt( const WesternDeed& deed );
         [[nodiscard]] bool skinCarcasses();
         [[nodiscard]] bool sellPelts();
-        /** @brief 법 쪽에서 생긴 일을 한 줄 로그로 남깁니다. */
+        /** @brief 법 쪽에서 생긴 일을 한 줄 로그로 남기고 `pollLawEvents` 가 꺼낼 곳에 둡니다. */
         void logLawEvents();
 
     private:
-        WesternHonor           _honor;
-        WesternLawState        _law;
-        WesternSurvival        _survival;
-        WesternPerceptionSight _sight;
-        GameRandom             _random;
+        WesternHonor                        _honor;
+        WesternLawState                     _law;
+        NotificationBuffer<WesternLawEvent> _lawEventBuffer; ///< `pollLawEvents`
+        WesternSurvival                     _survival;
+        WesternPerceptionSight              _sight;
+        GameRandom                          _random;
         PROPERTY( RuntimeState )
         vector<WesternCarcass> _listCarcass;
         PROPERTY( RuntimeState )

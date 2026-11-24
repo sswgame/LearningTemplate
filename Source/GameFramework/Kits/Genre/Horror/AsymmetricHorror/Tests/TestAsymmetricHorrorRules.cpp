@@ -594,7 +594,6 @@ SW_TEST_CASE_F( AsymmetricHorrorRulesTest, HookStagesLeadToSacrifice )
     SW_EXPECT_TRUE( survivor( 0 )._state == SurvivorState::Sacrificed );
     SW_EXPECT_EQUAL( SW_FALSE, survivor( 0 )._bBledOut );
     SW_EXPECT_TRUE( _match.isEnded() );
-    SW_EXPECT_EQUAL( 1, countEvents( AsymmetricHorrorEvent::Kind::MatchEnded ) );
     SW_EXPECT_EQUAL( _match.getMatch().findParticipant( _match.getKiller()._participant )->_team, _match.getMatch().getWinningTeam() );
 }
 
@@ -1119,7 +1118,6 @@ SW_TEST_CASE_F( AsymmetricHorrorRulesTest, GateEscapeAndCollapse )
     SW_EXPECT_TRUE( survivor( 1 )._state == SurvivorState::Sacrificed );
     SW_EXPECT_TRUE( _match.isEnded() );
     SW_EXPECT_EQUAL( -1, _match.getMatch().getWinningTeam() );
-    SW_EXPECT_EQUAL( 1, countEvents( AsymmetricHorrorEvent::Kind::MatchEnded ) );
 
     SW_EXPECT_FALSE( _match.escape( 1 ) ); // 끝난 판은 아무것도 받지 않는다
     SW_EXPECT_FALSE( _match.startRepair( 1, 0 ) );

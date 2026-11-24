@@ -161,7 +161,8 @@ SW_TEST_CASE( SurvivalHorrorGameModeTest, KeyFightAndExit )
     SurvivalGameModeBench::walkEast( manager, *pDirector, 2.0f ); // 4 m/s — 홀(4,4)에서 지하실 (12,4) 근처까지
     SW_EXPECT_EQUAL( 0, pDirector->getItemCount() );              // 열쇠는 문에 쓰였다
     SW_EXPECT_TRUE( pDirector->isInDarkness() );
-    SW_EXPECT_TRUE( pDirector->getSanity() < 80.0f ); // 목격 20 + 어둠
+    SW_EXPECT_TRUE( bench._soundPlayer.countPosted( "SurvivalHorrorArea" ) >= 1 ); // 지하실에 들었다
+    SW_EXPECT_TRUE( pDirector->getSanity() < 80.0f );                              // 목격 20 + 어둠
     SurvivalGameModeBench::pressUse( manager, *pDirector );
     SW_REQUIRE_TRUE( pDirector->isFighting() );
 

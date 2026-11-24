@@ -86,7 +86,6 @@ namespace sw
             ReviveInterrupted, ///< 맞아서 끊겼다
             PlayerRevived,     ///< _other 가 _player 를 살렸다
             ArmorBroken,       ///< _player 의 방어구가 부서졌다(_value 는 BattleRoyaleHitZone)
-            PlayersRemaining,  ///< _value 는 남은 인원(기절 포함)
             TeamEliminated,    ///< _team 이 전멸했다. _value 는 순위
             SupplyDropLanded,  ///< _value 는 보급 상자 번호, _position 은 착지 위치
             MatchEnded         ///< _team 이 이긴 팀(없으면 무승부)

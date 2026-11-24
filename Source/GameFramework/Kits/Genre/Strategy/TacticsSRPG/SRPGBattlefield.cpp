@@ -171,7 +171,6 @@ namespace sw
             return;
         }
         _turn = 1;
-        pushEvent( SRPGEvent{ nullopt, nullopt, _turn, SRPGEvent::Kind::TurnStarted, SRPGTeam::Player } );
         for ( int32 team = 0; team < kSRPGTeamCount; ++team )
         {
             if ( countAlive( static_cast<SRPGTeam>( team ) ) > 0 )
@@ -248,10 +247,7 @@ namespace sw
         {
             team = ( team + 1 ) % kSRPGTeamCount;
             if ( team == 0 )
-            {
                 ++_turn;
-                pushEvent( SRPGEvent{ nullopt, nullopt, _turn, SRPGEvent::Kind::TurnStarted, SRPGTeam::Player } );
-            }
             if ( countAlive( static_cast<SRPGTeam>( team ) ) > 0 )
             {
                 startPhase( static_cast<SRPGTeam>( team ) );
@@ -281,10 +277,7 @@ namespace sw
             const int32 unitIndex = _turnOrder.next().value(); // 행위자가 있는 동안만 돈다
             SRPGUnit*   pUnit     = findUnit( unitIndex );
             if ( _turnOrder.getRound() > _turn )
-            {
                 _turn = _turnOrder.getRound();
-                pushEvent( SRPGEvent{ nullopt, nullopt, _turn, SRPGEvent::Kind::TurnStarted, SRPGTeam::Player } );
-            }
             if ( pUnit == nullptr || pUnit->_bAlive == SW_FALSE )
             {
                 _turnOrder.removeActor( unitIndex );

@@ -27,16 +27,20 @@ namespace sw
             static constexpr const utf8* kLoseResult = "lose";
 
             // 사운드 이벤트 이름 — 클립 · 범위 · 상한은 게임의 사운드 이벤트 데이터(audioevents.xml)가 정한다.
-            static constexpr const utf8* kEventBounce  = "PartyArenaBounce";
-            static constexpr const utf8* kEventAttack  = "PartyArenaAttack";
-            static constexpr const utf8* kEventHit     = "PartyArenaHit";
-            static constexpr const utf8* kEventBlocked = "PartyArenaBlocked";
-            static constexpr const utf8* kEventPound   = "PartyArenaPound";
-            static constexpr const utf8* kEventRingOut = "PartyArenaRingOut";
-            static constexpr const utf8* kEventItem    = "PartyArenaItem";
-            static constexpr const utf8* kEventRound   = "PartyArenaRound";
-            static constexpr const utf8* kEventWon     = "PartyArenaWon";
-            static constexpr const utf8* kEventLost    = "PartyArenaLost";
+            static constexpr const utf8* kEventBounce      = "PartyArenaBounce";
+            static constexpr const utf8* kEventAttack      = "PartyArenaAttack";
+            static constexpr const utf8* kEventHit         = "PartyArenaHit";
+            static constexpr const utf8* kEventBlocked     = "PartyArenaBlocked";
+            static constexpr const utf8* kEventPound       = "PartyArenaPound";
+            static constexpr const utf8* kEventRingOut     = "PartyArenaRingOut";
+            static constexpr const utf8* kEventItem        = "PartyArenaItem";
+            static constexpr const utf8* kEventRound       = "PartyArenaRound";
+            static constexpr const utf8* kEventItemSpawned = "PartyArenaItemSpawned";
+            static constexpr const utf8* kEventItemExpired = "PartyArenaItemExpired";
+            static constexpr const utf8* kEventWon         = "PartyArenaWon";
+            static constexpr const utf8* kEventLost        = "PartyArenaLost";
+            static constexpr const utf8* kEventComboBroken = "PartyArenaComboBroken";
+            static constexpr const utf8* kEventRespawn     = "PartyArenaRespawn";
 
             /** @brief 무대의 알림 @p kind 가 그 사람(`_player`)의 자리에서 내는 소리입니다. 소리가 없는 알림이면 nullptr 입니다. */
             static const utf8* findSound( TrampolineEvent::Kind kind )
@@ -71,11 +75,16 @@ namespace sw
                     {
                         return kEventItem;
                     }
-                    default:
+                    case TrampolineEvent::Kind::ComboBroken:
                     {
-                        return nullptr;
+                        return kEventComboBroken;
+                    }
+                    case TrampolineEvent::Kind::Respawned:
+                    {
+                        return kEventRespawn;
                     }
                 }
+                return nullptr;
             }
         };
     } // namespace
@@ -99,6 +108,7 @@ namespace sw
         , _series{}
         , _arena{}
         , _listArenaEvent{}
+        , _listItemEvent{}
         , _listSeriesEvent{}
         , _phaseTimer{}
         , _phase{ PartyGamePhase::Round }
@@ -206,6 +216,14 @@ namespace sw
                 continue;
             _playerRingOutCount += event._player == kLocalPlayer ? 1 : 0;
             SW_LOG_INFO_ID( "PartyArena.RingOut", "[PartyArena] player %# fell, point to %#", event._player, event._other.has_value() ? *event._other : kNoWinner );
+        }
+        _listItemEvent.clear();
+        _arena.getItemSpawner().pollEvents( _listItemEvent );
+        for ( const PartyItemEvent& event : _listItemEvent )
+        {
+            const utf8* const pSound = event._kind == PartyItemEvent::Kind::Spawned ? PartyGameModeComponentInternal::kEventItemSpawned : PartyGameModeComponentInternal::kEventItemExpired;
+            if ( pManager != nullptr )
+                getSoundQueue().queueEventAt( pSound, pManager->getWorldOrigin().toLocal( AbsolutePosition{ event._position } ) );
         }
         _listSeriesEvent.clear();
         _series.pollEvents( _listSeriesEvent );

@@ -22,6 +22,11 @@ namespace sw
             static constexpr const utf8* kWinResult  = "win";
             static constexpr const utf8* kLoseResult = "lose";
 
+            // 사운드 이벤트 이름 — 클립 · 범위 · 상한은 게임의 사운드 이벤트 데이터(audioevents.xml)가 정한다.
+            static constexpr const utf8* kEventJudged     = "RhythmJudged";
+            static constexpr const utf8* kEventMissed     = "RhythmMissed";
+            static constexpr const utf8* kEventEmptyPress = "RhythmEmptyPress";
+
             /** @brief 기본 판정 창 하나입니다(좁은 것부터). */
             struct DefaultWindow
             {
@@ -161,7 +166,11 @@ namespace sw
         _session.pollEvents( _listEvent );
         for ( const RhythmEvent& event : _listEvent )
         {
-            if ( event._kind == RhythmEvent::Kind::Cleared )
+            if ( event._kind == RhythmEvent::Kind::Judged )
+                getSoundQueue().queueEvent( event._grade.empty() ? RhythmGameModeComponentInternal::kEventMissed : RhythmGameModeComponentInternal::kEventJudged );
+            else if ( event._kind == RhythmEvent::Kind::EmptyPress )
+                getSoundQueue().queueEvent( RhythmGameModeComponentInternal::kEventEmptyPress );
+            else if ( event._kind == RhythmEvent::Kind::Cleared )
                 SW_LOG_INFO_ID( "Rhythm.Cleared", "[Rhythm] cleared - score %#, max combo %#, accuracy %#%%, rank '%#'", _session.getScore(), _session.getMaxCombo(), _session.computeAccuracy(),
                                 _session.computeRank().c_str() );
             else if ( event._kind == RhythmEvent::Kind::Failed )

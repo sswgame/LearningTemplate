@@ -28,6 +28,33 @@ namespace sw
             static constexpr uint32 kStateTag     = FourCCUtil::make( "IVSD" );
             static constexpr uint32 kStateVersion = 1;
 
+            // 사운드 이벤트 이름 — 클립 · 범위 · 상한은 게임의 사운드 이벤트 데이터(audioevents.xml)가 정한다.
+            static constexpr const utf8* kEventBought    = "ShopBought";
+            static constexpr const utf8* kEventSold      = "ShopSold";
+            static constexpr const utf8* kEventRestocked = "ShopRestocked";
+
+            /** @brief 가게 알림 @p kind 에 낼 소리입니다. */
+            static const utf8* findSound( ShopEvent::Kind kind )
+            {
+                switch ( kind )
+                {
+                    case ShopEvent::Kind::Bought:
+                    case ShopEvent::Kind::BoughtBack:
+                    {
+                        return kEventBought;
+                    }
+                    case ShopEvent::Kind::Sold:
+                    {
+                        return kEventSold;
+                    }
+                    case ShopEvent::Kind::Restocked:
+                    {
+                        return kEventRestocked;
+                    }
+                }
+                return nullptr;
+            }
+
             /** @brief 감시 값 `Demo.Gold` — 시연 지갑의 가게 통화 잔액입니다. */
             [[nodiscard]] static bool readGold( const AutomationWatchQuery& query, AutomationWatchValue& outValue )
             {
@@ -52,6 +79,7 @@ namespace sw
         , _shopDocument{}
         , _pShops{}
         , _shop{}
+        , _listShopEvent{}
         , _wallet{}
         , _currency{}
         , _provider{}
@@ -106,6 +134,13 @@ namespace sw
     void InventoryShopDemoComponent::updateGame( float32 deltaTime )
     {
         (void)deltaTime;
+        _listShopEvent.clear();
+        _shop.pollEvents( _listShopEvent );
+        for ( const ShopEvent& event : _listShopEvent )
+        {
+            if ( const utf8* const pSound = InventoryShopDemoInternal::findSound( event._kind ) )
+                getSoundQueue().queueEvent( pSound );
+        }
     }
 
     void InventoryShopDemoComponent::onFlush( GameObjectManager& manager, bool bRespawnViews )

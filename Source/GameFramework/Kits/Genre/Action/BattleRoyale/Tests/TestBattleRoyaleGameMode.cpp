@@ -154,6 +154,7 @@ SW_TEST_CASE( BattleRoyaleGameModeTest, DropThenZoneEndsTheMatch )
     SW_REQUIRE_TRUE( test.runUntil( BattleRoyalePhase::Ended ) );
     SW_EXPECT_FALSE( test._pGameMode->isAcceptingInput() );
     SW_EXPECT_TRUE( test._pGameMode->getRemaining() <= 1 );
+    SW_EXPECT_EQUAL( 1, test._soundPlayer.countPosted( "BattleRoyaleZoneRevealed" ) ); // 단계가 하나인 구역이다
     test._manager.endPlay();
 }
 

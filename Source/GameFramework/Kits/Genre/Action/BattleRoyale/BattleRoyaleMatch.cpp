@@ -119,7 +119,6 @@ namespace sw
         SW_ASSERT( _pCatalog != nullptr && "initialize the match before it starts" );
         _matchState.start();
         collectMatchEvents();
-        pushEvent( BattleRoyaleEvent::Kind::PlayersRemaining, nullopt, nullopt, nullopt, countRemainingPlayers() );
     }
 
     void BattleRoyaleMatch::update( float32 deltaTime )
@@ -332,9 +331,7 @@ namespace sw
         if ( killer.has_value() && isValidPlayer( *killer ) && TeamAttitudeUtil::isHostile( _listPlayer[static_cast<size_t>( *killer )]._team, target._team ) )
             ++_listPlayer[static_cast<size_t>( *killer )]._kills;
         _matchState.reportKill( player, killer );
-        const int32 remaining = countRemainingPlayers();
-        pushEvent( BattleRoyaleEvent::Kind::PlayerKilled, player, killer, target._team, remaining );
-        pushEvent( BattleRoyaleEvent::Kind::PlayersRemaining, nullopt, nullopt, nullopt, remaining );
+        pushEvent( BattleRoyaleEvent::Kind::PlayerKilled, player, killer, target._team, countRemainingPlayers() );
         collectMatchEvents();
         resolveTeamWipe( target._team );
     }

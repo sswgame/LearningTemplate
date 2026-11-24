@@ -92,6 +92,8 @@ namespace sw
         void startOfferedRequests( const QuestLog& questLog );
         /** @brief 지갑이 낼 수 있고 업그레이드 서식지가 없으면 마을 업그레이드을 삽니다. */
         void buyUpgrade( Wallet& wallet, int32 day );
+        /** @brief 마을이 낸 알림(서식지 · 방문 · 호감도 · 부탁 · 능력 · 매력)을 소리와 로그로 알립니다. */
+        void reportTownEvents( int32 day );
 
     private:
         PROPERTY( Category = "Data", DisplayName = "Creature Data", Tooltip = "Creature life catalog XML" )
@@ -117,6 +119,7 @@ namespace sw
         shared_ptr<const QuestCatalog>      _pQuestCatalog;      ///< 처음 연 때의 판 — 부탁 일지가 빌린다(일지는 첫 카탈로그만 쓴다)
         shared_ptr<const ReputationCatalog> _pFriendshipCatalog; ///< 처음 연 때의 판 — 평판이 빌린다(평판은 첫 카탈로그만 쓴다)
         CreatureTown                        _town;
-        uint32                              _townRevision; ///< `getTownRevision`
+        vector<CreatureTownEvent>           _listTownEvent; ///< `reportTownEvents` 의 임시 목록(용량만 넘긴다)
+        uint32                              _townRevision;  ///< `getTownRevision`
     };
 } // namespace sw

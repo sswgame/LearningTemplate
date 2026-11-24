@@ -22,6 +22,50 @@ namespace sw
             static constexpr uint32 kStateTag     = FourCCUtil::make( "KDTS" );
             static constexpr uint32 kStateVersion = 3; // 3: 커서가 클라이언트 모듈(`SRPGCursorComponent`)로 가 디렉터 상태 칸에서 빠졌다
             static constexpr int32  kNoSelection  = -1;
+
+            // 사운드 이벤트 이름 — 클립 · 범위 · 상한은 게임의 사운드 이벤트 데이터(audioevents.xml)가 정한다.
+            static constexpr const utf8* kEventPhase     = "SRPGPhase";
+            static constexpr const utf8* kEventMoved     = "SRPGMoved";
+            static constexpr const utf8* kEventHit       = "SRPGHit";
+            static constexpr const utf8* kEventMissed    = "SRPGMissed";
+            static constexpr const utf8* kEventDestroyed = "SRPGDestroyed";
+            static constexpr const utf8* kEventLevelUp   = "SRPGLevelUp";
+
+            /** @brief 전장 알림 @p kind 에 낼 소리입니다. */
+            static const utf8* findSound( SRPGEvent::Kind kind )
+            {
+                switch ( kind )
+                {
+                    case SRPGEvent::Kind::PhaseStarted:
+                    case SRPGEvent::Kind::UnitTurnStarted:
+                    {
+                        return kEventPhase;
+                    }
+                    case SRPGEvent::Kind::Moved:
+                    {
+                        return kEventMoved;
+                    }
+                    case SRPGEvent::Kind::Hit:
+                    {
+                        return kEventHit;
+                    }
+                    case SRPGEvent::Kind::Missed:
+                    {
+                        return kEventMissed;
+                    }
+                    case SRPGEvent::Kind::Destroyed:
+                    {
+                        return kEventDestroyed;
+                    }
+                    case SRPGEvent::Kind::PilotLevelUp:
+                    case SRPGEvent::Kind::UnitLevelUp:
+                    case SRPGEvent::Kind::Developed:
+                    {
+                        return kEventLevelUp;
+                    }
+                }
+                return nullptr;
+            }
         };
     } // namespace
 
@@ -193,6 +237,8 @@ namespace sw
         fixed_string<constant::buffer::kMax64> cause; // 레벨 오름의 출처 — 같은 이벤트 묶음에서 그 앞의 명중 · 격파다(전장은 경험치를 그 자리에서 준다)
         for ( const SRPGEvent& event : _listEvent )
         {
+            if ( const utf8* const pSound = SRPGGameModeComponentInternal::findSound( event._kind ) )
+                getSoundQueue().queueEvent( pSound );
             if ( event._kind == SRPGEvent::Kind::Destroyed )
                 SW_LOG_INFO_ID( "SRPG.Destroyed", "[SRPG] unit %# destroyed by %#", event._unit.value(), event._other.has_value() ? to_string( *event._other ).c_str() : "nothing" );
             else if ( event._kind == SRPGEvent::Kind::PhaseStarted )

@@ -86,13 +86,12 @@ namespace sw
         enum class Kind : uint8
         {
             Spawned = 0,
-            Expired,
-            PickedUp ///< `_player` 가 주운 사람이다
+            Expired ///< 아무도 줍지 않아 사라졌다(주운 것은 줍는 쪽이 안다)
         };
-        hashed_string   _itemID{};
-        int32           _serial{ 0 };
-        optional<int32> _player{};
-        Kind            _kind{ Kind::Spawned };
+        float3        _position{}; ///< 놓인 자리
+        hashed_string _itemID{};
+        int32         _serial{ 0 };
+        Kind          _kind{ Kind::Spawned };
     };
 } // namespace sw
 
@@ -128,11 +127,9 @@ namespace sw
         void               addItem( const PartyItemDef& def ) { (void)_catalog.add( def ); }
 
         void update( float32 deltaTime );
-        /** @brief @p position 에서 @p radius 안의 가장 가까운 아이템을 @p player 가 줍습니다. 없으면 false 를 반환합니다. */
-        [[nodiscard]] bool tryPickUp( const float3& position, float32 radius, int32 player, PartyItemInstance& outItem );
+        /** @brief @p position 에서 @p radius 안의 가장 가까운 아이템을 줍습니다. 없으면 false 를 반환합니다. */
+        [[nodiscard]] bool tryPickUp( const float3& position, float32 radius, PartyItemInstance& outItem );
         void               pollEvents( vector<PartyItemEvent>& outListEvent );
-        /** @brief 쌓인 이벤트를 꺼내지 않고 버립니다. 이벤트를 쓰지 않는 쪽에서 받을 목록을 만들어 복사하지 않게 하려는 함수입니다. */
-        void discardEvents() { _eventBuffer.clear(); }
 
         /**
          * @brief 놓인 아이템(위치, 정의 id, 나이, 번호), 난수, 다음 아이템까지 남은 시간, 다음 번호를 씁니다. 정의와 규칙은 저장하지 않고, 이벤트는 읽을 때 비웁니다.

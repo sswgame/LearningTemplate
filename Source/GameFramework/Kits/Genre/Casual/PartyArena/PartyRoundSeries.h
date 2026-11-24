@@ -50,8 +50,7 @@ namespace sw
         enum class Kind : uint8
         {
             RoundStarted = 0, ///< `_value` 는 라운드 번호(0부터)이다
-            RoundRanked,      ///< `_player` 는 사람, `_value` 는 순위(1부터), `_points` 는 받은 순위 점수이다
-            SeriesWon         ///< `_player` 는 우승한 사람이다
+            RoundRanked       ///< `_player` 는 사람, `_value` 는 순위(1부터), `_points` 는 받은 순위 점수이다
         };
         hashed_string   _roundID{};
         optional<int32> _player{};

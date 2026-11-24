@@ -39,6 +39,7 @@ namespace sw
             static constexpr const utf8* kEventCommanderBack = "ConquestCommanderBack";
             static constexpr const utf8* kEventWon           = "ConquestWon";
             static constexpr const utf8* kEventLost          = "ConquestLost";
+            static constexpr const utf8* kEventIncome        = "ConquestIncome";
 
             /** @brief 판의 알림 @p kind 에 낼 소리입니다. 소리가 없는 알림이면 nullptr 입니다(거점은 새 주인이 정한다). */
             static const utf8* findSound( ConquestEvent::Kind kind )
@@ -78,11 +79,17 @@ namespace sw
                     {
                         return kEventLost;
                     }
-                    default:
+                    case ConquestEvent::Kind::IncomePaid:
                     {
-                        return nullptr;
+                        return kEventIncome;
+                    }
+                    case ConquestEvent::Kind::ResourceProduced: // 자원 건물마다 잇따라 온다 — 수입이 낸다
+                    case ConquestEvent::Kind::SiteCaptured:     // 새 주인이 정한다(`reportEvents`)
+                    {
+                        break;
                     }
                 }
+                return nullptr;
             }
         };
     } // namespace

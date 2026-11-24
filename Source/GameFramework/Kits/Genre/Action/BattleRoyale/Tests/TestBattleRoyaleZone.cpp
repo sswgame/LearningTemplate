@@ -132,13 +132,12 @@ SW_TEST_CASE( BattleRoyaleZoneTest, StagesFlowAndInterpolate )
 
     sw::vector<sw::BattleRoyaleZoneEvent> listEvent;
     zone.pollEvents( listEvent );
-    SW_REQUIRE_EQUAL( size_t( 4 ), listEvent.size() );
+    SW_REQUIRE_EQUAL( size_t( 3 ), listEvent.size() );
     SW_EXPECT_TRUE( listEvent[0]._kind == sw::BattleRoyaleZoneEvent::Kind::NextZoneRevealed );
     SW_EXPECT_NEAR( 200.0f, listEvent[0]._radius, kZoneTolerance );
     SW_EXPECT_TRUE( listEvent[1]._kind == sw::BattleRoyaleZoneEvent::Kind::ShrinkStarted );
-    SW_EXPECT_TRUE( listEvent[2]._kind == sw::BattleRoyaleZoneEvent::Kind::ShrinkFinished );
-    SW_EXPECT_TRUE( listEvent[3]._kind == sw::BattleRoyaleZoneEvent::Kind::FinalZone );
-    SW_EXPECT_EQUAL( 1, listEvent[3]._phase );
+    SW_EXPECT_TRUE( listEvent[2]._kind == sw::BattleRoyaleZoneEvent::Kind::FinalZone );
+    SW_EXPECT_EQUAL( 1, listEvent[2]._phase );
 }
 
 /**

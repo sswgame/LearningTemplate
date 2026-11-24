@@ -2188,6 +2188,13 @@
     "_allocationCountReserve": "지움 — 할당 수 한도는 VMA 가 지킨다(2026-11-24)",
     "VulkanPipelineCacheFile": "RHIPipelineCacheFile — Vulkan 과 DX12 의 디스크 PSO 캐시가 같은 파일 규칙을 쓴다(2026-11-24)",
     "flat_map": "map — 정렬 컨테이너의 사용자 원래 이름 — 저장은 SW_ENABLE_STL_CONTAINER 로 고른다(2026-11-24)",
-    "flat_set": "set — 정렬 컨테이너의 사용자 원래 이름 — 저장은 SW_ENABLE_STL_CONTAINER 로 고른다(2026-11-24)"
+    "flat_set": "set — 정렬 컨테이너의 사용자 원래 이름 — 저장은 SW_ENABLE_STL_CONTAINER 로 고른다(2026-11-24)",
+    "PlayersRemaining": "PlayerKilled::_value · countRemainingPlayers — 남은 인원의 사본이었다 (2026-11-25)",
+    "ShrinkFinished": "NextZoneRevealed · FinalZone — 다 줄면 다음 단계 알림이 늘 뒤따른다 (2026-11-25)",
+    "LapStarted": "LapCompleted · RaceStarted — 바퀴 번호는 KartRacer::_lap 이 든다 (2026-11-25)",
+    "CheckpointPassed": "KartRacer::_nextCheckpoint — 지난 수의 사본이었다 (2026-11-25)",
+    "SeriesWon": "PartyRoundSeries::getWinner — 우승의 사본이었다 (2026-11-25)",
+    "EnemiesRespawned": "Rested · Died — 적은 쉬거나 죽을 때 늘 다시 나온다 (2026-11-25)",
+    "GoldGained": "WalletEvent — 골드는 지갑이 알린다 (2026-11-25)"
   }
 }

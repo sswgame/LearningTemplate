@@ -93,22 +93,21 @@ namespace sw
     {
         enum class Kind : uint8
         {
-            TurnStarted = 0, ///< `_value` 는 턴이다
-            PhaseStarted,    ///< `_team` 이 시작한 페이즈이다
-            UnitTurnStarted, ///< 개별 행동 순에서 `_unit` 의 차례가 시작되었다
-            Moved,           ///< `_unit` 이 움직였고 `_value` 는 걸은 셀 수이다
-            Hit,             ///< `_unit` 이 `_other` 를 맞혔고 `_value` 는 피해이다
-            Missed,          ///< `_unit` 이 `_other` 를 놓쳤다
-            Destroyed,       ///< `_unit` 이 `_other` 에게 격파되었다(`_other` 는 -1 일 수 있다)
-            PilotLevelUp,    ///< `_unit` 의 파일럿이 올랐고 `_value` 는 새 레벨이다
-            UnitLevelUp,     ///< `_unit` 의 기체가 올랐고 `_value` 는 새 기체 레벨이다
-            Developed        ///< `_unit` 이 개발되었다
+            PhaseStarted = 0, ///< `_team` 이 시작한 페이즈이다. 턴은 `getTurn` 이 말한다
+            UnitTurnStarted,  ///< 개별 행동 순에서 `_unit` 의 차례가 시작되었다
+            Moved,            ///< `_unit` 이 움직였고 `_value` 는 걸은 셀 수이다
+            Hit,              ///< `_unit` 이 `_other` 를 맞혔고 `_value` 는 피해이다
+            Missed,           ///< `_unit` 이 `_other` 를 놓쳤다
+            Destroyed,        ///< `_unit` 이 `_other` 에게 격파되었다(`_other` 는 -1 일 수 있다)
+            PilotLevelUp,     ///< `_unit` 의 파일럿이 올랐고 `_value` 는 새 레벨이다
+            UnitLevelUp,      ///< `_unit` 의 기체가 올랐고 `_value` 는 새 기체 레벨이다
+            Developed         ///< `_unit` 이 개발되었다
         };
 
         optional<int32> _unit{};
         optional<int32> _other{};
         int32           _value{ 0 };
-        Kind            _kind{ Kind::TurnStarted };
+        Kind            _kind{ Kind::PhaseStarted };
         SRPGTeam        _team{ SRPGTeam::Player };
     };
 } // namespace sw

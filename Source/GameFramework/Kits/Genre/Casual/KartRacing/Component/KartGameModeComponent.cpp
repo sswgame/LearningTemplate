@@ -25,17 +25,22 @@ namespace sw
             static constexpr int32       kFirstPlace = 1;
 
             // 사운드 이벤트 이름 — 클립 · 범위 · 상한은 게임의 사운드 이벤트 데이터(audioevents.xml)가 정한다.
-            static constexpr const utf8* kEventGo       = "KartRacingGo";
-            static constexpr const utf8* kEventLap      = "KartRacingLap";
-            static constexpr const utf8* kEventFinalLap = "KartRacingFinalLap";
-            static constexpr const utf8* kEventItemBox  = "KartRacingItemBox";
-            static constexpr const utf8* kEventItemUsed = "KartRacingItemUsed";
-            static constexpr const utf8* kEventHit      = "KartRacingHit";
-            static constexpr const utf8* kEventBlocked  = "KartRacingBlocked";
-            static constexpr const utf8* kEventBoost    = "KartRacingBoost";
-            static constexpr const utf8* kEventWrongWay = "KartRacingWrongWay";
-            static constexpr const utf8* kEventWon      = "KartRacingWon";
-            static constexpr const utf8* kEventLost     = "KartRacingLost";
+            static constexpr const utf8* kEventGo            = "KartRacingGo";
+            static constexpr const utf8* kEventLap           = "KartRacingLap";
+            static constexpr const utf8* kEventFinalLap      = "KartRacingFinalLap";
+            static constexpr const utf8* kEventItemBox       = "KartRacingItemBox";
+            static constexpr const utf8* kEventItemUsed      = "KartRacingItemUsed";
+            static constexpr const utf8* kEventHit           = "KartRacingHit";
+            static constexpr const utf8* kEventBlocked       = "KartRacingBlocked";
+            static constexpr const utf8* kEventBoost         = "KartRacingBoost";
+            static constexpr const utf8* kEventWrongWay      = "KartRacingWrongWay";
+            static constexpr const utf8* kEventWon           = "KartRacingWon";
+            static constexpr const utf8* kEventLost          = "KartRacingLost";
+            static constexpr const utf8* kEventLapLost       = "KartRacingLapLost";
+            static constexpr const utf8* kEventBestLap       = "KartRacingBestLap";
+            static constexpr const utf8* kEventPlaceChanged  = "KartRacingPlaceChanged";
+            static constexpr const utf8* kEventDrift         = "KartRacingDrift";
+            static constexpr const utf8* kEventVehicleLanded = "KartRacingLanded";
 
             /** @brief 플레이어 차의 알림 @p kind 에 낼 소리입니다. 소리가 없는 알림이면 nullptr 입니다(결승은 순위가, 거꾸로 달림은 시작인지가 정한다). */
             static const utf8* findSound( KartRaceEvent::Kind kind )
@@ -70,11 +75,40 @@ namespace sw
                     {
                         return kEventBoost;
                     }
-                    default:
+                    case KartRaceEvent::Kind::CheckpointMissed:
+                    case KartRaceEvent::Kind::LapRevoked:
                     {
-                        return nullptr;
+                        return kEventLapLost;
+                    }
+                    case KartRaceEvent::Kind::NewBestLap:
+                    {
+                        return kEventBestLap;
+                    }
+                    case KartRaceEvent::Kind::PlaceChanged:
+                    {
+                        return kEventPlaceChanged;
+                    }
+                    case KartRaceEvent::Kind::DriftCharged:
+                    {
+                        return kEventDrift;
+                    }
+                    case KartRaceEvent::Kind::Landed:
+                    {
+                        return kEventVehicleLanded;
+                    }
+                    case KartRaceEvent::Kind::MiniTurbo:
+                    {
+                        return kEventBoost;
+                    }
+                    case KartRaceEvent::Kind::RaceStarted: // 경기 전체의 알림이라 차의 소리가 아니다
+                    case KartRaceEvent::Kind::RaceEnded:
+                    case KartRaceEvent::Kind::Finished: // 순위 · 시작인지가 정한다(`queuePlayerSound`)
+                    case KartRaceEvent::Kind::WrongWay:
+                    {
+                        break;
                     }
                 }
+                return nullptr;
             }
         };
     } // namespace

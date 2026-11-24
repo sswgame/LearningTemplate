@@ -33,6 +33,7 @@ namespace sw
     WesternOutlaw::WesternOutlaw()
         : _honor{}
         , _law{}
+        , _lawEventBuffer{}
         , _survival{}
         , _sight{ AIPerceptionSettings{}, nullptr }
         , _random{}
@@ -269,6 +270,7 @@ namespace sw
         _law.pollEvents( listEvent );
         for ( const WesternLawEvent& lawEvent : listEvent )
         {
+            _lawEventBuffer.push( lawEvent );
             switch ( lawEvent._kind )
             {
                 case WesternLawEvent::Kind::Reported:

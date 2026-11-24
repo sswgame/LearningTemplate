@@ -194,6 +194,10 @@ SW_TEST_CASE( MonsterHuntGameModeTest, HaggleInvestigateAndHuntToVictory )
     SW_EXPECT_EQUAL( 3, fixture._pGameMode->getPhase() );
     SW_EXPECT_EQUAL( 0, fixture._pGameMode->getMonsterHP() );
     SW_EXPECT_EQUAL( 40, fixture._pGameMode->getPlayerHP() ); // 괴물의 첫 공격(2 초) 전이다
+    SW_EXPECT_EQUAL( 2, fixture._soundPlayer.countPosted( "MonsterHuntClue" ) );
+    SW_EXPECT_EQUAL( 2, fixture._soundPlayer.countPosted( "MonsterHuntStep" ) );
+    SW_EXPECT_EQUAL( 1, fixture._soundPlayer.countPosted( "MonsterHuntSolved" ) );
+    SW_EXPECT_TRUE( fixture._soundPlayer.countPosted( "MonsterHuntKnowledge" ) >= 1 );
     fixture._manager.endPlay();
 }
 

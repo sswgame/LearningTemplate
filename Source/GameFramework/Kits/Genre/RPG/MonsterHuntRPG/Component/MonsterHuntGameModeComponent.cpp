@@ -30,19 +30,22 @@ namespace sw
             static constexpr const utf8* kLoseResult = "lose";
 
             // 사운드 이벤트 이름 — 클립 · 범위 · 상한은 게임의 사운드 이벤트 데이터(audioevents.xml)가 정한다.
-            static constexpr const utf8* kEventContract = "MonsterHuntContract";
-            static constexpr const utf8* kEventClue     = "MonsterHuntClue";
-            static constexpr const utf8* kEventLearn    = "MonsterHuntLearn";
-            static constexpr const utf8* kEventQuest    = "MonsterHuntQuest";
-            static constexpr const utf8* kEventMutagen  = "MonsterHuntMutagen";
-            static constexpr const utf8* kEventMonster  = "MonsterHuntMonster";
-            static constexpr const utf8* kEventHit      = "MonsterHuntHit";
-            static constexpr const utf8* kEventHurt     = "MonsterHuntHurt";
-            static constexpr const utf8* kEventDodge    = "MonsterHuntDodge";
-            static constexpr const utf8* kEventPotion   = "MonsterHuntPotion";
-            static constexpr const utf8* kEventBrew     = "MonsterHuntBrew";
-            static constexpr const utf8* kEventWon      = "MonsterHuntWon";
-            static constexpr const utf8* kEventLost     = "MonsterHuntLost";
+            static constexpr const utf8* kEventContract  = "MonsterHuntContract";
+            static constexpr const utf8* kEventClue      = "MonsterHuntClue";
+            static constexpr const utf8* kEventStep      = "MonsterHuntStep";
+            static constexpr const utf8* kEventSolved    = "MonsterHuntSolved";
+            static constexpr const utf8* kEventKnowledge = "MonsterHuntKnowledge";
+            static constexpr const utf8* kEventLearn     = "MonsterHuntLearn";
+            static constexpr const utf8* kEventQuest     = "MonsterHuntQuest";
+            static constexpr const utf8* kEventMutagen   = "MonsterHuntMutagen";
+            static constexpr const utf8* kEventMonster   = "MonsterHuntMonster";
+            static constexpr const utf8* kEventHit       = "MonsterHuntHit";
+            static constexpr const utf8* kEventHurt      = "MonsterHuntHurt";
+            static constexpr const utf8* kEventDodge     = "MonsterHuntDodge";
+            static constexpr const utf8* kEventPotion    = "MonsterHuntPotion";
+            static constexpr const utf8* kEventBrew      = "MonsterHuntBrew";
+            static constexpr const utf8* kEventWon       = "MonsterHuntWon";
+            static constexpr const utf8* kEventLost      = "MonsterHuntLost";
 
             static constexpr float32 kPercent = 100.0f;
         };
@@ -507,10 +510,27 @@ namespace sw
         _investigation.pollEvents( _listInvestigationEvent );
         for ( const MonsterHuntInvestigationEvent& event : _listInvestigationEvent )
         {
-            if ( event._kind != MonsterHuntInvestigationEvent::Kind::ClueFound )
-                continue;
-            getSoundQueue().queueEvent( MonsterHuntGameModeComponentInternal::kEventClue );
-            SW_LOG_INFO_ID( "MonsterHunt.ClueFound", "[MonsterHunt] clue '%#' of step '%#'", event._clueID.c_str(), event._stepID.c_str() );
+            switch ( event._kind )
+            {
+                case MonsterHuntInvestigationEvent::Kind::ClueFound:
+                {
+                    getSoundQueue().queueEvent( MonsterHuntGameModeComponentInternal::kEventClue );
+                    SW_LOG_INFO_ID( "MonsterHunt.ClueFound", "[MonsterHunt] clue '%#' of step '%#'", event._clueID.c_str(), event._stepID.c_str() );
+                    break;
+                }
+                case MonsterHuntInvestigationEvent::Kind::StepCompleted:
+                {
+                    getSoundQueue().queueEvent( MonsterHuntGameModeComponentInternal::kEventStep );
+                    SW_LOG_INFO_ID( "MonsterHunt.StepCompleted", "[MonsterHunt] step '%#' is done", event._stepID.c_str() );
+                    break;
+                }
+                case MonsterHuntInvestigationEvent::Kind::Solved:
+                {
+                    getSoundQueue().queueEvent( MonsterHuntGameModeComponentInternal::kEventSolved );
+                    SW_LOG_INFO_ID( "MonsterHunt.Solved", "[MonsterHunt] the investigation is solved" );
+                    break;
+                }
+            }
         }
         _listQuestEvent.clear();
         _questLog.pollEvents( _listQuestEvent );
@@ -525,7 +545,10 @@ namespace sw
         _bestiary.pollEvents( _listBestiaryEvent );
         for ( const MonsterHuntBestiaryEvent& event : _listBestiaryEvent )
         {
-            if ( event._kind == MonsterHuntBestiaryEvent::Kind::WeaknessRevealed )
+            getSoundQueue().queueEvent( MonsterHuntGameModeComponentInternal::kEventKnowledge );
+            if ( event._kind == MonsterHuntBestiaryEvent::Kind::KnowledgeRaised )
+                SW_LOG_INFO_ID( "MonsterHunt.KnowledgeRaised", "[MonsterHunt] knowledge of '%#' is %# now", event._monsterID.c_str(), event._value );
+            else
                 SW_LOG_INFO_ID( "MonsterHunt.WeaknessRevealed", "[MonsterHunt] '%#' is weak to '%#'", event._monsterID.c_str(), event._weaknessID.c_str() );
         }
     }

@@ -637,7 +637,6 @@ namespace sw
         if ( _pParty->countAlive() == 0 )
         {
             _result = JRPGBattleResult::Defeat;
-            pushEvent( JRPGBattleEvent::Kind::Defeat, false, nullopt, nullopt );
             return;
         }
         if ( findLivingEnemy( 0 ).has_value() )
@@ -650,9 +649,8 @@ namespace sw
             _rewardExp += pEnemy->_exp;
             _rewardGold += pEnemy->_gold;
         }
-        _result           = JRPGBattleResult::Victory;
-        const int64 share = _pParty->distributeRewards( _rewardExp, _rewardGold );
-        pushEvent( JRPGBattleEvent::Kind::Victory, false, nullopt, nullopt, static_cast<int32>( share ) );
+        _result = JRPGBattleResult::Victory;
+        (void)_pParty->distributeRewards( _rewardExp, _rewardGold ); // 멤버의 몫은 파티가 알린다(`ExpGained`)
     }
 
     void JRPGBattle::pushEvent( JRPGBattleEvent::Kind kind, bool bEnemyActor, optional<int32> actor, optional<int32> target, int32 value, const hashed_string& id )

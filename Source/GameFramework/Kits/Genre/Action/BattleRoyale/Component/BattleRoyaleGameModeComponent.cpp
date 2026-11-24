@@ -42,18 +42,22 @@ namespace sw
             static constexpr float32 kRouteReach       = 0.3f; ///< 길의 점에 닿았다고 보는 거리(m)
 
             // 사운드 이벤트 이름 — 클립 · 범위 · 상한은 게임의 사운드 이벤트 데이터(audioevents.xml)가 정한다.
-            static constexpr const utf8* kEventJump        = "BattleRoyaleJump";
-            static constexpr const utf8* kEventParachute   = "BattleRoyaleParachute";
-            static constexpr const utf8* kEventArmorBroken = "BattleRoyaleArmorBroken";
-            static constexpr const utf8* kEventDowned      = "BattleRoyaleDowned";
-            static constexpr const utf8* kEventKilled      = "BattleRoyaleKilled";
-            static constexpr const utf8* kEventRevived     = "BattleRoyaleRevived";
-            static constexpr const utf8* kEventWeaponTaken = "BattleRoyaleWeaponTaken";
-            static constexpr const utf8* kEventItemTaken   = "BattleRoyaleItemTaken";
-            static constexpr const utf8* kEventSupplyDrop  = "BattleRoyaleSupplyDrop";
-            static constexpr const utf8* kEventZoneShrink  = "BattleRoyaleZoneShrink";
-            static constexpr const utf8* kEventWon         = "BattleRoyaleWon";
-            static constexpr const utf8* kEventLost        = "BattleRoyaleLost";
+            static constexpr const utf8* kEventJump          = "BattleRoyaleJump";
+            static constexpr const utf8* kEventParachute     = "BattleRoyaleParachute";
+            static constexpr const utf8* kEventArmorBroken   = "BattleRoyaleArmorBroken";
+            static constexpr const utf8* kEventDowned        = "BattleRoyaleDowned";
+            static constexpr const utf8* kEventKilled        = "BattleRoyaleKilled";
+            static constexpr const utf8* kEventRevived       = "BattleRoyaleRevived";
+            static constexpr const utf8* kEventWeaponTaken   = "BattleRoyaleWeaponTaken";
+            static constexpr const utf8* kEventItemTaken     = "BattleRoyaleItemTaken";
+            static constexpr const utf8* kEventSupplyDrop    = "BattleRoyaleSupplyDrop";
+            static constexpr const utf8* kEventZoneRevealed  = "BattleRoyaleZoneRevealed";
+            static constexpr const utf8* kEventZoneShrink    = "BattleRoyaleZoneShrink";
+            static constexpr const utf8* kEventFinalZone     = "BattleRoyaleFinalZone";
+            static constexpr const utf8* kEventWon           = "BattleRoyaleWon";
+            static constexpr const utf8* kEventLost          = "BattleRoyaleLost";
+            static constexpr const utf8* kEventReviveStarted = "BattleRoyaleReviveStarted";
+            static constexpr const utf8* kEventReviveBroken  = "BattleRoyaleReviveBroken";
 
             /** @brief 판의 알림 @p kind 가 그 사람(`_player`)의 자리에서 내는 소리입니다. 소리가 없는 알림이면 nullptr 입니다. */
             static const utf8* findSound( BattleRoyaleEvent::Kind kind )
@@ -76,11 +80,22 @@ namespace sw
                     {
                         return kEventArmorBroken;
                     }
-                    default:
+                    case BattleRoyaleEvent::Kind::ReviveStarted:
                     {
-                        return nullptr;
+                        return kEventReviveStarted;
+                    }
+                    case BattleRoyaleEvent::Kind::ReviveInterrupted:
+                    {
+                        return kEventReviveBroken;
+                    }
+                    case BattleRoyaleEvent::Kind::TeamEliminated: // 사람의 자리가 없는 알림이다 — 보급 상자 · 판 끝은 `settle` 이 낸다
+                    case BattleRoyaleEvent::Kind::SupplyDropLanded:
+                    case BattleRoyaleEvent::Kind::MatchEnded:
+                    {
+                        break;
                     }
                 }
+                return nullptr;
             }
 
             /** @brief @p from 에서 @p to 쪽 방향(길이 1, 같은 자리면 0)입니다. */
@@ -736,10 +751,27 @@ namespace sw
         _match.getZoneMutable().pollEvents( _listZoneEvent );
         for ( const BattleRoyaleZoneEvent& event : _listZoneEvent )
         {
-            if ( event._kind != BattleRoyaleZoneEvent::Kind::ShrinkStarted )
-                continue;
-            getSoundQueue().queueEvent( BattleRoyaleGameModeComponentInternal::kEventZoneShrink );
-            SW_LOG_INFO_ID( "BattleRoyale.ZoneShrinks", "[BattleRoyale] the zone starts to shrink (phase %#)", event._phase );
+            switch ( event._kind )
+            {
+                case BattleRoyaleZoneEvent::Kind::NextZoneRevealed:
+                {
+                    getSoundQueue().queueEvent( BattleRoyaleGameModeComponentInternal::kEventZoneRevealed );
+                    SW_LOG_INFO_ID( "BattleRoyale.ZoneRevealed", "[BattleRoyale] the next zone is known (phase %#, radius %#)", event._phase, event._radius );
+                    break;
+                }
+                case BattleRoyaleZoneEvent::Kind::ShrinkStarted:
+                {
+                    getSoundQueue().queueEvent( BattleRoyaleGameModeComponentInternal::kEventZoneShrink );
+                    SW_LOG_INFO_ID( "BattleRoyale.ZoneShrinks", "[BattleRoyale] the zone starts to shrink (phase %#)", event._phase );
+                    break;
+                }
+                case BattleRoyaleZoneEvent::Kind::FinalZone:
+                {
+                    getSoundQueue().queueEvent( BattleRoyaleGameModeComponentInternal::kEventFinalZone );
+                    SW_LOG_INFO_ID( "BattleRoyale.FinalZone", "[BattleRoyale] the final zone stands at radius %#", event._radius );
+                    break;
+                }
+            }
         }
         if ( bEnded )
             endGame();

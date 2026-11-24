@@ -109,7 +109,6 @@ namespace sw
             TechniqueUnlocked, ///< `_id` 는 초식
             ClassChanged,      ///< `_id` 는 새 직업
             ExpGained,         ///< `_value` 는 받은 경험치
-            GoldGained,        ///< `_value` 는 골드(멤버는 −1)
             Rested,            ///< 여관에서 쉬었다. `_value` 는 낸 돈
             Revived            ///< 교회에서 부활했다. `_value` 는 낸 돈
         };

@@ -28,17 +28,26 @@ namespace sw
             static constexpr const utf8* kLoseResult = "lose";
 
             // 사운드 이벤트 이름 — 클립 · 범위 · 상한은 게임의 사운드 이벤트 데이터(audioevents.xml)가 정한다.
-            static constexpr const utf8* kEventEncounter   = "JRPGEncounter";
-            static constexpr const utf8* kEventHit         = "JRPGHit";
-            static constexpr const utf8* kEventHurt        = "JRPGHurt";
-            static constexpr const utf8* kEventTimed       = "JRPGTimed";
-            static constexpr const utf8* kEventHeal        = "JRPGHeal";
-            static constexpr const utf8* kEventLevelUp     = "JRPGLevelUp";
-            static constexpr const utf8* kEventEquip       = "JRPGEquip";
-            static constexpr const utf8* kEventClassChange = "JRPGClassChange";
-            static constexpr const utf8* kEventRest        = "JRPGRest";
-            static constexpr const utf8* kEventWon         = "JRPGWon";
-            static constexpr const utf8* kEventLost        = "JRPGLost";
+            static constexpr const utf8* kEventEncounter     = "JRPGEncounter";
+            static constexpr const utf8* kEventHit           = "JRPGHit";
+            static constexpr const utf8* kEventHurt          = "JRPGHurt";
+            static constexpr const utf8* kEventTimed         = "JRPGTimed";
+            static constexpr const utf8* kEventHeal          = "JRPGHeal";
+            static constexpr const utf8* kEventLevelUp       = "JRPGLevelUp";
+            static constexpr const utf8* kEventEquip         = "JRPGEquip";
+            static constexpr const utf8* kEventLearned       = "JRPGLearned";
+            static constexpr const utf8* kEventClassChange   = "JRPGClassChange";
+            static constexpr const utf8* kEventRest          = "JRPGRest";
+            static constexpr const utf8* kEventWon           = "JRPGWon";
+            static constexpr const utf8* kEventLost          = "JRPGLost";
+            static constexpr const utf8* kEventRefused       = "JRPGRefused";
+            static constexpr const utf8* kEventDefend        = "JRPGDefend";
+            static constexpr const utf8* kEventCast          = "JRPGCast";
+            static constexpr const utf8* kEventLockBroken    = "JRPGLockBroken";
+            static constexpr const utf8* kEventCastCancelled = "JRPGCastCancelled";
+            static constexpr const utf8* kEventCombo         = "JRPGCombo";
+            static constexpr const utf8* kEventDefeated      = "JRPGDefeated";
+            static constexpr const utf8* kEventFled          = "JRPGFled";
 
             /** @brief 전투 알림 @p event 에 낼 소리입니다. 소리가 없는 알림이면 nullptr 입니다. */
             static const utf8* findSound( const JRPGBattleEvent& event )
@@ -59,11 +68,51 @@ namespace sw
                     {
                         return kEventHeal;
                     }
-                    default:
+                    case JRPGBattleEvent::Kind::NotEnoughMP:
+                    case JRPGBattleEvent::Kind::NotEnoughInner:
+                    case JRPGBattleEvent::Kind::CannotUse:
+                    case JRPGBattleEvent::Kind::FleeFailed:
                     {
-                        return nullptr;
+                        return kEventRefused;
+                    }
+                    case JRPGBattleEvent::Kind::Defending:
+                    {
+                        return kEventDefend;
+                    }
+                    case JRPGBattleEvent::Kind::CastStarted:
+                    {
+                        return kEventCast;
+                    }
+                    case JRPGBattleEvent::Kind::LockBroken:
+                    {
+                        return kEventLockBroken;
+                    }
+                    case JRPGBattleEvent::Kind::CastCancelled:
+                    {
+                        return kEventCastCancelled;
+                    }
+                    case JRPGBattleEvent::Kind::ComboUsed:
+                    {
+                        return kEventCombo;
+                    }
+                    case JRPGBattleEvent::Kind::Defeated:
+                    {
+                        return kEventDefeated;
+                    }
+                    case JRPGBattleEvent::Kind::Fled:
+                    {
+                        return kEventFled;
+                    }
+                    case JRPGBattleEvent::Kind::Attack: // 직업 · 주문 표의 소리다(`queueBattleSound`)
+                    case JRPGBattleEvent::Kind::SpellCast:
+                    case JRPGBattleEvent::Kind::CastReleased: // 뒤따르는 피해 · 회복이 낸다
+                    case JRPGBattleEvent::Kind::ComboPoints:  // 쌓이는 값이다 — 쓰거나 열릴 때(`ComboUsed` · `TechniqueUnlocked`) 낸다
+                    case JRPGBattleEvent::Kind::ProficiencyGained:
+                    {
+                        break;
                     }
                 }
+                return nullptr;
             }
         };
     } // namespace
@@ -430,8 +479,7 @@ namespace sw
         if ( bCannotChange || _party.changeClass( memberIndex, _restClass.key(), _classChangeLevel ) != JRPGClassChangeResult::Ok )
             return false;
         ++_classChangeCount;
-        getSoundQueue().queueEvent( JRPGGameModeComponentInternal::kEventClassChange );
-        SW_LOG_INFO_ID( "JRPG.ClassChanged", "[JRPG] '%#' becomes '%#'", _party.getMember( memberIndex )._id.c_str(), _restClass.c_str() );
+        reportPartyEvents();
         return true;
     }
 
@@ -460,8 +508,7 @@ namespace sw
         if ( bRevived == false && bRested == false )
             return false;
         _walker.restartGrace();
-        getSoundQueue().queueEvent( JRPGGameModeComponentInternal::kEventRest );
-        SW_LOG_INFO_ID( "JRPG.Rested", "[JRPG] rested at the inn, %# gold left", getGold() );
+        reportPartyEvents();
         return true;
     }
 
@@ -528,6 +575,56 @@ namespace sw
             getSoundQueue().queueEvent( techniqueSound.c_str() ); // 이름 표의 글은 사라지지 않는다
     }
 
+    void JRPGGameModeComponent::reportPartyEvents()
+    {
+        using Internal = JRPGGameModeComponentInternal;
+        _listPartyEvent.clear();
+        _party.pollEvents( _listPartyEvent );
+        for ( const JRPGPartyEvent& event : _listPartyEvent )
+        {
+            const utf8* const pMemberID = event._memberIndex.has_value() ? _party.getMember( *event._memberIndex )._id.c_str() : "the party";
+            switch ( event._kind )
+            {
+                case JRPGPartyEvent::Kind::LevelUp:
+                {
+                    getSoundQueue().queueEvent( Internal::kEventLevelUp );
+                    SW_LOG_INFO_ID( "JRPG.LevelUp", "[JRPG] '%#' reached level %#", pMemberID, event._value );
+                    break;
+                }
+                case JRPGPartyEvent::Kind::LearnedSpell:
+                case JRPGPartyEvent::Kind::TechniqueUnlocked:
+                {
+                    getSoundQueue().queueEvent( Internal::kEventLearned );
+                    SW_LOG_INFO_ID( "JRPG.Learned", "[JRPG] '%#' learned '%#'", pMemberID, event._id.c_str() );
+                    break;
+                }
+                case JRPGPartyEvent::Kind::ClassChanged:
+                {
+                    getSoundQueue().queueEvent( Internal::kEventClassChange );
+                    SW_LOG_INFO_ID( "JRPG.ClassChanged", "[JRPG] '%#' becomes '%#'", pMemberID, event._id.c_str() );
+                    break;
+                }
+                case JRPGPartyEvent::Kind::ExpGained:
+                {
+                    SW_LOG_INFO_ID( "JRPG.ExpGained", "[JRPG] '%#' gains %# experience", pMemberID, event._value );
+                    break;
+                }
+                case JRPGPartyEvent::Kind::Rested:
+                {
+                    getSoundQueue().queueEvent( Internal::kEventRest );
+                    SW_LOG_INFO_ID( "JRPG.Rested", "[JRPG] rested at the inn for %#, %# gold left", event._value, getGold() );
+                    break;
+                }
+                case JRPGPartyEvent::Kind::Revived:
+                {
+                    getSoundQueue().queueEvent( Internal::kEventHeal );
+                    SW_LOG_INFO_ID( "JRPG.Revived", "[JRPG] '%#' stands again for %#", pMemberID, event._value );
+                    break;
+                }
+            }
+        }
+    }
+
     void JRPGGameModeComponent::settleBattle()
     {
         _listBattleEvent.clear();
@@ -539,15 +636,7 @@ namespace sw
             if ( event._kind == JRPGBattleEvent::Kind::Defeated )
                 SW_LOG_INFO_ID( "JRPG.Defeated", "[JRPG] '%#' is down", event._id.c_str() );
         }
-        _listPartyEvent.clear();
-        _party.pollEvents( _listPartyEvent );
-        for ( const JRPGPartyEvent& event : _listPartyEvent )
-        {
-            if ( event._kind != JRPGPartyEvent::Kind::LevelUp || event._memberIndex.has_value() == false )
-                continue;
-            getSoundQueue().queueEvent( JRPGGameModeComponentInternal::kEventLevelUp );
-            SW_LOG_INFO_ID( "JRPG.LevelUp", "[JRPG] '%#' reached level %#", _party.getMember( *event._memberIndex )._id.c_str(), event._value );
-        }
+        reportPartyEvents();
         switch ( _battle.getResult() )
         {
             case JRPGBattleResult::Ongoing:

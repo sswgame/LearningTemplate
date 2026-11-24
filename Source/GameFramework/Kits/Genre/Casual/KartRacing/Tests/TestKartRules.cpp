@@ -937,6 +937,34 @@ SW_TEST_CASE_F( KartRaceTest, RevokedLapLeavesNoBestTime )
 }
 
 /**
+ * @brief [KartRaceTest] 결함: 경기가 차의 알림을 버려 드리프트 단계 · 미니터보가 게임에 닿지 않았다 — 드리프트를 모았다 풀면 단계 알림과 미니터보 알림이 온다
+ */
+SW_TEST_CASE_F( KartRaceTest, DriftChargeAndMiniTurboReachTheRaceEvents )
+{
+    open( KartTestUtil::makeRingDef( 3, {} ), 1 );
+    sw::KartRacerInput input;
+    input._vehicle._throttle = 1.0f;
+    for ( int32 stepIndex = 0; stepIndex < 90; ++stepIndex )
+    {
+        _race.setInput( 0, input );
+        _race.step();
+    }
+    input._vehicle._steer      = -1.0f; // 트랙이 왼쪽으로 돈다
+    input._vehicle._bDriftHeld = SW_TRUE;
+    for ( int32 stepIndex = 0; stepIndex < 48; ++stepIndex ) // 첫 단계(0.6 초)를 넘긴다
+    {
+        _race.setInput( 0, input );
+        _race.step();
+    }
+    SW_EXPECT_EQUAL( 1, countEvents( sw::KartRaceEvent::Kind::DriftCharged ) );
+    SW_EXPECT_EQUAL( 0, countEvents( sw::KartRaceEvent::Kind::MiniTurbo ) );
+    input._vehicle._bDriftHeld = SW_FALSE;
+    _race.setInput( 0, input );
+    _race.step();
+    SW_EXPECT_EQUAL( 1, countEvents( sw::KartRaceEvent::Kind::MiniTurbo ) );
+}
+
+/**
  * @brief [KartRaceTest] 결함: 한 걸음에 문 하나만 세어, 같은 자리의 두 문(또는 한 걸음 안의 가까운 문)은 뒤의 문을 영영 지나지 못해 바퀴를 끝낼 수 없었다
  */
 SW_TEST_CASE_F( KartRaceTest, TwoGatesInOneStepBothCount )
@@ -946,7 +974,6 @@ SW_TEST_CASE_F( KartRaceTest, TwoGatesInOneStepBothCount )
     SW_REQUIRE_TRUE( drive( 0, 0.0f, true ) );
     SW_REQUIRE_TRUE( driveGate( 0, 1, true ) );
     SW_EXPECT_EQUAL( 2, racer( 0 )._nextCheckpoint );
-    SW_EXPECT_EQUAL( 2, countEvents( sw::KartRaceEvent::Kind::CheckpointPassed ) );
     SW_REQUIRE_TRUE( drive( 0, 0.0f, true ) );
     SW_EXPECT_EQUAL( 2, racer( 0 )._lap );
 
