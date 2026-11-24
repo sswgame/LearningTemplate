@@ -636,6 +636,8 @@ namespace sw
         /// @brief 이번 프레임의 씬 간접 드로우 호출 수입니다. 패스를 병렬로 기록하므로 atomic 으로 둡니다.
         /// @brief 이번 프레임에 PSO 가 만드는 중이라 건너뛴 묶음 수입니다(`getPendingPSOBatchCount`). 같은 이유로 atomic 입니다.
         atomic<uint32> _pendingPSOBatchCount;
+        /// @brief 이번 프레임에 PSO 를 만드는 중이라 직전 변형으로 그린 묶음 수입니다. 화면에는 늦은 전환일 뿐이지만 다시 그리지 않는 그림자 캐시 층에는 굳으면 안 된다(`prepareShadowCacheLayer`).
+        atomic<uint32> _fallbackPSOBatchCount;
         /// @brief `setInputRoleEnabled( role, false )` 가 켠 비트입니다. 그 역할의 입력은 바인딩하지 않습니다.
         uint32 _disabledInputRoleMask;
         /// @brief 지난 프레임에 그린 추가 뷰 수입니다.

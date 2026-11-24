@@ -175,6 +175,12 @@ namespace sw
         /** @brief 음악의 현재 위치(구간, 박, 마디)를 반환합니다. */
         AudioMusicStatus getMusicStatus() const;
 
+        /**
+         * @brief 게임이 일시정지했는지 알립니다. 멈춘 동안 게임 버스(`AudioBusDef::_bPlaysInGamePause` 가 거짓)의 보이스 · 이벤트 시계 · 음악 시계가 그 자리에 서고, 풀면 이어집니다.
+         * @details 소리마다의 일시정지(`setPaused`)와 따로다 — 게임이 풀려도 소리를 멈춰 둔 쪽의 뜻이 남는다.
+         */
+        void setGamePaused( bool bPaused );
+
         // --- 게임 스레드: 믹스 ------------------------------------------------------------------------------------------
 
         /** @brief 버스의 사용자 볼륨(선형, [0, 1])을 정합니다. 설정 메뉴가 씁니다. 그래프를 바꿔도 버스 이름으로 유지됩니다. */
@@ -271,6 +277,7 @@ namespace sw
             StopEmitter,
             StopAll,
             SetPaused,
+            SetGamePaused,
             SetBusUserVolume,
             SetBusMuted,
             SetBusSolo,
@@ -386,6 +393,10 @@ namespace sw
         void applyCommand( Command& command );
         /** @brief 클립 재생 명령으로 보이스를 잡고 클립 불러오기를 시작합니다. 보이스가 없으면 경고하고 버립니다. */
         void applyPlayClip( const Command& command );
+        /** @brief 게임 일시정지가 버스 @p busIndex 의 소리를 세웠는가입니다(오디오 스레드). */
+        bool isBusHeldByGamePause( uint32 busIndex ) const;
+        /** @brief 이벤트 인스턴스의 경과가 서 있는가입니다 — 멈춰 두었거나, 게임 일시정지가 그 버스를 세웠다. */
+        bool isInstanceHeld( const EventInstance& instance ) const;
         /** @brief 에미터의 이름 붙은 파라미터를 넣거나 고칩니다. */
         void applySetEmitterParameter( const Command& command );
         /**
@@ -505,6 +516,7 @@ namespace sw
         ParameterMap                                 _mapParameter;                   /**< 파라미터 이름에서 상태로 가는 맵입니다. */
         unordered_map<AudioEmitterID, EmitterRecord> _mapEmitter;                     /**< 에미터 id 에서 상태로 가는 맵입니다. */
         AudioListenerState                           _arrListener[kMaxListenerCount]; /**< 리스너입니다. */
+        bool                                         _bGamePaused{ false };           /**< 게임이 일시정지했습니다(오디오 스레드, `setGamePaused`). NOLINT(sw-bool-flag): 홀로 선 칸이다 */
         DeterministicRandom64                        _random;                         /**< 컨테이너와 범위가 쓰는 난수입니다(시드는 `setRandomSeed`). */
         uint64                                       _renderedFrameCount;             /**< 지금까지 렌더한 프레임입니다. */
         uint64                                       _musicFrameCount;                /**< 음악 시계 — 음악이 멈춰 있지 않던 블록만 센 렌더 프레임입니다. */

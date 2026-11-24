@@ -31,6 +31,7 @@
 #include "Engine/Automation/Watch/AutomationWatch.h"
 #include "Engine/Console/DevCommandRegistry.h"
 #include "Engine/Content/AssetPaths.h"
+#include "Engine/Content/AssetRegistry.h"
 #include "Engine/Content/ContentHash.h"
 #include "Engine/Scene/Scene.h"
 #include "Engine/Scene/SceneManager.h"
@@ -141,7 +142,7 @@ namespace sw::editor
 
             /**
              * @brief 새 씬(원본 없음)의 사본 칸 이름 `untitled-<씬 세대>` 입니다 — 언리얼 Untitled 패키지 · 유니티 씬 백업처럼 저장 전 씬도 사본을 둔다.
-             * @details 리소스 id 칸(`makeSlotName`)은 `.scene.xml` 로 끝나 겹치지 않는다. 세대마다 칸이 달라 새 씬을 다시 만들면 앞 칸과 섞이지 않는다.
+             * @details 다른 칸(`makeSlotName`)은 `guid_` 로 시작하거나 `.scene.xml` 로 끝나 겹치지 않는다. 세대마다 칸이 달라 새 씬을 다시 만들면 앞 칸과 섞이지 않는다.
              */
             static string makeUntitledSlotName( uint64 sceneGeneration )
             {
@@ -173,16 +174,20 @@ namespace sw::editor
                     StringBuilder<constant::buffer::kMax256> snapshotIDBuilder;
                     const string                             sessionName = FileUtil::getFileNamePart( FileUtil::getDirectoryPart( slotFolder.str() ) );
                     snapshotIDBuilder.appendFormat( "%#/%#/%#/%#%#", EditorAutosaveCommands::kDomain, sessionName, FileUtil::getFileNamePart( slotFolder.str() ), newest, kSceneSuffix );
-                    entry._snapshotID      = string( snapshotIDBuilder.view() );
-                    entry._sourceID        = EditorAutosaveCommands::findMetaValue( metaText, "source" );
-                    entry._projectRoot     = EditorAutosaveCommands::findMetaValue( metaText, "project" );
-                    entry._generationCount = static_cast<uint32>( listGeneration.size() );
+                    entry._snapshotID                           = string( snapshotIDBuilder.view() );
+                    entry._sourceReference                      = EditorAutosaveCommands::findMetaValue( metaText, "source" );
+                    const expected<AssetReferenceTarget> source = AssetRegistry::readReferenceText( entry._sourceReference );
+                    entry._sourceID                             = source.has_value() ? source->_path : entry._sourceReference;
+                    entry._projectRoot                          = EditorAutosaveCommands::findMetaValue( metaText, "project" );
+                    entry._generationCount                      = static_cast<uint32>( listGeneration.size() );
                     (void)StringUtil::parseInt64( EditorAutosaveCommands::findMetaValue( metaText, "saved" ), entry._savedTicks );
                     (void)StringUtil::parseUint64( EditorAutosaveCommands::findMetaValue( metaText, "sourceHash" ), entry._sourceContentHash ); // 없으면(옛 메타) 0 — 아래에서 바뀐 원본으로 거절한다
                     // 다른 프로젝트 · 바뀐 원본에는 적용하지 않는다 — 사본이 오래된 원본 위에 덮여 남의 일을 지우지 않게.
                     // 바뀜은 내용 해시로 본다 — 쓰기 시각은 체크아웃 · 복사가 내용과 따로 바꾸고, 같은 틱의 다시 쓰기는 시각이 같다.
                     if ( FileUtil::isSameDiskPath( entry._projectRoot, projectRoot.str() ) == false )
                         entry._refusal = "it was written for another project";
+                    else if ( source.has_value() == false )
+                        entry._refusal = "the original scene is gone";
                     else if ( entry._sourceID.empty() == false ) // 새 씬(원본 없음)은 견줄 원본이 없다 — 프로젝트만 본다
                     {
                         const uint64 currentHash = EditorAutosaveCommands::computeSourceHash( entry._sourceID );
@@ -285,7 +290,7 @@ namespace sw::editor
                     return false;
                 }
                 StringBuilder<constant::buffer::kMax256> metaBuilder;
-                metaBuilder.appendFormat( "source=%#\nproject=%#\nsaved=%#\nsourceHash=%#\n", sourceID, ProcessRoots::get()._project.str(), FileUtil::getCurrentFileWriteTime(), sourceHash );
+                metaBuilder.appendFormat( "source=%#\nproject=%#\nsaved=%#\nsourceHash=%#\n", AssetRegistry::makeReferenceText( sourceID, AssetRegistry::resolveGUID( sourceID ) ), ProcessRoots::get()._project.str(), FileUtil::getCurrentFileWriteTime(), sourceHash );
                 const string meta{ metaBuilder.view() };
                 if ( FileUtil::writeTextFile( makeMetaPath( slotFolder, generation ), meta ) == false )
                 {
@@ -356,10 +361,16 @@ namespace sw::editor
                                      entry._sourceID );
                     return false;
                 }
+                const expected<AssetReferenceTarget> source = AssetRegistry::readReferenceText( entry._sourceReference ); // 훑은 뒤 옮겼으면 지금 자리
+                if ( source.has_value() == false )
+                {
+                    SW_LOG_WARNING_ID( "EditorAutosaveCommands.RestoreRefused", "Autosave: '%#' was not restored - %#", entry._sourceID, "the original scene is gone" );
+                    return false;
+                }
                 if ( EditorSceneFileCommands::tryOpenScene( entry._snapshotID ) == false )
                     return false; // 이유는 tryOpenScene 이 알렸다
                 state._pendingSnapshotID = AssetPaths::normalizeAssetID( entry._snapshotID );
-                state._pendingSourceID   = entry._sourceID;
+                state._pendingSourceID   = source->_path;
                 state._pendingSlotFolder = entry._snapshotAbs.getParent();
                 state._pendingGeneration = editor::getSubsystem<SceneManager>().getSceneGeneration();
                 return true;
@@ -519,14 +530,16 @@ namespace sw::editor
         const string pendingSlotFolder = state._pendingSnapshotID.empty() ? string{} : state._pendingSlotFolder.str();
         const auto   isPendingCopy     = [&pendingSlotFolder]( const EditorAutosaveEntry& entry )
         { return pendingSlotFolder.empty() == false && FileUtil::isSameDiskPath( FileUtil::getDirectoryPart( entry._snapshotAbs.str() ), pendingSlotFolder ); };
+        const auto isCopyOfSaved = [&arrSlotName]( const EditorAutosaveEntry& entry ) // 칸 이름이 씬의 정체다 — 훑은 뒤 옮긴 씬도 맞는다
+        { return FileUtil::getFileNamePart( entry._snapshotAbs.getParent().str() ) == arrSlotName[0]; };
         for ( const EditorAutosaveEntry& entry : listEntry )
         {
             const AbsolutePath entrySlotFolder = entry._snapshotAbs.getParent();
-            if ( entry._sourceID == sourceID && isPendingCopy( entry ) == false && FileUtil::isDirectory( entrySlotFolder ) )
+            if ( isCopyOfSaved( entry ) && isPendingCopy( entry ) == false && FileUtil::isDirectory( entrySlotFolder ) )
                 (void)FileUtil::removeDirectory( entrySlotFolder );
         }
-        listEntry.erase( std::remove_if( listEntry.begin(), listEntry.end(), [sourceID, &isPendingCopy]( const EditorAutosaveEntry& entry )
-        { return entry._sourceID == sourceID && isPendingCopy( entry ) == false; } ),
+        listEntry.erase( std::remove_if( listEntry.begin(), listEntry.end(), [&isCopyOfSaved, &isPendingCopy]( const EditorAutosaveEntry& entry )
+        { return isCopyOfSaved( entry ) && isPendingCopy( entry ) == false; } ),
                          listEntry.end() );
     }
 
@@ -583,7 +596,14 @@ namespace sw::editor
         }
         // 문서 열기와 같은 길(워크스페이스 포커스)이다 — 맞는 문서 패널이 받아 읽고, 읽은 직후 이 청을 꺼내 사본 글을 적용한다(takePendingDocumentRestore).
         // 상태 문서는 연 에셋이 없다 — 그 패널을 열면 패널이 자기 파일의 사본을 적용한다(`EditorStateDocumentPanel`).
-        state._pendingDocumentPath = entry._documentPath;
+        // 훑은 뒤 옮긴 문서는 지금 자리를 연다 — 상태 문서의 참조 글은 파일 id 그대로다.
+        const expected<AssetReferenceTarget> document = AssetRegistry::readReferenceText( entry._documentReference );
+        if ( document.has_value() == false )
+        {
+            SW_LOG_WARNING_ID( "EditorAutosaveCommands.DocumentRestoreRefused", "Autosave: document '%#' was not restored - %#", entry._documentPath, "the original document is gone" );
+            return false;
+        }
+        state._pendingDocumentPath = document->_path;
         state._pendingDocumentText = std::move( text );
         EditorWorkspace& workspace = editor::getSubsystem<EditorWorkspace>();
         if ( entry._panelID.empty() )
@@ -631,11 +651,11 @@ namespace sw::editor
         vector<EditorDocumentAutosaveEntry>& listEntry = state._listRecoverableDocument;
         for ( const EditorDocumentAutosaveEntry& entry : listEntry )
         {
-            if ( entry._documentPath == documentPath )
+            if ( entry.isCopyOf( documentPath ) )
                 (void)FileUtil::tryRemoveFile( entry._textAbs ); // 문서가 dirty 로 메모리에 있다 — 남기면 다음 기동이 같은 사본을 또 묻는다
         }
         listEntry.erase( std::remove_if( listEntry.begin(), listEntry.end(), [documentPath]( const EditorDocumentAutosaveEntry& entry )
-        { return entry._documentPath == documentPath; } ),
+        { return entry.isCopyOf( documentPath ); } ),
                          listEntry.end() );
         state._pendingDocumentPath.clear();
         state._pendingDocumentText.clear();
@@ -748,9 +768,11 @@ namespace sw::editor
 
     string EditorAutosaveCommands::makeSlotName( string_view sourceID )
     {
-        string slot;
-        slot.reserve( sourceID.size() );
-        for ( const utf8 ch : sourceID )
+        // 칸은 자리가 아니라 정체다 — 옮긴 뒤의 사본 · 저장이 같은 칸을 잇고, 옛 자리에 새로 생긴 에셋이 남의 사본을 이어받지 않는다.
+        const string identity = AssetRegistry::makeReferenceText( sourceID, AssetRegistry::resolveGUID( sourceID ) );
+        string       slot;
+        slot.reserve( identity.size() );
+        for ( const utf8 ch : identity )
         {
             const utf8 lower    = StringUtil::toLowerChar( ch );
             const bool bAllowed = ( lower >= 'a' && lower <= 'z' ) || ( lower >= '0' && lower <= '9' ) || lower == '_' || lower == '-' || lower == '.';

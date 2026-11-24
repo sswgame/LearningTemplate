@@ -217,8 +217,8 @@ namespace sw
         const DialogueAssetNode* findNode( int32 nodeID ) const;
         /** @brief id 로 화자를 찾습니다. 없거나 0 이면 nullptr 입니다. */
         const DialogueSpeaker* findSpeaker( uint32 speakerID ) const;
-        /** @brief 화자 @p speakerID 의 표시 이름을 현지화해 돌려줍니다. 화자가 없으면 빈 글입니다. */
-        string resolveSpeakerName( uint32 speakerID ) const;
+        /** @brief 화자 @p speakerID 의 이름(현지화 키이거나 원문 — 그릴 때 풀린다)입니다. 없으면 빈 글입니다. */
+        string getSpeakerName( uint32 speakerID ) const;
         /** @brief 아직 쓰지 않은 화자 id 입니다(지금 가장 큰 id + 1). 에디터가 화자를 더할 때 쓴다. */
         uint32 makeNextSpeakerID() const;
 
@@ -266,8 +266,6 @@ namespace sw
         optional<int32> findChoiceNextNodeID( int32 fromNodeID, int32 choiceIndex ) const;
         /** @brief Branch True/False 핀의 다음 노드 id 입니다. */
         optional<int32> findBranchNextNodeID( int32 fromNodeID, bool bTrue ) const;
-        /** @brief text 필드를 로컬라이즈 키로 해석합니다. 키가 없으면 원문을 반환합니다. */
-        static string resolveLocalizedText( string_view textOrKey );
 
         /** @brief 화자 목록입니다. 노드의 `_speaker` 가 이 id 를 가리킨다. */
         PROPERTY( Tooltip = "Speakers the nodes refer to by id" )

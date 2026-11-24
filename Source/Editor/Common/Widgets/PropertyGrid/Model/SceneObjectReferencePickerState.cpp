@@ -38,7 +38,7 @@ namespace sw::editor
                 {
                     if ( scene == nullptr || scene->getObjectManager() == nullptr )
                         continue;
-                    if ( SceneObjectReference::isSameScenePath( scene->getSourcePath(), value._scenePath ) )
+                    if ( value.isTargetScene( *scene ) )
                         return scene->getObjectManager()->findGameObjectByID( objectID );
                 }
                 return nullptr;
@@ -81,18 +81,18 @@ namespace sw::editor
             }
             case SceneObjectResolveResult::SceneNotLoaded:
             {
-                formatstring( preview.data(), preview.capacity(), "(scene not loaded) %# #%#", pValue->_scenePath, pValue->_fileID );
+                formatstring( preview.data(), preview.capacity(), "(scene not loaded) %# #%#", pValue->_targetScene.path(), pValue->_fileID );
                 break;
             }
             case SceneObjectResolveResult::ObjectMissing:
             {
-                formatstring( preview.data(), preview.capacity(), "(missing) %# #%#", pValue->_scenePath, pValue->_fileID );
+                formatstring( preview.data(), preview.capacity(), "(missing) %# #%#", pValue->_targetScene.path(), pValue->_fileID );
                 break;
             }
             case SceneObjectResolveResult::Resolved:
             {
                 const GameObject* pObject = Internal::findObject( sceneManager, *pValue, resolvedID );
-                formatstring( preview.data(), preview.capacity(), "%# / %#", FileUtil::getFileNamePart( pValue->_scenePath ), pObject != nullptr ? pObject->getName().c_str() : "?" );
+                formatstring( preview.data(), preview.capacity(), "%# / %#", FileUtil::getFileNamePart( pValue->_targetScene.path() ), pObject != nullptr ? pObject->getName().c_str() : "?" );
                 break;
             }
         }

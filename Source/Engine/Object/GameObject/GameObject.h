@@ -99,7 +99,13 @@ namespace sw
         uint64 getObjectID() const { return _objectID; }
 
         /** @brief 이 오브젝트를 가리키는 핸들을 반환합니다. 프레임을 넘겨 보관할 때는 포인터 대신 이것을 씁니다. */
-        GameObjectHandle getHandle() const { return GameObjectHandle::make( _objectID ); }
+        GameObjectHandle getHandle() const { return GameObjectHandle::make( _objectID, _handleGeneration ); }
+        /**
+         * @brief 지금까지 받은 핸들이 이 오브젝트를 더는 가리키지 않게 합니다 — 풀이 돌려받을 때(앞 생이 끝날 때) 부릅니다. 파괴한 것처럼 앞 핸들은 nullptr 로 풀립니다.
+         * @details 이 오브젝트의 `GameObjectHandle` 만 끊는다. 자식 오브젝트의 핸들과 `ComponentHandle` 은 프리팹 안의 참조(자식 · 형제 컴포넌트)라 생을 넘어 이어져야 하므로 그대로다.
+         *          틱 밖 게임 스레드에서 부른다.
+         */
+        void invalidateHandles() { ++_handleGeneration; }
 
         /**
          * @brief 소유 매니저를 읽기 전용으로 반환합니다 — 틱 안에서 꺼내도 씬을 바꾸는 호출이 컴파일되지 않습니다(`TickContext.h`).
@@ -603,6 +609,8 @@ namespace sw
         /** @brief 월드 스트리밍이 셀에 넣지 않고 늘 올려 둔다(`setAlwaysLoaded`). 쿠커만 읽는다 — 틱 · 렌더는 보지 않는다. */
         PROPERTY( Tooltip = "World streaming keeps this object loaded instead of placing it in a cell" )
         bool _bAlwaysLoaded;
+        /** @brief 핸들 세대입니다(`invalidateHandles`, 감긴다). 이 값을 담은 핸들만 이 오브젝트로 풀린다. 꼬리 패딩 자리다. */
+        uint16 _handleGeneration;
     };
 
     template <typename T, typename... Args>

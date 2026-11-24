@@ -48,12 +48,16 @@ namespace sw::editor
             static void capturePlaySnapshot( PlaySessionData& data )
             {
                 data._snapshot._listSnapshot.clear();
-                data._snapshot._bHasSnapshot = SW_FALSE;
+                data._snapshot._bHasSnapshot         = SW_FALSE;
+                data._snapshot._bStartedWithoutScene = SW_FALSE;
 
-                // 선택: 씬이 없는 상태에서도 플레이를 누를 수 있다. 되돌릴 것이 없으므로 스냅샷 없이 시작한다(`_bHasSnapshot` 이 false).
+                // 선택: 씬이 없는 상태에서도 플레이를 누를 수 있다. 플레이 전 상태는 "씬 없음" 이다 — Stop 이 플레이가 연 씬을 내린다.
                 Scene* pScene = editor::getActiveScene();
                 if ( pScene == nullptr || pScene->getObjectManager() == nullptr )
+                {
+                    data._snapshot._bStartedWithoutScene = SW_TRUE;
                     return;
+                }
 
                 // Stop 할 때 활성 씬이 이 씬인지 알아보려고 세대를 기록하고, 아니면 다시 만들려고 이름과 소스 경로를 기록한다.
                 data._snapshot._sceneGeneration = editor::getSubsystem<SceneManager>().getSceneGeneration();
@@ -162,6 +166,13 @@ namespace sw::editor
                 // 진행 중인 로드는 늘 취소한다 — 플레이가 건 이동이 아직 끝나지 않았으면 씬 세대는 그대로이고, Stop 뒤에 끝나며 편집 씬을 저장 확인 없이 바꿔 끼웠다.
                 SceneManager& sceneManager = editor::getSubsystem<SceneManager>();
                 sceneManager.cancelPendingAsyncLoads();
+                if ( data._snapshot._bStartedWithoutScene == SW_TRUE )
+                {
+                    // 남기면 게임이 연 씬이 플레이 상태 그대로 편집 씬이 되고, 저장하면 그 레벨 파일을 덮는다.
+                    data._snapshot._bStartedWithoutScene = SW_FALSE;
+                    sceneManager.closeLoadedScenes();
+                    return;
+                }
                 if ( data._snapshot._bHasSnapshot == SW_FALSE )
                     return;
 

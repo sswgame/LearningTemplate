@@ -21,6 +21,7 @@
 #include "Engine/Graphics/RHI/Backend/RHITrackedState.h"
 #include "Engine/Graphics/RHI/RHIDescriptors.h"
 #include "Engine/Graphics/RHI/RHIPipelineStateDesc.h"
+#include "Engine/Graphics/RHI/Tests/RHIFakeDevice.h"
 #include "Engine/Graphics/Shader/Compile/RHIShaderRequest.h"
 
 #include <thread>
@@ -453,8 +454,8 @@ SW_TEST_CASE( RHIFrameFenceRingTest, BoundsFramesInFlightAndRetiresInOrder )
  */
 SW_TEST_CASE( RHIHandleTableTest, ReleasedSlotIsNotReusedWithinTheFrame )
 {
-    atomic<uint64>                          beginFrameCount{ 1 };
-    RHIHandleTable<RHIBufferHandle, uint32> table{ beginFrameCount };
+    atomic<uint64>                          handleReuseCount{ 1 };
+    RHIHandleTable<RHIBufferHandle, uint32> table{ handleReuseCount };
     const RHIBufferHandle                   first  = table.insert( 42u );
     const uint32* const                     pFirst = table.get( first );
     SW_REQUIRE_NOT_NULL( pFirst );
@@ -464,10 +465,26 @@ SW_TEST_CASE( RHIHandleTableTest, ReleasedSlotIsNotReusedWithinTheFrame )
     const RHIBufferHandle second = table.insert( 99u );
     SW_EXPECT_EQUAL( 42u, *pFirst ); // 쥔 포인터가 새 값을 옛 핸들의 값으로 읽지 않는다
     SW_EXPECT_TRUE( table.get( second ) != pFirst );
-    beginFrameCount.store( 2 ); // 놓은 프레임의 기록이 아직 돌 수 있다
+    handleReuseCount.store( 2 ); // 놓은 프레임의 기록이 아직 돌 수 있다
     SW_EXPECT_TRUE( table.get( table.insert( 7u ) ) != pFirst );
-    beginFrameCount.store( 3 );
+    handleReuseCount.store( 3 );
     SW_EXPECT_TRUE( table.get( table.insert( 8u ) ) == pFirst );
+}
+
+/**
+ * @brief [RHIHandleTableTest] 프레임을 열지 않아도 GPU 를 기다린 뒤에는 놓은 칸이 돌아온다 — 굽기 · 쿠킹 도구에서 표가 끝없이 자라지 않는다
+ * @details 변이: `IRHIDevice::waitIdle` 이 경계 수를 올리지 않으면 새 값이 다른 칸에 들어가 진다.
+ */
+SW_TEST_CASE( RHIHandleTableTest, WaitIdleReturnsReleasedSlots )
+{
+    test::FakeRHIDevice                     device;
+    RHIHandleTable<RHIBufferHandle, uint32> table{ device.getHandleReuseCount() };
+    const RHIBufferHandle                   first  = table.insert( 42u );
+    const uint32* const                     pFirst = table.get( first );
+    uint32                                  taken{ 0 };
+    SW_REQUIRE_TRUE( table.take( first, taken ) );
+    device.waitIdle( RHIWaitIdleReason::Resize );
+    SW_EXPECT_TRUE( table.get( table.insert( 7u ) ) == pFirst );
 }
 
 /**
@@ -475,8 +492,8 @@ SW_TEST_CASE( RHIHandleTableTest, ReleasedSlotIsNotReusedWithinTheFrame )
  */
 SW_TEST_CASE( RHIHandleTableTest, GenerationInvalidatesStaleHandles )
 {
-    const atomic<uint64>                    beginFrameCount{ 0 };
-    RHIHandleTable<RHIBufferHandle, uint32> table{ beginFrameCount };
+    const atomic<uint64>                    handleReuseCount{ 0 };
+    RHIHandleTable<RHIBufferHandle, uint32> table{ handleReuseCount };
     const RHIBufferHandle                   first = table.insert( 42u );
     SW_EXPECT_TRUE( first != 0 );
     uint32* pSlot = table.get( first );

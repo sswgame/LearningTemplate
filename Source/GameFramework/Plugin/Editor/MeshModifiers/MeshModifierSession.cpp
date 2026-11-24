@@ -331,6 +331,7 @@ namespace sw::editor
         , _listSourcePosition{}
         , _history{}
         , _savedStackText{ string{} }
+        , _sidecarBaseline{}
         , _meshPath{}
         , _sourceBounds{}
         , _target{}
@@ -752,13 +753,14 @@ namespace sw::editor
     bool MeshModifierSession::saveSidecar()
     {
         const optional<AbsolutePath> path = findSidecarPath();
-        if ( path.has_value() == false )
+        if ( path.has_value() == false || _sidecarBaseline.validateOverwrite( span<const AbsolutePath>( &*path, 1 ) ) == false )
             return false;
         if ( _stack.saveToFile( *path ) == false )
         {
             SW_LOG_ERROR_ID( "MeshModifierSession.FailedWriteMeshModifier", "Failed to write mesh modifier stack %#", path->c_str() );
             return false;
         }
+        _sidecarBaseline.capture( span<const AbsolutePath>( &*path, 1 ) );
         _savedStackText = _stack.makeJSONText( -1 );
         _bUnsavedStale  = SW_TRUE;
         SW_LOG_INFO_ID( "MeshModifierSession.MeshModifierStackSaved", "Mesh modifier stack saved to %#", path->c_str() );
@@ -772,6 +774,7 @@ namespace sw::editor
         const auto path = editor::getSubsystem<AssetPaths>().findLooseFile( MeshModifierStack::makeSidecarPath( _meshPath ) );
         if ( path.has_value() == false )
             return false;
+        _sidecarBaseline.capture( span<const AbsolutePath>( &*path, 1 ) );
         if ( _stack.loadFromFile( *path ) == false )
         {
             SW_LOG_WARNING_ID( "MeshModifierSession.MeshModifierStackCould2", "Mesh modifier stack %# could not be read", path->c_str() );

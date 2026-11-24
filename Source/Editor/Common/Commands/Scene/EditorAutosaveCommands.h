@@ -26,7 +26,8 @@ namespace sw::editor
     {
         AbsolutePath _snapshotAbs;            ///< 가장 새 사본의 디스크 경로
         string       _snapshotID;             ///< 그 사본의 리소스 id(`autosave/…` — 붙인 도메인)
-        string       _sourceID;               ///< 원래 씬의 리소스 id. 비면 저장한 적 없는 새 씬이다
+        string       _sourceID;               ///< 원래 씬의 리소스 id(훑은 때의 자리). 비면 저장한 적 없는 새 씬이다
+        string       _sourceReference;        ///< 메타에 적힌 원래 씬의 참조 글(GUID 참조) — 훑은 뒤 씬을 옮겨도 복원이 지금 자리를 찾는다
         string       _projectRoot;            ///< 사본을 쓴 프로젝트 루트
         int64        _savedTicks{ 0 };        ///< 사본을 쓴 시각(`FileUtil::getCurrentFileWriteTime` 눈금)
         uint64       _sourceContentHash{ 0 }; ///< 그때 원본 파일의 내용 해시(`ContentHash`). 0 은 메타에 없음 — 바뀐 원본으로 거절한다
@@ -129,7 +130,7 @@ namespace sw::editor
         static void cancelPendingDocumentRestore();
         /** @brief 이번 세션에 문서 복원을 끝낸 수입니다(감시 값 `Editor.AutosaveDocumentRestoredCount`). */
         static uint32 getRestoredDocumentCount();
-        /** @brief 씬 리소스 id 를 사본 폴더 이름(`[a-z0-9_.-]`)으로 바꿉니다. 같은 id 는 같은 이름입니다. */
+        /** @brief 씬 · 문서의 리소스 id 를 사본 폴더 이름(`[a-z0-9_.-]`)으로 바꿉니다. 정체성(GUID)이 있으면 그 이름이라 옮겨도 같고, 없으면 id 의 이름입니다. */
         static string makeSlotName( string_view sourceID );
         /** @brief 사본 옆 메타 글(`key=value` 줄들)에서 @p key 의 값을 찾습니다. 없으면 빈 글입니다. 씬 사본 · 문서 사본 · 세션 잠금 파일이 같은 모양이다. */
         [[nodiscard]] static string findMetaValue( string_view metaText, string_view key );

@@ -174,6 +174,9 @@ namespace sw
         bool _bMuted{ SW_FALSE };
         PROPERTY( Tooltip = "Starts soloed (every bus that is not on a soloed path goes silent)" )
         bool _bSolo{ false };
+        /// 게임 일시정지 동안 이 버스(와 자식 버스)의 소리가 계속 나는가입니다. 언리얼 bIsUISound · 유니티 AudioSource.ignoreListenerPause 자리이고, 소리마다가 아니라 버스가 정합니다.
+        PROPERTY( Tooltip = "Keeps playing while the game is paused (menus, music); other buses stand still where they are. Child buses follow a parent that plays in pause" )
+        bool _bPlaysInGamePause{ false };
     };
 } // namespace sw
 

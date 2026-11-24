@@ -930,8 +930,10 @@ namespace sw
 
         // onBeforeReload 는 모듈에서 시작된 작업을 멈춰야 한다. 실행 중인 태스크를 비워 콜백이 옛 라이브러리에 들어가지 못하게 한다.
         // clear() 는 부르지 않는다. 그러면 관계없는 GPUScene · 씬 로드 작업까지 버리고 onTaskFinished 정리를 건너뛴다.
+        // 도는 씬 로드는 취소하지 않고 멈춰 둔다 — 지은 씬만 코드가 있을 때 없애고, 같은 약속으로 다시 띄운다. 약속을 쥔 모듈 코드(씬 흐름)는 값으로 물어보기만 하고
+        // 이어 부르기(`then`)를 걸지 않으므로 내려간 코드를 부르지 않는다. 새로 선 쪽은 `replayPendingLoadRequests` 로 이어받는다.
         if ( engine::areEngineServicesBound() )
-            engine::getSubsystem<SceneManager>().cancelPendingAsyncLoads();
+            engine::getSubsystem<SceneManager>().suspendPendingLoad();
 
         // 렌더 스레드는 TaskManager 밖에서 돈다. Present 훅이 모듈 코드를 실행 중일 수 있으므로 먼저 비운다.
         if ( _flushWorkers.isBound() )

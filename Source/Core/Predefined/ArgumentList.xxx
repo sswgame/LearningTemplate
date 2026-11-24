@@ -71,6 +71,9 @@ SW_REGISTER_ARGUMENT( COOK_ALL, Dev, false, "cook-all" )
 // `-cook-scenes` · `-cook-packs` · `-cook-all` 이 쿠킹 결과를 쓸 스테이징 폴더
 SW_REGISTER_ARGUMENT( COOKED_DIR, Dev, CommandLineDiskPath{}, "cooked-dir" )
 
+// `-cook-scenes` · `-cook-packs` · `-cook-all` 이 굽는 대상 플랫폼(`windows` · `linux` · `android` · `web`) — 리소스 조건(`_when`)의 `platform` 축이다. 없으면 쿠킹하는 App 의 플랫폼. 교차 빌드(호스트 App 이 굽는 Android · 웹)가 준다
+SW_REGISTER_ARGUMENT( COOK_PLATFORM, Dev, "", "cook-platform" )
+
 // DDC 폴더 — 층 설정(`Config/Dev/DerivedData.json`) 대신 이 폴더 하나(쓰기 가능, 정리 없음)를 쓴다. 빈 캐시에서 굽는 길의 테스트가 함께 쓰는 캐시를 건드리지 않게
 SW_REGISTER_ARGUMENT( DDC_DIR, Dev, CommandLineDiskPath{}, "ddc-dir" )
 

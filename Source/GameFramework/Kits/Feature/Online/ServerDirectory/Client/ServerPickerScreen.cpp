@@ -6,6 +6,7 @@
 #include "Core/Log/Logger.h"
 #include "Core/String/StringBuilder.h"
 
+#include "Engine/Localization/LocText.h"
 #include "Engine/UI/UISystem.h"
 #include "Engine/UI/WidgetTree/WidgetTree.h"
 #include "Engine/UI/Widgets/ButtonWidget.h"
@@ -30,33 +31,31 @@ namespace sw
                 {
                     case ServerState::Starting:
                     {
-                        return "starting";
+                        return SW_LOCKEYREF( "ServerPicker", "StateStarting" );
                     }
                     case ServerState::Open:
                     {
-                        return "open";
+                        return SW_LOCKEYREF( "ServerPicker", "StateOpen" );
                     }
                     case ServerState::Draining:
                     {
-                        return "draining";
+                        return SW_LOCKEYREF( "ServerPicker", "StateDraining" );
                     }
                     case ServerState::Maintenance:
                     {
-                        return "maintenance";
+                        return SW_LOCKEYREF( "ServerPicker", "StateMaintenance" );
                     }
                     case ServerState::Count:
                     {
                         break;
                     }
                 }
-                return "unknown";
+                return SW_LOCKEYREF( "ServerPicker", "StateUnknown" );
             }
 
             static string makeRowText( const ServerListEntry& server )
             {
-                StringBuilder<constant::buffer::kMax256> resultBuilder;
-                resultBuilder.appendFormat( "%#  %#%%  %#", server._region, static_cast<int32>( server._fillPercent ), getStateText( server._state ) );
-                return string( resultBuilder.view() );
+                return SW_LOCALIZED_MESSAGE( "ServerPicker", "Row" ).addKey( "region", server._region ).addInteger( "fill", static_cast<int64>( server._fillPercent ) ).addKey( "state", getStateText( server._state ) ).str();
             }
         };
     } // namespace
@@ -178,24 +177,22 @@ namespace sw
         {
             case ServerListState::Idle:
             {
-                pStatus->setText( "Press Refresh to list servers" );
+                pStatus->setText( SW_LOCKEYREF( "ServerPicker", "Idle" ) );
                 break;
             }
             case ServerListState::Loading:
             {
-                pStatus->setText( "Loading servers..." );
+                pStatus->setText( SW_LOCKEYREF( "ServerPicker", "Loading" ) );
                 break;
             }
             case ServerListState::Loaded:
             {
-                pStatus->setText( listEntry.empty() ? "No server is available right now" : "Pick a server" );
+                pStatus->setText( listEntry.empty() ? SW_LOCKEYREF( "ServerPicker", "None" ) : SW_LOCKEYREF( "ServerPicker", "Pick" ) );
                 break;
             }
             case ServerListState::Failed:
             {
-                StringBuilder<constant::buffer::kMax256> textBuilder;
-                textBuilder.appendFormat( "Could not load the server list (error %#)", static_cast<int32>( pModel->getErrorCode() ) );
-                pStatus->setText( string( textBuilder.view() ) );
+                pStatus->setText( SW_LOCALIZED_MESSAGE( "ServerPicker", "LoadFailed" ).addInteger( "error", static_cast<int64>( pModel->getErrorCode() ) ).str() );
                 break;
             }
         }

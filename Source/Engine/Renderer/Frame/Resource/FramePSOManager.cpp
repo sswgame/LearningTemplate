@@ -1272,7 +1272,8 @@ namespace sw
         if ( fallbackPSO == 0 )
             return makeBatchPSO( 0, RenderPSOCache::MaterialPSOState::Building );
         SW_PROFILE_COUNT( "RT.PSO.fallbackVariants", 1 );
-        return makeBatchPSO( fallbackPSO, RenderPSOCache::MaterialPSOState::Ready );
+        // 상태는 `Building` 그대로다 — 그려지지만 이 변형의 그림이 아니다(그림자 캐시가 이 그림을 굳히지 않게).
+        return makeBatchPSO( fallbackPSO, RenderPSOCache::MaterialPSOState::Building );
     }
 
     void FramePSOManager::buildBatchPSOTable( uint32 viewModeMask )

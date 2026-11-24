@@ -68,6 +68,7 @@ namespace sw
         , _crowdAgentID{ NavigationConstant::kInvalidAgentID }
         , _navIndex{ SceneNavigation::kNotRegistered }
         , _crowdIndex{ SceneNavigation::kNotRegistered }
+        , _teleport{}
         , _writtenTransformVersion{ 0 }
         , _routeRevision{ 0 }
         , _routeReplanCount{ 0 }

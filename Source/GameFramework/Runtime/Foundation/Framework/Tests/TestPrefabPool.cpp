@@ -41,6 +41,8 @@ SW_TEST_CASE( PrefabPoolTest, ReleasedInstanceIsReusedInsteadOfCreated )
     SW_EXPECT_EQUAL( 0u, pool.getBusyCount() );
     SW_EXPECT_EQUAL( 1u, pool.getIdleCount() );
     SW_EXPECT_FALSE( pObject->isActiveInHierarchy() );
+    pool.release( manager, handle ); // 같은 생을 두 번 돌려줘도 두 번 쉬지 않는다
+    SW_EXPECT_EQUAL( 1u, pool.getIdleCount() );
 
     GameObject* pAgain = pool.acquire( manager, "Shot" );
     SW_EXPECT_TRUE( pAgain == pObject );
@@ -86,6 +88,32 @@ SW_TEST_CASE( PrefabPoolTest, RecyclingHandsBackTheOldestWhenFull )
     SW_EXPECT_TRUE( pool.acquireRecycling( manager, 2, "Shot" ) == pOther );
     SW_EXPECT_EQUAL( uint64{ 2 }, pool.getCreatedCount().get() );
     SW_EXPECT_EQUAL( 2u, pool.getBusyCount() );
+}
+
+/** @brief [PrefabPoolTest] 결함: 풀이 돌려받은 오브젝트는 id 가 같아 앞 생을 겨누던 핸들(잠금 조준 · 포탑 · 킬캠)이 다시 꺼낸 생을 가리켰다 — 돌려받기 · 다시 내주기가 핸들을 끊는다 */
+SW_TEST_CASE( PrefabPoolTest, HandleOfAnEarlierLifeDoesNotSeeTheNext )
+{
+    GameObjectManager manager;
+    PrefabPool        pool   = PrefabPoolComponentSpawner<>::makePool( 2 );
+    GameObject*       pEnemy = pool.acquire( manager, "Enemy" );
+    SW_REQUIRE_TRUE( pEnemy != nullptr );
+    const GameObjectHandle firstLife = pEnemy->getHandle();
+    SW_EXPECT_TRUE( manager.resolveGameObject( firstLife ) == pEnemy );
+    pool.release( manager, firstLife );
+    SW_EXPECT_TRUE( manager.resolveGameObject( firstLife ) == nullptr );
+
+    SW_REQUIRE_TRUE( pool.acquire( manager, "Enemy" ) == pEnemy );
+    const GameObjectHandle secondLife = pEnemy->getHandle();
+    SW_EXPECT_TRUE( secondLife != firstLife );
+    SW_EXPECT_EQUAL( firstLife.objectID(), secondLife.objectID() );
+    SW_EXPECT_TRUE( manager.resolveGameObject( firstLife ) == nullptr );
+    SW_EXPECT_TRUE( manager.resolveGameObject( secondLife ) == pEnemy );
+
+    SW_REQUIRE_TRUE( pool.acquireRecycling( manager, 1, "Enemy" ) == pEnemy ); // 쓰던 것을 빼앗아 다시 내준다
+    SW_EXPECT_TRUE( manager.resolveGameObject( secondLife ) == nullptr );
+    SW_EXPECT_EQUAL( 1u, pool.getBusyCount() );
+    pool.destroyAll( manager );
+    SW_EXPECT_TRUE( manager.resolveGameObject( pEnemy->getHandle() ) == nullptr );
 }
 
 /** @brief [PrefabPoolTest] 조건이 참인 것만 돌려받고 모두 지우기는 꺼낸 것까지 지운다 */

@@ -26,11 +26,12 @@ namespace sw
     struct CanvasTargetLease
     {
         hashed_string    _path{};
-        TextureHandle    _load{};              ///< 렌더 타깃 요청(참조를 쥔다 — 놓으면 캐시에 돌려준다). 실패해도 쥔다(캐시가 이유를 남겼으므로 다시 묻지 않는다)
-        Texture2D*       _pTexture{ nullptr }; ///< 준비된 렌더 타깃(`_load` 가 쥐는 동안 유효). 만드는 중이면 nullptr — 그 대상은 그리지 않는다
-        uint64           _drawnRevision{ 0 };  ///< 마지막으로 그린 내용 번호(0이면 그린 적 없음)
-        RHITextureHandle _drawnTexture{ 0 };   ///< 그때의 텍스처(다시 만들어졌으면 내용이 없으므로 다시 그린다)
-        uint8            _bSeen{ SW_FALSE };   ///< 이번 프레임 목록에 있다.
+        TextureHandle    _load{};                  ///< 렌더 타깃 요청(참조를 쥔다 — 놓으면 캐시에 돌려준다). 실패해도 쥔다(캐시가 이유를 남겼으므로 다시 묻지 않는다)
+        Texture2D*       _pTexture{ nullptr };     ///< 준비된 렌더 타깃(`_load` 가 쥐는 동안 유효). 만드는 중이면 nullptr — 그 대상은 그리지 않는다
+        uint64           _drawnRevision{ 0 };      ///< 마지막으로 그린 내용 번호(0이면 그린 적 없음)
+        RHITextureHandle _drawnTexture{ 0 };       ///< 그때의 텍스처(다시 만들어졌으면 내용이 없으므로 다시 그린다)
+        uint8            _bSeen{ SW_FALSE };       ///< 이번 프레임 목록에 있다.
+        uint8            _bDrawnWhole{ SW_FALSE }; ///< 지난번에 그릴 때 텍스처가 모두 와 있었다. 온 것을 처음 본 프레임은 한 번 더 그린다(`CanvasRenderer::drawTargets`)
     };
 
     /**
@@ -57,6 +58,8 @@ namespace sw
         CanvasTargetLease* findTarget( const hashed_string& path );
         /** @brief 경로로 빌린 이미지의 SRV 입니다. 빌리지 않았거나 아직 읽는 중이거나 읽지 못한 경로면 kInvalidDescriptorIndex 입니다. */
         RHITextureSRVIndex findPathTextureSRV( const hashed_string& path ) const { return _pathTextures.findReadySRV( path ); }
+        /** @brief 경로로 빌린 이미지를 아직 읽는 중이면 true 입니다(`PathTextureSet::isPending`). */
+        bool isPathTexturePending( const hashed_string& path ) const { return _pathTextures.isPending( path ); }
         /** @brief 빌린 이미지와 대상을 캐시에 돌려줍니다(다음 `prepareTargets` · `acquirePathTextures` 가 다시 빌립니다). */
         void release();
 

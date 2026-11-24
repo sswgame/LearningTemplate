@@ -35,6 +35,81 @@ msgctxt "Cancel"
 msgid "Cancel"
 msgstr "취소"
 
+#: Source/GameFramework/Kits/Feature/Online/Chat/Client/ChatScreen.cpp
+msgctxt "Chat.Blocked"
+msgid "Message was blocked by the word filter"
+msgstr "단어 거르기에 걸려 메시지를 보내지 못했습니다"
+
+#: Source/GameFramework/Kits/Feature/Online/Chat/Client/ChatScreen.cpp
+msgctxt "Chat.Failed"
+msgid "Chat failed"
+msgstr "채팅을 보내지 못했습니다"
+
+#: Source/GameFramework/Kits/Feature/Online/Chat/Client/ChatScreen.cpp
+msgctxt "Chat.InvalidMessage"
+msgid "Message is empty or not valid"
+msgstr "메시지가 비었거나 올바르지 않습니다"
+
+#: Source/GameFramework/Kits/Feature/Online/Chat/Client/ChatScreen.cpp
+msgctxt "Chat.Muted"
+msgid "You are muted ({seconds} s left)"
+msgstr "채팅이 금지되어 있습니다({seconds}초 남음)"
+
+#: Source/GameFramework/Kits/Feature/Online/Chat/Client/ChatScreen.cpp
+msgctxt "Chat.NotFound"
+msgid "Message not found"
+msgstr "메시지를 찾을 수 없습니다"
+
+#: Source/GameFramework/Kits/Feature/Online/Chat/Client/ChatScreen.cpp
+msgctxt "Chat.NotJoinable"
+msgid "This channel cannot be joined"
+msgstr "참여할 수 없는 채널입니다"
+
+#: Source/GameFramework/Kits/Feature/Online/Chat/Client/ChatScreen.cpp
+msgctxt "Chat.NotMember"
+msgid "You have not joined this channel"
+msgstr "참여하지 않은 채널입니다"
+
+#: Source/GameFramework/Kits/Feature/Online/Chat/Client/ChatScreen.cpp
+msgctxt "Chat.Repeated"
+msgid "You already said that"
+msgstr "이미 한 말입니다"
+
+#: Source/GameFramework/Kits/Feature/Online/Chat/Client/ChatScreen.cpp
+msgctxt "Chat.SignIn"
+msgid "Sign in to chat"
+msgstr "채팅하려면 로그인하세요"
+
+#: Source/GameFramework/Kits/Feature/Online/Chat/Client/ChatScreen.cpp
+msgctxt "Chat.TargetOffline"
+msgid "That player is offline"
+msgstr "상대가 접속해 있지 않습니다"
+
+#: Source/GameFramework/Kits/Feature/Online/Chat/Client/ChatScreen.cpp
+msgctxt "Chat.TooFast"
+msgid "Too fast, try again soon"
+msgstr "너무 빠릅니다. 잠시 뒤에 다시 시도하세요"
+
+#: Source/GameFramework/Kits/Feature/Online/Chat/Client/ChatScreen.cpp
+msgctxt "Chat.TooFastWait"
+msgid "Too fast, wait {milliseconds} ms"
+msgstr "너무 빠릅니다. {milliseconds}ms 기다리세요"
+
+#: Source/GameFramework/Kits/Feature/Online/Chat/Client/ChatScreen.cpp
+msgctxt "Chat.TooManyChannels"
+msgid "Too many channels"
+msgstr "채널이 너무 많습니다"
+
+#: Source/GameFramework/Kits/Feature/Online/Chat/Client/ChatScreen.cpp
+msgctxt "Chat.Unavailable"
+msgid "Chat is not available right now"
+msgstr "지금은 채팅할 수 없습니다"
+
+#: Source/GameFramework/Kits/Feature/Online/Chat/Client/ChatScreen.cpp
+msgctxt "Chat.UpdateGame"
+msgid "Update the game to chat"
+msgstr "채팅하려면 게임을 업데이트하세요"
+
 #. Context: TextWidget._text
 #: engine/ui/debughud.ui.xml
 #: engine/ui/options.ui.xml
@@ -2214,6 +2289,76 @@ msgctxt "EditorTip.ZoneRevertParam"
 msgid "Use the preset's value for this parameter again."
 msgstr "이 매개변수에 프리셋 값을 다시 씁니다."
 
+#: Source/GameFramework/Kits/Feature/Online/Social/Client/FriendListScreen.cpp
+msgctxt "FriendList.Idle"
+msgid "Press Refresh to list friends"
+msgstr "새로 고침을 누르면 친구 목록을 보입니다"
+
+#: Source/GameFramework/Kits/Feature/Online/Social/Client/FriendListScreen.cpp
+msgctxt "FriendList.LoadFailed"
+msgid "Could not load the friend list (error {error})"
+msgstr "친구 목록을 불러오지 못했습니다(오류 {error})"
+
+#: Source/GameFramework/Kits/Feature/Online/Social/Client/FriendListScreen.cpp
+msgctxt "FriendList.Loading"
+msgid "Loading friends..."
+msgstr "친구 목록을 불러오는 중..."
+
+#: Source/GameFramework/Kits/Feature/Online/Social/Client/FriendListScreen.cpp
+msgctxt "FriendList.None"
+msgid "No friends yet"
+msgstr "아직 친구가 없습니다"
+
+#: Source/GameFramework/Kits/Feature/Online/Social/Client/FriendListScreen.cpp
+msgctxt "FriendList.PendingRequests"
+msgid "{title}  ({count, plural, one {# pending request} other {# pending requests}})"
+msgstr "{title}  (받은 요청 {count}건)"
+
+#: Source/GameFramework/Kits/Feature/Online/Social/Client/FriendListScreen.cpp
+msgctxt "FriendList.PresenceAway"
+msgid "away"
+msgstr "자리 비움"
+
+#: Source/GameFramework/Kits/Feature/Online/Social/Client/FriendListScreen.cpp
+msgctxt "FriendList.PresenceBusy"
+msgid "busy"
+msgstr "바쁨"
+
+#: Source/GameFramework/Kits/Feature/Online/Social/Client/FriendListScreen.cpp
+msgctxt "FriendList.PresenceInGame"
+msgid "in game"
+msgstr "게임 중"
+
+#: Source/GameFramework/Kits/Feature/Online/Social/Client/FriendListScreen.cpp
+msgctxt "FriendList.PresenceOffline"
+msgid "offline"
+msgstr "오프라인"
+
+#: Source/GameFramework/Kits/Feature/Online/Social/Client/FriendListScreen.cpp
+msgctxt "FriendList.PresenceOnline"
+msgid "online"
+msgstr "온라인"
+
+#: Source/GameFramework/Kits/Feature/Online/Social/Client/FriendListScreen.cpp
+msgctxt "FriendList.PresenceUnknown"
+msgid "unknown"
+msgstr "알 수 없음"
+
+#: Source/GameFramework/Kits/Feature/Online/Social/Client/FriendListScreen.cpp
+msgctxt "FriendList.Row"
+msgid "#{account}  {presence}"
+msgstr "#{account}  {presence}"
+
+#: Source/GameFramework/Kits/Feature/Online/Social/Client/FriendListScreen.cpp
+msgctxt "FriendList.RowActivity"
+msgid "#{account}  {presence}  {activity}"
+msgstr "#{account}  {presence}  {activity}"
+
+#: Source/GameFramework/Kits/Feature/Online/Social/Client/FriendListScreen.cpp
+msgctxt "FriendList.Title"
+msgid "Friends"
+msgstr "친구"
+
 #: Source/GameFramework/Client/Inventory/InventoryScreen.cpp
 msgctxt "Inventory.Done"
 msgid "Done."
@@ -2230,6 +2375,11 @@ msgid "The slot is empty."
 msgstr "빈 칸입니다."
 
 #: Source/GameFramework/Client/Inventory/InventoryScreen.cpp
+msgctxt "Inventory.EquipLine"
+msgid "{slot}: {item}"
+msgstr "{slot}: {item}"
+
+#: Source/GameFramework/Client/Inventory/InventoryScreen.cpp
 msgctxt "Inventory.InvalidCount"
 msgid "That amount is not possible."
 msgstr "그 수량은 안 됩니다."
@@ -2238,6 +2388,11 @@ msgstr "그 수량은 안 됩니다."
 msgctxt "Inventory.InvalidSlot"
 msgid "That slot cannot take it."
 msgstr "그 칸에는 넣을 수 없습니다."
+
+#: Source/GameFramework/Client/Inventory/InventoryScreen.cpp
+msgctxt "Inventory.ItemCount"
+msgid "{item} x{count}"
+msgstr "{item} x{count}"
 
 #: Source/GameFramework/Client/Inventory/InventoryScreen.cpp
 msgctxt "Inventory.NoRoom"
@@ -2263,6 +2418,11 @@ msgstr "그 자리에는 장착할 수 없습니다."
 msgctxt "Inventory.SplitTitle"
 msgid "Split how many?"
 msgstr "몇 개를 나눌까요?"
+
+#: Source/GameFramework/Client/Inventory/InventoryScreen.cpp
+msgctxt "Inventory.StatLine"
+msgid "{stat} {value}"
+msgstr "{stat} {value}"
 
 #. Context: TextWidget._text
 #: engine/ui/confirm_countdown.ui.xml
@@ -2348,6 +2508,16 @@ msgctxt "Quit Game"
 msgid "Quit Game"
 msgstr "게임 종료"
 
+#: Source/GameFramework/Client/Intent/IntentReplayBar.cpp
+msgctxt "ReplayBar.Pause"
+msgid "Pause"
+msgstr "일시정지"
+
+#: Source/GameFramework/Client/Intent/IntentReplayBar.cpp
+msgctxt "ReplayBar.Play"
+msgid "Play"
+msgstr "재생"
+
 #. Context: TextWidget._text
 #: engine/ui/pause.ui.xml
 msgctxt "Resume"
@@ -2378,6 +2548,66 @@ msgstr "되돌리기까지"
 msgctxt "Sections"
 msgid "Sections"
 msgstr "섹션"
+
+#: Source/GameFramework/Kits/Feature/Online/ServerDirectory/Client/ServerPickerScreen.cpp
+msgctxt "ServerPicker.Idle"
+msgid "Press Refresh to list servers"
+msgstr "새로 고침을 누르면 서버 목록을 보입니다"
+
+#: Source/GameFramework/Kits/Feature/Online/ServerDirectory/Client/ServerPickerScreen.cpp
+msgctxt "ServerPicker.LoadFailed"
+msgid "Could not load the server list (error {error})"
+msgstr "서버 목록을 불러오지 못했습니다(오류 {error})"
+
+#: Source/GameFramework/Kits/Feature/Online/ServerDirectory/Client/ServerPickerScreen.cpp
+msgctxt "ServerPicker.Loading"
+msgid "Loading servers..."
+msgstr "서버 목록을 불러오는 중..."
+
+#: Source/GameFramework/Kits/Feature/Online/ServerDirectory/Client/ServerPickerScreen.cpp
+msgctxt "ServerPicker.None"
+msgid "No server is available right now"
+msgstr "지금 들어갈 수 있는 서버가 없습니다"
+
+#: Source/GameFramework/Kits/Feature/Online/ServerDirectory/Client/ServerPickerScreen.cpp
+msgctxt "ServerPicker.Pick"
+msgid "Pick a server"
+msgstr "서버를 고르세요"
+
+#: Source/GameFramework/Kits/Feature/Online/ServerDirectory/Client/ServerPickerScreen.cpp
+msgctxt "ServerPicker.Row"
+msgid "{region}  {fill}%  {state}"
+msgstr "{region}  {fill}%  {state}"
+
+#: Source/GameFramework/Kits/Feature/Online/ServerDirectory/Client/ServerPickerScreen.cpp
+msgctxt "ServerPicker.StateDraining"
+msgid "draining"
+msgstr "비우는 중"
+
+#: Source/GameFramework/Kits/Feature/Online/ServerDirectory/Client/ServerPickerScreen.cpp
+msgctxt "ServerPicker.StateMaintenance"
+msgid "maintenance"
+msgstr "점검 중"
+
+#: Source/GameFramework/Kits/Feature/Online/ServerDirectory/Client/ServerPickerScreen.cpp
+msgctxt "ServerPicker.StateOpen"
+msgid "open"
+msgstr "열림"
+
+#: Source/GameFramework/Kits/Feature/Online/ServerDirectory/Client/ServerPickerScreen.cpp
+msgctxt "ServerPicker.StateStarting"
+msgid "starting"
+msgstr "시작 중"
+
+#: Source/GameFramework/Kits/Feature/Online/ServerDirectory/Client/ServerPickerScreen.cpp
+msgctxt "ServerPicker.StateUnknown"
+msgid "unknown"
+msgstr "알 수 없음"
+
+#: Source/GameFramework/Client/Shop/ShopScreen.cpp
+msgctxt "Shop.BalanceLine"
+msgid "{amount} {currency}"
+msgstr "{amount} {currency}"
 
 #: Source/GameFramework/Client/Shop/ShopScreen.cpp
 msgctxt "Shop.Bought"
@@ -2423,6 +2653,16 @@ msgstr "가방이 가득 찼습니다."
 msgctxt "Shop.NotEnoughMoney"
 msgid "Not enough money."
 msgstr "돈이 부족합니다."
+
+#: Source/GameFramework/Client/Shop/ShopScreen.cpp
+msgctxt "Shop.OfferRow"
+msgid "{item}  {price} {currency}"
+msgstr "{item}  {price} {currency}"
+
+#: Source/GameFramework/Client/Shop/ShopScreen.cpp
+msgctxt "Shop.OfferRowStock"
+msgid "{offer}  ({stock})"
+msgstr "{offer}  ({stock})"
 
 #: Source/GameFramework/Client/Shop/ShopScreen.cpp
 msgctxt "Shop.OutOfStock"
@@ -2492,6 +2732,76 @@ msgstr "게임을 끝낼까요?"
 msgctxt "UIMenu.QuitTitle"
 msgid "Quit Game"
 msgstr "게임 종료"
+
+#: Source/GameFramework/Kits/Genre/RPG/OpenWorldWestern/Client/WesternRiderViewComponent.cpp
+msgctxt "Western.Bounty"
+msgid "Bounty ${amount}"
+msgstr "현상금 ${amount}"
+
+#: Source/GameFramework/Kits/Genre/RPG/OpenWorldWestern/Client/WesternRiderViewComponent.cpp
+msgctxt "Western.Carcasses"
+msgid "Carcasses {count}"
+msgstr "사체 {count}"
+
+#: Source/GameFramework/Kits/Genre/RPG/OpenWorldWestern/Client/WesternRiderViewComponent.cpp
+msgctxt "Western.GaitCanter"
+msgid "Canter"
+msgstr "구보"
+
+#: Source/GameFramework/Kits/Genre/RPG/OpenWorldWestern/Client/WesternRiderViewComponent.cpp
+msgctxt "Western.GaitGallop"
+msgid "Gallop"
+msgstr "질주"
+
+#: Source/GameFramework/Kits/Genre/RPG/OpenWorldWestern/Client/WesternRiderViewComponent.cpp
+msgctxt "Western.GaitStanding"
+msgid "Standing"
+msgstr "서 있음"
+
+#: Source/GameFramework/Kits/Genre/RPG/OpenWorldWestern/Client/WesternRiderViewComponent.cpp
+msgctxt "Western.GaitTrot"
+msgid "Trot"
+msgstr "속보"
+
+#: Source/GameFramework/Kits/Genre/RPG/OpenWorldWestern/Client/WesternRiderViewComponent.cpp
+msgctxt "Western.GaitWalk"
+msgid "Walk"
+msgstr "평보"
+
+#: Source/GameFramework/Kits/Genre/RPG/OpenWorldWestern/Client/WesternRiderViewComponent.cpp
+msgctxt "Western.Honor"
+msgid "Honor {honor} ({tier})"
+msgstr "명예 {honor}({tier})"
+
+#: Source/GameFramework/Kits/Genre/RPG/OpenWorldWestern/Client/WesternRiderViewComponent.cpp
+msgctxt "Western.Hungry"
+msgid "Hungry"
+msgstr "배고픔"
+
+#: Source/GameFramework/Kits/Genre/RPG/OpenWorldWestern/Client/WesternRiderViewComponent.cpp
+msgctxt "Western.Money"
+msgid "${amount}"
+msgstr "${amount}"
+
+#: Source/GameFramework/Kits/Genre/RPG/OpenWorldWestern/Client/WesternRiderViewComponent.cpp
+msgctxt "Western.OnFoot"
+msgid "On foot - E: mount  F: whistle"
+msgstr "걷는 중 - E: 타기  F: 휘파람"
+
+#: Source/GameFramework/Kits/Genre/RPG/OpenWorldWestern/Client/WesternRiderViewComponent.cpp
+msgctxt "Western.Pelts"
+msgid "Pelts {count}"
+msgstr "가죽 {count}"
+
+#: Source/GameFramework/Kits/Genre/RPG/OpenWorldWestern/Client/WesternRiderViewComponent.cpp
+msgctxt "Western.Riding"
+msgid "Riding {horse} - {gait} {speed} m/s - E: dismount  Shift: gallop"
+msgstr "{horse} 탑승 - {gait} {speed} m/s - E: 내리기  Shift: 질주"
+
+#: Source/GameFramework/Kits/Genre/RPG/OpenWorldWestern/Client/WesternRiderViewComponent.cpp
+msgctxt "Western.Wanted"
+msgid "Wanted {level}"
+msgstr "수배 {level}"
 
 #. Context: TextWidget._text
 #: engine/ui/confirm_unsaved.ui.xml

@@ -741,6 +741,11 @@ namespace sw
          */
         void updateStaticShadowGeneration( const PrimitiveRegistry& primitives, bool bSetChanged );
         /**
+         * @brief 지난 빌드 뒤 텍스처가 도착했고(`TextureCache::getArrivalCount`) 그림자의 모양을 텍스처가 정하는 머티리얼이 있으면 정적 그림자 세대를 올립니다.
+         * @details 도착 전에 그린 캐시 층은 자리 텍스처의 알파로 오려졌다. 도착은 SRV 번호를 바꾸지 않아 프리미티브 더티가 없다 — 정지한 씬에서는 영영 그대로였다.
+         */
+        void updateTextureArrivals();
+        /**
          * @brief 월드 행렬만 바뀐 항목 가운데 지난 프레임 후보에 없는 것(메시가 아직 없었거나 인스턴스 항목)을 렌더 상태 목록으로 넘깁니다.
          * @details 그런 항목은 다시 모아야 후보에 실릴지 알 수 있다. 남은 것만 `copyCandidateTransforms` 가 행렬을 옮긴다. 부분 수집 안에서만 부른다.
          */
@@ -922,6 +927,7 @@ namespace sw
         uint64 _lastPrimitiveLayoutGeneration{ 0 };
         uint64 _staticShadowSignature{ 0 }; ///< 정적 메시 집합의 지문(포인터 섞은 값의 합 — 순서와 무관하다). `updateStaticShadowGeneration`
         uint32 _staticShadowCount{ 0 };     ///< 정적 메시 수. 지문과 함께 집합이 바뀌었는지 본다
+        uint64 _textureArrivalCount{ 0 };   ///< 마지막으로 본 텍스처 도착 수. `updateTextureArrivals`
         float3 _lastCameraPos{};
         /** @brief 마지막 빌드가 쓴 깊이 축입니다(`GPUTransparentSorter::getAxis`). 다르면 정렬을 다시 합니다. */
         float3 _lastTransparentSortAxis{};

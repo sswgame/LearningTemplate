@@ -37,7 +37,7 @@ SW_TEST_CASE( SceneManagerTest, AllScenesIncludePreviewScenes )
     Scene* const   pActive  = sceneManager.createEmptyActiveScene( "Active" );
     Scene* const   pPreview = sceneManager.createPreviewScene( "Preview", ScenePreviewPolicy{} );
     vector<Scene*> listScene;
-    sceneManager.collectScenes( listScene );
+    sceneManager.collectAllScenes( listScene );
     SW_REQUIRE_EQUAL( size_t{ 2 }, listScene.size() );
     SW_EXPECT_TRUE( listScene[0] == pActive );
     SW_EXPECT_TRUE( listScene[1] == pPreview );

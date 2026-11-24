@@ -19,6 +19,7 @@
 #include "Engine/Foundation/EngineServices.h"
 #include "Engine/Graphics/Mesh/Mesh.h"
 #include "Engine/Object/GameObject/GameObject.h"
+#include "Engine/Object/GameObject/GameObjectEvents.h"
 #include "Engine/Object/GameObject/GameObjectManager.inl"
 #include "Engine/Object/GameObject/GameObjectManagerResolve.inl"
 #include "Engine/Visual/Component/MeshSectionComponent.h"
@@ -273,6 +274,13 @@ namespace sw
         MeshComponent::resolveRenderAssets();
         resolveSkinInstanceMesh();
         resolveSkeleton();
+        notifySkinnedMeshResolved();
+    }
+
+    void SkeletalMeshComponent::notifySkinnedMeshResolved() const
+    {
+        if ( getOwner() != nullptr )
+            GameObjectEvents::broadcast( *getOwner(), &GameObjectEvents::_skinnedMeshResolved, *this );
     }
 
     void SkeletalMeshComponent::setSkeletonPath( string_view path )
@@ -320,6 +328,7 @@ namespace sw
         setMesh( std::move( source ) );
         resolveSkinInstanceMesh();
         _bPoseDirty = SW_TRUE;
+        notifySkinnedMeshResolved();
     }
 
     void SkeletalMeshComponent::resolveSkeleton()

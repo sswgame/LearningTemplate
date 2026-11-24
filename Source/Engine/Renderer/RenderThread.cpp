@@ -807,10 +807,11 @@ namespace sw
 
     void RenderThread::drawScenePreviews( RenderFramePacket& packet, IRHICommandContext* pFrameStream, bool bMainDrew )
     {
-        // 씬마다 빠뜨린 배치 수를 이 프레임 것으로 다시 쓴다(캡처 준비 판정 `CaptureReadiness`). 주 화면이 그리지 않은 프레임은 기다릴 그림이 없다.
+        // 씬마다 빠뜨린 배치 수를 이 프레임 것으로 다시 쓴다(캡처 준비 판정 `CaptureReadiness`). 주 화면이 그리지 않은 프레임은 줄이 없다 — 그려진 그림이 없으니 준비가 아니다(`CaptureReadiness::countPendingRenderJobs` 의 계약).
         array<ScenePendingJob, 1 + kMaxPreviewSceneView> arrPending{};
         uint32                                           pendingCount = 0;
-        arrPending[pendingCount++]                                    = ScenePendingJob{ 0, bMainDrew ? _pFrameRenderer->getLastPendingPSOBatchCount() : 0u };
+        if ( bMainDrew )
+            arrPending[pendingCount++] = ScenePendingJob{ 0, _pFrameRenderer->getLastPendingPSOBatchCount() };
         // 볼륨 안개의 상태는 주 화면의 것만 올린다(미리보기 렌더러는 쓰지 않는다 — 에디터 창이 보이는 이유가 주 화면의 이유다).
         if ( bMainDrew )
         {

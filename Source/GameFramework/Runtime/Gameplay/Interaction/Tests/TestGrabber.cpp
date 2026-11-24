@@ -38,10 +38,11 @@ namespace
             _pAttached = &target;
             return true;
         }
-        void release( GameObject& holder, GameObject& target, const float3& velocity ) override
+        void release( GameObject& holder, GameObject& target, const float3& velocity, PhysicsBodyType bodyType ) override
         {
             (void)holder;
             (void)target;
+            (void)bodyType;
             _pAttached    = nullptr;
             _lastVelocity = velocity;
             ++_releaseCount;
@@ -172,6 +173,28 @@ SW_TEST_CASE( GrabberTest, RigidBodyIsKinematicInTheHandAndThrown )
     SW_EXPECT_TRUE( pBody->getLinearVelocity()._x > 4.0f );
     SW_EXPECT_TRUE( pBody->getWorldPosition()._x > thrownFrom + 1.5f ); // 6 m/s 로 반 초
     SW_EXPECT_TRUE( pBody->getWorldPosition()._y < 11.0f );             // 손을 떠나 중력을 받는다
+}
+
+/** @brief [GrabberTest] 결함: 놓기가 늘 동적으로 되돌려, 저작된 키네마틱(받침대의 열쇠 · 움직이는 부품)을 집었다 놓으면 떨어져 나갔다 — 집기 전의 종류로 돌아간다 */
+SW_TEST_CASE( GrabberTest, KinematicBodyStaysKinematicAfterTheHand )
+{
+    GameObjectManager manager;
+    GrabberComponent* pGrabber = Util::spawnAt( manager, "Holder", float3{ 0.0f, 10.0f, 0.0f } )->addComponent<GrabberComponent>();
+    GameObject*       pKey     = manager.createGameObject( hashed_string( "Key" ) );
+    auto*             pBody    = pKey->addComponent<RigidBodyComponent>();
+    pBody->setBodyType( PhysicsBodyType::Kinematic );
+    pBody->setWorldPosition( float3{ 1.0f, 10.0f, 0.0f } );
+    manager.beginPlay();
+    manager.update( Util::kFrame );
+    SW_REQUIRE_TRUE( pGrabber->grab( *pKey ) );
+    SW_REQUIRE_TRUE( pGrabber->dropHeld() );
+    SW_EXPECT_TRUE( pBody->getBodyType() == PhysicsBodyType::Kinematic );
+    const float32 droppedAt = pBody->getWorldPosition()._y;
+    for ( uint32 frame = 0; frame < 30; ++frame )
+    {
+        manager.update( Util::kFrame );
+    }
+    SW_EXPECT_NEAR( droppedAt, pBody->getWorldPosition()._y, 1.0e-3f );
 }
 
 /** @brief [GrabberTest] 게임이 건 백엔드가 집기 · 놓기를 받고, 백엔드가 거절하면 든 것이 없다. 든 것이 사라지면 놓기는 부르지 않고 빈손이 된다 */

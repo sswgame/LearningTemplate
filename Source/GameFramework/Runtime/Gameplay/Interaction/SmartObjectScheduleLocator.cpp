@@ -74,7 +74,7 @@ namespace sw
     {
         if ( _pManager == nullptr )
             return false;
-        const GameObject* pObject = _pManager->resolveGameObject( GameObjectHandle::make( reservation._objectID ) );
+        const GameObject* pObject = _pManager->findGameObjectByID( reservation._objectID );
         if ( pObject == nullptr )
             return false;
         const SmartObjectComponent* pSmart = pObject->getComponent<SmartObjectComponent>();
@@ -184,7 +184,7 @@ namespace sw
         {
             if ( reservation._id != reservationID )
                 continue;
-            GameObject*           pObject = _pManager->resolveGameObject( GameObjectHandle::make( reservation._objectID ) );
+            GameObject*           pObject = _pManager->findGameObjectByID( reservation._objectID );
             SmartObjectComponent* pSmart  = pObject != nullptr ? pObject->getComponent<SmartObjectComponent>() : nullptr;
             return pSmart != nullptr && pSmart->claimSlot( npc, reservation._slot );
         }
@@ -199,7 +199,7 @@ namespace sw
         {
             if ( reservation._id != reservationID )
                 continue;
-            GameObject*           pObject = _pManager->resolveGameObject( GameObjectHandle::make( reservation._objectID ) );
+            GameObject*           pObject = _pManager->findGameObjectByID( reservation._objectID );
             SmartObjectComponent* pSmart  = pObject != nullptr ? pObject->getComponent<SmartObjectComponent>() : nullptr;
             return pSmart != nullptr && pSmart->releaseSlot( npc );
         }

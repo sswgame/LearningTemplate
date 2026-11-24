@@ -62,12 +62,15 @@ namespace sw
         , _nextPreviewKey{ 1 }
         , _bWorldPlaying{ SW_FALSE }
         , _bInitialized{ SW_FALSE }
+        , _bRestartLoad{ SW_FALSE }
         , _sceneGeneration{ 0 }
         , _pRenderBinding{ nullptr }
         , _services{ SceneEngineServices::makeFromBoundEngine() }
         , _asyncLoad{ sw::make_shared<AsyncLoadSlot>() }
         , _queuedPath{}
         , _inFlightPath{}
+        , _inFlightKind{ SceneLoadKind::Travel }
+        , _queuedKind{ SceneLoadKind::Travel }
         , _chunkWaitPath{}
         , _queuedPromise{}
         , _bLoadInFlight{ false }
@@ -179,10 +182,15 @@ namespace sw
 
         if ( _asyncLoad != nullptr )
         {
-            ScopedLock<mutex> lock{ _asyncLoad->_mutex };
-            _asyncLoad->_scene.reset();
-            _asyncLoad->_bReady.store( false, std::memory_order_release );
+            {
+                ScopedLock<mutex> lock{ _asyncLoad->_mutex };
+                _asyncLoad->_scene.reset();
+                _asyncLoad->_bReady.store( false, std::memory_order_release );
+            }
+            if ( _bLoadInFlight.load( std::memory_order_acquire ) )
+                _asyncLoad->_promise.setValue( nullptr ); // 기다리는 쪽이 끝나지 않는 future 를 쥐지 않는다
         }
+        _bRestartLoad  = SW_FALSE;
         _bLoadInFlight = false;
         // 미리보기 씬이 먼저다 — 로드된 씬과 서비스를 공유하지 않지만, 내리는 순서를 만든 순서의 역으로 둔다.
         while ( _listPreviewScene.empty() == false )
@@ -201,19 +209,6 @@ namespace sw
         _listLoadedScene.clear();
         broadcastSceneObjectsInvalidated();
         SW_LOG_INFO_ID( "SceneManager.ShutDown", "Shut down." );
-    }
-
-    void SceneManager::collectScenes( vector<Scene*>& outListScene ) const
-    {
-        outListScene.clear();
-        outListScene.reserve( _listLoadedScene.size() + _listPreviewScene.size() );
-        for ( const unique_ptr<Scene>& scene : _listLoadedScene )
-        {
-            if ( scene != nullptr )
-                outListScene.push_back( scene.get() );
-        }
-        for ( const PreviewSceneEntry& preview : _listPreviewScene )
-            outListScene.push_back( preview._scene.get() );
     }
 
     Scene* SceneManager::createScene( string_view name )
@@ -321,6 +316,7 @@ namespace sw
                 _asyncLoad->_stop.requestStop();
 
             _queuedPath    = path;
+            _queuedKind    = kind;
             _queuedPromise = TaskPromise<Scene*>{};
             SW_LOG_TRACE_ID( "SceneManager.AsyncLoadFlightQueued", "Async load in flight — queued '%#'", path );
             TaskFuture<Scene*> queuedFuture = _queuedPromise.getFuture();
@@ -330,14 +326,14 @@ namespace sw
 
         // `TaskPromise` 는 공유 상태를 가리키는 핸들이라 복사해도 같은 약속이다. 여기서 복사해 넘기고 원본으로 future 를 뽑는다.
         TaskPromise<Scene*> promise{};
-        if ( dispatchLoad( path, promise ) == false )
+        if ( dispatchLoad( path, promise, kind ) == false )
             return {};
         TaskFuture<Scene*> future = promise.getFuture();
         _onSceneLoadRequested.broadcast( string( path ), kind, future );
         return future;
     }
 
-    bool SceneManager::dispatchLoad( string_view path, TaskPromise<Scene*> promise )
+    bool SceneManager::dispatchLoad( string_view path, TaskPromise<Scene*> promise, SceneLoadKind kind )
     {
         const ScopedMemoryTag memoryScope{ kSubsystemMemoryTag };
         // 로드를 띄울 곳(태스크)과 지을 표(타입)가 없으면 띄우지 않는다. 기다리는 쪽에는 실패로 알린다.
@@ -365,6 +361,7 @@ namespace sw
                 _asyncLoad->_bReady.store( false, std::memory_order_release );
                 _asyncLoad->_promise = std::move( promise );
                 _inFlightPath        = path;
+                _inFlightKind        = kind;
                 _chunkWaitPath       = path;
                 SW_LOG_TRACE_ID( "SceneManager.WaitingForChunks", "dispatchLoad: '%#' waits for its pack chunks", path );
                 return true;
@@ -376,6 +373,7 @@ namespace sw
         _asyncLoad->_typeTableGeneration = _services._pTypeRegistry->getGeneration();
         _asyncLoad->_stop                = StopSource{}; // 앞 로드가 밀려나며 올린 중단을 물려받지 않는다
         _inFlightPath                    = path;
+        _inFlightKind                    = kind;
         SW_LOG_TRACE_ID( "SceneManager.DispatchLoad", "dispatchLoad: %#", path );
 
         shared_ptr<AsyncLoadSlot> slot = _asyncLoad;
@@ -551,8 +549,37 @@ namespace sw
         }
     }
 
+    void SceneManager::suspendPendingLoad()
+    {
+        // 청크를 기다리는 로드는 아직 아무것도 짓지 않았다 — 그대로 두면 다음 갱신이 이어 간다.
+        if ( _asyncLoad == nullptr || _bLoadInFlight.load( std::memory_order_acquire ) == false || _chunkWaitPath.empty() == false )
+            return;
+        _asyncLoad->_stop.requestStop();
+        _asyncLoad->_bAccepting.store( false, std::memory_order_release );
+        if ( _services._pTaskManager != nullptr )
+            _services._pTaskManager->waitStage( _loadStage, "SceneManager::suspendPendingLoad" );
+        {
+            ScopedLock<mutex> lock{ _asyncLoad->_mutex };
+            _asyncLoad->_scene.reset(); // 내릴 모듈의 컴포넌트로 지은 씬이다 — 코드가 있는 지금 없앤다
+        }
+        _asyncLoad->_bAccepting.store( true, std::memory_order_release );
+        _bRestartLoad = SW_TRUE;
+        _asyncLoad->_bReady.store( true, std::memory_order_release ); // 다음 `updateTransitions` 가 같은 약속으로 다시 띄운다
+    }
+
+    void SceneManager::replayPendingLoadRequests( const SceneLoadRequestedHandler& handler ) const
+    {
+        if ( handler.isBound() == false || _asyncLoad == nullptr )
+            return;
+        if ( _bLoadInFlight.load( std::memory_order_acquire ) )
+            handler( _inFlightPath, _inFlightKind, _asyncLoad->_promise.getFuture() );
+        if ( _queuedPath.empty() == false )
+            handler( _queuedPath, _queuedKind, _queuedPromise.getFuture() );
+    }
+
     void SceneManager::cancelPendingAsyncLoads()
     {
+        _bRestartLoad = SW_FALSE;
         if ( _asyncLoad != nullptr )
             _asyncLoad->_bAccepting.store( false, std::memory_order_release );
 
@@ -688,7 +715,7 @@ namespace sw
             _asyncLoad->_promise.setValue( nullptr );
             const string nextPath = std::move( _queuedPath );
             _queuedPath.clear();
-            dispatchLoad( nextPath, std::move( _queuedPromise ) );
+            dispatchLoad( nextPath, std::move( _queuedPromise ), _queuedKind );
             return;
         }
         const PackChunkState chunks = _services._pAssetManager->prepareSceneChunks( _chunkWaitPath );
@@ -708,7 +735,7 @@ namespace sw
             }
             return;
         }
-        dispatchLoad( path, std::move( _asyncLoad->_promise ) );
+        dispatchLoad( path, std::move( _asyncLoad->_promise ), _inFlightKind );
     }
 
     void SceneManager::updateTransitions()
@@ -738,16 +765,18 @@ namespace sw
         // 표로 지어져, 아직 오르지 않은 모듈의 컴포넌트가 빠진다(못 만든 컴포넌트는 `MissingComponent` 로 남는다). 버리고 같은 경로를 다시
         // 띄운다. 대기열이 **다른** 경로면 어차피 이 결과를 버리므로 아래에 맡긴다. 대기열이 **같은** 경로면 아래는 이 결과를 그대로 쓰므로
         // 여기서 다시 짓는다. 대기열은 그대로 두어, 다시 지은 결과가 두 요청자를 함께 채운다.
-        const bool bQueuedSamePath = _queuedPath.empty() == false && pendingScene != nullptr &&
-                                     FileUtil::isSameDiskPath( pendingScene->getSourcePath(), _queuedPath );
-        const bool bTypeTableChanged    = _services._pTypeRegistry != nullptr && _asyncLoad->_typeTableGeneration != _services._pTypeRegistry->getGeneration();
-        const bool bReloadForTypeChange = pendingScene != nullptr && ( _queuedPath.empty() || bQueuedSamePath ) && bTypeTableChanged;
+        // 리로드가 멈춰 둔 로드(`suspendPendingLoad`)도 같은 길이다 — 지은 것은 코드가 있을 때 이미 없앴다.
+        const bool bSuspended             = _bRestartLoad == SW_TRUE;
+        _bRestartLoad                     = SW_FALSE;
+        const string loadedPath           = pendingScene != nullptr ? pendingScene->getSourcePath() : ( bSuspended ? _inFlightPath : string{} );
+        const bool   bQueuedSamePath      = _queuedPath.empty() == false && loadedPath.empty() == false && FileUtil::isSameDiskPath( loadedPath, _queuedPath );
+        const bool   bTypeTableChanged    = _services._pTypeRegistry != nullptr && _asyncLoad->_typeTableGeneration != _services._pTypeRegistry->getGeneration();
+        const bool   bReloadForTypeChange = ( _queuedPath.empty() || bQueuedSamePath ) && ( bSuspended || ( pendingScene != nullptr && bTypeTableChanged ) );
         if ( bReloadForTypeChange )
         {
-            const string path = pendingScene->getSourcePath();
-            SW_LOG_INFO_ID( "SceneManager.ReflectedTypesChangedWhile", "Reflected types changed while '%#' was loading — loading it again", path );
+            SW_LOG_INFO_ID( "SceneManager.ReflectedTypesChangedWhile", "Modules or reflected types changed while '%#' was loading — loading it again", loadedPath );
             pendingScene.reset();
-            dispatchLoad( path, std::move( _asyncLoad->_promise ) );
+            dispatchLoad( loadedPath, std::move( _asyncLoad->_promise ), _inFlightKind );
             return;
         }
 
@@ -770,7 +799,7 @@ namespace sw
                 pendingScene.reset();
                 // 대기열 요청자의 약속을 **그대로 들고 간다.** `requestLoadFuture` 를 다시 불러 약속을 새로 만들면
                 // 대기열에 넣은 쪽이 쥔 future 는 바로 위에서 nullptr 로 닫힌 것이 되어, 자기 씬이 활성이 되는데도 실패를 받는다.
-                dispatchLoad( nextPath, std::move( _queuedPromise ) );
+                dispatchLoad( nextPath, std::move( _queuedPromise ), _queuedKind );
                 return;
             }
         }
@@ -907,9 +936,10 @@ namespace sw
         return kInvalidSceneKey;
     }
 
-    void SceneManager::collectAllScenes( vector<const Scene*>& outListScene ) const
+    void SceneManager::collectAllScenes( vector<Scene*>& outListScene ) const
     {
         outListScene.clear();
+        outListScene.reserve( _listLoadedScene.size() + _listPreviewScene.size() );
         for ( const unique_ptr<Scene>& scene : _listLoadedScene )
         {
             if ( scene != nullptr )

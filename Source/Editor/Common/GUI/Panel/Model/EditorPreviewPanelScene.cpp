@@ -194,6 +194,7 @@ namespace sw::editor
         // `Live` 배치는 런타임 id 가 맞아 옮기지 못한 핸들을 실패로 치지 않는다. 늘 true 다.
         [[maybe_unused]] const bool bLinked = batch.finish();
         SW_ASSERT( bLinked );
+        SW_LOG_INFO_ID( "EditorPreviewPanel.ModuleStateRestored", "%#: restored %# object(s) after the module reload", getPanelTitle(), static_cast<uint32>( pState->_listSnapshot.size() ) );
     }
 
     void EditorPreviewPanel::prepareDocumentForSave()

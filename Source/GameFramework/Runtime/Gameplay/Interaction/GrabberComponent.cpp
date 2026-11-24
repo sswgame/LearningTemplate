@@ -34,9 +34,10 @@ namespace sw
         return true;
     }
 
-    void TransformGrabPhysics::release( GameObject& holder, GameObject& target, const float3& velocity )
+    void TransformGrabPhysics::release( GameObject& holder, GameObject& target, const float3& velocity, PhysicsBodyType bodyType )
     {
         (void)holder;
+        (void)bodyType;
         (void)velocity; // 강체가 없으면 속도를 받을 곳이 없다 - 놓은 자리에 남는다. 던지려면 대상에 강체를 둔다(RigidBodyGrabPhysics)
         SceneComponent* pTargetScene = target.getPrimarySceneComponent();
         if ( pTargetScene != nullptr )
@@ -57,13 +58,13 @@ namespace sw
         return true;
     }
 
-    void RigidBodyGrabPhysics::release( GameObject& holder, GameObject& target, const float3& velocity )
+    void RigidBodyGrabPhysics::release( GameObject& holder, GameObject& target, const float3& velocity, PhysicsBodyType bodyType )
     {
         RigidBodyComponent*   pBody3D = target.getComponent<RigidBodyComponent>();
         RigidBody2DComponent* pBody2D = target.getComponent<RigidBody2DComponent>();
         if ( pBody3D == nullptr && pBody2D == nullptr )
         {
-            _transform.release( holder, target, velocity );
+            _transform.release( holder, target, velocity, bodyType );
             return;
         }
         SceneComponent* pTargetScene = target.getPrimarySceneComponent();
@@ -71,21 +72,28 @@ namespace sw
             pTargetScene->detachFromComponent( AttachRule::KeepWorld );
         if ( pBody3D != nullptr )
         {
-            pBody3D->setBodyType( PhysicsBodyType::Dynamic );
-            pBody3D->setLinearVelocity( velocity );
-            pBody3D->wake();
+            pBody3D->setBodyType( bodyType );
+            if ( bodyType == PhysicsBodyType::Dynamic )
+            {
+                pBody3D->setLinearVelocity( velocity );
+                pBody3D->wake();
+            }
         }
         if ( pBody2D != nullptr )
         {
-            pBody2D->setBodyType( PhysicsBodyType::Dynamic );
-            pBody2D->setLinearVelocity( float2{ velocity._x, velocity._y } );
-            pBody2D->wake();
+            pBody2D->setBodyType( bodyType );
+            if ( bodyType == PhysicsBodyType::Dynamic )
+            {
+                pBody2D->setLinearVelocity( float2{ velocity._x, velocity._y } );
+                pBody2D->wake();
+            }
         }
     }
 
     GrabberComponent::GrabberComponent()
         : _holdOffset{ 0.0f, 1.0f, 0.6f }
         , _held{}
+        , _heldBodyType{ PhysicsBodyType::Dynamic }
         , _grabButton{}
         , _grabbableTags{}
         , _reach{ 1.5f }
@@ -192,9 +200,14 @@ namespace sw
         const bool  bCannotGrab = pOwner == nullptr || &target == pOwner || isHolding() || findHolderOf( target ) != nullptr; // 남의 손에서 빼앗으면 두 쪽이 같은 것을 쥔 줄 안다
         if ( bCannotGrab )
             return false;
+        // 붙이기가 키네마틱으로 바꾸기 전에 적는다. 놓으면 이 종류로 돌아간다 — 저작된 키네마틱을 놓는다고 동적으로 바꾸지 않는다.
+        const RigidBodyComponent*   pBody3D  = target.getComponent<RigidBodyComponent>();
+        const RigidBody2DComponent* pBody2D  = target.getComponent<RigidBody2DComponent>();
+        const PhysicsBodyType       bodyType = pBody3D != nullptr ? pBody3D->getBodyType() : ( pBody2D != nullptr ? pBody2D->getBodyType() : PhysicsBodyType::Dynamic );
         if ( getBackend().attach( *pOwner, target, _holdOffset ) == false )
             return false;
-        _held = target.getHandle();
+        _heldBodyType = bodyType;
+        _held         = target.getHandle();
         target.setKeptWhenParentDestroyed( true ); // 손에 붙어도 집은 쪽의 일부가 아니다
         return true;
     }
@@ -220,7 +233,7 @@ namespace sw
         if ( pHeld == nullptr )
             return false;
         pHeld->setKeptWhenParentDestroyed( false );
-        getBackend().release( *pOwner, *pHeld, velocity );
+        getBackend().release( *pOwner, *pHeld, velocity, _heldBodyType );
         return true;
     }
 } // namespace sw

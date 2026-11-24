@@ -174,6 +174,33 @@ namespace sw
                 return listLevel;
             }
 
+            /** @brief 떨어진 조각의 정점과 스킨입니다(바인드 자세). */
+            struct SeverPieces
+            {
+                vector<RHIVertex>      _listVertex{};
+                vector<MeshSkinVertex> _listSkin{};
+            };
+
+            /**
+             * @brief @p mesh 에서 영역 하나를 뺀 새 메시를 만듭니다(남은 몸 캡 · 낮은 상세 단계 포함). 잘린 삼각형이 없으면 @p mesh 그대로이고 @p outPieces 는 비어 있습니다.
+             */
+            static shared_ptr<Mesh> severMesh( const shared_ptr<Mesh>& mesh, const Skeleton& skeleton, const FitTables& regionTable, uint32 regionIndex, SeverPieces& outPieces )
+            {
+                SeverResult result;
+                if ( computeSeveredTriangles( *mesh, skeleton, regionTable, regionIndex, result ) == false )
+                    return mesh;
+                vector<RHIVertex>      listKeptVertex;
+                vector<MeshSkinVertex> listKeptSkin;
+                splitByTriangle( *mesh, result, listKeptVertex, listKeptSkin, outPieces._listVertex, outPieces._listSkin );
+                shared_ptr<Mesh> kept = Mesh::create( MeshCPUAccess::Keep );
+                kept->setVertices( std::move( listKeptVertex ) );
+                kept->setSkin( std::move( listKeptSkin ), mesh->getSkinBinding() );
+                // 낮은 단계도 같이 자른다(스킨을 먼저 둔 뒤 — `setSkin` 은 LOD 를 뗀다). 받지 못하면 setLODs 가 오류를 남기고 LOD 0 만 남는다.
+                if ( mesh->getLODs().empty() == false )
+                    (void)kept->setLODs( severLODLevels( *mesh, skeleton, regionTable, regionIndex ) );
+                return kept;
+            }
+
             /**
              * @brief 조각 정점을 현재 포즈로 스키닝해 월드로 옮기고, 무게중심 기준 좌표로 바꿉니다. 무게중심을 돌려줍니다.
              * @details 볼록 껍질 점은 고르게 솎아 `kMaxHullPoint` 개 안팎으로 @p outHull 에 담는다.
@@ -282,7 +309,9 @@ namespace sw
         , _pRegionTable{}
         , _listSeveredRegion{}
         , _listPiece{}
+        , _meshSubscription{}
         , _pIntactMesh{}
+        , _pSeveredMesh{}
         , _bTableLoaded{ false }
     {
         setCanEverTick( false );
@@ -321,6 +350,7 @@ namespace sw
         if ( _pIntactMesh != nullptr && pUnit != nullptr )
             pUnit->setMesh( std::move( _pIntactMesh ) );
         _pIntactMesh.reset();
+        _pSeveredMesh.reset();
         _listSeveredRegion.clear();
         return SpawnStateReset::Reset;
     }
@@ -397,7 +427,28 @@ namespace sw
     void SkeletalSeveringComponent::onRegister( GameObjectManager& manager )
     {
         Component::onRegister( manager );
-        _hitSubscription = GameObjectEvents::listen<&SkeletalSeveringComponent::handleHit>( *this, &GameObjectEvents::_hitReceived );
+        _hitSubscription  = GameObjectEvents::listen<&SkeletalSeveringComponent::handleHit>( *this, &GameObjectEvents::_hitReceived );
+        _meshSubscription = GameObjectEvents::listen<&SkeletalSeveringComponent::handleSkinnedMeshResolved>( *this, &GameObjectEvents::_skinnedMeshResolved );
+    }
+
+    void SkeletalSeveringComponent::handleSkinnedMeshResolved( const SkeletalMeshComponent& unit )
+    {
+        using Internal                = SkeletalSeveringComponentInternal;
+        SkeletalMeshComponent* pUnit  = getOwner() != nullptr ? getOwner()->getComponent<SkeletalMeshComponent>() : nullptr;
+        const bool             bOther = pUnit != &unit || _listSeveredRegion.empty() || _pRegionTable == nullptr;
+        if ( bOther || unit.getMesh() == nullptr || unit.getMesh() == _pSeveredMesh || unit.getMesh()->hasSkin() == false )
+            return;
+        _pIntactMesh             = unit.getMesh();
+        shared_ptr<Mesh> current = _pIntactMesh;
+        for ( const hashed_string& region : _listSeveredRegion )
+        {
+            const optional<uint32> regionIndex = findRegionIndex( region );
+            Internal::SeverPieces  pieces;
+            if ( regionIndex.has_value() )
+                current = Internal::severMesh( current, pUnit->getSkeleton(), *_pRegionTable, *regionIndex, pieces ); // 새 메시에 그 영역이 없으면 그대로다
+        }
+        _pSeveredMesh = current;
+        pUnit->setMesh( std::move( current ) );
     }
 
     void SkeletalSeveringComponent::handleHit( const HitInfo& hit )
@@ -439,26 +490,17 @@ namespace sw
         if ( VectorUtil::contains( _listSeveredRegion, region ) )
             return false;
 
-        // 1) 위상: 위치로 이은 형상과 정점마다 영역을 구해 자른다.
-        const shared_ptr<Mesh>& mesh = pUnit->getMesh();
-        SeverResult             result;
-        if ( Internal::computeSeveredTriangles( *mesh, pUnit->getSkeleton(), *_pRegionTable, regionIndex, result ) == false )
+        // 1 · 2) 몸 메시에서 영역을 빼고 남은 몸으로 바꾼다.
+        const shared_ptr<Mesh> mesh = pUnit->getMesh();
+        Internal::SeverPieces  pieces;
+        shared_ptr<Mesh>       kept = Internal::severMesh( mesh, pUnit->getSkeleton(), *_pRegionTable, regionIndex, pieces );
+        if ( kept == mesh )
             return false;
-
-        // 2) 남은 몸: 잘린 삼각형을 빼고 남은 몸 캡을 붙인 메시로 바꾼다.
-        vector<RHIVertex>      listKeptVertex;
-        vector<MeshSkinVertex> listKeptSkin;
-        vector<RHIVertex>      listPieceVertex;
-        vector<MeshSkinVertex> listPieceSkin;
-        Internal::splitByTriangle( *mesh, result, listKeptVertex, listKeptSkin, listPieceVertex, listPieceSkin );
-        shared_ptr<Mesh> kept = Mesh::create( MeshCPUAccess::Keep );
-        kept->setVertices( std::move( listKeptVertex ) );
-        kept->setSkin( std::move( listKeptSkin ), mesh->getSkinBinding() );
-        // 낮은 단계도 같이 자른다(스킨을 먼저 둔 뒤 — `setSkin` 은 LOD 를 뗀다). 받지 못하면 setLODs 가 오류를 남기고 LOD 0 만 남는다.
-        if ( mesh->getLODs().empty() == false )
-            (void)kept->setLODs( Internal::severLODLevels( *mesh, pUnit->getSkeleton(), *_pRegionTable, regionIndex ) );
         if ( _pIntactMesh == nullptr )
             _pIntactMesh = mesh; // 처음 자를 때만 — 다음 영역은 이미 자른 몸에서 자른다
+        _pSeveredMesh                           = kept;
+        vector<RHIVertex>&      listPieceVertex = pieces._listVertex;
+        vector<MeshSkinVertex>& listPieceSkin   = pieces._listSkin;
         pUnit->setMesh( std::move( kept ) );
 
         // 3) 떨어진 조각: 현재 포즈로 스키닝해 정적 메시로 만들고, 그 정점의 볼록 껍질로 강체를 만든다.

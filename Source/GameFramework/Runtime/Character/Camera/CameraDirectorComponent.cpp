@@ -216,6 +216,8 @@ namespace sw
         , _contextPreset{}
         , _listContext{}
         , _listHeldContext{}
+        , _teleportTarget{}
+        , _targetTeleport{}
         , _pendingDeltaTime{ 0.0f }
         , _bResolvePending{ false }
     {
@@ -699,6 +701,7 @@ namespace sw
         // 암 충돌: 따로 준 질의가 없으면 씬의 물리(3D · 2D, 2D 콜라이더 포함)에 쓸어 본다(대상 자신의 바디는 모두 뺀다 — 피벗이 그 안에 있다).
         const CameraTarget target = computeTarget();
         _director.setUserSettings( CameraUserSettings::makeFromGlobalVariables() );
+        consumeTargetTeleport();
         if ( _pExternalProbe == nullptr && pManager != nullptr )
         {
             const GameObject*      pTarget = pManager->resolveGameObject( _target );
@@ -741,6 +744,21 @@ namespace sw
         _director.applyWorldOffset( delta );
         _photoMode.applyWorldOffset( delta );
         _channelImpulse.applyWorldOffset( delta );
+    }
+
+    void CameraDirectorComponent::consumeTargetTeleport()
+    {
+        const GameObjectManager* const pManager = getOwner() != nullptr ? getOwner()->getManager() : nullptr;
+        const GameObject* const        pTarget  = pManager != nullptr ? pManager->resolveGameObject( _target ) : nullptr;
+        const SceneComponent* const    pRoot    = pTarget != nullptr ? pTarget->getPrimarySceneComponent() : nullptr;
+        if ( pRoot == nullptr )
+            return;
+        const optional<TeleportType> teleport   = _targetTeleport.consume( *pRoot );
+        const bool                   bNewTarget = _teleportTarget != _target;
+        _teleportTarget                         = _target;
+        // 새로 잡은 대상이 그 전에 순간이동한 것은 이 카메라의 일이 아니다. 그룹은 한 사람의 순간이동으로 화면을 끊지 않는다.
+        if ( teleport.has_value() && bNewTarget == false && _listGroupTarget.empty() )
+            _director.onTargetTeleported( *teleport );
     }
 
     CameraTarget CameraDirectorComponent::computeTarget() const

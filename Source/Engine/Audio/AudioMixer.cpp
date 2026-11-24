@@ -57,7 +57,13 @@ namespace sw
             bus._volumeDb              = busDesc._volumeDb;
             bus._bMuted                = busDesc._bMuted ? SW_TRUE : SW_FALSE;
             bus._bSolo                 = busDesc._bSolo ? SW_TRUE : SW_FALSE;
-            bus._layout                = resolveAudioMixerBusLayout( busDesc._channels, layout );
+            bus._bPlaysInGamePause     = SW_FALSE;
+            for ( optional<uint32> visit = static_cast<uint32>( busIndex ); visit.has_value(); visit = desc.findBusIndex( desc._listBus[*visit]._parent ) )
+            {
+                if ( desc._listBus[*visit]._bPlaysInGamePause )
+                    bus._bPlaysInGamePause = SW_TRUE;
+            }
+            bus._layout = resolveAudioMixerBusLayout( busDesc._channels, layout );
             bus._input.allocate( bus._layout );
             // 넓은 버스가 두 채널 버스(부모 · 센드)로 갈 때 쓰는 BS.775 행렬이다. 레이아웃의 마스크는 늘 아는 스피커라 실패하지 않는다.
             const uint32 busChannelCount = AudioChannelLayoutUtil::getChannelCount( bus._layout );

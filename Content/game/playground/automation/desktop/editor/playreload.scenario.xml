@@ -38,6 +38,14 @@
 	<Expect watch="Editor.PlayState" equals="1"/>
 	<ExpectStateHash key="playing"/>
 
+	<!-- 프리팹 창에 게임 모듈의 컴포넌트와 덮어쓸 머티리얼을 든 프리팹을 연다 — ① 은 그 미리보기의 상태를 맡겼다 되돌리고, ③ 은 그 미리보기에도 알린다 -->
+	<Variable name="gv_editorWatchPanel" value="prefab_window"/>
+	<DevCommand line="panel.focus prefab_window"/>
+	<EditorWaitStable/>
+	<DevCommand line="asset.openScratch scratch/playreload/preview.prefab.xml"/>
+	<WaitUntil watch="Editor.PanelOpen" equals="1" timeoutFrames="300"/>
+	<EditorWaitStable/>
+
 	<!-- ① 게임 모듈 다시 짓기 + 교체 — 바뀐 코드(판 101)가 돌고 지갑 · 진행이 그대로다 -->
 	<Store watch="Reload.Count.Module" as="moduleBefore"/>
 	<RebuildModule name="SWGame" variant="probe-next"/>
@@ -50,6 +58,8 @@
 	<Expect watch="HotReload.TestKept" equals="42"/>
 	<Expect watch="Demo.Gold" target="Director" equals="75"/>
 	<ExpectStateHash key="playing"/>
+	<ExpectLog id="EditorPreviewPanel.ModuleStateRestored" contains="restored 1 object(s)" atLeast="1"/>
+	<ExpectLog id="EditorPreviewPanel.ModuleStateNotRestored" count="0"/>
 	<Expect watch="Reload.Count.Module" differsFrom="moduleBefore"/>
 	<Expect watch="Reload.LastMs.Module" atLeast="0.001"/>
 	<!-- 단계 나눔 — 빌드 끝 감지부터의 대기 · 새 이미지 준비 · 게임 상태 맡기기 · 교체(사람이 기다리는 시간을 어디서 쓰는지) -->
@@ -62,6 +72,7 @@
 	<Store watch="Reload.Count.Asset" as="assetBefore"/>
 	<DevCommand line="asset.overwriteScratch scratch/playreload/probe_edited.material scratch/playreload/probe.material"/>
 	<WaitUntil watch="Reload.Count.Asset" increaseFrom="assetBefore" increaseBy="1" timeoutWallSeconds="30"/>
+	<ExpectLog id="AssetHotReload.PreviewUsersNotified" contains="probe.material" atLeast="1"/>
 	<Store watch="Reload.Count.Asset" as="assetAfterMaterial"/>
 	<DevCommand line="asset.overwriteScratch scratch/playreload/probe_edited.dds scratch/playreload/probe.dds"/>
 	<WaitUntil watch="Reload.Count.Asset" increaseFrom="assetAfterMaterial" increaseBy="1" timeoutWallSeconds="30"/>
@@ -73,6 +84,10 @@
 	<Expect watch="Reload.LastMs.Asset" atLeast="0.001"/>
 	<Expect watch="Editor.PlayState" equals="1"/>
 	<Expect watch="Demo.Gold" target="Director" equals="75"/>
+
+	<DevCommand line="panel.close prefab_window"/>
+	<DevCommand line="panel.focus game_view"/>
+	<EditorWaitStable/>
 
 	<!-- ④ 설정 덮어쓰기 — 바꾸지 않은 저장을 감시가 다시 읽는다(성공) -->
 	<Store watch="Reload.Count.Config" as="configBefore"/>

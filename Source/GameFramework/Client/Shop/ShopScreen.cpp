@@ -171,11 +171,10 @@ namespace sw
 
     string ShopScreen::makeRowText( const ShopOffer& offer )
     {
-        StringBuilder<constant::buffer::kMax256> rowBuilder;
-        rowBuilder.appendFormat( "%#  %# %#", offer._displayName, offer._unitPrice, offer._currency.c_str() );
-        if ( offer._stock != ShopOffer::kUnlimitedStock )
-            rowBuilder.appendFormat( "  (%#)", offer._stock );
-        return string( rowBuilder.view() );
+        const string row = SW_LOCALIZED_MESSAGE( "Shop", "OfferRow" ).addKey( "item", offer._displayName ).addInteger( "price", offer._unitPrice ).addKey( "currency", offer._currency.c_str() ).str();
+        if ( offer._stock == ShopOffer::kUnlimitedStock )
+            return row;
+        return SW_LOCALIZED_MESSAGE( "Shop", "OfferRowStock" ).addKey( "offer", row ).addInteger( "stock", offer._stock ).str();
     }
 
     bool ShopScreen::onCommand( const hashed_string& command, Widget& source )
@@ -212,8 +211,7 @@ namespace sw
         }
         ConfirmDialogDesc desc{};
         desc._title                     = SW_LOCKEYREF( "Shop", "ConfirmTitle" );
-        desc._message                   = SW_LOCFORMAT( "Shop", "ConfirmMessage", "Buy {item} for {price} {currency}?",
-                                                        TextArgumentList().addText( "item", offer._displayName ).addInteger( "price", total ).addText( "currency", offer._currency.c_str() ) );
+        desc._message                   = SW_LOCALIZED_MESSAGE( "Shop", "ConfirmMessage" ).addKey( "item", offer._displayName ).addInteger( "price", total ).addKey( "currency", offer._currency.c_str() ).str();
         desc._acceptText                = SW_LOCKEYREF( "Shop", "ConfirmAccept" );
         desc._cancelText                = SW_LOCKEYREF( "Shop", "ConfirmCancel" );
         const UIScreenHandle shop       = getHandle();
@@ -314,16 +312,16 @@ namespace sw
         } ) );
         pOffers->setItemCount( static_cast<uint32>( _listOffer.size() ) );
         // 잔액은 상품이 쓰는 재화마다 한 번(진열 순서).
-        StringBuilder<constant::buffer::kMax256> balanceBuilder;
-        vector<hashed_string>                    listShown;
+        vector<string>        listBalance;
+        vector<hashed_string> listShown;
         for ( const ShopOffer& offer : _listOffer )
         {
             if ( std::find( listShown.begin(), listShown.end(), offer._currency ) != listShown.end() )
                 continue;
             listShown.push_back( offer._currency );
-            balanceBuilder.appendFormat( "%#%# %#", listShown.size() > 1 ? "  " : "", _pProvider->getBalance( offer._currency ), offer._currency.c_str() );
+            listBalance.push_back( SW_LOCALIZED_MESSAGE( "Shop", "BalanceLine" ).addInteger( "amount", _pProvider->getBalance( offer._currency ) ).addKey( "currency", offer._currency.c_str() ).str() );
         }
-        pBalance->setText( string( balanceBuilder.view() ) );
+        pBalance->setText( LocalizedMessage::join( "  ", listBalance ) );
         _shownRevision = _pProvider->getRevision();
         _bBuilt        = SW_TRUE;
     }

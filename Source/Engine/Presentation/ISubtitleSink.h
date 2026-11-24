@@ -22,7 +22,7 @@ namespace sw
         virtual ~ISubtitleSink() = default;
 
         /**
-         * @brief @p speaker 의 줄 @p text 를 자막으로 올립니다. 보이는 시간은 @p durationSeconds 이고 0 이하면 읽기 시간입니다(대화 진행은 읽기 시간, 시퀀서 자막은 구간 길이).
+         * @brief @p speaker 의 줄 @p text 를 자막으로 올립니다. 둘 다 현지화 키 · 메시지(`LocalizedMessage`) · 원문이며 그릴 때 풀립니다(푼 글을 넘기면 언어를 바꿔도 그대로다). 보이는 시간은 @p durationSeconds 이고 0 이하면 읽기 시간입니다(대화 진행은 읽기 시간, 시퀀서 자막은 구간 길이).
          * @return 줄 번호(1 부터)입니다. 들고 있다가 다음 줄 · 끝 · 건너뛰기에서 `removeSubtitle` 에 넘깁니다(버리면 앞 줄이 읽기 시간만큼 남는다).
          */
         [[nodiscard]] virtual uint32 postSubtitle( string_view speaker, string_view text, float32 durationSeconds ) = 0;

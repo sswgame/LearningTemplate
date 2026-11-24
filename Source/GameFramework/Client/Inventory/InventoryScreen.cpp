@@ -94,20 +94,22 @@ namespace sw
                 return label;
             }
 
+            /** @brief 아이템 이름(현지화 키이거나 원문)과 둘 이상이면 개수입니다. */
+            static string makeItemLabel( const ItemDef& item, int32 count )
+            {
+                const string name = item._name.empty() ? string( item._id.c_str() ) : item._name;
+                return count > 1 ? SW_LOCALIZED_MESSAGE( "Inventory", "ItemCount" ).addKey( "item", name ).addInteger( "count", count ).str() : name;
+            }
+
             /** @brief 툴팁 · 자세히 글입니다: 이름, 설명, 수치(한 줄에 하나). 이름 · 설명은 현지화 키이거나 원문이다. */
             static string makeDetails( const ItemDef& item, int32 count )
             {
-                StringBuilder<constant::buffer::kMax512> builder;
-                builder.appendFormat( "%#", item._name.empty() ? item._id.c_str() : item._name.c_str() );
-                if ( count > 1 )
-                    builder.appendFormat( " x%#", count );
-                if ( item._description.empty() == false )
-                    builder.appendFormat( "\n%#", item._description );
+                vector<string> listLine{ makeItemLabel( item, count ), item._description };
                 for ( const StatValue& stat : item._stats.getValues() )
                 {
-                    builder.appendFormat( "\n%# %#", stat._name.c_str(), stat._value );
+                    listLine.push_back( SW_LOCALIZED_MESSAGE( "Inventory", "StatLine" ).addKey( "stat", stat._name.c_str() ).addDecimal( "value", static_cast<float64>( stat._value ) ).str() );
                 }
-                return string( builder.view() );
+                return LocalizedMessage::join( "\n", listLine );
             }
         };
     } // namespace
@@ -205,17 +207,12 @@ namespace sw
         const ItemCatalog* pCatalog = bag.getCatalog();
         for ( InventorySlotWidget* pWidget : _listSlotWidget )
         {
-            const int32                              index = pWidget->getBagSlot();
-            const InventorySlot&                     item  = bag.getSlot( index );
-            const ItemDef*                           pDef  = pCatalog != nullptr && item.isEmpty() == false ? pCatalog->find( item._itemID ) : nullptr;
-            TextWidget*                              pText = castTo<TextWidget>( pWidget->getChild( 0 ) );
-            StringBuilder<constant::buffer::kMax128> label;
-            if ( pDef != nullptr )
-                label.appendFormat( "%#", pDef->_name.empty() ? item._itemID.c_str() : pDef->_name.c_str() );
-            if ( pDef != nullptr && item._count > 1 )
-                label.appendFormat( " x%#", item._count );
+            const int32          index = pWidget->getBagSlot();
+            const InventorySlot& item  = bag.getSlot( index );
+            const ItemDef*       pDef  = pCatalog != nullptr && item.isEmpty() == false ? pCatalog->find( item._itemID ) : nullptr;
+            TextWidget*          pText = castTo<TextWidget>( pWidget->getChild( 0 ) );
             if ( pText != nullptr )
-                pText->setText( string( label.view() ) );
+                pText->setText( pDef != nullptr ? InventoryScreenInternal::makeItemLabel( *pDef, item._count ) : string{} );
             pWidget->setTooltip( pDef != nullptr ? InventoryScreenInternal::makeDetails( *pDef, item._count ) : string{} );
             // 거르기에 맞지 않는 칸은 끈다(빈 칸은 놓을 자리라 켜 둔다). 집은 칸은 선택 표시(중립 단계).
             const bool bFiltered = _filter.empty() == false && pDef != nullptr && pDef->_category != _filter;
@@ -228,28 +225,26 @@ namespace sw
             const vector<EquipmentSlot>& listSlot = pCharacter->getEquipment().getSlots();
             for ( uint32 index = 0; index < pEquipment->getChildCount() && index < listSlot.size(); ++index )
             {
-                const EquipmentSlot&                     equipSlot = listSlot[index];
-                const ItemDef*                           pDef      = pCatalog != nullptr && equipSlot._item.isEmpty() == false ? pCatalog->find( equipSlot._item._itemID ) : nullptr;
-                Widget*                                  pButton   = pEquipment->getChild( index );
-                PanelWidget*                             pPanel    = castTo<PanelWidget>( pButton );
-                TextWidget*                              pText     = pPanel != nullptr && pPanel->getChildCount() > 0 ? castTo<TextWidget>( pPanel->getChild( 0 ) ) : nullptr;
-                StringBuilder<constant::buffer::kMax128> label;
-                label.appendFormat( "%#: %#", equipSlot._name.c_str(), pDef != nullptr ? ( pDef->_name.empty() ? pDef->_id.c_str() : pDef->_name.c_str() ) : "-" );
+                const EquipmentSlot& equipSlot = listSlot[index];
+                const ItemDef*       pDef      = pCatalog != nullptr && equipSlot._item.isEmpty() == false ? pCatalog->find( equipSlot._item._itemID ) : nullptr;
+                Widget*              pButton   = pEquipment->getChild( index );
+                PanelWidget*         pPanel    = castTo<PanelWidget>( pButton );
+                TextWidget*          pText     = pPanel != nullptr && pPanel->getChildCount() > 0 ? castTo<TextWidget>( pPanel->getChild( 0 ) ) : nullptr;
                 if ( pText != nullptr )
-                    pText->setText( string( label.view() ) );
+                    pText->setText( SW_LOCALIZED_MESSAGE( "Inventory", "EquipLine" ).addKey( "slot", equipSlot._name.c_str() ).addKey( "item", pDef != nullptr ? InventoryScreenInternal::makeItemLabel( *pDef, 1 ) : string( "-" ) ).str() );
                 pButton->setTooltip( pDef != nullptr ? InventoryScreenInternal::makeDetails( *pDef, 1 ) : string{} );
             }
         }
         StatBlock stats;
         pCharacter->getEquipment().computeStats( stats );
-        StringBuilder<constant::buffer::kMax256> statsBuilder;
+        vector<string> listStat;
         for ( const StatValue& stat : stats.getValues() )
         {
-            statsBuilder.appendFormat( "%#%# %#", statsBuilder.view().empty() ? "" : "  ", stat._name.c_str(), stat._value );
+            listStat.push_back( SW_LOCALIZED_MESSAGE( "Inventory", "StatLine" ).addKey( "stat", stat._name.c_str() ).addDecimal( "value", static_cast<float64>( stat._value ) ).str() );
         }
         TextWidget* pStats = getTree().findWidget<TextWidget>( hashed_string( kStatsName ) );
         if ( pStats != nullptr )
-            pStats->setText( string( statsBuilder.view() ) );
+            pStats->setText( LocalizedMessage::join( "  ", listStat ) );
         StringBuilder<constant::buffer::kMax128> weightBuilder;
         if ( bag.getMaxWeight() > 0.0f )
             weightBuilder.appendFormat( "%# / %#", bag.computeWeight(), bag.getMaxWeight() );

@@ -5,6 +5,7 @@
 #include "Core/Encoding/FourCCUtil.h"
 #include "Core/Math/MathUtil.h"
 
+#include "Engine/Object/Component/SceneComponent.h"
 #include "Engine/Serialization/Format/Archive.h"
 #include "Engine/Serialization/Format/StateIO.h"
 
@@ -308,6 +309,31 @@ namespace sw
         }
         _outputPose._position += delta;
         _impulseListener.applyWorldOffset( delta );
+    }
+
+    void CameraDirector::onTargetTeleported( TeleportType type )
+    {
+        const bool bRestart = type == TeleportType::ResetPhysics;
+        // 앞 프리셋에서 섞던 중이면 지난 자리의 화면과 섞이지 않게 새 프리셋만 남긴다.
+        if ( bRestart && _listLayer.size() > 1 )
+        {
+            _listLayer.erase( _listLayer.begin(), _listLayer.end() - 1 );
+            _listLayer.back()._weight = 1.0f;
+        }
+        for ( Layer& layer : _listLayer )
+        {
+            CameraModeState& state   = layer._state;
+            state._bHasPreviousFocus = SW_FALSE;
+            state._bHasBobFocus      = SW_FALSE;
+            if ( bRestart == false )
+                continue;
+            state._lookAhead = float3{};
+            state._bAimValid = SW_FALSE;
+            state._armLength = CameraModeState{}._armLength;
+            layer._bFresh    = SW_TRUE;
+            if ( layer._def._view._mode != CameraPresetMode::Fixed && _bHasPose == SW_TRUE )
+                _bCutQueued = SW_TRUE;
+        }
     }
 
     bool CameraDirector::consumeCut()

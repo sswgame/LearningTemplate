@@ -52,7 +52,7 @@ SW_TEST_CASE( SimulationViewSyncTest, OnlyChangedSlotsRespawn )
     const auto spawn = [&spawnCount]( size_t, int32 id )
     {
         ++spawnCount;
-        return sw::GameObjectHandle::make( static_cast<uint64>( 100 + id ) );
+        return sw::GameObjectHandle::make( static_cast<uint64>( 100 + id ), 0 );
     };
 
     sync.beginCollect();

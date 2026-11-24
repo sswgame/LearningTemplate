@@ -371,6 +371,45 @@ namespace sw
             }
 
             /**
+             * @brief 쿠킹본을 따로 만드는 원본(씬 · 프리팹)이 쿠킹 때 정할 수 없는 것에 기대는지 봅니다 — 로드 축 조건(`_when` 의 `quality.low` …)과 그 위의 덮어쓰기 층입니다. 하나라도 있으면 false 입니다.
+             * @details 쿠킹본은 한 벌이라 읽을 때의 값을 담지 못한다. 그대로 구우면 쿠커 기계의 품질 · 언어가 굳고(조건), 배포본에서 층이 얹히지 않는다 — 개발 실행에서는 둘 다 되므로
+             *          배포본에서야 드러난다. 부모 씬 · 넣은 씬 · 중첩 프리팹도 파일마다 여기를 지난다. 쿠킹 축 조건(`platform` · `target`)은 쿠커가 풀어 담는다.
+             */
+            [[nodiscard]] static bool validateCookedSources( const PackSelection& selection, const vector<PackDomainCandidates>& listCandidates )
+            {
+                bool bValid = true;
+                for ( const PackDomainCandidates& candidates : listCandidates )
+                {
+                    for ( const PackCandidateFile& file : candidates._listFile )
+                    {
+                        if ( AssetCookPath::isCookableSource( file._assetID ) == false )
+                            continue;
+                        if ( isLayerFile( selection, file._assetID ) )
+                        {
+                            SW_LOG_ERROR_ID( "PackCooker.LayerOverCookedSource", "Pack cook: '%#' is a resource layer over a scene or prefab - a cooked build reads the cooked copy and never applies it", file._assetID );
+                            bValid = false;
+                            continue;
+                        }
+                        if ( StringUtil::endsWith( file._assetID, ".xml", true ) == false )
+                            continue;
+                        string         text;
+                        string         resolvedText;
+                        bool           bResolved = false;
+                        vector<string> listLoadTag;
+                        const bool     bRead = AssetIO::readTextFile( file._absolutePath, text ) &&
+                                           ResourceComposer::resolveConditions( text, file._assetID, ResourceTagTiming::Load, engine::getSubsystem<ResourceTags>().capture(), resolvedText, bResolved, listLoadTag );
+                        if ( bRead && listLoadTag.empty() )
+                            continue;
+                        if ( bRead )
+                            SW_LOG_ERROR_ID( "PackCooker.LoadConditionInCookedSource", "Pack cook: '%#' has a condition on '%#' that is decided when it is read - the cooked copy would keep this machine's answer", file._assetID,
+                                             listLoadTag.front() );
+                        bValid = false;
+                    }
+                }
+                return bValid;
+            }
+
+            /**
              * @brief 굽는 모든 도메인을 한 번에 보고 담을 파일을 고릅니다(`PackReachResult`). 빠진 참조가 있으면 오류를 남기고 false 입니다.
              * @details 작업 범위 하나(`PackReach`) 안에서 읽는다 — 쿠킹 세션은 작업 밖 읽기를 막는다. 그 범위의 입력은 기록하지 않는다: 고른 결과는 팩마다 설정 해시로 들어가고
              *          담긴 파일은 팩 작업이 다시 읽어 그 작업의 입력이 된다(`computeSelectionHash`).
@@ -444,9 +483,10 @@ namespace sw
                 outSelection._setReferencedExcluded = std::move( reach._setReferencedExcluded );
                 if ( collectLayerRoots( listDomain, gamePrefix.data(), outSelection ) == false )
                     return false;
-                // 둘 다 돈다 — 한 번에 모두 알린다.
-                const bool bLayersValid = validateLayeredCatalogs( params, source, outSelection );
-                if ( validateCatalogKeys( params, outSelection, listCandidates ) == false || bLayersValid == false )
+                // 셋 다 돈다 — 한 번에 모두 알린다.
+                const bool bLayersValid  = validateLayeredCatalogs( params, source, outSelection );
+                const bool bSourcesValid = validateCookedSources( outSelection, listCandidates );
+                if ( validateCatalogKeys( params, outSelection, listCandidates ) == false || bLayersValid == false || bSourcesValid == false )
                     return false;
                 return planSceneChunks( config, graph, outSelection );
             }

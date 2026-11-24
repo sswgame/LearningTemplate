@@ -9,6 +9,7 @@
 #include "Core/Memory/Memory.h"
 #include "Core/Path/AbsolutePath.h"
 
+#include "Editor/Common/Workspace/Asset/EditorDiskBaseline.h"
 #include "Editor/Panels/ProjectSettings/Model/ProjectSettingsDocument.h"
 #include "Editor/Panels/ProjectSettings/Model/ProjectSettingsEntry.h"
 #include "Editor/Panels/ProjectSettings/Model/ProjectSettingsJSONDocument.h"
@@ -33,6 +34,7 @@ namespace sw::editor
         ProjectSettingsDocument     _document;      ///< 반사 형식 페이지의 문서
         ProjectSettingsJSONDocument _tableDocument; ///< 표 페이지(`ProjectSettingsEntry::isTable`)의 문서
         AbsolutePath                _absolutePath;
+        EditorDiskBaseline          _diskBaseline; ///< 연(쓴) 때의 파일 내용 — 저장이 그 사이 밖에서 바뀐 파일을 덮기 전에 알린다. 페이지마다 여는 때가 달라 페이지가 든다
         bool                        _bOpened{ false };
         bool                        _bTypeFound{ false };
         bool                        _bDirty{ false };
@@ -41,7 +43,7 @@ namespace sw::editor
         void open();
         /** @brief 문서와 비교해 저장하지 않은 표시를 다시 정합니다. */
         void refreshDirty();
-        /** @brief 파일에 쓰고 호스트에 알립니다. 호스트가 반영했으면 @p outApplied 가 true 입니다. 쓰지 못하면 false 이고 표시는 그대로입니다. */
+        /** @brief 파일에 쓰고 호스트에 알립니다. 호스트가 반영했으면 @p outApplied 가 true 입니다. 쓰지 못하거나 연 뒤 밖에서 바뀐 파일이면(알린다 — 다시 저장하면 덮는다) false 이고 표시는 그대로입니다. */
         [[nodiscard]] bool saveDocument( bool& outApplied );
         /** @brief 저장하면 쓸 값의 글입니다(자동 저장 사본) — 반사 형식은 기본값과 다른 값의 글, 표는 파일 글입니다. 열리지 않았으면 오류입니다. */
         [[nodiscard]] expected<string> tryMakeText() const;

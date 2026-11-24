@@ -76,6 +76,8 @@ namespace sw
          *          버퍼 밖을 가리킨다.
          */
         inline constexpr uint32 kMaxFrameCountInFlight = 3;
+        /** @brief 놓은 핸들 칸을 다시 쓰기까지 지나야 하는 프레임 경계 수입니다(`RHIHandleTable`) — 놓은 프레임의 기록이 끝나고 그 다음 프레임이 시작한 뒤다. */
+        inline constexpr uint64 kHandleReuseDelayCount = 2;
 
         /**
          * @brief 프레임 하나에 찍을 수 있는 GPU 타임스탬프 슬롯 수입니다.

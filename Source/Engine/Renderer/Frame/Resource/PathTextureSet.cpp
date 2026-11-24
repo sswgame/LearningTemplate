@@ -49,6 +49,12 @@ namespace sw
         return pTexture != nullptr && pTexture->isRHIValid() ? pTexture->getSRV() : kInvalidDescriptorIndex;
     }
 
+    bool PathTextureSet::isPending( const hashed_string& path ) const
+    {
+        const Entry* pEntry = findEntry( path );
+        return pEntry != nullptr && pEntry->_load.isValid() && pEntry->_load.isReady() == false && pEntry->_load.hasFailed() == false;
+    }
+
     void PathTextureSet::pruneUnused()
     {
         for ( size_t index = 0; index < _listEntry.size(); )

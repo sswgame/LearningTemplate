@@ -94,6 +94,8 @@ namespace sw::editor
         [[nodiscard]] bool saveDocument() override;
         /** @brief 연 캐릭터가 아니라 미저장인 소켓 · 포즈 파일에 쓴다(`CharacterEditorViewModel::collectFilesToSave`). */
         void collectFilesToSave( vector<AbsolutePath>& outListPath ) const override;
+        /** @brief 파일마다 여는 때가 달라 모델이 읽을 때 기준을 적고 쓸 때 본다(`CharacterEditorViewModel::saveFiles`). */
+        [[nodiscard]] bool validateDiskBeforeSave( const vector<AbsolutePath>& /*listPath*/ ) override { return true; }
         /** @brief 다시 읽기는 소켓 경로 칸에서 읽는다 — 연 문서를 가리키던 칸을 새 자리로 고친다. */
         void onAssetMoved( string_view oldPath, string_view newPath ) override;
         bool canSaveDocument() const override { return isDocumentLoadFailed() == false && _document.isDirty(); }

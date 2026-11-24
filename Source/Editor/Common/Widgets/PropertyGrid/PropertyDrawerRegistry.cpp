@@ -345,10 +345,10 @@ namespace sw::editor
         {
             if constexpr ( std::is_same_v<T, GameObjectHandle> )
             {
-                uint64 objectID = value.objectID();
-                if ( EditorWidgets::inputScalar( id, ImGuiDataType_U64, &objectID ) == false )
+                uint64 handleValue = value.value();
+                if ( EditorWidgets::inputScalar( id, ImGuiDataType_U64, &handleValue ) == false )
                     return false;
-                value = GameObjectHandle::make( objectID );
+                value = GameObjectHandle::fromValue( handleValue );
                 return true;
             }
             else if constexpr ( std::is_same_v<T, ComponentHandle> )

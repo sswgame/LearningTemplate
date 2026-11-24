@@ -40,6 +40,7 @@ namespace sw
         bool                       _bRightToLeft{ SW_FALSE }; ///< 문화권이 오른쪽에서 왼쪽인지 나타냅니다(`UILayoutPass::isCultureRightToLeft`). 루트의 Inherit 이 이 값을 따릅니다.
         const LocalizationManager* _pLocalization{ nullptr }; ///< 텍스트 위젯이 키를 해석하는 문화권입니다(없으면 텍스트 그대로).
         uint32                     _textRevision{ 0 };        ///< 그 문화권의 텍스트 버전입니다(`getTextRevision`). 텍스트 위젯의 해석 캐시 키입니다.
+        uint32                     _glyphRevision{ 0 };       ///< 액션 글리프가 바뀔 때마다 오르는 번호입니다(입력 장치 종류 · 키 재배치).
         const UIActionGlyphSource* _pActionGlyphs{ nullptr }; ///< `[action=이름]` 태그의 글리프 출처입니다(없으면 태그를 해석하지 않습니다).
     };
 } // namespace sw

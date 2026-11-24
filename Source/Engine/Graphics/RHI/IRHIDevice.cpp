@@ -262,6 +262,8 @@ namespace sw
         flushDeferredHandleReleases();
         _pDeferredHandleQueue->_gpuIdleWaitCount.add();
         waitIdleInternal();
+        // 렌더 스레드가 쉬고 GPU 가 비었다 — 레코드 포인터를 쥔 기록이 없으니 놓은 칸을 모두 돌려받는다. 프레임을 열지 않는 도구(굽기 · 쿠킹)는 이 길로만 칸이 돌아온다.
+        (void)_handleReuseCount.fetch_add( constant::render::kHandleReuseDelayCount, std::memory_order_acq_rel );
     }
 
     void IRHIDevice::flushRenderThread()

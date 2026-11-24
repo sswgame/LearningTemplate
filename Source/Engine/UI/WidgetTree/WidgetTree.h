@@ -144,6 +144,8 @@ namespace sw
         WidgetID                                                       _focusedWidget;
         float32                                                        _layoutUIScale;        ///< 지난 레이아웃 순회의 UI 배율입니다(바뀌면 전체를 다시 처리합니다. UILayoutPass).
         float32                                                        _layoutTextScale;      ///< 지난 레이아웃 순회의 글자 배율입니다.
+        uint32                                                         _layoutTextRevision;   ///< 지난 레이아웃 순회의 텍스트 버전입니다(바뀌면 위젯에 알립니다).
+        uint32                                                         _layoutGlyphRevision;  ///< 지난 레이아웃 순회의 액션 글리프 번호입니다.
         float4                                                         _layoutSafeInsets;     ///< 지난 레이아웃 순회의 안전 영역입니다(바뀌면 루트부터 다시 배치합니다).
         float32                                                        _paintUIScale;         ///< 지난 그리기 순회의 UI 배율입니다(바뀌면 픽셀이 바뀌므로 모든 그리기 캐시를 다시 만듭니다).
         uint32                                                         _paintAtlasGeneration; ///< 지난 그리기 순회의 글리프 아틀라스 세대입니다(바뀌면 텍스트 위젯을 다시 칠합니다).

@@ -240,12 +240,13 @@ namespace sw::editor
         vector<string>                           _listRecentPath;
         vector<string>                           _listOpenCandidate; ///< 열기 팝업을 열 때 모은 이 종류의 에셋(리소스 id)
         fixed_string<constant::buffer::kMax128>  _openFilter;
-        string                                   _movedUnsavedText; ///< 문서를 옮길 때 미저장이던 글 — 새 자리에서 다시 읽은 뒤 얹는다(`markDocumentLoaded`)
+        string                                   _movedText;        ///< 문서를 옮길 때의 글 — 새 자리에서 다시 읽은 뒤 미저장이던 편집을 얹고, 글이 같으면 되돌리기 기록을 잇는다(`markDocumentLoaded`)
         uint32                                   _documentSerial;   ///< 연 문서의 번호(`acceptFocusedDocument` 마다 오른다) — 되돌리기 단계가 자기 문서인지 경로가 아니라 이것으로 본다(옮기면 경로가 바뀐다)
         uint64                                   _lastCopyTextHash; ///< 지난 자동 저장 사본의 글 해시(`takeAutosaveCopies`). 0 은 사본 없음 — 읽기 · 저장이 비운다
         uint8                                    _bLoaded        : 1;
         uint8                                    _bConfirmSwitch : 1;
         uint8                                    _bLoadFailed    : 1;
+        uint8                                    _bMovedUnsaved  : 1; ///< 옮길 때 미저장이었다(`_movedText` 를 얹는다)
         [[maybe_unused]] uint8                   _reserved       : 4;
     };
 } // namespace sw::editor

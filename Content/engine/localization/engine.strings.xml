@@ -24,6 +24,81 @@
 				<item>engine/ui/quantity.ui.xml</item>
 			</origins>
 		</entry>
+		<entry key="Chat.Blocked" source="Message was blocked by the word filter">
+			<origins>
+				<item>Source/GameFramework/Kits/Feature/Online/Chat/Client/ChatScreen.cpp</item>
+			</origins>
+		</entry>
+		<entry key="Chat.Failed" source="Chat failed">
+			<origins>
+				<item>Source/GameFramework/Kits/Feature/Online/Chat/Client/ChatScreen.cpp</item>
+			</origins>
+		</entry>
+		<entry key="Chat.InvalidMessage" source="Message is empty or not valid">
+			<origins>
+				<item>Source/GameFramework/Kits/Feature/Online/Chat/Client/ChatScreen.cpp</item>
+			</origins>
+		</entry>
+		<entry key="Chat.Muted" source="You are muted ({seconds} s left)">
+			<origins>
+				<item>Source/GameFramework/Kits/Feature/Online/Chat/Client/ChatScreen.cpp</item>
+			</origins>
+		</entry>
+		<entry key="Chat.NotFound" source="Message not found">
+			<origins>
+				<item>Source/GameFramework/Kits/Feature/Online/Chat/Client/ChatScreen.cpp</item>
+			</origins>
+		</entry>
+		<entry key="Chat.NotJoinable" source="This channel cannot be joined">
+			<origins>
+				<item>Source/GameFramework/Kits/Feature/Online/Chat/Client/ChatScreen.cpp</item>
+			</origins>
+		</entry>
+		<entry key="Chat.NotMember" source="You have not joined this channel">
+			<origins>
+				<item>Source/GameFramework/Kits/Feature/Online/Chat/Client/ChatScreen.cpp</item>
+			</origins>
+		</entry>
+		<entry key="Chat.Repeated" source="You already said that">
+			<origins>
+				<item>Source/GameFramework/Kits/Feature/Online/Chat/Client/ChatScreen.cpp</item>
+			</origins>
+		</entry>
+		<entry key="Chat.SignIn" source="Sign in to chat">
+			<origins>
+				<item>Source/GameFramework/Kits/Feature/Online/Chat/Client/ChatScreen.cpp</item>
+			</origins>
+		</entry>
+		<entry key="Chat.TargetOffline" source="That player is offline">
+			<origins>
+				<item>Source/GameFramework/Kits/Feature/Online/Chat/Client/ChatScreen.cpp</item>
+			</origins>
+		</entry>
+		<entry key="Chat.TooFast" source="Too fast, try again soon">
+			<origins>
+				<item>Source/GameFramework/Kits/Feature/Online/Chat/Client/ChatScreen.cpp</item>
+			</origins>
+		</entry>
+		<entry key="Chat.TooFastWait" source="Too fast, wait {milliseconds} ms">
+			<origins>
+				<item>Source/GameFramework/Kits/Feature/Online/Chat/Client/ChatScreen.cpp</item>
+			</origins>
+		</entry>
+		<entry key="Chat.TooManyChannels" source="Too many channels">
+			<origins>
+				<item>Source/GameFramework/Kits/Feature/Online/Chat/Client/ChatScreen.cpp</item>
+			</origins>
+		</entry>
+		<entry key="Chat.Unavailable" source="Chat is not available right now">
+			<origins>
+				<item>Source/GameFramework/Kits/Feature/Online/Chat/Client/ChatScreen.cpp</item>
+			</origins>
+		</entry>
+		<entry key="Chat.UpdateGame" source="Update the game to chat">
+			<origins>
+				<item>Source/GameFramework/Kits/Feature/Online/Chat/Client/ChatScreen.cpp</item>
+			</origins>
+		</entry>
 		<entry key="Close" source="Close" context="TextWidget._text">
 			<origins>
 				<item>engine/ui/debughud.ui.xml</item>
@@ -2266,6 +2341,77 @@
 				<item>Source/GameFramework/Plugin/Editor/GameplayTools/Zone/ZoneVolumeInspector.cpp</item>
 			</origins>
 		</entry>
+		<entry key="FriendList.Idle" source="Press Refresh to list friends">
+			<origins>
+				<item>Source/GameFramework/Kits/Feature/Online/Social/Client/FriendListScreen.cpp</item>
+			</origins>
+		</entry>
+		<entry key="FriendList.LoadFailed" source="Could not load the friend list (error {error})">
+			<origins>
+				<item>Source/GameFramework/Kits/Feature/Online/Social/Client/FriendListScreen.cpp</item>
+			</origins>
+		</entry>
+		<entry key="FriendList.Loading" source="Loading friends...">
+			<origins>
+				<item>Source/GameFramework/Kits/Feature/Online/Social/Client/FriendListScreen.cpp</item>
+			</origins>
+		</entry>
+		<entry key="FriendList.None" source="No friends yet">
+			<origins>
+				<item>Source/GameFramework/Kits/Feature/Online/Social/Client/FriendListScreen.cpp</item>
+			</origins>
+		</entry>
+		<entry key="FriendList.PendingRequests"
+		       source="{title}  ({count, plural, one {# pending request} other {# pending requests}})">
+			<origins>
+				<item>Source/GameFramework/Kits/Feature/Online/Social/Client/FriendListScreen.cpp</item>
+			</origins>
+		</entry>
+		<entry key="FriendList.PresenceAway" source="away">
+			<origins>
+				<item>Source/GameFramework/Kits/Feature/Online/Social/Client/FriendListScreen.cpp</item>
+			</origins>
+		</entry>
+		<entry key="FriendList.PresenceBusy" source="busy">
+			<origins>
+				<item>Source/GameFramework/Kits/Feature/Online/Social/Client/FriendListScreen.cpp</item>
+			</origins>
+		</entry>
+		<entry key="FriendList.PresenceInGame" source="in game">
+			<origins>
+				<item>Source/GameFramework/Kits/Feature/Online/Social/Client/FriendListScreen.cpp</item>
+			</origins>
+		</entry>
+		<entry key="FriendList.PresenceOffline" source="offline">
+			<origins>
+				<item>Source/GameFramework/Kits/Feature/Online/Social/Client/FriendListScreen.cpp</item>
+			</origins>
+		</entry>
+		<entry key="FriendList.PresenceOnline" source="online">
+			<origins>
+				<item>Source/GameFramework/Kits/Feature/Online/Social/Client/FriendListScreen.cpp</item>
+			</origins>
+		</entry>
+		<entry key="FriendList.PresenceUnknown" source="unknown">
+			<origins>
+				<item>Source/GameFramework/Kits/Feature/Online/Social/Client/FriendListScreen.cpp</item>
+			</origins>
+		</entry>
+		<entry key="FriendList.Row" source="#{account}  {presence}">
+			<origins>
+				<item>Source/GameFramework/Kits/Feature/Online/Social/Client/FriendListScreen.cpp</item>
+			</origins>
+		</entry>
+		<entry key="FriendList.RowActivity" source="#{account}  {presence}  {activity}">
+			<origins>
+				<item>Source/GameFramework/Kits/Feature/Online/Social/Client/FriendListScreen.cpp</item>
+			</origins>
+		</entry>
+		<entry key="FriendList.Title" source="Friends">
+			<origins>
+				<item>Source/GameFramework/Kits/Feature/Online/Social/Client/FriendListScreen.cpp</item>
+			</origins>
+		</entry>
 		<entry key="Inventory.Done" source="Done.">
 			<origins>
 				<item>Source/GameFramework/Client/Inventory/InventoryScreen.cpp</item>
@@ -2281,12 +2427,22 @@
 				<item>Source/GameFramework/Client/Inventory/InventoryScreen.cpp</item>
 			</origins>
 		</entry>
+		<entry key="Inventory.EquipLine" source="{slot}: {item}">
+			<origins>
+				<item>Source/GameFramework/Client/Inventory/InventoryScreen.cpp</item>
+			</origins>
+		</entry>
 		<entry key="Inventory.InvalidCount" source="That amount is not possible.">
 			<origins>
 				<item>Source/GameFramework/Client/Inventory/InventoryScreen.cpp</item>
 			</origins>
 		</entry>
 		<entry key="Inventory.InvalidSlot" source="That slot cannot take it.">
+			<origins>
+				<item>Source/GameFramework/Client/Inventory/InventoryScreen.cpp</item>
+			</origins>
+		</entry>
+		<entry key="Inventory.ItemCount" source="{item} x{count}">
 			<origins>
 				<item>Source/GameFramework/Client/Inventory/InventoryScreen.cpp</item>
 			</origins>
@@ -2312,6 +2468,11 @@
 			</origins>
 		</entry>
 		<entry key="Inventory.SplitTitle" source="Split how many?">
+			<origins>
+				<item>Source/GameFramework/Client/Inventory/InventoryScreen.cpp</item>
+			</origins>
+		</entry>
+		<entry key="Inventory.StatLine" source="{stat} {value}">
 			<origins>
 				<item>Source/GameFramework/Client/Inventory/InventoryScreen.cpp</item>
 			</origins>
@@ -2391,6 +2552,16 @@
 				<item>engine/ui/pause.ui.xml</item>
 			</origins>
 		</entry>
+		<entry key="ReplayBar.Pause" source="Pause">
+			<origins>
+				<item>Source/GameFramework/Client/Intent/IntentReplayBar.cpp</item>
+			</origins>
+		</entry>
+		<entry key="ReplayBar.Play" source="Play">
+			<origins>
+				<item>Source/GameFramework/Client/Intent/IntentReplayBar.cpp</item>
+			</origins>
+		</entry>
 		<entry key="Resume" source="Resume" context="TextWidget._text">
 			<origins>
 				<item>engine/ui/pause.ui.xml</item>
@@ -2452,6 +2623,66 @@
 				<item>engine/ui/debughud.ui.xml</item>
 			</origins>
 		</entry>
+		<entry key="ServerPicker.Idle" source="Press Refresh to list servers">
+			<origins>
+				<item>Source/GameFramework/Kits/Feature/Online/ServerDirectory/Client/ServerPickerScreen.cpp</item>
+			</origins>
+		</entry>
+		<entry key="ServerPicker.LoadFailed" source="Could not load the server list (error {error})">
+			<origins>
+				<item>Source/GameFramework/Kits/Feature/Online/ServerDirectory/Client/ServerPickerScreen.cpp</item>
+			</origins>
+		</entry>
+		<entry key="ServerPicker.Loading" source="Loading servers...">
+			<origins>
+				<item>Source/GameFramework/Kits/Feature/Online/ServerDirectory/Client/ServerPickerScreen.cpp</item>
+			</origins>
+		</entry>
+		<entry key="ServerPicker.None" source="No server is available right now">
+			<origins>
+				<item>Source/GameFramework/Kits/Feature/Online/ServerDirectory/Client/ServerPickerScreen.cpp</item>
+			</origins>
+		</entry>
+		<entry key="ServerPicker.Pick" source="Pick a server">
+			<origins>
+				<item>Source/GameFramework/Kits/Feature/Online/ServerDirectory/Client/ServerPickerScreen.cpp</item>
+			</origins>
+		</entry>
+		<entry key="ServerPicker.Row" source="{region}  {fill}%  {state}">
+			<origins>
+				<item>Source/GameFramework/Kits/Feature/Online/ServerDirectory/Client/ServerPickerScreen.cpp</item>
+			</origins>
+		</entry>
+		<entry key="ServerPicker.StateDraining" source="draining">
+			<origins>
+				<item>Source/GameFramework/Kits/Feature/Online/ServerDirectory/Client/ServerPickerScreen.cpp</item>
+			</origins>
+		</entry>
+		<entry key="ServerPicker.StateMaintenance" source="maintenance">
+			<origins>
+				<item>Source/GameFramework/Kits/Feature/Online/ServerDirectory/Client/ServerPickerScreen.cpp</item>
+			</origins>
+		</entry>
+		<entry key="ServerPicker.StateOpen" source="open">
+			<origins>
+				<item>Source/GameFramework/Kits/Feature/Online/ServerDirectory/Client/ServerPickerScreen.cpp</item>
+			</origins>
+		</entry>
+		<entry key="ServerPicker.StateStarting" source="starting">
+			<origins>
+				<item>Source/GameFramework/Kits/Feature/Online/ServerDirectory/Client/ServerPickerScreen.cpp</item>
+			</origins>
+		</entry>
+		<entry key="ServerPicker.StateUnknown" source="unknown">
+			<origins>
+				<item>Source/GameFramework/Kits/Feature/Online/ServerDirectory/Client/ServerPickerScreen.cpp</item>
+			</origins>
+		</entry>
+		<entry key="Shop.BalanceLine" source="{amount} {currency}">
+			<origins>
+				<item>Source/GameFramework/Client/Shop/ShopScreen.cpp</item>
+			</origins>
+		</entry>
 		<entry key="Shop.Bought" source="Bought.">
 			<origins>
 				<item>Source/GameFramework/Client/Shop/ShopScreen.cpp</item>
@@ -2493,6 +2724,16 @@
 			</origins>
 		</entry>
 		<entry key="Shop.NotEnoughMoney" source="Not enough money.">
+			<origins>
+				<item>Source/GameFramework/Client/Shop/ShopScreen.cpp</item>
+			</origins>
+		</entry>
+		<entry key="Shop.OfferRow" source="{item}  {price} {currency}">
+			<origins>
+				<item>Source/GameFramework/Client/Shop/ShopScreen.cpp</item>
+			</origins>
+		</entry>
+		<entry key="Shop.OfferRowStock" source="{offer}  ({stock})">
 			<origins>
 				<item>Source/GameFramework/Client/Shop/ShopScreen.cpp</item>
 			</origins>
@@ -2562,6 +2803,76 @@
 		<entry key="UIMenu.QuitTitle" source="Quit Game">
 			<origins>
 				<item>Source/Engine/UI/Menu/MainMenuScreen.cpp</item>
+			</origins>
+		</entry>
+		<entry key="Western.Bounty" source="Bounty ${amount}">
+			<origins>
+				<item>Source/GameFramework/Kits/Genre/RPG/OpenWorldWestern/Client/WesternRiderViewComponent.cpp</item>
+			</origins>
+		</entry>
+		<entry key="Western.Carcasses" source="Carcasses {count}">
+			<origins>
+				<item>Source/GameFramework/Kits/Genre/RPG/OpenWorldWestern/Client/WesternRiderViewComponent.cpp</item>
+			</origins>
+		</entry>
+		<entry key="Western.GaitCanter" source="Canter">
+			<origins>
+				<item>Source/GameFramework/Kits/Genre/RPG/OpenWorldWestern/Client/WesternRiderViewComponent.cpp</item>
+			</origins>
+		</entry>
+		<entry key="Western.GaitGallop" source="Gallop">
+			<origins>
+				<item>Source/GameFramework/Kits/Genre/RPG/OpenWorldWestern/Client/WesternRiderViewComponent.cpp</item>
+			</origins>
+		</entry>
+		<entry key="Western.GaitStanding" source="Standing">
+			<origins>
+				<item>Source/GameFramework/Kits/Genre/RPG/OpenWorldWestern/Client/WesternRiderViewComponent.cpp</item>
+			</origins>
+		</entry>
+		<entry key="Western.GaitTrot" source="Trot">
+			<origins>
+				<item>Source/GameFramework/Kits/Genre/RPG/OpenWorldWestern/Client/WesternRiderViewComponent.cpp</item>
+			</origins>
+		</entry>
+		<entry key="Western.GaitWalk" source="Walk">
+			<origins>
+				<item>Source/GameFramework/Kits/Genre/RPG/OpenWorldWestern/Client/WesternRiderViewComponent.cpp</item>
+			</origins>
+		</entry>
+		<entry key="Western.Honor" source="Honor {honor} ({tier})">
+			<origins>
+				<item>Source/GameFramework/Kits/Genre/RPG/OpenWorldWestern/Client/WesternRiderViewComponent.cpp</item>
+			</origins>
+		</entry>
+		<entry key="Western.Hungry" source="Hungry">
+			<origins>
+				<item>Source/GameFramework/Kits/Genre/RPG/OpenWorldWestern/Client/WesternRiderViewComponent.cpp</item>
+			</origins>
+		</entry>
+		<entry key="Western.Money" source="${amount}">
+			<origins>
+				<item>Source/GameFramework/Kits/Genre/RPG/OpenWorldWestern/Client/WesternRiderViewComponent.cpp</item>
+			</origins>
+		</entry>
+		<entry key="Western.OnFoot" source="On foot - E: mount  F: whistle">
+			<origins>
+				<item>Source/GameFramework/Kits/Genre/RPG/OpenWorldWestern/Client/WesternRiderViewComponent.cpp</item>
+			</origins>
+		</entry>
+		<entry key="Western.Pelts" source="Pelts {count}">
+			<origins>
+				<item>Source/GameFramework/Kits/Genre/RPG/OpenWorldWestern/Client/WesternRiderViewComponent.cpp</item>
+			</origins>
+		</entry>
+		<entry key="Western.Riding" source="Riding {horse} - {gait} {speed} m/s - E: dismount  Shift: gallop">
+			<origins>
+				<item>Source/GameFramework/Kits/Genre/RPG/OpenWorldWestern/Client/WesternRiderViewComponent.cpp</item>
+			</origins>
+		</entry>
+		<entry key="Western.Wanted" source="Wanted {level}">
+			<origins>
+				<item>Source/GameFramework/Kits/Genre/RPG/OpenWorldWestern/Client/WesternRiderViewComponent.cpp</item>
 			</origins>
 		</entry>
 		<entry key="You have changes that are not applied."

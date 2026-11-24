@@ -561,3 +561,21 @@ SW_TEST_CASE( ObjectStateBatchTest, ResolverIsAskedOnlyForWhatTheBatchLacks )
     SW_EXPECT_EQUAL( 3u, askCount ); // id 0 은 "id 없음" 이라 묻지 않는다
     batch.abandon();
 }
+
+/** @brief [SceneAssemblyTest] 디스크 입구(쿠커가 쓴다)도 리소스 id 입구처럼 조건을 푼다 — 날것으로 읽으면 개발 실행에서 빠진 엔티티가 쿠킹본에만 남는다 */
+SW_TEST_CASE( SceneAssemblyTest, DiskReadResolvesConditionsLikeTheResourceRead )
+{
+    const test::ScopedScratchDomain domain;
+    ResourceTags&                   tags     = engine::getSubsystem<ResourceTags>();
+    const ResourceTagSet            previous = tags.exchange( tags.capture() );
+    SW_EXPECT_TRUE( tags.setAxisValue( "platform", "android" ) );
+    Util::write( domain, "conditional.scene.xml",
+                 Util::makeScene( "Conditional", { Util::makeEntity( "1", "Kept", "0,0,0" ), Util::makeEntity( "2", "DesktopOnly", "0,0,0", "", "<_when _if=\"platform.android\" _op=\"Remove\"/>" ) } ) );
+    SceneDocument fromDisk{};
+    SceneDocument fromID{};
+    SW_EXPECT_TRUE( fromDisk.loadXMLFromDiskFile( domain.makeDiskPath( "conditional.scene.xml" ) ) );
+    SW_EXPECT_TRUE( fromID.loadXML( test::ScopedScratchDomain::makeID( "conditional.scene.xml" ) ) );
+    (void)tags.exchange( previous );
+    SW_EXPECT_EQUAL( size_t{ 1 }, fromID._listSceneObjectNode.size() );
+    SW_EXPECT_EQUAL( fromID._listSceneObjectNode.size(), fromDisk._listSceneObjectNode.size() );
+}

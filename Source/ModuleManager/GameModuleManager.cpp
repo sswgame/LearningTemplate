@@ -207,7 +207,7 @@ namespace sw
         if ( engine::areEngineServicesBound() == false )
             return;
         vector<Scene*> listScene;
-        engine::getSubsystem<SceneManager>().collectScenes( listScene );
+        engine::getSubsystem<SceneManager>().collectAllScenes( listScene );
         for ( Scene* const pScene : listScene )
         {
             if ( pScene->getObjectManager() != nullptr )
