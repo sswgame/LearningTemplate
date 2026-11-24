@@ -141,7 +141,6 @@ namespace sw
     void CityViewComponent::onBeginPlay()
     {
         Component::onBeginPlay();
-        setTickGroup( TickGroup::PostUpdate );
         _bViewsChecked = SW_FALSE;
     }
 

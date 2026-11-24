@@ -195,10 +195,20 @@ namespace sw
     public:
         REFLECT_BODY();
 
+        static constexpr TickGroup kTickGroup = TickGroup::PostPhysics; ///< 형식이 선언한 그룹(`TickGroupComesFromTheType`)
+
         uint32 _tickCount = 0;
 
     protected:
         void onTick( TickContext& /*context*/ ) override { ++_tickCount; }
+    };
+
+    /** @brief 그룹을 선언하지 않고 기반에서 물려받는 파생 컴포넌트입니다. */
+    REFLECT( HideInMenu )
+    class TickModeInheritedGroupTestComponent : public TickModeProtectedTickTestComponent
+    {
+    public:
+        REFLECT_BODY();
     };
 
     /**

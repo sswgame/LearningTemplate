@@ -202,6 +202,24 @@ static_assert( ReflectAccess<TickAccessTag>::hasDeclaredTick<TickModeProtectedTi
 static_assert( HasOnTickOverride_v<TickModeMoverTestComponent> && HasOnTickOverride_v<LifetimeSpawnOnDestroyTestComponent> == false );
 
 /**
+ * @brief [TickModesTest] 주 틱의 그룹은 형식이 정한다 — 붙이는 순간(플레이 시작 전)에 이미 그 그룹이고, 선언하지 않은 파생은 기반의 것을, 아무도 선언하지 않으면 기본을 쓴다
+ */
+SW_TEST_CASE( TickModesTest, TickGroupComesFromTheType )
+{
+    const SceneEngineServices services = SceneEngineServices::makeFromBoundEngine();
+    GameObjectManager         manager{ services };
+    GameObject*               pObject = manager.createGameObject( hashed_string( "Grouped" ) );
+    SW_REQUIRE_TRUE( pObject != nullptr );
+    const Component* pDeclared  = pObject->addComponent<TickModeProtectedTickTestComponent>();
+    const Component* pInherited = pObject->addComponent<TickModeInheritedGroupTestComponent>();
+    const Component* pDefault   = pObject->addComponent<TickModeMainTestComponent>();
+    SW_REQUIRE_TRUE( pDeclared != nullptr && pInherited != nullptr && pDefault != nullptr );
+    SW_EXPECT_TRUE( pDeclared->getTickGroup() == TickGroup::PostPhysics );
+    SW_EXPECT_TRUE( pInherited->getTickGroup() == TickGroup::PostPhysics );
+    SW_EXPECT_TRUE( pDefault->getTickGroup() == TickGroup::DuringPhysics );
+}
+
+/**
  * @brief [TickModesTest] 모드 없는 등록 줄(`makeDeclaredTickEntry`)은 직접 선언한 형식만 Batch 줄로 오르고, 물려받은 형식의 줄은 레지스트리가 받지 않는다
  */
 SW_TEST_CASE( TickModesTest, DeclaredTickEntryRegistersOnlyDeclaringType )

@@ -32,7 +32,6 @@ namespace sw
     void DamageNumberComponent::onBeginPlay()
     {
         Component::onBeginPlay();
-        setTickGroup( TickGroup::PostUpdate );
 
         // 흐른 수명은 처음으로 되돌리지 않는다 — 떠 있는 동안 상태를 다시 읽은 숫자(플레이 중 되돌리기 · 핫 리로드)가 수명을 다시 시작하지 않게.
         // 새로 만든 숫자는 0 이다. 알파는 흐른 수명에서 다시 구한다.

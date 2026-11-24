@@ -48,6 +48,8 @@ namespace sw
     public:
         REFLECT_BODY();
 
+        static constexpr TickGroup kTickGroup = TickGroup::PostUpdate;
+
         /** @brief 색 인스턴스는 틱 뒤 게임 스레드에서만 바뀝니다 — 유닛 뷰가 병렬 틱에서 읽어도 됩니다. */
         static constexpr bool kTickReadSafe = true;
 

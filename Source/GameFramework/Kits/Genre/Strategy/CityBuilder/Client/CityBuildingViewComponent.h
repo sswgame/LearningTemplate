@@ -32,10 +32,11 @@ namespace sw
     public:
         REFLECT_BODY();
 
+        static constexpr TickGroup kTickGroup = TickGroup::PostUpdate; ///< 디렉터(PrePhysics)가 이 프레임의 시뮬레이션을 끝낸 뒤에 읽는다.
+
         CityBuildingViewComponent();
         virtual ~CityBuildingViewComponent() override = default;
 
-        void onBeginPlay() override;
         void onTick( TickContext& context ) override;
 
         /** @brief 따라갈 도시(디렉터 · 도시 뷰의 오브젝트)와 건물 번호를 정합니다(도시 뷰가 세운 뒤 부른다). */

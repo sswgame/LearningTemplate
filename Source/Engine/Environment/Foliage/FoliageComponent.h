@@ -126,6 +126,8 @@ namespace sw
     public:
         REFLECT_BODY();
 
+        static constexpr TickGroup kTickGroup = TickGroup::PostUpdate;
+
         /** @brief 지형 세대가 이만큼(프레임) 그대로여야 배치를 다시 계산합니다(60 Hz 에서 0.3 초). */
         static constexpr uint32 kTerrainStabilityFrames = 18;
 

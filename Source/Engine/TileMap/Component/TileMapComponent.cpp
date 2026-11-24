@@ -77,7 +77,6 @@ namespace sw
     void TileMapComponent::onBeginPlay()
     {
         SceneComponent::onBeginPlay();
-        setTickGroup( TickGroup::PrePhysics );
         const bool bLoadFailed = _bLoaded == SW_FALSE && _tileMapPath.empty() == false && loadTileMap() == false;
         if ( bLoadFailed )
             return;

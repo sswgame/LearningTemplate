@@ -18,7 +18,6 @@ namespace sw
         , _stormScale{ 4.0f }
     {
         setCanEverTick( true );
-        setTickGroup( TickGroup::PrePhysics ); // 부력(물리 스텝)과 물 틱(PostUpdate)이 같은 프레임의 배율을 읽는다
     }
 
     float32 WeatherWaveComponent::computeAmplitudeScale( float32 weatherValue, float32 stormScale )

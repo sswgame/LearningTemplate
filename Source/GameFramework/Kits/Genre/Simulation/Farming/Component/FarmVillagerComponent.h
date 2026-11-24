@@ -30,10 +30,11 @@ namespace sw
     public:
         REFLECT_BODY();
 
+        static constexpr TickGroup kTickGroup = TickGroup::PostUpdate; ///< 마을 디렉터(PrePhysics)가 이 프레임의 일정을 흘린 뒤에 읽는다.
+
         FarmVillagerComponent();
         virtual ~FarmVillagerComponent() override = default;
 
-        void onBeginPlay() override;
         void onTick( TickContext& context ) override;
 
         /** @brief 따라갈 디렉터와 마을 사람 번호를 정합니다(디렉터가 스폰한 뒤 부른다). */

@@ -37,7 +37,7 @@ namespace sw
      * @class GameModeComponent
      * @brief 씬에 하나 두는 디렉터의 공통 골격입니다.
      * @details 파생 클래스는 규칙(시작, 틱, 상태 바이트)과 무엇을 스폰하는지만 적는다. 베이스는 다음을 맡는다.
-     *          - **수명**: `onBeginPlay` 가 틱 그룹을 `PrePhysics` 로 두고(뷰와 컨트롤러는 뒤 그룹에서 읽는다) `openGame` 이 상태 칸을 기본값으로 되돌린 뒤 `startGame` 을 부른다.
+     *          - **수명**: `PrePhysics` 에서 틱하고(`kTickGroup` — 뷰와 컨트롤러는 뒤 그룹에서 읽는다) `onBeginPlay` 의 `openGame` 이 상태 칸을 기본값으로 되돌린 뒤 `startGame` 을 부른다.
      *            그다음 보관하던 복원 바이트를 적용하고 첫 플러시를 예약한다. 시작하지 못하면 틱도 돌지 않는다.
      *          - **상태 바이트**: `restoreState` 는 시작 전이면 바이트를 보관했다가 시작할 때 적용하고, 시작 뒤면 바로 `readState` 로 적용한다.
      *            적용한 뒤에는 뷰 오브젝트를 정리해 다시 스폰하게 한다.
@@ -75,6 +75,8 @@ namespace sw
     public:
         REFLECT_BODY();
 
+        static constexpr TickGroup kTickGroup = TickGroup::PrePhysics; ///< 규칙은 앞 그룹 — 뷰 · 컨트롤러 · 카메라 리그(뒤 그룹)가 같은 프레임에 이 결과를 읽는다.
+
         /** @brief 디렉터의 판 상태는 병렬 틱 중 남이 읽어도 됩니다 — 규칙은 틱 뒤 게임 스레드에서만 돈다(`deferRules`). 틱이 쓰는 것은 자기 시간 누적뿐이다. */
         static constexpr bool   kTickReadSafe = true;
         static constexpr uint32 kRuleSubTick  = 0x52554C45u; ///< 규칙을 도는 서브틱 id(`_tickAfter` 를 걸었을 때만)
@@ -84,7 +86,7 @@ namespace sw
         GameModeComponent();
         virtual ~GameModeComponent() override;
 
-        /** @brief 틱 그룹을 정하고 판을 시작합니다(`openGame`). 보관하던 복원 바이트를 적용하고 첫 플러시를 예약합니다. */
+        /** @brief 판을 시작합니다(`openGame`). 보관하던 복원 바이트를 적용하고 첫 플러시를 예약합니다. */
         void onBeginPlay() override;
         /** @brief 스폰한 오브젝트를 정리하고 판을 끝냅니다. */
         void onEndPlay() override;

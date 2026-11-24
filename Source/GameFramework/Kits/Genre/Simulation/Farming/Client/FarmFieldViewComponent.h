@@ -65,6 +65,8 @@ namespace sw
     public:
         REFLECT_BODY();
 
+        static constexpr TickGroup kTickGroup = TickGroup::PrePhysics; ///< 디렉터와 같은 그룹 — 카메라 디렉터(PostPhysics 틱 뒤)가 이번 프레임의 초점을 읽는다.
+
         /** @brief 칸 뷰(병렬 틱)가 남 읽기 길로 읽습니다 — 모습은 틱 뒤 게임 스레드(`updateView`)에서만 바뀌고 틱은 일을 미루기만 한다. */
         static constexpr bool kTickReadSafe = true;
 
@@ -73,7 +75,6 @@ namespace sw
 
         /** @brief 같은 오브젝트의 디렉터를 찾아 핸들로 듭니다. 없으면 오류를 남기고 아무것도 하지 않습니다. */
         void onRegister( GameObjectManager& manager ) override;
-        void onBeginPlay() override;
         /** @brief 세운 칸 오브젝트를 걷습니다. */
         void onEndPlay() override;
         /** @brief 세우기 · 카메라 초점을 틱 뒤 게임 스레드로 미룹니다. */

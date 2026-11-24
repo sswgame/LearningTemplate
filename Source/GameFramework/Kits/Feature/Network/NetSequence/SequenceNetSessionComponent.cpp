@@ -22,8 +22,6 @@ namespace sw
     void SequenceNetSessionComponent::onBeginPlay()
     {
         Component::onBeginPlay();
-        // 트리거 · 디렉터의 틱 뒤에 보낸다 — 마지막 그룹에서 돈다.
-        setTickGroup( TickGroup::PostUpdate );
 
         // 넷 링크는 이 컴포넌트의 월드에 올라 있다 — 전역 세션을 찾지 않는다(`SceneNetLink`). 링크가 비면 혼자 하는 게임이다.
         GameObject*         pOwner   = getOwner();

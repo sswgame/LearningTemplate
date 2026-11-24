@@ -557,7 +557,7 @@ namespace sw::editor
                 EditorVisualizerLine prototype{};
                 prototype._thickness = 1.0f;
                 prototype._colorRole = EditorVisualizerColorRole::ThemeToken;
-                prototype._pThemeKey = bStage ? "Viewport.ModifierStage" : "Viewport.ModifierPreview";
+                prototype._themeKey  = bStage ? SW_THEME_COLOR_KEY( "Viewport", "ModifierStage" ) : SW_THEME_COLOR_KEY( "Viewport", "ModifierPreview" );
                 for ( size_t index = 0; index + 1 < listPoint.size(); index += 2 )
                 {
                     EditorVisualizerLine line = prototype;

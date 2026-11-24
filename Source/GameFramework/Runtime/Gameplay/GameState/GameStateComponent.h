@@ -76,6 +76,8 @@ namespace sw
     {
     public:
         REFLECT_BODY();
+
+        static constexpr TickGroup kTickGroup = TickGroup::PrePhysics; ///< 디렉터와 같은 그룹이다. 같은 오브젝트 안에서는 붙은 순서대로 처리하며, 이 컴포넌트가 맨 앞이다.
         REFLECT_INTERFACE( IGameFlagsOwner, _gameFlagsOwnerPort );
 
         static constexpr uint32 kStateTag     = FourCCUtil::make( "GTST" );

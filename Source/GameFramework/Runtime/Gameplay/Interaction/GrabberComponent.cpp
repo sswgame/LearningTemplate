@@ -99,7 +99,6 @@ namespace sw
     void GrabberComponent::onBeginPlay()
     {
         Component::onBeginPlay();
-        setTickGroup( TickGroup::PrePhysics );
         const GameObject*    pOwner = getOwner();
         const PawnComponent* pPawn  = pOwner != nullptr && _grabButton.empty() == false ? pOwner->getComponent<PawnComponent>() : nullptr;
         _grabIndex                  = pPawn != nullptr ? pPawn->findButton( _grabButton ) : nullopt;

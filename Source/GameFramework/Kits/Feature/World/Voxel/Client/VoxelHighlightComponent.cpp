@@ -34,8 +34,6 @@ namespace sw
         , _reserved{ 0 }
     {
         setCanEverTick( true );
-        // 플레이어(DuringPhysics)가 이번 프레임에 겨눈 블록을 정한 뒤에 읽습니다. 편집 중인 씬은 플레이 시작 없이 틱하므로 시작이 아니라 생성 때 정합니다(같은 그룹이면 병렬 읽기가 겹친다).
-        setTickGroup( TickGroup::PostUpdate );
     }
 
     VoxelHighlightComponent::~VoxelHighlightComponent() = default;

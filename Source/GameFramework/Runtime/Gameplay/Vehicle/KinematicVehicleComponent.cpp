@@ -98,7 +98,6 @@ namespace sw
     void KinematicVehicleComponent::onBeginPlay()
     {
         Component::onBeginPlay();
-        setTickGroup( TickGroup::PrePhysics );
         _bReady                     = false;
         GameObject*          pOwner = getOwner();
         const PawnComponent* pPawn  = pOwner != nullptr ? pOwner->getComponent<PawnComponent>() : nullptr;

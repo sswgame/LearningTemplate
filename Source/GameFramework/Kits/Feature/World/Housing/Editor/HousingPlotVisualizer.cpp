@@ -31,14 +31,14 @@ namespace sw::editor
             static constexpr float32 kCellThickness   = 1.0f;
             static constexpr float32 kBoundsThickness = 2.0f;
 
-            static EditorVisualizerLine makeLine( const float3& from, const float3& to, const utf8* pThemeKey, float32 thickness )
+            static EditorVisualizerLine makeLine( const float3& from, const float3& to, EditorThemeColorKey themeKey, float32 thickness )
             {
                 EditorVisualizerLine line{};
                 line._from      = from;
                 line._to        = to;
                 line._thickness = thickness;
                 line._colorRole = EditorVisualizerColorRole::ThemeToken;
-                line._pThemeKey = pThemeKey;
+                line._themeKey  = themeKey;
                 return line;
             }
 
@@ -57,12 +57,12 @@ namespace sw::editor
                     for ( int32 x = 1; x < settings._sizeX; ++x )
                     {
                         const float32 offset = static_cast<float32>( x ) * cellSize;
-                        outDrawList.addLine( makeLine( origin + float3{ offset, 0.0f, 0.0f }, origin + float3{ offset, 0.0f, sizeZ }, "Viewport.HousingCell", kCellThickness ) );
+                        outDrawList.addLine( makeLine( origin + float3{ offset, 0.0f, 0.0f }, origin + float3{ offset, 0.0f, sizeZ }, SW_THEME_COLOR_KEY( "Viewport", "HousingCell" ), kCellThickness ) );
                     }
                     for ( int32 z = 1; z < settings._sizeZ; ++z )
                     {
                         const float32 offset = static_cast<float32>( z ) * cellSize;
-                        outDrawList.addLine( makeLine( origin + float3{ 0.0f, 0.0f, offset }, origin + float3{ sizeX, 0.0f, offset }, "Viewport.HousingCell", kCellThickness ) );
+                        outDrawList.addLine( makeLine( origin + float3{ 0.0f, 0.0f, offset }, origin + float3{ sizeX, 0.0f, offset }, SW_THEME_COLOR_KEY( "Viewport", "HousingCell" ), kCellThickness ) );
                     }
                 }
                 const float3 arrCorner[] = {
@@ -70,14 +70,14 @@ namespace sw::editor
                     origin + float3{sizeX, 0.0f, sizeZ},
                     origin + float3{ 0.0f, 0.0f, sizeZ}
                 };
-                outDrawList.addLoop( arrCorner, 4, makeLine( origin, origin, "Viewport.HousingPlot", kBoundsThickness ) );
+                outDrawList.addLoop( arrCorner, 4, makeLine( origin, origin, SW_THEME_COLOR_KEY( "Viewport", "HousingPlot" ), kBoundsThickness ) );
                 StringBuilder<constant::buffer::kMax256> labelBuilder;
                 labelBuilder.appendFormat( "%#  %# x %#", settings._plotID.c_str(), settings._sizeX, settings._sizeZ );
                 EditorVisualizerText label{};
                 label._position  = origin;
                 label._text      = string{ labelBuilder.view() };
                 label._colorRole = EditorVisualizerColorRole::ThemeToken;
-                label._pThemeKey = "Viewport.Label";
+                label._themeKey  = SW_THEME_COLOR_KEY( "Viewport", "Label" );
                 label._bShadow   = false;
                 outDrawList._listText.push_back( label );
             }

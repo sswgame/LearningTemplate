@@ -33,6 +33,8 @@ namespace sw
     public:
         REFLECT_BODY();
 
+        static constexpr TickGroup kTickGroup = TickGroup::PostUpdate; ///< 서버는 이번 틱의 물리가 만든 사건을 같은 틱에 보낸다 — 마지막 그룹에서 돈다.
+
         DestructionNetSessionComponent();
         ~DestructionNetSessionComponent() override = default;
 

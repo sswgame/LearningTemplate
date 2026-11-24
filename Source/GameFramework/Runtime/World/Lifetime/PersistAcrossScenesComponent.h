@@ -11,6 +11,8 @@ namespace sw
     {
     public:
         REFLECT_BODY();
+
+        static constexpr TickGroup kTickGroup = TickGroup::PrePhysics;
         PersistAcrossScenesComponent();
         virtual ~PersistAcrossScenesComponent() override = default;
 

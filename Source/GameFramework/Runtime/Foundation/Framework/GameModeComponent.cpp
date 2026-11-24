@@ -91,8 +91,6 @@ namespace sw
     void GameModeComponent::onBeginPlay()
     {
         Component::onBeginPlay();
-        // 규칙은 앞 그룹 — 뷰 · 컨트롤러 · 카메라 리그(뒤 그룹)가 같은 프레임에 이 결과를 읽는다.
-        setTickGroup( TickGroup::PrePhysics );
         if ( openGame() == false )
             return;
         _bStarted = SW_TRUE;

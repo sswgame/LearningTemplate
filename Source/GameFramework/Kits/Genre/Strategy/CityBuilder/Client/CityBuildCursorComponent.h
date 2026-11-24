@@ -23,10 +23,11 @@ namespace sw
     public:
         REFLECT_BODY();
 
+        static constexpr TickGroup kTickGroup = TickGroup::PostUpdate; ///< 짓기 입력은 틱 뒤에 커서 칸을 정한다 — 지난 프레임 것을 읽는다.
+
         CityBuildCursorComponent();
         virtual ~CityBuildCursorComponent() override = default;
 
-        void onBeginPlay() override;
         void onTick( TickContext& context ) override;
 
     private:

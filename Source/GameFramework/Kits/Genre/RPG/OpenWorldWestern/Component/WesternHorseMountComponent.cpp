@@ -20,13 +20,6 @@ namespace sw
         setCanEverTick( true );
     }
 
-    void WesternHorseMountComponent::onBeginPlay()
-    {
-        Component::onBeginPlay();
-        // 걸음새는 PrePhysics 의 탈것 이동이 고른다. 그 뒤에 스태미나를 쓴다.
-        setTickGroup( TickGroup::PostPhysics );
-    }
-
     void WesternHorseMountComponent::onTick( TickContext& context )
     {
         Component::onTick( context );

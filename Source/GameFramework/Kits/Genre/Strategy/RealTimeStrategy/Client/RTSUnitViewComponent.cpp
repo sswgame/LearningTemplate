@@ -63,13 +63,6 @@ namespace sw
         setCanEverTick( true );
     }
 
-    void RTSUnitViewComponent::onBeginPlay()
-    {
-        Component::onBeginPlay();
-        // 디렉터(PrePhysics)가 이 프레임의 판을 끝낸 뒤에 읽는다.
-        setTickGroup( TickGroup::PostUpdate );
-    }
-
     SpawnStateReset RTSUnitViewComponent::resetToSpawnState()
     {
         if ( _bPlaced == SW_TRUE )

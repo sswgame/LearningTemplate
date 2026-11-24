@@ -40,13 +40,13 @@ namespace sw
     public:
         REFLECT_BODY();
 
+        static constexpr TickGroup kTickGroup = TickGroup::PostUpdate;
+
         VoxelWorldViewComponent();
         virtual ~VoxelWorldViewComponent() override;
 
         /** @brief 같은 오브젝트의 디렉터를 찾아 핸들로 듭니다. 없으면 오류를 남기고 아무것도 하지 않습니다. */
         void onRegister( GameObjectManager& manager ) override;
-        /** @brief 틱 그룹은 뷰와 같은 `PostUpdate` 입니다. */
-        void onBeginPlay() override;
         /** @brief 세운 청크를 걷습니다. */
         void onEndPlay() override;
         /** @brief 뷰 맞추기를 틱 뒤 게임 스레드로 미룹니다. */

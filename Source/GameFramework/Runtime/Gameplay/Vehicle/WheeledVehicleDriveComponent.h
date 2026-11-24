@@ -42,6 +42,8 @@ namespace sw
     public:
         REFLECT_BODY();
 
+        static constexpr TickGroup kTickGroup = TickGroup::PrePhysics;
+
         WheeledVehicleDriveComponent();
         ~WheeledVehicleDriveComponent() override = default;
 

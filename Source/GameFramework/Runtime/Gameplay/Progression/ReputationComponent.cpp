@@ -50,9 +50,6 @@ namespace sw
     void ReputationComponent::onBeginPlay()
     {
         Component::onBeginPlay();
-        // 월드 상태와 같은 오브젝트면 붙은 순서대로 그 뒤에 돈다(디렉터 앞에 두면 디렉터가 식힌 평판을 읽는다). 다른 오브젝트면 다음 그룹에서 읽어 경쟁을 피한다.
-        const GameObject* const pOwner = getOwner();
-        setTickGroup( pOwner != nullptr && pOwner->getComponent<GameStateComponent>() != nullptr ? TickGroup::PrePhysics : TickGroup::PostPhysics );
         if ( _bOpenAtBeginPlay == SW_TRUE && _restore.isOpen() == false )
             (void)_restore.open( *this ); // 카탈로그를 빌리지 않은 평판이다 — 결과는 새 판 · 복원뿐이다
     }

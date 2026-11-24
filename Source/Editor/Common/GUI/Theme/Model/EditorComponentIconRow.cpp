@@ -7,6 +7,8 @@
 
 #include "Editor/Common/Config/EditorComponentIconTable.h"
 #include "Editor/Common/Config/EditorIconGlyphTable.h"
+#include "Editor/Common/Config/EditorPaths.h"
+#include "Editor/Common/Config/EditorThemeConfig.h"
 #include "Editor/Common/GUI/Theme/EditorThemeUtil.h"
 #include "Editor/Common/Workspace/EditorService.h"
 #include "Editor/Common/Workspace/EditorStateStore.h"
@@ -72,11 +74,26 @@ namespace sw::editor
                 const uint32 generation = editor::getSubsystem<TypeRegistry>().getGeneration();
                 if ( cache._generation != generation )
                 {
+                    if ( cache._generation != constant::invalid_index::kUint32 ) // 처음은 기동이 봤다(`ImGuiEditor::initializeEditorContext`)
+                        (void)EditorComponentIconRow::validateNames();           // 다시 읽은 모듈의 메타 — 없는 이름은 오류 로그다
                     cache._mapRow.clear();
                     cache._bObjectRow = false;
                     cache._generation = generation;
                 }
                 return cache;
+            }
+
+            /** @brief @p owner 가 드는 아이콘 · 색 이름이 표에 있으면 true 입니다. 없으면 오류를 남깁니다. */
+            static bool validateRowNames( const utf8* pOwner, string_view iconName, string_view colorName )
+            {
+                const bool bIcon = editor::getSubsystem<EditorIconGlyphTable>().findGlyph( hashed_string{ iconName } ) != nullptr;
+                if ( bIcon == false )
+                    SW_LOG_ERROR_ID( "EditorComponentIcon.UnknownIcon", "%# names icon '%#' which the icon table does not have (%#)", pOwner, iconName, EditorPaths::kIconGlyphTable );
+                const string colorKey = EditorComponentIconTable::makeColorKey( colorName );
+                const bool   bColor   = EditorThemeUtil::getActiveTheme().findColor( hashed_string{ string_view{ colorKey } } ) != nullptr;
+                if ( bColor == false )
+                    SW_LOG_ERROR_ID( "EditorComponentIcon.UnknownColor", "%# names color '%#' but the theme has no '%#'", pOwner, colorName, colorKey );
+                return bIcon && bColor;
             }
 
             static EditorComponentIconRow resolve( const NamedRow& row )
@@ -85,6 +102,29 @@ namespace sw::editor
             }
         };
     } // namespace
+
+    bool EditorComponentIconRow::validateNames()
+    {
+        using Internal                            = EditorComponentIconInternal;
+        const EditorComponentIconTable& iconTable = Internal::table();
+        bool                            bValid    = Internal::validateRowNames( "The default component row", iconTable._defaultIcon, iconTable._neutralColor );
+        bValid                                    = Internal::validateRowNames( "The object row", iconTable._objectIcon, iconTable._neutralColor ) && bValid;
+        for ( const EditorComponentCategoryIcon& row : iconTable._listCategory )
+        {
+            bValid = Internal::validateRowNames( row._category.c_str(), row._icon, row._color ) && bValid;
+        }
+        editor::getSubsystem<TypeRegistry>().forEachType( [&bValid, &iconTable]( const TypeInfo& type )
+        {
+            const string* pIcon  = type.findCustomMeta( "Icon" );
+            const string* pColor = type.findCustomMeta( "IconColor" );
+            if ( pIcon == nullptr && pColor == nullptr )
+                return;
+            bValid = Internal::validateRowNames( type._name.c_str(), pIcon != nullptr ? string_view{ *pIcon } : string_view{ iconTable._defaultIcon },
+                                                 pColor != nullptr ? string_view{ *pColor } : string_view{ iconTable._neutralColor } ) &&
+                     bValid;
+        } );
+        return bValid;
+    }
 
     EditorComponentIconRow EditorComponentIconRow::findRow( const TypeInfo* pType )
     {

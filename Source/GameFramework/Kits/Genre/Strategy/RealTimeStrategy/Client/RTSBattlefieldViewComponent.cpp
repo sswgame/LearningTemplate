@@ -98,7 +98,6 @@ namespace sw
     void RTSBattlefieldViewComponent::onBeginPlay()
     {
         Component::onBeginPlay();
-        setTickGroup( TickGroup::PostUpdate );
         _bModelsChecked = SW_FALSE;
     }
 

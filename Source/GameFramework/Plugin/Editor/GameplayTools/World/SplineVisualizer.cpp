@@ -35,7 +35,7 @@ namespace sw::editor
                 EditorVisualizerLine line{};
                 line._thickness = kCurveThickness;
                 line._colorRole = EditorVisualizerColorRole::ThemeToken;
-                line._pThemeKey = "Viewport.Marker";
+                line._themeKey  = SW_THEME_COLOR_KEY( "Viewport", "Marker" );
                 for ( const SplineComponent* pSpline : args._pObjectManager->getComponentRegistry().getAll<SplineComponent>() )
                 {
                     const GameObject* pOwner = pSpline->getOwner();

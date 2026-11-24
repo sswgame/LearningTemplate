@@ -505,8 +505,9 @@ namespace sw
          * @details 이 오브젝트가 삭제 예정이면 컴포넌트를 **삭제 예정으로 시작한다**(목록과 버킷에 넣기 전에). 오브젝트와 함께 파괴되며, 순회에 보이지 않는다
          *          (유니티에서 `Destroy` 를 부른 같은 프레임의 `AddComponent` 와 같다). `isPendingDestroy` 의 불변식이 이것으로 성립한다.
          * @param bOverridesTick 타입이 `onTick` 을 오버라이드했는지 나타냅니다(`HasOnTickOverride_v`). 아니면 실행할 것이 없으므로 주 틱을 끕니다.
+         * @param tickGroup 타입이 선언한 주 틱의 그룹(`T::kTickGroup`)입니다.
          */
-        void attachCreatedComponent( Component* pComp, const TypeInfo* pTypeInfo, ComponentPoolEntry* pPoolEntry, bool bOverridesTick );
+        void attachCreatedComponent( Component* pComp, const TypeInfo* pTypeInfo, ComponentPoolEntry* pPoolEntry, bool bOverridesTick, TickGroup tickGroup );
         /**
          * @brief `addComponent` 의 본체입니다. @p bFreshLocalID 면 붙인 뒤 오브젝트 안에서 겹치지 않는 새 지역 id 를 준다(게임 코드가 붙인 컴포넌트 — 세이브가 그 id 로 가리킨다).
          * @details 이름으로 만드는 길(`addComponentTo` — 직렬화 · 에디터)은 주지 않는다 — 곧 읽을 상태의 id 가 맞고, 로드 중에 형제 id 를 굳히면 뒤 형제의 적힌 id 와 겹칠 수 있다.
@@ -611,6 +612,7 @@ namespace sw
         // 그러면 모듈을 언로드할 때 `destroyComponentsOfModule` 이 TypeInfo 의 모듈 이름으로 대상을 고르므로 그 인스턴스를 놓친다.
         // 그 인스턴스의 vtable 은 언로드된 이미지를 가리킨 채 씬에 남는다(언리얼도 모든 UObject 클래스는 리플렉션을 갖는다).
         static_assert( HasOwnReflectBody_v<T>, "T must declare its own REFLECT_BODY()." );
+        static_assert( isValidTickGroup( T::kTickGroup ), "T::kTickGroup is not a tick group" );
 
         if ( _pOwnerManager == nullptr )
         {
@@ -639,7 +641,7 @@ namespace sw
             return nullptr;
 
         T* pComp = sw_placement_new( storage._pMemory ) T( std::forward<Args>( args )... );
-        attachCreatedComponent( pComp, pTypeInfo, storage._pPoolEntry, HasOnTickOverride_v<T> );
+        attachCreatedComponent( pComp, pTypeInfo, storage._pPoolEntry, HasOnTickOverride_v<T>, T::kTickGroup );
         if ( bFreshLocalID )
             giveFreshLocalID( pComp );
         return pComp;

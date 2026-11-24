@@ -25,6 +25,8 @@ namespace sw
     public:
         REFLECT_BODY();
 
+        static constexpr TickGroup kTickGroup = TickGroup::PostUpdate; ///< 플레이어 컨트롤러(DuringPhysics)가 옮긴 자리가 적용된 뒤(물리 뒤 단계)에 읽는다.
+
         FollowCameraComponent();
         virtual ~FollowCameraComponent() override = default;
 

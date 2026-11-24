@@ -175,7 +175,6 @@ namespace sw
         , _bRebuildQueued{ false }
     {
         setCanEverTick( true );
-        setTickGroup( TickGroup::PostUpdate );
     }
 
     WaterBodyComponent::~WaterBodyComponent() = default;

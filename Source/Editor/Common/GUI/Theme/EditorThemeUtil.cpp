@@ -251,7 +251,7 @@ namespace sw::editor
             {
                 if ( pRegistration == nullptr )
                     return SW_THEME_COLOR( "Base", "TextMuted" );
-                return EditorThemeUtil::findColor( hashed_string{ pRegistration->_pColorKey } );
+                return EditorThemeUtil::findColor( pRegistration->_colorKey );
             }
         };
     } // namespace
@@ -489,15 +489,16 @@ namespace sw::editor
             // 3) 빠른 액센트 팔레트 스와치 — 색은 테마 토큰(`AccentSwatch.*`, 기본 테마가 정하고 다른 테마가 물려받는다), 여기는 놓는 순서만 든다
             ImGui::TextUnformatted( SW_LOCKEY( "EdText", "AccentSwatches" ) );
             ImGui::SameLine();
-            static constexpr const utf8* kArrSwatchKey[] = { "AccentSwatch.ElectricBlue", "AccentSwatch.EmeraldCyan", "AccentSwatch.NeonViolet", "AccentSwatch.AmberGold",
-                                                             "AccentSwatch.Crimson" };
-            const float32                swatchSize      = ImGui::GetFrameHeight();
+            static constexpr EditorThemeColorKey kArrSwatchKey[] = { SW_THEME_COLOR_KEY( "AccentSwatch", "ElectricBlue" ), SW_THEME_COLOR_KEY( "AccentSwatch", "EmeraldCyan" ),
+                                                                     SW_THEME_COLOR_KEY( "AccentSwatch", "NeonViolet" ), SW_THEME_COLOR_KEY( "AccentSwatch", "AmberGold" ),
+                                                                     SW_THEME_COLOR_KEY( "AccentSwatch", "Crimson" ) };
+            const float32                        swatchSize      = ImGui::GetFrameHeight();
             for ( int32 index = 0; index < static_cast<int32>( SW_COUNT_OF( kArrSwatchKey ) ); ++index )
             {
                 if ( index > 0 )
                     ImGui::SameLine();
                 ImGui::PushID( index );
-                const Color swatch = findColor( hashed_string{ kArrSwatchKey[index] } );
+                const Color swatch = findColor( kArrSwatchKey[index] );
                 if ( ImGui::ColorButton( "##swatch", EditorThemeInternal::toImVec4( swatch ), ImGuiColorEditFlags_NoAlpha, ImVec2( swatchSize, swatchSize ) ) )
                 {
                     setAccentColor( swatch );

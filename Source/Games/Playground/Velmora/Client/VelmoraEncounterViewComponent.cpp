@@ -57,7 +57,6 @@ namespace sw
     void VelmoraEncounterViewComponent::onBeginPlay()
     {
         Component::onBeginPlay();
-        setTickGroup( TickGroup::PostUpdate );
         _bActionsValid = _attackAction.empty() == false && _dashAction.empty() == false ? SW_TRUE : SW_FALSE;
         if ( _bActionsValid == SW_FALSE )
             SW_LOG_ERROR_ID( "Velmora.ViewActionMissing", "Velmora encounter view: attack '%#' and dash '%#' actions must both be named - the view reads no input", _attackAction.c_str(), _dashAction.c_str() );

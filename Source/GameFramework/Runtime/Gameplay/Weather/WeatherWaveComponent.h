@@ -27,6 +27,8 @@ namespace sw
     public:
         REFLECT_BODY();
 
+        static constexpr TickGroup kTickGroup = TickGroup::PrePhysics; ///< 부력(물리 스텝)과 물 틱(PostUpdate)이 같은 프레임의 배율을 읽는다
+
         WeatherWaveComponent();
         ~WeatherWaveComponent() override = default;
 

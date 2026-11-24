@@ -146,7 +146,6 @@ namespace sw
     void InteractorComponent::onBeginPlay()
     {
         Component::onBeginPlay();
-        setTickGroup( TickGroup::PostPhysics );
         GameObject*        pOwner   = getOwner();
         GameObjectManager* pManager = pOwner != nullptr ? pOwner->getMutableManager() : nullptr;
         if ( pManager != nullptr )

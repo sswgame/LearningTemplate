@@ -349,6 +349,13 @@ namespace sw
          *          언리얼 Mass 처리기의 읽기 요구 선언과 같은 자리다. 기본은 false — 남의 컴포넌트를 `getComponent` 로 찾으면 병렬 틱 검사가 멈춘다.
          */
         static constexpr bool kTickReadSafe = false;
+        /**
+         * @brief 주 틱(`onTick`)의 그룹입니다 — 파생 형식이 같은 이름으로 가립니다(`static constexpr TickGroup kTickGroup = TickGroup::PostUpdate;`).
+         * @details 붙일 때(`GameObject::addComponent`) 형식에서 한 번 읽고 그 뒤로 바뀌지 않는다. 언리얼 `PrimaryComponentTick.TickGroup`(생성자에서 정한다) · 유니티
+         *          `[UpdateInGroup]` 과 같은 자리다. 예전에는 컴포넌트 70 여 개가 `onBeginPlay` 에서 정해, 플레이 시작 없이 틱하는 편집 중 씬에서는 모두 기본 그룹에서 돌았다
+         *          (뒤 그룹에서 남을 읽던 컴포넌트가 같은 그룹이 되어 병렬 읽기 검사가 멈췄다). 서브틱의 그룹은 등록할 때 정한다(`registerSubTick`).
+         */
+        static constexpr TickGroup kTickGroup = TickGroup::DuringPhysics;
 
         /** @brief 기본 컴포넌트를 만듭니다. */
         Component();

@@ -40,7 +40,7 @@ Scripts/dev/test_history.py
 `git diff --name-status <base>...HEAD` 로 가른다(이력 DB 는 기계마다 달라 쓰지 않는다). 묶음 검증이 build 와 cpu 사이에 부른다(`preflight.sh` 의 `changed` 단계).
   (a) 바뀐 소스 · 테스트 파일의 기능 폴더(`…/Tests/…` 는 `Tests` 앞, 아니면 그 파일의 폴더 — 테스트가 없으면 한 단계 위)를 그 폴더를 싣는 단위 항목
       (`UnitTests` · `UnitTests.<게임>` · `UnitTests.OnlineKits` — ctest 의 명령을 `ctest --show-only=json-v1` 에서 읽는다)에 `--test-source=` 로 좁혀 돈다.
-      에디터 쪽(`/Editor/` 소스 · 편집기 시나리오 · `Content/editor` 데이터)이 바뀌었으면 에디터 단위 테스트(`editor.unitTests`)를 편집기 안에서 돈다 — `App --test` 에는 없다.
+      에디터 쪽(`/Editor/` 소스 · 편집기 시나리오 · `Content/editor` 데이터)이나 리플렉션 선언(`REFLECT` 이 있는 헤더 — 메타 `Icon=` · 분류 · 표시 이름)이 바뀌었으면 에디터 단위 테스트(`editor.unitTests`)를 편집기 안에서 돈다 — `App --test` 에는 없다.
   (b) 더해지거나 바뀐 `*.scenario.xml`(골든이 바뀌면 그 시나리오)을 하나씩 제 프로세스로, 그 시나리오가 든 ctest 항목의 백엔드마다 돈다.
   둘 다 **없는 기준 파일만 쓴다**(`--record-missing-snapshots` · `-scenario-record-missing-golden`) — 쓴 케이스 · 시나리오는 `MissingBaseline` 으로 지고, 쓴 파일(추적 안 된
   `golden/` · `Snapshots/`)이 있으면 목록을 내고 멈춘다. 통합 담당이 보고 커밋한 뒤 `--from changed` 로 다시 돌려 기록 없이 통과해야 한다.
@@ -319,6 +319,7 @@ CHANGED_OUTPUT = Path("Testing") / "Changed"   # 빌드 폴더 아래 이 단계
 # 에디터 단위 테스트는 편집기 안의 자체 테스트로만 돈다(`EditorSelfTestUnitTests.cpp`) — 시나리오 읽기 검사 · 아이콘 · 테마 · 현지화 검사가 모두 여기다.
 EDITOR_SELF_TEST_SCENARIO = "engine/automation/editor/selftests.scenario.xml"
 EDITOR_UNIT_TEST_ITEM = "editor.unitTests"
+REFLECT_DECLARATION = re.compile(r"^\s*(?:REFLECT|PROPERTY|ENUM)\(", re.MULTILINE)
 UNIT_ITEM_PATTERN = re.compile(r"^UnitTests(\.[A-Za-z0-9_]+)?$")
 SOURCE_SUFFIXES = (".cpp", ".h", ".hpp", ".inl")
 SCENARIO_SUFFIX = ".scenario.xml"
@@ -436,10 +437,16 @@ def select_scenarios(list_changed: Sequence[ChangedFile], list_scenario_file: Se
     return map_scenario
 
 
-def select_editor_files(list_changed: Sequence[ChangedFile]) -> list[ChangedFile]:
-    """에디터 단위 테스트(`editor.unitTests`)를 돌게 하는 바뀐 파일 — 에디터 모듈 · 편집기 확장의 소스, 편집기 시나리오, 에디터 데이터."""
+def has_reflected_type(path: str, read_text: Callable[[str], str]) -> bool:
+    """리플렉션 형식을 선언하는 헤더 — 에디터 단위 테스트가 그 메타(아이콘 · 색 · 분류)를 데이터 표와 대조한다."""
+    return path.startswith("Source/") and path.endswith(".h") and REFLECT_DECLARATION.search(read_text(path)) is not None
+
+
+def select_editor_files(list_changed: Sequence[ChangedFile], read_text: Callable[[str], str]) -> list[ChangedFile]:
+    """에디터 단위 테스트(`editor.unitTests`)를 돌게 하는 바뀐 파일 — 에디터 모듈 · 편집기 확장의 소스, 편집기 시나리오, 에디터 데이터, 리플렉션 헤더(어느 층이든)."""
     return [changed for changed in list_changed
             if (changed.path.startswith("Source/") and "/Editor/" in changed.path)
+            or has_reflected_type(changed.path, read_text)
             or (changed.path.startswith("Content/") and "/automation/editor/" in changed.path and changed.path.endswith(SCENARIO_SUFFIX))
             or changed.path.startswith("Content/editor/")]
 
@@ -745,7 +752,7 @@ def run_changed(project_root: Path, preset: str, base: str) -> int:
     list_scenario_file = [path for path in run_git_or_raise(["ls-files", "--", "Content"], cwd=project_root).splitlines() if path.endswith(SCENARIO_SUFFIX)]
     map_folder = select_unit_folders(list_changed, list_test_file)
     map_scenario = select_scenarios(list_changed, list_scenario_file)
-    list_editor_file = select_editor_files(list_changed)
+    list_editor_file = select_editor_files(list_changed, lambda path: (project_root / path).read_text(encoding="utf-8", errors="replace"))
     print(f"[Changed] {base}...HEAD: 바뀐 파일 {len(list_changed)} · 기능 폴더 {len(map_folder)} · 시나리오 {len(map_scenario)} · 에디터 파일 {len(list_editor_file)}")
     if not map_folder and not map_scenario and not list_editor_file:
         print(f"CHANGED_OK={sha}")
@@ -825,10 +832,15 @@ def run_changed_self_check() -> None:
     assert sorted(map_scenario) == ["engine/automation/rhiswap/x.scenario.xml", "game/g/automation/new.scenario.xml", "game/g/automation/old.view.scenario.xml",
                                     "game/g/automation/sequence/pair.1.scenario.xml"], map_scenario
 
-    assert [changed.path for changed in select_editor_files(list_changed)] == ["Source/Editor/Panel/Tests/TestPanel.cpp"], "에디터 소스"
+    def read_no_text(path: str) -> str:
+        return ""
+    assert [changed.path for changed in select_editor_files(list_changed, read_no_text)] == ["Source/Editor/Panel/Tests/TestPanel.cpp"], "에디터 소스"
+    header_changed = [ChangedFile("M", "Source/Engine/Foo/Light.h"), ChangedFile("M", "Source/Engine/Foo/Plain.h"), ChangedFile("M", "Source/Engine/Foo/Light.cpp")]
+    header_text = {"Source/Engine/Foo/Light.h": 'x\n    REFLECT( Meta = "Icon=Curve" )\n', "Source/Engine/Foo/Plain.h": "// REFLECT( 주석 )\n"}
+    assert [changed.path for changed in select_editor_files(header_changed, lambda path: header_text[path])] == ["Source/Engine/Foo/Light.h"], "메타만 바뀐 엔진 헤더"
     editor_changed = [ChangedFile("M", path) for path in ("Source/GameFramework/Plugin/Editor/X.cpp", "Content/game/g/automation/editor/e.scenario.xml",
                                                           "Content/editor/fonts/i.glyphs.xml", "Content/game/g/automation/editor/golden/e.dx12.ppm")]
-    assert len(select_editor_files(editor_changed)) == 3, "편집기 확장 · 편집기 시나리오 · 에디터 데이터(골든은 아니다)"
+    assert len(select_editor_files(editor_changed, read_no_text)) == 3, "편집기 확장 · 편집기 시나리오 · 에디터 데이터(골든은 아니다)"
     self_test_item = CtestItem("Scenario.editor", ("App.exe", "-EnableEditor", f"-scenario=a.scenario.xml,{EDITOR_SELF_TEST_SCENARIO}", "-scenario-backends=all"), "B/Bin")
     with tempfile.TemporaryDirectory() as temporary:
         content_root = Path(temporary)

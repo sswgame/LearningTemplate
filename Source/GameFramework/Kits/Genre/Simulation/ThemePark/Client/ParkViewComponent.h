@@ -47,6 +47,8 @@ namespace sw
     public:
         REFLECT_BODY();
 
+        static constexpr TickGroup kTickGroup = TickGroup::PrePhysics; ///< 디렉터와 같은 그룹 — 카메라 디렉터(PostPhysics 틱 뒤)가 이번 프레임의 탑승 시점을 읽는다.
+
         /** @brief 손님 뷰(병렬 틱)가 남 읽기 길로 읽습니다 — 모습은 틱 뒤 게임 스레드(`updateView`)에서만 바뀌고 틱은 자기 칸만 쓴다. */
         static constexpr bool kTickReadSafe = true;
 

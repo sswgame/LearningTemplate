@@ -139,8 +139,6 @@ namespace sw
         if ( _director.isValid() == false )
             SW_LOG_ERROR_ID( "ParkView.WithoutGameMode", "[Park] park view on '%#': no ParkGameModeComponent in front of it on the same object - the park is not shown",
                              getOwner() != nullptr ? getOwner()->getName().c_str() : "?" );
-        // 디렉터와 같은 그룹 — 카메라 디렉터(PostPhysics 틱 뒤)가 이번 프레임의 탑승 시점을 읽는다.
-        setTickGroup( TickGroup::PrePhysics );
         _bActionsValid = SW_TRUE;
         for ( const hashed_string* pAction : { &_nextRideAction, &_toggleOpenAction, &_priceDownAction, &_priceUpAction, &_feeDownAction, &_feeUpAction, &_buildAction, &_rideAction, &_thoughtsAction,
                                                &_statusAction } )

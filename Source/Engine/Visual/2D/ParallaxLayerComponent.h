@@ -31,6 +31,8 @@ namespace sw
     {
     public:
         REFLECT_BODY();
+
+        static constexpr TickGroup kTickGroup = TickGroup::PostUpdate; ///< 카메라를 옮기는 컴포넌트(따라가기 · 픽셀 퍼펙트)가 앞 그룹에서 돈 뒤에 그 프레임의 카메라를 본다.
         ParallaxLayerComponent();
         virtual ~ParallaxLayerComponent() override = default;
 

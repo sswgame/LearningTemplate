@@ -8,6 +8,7 @@
 
 #include "Editor/Common/Config/EditorPaths.h"
 #include "Editor/Common/Config/EditorThemeConfig.h"
+#include "Editor/Common/Config/EditorThemeKey.h"
 #include "Editor/Common/Workspace/EditorService.h"
 
 #include "Engine/Config/ConfigManager.h"
@@ -25,7 +26,8 @@ namespace sw::editor
         struct EditorThemeTokensInternal
         {
             /** @brief 0 이 될 수 없는 수치 키입니다(글꼴 크기 · 아이콘 비율 · 밀도). 0 이면 글자가 사라지거나 여백이 무너진다. */
-            static constexpr const utf8* kArrPositiveMetric[] = { "Typography.FontSize", "Typography.IconScale", "Layout.Density" };
+            static constexpr EditorThemeMetricKey kArrPositiveMetric[] = { SW_THEME_METRIC_KEY( "Typography", "FontSize" ), SW_THEME_METRIC_KEY( "Typography", "IconScale" ),
+                                                                           SW_THEME_METRIC_KEY( "Layout", "Density" ) };
 
             /** @brief 키가 `Namespace.Key` 모양인지 봅니다(점 하나, 양쪽이 비지 않음). 지역화 키와 같은 모양이다. */
             static bool isValidKey( string_view key )
@@ -116,7 +118,21 @@ namespace sw::editor
         const AbsolutePath folder = getFolderPath();
         if ( folder.empty() )
             return unexpected( Error{ ErrorKind::NotFound, "the content root is not mounted" } );
-        return loadThemeFile( folder.join( name ).appendSuffix( kExtension ) );
+        expected<EditorThemeConfig> config = loadThemeFile( folder.join( name ).appendSuffix( kExtension ) );
+        if ( config.has_value() == false )
+            return config;
+        // 코드가 쓰는 키는 컴파일 때 목록으로 막았다 — 목록과 벌이 어긋나면 그리기 전에(기동에서) 진다.
+        for ( const utf8* pKey : EditorThemeColorKey::List::kArrName )
+        {
+            if ( config->findColor( hashed_string( pKey ) ) == nullptr )
+                return unexpected( Error{ ErrorKind::NotFound, "the theme has no _color the code names (EditorThemeColorKeyList)", pKey } );
+        }
+        for ( const utf8* pKey : EditorThemeMetricKey::List::kArrName )
+        {
+            if ( config->findMetric( hashed_string( pKey ) ) == nullptr )
+                return unexpected( Error{ ErrorKind::NotFound, "the theme has no _metric the code names (EditorThemeMetricKeyList)", pKey } );
+        }
+        return config;
     }
 
     bool EditorThemeTokens::loadThemeResource( const AssetID& id, EditorThemeConfig& outConfig )
@@ -173,11 +189,11 @@ namespace sw::editor
                 return unexpected( Error{ ErrorKind::InvalidArgument, "a _metric key needs a Namespace.Key name and a value of 0 or more", key } );
             resolved._mapMetric[hashed_string( string_view( key ) )] = value;
         }
-        for ( const utf8* pKey : EditorThemeTokensInternal::kArrPositiveMetric )
+        for ( const EditorThemeMetricKey key : EditorThemeTokensInternal::kArrPositiveMetric )
         {
-            const float32* pValue = resolved.findMetric( hashed_string( pKey ) );
+            const float32* pValue = resolved.findMetric( hashed_string( key.c_str() ) );
             if ( pValue == nullptr || *pValue <= 0.0f )
-                return unexpected( Error{ ErrorKind::InvalidArgument, "the _metric must be present and positive", pKey } );
+                return unexpected( Error{ ErrorKind::InvalidArgument, "the _metric must be present and positive", key.c_str() } );
         }
         resolved._name        = def._name;
         resolved._displayName = def._displayName.empty() ? def._name : def._displayName;

@@ -112,7 +112,6 @@ namespace sw
     void MinimapComponent::onBeginPlay()
     {
         Component::onBeginPlay();
-        setTickGroup( TickGroup::PostPhysics ); // 몸이 이번 프레임에 간 자리
         const GameObject* pOwner = getOwner();
         if ( pOwner != nullptr && pOwner->getComponent<HUDControllerComponent>() == nullptr )
             SW_LOG_ERROR_ID( "Minimap.NoHUD", "Minimap of '%#' needs a HUDControllerComponent on the same object", pOwner->getName().c_str() );

@@ -55,10 +55,11 @@ namespace sw
     {
     public:
         REFLECT_BODY();
+
+        static constexpr TickGroup kTickGroup = TickGroup::PrePhysics;
         SpriteComponent();
         virtual ~SpriteComponent() override = default;
 
-        void onBeginPlay() override;
         /** @brief 메시와 머티리얼을 해석하고 클립, 텍스처 인스턴스, 프레임을 맞춥니다. */
         void resolveRenderAssets() override;
         /**

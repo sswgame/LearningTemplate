@@ -17,13 +17,6 @@ namespace sw
         setCanEverTick( true );
     }
 
-    void RTSDragBoxComponent::onBeginPlay()
-    {
-        Component::onBeginPlay();
-        // 명령 입력은 틱 뒤에 끌기를 정한다 — 여기서 읽는 것은 지난 프레임의 끌기다.
-        setTickGroup( TickGroup::PostUpdate );
-    }
-
     void RTSDragBoxComponent::onTick( TickContext& context )
     {
         Component::onTick( context );

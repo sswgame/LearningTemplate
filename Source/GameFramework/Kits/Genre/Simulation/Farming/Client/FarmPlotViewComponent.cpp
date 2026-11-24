@@ -98,7 +98,6 @@ namespace sw
     void FarmPlotViewComponent::onBeginPlay()
     {
         Component::onBeginPlay();
-        setTickGroup( TickGroup::PostUpdate );
         _bActionsValid = _fastForwardAction.empty() == false ? SW_TRUE : SW_FALSE;
         if ( _bActionsValid == SW_FALSE )
             SW_LOG_ERROR_ID( "FarmPlot.ViewActionMissing", "Farm plot view: the fast forward action must be named - the view reads no input" );

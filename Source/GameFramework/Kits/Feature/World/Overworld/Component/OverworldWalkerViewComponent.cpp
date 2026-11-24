@@ -43,8 +43,6 @@ namespace sw
     void OverworldWalkerViewComponent::onBeginPlay()
     {
         Component::onBeginPlay();
-        // 디렉터(PrePhysics)가 이 프레임의 걸음을 끝낸 뒤에 읽는다.
-        setTickGroup( TickGroup::PostUpdate );
         _playingAnimation.clear();
     }
 

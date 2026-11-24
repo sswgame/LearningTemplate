@@ -52,6 +52,8 @@ namespace sw
     {
     public:
         REFLECT_BODY();
+
+        static constexpr TickGroup kTickGroup = TickGroup::PrePhysics;
         /// @brief 청크 한 변의 칸 수입니다.
         static constexpr int32 kChunkSize = 32;
         /// @brief 한 레이어의 칸 수 상한입니다(1024 × 1024). 칠한 칸만 항목을 들지만 칸마다 브러시 번호 · 애니메이션 표시는 듭니다.

@@ -41,8 +41,6 @@ namespace sw
     void ParallaxLayerComponent::onBeginPlay()
     {
         Component::onBeginPlay();
-        // 카메라를 옮기는 컴포넌트(따라가기 · 픽셀 퍼펙트)가 앞 그룹에서 돈 뒤에 그 프레임의 카메라를 본다.
-        setTickGroup( TickGroup::PostUpdate );
         (void)captureOrigin(); // 자리를 잡을 장면 컴포넌트가 없으면 틱이 다시 묻는다
     }
 

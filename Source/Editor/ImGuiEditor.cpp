@@ -35,6 +35,7 @@
 #include "Editor/Common/GUI/Panel/EditorPanelDump.h"
 #include "Editor/Common/GUI/Panel/EditorPanelManager.h"
 #include "Editor/Common/GUI/Theme/EditorColorUtil.h"
+#include "Editor/Common/GUI/Theme/EditorComponentIconRow.h"
 #include "Editor/Common/GUI/Theme/EditorFontSetup.h"
 #include "Editor/Common/GUI/Theme/EditorThemeUtil.h"
 #include "Editor/Common/Input/EditorCommandGUI.h"
@@ -703,6 +704,12 @@ namespace sw::editor
         // 테마는 컨텍스트가 활성화된 뒤에 읽어야 한다. 테마 상태를 컨텍스트가 보관하므로, 그 전에 부르면 적용한 테마가 갈 곳이
         // 없어 조용히 버려진다. 이때 stored preset 이 0 에 머문다. 설정한 벌이 없으면 다른 벌로 대신하지 않고 기동을 멈춘다(이유는 로그에 남았다).
         if ( EditorThemeUtil::loadFromConfig() == false )
+        {
+            shutdownEditorContext();
+            return SubsystemInitResult::Failed;
+        }
+        // 컴포넌트 선언의 메타(`Icon=` · `IconColor=`)와 아이콘 표가 드는 이름 — 엔진 선언은 에디터 목록을 몰라 컴파일로 막지 못한다. 이유는 줄마다 남았다.
+        if ( EditorComponentIconRow::validateNames() == false )
         {
             shutdownEditorContext();
             return SubsystemInitResult::Failed;

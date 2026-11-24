@@ -2,7 +2,7 @@
  * @file EditorIconGlyphTable.h
  * @brief 에디터 아이콘 글꼴의 이름 → 코드포인트 표(`editor/fonts/sweditoricons.glyphs.xml`)입니다. 글꼴을 바꾸면 이 표를 바꾼다(코드는 이름으로만 찾는다).
  * @details 표는 데이터다 — 고도도 에디터 아이콘을 이름으로 찾고(`get_editor_theme_icon`) 그림은 파일에 둔다. 코드는 이름만 안다(`SW_EDITOR_ICON`) — 글꼴을 바꾸면 표만 바꾼다.
- *          코드의 이름 리터럴은 목록(`EditorIconName::kArrName`)에 있어야 컴파일되고, 표를 읽을 때 그 목록이 모두 표에 있는지 본다.
+ *          코드의 이름 리터럴은 목록(`EditorIconNameList`)에 있어야 컴파일되고, 표를 읽을 때 그 목록이 모두 표에 있는지 본다.
  *          데이터가 쓰는 이름이 표에 없으면 Missing 아이콘을 그리고 이름마다 한 번 오류를 남긴다. 등록 줄 · 상수 표는 글리프가 아니라 이름(`SW_EDITOR_ICON_NAME`)을 들고 그릴 때 찾는다 — 정적 초기화는 표를 읽기 전이다.
  */
 #pragma once
@@ -49,7 +49,7 @@ namespace sw::editor
         PROPERTY( Required, Tooltip = "Icons of the font" )
         vector<EditorIconGlyph> _listIcon;
 
-        /** @brief 리소스 경로의 XML 을 엄격하게 읽고 검사합니다(코드가 쓰는 이름 `EditorIconName::kArrName` 이 모두 있는지까지). 실패하면 오류를 남기고 false 이며 표는 비어 있습니다. */
+        /** @brief 리소스 경로의 XML 을 엄격하게 읽고 검사합니다(코드가 쓰는 이름 `EditorIconNameList` 이 모두 있는지까지). 실패하면 오류를 남기고 false 이며 표는 비어 있습니다. */
         [[nodiscard]] bool loadFromAsset( const AssetID& assetID );
         /** @brief XML 글을 엄격하게 읽고 검사합니다(`loadFromAsset` 의 본문 — 테스트 · 도구). @p sourceName 은 오류 글에 쓴다. */
         [[nodiscard]] bool loadFromXMLText( string_view xmlText, string_view sourceName );
@@ -79,7 +79,7 @@ namespace sw::editor
     };
 } // namespace sw::editor
 
-/** @brief 아이콘 이름 @p NameLiteral(문자열 리터럴 — `EditorIconName::kArrName` 에 없으면 컴파일되지 않는다)의 글리프입니다. 호출 자리마다 이름 키를 한 번만 intern 한다. */
+/** @brief 아이콘 이름 @p NameLiteral(문자열 리터럴 — `EditorIconNameList` 에 없으면 컴파일되지 않는다)의 글리프입니다. 호출 자리마다 이름 키를 한 번만 intern 한다. */
 #define SW_EDITOR_ICON( NameLiteral ) \
     ::sw::editor::EditorIconGlyphTable::findPublishedGlyph( []() -> const ::sw::hashed_string& {                                                                         \
         static const ::sw::hashed_string s_key{ SW_EDITOR_ICON_NAME( NameLiteral ).c_str() };                                                                                             \

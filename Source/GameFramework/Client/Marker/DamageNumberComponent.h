@@ -30,6 +30,8 @@ namespace sw
     public:
         REFLECT_BODY();
 
+        static constexpr TickGroup kTickGroup = TickGroup::PostUpdate;
+
         /** @brief `spawnNumber` 로 띄운 숫자의 수명(초)과 떠오르는 빠르기(m/s)입니다. */
         static constexpr float32 kSpawnedLifeTime   = 0.9f;
         static constexpr float32 kSpawnedFloatSpeed = 1.2f;

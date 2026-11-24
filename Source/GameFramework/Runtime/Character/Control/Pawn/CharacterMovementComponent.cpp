@@ -73,7 +73,6 @@ namespace sw
     void CharacterMovementComponent::onBeginPlay()
     {
         Component::onBeginPlay();
-        setTickGroup( TickGroup::PrePhysics );
         resolveButtons();
         const SceneComponent* pScene = getOwner() != nullptr ? getOwner()->getPrimarySceneComponent() : nullptr;
         if ( pScene != nullptr )

@@ -29,10 +29,11 @@ namespace sw
     public:
         REFLECT_BODY();
 
+        static constexpr TickGroup kTickGroup = TickGroup::PostPhysics; ///< 걸음새는 PrePhysics 의 탈것 이동이 고른다. 그 뒤에 스태미나를 쓴다.
+
         WesternHorseMountComponent();
         ~WesternHorseMountComponent() override = default;
 
-        void onBeginPlay() override;
         void onTick( TickContext& context ) override;
 
         /** @brief 말 상태를 빌립니다(소유하지 않습니다). nullptr 이면 연결을 풉니다. */

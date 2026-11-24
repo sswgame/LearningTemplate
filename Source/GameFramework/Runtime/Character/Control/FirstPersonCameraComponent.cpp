@@ -50,8 +50,6 @@ namespace sw
     void FirstPersonCameraComponent::onBeginPlay()
     {
         Component::onBeginPlay();
-        // 조종 회전(조종 시스템 단계 — 틱 앞)을 몸을 움직이는 컴포넌트(같은 오브젝트, 뒤 그룹)가 같은 프레임에 쓴다.
-        setTickGroup( TickGroup::PrePhysics );
         if ( _look.setMaxPitch( _maxPitch.radians() ) == false )
             SW_LOG_ERROR_ID( "FirstPersonCameraComponent.FirstPersonCameraMaxPitchOutside", "FirstPersonCamera: the Max Pitch %# is outside [0, pi/2] - the pitch limit stays at its default", _maxPitch.radians() );
         // 시작 시점은 폰의 조종 회전으로도 넘긴다 — 조종자가 쥐면 이 값에서 이어 간다.

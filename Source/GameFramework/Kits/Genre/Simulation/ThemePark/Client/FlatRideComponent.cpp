@@ -19,13 +19,6 @@ namespace sw
         setCanEverTick( true );
     }
 
-    void FlatRideComponent::onBeginPlay()
-    {
-        Component::onBeginPlay();
-        // 디렉터(PrePhysics)가 이 프레임의 탑승을 정한 뒤에 읽는다.
-        setTickGroup( TickGroup::PostUpdate );
-    }
-
     void FlatRideComponent::assignRide( GameObjectHandle gameMode, int32 rideIndex, float32 spin, float32 startAngle )
     {
         bindGameMode( gameMode );

@@ -66,7 +66,6 @@ namespace sw
     void AdventureAvatarComponent::onBeginPlay()
     {
         Component::onBeginPlay();
-        setTickGroup( TickGroup::PostUpdate );
         _bActionsValid = _moveAction.empty() == false && _useAction.empty() == false ? SW_TRUE : SW_FALSE;
         if ( _bActionsValid == SW_FALSE )
             SW_LOG_ERROR_ID( "Adventure.AvatarActionMissing", "Adventure avatar: move '%#' and use '%#' actions must both be named - the avatar reads no input", _moveAction.c_str(), _useAction.c_str() );

@@ -35,6 +35,8 @@ namespace sw
     public:
         REFLECT_BODY();
 
+        static constexpr TickGroup kTickGroup = TickGroup::PostUpdate;
+
         SRPGCursorComponent();
         virtual ~SRPGCursorComponent() override;
 

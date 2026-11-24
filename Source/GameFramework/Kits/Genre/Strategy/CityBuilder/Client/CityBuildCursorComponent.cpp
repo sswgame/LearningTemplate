@@ -19,13 +19,6 @@ namespace sw
         setCanEverTick( true );
     }
 
-    void CityBuildCursorComponent::onBeginPlay()
-    {
-        Component::onBeginPlay();
-        // 짓기 입력은 틱 뒤에 커서 칸을 정한다 — 지난 프레임 것을 읽는다.
-        setTickGroup( TickGroup::PostUpdate );
-    }
-
     void CityBuildCursorComponent::onTick( TickContext& context )
     {
         Component::onTick( context );

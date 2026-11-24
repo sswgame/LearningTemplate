@@ -68,7 +68,6 @@ namespace sw
     void MountMovementComponent::onBeginPlay()
     {
         Component::onBeginPlay();
-        setTickGroup( TickGroup::PrePhysics );
         const GameObject*    pOwner = getOwner();
         const PawnComponent* pPawn  = pOwner != nullptr ? pOwner->getComponent<PawnComponent>() : nullptr;
         _sprintIndex                = pPawn != nullptr && _sprintButton.empty() == false ? pPawn->findButton( _sprintButton ) : nullopt;

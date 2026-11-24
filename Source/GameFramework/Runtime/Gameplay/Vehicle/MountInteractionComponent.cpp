@@ -22,7 +22,6 @@ namespace sw
     void MountInteractionComponent::onBeginPlay()
     {
         Component::onBeginPlay();
-        setTickGroup( TickGroup::PrePhysics );
         const GameObject*    pOwner = getOwner();
         const PawnComponent* pPawn  = pOwner != nullptr ? pOwner->getComponent<PawnComponent>() : nullptr;
         _interactIndex              = pPawn != nullptr ? pPawn->findButton( _interactButton ) : nullopt;

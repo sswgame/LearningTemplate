@@ -39,6 +39,8 @@ namespace sw
     {
     public:
         REFLECT_BODY();
+
+        static constexpr TickGroup kTickGroup = TickGroup::PostUpdate;
         REFLECT_INTERFACE( IHealthListener, _healthListenerPort );
 
         /** @brief 막대 위젯 안의 자식 순서입니다. 겹침 패널의 아래에서 위로 셉니다. */

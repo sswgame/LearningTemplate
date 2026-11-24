@@ -36,12 +36,12 @@ namespace sw::editor
             static constexpr Color kTextShadow{ Color::fromBytes( 0, 0, 0, 200 ) };
 
             /** @brief 색 역할을 이번 테마의 색으로 풉니다(값에는 테마가 없다). 역할 색에는 값의 알파를 곱한다. */
-            static ImU32 resolveColor( EditorVisualizerColorRole role, const utf8* pThemeKey, const float4& color )
+            static ImU32 resolveColor( EditorVisualizerColorRole role, EditorThemeColorKey themeKey, const float4& color )
             {
                 switch ( role )
                 {
                     case EditorVisualizerColorRole::ThemeToken:
-                        return withAlpha( EditorThemeUtil::findColor( hashed_string{ pThemeKey != nullptr ? pThemeKey : "" } ), color );
+                        return withAlpha( EditorThemeUtil::findColor( themeKey ), color );
                     case EditorVisualizerColorRole::ColliderWire:
                         return withAlpha( SW_THEME_COLOR( "Viewport", "ColliderWire" ), color );
                     case EditorVisualizerColorRole::CameraWire:
@@ -76,7 +76,7 @@ namespace sw::editor
                 ImVec2 screenTo;
                 if ( EditorViewportProjectionUtil::projectSegment( viewProj, line._from, line._to, canvasPos, canvasSize, screenFrom, screenTo ) == false )
                     return false;
-                pDrawList->AddLine( screenFrom, screenTo, resolveColor( line._colorRole, line._pThemeKey, line._color ), line._thickness );
+                pDrawList->AddLine( screenFrom, screenTo, resolveColor( line._colorRole, line._themeKey, line._color ), line._thickness );
                 return true;
             }
 
@@ -122,7 +122,7 @@ namespace sw::editor
                     // 글자 그림자를 먼저 깔아 밝은 배경에서도 읽히게 한다.
                     if ( text._bShadow )
                         args._pDrawList->AddText( ImVec2( screen.x + 1.0f, screen.y + 1.0f ), EditorColorUtil::toImU32( kTextShadow ), text._text.c_str() );
-                    args._pDrawList->AddText( screen, resolveColor( text._colorRole, text._pThemeKey, text._color ), text._text.c_str() );
+                    args._pDrawList->AddText( screen, resolveColor( text._colorRole, text._themeKey, text._color ), text._text.c_str() );
                     count( stats, text._statSlot, true );
                 }
             }
