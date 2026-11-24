@@ -4,6 +4,7 @@
 #include "Core/Container/string.h"
 #include "Core/Container/vector.h"
 #include "Core/Delegate/Delegate.h"
+#include "Core/Delegate/Subscription.h"
 #include "Core/Foundation/Macros.h"
 #include "Core/Foundation/Types.h"
 #include "Core/Memory/Memory.h"
@@ -186,7 +187,7 @@ namespace sw
          * @brief 패치 목록의 서명을 마운트 전에 확인하게 합니다. `scanAndMountPacks` 보다 먼저, 기동 스레드에서 한 번 부릅니다.
          * @details 설정하면 `mountPatchChain` 이 팩을 하나도 올리기 전에 사슬의 모든 목록에서 서명 · 팩 해시를 확인하고, 서명이 없거나 하나라도 틀리면 실패한다
          *          (이 호출이 올린 기본 팩도 `scanAndMountPacks` 가 모두 내린다). 설정하지 않으면 서명을 보지 않는다 — 스팀처럼 스토어가 무결성을 맡는 채널의 기본이다.
-         *          @p trust 의 제공자는 마운트가 끝날 때까지 살아 있어야 한다. 제공자가 없는 설정은 오류로 거절하고 false 다(서명을 요구하면서 확인하지 못하는 길을 만들지 않는다).
+         *          @p trust 의 제공자가 내려가면(`INetSecurityProvider::retire`) 서명한 팩의 읽기와 새 패치 마운트는 오류로 진다. 제공자가 없는 설정은 오류로 거절하고 false 다(서명을 요구하면서 확인하지 못하는 길을 만들지 않는다).
          */
         [[nodiscard]] bool setPatchTrust( const PackPatchTrust& trust );
 
@@ -196,6 +197,10 @@ namespace sw
          * @details 팩 바이트는 읽지 않는다 — 리더가 여는 핸들로 색인 요약을 견주고 읽을 때 블록마다 견준다(확인한 핸들이 곧 읽는 핸들이라 틈이 없다).
          */
         [[nodiscard]] bool verifyPatchSignatures( const vector<PackPatchManifest>& listManifest, const vector<size_t>& listOrder, vector<PackIndexTrust>& outListTrust ) const;
+        /** @brief 제공자가 내려가기 전에 놓게 구독합니다(이미 했으면 아무 일도 없습니다). 게임 스레드입니다. */
+        void followTrustProvider( INetSecurityProvider& provider );
+        /** @brief 제공자가 내려갑니다 — 신뢰 설정과 서명한 팩의 리더가 쥔 포인터를 비우고 그 뒤의 확인을 거절합니다. */
+        void onTrustProviderRetiring();
         /**
          * @brief 폴더의 빌드 기록에서 설치된 빌드를 읽고 @p listManifest 의 패치를 그 빌드부터 이어지는 순서로 높은 우선순위에 마운트합니다.
          * @param listMountedPath 마운트한 패치 팩 경로를 뒤에 덧붙입니다(실패했을 때 호출자가 내린다).
@@ -227,6 +232,8 @@ namespace sw
         atomic<ContentSource>                _contentSource;  ///< 기동 때 정하고 로드 스레드가 잠금 없이 읽는다 — 원자값
         atomic<uint32>                       _patchPackCount; ///< 도메인 없는 팩 수(`hasPatchFile` 이 모든 리소스 읽기에서 잠금 없이 0 을 본다). 목록을 바꿀 때 잠금 안에서 다시 센다
         PackPatchTrust                       _patchTrust;     ///< 기동 스레드가 마운트 전에 한 번 정한다(`setPatchTrust`). `_pProvider` 가 null 이면 서명을 보지 않는다
+        Subscription                         _trustRetiring;  ///< 제공자가 내려가기 전의 알림(`onTrustProviderRetiring`)
+        uint8                                _bTrustRetired;  ///< 서명을 보는 채널의 제공자가 내려갔다 — 더는 확인할 수 없다
         PackChunkManifest                    _chunkManifest;  ///< 기동 스레드가 `scanAndMountPacks` 에서 한 번 읽는다 — 그 뒤로는 읽기만 한다
         string                               _packsDirectory; ///< 같다
 

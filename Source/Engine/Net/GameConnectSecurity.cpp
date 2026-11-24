@@ -3,6 +3,7 @@
 #include "Engine/Net/GameConnectSecurity.h"
 
 #include "Core/Log/ScopedDeferredLog.h"
+#include "Core/Network/Security/INetSecurityProvider.h"
 
 #include <mutex>
 
@@ -12,14 +13,21 @@ namespace sw
         : _mutex{}
         , _pProvider{ nullptr }
         , _pAuthenticator{ nullptr }
+        , _providerRetiring{}
         , _refusedWhileUnbound{ 0 }
     {
     }
 
     void GameConnectSecurity::setProvider( INetSecurityProvider* pProvider )
     {
-        ScopedLock<mutex> lock{ _mutex };
-        _pProvider = pProvider;
+        {
+            ScopedLock<mutex> lock{ _mutex };
+            _pProvider = pProvider;
+        }
+        _providerRetiring.reset();
+        if ( pProvider != nullptr )
+            _providerRetiring = pProvider->subscribeRetiring( SW_DELEGATE_LAMBDA( Delegate<void()>, [this]()
+            { setProvider( nullptr ); } ) );
     }
 
     INetSecurityProvider* GameConnectSecurity::findProvider() const

@@ -130,6 +130,28 @@ SW_TEST_CASE( PackPatchTest, TamperedPayloadBlockFailsAtRead )
     SW_EXPECT_TRUE( FileUtil::removeFile( packPath ) );
 }
 
+/** @brief [PackPatchTest] 암호 제공자(모듈의 것)가 내려간 뒤에는 서명한 팩을 요약 없이 읽지 않고 오류로 진다 — 사라진 제공자를 부르지 않는다 */
+SW_TEST_CASE( PackPatchTest, RetiredProviderRefusesSignedReads )
+{
+    SW_EXPECT_LOG( "PackReader.DigestProviderRetired" );
+    const AbsolutePath packPath = test::makeScratchPath( "patch_4.pack" );
+    PackManager        packs;
+    vector<uint8>      bytes;
+    {
+        test::FakeNetSecurityProvider provider;
+        provider._bHashOk  = SW_TRUE;
+        const auto written = Util::writeSignedPack( packPath, provider );
+        SW_REQUIRE_TRUE( written.has_value() && written->_indexDigest.has_value() );
+        const PackIndexTrust trust{ &provider, *written->_indexDigest };
+        SW_REQUIRE_TRUE( packs.mountPatchPack( packPath.str(), 100, {}, &trust ) );
+        SW_EXPECT_TRUE( packs.readFile( "game/test/data/a.xml", bytes ) );
+        provider.retire();
+    }
+    SW_EXPECT_FALSE( packs.readFile( "game/test/data/a.xml", bytes ) );
+    packs.unmountAll();
+    SW_EXPECT_TRUE( FileUtil::removeFile( packPath ) );
+}
+
 // 서명 확인 비용은 색인 크기에만 비례하고 팩 크기 한도가 없다 — 페이로드가 2 GiB 너머에 있는 팩(앞은 성긴 파일의 구멍)을 신뢰로 열고 읽는다.
 SW_TEST_CASE( PackPatchTest, PatchOverTwoGiBIsAccepted )
 {

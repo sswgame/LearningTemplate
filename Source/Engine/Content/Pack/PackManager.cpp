@@ -307,6 +307,8 @@ namespace sw
         , _contentSource{ kBuildContentSource }
         , _patchPackCount{ 0 }
         , _patchTrust{}
+        , _trustRetiring{}
+        , _bTrustRetired{ SW_FALSE }
         , _chunkManifest{}
         , _packsDirectory{}
     {
@@ -318,6 +320,7 @@ namespace sw
     }
 
     PackManager::PackManager( PackManager&& other ) noexcept
+        : _bTrustRetired{ SW_FALSE }
     {
         ScopedLock<mutex> lock{ other._vfsMutex };
         _listMountedPack = std::move( other._listMountedPack );
@@ -398,6 +401,8 @@ namespace sw
             SW_LOG_ERROR_ID( "PackManager.FailedOpenMountPack", "Failed to open and mount pack: %#", packFilePath );
             return false;
         }
+        if ( pTrust != nullptr )
+            followTrustProvider( *pTrust->_pProvider );
         // 도메인은 팩이 적은 것이다(파일 이름 추측 아님). 도메인 팩은 도메인이, 패치 팩은 없어야 한다 - 항목 경로의 뜻이 다르다.
         string mountDomain = pReader->getMountDomain();
         if ( mountDomain.empty() != bPatch )
@@ -845,13 +850,40 @@ namespace sw
             SW_LOG_ERROR_ID( "PackManager.PackPatchTrustNo", "Pack patch trust has no crypto provider - a signature requirement that cannot be checked is not accepted" );
             return false;
         }
-        _patchTrust = trust;
+        _patchTrust    = trust;
+        _bTrustRetired = SW_FALSE;
+        followTrustProvider( *trust._pProvider );
         return true;
+    }
+
+    void PackManager::followTrustProvider( INetSecurityProvider& provider )
+    {
+        if ( _trustRetiring.isActive() == false )
+            _trustRetiring = provider.subscribeRetiring( SW_DELEGATE_METHOD( Delegate<void()>, &PackManager::onTrustProviderRetiring, this ) );
+    }
+
+    void PackManager::onTrustProviderRetiring()
+    {
+        if ( _patchTrust._pProvider != nullptr )
+            _bTrustRetired = SW_TRUE;
+        _patchTrust._pProvider = nullptr;
+        _trustRetiring.reset();
+        ScopedLock<mutex> lock{ _vfsMutex };
+        for ( const MountedPack& mounted : _listMountedPack )
+        {
+            if ( mounted._pReader != nullptr )
+                mounted._pReader->releaseDigestProvider();
+        }
     }
 
     bool PackManager::verifyPatchSignatures( const vector<PackPatchManifest>& listManifest, const vector<size_t>& listOrder, vector<PackIndexTrust>& outListTrust ) const
     {
         outListTrust.clear();
+        if ( _bTrustRetired == SW_TRUE )
+        {
+            SW_LOG_ERROR_ID( "PackManager.TrustProviderRetired", "Pack patch signatures cannot be checked - the crypto provider is gone" );
+            return false;
+        }
         if ( _patchTrust._pProvider == nullptr )
             return true; // 신뢰 설정이 없는 채널은 서명을 보지 않는다
         // 목록의 서명만 본다 — 팩 바이트는 읽지 않는다. 색인 요약은 마운트가 여는 핸들로 견주고 페이로드는 읽을 때 블록마다 견준다(확인한 핸들이 곧 읽는 핸들).

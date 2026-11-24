@@ -11,6 +11,7 @@
 #include "Core/Network/Connection/NetEndpointThread.h"
 #include "Core/Network/DevOnlineExtension.h"
 #include "Core/Network/Message/NetStatsReport.h"
+#include "Core/Network/Security/INetSecurityProvider.h"
 #include "Core/Network/Transport/PlatformSocketUtil.h"
 #include "Core/Network/Transport/ProxyProtocolAcceptTransport.h"
 #include "Core/Network/Transport/StreamNetTransport.h"
@@ -502,6 +503,9 @@ namespace sw
                 return false;
             }
         }
+        // 봉인기는 제공자의 모듈이 만든 객체다 — 제공자가 내려가기 전에 닫는다(종료 순서에 기대지 않는다).
+        if ( INetSecurityProvider* const pProvider = params._hostSettings._security._pProvider )
+            _providerRetiring = pProvider->subscribeRetiring( SW_DELEGATE_METHOD( Delegate<void()>, &GameNetSession::shutdown, this ) );
         _role = params._role;
         if ( GameTimeScale* const pTimeScale = engine::findSubsystem<GameTimeScale>() )
             _worldTimeShare = pTimeScale->shareWorldTime(); // 이 기계만 멈추면 상대보다 뒤처진다 — 정지 메뉴는 열려도 시간은 흐른다
@@ -611,6 +615,7 @@ namespace sw
         }
         if ( _role != GameNetRole::None )
             SW_LOG_INFO_ID( "GameNetSession.NetSessionClosed", "Net session closed (%#)", getEnumName( _role ) );
+        _providerRetiring.reset();
         _routerSubscription.reset();
         if ( _role != GameNetRole::None )
             _router.closeSession(); // 씬의 컴포넌트가 쥔 처리기 등록 · 링크가 여기서 함께 끝난다 — 다음 세션이 닫힌 세션의 처리기를 부르지 않는다

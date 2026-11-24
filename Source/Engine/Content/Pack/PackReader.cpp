@@ -62,6 +62,7 @@ namespace sw
         , _stringPoolBytes{}
         , _listBlockDigest{}
         , _pDigestProvider{ nullptr }
+        , _bDigestRequired{ SW_FALSE }
     {
     }
 
@@ -82,6 +83,7 @@ namespace sw
         , _stringPoolBytes{}
         , _listBlockDigest{}
         , _pDigestProvider{ nullptr }
+        , _bDigestRequired{ SW_FALSE }
     {
         // 새 객체의 잠금도 잡는다 — 아직 아무도 보지 않지만, 그래야 넘겨받는 칸이 `_fileMutex` 아래라는 선언과 맞는다.
         ScopedLockPair<mutex> lock{ _fileMutex, other._fileMutex };
@@ -111,6 +113,7 @@ namespace sw
         _stringPoolBytes = std::move( other._stringPoolBytes );
         _listBlockDigest = std::move( other._listBlockDigest );
         _pDigestProvider = other._pDigestProvider;
+        _bDigestRequired = other._bDigestRequired;
         other._file.close();
     }
 
@@ -226,6 +229,13 @@ namespace sw
         _mountDomain.clear();
         _stringPoolBytes.clear();
         _listBlockDigest.clear();
+        _pDigestProvider = nullptr;
+        _bDigestRequired = SW_FALSE;
+    }
+
+    void PackReader::releaseDigestProvider()
+    {
+        ScopedLock<mutex> lock{ _fileMutex };
         _pDigestProvider = nullptr;
     }
 
@@ -379,7 +389,7 @@ namespace sw
         outPlan._bVerifyCRC  = ( _header._flags & static_cast<uint16>( PackFlag::HasCRC32 ) ) != 0;
         outPlan._listBlock.assign( _listBlock.begin() + tableBegin, _listBlock.begin() + tableBegin + ( endBlock - firstBlock ) );
         outPlan._pDigestProvider = _pDigestProvider;
-        if ( _pDigestProvider != nullptr ) // 신뢰를 받아 열었으면 블록 해시 표가 있다(`loadIndexTable`)
+        if ( _bDigestRequired == SW_TRUE ) // 신뢰를 받아 열었으면 블록 해시 표가 있다(`loadIndexTable`)
             outPlan._listBlockDigest.assign( _listBlockDigest.begin() + tableBegin, _listBlockDigest.begin() + tableBegin + ( endBlock - firstBlock ) );
         outFile = _file;
         return ReadPlanResult::Ready;
@@ -437,8 +447,14 @@ namespace sw
             const size_t                rawSize    = getRawSize( ordinal );
             storedBegin                            = block._compressedEnd;
             // 서명 채널이면 풀기 전에 저장 바이트의 요약을 견준다 — 바뀐 바이트가 코덱에 닿지 않는다.
-            if ( plan._pDigestProvider != nullptr )
+            if ( plan._listBlockDigest.empty() == false )
             {
+                if ( plan._pDigestProvider == nullptr )
+                {
+                    SW_LOG_ERROR_ID( "PackReader.DigestProviderRetired", "A block of a signed pack cannot be checked - the crypto provider is gone: %#", packPath );
+                    outBytes.clear();
+                    return false;
+                }
                 PackDigest actualDigest;
                 const bool bHashed = plan._pDigestProvider->computeSHA256( pStored, static_cast<int32>( storedSize ), actualDigest._arrByte );
                 if ( bHashed == false || actualDigest != plan._listBlockDigest[ordinal] )
@@ -645,6 +661,7 @@ namespace sw
                 return false;
             }
             _pDigestProvider = pTrust->_pProvider;
+            _bDigestRequired = SW_TRUE;
         }
         // 잠금을 쥔 이 함수에서 값을 떠 넘긴다 — 람다 본문은 쥔 잠금을 물려받지 않는다(스레드 안전성 분석).
         const uint64 indexOffset   = _header._indexOffset;

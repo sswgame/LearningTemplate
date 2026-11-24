@@ -57,6 +57,34 @@ SW_TEST_CASE( GameNetSessionTicketLinkTest, EncryptedSessionClosesBeforeModulesU
     session.getConnectSecurity().setProvider( nullptr );
 }
 
+/** @brief [GameNetSessionTicketLinkTest] 암호 제공자가 내려가기 전에 그 봉인기를 쥔 세션이 닫히고 접속 보안 자리가 빈다 — 서브시스템의 종료 순서에 기대지 않는다 */
+SW_TEST_CASE( GameNetSessionTicketLinkTest, RetiringProviderClosesTheSession )
+{
+    GameNetSession session{ engine::getSubsystem<ResourceComposition>() };
+    {
+        test::FakeNetSecurityProvider provider;
+        session.getConnectSecurity().setProvider( &provider );
+        ServerConfig config;
+        config._listenAddress      = "127.0.0.1";
+        config._gamePort           = 0; // 운영체제가 고른다
+        config._bGameConnectTicket = true;
+        GameNetSessionParams params;
+        SW_REQUIRE_TRUE( session.makeServerParams( config, params ) );
+        SW_REQUIRE_TRUE( session.initialize( params ) );
+        provider.retire();
+        SW_EXPECT_FALSE( session.isActive() );
+        SW_EXPECT_NULL( session.getConnectSecurity().findProvider() );
+        // 평문 세션은 제공자와 무관하다.
+        session.getConnectSecurity().setProvider( &provider );
+        config._bGameConnectTicket = false;
+        SW_REQUIRE_TRUE( session.makeServerParams( config, params ) );
+        SW_REQUIRE_TRUE( session.initialize( params ) );
+    }
+    SW_EXPECT_TRUE( session.isActive() );
+    SW_EXPECT_NULL( session.getConnectSecurity().findProvider() ); // 제공자가 사라지면 저절로 빈다
+    session.shutdown();
+}
+
 /** @brief [GameNetSessionTicketLinkTest] 닫힌 세션의 링크는 비고, 같은 세션 객체로 새로 열어도 되살아나지 않는다 — 새로 만든 링크만 쓸 수 있다 */
 SW_TEST_CASE( GameNetSessionTicketLinkTest, ClosedSessionLinkStaysEmpty )
 {

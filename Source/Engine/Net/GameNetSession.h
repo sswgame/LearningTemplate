@@ -540,6 +540,7 @@ namespace sw
 
     private:
         vector<unique_ptr<Shard>>         _listShard;          ///< 포트 샤드마다 소켓 · 데코레이터 · 호스트 · 네트워크 스레드(클라이언트는 하나)
+        Subscription                      _providerRetiring;   ///< 암호 제공자가 내려가기 전에 세션을 닫는다
         MulticastDelegate<void()>         _onClientOpening;    ///< 클라이언트 세션을 여는 앞머리의 알림(`onClientOpening`)
         GameNetTransportDecoratorDelegate _transportDecorator; ///< `setTransportDecorator` 가 건 것(없으면 비었다)
         GameNetLaunchOverrideDelegate     _launchOverride;     ///< `setLaunchOverride` 가 건 것(없으면 비었다)
