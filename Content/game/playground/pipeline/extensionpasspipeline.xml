@@ -12,6 +12,13 @@
 		<RenderGraphPassDesc _name="Distortion" _op="Remove" />
 		<RenderGraphPassDesc _name="SceneDepthCopy" _op="Remove" />
 		<RenderGraphPassDesc _name="SceneColorCopy" _op="Remove" />
+		<RenderGraphPassDesc _name="VolumetricClouds" _op="Remove" />
+		<RenderGraphPassDesc _name="Sky">
+			<_listInput>
+				<item>SceneColor</item>
+				<item>SceneDepth</item>
+			</_listInput>
+		</RenderGraphPassDesc>
 		<RenderGraphPassDesc _name="Transparent">
 			<_listInput>
 				<item>SceneColor</item>

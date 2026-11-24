@@ -63,7 +63,7 @@ namespace sw
         /** @brief 밉 0 을 @p listTexel(한 변 @p resolution, 행 → 열)로 정하고 밉 사슬을 비웁니다. 크기가 범위 밖이거나 텍셀 수가 틀리면 그 까닭이고 비운다. */
         [[nodiscard]] expected<void> assignBase( uint32 resolution, vector<float3>&& listTexel );
         /**
-         * @brief 밉 0 을 2×2 상자 평균으로 줄여 밉을 @p mipCount 개까지 만듭니다(밉 0 포함). 한 변이 홀수이거나 1 이면 거기서 멈춘다 — 텍스처 밉 수가 크기로 막히는 것과 같다.
+         * @brief 밉 0 을 2×2 입체각 가중 평균으로 줄여 밉을 @p mipCount 개까지 만듭니다(밉 0 포함). 한 변이 홀수이거나 1 이면 거기서 멈춘다 — 텍스처 밉 수가 크기로 막히는 것과 같다.
          * @return 밉 0 이 없거나 @p mipCount 가 0 이면 그 까닭입니다.
          */
         [[nodiscard]] expected<void> buildMips( uint32 mipCount );

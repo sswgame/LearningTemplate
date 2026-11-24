@@ -672,13 +672,13 @@ SW_TEST_CASE( ReflectionProbeAssetTest, RadianceMapBytesRoundTripAndRejectBadInp
     SW_EXPECT_EQUAL( 0u, read.getMipCount() );
 }
 
-/** @brief [ReflectionProbeAssetTest] 거르기는 원본이 거른 데이터보다 크면 단계 0 을 크기가 맞는 밉에서 읽는다 — 원본 텍셀 넷의 평균이다 */
+/** @brief [ReflectionProbeAssetTest] 거르기는 원본이 거른 데이터보다 크면 단계 0 을 크기가 맞는 밉에서 읽는다 — 원본 텍셀 넷의 입체각 가중 평균이다 */
 SW_TEST_CASE( ReflectionProbeAssetTest, FilterReadsTheBaseLevelFromTheMatchingMip )
 {
     vector<float3> listTexel;
     for ( uint32 texelIndex = 0; texelIndex < 16u * 16u; ++texelIndex )
     {
-        // 바둑판 — 텍셀 넷의 평균은 늘 0.5 다.
+        // 바둑판 — 텍셀 넷의 입체각 가중 평균은 0.5 가까이다(밉 0 의 텍셀은 0 · 1 뿐이라 갈린다).
         const uint32 x = texelIndex % 16u;
         const uint32 y = texelIndex / 16u;
         listTexel.push_back( ( ( x + y ) & 1u ) == 0u ? float3{ 1.0f, 1.0f, 1.0f } : float3{} );
@@ -696,7 +696,9 @@ SW_TEST_CASE( ReflectionProbeAssetTest, FilterReadsTheBaseLevelFromTheMatchingMi
     {
         for ( uint32 x = 0; x < 8u; ++x )
         {
-            wrongTexelCount += MathUtil::abs( data._listTexel[data.computeTexelIndex( 0, x, y )]._x - 0.5f ) < 1.0e-3f ? 0u : 1u;
+            const float32 filtered = data._listTexel[data.computeTexelIndex( 0, x, y )]._x;
+            const float32 average  = source._listMip[1]._listTexel[y * 8u + x]._x;
+            wrongTexelCount += MathUtil::abs( filtered - average ) < 1.0e-3f && MathUtil::abs( average - 0.5f ) < 0.25f ? 0u : 1u;
         }
     }
     SW_EXPECT_EQUAL( 0u, wrongTexelCount );

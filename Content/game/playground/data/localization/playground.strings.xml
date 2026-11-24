@@ -54,7 +54,9 @@
 				<item>common/data/items.xml</item>
 			</origins>
 		</entry>
-		<entry key="Attack (J)   Spell (K)   Defend (L)   Flee (R)" source="Attack (J)   Spell (K)   Defend (L)   Flee (R)" context="TextWidget._text">
+		<entry key="Attack (J)   Spell (K)   Defend (L)   Flee (R)"
+		       source="Attack (J)   Spell (K)   Defend (L)   Flee (R)"
+		       context="TextWidget._text">
 			<origins>
 				<item>game/playground/classicjrpg/ui/hud.ui.xml</item>
 			</origins>
@@ -104,7 +106,9 @@
 				<item>common/data/items.xml</item>
 			</origins>
 		</entry>
-		<entry key="Buy (J)   Price up (K)   Price down (L)   Add station (F)   Open (Enter)" source="Buy (J)   Price up (K)   Price down (L)   Add station (F)   Open (Enter)" context="TextWidget._text">
+		<entry key="Buy (J)   Price up (K)   Price down (L)   Add station (F)   Open (Enter)"
+		       source="Buy (J)   Price up (K)   Price down (L)   Add station (F)   Open (Enter)"
+		       context="TextWidget._text">
 			<origins>
 				<item>game/playground/restaurantsim/ui/hud.ui.xml</item>
 			</origins>
@@ -265,7 +269,9 @@
 				<item>game/playground/metroidvania/ui/hud.ui.xml</item>
 			</origins>
 		</entry>
-		<entry key="Fast (J)   Strong (K)   Dodge (Shift)   Sign (Q)   Twin sign (R)   Oil (1)   Potion (2)   Brew (B)" source="Fast (J)   Strong (K)   Dodge (Shift)   Sign (Q)   Twin sign (R)   Oil (1)   Potion (2)   Brew (B)" context="TextWidget._text">
+		<entry key="Fast (J)   Strong (K)   Dodge (Shift)   Sign (Q)   Twin sign (R)   Oil (1)   Potion (2)   Brew (B)"
+		       source="Fast (J)   Strong (K)   Dodge (Shift)   Sign (Q)   Twin sign (R)   Oil (1)   Potion (2)   Brew (B)"
+		       context="TextWidget._text">
 			<origins>
 				<item>game/playground/monsterhuntrpg/ui/hud.ui.xml</item>
 			</origins>
@@ -290,7 +296,9 @@
 				<item>game/playground/metroidvania/ui/hud.ui.xml</item>
 			</origins>
 		</entry>
-		<entry key="Follow the lantern trail to its end" source="Follow the lantern trail to its end" context="TextWidget._text">
+		<entry key="Follow the lantern trail to its end"
+		       source="Follow the lantern trail to its end"
+		       context="TextWidget._text">
 			<origins>
 				<item>game/playground/classicjrpg/ui/hud.ui.xml</item>
 			</origins>
@@ -375,7 +383,9 @@
 				<item>game/playground/restaurantsim/ui/hud.ui.xml</item>
 			</origins>
 		</entry>
-		<entry key="In orbit - Move and Use buy from the terminal, the lever lands" source="In orbit - Move and Use buy from the terminal, the lever lands" context="TextWidget._text">
+		<entry key="In orbit - Move and Use buy from the terminal, the lever lands"
+		       source="In orbit - Move and Use buy from the terminal, the lever lands"
+		       context="TextWidget._text">
 			<origins>
 				<item>game/playground/coopscavenger/ui/hud.ui.xml</item>
 			</origins>
@@ -485,7 +495,9 @@
 				<item>common/data/items.xml</item>
 			</origins>
 		</entry>
-		<entry key="Light: stun an attacking ghost - Vacuum: pull it in - Use: surge or search" source="Light: stun an attacking ghost - Vacuum: pull it in - Use: surge or search" context="TextWidget._text">
+		<entry key="Light: stun an attacking ghost - Vacuum: pull it in - Use: surge or search"
+		       source="Light: stun an attacking ghost - Vacuum: pull it in - Use: surge or search"
+		       context="TextWidget._text">
 			<origins>
 				<item>game/playground/ghosthunt/ui/hud.ui.xml</item>
 			</origins>
@@ -515,7 +527,9 @@
 				<item>game/playground/classicjrpg/ui/hud.ui.xml</item>
 			</origins>
 		</entry>
-		<entry key="Mech destroyed - special picks the next mech" source="Mech destroyed - special picks the next mech" context="TextWidget._text">
+		<entry key="Mech destroyed - special picks the next mech"
+		       source="Mech destroyed - special picks the next mech"
+		       context="TextWidget._text">
 			<origins>
 				<item>game/playground/mecharena/ui/hud.ui.xml</item>
 			</origins>
@@ -605,7 +619,9 @@
 				<item>game/playground/classicjrpg/ui/hud.ui.xml</item>
 			</origins>
 		</entry>
-		<entry key="Press J as the bar fills to strike twice" source="Press J as the bar fills to strike twice" context="TextWidget._text">
+		<entry key="Press J as the bar fills to strike twice"
+		       source="Press J as the bar fills to strike twice"
+		       context="TextWidget._text">
 			<origins>
 				<item>game/playground/classicjrpg/ui/hud.ui.xml</item>
 			</origins>
@@ -657,7 +673,9 @@
 				<item>game/playground/monstercollector/ui/hud.ui.xml</item>
 			</origins>
 		</entry>
-		<entry key="Rest at the inn (E)   Change class (F)" source="Rest at the inn (E)   Change class (F)" context="TextWidget._text">
+		<entry key="Rest at the inn (E)   Change class (F)"
+		       source="Rest at the inn (E)   Change class (F)"
+		       context="TextWidget._text">
 			<origins>
 				<item>game/playground/classicjrpg/ui/hud.ui.xml</item>
 			</origins>
@@ -855,7 +873,9 @@
 				<item>game/playground/audio/playground.audioevents.xml</item>
 			</origins>
 		</entry>
-		<entry key="Take the offer (J)   Ask for more (K)" source="Take the offer (J)   Ask for more (K)" context="TextWidget._text">
+		<entry key="Take the offer (J)   Ask for more (K)"
+		       source="Take the offer (J)   Ask for more (K)"
+		       context="TextWidget._text">
 			<origins>
 				<item>game/playground/monsterhuntrpg/ui/hud.ui.xml</item>
 			</origins>
@@ -975,27 +995,37 @@
 				<item>game/playground/battleroyale/ui/hud.ui.xml</item>
 			</origins>
 		</entry>
-		<entry key="Use move (J)   Ball (K)   Switch (L)   Run (R)" source="Use move (J)   Ball (K)   Switch (L)   Run (R)" context="TextWidget._text">
+		<entry key="Use move (J)   Ball (K)   Switch (L)   Run (R)"
+		       source="Use move (J)   Ball (K)   Switch (L)   Run (R)"
+		       context="TextWidget._text">
 			<origins>
 				<item>game/playground/monstercollector/ui/hud.ui.xml</item>
 			</origins>
 		</entry>
-		<entry key="Use: pick up, load, sell - Lever: land or take off" source="Use: pick up, load, sell - Lever: land or take off" context="TextWidget._text">
+		<entry key="Use: pick up, load, sell - Lever: land or take off"
+		       source="Use: pick up, load, sell - Lever: land or take off"
+		       context="TextWidget._text">
 			<origins>
 				<item>game/playground/coopscavenger/ui/hud.ui.xml</item>
 			</origins>
 		</entry>
-		<entry key="Use: repair, open, rescue, heal - hold to struggle" source="Use: repair, open, rescue, heal - hold to struggle" context="TextWidget._text">
+		<entry key="Use: repair, open, rescue, heal - hold to struggle"
+		       source="Use: repair, open, rescue, heal - hold to struggle"
+		       context="TextWidget._text">
 			<origins>
 				<item>game/playground/asymmetrichorror/ui/hud.ui.xml</item>
 			</origins>
 		</entry>
-		<entry key="Use: take, read, unlock, fight - Light: flashlight - Heal: use or mix" source="Use: take, read, unlock, fight - Light: flashlight - Heal: use or mix" context="TextWidget._text">
+		<entry key="Use: take, read, unlock, fight - Light: flashlight - Heal: use or mix"
+		       source="Use: take, read, unlock, fight - Light: flashlight - Heal: use or mix"
+		       context="TextWidget._text">
 			<origins>
 				<item>game/playground/survivalhorror/ui/hud.ui.xml</item>
 			</origins>
 		</entry>
-		<entry key="Walk the glade to meet wild monsters" source="Walk the glade to meet wild monsters" context="TextWidget._text">
+		<entry key="Walk the glade to meet wild monsters"
+		       source="Walk the glade to meet wild monsters"
+		       context="TextWidget._text">
 			<origins>
 				<item>game/playground/monstercollector/ui/hud.ui.xml</item>
 			</origins>
@@ -1045,7 +1075,9 @@
 				<item>game/playground/kartracing/ui/hud.ui.xml</item>
 			</origins>
 		</entry>
-		<entry key="You are down - wait for your squad" source="You are down - wait for your squad" context="TextWidget._text">
+		<entry key="You are down - wait for your squad"
+		       source="You are down - wait for your squad"
+		       context="TextWidget._text">
 			<origins>
 				<item>game/playground/battleroyale/ui/hud.ui.xml</item>
 			</origins>
@@ -1055,7 +1087,9 @@
 				<item>game/playground/survivalhorror/ui/hud.ui.xml</item>
 			</origins>
 		</entry>
-		<entry key="You fell - your geo lies where you died" source="You fell - your geo lies where you died" context="TextWidget._text">
+		<entry key="You fell - your geo lies where you died"
+		       source="You fell - your geo lies where you died"
+		       context="TextWidget._text">
 			<origins>
 				<item>game/playground/metroidvania/ui/hud.ui.xml</item>
 			</origins>
