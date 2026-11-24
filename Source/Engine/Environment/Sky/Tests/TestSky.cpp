@@ -202,15 +202,17 @@ SW_TEST_CASE( SkyTest, FindSkyTakesTheSunFromTheDirectionalLight )
 SW_TEST_CASE( SkyTest, CloudQualityTurnsVolumetricIntoLayer )
 {
     SkyCloudConfig config;
-    config._bVolumetric   = true;
-    config._viewStepCount = 32;
-    config._historyWeight = 0.9f;
+    config._bVolumetric        = true;
+    config._viewStepCount      = 32;
+    config._scatterOctaveCount = 4;
+    config._historyWeight      = 0.9f;
 
     SkyClouds clouds;
     clouds._mode = SkyCloudMode::Volumetric;
     clouds.applyQuality( config );
     SW_EXPECT_TRUE( clouds._mode == SkyCloudMode::Volumetric );
     SW_EXPECT_EQUAL( 32u, clouds._viewStepCount );
+    SW_EXPECT_EQUAL( 4u, clouds._scatterOctaveCount );
     SW_EXPECT_NEAR( 0.9f, clouds._historyWeight, 1.0e-6f );
 
     config._bVolumetric = false;
@@ -220,6 +222,33 @@ SW_TEST_CASE( SkyTest, CloudQualityTurnsVolumetricIntoLayer )
     SkyClouds none;
     none.applyQuality( config );
     SW_EXPECT_TRUE( none._mode == SkyCloudMode::None );
+}
+
+/** @brief [SkyTest] 볼륨 구름이 해 말고 받는 빛 — 고른 하늘은 반구 몫 1/2 이고, 땅 빛은 구름이 덮은 몫만큼 줄고 배율을 따른다. 대기 모드의 낮은 바닥을 밝힐 땅 빛이 있고 해가 없으면 0 이다 */
+SW_TEST_CASE( SkyTest, CloudLightingComesFromSkyAndGround )
+{
+    SkyGradient sky;
+    sky._zenithColor       = float3{ 0.4f, 0.4f, 0.4f };
+    sky._horizonColor      = float3{ 0.4f, 0.4f, 0.4f };
+    sky._groundColor       = float3{ 0.2f, 0.2f, 0.2f };
+    sky._horizonExponent   = 4.0f;
+    sky._intensity         = 1.0f;
+    sky._clouds._coverage  = 0.5f;
+    sky._clouds._opacity   = 1.0f;
+    SkyCloudLighting light = sky.computeCloudLighting();
+    SW_EXPECT_NEAR( 0.2f, light._sky._y, 1.0e-5f );
+    SW_EXPECT_NEAR( 0.05f, light._ground._y, 1.0e-5f );
+    sky._clouds._groundLight = 2.0f;
+    SW_EXPECT_NEAR( 0.1f, sky.computeCloudLighting()._ground._y, 1.0e-5f );
+
+    sky._mode                     = SkyMode::Atmosphere;
+    sky._atmosphere._sunIntensity = 20.0f;
+    sky.setSun( float3{ 0.0f, -1.0f, 0.0f }, float3{ 1.0f, 1.0f, 1.0f } );
+    light = sky.computeCloudLighting();
+    SW_EXPECT_TRUE( light._sky._z > light._sky._x ); // 파란 하늘
+    SW_EXPECT_TRUE( light._ground._x > 0.0f );
+    sky.setSun( float3{}, float3{} );
+    SW_EXPECT_NEAR( 0.0f, sky.computeCloudLighting()._ground._x, 1.0e-6f );
 }
 
 /** @brief [SkyTest] 눈에서 해까지의 투과율은 해가 높으면 파랑이 조금 줄고, 낮으면 더 붉고, 행성에 가리면 0 이다 */

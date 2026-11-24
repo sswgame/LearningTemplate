@@ -116,6 +116,12 @@ namespace sw
         float32 _cloudThicknessKm;
         PROPERTY( Category = "Clouds", DisplayName = "Extinction", Min = 0.0, EditCondition = "_cloudMode == Volumetric", Tooltip = "Light lost per kilometre inside the densest cloud; higher makes darker, harder clouds" )
         float32 _cloudExtinctionPerKm;
+        PROPERTY( Category = "Clouds", DisplayName = "Multi Scattering", Min = 0.0, Max = 1.0, EditCondition = "_cloudMode == Volumetric", Tooltip = "Share of light each further scattering octave keeps; higher brightens thick clouds" )
+        float32 _cloudMultiScattering;
+        PROPERTY( Category = "Clouds", DisplayName = "Bottom Occlusion", Min = 0.0, Max = 1.0, EditCondition = "_cloudMode == Volumetric", Tooltip = "Share of the sky light blocked at the bottom of the volumetric layer" )
+        float32 _cloudBottomOcclusion;
+        PROPERTY( Category = "Clouds", DisplayName = "Ground Light", Min = 0.0, EditCondition = "_cloudMode == Volumetric", Tooltip = "Multiplies the light bounced off the ground onto the cloud bottoms" )
+        float32 _cloudGroundLight;
 
         float32 _intensityScale; ///< 날씨 같은 실행 중 배율(저장하지 않는다)
     };

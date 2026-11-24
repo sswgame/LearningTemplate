@@ -18,7 +18,8 @@
         "_shadowLocalCullSlotLimit": 8,
         "_maxExtraViewCount": 6,
         "_skyClouds": {
-            "_viewStepCount": 32
+            "_viewStepCount": 32,
+            "_scatterOctaveCount": 5
         },
         "_textureStreaming": {
             "_poolMegabytes": 512
@@ -31,7 +32,8 @@
         "_maxExtraViewCount": 16,
         "_rainOcclusionResolution": 1024,
         "_skyClouds": {
-            "_viewStepCount": 80
+            "_viewStepCount": 80,
+            "_scatterOctaveCount": 8
         },
         "_textureStreaming": {
             "_uploadsPerFrame": 16,

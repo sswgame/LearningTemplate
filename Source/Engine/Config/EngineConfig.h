@@ -345,6 +345,10 @@ namespace sw
         PROPERTY( Min = 1, Max = 128 )
         uint32 _viewStepCount{};
 
+        /** @brief 여러 번 산란을 어림하는 옥타브 수입니다 — 많을수록 두꺼운 구름의 속 · 바닥까지 빛이 닿는다. 상한은 셰이더의 `kCloudMaxScatterOctaves` 다. */
+        PROPERTY( Min = 1, Max = 8 )
+        uint32 _scatterOctaveCount{};
+
         /** @brief 시간 누적의 기록 비율입니다 — 클수록 잡음이 적고 바람 · 빛의 변화가 늦게 따라온다. 1 이면 이번 걸음이 들지 않으므로 1 미만이다. */
         PROPERTY( Min = 0.0, Max = 0.98 )
         float32 _historyWeight{};

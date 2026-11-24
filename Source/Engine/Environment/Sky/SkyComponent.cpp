@@ -44,6 +44,9 @@ namespace sw
         , _cloudColor{ 1.0f, 1.0f, 1.0f }
         , _cloudThicknessKm{ 1.5f }
         , _cloudExtinctionPerKm{ 18.0f }
+        , _cloudMultiScattering{ 0.5f }
+        , _cloudBottomOcclusion{ 0.5f }
+        , _cloudGroundLight{ 1.0f }
         , _intensityScale{ 1.0f }
     {
     }
@@ -96,6 +99,9 @@ namespace sw
         clouds._color                = _cloudColor;
         clouds._thicknessKm          = _cloudThicknessKm;
         clouds._extinctionPerKm      = _cloudExtinctionPerKm;
+        clouds._multiScattering      = _cloudMultiScattering;
+        clouds._bottomOcclusion      = _cloudBottomOcclusion;
+        clouds._groundLight          = _cloudGroundLight;
         return gradient;
     }
 

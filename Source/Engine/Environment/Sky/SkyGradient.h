@@ -109,18 +109,29 @@ namespace sw
         float3  _color{ 1.0f, 1.0f, 1.0f };     ///< 구름 색(선형 RGB) — 빛을 받은 흰색에 곱한다
         float32 _thicknessKm{ 1.5f };           ///< 볼륨 층의 두께(km)
         float32 _extinctionPerKm{ 18.0f };      ///< 볼륨 층의 소멸 계수(1/km, 밀도 1 일 때)
+        float32 _multiScattering{ 0.5f };       ///< 볼륨의 여러 번 산란 — 옥타브마다 이어지는 몫(0..1, 0 이면 한 번 산란뿐)
+        float32 _bottomOcclusion{ 0.5f };       ///< 볼륨 층 바닥에서 가리는 하늘빛의 비율(0..1)
+        float32 _groundLight{ 1.0f };           ///< 땅에서 반사해 볼륨 바닥을 밝히는 빛의 배율
         // 품질 값 — 렌더 패킷이 `applyQuality` 로 채운다(저장하지 않는다). 볼륨이 아니면 쓰지 않는다.
         uint32       _viewStepCount{ 0 };         ///< 시선마다 걷는 걸음 수
+        uint32       _scatterOctaveCount{ 0 };    ///< 여러 번 산란을 어림하는 옥타브 수
         float32      _historyWeight{ 0.0f };      ///< 시간 누적의 기록 비율
         SkyCloudMode _mode{ SkyCloudMode::None }; ///< 구름의 종류
 
-        /** @brief 품질 값 @p config 를 싣습니다 — 볼륨을 끈 품질이면 볼륨 구름을 평면 구름으로 바꿉니다. 볼륨인데 걸음 수가 없으면 멈춥니다(폴백 없음). */
+        /** @brief 품질 값 @p config 를 싣습니다 — 볼륨을 끈 품질이면 볼륨 구름을 평면 구름으로 바꿉니다. 볼륨인데 걸음 수 · 산란 옥타브 수가 없으면 멈춥니다(폴백 없음). */
         void applyQuality( const SkyCloudConfig& config );
     };
 } // namespace sw
 
 namespace sw
 {
+    /** @brief 볼륨 구름이 해 말고 받는 빛입니다(선형 RGB). 반구 하나의 등방 산란 몫 1/2 을 곱한 값이다(`SkyGradient::computeCloudLighting`). */
+    struct SkyCloudLighting
+    {
+        float3 _sky{};    ///< 위 반구의 하늘빛
+        float3 _ground{}; ///< 땅에서 반사해 올라오는 빛
+    };
+
     /**
      * @brief 하늘 한 벌입니다. 셰이더(`sky.hlsl`)와 같은 식을 CPU 에서 셉니다.
      * @details `Gradient` 모드: 위쪽은 천정 색에서 지평선 색으로, 아래쪽은 땅 색에서 지평선 색으로 간다. 지평선 쪽 비율은 `(1 - |y|)^지수` 이고 마지막에 세기를 곱한다.
@@ -157,6 +168,11 @@ namespace sw
         [[nodiscard]] float3 computeHdriLookupDirection( const float3& unit ) const;
         /** @brief 방향 @p direction(길이는 상관없다, 0 벡터는 지평선)에서 오는 하늘빛입니다. 구름과 해 원반은 넣지 않는다. */
         float3 evaluateRadiance( const float3& direction ) const;
+        /**
+         * @brief 볼륨 구름이 해 말고 받는 빛입니다 — 위 반구의 평균 하늘빛과 바로 아래의 땅 빛(× `_groundLight`).
+         * @details 땅은 구름이 덮은 몫(덮는 비율 × 불투명도)만큼 해를 못 받는다. 언리얼 Volumetric Cloud 의 Sky Light · Ground Contribution 자리이고 프레임에 한 번 구한다.
+         */
+        [[nodiscard]] SkyCloudLighting computeCloudLighting() const;
         /**
          * @brief @p other 와 `evaluateRadiance` 가 모든 방향에서 같으면 true 입니다 — 구름(`_clouds`)과 출처(`_sourceID`)만 빼고 모든 값을 견준다.
          * @details 스카이 라이트가 다시 거를지 정한다(`SkyLightCache`). 색 · 방향은 `float3::operator==` 의 허용 오차로 견준다 — 그 안의 흔들림은 같은 하늘이다.
