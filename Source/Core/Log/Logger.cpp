@@ -126,13 +126,13 @@ namespace sw
         return s_globalSink.load( std::memory_order_acquire );
     }
 
-    void Logger::printAssertFailureToStderr( const utf8* pExpression, const utf8* pMessage, const utf8* pFile, int32 line, const utf8* pFunction ) noexcept
+    void Logger::printAssertFailureToStderr( const utf8* pExpression, const utf8* pMessage, const utf8* pFile, int32 line, [[maybe_unused]] const utf8* pFunction ) noexcept
     {
         std::fprintf( stderr, "\n[SW_LOG_ASSERT] %s\n  %s\n  at %s:%d\n  in %s\n", pExpression, pMessage, pFile, line, pFunction );
         std::fflush( stderr );
     }
 
-    bool Logger::reportAssertFailure( const utf8* pTag, const utf8* pExpression, const utf8* pMessage, const utf8* pFile, int32 line, const utf8* pFunction ) noexcept
+    bool Logger::reportAssertFailure( const utf8* pTag, const utf8* pExpression, const utf8* pMessage, const utf8* pFile, int32 line, [[maybe_unused]] const utf8* pFunction ) noexcept
     {
 #if defined( SW_DO_CHECKS )
         printAssertFailureToStderr( pExpression, pMessage, pFile, line, pFunction != nullptr ? pFunction : "" );
