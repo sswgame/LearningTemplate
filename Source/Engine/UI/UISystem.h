@@ -113,6 +113,8 @@ namespace sw
         SubsystemInitResult initializeSubsystem() override;
         void                shutdownSubsystem() override;
         const utf8*         getSubsystemName() const override { return kSubsystemName; }
+        void                resetGameInstanceState( GameInstanceBoundary boundary ) override;
+        const utf8*         findGameInstanceState() const override;
         /** @brief 입력(행동 · 포인터)을 읽고 글꼴로 측정한다. UI 배율 · 글자 크기는 사용자 설정이다. */
         span<const utf8* const> getSubsystemDependencies() const override;
         SubsystemHostMask       getSubsystemHost() const override { return EngineSubsystemHost::kClient; }
@@ -406,6 +408,8 @@ namespace sw
         void destroyScreenAt( uint32 index );
         /** @brief 활성 화면과 게임 정지를 다시 정합니다(화면을 올리고 지운 뒤 부릅니다). */
         void refreshActiveScreen();
+        /** @brief 정지 화면이 하나라도 있으면 게임 시간 정지 요청을 걸어 두고, 없으면 풉니다. */
+        void syncPauseRequest();
 
     private:
         /** @class InputCaptureQuery @brief `IInputCaptureQuery` 를 시스템의 같은 이름 함수로 넘깁니다(수명은 시스템과 같다). */

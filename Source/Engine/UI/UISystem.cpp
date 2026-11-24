@@ -857,6 +857,36 @@ namespace sw
         refreshActiveScreen();
     }
 
+    void UISystem::resetGameInstanceState( GameInstanceBoundary boundary )
+    {
+        if ( boundary != GameInstanceBoundary::Ended )
+            return;
+        // 겹치기 · 로딩 층은 든 쪽(알림 · 자막 · 로딩 화면 · 화면 전환)이 닫는다 — 타이틀 복귀는 지금 로딩 화면을 띄우는 중이다. 이미 닫히는 화면은 층과 무관하게 애니메이션을 끊는다.
+        // 위젯 이벤트 안에서도 불리므로 지우지 않고 표시만 한다 — 다음 그리기 앞(`applyPendingCloses`)에 사라진다.
+        for ( const unique_ptr<UIScreen>& screen : _listScreen )
+        {
+            const UILayer layer      = screen->getDesc()._layer;
+            const bool    bGameOwned = screen->isDevOverlay() == false && layer != UILayer::Overlay && layer != UILayer::Loading;
+            if ( bGameOwned == false && screen->_bClosing == SW_FALSE )
+                continue;
+            screen->_bClosing = SW_TRUE;
+            screen->_animationPlayer.stopAll();
+            _bPendingClose = SW_TRUE;
+        }
+        _listReopenDocument.clear();
+        syncPauseRequest();
+    }
+
+    const utf8* UISystem::findGameInstanceState() const
+    {
+        for ( const unique_ptr<UIScreen>& screen : _listScreen )
+        {
+            if ( screen->isDevOverlay() == false && screen->isClosing() == false )
+                return "an open screen";
+        }
+        return _paintState.getHiddenLayers() == UILayerMask{} ? nullptr : "a layer hide request";
+    }
+
     void UISystem::updateScreens( float32 deltaSeconds )
     {
         // 틱이 화면을 올리고 닫을 수 있으므로(확인 창, 키 바인딩 창) 번호로 돌며 매번 다시 찾는다.
@@ -916,8 +946,11 @@ namespace sw
 
         // UI 액션은 활성 화면이 있을 때만 받는다. HUD 만 있으면 패드 A 는 게임의 것이다(UI 맵이 없으면 아무것도 하지 않는다).
         _input.syncInputLayers( pNewActive, _pauseMenuDocument.empty() == false );
+        syncPauseRequest();
+    }
 
-        // 게임 정지: 정지 화면이 하나라도 있으면 요청을 걸어 둔다.
+    void UISystem::syncPauseRequest()
+    {
         bool bPause = false;
         for ( const unique_ptr<UIScreen>& screen : _listScreen )
         {
@@ -1162,7 +1195,7 @@ namespace sw
 namespace sw
 {
     // 화면 스택 — 위의 UI 서비스가 이것에 의존하고 UI 갱신의 칸(`onUpdateBeforeScreens` · `onUpdateAfterScreens` …)에 건다.
-    SW_ENGINE_SERVICE_SUBSYSTEM( UISystem, GameVisible, Startup, (), []( engine::EngineSubsystemFactoryScope& scope, engine::EngineSubsystemBuild& build )
+    SW_ENGINE_SERVICE_SUBSYSTEM( UISystem, GameVisible, GameInstance, Startup, (), []( engine::EngineSubsystemFactoryScope& scope, engine::EngineSubsystemBuild& build )
     {
         UISystem& uiSystem               = scope.emplaceSubsystem<UISystem>();
         build._pStartupParts->_pUISystem = &uiSystem;

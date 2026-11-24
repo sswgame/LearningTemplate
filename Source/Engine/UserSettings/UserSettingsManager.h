@@ -316,7 +316,7 @@ namespace sw
         void captureStageBaseline();
         /**
          * @brief 기준과 다른 확정 값(보류 · 확인 대기 포함)을 기준으로 되돌려 대상에 다시 넣습니다. 파일에는 쓰지 않습니다. 기준이 없으면 아무 일도 하지 않습니다.
-         * @details 자동화 단계 되돌리기(`SW_AUTOMATION_STAGE_RESET`)가 다음 단계 앞에서 부른다. 전역 변수 대상은 기동 적용처럼 넣는다 — 명령줄로 준 변수(`<Launch>`)를 덮지 않는다.
+         * @details 자동화 세션이 다음 단계 앞에서 전역 변수와 함께 부른다(`AutomationSession::startStage`) — 게임을 다시 시작해도 남는 사용자 설정이라 게임 인스턴스 수명이 아니다. 전역 변수 대상은 기동 적용처럼 넣는다 — 명령줄로 준 변수(`<Launch>`)를 덮지 않는다.
          *          다음 실행에 닿는 설정(`NeedsRestart`)은 확정 값만 되돌린다.
          * @return 되돌린 설정 수입니다.
          */

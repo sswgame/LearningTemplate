@@ -3,6 +3,7 @@
 #include "Engine/Graphics/Debug/VisualLogger.h"
 
 #include "Core/Foundation/Constants.h"
+#include "Core/GlobalVariable/GlobalVariableManager.h"
 #include "Core/Math/MathUtil.h"
 #include "Core/String/StringBuilder.h"
 #include "Core/String/StringUtil.h"
@@ -87,18 +88,36 @@ namespace sw
         }
     } // namespace
 
+    /** @brief 기록을 켭니다. 개발 명령 · 도구의 켬 스위치는 전역 변수다 — 자동화 단계가 시작 값으로 되돌린다. */
+    SW_GLOBAL_VARIABLE( bool, gv_visualLogger, false, "비주얼 로그 기록을 켠다 (개발 명령 vlog 와 같다)" );
+
     VisualLogger::VisualLogger()
         : _mutex{}
         , _listEntry{}
         , _frame{ 0 }
         , _capacity{ kDefaultCapacity }
-        , _bEnabled{ SW_FALSE }
     {
     }
 
     void VisualLogger::setEnabled( bool bEnabled )
     {
-        _bEnabled = bEnabled ? SW_TRUE : SW_FALSE;
+        gv_visualLogger = bEnabled;
+    }
+
+    bool VisualLogger::isEnabled() const
+    {
+        return gv_visualLogger;
+    }
+
+    void VisualLogger::resetGameInstanceState( GameInstanceBoundary boundary )
+    {
+        if ( boundary == GameInstanceBoundary::Starting )
+            clear(); // 기록은 게임이 끝난 뒤에 읽는다 — 다음 인스턴스가 시작할 때 비운다
+    }
+
+    const utf8* VisualLogger::findGameInstanceState() const
+    {
+        return getEntryCount() == 0 ? nullptr : "visual log entries";
     }
 
     bool VisualLogger::setCapacity( uint32 capacity )
@@ -372,5 +391,5 @@ namespace sw
 
 namespace sw
 {
-    SW_ENGINE_SERVICE_SUBSYSTEM( VisualLogger, GameVisible, Services, (), SW_ENGINE_DEFAULT_FACTORY( VisualLogger ) );
+    SW_ENGINE_SERVICE_SUBSYSTEM( VisualLogger, GameVisible, GameInstance, Services, (), SW_ENGINE_DEFAULT_FACTORY( VisualLogger ) );
 } // namespace sw

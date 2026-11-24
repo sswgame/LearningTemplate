@@ -121,8 +121,11 @@ namespace sw
                 const size_t                              headerEnd = body.find( "\r\n" );
                 const uint32                              lineCount = StringUtil::countChar( body, '\n' );
                 StringBuilder<constant::buffer::kMax1024> reply;
-                reply.appendFormat( "memory.exportinfo: %#%# header=%# rows=%#", sheetName, bBOM ? " bom=yes" : " bom=no", body.substr( 0, headerEnd == string_view::npos ? body.size() : headerEnd ),
-                                    lineCount > 0 ? lineCount - 1 : 0u );
+                const uint32                              rowCount = lineCount > 0 ? lineCount - 1 : 0u;
+                // 태그 시트는 이 빌드의 태그마다 한 줄이다 — 부르는 쪽이 태그 수를 적지 않게 여기서 견준다.
+                const bool bTagSheet = sheetName == getMemorySheetSchema( MemorySheetKind::Tags )._pName;
+                reply.appendFormat( "memory.exportinfo: %#%#%# header=%# rows=%#", sheetName, bBOM ? " bom=yes" : " bom=no", bTagSheet ? ( rowCount == kMemoryTagCount ? " tags=all" : " tags=missing" ) : "",
+                                    body.substr( 0, headerEnd == string_view::npos ? body.size() : headerEnd ), rowCount );
                 outReply = string( reply.view() );
                 return true;
             }

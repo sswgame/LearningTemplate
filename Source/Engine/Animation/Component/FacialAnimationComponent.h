@@ -216,7 +216,7 @@ namespace sw
         float32                                       _blinkElapsed; ///< 깜빡이는 중 지난 시간(음수 = 깜빡이지 않음)
         float32                                       _blinkAmount;
         float32                                       _saccadeTimer;
-        DeterministicRandom32                         _random; ///< 깜빡임 · 사카드 박자(씨앗은 컴포넌트 id)
+        DeterministicRandom32                         _random; ///< 깜빡임 · 사카드 박자(씨앗은 주인의 이름)
         PROPERTY( Category = "Facial", DisplayName = "Blink", Tooltip = "Blink automatically with the rig's interval and duration" )
         uint8 _bBlink : 1;
         PROPERTY( Category = "Facial", DisplayName = "Saccades", Tooltip = "Add small random eye jumps while looking at a target" )

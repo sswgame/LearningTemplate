@@ -88,7 +88,7 @@ namespace sw
          *          이 빌드에 없는 역할이면(Client 빌드의 전용 서버, Server 빌드의 클라이언트) 실패합니다.
          * @param pHostScope 호스트 범위입니다 — 코어 범위의 부모이고, 엔진의 `ModuleLoadStage` · `ModuleUnloadStage` 단계가 여기서 `IModuleLoader` 를 찾습니다.
          *                   범위 객체는 엔진보다 오래 살아야 합니다. 그 안의 서브시스템은 `shutdown` 이 내립니다. nullptr 이면 호스트가 내준 것이 없습니다(테스트 하네스).
-         *                   이 범위가 **프로세스 범위**(범위 사슬의 뿌리)라, 모듈 서브시스템(`SW_MODULE_SUBSYSTEM( Process, … )`)이 여기에 모듈 이름의 자식 범위로 선다 —
+         *                   이 범위가 **프로세스 범위**(범위 사슬의 뿌리)라, 모듈 서브시스템(`SW_MODULE_SUBSYSTEM( Process, Process, … )`)이 여기에 모듈 이름의 자식 범위로 선다 —
          *                   그래서 쓰기 가능한 범위로 받는다. 없으면 코어 범위가 뿌리다.
          */
         [[nodiscard]] bool initialize( int32 argc, utf8* pArgv[], EngineHostRole role, SubsystemScope* pHostScope );

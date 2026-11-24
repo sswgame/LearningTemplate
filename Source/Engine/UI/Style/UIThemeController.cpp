@@ -183,5 +183,5 @@ namespace sw
 namespace sw
 {
     // 테마 — 화면 스택과 오프스크린 화면이 같이 본다.
-    SW_ENGINE_SERVICE_SUBSYSTEM( UIThemeController, GameVisible, Startup, (), SW_ENGINE_DEFAULT_FACTORY( UIThemeController ) );
+    SW_ENGINE_SERVICE_SUBSYSTEM( UIThemeController, GameVisible, Process, Startup, (), SW_ENGINE_DEFAULT_FACTORY( UIThemeController ) );
 } // namespace sw

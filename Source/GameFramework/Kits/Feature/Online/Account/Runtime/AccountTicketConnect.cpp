@@ -118,7 +118,7 @@ namespace sw
 
 namespace sw
 {
-    SW_MODULE_SUBSYSTEM( Engine, AccountTicketConnector, AccountTicketConnector );
+    SW_MODULE_SUBSYSTEM( Engine, Process, AccountTicketConnector, AccountTicketConnector );
 
     AccountTicketConnector::AccountTicketConnector()
         : _tlsContext{}

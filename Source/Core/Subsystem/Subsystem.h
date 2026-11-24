@@ -43,6 +43,26 @@ namespace sw
     };
 
     /**
+     * @brief 서브시스템이 든 상태의 수명입니다. 등록 줄(`SW_ENGINE_SUBSYSTEM` · `SW_MODULE_SUBSYSTEM` …)이 **꼭 고른다** — 기본값이 없다.
+     * @details 예전에는 엔진 서비스가 모두 프로세스 수명이라 떠 있는 자막 · 알림 · 재생 중인 소리 · 열린 화면이 게임을 다시 시작해도 남았고, 샐 때마다 하나씩 자동화 되돌리기로 등록했다.
+     *          언리얼이 `UEngineSubsystem` 과 `UGameInstanceSubsystem` 을 형식으로 가르는 자리다. 여기서는 객체를 다시 만들지 않고 상태만 비운다 —
+     *          서비스를 빌려 든 쪽(칸 · 다른 서브시스템)이 많고, 장치 · 구독처럼 게임을 넘어 남을 것과 한 객체에 있다.
+     *          `GameInstance` 는 `Subsystem` 의 두 함수를 **재정의해야 하고** `Process` 는 재정의하면 안 된다(`kSubsystemLifetimeMatches` — 컴파일 오류).
+     */
+    enum class SubsystemLifetime : uint8
+    {
+        Process,      ///< 게임을 다시 시작해도 남는다 — 종류 표 · 캐시 · 장치 · 주인이 스스로 빼는 등록 · 사용자 설정 · 도구 설정
+        GameInstance, ///< 게임 인스턴스와 함께 사라진다 — 떠 있는 것 · 기다리는 것 · 쌓인 기록
+    };
+
+    /** @brief 게임 인스턴스의 수명 경계입니다(`Subsystem::resetGameInstanceState`). */
+    enum class GameInstanceBoundary : uint8
+    {
+        Ended,    ///< 인스턴스가 끝났다(게임 다시 시작 · 타이틀 복귀 · PIE 멈춤) — 떠 있는 것을 비운다
+        Starting, ///< 다음 인스턴스가 시작한다(게임 다시 시작 · PIE 시작) — 끝난 뒤에도 읽는 기록(비주얼 로그 · 추적)은 여기서 비운다(언리얼 Visual Logger 와 같다)
+    };
+
+    /**
      * @brief 서브시스템이 제 범위 밖의 **모듈 서비스 범위**에 보이는지입니다. 형식 상수 `kModuleVisibility` 로 서브시스템이 스스로 선언한다(`SubsystemScope::addSubsystem` 이 칸에 옮긴다).
      * @details 호스트가 모듈에 넘기는 범위가 손 목록으로 빌려 걸던 자리다 — 목록에서 빠지면 모듈이 조용히 못 찾았다. 이 길로는 게임 모듈에 닿을 수 없다:
      *          게임 모듈에 보이는 것은 엔진 서비스 칸(`GameVisible`)과 모듈이 공개한 서브시스템(`SW_MODULE_SUBSYSTEM`)뿐이다 — 호스트 전용의 경계가 형식으로 선다.
@@ -95,6 +115,14 @@ namespace sw
         /** @brief 세운 서브시스템을 내립니다. 모든 `stopSubsystem` 뒤에, 초기화에 성공한 것만 역순으로 불립니다. */
         virtual void shutdownSubsystem() = 0;
 
+        /**
+         * @brief 게임 인스턴스 수명의 상태를 비웁니다(`SubsystemLifetime::GameInstance` 만 재정의한다). 게임 스레드에서 초기화의 역순으로 불립니다.
+         * @details 상태만 비운다 — 구독 · 등록은 건 쪽이 푼다. 타이틀 복귀 · PIE 에서는 게임 인스턴스와 씬이 아직 살아 있으므로, 남이 쥔 핸들은 세대로 무효가 되어야 한다.
+         */
+        virtual void resetGameInstanceState( GameInstanceBoundary boundary ) { (void)boundary; }
+        /** @brief 지금 든 게임 인스턴스 상태의 이름입니다(`"queued subtitles"`). 비었으면 nullptr 입니다. `resetGameInstanceState` 가 비우는 것과 같은 것을 본다(개발의 누수 검사가 이름을 댄다). */
+        virtual const utf8* findGameInstanceState() const { return nullptr; }
+
         /** @brief 이름입니다(의존 칸이 부르는 식별자, 문자열 리터럴). */
         virtual const utf8* getSubsystemName() const = 0;
         /** @brief 먼저 서야 하는 서브시스템 이름들입니다(없으면 빈 구간). 배열은 프로세스 수명이어야 합니다(`static constexpr`). */
@@ -122,4 +150,16 @@ namespace sw
         friend class SubsystemCollection;
         MemoryTag _memoryTag{ MemoryTag::EngineMisc }; ///< 컬렉션이 넣을 때 붙인 형식의 `kSubsystemMemoryTag`
     };
+
+    /** @brief 형식 @p T 가 재정의한 게임 인스턴스 상태 함수의 수입니다(0 ~ 2). 서브시스템이 아닌 형식(인터페이스만 거는 등록 줄)은 0 이다. */
+    template <typename T, typename = void>
+    inline constexpr uint32 kGameInstanceStateOverrideCount = 0;
+    template <typename T>
+    inline constexpr uint32 kGameInstanceStateOverrideCount<T, std::enable_if_t<std::is_base_of_v<Subsystem, T>>> =
+        ( std::is_same_v<decltype( &T::resetGameInstanceState ), decltype( &Subsystem::resetGameInstanceState )> ? 0u : 1u ) +
+        ( std::is_same_v<decltype( &T::findGameInstanceState ), decltype( &Subsystem::findGameInstanceState )> ? 0u : 1u );
+
+    /** @brief 등록 줄이 고른 수명과 형식이 맞으면 true 입니다 — `GameInstance` 는 둘 다 재정의하고 `Process` 는 하나도 재정의하지 않는다. */
+    template <typename T, SubsystemLifetime lifetime>
+    inline constexpr bool kSubsystemLifetimeMatches = kGameInstanceStateOverrideCount<T> == ( lifetime == SubsystemLifetime::GameInstance ? 2u : 0u );
 } // namespace sw

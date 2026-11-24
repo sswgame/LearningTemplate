@@ -570,5 +570,5 @@ namespace sw
 namespace sw
 {
     // 스트리밍 큐의 소멸자는 태스크를 기다리므로 Task 보다 먼저 놓는다(그 의존은 `getSubsystemDependencies` 가 선언한다).
-    SW_ENGINE_SERVICE_SUBSYSTEM( AssetStreamingQueue, HostOnly, Startup, (), SW_ENGINE_DEFAULT_FACTORY( AssetStreamingQueue ) );
+    SW_ENGINE_SERVICE_SUBSYSTEM( AssetStreamingQueue, HostOnly, Process, Startup, (), SW_ENGINE_DEFAULT_FACTORY( AssetStreamingQueue ) );
 } // namespace sw

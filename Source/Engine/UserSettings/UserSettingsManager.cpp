@@ -14,7 +14,6 @@
 
 #include "Engine/Asset/AssetManager.h"
 #include "Engine/Asset/PackEngineSettingsSubsystem.h"
-#include "Engine/Automation/Scenario/AutomationStageReset.h"
 #include "Engine/Config/EngineDefaultAssets.h"
 #include "Engine/Config/GameConfig.h"
 #include "Engine/Config/PackEngineSettings.h"
@@ -45,16 +44,6 @@ namespace sw
             }
             return nullopt;
         }
-
-        /** @brief 자동화 단계 되돌리기 — 앞 단계가 바꾼 사용자 설정을 세션 시작 때 값으로 되돌린다(`UserSettingsManager::restoreStageBaseline`). */
-        struct UserSettingsStageResetInternal
-        {
-            static void restoreBaseline()
-            {
-                if ( UserSettingsManager* pSettings = engine::findSubsystem<UserSettingsManager>() )
-                    (void)pSettings->restoreStageBaseline();
-            }
-        };
     } // namespace
 } // namespace sw
 
@@ -1258,13 +1247,11 @@ namespace sw
         static constexpr const utf8* kArrDependency[] = { InputManager::kSubsystemName, AssetManager::kSubsystemName, PackEngineSettingsSubsystem::kSubsystemName };
         return kArrDependency;
     }
-
-    SW_AUTOMATION_STAGE_RESET( userSettingsBaseline, "user settings (language, key bindings, quality bundles, ...)", &UserSettingsStageResetInternal::restoreBaseline );
 } // namespace sw
 
 namespace sw
 {
-    SW_ENGINE_SERVICE_SUBSYSTEM( UserSettingsManager, GameVisible, Startup, (), []( engine::EngineSubsystemFactoryScope& scope, engine::EngineSubsystemBuild& build )
+    SW_ENGINE_SERVICE_SUBSYSTEM( UserSettingsManager, GameVisible, Process, Startup, (), []( engine::EngineSubsystemFactoryScope& scope, engine::EngineSubsystemBuild& build )
     {
         build._pStartupParts->_pUserSettings = &scope.emplaceSubsystem<UserSettingsManager>();
     } );

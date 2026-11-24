@@ -61,6 +61,9 @@ namespace sw
          */
         SW_API void bindModuleServices( SubsystemScope& outScope, bool bGameModuleOnly, bool bSkipAlreadyBound = false );
 
+        /** @brief 묶인 범위(모듈이 매단 자식 · 상위 범위까지)의 초기화된 서브시스템을 낮은 범위(먼저 서는 쪽)부터 채웁니다. 엔진이 묶이지 않았으면 비운다. */
+        SW_API void collectInitializedSubsystems( vector<Subsystem*>& outListSubsystem );
+
         // ------------------------------------------------------------------------------
         // 2) 서비스 창구
         // ------------------------------------------------------------------------------

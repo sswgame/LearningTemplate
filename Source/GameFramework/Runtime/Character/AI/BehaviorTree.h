@@ -289,7 +289,7 @@ namespace sw
         uint32*             _pMoveSerial;       ///< 이동 인터페이스에 낸 마지막 요청의 번호. 슬롯 러너는 같은 이동 인터페이스를 쓰는 바깥 러너의 것을 가리킨다
         uint32              _ownMoveSerial;
         float32             _elapsedTime;
-        int32               _tickCount; ///< 확률 조건의 씨앗
+        int32               _tickCount; ///< 시간이 흐른 틱 수 — 확률 조건의 씨앗
         optional<int32>     _activeLeaf;
         optional<int32>     _lastSucceededLeaf; ///< 이번 틱에 마지막으로 성공한 작업. 도는 잎이 없을 때 `getActiveLeafName` 이 쓴다
     };

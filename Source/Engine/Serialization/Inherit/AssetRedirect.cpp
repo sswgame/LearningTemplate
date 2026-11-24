@@ -301,5 +301,5 @@ namespace sw
 namespace sw
 {
     // 옛 경로 표 — 팩 설정(`PackEngineSettingsSubsystem`)이 채우고 저장된 기록을 읽는 쪽(`readSavedReference`)이 묻는다.
-    SW_ENGINE_SERVICE_SUBSYSTEM( AssetRedirectTable, HostOnly, Services, (), SW_ENGINE_DEFAULT_FACTORY( AssetRedirectTable ) );
+    SW_ENGINE_SERVICE_SUBSYSTEM( AssetRedirectTable, HostOnly, Process, Services, (), SW_ENGINE_DEFAULT_FACTORY( AssetRedirectTable ) );
 } // namespace sw

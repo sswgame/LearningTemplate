@@ -309,5 +309,5 @@ namespace sw
 
 namespace sw
 {
-    SW_ENGINE_SERVICE_SUBSYSTEM( RenderDebugRegistry, HostOnly, Services, (), SW_ENGINE_DEFAULT_FACTORY( RenderDebugRegistry ) );
+    SW_ENGINE_SERVICE_SUBSYSTEM( RenderDebugRegistry, HostOnly, Process, Services, (), SW_ENGINE_DEFAULT_FACTORY( RenderDebugRegistry ) );
 } // namespace sw

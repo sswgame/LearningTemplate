@@ -65,6 +65,7 @@ namespace sw
     public:
         /**
          * @brief 표본 길의 활성자 쪽 나타남(막 생긴 오브젝트) 프레임 창입니다. 막 생긴 개체가 처음 표본에 드는 데(시작 · 공간 색인 단계 한 번) 걸리는 프레임을 덮는다.
+         *        시간이 흐른 프레임만 센다(`GameObjectManager::getRunningUpdateCount`) — 로딩 화면이 길다고 창이 먼저 닫히지 않는다.
          * @details 표본은 프레임마다 재므로 그 늦음은 프레임 수로 정해진다(물리 스텝과 무관). 겹침 길은 이 창을 쓰지 않는다(`isOverlapSpawnEntry`).
          */
         static constexpr uint64 kFrames = 8;

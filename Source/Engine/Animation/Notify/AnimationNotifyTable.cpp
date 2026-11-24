@@ -275,7 +275,7 @@ namespace sw
 
     AnimationNotifyHandlerRegistry::~AnimationNotifyHandlerRegistry() = default;
 
-    SW_ENGINE_SERVICE_SUBSYSTEM( AnimationNotifyHandlerRegistry, GameVisible, Services, (), SW_ENGINE_DEFAULT_FACTORY( AnimationNotifyHandlerRegistry ) );
+    SW_ENGINE_SERVICE_SUBSYSTEM( AnimationNotifyHandlerRegistry, GameVisible, Process, Services, (), SW_ENGINE_DEFAULT_FACTORY( AnimationNotifyHandlerRegistry ) );
 
     bool AnimationNotifyHandlerRegistry::registerHandler( const hashed_string& name, unique_ptr<IAnimationNotifyHandler> handler )
     {

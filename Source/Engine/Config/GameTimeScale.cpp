@@ -79,5 +79,5 @@ namespace sw
 namespace sw
 {
     // 정지 요청 · 이번 프레임의 실제 경과.
-    SW_ENGINE_SERVICE_SUBSYSTEM( GameTimeScale, GameVisible, Services, (), SW_ENGINE_DEFAULT_FACTORY( GameTimeScale ) );
+    SW_ENGINE_SERVICE_SUBSYSTEM( GameTimeScale, GameVisible, Process, Services, (), SW_ENGINE_DEFAULT_FACTORY( GameTimeScale ) );
 } // namespace sw

@@ -275,5 +275,5 @@ namespace sw
 namespace sw
 {
     // 파일 내용 해시 캐시 — 셰이더 컴파일 · 쿠킹이 워커에서 묻는다.
-    SW_ENGINE_SERVICE_SUBSYSTEM( ContentHashCache, HostOnly, Services, (), SW_ENGINE_DEFAULT_FACTORY( ContentHashCache ) );
+    SW_ENGINE_SERVICE_SUBSYSTEM( ContentHashCache, HostOnly, Process, Services, (), SW_ENGINE_DEFAULT_FACTORY( ContentHashCache ) );
 } // namespace sw

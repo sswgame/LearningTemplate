@@ -11,6 +11,7 @@
   py -3 Scripts/dev/scenario_bisect.py playground.shooter3d --rerun-failed --preset Ninja-Release   # 마지막 체인에서 진 단계: 혼자 → 앞을 붙여 → 이분 탐색
   py -3 Scripts/dev/scenario_bisect.py playground.shooter3d --from-stage shooter3d_enemydeath --backend vk     # 그 단계부터 끝까지만
   py -3 Scripts/dev/scenario_bisect.py playground.shooter3d --advances                              # 진행(AdvanceSimulation) 목록(condition · photo · other, render)
+  py -3 Scripts/dev/scenario_bisect.py playground wildwest_mount --determinism --preset Ninja-Release   # 혼자 · 앞 단계 하나 · 두 번 이어 돌린 사진을 바이트로 견준다
   py -3 Scripts/dev/scenario_bisect.py --golden-margins [보고 폴더…]                # 흔들리는 골든: 보고의 goldenSamples[] 를 모아 골든별 최대 · 여유
   py -3 Scripts/dev/scenario_bisect.py --golden-coverage                            # 플랫폼 · 백엔드마다 골든 수(체인 백엔드 표와 대조)
 
@@ -452,6 +453,8 @@ def main(argv: Sequence[str] | None = None) -> int:
     parser.add_argument('--rerun-failed', action='store_true',
                         help='단계 대신: 마지막 체인 실행(Bin/Saved/Automation 의 per-backend 보고)에서 진 단계를 그 백엔드로 혼자 → 앞 단계를 붙여 → 이분 탐색으로 다시 돈다')
     parser.add_argument('--from-stage', metavar='단계', help='단계 대신: 그 단계부터 체인 끝까지만 --backend 로 돌고 진 단계를 낸다')
+    parser.add_argument('--determinism', action='store_true',
+                        help='이분 탐색 대신: 그 단계를 혼자 · 앞 단계 하나 · 두 번 이어 --backend 로 돌려 찍은 사진이 바이트까지 같은지 본다(scenario_determinism)')
     parser.add_argument('--advances', action='store_true', help='단계 대신: 체인의 진행(<AdvanceSimulation>)마다 프레임 수 · render · 다음 단계 · 분류(condition · photo · other)')
     options = parser.parse_args(argv)
     if options.self_check:
@@ -521,6 +524,15 @@ def main(argv: Sequence[str] | None = None) -> int:
         paths = read_backend_chain_order(backend_log.read_text(encoding='utf-8', errors='replace'))
     # 단계 이름은 시나리오 파일의 name 속성이 정본이다(로그 문구를 읽지 않는다 — 체인을 먼저 돌려 둘 필요도 없다).
     target_index, target_name = resolve_target({index: read_scenario_name(path) for index, path in enumerate(paths)}, options.stage)
+    if options.determinism:
+        from dev.scenario_determinism import check_determinism, make_runner
+        runner = make_runner(command, target_name, REPO / 'Content', options.backend, build_dir, build_dir / 'Bin')
+        list_problem = check_determinism(paths, target_index, target_name, build_dir / 'Bin' / 'Saved' / 'Automation', runner)
+        for problem in list_problem:
+            print(f'{options.backend} {target_name}: {problem}')
+        print(f'{options.backend} {target_name}: {"앞 단계에 따라 다르다" if list_problem else "세 실행의 사진이 바이트까지 같다"}')
+        return 1 if list_problem else 0
+
     def fails(prefix: list[str]) -> bool:
         return run_stage(prefix + [paths[target_index]], target_name, options.backend)
 

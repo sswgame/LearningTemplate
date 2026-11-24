@@ -7,6 +7,7 @@
  */
 #pragma once
 #include "Core/Container/string.h"
+#include "Core/Delegate/Delegate.h"
 #include "Core/Subsystem/Subsystem.h"
 
 namespace sw
@@ -53,10 +54,13 @@ namespace sw
     public:
         virtual ~IGameRestarter() = default;
 
+        /** @brief 앞 인스턴스 · 씬 · 인스턴스 수명 상태가 모두 사라지고 새 인스턴스가 서기 전에 불립니다. */
+        using GameInstanceEndedDelegate = Delegate<void()>;
+
         /**
          * @brief 게임을 처음부터 다시 시작합니다. 새 인스턴스의 초기화가 기동 때처럼 첫 씬을 요청하고 · 벤치를 세운다. 게임 스레드에서만 부릅니다.
          * @return 게임 인스턴스가 없었거나 새로 만들지 못했으면 false 입니다(그러면 게임이 없다).
          */
-        [[nodiscard]] virtual bool restartGame() = 0;
+        [[nodiscard]] virtual bool restartGame( const GameInstanceEndedDelegate& onInstanceEnded ) = 0;
     };
 } // namespace sw

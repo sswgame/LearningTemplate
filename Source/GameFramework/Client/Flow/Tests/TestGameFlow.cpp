@@ -1,14 +1,21 @@
 // GameFlowTest — 게임 흐름의 화면 없이 도는 규칙: 팁 파일 읽기, UI 시스템이 없을 때의 로딩 화면, 타이틀 씬이 없는 게임(nogpu). 화면이 뜨는 길은 시나리오 `loadingscreen` 이 맡는다.
 #include "pch.h"
 
+#include "Core/Event/EventDispatcher.h"
 #include "Core/Testing/TestFramework.h"
 
+#define SW_TEST_INTERNAL // 임시 리소스 도메인 픽스처(`ScopedScratchDomain`)와 엔진 서비스를 직접 쓴다
+#include "Engine/Content/Tests/ScopedScratchDomain.h"
+#include "Engine/Foundation/EngineServices.h"
+#include "Engine/Scene/SceneManager.h"
 #include "Engine/UI/Screen/UIGlobalCommandRegistry.h"
 
 #include "GameFramework/Client/Flow/GameInstanceClient.h"
 #include "GameFramework/Client/Flow/LoadingScreenController.h"
 #include "GameFramework/Runtime/Foundation/Framework/Flow/GameSceneFlow.h"
 #include "GameFramework/Runtime/Foundation/Framework/Flow/ScreenTransitionManager.h"
+#include "GameFramework/Runtime/Foundation/Framework/GameEvents.h"
+#include "GameFramework/Runtime/Foundation/Framework/GameService.h"
 #include "GameFramework/Runtime/Foundation/Framework/Save/SaveLock.h"
 #include "GameFramework/Runtime/Foundation/GameData/GameSettings.h"
 
@@ -75,4 +82,45 @@ SW_TEST_CASE( GameFlowTest, GameWithoutTitleScene )
     SW_EXPECT_TRUE( commands.hasCommand( hashed_string( UIGlobalCommandRegistry::kStartGame ) ) );
     flow.unregisterSessionCommands();
     SW_EXPECT_FALSE( commands.hasCommand( hashed_string( UIGlobalCommandRegistry::kStartGame ) ) );
+}
+
+/**
+ * @brief [GameFlowTest] 타이틀 복귀는 하던 게임을 **먼저** 끝내고 타이틀 씬을 요청한다 — 요청 뒤에 시작한 것(로딩 화면 · 타이틀의 음악)은 남는다
+ * @details 결함이면 타이틀 씬이 시작한 음악 · 화면이 게임을 끝내는 비우기에 함께 꺼진다. 엔진 이벤트 큐(게임 인스턴스 수명)를 표지로 본다.
+ */
+SW_TEST_CASE( GameFlowTest, TitleEndsTheGameBeforeItRequestsTheScene )
+{
+    const test::ScopedScratchDomain domain;
+    SceneManager                    sceneManager;
+    SW_REQUIRE_NOT_NULL( sceneManager.createEmptyActiveScene( "Title" ) );
+    SW_REQUIRE_TRUE( sceneManager.saveActiveSceneCopy( domain.makeDiskPath( "title.scene.xml" ) ) );
+
+    SubsystemScope              scope;
+    const game::ScopedGameScope scopedGame{ scope };
+    SW_REQUIRE_TRUE( scope.bind( &sceneManager ) );
+    GameSettings                             settings;
+    StringBuilder<constant::buffer::kMax512> settingsText;
+    settingsText.appendFormat( "<GameSettings><startMap>%#</startMap><titleScene>%#</titleScene><defaultLanguage>ko_kr</defaultLanguage></GameSettings>",
+                               test::ScopedScratchDomain::makeID( "title.scene.xml" ).str(), test::ScopedScratchDomain::makeID( "title.scene.xml" ).str() );
+    SW_REQUIRE_TRUE( settings.loadFromXMLText( settingsText.view(), "GameFlowTest" ) );
+    ScreenTransitionManager transition;
+    LoadingScreenController loading;
+    SaveLock                saveLock;
+    GameSceneFlow           flow( settings, transition, &loading.getLoadingScreen(), saveLock );
+
+    EventDispatcher& dispatcher = engine::getSubsystem<EventDispatcher>();
+    dispatcher.push( SceneLoadCompletedEvent{} ); // 하던 게임이 남긴 것
+    bool               bEndedBeforeRequest = false;
+    const Subscription subscription        = sceneManager.onSceneLoadRequested().add( SW_DELEGATE_LAMBDA( SceneLoadRequestedHandler, [&]( const string& scenePath, SceneLoadKind kind, const TaskFuture<Scene*>& future )
+           {
+        (void)scenePath;
+        (void)kind;
+        (void)future;
+        bEndedBeforeRequest = dispatcher.findGameInstanceState() == nullptr;
+        dispatcher.push( SceneLoadCompletedEvent{} ); // 타이틀이 시작한 것
+    } ) );
+    SW_EXPECT_TRUE( flow.requestTitleScene() );
+    SW_EXPECT_TRUE( bEndedBeforeRequest );
+    SW_EXPECT_TRUE( dispatcher.findGameInstanceState() != nullptr );
+    dispatcher.resetGameInstanceState( GameInstanceBoundary::Ended );
 }

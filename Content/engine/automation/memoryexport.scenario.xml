@@ -2,7 +2,7 @@
 <?asset guid="5f515df729324dfb86385645813ea537"?>
 <!--
   엔진 시나리오 — 메모리 스냅숏 개발 명령(어느 게임 프리셋에서나 돈다): memory.snapshot 이 전송 글(swmem 1)로 답하고, memory.export 가 Saved/MemorySnapshots/<시각>/ 에
-  시트별 CSV 를 워커에서 쓰며, 쓰기가 끝난 뒤 memory.exportinfo 가 읽은 Tags.csv 가 BOM · 머리말 · 태그 수(19) 만큼의 행을 가졌는지 본다.
+  시트별 CSV 를 워커에서 쓰며, 쓰기가 끝난 뒤 memory.exportinfo 가 읽은 Tags.csv 가 BOM · 머리말 · 이 빌드의 태그마다 한 행을 가졌는지(tags=all) 본다.
   에디터 Memory 창의 길(찍기 · 비교 · 표 내보내기)은 editor/memorypanel 이 본다.
   실행: App -scenario=engine/automation/memoryexport.scenario.xml -unattended
 -->
@@ -16,7 +16,7 @@
 	<ExpectLog id="MemoryExport.Written" count="1"/>
 	<ExpectLog id="MemoryExport.SheetWritten" count="7"/>
 	<DevCommand line="memory.exportinfo Tags"/>
-	<ExpectLog id="DevCommand.Reply" contains="memory.exportinfo: Tags bom=yes header=Tag,Live (bytes),Live (MB),Peak (bytes),Peak (MB),Budget (bytes),Budget (MB),LiveCount,TotalCount rows=19" count="1"/>
+	<ExpectLog id="DevCommand.Reply" contains="memory.exportinfo: Tags bom=yes tags=all header=Tag," count="1"/>
 	<ExpectLog id="MemoryExport.Failed" count="0"/>
 	<Pass/>
 </Scenario>

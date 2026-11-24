@@ -344,7 +344,7 @@ namespace sw::editor
             ImGui::PushID( static_cast<int32>( index ) );
             if ( ImGui::Selectable( entry._name.c_str(), state._selectedBuffer == optional<uint32>{ index } ) )
                 _viewModel.selectBuffer( index );
-            EditorSelfTestMarks::recordFormat( "renderDebugger.buffer.%#", index );
+            EditorSelfTestMarks::recordFormat( "renderDebugger.buffer.%#.%#", entry._name, entry._slot ); // 이름으로 고른다 — 차례는 렌더 경로가 정한다
             ImGui::SameLine();
             ImGui::TextDisabled( "[%u]  %u x %u B", entry._slot, entry._elementCount, entry._elementSize );
             ImGui::PopID();

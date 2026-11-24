@@ -222,5 +222,5 @@ namespace sw
 namespace sw
 {
     // 렌더러 폴더와 같이 클라이언트에만 있다(Server 타깃은 이 폴더를 짓지 않아 이 등록도 없다).
-    SW_ENGINE_SERVICE_SUBSYSTEM( RenderExtensionRegistry, GameVisible, Services, (), SW_ENGINE_DEFAULT_FACTORY( RenderExtensionRegistry ) );
+    SW_ENGINE_SERVICE_SUBSYSTEM( RenderExtensionRegistry, GameVisible, Process, Services, (), SW_ENGINE_DEFAULT_FACTORY( RenderExtensionRegistry ) );
 } // namespace sw

@@ -127,5 +127,5 @@ namespace sw
 namespace sw
 {
     // 스크린 리더 — 알림이 이것으로 읽힌다.
-    SW_ENGINE_SERVICE_SUBSYSTEM( UIAccessibilityService, GameVisible, Startup, (), SW_ENGINE_DEFAULT_FACTORY( UIAccessibilityService ) );
+    SW_ENGINE_SERVICE_SUBSYSTEM( UIAccessibilityService, GameVisible, Process, Startup, (), SW_ENGINE_DEFAULT_FACTORY( UIAccessibilityService ) );
 } // namespace sw

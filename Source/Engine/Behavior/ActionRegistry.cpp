@@ -4,6 +4,7 @@
 
 #include "Core/Concurrency/atomic.h"
 #include "Core/Concurrency/mutex.h"
+#include "Core/GlobalVariable/GlobalVariableManager.h"
 #include "Core/Log/Logger.h"
 #include "Core/String/StringUtil.h"
 #include "Core/Subsystem/ServiceSlot.h"
@@ -146,6 +147,9 @@ namespace sw
 
 namespace sw
 {
+    /** @brief 범용 Action 추적을 켭니다(개발 명령 `action.trace`). 켬 스위치는 전역 변수다 — 자동화 단계가 시작 값으로 되돌린다. */
+    SW_GLOBAL_VARIABLE( bool, gv_actionTrace, false, "게임 동작(Action) 호출을 모두 기록한다 (개발 명령 action.trace 와 같다)" );
+
     namespace
     {
         struct ActionTraceInternal
@@ -154,10 +158,9 @@ namespace sw
 
             struct TraceState
             {
-                mutex            _mutex{};
+                mutable mutex    _mutex{};
                 ActionTraceEntry _arrEntry[ActionTrace::kCapacity] SW_GUARDED_BY( _mutex ){};
                 uint64 _count    SW_GUARDED_BY( _mutex ){ 0 };
-                atomic<bool>     _bEnabled{ false };
             };
 
             /** @brief 상태입니다 — 엔진 범위의 `ActionTraceState` 가 든다. */
@@ -213,7 +216,7 @@ namespace sw
 
     /**
      * @class ActionTraceState
-     * @brief 범용 Action 추적의 고리 버퍼 · 켜짐 — 예전 함수 정적(감춘 싱글턴)을 엔진 범위 서브시스템이 든다. 엔진을 다시 세우면 새로 선다.
+     * @brief 범용 Action 추적의 고리 버퍼 — 예전 함수 정적(감춘 싱글턴)을 엔진 범위 서브시스템이 든다. 켜짐은 전역 변수 `gv_actionTrace` 다.
      */
     class ActionTraceState final : public Subsystem
     {
@@ -228,6 +231,16 @@ namespace sw
         SubsystemInitResult initializeSubsystem() override { return SubsystemInitResult::Succeeded; }
         void                shutdownSubsystem() override {}
         const utf8*         getSubsystemName() const override { return kSubsystemName; }
+        void                resetGameInstanceState( GameInstanceBoundary boundary ) override
+        {
+            if ( boundary == GameInstanceBoundary::Starting )
+                ActionTrace::clear(); // 기록은 게임이 끝난 뒤에 읽는다
+        }
+        const utf8* findGameInstanceState() const override
+        {
+            ScopedLock<mutex> lock{ _state._mutex };
+            return _state._count == 0 ? nullptr : "action trace entries";
+        }
 
         /** @brief 든 상태입니다. */
         ActionTraceInternal::TraceState& getState() { return _state; }
@@ -245,12 +258,12 @@ namespace sw
 
     void ActionTrace::setEnabled( bool bEnabled )
     {
-        ActionTraceInternal::getState()._bEnabled.store( bEnabled, std::memory_order_relaxed );
+        gv_actionTrace = bEnabled;
     }
 
     bool ActionTrace::isEnabled()
     {
-        return ActionTraceInternal::getState()._bEnabled.load( std::memory_order_relaxed );
+        return gv_actionTrace;
     }
 
     void ActionTrace::record( const ActionEntry& entry, const ActionContext& context, ActionResult result )
@@ -297,5 +310,5 @@ namespace sw
 
 namespace sw
 {
-    SW_ENGINE_SERVICE_SUBSYSTEM( ActionTraceState, HostOnly, Services, (), SW_ENGINE_DEFAULT_FACTORY( ActionTraceState ) );
+    SW_ENGINE_SERVICE_SUBSYSTEM( ActionTraceState, HostOnly, GameInstance, Services, (), SW_ENGINE_DEFAULT_FACTORY( ActionTraceState ) );
 } // namespace sw

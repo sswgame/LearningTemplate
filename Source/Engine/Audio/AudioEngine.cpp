@@ -482,6 +482,13 @@ namespace sw
         pushCommand( std::move( command ) );
     }
 
+    void AudioEngine::stopAllPlayback()
+    {
+        Command command;
+        command._type = CommandKind::StopAll;
+        pushCommand( std::move( command ) );
+    }
+
     void AudioEngine::setPaused( AudioPlayingID playingID, bool bPaused )
     {
         Command command;
@@ -869,6 +876,11 @@ namespace sw
             case CommandKind::StopEmitter:
             {
                 stopVoices( 0, command._emitterID, command._value );
+                break;
+            }
+            case CommandKind::StopAll:
+            {
+                applyStopAll();
                 break;
             }
             case CommandKind::SetPaused:
@@ -1476,25 +1488,59 @@ namespace sw
 
         if ( command._pLibrary != nullptr )
         {
-            for ( const AudioParameterDef& desc : command._pLibrary->_listParameter )
-            {
-                const bool      bNew      = _mapParameter.find( desc._name ) == _mapParameter.end();
-                ParameterState& parameter = _mapParameter[desc._name];
-                parameter._minValue       = desc._minValue;
-                parameter._maxValue       = desc._maxValue;
-                parameter._seekSpeed      = desc._seekSpeed;
-                if ( bNew )
-                {
-                    parameter._value  = desc._defaultValue;
-                    parameter._target = desc._defaultValue;
-                }
-                parameter._value  = MathUtil::clamp( parameter._value, desc._minValue, desc._maxValue );
-                parameter._target = MathUtil::clamp( parameter._target, desc._minValue, desc._maxValue );
-            }
+            applyLibraryParameters( *command._pLibrary );
         }
         rebuildEventTable();
         rebuildAttenuationTable();
         command._pLibrary = std::move( pPrevious ); // 새 라이브러리는 표가 쥔다 — 명령의 사본 대신 옛 것을 돌려보낸다
+    }
+
+    void AudioEngine::applyLibraryParameters( const AudioEventLibrary& library )
+    {
+        for ( const AudioParameterDef& desc : library._listParameter )
+        {
+            const bool      bNew      = _mapParameter.find( desc._name ) == _mapParameter.end();
+            ParameterState& parameter = _mapParameter[desc._name];
+            parameter._minValue       = desc._minValue;
+            parameter._maxValue       = desc._maxValue;
+            parameter._seekSpeed      = desc._seekSpeed;
+            if ( bNew )
+            {
+                parameter._value  = desc._defaultValue;
+                parameter._target = desc._defaultValue;
+            }
+            parameter._value  = MathUtil::clamp( parameter._value, desc._minValue, desc._maxValue );
+            parameter._target = MathUtil::clamp( parameter._target, desc._minValue, desc._maxValue );
+        }
+    }
+
+    void AudioEngine::applyStopAll()
+    {
+        _musicPlayer.stop( *this, 0.0f );
+        for ( AudioVoiceSlot& slot : _voicePool )
+        {
+            if ( slot._bInUse )
+                AudioVoicePool::free( slot );
+        }
+        for ( EventInstance& instance : _listInstance )
+        {
+            instance = EventInstance{};
+        }
+        // 쿨다운 · 순차 커서 · 무작위 기억도 앞 게임의 것이다 — 라이브러리와 설명자는 둔다.
+        for ( auto& entry : _mapEventState )
+        {
+            EventState fresh{};
+            fresh._pLibrary = entry.second._pLibrary;
+            fresh._pDesc    = entry.second._pDesc;
+            entry.second    = std::move( fresh );
+        }
+        _random = DeterministicRandom64{}; // 무작위로 고른 클립이 자막을 정한다 — 앞 게임이 쓴 만큼 밀린 채 시작하지 않는다
+        _snapshotMixer.clearSnapshots();
+        _mapParameter.clear();
+        for ( const auto& entry : _mapLibrary )
+        {
+            applyLibraryParameters( *entry.second );
+        }
     }
 
     void AudioEngine::rebuildEventTable()

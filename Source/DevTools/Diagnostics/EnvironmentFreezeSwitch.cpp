@@ -72,7 +72,7 @@ namespace sw
     };
 
     // 기동 단계 — 서비스 단계 초기화 중에는 엔진 서비스(GlobalVariableManager 조회)가 아직 묶이지 않았다(--test 가 시작 중 멈췄다).
-    SW_ENGINE_SUBSYSTEM( EnvironmentFreezeSwitch, Startup, (), []( engine::EngineSubsystemFactoryScope& scope, engine::EngineSubsystemBuild& build )
+    SW_ENGINE_SUBSYSTEM( EnvironmentFreezeSwitch, Process, Startup, (), []( engine::EngineSubsystemFactoryScope& scope, engine::EngineSubsystemBuild& build )
     {
         (void)build;
         (void)scope.emplaceSubsystem<EnvironmentFreezeSwitch>();

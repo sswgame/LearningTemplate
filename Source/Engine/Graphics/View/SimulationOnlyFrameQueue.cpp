@@ -52,5 +52,5 @@ namespace sw
 namespace sw
 {
     // 그리지 않고 진행하는 고정 걸음 — 클라이언트 전용(렌더러가 있는 호스트).
-    SW_ENGINE_SERVICE_SUBSYSTEM( SimulationOnlyFrameQueue, HostOnly, Services, (), SW_ENGINE_DEFAULT_FACTORY( SimulationOnlyFrameQueue ) );
+    SW_ENGINE_SERVICE_SUBSYSTEM( SimulationOnlyFrameQueue, HostOnly, Process, Services, (), SW_ENGINE_DEFAULT_FACTORY( SimulationOnlyFrameQueue ) );
 } // namespace sw

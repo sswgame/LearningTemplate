@@ -439,5 +439,5 @@ namespace sw
 
 namespace sw
 {
-    SW_ENGINE_SERVICE_SUBSYSTEM( ShaderCache, GameVisible, Startup, (), SW_ENGINE_DEFAULT_FACTORY( ShaderCache ) );
+    SW_ENGINE_SERVICE_SUBSYSTEM( ShaderCache, GameVisible, Process, Startup, (), SW_ENGINE_DEFAULT_FACTORY( ShaderCache ) );
 } // namespace sw

@@ -328,5 +328,5 @@ namespace sw
 
 namespace sw
 {
-    SW_ENGINE_SERVICE_SUBSYSTEM( ComponentDefaults, GameVisible, Services, (), SW_ENGINE_DEFAULT_FACTORY( ComponentDefaults ) );
+    SW_ENGINE_SERVICE_SUBSYSTEM( ComponentDefaults, GameVisible, Process, Services, (), SW_ENGINE_DEFAULT_FACTORY( ComponentDefaults ) );
 } // namespace sw

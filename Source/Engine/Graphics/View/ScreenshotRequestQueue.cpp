@@ -129,5 +129,5 @@ namespace sw
 namespace sw
 {
     // 렌더 스레드의 스크린샷 요청이 쓰는 우편함 — 클라이언트 전용.
-    SW_ENGINE_SERVICE_SUBSYSTEM( ScreenshotRequestQueue, HostOnly, Services, (), SW_ENGINE_DEFAULT_FACTORY( ScreenshotRequestQueue ) );
+    SW_ENGINE_SERVICE_SUBSYSTEM( ScreenshotRequestQueue, HostOnly, Process, Services, (), SW_ENGINE_DEFAULT_FACTORY( ScreenshotRequestQueue ) );
 } // namespace sw

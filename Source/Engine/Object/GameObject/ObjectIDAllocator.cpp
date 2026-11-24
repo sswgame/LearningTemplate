@@ -33,5 +33,5 @@ namespace sw
 namespace sw
 {
     // 오브젝트 · 컴포넌트 id 공간 — 엔진의 모든 씬이 나눠 쓴다(`SceneEngineServices::makeFromBoundEngine` 이 칸에 싣는다).
-    SW_ENGINE_SERVICE_SUBSYSTEM( ObjectIDAllocator, HostOnly, Services, (), SW_ENGINE_DEFAULT_FACTORY( ObjectIDAllocator ) );
+    SW_ENGINE_SERVICE_SUBSYSTEM( ObjectIDAllocator, HostOnly, Process, Services, (), SW_ENGINE_DEFAULT_FACTORY( ObjectIDAllocator ) );
 } // namespace sw

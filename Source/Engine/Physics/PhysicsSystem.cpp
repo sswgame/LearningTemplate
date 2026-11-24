@@ -133,7 +133,7 @@ namespace sw
 
 namespace sw
 {
-    SW_ENGINE_SERVICE_SUBSYSTEM( PhysicsSystem, GameVisible, Startup, (), SW_ENGINE_DEFAULT_FACTORY( PhysicsSystem ) );
+    SW_ENGINE_SERVICE_SUBSYSTEM( PhysicsSystem, GameVisible, Process, Startup, (), SW_ENGINE_DEFAULT_FACTORY( PhysicsSystem ) );
 } // namespace sw
 
 // 물리 설정은 상수로 읽는다(이름 검증은 서비스 없이도) - 쓰는 것만 담는 팩 쿠킹의 뿌리다(`AssetCookRoot.h`).

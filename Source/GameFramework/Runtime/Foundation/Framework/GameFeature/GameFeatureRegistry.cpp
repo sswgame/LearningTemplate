@@ -43,5 +43,5 @@ namespace sw
      * 키트 모듈의 등록자(`SW_GAME_FEATURE`)가 붙는 곳 — 프로세스 범위다. 등록은 다른 모듈(키트)의 이미지와 수명이 같아, 엔진 범위(기동 단계와 함께 모듈 내리기보다
      * 먼저 내려간다)에 두면 키트가 내려가며 뗄 때 레지스트리가 이미 없어 멈췄다(`--check-text` 종료).
      */
-    SW_MODULE_SUBSYSTEM( Process, GameFeatureRegistry, GameFeatureRegistry );
+    SW_MODULE_SUBSYSTEM( Process, Process, GameFeatureRegistry, GameFeatureRegistry );
 } // namespace sw

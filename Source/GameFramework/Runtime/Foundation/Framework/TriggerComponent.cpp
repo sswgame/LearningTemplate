@@ -19,7 +19,7 @@ namespace sw
 {
     void TriggerSpawnWindow::markAppeared( const GameObjectManager& manager )
     {
-        _appearedFrame     = manager.getUpdateCount();
+        _appearedFrame     = manager.getRunningUpdateCount();
         _appearedStep      = manager.getSubsystem<ScenePhysics>().getStepCount();
         _watermarkFrame    = _appearedFrame;
         _watermarkPrevious = manager.getObjectIDAllocator().peekNextObjectID();
@@ -29,11 +29,11 @@ namespace sw
     void TriggerSpawnWindow::advance( const GameObjectManager& manager )
     {
         // 창 하나 전에 적은 다음 id 보다 크거나 같은 오브젝트는 창 둘 안에 생겼다.
-        if ( manager.getUpdateCount() < _watermarkFrame + kFrames )
+        if ( manager.getRunningUpdateCount() < _watermarkFrame + kFrames )
             return;
         _watermarkPrevious = _watermarkCurrent;
         _watermarkCurrent  = manager.getObjectIDAllocator().peekNextObjectID();
-        _watermarkFrame    = manager.getUpdateCount();
+        _watermarkFrame    = manager.getRunningUpdateCount();
     }
 
     bool TriggerSpawnWindow::isOverlapSpawnEntry( const GameObjectManager& manager, const OverlapInfo& overlap ) const
@@ -46,7 +46,7 @@ namespace sw
     bool TriggerSpawnWindow::isSampledSpawnEntry( const GameObjectManager& manager, const GameObject& activator ) const
     {
         // 볼륨 쪽: 나타났을 때 이미 안에 있던 것만 — 첫 표본 프레임에서 온 진입이다.
-        const bool bVolumeAppeared = manager.getUpdateCount() <= _appearedFrame + 1;
+        const bool bVolumeAppeared = manager.getRunningUpdateCount() <= _appearedFrame + 1;
         const bool bActivatorNew   = activator.getObjectID() >= _watermarkPrevious;
         return bVolumeAppeared || bActivatorNew;
     }

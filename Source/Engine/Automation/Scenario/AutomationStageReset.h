@@ -1,8 +1,8 @@
 /**
  * @file AutomationStageReset.h
- * @brief 체인의 다음 단계 앞에서 호스트 · 모듈이 자기 상태를 새 프로세스처럼 되돌리는 등록입니다(`SW_AUTOMATION_STAGE_RESET`).
- * @details 세션은 단계마다 씬 · 전역 변수 · 게임 인스턴스를 되돌린다(`AutomationSession::startStage`). 엔진이 모르는 상태(편집기의 패널 · 팝업 · 배치)는
- *          그 상태를 가진 모듈이 여기에 등록해 같은 자리에서 되돌린다 — 되돌리지 않으면 앞 단계가 연 팝업 · 닫은 패널이 다음 단계의 클릭을 막았다
+ * @brief 체인의 다음 단계 앞에서 에디터가 자기 세션을 새 프로세스처럼 되돌리는 등록입니다(`SW_AUTOMATION_STAGE_RESET`).
+ * @details 세션은 단계마다 전역 변수 · 사용자 설정을 되돌리고 게임을 다시 시작한다(`AutomationSession::startStage`) — 게임과 함께 사라질 엔진 · 모듈 상태는 등록 줄의 수명
+ *          (`SubsystemLifetime::GameInstance`)이 비우므로 **여기에 등록하지 않는다**. 여기는 게임 인스턴스와 무관한 에디터 세션(패널 · 팝업 · 배치)만이다 — 되돌리지 않으면 앞 단계가 연 팝업 · 닫은 패널이 다음 단계의 클릭을 막았다
  *          (혼자 돌면 통과하는 시나리오가 체인에서 졌다). 언리얼 PIE 가 플레이마다 새 GameInstance 를 만드는 것과 같은 자리를 모듈 상태까지 넓힌다.
  */
 #pragma once

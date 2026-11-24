@@ -199,5 +199,5 @@ namespace sw
 namespace sw
 {
     // 경로 교체 표 — 팩 설정(`PackEngineSettingsSubsystem`)이 채우고 파일 읽기(`AssetIO`)가 묻는다.
-    SW_ENGINE_SERVICE_SUBSYSTEM( ResourceRemapTable, HostOnly, Services, (), SW_ENGINE_DEFAULT_FACTORY( ResourceRemapTable ) );
+    SW_ENGINE_SERVICE_SUBSYSTEM( ResourceRemapTable, HostOnly, Process, Services, (), SW_ENGINE_DEFAULT_FACTORY( ResourceRemapTable ) );
 } // namespace sw

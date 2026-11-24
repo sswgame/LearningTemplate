@@ -96,6 +96,18 @@ namespace sw
         _listVisibleText.clear();
     }
 
+    void DebugDrawQueue::resetGameInstanceState( GameInstanceBoundary boundary )
+    {
+        if ( boundary == GameInstanceBoundary::Ended )
+            clear(); // 카테고리 켜짐은 도구 설정이라 남는다
+    }
+
+    const utf8* DebugDrawQueue::findGameInstanceState() const
+    {
+        ScopedLock<mutex> lock{ _mutex };
+        return _listLine.empty() && _listSphere.empty() && _listText.empty() ? nullptr : "debug shapes";
+    }
+
     void DebugDrawQueue::endFrame( float32 deltaSeconds )
     {
         ScopedLock<mutex> lock{ _mutex };
@@ -384,5 +396,5 @@ namespace sw
 
 namespace sw
 {
-    SW_ENGINE_SERVICE_SUBSYSTEM( DebugDrawQueue, GameVisible, Services, (), SW_ENGINE_DEFAULT_FACTORY( DebugDrawQueue ) );
+    SW_ENGINE_SERVICE_SUBSYSTEM( DebugDrawQueue, GameVisible, GameInstance, Services, (), SW_ENGINE_DEFAULT_FACTORY( DebugDrawQueue ) );
 } // namespace sw

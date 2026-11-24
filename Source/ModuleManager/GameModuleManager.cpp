@@ -363,7 +363,7 @@ namespace sw
         return true;
     }
 
-    bool GameModuleManager::restartGame()
+    bool GameModuleManager::restartGame( const GameInstanceEndedDelegate& onInstanceEnded )
     {
         if ( _game == nullptr )
         {
@@ -373,11 +373,16 @@ namespace sw
         flushRenderWorkers( FlushReason::Restart );
         destroyGameInstance( false );
         SceneManager& sceneManager = engine::getSubsystem<SceneManager>();
-        sceneManager.closeActiveScene();
+        sceneManager.closeLoadedScenes();
         // 기동처럼 월드를 플레이 전으로 두고 새 게임을 세운다 — 다음 `beginFrame` 이 켠다. 켜 둔 채면 게임이 세우는 오브젝트가 하나씩 플레이를 시작해
         // 기동(다 세운 뒤 한꺼번에 `beginPlay`)과 컴포넌트 틱 순서가 달라지고, 그림이 한 프레임 어긋난다(벤치 kaykit 의 애니메이션 알림).
         if ( canControlWorldPlay() == false )
             sceneManager.setWorldPlaying( false );
+        // 게임과 함께 사라져야 하는 엔진 · 모듈 상태를 비운다 — 씬이 내려간 뒤라 컴포넌트가 놓으며 남긴 것까지 비운다.
+        engine::notifyGameInstanceBoundary( GameInstanceBoundary::Ended );
+        engine::notifyGameInstanceBoundary( GameInstanceBoundary::Starting );
+        if ( onInstanceEnded.isBound() )
+            onInstanceEnded();
         if ( createGameInstance() == false )
         {
             SW_LOG_ERROR_ID( "GameModuleManager.RestartGameGameInstanceCould", "restartGame: the game instance could not be created again" );

@@ -64,5 +64,5 @@ namespace sw
 
 namespace sw
 {
-    SW_ENGINE_SERVICE_SUBSYSTEM( UIStyleSheetCache, HostOnly, Startup, (), SW_ENGINE_DEFAULT_FACTORY( UIStyleSheetCache ) );
+    SW_ENGINE_SERVICE_SUBSYSTEM( UIStyleSheetCache, HostOnly, Process, Startup, (), SW_ENGINE_DEFAULT_FACTORY( UIStyleSheetCache ) );
 } // namespace sw

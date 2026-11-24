@@ -24,7 +24,7 @@
 	<WaitUntil watch="Editor.RenderDebuggerTab" equals="2" timeoutFrames="60"/>
 	<WaitUntil watch="Editor.RenderDebuggerBuffers" atLeast="1" timeoutWallSeconds="10"/>
 	<EditorWaitStable/>
-	<EditorClick mark="renderDebugger.buffer.0"/>
+	<EditorClick mark="renderDebugger.buffer.HZB.0"/>
 	<WaitUntil watch="Editor.RenderDebuggerBufferRows" atLeast="1" timeoutWallSeconds="10"/>
 	<EditorWaitStable/>
 	<CaptureEditorUI file="renderdebugger/buffers.png" maxMagentaFraction="0"/>

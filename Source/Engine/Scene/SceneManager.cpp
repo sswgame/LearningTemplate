@@ -202,17 +202,22 @@ namespace sw
         return applyScene( sw::make_unique<Scene>( name, _services ), SceneRole::Active );
     }
 
-    void SceneManager::closeActiveScene()
+    void SceneManager::closeLoadedScenes()
     {
         cancelPendingAsyncLoads();
-        Scene* const pPrevious = _pActiveScene;
-        if ( pPrevious == nullptr )
+        _pAheadPreload.reset();
+        _aheadPreloadPath.clear();
+        _listPersistentObjectID.clear();
+        if ( _listLoadedScene.empty() )
             return;
-        // 씬을 바꿀 때(`applyScene`)와 같은 순서 — 활성을 비우고 알린 뒤 내린다.
+        // 씬을 바꿀 때(`applyScene`)와 같은 순서 — 활성을 비우고 알린 뒤 내린다. 덧붙여 연 씬도 앞 게임의 것이다.
         activateScene( nullptr );
         ++_sceneGeneration;
         broadcastSceneObjectsInvalidated();
-        unloadScene( pPrevious );
+        while ( _listLoadedScene.empty() == false )
+        {
+            unloadScene( _listLoadedScene.back().get() );
+        }
         garbageCollectUnusedAssets();
     }
 
@@ -1196,7 +1201,7 @@ namespace sw
 namespace sw
 {
     // 씬 매니저가 서브시스템이다 — 씬이 바뀌면 되돌리기 기록을 비우는 구독도 그것이 건다.
-    SW_ENGINE_SERVICE_SUBSYSTEM( SceneManager, GameVisible, Startup, (), []( engine::EngineSubsystemFactoryScope& scope, engine::EngineSubsystemBuild& build )
+    SW_ENGINE_SERVICE_SUBSYSTEM( SceneManager, GameVisible, Process, Startup, (), []( engine::EngineSubsystemFactoryScope& scope, engine::EngineSubsystemBuild& build )
     {
         build._pStartupParts->_pSceneManager = &scope.emplaceSubsystem<SceneManager>();
     } );

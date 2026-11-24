@@ -37,5 +37,5 @@ namespace sw
 
 namespace sw
 {
-    SW_ENGINE_SERVICE_SUBSYSTEM( UIGlobalCommandRegistry, GameVisible, Startup, (), SW_ENGINE_DEFAULT_FACTORY( UIGlobalCommandRegistry ) );
+    SW_ENGINE_SERVICE_SUBSYSTEM( UIGlobalCommandRegistry, GameVisible, Process, Startup, (), SW_ENGINE_DEFAULT_FACTORY( UIGlobalCommandRegistry ) );
 } // namespace sw

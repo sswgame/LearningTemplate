@@ -14,6 +14,7 @@
 #include "Core/Subsystem/Subsystem.h"
 
 #include "DevTools/Client/Automation/Runner/AutomationRunTitle.h"
+#include "DevTools/Client/Automation/Runner/AutomationStageFingerprint.h"
 #include "DevTools/Client/Automation/Scenario/ScenarioRecorder.h"
 #include "DevTools/DevToolsAPI.h"
 
@@ -32,7 +33,7 @@ namespace sw
     /**
      * @class AutomationSession
      * @brief 엔진 루프에 프레임 훅(`EngineFrameHooks`, `makeFrameHooks`)으로 붙는 시나리오 구동기입니다. 루프는 관찰자 목록만 알고, 세션 · 실행기 · 체인 · 단계 전환은 모릅니다.
-     * @details 개발 도구 이미지의 모듈 서브시스템으로 엔진 범위에 스스로 서고 `IAutomationRuntime` 을 공개합니다(`SW_MODULE_SUBSYSTEM( Engine, … )`) — 이 폴더를 짓지 않는
+     * @details 개발 도구 이미지의 모듈 서브시스템으로 엔진 범위에 스스로 서고 `IAutomationRuntime` 을 공개합니다(`SW_MODULE_SUBSYSTEM( Engine, Process, … )`) — 이 폴더를 짓지 않는
      *          구성은 등록이 없고, 호스트는 실행기를 모른다. 런처가 엔진이 선 뒤에 `IAutomationRuntime::start` 로 시작하면 `Engine::getFrameHooks().add( makeFrameHooks() )` 로 붙습니다.
      *          엔진 범위의 자식이라 기동 단계보다 먼저 내려간다 — 실행기가 빌려 쓰는 엔진 서비스(로그 리스너 · 입력)가 사라지기 전에 `shutdownSubsystem` 이 떼고 비웁니다. 한 단계가 끝나면(통과해야 다음으로 간다 — `AutomationScenarioChain`) 같은 프로세스에서 다음 시나리오의 실행기를 새로 만든다. 그 단계가 시작할 때
      *          - 프로세스의 **작업 폴더**가 처음과 같은지 보고(파일 대화상자 같은 것이 옮긴다) 다르면 경고하고 되돌린다,
@@ -138,6 +139,11 @@ namespace sw
          *          열거나 벤치를 세우므로 단계는 첫 단계와 같은 길로 선다 — 그래서 CTest 는 시나리오 모두를 한 체인으로 돌린다(`Test/Scenario/CMakeLists.txt`).
          */
         void startStage( uint32 completedScreenshotCount );
+        /**
+         * @brief 지금 상태 지문을 앞 단계의 시작과 견주어, 샌 것이 있으면 무엇이 남았는지 한 줄로 돌려줍니다(없으면 빈 글). 지금 지문이 다음 기준이 된다 — 한 번 샌 것으로 뒤 단계가 모두 지지 않게.
+         * @details 첫 단계에서 부르면 기준을 찍을 뿐이다(새 프로세스 — 게임이 아직 서지 않았다). 둘째 단계부터는 게임 다시 시작이 앞 인스턴스 · 씬을 내린 뒤 부른다.
+         */
+        [[nodiscard]] string findStageStateLeak();
         /** @brief 세션 시작 때 찍어 둔 전역 변수 값과 지금 값이 다른 것을 되돌립니다(`_listStartVariable`). */
         void restoreStartVariables();
         /** @brief 주 창을 세션 시작 때의 클라이언트 크기로 되돌립니다(`ResizeWindow` 와 같은 길). 창이 없거나 크기가 같으면 아무것도 하지 않는다. */
@@ -178,6 +184,7 @@ namespace sw
         uint32                              _startWindowWidth;         ///< 시작할 때의 주 창 클라이언트 너비(둘째 단계부터 이 크기에서 시작한다, 창이 없으면 0)
         uint32                              _startWindowHeight;        ///< 시작할 때의 주 창 클라이언트 높이
         vector<pair<string, string>>        _listStartVariable;        ///< 세션 시작 때의 전역 변수(이름, 값 글) — 둘째 단계부터 이 값에서 시작한다
+        AutomationStageFingerprint          _stageFingerprint;         ///< 마지막 단계 시작의 상태 지문(`findStageStateLeak`)
         AutomationReproduceInput            _reproduceInput;           ///< 재현 명령 재료(게임 · 시작 때 백엔드 · 에디터 · 시나리오 목록) — 단계마다 실행기에 넘긴다
         uint32                              _screenshotBaseline;       ///< 단계가 시작할 때 렌더 스레드가 이미 쓴 스크린샷 수
         uint8                               _bUnattended : 1;          ///< `-unattended` — 보는 사람이 없다. 시나리오가 `present="true"` 가 아니면 내보내지 않는다(`applyPresentPolicy`)

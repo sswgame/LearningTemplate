@@ -235,5 +235,5 @@ namespace sw
 
 namespace sw
 {
-    SW_ENGINE_SERVICE_SUBSYSTEM( RHIBackendRegistry, HostOnly, Services, (), SW_ENGINE_DEFAULT_FACTORY( RHIBackendRegistry ) );
+    SW_ENGINE_SERVICE_SUBSYSTEM( RHIBackendRegistry, HostOnly, Process, Services, (), SW_ENGINE_DEFAULT_FACTORY( RHIBackendRegistry ) );
 } // namespace sw

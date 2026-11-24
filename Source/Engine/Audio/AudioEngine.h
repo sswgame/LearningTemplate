@@ -156,6 +156,8 @@ namespace sw
         void stop( AudioPlayingID playingID, float32 fadeSeconds );
         /** @brief 에미터의 재생을 모두 멈춥니다. 페이드가 음수면 이벤트의 값을 씁니다. */
         void stopEmitter( AudioEmitterID emitterID, float32 fadeSeconds );
+        /** @brief 모든 재생(음악 · 대기 · 가상 보이스)을 바로 멈추고, 켠 스냅샷을 끄고, 게임 파라미터를 라이브러리 기본값으로 되돌립니다(게임 인스턴스의 끝). 에미터 · 버스 사용자 볼륨은 그대로다. */
+        void stopAllPlayback();
         /** @brief 재생을 일시정지하거나 재개합니다. 적응형 음악이면 구간 시계 · 예약한 전환도 함께 멈췄다가 그 자리에서 이어집니다. */
         void setPaused( AudioPlayingID playingID, bool bPaused );
 
@@ -264,6 +266,7 @@ namespace sw
             PostEvent,
             Stop,
             StopEmitter,
+            StopAll,
             SetPaused,
             SetBusUserVolume,
             SetBusMuted,
@@ -424,6 +427,10 @@ namespace sw
         // AudioEngine.cpp: 이벤트, 파라미터, 보이스 제한
         /** @brief 이벤트를 재생합니다. 쿨다운, 상한, 컨테이너를 적용합니다. */
         void applyPostEvent( const Command& command );
+        /** @brief 모든 재생과 게임이 정한 값을 처음으로 되돌립니다(`stopAllPlayback`). */
+        void applyStopAll();
+        /** @brief 라이브러리 @p library 의 파라미터를 표에 넣습니다(이미 있으면 값은 두고 범위만 다시 정한다). */
+        void applyLibraryParameters( const AudioEventLibrary& library );
         /** @brief 쿨다운과 동시 재생 상한을 봅니다. 상한이면 뺏을 인스턴스를 멈춥니다. 버려야 하면(버린 수를 올리고) false 입니다. */
         [[nodiscard]] bool tryAcceptEvent( const EventState& state, const AudioEventDef& event );
         /** @brief 이벤트의 살아 있는 인스턴스 수와, 뺏을 인스턴스(정책에 가장 맞는 것)의 번호를 구합니다. 없으면 비어 있습니다. */

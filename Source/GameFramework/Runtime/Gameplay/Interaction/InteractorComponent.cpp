@@ -3,6 +3,7 @@
 #include "GameFramework/Runtime/Gameplay/Interaction/InteractorComponent.h"
 
 #include "Core/Foundation/Constants.h"
+#include "Core/Hash/HashUtil.h"
 #include "Core/Log/Logger.h"
 
 #include "Engine/Animation/Component/MotionWarpingComponent.h"
@@ -417,7 +418,9 @@ namespace sw
         request._interactable = _focus;
         request._interaction  = pDef->_id;
         const bool bAllowed   = pAuthority == nullptr || pAuthority->canBeginInteraction( request );
-        if ( bAllowed && _session.begin( pTarget->shareDefinition(), static_cast<uint32>( owner.getObjectID() ) ) )
+        // 하는 쪽 번호는 반응 단계의 난수 씨앗에 든다 — 오브젝트 id 는 앞서 돈 씬에 달렸으므로 씬이 정한 이름으로 낸다.
+        const string_view actorName = owner.getName().c_str();
+        if ( bAllowed && _session.begin( pTarget->shareDefinition(), HashUtil::computeStringHash32( actorName.data(), actorName.size(), false ) ) )
             InteractorComponentInternal::setAlignmentWarpTarget( owner, *pTarget, *pDef );
     }
 

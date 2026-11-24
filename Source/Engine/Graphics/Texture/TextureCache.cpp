@@ -1934,7 +1934,7 @@ namespace sw
 namespace sw
 {
     // 렌더 타깃 크기를 받는 쪽 — 카메라(컴포넌트 모델 코어, Graphics 아래 층)가 인터페이스로 찾는다. 캐시는 에셋 매니저와 수명이 같다 — 공장이 그 매니저를 찾으므로 먼저 만든다.
-    SW_ENGINE_SUBSYSTEM( IRenderTargetDeclarationSink, Startup, ( AssetManager ), []( engine::EngineSubsystemFactoryScope& scope, engine::EngineSubsystemBuild& build )
+    SW_ENGINE_SUBSYSTEM( IRenderTargetDeclarationSink, Process, Startup, ( AssetManager ), []( engine::EngineSubsystemFactoryScope& scope, engine::EngineSubsystemBuild& build )
     {
         (void)build;
         AssetManager& assetManager = scope.get<AssetManager>();

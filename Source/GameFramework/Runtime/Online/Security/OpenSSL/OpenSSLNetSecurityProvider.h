@@ -1,7 +1,7 @@
 /**
  * @file OpenSSLNetSecurityProvider.h
  * @brief OpenSSL 3 로 구현한 `INetSecurityProvider` 입니다. OpenSSL 헤더는 이 폴더의 .cpp 에서만 include 한다.
- * @details GameFramework 의 모듈 서브시스템(`OpenSSLNetSecuritySubsystem`, `SW_MODULE_SUBSYSTEM( Process, … )`)이 이 제공자를 멤버로 들고 공개한다 — 프로세스 범위 아래
+ * @details GameFramework 의 모듈 서브시스템(`OpenSSLNetSecuritySubsystem`, `SW_MODULE_SUBSYSTEM( Process, Process, … )`)이 이 제공자를 멤버로 들고 공개한다 — 프로세스 범위 아래
  *          GameFramework 의 자식 범위에 서서 게임 · 키트 모듈 리로드와 엔진 기동 단계 다시 세우기에 살아남고, GameFramework 가 내려갈 때 함께 걷힌다.
  *          다른 코드는 이 헤더가 아니라 공개한 인터페이스로 찾는다(`game::getSubsystem<INetSecurityProvider>()`, 엔진은 `engine::findSubsystem<INetSecurityProvider>()`).
  *          언리얼 FSSLModule 처럼 모듈이 소유하고, 함수 정적 객체 · 엔진 쪽 함수 칸을 두지 않는다. 제공자는 서브시스템이 아니다 — 테스트는 그대로 만들어 쓴다.

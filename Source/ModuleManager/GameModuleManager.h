@@ -143,7 +143,7 @@ namespace sw
          * @details 활성 씬이 남아 있으면 새 인스턴스가 다시 선 인스턴스로 여겨 첫 씬을 요청하지 않는다(`GameSceneFlow::requestFirstScene`) — 그래서 씬을 닫는다.
          *          에디터 인스턴스는 건드리지 않는다.
          */
-        [[nodiscard]] bool restartGame() override;
+        [[nodiscard]] bool restartGame( const GameInstanceEndedDelegate& onInstanceEnded ) override;
 
         // 2) 프레임 단위 처리
         /**

@@ -55,7 +55,7 @@ namespace sw
     };
 
     // 렌더 드라이버가 선 기동만(렌더러를 끈 기동은 드라이버가 없다).
-    SW_ENGINE_SUBSYSTEM( DeviceLostPolicySwitch, Startup, ( EngineRenderDriverSubsystem ), []( engine::EngineSubsystemFactoryScope& scope, engine::EngineSubsystemBuild& build )
+    SW_ENGINE_SUBSYSTEM( DeviceLostPolicySwitch, Process, Startup, ( EngineRenderDriverSubsystem ), []( engine::EngineSubsystemFactoryScope& scope, engine::EngineSubsystemBuild& build )
     {
         IEngineRenderDriver* const pRenderDriver = build._pStartupParts->_pRenderDriver;
         if ( pRenderDriver == nullptr )

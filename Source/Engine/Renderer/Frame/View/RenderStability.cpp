@@ -189,7 +189,7 @@ namespace sw
         return engine::getSubsystem<RenderStabilityStatusHolder>().loadPresentedFrames();
     }
 
-    SW_ENGINE_SERVICE_SUBSYSTEM( RenderStabilityStatusHolder, HostOnly, Services, (), SW_ENGINE_DEFAULT_FACTORY( RenderStabilityStatusHolder ) );
+    SW_ENGINE_SERVICE_SUBSYSTEM( RenderStabilityStatusHolder, HostOnly, Process, Services, (), SW_ENGINE_DEFAULT_FACTORY( RenderStabilityStatusHolder ) );
 } // namespace sw
 
 namespace sw

@@ -104,5 +104,5 @@ namespace sw
 namespace sw
 {
     // 화면 스택(`UISystem`)이 변환기 표에 의존한다.
-    SW_ENGINE_SERVICE_SUBSYSTEM( UIBindingConverterRegistry, GameVisible, Startup, (), SW_ENGINE_DEFAULT_FACTORY( UIBindingConverterRegistry ) );
+    SW_ENGINE_SERVICE_SUBSYSTEM( UIBindingConverterRegistry, GameVisible, Process, Startup, (), SW_ENGINE_DEFAULT_FACTORY( UIBindingConverterRegistry ) );
 } // namespace sw

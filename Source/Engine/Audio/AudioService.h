@@ -96,6 +96,8 @@ namespace sw
         SubsystemInitResult     initializeSubsystem() override;
         void                    shutdownSubsystem() override { shutdown(); }
         const utf8*             getSubsystemName() const override { return kSubsystemName; }
+        void                    resetGameInstanceState( GameInstanceBoundary boundary ) override;
+        const utf8*             findGameInstanceState() const override;
         span<const utf8* const> getSubsystemDependencies() const override;
         /** @brief 씬 매니저 · 사용자 설정은 오디오 뒤에 선다 — 오디오를 모르는 쪽이 기능 이름을 적지 않게 기능 쪽이 적는다(서버는 오디오를 짓지 않는다). */
         span<const utf8* const>    getSubsystemDependents() const override;

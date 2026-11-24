@@ -106,6 +106,8 @@ namespace sw
         [[nodiscard]] static bool canPollGamepad( bool bWindowFocused, bool bBackgroundAllowed ) { return bWindowFocused || bBackgroundAllowed; }
         void                      shutdownSubsystem() override { shutdown(); }
         const utf8*               getSubsystemName() const override { return kSubsystemName; }
+        void                      resetGameInstanceState( GameInstanceBoundary boundary ) override;
+        const utf8*               findGameInstanceState() const override;
 
         /**
          * @brief 프레임을 시작합니다. 장치를 폴링하고, 락프리 큐를 비워 이벤트를 들어온 순서대로 적용하고, 프레임 엣지를 맞춥니다.

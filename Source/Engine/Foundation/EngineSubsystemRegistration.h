@@ -6,11 +6,12 @@
  *          등록 줄 하나가 그 타입의 모든 것을 말합니다.
  *          | 줄 | 하는 일 |
  *          | --- | --- |
- *          | `SW_ENGINE_SERVICE_SUBSYSTEM( Type, 노출, 단계, ( 먼저 만들 타입… ), 공장 )` | 서브시스템을 만들고 서비스 칸에 묶는다(가장 흔한 모양) |
- *          | `SW_ENGINE_SUBSYSTEM( Type, 단계, ( 먼저 만들 타입… ), 공장 )` | 서브시스템을 만들기만 한다(서비스 칸이 없다 — 범위로만 찾는다) |
+ *          | `SW_ENGINE_SERVICE_SUBSYSTEM( Type, 노출, 수명, 단계, ( 먼저 만들 타입… ), 공장 )` | 서브시스템을 만들고 서비스 칸에 묶는다(가장 흔한 모양) |
+ *          | `SW_ENGINE_SUBSYSTEM( Type, 수명, 단계, ( 먼저 만들 타입… ), 공장 )` | 서브시스템을 만들기만 한다(서비스 칸이 없다 — 범위로만 찾는다) |
  *          | `SW_ENGINE_SERVICE( Type, 노출 )` | 다른 서브시스템이 범위에 건 객체(값 묶음 · 안의 객체)를 서비스 칸에 묶는다 |
  *          - **필수 여부 · const** 는 타입 헤더의 칸 선언(`SW_SERVICE_SLOT`, `Core/Subsystem/ServiceSlot.h`)이 말한다 — 부르는 TU 가 컴파일 때 알아야 한다.
  *          - **노출**: `GameVisible` 이면 게임 모듈(SWGame)의 범위에도 건다(`engine::bindModuleServices`), `HostOnly` 면 호스트 · 에디터 전용.
+ *          - **수명**: `Process`(게임을 다시 시작해도 남는다) · `GameInstance`(게임 인스턴스와 함께 상태를 비운다 — 두 함수를 재정의해야 컴파일된다, `SubsystemLifetime`).
  *          - **단계**: `Services`(초기화 · 종료할 것이 없고 수명만 있는 공용 서비스 — 엔진 범위의 어느 것보다 먼저 서고 나중에 사라진다) · `Startup`(기동 단계).
  *          - **만드는 순서**: 공장이 범위에서 다른 서브시스템을 찾으면(`scope.get<T>()`) 그 타입을 괄호 안에 적는다(언리얼 `Collection.InitializeDependency<T>()`).
  *            같은 단계 안에서 그 순서로 위상 정렬하고, 동점은 이름 순이다(링크 순서에 기대지 않는다). 모르는 타입 · 다른 단계 · 순환은 기동 오류다.
@@ -381,10 +382,12 @@ namespace sw::engine
 /**
  * @brief 서브시스템을 만드는 법을 목록에 답니다. @p after 는 괄호로 싼 타입 목록(`()` · `( TaskManager )`)이고, @p Function 은 `void( EngineSubsystemFactoryScope&, EngineSubsystemBuild& )` 다.
  * @code
- *     SW_ENGINE_SUBSYSTEM( SceneRHISubsystem, Startup, ( RHISubsystem ), []( engine::EngineSubsystemFactoryScope& scope, engine::EngineSubsystemBuild& build ) { ... } );
+ *     SW_ENGINE_SUBSYSTEM( SceneRHISubsystem, Process, Startup, ( RHISubsystem ), []( engine::EngineSubsystemFactoryScope& scope, engine::EngineSubsystemBuild& build ) { ... } );
  * @endcode
  */
-#define SW_ENGINE_SUBSYSTEM( Type, stage, after, Function )                                                                                      \
+#define SW_ENGINE_SUBSYSTEM( Type, lifetime, stage, after, Function )                                                                            \
+    static_assert( ::sw::kSubsystemLifetimeMatches<Type, ::sw::SubsystemLifetime::lifetime>,                                                     \
+                   #Type ": a GameInstance subsystem overrides resetGameInstanceState and findGameInstanceState, a Process subsystem neither" ); \
     static const ::sw::engine::EngineSubsystemRecord s_engineSubsystemRecord_##Type                                                              \
     {                                                                                                                                            \
         ::sw::engine::EngineRegistrationList::getGlobal(), #Type, ::sw::getSubsystemTypeHash<Type>(), ::sw::engine::EngineSubsystemStage::stage, \
@@ -393,9 +396,9 @@ namespace sw::engine
     }
 
 /** @brief 서브시스템을 만들고 그 타입의 서비스 칸에 묶습니다(위 둘을 한 줄로). @p Function 이 넣은 것(또는 건 객체)이 @p Type 으로 찾혀야 한다. */
-#define SW_ENGINE_SERVICE_SUBSYSTEM( Type, visibility, stage, after, Function ) \
-    SW_ENGINE_SERVICE( Type, visibility );                                      \
-    SW_ENGINE_SUBSYSTEM( Type, stage, after, Function )
+#define SW_ENGINE_SERVICE_SUBSYSTEM( Type, visibility, lifetime, stage, after, Function ) \
+    SW_ENGINE_SERVICE( Type, visibility );                                                \
+    SW_ENGINE_SUBSYSTEM( Type, lifetime, stage, after, Function )
 
 /** @brief 인자 없이 만들고 호스트가 직접 쓰지 않는 공장입니다(`SW_ENGINE_SUBSYSTEM` 의 @p Function 자리). */
 #define SW_ENGINE_DEFAULT_FACTORY( Type ) &::sw::engine::EngineRegistrationOps<Type>::emplace

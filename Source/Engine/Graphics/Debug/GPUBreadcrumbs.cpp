@@ -227,5 +227,5 @@ namespace sw
 namespace sw
 {
     // 디바이스 소실 보고의 패스 이름 표 — 백엔드를 바꿔도 같은 실행의 것이다.
-    SW_ENGINE_SERVICE_SUBSYSTEM( GPUBreadcrumbLog, HostOnly, Services, (), SW_ENGINE_DEFAULT_FACTORY( GPUBreadcrumbLog ) );
+    SW_ENGINE_SERVICE_SUBSYSTEM( GPUBreadcrumbLog, HostOnly, Process, Services, (), SW_ENGINE_DEFAULT_FACTORY( GPUBreadcrumbLog ) );
 } // namespace sw

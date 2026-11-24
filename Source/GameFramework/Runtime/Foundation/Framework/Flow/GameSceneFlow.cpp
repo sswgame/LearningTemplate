@@ -3,8 +3,10 @@
 #include "GameFramework/Runtime/Foundation/Framework/Flow/GameSceneFlow.h"
 
 #include "Core/GlobalVariable/GlobalVariableManager.h"
+#include "Core/Subsystem/Subsystem.h"
 
 #include "Engine/Config/GameTimeScale.h"
+#include "Engine/Foundation/EngineScope.h"
 #include "Engine/Scene/Scene.h"
 #include "Engine/Scene/SceneManager.h"
 
@@ -115,6 +117,7 @@ namespace sw
         const DataPath& titleScene = _settings._titleScene;
         if ( titleScene.isSet() == false )
             return false;
+        engine::notifyGameInstanceBoundary( GameInstanceBoundary::Ended ); // 하던 게임이 끝났다 — 열린 화면 · 자막 · 소리 · 세션. 로딩 화면은 바로 아래 요청이 띄운다
         return requestLoadScene( titleScene.get(), "title" );
     }
 

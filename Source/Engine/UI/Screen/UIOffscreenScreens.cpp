@@ -292,5 +292,5 @@ namespace sw
 namespace sw
 {
     // 화면 스택 밖 화면(에디터 UI 미리보기) — UI 갱신의 그리기 뒤 칸에 건다.
-    SW_ENGINE_SERVICE_SUBSYSTEM( UIOffscreenScreens, HostOnly, Startup, (), SW_ENGINE_DEFAULT_FACTORY( UIOffscreenScreens ) );
+    SW_ENGINE_SERVICE_SUBSYSTEM( UIOffscreenScreens, HostOnly, Process, Startup, (), SW_ENGINE_DEFAULT_FACTORY( UIOffscreenScreens ) );
 } // namespace sw

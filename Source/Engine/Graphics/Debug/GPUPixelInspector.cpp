@@ -115,5 +115,5 @@ namespace sw
 namespace sw
 {
     // 픽셀 검사기의 선택 — 백엔드를 바꿔도 같은 실행의 것이다(개발 명령이 쓰고 렌더러가 읽는다).
-    SW_ENGINE_SERVICE_SUBSYSTEM( GPUPixelInspector, HostOnly, Services, (), SW_ENGINE_DEFAULT_FACTORY( GPUPixelInspector ) );
+    SW_ENGINE_SERVICE_SUBSYSTEM( GPUPixelInspector, HostOnly, Process, Services, (), SW_ENGINE_DEFAULT_FACTORY( GPUPixelInspector ) );
 } // namespace sw

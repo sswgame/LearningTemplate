@@ -25,4 +25,4 @@
             return kSubsystemName;                                                                 \
         }                                                                                          \
     };                                                                                             \
-    SW_MODULE_SUBSYSTEM( Engine, SharedAssetCacheSubsystem_##id, SharedAssetCacheSubsystem_##id )
+    SW_MODULE_SUBSYSTEM( Engine, Process, SharedAssetCacheSubsystem_##id, SharedAssetCacheSubsystem_##id )

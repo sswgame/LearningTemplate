@@ -457,6 +457,8 @@ namespace sw
 
         /** @brief 등록된 델리게이트가 하나라도 있는지 확인합니다. */
         bool isBound() const { return _listDelegate.empty() == false; }
+        /** @brief 등록된 델리게이트 수입니다(broadcast 중에 푼 것은 끝날 때까지 센다). */
+        size_t getCount() const { return _listDelegate.size(); }
 
         /**
          * @brief 등록된 모든 델리게이트를 호출합니다.

@@ -408,5 +408,5 @@ namespace sw
 
 namespace sw
 {
-    SW_ENGINE_SERVICE_SUBSYSTEM( FrameProfiler, GameVisible, Services, (), SW_ENGINE_DEFAULT_FACTORY( FrameProfiler ) );
+    SW_ENGINE_SERVICE_SUBSYSTEM( FrameProfiler, GameVisible, Process, Services, (), SW_ENGINE_DEFAULT_FACTORY( FrameProfiler ) );
 } // namespace sw

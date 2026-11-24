@@ -12,7 +12,6 @@
 #include "Core/String/formatString.h"
 #include "Core/Subsystem/Subsystem.h"
 
-#include "Engine/Automation/Scenario/AutomationStageReset.h"
 #include "Engine/Character/Fit/BodyShape.h"
 #include "Engine/Character/Fit/CharacterGeometry.h"
 #include "Engine/Character/Fit/CharacterLODSettings.h"
@@ -181,7 +180,7 @@ namespace sw
 
             using EntryMap = LRUMap<uint64, AppearanceMeshAssemblyInternal::BakedEntry>;
 
-            mutex               _mutex;
+            mutable mutex       _mutex;
             EntryMap _mapEntry  SW_GUARDED_BY( _mutex );      ///< 쓴 순서를 함께 든다 — 넣기 · 꺼내기가 가장 최근으로 옮긴다
             uint64 _cachedBytes SW_GUARDED_BY( _mutex ){ 0 }; ///< 항목 바이트의 합
             DevCounter          _hitCount;                    ///< `tryGet` 이 내준 횟수(감시 값만 읽는 개발 전용 칸 — 원자라 잠금 밖에서도 된다)
@@ -197,14 +196,24 @@ namespace sw
             }
             const utf8* getSubsystemName() const override { return kSubsystemName; }
 
-            /** @brief 구운 메시를 모두 놓습니다 — 자동화 단계 사이(`SW_AUTOMATION_STAGE_RESET`)에 새 프로세스처럼 비운다. */
-            void clear()
+            /**
+             * @brief 게임 인스턴스가 끝나면 구운 메시를 모두 놓습니다.
+             * @details 남은 차림을 다음 게임이 그대로 쓰면 에셋 일이 빨리 끝나 같은 장면의 프레임이 혼자 시작한 게임과 달라진다(shooter3d killcam 16 대 22 프레임).
+             */
+            void resetGameInstanceState( GameInstanceBoundary boundary ) override
             {
+                if ( boundary != GameInstanceBoundary::Ended )
+                    return;
                 EntryMap          retired; // 잠금을 놓은 뒤 놓는다
                 ScopedLock<mutex> lock{ _mutex };
                 std::swap( retired, _mapEntry );
                 _cachedBytes = 0;
                 _hitCount.reset();
+            }
+            const utf8* findGameInstanceState() const override
+            {
+                ScopedLock<mutex> lock{ _mutex };
+                return _mapEntry.empty() ? nullptr : "baked appearance meshes";
             }
 
             /**
@@ -470,18 +479,5 @@ namespace sw
 
 namespace sw
 {
-    SW_MODULE_SUBSYSTEM( Engine, AppearanceBakedMeshTable, AppearanceBakedMeshTable );
-
-    namespace
-    {
-        /** @brief 단계 되돌리기 — 앞 단계가 구운 차림을 다음 단계가 그대로 쓰면 에셋 일이 빨리 끝나 사진 시점이 혼자 돈 실행과 달라진다(shooter3d killcam 16 대 22 프레임). */
-        void resetAppearanceBakedMeshes()
-        {
-            AppearanceBakedMeshTable* const pTable = game::findSubsystem<AppearanceBakedMeshTable>();
-            if ( pTable != nullptr )
-                pTable->clear();
-        }
-    } // namespace
-
-    SW_AUTOMATION_STAGE_RESET( appearanceBakedMeshes, "AppearanceBakedMeshTable", &resetAppearanceBakedMeshes );
+    SW_MODULE_SUBSYSTEM( Engine, GameInstance, AppearanceBakedMeshTable, AppearanceBakedMeshTable );
 } // namespace sw

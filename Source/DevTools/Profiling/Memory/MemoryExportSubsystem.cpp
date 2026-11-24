@@ -46,6 +46,12 @@ namespace sw
         };
     } // namespace
 
+    SW_AUTOMATION_WATCH( memoryTagCount, "Memory.TagCount", "Memory tags this build counts (the rows of a Tags sheet)", []( const GameObjectManager* pManager, float64& outValue )
+    {
+        (void)pManager;
+        outValue = static_cast<float64>( kMemoryTagCount );
+        return true;
+    } );
     SW_AUTOMATION_FINISH_BLOCKER( memoryExportWrites, "MemoryExportWrites", &MemoryExportSubsystemInternal::readPendingWrites );
     SW_AUTOMATION_WATCH( memoryExportPendingWrites, "Memory.ExportPendingWrites", "Memory snapshot CSV exports still being written on a worker",
                          &MemoryExportSubsystemInternal::readPendingWriteWatch );

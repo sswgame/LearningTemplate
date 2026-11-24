@@ -285,6 +285,32 @@ SW_TEST_CASE( BehaviorTreeTest, RepeatForeverEndsOnlyOnFailure )
     SW_EXPECT_TRUE( rig.tick() == BehaviorStatus::Failure );
 }
 
+/** @brief [BehaviorTreeTest] 시간이 멈춘 틱은 확률 조건의 차례를 넘기지 않는다 — 결함이면 로딩 · 일시 정지 길이에 따라 AI 의 선택이 갈린다 */
+SW_TEST_CASE( BehaviorTreeTest, PausedTicksDoNotAdvanceChance )
+{
+    ConditionExpr chance;
+
+    BehaviorFixture plain;
+    BehaviorFixture paused;
+    SW_REQUIRE_TRUE( ConditionExpr::compile( "chance(0.5)", "test", chance ) );
+    SW_REQUIRE_TRUE( plain._tree.addCondition( nullopt, "Chance", chance ).has_value() );
+    SW_REQUIRE_TRUE( paused._tree.addCondition( nullopt, "Chance", chance ).has_value() );
+    plain.build();
+    paused.build();
+    uint32 successCount = 0;
+    for ( uint32 step = 0; step < 32; ++step )
+    {
+        for ( uint32 pausedTick = 0; pausedTick < step % 4; ++pausedTick )
+        {
+            (void)paused.tick( 0.0f );
+        }
+        const BehaviorStatus expected = plain.tick();
+        SW_EXPECT_TRUE( paused.tick() == expected );
+        successCount += expected == BehaviorStatus::Success ? 1u : 0u;
+    }
+    SW_EXPECT_TRUE( successCount > 0 && successCount < 32 ); // 굴림이 실제로 갈린다
+}
+
 SW_TEST_CASE( BehaviorTreeTest, CooldownFailsUntilItsTimePassed )
 {
     BehaviorFixture rig;

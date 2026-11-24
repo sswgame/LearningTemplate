@@ -254,6 +254,8 @@ namespace sw
     public:
         static constexpr const utf8* kSubsystemName = "GameNetSession";
         const utf8*                  getSubsystemName() const override { return kSubsystemName; }
+        void                         resetGameInstanceState( GameInstanceBoundary boundary ) override;
+        const utf8*                  findGameInstanceState() const override;
         /** @brief 엔진 기동 때는 열지 않습니다 — 전용 서버의 서버 문맥은 게임 인스턴스 앞에 걸리므로 `openFromLaunch` 가 엽니다. */
         SubsystemInitResult initializeSubsystem() override { return SubsystemInitResult::Succeeded; }
         /** @brief 세션을 닫습니다(엔진 종료). */

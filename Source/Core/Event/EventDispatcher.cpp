@@ -168,6 +168,37 @@ namespace sw
         return pMulticast;
     }
 
+    size_t EventDispatcher::getSubscriberCount() const
+    {
+        ScopedLock<SpinLock> lock{ _busSpinLock };
+        size_t               count = 0;
+        for ( const auto& [key, pMulticast] : _mapChannelDispatchTable )
+        {
+            count += pMulticast->getCount();
+        }
+        return count;
+    }
+
+    void EventDispatcher::resetGameInstanceState( GameInstanceBoundary boundary )
+    {
+        if ( boundary != GameInstanceBoundary::Ended )
+            return;
+        assertBusThread();
+        ScopedLock<SpinLock> lock{ _queueSpinLock };
+        removeQueuedEvents(); // 구독은 건 쪽이 푼다 — 앞 게임이 넣고 아직 나누지 않은 이벤트만 버린다
+    }
+
+    const utf8* EventDispatcher::findGameInstanceState() const
+    {
+        ScopedLock<SpinLock> lock{ _queueSpinLock };
+        for ( const auto& [channel, list] : _mapChannelQueue )
+        {
+            if ( list->_pHead.load( std::memory_order_relaxed ) != nullptr )
+                return "queued events";
+        }
+        return nullptr;
+    }
+
     void EventDispatcher::clear()
     {
         assertBusThread();
