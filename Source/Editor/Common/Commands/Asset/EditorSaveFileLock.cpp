@@ -5,7 +5,9 @@
 #include "Core/Container/unordered_map.h"
 #include "Core/File/FileUtil.h"
 #include "Core/Log/Logger.h"
+#include "Core/Process/Process.h"
 #include "Core/String/StringBuilder.h"
+#include "Core/String/StringUtil.h"
 
 #include "Editor/Common/Workspace/EditorStateStore.h"
 
@@ -17,10 +19,13 @@ namespace sw::editor
     {
         struct EditorSaveFileLockInternal
         {
-            /** @brief 장부 파일 이름입니다(자동화 출력 폴더 아래, 한 줄에 경로 하나). */
-            static constexpr const utf8* kLedgerFileName = "locked_save_files.txt";
+            /**
+             * @brief 장부 폴더입니다(자동화 출력 폴더 아래). 장부는 프로세스마다 `<pid>` 파일 하나 — 한 줄에 경로 하나.
+             * @details 백엔드마다 프로세스를 하나씩 띄우는 체인이 출력 폴더를 함께 쓴다 — 장부가 하나면 옆 프로세스의 단계 초기화가 살아 있는 잠금을 풀고 장부를 지운다.
+             */
+            static AbsolutePath getLedgerFolder() { return makeAutomationOutputFolderPath().join( "LockedSaveFiles" ); }
 
-            static AbsolutePath getLedgerPath() { return makeAutomationOutputFolderPath().join( kLedgerFileName ); }
+            static AbsolutePath getLedgerPath() { return getLedgerFolder().join( to_string( Process::getCurrentProcessID() ) ); }
 
             /** @brief 잠근 파일 글(파일마다 글, 없던 파일은 빈 값)입니다. 사라질 때(소멸 · `EditorStateStore::resetAll`) 쓰기를 되돌린다 — 시나리오가 어떻게 끝나든 잠금이 남지 않게. */
             struct LockState
@@ -104,23 +109,30 @@ namespace sw::editor
 
     void EditorSaveFileLock::releaseStaleLocks()
     {
-        const AbsolutePath ledgerPath = EditorSaveFileLockInternal::getLedgerPath();
-        string             ledger;
-        if ( FileUtil::readOptionalTextFile( ledgerPath, ledger ) != OptionalFileRead::Read )
-            return; // 장부가 없다(없음은 로그 없이 빈 값, 못 읽은 것은 읽기가 알렸다)
-        size_t lineStart = 0;
-        while ( lineStart < ledger.size() )
+        vector<AbsolutePath> listLedgerPath;
+        (void)FileUtil::collectFiles( EditorSaveFileLockInternal::getLedgerFolder(), "", listLedgerPath, false ); // 폴더가 없으면 남은 장부도 없다
+        for ( const AbsolutePath& ledgerPath : listLedgerPath )
         {
-            size_t lineEnd = ledger.find( '\n', lineStart );
-            if ( lineEnd == string::npos )
-                lineEnd = ledger.size();
-            const AbsolutePath path = FileUtil::toDiskPath( ledger.substr( lineStart, lineEnd - lineStart ) );
-            if ( path.empty() == false && FileUtil::isRegularFile( path ) )
-                (void)FileUtil::setWritable( path, true );
-            lineStart = lineEnd + 1;
+            int32      processID = 0;
+            string     ledger;
+            const bool bParsed = StringUtil::parseInt( FileUtil::getFileNamePart( ledgerPath.str() ), processID );
+            const bool bStale  = bParsed && ( processID == Process::getCurrentProcessID() || Process::isProcessAlive( processID ) == false );
+            if ( bStale == false || FileUtil::readOptionalTextFile( ledgerPath, ledger ) != OptionalFileRead::Read )
+                continue; // 살아 있는 다른 프로세스의 잠금이거나 그사이 지워졌다(못 읽은 것은 읽기가 알렸다)
+            size_t lineStart = 0;
+            while ( lineStart < ledger.size() )
+            {
+                size_t lineEnd = ledger.find( '\n', lineStart );
+                if ( lineEnd == string::npos )
+                    lineEnd = ledger.size();
+                const AbsolutePath path = FileUtil::toDiskPath( ledger.substr( lineStart, lineEnd - lineStart ) );
+                if ( path.empty() == false && FileUtil::isRegularFile( path ) )
+                    (void)FileUtil::setWritable( path, true );
+                lineStart = lineEnd + 1;
+            }
+            SW_LOG_INFO_ID( "EditorSaveFileLock.RestoredLeftovers", "Made the files of a lock ledger left by an earlier run writable again (%#)", ledgerPath.str() );
+            (void)FileUtil::removeFile( ledgerPath );
         }
-        SW_LOG_INFO_ID( "EditorSaveFileLock.RestoredLeftovers", "Made the files of a lock ledger left by an earlier run writable again (%#)", ledgerPath.str() );
-        (void)FileUtil::removeFile( ledgerPath );
     }
 
     uint32 EditorSaveFileLock::getLockedCount()
