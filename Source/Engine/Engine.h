@@ -16,14 +16,16 @@
 #include "Engine/EngineStartupExtension.h"
 #include "Engine/Foundation/QuitRequest.h"
 #include "Engine/Graphics/RHI/RHIInitResult.h"
-#include "Engine/Graphics/View/FrameViewports.h"
 #include "Engine/HeadlessSubsystem.h"
+#include "Engine/Presentation/ViewCameraProvider.h"
 
 namespace sw
 {
     struct EngineConfig;
     struct EngineDefaultAssets;
     struct EngineFrameContext;
+    struct FrameViewports;
+    struct ViewportTarget;
 
     class AssetManager;
     class AssetStreamingQueue;
@@ -115,6 +117,8 @@ namespace sw
          * @param sceneTick `Pause` 면 씬 GameObject 틱을 건너뜁니다(에디터 일시정지).
          */
         void update( float32 deltaTime, const FrameViewports& views, const ViewCameraProviderDelegate& sceneViewCameraProvider, SceneTick sceneTick );
+        /** @brief 오프스크린 출력을 요청하지 않는 호스트(전용 서버)의 `update` 입니다 — 뷰 요청 형식(RHI 핸들)을 읽지 않는다. */
+        void update( float32 deltaTime, SceneTick sceneTick );
         /** @brief 입력 종료 등 프레임의 마지막 단계입니다. */
         void endFrame();
 
