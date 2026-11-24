@@ -58,7 +58,7 @@ class ToolPolicy:
     def rule_matches(self, rule: dict) -> bool:
         if self._tool_name not in rule.get("tools", []):
             return False
-        if self._tool_name in ("Bash", "PowerShell"):
+        if self._tool_name in ("Bash", "PowerShell", "Monitor"):
             command = self.command()
             return bool(rule.get("shell")) and re.search(rule["shell"], command) is not None and not GRAPH_COMMAND.search(command)
         return bool(rule.get("path")) and re.search(rule["path"], self.target_path()) is not None
