@@ -610,6 +610,9 @@ namespace sw
 
     void FacialAnimationComponent::applyFace( SkeletalMeshComponent& skeletalMesh )
     {
+        // 메시 에셋을 읽는 중이면(비동기 — `MeshComponent::isMeshLoading`) 이을 모프 타깃이 없다. 빈 목록과 견줘 리그를 틀렸다고 하지 않고 도착한 프레임에 잇는다.
+        if ( skeletalMesh.getRawMesh() == nullptr )
+            return;
         refreshBindings( skeletalMesh );
         const bool                       bDriving  = isDrivingFace();
         const SkeletalAnimatorComponent* pAnimator = findAnimator( &skeletalMesh );

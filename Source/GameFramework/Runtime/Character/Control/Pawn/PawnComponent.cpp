@@ -41,7 +41,7 @@ namespace sw
         , _moveAction{ CommonInputActions::kMove }
         , _lookAction{ CommonInputActions::kLook }
         , _upAction{}
-        , _inputLayer{}
+        , _listInputLayer{}
         , _triggerLookButton{}
         , _aiControllerPrefab{}
         , _maxPitch{ Radians::fromRadians( 1.4f ) }

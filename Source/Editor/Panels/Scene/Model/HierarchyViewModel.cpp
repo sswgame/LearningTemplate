@@ -144,6 +144,11 @@ namespace sw::editor
         return HierarchyDropZone::Onto;
     }
 
+    bool HierarchyViewModel::isBareGameCamera( const GameObject& root, const CameraComponent* pGameCamera )
+    {
+        return pGameCamera != nullptr && pGameCamera->getOwner() == &root && root.hasChildren() == false && root.getComponents().size() == 1;
+    }
+
     void HierarchyViewModel::gather( string_view filterText, const HierarchyRowWindow& window, HierarchyViewState& outState )
     {
         outState._listEntry.clear();
@@ -153,6 +158,7 @@ namespace sw::editor
         outState._visibleRootCount    = 0;
         outState._bHasScene           = SW_FALSE;
         outState._bFilterActive       = SW_FALSE;
+        outState._bEmptyScene         = SW_FALSE;
         outState._bRenameStarted      = SW_FALSE;
         GameObjectManager* pManager   = editor::getActiveObjectManager();
         if ( pManager == nullptr )
@@ -180,6 +186,11 @@ namespace sw::editor
         outState._selectedComponentID = HierarchyViewModelInternal::getWorkspace().getSelectedComponentID();
         outState._visibleRootCount    = _rowModel.getVisibleRootCount();
         outState._bFilterActive       = _rowModel.isFilterActive();
+        if ( _rowModel.isFilterActive() == false && _rowModel.getVisibleRootCount() <= 1 )
+        {
+            const Scene* pScene   = editor::getActiveScene();
+            outState._bEmptyScene = _rowModel.getRows().empty() || ( pScene != nullptr && isBareGameCamera( *_rowModel.getRows()[0]._pObject, pScene->getActiveGameCamera() ) );
+        }
 
         collectDetailRows( window, _listDetailRow );
         uint32 nextRow = 0;

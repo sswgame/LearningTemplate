@@ -25,9 +25,8 @@ namespace sw
     {
         struct GuardDemoComponentInternal
         {
-            static constexpr uint32      kStateTag     = FourCCUtil::make( "FDGU" );
-            static constexpr uint32      kStateVersion = 1;
-            static constexpr const utf8* kNone         = "none";
+            static constexpr uint32 kStateTag     = FourCCUtil::make( "FDGU" );
+            static constexpr uint32 kStateVersion = 1;
 
             static bool runLock( const vector<string>& listArgument, string& outReply )
             {
@@ -37,7 +36,7 @@ namespace sw
                 if ( pGuard == nullptr )
                     return false;
                 (void)pGuard->lockBest(); // 잡을 것이 없으면 풀린 채다 — 답과 상태 칸이 알린다
-                FeatureDemoCommandUtil::reply( outReply, "locked %#", pGuard->getLockedTarget().c_str() );
+                FeatureDemoCommandUtil::reply( outReply, "locked %#", pGuard->getLockedTarget() );
                 return true;
             }
 
@@ -51,7 +50,7 @@ namespace sw
                 if ( pGuard == nullptr )
                     return false;
                 pGuard->cycleLock( bRight ? 1 : -1 );
-                FeatureDemoCommandUtil::reply( outReply, "locked %#", pGuard->getLockedTarget().c_str() );
+                FeatureDemoCommandUtil::reply( outReply, "locked %#", pGuard->getLockedTarget() );
                 return true;
             }
 
@@ -105,9 +104,9 @@ namespace sw
         , _lockMaxDistance{ 9.0f }
         , _lockBreakDistance{ 10.0f }
         , _lockLostSightGrace{ 0.5f }
-        , _seenTarget{ GuardDemoComponentInternal::kNone }
-        , _heardTarget{ GuardDemoComponentInternal::kNone }
-        , _lockedTarget{ GuardDemoComponentInternal::kNone }
+        , _seenTarget{}
+        , _heardTarget{}
+        , _lockedTarget{}
         , _rememberedCount{ 0 }
         , _perception{}
         , _lockOn{}
@@ -178,7 +177,7 @@ namespace sw
     {
         const GameObjectManager* pManager = getObjectManager();
         const GameObject*        pObject  = objectID != 0 && pManager != nullptr ? pManager->findGameObjectByID( objectID ) : nullptr;
-        return pObject != nullptr ? pObject->getName() : hashed_string( GuardDemoComponentInternal::kNone );
+        return pObject != nullptr ? pObject->getName() : hashed_string{};
     }
 
     void GuardDemoComponent::updateGame( float32 deltaTime )
@@ -202,7 +201,7 @@ namespace sw
 
         vector<LockOnCandidate> listCandidate;
         gatherLockCandidates( listCandidate );
-        (void)_lockOn.update( eye, listCandidate, deltaTime ); // 풀렸으면 아래가 none 으로 적는다
+        (void)_lockOn.update( eye, listCandidate, deltaTime ); // 풀렸으면 아래가 빈 이름으로 적는다
         refreshLockedTarget();
     }
 

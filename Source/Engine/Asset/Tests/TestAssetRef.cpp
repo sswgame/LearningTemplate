@@ -105,6 +105,23 @@ SW_TEST_CASE( AssetRefTest, BuiltinNameIsExactAndUnknownNameIsALoadError )
     SW_EXPECT_TRUE( reference.empty() );
 }
 
+/** @brief [AssetRefTest] 실행 중에 만드는 자원의 경로(텍스처의 렌더 텍스처)는 접미사가 없어도 받고 파일로 보지 않는다 — 규칙 밖의 경로는 오류다 */
+SW_TEST_CASE( AssetRefTest, RuntimePathIsAccepted )
+{
+    AssetRef<AssetRefSampleRuntimeTarget> texture;
+    texture = "refruntime/minimap";
+    SW_EXPECT_TRUE( texture == "refruntime/minimap" );
+    SW_EXPECT_TRUE( texture.isBuiltin() );
+
+    texture = "common/textures/a.reftexture";
+    SW_EXPECT_TRUE( texture == "common/textures/a.reftexture" );
+    SW_EXPECT_FALSE( texture.isBuiltin() );
+
+    SW_EXPECT_LOG( "AssetRef.WrongType" );
+    texture = "other/minimap";
+    SW_EXPECT_TRUE( texture == "common/textures/a.reftexture" );
+}
+
 /** @brief [AssetRefTest] 접미사가 없는 카탈로그는 종류의 경로 규칙으로 가른다 — 규칙 밖의 파일은 오류다 */
 SW_TEST_CASE( AssetRefTest, CatalogPathRuleDecidesTheKind )
 {

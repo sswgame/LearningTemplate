@@ -284,8 +284,8 @@ namespace sw::editor
             return;
         }
         // 줄무늬 · 머리 띠 없이 칸 정렬로 읽는다. 시트 · 비교마다 칸이 달라 표 id 를 가른다(정렬 상태가 섞이지 않게).
-        constexpr ImGuiTableFlags kFlags = ImGuiTableFlags_Sortable | ImGuiTableFlags_Resizable | ImGuiTableFlags_ScrollY | ImGuiTableFlags_BordersInnerH |
-                                           ImGuiTableFlags_SizingStretchProp | ImGuiTableFlags_NoSavedSettings;
+        constexpr ImGuiTableFlags kFlags = ImGuiTableFlags_Sortable | ImGuiTableFlags_Resizable | ImGuiTableFlags_ScrollY | ImGuiTableFlags_BordersInnerH | ImGuiTableFlags_NoBordersInBody |
+                                           ImGuiTableFlags_SizingStretchProp | ImGuiTableFlags_NoSavedSettings; // 줄 전체가 고르기다 — 몸의 칸 경계가 누름을 먹지 않게 칸 폭은 머리에서만 끈다
         ImGui::PushID( static_cast<int32>( _viewState._sheet ) * MemoryPanelInternal::kTableIDStride + ( _viewState._bCompareMode != SW_FALSE ? 1 : 0 ) );
         if ( ImGui::BeginTable( "##memoryTable", static_cast<int32>( listColumn.size() ), kFlags, ImGui::GetContentRegionAvail() ) == false )
         {

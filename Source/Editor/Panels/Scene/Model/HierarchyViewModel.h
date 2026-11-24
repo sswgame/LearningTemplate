@@ -20,6 +20,7 @@
 
 namespace sw
 {
+    class CameraComponent;
     class GameObject;
 } // namespace sw
 
@@ -81,6 +82,7 @@ namespace sw::editor
         uint32                                  _visibleRootCount{ 0 };      ///< 필터를 지난 루트 수
         uint8                                   _bHasScene{ SW_FALSE };      ///< 편집 중인 씬이 있다
         uint8                                   _bFilterActive{ SW_FALSE };  ///< 검색어가 걸려 있다
+        uint8                                   _bEmptyScene{ SW_FALSE };    ///< 씬에 사람이 놓은 것이 없다(에디터 카메라와 씬이 세운 기본 게임 카메라뿐)
         uint8                                   _bRenameStarted{ SW_FALSE }; ///< 이름 바꾸기 요청이 이번 프레임에 그 행의 입력 칸을 연다
     };
 
@@ -103,6 +105,11 @@ namespace sw::editor
 
         HierarchyViewModel();
 
+        /**
+         * @brief @p root 가 자식 없이 활성 게임 카메라 @p pGameCamera 하나만 든 오브젝트면 true 입니다 — 루트가 이것뿐인 씬은 사람이 놓은 것이 없는 씬이다.
+         * @details 씬은 게임 카메라가 없으면 늘 하나를 세운다(`Scene::pickActiveGameCamera` — 유니티 새 씬의 Main Camera 와 같다). 루트 수 0 만 보면 새 씬도 빈 씬이 아니었다.
+         */
+        static bool isBareGameCamera( const GameObject& root, const CameraComponent* pGameCamera );
         /** @brief 에디터 범위의 상태 저장소가 가진 하나입니다. */
         static HierarchyViewModel& get();
         /** @brief 편집 중인 씬이 있으면 true 입니다(창이 툴바를 그리기 전에 묻는다). */

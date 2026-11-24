@@ -253,7 +253,7 @@ namespace sw
             _verticalSpeed = 0.0f;
             _airVelocity   = 0.0f;
         }
-        else if ( _verticalSpeed > 0.0f && _state._velocity._y < _verticalSpeed )
+        else if ( _state.isRiseBlocked( _verticalSpeed ) )
             _verticalSpeed = _state._velocity._y;
         // 결정: 바닥을 떠나는 스텝에 바닥이 실어 나르던 속도를 관성으로 잇는다(3D `CharacterControllerComponent` 와 같다 — 천장 판정 뒤에 둔다).
         const bool bLeftGround = _state._bGrounded == false && _state._carriedVelocity.getLengthSquared() > 0.0f;

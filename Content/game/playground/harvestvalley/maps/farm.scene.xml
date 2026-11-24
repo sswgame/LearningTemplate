@@ -1192,7 +1192,6 @@
 					               _moveAction="Move"
 					               _lookAction="None"
 					               _upAction="None"
-					               _inputLayer="None"
 					               _aiControllerPrefab=""
 					               _maxPitch="80.21409"
 					               _autoPossess="Player0">

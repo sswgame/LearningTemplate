@@ -7,6 +7,8 @@
 #include "Core/Container/vector.h"
 #include "Core/Delegate/Delegate.h"
 #include "Core/Delegate/Subscription.h"
+#include "Core/Foundation/Macros.h"
+#include "Core/Subsystem/ServiceSlot.h"
 
 namespace sw
 {
@@ -14,9 +16,10 @@ namespace sw
      * @class IContentFolderWatch
      * @brief 기능 · 게임이 자기 데이터 폴더의 다시 읽기를 걸 때 찾는 감시 창구입니다(`game::findSubsystem<IContentFolderWatch>()`).
      * @details 감시 자체(OS 파일 감시 · 분배)는 개발 도구(`DevTools`)의 것이다 — 기능 쪽은 `#if` 없이 찾아보고, 없으면 감시하지 않는다(배포 · 팩 데이터).
+     *          게임 · 에디터 모듈의 범위에는 엔진 서비스 칸(`GameVisible`)으로 걸린다 — 호스트 범위에 걸기만 하면 모듈에 닿지 않아 데이터 다시 읽기가 조용히 꺼졌다.
      *          알림은 게임 스레드의 프레임 끝에 바뀐 감시마다 한 번이다.
      */
-    class IContentFolderWatch
+    class SW_API IContentFolderWatch
     {
     public:
         using ChangedDelegate = Delegate<void()>;
@@ -28,6 +31,8 @@ namespace sw
          * @return 낱개 폴더가 없거나(팩 데이터) 감시를 시작하지 못하면(이 플랫폼에 감시자 없음) 빈 구독입니다(이유는 로그).
          */
         [[nodiscard]] virtual Subscription watchAssetFolder( string_view folderID, const vector<string>& listExtension, const ChangedDelegate& onChanged ) = 0;
+
+        SW_SERVICE_SLOT( IContentFolderWatch, Optional );
 
     protected:
         ~IContentFolderWatch() = default;

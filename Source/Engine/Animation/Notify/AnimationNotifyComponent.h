@@ -120,8 +120,10 @@ namespace sw
         bool is2D() const;
         /** @brief 소켓(또는 본) 이름의 월드 변환입니다. 이름이 비었거나 없으면 오브젝트 루트이고 false 입니다. */
         [[nodiscard]] bool findSocketWorldTransform( const hashed_string& socketName, float4x4& outWorldTransform ) const;
-        /** @brief 소켓의 월드 위치를 반환합니다. 찾지 못하면 오브젝트 루트 위치를 반환합니다. */
+        /** @brief 소켓의 월드 위치를 반환합니다. 빈 이름은 오브젝트 루트 위치이고, 이름이 있는데 찾지 못하면 오류를 남기고(`reportMissingSocket`) 루트 위치입니다. */
         float3 findSocketWorldPosition( const hashed_string& socketName ) const;
+        /** @brief 테이블이 적은 소켓 @p socketName 이 이 오브젝트(소켓 테이블 · 스켈레톤)에 없다고 알립니다(이름마다 한 번). 빈 이름은 루트를 뜻하므로 알리지 않습니다. */
+        void reportMissingSocket( const hashed_string& socketName ) const;
         /**
          * @brief 이 오브젝트의 바디를 모두 건너뛰고 @p from → @p to 를 쏩니다(차원에 맞는 씬). @p radius 가 0 보다 크면 구(원)를 쓸어 갑니다.
          * @return 맞은 것이 있으면 true 입니다.

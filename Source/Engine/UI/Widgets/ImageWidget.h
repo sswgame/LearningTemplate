@@ -41,7 +41,7 @@ namespace sw
         /** @brief 이미지를 바꿉니다(크기가 따라 바뀔 수 있어 kLayout 입니다). nullptr 이면 단색 상자입니다. */
         void                               setImage( shared_ptr<const Texture2D> image );
         const shared_ptr<const Texture2D>& getImage() const { return _image; }
-        /** @brief 이미지 경로(DDS 리소스 경로)를 바꿉니다. 텍스처 객체(`setImage`)가 있으면 그것이 우선합니다. kPaint 입니다. */
+        /** @brief 이미지 경로(DDS 리소스 경로나 렌더 텍스처 `rendertarget/<이름>`)를 바꿉니다. 텍스처 객체(`setImage`)가 있으면 그것이 우선합니다. kPaint 입니다. */
         void          setImagePath( string_view imagePath );
         const string& getImagePath() const { return _imagePath.path(); }
         /** @brief 브러시를 바꿉니다. kPaint 만 합니다. */

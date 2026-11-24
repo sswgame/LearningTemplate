@@ -8420,7 +8420,7 @@
 			</origins>
 		</entry>
 		<entry key="EditorScene.HierarchyEmptyScene"
-		       source="This scene has no objects yet. Add one here, or drag a prefab or mesh from the Content Browser into the scene view.">
+		       source="This scene has nothing but its camera yet. Add an object here, or drag a prefab or mesh from the Content Browser into the scene view.">
 			<origins>
 				<item>Source/Editor/Panels/Scene/HierarchyPanel.cpp</item>
 			</origins>

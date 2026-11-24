@@ -11,6 +11,8 @@
 #include "Core/Foundation/Types.h"
 #include "Core/Memory/MemoryTag.h"
 
+#include <type_traits>
+
 namespace sw
 {
     /**
@@ -44,13 +46,20 @@ namespace sw
      * @brief 서브시스템이 제 범위 밖의 **모듈 서비스 범위**에 보이는지입니다. 형식 상수 `kModuleVisibility` 로 서브시스템이 스스로 선언한다(`SubsystemScope::addSubsystem` 이 칸에 옮긴다).
      * @details 호스트가 모듈에 넘기는 범위가 손 목록으로 빌려 걸던 자리다 — 목록에서 빠지면 모듈이 조용히 못 찾았다. 이 길로는 게임 모듈에 닿을 수 없다:
      *          게임 모듈에 보이는 것은 엔진 서비스 칸(`GameVisible`)과 모듈이 공개한 서브시스템(`SW_MODULE_SUBSYSTEM`)뿐이다 — 호스트 전용의 경계가 형식으로 선다.
-     *          언리얼 `UEditorSubsystem`(에디터만 찾는 서브시스템)과 같은 자리다.
+     *          언리얼 `UEditorSubsystem`(에디터만 찾는 서브시스템)과 같은 자리다. 서브시스템이 드러낸 멤버(`SubsystemScope::exposeMember`)도 그 멤버의 형식이 같은 상수로 선언한다
+     *          (`kModuleVisibilityOf`) — 파일 감시 창구(`FileWatchService`)가 드러낸 칸에 선언이 닿지 않아 에디터가 조용히 못 찾았다(에셋 핫 리로드 전체가 꺼졌다).
      */
     enum class SubsystemModuleVisibility : uint8
     {
         ScopeOnly,   ///< 제 범위(와 그 아래 범위)의 조회에만 보인다(기본)
         HostModules, ///< 호스트 모듈(에디터)의 서비스 범위에도 보인다 — 게임 모듈은 찾지 못한다(`ModuleRegistrationHost::getHostModuleLocator`)
     };
+
+    /** @brief 형식 @p T 가 선언한 노출입니다(`T::kModuleVisibility`). 선언하지 않았으면 `ScopeOnly` 다. */
+    template <typename T, typename = void>
+    inline constexpr SubsystemModuleVisibility kModuleVisibilityOf = SubsystemModuleVisibility::ScopeOnly;
+    template <typename T>
+    inline constexpr SubsystemModuleVisibility kModuleVisibilityOf<T, std::void_t<decltype( T::kModuleVisibility )>> = T::kModuleVisibility;
 } // namespace sw
 
 namespace sw

@@ -76,7 +76,7 @@ namespace sw::editor
     {
         ImGui::TextColored( EditorColorUtil::toImVec4( SW_THEME_COLOR( "Signal", "Error" ) ), "%s %u", SW_LOCKEY( "EditorStreamingCells", "ViolationHeader" ),
                             static_cast<uint32>( _viewState._listViolation.size() ) );
-        constexpr ImGuiTableFlags kTableFlags = ImGuiTableFlags_Borders | ImGuiTableFlags_RowBg | ImGuiTableFlags_Resizable | ImGuiTableFlags_ScrollY;
+        constexpr ImGuiTableFlags kTableFlags = ImGuiTableFlags_Borders | ImGuiTableFlags_NoBordersInBody | ImGuiTableFlags_RowBg | ImGuiTableFlags_Resizable | ImGuiTableFlags_ScrollY; // 줄 전체가 고르기다 — 몸의 칸 경계가 누름을 먹지 않게 칸 폭은 머리에서만 끈다
         if ( ImGui::BeginTable( "##world_cell_violations", 2, kTableFlags, ImGui::GetContentRegionAvail() ) == false )
             return;
         ImGui::TableSetupColumn( "Object", ImGuiTableColumnFlags_WidthStretch, 1.0f );
@@ -109,7 +109,7 @@ namespace sw::editor
             EditorWidgets::drawEmptyHint( SW_LOCKEY( "EditorStreamingCells", "NoGameCamera" ) );
 
         constexpr ImGuiTableFlags kTableFlags =
-            ImGuiTableFlags_Borders | ImGuiTableFlags_RowBg | ImGuiTableFlags_Resizable | ImGuiTableFlags_ScrollY | ImGuiTableFlags_SizingStretchProp;
+            ImGuiTableFlags_Borders | ImGuiTableFlags_NoBordersInBody | ImGuiTableFlags_RowBg | ImGuiTableFlags_Resizable | ImGuiTableFlags_ScrollY | ImGuiTableFlags_SizingStretchProp; // 줄 전체가 고르기다 — 몸의 칸 경계가 누름을 먹지 않게 칸 폭은 머리에서만 끈다
         if ( ImGui::BeginTable( "##world_cells", 3, kTableFlags, ImGui::GetContentRegionAvail() ) == false )
             return;
         ImGui::TableSetupColumn( "Cell (x, z)", ImGuiTableColumnFlags_WidthStretch, 1.0f );

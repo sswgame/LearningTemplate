@@ -108,11 +108,12 @@ namespace sw
         /** @brief 보기 축 액션 이름입니다(빈 이름: 보기 없음 — 입력 맵에 묻지 않는다). 코드로 만든 폰 · 테스트가 쓴다. 씬의 폰은 PROPERTY 가 채운다. */
         void                 setLookAction( const hashed_string& lookAction ) { _lookAction = lookAction; }
         const hashed_string& getUpAction() const { return _upAction; }
-        const hashed_string& getInputLayer() const { return _inputLayer; }
+        /** @brief 플레이어가 쥔 동안 입력 레이어 스택에 쌓을 레이어들입니다(아래부터). 비었으면 스택을 건드리지 않아 켜진 레이어가 모두 삽니다. */
+        const vector<hashed_string>& getInputLayers() const { return _listInputLayer; }
         /** @brief 눌린 순간의 조종 회전을 의도에 싣게 할 버튼 이름입니다(서브틱 입력). 비었으면 싣지 않는다. */
         const hashed_string& getTriggerLookButton() const { return _triggerLookButton; }
         void                 setTriggerLookButton( const hashed_string& button ) { _triggerLookButton = button; }
-        void                 setInputLayer( const hashed_string& layer ) { _inputLayer = layer; }
+        void                 setInputLayers( const vector<hashed_string>& listLayer ) { _listInputLayer = listLayer; }
         float32              getMaxPitch() const { return _maxPitch.radians(); }
         PawnAutoPossess      getAutoPossess() const { return _autoPossess; }
         void                 setAutoPossess( PawnAutoPossess autoPossess ) { _autoPossess = autoPossess; }
@@ -153,8 +154,9 @@ namespace sw
         hashed_string _lookAction;
         PROPERTY( Category = "Control", DisplayName = "Up Action", Tooltip = "InputMap 1D action for up and down (swim, fly); empty = none" )
         hashed_string _upAction;
-        PROPERTY( Category = "Control", DisplayName = "Input Layer", Tooltip = "InputMap layer pushed while a player possesses this pawn (OnFoot, Horse, Car); empty = none" )
-        hashed_string _inputLayer;
+        /// 스택에 무엇이 있으면 스택 밖 레이어는 꺼진다 — 그래서 레이어 하나가 아니라 이 폰이 쓰는 레이어 전부를 적는다(미니게임 정의의 `inputContexts` 와 같은 뜻).
+        PROPERTY( Category = "Control", DisplayName = "Input Layers", Tooltip = "InputMap layers pushed while a player possesses this pawn - only stacked layers stay live, so list every layer its actions use; empty = none" )
+        vector<hashed_string> _listInputLayer;
         PROPERTY( Category = "Control", DisplayName = "Trigger Look Button", Tooltip = "Intent button whose press instant carries the control rotation at that moment (a shot fires along the look at the click, not at the frame end); empty = none" )
         hashed_string _triggerLookButton;
         PROPERTY( Category = "Control", DisplayName = "AI Controller Prefab", Tooltip = "Spawned to possess this pawn when Auto Possess is AI (empty: a plain AI controller)" )

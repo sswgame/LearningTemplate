@@ -134,6 +134,7 @@ namespace sw
         AssetTypeLoader    _loader{};                ///< 진짜 로더와 읽는 방식(등록 줄이 넣는다)
         const string_view* _pBuiltinName{ nullptr }; ///< 파일이 아니라 엔진이 만드는 에셋의 이름(내장 도형 `Cube`). 없으면 nullptr
         uint32             _builtinNameCount{ 0 };   ///< `_pBuiltinName` 의 수
+        AssetPathRule      _runtimePath{};           ///< 파일이 아니라 실행 중에 만드는 자원의 경로 규칙(렌더 텍스처 `rendertarget/`). 비어 있으면 없다
 
         /**
          * @brief @p rule 을 경로 규칙으로 가진 사본입니다. 카탈로그 종류는 헤더의 `kAssetType` 에 규칙을 적어(`makeDataFile`) 타입 있는 참조(`AssetRef<T>`)가 경로를 가른다.
@@ -166,6 +167,13 @@ namespace sw
                     return true;
             }
             return false;
+        }
+        /** @brief @p rule 을 실행 중에 만드는 자원의 경로 규칙으로 가진 사본입니다(헤더의 `kAssetType`). 그런 경로도 이 종류의 참조로 받되 파일로 찾지 않는다. */
+        [[nodiscard]] constexpr AssetTypeDef withRuntimePath( const AssetPathRule& rule ) const
+        {
+            AssetTypeDef copy = *this;
+            copy._runtimePath = rule;
+            return copy;
         }
         /** @brief 경로로 이 종류의 에셋인지 가를 수 있으면(접미사 · 경로 규칙 · 내장 이름 중 하나가 있으면) true 입니다. 가를 수 없는 종류는 타입 있는 참조의 대상이 될 수 없다. */
         [[nodiscard]] constexpr bool canTellPath() const { return _suffixCount > 0 || _pathRule.isEmpty() == false || _builtinNameCount > 0; }

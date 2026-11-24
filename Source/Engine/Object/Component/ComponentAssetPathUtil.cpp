@@ -87,7 +87,7 @@ namespace sw
             case AssetPathValueKind::AssetRef:
             {
                 const AssetRefBase* const pValue = static_cast<const AssetRefBase*>( _pValue );
-                return pValue->isBuiltin() ? string_view{} : string_view( pValue->path() ); // 내장 에셋(`Cube`)은 파일이 아니다 — 프리로드 · 핫 리로드가 파일로 찾지 않게
+                return pValue->isBuiltin() ? string_view{} : string_view( pValue->path() ); // 내장 에셋(`Cube`) · 렌더 텍스처는 파일이 아니다 — 프리로드 · 핫 리로드가 파일로 찾지 않게
             }
             case AssetPathValueKind::String:
                 return string_view( *static_cast<const string*>( _pValue ) );

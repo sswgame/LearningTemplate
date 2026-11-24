@@ -1867,6 +1867,7 @@ namespace sw
         record._carriedVelocity = float3{};
         record._groundYawRate   = 0.0f;
         record._movedVelocity   = velocity;
+        record._moveStart       = JoltUtil::toEngine( virtualCharacter.GetPosition() );
         if ( deltaTime <= 0.0f )
             return;
         // 순간이동(`setCharacterPosition`)이 `_groundBody` 를 비우므로, 옮긴 직후 한 스텝은 옛 바닥의 속도를 싣지 않는다.
@@ -1939,12 +1940,13 @@ namespace sw
         }
         PhysicsCharacterState3D& state = record._state;
         state._position                = JoltUtil::toEngine( virtualCharacter.GetPosition() );
-        state._velocity                = JoltUtil::toEngine( virtualCharacter.GetLinearVelocity() ) - record._carriedVelocity;
-        state._carriedVelocity         = record._carriedVelocity;
-        state._groundYawRate           = record._groundYawRate;
-        state._bGrounded               = virtualCharacter.GetGroundState() == JPH::CharacterBase::EGroundState::OnGround;
-        state._groundNormal            = state._bGrounded ? JoltUtil::toEngine( virtualCharacter.GetGroundNormal() ) : float3{};
-        state._groundBody              = state._bGrounded ? findHandle( virtualCharacter.GetGroundBodyID() ) : PhysicsBodyHandle{};
+        // Jolt 의 선속도는 준 요청 그대로라(`CharacterVirtual::Update` 는 고치지 않는다) 서 있어도 중력 한 스텝, 벽에 막혀도 걷는 속도가 남는다 — 옮겨진 거리로 셈한다(2D 와 같다).
+        state._velocity        = deltaTime > 0.0f ? ( state._position - record._moveStart ) * ( 1.0f / deltaTime ) - record._carriedVelocity : float3{};
+        state._carriedVelocity = record._carriedVelocity;
+        state._groundYawRate   = record._groundYawRate;
+        state._bGrounded       = virtualCharacter.GetGroundState() == JPH::CharacterBase::EGroundState::OnGround;
+        state._groundNormal    = state._bGrounded ? JoltUtil::toEngine( virtualCharacter.GetGroundNormal() ) : float3{};
+        state._groundBody      = state._bGrounded ? findHandle( virtualCharacter.GetGroundBodyID() ) : PhysicsBodyHandle{};
         // 다른 캐릭터가 이제 이 자리를 본다.
         JPH::CharacterVirtual& mirror = *record._pMirror;
         mirror.SetPosition( virtualCharacter.GetPosition() );

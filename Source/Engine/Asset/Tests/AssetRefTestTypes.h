@@ -31,6 +31,15 @@ namespace sw
         static constexpr AssetTypeDef kAssetType        = AssetTypeDef{ "AssetRefSampleBuiltinTarget", kArrAssetSuffix, 1, {}, 0, {} }.withBuiltinNames( kArrBuiltinName );
     };
 
+    /** @brief 파일 말고 실행 중에 만드는 자원의 경로도 받는 대상 종류입니다(텍스처의 `rendertarget/` 과 같은 모양). */
+    struct AssetRefSampleRuntimeTarget
+    {
+        static constexpr AssetSuffix kArrAssetSuffix[] = {
+            { ".reftexture", AssetSuffixRole::Plain }
+        };
+        static constexpr AssetTypeDef kAssetType = AssetTypeDef{ "AssetRefSampleRuntimeTarget", kArrAssetSuffix, 1, {}, 0, {} }.withRuntimePath( AssetPathRule{ "refruntime/", {}, {} } );
+    };
+
     /** @brief 접미사 없이 경로 규칙으로 가르는 카탈로그 종류입니다(`/data/crops.xml` 과 같은 모양). */
     struct AssetRefSampleCatalog
     {
