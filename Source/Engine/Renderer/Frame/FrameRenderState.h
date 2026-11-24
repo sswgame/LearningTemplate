@@ -246,11 +246,6 @@ namespace sw
 
     private:
         /** @brief 주 시점 하나만 든 뷰 목록입니다(처음 값). */
-        static vector<unique_ptr<FrameViewTarget>> makeMainViewList()
-        {
-            vector<unique_ptr<FrameViewTarget>> listView;
-            listView.push_back( make_unique<FrameViewTarget>() );
-            return listView;
-        }
+        static vector<unique_ptr<FrameViewTarget>> makeMainViewList();
     };
 } // namespace sw

@@ -133,7 +133,14 @@ SW_TEST_CASE( PhysicsSoftBodyTest, PinnedVerticesFollowTheTransform )
     SW_REQUIRE_TRUE( softBody.isValid() );
     Internal::step( *pScene, 300 ); // 매달려 쉰다(잠들 수 있다)
 
-    pScene->setSoftBodyPinnedTransform( softBody, float3{ 2.0f, 8.0f, 0.0f }, quaternion{} );
+    // 걸음마다 조금씩 옮긴다(`ClothComponent` 와 같다) — 한 걸음에 몇 미터를 순간 이동시키면 천이 그 속도로 튕겨 올라 거꾸로 접힌다.
+    constexpr uint32 kMoveStepCount = 120;
+    for ( uint32 index = 1; index <= kMoveStepCount; ++index )
+    {
+        const float32 alpha = static_cast<float32>( index ) / static_cast<float32>( kMoveStepCount );
+        pScene->setSoftBodyPinnedTransform( softBody, float3{ 2.0f * alpha, 5.0f + 3.0f * alpha, 0.0f }, quaternion{} );
+        Internal::step( *pScene, 1 );
+    }
     Internal::step( *pScene, 300 );
     vector<float3> listVertex;
     SW_REQUIRE_TRUE( pScene->getSoftBodyVertices( softBody, listVertex ) );

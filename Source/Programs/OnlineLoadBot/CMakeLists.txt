@@ -35,7 +35,7 @@ endforeach()
 
 # ------------------------------------------------------------------------------
 # 2) 봇 모듈(`OnlineLoadBotCore` — 봇 · 시나리오 · 지표 · 실행기 · 서버 조립 · 진입점 `LoadBotMain.cpp`)과 그것을 올리는 실행 파일.
-#    실행 파일은 Engine · ModuleManager 만 링크한다. GameFramework · 키트 DLL 은 정적 초기화에서 이름 풀(`hashed_string`)을 써서 엔진 기동 뒤에만 올라올 수 있다 —
+#    실행 파일은 Engine · ModuleManager · DevTools 만 링크한다. GameFramework · 키트 DLL 은 정적 초기화에서 이름 풀(`hashed_string`)을 써서 엔진 기동 뒤에만 올라올 수 있다 —
 #    실행 파일이 직접 링크하면 main 전에 DLL 초기화가 실패한다(0xC0000142, 로그 없음, Windows 오류 대화상자로 CTest 가 시간 초과). App · Server 가 모듈을
 #    기동 뒤에 올리는 것과 같은 모양으로, 실행 파일이 엔진의 `ModuleTypes` 단계에서 `SW_LOADBOT_MODULES` 를 순서대로 올리고 진입점(`LoadBotModuleEntry.h`)을 부른다.
 #    모듈은 App 이 올리는 동적 모듈 레지스트리(`Bin/Modules`)에 넣지 않고 `Bin` 에 둔다(`findModuleLibraryPath` 가 Modules → Bin 으로 찾는다).
@@ -67,8 +67,8 @@ set(load_bot_module_list GameFramework ${load_bot_kit} OnlineLoadBotCore)
 list(JOIN load_bot_module_list "\",\"" load_bot_module_text)
 
 sw_add_executable(OnlineLoadBot Main.cpp)
-# ModuleManager: 호스트 범위의 모듈 라이브러리 창구(`ModuleLoaderSubsystem`) — 전용 서버(`ServerApp`)와 같은 모양으로 엔진(DedicatedServer)을 세운다.
-target_link_libraries(OnlineLoadBot PRIVATE ModuleManager Engine sw_public_source_includes sw_global_options)
+# ModuleManager · DevTools: 전용 서버(`ServerApp`)와 같은 부팅 열(`HostLaunch`)과 개발 계층(헤드리스 단위 테스트의 등록자)으로 엔진(DedicatedServer)을 세운다.
+target_link_libraries(OnlineLoadBot PRIVATE ModuleManager DevTools Engine sw_public_source_includes sw_global_options)
 target_compile_definitions(OnlineLoadBot PRIVATE "SW_LOG_TAG=\"OnlineLoadBot\"" "SW_REGISTRAR_MODULE=\"OnlineLoadBot\"" "SW_LOADBOT_MODULES=\"${load_bot_module_text}\"")
 add_dependencies(OnlineLoadBot OnlineLoadBotCore) # 실행 파일을 지으면 올릴 모듈(과 그것이 링크하는 키트)도 선다
 sw_configure_pch(OnlineLoadBot "${CMAKE_SOURCE_DIR}/Source/Engine/pch.h")

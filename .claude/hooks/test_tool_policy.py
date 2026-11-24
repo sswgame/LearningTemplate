@@ -52,7 +52,7 @@ class ToolPolicyTest(unittest.TestCase):
         list_milliseconds = []
         for _ in range(20):
             started = time.perf_counter()
-            subprocess.run([sys.executable, os.path.join(here, "tool_policy.py")], input=b"{}", capture_output=True, check=True)
+            subprocess.run([sys.executable, "-I", "-S", os.path.join(here, "tool_policy.py")], input=b"{}", capture_output=True, check=True)
             list_milliseconds.append((time.perf_counter() - started) * 1000.0)
         p95 = sorted(list_milliseconds)[18]
         print(f"\n[tool-policy] 훅 호출 p95 {p95:.0f} ms (예산 {budget} ms){' - 경고: 예산을 넘었다' if p95 > budget else ''}")

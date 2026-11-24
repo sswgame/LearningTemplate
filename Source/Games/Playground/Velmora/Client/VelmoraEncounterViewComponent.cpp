@@ -15,7 +15,7 @@
 #include "Engine/Object/GameObject/WorldOrigin.h"
 
 #include "GameFramework/Kits/Genre/Action/ActionAdventure/Component/AdventureGameModeComponent.h"
-#include "GameFramework/Kits/Genre/Action/ActionCombat/Client/ActionRoomDebugDraw.h"
+#include "GameFramework/Kits/Genre/Action/ActionCombat/ActionRoomDebugDraw.h"
 #include "GameFramework/Runtime/Foundation/Framework/GameService.h"
 #include "GameFramework/Runtime/Gameplay/GameState/PlayerComponentUtil.h"
 

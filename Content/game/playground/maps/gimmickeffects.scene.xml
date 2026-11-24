@@ -100,7 +100,7 @@
 						<_listButton />
 						<_listAnalog />
 					</PawnComponent>
-					<KinematicVehicleComponent _localID="3610959554269325066" _tuning="common/data/vehicles/kart.vehicle.xml" _bUsePhysicsGround="true" />
+					<KinematicVehicleComponent _localID="3610959554269325066" _driftButton="Drift" _boostButton="Boost" _jumpButton="Jump" _tuning="common/data/vehicles/kart.vehicle.xml" _bUsePhysicsGround="true" />
 				</_listComponent>
 			</GameObject>
 		</entity>

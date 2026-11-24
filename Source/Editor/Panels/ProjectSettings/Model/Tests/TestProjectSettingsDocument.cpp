@@ -2,6 +2,7 @@
 
 #include "Core/File/FileUtil.h"
 #include "Core/File/ProcessRoots.h"
+#include "Core/String/StringUtil.h"
 #include "Core/Testing/TestFramework.h"
 
 #include "Editor/Panels/ProjectSettings/Model/ProjectSettingsDocument.h"
@@ -77,7 +78,9 @@ SW_TEST_CASE( ProjectSettingsDocumentTest, EveryGamePresetOpensEditsAndSaves )
         GameConfig* const pConfig    = static_cast<GameConfig*>( document.getInstance() );
         const DataPath    packRoot   = pConfig->_packRoot;
         const size_t      fieldCount = pConfig->_cookRules._listEntryIDField.size();
-        pConfig->_packRoot           = DataPath{ "game/savedpack" };
+        // 데이터 경로 칸은 읽기만 값을 넣는다(DataPath) — 되돌리기 글로 고친 값을 넣는다.
+        SW_REQUIRE_TRUE( document.applyText( StringUtil::replace( document.captureText(), packRoot.get(), "game/savedpack" ) ) );
+        SW_EXPECT_EQUAL( string{ "game/savedpack" }, static_cast<GameConfig*>( document.getInstance() )->_packRoot.get() );
         SW_EXPECT_TRUE( document.isModified() );
         SW_REQUIRE_TRUE( document.saveDocument() );
         SW_EXPECT_FALSE( document.isModified() );

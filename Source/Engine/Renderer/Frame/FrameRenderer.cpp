@@ -666,6 +666,13 @@ namespace sw
         constexpr float4 kDefaultOutlineColor{ 0.08f, 0.05f, 0.12f, 0.85f };
     } // namespace
 
+    vector<unique_ptr<FrameViewTarget>> FrameRenderState::makeMainViewList()
+    {
+        vector<unique_ptr<FrameViewTarget>> listView;
+        listView.push_back( make_unique<FrameViewTarget>() );
+        return listView;
+    }
+
     void FrameRenderer::applyFrameSky( bool bHasSky, const SkyGradient& sky, const float4& skyLight )
     {
         // 셰이더 상수 배치는 SkyGradient 머리 주석이 기준이다(sky.hlsl 의 evaluateSky 가 같은 순서로 읽는다).

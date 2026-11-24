@@ -115,7 +115,7 @@ SW_TEST_CASE( ModelImportSectionsTest, NonJointNodeBetweenJointsKeepsTheBonePlac
     const optional<uint32> spine = result._skeleton.findBoneIndex( hashed_string( "Spine" ) );
     SW_REQUIRE_TRUE( spine.has_value() );
     SW_EXPECT_EQUAL( 0, result._skeleton.getBone( *spine )._parentIndex );
-    SW_EXPECT_NEAR( 3.0f, result._skeleton.getBone( *spine )._localTransform._translation._y, 1e-5f );
+    SW_EXPECT_NEAR( 3.0f, result._skeleton.getBone( *spine )._referencePose._translation._y, 1e-5f );
 }
 
 /**

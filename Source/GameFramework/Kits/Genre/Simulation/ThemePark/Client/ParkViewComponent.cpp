@@ -128,19 +128,16 @@ namespace sw
         Component::onRegister( manager );
         GameObject* const                  pOwner    = getOwner();
         const ParkGameModeComponent* const pDirector = pOwner != nullptr ? pOwner->getComponent<ParkGameModeComponent>() : nullptr;
-        if ( pDirector == nullptr )
-        {
-            SW_LOG_ERROR_ID( "ParkView.WithoutGameMode", "[Park] park view on '%#': no ParkGameModeComponent in front of it on the same object - the park is not shown",
-                             pOwner != nullptr ? pOwner->getName().c_str() : "?" );
-            _director = TComponentHandle<ParkGameModeComponent>{};
-            return;
-        }
-        _director = TComponentHandle<ParkGameModeComponent>( pDirector );
+        _director                                    = pDirector != nullptr ? TComponentHandle<ParkGameModeComponent>( pDirector ) : TComponentHandle<ParkGameModeComponent>{};
     }
 
     void ParkViewComponent::onBeginPlay()
     {
         Component::onBeginPlay();
+        // 배선 오류는 플레이가 시작될 때 알린다 — 편집 중에는 컴포넌트를 하나씩 더하는 동안 비어 있을 수 있다.
+        if ( _director.isValid() == false )
+            SW_LOG_ERROR_ID( "ParkView.WithoutGameMode", "[Park] park view on '%#': no ParkGameModeComponent in front of it on the same object - the park is not shown",
+                             getOwner() != nullptr ? getOwner()->getName().c_str() : "?" );
         // 디렉터와 같은 그룹 — 카메라 디렉터(PostPhysics 틱 뒤)가 이번 프레임의 탑승 시점을 읽는다.
         setTickGroup( TickGroup::PrePhysics );
         _bActionsValid = SW_TRUE;

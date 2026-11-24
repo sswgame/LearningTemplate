@@ -21,7 +21,7 @@ namespace
         static hashed_string makeName( uint32 index )
         {
             array<utf8, 32> text{};
-            formatstring( text.data(), text.capacity(), "g_TestConstant%#", index );
+            formatstring( text.data(), text.size(), "g_TestConstant%#", index );
             return hashed_string( text.data() );
         }
 
