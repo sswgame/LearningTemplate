@@ -446,7 +446,7 @@ namespace sw
 
     void MechArenaWorld::applyDamage( int32 attacker, int32 victim, float32 damage, float32 downValue, float32 staggerTime )
     {
-        resolveHit( attacker, victim, damage, downValue, 0.0f, staggerTime, false, MechWeaponKind::Shot );
+        resolveHit( attacker, victim, damage, downValue, 0.0f, staggerTime, false, MechWeaponKind::Shot, hashed_string{} );
     }
 
     void MechArenaWorld::teleport( int32 pilot, const float3& position )
@@ -847,7 +847,7 @@ namespace sw
                 }
             }
             if ( hitPilot >= 0 )
-                resolveHit( pilotIndex, hitPilot, projectile._damage, slot._downValue, slot._knockback, slot._staggerTime, false, slot._kind );
+                resolveHit( pilotIndex, hitPilot, projectile._damage, slot._downValue, slot._knockback, slot._staggerTime, false, slot._kind, hashed_string{} );
             return;
         }
         // 맞은 뒤의 반응(다운치 · 경직 · 넉백 · 종류)은 탄에 베끼지 않고 슬롯을 가리킨다(`findProjectileSlot`).
@@ -870,7 +870,7 @@ namespace sw
     }
 
     void MechArenaWorld::resolveHit( int32 attacker, int32 victim, float32 damage, float32 downValue, float32 knockback, float32 staggerTime, bool bKnockdown,
-                                     MechWeaponKind kind )
+                                     MechWeaponKind kind, const hashed_string& moveID )
     {
         using Internal = MechArenaWorldInternal;
         if ( isTargetable( victim ) == false || _pMechCatalog == nullptr )
@@ -902,7 +902,7 @@ namespace sw
                                                       ? optional<int32>( _listPilot[static_cast<size_t>( attacker )]._listParticipant[static_cast<size_t>( _listPilot[static_cast<size_t>( attacker )]._deckIndex )] )
                                                       : nullopt;
         _match.reportDamage( attackerParticipant, victimParticipant, result._healthDamage );
-        pushEvent( MechArenaEvent::Kind::Hit, victim, instigator, result._healthDamage, hashed_string{} );
+        pushEvent( MechArenaEvent::Kind::Hit, victim, instigator, result._healthDamage, moveID );
 
         if ( result._bDied == SW_TRUE )
         {
@@ -1466,7 +1466,7 @@ namespace sw
         pilot._melee.registerContact( false );
         pilot._bMeleeHit = SW_TRUE;
         resolveHit( pilotIndex, target, move._damage, slot._downValue, slot._knockback, static_cast<float32>( move._hitstun ) * _settings._fixedStep,
-                    move._bKnockdown == SW_TRUE, MechWeaponKind::Melee );
+                    move._bKnockdown == SW_TRUE, MechWeaponKind::Melee, move._id );
     }
 
     void MechArenaWorld::stepSkills( int32 pilotIndex, float32 deltaTime )
@@ -1498,7 +1498,7 @@ namespace sw
             const MechWeaponSlotDef* pSlot = findProjectileSlot( event._projectile._payload );
             if ( pSlot == nullptr )
                 continue; // 쏠 때와 상태 읽기가 번호를 봤으므로 닿지 않는다
-            resolveHit( event._projectile._owner, event._hit._other, event._projectile._damage, pSlot->_downValue, pSlot->_knockback, pSlot->_staggerTime, false, pSlot->_kind );
+            resolveHit( event._projectile._owner, event._hit._other, event._projectile._damage, pSlot->_downValue, pSlot->_knockback, pSlot->_staggerTime, false, pSlot->_kind, hashed_string{} );
         }
     }
 } // namespace sw

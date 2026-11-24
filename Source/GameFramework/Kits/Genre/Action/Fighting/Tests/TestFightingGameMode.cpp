@@ -1,4 +1,4 @@
-// FightingGameModeTest — 격투 디렉터: 명령은 대전이 열린 동안만 받고, 카탈로그가 없거나 모르는 캐릭터면 열지 않으며, 플레이어의 하단으로 이긴 대전은 결과 값을 내고 상태 바이트를 왕복한다(nogpu, 에셋 없음).
+// FightingGameModeTest — 격투 디렉터: 명령은 대전이 열린 동안만 받고, 카탈로그가 없거나 모르는 캐릭터면 열지 않으며, 플레이어의 하단으로 이긴 대전은 기술 표의 소리와 결과 값을 내고 상태 바이트를 왕복한다(nogpu, 에셋 없음).
 #include "pch.h"
 
 #include "Core/Subsystem/SubsystemScope.h"
@@ -12,13 +12,14 @@
 #include "GameFramework/Kits/Genre/Action/Fighting/Component/FightingGameModeComponent.h"
 #include "GameFramework/Runtime/Foundation/Framework/GameService.h"
 #include "GameFramework/Runtime/Foundation/Framework/Minigame/MinigameStack.h"
+#include "GameFramework/Runtime/Foundation/Framework/Presentation/Tests/RecordingSoundPlayer.h"
 
 using namespace sw;
 
 namespace
 {
     constexpr const utf8* kFightingDirectorMoveXML = R"(<MoveCatalog>
-  <Move id="low" startup="3" active="2" recovery="6" damage="10" hitstun="12" blockstun="6" height="Low"><Hitbox x="0.6" y="0.8" w="1.4" h="1.6"/></Move>
+  <Move id="low" startSound="LowStart" hitSound="LowHit" blockSound="LowBlocked" startup="3" active="2" recovery="6" damage="10" hitstun="12" blockstun="6" height="Low"><Hitbox x="0.6" y="0.8" w="1.4" h="1.6"/></Move>
 </MoveCatalog>)";
 
     constexpr const utf8* kFightingDirectorCatalogXML = R"(<FighterCatalog buttons="1,2,3,4">
@@ -40,6 +41,7 @@ namespace
     {
         MoveCatalog                _moves{};
         FighterCatalog             _fighters{};
+        RecordingSoundPlayer       _soundPlayer{};
         SubsystemScope             _scope{};
         GameObjectManager          _manager{};
         FightingGameModeComponent* _pGameMode{ nullptr };
@@ -48,7 +50,7 @@ namespace
         {
             if ( _moves.loadFromXMLText( kFightingDirectorMoveXML, "FightingGameModeTest" ) == false || _fighters.loadFromXMLText( kFightingDirectorCatalogXML, _moves, "FightingGameModeTest" ) == false )
                 return false;
-            if ( _scope.bind<const FighterCatalog>( &_fighters ) == false )
+            if ( _scope.bind<const FighterCatalog>( &_fighters ) == false || _scope.bind<ISoundPlayer>( &_soundPlayer ) == false )
                 return false;
             _pGameMode = _manager.createGameObject( hashed_string( "Director" ) )->addComponent<FightingGameModeComponent>();
             return _pGameMode != nullptr && XMLSerializer::deserialize( _pGameMode, *FightingGameModeComponent::StaticType(), pDirectorXML );
@@ -107,6 +109,10 @@ SW_TEST_CASE( FightingGameModeTest, PlayerLowWinsTheMatchAndReportsTheMoney )
         test._manager.update( kFightingGameModeFrame );
     }
     SW_EXPECT_EQUAL( FightingGameModeComponent::kPlayer, test._pGameMode->getMatchWinner() );
+    // 기술 표의 소리가 난다 — 낸 기술의 시작 하나, 맞음 하나.
+    SW_EXPECT_EQUAL( 1, test._soundPlayer.countPosted( "LowStart" ) );
+    SW_EXPECT_EQUAL( 1, test._soundPlayer.countPosted( "LowHit" ) );
+    SW_EXPECT_EQUAL( 0, test._soundPlayer.countPosted( "LowBlocked" ) );
     SW_EXPECT_EQUAL( 0, test._pGameMode->getOpponentHealth() );
     SW_EXPECT_FALSE( test._pGameMode->isAcceptingInput() );
 

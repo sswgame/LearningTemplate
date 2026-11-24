@@ -137,7 +137,7 @@ namespace sw
         enum class Kind : uint8
         {
             Fired = 0,     ///< _pilot 이 쏘았다. _id 는 무기 슬롯
-            Hit,           ///< _pilot 이 맞은 쪽, _other 가 때린 쪽, _value 는 체력 피해
+            Hit,           ///< _pilot 이 맞은 쪽, _other 가 때린 쪽, _value 는 체력 피해. _id 는 근접이면 기술(탄이면 빈 이름)
             Downed,        ///< _pilot 이 다운되었다. _other 는 다운시킨 쪽
             WokeUp,        ///< _pilot 에게 기상 무적이 붙었다
             Destroyed,     ///< _pilot 이 격추되었다. _other 는 격추한 쪽
@@ -146,7 +146,7 @@ namespace sw
             Transformed,   ///< _pilot 이 변형했다. _id 는 새 형태
             SkillStarted,  ///< _pilot 이 스킬을 켰다. _id 는 스킬
             SkillEnded,    ///< _pilot 의 스킬이 끝났다. _id 는 스킬
-            ComboAdvanced, ///< _pilot 의 콤보가 다음 단으로 넘어갔다. _value 는 새 단(0부터)
+            ComboAdvanced, ///< _pilot 의 콤보가 다음 단으로 넘어갔다. _value 는 새 단(0부터), _id 는 그 단의 기술
             MechSwapped,   ///< _pilot 이 기체를 바꿨다. _value 는 덱 슬롯
             MatchEnded     ///< _other 가 이긴 팀(−1이면 무승부)
         };
@@ -316,7 +316,7 @@ namespace sw
         /** @brief 탄의 반응 번호가 가리키는 슬롯입니다. 번호가 틀리면 nullptr 입니다. */
         const MechWeaponSlotDef* findProjectileSlot( uint32 payload ) const;
         void                     resolveHit( int32 attacker, int32 victim, float32 damage, float32 downValue, float32 knockback, float32 staggerTime, bool bKnockdown,
-                                             MechWeaponKind kind );
+                                             MechWeaponKind kind, const hashed_string& moveID );
         void                     activateSkill( int32 pilot, int32 skillIndex );
         void                     triggerSkills( int32 pilot, MechSkillTrigger trigger );
         /** @brief 지금 장착한 기체로 체력, 부스트, 록온, 무기를 다시 짭니다. 기체의 체력 설정이 범위 밖이라 거절되면 false 입니다. */
