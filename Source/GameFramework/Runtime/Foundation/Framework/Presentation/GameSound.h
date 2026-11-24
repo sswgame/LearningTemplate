@@ -35,6 +35,8 @@ namespace sw
         [[nodiscard]] static bool playAdaptiveMusic( const AssetID& assetID );
         /** @brief 나고 있는 음악을 멈춥니다. */
         static void stopMusic();
+        /** @brief 나고 있는 음악을 구간 시계와 함께 멈추거나 이어 냅니다(`ISoundPlayer::setMusicPaused`). */
+        static void setMusicPaused( bool bPaused );
         /** @brief 적응형 음악의 지금 구간 시각(초)입니다(`ISoundPlayer::findMusicSeconds`). 창구 · 나는 음악이 없으면 nullopt 입니다. */
         static optional<float32> findMusicSeconds();
 

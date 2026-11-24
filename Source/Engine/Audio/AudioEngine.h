@@ -156,7 +156,7 @@ namespace sw
         void stop( AudioPlayingID playingID, float32 fadeSeconds );
         /** @brief 에미터의 재생을 모두 멈춥니다. 페이드가 음수면 이벤트의 값을 씁니다. */
         void stopEmitter( AudioEmitterID emitterID, float32 fadeSeconds );
-        /** @brief 재생을 일시정지하거나 재개합니다. */
+        /** @brief 재생을 일시정지하거나 재개합니다. 적응형 음악이면 구간 시계 · 예약한 전환도 함께 멈췄다가 그 자리에서 이어집니다. */
         void setPaused( AudioPlayingID playingID, bool bPaused );
 
         // --- 게임 스레드: 적응형 음악 ------------------------------------------------------------------------------------
@@ -446,7 +446,7 @@ namespace sw
         optional<uint32> allocateInstance();
 
         // AudioEngine.cpp: 음악 플레이어에게 내주는 보이스 풀의 창(`IAudioMusicVoices`)
-        uint64             getMusicClock() const override { return _renderedFrameCount; }
+        uint64             getMusicClock() const override { return _musicFrameCount; }
         float32            findMusicParameter( const hashed_string& name ) const override { return getParameterValue( name ); }
         [[nodiscard]] bool startMusicVoice( const AudioMusicVoiceRequest& request ) override;
         void               fadeMusicVoices( AudioPlayingID playingID, int32 segment, uint32 fadeFrames, uint32 delayFrames ) override;
@@ -494,6 +494,7 @@ namespace sw
         AudioListenerState                           _arrListener[kMaxListenerCount]; /**< 리스너입니다. */
         DeterministicRandom64                        _random;                         /**< 컨테이너와 범위가 쓰는 난수입니다(시드는 `setRandomSeed`). */
         uint64                                       _renderedFrameCount;             /**< 지금까지 렌더한 프레임입니다. */
+        uint64                                       _musicFrameCount;                /**< 음악 시계 — 음악이 멈춰 있지 않던 블록만 센 렌더 프레임입니다. */
         uint64                                       _appliedPlayingID;               /**< 적용한 재생 명령의 가장 큰 id 입니다. */
         uint64                                       _playedEventCount;               /**< 재생한 이벤트 수입니다. 게시용입니다. */
         uint64                                       _droppedEventCount;              /**< 버린 이벤트 수입니다. 게시용입니다. */

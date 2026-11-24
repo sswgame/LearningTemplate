@@ -30,6 +30,12 @@ namespace sw
             pPlayer->stopMusic();
     }
 
+    void GameSound::setMusicPaused( bool bPaused )
+    {
+        if ( ISoundPlayer* pPlayer = game::findSubsystem<ISoundPlayer>() )
+            pPlayer->setMusicPaused( bPaused );
+    }
+
     optional<float32> GameSound::findMusicSeconds()
     {
         const ISoundPlayer* pPlayer = game::findSubsystem<ISoundPlayer>();

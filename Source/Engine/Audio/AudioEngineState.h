@@ -111,13 +111,13 @@ namespace sw
     {
         shared_ptr<const AudioMusicDef> _pDesc{};           ///< 지금 음악이다.
         AudioPlayingID                  _playingID{ 0 };    ///< 음악의 재생 id 다.
-        uint64                          _segmentStart{ 0 }; ///< 현재 구간의 0 박이 있는 렌더 프레임이다.
-        uint64                          _pendingFrame{ 0 }; ///< 예약된 전환의 렌더 프레임이다.
+        uint64                          _segmentStart{ 0 }; ///< 현재 구간의 0 박이 있는 음악 시계의 프레임이다.
+        uint64                          _pendingFrame{ 0 }; ///< 예약된 전환의 음악 시계 프레임이다.
         optional<int32>                 _segment;           ///< 지금 구간이다(없으면 비어 있다).
         optional<int32>                 _pendingSegment;    ///< 예약된 다음 구간이다(없으면 비어 있다).
 
-        /** @brief @p renderedFrameCount 시각의 음악 위치를 만듭니다. 음악이 없으면 재생하지 않는 상태입니다. */
-        AudioMusicStatus makeStatus( uint64 renderedFrameCount ) const;
+        /** @brief 음악 시계 @p musicClock 의 음악 위치를 만듭니다. 음악이 없으면 재생하지 않는 상태입니다. */
+        AudioMusicStatus makeStatus( uint64 musicClock ) const;
     };
 } // namespace sw
 
