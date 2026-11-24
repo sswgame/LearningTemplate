@@ -3,7 +3,7 @@
 <!--
   허브 서버 두 프로세스 — 첫 접속(클라이언트). `py -3 -m Scripts net-pair mmo` 가 전용 서버(-game=Playground — 시작 맵 maps/hub, 게임 접속 티켓 · 실행마다 빈 사용자 데이터 폴더 SW_USER_DATA_ROOT)를 띄운 뒤 이 시나리오로 클라이언트를 돌린다.
   로그인 → 티켓 → 암호화 UDP 접속 → 서버가 계정 진행(새 계정)을 읽어 아바타를 세움 → 짐승 둘을 세 번씩 쳐 쓰러뜨림(경험 60 씩, 동전 5 씩) → 레벨 2 → 버섯 채집(경험 15)
-  → 사거리 밖 짐승은 서버가 OutOfRange(2) 로 거절 → 하위 레벨 미니게임에 다녀온 뒤에도 세션이 이어짐. 행동은 모두 반사 함수 호출(`HubAvatarAgent` 의 Server 함수)이고 판정 · 보상은 서버가 한다.
+  → 사거리 밖 짐승은 서버가 OutOfRange(2) 로 거절 → 서버가 들어간 하위 레벨 미니게임을 이 클라이언트도 세우고 내림. 행동은 모두 반사 함수 호출(`HubAvatarAgent` 의 Server 함수)이고 판정 · 보상은 서버가 한다.
   끝나면 앱이 나가고 서버가 연결 끝에 진행을 저장한다. 이어 `hub_return.scenario.xml` 이 같은 계정으로 다시 붙어 같은 진행을 읽는지 본다.
 -->
 <Scenario name="game.playground.netpair.hub_first" fixedDelta="0.0166667" timeoutFrames="36000" startAfter="ScenePlaying" startTimeoutFrames="900">
@@ -75,10 +75,11 @@
 	<WaitUntil watch="Hub.ResultCount" equals="11" timeoutSeconds="10"/>
 	<Expect watch="Hub.LastResult" equals="9"/>
 	<Expect watch="Hub.PartySize" equals="1"/>
-	<!-- 하위 레벨 미니게임(카드 탁자 — 허브가 그대로다)에 다녀와도 허브 서버의 세션이 이어진다: 진행 · 복제가 그대로이고 행동이 계속 판정된다. 씬을 바꾸는 미니게임은 접속 중에 거절된다(MinigameFlow) -->
-	<DevCommand line="minigame.enter cardtable CardTableGate"/>
+	<!-- 하위 레벨 미니게임(카드 탁자 — 허브가 그대로다)은 서버가 들어가고 나온다: 실행기가 아래 첫 상태 줄을 보고 서버 콘솔에 `minigame.enter`, 둘째 상태 줄을 보고 `minigame.leave` 를 넣는다.
+	     이 클라이언트는 알림만 받아 같은 하위 레벨을 세우고 내린다. 진행 · 복제가 그대로이고 행동이 계속 판정된다 -->
+	<DevCommand line="hub.status"/>
 	<WaitUntil watch="Scene.LoadedSubLevelCount" equals="1" timeoutWallSeconds="60"/>
-	<DevCommand line="minigame.leave"/>
+	<DevCommand line="hub.status"/>
 	<WaitUntil watch="Scene.SubLevelCount" equals="0" timeoutWallSeconds="60"/>
 	<Expect watch="Hub.NetRole" equals="2"/>
 	<Expect watch="Hub.Level" equals="2"/>

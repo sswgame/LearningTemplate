@@ -156,6 +156,8 @@ _MMO_PAWN_EMULATION = {"gv_netEmulationLatencyMs": "60", "gv_netEmulationJitterM
 _MMO_ACCEPTED = re.compile(r"entered the hub as avatar \d+ on connection \d+ \(level (\d+), (new account|stored progress)\)")
 _MMO_FLOOR = re.compile(r"\[Hub\] floor self=(\d+) x=(-?[\d.]+) z=(-?[\d.]+) seen=(\d+) x=(-?[\d.]+) z=(-?[\d.]+)")
 _MMO_FLOOR_TOLERANCE = 0.3  # 바닥 위에 선 자리(m) - 절대 자리로 보내면 보간 지연만큼 어긋난다
+_MMO_STATUS = r"-> hub: avatar \d+ level"  # 시나리오의 `hub.status` 답 — 첫 줄은 서버가 하위 레벨에 들어갈 차례, 둘째 줄은 나올 차례다
+_MMO_SUBLEVEL_ENTER, _MMO_SUBLEVEL_LEAVE = "minigame.enter cardtable CardTableGate", "minigame.leave"  # 들어가는 것은 서버뿐이다(클라이언트 월드의 진입은 거절된다)
 _MMO_SAVED = re.compile(r"\[Hub\] profile of account \d+ saved")
 
 
@@ -210,6 +212,11 @@ def _run_mmo(argument: argparse.Namespace) -> int:
             client = group.start(f"client{index + 1}", [client_exe, app_arguments.option("game", _MMO_GAME), app_arguments.option("scenario", scenario),
                                                         app_arguments.flag("unattended")], stdin=False)
             list_client.append(client)
+            if index == 0:
+                # 하위 레벨은 서버가 들어가고, 클라이언트가 같은 것을 세웠다고 답한 뒤 나온다. 줄이 나오지 않으면 시나리오가 져서 아래 종료 코드가 알린다.
+                for pattern, line in ((_MMO_STATUS, _MMO_SUBLEVEL_ENTER), (f"{_MMO_STATUS}.*{_MMO_STATUS}", _MMO_SUBLEVEL_LEAVE)):
+                    if client.wait_for(re.compile(pattern, re.DOTALL), _TIMEOUT_SECONDS * 4):
+                        server.send(line)
             client.wait(_TIMEOUT_SECONDS * 4)
             if client.return_code != 0:
                 server.stop()
