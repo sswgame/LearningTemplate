@@ -7,6 +7,7 @@
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
 
+#include "GameFramework/Runtime/Character/Combat/TargetFilter.h"
 #include "GameFramework/Runtime/Gameplay/Ability/AbilityCatalog.h"
 #include "GameFramework/Runtime/Gameplay/Ability/AbilitySystemComponent.h"
 #include "GameFramework/Runtime/Gameplay/Interaction/InteractableComponent.h"
@@ -57,4 +58,37 @@ SW_TEST_CASE( InteractorEffectTest, StartEffectEndsWhenTheTargetIsDestroyed )
     manager.update( kFrame );
     SW_EXPECT_FALSE( pInteractor->isInteracting() );
     SW_EXPECT_EQUAL( 0u, pAbility->getActiveEffectCount() );
+}
+
+/** @brief [InteractorEffectTest] 누르고 있기 도중 쓰러지면 누른 채여도 상호작용이 취소되고, 쓰러진 동안 새로 시작하지 않는다 */
+SW_TEST_CASE( InteractorEffectTest, DeathEndsTheInteraction )
+{
+    GameObjectManager manager;
+    GameObject&       hero = *manager.createGameObject( hashed_string( "Hero" ) );
+    (void)hero.addComponent<SceneComponent>();
+    InteractorComponent* pInteractor = hero.addComponent<InteractorComponent>();
+    GameObject*          pChest      = manager.createGameObject( hashed_string( "Chest" ) );
+    pChest->addComponent<SceneComponent>()->setWorldPosition( float3{ 0.0f, 0.0f, 1.0f } );
+    InteractionDef def;
+    def._id           = hashed_string( "open" );
+    def._maxDistance  = 5.0f;
+    def._bLineOfSight = SW_FALSE;
+    InteractionStepDef step;
+    step._mode     = InteractionInputMode::Hold;
+    step._duration = 10.0f;
+    def._listStep.push_back( step );
+    pChest->addComponent<InteractableComponent>()->setDefinition( def );
+    manager.beginPlay();
+
+    constexpr float32 kFrame = 1.0f / 60.0f;
+    pInteractor->setInput( true );
+    manager.update( kFrame );
+    SW_REQUIRE_TRUE( pInteractor->isInteracting() );
+    hero.addTag( TargetFilter::getDeadTag() );
+    manager.update( kFrame );
+    SW_EXPECT_FALSE( pInteractor->isInteracting() );
+    pInteractor->setInput( false );
+    pInteractor->setInput( true );
+    manager.update( kFrame );
+    SW_EXPECT_FALSE( pInteractor->isInteracting() );
 }
