@@ -449,8 +449,8 @@ namespace sw
          * @param pCallerName 오류 로그에 찍을 호출자 이름
          */
         [[nodiscard]] bool uploadSceneAndSubmit( IRHIDevice* pDevice, const utf8* pCallerName );
-        /** @brief `uploadSceneAndSubmit` 의 몸체(모듈 구간 안)입니다. */
-        [[nodiscard]] bool uploadSceneAndSubmitFrame( IRHIDevice* pDevice, const utf8* pCallerName );
+        /** @brief `executePacket` 의 뒷부분(모듈 구간 안)입니다 — 패스 고르기 · 추가 뷰 · 프레임 준비를 하고 올려 제출합니다. */
+        [[nodiscard]] bool drawPacket( IRHIDevice* pDevice, RenderFramePacket& packet );
         /**
          * @brief 라이트 버퍼를 올리고 뷰마다 라이트 그리드를 준비합니다. 업로드 전에, 추가 뷰가 정해진 뒤에 부릅니다(생산자는 `selectLightGridProducer`).
          * @details 라이트와 그림자 타일은 앞서 `GPULightBuffer::populate` 로 담겨 있어야 한다. 뷰의 그리드 번호는 `FrameViewTarget::_lightGridIndex` 에 남는다.

@@ -124,6 +124,8 @@ namespace sw
         }
         /** @brief 두 공간의 크기가 다른지(시간 업스케일이 켜졌는지)입니다. */
         bool hasTemporalUpscale() const { return _outputWidth != _width || _outputHeight != _height; }
+        /** @brief 크기를 정했으면 true 입니다(`setSize`). 첨부는 그 뒤 도는 패스가 처음 쓸 때 생긴다. */
+        bool hasSize() const { return _width > 0; }
         /** @brief 첨부가 하나도 없으면 true 입니다. */
         bool isEmpty() const { return _mapAttachment.empty(); }
 
@@ -192,7 +194,7 @@ namespace sw
         void release( IRHIDevice* pDevice );
         /**
          * @brief 그 이름으로 만든 첨부의 쉰 프레임 수를 나아가게 하고, `kIdleFramesBeforeRelease` 프레임 이어서 쓰이지 않았으면 놓습니다. 셋업(기록 전)에서 프레임마다 부릅니다.
-         * @return 이번에 놓았으면 true 입니다. 첨부가 없으면 false 입니다.
+         * @return 이번에 놓았으면 true 입니다. 첨부가 없거나 프레임을 넘어 내용을 잇는 첨부(`Load`)면 false 입니다.
          */
         bool releaseIfIdle( IRHIDevice* pDevice, const hashed_string& name, bool bUsedThisFrame );
         /** @brief 이 풀이 지금까지 만든 첨부 수입니다(놓았다 다시 만든 것도 센다 — 진단과 테스트용). */

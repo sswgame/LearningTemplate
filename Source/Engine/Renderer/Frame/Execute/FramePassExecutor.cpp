@@ -1437,9 +1437,7 @@ namespace sw
             const RenderPassInputRole role = static_cast<RenderPassInputRole>( input._role );
             if ( ( _disabledInputRoleMask & ( 1u << input._role ) ) != 0 )
                 continue;
-            // 이 뷰에서 빠진 패스의 출력(`TransientAttachmentPool::markAbsent`, 꺼진 SSAO)은 걸지 않는다 — 셰이더는 그 역할의 기본값(AO = 1)을 쓴다. 로드 검증 3-7 이 선택 입력만 그렇게 읽게 한다.
-            if ( activePool().resolveName( input._attachment ).empty() )
-                continue;
+            // 이 뷰에서 빠진 패스의 출력은 걸리지 않는다(`registerPassTexture`) — 로드 검증 3-7 이 선택 입력만 그렇게 읽게 한다.
             registerPassTexture( context, inputRoleName( role ), input._attachment );
         }
     }

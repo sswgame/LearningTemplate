@@ -349,6 +349,23 @@ namespace sw
 
         ensurePassResources();
         ensureTransientResources( packet._viewportWidth, packet._viewportHeight );
+        // 모듈 구간(ExtensionRenderPass M3) — 확장 훅부터 기록 · 제출까지 모듈 코드가 도는 동안 레지스트리의 렌더 잠금을 쥔다(등록 해제의 flush 가 이 잠금을 기다린다).
+        // 미리보기 씬 렌더러는 모듈 확장을 받지 않는다(확장은 주 렌더러의 파이프라인에 붙는다). 구간이 끝나면 모듈이 넣은 콜백을 모두 놓는다(소멸 코드가 모듈 안에 있다).
+        // 확장이 읽고 쓰는 첨부도 패스 고르기가 보므로(`applyViewPassSelection`) 고르기보다 먼저 모은다.
+        RenderExtensionRegistry* const pExtensionRegistry = _host._pExtensions;
+        if ( pExtensionRegistry == nullptr )
+            return drawPacket( pDevice, packet );
+        RenderExtensionRegistry::RenderScope moduleScope( *pExtensionRegistry );
+        // 선언이 그래프에 묶인 것과 다르면 다음 `bindPassCallbacks` 가 모듈 노드를 새로 넣는다.
+        if ( _extensionHost.collectFrame( *pExtensionRegistry, _state._outputWidth, _state._outputHeight ) )
+            _bCallbacksBound = SW_FALSE;
+        const bool bDrew = drawPacket( pDevice, packet );
+        _extensionHost.releaseFrame();
+        return bDrew;
+    }
+
+    bool FrameRenderer::drawPacket( IRHIDevice* pDevice, RenderFramePacket& packet )
+    {
         resetPassCbRing();
         prepareRainOcclusion( packet );
         _passExecutor.setIdentityWorld( _state._frameContext );
@@ -364,6 +381,12 @@ namespace sw
             _state._lensFlare.prepare( pDevice, {}, packet._viewProj, 1.0f );
         // 추가 뷰의 풀, 텍스처, 컬링 슬롯을 업로드 전에 맞춘다(기록 중에는 만들 수 없다).
         prepareExtraViews( packet._listView );
+        // 모듈 임시 텍스처도 이번 프레임에 그리는 뷰마다 기록 전에 만든다.
+        for ( const unique_ptr<FrameViewTarget>& pView : _state._listView )
+        {
+            if ( pView->_bRenderThisFrame == SW_TRUE )
+                _extensionHost.allocateTextures( *pView );
+        }
         // 값 업로드와 바인딩은 드로우 직전에 ShaderParameterBinder 가 한다. 여기서는 시드만 채운다.
         _passExecutor.resetViewRecordState();
 
@@ -573,27 +596,6 @@ namespace sw
 
     bool FrameRenderer::uploadSceneAndSubmit( IRHIDevice* pDevice, const utf8* pCallerName )
     {
-        // 모듈 구간(ExtensionRenderPass M3) — 확장 훅부터 기록 · 제출까지 모듈 코드가 도는 동안 레지스트리의 렌더 잠금을 쥔다(등록 해제의 flush 가 이 잠금을 기다린다).
-        // 미리보기 씬 렌더러는 모듈 확장을 받지 않는다(확장은 주 렌더러의 파이프라인에 붙는다). 구간이 끝나면 모듈이 넣은 콜백을 모두 놓는다(소멸 코드가 모듈 안에 있다).
-        RenderExtensionRegistry* const pExtensionRegistry = _host._pExtensions;
-        if ( pExtensionRegistry == nullptr )
-            return uploadSceneAndSubmitFrame( pDevice, pCallerName );
-        RenderExtensionRegistry::RenderScope moduleScope( *pExtensionRegistry );
-        // 선언이 그래프에 묶인 것과 다르면 다음 `bindPassCallbacks` 가 모듈 노드를 새로 넣는다. 임시 텍스처는 이번 프레임에 그리는 뷰마다 기록 전에 만든다.
-        if ( _extensionHost.collectFrame( *pExtensionRegistry, _state._outputWidth, _state._outputHeight ) )
-            _bCallbacksBound = SW_FALSE;
-        for ( unique_ptr<FrameViewTarget>& pView : _state._listView )
-        {
-            if ( pView->_bRenderThisFrame == SW_TRUE )
-                _extensionHost.allocateTextures( *pView );
-        }
-        const bool bOk = uploadSceneAndSubmitFrame( pDevice, pCallerName );
-        _extensionHost.releaseFrame();
-        return bOk;
-    }
-
-    bool FrameRenderer::uploadSceneAndSubmitFrame( IRHIDevice* pDevice, const utf8* pCallerName )
-    {
         uploadGPUScene( pDevice );
         // 라이트 버퍼는 뷰가 정해진 뒤에 올린다 — 뷰마다 라이트 그리드가 붙는다(주 시점과 이번 프레임에 그리는 추가 뷰).
         updateLightBuffer( pDevice );
@@ -755,7 +757,7 @@ namespace sw
         _state.getMainView().beginViewHistory();
         // 지난 뷰-투영과 견주므로 applyViewProjection(지난 것을 이번 것으로 바꾼다) 앞이다.
         // 주 시점의 첨부만 렌더 타깃 목록(에디터 패널)에 싣는다 — 가리키는 곳이 바뀌거나 타깃을 만들고 놓았을 때만 다시 싣는다.
-        const FrameViewResources::PassSelectionResult selection = _viewResources.applyViewPassSelection( _state.getMainView(), mainViewProj, captureViewPassSceneState() );
+        const FrameViewResources::PassSelectionResult selection = _viewResources.applyViewPassSelection( _state.getMainView(), mainViewProj, captureViewPassSceneState(), _state._transientAliasPlan, _extensionHost.getPasses() );
         if ( selection._bTargetsRebound == SW_TRUE || selection._bTargetsChanged == SW_TRUE )
             publishRenderTargets();
         if ( selection._bTargetsChanged == SW_TRUE )
@@ -1006,10 +1008,9 @@ namespace sw
                                                                                          settings._resolutionScale, settings._upscaleZoom );
         const uint32              poolHeight = FrameRendererUtil::computeViewPoolExtent( static_cast<float32>( height ) * settings._screenRect._w,
                                                                                          settings._resolutionScale, settings._upscaleZoom );
-        if ( _viewResources.updateViewTransients( _state.getMainView(), poolWidth, poolHeight, _state._transientAliasPlan, _state._transientAliasGeneration, true ) )
+        if ( _viewResources.updateViewTransients( _state.getMainView(), poolWidth, poolHeight, _state._transientAliasGeneration, true ) )
         {
-            publishRenderTargets();
-            reportRenderTargetMemory();
+            publishRenderTargets(); // 놓은 첨부를 목록에서 뺀다 — 새 첨부는 패스 고르기가 만든 뒤 다시 싣는다(`updatePassConstants`)
             _publishedViewTransientRebuildCount.add();
         }
         // 자동 렌더 배율은 풀이 아니라 사각형만 줄인다(정수 업스케일은 풀 전체가 화면 픽셀과 짝이라 늘 1).
@@ -1061,7 +1062,7 @@ namespace sw
     {
 #if SW_LOG_LEVEL_COMPILED( SW_LOG_VERBOSITY_INFO )
         // 주 시점의 첨부마다 크기를 남긴다(렌더 타깃 패널 `RenderTargetRegistry` 와 같은 목록). `[Profile] GPU memory by kind` 가 늘면 어느 첨부가 늘었는지 이 줄로 나눈다(측정 기준을 다시 뜰 때 함께 본다).
-        // 풀을 다시 만들 때와 꺼져 있던 효과의 타깃을 처음 만들 때만 부른다.
+        // 패스 고르기가 첨부를 만들거나 놓은 프레임에만 부른다.
         uint64 totalBytes = 0;
         for ( const auto& [name, attachment] : _state.getMainView()._transientPool.getAll() )
         {
@@ -1413,12 +1414,12 @@ namespace sw
         const uint32  zoom   = view._outputKind == RenderViewOutputKind::ScreenRect ? view._settings._upscaleZoom : 0u;
         const uint32  width  = FrameRendererUtil::computeViewPoolExtent( static_cast<float32>( view._outputWidth ), scale, zoom );
         const uint32  height = FrameRendererUtil::computeViewPoolExtent( static_cast<float32>( view._outputHeight ), scale, zoom );
-        (void)_viewResources.updateViewTransients( view, width, height, _state._transientAliasPlan, _state._transientAliasGeneration, false );
+        (void)_viewResources.updateViewTransients( view, width, height, _state._transientAliasGeneration, false );
         view.updateViewRect( zoom > 0 ? 1.0f : view._settings._rectScale );
         // 기록을 버릴지는 컬링(가림 판정)이 기록 전에 보므로 그리기(renderExtraView)가 아니라 여기서 정한다.
         view.beginViewHistory();
         // 이 뷰가 기록할 풀스크린 패스를 고르고 도는 패스의 타깃을 만든다 — 텍스처는 기록 중에 만들 수 없어 셋업에서 한다. 지난 뷰-투영은 그리기(applyViewProjection)가 바꾼다.
-        (void)_viewResources.applyViewPassSelection( view, request._viewProj, captureViewPassSceneState() ); // 추가 뷰의 첨부는 렌더 타깃 목록에 싣지 않는다
+        (void)_viewResources.applyViewPassSelection( view, request._viewProj, captureViewPassSceneState(), _state._transientAliasPlan, _extensionHost.getPasses() ); // 추가 뷰의 첨부는 렌더 타깃 목록에 싣지 않는다
         _upscale.prepareUpscale( view, view._outputWidth, view._outputHeight );
         _postProcessMaterials.prepareView( view );
     }

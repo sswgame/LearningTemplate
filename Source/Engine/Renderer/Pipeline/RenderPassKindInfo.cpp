@@ -167,7 +167,7 @@ namespace sw
                         // 기록은 화면 속도(물체 움직임 포함)로 지난 프레임 자리를 찾고 이번 원본의 이웃 범위로 자른다(taa.hlsl). 속도는 3x3 에서 가장 가까운 깊이의 것을 쓴다.
                         // 하늘(깊이 1)은 속도 출력이 없어 깊이 · 지난 뷰-투영으로 카메라 재투영만 한다.
                         // 후처리를 끈 뷰(CCTV)에서는 패스를 기록하지 않고 출력이 원본을 가리킨다(kBypassesToSource, 출력은 원본과 같은 형식 — 검증 3-6).
-                        // 일반 풀스크린 패스가 아니라 실행은 executeTAAPass 이고, 출력 타깃은 셋업이 기록 형식으로 읽으므로 늘 만든다(ensureTAAHistory).
+                        // 일반 풀스크린 패스가 아니라 실행은 executeTAAPass 이고, 기록은 셋업이 출력 형식으로 만든다(FrameViewResources::updateOutputHistory).
                         info._pDefaultShader     = &EngineDefaultAssets::_shaderTAA;
                         info._inputContract      = makeContract( { Role::SourceColor, Role::SceneDepth, Role::Velocity }, {} );
                         info._executionBoundRole = Role::GBufferAlbedo; // 기록(지난 출력)을 그 칸에 건다 — executeTAAPass

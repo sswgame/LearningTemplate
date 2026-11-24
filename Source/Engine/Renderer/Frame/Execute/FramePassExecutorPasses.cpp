@@ -670,13 +670,13 @@ namespace sw
             registerPassTexture( context, attachmentNames()._localShadowMap, pLocalShadowInput->_attachment );
         // 접촉 그림자 마스크는 그 패스가 이 뷰에서 돌았을 때만 건다(꺼지면 출력이 없다 — 셰이더는 1). 나머지 선언 입력(원본 색 · 깊이)은 이 패스가 그리는 첨부라 걸지 않는다.
         const RenderGraphPassDesc::ResolvedAttachment* pContactInput = Internal::findInputByRole( input._passDesc, RenderPassInputRole::ContactShadow );
-        if ( pContactInput != nullptr && activePool().resolveName( pContactInput->_attachment ).empty() == false )
+        if ( pContactInput != nullptr )
             registerPassTexture( context, attachmentNames()._contactShadow, pContactInput->_attachment );
         // DBuffer 셋도 같다 — 데칼 패스가 이 뷰에서 돌았을 때만 건다(데칼이 없으면 출력이 없다 — 셰이더는 "덮지 않음").
         for ( const RenderPassInputRole dbufferRole : { RenderPassInputRole::DBufferA, RenderPassInputRole::DBufferB, RenderPassInputRole::DBufferC } )
         {
             const RenderGraphPassDesc::ResolvedAttachment* pDBufferInput = Internal::findInputByRole( input._passDesc, dbufferRole );
-            if ( pDBufferInput != nullptr && activePool().resolveName( pDBufferInput->_attachment ).empty() == false )
+            if ( pDBufferInput != nullptr )
                 registerPassTexture( context, inputRoleName( dbufferRole ), pDBufferInput->_attachment );
         }
         // 선언한 컬러 출력을 모두 연다 — 화면 속도를 선언했으면 [색, 속도] 두 타깃이다(검증 3-3, 셰이더 SV_TARGET0 · 1).
@@ -859,7 +859,7 @@ namespace sw
             context._resourceRegistry.registerTexture( attachmentNames()._sourceColor, pHdri->getHandle(), pHdri->getSRV() );
         // 볼륨 구름은 그 패스가 이 뷰에서 돌았을 때만 건다(없으면 셰이더는 구름을 얹지 않는다). 나머지 선언 입력(장면 색 · 깊이)은 이 패스가 그리는 첨부라 걸지 않는다.
         const RenderGraphPassDesc::ResolvedAttachment* pCloudInput = FramePassExecutorInternal::findInputByRole( input._passDesc, RenderPassInputRole::SkyClouds );
-        if ( pCloudInput != nullptr && activePool().resolveName( pCloudInput->_attachment ).empty() == false )
+        if ( pCloudInput != nullptr )
             registerPassTexture( context, attachmentNames()._skyClouds, pCloudInput->_attachment );
         if ( beginColorPass( context, colorTarget, input._passDepth, _state._clearColor, RHIRenderPassLoadOp::Load, RHIRenderPassLoadOp::Load ) == false )
             return;
@@ -1190,7 +1190,7 @@ namespace sw
 
     void FramePassExecutor::executeTAAPass( const PassExecuteInput& input )
     {
-        // 타깃은 선언한 첫 컬러 출력이다(풀스크린 패스와 같은 규칙이며 히스토리도 같은 규칙으로 만든다. ensureTAAHistory).
+        // 타깃은 선언한 첫 컬러 출력이다(풀스크린 패스와 같은 규칙이며 히스토리도 같은 규칙으로 만든다. updateOutputHistory).
         FramePassContext&      context   = input._context;
         const AttachmentNames& names     = attachmentNames();
         const hashed_string&   taaTarget = input._declaredColor[0]._attachment;
@@ -1205,7 +1205,7 @@ namespace sw
             if ( static_cast<RenderPassInputRole>( sourceInput._role ) == RenderPassInputRole::SourceColor )
                 pSrcName = &sourceInput._attachment;
         }
-        // 히스토리 생성과 bindless 등록은 ensureTAAHistory() 가 셋업 단계에서 끝냈다. 이 콜백은
+        // 히스토리 생성과 bindless 등록은 updateOutputHistory() 가 셋업 단계에서 끝냈다. 이 콜백은
         // 병렬 기록에서 태스크 스레드가 실행하므로 여기서 레지스트리를 건드리면 안 된다. 히스토리는 뷰마다 하나다.
         const FrameViewTarget& activeView = *_pActiveView;
         // 기록을 버리는 프레임(처음 그리는 프레임 · 컷 · 후처리를 다시 켠 첫 프레임 — `FrameViewTarget::_bTAAHistoryReset`)에서는 지난 화면의 히스토리를 버린다. 이번 프레임은 히스토리 슬롯에 **이번 원본**을
@@ -1433,10 +1433,7 @@ namespace sw
         }
         for ( const ExtensionPassRead& read : pass._params._listRead )
         {
-            // 이 뷰에서 빠진 첨부(꺼진 효과의 출력)는 걸지 않는다 — 셰이더는 그 역할의 기본값을 쓴다.
-            const hashed_string readName( read._attachment.c_str() );
-            if ( activePool().resolveName( readName ).empty() == false )
-                registerPassTexture( context, inputRoleName( read._role ), readName );
+            registerPassTexture( context, inputRoleName( read._role ), hashed_string( read._attachment.c_str() ) );
         }
         ExtensionConstantScope<FramePassContext> constantScope( context, _frameArena );
         constantScope.apply( listConstant.data(), static_cast<uint32>( listConstant.size() ) );
@@ -1469,9 +1466,7 @@ namespace sw
             return true; // 그릴 것이 없으면 렌더 패스를 열지 않는다(열면 타깃의 첫 접근이 클리어로 소비된다)
         for ( const ExtensionPassRead& read : pass._params._listRead )
         {
-            const hashed_string readName( read._attachment.c_str() );
-            if ( activePool().resolveName( readName ).empty() == false )
-                registerPassTexture( context, inputRoleName( read._role ), readName );
+            registerPassTexture( context, inputRoleName( read._role ), hashed_string( read._attachment.c_str() ) );
         }
         ExtensionConstantScope<FramePassContext> passScope( context, _frameArena );
         passScope.apply( listConstant.data(), static_cast<uint32>( listConstant.size() ) );

@@ -337,6 +337,9 @@ namespace sw
     {
         // 상태는 옮기지 않는다 — 선언한 입력은 레벨 콜백이 셰이더 읽기로 옮겼다(꺼진 효과가 가리키는 원본은 그 효과 패스의 입력 선언이 옮겼다). 패스 기록 면에는 텍스처 전이가 없다.
         const TransientAttachmentPool::Attachment attachment = findTransientAttachment( attachmentName );
+        // 이 뷰에 없는 첨부(빠진 패스의 출력 — 꺼진 SSAO · 데칼 없는 DBuffer · 타일 없는 점광 그림자 아틀라스)는 걸지 않는다 — 셰이더는 그 역할의 기본값을 쓴다.
+        if ( attachment._texture == 0 )
+            return;
         context._resourceRegistry.registerTexture( canonicalName, attachment._texture, attachment._srv );
         // 원본을 비켜 읽는 효과(블룸)는 그 원본의 텍셀 크기로 비켜야 한다. 반해상도 첨부면 프레임 텍셀의 두 배다. context 는 패스마다 시드의 사본이라 다음 패스로 새지 않는다.
         const bool bSourceColorAttachment = canonicalName == attachmentNames()._sourceColor && attachment._width > 0 && attachment._height > 0;
