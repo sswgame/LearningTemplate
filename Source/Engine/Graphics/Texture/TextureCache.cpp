@@ -192,6 +192,7 @@ namespace sw
         vector<StreamingRead> _listReading              SW_GUARDED_BY( _streamingMutex );         ///< 범위를 읽는 중이거나 읽어 제출을 기다리는 요청
         uint64 _bytesInFlight                           SW_GUARDED_BY( _streamingMutex ) = 0;     ///< `_listReading` 이 쥔(쥘) 바이트 합 — `TextureStreamingBudget::_maxBytesInFlight` 아래로 묶는다
         bool _bStreamingParked                          SW_GUARDED_BY( _streamingMutex ) = false; ///< 지난 `updateStreaming` 이 풀 예산에 막혔다 — 줄은 예산이 날 때까지 쉰다(`countLoadsInFlight` 가 세지 않는다) NOLINT(sw-bool-flag): 잠금이 지키는 칸 하나다
+        atomic<uint64>                                  _arrivalCount{ 0 };                       ///< 도착한 텍스처 수(`getArrivalCount`)
         TextureStreamingRetireList                      _retired;                                 ///< 바꿔 끼운 옛 GPU 자원(`releaseRetiredTextures` 가 해제한다)
         atomic<int32>                                   _qualityMipDrop{ 0 };                     ///< 텍스처 품질이 버리는 위쪽 밉 수 — 게임 스레드가 뜬 사본(`refreshQualitySettings`)이라 워커 · 렌더 스레드는 이것만 읽는다
         vector<string> _listUpgrading                   SW_GUARDED_BY( _streamingMutex );         ///< 위쪽 밉 업로드를 제출했고 끝남 확인을 기다리는 텍스처의 키(`updateStreaming` 이 폴링한다)
@@ -380,6 +381,7 @@ namespace sw
                     _mapEntry.erase( it );
                 }
             }
+            _arrivalCount.fetch_add( 1, std::memory_order_release ); // 실패도 센다 — 번호가 로드 중 텍스처에서 누락 체커로 바뀌었다
             _cvLoaded.notify_all();
         }
     };
@@ -1151,6 +1153,11 @@ namespace sw
     {
         if ( pDevice != nullptr )
             _impl->_retired.releaseForDevice( pDevice );
+    }
+
+    uint64 TextureCache::getArrivalCount() const
+    {
+        return _impl->_arrivalCount.load( std::memory_order_acquire );
     }
 
     uint32 TextureCache::countLoadsInFlight() const
@@ -1926,6 +1933,7 @@ namespace sw
         lock.unlock();
         if ( pErased != nullptr )
             pErased->releaseRHI( pDevice ); // 지키던 번호도 함께 놓는다
+        _impl->_arrivalCount.fetch_add( 1, std::memory_order_release );
         _impl->_cvLoaded.notify_all();
         return bReloaded ? ReloadResult::Reloaded : ReloadResult::Failed;
     }

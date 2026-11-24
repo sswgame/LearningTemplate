@@ -885,6 +885,7 @@ namespace sw
 
         // 메시 쪽은 "바뀐 것 없음" · "후보 없음" 으로 일찍 끝나는 길이 여럿이다. 입자는 단계마다 움직이므로 그 뒤에 따로, 매 프레임 모은다.
         populateMeshesFromScene( pScene, cameraPos );
+        updateTextureArrivals();
         // 배치 구성을 그대로 둔 프레임(위 일찍 끝나는 길)에도 머티리얼 값은 바뀔 수 있다(에디터 편집 · 매 틱 넣는 인스턴스 값). 사본은 매 빌드 맞춘다.
         _materialRegistry.refreshMaterialBindings( _snapshot );
         const GameObjectManager* pObjects = pScene != nullptr ? pScene->getObjectManager() : nullptr;
@@ -1513,6 +1514,18 @@ namespace sw
             _staticShadowCount     = staticCount;
         }
         if ( bStaticDirty )
+            ++_snapshot._staticShadowGeneration;
+    }
+
+    void GPUSceneBuilder::updateTextureArrivals()
+    {
+        if ( engine::areEngineServicesBound() == false )
+            return; // 도구 · 테스트 — 텍스처 캐시가 없다
+        const uint64 arrivalCount = engine::getSubsystem<AssetManager>().getAssetCache<TextureCache>().getArrivalCount();
+        if ( arrivalCount == _textureArrivalCount )
+            return;
+        _textureArrivalCount = arrivalCount;
+        if ( _snapshot.hasTextureShapedDepth() )
             ++_snapshot._staticShadowGeneration;
     }
 

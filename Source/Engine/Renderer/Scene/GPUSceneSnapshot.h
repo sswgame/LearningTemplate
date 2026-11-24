@@ -6,6 +6,7 @@
  *          소유 규칙(shared_ptr 로 소유권을 함께 싣는다)은 `GPUSceneSnapshot` 주석을 참고한다.
  */
 #pragma once
+#include "Core/Algorithm/VectorUtil.h"
 #include "Core/Container/span.h"
 #include "Core/Container/unordered_map.h"
 #include "Core/Container/vector.h"
@@ -16,6 +17,7 @@
 #include "Engine/Animation/Scene/AnimationSkinSlot.h"
 #include "Engine/EngineMinimal.h"
 #include "Engine/Graphics/Material/MaterialRenderProxy.h"
+#include "Engine/Graphics/Material/MaterialTypes.h"
 #include "Engine/Graphics/RenderState/RenderState.h"
 #include "Engine/Graphics/Shader/Binding/GPUSpriteInstanceData.h"
 #include "Engine/Presentation/InstanceCustomData.h"
@@ -462,7 +464,8 @@ namespace sw
         /** @brief 셰이더로 보내는 시간을 접는 주기(초, `EngineConfig::_shaderTimeRolloverSeconds`)입니다. 렌더러 시계(`FrameRenderState::getAnimationTime`)도 이 값으로 접는다. */
         float64 _shaderTimeRolloverSeconds{ 0.0 };
         /**
-         * @brief 정적 그림자 세대입니다. 정적 메시가 움직이거나 바뀌거나 더해지거나 빠질 때 오른다(`GPUSceneBuilder::updateStaticShadowGeneration`).
+         * @brief 정적 그림자 세대입니다. 정적 메시가 움직이거나 바뀌거나 더해지거나 빠질 때(`GPUSceneBuilder::updateStaticShadowGeneration`),
+         *        그리고 그림자 모양을 정하는 텍스처가 도착할 때(`updateTextureArrivals`) 오른다.
          * @details 그림자 캐시(`ShadowCachePolicy`)가 이 값이 바뀌면 캐시 층을 다시 그린다 — 언리얼이 정적 프리미티브의 등록 · 이동으로 캐시한 그림자 맵을 버리는 것과 같은 자리다.
          */
         uint64 _staticShadowGeneration{ 0 };
@@ -564,6 +567,17 @@ namespace sw
             _listVFXMeshEmitter.clear();
         }
 
+        /**
+         * @brief 텍스처가 깊이 · 그림자의 모양을 정하는 퍼뮤테이션(알파 컷오프 · 변위)이 있으면 true 입니다.
+         * @details 텍스처가 도착하면 그 그림자의 모양이 바뀌지만 SRV 번호가 그대로라 프리미티브도 머티리얼도 더럽지 않다(`GPUSceneBuilder::updateTextureArrivals`).
+         */
+        bool hasTextureShapedDepth() const
+        {
+            return _pListShaderPermutation != nullptr &&
+                   VectorUtil::containsIf( *_pListShaderPermutation, []( const GPUShaderPermutation& permutation )
+            { return VectorUtil::containsIf( permutation._listDefine, []( const string& define )
+              { return define == kMaterialAlphaCutoffDefine || define == kMaterialDisplacementDefine; } ); } );
+        }
         /** @brief 칸 순 인스턴스 배열을 반환합니다(구멍 포함). 아직 발행 전이면 빈 배열입니다. */
         const vector<GPUInstance>& getInstances() const
         {

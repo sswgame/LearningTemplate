@@ -207,6 +207,12 @@ namespace sw
          * @details 시나리오의 스크린샷이 로드 중 텍스처 · 아직 작은 밉을 찍지 않게 기다릴 때 씁니다(`AutomationRunner`).
          */
         uint32 countLoadsInFlight() const;
+        /**
+         * @brief 지금까지 도착한 텍스처 수입니다(어느 스레드든). 첫 로드가 끝나거나 다시 읽은(핫 리로드) 뒤 오릅니다 — 그때 안정 SRV 번호는 이미 새 텍스처를 가리킵니다.
+         * @details 안정 번호(R-6)라 도착이 머티리얼 · 프리미티브를 더럽히지 않는다. 도착 전 그림을 캐시하는 쪽(그림자 캐시)이 이 수로 다시 그린다.
+         *          밉 올리기 · 내리기는 세지 않는다 — 카메라가 움직일 때마다 바뀌어 캐시가 늘 버려진다(모양은 작은 밉과 같다).
+         */
+        [[nodiscard]] uint64 getArrivalCount() const;
         /** @brief 렌더 텍스처 경로(`rendertarget/...`)이면 true 입니다. */
         static bool isRenderTargetPath( string_view relativePath );
         /** @brief CPU 텍스처 경로(`cpu/...`)이면 true 입니다. */
