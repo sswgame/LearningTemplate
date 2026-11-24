@@ -51,8 +51,9 @@ namespace sw
         /** @brief 이 화면이 맡은 플레이어입니다(혼자 하면 0). 세션이 닫힌 뒤에도 그 판이 끝날 때까지 같다. */
         int32 getLocalPlayer() const { return _localPlayer; }
         /**
-         * @brief 판 도중에 넷 세션이 닫혔으면 락스텝을 놓고 true 입니다(한 번). 맡은 플레이어는 그대로다.
-         * @details 멈춘 채 기다리지 않는다 — 남은 사람이 이 프로세스의 판을 이어 한다(나간 상대의 유닛은 명령을 받지 않는다).
+         * @brief 판 도중에 상대를 잃었으면 락스텝을 놓고 true 입니다(한 번). 맡은 플레이어는 그대로다.
+         * @details 잃은 것은 셋이다 — 넷 세션이 닫혔다, 판의 월드에 들어왔던 상대가 나갔다(연결이 끊김 · 다른 씬), 두 판이 어긋났다(체크섬).
+         *          멈춘 채 기다리지 않는다 — 남은 사람이 이 프로세스의 판을 이어 한다(나간 상대의 유닛은 명령을 받지 않는다). 어긋난 판을 함께 잇지 않는다.
          */
         [[nodiscard]] bool releaseLostSession();
         /** @brief 명령을 다음 내 입력에 싣습니다. 열려 있지 않으면 false 입니다. */
@@ -68,7 +69,7 @@ namespace sw
         int32 getAppliedCommandCount( int32 player ) const;
 
     private:
-        /** @brief 상대가 같은 월드(판의 씬)에 들어와 있으면 true 입니다. 붙기만 하고 씬을 읽는 상대에게 낸 입력은 받을 처리기가 없어 사라진다. */
+        /** @brief 상대가 이 판의 월드(씬)에 들어와 있으면 true 입니다. 붙기만 하고 씬을 읽는 상대에게 낸 입력은 받을 처리기가 없어 사라진다. */
         [[nodiscard]] bool isPeerInWorld() const;
 
     private:
@@ -84,6 +85,7 @@ namespace sw
         int32                  _arrAppliedCount[kPlayerCount];
         uint8                  _bPendingInput   : 1;
         uint8                  _bReportedDesync : 1;
-        [[maybe_unused]] uint8 _reserved        : 6;
+        uint8                  _bPeerJoined     : 1; ///< 상대가 판의 월드에 들어온 적이 있다 — 그 뒤 없으면 나간 것이다
+        [[maybe_unused]] uint8 _reserved        : 5;
     };
 } // namespace sw

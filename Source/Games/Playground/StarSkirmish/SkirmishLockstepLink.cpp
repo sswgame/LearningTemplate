@@ -24,6 +24,7 @@ namespace sw
         , _arrAppliedCount{ 0, 0 }
         , _bPendingInput{ SW_FALSE }
         , _bReportedDesync{ SW_FALSE }
+        , _bPeerJoined{ SW_FALSE }
         , _reserved{ 0 }
     {
     }
@@ -72,13 +73,19 @@ namespace sw
         _arrAppliedCount[1] = 0;
         _bPendingInput      = SW_FALSE;
         _bReportedDesync    = SW_FALSE;
+        _bPeerJoined        = SW_FALSE;
         _listLocalCommand.clear();
         _listPendingInput.clear();
     }
 
     bool SkirmishLockstepLink::releaseLostSession()
     {
-        if ( _pNetSession == nullptr || isActive() )
+        if ( _pNetSession == nullptr )
+            return false;
+        const bool bPeerInWorld = isActive() && isPeerInWorld();
+        const bool bPeerLeft    = _bPeerJoined != SW_FALSE && bPeerInWorld == false;
+        _bPeerJoined            = bPeerInWorld ? SW_TRUE : _bPeerJoined;
+        if ( isActive() && bPeerLeft == false && _bReportedDesync == SW_FALSE )
             return false;
         const int32 localPlayer = _localPlayer;
         close();
@@ -104,7 +111,10 @@ namespace sw
         if ( _pNetSession == nullptr )
             return false;
         const INetPeers& peers = _pNetSession->getPeers();
-        return peers.isServer() ? peers.getInWorldCount() > 0 : peers.isInWorld( 0 );
+        if ( peers.isServer() )
+            return peers.getInWorldCount() > 0;
+        // 서버가 다음 씬을 열면 세대가 달라진다 — 그 뒤의 입력은 지난 판의 것이라 서버가 받지 않는다.
+        return peers.getConnectedCount() > 0 && peers.isInWorld( 0 ) && peers.getWorldGeneration() == _session.getMatchID();
     }
 
     int32 SkirmishLockstepLink::advance( float32 deltaTime, float32 step, SkirmishMatch& match )

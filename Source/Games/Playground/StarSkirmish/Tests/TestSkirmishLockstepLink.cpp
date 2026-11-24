@@ -16,6 +16,32 @@
 
 using namespace sw;
 
+/** @brief [SkirmishLockstepLinkTest] 판의 월드에 들어왔던 상대가 나가면 락스텝을 한 번 놓는다 — 기다리던 상대(아직 들어오지 않음)는 나간 것이 아니다 */
+SW_TEST_CASE( SkirmishLockstepLinkTest, PeerLeavingTheWorldReleasesTheLockstep )
+{
+    GameNetSession session{ engine::getSubsystem<ResourceComposition>() };
+    ServerConfig   config;
+    config._listenAddress = "127.0.0.1";
+    config._gamePort      = 0; // 운영체제가 고른다
+    GameNetSessionParams params;
+    SW_REQUIRE_TRUE( session.makeServerParams( config, params ) );
+    SW_REQUIRE_TRUE( session.initialize( params ) );
+    SubsystemScope scope;
+    SW_REQUIRE_TRUE( scope.bind<GameNetSession>( &session ) );
+    game::ScopedGameScope scopedScope( scope );
+
+    SkirmishLockstepLink link;
+    SW_REQUIRE_TRUE( link.open() );
+    SW_EXPECT_FALSE( link.releaseLostSession() ); // 아직 아무도 들어오지 않았다
+    session.getPeers().setInWorld( 0, true );
+    SW_EXPECT_FALSE( link.releaseLostSession() );
+    session.getPeers().setInWorld( 0, false ); // 끊겼거나 다른 씬으로 갔다 — 세션은 열려 있다
+    SW_EXPECT_TRUE( link.releaseLostSession() );
+    SW_EXPECT_FALSE( link.isActive() );
+    SW_EXPECT_FALSE( link.releaseLostSession() );
+    session.shutdown();
+}
+
 /** @brief [SkirmishLockstepLinkTest] 판 도중에 세션이 닫히면 락스텝을 한 번 놓는다 — 명령을 쌓으며 영영 기다리지 않고, 새 세션에서 다시 열린다 */
 SW_TEST_CASE( SkirmishLockstepLinkTest, ClosedSessionReleasesTheLockstep )
 {

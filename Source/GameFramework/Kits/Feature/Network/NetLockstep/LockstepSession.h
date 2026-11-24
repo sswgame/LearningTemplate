@@ -116,6 +116,7 @@ namespace sw
         /** @brief `initialize` 가 성공했는가입니다. 거절된 세션은 입력을 예약하지 않고 틱을 넘기지 않습니다. */
         bool   isStarted() const { return _playerCount > 0; }
         uint32 getCurrentTick() const { return _currentTick; }
+        uint32 getMatchID() const { return _matchID; }
         /** @brief 입력을 기다리며 멈춘 틱 수입니다. 누가 느린지 알려 주므로 화면의 "기다리는 중" 표시에 씁니다. */
         int32  getStallCount() const { return _stallCount; }
         bool   isDesynced() const { return _bDesynced != SW_FALSE; }
