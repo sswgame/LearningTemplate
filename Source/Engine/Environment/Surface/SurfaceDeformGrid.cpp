@@ -2,9 +2,13 @@
 
 #include "Engine/Environment/Surface/SurfaceDeformGrid.h"
 
+#include "Core/Concurrency/ScopedLock.h"
+#include "Core/Concurrency/SpinLock.h"
+#include "Core/Container/span.h"
 #include "Core/Math/MathUtil.h"
 
 #include "Engine/Environment/Surface/SurfaceStamp.h"
+#include "Engine/Foundation/EngineParallel.h"
 
 namespace sw
 {
@@ -16,8 +20,26 @@ namespace sw
             static constexpr float32 kTexelMax = 255.0f;
             /** @brief 젖은 자국 가장자리에서 젖음이 0 으로 줄어드는 폭(타원 안쪽 비율) — 칸 경계가 계단으로 보이지 않게. */
             static constexpr float32 kWetPrintEdgeFade = 0.3f;
+            /** @brief 메우기를 작업으로 나눌 행 묶음의 문턱입니다 — 발자국 몇 개(작은 사각형)는 나누지 않는다. */
+            static constexpr uint32 kParallelRowCount = 32;
         };
     } // namespace
+
+    struct SurfaceDeformGrid::FillJob
+    {
+        span<float32>        _height{};
+        span<const float32>  _fillSpeed{};
+        span<float32>        _wet{};
+        span<const float32>  _drySpeed{};
+        TexelRect            _rect{}; ///< 메울 사각형(시작 때의 활성 사각형)
+        uint32               _resolution{ 0 };
+        float32              _deltaTime{ 0.0f };
+        SpinLock             _lock;
+        TexelRect _remaining SW_GUARDED_BY( _lock ){}; ///< 아직 남은 칸의 사각형
+
+        /** @brief 사각형의 행 [@p startRow, @p endRow) 를 메웁니다(워커). */
+        void fillRows( uint32 startRow, uint32 endRow );
+    };
 
     void SurfaceDeformGrid::TexelRect::merge( const TexelRect& other )
     {
@@ -228,23 +250,42 @@ namespace sw
             return;
         // 메운 칸은 지난번 모습과 다르다 — 옛 사각형 전부를 보내고, 아직 남은 칸으로 사각형을 줄인다.
         _dirtyRect.merge( _activeRect );
+        // 칸은 서로 읽지 않는다 — 행 묶음을 작업 풀이 나눠 돌고, 남은 사각형은 구간마다 모아 합친다(합은 차례와 무관해 결과가 같다).
+        FillJob job;
+        job._height     = span<float32>( _listHeight );
+        job._fillSpeed  = span<const float32>( _listFillSpeed );
+        job._wet        = span<float32>( _listWet );
+        job._drySpeed   = span<const float32>( _listDrySpeed );
+        job._rect       = _activeRect;
+        job._resolution = _resolution;
+        job._deltaTime  = deltaTime;
+        engine::runParallel( _activeRect.getHeight(), SurfaceDeformGridInternal::kParallelRowCount, SW_DELEGATE_METHOD( ParallelBlockDelegate, &FillJob::fillRows, &job ) );
+        ScopedLock<SpinLock> lock{ job._lock };
+        _activeRect = job._remaining;
+    }
+
+    void SurfaceDeformGrid::FillJob::fillRows( uint32 startRow, uint32 endRow )
+    {
         TexelRect remaining;
-        for ( uint32 z = _activeRect._minZ; z < _activeRect._maxZ; ++z )
+        for ( uint32 z = _rect._minZ + startRow; z < _rect._minZ + endRow; ++z )
         {
-            for ( uint32 x = _activeRect._minX; x < _activeRect._maxX; ++x )
+            for ( uint32 x = _rect._minX; x < _rect._maxX; ++x )
             {
-                const uint32 index = toIndex( x, z );
-                if ( isMarked( index ) == false )
+                const uint32 index   = z * _resolution + x;
+                float32&     height  = _height[index];
+                float32&     wet     = _wet[index];
+                const bool   bMarked = height != 0.0f || wet > 0.0f;
+                if ( bMarked == false )
                     continue;
-                float32&      cell = _listHeight[index];
-                const float32 step = _listFillSpeed[index] * deltaTime;
-                cell               = cell < 0.0f ? MathUtil::min( cell + step, 0.0f ) : MathUtil::max( cell - step, 0.0f );
-                _listWet[index]    = MathUtil::max( _listWet[index] - _listDrySpeed[index] * deltaTime, 0.0f );
-                if ( isMarked( index ) )
+                const float32 step = _fillSpeed[index] * _deltaTime;
+                height             = height < 0.0f ? MathUtil::min( height + step, 0.0f ) : MathUtil::max( height - step, 0.0f );
+                wet                = MathUtil::max( wet - _drySpeed[index] * _deltaTime, 0.0f );
+                if ( height != 0.0f || wet > 0.0f )
                     remaining.merge( TexelRect{ x, z, x + 1, z + 1 } );
             }
         }
-        _activeRect = remaining;
+        ScopedLock<SpinLock> lock{ _lock };
+        _remaining.merge( remaining );
     }
 
     bool SurfaceDeformGrid::findIndexAt( float32 x, float32 z, uint32& outIndex ) const
