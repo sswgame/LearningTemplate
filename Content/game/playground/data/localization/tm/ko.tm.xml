@@ -2,6 +2,7 @@
 <TranslationMemory culture="ko">
 	<entries>
 		<entry source="/" text="/" />
+		<entry source=">" text=">" />
 		<entry source="Accuracy (%)" text="정확도(%)" />
 		<entry source="Actor" text="배우" />
 		<entry source="All sites" text="모든 거점" />
@@ -11,7 +12,8 @@
 		<entry source="ArrivalCutA" text="도착 컷 A" />
 		<entry source="ArrivalCutB" text="도착 컷 B" />
 		<entry source="Assault Rifle" text="돌격 소총" />
-		<entry source="Attack (J)   Spell (K)   Defend (L)   Flee (R)" text="공격 (J)   주문 (K)   방어 (L)   도망 (R)" />
+		<entry source="Attack (J)   Spell (K)   Defend (L)   Flee (R)"
+		       text="공격 (J)   주문 (K)   방어 (L)   도망 (R)" />
 		<entry source="Attack power" text="공격력" />
 		<entry source="Balls" text="볼" />
 		<entry source="Balm" text="연고" />
@@ -21,7 +23,8 @@
 		<entry source="Bramble Sprite" text="가시덤불 정령" />
 		<entry source="Broth Bowl" text="맑은국수" />
 		<entry source="Broth Noodles" text="국수 사리" />
-		<entry source="Buy (J)   Price up (K)   Price down (L)   Add station (F)   Open (Enter)" text="사기 (J)   가격 올리기 (K)   가격 내리기 (L)   스테이션 들이기 (F)   열기 (Enter)" />
+		<entry source="Buy (J)   Price up (K)   Price down (L)   Add station (F)   Open (Enter)"
+		       text="사기 (J)   가격 올리기 (K)   가격 내리기 (L)   스테이션 들이기 (F)   열기 (Enter)" />
 		<entry source="Buy more while open (J)" text="영업 중에도 살 수 있습니다 (J)" />
 		<entry source="Card cost" text="카드 비용" />
 		<entry source="Caught" text="포획" />
@@ -40,6 +43,7 @@
 		<entry source="Dark rooms" text="어두운 방" />
 		<entry source="Day" text="날" />
 		<entry source="Days left" text="남은 날" />
+		<entry source="Defeated" text="쓰러짐" />
 		<entry source="Double K.O. - the bout is a draw" text="더블 K.O. 시합이 무승부입니다" />
 		<entry source="Draw pile" text="뽑을 더미" />
 		<entry source="Dusk Moth" text="땅거미 나방" />
@@ -54,8 +58,10 @@
 		<entry source="Escaped" text="탈출했습니다" />
 		<entry source="Every room is lit" text="모든 방에 불을 켰습니다" />
 		<entry source="Explored %" text="탐색 %" />
-		<entry source="Fast (J)   Strong (K)   Dodge (Shift)   Sign (Q)   Twin sign (R)   Oil (1)   Potion (2)" text="빠르게 (J)   강하게 (K)   회피 (Shift)   표식 (Q)   쌍표식 (R)   오일 (1)   물약 (2)" />
-		<entry source="Fast (J)   Strong (K)   Dodge (Shift)   Sign (Q)   Twin sign (R)   Oil (1)   Potion (2)   Brew (B)" text="빠르게 (J)   강하게 (K)   회피 (Shift)   표식 (Q)   쌍표식 (R)   오일 (1)   물약 (2)   만들기 (B)" />
+		<entry source="Fast (J)   Strong (K)   Dodge (Shift)   Sign (Q)   Twin sign (R)   Oil (1)   Potion (2)"
+		       text="빠르게 (J)   강하게 (K)   회피 (Shift)   표식 (Q)   쌍표식 (R)   오일 (1)   물약 (2)" />
+		<entry source="Fast (J)   Strong (K)   Dodge (Shift)   Sign (Q)   Twin sign (R)   Oil (1)   Potion (2)   Brew (B)"
+		       text="빠르게 (J)   강하게 (K)   회피 (Shift)   표식 (Q)   쌍표식 (R)   오일 (1)   물약 (2)   만들기 (B)" />
 		<entry source="Fatigues" text="전투복" />
 		<entry source="Fernling" text="고사리돌이" />
 		<entry source="Fernwarden" text="고사리지기" />
@@ -64,6 +70,7 @@
 		<entry source="Flasks" text="물약" />
 		<entry source="Follow the lantern path to the old bridge." text="등불 길을 따라 옛 다리로 가세요." />
 		<entry source="Follow the lantern trail to its end" text="등불 길의 끝까지 가세요" />
+		<entry source="Gate locked" text="문 잠김" />
 		<entry source="GateCut" text="문 컷" />
 		<entry source="Generators left" text="남은 발전기" />
 		<entry source="Geo" text="지오" />
@@ -80,7 +87,8 @@
 		<entry source="High Heels" text="하이힐" />
 		<entry source="Hollow Stag" text="텅 빈 수사슴" />
 		<entry source="Hour" text="시각" />
-		<entry source="In orbit - Move and Use buy from the terminal, the lever lands" text="궤도 - 이동으로 고르고 사용으로 구매, 레버로 착륙" />
+		<entry source="In orbit - Move and Use buy from the terminal, the lever lands"
+		       text="궤도 - 이동으로 고르고 사용으로 구매, 레버로 착륙" />
 		<entry source="In orbit - pull the lever to land" text="궤도 - 레버를 당겨 착륙하세요" />
 		<entry source="It is too dark to see" text="너무 어두워 보이지 않습니다" />
 		<entry source="Item ready" text="아이템 있음" />
@@ -103,7 +111,8 @@
 		<entry source="Learn (3)   Mutagen (4)" text="배우기 (3)   변이원 (4)" />
 		<entry source="Life" text="라이프" />
 		<entry source="Light Ammo" text="경량 탄약" />
-		<entry source="Light: stun an attacking ghost - Vacuum: pull it in - Use: surge or search" text="손전등: 공격하는 유령을 기절 - 청소기: 빨아들이기 - 쓰기: 서지 · 뒤지기" />
+		<entry source="Light: stun an attacking ghost - Vacuum: pull it in - Use: surge or search"
+		       text="손전등: 공격하는 유령을 기절 - 청소기: 빨아들이기 - 쓰기: 서지 · 뒤지기" />
 		<entry source="Lockpick" text="자물쇠 따개" />
 		<entry source="Longbow" text="장궁" />
 		<entry source="Low Boots" text="낮은 장화" />
@@ -111,8 +120,10 @@
 		<entry source="M4 Rifle" text="M4 소총" />
 		<entry source="M9 Pistol" text="M9 권총" />
 		<entry source="MP" text="마력" />
-		<entry source="Mech destroyed - special picks the next mech" text="기체 격추 - 특수기로 다음 기체를 고릅니다" />
-		<entry source="Mind the pond - nobody swims in it." text="연못을 조심하게 - 아무도 거기서 헤엄치지 않는다네." />
+		<entry source="Mech destroyed - special picks the next mech"
+		       text="기체 격추 - 특수기로 다음 기체를 고릅니다" />
+		<entry source="Mind the pond - nobody swims in it."
+		       text="연못을 조심하게 - 아무도 거기서 헤엄치지 않는다네." />
 		<entry source="Mire Fat" text="늪 기름" />
 		<entry source="Monster" text="괴물" />
 		<entry source="Move" text="기술" />
@@ -149,6 +160,7 @@
 		<entry source="Reward" text="보상" />
 		<entry source="Rifle Ammo" text="소총 탄약" />
 		<entry source="Ripplet" text="물결이" />
+		<entry source="Room cleared" text="방 정리 완료" />
 		<entry source="Root Grip" text="뿌리 잡기" />
 		<entry source="Round" text="라운드" />
 		<entry source="Round Shield" text="둥근 방패" />
@@ -206,10 +218,14 @@
 		<entry source="Trout" text="송어" />
 		<entry source="Turn" text="턴" />
 		<entry source="Use - jump off the plane" text="쓰기 - 비행기에서 뛰어내리기" />
-		<entry source="Use move (J)   Ball (K)   Switch (L)   Run (R)" text="기술 (J)   볼 (K)   교체 (L)   도망 (R)" />
-		<entry source="Use: pick up, load, sell - Lever: land or take off" text="쓰기: 줍기 · 싣기 · 팔기 - 레버: 착륙 · 이륙" />
-		<entry source="Use: repair, open, rescue, heal - hold to struggle" text="쓰기: 수리 · 문 열기 · 구출 · 치료 - 누르고 있으면 몸부림" />
-		<entry source="Use: take, read, unlock, fight - Light: flashlight - Heal: use or mix" text="쓰기: 줍기 · 읽기 · 풀기 · 싸우기 - 손전등 - 회복: 쓰거나 섞기" />
+		<entry source="Use move (J)   Ball (K)   Switch (L)   Run (R)"
+		       text="기술 (J)   볼 (K)   교체 (L)   도망 (R)" />
+		<entry source="Use: pick up, load, sell - Lever: land or take off"
+		       text="쓰기: 줍기 · 싣기 · 팔기 - 레버: 착륙 · 이륙" />
+		<entry source="Use: repair, open, rescue, heal - hold to struggle"
+		       text="쓰기: 수리 · 문 열기 · 구출 · 치료 - 누르고 있으면 몸부림" />
+		<entry source="Use: take, read, unlock, fight - Light: flashlight - Heal: use or mix"
+		       text="쓰기: 줍기 · 읽기 · 풀기 · 싸우기 - 손전등 - 회복: 쓰거나 섞기" />
 		<entry source="Walk the glade to meet wild monsters" text="풀밭을 걸어 야생 몬스터를 만나세요" />
 		<entry source="Wear gear (Q)" text="장비 끼기 (Q)" />
 		<entry source="Welcome to Dry Gulch." text="드라이 걸치에 온 것을 환영하네." />
@@ -222,7 +238,8 @@
 		<entry source="Wrong way!" text="역주행!" />
 		<entry source="You are down - wait for your squad" text="기절했습니다 - 동료를 기다리세요" />
 		<entry source="You died" text="죽었습니다" />
-		<entry source="You fell - your geo lies where you died" text="쓰러졌습니다 - 지오는 죽은 자리에 남습니다" />
+		<entry source="You fell - your geo lies where you died"
+		       text="쓰러졌습니다 - 지오는 죽은 자리에 남습니다" />
 		<entry source="You got out" text="빠져나왔습니다" />
 		<entry source="You were defeated" text="쓰러졌다" />
 		<entry source="You win the battle!" text="전투에서 이겼다!" />

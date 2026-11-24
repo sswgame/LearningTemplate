@@ -1626,6 +1626,11 @@ msgctxt "EdField.FirstFrame"
 msgid "first frame"
 msgstr "첫 프레임"
 
+#: Source/Editor/Viewport/TerrainBrushTool.cpp
+msgctxt "EdField.Foliage"
+msgid "Foliage"
+msgstr "폴리지"
+
 #: Source/Editor/Panels/Animation/SpriteClipPanel.cpp
 msgctxt "EdField.FrameCount"
 msgid "frame count"
@@ -2023,6 +2028,12 @@ msgstr "ID: {componentID}"
 msgctxt "EdFormat.If"
 msgid "if ({condition})"
 msgstr "조건({condition})"
+
+#: Source/Editor/Panels/Physics/RagdollPreviewPanel.cpp
+#: Source/Editor/Panels/VFX/VFXPreviewPanel.cpp
+msgctxt "EdFormat.InheritsFrom"
+msgid "Inherits from {base}"
+msgstr "{base} 에서 물려받음"
 
 #: Source/Editor/Panels/Settings/UserSettingsPanel.cpp
 msgctxt "EdFormat.KeepDisplaySettings"
@@ -2739,8 +2750,8 @@ msgctxt "EdLabel.ResetOverlays"
 msgid "Reset Overlays"
 msgstr "겹치기 초기화"
 
-#: Source/Editor/Panels/InputMap/InputMapPanel.cpp
 #: Source/Editor/Common/Widgets/PropertyGrid/EditorPropertyGrid.cpp
+#: Source/Editor/Panels/InputMap/InputMapPanel.cpp
 msgctxt "EdLabel.ResetToDefault"
 msgid "Reset to Default"
 msgstr "기본값으로"
@@ -2850,6 +2861,21 @@ msgstr "리슨 호스트"
 msgctxt "EdNetMode.Standalone"
 msgid "Standalone"
 msgstr "단독"
+
+#: Source/Editor/Panels/Physics/RagdollPreviewPanel.cpp
+msgctxt "EdPhysicsAsset.DuplicateBodyTip"
+msgid "Copy this body below it. The copy needs the name of a bone in the skeleton before it can stand."
+msgstr "이 바디를 아래에 복사합니다. 복사본은 스켈레톤의 본 이름을 적어야 섭니다."
+
+#: Source/Editor/Panels/Physics/RagdollPreviewPanel.cpp
+msgctxt "EdPhysicsAsset.NotEditable"
+msgid "The asset text could not be opened for editing - see the log."
+msgstr "에셋 원문을 편집용으로 열지 못했습니다. 로그를 보세요."
+
+#: Source/Editor/Panels/Physics/RagdollPreviewPanel.cpp
+msgctxt "EdPhysicsAsset.SelectBody"
+msgid "Select a body in the table to edit it. With a body placed, drag the square handles to resize its shapes."
+msgstr "표에서 바디를 고르면 고칠 수 있습니다. 몸을 놓으면 네모 손잡이로 셰이프 크기를 끌 수 있습니다."
 
 #: Source/Editor/Panels/InputMap/InputMapPanel.cpp
 msgctxt "EdSection.Actions"
@@ -3517,6 +3543,12 @@ msgstr "가져오기..."
 msgctxt "EdText.Impulse"
 msgid "Impulse"
 msgstr "충격"
+
+#: Source/Editor/Panels/Physics/RagdollPreviewPanel.cpp
+#: Source/Editor/Panels/VFX/VFXPreviewPanel.cpp
+msgctxt "EdText.InheritsFromTip"
+msgid "Only the values that differ from the parent are written to this file. Setting a value back to the parent's value removes it from the file."
+msgstr "부모와 다른 값만 이 파일에 씁니다. 부모 값으로 되돌리면 파일에서 빠집니다."
 
 #: Source/Editor/Panels/InputMap/InputMapPanel.cpp
 msgctxt "EdText.InjectKeyDown"
@@ -4300,6 +4332,16 @@ msgid "Targets on other units or objects are placed by the host - move that obje
 msgstr "다른 단위 · 오브젝트의 목표는 호스트가 놓습니다 — 그 오브젝트를 옮기세요"
 
 #: Source/Editor/Viewport/TerrainBrushTool.cpp
+msgctxt "EdTip.TerrainFoliage"
+msgid "Foliage grows where its density layer is painted. Pick one to paint that layer; Erase Layer removes it"
+msgstr "폴리지는 밀도 레이어를 칠한 곳에 자랍니다. 고르면 그 레이어를 칠하고 Erase Layer 로 지웁니다"
+
+#: Source/Editor/Viewport/TerrainBrushTool.cpp
+msgctxt "EdTip.TerrainFoliageNoDensity"
+msgid "This foliage ignores the terrain layers. Set Density Layer of its rule in the Inspector to paint it"
+msgstr "이 폴리지는 지형 레이어를 보지 않습니다. Inspector 에서 규칙의 Density Layer 를 정하면 칠할 수 있습니다"
+
+#: Source/Editor/Viewport/TerrainBrushTool.cpp
 msgctxt "EdTip.TerrainResample"
 msgid "Resample the heights and holes of the last edited terrain to a new resolution (undoable)"
 msgstr "마지막으로 고친 지형의 높이와 구멍을 새 해상도로 다시 표본합니다(되돌릴 수 있음)"
@@ -4328,6 +4370,16 @@ msgstr "사용자 음량(옵션 메뉴 값) — Ctrl+누르면 숫자를 칩니�
 msgctxt "EdTip.WriteTheWeightsAndOnOffOf"
 msgid "Write the weights and on/off of this instance's nodes into the rig asset (*.rig.xml); other keys stay as they are"
 msgstr "이 인스턴스 노드의 가중치 · 켜짐을 리그 에셋(*.rig.xml)에 씁니다. 다른 키는 그대로입니다"
+
+#: Source/Editor/Panels/VFX/VFXPreviewPanel.cpp
+msgctxt "EdVFX.NotEditable"
+msgid "The effect text could not be opened for editing - see the log."
+msgstr "효과 원문을 편집용으로 열지 못했습니다. 로그를 보세요."
+
+#: Source/Editor/Panels/VFX/VFXPreviewPanel.cpp
+msgctxt "EdVFX.SelectEmitter"
+msgid "Select an emitter above to edit it. Save (Ctrl+S) plays the change in the preview."
+msgstr "위에서 방출기를 고르면 고칠 수 있습니다. 저장(Ctrl+S)하면 미리보기가 바뀐 효과를 재생합니다."
 
 #: Source/Editor/Panels/VFX/VFXPreviewPanel.cpp
 msgctxt "EdVFX.Solo"
@@ -4375,8 +4427,8 @@ msgctxt "EdVerb.Cancel"
 msgid "Cancel"
 msgstr "취소"
 
-#: Source/Editor/Panels/Console/ConsolePanel.cpp
 #: Source/Editor/Common/Widgets/PropertyGrid/EditorPropertyGrid.cpp
+#: Source/Editor/Panels/Console/ConsolePanel.cpp
 #: Source/Editor/Panels/Multiplayer/MultiplayerProfilerTab.cpp
 #: Source/Editor/Panels/Multiplayer/MultiplayerSyncTab.cpp
 #: Source/Editor/Panels/Profiler/ProfilerPanel.cpp
@@ -4390,6 +4442,12 @@ msgstr "지우기"
 msgctxt "EdVerb.Delete"
 msgid "Delete"
 msgstr "삭제"
+
+#: Source/Editor/Panels/Physics/RagdollPreviewPanel.cpp
+#: Source/Editor/Panels/VFX/VFXPreviewPanel.cpp
+msgctxt "EdVerb.Duplicate"
+msgid "Duplicate"
+msgstr "복제"
 
 #: Source/Editor/Panels/Animation/AnimationGraphPanel.cpp
 #: Source/Editor/Panels/Animation/SequencerPanel.cpp
@@ -4453,8 +4511,10 @@ msgstr "다시 읽기"
 #: Source/Editor/Panels/Catalog/CatalogTableEditor.cpp
 #: Source/Editor/Panels/ContentBrowser/ContentBrowserPanel.cpp
 #: Source/Editor/Panels/InputMap/InputMapPanel.cpp
+#: Source/Editor/Panels/Physics/RagdollPreviewPanel.cpp
 #: Source/Editor/Panels/TileMap/TileMapPanel.cpp
 #: Source/Editor/Panels/TileSet/TileSetPanel.cpp
+#: Source/Editor/Panels/VFX/VFXPreviewPanel.cpp
 msgctxt "EdVerb.Remove"
 msgid "Remove"
 msgstr "제거"
@@ -4827,6 +4887,11 @@ msgctxt "EdWidget.NoFileDefaults"
 msgid "No file - defaults"
 msgstr "파일 없음 - 기본값"
 
+#: Source/Editor/Viewport/TerrainBrushTool.cpp
+msgctxt "EdWidget.NoFoliageOnLayer"
+msgid "(no foliage on this layer)"
+msgstr "(이 레이어에 폴리지 없음)"
+
 #: Source/Editor/Panels/Packaging/PackagingPanel.cpp
 msgctxt "EdWidget.OutputFolder"
 msgid "Output Folder"
@@ -4846,6 +4911,11 @@ msgstr "패턴(숫자 패드 표기)"
 msgctxt "EdWidget.Paused"
 msgid "Paused"
 msgstr "일시 정지됨"
+
+#: Source/Editor/Panels/Packaging/PackagingPanel.cpp
+msgctxt "EdWidget.Platform"
+msgid "Platform"
+msgstr "플랫폼"
 
 #: Source/Editor/Panels/Inspector/InspectorPanel.cpp
 #: Source/Editor/Panels/Scene/HierarchyPanel.cpp
@@ -5957,6 +6027,11 @@ msgid "This collection is empty. Drop assets on its name to add them."
 msgstr "이 컬렉션은 비었습니다. 에셋을 이름 위에 놓으면 더해집니다."
 
 #: Source/Editor/Panels/ContentBrowser/ContentBrowserPanel.cpp
+msgctxt "EditorContentBrowser.EmptyFolder"
+msgid "This folder is empty. Import source files here, or drop them onto this window."
+msgstr "폴더가 비어 있습니다. 여기로 원본 파일을 임포트하거나 이 창에 끌어 놓으세요."
+
+#: Source/Editor/Panels/ContentBrowser/ContentBrowserPanel.cpp
 msgctxt "EditorContentBrowser.FindSelected"
 msgid "Find selected"
 msgstr "선택 항목 찾기"
@@ -6097,6 +6172,16 @@ msgid "Add a string with the key typed on the left. Keys already in the table ar
 msgstr "왼쪽에 입력한 키로 문자열을 추가합니다. 테이블에 이미 있는 키는 무시합니다."
 
 #: Source/Editor/Panels/DataTable/DataTablePanel.cpp
+msgctxt "EditorDataTable.CheckText"
+msgid "Check Text"
+msgstr "원문 확인"
+
+#: Source/Editor/Panels/DataTable/DataTablePanel.cpp
+msgctxt "EditorDataTable.CheckTextTip"
+msgid "Check that the tables are up to date and no staged translation is missing or stale. Nothing is written"
+msgstr "표가 최신인지, 출시 문화권의 번역이 빠지거나 낡지 않았는지 본다. 파일은 고치지 않는다"
+
+#: Source/Editor/Panels/DataTable/DataTablePanel.cpp
 msgctxt "EditorDataTable.ConfirmTranslation"
 msgid "OK"
 msgstr "확인"
@@ -6107,9 +6192,44 @@ msgid "Keep this text: it becomes the translation of the current source and the 
 msgstr "이 글을 그대로 둡니다. 지금 원문의 번역이 되고 저장할 때 낡음 · 검토 표시가 사라집니다."
 
 #: Source/Editor/Panels/DataTable/DataTablePanel.cpp
+msgctxt "EditorDataTable.CultureProgress"
+msgid "stale {stale}, review {review}, missing {missing}"
+msgstr "낡음 {stale}, 검토 {review}, 없음 {missing}"
+
+#: Source/Editor/Panels/DataTable/DataTablePanel.cpp
 msgctxt "EditorDataTable.DeleteKeyTip"
 msgid "Remove this key from the source table and every translation table when you save."
 msgstr "저장할 때 이 키를 원문 테이블과 모든 번역 테이블에서 지웁니다."
+
+#: Source/Editor/Panels/DataTable/DataTablePanel.cpp
+msgctxt "EditorDataTable.ExportPo"
+msgid "Export PO"
+msgstr "PO 내보내기"
+
+#: Source/Editor/Panels/DataTable/DataTablePanel.cpp
+msgctxt "EditorDataTable.ExportPoTip"
+msgid "Write one po file per culture next to the project for translators"
+msgstr "번역가에게 줄 po 파일을 문화권마다 프로젝트 곁에 쓴다"
+
+#: Source/Editor/Panels/DataTable/DataTablePanel.cpp
+msgctxt "EditorDataTable.GatherText"
+msgid "Gather Text"
+msgstr "원문 수집"
+
+#: Source/Editor/Panels/DataTable/DataTablePanel.cpp
+msgctxt "EditorDataTable.GatherTextTip"
+msgid "Collect the source text of this project from code and assets and update its tables"
+msgstr "이 프로젝트의 원문을 코드와 에셋에서 모아 표를 고친다"
+
+#: Source/Editor/Panels/DataTable/DataTablePanel.cpp
+msgctxt "EditorDataTable.ImportPo"
+msgid "Import PO"
+msgstr "PO 가져오기"
+
+#: Source/Editor/Panels/DataTable/DataTablePanel.cpp
+msgctxt "EditorDataTable.ImportPoTip"
+msgid "Read the po file of this culture back into the translation table"
+msgstr "이 문화권의 po 파일을 번역 표로 읽어 들인다"
 
 #: Source/Editor/Panels/DataTable/DataTablePanel.cpp
 msgctxt "EditorDataTable.KeyTip"
@@ -6180,6 +6300,11 @@ msgstr "편집을 버리고 디스크에서 파일을 다시 읽습니다."
 msgctxt "EditorDataTable.SaveBeforeSwitchingTip"
 msgid "Save or revert this file before opening another one."
 msgstr "다른 파일을 열기 전에 이 파일을 저장하거나 되돌립니다."
+
+#: Source/Editor/Panels/DataTable/DataTablePanel.cpp
+msgctxt "EditorDataTable.SaveBeforeTools"
+msgid "Save the table first - the tools write the same files."
+msgstr "표를 먼저 저장하세요. 도구가 같은 파일을 씁니다."
 
 #: Source/Editor/Panels/DataTable/DataTablePanel.cpp
 msgctxt "EditorDataTable.SaveFileTip"
@@ -6940,14 +7065,34 @@ msgid "View options: show only modified properties, expand or collapse all secti
 msgstr "보기 옵션: 바뀐 프로퍼티만 보기, 모든 영역 펼치기 또는 접기"
 
 #: Source/Editor/Panels/MapCheck/MapCheckPanel.cpp
+msgctxt "EditorMapCheck.AllIssuesHidden"
+msgid "Every issue is hidden by the Errors and Warnings checkboxes."
+msgstr "Errors · Warnings 체크칸이 결과를 모두 가렸습니다."
+
+#: Source/Editor/Panels/MapCheck/MapCheckPanel.cpp
 msgctxt "EditorMapCheck.CheckMap"
 msgid "Validate every object of the active scene again"
 msgstr "활성 씬의 모든 오브젝트를 다시 검증합니다"
 
 #: Source/Editor/Panels/MapCheck/MapCheckPanel.cpp
+msgctxt "EditorMapCheck.CheckSourceTip"
+msgid "Found in a data file, not on an object. Double-click to show the file in the Content Browser"
+msgstr "오브젝트가 아니라 데이터 파일의 문제입니다. 두 번 누르면 Content Browser 에서 보입니다"
+
+#: Source/Editor/Panels/MapCheck/MapCheckPanel.cpp
 msgctxt "EditorMapCheck.FixAllTooltip"
 msgid "Apply every safe fix in the visible rows as one undo step. Rows without a Fix button need a hand fix"
 msgstr "보이는 줄의 안전한 고침을 모두 한 번의 실행 취소 단계로 적용합니다. 고치기 버튼이 없는 줄은 손으로 고쳐야 합니다"
+
+#: Source/Editor/Panels/MapCheck/MapCheckPanel.cpp
+msgctxt "EditorMapCheck.NextActionFix"
+msgid "Fix applies the safe change of one row and Fix All applies every one as a single undo step. Double-click a row to frame its object."
+msgstr "Fix 는 그 줄의 안전한 고침을, Fix All 은 모두를 되돌리기 한 단계로 적용합니다. 줄을 두 번 누르면 오브젝트를 화면에 맞춥니다."
+
+#: Source/Editor/Panels/MapCheck/MapCheckPanel.cpp
+msgctxt "EditorMapCheck.NextActionInspect"
+msgid "Select a row to open its object in the Inspector and change the named property. Double-click to frame it."
+msgstr "줄을 고르면 오브젝트가 Inspector 에 열립니다. 적힌 프로퍼티를 고치세요. 두 번 누르면 화면에 맞춥니다."
 
 #: Source/Editor/Panels/MapCheck/MapCheckPanel.cpp
 msgctxt "EditorMapCheck.NoIssues"
@@ -7490,9 +7635,24 @@ msgid "Client area size of each App window (pixels)"
 msgstr "App 창마다의 클라이언트 영역 크기(픽셀)"
 
 #: Source/Editor/Panels/Packaging/PackagingPanel.cpp
+msgctxt "EditorPackaging.FirstPackage"
+msgid "Nothing packaged in this session. Pick a target and a game, then press Package - the first run builds the code and cooks every asset, so it takes the longest."
+msgstr "이번 세션에 패키징한 것이 없습니다. 타깃과 게임을 고르고 Package 를 누르세요. 첫 실행은 코드를 짓고 에셋을 모두 쿠킹하므로 가장 오래 걸립니다."
+
+#: Source/Editor/Panels/Packaging/PackagingPanel.cpp
 msgctxt "EditorPackaging.Game"
 msgid "Game to package"
 msgstr "패키징할 게임입니다"
+
+#: Source/Editor/Panels/Packaging/PackagingPanel.cpp
+msgctxt "EditorPackaging.NextActionFailed"
+msgid "Fix the red line and press Package again. Skip Build and Skip Cook keep the steps that already passed."
+msgstr "빨간 줄을 고치고 Package 를 다시 누르세요. Skip Build 와 Skip Cook 은 이미 통과한 단계를 건너뜁니다."
+
+#: Source/Editor/Panels/Packaging/PackagingPanel.cpp
+msgctxt "EditorPackaging.NoGames"
+msgid "No game preset was found in Config/Game. Add one there, then reopen this window."
+msgstr "Config/Game 에 게임 설정이 없습니다. 하나 더한 뒤 창을 다시 여세요."
 
 #: Source/Editor/Panels/Packaging/PackagingPanel.cpp
 msgctxt "EditorPackaging.OpenFolder"
@@ -7508,6 +7668,11 @@ msgstr "패키지 빌드를 스테이징할 폴더입니다"
 msgctxt "EditorPackaging.Package"
 msgid "Configure, build, cook and stage the selected game into the output folder"
 msgstr "고른 게임을 구성 · 빌드 · 쿠킹해 출력 폴더에 스테이징합니다"
+
+#: Source/Editor/Panels/Packaging/PackagingPanel.cpp
+msgctxt "EditorPackaging.Platform"
+msgid "Where the package runs. Desktop is this computer; Web makes a browser folder and Android a signed debug APK - both are client only and their preset decides the backend"
+msgstr "패키지를 돌릴 곳. Desktop 은 이 컴퓨터, Web 은 브라우저 폴더, Android 는 서명한 디버그 APK 를 만든다. 둘은 클라이언트뿐이고 백엔드는 그 프리셋이 정한다"
 
 #: Source/Editor/Panels/Packaging/PackagingPanel.cpp
 msgctxt "EditorPackaging.RHIBackend"
@@ -7973,6 +8138,11 @@ msgstr "에디터에서 숨겨져 있습니다 - 클릭하면 보입니다"
 msgctxt "EditorScene.HierarchyAllTypes"
 msgid "All types"
 msgstr "모든 종류"
+
+#: Source/Editor/Panels/Scene/HierarchyPanel.cpp
+msgctxt "EditorScene.HierarchyEmptyScene"
+msgid "This scene has nothing but its camera yet. Add an object here, or drag a prefab or mesh from the Content Browser into the scene view."
+msgstr "이 씬에는 아직 카메라뿐입니다. 여기서 오브젝트를 더하거나 Content Browser 의 프리팹 · 메시를 씬 뷰로 끌어 놓으세요."
 
 #: Source/Editor/Panels/Scene/HierarchyPanel.cpp
 msgctxt "EditorScene.HierarchyNoActiveScene"
@@ -8853,6 +9023,11 @@ msgstr "이름 붙인 전역 변수 값 묶음을 저장하거나 불러옵니�
 msgctxt "EditorSettings.PressKeyCombo"
 msgid "Press a key combo (Esc cancels, Backspace clears)"
 msgstr "키 조합을 누르세요 (Esc 취소, Backspace 지우기)"
+
+#: Source/Editor/Panels/Settings/ModulesPanel.cpp
+msgctxt "EditorSettings.ReadingModules"
+msgid "Reading modules..."
+msgstr "모듈을 읽는 중..."
 
 #: Source/Editor/Panels/Settings/ModulesPanel.cpp
 msgctxt "EditorSettings.RefreshModules"

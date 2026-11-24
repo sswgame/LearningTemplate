@@ -1,7 +1,7 @@
 msgid ""
 msgstr ""
 "Language: ko\n"
-"X-Localization-Project: empty\n"
+"X-Localization-Project: playground\n"
 "MIME-Version: 1.0\n"
 "Content-Type: text/plain; charset=UTF-8\n"
 "Content-Transfer-Encoding: 8bit\n"
@@ -13,9 +13,16 @@ msgstr ""
 #: game/playground/monstercollector/ui/hud.ui.xml
 #: game/playground/restaurantsim/ui/hud.ui.xml
 #: game/playground/shooter3d/ui/hud.ui.xml
+#: game/playground/ui/hub_cards.ui.xml
 msgctxt "/"
 msgid "/"
 msgstr "/"
+
+#. Context: TextWidget._text
+#: game/playground/ui/hub_cards.ui.xml
+msgctxt ">"
+msgid ">"
+msgstr ">"
 
 #. Context: TextWidget._text
 #: game/playground/rhythm/ui/hud.ui.xml
@@ -241,6 +248,12 @@ msgid "Days left"
 msgstr "남은 날"
 
 #. Context: TextWidget._text
+#: game/playground/ui/actionroom.ui.xml
+msgctxt "Defeated"
+msgid "Defeated"
+msgstr "쓰러짐"
+
+#. Context: TextWidget._text
 #: game/playground/fighting/ui/hud.ui.xml
 msgctxt "Double K.O. - the bout is a draw"
 msgid "Double K.O. - the bout is a draw"
@@ -360,11 +373,17 @@ msgctxt "Follow the lantern trail to its end"
 msgid "Follow the lantern trail to its end"
 msgstr "등불 길의 끝까지 가세요"
 
+#. Context: TextWidget._text
+#: game/playground/ui/actionroom.ui.xml
+msgctxt "Gate locked"
+msgid "Gate locked"
+msgstr "문 잠김"
+
 #. Context: SequenceBinding._name
 #: game/playground/data/cutscenegate.seq.xml
 msgctxt "GateCut"
 msgid "GateCut"
-msgstr ""
+msgstr "문 컷"
 
 #. Context: TextWidget._text
 #: game/playground/asymmetrichorror/ui/hud.ui.xml
@@ -737,6 +756,12 @@ msgctxt "Press J as the bar fills to strike twice"
 msgid "Press J as the bar fills to strike twice"
 msgstr "막대가 찰 때 J 를 눌러 두 번 치세요"
 
+#. Context: TutorialHintTriggerComponent._text
+#: game/playground/harvestvalley/maps/farm.scene.xml
+msgctxt "Press [action=Farm.Use] to work the soil with your tool"
+msgid "Press [action=Farm.Use] to work the soil with your tool"
+msgstr "[action=Farm.Use] 을(를) 눌러 도구로 흙을 일구세요"
+
 #. Context: TextWidget._text
 #: game/playground/restaurantsim/ui/hud.ui.xml
 msgctxt "Price"
@@ -808,6 +833,12 @@ msgstr "소총 탄약"
 msgctxt "Ripplet"
 msgid "Ripplet"
 msgstr "물결이"
+
+#. Context: TextWidget._text
+#: game/playground/ui/actionroom.ui.xml
+msgctxt "Room cleared"
+msgid "Room cleared"
+msgstr "방 정리 완료"
 
 #. Context: Monster name
 #: game/playground/data/monstercollector.xml

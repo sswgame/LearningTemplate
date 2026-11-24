@@ -1,7 +1,7 @@
 """
 텔레메트리 · 크래시 업로드 로컬 실행 — 루프백 HTTP 수신기를 띄우고 게임을 두 번 띄워, 동의한 텔레메트리 스풀 파일과 보낼 줄의 크래시 묶음이 실제 HTTP 로 오는지 본다(H1).
 
-  py -3 -m Scripts telemetry-local run                 # 기본: Playground, Ninja-Debug
+  py -3 -m Scripts telemetry-local run                 # 기본: Playground, Ninja-Release
   py -3 -m Scripts telemetry-local run --game NileCity
 
 끝점은 gamesettings 칸(`_telemetryUploadEndpoint` · `_crashUploadEndpoint`)이고 저장소의 팩은 적지 않는다 - 이 스크립트는 `-gv_telemetryUploadEndpoint` ·
@@ -31,7 +31,7 @@ from common.process_group import USER_DATA_ROOT_ENVIRONMENT, CheckResult, Proces
 _TELEMETRY_LINKED = re.compile(r"\[TelemetryUpload\] telemetry uploads go to")
 _CRASH_SENT = re.compile(r"\[TelemetryUpload\] crash reports: (\d+) sent from '([^']+)'")
 _FAKE_SESSION = "telemetrylocalrun"
-_PRESET = "Ninja-Debug"  # build/<프리셋>/Bin 의 App 을 쓴다
+_PRESET = "Ninja-Release"  # build/<프리셋>/Bin 의 App 을 쓴다
 _CLIENT_DELAY_SECONDS = 8.0  # 기동 줄을 본 뒤 명령을 보낼 때까지
 _TIMEOUT_SECONDS = 60.0  # 기동 줄을 기다리는 최대 초
 

@@ -1,7 +1,7 @@
 """
 락스텝 2 인 대전 실행 — Playground 의 RTS 매치 미니게임(starskirmish)을 리슨 호스트(0 번)와 클라이언트(1 번) 두 프로세스로 띄워, 명령만 나누는 락스텝이 같은 판을 같은 걸음으로 돌리는지 본다(K3).
 
-  py -3 -m Scripts lockstep-pair run                 # 기본: Ninja-Debug, 자동 플레이(두 AI 가 양쪽 프로세스에서 같은 판 규칙으로 돈다)
+  py -3 -m Scripts lockstep-pair run                 # 기본: Ninja-Release, 자동 플레이(두 AI 가 양쪽 프로세스에서 같은 판 규칙으로 돈다)
   py -3 -m Scripts lockstep-pair run --seconds 90
 
 두 프로세스 모두 자동 플레이라 사람 입력은 없다. 1 번에게 병력이 생기면 클라이언트(1 번)에 개발 명령 `skirmish.order` 로 병력 공격 이동을 한 번 내 사람 명령이 락스텝 입력으로 건너가는지 본다.
@@ -23,7 +23,7 @@ from common.process_group import CheckResult, ProcessGroup, problem_lines, repor
 
 _OPENED = re.compile(r"\[Skirmish\] lockstep match - you are player (\d)")
 _STATUS = re.compile(r"skirmish lockstep: player (\d) tick (\d+) stalls (\d+) desynced (\d) applied (\d+) (\d+)")
-_PRESET = "Ninja-Debug"  # build/<프리셋>/Bin 의 App 을 쓴다
+_PRESET = "Ninja-Release"  # build/<프리셋>/Bin 의 App 을 쓴다
 _ARMY = re.compile(r"\[Skirmish\] t=\d+s .*\| p1 workers \d+ army [1-9]")  # 1 번에게 병력이 생긴 판 상태 줄(`SkirmishMatch` 가 30 초마다 남긴다)
 _ARMY_TIMEOUT_SECONDS = 420.0  # 병력이 생기기를 기다리는 최대 초(판의 시간은 실제 시간과 같다)
 _GAME = "Playground"

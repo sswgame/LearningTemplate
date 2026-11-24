@@ -28,7 +28,7 @@ from common.paths import get_project_root
 from common.process_group import USER_DATA_ROOT_ENVIRONMENT, CheckResult, ChildProcess, ProcessGroup, problem_lines, read_log, report
 
 _DEFAULT_CONFIG = "Config/Server/Online/Playground.json"
-_PRESET = "Ninja-Debug"  # build/<프리셋>/Bin 의 Server · App 을 쓴다
+_PRESET = "Ninja-Release"  # build/<프리셋>/Bin 의 Server · App 을 쓴다
 _GAME = "Playground"
 _MATCH_MINIGAME = "shooter3d_match"  # 서버의 첫 씬이자 클라이언트가 줄을 서는 매치형 미니게임
 _CLIENT_DELAY_SECONDS = 8.0  # 클라이언트를 띄운 뒤 명령을 보낼 때까지

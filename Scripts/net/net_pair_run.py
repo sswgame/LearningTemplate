@@ -1,11 +1,11 @@
 """
 두 프로세스 온라인 접속 시나리오 — 전용 서버와 클라이언트를 띄워 로그인 → 게임 접속 티켓 → 암호화 UDP 게임 접속을 끝까지 돌린다(OnlineKits F5).
 
-  py -3 -m Scripts net-pair run --preset Ninja-Debug      # 서버 · 클라이언트를 띄워 접속이 열리는지 본다
+  py -3 -m Scripts net-pair run --preset Ninja-Release      # 서버 · 클라이언트를 띄워 접속이 열리는지 본다
   py -3 -m Scripts net-pair check <서버 로그> <클라이언트 로그>   # 이미 있는 두 로그만 판정한다
-  py -3 -m Scripts net-pair mmo --preset Ninja-Debug      # 허브 서버(Playground): 첫 접속 → 나감(서버 저장) → 재접속(같은 진행) → 두 클라이언트 함께(폰 복제 · 예측, 회선 흉내)
-  py -3 -m Scripts net-pair match --preset Ninja-Debug    # 접속한 허브 → 매칭 배정 → 매치 서버 → 서버가 점수 제출 → 허브 재접속(서버 둘 · 클라이언트 하나)
-  py -3 -m Scripts net-pair respawn --preset Ninja-Debug  # 두 사람이 한 매치 서버에서 동시에 둔다: 서로 쏘아(서버 판정) 쓰러짐 → 같은 매치에서 다시 태어남(서버 둘 · 클라이언트 둘)
+  py -3 -m Scripts net-pair mmo --preset Ninja-Release      # 허브 서버(Playground): 첫 접속 → 나감(서버 저장) → 재접속(같은 진행) → 두 클라이언트 함께(폰 복제 · 예측, 회선 흉내)
+  py -3 -m Scripts net-pair match --preset Ninja-Release    # 접속한 허브 → 매칭 배정 → 매치 서버 → 서버가 점수 제출 → 허브 재접속(서버 둘 · 클라이언트 하나)
+  py -3 -m Scripts net-pair respawn --preset Ninja-Release  # 두 사람이 한 매치 서버에서 동시에 둔다: 서로 쏘아(서버 판정) 쓰러짐 → 같은 매치에서 다시 태어남(서버 둘 · 클라이언트 둘)
 
 준비(`run` 이 `Saved/NetPairRun/` 아래에 쓴다): 서버 설정(`NetPair.json` — 게임 포트 · 서비스 포트 · `_bGameConnectTicket`)과 옆 온라인 설정(`NetPair.online.json` —
 계정 키트의 개발용 시드 계정 설정 `_listSeedTestAccount`, 게임 접속 조립 `gameConnect`). 서버는 `-server-config=<경로>` 로 그 설정을 읽는다.
@@ -614,13 +614,13 @@ def main(list_argument: list[str]) -> int:
     parser = argparse.ArgumentParser(prog="py -3 -m Scripts net-pair", description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     sub = parser.add_subparsers(dest="mode", required=True)
     run_parser = sub.add_parser("run", help="서버와 클라이언트를 띄워 로그인 → 티켓 → 게임 접속을 돈다")
-    run_parser.add_argument("--preset", default="Ninja-Debug", help="빌드 프리셋(build/<프리셋>/Bin 의 Server · App 을 쓴다)")
+    run_parser.add_argument("--preset", default="Ninja-Release", help="빌드 프리셋(build/<프리셋>/Bin 의 Server · App 을 쓴다)")
     mmo_parser = sub.add_parser("mmo", help="허브 서버(Playground)와 클라이언트(첫 접속 → 재접속 → 둘 함께)를 띄워 서버 권위 행동 · 저장 후 재접속 · 폰 복제와 예측을 본다")
-    mmo_parser.add_argument("--preset", default="Ninja-Debug", help="빌드 프리셋(build/<프리셋>/Bin 의 Server · App 을 쓴다)")
+    mmo_parser.add_argument("--preset", default="Ninja-Release", help="빌드 프리셋(build/<프리셋>/Bin 의 Server · App 을 쓴다)")
     match_parser = sub.add_parser("match", help="허브 서버 · 매치 서버 · 클라이언트를 띄워 접속한 허브 → 매치 → 서버 점수 제출 → 허브 재접속, 이어 두 사람이 움직이는 바닥 맵의 매치에서 서로 보고 쏘는 것을 본다")
-    match_parser.add_argument("--preset", default="Ninja-Debug", help="빌드 프리셋(build/<프리셋>/Bin 의 Server · App 을 쓴다)")
+    match_parser.add_argument("--preset", default="Ninja-Release", help="빌드 프리셋(build/<프리셋>/Bin 의 Server · App 을 쓴다)")
     respawn_parser = sub.add_parser("respawn", help="허브 서버 · 매치 서버 · 클라이언트 둘을 띄워 동시 대전의 쓰러짐 → 다시 태어남을 본다")
-    respawn_parser.add_argument("--preset", default="Ninja-Debug", help="빌드 프리셋(build/<프리셋>/Bin 의 Server · App 을 쓴다)")
+    respawn_parser.add_argument("--preset", default="Ninja-Release", help="빌드 프리셋(build/<프리셋>/Bin 의 Server · App 을 쓴다)")
     check_parser = sub.add_parser("check", help="이미 있는 서버 · 클라이언트 로그를 판정한다")
     check_parser.add_argument("server_log")
     check_parser.add_argument("client_log")
