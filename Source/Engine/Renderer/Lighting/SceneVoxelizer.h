@@ -7,7 +7,7 @@
  *
  *          래스터가 아니라 컴퓨트인 까닭: 픽셀 셰이더의 3D UAV 원자 쓰기는 다섯 백엔드에 없다 — WGSL 의 원자 형식은 workgroup 변수와 read_write 저장 **버퍼**뿐이다
  *          (https://www.w3.org/TR/WGSL/#atomic-types). 구조 버퍼의 원자 연산은 다섯 백엔드 모두의 컴퓨트에 있다(HLSL SM 5 —
- *          https://learn.microsoft.com/windows/win32/direct3dhlsl/interlockedor). 삼각형마다 스레드 하나가 노멀의 가장 큰 축으로 투영한 칸(3 축 투영 — 기하 셰이더 없음)을 돌며
+ *          https://learn.microsoft.com/windows/win32/direct3dhlsl/interlockedor). 삼각형 토막마다 스레드 하나가 노멀의 가장 큰 축으로 투영한 칸(3 축 투영 — 기하 셰이더 없음)을 돌며
  *          그 칸 기둥에서 평면이 지나는 층만 분리축으로 판정한다 — 보존 래스터 없이 보수적이고, 예전 CPU 복셀화와 같은 칸이 켜진다.
  *          능력은 컴퓨트(`RHICapabilities::_bCompute`) 하나다 — 없으면 PSO 가 없고 프로브 갱신이 오류로 알린다(`RealtimeProbeUpdater::prepare`).
  */
@@ -48,7 +48,7 @@ namespace sw
         };
 
         vector<float4>   _listClearRow{}; ///< 지우기 디스패치의 입력 행(칸마다 스레드 하나)
-        vector<float4>   _listPaintRow{}; ///< 칠하기 디스패치의 입력 행(삼각형마다 스레드 하나)
+        vector<float4>   _listPaintRow{}; ///< 칠하기 디스패치의 입력 행(삼각형 토막마다 스레드 하나)
         uint32           _clearThreadCount{ 0 };
         uint32           _paintThreadCount{ 0 };
         vector<MeshSpan> _listMesh{};
@@ -85,6 +85,13 @@ namespace sw
          * @details 격자 모양이나 발광 목록(순위)이 다르거나 구간들의 칸 합이 격자보다 많으면 격자 전체 하나다. 바뀐 것이 없으면 빈 목록이다.
          */
         static void collectDirtyRanges( const SceneVoxelScene& painted, const SceneVoxelScene& scene, vector<SceneVoxelGrid::CellRange>& outListRange );
+        /**
+         * @brief 월드 상자 @p box 인 메시의 삼각형 하나를 구간 @p range 안에서 몇 토막(스레드)으로 나눠 칠할지입니다.
+         * @details 삼각형이 덮는 칸 수는 CPU 가 모른다(정점을 읽지 않는다). 상자에서 잡은 줄 수를 √삼각형 수로 나눈다 — 면을 고르게 나눈 메시에서 삼각형 하나가 덮는 줄 수다. 바닥판처럼
+         *          삼각형 둘이 격자를 가로지르면 줄마다 나눠 스레드 하나가 칸 기둥 128² 개를 혼자 도는 일이 없고, 촘촘한 메시는 1 이라 스레드가 늘지 않는다.
+         *          shortcut: 촘촘한 메시에 섞인 큰 삼각형 하나는 나누지 않는다, 그런 메시가 프레임을 막으면 GPU 가 토막 목록을 내고 간접 디스패치한다.
+         */
+        [[nodiscard]] static uint32 computeSliceCount( const SceneVoxelGrid& grid, const SceneVoxelGrid::CellRange& range, const AABB& box, uint32 triangleCount );
         /** @brief 격자들을 칠할 일을 짭니다 — 다시 칠할 구간마다 칸을 지우고, 구간에 닿는 메시를 구간 안만 칠한다. 행 배치는 `scene_voxelize.hlsl` 머리 주석이다. */
         [[nodiscard]] static SceneVoxelPaintPlan planPaint( const vector<SceneVoxelPaintTarget>& listTarget );
     };
