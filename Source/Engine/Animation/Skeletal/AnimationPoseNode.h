@@ -217,12 +217,9 @@ namespace sw
         /** @brief 걸음이 지난 클립 시각 구간(섹션 링크 · 분기를 따라 끊긴 조각)마다 입력의 루트 모션을 차례로 잇습니다(언리얼 몽타주의 섹션 위치 구간 루트 모션과 같다). */
         [[nodiscard]] BoneTransform computeRootMotion( const AnimationParameterSet& parameter, const AnimationTimeStep& step, const IAnimationRootMotionSource& source ) const override;
         void                        accumulateCurves( const AnimationParameterSet& parameter, float32 time, float32 weight, IAnimationCurveSink& sink ) const override;
-        /** @brief 마지막 평가가 있던 섹션 번호입니다(진단 · 테스트). */
-        uint32 getCurrentSection() const { return _currentSection; }
-        /** @brief 마지막 평가의 입력 클립 시각입니다(진단 · 테스트). */
-        float32 getClipTime() const { return _clipTime; }
 
     private:
+        friend struct MontagePoseNodeTestAccess; ///< 테스트만 안을 본다 — 배포 공개 API 에 진단 조회를 두지 않는다
         /** @brief 섹션 위의 자리입니다. */
         struct Cursor
         {

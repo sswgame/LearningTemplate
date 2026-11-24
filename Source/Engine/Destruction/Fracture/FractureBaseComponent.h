@@ -294,10 +294,10 @@ namespace sw
         void spawnGroup( FractureGroupRuntime& inoutRuntime, const DestructionGroup& group, const float3& linearVelocity, const float3& angularVelocity );
         /** @brief 앵커 그룹의 잎에만 정적 바디가 있게 맞춥니다. 남은 바디는 그대로 두므로 붙은 벽이 갈라져도 다시 만들지 않습니다. */
         void syncStaticBodies( vector<PhysicsBodyHandle>& inoutListDestroy );
-        /** @brief 메시 공간 사건 하나를 상태에 적용하고, 기록과 그룹 바디를 고칩니다. */
         /** @brief 이 씬의 월드 원점입니다(네트워크로 주고받는 절대 자리를 옮긴다). 매니저가 없으면 0 입니다. */
         WorldOrigin getManagerWorldOrigin() const;
-        void        applyMeshEvent( ScenePhysics& physics, const DestructionDamageEvent& event, const FractureGroupPose* pGroupPose = nullptr );
+        /** @brief 메시 공간 사건 하나를 상태에 적용하고, 기록과 그룹 바디를 고칩니다. */
+        void applyMeshEvent( ScenePhysics& physics, const DestructionDamageEvent& event, const FractureGroupPose* pGroupPose = nullptr );
         /** @brief 월드 요청 하나를 현재 자세로 메시 공간 사건들로 바꿉니다. */
         void convertWorldDamage( const FracturePendingDamage& pending, vector<DestructionDamageEvent>& outListEvent ) const;
         /** @brief 잎에서 런타임 슬롯으로 가는 테이블을 다시 만듭니다. */

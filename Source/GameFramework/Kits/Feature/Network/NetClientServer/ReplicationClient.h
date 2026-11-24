@@ -4,6 +4,7 @@
  * @details 보간 지연만큼 과거를 그리도록 렌더 시각을 맞추고, 입력은 서버가 확인한 다음 틱부터 보낸다.
  */
 #pragma once
+#include "Core/Concurrency/DevCounter.h"
 #include "Core/Container/span.h"
 #include "Core/Container/vector.h"
 #include "Core/Foundation/Macros.h"
@@ -98,9 +99,9 @@ namespace sw
          */
         [[nodiscard]] optional<int64> findServerTickOffset() const;
         /** @brief 그리는 서버 틱입니다. 보간 지연만큼 과거이며 소수이고, 서버의 랙 보정이 씁니다. 스냅샷을 받기 전에는 0 입니다. */
-        float64 getRenderTick() const { return _clock.hasServerTick() ? _clock.getRenderTick() : 0.0; }
-        uint64  getDecodeFailureCount() const { return _decodeFailureCount; }
-        bool    hasSnapshot() const { return _listSnapshot.hasNewest(); }
+        float64           getRenderTick() const { return _clock.hasServerTick() ? _clock.getRenderTick() : 0.0; }
+        const DevCounter& getDecodeFailureCount() const { return _decodeFailureCount; }
+        bool              hasSnapshot() const { return _listSnapshot.hasNewest(); }
         /** @brief 서버가 아직 확인하지 않은 내 입력 수입니다. 다음 메시지가 다시 싣습니다. */
         int32 getPendingInputCount() const { return _inputWindow.getPendingCount(); }
 
@@ -115,7 +116,7 @@ namespace sw
         ReplicationClientConfig     _settings;
         INetPeers*                  _pHost;
         NetClock                    _clock; ///< 렌더 틱의 시계. 받은 스냅샷 틱의 하한에 흐른 시간을 더하고 지연을 뺀 값이며, 받은 가장 새 틱까지만 가고 되돌아가지 않는다
-        uint64                      _decodeFailureCount;
+        DevCounter                  _decodeFailureCount;
         NetMessageWriter            _messageWriter; ///< 보낼 메시지. 버퍼를 재사용한다
     };
 } // namespace sw

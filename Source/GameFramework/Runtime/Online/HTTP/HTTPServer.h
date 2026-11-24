@@ -6,6 +6,7 @@
  *          클라이언트(루프백 PKCE 로그인)가 쓰므로 `Server/` 가 아니라 공유에 둔다 — 언리얼 `HTTPServer` 모듈도 에디터 · 클라이언트의 OAuth 리다이렉트 받기에 쓴다.
  */
 #pragma once
+#include "Core/Concurrency/DevCounter.h"
 #include "Core/Concurrency/OnceInit.h"
 #include "Core/Concurrency/atomic.h"
 #include "Core/Concurrency/mutex.h"
@@ -63,8 +64,8 @@ namespace sw
         /** @brief 전송을 돌리고(I/O 스레드가 없을 때) 모인 요청을 처리기에 넘겨 답합니다. */
         void update();
 
-        uint16 getListenPort() const;
-        int32  getHandledCount() const { return _handledCount; }
+        uint16            getListenPort() const;
+        const DevCounter& getHandledCount() const { return _handledCount; }
 
         // IStreamHandler: I/O 스레드
         void onStreamOpened( StreamConnectionHandle handle, const NetAddress& remote, bool bAccepted ) override;
@@ -94,7 +95,7 @@ namespace sw
         OnceInit<HTTPServerConfig>                       _settings;
         OnceInit<HTTPRequestFunction>                    _onRequest;
         int32                                            _ioThreadCount;
-        int32                                            _handledCount;
+        DevCounter                                       _handledCount;
         atomic<bool>                                     _bInitialized; ///< 시작했는가 — 소유 스레드가 쓰고 update 가 읽는다(원자값)
     };
 } // namespace sw

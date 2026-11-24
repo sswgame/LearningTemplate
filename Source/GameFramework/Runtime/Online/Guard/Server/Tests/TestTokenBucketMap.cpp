@@ -19,7 +19,7 @@ SW_TEST_CASE( TokenBucketMapTest, ManyBusyKeysDoNotScanOnEveryNewKey )
     }
     SW_EXPECT_EQUAL( size_t{ 1000 }, map.getTrackedKeyCount() );
     // 문턱 4 · 8 · 16 · … · 512 에서 한 번씩 — 두 배 문턱이라 log2(1000 / 4) 번 남짓이다.
-    SW_EXPECT_TRUE_MSG( map.getSweepCount() <= 8, "sweep count must grow logarithmically with busy keys" );
+    SW_EXPECT_TRUE_MSG( map.getSweepCount().get() <= 8, "sweep count must grow logarithmically with busy keys" );
 }
 
 SW_TEST_CASE( TokenBucketMapTest, SweepErasesFullBucketsAndKeepsBusyLimits )
@@ -33,7 +33,7 @@ SW_TEST_CASE( TokenBucketMapTest, SweepErasesFullBucketsAndKeepsBusyLimits )
     }
     SW_EXPECT_TRUE( map.tryConsume( 4, 5000, retryAfterMs ) ); // 키 1 ~ 3 은 5 초 뒤 다시 가득 찼다
     SW_EXPECT_TRUE( map.tryConsume( 5, 5000, retryAfterMs ) ); // 문턱 4 에 닿아 청소 — 가득 찬 셋이 지워진다
-    SW_EXPECT_EQUAL( size_t{ 1 }, map.getSweepCount() );
+    SW_EXPECT_EQUAL( size_t{ 1 }, map.getSweepCount().get() );
     SW_EXPECT_EQUAL( size_t{ 2 }, map.getTrackedKeyCount() );
 
     // 청소에서 살아남은 쓰는 중인 키는 제한이 그대로다.

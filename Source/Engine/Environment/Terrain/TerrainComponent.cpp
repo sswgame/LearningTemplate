@@ -1039,12 +1039,6 @@ namespace sw
         return ( chunkX < _layout._chunkCountX && chunkIndex < _listChunk.size() ) ? _listChunk[chunkIndex]._lod : 0u;
     }
 
-    uint32 TerrainComponent::getChunkVertexCount( uint32 chunkX, uint32 chunkZ ) const
-    {
-        const size_t chunkIndex = static_cast<size_t>( chunkZ ) * _layout._chunkCountX + chunkX;
-        return ( chunkX < _layout._chunkCountX && chunkIndex < _listChunk.size() ) ? _listChunk[chunkIndex]._vertexCount : 0u;
-    }
-
     TerrainComponent* TerrainComponent::findTerrainAt( const GameObjectManager& manager, float32 worldX, float32 worldZ )
     {
         for ( TerrainComponent* pTerrain : manager.getComponentRegistry().getAll<TerrainComponent>() )

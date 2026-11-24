@@ -12,6 +12,19 @@
 #include "Engine/Physics/IPhysicsScene.h"
 #include "Engine/Physics/Scene/ScenePhysics.h"
 
+namespace sw
+{
+    /** @brief 안을 보는 테스트 창구입니다(`friend`). */
+    struct ScenePhysicsTestAccess
+    {
+        static uint32 getContactStayListenerCount( const ScenePhysics& physics, uint64 objectID )
+        {
+            const auto found = physics._mapStayListener.find( objectID );
+            return found != physics._mapStayListener.end() ? static_cast<uint32>( found->second.size() ) : 0u;
+        }
+    };
+} // namespace sw
+
 using namespace sw;
 
 namespace
@@ -83,7 +96,7 @@ SW_TEST_CASE( ContactStayListenerTest, OnlyListeningObjectGetsStay )
     SW_REQUIRE_NOT_NULL( pQuiet );
     ScenePhysics& physics = manager.getSubsystem<ScenePhysics>();
     physics.registerContactStayListener( *pHeard, ContactStayListener{ &Internal::countCollisionStay, nullptr } ); // 씬을 만들기 전에 올려도 씬이 받는다
-    SW_EXPECT_EQUAL( 1u, physics.getContactStayListenerCount( pHeard->getOwner()->getObjectID() ) );
+    SW_EXPECT_EQUAL( 1u, ScenePhysicsTestAccess::getContactStayListenerCount( physics, pHeard->getOwner()->getObjectID() ) );
     manager.beginPlay();
 
     uint32 heardStay = 0;
@@ -100,7 +113,7 @@ SW_TEST_CASE( ContactStayListenerTest, OnlyListeningObjectGetsStay )
     SW_EXPECT_EQUAL( heardStay, Internal::s_collisionStayCount ); // 듣는 쪽은 쌍마다 한 번 받는다(바닥은 듣지 않는다)
 
     physics.unregisterContactStayListener( *pHeard );
-    SW_EXPECT_EQUAL( 0u, physics.getContactStayListenerCount( pHeard->getOwner()->getObjectID() ) );
+    SW_EXPECT_EQUAL( 0u, ScenePhysicsTestAccess::getContactStayListenerCount( physics, pHeard->getOwner()->getObjectID() ) );
     const uint32 receivedBefore = Internal::s_collisionStayCount;
     uint32       staleStay      = 0;
     for ( uint32 frame = 0; frame < 5; ++frame )

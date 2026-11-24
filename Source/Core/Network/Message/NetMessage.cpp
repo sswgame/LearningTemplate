@@ -144,7 +144,7 @@ namespace sw
         , _arrKindDirection{}
         , _kindStats{}
         , _inbound{}
-        , _malformedCount{ 0 }
+        , _malformedCount{}
         , _unclaimedNotificationCount{ 0 }
         , _mapPeerWireVersion{}
         , _listRefusedConnection{}
@@ -269,7 +269,7 @@ namespace sw
         }
         if ( body.hasOverflowed() || count > kMaxRangeCount )
         {
-            ++_malformedCount;
+            _malformedCount.add();
             SW_LOG_WARNING_ID( "Net.RouterTableVersionMalformed", "NetMessageRouter: connection %# sent a broken message table version notice - disconnecting it", connectionID );
             peers.disconnect( connectionID );
             _listRefusedConnection.push_back( connectionID );
@@ -358,7 +358,7 @@ namespace sw
 
     void NetMessageRouter::refuseWrongDirection( INetPeers& peers, int32 connectionID, uint8 kind, NetPeerRole role )
     {
-        ++_malformedCount;
+        _malformedCount.add();
         SW_LOG_WARNING_ID( "Net.RouterWrongDirection", "NetMessageRouter: connection %# sent message kind 0x%02x that does not travel toward the %# - disconnecting it", connectionID,
                            static_cast<int32>( kind ), role == NetPeerRole::Server ? "server" : "client" );
         peers.disconnect( connectionID );
@@ -374,13 +374,13 @@ namespace sw
             return NetHandleResult::NotMine;
         if ( isInboundAllowed( pData[0], role ) == false )
         {
-            ++_malformedCount;
+            _malformedCount.add();
             return NetHandleResult::Malformed; // 반대 방향 종류다 — 처리기는 자기 역할이 받는 종류만 본다
         }
         BitReader             body( pData + 1, size - 1 );
         const NetHandleResult result = pHandler->handleNetMessage( NetMessageContext{ pData, size, context._connectionID, context._channel, pData[0] }, body );
         if ( result == NetHandleResult::Malformed )
-            ++_malformedCount;
+            _malformedCount.add();
         return result;
     }
 

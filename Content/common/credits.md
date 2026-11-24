@@ -25,6 +25,7 @@
 | `music/subspaceaudio_chiptunes_action/*.ogg` | OpenGameArt "5 Chiptunes (Action)" — 만든 이 Juhani Junkala(SubspaceAudio) (<https://opengameart.org/content/5-chiptunes-action>) — wav 다섯 곡을 Ogg Vorbis 로 바꿈 | CC0 1.0 |
 | `music/cynicmusic_town_theme/town_theme.ogg` | OpenGameArt "Town Theme RPG" — 만든 이 cynicmusic (<https://opengameart.org/content/town-theme-rpg>) — `TownTheme.mp3` 를 Ogg Vorbis 로 바꿈 | CC0 1.0 |
 | `music/ville_nousiainen_fast_fight/fight.ogg` | OpenGameArt "Fast fight / battle music" — 만든 이 Ville Nousiainen (<https://opengameart.org/content/fast-fight-battle-music>) — `fight.ogg` | CC0 1.0 |
+| `models_raw/kenney_nature_kit/*.glb` | Kenney "Nature Kit" 2.1 (<https://kenney.nl/assets/nature-kit>) — 여러 게임이 쓰는 밭 흙 둘(`crops_dirt_row` · `crops_dirt_single`). 묶음 <https://kenney.nl/media/pages/assets/nature-kit/37ac38a37b-1677698939/kenney_nature-kit.zip> (SHA-256 `fa7974a0d342bfe63c38664ba9f8ec1a4aab8ea25f099bdc56870e33588c4d9d`) 의 `Models/GLTF format/<원본 이름>.glb`, `License.txt` 원문 "License: (Creative Commons Zero, CC0)" | CC0 1.0 |
 | `textures_raw/blaster_colormap.png` | Kenney "Blaster Kit" (<https://kenney.nl/assets/blaster-kit>) — 팔레트 텍스처(활 · 화살이 `blaster_palette` 머티리얼로 쓴다. 총 모델은 Sci-Fi Essentials 로 바꿨다) | CC0 1.0 |
 | `models_raw/kaykit/*.glb` · `textures_raw/kaykit_knight.png` · `textures_raw/kaykit_rogue.png` · `textures_raw/kaykit_skeleton.png` | KayKit "Character Pack: Adventurers 1.0" (<https://github.com/KayKit-Game-Assets/KayKit-Character-Pack-Adventures-1.0>) — 캐릭터 `knight` · `rogue`(41 관절 리그 · 클립 76 — 무기 · 방패는 본에 붙은 `parts/*.mesh`), 그리고 "Character Pack: Skeletons 1.0" (<https://github.com/KayKit-Game-Assets/KayKit-Character-Pack-Skeletons-1.0>) — `skeleton_minion` · `skeleton_warrior` · `skeleton_rogue`(클립 95) · 무기 `skeleton_axe` · `skeleton_blade` · `skeleton_shield_small_a`. 만든 이 Kay Lousberg (www.kaylousberg.com) | CC0 1.0 |
 | `models_raw/kaykit/knight_cape_chain.glb` | 이 저장소에서 생성 — 위 `knight.glb` 의 `Knight_Cape` 메시(정점 · 법선 · UV · 인덱스)를 `rigs/knight_cape.skeleton.xml` 사슬 뼈 `cape0`~`cape3` 에 묶은 스킨드 glb. 정점 높이를 위 · 아래 두 뼈에 선형으로 나눠 가중치를 주고(`StressTestSceneRig.cpp` 의 `createCapeSkinnedCopy` 와 같은 규칙) 역바인드는 뼈 모델 자리의 이동이다. 일회성 파이썬 스크립트로 한 번 만들었고(스크립트는 저장소에 두지 않는다 — git 이력 `3edb95697^:Scripts/dev/MakeSkinnedCape.py`) 결과 glb 만 둔다 | 이 저장소 |
@@ -45,7 +46,7 @@
   원본 해시(`source_sha256`) · 변환 매개변수 · 도구 버전은 `audio.sources.json` 의 `convert` 에 있고, `fetch` 가 같은 버전에서 같은 바이트를 다시 만든다.
 - 저장소에는 Ogg Vorbis 만 둔다. 파일 이름은 원본의 camelCase · 공백 · 기호를 소문자 `_` 로 바꾼 것이다(곡은 앞의 "Juhani Junkala [Chiptune Adventures] " · "[Retro Game Music Pack] " 를 뗐다).
   배포 원본이 ogg 인 팩은 바이트가 그대로다.
-- 아직 오디오 이벤트(`AudioEventLibrary`)로 등록하지 않았다. 게임이 쓰는 소리는 각 게임 팩의 `sounds/` 가 그대로다.
+- 오디오 이벤트(`AudioEventLibrary`)는 게임 팩마다 등록하고 클립은 이 폴더의 파일을 바로 가리킨다 — 같은 파일을 게임 팩에 복사하지 않는다.
 - CC0 는 표기 의무가 없지만 고마움을 적어 둡니다 — Kenney (www.kenney.nl), Juhani Junkala(SubspaceAudio), yd, Ville Nousiainen, cynicmusic.
 
 - 캐릭터 키트(위 표의 `models_raw/` · `textures_raw/` 행)는 Shooter3D 에서 옮겨 왔다 — 데이터(`materials/kaykit_*` · `blaster_palette` · `rigs/` · `characters/` · `prefabs/` · `data/{anim,sockets,appearance,items.xml}`)가 함께 왔다.

@@ -42,11 +42,10 @@ namespace sw
 
         void onScheduledRun( const ScheduledRun& run );
 
-        /** @brief 마지막으로 끝난 회차가 지운 레코드 수입니다(테스트 · 진단). */
-        int64 getLastDeletedCount() const { return _lastDeletedCount; }
-        bool  isRunning() const { return _sweepJob.isRunning(); }
+        bool isRunning() const { return _sweepJob.isRunning(); }
 
     private:
+        friend struct ServiceTTLMonitorTestAccess; ///< 테스트만 안을 본다 — 배포 공개 API 에 진단 조회를 두지 않는다
         void onSweepCompleted( vector<ServiceTTLRule> listRule, ServiceStoreResult result, int64 deletedCount );
 
     private:

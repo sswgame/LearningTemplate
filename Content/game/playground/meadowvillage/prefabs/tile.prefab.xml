@@ -10,7 +10,7 @@
 			               _attachOwner="None"
 			               _attachOwnerID="0"
 			               _attachComponent="None"
-			               _meshID="game/playground/meadowvillage/models/crops_dirt_single.mesh"
+			               _meshID="common/models/kenney_nature_kit/crops_dirt_single.mesh"
 			               _materialPath="game/playground/meadowvillage/materials/nature.material"
 			               _boundsRadius="0.866"
 			               _gpuSpinSeed="0"

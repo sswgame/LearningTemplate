@@ -65,19 +65,4 @@ namespace sw
         _storedCount.add();
         return true;
     }
-
-    uint32 SocketPartPool::getRestingCount( const hashed_string& assetPath ) const
-    {
-        const auto found = _mapResting.find( assetPath );
-        if ( found == _mapResting.end() )
-            return 0;
-        uint32 count = 0;
-        for ( const GameObjectHandle handle : found->second )
-        {
-            const GameObject* pObject = _pManager->resolveGameObject( handle );
-            if ( pObject != nullptr && pObject->isPendingDestroy() == false )
-                ++count;
-        }
-        return count;
-    }
 } // namespace sw

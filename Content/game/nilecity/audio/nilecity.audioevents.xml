@@ -7,17 +7,17 @@
 	<_listEvent>
 		<AudioEventDef _name="CitySelect" _bus="ui" _priority="70" _cooldownSeconds="0.05" _maxInstances="1" _steal="Oldest">
 			<_listClip>
-				<AudioClipEntry _path="game/nilecity/sounds/select_003.ogg" />
+				<AudioClipEntry _path="common/sounds/kenney_interface_sounds/select_003.ogg" />
 			</_listClip>
 		</AudioEventDef>
 		<AudioEventDef _name="CityBuilt" _bus="ui" _priority="70" _maxInstances="2">
 			<_listClip>
-				<AudioClipEntry _path="game/nilecity/sounds/confirmation_002.ogg" />
+				<AudioClipEntry _path="common/sounds/kenney_interface_sounds/confirmation_002.ogg" />
 			</_listClip>
 		</AudioEventDef>
 		<AudioEventDef _name="CityBlocked" _bus="ui" _priority="70" _cooldownSeconds="0.5" _maxInstances="1" _steal="Reject">
 			<_listClip>
-				<AudioClipEntry _path="game/nilecity/sounds/error_002.ogg" />
+				<AudioClipEntry _path="common/sounds/kenney_interface_sounds/error_002.ogg" />
 			</_listClip>
 		</AudioEventDef>
 		<AudioEventDef _name="CityEvolved"
@@ -31,7 +31,7 @@
 		                _pitchMin="-1"
 		                _pitchMax="2">
 			<_listClip>
-				<AudioClipEntry _path="game/nilecity/sounds/drop_003.ogg" />
+				<AudioClipEntry _path="common/sounds/kenney_interface_sounds/drop_003.ogg" />
 			</_listClip>
 		</AudioEventDef>
 	</_listEvent>

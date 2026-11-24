@@ -170,7 +170,6 @@ namespace sw
         , _waveAmplitudeScale{ 1.0f }
         , _boundsWaveScale{ 1.0f }
         , _surfaceBoundsRadius{ 0.0f }
-        , _surfaceVertexCount{ 0 }
         , _bOriginDirty{ false }
         , _bBuiltOnTerrain{ false }
         , _bRebuildQueued{ false }
@@ -399,7 +398,6 @@ namespace sw
         _bRebuildQueued = false;
         SW_PROFILE_SCOPE( "GT.Water.rebuildSurface" );
         _batch.reset();
-        _surfaceVertexCount = 0;
         // 질의도 이 원점을 쓴다. 물은 움직이지 않는 것으로 보고, 옮기면 다시 만든다(트랜스폼 변경은 onPropertyChanged 로 온다).
         _surfaceOrigin = getWorldPosition();
         if ( _pPrimitiveRegistry == nullptr )
@@ -441,8 +439,7 @@ namespace sw
             Mesh::weldTriangleList( listVertex, listWelded, listIndex );
             (void)mesh->setGeometryWithTangents( std::move( listWelded ), std::move( listIndex ) ); // 번호는 방금 합친 정점 안이다
         }
-        _surfaceVertexCount = mesh->getVertexCount();
-        _batch              = sw::make_unique<MeshInstanceBatch>( std::move( mesh ), _material.getMaterial(), _material.getInstance(), 1u, MeshInstanceWriter::CPU );
+        _batch = sw::make_unique<MeshInstanceBatch>( std::move( mesh ), _material.getMaterial(), _material.getInstance(), 1u, MeshInstanceWriter::CPU );
         _batch->setOwnerComponent( this );
         _batch->setWorld( 0, float4x4::makeTranslation( _surfaceOrigin ) );
         _batch->setBoundsRadius( 0, computeBoundsRadius() );

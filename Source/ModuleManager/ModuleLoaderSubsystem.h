@@ -13,7 +13,6 @@
 #include "Core/Foundation/Macros.h"
 #include "Core/Subsystem/Subsystem.h"
 
-#include "Engine/Foundation/HostSubsystemNames.h"
 #include "Engine/Module/HostInterfaces.h"
 #include "Engine/Module/ModuleCatalog.h"
 
@@ -56,7 +55,7 @@ namespace sw
     {
     public:
         /** @brief 서브시스템 이름입니다(같은 범위의 다른 서브시스템이 의존 칸에 적는다). */
-        static constexpr const utf8* kSubsystemName = HostSubsystemNames::kModuleLoader;
+        static constexpr const utf8* kSubsystemName = "ModuleLoader";
 
         /** @brief @p moduleTypeLoader 는 타입 공급자 로더입니다. 묶이지 않았으면 올릴 것이 없습니다. */
         explicit ModuleLoaderSubsystem( ModuleTypeLoaderDelegate moduleTypeLoader );

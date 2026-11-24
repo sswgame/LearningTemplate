@@ -125,8 +125,6 @@ namespace sw
          */
         void    setWaveAmplitudeScale( float32 scale );
         float32 getWaveAmplitudeScale() const { return _waveAmplitudeScale; }
-        /** @brief 수면 메시 정점 수입니다(테스트). */
-        uint32 getSurfaceVertexCount() const { return _surfaceVertexCount; }
 
         /**
          * @brief @p manager 의 물 가운데 @p viewPosition 을 물속에 둔 첫 물의 안개를 구합니다. 물속 안개를 켠 물만 봅니다. 없으면 false 를 반환합니다.
@@ -165,6 +163,7 @@ namespace sw
         void                 setSurfaceKind( const hashed_string& kind ) { _surfaceKind = kind; }
 
     private:
+        friend struct WaterBodyComponentTestAccess; ///< 테스트만 안을 본다 — 배포 공개 API 에 진단 조회를 두지 않는다
         /** @brief 강에서 (x, z) 에 가장 가까운 경로 위 점의 기준 높이와 그 구간의 진행 방향(xz, 정규화)을 찾습니다. 띠 밖이면 false 를 반환합니다. */
         [[nodiscard]] bool findRiverBase( float32 worldX, float32 worldZ, float32& outBaseHeight, float2& outDirection ) const;
         /** @brief (x, z) 의 파도 없는 기준면 높이입니다. 덮지 않으면 false 입니다. */
@@ -230,9 +229,8 @@ namespace sw
         float32                       _waveAmplitudeScale;  ///< 런타임 진폭 배율(저장하지 않는다 — 날씨가 정한다)
         float32                       _boundsWaveScale;     ///< 지금 바운드가 든 진폭 배율. 배율이 바뀌면 틱이 바운드를 고친다
         float32                       _surfaceBoundsRadius; ///< 파도를 뺀 수면 바운드 반지름(메시를 만들 때)
-        uint32                        _surfaceVertexCount;
-        atomic<bool>                  _bOriginDirty;    ///< 오너가 움직여 수면 원점이 낡았다
-        bool                          _bBuiltOnTerrain; ///< 마지막 수면이 지형 깊이를 구웠다
-        bool                          _bRebuildQueued;  ///< 다시 만들기가 틱 뒤로 줄 서 있다(`queueRebuild` 가 세우고 `rebuildSurface` 가 지운다)
+        atomic<bool>                  _bOriginDirty;        ///< 오너가 움직여 수면 원점이 낡았다
+        bool                          _bBuiltOnTerrain;     ///< 마지막 수면이 지형 깊이를 구웠다
+        bool                          _bRebuildQueued;      ///< 다시 만들기가 틱 뒤로 줄 서 있다(`queueRebuild` 가 세우고 `rebuildSurface` 가 지운다)
     };
 } // namespace sw

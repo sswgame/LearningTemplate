@@ -322,8 +322,6 @@ namespace sw
         void notifyRenderFrameQueued();
         /** @brief 렌더 스레드가 프레임 하나를 끝냈음을 알리고, 그 프레임까지 기다리던 핸들을 해제합니다. 렌더 스레드(기록 밖)에서 부릅니다. */
         void notifyRenderFrameRetired();
-        /** @brief 아직 해제하지 않고 미뤄 둔 핸들 수입니다(진단과 테스트용). */
-        size_t getDeferredHandleCount() const;
 
         // ------------------------------------------------------------------------------
         // 2) 능력과 스레드: 백엔드 종류, bindless, 컨텍스트 소유
@@ -763,6 +761,9 @@ namespace sw
         void markInitPhase( const utf8* pPhaseName ) { _initPhaseTimings.mark( pPhaseName ); }
 
     private:
+        friend struct RHIDeviceTestAccess; ///< 테스트만 안을 본다 — 배포 공개 API 에 진단 조회를 두지 않는다
+        /** @brief 아직 해제하지 않고 미뤄 둔 핸들 수입니다(테스트 — 줄의 형식이 cpp 안이라 본문도 cpp 에 있다). */
+        size_t getDeferredHandleCount() const;
         /** @brief 모든 해제 오버로드의 본문입니다 — 지금 놓을지 다음에 넘길 프레임 뒤로 미룰지 정한다. 0 은 무시한다. */
         void releaseHandleInternal( RHIHandleKind kind, uint64 packed );
         /** @brief 핸들 하나를 지금 그 종류의 백엔드 파괴 함수로 내립니다. 백엔드가 산 핸들이 아니었다고 하면 단언한다(같은 핸들 두 번 해제). */

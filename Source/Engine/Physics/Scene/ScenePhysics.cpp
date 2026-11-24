@@ -458,12 +458,6 @@ namespace sw
         _mapStayListener.erase( objectID );
     }
 
-    uint32 ScenePhysics::getContactStayListenerCount( uint64 objectID ) const
-    {
-        auto iter = _mapStayListener.find( objectID );
-        return iter != _mapStayListener.end() ? static_cast<uint32>( iter->second.size() ) : 0u;
-    }
-
     void ScenePhysics::applyContactStayListener( uint64 objectID, bool bListen )
     {
         // 씬은 처음 쓸 때 만든다 — 없으면 만들 때 `_mapStayListener` 를 다시 건다(`getScene3D` · `getScene2D`).

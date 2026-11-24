@@ -153,7 +153,7 @@ SW_TEST_CASE( NetMMOStreamingTest, ClientHoldsEnterUntilCellStreamed )
     // 보류 중 갱신: 새 틱은 받아 두고 오래된 틱은 버린다. 사건은 없다.
     (void)view.handleMessage( 0, Internal::writeUpdate( 9, 42, float3{ 3.0f, 0.0f, 3.0f } ) );
     (void)view.handleMessage( 0, Internal::writeUpdate( 8, 42, float3{ 2.0f, 0.0f, 2.0f } ) );
-    SW_EXPECT_EQUAL( static_cast<uint64>( 1 ), view.getStaleUpdateCount() );
+    SW_EXPECT_EQUAL( static_cast<uint64>( 1 ), view.getStaleUpdateCount().get() );
     view.update( Internal::kTickSeconds );
     vector<MMOClientEvent> listEvent;
     view.pollEvents( listEvent );

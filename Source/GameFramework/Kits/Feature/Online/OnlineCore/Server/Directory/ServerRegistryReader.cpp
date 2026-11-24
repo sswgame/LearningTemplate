@@ -22,7 +22,7 @@ namespace sw
         , _refreshPeriodMs{ 2000 }
         , _seatReservationTTLMs{ 0 }
         , _lastRefreshStartMs{ 0 }
-        , _refreshCount{ 0 }
+        , _refreshCount{}
         , _outstandingCount{ 0 }
         , _bRefreshRequested{ SW_TRUE }
     {
@@ -92,7 +92,7 @@ namespace sw
         {
             // 색인을 못 읽었다(캐시가 아프다) — 옛 스냅숏을 그대로 두고 다음 주기에 다시.
             _listBuilding.clear();
-            ++_refreshCount;
+            _refreshCount.add();
             return;
         }
         for ( const EphemeralScoredMember& member : reply._listMember )
@@ -165,7 +165,7 @@ namespace sw
         _mapRequestToServer.clear();
         _mapRequestToSeat.clear();
         _mapServerToReserved.clear();
-        ++_refreshCount;
+        _refreshCount.add();
     }
 
     bool ServerRegistryReader::pickServer( const ServerSelectionQuery& query, UnixMilliseconds nowMs, ServerStatus& outStatus )

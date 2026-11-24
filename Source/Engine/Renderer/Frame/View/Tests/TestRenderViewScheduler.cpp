@@ -5,6 +5,15 @@
 
 #include "Engine/Renderer/Frame/View/RenderViewScheduler.h"
 
+namespace sw
+{
+    /** @brief 안을 보는 테스트 창구입니다(`friend`). */
+    struct RenderViewSchedulerTestAccess
+    {
+        static uint32 getTrackedCount( const RenderViewScheduler& scheduler ) { return static_cast<uint32>( scheduler._listEntry.size() ); }
+    };
+} // namespace sw
+
 // 추가 뷰 자리 고르기(RN-13) — 카메라가 자리 수보다 많으면 보이는 뷰 먼저, 그다음 늦은 뷰 먼저 자리를 준다. 등록 순서로 자르지 않는다.
 
 using namespace sw;
@@ -56,7 +65,7 @@ SW_TEST_CASE( RenderViewSchedulerTest, VisibleViewsWinSlotsOverRegistrationOrder
     }
     SW_EXPECT_EQUAL( Util::kMaxListed, listedCount );
     SW_EXPECT_EQUAL( 6u, chosen );
-    SW_EXPECT_EQUAL( 12u, scheduler.getTrackedCount() ); // 자리를 얻지 못한 뷰도 기록이 남는다
+    SW_EXPECT_EQUAL( 12u, RenderViewSchedulerTestAccess::getTrackedCount( scheduler ) ); // 자리를 얻지 못한 뷰도 기록이 남는다
 }
 
 /** @brief [RenderViewSchedulerTest] 모두 보이면 자리를 얻지 못한 뷰가 다음 프레임에 더 늦은 채로 자리를 얻는다 — 같은 뷰가 계속 굶지 않는다 */

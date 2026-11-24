@@ -229,8 +229,6 @@ namespace sw
         [[nodiscard]] PhysicsReadScope openReadScope();
         /** @brief (게임 스레드) 워커를 기다린 뒤 구간을 닫고 "읽는 워커 없음" 증표를 돌려줍니다 — 씬을 고치는 길이 이 증표를 받는다. */
         [[nodiscard]] WorkerReadFence<ScenePhysics> closeReadScope( PhysicsReadScope&& scope );
-        /** @brief 지금 열린 읽기 구간 수입니다. */
-        uint32 getOpenReadScopeCount() const { return _openReadScopeCount; }
         /** @brief 마지막 프레임이 낸 3D 접촉 이벤트입니다(스텝 순서). 다음 `step` 까지 그대로입니다. */
         const vector<PhysicsContactEvent3D>& getFrameEvents3D() const { return _listFrameEvent3D; }
         /** @brief 마지막 프레임이 낸 2D 접촉 이벤트입니다. */
@@ -253,8 +251,6 @@ namespace sw
         void registerContactStayListener( Component& component, const ContactStayListener& listener );
         /** @brief 올린 듣는 쪽을 내립니다(`onUnregister`). 오브젝트의 마지막이면 물리 씬의 듣기도 끈다. 올리지 않았으면 아무것도 하지 않습니다. */
         void unregisterContactStayListener( Component& component );
-        /** @brief 오브젝트 @p objectID 에 올린 유지 듣는 쪽 수입니다(테스트 · 진단). */
-        uint32 getContactStayListenerCount( uint64 objectID ) const;
 
         /** @brief 물리 컴포넌트를 단계 목록에 넣습니다(`PhysicsComponent::onRegister`). */
         void registerComponent( PhysicsComponent* pComponent );
@@ -303,7 +299,9 @@ namespace sw
         const DebrisBudget& getDebrisBudget() const { return _debrisBudget; }
 
     private:
-        friend class PhysicsComponent; ///< 첫 바디를 알린다(`markObjectSpawned`) — 나타남 표시는 바디를 만드는 쪽만 적는다
+        friend struct PhysicsReadScopeTestAccess; ///< 테스트만 안을 본다
+        friend struct ScenePhysicsTestAccess;     ///< 테스트만 안을 본다 — 배포 공개 API 에 진단 조회를 두지 않는다
+        friend class PhysicsComponent;            ///< 첫 바디를 알린다(`markObjectSpawned`) — 나타남 표시는 바디를 만드는 쪽만 적는다
 
         /** @brief 첫 바디가 생긴 오브젝트 하나입니다(`markObjectSpawned`). */
         struct SpawnedObject

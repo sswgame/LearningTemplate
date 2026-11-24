@@ -108,10 +108,9 @@ namespace sw
          *          다시 꾸린 옛 풀이 아직 받지 못한 복사가 새 풀 복사보다 먼저 들어간다.
          */
         void recordPendingCopies( IRHICommandList& cmd, IRHIDevice& device );
-        /** @brief 아직 기록하지 않은 GPU 복사 수입니다(테스트 · 진단). */
-        uint32 getPendingCopyCount() const { return static_cast<uint32>( _listPendingCopy.size() ); }
 
     private:
+        friend struct GPUMeshVertexPoolTestAccess; ///< 테스트만 안을 본다 — 배포 공개 API 에 진단 조회를 두지 않는다
         /** @brief 풀에 든 메시 하나의 기록입니다. */
         struct Entry
         {

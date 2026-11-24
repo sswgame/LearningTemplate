@@ -10,6 +10,7 @@
  *          연결 사건(열림, 닫힘)도 라우터가 메시지보다 먼저 처리기에 알린다. 그래서 키트는 수신 가드나 연결 수명을 직접 배선하지 않고 자기 종류만 읽으면 된다.
  */
 #pragma once
+#include "Core/Concurrency/DevCounter.h"
 #include "Core/Container/unordered_map.h"
 #include "Core/Container/vector.h"
 #include "Core/Delegate/Subscription.h"
@@ -328,8 +329,8 @@ namespace sw
          * @brief 서버가 받은 메시지를 보낸 연결을 뺀 모두에게 **받은 채널 그대로** 다시 보냅니다. 클라이언트에서는 하지 않고 0을 반환합니다. 반환값은 보낸 수입니다.
          * @details 처리기 안에서 부른다(@p context 의 메시지 바이트는 처리기 호출 동안만 유효하다).
          */
-        static int32 relayToOtherPeers( INetPeers& peers, const NetMessageContext& context );
-        uint64       getMalformedCount() const { return _malformedCount; }
+        static int32      relayToOtherPeers( INetPeers& peers, const NetMessageContext& context );
+        const DevCounter& getMalformedCount() const { return _malformedCount; }
         /** @brief 그 종류를 보낸다고 등록한 처리기가 없어 버린 전달 통지 수입니다(첫 번째는 오류 로그도 남긴다 — 보낸 쪽이 처리기를 등록하지 않았다). */
         uint64 getUnclaimedNotificationCount() const { return _unclaimedNotificationCount; }
         /** @brief `poll` 가 지금까지 꺼낸 종류별 메시지 수와 바이트입니다(받은 쪽 셈 — 처리기가 없는 메시지도 센다. 보낸 쪽은 `INetPeers::addSentKindStats`). */
@@ -371,7 +372,7 @@ namespace sw
         uint8                                         _arrKindDirection[kKindCount];       ///< 종류마다 맡은 처리기가 적은 방향 비트(`kDirectionToServerBit` · `kDirectionToClientBit`).
         NetMessageKindStatsTable                      _kindStats;                          ///< `poll` 가 메시지마다 더한다(꺼내는 반복 안의 덧셈 둘 — 따로 훑지 않는다).
         NetInbound                                    _inbound;                            ///< `poll` 가 다시 쓰는 버퍼.
-        uint64                                        _malformedCount;
+        DevCounter                                    _malformedCount;
         uint64                                        _unclaimedNotificationCount;
         unordered_map<int32, vector<PeerWireVersion>> _mapPeerWireVersion;    ///< 연결마다 상대가 알린 표 판. 연결이 닫히면 지운다
         vector<int32>                                 _listRefusedConnection; ///< 이번 `poll` 에서 판이 달라 끊은 연결 — 남은 메시지를 넘기지 않는다

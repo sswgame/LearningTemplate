@@ -129,10 +129,9 @@ namespace sw
         GlyphCache& getGlyphCache() { return *_glyphCache; }
         /** @brief 읽은 카탈로그입니다. */
         const FontCatalogDef& getCatalog() const { return _catalog; }
-        /** @brief 한 번만 남긴 경고(못 찾은 패밀리, 글리프 없는 코드 포인트)의 수입니다. 경고가 반복되지 않는지 테스트가 확인합니다. */
-        uint32 getWarnedOnceCount() const { return static_cast<uint32>( _warnedOnce.getCount() ); }
 
     private:
+        friend struct FontServiceTestAccess; ///< 테스트만 안을 본다 — 배포 공개 API 에 진단 조회를 두지 않는다
         /** @brief 연 가족 면 하나입니다(없음도 캐시해 다시 찾지 않는다). */
         struct OpenedFamilyFace
         {

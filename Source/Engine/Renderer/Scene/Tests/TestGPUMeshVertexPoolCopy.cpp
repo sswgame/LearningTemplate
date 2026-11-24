@@ -16,6 +16,15 @@
 #include "Engine/Graphics/RHI/Tests/RHIFakeDevice.h"
 #include "Engine/Renderer/Scene/GPUMeshVertexPool.h"
 
+namespace sw
+{
+    /** @brief 안을 보는 테스트 창구입니다(`friend`). */
+    struct GPUMeshVertexPoolTestAccess
+    {
+        static uint32 getPendingCopyCount( const GPUMeshVertexPool& pool ) { return static_cast<uint32>( pool._listPendingCopy.size() ); }
+    };
+} // namespace sw
+
 using namespace sw;
 
 namespace
@@ -61,11 +70,11 @@ SW_TEST_CASE( GPUMeshVertexPoolCopyTest, ProxyMeshFillsByGPUCopy )
     SW_REQUIRE_TRUE( pool.update( &device, vector<Mesh*>{ mesh.get() } ) );
     SW_EXPECT_EQUAL( 1u, factory._gpuVertexBufferCount );  // 풀 정점 버퍼는 GPU 전용이다
     SW_EXPECT_EQUAL( 0u, factory._structuredUpdateCount ); // CPU 정점을 올리지 않았다
-    SW_EXPECT_EQUAL( 2u, pool.getPendingCopyCount() );
+    SW_EXPECT_EQUAL( 2u, GPUMeshVertexPoolTestAccess::getPendingCopyCount( pool ) );
 
     test::FakeRHICommandList list{ 0 };
     pool.recordPendingCopies( list, device );
-    SW_EXPECT_EQUAL( 0u, pool.getPendingCopyCount() );
+    SW_EXPECT_EQUAL( 0u, GPUMeshVertexPoolTestAccess::getPendingCopyCount( pool ) );
     SW_REQUIRE_EQUAL( static_cast<size_t>( 2 ), list._listBufferCopy.size() );
     const GPUMeshVertexPool::Placement          placement = pool.getPlacementOf( mesh.get() );
     const test::FakeRHICommandList::BufferCopy& position  = list._listBufferCopy[0];
@@ -96,7 +105,7 @@ SW_TEST_CASE( GPUMeshVertexPoolCopyTest, MeshWithoutProxyUploadsCPUVertices )
 
     GPUMeshVertexPool pool{ RHIMeshVertexFormat::Packed };
     SW_REQUIRE_TRUE( pool.update( &device, vector<Mesh*>{ mesh.get() } ) );
-    SW_EXPECT_EQUAL( 0u, pool.getPendingCopyCount() );
+    SW_EXPECT_EQUAL( 0u, GPUMeshVertexPoolTestAccess::getPendingCopyCount( pool ) );
     SW_EXPECT_EQUAL( 1u, factory._structuredUpdateCount );
     pool.release( &device );
 }

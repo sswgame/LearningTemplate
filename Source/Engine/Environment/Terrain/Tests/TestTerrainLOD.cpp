@@ -13,6 +13,15 @@
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
 
+namespace sw
+{
+    /** @brief 안을 보는 테스트 창구입니다(`friend`). */
+    struct TerrainComponentTestAccess
+    {
+        static uint32 getChunkVertexCount( const TerrainComponent& terrain, uint32 chunkX, uint32 chunkZ ) { return terrain._listChunk[static_cast<size_t>( chunkZ ) * terrain._layout._chunkCountX + chunkX]._vertexCount; }
+    };
+} // namespace sw
+
 using namespace sw;
 
 namespace TerrainLODTestUtil
@@ -63,7 +72,7 @@ SW_TEST_CASE( TerrainLODTest, ReturningLODsReuseCachedChunkMeshes )
     SW_EXPECT_TRUE( pTerrain->updateLODs( nearPosition ) > 0 );
     SW_EXPECT_EQUAL( builtBeforeReturn, pTerrain->getChunkMeshBuildCount().get() );
     SW_EXPECT_TRUE( pTerrain->getChunkLOD( 0, 0 ) < nearCornerFarLOD );
-    SW_EXPECT_TRUE( pTerrain->getChunkVertexCount( 0, 0 ) > pTerrain->getChunkVertexCount( 3, 3 ) ); // 꺼낸 메시의 정점 수도 그 LOD 의 것이다
+    SW_EXPECT_TRUE( TerrainComponentTestAccess::getChunkVertexCount( *pTerrain, 0, 0 ) > TerrainComponentTestAccess::getChunkVertexCount( *pTerrain, 3, 3 ) ); // 꺼낸 메시의 정점 수도 그 LOD 의 것이다
 
     // 높이를 쓴 청크는 들고 있던 메시를 버린다 — 멀리 가면 그 청크만 새로 만든다(나머지는 들고 있던 먼 메시다).
     vector<float32>   listHeight = pTerrain->getHeightfield().getHeightSamples();
