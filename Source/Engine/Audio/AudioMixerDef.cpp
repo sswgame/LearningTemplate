@@ -395,8 +395,9 @@ namespace sw
         for ( const utf8* pName : arrChildName )
         {
             AudioBusDef child;
-            child._name   = hashed_string( pName );
-            child._parent = master._name;
+            child._name              = hashed_string( pName );
+            child._parent            = master._name;
+            child._bPlaysInGamePause = child._name == hashed_string( AudioBusNames::kMusic ) || child._name == hashed_string( AudioBusNames::kUI );
             desc._listBus.push_back( child );
         }
         return desc;

@@ -433,7 +433,7 @@ namespace sw
             _pUIDriver->processFrameInput( engine::getSubsystem<GameTimeScale>().getUnscaledDeltaTime() ); // 정지 메뉴의 탐색 반복은 실제 시간
     }
 
-    void Engine::updateFrameServices()
+    void Engine::updateFrameServices( SceneTick sceneTick )
     {
         // 다른 스레드가 읽는 개발 변수의 사본을 게임 스레드에서 다시 뜬다(콘솔이 바꾼 값이 이번 프레임의 로드 기록부터 든다).
         if ( AssetLoadProfiler* const pLoadProfiler = engine::findSubsystem<AssetLoadProfiler>() )
@@ -477,7 +477,10 @@ namespace sw
             if ( _pAudioDriver != nullptr )
             {
                 SW_PROFILE_SCOPE( "GT.Audio.update" );
-                _pAudioDriver->update( engine::getSubsystem<GameTimeScale>().getUnscaledDeltaTime() ); // 장치는 게임이 멈춰도 돈다 — 장치 없는 렌더도 같아야 정지 · 에디터에서 오디오 상태가 움직인다
+                // 게임 시간이 선 동안(정지 메뉴 · 로딩 화면) 게임 소리도 선다. 에디터가 씬을 틱하지 않는 동안은 일시정지가 아니다 — 패널의 소리 미리듣기가 난다.
+                const GameTimeScale& timeScale = engine::getSubsystem<GameTimeScale>();
+                _pAudioDriver->setGamePaused( sceneTick == SceneTick::Run && timeScale.get() <= 0.0f );
+                _pAudioDriver->update( timeScale.getUnscaledDeltaTime() ); // 장치는 게임이 멈춰도 돈다 — 장치 없는 렌더도 같아야 정지 · 에디터에서 오디오 상태가 움직인다
             }
         }
     }
@@ -570,7 +573,7 @@ namespace sw
         SW_PROFILE_SCOPE( "GT.Frame" );
 
         // 프레임 순서가 곧 의미다: 서비스 → 씬 틱 → 관찰자 → 런타임 UI → 렌더 패킷.
-        updateFrameServices();
+        updateFrameServices( sceneTick );
         updateScenes( deltaTime, views, vpWidth, vpHeight, sceneTick );
 
         // 관찰자 훅 `onAfterSceneTick` — 이 프레임의 게임 상태가 정해진 뒤(씬 틱 뒤), 런타임 UI · 렌더 패킷 앞이라는 순서가 뜻이 있다(텔레메트리의 장면별 프레임 시간,
