@@ -163,7 +163,7 @@ namespace sw
         const int32 pendingCount = countPending( connectionID );
         if ( _messageWriter.getMessageChannel().has_value() == false )
             return; // 서술자가 있는 메시지만 줄에 선다 — 쓰지 못한 메시지는 오류 로그가 남았다
-        if ( pendingCount == 0 && _messageWriter.sendMessage( *_pHost, connectionID ) )
+        if ( pendingCount == 0 && _messageWriter.trySendMessage( *_pHost, connectionID ) )
             return;
         if ( _pHost->getConnectionState( connectionID ) != NetConnectionState::Connected )
             return; // 닫힌 연결이다. 돌아오면 토큰으로 다시 받는다
@@ -218,7 +218,7 @@ namespace sw
             body._action     = action._buffer;
             if ( _messageWriter.writeMessage<NetTurnRelayMessage::Table, NetTurnRelayMessage::Applied>( body ) == false )
                 return; // 받아들일 때 상한을 봤다 — 여기 오면 결함이고 오류 로그가 남았다
-            if ( _messageWriter.sendMessage( *_pHost, seat._connectionID ) == false )
+            if ( _messageWriter.trySendMessage( *_pHost, seat._connectionID ) == false )
                 return; // 창이 찼으므로 `update` 가 이어서 보낸다
             ++seat._sentActionCount;
         }
@@ -242,7 +242,7 @@ namespace sw
         body._actionCount = actionCount;
         if ( _messageWriter.writeMessage<NetTurnRelayMessage::Table, NetTurnRelayMessage::View>( body ) == false )
             return; // 정책이 상한을 넘겼다 — 오류 로그가 남았다
-        if ( _messageWriter.sendMessage( *_pHost, seat._connectionID ) )
+        if ( _messageWriter.trySendMessage( *_pHost, seat._connectionID ) )
             seat._sentViewActionCount = actionCount; // 창이 찼으면 `update` 가 그때의 가장 새 모습을 보낸다
     }
 

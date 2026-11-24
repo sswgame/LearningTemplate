@@ -156,6 +156,12 @@ namespace sw
         return getPendingReliableCount() + fragmentCount > kReliableWindow - 1;
     }
 
+    bool NetConnection::isReliableBulkWindowFull( int32 size ) const
+    {
+        const int32 fragmentCount = MathUtil::max( 1, ( size + kMaxSingleMessageSize - 1 ) / kMaxSingleMessageSize );
+        return getPendingReliableCount() + fragmentCount > kReliableBulkWindow;
+    }
+
     bool NetConnection::sendMessage( NetChannelKind channel, const uint8* pData, int32 size )
     {
         const bool bInvalidMessage = size < 0 || ( size > 0 && pData == nullptr ) || channel == NetChannelKind::Count;

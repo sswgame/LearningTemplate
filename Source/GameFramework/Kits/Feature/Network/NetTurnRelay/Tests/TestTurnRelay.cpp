@@ -26,7 +26,14 @@ namespace
         int32         _sendBudget{ -1 }; ///< 남은 보내기 수. 음수면 무한이다
         uint8         _bWindowFull{ SW_FALSE };
 
-        bool sendMessage( int32 connectionID, NetChannelKind channel, const uint8* pData, int32 size ) override { return trySendMessage( connectionID, channel, pData, size ); }
+        /** @brief 창이 차면 연결을 닫는다(`NetEndpoint::sendMessage` 와 같다) — 기다릴 쪽이 이것을 쓰면 테스트가 진다. */
+        bool sendMessage( int32 connectionID, NetChannelKind channel, const uint8* pData, int32 size ) override
+        {
+            if ( trySendMessage( connectionID, channel, pData, size ) )
+                return true;
+            _listDisconnected.push_back( connectionID );
+            return false;
+        }
         bool trySendMessage( int32 connectionID, NetChannelKind channel, const uint8* pData, int32 size ) override
         {
             (void)channel;
@@ -400,6 +407,7 @@ SW_TEST_CASE_F( TurnRelayTest, FullWindowResumesInUpdate )
     (void)relay( 1 ).submitAction( makeAction( 2 ) );
     poll();
     SW_EXPECT_TRUE( relay( 0 ).getActions().empty() );
+    SW_EXPECT_TRUE( _serverPeers._listDisconnected.empty() ); // 멈춘 것이지 닫은 것이 아니다
     SW_EXPECT_EQUAL( _server.findRoom( 7 )->_listAction.size(), size_t{ 2 } );
 
     _serverPeers._bWindowFull = SW_FALSE;

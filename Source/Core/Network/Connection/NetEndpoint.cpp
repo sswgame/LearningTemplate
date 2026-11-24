@@ -1486,8 +1486,11 @@ namespace sw
 
     bool NetEndpoint::sendMessageLocked( int32 connectionID, NetChannelKind channel, const uint8* pData, int32 size, WindowFullPolicy policy )
     {
-        NetEndpointSlot* pSlot   = _slotTable.findConnected( connectionID );
-        const bool       bQueued = pSlot != nullptr && pSlot->_connection->sendMessage( channel, pData, size );
+        NetEndpointSlot* pSlot     = _slotTable.findConnected( connectionID );
+        const bool       bReliable = channel == NetChannelKind::ReliableOrdered || channel == NetChannelKind::ReliableUnordered;
+        if ( pSlot != nullptr && bReliable && policy == WindowFullPolicy::Report && pSlot->_connection->isReliableBulkWindowFull( size ) )
+            return false;
+        const bool bQueued = pSlot != nullptr && pSlot->_connection->sendMessage( channel, pData, size );
         if ( bQueued )
         {
             _sentKindStats.add( pData, size );
@@ -1495,7 +1498,6 @@ namespace sw
             requestWake( pSlot->_lastSendTime + _settings._sendInterval ); // 보내기 간격이 차는 때 — 자는 네트워크 스레드가 그때 깬다
             return true;
         }
-        const bool bReliable    = channel == NetChannelKind::ReliableOrdered || channel == NetChannelKind::ReliableUnordered;
         const bool bCloseOnFull = pSlot != nullptr && bReliable && policy == WindowFullPolicy::Close && pSlot->_connection->isReliableWindowFull( size );
         if ( bCloseOnFull )
         {

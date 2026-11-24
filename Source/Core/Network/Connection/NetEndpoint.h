@@ -233,7 +233,10 @@ namespace sw
         {
             return sendMessage( connectionID, channel, buffer.data(), static_cast<int32>( buffer.size() ) );
         }
-        /** @brief `sendMessage` 와 같되 신뢰 창이 차면 닫지 않고 false 만 돌려줍니다. 부른 쪽이 남은 것을 들고 다음 틱에 다시 보낸다. */
+        /**
+         * @brief `sendMessage` 와 같되 신뢰 창의 몫(`NetConnection::kReliableBulkWindow`)이 차면 닫지 않고 false 만 돌려줍니다. 부른 쪽이 남은 것을 들고 다음 틱에 다시 보낸다.
+         * @details 창의 나머지는 `sendMessage` 의 것이다 — 큰 상태를 나눠 보내는 쪽이 창을 다 채워, 그사이의 작은 메시지 하나가 연결을 닫지 않게 한다.
+         */
         [[nodiscard]] virtual bool trySendMessage( int32 connectionID, NetChannelKind channel, const uint8* pData, int32 size ) = 0;
         [[nodiscard]] bool         trySendMessage( int32 connectionID, NetChannelKind channel, const vector<uint8>& buffer )
         {

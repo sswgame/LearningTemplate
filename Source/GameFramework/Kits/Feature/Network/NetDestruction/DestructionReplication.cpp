@@ -245,7 +245,9 @@ namespace sw
         {
             Entry*                 pEntry     = findEntry( request._netID );
             FractureBaseComponent* pComponent = pEntry != nullptr ? resolve( *pEntry ) : nullptr;
-            if ( pComponent != nullptr && sendSnapshot( *pEntry, *pComponent, request._connectionID ) == false )
+            const bool             bBlocked   = VectorUtil::containsIf( _listRequest, [&request]( const Request& waiting )
+                          { return waiting._connectionID == request._connectionID; } ); // 이 연결은 이번 틱에 이미 막혔다 — 스냅숏을 헛되이 만들지 않는다
+            if ( pComponent != nullptr && ( bBlocked || sendSnapshot( *pEntry, *pComponent, request._connectionID ) == false ) )
                 _listRequest.push_back( request ); // 신뢰 창이 찼으므로 다음 틱에 다시 보낸다. 연결이 닫히면 onConnectionClosed 가 지운다
         }
         for ( Entry& entry : _listEntry )
@@ -316,7 +318,8 @@ namespace sw
             ++_stats._sendRejectedCount;
             return true;
         }
-        if ( _writer.sendMessage( *_pHost, connectionID ) == false )
+        // 늦은 참가는 부서진 오브젝트마다 하나씩 받는다 — 창이 차면 닫지 않고 다음 틱에 잇는다.
+        if ( _writer.trySendMessage( *_pHost, connectionID ) == false )
         {
             ++_stats._sendRejectedCount;
             return false;

@@ -910,8 +910,14 @@ SW_TEST_CASE( NetEndpointTest, FullReliableWindowClosesInsteadOfDroppingMessages
     {
         ++queuedCount;
     }
-    SW_EXPECT_EQUAL( NetConnection::kReliableWindow - 1, queuedCount );
+    SW_EXPECT_EQUAL( NetConnection::kReliableBulkWindow, queuedCount );
     SW_EXPECT_EQUAL( 1, server.getConnectedCount() ); // 역압만 알렸다
+    // 나눠 보내는 쪽이 자기 몫을 다 채워도 닫는 보내기의 자리는 남는다 — 큰 전송 사이의 작은 메시지가 연결을 닫지 않는다.
+    for ( int32 index = queuedCount; index < NetConnection::kReliableWindow - 1; ++index )
+    {
+        SW_REQUIRE_TRUE( server.sendMessage( 0, NetChannelKind::ReliableOrdered, payload, static_cast<int32>( sizeof( payload ) ) ) );
+    }
+    SW_EXPECT_EQUAL( 1, server.getConnectedCount() );
 
     SW_EXPECT_LOG( "Net.ReliableOverflow" );
     SW_EXPECT_FALSE( server.sendMessage( 0, NetChannelKind::ReliableOrdered, payload, static_cast<int32>( sizeof( payload ) ) ) );
