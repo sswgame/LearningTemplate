@@ -3,6 +3,7 @@
 
 #include "Core/Testing/TestFramework.h"
 
+#include "Engine/Object/Component/SceneComponent.h"
 #include "Engine/Serialization/Format/Archive.h"
 
 #include "GameFramework/Runtime/Character/Camera/CameraDirector.h"
@@ -204,4 +205,49 @@ SW_TEST_CASE( CameraContextTest, UnknownPresetAndEmptyContextAreErrors )
     SW_EXPECT_EQUAL( 10, pAim->_priority );
     SW_EXPECT_EQUAL( size_t( 1 ), pAim->_listMap.size() );
     SW_EXPECT_NULL( catalog.findContext( hashed_string( "Empty" ) ) );
+}
+
+/**
+ * @brief [CameraDirectorTest] 결함: 대상의 순간이동을 앞보기가 속도로, 감쇠가 이동으로 읽어 문 · 리스폰 뒤 카메라가 두 자리 사이를 쓸고 갔다 — 운동을 지운 순간이동은 새 자리에서 컷으로 시작하고,
+ *        속도를 잇는 순간이동은 감쇠로 따라가되 앞보기에 넣지 않는다
+ */
+SW_TEST_CASE( CameraDirectorTest, TeleportedTargetIsNotMotion )
+{
+    namespace Util = CameraDirectorTestUtil;
+    CameraPresetCatalog catalog;
+    SW_REQUIRE_TRUE( catalog.loadFromXMLText( Util::kCatalogXML, "test.cameras.xml" ) );
+    const CameraPresetDef* pFollow = catalog.find( hashed_string( "follow" ) );
+    SW_REQUIRE_NOT_NULL( pFollow );
+    CameraPresetDef def              = *pFollow;
+    def._framing._lookAheadTime      = 0.5f;
+    def._framing._lookAheadSmoothing = 0.0f;
+    BlendCurveDef cut;
+    cut._curve = BlendCurve::Cut;
+    const CameraTarget start{};
+    CameraTarget       far{};
+    far._focus = float3{ 100.0f, 0.0f, 0.0f };
+
+    CameraDirector fresh;
+    fresh.activatePreset( def, cut );
+    const CameraPose atFar = fresh.step( Util::kStep, far );
+
+    CameraDirector director;
+    director.activatePreset( def, cut );
+    (void)director.step( Util::kStep, start );
+    (void)director.consumeCut();
+    director.onTargetTeleported( TeleportType::ResetPhysics );
+    const CameraPose respawned = director.step( Util::kStep, far );
+    SW_EXPECT_NEAR( atFar._position._x, respawned._position._x, 1.0e-3f );
+    SW_EXPECT_NEAR( atFar._position._z, respawned._position._z, 1.0e-3f );
+    SW_EXPECT_TRUE( director.consumeCut() );
+
+    CameraDirector carried;
+    carried.activatePreset( def, cut );
+    (void)carried.step( Util::kStep, start );
+    (void)carried.consumeCut();
+    carried.onTargetTeleported( TeleportType::TeleportPhysics );
+    (void)carried.step( Util::kStep, far );
+    SW_EXPECT_TRUE( carried.getPose()._position._x < 99.0f ); // 감쇠로 따라간다
+    SW_EXPECT_NEAR( 0.0f, carried.getModeState()._lookAhead.getLength(), 1.0e-4f );
+    SW_EXPECT_FALSE( carried.consumeCut() );
 }
