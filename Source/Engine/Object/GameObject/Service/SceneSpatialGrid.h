@@ -92,6 +92,8 @@ namespace sw
          * @details `isActive( layer )` 일 때만 부릅니다. 질의마다 자기 버퍼를 쓰므로 동시에 불러도 됩니다. 꺼진 열쇠(`Component::isActive` — 주인의 계층 활성 포함)는 담지 않습니다.
          */
         void query( const SpatialGridLayerDesc& layer, float32 minX, float32 minY, float32 maxX, float32 maxY, vector<Component*>& outListKey ) const;
+        /** @brief @p layer 에 올랐던 항목의 반 크기 가운데 가장 큰 값(위쪽 한계)입니다 — 항목 크기에 배율을 곱해 찾는 질의가 상자를 넓힌다. 층이 없으면 0 입니다. */
+        float32 getMaxExtent( const SpatialGridLayerDesc& layer ) const;
         /** @brief 3D 월드 자리를 @p layer 의 평면 좌표로 내립니다. */
         static void projectToPlane( const SpatialGridLayerDesc& layer, const float3& position, float32& outPlaneX, float32& outPlaneY );
 

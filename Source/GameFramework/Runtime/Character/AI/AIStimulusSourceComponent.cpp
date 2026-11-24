@@ -92,7 +92,7 @@ namespace sw
         } );
     }
 
-    void AIStimulusSourceComponent::gatherStimuli( const GameObjectManager& manager, uint8 ownTeam, const float3& eye, float32 range, vector<AIStimulus>& outListStimulus, vector<Component*>& inoutListKey )
+    void AIStimulusSourceComponent::gatherStimuli( const GameObjectManager& manager, uint8 ownTeam, const float3& eye, float32 range, float32 hearingScale, vector<AIStimulus>& outListStimulus, vector<Component*>& inoutListKey )
     {
         outListStimulus.clear();
         const SceneSpatialGrid& grid = manager.getSubsystem<SceneSpatialGrid>();
@@ -108,9 +108,10 @@ namespace sw
                 float32 planeX{ 0.0f };
                 float32 planeY{ 0.0f };
                 SceneSpatialGrid::projectToPlane( layer, eye, planeX, planeY );
-                // 소리 층은 항목 반 크기가 소리 반경이라 같은 상자로 "상자 + 반경 안" 이 걸린다.
-                // shortcut: 귀 배율이 1 + range / 반경을 넘으면 그 밖 소리를 놓친다, 귀 배율을 키우는 게임이 생기면 질의 상자에 배율을 싣는다.
-                grid.query( layer, planeX - range, planeY - range, planeX + range, planeY + range, inoutListKey );
+                // 소리 층은 항목 반 크기가 소리 반경이라 같은 상자로 "상자 + 반경 안" 이 걸린다. 밝은 귀는 반경 × 배율까지 들으므로 넘는 몫만큼 상자를 넓힌다.
+                const bool    bHearing = kindIndex == static_cast<size_t>( AIStimulusKind::Hearing );
+                const float32 half     = bHearing && hearingScale > 1.0f ? range + ( hearingScale - 1.0f ) * grid.getMaxExtent( layer ) : range;
+                grid.query( layer, planeX - half, planeY - half, planeX + half, planeY + half, inoutListKey );
                 for ( Component* pKey : inoutListKey )
                 {
                     // 이 층들의 열쇠는 원천 자신이다(`onRegister`). 해제가 항목을 빼므로 살아 있다.

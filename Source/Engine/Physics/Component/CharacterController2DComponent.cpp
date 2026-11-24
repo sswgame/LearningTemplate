@@ -73,6 +73,12 @@ namespace sw
         { command._pendingJumpSpeed = speed; } );
     }
 
+    void CharacterController2DComponent::launch( const float2& velocity )
+    {
+        editCommand( [&velocity]( CharacterCommand2D& command )
+        { command._pendingLaunch = velocity; } );
+    }
+
     void CharacterController2DComponent::applyClimbVelocity( const float2& velocity )
     {
         editCommand( [&velocity]( CharacterCommand2D& command )
@@ -206,19 +212,28 @@ namespace sw
             return;
         float32 moveVelocity = 0.0f;
         float32 jumpSpeed    = 0.0f;
-        editCommand( [&moveVelocity, &jumpSpeed]( CharacterCommand2D& command )
+        float2  launch{};
+        editCommand( [&moveVelocity, &jumpSpeed, &launch]( CharacterCommand2D& command )
         {
             moveVelocity              = command._moveVelocity;
             jumpSpeed                 = command._pendingJumpSpeed;
+            launch                    = command._pendingLaunch;
             command._pendingJumpSpeed = 0.0f;
+            command._pendingLaunch    = float2{};
         } );
+        const bool bLaunched = launch.getLengthSquared() > 0.0f;
         if ( _state._bGrounded && _verticalSpeed < 0.0f )
             _verticalSpeed = 0.0f;
         _verticalSpeed += pScene->getGravity()._y * _gravityScale * fixedDeltaTime;
-        if ( jumpSpeed > 0.0f )
+        if ( bLaunched )
+        {
+            _verticalSpeed = launch._y;
+            _airVelocity   = launch._x;
+        }
+        else if ( jumpSpeed > 0.0f )
             _verticalSpeed = jumpSpeed;
-        // 오르기: 중력 · 공중 관성 없이 이동기가 준 속도만 쓴다. 이 스텝의 점프는 매달림을 놓는 것이라 이긴다(3D 와 같다).
-        const bool bClimb = _bFrameClimb == SW_TRUE && jumpSpeed <= 0.0f;
+        // 오르기: 중력 · 공중 관성 없이 이동기가 준 속도만 쓴다. 이 스텝의 점프 · 발사는 매달림을 놓는 것이라 이긴다(3D 와 같다).
+        const bool bClimb = _bFrameClimb == SW_TRUE && jumpSpeed <= 0.0f && bLaunched == false;
         if ( bClimb )
         {
             _airVelocity   = 0.0f;

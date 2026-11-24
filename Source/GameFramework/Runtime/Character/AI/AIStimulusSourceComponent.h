@@ -58,9 +58,10 @@ namespace sw
         /**
          * @brief @p ownTeam 이 아닌 팀의 원천 중 @p eye 둘레 반 크기 @p range 상자에 걸린 것(보이는 몸 · 상자에 닿는 소리)을 @p outListStimulus 에 담습니다(먼저 비운다).
          * @details 종류마다 하나씩 담는다(번호 = 오브젝트 id — 보이면서 소리를 내면 둘). 고르기만 하고 보이는지 · 들리는지는 감각이 지금 자리로 판정한다.
+         *          @p hearingScale 이 1 보다 크면(밝은 귀) 소리는 반경 × 배율까지 고른다.
          *          @p inoutListKey 는 질의 버퍼다(감각이 들고 있어 프레임마다 새로 잡지 않는다).
          */
-        static void gatherStimuli( const GameObjectManager& manager, uint8 ownTeam, const float3& eye, float32 range, vector<AIStimulus>& outListStimulus, vector<Component*>& inoutListKey );
+        static void gatherStimuli( const GameObjectManager& manager, uint8 ownTeam, const float3& eye, float32 range, float32 hearingScale, vector<AIStimulus>& outListStimulus, vector<Component*>& inoutListKey );
 
     private:
         PROPERTY( Category = "AI", DisplayName = "Team", Min = 0, Max = 3, Tooltip = "Team index; AI senses only look at teams other than their own" )

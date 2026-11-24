@@ -2,6 +2,8 @@
 
 #include "GameFramework/Runtime/Gameplay/Gimmick/Trigger/GimmickSensorComponent.h"
 
+#include "Core/Algorithm/VectorUtil.h"
+
 #include "Engine/Automation/Watch/AutomationWatch.h"
 #include "Engine/Automation/Watch/AutomationWatchComponent.h"
 #include "Engine/Object/GameObject/GameObject.h"
@@ -37,6 +39,8 @@ namespace sw
     GimmickSensorComponent::GimmickSensorComponent()
         : _requiredTags{}
         , _listOccupant{}
+        , _listBodyOccupant{}
+        , _listTriggerOccupant{}
         , _defaultWeight{ 1.0f }
         , _bCountTriggers{ false }
         , _pendingDamage{ 0.0f }
@@ -80,18 +84,24 @@ namespace sw
         const bool bIgnoreOverlap  = overlap._pOther == nullptr || bIgnoredTrigger || canAcceptOccupant( *overlap._pOther ) == false;
         if ( bIgnoreOverlap )
             return;
+        (void)VectorUtil::addUnique( overlap._bOtherTrigger == SW_TRUE ? _listTriggerOccupant : _listBodyOccupant, overlap._pOther->getHandle() );
         addOccupant( *overlap._pOther );
     }
 
     void GimmickSensorComponent::handleOverlapEnd( const OverlapInfo& overlap )
     {
         // 세지 않은 상대 트리거(감지 범위)의 이탈은 몸의 겹침이 아니다 — 몸이 아직 안이면 빼지 않는다(진입과 같은 거름).
-        // shortcut: 트리거도 세면(`_bCountTriggers`) 몸 · 트리거 중 먼저 나간 쪽에서 빠진다, 둘을 따로 세야 하는 기믹이 생기면 대상마다 종류 비트를 둔다.
         if ( overlap._bOtherTrigger == SW_TRUE && _bCountTriggers == false )
             return;
         if ( overlap._pOther != nullptr )
         {
-            removeOccupant( overlap._pOther->getHandle() );
+            // 몸과 트리거를 따로 센다 — 한쪽이 나가도 다른 쪽이 안이면 남는다.
+            const GameObjectHandle    handle    = overlap._pOther->getHandle();
+            vector<GameObjectHandle>& listKind  = overlap._bOtherTrigger == SW_TRUE ? _listTriggerOccupant : _listBodyOccupant;
+            vector<GameObjectHandle>& listOther = overlap._bOtherTrigger == SW_TRUE ? _listBodyOccupant : _listTriggerOccupant;
+            (void)VectorUtil::removeSingleSwap( listKind, handle );
+            if ( VectorUtil::contains( listOther, handle ) == false )
+                removeOccupant( handle );
             return;
         }
         // 상대가 사라졌으므로 살아 있지 않은 핸들을 모두 뺀다.
@@ -99,11 +109,11 @@ namespace sw
         const GameObjectManager* pManager = pOwner != nullptr ? pOwner->getManager() : nullptr;
         if ( pManager == nullptr )
             return;
-        for ( size_t index = _listOccupant.size(); index > 0; --index )
-        {
-            if ( pManager->resolveGameObject( _listOccupant[index - 1] ) == nullptr )
-                _listOccupant.erase( _listOccupant.begin() + static_cast<ptrdiff_t>( index - 1 ) );
-        }
+        const auto isGone = [pManager]( const GameObjectHandle& handle )
+        { return pManager->resolveGameObject( handle ) == nullptr; };
+        VectorUtil::removeIf( _listOccupant, isGone );
+        VectorUtil::removeIf( _listBodyOccupant, isGone );
+        VectorUtil::removeIf( _listTriggerOccupant, isGone );
     }
 
     float32 GimmickSensorComponent::computeOccupantWeight() const
