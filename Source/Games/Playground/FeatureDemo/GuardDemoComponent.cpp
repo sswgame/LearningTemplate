@@ -176,7 +176,7 @@ namespace sw
     hashed_string GuardDemoComponent::findName( uint64 objectID ) const
     {
         const GameObjectManager* pManager = getObjectManager();
-        const GameObject*        pObject  = objectID != 0 && pManager != nullptr ? pManager->findGameObjectByID( objectID ) : nullptr;
+        const GameObject*        pObject  = pManager != nullptr ? pManager->resolveGameObject( GameObjectHandle::fromValue( objectID ) ) : nullptr;
         return pObject != nullptr ? pObject->getName() : hashed_string{};
     }
 

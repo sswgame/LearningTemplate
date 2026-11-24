@@ -457,13 +457,13 @@ namespace sw
                 context.registerTextHandler(
                     hashed_string( "GameObjectHandle" ),
                     []( const void* pPtr )
-                { return sw::to_string( static_cast<const GameObjectHandle*>( pPtr )->objectID() ); },
+                { return sw::to_string( static_cast<const GameObjectHandle*>( pPtr )->value() ); },
                     []( void* pPtr, string_view strView )
                 {
-                    uint64 objectID{ 0 };
-                    if ( StringUtil::parseUint64( StringUtil::trim( strView ), objectID, 10 ) == false )
+                    uint64 value{ 0 };
+                    if ( StringUtil::parseUint64( StringUtil::trim( strView ), value, 10 ) == false )
                         return false;
-                    *static_cast<GameObjectHandle*>( pPtr ) = GameObjectHandle::make( objectID );
+                    *static_cast<GameObjectHandle*>( pPtr ) = GameObjectHandle::fromValue( value );
                     return true;
                 } );
 

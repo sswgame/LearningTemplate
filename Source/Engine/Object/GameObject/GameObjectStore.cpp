@@ -117,6 +117,7 @@ namespace sw
 
     GameObject* GameObjectStore::createGameObjectUnlocked( hashed_string name, uint64 objectID )
     {
+        SW_ASSERT( objectID <= GameObjectHandle::kMaxObjectID );
         NameEntry           nameEntry{};
         const hashed_string uniqueName = makeUniqueNameUnlocked( name, nameEntry );
         GameObject*         pObj       = _poolGameObject.create( uniqueName );

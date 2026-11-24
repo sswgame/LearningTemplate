@@ -120,7 +120,11 @@ namespace sw
         /** @brief 오브젝트 ID 로 GameObject 를 찾습니다. 잠금을 쓰지 않으며, 슬롯이 그 id 를 가지고 있을 때 찾습니다. */
         GameObject* findGameObjectByID( uint64 objectID ) const;
         /** @brief 핸들이 가리키는 오브젝트를 찾습니다. 파괴됐거나 삭제 대기 중이면 nullptr 입니다. */
-        GameObject* resolveGameObject( GameObjectHandle handle ) const { return findGameObjectByID( handle.objectID() ); }
+        GameObject* resolveGameObject( GameObjectHandle handle ) const
+        {
+            GameObject* const pObject = findGameObjectByID( handle.objectID() );
+            return pObject != nullptr && pObject->getHandle() == handle ? pObject : nullptr; // 다른 생을 가리키면 없는 대상이다
+        }
         /** @brief 핸들이 가리키는 컴포넌트를 찾습니다. 파괴됐으면 nullptr 이고, 삭제 대기 중이어도 돌려주므로 호출부가 `isPendingDestroy()` 를 봅니다. */
         Component* resolveComponent( ComponentHandle handle ) const;
         /** @brief 테이블의 슬롯을 다른 오브젝트가 써서 맵에 들어간 오브젝트 수입니다. 진단과 회귀 테스트용이며, 보통 0 입니다. */

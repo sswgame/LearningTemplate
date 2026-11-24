@@ -270,22 +270,22 @@ SW_TEST_CASE( SequencerTest, BindingViewPrefersSpawnedObjects )
 
     vector<SequenceBindingSlot> listSlot( 2 );
     listSlot[0]._binding = heroID;
-    listSlot[0]._object  = GameObjectHandle::make( 11 );
+    listSlot[0]._object  = GameObjectHandle::make( 11, 0 );
     listSlot[1]._binding = propID;
-    listSlot[1]._object  = GameObjectHandle::make( 12 );
+    listSlot[1]._object  = GameObjectHandle::make( 12, 0 );
     vector<SequenceSpawnedObject> listSpawned;
     SequenceBindingView           view;
     view._pAsset       = &asset;
     view._pListSlot    = &listSlot;
     view._pListSpawned = &listSpawned;
 
-    SW_EXPECT_TRUE( view.findHandle( heroID ) == GameObjectHandle::make( 11 ) );
+    SW_EXPECT_TRUE( view.findHandle( heroID ) == GameObjectHandle::make( 11, 0 ) );
     SW_EXPECT_FALSE( view.findHandle( propID ).isValid() ); // 아직 스폰하지 않았다 — 씬의 칸은 보지 않는다
     SequenceSpawnedObject spawned;
     spawned._itemIndex = 0;
-    spawned._object    = GameObjectHandle::make( 40 );
+    spawned._object    = GameObjectHandle::make( 40, 0 );
     listSpawned.push_back( spawned );
-    SW_EXPECT_TRUE( view.findHandle( propID ) == GameObjectHandle::make( 40 ) );
+    SW_EXPECT_TRUE( view.findHandle( propID ) == GameObjectHandle::make( 40, 0 ) );
     SW_EXPECT_FALSE( view.findHandle( kSequenceNoBinding ).isValid() );
     SW_EXPECT_FALSE( view.findHandle( 99 ).isValid() );
 }

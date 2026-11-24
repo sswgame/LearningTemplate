@@ -126,7 +126,10 @@ namespace sw
                 (void)_busyOrder.erase( oldest );
                 continue;
             }
-            (void)_busyOrder.touch( oldest );
+            // 쓰던 것을 빼앗아 다시 내준다 — 앞에 꺼낸 쪽의 핸들은 다음 생을 가리키지 않는다.
+            (void)_busyOrder.erase( oldest );
+            pObject->invalidateHandles();
+            _busyOrder.insertOrAssign( pObject->getHandle(), 0 );
             return pObject;
         }
         return acquire( manager, pInstanceName );
@@ -154,7 +157,8 @@ namespace sw
             return;
         }
         pObject->setActive( false );
-        _listIdle.push_back( handle );
+        pObject->invalidateHandles(); // 앞 생을 겨누던 쪽(잠금 조준 · 킬캠 · 포탑 · 가해자)이 다시 꺼낸 생을 보지 않는다 — 같은 핸들을 두 번 돌려줘도 두 번 쉬지 않는다
+        _listIdle.push_back( pObject->getHandle() );
     }
 
     uint32 PrefabPool::prewarm( GameObjectManager& manager, uint32 count, const utf8* pInstanceName )

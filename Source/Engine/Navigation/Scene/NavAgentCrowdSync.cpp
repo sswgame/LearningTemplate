@@ -23,7 +23,7 @@ namespace sw
     {
         struct NavAgentCrowdSyncInternal
         {
-            /** @brief 바깥이 오브젝트를 이보다 멀리 옮기면 순간이동으로 봅니다(미터). */
+            /** @brief 순간이동이라고 알리지 않고 바깥이 이보다 멀리 옮기면 통로로 이어 가지 않고 다시 길을 찾습니다(미터). */
             static constexpr float32 kTeleportDistance = 0.5f;
             /** @brief 몸을 돌리기 시작하는 속도(m/s)입니다. */
             static constexpr float32 kTurnSpeed = 0.05f;
@@ -76,8 +76,10 @@ namespace sw
                 if ( listRuntime[runtimeIndex].get() == &runtime )
                     agent._crowdIndex = static_cast<uint32>( runtimeIndex );
             }
-            agent._writtenPosition   = currentPosition;
-            agent._bHasWritten       = SW_TRUE;
+            agent._writtenPosition = currentPosition;
+            agent._bHasWritten     = SW_TRUE;
+            if ( pScene != nullptr )
+                (void)agent._teleport.consume( *pScene ); // 들어오기 전의 순간이동은 이미 이 자리다
             agent._bDestinationDirty = agent._bHasDestination;
             agent._bParamsDirty      = SW_FALSE;
         }
@@ -88,6 +90,8 @@ namespace sw
                 pScene->teleportTo( agent._pendingWarp ); // 걸어간 길이 아니다 — 몸 · 칼 궤적 · 화면 속도가 사이를 쓸지 않는다
             else if ( pController != nullptr )
                 pController->teleportTo( agent._pendingWarp );
+            if ( pScene != nullptr )
+                (void)agent._teleport.consume( *pScene ); // 스스로 한 순간이동이다
             agent._writtenPosition   = agent._pendingWarp;
             agent._bDestinationDirty = agent._bHasDestination;
             NavStreamRoute::clearAgentRoute( agent ); // 새 자리에서 다시 계획한다(가상 이동도 끝난다)
@@ -99,10 +103,13 @@ namespace sw
         }
         else
         {
-            // 마지막 쓰기 뒤 월드 변경 번호가 그대로면 바깥이 옮기지 않았다 — 거리를 재지 않는다. 번호가 바뀌었어도 작은 밀림은 순간이동이 아니므로 거리 문턱은 남긴다.
-            const bool bMovedOutside = pScene != nullptr && pScene->getWorldTransformVersion() != agent._writtenTransformVersion;
-            const bool bTeleported   = agent._bHasWritten == SW_TRUE && bMovedOutside &&
-                                     float3::getHorizontalDistance( currentPosition, agent._writtenPosition ) > Internal::kTeleportDistance;
+            // 마지막 쓰기 뒤 월드 변경 번호가 그대로면 바깥이 옮기지 않았다 — 거리를 재지 않는다. 밀림(넉백 · 컨베이어 · 움직이는 부모)은 다른 방식처럼 군중이 받아들이고,
+            // 순간이동이거나 통로로 이어 갈 수 없게 멀리 옮겼으면 그 자리에서 다시 길을 찾는다.
+            const bool bMovedOutside = agent._bHasWritten == SW_TRUE && pScene != nullptr && pScene->getWorldTransformVersion() != agent._writtenTransformVersion;
+            const bool bTeleported   = ( pScene != nullptr && agent._teleport.consume( *pScene ).has_value() ) ||
+                                     ( bMovedOutside && float3::getHorizontalDistance( currentPosition, agent._writtenPosition ) > Internal::kTeleportDistance );
+            if ( bMovedOutside && bTeleported == false )
+                crowd.syncAgentPosition( agent._crowdAgentID, origin.toAbsolute( currentPosition ) );
             if ( bTeleported )
             {
                 crowd.teleportAgent( agent._crowdAgentID, origin.toAbsolute( currentPosition ) );

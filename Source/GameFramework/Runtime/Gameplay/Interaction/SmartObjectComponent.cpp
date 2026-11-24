@@ -119,7 +119,7 @@ namespace sw
         for ( size_t slot = 0; slot < _listClaimant.size() && slot < static_cast<size_t>( _slots.getSlotCount() ); ++slot )
         {
             if ( _listClaimant[slot].isValid() )
-                (void)_slots.claim( static_cast<int32>( slot ), _listClaimant[slot].objectID() );
+                (void)_slots.claim( static_cast<int32>( slot ), _listClaimant[slot].value() );
         }
         _listClaimant.resize( static_cast<size_t>( _slots.getSlotCount() ) );
     }
@@ -178,10 +178,10 @@ namespace sw
         for ( int32 slot = 0; slot < _slots.getSlotCount(); ++slot )
         {
             const uint64 claimant             = _slots.getClaimant( slot );
-            const bool   bReleaseDeadClaimant = claimant != 0 && pManager != nullptr && pManager->resolveGameObject( GameObjectHandle::make( claimant ) ) == nullptr;
+            const bool   bReleaseDeadClaimant = claimant != 0 && pManager != nullptr && pManager->resolveGameObject( GameObjectHandle::fromValue( claimant ) ) == nullptr;
             if ( bReleaseDeadClaimant )
                 (void)_slots.release( claimant );
-            _listClaimant[static_cast<size_t>( slot )] = _slots.isFree( slot ) ? GameObjectHandle{} : GameObjectHandle::make( _slots.getClaimant( slot ) );
+            _listClaimant[static_cast<size_t>( slot )] = _slots.isFree( slot ) ? GameObjectHandle{} : GameObjectHandle::fromValue( _slots.getClaimant( slot ) );
         }
     }
 
@@ -189,7 +189,7 @@ namespace sw
     {
         ScopedLock<mutex> lock{ _mutex };
         syncClaimants();
-        const bool bClaimed = _slots.claim( slot, claimant.getObjectID() );
+        const bool bClaimed = _slots.claim( slot, claimant.getHandle().value() );
         syncClaimants();
         return bClaimed;
     }
@@ -198,11 +198,11 @@ namespace sw
     {
         ScopedLock<mutex> lock{ _mutex };
         syncClaimants();
-        const optional<int32> owned = _slots.findSlotOf( claimant.getObjectID() );
+        const optional<int32> owned = _slots.findSlotOf( claimant.getHandle().value() );
         if ( owned.has_value() )
             return owned;
         const optional<int32> slot = _slots.findFreeSlot( requiredTags );
-        if ( slot.has_value() == false || _slots.claim( *slot, claimant.getObjectID() ) == false )
+        if ( slot.has_value() == false || _slots.claim( *slot, claimant.getHandle().value() ) == false )
             return nullopt;
         syncClaimants();
         return slot;
@@ -211,7 +211,7 @@ namespace sw
     bool SmartObjectComponent::releaseSlot( const GameObject& claimant )
     {
         ScopedLock<mutex> lock{ _mutex };
-        const bool        bReleased = _slots.release( claimant.getObjectID() );
+        const bool        bReleased = _slots.release( claimant.getHandle().value() );
         syncClaimants();
         return bReleased;
     }
@@ -219,7 +219,7 @@ namespace sw
     optional<int32> SmartObjectComponent::findSlotOf( const GameObject& claimant ) const
     {
         ScopedLock<mutex> lock{ _mutex };
-        return _slots.findSlotOf( claimant.getObjectID() );
+        return _slots.findSlotOf( claimant.getHandle().value() );
     }
 
     int32 SmartObjectComponent::countFreeSlots() const

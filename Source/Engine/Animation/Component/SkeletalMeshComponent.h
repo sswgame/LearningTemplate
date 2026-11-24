@@ -286,6 +286,8 @@ namespace sw
         void assignSkeleton( shared_ptr<const Skeleton> skeleton );
         /** @brief 공유 메시가 스킨을 가지면 컴포넌트 전용 복사본을 만듭니다. */
         void resolveSkinInstanceMesh();
+        /** @brief 그릴 메시를 다시 정했다고 알립니다(`GameObjectEvents::_skinnedMeshResolved`). */
+        void notifySkinnedMeshResolved() const;
         /** @brief 스켈레톤이 바뀌었으면 포즈, 행렬, 리더 테이블을 맞춥니다. */
         void resetPoseBuffers();
         /** @brief 그리는 메시의 역 바인드로 팔레트를 구합니다. 스킨 없는 메시는 그릴 팔레트가 없어 그대로 둡니다. */

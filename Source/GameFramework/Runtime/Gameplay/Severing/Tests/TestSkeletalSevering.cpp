@@ -1,8 +1,14 @@
 #include "pch.h"
 
+#define SW_TEST_INTERNAL // 임시 리소스 도메인 픽스처가 엔진 서비스(`AssetPaths`)를 직접 쓴다
+
+#include "Core/File/FileUtil.h"
 #include "Core/Testing/TestFramework.h"
 
 #include "Engine/Animation/Component/SkeletalMeshComponent.h"
+#include "Engine/Animation/Skeletal/Skeleton.h"
+#include "Engine/Content/Tests/ScopedScratchDomain.h"
+#include "Engine/Graphics/Mesh/Mesh.h"
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
 
@@ -74,4 +80,60 @@ SW_TEST_CASE( SkeletalSeveringTest, IntactBodyIsUnchangedBySpawnStateReset )
     SW_EXPECT_TRUE( pUnit->getMesh().get() == pBody );
     SW_EXPECT_TRUE( pCut->getSeveredRegions().empty() );
     SW_EXPECT_TRUE( pCut->getPieces().empty() );
+}
+
+/** @brief [SkeletalSeveringTest] 결함: 자른 뒤 외형이 몸 메시를 다시 조립하면(옷 갈아입기) 잘린 팔이 되살아나고, 풀 반환이 옛 외형의 메시를 걸었다 — 새 메시에서도 잘려 있고, 되돌리면 새 메시다 */
+SW_TEST_CASE( SkeletalSeveringTest, NewBodyMeshStaysSevered )
+{
+    SW_EXPECT_LOG( "SkeletalSevering.AppearanceSurfaceMissing" ); // 외형 없는 몸이다(피는 이 테스트의 일이 아니다)
+    const test::ScopedScratchDomain domain;
+    SW_REQUIRE_TRUE( FileUtil::writeTextFile( domain.makeDiskPath( "body.fit.xml" ), R"(<FitTables><Region name="Hand" bones="hand" minWeight="0.5"/></FitTables>)" ) );
+    const auto makeBodyMesh = []()
+    {
+        const AppearanceGeometry strip = SkeletalSeveringTestUtil::makeStrip();
+        vector<RHIVertex>        listVertex;
+        vector<MeshSkinVertex>   listSkin;
+        for ( const uint32 index : strip._listIndex )
+        {
+            RHIVertex vertex{};
+            vertex._arrPosition[0] = strip._listPosition[index]._x;
+            vertex._arrPosition[1] = strip._listPosition[index]._y;
+            vertex._arrNormal[2]   = -1.0f;
+            listVertex.push_back( vertex );
+            MeshSkinVertex skin{};
+            skin._arrJoint[0]  = index >= 4 ? uint16{ 1 } : uint16{ 0 };
+            skin._arrWeight[0] = 1.0f;
+            listSkin.push_back( skin );
+        }
+        shared_ptr<Mesh> mesh = Mesh::create( MeshCPUAccess::Keep );
+        mesh->setVertices( std::move( listVertex ) );
+        mesh->setSkin( std::move( listSkin ), MeshSkinBinding::makeIdentity( 2u ) );
+        return mesh;
+    };
+    shared_ptr<Skeleton> skeleton = make_shared<Skeleton>();
+    (void)skeleton->addBone( hashed_string( "spine" ), -1, BoneTransform{} );
+    (void)skeleton->addBone( hashed_string( "hand" ), 0, BoneTransform{} );
+
+    GameObjectManager          manager;
+    GameObject*                pBody     = manager.createGameObject( hashed_string( "Body" ) );
+    SkeletalMeshComponent*     pUnit     = pBody->addComponent<SkeletalMeshComponent>();
+    SkeletalSeveringComponent* pSevering = pBody->addComponent<SkeletalSeveringComponent>();
+    pSevering->setRegionTablePath( test::ScopedScratchDomain::makeID( "body.fit.xml" ).str() );
+    manager.beginPlay();
+    pUnit->setSkeleton( skeleton );
+    pUnit->setSkinSourceMesh( makeBodyMesh() );
+    const uint32 wholeCount = pUnit->getMesh()->getIndexCount();
+    SW_REQUIRE_TRUE( pSevering->severRegion( hashed_string( "Hand" ), float3{} ) );
+    const uint32 severedCount = pUnit->getMesh()->getIndexCount();
+    SW_REQUIRE_TRUE( severedCount != wholeCount );
+
+    const shared_ptr<Mesh> dressed = makeBodyMesh();
+    pUnit->setSkinSourceMesh( dressed ); // 옷을 갈아입어 몸을 다시 조립했다
+    SW_EXPECT_TRUE( pUnit->getMesh() != dressed );
+    SW_EXPECT_EQUAL( severedCount, pUnit->getMesh()->getIndexCount() );
+    SW_EXPECT_EQUAL( size_t{ 1 }, pSevering->getPieces().size() ); // 조각을 다시 띄우지 않는다
+
+    SW_EXPECT_TRUE( pSevering->resetToSpawnState() == SpawnStateReset::Reset );
+    SW_EXPECT_TRUE( pUnit->getMesh() == dressed ); // 옛 외형이 아니다
+    manager.endPlay();
 }

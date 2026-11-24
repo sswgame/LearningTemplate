@@ -385,6 +385,18 @@ namespace sw
         registerFixedStep<&RigidBodyComponent::onPhysicsFrameEnd>( manager, FixedStepGroup::FrameEnd );
     }
 
+    void RigidBodyComponent::onWorldOriginShifted( const float3& delta )
+    {
+        const uint32       index = getPoseIndex();
+        PhysicsBodyPage3D& page  = *_pPosePage;
+        if ( page._arrBody[index].isValid() == false || absorbWorldOriginShift( delta ) == false )
+            return;
+        page._arrPreviousPosition[index] += delta;
+        page._arrCurrentPosition[index] += delta;
+        _kinematicStartPosition += delta;
+        _kinematicTargetPosition += delta;
+    }
+
     void RigidBodyComponent::onPhysicsFrameBegin( const FixedStepContext& context )
     {
         ScenePhysics& physics = context.getPhysics();
