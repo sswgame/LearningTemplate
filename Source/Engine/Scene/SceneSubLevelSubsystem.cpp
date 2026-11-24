@@ -2,6 +2,7 @@
 
 #include "Engine/Scene/SceneSubLevelSubsystem.h"
 
+#include "Core/Algorithm/VectorUtil.h"
 #include "Core/Concurrency/atomic.h"
 #include "Core/Hash/HashUtil.h"
 #include "Core/Log/Logger.h"
@@ -120,6 +121,16 @@ namespace sw
         }
         pSubLevel->_state = SubLevelState::Removing;
         return true;
+    }
+
+    void SceneSubLevelSubsystem::releaseObject( const uint64 objectID )
+    {
+        if ( _mapObjectSubLevel.erase( objectID ) == 0 )
+            return;
+        for ( const unique_ptr<SubLevel>& pSubLevel : _listSubLevel )
+        {
+            (void)VectorUtil::removeValue( pSubLevel->_listObjectID, objectID );
+        }
     }
 
     void SceneSubLevelSubsystem::endScene()
@@ -296,6 +307,8 @@ namespace sw
             pAnchor->setAlwaysLoaded( true );                  // 스트리밍 셀이 런타임 스폰으로 삼키지 않는다 — 하위 레벨은 자기 단위로 오르내린다
             subLevel._anchorObjectID = pAnchor->getObjectID(); // 목록에는 짓기 뒤에 든다 — 셀 짓기는 목록을 "이 셀이 지은 것" 으로 보고 참조 대상에서 빼, 멤버가 앵커를 찾지 못한다
         }
+        // 소속 표에는 지금 든다 — 짓는 중에 찍은 세이브가 앵커를 늘 올라 있는 오브젝트로 실으면, 복원한 하위 레벨이 앵커의 파일 id 를 얻지 못해 서지 않는다.
+        rebuildObjectMap();
         subLevel._pBuild = _pScene->beginCellBuild( subLevel._listNode );
         subLevel._state  = SubLevelState::Building;
     }
@@ -325,6 +338,10 @@ namespace sw
         _mapObjectSubLevel.clear();
         for ( const unique_ptr<SubLevel>& pSubLevel : _listSubLevel )
         {
+            if ( pSubLevel->_anchorObjectID != 0 )
+                _mapObjectSubLevel[pSubLevel->_anchorObjectID] = pSubLevel->_anchorObjectID;
+            if ( pSubLevel->_state == SubLevelState::Building )
+                continue; // 지은 멤버는 아직 숨어 있다(`stageGameObjects`) — 다 지으면 든다
             for ( const uint64 objectID : pSubLevel->_listObjectID )
             {
                 _mapObjectSubLevel[objectID] = pSubLevel->_anchorObjectID;

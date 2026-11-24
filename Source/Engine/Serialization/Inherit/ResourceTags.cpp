@@ -177,7 +177,7 @@ namespace sw
             SW_LOG_ERROR_ID( "ResourceTags.InvalidValue", "Resource tag not set: %# '%#'", valid.error().message(), valid.error().detail() );
             return false;
         }
-        ResourceTagSet next = capture();
+        ResourceTagSet next = captureStored();
         next.removeAxis( axisName );
         if ( value.empty() == false )
             next.add( ResourceTagsInternal::makeTag( axisName, value ) );
@@ -190,7 +190,7 @@ namespace sw
         const ResourceTagAxis* pAxis = ResourceTagsInternal::findAxisFor( axisName, ResourceTagArity::Multi );
         if ( pAxis == nullptr )
             return false;
-        ResourceTagSet next = capture();
+        ResourceTagSet next = captureStored();
         next.removeAxis( axisName );
         for ( const string& value : listValue )
         {
@@ -215,7 +215,7 @@ namespace sw
             SW_LOG_ERROR_ID( "ResourceTags.InvalidValue3", "Resource tag not set: %# '%#'", valid.error().message(), valid.error().detail() );
             return false;
         }
-        ResourceTagSet next = capture();
+        ResourceTagSet next = captureStored();
         const string   tag  = ResourceTagsInternal::makeTag( axisName, value );
         if ( bActive )
             next.add( tag );
@@ -228,8 +228,16 @@ namespace sw
     ResourceTags::ResourceTags( ResourceComposition& composition )
         : _composition{ composition }
         , _mutex{}
+        , _storedTags{}
+        , _listContribution{}
         , _tags{}
+        , _nextContributionID{ 1 }
     {
+    }
+
+    ResourceTags::~ResourceTags()
+    {
+        closeSubscriptions();
     }
 
     bool ResourceTags::setAxisTags( const ResourceTagSet& tags )
@@ -251,7 +259,9 @@ namespace sw
                 return false;
             }
         }
-        replace( captureWith( tags ), nullptr );
+        ResourceTagSet next = captureStored();
+        next.overrideAxes( tags );
+        replace( next, nullptr );
         return true;
     }
 
@@ -259,6 +269,12 @@ namespace sw
     {
         ScopedLock<mutex> lock{ _mutex };
         return _tags;
+    }
+
+    ResourceTagSet ResourceTags::captureStored() const
+    {
+        ScopedLock<mutex> lock{ _mutex };
+        return _storedTags;
     }
 
     ResourceTagSet ResourceTags::captureWith( const ResourceTagSet& overrideTags ) const
@@ -280,19 +296,78 @@ namespace sw
         vector<string> listChanged;
         {
             ScopedLock<mutex> lock{ _mutex };
-            for ( const string& tag : _tags.getTags() )
-            {
-                if ( next.contains( tag ) == false )
-                    listChanged.push_back( tag );
-            }
-            for ( const string& tag : next.getTags() )
-            {
-                if ( _tags.contains( tag ) == false )
-                    listChanged.push_back( tag );
-            }
             if ( pOutPrevious != nullptr )
-                *pOutPrevious = _tags;
-            _tags = next;
+                *pOutPrevious = _storedTags;
+            _storedTags = next;
+            listChanged = rebuildTags();
+        }
+        if ( listChanged.empty() == false )
+            _composition.notifyTagsChanged( listChanged );
+    }
+
+    vector<string> ResourceTags::rebuildTags()
+    {
+        ResourceTagSet next = _storedTags;
+        for ( const Contribution& contribution : _listContribution )
+        {
+            for ( const string& tag : contribution._listTag )
+            {
+                next.add( tag );
+            }
+        }
+        vector<string> listChanged;
+        for ( const string& tag : _tags.getTags() )
+        {
+            if ( next.contains( tag ) == false )
+                listChanged.push_back( tag );
+        }
+        for ( const string& tag : next.getTags() )
+        {
+            if ( _tags.contains( tag ) == false )
+                listChanged.push_back( tag );
+        }
+        _tags = std::move( next );
+        return listChanged;
+    }
+
+    Subscription ResourceTags::addAxisValues( string_view axisName, const vector<string>& listValue )
+    {
+        const ResourceTagAxis* pAxis = ResourceTagsInternal::findAxisFor( axisName, ResourceTagArity::Multi );
+        if ( pAxis == nullptr || listValue.empty() )
+            return {};
+        Contribution contribution;
+        for ( const string& value : listValue )
+        {
+            if ( const expected<void> valid = ResourceTagsInternal::isValidValue( *pAxis, value ); valid.has_value() == false )
+            {
+                SW_LOG_ERROR_ID( "ResourceTags.InvalidValue5", "Resource tags not added: %# '%#'", valid.error().message(), valid.error().detail() );
+                return {};
+            }
+            contribution._listTag.push_back( ResourceTagsInternal::makeTag( axisName, value ) );
+        }
+        vector<string> listChanged;
+        uint64         id{ 0 };
+        {
+            ScopedLock<mutex> lock{ _mutex };
+            id               = _nextContributionID++;
+            contribution._id = id;
+            _listContribution.push_back( std::move( contribution ) );
+            listChanged = rebuildTags();
+        }
+        Subscription subscription = issueSubscription( id );
+        if ( listChanged.empty() == false )
+            _composition.notifyTagsChanged( listChanged );
+        return subscription;
+    }
+
+    void ResourceTags::releaseSubscription( uint64 id )
+    {
+        vector<string> listChanged;
+        {
+            ScopedLock<mutex> lock{ _mutex };
+            (void)VectorUtil::removeIf( _listContribution, [id]( const Contribution& contribution )
+            { return contribution._id == id; } );
+            listChanged = rebuildTags();
         }
         if ( listChanged.empty() == false )
             _composition.notifyTagsChanged( listChanged );

@@ -152,7 +152,7 @@ namespace sw
             SceneStreamingSubsystem::SaveState _streaming;
             SceneDataLayerSubsystem::SaveState _dataLayers;
             SceneSubLevelSubsystem::SaveState  _subLevels;
-            double3                            _worldOrigin{}; ///< 씬 섹션 오브젝트의 자리가 기준한 월드 원점(`Scene::getWorldOrigin`)
+            double3                            _worldOrigin{}; ///< 씬 섹션 오브젝트의 자리가 기준한 월드 원점(`Scene::getWorldOrigin`) — 오브젝트를 만들기 전에 돌린다(셀 · 레이어 · 하위 레벨의 떠 둔 상태는 엔티티마다 원점을 든다)
         };
 
         struct ScenePartInternal
@@ -226,8 +226,6 @@ namespace sw
                         listFileID.push_back( Scene::SavedFileID{ liveIt->second, entry._fileID } );
                 }
                 scene.rebindRestoredFileIDs( listFileID );
-                // 씬 섹션의 오브젝트는 저장 때의 원점 기준 자리로 다시 섰다 — 원점도 그때로 돌린다(셀 · 레이어 · 하위 레벨의 떠 둔 상태는 엔티티마다 원점을 든다).
-                scene.restoreWorldOrigin( part._worldOrigin );
                 // 켜진 레이어가 먼저다 — 스트리밍 셀 조각도 레이어로 오른다.
                 scene.getObjectManager()->getSubsystem<SceneDataLayerSubsystem>().applySaveState( std::move( part._dataLayers ) );
                 scene.getObjectManager()->getSubsystem<SceneStreamingSubsystem>().applySaveState( std::move( part._streaming ) );
@@ -473,14 +471,18 @@ namespace sw
         {
             // 비우면 스트리밍 셀이 문서 내용으로 돌아간다(월드는 남는다) — 오브젝트를 다시 만든 뒤 씬 몫을 얹으면 다음 갱신이 세이브의 상태로 셀을 짓는다.
             pLiveManager->clear();
+            // 씬 섹션의 오브젝트는 저장 때의 원점 기준 자리다 — 만들기 전에 그 원점으로 돌린다. 뒤에 돌리면 등록하며 절대 자리를 재는 컴포넌트(내비 장애물 · 링크)가 지금 원점으로 잰다.
+            Scene* const pActiveScene = GameStateSnapshotInternal::findActiveScene();
+            const bool   bActiveScene = pActiveScene != nullptr && pActiveScene->getObjectManager() == pLiveManager;
+            if ( bActiveScene )
+                pActiveScene->restoreWorldOrigin( scenePart._worldOrigin );
             if ( GameStateSnapshotInternal::shouldBreakReplace() ||
                  deserializeSceneObjects( purpose, bytesScene.data(), bytesScene.size(), format, *pLiveManager, listComponentIDRemap, mapObjectID ) == false )
             {
                 _pComponentStateStore->clear();
                 return broken;
             }
-            Scene* const pActiveScene = GameStateSnapshotInternal::findActiveScene();
-            if ( pActiveScene != nullptr && pActiveScene->getObjectManager() == pLiveManager )
+            if ( bActiveScene )
                 ScenePartInternal::apply( *pActiveScene, std::move( scenePart ), mapObjectID );
         }
         if ( bHasState && BinarySerializer::deserialize( pStateInstance, *pStateType, bytesState.data(), bytesState.size(), SerializeContext::getDefault( purpose ) ) == false )
