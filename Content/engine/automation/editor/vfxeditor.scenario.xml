@@ -33,7 +33,7 @@
 	<EditorWaitStable/>
 	<EditorKey key="Ctrl+A"/>
 	<EditorWaitStable/>
-	<EditorText value="20"/>
+	<EditorText value="12"/> <!-- 12 × 최대 수명 2.5 s = 30 — 풀(_maxParticles 32) 안이라 풀 경고가 없다 -->
 	<EditorWaitStable/>
 	<EditorKey key="Enter"/>
 	<WaitUntil watch="Editor.DirtyDocumentCount" equals="1" timeoutFrames="60"/>

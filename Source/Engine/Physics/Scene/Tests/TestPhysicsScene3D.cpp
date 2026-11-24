@@ -44,6 +44,22 @@ namespace
             return pBody;
         }
 
+        /** @brief 정적 상자를 놓습니다. */
+        static RigidBodyComponent* addBox( GameObjectManager& manager, const utf8* pName, const float3& position, const float3& halfExtents )
+        {
+            GameObject*         pObject = manager.createGameObject( hashed_string( pName ) );
+            RigidBodyComponent* pBody   = pObject != nullptr ? pObject->addComponent<RigidBodyComponent>() : nullptr;
+            if ( pBody == nullptr )
+                return nullptr;
+            PhysicsShapeDesc3D box;
+            box._type        = PhysicsShapeType3D::Box;
+            box._halfExtents = halfExtents;
+            pBody->setShape( box );
+            pBody->setBodyType( PhysicsBodyType::Static );
+            pBody->setLocalPosition( position );
+            return pBody;
+        }
+
         /** @brief 발이 @p position 인 캐릭터를 만듭니다(속 바디는 기본값 그대로). */
         static CharacterControllerComponent* addWalker( GameObjectManager& manager, const utf8* pName, const float3& position )
         {
@@ -458,6 +474,66 @@ SW_TEST_CASE( PhysicsScene3DTest, PartialTransformWritesKeepTheSimulatedRest )
     SW_EXPECT_TRUE( arrFinalPosition[2]._x > 2.0f );                           // 자리를 썼다
     SW_EXPECT_TRUE( arrFinalYaw[0] > 0.3f );                                   // 반 초 돌았다
     SW_EXPECT_NEAR( arrFinalYaw[0], arrFinalYaw[2], 1.0e-3f );                 // 자리만 썼다 — 그대로 돈다
+}
+
+/**
+ * @brief [PhysicsCharacterTest] 캐릭터 속도는 실제로 난 속도다 — 서 있으면 0 이고 벽에 막히면 그쪽 몫이 0 이며, 내려 한 속도는 따로 읽는다
+ * @details 예전 3D 는 Jolt 에 준 요청을 그대로 돌려줘 서 있어도 중력 한 스텝(0.1635 m/s), 벽에 막혀도 걷는 속도가 남았다(시나리오 localplayers 가 멈춤을 기다리다 졌다).
+ */
+SW_TEST_CASE( PhysicsCharacterTest, VelocityIsWhatActuallyHappened )
+{
+    using Internal = TestPhysicsScene3DInternal;
+    GameObjectManager manager;
+    SW_REQUIRE_NOT_NULL( Internal::addFloor( manager ) );
+    SW_REQUIRE_NOT_NULL( Internal::addBox( manager, "Wall", float3{ 2.0f, 1.0f, 0.0f }, float3{ 0.5f, 1.0f, 2.0f } ) );
+    CharacterControllerComponent* pWalker = Internal::addWalker( manager, "Walker", float3{ 0.0f, 0.05f, 0.0f } );
+    SW_REQUIRE_NOT_NULL( pWalker );
+    manager.beginPlay();
+    for ( uint32 frame = 0; frame < 30; ++frame )
+    {
+        manager.update( Internal::kFrame );
+    }
+    SW_REQUIRE_TRUE( pWalker->isGrounded() );
+    SW_EXPECT_NEAR( 0.0f, pWalker->getVelocity().getLength(), 0.01f );
+
+    pWalker->setMoveVelocity( float3{ 2.0f, 0.0f, 0.0f } );
+    for ( uint32 frame = 0; frame < 10; ++frame )
+    {
+        manager.update( Internal::kFrame );
+    }
+    SW_EXPECT_NEAR( 2.0f, pWalker->getVelocity()._x, 0.05f );
+    for ( uint32 frame = 0; frame < 80; ++frame ) // 벽(x 1.5)까지 걸어 막힌다
+    {
+        manager.update( Internal::kFrame );
+    }
+    SW_EXPECT_NEAR( 0.0f, pWalker->getVelocity()._x, 0.05f );
+    SW_EXPECT_NEAR( 2.0f, pWalker->getRequestedStepVelocity()._x, 1.0e-4f );
+}
+
+/** @brief [PhysicsCharacterTest] 천장에 머리를 부딪히면 오르던 속도가 끊겨 바로 떨어진다(2D 와 같다). 예전 3D 는 속도가 요청 그대로라 중력이 다 깎을 때까지 천장에 붙어 있었다 */
+SW_TEST_CASE( PhysicsCharacterTest, CeilingStopsTheJump )
+{
+    using Internal = TestPhysicsScene3DInternal;
+    GameObjectManager manager;
+    SW_REQUIRE_NOT_NULL( Internal::addFloor( manager ) );
+    CharacterControllerComponent* pWalker = Internal::addWalker( manager, "Jumper", float3{ 0.0f, 0.05f, 0.0f } );
+    SW_REQUIRE_NOT_NULL( pWalker );
+    const float32 height = 2.0f * ( pWalker->getHalfHeight() + pWalker->getRadius() );
+    SW_REQUIRE_NOT_NULL( Internal::addBox( manager, "Ceiling", float3{ 0.0f, height + 0.2f + 0.5f, 0.0f }, float3{ 2.0f, 0.5f, 2.0f } ) ); // 머리 위 0.2 m
+    manager.beginPlay();
+    for ( uint32 frame = 0; frame < 30; ++frame )
+    {
+        manager.update( Internal::kFrame );
+    }
+    SW_REQUIRE_TRUE( pWalker->isGrounded() );
+    pWalker->jump( 5.0f );
+    manager.update( Internal::kFrame );
+    SW_REQUIRE_FALSE( pWalker->isGrounded() );
+    for ( uint32 frame = 0; frame < 29; ++frame ) // 반 초 — 끊기면 0.3 초 안에 디디고, 붙어 있으면 0.5 초에야 떨어지기 시작한다
+    {
+        manager.update( Internal::kFrame );
+    }
+    SW_EXPECT_TRUE( pWalker->isGrounded() );
 }
 
 /** @brief [PhysicsCharacterTest] 빈 자리 찾기 — 서 있는 캐릭터의 자리는 비지 않았고, 곁의 빈 자리를 준다. 제 몸은 막는 것으로 보지 않는다 */

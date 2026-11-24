@@ -69,6 +69,7 @@ namespace sw::editor
         EditorExternalToolResult result;
         ProcessOptions           options;
         options._workingDirectory = input._workingDirectory;
+        options._releaseMode      = ProcessReleaseMode::Terminate; // 놓는 것이 곧 취소다 — `cancelAndWait` 의 terminate 는 끝나기를 기다리지 않아, 바로 놓으면 아직 도는 자식으로 보인다
         result._bLaunched         = pProcess->launch( input._command, options );
         if ( result._bLaunched )
         {

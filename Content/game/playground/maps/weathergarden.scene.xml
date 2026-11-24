@@ -116,6 +116,7 @@
 					<SkeletalMeshComponent _localID="15127961318995883145" _localPosition="0,0,0" _localRotation="0,0,0" _localScale="1,1,1" _attachOwner="None" _attachComponent="#19b3407eb1f9cd74" _meshID="" _materialPath="" _boundsRadius="2" _visibilityBasedTickOption="AlwaysTickPoseAndRefreshBones" />
 					<SkeletalAnimatorComponent _localID="6157124105282015569" _animationSetPath="common/models/kaykit/skeleton_warrior/skeleton_warrior.animset.xml" _initialState="Walking_A" _bPlayOnBegin="true" />
 					<CharacterAppearanceComponent _localID="13827364293183997314" _presetID="SkeletonWarrior" _seed="0" _bMergeParts="true" _surfaceChannelsPath="engine/character/default.surfacechannels.xml" />
+					<SocketSetComponent _localID="7203911658842047713" _socketSetPath="common/characters/skeleton_warrior/skeleton_warrior.sockets.xml" />
 					<AnimationNotifyComponent _localID="3803990792213876096" _notifyTablePath="common/characters/skeleton_warrior/skeleton_warrior.notifies.xml" />
 				</_listComponent>
 			</GameObject>

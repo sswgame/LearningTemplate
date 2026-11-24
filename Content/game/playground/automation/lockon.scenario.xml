@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
 <?asset guid="7b3f1dcae9dbc1121108b052842ab122"?>
 <!--
-  록온(LockOnSelector) — 무대 maps/guarddemo. 후보는 Guard 가 감각으로 기억하는 대상이다. 값으로 판정한다(골든 없음).
+  록온(LockOnSelector) — 무대 maps/guarddemo. 후보는 Guard 가 감각으로 기억하는 대상이다. 값으로 판정한다(골든 없음). 대상 이름 칸은 없으면 빈 이름이다.
   ① 앞 가운데 대상을 잡는다 ② 좌우로 넘기고, 그쪽에 더 없으면 그대로다 ③ 벽 뒤로 가려지면 유예(0.5 s) 동안 유지하다 풀린다 ④ 놓기 ⑤ 끊는 거리(10 m)를 넘으면 바로 풀린다
   ⑥ 잡는 거리(9 m) 밖은 보여도 잡지 않는다.
   실행: App -scenario=game/playground/automation/lockon.scenario.xml -unattended (체인: ctest -R Scenario.playground)
@@ -11,7 +11,7 @@
 	<WaitUntil watch="Assets.Pending" equals="0" timeoutWallSeconds="60"/>
 
 	<DevCommand line="guard.lock Guard"/> <!-- 아직 보이는 대상이 없다 -->
-	<Expect watch="Object.Property" target="Guard" key="GuardDemoComponent._lockedTarget" is="none"/>
+	<Expect watch="Object.Property" target="Guard" key="GuardDemoComponent._lockedTarget" is=""/>
 	<DevCommand line="object.place Runner 0.5 0 6.5"/>
 	<DevCommand line="object.place TargetLeft -3.5 0 6.5"/>
 	<DevCommand line="object.place TargetRight 3.5 0 4.5"/>
@@ -36,26 +36,26 @@
 	<DevCommand line="object.place TargetLeft 5.5 0 7.5"/>
 	<AdvanceSimulation frames="10"/> <!-- 유예 0.5 초(30 프레임) 안 -->
 	<Expect watch="Object.Property" target="Guard" key="GuardDemoComponent._lockedTarget" is="TargetLeft"/>
-	<WaitUntil watch="Object.Property" target="Guard" key="GuardDemoComponent._lockedTarget" is="none" timeoutSeconds="1"/>
+	<WaitUntil watch="Object.Property" target="Guard" key="GuardDemoComponent._lockedTarget" is="" timeoutSeconds="1"/>
 	<DevCommand line="object.place TargetLeft -60 0 0"/>
 
 	<!-- ④ 놓기 -->
 	<DevCommand line="guard.lock Guard"/>
 	<Expect watch="Object.Property" target="Guard" key="GuardDemoComponent._lockedTarget" is="Runner"/>
 	<DevCommand line="guard.release Guard"/>
-	<Expect watch="Object.Property" target="Guard" key="GuardDemoComponent._lockedTarget" is="none"/>
+	<Expect watch="Object.Property" target="Guard" key="GuardDemoComponent._lockedTarget" is=""/>
 
 	<!-- ⑤ 끊는 거리 -->
 	<DevCommand line="guard.lock Guard"/>
 	<Expect watch="Object.Property" target="Guard" key="GuardDemoComponent._lockedTarget" is="Runner"/>
 	<DevCommand line="object.place Runner 0.5 0 12"/> <!-- 11.5 m — 놓치는 거리(14) 안이라 보이지만 끊는 거리(10) 밖 -->
-	<WaitUntil watch="Object.Property" target="Guard" key="GuardDemoComponent._lockedTarget" is="none" timeoutFrames="10"/>
+	<WaitUntil watch="Object.Property" target="Guard" key="GuardDemoComponent._lockedTarget" is="" timeoutFrames="10"/>
 	<Expect watch="Object.Property" target="Guard" key="GuardDemoComponent._seenTarget" is="TargetRight"/>
 
 	<!-- ⑥ 잡는 거리 -->
 	<DevCommand line="object.destroy TargetRight"/>
 	<WaitUntil watch="Object.Property" target="Guard" key="GuardDemoComponent._seenTarget" is="Runner" timeoutFrames="10"/>
 	<DevCommand line="guard.lock Guard"/>
-	<Expect watch="Object.Property" target="Guard" key="GuardDemoComponent._lockedTarget" is="none"/>
+	<Expect watch="Object.Property" target="Guard" key="GuardDemoComponent._lockedTarget" is=""/>
 	<Pass/>
 </Scenario>

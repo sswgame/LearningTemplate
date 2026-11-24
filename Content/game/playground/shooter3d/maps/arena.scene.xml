@@ -518,7 +518,6 @@
 					               _moveAction="Move"
 					               _lookAction="Look"
 					               _upAction="None"
-					               _inputLayer="None"
 					               _triggerLookButton="Fire"
 					               _aiControllerPrefab=""
 					               _maxPitch="85"

@@ -18,6 +18,9 @@ namespace sw
     class IRenderTargetDeclarationSink
     {
     public:
+        /** @brief 렌더 텍스처 경로의 접두사입니다 — 파일이 아니라 크기를 알려 만드는 텍스처다. 텍스처 종류의 정의(`Texture2D::kAssetType`)와 캐시(`TextureCache`)가 같은 글을 쓴다. */
+        static constexpr const utf8* kPathPrefix = "rendertarget/";
+
         virtual ~IRenderTargetDeclarationSink() = default;
 
         /** @brief 렌더 텍스처 @p relativePath 의 크기를 알립니다. 이미 만든 것은 바꾸지 않는다(다음에 새로 만들 때부터). */

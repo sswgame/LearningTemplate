@@ -238,7 +238,7 @@ namespace sw
         if ( pController != nullptr )
         {
             const float3 waist    = feet + float3{ 0.0f, height * Internal::kWaistRatio, 0.0f };
-            const float3 velocity = pController->getVelocity();
+            const float3 velocity = pController->getRequestedStepVelocity(); // 막히기 전의 속도 — 실제로 난 속도는 벽에서 0 이다
             const float3 arrDirection[4]{
                 float3{ 1.0f, 0.0f,  0.0f},
                 float3{-1.0f, 0.0f,  0.0f},

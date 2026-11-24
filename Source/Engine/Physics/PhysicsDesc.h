@@ -181,6 +181,9 @@ namespace sw
     {
         using Vector = typename TDimension::Vector;
 
+        /** @brief 옮긴 거리로 셈한 속도의 반올림보다 큰 차이(m/s)입니다 — 원점에서 1 km 떨어진 자리의 60 Hz 스텝에서도 반올림(약 0.004)이 이보다 작다. */
+        static constexpr float32 kBlockedSpeedTolerance = 0.01f;
+
         Vector            _position{};     ///< 발 위치다.
         Vector            _velocity{};     ///< 이번 이동에서 실제로 난 속도다. 움직이는 바닥이 실어 나른 몫(`_groundBody` 의 속도)은 뺀 바닥 기준 속도다.
         Vector            _groundNormal{}; ///< 서 있으면 바닥 법선이다.
@@ -189,6 +192,9 @@ namespace sw
         Vector  _carriedVelocity{};
         float32 _groundYawRate{ 0.0f }; ///< 디딘 바닥이 위 축(3D Y, 2D Z) 둘레로 도는 각속도(rad/s)다. 3D 컴포넌트가 캐릭터 방향을 따라 돌린다.
         bool    _bGrounded{ false };    ///< NOLINT(sw-bool-flag): 집합체다(중괄호 · 지정 초기화로 만든다) — C++17 비트필드는 기본값을 둘 수 없어 `T x;` 가 값을 남기지 않는다
+
+        /** @brief 위로 @p verticalSpeed 로 오르려던 이동이 막혔는지(천장)입니다. 반올림만큼 모자란 것은 막힌 것이 아니다 — 스텝마다 깎으면 점프가 조금씩 낮아진다. */
+        [[nodiscard]] bool isRiseBlocked( float32 verticalSpeed ) const { return verticalSpeed > 0.0f && _velocity._y < verticalSpeed - kBlockedSpeedTolerance; }
     };
 
     using PhysicsCharacterState3D = PhysicsCharacterState<PhysicsDimension3D>;

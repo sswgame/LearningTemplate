@@ -52,7 +52,7 @@ namespace sw
         [[nodiscard]] bool readEye( float3& outEye, float3& outForward ) const;
         /** @brief 기억하는 대상을 록온 후보로 옮깁니다(지금 보이는 것만 `_bVisible`). */
         void gatherLockCandidates( vector<LockOnCandidate>& outListCandidate ) const;
-        /** @brief 오브젝트 id 의 이름입니다. 0 이거나 사라졌으면 `none` 입니다. */
+        /** @brief 오브젝트 id 의 이름입니다. 0 이거나 사라졌으면 빈 이름입니다. */
         [[nodiscard]] hashed_string findName( uint64 objectID ) const;
         /** @brief 록온 대상 이름을 상태 칸에 적습니다. */
         void refreshLockedTarget() { _lockedTarget = findName( _lockOn.getTarget() ); }
@@ -84,11 +84,11 @@ namespace sw
         float32 _lockLostSightGrace;
 
         PROPERTY( RuntimeState )
-        hashed_string _seenTarget; ///< 지금 보이는 대상 가운데 가장 가까운 것(없으면 `none`)
+        hashed_string _seenTarget; ///< 지금 보이는 대상 가운데 가장 가까운 것(없으면 빈 이름)
         PROPERTY( RuntimeState )
-        hashed_string _heardTarget; ///< 이번에 들린 대상(없으면 `none`)
+        hashed_string _heardTarget; ///< 이번에 들린 대상(없으면 빈 이름)
         PROPERTY( RuntimeState )
-        hashed_string _lockedTarget; ///< 쥔 대상(없으면 `none`)
+        hashed_string _lockedTarget; ///< 쥔 대상(없으면 빈 이름)
         PROPERTY( RuntimeState, Min = 0 )
         int32 _rememberedCount; ///< 기억하는 대상 수(보이지 않아도 기억 시간 안이면 센다)
 

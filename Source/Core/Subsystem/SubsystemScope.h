@@ -165,6 +165,7 @@ namespace sw
          * @details 칸의 주인은 @p owner 다 — 초기화 중 조회(범위 · 서비스 칸)가 의존 검사를 지나고(`SubsystemCollection::recordInitializeLookup`), 칸은 그 서브시스템과 함께 지워진다(`destroyAll`).
          *          `bind` 로 걸면 주인이 비어(빌린 칸) 선언을 빠뜨린 조회가 검사를 빠져나간다 — 서브시스템의 멤버는 이것으로 건다. @p member 는 @p owner 와 수명이 같아야 한다.
          *          @p TInterface 가 const 면 `bind` 와 같이 `const T` 로 찾는 쪽만 찾는다. @p owner 가 이 범위에 소유한 서브시스템이 아니면 부른 쪽의 잘못이라 멈춘다.
+         *          호스트 모듈(에디터)에 보이는지는 @p TInterface 가 선언한다(`kModuleVisibility` — `kModuleVisibilityOf`).
          * @return 같은 타입이 const 든 아니든 이미 걸려 있으면 false 입니다.
          */
         template <class TInterface, class TOwner>
@@ -176,7 +177,7 @@ namespace sw
             SW_ASSERT( pOwner == static_cast<const Subsystem*>( &owner ) );
             if ( findOwnEntry( getSubsystemTypeHash<TPlain>() ) != nullptr || findOwnEntry( getSubsystemTypeHash<const TPlain>() ) != nullptr )
                 return false;
-            return registerEntry( getSubsystemTypeHash<TInterface>(), const_cast<TPlain*>( &member ), pOwner );
+            return registerEntry( getSubsystemTypeHash<TInterface>(), const_cast<TPlain*>( &member ), pOwner, kModuleVisibilityOf<TPlain> );
         }
 
         /**

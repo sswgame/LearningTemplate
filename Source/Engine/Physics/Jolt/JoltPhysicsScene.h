@@ -415,6 +415,7 @@ namespace sw
             PhysicsBodyHandle               _innerBody{};       ///< 속 바디의 엔진 핸들이다(없으면 무효). 사용자 값은 캐릭터의 것이다.
             float3                          _movedVelocity{};   ///< 이번 이동에 Jolt 에 준 속도(요청 + 바닥) — 미는 충격량을 셈한다
             float3                          _carriedVelocity{}; ///< 이번 이동에 바닥이 실어 준 속도
+            float3                          _moveStart{};       ///< 이번 이동을 시작한 발 자리 — 실제로 난 속도를 셈한다
             float32                         _groundYawRate{ 0.0f };
             uint32                          _moveStamp{ 0 }; ///< 마지막으로 든 일괄 이동의 번호(`_characterMoveStamp`) — 같은 캐릭터를 한 일괄에 두 번 들지 않는다
         };
