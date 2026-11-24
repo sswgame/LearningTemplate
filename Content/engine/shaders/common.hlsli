@@ -132,6 +132,24 @@ static const uint kInvalidIndex = 0xFFFFFFFFu;
 // ------------------------------------------------------------------------------
 #define SW_NUMTHREADS( x, y, z ) [numthreads( x, y, z )]
 
+// ------------------------------------------------------------------------------
+// 3-3) RW 버퍼 배리어 — 그룹의 모든 스레드가 모이고, 그 앞의 RW 버퍼 쓰기를 그 뒤의 같은 그룹 스레드가 본다. `DeviceMemoryBarrierWithGroupSync` 대신 쓴다:
+//      WGSL 의 배리어는 그룹 범위뿐이라 Tint 가 장치 범위의 배리어(Device · AllMemoryBarrierWithGroupSync)를 거절한다("control barrier requires workgroup memory scope").
+//      `GroupMemoryBarrierWithGroupSync` 는 workgroupBarrier 가 되어 groupshared 만 맞추므로 대신할 수 없다 — WebGPU 는 그룹 범위 · 버퍼 의미의 OpControlBarrier(storageBarrier)를 바로 낸다.
+// ------------------------------------------------------------------------------
+#if defined( WEBGPU )
+// 224 = OpControlBarrier( 실행 범위, 메모리 범위, 의미 )
+[[vk::ext_instruction( 224 )]] void spirvControlBarrier( uint executionScope, uint memoryScope, uint semantics );
+// 범위 2 = Workgroup, 의미 0x8 = AcquireRelease | 0x40 = UniformMemory(저장 버퍼 포함)
+void storageBarrierWithGroupSync()
+{
+    spirvControlBarrier( 2u, 2u, 0x48u );
+}
+    #define SW_STORAGE_BARRIER_WITH_GROUP_SYNC storageBarrierWithGroupSync
+#else
+    #define SW_STORAGE_BARRIER_WITH_GROUP_SYNC DeviceMemoryBarrierWithGroupSync // FXC 는 인자 없는 함수형 매크로를 받지 않아 이름만 바꾼다
+#endif
+
 // 반복 · 분기 힌트 — 맨 `[unroll]` 은 clang-format 이 다음 문장과 붙이므로 속성 매크로로 쓴다(Content/.clang-format 의 AttributeMacros).
 #define SW_UNROLL [unroll]
 #define SW_LOOP   [loop]

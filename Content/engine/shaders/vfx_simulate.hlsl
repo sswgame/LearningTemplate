@@ -432,7 +432,7 @@ void simulateSingleGroup( uint thread )
     uint droppedCount = bReset ? 0u : loadArgsWord( SW_VFX_ARGS_WORD_DROPPED );
     if ( bReset )
         resetDeadSlots( thread, SW_VFX_SIMULATE_THREAD_COUNT, poolSize );
-    DeviceMemoryBarrierWithGroupSync();
+    SW_STORAGE_BARRIER_WITH_GROUP_SYNC();
 
     for ( uint stepIndex = 0u; stepIndex < stepCount; ++stepIndex )
     {
@@ -448,15 +448,15 @@ void simulateSingleGroup( uint thread )
             g_VFXStateRW[sourceBase + aliveCount + spawnIndex] = created;
         }
         // 꺼낸 칸을 다 읽은 뒤에 아래 죽은 입자가 같은 스택 자리에 돌려준다.
-        DeviceMemoryBarrierWithGroupSync();
+        SW_STORAGE_BARRIER_WITH_GROUP_SYNC();
 
         // 2) 적분 · 충돌 · 수명 제거 - 다른 반쪽에 태어난 순서 그대로 압축한다.
         const uint totalCount = aliveCount + createdCount;
         const uint targetBase = ( 1u - currentHalf ) * poolSize;
         const uint deadBase   = poolSize - totalCount; // 생성이 꺼낸 뒤의 스택 깊이 — 죽은 입자는 그 위에 죽은 차례로 돌려준다
         uint       written    = 0u;
-#if defined( DX11 )
-        // FXC(cs_5_0)는 UAV 에서 읽은 수(살아 있는 수)로 끝나는 반복 안의 동기화를 받지 않는다(X3663) - 풀 전체(매개변수 SRV 의 값)를 돌고
+#if defined( DX11 ) || defined( WEBGPU )
+        // FXC(cs_5_0, X3663)와 WGSL(균일 제어 흐름 규칙)은 UAV 에서 읽은 수(살아 있는 수)로 끝나는 반복 안의 동기화를 받지 않는다 - 풀 전체(매개변수 SRV 의 값)를 돌고
         // 수 밖의 칸은 죽은 입자로 센다(위 slot < totalCount). 결과는 같고 덩어리 수만 풀 크기를 따른다.
         const uint chunkLimit = poolSize;
 #else
@@ -486,7 +486,7 @@ void simulateSingleGroup( uint thread )
             written += s_arrScan[SW_VFX_SIMULATE_THREAD_COUNT - 1u];
             GroupMemoryBarrierWithGroupSync();
         }
-        DeviceMemoryBarrierWithGroupSync();
+        SW_STORAGE_BARRIER_WITH_GROUP_SYNC();
         aliveCount  = written;
         currentHalf = 1u - currentHalf;
     }
