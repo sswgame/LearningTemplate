@@ -86,6 +86,14 @@ namespace sw
         std::swap( _mapCached, _mapNextCached );
     }
 
+    void ShadowCache::markIncomplete()
+    {
+        for ( auto& entry : _mapCached )
+        {
+            entry.second._bValid = SW_FALSE;
+        }
+    }
+
     ShadowCacheTileAction ShadowCache::getAction( uint32 tileIndex ) const
     {
         return tileIndex < _listAction.size() ? _listAction[tileIndex] : ShadowCacheTileAction::DrawAll;

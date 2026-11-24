@@ -55,6 +55,7 @@ namespace sw
         void                     setIndexBuffer( RHIBufferHandle buffer, uint32 indexStride = 4, uint32 offset = 0 ) override;
         void                     transitionBufferNative( RHIBufferHandle buffer, RHIBufferState newState ) override;
         void                     copyBufferToReadbackNative( RHIBufferHandle source, RHIBufferHandle readback, uint32 sizeBytes ) override;
+        uint64                   findBufferBytes( RHIBufferHandle buffer ) const override;
         void                     copyBufferRegionNative( RHIBufferHandle destination, uint64 destinationOffset, RHIBufferHandle source, uint64 sourceOffset, uint64 sizeBytes ) override;
         void                     uavBarrierNative( RHIBufferHandle buffer ) override;
         void                     uavBarrierTextureNative( RHITextureHandle texture ) override;

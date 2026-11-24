@@ -91,8 +91,8 @@ namespace sw
         , _immediateContext{}
         , _backBufferFormat{ constant::render::kBackBufferFormat }
         , _swapChain{}
-        , _gpuBuffers{}
-        , _gpuTextures{}
+        , _gpuBuffers{ getBeginFrameCount() }
+        , _gpuTextures{ getBeginFrameCount() }
         , _timestampRing{}
         , _bTimestampEnabled{ SW_FALSE }
         , _bTimestampReady{ SW_FALSE }
@@ -108,7 +108,7 @@ namespace sw
         , _bufferRegistry{}
         , _textureRegistry{}
         , _uavRegistry{}
-        , _pipelineStates{}
+        , _pipelineStates{ getBeginFrameCount() }
         , _arrStaticSampler{}
         , _pHWnd{ nullptr }
         , _releaseQueue{}

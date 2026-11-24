@@ -563,6 +563,11 @@ namespace sw
         glBindBuffer( GL_COPY_WRITE_BUFFER, 0 );
     }
 
+    uint64 OpenGLRHICommandContext::findBufferBytes( RHIBufferHandle buffer ) const
+    {
+        return _pDevice->resolveGlBufferSize( buffer );
+    }
+
     void OpenGLRHICommandContext::copyBufferRegionNative( RHIBufferHandle destination, uint64 destinationOffset, RHIBufferHandle source, uint64 sourceOffset, uint64 sizeBytes )
     {
         if ( _pDevice->_bInitialized == SW_FALSE )

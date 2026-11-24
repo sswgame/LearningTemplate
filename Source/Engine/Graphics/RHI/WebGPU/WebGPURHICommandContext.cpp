@@ -746,6 +746,12 @@ namespace sw
         }
     }
 
+    uint64 WebGPURHICommandContext::findBufferBytes( RHIBufferHandle buffer ) const
+    {
+        const WebGPUBufferRecord* const pRecord = _pDevice->findBuffer( buffer );
+        return pRecord != nullptr ? pRecord->_sizeBytes : 0;
+    }
+
     void WebGPURHICommandContext::copyBufferRegionNative( RHIBufferHandle destination, uint64 destinationOffset, RHIBufferHandle source, uint64 sourceOffset, uint64 sizeBytes )
     {
         endComputePass();
