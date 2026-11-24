@@ -492,8 +492,8 @@ namespace sw
             const MountMovementComponent* pMount = pose._mountNumber != 0 ? findMount( manager, pose._mountNumber ) : nullptr;
             pose._position                       = origin.toAbsolute( pMount != nullptr ? pRoot->getWorldPosition() : pMovement->getState()._motion._position );
             pose._yaw                            = MathUtil::wrapAngle( pMount != nullptr ? pMount->getFacingYaw() : pMovement->getFacingYaw() );
-            _interest.setEntityPosition( pawn._avatarID, pose._position );
-            _interest.setObserver( pawn._connectionID, pose._position );
+            _interest.setEntityPosition( pawn._avatarID, AbsolutePosition{ pose._position } );
+            _interest.setObserver( pawn._connectionID, AbsolutePosition{ pose._position } );
             // 움직이는 바닥 위의 폰은 바닥 기준으로 싣는다 — 받는 쪽의 바닥은 다른 틱(예측)에 있어 절대 자리면 바닥에서 떨어져 보인다(언리얼 `FBasedMovementInfo`).
             float3      floorPosition;
             quaternion  floorRotation;
@@ -521,7 +521,7 @@ namespace sw
             pose._gait     = state._gait;
             if ( writePose( pose, _bytesScratch ) )
                 _server.setEntity( entityID, kMountTypeID, _bytesScratch );
-            _interest.setEntityPosition( entityID, pose._position );
+            _interest.setEntityPosition( entityID, AbsolutePosition{ pose._position } );
         }
     }
 

@@ -58,8 +58,8 @@ SW_TEST_CASE( MMOEntityHeaderTest, NonFinitePositionIsRejectedOnBothSides )
 
     MMOReplicator replicator;
     MMOEntity     entity;
-    entity._entityID    = 9;
-    entity._position._z = std::numeric_limits<float32>::infinity();
+    entity._entityID           = 9;
+    entity._position._value._z = std::numeric_limits<float32>::infinity();
     SW_EXPECT_LOG( "MMOReplicator.EntityHeaderOutOfRange" );
     replicator.setEntity( entity );
     SW_EXPECT_EQUAL( uint64{ 1 }, replicator.getOutOfRangeEntityCount() );

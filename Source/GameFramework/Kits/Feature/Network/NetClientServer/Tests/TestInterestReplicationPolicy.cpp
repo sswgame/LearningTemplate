@@ -114,14 +114,16 @@ namespace
                     // 자리를 알린 엔티티 몇은 중간에 자리를 지운다 — 보이는 목록에 남은 채 자리 없는 엔티티가 되는 길까지 같아야 한다.
                     const bool bDropped = entityID % 11u == 0u && tick >= 20u;
                     if ( entityID < kPositioned && bDropped == false )
-                        interest.setEntityPosition( entityID, makePosition( entityID, tick ) );
+                        interest.setEntityPosition( entityID, AbsolutePosition{ makePosition( entityID, tick ) } );
                     else if ( entityID < kPositioned && tick == 20u )
                         interest.removeEntity( entityID );
                 }
                 // 관찰자는 연결마다 다른 자리 — 하나(마지막 연결)는 관찰자를 두지 않는다(자리 없는 엔티티만 간다).
                 for ( size_t index = 0; index + 1 < listConnection.size(); ++index )
                 {
-                    interest.setObserver( listConnection[index], float3{ static_cast<float32>( index ) * 30.0f - 75.0f + static_cast<float32>( tick ), 0.0f, 8.0f } );
+                    interest.setObserver( listConnection[index], AbsolutePosition{
+                                                                     float3{ static_cast<float32>( index ) * 30.0f - 75.0f + static_cast<float32>( tick ), 0.0f, 8.0f }
+                    } );
                 }
                 server.endTick();
                 interest.updateRelevancy();
@@ -176,10 +178,14 @@ SW_TEST_CASE( InterestReplicationPolicyTest, CollectMatchesEvaluateForEveryEntit
         NetEntityState& entity = listWorld.emplace_back();
         entity._entityID       = entityID * 2u + 1u; // 이빠진 id
         if ( entityID < 45 )
-            policy.setEntityPosition( entity._entityID, InterestReplicationPolicyTestInternal::makePosition( entityID, 3u ) );
+            policy.setEntityPosition( entity._entityID, AbsolutePosition{ InterestReplicationPolicyTestInternal::makePosition( entityID, 3u ) } );
     }
-    policy.setObserver( 0, float3{ -20.0f, 0.0f, 0.0f } );
-    policy.setObserver( 2, float3{ 60.0f, 0.0f, 10.0f } );
+    policy.setObserver( 0, AbsolutePosition{
+                               float3{ -20.0f, 0.0f, 0.0f }
+    } );
+    policy.setObserver( 2, AbsolutePosition{
+                               float3{ 60.0f, 0.0f, 10.0f }
+    } );
     policy.updateRelevancy();
     policy.removeEntity( listWorld[4]._entityID ); // 보이는 목록에 남은 채 자리를 지운 엔티티
     policy.prepareSnapshots( listWorld );

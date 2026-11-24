@@ -32,7 +32,7 @@ namespace sw
             {
                 MMOEntityEnterHeader header;
                 header._header._entityID = entity._entityID;
-                header._header._position = entity._position;
+                header._header._position = entity._position._value;
                 header._typeID           = entity._typeID;
                 header._staticID         = entity._staticID;
                 return header;
@@ -56,7 +56,7 @@ namespace sw
                 if ( result != FixedReadResult::Ok )
                     return false;
                 outEntity._entityID = header._header._entityID;
-                outEntity._position = header._header._position;
+                outEntity._position = AbsolutePosition{ header._header._position };
                 if ( bWithType )
                 {
                     outEntity._typeID   = header._typeID;
@@ -165,12 +165,12 @@ namespace sw
         {
             if ( _outOfRangeEntityCount == 0 )
                 SW_LOG_ERROR_ID( "MMOReplicator.EntityHeaderOutOfRange", "MMOReplicator: entity %# at (%#, %#, %#) is outside the replicated header range - ignored (further ones are only counted)", entity._entityID,
-                                 entity._position._x, entity._position._y, entity._position._z );
+                                 entity._position._value._x, entity._position._value._y, entity._position._value._z );
             ++_outOfRangeEntityCount;
             return;
         }
         _mapEntity[entity._entityID] = entity;
-        _interest.setPoint( entity._entityID, entity._position );
+        _interest.setPoint( entity._entityID, entity._position._value );
         if ( entity._bAlwaysRelevant )
             _setAlwaysRelevant.insert( entity._entityID );
         else
@@ -304,7 +304,7 @@ namespace sw
                 continue;
             const auto entityIter = _mapEntity.find( observer._entityID );
             if ( entityIter != _mapEntity.end() )
-                outListPosition.push_back( entityIter->second._position );
+                outListPosition.push_back( entityIter->second._position._value );
         }
     }
 
@@ -317,7 +317,7 @@ namespace sw
                 continue;
             const auto entityIter = _mapEntity.find( observer._entityID );
             if ( entityIter != _mapEntity.end() )
-                outListSource.push_back( StreamingSource{ entityIter->second._position, observer._streamingRadius, observer._streamingPriority } );
+                outListSource.push_back( StreamingSource{ entityIter->second._position._value, observer._streamingRadius, observer._streamingPriority } );
         }
     }
 
@@ -397,7 +397,7 @@ namespace sw
         const auto observerIter = _mapEntity.find( observer._entityID );
         if ( observerIter == _mapEntity.end() )
             return;
-        const float3 center = observerIter->second._position;
+        const float3 center = observerIter->second._position._value;
 
         // 1) 보이지 않게 됨: 사라졌거나 나가는 반경 밖으로 간 엔티티이다. 항상 보이는 엔티티는 제외한다.
         vector<uint32>& listLeave = scratch._listLeave;
@@ -411,7 +411,7 @@ namespace sw
                 continue;
             }
             const bool bAlways = entityIter->second._bAlwaysRelevant && _pPolicy->isAlwaysRelevant( connectionID, entityIter->second );
-            if ( bAlways == false && _interest.isOutsideLeaveRadius( center, entityIter->second._position ) )
+            if ( bAlways == false && _interest.isOutsideLeaveRadius( center, entityIter->second._position._value ) )
                 listLeave.push_back( visible.first );
         }
         VectorUtil::sort( listLeave );
@@ -443,7 +443,7 @@ namespace sw
                 continue;
             const auto entityIter = _mapEntity.find( entityID );
             if ( entityIter != _mapEntity.end() )
-                listRank.emplace_back( float3::getHorizontalDistance( center, entityIter->second._position ), entityID );
+                listRank.emplace_back( float3::getHorizontalDistance( center, entityIter->second._position._value ), entityID );
         }
         VectorUtil::sortUnique( listRank ); // 반경 안의 엔티티와 항상 보이는 엔티티가 겹친 항목을 제거한다
         // 신뢰 메시지 하나에 묶어 보낸다. 엔티티마다 신뢰 창 슬롯과 헤더를 쓰지 않으려는 것이며, Core 가 64 KB까지 조각으로 나눠 전송한다. 전송이 받아들여져야 보이는 목록에 넣는다.
@@ -491,7 +491,7 @@ namespace sw
             if ( std::binary_search( listLeave.begin() + static_cast<ptrdiff_t>( pendingLeaveIndex ), listLeave.end(), visible.first ) )
                 continue;
             const MMOEntity&    entity   = getEntity( visible.first );
-            const float32       distance = float3::getHorizontalDistance( center, entity._position );
+            const float32       distance = float3::getHorizontalDistance( center, entity._position._value );
             const VisibleEntry& entry    = visible.second;
             // 전송 중인 갱신이 있으면 그것과 비교한다. 확인을 기다리는 동안 같은 상태를 "바뀜" 으로 가속하지 않으려는 것이다. 잃으면 확인된 상태(오래된 것)와 비교하게 된다.
             const vector<uint8>& reference = entry._bInFlight == SW_TRUE ? entry._listInFlightState : entry._listSentState;
@@ -596,10 +596,10 @@ namespace sw
     {
     }
 
-    bool MMOSceneClientWorld::isPositionStreamed( const float3& position ) const
+    bool MMOSceneClientWorld::isPositionStreamed( const AbsolutePosition& position ) const
     {
         const SceneStreamingSubsystem& streaming = _scene.getObjectManager()->getSubsystem<SceneStreamingSubsystem>();
-        return streaming.isStreaming() == false || streaming.isCellStreamingCompleted( streaming.getGrid().computeCell( position ) );
+        return streaming.isStreaming() == false || streaming.isCellStreamingCompleted( streaming.getGrid().computeCell( position._value ) );
     }
 
     uint64 MMOSceneClientWorld::findStaticObject( uint64 staticID ) const
@@ -696,7 +696,7 @@ namespace sw
             }
             // 셀이 끝내 오르지 않는다 — 서버의 나가는 반경이 이 클라이언트의 로딩 반경보다 큰 설정 결함일 수 있다. 영원히 숨기지 않고 보인다.
             SW_LOG_WARNING_ID( "MMOClientView.CellHoldTimedOut", "MMOClientView: entity %# waited %# s for its cell at (%#, %#) - shown without it", entityID,
-                               _settings._cellHoldTimeoutSeconds, entry._entity._position._x, entry._entity._position._z );
+                               _settings._cellHoldTimeoutSeconds, entry._entity._position._value._x, entry._entity._position._value._z );
             makeVisible( entityID, entry, 0 );
         }
     }

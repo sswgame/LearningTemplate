@@ -40,7 +40,7 @@ namespace
         static MMOEntity makeEntity( uint32 entityID, const float3& position, bool bAlwaysRelevant )
         {
             MMOEntity entity;
-            entity._position        = position;
+            entity._position        = AbsolutePosition{ position };
             entity._entityID        = entityID;
             entity._typeID          = 1;
             entity._bAlwaysRelevant = bAlwaysRelevant ? SW_TRUE : SW_FALSE;

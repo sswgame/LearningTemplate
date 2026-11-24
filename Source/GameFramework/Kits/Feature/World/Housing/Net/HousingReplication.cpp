@@ -549,14 +549,14 @@ namespace sw
             entry._bReachErrorLogged = SW_TRUE;
             return false;
         }
-        float3 caller{};
+        AbsolutePosition caller{};
         if ( _config._locateCaller( connectionID, caller ) == false )
             return false; // 서버가 이 연결의 자리를 모른다 — 클라이언트 값으로 대신하지 않는다
         for ( const float3& local : listLocal )
         {
-            const float3  target = plot._origin + local;
-            const float32 dx     = target._x - caller._x;
-            const float32 dz     = target._z - caller._z;
+            const float3  target = ( plot._origin + local )._value;
+            const float32 dx     = target._x - caller._value._x;
+            const float32 dz     = target._z - caller._value._z;
             if ( dx * dx + dz * dz > maxReach * maxReach )
                 return false;
         }

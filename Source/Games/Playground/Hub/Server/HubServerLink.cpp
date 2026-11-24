@@ -346,7 +346,7 @@ namespace sw
         }
         MMOEntity entity;
         entity._listState  = _listStateScratch;
-        entity._position   = value._position;
+        entity._position   = AbsolutePosition{ value._position }; // 허브 규칙의 자리는 절대다
         entity._entityID   = entityID;
         entity._typeID     = value._typeID;
         entity._importance = importance;

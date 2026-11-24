@@ -729,7 +729,7 @@ namespace sw
         plot._pLayout = &_layout;
         plot._pWallet = &_wallet;
         plot._pOwner  = &_ownerID;
-        plot._origin  = getPlotOrigin();
+        plot._origin  = AbsolutePosition{ getOwner()->getManager()->getWorldOrigin().toAbsolute( getPlotOrigin() ) };
         return plot;
     }
 

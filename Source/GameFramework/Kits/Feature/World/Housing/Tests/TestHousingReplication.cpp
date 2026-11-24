@@ -47,7 +47,7 @@ namespace
             plot._pLayout = &_layout;
             plot._pWallet = &_wallet;
             plot._pOwner  = &_owner;
-            plot._origin  = float3{ 0.0f, 0.0f, 0.0f };
+            plot._origin  = AbsolutePosition{};
             return plot;
         }
 
@@ -267,9 +267,11 @@ SW_TEST_CASE( HousingReplicationTest, ServerChecksReachRateAndRawValues )
 {
     {
         // 요청자는 부지에서 멀다(100, 100) — 거리 3 m 를 넘는다.
-        HousingNetRig rig( 100, 16, 3.0f, SW_DELEGATE_LAMBDA( HousingCallerLocator, []( int32, float3& outPosition )
+        HousingNetRig rig( 100, 16, 3.0f, SW_DELEGATE_LAMBDA( HousingCallerLocator, []( int32, AbsolutePosition& outPosition )
         {
-            outPosition = float3{ 100.0f, 0.0f, 100.0f };
+            outPosition = AbsolutePosition{
+                float3{ 100.0f, 0.0f, 100.0f }
+            };
             return true;
         } ) );
         rig.connect();
@@ -440,9 +442,9 @@ SW_TEST_CASE( HousingReplicationTest, UndoAndRedoAreJudgedByTheirTargetReach )
 {
     float3        caller{ 0.0f, 0.0f, 0.0f };
     float3*       pCaller = &caller;
-    HousingNetRig rig( 100, 16, 3.0f, SW_DELEGATE_LAMBDA( HousingCallerLocator, [pCaller]( int32, float3& outPosition )
+    HousingNetRig rig( 100, 16, 3.0f, SW_DELEGATE_LAMBDA( HousingCallerLocator, [pCaller]( int32, AbsolutePosition& outPosition )
     {
-        outPosition = *pCaller;
+        outPosition = AbsolutePosition{ *pCaller };
         return true;
     } ) );
     rig.connect();

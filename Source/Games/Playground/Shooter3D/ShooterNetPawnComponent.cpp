@@ -556,9 +556,9 @@ namespace sw
                 _server.setEntity( entityID, kPawnTypeID, _bytesScratch );
             else
                 SW_LOG_ERROR_ID( "ShooterNetPawn.StateOutOfRange", "Pawn state is outside the replicated range (%#, %#, %#) - not replicated this tick", move._position._x, move._position._y, move._position._z );
-            _interest.setEntityPosition( entityID, move._position );
+            _interest.setEntityPosition( entityID, AbsolutePosition{ move._position } );
             if ( pawn._connectionID >= 0 )
-                _interest.setObserver( pawn._connectionID, move._position );
+                _interest.setObserver( pawn._connectionID, AbsolutePosition{ move._position } );
         }
     }
 
@@ -975,7 +975,7 @@ namespace sw
                 else
                     SW_LOG_ERROR_ID( "ShooterNetPawn.EnemyOutOfRange", "Enemy %# is outside the replicated range (%#, %#, %#) - not replicated this tick", view._netEntityID,
                                      view._position._value._x, view._position._value._y, view._position._value._z );
-                _interest.setEntityPosition( view._netEntityID, view._position._value );
+                _interest.setEntityPosition( view._netEntityID, view._position );
                 _listEntityScratch.push_back( view._netEntityID );
             }
         }

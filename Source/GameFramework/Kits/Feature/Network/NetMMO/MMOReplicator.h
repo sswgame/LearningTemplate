@@ -47,6 +47,7 @@
 #include "Core/Network/Replication/TickRingBuffer.h"
 #include "Core/Serialization/BitStream.h"
 
+#include "Engine/Foundation/WorldOrigin.h"
 #include "Engine/Reflection/ReflectionMacros.h"
 #include "Engine/Scene/StreamingCellGrid.h"
 
@@ -90,7 +91,7 @@ namespace sw
         uint32 _entityID{ 0 };
 
         PROPERTY( Replicated, Min = -1000000, Max = 1000000 )
-        float3 _position{ 0.0f, 0.0f, 0.0f }; ///< 월드 자리(m, 비트 그대로)
+        float3 _position{ 0.0f, 0.0f, 0.0f }; ///< 절대 자리(m, 비트 그대로 — `MMOEntity::_position`)
     };
 
     /** @brief 새로 보임 메시지(`NetMMOMessage::Enter`)에 싣는 엔티티 머리입니다 — 갱신 머리에 타입 · 정적 id 가 붙는다. 칸을 바꾸면 `Enter` 의 본문 판을 올린다. */
@@ -115,13 +116,13 @@ namespace sw
     /** @brief 엔티티 하나입니다. */
     struct MMOEntity
     {
-        vector<uint8> _listState{};
-        float3        _position{};
-        uint32        _entityID{ 0 };
-        uint32        _typeID{ 0 };
-        float32       _importance{ 1.0f };          ///< 보스와 다른 플레이어는 크게 잡는다
-        uint8         _bAlwaysRelevant{ SW_FALSE }; ///< 반경 밖에서도 보일 후보. 서버 복제기가 `setEntity` 때 항상 보임 집합에 모으고 정책(`IInterestPolicy::isAlwaysRelevant`)이 관찰자마다 거른다. 와이어에는 싣지 않는다
-        uint64        _staticID{ 0 };               ///< (집합체 초기화 순서를 지키려 끝에 둔다) 셀에 놓인 엔티티면 쿠킹된 씬의 파일 id(서버 · 클라이언트가 같은 쿠킹본이라 같다). 0 이면 게임이 스폰하는 동적 엔티티다. 새로 보임에만 싣는다
+        vector<uint8>    _listState{};
+        AbsolutePosition _position{}; ///< 절대 — 서버와 클라이언트의 월드 원점이 다르다. 씬에 놓을 때 `WorldOrigin::toLocal` 로 옮긴다
+        uint32           _entityID{ 0 };
+        uint32           _typeID{ 0 };
+        float32          _importance{ 1.0f };          ///< 보스와 다른 플레이어는 크게 잡는다
+        uint8            _bAlwaysRelevant{ SW_FALSE }; ///< 반경 밖에서도 보일 후보. 서버 복제기가 `setEntity` 때 항상 보임 집합에 모으고 정책(`IInterestPolicy::isAlwaysRelevant`)이 관찰자마다 거른다. 와이어에는 싣지 않는다
+        uint64           _staticID{ 0 };               ///< (집합체 초기화 순서를 지키려 끝에 둔다) 셀에 놓인 엔티티면 쿠킹된 씬의 파일 id(서버 · 클라이언트가 같은 쿠킹본이라 같다). 0 이면 게임이 스폰하는 동적 엔티티다. 새로 보임에만 싣는다
     };
 } // namespace sw
 
@@ -396,7 +397,7 @@ namespace sw
         INetClientWorld& operator=( const INetClientWorld& ) = delete;
 
         /** @brief 자리 @p position 의 셀(바닥)이 다 올랐거나 기다릴 셀이 없으면 true 입니다. */
-        virtual bool isPositionStreamed( const float3& position ) const = 0;
+        virtual bool isPositionStreamed( const AbsolutePosition& position ) const = 0;
         /** @brief 파일 id @p staticID 인 셀 오브젝트가 드러나 있으면 그 런타임 id, 없으면 0 입니다. */
         virtual uint64 findStaticObject( uint64 staticID ) const = 0;
     };
@@ -411,7 +412,7 @@ namespace sw
     public:
         explicit MMOSceneClientWorld( const Scene& scene );
 
-        bool   isPositionStreamed( const float3& position ) const override;
+        bool   isPositionStreamed( const AbsolutePosition& position ) const override;
         uint64 findStaticObject( uint64 staticID ) const override;
 
     private:

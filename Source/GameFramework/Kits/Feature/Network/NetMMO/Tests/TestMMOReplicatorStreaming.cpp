@@ -42,7 +42,7 @@ namespace
             {
             }
 
-            bool isPositionStreamed( const float3& position ) const override
+            bool isPositionStreamed( const AbsolutePosition& position ) const override
             {
                 (void)position;
                 return _bStreamed != SW_FALSE;
@@ -170,7 +170,7 @@ SW_TEST_CASE( NetMMOStreamingTest, ClientHoldsEnterUntilCellStreamed )
     SW_EXPECT_EQUAL( 0, view.getHeldEntityCount() );
     const MMOEntity* pEntity = view.findEntity( 42 );
     SW_REQUIRE_TRUE( pEntity != nullptr );
-    SW_EXPECT_EQUAL( 3.0f, pEntity->_position._x );
+    SW_EXPECT_EQUAL( 3.0f, pEntity->_position._value._x );
 
     // 셀이 이미 올라 있으면 보류 없이 곧바로 보인다. 보류 중 사라짐은 사건 없이 버린다.
     SW_EXPECT_TRUE( NetHandleResult::Handled == view.handleMessage( 0, Internal::writeEnter( 10, 43, 0, float3{} ) ) );
@@ -278,7 +278,7 @@ SW_TEST_CASE( NetMMOStreamingTest, ReenterOfVisibleEntityNeverSplitsOrDoublesEve
     (void)view.handleMessage( 0, Internal::writeEnter( 2, 80, 0, float3{ 4.0f, 0.0f, 0.0f } ) );
     SW_EXPECT_EQUAL( 0, view.getHeldEntityCount() );
     SW_EXPECT_EQUAL( 1, view.getEntityCount() );
-    SW_EXPECT_EQUAL( 4.0f, view.findEntity( 80 )->_position._x );
+    SW_EXPECT_EQUAL( 4.0f, view.findEntity( 80 )->_position._value._x );
     (void)view.handleMessage( 0, Internal::writeLeave( 80 ) );
     world._bStreamed = SW_TRUE;
     view.update( Internal::kTickSeconds ); // 남은 보류가 없어 다시 보이지 않는다
@@ -343,10 +343,14 @@ SW_TEST_CASE( NetMMOStreamingTest, ObserverStreamingSourceIsValidated )
     SW_REQUIRE_TRUE( server.initialize( &cluster.getServer(), mmoSettings, cellGrid ) );
     MMOEntity avatar;
     avatar._entityID = 1;
-    avatar._position = float3{ 5.0f, 0.0f, 10.0f };
+    avatar._position = AbsolutePosition{
+        float3{ 5.0f, 0.0f, 10.0f }
+    };
     server.setEntity( avatar );
     avatar._entityID = 2;
-    avatar._position = float3{ 150.0f, 0.0f, 10.0f };
+    avatar._position = AbsolutePosition{
+        float3{ 150.0f, 0.0f, 10.0f }
+    };
     server.setEntity( avatar );
     server.setObserver( 0, 1 );
     server.setObserver( 1, 2 );
@@ -356,7 +360,9 @@ SW_TEST_CASE( NetMMOStreamingTest, ObserverStreamingSourceIsValidated )
     SW_REQUIRE_TRUE( server.initialize( &cluster.getServer(), mmoSettings, cellGrid ) );
     server.setEntity( avatar );
     avatar._entityID = 1;
-    avatar._position = float3{ 5.0f, 0.0f, 10.0f };
+    avatar._position = AbsolutePosition{
+        float3{ 5.0f, 0.0f, 10.0f }
+    };
     server.setEntity( avatar );
     server.setObserver( 0, 1 );
     server.setObserver( 1, 2 );
@@ -497,7 +503,7 @@ namespace
                 crate._entityID = entityID;
                 crate._typeID   = 3;
                 crate._staticID = fileID;
-                crate._position = getCratePosition( x );
+                crate._position = AbsolutePosition{ getCratePosition( x ) };
                 _server.setEntity( crate );
             }
         }
@@ -515,7 +521,7 @@ namespace
                     MMOEntity avatar;
                     avatar._entityID = index == 0 ? kAvatarA : kAvatarB;
                     avatar._typeID   = 1;
-                    avatar._position = _arrAvatar[index];
+                    avatar._position = AbsolutePosition{ _arrAvatar[index] };
                     _server.setEntity( avatar );
                 }
                 syncStaticEntities();

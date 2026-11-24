@@ -34,11 +34,11 @@ namespace sw
         return true;
     }
 
-    void InterestReplicationPolicy::setEntityPosition( uint32 entityID, const float3& position )
+    void InterestReplicationPolicy::setEntityPosition( uint32 entityID, const AbsolutePosition& position )
     {
-        if ( _mapPosition.insert_or_assign( entityID, position ).second )
+        if ( _mapPosition.insert_or_assign( entityID, position._value ).second )
             _listRelevancyChanged.push_back( entityID ); // 모두에게 가던 자리 없는 엔티티가 공간 판단을 받기 시작한다
-        _interest.setPoint( entityID, position );
+        _interest.setPoint( entityID, position._value );
     }
 
     void InterestReplicationPolicy::removeEntity( uint32 entityID )
@@ -48,14 +48,14 @@ namespace sw
         _interest.removePoint( entityID );
     }
 
-    void InterestReplicationPolicy::setObserver( int32 connectionID, const float3& center )
+    void InterestReplicationPolicy::setObserver( int32 connectionID, const AbsolutePosition& center )
     {
         if ( connectionID < 0 )
             return;
         if ( connectionID >= static_cast<int32>( _listObserver.size() ) )
             _listObserver.resize( static_cast<size_t>( connectionID + 1 ) );
         Observer& observer = _listObserver[static_cast<size_t>( connectionID )];
-        observer._center   = center;
+        observer._center   = center._value;
         observer._bActive  = SW_TRUE;
     }
 

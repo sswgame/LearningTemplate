@@ -73,9 +73,8 @@ namespace
                 {
                     server.setEntity( MMOEntity{
                         vector<uint8>{ static_cast<uint8>( ( index + tick ) % 7u ) },
-                        float3{ static_cast<float32>( index % 30 ) * 15.0f, 0.0f, static_cast<float32>( index / 30 ) * 15.0f },
-                        index, 1, 1.0f + static_cast<float32>( index % 3 )
-                    } );
+                        AbsolutePosition{ float3{ static_cast<float32>( index % 30 ) * 15.0f, 0.0f, static_cast<float32>( index / 30 ) * 15.0f } },
+                        index, 1, 1.0f + static_cast<float32>( index % 3 ) } );
                 }
             };
             placeEntities( 0 );
@@ -95,9 +94,8 @@ namespace
                 {
                     server.setEntity( MMOEntity{
                         vector<uint8>{},
-                        float3{ static_cast<float32>( index % 6 ) * 70.0f + static_cast<float32>( tick ), 0.0f, static_cast<float32>( index / 6 ) * 70.0f },
-                        1000u + static_cast<uint32>( index ), 0, 2.0f
-                    } );
+                        AbsolutePosition{ float3{ static_cast<float32>( index % 6 ) * 70.0f + static_cast<float32>( tick ), 0.0f, static_cast<float32>( index / 6 ) * 70.0f } },
+                        1000u + static_cast<uint32>( index ), 0, 2.0f } );
                 }
                 server.update( 1.0f / 20.0f );
                 cluster.step( 1.0 / 20.0 );

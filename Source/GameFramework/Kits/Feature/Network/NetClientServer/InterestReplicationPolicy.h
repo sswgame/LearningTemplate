@@ -19,6 +19,8 @@
 #include "Core/Math/VectorMath.h"
 #include "Core/Network/Replication/NetInterestGrid.h"
 
+#include "Engine/Foundation/WorldOrigin.h"
+
 #include "GameFramework/GameFrameworkExports.h"
 #include "GameFramework/Kits/Feature/Network/NetClientServer/ReplicationServer.h"
 
@@ -41,10 +43,10 @@ namespace sw
         /** @brief 칸 크기와 두 반경을 정하고 비웁니다. 나가는 반경 < 들어오는 반경 등 쓸 수 없는 값이면 오류 로그와 false 이고 아무것도 바꾸지 않습니다. */
         [[nodiscard]] bool initialize( float32 cellSize, float32 enterRadius, float32 leaveRadius );
 
-        void setEntityPosition( uint32 entityID, const float3& position );
+        void setEntityPosition( uint32 entityID, const AbsolutePosition& position );
         void removeEntity( uint32 entityID );
         /** @brief 연결 @p connectionID 의 관찰 중심(보통 그 연결의 폰)을 정합니다. */
-        void setObserver( int32 connectionID, const float3& center );
+        void setObserver( int32 connectionID, const AbsolutePosition& center );
         void removeObserver( int32 connectionID );
         /** @brief 관찰자마다 보이는 목록을 고칩니다(나간 것 빼기 → 들어온 것 더하기). 게임 스레드에서 `sendSnapshots` 앞에 한 번 부릅니다. */
         void updateRelevancy();

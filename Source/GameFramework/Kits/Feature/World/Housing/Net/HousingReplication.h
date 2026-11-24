@@ -33,6 +33,7 @@
 #include "Core/Network/Message/NetMessageTable.h"
 #include "Core/Network/NetTypes.h"
 
+#include "Engine/Foundation/WorldOrigin.h"
 #include "Engine/Net/NetMessageBody.h"
 #include "Engine/Reflection/ReflectionMacros.h"
 
@@ -195,10 +196,10 @@ namespace sw
     /** @brief `update` 한 번 동안 빌려 주는 부지 하나입니다. 레이아웃은 지갑이 묶여 있고(`bindWallet`) 셋 다 `update` 가 끝날 때까지 산다. */
     struct HousingNetPlotRef
     {
-        HousingLayout* _pLayout{ nullptr };
-        Wallet*        _pWallet{ nullptr };
-        uint64*        _pOwner{ nullptr }; ///< 서버 — 부지의 주인 주체(부지가 세이브에 싣는다). 클라이언트는 쓰지 않는다
-        float3         _origin{};          ///< 부지 원점(월드) — 서버의 거리 검증
+        HousingLayout*   _pLayout{ nullptr };
+        Wallet*          _pWallet{ nullptr };
+        uint64*          _pOwner{ nullptr }; ///< 서버 — 부지의 주인 주체(부지가 세이브에 싣는다). 클라이언트는 쓰지 않는다
+        AbsolutePosition _origin{};          ///< 부지 원점 — 서버의 거리 검증
     };
 
     /** @brief 클라이언트가 받은 판정 하나입니다. `_plotIndex` 는 그 `update` 에 넘긴 목록의 자리입니다. */
@@ -224,8 +225,8 @@ namespace sw
         uint32 _sendFailedCount{ 0 };      ///< 보내지 못한 메시지(신뢰 창이 차 연결이 닫혔거나 상태가 상한을 넘었다)
     };
 
-    /** @brief 서버가 아는 요청자의 월드 자리입니다(서버의 아바타). 모르면 false 입니다. */
-    using HousingCallerLocator = Delegate<bool( int32 connectionID, float3& outWorldPosition )>;
+    /** @brief 서버가 아는 요청자의 자리입니다(서버의 아바타 — 절대). 모르면 false 입니다. */
+    using HousingCallerLocator = Delegate<bool( int32 connectionID, AbsolutePosition& outPosition )>;
 
     /** @brief 서버 설정입니다. 기본값이 없다 — `_maxRequestsPerTick` 이 0 이하면 `initialize` 가 오류로 멈춘다. */
     struct HousingServerConfig
