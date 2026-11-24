@@ -82,6 +82,7 @@ namespace sw
     {
     public:
         REFLECT_BODY();
+        SW_REGISTERED_COMPONENT( GrabberComponent );
 
         static constexpr TickGroup kTickGroup = TickGroup::PrePhysics;
 
@@ -90,9 +91,11 @@ namespace sw
 
         /** @brief 폰의 의도 버튼 번호를 찾고 PrePhysics 에서 틱합니다(버튼이 있을 때). */
         void onBeginPlay() override;
+        /** @brief 쥔 것을 내려놓습니다 — 든 쪽이 사라져도 대상은 남고(물리로 돌아간다) 손과 함께 지워지지 않는다. */
+        void onEndPlay() override;
         void onTick( TickContext& context ) override;
 
-        /** @brief 집습니다. 이미 쥐고 있거나 자기 자신이면 false 입니다. 게임 스레드에서 부릅니다. */
+        /** @brief 집습니다. 이미 쥐고 있거나 자기 자신이면 false 입니다. 남이 쥔 것이면 그 손에서 놓게 하고 집습니다(대상 하나를 쥔 손은 하나다). 게임 스레드에서 부릅니다. */
         [[nodiscard]] bool grab( GameObject& target );
         /** @brief 든 것을 @p velocity 로 던집니다. 든 것이 없으면 false 입니다. */
         FUNCTION( Category = "Grab", Exec )
@@ -105,11 +108,14 @@ namespace sw
         GameObject* findNearestGrabbable();
 
         GameObjectHandle getHeld() const { return _held; }
-        bool             isHolding() const { return _held.isValid(); }
-        void             setHoldOffset( const float3& offset ) { _holdOffset = offset; }
+        /** @brief 살아 있는 것을 들고 있으면 true 입니다(들고 있던 것이 지워졌으면 빈손이다). */
+        bool isHolding() const { return findHeld() != nullptr; }
+        void setHoldOffset( const float3& offset ) { _holdOffset = offset; }
 
     private:
         IGrabPhysics& getBackend();
+        /** @brief 살아 있는 든 것입니다. 없으면 nullptr 입니다. */
+        const GameObject* findHeld() const;
 
     private:
         PROPERTY( Category = "Grab", DisplayName = "Hold Offset", Tooltip = "Where the held object sits, in this object's space", Units = m )

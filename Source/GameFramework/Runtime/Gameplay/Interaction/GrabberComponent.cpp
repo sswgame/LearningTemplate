@@ -12,6 +12,7 @@
 #include "Engine/Object/Component/SceneComponent.h"
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Object/GameObject/GameObjectManagerResolve.inl"
+#include "Engine/Object/GameObject/Registry/ComponentRegistry.h"
 #include "Engine/Object/GameObject/Registry/TagIndex.h"
 #include "Engine/Physics/Component/RigidBody2DComponent.h"
 #include "Engine/Physics/Component/RigidBodyComponent.h"
@@ -107,6 +108,12 @@ namespace sw
                              pOwner != nullptr ? pOwner->getName().c_str() : "?", _grabButton.c_str() );
     }
 
+    void GrabberComponent::onEndPlay()
+    {
+        (void)dropHeld(); // 든 것이 없으면 할 일이 없다
+        Component::onEndPlay();
+    }
+
     void GrabberComponent::onTick( TickContext& context )
     {
         Component::onTick( context );
@@ -168,26 +175,41 @@ namespace sw
         return *pService;
     }
 
+    const GameObject* GrabberComponent::findHeld() const
+    {
+        const GameObject*              pOwner   = getOwner();
+        const GameObjectManager* const pManager = pOwner != nullptr ? pOwner->getManager() : nullptr;
+        const GameObject* const        pHeld    = pManager != nullptr && _held.isValid() ? pManager->resolveGameObject( _held ) : nullptr;
+        return pHeld != nullptr && pHeld->isPendingDestroy() == false ? pHeld : nullptr;
+    }
+
     bool GrabberComponent::grab( GameObject& target )
     {
         GameObject* pOwner      = getOwner();
-        const bool  bCannotGrab = pOwner == nullptr || &target == pOwner || isHolding();
+        const bool  bCannotGrab = pOwner == nullptr || pOwner->getMutableManager() == nullptr || &target == pOwner || isHolding();
         if ( bCannotGrab )
             return false;
+        // 남의 손에 있으면 먼저 놓게 한다 — 두 손이 같은 것을 쥔 채면 앞 손의 놓기가 뒤 손에서 떼어 낸다.
+        for ( GrabberComponent* pOther : pOwner->getMutableManager()->getComponentRegistry().getAll<GrabberComponent>() )
+        {
+            if ( pOther != this && pOther->_held == target.getHandle() )
+                (void)pOther->dropHeld();
+        }
         if ( getBackend().attach( *pOwner, target, _holdOffset ) == false )
             return false;
+        target.setKeptWhenParentDestroyed( true ); // 손에 붙어도 든 쪽의 일부가 아니다
         _held = target.getHandle();
         return true;
     }
 
     bool GrabberComponent::throwHeld( const float3& velocity )
     {
-        GameObject*        pOwner   = getOwner();
-        GameObjectManager* pManager = pOwner != nullptr ? pOwner->getMutableManager() : nullptr;
-        GameObject*        pHeld    = pManager != nullptr ? pManager->resolveGameObject( _held ) : nullptr;
-        _held                       = GameObjectHandle{};
+        GameObject* const pOwner = getOwner();
+        GameObject* const pHeld  = isHolding() ? pOwner->getMutableManager()->resolveGameObject( _held ) : nullptr;
+        _held                    = GameObjectHandle{};
         if ( pHeld == nullptr )
             return false;
+        pHeld->setKeptWhenParentDestroyed( false );
         getBackend().release( *pOwner, *pHeld, velocity );
         return true;
     }

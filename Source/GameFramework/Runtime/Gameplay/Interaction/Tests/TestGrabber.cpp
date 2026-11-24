@@ -145,6 +145,45 @@ SW_TEST_CASE( GrabberTest, RigidBodyIsKinematicInTheHandAndThrown )
     SW_EXPECT_TRUE( pBody->getWorldPosition()._y < 11.0f );             // 손을 떠나 중력을 받는다
 }
 
+/** @brief [GrabberTest] 결함: 든 쪽이 지워지면 손에 붙은 것도 함께 지워졌다 — 든 것은 남아 물리로 돌아간다 */
+SW_TEST_CASE( GrabberTest, HeldObjectSurvivesItsHolder )
+{
+    GameObjectManager manager;
+    GameObject*       pHolder  = Util::spawnAt( manager, "Holder", float3{ 0.0f, 10.0f, 0.0f } );
+    GrabberComponent* pGrabber = pHolder->addComponent<GrabberComponent>();
+    GameObject*       pCrate   = manager.createGameObject( hashed_string( "Crate" ) );
+    auto*             pBody    = pCrate->addComponent<RigidBodyComponent>();
+    pBody->setWorldPosition( float3{ 1.0f, 10.0f, 0.0f } );
+    manager.beginPlay();
+    manager.update( Util::kFrame );
+    SW_REQUIRE_TRUE( pGrabber->grab( *pCrate ) );
+    const GameObjectHandle crate = pCrate->getHandle();
+
+    manager.destroyGameObject( pHolder );
+    manager.update( Util::kFrame );
+    manager.update( Util::kFrame );
+    SW_REQUIRE_TRUE( manager.resolveGameObject( crate ) == pCrate );
+    SW_EXPECT_FALSE( pCrate->isPendingDestroy() );
+    SW_EXPECT_FALSE( pCrate->isKeptWhenParentDestroyed() );
+    SW_EXPECT_TRUE( pBody->getBodyType() == PhysicsBodyType::Dynamic );
+}
+
+/** @brief [GrabberTest] 결함: 두 손이 같은 것을 쥐면 앞 손의 놓기가 뒤 손에서 떼어 냈다 — 뒤 손이 집으면 앞 손은 빈손이다 */
+SW_TEST_CASE( GrabberTest, SecondHandTakesTheObjectFromTheFirst )
+{
+    GameObjectManager manager;
+    GrabberComponent* pFirst  = Util::spawnAt( manager, "First", float3{} )->addComponent<GrabberComponent>();
+    GrabberComponent* pSecond = Util::spawnAt( manager, "Second", float3{ 5.0f, 0.0f, 0.0f } )->addComponent<GrabberComponent>();
+    GameObject*       pCrate  = Util::spawnAt( manager, "Crate", float3{ 1.0f, 0.0f, 0.0f } );
+    pSecond->setHoldOffset( float3{} );
+    SW_REQUIRE_TRUE( pFirst->grab( *pCrate ) );
+    SW_REQUIRE_TRUE( pSecond->grab( *pCrate ) );
+    SW_EXPECT_FALSE( pFirst->isHolding() );
+    SW_EXPECT_FALSE( pFirst->dropHeld() );
+    SW_EXPECT_TRUE( pSecond->isHolding() );
+    Util::expectPosition( float3{ 5.0f, 0.0f, 0.0f }, *pCrate );
+}
+
 /** @brief [GrabberTest] 게임이 건 백엔드가 집기 · 놓기를 받고, 백엔드가 거절하면 든 것이 없다. 든 것이 사라지면 놓기는 부르지 않고 빈손이 된다 */
 SW_TEST_CASE( GrabberTest, BoundBackendReceivesTheCalls )
 {
