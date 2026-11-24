@@ -554,6 +554,10 @@ namespace sw
                 listArgument.push_back( L"-fspv-target-env=vulkan1.1" );
                 listArgument.push_back( L"-fvk-use-dx-position-w" );
                 listArgument.push_back( L"-fvk-use-dx-layout" ); // Vulkan 과 같은 이유. 네 백엔드 원소 레이아웃 일치
+                // `&&` · `||` · 삼항을 분기 없이 양쪽을 평가하는 식으로 낸다(HLSL 2018 — DX11 의 FXC 와 같은 뜻이고, 두 백엔드는 같은 에뮬 갈래를 읽는다). HLSL 2021 의 단락 평가는
+                // 루프 조건 · 분기 안에 블록을 더하고, NVIDIA GL(ARB_gl_spirv)이 그 모양을 되풀이해 잘못 컴파일했다(scene_voxelize 의 루프 탈출을 지워 GPU 정지, 그림자 칸 분기).
+                listArgument.push_back( L"-HV" );
+                listArgument.push_back( L"2018" );
                 listArgument.push_back( L"-fvk-b-shift" );
                 listArgument.push_back( L"16" );
                 listArgument.push_back( L"0" );

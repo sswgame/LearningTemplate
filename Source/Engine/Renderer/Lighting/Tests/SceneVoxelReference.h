@@ -226,7 +226,7 @@ namespace sw::test
         struct Job
         {
             uint32                    _firstThread{ 0 };
-            uint32                    _threadCount{ 0 };
+            uint32                    _sliceCount{ 0 };
             uint32                    _wordOffset{ 0 };
             uint32                    _emissionOffset{ 0 };
             uint32                    _emissionRank{ 0 };
@@ -249,7 +249,7 @@ namespace sw::test
             const float4& r4  = listRow[row + 4u];
             Job           job;
             job._firstThread       = readBits( r0._x );
-            job._threadCount       = readBits( r0._y );
+            job._sliceCount        = readBits( r0._y );
             job._wordOffset        = readBits( r0._z );
             job._emissionOffset    = readBits( r0._w );
             job._grid._dimX        = readBits( r1._x );
@@ -286,7 +286,6 @@ namespace sw::test
             for ( uint32 jobIndex = 0; jobIndex < jobCount; ++jobIndex )
             {
                 const Job job = loadJob( listRow, jobIndex );
-                SW_ASSERT( job._firstThread + job._threadCount <= threadCount );
                 if ( bClear )
                 {
                     forEachCell( job._clip, [&job, &inoutWords]( uint32 cellX, uint32 cellY, uint32 cellZ )
@@ -298,14 +297,16 @@ namespace sw::test
                     } );
                     continue;
                 }
-                for ( uint32 triangle = 0; triangle < job._threadCount; ++triangle )
+                const uint32 endThread = jobIndex + 1u < jobCount ? loadJob( listRow, jobIndex + 1u )._firstThread : threadCount;
+                for ( uint32 local = 0; job._firstThread + local < endThread; ++local )
                 {
-                    float3 arrCorner[3];
+                    const uint32 triangle = local / job._sliceCount;
+                    float3       arrCorner[3];
                     for ( uint32 corner = 0; corner < 3; ++corner )
                     {
                         arrCorner[corner] = float3::transform( listPosition[job._firstVertex + listIndex[job._firstIndex + triangle * 3u + corner]], job._world ) - job._grid._origin;
                     }
-                    paintTriangle( job, arrCorner[0], arrCorner[1], arrCorner[2], inoutWords );
+                    paintTriangle( job, arrCorner[0], arrCorner[1], arrCorner[2], local % job._sliceCount, inoutWords );
                 }
             }
         }
@@ -318,8 +319,8 @@ namespace sw::test
             return axis == 1 ? float3{ value._z, value._x, value._y } : value;
         }
 
-        /** @brief 칠하기 — 삼각형 하나를 노멀의 가장 큰 축으로 투영해 켭니다(scene_voxelize.hlsl paintTriangle). */
-        static void paintTriangle( const Job& job, const float3& cornerA, const float3& cornerB, const float3& cornerC, vector<uint32>& inoutWords )
+        /** @brief 칠하기 — 삼각형의 토막 @p slice 를 노멀의 가장 큰 축으로 투영해 켭니다(scene_voxelize.hlsl paintTriangle). */
+        static void paintTriangle( const Job& job, const float3& cornerA, const float3& cornerB, const float3& cornerC, uint32 slice, vector<uint32>& inoutWords )
         {
             const AABB                box{ float3::min( cornerA, float3::min( cornerB, cornerC ) ) + job._grid._origin, float3::max( cornerA, float3::max( cornerB, cornerC ) ) + job._grid._origin };
             SceneVoxelGrid::CellRange range{};
@@ -350,7 +351,10 @@ namespace sw::test
             const float32 slopeU   = n._x / n._z;
             const float32 slopeV   = n._y / n._z;
             const float32 spread   = half * ( MathUtil::abs( slopeU ) + MathUtil::abs( slopeV ) ) + cellSize * kLayerSlack;
-            for ( float32 columnV = first._y; columnV <= last._y; columnV += 1.0f )
+            const uint32  rowCount = static_cast<uint32>( last._y - first._y ) + 1u;
+            const float32 rowFirst = first._y + static_cast<float32>( rowCount * slice / job._sliceCount );
+            const float32 rowEnd   = first._y + static_cast<float32>( rowCount * ( slice + 1u ) / job._sliceCount ); // 끝 제외
+            for ( float32 columnV = rowFirst; columnV < rowEnd; columnV += 1.0f )
             {
                 for ( float32 columnU = first._x; columnU <= last._x; columnU += 1.0f )
                 {
