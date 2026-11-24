@@ -1,0 +1,30 @@
+<?xml version="1.0" encoding="utf-8"?>
+<?asset guid="31ba7c2cb29eff49e929cd4ad4d9e876"?>
+<!--
+  카트 경기 미니게임(GF_KartRacing 디렉터 KartGameModeComponent · GF_Client_KartRacing 의 KartRaceViewComponent) — 카운트다운 → 페달(W, 공통 Move 축) → 사람 차가 달린다 → 발을 떼고 기다린다
+  → AI 셋이 결승에 들어온다 → 시한 뒤 사람은 꼴찌로 순위가 정해진다 → 결과 lose 로 미니게임이 끝난다. 경기는 고정 걸음 · 고정 시드라 부하와 무관하다.
+  감시 값: KartRacing.Phase(2 경기, 3 끝) · .PlayerSpeed · .PlayerFinishPlace · .FinishedCount.
+  실행: App -scenario=game/playground/automation/kartracing.scenario.xml -unattended (체인: ctest -R Scenario.playground)
+-->
+<Scenario name="game.playground.kartracing" fixedDelta="0.0166667" timeoutFrames="900" startAfter="ScenePlaying" startTimeoutFrames="900" input="exclusive">
+	<Launch variable="gv_firstMinigame" value="kartracing"/>
+	<Launch variable="gv_playgroundAutoPlay" value="0"/>
+	<WaitUntil watch="KartRacing.Phase" equals="2" timeoutFrames="600"/>
+	<Expect watch="KartRacing.PlayerFinishPlace" equals="0"/>
+	<ExpectLog id="KartRacing.Go" count="1"/>
+	<Press slot="Key.W"/>
+	<WaitUntil watch="KartRacing.PlayerSpeed" atLeast="8" timeoutFrames="300"/>
+	<Release slot="Key.W"/>
+	<WaitUntil watch="KartRacing.FinishedCount" atLeast="1" timeoutFrames="5400"/>
+	<Expect watch="KartRacing.PlayerFinishPlace" equals="0"/>
+	<WaitUntil watch="KartRacing.Phase" equals="3" timeoutFrames="900"/>
+	<Expect watch="KartRacing.PlayerFinishPlace" equals="4"/>
+	<ExpectLog id="KartRacing.Ended" count="1"/>
+	<!-- 결과를 보인 뒤 스스로 끝난다 — 돌아올 자리가 없으면 입구 씬(마을)으로 간다 -->
+	<WaitUntil watch="Minigame.Active" is="none" timeoutFrames="600"/>
+	<WaitUntil watch="Scene.Transitioning" equals="0" timeoutWallSeconds="60"/>
+	<WaitUntil watch="Minigame.LastResult" is="lose" timeoutWallSeconds="60"/>
+	<ExpectActiveScene path="game/playground/maps/hub.scene.xml"/>
+	<Expect watch="Minigame.LeakCount" equals="0"/>
+	<Pass/>
+</Scenario>

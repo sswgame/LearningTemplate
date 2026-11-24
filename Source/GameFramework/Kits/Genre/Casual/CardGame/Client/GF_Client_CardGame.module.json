@@ -1,0 +1,22 @@
+{
+    "_name": "GF_Client_CardGame",
+    "_version": "1.0.0",
+    "_kind": "Kit",
+    "_description": "카드 게임 키트(클라이언트) — 고르기 입력을 디렉터 명령으로 바꾸고 덱 전투의 손패 · 상대를 보이며 HUD 를 채운다(뷰 · 입력 · HUD). 규칙 · 디렉터는 GF_CardGame",
+    "_listDependency": [
+        {
+            "_name": "GameFramework"
+        },
+        {
+            "_name": "GF_CardGame"
+        }
+    ],
+    "_listConfiguration": [
+        "Dev",
+        "Shipping"
+    ],
+    "_listTarget": [
+        "Client"
+    ],
+    "_bEnabledByDefault": true
+}

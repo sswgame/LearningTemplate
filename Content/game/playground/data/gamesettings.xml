@@ -66,6 +66,12 @@
   <inputMap path="game/playground/ghosthunt/data/ghosthunt.input.xml"/>
   <!-- 생존 공포 미니게임(minigames/survivalhorror)의 쓰기 · 손전등 · 회복 — 꺼진 레이어 SurvivalHorror(미니게임이 켠다). -->
   <inputMap path="game/playground/survivalhorror/data/survivalhorror.input.xml"/>
+  <!-- 카트 경기(minigames/kartracing) · 파티 아레나(minigames/partyarena) · 리듬(minigames/rhythm) · 덱 전투(minigames/cardgame) · 정복(minigames/sidescrollconquest) — 저마다 꺼진 레이어(미니게임이 켠다). -->
+  <inputMap path="game/playground/kartracing/data/kartracing.input.xml"/>
+  <inputMap path="game/playground/partyarena/data/partyarena.input.xml"/>
+  <inputMap path="game/playground/rhythm/data/rhythm.input.xml"/>
+  <inputMap path="game/playground/cardgame/data/cardgame.input.xml"/>
+  <inputMap path="game/playground/sidescrollconquest/data/sidescrollconquest.input.xml"/>
   <!-- 온라인 세션(OnlineSession) — 연결은 게임이 connect 로 연다(접속하지 않으면 혼자 하는 허브다). 서버 설정은 Config/Server/Online/Playground.json.
        onlineHubServerID 는 매치(minigames/shooter3d_match)를 마친 클라이언트가 돌아올 허브 서버의 접속 티켓 이름이다 -->
   <onlineServerAddress>127.0.0.1:17793</onlineServerAddress>

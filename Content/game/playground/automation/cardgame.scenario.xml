@@ -1,0 +1,44 @@
+<?xml version="1.0" encoding="utf-8"?>
+<?asset guid="c9bf42a04aae4a26dbbb85a50323ce82"?>
+<!--
+  덱 전투 미니게임(GF_CardGame 디렉터 CardBattleGameModeComponent · GF_Client_CardGame 의 CardBattleViewComponent) — 같은 카드뿐인 덱이라 섞인 순서와 상관없이 같은 판이다: 공격(비용 1, 피해 6) 여덟 장 · 에너지 3 · 상대 체력 30
+  → 카드 셋을 낸다(30 → 12) → 에너지가 다해 더 내지 못한다 → 턴 끝(상대 공격 5: 50 → 45) → 둘째 턴 둘로 이긴다 → 결과 win 으로 미니게임이 끝난다.
+  고르기는 Move 축을 한 번 기울일 때 한 장이다. 감시 값: CardBattle.Phase(0 내 턴, 1 승리, 2 패배) · .Turn · .EnemyHP · .PlayerHP · .Energy · .HandCount · .SelectedCard.
+  실행: App -scenario=game/playground/automation/cardgame.scenario.xml -unattended (체인: ctest -R Scenario.playground)
+-->
+<Scenario name="game.playground.cardgame" fixedDelta="0.0166667" timeoutFrames="900" startAfter="ScenePlaying" startTimeoutFrames="900" input="exclusive">
+	<Launch variable="gv_firstMinigame" value="cardgame"/>
+	<Launch variable="gv_playgroundAutoPlay" value="0"/>
+	<WaitUntil watch="CardBattle.HandCount" equals="5" timeoutFrames="120"/>
+	<Expect watch="CardBattle.EnemyHP" equals="30"/>
+	<ActionAxis name="Move" x="1" seconds="0.1"/>
+	<WaitUntil watch="CardBattle.SelectedCard" equals="1" timeoutFrames="30"/>
+	<Action name="Card.Confirm"/>
+	<WaitUntil watch="CardBattle.EnemyHP" equals="24" timeoutFrames="30"/>
+	<Action name="Card.Confirm"/>
+	<WaitUntil watch="CardBattle.EnemyHP" equals="18" timeoutFrames="30"/>
+	<Action name="Card.Confirm"/>
+	<WaitUntil watch="CardBattle.EnemyHP" equals="12" timeoutFrames="30"/>
+	<Expect watch="CardBattle.Energy" equals="0"/>
+	<Expect watch="CardBattle.HandCount" equals="2"/>
+	<!-- 에너지가 없으면 내지 못한다 -->
+	<Action name="Card.Confirm"/>
+	<AdvanceSimulation frames="10"/> <!-- 거절은 시간이 내용 -->
+	<Expect watch="CardBattle.HandCount" equals="2"/>
+	<Action name="Card.EndTurn"/>
+	<WaitUntil watch="CardBattle.Turn" equals="2" timeoutFrames="30"/>
+	<Expect watch="CardBattle.PlayerHP" equals="45"/>
+	<Expect watch="CardBattle.HandCount" equals="5"/>
+	<Action name="Card.Confirm"/>
+	<WaitUntil watch="CardBattle.EnemyHP" equals="6" timeoutFrames="30"/>
+	<Action name="Card.Confirm"/>
+	<WaitUntil watch="CardBattle.Phase" equals="1" timeoutFrames="30"/>
+	<ExpectLog id="CardBattle.Finished" count="1"/>
+	<!-- 결과를 보인 뒤 스스로 끝난다 — 돌아올 자리가 없으면 입구 씬(마을)으로 간다 -->
+	<WaitUntil watch="Minigame.Active" is="none" timeoutFrames="600"/>
+	<WaitUntil watch="Scene.Transitioning" equals="0" timeoutWallSeconds="60"/>
+	<WaitUntil watch="Minigame.LastResult" is="win" timeoutWallSeconds="60"/>
+	<ExpectActiveScene path="game/playground/maps/hub.scene.xml"/>
+	<Expect watch="Minigame.LeakCount" equals="0"/>
+	<Pass/>
+</Scenario>

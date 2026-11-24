@@ -1,0 +1,21 @@
+<?asset guid="d2d9056c68a15eabd00a04317606c0de"?>
+<!-- 키트 클라이언트 뷰(PrefabViewBatch)가 쓰는 키 1.8 m 캡슐(발이 자리) — 지휘관 · 카드 전투의 상대. 자리 · 색은 뷰가 정한다. -->
+<Prefab formatVersion="1" name="RuleHero">
+	<GameObject _schemaVersion="0" _name="RuleHero" _bActive="true">
+		<_listComponent>
+			<MeshComponent _localID="163493842152903304" _componentName="MeshComponent"
+			               _bActive="true"
+			               _localPosition="0,0.9,0"
+			               _localRotation="0,0,0"
+			               _localScale="0.9,0.9,0.9"
+			               _attachOwner="None"
+			               _attachOwnerID="0"
+			               _attachComponent="None"
+			               _meshID="Capsule"
+			               _materialPath="engine/materials/defaultmaterial.material"
+			               _boundsRadius="0.866"
+			               _gpuSpinSeed="0"
+			               _bVisible="true" />
+		</_listComponent>
+	</GameObject>
+</Prefab>

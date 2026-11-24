@@ -1,0 +1,21 @@
+<?asset guid="ee5df9761e9e8b5cb7a2e648025636ea"?>
+<!-- 카트 한 대(원시 도형) — 앞이 +Z. 자리 · 방향 · 색은 뷰(KartRaceViewComponent)가 정한다. -->
+<Prefab formatVersion="1" name="Kart">
+	<GameObject _schemaVersion="0" _name="Kart" _bActive="true">
+		<_listComponent>
+			<MeshComponent _localID="163493842152903304" _componentName="MeshComponent"
+			               _bActive="true"
+			               _localPosition="0,0.35,0"
+			               _localRotation="0,0,0"
+			               _localScale="1.2,0.6,2"
+			               _attachOwner="None"
+			               _attachOwnerID="0"
+			               _attachComponent="None"
+			               _meshID="Cube"
+			               _materialPath="engine/materials/defaultmaterial.material"
+			               _boundsRadius="0.866"
+			               _gpuSpinSeed="0"
+			               _bVisible="true" />
+		</_listComponent>
+	</GameObject>
+</Prefab>

@@ -1,0 +1,75 @@
+<?asset guid="a03a699e3f5df2fa2c4c75b90c65421c"?>
+<Scene formatVersion="3" name="PartyTrampoline">
+	<!-- 트램펄린 무대 한 판 — 라운드 · 순위 점수는 data/partyrounds.xml. 무대 · 사람 · 아이템은 뷰가 원시 도형 프리팹으로 세운다. -->
+	<SceneSettings _bStreaming="false" _unloadMargin="0" _maxCellLoadsPerFrame="0" _addToWorldBudgetMicroseconds="0">
+		<_cellGrid _cellSize="0" _loadingRadius="0" />
+	</SceneSettings>
+	<entities>
+		<entity id="1" name="GameCamera">
+			<GameObject _schemaVersion="0" _name="GameCamera" _bActive="true">
+				<_listComponent>
+					<CameraComponent _localID="17709685451340727998" _componentName="CameraComponent"
+					                 _bActive="true"
+					                 _localPosition="0,15,-17"
+					                 _localRotation="0.7227342,0,0"
+					                 _localScale="1,1,1"
+					                 _attachOwner="None"
+					                 _attachOwnerID="0"
+					                 _attachComponent="None"
+					                 _fovY="40.107045"
+					                 _nearZ="0.1"
+					                 _farZ="120"
+					                 _orthoHeight="10"
+					                 _priority="0"
+					                 _role="Game"
+					                 _bOrthographic="false" />
+				</_listComponent>
+			</GameObject>
+		</entity>
+		<entity id="2" name="Sun">
+			<GameObject _schemaVersion="0" _name="Sun" _bActive="true">
+				<_listComponent>
+					<DirectionalLightComponent _localID="51927904365891271" _componentName="DirectionalLightComponent"
+					                           _bActive="true"
+					                           _localPosition="0,0,0"
+					                           _localRotation="0.448254,-2.121679,0"
+					                           _localScale="1,1,1"
+					                           _attachOwner="None"
+					                           _attachOwnerID="0"
+					                           _attachComponent="None"
+					                           _color="1,0.95,0.88"
+					                           _intensity="1.3"
+					                           _ambient="0.35"
+					                           _shadowExtent="30"
+					                           _shadowDistance="60"
+					                           _bCastShadow="true" />
+				</_listComponent>
+			</GameObject>
+		</entity>
+		<!-- 디렉터(규칙) → 클라이언트 뷰(입력 · 모습 · HUD 값) → HUD 문서. 뷰는 같은 오브젝트에 앞서 붙은 디렉터를 찾는다. -->
+		<entity id="3" name="Director">
+			<GameObject _schemaVersion="0" _name="Director" _bActive="true">
+				<_listComponent>
+					<PartyGameModeComponent _localID="16549415557893916493" _componentName="PartyGameModeComponent" _bActive="true"
+					                        _items="game/playground/partyarena/data/trampoline.partyitems.xml"
+					                        _botCount="2"
+					                        _roundLimit="3"
+					                        _intermissionSeconds="2"
+					                        _resultHoldSeconds="3"
+					                        _seed="7"
+					                        _winReward="50" />
+					<PartyArenaViewComponent _localID="10385072913201604217" _componentName="PartyArenaViewComponent" _bActive="true"
+					                         _moveAction="Move"
+					                         _jumpAction="Party.Jump"
+					                         _attackAction="Party.Attack"
+					                         _poundAction="Party.Pound"
+					                         _floorPrefab="game/playground/prefabs/ruleviews/disc.prefab.xml"
+					                         _playerPrefab="game/playground/prefabs/ruleviews/ball.prefab.xml"
+					                         _itemPrefab="game/playground/prefabs/ruleviews/ball.prefab.xml" />
+					<HUDControllerComponent _localID="17122754535480611078" _componentName="HUDControllerComponent" _bActive="true"
+					                        _documentPath="game/playground/partyarena/ui/hud.ui.xml" />
+				</_listComponent>
+			</GameObject>
+		</entity>
+	</entities>
+</Scene>

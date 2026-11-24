@@ -1,0 +1,83 @@
+<?asset guid="4b0558723954958aeaa1ee3bc08eeb2c"?>
+<Scene formatVersion="3" name="KartCircuit">
+	<!-- 카트 경기 한 판 — 트랙은 data/karttracks.xml 의 sunny_oval. 트랙 · 차 · 아이템은 뷰가 원시 도형 프리팹으로 세운다. 카메라는 사람 차를 위에서 따라간다. -->
+	<SceneSettings _bStreaming="false" _unloadMargin="0" _maxCellLoadsPerFrame="0" _addToWorldBudgetMicroseconds="0">
+		<_cellGrid _cellSize="0" _loadingRadius="0" />
+	</SceneSettings>
+	<entities>
+		<entity id="1" name="GameCamera">
+			<GameObject _schemaVersion="0" _name="GameCamera" _bActive="true">
+				<_listComponent>
+					<CameraComponent _localID="17709685451340727998" _componentName="CameraComponent"
+					                 _bActive="true"
+					                 _localPosition="0,34,-24"
+					                 _localRotation="0.9560347,0,0"
+					                 _localScale="1,1,1"
+					                 _attachOwner="None"
+					                 _attachOwnerID="0"
+					                 _attachComponent="None"
+					                 _fovY="40.107045"
+					                 _nearZ="0.1"
+					                 _farZ="300"
+					                 _orthoHeight="10"
+					                 _priority="0"
+					                 _role="Game"
+					                 _bOrthographic="false" />
+					<FollowCameraComponent _localID="15357652970512560881" _componentName="FollowCameraComponent"
+					                       _bActive="true"
+					                       _gameMode="3"
+					                       _offset="0,34,-24"
+					                       _minFarPlane="300" />
+				</_listComponent>
+			</GameObject>
+		</entity>
+		<entity id="2" name="Sun">
+			<GameObject _schemaVersion="0" _name="Sun" _bActive="true">
+				<_listComponent>
+					<DirectionalLightComponent _localID="51927904365891271" _componentName="DirectionalLightComponent"
+					                           _bActive="true"
+					                           _localPosition="0,0,0"
+					                           _localRotation="0.448254,-2.121679,0"
+					                           _localScale="1,1,1"
+					                           _attachOwner="None"
+					                           _attachOwnerID="0"
+					                           _attachComponent="None"
+					                           _color="1,0.95,0.88"
+					                           _intensity="1.3"
+					                           _ambient="0.35"
+					                           _shadowExtent="30"
+					                           _shadowDistance="60"
+					                           _bCastShadow="true" />
+				</_listComponent>
+			</GameObject>
+		</entity>
+		<!-- 디렉터(규칙) → 클라이언트 뷰(입력 · 모습 · HUD 값) → HUD 문서. 뷰는 같은 오브젝트에 앞서 붙은 디렉터를 찾는다. -->
+		<entity id="3" name="Director">
+			<GameObject _schemaVersion="0" _name="Director" _bActive="true">
+				<_listComponent>
+					<KartGameModeComponent _localID="489024443286610025" _componentName="KartGameModeComponent" _bActive="true"
+					                       _trackID="sunny_oval"
+					                       _itemCatalog="game/playground/kartracing/data/circuit.kartitems.xml"
+					                       _vehicle="common/data/vehicles/kart.vehicle.xml"
+					                       _botCount="3"
+					                       _countdownSeconds="3"
+					                       _finishTimeoutSeconds="8"
+					                       _resultHoldSeconds="3"
+					                       _seed="7"
+					                       _firstReward="40"
+					                       _rewardStep="10" />
+					<KartRaceViewComponent _localID="3445377818592114861" _componentName="KartRaceViewComponent" _bActive="true"
+					                       _moveAction="Move"
+					                       _driftAction="Kart.Drift"
+					                       _boostAction="Kart.Boost"
+					                       _itemAction="Kart.Item"
+					                       _trackPrefab="game/playground/prefabs/ruleviews/cube.prefab.xml"
+					                       _kartPrefab="game/playground/kartracing/prefabs/kart.prefab.xml"
+					                       _itemPrefab="game/playground/prefabs/ruleviews/ball.prefab.xml" />
+					<HUDControllerComponent _localID="17122754535480611078" _componentName="HUDControllerComponent" _bActive="true"
+					                        _documentPath="game/playground/kartracing/ui/hud.ui.xml" />
+				</_listComponent>
+			</GameObject>
+		</entity>
+	</entities>
+</Scene>
