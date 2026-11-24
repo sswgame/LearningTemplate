@@ -60,6 +60,8 @@ HEADER_EXTENSIONS = {".h", ".hpp"}
 DIAGNOSTIC_PATTERN = re.compile(r"^(?P<path>.+?):(?P<line>\d+):(?P<column>\d+): (?P<level>warning|error): (?P<message>.*?) \[(?P<check>[^\]]+)\]$")
 #: PCH 를 쓰라는 clang-cl 플래그(/Yu<헤더> · /Fp<파일>) — 붙여 쓴 꼴이라 한 낱말이다.
 PCH_USE_PATTERN = re.compile(r'\s/(Yu|Fp)("[^"]*"|\S*)')
+#: CMake 가 강제 포함하는 미리 컴파일 머리 — 담은 헤더를 본 트리의 절대 경로로 적는다.
+PCH_HEADER_PATTERN = re.compile(r'(\s/FI)"?([^"\s]*cmake_pch\.hxx)"?')
 #: 저장소 include 꼴(`#include "Core/…/X.h"` — `Source/` 기준 경로).
 INCLUDE_PATTERN = re.compile(r'^[ \t]*#[ \t]*include[ \t]*"([^"]+)"', re.MULTILINE)
 #: 캐시 키의 포함 닫힘을 훑는 꼴 — 따옴표 · 꺾쇠, 그리고 둘 다 아닌 매크로 포함(풀지 못해 그 TU 는 캐시하지 않는다).
@@ -93,11 +95,20 @@ def clang_tidy_path(main_root: Path) -> Path:
     return path
 
 
+def expand_pch_header(match: re.Match[str]) -> str:
+    """강제 포함한 `cmake_pch.hxx` 를 그 안의 헤더 강제 포함으로 바꾼다. 아직 만들지 않았으면 그대로 둔다."""
+    path = Path(match.group(2))
+    if not path.is_file():
+        return match.group(0)
+    return "".join(f"{match.group(1)}{header}" for header in INCLUDE_PATTERN.findall(path.read_text(encoding="utf-8", errors="replace")))
+
+
 def rewrite_command(command: str, main_root: Path, tree_root: Path) -> str:
     """PCH 사용 플래그를 빼고, 워크트리면 본 트리 소스 경로(build · Tools 밖)를 이 트리로 바꾼다."""
     command = PCH_USE_PATTERN.sub("", command)
     if main_root.resolve() == tree_root.resolve():
         return command
+    command = PCH_HEADER_PATTERN.sub(expand_pch_header, command)   # 담은 헤더를 직접 강제 포함해 아래에서 이 트리 것이 된다 — 그대로 두면 같은 헤더가 두 번 정의된다
     for separator in ("/", "\\"):
         main_text = str(main_root).replace("\\", "/").replace("/", separator) + separator
         tree_text = str(tree_root).replace("\\", "/").replace("/", separator) + separator
