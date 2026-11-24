@@ -1,7 +1,7 @@
 /**
  * @file GimmickDamageUtil.h
  * @brief 기믹이 오브젝트에 피해를 주는 단일 경로입니다. 대상이 기믹 센서를 가지고 있으면 그 센서의 Damage 입력에 넣고(폭발 연쇄가 쓴다), 체력은 엔진 맞음 길
- *        (`CharacterRayHit::deliverHit` → `GameObjectEvents::_hitReceived`, `HitInfo::_kind` = 피해 종류)로 깎습니다. "game" 채널 이벤트(`GimmickDamageEvent`)는 알림일 뿐입니다.
+ *        (`CharacterRayHit::deliverHit` → `GameObjectEvents::_hitReceived`, `HitInfo::_kind` = 피해 종류)로 깎습니다.
  */
 #pragma once
 #include "Core/Foundation/Types.h"

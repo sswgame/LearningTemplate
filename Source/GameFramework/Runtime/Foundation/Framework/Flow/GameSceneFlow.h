@@ -29,7 +29,7 @@ namespace sw
      * @class GameSceneFlow
      * @brief 게임 인스턴스 서브시스템입니다(`game::findSubsystem<GameSceneFlow>()` · 인스턴스의 `getSubsystem<GameSceneFlow>()`). 언리얼 `UGameInstance` 의 맵 이동 · 로딩 화면 연결 자리입니다.
      * @details `GameInstance` 가 생성자에서 자기 gamesettings · 화면 전환 · 로딩 화면을 넘겨 만들고, 초기화(`onInitialize` 앞)에서 씬 로드 받아들임 알림을 건다 —
-     *          누가 씬 로드를 요청했든(게임 · 시나리오 · 콘솔) 게임 이동이면 로딩 화면을 띄우고 `SceneLoadRequestedEvent` 를 내며, 끝나면 `SceneLoadCompletedEvent` 를 낸다.
+     *          누가 씬 로드를 요청했든(게임 · 시나리오 · 콘솔) 게임 이동이면 로딩 화면을 띄우고, 끝나면 `SceneLoadCompletedEvent` 를 낸다.
      *          프레임마다 인스턴스가 `update` 를 부른다(넷 세션 · 파생 프레임 앞). 게임 스레드에서만 쓴다.
      */
     class SW_GF_API GameSceneFlow final : public GameInstanceSubsystem
@@ -74,7 +74,7 @@ namespace sw
         const string& getEntranceScene() const;
         /**
          * @brief `getFirstScene()` 의 로드를 요청합니다. 열 씬이 없거나 요청이 실패하면 false 입니다(실패는 알립니다).
-         * @details 요청이 들어가면 `SceneLoadRequestedEvent` 를 내고, 그 로드가 끝난(활성 씬이 됐거나 실패한) 뒤의 첫 `update` 가 `SceneLoadCompletedEvent` 를 냅니다.
+         * @details 그 로드가 끝난(활성 씬이 됐거나 실패한) 뒤의 첫 `update` 가 `SceneLoadCompletedEvent` 를 냅니다.
          *          인스턴스가 살아 있는 월드 위에 다시 섰으면(게임 모듈 핫 리로드 · 백엔드 교체 — 초기화 때 이미 활성 씬이 있었다) 요청하지 않고 false 다.
          *          그 씬은 곧 스냅샷으로 되살아나거나 에디터가 연 씬이다. 언리얼의 핫 리로드도 `GameInstance::Init` 을 다시 부르지 않는다.
          */
@@ -119,11 +119,11 @@ namespace sw
         };
 
         /**
-         * @brief @p scenePath 의 로드를 `SceneManager` 에 게임 이동으로 맡깁니다. 로딩 화면 · `SceneLoadRequestedEvent` 는 `onSceneLoadRequested` 가 붙인다.
+         * @brief @p scenePath 의 로드를 `SceneManager` 에 게임 이동으로 맡깁니다. 로딩 화면은 `onSceneLoadRequested` 가 붙인다.
          * @return 경로가 비었으면 조용히 false, 맡기지 못했으면 알리고 false 입니다(그때는 이벤트도 없습니다).
          */
         [[nodiscard]] bool requestLoadScene( const string& scenePath, const utf8* pWhich );
-        /** @brief 씬 로드 받아들임 알림입니다. 게임 이동(`SceneLoadKind::Travel`)이면 대기 목록에 넣고 로딩 화면을 띄우고 `SceneLoadRequestedEvent` 를 냅니다. */
+        /** @brief 씬 로드 받아들임 알림입니다. 게임 이동(`SceneLoadKind::Travel`)이면 대기 목록에 넣고 로딩 화면을 띄웁니다. */
         void onSceneLoadRequested( const string& scenePath, SceneLoadKind kind, const TaskFuture<Scene*>& future );
         /** @brief 끝난 씬 로드마다 `SceneLoadCompletedEvent` 를 내고 묶인 함수를 부릅니다(요청 순서). 받는 쪽이 새 로드를 요청해도 된다 — 끝난 것을 먼저 목록에서 뺀 뒤 알린다. */
         void publishFinishedSceneLoads();

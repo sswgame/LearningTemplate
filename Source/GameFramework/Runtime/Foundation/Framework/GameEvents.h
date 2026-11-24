@@ -4,10 +4,9 @@
  * @details 프레임워크가 정해진 시점에 이 이벤트를 낸다.
  *          모두 `GameEventUtil::send` 로 내며, 버스 스레드면 즉시, 아니면 다음 `processEvents` 에서 전달된다.
  *          - `SaveGameSavedEvent` 와 `SaveGameLoadedEvent`: `GameSaveSlots::save` 과 `load`(자동 저장 되돌리기 `AutosaveManager::restoreLatest` · `restoreCheckpoint` 도 같은 적용 길)이 맡긴 슬롯 쓰기 · 읽기가 끝난 뒤 낸다 — 세이브가 다른 씬이면 그 씬이 열려 적용한 뒤다. 성공과 실패 모두 낸다.
- *          - `SceneLoadRequestedEvent`: `GameSceneFlow` 가 게임 이동 씬 로드를 받아들일 때(`requestFirstScene` · `requestEntranceScene` · `requestTitleScene` 포함) 씬 로드를 요청할 때 낸다.
- *          - `SceneLoadCompletedEvent`: 그 로드가 활성 씬이 되었거나 실패한 뒤의 첫 `GameInstance::update` 에서 낸다.
+ *          - `SceneLoadCompletedEvent`: 게임 이동 씬 로드가 활성 씬이 되었거나 실패한 뒤의 첫 `GameInstance::update` 에서 낸다. 요청은 씬 매니저가 알린다(`SceneManager::onSceneLoadRequested`).
  *
- *          언리얼의 `FCoreUObjectDelegates::PreLoadMap` 과 `PostLoadMapWithWorld` 에 해당한다. 낼 시점이 없는 이벤트(일시정지 등)는 두지 않는다.
+ *          언리얼의 `FCoreUObjectDelegates::PostLoadMapWithWorld` 에 해당한다. 낼 시점이 없는 이벤트(일시정지 등)는 두지 않는다.
  *          다른 채널 이벤트는 킷이 자기 헤더에 둔다(`ActionCombatEvents.h` 의 룸 이벤트). 유닛의 피해는 `DamageEvents.h` 다.
  *          `SceneManager` 를 직접 불러 한 씬 로드는 레벨 이벤트를 내지 않는다. 엔진은 GameFramework 를 모르기 때문이다.
  */
@@ -35,7 +34,7 @@ namespace sw
     // ------------------------------------------------------------------------------
     // 2) 세이브와 로드: GameInstance
     // ------------------------------------------------------------------------------
-    /** @brief 게임 상태 저장(`GameSaveSlots::save`)이 끝났음을 알립니다. 프레임워크의 받는 쪽은 없다 — 결과는 로그와 `GameSaveSlots::getCounts` 가 말하고, 이 이벤트는 게임의 저장 알림 몫이다. */
+    /** @brief 게임 상태 저장(`GameSaveSlots::save`)이 끝났음을 알립니다. 실패는 `LoadingScreenController` 가 대화 상자로 알린다. */
     struct SW_GF_API SaveGameSavedEvent final : EventBase
     {
         string _slot;             ///< 쓴(쓰려 한) 로컬 저장 슬롯 이름
@@ -46,7 +45,7 @@ namespace sw
 
 namespace sw
 {
-    /** @brief 게임 상태 불러오기(`GameSaveSlots::load`)가 끝났음을 알립니다. 프레임워크의 받는 쪽은 없다 — 되살린 상태는 컴포넌트가 복원 길로 직접 받고(자동 저장은 `AppliedFunction`), 이 이벤트는 게임의 알림 몫이다. */
+    /** @brief 게임 상태 불러오기(`GameSaveSlots::load`)가 끝났음을 알립니다. 실패는 `LoadingScreenController` 가 대화 상자로 알린다. 되살린 상태는 컴포넌트가 복원 길로 직접 받는다. */
     struct SW_GF_API SaveGameLoadedEvent final : EventBase
     {
         string _slot;             ///< 읽은(읽으려 한) 로컬 저장 슬롯 이름
@@ -60,16 +59,6 @@ namespace sw
     // ------------------------------------------------------------------------------
     // 3) 레벨(씬) 로드: GameInstance
     // ------------------------------------------------------------------------------
-    /** @brief 프레임워크가 씬 로드를 맡겼음을 알립니다. 알림일 뿐 요청 명령이 아니며, 받아서 로드하는 쪽은 없습니다(로딩 화면은 씬 흐름이 직접 띄운다 — 이 이벤트는 게임의 음악 · 연출 몫이다). */
-    struct SW_GF_API SceneLoadRequestedEvent final : EventBase
-    {
-        string _levelName; ///< 로드할 씬 경로
-        SW_DECLARE_GAMEPLAY_EVENT( SceneLoadRequestedEvent );
-    };
-} // namespace sw
-
-namespace sw
-{
     /** @brief 맡긴 씬 로드가 끝났음을 알립니다. 성공이면 그 씬이 이미 활성 씬입니다. 실패는 로딩 화면 컨트롤러(`LoadingScreenController`)가 대화 상자로 알린다. */
     struct SW_GF_API SceneLoadCompletedEvent final : EventBase
     {

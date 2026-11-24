@@ -1,4 +1,4 @@
-// QuestLogComponentTest — 일지 주인이 "game" 채널의 쓰러짐 · 상호작용 완료를 구독해, 자기가 조종하는 폰이 한 것만 Defeat(대상 태그) · Interact(이름)로 세는지 본다(nogpu, 헤드리스).
+// QuestLogComponentTest — 일지 주인이 "game" 채널의 쓰러짐 · 상호작용 완료 · 연출 신호를 구독해, 자기가 조종하는 폰이 한 것만 Defeat(대상 태그) · Interact(이름) · Cue(신호 이름)로 세는지 본다(nogpu, 헤드리스).
 #include "pch.h"
 
 #include "Core/Event/EventDispatcher.h"
@@ -14,6 +14,7 @@
 #include "GameFramework/Runtime/Foundation/Framework/GameEventUtil.h"
 #include "GameFramework/Runtime/Foundation/Framework/GameService.h"
 #include "GameFramework/Runtime/Gameplay/Ability/AbilityEvents.h"
+#include "GameFramework/Runtime/Gameplay/Gimmick/GimmickEvents.h"
 #include "GameFramework/Runtime/Gameplay/Interaction/InteractionAuthority.h"
 #include "GameFramework/Runtime/Gameplay/Quest/QuestCatalog.h"
 #include "GameFramework/Runtime/Gameplay/Quest/QuestLogComponent.h"
@@ -24,6 +25,7 @@ namespace
 {
     constexpr const utf8* kQuestXML = R"(<QuestCatalog>
   <Quest id="hunt"><Stage id="kill" next="end"><Objective kind="Defeat" target="Enemy.Wolf" count="2"/></Stage><Stage id="end" complete="true"/></Quest>
+  <Quest id="scare"><Stage id="enter" next="end"><Objective kind="Cue" target="Cue.Scare"/></Stage><Stage id="end" complete="true"/></Quest>
   <Quest id="shrine"><Stage id="pray" next="end"><Objective kind="Interact" target="pray"/></Stage><Stage id="end" complete="true"/></Quest>
 </QuestCatalog>)";
 } // namespace
@@ -59,6 +61,7 @@ SW_TEST_CASE( QuestLogComponentTest, CountsOnlyWhatItsOwnPawnDid )
     QuestLog& log = pQuests->getQuestLog();
     SW_REQUIRE_TRUE( log.start( hashed_string( "hunt" ), 1 ) == QuestStartResult::Ok );
     SW_REQUIRE_TRUE( log.start( hashed_string( "shrine" ), 1 ) == QuestStartResult::Ok );
+    SW_REQUIRE_TRUE( log.start( hashed_string( "scare" ), 1 ) == QuestStartResult::Ok );
 
     AbilityOwnerDiedEvent died;
     died._target     = pEnemy->getHandle();
@@ -81,4 +84,15 @@ SW_TEST_CASE( QuestLogComponentTest, CountsOnlyWhatItsOwnPawnDid )
     completed._request._interactor = pPawnObject->getHandle();
     GameEventUtil::send( completed );
     SW_EXPECT_TRUE( log.getStatus( hashed_string( "shrine" ) ) == QuestStatus::Completed );
+
+    GimmickCueEvent cue;
+    cue._cue    = hashed_string( "Cue.Scare" );
+    cue._target = pStranger->getHandle();
+    GameEventUtil::send( cue ); // 남이 트리거에 들어갔다 — 세지 않는다
+    cue._target = GameObjectHandle{};
+    GameEventUtil::send( cue ); // 부른 쪽이 없는 신호(폭발 · 파괴) — 세지 않는다
+    SW_EXPECT_TRUE( log.getStatus( hashed_string( "scare" ) ) == QuestStatus::Active );
+    cue._target = pPawnObject->getHandle();
+    GameEventUtil::send( cue );
+    SW_EXPECT_TRUE( log.getStatus( hashed_string( "scare" ) ) == QuestStatus::Completed );
 }

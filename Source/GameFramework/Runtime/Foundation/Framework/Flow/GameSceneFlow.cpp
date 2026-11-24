@@ -175,10 +175,6 @@ namespace sw
         _listPendingSceneLoad.push_back( PendingSceneLoad{ scenePath, future, _saveLock.block( "scene.loading" ), SceneLoadedFunction{} } );
         if ( _pLoadingScreen != nullptr && _pLoadingScreen->hasLoadingScreenDocument() )
             (void)_pLoadingScreen->beginLoading();
-
-        SceneLoadRequestedEvent event{};
-        event._levelName = scenePath;
-        GameEventUtil::send( event );
     }
 
     void GameSceneFlow::publishFinishedSceneLoads()

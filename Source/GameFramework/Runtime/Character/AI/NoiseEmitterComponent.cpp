@@ -10,8 +10,7 @@
 #include "Engine/Object/GameObject/Tick/TickInterval.h"
 
 #include "GameFramework/Runtime/Character/AI/AIStimulusSourceComponent.h"
-#include "GameFramework/Runtime/Foundation/Framework/GameEventUtil.h"
-#include "GameFramework/Runtime/Gameplay/Gimmick/GimmickEvents.h"
+#include "GameFramework/Runtime/Gameplay/Gimmick/GimmickUtil.h"
 #include "GameFramework/Runtime/Gameplay/Gimmick/Trigger/GimmickSensorComponent.h"
 
 namespace sw
@@ -47,12 +46,8 @@ namespace sw
         AIStimulusSourceComponent* pStimulus = pOwner->getComponent<AIStimulusSourceComponent>();
         if ( pStimulus != nullptr )
             pStimulus->reportNoise( _noiseRadius );
-        GimmickNoiseEvent event;
-        event._source = pOwner->getHandle();
-        event._radius = radius;
-        if ( pOwner->getPrimarySceneComponent() != nullptr )
-            event._position = pOwner->getPrimarySceneComponent()->getWorldPosition();
-        GameEventUtil::send( event );
+        const SceneComponent* pRoot = pOwner->getPrimarySceneComponent();
+        GimmickUtil::sendCue( *pOwner, hashed_string( "Noise" ), pRoot != nullptr ? pRoot->getWorldPosition() : float3{}, radius );
     }
 
     void NoiseEmitterComponent::onTick( TickContext& context )

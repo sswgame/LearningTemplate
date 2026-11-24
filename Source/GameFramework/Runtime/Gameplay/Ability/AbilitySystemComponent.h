@@ -104,7 +104,7 @@ namespace sw
      *             데이터로 하면 `_abilitySetID` 가 가리키는 카탈로그의 `<AbilitySet>` 이 플레이 시작에 어트리뷰트 세트, 어빌리티, 시작 이펙트, 태그를 한 번에 준다.
      *          2. 어빌리티를 준다(`giveAbility`, `giveAbilityByID`). 입력 번호를 주면 `abilityInputPressed( 번호 )` 가 어빌리티를 발동한다.
      *          3. 어빌리티는 이펙트 스펙(`makeOutgoingSpec`)을 만들어 자기 자신이나 다른 오브젝트에 적용한다(`applyGameplayEffectSpecToTarget`).
-     *          4. 게임은 델리게이트(어트리뷰트, 태그, 큐, 이벤트)나 "game" 채널(`AbilityPresentationEvent`, `AbilityOwnerDiedEvent`)로 반응한다.
+     *          4. 게임은 델리게이트(어트리뷰트, 태그, 큐, 이벤트)나 "game" 채널(`AbilityOwnerDiedEvent`)로 반응한다.
      *
      *          **시간**: 컴포넌트 틱이 `advanceTime( 프레임 시간 )` 을 부른다. 시간으로 움직일 것(기간 · 주기 이펙트 — 쿨다운 포함, 켜진 어빌리티와 그 작업)이
      *          없으면 주 틱을 끄고 생기면 켠다(`refreshTickEnabled` — 이펙트 · 어빌리티가 붙고 떨어지는 자리에서만 부른다). 그래서 쉬는 동안 `getTime` 은 멈춘다.
@@ -405,7 +405,7 @@ namespace sw
         static void sendGameplayEventToTarget( AbilitySystemComponent* pTarget, TagID eventTag, const AbilityEventData& payload );
         /** @brief @p eventTag 나 그 하위 태그의 이벤트가 오면 호출할 델리게이트를 등록합니다. 돌려준 구독이 사라지면 뗍니다. 태그가 무효면 빈 구독입니다. */
         [[nodiscard]] Subscription registerGameplayEvent( TagID eventTag, const AbilityEventDelegate& delegate );
-        /** @brief 이 오브젝트의 이펙트가 큐를 낼 때마다 호출할 델리게이트를 등록합니다. 채널 이벤트보다 먼저 호출됩니다. 돌려준 구독이 사라지면 뗍니다. */
+        /** @brief 이 오브젝트의 이펙트가 큐를 낼 때마다 호출할 델리게이트를 등록합니다. 연출 창구보다 먼저 호출됩니다. 돌려준 구독이 사라지면 뗍니다. */
         [[nodiscard]] Subscription registerGameplayCue( const AbilityPresentationDelegate& delegate );
 
         // --------------------------------------------------------------------------

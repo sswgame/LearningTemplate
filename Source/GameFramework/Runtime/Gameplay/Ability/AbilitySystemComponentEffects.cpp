@@ -6,7 +6,7 @@
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Object/GameObject/GameObjectManagerResolve.inl"
 
-#include "GameFramework/Runtime/Foundation/Framework/GameEventUtil.h"
+#include "GameFramework/Runtime/Foundation/Framework/GameService.h"
 #include "GameFramework/Runtime/Foundation/Framework/Presentation/IAbilityCueSink.h"
 #include "GameFramework/Runtime/Gameplay/Ability/Ability.h"
 #include "GameFramework/Runtime/Gameplay/Ability/AbilityCatalog.h"
@@ -716,7 +716,6 @@ namespace sw
             cueEvent._magnitude  = magnitude;
             cueEvent._phase      = phase;
             _gameplayCueMulticast.broadcast( cueEvent );
-            GameEventUtil::send( cueEvent );
             playCueDef( cueTag, phase );
         }
     }
