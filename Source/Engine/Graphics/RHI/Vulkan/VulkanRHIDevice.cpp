@@ -128,7 +128,7 @@ namespace sw
         , _pCmdDrawIndirectCount{ nullptr }
         , _pCmdDrawIndexedIndirectCount{ nullptr }
         , _breadcrumbBuffer{ VK_NULL_HANDLE }
-        , _breadcrumbMemory{ VK_NULL_HANDLE }
+        , _breadcrumbMemory{}
         , _pBreadcrumbMapped{ nullptr }
         , _bTimestampEnabled{ SW_FALSE }
         , _timestampRing{}
@@ -154,9 +154,9 @@ namespace sw
         , _listCmdListDescriptorPoolSet{}
         , _bindlessDummyImage{ nullptr }
         , _bindlessDummyView{ nullptr }
-        , _bindlessDummyMemory{ nullptr }
+        , _bindlessDummyMemory{}
         , _dummyUBO{ nullptr }
-        , _dummyUBOMemory{ nullptr }
+        , _dummyUBOMemory{}
         , _pipelineStates{}
         , _pipelineCache{ nullptr }
         , _transferSerials{ deviceGeneration }
@@ -187,7 +187,7 @@ namespace sw
     VulkanRHIDevice::VulkanHeapMemory::~VulkanHeapMemory()
     {
         if ( _pOwner != nullptr )
-            _pOwner->freeDeviceMemory( _memory );
+            _pOwner->freeHeap( _memory );
     }
 
     IRHIResourceFactory* VulkanRHIDevice::getResourceFactory()
@@ -220,13 +220,7 @@ namespace sw
         _width          = desc._width;
         _height         = desc._height;
 
-        // 할당 수 여유는 EngineConfig 의 `_rhi` 값이다. 없으면(0) 짐작하지 않고 멈춘다.
-        if ( deviceDesc._allocationCountReserve == 0 )
-        {
-            SW_LOG_ERROR_ID( "Vulkan.AllocationCountReserveMissing", "EngineConfig _rhi._allocationCountReserve must be > 0 - the Vulkan backend does not start" );
-            return false;
-        }
-        _allocationCountReserve = deviceDesc._allocationCountReserve;
+        // 업로드 스테이징 크기는 EngineConfig 의 `_rhi` 값이다. 없으면(0) 짐작하지 않고 멈춘다.
         if ( deviceDesc._uploadStagingBytes == 0 )
         {
             SW_LOG_ERROR_ID( "Vulkan.UploadStagingMissing", "EngineConfig _rhi._uploadStagingMegabytes must be > 0 - the Vulkan backend does not start" );
@@ -314,12 +308,6 @@ namespace sw
                 return false;
             }
 
-            {
-                VkPhysicalDeviceProperties limitProperties{};
-                vkGetPhysicalDeviceProperties( _physicalDevice, &limitProperties );
-                _memoryAccount.setLimit( limitProperties.limits.maxMemoryAllocationCount, _allocationCountReserve );
-            }
-
             if ( createLogicalDevice() == false )
                 return false;
             markInitPhase( "device" );
@@ -390,9 +378,11 @@ namespace sw
                                                  offset >= pRecord->_cbSlotSize;
         if ( bCannotUpdateConstantBuffer )
             return;
-        const uint32 slotSize  = pRecord->_cbSlotSize;
-        const uint32 copyBytes = MathUtil::min( size, slotSize - offset ); // 페이지 구간이면 그 칸 안에서 자른다
-        Memory::copy( pRecord->_memory._pMapped + static_cast<size_t>( slot ) * slotSize + offset, pData, copyBytes );
+        const uint32 slotSize    = pRecord->_cbSlotSize;
+        const uint32 copyBytes   = MathUtil::min( size, slotSize - offset ); // 페이지 구간이면 그 칸 안에서 자른다
+        const size_t writeOffset = static_cast<size_t>( slot ) * slotSize + offset;
+        Memory::copy( pRecord->_memory._pMapped + writeOffset, pData, copyBytes );
+        _memoryAllocator.flush( pRecord->_memory, writeOffset, copyBytes );
     }
 
     void VulkanRHIDevice::fillConstantBufferSlot()
@@ -444,20 +434,13 @@ namespace sw
 
             _gpuBuffers.forEach( [this]( VulkanBufferRecord& record )
             {
-                if ( record._buffer != VK_NULL_HANDLE )
-                    vkDestroyBuffer( _device, record._buffer, nullptr );
-                _memoryAllocator.release( record._memory );
+                _memoryAllocator.destroyBuffer( record._buffer, record._memory );
             } );
             _gpuBuffers.clear();
             _constantBufferMirror.clear();
             for ( StructuredUploadSlot& slot : _arrStructuredUploadSlot )
             {
-                if ( slot._pMapped != nullptr && slot._memory != VK_NULL_HANDLE )
-                    vkUnmapMemory( _device, slot._memory );
-                if ( slot._buffer != VK_NULL_HANDLE )
-                    vkDestroyBuffer( _device, slot._buffer, nullptr );
-                if ( slot._memory != VK_NULL_HANDLE )
-                    freeDeviceMemory( slot._memory );
+                _memoryAllocator.destroyBuffer( slot._buffer, slot._memory );
                 slot = StructuredUploadSlot{};
             }
             _recordingState._geometry = RHIGeometryBindings{};
@@ -476,9 +459,7 @@ namespace sw
                     vkDestroyImageView( _device, record._imageView, nullptr );
                 if ( record._sampleView != VK_NULL_HANDLE )
                     vkDestroyImageView( _device, record._sampleView, nullptr );
-                if ( record._image != VK_NULL_HANDLE )
-                    vkDestroyImage( _device, record._image, nullptr );
-                _memoryAllocator.release( record._memory );
+                _memoryAllocator.destroyImage( record._image, record._memory );
             } );
             // 힙 핸들 표를 텍스처 표보다 먼저 비운다 — 이미지는 위에서 모두 지웠고, 남은 참조(레코드 · 해제 대리자)가 놓일 때 장치가 아직 살아 있다.
             _mapTransientHeap.clear();
@@ -531,31 +512,17 @@ namespace sw
                 if ( pPoolSet != nullptr )
                     destroyDescriptorPoolSet( *pPoolSet );
             }
-            if ( _dummyUBO )
-            {
-                vkDestroyBuffer( _device, _dummyUBO, nullptr );
-                _dummyUBO = nullptr;
-            }
-            if ( _dummyUBOMemory )
-            {
-                freeDeviceMemory( _dummyUBOMemory );
-                _dummyUBOMemory = nullptr;
-            }
+            _memoryAllocator.destroyBuffer( _dummyUBO, _dummyUBOMemory );
+            _dummyUBO       = nullptr;
+            _dummyUBOMemory = VulkanAllocation{};
             if ( _bindlessDummyView )
             {
                 vkDestroyImageView( _device, _bindlessDummyView, nullptr );
                 _bindlessDummyView = nullptr;
             }
-            if ( _bindlessDummyImage )
-            {
-                vkDestroyImage( _device, _bindlessDummyImage, nullptr );
-                _bindlessDummyImage = nullptr;
-            }
-            if ( _bindlessDummyMemory )
-            {
-                freeDeviceMemory( _bindlessDummyMemory );
-                _bindlessDummyMemory = nullptr;
-            }
+            _memoryAllocator.destroyImage( _bindlessDummyImage, _bindlessDummyMemory );
+            _bindlessDummyImage  = nullptr;
+            _bindlessDummyMemory = VulkanAllocation{};
 
             // 타임스탬프 쿼리 풀은 계측을 켠 적이 있으면 있다. 안 부수면 검증 레이어가 종료 때 새는 객체로 잡는다.
             if ( _timestampPool != VK_NULL_HANDLE )
@@ -625,7 +592,7 @@ namespace sw
             }
             savePipelineCache();
             destroyBreadcrumbBuffer();
-            _memoryAllocator.releaseAll(); // 자원 · 해제 큐가 모두 놓은 뒤다
+            _memoryAllocator.shutdown(); // 자원 · 해제 큐가 모두 놓은 뒤다 — 남은 할당은 이름과 함께 오류로 남는다
             vkDestroyDevice( _device, nullptr );
             _device = nullptr;
         }
@@ -647,47 +614,6 @@ namespace sw
     {
         const VulkanTextureRecord* pTex = resolveTexture( texture );
         return ( pTex != nullptr && pTex->_imageView != VK_NULL_HANDLE ) ? reinterpret_cast<void*>( pTex->_imageView ) : nullptr;
-    }
-
-    bool VulkanRHIDevice::findMemoryType( uint32 typeFilter, uint32 properties, uint32& outIndex )
-    {
-        VkPhysicalDeviceMemoryProperties memProperties;
-        vkGetPhysicalDeviceMemoryProperties( _physicalDevice, &memProperties );
-        for ( uint32 typeIndex = 0; typeIndex < memProperties.memoryTypeCount; typeIndex++ )
-        {
-            if ( ( typeFilter & ( 1 << typeIndex ) ) && ( memProperties.memoryTypes[typeIndex].propertyFlags & properties ) == properties )
-            {
-                outIndex = typeIndex;
-                return true;
-            }
-        }
-        return false;
-    }
-
-    bool VulkanRHIDevice::allocateDeviceMemory( const VkMemoryAllocateInfo& allocInfo, VkDeviceMemory& outMemory )
-    {
-        outMemory = VK_NULL_HANDLE;
-        if ( _memoryAccount.tryAcquire() == false )
-        {
-            SW_LOG_ERROR_ID( "Vulkan.AllocationCountLimit", "Vulkan device memory allocations reached %# (maxMemoryAllocationCount minus EngineConfig _rhi._allocationCountReserve) - this allocation (%# bytes) fails",
-                             _memoryAccount.getUsableCount(), static_cast<uint64>( allocInfo.allocationSize ) );
-            return false;
-        }
-        if ( vkAllocateMemory( _device, &allocInfo, nullptr, &outMemory ) != VK_SUCCESS )
-        {
-            _memoryAccount.release();
-            outMemory = VK_NULL_HANDLE;
-            return false;
-        }
-        return true;
-    }
-
-    void VulkanRHIDevice::freeDeviceMemory( VkDeviceMemory memory )
-    {
-        if ( memory == VK_NULL_HANDLE || _device == VK_NULL_HANDLE )
-            return;
-        vkFreeMemory( _device, memory, nullptr );
-        _memoryAccount.release();
     }
 
     VulkanRHIDevice::VulkanBufferRecord* VulkanRHIDevice::resolveAllocatedBuffer( RHIBufferHandle handle )
@@ -712,113 +638,34 @@ namespace sw
 
     bool VulkanRHIDevice::queryGPUMemoryBudgetInternal( RHIMemoryBudget& outBudget )
     {
-        if ( _bMemoryBudget == SW_FALSE || _physicalDevice == VK_NULL_HANDLE )
-            return false;
-
-        VkPhysicalDeviceMemoryBudgetPropertiesEXT budgetProperties{};
-        budgetProperties.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_MEMORY_BUDGET_PROPERTIES_EXT;
-        VkPhysicalDeviceMemoryProperties2 memoryProperties{};
-        memoryProperties.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_MEMORY_PROPERTIES_2;
-        memoryProperties.pNext = &budgetProperties;
-        vkGetPhysicalDeviceMemoryProperties2( _physicalDevice, &memoryProperties );
-
-        // 사용량은 모든 힙(로컬 + 호스트 가시)의 합이다 — 추적기가 호스트 가시 버퍼도 센다. 예산 · 남은 양은 로컬 힙만 본다.
-        uint64 usageBytes{ 0 };
-        uint64 localUsageBytes{ 0 };
-        uint64 localBudgetBytes{ 0 };
-        for ( uint32 heapIndex = 0; heapIndex < memoryProperties.memoryProperties.memoryHeapCount; ++heapIndex )
-        {
-            usageBytes += budgetProperties.heapUsage[heapIndex];
-            const bool bDeviceLocal = ( memoryProperties.memoryProperties.memoryHeaps[heapIndex].flags & VK_MEMORY_HEAP_DEVICE_LOCAL_BIT ) != 0;
-            if ( bDeviceLocal == false )
-                continue;
-            localUsageBytes += budgetProperties.heapUsage[heapIndex];
-            localBudgetBytes += budgetProperties.heapBudget[heapIndex];
-        }
-        outBudget._usageBytes      = usageBytes;
-        outBudget._budgetBytes     = localBudgetBytes;
-        outBudget._availableBytes  = localBudgetBytes > localUsageBytes ? localBudgetBytes - localUsageBytes : 0;
-        outBudget._scope           = RHIMemoryScope::Process;
-        outBudget._bUsageKnown     = SW_TRUE;
-        outBudget._bBudgetKnown    = SW_TRUE;
-        outBudget._bAvailableKnown = SW_TRUE;
-        return true;
+        return _memoryAllocator.queryBudget( outBudget );
     }
 
-    RHIBufferHandle VulkanRHIDevice::createVulkanBuffer( uint64 sizeBytes, uint32 usageFlags, const void* pInitialData, uint32 cbSlotSize, VulkanBufferMemory placement )
+    RHIBufferHandle VulkanRHIDevice::createVulkanBuffer( uint64 sizeBytes, uint32 usageFlags, uint32 cbSlotSize, VulkanBufferMemory placement, const utf8* pName )
     {
         if ( _device == nullptr || sizeBytes == 0 )
             return 0;
-        if ( placement == VulkanBufferMemory::DeviceLocal && pInitialData != nullptr )
-        {
-            SW_LOG_ERROR_ID( "Vulkan.DeviceLocalInitialData", "createVulkanBuffer: a device-local buffer takes no initial data - upload it with a staging copy" );
-            return 0;
-        }
-
-        const uint64 alignedSize = MathUtil::align( sizeBytes, static_cast<uint64>( constant::render::kConstantBufferAlignment ) );
 
         VkBufferCreateInfo bufferInfo{};
         bufferInfo.sType       = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO;
-        bufferInfo.size        = alignedSize;
+        bufferInfo.size        = MathUtil::align( sizeBytes, static_cast<uint64>( constant::render::kConstantBufferAlignment ) );
         bufferInfo.usage       = usageFlags;
         bufferInfo.sharingMode = VK_SHARING_MODE_EXCLUSIVE;
 
-        VkBuffer buffer = VK_NULL_HANDLE;
-        if ( vkCreateBuffer( _device, &bufferInfo, nullptr, &buffer ) != VK_SUCCESS )
-        {
-            SW_LOG_ERROR_ID( "Vulkan.FailedCreateVkBufferUsage", "Failed to create VkBuffer (usage=0x%#).", usageFlags );
-            return 0;
-        }
-
-        VkMemoryRequirements memRequirements;
-        vkGetBufferMemoryRequirements( _device, buffer, &memRequirements );
-
-        uint32       memoryTypeIndex{ 0 };
-        const uint32 memoryProperties = placement == VulkanBufferMemory::DeviceLocal ? static_cast<uint32>( VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT )
-                                                                                     : static_cast<uint32>( VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT );
-        if ( findMemoryType( memRequirements.memoryTypeBits, memoryProperties, memoryTypeIndex ) == false )
-        {
-            vkDestroyBuffer( _device, buffer, nullptr );
-            SW_LOG_ERROR_ID( "Vulkan.FailedFindHostVisible", "Failed to find a memory type (properties 0x%#) for VkBuffer.", memoryProperties );
-            return 0;
-        }
-
-        VulkanMemoryAllocator::Request request{};
-        request._sizeBytes       = memRequirements.size;
-        request._alignment       = memRequirements.alignment;
-        request._memoryTypeIndex = memoryTypeIndex;
-        request._bHostVisible    = placement == VulkanBufferMemory::HostVisible ? SW_TRUE : SW_FALSE;
-        VulkanMemoryRange memory{};
-        if ( _memoryAllocator.allocate( request, memory ) == false )
-        {
-            vkDestroyBuffer( _device, buffer, nullptr );
-            SW_LOG_ERROR_ID( "Vulkan.FailedAllocateMemoryVkBuffer", "Failed to allocate memory for VkBuffer." );
-            return 0;
-        }
-
-        // 메모리를 붙이지 못한 버퍼 · 초기 값을 쓰지 못한 버퍼는 돌려주지 않는다 — 빈 버퍼로 그리면 조용히 틀린 화면이 나온다.
-        const bool bInitialDataWritable = pInitialData == nullptr || memory._pMapped != nullptr;
-        SW_ASSERT( bInitialDataWritable && "initial data needs host visible memory" );
-        const bool bReady = isVkSuccess( vkBindBufferMemory( _device, buffer, memory._memory, memory._offset ), "vkBindBufferMemory" ) && bInitialDataWritable;
-        if ( bReady == false )
-        {
-            vkDestroyBuffer( _device, buffer, nullptr );
-            _memoryAllocator.release( memory );
-            return 0;
-        }
-        if ( pInitialData != nullptr )
-            Memory::copy( memory._pMapped, pInitialData, static_cast<size_t>( sizeBytes ) );
-
         VulkanBufferRecord record{};
-        record._buffer     = buffer;
-        record._memory     = memory;
+        if ( _memoryAllocator.createBuffer( bufferInfo, placement, pName, record._buffer, record._memory ) == false )
+        {
+            SW_LOG_ERROR_ID( "Vulkan.FailedCreateVkBufferUsage", "Failed to create the VkBuffer '%#' (%# bytes, usage=0x%#).", pName, sizeBytes, usageFlags );
+            return 0;
+        }
         record._sizeBytes  = sizeBytes;
         record._usage      = usageFlags;
         record._cbSlotSize = cbSlotSize;
 
-        // GPU 메모리 추적기의 Buffer 줄에 올리는 유일한 자리다. 크기는 드라이버가 요구한 할당 크기(정렬 포함)다.
-        const RHIBufferHandle handle = _gpuBuffers.insert( record );
-        getMemoryTracker().recordAllocation( RHIMemoryKey::makeBuffer( handle ), RHIMemoryKind::Buffer, memRequirements.size );
+        // GPU 메모리 추적기의 Buffer 줄에 올리는 유일한 자리다. 크기는 할당 크기(정렬 포함)다.
+        const uint64          allocationBytes = record._memory._sizeBytes;
+        const RHIBufferHandle handle          = _gpuBuffers.insert( record );
+        getMemoryTracker().recordAllocation( RHIMemoryKey::makeBuffer( handle ), RHIMemoryKind::Buffer, allocationBytes );
         return handle;
     }
 
@@ -1506,6 +1353,8 @@ namespace sw
 
         if ( vkCreateDevice( _physicalDevice, &createInfo, nullptr, &_device ) != VK_SUCCESS )
             return false;
+        if ( _memoryAllocator.initialize( _instance, _physicalDevice, _device, _bMemoryBudget != SW_FALSE ) == false )
+            return false;
 
         vkGetDeviceQueue( _device, _graphicsQueueFamilyIndex, 0, &_graphicsQueue );
         // 켜지 않았으면 nullptr 이다(장치에 없는 함수를 물으면 nullptr — 명세).
@@ -1569,34 +1418,16 @@ namespace sw
 
     bool VulkanRHIDevice::createBreadcrumbBuffer()
     {
-        constexpr VkDeviceSize kSize = kBreadcrumbSlotCount * sizeof( uint32 );
-        VkBufferCreateInfo     bufferInfo{};
+        VkBufferCreateInfo bufferInfo{};
         bufferInfo.sType       = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO;
-        bufferInfo.size        = kSize;
+        bufferInfo.size        = kBreadcrumbSlotCount * sizeof( uint32 );
         bufferInfo.usage       = VK_BUFFER_USAGE_TRANSFER_DST_BIT; // vkCmdWriteBufferMarkerAMD 의 도착지 조건
         bufferInfo.sharingMode = VK_SHARING_MODE_EXCLUSIVE;
-        if ( vkCreateBuffer( _device, &bufferInfo, nullptr, &_breadcrumbBuffer ) != VK_SUCCESS )
-            return false;
-        VkMemoryRequirements requirements{};
-        vkGetBufferMemoryRequirements( _device, _breadcrumbBuffer, &requirements );
-        uint32 memoryTypeIndex{ 0 };
         // 소실 뒤에도 CPU 가 매핑으로 읽어야 하므로 호스트 일관 메모리다(flush · invalidate 없이 GPU 의 마지막 쓰기가 보인다).
-        if ( findMemoryType( requirements.memoryTypeBits, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT, memoryTypeIndex ) == false )
-            return false;
-        VkMemoryAllocateInfo allocInfo{};
-        allocInfo.sType           = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO;
-        allocInfo.allocationSize  = requirements.size;
-        allocInfo.memoryTypeIndex = memoryTypeIndex;
-        if ( allocateDeviceMemory( allocInfo, _breadcrumbMemory ) == false )
-            return false;
-        if ( isVkSuccess( vkBindBufferMemory( _device, _breadcrumbBuffer, _breadcrumbMemory, 0 ), "vkBindBufferMemory (breadcrumbs)" ) == false )
-            return false;
-        void*      pMapped{ nullptr };
-        const bool bMapped = isVkSuccess( vkMapMemory( _device, _breadcrumbMemory, 0, kSize, 0, &pMapped ), "vkMapMemory (breadcrumbs)" ) && pMapped != nullptr;
-        if ( bMapped == false )
+        if ( _memoryAllocator.createBuffer( bufferInfo, VulkanBufferMemory::HostCoherent, "Breadcrumbs", _breadcrumbBuffer, _breadcrumbMemory ) == false )
             return false;
         // 0 은 표지가 아니다 — 아직 쓰지 않은 칸을 소실 보고에 싣지 않는다.
-        uint32* const pSlot = static_cast<uint32*>( pMapped );
+        uint32* const pSlot = reinterpret_cast<uint32*>( _breadcrumbMemory._pMapped );
         for ( uint32 slot = 0; slot < kBreadcrumbSlotCount; ++slot )
         {
             pSlot[slot] = 0;
@@ -1607,15 +1438,10 @@ namespace sw
 
     void VulkanRHIDevice::destroyBreadcrumbBuffer()
     {
-        if ( _pBreadcrumbMapped != nullptr )
-            vkUnmapMemory( _device, _breadcrumbMemory );
         _pBreadcrumbMapped = nullptr;
-        if ( _breadcrumbBuffer != VK_NULL_HANDLE )
-            vkDestroyBuffer( _device, _breadcrumbBuffer, nullptr );
-        if ( _breadcrumbMemory != VK_NULL_HANDLE )
-            freeDeviceMemory( _breadcrumbMemory );
+        _memoryAllocator.destroyBuffer( _breadcrumbBuffer, _breadcrumbMemory );
         _breadcrumbBuffer = VK_NULL_HANDLE;
-        _breadcrumbMemory = VK_NULL_HANDLE;
+        _breadcrumbMemory = VulkanAllocation{};
     }
 
     bool VulkanRHIDevice::createCommandPool()
@@ -2423,8 +2249,9 @@ namespace sw
     // 길이 유지(긴 함수 정리 기준): 펜스 대기 · 이미지 획득 · 기록 시작의 프레임 순서가 곧 의미라 나누지 않는다.
     void VulkanRHIDevice::beginFrameInternal()
     {
-        _renderThread.assumeHeld();                                                     // 렌더 스레드의 프레임 진행(그 병렬 기록 태스크 포함)에서, 또는 렌더 스레드를 세운 뒤(초기화 · 종료 · resize) 불린다
-        SW_PROFILE_COUNT( "RT.Vulkan.allocationCount", _memoryAccount.getLiveCount() ); // 살아 있는 VkDeviceMemory(maxMemoryAllocationCount 의 분자 — 감사 R-4 측정)
+        _renderThread.assumeHeld(); // 렌더 스레드의 프레임 진행(그 병렬 기록 태스크 포함)에서, 또는 렌더 스레드를 세운 뒤(초기화 · 종료 · resize) 불린다
+        _memoryAllocator.onFrameBegin( _frameFenceRing.getRecordingSerial() );
+        SW_PROFILE_COUNT( "RT.Vulkan.allocationCount", _memoryAllocator.computeBlockCount() ); // 살아 있는 VkDeviceMemory(maxMemoryAllocationCount 의 분자 — 감사 R-4 측정)
         // 앞 프레임이 시작되지 못해 버려진 리스트가 있었으면 그 리스트가 앞서 바꾼 레이아웃 기록부터 되돌린다.
         restoreDroppedFrameLayouts();
         _bFrameStarted = SW_FALSE;
@@ -2954,17 +2781,8 @@ namespace sw
 
     VulkanRHIDevice::UploadStagingBlock VulkanRHIDevice::createStagingBlock( uint64 capacity, bool bDedicated )
     {
-        UploadStagingBlock        block{};
-        const RHIBufferHandle     handle  = createVulkanBuffer( capacity, VK_BUFFER_USAGE_TRANSFER_SRC_BIT, nullptr, 0, VulkanBufferMemory::HostVisible );
-        VulkanBufferRecord* const pRecord = resolveAllocatedBuffer( handle );
-        const bool                bMapped = pRecord != nullptr && pRecord->_memory._pMapped != nullptr;
-        if ( bMapped == false )
-        {
-            releaseHandle( handle ); // 0 이면 무시한다
-            return block;
-        }
-        block._buffer     = handle;
-        block._pMapped    = pRecord->_memory._pMapped; // 펜스 뒤 다시 쓰는 동안 매핑해 둔다(호스트 일관 메모리)
+        UploadStagingBlock block{};
+        block._buffer     = createVulkanBuffer( capacity, VK_BUFFER_USAGE_TRANSFER_SRC_BIT, 0, VulkanBufferMemory::HostWrite, "UploadStagingBlock" );
         block._capacity   = capacity;
         block._bDedicated = bDedicated ? SW_TRUE : SW_FALSE;
         return block;
@@ -3027,16 +2845,17 @@ namespace sw
             }
             pBlock = &_openStagingBlock;
         }
-        if ( pBlock->_buffer == 0 )
+        const VulkanBufferRecord* const pStaging = resolveAllocatedBuffer( pBlock->_buffer );
+        if ( pStaging == nullptr )
         {
             SW_LOG_ERROR_ID( "Vulkan.UploadStagingFailed", "Failed to get %# bytes of upload staging", sizeBytes );
             return false;
         }
         const uint64 stagingOffset = pBlock->_offset;
-        Memory::copy( pBlock->_pMapped + stagingOffset, pData, static_cast<size_t>( sizeBytes ) );
+        Memory::copy( pStaging->_memory._pMapped + stagingOffset, pData, static_cast<size_t>( sizeBytes ) );
+        _memoryAllocator.flush( pStaging->_memory, stagingOffset, sizeBytes );
         pBlock->_offset += alignedSize;
-        const VulkanBufferRecord* const pStaging = resolveAllocatedBuffer( pBlock->_buffer );
-        recordBufferUploadCopy( _openUploadBuffer, pStaging != nullptr ? pStaging->_buffer : VK_NULL_HANDLE, stagingOffset, destination, destinationOffset, sizeBytes );
+        recordBufferUploadCopy( _openUploadBuffer, pStaging->_buffer, stagingOffset, destination, destinationOffset, sizeBytes );
         return true;
     }
 
@@ -3099,9 +2918,7 @@ namespace sw
         VulkanBufferRecord owned;
         if ( block._buffer == 0 || _gpuBuffers.take( block._buffer, owned ) == false )
             return;
-        if ( owned._buffer != VK_NULL_HANDLE )
-            vkDestroyBuffer( _device, owned._buffer, nullptr );
-        _memoryAllocator.release( owned._memory );
+        _memoryAllocator.destroyBuffer( owned._buffer, owned._memory );
         getMemoryTracker().recordFree( RHIMemoryKey::makeBuffer( block._buffer ) );
     }
 
@@ -3314,7 +3131,7 @@ namespace sw
     {
         // 구간 시작 정렬. 복사 오프셋 규칙(텍셀 블록 바이트와 4 의 배수)은 제출 함수가 구간 안에서 맞추고, 여기서는 캐시 줄 경계에서 시작하도록 넉넉히 둔다(GL 링과 같다).
         constexpr uint64 kSpanAlignmentBytes = 256;
-        if ( createMappedStagingBuffer( capacityBytes, usageFlags, pName, ring._buffer, ring._memory, ring._pMapped ) == false )
+        if ( createMappedStagingBuffer( capacityBytes, usageFlags, pName, ring._buffer, ring._memory ) == false )
             return false;
         ring._allocator.initialize( capacityBytes, kSpanAlignmentBytes, soloMaxBytes );
         return true;
@@ -3324,72 +3141,38 @@ namespace sw
     {
         {
             ScopedLock<mutex> soloLock{ ring._soloMutex };
-            destroyMappedStagingBuffer( ring._soloBuffer, ring._soloMemory, ring._pSoloMapped );
+            destroyMappedStagingBuffer( ring._soloBuffer, ring._soloMemory );
         }
-        destroyMappedStagingBuffer( ring._buffer, ring._memory, ring._pMapped );
+        destroyMappedStagingBuffer( ring._buffer, ring._memory );
         ring._allocator.shutdown();
     }
 
-    bool VulkanRHIDevice::createMappedStagingBuffer( uint64 capacityBytes, uint32 usageFlags, const utf8* pName, VkBuffer& outBuffer, VkDeviceMemory& outMemory,
-                                                     uint8*& outMapped )
+    bool VulkanRHIDevice::createMappedStagingBuffer( uint64 capacityBytes, uint32 usageFlags, const utf8* pName, VkBuffer& outBuffer, VulkanAllocation& outMemory )
     {
-        outBuffer = VK_NULL_HANDLE;
-        outMemory = VK_NULL_HANDLE;
-        outMapped = nullptr;
-
         VkBufferCreateInfo bufferInfo{};
         bufferInfo.sType       = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO;
         bufferInfo.size        = capacityBytes;
         bufferInfo.usage       = usageFlags;
         bufferInfo.sharingMode = VK_SHARING_MODE_EXCLUSIVE;
-        if ( vkCreateBuffer( _device, &bufferInfo, nullptr, &outBuffer ) != VK_SUCCESS )
+        // 되읽기는 CPU 가 읽는 자리(캐시 메모리를 먼저 고른다), 업로드는 쓰기 자리다 — 쓴 뒤 flush, 읽기 전 invalidate 는 제출 · 가져가기가 부른다.
+        const VulkanBufferMemory placement = ( usageFlags & VK_BUFFER_USAGE_TRANSFER_DST_BIT ) != 0 ? VulkanBufferMemory::HostRead : VulkanBufferMemory::HostWrite;
+        if ( _memoryAllocator.createBuffer( bufferInfo, placement, pName, outBuffer, outMemory ) == false )
         {
-            outBuffer = VK_NULL_HANDLE;
             SW_LOG_ERROR_ID( "Vulkan.FailedCreateVulkanStaging", "Failed to create the Vulkan %# staging buffer (%# bytes, _rhi._stagingRingMegabytes · _rhi._readbackRingMegabytes · _rhi._stagingSingleMaxMegabytes)",
                              pName, capacityBytes );
             return false;
         }
-
-        // 호스트 일관 메모리라 제출 전의 memcpy 는 flush 없이 보이고, 되읽기는 복사 뒤의 HOST 배리어와 펜스만으로 읽힌다(invalidate 가 필요 없다).
-        VkMemoryRequirements requirements{};
-        vkGetBufferMemoryRequirements( _device, outBuffer, &requirements );
-        uint32 memoryTypeIndex{ 0 };
-        void*  pMapped{ nullptr };
-        bool   bMemoryReady = findMemoryType( requirements.memoryTypeBits, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT, memoryTypeIndex );
-        if ( bMemoryReady )
-        {
-            VkMemoryAllocateInfo allocInfo{};
-            allocInfo.sType           = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO;
-            allocInfo.allocationSize  = requirements.size;
-            allocInfo.memoryTypeIndex = memoryTypeIndex;
-            bMemoryReady              = allocateDeviceMemory( allocInfo, outMemory ) &&
-                           vkBindBufferMemory( _device, outBuffer, outMemory, 0 ) == VK_SUCCESS &&
-                           vkMapMemory( _device, outMemory, 0, VK_WHOLE_SIZE, 0, &pMapped ) == VK_SUCCESS && pMapped != nullptr;
-        }
-        if ( bMemoryReady == false )
-        {
-            SW_LOG_ERROR_ID( "Vulkan.VulkanStagingBufferBytes", "The Vulkan %# staging buffer (%# bytes) could not be allocated or mapped in host visible memory", pName, capacityBytes );
-            destroyMappedStagingBuffer( outBuffer, outMemory, outMapped );
-            return false;
-        }
-
-        outMapped = static_cast<uint8*>( pMapped );
-        getMemoryTracker().recordAllocation( RHIMemoryKey::makeDeviceObject( outMemory ), RHIMemoryKind::Staging, requirements.size );
+        getMemoryTracker().recordAllocation( RHIMemoryKey::makeDeviceObject( outMemory._allocation ), RHIMemoryKind::Staging, outMemory._sizeBytes );
         return true;
     }
 
-    void VulkanRHIDevice::destroyMappedStagingBuffer( VkBuffer& rBuffer, VkDeviceMemory& rMemory, uint8*& pMapped )
+    void VulkanRHIDevice::destroyMappedStagingBuffer( VkBuffer& rBuffer, VulkanAllocation& rMemory )
     {
-        // 메모리를 놓으면 매핑도 풀린다. 추적기에는 매핑까지 끝난 버퍼만 올렸다.
-        if ( pMapped != nullptr )
-            getMemoryTracker().recordFree( RHIMemoryKey::makeDeviceObject( rMemory ) );
-        if ( rBuffer != VK_NULL_HANDLE )
-            vkDestroyBuffer( _device, rBuffer, nullptr );
-        if ( rMemory != VK_NULL_HANDLE )
-            freeDeviceMemory( rMemory );
+        if ( rMemory.isValid() )
+            getMemoryTracker().recordFree( RHIMemoryKey::makeDeviceObject( rMemory._allocation ) );
+        _memoryAllocator.destroyBuffer( rBuffer, rMemory );
         rBuffer = VK_NULL_HANDLE;
-        rMemory = VK_NULL_HANDLE;
-        pMapped = nullptr;
+        rMemory = VulkanAllocation{};
     }
 
     RHISubmitResult VulkanRHIDevice::allocateStagingSpan( VulkanStagingRing& ring, uint64 sizeBytes, uint32 usageFlags, const utf8* pCaller, RHIStagingSpan& outSpan )
@@ -3406,8 +3189,8 @@ namespace sw
             return submitResult;
         // 할당기가 단독 구간을 내줬다면 앞선 단독 구간은 이미 돌아왔다 — 남은 버퍼(아직 회수가 지우지 않은 것)를 GPU 가 더 쓰지 않는다.
         ScopedLock<mutex> soloLock{ ring._soloMutex };
-        destroyMappedStagingBuffer( ring._soloBuffer, ring._soloMemory, ring._pSoloMapped );
-        if ( createMappedStagingBuffer( outSpan.getSizeBytes(), usageFlags, "single transfer", ring._soloBuffer, ring._soloMemory, ring._pSoloMapped ) )
+        destroyMappedStagingBuffer( ring._soloBuffer, ring._soloMemory );
+        if ( createMappedStagingBuffer( outSpan.getSizeBytes(), usageFlags, "single transfer", ring._soloBuffer, ring._soloMemory ) )
             return RHISubmitResult::Accepted;
         return RHIStagingRingUtil::rejectSoloBufferFailure( ring._allocator, outSpan, "Vulkan", pCaller );
     }
@@ -3421,7 +3204,7 @@ namespace sw
         ring._allocator.freeCompleted( _transferSerials.getWatermark() );
         if ( ring._allocator.hasLiveSolo() )
             return;
-        destroyMappedStagingBuffer( ring._soloBuffer, ring._soloMemory, ring._pSoloMapped );
+        destroyMappedStagingBuffer( ring._soloBuffer, ring._soloMemory );
     }
 
     bool VulkanRHIDevice::beginTransferJob( VulkanTransferJob& outJob )
@@ -3762,27 +3545,11 @@ namespace sw
             bufferInfo.size        = kDummyUboSize;
             bufferInfo.usage       = VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT;
             bufferInfo.sharingMode = VK_SHARING_MODE_EXCLUSIVE;
-            if ( vkCreateBuffer( _device, &bufferInfo, nullptr, &_dummyUBO ) != VK_SUCCESS )
-                return false;
-            VkMemoryRequirements memoryRequirements{};
-            vkGetBufferMemoryRequirements( _device, _dummyUBO, &memoryRequirements );
-            uint32 memoryTypeIndex{ 0 };
-            if ( findMemoryType( memoryRequirements.memoryTypeBits, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT, memoryTypeIndex ) == false )
-                return false;
-            VkMemoryAllocateInfo allocMem{};
-            allocMem.sType           = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO;
-            allocMem.allocationSize  = memoryRequirements.size;
-            allocMem.memoryTypeIndex = memoryTypeIndex;
-            if ( allocateDeviceMemory( allocMem, _dummyUBOMemory ) == false )
-                return false;
-            if ( isVkSuccess( vkBindBufferMemory( _device, _dummyUBO, _dummyUBOMemory, 0 ), "vkBindBufferMemory (dummy UBO)" ) == false )
-                return false;
             // 빈 슬롯이 읽는 값이다 — 0 으로 채우지 못하면 쓰레기를 읽으므로 초기화를 실패시킨다.
-            void* pMapped{ nullptr };
-            if ( isVkSuccess( vkMapMemory( _device, _dummyUBOMemory, 0, kDummyUboSize, 0, &pMapped ), "vkMapMemory (dummy UBO)" ) == false || pMapped == nullptr )
+            if ( _memoryAllocator.createBuffer( bufferInfo, VulkanBufferMemory::HostWrite, "DummyConstantBuffer", _dummyUBO, _dummyUBOMemory ) == false )
                 return false;
-            Memory::set( pMapped, 0, static_cast<size_t>( kDummyUboSize ) );
-            vkUnmapMemory( _device, _dummyUBOMemory );
+            Memory::set( _dummyUBOMemory._pMapped, 0, static_cast<size_t>( kDummyUboSize ) );
+            _memoryAllocator.flush( _dummyUBOMemory, 0, kDummyUboSize );
         }
 
         return true;
@@ -3808,25 +3575,7 @@ namespace sw
         imageInfo.tiling        = VK_IMAGE_TILING_OPTIMAL;
         imageInfo.usage         = VK_IMAGE_USAGE_SAMPLED_BIT | VK_IMAGE_USAGE_TRANSFER_DST_BIT;
         imageInfo.initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
-        if ( vkCreateImage( _device, &imageInfo, nullptr, &_bindlessDummyImage ) != VK_SUCCESS )
-            return false;
-
-        VkMemoryRequirements memoryRequirements{};
-        vkGetImageMemoryRequirements( _device, _bindlessDummyImage, &memoryRequirements );
-        uint32 memoryTypeIndex{ 0 };
-        if ( findMemoryType( memoryRequirements.memoryTypeBits, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT, memoryTypeIndex ) == false )
-        {
-            SW_LOG_ERROR_ID( "Vulkan.FailedFindDeviceLocal", "Failed to find a device local memory type for the bindless dummy image." );
-            return false;
-        }
-
-        VkMemoryAllocateInfo allocMem{};
-        allocMem.sType           = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO;
-        allocMem.allocationSize  = memoryRequirements.size;
-        allocMem.memoryTypeIndex = memoryTypeIndex;
-        if ( allocateDeviceMemory( allocMem, _bindlessDummyMemory ) == false )
-            return false;
-        if ( isVkSuccess( vkBindImageMemory( _device, _bindlessDummyImage, _bindlessDummyMemory, 0 ), "vkBindImageMemory (bindless dummy image)" ) == false )
+        if ( _memoryAllocator.createImage( imageInfo, "BindlessDummyTexture", _bindlessDummyImage, _bindlessDummyMemory ) == false )
             return false;
 
         VkImageViewCreateInfo viewInfo{};

@@ -2147,6 +2147,10 @@
     "MeadowFarmGameModeComponent": "FarmPlotGameModeComponent — 한 키트만 쓰는 밭 디렉터를 Farming 키트로 옮겼다(흡수 8 의 남은 몫)(2026-11-24)",
     "NileBuildingComponent": "CityBuildingViewComponent — 도시 건물 뷰는 키트 클라이언트(GF_Client_CityBuilder)의 것이다 — 게임 접두를 뗀다(2026-11-24)",
     "NileWalkerComponent": "CityWalkerViewComponent — 도시 일꾼 뷰는 키트 클라이언트(GF_Client_CityBuilder)의 것이다 — 게임 접두를 뗀다(2026-11-24)",
-    "NileCursorComponent": "CityBuildCursorComponent — 도시 짓기 뷰는 키트 클라이언트(GF_Client_CityBuilder)의 것이다 — 게임 접두를 뗀다(2026-11-24)"
+    "NileCursorComponent": "CityBuildCursorComponent — 도시 짓기 뷰는 키트 클라이언트(GF_Client_CityBuilder)의 것이다 — 게임 접두를 뗀다(2026-11-24)",
+    "VulkanMemoryAccount": "지움 — 할당 수 한도는 VMA 가 지킨다(`VulkanMemoryAllocator::computeBlockCount`, 2026-11-24)",
+    "VulkanMemoryRange": "VulkanAllocation — VMA 할당 하나다(2026-11-24)",
+    "RHIMemoryRangeAllocator": "지움 — 장치 메모리 구간은 VMA · D3D12MA 가 나눈다(2026-11-24)",
+    "_allocationCountReserve": "지움 — 할당 수 한도는 VMA 가 지킨다(2026-11-24)"
   }
 }

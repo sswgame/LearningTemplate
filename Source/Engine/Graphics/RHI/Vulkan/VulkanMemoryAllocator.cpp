@@ -2,141 +2,261 @@
 
 #include "Engine/Graphics/RHI/Vulkan/VulkanMemoryAllocator.h"
 
-#include "Engine/Graphics/RHI/Vulkan/VulkanRHIDevice.h"
-#include "Engine/Graphics/RHI/Vulkan/VulkanRHIUtil.h"
+#include "Engine/Graphics/RHI/Backend/RHIAllocationLeakUtil.h"
+#include "Engine/Graphics/RHI/Diagnostics/RHIMemoryTracker.h"
+#include "Engine/Graphics/RHI/Vulkan/VulkanRHIRequiredVersion.h"
 #include "Engine/Graphics/RHI/Vulkan/VulkanResultCheck.h"
+
+#include <vulkan/vulkan.h>
+
+// VMA 의 구현은 이 파일 하나가 짓는다(헤더는 SYSTEM include 라 그 안의 경고는 나지 않는다).
+// 함수는 로더에 링크한 것을 그대로 쓴다(엔진의 다른 Vulkan 호출과 같다). 판은 장치가 요구하는 1.2 로 묶는다 — 더 높은 판은 Android libvulkan 이 내보내지 않는 함수를 링크한다.
+// https://gpuopen-librariesandsdks.github.io/VulkanMemoryAllocator/html/quick_start.html
+#define VMA_STATIC_VULKAN_FUNCTIONS  1
+#define VMA_DYNAMIC_VULKAN_FUNCTIONS 0
+#define VMA_VULKAN_VERSION           1002000
+#define VMA_EXTERNAL_MEMORY_WIN32    0 // 다른 API 와 메모리를 나누지 않는다
+#define VMA_ASSERT( expr )           SW_ASSERT( expr )
+#define VMA_ASSERT_LEAK( expr )      static_cast<void>( 0 ) // 남은 할당은 `shutdown` 이 이름과 함께 오류로 남긴다
+#define VMA_IMPLEMENTATION
+#include <vk_mem_alloc.h>
 
 namespace sw
 {
-    VulkanMemoryAllocator::VulkanMemoryAllocator( VulkanRHIDevice& device )
-        : _pDevice{ &device }
-        , _mutex{}
-        , _listBlock{}
+    bool VulkanMemoryAllocator::initialize( VkInstance instance, VkPhysicalDevice physicalDevice, VkDevice device, bool bMemoryBudget )
     {
-    }
-
-    bool VulkanMemoryAllocator::allocate( const Request& request, VulkanMemoryRange& outRange )
-    {
-        outRange                = VulkanMemoryRange{};
-        const bool   bHost      = request._bHostVisible != SW_FALSE;
-        const uint64 blockBytes = bHost ? kHostBlockBytes : kDeviceBlockBytes;
-        if ( request._sizeBytes <= blockBytes / 2 )
+        static_assert( constant::render::kVulkanRequiredMajor == 1u && constant::render::kVulkanRequiredMinor == 2u, "VMA_VULKAN_VERSION must follow the required Vulkan version" );
+        VmaAllocatorCreateInfo createInfo{};
+        createInfo.flags            = bMemoryBudget ? static_cast<VmaAllocatorCreateFlags>( VMA_ALLOCATOR_CREATE_EXT_MEMORY_BUDGET_BIT ) : VmaAllocatorCreateFlags{ 0 };
+        createInfo.physicalDevice   = physicalDevice;
+        createInfo.device           = device;
+        createInfo.instance         = instance;
+        createInfo.vulkanApiVersion = VulkanRHIRequiredVersion::kRequiredAPIVersion;
+        if ( isVkSuccess( vmaCreateAllocator( &createInfo, &_allocator ), "vmaCreateAllocator" ) == false )
         {
-            ScopedLock<mutex> lock{ _mutex };
-            uint32            freeBlockIndex = constant::invalid_index::kUint32;
-            for ( uint32 blockIndex = 0; blockIndex < _listBlock.size(); ++blockIndex )
-            {
-                const Block& block = _listBlock[blockIndex];
-                if ( block._memory == nullptr )
-                {
-                    freeBlockIndex = blockIndex;
-                    continue;
-                }
-                const bool bMatches = block._memoryTypeIndex == request._memoryTypeIndex && block._bLinear == request._bLinear && ( block._pMapped != nullptr ) == bHost;
-                if ( bMatches && allocateFromBlock( blockIndex, request, outRange ) )
-                    return true;
-            }
-            Block block{};
-            if ( allocateMemory( blockBytes, request._memoryTypeIndex, bHost, block._memory, block._pMapped ) )
-            {
-                block._sizeBytes       = blockBytes;
-                block._memoryTypeIndex = request._memoryTypeIndex;
-                block._bLinear         = request._bLinear;
-                block._ranges.reset( blockBytes );
-                if ( freeBlockIndex == constant::invalid_index::kUint32 )
-                {
-                    freeBlockIndex = static_cast<uint32>( _listBlock.size() );
-                    _listBlock.push_back( std::move( block ) );
-                }
-                else
-                {
-                    _listBlock[freeBlockIndex] = std::move( block );
-                }
-                return allocateFromBlock( freeBlockIndex, request, outRange );
-            }
-            // 블록 하나만큼은 없어도 이 자원만큼은 있을 수 있다(메모리가 거의 찼다) — 아래 전용 할당이 마지막 시도다.
-        }
-        uint8* pMapped{ nullptr };
-        if ( allocateMemory( request._sizeBytes, request._memoryTypeIndex, bHost, outRange._memory, pMapped ) == false )
+            _allocator = nullptr;
             return false;
-        outRange._sizeBytes = request._sizeBytes;
-        outRange._pMapped   = pMapped;
+        }
+        _device        = device;
+        _bMemoryBudget = bMemoryBudget ? SW_TRUE : SW_FALSE;
         return true;
     }
 
-    void VulkanMemoryAllocator::release( const VulkanMemoryRange& range )
+    void VulkanMemoryAllocator::shutdown()
     {
-        if ( range.isValid() == false )
+        if ( _allocator == nullptr )
             return;
-        if ( range._blockIndex == constant::invalid_index::kUint32 )
+        VmaTotalStatistics statistics{};
+        vmaCalculateStatistics( _allocator, &statistics );
+        if ( statistics.total.statistics.allocationCount != 0 )
         {
-            _pDevice->freeDeviceMemory( range._memory ); // 매핑은 메모리 해제가 풀어 준다
-            return;
+            utf8* pStats{ nullptr };
+            vmaBuildStatsString( _allocator, &pStats, VK_TRUE );
+            RHIAllocationLeakUtil::report( "Vulkan", statistics.total.statistics.allocationCount, pStats );
+            vmaFreeStatsString( _allocator, pStats );
         }
-        ScopedLock<mutex> lock{ _mutex };
-        Block&            block = _listBlock[range._blockIndex];
-        SW_ASSERT( block._memory == range._memory && "Vulkan memory range released after its block" );
-        block._ranges.release( range._offset, range._sizeBytes );
-        if ( block._ranges.isEmpty() == false )
-            return;
-        // 같은 종류의 빈 블록을 하나는 남긴다 — 자원이 경계에서 하나씩 오가도 블록을 만들었다 놓았다 하지 않는다.
-        for ( uint32 blockIndex = 0; blockIndex < _listBlock.size(); ++blockIndex )
-        {
-            const Block& other     = _listBlock[blockIndex];
-            const bool   bSameKind = blockIndex != range._blockIndex && other._memory != nullptr && other._memoryTypeIndex == block._memoryTypeIndex && other._bLinear == block._bLinear;
-            if ( bSameKind && other._ranges.isEmpty() )
-            {
-                _pDevice->freeDeviceMemory( block._memory );
-                block = Block{};
-                return;
-            }
-        }
+        vmaDestroyAllocator( _allocator );
+        _allocator = nullptr;
+        _device    = nullptr;
     }
 
-    void VulkanMemoryAllocator::releaseAll()
+    void VulkanMemoryAllocator::onFrameBegin( uint64 frameSerial )
     {
-        ScopedLock<mutex> lock{ _mutex };
-        for ( Block& block : _listBlock )
-        {
-            if ( block._memory != nullptr )
-                _pDevice->freeDeviceMemory( block._memory );
-        }
-        _listBlock.clear();
+        if ( _allocator != nullptr )
+            vmaSetCurrentFrameIndex( _allocator, static_cast<uint32>( frameSerial ) );
     }
 
-    bool VulkanMemoryAllocator::allocateMemory( uint64 sizeBytes, uint32 memoryTypeIndex, bool bHostVisible, VkDeviceMemory& outMemory, uint8*& outMapped )
+    bool VulkanMemoryAllocator::createBuffer( const VkBufferCreateInfo& info, VulkanBufferMemory placement, const utf8* pName, VkBuffer& outBuffer, VulkanAllocation& outAllocation )
     {
-        outMapped = nullptr;
-        VkMemoryAllocateInfo allocInfo{};
-        allocInfo.sType           = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO;
-        allocInfo.allocationSize  = sizeBytes;
-        allocInfo.memoryTypeIndex = memoryTypeIndex;
-        if ( _pDevice->allocateDeviceMemory( allocInfo, outMemory ) == false )
-            return false;
-        if ( bHostVisible == false )
-            return true;
-        void* pMapped{ nullptr };
-        if ( isVkSuccess( vkMapMemory( _pDevice->_device, outMemory, 0, VK_WHOLE_SIZE, 0, &pMapped ), "vkMapMemory (memory block)" ) == false || pMapped == nullptr )
+        outBuffer     = nullptr;
+        outAllocation = VulkanAllocation{};
+        VmaAllocationCreateInfo allocationInfo{};
+        allocationInfo.usage = VMA_MEMORY_USAGE_AUTO;
+        switch ( placement )
         {
-            _pDevice->freeDeviceMemory( outMemory );
-            outMemory = nullptr;
+            case VulkanBufferMemory::HostWrite:
+                allocationInfo.flags = VMA_ALLOCATION_CREATE_MAPPED_BIT | VMA_ALLOCATION_CREATE_HOST_ACCESS_SEQUENTIAL_WRITE_BIT;
+                break;
+            case VulkanBufferMemory::HostRead:
+                allocationInfo.flags = VMA_ALLOCATION_CREATE_MAPPED_BIT | VMA_ALLOCATION_CREATE_HOST_ACCESS_RANDOM_BIT;
+                break;
+            case VulkanBufferMemory::HostCoherent:
+                allocationInfo.flags         = VMA_ALLOCATION_CREATE_MAPPED_BIT | VMA_ALLOCATION_CREATE_HOST_ACCESS_RANDOM_BIT;
+                allocationInfo.requiredFlags = VK_MEMORY_PROPERTY_HOST_COHERENT_BIT;
+                break;
+            case VulkanBufferMemory::DeviceLocal:
+                allocationInfo.usage = VMA_MEMORY_USAGE_AUTO_PREFER_DEVICE;
+                break;
+        }
+        VmaAllocationInfo allocated{};
+        if ( isVkSuccess( vmaCreateBuffer( _allocator, &info, &allocationInfo, &outBuffer, &outAllocation._allocation, &allocated ), "vmaCreateBuffer" ) == false )
+        {
+            outBuffer     = nullptr;
+            outAllocation = VulkanAllocation{};
             return false;
         }
-        outMapped = static_cast<uint8*>( pMapped );
+        outAllocation._pMapped   = static_cast<uint8*>( allocated.pMappedData );
+        outAllocation._sizeBytes = allocated.size;
+        vmaSetAllocationName( _allocator, outAllocation._allocation, pName );
+        if ( placement != VulkanBufferMemory::DeviceLocal && outAllocation._pMapped == nullptr )
+        {
+            SW_LOG_ERROR_ID( "Vulkan.BufferNotMapped", "The host visible buffer '%#' (%# bytes) was not mapped", pName, static_cast<uint64>( info.size ) );
+            destroyBuffer( outBuffer, outAllocation );
+            outBuffer     = nullptr;
+            outAllocation = VulkanAllocation{};
+            return false;
+        }
         return true;
     }
 
-    bool VulkanMemoryAllocator::allocateFromBlock( uint32 blockIndex, const Request& request, VulkanMemoryRange& outRange )
+    bool VulkanMemoryAllocator::createImage( const VkImageCreateInfo& info, const utf8* pName, VkImage& outImage, VulkanAllocation& outAllocation )
     {
-        Block& block = _listBlock[blockIndex];
-        uint64 offset{ 0 };
-        if ( block._ranges.allocate( request._sizeBytes, request._alignment, offset ) == false )
+        outImage      = nullptr;
+        outAllocation = VulkanAllocation{};
+        VmaAllocationCreateInfo allocationInfo{};
+        allocationInfo.usage = VMA_MEMORY_USAGE_AUTO_PREFER_DEVICE;
+        VmaAllocationInfo allocated{};
+        if ( isVkSuccess( vmaCreateImage( _allocator, &info, &allocationInfo, &outImage, &outAllocation._allocation, &allocated ), "vmaCreateImage" ) == false )
+        {
+            outImage      = nullptr;
+            outAllocation = VulkanAllocation{};
             return false;
-        outRange._memory     = block._memory;
-        outRange._offset     = offset;
-        outRange._sizeBytes  = request._sizeBytes;
-        outRange._pMapped    = block._pMapped != nullptr ? block._pMapped + offset : nullptr;
-        outRange._blockIndex = blockIndex;
+        }
+        outAllocation._sizeBytes = allocated.size;
+        vmaSetAllocationName( _allocator, outAllocation._allocation, pName );
         return true;
+    }
+
+    void VulkanMemoryAllocator::destroyBuffer( VkBuffer buffer, const VulkanAllocation& allocation )
+    {
+        if ( _allocator != nullptr )
+            vmaDestroyBuffer( _allocator, buffer, allocation._allocation );
+    }
+
+    void VulkanMemoryAllocator::destroyImage( VkImage image, const VulkanAllocation& allocation )
+    {
+        if ( _allocator != nullptr )
+            vmaDestroyImage( _allocator, image, allocation._allocation );
+    }
+
+    bool VulkanMemoryAllocator::allocateHeap( const VkMemoryRequirements& requirements, const utf8* pName, VulkanAllocation& outAllocation )
+    {
+        outAllocation = VulkanAllocation{};
+        VmaAllocationCreateInfo allocationInfo{};
+        // 이미지 하나에 묶이지 않는 전용 블록이다 — CAN_ALIAS 가 `VkMemoryDedicatedAllocateInfo` 를 붙이지 않게 한다.
+        // https://gpuopen-librariesandsdks.github.io/VulkanMemoryAllocator/html/resource_aliasing.html
+        allocationInfo.flags         = VMA_ALLOCATION_CREATE_DEDICATED_MEMORY_BIT | VMA_ALLOCATION_CREATE_CAN_ALIAS_BIT;
+        allocationInfo.requiredFlags = VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT;
+        VmaAllocationInfo allocated{};
+        if ( isVkSuccess( vmaAllocateMemory( _allocator, &requirements, &allocationInfo, &outAllocation._allocation, &allocated ), "vmaAllocateMemory (heap)" ) == false )
+        {
+            outAllocation = VulkanAllocation{};
+            return false;
+        }
+        outAllocation._sizeBytes = allocated.size;
+        vmaSetAllocationName( _allocator, outAllocation._allocation, pName );
+        return true;
+    }
+
+    void VulkanMemoryAllocator::freeHeap( const VulkanAllocation& allocation )
+    {
+        if ( _allocator != nullptr && allocation.isValid() )
+            vmaFreeMemory( _allocator, allocation._allocation );
+    }
+
+    bool VulkanMemoryAllocator::createAliasingImage( const VulkanAllocation& heap, uint64 offsetBytes, const VkImageCreateInfo& info, VkImage& outImage, uint64& outBytes )
+    {
+        outImage = nullptr;
+        outBytes = 0;
+        // `vmaCreateAliasingImage2` 는 만들고 곧바로 묶는다 — 힙이 받지 않는 이미지를 검증 레이어 없이도 거절하려면 묶기 전에 요구를 봐야 해서 같은 일을 두 호출로 한다.
+        // 종류 · 정렬 · 크기는 vkBindImageMemory 의 유효 사용(VUID-VkBindImageMemoryInfo-memory-01612 · memoryOffset-01613 · memory-01614)이다.
+        VkImage image{ VK_NULL_HANDLE };
+        if ( isVkSuccess( vkCreateImage( _device, &info, nullptr, &image ), "vkCreateImage (aliasing)" ) == false )
+            return false;
+        VkMemoryRequirements requirements{};
+        vkGetImageMemoryRequirements( _device, image, &requirements );
+        VmaAllocationInfo heapInfo{};
+        vmaGetAllocationInfo( _allocator, heap._allocation, &heapInfo );
+        const bool bTypeAccepted = ( requirements.memoryTypeBits & ( 1u << heapInfo.memoryType ) ) != 0;
+        const bool bAligned      = requirements.alignment == 0 || ( heapInfo.offset + offsetBytes ) % requirements.alignment == 0;
+        const bool bFits         = offsetBytes <= heapInfo.size && heapInfo.size - offsetBytes >= requirements.size;
+        if ( bTypeAccepted == false || bAligned == false || bFits == false )
+        {
+            vkDestroyImage( _device, image, nullptr );
+            SW_LOG_ERROR_ID( "Vulkan.AliasingImageRejected", "A %#x%# image does not fit the heap (type accepted %#, offset %# aligned %#, size %# of %#)", info.extent.width, info.extent.height, bTypeAccepted,
+                             offsetBytes, bAligned, static_cast<uint64>( requirements.size ), static_cast<uint64>( heapInfo.size ) );
+            return false;
+        }
+        if ( isVkSuccess( vmaBindImageMemory2( _allocator, heap._allocation, offsetBytes, image, nullptr ), "vmaBindImageMemory2" ) == false )
+        {
+            vkDestroyImage( _device, image, nullptr );
+            return false;
+        }
+        outImage = image;
+        outBytes = requirements.size;
+        return true;
+    }
+
+    void VulkanMemoryAllocator::setName( const VulkanAllocation& allocation, const utf8* pName )
+    {
+        if ( _allocator != nullptr && allocation.isValid() )
+            vmaSetAllocationName( _allocator, allocation._allocation, pName );
+    }
+
+    void VulkanMemoryAllocator::flush( const VulkanAllocation& allocation, uint64 offsetBytes, uint64 sizeBytes )
+    {
+        if ( allocation.isValid() )
+            (void)isVkSuccess( vmaFlushAllocation( _allocator, allocation._allocation, offsetBytes, sizeBytes ), "vmaFlushAllocation" ); // 실패는 안에서 로그로 남는다
+    }
+
+    void VulkanMemoryAllocator::invalidate( const VulkanAllocation& allocation, uint64 offsetBytes, uint64 sizeBytes )
+    {
+        if ( allocation.isValid() )
+            (void)isVkSuccess( vmaInvalidateAllocation( _allocator, allocation._allocation, offsetBytes, sizeBytes ), "vmaInvalidateAllocation" ); // 실패는 안에서 로그로 남는다
+    }
+
+    bool VulkanMemoryAllocator::queryBudget( RHIMemoryBudget& outBudget ) const
+    {
+        if ( _allocator == nullptr || _bMemoryBudget == SW_FALSE )
+            return false;
+        const VkPhysicalDeviceMemoryProperties* pProperties{ nullptr };
+        vmaGetMemoryProperties( _allocator, &pProperties );
+        VmaBudget arrBudget[VK_MAX_MEMORY_HEAPS]{};
+        vmaGetHeapBudgets( _allocator, arrBudget );
+
+        // 사용량은 모든 힙(로컬 + 호스트 가시)의 합이다 — 추적기가 호스트 가시 버퍼도 센다. 예산 · 남은 양은 로컬 힙만 본다.
+        uint64 usageBytes{ 0 };
+        uint64 localUsageBytes{ 0 };
+        uint64 localBudgetBytes{ 0 };
+        for ( uint32 heapIndex = 0; heapIndex < pProperties->memoryHeapCount; ++heapIndex )
+        {
+            usageBytes += arrBudget[heapIndex].usage;
+            if ( ( pProperties->memoryHeaps[heapIndex].flags & VK_MEMORY_HEAP_DEVICE_LOCAL_BIT ) == 0 )
+                continue;
+            localUsageBytes += arrBudget[heapIndex].usage;
+            localBudgetBytes += arrBudget[heapIndex].budget;
+        }
+        outBudget._usageBytes      = usageBytes;
+        outBudget._budgetBytes     = localBudgetBytes;
+        outBudget._availableBytes  = localBudgetBytes > localUsageBytes ? localBudgetBytes - localUsageBytes : 0;
+        outBudget._scope           = RHIMemoryScope::Process;
+        outBudget._bUsageKnown     = SW_TRUE;
+        outBudget._bBudgetKnown    = SW_TRUE;
+        outBudget._bAvailableKnown = SW_TRUE;
+        return true;
+    }
+
+    uint32 VulkanMemoryAllocator::computeBlockCount() const
+    {
+        if ( _allocator == nullptr )
+            return 0;
+        VmaBudget arrBudget[VK_MAX_MEMORY_HEAPS]{}; // 장치에 없는 힙의 칸은 0 으로 남는다
+        vmaGetHeapBudgets( _allocator, arrBudget );
+        uint32 blockCount{ 0 };
+        for ( const VmaBudget& budget : arrBudget )
+        {
+            blockCount += budget.statistics.blockCount;
+        }
+        return blockCount;
     }
 } // namespace sw

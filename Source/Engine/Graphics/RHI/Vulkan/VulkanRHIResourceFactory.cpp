@@ -96,7 +96,7 @@ namespace sw
         const uint32 aligned = MathUtil::align( size, constant::render::kConstantBufferAlignment );
         const uint32 total   = aligned * constant::render::kMaxFrameCountInFlight;
         // 칸 크기는 레코드가 표에 오르기 전에 적힌다 — 렌더 스레드가 드로우마다 락 없이 읽는다.
-        return _pDevice->createVulkanBuffer( total, VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT, nullptr, aligned, VulkanBufferMemory::HostVisible ); // 링 칸을 CPU 가 매핑해 쓴다
+        return _pDevice->createVulkanBuffer( total, VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT, aligned, VulkanBufferMemory::HostWrite, "ConstantBuffer" ); // 링 칸을 CPU 가 매핑해 쓴다
     }
 
     void VulkanRHIResourceFactory::updateConstantBuffer( RHIBufferHandle buffer, const void* pData, uint32 size )
@@ -111,11 +111,14 @@ namespace sw
         VulkanRHIDevice::VulkanBufferRecord* const pRecord = _pDevice->resolveAllocatedBuffer( buffer );
         if ( pRecord == nullptr || pRecord->_cbSlotSize == 0 )
         {
-            // 호스트가 보는 버퍼만 곧바로 쓴다(블록이 매핑해 둔다). 기기 로컬 버퍼에 온 쓰기는 부르는 쪽의 결함이다.
+            // 호스트가 보는 버퍼만 곧바로 쓴다(할당이 매핑해 둔다). 기기 로컬 버퍼에 온 쓰기는 부르는 쪽의 결함이다.
             const bool bWritable = pRecord != nullptr && pRecord->_memory._pMapped != nullptr && size <= pRecord->_sizeBytes;
             SW_ASSERT( bWritable && "updateConstantBuffer needs a host visible buffer" );
             if ( bWritable )
+            {
                 Memory::copy( pRecord->_memory._pMapped, pData, size );
+                _pDevice->_memoryAllocator.flush( pRecord->_memory, 0, size );
+            }
             return;
         }
         SW_PROFILE_COUNT( "RT.Bind.constantBufferWrites", 1 );
@@ -126,7 +129,7 @@ namespace sw
 
     RHIBufferHandle VulkanRHIResourceFactory::createConstantBufferPage( uint32 size )
     {
-        // `VkDeviceMemory` 하나(프레임 칸 × 페이지 크기)를 구간이 나눠 쓴다 — 버퍼마다 `vkAllocateMemory` 이던 것을 페이지당 하나로 줄인다(감사 R-4).
+        // 버퍼 하나(프레임 칸 × 페이지 크기)를 구간이 나눠 쓴다 — 상수 버퍼마다 버퍼 하나이던 것을 페이지당 하나로 줄인다(감사 R-4).
         return createConstantBuffer( size );
     }
 
@@ -158,7 +161,7 @@ namespace sw
         constexpr uint32 usage = VK_BUFFER_USAGE_STORAGE_BUFFER_BIT | VK_BUFFER_USAGE_INDIRECT_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT |
                                  VK_BUFFER_USAGE_TRANSFER_SRC_BIT;
         // 구조 버퍼는 GPU 가 읽고 쓴다(인스턴스 · 컬링 · 라이트 그리드) — 기기 로컬이다. 갱신은 늘 스테이징 복사다(`updateStructuredBufferRegions`).
-        return _pDevice->createVulkanBuffer( totalBytes, usage, nullptr, 0, VulkanBufferMemory::DeviceLocal );
+        return _pDevice->createVulkanBuffer( totalBytes, usage, 0, VulkanBufferMemory::DeviceLocal, "StructuredBuffer" );
     }
 
     bool VulkanRHIResourceFactory::acquireStructuredUploadStaging( uint64 sizeBytes, uint64& outOffset, VkBuffer& outBuffer )
@@ -184,22 +187,17 @@ namespace sw
             // 옛 스테이징은 이번 구간의 앞선 복사가 아직 읽고 있을 수 있다. 펜스 뒤에 놓아준다.
             if ( slot._buffer != VK_NULL_HANDLE )
             {
-                VkDevice       dev = _pDevice->_device;
-                VkBuffer       buf = slot._buffer;
-                VkDeviceMemory mem = slot._memory;
-                if ( slot._pMapped != nullptr )
-                    vkUnmapMemory( dev, mem );
+                VkBuffer          buf      = slot._buffer;
+                VulkanAllocation  mem      = slot._memory;
                 RHIMemoryTracker* pTracker = &_pDevice->getMemoryTracker();
-                _pDevice->_releaseQueue.enqueueGPURelease( SW_DELEGATE_LAMBDA( RHIResourceReleaseDelegate, [dev, buf, mem, pTracker, pDevice = _pDevice]()
+                _pDevice->_releaseQueue.enqueueGPURelease( SW_DELEGATE_LAMBDA( RHIResourceReleaseDelegate, [buf, mem, pTracker, pDevice = _pDevice]()
                 {
-                    vkDestroyBuffer( dev, buf, nullptr );
-                    pDevice->freeDeviceMemory( mem );
-                    pTracker->recordFree( RHIMemoryKey::makeDeviceObject( mem ) );
+                    pTracker->recordFree( RHIMemoryKey::makeDeviceObject( mem._allocation ) ); // 할당을 놓으면 같은 주소가 다른 할당에 다시 나갈 수 있다 — 추적기에서 먼저 내린다
+                    pDevice->_memoryAllocator.destroyBuffer( buf, mem );
                 } ),
                                                            _pDevice->_frameFenceRing.getRecordingSerial() );
                 slot._buffer   = VK_NULL_HANDLE;
-                slot._memory   = VK_NULL_HANDLE;
-                slot._pMapped  = nullptr;
+                slot._memory   = VulkanAllocation{};
                 slot._capacity = 0;
                 offset         = 0;
             }
@@ -209,43 +207,13 @@ namespace sw
             bufferInfo.size        = newCapacity;
             bufferInfo.usage       = VK_BUFFER_USAGE_TRANSFER_SRC_BIT;
             bufferInfo.sharingMode = VK_SHARING_MODE_EXCLUSIVE;
-            if ( vkCreateBuffer( _pDevice->_device, &bufferInfo, nullptr, &slot._buffer ) != VK_SUCCESS )
+            if ( _pDevice->_memoryAllocator.createBuffer( bufferInfo, VulkanBufferMemory::HostWrite, "StructuredUploadStaging", slot._buffer, slot._memory ) == false )
             {
                 SW_LOG_ERROR_ID( "VulkanRHIResourceFactory.AcquireStructuredUploadStagingFailedCreateStaging", "acquireStructuredUploadStaging: failed to create the staging buffer (%# bytes)", newCapacity );
-                slot._buffer = VK_NULL_HANDLE;
-                return false;
-            }
-
-            VkMemoryRequirements memoryRequirements{};
-            vkGetBufferMemoryRequirements( _pDevice->_device, slot._buffer, &memoryRequirements );
-            uint32 memoryTypeIndex{ 0 };
-            if ( _pDevice->findMemoryType( memoryRequirements.memoryTypeBits, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT, memoryTypeIndex ) == false )
-            {
-                vkDestroyBuffer( _pDevice->_device, slot._buffer, nullptr );
-                slot._buffer = VK_NULL_HANDLE;
-                SW_LOG_ERROR_ID( "VulkanRHIResourceFactory.AcquireStructuredUploadStagingNoHostVisible", "acquireStructuredUploadStaging: no host visible memory type" );
-                return false;
-            }
-
-            VkMemoryAllocateInfo allocInfo{};
-            allocInfo.sType                   = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO;
-            allocInfo.allocationSize          = memoryRequirements.size;
-            allocInfo.memoryTypeIndex         = memoryTypeIndex;
-            const bool bSlotMemorySetupFailed = _pDevice->allocateDeviceMemory( allocInfo, slot._memory ) == false ||
-                                                vkBindBufferMemory( _pDevice->_device, slot._buffer, slot._memory, 0 ) != VK_SUCCESS ||
-                                                vkMapMemory( _pDevice->_device, slot._memory, 0, VK_WHOLE_SIZE, 0, &slot._pMapped ) != VK_SUCCESS;
-            if ( bSlotMemorySetupFailed )
-            {
-                if ( slot._memory != VK_NULL_HANDLE )
-                    _pDevice->freeDeviceMemory( slot._memory );
-                vkDestroyBuffer( _pDevice->_device, slot._buffer, nullptr );
-                slot             = VulkanRHIDevice::StructuredUploadSlot{};
-                slot._resetFence = _pDevice->_frameFenceRing.getRecordingSerial();
-                SW_LOG_ERROR_ID( "VulkanRHIResourceFactory.AcquireStructuredUploadStagingFailedAllocateMap", "acquireStructuredUploadStaging: failed to allocate/map the staging memory" );
                 return false;
             }
             slot._capacity = newCapacity;
-            _pDevice->getMemoryTracker().recordAllocation( RHIMemoryKey::makeDeviceObject( slot._memory ), RHIMemoryKind::Staging, memoryRequirements.size );
+            _pDevice->getMemoryTracker().recordAllocation( RHIMemoryKey::makeDeviceObject( slot._memory._allocation ), RHIMemoryKind::Staging, slot._memory._sizeBytes );
         }
 
         slot._uploadOffset = offset + sizeBytes;
@@ -309,9 +277,9 @@ namespace sw
         if ( acquireStructuredUploadStaging( totalSize, stagingOffset, stagingBuffer ) == false )
             return;
 
-        const uint8* pBase  = static_cast<const uint8*>( pBaseSource );
-        uint8* const pStage = static_cast<uint8*>( _pDevice->_arrStructuredUploadSlot[_pDevice->getFrameSlot()]._pMapped );
-        uint64       cursor{ stagingOffset };
+        const uint8*            pBase   = static_cast<const uint8*>( pBaseSource );
+        const VulkanAllocation& staging = _pDevice->_arrStructuredUploadSlot[_pDevice->getFrameSlot()]._memory;
+        uint64                  cursor{ stagingOffset };
         for ( uint32 regionIndex = 0; regionIndex < regionCount; ++regionIndex )
         {
             const RHIBufferCopyRegion& region = pRegions[regionIndex];
@@ -323,7 +291,7 @@ namespace sw
             if ( copySize > pRecord->_sizeBytes - region._dstOffset )
                 copySize = static_cast<uint32>( pRecord->_sizeBytes - region._dstOffset );
 
-            Memory::copy( pStage + cursor, pBase + region._srcOffset, copySize );
+            Memory::copy( staging._pMapped + cursor, pBase + region._srcOffset, copySize );
 
             VkBufferCopy vkRegion{};
             vkRegion.srcOffset = cursor;
@@ -335,6 +303,7 @@ namespace sw
         }
         if ( listRegion.empty() )
             return;
+        _pDevice->_memoryAllocator.flush( staging, stagingOffset, cursor - stagingOffset );
 
         // 렌더 스레드가 기록 중인 프레임 스트림에 넣는다(같은 스레드의 앞뒤 그리기와 기록 순서 그대로).
         const VkCommandBuffer cmd = _pDevice->_activeFrameBuffer;
@@ -390,7 +359,7 @@ namespace sw
         if ( pData == nullptr )
             return 0;
         // 정적 인덱스는 기기 로컬 + 스테이징 복사다(호스트 메모리에서 그리지 않는다).
-        const RHIBufferHandle handle = _pDevice->createVulkanBuffer( sizeBytes, VK_BUFFER_USAGE_INDEX_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT, nullptr, 0, VulkanBufferMemory::DeviceLocal );
+        const RHIBufferHandle handle = _pDevice->createVulkanBuffer( sizeBytes, VK_BUFFER_USAGE_INDEX_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT, 0, VulkanBufferMemory::DeviceLocal, "IndexBuffer" );
         return uploadDeviceLocal( handle, pData, sizeBytes );
     }
 
@@ -401,7 +370,7 @@ namespace sw
             return 0;
         // TRANSFER_SRC: 렌더 프록시 정점 버퍼가 정점 풀 복사의 원본이 된다(R-15 — copyBufferRegion). 정적 정점은 기기 로컬 + 스테이징 복사다.
         const RHIBufferHandle handle =
-            _pDevice->createVulkanBuffer( sizeBytes, VK_BUFFER_USAGE_VERTEX_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_SRC_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT, nullptr, 0, VulkanBufferMemory::DeviceLocal );
+            _pDevice->createVulkanBuffer( sizeBytes, VK_BUFFER_USAGE_VERTEX_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_SRC_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT, 0, VulkanBufferMemory::DeviceLocal, "VertexBuffer" );
         return uploadDeviceLocal( handle, pData, sizeBytes );
     }
 
@@ -409,7 +378,7 @@ namespace sw
     {
         // 복사의 도착 · 원본(풀을 다시 꾸릴 때 옛 풀이 원본이다). 기기 로컬이다.
         constexpr uint32 usage = VK_BUFFER_USAGE_VERTEX_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_TRANSFER_SRC_BIT;
-        return _pDevice->createVulkanBuffer( sizeBytes, usage, nullptr, 0, VulkanBufferMemory::DeviceLocal );
+        return _pDevice->createVulkanBuffer( sizeBytes, usage, 0, VulkanBufferMemory::DeviceLocal, "GPUVertexBuffer" );
     }
 
     void VulkanRHIResourceFactory::updateGeometryBufferRegions( RHIBufferHandle buffer, const void* pBaseSource, const RHIBufferCopyRegion* pRegions, uint32 regionCount )
@@ -418,9 +387,7 @@ namespace sw
         const bool bInvalidVertexRegionUpdate = buffer == 0 || pBaseSource == nullptr || pRegions == nullptr || regionCount == 0 || _pDevice->_device == VK_NULL_HANDLE;
         if ( bInvalidVertexRegionUpdate )
             return;
-        // 정점 버퍼는 HOST_VISIBLE | HOST_COHERENT 메모리다(createVulkanBuffer). 매핑해 CPU 가 직접 쓴다 — 앞 프레임이 읽는 조각이 아님은
-        // 부르는 쪽이 지킨다(IRHIResourceFactory::updateGeometryBufferRegions). 정점 · 인덱스 버퍼만 받는다: 링 상수 버퍼처럼 늘 매핑해 둔 메모리를
-        // 다시 매핑하면 검증 레이어 오류다.
+        // 정점 · 인덱스 버퍼만 받는다(IRHIResourceFactory::updateGeometryBufferRegions).
         constexpr VkBufferUsageFlags         kGeometryUsage  = VK_BUFFER_USAGE_VERTEX_BUFFER_BIT | VK_BUFFER_USAGE_INDEX_BUFFER_BIT;
         VulkanRHIDevice::VulkanBufferRecord* pRecord         = _pDevice->resolveAllocatedBuffer( buffer );
         const bool                           bGeometryBuffer = pRecord != nullptr && pRecord->_memory.isValid() && ( pRecord->_usage & kGeometryUsage ) != 0;
@@ -464,14 +431,11 @@ namespace sw
         { deferFreeBufferIndex( index, true ); } );
 
         VkBuffer          buf      = owned._buffer;
-        VulkanMemoryRange mem      = owned._memory;
-        VkDevice          dev      = _pDevice->_device;
+        VulkanAllocation  mem      = owned._memory;
         RHIMemoryTracker* pTracker = &_pDevice->getMemoryTracker();
-        _pDevice->_releaseQueue.enqueueGPURelease( SW_DELEGATE_LAMBDA( RHIResourceReleaseDelegate, [dev, buf, mem, pTracker, buffer, pDevice = _pDevice]()
+        _pDevice->_releaseQueue.enqueueGPURelease( SW_DELEGATE_LAMBDA( RHIResourceReleaseDelegate, [buf, mem, pTracker, buffer, pDevice = _pDevice]()
         {
-            if ( buf != VK_NULL_HANDLE )
-                vkDestroyBuffer( dev, buf, nullptr );
-            pDevice->_memoryAllocator.release( mem );
+            pDevice->_memoryAllocator.destroyBuffer( buf, mem );
             // 추적기는 메모리를 실제로 놓을 때 줄인다(해제 요청 시점이 아니라).
             pTracker->recordFree( RHIMemoryKey::makeBuffer( buffer ) );
         } ),
@@ -485,6 +449,7 @@ namespace sw
         if ( pRecord == nullptr || pRecord->_image == VK_NULL_HANDLE || pName == nullptr )
             return;
         _pDevice->getMemoryTracker().setLabel( RHIMemoryKey::makeTexture( texture ), pName ); // 메모리 스냅숏 · RT 목록이 같은 이름을 보인다
+        _pDevice->_memoryAllocator.setName( pRecord->_memory, pName );
         if ( _pDevice->_instance == VK_NULL_HANDLE )
             return;
         // VK_EXT_debug_utils 가 켜진 인스턴스에서만 함수가 있다(이벤트 표지 vkCmdBeginDebugUtilsLabelEXT 와 같은 조회) — 없으면 이름을 붙이지 않는다.
@@ -599,22 +564,11 @@ namespace sw
         vkGetImageMemoryRequirements( _pDevice->_device, probe, &requirements );
         vkDestroyImage( _pDevice->_device, probe, nullptr );
 
-        uint32 memoryTypeIndex{ 0 };
-        if ( _pDevice->findMemoryType( requirements.memoryTypeBits, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT, memoryTypeIndex ) == false )
-        {
-            SW_LOG_ERROR_ID( "VulkanRHIResourceFactory.TransientHeapNoMemoryType", "createTransientHeap: no device local memory type for render target images" );
-            return 0;
-        }
-        VkMemoryAllocateInfo allocInfo{};
-        allocInfo.sType                                     = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO;
-        allocInfo.allocationSize                            = sizeBytes;
-        allocInfo.memoryTypeIndex                           = memoryTypeIndex;
+        requirements.size                                   = sizeBytes;
         shared_ptr<VulkanRHIDevice::VulkanHeapMemory> pHeap = make_shared<VulkanRHIDevice::VulkanHeapMemory>();
-        if ( _pDevice->allocateDeviceMemory( allocInfo, pHeap->_memory ) == false )
+        if ( _pDevice->_memoryAllocator.allocateHeap( requirements, "TransientHeap", pHeap->_memory ) == false )
             return 0;
-        pHeap->_pOwner          = _pDevice;
-        pHeap->_sizeBytes       = sizeBytes;
-        pHeap->_memoryTypeIndex = memoryTypeIndex;
+        pHeap->_pOwner = &_pDevice->_memoryAllocator;
         const RHITransientHeapHandle handle{ _pDevice->_nextTransientHeap++ };
         _pDevice->_mapTransientHeap.emplace( handle, std::move( pHeap ) );
         return handle;
@@ -662,64 +616,26 @@ namespace sw
         record._bRenderTarget = desc._bIsRenderTarget ? 1 : 0;
         record._bDepthStencil = desc._bIsDepthStencil ? 1 : 0;
 
-        if ( vkCreateImage( _pDevice->_device, &imageInfo, nullptr, &record._image ) != VK_SUCCESS )
-        {
-            SW_LOG_ERROR_ID( "VulkanRHIResourceFactory.FailedCreateVkImageTexture2D", "Failed to create VkImage for Texture2D." );
-            return 0;
-        }
-
-        VkMemoryRequirements memRequirements;
-        vkGetImageMemoryRequirements( _pDevice->_device, record._image, &memRequirements );
-
+        uint64 allocationBytes{ 0 };
         if ( pHeap != nullptr )
         {
-            // placed — 힙 메모리의 오프셋에 묶는다. 종류 · 정렬 · 크기는 vkBindImageMemory 의 유효 사용(VUID-VkBindImageMemoryInfo-memory-01612 · memoryOffset-01613 · memory-01614)이다.
-            // https://raw.githubusercontent.com/KhronosGroup/Vulkan-Docs/main/chapters/resources.adoc (Memory Aliasing · VkBindImageMemoryInfo)
-            const bool bTypeAccepted = ( memRequirements.memoryTypeBits & ( 1u << pHeap->_memoryTypeIndex ) ) != 0;
-            const bool bAligned      = memRequirements.alignment == 0 || offsetBytes % memRequirements.alignment == 0;
-            const bool bFits         = offsetBytes <= pHeap->_sizeBytes && pHeap->_sizeBytes - offsetBytes >= memRequirements.size;
-            if ( bTypeAccepted == false || bAligned == false || bFits == false )
+            // placed — 힙 메모리의 오프셋에 묶는다(VMA 의 앨리어싱 묶기). 레코드가 힙 참조를 든다.
+            if ( _pDevice->_memoryAllocator.createAliasingImage( pHeap->_memory, offsetBytes, imageInfo, record._image, allocationBytes ) == false )
             {
-                vkDestroyImage( _pDevice->_device, record._image, nullptr );
-                SW_LOG_ERROR_ID( "VulkanRHIResourceFactory.PlacedTextureRejected", "createPlacedTexture2D: %#x%# does not fit the heap (type accepted %#, offset %# aligned %#, size %# + %# of %#)", desc._width, desc._height,
-                                 bTypeAccepted, offsetBytes, bAligned, memRequirements.size, offsetBytes, pHeap->_sizeBytes );
-                return 0;
-            }
-            if ( isVkSuccess( vkBindImageMemory( _pDevice->_device, record._image, pHeap->_memory, offsetBytes ), "vkBindImageMemory (placed Texture2D)" ) == false )
-            {
-                vkDestroyImage( _pDevice->_device, record._image, nullptr );
+                SW_LOG_ERROR_ID( "VulkanRHIResourceFactory.PlacedTextureRejected", "createPlacedTexture2D: the %#x%# texture could not be placed at offset %#", desc._width, desc._height, offsetBytes );
                 return 0;
             }
             record._heapMemory = pHeap;
         }
         else
         {
-            uint32 memoryTypeIndex{ 0 };
-            if ( _pDevice->findMemoryType( memRequirements.memoryTypeBits, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT, memoryTypeIndex ) == false )
+            const bool bAttachment = desc._bIsRenderTarget || desc._bIsDepthStencil;
+            if ( _pDevice->_memoryAllocator.createImage( imageInfo, bAttachment ? "RenderTarget" : "Texture", record._image, record._memory ) == false )
             {
-                vkDestroyImage( _pDevice->_device, record._image, nullptr );
-                SW_LOG_ERROR_ID( "VulkanRHIResourceFactory.FailedFindDeviceLocal", "Failed to find a device local memory type for Texture2D." );
+                SW_LOG_ERROR_ID( "VulkanRHIResourceFactory.FailedCreateVkImageTexture2D", "Failed to create the VkImage for a %#x%# texture.", desc._width, desc._height );
                 return 0;
             }
-
-            VulkanMemoryAllocator::Request request{};
-            request._sizeBytes       = memRequirements.size;
-            request._alignment       = memRequirements.alignment;
-            request._memoryTypeIndex = memoryTypeIndex;
-            request._bLinear         = SW_FALSE;
-            if ( _pDevice->_memoryAllocator.allocate( request, record._memory ) == false )
-            {
-                vkDestroyImage( _pDevice->_device, record._image, nullptr );
-                SW_LOG_ERROR_ID( "VulkanRHIResourceFactory.FailedAllocateMemoryTexture2D", "Failed to allocate memory for Texture2D." );
-                return 0;
-            }
-
-            if ( isVkSuccess( vkBindImageMemory( _pDevice->_device, record._image, record._memory._memory, record._memory._offset ), "vkBindImageMemory (Texture2D)" ) == false )
-            {
-                vkDestroyImage( _pDevice->_device, record._image, nullptr );
-                _pDevice->_memoryAllocator.release( record._memory );
-                return 0;
-            }
+            allocationBytes = record._memory._sizeBytes;
         }
 
         VkImageAspectFlags aspect = VK_IMAGE_ASPECT_COLOR_BIT;
@@ -741,8 +657,7 @@ namespace sw
 
         if ( vkCreateImageView( _pDevice->_device, &viewInfo, nullptr, &record._imageView ) != VK_SUCCESS )
         {
-            vkDestroyImage( _pDevice->_device, record._image, nullptr );
-            _pDevice->_memoryAllocator.release( record._memory );
+            _pDevice->_memoryAllocator.destroyImage( record._image, record._memory );
             SW_LOG_ERROR_ID( "VulkanRHIResourceFactory.FailedCreateVkImageViewTexture2D", "Failed to create VkImageView for Texture2D." );
             return 0;
         }
@@ -787,9 +702,9 @@ namespace sw
         if ( record._bRenderTarget && _pDevice->createOffscreenFramebuffer( record ) == false )
             SW_LOG_WARNING_ID( "VulkanRHIResourceFactory.CreateTexture2DFramebufferCreationFailed", "createTexture2D: framebuffer creation failed — texture kept without offscreen pass." );
 
-        // GPU 메모리 추적기에 올리는 유일한 자리다. 크기는 드라이버가 요구한 할당 크기(정렬 포함)다.
+        // GPU 메모리 추적기에 올리는 유일한 자리다. 크기는 할당 크기(정렬 포함)다.
         const RHITextureHandle handle = _pDevice->_gpuTextures.insert( record );
-        _pDevice->getMemoryTracker().recordTexture( handle, desc, memRequirements.size );
+        _pDevice->getMemoryTracker().recordTexture( handle, desc, allocationBytes );
         return handle;
     }
 
@@ -847,7 +762,8 @@ namespace sw
         {
             const RHITextureMipSpan& mipSpan = arrMip[mip];
             ringOffset                       = alignUpToMultiple( ringOffset, copyAlignment );
-            Memory::copy( ring.getSpanMappedBase( span ) + ringOffset, mipSpan._pData, mipSpan._sizeBytes );
+            Memory::copy( ring.getSpanMemory( span )._pMapped + ringOffset, mipSpan._pData, mipSpan._sizeBytes );
+            _pDevice->_memoryAllocator.flush( ring.getSpanMemory( span ), ringOffset, mipSpan._sizeBytes );
 
             VkBufferImageCopy& region              = arrRegion[mip];
             region.bufferOffset                    = ringOffset;
@@ -919,7 +835,8 @@ namespace sw
         if ( allocateResult != RHISubmitResult::Accepted )
             return RHITransferSubmit::fromUnaccepted( allocateResult );
         const uint64 ringOffset = alignUpToMultiple( span.getOffsetBytes(), copyAlignment );
-        Memory::copy( ring.getSpanMappedBase( span ) + ringOffset, desc._pData, static_cast<size_t>( usedBytes ) );
+        Memory::copy( ring.getSpanMemory( span )._pMapped + ringOffset, desc._pData, static_cast<size_t>( usedBytes ) );
+        _pDevice->_memoryAllocator.flush( ring.getSpanMemory( span ), ringOffset, usedBytes );
 
         ScopedLock<mutex> transferLock{ _pDevice->_transferMutex };
         return RHITextureTransferDriver::runJob<VulkanRHIDevice::VulkanTransferJob>(
@@ -984,10 +901,12 @@ namespace sw
             SW_LOG_ERROR_ID( "VulkanRHIResourceFactory.TakeTextureReadbackTicketNotPending", "takeTextureReadback: ticket %# is not a pending texture readback (an upload ticket, or already taken or discarded)", ticket._serial );
             return false;
         }
-        // 펜스를 지났고 복사 뒤에 HOST 배리어를 걸었다 — 호스트 일관 메모리라 그대로 읽는다. 읽은 뒤 구간을 돌려준다.
+        // 펜스를 지났고 복사 뒤에 HOST 배리어를 걸었다 — 캐시에 남은 옛 값만 버리고 읽는다. 읽은 뒤 구간을 돌려준다.
         VulkanRHIDevice::VulkanStagingRing& ring = _pDevice->_readbackRing;
         outBytes.resize( pending._sizeBytes );
-        Memory::copy( outBytes.data(), ring.getSpanMappedBase( pending._span ) + pending._dataOffsetBytes, pending._sizeBytes );
+        const VulkanAllocation& readback = ring.getSpanMemory( pending._span );
+        _pDevice->_memoryAllocator.invalidate( readback, pending._dataOffsetBytes, pending._sizeBytes );
+        Memory::copy( outBytes.data(), readback._pMapped + pending._dataOffsetBytes, pending._sizeBytes );
         RHITextureTransferDriver::releaseTakenReadback( ring._allocator, std::move( pending._span ) );
         if ( pending._depth24TexelCount != 0 )
             convertRHIDepth24ToFloat( outBytes.data(), pending._depth24TexelCount );
@@ -1019,7 +938,7 @@ namespace sw
         if ( bInvalidReadbackRequest )
             return 0;
         // 읽기 버퍼는 CPU 가 맵해 읽는다 — 호스트 보임이다.
-        return _pDevice->createVulkanBuffer( totalBytes, VK_BUFFER_USAGE_TRANSFER_DST_BIT, nullptr, 0, VulkanBufferMemory::HostVisible );
+        return _pDevice->createVulkanBuffer( totalBytes, VK_BUFFER_USAGE_TRANSFER_DST_BIT, 0, VulkanBufferMemory::HostRead, "ReadbackBuffer" );
     }
 
     bool VulkanRHIResourceFactory::readReadbackBuffer( RHIBufferHandle readback, uint32 sizeBytes, void* pDestination )
@@ -1041,6 +960,7 @@ namespace sw
             SW_LOG_ERROR_ID( "VulkanRHIResourceFactory.ReadReadbackBufferFailedMapReadback", "readReadbackBuffer: the readback memory is not host visible (%# bytes)", sizeBytes );
             return false;
         }
+        _pDevice->_memoryAllocator.invalidate( pRecord->_memory, 0, sizeBytes );
         Memory::copy( pDestination, pRecord->_memory._pMapped, sizeBytes );
         return true;
     }
@@ -1187,7 +1107,7 @@ namespace sw
         VkImageView         view       = owned._imageView;
         VkImageView         sampleView = owned._sampleView;
         VkImage             image      = owned._image;
-        VulkanMemoryRange   mem        = owned._memory;
+        VulkanAllocation    mem        = owned._memory;
         vector<VkImageView> listSliceView{ owned._listSliceView };
         RHIMemoryTracker*   pTracker = &_pDevice->getMemoryTracker();
         // placed 텍스처는 힙 메모리 참조를 대리자가 펜스까지 든다 — 대리자가 놓이면서 마지막 참조면 메모리가 풀린다(`VulkanHeapMemory`).
@@ -1203,9 +1123,7 @@ namespace sw
                 vkDestroyImageView( dev, view, nullptr );
             if ( sampleView != VK_NULL_HANDLE )
                 vkDestroyImageView( dev, sampleView, nullptr );
-            if ( image != VK_NULL_HANDLE )
-                vkDestroyImage( dev, image, nullptr );
-            pDevice->_memoryAllocator.release( mem );
+            pDevice->_memoryAllocator.destroyImage( image, mem );
             // 추적기는 메모리를 실제로 놓을 때 줄인다(해제 요청 시점이 아니라).
             pTracker->recordFree( RHIMemoryKey::makeTexture( texture ) );
         } );

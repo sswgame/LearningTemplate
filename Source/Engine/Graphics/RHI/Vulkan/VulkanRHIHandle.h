@@ -34,18 +34,21 @@ SW_VK_DEFINE_HANDLE( VkDescriptorSetLayout )
 SW_VK_DEFINE_HANDLE( VkDescriptorPool )
 SW_VK_DEFINE_HANDLE( VkDescriptorSet )
 SW_VK_DEFINE_HANDLE( VkBuffer )
-SW_VK_DEFINE_HANDLE( VkDeviceMemory )
 SW_VK_DEFINE_HANDLE( VkPipeline )
 SW_VK_DEFINE_HANDLE( VkPipelineCache )
 SW_VK_DEFINE_HANDLE( VkDebugUtilsMessengerEXT )
 SW_VK_DEFINE_HANDLE( VkSampler )
 SW_VK_DEFINE_HANDLE( VkQueryPool )
+// Vulkan Memory Allocator 의 핸들 — `vk_mem_alloc.h` 의 VK_DEFINE_HANDLE 과 같은 typedef 다.
+SW_VK_DEFINE_HANDLE( VmaAllocator )
+SW_VK_DEFINE_HANDLE( VmaAllocation )
 
 // 헤더가 멤버로 드는 플래그 형식 — `vulkan_core.h` 와 같은 typedef 라 둘 다 보이는 TU 에서도 겹치지 않는다.
 typedef uint32_t VkFlags;
 typedef VkFlags  VkPipelineStageFlags;
 
-// 헤더가 참조로만 받는 서술(이미지 생성 · 배리어) — 정의는 `vulkan_core.h` 의 같은 이름 struct 다.
+// 헤더가 참조로만 받는 서술(버퍼 · 이미지 생성 · 메모리 요구 · 배리어) — 정의는 `vulkan_core.h` 의 같은 이름 struct 다.
 struct VkImageCreateInfo;
 struct VkImageMemoryBarrier;
-struct VkMemoryAllocateInfo;
+struct VkBufferCreateInfo;
+struct VkMemoryRequirements;
