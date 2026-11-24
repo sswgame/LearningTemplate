@@ -1,0 +1,81 @@
+<?xml version="1.0" encoding="utf-8"?>
+<?asset guid="ebe1ee0199aa4bc9aed8f95ba4b08090"?>
+<!--
+  장르 완결 루프 — 클래식 JRPG 미니게임(classicjrpg)의 한 판: 걷기 → 걸음 조우 전투(멤버마다 명령) → 저장 · 불러오기 → 둘째 전투 → 쉼터 → 보스 → 승리 → 결과를 들고 허브로.
+  플레이어와 같은 입력 맵 액션(Move · JRPG.*)과 세이브 메뉴 자리의 개발 명령(game.save · game.load)만 쓴다.
+  디렉터는 키트 JRPGGameModeComponent, 입력 · 그리기 · HUD 는 클라이언트 모듈 GF_Client_ClassicJRPG 의 JRPGAvatarComponent.
+  자리: (0,0)에서 시작, 4 m/s — 네 걸음(4 m)마다 전투(x 4 · x 8), 길 끝 (12,0)의 1 m 안(x 11)에서 보스. 풀숲의 적은 한 번에, 보스는 두 라운드째에 쓰러진다(data/jrpg.xml 의 수치).
+  감시 값: JRPG.Phase(0 걷기, 1 전투, 2 승리, 3 패배) · JRPG.CommandMember · JRPG.EnemiesAlive · JRPG.BattleCount · JRPG.BattleRound · JRPG.Gold · JRPG.LeaderXP · JRPG.PlayerX · Minigame.LastResult.
+  실행: ctest -R Scenario.playground
+-->
+<Scenario name="game.playground.classicjrpg_slice" fixedDelta="0.0166667" timeoutFrames="3600" startAfter="ScenePlaying" startTimeoutFrames="900" input="exclusive">
+	<Launch variable="gv_firstMinigame" value="classicjrpg"/>
+	<Variable name="gv_playgroundAutoPlay" value="0"/>
+	<WaitUntil watch="JRPG.Gold" equals="10" timeoutFrames="120"/>
+	<Expect watch="JRPG.Phase" equals="0"/>
+	<!-- 첫 전투(x 4) — 멤버마다 명령 하나, 마지막 명령이 라운드를 돌린다 -->
+	<ActionAxis name="Move" x="1" seconds="1.2"/>
+	<WaitUntil watch="JRPG.Phase" equals="1" timeoutFrames="120"/>
+	<AdvanceSimulation frames="30"/> <!-- 누른 이동이 끝나는 시간 — 전투가 끝난 뒤 이어 걷지 않게(시간이 내용) -->
+	<Expect watch="JRPG.EnemiesAlive" equals="2"/>
+	<Expect watch="JRPG.CommandMember" equals="0"/>
+	<Action name="JRPG.Attack"/>
+	<WaitUntil watch="JRPG.CommandMember" equals="1" timeoutFrames="30"/>
+	<Expect watch="JRPG.BattleRound" equals="0"/>
+	<Action name="JRPG.Attack"/>
+	<WaitUntil watch="JRPG.Phase" equals="0" timeoutFrames="30"/>
+	<Expect watch="JRPG.BattleCount" equals="1"/>
+	<Expect watch="JRPG.Gold" equals="17"/>
+	<Expect watch="JRPG.LeaderXP" equals="12"/>
+	<Expect watch="JRPG.LeaderHP" equals="100"/>
+	<Expect watch="JRPG.PlayerX" near="4" tolerance="0.1"/>
+	<!-- 저장하고 되돌아 걸은 뒤 불러온다 — 자리 · 파티 · 지갑이 저장한 때로 돌아온다 -->
+	<DevCommand line="game.save classicjrpg/slice"/>
+	<WaitUntil watch="Save.Written" atLeast="1" timeoutWallSeconds="10"/>
+	<ActionAxis name="Move" x="-1" seconds="0.25"/>
+	<WaitUntil watch="JRPG.PlayerX" near="3" tolerance="0.15" timeoutFrames="60"/>
+	<DevCommand line="game.load classicjrpg/slice"/>
+	<WaitUntil watch="Save.Loaded" atLeast="1" timeoutWallSeconds="10"/>
+	<WaitUntil watch="JRPG.PlayerX" near="4" tolerance="0.1" timeoutFrames="30"/>
+	<Expect watch="JRPG.Gold" equals="17"/>
+	<Expect watch="JRPG.LeaderXP" equals="12"/>
+	<Expect watch="JRPG.BattleCount" equals="1"/>
+	<!-- 둘째 전투(x 8) -->
+	<ActionAxis name="Move" x="1" seconds="1.2"/>
+	<WaitUntil watch="JRPG.Phase" equals="1" timeoutFrames="120"/>
+	<AdvanceSimulation frames="30"/> <!-- 누른 이동이 끝나는 시간(시간이 내용) -->
+	<Action name="JRPG.Attack"/>
+	<WaitUntil watch="JRPG.CommandMember" equals="1" timeoutFrames="30"/>
+	<Action name="JRPG.Attack"/>
+	<WaitUntil watch="JRPG.Phase" equals="0" timeoutFrames="30"/>
+	<Expect watch="JRPG.Gold" equals="24"/>
+	<!-- 쉼터(8, 0.8) — 여관 값 4 × 2 -->
+	<Action name="JRPG.Rest"/>
+	<WaitUntil watch="JRPG.Gold" equals="16" timeoutFrames="30"/>
+	<ExpectLog id="JRPG.Rested" count="1"/>
+	<!-- 길 끝 — 보스전: 공격 + 주문, 공격 둘 -->
+	<ActionAxis name="Move" x="1" seconds="1"/>
+	<WaitUntil watch="JRPG.Phase" equals="1" timeoutFrames="120"/>
+	<AdvanceSimulation frames="30"/> <!-- 누른 이동이 끝나는 시간(시간이 내용) -->
+	<Expect watch="JRPG.EnemiesAlive" equals="1"/>
+	<Action name="JRPG.Flee"/>
+	<AdvanceSimulation frames="5"/> <!-- 보스전에서는 도망을 거절한다 — 라운드가 돌지 않는 것이 내용 -->
+	<Expect watch="JRPG.BattleRound" equals="0"/>
+	<Action name="JRPG.Attack"/>
+	<WaitUntil watch="JRPG.CommandMember" equals="1" timeoutFrames="30"/>
+	<Action name="JRPG.Spell"/>
+	<WaitUntil watch="JRPG.BattleRound" equals="1" timeoutFrames="30"/>
+	<Expect watch="JRPG.Phase" equals="1"/>
+	<Action name="JRPG.Attack"/>
+	<WaitUntil watch="JRPG.CommandMember" equals="1" timeoutFrames="30"/>
+	<Action name="JRPG.Attack"/>
+	<WaitUntil watch="JRPG.Phase" equals="2" timeoutFrames="30"/>
+	<ExpectLog id="JRPG.Victory" count="1"/>
+	<Expect watch="JRPG.Gold" equals="46"/>
+	<!-- 결과를 보여 준 뒤 스스로 끝난다 — 돌아올 씬이 없으니(첫 진입) 입구 씬(허브)으로 간다 -->
+	<WaitUntil watch="Minigame.LastResult" is="win" timeoutWallSeconds="60"/>
+	<ExpectActiveScene path="game/playground/maps/hub.scene.xml"/>
+	<Expect watch="Minigame.Active" is="none"/>
+	<Expect watch="Minigame.LeakCount" equals="0"/>
+	<Pass/>
+</Scenario>

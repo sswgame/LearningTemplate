@@ -3,6 +3,7 @@
 	<entries>
 		<entry key="/" source="/" context="TextWidget._text">
 			<origins>
+				<item>game/playground/classicjrpg/ui/hud.ui.xml</item>
 				<item>game/playground/shooter3d/ui/hud.ui.xml</item>
 			</origins>
 		</entry>
@@ -26,6 +27,16 @@
 				<item>common/data/items.xml</item>
 			</origins>
 		</entry>
+		<entry key="Attack (J)   Spell (K)   Defend (L)   Flee (R)" source="Attack (J)   Spell (K)   Defend (L)   Flee (R)" context="TextWidget._text">
+			<origins>
+				<item>game/playground/classicjrpg/ui/hud.ui.xml</item>
+			</origins>
+		</entry>
+		<entry key="Balm" source="Balm" context="JRPG name">
+			<origins>
+				<item>game/playground/data/jrpg.xml</item>
+			</origins>
+		</entry>
 		<entry key="Bone Axe" source="Bone Axe" context="Item name">
 			<origins>
 				<item>common/data/items.xml</item>
@@ -34,6 +45,11 @@
 		<entry key="Bone Shield" source="Bone Shield" context="Item name">
 			<origins>
 				<item>common/data/items.xml</item>
+			</origins>
+		</entry>
+		<entry key="Bramble Sprite" source="Bramble Sprite" context="JRPG name">
+			<origins>
+				<item>game/playground/data/jrpg.xml</item>
 			</origins>
 		</entry>
 		<entry key="CutA" source="CutA" context="SequenceBinding._name">
@@ -46,9 +62,19 @@
 				<item>game/playground/data/cinematic.seq.xml</item>
 			</origins>
 		</entry>
+		<entry key="Dusk Moth" source="Dusk Moth" context="JRPG name">
+			<origins>
+				<item>game/playground/data/jrpg.xml</item>
+			</origins>
+		</entry>
 		<entry key="Elder" source="Elder" context="Dialogue speaker name">
 			<origins>
 				<item>game/playground/pixeltown/dialogue/elder.dialogue.xml</item>
+			</origins>
+		</entry>
+		<entry key="Follow the lantern trail to its end" source="Follow the lantern trail to its end" context="TextWidget._text">
+			<origins>
+				<item>game/playground/classicjrpg/ui/hud.ui.xml</item>
 			</origins>
 		</entry>
 		<entry key="GateCut" source="GateCut" context="SequenceBinding._name">
@@ -61,9 +87,29 @@
 				<item>common/data/items.xml</item>
 			</origins>
 		</entry>
+		<entry key="Gloom" source="Gloom" context="JRPG name">
+			<origins>
+				<item>game/playground/data/jrpg.xml</item>
+			</origins>
+		</entry>
+		<entry key="Gold" source="Gold" context="TextWidget._text">
+			<origins>
+				<item>game/playground/classicjrpg/ui/hud.ui.xml</item>
+			</origins>
+		</entry>
+		<entry key="HP" source="HP" context="TextWidget._text">
+			<origins>
+				<item>game/playground/classicjrpg/ui/hud.ui.xml</item>
+			</origins>
+		</entry>
 		<entry key="Heraldic Cape" source="Heraldic Cape" context="Item name">
 			<origins>
 				<item>common/data/items.xml</item>
+			</origins>
+		</entry>
+		<entry key="Hollow Stag" source="Hollow Stag" context="JRPG name">
+			<origins>
+				<item>game/playground/data/jrpg.xml</item>
 			</origins>
 		</entry>
 		<entry key="Knight Helmet" source="Knight Helmet" context="Item name">
@@ -86,9 +132,19 @@
 				<item>common/data/items.xml</item>
 			</origins>
 		</entry>
+		<entry key="Lantern Guard" source="Lantern Guard" context="JRPG name">
+			<origins>
+				<item>game/playground/data/jrpg.xml</item>
+			</origins>
+		</entry>
 		<entry key="Longbow" source="Longbow" context="Item name">
 			<origins>
 				<item>common/data/items.xml</item>
+			</origins>
+		</entry>
+		<entry key="MP" source="MP" context="TextWidget._text">
+			<origins>
+				<item>game/playground/classicjrpg/ui/hud.ui.xml</item>
 			</origins>
 		</entry>
 		<entry key="Mind the pond - nobody swims in it." source="Mind the pond - nobody swims in it." context="Dialogue line">
@@ -118,6 +174,11 @@
 				<item>common/data/items.xml</item>
 			</origins>
 		</entry>
+		<entry key="Rest at the inn (E)" source="Rest at the inn (E)" context="TextWidget._text">
+			<origins>
+				<item>game/playground/classicjrpg/ui/hud.ui.xml</item>
+			</origins>
+		</entry>
 		<entry key="Round Shield" source="Round Shield" context="Item name">
 			<origins>
 				<item>common/data/items.xml</item>
@@ -131,6 +192,11 @@
 		<entry key="Rusted Helm" source="Rusted Helm" context="Item name">
 			<origins>
 				<item>common/data/items.xml</item>
+			</origins>
+		</entry>
+		<entry key="Spark" source="Spark" context="JRPG name">
+			<origins>
+				<item>game/playground/data/jrpg.xml</item>
 			</origins>
 		</entry>
 		<entry key="Stamina" source="Stamina" context="TextWidget._text">
@@ -165,9 +231,24 @@
 				<item>game/playground/audio/playground.audioevents.xml</item>
 			</origins>
 		</entry>
+		<entry key="Target" source="Target" context="TextWidget._text">
+			<origins>
+				<item>game/playground/classicjrpg/ui/hud.ui.xml</item>
+			</origins>
+		</entry>
 		<entry key="Tattered Cape" source="Tattered Cape" context="Item name">
 			<origins>
 				<item>common/data/items.xml</item>
+			</origins>
+		</entry>
+		<entry key="The party has fallen" source="The party has fallen" context="TextWidget._text">
+			<origins>
+				<item>game/playground/classicjrpg/ui/hud.ui.xml</item>
+			</origins>
+		</entry>
+		<entry key="The trail is safe again" source="The trail is safe again" context="TextWidget._text">
+			<origins>
+				<item>game/playground/classicjrpg/ui/hud.ui.xml</item>
 			</origins>
 		</entry>
 		<entry key="The warrior wakes." source="The warrior wakes." context="SequenceTrackItem._text">
@@ -188,6 +269,11 @@
 		<entry key="Welcome to Pixel Town, traveller." source="Welcome to Pixel Town, traveller." context="Dialogue line">
 			<origins>
 				<item>game/playground/pixeltown/dialogue/elder.dialogue.xml</item>
+			</origins>
+		</entry>
+		<entry key="Wick Mage" source="Wick Mage" context="JRPG name">
+			<origins>
+				<item>game/playground/data/jrpg.xml</item>
 			</origins>
 		</entry>
 	</entries>

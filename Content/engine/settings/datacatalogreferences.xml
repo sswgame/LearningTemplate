@@ -244,4 +244,10 @@
 	<CatalogKey tag="CoasterLayoutDef" catalog="CoasterLayoutCatalog" entry="Layout"/>
 	<Element type="ParkCoasterDef" catalog="ParkLayout" path="Coaster"/>
 	<Field owner="ParkCoasterDef" field="_layout" tag="CoasterLayoutDef"/>
+	<CatalogKey tag="JRPGClassDef" catalog="JRPGCatalog" entry="Class"/>
+	<CatalogKey tag="JRPGAreaDef" catalog="JRPGCatalog" entry="Area"/>
+	<CatalogKey tag="JRPGEnemyDef" catalog="JRPGCatalog" entry="Enemy"/>
+	<Field owner="JRPGGameModeComponent" field="_listHero" tag="JRPGClassDef"/>
+	<Field owner="JRPGGameModeComponent" field="_area" tag="JRPGAreaDef"/>
+	<Field owner="JRPGGameModeComponent" field="_listBoss" tag="JRPGEnemyDef"/>
 </DataCatalogReferenceTable>

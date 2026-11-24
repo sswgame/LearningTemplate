@@ -28,5 +28,12 @@
 				<item>Weapon</item>
 			</elements>
 		</rule>
+		<rule files="jrpg.xml" attribute="name" kind="text" context="JRPG name">
+			<elements>
+				<item>Class</item>
+				<item>Spell</item>
+				<item>Enemy</item>
+			</elements>
+		</rule>
 	</assetRules>
 </LocalizationProject>

@@ -4,23 +4,36 @@
 		<entry key="/" text="/" sourceHash="af63a24c860189fe" />
 		<entry key="Actor" text="배우" sourceHash="f865a44470a1eb3a" />
 		<entry key="Assault Rifle" text="돌격 소총" sourceHash="67220abc0f738d9a" />
+		<entry key="Attack (J)   Spell (K)   Defend (L)   Flee (R)" text="공격 (J)   주문 (K)   방어 (L)   도망 (R)" sourceHash="a5fc363affec7aa6" />
+		<entry key="Balm" text="연고" sourceHash="c13bdaa7a88916b7" />
 		<entry key="Bone Axe" text="뼈 도끼" sourceHash="9e2cdbf7cb3d6953" />
 		<entry key="Bone Shield" text="뼈 방패" sourceHash="0201be6b95ece038" />
+		<entry key="Bramble Sprite" text="가시덤불 정령" sourceHash="820f516764689b41" />
 		<entry key="CutA" text="컷 A" sourceHash="770f429cae410066" />
 		<entry key="CutB" text="컷 B" sourceHash="770f419cae40feb3" />
+		<entry key="Dusk Moth" text="땅거미 나방" sourceHash="6a5fe98cf648b21c" />
+		<entry key="Follow the lantern trail to its end" text="등불 길의 끝까지 가세요" sourceHash="0929e78693e66e6f" />
 		<entry key="Gilded Knight Helmet" text="금박 기사 투구" sourceHash="78c4a96597a1f01e" />
+		<entry key="Gloom" text="어스름" sourceHash="38abc03c467d546b" />
+		<entry key="Gold" text="골드" sourceHash="c416c97e0d3218b3" />
+		<entry key="HP" text="체력" sourceHash="09276807b5bba505" />
 		<entry key="Heraldic Cape" text="문장 망토" sourceHash="6f86256a16ab8f26" />
+		<entry key="Hollow Stag" text="텅 빈 수사슴" sourceHash="0b3a71e1453de039" />
 		<entry key="Knight Helmet" text="기사 투구" sourceHash="4733227ae193d121" />
 		<entry key="Knight Helmet (Dyeable)" text="기사 투구(염색 가능)" sourceHash="ff08b0d01b60fde4" />
 		<entry key="Knight Helmet (Merged)" text="기사 투구(병합)" sourceHash="bd029e7ca9b9d6ac" />
 		<entry key="Knight Sword (Merged)" text="기사 검(병합)" sourceHash="3c4283c2efbf5e38" />
+		<entry key="Lantern Guard" text="등불지기" sourceHash="3a83771027d72ef6" />
 		<entry key="Longbow" text="장궁" sourceHash="1ca5e729801861e9" />
+		<entry key="MP" text="마력" sourceHash="09166a07b5ad3538" />
 		<entry key="Notched Blade" text="이 빠진 칼" sourceHash="0bda544f4c061f1a" />
 		<entry key="Pistol" text="권총" sourceHash="9fbfefa835da8476" />
 		<entry key="Pump Shotgun" text="펌프 산탄총" sourceHash="91f761c37c27a1e1" />
+		<entry key="Rest at the inn (E)" text="여관에서 쉬기 (E)" sourceHash="a3813c63a2a7f79e" />
 		<entry key="Round Shield" text="둥근 방패" sourceHash="b63752b781a90fd4" />
 		<entry key="Round Shield (Merged)" text="둥근 방패(병합)" sourceHash="42c4611c12baf19f" />
 		<entry key="Rusted Helm" text="녹슨 투구" sourceHash="e74fbfb19151f99e" />
+		<entry key="Spark" text="불씨" sourceHash="02f9e3f12431edaa" />
 		<entry key="Subtitle.Guide" text="안내인" sourceHash="7bf3b283b3f22c4b" />
 		<entry key="Subtitle.GuideLine" text="등불 길을 따라 옛 다리로 가세요." sourceHash="330029ad4a1d3f28" />
 		<entry key="Subtitle.LongLine"
@@ -28,8 +41,12 @@
 		       sourceHash="7c1819fcaa99eaf9" />
 		<entry key="Subtitle.Scout" text="정찰병" sourceHash="7d573c625719c1a5" />
 		<entry key="Subtitle.ScoutLine" text="능선에 움직임이 있다. 몸을 낮춰." sourceHash="f5effb26f2446842" />
+		<entry key="Target" text="대상" sourceHash="ff5bb7742c2896c8" />
 		<entry key="Tattered Cape" text="해진 망토" sourceHash="add8e4bee185648f" />
+		<entry key="The party has fallen" text="일행이 쓰러졌습니다" sourceHash="b9e9faeca81d229e" />
+		<entry key="The trail is safe again" text="길이 다시 안전해졌습니다" sourceHash="ecbbdec92e6e0755" />
 		<entry key="The warrior wakes." text="전사가 깨어난다." sourceHash="2cbe2d95a0824eaf" />
 		<entry key="Travel Cape" text="여행 망토" sourceHash="9b537522d0556b6c" />
+		<entry key="Wick Mage" text="심지술사" sourceHash="e463ec8fd5641a0f" />
 	</entries>
 </TranslationTable>

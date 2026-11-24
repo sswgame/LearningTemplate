@@ -9,6 +9,7 @@ msgstr ""
 "X-Generator: SWEngine LocalizationTools\n"
 
 #. Context: TextWidget._text
+#: game/playground/classicjrpg/ui/hud.ui.xml
 #: game/playground/shooter3d/ui/hud.ui.xml
 msgctxt "/"
 msgid "/"
@@ -26,6 +27,18 @@ msgctxt "Assault Rifle"
 msgid "Assault Rifle"
 msgstr "돌격 소총"
 
+#. Context: TextWidget._text
+#: game/playground/classicjrpg/ui/hud.ui.xml
+msgctxt "Attack (J)   Spell (K)   Defend (L)   Flee (R)"
+msgid "Attack (J)   Spell (K)   Defend (L)   Flee (R)"
+msgstr "공격 (J)   주문 (K)   방어 (L)   도망 (R)"
+
+#. Context: JRPG name
+#: game/playground/data/jrpg.xml
+msgctxt "Balm"
+msgid "Balm"
+msgstr "연고"
+
 #. Context: Item name
 #: common/data/items.xml
 msgctxt "Bone Axe"
@@ -37,6 +50,12 @@ msgstr "뼈 도끼"
 msgctxt "Bone Shield"
 msgid "Bone Shield"
 msgstr "뼈 방패"
+
+#. Context: JRPG name
+#: game/playground/data/jrpg.xml
+msgctxt "Bramble Sprite"
+msgid "Bramble Sprite"
+msgstr "가시덤불 정령"
 
 #. Context: SequenceBinding._name
 #: game/playground/data/cinematic.seq.xml
@@ -50,6 +69,18 @@ msgctxt "CutB"
 msgid "CutB"
 msgstr "컷 B"
 
+#. Context: JRPG name
+#: game/playground/data/jrpg.xml
+msgctxt "Dusk Moth"
+msgid "Dusk Moth"
+msgstr "땅거미 나방"
+
+#. Context: TextWidget._text
+#: game/playground/classicjrpg/ui/hud.ui.xml
+msgctxt "Follow the lantern trail to its end"
+msgid "Follow the lantern trail to its end"
+msgstr "등불 길의 끝까지 가세요"
+
 #. Context: SequenceBinding._name
 #: game/playground/data/cutscenegate.seq.xml
 msgctxt "GateCut"
@@ -62,11 +93,35 @@ msgctxt "Gilded Knight Helmet"
 msgid "Gilded Knight Helmet"
 msgstr "금박 기사 투구"
 
+#. Context: JRPG name
+#: game/playground/data/jrpg.xml
+msgctxt "Gloom"
+msgid "Gloom"
+msgstr "어스름"
+
+#. Context: TextWidget._text
+#: game/playground/classicjrpg/ui/hud.ui.xml
+msgctxt "Gold"
+msgid "Gold"
+msgstr "골드"
+
+#. Context: TextWidget._text
+#: game/playground/classicjrpg/ui/hud.ui.xml
+msgctxt "HP"
+msgid "HP"
+msgstr "체력"
+
 #. Context: Item name
 #: common/data/items.xml
 msgctxt "Heraldic Cape"
 msgid "Heraldic Cape"
 msgstr "문장 망토"
+
+#. Context: JRPG name
+#: game/playground/data/jrpg.xml
+msgctxt "Hollow Stag"
+msgid "Hollow Stag"
+msgstr "텅 빈 수사슴"
 
 #. Context: Item name
 #: common/data/items.xml
@@ -92,11 +147,23 @@ msgctxt "Knight Sword (Merged)"
 msgid "Knight Sword (Merged)"
 msgstr "기사 검(병합)"
 
+#. Context: JRPG name
+#: game/playground/data/jrpg.xml
+msgctxt "Lantern Guard"
+msgid "Lantern Guard"
+msgstr "등불지기"
+
 #. Context: Item name
 #: common/data/items.xml
 msgctxt "Longbow"
 msgid "Longbow"
 msgstr "장궁"
+
+#. Context: TextWidget._text
+#: game/playground/classicjrpg/ui/hud.ui.xml
+msgctxt "MP"
+msgid "MP"
+msgstr "마력"
 
 #. Context: Item name
 #: common/data/items.xml
@@ -116,6 +183,12 @@ msgctxt "Pump Shotgun"
 msgid "Pump Shotgun"
 msgstr "펌프 산탄총"
 
+#. Context: TextWidget._text
+#: game/playground/classicjrpg/ui/hud.ui.xml
+msgctxt "Rest at the inn (E)"
+msgid "Rest at the inn (E)"
+msgstr "여관에서 쉬기 (E)"
+
 #. Context: Item name
 #: common/data/items.xml
 msgctxt "Round Shield"
@@ -133,6 +206,12 @@ msgstr "둥근 방패(병합)"
 msgctxt "Rusted Helm"
 msgid "Rusted Helm"
 msgstr "녹슨 투구"
+
+#. Context: JRPG name
+#: game/playground/data/jrpg.xml
+msgctxt "Spark"
+msgid "Spark"
+msgstr "불씨"
 
 #. Context: Subtitle speaker (audio event SubtitleGuideLine)
 #: game/playground/audio/playground.audioevents.xml
@@ -164,11 +243,29 @@ msgctxt "Subtitle.ScoutLine"
 msgid "Movement on the ridge. Stay low."
 msgstr "능선에 움직임이 있다. 몸을 낮춰."
 
+#. Context: TextWidget._text
+#: game/playground/classicjrpg/ui/hud.ui.xml
+msgctxt "Target"
+msgid "Target"
+msgstr "대상"
+
 #. Context: Item name
 #: common/data/items.xml
 msgctxt "Tattered Cape"
 msgid "Tattered Cape"
 msgstr "해진 망토"
+
+#. Context: TextWidget._text
+#: game/playground/classicjrpg/ui/hud.ui.xml
+msgctxt "The party has fallen"
+msgid "The party has fallen"
+msgstr "일행이 쓰러졌습니다"
+
+#. Context: TextWidget._text
+#: game/playground/classicjrpg/ui/hud.ui.xml
+msgctxt "The trail is safe again"
+msgid "The trail is safe again"
+msgstr "길이 다시 안전해졌습니다"
 
 #. Context: SequenceTrackItem._text
 #: game/playground/data/cinematic.seq.xml
@@ -181,3 +278,9 @@ msgstr "전사가 깨어난다."
 msgctxt "Travel Cape"
 msgid "Travel Cape"
 msgstr "여행 망토"
+
+#. Context: JRPG name
+#: game/playground/data/jrpg.xml
+msgctxt "Wick Mage"
+msgid "Wick Mage"
+msgstr "심지술사"

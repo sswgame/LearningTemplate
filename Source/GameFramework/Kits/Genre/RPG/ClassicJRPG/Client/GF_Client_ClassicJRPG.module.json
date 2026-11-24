@@ -1,0 +1,22 @@
+{
+    "_name": "GF_Client_ClassicJRPG",
+    "_version": "1.0.0",
+    "_kind": "Kit",
+    "_description": "클래식 JRPG 키트(클라이언트) — 걷기 · 전투 명령 입력을 디렉터 명령으로 바꾸고 길 · 적을 그리며 HUD 를 채운다. 규칙 · 디렉터는 GF_ClassicJRPG",
+    "_listDependency": [
+        {
+            "_name": "GameFramework"
+        },
+        {
+            "_name": "GF_ClassicJRPG"
+        }
+    ],
+    "_listConfiguration": [
+        "Dev",
+        "Shipping"
+    ],
+    "_listTarget": [
+        "Client"
+    ],
+    "_bEnabledByDefault": true
+}

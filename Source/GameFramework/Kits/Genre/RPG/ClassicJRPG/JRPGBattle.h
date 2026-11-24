@@ -88,27 +88,48 @@ namespace sw
 
 namespace sw
 {
-    /** @brief 전투 규칙의 수치입니다. */
-    struct JRPGBattleSettings
+    /** @brief 전투 규칙의 수치입니다. 디렉터가 씬 데이터로 정합니다(`JRPGGameModeComponent::_battleSettings`). */
+    REFLECT()
+    struct SW_KIT_API JRPGBattleSettings
     {
-        float32 _timedHitBonus{ 0.5f };       ///< 타이밍 공격에서 추가 타격이 주는 피해 비율
+        REFLECT_BODY();
+
+        PROPERTY( Min = 0.0 )
+        float32 _timedHitBonus{ 0.5f }; ///< 타이밍 공격에서 추가 타격이 주는 피해 비율
+        PROPERTY( Min = 0.0, Max = 1.0, Units = ratio )
         float32 _timedBlockReduction{ 0.5f }; ///< 타이밍 방어에서 받는 피해에서 빼는 비율
-        float32 _defendReduction{ 0.5f };     ///< 방어 명령에서 받는 피해에서 빼는 비율
-        float32 _weaknessMultiplier{ 1.5f };  ///< 약점 유형을 맞혔을 때의 피해 배율
+        PROPERTY( Min = 0.0, Max = 1.0, Units = ratio )
+        float32 _defendReduction{ 0.5f }; ///< 방어 명령에서 받는 피해에서 빼는 비율
+        PROPERTY( Min = 0.0 )
+        float32 _weaknessMultiplier{ 1.5f }; ///< 약점 유형을 맞혔을 때의 피해 배율
+        PROPERTY( Min = 0.0, Max = 1.0, Units = ratio )
         float32 _fleeBase{ 0.5f };
-        float32 _fleePerAgility{ 0.02f };     ///< 평균 민첩 차이 1마다 늘어나는 도망 확률
-        float32 _fleePerAttempt{ 0.1f };      ///< 실패할 때마다 오르는 도망 확률
-        float32 _fleeChanceMin{ 0.05f };      ///< 도망 확률의 하한
-        float32 _fleeChanceMax{ 0.95f };      ///< 도망 확률의 상한
-        int32   _physicalVarianceMin{ 875 };  ///< 물리 피해 흔들림의 하한(1000 분율)
-        int32   _physicalVarianceMax{ 1125 }; ///< 물리 피해 흔들림의 상한(1000 분율)
-        int32   _skillVarianceMin{ 900 };     ///< 주문 · 합체기 피해 흔들림의 하한(1000 분율)
-        int32   _skillVarianceMax{ 1100 };    ///< 주문 · 합체기 피해 흔들림의 상한(1000 분율)
-        int32   _comboPerHit{ 1 };            ///< 기본 공격 한 타마다 얻는 콤보 포인트
-        int32   _comboMax{ 9 };
-        int32   _innerPerAttack{ 10 }; ///< 무협 옵션에서 기본 공격 한 타마다 얻는 내공
-        int32   _innerPerHitTaken{ 5 };
-        bool    _bWuxia{ false }; ///< 무협 옵션이다(내공 게이지와 초식 내공 비용을 쓴다) NOLINT(sw-bool-flag): 집합체다(중괄호 · 지정 초기화로 만든다) — C++17 비트필드는 기본값을 둘 수 없어 `T x;` 가 값을 남기지 않는다
+        PROPERTY( Min = 0.0 )
+        float32 _fleePerAgility{ 0.02f }; ///< 평균 민첩 차이 1마다 늘어나는 도망 확률
+        PROPERTY( Min = 0.0 )
+        float32 _fleePerAttempt{ 0.1f }; ///< 실패할 때마다 오르는 도망 확률
+        PROPERTY( Min = 0.0, Max = 1.0, Units = ratio )
+        float32 _fleeChanceMin{ 0.05f }; ///< 도망 확률의 하한
+        PROPERTY( Min = 0.0, Max = 1.0, Units = ratio )
+        float32 _fleeChanceMax{ 0.95f }; ///< 도망 확률의 상한
+        PROPERTY( Min = 0 )
+        int32 _physicalVarianceMin{ 875 }; ///< 물리 피해 흔들림의 하한(1000 분율)
+        PROPERTY( Min = 0 )
+        int32 _physicalVarianceMax{ 1125 }; ///< 물리 피해 흔들림의 상한(1000 분율)
+        PROPERTY( Min = 0 )
+        int32 _skillVarianceMin{ 900 }; ///< 주문 · 합체기 피해 흔들림의 하한(1000 분율)
+        PROPERTY( Min = 0 )
+        int32 _skillVarianceMax{ 1100 }; ///< 주문 · 합체기 피해 흔들림의 상한(1000 분율)
+        PROPERTY( Min = 0 )
+        int32 _comboPerHit{ 1 }; ///< 기본 공격 한 타마다 얻는 콤보 포인트
+        PROPERTY( Min = 0 )
+        int32 _comboMax{ 9 };
+        PROPERTY( Min = 0 )
+        int32 _innerPerAttack{ 10 }; ///< 무협 옵션에서 기본 공격 한 타마다 얻는 내공
+        PROPERTY( Min = 0 )
+        int32 _innerPerHitTaken{ 5 };
+        PROPERTY()
+        bool _bWuxia{ false }; ///< 무협 옵션이다(내공 게이지와 초식 내공 비용을 쓴다) NOLINT(sw-bool-flag): 집합체다(중괄호 · 지정 초기화로 만든다) — C++17 비트필드는 기본값을 둘 수 없어 `T x;` 가 값을 남기지 않는다
     };
 } // namespace sw
 

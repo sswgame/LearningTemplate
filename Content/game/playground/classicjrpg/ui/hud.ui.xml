@@ -1,0 +1,77 @@
+<?asset guid="4834f16d133578748f520d0d12a0b31f"?>
+<UIDocument _schemaVersion="1">
+	<!-- 등불 길 미니게임(minigames/classicjrpg)의 HUD — 값은 JRPGBattleHUDViewModel, 글은 이 문서(현지화 키)와 카탈로그의 이름이다. -->
+	<UIScreenDef _layer="HUD" _bTakesFocus="false" _bShowCursor="false" />
+	<SafeZonePanel _visibility="SelfHitTestInvisible">
+		<CanvasPanel _visibility="SelfHitTestInvisible">
+			<TextWidget _name="MemberName" _text="{bind:_memberName}" _styleClass="hud" _visibility="HitTestInvisible">
+				<_slot _anchorMin="0,0" _anchorMax="0,0" _offsetMin="48,40" _offsetMax="328,76" />
+			</TextWidget>
+			<TextWidget _text="HP" _styleClass="hud" _visibility="HitTestInvisible">
+				<_slot _anchorMin="0,0" _anchorMax="0,0" _offsetMin="328,40" _offsetMax="384,76" />
+			</TextWidget>
+			<TextWidget _name="MemberHP" _text="{bind:_memberHP}" _styleClass="hud" _visibility="HitTestInvisible" _bLocalized="false">
+				<_slot _anchorMin="0,0" _anchorMax="0,0" _offsetMin="384,40" _offsetMax="464,76" />
+			</TextWidget>
+			<TextWidget _text="/" _styleClass="hud" _visibility="HitTestInvisible" _bLocalized="false">
+				<_slot _anchorMin="0,0" _anchorMax="0,0" _offsetMin="464,40" _offsetMax="484,76" />
+			</TextWidget>
+			<TextWidget _name="MemberMaxHP" _text="{bind:_memberMaxHP}" _styleClass="hud" _visibility="HitTestInvisible" _bLocalized="false">
+				<_slot _anchorMin="0,0" _anchorMax="0,0" _offsetMin="484,40" _offsetMax="564,76" />
+			</TextWidget>
+			<TextWidget _text="MP" _styleClass="hud" _visibility="HitTestInvisible">
+				<_slot _anchorMin="0,0" _anchorMax="0,0" _offsetMin="572,40" _offsetMax="628,76" />
+			</TextWidget>
+			<TextWidget _name="MemberMP" _text="{bind:_memberMP}" _styleClass="hud" _visibility="HitTestInvisible" _bLocalized="false">
+				<_slot _anchorMin="0,0" _anchorMax="0,0" _offsetMin="628,40" _offsetMax="708,76" />
+			</TextWidget>
+			<TextWidget _text="Gold" _styleClass="hud" _visibility="HitTestInvisible">
+				<_slot _anchorMin="0,0" _anchorMax="0,0" _offsetMin="48,80" _offsetMax="188,116" />
+			</TextWidget>
+			<TextWidget _name="Gold" _text="{bind:_gold}" _styleClass="hud" _visibility="HitTestInvisible" _bLocalized="false">
+				<_slot _anchorMin="0,0" _anchorMax="0,0" _offsetMin="188,80" _offsetMax="328,116" />
+			</TextWidget>
+			<CanvasPanel _visibility="{bind:_exploreVisibility}">
+				<_slot _anchorMin="0,0" _anchorMax="1,1" _offsetMin="0,0" _offsetMax="0,0" />
+				<TextWidget _text="Follow the lantern trail to its end" _styleClass="hud" _visibility="HitTestInvisible">
+					<_slot _anchorMin="0,1" _anchorMax="0,1" _offsetMin="48,-84" _offsetMax="1048,-48" />
+				</TextWidget>
+			</CanvasPanel>
+			<CanvasPanel _visibility="{bind:_restVisibility}">
+				<_slot _anchorMin="0,0" _anchorMax="1,1" _offsetMin="0,0" _offsetMax="0,0" />
+				<TextWidget _text="Rest at the inn (E)" _styleClass="hud" _visibility="HitTestInvisible">
+					<_slot _anchorMin="0,0" _anchorMax="0,0" _offsetMin="48,120" _offsetMax="528,156" />
+				</TextWidget>
+			</CanvasPanel>
+			<CanvasPanel _visibility="{bind:_battleVisibility}">
+				<_slot _anchorMin="0,0" _anchorMax="1,1" _offsetMin="0,0" _offsetMax="0,0" />
+				<TextWidget _text="Target" _styleClass="hud" _visibility="HitTestInvisible">
+					<_slot _anchorMin="0,0" _anchorMax="0,0" _offsetMin="48,120" _offsetMax="188,156" />
+				</TextWidget>
+				<TextWidget _name="TargetName" _text="{bind:_targetName}" _styleClass="hud" _visibility="HitTestInvisible">
+					<_slot _anchorMin="0,0" _anchorMax="0,0" _offsetMin="188,120" _offsetMax="468,156" />
+				</TextWidget>
+				<TextWidget _name="TargetHP" _text="{bind:_targetHP}" _styleClass="hud" _visibility="HitTestInvisible" _bLocalized="false">
+					<_slot _anchorMin="0,0" _anchorMax="0,0" _offsetMin="484,120" _offsetMax="564,156" />
+				</TextWidget>
+				<TextWidget _text="Attack (J)   Spell (K)   Defend (L)   Flee (R)" _styleClass="hud" _visibility="HitTestInvisible">
+					<_slot _anchorMin="0,1" _anchorMax="0,1" _offsetMin="48,-84" _offsetMax="1048,-48" />
+				</TextWidget>
+			</CanvasPanel>
+			<CanvasPanel _visibility="{bind:_victoryVisibility}">
+				<_slot _anchorMin="0,0" _anchorMax="1,1" _offsetMin="0,0" _offsetMax="0,0" />
+				<TextWidget _text="The trail is safe again" _styleClass="hud" _visibility="HitTestInvisible">
+					<_slot _anchorMin="0.5,0.3" _anchorMax="0.5,0.3" _offsetMin="-400,-24" _offsetMax="400,24" />
+					<_style _alignment="Center" />
+				</TextWidget>
+			</CanvasPanel>
+			<CanvasPanel _visibility="{bind:_defeatVisibility}">
+				<_slot _anchorMin="0,0" _anchorMax="1,1" _offsetMin="0,0" _offsetMax="0,0" />
+				<TextWidget _text="The party has fallen" _styleClass="hud" _visibility="HitTestInvisible">
+					<_slot _anchorMin="0.5,0.3" _anchorMax="0.5,0.3" _offsetMin="-400,-24" _offsetMax="400,24" />
+					<_style _alignment="Center" />
+				</TextWidget>
+			</CanvasPanel>
+		</CanvasPanel>
+	</SafeZonePanel>
+</UIDocument>
