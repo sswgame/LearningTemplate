@@ -856,12 +856,14 @@ namespace sw
             const bool bUniform = bindingIndex < vk::kTShift;
             if ( bBound == false )
             {
-                const bool bCannotFillDummyUniform = bUniform == false || bindingIndex >= shaderslot::kConstantBufferSlotCount || _pDevice->_dummyUBO == VK_NULL_HANDLE;
-                if ( bCannotFillDummyUniform )
+                // 컴퓨트 쓰기 슬롯은 비워 두지 않는다 — 다시 받은 세트에 남은 디스크립터(놓은 버퍼)에 쓴다. 레이아웃이 partially-bound 라 검증 레이어도 보지 못한다.
+                const bool bComputeWrite = bCompute && bindingIndex >= vk::kUShift && bindingIndex < vk::kUShift + shaderslot::kComputeUAVSlotCount;
+                const bool bDummyUniform = bUniform && bindingIndex < shaderslot::kConstantBufferSlotCount;
+                if ( bDummyUniform == false && bComputeWrite == false )
                     continue;
-                arrInfo[writeCount].buffer = _pDevice->_dummyUBO;
+                arrInfo[writeCount].buffer = bUniform ? _pDevice->_dummyUBO : _pDevice->_dummyStorage;
                 arrInfo[writeCount].offset = 0;
-                arrInfo[writeCount].range  = 256;
+                arrInfo[writeCount].range  = VK_WHOLE_SIZE;
             }
             else
             {

@@ -456,7 +456,6 @@
     "Source/Engine/Graphics/RHI/GL/Platform/EGLPlatformContext.cpp": {"integer": 1},
     "Source/Engine/Graphics/RHI/GL/Platform/WGLPlatformContext.cpp": {"integer": 2},
     "Source/Engine/Graphics/RHI/RHIEnums.h": {"integer": 13},
-    "Source/Engine/Graphics/RHI/Vulkan/VulkanRHICommandContext.cpp": {"integer": 1},
     "Source/Engine/Graphics/RHI/Vulkan/VulkanRHIDevice.cpp": {"float": 1, "integer": 1},
     "Source/Engine/Graphics/RHI/Vulkan/VulkanRHIRenderPassCache.cpp": {"integer": 4},
     "Source/Engine/Graphics/RHI/Vulkan/VulkanRHISamplerPreset.h": {"float": 1},
