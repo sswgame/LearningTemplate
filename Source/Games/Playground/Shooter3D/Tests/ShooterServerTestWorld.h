@@ -5,6 +5,7 @@
 #pragma once
 #include "Core/Algorithm/VectorUtil.h"
 #include "Core/Container/vector.h"
+#include "Core/Foundation/BuildInfo.h"
 #include "Core/Network/Connection/NetEndpoint.h"
 #include "Core/Network/Message/NetMessage.h"
 #include "Core/Network/Tests/FakeNetPeers.h"
@@ -117,6 +118,13 @@ namespace sw
         {
             _manager.endPlay();
             _manager.getSubsystem<SceneNetLink>().unbind();
+        }
+
+        /** @brief 맞음 소리의 경고를 적습니다 — 사운드 이벤트 표가 없다. 오디오를 짓지 않는 서버 구성에는 경고도 없다. */
+        static void expectHitSound()
+        {
+            if constexpr ( build::kWithClientCode )
+                SW_EXPECT_LOG( "AudioEngine.UnknownAudioEvent" );
         }
 
         /** @brief 씬처럼 감독이 플레이어 오브젝트를 가리키게 합니다 — 플레이어의 규칙이 네트 몸을 이 칸으로 찾는다(없으면 되감기 · 남의 몸 판정 없이 혼자 하는 길을 돈다). */

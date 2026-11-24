@@ -21,12 +21,18 @@
 
 namespace
 {
+    /** @brief 봉투에 싣는 미니게임 바이트입니다 — 칸 바이트를 흉내 낸 셋 뒤에 넘기지 못한 결과 수 0(`MinigameStack::writeSaveState` 의 꼬리). */
+    sw::vector<uint8> makeMinigameBytes()
+    {
+        return sw::vector<uint8>{ 7, 8, 9, 0, 0, 0, 0 };
+    }
+
     /** @brief 씬 · 리플렉션 상태 없이 찍은 봉투입니다(커스텀 상태 없이도 지원하는 사용법). */
     sw::vector<uint8> captureEmptyEnvelope( sw::GameStateSnapshot& snapshot )
     {
         sw::vector<uint8> bytes;
         snapshot.beginCapture();
-        if ( snapshot.writeEnvelope( sw::SerializePurpose::Snapshot, nullptr, nullptr, 12.5, sw::vector<uint8>{ 7, 8, 9 }, bytes ) == false )
+        if ( snapshot.writeEnvelope( sw::SerializePurpose::Snapshot, nullptr, nullptr, 12.5, makeMinigameBytes(), bytes ) == false )
             bytes.clear();
         return bytes;
     }
@@ -60,7 +66,7 @@ namespace
         sw::ComponentStateCodec _codec;
     };
 
-    /** @brief 판 13 봉투 @p bytes 를 판 12 의 배치로 되돌립니다 — 오브젝트마다의 컴포넌트 상태를 컴포넌트 id 로 모은 섹션으로, 머리의 플레이 시간 · 저장 시각은 뺀다. */
+    /** @brief 판 13 봉투 @p bytes 를 판 12 의 배치로 되돌립니다 — 오브젝트마다의 컴포넌트 상태를 컴포넌트 id 로 모은 섹션으로, 머리의 플레이 시간 · 저장 시각과 미니게임 칸 뒤의 결과 수는 뺀다. */
     sw::vector<uint8> makeVersion12Envelope( const sw::vector<uint8>& bytes )
     {
         using namespace sw;
@@ -80,8 +86,9 @@ namespace
         bool          bRead = in.readSection( minigame );
         in >> playTime >> savedTime;
         bRead = bRead && in.readSection( sceneBytes ) && in.readSection( stateBytes ) && in.readSection( partBytes ) && in.isError() == false;
-        if ( bRead == false )
+        if ( bRead == false || minigame.size() < sizeof( uint32 ) )
             return {};
+        minigame.resize( minigame.size() - sizeof( uint32 ) ); // 판 12 의 칸 바이트에는 넘기지 못한 결과가 없다
 
         uint32 objectCount{ 0 };
         Memory::copy( &objectCount, sceneBytes.data(), sizeof( uint32 ) );
@@ -227,6 +234,8 @@ SW_TEST_CASE( GameStateSnapshotTest, OldEnvelopesAreUpgradedOnceBeforeReading )
     vector<uint8> upgraded = previous;
     SW_REQUIRE_TRUE( GameStateSnapshot::upgradeEnvelope( upgraded ) );
     SW_EXPECT_TRUE( makeVersion12Envelope( upgraded ) == previous ); // 올린 것을 되돌리면 같다
+    const optional<vector<uint8>> upgradedMinigame = GameStateSnapshot::readMinigameBytes( upgraded.data(), static_cast<uint32>( upgraded.size() ) );
+    SW_EXPECT_TRUE( upgradedMinigame.has_value() && *upgradedMinigame == makeMinigameBytes() ); // 옛 세이브는 결과 수 0 이 붙는다
     const optional<GameStateSnapshot::SaveInfo> info = GameStateSnapshot::readSaveInfo( upgraded.data(), static_cast<uint32>( upgraded.size() ) );
     SW_EXPECT_TRUE( info.has_value() && info->_playTime == 0.0 && info->_savedTime == UnixMilliseconds{ 0 } );
     ScopedSceneStateCodec::s_listRestored.clear();
@@ -388,7 +397,7 @@ SW_TEST_CASE( GameStateSnapshotTest, ReadSceneIDPeeksTheHeaderOnly )
     SW_REQUIRE_TRUE( sceneID.has_value() );
     SW_EXPECT_TRUE( *sceneID == "scenes/a.scene" );
     const optional<vector<uint8>> minigameBytes = GameStateSnapshot::readMinigameBytes( saveA.data(), static_cast<uint32>( saveA.size() ) );
-    SW_EXPECT_TRUE( ( minigameBytes.has_value() && *minigameBytes == vector<uint8>{ 7, 8, 9 } ) ); // 찍은 미니게임 칸 스택도 머리에서 읽는다
+    SW_EXPECT_TRUE( ( minigameBytes.has_value() && *minigameBytes == makeMinigameBytes() ) ); // 찍은 미니게임 칸 스택도 머리에서 읽는다
     SW_EXPECT_EQUAL( 1u, countObjects( *pSceneB ) );
 
     // 머리가 없는 버퍼 · 머리 앞에서 잘린 버퍼는 없음이다.

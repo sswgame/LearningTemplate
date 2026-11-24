@@ -195,11 +195,11 @@ SW_TEST_CASE( VFXSimulationSpaceTest, ReplayFollowsTheEffectsQuality )
     pComponent->setEffect( pEffect );
     manager.beginPlay();
     pComponent->play();
-    manager.update( 0.5f );
+    manager.update( 0.1f ); // 한 프레임이 도는 걸음 한도(8) 안
     SW_EXPECT_TRUE( pComponent->getSpawnedParticleCount() > 0u );
 
     const test::ScopedGlobalVariableValue off{ *pScale, "0" };
     pComponent->play();
-    manager.update( 0.5f );
+    manager.update( 0.1f ); // 한 프레임이 도는 걸음 한도(8) 안
     SW_EXPECT_EQUAL( uint64{ 0 }, pComponent->getSpawnedParticleCount() );
 }

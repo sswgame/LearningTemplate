@@ -210,13 +210,15 @@ SW_TEST_CASE( SocketPartPoolTest, StoresDetachedInactivePartsAndRefusesDroppedOn
     SW_EXPECT_EQUAL( 1u, SocketPartPoolTestAccess::getRestingCount( pool, sword ) );
     SW_EXPECT_EQUAL( 0u, SocketPartPoolTestAccess::getRestingCount( pool, hashed_string( "p/axe.prefab.xml" ) ) );
 
-    // 옛 주인을 지워도 쉬는 부품은 자식이 아니라 남는다.
+    // 앞 주인이 든 핸들은 쉬는 부품도 다음 주인의 부품도 가리키지 않는다. 옛 주인을 지워도 쉬는 부품은 자식이 아니라 남는다.
+    SW_EXPECT_TRUE( rig._manager.resolveGameObject( unit ) == nullptr );
     rig._manager.destroyGameObject( rig._pHolder );
     rig._manager.update( 0.016f );
-    SW_REQUIRE_TRUE( rig._manager.resolveGameObject( unit ) != nullptr );
+    SW_REQUIRE_TRUE( rig._manager.resolveGameObject( rig._pUnit->getHandle() ) == rig._pUnit );
     SW_EXPECT_TRUE( pool.takePart( hashed_string( "p/axe.prefab.xml" ) ) == nullptr );
     GameObject* pTaken = pool.takePart( sword );
-    SW_REQUIRE_TRUE( pTaken == rig._manager.resolveGameObject( unit ) );
+    SW_REQUIRE_TRUE( pTaken == rig._pUnit );
+    SW_EXPECT_TRUE( rig._manager.resolveGameObject( unit ) == nullptr );
     SW_EXPECT_TRUE( pTaken->isActive() );
     SW_EXPECT_TRUE( pool.takePart( sword ) == nullptr );
     SW_EXPECT_EQUAL( uint64{ 1 }, pool.getStoredCount().get() );

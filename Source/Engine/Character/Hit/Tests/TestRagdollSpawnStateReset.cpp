@@ -58,3 +58,14 @@ SW_TEST_CASE( RagdollSpawnStateResetTest, CollapsedStateTravelsThroughTheCodec )
     pRebuilt->restoreState( std::move( bytes ) );
     SW_EXPECT_TRUE( pRebuilt->getState() == RagdollState::Ragdoll );
 }
+
+/** @brief [RagdollSpawnStateResetTest] 결함: 처음부터 스켈레탈 메시가 없는 래그돌은 "없음 → 없음" 이라 경고를 남기지 않고 조용히 아무것도 하지 않았다 — 시작할 때 한 번 알린다 */
+SW_TEST_CASE( RagdollSpawnStateResetTest, RagdollWithoutASkeletalMeshIsReported )
+{
+    SW_EXPECT_LOG( "Ragdoll.RagdollNoSkeletalMeshComponentObject" );
+    GameObjectManager manager;
+    RagdollComponent* pRagdoll = manager.createGameObject( hashed_string( "Bare" ) )->addComponent<RagdollComponent>();
+    SW_REQUIRE_NOT_NULL( pRagdoll );
+    manager.beginPlay();
+    manager.endPlay();
+}

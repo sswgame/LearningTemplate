@@ -33,7 +33,7 @@ namespace
 /** @brief [ShooterServerCommandTest] 명령 하나는 걷고 나서 쏜다 — 걸은 자리에서만 맞는 표적이 맞는다(판정 뒤에 걸으면 빗나간다) */
 SW_TEST_CASE( ShooterServerCommandTest, ShotsLeaveFromWhereTheCommandWalked )
 {
-    SW_EXPECT_LOG( "AudioEngine.UnknownAudioEvent" ); // 맞음 소리 — 사운드 이벤트 표가 없다
+    ShooterServerTestWorld::expectHitSound();
     SW_EXPECT_LOG( "PrefabPool.PrefabPoolCannotSpawn" );
     World                 world{ World::WeaponTable::Present };
     game::ScopedGameScope scopedScope( world._scope );
@@ -59,7 +59,7 @@ SW_TEST_CASE( ShooterServerCommandTest, ShotsLeaveFromWhereTheCommandWalked )
 /** @brief [ShooterServerCommandTest] 발동은 자기가 보던 시각의 표적을 맞힌다 — 같은 조준이라도 지금을 보고 쏘면 이미 지나간 자리라 빗나간다(의도의 시각이 아니라 발동의 시각이다) */
 SW_TEST_CASE( ShooterServerCommandTest, EachTriggerIsJudgedAtTheTimeItSaw )
 {
-    SW_EXPECT_LOG( "AudioEngine.UnknownAudioEvent" ); // 맞음 소리 — 사운드 이벤트 표가 없다
+    ShooterServerTestWorld::expectHitSound();
     constexpr bool kArrSeenPast[] = { true, false };
     for ( const bool bSeenPast : kArrSeenPast )
     {
@@ -95,7 +95,7 @@ SW_TEST_CASE( ShooterServerCommandTest, EachTriggerIsJudgedAtTheTimeItSaw )
 /** @brief [ShooterServerCommandTest] 쓰러진 몸이 보낸 명령은 걷지도 쏘지도 않는다 */
 SW_TEST_CASE( ShooterServerCommandTest, CommandsOfADownedBodyAreRefused )
 {
-    SW_EXPECT_LOG( "AudioEngine.UnknownAudioEvent" ); // 맞음 소리 — 사운드 이벤트 표가 없다
+    ShooterServerTestWorld::expectHitSound();
     SW_EXPECT_LOG( "PrefabPool.PrefabPoolCannotSpawn" );
     World                 world{ World::WeaponTable::Present };
     game::ScopedGameScope scopedScope( world._scope );
@@ -122,7 +122,7 @@ SW_TEST_CASE( ShooterServerCommandTest, CommandsOfADownedBodyAreRefused )
 /** @brief [ShooterServerCommandTest] 서버는 설정한 눈 높이에서 쏜다 — 머리 위(2.2 m)의 눈이면 선 사람 위로 지나간다 */
 SW_TEST_CASE( ShooterServerCommandTest, ShotsLeaveFromTheEyeHeightSetting )
 {
-    SW_EXPECT_LOG( "AudioEngine.UnknownAudioEvent" ); // 맞음 소리 — 사운드 이벤트 표가 없다
+    ShooterServerTestWorld::expectHitSound();
     constexpr float32 kArrEyeHeight[] = { 1.5f, 2.2f };
     for ( const float32 eyeHeight : kArrEyeHeight )
     {
