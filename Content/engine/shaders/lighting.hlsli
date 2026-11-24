@@ -142,9 +142,9 @@ static float Shadow::findBlockerDepth( uint atlasIndex, uint atlasSlot, float2 u
 {
     float blockerSum   = 0.0f;
     float blockerCount = 0.0f;
-    SW_UNROLL for ( int offsetY = 0; offsetY < 4; ++offsetY )
+    SW_UNROLL_EXCEPT_FXC for ( int offsetY = 0; offsetY < 4; ++offsetY )
     {
-        SW_UNROLL for ( int offsetX = 0; offsetX < 4; ++offsetX )
+        SW_UNROLL_EXCEPT_FXC for ( int offsetX = 0; offsetX < 4; ++offsetX )
         {
             const float2 offset = ( float2( offsetX, offsetY ) - 1.5f ) * ( searchTexels / 1.5f );
             const float2 tapUv  = clamp( uv + offset * texelUv, clampMin, clampMax );
@@ -164,9 +164,9 @@ static float Shadow::findBlockerDepth( uint atlasIndex, uint atlasSlot, float2 u
 static float Shadow::filterDisk( uint atlasIndex, uint atlasSlot, float2 uv, float depth, float texelUv, float2 clampMin, float2 clampMax, float radiusTexels )
 {
     float lit = 0.0f;
-    SW_UNROLL for ( int offsetY = 0; offsetY < 4; ++offsetY )
+    SW_UNROLL_EXCEPT_FXC for ( int offsetY = 0; offsetY < 4; ++offsetY )
     {
-        SW_UNROLL for ( int offsetX = 0; offsetX < 4; ++offsetX )
+        SW_UNROLL_EXCEPT_FXC for ( int offsetX = 0; offsetX < 4; ++offsetX )
         {
             const float2 offset = ( float2( offsetX, offsetY ) - 1.5f ) * ( radiusTexels / 1.5f );
             lit += Bindless::sampleShadowComparison( atlasIndex, atlasSlot, clamp( uv + offset * texelUv, clampMin, clampMax ), depth );
@@ -541,7 +541,7 @@ float4 LightData::sampleProbeVolume( float3 worldPosition, float3 normal, float3
     float        weightSum     = 0.0f;
     if ( bInside )
     {
-        SW_UNROLL for ( uint corner = 0u; corner < 8u; ++corner )
+        SW_UNROLL_EXCEPT_FXC for ( uint corner = 0u; corner < 8u; ++corner )
         {
             const uint3  pick          = uint3( corner & 1u, ( corner >> 1u ) & 1u, ( corner >> 2u ) & 1u );
             const uint3  probeCell     = cell + pick * nextOffset;
