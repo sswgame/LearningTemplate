@@ -118,17 +118,20 @@ namespace sw
 
             /**
              * @brief 태그 스트림의 머리(버전 + 프로퍼티 수)를 읽습니다. 머리가 버전을 말한다 — 이 스트림 안의 값(컨테이너 원소, 맵 키 포함)은 그 버전으로 읽는다. 현재 버전이 아니면 읽지 않는다.
+             *        배치 스트림은 문맥이 받을 때만(`SerializeContext::setSchemaLayout`) 읽는다 — 신뢰할 수 없는 바이트(메시지 · 세이브 · 캐시)가 머리 비트 하나로 이름 · 형식 확인이 없는 꼴을
+             *        고르지 못하게, 받지 않는 문맥에서는 모르는 버전이다.
              * @return 머리를 읽지 못하거나 읽을 수 없는 버전이면 false 입니다.
              */
-            [[nodiscard]] static bool readTaggedHeader( ByteReader& reader, const TypeInfo& typeInfo, BinaryWireVersion& outWireVersion, uint32& outPropCount, bool& outbSchemaLayout )
+            [[nodiscard]] static bool readTaggedHeader( ByteReader& reader, const TypeInfo& typeInfo, const SerializeContext& context, BinaryWireVersion& outWireVersion, uint32& outPropCount,
+                                                        bool& outbSchemaLayout )
             {
                 uint32 header{ 0 };
                 header = reader.readPod<uint32>();
                 if ( reader.hasOverflowed() )
                     return false;
                 const uint32 versionByte       = header >> kTaggedVersionShift;
-                const uint32 wireVersionNumber = versionByte & ~kSchemaLayoutBit;
-                outbSchemaLayout               = ( versionByte & kSchemaLayoutBit ) != 0;
+                outbSchemaLayout               = context.usesSchemaLayout() && ( versionByte & kSchemaLayoutBit ) != 0;
+                const uint32 wireVersionNumber = outbSchemaLayout ? versionByte & ~kSchemaLayoutBit : versionByte;
                 if ( isReadableWireVersion( wireVersionNumber ) == false )
                 {
                     SW_LOG_WARNING_ID( "BinarySerializer.BinaryStreamWireVersion", "%#: binary stream is wire version %# but this build reads up to %# - not read", typeInfo._name.c_str(), wireVersionNumber,
@@ -362,7 +365,7 @@ namespace sw
                 BinaryWireVersion wireVersion{};
                 uint32            propCount{ 0 };
                 bool              bSchemaLayout = false;
-                if ( readTaggedHeader( reader, typeInfo, wireVersion, propCount, bSchemaLayout ) == false )
+                if ( readTaggedHeader( reader, typeInfo, context, wireVersion, propCount, bSchemaLayout ) == false )
                     return FieldReadResult::FieldFailed;
 
                 TaggedReadState state{ pInstance, typeInfo, context, pOutListOrphan, bStrict, bStrict == false || context.shouldSkipUnreadableProperties(), wireVersion };

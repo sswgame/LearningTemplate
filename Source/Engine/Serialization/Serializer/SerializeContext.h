@@ -143,7 +143,8 @@ namespace sw
         }
 
         /**
-         * @brief 바이너리를 프로퍼티 이름 · 형식 태그 없이 배치 차례로 씁니다(중첩 객체까지) — 쿠킹 상태만 켠다. 읽기는 스트림 머리로 스스로 가린다.
+         * @brief 바이너리를 프로퍼티 이름 · 형식 태그 없이 배치 차례로 쓰고(중첩 객체까지), 그 스트림을 받습니다 — 쿠킹 상태의 저작 문맥만 켠다. 켠 읽기는 태그 스트림도 받는다(머리로 가린다).
+         *        끈 읽기에 배치 스트림이 오면 모르는 버전으로 거절한다.
          * @details 배치가 다른 빌드는 읽지 못한다(다시 쿠킹한다). 세이브 · 스냅숏 · 메시지처럼 빌드가 바뀌어도 읽어야 하는 데이터는 켜지 않는다
          *          (언리얼 쿠킹본의 unversioned property serialization, 유니티 플레이어 빌드의 TypeTree 제거와 같은 자리).
          */
@@ -182,7 +183,7 @@ namespace sw
         bool isRestoringValueBeforeRead() const { return _bRestoringValueBeforeRead == SW_TRUE; }
         /** @brief 생략을 허락한 빈 칸도 쓰는지(`setWriteEmptyValues`) 반환합니다. */
         bool shouldWriteEmptyValues() const { return _bWriteEmptyValues == SW_TRUE; }
-        /** @brief 바이너리를 배치 차례로 쓰는지(`setSchemaLayout`) 반환합니다. */
+        /** @brief 바이너리를 배치 차례로 쓰고 받는지(`setSchemaLayout`) 반환합니다. */
         bool usesSchemaLayout() const { return _bSchemaLayout == SW_TRUE; }
         /**
          * @brief 저장 목적입니다. 만들 때 정하고 바꾸지 않습니다.

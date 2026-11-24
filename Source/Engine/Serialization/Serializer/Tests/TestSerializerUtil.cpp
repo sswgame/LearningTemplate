@@ -503,7 +503,7 @@ SW_TEST_CASE( SchemaMigrateTest, WireTypeNameIsFoundOrEmpty )
     SW_EXPECT_TRUE( findWireTypeName( static_cast<uint32>( hashed_string::computeHash( string_view{ "SchemaMigrateTest.NoSuchType" } ) ) ).empty() );
 }
 
-/** @brief [BinarySerializerTest] 쿠킹 배치 스트림은 태그 스트림과 같은 값을 읽고 더 작으며, 이어 쓴 Archive 에서 끝을 알고, 다른 목적의 읽기는 하나도 쓰지 않고 거절한다 */
+/** @brief [BinarySerializerTest] 쿠킹 배치 스트림은 태그 스트림과 같은 값을 읽고 더 작으며, 이어 쓴 Archive 에서 끝을 알고, 켜지 않은 읽기와 배치가 다른 읽기는 하나도 쓰지 않고 거절한다 */
 SW_TEST_CASE( BinarySerializerTest, SchemaLayoutStreamMatchesTheTaggedValues )
 {
     SerializerSampleGroup source;
@@ -531,13 +531,13 @@ SW_TEST_CASE( BinarySerializerTest, SchemaLayoutStreamMatchesTheTaggedValues )
         SW_EXPECT_EQUAL( source._part._extra, read._part._extra );
         SW_EXPECT_EQUAL( source._count, read._count );
     };
-    // 읽기는 머리로 가린다 — 문맥에 배치를 켤 필요가 없다. 소프트 읽기도 모르는 칸이 없다.
+    // 켠 문맥은 머리로 두 꼴을 가린다. 소프트 읽기도 모르는 칸이 없다.
     SerializerSampleGroup strictRead;
-    SW_REQUIRE_TRUE( BinarySerializer::deserialize( &strictRead, type, layoutBytes.data(), layoutBytes.size() ) );
+    SW_REQUIRE_TRUE( BinarySerializer::deserialize( &strictRead, type, layoutBytes.data(), layoutBytes.size(), cookContext ) );
     expectSame( strictRead );
     SerializerSampleGroup     softRead;
     vector<SchemaOrphanValue> listOrphan;
-    SW_EXPECT_TRUE( BinarySerializer::deserializeSoft( &softRead, type, layoutBytes.data(), layoutBytes.size(), &listOrphan ) == SoftReadResult::Read );
+    SW_EXPECT_TRUE( BinarySerializer::deserializeSoft( &softRead, type, layoutBytes.data(), layoutBytes.size(), &listOrphan, cookContext ) == SoftReadResult::Read );
     SW_EXPECT_TRUE( listOrphan.empty() );
     expectSame( softRead );
 
@@ -548,19 +548,28 @@ SW_TEST_CASE( BinarySerializerTest, SchemaLayoutStreamMatchesTheTaggedValues )
     Archive               reader( archive.getData(), archive.getSize() );
     SerializerSampleGroup first;
     SerializerSampleGroup second;
-    SW_REQUIRE_TRUE( BinarySerializer::deserialize( &first, type, reader ) );
-    SW_REQUIRE_TRUE( BinarySerializer::deserialize( &second, type, reader ) );
+    SW_REQUIRE_TRUE( BinarySerializer::deserialize( &first, type, reader, cookContext ) );
+    SW_REQUIRE_TRUE( BinarySerializer::deserialize( &second, type, reader, cookContext ) );
     expectSame( first );
     expectSame( second );
 
-    // 다른 목적은 싣는 칸이 달라 배치가 다르다 — 값을 하나도 쓰지 않는다.
-    SW_EXPECT_LOG( "BinarySerializer.SchemaLayoutMismatch" );
+    // 켜지 않은 문맥(세이브 · 메시지 · 스냅샷)은 모르는 버전으로 거절한다 — 값을 하나도 쓰지 않는다.
     SerializerSampleGroup untouched;
-    SW_EXPECT_FALSE( BinarySerializer::deserialize( &untouched, type, layoutBytes.data(), layoutBytes.size(), SerializeContext::getDefault( SerializePurpose::Snapshot ) ) );
+    for ( const SerializePurpose purpose : { SerializePurpose::Authoring, SerializePurpose::Snapshot, SerializePurpose::SaveGame } )
+    {
+        SW_EXPECT_LOG( "BinarySerializer.BinaryStreamWireVersion" );
+        SW_EXPECT_FALSE( BinarySerializer::deserialize( &untouched, type, layoutBytes.data(), layoutBytes.size(), SerializeContext::getDefault( purpose ) ) );
+    }
+    // 배치 해시가 다르면(다른 빌드의 쿠킹본) 값을 하나도 쓰지 않고 거절한다.
+    vector<uint8> otherLayout = layoutBytes;
+    otherLayout[sizeof( uint32 )] ^= 1;
+    SW_EXPECT_LOG( "BinarySerializer.SchemaLayoutMismatch" );
+    SW_EXPECT_FALSE( BinarySerializer::deserialize( &untouched, type, otherLayout.data(), otherLayout.size(), cookContext ) );
+    // 잘린 스트림은 읽지 않는다.
+    SW_EXPECT_FALSE( BinarySerializer::deserialize( &untouched, type, layoutBytes.data(), 2, cookContext ) );
     SW_EXPECT_EQUAL( 0, untouched._count );
     SW_EXPECT_TRUE( untouched._listText.empty() );
-    // 잘린 스트림은 읽지 않는다.
-    SW_EXPECT_FALSE( BinarySerializer::deserialize( &untouched, type, layoutBytes.data(), layoutBytes.size() - 1 ) );
+    SW_EXPECT_FALSE( BinarySerializer::deserialize( &untouched, type, layoutBytes.data(), layoutBytes.size() - 1, cookContext ) );
 }
 
 /** @brief [BinarySerializerTest] 위조된 값 크기(32 비트 size_t 에서 자리와 더하면 넘치는 크기 포함)와 머리 개수가 틀린 배치 스트림은 읽지 않는다 — 값은 그대로다 */

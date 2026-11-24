@@ -640,9 +640,10 @@ namespace sw
 
         const GameObject::ComponentIDRestoreScope restoreScope( pGameObject, context._pIdentity );
         ObjectStateBatch::ComponentKeyTextMap     mapKeyText; // 읽은 컴포넌트 핸들의 키 글이다. 배치가 풀지 못한 참조를 남길 때 쓴다
-        const SerializeContext                    serializeContext = ObjectStateSerializerInternal::makeGameObjectContext(
+        SerializeContext                          serializeContext = ObjectStateSerializerInternal::makeGameObjectContext(
             pGameObject, context.getPurpose(), SW_DELEGATE_FUNCTION( SerializeContext::TextWriteFn, &ObjectStateSerializerInternal::ReferenceWriter::writeRuntimeComponentText ),
             &mapKeyText );
+        serializeContext.setSchemaLayout( context.getPurpose() == SerializePurpose::Authoring ); // 쿠킹 상태는 저작 목적으로만 쓴다 — 세이브 · 스냅샷 바이트는 배치 스트림을 받지 않는다
         const bool bLoaded = deserializeState( serializeContext );
         if ( bLoaded )
         {
