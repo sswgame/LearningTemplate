@@ -56,18 +56,35 @@ namespace sw
      * @brief 배치의 가시 목록 정렬 방식입니다.
      * @details 컬링이 압축을 하면 슬롯 번호가 원자 연산의 완료 순서로 정해진다. 불투명은 상관없지만
      *          투명은 그 순서가 곧 블렌딩 순서다. 그래서 투명은 컬링 뒤에 **GPU 에서 CPU 정렬 순서로 되돌린다**
-     *          (instance_sort.hlsl. 인스턴스 번호가 곧 CPU 가 정한 그리는 순서다). 한 워크그룹에 담기지 않는 큰 배치만 압축을 포기하고 CPU 가
-     *          정렬해 둔 제자리 매핑을 쓴다.
+     *          (instance_sort.hlsl. 인스턴스 번호가 곧 CPU 가 정한 그리는 순서다). 한 워크그룹에 담기지 않는 큰 배치는 같은 정렬을 여러 디스패치로 한다.
      */
     enum class GPUBatchSortMode : uint32
     {
-        None     = 0, ///< 불투명. 압축만 하고 순서는 상관없다.
-        Preserve = 1, ///< 압축하지 않고 CPU 정렬 순서를 그대로 쓴다(GPU 정렬 한계를 넘는 투명 배치).
-        DepthGPU = 2, ///< 압축한 뒤 GPU 가 CPU 정렬 순서(인스턴스 번호)로 되돌린다(투명 기본, instance_sort.hlsl).
+        None      = 0, ///< 불투명. 압축만 하고 순서는 상관없다.
+        OneGroup  = 1, ///< 압축한 뒤 워크그룹 하나가 CPU 정렬 순서(인스턴스 번호)로 되돌린다(투명 기본, instance_sort.hlsl).
+        MultiPass = 2, ///< 워크그룹 하나에 담기지 않는 큰 투명 배치 — 같은 되돌리기를 배치마다 여러 디스패치로 한다(`GPUScene::collectSortStages`).
     };
 
-    /// @brief 한 배치에서 GPU 정렬로 처리할 수 있는 최대 인스턴스 수입니다(instance_sort.hlsl 의 SW_SORT_MAX_ELEMENTS).
+    /// @brief 워크그룹 하나가 정렬할 수 있는 인스턴스 수이자 다단 정렬의 블록 크기입니다(instance_sort.hlsl 의 SW_SORT_MAX_ELEMENTS).
     inline constexpr uint32 kGPUSortMaxElements = 512;
+
+    /** @brief 다단 정렬(instance_sort.hlsl 의 `SW_SORT_MULTI_PASS`)의 단계 종류입니다. 셰이더의 kSortStage* 와 같은 값이다. */
+    enum class GPUSortStageKind : uint32
+    {
+        Block,    ///< 블록(`kGPUSortMaxElements` 칸)마다 그룹공유 정렬
+        Flip,     ///< 블록 합치기의 첫 비교(뒤 절반을 뒤집어 견준다)
+        Distance, ///< 블록 크기 이상의 거리 비교
+        Merge,    ///< 블록 절반부터 1 까지의 거리 비교를 블록 안에서
+        Resolve,  ///< 차례 → 칸
+    };
+
+    /** @brief 다단 정렬의 디스패치 하나입니다. */
+    struct GPUSortStage
+    {
+        GPUSortStageKind _kind{ GPUSortStageKind::Block };
+        uint32           _span{ 0 };        ///< 뒤집기의 블록 칸 수 · 펼치기의 거리
+        uint32           _threadCount{ 0 }; ///< 디스패치 스레드 수(그룹 크기의 배수가 아니면 올림한다 — 셰이더가 개수 밖을 건너뛴다)
+    };
 
     /**
      * @brief 배치 테이블의 원소 하나입니다. 컬링 컴퓨트(t1)와 정점 셰이더(`g_SwBatches`, t9)가 같은 테이블을 읽습니다.
@@ -291,6 +308,13 @@ namespace sw
         RHIBufferSRVIndex getBatchInfoSRV() const { return _batchInfo._srv; }
         /** @brief 배치 테이블 버퍼 핸들을 반환합니다. */
         RHIBufferHandle getBatchInfoBuffer() const { return _batchInfo._buffer; }
+        /** @brief 다단 정렬이 필요한 투명 배치(`GPUBatchSortMode::MultiPass`)의 번호입니다(배치 번호 오름차순, 보통 비어 있다). */
+        const vector<uint32>& getMultiPassSortBatches() const { return _listMultiPassSortBatch; }
+        /**
+         * @brief 인스턴스 @p count 개짜리 배치를 정렬하는 단계를 차례로 적습니다(블록 정렬 → 블록을 두 배씩 합치기 → 차례를 칸으로). 앞 내용은 지운다.
+         * @details 비교가 모두 오름차순인 바이토닉이라 개수 뒤의 칸을 무한대로 보고 건너뛰면 된다. 단계 사이에는 가시 목록의 UAV 배리어가 필요하다.
+         */
+        static void collectSortStages( uint32 count, vector<GPUSortStage>& outListStage );
         /** @brief 인스턴스 슬롯 스트림 정점 버퍼(슬롯 1)를 반환합니다. 0이면 아직 없습니다. */
         RHIBufferHandle getInstanceSlotStream() const { return _instanceSlotStream._buffer; }
         /**
@@ -416,6 +440,7 @@ namespace sw
         shared_ptr<const vector<GPUMaterialGroup>> _pUploadedMaterialGroups;
         vector<RHIDrawIndexedIndirectCommand>      _listScratchIndirectCmd;
         vector<GPUBatchInfo>                       _listScratchBatchInfo;
+        vector<uint32>                             _listMultiPassSortBatch; ///< `GPUBatchSortMode::MultiPass` 배치의 번호(배치 표와 함께 정한다)
         /// @brief 부분 인스턴스 업로드용 영역 목록입니다. 프레임마다 다시 채워 쓰며 할당을 반복하지 않습니다.
         vector<RHIBufferCopyRegion> _listScratchCopyRegion;
         /// @brief 바뀐 칸을 모은 구간입니다(스크래치).

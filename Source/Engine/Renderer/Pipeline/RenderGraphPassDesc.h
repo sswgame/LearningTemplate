@@ -194,6 +194,8 @@ namespace sw
         InstanceAnimation,
         /// @brief 배치 안의 가시 인스턴스를 CPU 정렬 순서(인스턴스 번호)로 되돌리는 컴퓨트(instance_sort.hlsl)입니다. 투명 블렌딩 순서를 맞춥니다.
         InstanceSort,
+        /// @brief 워크그룹 하나에 담기지 않는 투명 배치를 여러 디스패치로 정렬하는 커널(instance_sort.hlsl 의 `SW_SORT_MULTI_PASS`)입니다. 컬링 패스 안의 디스패치다.
+        InstanceSortMultiPass,
         /// @brief 레스트 정점을 읽어 변형 결과를 쓰는 컴퓨트(mesh_morph.hlsl)입니다. 정점 셰이더가 그 결과를 풀링합니다.
         MeshMorph,
         /// @brief 스킨드 메시의 바인드 포즈 정점을 본 팔레트로 블렌딩해 모프 풀의 스킨 구간에 쓰는 컴퓨트(mesh_skin.hlsl)입니다.
@@ -255,7 +257,7 @@ namespace sw
         NanCheck,
         /**
          * @brief 간접 인자의 인스턴스 개수를 GPU 에서 되돌리는 컴퓨트(gpu_cull.hlsl 의 `SW_CULL_RESET_ARGS`)입니다. 컬링 슬롯마다 컬링 앞에서 배치마다 스레드 하나가
-         *        개수를 0(압축을 포기한 배치는 CPU 개수)으로 쓴다 — CPU 가 프레임마다 인자 전체를 다시 올리던 일을 대신한다(`FrameGraphExecutor::dispatchCullView`).
+         *        개수를 0 으로 쓴다 — CPU 가 프레임마다 인자 전체를 다시 올리던 일을 대신한다(`FrameGraphExecutor::dispatchCullView`).
          *        컬링과 같은 조건(간접 인자 능력)이고 GPUCull 패스 안의 첫 디스패치라 따로 선언하지 않는다.
          */
         IndirectArgsReset,
@@ -343,7 +345,7 @@ namespace sw
     /**
      * @brief 프레임 그래프(`_listFramePass`)의 `_type` 으로 쓸 수 있는 값인지 확인합니다. 프레임에 한 번 모든 뷰의 몫을 기록하는 패스입니다(`FrameGraphExecutor`).
      * @details 이 목록이 곧 "그래프 앞에 C++ 가 박아 두던 일" 의 전부다. 파이프라인이 선언하지 않은 종류는 PSO 도 없고 돌지 않는다(`FramePSOManager::createPassPSOs`).
-     *          InstanceSort · IndirectArgsReset 는 GPUCull 패스 안의 다른 디스패치라 따로 선언하지 않는다. 입자 정렬 · 메시 쓰기는 시뮬레이션과 읽는 상태가 달라
+     *          InstanceSort · InstanceSortMultiPass · IndirectArgsReset 는 GPUCull 패스 안의 다른 디스패치라 따로 선언하지 않는다. 입자 정렬 · 메시 쓰기는 시뮬레이션과 읽는 상태가 달라
      *          (렌더 입력 · 인자를 UAV 로 쓰고 셰이더 읽기로 읽는다) 따로 선언한다 — 패스 몸통은 전이하지 않고 그래프가 패스 사이에 낸다(렌더 그래프 접근 핸들 ②).
      */
     constexpr bool isFramePassType( RenderPassKind type )

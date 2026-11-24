@@ -418,6 +418,13 @@ namespace sw
                         info._flags          = Flag::kCompute | Flag::kRequiresGPUCulling;
                         break;
                     }
+                    case RenderPassKind::InstanceSortMultiPass:
+                    {
+                        info._pDefaultShader = &EngineDefaultAssets::_shaderInstanceSort;
+                        info._pPassDefine    = kPassInstanceSortMultiPassDefine;
+                        info._flags          = Flag::kCompute | Flag::kRequiresGPUCulling;
+                        break;
+                    }
                     case RenderPassKind::MeshMorph:
                     {
                         info._pDefaultShader = &EngineDefaultAssets::_shaderMeshMorph;

@@ -15,14 +15,14 @@
  * CPU 와 GPU 가 다른 순서를 낸다. 정렬 기준은 CPU 한 곳뿐이다. 추가 뷰(CCTV · PiP)는 그 뷰의 눈으로 CPU 가 다시 정한 순번(t2,
  * GPUSceneBuilder::computeViewTransparentOrders)으로 정렬한다 — 키는 (순번 << 9) | 배치 안 번호.
  *
- * 정렬은 그룹공유 메모리 안의 **바이토닉 정렬**이다. 워크그룹 하나에 담기는 만큼(SW_SORT_MAX_ELEMENTS)만
- * 다룰 수 있다 — 그보다 큰 투명 배치는 CPU 가 정렬한 제자리 매핑을 그대로 쓴다(GPUScene 이 그런 배치에
- * sortMode = Preserve 를 준다). 배치 하나에 투명 인스턴스가 수백 개를 넘는 일은 드물고, 넘으면 정확성을
- * 포기하는 대신 컬링을 포기한다.
+ * 정렬은 **바이토닉 정렬**이다. 워크그룹 하나에 담기는 배치(SW_SORT_MAX_ELEMENTS 이하)는 그룹공유 메모리 안에서 한 디스패치로 끝낸다(sortMode 1).
+ * 그보다 큰 배치(sortMode 2)는 같은 파일의 `SW_SORT_MULTI_PASS` 커널이 배치마다 여러 디스패치로 정렬한다 — 512 칸 블록을 그룹공유로 정렬한 뒤(블록 정렬) 블록을 두 배씩
+ * 합친다(뒤집기 합치기 → 펼치기, 거리 256 이하는 블록 안 펼치기 하나). 비교가 모두 오름차순이라 개수 뒤의 빈 칸은 무한대로 보고 건너뛰기만 하면 된다(2 의 거듭제곱 채움이 없다).
+ * 디스패치 차례는 C++ 이 배치 크기로 정한다(`GPUScene::collectSortStages`) — GPU 가 줄인 개수를 CPU 가 모르므로 배치 크기까지 잡고, 개수 밖의 쌍은 셰이더가 건너뛴다.
  *
  * 바인딩 계약(binding_slots.hlsli): CB b0, 인스턴스 t0, 배치 구간 t1, 뷰 순번 t2(추가 뷰 — 다른 뷰는 자리표), 차례 → 칸 t3, 간접 인자 u0, 가시 ID u1.
  * 정렬하는 배치는 컬링이 **차례**를 적어 두었다(인스턴스 버퍼가 칸 순이라 칸 번호는 그리는 순서가 아니다). 차례로 정렬한 뒤 t3 으로 칸을 찾아 되쓴다.
- * (컬링과 같은 자리라 바인딩을 갈아 끼우지 않고 PSO 만 바꿔 디스패치한다.)
+ * (컬링과 같은 자리라 바인딩을 갈아 끼우지 않고 PSO 만 바꿔 디스패치한다. 다단 커널은 배치 · 단계를 루트 상수로 더 받는다.)
  */
 
 /// @brief 한 배치에서 GPU 정렬로 다룰 수 있는 최대 인스턴스 수. 바이토닉이라 2의 거듭제곱이어야 한다.
@@ -55,6 +55,157 @@ SW_DECLARE_STRUCTURED_BUFFER( uint, g_InstanceOrder, 3 ); // 그리는 차례 �
 SW_DECLARE_RW_STRUCTURED_BUFFER( SceneDrawArgs, g_IndirectArgs, 0 );
 SW_DECLARE_RW_STRUCTURED_BUFFER( uint, g_VisibleInstanceIDs, 1 );
 
+#if defined( SW_SORT_MULTI_PASS )
+SW_ROOT_CONSTANTS_BEGIN
+{
+    uint g_SortBatch; // 정렬할 배치
+    uint g_SortStage; // 아래 kSortStage*
+    uint g_SortSpan;  // 뒤집기 합치기의 블록 칸 수 · 펼치기의 거리
+};
+SW_ROOT_CONSTANTS_END
+
+/// 단계 — C++ `GPUSortStageKind` 와 같은 값이다.
+static const uint kSortStageBlock    = 0u; // 512 칸 블록을 그룹공유로 정렬한다(그룹 하나가 블록 하나)
+static const uint kSortStageFlip     = 1u; // 블록 g_SortSpan 의 앞 절반과 뒤집은 뒤 절반을 견준다(스레드 하나가 쌍 하나)
+static const uint kSortStageDistance = 2u; // 거리 g_SortSpan 의 쌍을 견준다(스레드 하나가 쌍 하나, 거리 512 이상)
+static const uint kSortStageMerge    = 3u; // 거리 256 부터 1 까지의 펼치기를 블록 안에서 한 번에 한다
+static const uint kSortStageResolve  = 4u; // 정렬한 차례를 칸으로 바꿔 쓴다(스레드 하나가 칸 하나)
+
+/// 개수 밖의 칸 — 어떤 차례보다 뒤다.
+static const uint kSortPastEnd = 0xFFFFFFFFu;
+
+groupshared uint s_arrOrder[SW_SORT_MAX_ELEMENTS];
+groupshared uint s_arrKey[SW_SORT_MAX_ELEMENTS];
+
+/** @brief 차례의 정렬 키입니다 — 주 시점은 차례 그대로, 추가 뷰는 그 뷰의 순번(t2)이다. */
+uint computeSortKey( uint orderIndex )
+{
+    if ( g_UseViewRank == 0u )
+        return orderIndex;
+    return orderIndex >= g_TransparentTailBase ? g_ViewRank[orderIndex - g_TransparentTailBase] : 0u;
+}
+
+/** @brief 첫째가 둘째보다 뒤면 true 입니다. 키가 같으면 차례로 가른다(전순서). */
+bool isSortedAfter( uint keyA, uint orderA, uint keyB, uint orderB )
+{
+    return keyA > keyB || ( keyA == keyB && orderA > orderB );
+}
+
+/** @brief 그룹공유의 두 칸을 오름차순으로 맞춥니다(low < high). */
+void exchangeLocal( uint low, uint high )
+{
+    const uint keyLow    = s_arrKey[low];
+    const uint keyHigh   = s_arrKey[high];
+    const uint orderLow  = s_arrOrder[low];
+    const uint orderHigh = s_arrOrder[high];
+    if ( isSortedAfter( keyLow, orderLow, keyHigh, orderHigh ) )
+    {
+        s_arrKey[low]    = keyHigh;
+        s_arrKey[high]   = keyLow;
+        s_arrOrder[low]  = orderHigh;
+        s_arrOrder[high] = orderLow;
+    }
+}
+
+/** @brief 쌍 번호 @p pairIndex 의 낮은 칸입니다(블록 2 × half 안의 앞 절반). */
+uint computePairLow( uint pairIndex, uint halfSpan )
+{
+    return ( ( pairIndex & ~( halfSpan - 1u ) ) << 1u ) + ( pairIndex & ( halfSpan - 1u ) );
+}
+
+SW_NUMTHREADS( SW_SORT_THREADS, 1, 1 )
+void CSMain( uint3 groupId : SV_GroupID, uint3 groupThreadID : SV_GroupThreadID, uint3 dispatchThreadID : SV_DispatchThreadID )
+{
+    const uint      stage      = SW_ROOT( g_SortStage );
+    const uint      batchIndex = SW_ROOT( g_SortBatch );
+    const uint      span       = SW_ROOT( g_SortSpan );
+    const BatchData info       = g_BatchInfo[batchIndex];
+    const uint      slots      = info._visibleBase;
+    const uint      count      = g_IndirectArgs[batchIndex]._instanceCount;
+
+    if ( stage == kSortStageFlip || stage == kSortStageDistance )
+    {
+        const uint halfSpan = stage == kSortStageFlip ? span >> 1u : span;
+        const uint low      = computePairLow( dispatchThreadID.x, halfSpan );
+        const uint high     = stage == kSortStageFlip ? low + ( span - 1u ) - 2u * ( dispatchThreadID.x & ( halfSpan - 1u ) ) : low + halfSpan;
+        // 높은 칸이 개수 밖이면 무한대다 — 바꿀 것이 없다.
+        if ( high < count )
+        {
+            const uint orderLow  = g_VisibleInstanceIDs[slots + low];
+            const uint orderHigh = g_VisibleInstanceIDs[slots + high];
+            if ( isSortedAfter( computeSortKey( orderLow ), orderLow, computeSortKey( orderHigh ), orderHigh ) )
+            {
+                g_VisibleInstanceIDs[slots + low]  = orderHigh;
+                g_VisibleInstanceIDs[slots + high] = orderLow;
+            }
+        }
+        return;
+    }
+    if ( stage == kSortStageResolve )
+    {
+        if ( dispatchThreadID.x < count )
+        {
+            const uint orderIndex                            = g_VisibleInstanceIDs[slots + dispatchThreadID.x];
+            g_VisibleInstanceIDs[slots + dispatchThreadID.x] = ( orderIndex < g_InstanceCount ) ? g_InstanceOrder[orderIndex] : orderIndex;
+        }
+        return;
+    }
+
+    const uint blockBase   = groupId.x * (uint)SW_SORT_MAX_ELEMENTS;
+    const uint threadIndex = groupThreadID.x;
+    SW_UNROLL for ( uint loadIndex = 0u; loadIndex < 2u; ++loadIndex )
+    {
+        const uint local  = threadIndex + loadIndex * (uint)SW_SORT_THREADS;
+        const bool bValid = blockBase + local < count;
+        uint       order  = kSortPastEnd;
+        uint       key    = kSortPastEnd;
+        if ( bValid )
+        {
+            order = g_VisibleInstanceIDs[slots + blockBase + local];
+            key   = computeSortKey( order );
+        }
+        s_arrOrder[local] = order;
+        s_arrKey[local]   = key;
+    }
+    GroupMemoryBarrierWithGroupSync();
+
+    if ( stage == kSortStageBlock )
+    {
+        // 블록 2 는 뒤집기 하나뿐이다(펼칠 거리가 없다) — 반복 앞에 둔다.
+        exchangeLocal( threadIndex << 1u, ( threadIndex << 1u ) + 1u );
+        GroupMemoryBarrierWithGroupSync();
+        for ( uint blockSize = 4u; blockSize <= (uint)SW_SORT_MAX_ELEMENTS; blockSize <<= 1u )
+        {
+            const uint flipHalf = blockSize >> 1u;
+            const uint flipLow  = computePairLow( threadIndex, flipHalf );
+            exchangeLocal( flipLow, flipLow + ( blockSize - 1u ) - 2u * ( threadIndex & ( flipHalf - 1u ) ) );
+            GroupMemoryBarrierWithGroupSync();
+            for ( uint distance = blockSize >> 2u; distance > 0u; distance >>= 1u )
+            {
+                const uint low = computePairLow( threadIndex, distance );
+                exchangeLocal( low, low + distance );
+                GroupMemoryBarrierWithGroupSync();
+            }
+        }
+    }
+    else
+    {
+        for ( uint distance = (uint)SW_SORT_THREADS; distance > 0u; distance >>= 1u )
+        {
+            const uint low = computePairLow( threadIndex, distance );
+            exchangeLocal( low, low + distance );
+            GroupMemoryBarrierWithGroupSync();
+        }
+    }
+
+    SW_UNROLL for ( uint storeIndex = 0u; storeIndex < 2u; ++storeIndex )
+    {
+        const uint local = threadIndex + storeIndex * (uint)SW_SORT_THREADS;
+        if ( blockBase + local < count )
+            g_VisibleInstanceIDs[slots + blockBase + local] = s_arrOrder[local];
+    }
+}
+#else
 // 정렬할 값은 인스턴스 번호 하나다 — 번호가 곧 CPU 가 정한 그리는 순서다(위 주석).
 groupshared uint s_arrID[SW_SORT_MAX_ELEMENTS];
 
@@ -66,7 +217,7 @@ void CSMain( uint3 groupId : SV_GroupID, uint3 groupThreadID : SV_GroupThreadID 
         return;
 
     const BatchData info = g_BatchInfo[batchIndex];
-    if ( info._sortMode != 2u ) // 이 배치는 여기서 정렬하지 않는다
+    if ( info._sortMode != 1u ) // 이 배치는 여기서 정렬하지 않는다
         return;
 
     const uint count = min( g_IndirectArgs[batchIndex]._instanceCount, (uint)SW_SORT_MAX_ELEMENTS );
@@ -86,7 +237,7 @@ void CSMain( uint3 groupId : SV_GroupID, uint3 groupThreadID : SV_GroupThreadID 
     // 그룹공유로 올린다. count 밖의 자리는 가장 큰 값으로 둬 뒤로 밀어 두고, 되쓸 때 count 까지만 쓴다.
     // 인스턴스 번호가 범위를 벗어나도(있어선 안 되지만) 값 그대로 정렬된다 — 그리는 쪽이 g_SwInstanceCount 로 막는다.
     // 추가 뷰는 키 = (그 뷰의 순번 << 9) | 배치 안 번호다(배치 안 번호는 SW_SORT_MAX_ELEMENTS 미만 — 9 비트). 되쓸 때 아래 9 비트로 번호를 되찾는다.
-    // 정렬하는 배치(sortMode 2)는 투명 배치뿐이고 그 인스턴스는 모두 꼬리라 순번이 있다.
+    // 정렬하는 배치(sortMode 1)는 투명 배치뿐이고 그 인스턴스는 모두 꼬리라 순번이 있다.
     for ( uint loadIndex = groupThreadID.x; loadIndex < (uint)SW_SORT_MAX_ELEMENTS; loadIndex += SW_SORT_THREADS )
     {
         uint key = 0xFFFFFFFFu;
@@ -118,3 +269,4 @@ void CSMain( uint3 groupId : SV_GroupID, uint3 groupThreadID : SV_GroupThreadID 
         g_VisibleInstanceIDs[slots + storeIndex] = ( orderIndex < g_InstanceCount ) ? g_InstanceOrder[orderIndex] : orderIndex;
     }
 }
+#endif // SW_SORT_MULTI_PASS

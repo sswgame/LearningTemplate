@@ -16,13 +16,13 @@
  * 보이는 상황에서 **보이는 쪽이 사라지고 안 보이는 쪽이 그려진다**. 개수만으로는 무엇을 그릴지 고를 수 없어 압축 목록을 만든다.
  *
  * 개수는 디스패치 전에 0 이어야 한다 — 같은 파일의 되돌리기 커널(`SW_CULL_RESET_ARGS`, C++ RenderPassKind::IndirectArgsReset)이 컬링 바로 앞에서
- * 배치마다 0(압축을 포기한 배치는 CPU 개수)을 쓴다. CPU 는 배치 표가 바뀔 때만 인자 전체를 올린다.
+ * 배치마다 0 을 쓴다. CPU 는 배치 표가 바뀔 때만 인자 전체를 올린다.
  *
  * 바인딩 계약(binding_slots.hlsli): CB b0, 인스턴스 읽기 t0, 배치 구간 읽기 t1, HZB 피라미드 읽기 t2, 차례 → 칸 읽기 t3, 간접 인자 쓰기 u0,
  * 가시 ID 쓰기 u1, LOD 전환 상태 u2, 가려진 차례 표시 u3(2 단계 가림).
  *
  * 인스턴스 버퍼는 **칸 순**이다(원소 번호 = GPUScene 칸, 구멍은 배치 번호가 무효 — C++ GPUSceneSlotBuffer). 스레드 하나가 **그리는 차례** 하나를 맡아
- * t3(g_InstanceOrder)에서 그 차례의 칸을 읽는다. 가시 목록에는 칸을 적는다 — 정점 셰이더는 그 칸으로 인스턴스를 읽는다. 투명 정렬 배치(sortMode 2)만
+ * t3(g_InstanceOrder)에서 그 차례의 칸을 읽는다. 가시 목록에는 칸을 적는다 — 정점 셰이더는 그 칸으로 인스턴스를 읽는다. 투명 정렬 배치(sortMode 1 · 2)만
  * 차례를 적고 instance_sort.hlsl 이 정렬한 뒤 칸으로 바꾼다(정렬 기준이 차례다).
  *
  * 가림 판정(g_HZBControl.w = 판정 발자국 > 0, C++ HZBOcclusion::fillCullParams): 절두체를 통과한 인스턴스의 경계 상자를 HZB 의 깊이를 그린 뷰-투영(g_HZBViewProj)으로
@@ -33,7 +33,7 @@
  * 2 단계 가림(g_CullPhase.x, C++ FrameGraphExecutor::recordLateOcclusion — Adria · VQEngine · Niagara 의 two-phase occlusion):
  *   1 앞 단계 — 프레임 그래프에서 지난 프레임 HZB 로 판정하고, 가려져 빠진 불투명(sortMode 0) 차례를 u3 에 적는다(나머지 차례는 0).
  *   2 뒤 단계 — 깊이 프리패스 뒤 그 깊이로 다시 지은 HZB 로 적힌 차례만 다시 판정해 이제 보이는 것을 같은 간접 인자에 더한다(개수를 되돌리지 않는다 — 앞 단계 개수 위에 센다).
- *   투명 정렬 배치(sortMode 2)는 앞 단계 판정만 본다 — 뒤 단계가 더하면 정렬(instance_sort.hlsl)이 끝난 목록 뒤에 붙어 블렌드 순서가 틀린다.
+ *   투명 정렬 배치(sortMode 1 · 2)는 앞 단계 판정만 본다 — 뒤 단계가 더하면 정렬(instance_sort.hlsl)이 끝난 목록 뒤에 붙어 블렌드 순서가 틀린다.
  *   0 은 한 단계(2 단계를 끈 설정 · 그림자 · 추가 뷰)다.
  */
 
@@ -310,15 +310,14 @@ void advanceLODFade( uint instanceId, uint slotSerial, uint headBatch, uint leve
 }
 
 #if defined( SW_CULL_RESET_ARGS )
-// 되돌리기 커널 — 배치마다 스레드 하나. 컬링이 이 위에서 InterlockedAdd 로 센다. 압축을 포기한 배치(sortMode 1)는 컬링이 개수를 건드리지 않으므로 CPU 개수를 둔다.
+// 되돌리기 커널 — 배치마다 스레드 하나. 컬링이 이 위에서 InterlockedAdd 로 센다.
 SW_NUMTHREADS( 64, 1, 1 )
 void CSMain( uint3 dispatchThreadID : SV_DispatchThreadID )
 {
     const uint batchIndex = dispatchThreadID.x;
     if ( batchIndex >= g_BatchCount )
         return;
-    const BatchData batch                     = g_BatchInfo[batchIndex];
-    g_IndirectArgs[batchIndex]._instanceCount = ( batch._sortMode == 1u ) ? batch._instanceCount : 0u;
+    g_IndirectArgs[batchIndex]._instanceCount = 0u;
 }
 #else
 SW_NUMTHREADS( 64, 1, 1 )
@@ -330,7 +329,7 @@ void CSMain( uint3 dispatchThreadID : SV_DispatchThreadID )
     if ( orderIndex >= g_InstanceCount )
         return;
     // 2 단계 가림: 앞 단계는 표시를 먼저 지운다(아래 어느 길로 돌아가도 0 이다). 뒤 단계는 앞 단계가 가려졌다고 적은 차례만 본다 — 그 차례는 불투명이라
-    // 아래 압축 포기 · 투명 길에 닿지 않고, LOD 전환도 앞 단계에서 진행하지 않았다(가림 판정이 LOD 앞이다).
+    // 아래 투명 길에 닿지 않고, LOD 전환도 앞 단계에서 진행하지 않았다(가림 판정이 LOD 앞이다).
     const uint phase = g_CullPhase.x;
     if ( phase == kCullPhaseEarly )
         g_OccludedOrders[orderIndex] = 0u;
@@ -346,23 +345,12 @@ void CSMain( uint3 dispatchThreadID : SV_DispatchThreadID )
     if ( headBatch >= g_BatchCount )
         return;
 
-    // sortMode 1 = 압축을 포기하는 배치. 차례는 배치마다 연속이므로 (차례 - 배치 인스턴스 시작)이 곧 배치 안 자리다 — 그 자리에 칸을 적는다.
-    // 제자리 매핑을 가시 구간에 적고 개수는 CPU 가 채운 값을 그대로 둔다. GPU 정렬 한계(SW_SORT_MAX_ELEMENTS)를 넘는
-    // 큰 투명 배치만 여기로 온다. 나머지 투명(sortMode 2)은 압축한 뒤 instance_sort.hlsl 이 CPU 정렬 순서로 되돌린다.
-    // 판정(절두체 · 가림) **앞에서** 쓴다 — 개수가 배치 전체라 정점 셰이더가 모든 칸을 읽는다. 판정 뒤에 쓰면 밖으로 나간 인스턴스의 칸이 비어(초기 내용 없음) 쓰레기 번호를 그린다(RN-1).
-    // 언리얼 FInstanceCullingContext · 유니티 BRG 처럼 그리는 개수만큼의 목록은 컬링 결과와 무관하게 모두 채운다.
     const BatchData headInfo = g_BatchInfo[headBatch];
-    if ( headInfo._sortMode == 1u )
-    {
-        g_VisibleInstanceIDs[headInfo._visibleBase + ( orderIndex - headInfo._instanceBase )] = instanceId;
-        return;
-    }
     // 빈 칸(GPU 메시 입자의 죽은 칸 — vfx_mesh_instance.hlsl)은 세지 않는다. 그래서 간접 인자의 인스턴스 수가 살아 있는 수이고 CPU 는 그 수를 모른다(Niagara · VFX Graph 와 같다).
-    // 위 압축 포기 배치(투명)는 개수가 CPU 값이라 여기 오지 않는다 — GPU 메시 입자는 불투명뿐이다(VFXComponent::rebuildMeshEmitters).
     if ( ( instance._instanceFlags & kInstanceFlagEmpty ) != 0u )
         return;
-    // 투명 정렬 배치(sortMode 2)는 차례를 적는다 — instance_sort.hlsl 이 차례로 정렬한 뒤 칸으로 바꾼다. 나머지는 칸을 바로 적는다.
-    const uint visibleId = ( headInfo._sortMode == 2u ) ? orderIndex : instanceId;
+    // 투명 정렬 배치(sortMode 1 · 2)는 차례를 적는다 — instance_sort.hlsl 이 차례로 정렬한 뒤 칸으로 바꾼다. 나머지는 칸을 바로 적는다.
+    const uint visibleId = ( headInfo._sortMode != 0u ) ? orderIndex : instanceId;
 
     // 바운드 중심은 이미 월드 공간이다 (GPUScene 이 월드 행렬의 이동 성분으로 채우고, instance_animation 도
     // 회전 뒤에 다시 맞춘다). 여기서 또 world 를 곱하면 이동이 두 번 들어간다.
@@ -377,7 +365,7 @@ void CSMain( uint3 dispatchThreadID : SV_DispatchThreadID )
     if ( bHasBox && isBoxVisible( boxCenter, boxExtent ) == false )
         return;
 
-    // HZB 깊이 뒤에 숨은 인스턴스는 그리지 않는다(위 압축 포기 배치는 개수가 CPU 값이라 거르지 않는다). 앞 단계는 빠진 불투명 차례를 뒤 단계에 넘긴다.
+    // HZB 깊이 뒤에 숨은 인스턴스는 그리지 않는다. 앞 단계는 빠진 불투명 차례를 뒤 단계에 넘긴다.
     if ( bHasBox ? isOccluded( boxCenter, boxExtent ) : isOccluded( instance._boundsCenter, instance._boundsRadius.xxx ) )
     {
         if ( phase == kCullPhaseEarly && headInfo._sortMode == 0u )
@@ -393,7 +381,7 @@ void CSMain( uint3 dispatchThreadID : SV_DispatchThreadID )
     }
 
     // LOD 그룹: 화면 크기로 단계를 골라 그 단계 배치(머리 + 단계)의 가시 구간에 쓴다. 단계 배치는 머리와 같은 머티리얼 · 메시이고 정점 구간만 다르며, 인스턴스는 머리에 한 번만 있다.
-    // 그룹은 정적 불투명뿐이라 위의 압축 포기(sortMode 1)나 투명 정렬과 만나지 않는다. 전환 중이면 두 단계에 모두 쓴다(항목의 위쪽 비트가 상보 디더 코드).
+    // 그룹은 정적 불투명뿐이라 투명 정렬과 만나지 않는다. 전환 중이면 두 단계에 모두 쓴다(항목의 위쪽 비트가 상보 디더 코드).
     uint level     = 0u;
     uint previous  = 0u;
     uint fadeLevel = 16u;

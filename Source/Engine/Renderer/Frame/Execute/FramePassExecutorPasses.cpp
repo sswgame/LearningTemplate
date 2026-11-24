@@ -363,6 +363,7 @@ namespace sw
                 case RenderPassKind::GPUCull:
                 case RenderPassKind::InstanceAnimation:
                 case RenderPassKind::InstanceSort:
+                case RenderPassKind::InstanceSortMultiPass:
                 case RenderPassKind::MeshMorph:
                 case RenderPassKind::MeshSkin:
                 case RenderPassKind::LightGrid:

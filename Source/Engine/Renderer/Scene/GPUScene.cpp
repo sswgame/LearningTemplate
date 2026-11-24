@@ -493,6 +493,7 @@ namespace sw
     {
         // 배치 표: 컬링 컴퓨트는 "이 배치의 인스턴스는 어디서 시작하나" 를, 정점 셰이더는 모프 · 정점 풀 오프셋을 읽는다.
         _listScratchBatchInfo.resize( argsCount );
+        _listMultiPassSortBatch.clear();
         for ( uint32 argIndex = 0; argIndex < argsCount; ++argIndex )
         {
             const GPUMeshBatch&        infoBatch                 = _snapshot.getAllBatches()[argIndex];
@@ -512,16 +513,40 @@ namespace sw
             _listScratchBatchInfo[argIndex]._localBoundsExtent   = bHasBounds ? ( pBatchMesh->getLocalBoundsMax() - pBatchMesh->getLocalBoundsMin() ) * 0.5f : float3{};
             _listScratchBatchInfo[argIndex]._uvDensity           = pBatchMesh != nullptr ? pBatchMesh->getUVDensity() : 0.0f;
             _listScratchBatchInfo[argIndex]._meanEdgeLength      = pBatchMesh != nullptr ? pBatchMesh->getMeanEdgeLength() : 0.0f;
-            // 투명은 압축한 뒤 GPU 가 깊이순으로 다시 정렬한다. 한 워크그룹에 안 담기는 큰 배치만
-            // 압축을 포기하고 CPU 가 정렬해 둔 순서를 그대로 쓴다.
+            // 투명은 압축한 뒤 GPU 가 깊이순으로 다시 정렬한다. 한 워크그룹에 안 담기는 큰 배치는 여러 디스패치로 정렬한다.
             GPUBatchSortMode sortMode = GPUBatchSortMode::None;
             if ( infoBatch._blendMode == BlendMode::Transparent )
-                sortMode = ( infoBatch._instanceCount <= kGPUSortMaxElements ) ? GPUBatchSortMode::DepthGPU : GPUBatchSortMode::Preserve;
+                sortMode = ( infoBatch._instanceCount <= kGPUSortMaxElements ) ? GPUBatchSortMode::OneGroup : GPUBatchSortMode::MultiPass;
+            if ( sortMode == GPUBatchSortMode::MultiPass )
+                _listMultiPassSortBatch.push_back( argIndex );
             _listScratchBatchInfo[argIndex]._sortMode = static_cast<uint32>( sortMode );
         }
         constexpr RHIBufferUsage kBatchInfoUsage = RHIBufferUsage::Structured | RHIBufferUsage::ShaderResource;
         if ( _batchInfo.ensureCapacity( pDevice, static_cast<uint32>( sizeof( GPUBatchInfo ) ), argsCount, kBatchInfoUsage, true, false, nullptr ) )
             _batchInfo.upload( pDevice, _listScratchBatchInfo.data(), argsCount * static_cast<uint32>( sizeof( GPUBatchInfo ) ) );
+    }
+
+    void GPUScene::collectSortStages( uint32 count, vector<GPUSortStage>& outListStage )
+    {
+        constexpr uint32 kThreadsPerBlock = kGPUSortMaxElements / 2u; // 그룹 하나가 블록 하나(스레드 하나가 쌍 하나)
+        const uint32     blockThreads     = ( ( count + kGPUSortMaxElements - 1u ) / kGPUSortMaxElements ) * kThreadsPerBlock;
+        outListStage.clear();
+        outListStage.push_back( GPUSortStage{ GPUSortStageKind::Block, 0, blockThreads } );
+        uint32 sortLength = kGPUSortMaxElements;
+        while ( sortLength < count )
+        {
+            sortLength <<= 1u;
+        }
+        for ( uint32 blockSize = kGPUSortMaxElements << 1u; blockSize <= sortLength; blockSize <<= 1u )
+        {
+            outListStage.push_back( GPUSortStage{ GPUSortStageKind::Flip, blockSize, sortLength >> 1u } );
+            for ( uint32 distance = blockSize >> 2u; distance >= kGPUSortMaxElements; distance >>= 1u )
+            {
+                outListStage.push_back( GPUSortStage{ GPUSortStageKind::Distance, distance, sortLength >> 1u } );
+            }
+            outListStage.push_back( GPUSortStage{ GPUSortStageKind::Merge, 0, blockThreads } );
+        }
+        outListStage.push_back( GPUSortStage{ GPUSortStageKind::Resolve, 0, count } );
     }
 
     uint32 GPUScene::computeStartInstance( const GPUMeshBatch& batch ) const
@@ -537,10 +562,8 @@ namespace sw
             RHIDrawIndexedIndirectCommand& cmd = _listScratchIndirectCmd[argIndex];
             cmd._indexCountPerInstance         = _snapshot.getAllBatches()[argIndex]._indexCount;
             // 컬링 컴퓨트가 개수를 만드는 배치는 **0 에서 시작**해야 한다. InterlockedAdd 로 보이는 것만 센다.
-            // 압축을 포기한 배치(Preserve)와 컬링이 아예 없을 때는 CPU 가 센 개수를 그대로 쓴다.
-            const bool bPreserve  = static_cast<GPUBatchSortMode>( _listScratchBatchInfo[argIndex]._sortMode ) == GPUBatchSortMode::Preserve;
-            const bool bGPUCounts = ( _bGPUFillsIndirectCounts != SW_FALSE ) && ( bPreserve == false );
-            cmd._instanceCount    = bGPUCounts ? 0u : _snapshot.getAllBatches()[argIndex]._instanceCount;
+            // 컬링이 아예 없을 때는 CPU 가 센 개수를 그대로 쓴다.
+            cmd._instanceCount = _bGPUFillsIndirectCounts != SW_FALSE ? 0u : _snapshot.getAllBatches()[argIndex]._instanceCount;
             // 인덱스 풀 안의 시작과 메시의 정점 풀 시작. 인덱스는 메시 안 번호다(SV_VertexID 가 baseVertex 를 포함하는지는 API 마다 다르다: binding.hlsli).
             cmd._startIndexLocation = _listBatchBinding[argIndex]._firstIndex;
             cmd._baseVertexLocation = static_cast<int32>( _listBatchBinding[argIndex]._baseVertex );
