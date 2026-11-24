@@ -353,9 +353,15 @@ namespace sw
     {
         IncomingQueue& queue = _arrIncoming[channel];
         const int32    bytes = static_cast<int32>( buffer.size() ) + kIncomingMessageOverheadBytes;
+        // 비신뢰 메시지는 잃어도 되는 것이라 가장 오래된 것부터 버린다 — 앱이 멈춘 동안(백그라운드) 쌓인 옛 스냅숏 때문에 연결을 끊지 않는다(OS 의 UDP 수신 버퍼도 차면 버린다).
+        const bool bUnreliable = channel == NetChannelKind::Unreliable || channel == NetChannelKind::UnreliableSequenced;
+        while ( bUnreliable && queue._listMessage.empty() == false && queue._byteCount + bytes > kMaxPendingReceiveBytes )
+        {
+            popIncoming( queue );
+        }
         if ( queue._byteCount + bytes > kMaxPendingReceiveBytes )
         {
-            // 게임이 꺼내는 속도보다 상대가 빨리 넣는다(느린 틱이거나 홍수). UDP 는 상대를 멈출 수 없으므로 엔드포인트가 끊는다.
+            // 신뢰 메시지다. 게임이 꺼내는 속도보다 상대가 빨리 넣는다(느린 틱이거나 홍수). UDP 는 상대를 멈출 수 없으므로 엔드포인트가 끊는다.
             if ( _bReceiveOverflowed == SW_FALSE )
                 SW_LOG_WARNING_ID( "Net.ReceiveOverflow", "NetConnection: the receive queue of channel %# exceeds %# bytes - dropping the connection", static_cast<int32>( channel ), kMaxPendingReceiveBytes );
             _bReceiveOverflowed = SW_TRUE;

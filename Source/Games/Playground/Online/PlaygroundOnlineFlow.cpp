@@ -607,7 +607,7 @@ namespace sw
     {
         if ( notification.has_value() )
             return notification->_reason == GameShutdownReason::ServerRestart;
-        return reason == NetDisconnectReason::Timeout;
+        return reason == NetDisconnectReason::Timeout || reason == NetDisconnectReason::ReceiveOverflow || reason == NetDisconnectReason::ReliableOverflow;
     }
 
     bool PlaygroundOnlineFlow::canReturnToHub( OnlineSession& session ) const

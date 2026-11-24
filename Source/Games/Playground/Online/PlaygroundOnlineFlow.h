@@ -121,7 +121,7 @@ namespace sw
         int32 getRefusedScoreCount() const { return _refusedScoreCount; }
 
         /**
-         * @brief 잃은 허브에 다시 붙을지입니다 — 시간 초과(회선 · 서버가 죽음)와 서버 재시작이면 붙고, 점검 · 운영자 종료 · 추방이면 붙지 않습니다.
+         * @brief 잃은 허브에 다시 붙을지입니다 — 시간 초과 · 줄 넘침(회선 · 서버가 죽음, 앱이 멈춘 동안 밀림)과 서버 재시작이면 붙고, 점검 · 운영자 종료 · 추방이면 붙지 않습니다.
          * @details 까닭 없이 서버가 닫은 것(`Remote`)은 추방이나 같은 계정의 다른 접속일 수 있다 — 저절로 다시 붙으면 두 쪽이 서로 밀어낸다.
          */
         static bool shouldReconnectHub( NetDisconnectReason reason, const optional<GameShutdownNotice>& notification );
