@@ -222,6 +222,8 @@ namespace sw
         , _digestSentRevision{ 0 }
         , _digestServerConnection{ -1 }
         , _shutdownNotice{}
+        , _lostReason{}
+        , _bServerJoined{ SW_FALSE }
         , _bShutdownNoticeKnown{ SW_FALSE }
         , _bServerTickKnown{ SW_FALSE }
         , _clientHostFrameNumber{ 0 }
@@ -610,6 +612,8 @@ namespace sw
         _bConnectFailureReported = SW_FALSE;
         _bServerTickKnown        = SW_FALSE;
         _bShutdownNoticeKnown    = SW_FALSE;
+        _bServerJoined           = SW_FALSE;
+        _lostReason.reset();
     }
 
     void GameNetSession::update()
@@ -619,9 +623,25 @@ namespace sw
         reportConnectResult();
         _listEventScratch.clear();
         (void)_router.poll( _peers, nullptr, &_listEventScratch ); // 처리기가 없는 메시지는 버린다(맡은 키트가 없다)
+        recordServerLoss();
         logEvents( EventPhase::Running );
         recordMetrics();
         updateResourceDigest();
+    }
+
+    void GameNetSession::recordServerLoss()
+    {
+        if ( _role != GameNetRole::Client )
+            return;
+        for ( const NetEndpointEvent& event : _listEventScratch )
+        {
+            const bool bConnected = event._kind == NetEndpointEvent::Kind::Connected;
+            if ( bConnected )
+                _lostReason.reset();
+            else if ( _bServerJoined == SW_TRUE ) // 붙지 못한 시도의 끝은 잃은 것이 아니다(`hasConnectFailed`)
+                _lostReason = event._reason;
+            _bServerJoined = bConnected ? SW_TRUE : SW_FALSE;
+        }
     }
 
     void GameNetSession::logEvents( EventPhase phase ) const

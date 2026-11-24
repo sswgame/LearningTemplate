@@ -330,6 +330,8 @@ namespace sw
         bool isTicketBound() const { return _bTicketBound == SW_TRUE; }
         /** @brief 클라이언트의 접속 시도가 한 번이라도 실패했으면 true 입니다(시간 초과 — 뒤에서 다시 시도한다 — 또는 거절). 붙은 뒤에도 남으므로 `getConnectedCount` 를 먼저 본다. 세션을 다시 열면 지워진다. */
         bool hasConnectFailed() const { return _bConnectFailureReported == SW_TRUE; }
+        /** @brief 붙어 있던 서버를 잃은 까닭입니다. 붙은 적이 없거나 다시 붙었으면 비어 있습니다 — 저절로 다시 붙지 않으므로 게임이 보고 정한다(`tryGetShutdownNotice` 의 사유와 함께). */
+        const optional<NetDisconnectReason>& getLostReason() const { return _lostReason; }
         /** @brief 서버면 첫 샤드가 연 UDP 포트를 반환합니다(샤드 `n` 은 이 포트 + n, 한 포트를 나누면 모두 이 포트). 포트로 0 을 줬으면 운영체제가 고른 포트입니다. 클라이언트면 0 입니다. */
         uint16 getListenPort() const { return _listenPort; }
         /** @brief 포트 샤드 수입니다. 클라이언트와 샤딩하지 않는 서버는 1, 세션을 열지 않았으면 0 입니다. */
@@ -512,6 +514,8 @@ namespace sw
             Running, ///< 세션이 도는 중(update) — 서버를 잃으면 이상이라 경고다
             Closing, ///< 이 프로세스가 세션을 닫는 중(shutdown) — 같이 끝나는 서버가 먼저 나간 것이라 정보다
         };
+        /** @brief 클라이언트가 서버에 붙고 잃은 것을 이번 사건에서 적습니다(`getLostReason`). */
+        void recordServerLoss();
         /** @brief `_listEventScratch` 의 연결과 끊김을 로그 한 줄씩 남깁니다. 서버는 둘 다 남기고, 클라이언트는 끊김만 남깁니다(@p phase 가 무게를 정한다). */
         void logEvents( EventPhase phase ) const;
         /** @brief 샤드 @p shardIndex 의 지표 시리즈를 레지스트리에 올립니다. 레지스트리가 없으면 빈 값입니다. */
@@ -546,6 +550,8 @@ namespace sw
         uint64                            _digestSentRevision;      ///< 클라이언트 — 합성 줄을 어디까지 보냈는가
         int32                             _digestServerConnection;  ///< 클라이언트 — 합성 줄을 보낼 연결. 음수면 붙어 있지 않다
         GameShutdownNotice                _shutdownNotice;          ///< 클라이언트 — 받은 서버 종료 통지(`_bShutdownNoticeKnown` 일 때만 뜻이 있다)
+        optional<NetDisconnectReason>     _lostReason;              ///< 클라이언트 — 붙어 있던 서버를 잃은 까닭
+        uint8                             _bServerJoined;           ///< 클라이언트 — 서버에 붙어 있다(`update` 가 본 사건으로)
         uint8                             _bShutdownNoticeKnown;    ///< 클라이언트 — 서버 종료 통지를 받았다
         uint8                             _bServerTickKnown;        ///< 클라이언트 — 서버 틱을 한 번이라도 받았다
         uint64                            _clientHostFrameNumber;   ///< 클라이언트 호스트 — 프레임 앞 훅이 센 프레임 수(리슨 호스트의 `[frame=N]`)
