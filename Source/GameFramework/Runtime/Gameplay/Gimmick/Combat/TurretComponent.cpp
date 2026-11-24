@@ -100,6 +100,7 @@ namespace sw
         , _listShotTarget{}
         , _projectiles{}
         , _previousTarget{}
+        , _targetTeleport{}
         , _previousTargetPosition{}
     {
     }
@@ -222,10 +223,13 @@ namespace sw
         }
 
         // 조준: 요를 겨눌 곳 쪽으로 돌린다. 날아가는 탄은 대상이 움직인 만큼 앞을 겨눈다 — 처음 본 스텝은 속도를 모르므로 멈춘 것으로 본다.
-        const float3 targetPosition = listCandidate[static_cast<size_t>( *pick )]._position;
-        const float3 targetVelocity = _previousTarget == _target ? ( targetPosition - _previousTargetPosition ) * ( 1.0f / constant::time::kDefaultFixedStepSeconds ) : float3{};
-        _previousTarget             = _target;
-        _previousTargetPosition     = targetPosition;
+        const float3                targetPosition = listCandidate[static_cast<size_t>( *pick )]._position;
+        const GameObject* const     pTarget        = pManager->resolveGameObject( _target );
+        const SceneComponent* const pTargetScene   = pTarget != nullptr ? pTarget->getPrimarySceneComponent() : nullptr;
+        const bool                  bTeleported    = pTargetScene != nullptr && _targetTeleport.consume( *pTargetScene ).has_value();
+        const float3                targetVelocity = _previousTarget == _target && bTeleported == false ? ( targetPosition - _previousTargetPosition ) * ( 1.0f / constant::time::kDefaultFixedStepSeconds ) : float3{};
+        _previousTarget                            = _target;
+        _previousTargetPosition                    = targetPosition;
         float3        aimPoint{};
         float3        direction{};
         const bool    bCanHit    = computeAim( origin, targetPosition, targetVelocity, _projectileSpeed, _projectileGravityScale, aimPoint, direction );

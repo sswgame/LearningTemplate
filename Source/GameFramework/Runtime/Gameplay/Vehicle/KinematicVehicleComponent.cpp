@@ -84,6 +84,7 @@ namespace sw
         , _bUsePhysicsGround{ true }
         , _motor{}
         , _ground{}
+        , _teleport{}
         , _listFrameEvent{}
         , _driftIndex{}
         , _boostIndex{}
@@ -128,6 +129,7 @@ namespace sw
         _motor.setSettings( *pTuning );
         _motor.setGround( &_ground );
         _motor.reset( start, pRoot->getLocalRotation()._y );
+        (void)_teleport.consume( *pRoot ); // 시작 전의 순간이동은 시작 자리에 이미 들었다
         if ( pTuning->_rail._bEnabled && attachRail() == false )
             return;
         _bReady = true;
@@ -180,6 +182,14 @@ namespace sw
         SceneComponent*      pRoot  = pOwner != nullptr ? pOwner->getPrimarySceneComponent() : nullptr;
         if ( pRoot == nullptr || _bReady == false )
             return;
+        // 자리는 모터의 것이다 — 순간이동(문 · 리스폰)은 모터가 받아야 다음 쓰기가 도로 되돌리지 않는다. 운동을 지우는 순간이동이면 모터도 멈춘다.
+        if ( const optional<TeleportType> teleport = _teleport.consume( *pRoot ) )
+        {
+            if ( *teleport == TeleportType::ResetPhysics )
+                _motor.reset( pRoot->getWorldPosition(), pRoot->getLocalRotation()._y );
+            else
+                _motor.setPosition( pRoot->getWorldPosition() );
+        }
         const ControlIntent         intent = pPawn != nullptr ? pPawn->getIntent() : ControlIntent{};
         const KinematicVehicleInput input  = toVehicleInput( intent, _motor.getYaw(), _driftIndex, _boostIndex, _jumpIndex );
         _ground._probeTop                  = _motor.getPosition()._y + Internal::kProbeAbove;

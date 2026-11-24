@@ -1394,7 +1394,7 @@ namespace sw
         } );
         for ( SceneComponent* pRoot : listRoot )
         {
-            pRoot->teleportTo( pRoot->getWorldPosition() + delta, TeleportType::TeleportPhysics ); // 속도는 잇는다 — 떨어지던 몸은 계속 떨어진다
+            pRoot->teleportTo( pRoot->getWorldPosition() + delta, TeleportType::WorldOriginShift ); // 속도는 잇는다 — 떨어지던 몸은 계속 떨어진다
         }
         _objectManager->setWorldOrigin( target );
         _objectManager->flushSceneTransforms();

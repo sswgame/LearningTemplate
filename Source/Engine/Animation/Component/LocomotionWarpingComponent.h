@@ -19,6 +19,7 @@
 
 #include "Engine/Animation/Scene/AnimationSystem.h"
 #include "Engine/Object/Component/Component.h"
+#include "Engine/Object/Component/SceneTeleportCursor.h"
 #include "Engine/Reflection/ReflectionMacros.h"
 
 namespace sw
@@ -125,6 +126,7 @@ namespace sw
         Subscription             _bindingRegistration; ///< 유닛 단계 작업 등록 구독(놓으면 유닛에서 빠진다)
         SkeletalMeshComponent*   _pSkeletalMesh;       ///< 같은 오브젝트의 유닛(일을 건 곳 — 유닛이 사라지면 알려 준다)
         float3                   _previousPosition;
+        SceneTeleportCursor      _teleport;
         float3                   _measuredVelocity;
         float32                  _orientationAngle;
         float32                  _strideScale;
