@@ -301,6 +301,7 @@ SW_TEST_CASE( GameInstanceTest, ContentIsPreparedBeforeDeclaredData )
 SW_TEST_CASE( GameInstanceTest, NetSessionRefusesLocalRestoreAndClientSaves )
 {
     SW_EXPECT_LOG( "GameSaveSlots.LoadInNetSession" );
+    SW_EXPECT_LOG( "GameSaveSlots.SaveSlotCouldNot2" ); // 세션이 닫힌 뒤의 불러오기는 없는 칸까지 간다
     GameTimeScale timeScale;
     timeScale.setUnscaledDeltaTime( 1.0f / 60.0f );
     GameNetSession server{ engine::getSubsystem<ResourceComposition>() };

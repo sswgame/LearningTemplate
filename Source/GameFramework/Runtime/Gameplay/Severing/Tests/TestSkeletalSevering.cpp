@@ -12,6 +12,7 @@
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
 #include "Engine/Object/GameObject/Serialization/ObjectStateSerializer.h"
+#include "Engine/Reflection/TypeInfo.h"
 
 #include "GameFramework/Runtime/Gameplay/Severing/SeverResult.h"
 #include "GameFramework/Runtime/Gameplay/Severing/SkeletalSeveringComponent.h"
@@ -155,6 +156,9 @@ SW_TEST_CASE( SkeletalSeveringTest, RestoredBodyIsSeveredAgain )
     GameObject*                pBody     = manager.createGameObject( hashed_string( "Body" ) );
     SkeletalMeshComponent*     pUnit     = pBody->addComponent<SkeletalMeshComponent>();
     SkeletalSeveringComponent* pSevering = pBody->addComponent<SkeletalSeveringComponent>();
+    const PropertyInfo*        pChannel  = SkeletalSeveringComponent::StaticType()->findProperty( hashed_string( "_severedSurfaceChannel" ) ); // 뜬 상태를 되돌릴 때 필수 칸을 본다
+    SW_REQUIRE_NOT_NULL( pChannel );
+    *pChannel->getValuePtr<hashed_string>( static_cast<void*>( pSevering ) ) = hashed_string( "Blood" );
     pSevering->setRegionTablePath( test::ScopedScratchDomain::makeID( "body.fit.xml" ).str() );
     manager.beginPlay();
     pUnit->setSkeleton( skeleton );
