@@ -16,6 +16,7 @@
 #include "Engine/Foundation/EngineServices.h"
 #include "Engine/Reflection/ReflectionCast.h"
 #include "Engine/Reflection/ReflectionConstants.h"
+#include "Engine/Reflection/ReflectionDesc.h"
 #include "Engine/Reflection/ReflectionEditorMetadata.h"
 #include "Engine/Reflection/ReflectionEnumNames.h"
 #include "Engine/Reflection/ReflectionMetadata.h"

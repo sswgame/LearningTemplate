@@ -3,8 +3,6 @@
  * @brief 열거형 하나의 리플렉션 정보입니다.
  */
 #pragma once
-#include "Core/Container/span.h"
-#include "Core/String/NamedValue.h"
 
 #include "Engine/Reflection/ReflectionConstants.h"
 #include "Engine/Reflection/ReflectionMetadataBox.h"
@@ -12,29 +10,8 @@
 namespace sw
 {
     struct EnumEditorMetadata;
+    struct EnumInfoDesc;
     struct EnumeratorEditorMetadata;
-
-    /**
-     * @struct EnumInfoDesc
-     * @brief 생성기가 열거형마다 내는 등록 설명자입니다 — 항목 표(이름 · 값 배열) 하나와 표식 이름만 담고, 이름 표 · 값 표 · 인덱스 목록은 `EnumInfo::createFromDesc` 가 짓는다.
-     * @details 열거형마다 같은 맵 초기화 코드를 펼치지 않는다(magic_enum 이 이름 · 값 배열 하나에서 모든 조회를 푸는 것과 같은 모양). 값은 생성 코드에서
-     *          `static_cast<int64>( E::X )` 라 컴파일러가 계산한다 — libclang 의 값을 숫자로 박지 않는다.
-     */
-    struct EnumInfoDesc
-    {
-        const utf8*                   _pName;
-        const utf8*                   _pFullyQualifiedName;
-        const utf8*                   _pModuleName;
-        span<const NamedValue<int64>> _listEntry;          ///< 선언 순서의 열거자 전부(표식 열거자 포함)
-        span<const NamedValue<int64>> _listRedirect;       ///< 옛 열거자 이름 → 지금 값(`ValueAlias` · `Removed`)
-        const utf8*                   _pInvalidName;       ///< `Invalid` 표식 열거자 이름. 없으면 nullptr
-        const utf8*                   _pCountName;         ///< `Count` 표식 열거자 이름(끝 열거자 `Count` 는 생성기가 자동으로 넣는다). 없으면 nullptr
-        bool                          _bIsBitFlag;         // NOLINT(sw-bool-flag): 생성 코드가 집합체 초기화로 한 번 채우는 일회용 설명자다(기본값 없는 비트필드는 순서 초기화를 깨뜨린다)
-        uint8                         _size;               ///< 열거형의 바이트 크기
-        bool                          _bSigned;            ///< 밑바탕 타입이 부호 있는 정수다 NOLINT(sw-bool-flag): `_bIsBitFlag` 와 같다
-        const utf8* const*            _ppAlias{ nullptr }; ///< `ENUM( Alias = … )` 의 옛 이름 `_aliasCount` 개
-        uint32                        _aliasCount{ 0 };
-    };
 
     /** @brief 열거자 하나(이름 · 값)입니다. `EnumInfo::_listEnumerator` 의 원소입니다. */
     struct EnumeratorInfo
