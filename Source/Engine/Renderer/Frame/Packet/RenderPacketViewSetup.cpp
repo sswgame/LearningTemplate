@@ -35,6 +35,9 @@ namespace sw
         , _forcedAutoRenderScale{ 0.0f }
         , _bAutoRenderScaleActive{ SW_FALSE }
         , _bMissingCameraReported{ SW_FALSE }
+        , _bOriginShifted{ SW_FALSE }
+        , _lastMainCameraID{ 0 }
+        , _lastWorldOrigin{}
     {
     }
 
@@ -127,6 +130,11 @@ namespace sw
         return scale;
     }
 
+    bool RenderPacketViewSetup::isMainViewCut( uint64 previousCameraID, uint64 cameraID, const double3& previousOrigin, const double3& origin )
+    {
+        return previousCameraID != cameraID || previousOrigin != origin;
+    }
+
     RenderPacketMainView RenderPacketViewSetup::populateMainView( RenderFramePacket& packet, const FrameViewports& views, const ViewCameraProviderDelegate& sceneViewCameraProvider,
                                                                   Scene& activeScene, const FrameRenderer* pFrameRenderer )
     {
@@ -150,7 +158,12 @@ namespace sw
         if ( pCam != nullptr )
         {
             // 주 시점의 출력 설정(사각형 · 배율 · 끌 기능)과 컷 표시. 비율은 사각형의 것이다(분할 화면의 한 칸).
-            packet._mainView         = RenderViewCollector::makeMainSettings( pCam, autoRenderScale );
+            packet._mainView = RenderViewCollector::makeMainSettings( pCam, autoRenderScale );
+            if ( isMainViewCut( _lastMainCameraID, pCam->getComponentID(), _lastWorldOrigin, activeScene.getWorldOrigin() ) )
+                packet._mainView._bCut = SW_TRUE;
+            _bOriginShifted          = _lastMainCameraID == pCam->getComponentID() && _lastWorldOrigin != activeScene.getWorldOrigin() ? SW_TRUE : SW_FALSE;
+            _lastMainCameraID        = pCam->getComponentID();
+            _lastWorldOrigin         = activeScene.getWorldOrigin();
             const float32 mainAspect = RenderViewCollector::computeAspect( packet._mainView, outputWidth, outputHeight );
             packet.setMainView( pCam->getViewProjectionMatrix( mainAspect ), pCam->getCameraPosition() );
             pCam->setDrawnAspect( mainAspect ); // 게임 쪽이 같은 비로 투영하게 적는다(대기 뷰 LOD)
@@ -196,6 +209,14 @@ namespace sw
             RenderViewCollector::removeScreenRectViews( packet._listView );
         else if ( mainView._pSceneViewCamera != nullptr && mainView._pSceneViewCamera != mainView._pCamera )
             RenderViewCollector::appendViewportView( *mainView._pSceneViewCamera, views._scene, mainView._sceneViewMode, maxExtraViewCount, packet._listView );
+        if ( _bOriginShifted != SW_FALSE )
+        {
+            for ( RenderViewRequest& request : packet._listView )
+            {
+                request._settings._bCut = SW_TRUE;
+            }
+            _bOriginShifted = SW_FALSE;
+        }
         // 뷰가 다 정해졌다 — 블렌더블을 머티리얼로 푼다(뷰마다 볼륨을 섞은 값이 다르다).
         resolvePostProcessMaterials( packet );
     }
