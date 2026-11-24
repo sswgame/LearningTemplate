@@ -170,6 +170,7 @@ namespace sw
         vector<RegionUpdate>                   _listPendingRegion;  ///< 게임 스레드가 쌓고 렌더 스레드가 비운다(`_regionMutex`)
         vector<RegionUpdate>                   _listFlushingRegion; ///< 렌더 스레드만 쓰는 맞바꾸기 자리(저장소를 재사용한다)
         mutex                                  _regionMutex;
+        vector<TextureLayerBakeRequest>        _listReadyBake;   ///< 이번 프레임에 그릴 굽기(`selectReadyLayerBakes`, `_bakeMutex`)
         vector<TextureLayerBakeRequest>        _listPendingBake; ///< 게임 스레드가 쌓고 렌더 스레드가 가져간다(`_bakeMutex`) — 결과 타깃마다 하나
         /// @brief 최근에 그린 굽기(결과 타깃, 그린 번호) — 앞이 오래된 것이고 `kBakeHistoryCount` 를 넘으면 앞을 버린다(`_bakeMutex`).
         vector<pair<string, uint32>>            _listBakedTarget;
@@ -1421,13 +1422,50 @@ namespace sw
         _impl->_listPendingBake.push_back( std::move( request ) );
     }
 
+    void TextureCache::selectReadyLayerBakes()
+    {
+        if ( _impl == nullptr )
+            return;
+        vector<TextureLayerBakeRequest> listRequest;
+        {
+            ScopedLock<mutex> lock{ _impl->_bakeMutex };
+            listRequest.swap( _impl->_listPendingBake );
+        }
+        const auto isPathReady = [this]( const string& path )
+        {
+            const Texture2D* const pTexture = find( path );
+            return pTexture != nullptr && pTexture->isRHIValid();
+        };
+        for ( TextureLayerBakeRequest& request : listRequest )
+        {
+            if ( isCached( request._albedoTarget ) == false )
+                continue; // 요청한 쪽이 결과를 놓았다 — 그릴 곳이 없다
+            bool bReady = isPathReady( request._base ) && isPathReady( request._albedoTarget ) && isPathReady( request._surfaceTarget );
+            bReady      = bReady && ( request.getDrawCount() < 2u || ( isPathReady( request._albedoScratch ) && isPathReady( request._surfaceScratch ) ) );
+            for ( const TextureLayerBakeLayer& layer : request._listLayer )
+            {
+                bReady = bReady && isPathReady( layer._mask ) && ( layer._smear.empty() || isPathReady( layer._smear ) );
+            }
+            if ( bReady == false )
+            {
+                deferLayerBake( std::move( request ) ); // 읽는 중이거나 디바이스 교체로 다시 만드는 중 — 다음 프레임에 다시
+                continue;
+            }
+            ScopedLock<mutex> lock{ _impl->_bakeMutex };
+            // 그리지 않은 프레임이 이어지면 같은 결과의 앞 요청이 남아 있다 — 새 것으로 대체한다.
+            VectorUtil::removeIf( _impl->_listReadyBake, [&request]( const TextureLayerBakeRequest& ready )
+            { return ready._albedoTarget == request._albedoTarget; } );
+            _impl->_listReadyBake.push_back( std::move( request ) );
+        }
+    }
+
     void TextureCache::takeLayerBakes( vector<TextureLayerBakeRequest>& outListRequest )
     {
         outListRequest.clear();
         if ( _impl == nullptr )
             return;
         ScopedLock<mutex> lock{ _impl->_bakeMutex };
-        outListRequest.swap( _impl->_listPendingBake );
+        outListRequest.swap( _impl->_listReadyBake );
     }
 
     void TextureCache::recordLayerBaked( const string& albedoTarget )

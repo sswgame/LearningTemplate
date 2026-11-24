@@ -1140,7 +1140,7 @@ namespace sw
         for ( TextureLayerBakeRequest& request : listRequest )
         {
             if ( textures.find( request._albedoTarget ) == nullptr )
-                continue; // 요청한 쪽이 결과를 놓았다 — 그릴 곳이 없다
+                continue; // 고른 뒤에 요청한 쪽이 결과를 놓았다 — 그릴 곳이 없다
             // [0] 작업 타깃 · [1] 결과 타깃, 각 (알베도, 표면).
             const Texture2D* arrTarget[2][2] = {
                 {findReady( request._albedoScratch ), findReady( request._surfaceScratch )},

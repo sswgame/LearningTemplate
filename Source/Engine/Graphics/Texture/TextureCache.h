@@ -282,7 +282,12 @@ namespace sw
         void requestLayerBake( TextureLayerBakeRequest request );
         /** @brief 그리지 못한 굽기를 다음 프레임으로 돌려놓습니다(렌더 스레드). 그 사이 같은 결과의 새 요청이 들어왔으면 버립니다. */
         void deferLayerBake( TextureLayerBakeRequest request );
-        /** @brief 맡겨 둔 굽기를 모두 가져갑니다(렌더 스레드, 프레임 프리패스). @p outListRequest 는 비우고 채운다. */
+        /**
+         * @brief 맡겨 둔 굽기 가운데 텍스처가 모두 와 있는 것을 이번 프레임에 그릴 것으로 옮깁니다(렌더 스레드, 이번 프레임의 로드를 끝내기 **전** — `FrameRenderer::updateTextureUploads`).
+         * @details 예약한 SRV 번호의 다시 묶기는 다음 프레임부터 셰이더에 보인다. 이번 프레임에 끝난 텍스처로 구우면 로드 중 텍스처가 결과에 굳는다 — 굽기는 한 번뿐이다.
+         */
+        void selectReadyLayerBakes();
+        /** @brief `selectReadyLayerBakes` 가 고른 굽기를 모두 가져갑니다(렌더 스레드, 프레임 프리패스). @p outListRequest 는 비우고 채운다. */
         void takeLayerBakes( vector<TextureLayerBakeRequest>& outListRequest );
         /** @brief 결과 타깃 @p albedoTarget 의 굽기를 기록했다고 적습니다(렌더 스레드). 머티리얼이 그 프레임 뒤의 그리기에서 읽으면 구운 내용이다(같은 큐의 제출 순서). */
         void recordLayerBaked( const string& albedoTarget );
