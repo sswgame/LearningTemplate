@@ -201,7 +201,7 @@ namespace sw
 {
     /**
      * @class GhostCatalog
-     * @brief `<GhostHunt><Flashlight range="8" angle="0.436" strobeRange="10" strobeAngle="0.698" strobeCharge="1"/>
+     * @brief `<GhostHunt><Flashlight range="8" angle="25" strobeRange="10" strobeAngle="40" strobeCharge="1"/>
      *        <Vacuum range="4" stages="10 16 24" alignThreshold="0.7" alignBonus="1.5" surgeFill="2" surgeDamage="40" dragSpeed="2" dragReduction="0.75"/>
      *        <Ghost id="goob" hp="40" .../><Room id="foyer" ghosts="goob,goob" key="parlorKey" lightFlag="lit.foyer"/><Door id="parlorDoor" key="parlorKey" flag="door.parlor"/>
      *        <Furniture id="dresser" room="foyer" loot="dresserLoot" search="Shake"/><Boo id="booA" room="foyer" furniture="dresser" hp="30" escapeTime="5"/></GhostHunt>`

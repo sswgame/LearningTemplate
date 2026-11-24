@@ -5,6 +5,7 @@
 #include "Core/Algorithm/VectorUtil.h"
 #include "Core/Hash/HashUtil.h"
 #include "Core/Math/MathUtil.h"
+#include "Core/Math/PackedValueTraits.h"
 #include "Core/String/StringUtil.h"
 
 #include "Engine/Serialization/XML/XMLDocument.h"
@@ -290,8 +291,7 @@ namespace sw
                 const XMLNode node = parent.appendChild( "SocketOverride" );
                 node.appendAttribute( "name", socketOverride._name.c_str() );
                 appendNameList( node, "parent", socketOverride._placement._listSocket );
-                const float3& offset   = socketOverride._placement._offset;
-                const float3& rotation = socketOverride._placement._rotation;
+                const float3& offset = socketOverride._placement._offset;
                 string        text;
                 if ( offset != float3::Zero )
                 {
@@ -302,14 +302,15 @@ namespace sw
                     appendNumber( text, offset._z );
                     node.appendAttribute( "offset", string_view( text ) );
                 }
-                if ( rotation != float3::Zero )
+                if ( socketOverride._placement._rotation != EulerAngles{} )
                 {
+                    const PackedFloats degrees = PackedValueTraits<EulerAngles>::toFloats( socketOverride._placement._rotation ); // 다시 읽으면 같은 각인 가장 짧은 도
                     text.clear();
-                    appendNumber( text, rotation._x );
+                    appendNumber( text, degrees._arrValue[0] );
                     text += ' ';
-                    appendNumber( text, rotation._y );
+                    appendNumber( text, degrees._arrValue[1] );
                     text += ' ';
-                    appendNumber( text, rotation._z );
+                    appendNumber( text, degrees._arrValue[2] );
                     node.appendAttribute( "rotation", string_view( text ) );
                 }
             }

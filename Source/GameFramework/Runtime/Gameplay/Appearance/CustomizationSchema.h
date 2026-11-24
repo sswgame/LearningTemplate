@@ -9,6 +9,7 @@
 #include "Core/Foundation/Macros.h"
 #include "Core/Foundation/Types.h"
 #include "Core/Math/Math.h"
+#include "Core/Math/Radians.h"
 #include "Core/Name/hashed_string.h"
 
 #include "Engine/Asset/AssetRef.h"
@@ -127,8 +128,8 @@ namespace sw
         hashed_string _sprite{};
         PROPERTY( Units = m )
         float3 _offset{};
-        PROPERTY( Units = deg )
-        float3 _rotation{};
+        PROPERTY()
+        EulerAngles _rotation{};
     };
 
     /** @brief 조건(`<Condition parameter options min max/>`)의 칸입니다. 선택지 목록은 손으로 푼다. 구간은 적지 않으면 대상 슬라이더의 범위다. */
@@ -152,7 +153,7 @@ namespace sw
     struct CustomizationOptionDef
     {
         float3        _offset{};   ///< 부착 오프셋
-        float3        _rotation{}; ///< 부착 회전(도)
+        EulerAngles   _rotation{}; ///< 부착 회전
         hashed_string _name{};
         hashed_string _visual{};          ///< 고르기: 추가할 외형(머리카락, 수염). 주인은 매개변수 이름이다
         hashed_string _variant{};         ///< 고르기: 주인의 메시 변형 이름

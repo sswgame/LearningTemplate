@@ -228,7 +228,7 @@ namespace sw
         target._skeletalMesh        = params._skeletalMesh;
         target._space               = params._space;
         target._offset._translation = params._translation;
-        target._offset._rotation    = quaternion::makeFromYawPitchRoll( params._rotation * MathUtil::kDegreeToRadian );
+        target._offset._rotation    = quaternion::makeFromYawPitchRoll( params._rotation.radians() );
 
         const bool   bTrace      = params._traceFrom.empty() == false;
         const uint32 sourceCount = ( target._bone.empty() ? 0u : 1u ) + ( target._socket.empty() ? 0u : 1u ) + ( target._object.empty() ? 0u : 1u ) + ( bTrace ? 1u : 0u );

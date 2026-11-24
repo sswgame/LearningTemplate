@@ -3,7 +3,7 @@
  * @brief 리그 파일(`*.rig.xml`)의 원소마다 받는 칸입니다 — 에셋 루트 · 대상 · 노드 공통 키 · 노드 종류마다의 키와 그 목록 원소(`<item>`).
  * @details `RigXMLReader::readProperties` 가 이 스키마로 속성을 읽는다. 칸의 초기값이 "적지 않음" 값이고, 범위는 PROPERTY( Min · Max ) 가 정본이다.
  *          이름 목록(`<bones><item>…`)과 객체 목록(`<feet>` 등)은 자식 요소라 노드가 손으로 푼다. 파일 키는 밑줄 이름이라 칸마다 `Name` 을 적는다.
- *          도 단위로 적는 스칼라 각은 `Radians` 칸이라 읽는 입구가 라디안으로 담는다(파일 글은 도). 오일러 각(`float3`)은 파일 단위 그대로(`Units = deg`) 읽고 노드가 쿼터니언으로 옮긴다.
+ *          도 단위로 적는 스칼라 각은 `Radians` 칸이라 읽는 입구가 라디안으로 담는다(파일 글은 도). 오일러 각은 `EulerAngles` 칸이고 노드가 쿼터니언으로 옮긴다.
  *          언리얼 애님 노드의 UPROPERTY 파라미터 구조체 자리다 — 키 · 기본값 · 범위를 한 곳에 둔다.
  */
 #pragma once
@@ -48,8 +48,8 @@ namespace sw
         hashed_string _space{};
         PROPERTY( Name = "translation", Units = m )
         float3 _translation{};
-        PROPERTY( Name = "rotation", Units = deg )
-        float3 _rotation{};
+        PROPERTY( Name = "rotation" )
+        EulerAngles _rotation{};
         PROPERTY( Name = "trace_from" )
         hashed_string _traceFrom{};
         PROPERTY( Name = "trace_direction" )
@@ -152,10 +152,10 @@ namespace sw
 
         PROPERTY( Name = "bone", Required )
         hashed_string _bone{};
-        PROPERTY( Name = "min_degrees", Required, Units = deg )
-        float3 _minDegrees{};
-        PROPERTY( Name = "max_degrees", Required, Units = deg )
-        float3 _maxDegrees{};
+        PROPERTY( Name = "min_degrees", Required )
+        EulerAngles _min{};
+        PROPERTY( Name = "max_degrees", Required )
+        EulerAngles _max{};
     };
 
     /** @brief 트위스트 분배(`TwistDistribution`)의 칸입니다. */
@@ -486,8 +486,8 @@ namespace sw
 
         PROPERTY( Name = "name", Required )
         hashed_string _name{};
-        PROPERTY( Name = "rotation", Required, Units = deg )
-        float3 _rotation{};
+        PROPERTY( Name = "rotation", Required )
+        EulerAngles _rotation{};
     };
 
     /** @brief 포즈의 모프 가중치(`<morphs><item morph weight/>`) 하나입니다. */
@@ -510,8 +510,8 @@ namespace sw
 
         PROPERTY( Name = "bone", Required )
         hashed_string _bone{};
-        PROPERTY( Name = "rotation", Units = deg )
-        float3 _rotation{};
+        PROPERTY( Name = "rotation" )
+        EulerAngles _rotation{};
         PROPERTY( Name = "translation", Units = m )
         float3 _translation{};
     };

@@ -18,7 +18,7 @@
 					<MeshComponent _localID="163493842152903304" _componentName="MeshComponent"
 					               _bActive="true"
 					               _localPosition="0,1,0"
-					               _localRotation="0,30,0"
+					               _localRotation="0,0.5235988,0"
 					               _localScale="1,1,1"
 					               _attachOwner="None"
 					               _attachOwnerID="0"

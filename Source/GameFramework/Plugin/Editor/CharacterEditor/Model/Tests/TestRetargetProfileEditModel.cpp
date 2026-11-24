@@ -54,8 +54,7 @@ SW_TEST_CASE( RetargetProfileEditModelTest, PoseDragIsOneUndoStep )
     {
         vector<RetargetPoseBone> listPose;
         listPose.push_back( RetargetPoseBone{
-            hashed_string( "spine" ), float3{ static_cast<float32>( frameIndex ), 0.0f, 0.0f }
-        } );
+            hashed_string( "spine" ), EulerAngles::fromDegrees( float3{ static_cast<float32>( frameIndex ), 0.0f, 0.0f } ) } );
         model.setTargetPose( std::move( listPose ) );
     }
     SW_EXPECT_EQUAL( notifyCount, 5u );

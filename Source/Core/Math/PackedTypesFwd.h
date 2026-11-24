@@ -19,6 +19,7 @@ namespace sw
     struct NormalizedVector;
     struct OctahedralNormal;
     struct RGB10A2;
+    struct EulerAngles;
     struct Radians;
     template <typename TStorage>
     struct snorm;

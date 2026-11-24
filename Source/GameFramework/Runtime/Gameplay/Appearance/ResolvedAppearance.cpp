@@ -145,7 +145,7 @@ namespace sw
                         addName( socket );
                     }
                     addFloat3( placement._offset );
-                    addFloat3( placement._rotation );
+                    addFloat3( placement._rotation.radians() );
                 }
             };
 
@@ -301,10 +301,10 @@ namespace sw
                     }
                     if ( pDef->_bPlaceable == false )
                     {
-                        layer._value._offset          = float2{ 0.5f, 0.5f }; // 배치 없는 층은 피부 UV 그대로다
-                        layer._value._scale           = float2{ 1.0f, 1.0f };
-                        layer._value._rotationDegrees = 0.0f;
-                        layer._value._bMirror         = SW_FALSE;
+                        layer._value._offset   = float2{ 0.5f, 0.5f }; // 배치 없는 층은 피부 UV 그대로다
+                        layer._value._scale    = float2{ 1.0f, 1.0f };
+                        layer._value._rotation = Radians{};
+                        layer._value._bMirror  = SW_FALSE;
                     }
                     layer._regionMin       = pDef->_regionMin;
                     layer._regionMax       = pDef->_regionMax;
@@ -1234,7 +1234,7 @@ namespace sw
             builder.addFloat( layer._value._offset._y );
             builder.addFloat( layer._value._scale._x );
             builder.addFloat( layer._value._scale._y );
-            builder.addFloat( layer._value._rotationDegrees );
+            builder.addFloat( layer._value._rotation.radians() );
             builder.addInt( layer._value._bMirror );
         }
         for ( const ResolvedSlotItem& item : resolved._listSlotItem )
