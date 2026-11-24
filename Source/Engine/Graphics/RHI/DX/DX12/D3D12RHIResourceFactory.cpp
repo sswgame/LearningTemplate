@@ -66,7 +66,7 @@ namespace sw
         const UINT                             alignedSize = MathUtil::align( size, constant::render::kConstantBufferAlignment );
         Microsoft::WRL::ComPtr<ID3D12Resource> buffer;
         void*                                  pMapped{ nullptr };
-        if ( _pDevice->createMappedUploadBuffer( static_cast<uint64>( alignedSize ) * constant::render::kMaxFrameCountInFlight, buffer, pMapped ) == false )
+        if ( _pDevice->createMappedUploadBuffer( static_cast<uint64>( alignedSize ) * constant::render::kMaxFrameCountInFlight, L"ConstantBuffer", buffer, pMapped ) == false )
             return 0;
 
         const RHIBufferHandle handle = _pDevice->storeBuffer( buffer );
@@ -97,7 +97,7 @@ namespace sw
 
     RHIBufferHandle D3D12RHIResourceFactory::createConstantBufferPage( uint32 size )
     {
-        // 업로드 커밋 자원 하나(프레임 칸 × 페이지 크기)를 구간이 나눠 쓴다 — 버퍼마다 커밋 자원이던 것을 페이지당 하나로 줄인다(감사 R-4).
+        // 업로드 버퍼 하나(프레임 칸 × 페이지 크기)를 구간이 나눠 쓴다 — 상수 버퍼마다 버퍼 하나이던 것을 페이지당 하나로 줄인다(감사 R-4).
         return createConstantBuffer( size );
     }
 
@@ -118,12 +118,11 @@ namespace sw
     RHIBufferHandle D3D12RHIResourceFactory::createStructuredBuffer( uint32 elementSize, uint32 elementCount )
     {
         // 64비트로 곱한다. `UINT` 로 곱해 `Width`(UINT64)에 넣으면 넘칠 때 조용히 작은 버퍼가 된다.
-        const uint64                totalBytes   = static_cast<uint64>( elementSize ) * static_cast<uint64>( elementCount );
-        const D3D12_HEAP_PROPERTIES heapProps    = D3D12RHIResourcePreset::heapProperties( D3D12_HEAP_TYPE_DEFAULT );
-        const D3D12_RESOURCE_DESC   resourceDesc = D3D12RHIResourcePreset::bufferDesc( totalBytes, D3D12_RESOURCE_FLAG_ALLOW_UNORDERED_ACCESS );
+        const uint64              totalBytes   = static_cast<uint64>( elementSize ) * static_cast<uint64>( elementCount );
+        const D3D12_RESOURCE_DESC resourceDesc = D3D12RHIResourcePreset::bufferDesc( totalBytes, D3D12_RESOURCE_FLAG_ALLOW_UNORDERED_ACCESS );
 
         Microsoft::WRL::ComPtr<ID3D12Resource> buffer;
-        if ( isHrSuccess( _pDevice->_device->CreateCommittedResource( &heapProps, D3D12_HEAP_FLAG_NONE, &resourceDesc, D3D12_RESOURCE_STATE_COMMON, nullptr, IID_PPV_ARGS( buffer.GetAddressOf() ) ), "CreateCommittedResource" ) == false )
+        if ( _pDevice->createResource( D3D12_HEAP_TYPE_DEFAULT, resourceDesc, D3D12_RESOURCE_STATE_COMMON, nullptr, L"StructuredBuffer", buffer ) == false )
             return 0;
 
         const RHIBufferHandle handle = _pDevice->storeBuffer( buffer );
@@ -254,7 +253,7 @@ namespace sw
 
             Microsoft::WRL::ComPtr<ID3D12Resource> newHeap;
             void*                                  pMapped{ nullptr };
-            if ( _pDevice->createMappedUploadBuffer( newCapacity, newHeap, pMapped ) == false )
+            if ( _pDevice->createMappedUploadBuffer( newCapacity, L"StructuredUploadStaging", newHeap, pMapped ) == false )
             {
                 SW_LOG_ERROR_ID( "D3D12RHIResourceFactory.AcquireUploadStagingFailedCreateMap", "acquireUploadStaging: failed to create or map staging upload buffer (%# bytes)", newCapacity );
                 return false;
@@ -724,11 +723,8 @@ namespace sw
         if ( _pDevice->_device == nullptr || sizeBytes == 0 )
             return 0;
         // default 힙 — 복사의 도착이 된다(업로드 힙 `createVertexBuffer` 는 못 된다). 구조 버퍼처럼 상태를 추적한다(COMMON 으로 시작, 그리기 전 VertexOrConstant 로 옮긴다).
-        const D3D12_HEAP_PROPERTIES            heapProps    = D3D12RHIResourcePreset::heapProperties( D3D12_HEAP_TYPE_DEFAULT );
-        const D3D12_RESOURCE_DESC              resourceDesc = D3D12RHIResourcePreset::bufferDesc( sizeBytes );
         Microsoft::WRL::ComPtr<ID3D12Resource> buffer;
-        if ( isHrSuccess( _pDevice->_device->CreateCommittedResource( &heapProps, D3D12_HEAP_FLAG_NONE, &resourceDesc, D3D12_RESOURCE_STATE_COMMON, nullptr, IID_PPV_ARGS( buffer.GetAddressOf() ) ),
-                          "CreateCommittedResource" ) == false )
+        if ( _pDevice->createResource( D3D12_HEAP_TYPE_DEFAULT, D3D12RHIResourcePreset::bufferDesc( sizeBytes ), D3D12_RESOURCE_STATE_COMMON, nullptr, L"GeometryBuffer", buffer ) == false )
             return 0;
         const RHIBufferHandle handle = _pDevice->storeBuffer( buffer );
         if ( D3D12RHIDevice::BufferRecord* const pRecord = _pDevice->findBufferRecord( handle ) )
@@ -808,12 +804,8 @@ namespace sw
         const bool bInvalidReadbackRequest = _pDevice->_device == nullptr || elementSize == 0 || elementCount == 0 || RHIBufferSizeUtil::computeStructuredBytes( elementSize, elementCount, totalBytes ) == false;
         if ( bInvalidReadbackRequest )
             return 0;
-        const D3D12_HEAP_PROPERTIES            readbackHeap = D3D12RHIResourcePreset::heapProperties( D3D12_HEAP_TYPE_READBACK );
-        const D3D12_RESOURCE_DESC              bufferDesc   = D3D12RHIResourcePreset::bufferDesc( totalBytes );
         Microsoft::WRL::ComPtr<ID3D12Resource> readback;
-        if ( isHrSuccess( _pDevice->_device->CreateCommittedResource( &readbackHeap, D3D12_HEAP_FLAG_NONE, &bufferDesc, D3D12_RESOURCE_STATE_COPY_DEST, nullptr,
-                                                                      IID_PPV_ARGS( readback.GetAddressOf() ) ),
-                          "CreateCommittedResource" ) == false )
+        if ( _pDevice->createResource( D3D12_HEAP_TYPE_READBACK, D3D12RHIResourcePreset::bufferDesc( totalBytes ), D3D12_RESOURCE_STATE_COPY_DEST, nullptr, L"ReadbackBuffer", readback ) == false )
             return 0;
         // 읽기 힙 리소스는 COPY_DEST 로 고정이다 — 상태 추적(`BufferRecord::_bTrackedState`)에 올리지 않는다.
         return _pDevice->storeBuffer( readback );
@@ -858,7 +850,7 @@ namespace sw
         _pDevice->getMemoryTracker().setLabel( RHIMemoryKey::makeTexture( texture ), pName ); // 메모리 스냅숏 · RT 목록이 같은 이름을 보인다
         // PIX · DRED 페이지 폴트 출력이 이 이름을 보인다(디버그 빌드의 `SW Texture <핸들>` 이름을 첨부 이름으로 덮는다).
         const wstring wideName = StringUtil::utf8ToUTF16( pName );
-        pResource->SetName( wideName.c_str() );
+        D3D12RHIDevice::setResourceName( pResource, wideName.c_str() );
     }
 
     // 길이 유지(긴 함수 정리 기준): 서술 채우기 · 리소스 생성 · 뷰 · 초기 데이터 업로드의 순서가 곧 의미라 나누지 않는다.
@@ -880,16 +872,19 @@ namespace sw
 
     RHITransientHeapHandle D3D12RHIResourceFactory::createTransientHeap( uint64 sizeBytes )
     {
-        if ( sizeBytes == 0 )
+        if ( sizeBytes == 0 || _pDevice->_allocator == nullptr )
             return 0;
-        D3D12_HEAP_DESC heapDesc{};
-        heapDesc.SizeInBytes     = sizeBytes;
-        heapDesc.Properties.Type = D3D12_HEAP_TYPE_DEFAULT;
-        heapDesc.Alignment       = D3D12_DEFAULT_RESOURCE_PLACEMENT_ALIGNMENT;
-        heapDesc.Flags           = D3D12_HEAP_FLAG_ALLOW_ONLY_RT_DS_TEXTURES; // 리소스 힙 등급 1 도 받는 범주(렌더 타깃 · 깊이 텍스처만)
-        Microsoft::WRL::ComPtr<ID3D12Heap> heap;
-        if ( isHrSuccess( _pDevice->_device->CreateHeap( &heapDesc, IID_PPV_ARGS( heap.GetAddressOf() ) ), "CreateHeap (transient)" ) == false )
+        D3D12MA::ALLOCATION_DESC allocationDesc{};
+        allocationDesc.Flags          = D3D12MA::ALLOCATION_FLAG_COMMITTED | D3D12MA::ALLOCATION_FLAG_CAN_ALIAS; // 자기 힙 하나(오프셋 0) — 풀이 크기가 바뀔 때 통째로 다시 만든다
+        allocationDesc.HeapType       = D3D12_HEAP_TYPE_DEFAULT;
+        allocationDesc.ExtraHeapFlags = D3D12_HEAP_FLAG_ALLOW_ONLY_RT_DS_TEXTURES; // 리소스 힙 등급 1 도 받는 범주(렌더 타깃 · 깊이 텍스처만)
+        D3D12_RESOURCE_ALLOCATION_INFO allocationInfo{};
+        allocationInfo.SizeInBytes = MathUtil::align( sizeBytes, static_cast<uint64>( D3D12_DEFAULT_RESOURCE_PLACEMENT_ALIGNMENT ) ); // AllocateMemory 는 64KB 의 배수를 받는다
+        allocationInfo.Alignment   = D3D12_DEFAULT_RESOURCE_PLACEMENT_ALIGNMENT;
+        Microsoft::WRL::ComPtr<D3D12MA::Allocation> heap;
+        if ( isHrSuccess( _pDevice->_allocator->AllocateMemory( &allocationDesc, &allocationInfo, heap.GetAddressOf() ), "D3D12MA::Allocator::AllocateMemory (transient heap)" ) == false )
             return 0;
+        heap->SetName( L"TransientHeap" );
         const RHITransientHeapHandle handle{ _nextTransientHeap++ };
         _mapTransientHeap.emplace( handle, std::move( heap ) );
         return handle;
@@ -912,7 +907,7 @@ namespace sw
         return createTextureResource( desc, it->second.Get(), offsetBytes );
     }
 
-    RHITextureHandle D3D12RHIResourceFactory::createTextureResource( const RHITextureDesc& desc, ID3D12Heap* pHeap, uint64 offsetBytes )
+    RHITextureHandle D3D12RHIResourceFactory::createTextureResource( const RHITextureDesc& desc, D3D12MA::Allocation* pHeap, uint64 offsetBytes )
     {
         if ( isRHITextureShapeValid( desc ) == false )
         {
@@ -926,9 +921,6 @@ namespace sw
             SW_LOG_ERROR_ID( "D3D12.CreateTexture2DFormatUnsupported", "createTexture2D: this device cannot sample format %# (%#x%#) - the texture is not created", static_cast<uint32>( desc._format ), desc._width, desc._height );
             return 0;
         }
-        D3D12_HEAP_PROPERTIES heapProps{};
-        heapProps.Type = D3D12_HEAP_TYPE_DEFAULT;
-
         const bool                bDepth       = desc._bIsDepthStencil != SW_FALSE;
         const DXGI_FORMAT         dsvFmt       = toDXGIFormat( constant::render::kDepthStencilFormat );
         const DXGI_FORMAT         colorFmt     = toDXGIFormat( desc._format );
@@ -957,17 +949,13 @@ namespace sw
         if ( pHeap != nullptr )
         {
             // placed — 같은 힙 바이트를 다른 텍스처와 나눈다. 첫 쓰기 앞에 앨리어싱 배리어(beginTextureAlias)와 지우기가 온다(트랜지언트 풀의 규칙).
-            if ( isHrSuccess( _pDevice->_device->CreatePlacedResource( pHeap, offsetBytes, &resourceDesc, D3D12_RESOURCE_STATE_COMMON, pClearValue, IID_PPV_ARGS( texture.GetAddressOf() ) ),
-                              "CreatePlacedResource" ) == false )
-                return 0;
-            // 리소스가 힙을 붙든다(열쇠는 힙 인터페이스의 GUID — 이 사적 데이터만 쓴다) — 힙 핸들을 먼저 놓아도 이 텍스처의 미룬 해제가 끝날 때까지 메모리가 남는다.
-            if ( isHrSuccess( texture->SetPrivateDataInterface( __uuidof( ID3D12Heap ), pHeap ), "SetPrivateDataInterface (heap owner)" ) == false )
+            if ( _pDevice->createAliasingResource( pHeap, offsetBytes, resourceDesc, pClearValue, texture ) == false )
                 return 0;
         }
-        else if ( isHrSuccess( _pDevice->_device->CreateCommittedResource( &heapProps, D3D12_HEAP_FLAG_NONE, &resourceDesc, D3D12_RESOURCE_STATE_COMMON, pClearValue,
-                                                                           IID_PPV_ARGS( texture.GetAddressOf() ) ),
-                               "CreateCommittedResource" ) == false )
+        else if ( _pDevice->createResource( D3D12_HEAP_TYPE_DEFAULT, resourceDesc, D3D12_RESOURCE_STATE_COMMON, pClearValue, L"Texture", texture ) == false )
+        {
             return 0;
+        }
 
         const RHITextureHandle                 handle  = _pDevice->storeTexture( texture, desc );
         ID3D12Resource*                        pNative = _pDevice->resolveTexture( handle );

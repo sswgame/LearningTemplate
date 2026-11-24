@@ -47,9 +47,10 @@ endif()
 
 if(NOT TARGET sw_graphics_libs)
 	add_library(sw_graphics_libs INTERFACE)
+	# DX12 는 링크만 넘긴다 — 할당기(ThirdParty/d3d12-memory-allocator)의 정의 · include 는 백엔드 모듈만 받는다(모두의 컴파일 줄에 싣지 않는다).
 	target_link_libraries(sw_graphics_libs INTERFACE
 		sw_graphics_dx11_libs
-		sw_graphics_dx12_libs
+		$<LINK_ONLY:sw_graphics_dx12_libs>
 		sw_graphics_gl_libs
 	)
 endif()

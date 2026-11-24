@@ -21,19 +21,27 @@
     #include "Engine/Config/EngineDefaultAssets.h"
     #include "Engine/Foundation/EnginePlatformHeaders.h"
     #include "Engine/Foundation/EngineServices.h"
+    #include "Engine/Graphics/RHI/Backend/RHIAllocationLeakUtil.h"
     #include "Engine/Graphics/RHI/Backend/RHILiveCommandListUtil.h"
     #include "Engine/Graphics/RHI/DX/DXGIAdapter.h"
     #include "Engine/Graphics/RHI/DX/DXGIFormat.h"
-    #include "Engine/Graphics/RHI/DX/DXGIMemoryBudget.h"
     #include "Engine/Graphics/Shader/Binding/ShaderBindingSlots.h"
     #include "Engine/Graphics/Shader/Compile/ShaderCache.h"
     #include "Engine/Profiling/FrameProfiler.h"
 
 namespace sw
 {
+    namespace
+    {
+        /// @brief 자원의 사적 데이터 열쇠 — 자기 메모리(D3D12MA 할당). 자원이 사라질 때 D3D12 가 놓아 구간이 돌아간다.
+        struct __declspec( uuid( "8f5b3d1e-2c47-4e0a-9b61-5d0e7a93441c" ) ) D3D12OwnAllocationKey;
+        /// @brief 자원의 사적 데이터 열쇠 — 놓인 힙(트랜지언트 힙의 할당). 힙 핸들을 먼저 놓아도 이 자원이 사라질 때까지 메모리가 남는다.
+        struct __declspec( uuid( "3a70c9d4-91ef-4b52-a80d-16c352be7f08" ) ) D3D12PlacedHeapKey;
+    } // namespace
+
     D3D12RHIDevice::D3D12RHIDevice( uint32 deviceGeneration )
         : _device{ nullptr }
-        , _memoryAdapter{ nullptr }
+        , _allocator{ nullptr }
         , _commandQueue{ nullptr }
         , _computeQueue{ nullptr }
         , _queueSyncFence{ nullptr }
@@ -422,16 +430,98 @@ namespace sw
             _releaseQueue.enqueueGPUTrackedRelease<RHIMemoryKeySpace::Buffer>( owned, getMemoryTracker(), key._id, releaseFence );
     }
 
-    bool D3D12RHIDevice::createMappedUploadBuffer( uint64 sizeBytes, Microsoft::WRL::ComPtr<ID3D12Resource>& outBuffer, void*& pOutMapped )
+    bool D3D12RHIDevice::createAllocator( IDXGIAdapter* pAdapter )
+    {
+        D3D12MA::ALLOCATOR_DESC allocatorDesc{};
+        allocatorDesc.Flags    = D3D12MA_RECOMMENDED_ALLOCATOR_FLAGS; // 새 블록을 0 으로 채우지 않는다 — 나눠 준 구간은 어차피 앞 자원의 바이트다(만든 쪽이 첫 쓰기를 한다, Vulkan 과 같다)
+        allocatorDesc.pDevice  = _device.Get();
+        allocatorDesc.pAdapter = pAdapter;
+        return isHrSuccess( D3D12MA::CreateAllocator( &allocatorDesc, _allocator.ReleaseAndGetAddressOf() ), "D3D12MA::CreateAllocator" );
+    }
+
+    void D3D12RHIDevice::releaseAllocator()
+    {
+        if ( _allocator == nullptr )
+            return;
+        D3D12MA::TotalStatistics statistics{};
+        _allocator->CalculateStatistics( &statistics );
+        if ( statistics.Total.Stats.AllocationCount == 0 )
+        {
+            _allocator.Reset();
+            return;
+        }
+        WCHAR* pStats{ nullptr };
+        _allocator->BuildStatsString( &pStats, TRUE );
+        const string stats = StringUtil::utf16ToUTF8( pStats );
+        _allocator->FreeStatsString( pStats );
+        RHIAllocationLeakUtil::report( getBackendName(), statistics.Total.Stats.AllocationCount, stats.c_str() );
+        (void)_allocator.Detach(); // 남은 자원이 나중에 놓일 때 부서진 할당기를 만지지 않게 할당기를 놓지 않는다(위에서 오류로 알렸다)
+    }
+
+    bool D3D12RHIDevice::createResource( D3D12_HEAP_TYPE heapType, const D3D12_RESOURCE_DESC& desc, D3D12_RESOURCE_STATES initialState, const D3D12_CLEAR_VALUE* pClearValue, const utf16* pName,
+                                         Microsoft::WRL::ComPtr<ID3D12Resource>& outResource )
+    {
+        outResource.Reset();
+        if ( _allocator == nullptr )
+            return false;
+        D3D12MA::ALLOCATION_DESC allocationDesc{};
+        allocationDesc.HeapType = heapType;
+        // 렌더 타깃 · 깊이는 커밋 자원이다 — 놓인(placed) 렌더 타깃은 첫 사용이 Clear · Discard · Copy 여야 하는데 트랜지언트 풀 밖의 첨부(히스토리 · 캡처)는 그 약속이 없다.
+        // https://gpuopen-librariesandsdks.github.io/D3D12MemoryAllocator/html/optimal_allocation.html (committed vs placed)
+        if ( ( desc.Flags & ( D3D12_RESOURCE_FLAG_ALLOW_RENDER_TARGET | D3D12_RESOURCE_FLAG_ALLOW_DEPTH_STENCIL ) ) != 0 )
+            allocationDesc.Flags = D3D12MA::ALLOCATION_FLAG_COMMITTED;
+
+        Microsoft::WRL::ComPtr<D3D12MA::Allocation> allocation;
+        if ( isHrSuccess( _allocator->CreateResource( &allocationDesc, &desc, initialState, pClearValue, allocation.GetAddressOf(), IID_PPV_ARGS( outResource.GetAddressOf() ) ),
+                          "D3D12MA::Allocator::CreateResource" ) == false )
+        {
+            outResource.Reset();
+            return false;
+        }
+        allocation->SetName( pName );
+        // 할당은 자원을 들고 태어난다 — 거꾸로 자원이 할당을 들게 하고 할당의 참조를 끊는다(서로 들면 둘 다 사라지지 않는다).
+        if ( isHrSuccess( outResource->SetPrivateDataInterface( __uuidof( D3D12OwnAllocationKey ), allocation.Get() ), "SetPrivateDataInterface (allocation owner)" ) == false )
+        {
+            outResource.Reset();
+            return false;
+        }
+        allocation->SetResource( nullptr );
+        return true;
+    }
+
+    bool D3D12RHIDevice::createAliasingResource( D3D12MA::Allocation* pHeap, uint64 offsetBytes, const D3D12_RESOURCE_DESC& desc, const D3D12_CLEAR_VALUE* pClearValue,
+                                                 Microsoft::WRL::ComPtr<ID3D12Resource>& outResource )
+    {
+        outResource.Reset();
+        if ( _allocator == nullptr || pHeap == nullptr )
+            return false;
+        if ( isHrSuccess( _allocator->CreateAliasingResource( pHeap, offsetBytes, &desc, D3D12_RESOURCE_STATE_COMMON, pClearValue, IID_PPV_ARGS( outResource.GetAddressOf() ) ),
+                          "D3D12MA::Allocator::CreateAliasingResource" ) == false )
+        {
+            outResource.Reset();
+            return false;
+        }
+        if ( isHrSuccess( outResource->SetPrivateDataInterface( __uuidof( D3D12PlacedHeapKey ), pHeap ), "SetPrivateDataInterface (heap owner)" ) == false )
+        {
+            outResource.Reset();
+            return false;
+        }
+        return true;
+    }
+
+    void D3D12RHIDevice::setResourceName( ID3D12Resource* pResource, const utf16* pName )
+    {
+        pResource->SetName( pName );
+        Microsoft::WRL::ComPtr<IUnknown> owner;
+        UINT                             byteCount = sizeof( IUnknown* );
+        if ( SUCCEEDED( pResource->GetPrivateData( __uuidof( D3D12OwnAllocationKey ), &byteCount, owner.GetAddressOf() ) ) && owner != nullptr )
+            static_cast<D3D12MA::Allocation*>( owner.Get() )->SetName( pName );
+    }
+
+    bool D3D12RHIDevice::createMappedUploadBuffer( uint64 sizeBytes, const utf16* pName, Microsoft::WRL::ComPtr<ID3D12Resource>& outBuffer, void*& pOutMapped )
     {
         pOutMapped = nullptr;
-        outBuffer.Reset();
-
-        const D3D12_HEAP_PROPERTIES heapProps    = D3D12RHIResourcePreset::heapProperties( D3D12_HEAP_TYPE_UPLOAD );
-        const D3D12_RESOURCE_DESC   resourceDesc = D3D12RHIResourcePreset::bufferDesc( sizeBytes );
-        if ( isHrSuccess( _device->CreateCommittedResource( &heapProps, D3D12_HEAP_FLAG_NONE, &resourceDesc, D3D12_RESOURCE_STATE_GENERIC_READ, nullptr,
-                                                            IID_PPV_ARGS( outBuffer.GetAddressOf() ) ),
-                          "CreateCommittedResource (mapped upload buffer)" ) == false )
+        if ( createResource( D3D12_HEAP_TYPE_UPLOAD, D3D12RHIResourcePreset::bufferDesc( sizeBytes ), D3D12_RESOURCE_STATE_GENERIC_READ, nullptr, pName, outBuffer ) == false )
             return false;
 
         if ( isHrSuccess( outBuffer->Map( 0, nullptr, &pOutMapped ), "ID3D12Resource::Map (mapped upload buffer)" ) == false || pOutMapped == nullptr )
@@ -443,16 +533,10 @@ namespace sw
         return true;
     }
 
-    bool D3D12RHIDevice::createMappedReadbackBuffer( uint64 sizeBytes, Microsoft::WRL::ComPtr<ID3D12Resource>& outBuffer, void*& pOutMapped )
+    bool D3D12RHIDevice::createMappedReadbackBuffer( uint64 sizeBytes, const utf16* pName, Microsoft::WRL::ComPtr<ID3D12Resource>& outBuffer, void*& pOutMapped )
     {
         pOutMapped = nullptr;
-        outBuffer.Reset();
-
-        const D3D12_HEAP_PROPERTIES heapProps    = D3D12RHIResourcePreset::heapProperties( D3D12_HEAP_TYPE_READBACK );
-        const D3D12_RESOURCE_DESC   resourceDesc = D3D12RHIResourcePreset::bufferDesc( sizeBytes );
-        if ( isHrSuccess( _device->CreateCommittedResource( &heapProps, D3D12_HEAP_FLAG_NONE, &resourceDesc, D3D12_RESOURCE_STATE_COPY_DEST, nullptr,
-                                                            IID_PPV_ARGS( outBuffer.GetAddressOf() ) ),
-                          "CreateCommittedResource (mapped readback buffer)" ) == false )
+        if ( createResource( D3D12_HEAP_TYPE_READBACK, D3D12RHIResourcePreset::bufferDesc( sizeBytes ), D3D12_RESOURCE_STATE_COPY_DEST, nullptr, pName, outBuffer ) == false )
             return false;
 
         // CPU 접근 힙은 영속 매핑할 수 있다(ID3D12Resource::Map 비고 — https://learn.microsoft.com/en-us/windows/win32/api/d3d12/nf-d3d12-id3d12resource-map). 가져가기가 읽기 범위로 다시 Map 해 CPU 캐시를 무효화한다.
@@ -495,7 +579,7 @@ namespace sw
         utf16                     arrName[constant::buffer::kMax128]{};
         swprintf_s( arrName, L"SW %ls %llu (%llux%u fmt %u)", pKind, static_cast<uint64>( handle ), static_cast<uint64>( desc.Width ),
                     static_cast<uint32>( desc.Height ), static_cast<uint32>( desc.Format ) );
-        pResource->SetName( arrName );
+        setResourceName( pResource, arrName );
     }
     #endif
 
@@ -623,7 +707,20 @@ namespace sw
 
     bool D3D12RHIDevice::queryGPUMemoryBudgetInternal( RHIMemoryBudget& outBudget )
     {
-        return queryDXGIMemoryBudget( _memoryAdapter.Get(), outBudget );
+        if ( _allocator == nullptr )
+            return false;
+        D3D12MA::Budget localBudget{};
+        D3D12MA::Budget nonLocalBudget{};
+        _allocator->GetBudget( &localBudget, &nonLocalBudget );
+        // 사용량은 로컬(비디오 메모리)과 비로컬(업로드 · 되읽기 힙)의 합이다 — 추적기가 업로드 힙 버퍼도 센다. 예산 · 남은 양은 로컬만 본다.
+        outBudget._usageBytes      = localBudget.UsageBytes + nonLocalBudget.UsageBytes;
+        outBudget._budgetBytes     = localBudget.BudgetBytes;
+        outBudget._availableBytes  = localBudget.BudgetBytes > localBudget.UsageBytes ? localBudget.BudgetBytes - localBudget.UsageBytes : 0;
+        outBudget._scope           = RHIMemoryScope::Process;
+        outBudget._bUsageKnown     = SW_TRUE;
+        outBudget._bBudgetKnown    = SW_TRUE;
+        outBudget._bAvailableKnown = SW_TRUE;
+        return true;
     }
 
     IRHIResourceFactory* D3D12RHIDevice::getResourceFactory()
@@ -723,9 +820,9 @@ namespace sw
 
         if ( FAILED( D3D12CreateDevice( adapter.Get(), D3D_FEATURE_LEVEL_11_0, IID_PPV_ARGS( _device.GetAddressOf() ) ) ) )
             return false;
+        if ( createAllocator( adapter.Get() ) == false )
+            return false;
         createBreadcrumbBuffer();
-        // 메모리 질의는 디바이스가 실제로 쓰는 어댑터에 한다(기본 어댑터를 가정하지 않는다). 못 찾으면 드라이버 값은 "모름" 이다.
-        _memoryAdapter = findDXGIAdapterByLuid( _device->GetAdapterLuid() );
         // 실제로 선 어댑터가 소프트웨어인지 — 요청이 아니라 결과를 적는다.
         if ( softwareAdapter != nullptr )
         {
@@ -927,13 +1024,10 @@ namespace sw
         if ( isGPUBreadcrumbsEnabled() == false || _device == nullptr )
             return;
         // 큐마다 읽기 힙(CPU 가 읽는 시스템 메모리) uint32 둘 — [0] 시작 표지 · [1] 끝 표지. GPU 가 소실 중에 쓴 값이 소실 뒤에도 CPU 에서 읽힌다. 읽기 힙 버퍼의 상태는 COPY_DEST 로 고정이다.
-        const D3D12_HEAP_PROPERTIES heapProperties = D3D12RHIResourcePreset::heapProperties( D3D12_HEAP_TYPE_READBACK );
-        const D3D12_RESOURCE_DESC   bufferDesc     = D3D12RHIResourcePreset::bufferDesc( sizeof( uint32 ) * kBreadcrumbSlotCount );
+        const D3D12_RESOURCE_DESC bufferDesc = D3D12RHIResourcePreset::bufferDesc( sizeof( uint32 ) * kBreadcrumbSlotCount );
         for ( BreadcrumbTrack& track : _arrBreadcrumb )
         {
-            if ( isHrSuccess( _device->CreateCommittedResource( &heapProperties, D3D12_HEAP_FLAG_NONE, &bufferDesc, D3D12_RESOURCE_STATE_COPY_DEST, nullptr,
-                                                                IID_PPV_ARGS( track._buffer.GetAddressOf() ) ),
-                              "CreateCommittedResource(breadcrumb)" ) == false )
+            if ( createResource( D3D12_HEAP_TYPE_READBACK, bufferDesc, D3D12_RESOURCE_STATE_COPY_DEST, nullptr, L"Breadcrumbs", track._buffer ) == false )
             {
                 SW_LOG_WARNING_ID( "D3D12.D3D12GPUBreadcrumbBuffer", "The D3D12 GPU breadcrumb buffer could not be created - device lost reports only the CPU-recorded last pass" );
                 return;
@@ -1051,7 +1145,15 @@ namespace sw
         _computeFence.Reset();
         _computeQueue.Reset();
         _commandQueue.Reset();
-        _memoryAdapter.Reset();
+        // 할당기보다 자원이 먼저 사라진다 — 표 밖에 든 것(구조 버퍼 업로드 칸 · 타임스탬프 읽기 버퍼 · 트랜지언트 힙)까지 여기서 놓는다.
+        for ( StructuredUploadSlot& slot : _arrStructuredUploadSlot )
+        {
+            slot = StructuredUploadSlot{};
+        }
+        _timestampReadback.Reset();
+        _timestampHeap.Reset();
+        _resourceImpl->releaseTransientHeaps();
+        releaseAllocator();
         Microsoft::WRL::ComPtr<ID3D12InfoQueue1> infoQueue1;
         const bool                               bHasValidationCallback = _validationCallbackCookie != 0 && _device != nullptr && SUCCEEDED( _device.As( &infoQueue1 ) );
         if ( bHasValidationCallback )
@@ -1738,20 +1840,8 @@ namespace sw
             return;
 
         // 읽기 전용 버퍼 하나에 링 전체 분량을 담는다. 슬롯마다 구간이 겹치지 않는다.
-        D3D12_HEAP_PROPERTIES heapProps{};
-        heapProps.Type = D3D12_HEAP_TYPE_READBACK;
-        D3D12_RESOURCE_DESC bufferDesc{};
-        bufferDesc.Dimension        = D3D12_RESOURCE_DIMENSION_BUFFER;
-        bufferDesc.Width            = sizeof( uint64 ) * heapDesc.Count;
-        bufferDesc.Height           = 1;
-        bufferDesc.DepthOrArraySize = 1;
-        bufferDesc.MipLevels        = 1;
-        bufferDesc.SampleDesc.Count = 1;
-        bufferDesc.Layout           = D3D12_TEXTURE_LAYOUT_ROW_MAJOR;
-        if ( isHrSuccess( _device->CreateCommittedResource( &heapProps, D3D12_HEAP_FLAG_NONE, &bufferDesc,
-                                                            D3D12_RESOURCE_STATE_COPY_DEST, nullptr,
-                                                            IID_PPV_ARGS( &_timestampReadback ) ),
-                          "CreateCommittedResource" ) == false )
+        const D3D12_RESOURCE_DESC bufferDesc = D3D12RHIResourcePreset::bufferDesc( sizeof( uint64 ) * heapDesc.Count );
+        if ( createResource( D3D12_HEAP_TYPE_READBACK, bufferDesc, D3D12_RESOURCE_STATE_COPY_DEST, nullptr, L"TimestampReadback", _timestampReadback ) == false )
         {
             _timestampHeap.Reset();
             return;
@@ -1846,6 +1936,11 @@ namespace sw
         if ( _frameStreamState._bRecording == SW_FALSE )
         {
             waitForRingSlot();
+            _allocator->SetCurrentFrameIndex( static_cast<UINT>( _fenceValue.load() ) ); // 예산을 다시 읽는다
+            D3D12MA::Budget localBudget{};
+            D3D12MA::Budget nonLocalBudget{};
+            _allocator->GetBudget( &localBudget, &nonLocalBudget );
+            SW_PROFILE_COUNT( "RT.DX12.allocationCount", localBudget.Stats.BlockCount + nonLocalBudget.Stats.BlockCount ); // 살아 있는 힙 + 커밋 자원(Vulkan 의 RT.Vulkan.allocationCount 자리)
             // **여기가 타임스탬프를 읽는 유일한 안전한 자리다.** 이 슬롯의 펜스를 방금 통과했으므로
             // 지난번 이 슬롯에 적은 값이 GPU 에서 끝나 있다. 기다리지 않으니 파이프라인이 안 멈춘다.
             ensureTimestampResources();
@@ -2343,7 +2438,7 @@ namespace sw
     {
         pOutMapped = nullptr;
         void*      pMapped{ nullptr };
-        const bool bCreated = heapType == D3D12_HEAP_TYPE_READBACK ? createMappedReadbackBuffer( sizeBytes, outBuffer, pMapped ) : createMappedUploadBuffer( sizeBytes, outBuffer, pMapped );
+        const bool bCreated = heapType == D3D12_HEAP_TYPE_READBACK ? createMappedReadbackBuffer( sizeBytes, L"ReadbackRing", outBuffer, pMapped ) : createMappedUploadBuffer( sizeBytes, L"UploadRing", outBuffer, pMapped );
         if ( bCreated == false )
         {
             SW_LOG_ERROR_ID( "D3D12.FailedCreateMapD3D12", "Failed to create or map the D3D12 staging upload buffer (%# bytes, _rhi._stagingRingMegabytes · _rhi._stagingSingleMaxMegabytes)", sizeBytes );
