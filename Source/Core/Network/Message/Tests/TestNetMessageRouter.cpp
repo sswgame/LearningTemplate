@@ -459,6 +459,7 @@ SW_TEST_CASE( NetMessageRouterTest, WorldGenerationReachesEveryClient )
     NetMessageRouter clientRouter;
     SW_REQUIRE_TRUE( pair.getServer().listen() );
     serverRouter.openWorld( pair.getServer(), 0 ); // 아직 아무도 없다 — 붙을 때 받는다
+    clientRouter.setLocalScene( pair.getClient( 0 ), 0 );
     SW_REQUIRE_TRUE( pair.getClient( 0 ).connect( NetAddress::makeLoopback( 4000 ) ) );
     const auto pollAll = [&]()
     {
@@ -1044,6 +1045,22 @@ SW_TEST_CASE( NetMessageRouterTest, WorldClockReachesOnlyItsOwnScene )
     SW_EXPECT_NEAR( 18.0, rig._clientRouter.getWorldClock().getServerTick(), kTolerance );
 }
 
+/** @brief [NetMessageRouterTest] 결함: 씬을 아직 세우지 않은 클라이언트가 서버의 문서 없는 월드(씬 번호 0)에 들어온 것으로 셌다 — 세운 뒤에만 들어온다 */
+SW_TEST_CASE( NetMessageRouterTest, ClientWithoutASceneStaysOutOfTheUndocumentedWorld )
+{
+    HoldTestRig            rig;
+    WorldTestHandler       serverHandler;
+    const sw::Subscription serverSubscription = rig._serverRouter.registerHandler( &serverHandler );
+    rig._serverRouter.openWorld( rig._pair.getServer(), 0 );
+    rig.pollAll();
+    SW_EXPECT_EQUAL( 0u, static_cast<uint32>( rig._clientRouter.getWorldGeneration() ) );
+    SW_EXPECT_TRUE( serverHandler._listEntered.empty() );
+    rig._clientRouter.setLocalScene( rig._pair.getClient( 0 ), 0 );
+    rig.pollAll();
+    SW_EXPECT_EQUAL( 1u, static_cast<uint32>( rig._clientRouter.getWorldGeneration() ) );
+    SW_EXPECT_EQUAL( size_t{ 1 }, serverHandler._listEntered.size() );
+}
+
 /** @brief [NetMessageRouterTest] 세대는 255 에서 1 로 돌아도 앞뒤를 안다 */
 SW_TEST_CASE( NetMessageRouterTest, WorldGenerationWrapsAround )
 {
@@ -1051,6 +1068,8 @@ SW_TEST_CASE( NetMessageRouterTest, WorldGenerationWrapsAround )
     for ( int32 index = 0; index < 255; ++index )
     {
         rig._serverRouter.openWorld( rig._pair.getServer(), 0 );
+        if ( index % 32 == 31 )
+            rig.pollAll(); // 알림은 신뢰 메시지다 — 상대가 확인할 틈이 없으면 신뢰 창이 차 연결이 닫힌다
     }
     SW_EXPECT_EQUAL( 255u, static_cast<uint32>( rig._serverRouter.getWorldGeneration() ) );
     SW_EXPECT_TRUE( rig._serverRouter.isLaterWorld( 1 ) );

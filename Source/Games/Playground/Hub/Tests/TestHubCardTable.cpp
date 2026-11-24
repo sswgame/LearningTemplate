@@ -162,6 +162,9 @@ namespace
 
         void receive( int32 connectionID, const vector<uint8>& bytes )
         {
+            SW_REQUIRE_FALSE( bytes.empty() );
+            if ( NetMessageRange::isRouterKind( bytes[0] ) )
+                return; // 월드 시계 · 판 알림은 라우터가 `poll` 에서 스스로 읽는다 — 처리기의 것이 아니다
             NetMessageContext context;
             context._connectionID = connectionID;
             SW_EXPECT_TRUE( _router.dispatch( _peers.isServer() ? NetPeerRole::Server : NetPeerRole::Client, context, bytes.data(), static_cast<int32>( bytes.size() ) ) == NetHandleResult::Handled );

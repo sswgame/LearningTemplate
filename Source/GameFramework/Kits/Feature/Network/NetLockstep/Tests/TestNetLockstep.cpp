@@ -404,6 +404,7 @@ SW_TEST_CASE( NetLockstepTest, RematchFollowsTheServerWorldAndResendsLostInputs 
             (void)clientRouter.poll( cluster.getClient( 0 ) );
         }
     };
+    clientRouter.setLocalScene( cluster.getClient( 0 ), 0 );
     serverRouter.openWorld( cluster.getServer(), 0 );
     pollAll();
     SW_REQUIRE_EQUAL( 1u, static_cast<uint32>( clientRouter.getWorldGeneration() ) );

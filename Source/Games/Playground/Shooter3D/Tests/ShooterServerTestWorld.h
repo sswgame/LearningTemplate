@@ -92,8 +92,8 @@ namespace sw
             link._role    = NetLinkRole::Server;
             SW_REQUIRE_TRUE( _manager.getSubsystem<SceneNetLink>().bind( link, 0 ) );
             GameObject* pGameMode = _manager.createGameObject( hashed_string( "GameMode" ) );
-            (void)pGameMode->addComponent<ShooterGameModeComponent>();
-            _pPlayer = _manager.createGameObject( hashed_string( "Player" ) );
+            _pPlayer              = _manager.createGameObject( hashed_string( "Player" ) );
+            bindScenePlayer( *pGameMode->addComponent<ShooterGameModeComponent>(), *_pPlayer );
             _pPlayer->addComponent<PawnComponent>()->setButtonNames( { hashed_string( "Jump" ), hashed_string( "Fire" ) } );
             (void)_pPlayer->addComponent<ShooterBodyMovementComponent>();
             (void)_pPlayer->addComponent<FirstPersonCameraComponent>();
@@ -113,6 +113,15 @@ namespace sw
         {
             _manager.endPlay();
             _manager.getSubsystem<SceneNetLink>().unbind();
+        }
+
+        /** @brief 씬처럼 감독이 플레이어 오브젝트를 가리키게 합니다 — 플레이어의 규칙이 네트 몸을 이 칸으로 찾는다(없으면 되감기 · 남의 몸 판정 없이 혼자 하는 길을 돈다). */
+        static void bindScenePlayer( ShooterGameModeComponent& gameMode, const GameObject& player )
+        {
+            StringBuilder<constant::buffer::kMax128> gameModeXML;
+            gameModeXML.appendFormat( "<ShooterGameModeComponent _player=\"%#\"/>", player.getObjectID() );
+            SW_REQUIRE_TRUE( XMLSerializer::deserialize( &gameMode, *ShooterGameModeComponent::StaticType(), gameModeXML.c_str() ) );
+            SW_REQUIRE_TRUE( gameMode.getPlayer() == player.getHandle() );
         }
 
         ShooterServerTestWorld( const ShooterServerTestWorld& )            = delete;
