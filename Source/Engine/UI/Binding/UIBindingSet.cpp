@@ -9,6 +9,7 @@
 #include "Core/String/StringUtil.h"
 
 #include "Engine/Foundation/EngineServices.h"
+#include "Engine/Localization/LocText.h"
 #include "Engine/Localization/LocalizationManager.h"
 #include "Engine/Localization/TextFormatter.h"
 #include "Engine/Presentation/UIViewModel.h"
@@ -32,7 +33,7 @@ namespace sw
             static constexpr utf8 kFormatFallbackPattern[] = "{value}";
 
             /** @brief 값을 형식 인자로 담습니다. */
-            static TextArgumentList makeFormatArguments( const UIBindingValue& value )
+            static TextArgumentList makeFormatArguments( const UIBindingValue& value, const LocalizationManager* pLocalization )
             {
                 TextArgumentList arguments;
                 if ( value._kind == UIBindingValueKind::Number && value._bInteger )
@@ -40,7 +41,7 @@ namespace sw
                 else if ( value._kind == UIBindingValueKind::Number )
                     arguments.addDecimal( kFormatArgumentName, value._number );
                 else
-                    arguments.addText( kFormatArgumentName, value.toText() );
+                    arguments.addText( kFormatArgumentName, LocalizedText::resolve( pLocalization, value.toText() ) ); // 값이 키면(무기 이름) 함께 푼다 — 글 위젯은 포맷한 글 안의 키를 알 수 없다
                 return arguments;
             }
 
@@ -313,7 +314,7 @@ namespace sw
         }
         if ( binding._expression._format.empty() == false )
         {
-            const TextArgumentList arguments = UIBindingSetInternal::makeFormatArguments( inoutValue );
+            const TextArgumentList arguments = UIBindingSetInternal::makeFormatArguments( inoutValue, context._pLocalization );
             if ( context._pLocalization != nullptr )
                 inoutValue = UIBindingValue::makeText( context._pLocalization->getFormattedString( binding._expression._format, arguments,
                                                                                                    UIBindingSetInternal::kFormatFallbackPattern ) );

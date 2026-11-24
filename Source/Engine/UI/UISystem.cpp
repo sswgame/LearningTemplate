@@ -205,6 +205,8 @@ namespace sw
         , _nextPushOrder{ 0 }
         , _textRevision{ 0 }
         , _converterRevision{ 0 }
+        , _glyphRevision{ 0 }
+        , _glyphBindingRevision{ 0 }
         , _glyphStyle{ InputGlyphStyle::KeyboardMouse }
         , _bPendingClose{ SW_FALSE }
         , _bTextRevisionKnown{ SW_FALSE }
@@ -768,17 +770,7 @@ namespace sw
         {
             if ( _pFontService != nullptr && _pFontService->isInitialized() )
                 _pFontService->invalidateFaceChains(); // 문화권의 대체 폰트 패밀리가 바뀐다
-            vector<Widget*> listWidget;
-            for ( const unique_ptr<UIScreen>& screen : _listScreen )
-            {
-                listWidget.clear();
-                screen->getTree().collectWidgetsInDocumentOrder( listWidget );
-                for ( Widget* pWidget : listWidget )
-                {
-                    pWidget->onTextRevisionChanged();
-                }
-            }
-            context._bTextRevisionChanged = true;
+            context._bTextRevisionChanged = true;      // 위젯에는 트리마다의 레이아웃이 알린다(`UILayoutPass::update`)
         }
         _textRevision       = textRevision;
         _bTextRevisionKnown = SW_TRUE;
@@ -820,22 +812,14 @@ namespace sw
         const InputManager* pInput = _input.getInputManager();
         if ( pInput == nullptr )
             return;
-        const InputGlyphStyle style = pInput->getActiveGlyphStyle();
-        if ( _bGlyphStyleKnown == SW_TRUE && style != _glyphStyle )
-        {
-            vector<Widget*> listWidget;
-            for ( const unique_ptr<UIScreen>& screen : _listScreen )
-            {
-                listWidget.clear();
-                screen->getTree().collectWidgetsInDocumentOrder( listWidget );
-                for ( Widget* pWidget : listWidget )
-                {
-                    pWidget->onInputGlyphsChanged();
-                }
-            }
-        }
-        _glyphStyle       = style;
-        _bGlyphStyleKnown = SW_TRUE;
+        const InputGlyphStyle style           = pInput->getActiveGlyphStyle();
+        const InputMap* const pUIInputMap     = _input.getUIInputMap();
+        const uint32          bindingRevision = pInput->getInputMap().getBindingRevision() + ( pUIInputMap != nullptr ? pUIInputMap->getBindingRevision() : 0u );
+        if ( _bGlyphStyleKnown == SW_TRUE && ( style != _glyphStyle || bindingRevision != _glyphBindingRevision ) )
+            ++_glyphRevision; // 트리마다의 레이아웃이 위젯에 알린다(`UILayoutPass::update`)
+        _glyphStyle           = style;
+        _glyphBindingRevision = bindingRevision;
+        _bGlyphStyleKnown     = SW_TRUE;
     }
 
     void UISystem::applyPendingCloses()
@@ -1186,6 +1170,7 @@ namespace sw
         context._pLocalization = findLocalization();
         context._bRightToLeft  = UILayoutPass::isCultureRightToLeft( context._pLocalization ); // 운영 경로는 기동 때 받은 엔진 서비스의 문화권이다
         context._textRevision  = context._pLocalization != nullptr ? context._pLocalization->getTextRevision() : 0;
+        context._glyphRevision = _glyphRevision;
         context._pActionGlyphs = &_actionGlyphs;
         return context;
     }

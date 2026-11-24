@@ -66,6 +66,7 @@ namespace sw
         , _listLayerName{}
         , _listLayerStack{}
         , _listLayerEnable{}
+        , _bindingRevision{ 0 }
         , _lastLayerRequestID{ 0 }
         , _listSource{}
         , _actionBuffer{}
@@ -89,6 +90,7 @@ namespace sw
 
     void InputMap::clear()
     {
+        ++_bindingRevision;
         _mapAction.clear();
         _mapLayer.clear();
         _listActionEntry.clear();
@@ -135,6 +137,7 @@ namespace sw
         entry._definition._listBinding.push_back( binding );
         entry._definition._listDefaultBinding.push_back( binding );
         entry._state._listBindingState.push_back( makeBindingState( binding ) );
+        ++_bindingRevision;
     }
 
     void InputMap::bind( const hashed_string& action, InputSlot slot, ActionTrigger trigger, const hashed_string& layer )
@@ -428,6 +431,7 @@ namespace sw
             return false;
         binding = candidate;
         reseedBindingState( *pEntry, bindIndex );
+        ++_bindingRevision;
         return true;
     }
 
@@ -451,6 +455,7 @@ namespace sw
         binding._modifierMask = modifierMask;
         binding._arrSlot[0]   = InputSlot::fromKey( key );
         reseedBindingState( *pEntry, bindIndex );
+        ++_bindingRevision;
         return true;
     }
 
@@ -537,6 +542,7 @@ namespace sw
         candidate._arrSlot[targetSlot] = newSlot;
         if ( reportVirtualCursorConflict( "rebind", action, candidate ) )
             return false;
+        ++_bindingRevision;
         const hashed_string targetLayer = pEntry->_definition._listBinding[bindIndex]._layer;
 
         hashed_string    conflictingAction{};
@@ -671,11 +677,13 @@ namespace sw
 
         pEntry->_definition._listBinding = pEntry->_definition._listDefaultBinding;
         rebuildBindingStates( *pEntry );
+        ++_bindingRevision;
         return true;
     }
 
     void InputMap::resetAllBindingsToDefault()
     {
+        ++_bindingRevision;
         for ( ActionEntry& entry : _listActionEntry )
         {
             if ( entry._definition._listDefaultBinding.empty() == false )
@@ -874,6 +882,7 @@ namespace sw
         if ( pEntry == nullptr || bindIndex >= pEntry->_definition._listBinding.size() )
             return false;
         pEntry->_definition._listBinding.erase( pEntry->_definition._listBinding.begin() + bindIndex );
+        ++_bindingRevision;
         pEntry->_state._listBindingState.erase( pEntry->_state._listBindingState.begin() + bindIndex );
         if ( bindIndex < pEntry->_definition._listDefaultBinding.size() )
             pEntry->_definition._listDefaultBinding.erase( pEntry->_definition._listDefaultBinding.begin() + bindIndex );
