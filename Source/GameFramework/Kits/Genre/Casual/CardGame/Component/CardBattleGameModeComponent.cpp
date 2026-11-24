@@ -20,6 +20,16 @@ namespace sw
 
             static constexpr const utf8* kWinResult  = "win";
             static constexpr const utf8* kLoseResult = "lose";
+
+            // 사운드 이벤트 이름 — 클립 · 범위 · 상한은 게임의 사운드 이벤트 데이터(audioevents.xml)가 정한다.
+            static constexpr const utf8* kEventPlay    = "CardBattlePlay";
+            static constexpr const utf8* kEventHit     = "CardBattleHit";
+            static constexpr const utf8* kEventBlock   = "CardBattleBlock";
+            static constexpr const utf8* kEventEndTurn = "CardBattleEndTurn";
+            static constexpr const utf8* kEventHurt    = "CardBattleHurt";
+            static constexpr const utf8* kEventRefused = "CardBattleRefused";
+            static constexpr const utf8* kEventWon     = "CardBattleWon";
+            static constexpr const utf8* kEventLost    = "CardBattleLost";
         };
     } // namespace
 
@@ -113,8 +123,13 @@ namespace sw
 
     bool CardBattleGameModeComponent::playCard( int32 handIndex )
     {
-        if ( isAwaitingCommand() == false || _battle.playCard( handIndex ) == false )
+        if ( isAwaitingCommand() == false )
             return false;
+        if ( applyCard( handIndex ) == false )
+        {
+            getSoundQueue().queueEvent( CardBattleGameModeComponentInternal::kEventRefused );
+            return false;
+        }
         settle();
         return true;
     }
@@ -123,9 +138,32 @@ namespace sw
     {
         if ( isAwaitingCommand() == false )
             return false;
-        _battle.endTurn();
+        applyEndTurn();
         settle();
         return true;
+    }
+
+    bool CardBattleGameModeComponent::applyCard( int32 handIndex )
+    {
+        using Internal            = CardBattleGameModeComponentInternal;
+        const int32 enemyHPBefore = getEnemyHP();
+        const int32 blockBefore   = _battle.getPlayerBlock();
+        if ( _battle.playCard( handIndex ) == false )
+            return false;
+        getSoundQueue().queueEvent( Internal::kEventPlay );
+        if ( getEnemyHP() < enemyHPBefore )
+            getSoundQueue().queueEvent( Internal::kEventHit );
+        if ( _battle.getPlayerBlock() > blockBefore )
+            getSoundQueue().queueEvent( Internal::kEventBlock );
+        return true;
+    }
+
+    void CardBattleGameModeComponent::applyEndTurn()
+    {
+        using Internal             = CardBattleGameModeComponentInternal;
+        const int32 playerHPBefore = getPlayerHP();
+        _battle.endTurn();
+        getSoundQueue().queueEvent( getPlayerHP() < playerHPBefore ? Internal::kEventHurt : Internal::kEventEndTurn );
     }
 
     void CardBattleGameModeComponent::stepAutoPlay()
@@ -134,10 +172,10 @@ namespace sw
         {
             if ( isPlayable( handIndex ) == false )
                 continue;
-            (void)_battle.playCard( handIndex ); // 낼 수 있는 카드다
+            (void)applyCard( handIndex ); // 낼 수 있는 카드다
             return;
         }
-        _battle.endTurn();
+        applyEndTurn();
     }
 
     void CardBattleGameModeComponent::settle()
@@ -146,6 +184,7 @@ namespace sw
             return;
         _bResultShown = SW_TRUE;
         _timer.start( _resultHoldSeconds );
+        getSoundQueue().queueEvent( _battle.getPhase() == CardBattlePhase::Won ? CardBattleGameModeComponentInternal::kEventWon : CardBattleGameModeComponentInternal::kEventLost );
         SW_LOG_INFO_ID( "CardBattle.Finished", "[CardBattle] %# on turn %# with %# HP left", _battle.getPhase() == CardBattlePhase::Won ? "victory" : "defeat", _battle.getTurn(), _battle.getPlayerHP() );
     }
 

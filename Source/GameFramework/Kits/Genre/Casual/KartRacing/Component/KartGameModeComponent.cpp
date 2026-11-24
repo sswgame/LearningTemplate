@@ -23,6 +23,59 @@ namespace sw
             static constexpr const utf8* kWinResult  = "win";
             static constexpr const utf8* kLoseResult = "lose";
             static constexpr int32       kFirstPlace = 1;
+
+            // 사운드 이벤트 이름 — 클립 · 범위 · 상한은 게임의 사운드 이벤트 데이터(audioevents.xml)가 정한다.
+            static constexpr const utf8* kEventGo       = "KartRacingGo";
+            static constexpr const utf8* kEventLap      = "KartRacingLap";
+            static constexpr const utf8* kEventFinalLap = "KartRacingFinalLap";
+            static constexpr const utf8* kEventItemBox  = "KartRacingItemBox";
+            static constexpr const utf8* kEventItemUsed = "KartRacingItemUsed";
+            static constexpr const utf8* kEventHit      = "KartRacingHit";
+            static constexpr const utf8* kEventBlocked  = "KartRacingBlocked";
+            static constexpr const utf8* kEventBoost    = "KartRacingBoost";
+            static constexpr const utf8* kEventWrongWay = "KartRacingWrongWay";
+            static constexpr const utf8* kEventWon      = "KartRacingWon";
+            static constexpr const utf8* kEventLost     = "KartRacingLost";
+
+            /** @brief 플레이어 차의 알림 @p kind 에 낼 소리입니다. 소리가 없는 알림이면 nullptr 입니다(결승은 순위가, 거꾸로 달림은 시작인지가 정한다). */
+            static const utf8* findSound( KartRaceEvent::Kind kind )
+            {
+                switch ( kind )
+                {
+                    case KartRaceEvent::Kind::LapCompleted:
+                    {
+                        return kEventLap;
+                    }
+                    case KartRaceEvent::Kind::FinalLap:
+                    {
+                        return kEventFinalLap;
+                    }
+                    case KartRaceEvent::Kind::ItemBoxTaken:
+                    {
+                        return kEventItemBox;
+                    }
+                    case KartRaceEvent::Kind::ItemUsed:
+                    {
+                        return kEventItemUsed;
+                    }
+                    case KartRaceEvent::Kind::Hit:
+                    {
+                        return kEventHit;
+                    }
+                    case KartRaceEvent::Kind::ShieldBlocked:
+                    {
+                        return kEventBlocked;
+                    }
+                    case KartRaceEvent::Kind::BoostPad:
+                    {
+                        return kEventBoost;
+                    }
+                    default:
+                    {
+                        return nullptr;
+                    }
+                }
+            }
         };
     } // namespace
 
@@ -165,14 +218,31 @@ namespace sw
         return true;
     }
 
+    void KartGameModeComponent::queuePlayerSound( const KartRaceEvent& event )
+    {
+        using Internal     = KartGameModeComponentInternal;
+        const utf8* pSound = Internal::findSound( event._kind );
+        if ( event._kind == KartRaceEvent::Kind::Finished )
+            pSound = event._value == Internal::kFirstPlace ? Internal::kEventWon : Internal::kEventLost;
+        else if ( event._kind == KartRaceEvent::Kind::WrongWay && event._value != 0 )
+            pSound = Internal::kEventWrongWay;
+        if ( pSound != nullptr )
+            getSoundQueue().queueEvent( pSound );
+    }
+
     void KartGameModeComponent::reportEvents()
     {
         _listEvent.clear();
         _race.pollEvents( _listEvent );
         for ( const KartRaceEvent& event : _listEvent )
         {
+            if ( event._racer == optional<int32>{ kPlayerRacer } )
+                queuePlayerSound( event );
             if ( event._kind == KartRaceEvent::Kind::RaceStarted )
+            {
+                getSoundQueue().queueEvent( KartGameModeComponentInternal::kEventGo );
                 SW_LOG_INFO_ID( "KartRacing.Go", "[KartRacing] go" );
+            }
             else if ( event._kind == KartRaceEvent::Kind::LapCompleted && event._racer.has_value() )
                 SW_LOG_INFO_ID( "KartRacing.Lap", "[KartRacing] kart %# finished lap %# in %# s", *event._racer, event._value, event._time );
             else if ( event._kind == KartRaceEvent::Kind::Finished && event._racer.has_value() )

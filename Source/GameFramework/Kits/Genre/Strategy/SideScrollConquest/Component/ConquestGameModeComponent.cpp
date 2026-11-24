@@ -25,6 +25,65 @@ namespace sw
             static constexpr const utf8* kLoseResult    = "lose";
             static constexpr int32       kStartBuilding = 0;    ///< 시작 건물의 번호 — 판을 열며 처음 짓는다
             static constexpr float32     kAutoPlayAxis  = 1.0f; ///< 자동 플레이의 지휘관 이동 축(오른쪽 — 적 쪽)
+
+            // 사운드 이벤트 이름 — 클립 · 범위 · 상한은 게임의 사운드 이벤트 데이터(audioevents.xml)가 정한다.
+            static constexpr const utf8* kEventOrder         = "ConquestOrder";
+            static constexpr const utf8* kEventTrained       = "ConquestTrained";
+            static constexpr const utf8* kEventRefused       = "ConquestRefused";
+            static constexpr const utf8* kEventUnitDown      = "ConquestUnitDown";
+            static constexpr const utf8* kEventBroken        = "ConquestBroken";
+            static constexpr const utf8* kEventSiteTaken     = "ConquestSiteTaken";
+            static constexpr const utf8* kEventSiteLost      = "ConquestSiteLost";
+            static constexpr const utf8* kEventWave          = "ConquestWave";
+            static constexpr const utf8* kEventCommanderDown = "ConquestCommanderDown";
+            static constexpr const utf8* kEventCommanderBack = "ConquestCommanderBack";
+            static constexpr const utf8* kEventWon           = "ConquestWon";
+            static constexpr const utf8* kEventLost          = "ConquestLost";
+
+            /** @brief 판의 알림 @p kind 에 낼 소리입니다. 소리가 없는 알림이면 nullptr 입니다(거점은 새 주인이 정한다). */
+            static const utf8* findSound( ConquestEvent::Kind kind )
+            {
+                switch ( kind )
+                {
+                    case ConquestEvent::Kind::UnitTrained:
+                    {
+                        return kEventTrained;
+                    }
+                    case ConquestEvent::Kind::UnitDied:
+                    {
+                        return kEventUnitDown;
+                    }
+                    case ConquestEvent::Kind::GateBroken:
+                    case ConquestEvent::Kind::WallBroken:
+                    {
+                        return kEventBroken;
+                    }
+                    case ConquestEvent::Kind::WaveSpawned:
+                    {
+                        return kEventWave;
+                    }
+                    case ConquestEvent::Kind::CommanderDied:
+                    {
+                        return kEventCommanderDown;
+                    }
+                    case ConquestEvent::Kind::CommanderRespawned:
+                    {
+                        return kEventCommanderBack;
+                    }
+                    case ConquestEvent::Kind::Victory:
+                    {
+                        return kEventWon;
+                    }
+                    case ConquestEvent::Kind::Defeat:
+                    {
+                        return kEventLost;
+                    }
+                    default:
+                    {
+                        return nullptr;
+                    }
+                }
+            }
         };
     } // namespace
 
@@ -114,6 +173,7 @@ namespace sw
         if ( isAwaitingCommand() == false )
             return false;
         _world.issueOrder( order );
+        getSoundQueue().queueEvent( ConquestGameModeComponentInternal::kEventOrder );
         SW_LOG_INFO_ID( "Conquest.Order", "[Conquest] order %# to a squad of %#", static_cast<int32>( order ), _world.getSquadSize() );
         return true;
     }
@@ -124,7 +184,10 @@ namespace sw
             return ConquestResult::InvalidBuilding;
         const ConquestResult result = _world.trainUnit( ConquestGameModeComponentInternal::kStartBuilding, _trainUnit.key() );
         if ( result != ConquestResult::Ok )
+        {
+            getSoundQueue().queueEvent( ConquestGameModeComponentInternal::kEventRefused );
             SW_LOG_INFO_ID( "Conquest.TrainingRefused", "[Conquest] '%#' is not trained now (result %#)", _trainUnit.c_str(), static_cast<int32>( result ) );
+        }
         return result;
     }
 
@@ -151,6 +214,11 @@ namespace sw
         _world.pollEvents( _eventLease, _listEvent );
         for ( const ConquestEvent& event : _listEvent )
         {
+            const utf8* pSound = ConquestGameModeComponentInternal::findSound( event._kind );
+            if ( event._kind == ConquestEvent::Kind::SiteCaptured )
+                pSound = event._team == ConquestTeam::Player ? ConquestGameModeComponentInternal::kEventSiteTaken : ConquestGameModeComponentInternal::kEventSiteLost;
+            if ( pSound != nullptr )
+                getSoundQueue().queueEvent( pSound );
             if ( event._kind == ConquestEvent::Kind::SiteCaptured )
                 SW_LOG_INFO_ID( "Conquest.SiteCaptured", "[Conquest] site '%#' taken by team %#", event._id.c_str(), static_cast<int32>( event._team ) );
             else if ( event._kind == ConquestEvent::Kind::GateBroken )

@@ -25,6 +25,58 @@ namespace sw
 
             static constexpr const utf8* kWinResult  = "win";
             static constexpr const utf8* kLoseResult = "lose";
+
+            // 사운드 이벤트 이름 — 클립 · 범위 · 상한은 게임의 사운드 이벤트 데이터(audioevents.xml)가 정한다.
+            static constexpr const utf8* kEventBounce  = "PartyArenaBounce";
+            static constexpr const utf8* kEventAttack  = "PartyArenaAttack";
+            static constexpr const utf8* kEventHit     = "PartyArenaHit";
+            static constexpr const utf8* kEventBlocked = "PartyArenaBlocked";
+            static constexpr const utf8* kEventPound   = "PartyArenaPound";
+            static constexpr const utf8* kEventRingOut = "PartyArenaRingOut";
+            static constexpr const utf8* kEventItem    = "PartyArenaItem";
+            static constexpr const utf8* kEventRound   = "PartyArenaRound";
+            static constexpr const utf8* kEventWon     = "PartyArenaWon";
+            static constexpr const utf8* kEventLost    = "PartyArenaLost";
+
+            /** @brief 무대의 알림 @p kind 가 그 사람(`_player`)의 자리에서 내는 소리입니다. 소리가 없는 알림이면 nullptr 입니다. */
+            static const utf8* findSound( TrampolineEvent::Kind kind )
+            {
+                switch ( kind )
+                {
+                    case TrampolineEvent::Kind::Bounced:
+                    {
+                        return kEventBounce;
+                    }
+                    case TrampolineEvent::Kind::Attacked:
+                    {
+                        return kEventAttack;
+                    }
+                    case TrampolineEvent::Kind::Hit:
+                    {
+                        return kEventHit;
+                    }
+                    case TrampolineEvent::Kind::ShieldBlocked:
+                    {
+                        return kEventBlocked;
+                    }
+                    case TrampolineEvent::Kind::GroundPound:
+                    {
+                        return kEventPound;
+                    }
+                    case TrampolineEvent::Kind::RingOut:
+                    {
+                        return kEventRingOut;
+                    }
+                    case TrampolineEvent::Kind::ItemPicked:
+                    {
+                        return kEventItem;
+                    }
+                    default:
+                    {
+                        return nullptr;
+                    }
+                }
+            }
         };
     } // namespace
 
@@ -144,8 +196,12 @@ namespace sw
     {
         _listArenaEvent.clear();
         _arena.pollEvents( _listArenaEvent );
+        const GameObjectManager* const pManager = getObjectManager();
         for ( const TrampolineEvent& event : _listArenaEvent )
         {
+            const utf8* const pSound = PartyGameModeComponentInternal::findSound( event._kind );
+            if ( pSound != nullptr && pManager != nullptr )
+                getSoundQueue().queueEventAt( pSound, pManager->getWorldOrigin().toLocal( getPlayerPosition( event._player ) ) );
             if ( event._kind != TrampolineEvent::Kind::RingOut )
                 continue;
             _playerRingOutCount += event._player == kLocalPlayer ? 1 : 0;
@@ -156,7 +212,10 @@ namespace sw
         for ( const PartySeriesEvent& event : _listSeriesEvent )
         {
             if ( event._kind == PartySeriesEvent::Kind::RoundStarted )
+            {
+                getSoundQueue().queueEvent( PartyGameModeComponentInternal::kEventRound );
                 SW_LOG_INFO_ID( "PartyArena.Round", "[PartyArena] round %#", event._value );
+            }
             else if ( event._kind == PartySeriesEvent::Kind::RoundRanked && event._player.has_value() )
                 SW_LOG_INFO_ID( "PartyArena.Ranked", "[PartyArena] player %# took place %# for %# points", *event._player, event._value, event._points );
         }
@@ -185,6 +244,7 @@ namespace sw
         _winner = winner;
         _phase  = PartyGamePhase::Finished;
         _phaseTimer.start( _resultHoldSeconds );
+        getSoundQueue().queueEvent( _winner == kLocalPlayer ? PartyGameModeComponentInternal::kEventWon : PartyGameModeComponentInternal::kEventLost );
         SW_LOG_INFO_ID( "PartyArena.Finished", "[PartyArena] the series is over - winner %#", _winner );
     }
 

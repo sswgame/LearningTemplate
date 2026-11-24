@@ -18,6 +18,7 @@
 	</_listParameter>
 	<_listAttenuation>
 		<AudioAttenuationDef _name="RTSBattlefield" _curve="Linear" _minDistance="8" _maxDistance="60" _bOcclusion="false" />
+		<AudioAttenuationDef _name="PartyArenaStage" _curve="Linear" _minDistance="26" _maxDistance="80" _bOcclusion="false" />
 	</_listAttenuation>
 	<_listEvent>
 		<AudioEventDef _name="Weather.Rain" _bus="ambient" _priority="40" _fadeInSeconds="1" _fadeOutSeconds="1.5" _maxInstances="1" _steal="Oldest" _bLoop="true">
@@ -525,6 +526,254 @@
 		                _bLoop="true">
 			<_listClip>
 				<AudioClipEntry _path="common/sounds/kenney_scifi_sounds/thruster_fire_000.ogg" />
+			</_listClip>
+		</AudioEventDef>
+		<!-- KartRacing* 은 카트 경기(kartracing)의 디렉터가 플레이어 차의 알림마다 낸다 — 카메라가 플레이어를 따라가 모두 2D 다. -->
+		<AudioEventDef _name="KartRacingGo" _bus="sfx" _priority="80" _maxInstances="1" _steal="Oldest">
+			<_listClip>
+				<AudioClipEntry _path="common/sounds/subspaceaudio_512_sfx/general_sounds/fanfares/sfx_sounds_fanfare1.ogg" />
+			</_listClip>
+		</AudioEventDef>
+		<AudioEventDef _name="KartRacingLap" _bus="sfx" _priority="70" _maxInstances="1" _steal="Oldest">
+			<_listClip>
+				<AudioClipEntry _path="common/sounds/kenney_interface_sounds/confirmation_001.ogg" />
+			</_listClip>
+		</AudioEventDef>
+		<AudioEventDef _name="KartRacingFinalLap" _bus="sfx" _priority="75" _maxInstances="1" _steal="Oldest">
+			<_listClip>
+				<AudioClipEntry _path="common/sounds/kenney_interface_sounds/confirmation_004.ogg" />
+			</_listClip>
+		</AudioEventDef>
+		<AudioEventDef _name="KartRacingItemBox" _bus="sfx" _container="Random" _priority="55" _maxInstances="2" _steal="Oldest">
+			<_listClip>
+				<AudioClipEntry _path="common/sounds/kenney_interface_sounds/glass_001.ogg" />
+				<AudioClipEntry _path="common/sounds/kenney_interface_sounds/glass_002.ogg" />
+				<AudioClipEntry _path="common/sounds/kenney_interface_sounds/glass_003.ogg" />
+			</_listClip>
+		</AudioEventDef>
+		<AudioEventDef _name="KartRacingItemUsed" _bus="sfx" _container="Random" _priority="60" _maxInstances="2" _steal="Oldest" _pitchMin="-1" _pitchMax="1">
+			<_listClip>
+				<AudioClipEntry _path="common/sounds/kenney_scifi_sounds/laser_small_000.ogg" />
+				<AudioClipEntry _path="common/sounds/kenney_scifi_sounds/laser_small_001.ogg" />
+				<AudioClipEntry _path="common/sounds/kenney_scifi_sounds/laser_small_002.ogg" />
+			</_listClip>
+		</AudioEventDef>
+		<AudioEventDef _name="KartRacingHit" _bus="sfx" _container="Random" _priority="70" _cooldownSeconds="0.05" _maxInstances="2" _steal="Oldest" _pitchMin="-1" _pitchMax="1">
+			<_listClip>
+				<AudioClipEntry _path="common/sounds/kenney_impact_sounds/impact_metal_heavy_000.ogg" />
+				<AudioClipEntry _path="common/sounds/kenney_impact_sounds/impact_metal_heavy_001.ogg" />
+				<AudioClipEntry _path="common/sounds/kenney_impact_sounds/impact_metal_heavy_002.ogg" />
+				<AudioClipEntry _path="common/sounds/kenney_impact_sounds/impact_metal_heavy_003.ogg" />
+				<AudioClipEntry _path="common/sounds/kenney_impact_sounds/impact_metal_heavy_004.ogg" />
+			</_listClip>
+		</AudioEventDef>
+		<AudioEventDef _name="KartRacingBlocked" _bus="sfx" _container="Random" _priority="65" _maxInstances="2" _steal="Oldest">
+			<_listClip>
+				<AudioClipEntry _path="common/sounds/kenney_scifi_sounds/force_field_000.ogg" />
+				<AudioClipEntry _path="common/sounds/kenney_scifi_sounds/force_field_001.ogg" />
+			</_listClip>
+		</AudioEventDef>
+		<AudioEventDef _name="KartRacingBoost" _bus="sfx" _priority="60" _cooldownSeconds="0.2" _maxInstances="1" _steal="Oldest">
+			<_listClip>
+				<AudioClipEntry _path="common/sounds/kenney_scifi_sounds/thruster_fire_001.ogg" />
+			</_listClip>
+		</AudioEventDef>
+		<AudioEventDef _name="KartRacingWrongWay" _bus="sfx" _priority="65" _cooldownSeconds="1.0" _maxInstances="1" _steal="Oldest">
+			<_listClip>
+				<AudioClipEntry _path="common/sounds/kenney_interface_sounds/error_004.ogg" />
+			</_listClip>
+		</AudioEventDef>
+		<AudioEventDef _name="KartRacingWon" _bus="sfx" _priority="85" _maxInstances="1" _steal="Oldest">
+			<_listClip>
+				<AudioClipEntry _path="common/sounds/subspaceaudio_512_sfx/general_sounds/fanfares/sfx_sounds_fanfare3.ogg" />
+			</_listClip>
+		</AudioEventDef>
+		<AudioEventDef _name="KartRacingLost" _bus="sfx" _priority="85" _maxInstances="1" _steal="Oldest">
+			<_listClip>
+				<AudioClipEntry _path="common/sounds/subspaceaudio_512_sfx/general_sounds/negative_sounds/sfx_sounds_negative1.ogg" />
+			</_listClip>
+		</AudioEventDef>
+		<!-- PartyArena* 는 파티 아레나(partyarena)의 디렉터가 낸다 — 무대의 소리는 그 사람의 자리에서 3D(PartyArenaStage 감쇠 — 카메라가 무대 전체를 본다), 라운드 · 결과는 2D 다. -->
+		<AudioEventDef _name="PartyArenaBounce" _bus="sfx" _attenuation="PartyArenaStage" _container="Random" _priority="30" _cooldownSeconds="0.05" _maxInstances="3" _steal="Farthest" _pitchMin="-1" _pitchMax="1">
+			<_listClip>
+				<AudioClipEntry _path="common/sounds/kenney_impact_sounds/impact_soft_medium_000.ogg" _volumeDb="-6" />
+				<AudioClipEntry _path="common/sounds/kenney_impact_sounds/impact_soft_medium_001.ogg" _volumeDb="-6" />
+				<AudioClipEntry _path="common/sounds/kenney_impact_sounds/impact_soft_medium_002.ogg" _volumeDb="-6" />
+			</_listClip>
+		</AudioEventDef>
+		<AudioEventDef _name="PartyArenaAttack" _bus="sfx" _attenuation="PartyArenaStage" _container="Random" _priority="40" _cooldownSeconds="0.05" _maxInstances="3" _steal="Farthest" _pitchMin="-1" _pitchMax="1">
+			<_listClip>
+				<AudioClipEntry _path="common/sounds/kenney_rpg_audio/knife_slice.ogg" />
+				<AudioClipEntry _path="common/sounds/kenney_rpg_audio/knife_slice2.ogg" />
+			</_listClip>
+		</AudioEventDef>
+		<AudioEventDef _name="PartyArenaHit" _bus="sfx" _attenuation="PartyArenaStage" _container="Random" _priority="60" _cooldownSeconds="0.03" _maxInstances="4" _steal="Farthest" _pitchMin="-1" _pitchMax="1">
+			<_listClip>
+				<AudioClipEntry _path="common/sounds/kenney_impact_sounds/impact_punch_medium_000.ogg" />
+				<AudioClipEntry _path="common/sounds/kenney_impact_sounds/impact_punch_medium_001.ogg" />
+				<AudioClipEntry _path="common/sounds/kenney_impact_sounds/impact_punch_medium_002.ogg" />
+				<AudioClipEntry _path="common/sounds/kenney_impact_sounds/impact_punch_medium_003.ogg" />
+				<AudioClipEntry _path="common/sounds/kenney_impact_sounds/impact_punch_medium_004.ogg" />
+			</_listClip>
+		</AudioEventDef>
+		<AudioEventDef _name="PartyArenaBlocked" _bus="sfx" _attenuation="PartyArenaStage" _container="Random" _priority="55" _cooldownSeconds="0.03" _maxInstances="3" _steal="Farthest">
+			<_listClip>
+				<AudioClipEntry _path="common/sounds/kenney_impact_sounds/impact_plate_medium_000.ogg" />
+				<AudioClipEntry _path="common/sounds/kenney_impact_sounds/impact_plate_medium_001.ogg" />
+				<AudioClipEntry _path="common/sounds/kenney_impact_sounds/impact_plate_medium_002.ogg" />
+			</_listClip>
+		</AudioEventDef>
+		<AudioEventDef _name="PartyArenaPound" _bus="sfx" _attenuation="PartyArenaStage" _container="Random" _priority="60" _cooldownSeconds="0.05" _maxInstances="3" _steal="Farthest">
+			<_listClip>
+				<AudioClipEntry _path="common/sounds/kenney_impact_sounds/impact_wood_heavy_000.ogg" />
+				<AudioClipEntry _path="common/sounds/kenney_impact_sounds/impact_wood_heavy_001.ogg" />
+				<AudioClipEntry _path="common/sounds/kenney_impact_sounds/impact_wood_heavy_002.ogg" />
+			</_listClip>
+		</AudioEventDef>
+		<AudioEventDef _name="PartyArenaRingOut" _bus="sfx" _attenuation="PartyArenaStage" _container="Random" _priority="70" _maxInstances="3" _steal="Farthest">
+			<_listClip>
+				<AudioClipEntry _path="common/sounds/subspaceaudio_512_sfx/movement/falling_sounds/sfx_sounds_falling1.ogg" />
+				<AudioClipEntry _path="common/sounds/subspaceaudio_512_sfx/movement/falling_sounds/sfx_sounds_falling2.ogg" />
+				<AudioClipEntry _path="common/sounds/subspaceaudio_512_sfx/movement/falling_sounds/sfx_sounds_falling3.ogg" />
+			</_listClip>
+		</AudioEventDef>
+		<AudioEventDef _name="PartyArenaItem" _bus="sfx" _attenuation="PartyArenaStage" _container="Random" _priority="55" _maxInstances="3" _steal="Farthest">
+			<_listClip>
+				<AudioClipEntry _path="common/sounds/kenney_interface_sounds/glass_004.ogg" />
+				<AudioClipEntry _path="common/sounds/kenney_interface_sounds/glass_005.ogg" />
+			</_listClip>
+		</AudioEventDef>
+		<AudioEventDef _name="PartyArenaRound" _bus="sfx" _priority="80" _maxInstances="1" _steal="Oldest">
+			<_listClip>
+				<AudioClipEntry _path="common/sounds/kenney_interface_sounds/bong_001.ogg" />
+			</_listClip>
+		</AudioEventDef>
+		<AudioEventDef _name="PartyArenaWon" _bus="sfx" _priority="85" _maxInstances="1" _steal="Oldest">
+			<_listClip>
+				<AudioClipEntry _path="common/sounds/subspaceaudio_512_sfx/general_sounds/fanfares/sfx_sounds_fanfare2.ogg" />
+			</_listClip>
+		</AudioEventDef>
+		<AudioEventDef _name="PartyArenaLost" _bus="sfx" _priority="85" _maxInstances="1" _steal="Oldest">
+			<_listClip>
+				<AudioClipEntry _path="common/sounds/subspaceaudio_512_sfx/general_sounds/negative_sounds/sfx_sounds_negative2.ogg" />
+			</_listClip>
+		</AudioEventDef>
+		<!-- CardBattle* 은 덱 전투(cardgame)의 디렉터가 낸다 — 탁자를 내려다보는 판이라 모두 2D 다. -->
+		<AudioEventDef _name="CardBattlePlay" _bus="sfx" _container="Random" _priority="50" _cooldownSeconds="0.03" _maxInstances="2" _steal="Oldest" _pitchMin="-1" _pitchMax="1">
+			<_listClip>
+				<AudioClipEntry _path="common/sounds/kenney_rpg_audio/book_flip1.ogg" />
+				<AudioClipEntry _path="common/sounds/kenney_rpg_audio/book_flip2.ogg" />
+				<AudioClipEntry _path="common/sounds/kenney_rpg_audio/book_flip3.ogg" />
+			</_listClip>
+		</AudioEventDef>
+		<AudioEventDef _name="CardBattleHit" _bus="sfx" _container="Random" _priority="60" _maxInstances="2" _steal="Oldest" _pitchMin="-1" _pitchMax="1">
+			<_listClip>
+				<AudioClipEntry _path="common/sounds/kenney_impact_sounds/impact_punch_heavy_000.ogg" />
+				<AudioClipEntry _path="common/sounds/kenney_impact_sounds/impact_punch_heavy_001.ogg" />
+				<AudioClipEntry _path="common/sounds/kenney_impact_sounds/impact_punch_heavy_002.ogg" />
+			</_listClip>
+		</AudioEventDef>
+		<AudioEventDef _name="CardBattleBlock" _bus="sfx" _container="Random" _priority="55" _maxInstances="2" _steal="Oldest">
+			<_listClip>
+				<AudioClipEntry _path="common/sounds/kenney_impact_sounds/impact_plate_light_000.ogg" />
+				<AudioClipEntry _path="common/sounds/kenney_impact_sounds/impact_plate_light_001.ogg" />
+				<AudioClipEntry _path="common/sounds/kenney_impact_sounds/impact_plate_light_002.ogg" />
+			</_listClip>
+		</AudioEventDef>
+		<AudioEventDef _name="CardBattleEndTurn" _bus="sfx" _container="Random" _priority="50" _maxInstances="1" _steal="Oldest">
+			<_listClip>
+				<AudioClipEntry _path="common/sounds/kenney_rpg_audio/book_place1.ogg" />
+				<AudioClipEntry _path="common/sounds/kenney_rpg_audio/book_place2.ogg" />
+			</_listClip>
+		</AudioEventDef>
+		<AudioEventDef _name="CardBattleHurt" _bus="sfx" _priority="70" _maxInstances="1" _steal="Oldest">
+			<_listClip>
+				<AudioClipEntry _path="common/sounds/subspaceaudio_512_sfx/general_sounds/negative_sounds/sfx_sounds_damage1.ogg" />
+			</_listClip>
+		</AudioEventDef>
+		<AudioEventDef _name="CardBattleRefused" _bus="sfx" _priority="50" _cooldownSeconds="0.2" _maxInstances="1" _steal="Oldest">
+			<_listClip>
+				<AudioClipEntry _path="common/sounds/kenney_interface_sounds/error_001.ogg" />
+			</_listClip>
+		</AudioEventDef>
+		<AudioEventDef _name="CardBattleWon" _bus="sfx" _priority="85" _maxInstances="1" _steal="Oldest">
+			<_listClip>
+				<AudioClipEntry _path="common/sounds/subspaceaudio_512_sfx/general_sounds/fanfares/sfx_sounds_fanfare2.ogg" />
+			</_listClip>
+		</AudioEventDef>
+		<AudioEventDef _name="CardBattleLost" _bus="sfx" _priority="85" _maxInstances="1" _steal="Oldest">
+			<_listClip>
+				<AudioClipEntry _path="common/sounds/subspaceaudio_512_sfx/general_sounds/negative_sounds/sfx_sounds_negative1.ogg" />
+			</_listClip>
+		</AudioEventDef>
+		<!-- Conquest* 는 정복(sidescrollconquest)의 디렉터가 판의 알림마다 낸다 — 옆에서 보는 전선이라 모두 2D 다. 병사가 한꺼번에 쓰러질 수 있어 쿨다운과 동시 재생 상한을 둔다. -->
+		<AudioEventDef _name="ConquestOrder" _bus="sfx" _container="Random" _priority="55" _cooldownSeconds="0.1" _maxInstances="1" _steal="Oldest">
+			<_listClip>
+				<AudioClipEntry _path="common/sounds/kenney_interface_sounds/select_001.ogg" />
+				<AudioClipEntry _path="common/sounds/kenney_interface_sounds/select_002.ogg" />
+			</_listClip>
+		</AudioEventDef>
+		<AudioEventDef _name="ConquestTrained" _bus="sfx" _priority="50" _maxInstances="2" _steal="Oldest">
+			<_listClip>
+				<AudioClipEntry _path="common/sounds/kenney_rpg_audio/metal_latch.ogg" />
+			</_listClip>
+		</AudioEventDef>
+		<AudioEventDef _name="ConquestRefused" _bus="sfx" _priority="50" _cooldownSeconds="0.2" _maxInstances="1" _steal="Oldest">
+			<_listClip>
+				<AudioClipEntry _path="common/sounds/kenney_interface_sounds/error_001.ogg" />
+			</_listClip>
+		</AudioEventDef>
+		<AudioEventDef _name="ConquestUnitDown" _bus="sfx" _container="Random" _priority="40" _cooldownSeconds="0.08" _maxInstances="3" _steal="Oldest" _pitchMin="-1" _pitchMax="1">
+			<_listClip>
+				<AudioClipEntry _path="common/sounds/kenney_impact_sounds/impact_generic_light_000.ogg" />
+				<AudioClipEntry _path="common/sounds/kenney_impact_sounds/impact_generic_light_001.ogg" />
+				<AudioClipEntry _path="common/sounds/kenney_impact_sounds/impact_generic_light_002.ogg" />
+				<AudioClipEntry _path="common/sounds/kenney_impact_sounds/impact_generic_light_003.ogg" />
+				<AudioClipEntry _path="common/sounds/kenney_impact_sounds/impact_generic_light_004.ogg" />
+			</_listClip>
+		</AudioEventDef>
+		<AudioEventDef _name="ConquestBroken" _bus="sfx" _container="Random" _priority="65" _cooldownSeconds="0.05" _maxInstances="2" _steal="Oldest">
+			<_listClip>
+				<AudioClipEntry _path="common/sounds/kenney_impact_sounds/impact_plank_medium_000.ogg" />
+				<AudioClipEntry _path="common/sounds/kenney_impact_sounds/impact_plank_medium_001.ogg" />
+				<AudioClipEntry _path="common/sounds/kenney_impact_sounds/impact_plank_medium_002.ogg" />
+				<AudioClipEntry _path="common/sounds/kenney_impact_sounds/impact_plank_medium_003.ogg" />
+				<AudioClipEntry _path="common/sounds/kenney_impact_sounds/impact_plank_medium_004.ogg" />
+			</_listClip>
+		</AudioEventDef>
+		<AudioEventDef _name="ConquestSiteTaken" _bus="sfx" _priority="75" _maxInstances="1" _steal="Oldest">
+			<_listClip>
+				<AudioClipEntry _path="common/sounds/subspaceaudio_512_sfx/general_sounds/positive_sounds/sfx_sounds_powerup1.ogg" />
+			</_listClip>
+		</AudioEventDef>
+		<AudioEventDef _name="ConquestSiteLost" _bus="sfx" _priority="75" _maxInstances="1" _steal="Oldest">
+			<_listClip>
+				<AudioClipEntry _path="common/sounds/subspaceaudio_512_sfx/general_sounds/negative_sounds/sfx_sounds_negative2.ogg" />
+			</_listClip>
+		</AudioEventDef>
+		<AudioEventDef _name="ConquestWave" _bus="sfx" _priority="65" _maxInstances="1" _steal="Oldest">
+			<_listClip>
+				<AudioClipEntry _path="common/sounds/kenney_impact_sounds/impact_bell_heavy_000.ogg" />
+			</_listClip>
+		</AudioEventDef>
+		<AudioEventDef _name="ConquestCommanderDown" _bus="sfx" _priority="75" _maxInstances="1" _steal="Oldest">
+			<_listClip>
+				<AudioClipEntry _path="common/sounds/subspaceaudio_512_sfx/general_sounds/negative_sounds/sfx_sounds_damage1.ogg" />
+			</_listClip>
+		</AudioEventDef>
+		<AudioEventDef _name="ConquestCommanderBack" _bus="sfx" _priority="70" _maxInstances="1" _steal="Oldest">
+			<_listClip>
+				<AudioClipEntry _path="common/sounds/subspaceaudio_512_sfx/general_sounds/positive_sounds/sfx_sounds_powerup2.ogg" />
+			</_listClip>
+		</AudioEventDef>
+		<AudioEventDef _name="ConquestWon" _bus="sfx" _priority="85" _maxInstances="1" _steal="Oldest">
+			<_listClip>
+				<AudioClipEntry _path="common/sounds/subspaceaudio_512_sfx/general_sounds/fanfares/sfx_sounds_fanfare3.ogg" />
+			</_listClip>
+		</AudioEventDef>
+		<AudioEventDef _name="ConquestLost" _bus="sfx" _priority="85" _maxInstances="1" _steal="Oldest">
+			<_listClip>
+				<AudioClipEntry _path="common/sounds/subspaceaudio_512_sfx/general_sounds/negative_sounds/sfx_sounds_negative1.ogg" />
 			</_listClip>
 		</AudioEventDef>
 	</_listEvent>

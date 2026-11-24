@@ -69,6 +69,10 @@ namespace sw
         [[nodiscard]] bool openBattle( CardBattle& outBattle ) const;
         /** @brief 자동 플레이의 한 수 — 낼 수 있는 앞 패를 내거나, 없으면 턴을 마칩니다. */
         void stepAutoPlay();
+        /** @brief 패를 내고 그 결과의 소리를 쌓습니다(규칙이 알림을 내지 않아 앞뒤의 값을 견준다). 낼 수 없으면 false 입니다. */
+        bool applyCard( int32 handIndex );
+        /** @brief 턴을 마치고 상대의 차례 결과의 소리를 쌓습니다. */
+        void applyEndTurn();
         /** @brief 승패가 났으면 로그를 남기고 결과 보이기를 시작합니다. */
         void settle();
 

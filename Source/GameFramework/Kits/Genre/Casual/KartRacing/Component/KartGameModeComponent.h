@@ -79,6 +79,8 @@ namespace sw
         [[nodiscard]] bool openRace( KartRace& outRace );
         /** @brief 경기 이벤트를 로그로 냅니다. */
         void reportEvents();
+        /** @brief 플레이어 차의 알림에 맞는 소리를 쌓습니다. */
+        void queuePlayerSound( const KartRaceEvent& event );
 
     private:
         PROPERTY( Category = "Data", DisplayName = "Track", Required, Tooltip = "Track id in the catalog" )
