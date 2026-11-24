@@ -13,6 +13,7 @@
 #include "Core/Foundation/StdHeaders.h"
 #include "Core/GlobalVariable/GlobalVariableManager.h"
 #include "Core/Log/Logger.h"
+#include "Core/Log/ScopedDeferredLog.h"
 #include "Core/Math/MathUtil.h"
 #include "Core/Memory/Memory.h"
 #include "Core/String/StringUtil.h"
@@ -209,6 +210,7 @@ namespace sw
         RegionFlushResult submitRegionUpdate( RegionUpdate& update, IRHIDevice* pDevice )
         {
             // 올리는 동안 같은 텍스처를 놓거나 다시 올리지 못하게 읽기 잠금을 쥔다(release · reload 는 쓰기 잠금을 잡는다).
+            const ScopedDeferredLog        deferredLog;
             ScopedSharedLock<shared_mutex> lock{ _mutex };
             const auto                     it     = _mapEntry.find( update._key );
             Texture2D*                     pFound = it != _mapEntry.end() ? it->second._texture.get() : nullptr;
@@ -451,6 +453,7 @@ namespace sw
         if ( isResident( _impl->_pLoadingStandIn.load( std::memory_order_acquire ) ) && isResident( _impl->_pMissingStandIn.load( std::memory_order_acquire ) ) )
             return;
         // 처음이거나 디바이스 교체로 GPU 자원을 잃었다 — 동기로 (다시) 올린다. 캐시는 자리 텍스처마다 참조 하나만 쥔다(다시 올릴 때 받은 참조는 곧바로 놓는다).
+        const ScopedDeferredLog    deferredLog;
         const ScopedLock<mutex>    lock{ _impl->_standInMutex };
         const EngineDefaultAssets& defaults      = engine::getSubsystem<EngineDefaultAssets>();
         const auto                 ensureStandIn = [this, &isResident]( atomic<Texture2D*>& slot, const string& path )
@@ -661,8 +664,9 @@ namespace sw
         // 2) 새로 제출한다 — 프레임당 상한은 제출 수다.
         vector<shared_ptr<TextureLoadOperation>> listOperation;
         {
-            ScopedLock<mutex> lock{ _impl->_awaitingMutex };
-            const size_t      takeCount = MathUtil::min( static_cast<size_t>( maxCount ), _impl->_listAwaitingUpload.size() );
+            const ScopedDeferredLog deferredLog;
+            ScopedLock<mutex>       lock{ _impl->_awaitingMutex };
+            const size_t            takeCount = MathUtil::min( static_cast<size_t>( maxCount ), _impl->_listAwaitingUpload.size() );
             if ( bBlocking == false )
                 SW_PROFILE_COUNT( "RT.TextureUpload.waiting", _impl->_listAwaitingUpload.size() - takeCount ); // 프레임 상한에 밀려 다음 프레임으로 넘어간 수
             if ( takeCount == 0 )
@@ -788,7 +792,8 @@ namespace sw
         }
         vector<Impl::StreamingRead> listRead;
         {
-            ScopedLock<mutex> lock{ _impl->_streamingMutex };
+            const ScopedDeferredLog deferredLog;
+            ScopedLock<mutex>       lock{ _impl->_streamingMutex };
             SW_PROFILE_COUNT( "RT.TextureStreaming.bytesInFlight", _impl->_bytesInFlight );
             for ( size_t index = 0; index < _impl->_listReading.size(); )
             {
@@ -1532,9 +1537,10 @@ namespace sw
             _impl->_pLoadingStandIn.store( nullptr, std::memory_order_release ); // 항목과 함께 사라진다
             _impl->_pMissingStandIn.store( nullptr, std::memory_order_release );
         }
+        const CacheStatsHandle&  stats = getTextureCacheStats(); // 처음 부르면 로그를 쓸 수 있다 — 잠그기 전에 받는다
         UniqueLock<shared_mutex> lock{ _impl->_mutex };
         _impl->_mapEntry.clear();
-        getTextureCacheStats().recordClear();
+        stats.recordClear();
     }
 } // namespace sw
 
@@ -1853,6 +1859,7 @@ namespace sw
 
         // 렌더 스레드 비우기와 다시 올리기는 잠금 밖에서 한다. 잠금을 쥔 채 비우면 같은 잠금을 기다리는
         // 렌더 스레드와 서로 기다릴 수 있다. 진행 중 표시를 세워 두면 그사이 acquire 는 기다리고 release 는 지우지 않는다.
+        const ScopedDeferredLog  deferredLog;
         UniqueLock<shared_mutex> lock{ _impl->_mutex };
         Texture2D*               pTexture = nullptr;
         for ( ;; )

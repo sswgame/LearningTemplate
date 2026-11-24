@@ -2,6 +2,7 @@
 
 #include "GameFramework/Runtime/Online/HTTP/BlockingHTTPClient.h"
 
+#include "Core/Log/ScopedDeferredLog.h"
 #include "Core/String/StringUtil.h"
 #include "Core/Time/MonotonicClock.h"
 
@@ -32,19 +33,22 @@ namespace sw
 
     bool BlockingHTTPClient::initialize()
     {
-        ScopedLock<mutex> lock{ _sendMutex };
+        const ScopedDeferredLog deferredLog;
+        ScopedLock<mutex>       lock{ _sendMutex };
         return _client.initialize();
     }
 
     void BlockingHTTPClient::shutdown()
     {
-        ScopedLock<mutex> lock{ _sendMutex };
+        const ScopedDeferredLog deferredLog;
+        ScopedLock<mutex>       lock{ _sendMutex };
         _client.shutdown();
     }
 
     expected<void> BlockingHTTPClient::registerHostTLS( string_view url, string_view trustFile, string_view trustOption )
     {
-        ScopedLock<mutex> lock{ _sendMutex };
+        const ScopedDeferredLog deferredLog;
+        ScopedLock<mutex>       lock{ _sendMutex };
         return _client.registerHostTLS( url, trustFile, trustOption );
     }
 
@@ -79,6 +83,7 @@ namespace sw
             response._error = string( error.view() );
             return response;
         }
+        const ScopedDeferredLog    deferredLog;
         ScopedLock<mutex>          lock{ _sendMutex };
         HTTPClient&                client    = _client.get();
         const uint64               requestID = client.submitRequest( clientRequest );

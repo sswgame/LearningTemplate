@@ -496,10 +496,9 @@ namespace sw
             return;
         }
         // 잠금은 잎 잠금이다(결정 5-3) — 쥔 채 남긴 로그는 그 잠금을 다시 잡는 싱크 · 장치 · 리스너와 맞물려 멈출 수 있다.
-        // 형식(-Wthread-safety)은 호출 그래프를 건너는 위반을 못 보므로 Debug 에서 쥔 잠금 수를 센다. 줄은 그대로 남긴다.
-        // 단언은 `SW_ENFORCE_LEAF_LOCK_LOG`(CMake 옵션, 기본 꺼짐)일 때만 건다 — 아직 고치지 못한 위반 자리(Telemetry · RESP · 메트릭 등록 …)가 남아 있어
-        // 켜면 테스트가 줄줄이 멈춘다. 자리를 다 고친 뒤 옵션을 켜고 이 주석을 지운다(NEXT 의 lockfmt 후속).
-#if defined( SW_ENFORCE_LEAF_LOCK_LOG )
+        // 형식(-Wthread-safety)은 호출 그래프를 건너는 위반을 못 보므로 검사 구성에서 쥔 잠금 수를 센다. 줄은 그대로 남긴다.
+        // 고치는 법: 로그를 잠금 밖으로 옮기거나, 잠금 안의 호출이 남기는 줄이면 가드 앞에 `ScopedDeferredLog` 을 둔다.
+#if defined( SW_DO_CHECKS )
         const bool bLoggedUnderLock = mutex::getHeldLockDepth() != 0 && t_reentryDepth.heldLockReport == 0;
         if ( bLoggedUnderLock )
         {

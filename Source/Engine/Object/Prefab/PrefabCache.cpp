@@ -229,12 +229,13 @@ namespace sw
 
     void PrefabCache::clear()
     {
+        const CacheStatsHandle&  stats = PrefabCacheInternal::getCacheStats(); // 처음 부르면 로그를 쓸 수 있다 — 잠그기 전에 받는다
         UniqueLock<shared_mutex> writeLock{ _mapCacheMutex };
         _cacheGeneration.fetch_add( 1, std::memory_order_acq_rel );
         _mapLoading.clear();
         _mapCache.clear();
         _mapLoadedBytes.clear();
-        PrefabCacheInternal::getCacheStats().recordClear();
+        stats.recordClear();
     }
 
     PrefabCache::PrefabCache()
@@ -310,6 +311,7 @@ namespace sw
         const string resolvedPath = string( assetRelativePath );
         const string cacheKey     = PrefabCache::makeCacheKey( resolvedPath );
 
+        const CacheStatsHandle&         stats = PrefabCacheInternal::getCacheStats();
         shared_ptr<PrefabLoadOperation> pOperation;
         {
             UniqueLock<shared_mutex> writeLock{ _mapCacheMutex };
@@ -318,7 +320,7 @@ namespace sw
                 pOperation = loadingIt->second.lock();
             if ( pOperation != nullptr )
             {
-                PrefabCacheInternal::getCacheStats().recordHit();
+                stats.recordHit();
                 return PrefabHandle{ std::move( pOperation ) };
             }
 
@@ -329,11 +331,11 @@ namespace sw
             {
                 pOperation->_pAsset = cacheIt->second;
                 pOperation->markReadyWithoutLoad();
-                PrefabCacheInternal::getCacheStats().recordHit();
+                stats.recordHit();
                 return PrefabHandle{ std::move( pOperation ) };
             }
             _mapLoading[cacheKey] = pOperation;
-            PrefabCacheInternal::getCacheStats().recordMiss();
+            stats.recordMiss();
         }
         AssetLoadOperation::startLoad( pOperation, start );
         return PrefabHandle{ std::move( pOperation ) };

@@ -6,6 +6,7 @@
 #include "Core/File/AsyncFileIO.h"
 #include "Core/File/FileUtil.h"
 #include "Core/Log/Logger.h"
+#include "Core/Log/ScopedDeferredLog.h"
 #include "Core/Task/TaskManager.h"
 
 #include "Engine/Asset/AssetHandle.h"
@@ -133,7 +134,8 @@ namespace sw
             return request;
         }
 
-        ScopedLock<mutex> lock{ _mutex };
+        const ScopedDeferredLog deferredLog;
+        ScopedLock<mutex>       lock{ _mutex };
 
         if ( _uniqueActiveRequest.find( pathStr ) != _uniqueActiveRequest.end() )
         {
@@ -159,7 +161,8 @@ namespace sw
         bool             bIssueRead{ false };
         StreamingRequest request{ pathStr, 0 };
         {
-            ScopedLock<mutex> lock{ _mutex };
+            const ScopedDeferredLog deferredLog;
+            ScopedLock<mutex>       lock{ _mutex };
             request._requestID = ++_nextRequestID;
 
             // **바이트를 읽는 요청에만 편승한다.** 존재 확인 태스크(`requestAsset`)는 파일을 읽지
@@ -197,7 +200,8 @@ namespace sw
             } ) );
             handle.setPriority( toTaskPriority( priority ) );
             {
-                ScopedLock<mutex> lock{ _mutex };
+                const ScopedDeferredLog deferredLog;
+                ScopedLock<mutex>       lock{ _mutex };
                 engine::getSubsystem<TaskManager>().addToStage( _taskStage, handle, "AssetStreaming" ); // 제출 전에 넣는다
             }
             handle.submit();

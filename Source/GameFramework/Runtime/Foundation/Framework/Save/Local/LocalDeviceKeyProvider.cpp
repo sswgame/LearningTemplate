@@ -11,6 +11,7 @@
 
 #if defined( SW_PLATFORM_WINDOWS )
     #include "Core/Foundation/PlatformOSHeaders.h"
+    #include "Core/Log/ScopedDeferredLog.h"
 
     #include <dpapi.h>
 #elif defined( SW_PLATFORM_LINUX ) || defined( SW_PLATFORM_ANDROID ) || defined( SW_PLATFORM_WEB )
@@ -104,8 +105,9 @@ namespace sw
         optional<Error> failure;
         AbsolutePath    setAsidePath;
         {
-            ScopedLock<mutex> lock{ _mutex };
-            expected<void>    loaded = _bLoaded == SW_TRUE ? expected<void>{} : loadOrCreateKeyLocked( setAsidePath );
+            const ScopedDeferredLog deferredLog;
+            ScopedLock<mutex>       lock{ _mutex };
+            expected<void>          loaded = _bLoaded == SW_TRUE ? expected<void>{} : loadOrCreateKeyLocked( setAsidePath );
             if ( loaded.has_value() )
                 std::memcpy( outKey, _arrKey, sizeof( _arrKey ) );
             else

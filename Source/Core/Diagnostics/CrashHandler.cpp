@@ -10,6 +10,7 @@
 #include "Core/File/FileUtil.h"
 #include "Core/Foundation/PlatformOSHeaders.h"
 #include "Core/Log/Logger.h"
+#include "Core/Log/ScopedDeferredLog.h"
 #include "Core/Process/ProcessSession.h"
 #include "Core/Process/ThreadCrashStack.h"
 #include "Core/String/StringBuilder.h"
@@ -113,7 +114,8 @@ namespace sw
 
     void CrashHandler::install()
     {
-        ScopedLock<mutex> lock{ getChainMutex() };
+        const ScopedDeferredLog deferredLog;
+        ScopedLock<mutex>       lock{ getChainMutex() };
         if ( _bInstalled == SW_TRUE )
             return;
         (void)ProcessSession::getID(); // 크래시 경로에서 만들지 않게 지금 만든다(`ProcessSession::getID` 설명)

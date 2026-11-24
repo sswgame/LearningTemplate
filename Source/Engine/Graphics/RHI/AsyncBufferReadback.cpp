@@ -3,6 +3,7 @@
 #include "Engine/Graphics/RHI/AsyncBufferReadback.h"
 
 #include "Core/Concurrency/mutex.h"
+#include "Core/Log/ScopedDeferredLog.h"
 
 #include "Engine/Graphics/RHI/IRHICommandList.h"
 #include "Engine/Graphics/RHI/IRHIDevice.h"
@@ -52,7 +53,8 @@ namespace sw
          */
         void onGPUCompletion( uint32 slot, RHIFrameCompletion result )
         {
-            ScopedLock<mutex> lock{ _mutex };
+            const ScopedDeferredLog deferredLog;
+            ScopedLock<mutex>       lock{ _mutex };
             if ( result != RHIFrameCompletion::Completed )
             {
                 _arrSlotState[slot] = SlotState::Blocked;

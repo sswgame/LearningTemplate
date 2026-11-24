@@ -42,6 +42,7 @@
 #endif
 #include "Core/Diagnostics/CrashHandler.h"
 #include "Core/Foundation/BuildInfo.h"
+#include "Core/Log/ScopedDeferredLog.h"
 
 #include "Engine/Graphics/Debug/GPUBreadcrumbs.h"
 #include "Engine/Graphics/RHI/Diagnostics/RHIMemoryTracker.h"
@@ -1635,7 +1636,8 @@ namespace sw
         if ( _windowSwapChains.getRebuildList().empty() )
             return;
         {
-            ScopedLock<mutex> queueLock{ _queueMutex };
+            const ScopedDeferredLog deferredLog;
+            ScopedLock<mutex>       queueLock{ _queueMutex };
             reportQueueResult( static_cast<int32>( vkDeviceWaitIdle( _device ) ), "rebuildPendingWindowSwapChains: vkDeviceWaitIdle" );
         }
         if ( isDeviceLost() == false )
@@ -1705,7 +1707,8 @@ namespace sw
         if ( _device == nullptr )
             return;
         {
-            ScopedLock<mutex> queueLock{ _queueMutex };
+            const ScopedDeferredLog deferredLog;
+            ScopedLock<mutex>       queueLock{ _queueMutex };
             reportQueueResult( static_cast<int32>( vkDeviceWaitIdle( _device ) ), "releaseSurface: vkDeviceWaitIdle" );
         }
         if ( isDeviceLost() == false )
@@ -1738,7 +1741,8 @@ namespace sw
         if ( bCannotRecreateSwapChain )
             return false;
         {
-            ScopedLock<mutex> queueLock{ _queueMutex };
+            const ScopedDeferredLog deferredLog;
+            ScopedLock<mutex>       queueLock{ _queueMutex };
             reportQueueResult( static_cast<int32>( vkDeviceWaitIdle( _device ) ), "recreateSwapChain: vkDeviceWaitIdle" );
         }
         // 대기에서 잃었음을 봤으면 다시 만들지 않는다 — 잃은 장치의 스왑체인 생성은 같은 손실만 다시 듣는다.
@@ -1795,7 +1799,8 @@ namespace sw
         if ( bCannotRecreateSurface )
             return false;
         {
-            ScopedLock<mutex> queueLock{ _queueMutex };
+            const ScopedDeferredLog deferredLog;
+            ScopedLock<mutex>       queueLock{ _queueMutex };
             reportQueueResult( static_cast<int32>( vkDeviceWaitIdle( _device ) ), "recreateSurfaceAndSwapChain: vkDeviceWaitIdle" );
         }
         if ( isDeviceLost() )
@@ -2069,7 +2074,8 @@ namespace sw
             // 쌓인 업로드(워커 · 프레임 밖)도 내고 함께 기다린다 — 프레임 없이 기다리는 쪽(도구 · 테스트 · 크기 바꾸기)도 그 내용을 본다.
             const UploadBatch uploadBatch = takeUploadBatch();
             {
-                ScopedLock<mutex> queueLock{ _queueMutex };
+                const ScopedDeferredLog deferredLog;
+                ScopedLock<mutex>       queueLock{ _queueMutex };
                 if ( uploadBatch._buffer != VK_NULL_HANDLE )
                 {
                     VkSubmitInfo uploadInfo{};
@@ -2474,7 +2480,8 @@ namespace sw
         // 이번 프레임 기록 중 등록된 지연 해제(enqueueGPURelease)는 기록 시리얼(`_frameFenceRing`)이 실제로 끝났다고 확인될 때까지(beginFrame) 보류된다.
         if ( _frameStreamContext != nullptr )
             recordSubmittedEventMarker( _frameStreamContext->getLastEventMarker() );
-        UniqueLock<mutex> queueLock{ _queueMutex };
+        const ScopedDeferredLog deferredLog;
+        UniqueLock<mutex>       queueLock{ _queueMutex };
         // 기록하는 사이에 장치를 잃었으면(다른 스레드의 손실 · rhi.removeDevice) 내지 않는다. 버퍼는 위에서 닫았다.
         const bool     bDeviceLost  = isDeviceLost();
         const VkResult submitResult = bDeviceLost ? VK_ERROR_DEVICE_LOST : vkQueueSubmit( _graphicsQueue, 1, &submitInfo, _listInFlightFence[getFrameSlot()] );
@@ -2666,8 +2673,9 @@ namespace sw
         submitInfo.pCommandBuffers    = bHasUpload ? arrSubmitBuffer : &listBuffer;
         recordSubmittedEventMarker( pList->getLastEventMarker() );
         {
-            ScopedLock<mutex> queueLock{ _queueMutex };
-            VkResult          queueResult = isDeviceLost() ? VK_ERROR_DEVICE_LOST : vkQueueSubmit( _graphicsQueue, 1, &submitInfo, VK_NULL_HANDLE );
+            const ScopedDeferredLog deferredLog;
+            ScopedLock<mutex>       queueLock{ _queueMutex };
+            VkResult                queueResult = isDeviceLost() ? VK_ERROR_DEVICE_LOST : vkQueueSubmit( _graphicsQueue, 1, &submitInfo, VK_NULL_HANDLE );
             if ( queueResult == VK_SUCCESS )
                 queueResult = vkQueueWaitIdle( _graphicsQueue );
             reportQueueResult( static_cast<int32>( queueResult ), "executeCommandListImmediate" );
@@ -2734,8 +2742,9 @@ namespace sw
         flushInfo.signalSemaphoreCount = signal != VK_NULL_HANDLE ? 1u : 0u;
         flushInfo.pSignalSemaphores    = &signal;
         {
-            ScopedLock<mutex> queueLock{ _queueMutex };
-            const VkResult    flushResult = isDeviceLost() ? VK_ERROR_DEVICE_LOST : vkQueueSubmit( _graphicsQueue, 1, &flushInfo, VK_NULL_HANDLE );
+            const ScopedDeferredLog deferredLog;
+            ScopedLock<mutex>       queueLock{ _queueMutex };
+            const VkResult          flushResult = isDeviceLost() ? VK_ERROR_DEVICE_LOST : vkQueueSubmit( _graphicsQueue, 1, &flushInfo, VK_NULL_HANDLE );
             reportQueueResult( static_cast<int32>( flushResult ), "vkQueueSubmit (pending graphics)" );
         }
         _listPendingAcquireWait.clear();
@@ -2797,8 +2806,9 @@ namespace sw
     {
         if ( pData == nullptr || sizeBytes == 0 || _uploadCommandPool == VK_NULL_HANDLE )
             return false;
-        constexpr uint64  kCopyAlignment = 4;
-        ScopedLock<mutex> lock{ _uploadMutex };
+        constexpr uint64        kCopyAlignment = 4;
+        const ScopedDeferredLog deferredLog;
+        ScopedLock<mutex>       lock{ _uploadMutex };
         if ( _openUploadBuffer == VK_NULL_HANDLE )
         {
             VkCommandBufferAllocateInfo allocInfo{};
@@ -2866,8 +2876,9 @@ namespace sw
 
     VulkanRHIDevice::UploadBatch VulkanRHIDevice::takeUploadBatch()
     {
-        UploadBatch       batch;
-        ScopedLock<mutex> lock{ _uploadMutex };
+        UploadBatch             batch;
+        const ScopedDeferredLog deferredLog;
+        ScopedLock<mutex>       lock{ _uploadMutex };
         if ( _openUploadBuffer == VK_NULL_HANDLE )
             return batch;
         // 이 버퍼의 복사가 읽는 블록은 모두 GPU 가 끝날 때까지 산다 — 열린 블록도 함께 넘긴다(남은 자리는 버린다; 다음 버퍼는 새 블록을 연다).
@@ -3026,8 +3037,9 @@ namespace sw
         submitInfo.pSignalSemaphores    = &computeDone;
         recordSubmittedEventMarker( pList->getLastEventMarker() );
         {
-            ScopedLock<mutex> queueLock{ _queueMutex };
-            const VkResult    submitResult = isDeviceLost() ? VK_ERROR_DEVICE_LOST : vkQueueSubmit( _asyncComputeQueue, 1, &submitInfo, VK_NULL_HANDLE );
+            const ScopedDeferredLog deferredLog;
+            ScopedLock<mutex>       queueLock{ _queueMutex };
+            const VkResult          submitResult = isDeviceLost() ? VK_ERROR_DEVICE_LOST : vkQueueSubmit( _asyncComputeQueue, 1, &submitInfo, VK_NULL_HANDLE );
             reportQueueResult( static_cast<int32>( submitResult ), "submitAsyncCompute: vkQueueSubmit" );
         }
         _listAsyncSignal.push_back( computeDone );
@@ -3193,7 +3205,8 @@ namespace sw
         if ( submitResult != RHISubmitResult::Accepted || outSpan.isSolo() == false )
             return submitResult;
         // 할당기가 단독 구간을 내줬다면 앞선 단독 구간은 이미 돌아왔다 — 남은 버퍼(아직 회수가 지우지 않은 것)를 GPU 가 더 쓰지 않는다.
-        ScopedLock<mutex> soloLock{ ring._soloMutex };
+        const ScopedDeferredLog deferredLog;
+        ScopedLock<mutex>       soloLock{ ring._soloMutex };
         destroyMappedStagingBuffer( ring._soloBuffer, ring._soloMemory );
         if ( createMappedStagingBuffer( outSpan.getSizeBytes(), usageFlags, "single transfer", ring._soloBuffer, ring._soloMemory ) )
             return RHISubmitResult::Accepted;
@@ -3722,6 +3735,7 @@ namespace sw
 
     void VulkanRHIDevice::flushBindlessRingSlot( uint32 slot )
     {
+        const ScopedDeferredLog  deferredLog;
         UniqueLock<shared_mutex> registryLock{ _bindlessMutex };
         _bindlessRingMirror.flushSlot( slot, [this, slot]( RHIDescriptorIndex index )
         {

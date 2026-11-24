@@ -33,7 +33,9 @@ namespace sw
         { return _bDone; } ) == false )
         {
             const int64 elapsedSeconds = ( MonotonicClock::nowNanoseconds() - _startNanos ) / constant::time::kNanosecondsPerSecond;
+            lock.unlock(); // 잎 잠금 — 로그는 놓고 쓴다
             SW_LOG_INFO_ID( "ProgressReport.StillWorking", "%# still running after %# s", _what.c_str(), elapsedSeconds );
+            lock.lock();
         }
     }
 } // namespace sw

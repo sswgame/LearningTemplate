@@ -4,6 +4,7 @@
 
 #include "Core/Concurrency/atomic.h"
 #include "Core/Foundation/Constants.h"
+#include "Core/Log/ScopedDeferredLog.h"
 #include "Core/Network/Security/INetSecurityProvider.h"
 #include "Core/Serialization/ByteStream.h"
 #include "Core/String/StringBuilder.h"
@@ -243,9 +244,10 @@ namespace sw
         shared_ptr<Connection> connection = findConnection( handle );
         if ( connection == nullptr )
             return;
-        const AfterScope  flushLog{ [this, &connection]()
+        const AfterScope        flushLog{ [this, &connection]()
         { flushDeferredLog( *connection ); } }; // 잠금보다 먼저 선언 — 잠금을 놓은 뒤에 지연 로그를 쓴다
-        ScopedLock<mutex> lock{ connection->_mutex };
+        const ScopedDeferredLog deferredLog;
+        ScopedLock<mutex>       lock{ connection->_mutex };
         if ( connection->_errorReason != StreamCloseReason::None )
             return; // 이미 끊는 중이므로 남은 바이트는 버린다.
         if ( acceptIncomingLocked( *connection, pData, size ) == false )
@@ -407,9 +409,10 @@ namespace sw
         shared_ptr<Connection> connection = findConnection( handle );
         if ( connection == nullptr || _pTransport.get() == nullptr )
             return StreamSendResult::Closed;
-        const AfterScope  flushLog{ [this, &connection]()
+        const AfterScope        flushLog{ [this, &connection]()
         { flushDeferredLog( *connection ); } }; // 잠금보다 먼저 선언 — 잠금을 놓은 뒤에 지연 로그를 쓴다
-        ScopedLock<mutex> lock{ connection->_mutex };
+        const ScopedDeferredLog deferredLog;
+        ScopedLock<mutex>       lock{ connection->_mutex };
         connection->_frameScratch.clear();
         // 압축한 뒤 (TLS 면) 암호화하는 순서다. 줄어들지 않으면 원문을 보낸다. 상한은 원문 크기로 판단한다(받는 쪽도 푼 크기로 판단한다).
         const uint8* pFrameBody    = pBody;

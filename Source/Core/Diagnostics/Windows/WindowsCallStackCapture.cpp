@@ -12,6 +12,7 @@
 
 #if defined( SW_PLATFORM_WINDOWS )
     #include "Core/Foundation/PlatformOSHeaders.h"
+    #include "Core/Log/ScopedDeferredLog.h"
 
 namespace sw
 {
@@ -70,7 +71,8 @@ namespace sw
         if ( s_initRefCount.fetch_add( 1, std::memory_order_acq_rel ) != 0 )
             return;
 
-        ScopedLock<mutex> lock{ s_symbolMutex };
+        const ScopedDeferredLog deferredLog;
+        ScopedLock<mutex>       lock{ s_symbolMutex };
         SymSetOptions( SYMOPT_UNDNAME | SYMOPT_DEFERRED_LOADS | SYMOPT_LOAD_LINES );
         HANDLE process = GetCurrentProcess();
         SymInitialize( process, nullptr, FALSE );

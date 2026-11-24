@@ -3,6 +3,7 @@
 #include "Engine/Graphics/RHI/Diagnostics/RHIMemoryTracker.h"
 
 #include "Core/Algorithm/VectorUtil.h"
+#include "Core/Log/ScopedDeferredLog.h"
 
 #include "Engine/Graphics/RHI/RHIDescriptors.h"
 #include "Engine/Graphics/RHI/RHIFormatInfo.h"
@@ -135,6 +136,7 @@ namespace sw
         if ( bInvalidKey )
             return;
 
+        const ScopedDeferredLog           deferredLog;
         ScopedLock<mutex>                 lock{ _mutex };
         unordered_map<uint64, LiveEntry>& mapIDToEntry = _arrMapIDToEntry[spaceIndex];
         const auto                        entryIt      = mapIDToEntry.find( key._id );

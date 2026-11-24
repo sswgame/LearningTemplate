@@ -7,6 +7,7 @@
 #include "Engine/Object/GameObject/Registry/CameraRegistry.h"
 
 #include "Core/Foundation/StdHeaders.h"
+#include "Core/Log/ScopedDeferredLog.h"
 #include "Core/Math/MathUtil.h"
 
 #include "Engine/Object/Component/CameraComponent.h"
@@ -16,7 +17,8 @@ namespace sw
 {
     Subscription CameraRegistry::add( CameraComponent* pCamera )
     {
-        ScopedLock<mutex> lock{ _mutex };
+        const ScopedDeferredLog deferredLog;
+        ScopedLock<mutex>       lock{ _mutex };
         // nullptr · 이미 등록된 카메라는 목록이 거절한다(빈 구독) — 먼저 받은 구독이 쥔다.
         Subscription subscription = _registeredCamera.addSubscribed( pCamera, "Camera" );
         if ( subscription.isActive() )

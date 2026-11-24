@@ -3,6 +3,7 @@
 #include "Engine/Graphics/View/ScreenshotRequestQueue.h"
 
 #include "Core/Log/Logger.h"
+#include "Core/Log/ScopedDeferredLog.h"
 #include "Core/Math/MathUtil.h"
 
 #include "Engine/Foundation/EngineSubsystemRegistration.h"
@@ -11,6 +12,7 @@ namespace sw
 {
     uint32 ScreenshotRequestQueue::put( const AbsolutePath& filePath, RHITextureHandle sourceTexture, RHIFormat sourceFormat )
     {
+        const ScopedDeferredLog deferredLog;
         const ScopedLock<mutex> lock{ _mutex };
         return enqueue( ScreenshotRequest{ filePath, filePath.str(), sourceTexture, sourceFormat, 0, ScreenshotOutput::File } );
     }
@@ -22,6 +24,7 @@ namespace sw
             SW_LOG_ERROR_ID( "ScreenshotRequestQueue.EmptyByteRequestName", "A screenshot byte request needs a name - nothing was requested" );
             return 0;
         }
+        const ScopedDeferredLog deferredLog;
         const ScopedLock<mutex> lock{ _mutex };
         return enqueue( ScreenshotRequest{ {}, string{ requestName }, sourceTexture, sourceFormat, 0, ScreenshotOutput::PNGBytes } );
     }

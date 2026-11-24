@@ -172,7 +172,9 @@ namespace sw
         }
 
         const string                      key      = MeshCacheInternal::makeKey( path );
-        MeshCacheInternal::InFlightTable& inFlight = MeshCacheInternal::getState()._inFlight;
+        auto&                             state    = MeshCacheInternal::getState();
+        MeshCacheInternal::InFlightTable& inFlight = state._inFlight;
+        const CacheStatsHandle&           stats    = MeshCacheInternal::getStats(); // 처음 부르면 로그를 쓸 수 있다 — 잠그기 전에 받는다
         shared_ptr<MeshLoadOperation>     pOperation;
         {
             ScopedLock<mutex> lock{ inFlight._mutex };
@@ -183,23 +185,23 @@ namespace sw
             {
                 if ( cpuAccess == MeshCPUAccess::Keep )
                     pOperation->_cpuAccess.store( MeshCPUAccess::Keep, std::memory_order_release ); // 로드가 표에서 뺄 때 이 값을 본다
-                MeshCacheInternal::getStats().recordHit();
+                stats.recordHit();
                 return MeshHandle{ std::move( pOperation ) };
             }
 
             // 진행 중 표를 잡은 채 캐시를 본다 — 로드는 캐시에 넣은 뒤 표에서 빼므로, 여기서 둘 다 없으면 정말 아무도 읽지 않았다.
             // 이미 CPU 정점을 놓은 메시에 `Keep` 요청이 오면 파일을 다시 읽는 로드로 간다(디스크를 여기서 기다리지 않는다).
             pOperation            = sw::make_shared<MeshLoadOperation>( path, cpuAccess );
-            shared_ptr<Mesh> live = MeshCacheInternal::getState()._sharedTable.findLive( key );
+            shared_ptr<Mesh> live = state._sharedTable.findLive( key );
             if ( live != nullptr && ( cpuAccess == MeshCPUAccess::ReleaseAfterUpload || live->tryRetainCPUVertices() ) )
             {
                 pOperation->_pMesh = std::move( live );
                 pOperation->markReadyWithoutLoad();
-                MeshCacheInternal::getStats().recordHit();
+                stats.recordHit();
                 return MeshHandle{ std::move( pOperation ) };
             }
             inFlight._mapKeyToOperation[key] = pOperation;
-            MeshCacheInternal::getStats().recordMiss();
+            stats.recordMiss();
         }
         AssetLoadOperation::startLoad( pOperation, start );
         return MeshHandle{ std::move( pOperation ) };
