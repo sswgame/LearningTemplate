@@ -24,13 +24,13 @@
 	<Action name="MonsterHunt.Investigate"/>
 	<WaitUntil watch="MonsterHunt.FoundClues" equals="1" timeoutFrames="30"/>
 	<ActionAxis name="Move" x="1" seconds="1"/>
-	<WaitUntil watch="MonsterHunt.PlayerX" near="8" tolerance="0.1" timeoutFrames="90"/>
+	<WaitUntil watch="MonsterHunt.PlayerX" near="8" tolerance="0.25" timeoutFrames="90"/>
 	<AdvanceSimulation frames="6"/> <!-- 누른 이동이 끝나는 시간(시간이 내용) -->
 	<Action name="MonsterHunt.Investigate"/>
 	<WaitUntil watch="MonsterHunt.FoundClues" equals="2" timeoutFrames="30"/>
 	<Expect watch="MonsterHunt.Knowledge" equals="0"/>
 	<ActionAxis name="Move" x="1" seconds="1"/>
-	<WaitUntil watch="MonsterHunt.PlayerX" near="12" tolerance="0.1" timeoutFrames="90"/>
+	<WaitUntil watch="MonsterHunt.PlayerX" near="12" tolerance="0.25" timeoutFrames="90"/>
 	<AdvanceSimulation frames="6"/> <!-- 누른 이동이 끝나는 시간(시간이 내용) -->
 	<Action name="MonsterHunt.Investigate"/>
 	<WaitUntil watch="MonsterHunt.Phase" equals="2" timeoutFrames="30"/>

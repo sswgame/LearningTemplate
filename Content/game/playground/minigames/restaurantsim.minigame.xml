@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="utf-8"?>
+<?asset guid="ecae4f66396c4aceab548d94a5ef47b8"?>
+<!--
+  식당 경영 미니게임(항구 식당 — 장을 보고 가격을 정해 이틀 동안 목표 이익을 남긴다) — RestaurantSim 키트. 메뉴 · 손님(data/restaurant.xml)과 레시피(data/recipes.xml)를 게임 기능 RestaurantSim 이 미니게임 범위에 건다.
+  맵의 Director 오브젝트에 RestaurantGameModeComponent → RestaurantCounterComponent(GF_Client_RestaurantSim) → HUD 컨트롤러가 그 순서로 붙는다. 장(restaurantsim/data/market.shops.xml)은 씬 참조다.
+  마지막 날의 결산 뒤 목표에 닿았는지로 win · lose 를 정하고 번 이익을 결과 값 money 로 내고 나온다.
+  입력은 걷기 공통 레이어(줄 고르기)와 Restaurant 레이어(restaurantsim/data/restaurant.input.xml)만 켠다. 안에서 저장한다(영업 중의 손님 · 주문까지 실린다).
+  시나리오 automation/restaurantsim_slice.scenario.xml 이 실행 전역 변수 gv_firstMinigame 로 들어간다.
+-->
+<Minigame name="restaurantsim" map="game/playground/restaurantsim/maps/diner.scene.xml" entry="SceneSwitch" portalSlot="27" save="Allowed" features="RestaurantSim" inputContexts="Movement,Restaurant" catalogs="RestaurantCatalog,RecipeCatalog"/>

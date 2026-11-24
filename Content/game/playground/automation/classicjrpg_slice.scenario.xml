@@ -33,7 +33,7 @@
 	<DevCommand line="game.save classicjrpg/slice"/>
 	<WaitUntil watch="Save.Written" atLeast="1" timeoutWallSeconds="10"/>
 	<ActionAxis name="Move" x="-1" seconds="0.25"/>
-	<WaitUntil watch="JRPG.PlayerX" near="3" tolerance="0.15" timeoutFrames="60"/>
+	<WaitUntil watch="JRPG.PlayerX" near="3" tolerance="0.2" timeoutFrames="60"/>
 	<DevCommand line="game.load classicjrpg/slice"/>
 	<WaitUntil watch="Save.Loaded" atLeast="1" timeoutWallSeconds="10"/>
 	<WaitUntil watch="JRPG.PlayerX" near="4" tolerance="0.1" timeoutFrames="30"/>

@@ -38,26 +38,46 @@ namespace sw
     class Wallet;
     class WorldClock;
 
-    /** @brief 식당 규칙의 수치입니다. 시간 단위는 게임 분입니다. */
+    /** @brief 식당 규칙의 수치입니다. 시간 단위는 게임 분입니다. 디렉터가 씬 데이터로 정합니다(`RestaurantGameModeComponent::_settings`). */
+    REFLECT()
     struct RestaurantSettings
     {
+        REFLECT_BODY();
+
+        PROPERTY( DefaultName )
         hashed_string _reputationFaction{ "restaurant.guests" }; ///< 빌린 평판의 세력 id 이다(키트 접두어를 붙인 `<키트>.<이름>` 형식)
-        float32       _serveMinutes{ 2.0f };                     ///< 서버가 요리 하나를 나르는 시간(분)
-        float32       _checkoutMinutes{ 1.0f };                  ///< 계산 하나에 걸리는 시간(분)
-        float32       _priceElasticity{ 1.0f };                  ///< 가격 / 기본 가격이 1 오를 때 줄어드는 수요 비율
-        float32       _preferredWeight{ 3.0f };                  ///< 좋아하는 분류의 요리를 고르는 배율이다(0 이면 그 분류는 시키지 않는다)
-        float32       _reputationArrivalScale{ 0.001f };         ///< 평판 1 당 손님 배율 증가량
-        float32       _minCookTimeScale{ 0.3f };                 ///< 숙련도가 올라도 조리 시간이 레시피 시간의 이 비율 아래로는 줄지 않는다
-        float32       _cookSpeedPerLevel{ 0.1f };                ///< 요리사 레벨 1 당 조리 시간 감소 비율이다(최소 30 %)
-        float32       _marketVolatility{ 0.2f };                 ///< 날마다 시장의 사는 값이 이만큼씩 위아래로 흔들린다
-        float32       _qualityWeight{ 0.6f };                    ///< 만족도 = 품질 비율 x 이 값 + (1 - 기다림 비율) x (1 - 이 값)
-        int32         _reputationPerServe{ 10 };                 ///< 만족도가 1 이면 이 값만큼 오르고, 0 이면 이 값만큼 내린다
-        int32         _walkoutPenalty{ 15 };                     ///< 기다리다 떠나면 평판에서 이만큼 뺀다
-        int32         _seatCount{ 4 };
-        int64         _cookXP{ 10 };
-        int64         _serveXP{ 5 };
-        int64         _checkoutXP{ 5 };
-        uint32        _randomSeed{ 5150u }; ///< 손님 성향, 요리 고르기, 시세에 쓰는 난수 시드
+        PROPERTY( Min = 0.0 )
+        float32 _serveMinutes{ 2.0f }; ///< 서버가 요리 하나를 나르는 시간(분)
+        PROPERTY( Min = 0.0 )
+        float32 _checkoutMinutes{ 1.0f }; ///< 계산 하나에 걸리는 시간(분)
+        PROPERTY( Min = 0.0 )
+        float32 _priceElasticity{ 1.0f }; ///< 가격 / 기본 가격이 1 오를 때 줄어드는 수요 비율
+        PROPERTY( Min = 0.0 )
+        float32 _preferredWeight{ 3.0f }; ///< 좋아하는 분류의 요리를 고르는 배율이다(0 이면 그 분류는 시키지 않는다)
+        PROPERTY()
+        float32 _reputationArrivalScale{ 0.001f }; ///< 평판 1 당 손님 배율 증가량
+        PROPERTY( Min = 0.0, Max = 1.0, Units = ratio )
+        float32 _minCookTimeScale{ 0.3f }; ///< 숙련도가 올라도 조리 시간이 레시피 시간의 이 비율 아래로는 줄지 않는다
+        PROPERTY( Min = 0.0 )
+        float32 _cookSpeedPerLevel{ 0.1f }; ///< 요리사 레벨 1 당 조리 시간 감소 비율이다(최소 30 %)
+        PROPERTY( Min = 0.0 )
+        float32 _marketVolatility{ 0.2f }; ///< 날마다 시장의 사는 값이 이만큼씩 위아래로 흔들린다
+        PROPERTY( Min = 0.0, Max = 1.0, Units = ratio )
+        float32 _qualityWeight{ 0.6f }; ///< 만족도 = 품질 비율 x 이 값 + (1 - 기다림 비율) x (1 - 이 값)
+        PROPERTY( Min = 0 )
+        int32 _reputationPerServe{ 10 }; ///< 만족도가 1 이면 이 값만큼 오르고, 0 이면 이 값만큼 내린다
+        PROPERTY( Min = 0 )
+        int32 _walkoutPenalty{ 15 }; ///< 기다리다 떠나면 평판에서 이만큼 뺀다
+        PROPERTY( Min = 1 )
+        int32 _seatCount{ 4 };
+        PROPERTY( Min = 0 )
+        int64 _cookXP{ 10 };
+        PROPERTY( Min = 0 )
+        int64 _serveXP{ 5 };
+        PROPERTY( Min = 0 )
+        int64 _checkoutXP{ 5 };
+        PROPERTY( Min = 1 )
+        uint32 _randomSeed{ 5150u }; ///< 손님 성향, 요리 고르기, 시세에 쓰는 난수 시드
     };
 } // namespace sw
 

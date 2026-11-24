@@ -1,8 +1,9 @@
 <?xml version="1.0" encoding="utf-8"?>
 <?asset guid="b7999fb75704436296adea6b0e37587d"?>
 <!--
-  장르 키트 시연 — 식당 하루 영업의 기반 레시피(maps/kit_restaurantsim). 스테이션 없이 어디서나, 면 하나로 3 분에 만든다.
+  항구 식당 미니게임의 기반 레시피(restaurantsim/maps/diner). 스테이션 없이 어디서나 만든다 — 국수 하나로 3 분, 생선 하나로 4 분.
 -->
 <RecipeCatalog>
-	<Recipe id="ramen" time="3"><In item="noodle"/><Out item="ramen"/></Recipe>
+	<Recipe id="broth_bowl" time="3"><In item="broth_noodle"/><Out item="broth_bowl"/></Recipe>
+	<Recipe id="char_fish" time="4"><In item="harbor_fish"/><Out item="char_fish"/></Recipe>
 </RecipeCatalog>

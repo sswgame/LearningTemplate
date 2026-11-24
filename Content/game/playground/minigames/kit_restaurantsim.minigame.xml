@@ -1,7 +1,0 @@
-<?xml version="1.0" encoding="utf-8"?>
-<?asset guid="ecae4f66396c4aceab548d94a5ef47b8"?>
-<!--
-  장르 키트 시연 미니게임 — RestaurantSim 키트. 맵의 디렉터(GameModeComponent 파생)가 읽는 메뉴(data/restaurant.xml)와 레시피(data/recipes.xml)를 게임 기능 RestaurantSim 가 미니게임 범위에 건다.
-  시나리오 automation/kit_restaurantsim.scenario.xml 이 실행 전역 변수 gv_firstMinigame 로 들어간다.
--->
-<Minigame name="kit_restaurantsim" map="game/playground/maps/kit_restaurantsim.scene.xml" entry="SceneSwitch" features="RestaurantSim" catalogs="RestaurantCatalog,RecipeCatalog"/>

@@ -10,12 +10,17 @@
 		<entry source="Bone Axe" text="뼈 도끼" />
 		<entry source="Bone Shield" text="뼈 방패" />
 		<entry source="Bramble Sprite" text="가시덤불 정령" />
+		<entry source="Broth Bowl" text="맑은국수" />
+		<entry source="Buy (J)   Price up (K)   Price down (L)   Open (Enter)" text="사기 (J)   가격 올리기 (K)   가격 내리기 (L)   열기 (Enter)" />
+		<entry source="Buy more while open (J)" text="영업 중에도 살 수 있습니다 (J)" />
 		<entry source="Caught" text="포획" />
+		<entry source="Charred Fish" text="구운 생선" />
 		<entry source="Choose who steps in (L)" text="나설 몬스터를 고르세요 (L)" />
 		<entry source="Clues" text="단서" />
 		<entry source="Combat Helmet" text="전투 헬멧" />
 		<entry source="CutA" text="컷 A" />
 		<entry source="CutB" text="컷 B" />
+		<entry source="Day" text="날" />
 		<entry source="Dusk Moth" text="땅거미 나방" />
 		<entry source="Fast (J)   Strong (K)   Dodge (Shift)   Sign (Q)   Oil (1)   Potion (2)" text="빠르게 (J)   강하게 (K)   회피 (Shift)   표식 (Q)   오일 (1)   물약 (2)" />
 		<entry source="Fatigues" text="전투복" />
@@ -32,6 +37,7 @@
 		<entry source="HP" text="체력" />
 		<entry source="Heraldic Cape" text="문장 망토" />
 		<entry source="Hollow Stag" text="텅 빈 수사슴" />
+		<entry source="Hour" text="시각" />
 		<entry source="Knight Helmet" text="기사 투구" />
 		<entry source="Knight Helmet (Dyeable)" text="기사 투구(염색 가능)" />
 		<entry source="Knight Helmet (Merged)" text="기사 투구(병합)" />
@@ -46,10 +52,13 @@
 		<entry source="Monster" text="괴물" />
 		<entry source="Move" text="기술" />
 		<entry source="Movement on the ridge. Stay low." text="능선에 움직임이 있다. 몸을 낮춰." />
+		<entry source="Next day (Enter)" text="다음 날 (Enter)" />
 		<entry source="Notched Blade" text="이 빠진 칼" />
 		<entry source="Nudge" text="툭 치기" />
 		<entry source="Oil" text="오일" />
 		<entry source="Pistol" text="권총" />
+		<entry source="Price" text="가격" />
+		<entry source="Profit" text="이익" />
 		<entry source="Pump Shotgun" text="펌프 산탄총" />
 		<entry source="Recon Boots" text="정찰 부츠" />
 		<entry source="Recon Helmet" text="정찰 헬멧" />
@@ -65,17 +74,23 @@
 		<entry source="Rusted Helm" text="녹슨 투구" />
 		<entry source="Scout" text="정찰병" />
 		<entry source="Search the marsh for clues" text="늪지에서 단서를 찾으세요" />
+		<entry source="Seated" text="착석" />
+		<entry source="Served" text="계산" />
 		<entry source="Something is here (E)" text="무언가 있습니다 (E)" />
 		<entry source="Spark" text="불씨" />
 		<entry source="Splash Jab" text="물보라 찌르기" />
 		<entry source="Stamina" text="기력" />
+		<entry source="Stock" text="재고" />
 		<entry source="Take the offer (J)   Ask for more (K)" text="제안 받기 (J)   더 부르기 (K)" />
 		<entry source="Target" text="대상" />
 		<entry source="Tattered Cape" text="해진 망토" />
 		<entry source="The beast fears the right oil" text="괴물은 맞는 오일을 두려워합니다" />
+		<entry source="The books do not balance" text="장부가 맞지 않습니다" />
 		<entry source="The collection is complete" text="수집을 마쳤습니다" />
+		<entry source="The day is done" text="하루가 끝났습니다" />
 		<entry source="The ford is gone after the storm; take the long road past the mill and wait for the bell."
 		       text="폭풍 뒤로 여울이 사라졌습니다. 방앗간을 지나는 먼 길로 가서 종소리를 기다리세요." />
+		<entry source="The harbor loves this place" text="항구가 이 식당을 사랑합니다" />
 		<entry source="The hunter has fallen" text="사냥꾼이 쓰러졌습니다" />
 		<entry source="The marsh is quiet again" text="늪지가 다시 조용해졌습니다" />
 		<entry source="The party has fainted" text="파티가 모두 쓰러졌습니다" />

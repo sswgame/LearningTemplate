@@ -41,5 +41,10 @@
 				<item>Species</item>
 			</elements>
 		</rule>
+		<rule files="restaurant.xml" attribute="name" kind="text" context="Dish name">
+			<elements>
+				<item>Dish</item>
+			</elements>
+		</rule>
 	</assetRules>
 </LocalizationProject>

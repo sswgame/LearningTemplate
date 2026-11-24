@@ -1,0 +1,27 @@
+<?xml version="1.0" encoding="utf-8"?>
+<?asset guid="6daddf826b0f060c7432f01d06267673"?>
+<!--
+  항구 식당 미니게임(minigames/restaurantsim)의 입력 차이 — Playground 공통 묶음(data/gamesettings.xml 의 <inputMap> 줄) 위에 얹힌다. 게임 코드는 키를 묻지 않고 액션 이름만 묻는다. 줄 고르기는 공통 `Move` 축이다.
+  레이어 Restaurant 는 꺼져 있고 미니게임의 inputContexts 가 들어가 있는 동안만 켠다 — 허브 · 다른 미니게임의 같은 키와 겹치지 않는다.
+-->
+<InputMap>
+	<layers>
+		<layer name="Restaurant" enabled="0" blockLower="0"/>
+	</layers>
+	<action name="Restaurant.Buy" layer="Restaurant" trigger="Pressed">
+		<bind source="Key" code="J"/>
+		<bind source="Gamepad" code="X"/>
+	</action>
+	<action name="Restaurant.PriceUp" layer="Restaurant" trigger="Pressed">
+		<bind source="Key" code="K"/>
+		<bind source="Gamepad" code="Y"/>
+	</action>
+	<action name="Restaurant.PriceDown" layer="Restaurant" trigger="Pressed">
+		<bind source="Key" code="L"/>
+		<bind source="Gamepad" code="B"/>
+	</action>
+	<action name="Restaurant.Open" layer="Restaurant" trigger="Pressed">
+		<bind source="Key" code="Enter"/>
+		<bind source="Gamepad" code="A"/>
+	</action>
+</InputMap>

@@ -5,6 +5,7 @@
 			<origins>
 				<item>game/playground/classicjrpg/ui/hud.ui.xml</item>
 				<item>game/playground/monstercollector/ui/hud.ui.xml</item>
+				<item>game/playground/restaurantsim/ui/hud.ui.xml</item>
 				<item>game/playground/shooter3d/ui/hud.ui.xml</item>
 			</origins>
 		</entry>
@@ -58,9 +59,29 @@
 				<item>game/playground/data/jrpg.xml</item>
 			</origins>
 		</entry>
+		<entry key="Broth Bowl" source="Broth Bowl" context="Dish name">
+			<origins>
+				<item>game/playground/data/restaurant.xml</item>
+			</origins>
+		</entry>
+		<entry key="Buy (J)   Price up (K)   Price down (L)   Open (Enter)" source="Buy (J)   Price up (K)   Price down (L)   Open (Enter)" context="TextWidget._text">
+			<origins>
+				<item>game/playground/restaurantsim/ui/hud.ui.xml</item>
+			</origins>
+		</entry>
+		<entry key="Buy more while open (J)" source="Buy more while open (J)" context="TextWidget._text">
+			<origins>
+				<item>game/playground/restaurantsim/ui/hud.ui.xml</item>
+			</origins>
+		</entry>
 		<entry key="Caught" source="Caught" context="TextWidget._text">
 			<origins>
 				<item>game/playground/monstercollector/ui/hud.ui.xml</item>
+			</origins>
+		</entry>
+		<entry key="Charred Fish" source="Charred Fish" context="Dish name">
+			<origins>
+				<item>game/playground/data/restaurant.xml</item>
 			</origins>
 		</entry>
 		<entry key="Choose who steps in (L)" source="Choose who steps in (L)" context="TextWidget._text">
@@ -81,6 +102,11 @@
 		<entry key="CutB" source="CutB" context="SequenceBinding._name">
 			<origins>
 				<item>game/playground/data/cinematic.seq.xml</item>
+			</origins>
+		</entry>
+		<entry key="Day" source="Day" context="TextWidget._text">
+			<origins>
+				<item>game/playground/restaurantsim/ui/hud.ui.xml</item>
 			</origins>
 		</entry>
 		<entry key="Dusk Moth" source="Dusk Moth" context="JRPG name">
@@ -136,6 +162,7 @@
 		<entry key="Gold" source="Gold" context="TextWidget._text">
 			<origins>
 				<item>game/playground/classicjrpg/ui/hud.ui.xml</item>
+				<item>game/playground/restaurantsim/ui/hud.ui.xml</item>
 			</origins>
 		</entry>
 		<entry key="HP" source="HP" context="TextWidget._text">
@@ -153,6 +180,11 @@
 		<entry key="Hollow Stag" source="Hollow Stag" context="JRPG name">
 			<origins>
 				<item>game/playground/data/jrpg.xml</item>
+			</origins>
+		</entry>
+		<entry key="Hour" source="Hour" context="TextWidget._text">
+			<origins>
+				<item>game/playground/restaurantsim/ui/hud.ui.xml</item>
 			</origins>
 		</entry>
 		<entry key="Knight Helmet" source="Knight Helmet" context="Item name">
@@ -215,6 +247,11 @@
 				<item>game/playground/monstercollector/ui/hud.ui.xml</item>
 			</origins>
 		</entry>
+		<entry key="Next day (Enter)" source="Next day (Enter)" context="TextWidget._text">
+			<origins>
+				<item>game/playground/restaurantsim/ui/hud.ui.xml</item>
+			</origins>
+		</entry>
 		<entry key="Notched Blade" source="Notched Blade" context="Item name">
 			<origins>
 				<item>common/data/items.xml</item>
@@ -240,6 +277,16 @@
 		       context="TutorialHintTriggerComponent._text">
 			<origins>
 				<item>game/playground/harvestvalley/maps/farm.scene.xml</item>
+			</origins>
+		</entry>
+		<entry key="Price" source="Price" context="TextWidget._text">
+			<origins>
+				<item>game/playground/restaurantsim/ui/hud.ui.xml</item>
+			</origins>
+		</entry>
+		<entry key="Profit" source="Profit" context="TextWidget._text">
+			<origins>
+				<item>game/playground/restaurantsim/ui/hud.ui.xml</item>
 			</origins>
 		</entry>
 		<entry key="Pump Shotgun" source="Pump Shotgun" context="Weapon name">
@@ -292,6 +339,16 @@
 				<item>game/playground/monsterhuntrpg/ui/hud.ui.xml</item>
 			</origins>
 		</entry>
+		<entry key="Seated" source="Seated" context="TextWidget._text">
+			<origins>
+				<item>game/playground/restaurantsim/ui/hud.ui.xml</item>
+			</origins>
+		</entry>
+		<entry key="Served" source="Served" context="TextWidget._text">
+			<origins>
+				<item>game/playground/restaurantsim/ui/hud.ui.xml</item>
+			</origins>
+		</entry>
 		<entry key="Something is here (E)" source="Something is here (E)" context="TextWidget._text">
 			<origins>
 				<item>game/playground/monsterhuntrpg/ui/hud.ui.xml</item>
@@ -311,6 +368,11 @@
 			<origins>
 				<item>game/playground/monsterhuntrpg/ui/hud.ui.xml</item>
 				<item>game/playground/wildwest/ui/hud.ui.xml</item>
+			</origins>
+		</entry>
+		<entry key="Stock" source="Stock" context="TextWidget._text">
+			<origins>
+				<item>game/playground/restaurantsim/ui/hud.ui.xml</item>
 			</origins>
 		</entry>
 		<entry key="Subtitle.Guide" source="Guide" context="Subtitle speaker (audio event SubtitleGuideLine)">
@@ -360,9 +422,24 @@
 				<item>game/playground/monsterhuntrpg/ui/hud.ui.xml</item>
 			</origins>
 		</entry>
+		<entry key="The books do not balance" source="The books do not balance" context="TextWidget._text">
+			<origins>
+				<item>game/playground/restaurantsim/ui/hud.ui.xml</item>
+			</origins>
+		</entry>
 		<entry key="The collection is complete" source="The collection is complete" context="TextWidget._text">
 			<origins>
 				<item>game/playground/monstercollector/ui/hud.ui.xml</item>
+			</origins>
+		</entry>
+		<entry key="The day is done" source="The day is done" context="TextWidget._text">
+			<origins>
+				<item>game/playground/restaurantsim/ui/hud.ui.xml</item>
+			</origins>
+		</entry>
+		<entry key="The harbor loves this place" source="The harbor loves this place" context="TextWidget._text">
+			<origins>
+				<item>game/playground/restaurantsim/ui/hud.ui.xml</item>
 			</origins>
 		</entry>
 		<entry key="The hunter has fallen" source="The hunter has fallen" context="TextWidget._text">

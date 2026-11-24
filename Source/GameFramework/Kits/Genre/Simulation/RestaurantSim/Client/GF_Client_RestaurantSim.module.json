@@ -1,0 +1,22 @@
+{
+    "_name": "GF_Client_RestaurantSim",
+    "_version": "1.0.0",
+    "_kind": "Kit",
+    "_description": "식당 경영 키트(클라이언트) — 장보기 · 가격 · 영업 입력을 디렉터 명령으로 바꾸고 자리 · 주방을 그리며 HUD 를 채운다. 규칙 · 디렉터는 GF_RestaurantSim",
+    "_listDependency": [
+        {
+            "_name": "GameFramework"
+        },
+        {
+            "_name": "GF_RestaurantSim"
+        }
+    ],
+    "_listConfiguration": [
+        "Dev",
+        "Shipping"
+    ],
+    "_listTarget": [
+        "Client"
+    ],
+    "_bEnabledByDefault": true
+}

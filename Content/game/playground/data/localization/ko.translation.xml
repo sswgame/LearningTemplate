@@ -10,11 +10,16 @@
 		<entry key="Bone Axe" text="뼈 도끼" sourceHash="9e2cdbf7cb3d6953" />
 		<entry key="Bone Shield" text="뼈 방패" sourceHash="0201be6b95ece038" />
 		<entry key="Bramble Sprite" text="가시덤불 정령" sourceHash="820f516764689b41" />
+		<entry key="Broth Bowl" text="맑은국수" sourceHash="70e1759a4b511942" />
+		<entry key="Buy (J)   Price up (K)   Price down (L)   Open (Enter)" text="사기 (J)   가격 올리기 (K)   가격 내리기 (L)   열기 (Enter)" sourceHash="60ece787ba2f8265" />
+		<entry key="Buy more while open (J)" text="영업 중에도 살 수 있습니다 (J)" sourceHash="5a2d858e87b12bb2" />
 		<entry key="Caught" text="포획" sourceHash="124f7a6bf27434e5" />
+		<entry key="Charred Fish" text="구운 생선" sourceHash="632c66152fbc17ce" />
 		<entry key="Choose who steps in (L)" text="나설 몬스터를 고르세요 (L)" sourceHash="cdeab7fb476b6aa1" />
 		<entry key="Clues" text="단서" sourceHash="289958fb66c0ec21" />
 		<entry key="CutA" text="컷 A" sourceHash="770f429cae410066" />
 		<entry key="CutB" text="컷 B" sourceHash="770f419cae40feb3" />
+		<entry key="Day" text="날" sourceHash="e0955919920ee87d" />
 		<entry key="Dusk Moth" text="땅거미 나방" sourceHash="6a5fe98cf648b21c" />
 		<entry key="Fast (J)   Strong (K)   Dodge (Shift)   Sign (Q)   Oil (1)   Potion (2)" text="빠르게 (J)   강하게 (K)   회피 (Shift)   표식 (Q)   오일 (1)   물약 (2)" sourceHash="31d9ade3403d27cc" />
 		<entry key="Fernling" text="고사리돌이" sourceHash="431067eaf36b2340" />
@@ -27,6 +32,7 @@
 		<entry key="HP" text="체력" sourceHash="09276807b5bba505" />
 		<entry key="Heraldic Cape" text="문장 망토" sourceHash="6f86256a16ab8f26" />
 		<entry key="Hollow Stag" text="텅 빈 수사슴" sourceHash="0b3a71e1453de039" />
+		<entry key="Hour" text="시각" sourceHash="6b0bffd88024372f" />
 		<entry key="Knight Helmet" text="기사 투구" sourceHash="4733227ae193d121" />
 		<entry key="Knight Helmet (Dyeable)" text="기사 투구(염색 가능)" sourceHash="ff08b0d01b60fde4" />
 		<entry key="Knight Helmet (Merged)" text="기사 투구(병합)" sourceHash="bd029e7ca9b9d6ac" />
@@ -38,10 +44,13 @@
 		<entry key="MP" text="마력" sourceHash="09166a07b5ad3538" />
 		<entry key="Monster" text="괴물" sourceHash="3ac88ea2efcb0d51" />
 		<entry key="Move" text="기술" sourceHash="379c18aec5654894" />
+		<entry key="Next day (Enter)" text="다음 날 (Enter)" sourceHash="7aa8dc32ae4a024f" />
 		<entry key="Notched Blade" text="이 빠진 칼" sourceHash="0bda544f4c061f1a" />
 		<entry key="Nudge" text="툭 치기" sourceHash="2fb30900ca892138" />
 		<entry key="Oil" text="오일" sourceHash="3029d319bf980a3b" />
 		<entry key="Pistol" text="권총" sourceHash="9fbfefa835da8476" />
+		<entry key="Price" text="가격" sourceHash="eed76e8afe9f604a" />
+		<entry key="Profit" text="이익" sourceHash="a02dacfa52831687" />
 		<entry key="Pump Shotgun" text="펌프 산탄총" sourceHash="91f761c37c27a1e1" />
 		<entry key="Rest at the camp (E)" text="야영지에서 쉬기 (E)" sourceHash="21be64b41ec275ea" />
 		<entry key="Rest at the inn (E)" text="여관에서 쉬기 (E)" sourceHash="a3813c63a2a7f79e" />
@@ -52,10 +61,13 @@
 		<entry key="Round Shield (Merged)" text="둥근 방패(병합)" sourceHash="42c4611c12baf19f" />
 		<entry key="Rusted Helm" text="녹슨 투구" sourceHash="e74fbfb19151f99e" />
 		<entry key="Search the marsh for clues" text="늪지에서 단서를 찾으세요" sourceHash="8a4c000f101c09a4" />
+		<entry key="Seated" text="착석" sourceHash="2a87a5f144f4ecc9" />
+		<entry key="Served" text="계산" sourceHash="5afcb4918bbba2b0" />
 		<entry key="Something is here (E)" text="무언가 있습니다 (E)" sourceHash="ce2a8e597ad1fca3" />
 		<entry key="Spark" text="불씨" sourceHash="02f9e3f12431edaa" />
 		<entry key="Splash Jab" text="물보라 찌르기" sourceHash="3e3d6e1bc6b99c8b" />
 		<entry key="Stamina" text="기력" sourceHash="5f951de778479e56" />
+		<entry key="Stock" text="재고" sourceHash="04e13613e8f15f55" />
 		<entry key="Subtitle.Guide" text="안내인" sourceHash="7bf3b283b3f22c4b" />
 		<entry key="Subtitle.GuideLine" text="등불 길을 따라 옛 다리로 가세요." sourceHash="330029ad4a1d3f28" />
 		<entry key="Subtitle.LongLine"
@@ -67,7 +79,10 @@
 		<entry key="Target" text="대상" sourceHash="ff5bb7742c2896c8" />
 		<entry key="Tattered Cape" text="해진 망토" sourceHash="add8e4bee185648f" />
 		<entry key="The beast fears the right oil" text="괴물은 맞는 오일을 두려워합니다" sourceHash="e060f9bf57b89ed9" />
+		<entry key="The books do not balance" text="장부가 맞지 않습니다" sourceHash="eaeaae6541e5363a" />
 		<entry key="The collection is complete" text="수집을 마쳤습니다" sourceHash="dd09684b4a27f797" />
+		<entry key="The day is done" text="하루가 끝났습니다" sourceHash="924f78aa245811a2" />
+		<entry key="The harbor loves this place" text="항구가 이 식당을 사랑합니다" sourceHash="15d0145c4bb5130e" />
 		<entry key="The hunter has fallen" text="사냥꾼이 쓰러졌습니다" sourceHash="62c1d7f650d90858" />
 		<entry key="The marsh is quiet again" text="늪지가 다시 조용해졌습니다" sourceHash="36acea8545555fc5" />
 		<entry key="The party has fainted" text="파티가 모두 쓰러졌습니다" sourceHash="6f1d260f83a6a84b" />

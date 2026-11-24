@@ -11,6 +11,7 @@ msgstr ""
 #. Context: TextWidget._text
 #: game/playground/classicjrpg/ui/hud.ui.xml
 #: game/playground/monstercollector/ui/hud.ui.xml
+#: game/playground/restaurantsim/ui/hud.ui.xml
 #: game/playground/shooter3d/ui/hud.ui.xml
 msgctxt "/"
 msgid "/"
@@ -64,11 +65,35 @@ msgctxt "Bramble Sprite"
 msgid "Bramble Sprite"
 msgstr "가시덤불 정령"
 
+#. Context: Dish name
+#: game/playground/data/restaurant.xml
+msgctxt "Broth Bowl"
+msgid "Broth Bowl"
+msgstr "맑은국수"
+
+#. Context: TextWidget._text
+#: game/playground/restaurantsim/ui/hud.ui.xml
+msgctxt "Buy (J)   Price up (K)   Price down (L)   Open (Enter)"
+msgid "Buy (J)   Price up (K)   Price down (L)   Open (Enter)"
+msgstr "사기 (J)   가격 올리기 (K)   가격 내리기 (L)   열기 (Enter)"
+
+#. Context: TextWidget._text
+#: game/playground/restaurantsim/ui/hud.ui.xml
+msgctxt "Buy more while open (J)"
+msgid "Buy more while open (J)"
+msgstr "영업 중에도 살 수 있습니다 (J)"
+
 #. Context: TextWidget._text
 #: game/playground/monstercollector/ui/hud.ui.xml
 msgctxt "Caught"
 msgid "Caught"
 msgstr "포획"
+
+#. Context: Dish name
+#: game/playground/data/restaurant.xml
+msgctxt "Charred Fish"
+msgid "Charred Fish"
+msgstr "구운 생선"
 
 #. Context: TextWidget._text
 #: game/playground/monstercollector/ui/hud.ui.xml
@@ -93,6 +118,12 @@ msgstr "컷 A"
 msgctxt "CutB"
 msgid "CutB"
 msgstr "컷 B"
+
+#. Context: TextWidget._text
+#: game/playground/restaurantsim/ui/hud.ui.xml
+msgctxt "Day"
+msgid "Day"
+msgstr "날"
 
 #. Context: JRPG name
 #: game/playground/data/jrpg.xml
@@ -150,6 +181,7 @@ msgstr "어스름"
 
 #. Context: TextWidget._text
 #: game/playground/classicjrpg/ui/hud.ui.xml
+#: game/playground/restaurantsim/ui/hud.ui.xml
 msgctxt "Gold"
 msgid "Gold"
 msgstr "골드"
@@ -173,6 +205,12 @@ msgstr "문장 망토"
 msgctxt "Hollow Stag"
 msgid "Hollow Stag"
 msgstr "텅 빈 수사슴"
+
+#. Context: TextWidget._text
+#: game/playground/restaurantsim/ui/hud.ui.xml
+msgctxt "Hour"
+msgid "Hour"
+msgstr "시각"
 
 #. Context: Item name
 #: common/data/items.xml
@@ -240,6 +278,12 @@ msgctxt "Move"
 msgid "Move"
 msgstr "기술"
 
+#. Context: TextWidget._text
+#: game/playground/restaurantsim/ui/hud.ui.xml
+msgctxt "Next day (Enter)"
+msgid "Next day (Enter)"
+msgstr "다음 날 (Enter)"
+
 #. Context: Item name
 #: common/data/items.xml
 msgctxt "Notched Blade"
@@ -263,6 +307,18 @@ msgstr "오일"
 msgctxt "Pistol"
 msgid "Pistol"
 msgstr "권총"
+
+#. Context: TextWidget._text
+#: game/playground/restaurantsim/ui/hud.ui.xml
+msgctxt "Price"
+msgid "Price"
+msgstr "가격"
+
+#. Context: TextWidget._text
+#: game/playground/restaurantsim/ui/hud.ui.xml
+msgctxt "Profit"
+msgid "Profit"
+msgstr "이익"
 
 #. Context: Weapon name
 #: common/data/items.xml
@@ -325,6 +381,18 @@ msgid "Search the marsh for clues"
 msgstr "늪지에서 단서를 찾으세요"
 
 #. Context: TextWidget._text
+#: game/playground/restaurantsim/ui/hud.ui.xml
+msgctxt "Seated"
+msgid "Seated"
+msgstr "착석"
+
+#. Context: TextWidget._text
+#: game/playground/restaurantsim/ui/hud.ui.xml
+msgctxt "Served"
+msgid "Served"
+msgstr "계산"
+
+#. Context: TextWidget._text
 #: game/playground/monsterhuntrpg/ui/hud.ui.xml
 msgctxt "Something is here (E)"
 msgid "Something is here (E)"
@@ -348,6 +416,12 @@ msgstr "물보라 찌르기"
 msgctxt "Stamina"
 msgid "Stamina"
 msgstr "기력"
+
+#. Context: TextWidget._text
+#: game/playground/restaurantsim/ui/hud.ui.xml
+msgctxt "Stock"
+msgid "Stock"
+msgstr "재고"
 
 #. Context: Subtitle speaker (audio event SubtitleGuideLine)
 #: game/playground/audio/playground.audioevents.xml
@@ -404,10 +478,28 @@ msgid "The beast fears the right oil"
 msgstr "괴물은 맞는 오일을 두려워합니다"
 
 #. Context: TextWidget._text
+#: game/playground/restaurantsim/ui/hud.ui.xml
+msgctxt "The books do not balance"
+msgid "The books do not balance"
+msgstr "장부가 맞지 않습니다"
+
+#. Context: TextWidget._text
 #: game/playground/monstercollector/ui/hud.ui.xml
 msgctxt "The collection is complete"
 msgid "The collection is complete"
 msgstr "수집을 마쳤습니다"
+
+#. Context: TextWidget._text
+#: game/playground/restaurantsim/ui/hud.ui.xml
+msgctxt "The day is done"
+msgid "The day is done"
+msgstr "하루가 끝났습니다"
+
+#. Context: TextWidget._text
+#: game/playground/restaurantsim/ui/hud.ui.xml
+msgctxt "The harbor loves this place"
+msgid "The harbor loves this place"
+msgstr "항구가 이 식당을 사랑합니다"
 
 #. Context: TextWidget._text
 #: game/playground/monsterhuntrpg/ui/hud.ui.xml
