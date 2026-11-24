@@ -665,6 +665,7 @@ namespace sw
             if ( _pFrameRenderer != nullptr && _pFrameRenderer->isReady() )
                 _pFrameRenderer->executePacketWithoutDrawing( _pDevice, packet );
             _pDevice->endFrame( false, false );
+            RenderPresentCounter::addOne(); // 그리기 길로 프레임 끝까지 왔다 — 최소화한 동안도 시나리오(engine.windowpresent)가 이 수로 그 길을 지났음을 본다
             if ( packet._screenshotPath.empty() == false )
                 reportPacketScreenshotNotWritten( packet ); // 이 게임 프레임의 그림은 없다 — 지난 그림을 대신 쓰지 않는다
             return false;
