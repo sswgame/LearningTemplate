@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="utf-8"?>
+<?asset guid="2348b0e431d001a7e61414692c11bf80"?>
+<!-- 파티 아레나(minigames/partyarena)의 아이템 — 효과 이름과 수치는 트램펄린 무대(TrampolineArena)가 읽는다. -->
+<PartyItems minInterval="4" maxInterval="7" lifetime="8" height="1.2" maxActive="2">
+	<Item id="spring" effect="SuperBounce" weight="3"/>
+	<Item id="anvil" effect="Heavy" weight="2" duration="6" knockbackTaken="0.5" knockbackDealt="1.5"/>
+	<Item id="bubble" effect="Shield" weight="2"/>
+</PartyItems>
