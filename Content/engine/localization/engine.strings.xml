@@ -2593,7 +2593,8 @@
 				<item>Source/GameFramework/Client/Flow/LoadingScreenController.cpp</item>
 			</origins>
 		</entry>
-		<entry key="SaveGame.SaveFailedMessage" source="The game could not be saved. Try again, or keep playing without saving.">
+		<entry key="SaveGame.SaveFailedMessage"
+		       source="The game could not be saved. Try again, or keep playing without saving.">
 			<origins>
 				<item>Source/GameFramework/Client/Flow/LoadingScreenController.cpp</item>
 			</origins>
@@ -2788,6 +2789,7 @@
 		<entry key="UIMenu.Cancel" source="Cancel">
 			<origins>
 				<item>Source/Engine/UI/Menu/MainMenuScreen.cpp</item>
+				<item>Source/GameFramework/Client/Flow/LoadingScreenController.cpp</item>
 			</origins>
 		</entry>
 		<entry key="UIMenu.QuitAccept" source="Quit">

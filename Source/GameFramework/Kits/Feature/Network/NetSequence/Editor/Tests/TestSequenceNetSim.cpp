@@ -1,8 +1,11 @@
 #include "pch.h"
 
+#include "Core/Network/Connection/NetEndpoint.h"
 #include "Core/Network/Message/NetMessage.h"
 #include "Core/Testing/TestFramework.h"
 
+#include "Engine/Object/GameObject/GameObjectManager.h"
+#include "Engine/Object/GameObject/Service/SceneNetLink.h"
 #include "Engine/Scene/SceneManager.h"
 #include "Engine/Sequencer/SequencePlayerComponent.h"
 
@@ -28,6 +31,13 @@ namespace
         uint8       _bPlaying{ SW_TRUE };
     };
 
+    /** @brief 클라이언트 @p _worldIndex 의 왕복 시간이 @p _minRtt 초에 닿았는지 묻는 조건입니다. */
+    struct RttQuery
+    {
+        int32   _worldIndex{ 0 };
+        float32 _minRtt{ 0.0f };
+    };
+
     struct SequenceNetSimTestUtil
     {
         static bool areClientsConnected( const NetSimHarness& harness, void* pContext )
@@ -47,6 +57,26 @@ namespace
             const PlayingQuery& query  = *static_cast<const PlayingQuery*>( pContext );
             NetSimWorld*        pWorld = harness.findClient( query._worldIndex );
             return pWorld != nullptr && pWorld->isConnected() && isPlaying( *pWorld, query._pDirector ) == ( query._bPlaying == SW_TRUE );
+        }
+
+        /** @brief 서버가 복제하는 재생이 하나도 없으면 참입니다. @p pContext 는 그 하니스입니다(서버 세션은 const 하니스로 읽지 못한다). */
+        static bool isServerIdle( const NetSimHarness& harness, void* pContext )
+        {
+            (void)harness;
+            const SequenceNetSessionComponent* pServerNet = SequenceNetSimGame::findNetSession( static_cast<NetSimHarness*>( pContext )->getServer() );
+            return pServerNet != nullptr && pServerNet->getServer().getActivePlayCount() == 0;
+        }
+
+        /** @brief 클라이언트 월드의 왕복 시간 평활값이 @p pContext(`RttQuery`)의 값에 닿았으면 참입니다. */
+        static bool hasMeasuredRtt( const NetSimHarness& harness, void* pContext )
+        {
+            const RttQuery&    query  = *static_cast<const RttQuery*>( pContext );
+            NetSimWorld*       pWorld = harness.findClient( query._worldIndex );
+            NetConnectionStats stats;
+            if ( pWorld == nullptr )
+                return false;
+            const SceneNetLink& link = pWorld->getObjectManager().getSubsystem<SceneNetLink>();
+            return link.isBound() && link.get()._pPeers->getConnectionStats( 0, stats ) && stats._rtt >= query._minRtt;
         }
 
         /** @brief 서버 월드의 감시 값(`INetSimSession::readValue`)입니다. 없으면 −1 입니다. */
@@ -120,9 +150,8 @@ SW_TEST_CASE( SequenceNetSimTest, EveryonePlaysForAllAndLateJoinFollowsTheServer
     // 서버 재생이 끝나면 모두 끝난다.
     SW_EXPECT_TRUE( fixture.waitPlaying( fixture._firstClient, SequenceNetSimGame::kEveryoneDirector, false, 700 ) );
     SW_EXPECT_TRUE( fixture.waitPlaying( lateClient.value_or( 0 ), SequenceNetSimGame::kEveryoneDirector, false, 30 ) );
-    const SequenceNetSessionComponent* pServerNet = SequenceNetSimGame::findNetSession( harness.getServer() );
-    SW_REQUIRE_NOT_NULL( pServerNet );
-    SW_EXPECT_EQUAL( 0u, pServerNet->getServer().getActivePlayCount() );
+    // 클라이언트는 흐른 만큼 따라잡아 서버와 같은 때 끝난다 — 누가 한 틱 먼저 끝나는지는 정하지 않는다.
+    SW_EXPECT_TRUE( harness.stepUntil( &SequenceNetSimTestUtil::isServerIdle, &harness, 30 ).has_value() );
 }
 
 /** @brief [SequenceNetSimTest] 지연이 다른 두 클라이언트도 서버와 같은 프레임을 본다 — 시작이 오는 동안 흐른 만큼 따라잡는다(받은 때부터 틀면 지연만큼 늦다) */
@@ -133,7 +162,8 @@ SW_TEST_CASE( SequenceNetSimTest, StartsCatchUpWithTheServerClock, ._timeoutSeco
     NetEmulationConditions slow;
     slow._latency = 0.2; // 30 fps 로 여섯 프레임
     harness.setLinkConditions( fixture._firstClient, NetSimLinkConditions::makeSymmetric( slow ) );
-    harness.stepTicks( 240 ); // 왕복 시간의 평활값이 자리를 잡는다
+    RttQuery rttQuery{ fixture._firstClient, 0.39f }; // 왕복 시간의 평활값이 새 지연(한쪽 0.2 초)에 자리를 잡는다
+    SW_REQUIRE_TRUE( harness.stepUntil( &SequenceNetSimTestUtil::hasMeasuredRtt, &rttQuery, 3600 ).has_value() );
     SW_REQUIRE_TRUE( SequenceNetSimGame::activateTrigger( harness.getServer(), SequenceNetSimGame::kEveryoneTrigger, 1 ) );
     SW_EXPECT_TRUE( fixture.waitPlaying( fixture._firstClient, SequenceNetSimGame::kEveryoneDirector, true, 60 ) );
     SW_EXPECT_TRUE( fixture.waitPlaying( fixture._secondClient, SequenceNetSimGame::kEveryoneDirector, true, 60 ) );

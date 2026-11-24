@@ -251,6 +251,7 @@
 		<entry source="Live events" text="ライブイベント" />
 		<entry source="Live: {liveRunnerName}" text="実行中: {liveRunnerName}" />
 		<entry source="Load" text="読み込み" />
+		<entry source="Load Failed" text="ロード失敗" />
 		<entry source="Load a skeleton to see its bones. The skeleton is read-only; edits go to the reference pose file."
 		       text="スケルトンを読み込むとボーンが見えます。スケルトンは読み取り専用で、編集は基準ポーズファイルに入ります。" />
 		<entry source="Load appearance data to see which rules hid or changed what."
@@ -264,6 +265,7 @@
 		<entry source="Load the items file and the appearance folder to pick items and see rule explanations."
 		       text="アイテムファイルと外見フォルダを読み込むと、アイテムを選んでルールの説明を見られます。" />
 		<entry source="Loading" text="読み込み中" />
+		<entry source="Loading Failed" text="読み込み失敗" />
 		<entry source="Loading friends..." text="フレンドを読み込み中..." />
 		<entry source="Loading servers..." text="サーバーを読み込み中..." />
 		<entry source="Look up an account to see its balances and sanctions"
@@ -464,6 +466,7 @@
 		<entry source="Same id as {name}" text="{name}と ID が同じ" />
 		<entry source="Sanction" text="制裁" />
 		<entry source="Save" text="保存" />
+		<entry source="Save Failed" text="セーブ失敗" />
 		<entry source="Save Stack" text="スタックを保存" />
 		<entry source="Save as preset" text="プリセットとして保存" />
 		<entry source="Save body data" text="ボディデータを保存" />
@@ -570,6 +573,8 @@
 		<entry source="That slot cannot take it." text="そのスロットには入れられません。" />
 		<entry source="The catalog file the game reads. Edits keep its comments and layout."
 		       text="ゲームが読むカタログファイルです。編集してもコメントと配置は残ります。" />
+		<entry source="The game could not be saved. Try again, or keep playing without saving."
+		       text="ゲームをセーブできませんでした。もう一度試すか、セーブせずに続けてください。" />
 		<entry source="The node editor could not be created" text="ノードエディタを作成できませんでした" />
 		<entry source="The overrides do not apply to this profile - see the log for the module name."
 		       text="上書きがこのプロファイルに合いません - モジュール名はログを見てください。" />
@@ -583,6 +588,10 @@
 		       text="ランタイムローダーが保存したファイルを読み込めませんでした。理由はログを確認してください。" />
 		<entry source="The runtime loader reads the saved file."
 		       text="ランタイムローダーが保存したファイルを読み込みます。" />
+		<entry source="The saved game could not be loaded. Try again, or stay here."
+		       text="セーブデータを読み込めませんでした。もう一度試すか、このまま続けてください。" />
+		<entry source="The scene could not be opened. Try again, or stay here."
+		       text="シーンを開けませんでした。もう一度試すか、このまま続けてください。" />
 		<entry source="The slot is empty." text="空きスロットです。" />
 		<entry source="The target object no longer exists."
 		       text="対象のオブジェクトはもう存在しません。" />
@@ -607,6 +616,7 @@
 		<entry source="Travel" text="移動" />
 		<entry source="Tritanopia" text="3 型色覚 (青)" />
 		<entry source="Trot" text="トロット" />
+		<entry source="Try Again" text="もう一度試す" />
 		<entry source="Turn a target bone in its parent space (degrees) so the target reference matches the source reference, e.g. lower the arms of a T-pose source onto an A-pose target"
 		       text="ターゲットの基準ポーズがソースと合うよう、ターゲットのボーンを親空間で回します(度) — 例: T ポーズのソースを A ポーズのターゲットに合わせて腕を下げる" />
 		<entry source="UI Scale" text="UI の拡大率" />

@@ -1068,26 +1068,23 @@ namespace sw
                 pawn._listPendingClaim[keptCount++] = claim;
                 continue;
             }
-            const uint32            entityID = static_cast<uint32>( claim._targetID );
-            const ShooterEnemyView* pView    = nullptr;
-            for ( const ShooterEnemyView& view : pGameMode->getEnemyViews() )
-            {
-                if ( view._netEntityID == entityID )
-                    pView = &view;
-            }
-            LagRecord      past;
-            GameObject*    pTarget   = pView != nullptr ? manager.resolveGameObject( pView->_object ) : nullptr;
-            const float64* pViewTick = pawn._viewTickByInput.find( claim._step );
-            if ( pTarget == nullptr || pViewTick == nullptr || _lagHistory.sampleAt( *pViewTick, entityID, past ) == false )
+            const uint32                 entityID = static_cast<uint32>( claim._targetID );
+            LagRecord                    past;
+            GameObject*                  pTarget   = manager.resolveGameObject( pGameMode->findEnemyObject( entityID ) );
+            const ShooterEnemyComponent* pEnemy    = pTarget != nullptr ? pTarget->getComponent<ShooterEnemyComponent>() : nullptr;
+            vector<GameObjectHandle>&    listHit   = pPlayer->getMeleeHitTargets();
+            const float64*               pViewTick = pawn._viewTickByInput.find( claim._step );
+            // 쓰러진 표적은 이 휘두름의 서버 스윕이 맞힌 것만 인정한다 — 스윕이 먼저 쓰러뜨린 것이 주장의 맞음이다. 남의 탄에 쓰러진 것은 아니다.
+            const bool bClaimable = pEnemy != nullptr && ( pEnemy->isAlive() || VectorUtil::contains( listHit, pTarget->getHandle() ) );
+            if ( bClaimable == false || pViewTick == nullptr || _lagHistory.sampleAt( *pViewTick, entityID, past ) == false )
             {
                 ++_rejectedClaimCount; // 표적이 그 사이 쓰러졌거나 지어낸 번호 · 걸음이다
                 continue;
             }
             // 장부는 표적을 구로 본다 — 몸 가운데에 몸 전체를 덮는 구다(근접은 뼈마다 가르지 않는다).
-            const float3              center         = manager.getWorldOrigin().toLocal( past._position + float3{ 0.0f, past._height * 0.5f, 0.0f } ); // 장부의 칼날은 씬 자리다
-            const float32             radius         = MathUtil::max( past._radius, past._height * 0.5f );
-            vector<GameObjectHandle>& listHit        = pPlayer->getMeleeHitTargets();
-            const size_t              hitCountBefore = listHit.size();
+            const float3  center         = manager.getWorldOrigin().toLocal( past._position + float3{ 0.0f, past._height * 0.5f, 0.0f } ); // 장부의 칼날은 씬 자리다
+            const float32 radius         = MathUtil::max( past._radius, past._height * 0.5f );
+            const size_t  hitCountBefore = listHit.size();
             if ( pLedger->claimHit( *pObject, *pTarget, claim, center, radius, listHit ) != MeleeClaimResult::Confirmed )
             {
                 ++_rejectedClaimCount;

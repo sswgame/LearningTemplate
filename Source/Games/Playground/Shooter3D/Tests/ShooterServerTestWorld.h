@@ -15,6 +15,7 @@
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
 #include "Engine/Object/GameObject/Service/SceneNetLink.h"
+#include "Engine/Reflection/TypeInfo.h"
 #include "Engine/Serialization/Format/Archive.h"
 #include "Engine/Serialization/Format/XMLSerializer.h"
 
@@ -94,6 +95,9 @@ namespace sw
             GameObject* pGameMode = _manager.createGameObject( hashed_string( "GameMode" ) );
             _pPlayer              = _manager.createGameObject( hashed_string( "Player" ) );
             bindScenePlayer( *pGameMode->addComponent<ShooterGameModeComponent>(), *_pPlayer );
+            // 감독이 플레이어 조종자에게 폰을 쥐이는데 테스트에는 입력 맵이 없다.
+            SW_EXPECT_LOG( "Control.IntentButtonNotInInputMap" );
+            SW_EXPECT_LOG( "Control.AxisActionNotInInputMap" );
             _pPlayer->addComponent<PawnComponent>()->setButtonNames( { hashed_string( "Jump" ), hashed_string( "Fire" ) } );
             (void)_pPlayer->addComponent<ShooterBodyMovementComponent>();
             (void)_pPlayer->addComponent<FirstPersonCameraComponent>();
@@ -118,9 +122,10 @@ namespace sw
         /** @brief 씬처럼 감독이 플레이어 오브젝트를 가리키게 합니다 — 플레이어의 규칙이 네트 몸을 이 칸으로 찾는다(없으면 되감기 · 남의 몸 판정 없이 혼자 하는 길을 돈다). */
         static void bindScenePlayer( ShooterGameModeComponent& gameMode, const GameObject& player )
         {
-            StringBuilder<constant::buffer::kMax128> gameModeXML;
-            gameModeXML.appendFormat( "<ShooterGameModeComponent _player=\"%#\"/>", player.getObjectID() );
-            SW_REQUIRE_TRUE( XMLSerializer::deserialize( &gameMode, *ShooterGameModeComponent::StaticType(), gameModeXML.c_str() ) );
+            // 감독의 나머지 칸(적 성장 · 프리팹)은 쓰지 않는다 — 문서 읽기는 필수 칸을 모두 요구하므로 그 칸 하나만 리플렉션으로 적는다.
+            const PropertyInfo* pPlayer = ShooterGameModeComponent::StaticType()->findProperty( hashed_string( "_player" ) );
+            SW_REQUIRE_TRUE( pPlayer != nullptr );
+            *pPlayer->getValuePtr<GameObjectHandle>( static_cast<void*>( &gameMode ) ) = player.getHandle();
             SW_REQUIRE_TRUE( gameMode.getPlayer() == player.getHandle() );
         }
 

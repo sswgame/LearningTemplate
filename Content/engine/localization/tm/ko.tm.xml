@@ -260,6 +260,7 @@
 		<entry source="Live events" text="라이브 이벤트" />
 		<entry source="Live: {liveRunnerName}" text="실행 중: {liveRunnerName}" />
 		<entry source="Load" text="불러오기" />
+		<entry source="Load Failed" text="불러오기 실패" />
 		<entry source="Load a skeleton to see its bones. The skeleton is read-only; edits go to the reference pose file."
 		       text="스켈레톤을 불러오면 뼈가 보입니다. 스켈레톤은 읽기 전용이고 편집은 기준 포즈 파일에 들어갑니다." />
 		<entry source="Load appearance data to see which rules hid or changed what."
@@ -273,6 +274,7 @@
 		<entry source="Load the items file and the appearance folder to pick items and see rule explanations."
 		       text="항목 파일과 외형 폴더를 불러오면 항목을 고르고 규칙 설명을 봅니다." />
 		<entry source="Loading" text="로딩 중" />
+		<entry source="Loading Failed" text="불러오기 실패" />
 		<entry source="Loading friends..." text="친구 목록을 불러오는 중..." />
 		<entry source="Loading servers..." text="서버 목록을 불러오는 중..." />
 		<entry source="Look up an account to see its balances and sanctions"
@@ -310,7 +312,8 @@
 		<entry source="Nested Stack" text="하위 스택" />
 		<entry source="New" text="새로" />
 		<entry source="New socket name" text="새 소켓 이름" />
-		<entry source="No AbilitySystemComponent in the active scene" text="활성 씬에 AbilitySystemComponent 가 없습니다" />
+		<entry source="No AbilitySystemComponent in the active scene"
+		       text="활성 씬에 AbilitySystemComponent 가 없습니다" />
 		<entry source="No animation clips in ''{clipFolder}''"
 		       text="''{clipFolder}'' 에 애니메이션 클립이 없습니다" />
 		<entry source="No body channels. Sliders, body profiles and equipment set them."
@@ -472,6 +475,7 @@
 		<entry source="Same id as {name}" text="{name}와 id 가 같음" />
 		<entry source="Sanction" text="제재" />
 		<entry source="Save" text="저장" />
+		<entry source="Save Failed" text="저장 실패" />
 		<entry source="Save Stack" text="스택 저장" />
 		<entry source="Save as preset" text="프리셋으로 저장" />
 		<entry source="Save body data" text="몸 데이터 저장" />
@@ -578,6 +582,8 @@
 		<entry source="The catalog file the game reads. Edits keep its comments and layout."
 		       text="게임이 읽는 카탈로그 파일입니다. 편집해도 주석과 줄 배치가 남습니다." />
 		<entry source="The curve's value at this key." text="이 키에서 곡선이 가지는 값입니다." />
+		<entry source="The game could not be saved. Try again, or keep playing without saving."
+		       text="게임을 저장하지 못했습니다. 다시 시도하거나 저장하지 않고 계속하세요." />
 		<entry source="The node editor could not be created" text="노드 편집기를 만들지 못했습니다" />
 		<entry source="The overrides do not apply to this profile - see the log for the module name."
 		       text="덮어쓰기가 이 프로필에 맞지 않습니다 - 모듈 이름은 로그를 보세요." />
@@ -593,6 +599,10 @@
 		       text="런타임 로더가 저장한 파일을 읽습니다." />
 		<entry source="The same checklist as a runtime UI window (shows in the game view while playing)"
 		       text="같은 체크리스트를 런타임 UI 창으로 엽니다(플레이 중 게임 뷰에 보입니다)." />
+		<entry source="The saved game could not be loaded. Try again, or stay here."
+		       text="저장한 게임을 불러오지 못했습니다. 다시 시도하거나 지금 자리에 머무르세요." />
+		<entry source="The scene could not be opened. Try again, or stay here."
+		       text="장면을 열지 못했습니다. 다시 시도하거나 지금 자리에 머무르세요." />
 		<entry source="The slot is empty." text="빈 칸입니다." />
 		<entry source="The target object no longer exists." text="대상 오브젝트가 더 이상 없습니다." />
 		<entry source="This cannot be bought now." text="지금은 구매할 수 없습니다." />
@@ -615,6 +625,7 @@
 		<entry source="Travel" text="이동" />
 		<entry source="Tritanopia" text="청색약" />
 		<entry source="Trot" text="속보" />
+		<entry source="Try Again" text="다시 시도" />
 		<entry source="Turn a target bone in its parent space (degrees) so the target reference matches the source reference, e.g. lower the arms of a T-pose source onto an A-pose target"
 		       text="대상 기준 자세가 원본 기준 자세와 맞게 대상 뼈를 부모 공간에서 돌립니다(도) — 예: T 자세 원본을 A 자세 대상에 맞게 팔을 내린다" />
 		<entry source="UI Scale" text="UI 배율" />

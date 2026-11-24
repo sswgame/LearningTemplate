@@ -86,7 +86,7 @@ namespace sw
         const NetClock&    clock = _value._pRouter->getWorldClock();
         NetConnectionStats stats;
         const bool         bClient = _value._role == NetLinkRole::Client && _value._pPeers->getConnectionStats( 0, stats );
-        const float64      elapsed = ( clock.getServerTick() - static_cast<float64>( serverTick ) ) * static_cast<float64>( NetClock::kTickSeconds );
+        const float64      elapsed = ( clock.getReceivedTick() - static_cast<float64>( serverTick ) ) * static_cast<float64>( NetClock::kTickSeconds );
         return MathUtil::max( 0.0f, static_cast<float32>( elapsed ) + ( bClient ? stats._rtt * 0.5f : 0.0f ) );
     }
 
