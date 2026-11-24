@@ -295,9 +295,9 @@ namespace sw
             return false;
         timings._engineEndMicro = MonotonicClock::nowMicroseconds();
         // 헤드리스 모드(예: --cook-shaders, --cook-scenes)면 스플래시와 창 UI 를 건너뛴다.
-        // App 이 맡는 헤드리스 작업(크래시 보고, 로컬라이제이션 도구, 원본 임포트)은 `AppHeadlessTasks` 의 표가 정한다.
+        // App 이 맡는 헤드리스 작업은 크래시 보고와, 개발 계층의 에디터 모듈 작업 표(로컬라이제이션 도구, 원본 임포트)를 부르는 일이다(`AppHeadlessTasks`).
         if ( engineStart == HostEngineStart::Headless )
-            return AppHeadlessTasks::runAll( _launch.getEngine().getCommandLineManager() );
+            return AppHeadlessTasks::runAll( _launch.getEngine().getCommandLineManager(), _launch.getDevLayer() );
 
         // 무인 실행(-unattended)은 보는 사람이 없다 — 스플래시도 메인 창도 띄우지 않고 그리기 · 캡처만 한다(언리얼 -RenderOffScreen). 화면 표시를 보는 시나리오
         // (present="true")는 그 단계에서 자동화 세션이 메인 창을 띄운다(`AutomationSession::applyPresentPolicy`).
@@ -356,7 +356,7 @@ namespace sw
         }
         timings._modulesEndMicro = MonotonicClock::nowMicroseconds();
 
-        // 모듈이 선 뒤 한 번 하고 끝나는 작업(초상화 굽기)은 `AppHeadlessTasks` 의 표가 정한다. 실행했으면 창을 띄우지 않고 끝낸다.
+        // 모듈이 선 뒤 한 번 하고 끝나는 작업(초상화 굽기)은 `AppHeadlessTasks` 가 맡는다. 실행했으면 창을 띄우지 않고 끝낸다.
         const AppHeadlessTasks::TaskResult afterServices = AppHeadlessTasks::runAfterHostServices( *pCommandLineManager, _launch.getEngine() );
         if ( afterServices != AppHeadlessTasks::TaskResult::NotRequested )
         {

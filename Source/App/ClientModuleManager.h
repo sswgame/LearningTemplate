@@ -2,7 +2,7 @@
  * @file App/ClientModuleManager.h
  * @brief 클라이언트 호스트(App — 개발 · 배포 모두)의 모듈 관리자입니다. 공통 `GameModuleManager`(게임 모듈 · 장치 교체 순서) 위에 호스트 모듈(에디터)의 인스턴스, 리로드,
  *        UI · Present 훅, 장치 교체 뒤 재생성(`recreateHostModule`)을 구현합니다. 에디터를 켜지 않은 실행(배포 게임 포함)에서는 에디터 몫이 아무 일도 하지 않는다.
- *        인스턴스 없이 에디터 모듈만 올려 부르는 헤드리스 작업은 모듈 관리자의 일이 아니라 `EditorModuleHeadlessTasks` 에 있다.
+ *        인스턴스 없이 에디터 모듈만 올려 부르는 헤드리스 작업은 모듈 관리자의 일이 아니라 `DevTools/Host/EditorModuleHeadlessTasks` 에 있다.
  * @note 의존은 이쪽에서 `GameModuleManager` 로 한 방향입니다. 전용 서버(`Server`)는 이 클래스를 링크하지 않습니다.
  * @note 개발 전용 함수(에디터 모듈 등록 — `ClientModuleManager.cpp` 의 동적 모듈 구역)는 정적 모듈 구성이 짓지 않는다 — 부르는 자리가 `build::kStaticModules` 로 가른다.
  *       배포 게임도 이 매니저로 장치 분실 재생성을 탄다(언리얼 `FEngineLoop` 이 에디터 · 게임 공통으로 모듈을 드는 자리).
@@ -49,8 +49,6 @@ namespace sw
          * @param bEnableEditor 에디터 모드 여부
          */
         [[nodiscard]] bool initialize( ILiveReloadManager* pLiveReloadManager, RHI* pRHI, GenericWindow* pWindow, IEngineRenderDriver* pRenderDriver, bool bEnableEditor );
-        /** @brief 에디터 모듈 라이브러리의 ABI · API 표 심볼 이름입니다. 인스턴스 경로와 헤드리스 작업(`EditorModuleHeadlessTasks`)이 같이 씁니다. */
-        [[nodiscard]] static const ModuleAPISymbols& getModuleSymbols();
 
         // 프레임 단위 처리
         /**

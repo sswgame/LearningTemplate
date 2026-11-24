@@ -33,17 +33,6 @@ namespace sw
                 return commandLine.getArgument( argument, bGiven ) && bGiven;
             }
 
-            /** @brief 인자 목록 @p listArgument 가운데 하나라도 주어졌으면 true 입니다. */
-            static bool isAnyProvided( const CommandLineManager& commandLine, span<const CommandLineArgument> listArgument )
-            {
-                for ( const CommandLineArgument argument : listArgument )
-                {
-                    if ( commandLine.isArgumentProvided( argument ) )
-                        return true;
-                }
-                return false;
-            }
-
             static bool isHelpRequested( const CommandLineManager& commandLine ) { return isFlagGiven( commandLine, CommandLineArgument::HELP ); }
 
             /** @brief `-help` — 받는 인자 목록을 표준 출력에 찍고 끝낸다(창 · 렌더러를 세우지 않는다). */
@@ -57,28 +46,13 @@ namespace sw
                 }
                 return true;
             }
-
-            static bool isEditorTextToolRequested( const CommandLineManager& commandLine ) { return isAnyProvided( commandLine, kArrEditorTextToolArgument ); }
-            static bool isEditorAssetToolRequested( const CommandLineManager& commandLine ) { return isAnyProvided( commandLine, kArrEditorAssetToolArgument ); }
-
-            /**
-             * @brief 로컬라이제이션 도구(글 수집 · PO 교환)와 원본 임포트 · 대조(텍스처 · 모델 · 높이장)는 에디터 모듈이 한다(엔진은 에디터를 모른다).
-             *        여기서는 창 · RHI 없이 세우기만 하고, 모듈을 올려 부르는 것은 App 이다(`EditorModuleHeadlessTasks` 의 `runLocalizationWithEditorModule` ·
-             *        `importAssetsWithEditorModule`). 이 단계는 타입 공급자 모듈 뒤라 글 수집이 리플렉션 프로퍼티(`Meta = "Localizable"`)를 본다.
-             */
-            static bool enterEditorToolTask( HeadlessTaskContext& /*context*/ )
-            {
-                SW_LOG_INFO_ID( "Headless.StartingHeadlessEditorTools", "Starting Headless (editor tools: localization or asset import/check)..." );
-                return true;
-            }
         };
     } // namespace
 
-    // 배포에도 있는 헤드리스 작업. 쿠킹 · 테스트 · 문서 같은 개발 작업은 DevTools 가 자기 자리에서 올린다(`DevTools/Cook/CookTasks.cpp` · `DevTools/Diagnostics/DevHeadlessTasks.cpp`).
+    // 배포에도 있는 헤드리스 작업. 쿠킹 · 테스트 · 문서 · 에디터 모듈 작업 같은 개발 작업은 DevTools 가 자기 자리에서 올린다(`DevTools/Cook/CookTasks.cpp` · `DevTools/Diagnostics/DevHeadlessTasks.cpp` ·
+    // `DevTools/Host/EditorModuleHeadlessTasks.cpp`).
     using HeadlessInternal = HeadlessSubsystemInternal;
     SW_HEADLESS_TASK( help, "Help", HeadlessTaskPriority::kHelp, Any, &HeadlessInternal::isHelpRequested, &HeadlessInternal::runHelpTask );
-    SW_HEADLESS_TASK( editorTextTools, "EditorTextTools", HeadlessTaskPriority::kEditorTools, Any, &HeadlessInternal::isEditorTextToolRequested, &HeadlessInternal::enterEditorToolTask );
-    SW_HEADLESS_TASK( editorAssetTools, "EditorAssetTools", HeadlessTaskPriority::kEditorTools, Client, &HeadlessInternal::isEditorAssetToolRequested, &HeadlessInternal::enterEditorToolTask );
 } // namespace sw
 
 namespace sw

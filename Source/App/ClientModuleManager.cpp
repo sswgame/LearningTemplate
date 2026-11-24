@@ -27,18 +27,6 @@
 
 namespace sw
 {
-    namespace
-    {
-        /** @brief 이 TU 전용 도우미 모음입니다(유니티 빌드에서 이름이 충돌하지 않도록 TU 이름을 붙입니다). */
-        struct ClientModuleManagerInternal
-        {
-            static constexpr ModuleAPISymbols kEditorSymbols{ kEditorModuleABIStamp, "getEditorModuleABIStamp", "exportEditorAPI", "Editor" };
-        };
-    } // namespace
-} // namespace sw
-
-namespace sw
-{
     ClientModuleManager::ClientModuleManager()
         : GameModuleManager{}
         , _editorAPI{}
@@ -246,7 +234,7 @@ namespace sw
 
     bool ClientModuleManager::isEditorLibraryUsable( ModuleLibraryHandle library ) const
     {
-        return ModuleInstanceUtil::isLibraryUsable<EditorAPI, PFN_ExportEditorAPI>( library, getModuleSymbols() );
+        return ModuleInstanceUtil::isLibraryUsable<EditorAPI, PFN_ExportEditorAPI>( library, kEditorModuleSymbols );
     }
 
     void ClientModuleManager::onEditorReloadFault( uint32 faultCode )
@@ -303,14 +291,9 @@ namespace sw
     // API 바인딩 · 인스턴스
     // ======================================================================
 
-    const ModuleAPISymbols& ClientModuleManager::getModuleSymbols()
-    {
-        return ClientModuleManagerInternal::kEditorSymbols;
-    }
-
     bool ClientModuleManager::bindEditorAPI( ModuleLibraryHandle library )
     {
-        if ( ModuleInstanceUtil::exportAPIFromLibrary<EditorAPI, PFN_ExportEditorAPI>( library, getModuleSymbols(), _editorAPI ) == false )
+        if ( ModuleInstanceUtil::exportAPIFromLibrary<EditorAPI, PFN_ExportEditorAPI>( library, kEditorModuleSymbols, _editorAPI ) == false )
             return false;
 
         rebindEditorService();
@@ -358,7 +341,7 @@ namespace sw
 
 #if SW_WITH_DYNAMIC_MODULES
     // ----------------------------------------------------------------------------------------------------------------------
-    // 동적 모듈 구성에만 있는 경로 — 리로드 그래프 등록(LiveReload). 인스턴스 없는 헤드리스 작업은 `EditorModuleHeadlessTasks.cpp` 다.
+    // 동적 모듈 구성에만 있는 경로 — 리로드 그래프 등록(LiveReload). 인스턴스 없는 헤드리스 작업은 `DevTools/Host/EditorModuleHeadlessTasks.cpp` 다.
     // 정적 구성(배포 · 웹 · Android 개발)은 이 헤더 · 라이브러리를 짓지 않아 여기만 `#if` 로 가른다(docs/agents/CppStyle.md "Build configuration switches" 둘째 줄). 부르는 자리는 `build::kStaticModules` 로 가른다.
     // ----------------------------------------------------------------------------------------------------------------------
     bool ClientModuleManager::registerEditorModule( ILiveReloadManager* pLiveReloadManager )

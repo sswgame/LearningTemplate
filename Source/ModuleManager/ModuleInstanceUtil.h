@@ -10,6 +10,7 @@
 #include "Engine/Graphics/RHI/RHI.h"
 #include "Engine/Module/ModuleTypeRegistry.h"
 
+#include "ModuleAPI/ABI/EditorAPI.h"
 #include "ModuleAPI/ABI/ModuleABI.h"
 
 #include "ModuleManager/ModuleLibraryHandle.h"
@@ -29,6 +30,9 @@ namespace sw
         const utf8* _pExportSymbol;
         const utf8* _pModuleLabel;
     };
+
+    /** @brief 에디터 모듈 라이브러리의 ABI · API 표 심볼 이름입니다. 인스턴스 경로(`ClientModuleManager`)와 헤드리스 작업(`DevTools/Host/EditorModuleHeadlessTasks`)이 같이 씁니다. */
+    inline constexpr ModuleAPISymbols kEditorModuleSymbols{ kEditorModuleABIStamp, "getEditorModuleABIStamp", "exportEditorAPI", "Editor" };
 } // namespace sw
 
 namespace sw

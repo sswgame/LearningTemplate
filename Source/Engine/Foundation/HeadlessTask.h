@@ -76,7 +76,7 @@ namespace sw
         inline constexpr int32 kMakePatch          = 800;
         inline constexpr int32 kCook               = 900;
         inline constexpr int32 kImportLipSync      = 1000;
-        inline constexpr int32 kEditorTools        = 1100; ///< 에디터 모듈이 하는 도구 — 엔진은 헤드리스로 세우기만 한다
+        inline constexpr int32 kEditorTools        = 1100; ///< 에디터 모듈이 하는 도구 — 엔진은 헤드리스로 세우기만 하고 호스트가 엔진이 선 뒤에 돌린다(`DevTools/Host/EditorModuleHeadlessTasks`)
     } // namespace HeadlessTaskPriority
 
     /** @brief 작업 본문이 받는 문맥입니다. */
