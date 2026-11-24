@@ -973,8 +973,24 @@ namespace sw
                 return false;
         }
 #endif
-        context._pCmd->drawIndexedIndirect( inoutState._argsBuffer, argIndex * static_cast<uint32>( sizeof( RHIDrawIndexedIndirectCommand ) ), groupCount );
+        drawGroupArgs( context, inoutState._argsBuffer, argIndex, groupCount );
         return true;
+    }
+
+    void FramePassExecutor::drawGroupArgs( FramePassContext& context, RHIBufferHandle argsBuffer, uint32 firstArg, uint32 groupCount ) const
+    {
+        constexpr uint32 kStride = static_cast<uint32>( sizeof( RHIDrawIndexedIndirectCommand ) );
+        const GPUScene&  scene   = _state._gpuScene;
+        // 묶음이 압축 구간으로 빈틈없이 나뉘면 구간마다 살아남은 인자만 개수 버퍼로 그린다 — 아니면(구간 밖 배치가 섞였거나 패스가 더 잘게 끊었다) 원래 인자를 그대로 그린다.
+        if ( scene.hasCompactSegments() == false || GPUScene::isCompactSegmentSpan( scene.getCompactSegmentCounts(), firstArg, groupCount ) == false )
+        {
+            context._pCmd->drawIndexedIndirect( argsBuffer, firstArg * kStride, groupCount );
+            return;
+        }
+        for ( uint32 head = firstArg; head < firstArg + groupCount; head += scene.getCompactSegmentCounts()[head] )
+        {
+            context._pCmd->drawIndexedIndirect( argsBuffer, scene.getCompactArgsElement( head ) * kStride, scene.getCompactSegmentCounts()[head], argsBuffer, scene.getCompactCountElement( head ) * kStride );
+        }
     }
 
     bool FramePassExecutor::drawParticleRun( FramePassContext& context, vector_reference<const GPUTransparentParticleSlot> listSlot, uint32& inOutCursor, uint32 position )

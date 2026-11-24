@@ -52,7 +52,8 @@ float3 evaluateSky( float3 direction )
 /** @brief 등장방형 HDR 텍스처의 텍셀 하나입니다. 가로는 감싸고 세로는 자른다. */
 float3 loadHdriTexel( int2 texel, int2 size )
 {
-    const int2 wrapped = int2( ( texel.x % size.x + size.x ) % size.x, clamp( texel.y, 0, size.y - 1 ) );
+    // 텍셀은 -size 보다 크다(이웃 텍셀까지만 벗어난다) — 부호 없는 나머지가 싸다.
+    const int2 wrapped = int2( uint( texel.x + size.x ) % uint( size.x ), clamp( texel.y, 0, size.y - 1 ) );
     return Bindless::loadEngineTexel( SW_ENGINE_ROLE( SourceColor ), wrapped ).rgb;
 }
 

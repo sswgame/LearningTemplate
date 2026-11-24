@@ -33,8 +33,8 @@ namespace sw
         uint32  _giAccumulatedFrames{ 0 };          ///< 실시간 프로브 GI 기록이 지금 입력에 수렴한 프레임 수(`RealtimeProbeAccumulation`) — 정착 조건의 진척. 실시간 볼륨이 없으면 0
         float32 _giError{ 0.0f };                   ///< 실시간 프로브 GI 기록에 남은 옛 값의 몫(0 이면 다 바뀌었다). 실시간 볼륨이 없으면 0
         uint32  _cameraStillFrameCount{ 0 };        ///< 카메라만 서 있던 이어진 프레임 수(TAA 기록이 쌓인 프레임 — 물체 움직임은 보지 않는다)
-        uint8   _bTemporalAccumulation{ SW_FALSE }; ///< 이번 프레임 주 시점이 TAA 나 볼륨 구름을 쌓았다(`FrameViewTarget::_bTAAHistoryWritten` · `_bSkyCloudHistoryWritten`). 아니면 TAA 조건은 해당 없음이다
-        uint8   _bAutoExposure{ SW_FALSE };         ///< 이번 프레임 주 시점이 노출을 쟀다(`FrameViewTarget::_bAutoExposureThisFrame`). 아니면 노출 조건은 해당 없음이다
+        uint8   _bTemporalAccumulation{ SW_FALSE }; ///< 이번 프레임 주 시점이 TAA 나 볼륨 구름을 쌓았다(`FrameViewTarget::_taaHistory` · `_skyCloudHistory`). 아니면 TAA 조건은 해당 없음이다
+        uint8   _bAutoExposure{ SW_FALSE };         ///< 이번 프레임 주 시점이 노출을 쟀다(`FrameViewTarget::_autoExposureHistory`). 아니면 노출 조건은 해당 없음이다
         uint8   _bRealtimeGI{ SW_FALSE };           ///< 이번 프레임에 실시간 프로브를 갱신했다(`RealtimeProbeUpdater::isActive`). 아니면 실시간 GI 조건은 해당 없음이다
 
         /** @brief 렌더 스레드가 주 시점의 이번 값을 올립니다(엔진 범위 서브시스템이 든다 — `RenderStability.cpp`). */

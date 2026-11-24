@@ -1618,7 +1618,7 @@ namespace sw
 
             // 실패를 조용히 삼키지 않는다. PSO 가 null 이면 드로우가 아무 흔적 없이 사라진다. 루트 시그니처와 셰이더가 맞지 않으면
             // 그렇게 숨는다. 디버그 레이어 메시지를 바로 비워 원인이 같은 줄에 나오게 한다.
-            const HRESULT hrPSO = _pDevice->_device->CreateGraphicsPipelineState( &psoDesc, IID_PPV_ARGS( pso.GetAddressOf() ) );
+            const HRESULT hrPSO = _pDevice->createGraphicsPipeline( psoDesc, pso );
             if ( FAILED( hrPSO ) )
             {
                 SW_LOG_ERROR_ID( "D3D12RHIResourceFactory.CreateGraphicsPipelineStateFailedHrVS", "CreateGraphicsPipelineState failed (hr=%#): VS '%#' PS '%#'", static_cast<uint32>( hrPSO ), desc._vertexShaderPath.c_str(), desc._pixelShaderPath.c_str() );
@@ -1645,7 +1645,7 @@ namespace sw
             psoDesc.pRootSignature = _pDevice->_rootSignature.Get();
             psoDesc.CS             = { computeStage._bytecode.data(), computeStage._bytecode.size() };
 
-            const HRESULT hr = _pDevice->_device->CreateComputePipelineState( &psoDesc, IID_PPV_ARGS( pso.GetAddressOf() ) );
+            const HRESULT hr = _pDevice->createComputePipeline( psoDesc, pso );
             if ( FAILED( hr ) )
             {
                 SW_LOG_ERROR_ID( "D3D12RHIResourceFactory.CreateComputePipelineStateFailedHrX", "CreateComputePipelineState failed hr=0x%# '%#'", static_cast<uint32>( hr ), label );

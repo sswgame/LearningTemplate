@@ -10,8 +10,10 @@
 #include "Core/Container/string.h"
 #include "Core/Container/unordered_map.h"
 #include "Core/Container/vector.h"
+#include "Core/Delegate/Delegate.h"
 #include "Core/Delegate/Subscription.h"
 #include "Core/Foundation/Macros.h"
+#include "Core/Memory/Memory.h"
 #include "Core/Path/AbsolutePath.h"
 #include "Core/Subsystem/ServiceSlot.h"
 #include "Core/Subsystem/Subsystem.h"
@@ -186,6 +188,14 @@ namespace sw
     private:
         friend class ShaderLoadOperation;
 
+        /** @brief 디스크를 읽지 않는 스레드의 요청을 대신 도는 로드 스레드입니다. 완전한 타입은 cpp 에만 있습니다. */
+        struct LoadThread;
+
+        /**
+         * @brief @p body 를 로드 스레드에서 돌리고 끝날 때까지 기다립니다 — 디스크 IO 가 금지된 스레드(`DiskIOForbiddenScope`)의 동기 요청이다.
+         * @details 태스크로 내지 않는다: 기다리는 동안 다른 태스크를 도우면 렌더 스레드가 잠금을 쥔 채 남의 일을 돌 수 있고, 워커가 모두 찬 프레임에는 로드가 뒤로 밀린다.
+         */
+        void runOnLoadThread( const Delegate<void()>& body );
         /** @brief 인메모리 캐시의 키입니다(경로 · 진입점 · 스테이지 · 대상 · 코드젠 · define). */
         static string makeCacheKey( const ShaderCompileDesc& desc );
         /** @brief `request` 와 `getOrCompile` 의 본문입니다. 새 로드를 @p start 대로 시작합니다(`AssetLoadStart`). */
@@ -215,6 +225,7 @@ namespace sw
         DevCounter                                                       _memoryHitCount;              ///< `getMemoryHitCount` — 로드 워커가 함께 센다
         DevCounter                                                       _providerLoadCount;           ///< `getProviderLoadCount` — 로드 워커가 함께 센다
         BusyClock                                                        _compileBusy;                 ///< `getCompileBusyClock` — 로드 워커 · PSO 워커가 함께 센다
+        unique_ptr<LoadThread>                                           _pLoadThread;                 ///< `runOnLoadThread` 의 스레드 — 처음 쓸 때 띄우고 `shutdown` 이 합류한다
         uint8                                                            _bLiveDebugCodegen;           ///< `isLiveDebugCodegen` — 기동에서만 쓴다(그때는 로드가 없다)
 
         SW_SERVICE_SLOT( ShaderCache, Required );

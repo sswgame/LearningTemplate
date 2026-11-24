@@ -338,8 +338,9 @@ namespace sw
     {
         // 컴퓨트가 드로우 커맨드를 만드는 경로를 쓰려면 인다이렉트 드로우와 컬링 디스패치가 둘 다 켜져
         // 있고 컬링 PSO 가 실제로 만들어져 있어야 한다. 셋 중 하나라도 없으면 CPU 가 채운 개수로 그린다.
-        // 개수를 되돌리는 커널이 없으면 컴퓨트가 센 개수가 프레임마다 쌓인다(N, 2N ...) — 둘이 다 있어야 GPU 가 개수를 맡는다.
-        return _state._settings._bGPUCulling != SW_FALSE && _psoManager.getEnginePSO( RenderPassKind::GPUCull ) != 0 && _psoManager.getEnginePSO( RenderPassKind::IndirectArgsReset ) != 0;
+        // 개수를 되돌리는 커널이 없으면 컴퓨트가 센 개수가 프레임마다 쌓인다(N, 2N ...) · 압축 커널이 없으면 모은 인자가 빈 채로 그려진다 — 셋이 다 있어야 GPU 가 개수를 맡는다.
+        return _state._settings._bGPUCulling != SW_FALSE && _psoManager.getEnginePSO( RenderPassKind::GPUCull ) != 0 && _psoManager.getEnginePSO( RenderPassKind::IndirectArgsReset ) != 0 &&
+               _psoManager.getEnginePSO( RenderPassKind::IndirectArgsCompact ) != 0;
     }
 
     bool FrameGraphExecutor::shouldAnimateInstances() const
@@ -966,7 +967,7 @@ namespace sw
         renderView._cullCb.update( *_pCmd, &cullParams, sizeof( cullParams ) );
 
         // 컬링이 쓰는 버퍼(인자 · 가시 목록 · 전환 상태 · 차례 표시)는 그래프 레벨 콜백이 모든 슬롯을 묶어 UAV 로 옮겨 두었다(`registerCullResources`).
-        // 개수를 GPU 에서 되돌린다 — 배치마다 0(압축을 포기한 배치는 CPU 개수). 예전에는 CPU 가 프레임마다 모든 뷰의 인자 전체를 다시 올렸다.
+        // 개수를 GPU 에서 되돌린다 — 배치마다 0. 예전에는 CPU 가 프레임마다 모든 뷰의 인자 전체를 다시 올렸다.
         // 나머지 칸(인덱스 수 · 시작 · 정점 시작 · 인스턴스 시작)은 배치 표가 바뀔 때만 CPU 가 올린다. 바인딩은 컬링과 같은 자리(b0 · t1 · u0)라 그대로 이어 쓴다.
         _pCmd->setComputePipelineState( _psoManager.getEnginePSO( RenderPassKind::IndirectArgsReset ) );
         _pCmd->bindComputeConstantBuffer( renderView._cullCb._index, 0 );
@@ -1028,18 +1029,69 @@ namespace sw
             renderView._sortCb.update( *_pCmd, &sortParams, sizeof( sortParams ) );
 
             _pCmd->setComputePipelineState( sortPSO );
-            // 바인딩 위치는 컬링과 같다. 인자와 가시 목록을 그대로 읽고 쓴다. g_ViewRank(t2)는 추가 뷰의 순번 테이블이고, 그 밖의 뷰는 자리 표시용이다.
-            _pCmd->bindComputeConstantBuffer( renderView._sortCb._index, 0 );
-            _pCmd->bindComputeShaderResource( _state._gpuScene.getInstanceSRV(), 0 );
-            _pCmd->bindComputeShaderResource( _state._gpuScene.getBatchInfoSRV(), 1 );
-            if ( rankSRV != kInvalidDescriptorIndex )
-                _pCmd->bindComputeShaderResource( rankSRV, 2 );
-            // 정렬 배치는 컬링이 차례를 적어 두었다 — 정렬한 뒤 차례 → 칸(t3)으로 바꿔 쓴다.
-            _pCmd->bindComputeShaderResource( _state._gpuScene.getInstanceOrderBuffer()._srv, 3 );
-            _pCmd->bindComputeUAV( view._indirectArgs._uav, 0 );
-            _pCmd->bindComputeUAV( view._visibleInstances._uav, 1 );
+            bindSortResources( cullViewIndex, renderView, rankSRV );
             // 배치마다 워크그룹 하나를 쓴다. 그 배치의 목록을 그룹 공유 메모리 안에서 정렬한다.
             _pCmd->dispatchCompute( cullParams._batchCount, 1, 1 );
+            dispatchMultiPassSort( graphContext, cullViewIndex, renderView, rankSRV );
+        }
+        dispatchArgsCompact( *_pCmd, cullViewIndex, renderView._cullCb, cullParams._batchCount );
+    }
+
+    void FrameGraphExecutor::dispatchArgsCompact( IRHIPassCommandList& cmd, uint32 cullViewIndex, const RHIConstantBuffer& cullConstants, uint32 batchCount ) const
+    {
+        if ( _state._gpuScene.hasCompactSegments() == false )
+            return;
+        // 컬링이 쓴 개수를 읽는다 — 컬링 뒤의 UAV 배리어는 부르는 쪽이 냈다. 쓰는 구간은 읽는 구간과 겹치지 않는다(gpu_cull.hlsl SW_CULL_COMPACT_ARGS).
+        cmd.setComputePipelineState( _psoManager.getEnginePSO( RenderPassKind::IndirectArgsCompact ) );
+        cmd.bindComputeConstantBuffer( cullConstants._index, 0 );
+        cmd.bindComputeShaderResource( _state._gpuScene.getBatchInfoSRV(), 1 );
+        cmd.bindComputeUAV( _state._gpuScene.getCullView( cullViewIndex )._indirectArgs._uav, 0 );
+        cmd.dispatchThreads( batchCount, 1, 1 );
+    }
+
+    void FrameGraphExecutor::bindSortResources( uint32 cullViewIndex, const RenderView& renderView, RHIBufferSRVIndex rankSRV )
+    {
+        const GPUCullViewResources& view = _state._gpuScene.getCullView( cullViewIndex );
+        // 바인딩 위치는 컬링과 같다. 인자와 가시 목록을 그대로 읽고 쓴다. g_ViewRank(t2)는 추가 뷰의 순번 테이블이고, 그 밖의 뷰는 자리 표시용이다.
+        _pCmd->bindComputeConstantBuffer( renderView._sortCb._index, 0 );
+        _pCmd->bindComputeShaderResource( _state._gpuScene.getInstanceSRV(), 0 );
+        _pCmd->bindComputeShaderResource( _state._gpuScene.getBatchInfoSRV(), 1 );
+        if ( rankSRV != kInvalidDescriptorIndex )
+            _pCmd->bindComputeShaderResource( rankSRV, 2 );
+        // 정렬 배치는 컬링이 차례를 적어 두었다 — 정렬한 뒤 차례 → 칸(t3)으로 바꿔 쓴다.
+        _pCmd->bindComputeShaderResource( _state._gpuScene.getInstanceOrderBuffer()._srv, 3 );
+        _pCmd->bindComputeUAV( view._indirectArgs._uav, 0 );
+        _pCmd->bindComputeUAV( view._visibleInstances._uav, 1 );
+    }
+
+    void FrameGraphExecutor::dispatchMultiPassSort( const RenderGraphPassContext& graphContext, uint32 cullViewIndex, const RenderView& renderView, RHIBufferSRVIndex rankSRV )
+    {
+        // 셰이더의 SwRootConstants(instance_sort.hlsl `SW_SORT_MULTI_PASS`)와 같은 배치다.
+        struct RootConstants
+        {
+            uint32 _batch{ 0 };
+            uint32 _stage{ 0 };
+            uint32 _span{ 0 };
+        };
+        static_assert( sizeof( RootConstants ) / sizeof( uint32 ) <= shaderslot::kRootConstantDwords, "multi pass sort root constants exceed the root block" );
+        const vector<uint32>&        listBatch = _state._gpuScene.getMultiPassSortBatches();
+        const RHIPipelineStateHandle pso       = _psoManager.getEnginePSO( RenderPassKind::InstanceSortMultiPass );
+        if ( listBatch.empty() || pso == 0 )
+            return;
+        _pCmd->setComputePipelineState( pso );
+        bindSortResources( cullViewIndex, renderView, rankSRV );
+        vector<GPUSortStage> listStage;
+        for ( const uint32 batchIndex : listBatch )
+        {
+            GPUScene::collectSortStages( _state._gpuScene.getAllBatches()[batchIndex]._instanceCount, listStage );
+            for ( const GPUSortStage& stage : listStage )
+            {
+                // 앞 단계가 쓴 목록을 다음 단계가 읽는다(상태는 그대로 UAV).
+                graphContext.uavBarrier( RenderGraphBufferUAV{ FrameResource::cullVisibleInstances() }, cullViewIndex );
+                const RootConstants constants{ batchIndex, static_cast<uint32>( stage._kind ), stage._span };
+                _pCmd->setComputeRootConstants( 0, sizeof( constants ) / sizeof( uint32 ), &constants );
+                _pCmd->dispatchThreads( stage._threadCount, 1, 1 );
+            }
         }
     }
 
@@ -1179,6 +1231,9 @@ namespace sw
         cmd.bindComputeUAV( _occludedOrders._uav, 3 );
         _state._gpuMessages.bindCompute( cmd );
         cmd.dispatchThreads( _lateInstanceCount, 1, 1 );
+        // 더한 개수로 다시 모은다 — 앞 단계가 모은 인자는 깊이 프리패스가 이미 그렸다.
+        graphContext.uavBarrier( ViewGraphResource::cullArgs() );
+        dispatchArgsCompact( cmd, cullViewIndex, _lateCullCb, params._batchCount );
 
         // 3) 그리는 쪽이 읽는 상태(등록 접근)로 — 뒤 패스(G버퍼 · 포워드 불투명)가 더한 개수로 그린다. LOD 상태 · 차례 표시는 등록 접근이 UAV 라 그대로 둔다.
         graphContext.transition( ViewGraphResource::cullArgs(), RenderGraphAccess::IndirectArgs );

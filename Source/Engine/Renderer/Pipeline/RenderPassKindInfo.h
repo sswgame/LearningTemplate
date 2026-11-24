@@ -71,6 +71,10 @@ namespace sw
     inline constexpr const utf8* kPassFSRRcasDefine = "SW_PASS_FSR_RCAS=1";
     /// @brief 컬링 셰이더(gpu_cull.hlsl)를 간접 인자 개수 되돌리기 커널로 만든다(`RenderPassKind::IndirectArgsReset`).
     inline constexpr const utf8* kPassIndirectArgsResetDefine = "SW_CULL_RESET_ARGS=1";
+    /// @brief 컬링 셰이더(gpu_cull.hlsl)를 간접 인자 압축 커널로 만든다(`RenderPassKind::IndirectArgsCompact`).
+    inline constexpr const utf8* kPassIndirectArgsCompactDefine = "SW_CULL_COMPACT_ARGS=1";
+    /// @brief 투명 정렬 셰이더(instance_sort.hlsl)를 다단 정렬 커널로 만든다(`RenderPassKind::InstanceSortMultiPass`). 없으면 같은 파일이 워크그룹 하나짜리 정렬이다.
+    inline constexpr const utf8* kPassInstanceSortMultiPassDefine = "SW_SORT_MULTI_PASS=1";
     /// @brief 자동 노출 셰이더(auto_exposure.hlsl)를 히스토그램 컴퓨트 커널로 만든다(`RenderPassKind::AutoExposureHistogram`). 없으면 같은 파일이 1x1 풀스크린이다.
     inline constexpr const utf8* kPassAutoExposureHistogramDefine = "SW_PASS_AUTO_EXPOSURE_HISTOGRAM=1";
     /// @brief 화면 출력 인코딩의 퍼뮤테이션입니다(display_encode.hlsli — 1 HDR10 PQ, 2 scRGB 선형. 0 SDR 은 인코딩 패스가 없다).

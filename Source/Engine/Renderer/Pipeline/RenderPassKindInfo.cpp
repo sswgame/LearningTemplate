@@ -418,6 +418,13 @@ namespace sw
                         info._flags          = Flag::kCompute | Flag::kRequiresGPUCulling;
                         break;
                     }
+                    case RenderPassKind::InstanceSortMultiPass:
+                    {
+                        info._pDefaultShader = &EngineDefaultAssets::_shaderInstanceSort;
+                        info._pPassDefine    = kPassInstanceSortMultiPassDefine;
+                        info._flags          = Flag::kCompute | Flag::kRequiresGPUCulling;
+                        break;
+                    }
                     case RenderPassKind::MeshMorph:
                     {
                         info._pDefaultShader = &EngineDefaultAssets::_shaderMeshMorph;
@@ -525,6 +532,14 @@ namespace sw
                         // 컬링 셰이더의 다른 커널이다(같은 CullParams · 배치 표 · 간접 인자 바인딩). 컬링과 같은 조건(간접 인자 능력)이다.
                         info._pDefaultShader = &EngineDefaultAssets::_shaderGPUCull;
                         info._pPassDefine    = kPassIndirectArgsResetDefine;
+                        info._flags          = Flag::kCompute | Flag::kRequiresGPUCulling;
+                        break;
+                    }
+                    case RenderPassKind::IndirectArgsCompact:
+                    {
+                        // 컬링 셰이더의 다른 커널이다(되돌리기와 같은 바인딩).
+                        info._pDefaultShader = &EngineDefaultAssets::_shaderGPUCull;
+                        info._pPassDefine    = kPassIndirectArgsCompactDefine;
                         info._flags          = Flag::kCompute | Flag::kRequiresGPUCulling;
                         break;
                     }

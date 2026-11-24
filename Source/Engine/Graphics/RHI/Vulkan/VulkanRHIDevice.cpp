@@ -9,14 +9,11 @@
 #include "Core/Log/LogOnce.h"
 #include "Core/Math/MathUtil.h"
 #include "Core/Process/ProcessEnvironment.h"
-#include "Core/Task/TaskManager.h"
-#include "Core/Time/MonotonicClock.h"
 
 #include "Engine/Config/EngineDefaultAssets.h"
 #include "Engine/Foundation/EngineServices.h"
 #include "Engine/Graphics/RHI/Backend/RHILiveCommandListUtil.h"
 #include "Engine/Graphics/RHI/Vulkan/VulkanPhysicalDeviceRank.h"
-#include "Engine/Graphics/RHI/Vulkan/VulkanPipelineCacheFile.h"
 #include "Engine/Graphics/RHI/Vulkan/VulkanRHICommandContext.h"
 #include "Engine/Graphics/RHI/Vulkan/VulkanRHICommandList.h"
 #include "Engine/Graphics/RHI/Vulkan/VulkanRHIResourceFactory.h"
@@ -239,7 +236,7 @@ namespace sw
             SW_LOG_ERROR_ID( "Vulkan.PipelineCacheSaveIntervalMissing", "EngineConfig _rhi._pipelineCacheSaveIntervalSeconds must be > 0 - the Vulkan backend does not start" );
             return false;
         }
-        _pipelineCacheSaveIntervalNanoseconds = MonotonicClock::secondsToNanoseconds( deviceDesc._pipelineCacheSaveIntervalSeconds );
+        _pipelineCacheSaveIntervalSeconds = deviceDesc._pipelineCacheSaveIntervalSeconds;
 
         // 검증 레이어는 배포가 아닌 구성(레이어를 싣는 구성, `SW_VULKAN_VALIDATION`)에 컴파일돼 있고 켤지는 장치를 만들 때 정한다
         // (EngineConfig `_rhi._validationLayer`, `-rhi-validation` — 언리얼 `-vulkandebug`). 레이어가 없으면 아래 레이어 확인이 끈다.
@@ -673,15 +670,15 @@ namespace sw
     namespace
     {
         /**
-         * @brief @p physicalDevice 의 파이프라인 캐시 파일(`<Bin>/Saved/ShaderCache/vk_pipeline_cache_<vendor>_<device>_<driver>.bin`)입니다.
+         * @brief @p physicalDevice 의 파이프라인 캐시 파일(`<Bin>/Saved/ShaderCache/vk_pipeline_cache_…bin` — `RHIPipelineCacheFile::makeRelativePath`)입니다.
          * @details 작업 폴더가 아니라 실행 파일 폴더 기준이다 — 병렬 실행(ctest -j · 시나리오 행렬)도 같은 `Bin` 을 쓰고, 이 캐시는 같은 빌드의 실행끼리 나누는 것이 목적이다(쓰기는 원자적 바꿔치기라 겹쳐도 깨지지 않는다).
-         *          장치 · 드라이버마다 파일이 따로다(`VulkanPipelineCacheFile`, R-13).
+         *          장치 · 드라이버마다 파일이 따로다(`RHIPipelineCacheFile`, R-13).
          */
         AbsolutePath getVulkanPipelineCachePath( VkPhysicalDevice physicalDevice )
         {
             VkPhysicalDeviceProperties properties{};
             vkGetPhysicalDeviceProperties( physicalDevice, &properties );
-            return ProcessRoots::get()._saved.join( VulkanPipelineCacheFile::makeRelativePath( properties.vendorID, properties.deviceID, properties.driverVersion ) );
+            return ProcessRoots::get()._saved.join( RHIPipelineCacheFile::makeRelativePath( "vk_pipeline_cache", properties.vendorID, properties.deviceID, properties.driverVersion ) );
         }
 
         struct VulkanRHIDeviceInternal
@@ -1830,11 +1827,9 @@ namespace sw
         if ( _device == VK_NULL_HANDLE || _physicalDevice == VK_NULL_HANDLE )
             return false;
 
-        vector<uint8>      listCacheData;
-        const AbsolutePath cachePath = getVulkanPipelineCachePath( _physicalDevice );
-        // 못 읽으면 빈 캐시로 시작한다 — 파이프라인을 다시 만들 뿐이다.
-        if ( FileUtil::exists( cachePath ) )
-            (void)FileUtil::readFile( cachePath, listCacheData ); // 못 읽으면 빈 캐시로 시작한다(위 설명)
+        vector<uint8> listCacheData;
+        _pipelineCacheFile.open( getVulkanPipelineCachePath( _physicalDevice ), _pipelineCacheSaveIntervalSeconds,
+                                 SW_DELEGATE_METHOD( RHIPipelineCacheSerializeDelegate, &VulkanRHIDevice::serializePipelineCache, this ), listCacheData );
 
         VkPipelineCacheCreateInfo createInfo{};
         createInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_CACHE_CREATE_INFO;
@@ -1857,8 +1852,6 @@ namespace sw
         {
             SW_LOG_INFO_ID( "Vulkan.LoadedPipelineCacheBytes", "Loaded pipeline cache (%# bytes).", static_cast<uint32>( listCacheData.size() ) );
         }
-        _pipelineCacheLastSaveNanoseconds = MonotonicClock::nowNanoseconds();
-        _pipelineCacheLastSavedBytes      = static_cast<uint64>( listCacheData.size() );
         return _pipelineCache != VK_NULL_HANDLE;
     }
 
@@ -1866,61 +1859,31 @@ namespace sw
     {
         if ( _device == VK_NULL_HANDLE || _pipelineCache == VK_NULL_HANDLE )
             return;
-        if ( engine::areEngineServicesBound() )
-            engine::getSubsystem<TaskManager>().waitStage( _pipelineCacheSaveStage, "VulkanRHIDevice::savePipelineCache" );
-        writePipelineCacheFile();
+        _pipelineCacheFile.saveAndClose();
         vkDestroyPipelineCache( _device, _pipelineCache, nullptr );
         _pipelineCache = VK_NULL_HANDLE;
     }
 
     void VulkanRHIDevice::savePipelineCacheIfDue()
     {
-        if ( _device == VK_NULL_HANDLE || _pipelineCache == VK_NULL_HANDLE || engine::areEngineServicesBound() == false )
-            return; // 서비스(작업 풀)가 없는 도구는 종료 저장만 한다
-        const int64 nowNanoseconds = MonotonicClock::nowNanoseconds();
-        if ( nowNanoseconds - _pipelineCacheLastSaveNanoseconds < _pipelineCacheSaveIntervalNanoseconds )
+        if ( _device == VK_NULL_HANDLE || _pipelineCache == VK_NULL_HANDLE || _pipelineCacheFile.isIntervalPassed() == false )
             return;
         // 크기만 묻는다(버퍼 없이) — 새 파이프라인이 없으면 디스크를 건드리지 않는다. 캐시는 내부 동기화라 워커의 파이프라인 생성과 겹쳐도 된다(외부 동기화 깃발을 쓰지 않는다).
         size_t cacheBytes{ 0 };
-        if ( isVkSuccess( vkGetPipelineCacheData( _device, _pipelineCache, &cacheBytes, nullptr ), "vkGetPipelineCacheData (size)" ) == false )
-            return;
-        if ( VulkanPipelineCacheFile::isPeriodicSaveDue( nowNanoseconds, _pipelineCacheLastSaveNanoseconds, _pipelineCacheSaveIntervalNanoseconds, static_cast<uint64>( cacheBytes ),
-                                                         _pipelineCacheLastSavedBytes ) )
-        {
-            TaskManager& taskManager = engine::getSubsystem<TaskManager>();
-            if ( taskManager.isStageComplete( _pipelineCacheSaveStage ) == false )
-                return; // 앞 저장이 아직 쓰는 중이다(느린 디스크) — 시각을 옮기지 않아 다음 프레임에 다시 본다
-            TaskHandle saveTask = taskManager.emplaceTask( "VulkanPipelineCacheSave", SW_DELEGATE_METHOD( TaskDelegate, &VulkanRHIDevice::writePipelineCacheFile, this ) );
-            taskManager.addToStage( _pipelineCacheSaveStage, saveTask, "VulkanPipelineCacheSave" );
-            saveTask.submit();
-            _pipelineCacheLastSavedBytes = static_cast<uint64>( cacheBytes );
-        }
-        _pipelineCacheLastSaveNanoseconds = nowNanoseconds;
+        if ( isVkSuccess( vkGetPipelineCacheData( _device, _pipelineCache, &cacheBytes, nullptr ), "vkGetPipelineCacheData (size)" ) )
+            _pipelineCacheFile.saveIfDue( static_cast<uint64>( cacheBytes ) );
     }
 
-    void VulkanRHIDevice::writePipelineCacheFile()
+    bool VulkanRHIDevice::serializePipelineCache( vector<uint8>& outBytes )
     {
         size_t dataSize{ 0 };
-        // 캐시를 읽지 못하면 오류로 남기고 저장만 건너뛴다(다음 실행이 파이프라인을 새로 만들 뿐이다).
-        if ( isVkSuccess( vkGetPipelineCacheData( _device, _pipelineCache, &dataSize, nullptr ), "vkGetPipelineCacheData (size)" ) && dataSize > 0 )
-        {
-            vector<uint8> listCacheData( dataSize );
-            if ( isVkSuccess( vkGetPipelineCacheData( _device, _pipelineCache, &dataSize, listCacheData.data() ), "vkGetPipelineCacheData (data)" ) )
-            {
-                const AbsolutePath cachePath = getVulkanPipelineCachePath( _physicalDevice );
-                // 새 파이프라인이 없던 실행은 같은 바이트다 — 다시 쓰지 않는다. 드라이버가 같은 내용에 다른 바이트를 내면 지금처럼 쓴다.
-                vector<uint8> listSavedData;
-                const bool    bUnchanged = FileUtil::exists( cachePath ) && FileUtil::readFile( cachePath, listSavedData ) && listSavedData.size() == dataSize &&
-                                        Memory::compare( listSavedData.data(), listCacheData.data(), dataSize ) == 0;
-                if ( bUnchanged )
-                    SW_LOG_INFO_ID( "Vulkan.PipelineCacheUnchanged", "Pipeline cache unchanged (%# bytes) - not saved.", static_cast<uint32>( dataSize ) );
-                else if ( FileUtil::ensureParentDirectoryExists( cachePath ) &&
-                          FileUtil::writeFile( cachePath, listCacheData.data(), static_cast<uint64>( listCacheData.size() ) ) )
-                    SW_LOG_INFO_ID( "Vulkan.SavedPipelineCacheBytes", "Saved pipeline cache (%# bytes).", static_cast<uint32>( dataSize ) );
-                else
-                    SW_LOG_WARNING_ID( "Vulkan.CouldNotSavePipeline", "Could not save the pipeline cache - the next run builds pipelines from scratch" );
-            }
-        }
+        if ( isVkSuccess( vkGetPipelineCacheData( _device, _pipelineCache, &dataSize, nullptr ), "vkGetPipelineCacheData (size)" ) == false || dataSize == 0 )
+            return false;
+        outBytes.resize( dataSize );
+        if ( isVkSuccess( vkGetPipelineCacheData( _device, _pipelineCache, &dataSize, outBytes.data() ), "vkGetPipelineCacheData (data)" ) == false )
+            return false;
+        outBytes.resize( dataSize );
+        return true;
     }
 
     void VulkanRHIDevice::reportQueueResult( int32 result, const utf8* pWhere )

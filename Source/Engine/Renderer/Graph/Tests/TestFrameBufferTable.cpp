@@ -88,11 +88,20 @@ SW_TEST_CASE( FrameBufferTableTest, RegisteredHandlesAreFoundByNameAndSlot )
     SW_EXPECT_EQUAL( RHIBufferHandle{ 0 }, table.findBuffer( history, 0 ) ); // 텍스처를 버퍼로 찾지 않는다
     SW_EXPECT_EQUAL( RHITextureHandle{ 21 }, table.findTexture( history, 0 ) );
     SW_EXPECT_EQUAL( size_t{ 3 }, table.getEntries().size() );
+    // 이름마다 처음 등록 하나, 칸 색인은 등록하지 않은 칸을 무효로 둔다.
+    SW_EXPECT_EQUAL( size_t{ 2 }, table.getFirstEntries().size() );
+    const vector<uint32>* pSlots = table.findSlots( hzb );
+    SW_REQUIRE_NOT_NULL( pSlots );
+    SW_REQUIRE_EQUAL( size_t{ 3 }, pSlots->size() );
+    SW_EXPECT_EQUAL( constant::invalid_index::kUint32, ( *pSlots )[1] );
+    SW_EXPECT_NULL( table.findSlots( hashed_string( "LightGrid" ) ) );
 
     // 프레임마다 비운다 — 지난 프레임의 핸들이 남지 않는다.
     table.reset();
     SW_EXPECT_EQUAL( RHIBufferHandle{ 0 }, table.findBuffer( hzb, 0 ) );
     SW_EXPECT_TRUE( table.getEntries().empty() );
+    SW_EXPECT_TRUE( table.getFirstEntries().empty() );
+    SW_EXPECT_NULL( table.findSlots( hzb ) );
 }
 
 /**

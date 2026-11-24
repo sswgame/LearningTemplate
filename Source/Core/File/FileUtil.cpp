@@ -3,6 +3,7 @@
 #include "Core/File/FileUtil.h"
 
 #include "Core/Algorithm/VectorUtil.h"
+#include "Core/Concurrency/DiskIOScope.h"
 #include "Core/Concurrency/thread.h"
 #include "Core/File/PlatformFileSystem.h"
 #include "Core/File/PlatformFileUtil.h"
@@ -95,9 +96,16 @@ namespace sw
                 return result == FileWriteResult::Written;
             }
 
+            /** @brief 디스크 IO 를 금지한 구간(`DiskIOForbiddenScope` — 렌더 스레드의 패킷 실행)에서 파일 @p path 를 만지면 단언합니다. */
+            static void requireDiskIOAllowed( [[maybe_unused]] string_view path )
+            {
+                SW_LOG_ASSERT( DiskIOForbiddenScope::isActive() == false, "Disk IO inside a section that forbids it (render thread packet): %#", path );
+            }
+
             /** @brief `writeAtomically` 의 본체입니다 — 실패를 로그 없이 결과로 돌려준다(게이트 거절은 `isWriteAllowed` 가 남긴다). 설명은 `writeAtomically`. */
             [[nodiscard]] static FileWriteResult writeAtomicallyQuiet( const AbsolutePath& fileName, const void* pData, size_t size, FileSyncMode durability )
             {
+                requireDiskIOAllowed( fileName.str() );
                 AbsolutePath tempPath;
                 if ( prepareAtomicWrite( fileName, tempPath ) == false )
                     return FileWriteResult::Refused;
@@ -200,6 +208,7 @@ namespace sw
             template <typename BufferType>
             [[nodiscard]] static OptionalFileRead readRange( const AbsolutePath& fileName, uint64 offset, uint64 maxReadCount, BufferType& outBuffer, bool bMissingIsError )
             {
+                requireDiskIOAllowed( fileName.str() );
                 const NativeFileHandle handle = PlatformFileUtil::openNativeFileForRead( fileName.c_str() );
                 if ( handle == kInvalidNativeFileHandle )
                 {
@@ -935,6 +944,7 @@ namespace sw
     bool FileUtil::readStreamTextFile( const AbsolutePath& fileName, string& outText, const uint64 maxBytes )
     {
         outText.clear();
+        FileUtilInternal::requireDiskIOAllowed( fileName.str() );
         FILE* pFile = PlatformFileUtil::openFile( fileName.c_str(), "rb" );
         if ( pFile == nullptr )
         {
@@ -999,6 +1009,7 @@ namespace sw
     {
         if ( isWriteAllowed( fileName ) == false )
             return false;
+        FileUtilInternal::requireDiskIOAllowed( fileName.str() );
         FILE* pFile = PlatformFileUtil::openFile( fileName.c_str(), "ab" );
         if ( pFile == nullptr )
             return false;
@@ -1556,6 +1567,7 @@ namespace sw
     {
         if ( _pFile != nullptr )
             return unexpected( Error{ ErrorKind::InvalidArgument, "atomic file writer is already open", _filePath.str() } );
+        FileUtilInternal::requireDiskIOAllowed( filePath.str() );
         if ( FileUtilInternal::beginAtomicWrite( filePath, _tempPath ) == false )
             return unexpected( Error{ ErrorKind::ExternalFailure, "target cannot be written", filePath.str() } );
         _filePath = filePath;

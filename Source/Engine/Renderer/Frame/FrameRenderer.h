@@ -204,9 +204,9 @@ namespace sw
             sample._giError               = _state._probeUpdater.getError();
             sample._cameraStillFrameCount = _state.getMainView()._cameraStillFrameCount;
             // 시간 누적은 TAA 와 볼륨 구름 둘이다 — 하나라도 쌓이면 정지 프레임을 기다린다.
-            const bool bTemporal          = _state.getMainView()._bTAAHistoryWritten == SW_TRUE || _state.getMainView()._bSkyCloudHistoryWritten == SW_TRUE;
+            const bool bTemporal          = _state.getMainView()._taaHistory.isWritten() || _state.getMainView()._skyCloudHistory.isWritten();
             sample._bTemporalAccumulation = bTemporal ? SW_TRUE : SW_FALSE;
-            sample._bAutoExposure         = _state.getMainView()._bAutoExposureThisFrame;
+            sample._bAutoExposure         = _state.getMainView()._autoExposureHistory.isWritten() ? SW_TRUE : SW_FALSE;
             sample._bRealtimeGI           = _state._probeUpdater.isActive() ? SW_TRUE : SW_FALSE;
             return sample;
         }
@@ -337,7 +337,7 @@ namespace sw
          */
         [[nodiscard]] bool findPSODesc( RHIPipelineStateHandle pso, RHIPipelineStateDesc& outDesc ) const;
         /** @brief 주 시점의 TAA 히스토리 텍스처입니다. 파이프라인에 TAA 패스가 없거나 아직 만들지 않았으면 0 입니다(진단과 테스트용). */
-        RHITextureHandle getTAAHistory() const { return _state.getMainView()._taaHistory._texture; }
+        RHITextureHandle getTAAHistory() const { return _state.getMainView()._taaHistory.getCurrent()._texture; }
         /** @brief 주 시점의 첨부 풀입니다. 어느 타깃이 있고 몇 번 만들었는지 보는 진단 · 테스트용입니다(고치지 않는다). */
         const TransientAttachmentPool& getMainViewPool() const { return _state.getMainView()._transientPool; }
         /** @brief 마지막 프레임에 실제로 그린 추가 뷰 수입니다. 갱신 주기나 예산 때문에 쉰 뷰는 빠집니다(진단과 테스트용). */

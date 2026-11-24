@@ -64,20 +64,23 @@ float sampleLayerMask( float2 skinUV, uint flags )
 {
     const float2 regionMin = decodePair( SW_ROOT( g_SwBakeRegionMin ), 0.0f, 1.0f );
     const float2 regionMax = decodePair( SW_ROOT( g_SwBakeRegionMax ), 0.0f, 1.0f );
+    float        coverage  = 0.0f; // 출구가 하나다 — 이른 반환이면 FXC 가 초기화되지 않은 값으로 본다(X4000)
     if ( ( flags & kLayerBakeFlagPlaced ) == 0u )
     {
-        const float inside = SkinLayerComposite::computeInside( float2( 0.5f, 0.5f ), skinUV, regionMin, regionMax );
-        return inside * MaterialTexture::sampleIndex( SW_ROOT( g_SwBakeMask ), skinUV ).r;
+        coverage = SkinLayerComposite::computeInside( float2( 0.5f, 0.5f ), skinUV, regionMin, regionMax ) * MaterialTexture::sampleIndex( SW_ROOT( g_SwBakeMask ), skinUV ).r;
     }
-    const float2 offset   = decodePair( SW_ROOT( g_SwBakeOffset ), 0.0f, 1.0f );
-    const float2 scale    = decodePair( SW_ROOT( g_SwBakeScale ), kLayerBakeMinScale, kLayerBakeMaxScale );
-    const float  rotation = decodeUnorm16( flags, 0u, -kLayerBakeMaxAngle, kLayerBakeMaxAngle );
-    const float2 layerUV  = SkinLayerComposite::toLayerUV( skinUV, offset, scale, rotation, false );
-    float        coverage = SkinLayerComposite::computeInside( layerUV, skinUV, regionMin, regionMax ) * MaterialTexture::sampleIndex( SW_ROOT( g_SwBakeMask ), saturate( layerUV ) ).r;
-    SW_BRANCH if ( ( flags & kLayerBakeFlagMirror ) != 0u )
+    else
     {
-        const float2 mirrorUV = SkinLayerComposite::toLayerUV( skinUV, offset, scale, rotation, true );
-        coverage              = max( coverage, SkinLayerComposite::computeInside( mirrorUV, skinUV, regionMin, regionMax ) * MaterialTexture::sampleIndex( SW_ROOT( g_SwBakeMask ), saturate( mirrorUV ) ).r );
+        const float2 offset   = decodePair( SW_ROOT( g_SwBakeOffset ), 0.0f, 1.0f );
+        const float2 scale    = decodePair( SW_ROOT( g_SwBakeScale ), kLayerBakeMinScale, kLayerBakeMaxScale );
+        const float  rotation = decodeUnorm16( flags, 0u, -kLayerBakeMaxAngle, kLayerBakeMaxAngle );
+        const float2 layerUV  = SkinLayerComposite::toLayerUV( skinUV, offset, scale, rotation, false );
+        coverage              = SkinLayerComposite::computeInside( layerUV, skinUV, regionMin, regionMax ) * MaterialTexture::sampleIndex( SW_ROOT( g_SwBakeMask ), saturate( layerUV ) ).r;
+        SW_BRANCH if ( ( flags & kLayerBakeFlagMirror ) != 0u )
+        {
+            const float2 mirrorUV = SkinLayerComposite::toLayerUV( skinUV, offset, scale, rotation, true );
+            coverage              = max( coverage, SkinLayerComposite::computeInside( mirrorUV, skinUV, regionMin, regionMax ) * MaterialTexture::sampleIndex( SW_ROOT( g_SwBakeMask ), saturate( mirrorUV ) ).r );
+        }
     }
     return coverage;
 }

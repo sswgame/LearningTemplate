@@ -37,6 +37,7 @@
 #include "Engine/Graphics/RHI/IRHIDevice.h"
 #include "Engine/Graphics/RHI/IRHIResourceFactory.h"
 #include "Engine/Graphics/RHI/IRHITimestampProvider.h"
+#include "Engine/Graphics/RHI/RHIDescriptors.h"
 #include "Engine/Graphics/RHI/RHIMeshVertexStreams.h"
 #include "Engine/Graphics/Shader/Binding/ShaderBindingLayout.h"
 #include "Engine/Graphics/Shader/Binding/ShaderBindingSlots.h"
@@ -584,7 +585,7 @@ namespace sw
         // 컬링 · 지난 뷰-투영(속도 기준)은 받은 @p viewProj(지터 없음)를 쓰고, 화면 속도는 셰이더가 `g_TemporalJitter` 를 빼서 물체 · 카메라 움직임만 남긴다.
         const TransientAttachmentPool& pool = view._transientPool;
         // 기록을 버리는 프레임(처음 · 컷 · 건너뛴 프레임 뒤)은 이번 원본만 남으므로 지터하지 않는다 — 한 장짜리 그림이 흔들리기만 한다.
-        const bool bJitter = view._bTAAHistoryWritten == SW_TRUE && view._bTAAHistoryReset == SW_FALSE;
+        const bool bJitter = view._taaHistory.isWritten() && view._taaHistory.isReset() == false;
         if ( bJitter == false )
             view._temporalJitter.restart(); // 기록이 새로 시작하면 지터도 첫 표본부터 — 그 전에 흐른 프레임 수(앞 씬 · 대기)가 그림을 바꾸지 않는다
         // 지터는 렌더 공간 픽셀이다. 시간 업스케일이면 출력 픽셀마다 표본이 모이게 바퀴를 늘린다(`TemporalJitterSequence::computePhaseCount`).
@@ -765,8 +766,6 @@ namespace sw
             ViewGraphResource::cullVisibleInstances(),
             ViewGraphResource::cullLODState(),
             ViewGraphResource::occludedOrders(),
-            ViewGraphResource::deferredTileArgs(),
-            ViewGraphResource::deferredTileList(),
         };
         for ( const RenderGraphResourceAccess& resource : arrEngineResource )
         {
@@ -941,15 +940,7 @@ namespace sw
         if ( _state._settings._bAliasTransients == SW_FALSE || GPUNanCheck::isRequested() )
             return;
 
-        // 실행 순서 번호 → 레벨. 실행 순서는 레벨을 차례로 이은 것이다(`RenderGraph::compile`).
-        const RenderGraph&                   graph = _state._graph;
-        vector<uint32>                       listLevelOfOrder;
-        const vector<vector<hashed_string>>& listLevel = graph.getExecutionLevels();
-        for ( uint32 levelIndex = 0; levelIndex < static_cast<uint32>( listLevel.size() ); ++levelIndex )
-        {
-            listLevelOfOrder.insert( listLevelOfOrder.end(), listLevel[levelIndex].size(), levelIndex );
-        }
-
+        const RenderGraph&                   graph    = _state._graph;
         const vector<RenderGraphPassDesc>&   listPass = _pipelineResource.getGraphPass();
         unordered_map<hashed_string, size_t> mapCandidateIndex;
         vector<RenderGraphAliasCandidate>    listCandidate;
@@ -961,7 +952,7 @@ namespace sw
                 continue;
             const hashed_string                name( attachment._name.c_str() );
             const RenderGraphResourceLifetime* pLife = graph.findResourceLifetime( name );
-            if ( pLife == nullptr || pLife->_lastPassIndex >= listLevelOfOrder.size() )
+            if ( pLife == nullptr )
                 continue;
             // 서술 키 — 같은 텍스처로 넘길 수 있는 조건(형식 · 나눗수 · RW 용도 · 클리어 값, D3D12 의 최적 클리어 값이 서술에 든다).
             // 칸마다 32 비트로 옮겨 해시한다(구조체째 해시하면 정렬 채움 바이트가 섞인다).
@@ -976,7 +967,7 @@ namespace sw
             // 힙에 겹쳐 놓으려면 프레임의 첫 쓰기가 지우기여야 한다(앞 텍스처가 남긴 바이트가 내용이 된다) — RW(컴퓨트가 처음 쓴다)는 빼고 Clear 만 받는다.
             const uint8 bPlaceable  = attachment._loadOp == RHIRenderPassLoadOp::Clear && arrDescWord[2] == 0u ? 1 : 0;
             mapCandidateIndex[name] = listCandidate.size();
-            listCandidate.push_back( RenderGraphAliasCandidate{ name, descKey, listLevelOfOrder[pLife->_firstPassIndex], listLevelOfOrder[pLife->_lastPassIndex], bPlaceable } );
+            listCandidate.push_back( RenderGraphAliasCandidate{ name, descKey, pLife->_firstLevel, pLife->_lastLevel, bPlaceable } );
         }
 
         // 꺼진 효과는 출력 이름이 원본을 가리킨다(`kBypassesToSource`) — 그 출력을 읽는 패스가 원본을 읽으므로 원본의 수명이 출력의 끝까지 늘어난다. 둘을 한 구간으로 묶는다.
@@ -1144,12 +1135,15 @@ namespace sw
         uint32 uavBarrierCount = 0;
         for ( const RenderGraphBarrier& barrier : *levelContext._pListBarrier )
         {
-            bool bRegistered = false;
-            for ( const FrameBufferTable::Entry& entry : table.getEntries() )
+            bool                  bRegistered = false;
+            const vector<uint32>* pSlots      = table.findSlots( barrier._resource );
+            for ( size_t slot = 0; pSlots != nullptr && slot < pSlots->size(); ++slot )
             {
-                if ( entry._name != barrier._resource || entry._viewable != barrier._viewable )
+                const uint32 entryIndex = ( *pSlots )[slot];
+                if ( entryIndex == constant::invalid_index::kUint32 || table.getEntries()[entryIndex]._viewable != barrier._viewable )
                     continue;
-                bRegistered = true;
+                const FrameBufferTable::Entry& entry = table.getEntries()[entryIndex];
+                bRegistered                          = true;
                 if ( barrier._viewable == RenderGraphViewableKind::Buffer )
                 {
                     if ( barrier._bUAVBarrier != 0 )
@@ -1159,6 +1153,12 @@ namespace sw
                     }
                     else if ( const optional<RHIBufferState> state = RenderGraphAccessUtil::findBufferState( barrier._access ) )
                     {
+                        // 그래프가 만든 버퍼의 첫 쓰기 — 앞 이름(앞 뷰의 그래프)이 같은 버퍼를 UAV 로 남겼으면 상태 전이가 없다. 그 쓰기를 기다린다.
+                        if ( entry._bGraphOwned && barrier._before == RenderGraphResourceState::Undefined && barrier._access == RenderGraphAccess::UnorderedAccess )
+                        {
+                            cmd.uavBarrier( entry.getBuffer() );
+                            ++uavBarrierCount;
+                        }
                         _levelBufferTransitions.add( entry.getBuffer(), *state );
                     }
                 }
@@ -1303,18 +1303,17 @@ namespace sw
         _viewResourceTable.reset();
         // 등록 접근은 이 뷰 그래프의 시작이자 끝이다 — 아래 끝에서 그래프에 들이고, 그래프가 끝에 그 접근으로 되돌린다(패스가 돌지 않아 UAV 로 남은 자원도 다음 사용자가 같은 상태를 본다).
         // 자동 노출 — 이번 프레임에 재는 뷰만(`prepareAutoExposure`). 지난 칸을 읽고 이번 칸에 쓴다.
-        if ( view._bAutoExposureThisFrame == SW_TRUE && view._arrAutoExposure[0].isValid() && view._arrAutoExposure[1].isValid() )
+        if ( view._autoExposureHistory.isWritten() && view._autoExposureHistory.isValid() )
         {
-            const uint32 writeSlot = view._autoExposureWrite;
-            _viewResourceTable.registerTexture( ViewGraphResource::autoExposureHistory()._name, 0, view._arrAutoExposure[1u - writeSlot]._texture, RenderGraphAccess::ShaderRead );
-            _viewResourceTable.registerTexture( ViewGraphResource::autoExposureTarget()._name, 0, view._arrAutoExposure[writeSlot]._texture, RenderGraphAccess::ShaderRead );
+            _viewResourceTable.registerTexture( ViewGraphResource::autoExposureHistory()._name, 0, view._autoExposureHistory.getPrevious()._texture, RenderGraphAccess::ShaderRead );
+            _viewResourceTable.registerTexture( ViewGraphResource::autoExposureTarget()._name, 0, view._autoExposureHistory.getCurrent()._texture, RenderGraphAccess::ShaderRead );
         }
         // TAA 기록 — TAA 가 도는 뷰만(`applyViewPassSelection`). 지난 프레임의 복사 끝에 셰이더 읽기로 남았다.
-        if ( view._bTAAHistoryWritten == SW_TRUE && view._taaHistory.isValid() )
-            _viewResourceTable.registerTexture( ViewGraphResource::taaHistory()._name, 0, view._taaHistory._texture, RenderGraphAccess::ShaderRead );
+        if ( view._taaHistory.isWritten() && view._taaHistory.isValid() )
+            _viewResourceTable.registerTexture( ViewGraphResource::taaHistory()._name, 0, view._taaHistory.getCurrent()._texture, RenderGraphAccess::ShaderRead );
         // 볼륨 구름 기록 — 구름이 도는 뷰만(`applyViewPassSelection`). TAA 기록과 같은 상태로 남는다.
-        if ( view._bSkyCloudHistoryWritten == SW_TRUE && view._skyCloudHistory.isValid() )
-            _viewResourceTable.registerTexture( ViewGraphResource::skyCloudHistory()._name, 0, view._skyCloudHistory._texture, RenderGraphAccess::ShaderRead );
+        if ( view._skyCloudHistory.isWritten() && view._skyCloudHistory.isValid() )
+            _viewResourceTable.registerTexture( ViewGraphResource::skyCloudHistory()._name, 0, view._skyCloudHistory.getCurrent()._texture, RenderGraphAccess::ShaderRead );
         // FSR 1 — 이번 프레임에 키우는 뷰만(`prepareUpscale`).
         if ( view._bUpscaleThisFrame == SW_TRUE && view._upscaleIntermediate.isValid() )
             _viewResourceTable.registerTexture( ViewGraphResource::upscaleIntermediate()._name, 0, view._upscaleIntermediate._texture, RenderGraphAccess::ShaderRead );
@@ -1329,13 +1328,18 @@ namespace sw
             _viewResourceTable.registerTexture( ViewGraphResource::postProcessChainAfterTonemap()._name, 0, view._postProcessChainAfterTonemap._texture, RenderGraphAccess::ShaderRead );
         // 이번 장면 깊이로 HZB 를 짓는 패스(화면 공간 반사)와 2 단계 가림의 뒤 단계(주 시점)가 쓰는 깊이 사본 · HZB · 컬링 버퍼.
         _frameGraphExecutor.registerViewGraphResources( _viewResourceTable, view, isPassKindEnabledInView( RenderPassKind::ScreenSpaceReflection ) );
-        // 디퍼드 조명 타일 — 조명 패스가 도는 뷰에서 분류를 돌릴 수 있을 때만(능력 · 버퍼 · PSO). 등록이 곧 실행 조건이다(`executeTiledLighting`).
+        _state._graph.importResources( _viewResourceTable );
+        // 디퍼드 조명 타일 — 조명 패스가 도는 뷰에서 분류를 돌릴 수 있을 때만(능력 · PSO). 이 그래프 안에서 쓰고 버리므로 그래프가 만든다. 등록이 곧 실행 조건이다(`executeTiledLighting`).
         if ( isPassKindEnabledInView( RenderPassKind::Lighting ) && isTiledLightingReady( view ) )
         {
-            _viewResourceTable.registerBuffer( ViewGraphResource::deferredTileArgs()._name, 0, view._deferredTileArgs, RenderGraphAccess::IndirectArgs );
-            _viewResourceTable.registerBuffer( ViewGraphResource::deferredTileList()._name, 0, view._deferredTileList, RenderGraphAccess::ShaderRead );
+            constexpr RHIBufferUsage kArgsUsage = RHIBufferUsage::UnorderedAccess | RHIBufferUsage::IndirectArgs | RHIBufferUsage::Raw | RHIBufferUsage::ShaderResource;
+            constexpr RHIBufferUsage kListUsage = RHIBufferUsage::Structured | RHIBufferUsage::ShaderResource | RHIBufferUsage::UnorderedAccess;
+            _state._graph.createBuffer( ViewGraphResource::deferredTileArgs()._name, RenderGraphBufferDesc{ static_cast<uint32>( sizeof( RHIDrawIndirectCommand ) ), kDeferredTileClassCount, kArgsUsage } );
+            _state._graph.createBuffer( ViewGraphResource::deferredTileList()._name,
+                                        RenderGraphBufferDesc{ static_cast<uint32>( sizeof( uint32 ) ), kDeferredTileClassCount * view._deferredTileCapacity, kListUsage } );
         }
-        _state._graph.importResources( _viewResourceTable );
+        if ( _pDevice != nullptr )
+            _state._graph.allocateBuffers( *_pDevice, _viewResourceTable );
         selectGraphPlan();
     }
 

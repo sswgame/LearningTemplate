@@ -28,7 +28,7 @@
         "Engine/Graphics/RHI/RHIDescriptors.h": {"_limit": 9, "_reason": "메시 정점 스트림 · PSO 서술체 · 밉 배치 계산을 RHIMeshVertexLayout.h · RHIPipelineStateDesc.h · RHITextureMipLayout.h 로 떼었다(half · MeshVertex · RenderState · RHIFormatInfo 를 끌지 않는다)"},
         "Engine/Graphics/RHI/RHITypes.h": {"_limit": 11, "_reason": "묶음 헤더 — 서술체 몫(RHIDescriptors.h)이 무거운 의존을 따로 둔다"},
         "Engine/Graphics/RHI/IRHIResourceFactory.h": {"_limit": 10, "_reason": "PSO 서술체는 참조로만 받는다 — 전방 선언"},
-        "Engine/Renderer/Frame/Execute/FramePassExecutor.h": {"_limit": 111, "_reason": "프레임 상태 · 확장 호스트를 참조로만 든다 — FrameRenderState.h · FrameExtensionHost.h 대신 전방 선언"},
+        "Engine/Renderer/Frame/Execute/FramePassExecutor.h": {"_limit": 110, "_reason": "프레임 상태 · 확장 호스트를 참조로만 든다 — FrameRenderState.h · FrameExtensionHost.h 대신 전방 선언"},
         "Engine/Object/GameObject/GameObject.h": {"_limit": 14, "_reason": "태그 형식 TagID 를 앞 선언한다(TagID.h 를 포함하지 않는다)"},
         "Engine/Object/GameObject/GameObjectStore.h": {"_limit": 18, "_reason": "태그 질의 형식을 쓰지 않는다 — TagSystem.h 포함을 지웠다"},
         "Engine/Object/GameObject/GameObjectManager.h": {"_limit": 18, "_reason": "템플릿 몸체는 .inl 둘에 두고 getSubsystem<T> 만 여기 둔다(SubsystemScope.h — 서비스만 얻는 TU 115 곳이 .inl 을 읽지 않게)"},

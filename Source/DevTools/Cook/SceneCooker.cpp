@@ -12,12 +12,15 @@
 #include "Core/Time/MonotonicClock.h"
 
 #include "DevTools/Cook/CookStore.h"
+#include "DevTools/Cook/SceneHLODMeshCooker.h"
 
 #include "Engine/Asset/AssetFormat.h"
 #include "Engine/Config/GameConfig.h"
+#include "Engine/Content/AssetIO.h"
 #include "Engine/Content/AssetPaths.h"
 #include "Engine/Content/CookCodeFingerprint.h"
 #include "Engine/Foundation/EngineServices.h"
+#include "Engine/Graphics/Mesh/MeshAssetFormat.h"
 #include "Engine/Object/Component/Component.h"
 #include "Engine/Object/Component/ComponentStableKey.h"
 #include "Engine/Object/Component/MissingComponent.h"
@@ -226,6 +229,9 @@ namespace sw
                 // 스트리밍하는 씬은 엔티티를 셀로 나눈다. 셀을 넘는 참조가 있으면 쿠킹 실패다 — 런타임에 조용히 끊기는 참조를 싣지 않는다.
                 if ( SceneCellSplitter::split( services, doc, scenePath.str() ) == false )
                     return CookStep::Failed;
+                // 합친 HLOD 대리는 옆에 굽는 메시(`cookHLODMesh`)의 구간을 그린다 — 실행 때 합치지 않는다.
+                if ( SceneHLODMeshCooker::replaceMergedProxies( doc, SceneHLODMeshCooker::makeMeshPath( AssetCookPath::toCookedPath( relativeScene ) ) ).has_value() == false )
+                    return CookStep::Failed;
                 // 쿠킹본은 펼친 결과만 싣는다 — 런타임의 짓는 길이 하나다.
                 doc.stripAuthoringInstanceData();
                 if ( doc.saveBinary( outputPath ) == false )
@@ -235,6 +241,38 @@ namespace sw
                 }
                 SW_LOG_INFO_ID( "SceneCooker.CookedEntitiesBinaryState", "Cooked '%#' -> '%#' (%# entities, %# as binary state)", scenePath.str(), outputPath.str(), static_cast<uint32>( doc.computeTotalEntityCount() ),
                                 cookedCount );
+                return CookStep::Written;
+            }
+
+            /**
+             * @brief 씬 하나의 합친 HLOD 대리를 메시 하나로 구워 @p outputPath 에 씁니다(`SceneHLODMeshCooker`). 합칠 대리가 없는 씬은 건너뜁니다.
+             * @details 대리를 만드는 길은 씬 쿠킹과 같다(묶기 → 셀 나누기) — 입력은 씬이 지어지며 읽은 것과 부품 메시다. 부품 메시를 고치면 이 파일만 다시 굽는다.
+             */
+            static CookStep cookHLODMesh( const SceneEngineServices& services, const AbsolutePath& scenePath, const AbsolutePath& outputPath )
+            {
+                // 합치기를 켜지 않은 씬은 세우지 않는다 — 글에 설정 칸이 없으면 넘긴다. 작업 안에서 읽어 씬이 이 작업의 입력이 된다.
+                string text;
+                if ( AssetIO::readTextFile( scenePath, text ) == false || text.find( SceneHLODMeshCooker::kSettingMarker.data() ) == string::npos )
+                    return CookStep::Skipped;
+                SceneDocument doc{};
+                if ( doc.loadXMLFromDiskFile( scenePath ) == false )
+                {
+                    SW_LOG_ERROR_ID( "SceneCooker.SceneHLODMeshCookFailedRead", "Scene HLOD mesh cook failed to read '%#'.", scenePath.str() );
+                    return CookStep::Failed;
+                }
+                MeshAssetData data{};
+                if ( SceneCooker::packStaticMeshes( services, doc, scenePath.str() ) == false || SceneCellSplitter::split( services, doc, scenePath.str() ) == false ||
+                     SceneHLODMeshCooker::buildMesh( services, doc, scenePath.str(), data ) == false )
+                    return CookStep::Failed;
+                if ( data._listSection.empty() )
+                    return CookStep::Skipped;
+                if ( MeshAssetFormat::saveToFile( outputPath, data ) == false )
+                {
+                    SW_LOG_ERROR_ID( "SceneCooker.SceneHLODMeshCookFailedWrite", "Scene HLOD mesh cook failed to write '%#'.", outputPath.str() );
+                    return CookStep::Failed;
+                }
+                SW_LOG_INFO_ID( "SceneCooker.CookedHLODMesh", "Cooked HLOD mesh '%#' (%# merged proxies, %# triangles)", outputPath.str(), static_cast<uint32>( data._listSection.size() ),
+                                static_cast<uint32>( data._listIndex.size() / 3 ) );
                 return CookStep::Written;
             }
 
@@ -419,6 +457,7 @@ namespace sw
         const string      activePackRoot = FileUtil::trimTrailingSlashes( FileUtil::normalizePath( engine::getSubsystem<GameConfig>()._packRoot.get() ).str() );
         const CookJobDesc desc           = makeCookJobDesc( reflectionFingerprint );
         const CookJobDesc preloadDesc    = makePreloadCookJobDesc( reflectionFingerprint );
+        const CookJobDesc meshDesc       = makeHLODMeshCookJobDesc( reflectionFingerprint );
 
         // 다시 구운 씬의 시간 합과 가장 느린 씬(요약 로그). 씬은 차례로 굽는다 — 에셋 캐시와 결과가 프로세스 하나의 것이라, 나눈다면 언리얼 멀티프로세스 쿡처럼 프로세스를 가른다.
         CookStats stats;
@@ -460,6 +499,11 @@ namespace sw
             const CookResult   preloadResult = store.cookFile( preloadDesc, preloadID, preloadPath, [&]()
               { return SceneCookerInternal::cookPreloadList( SceneIterationKey{}, services, scenePath, preloadPath ); } );
             outFailedCount += preloadResult == CookResult::Failed ? 1u : 0u;
+
+            const string     meshID     = SceneHLODMeshCooker::makeMeshPath( outputID );
+            const CookResult meshResult = store.cookFile( meshDesc, meshID, cookedDir.join( meshID ), [&]()
+            { return SceneCookerInternal::cookHLODMesh( services, scenePath, cookedDir.join( meshID ) ); } );
+            outFailedCount += meshResult == CookResult::Failed ? 1u : 0u;
         }
 
         SW_LOG_INFO_ID( "SceneCooker.SceneCookReusedDDC", "Scene cook: %# reused from the DDC, %# cooked", stats._reusedCount, stats._cookedCount );
@@ -677,6 +721,16 @@ namespace sw
         desc._codeFingerprint = CookCodeFingerprint::find( "ScenePreload" );
         desc._target          = "Any";
         desc._settingsHash    = reflectionFingerprint; // 어느 칸이 경로인지 · 파일에 없는 칸의 기본값은 타입 표가 정한다 — 입력 파일만으로는 모른다
+        return desc;
+    }
+
+    CookJobDesc SceneCooker::makeHLODMeshCookJobDesc( const uint64 reflectionFingerprint )
+    {
+        CookJobDesc desc;
+        desc._cookerName      = "SceneHLODMesh";
+        desc._codeFingerprint = CookCodeFingerprint::find( "SceneHLODMesh" );
+        desc._target          = "Any";
+        desc._settingsHash    = reflectionFingerprint; // 대리를 짓는 씬의 값이 타입 표에서 온다(씬 쿠킹과 같다)
         return desc;
     }
 

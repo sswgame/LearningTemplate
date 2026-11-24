@@ -325,11 +325,11 @@ namespace sw
             SW_LOG_ERROR_ONCE_ID( "FrameViewResources.FailedCreateDepthHistory", "Failed to create the depth history (%#x%#, R32 float RT + UAV) - GPU particles do not collide with the scene depth", depth._width, depth._height );
     }
 
-    void FrameViewResources::updateOutputHistory( const TransientAttachmentPool& pool, const hashed_string& outputName, bool bWritten, const utf8* pDebugName, RHITextureSlot& history )
+    void FrameViewResources::updateOutputHistory( const TransientAttachmentPool& pool, const hashed_string& outputName, const utf8* pDebugName, FrameViewHistory& history )
     {
-        if ( bWritten == false )
+        if ( history.isWritten() == false )
         {
-            // 오래 쉬어 출력을 놓은 뷰는 기록도 놓는다. 다시 도는 첫 프레임은 기록을 버리므로(`_bTAAHistoryReset` · `_bSkyCloudHistoryReset`) 내용은 잃어도 된다.
+            // 오래 쉬어 출력을 놓은 뷰는 기록도 놓는다. 다시 도는 첫 프레임은 기록을 버리므로(`FrameViewHistoryIdleRule::Discard`) 내용은 잃어도 된다.
             if ( history.isValid() && pool.contains( outputName ) == false )
                 history.release( _pDevice );
             return;
@@ -373,39 +373,18 @@ namespace sw
         }
     }
 
-    void FrameViewResources::ensureDeferredTiles( FrameViewTarget& view )
+    void FrameViewResources::updateDeferredTileCapacity( FrameViewTarget& view )
     {
         // 분류 컴퓨트가 G버퍼를 샘플하고(네이티브 bindless) 간접 인자를 쓴다(간접 인자 능력 — 컬링과 같다). 조명 패스가 없는 파이프라인(포워드)은 쓸 곳이 없다.
         const bool bUsable = _pDevice != nullptr && _pDevice->supportsNativeBindlessSampling() && _pDevice->getCapabilities()._bGPUCulling != SW_FALSE &&
                              VectorUtil::containsIf( _pipeline.getGraphPass(), []( const RenderGraphPassDesc& pass )
         { return pass._type == RenderPassKind::Lighting; } );
-        if ( bUsable == false || view._deferredTileList.isValid() )
+        if ( bUsable == false || view._deferredTileCapacity > 0 )
             return;
         const TransientAttachmentPool::Attachment albedo = view._transientPool.find( attachmentNames()._gbufferAlbedo );
         if ( albedo._texture == 0 )
             return;
         view._deferredTileCapacity = FrameRendererUtil::divideRoundUp( albedo._width, kDeferredTileSize ) * FrameRendererUtil::divideRoundUp( albedo._height, kDeferredTileSize );
-        // 간접 인자는 종류마다 RHIDrawIndirectCommand 하나다 — 분류의 지우기 디스패치가 프레임마다 다시 쓴다(처음 값은 그리지 않음).
-        vector<RHIDrawIndirectCommand> listInitialArgs( kDeferredTileClassCount );
-        for ( RHIDrawIndirectCommand& args : listInitialArgs )
-        {
-            args._vertexCount   = SW_DEFERRED_TILE_VERTEX_COUNT;
-            args._instanceCount = 0;
-        }
-        constexpr RHIBufferUsage kArgsUsage = RHIBufferUsage::UnorderedAccess | RHIBufferUsage::IndirectArgs | RHIBufferUsage::Raw | RHIBufferUsage::ShaderResource;
-        constexpr RHIBufferUsage kListUsage = RHIBufferUsage::Structured | RHIBufferUsage::ShaderResource | RHIBufferUsage::UnorderedAccess;
-        const bool               bCreated   = view._deferredTileArgs.ensureCapacity( _pDevice, static_cast<uint32>( sizeof( RHIDrawIndirectCommand ) ), kDeferredTileClassCount, kArgsUsage, false, true,
-                                                                                     listInitialArgs.data() ) &&
-                              view._deferredTileList.ensureCapacity( _pDevice, static_cast<uint32>( sizeof( uint32 ) ), kDeferredTileClassCount * view._deferredTileCapacity, kListUsage, true, true,
-                                                                     nullptr );
-        if ( bCreated == false )
-        {
-            SW_LOG_ERROR_ID( "FrameViewResources.FailedCreateDeferredTiles", "Failed to create the deferred lighting tile buffers (%# tiles) - this view lights the whole screen with every lobe",
-                             view._deferredTileCapacity );
-            view._deferredTileArgs.release( _pDevice );
-            view._deferredTileList.release( _pDevice );
-            view._deferredTileCapacity = 0;
-        }
     }
 
     void FrameViewResources::releaseViewTransients( FrameViewTarget& view )
@@ -420,8 +399,6 @@ namespace sw
         {
             view._hzb                  = RHIStructuredBuffer{};
             view._occlusionTiles       = RHIStructuredBuffer{};
-            view._deferredTileList     = RHIStructuredBuffer{};
-            view._deferredTileArgs     = RHIStructuredBuffer{};
             view._deferredTileCapacity = 0;
             view._transientPool.clear();
             view._taaHistory.release( nullptr );
@@ -431,11 +408,9 @@ namespace sw
             return;
         }
 
-        // HZB · 가림 타일은 깊이 히스토리 크기를, 디퍼드 조명 타일은 G버퍼 크기를 따른다.
+        // HZB · 가림 타일은 깊이 히스토리 크기를, 디퍼드 조명 타일 수는 G버퍼 크기를 따른다.
         view._hzb.release( _pDevice );
         view._occlusionTiles.release( _pDevice );
-        view._deferredTileList.release( _pDevice );
-        view._deferredTileArgs.release( _pDevice );
         view._deferredTileCapacity = 0;
         // 깊이 히스토리도 풀 크기를 따른다.
         view._depthHistory.release( _pDevice );
@@ -491,7 +466,7 @@ namespace sw
             // 첨부의 크기를 따르는 자원 — 그 첨부가 처음 생긴 프레임에 함께 만든다(이미 있으면 그대로다).
             ensureDepthHistory( view );
             ensureHZB( view );
-            ensureDeferredTiles( view );
+            updateDeferredTileCapacity( view );
         }
         return bAllocated;
     }
@@ -541,8 +516,6 @@ namespace sw
         _listScratchWrittenAttachment.clear();
         bool bForwardSet = false;
         // TAA 가 이번 프레임에 기록을 쓰는지는 이 고르기 하나가 정한다(실행은 같은 결과 — 출력이 이어졌는지 — 를 본다). 다음 프레임의 `beginViewHistory` 가 읽는다.
-        view._bTAAHistoryWritten      = SW_FALSE;
-        view._bSkyCloudHistoryWritten = SW_FALSE;
         hashed_string cloudOutput;
         hashed_string taaOutput;
         // 모듈 확장 패스는 늘 돈다 — 읽는 첨부의 쓰는 쪽이 빠지지 않고, 쓰는 첨부 · 깊이 첨부가 있다. 선언에 없는 이름(모듈 임시 텍스처)은 `FrameExtensionHost::allocateTextures` 가 만든다.
@@ -578,7 +551,7 @@ namespace sw
                     continue;
                 }
                 if ( pass._type == RenderPassKind::TAA )
-                    view._bTAAHistoryWritten = SW_TRUE;
+                    view._taaHistory.markWritten();
                 const bool bSkipSceneCopyInputs = getRenderPassKindInfo( pass._type ).hasFlag( RenderPassTraitFlag::kDrawsTransparentBatch ) && sceneState._bRefractionBatches == SW_FALSE;
                 Internal::markReads( listAttachment, pass, true, listNeeded, bSkipSceneCopyInputs );
                 Internal::addWrites( pass, _listScratchWrittenAttachment );
@@ -610,9 +583,9 @@ namespace sw
                 continue;
             }
             if ( pass._type == RenderPassKind::TAA )
-                view._bTAAHistoryWritten = SW_TRUE;
+                view._taaHistory.markWritten();
             if ( pass._type == RenderPassKind::VolumetricClouds )
-                view._bSkyCloudHistoryWritten = SW_TRUE;
+                view._skyCloudHistory.markWritten();
             for ( const RenderGraphPassDesc::ResolvedAttachment& output : pass._listResolvedColorOutput )
             {
                 bForwardSet = pool.stopForward( output._attachment ) || bForwardSet;
@@ -626,16 +599,16 @@ namespace sw
         const bool bReleased  = ageAttachments( pool );
         // 시간 누적 기록 — 도는 뷰만 있고, 오래 쉬어 출력을 놓은 뷰는 기록도 놓는다. 구름의 표본 번호는 기록을 버린 프레임에 처음부터 센다.
         // 셋업에서 만든다 — 패스 콜백(병렬 기록)이 만들고 bindless 에 등록하면 다른 스레드가 같은 레지스트리를 읽는 도중에 레지스트리가 resize 된다.
-        updateOutputHistory( pool, taaOutput, view._bTAAHistoryWritten == SW_TRUE, "TAAHistory", view._taaHistory );
-        updateOutputHistory( pool, cloudOutput, view._bSkyCloudHistoryWritten == SW_TRUE, "SkyCloudHistory", view._skyCloudHistory );
-        if ( view._bSkyCloudHistoryWritten == SW_TRUE )
-            view._skyCloudSample = view._bSkyCloudHistoryReset == SW_TRUE ? 0u : view._skyCloudSample + 1u;
-        // 사진 앞 정착(조건 `RenderTemporalAccumulation`) — 시간 누적이 쌓인 정지 프레임 수. TAA 를 이번 프레임에 돌리는지는 위 고르기가 정했다(`_bTAAHistoryWritten`) —
+        updateOutputHistory( pool, taaOutput, "TAAHistory", view._taaHistory );
+        updateOutputHistory( pool, cloudOutput, "SkyCloudHistory", view._skyCloudHistory );
+        if ( view._skyCloudHistory.isWritten() )
+            view._skyCloudSample = view._skyCloudHistory.isReset() ? 0u : view._skyCloudSample + 1u;
+        // 사진 앞 정착(조건 `RenderTemporalAccumulation`) — 시간 누적이 쌓인 정지 프레임 수. TAA 를 이번 프레임에 돌리는지는 위 고르기가 정했다(`_taaHistory`) —
         // TAA 가 없는 뷰는 TAA 기록 버림을 보지 않는다(그것만 보면 Forward 뷰의 정지 프레임이 늘 0 이었다).
         // 볼륨 구름의 기록도 같은 규칙이다(Forward 뷰는 TAA 없이 구름만 쌓는다).
         const bool bHistoryReset      = view._bHistoryReset == SW_TRUE;
-        const bool bAccumulationReset = RenderStabilityUtil::isAccumulationReset( bHistoryReset, view._bTAAHistoryWritten == SW_TRUE, view._bTAAHistoryReset == SW_TRUE ) ||
-                                        RenderStabilityUtil::isAccumulationReset( bHistoryReset, view._bSkyCloudHistoryWritten == SW_TRUE, view._bSkyCloudHistoryReset == SW_TRUE );
+        const bool bAccumulationReset = RenderStabilityUtil::isAccumulationReset( bHistoryReset, view._taaHistory.isWritten(), view._taaHistory.isReset() ) ||
+                                        RenderStabilityUtil::isAccumulationReset( bHistoryReset, view._skyCloudHistory.isWritten(), view._skyCloudHistory.isReset() );
         view._stillFrameCount       = RenderStabilityUtil::advanceStillFrames( view._stillFrameCount, bAccumulationReset, bCameraStill, bObjectMotion );
         view._cameraStillFrameCount = RenderStabilityUtil::advanceStillFrames( view._cameraStillFrameCount, bAccumulationReset, bCameraStill, false );
         // 화면에 나가는 첨부 표시(`_bPresented`)가 가리키는 곳을 따라가므로 가리키는 곳이 바뀌어도 렌더러가 목록을 다시 싣는다. 놓은 타깃도 목록에서 뺀다(죽은 핸들을 남기지 않는다).

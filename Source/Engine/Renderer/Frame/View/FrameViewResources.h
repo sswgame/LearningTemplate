@@ -20,11 +20,11 @@ namespace sw
 {
     struct ExtensionFramePass;
     struct FrameViewTarget;
-    struct RHITextureSlot;
     struct RenderFrameSettings;
 
     class FrameAutoExposure;
     class FrameUpscale;
+    class FrameViewHistory;
     class IRHIDevice;
     class RenderPipelineAsset;
     class TransientAttachmentPool;
@@ -99,10 +99,10 @@ namespace sw
         /** @brief 파이프라인 패스가 쓰는 첨부의 쉰 프레임 수를 나아가게 하고, 오래 쓰지 않은 것을 놓습니다. 하나라도 놓았으면 true 입니다. */
         [[nodiscard]] bool ageAttachments( TransientAttachmentPool& pool );
         /**
-         * @brief 시간 누적 패스(TAA · 볼륨 구름)의 기록을 출력 첨부 @p outputName 과 같은 크기 · 형식으로 **셋업 단계에서** 맞춥니다. 도는 뷰(@p bWritten)만 있고, 출력을 놓은 뷰는 기록도 놓습니다.
+         * @brief 시간 누적 패스(TAA · 볼륨 구름)의 기록을 출력 첨부 @p outputName 과 같은 크기 · 형식으로 **셋업 단계에서** 맞춥니다. 도는 뷰(`FrameViewHistory::isWritten`)만 있고, 출력을 놓은 뷰는 기록도 놓습니다.
          * @details 패스 콜백은 병렬 기록에서 태스크 스레드가 실행하므로, 콜백 안에서 만들고 bindless 에 등록하면 다른 스레드가 같은 레지스트리를 읽는 도중에 레지스트리가 resize 된다.
          */
-        void updateOutputHistory( const TransientAttachmentPool& pool, const hashed_string& outputName, bool bWritten, const utf8* pDebugName, RHITextureSlot& history );
+        void updateOutputHistory( const TransientAttachmentPool& pool, const hashed_string& outputName, const utf8* pDebugName, FrameViewHistory& history );
         /** @brief 뷰의 깊이 히스토리(R32 실수 RT · RW 텍스처)를 풀 크기로 만들어 둡니다. 장면 깊이 첨부가 없으면(2D 파이프라인) 만들지 않는다. */
         void ensureDepthHistory( FrameViewTarget& view );
         /**
@@ -112,8 +112,8 @@ namespace sw
         void placeTransients( TransientAttachmentPool& pool, const RenderGraphAliasPlan& aliasPlan );
         /** @brief 뷰의 HZB 피라미드 버퍼와 가림 타일 버퍼를 깊이 히스토리 크기에 맞춰 만들어 둡니다(`HZBLayout`). 깊이 히스토리가 없으면 만들지 않습니다. */
         void ensureHZB( FrameViewTarget& view );
-        /** @brief 뷰의 디퍼드 조명 타일 목록 · 간접 인자를 G버퍼 알베도 크기의 타일 수로 만들어 둡니다. 타일 분류를 쓸 수 없는 백엔드 · 파이프라인이면 만들지 않습니다. */
-        void ensureDeferredTiles( FrameViewTarget& view );
+        /** @brief 뷰의 디퍼드 조명 타일 수(`FrameViewTarget::_deferredTileCapacity`)를 G버퍼 알베도 크기로 정합니다. 타일 분류를 쓸 수 없는 백엔드 · 파이프라인이면 0 그대로입니다. */
+        void updateDeferredTileCapacity( FrameViewTarget& view );
 
     private:
         IRHIDevice* const&         _pDevice; ///< 렌더러의 `_pDevice` 변수를 참조합니다(생성자 참고)

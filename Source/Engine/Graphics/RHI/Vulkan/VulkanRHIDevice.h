@@ -14,6 +14,7 @@
 #include "Engine/Graphics/RHI/Backend/RHIDescriptorRingMirror.h"
 #include "Engine/Graphics/RHI/Backend/RHIFrameFenceRing.h"
 #include "Engine/Graphics/RHI/Backend/RHIHandleTable.h"
+#include "Engine/Graphics/RHI/Backend/RHIPipelineCacheFile.h"
 #include "Engine/Graphics/RHI/Backend/RHIReleaseQueue.h"
 #include "Engine/Graphics/RHI/Backend/RHISwapChainSet.h"
 #include "Engine/Graphics/RHI/Backend/RHITimestampRing.h"
@@ -670,15 +671,9 @@ namespace sw
         [[nodiscard]] bool initializePipelineCache();
         /** @brief 파이프라인 캐시를 디스크에 저장하고 정리합니다(종료). */
         void savePipelineCache();
-        /**
-         * @brief 파이프라인 캐시를 디스크에 씁니다. 디스크의 바이트와 같으면 쓰지 않는다. 캐시는 그대로 둔다(주기 저장 · 종료 저장이 함께 쓴다).
-         * @details 어느 스레드에서나 부른다 — 캐시는 내부 동기화이고, 주기 저장의 워커가 도는 동안 장치 · 캐시는 바뀌지 않는다(`savePipelineCache` 가 기다린 뒤 지운다).
-         */
-        void writePipelineCacheFile();
-        /**
-         * @brief 주기(`RHIDeviceDesc::_pipelineCacheSaveIntervalSeconds`)가 지났고 캐시가 자랐으면 워커에 저장을 맡깁니다(R-13). 프레임 시작이 부른다.
-         * @details 캐시 데이터를 뜨고 디스크를 읽고 쓰는 일은 렌더 스레드에서 하지 않는다 — 캐시가 클수록 그 프레임이 늦는다(언리얼도 PSO 캐시를 비동기로 쓴다 — 기억).
-         */
+        /** @brief 파이프라인 캐시 전체를 바이트로 냅니다(`RHIPipelineCacheFile`). 어느 스레드에서나 부른다 — 캐시는 내부 동기화이고, 주기 저장의 워커가 도는 동안 장치 · 캐시는 바뀌지 않는다. */
+        [[nodiscard]] bool serializePipelineCache( vector<uint8>& outBytes );
+        /** @brief 주기가 지났으면 캐시 크기를 물어 저장할지 봅니다(`RHIPipelineCacheFile::saveIfDue`). 프레임 시작이 부른다. */
         void savePipelineCacheIfDue();
 
         /** @brief 불투명 버퍼 핸들로 VulkanBufferRecord 를 찾습니다. */
@@ -1134,10 +1129,8 @@ namespace sw
 
         RHIHandleTable<RHIPipelineStateHandle, VulkanPipelineStateRecord> _pipelineStates;
         VkPipelineCache                                                   _pipelineCache;
-        int64                                                             _pipelineCacheSaveIntervalNanoseconds{ 0 }; ///< 주기 저장 간격(`RHIDeviceDesc::_pipelineCacheSaveIntervalSeconds`)
-        int64                                                             _pipelineCacheLastSaveNanoseconds{ 0 };     ///< 지난 저장(또는 읽기) 시각
-        uint64                                                            _pipelineCacheLastSavedBytes{ 0 };          ///< 지난 저장(또는 읽기) 때의 캐시 크기
-        TaskStageHandle                                                   _pipelineCacheSaveStage;                    ///< 주기 저장 태스크(캐시를 지우기 전에 기다린다 — 렌더 스레드 · 해제 길에서만 쓴다)
+        RHIPipelineCacheFile                                              _pipelineCacheFile; ///< 파이프라인 캐시의 디스크 파일(DX12 와 같은 규칙)
+        float64                                                           _pipelineCacheSaveIntervalSeconds{ 0.0 };
 
         /// @brief 이 장치의 모든 버퍼 · 이미지 메모리를 준다(VMA). 논리 장치 바로 뒤에 서고 논리 장치 바로 앞에 부순다.
         VulkanMemoryAllocator _memoryAllocator;

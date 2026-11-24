@@ -125,7 +125,7 @@ namespace sw
 
     void FrameAutoExposure::ensureAutoExposureHistory( FrameViewTarget& view )
     {
-        const bool bNotNeeded = _pDevice == nullptr || findTonemapPass( _pipeline ) == nullptr || view._arrAutoExposure[0].isValid();
+        const bool bNotNeeded = _pDevice == nullptr || findTonemapPass( _pipeline ) == nullptr || view._autoExposureHistory.isValid();
         if ( bNotNeeded )
             return;
         RHITextureDesc desc{};
@@ -137,14 +137,8 @@ namespace sw
         // 히스토그램 컴퓨트가 도는 백엔드(PSO 를 만드는 조건과 같다 — 네이티브 bindless + 컴퓨트)는 같은 칸에 RW 로도 쓴다. 풀스크린 길은 RT 로 쓴다.
         const bool bHistogramCompute = _pDevice->supportsNativeBindlessSampling() && _pDevice->getCapabilities()._bCompute != SW_FALSE;
         desc._bIsUnorderedAccess     = bHistogramCompute ? SW_TRUE : SW_FALSE;
-        const bool bCreated          = view._arrAutoExposure[0].ensure( *_pDevice, desc, "AutoExposure" ) && view._arrAutoExposure[1].ensure( *_pDevice, desc, "AutoExposure" );
-        if ( bCreated )
-            return;
-        for ( RHITextureSlot& history : view._arrAutoExposure )
-        {
-            history.release( _pDevice );
-        }
-        SW_LOG_ERROR_ONCE_ID( "FrameAutoExposure.FailedCreateAutoExposure", "Failed to create the auto exposure history (2 x 1x1 R32 float RT) - auto exposure is not measured on this view" );
+        if ( view._autoExposureHistory.ensure( *_pDevice, desc, "AutoExposure" ) == false )
+            SW_LOG_ERROR_ONCE_ID( "FrameAutoExposure.FailedCreateAutoExposure", "Failed to create the auto exposure history (2 x 1x1 R32 float RT) - auto exposure is not measured on this view" );
     }
 
     void FrameAutoExposure::releaseAutoExposureHistory( FrameViewTarget& view )
@@ -153,18 +147,12 @@ namespace sw
             _pDevice->getResourceFactory()->discardTextureReadback( view._exposureReadbackTicket );
         view._exposureReadbackTicket = RHITransferTicket{};
         view._exposureAdaptationEv   = 0.0f;
-        for ( RHITextureSlot& history : view._arrAutoExposure )
-        {
-            history.release( _pDevice );
-        }
-        view._bAutoExposureThisFrame = SW_FALSE;
-        view._bAutoExposureMeasured  = SW_FALSE;
+        view._autoExposureHistory.release( _pDevice );
     }
 
     void FrameAutoExposure::prepareAutoExposure( FrameViewTarget& view, float32 now, float32& inoutExposureScale ) const
     {
         const PostProcessValues& post = view._settings._postProcess;
-        view._bAutoExposureThisFrame  = SW_FALSE;
         view._exposureErrorEv         = 0.0f; // 재지 않으면 노출이 고정이다(아래에서 재면 다시 정한다)
         // 범위가 한 점이면 재지 않는 고정 노출이다(기본 0 · 0 은 노출 1). 후처리를 끈 뷰 · 표면 값 보기는 톤맵이 카메라 노출을 걸지 않으므로 재지 않는다.
         if ( post.usesAutoExposure() == false )
@@ -172,24 +160,22 @@ namespace sw
             inoutExposureScale *= MathUtil::pow( 2.0f, -post._autoExposureMinEv );
             return;
         }
-        const bool bHasHistory = view._arrAutoExposure[0].isValid() && view._arrAutoExposure[1].isValid();
+        const bool bHasHistory = view._autoExposureHistory.isValid();
         const bool bHasPSO     = _psoManager.getEnginePSO( RenderPassKind::AutoExposure ) != 0 || findHistogramPSO( view ) != 0;
         const bool bMeasures   = view._settings.usesPostProcess() && bHasHistory && bHasPSO;
         if ( bMeasures == false )
             return;
-        readBackAdaptation( view ); // 칸을 바꾸기 전 — 지난 프레임이 쓴 칸(`_autoExposureWrite`)을 읽는다
+        readBackAdaptation( view ); // 칸을 바꾸기 전 — 지난 프레임이 쓴 칸을 읽는다
 
         // 시각은 패킷의 게임 시계다(고정 프레임 시간이면 결정적이다). 쉬던 추가 뷰(갱신 주기)는 그동안의 시간만큼 한 번에 다가간다.
         const float32 deltaSeconds = MathUtil::max( 0.0f, now - view._autoExposureClock );
         // 기록을 버리는 프레임(처음 · 컷)이거나 이 기록에 아직 측정한 값이 없으면(그동안 재지 않던 뷰) 지난 칸을 섞지 않는다 — 새 텍스처에는 값이 없다(NaN 일 수 있다).
-        const bool bReset            = view._bHistoryReset == SW_TRUE || view._bAutoExposureMeasured == SW_FALSE;
-        view._bAutoExposureMeasured  = SW_TRUE;
-        view._autoExposureClock      = now;
-        view._autoExposureWrite      = view._autoExposureWrite == 0 ? 1 : 0;
-        view._autoExposureParams     = float4{ post._autoExposureMinEv, post._autoExposureMaxEv,
+        const bool bReset        = view._autoExposureHistory.isReset();
+        view._autoExposureClock  = now;
+        view._autoExposureParams = float4{ post._autoExposureMinEv, post._autoExposureMaxEv,
                                            FrameAutoExposureInternal::computeAdaptRate( post._autoExposureSpeedUp, deltaSeconds, bReset ),
                                            FrameAutoExposureInternal::computeAdaptRate( post._autoExposureSpeedDown, deltaSeconds, bReset ) };
-        view._bAutoExposureThisFrame = SW_TRUE;
+        view._autoExposureHistory.markWritten();
         // 사진 앞 정착(조건 `RenderAutoExposure`) — 남은 노출 오차의 상한. 카메라가 움직인 프레임(카메라 정지 프레임 0)은 범위 끝까지 되돌린다.
         // 물체 움직임으로는 되돌리지 않는다 — 캐릭터가 늘 숨 쉬는 장면은 그러면 상한이 끝내 줄지 않았다(TAA 조건과 같은 카메라 기준).
         view._exposureErrorEv = RenderStabilityUtil::advanceExposureError( view._exposureErrorEv, bReset, view._cameraStillFrameCount == 0, post._autoExposureMaxEv - post._autoExposureMinEv,
@@ -198,8 +184,7 @@ namespace sw
 
     RHIPipelineStateHandle FrameAutoExposure::findHistogramPSO( const FrameViewTarget& view ) const
     {
-        const bool bWritable = view._arrAutoExposure[0]._uav != kInvalidDescriptorIndex && view._arrAutoExposure[1]._uav != kInvalidDescriptorIndex;
-        return bWritable ? _psoManager.getEnginePSO( RenderPassKind::AutoExposureHistogram ) : RHIPipelineStateHandle{ 0 };
+        return view._autoExposureHistory.isUnorderedAccess() ? _psoManager.getEnginePSO( RenderPassKind::AutoExposureHistogram ) : RHIPipelineStateHandle{ 0 };
     }
 
     void FrameAutoExposure::readBackAdaptation( FrameViewTarget& view ) const
@@ -226,17 +211,17 @@ namespace sw
             return;
         }
         // 아직 잰 적이 없는 기록 칸에는 값이 없다(NaN 일 수 있다).
-        if ( view._bAutoExposureMeasured == SW_FALSE )
+        if ( view._autoExposureHistory.hasContent() == false )
             return;
         RHITextureMipSpan       layout{};
-        const RHITransferSubmit submit = pFactory->submitTextureReadback( view._arrAutoExposure[view._autoExposureWrite]._texture, 0, 0, layout );
+        const RHITransferSubmit submit = pFactory->submitTextureReadback( view._autoExposureHistory.getCurrent()._texture, 0, 0, layout );
         if ( submit.isAccepted() )
             view._exposureReadbackTicket = submit._ticket; // `Busy`(스테이징이 찼다)면 다음 프레임에 다시 낸다
     }
 
     void FrameAutoExposure::recordAutoExposure( FramePassContext& context, const FrameViewTarget& view, const RenderGraphPassDesc& passDesc ) const
     {
-        if ( &passDesc != findTonemapPass( _pipeline ) || view._bAutoExposureThisFrame == SW_FALSE )
+        if ( &passDesc != findTonemapPass( _pipeline ) || view._autoExposureHistory.isWritten() == false )
             return;
         TransientAttachmentPool::Attachment source{};
         for ( const RenderGraphPassDesc::ResolvedAttachment& input : passDesc._listResolvedInput )
@@ -248,14 +233,14 @@ namespace sw
         if ( source._texture == 0 )
             return;
 
-        const uint32                             writeSlot       = view._autoExposureWrite;
-        const uint32                             readSlot        = 1u - writeSlot;
-        const RHITextureHandle                   target          = view._arrAutoExposure[writeSlot]._texture;
+        const RHITextureSlot&                    current         = view._autoExposureHistory.getCurrent();
+        const RHITextureSlot&                    previous        = view._autoExposureHistory.getPrevious();
+        const RHITextureHandle                   target          = current._texture;
         IRHIPassCommandList&                     cmd             = *context._pCmd;
         const bool                               bNativeBindless = _pDevice->supportsNativeBindlessSampling();
         FrameAutoExposureInternal::RootConstants constants{};
         constants._source       = bNativeBindless ? static_cast<uint32>( source._srv ) : 0u;
-        constants._history      = bNativeBindless ? static_cast<uint32>( view._arrAutoExposure[readSlot]._srv ) : 0u;
+        constants._history      = bNativeBindless ? static_cast<uint32>( previous._srv ) : 0u;
         constants._minEv        = view._autoExposureParams._x;
         constants._maxEv        = view._autoExposureParams._y;
         constants._rateUp       = view._autoExposureParams._z;
@@ -270,13 +255,13 @@ namespace sw
         const RHIPipelineStateHandle histogramPSO = findHistogramPSO( view );
         if ( histogramPSO != 0 )
         {
-            constants._output = static_cast<uint32>( view._arrAutoExposure[writeSlot]._uav );
+            constants._output = static_cast<uint32>( current._uav );
             cmd.setComputePipelineState( histogramPSO );
             cmd.setComputeRootConstants( 0, sizeof( constants ) / sizeof( uint32 ), &constants );
             cmd.dispatchCompute( 1, 1, 1 );
             graphPass.transition( ViewGraphResource::autoExposureTarget(), RenderGraphAccess::ShaderRead );
             context.resetBindingCache();
-            context._resourceRegistry.registerTexture( attachmentNames()._autoExposure, target, view._arrAutoExposure[writeSlot]._srv );
+            context._resourceRegistry.registerTexture( attachmentNames()._autoExposure, target, current._srv );
             return;
         }
         // 1 px 그리기 판 — 이번 칸을 렌더 타깃으로 옮긴다(선언은 UAV — 컴퓨트 판이 기본이다).
@@ -298,7 +283,7 @@ namespace sw
             constexpr uint32 kSourceSlot  = shaderslot::emulated::getSlot( "SourceColor" );
             constexpr uint32 kHistorySlot = shaderslot::emulated::getSlot( "AutoExposure" );
             cmd.bindShaderResource( source._srv, kSourceSlot );
-            cmd.bindShaderResource( view._arrAutoExposure[readSlot]._srv, kHistorySlot );
+            cmd.bindShaderResource( previous._srv, kHistorySlot );
         }
         cmd.setGraphicsRootConstants( 0, sizeof( constants ) / sizeof( uint32 ), &constants );
         cmd.draw( 3, 0 );
@@ -306,6 +291,6 @@ namespace sw
         graphPass.transition( ViewGraphResource::autoExposureTarget(), RenderGraphAccess::ShaderRead );
         // 측정 그리기는 PSO · 슬롯을 직접 바꿨다 — 톤맵 그리기가 바인딩 캐시를 믿고 PSO 를 건너뛰지 않게 지운다.
         context.resetBindingCache();
-        context._resourceRegistry.registerTexture( attachmentNames()._autoExposure, target, view._arrAutoExposure[writeSlot]._srv );
+        context._resourceRegistry.registerTexture( attachmentNames()._autoExposure, target, current._srv );
     }
 } // namespace sw

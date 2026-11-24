@@ -1,6 +1,7 @@
 // 셰이더 메모리 캐시 — 쿠킹본 정책은 같은 요청의 둘째 로드부터 공급자(팩)를 다시 읽지 않고, 깨진 편집은 마지막 성공 판을 쓴다(nogpu · 팩 없음).
 #include "pch.h"
 
+#include "Core/Concurrency/DiskIOScope.h"
 #include "Core/Testing/TestFramework.h"
 
 #include "Engine/Graphics/Shader/Compile/ShaderBytecodeProvider.h"
@@ -260,4 +261,69 @@ SW_TEST_CASE( ShaderCacheTest, LoadInFlightDoesNotOverwriteReplacedEntry )
     vector<uint8> cachedBytecode;
     SW_REQUIRE_TRUE( cache.findCachedBytecode( desc, cachedBytecode ) );
     SW_EXPECT_TRUE( cachedBytecode == vector<uint8>{ 2 } );
+}
+
+namespace
+{
+    /** @brief 디스크 IO 가 금지된 스레드에서 불렸는지 적고 성공으로 답하는 공급자입니다. */
+    class ThreadProbeProvider final : public IShaderBytecodeProvider
+    {
+    public:
+        mutable uint32 _loadCount{ 0 };
+        mutable uint32 _forbiddenCount{ 0 };
+
+        [[nodiscard]] ShaderCompileResult load( const ShaderCompileDesc& desc ) const override
+        {
+            (void)desc;
+            note();
+            ShaderCompileResult result;
+            result._bytecode = { 1 };
+            result._bSuccess = true;
+            return result;
+        }
+        [[nodiscard]] bool isCurrent( const ShaderCompileResult& result, const ShaderCompileDesc& desc ) const override
+        {
+            (void)result;
+            (void)desc;
+            return false;
+        }
+        [[nodiscard]] bool getReflection( ShaderCache& cache, const ShaderCompileDesc& desc, ShaderReflectionData& outReflection ) const override
+        {
+            (void)outReflection;
+            note();
+            return cache.getOrCompile( desc )._bSuccess;
+        }
+
+    private:
+        void note() const
+        {
+            ++_loadCount;
+            if ( DiskIOForbiddenScope::isActive() )
+                ++_forbiddenCount;
+        }
+    };
+} // namespace
+
+/**
+ * @brief [ShaderCacheTest] 디스크 IO 가 금지된 스레드(렌더 스레드의 패킷)의 동기 요청은 공급자를 로드 스레드에서 돌린다 — 답은 같다
+ * @details 공급자는 소스 지문 · DDC · 팩을 읽는다. 변이: `getOrCompile` · `getReflection` 이 부른 스레드에서 공급자를 부르면 금지 수가 0 이 아니다.
+ */
+SW_TEST_CASE( ShaderCacheTest, ForbiddenThreadLoadsOnTheLoadThread )
+{
+    ShaderCache                cache;
+    auto                       pOwnedProvider = make_unique<ThreadProbeProvider>();
+    ThreadProbeProvider* const pProvider      = pOwnedProvider.get();
+    SW_REQUIRE_TRUE( cache.initializeWithProvider( std::move( pOwnedProvider ) ) );
+    {
+        const DiskIOForbiddenScope forbidden;
+        for ( int32 repeat = 0; repeat < 3; ++repeat )
+        {
+            SW_EXPECT_TRUE( cache.getOrCompile( makeDesc( "PSMain" ) )._bSuccess );
+        }
+        ShaderReflectionData reflection{};
+        SW_EXPECT_TRUE( cache.getReflection( makeDesc( "PSOther" ), reflection ) );
+        SW_EXPECT_TRUE( DiskIOForbiddenScope::isActive() );
+    }
+    SW_EXPECT_EQUAL( 5u, pProvider->_loadCount ); // 컴파일 셋 + 리플렉션과 그 안의 컴파일
+    SW_EXPECT_EQUAL( 0u, pProvider->_forbiddenCount );
 }

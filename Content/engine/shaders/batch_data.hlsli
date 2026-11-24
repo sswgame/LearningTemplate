@@ -16,7 +16,7 @@ struct BatchData
     float3 _localBoundsExtent;   // 상자 반 크기
     uint   _instanceBase;        // 인스턴스 버퍼(또는 가시 목록)에서 이 배치의 시작
     uint   _instanceCount;       // CPU 가 센 개수 (컬링은 간접 인자에 자기 개수를 따로 만든다)
-    uint   _sortMode;            // 컬링 전용 (GPUBatchSortMode) — 0 없음(불투명), 1 CPU 순서 유지, 2 압축 뒤 CPU 순서로 되돌림
+    uint   _sortMode;            // 컬링 전용 (GPUBatchSortMode) — 0 없음(불투명), 1 압축 뒤 CPU 순서로 되돌림(한 디스패치), 2 같은 일을 여러 디스패치로(큰 배치)
     uint   _morphVertexBase;     // 모프 정점 풀에서 이 배치 메시의 시작. kInvalidIndex = 모프 안 함
     uint   _baseVertex;          // 정점 풀에서 이 배치 메시의 시작 (간접 인자의 baseVertex). SV_VertexID 가 이 값을 포함하는지는 API 마다 다르다 — MorphPool::computeElement 참고
     uint   _vertexAnimationBase; // 정점 애니메이션(VAT) 표에서 이 메시의 머리 원소. kInvalidIndex = VAT 없음 (InstanceData::loadAnimatedVertex)
@@ -27,8 +27,8 @@ struct BatchData
 
     float _uvDensity;      // UV 한 단위가 덮는 메시 공간 길이(0 이면 UV 가 없다) — 머티리얼 변위가 원래 꼭짓점의 높이 밉을 고른다(material_displacement.hlsli)
     float _meanEdgeLength; // 메시 공간 평균 변 길이(같은 쓰임)
-    uint  _padding0;       // 16 바이트 배수로 맞춘다(GL std430)
-    uint  _padding1;
+    uint  _compactHead;    // 간접 인자 압축 구간의 머리 배치(kInvalidIndex = 압축하지 않는다) — gpu_cull.hlsl SW_CULL_COMPACT_ARGS
+    uint  _compactCount;   // 머리 배치 행: 구간의 배치 수
 
     static BatchData load( uint batchIndex ); // 정의는 binding.hlsli(배치 표 g_SwBatches 를 읽는다)
 };
