@@ -144,10 +144,11 @@ namespace sw
         FrameRenderer& operator=( const FrameRenderer& ) = delete;
 
         /**
-         * @brief 디바이스, TaskManager, 설정 사본, 읽은 파이프라인으로 초기화합니다.
+         * @brief 디바이스, TaskManager, 설정 사본, 읽은 파이프라인, 가림 판정 설정으로 초기화합니다. 렌더 스레드에서도 부르므로 파일을 열지 않는다.
          * @details @p settings 는 게임 스레드가 뜬 사본이다(`RenderFrameSettings::capture`) — 렌더러는 전역 변수를 읽지 않는다. 첫 패킷부터는 패킷의 사본을 쓴다.
          */
-        [[nodiscard]] bool initialize( IRHIDevice* pDevice, TaskManager* pTaskManager, const RenderFrameSettings& settings, const RenderPipelineRequest& pipeline );
+        [[nodiscard]] bool initialize( IRHIDevice* pDevice, TaskManager* pTaskManager, const RenderFrameSettings& settings, const RenderPipelineRequest& pipeline,
+                                       const OcclusionCullingConfig& occlusionConfig );
         /** @brief 주 렌더러만 하는 일의 상대를 겁니다(`FrameRendererHost`). `initialize` 앞에 부릅니다(파이프라인 로드가 렌더 타깃을 공개한다). */
         void bindHost( const FrameRendererHost& host )
         {

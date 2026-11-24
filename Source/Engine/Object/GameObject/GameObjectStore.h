@@ -151,23 +151,13 @@ namespace sw
 
         /**
          * @brief 힙 할당 없이 등록된 모든 유효한 GameObject 를 순회합니다.
-         * @note 공유 잠금을 쥔 채 콜백을 부릅니다. 콜백 안에서 오브젝트를 만들거나 지우거나 컴포넌트를 붙이면 안 됩니다(`IterationScope`).
+         * @note 공유 잠금을 쥔 채 콜백을 부릅니다(콜백이 남긴 로그는 잠금을 놓은 뒤에 쓴다 — 잎 잠금). 콜백 안에서 오브젝트를 만들거나 지우거나 컴포넌트를 붙이면 안 됩니다(`IterationScope`).
          */
         template <typename Func>
         void forEachGameObject( Func&& func ) const
         {
-            ScopedSharedLock<shared_mutex> lock{ _mutex };
-            const IterationScope           iterationScope{};
-            for ( GameObject* pObj : _listGameObject )
-            {
-                if ( pObj != nullptr && pObj->isPendingDestroy() == false )
-                    func( pObj );
-            }
-            for ( GameObject* pObj : _listPendingAdd )
-            {
-                if ( pObj != nullptr && pObj->isPendingDestroy() == false )
-                    func( pObj );
-            }
+            visitGameObjects( []( void* pContext, GameObject* pObj )
+            { ( *static_cast<std::remove_reference_t<Func>*>( pContext ) )( pObj ); }, const_cast<void*>( static_cast<const void*>( std::addressof( func ) ) ) );
         }
 
         /**
@@ -185,24 +175,8 @@ namespace sw
         template <typename Func>
         void forEachComponentOfType( const TypeInfo* pToType, Func&& func ) const
         {
-            if ( pToType == nullptr )
-                return;
-            ScopedSharedLock<shared_mutex> lock{ _mutex };
-            const IterationScope           iterationScope{};
-            for ( const ComponentPoolEntry* pEntry : _listComponentPoolEntry )
-            {
-                if ( isTypeDerivedFrom( pEntry->_pType, pToType ) == false )
-                    continue;
-                for ( Component* pComp : pEntry->_listComponent )
-                {
-                    // Debug 에서만 불변식을 확인한다. 소유자를 **먼저** 읽어야 한다. 컴포넌트 표시가 오브젝트 표시보다 먼저라, 오브젝트가 삭제 대기인 것을
-                    // 본 뒤에는 컴포넌트도 삭제 대기로 보인다. 순서를 바꾸면 그 사이에 표시한 다른 스레드 때문에 거짓으로 걸린다.
-                    SW_ASSERT( pComp->getOwner()->isPendingDestroy() == false || pComp->isPendingDestroy() );
-                    if ( pComp->isPendingDestroy() || pComp->isStaged() ) // 나눠 짓는 셀의 컴포넌트는 다 지어 드러날 때까지 보이지 않는다
-                        continue;
-                    func( pComp );
-                }
-            }
+            visitComponentsOfType( pToType, []( void* pContext, Component* pComp )
+            { ( *static_cast<std::remove_reference_t<Func>*>( pContext ) )( pComp ); }, const_cast<void*>( static_cast<const void*>( std::addressof( func ) ) ) );
         }
 
         /** @brief 버킷의 타입 포인터를 가진 항목 수(비어 있지 않은 버킷 수)입니다. 진단과 회귀 테스트(묘비)용입니다. */
@@ -263,6 +237,11 @@ namespace sw
         void registerTypedComponent( Component* pComp );
 
     private:
+        /** @brief `forEachGameObject` 의 몸체입니다(잠금 · 로그 미루기를 헤더에 두지 않는다). */
+        void visitGameObjects( void ( *pVisit )( void* pContext, GameObject* pObj ), void* pContext ) const;
+        /** @brief `forEachComponentOfType` 의 몸체입니다. */
+        void visitComponentsOfType( const TypeInfo* pToType, void ( *pVisit )( void* pContext, Component* pComp ), void* pContext ) const;
+
         /**
          * @struct NameEntry
          * @brief 이름 테이블의 값입니다. 오브젝트와, 번호를 붙여 만든 이름이면 그 밑 이름과 번호를 담습니다.

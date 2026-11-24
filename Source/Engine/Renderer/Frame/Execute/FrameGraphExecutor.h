@@ -16,7 +16,6 @@
 #include "Core/Foundation/Types.h"
 #include "Core/Memory/Memory.h"
 
-#include "Engine/Config/OcclusionCullingConfig.h"
 #include "Engine/Graphics/RHI/RHIConstantBuffer.h"
 #include "Engine/Graphics/RHI/RHIStructuredBuffer.h"
 #include "Engine/Renderer/Frame/Execute/HZBOcclusion.h"
@@ -234,8 +233,6 @@ namespace sw
         RHIStructuredBuffer _transparentRankPlaceholder{};
         /// @brief GPU 컬링의 가림 판정(HZB 짓기 · 가림 타일 되읽기 · 자리표)입니다.
         HZBOcclusion _occlusion;
-        /// @brief 가림 판정 설정(`Config/Engine/OcclusionCulling.json`)입니다. `ensureResources` 가 읽고 검사한다.
-        OcclusionCullingConfig _occlusionConfig{};
         /// @brief 2 단계 가림 뒤 단계의 컬링 상수입니다 — 주 시점 슬롯의 상수 버퍼는 앞 단계가 이미 이번 프레임에 썼다(한 버퍼는 프레임에 한 번만 쓴다).
         RHIConstantBuffer _lateCullCb{};
         /// @brief 2 단계 가림의 차례마다 표시(uint — 앞 단계에서 가려져 빠졌으면 1, gpu_cull.hlsl u3)입니다. 주 시점 하나만 쓴다.

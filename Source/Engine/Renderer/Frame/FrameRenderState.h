@@ -12,6 +12,7 @@
 #include "Core/Memory/Memory.h"
 #include "Core/Time/TimeRollover.h"
 
+#include "Engine/Config/OcclusionCullingConfig.h"
 #include "Engine/Environment/Sky/SkyGradient.h"
 #include "Engine/Environment/Surface/SurfaceDeformBinding.h"
 #include "Engine/Graphics/Canvas/CanvasDrawList.h"
@@ -94,7 +95,9 @@ namespace sw
          * @details 패킷을 받을 때(`FrameRenderer::executePacket`) 바뀌고 기록 중에는 그대로라 한 프레임의 패스가 모두 같은 값을 본다. 기동 · 화면 밖 렌더러는 기동 때 받은 사본이다.
          */
         RenderFrameSettings _settings{};
-        GPUScene            _gpuScene{};
+        /// @brief 가림 판정 설정(`Config/Engine/OcclusionCulling.json`)입니다. 게임 스레드가 읽고 검사해 렌더러 초기화에 넘긴다 — 화면 밖 렌더러는 주 렌더러의 사본이다.
+        OcclusionCullingConfig _occlusionConfig{};
+        GPUScene               _gpuScene{};
         /** @brief 파이프라인 XML 의 `_listPass` 로 만든 뷰 그래프입니다. 뷰마다 다시 돈다. 렌더러가 다시 만들고(`selectPipeline`) 패스 실행이 콜백을 묶고 돌립니다. */
         RenderGraph _graph{};
         /** @brief 파이프라인 XML 의 `_listFramePass` 로 만든 프레임 그래프입니다. 프레임에 한 번, 뷰 그래프보다 먼저 돈다(`FramePassExecutor::recordFrameGraph`). */
