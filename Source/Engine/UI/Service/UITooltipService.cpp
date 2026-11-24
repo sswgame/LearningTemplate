@@ -155,6 +155,17 @@ namespace sw
             show( *pOwner );
     }
 
+    void UITooltipService::resetGameInstanceState( GameInstanceBoundary boundary )
+    {
+        if ( boundary == GameInstanceBoundary::Ended )
+            clear();
+    }
+
+    const utf8* UITooltipService::findGameInstanceState() const
+    {
+        return _screen == kInvalidUIScreenHandle ? nullptr : "a shown tooltip";
+    }
+
     void UITooltipService::clear()
     {
         hide();
@@ -220,5 +231,5 @@ namespace sw
 
 namespace sw
 {
-    SW_ENGINE_SUBSYSTEM( UITooltipService, Startup, (), SW_ENGINE_DEFAULT_FACTORY( UITooltipService ) );
+    SW_ENGINE_SUBSYSTEM( UITooltipService, GameInstance, Startup, (), SW_ENGINE_DEFAULT_FACTORY( UITooltipService ) );
 } // namespace sw

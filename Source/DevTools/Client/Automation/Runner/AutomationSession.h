@@ -32,7 +32,7 @@ namespace sw
     /**
      * @class AutomationSession
      * @brief 엔진 루프에 프레임 훅(`EngineFrameHooks`, `makeFrameHooks`)으로 붙는 시나리오 구동기입니다. 루프는 관찰자 목록만 알고, 세션 · 실행기 · 체인 · 단계 전환은 모릅니다.
-     * @details 개발 도구 이미지의 모듈 서브시스템으로 엔진 범위에 스스로 서고 `IAutomationRuntime` 을 공개합니다(`SW_MODULE_SUBSYSTEM( Engine, … )`) — 이 폴더를 짓지 않는
+     * @details 개발 도구 이미지의 모듈 서브시스템으로 엔진 범위에 스스로 서고 `IAutomationRuntime` 을 공개합니다(`SW_MODULE_SUBSYSTEM( Engine, Process, … )`) — 이 폴더를 짓지 않는
      *          구성은 등록이 없고, 호스트는 실행기를 모른다. 런처가 엔진이 선 뒤에 `IAutomationRuntime::start` 로 시작하면 `Engine::getFrameHooks().add( makeFrameHooks() )` 로 붙습니다.
      *          엔진 범위의 자식이라 기동 단계보다 먼저 내려간다 — 실행기가 빌려 쓰는 엔진 서비스(로그 리스너 · 입력)가 사라지기 전에 `shutdownSubsystem` 이 떼고 비웁니다. 한 단계가 끝나면(통과해야 다음으로 간다 — `AutomationScenarioChain`) 같은 프로세스에서 다음 시나리오의 실행기를 새로 만든다. 그 단계가 시작할 때
      *          - 프로세스의 **작업 폴더**가 처음과 같은지 보고(파일 대화상자 같은 것이 옮긴다) 다르면 경고하고 되돌린다,

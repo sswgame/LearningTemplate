@@ -188,7 +188,7 @@ namespace sw
     /**
      * @class GimmickNodeRegistrySubsystem
      * @brief 내장 종류를 모두 가진 기본 레지스트리를 가진 GameFramework 의 모듈 서브시스템입니다(`game::getSubsystem<GimmickNodeRegistrySubsystem>()`).
-     * @details 엔진 범위 아래 GameFramework 의 자식 범위에 선다(`SW_MODULE_SUBSYSTEM( Engine, … )` — 언리얼 `UEngineSubsystem`). 기동이 내장 종류를 채우고 그 뒤로 바꾸지 않는다.
+     * @details 엔진 범위 아래 GameFramework 의 자식 범위에 선다(`SW_MODULE_SUBSYSTEM( Engine, Process, … )` — 언리얼 `UEngineSubsystem`). 기동이 내장 종류를 채우고 그 뒤로 바꾸지 않는다.
      *          예전에는 소유자 없는 엔진 수명 값(`ScopeOwned`)을 정적 함수가 처음 부를 때 만들었다 — 이제 수명과 초기화 시점을 범위가 정한다.
      */
     class SW_GF_API GimmickNodeRegistrySubsystem final : public Subsystem

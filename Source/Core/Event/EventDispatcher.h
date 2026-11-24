@@ -60,6 +60,8 @@ namespace sw
         SubsystemInitResult initializeSubsystem() override { return SubsystemInitResult::Succeeded; }
         void                shutdownSubsystem() override {}
         const utf8*         getSubsystemName() const override { return kSubsystemName; }
+        void                resetGameInstanceState( GameInstanceBoundary boundary ) override;
+        const utf8*         findGameInstanceState() const override;
 
         /** @brief 버스와 큐 락, 더블 버퍼 아레나를 준비합니다. */
         EventDispatcher();

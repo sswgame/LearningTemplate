@@ -348,7 +348,7 @@ namespace sw
     }
 
     // 렌더러가 있는 클라이언트만 — 창 · RHI 를 두지 않는 기동(헤드리스 작업 · 단위 테스트)은 교체할 장치가 없다.
-    SW_ENGINE_SUBSYSTEM( RHIBackendSwitcher, Startup, ( RHISubsystem, RenderThreadSubsystem ), []( engine::EngineSubsystemFactoryScope& scope, engine::EngineSubsystemBuild& build )
+    SW_ENGINE_SUBSYSTEM( RHIBackendSwitcher, Process, Startup, ( RHISubsystem, RenderThreadSubsystem ), []( engine::EngineSubsystemFactoryScope& scope, engine::EngineSubsystemBuild& build )
     {
         if ( build._pStartupSetup->_bRenderer == false )
             return;

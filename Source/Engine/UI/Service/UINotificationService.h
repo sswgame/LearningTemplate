@@ -77,6 +77,8 @@ namespace sw
         SubsystemInitResult          initializeSubsystem() override;
         void                         shutdownSubsystem() override;
         const utf8*                  getSubsystemName() const override { return kSubsystemName; }
+        void                         resetGameInstanceState( GameInstanceBoundary boundary ) override;
+        const utf8*                  findGameInstanceState() const override;
         span<const utf8* const>      getSubsystemDependencies() const override;
         SubsystemHostMask            getSubsystemHost() const override { return EngineSubsystemHost::kClient; }
 

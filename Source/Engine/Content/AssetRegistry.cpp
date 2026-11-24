@@ -266,5 +266,5 @@ namespace sw
 namespace sw
 {
     // GUID ↔ 리소스 id 색인 — 에셋 매니저가 마운트 때 채우고(`AssetManager::mountContent`) 참조 읽기(`AssetRefBase`)가 묻는다.
-    SW_ENGINE_SERVICE_SUBSYSTEM( AssetRegistryTable, HostOnly, Services, (), SW_ENGINE_DEFAULT_FACTORY( AssetRegistryTable ) );
+    SW_ENGINE_SERVICE_SUBSYSTEM( AssetRegistryTable, HostOnly, Process, Services, (), SW_ENGINE_DEFAULT_FACTORY( AssetRegistryTable ) );
 } // namespace sw

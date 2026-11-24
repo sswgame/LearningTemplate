@@ -81,6 +81,8 @@ namespace sw
         SubsystemInitResult        initializeSubsystem() override { return SubsystemInitResult::Succeeded; }
         void                       shutdownSubsystem() override {}
         const utf8*                getSubsystemName() const override { return kSubsystemName; }
+        void                       resetGameInstanceState( GameInstanceBoundary boundary ) override;
+        const utf8*                findGameInstanceState() const override;
         static constexpr MemoryTag kSubsystemMemoryTag = MemoryTag::RenderCPU;
 
         /** @brief 카테고리를 주지 않은 도형의 카테고리 이름입니다. */

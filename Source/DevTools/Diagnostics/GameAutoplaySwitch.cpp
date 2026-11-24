@@ -80,7 +80,7 @@ namespace sw
         GameAutoplayQuery _query;
     };
 
-    SW_ENGINE_SUBSYSTEM( GameAutoplaySubsystem, Services, (), []( engine::EngineSubsystemFactoryScope& scope, engine::EngineSubsystemBuild& build )
+    SW_ENGINE_SUBSYSTEM( GameAutoplaySubsystem, Process, Services, (), []( engine::EngineSubsystemFactoryScope& scope, engine::EngineSubsystemBuild& build )
     {
         (void)build;
         GameAutoplaySubsystem& subsystem = scope.emplaceSubsystem<GameAutoplaySubsystem>();

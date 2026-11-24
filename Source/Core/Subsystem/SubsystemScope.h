@@ -68,6 +68,8 @@ namespace sw
             (void)typeHash;
             return nullptr;
         }
+        /** @brief 이 범위(와 매단 자식)가 소유한 서브시스템 가운데 지금 초기화돼 있는 것을 초기화 순서로 @p outListSubsystem 뒤에 덧붙입니다. 상위는 보지 않습니다. 소유하지 않는 창구는 없다. */
+        virtual void collectInitializedSubsystems( vector<Subsystem*>& outListSubsystem ) const { (void)outListSubsystem; }
     };
 
     /**
@@ -286,6 +288,7 @@ namespace sw
         const ISubsystemLocator* getParentScope() const override { return _pParent; }
         void*                    findHostModuleVisibleInScope( uint64 typeHash ) const override;
         const Subsystem*         findOwnerInScope( uint64 typeHash ) const override { return findOwner( typeHash ); }
+        void                     collectInitializedSubsystems( vector<Subsystem*>& outListSubsystem ) const override;
 
     private:
         /** @brief 조회 칸 하나입니다. */

@@ -49,6 +49,42 @@ namespace
         bool* _pDestroyed;
     };
 
+    /** @brief 게임 인스턴스 수명의 상태를 든 서브시스템입니다 — 두 함수를 재정의한다. */
+    class ScopeInstanceSubsystem final : public Subsystem
+    {
+    public:
+        uint32 _queuedCount{ 0 };
+
+        SubsystemInitResult initializeSubsystem() override { return SubsystemInitResult::Succeeded; }
+        void                shutdownSubsystem() override {}
+        const utf8*         getSubsystemName() const override { return "ScopeInstance"; }
+        void                resetGameInstanceState( GameInstanceBoundary boundary ) override
+        {
+            if ( boundary == GameInstanceBoundary::Ended )
+                _queuedCount = 0;
+        }
+        const utf8* findGameInstanceState() const override { return _queuedCount == 0 ? nullptr : "queued items"; }
+    };
+
+    /** @brief 하나만 재정의한 서브시스템입니다 — 어느 수명으로도 등록할 수 없다. */
+    class ScopeHalfInstanceSubsystem final : public Subsystem
+    {
+    public:
+        SubsystemInitResult initializeSubsystem() override { return SubsystemInitResult::Succeeded; }
+        void                shutdownSubsystem() override {}
+        const utf8*         getSubsystemName() const override { return "ScopeHalfInstance"; }
+        void                resetGameInstanceState( GameInstanceBoundary boundary ) override { (void)boundary; }
+    };
+
+    // 등록 줄의 수명 검사(`SW_ENGINE_SUBSYSTEM` · `SW_MODULE_SUBSYSTEM` 의 static_assert)가 보는 판정이다.
+    static_assert( kSubsystemLifetimeMatches<ScopeProbeSubsystem, SubsystemLifetime::Process> );
+    static_assert( kSubsystemLifetimeMatches<ScopeProbeSubsystem, SubsystemLifetime::GameInstance> == false );
+    static_assert( kSubsystemLifetimeMatches<ScopeInstanceSubsystem, SubsystemLifetime::GameInstance> );
+    static_assert( kSubsystemLifetimeMatches<ScopeInstanceSubsystem, SubsystemLifetime::Process> == false );
+    static_assert( kSubsystemLifetimeMatches<ScopeHalfInstanceSubsystem, SubsystemLifetime::GameInstance> == false );
+    static_assert( kSubsystemLifetimeMatches<ScopeHalfInstanceSubsystem, SubsystemLifetime::Process> == false );
+    static_assert( kSubsystemLifetimeMatches<IScopeProbe, SubsystemLifetime::Process> ); // 서브시스템이 아닌 창구
+
     /** @brief 인터페이스를 상속하지 않고 멤버로 든 서브시스템입니다(`publishPart`). */
     class ScopePartOwnerSubsystem final : public Subsystem
     {
@@ -424,4 +460,34 @@ SW_TEST_CASE( SubsystemScopeTest, HostModuleVisibilityReachesMountedChildren )
 
     parent.unmountChildScope( "ModuleA" );
     SW_EXPECT_TRUE( parent.findHostModuleVisibleInScope( getSubsystemTypeHash<HostModuleProbeSubsystem>() ) == nullptr );
+}
+
+/**
+ * @brief [SubsystemScopeTest] 초기화된 서브시스템만, 매단 자식의 것까지 모인다 — 게임 인스턴스 경계가 이 목록의 상태를 비운다. 결함이면 모듈 서브시스템의 상태가 게임을 다시 시작해도 남거나 서지 않은 것을 부른다
+ */
+SW_TEST_CASE( SubsystemScopeTest, CollectsInitializedSubsystemsOfMountedChildren )
+{
+    SubsystemScope          parent;
+    ScopeProbeSubsystem&    probe    = parent.emplaceSubsystem<ScopeProbeSubsystem>( nullptr );
+    SubsystemScope&         child    = parent.mountChildScope( "ModuleA" );
+    ScopeInstanceSubsystem& instance = child.emplaceSubsystem<ScopeInstanceSubsystem>();
+
+    vector<Subsystem*> listSubsystem;
+    parent.collectInitializedSubsystems( listSubsystem );
+    SW_EXPECT_TRUE( listSubsystem.empty() ); // 아직 아무것도 서지 않았다
+
+    SW_REQUIRE_TRUE( parent.getCollection().initializeAll( SubsystemHostMask::All ) );
+    SW_REQUIRE_TRUE( child.getCollection().initializeAll( SubsystemHostMask::All ) );
+    parent.collectInitializedSubsystems( listSubsystem );
+    SW_REQUIRE_EQUAL( size_t{ 2 }, listSubsystem.size() );
+    SW_EXPECT_TRUE( listSubsystem[0] == &probe );
+    SW_EXPECT_TRUE( listSubsystem[1] == &instance );
+
+    instance._queuedCount = 3;
+    SW_EXPECT_TRUE( listSubsystem[1]->findGameInstanceState() != nullptr );
+    for ( Subsystem* const pSubsystem : listSubsystem )
+    {
+        pSubsystem->resetGameInstanceState( GameInstanceBoundary::Ended );
+    }
+    SW_EXPECT_TRUE( listSubsystem[1]->findGameInstanceState() == nullptr );
 }

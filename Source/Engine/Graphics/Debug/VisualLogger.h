@@ -80,10 +80,12 @@ namespace sw
         SubsystemInitResult initializeSubsystem() override { return SubsystemInitResult::Succeeded; }
         void                shutdownSubsystem() override {}
         const utf8*         getSubsystemName() const override { return kSubsystemName; }
+        void                resetGameInstanceState( GameInstanceBoundary boundary ) override;
+        const utf8*         findGameInstanceState() const override;
 
         /** @brief 기록을 켜고 끕니다. 끄면 이미 쌓인 기록은 그대로 둔다. */
         void setEnabled( bool bEnabled );
-        bool isEnabled() const { return _bEnabled != SW_FALSE; }
+        bool isEnabled() const;
         /** @brief 용량(기록 수, 1 이상)을 바꿉니다. 줄이면 오래된 것부터 버립니다. 0 은 오류를 남기고 false 입니다. */
         [[nodiscard]] bool setCapacity( uint32 capacity );
         /** @brief 프레임 번호를 하나 올립니다. 엔진 루프가 프레임 끝에 한 번 부릅니다. */
@@ -134,7 +136,6 @@ namespace sw
         deque<VisualLogEntry> _listEntry SW_GUARDED_BY( _mutex );
         uint64 _frame                    SW_GUARDED_BY( _mutex );
         uint32 _capacity                 SW_GUARDED_BY( _mutex );
-        uint8                            _bEnabled;
 
         SW_SERVICE_SLOT( VisualLogger, Required );
     };

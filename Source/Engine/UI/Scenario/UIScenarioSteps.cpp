@@ -12,7 +12,6 @@
 #include "Core/String/StringUtil.h"
 
 #include "Engine/Automation/Scenario/AutomationScenario.h"
-#include "Engine/Automation/Scenario/AutomationStageReset.h"
 #include "Engine/Automation/Scenario/AutomationStepParams.h"
 #include "Engine/Automation/Scenario/AutomationStepRegistry.h"
 #include "Engine/Automation/Scenario/IAutomationStepContext.h"
@@ -268,21 +267,8 @@ namespace sw
                 return bCovering ? AutomationReadiness::waiting( 0, "the loading screen is shown" ) : AutomationReadiness::ready();
             }
         };
-        /**
-         * @brief 체인의 다음 단계 앞에서 마지막 입력 장치와 UI 입력 모드를 새 프로세스 값(키보드 · 마우스, 포인터)으로 되돌립니다.
-         * @details 둘 다 엔진 서비스가 들어 단계를 넘어 남는다. 앞 단계(frontend)가 패드로 끝나면 다음 단계의 화면이 이미 포커스를 띄운 채 열려,
-         *          "첫 패드 입력은 기본 포커스만 잡는다" 를 전제한 단계(inventory)의 첫 입력이 포커스를 한 칸 옮겼다.
-         */
-        void resetInputDeviceForNextStage()
-        {
-            if ( InputManager* const pInput = engine::findSubsystem<InputManager>() )
-                pInput->setActiveGlyphStyle( InputGlyphStyle::KeyboardMouse );
-            if ( UISystem* const pUISystem = engine::findSubsystem<UISystem>() )
-                pUISystem->setInputMode( UIInputMode::Pointer );
-        }
     } // namespace
 
-    SW_AUTOMATION_STAGE_RESET( uiInputDevice, "input device (glyph style, UI input mode)", &resetInputDeviceForNextStage );
     SW_AUTOMATION_QUERY_WATCH( uiActiveScreen, "UI.ActiveScreen", "Document path of the active UI screen (the top screen taking input and focus); none for a code screen or no screen",
                                &UIScenarioStepsInternal::readActiveScreen, false, false );
     SW_AUTOMATION_QUERY_WATCH( uiFocusedWidget, "UI.FocusedWidget", "Name of the focused UI widget; none without focus", &UIScenarioStepsInternal::readFocusedWidget, false, false );

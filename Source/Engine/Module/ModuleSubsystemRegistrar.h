@@ -92,6 +92,7 @@ namespace sw
     /**
      * @class ModulePartSubsystem
      * @brief 세울 일이 없는 창구 구현 @p TPart 하나를 멤버로 들고 공개하는 모듈 서브시스템입니다(`SW_MODULE_PART`). 이름은 @p TPart 의 `kModulePartName` 입니다.
+     *        수명은 늘 `Process` 다 — 게임 인스턴스 상태를 들게 되면 제 서브시스템(`SW_MODULE_SUBSYSTEM`)으로 옮긴다.
      * @details 창구 구현이 `Subsystem` 과 인터페이스를 함께 상속하지 않게(다중 상속 금지 — 린트 `cpp-shape`) 수명 짝을 맡는다. 세우거나 내릴 일이 있으면 제 서브시스템을 두고
      *          `getPublishedPart` 로 구현을 낸다(`OpenSSLNetSecuritySubsystem`).
      */
@@ -115,13 +116,16 @@ namespace sw
 
 /**
  * @brief 서브시스템 @p TSubsystem 을 이 이미지의 모듈 서브시스템으로 등록합니다. @p targetScope 는 `ModuleSubsystemScope` 의 열거자 이름, 나머지는 공개할 타입입니다.
- * @details 예: `SW_MODULE_SUBSYSTEM( Process, OpenSSLNetSecuritySubsystem, INetSecurityProvider );` — 프로세스 범위에 서고 `INetSecurityProvider` 로 찾힌다.
+ *          @p lifetime 은 `SubsystemLifetime` 의 열거자 이름이고 엔진 서비스와 같은 계약이다(`GameInstance` 는 두 함수를 재정의한다 — 아니면 컴파일 오류).
+ * @details 예: `SW_MODULE_SUBSYSTEM( Process, Process, OpenSSLNetSecuritySubsystem, INetSecurityProvider );` — 프로세스 범위에 서고 `INetSecurityProvider` 로 찾힌다.
  *          .cpp 의 `namespace sw` 안(함수 밖)에 둔다 — 타입 이름을 그 이름공간에서 찾는다. 유니티 빌드가 여러 .cpp 를 합쳐도 겹치지 않게 변수 이름에 타입 이름을 붙인다.
  */
-#define SW_MODULE_SUBSYSTEM( targetScope, TSubsystem, ... )                                                 \
-    static const ::sw::ModuleSubsystemRegistration<TSubsystem, __VA_ARGS__> sw_moduleSubsystem_##TSubsystem \
-    {                                                                                                       \
-        ::sw::ModuleSubsystemScope::targetScope                                                             \
+#define SW_MODULE_SUBSYSTEM( targetScope, lifetime, TSubsystem, ... )                                                                                  \
+    static_assert( ::sw::kSubsystemLifetimeMatches<TSubsystem, ::sw::SubsystemLifetime::lifetime>,                                                     \
+                   #TSubsystem ": a GameInstance subsystem overrides resetGameInstanceState and findGameInstanceState, a Process subsystem neither" ); \
+    static const ::sw::ModuleSubsystemRegistration<TSubsystem, __VA_ARGS__> sw_moduleSubsystem_##TSubsystem                                            \
+    {                                                                                                                                                  \
+        ::sw::ModuleSubsystemScope::targetScope                                                                                                        \
     }
 
 /**

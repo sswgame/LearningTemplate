@@ -406,7 +406,7 @@ namespace sw
         (void)registerType( hashed_string( "Montage" ), AnimationPoseNodeType{ 1u, &Internal::createMontage, &Internal::validateMontage, &Internal::fillMontage } );
     }
 
-    SW_ENGINE_SERVICE_SUBSYSTEM( AnimationPoseNodeRegistry, GameVisible, Services, (), SW_ENGINE_DEFAULT_FACTORY( AnimationPoseNodeRegistry ) );
+    SW_ENGINE_SERVICE_SUBSYSTEM( AnimationPoseNodeRegistry, GameVisible, Process, Services, (), SW_ENGINE_DEFAULT_FACTORY( AnimationPoseNodeRegistry ) );
 
     bool AnimationPoseNodeRegistry::registerType( const hashed_string& typeName, const AnimationPoseNodeType& type )
     {

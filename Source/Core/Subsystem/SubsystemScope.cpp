@@ -84,6 +84,18 @@ namespace sw
         return nullptr;
     }
 
+    void SubsystemScope::collectInitializedSubsystems( vector<Subsystem*>& outListSubsystem ) const
+    {
+        for ( const uint32 index : _collection.getInitializedIndices() )
+        {
+            outListSubsystem.push_back( &_collection.getSubsystem( index ) );
+        }
+        for ( const MountedScope& mounted : _listMounted )
+        {
+            mounted._scope->collectInitializedSubsystems( outListSubsystem );
+        }
+    }
+
     const SubsystemScope::Entry* SubsystemScope::findOwnEntry( uint64 typeHash ) const
     {
         return VectorUtil::findBy<&Entry::_typeHash>( _listEntry, typeHash );

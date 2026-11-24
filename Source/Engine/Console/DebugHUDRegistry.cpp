@@ -244,5 +244,5 @@ namespace sw
 
 namespace sw
 {
-    SW_ENGINE_SERVICE_SUBSYSTEM( DebugHUDRegistry, GameVisible, Services, (), SW_ENGINE_DEFAULT_FACTORY( DebugHUDRegistry ) );
+    SW_ENGINE_SERVICE_SUBSYSTEM( DebugHUDRegistry, GameVisible, Process, Services, (), SW_ENGINE_DEFAULT_FACTORY( DebugHUDRegistry ) );
 } // namespace sw

@@ -265,5 +265,5 @@ namespace sw
 
 namespace sw
 {
-    SW_ENGINE_SERVICE_SUBSYSTEM( FrameFogVolumeStatus, HostOnly, Services, (), SW_ENGINE_DEFAULT_FACTORY( FrameFogVolumeStatus ) );
+    SW_ENGINE_SERVICE_SUBSYSTEM( FrameFogVolumeStatus, HostOnly, Process, Services, (), SW_ENGINE_DEFAULT_FACTORY( FrameFogVolumeStatus ) );
 } // namespace sw

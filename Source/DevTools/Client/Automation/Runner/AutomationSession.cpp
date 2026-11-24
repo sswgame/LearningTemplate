@@ -36,7 +36,6 @@
 #include "Engine/Graphics/View/ScreenshotRequestQueue.h"
 #include "Engine/HeadlessSubsystem.h"
 #include "Engine/Input/InputManager.h"
-#include "Engine/Localization/LocalizationManager.h"
 #include "Engine/Module/HostInterfaces.h"
 #include "Engine/Module/ModuleSubsystemRegistrar.h"
 #include "Engine/Object/GameObject/GameObject.h"
@@ -45,6 +44,8 @@
 #include "Engine/Reflection/EnumName.h"
 #include "Engine/Scene/Scene.h"
 #include "Engine/Scene/SceneManager.h"
+#include "Engine/UI/UISystem.h"
+#include "Engine/UserSettings/UserSettingsManager.h"
 #include "Engine/Window/GenericWindow.h"
 #include "Engine/Window/MainWindowSubsystem.h"
 
@@ -295,15 +296,21 @@ namespace sw
             // (2D 쿠키 빛을 3D 파이프라인이 그리면 DX11 · GL 의 흉내 슬롯이 겹친다). 빈 씬은 어느 설정으로 그려도 된다.
             (void)engine::getSubsystem<SceneManager>().createEmptyActiveScene( kStageResetSceneName );
             restoreStartVariables();
+            // 사람(무인 실행에서는 앞 단계)이 정한 프로세스 수명 값도 시작 값으로 — 사용자 설정, 마지막 입력 장치(글리프 · UI 입력 방식). 게임을 다시 시작하는 것만으로는 바뀌지 않아야 한다
+            // (패드를 쥔 사람의 타이틀 복귀가 키보드 글리프로 바뀌지 않게).
+            if ( UserSettingsManager* const pSettings = engine::findSubsystem<UserSettingsManager>() )
+                (void)pSettings->restoreStageBaseline();
+            if ( InputManager* const pInput = engine::findSubsystem<InputManager>() )
+                pInput->setActiveGlyphStyle( InputGlyphStyle::KeyboardMouse );
+            if ( UISystem* const pUISystem = engine::findSubsystem<UISystem>() )
+                pUISystem->setInputMode( UIInputMode::Pointer );
             // 창 크기도 시작 때로 — 앞 단계가 바꾼 크기에서 편집기의 기본 배치를 세우면 도크 칸이 새 프로세스와 화소 몇 개 달라 골든이 어긋났다(씬 뷰 160x64 대 62).
             restoreStartWindowSize();
-            // 엔진이 모르는 모듈 상태(편집기의 패널 · 팝업 · 배치)도 새 프로세스처럼 — 그 상태를 가진 모듈이 등록한 되돌리기를 부른다.
+            // 게임 인스턴스와 무관한 에디터 세션(패널 · 팝업 · 배치)도 새 프로세스처럼 — 에디터가 등록한 되돌리기를 부른다. 게임과 함께 사라질 상태는 아래 재시작이 비운다.
             (void)AutomationStageResetRegistry::resetAll();
             // 앞 단계의 사본 폴더를 거둔다 — 패널 · 문서를 새로 만든 뒤라 연 파일이 없다. 남기면 이 프로세스의 색인 · Quick Open 이 원본과 같은 이름의 사본을 집는다.
             for ( const AutomationScratchFolder& folder : _pRunner->getScenario().getTestOptions()._listScratchFolder )
                 (void)AutomationScratchWorkspace::discard( folder ); // 못 지우면 경고가 남는다 — 다음 단계의 prepare 는 자기 사본만 새로 만든다
-            // 앞 단계가 찾지 못한 번역 키(시네마틱 자막 같은 것)도 비운다 — 판정의 로그 게이트가 그 목록을 세므로, 남기면 뒤 단계가 모두 그 키로 진다.
-            engine::getSubsystem<LocalizationManager>().clearMissingKeys();
             // 뷰 대상(풀 · TAA · 노출 · 깊이 기록 · 지터 순번)은 되돌릴 목록에 두지 않고 통째로 버린다 — 다음 단계의 첫 프레임은 새 프로세스처럼 기록이 없다.
             // 앞 단계의 기록이 남으면 같은 시나리오가 체인 위치에 따라 다른 그림을 냈다(언리얼 `FSceneViewState` 를 버리는 자리, 설계 D5).
             // 되돌리기 뒤에 둔다 — 렌더 스레드가 앞 단계의 남은 패킷을 끝내기를 기다리는 동안 위 일이 이미 겹쳐 돌았다.
@@ -367,7 +374,7 @@ namespace sw
             if ( bLaterStage )
             {
                 IGameRestarter* const pRestarter = engine::findSubsystem<IGameRestarter>();
-                if ( pRestarter == nullptr || pRestarter->restartGame() == false )
+                if ( pRestarter == nullptr || pRestarter->restartGame( {} ) == false )
                 {
                     _pRunner->finish( AutomationRunResult::failed( AutomationFailureKind::Assertion,
                                                                    pRestarter == nullptr ? "this host cannot restart the game for a later chain stage" : "the game could not be restarted for this stage", {} ) );
@@ -584,7 +591,7 @@ namespace sw
     }
 
     // 실행기는 스스로 엔진 범위에 선다 — 개발 도구 이미지의 등록도 호스트 라이브러리 걷기(`engine::registerHostLibraryTypes`)가 "Engine" 이름으로 걷는다. 이 폴더를 짓지 않는 구성(배포 · 전용 서버)은 등록이 없어 호스트가 찾지 못한다(`IAutomationRuntime`).
-    SW_MODULE_SUBSYSTEM( Engine, AutomationSession, IAutomationRuntime );
+    SW_MODULE_SUBSYSTEM( Engine, Process, AutomationSession, IAutomationRuntime );
 
     bool AutomationSession::Runtime::start( Engine& engine, SubsystemScope& host, const CommandLineManager& commandLine )
     {

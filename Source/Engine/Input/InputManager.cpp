@@ -870,6 +870,21 @@ namespace sw
         }
     }
 
+    void InputManager::resetGameInstanceState( GameInstanceBoundary boundary )
+    {
+        if ( boundary != GameInstanceBoundary::Ended )
+            return;
+        resetAllDeviceState(); // 누른 키 · 진동
+        closeLocalUsers();
+        setCursorShape( CursorShape::Arrow );
+        clearMouseClipSubRect();
+    }
+
+    const utf8* InputManager::findGameInstanceState() const
+    {
+        return _listUserDevices.empty() ? nullptr : "local users";
+    }
+
     void InputManager::setKeyboardFocus( InputKeyboardFocus focus )
     {
         if ( focus == InputKeyboardFocus::Count )
@@ -1316,7 +1331,7 @@ namespace sw
 
 namespace sw
 {
-    SW_ENGINE_SERVICE_SUBSYSTEM( InputManager, GameVisible, Startup, (), []( engine::EngineSubsystemFactoryScope& scope, engine::EngineSubsystemBuild& build )
+    SW_ENGINE_SERVICE_SUBSYSTEM( InputManager, GameVisible, GameInstance, Startup, (), []( engine::EngineSubsystemFactoryScope& scope, engine::EngineSubsystemBuild& build )
     {
         build._pStartupParts->_pInputManager = &scope.emplaceSubsystem<InputManager>();
     } );

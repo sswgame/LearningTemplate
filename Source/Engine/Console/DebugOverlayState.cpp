@@ -50,6 +50,17 @@ namespace sw
         _mapString.clear();
     }
 
+    void DebugOverlayState::resetGameInstanceState( GameInstanceBoundary boundary )
+    {
+        if ( boundary == GameInstanceBoundary::Ended )
+            clear();
+    }
+
+    const utf8* DebugOverlayState::findGameInstanceState() const
+    {
+        return _mapFloat.empty() && _mapString.empty() ? nullptr : "overlay values";
+    }
+
     void DebugOverlayState::collectRows( vector<DebugOverlayRow>& outListRow ) const
     {
         outListRow.clear();
@@ -71,5 +82,5 @@ namespace sw
 
 namespace sw
 {
-    SW_ENGINE_SERVICE_SUBSYSTEM( DebugOverlayState, GameVisible, Services, (), SW_ENGINE_DEFAULT_FACTORY( DebugOverlayState ) );
+    SW_ENGINE_SERVICE_SUBSYSTEM( DebugOverlayState, GameVisible, GameInstance, Services, (), SW_ENGINE_DEFAULT_FACTORY( DebugOverlayState ) );
 } // namespace sw

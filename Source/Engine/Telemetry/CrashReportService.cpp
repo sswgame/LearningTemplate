@@ -546,5 +546,5 @@ namespace sw
 
 namespace sw
 {
-    SW_ENGINE_SERVICE_SUBSYSTEM( CrashReportService, GameVisible, Services, (), SW_ENGINE_DEFAULT_FACTORY( CrashReportService ) );
+    SW_ENGINE_SERVICE_SUBSYSTEM( CrashReportService, GameVisible, Process, Services, (), SW_ENGINE_DEFAULT_FACTORY( CrashReportService ) );
 } // namespace sw

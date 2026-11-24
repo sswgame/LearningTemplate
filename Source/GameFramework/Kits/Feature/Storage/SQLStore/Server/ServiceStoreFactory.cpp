@@ -93,5 +93,5 @@ namespace sw
     };
 
     // 키트가 실리면 엔진 범위 아래 키트의 자식 범위에 서고, 내려가면 함께 걷힌다. PostgreSQL 드라이버는 드라이버 `.cpp` 의 등록 객체가 올린다.
-    SW_MODULE_SUBSYSTEM( Engine, SQLServiceStoreDriver, IServiceStoreDriver );
+    SW_MODULE_SUBSYSTEM( Engine, Process, SQLServiceStoreDriver, IServiceStoreDriver );
 } // namespace sw

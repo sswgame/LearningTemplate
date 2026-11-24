@@ -130,6 +130,8 @@ namespace sw
         SubsystemInitResult initializeSubsystem() override { return SubsystemInitResult::Succeeded; }
         void                shutdownSubsystem() override {}
         const utf8*         getSubsystemName() const override { return kSubsystemName; }
+        void                resetGameInstanceState( GameInstanceBoundary boundary ) override;
+        const utf8*         findGameInstanceState() const override;
 
         /** @brief 담을 틱 수를 정합니다(0 이면 끄고 비웁니다). */
         void   setCapacity( uint32 capacity );

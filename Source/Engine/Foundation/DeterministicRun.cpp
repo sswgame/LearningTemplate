@@ -24,5 +24,5 @@ namespace sw
 namespace sw
 {
     // 결정적 실행 정책 — 자동화 · 개발 스위치가 채우고 런타임(렌더 · 에셋 · 애니메이션 · App 프레임 시간)이 읽는다.
-    SW_ENGINE_SERVICE_SUBSYSTEM( DeterministicRun, GameVisible, Services, (), SW_ENGINE_DEFAULT_FACTORY( DeterministicRun ) );
+    SW_ENGINE_SERVICE_SUBSYSTEM( DeterministicRun, GameVisible, Process, Services, (), SW_ENGINE_DEFAULT_FACTORY( DeterministicRun ) );
 } // namespace sw

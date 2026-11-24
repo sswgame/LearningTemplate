@@ -45,7 +45,7 @@ namespace sw
         }
     }
 
-    SW_ENGINE_SERVICE_SUBSYSTEM( InputMapExtensionRegistry, GameVisible, Services, (), SW_ENGINE_DEFAULT_FACTORY( InputMapExtensionRegistry ) );
+    SW_ENGINE_SERVICE_SUBSYSTEM( InputMapExtensionRegistry, GameVisible, Process, Services, (), SW_ENGINE_DEFAULT_FACTORY( InputMapExtensionRegistry ) );
 } // namespace sw
 
 namespace sw

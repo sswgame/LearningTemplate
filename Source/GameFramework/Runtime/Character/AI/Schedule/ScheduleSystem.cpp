@@ -130,7 +130,7 @@ namespace sw
         const utf8*         getSubsystemName() const override { return kSubsystemName; }
     };
 
-    SW_MODULE_SUBSYSTEM( Engine, ScheduleSystemRegistry, ScheduleSystemRegistry );
+    SW_MODULE_SUBSYSTEM( Engine, Process, ScheduleSystemRegistry, ScheduleSystemRegistry );
 } // namespace sw
 
 namespace sw

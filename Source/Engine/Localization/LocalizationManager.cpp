@@ -1132,6 +1132,18 @@ namespace sw
         return vector<string>( _uniqueMissingKey.begin(), _uniqueMissingKey.end() );
     }
 
+    void LocalizationManager::resetGameInstanceState( GameInstanceBoundary boundary )
+    {
+        if ( boundary == GameInstanceBoundary::Starting )
+            clearMissingKeys(); // 놓친 키 목록은 게임이 끝난 뒤에 읽는 기록이다. 언어 · 프로젝트는 사용자 설정과 팩이 정한다
+    }
+
+    const utf8* LocalizationManager::findGameInstanceState() const
+    {
+        ScopedLock<mutex> lock{ _missingMutex };
+        return _uniqueMissingKey.empty() ? nullptr : "missing localization keys";
+    }
+
     void LocalizationManager::clearMissingKeys()
     {
         ScopedLock<mutex> lock{ _missingMutex };
@@ -1226,5 +1238,5 @@ namespace sw
 
 namespace sw
 {
-    SW_ENGINE_SERVICE_SUBSYSTEM( LocalizationManager, GameVisible, Services, (), SW_ENGINE_DEFAULT_FACTORY( LocalizationManager ) );
+    SW_ENGINE_SERVICE_SUBSYSTEM( LocalizationManager, GameVisible, GameInstance, Services, (), SW_ENGINE_DEFAULT_FACTORY( LocalizationManager ) );
 } // namespace sw

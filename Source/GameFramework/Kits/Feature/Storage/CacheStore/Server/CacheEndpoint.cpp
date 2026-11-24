@@ -135,7 +135,7 @@ namespace sw
         Driver                  _driver;         ///< `IEphemeralStoreDriver` 로 공개되는 부분
     };
 
-    SW_MODULE_SUBSYSTEM( Engine, RESPEphemeralStoreDriver, IEphemeralStoreDriver );
+    SW_MODULE_SUBSYSTEM( Engine, Process, RESPEphemeralStoreDriver, IEphemeralStoreDriver );
 
     expected<unique_ptr<IEphemeralStore>> RESPEphemeralStoreDriver::createEphemeralStore( string_view driverName, string_view endpoint, string_view secret )
     {

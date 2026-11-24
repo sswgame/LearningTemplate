@@ -40,7 +40,7 @@ namespace sw
 
 namespace sw
 {
-    SW_ENGINE_SUBSYSTEM( ModuleLoadStageSubsystem, Startup, (), []( engine::EngineSubsystemFactoryScope& scope, engine::EngineSubsystemBuild& build )
+    SW_ENGINE_SUBSYSTEM( ModuleLoadStageSubsystem, Process, Startup, (), []( engine::EngineSubsystemFactoryScope& scope, engine::EngineSubsystemBuild& build )
     {
         (void)build;
         (void)scope.emplaceSubsystem<ModuleLoadStageSubsystem>( &scope.getScope() );

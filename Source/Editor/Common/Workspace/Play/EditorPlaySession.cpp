@@ -14,6 +14,7 @@
 #include "Editor/Common/Workspace/Undo/CommandStack.h"
 
 #include "Engine/Environment/Terrain/TerrainComponent.h"
+#include "Engine/Foundation/EngineScope.h"
 #include "Engine/Object/Component/CameraComponent.h"
 #include "Engine/Object/Component/SceneComponent.h"
 #include "Engine/Object/GameObject/GameObject.h"
@@ -637,6 +638,7 @@ namespace sw::editor
             if ( pCommandStack != nullptr )
                 pCommandStack->suspendHistory();
             captureSnapshot( *pData );
+            engine::notifyGameInstanceBoundary( GameInstanceBoundary::Starting );
             EditorPlaySessionInternal::setWorldPlaying( true );
             // 카메라 위치에서 시작은 플레이어가 조종하는 세션만 해당한다. 월드가 시작한 뒤, 즉 onBeginPlay 가 스폰 위치를 정한 뒤에 옮긴다.
             if ( pData->_bStartAtPosition == SW_TRUE && pData->_bSimulate == SW_FALSE )
@@ -648,6 +650,7 @@ namespace sw::editor
             pData->_bEjected          = SW_FALSE; // 다음 세션은 조종으로 시작한다
             EditorPlaySessionInternal::setWorldPlaying( false );
             restoreSnapshot( *pData );
+            engine::notifyGameInstanceBoundary( GameInstanceBoundary::Ended ); // 게임 인스턴스는 에디터가 이어 쓰지만 하던 게임은 끝났다
             // 스냅샷이 오브젝트를 원래 id 로 되돌린 뒤이므로 맡긴 명령의 대상(id)이 다시 맞는다.
             if ( pCommandStack != nullptr )
                 pCommandStack->resumeHistory();

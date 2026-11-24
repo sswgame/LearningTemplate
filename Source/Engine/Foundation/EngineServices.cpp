@@ -59,6 +59,31 @@ namespace sw
             return EngineRegistrationList::getGlobal().isHostOnlyService( typeHash );
         }
 
+        void collectInitializedSubsystems( vector<Subsystem*>& outListSubsystem )
+        {
+            outListSubsystem.clear();
+            vector<const ISubsystemLocator*> listScope;
+            for ( const ISubsystemLocator* pScope = s_pSubsystems; pScope != nullptr; pScope = pScope->getParentScope() )
+            {
+                listScope.push_back( pScope );
+            }
+            for ( size_t index = listScope.size(); index > 0; --index )
+            {
+                listScope[index - 1]->collectInitializedSubsystems( outListSubsystem );
+            }
+        }
+
+        void notifyGameInstanceBoundary( GameInstanceBoundary boundary )
+        {
+            vector<Subsystem*> listSubsystem;
+            collectInitializedSubsystems( listSubsystem );
+            // 초기화의 역순 — 화면을 든 서비스(알림 · 자막)가 화면 스택보다, 화면 스택이 입력보다 먼저 비운다(종료와 같은 순서).
+            for ( size_t index = listSubsystem.size(); index > 0; --index )
+            {
+                listSubsystem[index - 1]->resetGameInstanceState( boundary );
+            }
+        }
+
         void bindModuleServices( SubsystemScope& outScope, bool bGameModuleOnly, bool bSkipAlreadyBound )
         {
             EngineRegistrationList::getGlobal().bindModuleServices( outScope, bGameModuleOnly, bSkipAlreadyBound );

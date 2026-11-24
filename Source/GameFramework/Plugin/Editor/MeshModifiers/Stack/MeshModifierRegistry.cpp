@@ -55,7 +55,7 @@ namespace sw::editor
 
 namespace sw::editor
 {
-    SW_MODULE_SUBSYSTEM( Engine, MeshModifierRegistrations, MeshModifierRegistrations );
+    SW_MODULE_SUBSYSTEM( Engine, Process, MeshModifierRegistrations, MeshModifierRegistrations );
 } // namespace sw::editor
 
 namespace sw::editor

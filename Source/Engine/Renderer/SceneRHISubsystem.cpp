@@ -92,7 +92,7 @@ namespace sw
 
 namespace sw
 {
-    SW_ENGINE_SUBSYSTEM( SceneRHISubsystem, Startup, ( RHISubsystem ), []( engine::EngineSubsystemFactoryScope& scope, engine::EngineSubsystemBuild& build )
+    SW_ENGINE_SUBSYSTEM( SceneRHISubsystem, Process, Startup, ( RHISubsystem ), []( engine::EngineSubsystemFactoryScope& scope, engine::EngineSubsystemBuild& build )
     {
         if ( build._pStartupSetup->_bRenderer == false )
             return;

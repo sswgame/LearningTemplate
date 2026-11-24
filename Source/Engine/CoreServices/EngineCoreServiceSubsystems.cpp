@@ -43,12 +43,12 @@ namespace sw
 
 namespace sw
 {
-    SW_ENGINE_SERVICE_SUBSYSTEM( EventDispatcher, GameVisible, Services, (), []( engine::EngineSubsystemFactoryScope& scope, engine::EngineSubsystemBuild& build )
+    SW_ENGINE_SERVICE_SUBSYSTEM( EventDispatcher, GameVisible, GameInstance, Services, (), []( engine::EngineSubsystemFactoryScope& scope, engine::EngineSubsystemBuild& build )
     {
         build._pServiceParts->_pEventDispatcher = &scope.emplaceSubsystem<EventDispatcher>();
     } );
 
-    SW_ENGINE_SERVICE_SUBSYSTEM( CompressionCodecRegistry, GameVisible, Startup, (), []( engine::EngineSubsystemFactoryScope& scope, engine::EngineSubsystemBuild& build )
+    SW_ENGINE_SERVICE_SUBSYSTEM( CompressionCodecRegistry, GameVisible, Process, Startup, (), []( engine::EngineSubsystemFactoryScope& scope, engine::EngineSubsystemBuild& build )
     {
         build._pStartupParts->_pCodecRegistry = &scope.emplaceSubsystem<CompressionCodecRegistry>();
         (void)scope.emplaceSubsystem<EngineCompressionCodecs>( *build._pStartupParts->_pCodecRegistry );
@@ -56,7 +56,7 @@ namespace sw
 
     // 워커 수는 명령줄 `-workers=N` 이 정한다(없으면 코어 수). 명령줄은 코어 범위에 있어 상위 범위로 올라가며 찾는다 — 공장 범위의 먼저 만들 타입이 아니다.
     // 게임 모듈에도 보인다 — 키트(계정 서버의 비밀번호 해시 줄 · RTS 길찾기)가 작업 풀을 쓴다(언리얼 게임 모듈도 태스크 그래프를 그대로 쓴다).
-    SW_ENGINE_SERVICE_SUBSYSTEM( TaskManager, GameVisible, Startup, (), []( engine::EngineSubsystemFactoryScope& scope, engine::EngineSubsystemBuild& build )
+    SW_ENGINE_SERVICE_SUBSYSTEM( TaskManager, GameVisible, Process, Startup, (), []( engine::EngineSubsystemFactoryScope& scope, engine::EngineSubsystemBuild& build )
     {
         (void)build;
         TaskManager&              taskManager = scope.emplaceSubsystem<TaskManager>();
@@ -70,7 +70,7 @@ namespace sw
     } );
 
     // 완료 콜백(팩 해제 · CRC · 스트리밍 완료 기록)은 태스크 워커에서 돈다 — IO 스레드는 다음 읽기를 거는 일만 한다. 공장이 태스크 매니저를 찾으므로 그것을 먼저 만든다.
-    SW_ENGINE_SERVICE_SUBSYSTEM( AsyncFileIO, HostOnly, Startup, ( TaskManager ), []( engine::EngineSubsystemFactoryScope& scope, engine::EngineSubsystemBuild& build )
+    SW_ENGINE_SERVICE_SUBSYSTEM( AsyncFileIO, HostOnly, Process, Startup, ( TaskManager ), []( engine::EngineSubsystemFactoryScope& scope, engine::EngineSubsystemBuild& build )
     {
         (void)build;
         AsyncFileIOConfig fileIOSettings{};

@@ -384,6 +384,18 @@ namespace sw
         }
     }
 
+    void StateHashHistory::resetGameInstanceState( GameInstanceBoundary boundary )
+    {
+        if ( boundary == GameInstanceBoundary::Starting )
+            setCapacity( _capacity ); // 줄을 비운다 — 기록은 게임이 끝난 뒤에 읽는다
+    }
+
+    const utf8* StateHashHistory::findGameInstanceState() const
+    {
+        StateHashSample latest{};
+        return tryGetLatest( latest ) ? "state hash samples" : nullptr;
+    }
+
     void StateHashHistory::setCapacity( uint32 capacity )
     {
         _capacity = capacity;
@@ -631,5 +643,5 @@ namespace sw
 namespace sw
 {
     // 게임 모듈에도 보인다 — 키트가 이름 붙은 해시 줄을 단다(`DestructionNetSessionComponent` 의 `destruction` 줄, 언리얼 게임 코드도 네트워크 예측 · 리플레이 디버그 해시를 직접 남긴다).
-    SW_ENGINE_SERVICE_SUBSYSTEM( StateHashHistory, GameVisible, Services, (), SW_ENGINE_DEFAULT_FACTORY( StateHashHistory ) );
+    SW_ENGINE_SERVICE_SUBSYSTEM( StateHashHistory, GameVisible, GameInstance, Services, (), SW_ENGINE_DEFAULT_FACTORY( StateHashHistory ) );
 } // namespace sw

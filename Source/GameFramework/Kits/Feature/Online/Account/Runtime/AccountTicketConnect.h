@@ -47,7 +47,7 @@ namespace sw
     /**
      * @class AccountTicketConnector
      * @brief 로그인 연결 하나를 들고 티켓을 받아 줍니다.
-     * @details 계정 키트의 모듈 서브시스템이다(`SW_MODULE_SUBSYSTEM( Engine, … )`) — 엔진 범위 아래 키트의 자식 범위에 서서 `game::getSubsystem<AccountTicketConnector>()` 로 찾힌다.
+     * @details 계정 키트의 모듈 서브시스템이다(`SW_MODULE_SUBSYSTEM( Engine, Process, … )`) — 엔진 범위 아래 키트의 자식 범위에 서서 `game::getSubsystem<AccountTicketConnector>()` 로 찾힌다.
      *          티켓이 계정 세션에 묶여 로그인 연결을 쥐어야 하므로 연결의 수명은 엔진 기동 단계와 같고, 키트가 내려가면 자식 범위째 닫힌다(함수 정적 객체가 DLL 소멸까지 쥐지 않는다).
      *          언리얼 `UGameInstanceSubsystem` 의 온라인 세션 도우미와 같은 자리지만 게임을 다시 세워도 로그인이 남게 엔진 범위다.
      */

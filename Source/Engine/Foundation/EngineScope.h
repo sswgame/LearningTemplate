@@ -10,6 +10,8 @@
 
 namespace sw
 {
+    enum class GameInstanceBoundary : uint8; // `Core/Subsystem/Subsystem.h`
+
     class ISubsystemLocator;
 
     namespace engine
@@ -21,5 +23,11 @@ namespace sw
          *        묶인 게임 모듈이 못 찾는 서비스를 묶이지 않은 실행(테스트 · 단계 사이)에서만 찾아 결함이 가려지지 않게(`game::findSubsystem`).
          */
         SW_API bool isHostOnlyService( uint64 typeHash );
+        /**
+         * @brief 게임 인스턴스의 수명 경계를 엔진 · 모듈 서브시스템에 알립니다 — `SubsystemLifetime::GameInstance` 로 등록한 것이 상태를 비운다. 게임 스레드에서 부릅니다.
+         * @details 게임 다시 시작(`GameModuleManager::restartGame`) · 타이틀 복귀(`GameSceneFlow`) · PIE 시작과 멈춤이 모두 이 함수 하나를 부른다. 자동화 단계는 게임 다시 시작이다.
+         *          모듈 핫 리로드 · 장치 교체는 월드와 연결을 잇는 인스턴스 재생성이라 경계가 아니다(부르지 않는다). 엔진이 묶이지 않았으면 할 일이 없다.
+         */
+        SW_API void notifyGameInstanceBoundary( GameInstanceBoundary boundary );
     } // namespace engine
 } // namespace sw

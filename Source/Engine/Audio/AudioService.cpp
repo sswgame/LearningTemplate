@@ -500,6 +500,19 @@ namespace sw
         _musicPath.clear();
     }
 
+    void AudioService::resetGameInstanceState( GameInstanceBoundary boundary )
+    {
+        if ( boundary != GameInstanceBoundary::Ended || _pEngine == nullptr )
+            return;
+        stopMusic();
+        _pEngine->stopAllPlayback();
+    }
+
+    const utf8* AudioService::findGameInstanceState() const
+    {
+        return _musicPath.empty() ? nullptr : "music"; // 보이스는 오디오 스레드가 멈춘다(`stopAllPlayback`) — 게임 스레드의 게시 값은 블록 하나 늦다
+    }
+
     void AudioService::pauseMusic()
     {
         if ( _musicPlayingID != 0 )
@@ -667,7 +680,7 @@ namespace sw
 namespace sw
 {
     // 전용 서버 역할(클라이언트 · 게임 구성의 `-server`)은 장치를 열지 않는다 — 소리 요청을 받아 버린다. 전용 서버 구성은 이 폴더를 짓지 않는다(`SW_EXCLUDED_ENGINE_FOLDERS`).
-    SW_ENGINE_SERVICE_SUBSYSTEM( AudioService, GameVisible, Startup, (), []( engine::EngineSubsystemFactoryScope& scope, engine::EngineSubsystemBuild& build )
+    SW_ENGINE_SERVICE_SUBSYSTEM( AudioService, GameVisible, GameInstance, Startup, (), []( engine::EngineSubsystemFactoryScope& scope, engine::EngineSubsystemBuild& build )
     {
         AudioService& audio                 = scope.addSubsystem( build._pStartupSetup->_bDedicatedServer ? AudioService::createNull() : AudioService::create() );
         build._pStartupParts->_pAudioDriver = &audio.getEngineAudioDriver();

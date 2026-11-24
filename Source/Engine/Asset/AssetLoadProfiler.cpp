@@ -319,5 +319,5 @@ namespace sw
 
 namespace sw
 {
-    SW_ENGINE_SERVICE_SUBSYSTEM( AssetLoadProfiler, HostOnly, Services, (), SW_ENGINE_DEFAULT_FACTORY( AssetLoadProfiler ) );
+    SW_ENGINE_SERVICE_SUBSYSTEM( AssetLoadProfiler, HostOnly, Process, Services, (), SW_ENGINE_DEFAULT_FACTORY( AssetLoadProfiler ) );
 } // namespace sw

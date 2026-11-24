@@ -283,6 +283,34 @@ SW_TEST_CASE( EventTest, ClearDestroysQueuedEvents )
 }
 
 /**
+ * @brief 게임 인스턴스가 끝나면 큐에 남은 이벤트만 버리고 구독은 남긴다 — 구독은 건 쪽(살아 있는 게임 인스턴스 · 엔진)이 푼다
+ * @details 앞 게임이 마지막 프레임에 넣은 이벤트가 다음 게임의 구독자에게 나가면 안 되고, 타이틀 복귀에서 구독까지 지우면 이어 사는 인스턴스가 이벤트를 잃는다.
+ */
+SW_TEST_CASE( EventTest, GameInstanceEndDropsQueuedEventsAndKeepsSubscriptions )
+{
+    sw::EventDispatcher    dispatcher;
+    uint32                 receivedCount = 0;
+    const sw::Subscription subscription  = dispatcher.subscribe<DestructorCountingEvent>( SW_DELEGATE_LAMBDA( sw::Delegate<void( const DestructorCountingEvent& )>, [&receivedCount]( const DestructorCountingEvent& event )
+     {
+        (void)event;
+        ++receivedCount;
+    } ) );
+
+    DestructorCountingEvent::s_liveCount = 0;
+    dispatcher.push( DestructorCountingEvent{} );
+    SW_EXPECT_TRUE( dispatcher.findGameInstanceState() != nullptr );
+    dispatcher.resetGameInstanceState( sw::GameInstanceBoundary::Ended );
+    SW_EXPECT_TRUE( dispatcher.findGameInstanceState() == nullptr );
+    SW_EXPECT_EQUAL( 0, DestructorCountingEvent::s_liveCount );
+    dispatcher.processEvents();
+    SW_EXPECT_EQUAL( 0u, receivedCount );
+
+    dispatcher.push( DestructorCountingEvent{} );
+    dispatcher.processEvents();
+    SW_EXPECT_EQUAL( 1u, receivedCount );
+}
+
+/**
  * @brief 디스패처가 죽을 때도 큐에 남은 이벤트를 파괴한다
  * @details `clear()` 와 같은 계약이다. 소멸자가 큐에 남은 이벤트를 파괴하지 않으면 종료 시점에 그대로 샌다.
  */

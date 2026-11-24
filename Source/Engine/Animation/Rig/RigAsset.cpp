@@ -69,7 +69,7 @@ namespace sw
         (void)RigNodeLibrary::registerEngineNodes( *this ); // 빈 표의 엔진 이름이다 — 겹치면 레지스트리가 오류로 알린다
     }
 
-    SW_ENGINE_SERVICE_SUBSYSTEM( RigNodeRegistry, GameVisible, Services, (), SW_ENGINE_DEFAULT_FACTORY( RigNodeRegistry ) );
+    SW_ENGINE_SERVICE_SUBSYSTEM( RigNodeRegistry, GameVisible, Process, Services, (), SW_ENGINE_DEFAULT_FACTORY( RigNodeRegistry ) );
 
     bool RigNodeRegistry::registerNode( const hashed_string& typeName, RigNodeFactory factory )
     {
