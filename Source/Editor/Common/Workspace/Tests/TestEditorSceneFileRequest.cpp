@@ -59,7 +59,7 @@ SW_TEST_CASE( EditorSceneFileRequestTest, UnsavedChoiceIsARequest )
 SW_TEST_CASE( EditorWorkspaceResetTest, ForgetsViewStateAndRequests )
 {
     sw::editor::EditorWorkspace workspace{ nullptr };
-    const sw::int32             freshGizmoOperation = workspace.getGizmoOperation();
+    const int32                 freshGizmoOperation = workspace.getGizmoOperation();
     const bool                  bFreshLocalSpace    = workspace.isGizmoLocalSpace();
     workspace.setGizmoOperation( freshGizmoOperation + 1 );
     workspace.setGizmoLocalSpace( bFreshLocalSpace == false );
@@ -71,7 +71,7 @@ SW_TEST_CASE( EditorWorkspaceResetTest, ForgetsViewStateAndRequests )
     workspace.requestOpenPanelByID( "material" );
     workspace.requestLoadScene( "game/hub/maps/a.scene.xml" );
     workspace.setPendingSceneAction( sw::editor::EditorPendingSceneAction::New );
-    const sw::uint32 editSerial = workspace.getSceneEditSerial();
+    const uint32 editSerial = workspace.getSceneEditSerial();
 
     workspace.resetToFreshEditor();
 

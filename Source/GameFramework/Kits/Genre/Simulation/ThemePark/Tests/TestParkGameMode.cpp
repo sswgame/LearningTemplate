@@ -13,11 +13,13 @@
 #include "Engine/Object/Component/SceneComponent.h"
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
+#include "Engine/Presentation/ISoundPlayer.h"
 #include "Engine/Reflection/Reflection.h"
 #include "Engine/Serialization/Serializer/SerializerUtil.h"
 
 #include "GameFramework/Kits/Genre/Simulation/ThemePark/Component/ParkGameModeComponent.h"
 #include "GameFramework/Kits/Genre/Simulation/ThemePark/Tests/ThemeParkTestRules.h"
+#include "GameFramework/Runtime/Foundation/Framework/GameService.h"
 
 using namespace sw;
 
@@ -82,6 +84,8 @@ SW_TEST_CASE( ParkGameModeTest, LayoutIsPlacedAtTheDirectorObject )
     SW_REQUIRE_NOT_NULL( pPath );
     SW_REQUIRE_TRUE( SerializerUtil::applyPropertyText( *pPath, MutableObjectAddress{ pGameMode }, test::ScopedScratchDomain::makeID( "park/data/rides.xml" ).str(),
                                                         SerializeContext::getDefault( SerializePurpose::Authoring ) ) );
+    if ( game::findSubsystem<ISoundPlayer>() != nullptr )
+        SW_EXPECT_LOG( "AudioEngine.UnknownAudioEvent" ); // 지은 소리를 내려 한다 — 이벤트 라이브러리는 게임이 설 때 싣는다
     manager.beginPlay();
     SW_REQUIRE_TRUE( pGameMode->isStarted() );
     SW_REQUIRE_EQUAL( size_t{ 1 }, pGameMode->getPlacements().size() );

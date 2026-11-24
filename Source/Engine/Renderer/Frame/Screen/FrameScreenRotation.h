@@ -12,6 +12,7 @@
 
 #include "Engine/Graphics/RHI/RHIEnums.h"
 #include "Engine/Graphics/RHI/RHIHandles.h"
+#include "Engine/Graphics/RHI/RHITextureSlot.h"
 
 namespace sw
 {

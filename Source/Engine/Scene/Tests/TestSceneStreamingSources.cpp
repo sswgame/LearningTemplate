@@ -264,7 +264,7 @@ SW_TEST_CASE( SceneStreamingSourcesTest, ContentBoundsDecideLoading )
     moveTo( 70.0f ); // 다리 끝에서 25 m — 반경 밖
     SW_EXPECT_FALSE( streaming.isCellLoaded( StreamingCellCoord{ 0, 0 } ) );
     SW_EXPECT_TRUE( streaming.isFloorMissing( float3{ 30.0f, 1.0f, 5.0f } ) );          // 다리가 덮는 자리
-    SW_EXPECT_FALSE( streaming.isFloorMissing( float3{ 30.0f, 1.0f, 8.0f } ) );         // 다리 옆
+    SW_EXPECT_FALSE( streaming.isFloorMissing( float3{ 30.0f, 1.0f, 15.0f } ) );        // 다리 옆 — 조각 경계는 셀 사각형(Z 0 ~ 10)에 다리를 더한 것이다
     SW_EXPECT_TRUE( streaming.isCellStreamingCompleted( StreamingCellCoord{ 3, 0 } ) ); // 그 좌표의 조각은 없다 — 복제 보류는 기다리지 않는다
     moveTo( 60.0f );                                                                    // 셀 (0,0) 은 50 m 지만 다리 끝은 15 m 다
     SW_EXPECT_TRUE( streaming.isCellLoaded( StreamingCellCoord{ 0, 0 } ) );

@@ -5,6 +5,8 @@
 		<entry key="Actor" text="배우" sourceHash="f865a44470a1eb3a" />
 		<entry key="Allied strength" text="아군 전력" sourceHash="8d3ba6769f2ebd03" />
 		<entry key="Allied strength broken - you lose" text="아군 전력이 바닥났습니다 - 패배" sourceHash="7fc102a6588e40a9" />
+		<entry key="ArrivalCutA" text="도착 컷 A" sourceHash="26b905e2200d2699" />
+		<entry key="ArrivalCutB" text="도착 컷 B" sourceHash="26b902e2200d2180" />
 		<entry key="Assault Rifle" text="돌격 소총" sourceHash="67220abc0f738d9a" />
 		<entry key="Bone Axe" text="뼈 도끼" sourceHash="9e2cdbf7cb3d6953" />
 		<entry key="Bone Shield" text="뼈 방패" sourceHash="0201be6b95ece038" />
@@ -12,32 +14,45 @@
 		<entry key="CutA" text="컷 A" sourceHash="770f429cae410066" />
 		<entry key="CutB" text="컷 B" sourceHash="770f419cae40feb3" />
 		<entry key="Double K.O. - the bout is a draw" text="더블 K.O. 시합이 무승부입니다" sourceHash="2f4f1c8b2a8b8859" />
+		<entry key="Elder" text="장로" sourceHash="424dbc1360c76777" />
 		<entry key="Enemy strength" text="적군 전력" sourceHash="b5143e5e2a708834" />
 		<entry key="Enemy strength broken - you win" text="적군 전력이 바닥났습니다 - 승리" sourceHash="3ecc332ccec2feeb" />
 		<entry key="Explored %" text="탐색 %" sourceHash="dba317bb17831f87" />
 		<entry key="Flasks" text="물약" sourceHash="75a3f0cc809b1eb9" />
+		<entry key="GateCut" text="문 컷" sourceHash="14d8a97b531f1462" />
 		<entry key="Geo" text="지오" sourceHash="eaeb8c19986395a2" />
 		<entry key="Gilded Knight Helmet" text="금박 기사 투구" sourceHash="78c4a96597a1f01e" />
+		<entry key="Health Potion" text="체력 물약" sourceHash="8e172b1950cb2862" />
 		<entry key="Heraldic Cape" text="문장 망토" sourceHash="6f86256a16ab8f26" />
+		<entry key="High Heels" text="하이힐" sourceHash="226fd9be54338c36" />
 		<entry key="K.O. - you lose the bout" text="K.O. 시합에서 졌습니다" sourceHash="fb3474b00a384899" />
 		<entry key="K.O. - you win the bout" text="K.O. 시합에서 이겼습니다" sourceHash="f24709a43b0f812e" />
 		<entry key="Knight Helmet" text="기사 투구" sourceHash="4733227ae193d121" />
 		<entry key="Knight Helmet (Dyeable)" text="기사 투구(염색 가능)" sourceHash="ff08b0d01b60fde4" />
 		<entry key="Knight Helmet (Merged)" text="기사 투구(병합)" sourceHash="bd029e7ca9b9d6ac" />
+		<entry key="Knight Helmet (Tintable)" text="기사 투구(착색 가능)" sourceHash="59e9a748e13a4333" />
 		<entry key="Knight Sword (Merged)" text="기사 검(병합)" sourceHash="3c4283c2efbf5e38" />
 		<entry key="Last squad standing - you win" text="마지막 분대 - 승리했습니다" sourceHash="ddaaaecde8b4a637" />
 		<entry key="Light Ammo" text="경량 탄약" sourceHash="f3408f7b1fa03c57" />
 		<entry key="Longbow" text="장궁" sourceHash="1ca5e729801861e9" />
+		<entry key="Low Boots" text="낮은 장화" sourceHash="69c0a6d537704324" />
 		<entry key="Mech destroyed - special picks the next mech" text="기체 격추 - 특수기로 다음 기체를 고릅니다" sourceHash="3711c7fb7ac4eee8" />
+		<entry key="Mind the pond - nobody swims in it."
+		       text="연못을 조심하게 - 아무도 거기서 헤엄치지 않는다네."
+		       sourceHash="805022e3109d8d1e" />
 		<entry key="Notched Blade" text="이 빠진 칼" sourceHash="0bda544f4c061f1a" />
 		<entry key="People left" text="남은 인원" sourceHash="6f27a40f6f8161a7" />
 		<entry key="Pistol" text="권총" sourceHash="9fbfefa835da8476" />
+		<entry key="Press [action=Farm.Use] to work the soil with your tool"
+		       text="[action=Farm.Use] 을(를) 눌러 도구로 흙을 일구세요"
+		       sourceHash="42a1af95d883d019" />
 		<entry key="Pump Shotgun" text="펌프 산탄총" sourceHash="91f761c37c27a1e1" />
 		<entry key="Rifle Ammo" text="소총 탄약" sourceHash="ed6ae1c9694f9861" />
 		<entry key="Round Shield" text="둥근 방패" sourceHash="b63752b781a90fd4" />
 		<entry key="Round Shield (Merged)" text="둥근 방패(병합)" sourceHash="42c4611c12baf19f" />
 		<entry key="Rusted Helm" text="녹슨 투구" sourceHash="e74fbfb19151f99e" />
 		<entry key="Shotgun Shells" text="산탄" sourceHash="c27d7c643a7aea30" />
+		<entry key="Stamina" text="기력" sourceHash="5f951de778479e56" />
 		<entry key="Subtitle.Guide" text="안내인" sourceHash="7bf3b283b3f22c4b" />
 		<entry key="Subtitle.GuideLine" text="등불 길을 따라 옛 다리로 가세요." sourceHash="330029ad4a1d3f28" />
 		<entry key="Subtitle.LongLine"
@@ -49,7 +64,16 @@
 		<entry key="The warden has fallen" text="파수꾼이 쓰러졌습니다" sourceHash="f907141e36178ebd" />
 		<entry key="The warrior wakes." text="전사가 깨어난다." sourceHash="2cbe2d95a0824eaf" />
 		<entry key="Travel Cape" text="여행 망토" sourceHash="9b537522d0556b6c" />
+		<entry key="Trout" text="송어" sourceHash="f554010d683976b5" />
 		<entry key="Use - jump off the plane" text="쓰기 - 비행기에서 뛰어내리기" sourceHash="ce3ab2b99b177051" />
+		<entry key="Welcome to Dry Gulch."
+		       text="드라이 걸치에 온 것을 환영하네."
+		       sourceHash="06afd11cd91933e0" />
+		<entry key="Welcome to Pixel Town, traveller."
+		       text="픽셀 마을에 온 것을 환영하네, 여행자여."
+		       sourceHash="a6a13f44ce9c7093" />
+		<entry key="Wild Herb" text="들풀" sourceHash="27860e9704b41dbc" />
+		<entry key="Wood Log" text="통나무" sourceHash="9412ff7c0bf7220a" />
 		<entry key="You are down - wait for your squad" text="기절했습니다 - 동료를 기다리세요" sourceHash="995b14b904f5e596" />
 		<entry key="You fell - your geo lies where you died" text="쓰러졌습니다 - 지오는 죽은 자리에 남습니다" sourceHash="fe7253fea05f4d7f" />
 		<entry key="Your squad is out" text="분대가 탈락했습니다" sourceHash="d6fb3828410be124" />

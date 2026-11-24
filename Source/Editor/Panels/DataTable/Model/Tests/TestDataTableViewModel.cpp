@@ -6,6 +6,7 @@
 
 #include "Editor/Common/Commands/Asset/EditorDataTableCommands.h"
 #include "Editor/Common/Widgets/Model/EditorListFilter.h"
+#include "Editor/Common/Workspace/Undo/CommandStack.h"
 #include "Editor/Common/Workspace/Undo/DocumentEditRecorder.h"
 #include "Editor/Panels/DataTable/Model/DataTableViewModel.h"
 

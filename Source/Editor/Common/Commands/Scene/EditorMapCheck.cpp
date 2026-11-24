@@ -33,7 +33,7 @@ namespace sw::editor
                 if ( folder.empty() )
                     return;
                 vector<string> listFile;
-                (void)EditorContentScan::collectFiles( FileUtil::toDiskPath( FileUtil::joinPath( folder, "data" ) ), ".xml", listFile, true ); // 데이터 폴더가 없는 팩이면 검사할 것도 없다
+                (void)EditorContentScan::collectFiles( FileUtil::joinPath( folder, "data" ), ".xml", listFile, true ); // 데이터 폴더가 없는 팩이면 검사할 것도 없다
                 for ( const string& file : listFile )
                 {
                     string assetID = editor::getSubsystem<AssetPaths>().toAssetID( file );
