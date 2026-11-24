@@ -47,8 +47,8 @@ namespace sw
         if ( _pHorse == nullptr )
             return WesternHorseReaction::Calm;
         const WesternHorseReaction reaction = _pHorse->frighten( amount );
-        GameObject*                pOwner   = getOwner();
-        GameObjectManager*         pManager = pOwner != nullptr ? pOwner->getMutableManager() : nullptr;
+        const GameObject*          pOwner   = getOwner();
+        const GameObjectManager*   pManager = pOwner != nullptr ? pOwner->getManager() : nullptr;
         if ( reaction == WesternHorseReaction::Bucked && pManager != nullptr )
             pManager->executeOrDeferPostTickOnComponent( *this, []( WesternHorseMountComponent& component )
             { component.throwRiders(); } );

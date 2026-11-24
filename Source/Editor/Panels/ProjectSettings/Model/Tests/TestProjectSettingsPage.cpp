@@ -35,6 +35,7 @@ SW_TEST_CASE( ProjectSettingsPageTest, OpeningAnUnknownTypeClearsTypeFound )
 SW_TEST_CASE( ProjectSettingsPageTest, FirstSaveRefusesAFileChangedOnDisk )
 {
     const AbsolutePath file = test::makeScratchPath( "ProjectSettingsPage" ).join( "probe.json" );
+    SW_REQUIRE_TRUE( FileUtil::ensureParentDirectoryExists( file ) );
     SW_REQUIRE_TRUE( FileUtil::writeTextFile( file, "{\n  \"value\": 1\n}\n" ) );
     ProjectSettingsPage page;
     page._entry._page  = "Probe/probe.json"; // 형식 이름이 없으면 표 페이지다

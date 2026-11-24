@@ -48,7 +48,7 @@ namespace sw
     void CharacterCrowdSpawnerComponent::onBeginPlay()
     {
         Component::onBeginPlay();
-        GameObjectManager* pManager = getOwner()->getMutableManager();
+        const GameObjectManager* pManager = getOwner()->getManager();
         if ( pManager == nullptr || _characterCount == 0 )
             return;
         pManager->executeOrDeferPostTickOnComponent( *this, []( CharacterCrowdSpawnerComponent& self, GameObjectManager& manager )
