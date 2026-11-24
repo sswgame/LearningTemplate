@@ -356,8 +356,8 @@ namespace sw
                     *ppIncludeSource = nullptr;
                     // DXC 는 include 폴더마다 후보 이름을 물어본다 - 없는 후보는 오류 로그 없이 실패로 돌려줘 다음 폴더로 넘어가게 한다.
                     vector<uint8>                bytes;
-                    const string                 candidate = FileUtil::normalizeSeparators( StringUtil::utf16ToUTF8( pFilename ) );
-                    const optional<AbsolutePath> found     = _resolver.readInclude( candidate, bytes );
+                    const optional<AbsolutePath> candidate = AbsolutePath::tryMake( StringUtil::utf16ToUTF8( pFilename ) ); // 상대 후보(작업 폴더 기준)는 찾지 않는다
+                    const optional<AbsolutePath> found     = candidate.has_value() ? _resolver.readInclude( *candidate, bytes ) : nullopt;
                     if ( found.has_value() == false )
                         return E_FAIL; // 연 파일 · 없던 후보는 include 규칙이 작업(`CookJob`)에 적었다
                     DxcComPtr<IDxcBlobEncoding> blob;

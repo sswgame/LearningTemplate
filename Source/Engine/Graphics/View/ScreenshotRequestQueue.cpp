@@ -12,7 +12,7 @@ namespace sw
     uint32 ScreenshotRequestQueue::put( const AbsolutePath& filePath, RHITextureHandle sourceTexture, RHIFormat sourceFormat )
     {
         const ScopedLock<mutex> lock{ _mutex };
-        return enqueue( ScreenshotRequest{ filePath.str(), sourceTexture, sourceFormat, 0, ScreenshotOutput::File } );
+        return enqueue( ScreenshotRequest{ filePath, filePath.str(), sourceTexture, sourceFormat, 0, ScreenshotOutput::File } );
     }
 
     uint32 ScreenshotRequestQueue::putForPNGBytes( string_view requestName, RHITextureHandle sourceTexture, RHIFormat sourceFormat )
@@ -23,7 +23,7 @@ namespace sw
             return 0;
         }
         const ScopedLock<mutex> lock{ _mutex };
-        return enqueue( ScreenshotRequest{ string{ requestName }, sourceTexture, sourceFormat, 0, ScreenshotOutput::PNGBytes } );
+        return enqueue( ScreenshotRequest{ {}, string{ requestName }, sourceTexture, sourceFormat, 0, ScreenshotOutput::PNGBytes } );
     }
 
     uint32 ScreenshotRequestQueue::enqueue( ScreenshotRequest request )
@@ -33,7 +33,7 @@ namespace sw
         TicketResult& slot   = _arrResult[ticket % kResultHistoryCount];
         if ( _listPending.size() >= kMaxPendingCount )
         {
-            SW_LOG_ERROR_ID( "Screenshot.QueueFull", "Screenshot '%#' was not requested - %# requests are already waiting", request._path, kMaxPendingCount );
+            SW_LOG_ERROR_ID( "Screenshot.QueueFull", "Screenshot '%#' was not requested - %# requests are already waiting", request._name, kMaxPendingCount );
             slot = TicketResult{ ticket, false, {} };
             return ticket;
         }
@@ -102,7 +102,7 @@ namespace sw
         const ScopedLock<mutex> lock{ _mutex };
         if ( _pendingPacketPath.empty() == false )
             return false;
-        _pendingPacketPath = filePath.str();
+        _pendingPacketPath = filePath;
         return true;
     }
 
@@ -112,13 +112,13 @@ namespace sw
         return _pendingPacketPath.empty();
     }
 
-    bool ScreenshotRequestQueue::takeForPacket( string& outPath )
+    bool ScreenshotRequestQueue::takeForPacket( AbsolutePath& outPath )
     {
         const ScopedLock<mutex> lock{ _mutex };
         if ( _pendingPacketPath.empty() )
             return false;
-        outPath = std::move( _pendingPacketPath );
-        _pendingPacketPath.clear();
+        outPath            = std::move( _pendingPacketPath );
+        _pendingPacketPath = {};
         return true;
     }
 } // namespace sw

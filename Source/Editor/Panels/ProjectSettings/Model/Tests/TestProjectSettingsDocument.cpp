@@ -158,7 +158,7 @@ SW_TEST_CASE( ProjectSettingsDocumentTest, SavingTheOverrideLeavesTheBaseUntouch
     const Util::OverriddenProject project = Util::makeProject( "settings_override_table" );
 
     ProjectSettingsJSONDocument table;
-    SW_REQUIRE_TRUE( table.open( project._overridePath.str() ).has_value() );
+    SW_REQUIRE_TRUE( table.open( project._overridePath ).has_value() );
     SW_REQUIRE_TRUE( table.isReadOnly() == false );
     const ProjectSettingsJSONNode& root = table.getNode( ProjectSettingsJSONDocument::kRootNode );
     SW_REQUIRE_EQUAL( root._listChild.size(), size_t{ 1 } );
