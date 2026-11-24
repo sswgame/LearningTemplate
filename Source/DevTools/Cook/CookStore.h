@@ -82,18 +82,19 @@ namespace sw
 
         /**
          * @brief 출력 파일 하나를 만듭니다.
-         * @param desc 작업 키의 쿠커 쪽 값입니다.
-         * @param outputID 쿠킹 폴더 기준 출력 경로입니다(예: `game/playground/maps/x.scene.bin`). 기록 파일 이름이 됩니다.
+         * @param desc 작업 키의 쿠커 쪽 값입니다(출력 이름은 이 함수가 채운다).
+         * @param outputID 쿠킹 폴더 기준 출력 경로입니다(예: `game/playground/maps/x.scene.bin`). 기록 파일 이름이자 작업 키의 출력 이름입니다 — 같은 입력의 출력이 여럿이어도 열쇠가 갈린다.
          * @param outputPath 출력 파일의 경로입니다.
          * @param cook 출력 파일을 @p outputPath 에 쓰고 `CookStep` 을 돌려주는 함수입니다. 빈 에셋 캐시와 작업 범위 안에서 부릅니다.
          */
         template <typename CookFunction>
         [[nodiscard]] CookResult cookFile( const CookJobDesc& desc, string_view outputID, const AbsolutePath& outputPath, CookFunction&& cook ) const
         {
-            if ( reuseFreshOutput( desc, outputID, outputPath ) )
+            const CookJobDesc jobDesc = desc.forOutput( outputID );
+            if ( reuseFreshOutput( jobDesc, outputID, outputPath ) )
                 return record( outputID, CookResult::Reused );
             clearAssetCachesForJob();
-            CookJob        job( desc );
+            CookJob        job( jobDesc );
             const CookStep step = cook();
             return record( outputID, finishCook( job, step, outputID, outputPath ) );
         }
@@ -101,14 +102,16 @@ namespace sw
         /**
          * @brief `cookFile` 과 같되 베이크하는 함수가 쓰면서 센 출력 해시를 함께 돌려줍니다(`CookStreamedStep`). 출력을 메모리로 다시 읽지 않는다 — 기록은 그 해시로,
          *        DDC 는 파일 복사로 남긴다(큰 팩, 감사 A-10).
+         * @param outputName 작업 키의 출력 이름입니다. 기록 자리(@p outputID)가 빌드 폴더마다 갈려도 같은 이름이면 DDC 를 함께 쓴다.
          */
         template <typename CookFunction>
-        [[nodiscard]] CookResult cookStreamedFile( const CookJobDesc& desc, string_view outputID, const AbsolutePath& outputPath, CookFunction&& cook ) const
+        [[nodiscard]] CookResult cookStreamedFile( const CookJobDesc& desc, string_view outputID, string_view outputName, const AbsolutePath& outputPath, CookFunction&& cook ) const
         {
-            if ( reuseFreshOutput( desc, outputID, outputPath ) )
+            const CookJobDesc jobDesc = desc.forOutput( outputName );
+            if ( reuseFreshOutput( jobDesc, outputID, outputPath ) )
                 return record( outputID, CookResult::Reused );
             clearAssetCachesForJob();
-            CookJob                job( desc );
+            CookJob                job( jobDesc );
             const CookStreamedStep step = cook();
             return record( outputID, finishStreamedCook( job, step, outputID, outputPath ) );
         }

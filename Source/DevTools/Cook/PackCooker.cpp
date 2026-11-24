@@ -1427,7 +1427,7 @@ namespace sw
                 const string outputID   = makeRecordID( desc._target, params._cookedDir.str(), packName );
                 CookJobDesc  partDesc   = desc;
                 partDesc._settingsHash  = PackCookerInternal::computePartHash( PackCookerInternal::computeSelectionHash( desc._settingsHash, domain, selection ), part );
-                const CookResult result = store.cookStreamedFile( partDesc, outputID, outputPath, [&]()
+                const CookResult result = store.cookStreamedFile( partDesc, outputID, packName, outputPath, [&]()
                 { return PackCookerInternal::cookDomainPack( config, params, domain, outputPath, listing, part, timing ); } );
                 if ( result == CookResult::Failed )
                     ++failedCount;

@@ -85,6 +85,41 @@ SW_TEST_CASE( CookStoreTest, ReusesWhileInputsAreUnchanged )
 }
 
 /**
+ * @brief [CookStoreTest] 입력 · 설정이 같은 두 출력은 DDC 열쇠가 다르다 — 지워진 출력은 저마다 제 바이트로 되살아난다
+ * @details 변이: 작업 키에서 출력 이름을 빼면 두 출력이 한 항목을 번갈아 덮어, 되살리기가 `CookStore.CookDDCEntryDoes` 경고와 함께 다시 굽는다(문화권마다의 번역 표가 그랬다).
+ */
+SW_TEST_CASE( CookStoreTest, OutputsOfTheSameInputsKeepTheirOwnEntry )
+{
+    CookFixture fixture;
+    SW_REQUIRE_TRUE( FileUtil::ensureParentDirectoryExists( fixture._inputPath ) && FileUtil::writeTextFile( fixture._inputPath, "one" ) );
+    int32      bakeCount  = 0;
+    const auto cookOutput = [&]( const CookStore& store, string_view outputID )
+    {
+        const AbsolutePath outputPath = fixture.makeOutputPath( outputID );
+        return store.cookFile( kDesc, outputID, outputPath, [&]
+        {
+            ++bakeCount;
+            vector<uint8> bytes;
+            if ( AssetIO::readBinaryFile( fixture._inputPath, bytes ) == false )
+                return CookStep::Failed;
+            return FileUtil::ensureParentDirectoryExists( outputPath ) && FileUtil::writeTextFile( outputPath, outputID ) ? CookStep::Written : CookStep::Failed;
+        } );
+    };
+    for ( const string_view outputID : { string_view( "text.ko.locres" ), string_view( "text.en.locres" ) } )
+    {
+        SW_EXPECT_EQUAL( CookResult::Cooked, cookOutput( fixture._store, outputID ) );
+    }
+    const CookStore nextRun = fixture.makeNextRun();
+    for ( const string_view outputID : { string_view( "text.ko.locres" ), string_view( "text.en.locres" ) } )
+    {
+        SW_REQUIRE_TRUE( FileUtil::removeFile( fixture.makeOutputPath( outputID ) ) );
+        SW_EXPECT_EQUAL( CookResult::Reused, cookOutput( nextRun, outputID ) );
+        SW_EXPECT_EQUAL( string( outputID ), fixture.readOutput( outputID ) );
+    }
+    SW_EXPECT_EQUAL( 2, bakeCount );
+}
+
+/**
  * @brief [CookStoreTest] 입력 내용이나 쿠커 버전이 바뀌면 다시 굽는다
  */
 SW_TEST_CASE( CookStoreTest, CooksAgainWhenInputOrVersionChanges )
