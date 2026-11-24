@@ -216,7 +216,7 @@ namespace sw
 
     void PrefabCache::collectMemoryEntries( vector<AssetMemoryEntry>& outListEntry ) const
     {
-        // shortcut: 객체 크기만 센다 — 프리팹 안 노드 표는 메모리 태그(Scene) 줄에 있다.
+        // 객체 크기만 센다 — 프리팹 안 노드 표는 메모리 태그(Scene) 줄에 있다(`AssetMemoryEntry`).
         ScopedSharedLock<shared_mutex> readLock{ _mapCacheMutex };
         for ( const auto& [key, pAsset] : _mapCache )
         {

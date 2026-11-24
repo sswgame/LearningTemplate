@@ -180,7 +180,7 @@ namespace sw
     template <typename AssetType>
     void SharedAssetCache<AssetType>::collectMemoryEntries( vector<AssetMemoryEntry>& outListEntry ) const
     {
-        // shortcut: 객체 크기(sizeof)만 센다 — 에셋 안 컨테이너는 메모리 태그 표가 종류별로 센다. 종류가 크기 질의를 가지면 그때 그것을 부른다.
+        // shortcut: 객체 크기(sizeof)만 센다 — 에셋 안 컨테이너는 메모리 태그 표가 종류별로 정확히 센다. 예산 판정이 이 표의 합을 쓰기 시작하면 종류마다 크기 질의(언리얼 `GetResourceSizeEx`)를 둔다.
         _pTable->forEachLive( [&outListEntry]( const string& key, const AssetType& /*asset*/, uint32 referenceCount )
         { outListEntry.push_back( AssetMemoryEntry{ key, sizeof( AssetType ), 0, referenceCount } ); } );
     }

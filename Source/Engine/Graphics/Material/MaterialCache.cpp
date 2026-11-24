@@ -211,7 +211,7 @@ namespace sw
     {
         if ( _impl == nullptr )
             return;
-        // shortcut: 객체 크기만 센다 — 상수 버퍼 · 텍스처는 그것을 쥔 GPU 자원 표와 텍스처 캐시 줄에 있다.
+        // 자기 몫만 센다 — 상수 버퍼 · 텍스처는 그것을 쥔 GPU 자원 표와 텍스처 캐시 줄에 있다(언리얼 `EResourceSizeMode::Exclusive`).
         ScopedSharedLock<shared_mutex> lock{ _impl->_mutex };
         for ( const auto& [key, entry] : _impl->_mapEntry )
         {

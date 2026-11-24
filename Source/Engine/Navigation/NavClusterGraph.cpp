@@ -95,7 +95,8 @@ namespace sw
         const auto first = std::lower_bound( _listCluster.begin(), _listCluster.end(), key, &NavClusterGraphInternal::isTileBefore );
         uint32     found = kNoCluster;
         float32    best  = MathUtil::kMaxFloat;
-        // shortcut: 같은 타일의 덩어리는 중심이 가까운 것으로 고른다(다리 위 · 아래처럼 겹친 층은 높이까지 잰다). 폴리곤 소속표를 싣게 되면 그것으로 바꾼다.
+        // 같은 타일의 덩어리는 중심이 가까운 것으로 고른다(다리 위 · 아래처럼 겹친 층은 높이까지 잰다). 아직 오르지 않은 타일에는 폴리곤이 없어 소속을 정확히 물을 곳이 없고,
+        // 오른 타일의 폴리곤은 장애물이 다시 지어 쿠킹한 소속표와 어긋난다 — 잘못 고른 덩어리는 다가가며 다시 계획한다(파일 머리말).
         for ( auto it = first; it != _listCluster.end() && it->_tileX == tileX && it->_tileZ == tileZ; ++it )
         {
             const float32 distanceSquared = float3::getDistanceSquared( it->_center, position );
