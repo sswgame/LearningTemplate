@@ -81,7 +81,7 @@ namespace sw
             string                  _surfacePath{};
             vector<TextureHandle>   _listHandle{}; ///< 결과 둘 · 작업 둘 · 밑 · 마스크들
             TextureLayerBakeRequest _request{};
-            uint64                  _bakedHandle{ 0 };  ///< 구운 때의 결과 GPU 핸들 — 바뀌면(디바이스 교체) 다시 굽는다
+            uint64                  _bakedHandle{ 0 };  ///< 굽기를 맡긴 때의 결과 텍스처 정체 — 바뀌면(디바이스 교체) 다시 굽는다
             uint32                  _submitSerial{ 0 }; ///< 맡길 때의 굽기 번호(`TextureCache::wasLayerBakedAfter`)
             uint8                   _bSubmitted{ SW_FALSE };
         };

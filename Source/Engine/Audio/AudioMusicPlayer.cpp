@@ -13,6 +13,7 @@ namespace sw
     AudioMusicPlayer::AudioMusicPlayer()
         : _playback{}
         , _bPaused{ SW_FALSE }
+        , _bHeldByGamePause{ SW_FALSE }
         , _reserved{ 0 }
     {
     }
@@ -166,7 +167,7 @@ namespace sw
 
     hashed_string AudioMusicPlayer::getBus() const
     {
-        return _playback._pDesc->_bus.empty() ? hashed_string( AudioBusNames::kMusic ) : _playback._pDesc->_bus;
+        return _playback._pDesc == nullptr || _playback._pDesc->_bus.empty() ? hashed_string( AudioBusNames::kMusic ) : _playback._pDesc->_bus;
     }
 
     float32 AudioMusicPlayer::computeLayerGain( const IAudioMusicVoices& voices, int32 segmentIndex, int32 layerIndex ) const

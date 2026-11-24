@@ -123,6 +123,7 @@ namespace sw::test
     class FakeRHIDevice final : public IRHIDevice
     {
     public:
+        using IRHIDevice::getHandleReuseCount;                                                                         /**< 핸들 표 테스트가 장치의 경계 수를 받는다 */
         uint32                             _maxCreatable{ 0xFFFFFFFFu };                                               /**< 이만큼 만든 뒤로는 만들지 못한다 */
         uint32                             _createdCount{ 0 };                                                         /**< 지금까지 만든 리스트 수 */
         vector<FakeRHICommandList*>        _listExecuted;                                                              /**< 제출된 순서 그대로의 리스트 */

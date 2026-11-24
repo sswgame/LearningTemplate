@@ -53,9 +53,10 @@ namespace sw
      */
     struct AudioSubtitleCue
     {
-        hashed_string  _speakerKey{};   ///< 이벤트의 화자 키다(`AudioEventDef::_subtitleSpeakerKey`). 비면 이름 줄을 접는다.
-        hashed_string  _textKey{};      ///< 시작한 클립의 자막 키다(`AudioClipEntry::_subtitleKey`).
-        AudioPlayingID _playingID{ 0 }; ///< 재생 id 다.
+        hashed_string  _speakerKey{};               ///< 이벤트의 화자 키다(`AudioEventDef::_subtitleSpeakerKey`). 비면 이름 줄을 접는다.
+        hashed_string  _textKey{};                  ///< 시작한 클립의 자막 키다(`AudioClipEntry::_subtitleKey`).
+        AudioPlayingID _playingID{ 0 };             ///< 재생 id 다.
+        bool           _bPlaysInGamePause{ false }; ///< 그 소리의 버스가 게임 일시정지 중에도 난다(`AudioBusDef::_bPlaysInGamePause`) — 자막 시간도 함께 흐른다 NOLINT(sw-bool-flag): 집합체다(중괄호로 만든다) — C++17 비트필드는 기본값을 둘 수 없다
     };
 } // namespace sw
 

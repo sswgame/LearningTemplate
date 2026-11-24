@@ -432,7 +432,9 @@ namespace sw
         _srv.store( srv, std::memory_order_release );
         if ( keptSRV != kInvalidDescriptorIndex )
             _keptSRV.store( kInvalidDescriptorIndex, std::memory_order_release );
-        _uploadTicket = RHITransferTicket{};
+        _uploadTicket       = RHITransferTicket{};
+        _bRestoreCPUTexture = SW_FALSE;
+        _residencySerial.fetch_add( 1, std::memory_order_release );
         SW_LOG_INFO_ID( "Texture2D.Texture2DReadyMipsTop", "Texture2D '%#' ready: %#×%#, %# mips (%# top mips streamed later), format %#, srv %#", _path.c_str(), _width, _height, _mipCount, _streamedMipCount,
                         static_cast<uint32>( _format ), srv.getValue() );
         return Texture2DUploadStatus::Ready;
@@ -630,9 +632,10 @@ namespace sw
         // 렌더 타깃은 파일이 없다 — 같은 크기 · 포맷으로 다시 만든다(그림은 다음에 그 뷰를 그릴 때 채워진다).
         if ( _bRenderTarget == SW_TRUE )
             return createRenderTarget( pDevice, _path, _width, _height, _format );
-        // CPU 텍스처는 다시 빌릴 때 캐시가 올린다(헤더 — 참조 0 이면 GPU 자원이 없다).
+        // CPU 텍스처는 장치가 내려갈 때 올라가 있던 것만 되살린다 — 머티리얼 밖에서 핸들로 쥔 쪽(표면 변형 · 번짐 굽기)은 다시 빌리지 않는다.
+        // 올라가 있지 않던 것은 다시 빌릴 때 캐시가 올린다(헤더 — 참조 0 이면 GPU 자원이 없다).
         if ( hasCPUBytes() )
-            return true;
+            return _bRestoreCPUTexture == SW_FALSE || loadFromCPUBytes( pDevice );
         // 워커가 미리 읽어 두었으면(`prepareRHI`) 그것을 올린다 - 디스크 읽기는 이 스레드에 남지 않는다.
         if ( bPrepareFailed )
             return false; // 읽지 못한 까닭은 준비 때 남겼다
@@ -761,6 +764,12 @@ namespace sw
         _streamedMipCount = 0;
     }
 
+    void Texture2D::releaseUnused( IRHIDevice* pDevice )
+    {
+        releaseRHI( pDevice );
+        _bRestoreCPUTexture = SW_FALSE; // 장치가 내려간 것이 아니라 아무도 쓰지 않는다
+    }
+
     void Texture2D::clearRHI( IRHIDevice* pDevice )
     {
         // 지키던 번호는 그 번호를 낸 디바이스와 함께 간다 — 다시 만드는 중이면(`_pDevice` 가 비었다) 아래 검사에 걸리지 않으므로 먼저 본다.
@@ -769,8 +778,9 @@ namespace sw
         if ( _pDevice != pDevice )
             return;
         // 디바이스가 이미 없다. 텍스처는 그와 함께 갔다. 새 디바이스에 다시 업로드할 때는 밉 전부가 올라간다(`initRHI`).
-        _handle = 0;
-        _srv    = kInvalidDescriptorIndex;
+        _bRestoreCPUTexture = _bRestoreCPUTexture != SW_FALSE || ( hasCPUBytes() && isRHIValid() ) ? SW_TRUE : SW_FALSE;
+        _handle             = 0;
+        _srv                = kInvalidDescriptorIndex;
         _keptSRV.store( kInvalidDescriptorIndex, std::memory_order_release );
         _uploadTicket     = RHITransferTicket{};
         _upgrade          = PendingUpgrade{};
@@ -803,8 +813,9 @@ namespace sw
             if ( _upgrade._handle != 0 )
                 pDevice->releaseHandle( _upgrade._handle );
         }
-        _handle = 0;
-        _srv    = kInvalidDescriptorIndex;
+        _bRestoreCPUTexture = _bRestoreCPUTexture != SW_FALSE || ( hasCPUBytes() && isRHIValid() ) ? SW_TRUE : SW_FALSE;
+        _handle             = 0;
+        _srv                = kInvalidDescriptorIndex;
         _keptSRV.store( kInvalidDescriptorIndex, std::memory_order_release );
         _uploadTicket     = RHITransferTicket{};
         _upgrade          = PendingUpgrade{};

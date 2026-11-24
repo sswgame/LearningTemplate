@@ -52,6 +52,7 @@ namespace sw
         , _authoredSpeakerFontSize{ 0.0f }
         , _screen{ kInvalidUIScreenHandle }
         , _lineIDAllocator{}
+        , _bGamePaused{ SW_FALSE }
         , _bDocumentFailed{ SW_FALSE }
     {
     }
@@ -128,8 +129,9 @@ namespace sw
             // 키는 `Namespace.Key` 이다 — 메시지로 들어 그릴 때 풀리고, 표에 없으면 빠진 키로 알리며 키가 보인다.
             (void)post( cue._speakerKey.empty() ? string{} : LocalizedMessage( cue._speakerKey.c_str() ).str(), LocalizedMessage( cue._textKey.c_str() ).str() );
             // 신호는 보이스를 얻은 클립만 낸다 — 다음 `refreshVoiceState` 까지는 나는 중으로 둔다.
-            _listQueued.back()._voicePlayingID = cue._playingID;
-            _listQueued.back()._bVoicePlaying  = cue._playingID != 0;
+            _listQueued.back()._voicePlayingID   = cue._playingID;
+            _listQueued.back()._bVoicePlaying    = cue._playingID != 0;
+            _listQueued.back()._bRunsInGamePause = cue._bPlaysInGamePause;
         }
     }
 
@@ -165,10 +167,11 @@ namespace sw
 
     void UISubtitleService::update( float32 deltaSeconds )
     {
-        // 1) 시간: 설정이 꺼져 있어도 흐른다(켜면 지금 줄부터 보인다). 음성이 나는 줄은 시간이 다 돼도 남는다.
+        // 1) 시간: 게임이 멈추면 게임 소리 · 시퀀스와 같이 선다(실제 시간으로 흐르면 다시 시작한 뒤 줄이 소리보다 먼저 사라진다). 설정이 꺼져 있어도 흐른다(켜면 지금 줄부터 보인다). 음성이 나는 줄은 시간이 다 돼도 남는다.
         for ( UISubtitleLine& line : _listActive )
         {
-            line._remainingSeconds -= deltaSeconds;
+            if ( _bGamePaused == SW_FALSE || line._bRunsInGamePause )
+                line._remainingSeconds -= deltaSeconds;
         }
         VectorUtil::removeIf( _listActive, []( const UISubtitleLine& line )
         { return line._remainingSeconds <= 0.0f && line._bVoicePlaying == false; } );

@@ -17,6 +17,7 @@
 #include "Engine/Graphics/RHI/RHIPipelineStateDesc.h"
 #include "Engine/Graphics/RHI/Tests/RHIFakeDevice.h"
 #include "Engine/Graphics/Texture/Texture2D.h"
+#include "Engine/Graphics/Texture/TextureCache.h"
 
 using namespace sw;
 
@@ -244,6 +245,72 @@ SW_TEST_CASE( Texture2DStableSRVTest, ResizeKeepsSRV )
     SW_EXPECT_EQUAL( texture.getHandle(), factory.findTexture( srv ) );
     SW_EXPECT_EQUAL( kInvalidDescriptorIndex, retired._srv );
     texture.releaseRHI( &device );
+}
+
+/**
+ * @brief [Texture2DStableSRVTest] 올라가 있던 CPU 텍스처는 장치가 바뀌면 되살아나고, 아무도 쓰지 않아 내린 것은 되살지 않는다
+ * @details 변이: `initRHI` 가 CPU 텍스처를 건너뛰면(예전 길) 핸들로 쥔 쪽(표면 변형 · 번짐 굽기)의 텍스처가 장치 교체 뒤 사라져 첫 단언이 진다.
+ *          정체를 핸들 값으로 두면 새 장치가 같은 값을 내 번호 단언이 진다.
+ */
+SW_TEST_CASE( Texture2DStableSRVTest, DeviceChangeRestoresCPUTexture )
+{
+    FakeBindlessFactory factory;
+    test::FakeRHIDevice device;
+    device._pResourceFactory = &factory;
+    FakeBindlessFactory newFactory;
+    test::FakeRHIDevice newDevice;
+    newDevice._pResourceFactory = &newFactory;
+    Texture2D texture;
+    texture.setCPUBytes( "cpu/restored", 2u, 2u, vector<uint8>( 2u * 2u * kRGBA8BytesPerPixel, 255u ) );
+    SW_REQUIRE_TRUE( texture.initRHI( &device ) );
+    SW_EXPECT_FALSE( texture.isRHIValid() ); // 아무도 빌리지 않았다
+    SW_REQUIRE_TRUE( texture.loadFromCPUBytes( &device ) );
+    const RHITextureHandle oldHandle = texture.getHandle();
+    const uint32           oldSerial = texture.getResidencySerial();
+
+    texture.releaseRHI( &device ); // 장치가 내려간다
+    SW_REQUIRE_TRUE( texture.initRHI( &newDevice ) );
+    SW_REQUIRE_TRUE( texture.isRHIValid() );
+    SW_EXPECT_EQUAL( oldHandle, texture.getHandle() ); // 새 장치의 핸들 표는 처음부터 센다 — 핸들로는 바뀐 것을 모른다
+    SW_EXPECT_TRUE( texture.getResidencySerial() != oldSerial );
+
+    texture.releaseUnused( &newDevice );
+    SW_REQUIRE_TRUE( texture.initRHI( &device ) );
+    SW_EXPECT_FALSE( texture.isRHIValid() );
+}
+
+/**
+ * @brief [Texture2DStableSRVTest] 올리는 사이 장치가 바뀌면 진행 중이던 로드는 실패하지 않고 새 장치에 다시 낸다
+ * @details 변이: 낸 업로드가 없는 것을 실패로 치면(예전 길) 로딩 중 백엔드를 바꾼 장면의 텍스처가 누락 체커로 굳는다.
+ */
+SW_TEST_CASE( Texture2DStableSRVTest, DeviceChangeResubmitsLoadInFlight )
+{
+    FakeBindlessFactory factory;
+    test::FakeRHIDevice device;
+    device._pResourceFactory = &factory;
+    factory._finalStatus     = RHITransferStatus::Pending; // 옛 장치는 끝내지 못했다
+    FakeBindlessFactory newFactory;
+    test::FakeRHIDevice newDevice;
+    newDevice._pResourceFactory = &newFactory;
+    constexpr string_view kPath = "rendertarget/test_device_change";
+    TextureCache          cache;
+    cache.bindDevice( &device );
+    cache.declareRenderTarget( kPath, kRenderTargetExtent, kRenderTargetExtent );
+    TextureHandle load = cache.request( kPath, AssetLoadStart::OnCallingThread, TextureStreamingGroup::NeverStream );
+    (void)cache.completePendingLoads( &device, 1u );
+    SW_REQUIRE_FALSE( load.isReady() );
+    Texture2D* const pTexture = load.getOperation()->getTexture();
+    SW_REQUIRE_NOT_NULL( pTexture );
+    SW_REQUIRE_TRUE( pTexture->hasUploadInFlight() );
+
+    pTexture->releaseRHI( &device ); // 장치가 내려간다
+    cache.bindDevice( &newDevice );
+    (void)cache.completePendingLoads( &newDevice, 1u ); // 다시 낸다
+    (void)cache.completePendingLoads( &newDevice, 1u );
+    SW_EXPECT_FALSE( load.hasFailed() );
+    SW_EXPECT_TRUE( load.isReady() );
+    SW_EXPECT_TRUE( pTexture->isRHIValid() );
+    load.reset(); // 새 장치가 살아 있을 때 놓는다
 }
 
 /**

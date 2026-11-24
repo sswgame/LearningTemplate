@@ -138,6 +138,7 @@ namespace sw
             _libraryGeneration.fetch_add( 1, std::memory_order_release );
         }
         _mapEmitter.clear();
+        _bGamePaused = false;
         _musicPlayer.reset();
         _pMixer.reset();
         _published.clear();
@@ -496,6 +497,29 @@ namespace sw
         command._playingID = playingID;
         command._bFlag     = bPaused;
         pushCommand( std::move( command ) );
+    }
+
+    void AudioEngine::setGamePaused( bool bPaused )
+    {
+        Command command;
+        command._type  = CommandKind::SetGamePaused;
+        command._bFlag = bPaused;
+        pushCommand( std::move( command ) );
+    }
+
+    bool AudioEngine::isBusHeldByGamePause( uint32 busIndex ) const
+    {
+        return _bGamePaused && _pMixer->shouldPlayInGamePause( busIndex ) == false;
+    }
+
+    bool AudioEngine::isInstanceHeld( const EventInstance& instance ) const
+    {
+        if ( instance._bPaused )
+            return true;
+        if ( _bGamePaused == false || instance._pDesc == nullptr )
+            return false;
+        const optional<uint32> busIndex = _pMixer->findBusIndex( instance._pDesc->_bus.empty() ? hashed_string( AudioBusNames::kSFX ) : instance._pDesc->_bus );
+        return busIndex.has_value() && isBusHeldByGamePause( *busIndex );
     }
 
     AudioPlayingID AudioEngine::startMusic( shared_ptr<const AudioMusicDef> pMusic, float32 fadeSeconds )
@@ -897,8 +921,8 @@ namespace sw
                 {
                     if ( slot._bInUse == false || slot._playingID != command._playingID )
                         continue;
-                    slot._bPausedRequest = command._bFlag;
-                    slot._voice.setPaused( command._bFlag );
+                    slot._bPausedRequest = command._bFlag; // 게임 일시정지와는 블록이 합친다(`renderBlock`)
+                    slot._voice.setPaused( command._bFlag || isBusHeldByGamePause( slot._busIndex ) );
                 }
                 for ( EventInstance& instance : _listInstance )
                 {
@@ -906,6 +930,11 @@ namespace sw
                         instance._bPaused = command._bFlag;
                 }
                 _musicPlayer.setPaused( command._playingID, command._bFlag );
+                break;
+            }
+            case CommandKind::SetGamePaused:
+            {
+                _bGamePaused = command._bFlag;
                 break;
             }
             case CommandKind::SetBusUserVolume:
@@ -1055,7 +1084,7 @@ namespace sw
         pSlot->_priority        = kMusicVoicePriority;
         pSlot->_virtualMode     = AudioVirtualMode::KeepReal; // 박을 지키려면 가상으로 빠지지 않는다
         pSlot->_bLoop           = request._bLoop;
-        pSlot->_bPausedRequest  = _musicPlayer.isPaused(); // 멈춘 음악에 예약한 구간은 이어 낼 때 함께 흐른다
+        pSlot->_bPausedRequest  = _musicPlayer.isPauseRequested(); // 멈춘 음악에 예약한 구간은 이어 낼 때 함께 흐른다
         pSlot->_bWaitingForClip = true;
         startWaitingVoice( *pSlot );
         return true;
@@ -1163,7 +1192,7 @@ namespace sw
         slot._voice.start( std::move( pClip ), slot._bLoop, delay, bScheduled == false, graphSeed );
         if ( skipFrames > 0.0 )
             slot._voice.setPosition( skipFrames );
-        slot._voice.setPaused( slot._bPausedRequest );
+        slot._voice.setPaused( slot._bPausedRequest || isBusHeldByGamePause( slot._busIndex ) );
         if ( slot._fadeInSeconds > 0.0f )
         {
             slot._voice.setFade( 0.0f, 0, 0, false );
@@ -1293,6 +1322,9 @@ namespace sw
         updateParameters();
         _snapshotMixer.update( *_pMixer );
         updateEmitters();
+        // 게임 일시정지는 음악 버스가 멈추는 그래프에서만 음악 시계를 세운다(기본 그래프의 음악 · UI 는 계속 난다).
+        const optional<uint32> musicBus = _bGamePaused ? _pMixer->findBusIndex( _musicPlayer.getBus() ) : optional<uint32>{};
+        _musicPlayer.setHeldByGamePause( musicBus.has_value() && isBusHeldByGamePause( *musicBus ) );
         _musicPlayer.update( *this );
 
         AudioMixer& mixer = *_pMixer;
@@ -1308,6 +1340,7 @@ namespace sw
                 if ( slot._bInUse == false || slot._bWaitingForClip )
                     continue;
             }
+            slot._voice.setPaused( slot._bPausedRequest || isBusHeldByGamePause( slot._busIndex ) );
             updateVoiceTargets( slot );
         }
         _voicePool.selectRealVoices( AudioMath::dbToLinear( _pMixer->getDesc()._inaudibleDb ), _pMixer->getDesc()._maxRealVoiceCount );
@@ -1356,7 +1389,7 @@ namespace sw
             _musicFrameCount += audio::kBlockFrameCount;
         for ( EventInstance& instance : _listInstance )
         {
-            if ( instance._bInUse && instance._bPaused == false )
+            if ( instance._bInUse && isInstanceHeld( instance ) == false )
                 instance._elapsedFrameCount += audio::kBlockFrameCount;
         }
         publishState( realCount, virtualCount );
@@ -1807,7 +1840,7 @@ namespace sw
             startWaitingVoice( *pSlot );
             // 자막은 버려지지 않고 보이스를 얻은 클립만 낸다 — 쿨다운 · 상한으로 버린 재생은 위에서 이미 돌아갔다.
             if ( clip._subtitleKey.empty() == false )
-                _published.addSubtitleCue( AudioSubtitleCue{ event._subtitleSpeakerKey, clip._subtitleKey, command._playingID } );
+                _published.addSubtitleCue( AudioSubtitleCue{ event._subtitleSpeakerKey, clip._subtitleKey, command._playingID, _pMixer->shouldPlayInGamePause( pSlot->_busIndex ) } );
         }
     }
 

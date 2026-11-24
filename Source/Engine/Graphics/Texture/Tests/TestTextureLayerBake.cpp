@@ -2,6 +2,7 @@
 
 #include "Core/Testing/TestFramework.h"
 
+#include "Engine/Graphics/Texture/TextureCache.h"
 #include "Engine/Graphics/Texture/TextureLayerBake.h"
 
 // TextureLayerBakeTest — UV 공간 층 굽기의 루트 상수 묶음(layer_bake.hlsl 과 같은 배치)과 결과 · 작업 타깃 번갈기. 디바이스 없음(nogpu).
@@ -82,4 +83,25 @@ SW_TEST_CASE( TextureLayerBakeTest, LastDrawLandsOnResult )
     request._listLayer.resize( 4 );
     SW_EXPECT_FALSE( request.writesResult( 0 ) );
     SW_EXPECT_TRUE( request.writesResult( 3 ) );
+}
+
+/**
+ * @brief [TextureLayerBakeTest] 결과를 놓은 굽기는 버리고, 고르지 않은 굽기는 그릴 목록에 들지 않는다
+ * @details 변이: 놓은 결과를 미루면 다시 오지 않을 굽기가 줄에 영영 남고, 고르기 없이 바로 가져가면 이번 프레임에 끝난 텍스처(셰이더에는 아직 로드 중 텍스처)로 구워 굳는다.
+ */
+SW_TEST_CASE( TextureLayerBakeTest, OnlySelectedBakesAreTaken )
+{
+    sw::TextureCache            cache;
+    sw::TextureLayerBakeRequest request;
+    request._base          = "textures/base.dds";
+    request._albedoTarget  = "rendertarget/test_bake_albedo";
+    request._surfaceTarget = "rendertarget/test_bake_surface";
+    cache.requestLayerBake( request );
+    SW_EXPECT_EQUAL( 1u, cache.countLoadsInFlight() ); // 사진은 굽기를 기다린다
+    sw::vector<sw::TextureLayerBakeRequest> listTaken;
+    cache.takeLayerBakes( listTaken );
+    SW_EXPECT_TRUE( listTaken.empty() ); // 아직 고르지 않았다
+    cache.selectReadyLayerBakes();       // 결과 타깃을 쥔 곳이 없다
+    cache.takeLayerBakes( listTaken );
+    SW_EXPECT_TRUE( listTaken.empty() );
 }

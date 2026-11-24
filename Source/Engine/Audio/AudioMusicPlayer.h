@@ -99,7 +99,13 @@ namespace sw
          */
         void setPaused( AudioPlayingID playingID, bool bPaused );
         /** @brief 음악이 멈춰 있는지 여부입니다. 멈춘 동안 시작한 보이스도 멈춘 채 시작합니다. */
-        bool isPaused() const { return _bPaused == SW_TRUE; }
+        bool isPaused() const { return _bPaused == SW_TRUE || _bHeldByGamePause == SW_TRUE; }
+        /** @brief 음악을 멈춰 두라고 청했는가입니다(`setPaused`). 게임 일시정지는 들지 않는다 — 그것은 블록마다 버스가 정한다. */
+        bool isPauseRequested() const { return _bPaused == SW_TRUE; }
+        /** @brief 게임 일시정지가 음악 버스를 세웠는지 적습니다(블록마다 — 엔진). */
+        void setHeldByGamePause( bool bHeld ) { _bHeldByGamePause = bHeld ? SW_TRUE : SW_FALSE; }
+        /** @brief 음악이 내는 버스입니다. 설명자가 비워 두거나 음악이 없으면 `music` 입니다. */
+        hashed_string getBus() const;
         /** @brief 보이스를 건드리지 않고 상태만 비웁니다(엔진 종료 — 보이스는 엔진이 함께 지운다). */
         void reset();
 
@@ -115,12 +121,11 @@ namespace sw
         uint64 computeSyncFrame( uint64 now, AudioMusicSync sync ) const;
         /** @brief 구간의 레이어 보이스를 @p startFrame 에 시작하도록 만듭니다. */
         void scheduleSegment( IAudioMusicVoices& voices, int32 segmentIndex, uint64 startFrame, float32 fadeInSeconds );
-        /** @brief 음악이 내는 버스입니다. 설명자가 비워 두면 `music` 입니다. */
-        hashed_string getBus() const;
 
     private:
-        AudioMusicPlayback     _playback;     /**< 적응형 음악의 재생 위치와 전환 예약입니다. */
-        uint8                  _bPaused  : 1; /**< 음악이 멈춰 있습니다. */
-        [[maybe_unused]] uint8 _reserved : 7;
+        AudioMusicPlayback     _playback;             /**< 적응형 음악의 재생 위치와 전환 예약입니다. */
+        uint8                  _bPaused          : 1; /**< 음악을 멈춰 두었습니다(`setPaused`). */
+        uint8                  _bHeldByGamePause : 1; /**< 게임 일시정지가 음악 버스를 세웠습니다. */
+        [[maybe_unused]] uint8 _reserved         : 6;
     };
 } // namespace sw

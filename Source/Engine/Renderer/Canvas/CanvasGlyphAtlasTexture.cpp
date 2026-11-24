@@ -73,6 +73,16 @@ namespace sw
         return atlasPage._bFailed == SW_TRUE ? kInvalidDescriptorIndex : atlasPage._srv;
     }
 
+    bool CanvasGlyphAtlasTexture::isPagePending( uint32 page ) const
+    {
+        if ( page >= _listPage.size() )
+            return true;
+        const AtlasPage& atlasPage = _listPage[page];
+        if ( atlasPage._bFailed == SW_TRUE )
+            return false;
+        return atlasPage._srv == kInvalidDescriptorIndex || atlasPage._bWholePageDirty == SW_TRUE || atlasPage._listDirty.empty() == false;
+    }
+
     void CanvasGlyphAtlasTexture::release( IRHIDevice* pDevice )
     {
         destroyRetiredTextures( pDevice );

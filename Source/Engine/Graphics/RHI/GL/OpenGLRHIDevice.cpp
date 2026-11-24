@@ -34,18 +34,18 @@ namespace sw
         , _defaultTexture{ 0 }
         , _contextOwnerThread{}
         , _contextOwnedStartNanos{ 0 }
-        , _gpuBuffers{ getBeginFrameCount() }
+        , _gpuBuffers{ getHandleReuseCount() }
         , _bindlessMutex{}
         , _bufferRegistry{}
         , _uavRegistry{}
-        , _gpuTextures{ getBeginFrameCount() }
+        , _gpuTextures{ getHandleReuseCount() }
         , _mapCompositeFbo{}
         , _textureRegistry{}
         , _arrTimestampQuery{}
         , _timestampRing{}
         , _timestampFrame{}
         , _arrComputeRootConstantShadow{}
-        , _pipelineStates{ getBeginFrameCount() }
+        , _pipelineStates{ getHandleReuseCount() }
         , _releaseQueue{}
         , _arrFrameDoneSync{}
         , _frameFenceRing{}

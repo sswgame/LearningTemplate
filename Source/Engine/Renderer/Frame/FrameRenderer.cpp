@@ -455,6 +455,7 @@ namespace sw
         // 새 머티리얼의 초기화는 여기서 하지 않는다 — 머티리얼은 게임 스레드 객체다(`Engine::submitRenderPacket`). 상수 버퍼는 `GPUScene::upload` 의 프록시가 만든다.
         SW_PROFILE_SCOPE( "RT.TextureRegionUpdates" );
         TextureCache& textures = engine::getSubsystem<AssetManager>().getAssetCache<TextureCache>();
+        textures.selectReadyLayerBakes(); // 이번 프레임에 끝나는 로드보다 앞 — 그 텍스처는 다음 프레임부터 셰이더에 보인다
         (void)textures.flushRegionUpdates( pDevice );
         // 워커가 읽어 둔 비동기 텍스처를 올린다 — 디바이스를 쓰는 스레드는 여기다(DX11 즉시 컨텍스트 · GL). 프레임당 상한이 있다.
         // 결정적 실행이면 상한 없이 모두 올리고 업로드 끝남까지 이 자리에서 기다린다.

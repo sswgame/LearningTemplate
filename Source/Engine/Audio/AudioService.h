@@ -140,6 +140,8 @@ namespace sw
          */
         [[nodiscard]] static bool resolveLayout( AudioSpeakerMode mode, const AudioOutputDevice& device, AudioChannelLayout& outLayout );
 
+        /** @brief 게임이 일시정지했는지 받습니다(바뀐 때만 엔진에 넘긴다 — `AudioEngine::setGamePaused`). */
+        void setGamePaused( bool bPaused );
         /** @brief 프레임마다 부릅니다(`IEngineAudioDriver`). 장치가 없으면 흐른 시간만큼 엔진을 렌더해 재생을 진행합니다. */
         void update( float32 deltaSeconds );
 
@@ -269,6 +271,7 @@ namespace sw
             }
 
             void update( float32 unscaledDeltaSeconds ) override { _owner.update( unscaledDeltaSeconds ); }
+            void setGamePaused( bool bPaused ) override { _owner.setGamePaused( bPaused ); }
 
         private:
             AudioService& _owner;
@@ -296,6 +299,7 @@ namespace sw
         float32                        _sfxVolume;            /**< 효과음 볼륨 [0,1] 입니다. */
         AudioSpeakerMode               _speakerMode;          /**< 사용자가 고른 스피커 모드입니다. */
         uint8                          _bMuted           : 1; /**< 음소거 상태입니다. */
+        uint8                          _bGamePaused      : 1; /**< 엔진에 마지막으로 넘긴 게임 일시정지입니다. */
         uint8                          _bDeviceOpen      : 1; /**< 장치를 열었는지입니다. */
         uint8                          _bOutputOpen      : 1; /**< 장치가 엔진을 당기고 있는지입니다. */
         uint8                          _bInitialized     : 1; /**< initialize 가 끝났는지입니다. */
