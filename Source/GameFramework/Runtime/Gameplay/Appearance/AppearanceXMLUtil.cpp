@@ -170,10 +170,11 @@ namespace sw
     {
         outPlacement._listSocket.clear();
         readNameList( node, pSocketAttribute, outPlacement._listSocket );
-        outPlacement._offset   = float3::Zero;
-        outPlacement._rotation = float3::Zero;
+        outPlacement._offset = float3::Zero;
+        float3 degrees       = float3::Zero;
         readOptionalFloat3( node, "offset", outPlacement._offset, report, sourceName );
-        readOptionalFloat3( node, "rotation", outPlacement._rotation, report, sourceName );
+        readOptionalFloat3( node, "rotation", degrees, report, sourceName );
+        outPlacement._rotation = EulerAngles::fromDegrees( degrees );
     }
 
     void AppearanceXMLUtil::readTags( const XMLNode& node, const utf8* pAttribute, TagContainer& outTags )

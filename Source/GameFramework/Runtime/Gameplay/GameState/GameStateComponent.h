@@ -76,6 +76,7 @@ namespace sw
     {
     public:
         REFLECT_BODY();
+        SW_REGISTERED_COMPONENT( GameStateComponent );
 
         static constexpr TickGroup kTickGroup = TickGroup::PrePhysics; ///< 디렉터와 같은 그룹이다. 같은 오브젝트 안에서는 붙은 순서대로 처리하며, 이 컴포넌트가 맨 앞이다.
         REFLECT_INTERFACE( IGameFlagsOwner, _gameFlagsOwnerPort );
@@ -172,7 +173,7 @@ namespace sw
         uint8                            _bWeather : 1; ///< 날씨 카탈로그로 열었는지 여부
         PROPERTY( Tooltip = "Open with default settings at begin play - only for scenes without a kit director (showcases, tests); a director opens it with its own settings" )
         uint8                  _bOpenAtBeginPlay : 1;
-        uint8                  _bRefusedInScene  : 1; ///< 같은 씬에 이미 월드 상태가 있어 등록에서 거절됐다(`onRegister`) — 레지스트리에 없고 열리지 않는다
+        uint8                  _bRefusedInScene  : 1; ///< 같은 씬에 이미 월드 상태가 있어 등록에서 거절됐다(`onRegister`) — 열리지 않는다
         [[maybe_unused]] uint8 _reserved         : 5;
 
     private:

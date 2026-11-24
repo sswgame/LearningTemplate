@@ -85,7 +85,7 @@ namespace sw
             if ( entry._bone == bone )
                 return entry;
         }
-        _listEntry.push_back( BoneProportionEntry{ bone, float3( 1.0f ), float3::Zero, float3::Zero } );
+        _listEntry.push_back( BoneProportionEntry{ bone, float3( 1.0f ), float3::Zero, EulerAngles{} } );
         return _listEntry.back();
     }
 
@@ -107,7 +107,7 @@ namespace sw
 
     quaternion BoneProportion::makeRotation( const BoneProportionEntry& entry )
     {
-        return quaternion::makeFromYawPitchRoll( entry._rotation );
+        return quaternion::makeFromYawPitchRoll( entry._rotation.radians() );
     }
 
     const BoneProportionEntry* BoneProportion::findBone( const hashed_string& bone ) const

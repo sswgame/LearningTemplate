@@ -105,18 +105,6 @@ namespace sw
         return gradient;
     }
 
-    void SkyComponent::onRegister( GameObjectManager& manager )
-    {
-        Component::onRegister( manager );
-        manager.getComponentRegistry().add<SkyComponent>( this );
-    }
-
-    void SkyComponent::onUnregister( GameObjectManager& manager )
-    {
-        manager.getComponentRegistry().remove<SkyComponent>( this );
-        Component::onUnregister( manager );
-    }
-
     bool SkyComponent::findSky( const GameObjectManager& manager, SkyGradient& outGradient )
     {
         outGradient = SkyGradient{};

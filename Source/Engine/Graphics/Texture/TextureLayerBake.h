@@ -25,7 +25,7 @@ namespace sw
         float2  _scale{ 1.0f, 1.0f };             ///< 층 하나가 덮는 크기(밑 UV)
         float2  _regionMin{ 0.0f, 0.0f };         ///< 영역 경계 — 밖은 덮지 않는다
         float2  _regionMax{ 1.0f, 1.0f };
-        float32 _rotationDegrees{ 0.0f };
+        float32 _rotationRadians{ 0.0f }; ///< 층의 회전 — 루트 상수에 담을 때만 도 격자로 옮긴다(`packLayer`)
         float32 _roughness{ 0.5f };
         float32 _roughnessWeight{ 0.0f };
         float32 _metallic{ 0.0f };
@@ -77,7 +77,7 @@ namespace sw
 
         static constexpr float32 kMinScale    = 0.01f;
         static constexpr float32 kMaxScale    = 4.0f;
-        static constexpr float32 kMaxRotation = 180.0f;
+        static constexpr float32 kMaxRotation = 180.0f; ///< 회전 격자의 끝(도 — 셰이더가 도로 푼다)
         /** @brief 번짐 텍스처의 이동 범위(UV)입니다 — RG 0..1 이 [−범위, +범위] 다. 셰이더 `kLayerBakeSmearRange` 와 같다. */
         static constexpr float32 kSmearOffsetRange = 0.25f;
         static constexpr uint32  kFlagPlaced       = 1u << 18;

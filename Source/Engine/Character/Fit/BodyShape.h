@@ -29,6 +29,7 @@
 #include "Core/Container/vector.h"
 #include "Core/Foundation/Macros.h"
 #include "Core/Foundation/Types.h"
+#include "Core/Math/Radians.h"
 #include "Core/Math/VectorMath.h"
 #include "Core/Name/hashed_string.h"
 
@@ -58,9 +59,9 @@ namespace sw
         float3 _scale{ 1.0f };
         PROPERTY( Units = m )
         float3 _offset{};
-        /** @brief 로컬 회전에 더하는 회전(라디안, `makeFromYawPitchRoll` 순서 — 엔진이 쥐는 각은 라디안이다)입니다. 하이힐의 발목 · 발가락 각처럼 채널이 관절을 굽힐 때 쓴다. 겹칠 때는 가중치만큼 각을 더한다. */
-        PROPERTY( Units = rad )
-        float3 _rotation{};
+        /** @brief 로컬 회전에 더하는 회전(`makeFromYawPitchRoll` 순서 — 파일 글은 도)입니다. 하이힐의 발목 · 발가락 각처럼 채널이 관절을 굽힐 때 쓴다. 겹칠 때는 가중치만큼 각을 더한다. */
+        PROPERTY()
+        EulerAngles _rotation{};
     };
 } // namespace sw
 

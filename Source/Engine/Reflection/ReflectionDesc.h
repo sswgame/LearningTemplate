@@ -240,6 +240,7 @@ namespace sw
         static constexpr uint32 kOverridesTick           = 1u << 4;
         static constexpr uint32 kOverridesSubTick        = 1u << 5;
         static constexpr uint32 kOverridesSerializeState = 1u << 6;
+        static constexpr uint32 kRegisteredComponent     = 1u << 7; ///< 씬 레지스트리 목록을 가지는 컴포넌트(`SW_REGISTERED_COMPONENT`)
     };
 
     /** @brief 내보낸 인터페이스 한 줄(`REFLECT_INTERFACE( I, _port )`)입니다. */

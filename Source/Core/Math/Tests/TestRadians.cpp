@@ -11,6 +11,8 @@ namespace sw
     static_assert( std::is_constructible_v<Radians, float32> == false, "Radians 는 float32 에서 암시로 만들지 않는다" );
     static_assert( std::is_convertible_v<Radians, float32> == false, "Radians 는 float32 로 암시로 풀리지 않는다" );
     static_assert( kIsPackedValue<Radians> && PackedValueTraits<Radians>::kComponentCount == 1, "Radians 의 바깥 표현은 성분 하나(도)다" );
+    static_assert( std::is_constructible_v<EulerAngles, float3> == false && std::is_convertible_v<EulerAngles, float3> == false, "EulerAngles 는 float3 에서 암시로 만들지도 풀리지도 않는다" );
+    static_assert( kIsPackedValue<EulerAngles> && PackedValueTraits<EulerAngles>::kComponentCount == 3, "EulerAngles 의 바깥 표현은 도 셋이다" );
     static_assert( Radians::fromDegrees( 180.0f ).radians() == static_cast<float32>( MathUtil::kPi64 ), "180 도는 float32 π 다" );
 } // namespace sw
 
@@ -71,4 +73,25 @@ SW_TEST_CASE( RadiansTest, ComponentRoundTripStaysWithinOneStep )
         const float32     spacing  = std::nextafter( sw::MathUtil::abs( radians ), sw::MathUtil::kMaxFloat ) - sw::MathUtil::abs( radians );
         SW_EXPECT_TRUE( sw::MathUtil::abs( restored.radians() - radians ) <= spacing );
     }
+}
+
+/** @brief [RadiansTest] 오일러 회전의 성분은 도 셋(피치, 요, 롤)이고 손으로 쓴 도가 그대로 돌아오며, 코드로 꺼낼 때만 단위를 고른다 */
+SW_TEST_CASE( RadiansTest, EulerAnglesAreThreeDegreeComponents )
+{
+    using Traits = sw::PackedValueTraits<sw::EulerAngles>;
+    sw::PackedFloats floats{};
+    floats._arrValue[0]          = 0.0f;
+    floats._arrValue[1]          = -25.0f;
+    floats._arrValue[2]          = 2.5f;
+    const sw::EulerAngles angles = Traits::fromFloats( floats );
+    SW_EXPECT_NEAR( -25.0f * sw::MathUtil::kDegreeToRadian, angles.radians()._y, 1e-6f );
+    SW_EXPECT_NEAR( 2.5f, angles.degrees()._z, 1e-4f );
+    SW_EXPECT_EQUAL( -25.0f, Traits::toFloats( angles )._arrValue[1] );
+    SW_EXPECT_EQUAL( 2.5f, Traits::toFloats( angles )._arrValue[2] );
+
+    sw::EulerAngles sum = sw::EulerAngles::fromRadians( sw::float3{ 0.5f, 0.0f, 0.0f } );
+    sum += sw::EulerAngles::fromRadians( sw::float3{ 1.0f, 0.25f, 0.0f } ) * 0.5f;
+    SW_EXPECT_NEAR( 1.0f, sum.radians()._x, 1e-6f );
+    SW_EXPECT_NEAR( 0.125f, sum.radians()._y, 1e-6f );
+    SW_EXPECT_TRUE( sum != angles && angles == Traits::fromFloats( Traits::toFloats( angles ) ) );
 }

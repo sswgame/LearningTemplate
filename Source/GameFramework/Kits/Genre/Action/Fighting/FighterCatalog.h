@@ -130,7 +130,7 @@ namespace sw
      * @class FighterCatalog
      * @brief 다음 형식의 XML 을 읽는 캐릭터 카탈로그입니다.
      *        `<FighterCatalog buttons="1,2,3,4" moves="game/x/data/moves.xml"><Fighter id="kaz" name="Kaz" health="170" walkSpeed="0.03" hurtRadius="0.35" pushRadius="0.3"
-     *        standHeight="1.8" crouchHeight="1.1" sidestepAngle="0.698" sidestepFrames="16" sidestep="u" sidestepDown="d,n" jump="u/f"
+     *        standHeight="1.8" crouchHeight="1.1" sidestepAngle="40" sidestepFrames="16" sidestep="u" sidestepDown="d,n" jump="u/f"
      *        jumpFrames="40" jumpHeight="1" jumpDistance="0.8">
      *        <Move id="jab" command="1" priority="0" maxGap="10" from="Standing,Crouching" stance="" enterStance="" stringOnly="false" tracking="false"
      *        screw="false" bound="false" groundHit="false" nearWall="false" rageArt="false" heatBurst="false" breakButtons="1" pushback="0.1"/>

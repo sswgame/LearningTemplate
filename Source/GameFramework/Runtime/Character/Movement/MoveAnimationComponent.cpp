@@ -15,7 +15,7 @@ namespace sw
         : _speedParameter{}
         , _smoothingSeconds{ 0.15f }
         , _faceMinSpeed{ 0.2f }
-        , _turnRateDegrees{ 540.0f }
+        , _turnRate{ Radians::fromDegrees( 540.0f ) }
         , _teleportDistance{ 2.0f }
         , _lastPosition{ 0.0f, 0.0f, 0.0f }
         , _speed{ 0.0f }
@@ -55,7 +55,7 @@ namespace sw
         {
             const float3  rotation  = pBody->getLocalRotation();
             const float32 targetYaw = MathUtil::atan2( step._x, step._z );
-            const float32 maxStep   = _turnRateDegrees * MathUtil::kDegreeToRadian * context.getDeltaTime();
+            const float32 maxStep   = _turnRate.radians() * context.getDeltaTime();
             pBody->setLocalRotation( float3{ rotation._x, turnTowards( rotation._y, targetYaw, maxStep ), rotation._z } );
         }
     }

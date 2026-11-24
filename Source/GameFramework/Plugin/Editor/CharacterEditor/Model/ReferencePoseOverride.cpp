@@ -67,7 +67,7 @@ namespace sw
                 }
                 if ( child.hasAttribute( "rotation" ) )
                 {
-                    boneOverride._rotation = quaternion::makeFromYawPitchRoll( params._rotation * MathUtil::kDegreeToRadian );
+                    boneOverride._rotation = quaternion::makeFromYawPitchRoll( params._rotation.radians() );
                     boneOverride._fieldMask |= BoneOverride::kRotationBit;
                 }
                 if ( child.hasAttribute( "scale" ) )

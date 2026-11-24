@@ -208,7 +208,7 @@ namespace sw
             const XMLNode targetPose = root.appendChild( "target_pose" );
             for ( const RetargetPoseBone& poseBone : _listTargetPose )
             {
-                XMLFields::writeProperties( targetPose.appendChild( "item" ), RetargetPoseBoneParams{ poseBone._bone, poseBone._rotationDegrees } );
+                XMLFields::writeProperties( targetPose.appendChild( "item" ), RetargetPoseBoneParams{ poseBone._bone, poseBone._rotation } );
             }
         }
         return document.saveToString();

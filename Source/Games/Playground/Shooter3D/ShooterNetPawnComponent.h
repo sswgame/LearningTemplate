@@ -112,6 +112,7 @@ namespace sw
     {
     public:
         REFLECT_BODY();
+        SW_REGISTERED_COMPONENT( ShooterNetPawnComponent );
 
         /** @brief 이 몸의 복제 엔티티 id 입니다. */
         static constexpr uint32 kPawnEntityID = 1;
@@ -126,10 +127,6 @@ namespace sw
 
         ShooterNetPawnComponent();
         ~ShooterNetPawnComponent() override;
-
-        void onRegister( GameObjectManager& manager ) override;
-
-        void onUnregister( GameObjectManager& manager ) override;
 
         void onBeginPlay() override;
         void onEndPlay() override;

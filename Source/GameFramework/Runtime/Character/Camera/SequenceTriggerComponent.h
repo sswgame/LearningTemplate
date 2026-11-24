@@ -55,6 +55,7 @@ namespace sw
     {
     public:
         REFLECT_BODY();
+        SW_REGISTERED_COMPONENT( SequenceTriggerComponent );
 
         SequenceTriggerComponent();
         ~SequenceTriggerComponent() override = default;
@@ -64,9 +65,6 @@ namespace sw
         /** @brief 누구에게 틀고 진행을 어디에 적는지 정합니다. 코드로 만든 볼륨 · 테스트가 씁니다. */
         void setAudience( SequenceTriggerAudience audience ) { _audience = audience; }
 
-        /** @brief 레지스트리의 자기 칸에 오릅니다 — 넷 키트가 씬을 훑지 않고 트리거를 찾는다. */
-        void onRegister( GameObjectManager& manager ) override;
-        void onUnregister( GameObjectManager& manager ) override;
         /** @brief 플레이어만의 디렉터들을 거둡니다. */
         void onEndPlay() override;
         /** @brief 가리킨 디렉터가 스스로 트는(`_bAutoPlay`) 것이면 오류를 남깁니다 — 시작 때 이미 틀어 트리거는 "재생 중" 으로 보고 영영 발동하지 않는다. */

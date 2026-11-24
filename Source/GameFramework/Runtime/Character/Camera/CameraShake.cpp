@@ -65,7 +65,8 @@ namespace sw
             arrValue[channel]     = computePerlinNoise1d( shifted, seed );
         }
         offset._position = float3{ arrValue[0] * noise._positionAmplitude._x, arrValue[1] * noise._positionAmplitude._y, arrValue[2] * noise._positionAmplitude._z };
-        offset._rotation = float3{ arrValue[3] * noise._rotationAmplitude._x, arrValue[4] * noise._rotationAmplitude._y, arrValue[5] * noise._rotationAmplitude._z };
+        offset._rotation = float3{ arrValue[3] * noise._rotationAmplitude.getPitch().radians(), arrValue[4] * noise._rotationAmplitude.getYaw().radians(),
+                                   arrValue[5] * noise._rotationAmplitude.getRoll().radians() };
         return offset;
     }
 

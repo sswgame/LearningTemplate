@@ -269,7 +269,7 @@ namespace sw
         if ( markWritten( "translation", SocketFieldBit::kTranslation ) )
             socket._translation = params._translation;
         if ( markWritten( "rotation", SocketFieldBit::kRotation ) )
-            socket._rotation = quaternion::makeFromYawPitchRoll( params._rotation * MathUtil::kDegreeToRadian );
+            socket._rotation = quaternion::makeFromYawPitchRoll( params._rotation.radians() );
         if ( markWritten( "scale", SocketFieldBit::kScale ) )
             socket._scale = params._scale;
         if ( markWritten( "preview", SocketFieldBit::kPreview ) )

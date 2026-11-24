@@ -108,6 +108,7 @@ namespace sw
         static VehicleSeatComponent* findNearestFreeSeat( const PawnComponent& riderPawn );
 
         REFLECT_BODY();
+        SW_REGISTERED_COMPONENT( VehicleSeatComponent );
 
         static constexpr TickGroup kTickGroup = TickGroup::PostPhysics;
 
@@ -181,6 +182,8 @@ namespace sw
 
         /** @brief 카메라 킥 · 충격과 소리 파라미터를 겁니다(오디오 · 카메라 디렉터는 게임 스레드에서만 부른다). */
         void applyRideFeedback();
+        /** @brief 이 좌석의 @p riderPawn 을 내립니다(`dismount` 의 몸 — 좌석을 찾지 않는다). 탑승자 오브젝트 · 매니저가 없으면 false 입니다. */
+        [[nodiscard]] bool releaseRider( PawnComponent& riderPawn, bool bForced );
         /** @brief 탑승자의 소켓 변환에 기울임을 얹고 애니메이터 파라미터를 씁니다. */
         void applyRiderLean( GameObjectManager& manager );
     };

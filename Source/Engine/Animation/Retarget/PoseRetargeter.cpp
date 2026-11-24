@@ -252,7 +252,7 @@ namespace sw
         for ( size_t index = 0; index < listBone.size(); ++index )
         {
             BoneTransform local = inoutPose.getBoneTransform( listBone[index] );
-            local._rotation     = ( quaternion::makeFromYawPitchRoll( profile.getTargetPose()[index]._rotationDegrees * MathUtil::kDegreeToRadian ) * local._rotation ).normalize();
+            local._rotation     = ( quaternion::makeFromYawPitchRoll( profile.getTargetPose()[index]._rotation.radians() ) * local._rotation ).normalize();
             inoutPose.setBoneTransform( listBone[index], local );
         }
         return true;

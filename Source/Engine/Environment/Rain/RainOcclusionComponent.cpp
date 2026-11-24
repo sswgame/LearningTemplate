@@ -28,18 +28,6 @@ namespace sw
         return settings;
     }
 
-    void RainOcclusionComponent::onRegister( GameObjectManager& manager )
-    {
-        Component::onRegister( manager );
-        manager.getComponentRegistry().add<RainOcclusionComponent>( this );
-    }
-
-    void RainOcclusionComponent::onUnregister( GameObjectManager& manager )
-    {
-        manager.getComponentRegistry().remove<RainOcclusionComponent>( this );
-        Component::onUnregister( manager );
-    }
-
     bool RainOcclusionComponent::findRainOcclusion( const GameObjectManager& manager, RainOcclusionSettings& outSettings )
     {
         outSettings                          = RainOcclusionSettings{};

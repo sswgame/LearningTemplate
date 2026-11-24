@@ -435,7 +435,6 @@ namespace sw
     {
         if ( io.check( _pCatalog != nullptr ) == false )
             return;
-        io.reflected( *this );   // 판 시각 · 다음 보급 상자 — 바닥은 칸의 `PROPERTY( Min )`
         io.value( _matchState ); // 리플렉션 밖 값 — 자기 `serializeState` 가 있는 형식, 난수, 고정 걸음 타이머
         io.value( _zone );
         io.value( _random );
@@ -484,22 +483,7 @@ namespace sw
             if ( io.check( 0 <= player._kills && 0 <= player._knocks && -1 <= player._downedBy && player._downedBy < playerLimit && -1 <= player._revivingTarget && player._revivingTarget < playerLimit ) == false )
                 return;
         }
-        // 상자마다 무더기 수(4) + 위치(8) + 시각(4) 바이트 이상
-        io.list( _listSupplyDrop, 16, [&]( BattleRoyaleSupplyDrop& drop )
-        {
-            // 무더기마다 위치(8) + 이름(4) + 개수(4) + 지점(4) 바이트
-            io.list( drop._listItem, 20, [&]( BattleRoyaleGroundItem& item )
-            {
-                io.value( item._position );
-                io.value( item._itemID );
-                io.value( item._count );
-                io.value( item._spotIndex );
-                io.check( item._count > 0 );
-            } );
-            io.value( drop._position );
-            io.value( drop._time );
-            io.check( 0.0f <= drop._time );
-        } );
+        io.reflected( *this ); // 보급 상자 · 판 시각 · 다음 보급 상자 — 바닥은 칸의 `PROPERTY( Min )`
     }
 
 } // namespace sw

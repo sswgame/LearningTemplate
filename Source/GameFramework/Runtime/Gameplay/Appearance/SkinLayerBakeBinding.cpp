@@ -50,7 +50,7 @@ namespace sw
                 layer._color           = float4{ resolved._value._color._x, resolved._value._color._y, resolved._value._color._z, resolved._value._color._w * resolved._value._opacity };
                 layer._offset          = resolved._value._offset;
                 layer._scale           = resolved._value._scale;
-                layer._rotationDegrees = resolved._value._rotationDegrees;
+                layer._rotationRadians = resolved._value._rotation.radians();
                 layer._regionMin       = resolved._regionMin;
                 layer._regionMax       = resolved._regionMax;
                 layer._roughness       = resolved._roughness;
@@ -83,7 +83,7 @@ namespace sw
             key                        = HashUtil::combine( key, HashUtil::computeStringHash64( layer._mask.view() ) );
             key                        = Internal::combineFloat4( key, value._color );
             key                        = Internal::combineFloat4( key, float4{ value._offset._x, value._offset._y, value._scale._x, value._scale._y } );
-            key                        = Internal::combineFloat4( key, float4{ value._opacity, value._rotationDegrees, static_cast<float32>( value._bMirror ), static_cast<float32>( layer._bPlaceable ) } );
+            key                        = Internal::combineFloat4( key, float4{ value._opacity, value._rotation.radians(), static_cast<float32>( value._bMirror ), static_cast<float32>( layer._bPlaceable ) } );
             key                        = Internal::combineFloat4( key, float4{ layer._regionMin._x, layer._regionMin._y, layer._regionMax._x, layer._regionMax._y } );
             key                        = Internal::combineFloat4( key, float4{ layer._roughness, layer._roughnessWeight, layer._metallic, layer._metallicWeight } );
             key                        = HashUtil::combine( key, static_cast<uint64>( layer._blend ) );

@@ -1288,16 +1288,4 @@ namespace sw
     SW_AUTOMATION_GETTER_WATCH( shooterEnemyHitCount, "Shooter.EnemyHitCount", "Shots of the first shooter player that hit an enemy", ShooterPlayerComponent, &ShooterPlayerComponent::getHitCount );
     SW_AUTOMATION_GETTER_WATCH( shooterServerKillCount, "Shooter.ServerKillCount", "Kills the match server last reported to the first shooter player (0 without a server)", ShooterPlayerComponent, &ShooterPlayerComponent::getServerKillCount );
     SW_AUTOMATION_COMPONENT_WATCH( shooterPlayerControllerKind, "Shooter.PlayerControllerKind", "Who possesses the first shooter player: 0 the player, 1 an AI (auto play), -1 none", ShooterPlayerComponent, &ShooterPlayerComponentInternal::readControllerKind );
-
-    void ShooterPlayerComponent::onRegister( GameObjectManager& manager )
-    {
-        GameFrameworkComponent::onRegister( manager );
-        manager.getComponentRegistry().add<ShooterPlayerComponent>( this );
-    }
-
-    void ShooterPlayerComponent::onUnregister( GameObjectManager& manager )
-    {
-        manager.getComponentRegistry().remove<ShooterPlayerComponent>( this );
-        GameFrameworkComponent::onUnregister( manager );
-    }
 } // namespace sw

@@ -124,18 +124,6 @@ namespace sw
         _listClaimant.resize( static_cast<size_t>( _slots.getSlotCount() ) );
     }
 
-    void SmartObjectComponent::onRegister( GameObjectManager& manager )
-    {
-        Component::onRegister( manager );
-        manager.getComponentRegistry().add<SmartObjectComponent>( this );
-    }
-
-    void SmartObjectComponent::onUnregister( GameObjectManager& manager )
-    {
-        manager.getComponentRegistry().remove<SmartObjectComponent>( this );
-        Component::onUnregister( manager );
-    }
-
     void SmartObjectComponent::onPostLoad()
     {
         Component::onPostLoad();

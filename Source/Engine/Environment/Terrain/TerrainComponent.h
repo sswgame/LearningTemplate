@@ -92,6 +92,7 @@ namespace sw
     {
     public:
         REFLECT_BODY();
+        SW_REGISTERED_COMPONENT( TerrainComponent );
 
         static constexpr TickGroup kTickGroup = TickGroup::PostUpdate;
 

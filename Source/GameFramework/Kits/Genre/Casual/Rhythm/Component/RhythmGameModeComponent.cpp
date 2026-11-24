@@ -17,7 +17,7 @@ namespace sw
         struct RhythmGameModeComponentInternal
         {
             static constexpr uint32 kStateTag     = FourCCUtil::make( "RHGM" );
-            static constexpr uint32 kStateVersion = 1;
+            static constexpr uint32 kStateVersion = 2; ///< 2: 등급 수가 판의 리플렉션 상태 칸이다
 
             static constexpr const utf8* kWinResult  = "win";
             static constexpr const utf8* kLoseResult = "lose";

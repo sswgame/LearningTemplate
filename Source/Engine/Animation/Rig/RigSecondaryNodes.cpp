@@ -319,7 +319,7 @@ namespace sw
                     bOk = poseReader.readProperties( poseParams );
                     DriverPose pose{};
                     pose._name              = poseParams._name;
-                    pose._rotation          = quaternion::makeFromYawPitchRoll( poseParams._rotation * MathUtil::kDegreeToRadian );
+                    pose._rotation          = quaternion::makeFromYawPitchRoll( poseParams._rotation.radians() );
                     const RigXMLList morphs = poseReader.readArray( "morphs", false );
                     for ( size_t morphIndex = 0; bOk && morphs.isValid() && morphIndex < morphs.size(); ++morphIndex )
                     {
@@ -341,7 +341,7 @@ namespace sw
                         bOk = boneReader.finish() && bOk;
                         CorrectiveBone corrective{};
                         corrective._name        = boneProperties._bone;
-                        corrective._rotation    = quaternion::makeFromYawPitchRoll( boneProperties._rotation * MathUtil::kDegreeToRadian );
+                        corrective._rotation    = quaternion::makeFromYawPitchRoll( boneProperties._rotation.radians() );
                         corrective._translation = boneProperties._translation;
                         pose._listBone.push_back( corrective );
                     }

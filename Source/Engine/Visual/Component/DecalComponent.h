@@ -60,12 +60,12 @@ namespace sw
     {
     public:
         REFLECT_BODY();
+        SW_REGISTERED_COMPONENT( DecalComponent );
 
         DecalComponent();
         virtual ~DecalComponent() override = default;
 
         void onRegister( GameObjectManager& manager ) override;
-        void onUnregister( GameObjectManager& manager ) override;
 
         void onTick( TickContext& context ) override;
 

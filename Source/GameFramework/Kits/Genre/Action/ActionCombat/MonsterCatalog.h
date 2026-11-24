@@ -8,7 +8,7 @@
  *         <Stats hp="220" maxHP="220" atk="12" def="16" speed="0.9" radius="0.7" invincibility="0"/>
  *         <AI coolTime="1.6" firstDelay="1.2"/>
  *         <Shot angle="0" projectile="boss_orb"/>
- *         <Shot angle="1.5708" projectile="boss_orb_slow"/>
+ *         <Shot angle="90" projectile="boss_orb_slow"/>
  *         <Prefab path=""/>
  *         <Drop exp="10" gold="5"/>
  *       </Monster>

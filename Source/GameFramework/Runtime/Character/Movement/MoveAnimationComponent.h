@@ -7,6 +7,7 @@
 #pragma once
 #include "Core/Foundation/Types.h"
 #include "Core/Math/Math.h"
+#include "Core/Math/Radians.h"
 #include "Core/Name/hashed_string.h"
 
 #include "Engine/Object/Component/Component.h"
@@ -20,7 +21,7 @@ namespace sw
      * @class MoveAnimationComponent
      * @brief 같은 오브젝트의 주 메시(`MeshComponent`)가 움직인 수평 속도를 `SkeletalAnimatorComponent` 의 매개변수(`_speedParameter`)로 넣습니다.
      * @details `TickGroup::PostUpdate` 에서 돈다(몸을 옮기는 쪽이 이번 프레임에 쓴 자리를 읽는다). 속도는 `_smoothingSeconds` 로 고르게 하고(한 프레임 튐이 걸음을 끊지 않게),
-     *          `_faceMinSpeed` 보다 빠르면 주 메시의 요를 움직이는 쪽으로 `_turnRateDegrees` 만큼씩 돌린다. 처음 프레임과 순간이동(`_teleportDistance` 보다 큰 걸음)은 속도로 치지 않는다.
+     *          `_faceMinSpeed` 보다 빠르면 주 메시의 요를 움직이는 쪽으로 `_turnRate` 만큼씩 돌린다. 처음 프레임과 순간이동(`_teleportDistance` 보다 큰 걸음)은 속도로 치지 않는다.
      */
     REFLECT( Category = "Character", DisplayName = "Move Animation", Tooltip = "Feeds the body's horizontal speed to the animator and faces where it moves" )
     class SW_GF_API MoveAnimationComponent : public Component
@@ -56,8 +57,8 @@ namespace sw
         float32 _smoothingSeconds;
         PROPERTY( Category = "Facing", DisplayName = "Face Min Speed", Tooltip = "Turns toward the motion above this speed; slower keeps the facing", Min = 0.0, Units = m )
         float32 _faceMinSpeed;
-        PROPERTY( Category = "Facing", DisplayName = "Turn Rate", Tooltip = "Largest yaw change per second while turning toward the motion (degrees)", Min = 0.0 )
-        float32 _turnRateDegrees;
+        PROPERTY( Category = "Facing", DisplayName = "Turn Rate", Tooltip = "Largest yaw change per second while turning toward the motion", Min = 0.0 )
+        Radians _turnRate; ///< 초당
         PROPERTY( Category = "Animation", DisplayName = "Teleport Distance", Tooltip = "A step longer than this is a teleport and not counted as speed", Min = 0.0, Units = m )
         float32 _teleportDistance;
 

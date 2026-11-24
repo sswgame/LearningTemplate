@@ -62,7 +62,6 @@ namespace sw
     void ZoneContactComponent::onRegister( GameObjectManager& manager )
     {
         Component::onRegister( manager );
-        manager.getComponentRegistry().add<ZoneContactComponent>( this );
         ZoneOccupantIndex::addLayerReader( manager ); // 표면 지역의 근처 역할이 물리 층을 질의한다(`ZoneTracker::resolveRoleTargets`)
         (void)ZoneSystem::getOrCreate( manager );
         manager.getSubsystem<ScenePhysics>().registerContactStayListener( *this, ContactStayListener{ &ZoneContactComponent::receiveCollisionStay, nullptr } );
@@ -72,7 +71,6 @@ namespace sw
     void ZoneContactComponent::onUnregister( GameObjectManager& manager )
     {
         manager.getSubsystem<ScenePhysics>().unregisterContactStayListener( *this );
-        manager.getComponentRegistry().remove<ZoneContactComponent>( this );
         ZoneOccupantIndex::removeLayerReader( manager );
         ZoneSystem::releaseIfUnused( manager );
         Component::onUnregister( manager );

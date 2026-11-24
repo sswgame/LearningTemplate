@@ -682,7 +682,7 @@ namespace sw
             writer.writeBits( SkinLayerValue::encodeFine( layer._offset._y, 0.0f, 1.0f ), Internal::kFineBits );
             writer.writeBits( SkinLayerValue::encodeFine( layer._scale._x, SkinLayerValue::kMinScale, SkinLayerValue::kMaxScale ), Internal::kFineBits );
             writer.writeBits( SkinLayerValue::encodeFine( layer._scale._y, SkinLayerValue::kMinScale, SkinLayerValue::kMaxScale ), Internal::kFineBits );
-            writer.writeBits( SkinLayerValue::encodeFine( layer._rotationDegrees, -SkinLayerValue::kMaxRotation, SkinLayerValue::kMaxRotation ), Internal::kFineBits );
+            writer.writeBits( SkinLayerValue::encodeFine( layer._rotation.degrees(), -SkinLayerValue::kMaxRotation, SkinLayerValue::kMaxRotation ), Internal::kFineBits );
             writer.writeBool( layer._bMirror == SW_TRUE );
             writer.writeBool( layer._bHidden == SW_TRUE );
         }
@@ -796,19 +796,19 @@ namespace sw
             for ( uint32 index = 0; index < layerCount; ++index )
             {
                 SkinLayerValue layer;
-                layer._layer           = Internal::findByHash( reader.readUint32(), listLayerID );
-                layer._color._x        = CustomizationParamDef::dequantizeColorChannel( reader.readBits( Internal::kColorBits ) );
-                layer._color._y        = CustomizationParamDef::dequantizeColorChannel( reader.readBits( Internal::kColorBits ) );
-                layer._color._z        = CustomizationParamDef::dequantizeColorChannel( reader.readBits( Internal::kColorBits ) );
-                layer._color._w        = CustomizationParamDef::dequantizeColorChannel( reader.readBits( Internal::kColorBits ) );
-                layer._opacity         = CustomizationParamDef::dequantizeColorChannel( reader.readBits( Internal::kColorBits ) );
-                layer._offset._x       = SkinLayerValue::decodeFine( reader.readBits( Internal::kFineBits ), 0.0f, 1.0f );
-                layer._offset._y       = SkinLayerValue::decodeFine( reader.readBits( Internal::kFineBits ), 0.0f, 1.0f );
-                layer._scale._x        = SkinLayerValue::decodeFine( reader.readBits( Internal::kFineBits ), SkinLayerValue::kMinScale, SkinLayerValue::kMaxScale );
-                layer._scale._y        = SkinLayerValue::decodeFine( reader.readBits( Internal::kFineBits ), SkinLayerValue::kMinScale, SkinLayerValue::kMaxScale );
-                layer._rotationDegrees = SkinLayerValue::decodeFine( reader.readBits( Internal::kFineBits ), -SkinLayerValue::kMaxRotation, SkinLayerValue::kMaxRotation );
-                layer._bMirror         = reader.readBool() ? SW_TRUE : SW_FALSE;
-                layer._bHidden         = reader.readBool() ? SW_TRUE : SW_FALSE;
+                layer._layer     = Internal::findByHash( reader.readUint32(), listLayerID );
+                layer._color._x  = CustomizationParamDef::dequantizeColorChannel( reader.readBits( Internal::kColorBits ) );
+                layer._color._y  = CustomizationParamDef::dequantizeColorChannel( reader.readBits( Internal::kColorBits ) );
+                layer._color._z  = CustomizationParamDef::dequantizeColorChannel( reader.readBits( Internal::kColorBits ) );
+                layer._color._w  = CustomizationParamDef::dequantizeColorChannel( reader.readBits( Internal::kColorBits ) );
+                layer._opacity   = CustomizationParamDef::dequantizeColorChannel( reader.readBits( Internal::kColorBits ) );
+                layer._offset._x = SkinLayerValue::decodeFine( reader.readBits( Internal::kFineBits ), 0.0f, 1.0f );
+                layer._offset._y = SkinLayerValue::decodeFine( reader.readBits( Internal::kFineBits ), 0.0f, 1.0f );
+                layer._scale._x  = SkinLayerValue::decodeFine( reader.readBits( Internal::kFineBits ), SkinLayerValue::kMinScale, SkinLayerValue::kMaxScale );
+                layer._scale._y  = SkinLayerValue::decodeFine( reader.readBits( Internal::kFineBits ), SkinLayerValue::kMinScale, SkinLayerValue::kMaxScale );
+                layer._rotation  = Radians::fromDegrees( SkinLayerValue::decodeFine( reader.readBits( Internal::kFineBits ), -SkinLayerValue::kMaxRotation, SkinLayerValue::kMaxRotation ) );
+                layer._bMirror   = reader.readBool() ? SW_TRUE : SW_FALSE;
+                layer._bHidden   = reader.readBool() ? SW_TRUE : SW_FALSE;
                 outSelection._listSkinLayer.push_back( layer );
             }
         }

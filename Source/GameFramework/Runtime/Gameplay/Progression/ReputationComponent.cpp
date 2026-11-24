@@ -35,18 +35,6 @@ namespace sw
         return _restore.open( *this );
     }
 
-    void ReputationComponent::onRegister( GameObjectManager& manager )
-    {
-        Component::onRegister( manager );
-        manager.getComponentRegistry().add<ReputationComponent>( this );
-    }
-
-    void ReputationComponent::onUnregister( GameObjectManager& manager )
-    {
-        manager.getComponentRegistry().remove<ReputationComponent>( this );
-        Component::onUnregister( manager );
-    }
-
     void ReputationComponent::onBeginPlay()
     {
         Component::onBeginPlay();

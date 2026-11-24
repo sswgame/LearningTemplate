@@ -74,18 +74,6 @@ namespace sw
         _pose._phase = KillcamPhase::Done;
     }
 
-    void KillcamComponent::onRegister( GameObjectManager& manager )
-    {
-        Component::onRegister( manager );
-        manager.getComponentRegistry().add<KillcamComponent>( this );
-    }
-
-    void KillcamComponent::onUnregister( GameObjectManager& manager )
-    {
-        manager.getComponentRegistry().remove<KillcamComponent>( this );
-        Component::onUnregister( manager );
-    }
-
     void KillcamComponent::onEndPlay()
     {
         skip();

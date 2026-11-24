@@ -25,13 +25,11 @@ namespace sw
     void RemoveStacksOnJumpComponent::onRegister( GameObjectManager& manager )
     {
         Component::onRegister( manager );
-        manager.getComponentRegistry().add<RemoveStacksOnJumpComponent>( this );
         (void)ZoneSystem::getOrCreate( manager );
     }
 
     void RemoveStacksOnJumpComponent::onUnregister( GameObjectManager& manager )
     {
-        manager.getComponentRegistry().remove<RemoveStacksOnJumpComponent>( this );
         ZoneSystem::releaseIfUnused( manager );
         Component::onUnregister( manager );
     }

@@ -27,14 +27,12 @@ namespace sw
     {
     public:
         REFLECT_BODY();
+        SW_REGISTERED_COMPONENT( ExplosiveBarrelComponent );
 
         static constexpr float32 kTickInterval = constant::time::kDefaultFixedStepSeconds; ///< 고정 걸음마다 한 번 — 지연 · 간격을 걸음 수로 센다(프레임 시간과 무관하게 같은 걸음)
 
         ExplosiveBarrelComponent();
         virtual ~ExplosiveBarrelComponent() override = default;
-
-        void onRegister( GameObjectManager& manager ) override;
-        void onUnregister( GameObjectManager& manager ) override;
 
         void    onTick( TickContext& context ) override;
         void    stepOnce();

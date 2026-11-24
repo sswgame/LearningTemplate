@@ -59,18 +59,6 @@ namespace sw
         return settings;
     }
 
-    void WindComponent::onRegister( GameObjectManager& manager )
-    {
-        Component::onRegister( manager );
-        manager.getComponentRegistry().add<WindComponent>( this );
-    }
-
-    void WindComponent::onUnregister( GameObjectManager& manager )
-    {
-        manager.getComponentRegistry().remove<WindComponent>( this );
-        Component::onUnregister( manager );
-    }
-
     float3 WindSettings::computeVelocity( const float3& position, float32 time ) const
     {
         const float32 along = position._x * _direction._x + position._z * _direction._y;

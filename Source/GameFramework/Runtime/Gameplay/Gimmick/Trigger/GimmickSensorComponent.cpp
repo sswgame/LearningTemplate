@@ -215,14 +215,7 @@ namespace sw
     void GimmickSensorComponent::onRegister( GameObjectManager& manager )
     {
         Component::onRegister( manager );
-        manager.getComponentRegistry().add<GimmickSensorComponent>( this );
         _overlapBeginSubscription = GameObjectEvents::listen<&GimmickSensorComponent::handleOverlapBegin>( *this, &GameObjectEvents::_overlapBegin );
         _overlapEndSubscription   = GameObjectEvents::listen<&GimmickSensorComponent::handleOverlapEnd>( *this, &GameObjectEvents::_overlapEnd );
-    }
-
-    void GimmickSensorComponent::onUnregister( GameObjectManager& manager )
-    {
-        manager.getComponentRegistry().remove<GimmickSensorComponent>( this );
-        Component::onUnregister( manager );
     }
 } // namespace sw

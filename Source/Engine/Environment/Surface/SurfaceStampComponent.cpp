@@ -38,15 +38,8 @@ namespace sw
             removePersistentStamp( *pManager );
     }
 
-    void SurfaceStampComponent::onRegister( GameObjectManager& manager )
-    {
-        Component::onRegister( manager );
-        manager.getComponentRegistry().add<SurfaceStampComponent>( this );
-    }
-
     void SurfaceStampComponent::onUnregister( GameObjectManager& manager )
     {
-        manager.getComponentRegistry().remove<SurfaceStampComponent>( this );
         removePersistentStamp( manager );
         Component::onUnregister( manager );
     }

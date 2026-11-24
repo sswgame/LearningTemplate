@@ -57,6 +57,7 @@ namespace sw
     {
     public:
         REFLECT_BODY();
+        SW_REGISTERED_COMPONENT( InteractableComponent );
 
         InteractableComponent();
         virtual ~InteractableComponent() override = default;

@@ -28,11 +28,9 @@ namespace sw
     {
     public:
         REFLECT_BODY();
+        SW_REGISTERED_COMPONENT( ShadowCaster2DComponent );
         ShadowCaster2DComponent();
         virtual ~ShadowCaster2DComponent() override = default;
-
-        void onRegister( GameObjectManager& manager ) override;
-        void onUnregister( GameObjectManager& manager ) override;
 
         /** @brief 월드의 가림막 토막 (x0, y0, x1, y1) 과 바깥쪽 방향을 모읍니다. */
         void computeWorldSegments( vector<float4>& outListSegment, vector<float2>& outListOutward ) const;

@@ -95,18 +95,6 @@ namespace sw
         return true;
     }
 
-    void ReflectionProbeComponent::onRegister( GameObjectManager& manager )
-    {
-        SceneComponent::onRegister( manager );
-        manager.getComponentRegistry().add<ReflectionProbeComponent>( this );
-    }
-
-    void ReflectionProbeComponent::onUnregister( GameObjectManager& manager )
-    {
-        manager.getComponentRegistry().remove<ReflectionProbeComponent>( this );
-        SceneComponent::onUnregister( manager );
-    }
-
     void ReflectionProbeComponent::onPostLoad()
     {
         SceneComponent::onPostLoad();

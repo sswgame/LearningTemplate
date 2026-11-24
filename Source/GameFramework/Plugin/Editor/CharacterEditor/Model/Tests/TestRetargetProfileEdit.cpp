@@ -81,7 +81,7 @@ SW_TEST_CASE( RetargetProfileEditTest, APoseBoneIsListedOnce )
     vector<RetargetPoseBone> listPose;
     SW_EXPECT_FALSE( RetargetProfileEdit::canAddPoseBone( listPose, hashed_string{} ) );
     SW_EXPECT_TRUE( RetargetProfileEdit::canAddPoseBone( listPose, hashed_string( "hip" ) ) );
-    listPose.push_back( RetargetPoseBone{ hashed_string( "hip" ), float3{} } );
+    listPose.push_back( RetargetPoseBone{ hashed_string( "hip" ), EulerAngles{} } );
     SW_EXPECT_FALSE( RetargetProfileEdit::canAddPoseBone( listPose, hashed_string( "hip" ) ) );
 }
 
@@ -110,7 +110,7 @@ SW_TEST_CASE( RetargetProfileEditTest, ProfilesTheEditorBuildsRoundTripThroughXM
     RetargetProfile profile = Util::makeProfile();
     profile.setSkeletonPaths( "a.skeleton.xml", "b.skeleton.xml" );
     profile.setTargetPose( {
-        RetargetPoseBone{ hashed_string( "shin" ), float3{ 1.0f, 2.0f, 3.0f } }
+        RetargetPoseBone{ hashed_string( "shin" ), EulerAngles::fromDegrees( float3{ 1.0f, 2.0f, 3.0f } ) }
     } );
     RetargetProfile reread;
     SW_REQUIRE_TRUE( reread.loadFromXMLText( profile.toXML(), "round trip" ) );
@@ -169,7 +169,7 @@ SW_TEST_CASE( RetargetProfileInspectionTest, MissingBonesAreNamedWithoutErrorLog
     RetargetProfile profile  = Util::makeProfile();
     profile.addBonePair( RetargetBonePair{ hashed_string( "nope_source" ), hashed_string( "nope_target" ) } );
     profile.setTargetPose( {
-        RetargetPoseBone{ hashed_string( "nope_pose" ), float3{} }
+        RetargetPoseBone{ hashed_string( "nope_pose" ), EulerAngles{} }
     } );
     RetargetProfileInspection inspection;
     const expected<void>      missing = RetargetProfileInspection::inspect( profile, &skeleton, &skeleton, inspection );
@@ -250,7 +250,7 @@ SW_TEST_CASE( RetargetPreviewViewModelTest, RetargetPoseMovesOnlyThePosedTarget 
     const Skeleton  skeleton = Util::makeSkeleton();
     RetargetProfile profile  = Util::makeProfile();
     profile.setTargetPose( {
-        RetargetPoseBone{ hashed_string( "root" ), float3{ 90.0f, 0.0f, 0.0f } }
+        RetargetPoseBone{ hashed_string( "root" ), EulerAngles::fromDegrees( float3{ 90.0f, 0.0f, 0.0f } ) }
     } );
     RetargetPreviewViewModel preview;
     preview.applySkeletons( profile, &skeleton, &skeleton );
@@ -268,7 +268,7 @@ SW_TEST_CASE( RetargetPreviewViewModelTest, RetargetPoseMovesOnlyThePosedTarget 
 
     // 없는 본을 적었으면 얹지 못하고 레퍼런스 그대로다 — 이유는 점검 칸이 말하므로 오류 로그를 남기지 않는다.
     profile.setTargetPose( {
-        RetargetPoseBone{ hashed_string( "nope" ), float3{ 90.0f, 0.0f, 0.0f } }
+        RetargetPoseBone{ hashed_string( "nope" ), EulerAngles::fromDegrees( float3{ 90.0f, 0.0f, 0.0f } ) }
     } );
     preview.rebuildPoses( profile );
     SW_EXPECT_NEAR( 0.0f, ( preview.getTargetPosePositions().back() - reference ).getLength(), 1e-4f );

@@ -140,16 +140,4 @@ namespace sw
                 GimmickDamageUtil::applyDamage( *target._pObject, pSource, hashed_string( "Explosion" ), _damage * ( 1.0f - target._distance / radius ) );
         }
     }
-
-    void ExplosiveBarrelComponent::onRegister( GameObjectManager& manager )
-    {
-        Component::onRegister( manager );
-        manager.getComponentRegistry().add<ExplosiveBarrelComponent>( this );
-    }
-
-    void ExplosiveBarrelComponent::onUnregister( GameObjectManager& manager )
-    {
-        manager.getComponentRegistry().remove<ExplosiveBarrelComponent>( this );
-        Component::onUnregister( manager );
-    }
 } // namespace sw

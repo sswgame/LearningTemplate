@@ -22,12 +22,10 @@ namespace sw
     {
     public:
         REFLECT_BODY();
+        SW_REGISTERED_COMPONENT( MinimapMarkerComponent );
 
         MinimapMarkerComponent();
         ~MinimapMarkerComponent() override = default;
-
-        void onRegister( GameObjectManager& manager ) override;
-        void onUnregister( GameObjectManager& manager ) override;
 
         const float4& getColor() const { return _color; }
         float32       getSize() const { return _size; }

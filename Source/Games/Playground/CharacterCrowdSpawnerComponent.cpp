@@ -45,18 +45,6 @@ namespace sw
     {
     }
 
-    void CharacterCrowdSpawnerComponent::onRegister( GameObjectManager& manager )
-    {
-        Component::onRegister( manager );
-        manager.getComponentRegistry().add<CharacterCrowdSpawnerComponent>( this );
-    }
-
-    void CharacterCrowdSpawnerComponent::onUnregister( GameObjectManager& manager )
-    {
-        manager.getComponentRegistry().remove<CharacterCrowdSpawnerComponent>( this );
-        Component::onUnregister( manager );
-    }
-
     void CharacterCrowdSpawnerComponent::onBeginPlay()
     {
         Component::onBeginPlay();

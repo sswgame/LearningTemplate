@@ -295,12 +295,13 @@ namespace sw
             {
                 RigPoseBuffer&   pose  = *context._pPose;
                 const quaternion delta = ( RigIKSolver::makeInverse( _reference ) * pose.getLocalRotation( _bone ) ).normalize();
-                const float3     euler = delta.getEulerAngles() * MathUtil::kRadianToDegree;
-                const float3     clamped{ MathUtil::clamp( euler._x, _params._minDegrees._x, _params._maxDegrees._x ), MathUtil::clamp( euler._y, _params._minDegrees._y, _params._maxDegrees._y ),
-                                      MathUtil::clamp( euler._z, _params._minDegrees._z, _params._maxDegrees._z ) };
+                const float3     euler = delta.getEulerAngles();
+                const float3     low   = _params._min.radians();
+                const float3     high  = _params._max.radians();
+                const float3     clamped{ MathUtil::clamp( euler._x, low._x, high._x ), MathUtil::clamp( euler._y, low._y, high._y ), MathUtil::clamp( euler._z, low._z, high._z ) };
                 if ( clamped == euler )
                     return;
-                pose.setLocalRotation( _bone, ( _reference * quaternion::makeFromYawPitchRoll( clamped * MathUtil::kDegreeToRadian ) ).normalize() );
+                pose.setLocalRotation( _bone, ( _reference * quaternion::makeFromYawPitchRoll( clamped ) ).normalize() );
             }
 
             void collectWrittenBones( vector<uint32>& inoutListBone ) const override { inoutListBone.push_back( _bone ); }

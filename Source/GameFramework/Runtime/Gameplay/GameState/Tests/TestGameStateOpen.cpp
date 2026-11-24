@@ -46,13 +46,7 @@ SW_TEST_CASE( GameStateOpenTest, SecondStateInSceneIsRefused )
     SW_EXPECT_TRUE( pSecond->initialize( GameStateSettings{} ) == GameStateInitResult::Refused );
     SW_EXPECT_FALSE( pSecond->isInitialized() );
     SW_EXPECT_TRUE( GameStateComponent::findOpen( &manager ) == pFirst );
-    size_t registeredCount = 0;
-    for ( const GameStateComponent* pRegistered : manager.getComponentRegistry().getAll<GameStateComponent>() )
-    {
-        SW_EXPECT_TRUE( pRegistered == pFirst );
-        ++registeredCount;
-    }
-    SW_EXPECT_EQUAL( size_t{ 1 }, registeredCount );
+    SW_EXPECT_FALSE( GameStateComponent::findOpen( &manager ) == pSecond ); // 목록에는 둘 다 있어도 열린 것은 첫 판뿐이다
 }
 
 /**

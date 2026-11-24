@@ -260,6 +260,12 @@ namespace sw
                                  prop._units, owner, ReflectUnit::makeUnitList() );
                 return false;
             }
+            // 도로 적는 칸은 형식이 단위를 말한다(`Radians` · `EulerAngles` — 글은 도, 값은 라디안). 실수 칸에 도를 담으면 같은 각 칸이 자리마다 도이기도 라디안이기도 하다.
+            if ( ReflectUnit::findUnit( prop._units )->_kind == ReflectUnitKind::Degree )
+            {
+                SW_LOG_ERROR_ID( "AstVisitor.ERRORPROPERTYUnitsDegree", "ERROR: PROPERTY( Units = deg ) on '%#' - an angle authored in degrees is a Radians or EulerAngles property (text in degrees, value in radians).", owner );
+                return false;
+            }
             for ( const auto& [key, value] : prop._listCustomMeta )
             {
                 if ( key == "Units" )

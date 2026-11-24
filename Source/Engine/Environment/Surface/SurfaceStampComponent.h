@@ -36,14 +36,13 @@ namespace sw
     {
     public:
         REFLECT_BODY();
+        SW_REGISTERED_COMPONENT( SurfaceStampComponent );
 
         SurfaceStampComponent();
         virtual ~SurfaceStampComponent() override = default;
 
         /** @brief 칸이 바뀌면 붙잡은 도장을 놓고 다음 찍기 전에 도장을 다시 검사합니다. */
         void onPropertyChanged( hashed_string propertyName ) override;
-        /** @brief 씬의 컴포넌트 레지스트리에 오릅니다(표면 서비스가 돈다). */
-        void onRegister( GameObjectManager& manager ) override;
         void onUnregister( GameObjectManager& manager ) override;
         /** @brief 오브젝트가 꺼지면 붙잡은 도장을 놓고 지나온 길을 끊습니다. */
         void onOwnerActiveInHierarchyChanged() override;

@@ -507,6 +507,7 @@ SW_TEST_CASE( PackedValueSerializationTest, RadiansIsDegreesOutsideAndRadiansIns
     using Test                     = PackedSerializationTestInternal;
 
     Test::expectBinaryRoundTrip( context, "Radians", Radians::fromRadians( 0.123456789f ) );
+    Test::expectBinaryRoundTrip( context, "EulerAngles", EulerAngles::fromRadians( float3{ 0.1f, -0.2f, 0.3f } ) );
 
     const SerializeContext::TextReadFn*  pReader = context.findTextReader( hashed_string( "Radians" ) );
     const SerializeContext::TextWriteFn* pWriter = context.findTextWriter( hashed_string( "Radians" ) );
@@ -522,6 +523,12 @@ SW_TEST_CASE( PackedValueSerializationTest, RadiansIsDegreesOutsideAndRadiansIns
     SW_EXPECT_LOG( "Serialization.PackedValueOutOfRange" ); // 도 범위(±1e6)를 넘는 글은 이유를 남기고 거절한다
     Test::expectTextRejected( context, "Radians", Radians::fromDegrees( 10.0f ), "1e9" );
     Test::expectTextRejected( context, "Radians", Radians::fromDegrees( 10.0f ), "ten" );
+
+    const SerializeContext::TextReadFn* pEulerReader = context.findTextReader( hashed_string( "EulerAngles" ) );
+    SW_REQUIRE_NOT_NULL( pEulerReader );
+    EulerAngles euler{};
+    SW_EXPECT_TRUE( ( *pEulerReader )( &euler, "0 -90 2.5" ) ); // 손으로 쓰는 파일은 공백으로도 가른다
+    SW_EXPECT_TRUE( euler == EulerAngles::fromDegrees( float3{ 0.0f, -90.0f, 2.5f } ) );
 
     const ReflectBuiltinIndex index = ReflectedValueUtil::findBuiltinIndex( hashed_string( "Radians" ) );
     SW_REQUIRE_TRUE( index != ReflectBuiltinIndex::kNone );

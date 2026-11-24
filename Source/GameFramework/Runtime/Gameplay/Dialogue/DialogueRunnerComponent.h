@@ -81,6 +81,7 @@ namespace sw
     {
     public:
         REFLECT_BODY();
+        SW_REGISTERED_COMPONENT( DialogueRunnerComponent );
 
         PROPERTY( Category = "Dialogue", DisplayName = "Graph", Tooltip = "Dialogue graph asset" )
         AssetRef<DialogueGraphAsset> _graphPath;
@@ -99,9 +100,6 @@ namespace sw
 
         DialogueRunnerComponent();
         virtual ~DialogueRunnerComponent() override = default;
-
-        void onRegister( GameObjectManager& manager ) override;
-        void onUnregister( GameObjectManager& manager ) override;
 
         void onBeginPlay() override;
         void onEndPlay() override;

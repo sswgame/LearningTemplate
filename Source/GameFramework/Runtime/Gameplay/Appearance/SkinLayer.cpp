@@ -5,6 +5,7 @@
 #include "Core/Algorithm/VectorUtil.h"
 #include "Core/Foundation/Constants.h"
 #include "Core/Math/MathUtil.h"
+#include "Core/Math/PackedValueTraits.h"
 #include "Core/String/StringBuilder.h"
 #include "Core/String/StringUtil.h"
 #include "Core/String/fixed_string.h"
@@ -49,17 +50,17 @@ namespace sw
 
     void SkinLayerValue::quantize()
     {
-        _color           = float4{ SkinLayerInternal::quantizeUnit( _color._x, kColorSteps ), SkinLayerInternal::quantizeUnit( _color._y, kColorSteps ), SkinLayerInternal::quantizeUnit( _color._z, kColorSteps ),
+        _color    = float4{ SkinLayerInternal::quantizeUnit( _color._x, kColorSteps ), SkinLayerInternal::quantizeUnit( _color._y, kColorSteps ), SkinLayerInternal::quantizeUnit( _color._z, kColorSteps ),
                          SkinLayerInternal::quantizeUnit( _color._w, kColorSteps ) };
-        _opacity         = SkinLayerInternal::quantizeUnit( _opacity, kColorSteps );
-        _offset          = float2{ decodeFine( encodeFine( _offset._x, 0.0f, 1.0f ), 0.0f, 1.0f ), decodeFine( encodeFine( _offset._y, 0.0f, 1.0f ), 0.0f, 1.0f ) };
-        _scale           = float2{ decodeFine( encodeFine( _scale._x, kMinScale, kMaxScale ), kMinScale, kMaxScale ), decodeFine( encodeFine( _scale._y, kMinScale, kMaxScale ), kMinScale, kMaxScale ) };
-        _rotationDegrees = decodeFine( encodeFine( _rotationDegrees, -kMaxRotation, kMaxRotation ), -kMaxRotation, kMaxRotation );
+        _opacity  = SkinLayerInternal::quantizeUnit( _opacity, kColorSteps );
+        _offset   = float2{ decodeFine( encodeFine( _offset._x, 0.0f, 1.0f ), 0.0f, 1.0f ), decodeFine( encodeFine( _offset._y, 0.0f, 1.0f ), 0.0f, 1.0f ) };
+        _scale    = float2{ decodeFine( encodeFine( _scale._x, kMinScale, kMaxScale ), kMinScale, kMaxScale ), decodeFine( encodeFine( _scale._y, kMinScale, kMaxScale ), kMinScale, kMaxScale ) };
+        _rotation = Radians::fromDegrees( decodeFine( encodeFine( _rotation.degrees(), -kMaxRotation, kMaxRotation ), -kMaxRotation, kMaxRotation ) );
     }
 
     bool SkinLayerValue::operator==( const SkinLayerValue& other ) const
     {
-        return _layer == other._layer && _color == other._color && _offset == other._offset && _scale == other._scale && _opacity == other._opacity && _rotationDegrees == other._rotationDegrees &&
+        return _layer == other._layer && _color == other._color && _offset == other._offset && _scale == other._scale && _opacity == other._opacity && _rotation == other._rotation &&
                _bMirror == other._bMirror && _bHidden == other._bHidden;
     }
 
@@ -67,7 +68,7 @@ namespace sw
     {
         const float2  source  = bMirrorCopy ? float2{ 1.0f - skinUV._x, skinUV._y } : skinUV;
         const float2  local   = source - _offset;
-        const float32 radians = -_rotationDegrees * MathUtil::kDegreeToRadian;
+        const float32 radians = -_rotation.radians();
         const float32 cosine  = MathUtil::cos( radians );
         const float32 sine    = MathUtil::sin( radians );
         const float2  rotated{ local._x * cosine - local._y * sine, local._x * sine + local._y * cosine };
@@ -79,22 +80,22 @@ namespace sw
     {
         // 속성은 리플렉션 칸이다(필수 층 이름 · 범위 · 모르는 속성은 XMLFields 가 알린다). 적지 않은 칸은 지금 값이 남는다. 회전 범위는 kMaxRotation 과 같다(PROPERTY 는 글자 범위만 받는다).
         SkinLayerValueParams def;
-        def._color           = _color;
-        def._opacity         = _opacity;
-        def._offset          = _offset;
-        def._scale           = _scale;
-        def._rotationDegrees = _rotationDegrees;
-        def._bMirror         = _bMirror != SW_FALSE;
-        def._bHidden         = _bHidden != SW_FALSE;
-        const bool bRead     = AppearanceXMLUtil::readProperties( node, def, report, sourceName );
-        _layer               = def._layer;
-        _color               = def._color;
-        _opacity             = def._opacity;
-        _offset              = def._offset;
-        _scale               = def._scale;
-        _rotationDegrees     = def._rotationDegrees;
-        _bMirror             = def._bMirror ? SW_TRUE : SW_FALSE;
-        _bHidden             = def._bHidden ? SW_TRUE : SW_FALSE;
+        def._color       = _color;
+        def._opacity     = _opacity;
+        def._offset      = _offset;
+        def._scale       = _scale;
+        def._rotation    = _rotation;
+        def._bMirror     = _bMirror != SW_FALSE;
+        def._bHidden     = _bHidden != SW_FALSE;
+        const bool bRead = AppearanceXMLUtil::readProperties( node, def, report, sourceName );
+        _layer           = def._layer;
+        _color           = def._color;
+        _opacity         = def._opacity;
+        _offset          = def._offset;
+        _scale           = def._scale;
+        _rotation        = def._rotation;
+        _bMirror         = def._bMirror ? SW_TRUE : SW_FALSE;
+        _bHidden         = def._bHidden ? SW_TRUE : SW_FALSE;
         return bRead && _layer.empty() == false;
     }
 
@@ -109,7 +110,7 @@ namespace sw
         fixed_string<constant::buffer::kMax64> scale;
         formatstring( scale.data(), scale.capacity(), "%# %#", _scale._x, _scale._y );
         fixed_string<constant::buffer::kMax64> angle;
-        formatstring( angle.data(), angle.capacity(), "%#", _rotationDegrees );
+        formatstring( angle.data(), angle.capacity(), "%#", PackedValueTraits<Radians>::toFloats( _rotation )._arrValue[0] ); // 다시 읽으면 같은 각인 가장 짧은 도
         node.appendAttribute( "layer", _layer.c_str() );
         node.appendAttribute( "color", color.c_str() );
         node.appendAttribute( "opacity", opacity.c_str() );

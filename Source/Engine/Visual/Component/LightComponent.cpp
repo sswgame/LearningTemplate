@@ -103,16 +103,4 @@ namespace sw
             worldDirection.normalize();
         return worldDirection;
     }
-
-    void LightComponent::onRegister( GameObjectManager& manager )
-    {
-        SceneComponent::onRegister( manager );
-        manager.getComponentRegistry().add<LightComponent>( this, getLightType() ); // 칸은 종류(방향광이 0 — 종류 순서로 돌면 앞에 온다)
-    }
-
-    void LightComponent::onUnregister( GameObjectManager& manager )
-    {
-        manager.getComponentRegistry().remove<LightComponent>( this, getLightType() );
-        SceneComponent::onUnregister( manager );
-    }
 } // namespace sw

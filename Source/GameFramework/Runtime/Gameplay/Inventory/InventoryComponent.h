@@ -44,6 +44,7 @@ namespace sw
     {
     public:
         REFLECT_BODY();
+        SW_REGISTERED_COMPONENT( InventoryComponent );
         REFLECT_INTERFACE( IItemReceiver, _itemReceiverPort );
 
         static constexpr uint32 kStateTag     = FourCCUtil::make( "INVC" );
@@ -58,10 +59,6 @@ namespace sw
          */
         [[nodiscard]] GameStateInitResult initialize( const ItemCatalog& itemCatalog, const InventorySettings& settings );
 
-        /** @brief 씬의 컴포넌트 레지스트리에 오릅니다(`PlayerComponentUtil::findOpen`). */
-        void onRegister( GameObjectManager& manager ) override;
-        /** @brief 레지스트리에서 내립니다. */
-        void onUnregister( GameObjectManager& manager ) override;
         /** @brief `_openSlotCount` 가 있으면 게임의 아이템 카탈로그로 그 슬롯 수의 가방을 엽니다. */
         void onBeginPlay() override;
 

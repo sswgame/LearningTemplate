@@ -118,11 +118,17 @@ namespace sw
 namespace sw
 {
     /** @brief 생물이 사는 집 하나입니다. */
+    REFLECT()
     struct CreatureHouse
     {
+        REFLECT_BODY();
+
+        PROPERTY()
         vector<hashed_string> _listResident{}; ///< 사는 생물이다(종 id)
-        int2                  _tile{};
-        int32                 _capacity{ 1 };
+        PROPERTY()
+        int2 _tile{};
+        PROPERTY( Min = 1 )
+        int32 _capacity{ 1 };
     };
 } // namespace sw
 
@@ -170,7 +176,7 @@ namespace sw
         REFLECT_BODY();
 
         static constexpr uint32 kStateTag     = FourCCUtil::make( "CTWN" );
-        static constexpr uint32 kStateVersion = 1;
+        static constexpr uint32 kStateVersion = 2; ///< 2: 집이 리플렉션 상태 칸이다
 
         CreatureTown();
 
@@ -271,7 +277,8 @@ namespace sw
         vector<hashed_string>   _listObject; ///< 셀마다의 오브젝트 id 이다(`_topology` 의 타일 번호). 빈 id 는 빈 셀이다
         vector<HabitatInstance> _listHabitat;
         PROPERTY( RuntimeState )
-        vector<TownCreature>  _listCreature; ///< 온 순서
+        vector<TownCreature> _listCreature; ///< 온 순서
+        PROPERTY( RuntimeState )
         vector<CreatureHouse> _listHouse;
         PROPERTY( RuntimeState )
         vector<hashed_string>                 _listOpenRequest; ///< 이 마을이 받은 부탁 중 아직 끝나지 않은 것이다(퀘스트 id)

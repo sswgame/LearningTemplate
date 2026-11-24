@@ -108,18 +108,6 @@ namespace sw
         Component::onEndPlay();
     }
 
-    void GameModeComponent::onRegister( GameObjectManager& manager )
-    {
-        Component::onRegister( manager );
-        manager.getComponentRegistry().add<GameModeComponent>( this );
-    }
-
-    void GameModeComponent::onUnregister( GameObjectManager& manager )
-    {
-        manager.getComponentRegistry().remove<GameModeComponent>( this );
-        Component::onUnregister( manager );
-    }
-
     bool GameModeComponent::openGame()
     {
         vector<FollowedAsset> listPrevious = std::move( _listFollowedAsset ); // 규칙 객체는 `startGame` 이 다시 묶을 때까지 앞 판을 가리킨다

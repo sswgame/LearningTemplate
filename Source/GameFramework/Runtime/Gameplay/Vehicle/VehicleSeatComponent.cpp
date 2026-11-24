@@ -87,7 +87,6 @@ namespace sw
     void VehicleSeatComponent::onRegister( GameObjectManager& manager )
     {
         Component::onRegister( manager );
-        manager.getComponentRegistry().add<VehicleSeatComponent>( this ); // 빈 좌석 찾기와 탑승자의 좌석 찾기가 씬을 순회하지 않게 된다
         (void)VehicleSeatSystem::getOrCreate( manager );
     }
 
@@ -98,11 +97,10 @@ namespace sw
         GameObject*    pOccupant = _occupant.isValid() && bClearing == false ? manager.resolveGameObject( _occupant ) : nullptr;
         PawnComponent* pRider    = pOccupant != nullptr ? pOccupant->getComponent<PawnComponent>() : nullptr;
         if ( pRider != nullptr )
-            (void)VehicleSeatComponent::dismount( *pRider, true );
+            (void)releaseRider( *pRider, true ); // 레지스트리에서는 이미 내렸다(`Component::dispatchUnregister`) — 좌석을 찾지 않는다
         _occupant                  = GameObjectHandle{};
         _occupantController        = TComponentHandle<ControllerComponent>{};
         _previousVehicleController = TComponentHandle<ControllerComponent>{};
-        manager.getComponentRegistry().remove<VehicleSeatComponent>( this );
         VehicleSeatSystem::releaseIfUnused( manager );
         Component::onUnregister( manager );
     }

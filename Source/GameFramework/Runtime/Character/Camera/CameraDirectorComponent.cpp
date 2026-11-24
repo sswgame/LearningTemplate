@@ -222,7 +222,6 @@ namespace sw
     void CameraDirectorComponent::onRegister( GameObjectManager& manager )
     {
         Component::onRegister( manager );
-        manager.getComponentRegistry().add<CameraDirectorComponent>( this );
         (void)CameraSystem::getOrCreate( manager );
     }
 
@@ -246,7 +245,6 @@ namespace sw
             game::getSubsystem<GameTimeScale>().removePauseRequest();
             releasePhotoModeUILayers();
         }
-        manager.getComponentRegistry().remove<CameraDirectorComponent>( this );
         CameraSystem::releaseIfUnused( manager );
         Component::onUnregister( manager );
     }

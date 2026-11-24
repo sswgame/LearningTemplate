@@ -54,14 +54,12 @@ namespace sw
     {
     public:
         REFLECT_BODY();
+        SW_REGISTERED_COMPONENT( InteractorComponent );
 
         static constexpr TickGroup kTickGroup = TickGroup::PostPhysics;
 
         InteractorComponent();
         virtual ~InteractorComponent() override = default;
-
-        void onRegister( GameObjectManager& manager ) override;
-        void onUnregister( GameObjectManager& manager ) override;
 
         void onBeginPlay() override;
         void onEndPlay() override;

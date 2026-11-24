@@ -39,6 +39,7 @@ namespace sw
     {
     public:
         REFLECT_BODY();
+        SW_REGISTERED_COMPONENT( ZoneContactComponent );
 
         /** @brief 표면 종류 하나의 지역입니다(그 종류의 프로필을 이 개체에 대해 컴파일한 것과 처리 기록). */
         struct SurfaceZone

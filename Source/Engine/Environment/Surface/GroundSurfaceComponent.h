@@ -28,13 +28,10 @@ namespace sw
     {
     public:
         REFLECT_BODY();
+        SW_REGISTERED_COMPONENT( GroundSurfaceComponent );
 
         GroundSurfaceComponent();
         virtual ~GroundSurfaceComponent() override = default;
-
-        /** @brief 씬의 컴포넌트 레지스트리에 오릅니다(표면 서비스가 돈다). */
-        void onRegister( GameObjectManager& manager ) override;
-        void onUnregister( GameObjectManager& manager ) override;
 
         /** @brief 마지막으로 읽은 표면 종류 이름입니다(디딘 것이 없으면 비어 있다). */
         const hashed_string& getGroundKind() const { return _groundKind; }

@@ -91,7 +91,8 @@ namespace sw::editor
                 float32 sum = 0.0f;
                 for ( const RetargetPoseBone& poseBone : listPose )
                 {
-                    sum += MathUtil::abs( poseBone._rotationDegrees._x ) + MathUtil::abs( poseBone._rotationDegrees._y ) + MathUtil::abs( poseBone._rotationDegrees._z );
+                    const float3 degrees = poseBone._rotation.degrees();
+                    sum += MathUtil::abs( degrees._x ) + MathUtil::abs( degrees._y ) + MathUtil::abs( degrees._z );
                 }
                 return static_cast<uint32>( MathUtil::round( sum ) );
             }
@@ -528,12 +529,13 @@ namespace sw::editor
             ImGui::PushID( static_cast<int32>( poseIndex ) );
             ImGui::Text( "%s", poseBone._bone.c_str() );
             ImGui::SameLine( 200.0f * EditorThemeUtil::getDPIScale() );
-            float32 arrDegree[3] = { poseBone._rotationDegrees._x, poseBone._rotationDegrees._y, poseBone._rotationDegrees._z };
+            const float3 degrees      = poseBone._rotation.degrees();
+            float32      arrDegree[3] = { degrees._x, degrees._y, degrees._z };
             ImGui::SetNextItemWidth( fieldWidth );
             if ( EditorWidgets::dragFloat3( SW_WIDGET_ID( "##Rotation" ), arrDegree, Internal::kPoseDragSpeed, -Internal::kPoseDegreeLimit, Internal::kPoseDegreeLimit, "%.1f" ) )
             {
-                poseBone._rotationDegrees = float3{ arrDegree[0], arrDegree[1], arrDegree[2] };
-                bDragged                  = true; // 끄는 동안 미리보기가 바로 바뀐다 — 되돌리기 단계는 놓을 때 한 번
+                poseBone._rotation = EulerAngles::fromDegrees( float3{ arrDegree[0], arrDegree[1], arrDegree[2] } );
+                bDragged           = true; // 끄는 동안 미리보기가 바로 바뀐다 — 되돌리기 단계는 놓을 때 한 번
             }
             if ( ImGui::IsItemDeactivatedAfterEdit() )
                 bChanged = true;
@@ -557,7 +559,7 @@ namespace sw::editor
         ImGui::BeginDisabled( bBoneUsable == false );
         if ( ImGui::Button( SW_LOCKEY( "EdPlugin", "AddBoneTurn" ) ) )
         {
-            listPose.push_back( RetargetPoseBone{ newBone, float3{} } );
+            listPose.push_back( RetargetPoseBone{ newBone, EulerAngles{} } );
             bChanged = true;
         }
         ImGui::EndDisabled();

@@ -24,18 +24,6 @@ namespace sw
 
     WalletComponent::~WalletComponent() = default;
 
-    void WalletComponent::onRegister( GameObjectManager& manager )
-    {
-        Component::onRegister( manager );
-        manager.getComponentRegistry().add<WalletComponent>( this );
-    }
-
-    void WalletComponent::onUnregister( GameObjectManager& manager )
-    {
-        manager.getComponentRegistry().remove<WalletComponent>( this );
-        Component::onUnregister( manager );
-    }
-
     void WalletComponent::serializeState( StateIO& io )
     {
         _restore.serialize( io, kStateTag, kStateVersion, _wallet, "the wallet" );

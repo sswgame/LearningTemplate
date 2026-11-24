@@ -67,6 +67,7 @@ namespace sw
     {
     public:
         REFLECT_BODY();
+        SW_REGISTERED_COMPONENT( ControllerComponent );
 
         ControllerComponent();
         ~ControllerComponent() override = default;

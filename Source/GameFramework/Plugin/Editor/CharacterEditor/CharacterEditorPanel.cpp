@@ -1149,7 +1149,12 @@ namespace sw::editor
                 EditorWidgets::drawPropertyRowLabel( SW_LOCKEY( "EdPlugin", "LayerScale" ), SW_LOCKEY( "EdPlugin", "LayerScaleTooltip" ) );
                 bChanged = EditorWidgets::dragFloat2( SW_WIDGET_ID( "##scale" ), &value._scale._x, CharacterEditorPanelInternal::kDragSpeed, SkinLayerValue::kMinScale, SkinLayerValue::kMaxScale ) || bChanged;
                 EditorWidgets::drawPropertyRowLabel( SW_LOCKEY( "EdPlugin", "LayerRotation" ), SW_LOCKEY( "EdPlugin", "LayerRotationTooltip" ) );
-                bChanged     = EditorWidgets::dragFloat( SW_WIDGET_ID( "##rotation" ), &value._rotationDegrees, CharacterEditorPanelInternal::kRotationDragSpeed, -SkinLayerValue::kMaxRotation, SkinLayerValue::kMaxRotation ) || bChanged;
+                float32 rotationDegrees = value._rotation.degrees();
+                if ( EditorWidgets::dragFloat( SW_WIDGET_ID( "##rotation" ), &rotationDegrees, CharacterEditorPanelInternal::kRotationDragSpeed, -SkinLayerValue::kMaxRotation, SkinLayerValue::kMaxRotation ) )
+                {
+                    value._rotation = Radians::fromDegrees( rotationDegrees );
+                    bChanged        = true;
+                }
                 bool bMirror = value._bMirror == SW_TRUE;
                 if ( ImGui::Checkbox( SW_LOCKEY( "EdPlugin", "LayerMirror" ), &bMirror ) )
                 {

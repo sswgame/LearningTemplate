@@ -232,28 +232,4 @@ namespace sw
     SW_AUTOMATION_QUERY_WATCH( westernPelts, "Western.Pelts", "Pelts held by the western game mode on target", &WesternOutlawWatchesInternal::readPelts, true, false );
     SW_AUTOMATION_QUERY_WATCH( westernStaminaCore, "Western.StaminaCore", "Stamina core (0..100) of the western game mode on target", &WesternOutlawWatchesInternal::readStaminaCore, true, false );
     SW_AUTOMATION_QUERY_WATCH( westernWarmth, "Western.Warmth", "Warmth of the clothes worn on the western game mode on target", &WesternOutlawWatchesInternal::readWarmth, true, false );
-
-    void WesternWitnessComponent::onRegister( GameObjectManager& manager )
-    {
-        Component::onRegister( manager );
-        manager.getComponentRegistry().add<WesternWitnessComponent>( this );
-    }
-
-    void WesternWitnessComponent::onUnregister( GameObjectManager& manager )
-    {
-        manager.getComponentRegistry().remove<WesternWitnessComponent>( this );
-        Component::onUnregister( manager );
-    }
-
-    void WesternDeedComponent::onRegister( GameObjectManager& manager )
-    {
-        Component::onRegister( manager );
-        manager.getComponentRegistry().add<WesternDeedComponent>( this );
-    }
-
-    void WesternDeedComponent::onUnregister( GameObjectManager& manager )
-    {
-        manager.getComponentRegistry().remove<WesternDeedComponent>( this );
-        Component::onUnregister( manager );
-    }
 } // namespace sw
