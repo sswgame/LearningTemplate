@@ -111,6 +111,7 @@ SW_TEST_CASE( GameFlowTest, FailedSaveWithoutUISystem )
 /** @brief [GameFlowTest] 타이틀 씬이 활성인 동안 세이브가 막힌다 — 타이틀을 저장하면 이어 하기가 타이틀을 연다. 다른 씬이 서면 풀린다 */
 SW_TEST_CASE( GameFlowTest, SavingIsBlockedOnTheTitleScene )
 {
+    SW_EXPECT_LOG( "GameSceneFlow.TravelDuringSessionTravel" ); // 플레이어가 고른 이동이 도는 동안의 게임 이동
     const test::ScopedScratchDomain domain;
     SceneManager                    sceneManager;
     SW_REQUIRE_NOT_NULL( sceneManager.createEmptyActiveScene( "Title" ) );

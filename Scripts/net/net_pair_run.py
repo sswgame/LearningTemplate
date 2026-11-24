@@ -154,7 +154,9 @@ _MMO_PAWN_SCENARIOS = (("game/playground/automation/netpair/hub_walk_north.scena
                        ("game/playground/automation/netpair/hub_walk_south.scenario.xml", "hub_south"))
 _MMO_PAWN_EMULATION = {"gv_netEmulationLatencyMs": "60", "gv_netEmulationJitterMs": "10", "gv_netEmulationLossPercent": "3"}
 _MMO_ACCEPTED = re.compile(r"entered the hub as avatar \d+ on connection \d+ \(level (\d+), (new account|stored progress)\)")
-_MMO_FLOOR = re.compile(r"\[Hub\] floor self=(\d+) x=(-?[\d.]+) z=(-?[\d.]+) seen=(\d+) x=(-?[\d.]+) z=(-?[\d.]+)")
+# 0 에 가까운 좌표는 지수로 적힌다(-1.4305115e-06)
+_COORD = r"(-?[\d.]+(?:e[+-]?\d+)?)"
+_MMO_FLOOR = re.compile(rf"\[Hub\] floor self=(\d+) x={_COORD} z={_COORD} seen=(\d+) x={_COORD} z={_COORD}")
 _MMO_FLOOR_TOLERANCE = 0.3  # 바닥 위에 선 자리(m) - 절대 자리로 보내면 보간 지연만큼 어긋난다
 _MMO_STATUS = r"-> hub: avatar \d+ level"  # 시나리오의 `hub.status` 답 — 첫 줄은 서버가 하위 레벨에 들어갈 차례, 둘째 줄은 나올 차례다
 _MMO_SUBLEVEL_ENTER, _MMO_SUBLEVEL_LEAVE = "minigame.enter cardtable CardTableGate", "minigame.leave"  # 들어가는 것은 서버뿐이다(클라이언트 월드의 진입은 거절된다)
@@ -258,7 +260,7 @@ _MATCH_DOWNED = re.compile(r"\[Shooter\] you were overrun")
 _FLOOR_MINIGAME = "shooter3d_floormatch"  # 움직이는 바닥 맵의 매치 - 매칭 모드(floor_solo)의 서버 종류가 아레나와 다르다
 _FLOOR_SERVER_KIND = "floor"
 _FLOOR_ENTERED = re.compile(r"Minigame 'shooter3d_floormatch' is entered")
-_FLOOR_STATUS = re.compile(r"\[Shooter\] floor self=(\d+) x=(-?[\d.]+) z=(-?[\d.]+) seen=(\d+) x=(-?[\d.]+) z=(-?[\d.]+)")
+_FLOOR_STATUS = re.compile(rf"\[Shooter\] floor self=(\d+) x={_COORD} z={_COORD} seen=(\d+) x={_COORD} z={_COORD}")
 _FLOOR_TOLERANCE = 0.3  # 바닥 위에 선 자리(m) - 절대 자리로 보내면 보간 지연만큼 어긋난다
 _MATCH_BORN_AGAIN = re.compile(r"\[Shooter\] a player is born again")
 

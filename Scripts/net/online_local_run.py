@@ -3,7 +3,7 @@
 
   py -3 -m Scripts online-local run                                   # 기본: Playground, 메모리 저장소
   py -3 -m Scripts online-local run --server-config <서버 설정 경로>   # 저장소 · 캐시 · 키트 · 제공자를 그 설정이 고른다(sqlite · postgres · resp 도 같은 길)
-  py -3 -m Scripts online-local people                                 # 서버 하나 · 클라이언트 둘: 친구 신청 → 수락, 금화 거래 정산 → 모자란 거래는 실패
+  py -3 -m Scripts online-local people                                 # 서버 하나 · 클라이언트 둘: 친구 신청 → 수락, 금화 거래 정산 → 모자란 거래는 잠글 때 거절
   py -3 -m Scripts online-local check <서버 로그> <클라이언트 로그>     # 이미 있는 두 로그만 판정한다
 
 설정은 코드가 만들지 않고 파일을 그대로 쓴다(`Config/Server/Online/<게임>.json` 과 옆 `.online.json`). 저장 키트(`GF_Server_SQLStore` · `GF_Server_CacheStore`)는 Playground 매니페스트가 켠다(`_listModuleOverride`).
@@ -127,7 +127,8 @@ _MAIL_STORED = re.compile(r"self mail is stored")
 _TRADE_INVITED = re.compile(r"trade \d+ is Invited")
 _TRADE_OPEN = re.compile(r"trade \d+ is Open")
 _TRADE_DONE = re.compile(r"trade \d+ is Settled")
-_TRADE_FAILED = re.compile(r"trade \d+ is Failed")
+_TRADE_SHORT = re.compile(r"trade call refused \(error 0, result 10\)")  # TradeResult::InsufficientFunds
+_TRADE_CANCELLED = re.compile(r"trade \d+ is Cancelled")
 _ONE_MAIL = re.compile(r"online mail list: 1 mails")
 
 
@@ -136,8 +137,8 @@ def _send(client: ChildProcess, line: str) -> None:
     time.sleep(0.5)  # 다음 명령이 앞 명령의 답(제시 판 · 잠금) 뒤에 서버에 닿게 한다
 
 
-def _trade(first: ChildProcess, second: ChildProcess, gold: int, result: re.Pattern[str]) -> list[str]:
-    """첫째가 금화 @p gold 를 내놓는 거래 하나 — 신청 → 수락 → 제시 → 잠금 → 확정. 두 쪽 모두 @p result 로 끝나야 한다."""
+def _offer_gold(first: ChildProcess, second: ChildProcess, gold: int) -> list[str]:
+    """첫째가 거래를 열고 금화 @p gold 를 내놓는다 — 신청 → 수락 → 제시."""
     _send(first, f"playground.online.trade invite {_PEER_NAME}")
     if not second.wait_for(_TRADE_INVITED, _TIMEOUT_SECONDS):
         return ["the second client never got the trade invite"]
@@ -145,10 +146,26 @@ def _trade(first: ChildProcess, second: ChildProcess, gold: int, result: re.Patt
     if not first.wait_for(_TRADE_OPEN, _TIMEOUT_SECONDS):
         return ["the trade never opened"]
     _send(first, f"playground.online.trade offer {gold}")
+    return []
+
+
+def _complete_trade(first: ChildProcess, second: ChildProcess, gold: int) -> list[str]:
+    """가진 만큼의 거래 — 잠금 → 확정. 두 쪽 모두 정산을 본다."""
+    problems = _offer_gold(first, second, gold)
     for verb in ("lock", "confirm"):
         for client in (first, second):
             _send(client, f"playground.online.trade {verb}")
-    return [f"the {client.name} log never saw the trade end as expected ({result.pattern})" for client in (first, second) if not client.wait_for(result, _TIMEOUT_SECONDS)]
+    return problems + [f"the {client.name} log never saw the trade settle" for client in (first, second) if not client.wait_for(_TRADE_DONE, _TIMEOUT_SECONDS)]
+
+
+def _short_trade(first: ChildProcess, second: ChildProcess, gold: int) -> list[str]:
+    """모자란 거래 — 서버가 잠글 때 잔액을 보고 거절한다. 물리면 두 쪽 모두 취소를 본다."""
+    problems = _offer_gold(first, second, gold)
+    _send(first, "playground.online.trade lock")
+    if not first.wait_for(_TRADE_SHORT, _TIMEOUT_SECONDS):
+        problems.append("locking the short trade was not refused for insufficient funds")
+    _send(first, "playground.online.trade cancel")
+    return problems + [f"the {client.name} log never saw the short trade cancelled" for client in (first, second) if not client.wait_for(_TRADE_CANCELLED, _TIMEOUT_SECONDS)]
 
 
 def _run_people(argument: argparse.Namespace) -> int:
@@ -189,7 +206,7 @@ def _run_people(argument: argparse.Namespace) -> int:
                 _send(client, "playground.online.friend list")
                 if not client.wait_for(_ONE_FRIEND, _TIMEOUT_SECONDS):
                     problems.append(f"the {client.name} friend list never showed the one friend")
-            # 거래 — 금화를 우편으로 받고, 가진 만큼은 정산되며 모자란 거래는 아무것도 옮기지 않고 실패한다
+            # 거래 — 금화를 우편으로 받고, 가진 만큼은 정산되며 모자란 거래는 잠글 때 거절된다
             server.send("playground.online.sendmail 100 playground_dev")
             if not server.wait_for(_MAIL_STORED, _TIMEOUT_SECONDS):
                 problems.append("the server did not store the gold mail")
@@ -198,8 +215,8 @@ def _run_people(argument: argparse.Namespace) -> int:
                 problems.append("the gold mail never reached the first client")
             _send(first, "playground.online.claimall")
             time.sleep(1.0)
-            problems += _trade(first, second, 40, _TRADE_DONE)
-            problems += _trade(first, second, 100, _TRADE_FAILED)
+            problems += _complete_trade(first, second, 40)
+            problems += _short_trade(first, second, 100)
             time.sleep(1.0)  # 늦게 나는 경고도 잡는다
         except OSError:
             return group.fail("a client exited before it took the commands")
@@ -211,7 +228,7 @@ def _run_people(argument: argparse.Namespace) -> int:
     for process in (server, *list_client):
         problems += problem_lines(process.name, process.text(), _ALLOWED_PROBLEM)
     return report("online-local", problems, [server.log, *(client.log for client in list_client)],
-                  "friend request -> accept -> list, gold trade settled, short trade failed, no unexpected errors or warnings")
+                  "friend request -> accept -> list, gold trade settled, short trade refused, no unexpected errors or warnings")
 
 
 def _print(result: CheckResult, server_log: Path, client_log: Path) -> int:
