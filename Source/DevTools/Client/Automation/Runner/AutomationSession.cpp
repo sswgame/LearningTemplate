@@ -117,6 +117,7 @@ namespace sw
         , _startWindowWidth{ 0 }
         , _startWindowHeight{ 0 }
         , _listStartVariable{}
+        , _stageFingerprint{}
         , _reproduceInput{}
         , _screenshotBaseline{ 0 }
         , _bUnattended{ SW_FALSE }
@@ -374,16 +375,48 @@ namespace sw
             if ( bLaterStage )
             {
                 IGameRestarter* const pRestarter = engine::findSubsystem<IGameRestarter>();
-                if ( pRestarter == nullptr || pRestarter->restartGame( {} ) == false )
+                string                leak;
+                const auto            onInstanceEnded = SW_DELEGATE_LAMBDA( IGameRestarter::GameInstanceEndedDelegate, [this, &leak]()
+                           {
+                    leak = findStageStateLeak();
+                } );
+                if ( pRestarter == nullptr || pRestarter->restartGame( onInstanceEnded ) == false )
                 {
                     _pRunner->finish( AutomationRunResult::failed( AutomationFailureKind::Assertion,
                                                                    pRestarter == nullptr ? "this host cannot restart the game for a later chain stage" : "the game could not be restarted for this stage", {} ) );
                     return;
                 }
+                if ( leak.empty() == false )
+                {
+                    StringBuilder<constant::buffer::kMax1024> reason;
+                    reason.appendFormat( "stage '%#' left state behind - %#", _runStatus._previousStageName, leak );
+                    SW_LOG_ERROR_ID( "AutomationSession.StageStateLeak", "[Scenario] %#", reason.view() );
+                    _pRunner->finish( AutomationRunResult::failed( AutomationFailureKind::StageStateLeak, reason.view(), {} ) );
+                    return;
+                }
+            }
+            else
+            {
+                (void)findStageStateLeak(); // 첫 단계는 기준을 찍을 뿐이다
             }
             if ( startScene.empty() == false )
                 _pRunner->requireStartScene( startScene );
         }
+    }
+
+    string AutomationSession::findStageStateLeak()
+    {
+        const bool                 bFirstStage = _pChain->getStageIndex() == 0;
+        AutomationStageFingerprint current     = AutomationStageFingerprint::capture( bFirstStage == false && _reproduceInput._bEditor == false );
+        const vector<string>       listLeak    = bFirstStage ? vector<string>{} : AutomationStageFingerprint::describeLeaks( _stageFingerprint, current );
+        _stageFingerprint                      = std::move( current );
+        StringBuilder<constant::buffer::kMax512> text;
+        for ( const string& leak : listLeak )
+        {
+            text.append( text.view().empty() ? "" : "; " );
+            text.append( leak );
+        }
+        return string( text.view() );
     }
 
     void AutomationSession::removeStartValue( string_view name, string_view value )

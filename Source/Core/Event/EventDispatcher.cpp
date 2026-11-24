@@ -168,6 +168,17 @@ namespace sw
         return pMulticast;
     }
 
+    size_t EventDispatcher::getSubscriberCount() const
+    {
+        ScopedLock<SpinLock> lock{ _busSpinLock };
+        size_t               count = 0;
+        for ( const auto& [key, pMulticast] : _mapChannelDispatchTable )
+        {
+            count += pMulticast->getCount();
+        }
+        return count;
+    }
+
     void EventDispatcher::resetGameInstanceState( GameInstanceBoundary boundary )
     {
         if ( boundary != GameInstanceBoundary::Ended )

@@ -50,6 +50,7 @@ namespace sw
         LoadError,       ///< 읽기 · 검사 · 준비가 졌다(시작하지 않았다)
         Hang,            ///< 프레임이 멈췄다(행 감시)
         RepeatedFailure, ///< 같은 실패가 되풀이되어 체인을 멈췄다
+        StageStateLeak,  ///< 앞 단계가 프로세스에 상태를 남겼다(시작하지 않았다) — 까닭이 무엇인지 댄다
     };
 
     /**
@@ -174,6 +175,7 @@ namespace sw
                 case AutomationFailureKind::GoldenMismatch:
                 case AutomationFailureKind::MissingBaseline:
                 case AutomationFailureKind::RepeatedFailure:
+                case AutomationFailureKind::StageStateLeak:
                     return AutomationResult::Failed;
             }
             return AutomationResult::Failed;

@@ -186,6 +186,9 @@ namespace sw
             return count;
         }
 
+        /** @brief 모든 채널의 구독 수를 반환합니다. */
+        size_t getSubscriberCount() const;
+
     private:
         /**
          * @brief 큐를 비우는(processEvents 하는) 스레드를 현재 스레드로 정합니다. `processEvents` 가 부릅니다.
