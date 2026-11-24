@@ -123,26 +123,31 @@ namespace sw
         _bGrowPending = SW_FALSE;
     }
 
-    void RealtimeProbeAccumulation::advance( bool bReset, bool bMoved, uint32 motionGapFrames )
+    void RealtimeProbeAccumulation::advance( bool bReset, bool bChanged, bool bStable )
     {
         if ( bReset )
             _framesSinceReset = 0;
-        if ( bMoved )
+        if ( bChanged )
         {
-            if ( _framesSinceMotion > motionGapFrames )
-                _motionFrames = 0; // 멈춰 있다가 새로 움직인다
-            _framesSinceMotion = 0;
+            if ( bStable || _framesSinceChange > _longestGap )
+            {
+                _longestGap       = bStable ? 1u : _framesSinceChange; // 정착했으면 앞 틈을 잊고, 아니면 이 틈을 배운다
+                _longestInnerGap  = 1;
+                _framesSinceStart = 0;
+            }
+            else
+                _longestInnerGap = MathUtil::max( _longestInnerGap, _framesSinceChange );
+            _framesSinceChange = 0;
         }
-        _bMoving = bMoved ? SW_TRUE : SW_FALSE;
         ++_framesSinceReset;
-        ++_motionFrames;
-        if ( _framesSinceMotion != constant::invalid_index::kUint32 )
-            ++_framesSinceMotion;
+        ++_framesSinceStart;
+        if ( _framesSinceChange != constant::invalid_index::kUint32 )
+            ++_framesSinceChange;
     }
 
     uint32 RealtimeProbeAccumulation::getAccumulatedFrames() const
     {
-        return MathUtil::min( _framesSinceReset, _bMoving == SW_TRUE ? _motionFrames : _framesSinceMotion );
+        return MathUtil::min( _framesSinceReset, _framesSinceChange <= _longestInnerGap ? _framesSinceStart : _framesSinceChange );
     }
 
     RealtimeProbeLayout RealtimeProbeUpdater::planLayout( const vector<RealtimeProbeRequest>& listRequest, const RealtimeProbeHistoryAllocator& history )
@@ -268,8 +273,37 @@ namespace sw
         return rows;
     }
 
+    vector<float4> RealtimeProbeUpdater::makeInputRows( const vector<RealtimeProbeRequest>& listRequest, const SH9Color& sky, vector_reference<const GPULight> lights )
+    {
+        vector<float4> rows;
+        for ( uint32 coefficientIndex = 0; coefficientIndex < SH9Color::kCoefficientCount; coefficientIndex += 3u ) // 계수 아홉 × RGB
+        {
+            rows.push_back( float4{ sky._arrCoefficient[coefficientIndex], sky._arrCoefficient[coefficientIndex + 1u], sky._arrCoefficient[coefficientIndex + 2u], 0.0f } );
+        }
+        for ( const RealtimeProbeRequest& request : listRequest )
+        {
+            const GPULight& element = request._volumeElement;
+            rows.push_back( float4{ element._colorIntensity._x, element._colorIntensity._y, element._colorIntensity._z, request._bounceAlbedo } );
+            rows.push_back( float4{ element._directionType._x, element._directionType._y, element._directionType._z, request._emissiveIntensity } );
+            rows.push_back( float4{ element._params._x, element._params._y, element._params._z, 0.0f } );
+        }
+        const size_t lightCount = MathUtil::min( static_cast<size_t>( lights.size() ), static_cast<size_t>( shaderslot::kProbeMaxDirectLights ) );
+        for ( size_t lightIndex = 0; lightIndex < lightCount; ++lightIndex )
+        {
+            const GPULight& light     = lights[lightIndex];
+            const uint32    lightType = RealtimeProbeUpdaterInternal::toCount( light._directionType._w );
+            if ( lightType != shaderslot::kLightTypeDirectional && lightType != shaderslot::kLightTypePoint && lightType != shaderslot::kLightTypeSpot )
+                continue; // 광선이 닿은 면을 비추지 않는다(probe_update.hlsl computeIncidence)
+            rows.push_back( light._positionRadius );
+            rows.push_back( light._colorIntensity );
+            rows.push_back( light._directionType );
+            rows.push_back( float4{ light._params._y, light._params._z, 0.0f, 0.0f } );
+        }
+        return rows;
+    }
+
     void RealtimeProbeUpdater::prepare( IRHIDevice* pDevice, const vector<RealtimeProbeRequest>& listRequest, const GPULightBuffer& lightBuffer, const SkyGradient& sky, bool bHasSky,
-                                        bool bPipelineReady, bool bCreateMissingMeshes )
+                                        bool bPipelineReady, bool bCreateMissingMeshes, float32 stableError )
     {
         _bActive = SW_FALSE;
         if ( pDevice == nullptr || listRequest.empty() )
@@ -292,9 +326,9 @@ namespace sw
         const uint32              float4Stride = static_cast<uint32>( sizeof( float4 ) );
 
         // 복셀 - 장면 포인터가 달라진 볼륨의 바뀐 구간만 다시 칠한다(컴포넌트가 같은 장면을 캐시로 돌려준다).
-        bool bReset          = false; // 정적 가리개가 바뀌었거나 기록을 0 에서 시작한다 — 정착을 처음부터 센다
-        bool bOccludersMoved = false;
-        if ( prepareVoxelPaint( pDevice, listRequest, layout, bCreateMissingMeshes, bReset, bOccludersMoved ) == false )
+        bool bReset   = false; // 기록을 0 에서 시작한다 — 정착을 처음부터 센다
+        bool bChanged = false; // 기록이 향하는 입력이 앞 프레임과 다르다
+        if ( prepareVoxelPaint( pDevice, listRequest, layout, bCreateMissingMeshes, bChanged ) == false )
             return;
 
         // 기록 - 볼륨 정체마다 구간이다. 용량이 늘었거나 버퍼가 없으면 통째로 0 에서, 아니면 새로 든 볼륨의 구간만 0 으로 채운다(서 있는 볼륨은 누적을 잇는다).
@@ -329,8 +363,9 @@ namespace sw
         {
             listWarmup.push_back( _historyAllocator.getFramesSinceReset( requestIndex ) / MathUtil::max( listRequest[requestIndex]._updatePeriod, 1u ) );
         }
-        _listRowScratch       = makeParamRows( listRequest, layout, listWarmup, projectSky( sky, bHasSky ), _frameCounter, lightBuffer.getGPULightBase() );
-        const uint32 rowCount = static_cast<uint32>( _listRowScratch.size() );
+        const SH9Color skyColor = projectSky( sky, bHasSky );
+        _listRowScratch         = makeParamRows( listRequest, layout, listWarmup, skyColor, _frameCounter, lightBuffer.getGPULightBase() );
+        const uint32 rowCount   = static_cast<uint32>( _listRowScratch.size() );
         if ( _paramBuffer.ensureCapacity( pDevice, float4Stride, rowCount, Internal::kReadUsage, true, false, nullptr ) == false )
         {
             SW_LOG_ERROR_ID( "RealtimeProbeUpdater.FailedCreateProbeUpdate", "Failed to create the probe update parameter buffer - realtime light probes do not update" );
@@ -341,22 +376,20 @@ namespace sw
         _totalProbes = layout._totalProbes;
         ++_frameCounter;
         _historyAllocator.advanceFrame();
-        uint32 motionGapFrames = 1;
-        for ( const RealtimeProbeRequest& request : listRequest )
-        {
-            motionGapFrames = MathUtil::max( motionGapFrames, request._updatePeriod );
-        }
-        _accumulation.advance( bReset, bOccludersMoved, motionGapFrames );
+        vector<float4> listInputRow = makeInputRows( listRequest, skyColor, lightBuffer.getUploadedLights() );
+        bChanged                    = bChanged || listInputRow.size() != _listInputRow.size() ||
+                   Memory::compare( listInputRow.data(), _listInputRow.data(), listInputRow.size() * sizeof( float4 ) ) != 0;
+        _listInputRow = std::move( listInputRow );
+        _accumulation.advance( bReset, bChanged, computeError( listRequest, _accumulation._framesSinceChange ) <= stableError );
         _error   = computeError( listRequest, _accumulation.getAccumulatedFrames() );
         _bActive = SW_TRUE;
     }
 
     bool RealtimeProbeUpdater::prepareVoxelPaint( IRHIDevice* pDevice, const vector<RealtimeProbeRequest>& listRequest, const RealtimeProbeLayout& layout, bool bCreateMissingMeshes,
-                                                  bool& outStaticChanged, bool& outMoved )
+                                                  bool& outChanged )
     {
-        using Internal   = RealtimeProbeUpdaterInternal;
-        outStaticChanged = false;
-        outMoved         = false;
+        using Internal = RealtimeProbeUpdaterInternal;
+        outChanged     = false;
         // 앞 프레임이 짠 칠하기를 기록하지 못했다(그래프가 돌지 않았다) — 무엇이 칠해졌는지 모르므로 모두 새로 칠한다.
         if ( _bPaintPending == SW_TRUE )
             _listPainted.clear();
@@ -403,8 +436,7 @@ namespace sw
         _arrVoxelThreadCount[1] = plan._paintThreadCount;
         _arrVoxelThreadCount[2] = plan._restoreThreadCount;
         _arrVoxelThreadCount[3] = plan._movingThreadCount;
-        outStaticChanged        = plan.hasStaticPaint();
-        outMoved                = plan._restoreThreadCount != 0;
+        outChanged              = plan.isEmpty() == false;
         _bPaintPending          = plan.isEmpty() ? SW_FALSE : SW_TRUE;
         return true;
     }
@@ -547,7 +579,8 @@ namespace sw
         _listPainted.clear();
         _listPendingCopy.clear();
         _historyAllocator.clear();
-        _accumulation  = RealtimeProbeAccumulation{};
+        _accumulation = RealtimeProbeAccumulation{};
+        _listInputRow.clear();
         _bActive       = SW_FALSE;
         _bPaintPending = SW_FALSE;
     }

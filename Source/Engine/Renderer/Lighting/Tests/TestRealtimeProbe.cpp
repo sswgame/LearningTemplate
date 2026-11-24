@@ -3,6 +3,7 @@
 #include "Core/Math/BitUtil.h"
 #include "Core/Math/MathUtil.h"
 #include "Core/Math/PackUtil.h"
+#include "Core/Memory/Memory.h"
 #include "Core/Name/hashed_string.h"
 #include "Core/Testing/TestFramework.h"
 
@@ -373,7 +374,7 @@ SW_TEST_CASE( SceneVoxelizerTest, MovedOccluderRepaintsOnlyItsLayer )
         const sw::SceneVoxelPaintPlan plan = sw::SceneVoxelizer::planPaint( {
             sw::SceneVoxelPaintTarget{ &current, pPainted, 0u, sw::SceneVoxelizer::kNoEmission, wordCount, sw::SceneVoxelizer::kNoEmission }
         } );
-        SW_EXPECT_EQUAL( pPainted == nullptr, plan.hasStaticPaint() );
+        SW_EXPECT_EQUAL( pPainted == nullptr, plan._clearThreadCount != 0 );
         SceneVoxelReference::executePlan( plan, words );
         const SceneVoxelReference fresh = paintWhole( sw::SceneVoxelizer::makeScene( registry, sceneOpaque.get(), bounds, 0.25f ) );
         SW_EXPECT_TRUE( sw::vector<uint32>( words.begin(), words.begin() + static_cast<ptrdiff_t>( wordCount ) ) == fresh._listWord );
@@ -779,48 +780,155 @@ SW_TEST_CASE( RealtimeProbeTest, ErrorDecaysPerUpdate )
 }
 
 /**
- * @brief [RealtimeProbeTest] 정착 진척은 되돌림부터 세고, 움직이는 동안은 움직임이 시작한 뒤, 멈추면 마지막으로 움직인 뒤부터 센다. 갱신 주기보다 짧은 틈은 이어진 움직임이다
- * @details 변이: 움직임마다 처음부터 세면 도는 물체가 있는 장면이 끝내 정착하지 않고, 움직임을 세지 않으면 막 멈춘 문의 옛 그늘이 남은 채 사진을 찍는다.
+ * @brief [RealtimeProbeTest] 정착 진척은 되돌림부터 세고, 변화가 이어지는 동안은 시작한 뒤, 멈추면 마지막 변화 뒤부터 센다
+ * @details 변이: 변화마다 처음부터 세면 도는 물체 · 깜빡이는 등이 있는 장면이 끝내 정착하지 않고, 변화를 세지 않으면 막 멈춘 문의 옛 그늘이 남은 채 사진을 찍는다.
  */
-SW_TEST_CASE( RealtimeProbeTest, AccumulationCountsFromMotion )
+SW_TEST_CASE( RealtimeProbeTest, AccumulationCountsFromChange )
 {
-    constexpr uint32              kGap = 4u;
     sw::RealtimeProbeAccumulation accumulation;
-    accumulation.advance( true, false, kGap );
+    accumulation.advance( true, true, true );
     for ( uint32 frame = 0; frame < 9u; ++frame )
     {
-        accumulation.advance( false, false, kGap );
+        accumulation.advance( false, false, false );
     }
     SW_EXPECT_EQUAL( 10u, accumulation.getAccumulatedFrames() );
 
-    // 움직이기 시작하면 1 부터, 이어지는 동안 는다(두 프레임에 한 번도 이어진 것이다).
-    for ( uint32 frame = 0; frame < 21u; ++frame )
+    // 정착한 뒤의 변화는 1 부터, 이어지는 동안 는다.
+    accumulation.advance( false, true, true );
+    SW_EXPECT_EQUAL( 1u, accumulation.getAccumulatedFrames() );
+    for ( uint32 frame = 0; frame < 20u; ++frame )
     {
-        accumulation.advance( false, frame % 2u == 0u, kGap );
-        if ( frame == 0u )
-            SW_EXPECT_EQUAL( 1u, accumulation.getAccumulatedFrames() );
+        accumulation.advance( false, true, false );
     }
     SW_EXPECT_EQUAL( 21u, accumulation.getAccumulatedFrames() );
 
-    // 멈추면 마지막으로 움직인 뒤부터 센다.
-    accumulation.advance( false, false, kGap );
+    // 멈추면 바로 마지막 변화 뒤부터 센다.
+    accumulation.advance( false, false, false );
     SW_EXPECT_EQUAL( 2u, accumulation.getAccumulatedFrames() );
     for ( uint32 frame = 0; frame < 10u; ++frame )
     {
-        accumulation.advance( false, false, kGap );
+        accumulation.advance( false, false, false );
     }
     SW_EXPECT_EQUAL( 12u, accumulation.getAccumulatedFrames() );
 
-    // 멈췄다가 다시 움직이면 새 움직임이다. 되돌림은 언제나 처음부터다.
-    accumulation.advance( false, true, kGap );
-    SW_EXPECT_EQUAL( 1u, accumulation.getAccumulatedFrames() );
-    for ( uint32 frame = 0; frame < 5u; ++frame )
+    // 정착하기 전의 다음 사건(문이 닫힌다)은 처음부터고, 멈춘 뒤에는 앞 사건과의 틈에 기대지 않는다.
+    for ( uint32 frame = 0; frame < 3u; ++frame )
     {
-        accumulation.advance( false, true, kGap );
+        accumulation.advance( false, true, false );
+        SW_EXPECT_EQUAL( frame + 1u, accumulation.getAccumulatedFrames() );
     }
-    SW_EXPECT_EQUAL( 6u, accumulation.getAccumulatedFrames() );
-    accumulation.advance( true, true, kGap );
+    accumulation.advance( false, false, false );
+    SW_EXPECT_EQUAL( 2u, accumulation.getAccumulatedFrames() );
+
+    // 되돌림은 언제나 처음부터다.
+    accumulation.advance( true, true, false );
     SW_EXPECT_EQUAL( 1u, accumulation.getAccumulatedFrames() );
+}
+
+/**
+ * @brief [RealtimeProbeTest] 드물게 되풀이하는 변화(틈이 정착 프레임보다 짧다)도 이어진 변화다 — 주기와 무관하게 정착하고 틈에서도 정착해 있다. 되풀이가 끝나면 다시 마지막 변화 뒤부터 센다
+ * @details 변이: 정한 틈(갱신 주기)만 이어진 것으로 치면 10 프레임마다 움직이는 물체가 있는 장면이 영영 정착하지 않는다.
+ */
+SW_TEST_CASE( RealtimeProbeTest, AccumulationKeepsRareRepeatedChange )
+{
+    constexpr uint32 kStabilityFrames = 120u;
+    for ( const uint32 period : { 2u, 10u, 60u, 119u } )
+    {
+        sw::RealtimeProbeAccumulation accumulation;
+        uint32                        frame      = 0;
+        const auto                    advanceOne = [&accumulation, &frame]( bool bChanged )
+        {
+            accumulation.advance( frame == 0u, bChanged, accumulation._framesSinceChange >= kStabilityFrames );
+            ++frame;
+        };
+        // 틈을 배우고(주기 하나) 이어진 변화가 시작한 뒤 정착 프레임이 지나고 다음 주기까지면 언제나 정착해 있다.
+        while ( frame < kStabilityFrames + period * 3u )
+        {
+            advanceOne( frame % period == 0u );
+        }
+        for ( uint32 step = 0; step < period * 2u; ++step )
+        {
+            advanceOne( frame % period == 0u );
+            SW_EXPECT_TRUE( accumulation.getAccumulatedFrames() >= kStabilityFrames );
+        }
+        // 멈추면 배운 틈을 넘는 프레임부터 마지막 변화 뒤를 센다.
+        while ( frame % period != 1u )
+        {
+            advanceOne( frame % period == 0u );
+        }
+        for ( uint32 still = 0; still < period; ++still )
+        {
+            advanceOne( false );
+        }
+        SW_EXPECT_EQUAL( period + 1u, accumulation.getAccumulatedFrames() );
+    }
+
+    // 틈이 들쭉날쭉해도 끝내 정착한다 — 바뀐 프레임은 이어진 변화다.
+    sw::RealtimeProbeAccumulation mixed;
+    uint32                        changeCount = 0;
+    for ( uint32 frame = 0; frame < kStabilityFrames * 4u; ++frame )
+    {
+        const bool bChanged = frame % 7u == 0u || frame % 11u == 0u;
+        mixed.advance( frame == 0u, bChanged, mixed._framesSinceChange >= kStabilityFrames );
+        if ( bChanged && frame >= kStabilityFrames * 2u )
+        {
+            ++changeCount;
+            SW_EXPECT_TRUE( mixed.getAccumulatedFrames() >= kStabilityFrames );
+        }
+    }
+    SW_EXPECT_TRUE( changeCount > 0u );
+}
+
+/**
+ * @brief [RealtimeProbeTest] 입력 행은 빛(자리 · 세기 · 색 · 원뿔 · 켜짐) · 하늘 · 볼륨 배율이 바뀌면 달라지고, 광선이 읽지 않는 값(그림자 칸 · 2D 빛 · 상한 너머의 빛)에는 그대로다
+ */
+SW_TEST_CASE( RealtimeProbeTest, InputRowsFollowLightsAndSky )
+{
+    sw::vector<sw::RealtimeProbeRequest> listRequest( 1 );
+    sw::vector<sw::GPULight>             listLight( sw::shaderslot::kProbeMaxDirectLights + 1u );
+    for ( sw::GPULight& light : listLight )
+    {
+        light._positionRadius = sw::float4{ 1.0f, 2.0f, 3.0f, 8.0f };
+        light._colorIntensity = sw::float4{ 1.0f, 1.0f, 1.0f, 2.0f };
+        light._directionType  = sw::float4{ 0.0f, -1.0f, 0.0f, static_cast<float32>( sw::shaderslot::kLightTypePoint ) };
+    }
+    listLight[1]._directionType._w = static_cast<float32>( sw::shaderslot::kLightTypePoint2D );
+    sw::float3 skyColor{ 0.1f, 0.2f, 0.3f };
+    const auto makeRows = [&listRequest, &skyColor]( const sw::vector<sw::GPULight>& lights )
+    { return sw::RealtimeProbeUpdater::makeInputRows( listRequest, sw::SH9Color::makeConstant( skyColor ), sw::vector_reference<const sw::GPULight>( lights.data(), lights.size() ) ); };
+    const sw::vector<sw::float4> rows   = makeRows( listLight );
+    const auto                   isSame = [&rows]( const sw::vector<sw::float4>& other )
+    { return rows.size() == other.size() && sw::Memory::compare( rows.data(), other.data(), rows.size() * sizeof( sw::float4 ) ) == 0; };
+
+    sw::vector<sw::GPULight> listChanged  = listLight;
+    listChanged[0]._params._x             = 1.0f; // 그림자 칸
+    listChanged[0]._params._w             = 5.0f;
+    listChanged[0]._extra                 = sw::float4{ 1.0f, 1.0f, 1.0f, 1.0f };
+    listChanged[1]._positionRadius._x     = 9.0f; // 2D 빛
+    listChanged.back()._colorIntensity._w = 9.0f; // 상한 너머
+    SW_EXPECT_TRUE( isSame( makeRows( listChanged ) ) );
+
+    listChanged                       = listLight;
+    listChanged[0]._positionRadius._y = 2.5f;
+    SW_EXPECT_FALSE( isSame( makeRows( listChanged ) ) );
+    listChanged                       = listLight;
+    listChanged[0]._colorIntensity._w = 1.0f;
+    SW_EXPECT_FALSE( isSame( makeRows( listChanged ) ) );
+    listChanged                       = listLight;
+    listChanged[0]._colorIntensity._x = 0.5f;
+    SW_EXPECT_FALSE( isSame( makeRows( listChanged ) ) );
+    listChanged               = listLight;
+    listChanged[0]._params._y = 0.5f; // 스폿 원뿔
+    SW_EXPECT_FALSE( isSame( makeRows( listChanged ) ) );
+    listChanged = listLight;
+    listChanged.resize( 3 ); // 꺼진 빛은 목록에서 빠진다
+    SW_EXPECT_FALSE( isSame( makeRows( listChanged ) ) );
+
+    skyColor._z = 0.4f;
+    SW_EXPECT_FALSE( isSame( makeRows( listLight ) ) );
+    skyColor._z                       = 0.3f;
+    listRequest[0]._emissiveIntensity = 1.0f;
+    SW_EXPECT_FALSE( isSame( makeRows( listLight ) ) );
 }
 
 /**

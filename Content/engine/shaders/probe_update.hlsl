@@ -49,7 +49,7 @@ static const uint kNoEmission     = 0xFFFFFFFFu; // RealtimeProbeUpdater::kNoEmi
 static const uint kProbeFloat4Count   = SW_LIGHT_PROBE_FLOAT4_COUNT;
 static const uint kMomentFloat4Count  = SW_PROBE_VISIBILITY_FLOAT4_COUNT;
 static const uint kHistoryFloat4Count = kProbeFloat4Count + kMomentFloat4Count; // 프로브 하나의 기록 — SH9 원시 계수 일곱 뒤에 모먼트(C++ RealtimeProbeHistoryAllocator::kFloat4PerProbe)
-static const uint kMaxDirectLights    = 8u;                                     // 닿은 면을 비추는 라이트의 상한(앞에서부터)
+static const uint kMaxDirectLights    = SW_PROBE_MAX_DIRECT_LIGHTS;             // 닿은 면을 비추는 라이트의 상한(앞에서부터)
 // 원주율은 common.hlsli 의 kPi 를 쓴다.
 static const float kSurfaceOffset   = 0.05f; // 닿은 칸 안쪽으로 파고들지 않게 면에서 띄우는 칸 크기 비율
 static const float kParallelEpsilon = 1.0e-8f;

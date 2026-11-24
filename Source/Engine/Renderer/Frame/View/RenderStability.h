@@ -11,8 +11,8 @@
  *          - 노출 오차: 기록을 버린 프레임은 측정값을 그대로 쓰므로 0 이고, 카메라가 움직인 프레임은 목표가 범위 끝까지 바뀔 수 있으므로 (최대 EV − 최소 EV) 로 되돌린다.
  *            정지 프레임마다 지수 적응의 남은 비율(1 − 다가가는 비율, 밝아짐 · 어두워짐 가운데 느린 쪽)을 곱한다 — GPU 값을 읽지 않는 상한이다. 자동 노출을 재지 않는 뷰는 해당 없음이다.
  *            카메라가 서 있어도 화면 밝기가 바뀌는 일(불이 켜짐 · 물체 등장)은 보지 않는다 — 그 경우는 시나리오가 그 사건을 먼저 기다린다.
- *          - 실시간 GI 오차: 프로브 기록이 0 에서 시작하거나 복셀(가리개)이 바뀐 뒤, 갱신마다 (1 − 섞는 비율)을 곱한 옛 기록의 남은 몫이다(볼륨 가운데 가장 큰 값 —
- *            `RealtimeProbeUpdater::computeError`). 움직이는 가리개는 멈춘 뒤의 프레임부터 세고, 멈추지 않는 것은 움직이기 시작한 뒤부터 센다(`RealtimeProbeAccumulation`). 실시간 볼륨이 없으면 해당 없음이다. 빛이 바뀌는 일은 보지 않는다(시나리오가 그 사건을 먼저 기다린다).
+ *          - 실시간 GI 오차: 프로브 기록이 0 에서 시작하거나 입력(가리개 · 발광 · 빛 · 하늘)이 바뀐 뒤, 갱신마다 (1 − 섞는 비율)을 곱한 옛 기록의 남은 몫이다(볼륨 가운데 가장 큰 값 —
+ *            `RealtimeProbeUpdater::computeError`). 변화는 멈춘 뒤의 프레임부터 세고, 이어지거나 되풀이하는 변화는 시작한 뒤부터 센다(`RealtimeProbeAccumulation`). 실시간 볼륨이 없으면 해당 없음이다.
  */
 #pragma once
 #include "Core/Foundation/Macros.h"
@@ -41,6 +41,8 @@ namespace sw
         static void publish( const RenderStabilitySample& sample );
         /** @brief 게임 스레드가 마지막으로 올린 값을 읽습니다. */
         [[nodiscard]] static RenderStabilitySample readPublished();
+        /** @brief (렌더 스레드) 실시간 GI 조건의 문턱입니다 — 갱신기가 "이미 정착했다" 를 조건과 같은 값으로 본다. 시나리오가 문턱을 싣지 않았으면 0 이다(정착을 보는 쪽이 없다). */
+        [[nodiscard]] static float32 readMaxGIError();
         /**
          * @brief TAA 정착 조건(`RenderTemporalAccumulation`)입니다 — TAA 를 돌리지 않으면 해당 없음, 카메라 정지 프레임이 @p minStillFrames 이상이면 준비됨, 아니면 진행 중(진척은 정지 프레임 수).
          * @details 카메라가 계속 움직이면 진척이 0 에 머물러 정지 시한(`_stallFrames`)에 진다 — 움직이는 카메라는 `stability="Assets"` 로 찍는다.

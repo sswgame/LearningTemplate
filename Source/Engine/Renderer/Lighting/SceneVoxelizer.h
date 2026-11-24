@@ -67,8 +67,6 @@ namespace sw
 
         /** @brief 다시 칠할 구간이 없으면 true 입니다. */
         bool isEmpty() const { return _clearThreadCount == 0 && _restoreThreadCount == 0; }
-        /** @brief 정적 층을 다시 칠하면 true 입니다(움직이는 것만 다시 칠하는 프레임은 false). */
-        bool hasStaticPaint() const { return _clearThreadCount != 0; }
     };
 
     /** @brief 씬의 메시를 복셀 장면으로 모으고 GPU 칠하기를 짜는 도구입니다(전부 static). */
