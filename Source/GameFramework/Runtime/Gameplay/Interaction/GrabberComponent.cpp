@@ -103,6 +103,9 @@ namespace sw
         const GameObject*    pOwner = getOwner();
         const PawnComponent* pPawn  = pOwner != nullptr && _grabButton.empty() == false ? pOwner->getComponent<PawnComponent>() : nullptr;
         _grabIndex                  = pPawn != nullptr ? pPawn->findButton( _grabButton ) : nullopt;
+        GameObjectManager* pManager = pOwner != nullptr ? getOwner()->getMutableManager() : nullptr;
+        if ( GameObject* const pHeld = pManager != nullptr ? pManager->resolveGameObject( _held ) : nullptr )
+            pHeld->setKeptWhenParentDestroyed( true ); // 쥔 채 되살아났다
         if ( _grabButton.empty() == false && _grabIndex.has_value() == false )
             SW_LOG_ERROR_ID( "GrabberComponent.GrabButtonNotOnPawn", "Grabber on '%#' listens to button '%#' but its object has no pawn with that button - the button does nothing",
                              pOwner != nullptr ? pOwner->getName().c_str() : "?", _grabButton.c_str() );
@@ -142,7 +145,7 @@ namespace sw
         for ( GameObject* pObject : _listTagged )
         {
             const SceneComponent* pOther = pObject != pOwner && pObject->isActiveInHierarchy() ? pObject->getPrimarySceneComponent() : nullptr;
-            if ( pOther == nullptr )
+            if ( pOther == nullptr || findHolderOf( *pObject ) != nullptr )
                 continue;
             const float32 distance = float3::getDistance( pSelf->getWorldPosition(), pOther->getWorldPosition() );
             if ( distance <= bestDistance )
@@ -186,20 +189,27 @@ namespace sw
     bool GrabberComponent::grab( GameObject& target )
     {
         GameObject* pOwner      = getOwner();
-        const bool  bCannotGrab = pOwner == nullptr || pOwner->getMutableManager() == nullptr || &target == pOwner || isHolding();
+        const bool  bCannotGrab = pOwner == nullptr || &target == pOwner || isHolding() || findHolderOf( target ) != nullptr; // 남의 손에서 빼앗으면 두 쪽이 같은 것을 쥔 줄 안다
         if ( bCannotGrab )
             return false;
-        // 남의 손에 있으면 먼저 놓게 한다 — 두 손이 같은 것을 쥔 채면 앞 손의 놓기가 뒤 손에서 떼어 낸다.
-        for ( GrabberComponent* pOther : pOwner->getMutableManager()->getComponentRegistry().getAll<GrabberComponent>() )
-        {
-            if ( pOther != this && pOther->_held == target.getHandle() )
-                (void)pOther->dropHeld();
-        }
         if ( getBackend().attach( *pOwner, target, _holdOffset ) == false )
             return false;
-        target.setKeptWhenParentDestroyed( true ); // 손에 붙어도 든 쪽의 일부가 아니다
         _held = target.getHandle();
+        target.setKeptWhenParentDestroyed( true ); // 손에 붙어도 집은 쪽의 일부가 아니다
         return true;
+    }
+
+    const GrabberComponent* GrabberComponent::findHolderOf( const GameObject& object )
+    {
+        const GameObjectManager* pManager = object.getManager();
+        if ( pManager == nullptr )
+            return nullptr;
+        for ( const GrabberComponent* pGrabber : pManager->getComponentRegistry().getAll<GrabberComponent>() )
+        {
+            if ( pGrabber->_held == object.getHandle() )
+                return pGrabber;
+        }
+        return nullptr;
     }
 
     bool GrabberComponent::throwHeld( const float3& velocity )

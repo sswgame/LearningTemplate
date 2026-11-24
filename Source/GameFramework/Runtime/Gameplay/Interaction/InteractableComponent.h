@@ -166,7 +166,7 @@ namespace sw
         PROPERTY( Category = "Interaction", DisplayName = "Enabled" )
         bool _bEnabled;
 
-        InteractionDef                               _overrideDef;
+        shared_ptr<const InteractionDef>             _pOverrideDef;
         shared_ptr<const InteractionCatalog>         _pCatalog; ///< `_pDef` 가 든 공유 테이블(쥔 동안 산다)
         const InteractionDef*                        _pDef;
         AssetReloadWatch<InteractionCatalog>         _catalogReload;    ///< 정의를 찾았을 때의 `SharedAssetCache<InteractionCatalog>::getReloadCount` 값. 달라지면 다시 찾는다

@@ -256,7 +256,7 @@ namespace sw
         return _outputPose;
     }
 
-    void CameraDirector::setPostProcessOverlay( const GameObjectHandle& source, const PostProcessValues& values, float32 weight )
+    void CameraDirector::setPostProcessOverlay( const ComponentHandle& source, const PostProcessValues& values, float32 weight )
     {
         for ( size_t index = 0; index < _listPostProcessOverlay.size(); ++index )
         {

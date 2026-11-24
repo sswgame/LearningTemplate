@@ -5,6 +5,7 @@
 #include "Core/Testing/TestFramework.h"
 
 #include "Engine/Content/Tests/ScopedScratchDomain.h"
+#include "Engine/Foundation/EngineServices.h"
 #include "Engine/Object/Component/SceneComponent.h"
 #include "Engine/Object/Component/Tests/StateHashTestComponent.h"
 #include "Engine/Object/GameObject/GameObject.h"
@@ -14,6 +15,7 @@
 #include "Engine/Scene/Scene.h"
 #include "Engine/Scene/SceneDataLayerSubsystem.h"
 #include "Engine/Scene/SceneDocument.h"
+#include "Engine/Serialization/Inherit/ResourceTags.h"
 #include "Engine/Serialization/XML/XMLDocument.h"
 
 using namespace sw;
@@ -279,6 +281,26 @@ SW_TEST_CASE( SceneAssemblyTest, DataLayerLoadsOnlyWhenActive )
     SW_EXPECT_TRUE( pNightSnow == nullptr || pNightSnow->isPendingDestroy() );
     const GameObject* pSnow = objects.findGameObjectByName( hashed_string( "Snow" ) );
     SW_EXPECT_TRUE( pSnow != nullptr && pSnow->isPendingDestroy() == false ); // Winter 는 켜져 있다
+}
+
+/** @brief [SceneAssemblyTest] 다음 씬을 올린 뒤 앞 씬을 내려도 다음 씬의 켜진 레이어 태그가 남는다 — 씬마다 제 몫만 거둔다 */
+SW_TEST_CASE( SceneAssemblyTest, UnloadedSceneKeepsTheNextScenesLayerTags )
+{
+    const test::ScopedScratchDomain domain;
+    Util::write( domain, "tagged.scene.xml",
+                 Util::makeScene( "Tagged", { Util::makeEntity( "1", "Always", "0,0,0" ) }, "<_listDataLayer><SceneDataLayerDef _name=\"TagWinter\" _bInitiallyActive=\"true\" /></_listDataLayer>" ) );
+    SceneDocument doc{};
+    SW_REQUIRE_TRUE( doc.loadXMLFromDiskFile( domain.makeDiskPath( "tagged.scene.xml" ) ) );
+    const ResourceTags& tags = engine::getSubsystem<ResourceTags>();
+
+    unique_ptr<Scene> previous = make_unique<Scene>( "Previous" );
+    SW_REQUIRE_TRUE( previous->instantiate( doc ) );
+    unique_ptr<Scene> next = make_unique<Scene>( "Next" ); // 비동기 로드 순서 — 다음 씬이 다 선 뒤 앞 씬이 내려간다
+    SW_REQUIRE_TRUE( next->instantiate( doc ) );
+    previous.reset();
+    SW_EXPECT_TRUE( tags.capture().contains( "layer.TagWinter" ) );
+    next.reset();
+    SW_EXPECT_FALSE( tags.capture().contains( "layer.TagWinter" ) );
 }
 
 /** @brief [SceneAssemblyTest] 선언하지 않은 레이어는 오류다 — 엔티티에 적어도, 켜려 해도 */

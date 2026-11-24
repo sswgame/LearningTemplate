@@ -118,6 +118,11 @@ namespace sw
         /** @brief 셀 짓기(`continueCellBuild`)가 지은 오브젝트를 함께 내려가는 것(`collectCellGroup` — 중첩 프리팹 부품 · 붙은 자손)까지 지우고 파일 id · 프리팹 기록을 뺍니다. */
         void unloadCell( const vector<uint64>& listObjectID );
         /**
+         * @brief 루트 @p root 와 자손을 셀 · 데이터 레이어 묶음 · 하위 레벨에서 빼고 늘 올라 있게 합니다 — 그 단위가 내려가도 남습니다(씬 전환을 넘는 오브젝트, `SceneManager::markPersistent`).
+         * @details 유니티 `DontDestroyOnLoad` 가 오브젝트를 원래 씬에서 떼어 내는 자리다. 뺀 뒤에도 파일 id 는 그대로다.
+         */
+        void releaseFromParts( GameObject& root );
+        /**
          * @brief 오브젝트(@p listObjectID — 셀 짓기가 지은 것 · 셀로 옮겨 온 것)의 지금 상태를 셀 엔티티로 씁니다(비우고 채웁니다). 스트리밍이 셀을 내리기 전 · 세이브에 실을 때 부르고, 다시 올릴 때 이것으로 짓는다(셀 상태 보존).
          * @details 함께 내려가는 것(`collectCellGroup` — 중첩 프리팹 부품 · 플레이 중 붙인 자손)도 저마다 엔티티로 뜨고, 다시 지을 때 부품을 프리팹에서 다시 스폰하지 않는다 — 부품의 런타임 칸 · PROPERTY 밖 상태 · 지운 부품이
          *          그대로 돌아온다(언리얼 레벨 스트리밍은 차일드 액터도 레벨의 액터로 남긴다). 파일 id 가 없던 것은 여기서 받는다.

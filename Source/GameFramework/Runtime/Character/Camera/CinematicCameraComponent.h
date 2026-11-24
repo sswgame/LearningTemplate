@@ -84,6 +84,7 @@ namespace sw
 
         GameObjectHandle _currentCutCamera;   ///< 지금 화면을 덮는 컷 카메라
         Subscription     _signalSubscription; ///< 시퀀스 플레이어의 카메라 신호 구독
+        Subscription     _pendingView;        ///< 카메라 매니저에 예고한 대기 뷰(컷이 오거나 재생이 끝나면 푼다)
         Subscription     _saveBlock;          ///< 시네마틱 동안 든 세이브 막기(끝 · 플레이 끝에서 놓는다)
     };
 } // namespace sw

@@ -73,9 +73,9 @@ namespace sw
         void update( float32 deltaTime ) override;
         /** @brief 미리보기 정책의 오디오 켜기(`ScenePreviewPolicy::_bAudio`)를 따릅니다 — 미리보기 창이 게임의 소리를 흔들지 않게. */
         void applyPreviewPolicy( const ScenePreviewPolicy& policy ) override;
-        /** @brief 씬을 비울 때 부릅니다. 등록은 컴포넌트가 스스로 풀므로 할 일이 없습니다. */
-        void onSceneCleared() override {}
-        /** @brief 리스너의 지난 자리를 옮깁니다. */
+        /** @brief 씬을 비울 때 부릅니다. 엔진에 걸어 둔 것(리스너 칸 · 리버브 존 스냅샷)을 내립니다. 등록은 컴포넌트가 스스로 푼다. */
+        void onSceneCleared() override;
+        /** @brief 리스너의 지난 자리와 엔진이 든 자리(리스너 · 에미터 — 끝까지 나는 한 번짜리 소리 포함)를 옮깁니다. */
         void onWorldOriginShifted( const float3& delta ) override;
 
         /** @brief 쓸 엔진을 정합니다(테스트). nullptr 이면 생성자로 받은 오디오 서비스의 엔진입니다. */
@@ -100,6 +100,12 @@ namespace sw
         [[nodiscard]] Subscription addReverbZone( AudioReverbZoneComponent* pZone );
 
     private:
+        /**
+         * @brief 이 씬이 엔진에 걸어 둔 리스너 칸을 끄고 리버브 존 스냅샷을 0 으로 내립니다.
+         * @details 엔진은 프로세스에 하나라 씬보다 오래 산다 — 내리지 않으면 동굴을 떠난 다음 씬에도 동굴 리버브가 남고, 화면 분할 리스너 칸이 옛 자리에 남아 소리가 그 자리에서도 들린다.
+         */
+        void releaseEngineState();
+
         /** @brief 스냅샷 하나에 지난 프레임에 넣은 세기입니다. */
         struct ZoneValue
         {
@@ -134,7 +140,7 @@ namespace sw
         void updateEmitters( AudioEngine& audioEngine, float32 deltaSeconds, bool bListenerMoved );
         /** @brief 가림 — 프레임마다 몇 개씩 돌아가며 측정한다(엔진이 부드럽게 따라간다). */
         void updateOcclusion( AudioEngine& audioEngine, const IPhysicsQueryScene3D* pScene3D, const IPhysicsQueryScene2D* pScene2D );
-        /** @brief 리버브 존 — 스냅샷마다 가장 큰 세기. 바뀐 것만 넣고, 이번에 거는 존이 없는 스냅샷은 0 으로 내린다. */
+        /** @brief 리버브 존 — 스냅샷마다 가장 큰 세기를 프레임마다 넣고, 이번에 거는 존이 없는 스냅샷은 0 으로 내린다. */
         void updateReverbZones( AudioEngine& audioEngine ) SW_REQUIRES_LOCK( _mutex );
 
     private:

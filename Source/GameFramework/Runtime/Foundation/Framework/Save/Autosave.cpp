@@ -112,6 +112,7 @@ namespace sw
         , _lastCheckpointID{}
         , _restoringCheckpointID{}
         , _restoringSlot{}
+        , _restoringPlayTime{ 0.0 }
         , _playTime{ 0.0 }
         , _lastSaveTime{ -1.0 }
         , _intervalTimer{ 0.0f }
@@ -183,7 +184,8 @@ namespace sw
             }
         }
         // 슬롯 기록을 읽는 중이면 다음 슬롯을 모르고, 맡긴 저장이 끝나기 전이면 가장 새 슬롯이 아직 바뀌지 않았다 - 기다린다.
-        const bool bNothingToSaveNow = _bPending == SW_FALSE || isBlocked() || _bSaving == SW_TRUE || isScanning() || isSaving();
+        // 되돌리는 중이면 지금 진행은 곧 버려진다 — 저장하면 되돌린 슬롯보다 새것으로 남는다.
+        const bool bNothingToSaveNow = _bPending == SW_FALSE || isBlocked() || _bSaving == SW_TRUE || isScanning() || isSaving() || isRestoring();
         if ( bNothingToSaveNow )
             return;
         // 최소 간격 — 지역을 빠르게 오가도 저장이 줄지어 서지 않는다. 체크포인트 · 보스 앞은 간격을 지키되 기다렸다 저장한다(버리지 않는다).
@@ -220,7 +222,7 @@ namespace sw
 
     bool AutosaveManager::notifyQuit()
     {
-        if ( _settings._bOnQuit == SW_FALSE || _bSaving == SW_TRUE || isScanning() || isSaving() )
+        if ( _settings._bOnQuit == SW_FALSE || _bSaving == SW_TRUE || isScanning() || isSaving() || isRestoring() )
             return false;
         // 종료는 기다릴 수 없다 — 막혀 있으면(씬 전환 · 연출 · 깨진 복원) 쓰지 않고 마지막 좋은 슬롯을 남긴다.
         if ( isBlocked() )
@@ -234,7 +236,7 @@ namespace sw
 
     bool AutosaveManager::saveNow( AutosaveTrigger trigger, const hashed_string& label )
     {
-        if ( isBlocked() || _bSaving == SW_TRUE || isScanning() || isSaving() )
+        if ( isBlocked() || _bSaving == SW_TRUE || isScanning() || isSaving() || isRestoring() )
             return false;
         _bPending = SW_FALSE;
         return performSave( trigger, label );
@@ -260,6 +262,7 @@ namespace sw
         if ( pSlot == nullptr || _onLoad.isBound() == false || isScanning() || isRestoring() )
             return false;
         _restoringCheckpointID = bCheckpoint ? pSlot->_label : hashed_string{};
+        _restoringPlayTime     = pSlot->_playTime;
         _restoreRequest        = _pStore->submitRead( pSlot->_slotName, SW_DELEGATE_METHOD( GameLocalStore::CompletionFunction, &AutosaveManager::onSlotRead, this ) );
         return true;
     }
@@ -292,10 +295,27 @@ namespace sw
             SW_LOG_WARNING_ID( "Autosave.AutosaveSlotReadBut", "Autosave slot %# was read but the game could not restore it", slot.c_str() );
             return;
         }
-        if ( checkpointID.empty() )
-            return;
-        _lastCheckpointID = checkpointID; // 되돌린 체크포인트에 다시 서도 저장하지 않는다
+        resetProgress();
+        _playTime         = _restoringPlayTime; // 다른 실행의 슬롯이어도 그 진행의 시간을 이어 센다
+        _lastCheckpointID = checkpointID;       // 되돌린 체크포인트에 다시 서도 저장하지 않는다(체크포인트 되돌리기가 아니면 비었다)
+    }
+
+    void AutosaveManager::resetProgress()
+    {
+        _lastCheckpointID = hashed_string{};
+        _pendingLabel     = hashed_string{};
         _bPending         = SW_FALSE;
+        _intervalTimer    = 0.0f;
+        _lastSaveTime     = -1.0; // 플레이 시간이 뒤로 갈 수 있다 — 앞 진행의 시각으로 최소 간격을 재지 않는다
+    }
+
+    void AutosaveManager::beginNewGame()
+    {
+        resetProgress();
+        _playTime              = 0.0;
+        _restoringCheckpointID = hashed_string{};
+        _restoringSlot.clear();
+        _restoreRequest = Subscription{};
     }
 
     void AutosaveManager::collectSlots( vector<AutosaveSlotInfo>& outListSlot ) const

@@ -93,6 +93,7 @@ namespace sw
         unique_ptr<IDevConsoleView> _pWindow;     ///< 그리는 쪽(없으면 nullptr — 전용 서버 · UI 없는 실행)
         InputManager*               _pInput;
         Subscription                _textInputSubscription; ///< 입력 관리자의 콘솔 포커스 글자 칸 구독
+        Subscription                _keyboardFocus;         ///< 열려 있는 동안 쥔 키보드(`InputManager::claimKeyboardFocus`)
         uint8                       _bOpen             : 1;
         uint8                       _bShellMapChecked  : 1; /**< 디버그 키 맵을 한 번 검사했는지 나타냅니다. */
         uint8                       _bShellMapComplete : 1; /**< 검사한 디버그 키 맵에 콘솔 레이어와 액션이 모두 있었는지 나타냅니다. */

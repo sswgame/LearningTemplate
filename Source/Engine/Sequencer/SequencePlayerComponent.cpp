@@ -148,12 +148,12 @@ namespace sw
         , _bHideHUD{ SW_FALSE }
         , _bSkippable{ SW_FALSE }
         , _bAllowFastForward{ SW_FALSE }
-        , _bInputLayerPushed{ SW_FALSE }
-        , _bInputLayerStacked{ SW_FALSE }
-        , _bHUDHidden{ SW_FALSE }
         , _bFastForwardHeld{ SW_FALSE }
         , _bTimelineOnly{ SW_FALSE }
         , _reserved{ 0 }
+        , _hudHide{}
+        , _cutsceneLayer{}
+        , _cutsceneBlock{}
         , _player{}
         , _pendingStep{}
         , _state{}
@@ -329,29 +329,23 @@ namespace sw
         return false;
     }
 
-    InputMap* SequencePlayerComponent::findPlayerInputMap()
-    {
-        InputManager* pInput = engine::findSubsystem<InputManager>();
-        return pInput != nullptr ? &pInput->getInputMap() : nullptr;
-    }
-
     void SequencePlayerComponent::acquireCutsceneOptions()
     {
         // HUD 는 이 컴포넌트가 모른다 — 숨기는 일은 레이어 숨김 창구(구현은 UI 시스템)가 한다. 창구가 없으면(전용 서버) 가릴 화면도 없다.
         IUILayerVisibility* pLayerVisibility = engine::findSubsystem<IUILayerVisibility>();
         if ( _bHideHUD == SW_TRUE && pLayerVisibility != nullptr )
-        {
-            pLayerVisibility->addLayerHideRequest( UILayerMask::HUD );
-            _bHUDHidden = SW_TRUE;
-        }
-        const bool bNeedsInput = _playerMovement == SequencePlayerMovement::Blocked || _bSkippable == SW_TRUE || _bAllowFastForward == SW_TRUE;
-        InputMap*  pInputMap   = bNeedsInput ? findPlayerInputMap() : nullptr;
-        if ( pInputMap == nullptr )
+            _hudHide = pLayerVisibility->addLayerHideRequest( UILayerMask::HUD );
+        const bool    bNeedsInput = _playerMovement == SequencePlayerMovement::Blocked || _bSkippable == SW_TRUE || _bAllowFastForward == SW_TRUE;
+        InputManager* pInput      = bNeedsInput ? engine::findSubsystem<InputManager>() : nullptr;
+        if ( pInput == nullptr )
             return; // 쓸 입력이 없거나 입력이 없는 구성이다(전용 서버 · 하네스)
-        // 컷씬 레이어는 엔진 맵이다(포토 모드 맵과 같은 꼴 — 게임마다 액션을 더하지 않는다). 처음 쓸 때 플레이어 맵에 더한다.
+        // 컷씬 레이어는 엔진 맵이다(포토 모드 맵과 같은 꼴 — 게임마다 액션을 더하지 않는다). 처음 쓸 때 사용자마다의 맵에 더한다.
         const hashed_string layerName( SequencePlayerComponentInternal::kCutsceneLayer );
-        if ( pInputMap->hasLayer( layerName ) == false )
+        for ( uint32 userIndex = 0; userIndex < pInput->getLocalUserCount(); ++userIndex )
         {
+            InputMap* const pInputMap = pInput->findUserMap( userIndex );
+            if ( pInputMap == nullptr || pInputMap->hasLayer( layerName ) )
+                continue;
             const EngineDefaultAssets* pDefaults = engine::findSubsystem<EngineDefaultAssets>();
             const bool                 bAppended = pDefaults != nullptr && pInputMap->appendFromAsset( AssetID{ pDefaults->_cutsceneInputMap.get() } );
             if ( bAppended == false )
@@ -364,35 +358,16 @@ namespace sw
         // 컷씬 레이어는 늘 켜지는 덧층(alwaysOn — cutscene.input.xml)이라 켜기만 하면 건너뛰기 · 빨리감기가 듣는다. 레이어 스택은 문맥 바꾸기라(스택에 무엇이 있으면 스택 밖 레이어가 꺼진다)
         // 막지 않는 재생(Free · Confined)이 스택에 올리면 게임 이동 레이어까지 꺼져 플레이어가 서 버렸다. 막기(Blocked)만 스택에 올려 아래 레이어(이동 · 시선 · 게임 동작)를 막는다.
         // 일시정지 · 메뉴는 UI 맵이라 막히지 않는다. 언리얼 Enhanced Input 의 매핑 문맥 더하기(우선순위 덧층)와 같은 자리다.
-        pInputMap->setLayerEnabled( layerName, true );
-        _bInputLayerPushed = SW_TRUE;
+        _cutsceneLayer = pInput->enableSharedLayer( layerName );
         if ( _playerMovement == SequencePlayerMovement::Blocked )
-        {
-            pInputMap->pushLayer( layerName, true );
-            _bInputLayerStacked = SW_TRUE;
-        }
+            _cutsceneBlock = pInput->pushSharedLayer( layerName, true );
     }
 
     void SequencePlayerComponent::releaseCutsceneOptions()
     {
-        if ( _bHUDHidden == SW_TRUE )
-        {
-            IUILayerVisibility* pLayerVisibility = engine::findSubsystem<IUILayerVisibility>();
-            if ( pLayerVisibility != nullptr )
-                pLayerVisibility->removeLayerHideRequest( UILayerMask::HUD );
-            _bHUDHidden = SW_FALSE;
-        }
-        if ( _bInputLayerPushed == SW_TRUE )
-        {
-            InputMap*           pInputMap = findPlayerInputMap();
-            const hashed_string layerName( SequencePlayerComponentInternal::kCutsceneLayer );
-            if ( pInputMap != nullptr && _bInputLayerStacked == SW_TRUE )
-                pInputMap->popLayer( layerName );
-            if ( pInputMap != nullptr )
-                pInputMap->setLayerEnabled( layerName, false );
-            _bInputLayerPushed  = SW_FALSE;
-            _bInputLayerStacked = SW_FALSE;
-        }
+        _hudHide.reset();
+        _cutsceneBlock.reset();
+        _cutsceneLayer.reset();
         if ( _bFastForwardHeld == SW_TRUE )
         {
             (void)_player.setPlayRate( _playRate );
@@ -402,16 +377,27 @@ namespace sw
 
     bool SequencePlayerComponent::readCutsceneInput()
     {
-        if ( _bInputLayerPushed == SW_FALSE )
+        if ( _cutsceneLayer.isActive() == false )
             return false;
         // 게임이 멈춘 동안(일시정지 메뉴 — 게임 시간과 같은 원천)은 컷씬 입력도 쉰다. 재생도 멈춘 시간으로 서 있다가 재개하면 그 자리부터 이어 간다.
         const GameTimeScale* pTimeScale = engine::findSubsystem<GameTimeScale>();
-        const InputMap*      pInputMap  = findPlayerInputMap();
-        if ( pInputMap == nullptr || ( pTimeScale != nullptr && pTimeScale->get() <= 0.0f ) )
+        InputManager*        pInput     = engine::findSubsystem<InputManager>();
+        if ( pInput == nullptr || ( pTimeScale != nullptr && pTimeScale->get() <= 0.0f ) )
             return false;
-        if ( _bSkippable == SW_TRUE && pInputMap->wasActionTriggered( hashed_string( SequencePlayerComponentInternal::kSkipAction ) ) )
+        // 한 화면의 누구나 넘기고 빨리 감는다(막기도 모두에게 걸린다).
+        bool bSkip = false;
+        bool bHeld = false;
+        for ( uint32 userIndex = 0; userIndex < pInput->getLocalUserCount(); ++userIndex )
+        {
+            const InputMap* const pInputMap = pInput->findUserMap( userIndex );
+            if ( pInputMap == nullptr )
+                continue;
+            bSkip = bSkip || pInputMap->wasActionTriggered( hashed_string( SequencePlayerComponentInternal::kSkipAction ) );
+            bHeld = bHeld || pInputMap->isActionDown( hashed_string( SequencePlayerComponentInternal::kFastForwardAction ) );
+        }
+        if ( _bSkippable == SW_TRUE && bSkip )
             return true;
-        const bool bHeld = _bAllowFastForward == SW_TRUE && pInputMap->isActionDown( hashed_string( SequencePlayerComponentInternal::kFastForwardAction ) );
+        bHeld = bHeld && _bAllowFastForward == SW_TRUE;
         if ( bHeld == ( _bFastForwardHeld == SW_TRUE ) )
             return false;
         const EngineConfig* pConfig = engine::findSubsystem<EngineConfig>();
@@ -476,8 +462,8 @@ namespace sw
     void SequencePlayerComponent::endPlayback( SequenceHistoryKind kind )
     {
         const bool bWasPlaying = _player.isPlaying() || kind == SequenceHistoryKind::Finished;
-        const bool bHoldsState = _state._listSpawned.empty() == false || _state._listSpan.empty() == false || _state._bRestoreCaptured == SW_TRUE || _bInputLayerPushed == SW_TRUE ||
-                                 _bHUDHidden == SW_TRUE;
+        const bool bHoldsState = _state._listSpawned.empty() == false || _state._listSpan.empty() == false || _state._bRestoreCaptured == SW_TRUE || _cutsceneLayer.isActive() ||
+                                 _hudHide.isActive() || _state._cameraCut.isActive();
         if ( bWasPlaying == false && bHoldsState == false )
             return;
         if ( _bTimelineOnly == SW_TRUE )
@@ -509,6 +495,12 @@ namespace sw
             listSignal.push_back( signal );
         }
         broadcastCameraSignals( listSignal ); // 컷 카메라가 아직 살아 있을 때 알린다(듣는 쪽이 그 화면에서 섞는다)
+        if ( bWasPlaying )
+        {
+            SequenceCameraSignal endSignal;
+            endSignal._kind = SequenceCameraSignalKind::PlaybackEnd;
+            _cameraSignalMulticast.broadcast( endSignal ); // 컷이 덮지 않은 때 끝나도 예고한 것(대기 뷰)을 거둔다. 항목이 없는 신호라 기록에 남기지 않는다
+        }
         releaseCutsceneOptions();
         // 정상 끝(끝 프레임 · 건너뛰기)은 위치를 끝에 둔다(언리얼 OnFinished · GoToEndAndStop) — 멈춤(Stop)만 처음으로 되감는다.
         if ( kind != SequenceHistoryKind::Finished )
@@ -516,7 +508,7 @@ namespace sw
         SequenceTimelineUtil::releaseSpans( pManager, asset, view, _framesPerSecond, _state._listSpan );
         SequenceTimelineUtil::releaseSpawns( pManager, _state._listSpawned );
         // 카메라 컷은 컷 구간이 끝나야 해제되므로, 구간 안에서 끝나면 여기서 해제한다(게임 카메라가 원래 규칙으로 돌아간다).
-        SequenceTimelineUtil::releaseCameraCut( pManager, asset );
+        _state._cameraCut.reset();
         if ( _state._bRestoreCaptured == SW_TRUE )
             SequenceTimelineUtil::applyRestoreState( pManager, asset, view, _state._listRestore );
         _state._listRestore.clear();
@@ -643,7 +635,7 @@ namespace sw
         // 지난 구간마다(반복 되감기 · 왕복 꺾임이면 둘) 문턱을 넘은 이벤트를 본다(`applyPlayback`).
         const SequenceBindingView        view = makeBindingView();
         vector<const SequenceTrackItem*> listCrossed;
-        SequenceTimelineUtil::applyPlayback( pManager, _player.getAsset(), step, view, &listCrossed );
+        SequenceTimelineUtil::applyPlayback( pManager, _player.getAsset(), step, view, _state._cameraCut, &listCrossed );
         SequenceTimelineUtil::applySpawns( pManager, _player.getAsset(), _player.getCurrentFrame(), _state._listSpawned );
         vector<const SequenceTrackItem*> listEnteredSpan;
         SequenceTimelineUtil::applySpans( pManager, _player.getAsset(), view, _player.getCurrentFrame(), _framesPerSecond, _player.getPlayRate(), _state._listSpan, &listEnteredSpan );

@@ -53,15 +53,23 @@ namespace sw
         /** @brief 기록 고리의 칸 수입니다. */
         static constexpr uint32 kLogCapacity = 32;
 
+        /** @brief 모듈 하나가 붙든 대상 하나입니다(들어온 개체의 역할을 푼 것 — 탑승자 · 탈것 · 근처). */
+        struct ModuleTarget
+        {
+            GameObjectHandle _target{};
+            ZoneModuleMemory _memory{};
+            uint32           _module{ 0 }; ///< 프로필 순서의 모듈 번호
+        };
+
         /** @brief 대상 하나의 기록입니다. */
         struct OccupantRecord
         {
-            GameObjectHandle         _target{};
-            ZoneSample               _sample{};
-            vector<ZoneModuleMemory> _listMemory{}; ///< 모듈마다(프로필 순서)
-            uint32                   _touchStamp{ 0 };
-            uint8                    _bEntered{ SW_FALSE };
-            uint8                    _arrReserved[3]{};
+            GameObjectHandle     _target{};
+            ZoneSample           _sample{};
+            vector<ModuleTarget> _listModuleTarget{}; ///< 진입을 부르고 아직 이탈을 부르지 않은 모듈 · 대상(기억도 대상마다다)
+            uint32               _touchStamp{ 0 };
+            uint8                _bEntered{ SW_FALSE };
+            uint8                _arrReserved[3]{};
         };
 
         ZoneTracker();
@@ -100,8 +108,13 @@ namespace sw
             Exit
         };
 
-        /** @brief 기록 하나의 모든 모듈에 사건 @p event 를 넘깁니다(대상 역할을 풀어 대상마다). */
-        void dispatch( GameObjectManager& manager, const ZoneCompiledProfile& profile, const ActionSource& source, OccupantRecord& occupancy, Event event, float32 deltaTime );
+        /**
+         * @brief 기록 하나의 모듈마다 대상 역할을 다시 풀어, 새로 대상이 된 것에는 진입 · 이제 대상이 아닌 것에는 이탈 · 남은 것에는 체류를 넘깁니다. @p bInside 가 false(나갔다)면 붙든 대상 모두에 이탈입니다.
+         * @details 역할의 답은 안에 있는 동안 바뀐다(타고 내림 · 근처를 드나듦). 나가는 때 다시 푼 답에만 이탈을 주면, 안에서 내린 탑승자에게 건 것이 남는다.
+         */
+        static void updateModuleTargets( GameObjectManager& manager, const ZoneCompiledProfile& profile, const ActionSource& source, OccupantRecord& occupancy, bool bInside, float32 deltaTime );
+        /** @brief 대상 하나에 모듈의 사건 @p event 를 넘깁니다. */
+        static void dispatch( GameObjectManager& manager, const ZoneCompiledModule& module, const ActionSource& source, const OccupantRecord& occupancy, GameObject& target, ZoneModuleMemory& memory, Event event, float32 deltaTime );
         /** @brief 모듈 @p module 의 대상 역할을 @p occupant 기준으로 풉니다. */
         static void resolveRoleTargets( GameObjectManager& manager, const ZoneCompiledModule& module, GameObject& occupant, vector<GameObject*>& outListTarget );
         void        appendLog( const ActionSource& source, const OccupantRecord& occupancy, ZoneLogEvent event );

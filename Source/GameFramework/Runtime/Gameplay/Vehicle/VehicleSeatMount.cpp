@@ -141,6 +141,7 @@ namespace sw
         {
             seat._occupantController        = TComponentHandle<ControllerComponent>{ pController };
             seat._previousVehicleController = pVehiclePawn->getController();
+            riderPawn.setRidingController( seat._occupantController ); // 빙의는 탈것으로 가도 탑승자의 플레이어(가방 · 일지)는 그대로다
             pController->possess( *pVehiclePawn );
         }
         return MountResult::Mounted;
@@ -184,13 +185,14 @@ namespace sw
         // 물리로 떨어진 몸은 걷지 않는다 — 부활(체력 다시 채움)까지 탑승자 쪽이 멈춤을 쥔다. 좌석이 쥐고 있으면 다음 탑승자가 앉을 때 풀린다.
         DismountOnDeathComponent* const pDown = bReleasedToPhysics ? pRider->getComponent<DismountOnDeathComponent>() : nullptr;
         if ( pDown != nullptr )
-            pDown->holdMovement( std::move( _riderSuspension ) );
+            pDown->holdFall( std::move( _riderSuspension ) );
         _riderSuspension.reset();
 
         // 운전석이면 탔을 때의 조종자가 탑승자를 다시 쥔다. 탈것 폰은 놓여서 의도가 0 이 되므로 멈춰 선다. 탈 때 탈것을 쥐고 있던 조종자(말 AI)는 탈것을 다시 쥔다.
         ControllerComponent* pController                = _occupantController.isValid() ? pManager->resolveComponent( _occupantController ) : nullptr;
         ControllerComponent* pPreviousVehicleController = _previousVehicleController.isValid() ? pManager->resolveComponent( _previousVehicleController ) : nullptr;
         pRider->setKeptWhenParentDestroyed( false );
+        riderPawn.setRidingController( TComponentHandle<ControllerComponent>{} );
         _occupant                  = GameObjectHandle{};
         _occupantController        = TComponentHandle<ControllerComponent>{};
         _previousVehicleController = TComponentHandle<ControllerComponent>{};
@@ -201,6 +203,32 @@ namespace sw
         if ( bReturnControlToVehicle )
             pPreviousVehicleController->possess( *pVehiclePawn );
         return true;
+    }
+
+    void VehicleSeatComponent::restoreRider()
+    {
+        using Internal                = VehicleSeatMountInternal;
+        _bRestorePending              = SW_FALSE;
+        GameObjectManager* pManager   = Internal::findManager( *this );
+        GameObject*        pRider     = pManager != nullptr ? pManager->resolveGameObject( _occupant ) : nullptr;
+        PawnComponent*     pRiderPawn = pRider != nullptr ? pRider->getComponent<PawnComponent>() : nullptr;
+        _occupant                     = GameObjectHandle{};
+        if ( pRiderPawn == nullptr )
+            return; // 탑승자는 이 씬에 되살아나지 않았다(다른 씬으로 옮겼다) — 빈 좌석이다
+        const MountResult result = mount( *pRiderPawn, *this );
+        if ( result == MountResult::Mounted )
+            return;
+        SW_LOG_ERROR_ID( "VehicleSeat.RiderNotRestored", "'%#' could not be seated on '%#' again (result %#) - it stands next to the vehicle", pRider->getName().c_str(), getOwner()->getName().c_str(),
+                         static_cast<int32>( result ) );
+        SceneComponent* pRiderRoot   = pRider->getPrimarySceneComponent();
+        SceneComponent* pVehicleRoot = getOwner()->getPrimarySceneComponent();
+        if ( pRiderRoot != nullptr && pVehicleRoot != nullptr )
+        {
+            if ( pRiderRoot->getParent() == pVehicleRoot )
+                pRiderRoot->detachFromComponent( AttachRule::KeepWorld );
+            pRiderRoot->teleportTo( Internal::findExitSpot( *pRider, *this, *pVehicleRoot ) );
+        }
+        Internal::setRiderPose( *pRider, getRiderPoseParameter(), false );
     }
 
     void VehicleSeatComponent::releaseGoneOccupant( GameObjectManager& manager, const GameObjectHandle& rider )

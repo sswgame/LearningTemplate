@@ -21,3 +21,19 @@ SW_TEST_CASE( RHIBufferCopyTest, CopyRegionRecordsArguments )
     SW_EXPECT_EQUAL( uint64{ 48 }, copy._sourceOffset );
     SW_EXPECT_EQUAL( uint64{ 960 }, copy._sizeBytes );
 }
+
+/**
+ * @brief [RHIBufferCopyTest] 버퍼 끝을 넘는 구간 복사는 어느 백엔드에도 닿지 않고 알린다 — 끝에 딱 맞는 복사는 나간다
+ * @details 변이: 검사가 크기만 보고 오프셋을 빼면 둘째 · 셋째 복사가 백엔드에 닿아 진다.
+ */
+SW_TEST_CASE( RHIBufferCopyTest, CopyOutsideABufferIsRejected )
+{
+    test::FakeRHIDevice         device;
+    test::FakeRHICommandContext context{ device };
+    SW_EXPECT_LOG( "RHI.CopyBufferRegionOutside" );
+    context.copyBufferRegion( RHIBufferHandle{ 2 }, 192, RHIBufferHandle{ 1 }, 0, 64 );
+    SW_EXPECT_EQUAL( 1u, context._copyRegionCount );
+    context.copyBufferRegion( RHIBufferHandle{ 2 }, 196, RHIBufferHandle{ 1 }, 0, 64 ); // 도착이 4 바이트 넘친다
+    context.copyBufferRegion( RHIBufferHandle{ 2 }, 0, RHIBufferHandle{ 1 }, 256, 4 );  // 원본 끝에서 읽는다
+    SW_EXPECT_EQUAL( 1u, context._copyRegionCount );
+}

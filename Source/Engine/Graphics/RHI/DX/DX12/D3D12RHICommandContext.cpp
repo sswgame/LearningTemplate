@@ -1115,6 +1115,12 @@ namespace sw
         commandListForRecord()->CopyBufferRegion( pTarget, 0, pSource, 0, sizeBytes );
     }
 
+    uint64 D3D12RHICommandContext::findBufferBytes( RHIBufferHandle buffer ) const
+    {
+        ID3D12Resource* const pBuffer = _pDevice->resolveBuffer( buffer );
+        return pBuffer != nullptr ? pBuffer->GetDesc().Width : 0;
+    }
+
     void D3D12RHICommandContext::copyBufferRegionNative( RHIBufferHandle destination, uint64 destinationOffset, RHIBufferHandle source, uint64 sourceOffset, uint64 sizeBytes )
     {
         if ( _pCmdList == nullptr )
@@ -1123,7 +1129,7 @@ namespace sw
         ID3D12Resource* pTarget = _pDevice->resolveBuffer( destination );
         if ( pSource == nullptr || pTarget == nullptr )
             return;
-        // 원본은 COPY_SOURCE, 도착은 COPY_DEST 로 부르는 쪽이 옮겨 두었다(`transitionBuffers`). 범위가 버퍼 밖이면 디버그 레이어가 잡는다 — 같은 버퍼는 위에서 걸렀다.
+        // 원본은 COPY_SOURCE, 도착은 COPY_DEST 로 부르는 쪽이 옮겨 두었다(`transitionBuffers`). 범위 밖 · 같은 버퍼는 공용 문맥이 걸렀다.
         commandListForRecord()->CopyBufferRegion( pTarget, destinationOffset, pSource, sourceOffset, sizeBytes );
     }
 

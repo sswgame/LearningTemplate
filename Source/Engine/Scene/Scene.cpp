@@ -621,6 +621,31 @@ namespace sw
         }
     }
 
+    void Scene::releaseFromParts( GameObject& root )
+    {
+        SceneStreamingSubsystem& streaming  = _objectManager->getSubsystem<SceneStreamingSubsystem>();
+        SceneDataLayerSubsystem& dataLayers = _objectManager->getSubsystem<SceneDataLayerSubsystem>();
+        SceneSubLevelSubsystem&  subLevels  = _objectManager->getSubsystem<SceneSubLevelSubsystem>();
+        root.setAlwaysLoaded( true ); // 스트리밍이 런타임 스폰으로 보고 자리의 셀에 다시 넣지 않는다
+        vector<GameObject*> listObject;
+        vector<GameObject*> listChild;
+        listObject.push_back( &root );
+        for ( size_t index = 0; index < listObject.size(); ++index )
+        {
+            GameObject* const pObject  = listObject[index];
+            const uint64      objectID = pObject->getObjectID();
+            streaming.releaseObject( objectID );
+            dataLayers.releaseObject( objectID );
+            subLevels.releaseObject( objectID );
+            _mapObjectDataLayer.erase( objectID ); // 저장이 레이어 엔티티로 적지 않는다
+            pObject->getChildren( listChild );
+            for ( GameObject* pChild : listChild )
+            {
+                listObject.push_back( pChild );
+            }
+        }
+    }
+
     void Scene::unloadCell( const vector<uint64>& listObjectID )
     {
         if ( _objectManager == nullptr )

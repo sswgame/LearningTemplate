@@ -45,6 +45,7 @@ namespace sw
     class UIStyleSheetCache;
     class UIScreen;
     class UIThemeController;
+    class SubscriptionList;
     class UserSettingsManager;
 } // namespace sw
 
@@ -79,7 +80,7 @@ namespace sw
      *          **화면 스택 자신의 책임**(값 멤버, 비가상 직접 호출 — 화면 목록 · 포커스 경로와 떼면 매 프레임 서로를 되묻는 것들이라 남긴다):
      *          입력 라우팅 `UIInputRouter`(포인터 · 포커스 · 소비는 화면 트리를 따라 간다 — `getInputRouter`, 포커스를 함께 옮기는 `setInputMode`),
      *          그리기 목록과 재사용 판정 상태 · 레이어 숨김 요청 수 `UICanvasPaintState`(스택을 칠한 결과다 — `getPaintState`. 숨김 요청은 화면마다 `_bHiddenByLayer` 를 맞추므로
-     *          `addLayerHideRequest` · `removeLayerHideRequest` 가 이 클래스에 있다). 화면 스택과 프레임 순서도 이 클래스에 남는다(순서는 `processInput` 과 `update` 본문이 기준이다).
+     *          `addLayerHideRequest` 가 이 클래스에 있다). 화면 스택과 프레임 순서도 이 클래스에 남는다(순서는 `processInput` 과 `update` 본문이 기준이다).
      *          **따로 선 서브시스템**(값 멤버가 아니다 — `engine::getSubsystem<T>()`): 이 시스템이 의존하는 것 — 클립보드 `UIClipboardService` · 전역 명령 표 `UIGlobalCommandRegistry` ·
      *          바인딩 변환기 `UIBindingConverterRegistry` · 문서 캐시 `UIDocumentCache` · 스타일 시트 캐시 `UIStyleSheetCache` · 테마 `UIThemeController`.
      *          이 시스템에 의존하고 UI 갱신 칸(`onPointerProcessed` · `onUpdateBeforeScreens` · `onUpdateAfterScreens` · `onUpdateBeforeLayout` · `onUpdateAfterPaint`)에 거는 것 —
@@ -284,13 +285,10 @@ namespace sw
         bool isOnScreenSuppressed() const { return _bOnScreenSuppressed == SW_TRUE; }
         /**
          * @brief 레이어 집합 @p layers 의 화면을 숨기는 요청을 하나 겁니다(포토 모드의 "UI 없이 보기" 같은 곳). 요청은 레이어마다 세어 쌓이므로 둘이 같은 레이어를 숨겨도 하나를 풀 때 다시 보이지 않습니다.
-         * @details `GameTimeScale::addPauseRequest` 와 같은 모양입니다. 숨긴 레이어의 화면은 그리지 않고 포인터를 받지 않으며(`UIScreen::isHiddenByLayer`), 화면 상태 · 포커스 · 틱 · 애니메이션은 그대로이고
+         * @details 돌려준 구독이 요청의 주인입니다(`GameTimeScale::addPauseRequest` 와 같은 모양 — 건 쪽이 사라지면 풀린다). 숨긴 레이어의 화면은 그리지 않고 포인터를 받지 않으며(`UIScreen::isHiddenByLayer`), 화면 상태 · 포커스 · 틱 · 애니메이션은 그대로이고
          *          요청 뒤에 열린 화면도 숨깁니다. 엔진은 레이어 가시성 기능만 주고 어느 레이어를 숨길지는 거는 쪽의 데이터가 정합니다(Godot `CanvasLayer.visible`, 언리얼 `AHUD::bShowHUD`, 유니티 `Canvas.enabled`).
-         *          건 쪽이 같은 집합으로 `removeLayerHideRequest` 를 꼭 부릅니다.
          */
-        void addLayerHideRequest( UILayerMask layers );
-        /** @brief `addLayerHideRequest` 로 건 요청을 하나 풉니다. 건 적 없는 레이어를 풀면 단언으로 멈춥니다. */
-        void removeLayerHideRequest( UILayerMask layers );
+        [[nodiscard]] Subscription addLayerHideRequest( UILayerMask layers );
         /**
          * @brief 이 시스템이 공개하는 창구들입니다 — 기동이 이 멤버를 그 타입으로 건다(`SubsystemScope::exposeMember`). 시스템이 창구 인터페이스를 함께 상속하지 않는다(다중 상속 금지 — 린트 `cpp-shape`).
          * @details `IInputCaptureQuery` 는 게임 코드의 입력 판정, `IUILayerVisibility` 는 레이어 숨김 요청, `IEngineUIDriver` 는 엔진 루프의 프레임 단계다.
@@ -410,6 +408,8 @@ namespace sw
         void refreshActiveScreen();
         /** @brief 정지 화면이 하나라도 있으면 게임 시간 정지 요청을 걸어 두고, 없으면 풉니다. */
         void syncPauseRequest();
+        /** @brief 레이어 숨김 요청 하나의 구독이 풀렸습니다(@p layers 는 `UILayerMask`). */
+        void releaseLayerHideRequest( uint64 layers );
 
     private:
         /** @class InputCaptureQuery @brief `IInputCaptureQuery` 를 시스템의 같은 이름 함수로 넘깁니다(수명은 시스템과 같다). */
@@ -438,8 +438,7 @@ namespace sw
             {
             }
 
-            void addLayerHideRequest( UILayerMask layers ) override { _owner.addLayerHideRequest( layers ); }
-            void removeLayerHideRequest( UILayerMask layers ) override { _owner.removeLayerHideRequest( layers ); }
+            [[nodiscard]] Subscription addLayerHideRequest( UILayerMask layers ) override { return _owner.addLayerHideRequest( layers ); }
 
         private:
             UISystem& _owner;
@@ -508,11 +507,12 @@ namespace sw
         uint32                       _textRevision;            ///< 마지막 바인딩 단계가 본 텍스트 버전입니다.
         uint32                       _converterRevision;       ///< 마지막 바인딩 단계가 본 변환기 표 번호입니다(`UIBindingConverterRegistry::getRevision`).
         InputGlyphStyle              _glyphStyle;              ///< 마지막으로 본 입력 장치 종류입니다(`refreshInputGlyphs`).
-        uint8                        _bPauseRequested     : 1; ///< 게임 정지 요청을 걸어 두었는지 나타냅니다(정지 화면이 하나라도 있으면 true).
         uint8                        _bPendingClose       : 1; ///< 닫기를 요청한 화면이 있는지 나타냅니다.
         uint8                        _bTextRevisionKnown  : 1; ///< `_textRevision` 을 한 번 읽었는지 나타냅니다.
         uint8                        _bGlyphStyleKnown    : 1; ///< `_glyphStyle` 을 한 번 읽었는지 나타냅니다.
         uint8                        _bOnScreenSuppressed : 1; ///< 화면 그리기와 포인터 입력을 막는지 나타냅니다(`setOnScreenSuppressed`).
+        Subscription                 _pauseRequest;            ///< 정지 화면이 하나라도 있는 동안 건 게임 시간 정지 요청입니다(`syncPauseRequest`).
+        unique_ptr<SubscriptionList> _layerHideSubscriptions;  ///< 레이어 숨김 요청의 구독입니다(`addLayerHideRequest`).
 
         SW_SERVICE_SLOT( UISystem, Required );
     };

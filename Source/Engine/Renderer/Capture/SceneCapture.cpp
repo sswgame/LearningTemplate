@@ -134,6 +134,11 @@ namespace sw
         }
         _job._packet._outputRenderTarget = _outputTarget->getHandle();
         device.beginFrame();
+        if ( device.isFrameStarted() == false )
+        {
+            device.endFrame( false, false ); // 기록이 제출되지 않을 프레임이다 — 그리지 않은 출력을 읽지 않고 다음 장에서 다시 그린다(시한은 `capture` 가 센다)
+            return;
+        }
         OffscreenSceneRenderers* const pOffscreen = _pRenderThread->getOffscreenRenderers();
         FrameRenderer* const           pRenderer  = pOffscreen != nullptr ? pOffscreen->execute( *_pRenderThread->getFrameRenderer(), &device, _job._packet, request._clearColor, &_pipeline ) : nullptr;
         device.endFrame( false, false ); // GPU 를 기다리지 않는다 — 읽기 전송이 앞서 제출한 이 프레임 뒤에 실행된다(전송 계약). 다 그려지지 않은 장은 읽지 않으니 기다릴 까닭이 없다

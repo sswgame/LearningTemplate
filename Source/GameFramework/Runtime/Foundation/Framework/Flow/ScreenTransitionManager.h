@@ -100,9 +100,12 @@ namespace sw
         bool isBusy() const { return _phase != Phase::None || _fade.isBusy(); }
         /** @brief 현재 전환 단계를 반환합니다. */
         Phase getPhase() const { return _phase; }
-        /** @brief 페이드 서비스를 반환합니다. */
-        ScreenFade& fade() { return _fade; }
-        /** @brief 페이드 서비스를 반환합니다. */
+        /**
+         * @brief 전환 밖에서(로딩 화면이 닫혔다) 검은 화면에서 밝힙니다. 전환이 어두워지는 중이면 아무것도 하지 않습니다 — 그 전환이 액션을 부른 뒤 스스로 밝힌다.
+         * @details 페이드를 직접 밝히면 어두워지기가 끝나지 않아 전환의 액션이 영영 불리지 않고 다음 전환도 모두 거절된다 — 그래서 고치는 페이드를 내주지 않는다.
+         */
+        void fadeInFromBlack( float32 duration );
+        /** @brief 페이드 서비스를 반환합니다(읽기 전용). */
         const ScreenFade& fade() const { return _fade; }
 
     private:

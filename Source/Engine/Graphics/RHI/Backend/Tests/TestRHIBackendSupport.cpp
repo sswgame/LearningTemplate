@@ -448,11 +448,35 @@ SW_TEST_CASE( RHIFrameFenceRingTest, BoundsFramesInFlightAndRetiresInOrder )
 }
 
 /**
- * @brief [RHIHandleTableTest] 세대가 올라가면 옛 핸들은 무효이고 슬롯은 재사용된다
+ * @brief [RHIHandleTableTest] 놓은 칸은 프레임 경계를 두 번 지난 뒤에만 다시 쓴다 — 그 앞에 들어온 값은 다른 칸이고, 쥔 포인터는 옛 값을 읽는다
+ * @details 변이: 놓은 칸을 곧바로 되돌리면(LIFO) 둘째 값이 쥔 포인터 자리에 들어가 첫 단언이 진다. 세워 둔 칸을 되돌리지 않으면 마지막 단언이 진다.
+ */
+SW_TEST_CASE( RHIHandleTableTest, ReleasedSlotIsNotReusedWithinTheFrame )
+{
+    atomic<uint64>                          beginFrameCount{ 1 };
+    RHIHandleTable<RHIBufferHandle, uint32> table{ beginFrameCount };
+    const RHIBufferHandle                   first  = table.insert( 42u );
+    const uint32* const                     pFirst = table.get( first );
+    SW_REQUIRE_NOT_NULL( pFirst );
+    uint32 taken{ 0 };
+    SW_REQUIRE_TRUE( table.take( first, taken ) );
+
+    const RHIBufferHandle second = table.insert( 99u );
+    SW_EXPECT_EQUAL( 42u, *pFirst ); // 쥔 포인터가 새 값을 옛 핸들의 값으로 읽지 않는다
+    SW_EXPECT_TRUE( table.get( second ) != pFirst );
+    beginFrameCount.store( 2 ); // 놓은 프레임의 기록이 아직 돌 수 있다
+    SW_EXPECT_TRUE( table.get( table.insert( 7u ) ) != pFirst );
+    beginFrameCount.store( 3 );
+    SW_EXPECT_TRUE( table.get( table.insert( 8u ) ) == pFirst );
+}
+
+/**
+ * @brief [RHIHandleTableTest] 세대가 올라가면 옛 핸들은 무효다
  */
 SW_TEST_CASE( RHIHandleTableTest, GenerationInvalidatesStaleHandles )
 {
-    RHIHandleTable<RHIBufferHandle, uint32> table;
+    const atomic<uint64>                    beginFrameCount{ 0 };
+    RHIHandleTable<RHIBufferHandle, uint32> table{ beginFrameCount };
     const RHIBufferHandle                   first = table.insert( 42u );
     SW_EXPECT_TRUE( first != 0 );
     uint32* pSlot = table.get( first );

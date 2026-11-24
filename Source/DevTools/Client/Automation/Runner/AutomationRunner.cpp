@@ -153,6 +153,7 @@ namespace sw
     AutomationRunner::AutomationRunner( shared_ptr<AutomationLogPolicy> pLogPolicy )
         : _scenario{}
         , _inputScript{}
+        , _startPause{}
         , _virtualInput{}
         , _evaluator{ std::move( pLogPolicy ) }
         , _run{}
@@ -162,7 +163,6 @@ namespace sw
         , _bStarted{ SW_FALSE }
         , _bEnded{ SW_FALSE }
         , _bHangWatchArmed{ SW_FALSE }
-        , _bStartPauseHeld{ SW_FALSE }
         , _reserved{ 0 }
         , _startedAt{}
         , _reproduceInput{}
@@ -183,23 +183,12 @@ namespace sw
     {
         (void)restoreFilesNow(); // 끝맺지 못하고 사라지는 실행(행 감시 · 강제 종료 길)도 맡긴 파일을 되돌린다 — 못 쓴 파일은 쓰기가 오류로 남겼다
         releaseWriteFilter();
-        releaseStartPause();
     }
 
     void AutomationRunner::holdGameTimeUntilStart()
     {
-        if ( _bStartPauseHeld == SW_TRUE )
-            return;
-        engine::getSubsystem<GameTimeScale>().addPauseRequest();
-        _bStartPauseHeld = SW_TRUE;
-    }
-
-    void AutomationRunner::releaseStartPause()
-    {
-        if ( _bStartPauseHeld == SW_FALSE )
-            return;
-        engine::getSubsystem<GameTimeScale>().removePauseRequest();
-        _bStartPauseHeld = SW_FALSE;
+        if ( _startPause.isActive() == false )
+            _startPause = engine::getSubsystem<GameTimeScale>().addPauseRequest( GamePauseReason::Host );
     }
 
     void AutomationRunner::forwardPendingScreenshot()
@@ -459,7 +448,7 @@ namespace sw
                 return;
             }
             _bStarted = SW_TRUE;
-            releaseStartPause(); // 시작 프레임부터 게임 시간이 흐른다
+            _startPause.reset(); // 시작 프레임부터 게임 시간이 흐른다
             // 상한을 다시 구한다 — 에디터 단계(CaptureEditorUI …)는 에디터 모듈이 실리며 등록돼, 시나리오를 읽던 때의 계산에는 그 단계 예산이 빠져 150 초로 남았다.
             // 행 감시도 같은 상한을 본다 — 바꿨으면 새 상한으로 다시 건다(옛 상한의 감시가 실행기보다 먼저 프로세스를 끝냈다).
             const float32 limitAtStart = computeWallLimitSeconds( _scenario );
@@ -953,7 +942,7 @@ namespace sw
     {
         if ( isActive() == false )
             return;
-        releaseStartPause(); // 시작하지 못하고 끝나도(시작 시한 · 읽기 오류) 다음 단계에 정지가 남지 않는다
+        _startPause.reset(); // 시작하지 못하고 끝나도(시작 시한 · 읽기 오류) 다음 단계에 정지가 남지 않는다
         // 통과로 끝맺었는데 적힌 실패가 있으면 첫 실패 줄이 까닭이다 — 끝 단계 이름(`<Pass/>`)이 실패의 까닭으로 남지 않는다.
         const vector<string>& listFailure = _evaluator.getFailures();
         _runResult                        = runResult.concludeWithFailures( listFailure.empty() ? string_view{} : string_view{ listFailure.front() }, _evaluator.getFirstFailureKind() );

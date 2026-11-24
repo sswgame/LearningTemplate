@@ -167,3 +167,32 @@ SW_TEST_CASE( KillcamTest, SecondKillcamStopsTheRecorder )
     SW_REQUIRE_NOT_NULL( manager.createGameObject( hashed_string( "KillcamB" ) )->addComponent<KillcamComponent>() );
     SW_EXPECT_NULL( KillcamComponent::findInScene( manager ) );
 }
+
+/** @brief [KillcamTest] 시퀀스 컷 위에서 킬캠을 틀고 끝내면 시퀀스 컷이 이어지고, 먼저 끝난 시퀀스는 킬캠의 컷을 지우지 않는다 */
+SW_TEST_CASE( KillcamTest, OverlapsASequenceCut )
+{
+    GameObjectManager manager;
+    CameraRegistry&   registry        = manager.getCameraRegistry();
+    GameObject*       pKillcamObject  = manager.createGameObject( hashed_string( "Killcam" ) );
+    CameraComponent*  pKillcamCamera  = pKillcamObject->addComponent<CameraComponent>();
+    KillcamComponent* pKillcam        = pKillcamObject->addComponent<KillcamComponent>();
+    GameObject*       pSequenceObject = manager.createGameObject( hashed_string( "SequenceCut" ) );
+    CameraComponent*  pSequenceCamera = pSequenceObject->addComponent<CameraComponent>();
+    Subscription      sequenceCut;
+    registry.setCutCamera( sequenceCut, pSequenceCamera );
+    pKillcam->recordShot( KillcamTestUtil::makePiercingShot() );
+    SW_REQUIRE_TRUE( pKillcam->playLastKill() );
+    SW_EXPECT_TRUE( registry.getCutCamera() == pKillcamCamera );
+
+    registry.setCutCamera( sequenceCut, nullptr ); // 시퀀스가 컷 사이의 틈을 지난다
+    SW_EXPECT_TRUE( registry.getCutCamera() == pKillcamCamera );
+    registry.setCutCamera( sequenceCut, pSequenceCamera );
+    pKillcam->skip();
+    SW_EXPECT_TRUE( registry.getCutCamera() == pSequenceCamera ); // 옛 코드는 여기서 nullptr 이다
+
+    SW_REQUIRE_TRUE( pKillcam->playLastKill() );
+    sequenceCut.reset(); // 시퀀스가 먼저 끝난다
+    SW_EXPECT_TRUE( registry.getCutCamera() == pKillcamCamera );
+    pKillcam->skip();
+    SW_EXPECT_TRUE( registry.getCutCamera() == nullptr );
+}

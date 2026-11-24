@@ -95,7 +95,7 @@ namespace sw
         void onEndPlay() override;
         void onTick( TickContext& context ) override;
 
-        /** @brief 집습니다. 이미 쥐고 있거나 자기 자신이면 false 입니다. 남이 쥔 것이면 그 손에서 놓게 하고 집습니다(대상 하나를 쥔 손은 하나다). 게임 스레드에서 부릅니다. */
+        /** @brief 집습니다. 이미 쥐고 있거나, 남이 쥐고 있거나, 자기 자신이면 false 입니다. 게임 스레드에서 부릅니다. */
         [[nodiscard]] bool grab( GameObject& target );
         /** @brief 든 것을 @p velocity 로 던집니다. 든 것이 없으면 false 입니다. */
         FUNCTION( Category = "Grab", Exec )
@@ -111,6 +111,8 @@ namespace sw
         /** @brief 살아 있는 것을 들고 있으면 true 입니다(들고 있던 것이 지워졌으면 빈손이다). */
         bool isHolding() const { return findHeld() != nullptr; }
         void setHoldOffset( const float3& offset ) { _holdOffset = offset; }
+        /** @brief @p object 를 쥔 집는 쪽입니다. 아무도 쥐지 않았으면 nullptr 입니다(집는 쪽 목록 — 씬을 훑지 않는다). */
+        [[nodiscard]] static const GrabberComponent* findHolderOf( const GameObject& object );
 
     private:
         IGrabPhysics& getBackend();

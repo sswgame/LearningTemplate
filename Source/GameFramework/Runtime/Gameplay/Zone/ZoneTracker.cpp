@@ -132,7 +132,7 @@ namespace sw
             if ( occupancy._touchStamp == _stamp )
                 continue;
             if ( occupancy._bEntered == SW_TRUE )
-                dispatch( manager, profile, source, occupancy, Event::Exit, 0.0f );
+                updateModuleTargets( manager, profile, source, occupancy, false, 0.0f );
             appendLog( source, occupancy, ZoneLogEvent::Exit );
             _listOccupancy.erase( _listOccupancy.begin() + static_cast<ptrdiff_t>( index - 1 ) );
         }
@@ -142,13 +142,10 @@ namespace sw
             OccupantRecord& occupancy = _listOccupancy[index];
             if ( occupancy._bEntered == SW_FALSE )
             {
-                occupancy._listMemory.assign( profile.getModules().size(), ZoneModuleMemory{} );
                 occupancy._bEntered = SW_TRUE;
                 appendLog( source, occupancy, ZoneLogEvent::Enter );
-                dispatch( manager, profile, source, occupancy, Event::Enter, 0.0f );
             }
-            occupancy._sample._timeInside += deltaTime;
-            dispatch( manager, profile, source, occupancy, Event::Stay, deltaTime );
+            updateModuleTargets( manager, profile, source, occupancy, true, deltaTime );
         }
     }
 
@@ -196,67 +193,119 @@ namespace sw
         ++_logCount;
     }
 
-    void ZoneTracker::dispatch( GameObjectManager& manager, const ZoneCompiledProfile& profile, const ActionSource& source, OccupantRecord& occupancy, Event event, float32 deltaTime )
+    void ZoneTracker::updateModuleTargets( GameObjectManager& manager, const ZoneCompiledProfile& profile, const ActionSource& source, OccupantRecord& occupancy, bool bInside, float32 deltaTime )
     {
-        GameObject* const pOccupant = manager.resolveGameObject( occupancy._target );
-        if ( pOccupant == nullptr || pOccupant->isPendingDestroy() )
-            return;
-        GameStateComponent* const pSession = GameStateComponent::findOpen( &manager );
-        GameFlags* const          pFlags   = pSession != nullptr ? &pSession->getFlags() : nullptr;
+        const vector<ZoneCompiledModule>& listModule   = profile.getModules();
+        const GameObjectHandle            occupant     = occupancy._target;
+        const auto                        findOccupant = [&manager, occupant]() -> GameObject*
+        {
+            GameObject* const pOccupant = manager.resolveGameObject( occupant );
+            return pOccupant != nullptr && pOccupant->isPendingDestroy() == false ? pOccupant : nullptr;
+        };
 
-        const vector<ZoneCompiledModule>& listModule = profile.getModules();
-        vector<GameObject*>               listTarget;
-        for ( size_t moduleIndex = 0; moduleIndex < listModule.size() && moduleIndex < occupancy._listMemory.size(); ++moduleIndex )
+        // 1. 대상이 바뀐 모듈의 이탈 · 진입
+        vector<ModuleTarget>& listHeld = occupancy._listModuleTarget;
+        vector<GameObject*>   listTarget;
+        for ( size_t moduleIndex = 0; moduleIndex < listModule.size(); ++moduleIndex )
         {
             const ZoneCompiledModule& module = listModule[moduleIndex];
-            if ( pOccupant->isPendingDestroy() )
-                return; // 앞 모듈의 할 일이 지웠다(재로 바뀜 · 파괴) — 남은 모듈은 할 대상이 없다
             if ( TriggerAuthorityRule::hasAuthority( module._pProcessor->getAuthority(), manager ) == false )
-                continue; // 이 월드가 판정하지 않는 효과(클라이언트의 Server 모듈) — 대상 기록은 같이 두고 결과는 복제로 받는다
+                continue; // 이 월드가 판정하지 않는 효과(클라이언트의 Server 모듈) — 대상 기록은 같이 두고 결과는 복제로 온다
             listTarget.clear();
-            resolveRoleTargets( manager, module, *pOccupant, listTarget );
+            GameObject* const pOccupant = bInside ? findOccupant() : nullptr;
+            if ( bInside && pOccupant == nullptr )
+                return; // 앞 모듈의 할 일이 지웠다(재로 바뀜 · 파괴) — 남은 대상의 이탈은 다음 갱신이 부른다
+            if ( pOccupant != nullptr )
+                resolveRoleTargets( manager, module, *pOccupant, listTarget );
+            for ( size_t heldIndex = listHeld.size(); heldIndex > 0; --heldIndex )
+            {
+                ModuleTarget held = listHeld[heldIndex - 1];
+                if ( held._module != moduleIndex )
+                    continue;
+                GameObject* const pTarget = manager.resolveGameObject( held._target );
+                if ( pTarget != nullptr && std::find( listTarget.begin(), listTarget.end(), pTarget ) != listTarget.end() )
+                    continue;
+                listHeld.erase( listHeld.begin() + static_cast<ptrdiff_t>( heldIndex - 1 ) );
+                if ( pTarget != nullptr && pTarget->isPendingDestroy() == false )
+                    dispatch( manager, module, source, occupancy, *pTarget, held._memory, Event::Exit, 0.0f );
+            }
             for ( GameObject* pTarget : listTarget )
             {
-                ZoneSample sample                 = occupancy._sample;
-                sample._pTarget                   = pTarget;
-                TagContainer                 tags = ZoneTrackerInternal::collectTargetTags( *pTarget );
-                ActionValues                 values;
-                AIControllerComponent* const pAI = ZoneTrackerInternal::findAIController( manager, *pTarget );
-
-                ZoneEventContext context;
-                context._pModule   = &module;
-                context._pMemory   = &occupancy._listMemory[moduleIndex];
-                context._pTarget   = pTarget;
-                context._pOccupant = pOccupant;
-                context._pManager  = &manager;
-                context._pSample   = &sample;
-                context._world.set<ZoneSampleSlot>( &sample );
-                context._world.set<SubjectTagsSlot>( &tags );
-                context._world.set<ActionTargetSlot>( pTarget );
-                context._world.set<ActionSourceSlot>( &source );
-                context._world.set<GameFlagsSlot>( pFlags );
-                context._world.set<GameFlagsWriteSlot>( pFlags );
-                if ( pAI != nullptr )
-                {
-                    context._world.set<BlackboardSlot>( &pAI->getBlackboard() );
-                    context._world.set<BlackboardWriteSlot>( &pAI->getBlackboard() );
-                }
-                module.evaluateActionParams( context._world, values );
-                context._world.set<ActionValuesSlot>( &values );
-                context._bConditionTrue = module._condition.evaluate( context._world ) ? SW_TRUE : SW_FALSE;
-                switch ( event )
-                {
-                    case Event::Enter:
-                        module._pProcessor->onEnter( context );
-                        break;
-                    case Event::Stay:
-                        module._pProcessor->onStay( context, deltaTime );
-                        break;
-                    case Event::Exit:
-                        module._pProcessor->onExit( context );
-                        break;
-                }
+                const GameObjectHandle target = pTarget->getHandle();
+                const bool             bHeld  = std::any_of( listHeld.begin(), listHeld.end(), [moduleIndex, target]( const ModuleTarget& held )
+                             { return held._module == moduleIndex && held._target == target; } );
+                if ( bHeld )
+                    continue;
+                ModuleTarget entered;
+                entered._target = target;
+                entered._module = static_cast<uint32>( moduleIndex );
+                listHeld.push_back( entered );
+                dispatch( manager, module, source, occupancy, *pTarget, listHeld.back()._memory, Event::Enter, 0.0f );
             }
+        }
+        if ( bInside == false )
+            return;
+
+        // 2. 체류 — 진입을 모두 부른 뒤다(모듈의 조건이 같은 프레임에 다른 모듈이 건 것을 본다)
+        occupancy._sample._timeInside += deltaTime;
+        for ( size_t moduleIndex = 0; moduleIndex < listModule.size(); ++moduleIndex )
+        {
+            for ( size_t heldIndex = 0; heldIndex < listHeld.size(); ++heldIndex )
+            {
+                if ( findOccupant() == nullptr )
+                    return; // 앞 모듈의 할 일이 지웠다 — 남은 모듈은 할 대상이 없다
+                if ( listHeld[heldIndex]._module != moduleIndex )
+                    continue;
+                GameObject* const pTarget = manager.resolveGameObject( listHeld[heldIndex]._target );
+                if ( pTarget != nullptr && pTarget->isPendingDestroy() == false )
+                    dispatch( manager, listModule[moduleIndex], source, occupancy, *pTarget, listHeld[heldIndex]._memory, Event::Stay, deltaTime );
+            }
+        }
+    }
+
+    void ZoneTracker::dispatch( GameObjectManager& manager, const ZoneCompiledModule& module, const ActionSource& source, const OccupantRecord& occupancy, GameObject& target, ZoneModuleMemory& memory, Event event,
+                                float32 deltaTime )
+    {
+        GameStateComponent* const pSession = GameStateComponent::findOpen( &manager );
+        GameFlags* const          pFlags   = pSession != nullptr ? &pSession->getFlags() : nullptr;
+        ZoneSample                sample   = occupancy._sample;
+        sample._pTarget                    = &target;
+        TagContainer                 tags  = ZoneTrackerInternal::collectTargetTags( target );
+        ActionValues                 values;
+        AIControllerComponent* const pAI = ZoneTrackerInternal::findAIController( manager, target );
+
+        ZoneEventContext context;
+        context._pModule   = &module;
+        context._pMemory   = &memory;
+        context._pTarget   = &target;
+        context._pOccupant = manager.resolveGameObject( occupancy._target );
+        context._pManager  = &manager;
+        context._pSample   = &sample;
+        context._world.set<ZoneSampleSlot>( &sample );
+        context._world.set<SubjectTagsSlot>( &tags );
+        context._world.set<ActionTargetSlot>( &target );
+        context._world.set<ActionSourceSlot>( &source );
+        context._world.set<GameFlagsSlot>( pFlags );
+        context._world.set<GameFlagsWriteSlot>( pFlags );
+        if ( pAI != nullptr )
+        {
+            context._world.set<BlackboardSlot>( &pAI->getBlackboard() );
+            context._world.set<BlackboardWriteSlot>( &pAI->getBlackboard() );
+        }
+        module.evaluateActionParams( context._world, values );
+        context._world.set<ActionValuesSlot>( &values );
+        context._bConditionTrue = module._condition.evaluate( context._world ) ? SW_TRUE : SW_FALSE;
+        switch ( event )
+        {
+            case Event::Enter:
+                module._pProcessor->onEnter( context );
+                break;
+            case Event::Stay:
+                module._pProcessor->onStay( context, deltaTime );
+                break;
+            case Event::Exit:
+                module._pProcessor->onExit( context );
+                break;
         }
     }
 

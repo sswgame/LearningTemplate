@@ -122,7 +122,10 @@ namespace sw
                         continue;
                     const float3 position = pScene->getWorldPosition();
                     if ( kindIndex == static_cast<size_t>( AIStimulusKind::Sight ) )
-                        outListStimulus.push_back( AIStimulus::makeSight( position, pObject->getObjectID() ) );
+                    {
+                        if ( pObject->hasTag( getHiddenTag(), true ) == false )
+                            outListStimulus.push_back( AIStimulus::makeSight( position, pObject->getObjectID() ) );
+                    }
                     else if ( source._noiseRadius > 0.0f )
                         outListStimulus.push_back( AIStimulus::makeHearing( position, pObject->getObjectID(), source._noiseRadius ) ); // 조용한 원천은 소리 자극이 아니다
                 }

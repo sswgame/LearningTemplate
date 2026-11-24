@@ -4,8 +4,10 @@
 #include "Core/Event/EventDispatcher.h"
 #include "Core/Subsystem/SubsystemScope.h"
 #include "Core/Testing/TestFramework.h"
+#include "Core/Testing/TestWait.h"
 
 #define SW_TEST_INTERNAL // 임시 리소스 도메인 픽스처(`ScopedScratchDomain`)와 엔진 서비스를 직접 쓴다
+#include "Engine/Config/GameTimeScale.h"
 #include "Engine/Content/Tests/ScopedScratchDomain.h"
 #include "Engine/Foundation/EngineServices.h"
 #include "Engine/Scene/SceneManager.h"
@@ -53,16 +55,16 @@ SW_TEST_CASE( GameFlowTest, LoadingScreenWithoutUISystem )
     SW_EXPECT_FALSE( controller.isShowing() );
     SW_EXPECT_NULL( controller.findLoadingScreen() );
 
-    ScreenFade fade;
-    controller.update( 0.5f, false, sw::optional<float32>{ 0.5f }, fade );
+    ScreenTransitionManager transition;
+    controller.update( 0.5f, false, sw::optional<float32>{ 0.5f }, transition );
     SW_EXPECT_NEAR( 0.0f, controller.getShownSeconds(), 1.0e-6f );
-    SW_EXPECT_NEAR( 0.0f, fade.getOverlayAlpha(), 1.0e-6f );
+    SW_EXPECT_NEAR( 0.0f, transition.fade().getOverlayAlpha(), 1.0e-6f );
     SW_EXPECT_NULL( controller.findFadeScreen() );
 
-    fade.beginFadeOut( 0.1f );
-    fade.update( 0.05f ); // 어두워지는 중이어도 패널을 열 UI 가 없다
-    SW_EXPECT_TRUE( fade.getOverlayAlpha() > 0.0f );
-    controller.update( 0.5f, false, sw::nullopt, fade );
+    SW_REQUIRE_TRUE( transition.beginTransition( Delegate<void()>{}, 0.1f, 0.1f ).has_value() );
+    transition.update( 0.05f ); // 어두워지는 중이어도 패널을 열 UI 가 없다
+    SW_EXPECT_TRUE( transition.fade().getOverlayAlpha() > 0.0f );
+    controller.update( 0.5f, false, sw::nullopt, transition );
     SW_EXPECT_NULL( controller.findFadeScreen() );
     SW_EXPECT_TRUE( controller.getCurrentTip().empty() );
 }
@@ -104,6 +106,51 @@ SW_TEST_CASE( GameFlowTest, FailedSaveWithoutUISystem )
     SW_EXPECT_FALSE( controller.isShowingSaveFailure() );
     controller.shutdownSubsystem();
     SW_EXPECT_EQUAL( subscriberCount - 3u, dispatcher.getSubscriberCount() ); // 씬 로드 · 저장 · 불러오기
+}
+
+/** @brief [GameFlowTest] 타이틀 씬이 활성인 동안 세이브가 막힌다 — 타이틀을 저장하면 이어 하기가 타이틀을 연다. 다른 씬이 서면 풀린다 */
+SW_TEST_CASE( GameFlowTest, SavingIsBlockedOnTheTitleScene )
+{
+    const test::ScopedScratchDomain domain;
+    SceneManager                    sceneManager;
+    SW_REQUIRE_NOT_NULL( sceneManager.createEmptyActiveScene( "Title" ) );
+    SW_REQUIRE_TRUE( sceneManager.saveActiveSceneCopy( domain.makeDiskPath( "title.scene.xml" ) ) );
+    SW_REQUIRE_TRUE( sceneManager.saveActiveSceneCopy( domain.makeDiskPath( "map.scene.xml" ) ) );
+
+    SubsystemScope              scope;
+    const game::ScopedGameScope scopedGame{ scope };
+    SW_REQUIRE_TRUE( scope.bind( &sceneManager ) );
+    SW_REQUIRE_TRUE( scope.bind( &engine::getSubsystem<GameTimeScale>() ) );
+    SW_REQUIRE_TRUE( sceneManager.initializeSubsystem() == SubsystemInitResult::Succeeded );
+    const string                             titlePath = test::ScopedScratchDomain::makeID( "title.scene.xml" ).str();
+    const string                             mapPath   = test::ScopedScratchDomain::makeID( "map.scene.xml" ).str();
+    GameSettings                             settings;
+    StringBuilder<constant::buffer::kMax512> settingsText;
+    settingsText.appendFormat( "<GameSettings><startMap>%#</startMap><titleScene>%#</titleScene><defaultLanguage>ko_kr</defaultLanguage></GameSettings>", mapPath, titlePath );
+    SW_REQUIRE_TRUE( settings.loadFromXMLText( settingsText.view(), "GameFlowTest" ) );
+    ScreenTransitionManager transition;
+    SaveLock                saveLock;
+    GameSceneFlow           flow( settings, transition, nullptr, saveLock );
+    SW_REQUIRE_TRUE( flow.initializeSubsystem() == SubsystemInitResult::Succeeded );
+
+    const auto travel = [&]()
+    {
+        return test::waitUntil( [&]()
+        {
+            sceneManager.updateTransitions();
+            flow.update();
+            return flow.hasPendingSceneLoad() == false;
+        } );
+    };
+    SW_REQUIRE_TRUE( flow.requestTitleScene() );
+    SW_EXPECT_TRUE( flow.hasPendingSceneLoad() );
+    SW_REQUIRE_TRUE( travel() );
+    SW_EXPECT_TRUE( saveLock.isBlocked() ); // 로드는 끝났다 — 타이틀이라 막혀 있다
+    SW_REQUIRE_TRUE( flow.requestEntranceScene() );
+    SW_REQUIRE_TRUE( travel() );
+    SW_EXPECT_FALSE( saveLock.isBlocked() );
+    flow.shutdownSubsystem();
+    sceneManager.shutdownSubsystem();
 }
 
 /** @brief [GameFlowTest] 타이틀 씬이 없는 게임은 타이틀 요청이 false 이고 "타이틀로" 명령을 걸지 않는다("시작" 은 건다) */

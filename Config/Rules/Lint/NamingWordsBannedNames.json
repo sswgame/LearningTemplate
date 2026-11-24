@@ -3,6 +3,7 @@
   "_bannedNames": {
     "setControllerActive": "CharacterControllerComponent::suspend — 멈춤은 부른 쪽이 Subscription 으로 쥔다(2026-11-25)",
     "setRiderMovementSuspended": "CharacterControllerComponent::suspend — 좌석이 _riderSuspension 을 쥔다(2026-11-25)",
+    "resumeFallenRider": "DismountOnDeathComponent::holdFall — 떨어진 탑승자의 멈춤과 되돌리기를 한곳이 쥔다(2026-11-25)",
     "_motionTeleportSerial": "SceneComponent::getTeleportSerial · getOriginShiftSerial(2026-11-25)",
     "_sequencerClip": "SkeletalAnimatorComponent::openSequencerOverride — 자리마다 주인이 있는 덮어쓰기 목록(2026-11-25)",
     "_sequencerTime": "SkeletalAnimatorComponent::openSequencerOverride(2026-11-25)",

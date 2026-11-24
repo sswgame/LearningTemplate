@@ -5,6 +5,7 @@
  *          서비스 칸의 정의는 이 폴더에 있어 UI 폴더를 짓지 않는 구성에서도 칸을 읽는 쪽이 링크됩니다(`IInputCaptureQuery` · `IPlayerNotificationSink` 와 같은 모양).
  */
 #pragma once
+#include "Core/Delegate/Subscription.h"
 #include "Core/Foundation/Macros.h"
 #include "Core/Subsystem/ServiceSlot.h"
 
@@ -21,10 +22,8 @@ namespace sw
     public:
         virtual ~IUILayerVisibility() = default;
 
-        /** @brief 레이어 집합 @p layers 를 숨기는 요청을 하나 겁니다. 요청은 레이어마다 세어 쌓입니다. 건 쪽이 같은 집합으로 `removeLayerHideRequest` 를 꼭 부릅니다. */
-        virtual void addLayerHideRequest( UILayerMask layers ) = 0;
-        /** @brief `addLayerHideRequest` 로 건 요청을 하나 풉니다. */
-        virtual void removeLayerHideRequest( UILayerMask layers ) = 0;
+        /** @brief 레이어 집합 @p layers 를 숨기는 요청을 하나 겁니다. 요청은 레이어마다 세어 쌓이고, 돌려준 구독이 풀리면 요청도 풀립니다. 빈 집합이면 빈 구독입니다. */
+        [[nodiscard]] virtual Subscription addLayerHideRequest( UILayerMask layers ) = 0;
 
         SW_SERVICE_SLOT( IUILayerVisibility, Optional );
     };

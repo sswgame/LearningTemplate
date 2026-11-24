@@ -2,6 +2,7 @@
 
 #include "GameFramework/Runtime/Foundation/Framework/Flow/GameSceneFlow.h"
 
+#include "Core/File/FileUtil.h"
 #include "Core/GlobalVariable/GlobalVariableManager.h"
 #include "Core/Subsystem/Subsystem.h"
 
@@ -14,6 +15,7 @@
 #include "GameFramework/Runtime/Foundation/Framework/Flow/ScreenTransitionManager.h"
 #include "GameFramework/Runtime/Foundation/Framework/GameEventUtil.h"
 #include "GameFramework/Runtime/Foundation/Framework/GameService.h"
+#include "GameFramework/Runtime/Foundation/Framework/Save/Autosave.h"
 #include "GameFramework/Runtime/Foundation/Framework/Save/SaveLock.h"
 #include "GameFramework/Runtime/Foundation/GameData/GameSettings.h"
 
@@ -33,6 +35,7 @@ namespace sw
         , _pLoadingScreen{ pLoadingScreen }
         , _saveLock{ saveLock }
         , _listPendingSceneLoad{}
+        , _titleSaveBlock{}
         , _sceneLoadRequestedSubscription{}
         , _listSessionCommandRegistration{}
         , _bResumingWorld{ SW_FALSE }
@@ -52,6 +55,8 @@ namespace sw
         SceneManager* const pSceneManager = game::findSubsystem<SceneManager>();
         // 인스턴스가 살아 있는 월드 위에 다시 섰다(게임 모듈 핫 리로드 · 백엔드 교체) — 첫 씬을 요청하지 않는다(`requestFirstScene`).
         _bResumingWorld = ( pSceneManager != nullptr && pSceneManager->findActiveObjectManager() != nullptr ) ? SW_TRUE : SW_FALSE;
+        if ( _bResumingWorld == SW_TRUE )
+            updateTitleSaveBlock( pSceneManager->getActiveScene()->getSourcePath() );
         // 씬 로드를 누가 요청했든 받아들임 알림으로 로딩 화면을 띄운다(언리얼 로딩 화면 모듈이 PreLoadMap 을 구독하는 것과 같다). 첫 씬 요청(onInitialize) 앞에 건다.
         if ( pSceneManager != nullptr )
             _sceneLoadRequestedSubscription = pSceneManager->onSceneLoadRequested().add( SW_DELEGATE_METHOD( SceneLoadRequestedHandler, &GameSceneFlow::onSceneLoadRequested, this ) );
@@ -62,6 +67,7 @@ namespace sw
     {
         _sceneLoadRequestedSubscription.reset();
         _listPendingSceneLoad.clear();
+        _titleSaveBlock.reset();
     }
 
     void GameSceneFlow::update()
@@ -78,7 +84,7 @@ namespace sw
         const float32 realDeltaTime = game::getSubsystem<GameTimeScale>().getUnscaledDeltaTime();
         _screenTransition.update( realDeltaTime );
         if ( _pLoadingScreen != nullptr )
-            _pLoadingScreen->update( realDeltaTime, bLoading, loadProgress, _screenTransition.fade() );
+            _pLoadingScreen->update( realDeltaTime, bLoading, loadProgress, _screenTransition );
         if ( _listPendingSceneLoad.empty() == false )
             publishFinishedSceneLoads();
     }
@@ -109,6 +115,7 @@ namespace sw
 
     bool GameSceneFlow::requestEntranceScene()
     {
+        resetRunningProgress();
         return requestLoadScene( getEntranceScene(), "entrance" );
     }
 
@@ -117,8 +124,24 @@ namespace sw
         const DataPath& titleScene = _settings._titleScene;
         if ( titleScene.isSet() == false )
             return false;
+        resetRunningProgress();
         engine::notifyGameInstanceBoundary( GameInstanceBoundary::Ended ); // 하던 게임이 끝났다 — 열린 화면 · 자막 · 소리 · 세션. 로딩 화면은 바로 아래 요청이 띄운다
         return requestLoadScene( titleScene.get(), "title" );
+    }
+
+    void GameSceneFlow::resetRunningProgress()
+    {
+        if ( AutosaveManager* const pAutosave = game::findSubsystem<AutosaveManager>() )
+            pAutosave->beginNewGame();
+    }
+
+    void GameSceneFlow::updateTitleSaveBlock( const string& scenePath )
+    {
+        const bool bTitle = _settings._titleScene.isSet() && FileUtil::isSameDiskPath( _settings._titleScene.get(), scenePath );
+        if ( bTitle == false )
+            _titleSaveBlock.reset();
+        else if ( _titleSaveBlock.isActive() == false )
+            _titleSaveBlock = _saveLock.block( "scene.title" );
     }
 
     bool GameSceneFlow::hasTitleScene() const
@@ -198,7 +221,9 @@ namespace sw
 
         for ( const PendingSceneLoad& finished : listFinished )
         {
-            Scene* const            pScene = finished._future.get();
+            Scene* const pScene = finished._future.get();
+            if ( pScene != nullptr )
+                updateTitleSaveBlock( finished._scenePath );
             SceneLoadCompletedEvent event{};
             event._levelName = finished._scenePath;
             event._bSuccess  = ( pScene != nullptr );

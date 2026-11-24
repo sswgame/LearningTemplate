@@ -6,6 +6,7 @@
 #include "Core/Container/string.h"
 #include "Core/Container/vector.h"
 #include "Core/Delegate/Delegate.h"
+#include "Core/Delegate/Subscription.h"
 #include "Core/Foundation/Expected.h"
 #include "Core/Foundation/Macros.h"
 #include "Core/Foundation/Types.h"
@@ -116,7 +117,7 @@ namespace sw
             _confineRadius = radius;
         }
         /** @brief 이 플레이어가 지금 플레이어 입력(아래 레이어)을 막고 있으면 true 입니다(감시 값 `Sequence.InputBlocked`). */
-        bool isBlockingPlayerInput() const { return _bInputLayerPushed == SW_TRUE && _playerMovement == SequencePlayerMovement::Blocked; }
+        bool isBlockingPlayerInput() const { return _cutsceneBlock.isActive(); }
         /** @brief 빨리감기 입력이 눌려 배율이 걸려 있으면 true 입니다. */
         bool isFastForwardHeld() const { return _bFastForwardHeld == SW_TRUE; }
         /** @brief 지금 플레이어에 걸린 재생 속도입니다(빨리감기 배율 포함, 감시 값 `Sequence.PlayRate`). */
@@ -193,8 +194,6 @@ namespace sw
         void acquireCutsceneOptions();
         /** @brief `acquireCutsceneOptions` 가 건 것을 같은 수로 풉니다(빨리감기 배율 포함). 끝내기가 부른다. */
         void releaseCutsceneOptions();
-        /** @brief 플레이어 입력 맵입니다. 입력 관리자가 없는 구성(전용 서버 · 하네스)이면 nullptr 입니다. */
-        static InputMap* findPlayerInputMap();
         /** @brief 건너뛰기 · 빨리감기 입력을 읽습니다(틱 — 게임이 멈춰 있으면 읽지 않는다). 건너뛰기를 눌렀으면 true 입니다. */
         [[nodiscard]] bool readCutsceneInput();
         /** @brief 범위 제한 대상을 중심 둘레 반지름 안으로 되돌립니다(틱 뒤). */
@@ -229,13 +228,13 @@ namespace sw
         PROPERTY( Category = "Cutscene", DisplayName = "Skippable", Tooltip = "The cutscene input map's Cutscene.Skip jumps to the end" )
         uint8 _bSkippable : 1;
         PROPERTY( Category = "Cutscene", DisplayName = "Fast Forward", Tooltip = "Holding Cutscene.FastForward multiplies the play rate (EngineConfig _sequencer._fastForwardRate)" )
-        uint8                  _bAllowFastForward  : 1;
-        uint8                  _bInputLayerPushed  : 1; ///< 컷씬 레이어를 켰다(끝내기가 끈다). 저장하지 않는다
-        uint8                  _bInputLayerStacked : 1; ///< 막기(Blocked)라 컷씬 레이어를 스택에 올렸다(끝내기가 뺀다). 저장하지 않는다
-        uint8                  _bHUDHidden         : 1; ///< HUD 숨김 요청을 걸었다. 저장하지 않는다
-        uint8                  _bFastForwardHeld   : 1; ///< 빨리감기 배율이 걸렸다. 저장하지 않는다
-        uint8                  _bTimelineOnly      : 1; ///< 시간만 잰다(`copyTimelineFrom`). 저장하지 않는다
-        [[maybe_unused]] uint8 _reserved           : 7;
+        uint8                  _bAllowFastForward : 1;
+        uint8                  _bFastForwardHeld  : 1; ///< 빨리감기 배율이 걸렸다. 저장하지 않는다
+        uint8                  _bTimelineOnly     : 1; ///< 시간만 잰다(`copyTimelineFrom`). 저장하지 않는다
+        [[maybe_unused]] uint8 _reserved          : 2;
+        Subscription           _hudHide;       ///< 재생 동안 건 HUD 숨김 요청(`IUILayerVisibility`). 저장하지 않는다
+        Subscription           _cutsceneLayer; ///< 재생 동안 켠 컷씬 레이어(`InputManager::enableSharedLayer`). 저장하지 않는다
+        Subscription           _cutsceneBlock; ///< 막기(Blocked)라 스택에 올린 컷씬 레이어. 저장하지 않는다
         SequencePlayer         _player;
         /** @brief 이번 틱이 민 재생 구간입니다 — 틱 뒤 작업이 묶인 오브젝트에 적용한다(틱 뒤 작업은 값을 캡처하지 않는다). 저장하지 않는다. */
         SequencePlaybackStep _pendingStep;

@@ -100,6 +100,26 @@ SW_TEST_CASE( AIPerceptionTest, SharedQueryFindsRegisteredSources )
     SW_EXPECT_TRUE( pTarget->_bSeen == SW_FALSE );
 }
 
+/** @brief [AIPerceptionTest] 숨은 대상(`State.Hidden`)은 보이지 않고 소리는 들린다. 나오면 다시 보인다 */
+SW_TEST_CASE( AIPerceptionTest, HiddenObjectIsHeardButNotSeen )
+{
+    GameObjectManager          manager;
+    AIStimulusSourceComponent* pSource = Util::makeSource( manager, "Near", float3{ 3.0f, 0.0f, 0.0f } );
+    GameObject* const          pObject = pSource->getOwner();
+    vector<AIStimulus>         listStimulus;
+    vector<Component*>         listKey;
+    pObject->addTag( AIStimulusSourceComponent::getHiddenTag() );
+    AIStimulusSourceComponent::gatherStimuli( manager, 1, float3{}, 10.0f, 1.0f, listStimulus, listKey );
+    SW_EXPECT_TRUE( listStimulus.empty() );
+    pSource->reportNoise( 5.0f );
+    AIStimulusSourceComponent::gatherStimuli( manager, 1, float3{}, 10.0f, 1.0f, listStimulus, listKey );
+    SW_EXPECT_EQUAL( size_t{ 1 }, listStimulus.size() );
+    pSource->clearNoise();
+    pObject->removeTag( AIStimulusSourceComponent::getHiddenTag() );
+    AIStimulusSourceComponent::gatherStimuli( manager, 1, float3{}, 10.0f, 1.0f, listStimulus, listKey );
+    SW_EXPECT_EQUAL( size_t{ 1 }, listStimulus.size() );
+}
+
 /**
  * @brief [AIPerceptionTest] 월드 원점을 옮기면 안 보이게 된 대상의 마지막 자리도 같은 만큼 옮겨진다 — 수색이 옛 원점의 엉뚱한 자리로 가지 않는다
  */

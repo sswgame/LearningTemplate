@@ -6,6 +6,7 @@
 
 #include "Engine/Object/GameObject/Registry/CameraRegistry.h"
 
+#include "Core/Algorithm/VectorUtil.h"
 #include "Core/Foundation/StdHeaders.h"
 #include "Core/Log/ScopedDeferredLog.h"
 #include "Core/Math/MathUtil.h"
@@ -32,20 +33,52 @@ namespace sw
         ScopedLock<mutex> lock{ _mutex };
         if ( _registeredCamera.remove( pCamera ) )
             _registrySerial.fetch_add( 1, std::memory_order_relaxed );
-        if ( _pCutCamera == pCamera )
-            _pCutCamera = nullptr;
+        for ( CutClaim& claim : _listCutClaim )
+        {
+            if ( claim._pCamera == pCamera )
+                claim._pCamera = nullptr;
+        }
     }
 
-    void CameraRegistry::setCutCamera( CameraComponent* pCamera )
+    void CameraRegistry::setCutCamera( Subscription& inoutClaim, CameraComponent* pCamera )
+    {
+        const uint64 id = _cutSubscriptions.findIssued( inoutClaim );
+        if ( id == 0 )
+        {
+            uint64 issuedID = 0;
+            {
+                ScopedLock<mutex> lock{ _mutex };
+                issuedID = ++_lastCutClaimID;
+                _listCutClaim.push_back( CutClaim{ issuedID, pCamera } );
+            }
+            inoutClaim = _cutSubscriptions.issue( issuedID );
+            return;
+        }
+        ScopedLock<mutex> lock{ _mutex };
+        for ( CutClaim& claim : _listCutClaim )
+        {
+            if ( claim._id == id )
+                claim._pCamera = pCamera;
+        }
+    }
+
+    void CameraRegistry::releaseCutClaim( uint64 id )
     {
         ScopedLock<mutex> lock{ _mutex };
-        _pCutCamera = pCamera;
+        (void)VectorUtil::removeIf( _listCutClaim, [id]( const CutClaim& claim )
+        { return claim._id == id; } ); // 지운 수는 늘 하나다
     }
 
     CameraComponent* CameraRegistry::getCutCamera() const
     {
         ScopedLock<mutex> lock{ _mutex };
-        return _pCutCamera;
+        for ( size_t index = _listCutClaim.size(); index > 0; --index )
+        {
+            CameraComponent* const pCamera = _listCutClaim[index - 1]._pCamera;
+            if ( isUsableCamera( pCamera ) )
+                return pCamera;
+        }
+        return nullptr;
     }
 
     bool CameraRegistry::isUsableCamera( const CameraComponent* pCamera )

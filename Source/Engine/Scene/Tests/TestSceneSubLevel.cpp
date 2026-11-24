@@ -4,6 +4,7 @@
 
 #include "Core/File/FileUtil.h"
 #include "Core/Testing/TestFramework.h"
+#include "Core/Testing/TestWait.h"
 
 #include "Engine/Content/Tests/ScopedScratchDomain.h"
 #include "Engine/Foundation/DeterministicRun.h"
@@ -112,6 +113,33 @@ namespace
         DeterministicRunPolicy _previous;
     };
 } // namespace
+
+/** @brief [SceneSubLevelTest] 여러 프레임에 나눠 짓는 중에도 앵커는 하위 레벨의 것이다 — 그때 찍은 세이브가 앵커를 씬 섹션에 실으면 복원한 하위 레벨이 앵커를 세우지 못한다 */
+SW_TEST_CASE( SceneSubLevelTest, AnchorBelongsToTheSubLevelWhileBuilding )
+{
+    const test::ScopedScratchDomain domain;
+    const ScopedFinishJobsPolicy    finishJobs{ SW_FALSE };
+    const string                    shopPath          = Util::writeShop( domain );
+    SceneDocument                   host              = Util::makeHostDocument();
+    host._sceneSettings._addToWorldBudgetMicroseconds = 1; // 엔티티 하나마다 예산을 넘긴다
+    Scene scene{ "Hub" };
+    SW_REQUIRE_TRUE( scene.instantiate( host ) );
+    GameObjectManager&      objects   = *scene.getObjectManager();
+    SceneSubLevelSubsystem& subLevels = objects.getSubsystem<SceneSubLevelSubsystem>();
+    SW_REQUIRE_TRUE( subLevels.addSubLevel( scene, "Shop", shopPath, SceneSubLevelSubsystem::Placement{} ) );
+    SubLevelState state{ SubLevelState::Loading };
+    SW_REQUIRE_TRUE( test::waitUntil( [&]()
+    {
+        subLevels.update( 0.0f ); // 문서 읽기가 끝난 갱신이 첫 엔티티까지 짓는다
+        return subLevels.findSubLevelState( "Shop", state ) && state != SubLevelState::Loading;
+    } ) );
+    SW_REQUIRE_TRUE( state == SubLevelState::Building );
+
+    objects.mergePendingAdds();
+    const GameObject* pAnchor = objects.findGameObjectByName( hashed_string( "Shop" ) );
+    SW_REQUIRE_TRUE( pAnchor != nullptr );
+    SW_EXPECT_TRUE( subLevels.isSubLevelObject( pAnchor->getObjectID() ) );
+}
 
 /** @brief [SceneSubLevelTest] 더한 씬은 다음 갱신에 앵커 아래로 펼쳐 서고(자리 · 부착 · 늘 올라 있음), 빼면 앵커와 멤버가 모두 내려간다 */
 SW_TEST_CASE( SceneSubLevelTest, AddBuildsUnderAnchorAndRemoveUnloads )

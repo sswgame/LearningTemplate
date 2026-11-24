@@ -42,6 +42,10 @@ namespace sw
                     spec._context._sourceName = pSource->_name;
                     if ( pSource->_object.isValid() )
                         spec._context._effectCauser = pSource->_object;
+                    // 같은 출처가 이미 걸어 둔 끝없는 이펙트는 다시 걸지 않는다 — 영역 안에서 저장하고 불러오면 이펙트는 세이브에서, 진입은 영역에서 다시 온다(둘이 걸리면 값이 두 배다).
+                    const bool bHoldsOne = spec._pDef->_durationPolicy == EffectDurationPolicy::Infinite && spec._pDef->_stackingPolicy == EffectStackingPolicy::None;
+                    if ( bHoldsOne && pSource->_name.empty() == false && pAbility->hasActiveEffectFromSource( params._effect, pSource->_name ) )
+                        return ActionResult::Succeeded;
                 }
                 if ( params._setByCaller.empty() == false )
                 {

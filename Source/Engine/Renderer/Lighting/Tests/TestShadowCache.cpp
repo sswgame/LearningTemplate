@@ -124,3 +124,26 @@ SW_TEST_CASE( ShadowCacheTest, StaticSceneChangeAndResolutionChangeRebuildEveryT
     cache.update( listGrown, Internal::kAtlasResolution / 2u, 4, true );
     SW_EXPECT_TRUE( cache.getAction( 0 ) == Action::Rebuild && cache.getAction( 2 ) == Action::Rebuild );
 }
+
+/**
+ * @brief [ShadowCacheTest] 빠진 배치가 있던 층(머티리얼 PSO 를 만드는 중)은 다음 프레임에 다시 그린다 — 다 그려진 뒤에만 Reuse 다
+ * @details 변이: `markIncomplete` 가 타일을 무효로 두지 않으면 둘째 프레임이 Reuse 라 빠진 그림자가 굳는다.
+ */
+SW_TEST_CASE( ShadowCacheTest, IncompleteLayerIsRebuiltNextFrame )
+{
+    using Internal = sw::ShadowCacheTestInternal;
+    using Action   = sw::ShadowCacheTileAction;
+    const sw::vector<sw::ShadowTileDraw> listTile{ Internal::makeTile( 0, 1.0f, 1u ) };
+    sw::ShadowCache                      cache;
+    cache.update( listTile, Internal::kAtlasResolution, 7, false );
+    cache.update( listTile, Internal::kAtlasResolution, 7, true );
+    SW_REQUIRE_TRUE( cache.getAction( 0 ) == Action::Rebuild );
+    cache.markRebuilt();
+    cache.markIncomplete();
+
+    cache.update( listTile, Internal::kAtlasResolution, 7, true );
+    SW_EXPECT_TRUE( cache.getAction( 0 ) == Action::Rebuild );
+    cache.markRebuilt();
+    cache.update( listTile, Internal::kAtlasResolution, 7, true );
+    SW_EXPECT_TRUE( cache.getAction( 0 ) == Action::Reuse );
+}

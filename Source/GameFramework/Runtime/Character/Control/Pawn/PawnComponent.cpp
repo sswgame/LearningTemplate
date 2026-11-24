@@ -49,6 +49,7 @@ namespace sw
         , _bLockMouse{ false }
         , _intent{}
         , _controller{}
+        , _ridingController{}
         , _yawOffsetUnits{ 0 }
         , _pitchOffsetUnits{ 0 }
         , _requestedYawUnits{ 0 }
@@ -199,6 +200,8 @@ namespace sw
     {
         const PawnComponent*       pPawn       = pawnObject.getComponent<PawnComponent>();
         const ControllerComponent* pController = pPawn != nullptr ? manager.resolveComponent( pPawn->getController() ) : nullptr;
+        if ( pController == nullptr && pPawn != nullptr )
+            pController = manager.resolveComponent( pPawn->_ridingController );
         return pController != nullptr ? pController->getOwner() : nullptr;
     }
 } // namespace sw

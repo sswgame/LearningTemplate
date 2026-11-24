@@ -386,7 +386,8 @@ namespace
         static vector<int32> collectFired( const SequenceAsset& asset, const SequencePlaybackStep& step )
         {
             vector<const SequenceTrackItem*> listCrossed;
-            SequenceTimelineUtil::applyPlayback( nullptr, asset, step, SequenceBindingView{}, &listCrossed );
+            Subscription                     cameraCut;
+            SequenceTimelineUtil::applyPlayback( nullptr, asset, step, SequenceBindingView{}, cameraCut, &listCrossed );
             vector<int32> listFrame;
             for ( const SequenceTrackItem* pItem : listCrossed )
                 listFrame.push_back( pItem->_start );
