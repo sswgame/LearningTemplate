@@ -111,6 +111,8 @@ namespace sw
         const ShaderBindingLayout* findLayout( RHIPipelineStateHandle pso ) const;
         /** @brief PSO 를 만들 때 쓴 디스크립터를 반환합니다. 모르는 PSO 면 false 입니다. */
         [[nodiscard]] bool findDesc( RHIPipelineStateHandle pso, RHIPipelineStateDesc& outDesc ) const;
+        /** @brief PSO 의 깊이 형식만 돌려줍니다(모르는 PSO · 깊이 없는 PSO 는 `Unknown`) — 서술을 복사하지 않는다. */
+        RHIFormat findDepthStencilFormat( RHIPipelineStateHandle pso ) const;
         /** @brief 이 레이아웃의 머티리얼 폴백 버퍼입니다(`ensureMaterialFallbackBuffers` 가 셋업에서 만든다). 없으면 nullptr 입니다. */
         const RHIStructuredBuffer* findMaterialFallback( const ShaderBindingLayout* pLayout ) const;
 

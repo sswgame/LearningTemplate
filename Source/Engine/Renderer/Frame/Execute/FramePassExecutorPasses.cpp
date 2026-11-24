@@ -832,9 +832,8 @@ namespace sw
         const float4                 sceneClear  = getTargetClearColor( colorTarget );
         const RHIPipelineStateHandle pso         = _psoManager.getEnginePSO( input._passType );
         // 렌더 패스의 깊이 붙임은 PSO 의 깊이 형식을 따른다 — 깊이 테스트를 끈 감각 패스의 PSO 는 깊이가 없고, 둘이 다르면 Vulkan 은 그리지 않는다.
-        RHIPipelineStateDesc psoDesc{};
-        const bool           bUsesDepth = _psoManager.findDesc( pso, psoDesc ) && psoDesc._depthStencilFormat != RHIFormat::Unknown;
-        const hashed_string  depthName  = bUsesDepth ? passDepth : hashed_string{};
+        const bool          bUsesDepth = _psoManager.findDepthStencilFormat( pso ) != RHIFormat::Unknown;
+        const hashed_string depthName  = bUsesDepth ? passDepth : hashed_string{};
         if ( beginColorPass( context, colorTarget, depthName, sceneClear, getColorLoadFor( colorTarget ), getColorLoadFor( passDepth ) ) == false )
             return;
         drawSceneMeshes( context, pso, false );

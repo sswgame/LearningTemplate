@@ -54,6 +54,13 @@ namespace sw
         return true;
     }
 
+    RHIFormat RenderPSOCache::findDepthStencilFormat( RHIPipelineStateHandle pso ) const
+    {
+        ScopedSharedLock<shared_mutex> lock{ _layoutMutex };
+        const auto                     it = _mapPSODesc.find( pso );
+        return it != _mapPSODesc.end() ? it->second._depthStencilFormat : RHIFormat::Unknown;
+    }
+
     const ShaderBindingSlot* RenderPSOCache::findComputeBufferSlot( RHIPipelineStateHandle pso, uint32 slot, bool bUAV, ShaderTargetFormat targetFormat )
     {
         RHIPipelineStateDesc desc{};

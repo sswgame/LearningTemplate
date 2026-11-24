@@ -103,6 +103,8 @@ namespace sw
          *          차이(알파 경로가 컴파일됐는가 같은)를 테스트가 여기서 확인합니다.
          */
         [[nodiscard]] bool findDesc( RHIPipelineStateHandle pso, RHIPipelineStateDesc& outDesc ) const;
+        /** @brief PSO 의 깊이 형식만 돌려줍니다(모르는 PSO · 깊이 없는 PSO 는 `Unknown`). 프레임마다 묻는 자리가 서술 전체(글 여럿)를 복사하지 않게 한다. */
+        RHIFormat findDepthStencilFormat( RHIPipelineStateHandle pso ) const;
         /** @brief 레이아웃 없이 desc 만 핸들에 적습니다 — 컴퓨트 PSO(`createComputePipelineState`)가 어느 셰이더로 만들었는지 `releasePSOsUsingShader` 가 알게 한다. 0 핸들은 무시합니다. */
         void registerDesc( RHIPipelineStateHandle pso, const RHIPipelineStateDesc& desc );
         /**

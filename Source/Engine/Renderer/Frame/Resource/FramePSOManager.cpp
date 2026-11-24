@@ -581,6 +581,11 @@ namespace sw
         return _pCache->findLayout( pso );
     }
 
+    RHIFormat FramePSOManager::findDepthStencilFormat( RHIPipelineStateHandle pso ) const
+    {
+        return _pCache->findDepthStencilFormat( pso );
+    }
+
     bool FramePSOManager::findDesc( RHIPipelineStateHandle pso, RHIPipelineStateDesc& outDesc ) const
     {
         return _pCache->findDesc( pso, outDesc );
