@@ -31,6 +31,8 @@ namespace sw
         void update( float32 deltaSeconds );
         /** @brief 사용자 값을 정합니다. 다음 요청부터 실립니다(일정은 그대로다). */
         void setUserValues( const VFXEmitterUserValues& values ) { _userValues = values; }
+        /** @brief 앞으로 태어나는 입자를 시뮬레이션 공간으로 옮기는 행렬입니다(`VFXCPUSimulation::setEmitterTransform` 과 같은 뜻). 다음 요청부터 실립니다. */
+        void setEmitterTransform( const float4x4& emitterToSimulation ) { _emitterToSimulation = emitterToSimulation; }
         /** @brief 처음부터 다시 시작합니다. 새 재생 토큰을 만들어 렌더 스레드가 GPU 상태를 새로 만든다. */
         void restart();
 
@@ -46,6 +48,7 @@ namespace sw
     private:
         VFXEmitterClock                  _clock;
         VFXEmitterUserValues             _userValues;
+        float4x4                         _emitterToSimulation;
         uint64                           _seed;
         shared_ptr<const VFXGPURunToken> _pRunToken; ///< 이 재생의 정체성(`restart` 가 새로 만든다)
         uint64                           _stepCount;

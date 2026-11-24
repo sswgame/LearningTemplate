@@ -37,7 +37,7 @@ namespace sw
 
         /**
          * @brief 먼 것부터(뒤 → 앞) 그리는 순서를 @p outListOrder 끝에 붙이고 그 구간을 돌려줍니다. 같은 깊이는 입자 번호 순(안정)입니다.
-         * @param world 방출기 행렬(행벡터 규약) — 입자는 방출기 로컬 좌표다
+         * @param world 방출기 행렬(행벡터 규약) — 입자는 시뮬레이션 공간 좌표다
          * @param eye 뷰의 눈 위치(월드)
          * @param axis 깊이 축(`GPUTransparentSorter::getAxis` — 직교 카메라는 시선 방향). 영벡터면 눈까지의 거리로 잰다
          */

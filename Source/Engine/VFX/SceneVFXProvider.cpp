@@ -36,12 +36,13 @@ namespace sw
             const bool bHidden = pVFX->isPendingDestroy() || pVFX->isActive() == false;
             if ( bHidden )
                 continue;
-            const float4x4 world = pVFX->getWorldMatrix();
+            const float3 position = pVFX->getWorldPosition();
             for ( uint32 emitterIndex = 0; emitterIndex < pVFX->getEmitterCount(); ++emitterIndex )
             {
                 // 메시 방출기는 메시 인스턴스 배치로 메시 경로를 탄다(`VFXComponent`). 띠는 이웃 둘이 있어야 한 마디다.
                 // GPU 방출기는 입자 수를 GT 가 모른다 — 재생 중이면 싣고, 그릴 입자 수(띠는 마디 수)는 컴퓨트가 간접 인자에 쓴다.
                 const VFXEmitterDef&        def      = pVFX->getEmitterDef( emitterIndex );
+                const float4x4              world    = pVFX->getEmitterWorldMatrix( emitterIndex );
                 const bool                  bRibbon  = def._renderMode == VFXRenderMode::Ribbon;
                 const bool                  bGPU     = pVFX->getEmitterSimulationTarget( emitterIndex ) == VFXSimulationTarget::GPU;
                 const VFXGPUEmitterRequest* pRequest = bGPU ? pVFX->findEmitterGPURequest( emitterIndex ) : nullptr;
@@ -54,11 +55,12 @@ namespace sw
                     continue;
                 }
                 SceneParticleBatchDesc desc{};
-                desc._world       = world;
-                desc._texturePath = hashed_string( def._texturePath.c_str() );
-                desc._bAdditive   = def._blendMode == VFXBlendMode::Additive ? SW_TRUE : SW_FALSE;
-                desc._bRibbon     = bRibbon ? SW_TRUE : SW_FALSE;
-                desc._sortMode    = def._sortMode;
+                desc._world        = world;
+                desc._sortPosition = position;
+                desc._texturePath  = hashed_string( def._texturePath.c_str() );
+                desc._bAdditive    = def._blendMode == VFXBlendMode::Additive ? SW_TRUE : SW_FALSE;
+                desc._bRibbon      = bRibbon ? SW_TRUE : SW_FALSE;
+                desc._sortMode     = def._sortMode;
                 if ( bGPU )
                 {
                     if ( pRequest != nullptr )

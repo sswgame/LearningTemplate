@@ -43,7 +43,7 @@
 /** @brief 입자 하나의 시뮬레이션 상태입니다(float4 SW_VFX_STATE_FLOAT4_COUNT 개 — C++ 는 크기만 안다). */
 struct VFXParticleState
 {
-    float4 _positionAge;      // xyz 방출기 로컬 위치, w 나이(초)
+    float4 _positionAge;      // xyz 시뮬레이션 공간 위치, w 나이(초)
     float4 _velocityLifetime; // xyz 속도, w 수명(초)
     uint4  _particleIndex;    // xy 입자 번호(64 비트, x 가 아래), z 다중 그룹의 생존 표시, w 인스턴스 칸(빈 칸 스택에서 꺼냈다)
 };
@@ -251,6 +251,9 @@ VFXParticleState makeParticle( uint2 particleIndex )
     particle._positionAge.y      = lerpFloat( -spawnBox.y, spawnBox.y, nextUnitFloat( state, seedRow.zw ) );
     particle._positionAge.z      = lerpFloat( -spawnBox.z, spawnBox.z, nextUnitFloat( state, seedRow.zw ) );
     particle._particleIndex      = uint4( particleIndex, 0u, 0u );
+    // 시뮬레이션 공간으로 — 로컬 공간은 단위 행렬이라 값이 그대로다.
+    particle._positionAge.xyz      = transformPoint4( SW_VFX_PARAM_ROW_EMITTER_TO_SIMULATION, particle._positionAge.xyz ).xyz;
+    particle._velocityLifetime.xyz = transformVector( SW_VFX_PARAM_ROW_EMITTER_TO_SIMULATION, particle._velocityLifetime.xyz );
     return particle;
 }
 
@@ -268,7 +271,7 @@ float3 computeDepthWorldPoint( int2 texel, float2 size, uint historyIndex )
 }
 
 /**
- * @brief 입자 하나의 깊이 충돌입니다. 닿지 않았으면 그대로 두고, 없애기면 @p outKilled 를 켜고, 튀기면 위치 · 속도를 고칩니다(방출기 로컬).
+ * @brief 입자 하나의 깊이 충돌입니다. 닿지 않았으면 그대로 두고, 없애기면 @p outKilled 를 켜고, 튀기면 위치 · 속도를 고칩니다(시뮬레이션 공간).
  * @details 튀기는 CPU 와 같은 식이다 — 법선 성분을 반발 계수만큼 뒤집고 접선 성분을 마찰만큼 줄인다. 면에서 멀어지는 중이면 튀기지 않는다(같은 면에 다시 걸린다).
  */
 void resolveDepthCollision( inout VFXParticleState inoutParticle, uint flags, out bool outKilled )

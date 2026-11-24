@@ -1581,6 +1581,7 @@ namespace sw
             batch._bRibbon          = desc._bRibbon;
             batch._source           = std::move( source );
             batch._world            = desc._world;
+            batch._sortPosition     = desc._sortPosition;
             batch._texturePath      = desc._texturePath;
             batch._bAdditive        = desc._bAdditive;
             batch._sortMode         = desc._sortMode;
@@ -1686,14 +1687,14 @@ namespace sw
 
     void GPUSceneBuilder::fillParticleKeys( const float3& eye, const float3& axis, vector<GPUTransparentSortKey>& outListKey ) const
     {
-        // 메시 투명 후보와 같은 규칙이다. 깊이는 방출기 위치(행렬의 이동)로 측정한다 — 입자 단위 정렬은 하지 않는다(방출기 하나 = 후보 하나).
+        // 메시 투명 후보와 같은 규칙이다. 깊이는 방출기 위치로 측정한다 — 입자 단위 정렬은 하지 않는다(방출기 하나 = 후보 하나).
         // 레이어는 기본 키다(방출기에는 정렬 레이어가 없다).
         const vector<GPUParticleBatch>& listBatch      = _snapshot._listParticleBatch;
         const uint32                    defaultSortKey = engine::getSubsystem<Render2DSettings>().getDefaultSortKey();
         outListKey.resize( listBatch.size() );
         for ( uint32 batchIndex = 0; batchIndex < static_cast<uint32>( listBatch.size() ); ++batchIndex )
         {
-            outListKey[batchIndex] = GPUTransparentSorter::makeTransparentSortKey( defaultSortKey, listBatch[batchIndex]._world.getTranslation(), eye, axis, batchIndex );
+            outListKey[batchIndex] = GPUTransparentSorter::makeTransparentSortKey( defaultSortKey, listBatch[batchIndex]._sortPosition, eye, axis, batchIndex );
         }
         VectorUtil::sort( outListKey, &GPUTransparentSorter::isDrawnBefore );
     }

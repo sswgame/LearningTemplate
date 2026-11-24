@@ -6,7 +6,7 @@
  *
  *          파일은 리플렉션 구조체로 읽는다(`ReflectedXMLFile` — 모르는 이름 · 읽지 못한 값 · 범위 밖 값은 오류). 필수 칸의 기본값은 **틀린 값**
  *          (비어 있거나 0)이라 파일에서 빠지면 `validate` 가 로드를 실패시킨다. 코드에 내장 효과나 기본 텍스처가 없다.
- *          좌표는 방출기 로컬이고, 커브의 시간은 입자 수명의 비율(0..1)이다.
+ *          좌표는 시뮬레이션 공간이고, 커브의 시간은 입자 수명의 비율(0..1)이다.
  */
 #pragma once
 #include "Core/Container/string.h"
@@ -64,7 +64,7 @@ namespace sw
     enum class VFXSimulationSpace : uint8
     {
         Local, ///< 방출기를 따라 움직인다
-        World, ///< 태어난 월드 자리에 남는다 — 카메라를 따라가는 비 · 눈이 끌려가지 않는다. 방출기의 이동만 되돌린다(회전 · 배율이 바뀌면 함께 돈다). CPU 전용
+        World, ///< 태어난 월드 자리에 남는다 — 카메라를 따라가는 비 · 눈이 끌려가지 않는다. 방출기의 이동 · 회전은 태어나는 자리와 속도에만 들고 중력은 월드 축이다. 배율은 재생 시작의 것이다
     };
 
     /** @brief 입자가 무엇에 닿았을 때 반응하는지입니다. */
@@ -142,7 +142,7 @@ namespace sw
     /**
      * @brief 입자 충돌입니다. 방법(`_method`)이 시뮬레이션 대상을 정합니다.
      * @details `PhysicsRaycast`(CPU): 한 단계에 움직인 선분을 물리 씬(3D)에 쏘아 처음 닿은 면에서 반응한다(언리얼 Niagara 의 CPU 레이 트레이스 충돌).
-     *          좌표는 방출기 로컬이고 월드 변환은 부르는 쪽이 한다(`IVFXCollisionScene`).
+     *          좌표는 시뮬레이션 공간이고 월드 변환은 부르는 쪽이 한다(`IVFXCollisionScene`).
      *          `SceneDepth`(GPU): 입자를 주 시점의 **지난 프레임** 깊이(`FrameRenderer` 의 깊이 히스토리)에 투영해, 깊이 면 뒤로 `_depthThickness` 안쪽에
      *          들어가면 닿은 것으로 본다. 법선은 깊이의 이웃 텍셀 기울기다(언리얼 Niagara GPU 깊이 버퍼 충돌). 한계: 화면 밖과 가려진 면(다른 물체 뒤)은
      *          보지 못하고, 깊이 두께보다 빨리 지나가면 뚫고, 한 프레임 늦은 깊이라 빠르게 움직이는 면은 어긋난다. 추가 뷰의 깊이는 쓰지 않는다.
@@ -305,7 +305,7 @@ namespace sw
         float32 _lifetimeMax{ 0.0f };
         PROPERTY( Tooltip = "Half size of the box around the emitter the particles are born in (zero = the emitter point)" )
         float3 _spawnHalfExtents{};
-        PROPERTY( Tooltip = "Space the particles live in: Local follows the emitter, World stays where each particle was born (CPU simulation)" )
+        PROPERTY( Tooltip = "Space the particles live in: Local follows the emitter, World stays where each particle was born (gravity is along the world axes)" )
         VFXSimulationSpace _space{ VFXSimulationSpace::Local };
         PROPERTY( Tooltip = "Per-axis lower bound of the initial velocity" )
         float3 _velocityMin{};

@@ -37,15 +37,16 @@
 #define SW_VFX_PARAM_ROW_COLLISION               9u  // (반발 계수, 마찰, 띄움 거리, 깊이 두께) — 실수
 #define SW_VFX_PARAM_ROW_DEPTH_INFO              10u // (깊이 히스토리 폭, 높이, RW 텍스처 번호 — 네이티브는 bindless UAV, 에뮬은 서수 0, 0)
 #define SW_VFX_PARAM_ROW_DEPTH_EYE               11u // (히스토리 시점의 눈 위치 xyz, 0)
-#define SW_VFX_PARAM_ROW_WORLD                   12u // 방출기 행렬 행 넷(12..15)
-#define SW_VFX_PARAM_ROW_INVERSE_WORLD           16u // 방출기 행렬의 역 행 넷(16..19)
+#define SW_VFX_PARAM_ROW_WORLD                   12u // 시뮬레이션 공간 → 월드 행렬 행 넷(12..15) — 로컬 공간은 방출기 행렬, 월드 공간은 기준 틀
+#define SW_VFX_PARAM_ROW_INVERSE_WORLD           16u // 그 역 행 넷(16..19)
 #define SW_VFX_PARAM_ROW_DEPTH_VIEW_PROJ         20u // 히스토리 시점의 뷰-투영 행 넷(20..23)
 #define SW_VFX_PARAM_ROW_DEPTH_INVERSE_VIEW_PROJ 24u // 그 역 행 넷(24..27)
 #define SW_VFX_PARAM_ROW_LIGHT                   28u // 파티클 라이트 (라이트 버퍼 안의 첫 슬롯 번호, 슬롯 수 — 0 이면 빛 없음, 월드 반경 실수, 세기 실수)
 #define SW_VFX_PARAM_ROW_USER_TINT               29u // 사용자 파라미터 색 곱 RGBA 실수(VFXEmitterUserValues::_tint)
 #define SW_VFX_PARAM_ROW_USER_SIZE               30u // 사용자 파라미터 크기 곱 실수, 0, 0, 0
 #define SW_VFX_PARAM_ROW_SPAWN_BOX               31u // 생성 상자의 반 크기 xyz 실수, 0(모두 0 이면 방출기 점 — VFXEmitterDef::_spawnHalfExtents)
-#define SW_VFX_PARAM_ROW_FIRST_STEP              32u // 단계마다 한 행 (만들 입자 수, 첫 입자 번호 lo, hi, 0) — 커브 키는 그 뒤
+#define SW_VFX_PARAM_ROW_EMITTER_TO_SIMULATION   32u // 새 입자의 위치 · 속도를 시뮬레이션 공간으로 옮기는 행렬 행 넷(32..35) — 로컬 공간은 단위, 월드 공간은 방출기 행렬 × 기준 틀의 역
+#define SW_VFX_PARAM_ROW_FIRST_STEP              36u // 단계마다 한 행 (만들 입자 수, 첫 입자 번호 lo, hi, 0) — 커브 키는 그 뒤
 // 커브 키 하나의 행 수 — (시각, 값, 들어오는 접선, 나가는 접선), (상수면 1, 직선이면 1, 0, 0). 둘 다 0 이면 에르미트다(FloatCurve 와 같은 식).
 #define SW_VFX_PARAM_ROWS_PER_KEY 2u
 
@@ -56,8 +57,8 @@
 #define SW_VFX_FLAG_DEPTH_READY    16u // 이번 프레임에 깊이 히스토리가 있다(없으면 충돌을 보지 않는다 — 첫 프레임 · 크기가 바뀐 프레임)
 
 // 메시 인스턴스 쓰기(vfx_mesh_instance.hlsl)의 구간 — 같은 매개변수 버퍼의 다른 구간이고, 루트 상수 g_VFXMeshParamBase 가 첫 행이다.
-#define SW_VFX_MESH_ROW_HEADER     0u // (풀 크기, 0, 메시 반지름, 방출기 최대 축 배율) — 뒤 둘은 실수
-#define SW_VFX_MESH_ROW_WORLD      1u // 방출기 행렬 행 넷(1..4)
+#define SW_VFX_MESH_ROW_HEADER     0u // (풀 크기, 0, 메시 반지름, 그 행렬의 최대 축 배율) — 뒤 둘은 실수
+#define SW_VFX_MESH_ROW_WORLD      1u // 시뮬레이션 공간 → 월드 행렬 행 넷(1..4)
 #define SW_VFX_MESH_ROW_FIRST_SLOT 5u // 입자 인스턴스 칸(0 ~ 풀 - 1)마다 GPUScene 칸(행 하나에 넷, SW_VFX_INVALID_SLOT 이면 쓰지 않는다)
 #define SW_VFX_INVALID_SLOT        0xFFFFFFFFu
 
@@ -88,7 +89,7 @@
 /** @brief 입자 하나의 렌더 입력입니다 — C++ `GPUParticle`(Engine/VFX/VFXParticle.h)과 같은 배치다. 시뮬레이션이 쓰고 그리기 · 정렬 · 메시 인스턴스 쓰기가 읽는다. */
 struct GPUParticle
 {
-    float4 _positionSize; // xyz = 방출기 로컬 위치, w = 크기(월드 변 길이 — 방출기 배율이 곱해진다)
+    float4 _positionSize; // xyz = 시뮬레이션 공간 위치(그리기의 행렬이 월드로 옮긴다), w = 크기(월드 변 길이 — 그 행렬의 배율이 곱해진다)
     float4 _color;        // 선형 RGBA
     float4 _rotationLife; // x = 회전(라디안), y = 수명 비율, zw = 비어 있음
 };

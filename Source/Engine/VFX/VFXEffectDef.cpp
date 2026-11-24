@@ -70,12 +70,6 @@ namespace sw
             static VFXSimulationTargetSet collisionTargets( const VFXEmitterDef& def ) { return def._collision.getSupportedTargets(); }
             static VFXSimulationTargetSet lightTargets( const VFXEmitterDef& def ) { return def._light.getSupportedTargets(); }
 
-            /** @brief 월드 공간은 CPU 전용이다 — GPU 입자는 방출기 로컬 버퍼에만 산다. */
-            static VFXSimulationTargetSet spaceTargets( const VFXEmitterDef& def )
-            {
-                return def._space == VFXSimulationSpace::Local ? VFXSimulationTargetSet::makeAll() : VFXSimulationTargetSet::makeOnly( VFXSimulationTarget::CPU );
-            }
-
             /** @brief 방출기의 모든 칸입니다. 칸을 더하면 여기에 줄을 더한다(`VFXEffectDefTest.EveryEmitterFieldDeclaresItsTargets`). */
             static constexpr ModuleRow kArrModuleRow[] = {
                 {            "_name",      &everyTarget, false},
@@ -92,7 +86,7 @@ namespace sw
                 {     "_lifetimeMin",      &everyTarget, false},
                 {     "_lifetimeMax",      &everyTarget, false},
                 {"_spawnHalfExtents",      &everyTarget, false},
-                {           "_space",     &spaceTargets, false},
+                {           "_space",      &everyTarget, false},
                 {     "_velocityMin",      &everyTarget, false},
                 {     "_velocityMax",      &everyTarget, false},
                 {         "_gravity",      &everyTarget, false},

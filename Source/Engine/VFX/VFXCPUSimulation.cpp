@@ -43,6 +43,7 @@ namespace sw
         , _listParticle{}
         , _listFreeSlot{}
         , _userValues{}
+        , _emitterToSimulation{}
         , _bWarnedPoolFull{ SW_FALSE }
     {
         SW_ASSERT( getDef()._maxParticles >= 1 );
@@ -115,6 +116,8 @@ namespace sw
                 particle._position._y = VFXCPUSimulationInternal::lerpFloat( -def._spawnHalfExtents._y, def._spawnHalfExtents._y, VFXCPUSimulationInternal::nextUnitFloat( state ) );
                 particle._position._z = VFXCPUSimulationInternal::lerpFloat( -def._spawnHalfExtents._z, def._spawnHalfExtents._z, VFXCPUSimulationInternal::nextUnitFloat( state ) );
             }
+            particle._position = float3::transform( particle._position, _emitterToSimulation );
+            particle._velocity = float3::transformVector( particle._velocity, _emitterToSimulation );
             // 트인 하늘에서만 태어난다(강수) — 지붕이 생성 상자보다 높은 실내에서 비가 생기지 않는다. 생성은 초당 수백이라 한 번의 광선은 단계마다의 충돌보다 싸다
             // (언리얼 · 유니티 강수가 위에서 내려다본 가림 깊이를 보는 자리 — 물리 광선이라 따로 그리지 않는다).
             VFXCollisionHit roof{};
@@ -169,14 +172,6 @@ namespace sw
         particle._velocity        = tangentPart * ( 1.0f - def._collision._friction ) - normalPart * def._collision._restitution;
         particle._position        = hit._point + hit._normal * VFXCollisionDef::kSurfaceSkin;
         return true;
-    }
-
-    void VFXCPUSimulation::moveEmitter( const float3& localOffset )
-    {
-        if ( getDef()._space != VFXSimulationSpace::World )
-            return;
-        for ( Particle& particle : _listParticle )
-            particle._position -= localOffset;
     }
 
     void VFXCPUSimulation::writeParticles( vector<GPUParticle>& outListParticle ) const

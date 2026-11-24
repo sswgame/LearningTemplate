@@ -601,7 +601,8 @@ namespace sw
         Internal::appendRow( _listParamWord, BitUtil::floatToBits( userValues._tint._x ), BitUtil::floatToBits( userValues._tint._y ), BitUtil::floatToBits( userValues._tint._z ), BitUtil::floatToBits( userValues._tint._w ) );
         Internal::appendRow( _listParamWord, BitUtil::floatToBits( userValues._sizeScale ), 0u, 0u, 0u );
         Internal::appendRow( _listParamWord, BitUtil::floatToBits( def._spawnHalfExtents._x ), BitUtil::floatToBits( def._spawnHalfExtents._y ), BitUtil::floatToBits( def._spawnHalfExtents._z ), 0u );
-        static_assert( SW_VFX_PARAM_ROW_FIRST_STEP == 32u && SW_VFX_PARAM_ROW_SPAWN_BOX == SW_VFX_PARAM_ROW_USER_SIZE + 1u && SW_VFX_PARAM_ROW_USER_SIZE == 30u && SW_VFX_PARAM_ROW_USER_TINT == 29u && SW_VFX_PARAM_ROW_LIGHT == 28u, "the header rows above must match vfx_simulate.hlsli" );
+        Internal::appendMatrixRows( _listParamWord, request._emitterToSimulation ); // 새 입자를 시뮬레이션 공간으로(`VFXCPUSimulation::spawnParticles` 와 같은 식)
+        static_assert( SW_VFX_PARAM_ROW_FIRST_STEP - SW_VFX_PARAM_ROW_EMITTER_TO_SIMULATION == SW_VFX_PARAM_ROW_INVERSE_WORLD - SW_VFX_PARAM_ROW_WORLD && SW_VFX_PARAM_ROW_EMITTER_TO_SIMULATION == SW_VFX_PARAM_ROW_SPAWN_BOX + 1u && SW_VFX_PARAM_ROW_SPAWN_BOX == SW_VFX_PARAM_ROW_USER_SIZE + 1u && SW_VFX_PARAM_ROW_USER_SIZE == 30u && SW_VFX_PARAM_ROW_USER_TINT == 29u && SW_VFX_PARAM_ROW_LIGHT == 28u, "the header rows above must match vfx_simulate.hlsli" );
 
         // 일정 — 게임 스레드와 같은 시계를 같은 단계 수만큼 돌린다.
         for ( uint32 stepIndex = 0; stepIndex < steps; ++stepIndex )

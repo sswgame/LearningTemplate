@@ -21,7 +21,8 @@ namespace sw
     /** @brief 입자 그리기 하나의 공통 값입니다. */
     struct SceneParticleBatchDesc
     {
-        float4x4      _world{};                       ///< 방출기 행렬(행벡터 규약)
+        float4x4      _world{};                       ///< 입자를 월드로 옮기는 행렬(행벡터 규약, `VFXComponent::getEmitterWorldMatrix`)
+        float3        _sortPosition{};                ///< 투명 정렬의 깊이를 재는 방출기 자리(월드) — 월드 공간 입자의 행렬은 방출기 자리가 아니다
         hashed_string _texturePath{};                 ///< 입자 텍스처(리소스 id)
         uint8         _bAdditive{ SW_FALSE };         ///< 더하기 블렌드면 SW_TRUE
         uint8         _bRibbon{ SW_FALSE };           ///< 띠면 SW_TRUE

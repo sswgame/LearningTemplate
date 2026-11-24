@@ -42,7 +42,7 @@ namespace sw
     namespace
     {
         /**
-         * @brief 물리 씬(3D)을 방출기 로컬 좌표로 감싼 충돌 질의입니다. 틱 하나 동안만 산다(방출기 행렬을 그 틱의 값으로 든다).
+         * @brief 물리 씬(3D)을 시뮬레이션 공간으로 감싼 충돌 질의입니다. 방출기의 틱 하나 동안만 산다(공간의 행렬을 그 틱의 값으로 든다).
          * @details 점은 행렬의 역으로, 법선은 행렬의 전치로 되돌린다(행벡터 규약에서 법선은 역전치로 옮기므로 그 역은 전치다).
          */
         class VFXPhysicsCollisionScene final : public IVFXCollisionScene
@@ -141,10 +141,10 @@ namespace sw
                     outValue.setText( "key must be 'minX minY minZ maxX maxY maxZ'" );
                     return false;
                 }
-                const float4x4 world = pEffect->getWorldMatrix();
-                uint32         count = 0;
+                uint32 count = 0;
                 for ( uint32 emitterIndex = 0; emitterIndex < pEffect->getEmitterCount(); ++emitterIndex )
                 {
+                    const float4x4                               world         = pEffect->getEmitterWorldMatrix( emitterIndex );
                     const shared_ptr<const vector<GPUParticle>>& pListParticle = pEffect->getEmitterParticles( emitterIndex );
                     if ( pListParticle == nullptr )
                         continue;
@@ -179,7 +179,7 @@ namespace sw
         , _listEmitterEnabled{}
         , _pEffect{}
         , _listUserParameter{}
-        , _lastOrigin{}
+        , _worldSpaceFrame{}
         , _pPrimitiveRegistry{ nullptr }
         , _seed{ 0 }
         , _bPlayOnBegin{ true }
@@ -226,42 +226,42 @@ namespace sw
             return;
 
         // 충돌하는 방출기가 있고 물리 씬(3D)이 있을 때만 질의를 만든다. 물리 씬이 없는 씬에서는 충돌 없이 돈다(닿을 것이 없다).
-        // 충돌은 CPU 전용 모듈이라 충돌하는 방출기는 늘 CPU 시뮬레이션이다.
-        bool bAnyCollision = false;
+        bool bAnyCollision  = false;
+        bool bAnyWorldSpace = false;
         for ( const EmitterSimulation& simulation : _listSimulation )
         {
             const VFXCPUSimulation* pCPUSimulation = std::get_if<VFXCPUSimulation>( &simulation );
-            bAnyCollision                          = bAnyCollision || ( pCPUSimulation != nullptr && pCPUSimulation->getDef()._collision._mode != VFXCollisionMode::None );
+            const VFXEmitterDef&    def            = pCPUSimulation != nullptr ? pCPUSimulation->getDef() : std::get<VFXGPUEmitter>( simulation ).getDef();
+            bAnyCollision                          = bAnyCollision || ( pCPUSimulation != nullptr && def._collision._mode != VFXCollisionMode::None );
+            bAnyWorldSpace                         = bAnyWorldSpace || def._space == VFXSimulationSpace::World;
         }
-        const IPhysicsQueryScene3D*          pPhysicsScene = bAnyCollision ? context.getManager().getSubsystem<ScenePhysics>().findScene3D() : nullptr;
-        unique_ptr<VFXPhysicsCollisionScene> pCollision;
-        if ( pPhysicsScene != nullptr )
-            pCollision = sw::make_unique<VFXPhysicsCollisionScene>( *pPhysicsScene, getWorldMatrix() );
-
-        // 월드 공간 방출기는 지난 틱 뒤의 이동을 되돌려 입자를 제자리에 둔다.
-        const float3 origin      = getWorldPosition();
-        const float3 worldOffset = origin - _lastOrigin;
-        _lastOrigin              = origin;
-        const bool   bMoved      = worldOffset != float3::Zero;
-        const float3 localOffset = bMoved ? float3::transformVector( worldOffset, getWorldMatrix().invert() ) : float3{};
+        const IPhysicsQueryScene3D* pPhysicsScene = bAnyCollision ? context.getManager().getSubsystem<ScenePhysics>().findScene3D() : nullptr;
+        // 월드 공간 방출기는 새 입자만 지금 방출기 자리에서 낸다 — 이미 태어난 입자는 기준 틀에 남는다.
+        const float4x4 emitterToFrame = bAnyWorldSpace ? getWorldMatrix() * _worldSpaceFrame.invert() : float4x4{};
 
         bool bAllFinished = true;
         for ( uint32 emitterIndex = 0; emitterIndex < static_cast<uint32>( _listSimulation.size() ); ++emitterIndex )
         {
             if ( isEmitterEnabled( emitterIndex ) == false )
                 continue; // 꺼진 방출기는 시간이 흐르지 않고, 재생이 끝났는지 셈에 들지 않는다
-            EmitterSimulation& simulation     = _listSimulation[emitterIndex];
-            VFXCPUSimulation*  pCPUSimulation = std::get_if<VFXCPUSimulation>( &simulation );
-            VFXGPUEmitter*     pGPUEmitter    = std::get_if<VFXGPUEmitter>( &simulation );
+            EmitterSimulation&   simulation     = _listSimulation[emitterIndex];
+            VFXCPUSimulation*    pCPUSimulation = std::get_if<VFXCPUSimulation>( &simulation );
+            VFXGPUEmitter*       pGPUEmitter    = std::get_if<VFXGPUEmitter>( &simulation );
+            const VFXEmitterDef& def            = getEmitterDef( emitterIndex );
             if ( pCPUSimulation != nullptr )
             {
-                if ( bMoved )
-                    pCPUSimulation->moveEmitter( localOffset );
-                pCPUSimulation->update( context.getDeltaTime(), pCollision.get() );
+                if ( def._space == VFXSimulationSpace::World )
+                    pCPUSimulation->setEmitterTransform( emitterToFrame );
+                optional<VFXPhysicsCollisionScene> collision;
+                if ( pPhysicsScene != nullptr && def._collision._mode != VFXCollisionMode::None )
+                    collision.emplace( *pPhysicsScene, getEmitterWorldMatrix( emitterIndex ) );
+                pCPUSimulation->update( context.getDeltaTime(), collision.has_value() ? &*collision : nullptr );
                 bAllFinished = bAllFinished && pCPUSimulation->isFinished();
             }
             else
             {
+                if ( def._space == VFXSimulationSpace::World )
+                    pGPUEmitter->setEmitterTransform( emitterToFrame );
                 pGPUEmitter->update( context.getDeltaTime() );
                 bAllFinished = bAllFinished && pGPUEmitter->isFinished();
             }
@@ -286,7 +286,7 @@ namespace sw
 
     void VFXComponent::onWorldOriginShifted( const float3& delta )
     {
-        _lastOrigin += delta;
+        _worldSpaceFrame.setTranslation( _worldSpaceFrame.getTranslation() + delta ); // 입자는 틀 안의 값 그대로다(GPU 버퍼를 고치지 않는다)
     }
 
     void VFXComponent::onPostLoad()
@@ -312,8 +312,10 @@ namespace sw
     void VFXComponent::play()
     {
         restartSimulations();
-        _lastOrigin = getWorldPosition();
-        _bPlaying   = _listSimulation.empty() == false;
+        // 월드 공간 입자의 기준 틀 — 재생 시작의 자리와 배율이다(회전은 없다 — 월드 축). 원점에서 먼 곳에서도 입자 좌표가 작아 정밀도를 지킨다(언리얼 Niagara LWC 타일과 같은 까닭).
+        const float32 frameScale = getWorldMatrix().getMaximumAxisScale();
+        _worldSpaceFrame         = float4x4::makeScale( frameScale > MathUtil::kEpsilon ? frameScale : 1.0f ) * float4x4::makeTranslation( getWorldPosition() ); // 배율 0 은 보이지 않는 방출기다 — 틀이 특이 행렬이 되지 않게만 한다
+        _bPlaying                = _listSimulation.empty() == false;
         publishParticles();
     }
 
@@ -423,6 +425,11 @@ namespace sw
         return _listPublished[emitterIndex];
     }
 
+    float4x4 VFXComponent::getEmitterWorldMatrix( uint32 emitterIndex ) const
+    {
+        return getEmitterDef( emitterIndex )._space == VFXSimulationSpace::World ? _worldSpaceFrame : getWorldMatrix();
+    }
+
     const VFXGPUEmitterRequest* VFXComponent::findEmitterGPURequest( uint32 emitterIndex ) const
     {
         SW_ASSERT( emitterIndex < _listGPURequest.size() );
@@ -467,15 +474,15 @@ namespace sw
     {
         if ( isActive() == false )
             return;
-        const float4x4 world     = getWorldMatrix();
-        const float32  sizeScale = world.getMaximumAxisScale();
         for ( size_t emitterIndex = 0; emitterIndex < _listSimulation.size(); ++emitterIndex )
         {
             const VFXLightDef&                           lightDef      = getEmitterDef( static_cast<uint32>( emitterIndex ) )._light;
             const shared_ptr<const vector<GPUParticle>>& pListParticle = _listPublished[emitterIndex];
             if ( lightDef._maxLights == 0 || pListParticle == nullptr )
                 continue;
-            const uint32 lightCount = MathUtil::min( lightDef._maxLights, static_cast<uint32>( pListParticle->size() ) );
+            const float4x4 world      = getEmitterWorldMatrix( static_cast<uint32>( emitterIndex ) );
+            const float32  sizeScale  = world.getMaximumAxisScale();
+            const uint32   lightCount = MathUtil::min( lightDef._maxLights, static_cast<uint32>( pListParticle->size() ) );
             for ( uint32 particleIndex = 0; particleIndex < lightCount; ++particleIndex )
             {
                 const GPUParticle& particle = ( *pListParticle )[particleIndex];
@@ -649,7 +656,7 @@ namespace sw
         if ( pListParticle != nullptr )
             std::get<VFXCPUSimulation>( _listSimulation[emitterIndex] ).writeInstanceSlots( listSlot );
         SW_ASSERT( listSlot.size() == ( pListParticle != nullptr ? pListParticle->size() : 0u ) ); // 칸과 입자가 같은 순서 · 같은 수다
-        const float4x4 world      = getWorldMatrix();
+        const float4x4 world      = getEmitterWorldMatrix( emitterIndex );
         const float32  sizeScale  = world.getMaximumAxisScale();
         const float32  meshRadius = meshEmitter._meshRadius;
         for ( uint32 particleIndex = 0; particleIndex < static_cast<uint32>( listSlot.size() ); ++particleIndex )
