@@ -12,7 +12,7 @@ namespace sw
     //    이 파일의 정적 등록이 프로그램 시작 때 걸고, `Core` STATIC 을 링크하는 실행 파일은 진입점에서 직접 부른다
     // ------------------------------------------------------------------------------
     /**
-     * @brief 경합 보고 함수를 `RaceDetectContext::setReportFunction` 에 겁니다.
+     * @brief 경합 보고 함수를 `RaceDetectContext::bindReportFunction` 에 겁니다.
      * @details 보고는 Error 로그 한 줄과 호출 스택 줄들입니다. 디버거에서 멈추는 일은 검출기가 합니다.
      */
     struct SW_API DataRaceReporter

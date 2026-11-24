@@ -104,7 +104,7 @@ namespace sw
         float32 _time{ 0.0f };
         PROPERTY()
         bool _bNegate{ SW_FALSE };
-        /** @brief MultiTap 의 누름 수입니다(`InputMapXMLUtil::kMinTapCount` .. `kMaxTapCount`). */
+        /** @brief MultiTap 의 누름 수입니다. */
         PROPERTY( Min = 2, Max = 255 )
         int32 _taps{ 2 };
         PROPERTY( Required )
@@ -136,7 +136,7 @@ namespace sw
         float32 _time{ 0.0f };
         PROPERTY()
         bool _bNegate{ SW_FALSE };
-        /** @brief MultiTap 의 누름 수입니다(`InputMapXMLUtil::kMinTapCount` .. `kMaxTapCount`). */
+        /** @brief MultiTap 의 누름 수입니다. */
         PROPERTY( Min = 2, Max = 255 )
         int32 _taps{ 2 };
         PROPERTY()
@@ -164,7 +164,7 @@ namespace sw
         float32 _time{ 0.0f };
         PROPERTY()
         bool _bNegate{ SW_FALSE };
-        /** @brief MultiTap 의 누름 수입니다(`InputMapXMLUtil::kMinTapCount` .. `kMaxTapCount`). */
+        /** @brief MultiTap 의 누름 수입니다. */
         PROPERTY( Min = 2, Max = 255 )
         int32 _taps{ 2 };
         PROPERTY( Required )

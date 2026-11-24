@@ -21,7 +21,7 @@ namespace sw
     using EventTypeID = uint32;
 
     // 엔진 예약 구간(1..255, 0 은 무효)에는 지금 이벤트가 없다. 창 이벤트 셋은 발행하는 곳이 없어 지웠다 — 창의 최소화 · 포커스는
-    // `GenericWindow` 가 들고, 크기는 `GenericWindow::setResizeCallback` 이 알린다. 고정 ID 가 필요해지면 번호가 겹치지 않게 이 자리에 상수를 두고
+    // `GenericWindow` 가 들고, 크기는 `GenericWindow::bindResizeCallback` 이 알린다. 고정 ID 가 필요해지면 번호가 겹치지 않게 이 자리에 상수를 두고
     // `SW_REGISTER_EVENT_ID` 로 등록한다.
 
     /** @brief 컴파일 타임 FNV-1a 32비트 해시로 게임플레이 이벤트 ID 를 만듭니다. StringUtil 과 같은 상수 · 알고리즘입니다. */
