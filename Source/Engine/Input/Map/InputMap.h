@@ -315,7 +315,7 @@ namespace sw
          */
         void setUserDevices( const optional<InputUserDevices>& devices ) { _userDevices = devices; }
         /**
-         * @brief true 면 이 맵은 키보드 포커스(`InputManager::setKeyboardFocus`)와 상관없이 키를 읽습니다. 기본은 false 이며 게임 쪽 맵이 이 값을 씁니다.
+         * @brief true 면 이 맵은 키보드 포커스(`InputManager::claimKeyboardFocus`)와 상관없이 키를 읽습니다. 기본은 false 이며 게임 쪽 맵이 이 값을 씁니다.
          * @details 디버그 키 맵(개발 콘솔, 리로드 단축키)만 켠다. 콘솔이 키보드를 가진 동안에도 닫는 키와 편집 키를 받아야 하기 때문이다.
          *          패드도 같다 — 콘솔이 열린 동안 게임 맵은 패드 바인딩을 "안 눌림" 으로 보고(`InputManager::isGamepadControlVisibleToGame`), 이 맵은 장치 상태를 그대로 읽는다.
          *          단, 키보드 포커스가 도구(`InputKeyboardFocus::Tool`)인 동안은 이 맵도 키를 보지 않는다 — 에디터 패널에 친 글자가 셸 · UI 맵의 키(콘솔 여는 `~`, UI 확인 Enter)가 되지 않게.

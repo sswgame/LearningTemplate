@@ -132,6 +132,7 @@ namespace sw
         , _pInput{ nullptr }
         , _textInputSubscription{}
         , _textCompositionSubscription{}
+        , _keyboardFocus{}
         , _lastPointerPosition{}
         , _lastMousePixel{}
         , _stickRepeatSeconds{ 0.0f }
@@ -175,11 +176,7 @@ namespace sw
 
     void UIInputRouter::shutdown()
     {
-        if ( _pInput != nullptr )
-        {
-            if ( _pInput->getKeyboardFocus() == InputKeyboardFocus::UI )
-                _pInput->setKeyboardFocus( InputKeyboardFocus::Game );
-        }
+        _keyboardFocus.reset();
         _textInputSubscription.reset(); // 이 라우터가 건 UI 포커스 칸만 놓는다
         _textCompositionSubscription.reset();
         _uiInputMap.reset();
@@ -591,14 +588,14 @@ namespace sw
         const Widget* pFocused = nullptr;
         if ( _focus.getFocusedTree() != nullptr )
             pFocused = _focus.getFocusedTree()->findWidgetByID( _focus.getFocusedWidget() );
-        const bool               bWantsText = pFocused != nullptr && pFocused->supportsTextInput();
-        const InputKeyboardFocus current    = _pInput->getKeyboardFocus();
-        if ( bWantsText && current == InputKeyboardFocus::Game )
-            _pInput->setKeyboardFocus( InputKeyboardFocus::UI );
-        else if ( bWantsText == false && current == InputKeyboardFocus::UI )
-            _pInput->setKeyboardFocus( InputKeyboardFocus::Game );
+        const bool bWantsText = pFocused != nullptr && pFocused->supportsTextInput();
         if ( bWantsText == false )
+        {
+            _keyboardFocus.reset();
             return;
+        }
+        if ( _keyboardFocus.isActive() == false )
+            _keyboardFocus = _pInput->claimKeyboardFocus( InputKeyboardFocus::UI );
         // 후보 창을 글 커서 자리 아래에 놓는다(`processPointer` 의 픽셀 → UI 단위 변환을 거꾸로 한다). 글자 배치는 위젯 안의 일이라 커서 자리는 위젯이 답한다.
         const WidgetGeometry& geometry = pFocused->getGeometry();
         const float2          origin   = geometry.transformPoint( float2{ pFocused->getTextCaretLocalX(), 0.0f } );

@@ -215,11 +215,13 @@ namespace sw
         [[nodiscard]] Subscription bindTextCompositionCallback( TextInputDelegate callback, InputKeyboardFocus owner = InputKeyboardFocus::Game );
 
         /**
-         * @brief 키보드를 받을 쪽을 바꿉니다(개발 콘솔이 열고 닫을 때).
-         * @details 포커스가 `Game` 이 아닌 동안 눌린 키는 포커스가 돌아온 뒤에도 뗄 때까지 게임에 보이지 않는다.
+         * @brief @p owner 가 키보드를 쥡니다. 돌려준 구독이 쥔 동안이며, 쥔 주인들 가운데 우선순위(`InputKeyboardFocus` 순서)가 가장 높은 쪽이 받습니다. `Game` 은 아무도 쥐지 않은 상태라 쥘 수 없습니다.
+         * @details 칸 하나에 마지막으로 쓴 쪽이 이기게 두면 주인이 저마다 "내 값일 때만 되돌린다" 를 해야 하고, 쥔 순서와 놓는 순서가 어긋나면(도구 창이 콘솔을 덮은 동안 콘솔이 사라짐) 없는 주인에게 돌아간다.
+         *          포커스가 `Game` 이 아닌 동안 눌린 키는 포커스가 돌아온 뒤에도 뗄 때까지 게임에 보이지 않는다.
          *          콘솔을 닫은 Esc 가 다음 프레임에 게임의 "일시정지" 로 새지 않게 하기 위해서다. 포커스를 넘기기 전부터 눌려 있던 키(달리던 W)는 돌아오면 다시 보인다.
          */
-        void               setKeyboardFocus( InputKeyboardFocus focus );
+        [[nodiscard]] Subscription claimKeyboardFocus( InputKeyboardFocus owner );
+        /** @brief 지금 키보드를 받는 쪽입니다(아무도 쥐지 않았으면 `Game`). */
         InputKeyboardFocus getKeyboardFocus() const { return _keyboardFocus; }
         /** @brief 게임 쪽 조회가 이 키를 볼 수 있으면 true 입니다. 포커스가 `Game` 이고, 다른 포커스 동안 눌려서 아직 떼지 않은 키가 아니어야 합니다. */
         bool isKeyVisibleToGame( Key key ) const;
@@ -322,7 +324,7 @@ namespace sw
          *          프레임 번호는 붙임마다 0 부터 세고 멈춘 동안에도 흐른다(그동안의 이벤트는 내지 않는다 — 시나리오 시각과 어긋나지 않게).
          *          붙이는 순간 모든 장치 상태를 지운다. 사람이 누르고 있던 키가 테스트의 첫 프레임에 남지 않게 하기 위해서다. 뗄 때도 지운다(가상 키가 눌린 채 남지 않게).
          *          배타 모드면 붙어 있는 동안 OS 의 키, 마우스, 패드 이벤트와 패드 폴링, 창 포커스 이벤트, 커서 가두기와 가운데 되돌리기를 하지 않고,
-         *          패드 연결은 가상 연결 이벤트가 정한다. 엔진 키보드 포커스(`setKeyboardFocus`, 개발 콘솔)는 가상 키에도 그대로 적용된다.
+         *          패드 연결은 가상 연결 이벤트가 정한다. 엔진 키보드 포커스(`claimKeyboardFocus`, 개발 콘솔)는 가상 키에도 그대로 적용된다.
          * @param source 빌려 쓰므로 떼기 전까지 살아 있어야 합니다(구독을 원천보다 뒤에 선언한다). 이미 붙은 원천이면 오류를 남기고 빈 구독을 돌려줍니다.
          * @param bResetState false 면 장치 상태를 지우지 않습니다. `InputReplay::seekTo` 로 만든 상태에서 이어 재생할 때 씁니다.
          */
@@ -426,6 +428,10 @@ namespace sw
         uint64 pushVirtualInput( IVirtualInputSource& source, VirtualInputMode mode, bool bResetState );
         /** @brief 붙임 @p index 와 그 위를 모두 뗍니다. 커서 잠금과 패드 세션을 남은 붙임에 맞춥니다. */
         void popVirtualInputs( size_t index, bool bResetState );
+        /** @brief 키보드를 쥔 주인 @p ownerID(`InputKeyboardFocus`)의 구독이 풀렸습니다. */
+        void releaseKeyboardFocus( uint64 ownerID );
+        /** @brief 쥔 주인들에서 키보드를 받을 쪽을 다시 고르고, 바뀌었으면 입력기 · 마우스 잠금을 맞춥니다. */
+        void syncKeyboardFocus();
         /** @brief 붙임 @p id 의 구독이 풀렸습니다. */
         void releaseVirtualInput( uint64 id );
 
@@ -550,16 +556,17 @@ namespace sw
         InputGlyphStyle                           _activeGlyphStyle;        /**< 마지막으로 조작이 감지된 장치 종류입니다(UI 글리프 자동 전환용). */
         DelegateSlot<ActiveDeviceChangedDelegate> _onActiveDeviceChanged;
         DelegateSlot<GamepadConnectionDelegate>   _onGamepadConnectionChanged;
-        DelegateSlot<TextInputDelegate>           _arrOnTextInput[kKeyboardFocusCount];       /**< 키보드 포커스 주인마다의 글자 콜백입니다. */
-        DelegateSlot<TextInputDelegate>           _arrOnTextComposition[kKeyboardFocusCount]; /**< 키보드 포커스 주인마다의 조합 중 글자 콜백입니다. */
-        string                                    _pendingComposition;                        /**< 이어지는 조합 조각(`_bTextContinued`)을 마지막 조각까지 모으는 글입니다. 큐를 비우는 스레드만 쓴다. */
-        uint64                                    _arrCapturedKeyMask[kKeyMaskWordCount];     /**< 포커스가 `Game` 이 아닐 때 눌려서 게임에 보이지 않게 가린 키입니다(뗀 다음 프레임에 해제). */
-        uint32                                    _arrCapturedGamepadMask[kMaxGamepadSlot];   /**< 개발 콘솔이 키보드를 쥔 동안 눌려서 게임에 보이지 않게 가린 패드 컨트롤입니다(비트는 `makeGamepadControlBit`). */
-        uint32                                    _arrSavedAccessibilityFlags[3];             /**< 접근성 단축키를 끄기 전의 OS 값입니다 — Windows 는 고정 · 토글 · 필터 키의 dwFlags, X11 은 [0] 에 XKB enabled_ctrls. */
-        InputKeyboardFocus                        _keyboardFocus;                             /**< 지금 키보드를 받는 쪽입니다. */
-        CursorShape                               _cursorShape;                               /**< OS 커서 모양입니다(`setCursorShape`). */
-        [[maybe_unused]] uint16                   _pendingHighSurrogate;                      /**< 짝을 기다리는 서로게이트의 앞 반쪽입니다(Win32 WM_CHAR). 0 이면 없습니다. */
-        uint8                                     _consumedButtonMask;                        /**< 잠금을 다시 잡느라 삼킨, 아직 떼지 않은 마우스 버튼 비트입니다(`1 << MouseButton`). */
+        DelegateSlot<TextInputDelegate>           _arrOnTextInput[kKeyboardFocusCount];        /**< 키보드 포커스 주인마다의 글자 콜백입니다. */
+        DelegateSlot<TextInputDelegate>           _arrOnTextComposition[kKeyboardFocusCount];  /**< 키보드 포커스 주인마다의 조합 중 글자 콜백입니다. */
+        string                                    _pendingComposition;                         /**< 이어지는 조합 조각(`_bTextContinued`)을 마지막 조각까지 모으는 글입니다. 큐를 비우는 스레드만 쓴다. */
+        uint64                                    _arrCapturedKeyMask[kKeyMaskWordCount];      /**< 포커스가 `Game` 이 아닐 때 눌려서 게임에 보이지 않게 가린 키입니다(뗀 다음 프레임에 해제). */
+        uint32                                    _arrCapturedGamepadMask[kMaxGamepadSlot];    /**< 개발 콘솔이 키보드를 쥔 동안 눌려서 게임에 보이지 않게 가린 패드 컨트롤입니다(비트는 `makeGamepadControlBit`). */
+        uint32                                    _arrSavedAccessibilityFlags[3];              /**< 접근성 단축키를 끄기 전의 OS 값입니다 — Windows 는 고정 · 토글 · 필터 키의 dwFlags, X11 은 [0] 에 XKB enabled_ctrls. */
+        uint32                                    _arrKeyboardClaimCount[kKeyboardFocusCount]; /**< 키보드 포커스 주인마다 쥔 구독 수입니다(`claimKeyboardFocus`). */
+        InputKeyboardFocus                        _keyboardFocus;                              /**< 지금 키보드를 받는 쪽입니다(쥔 주인 가운데 우선순위가 가장 높은 것). */
+        CursorShape                               _cursorShape;                                /**< OS 커서 모양입니다(`setCursorShape`). */
+        [[maybe_unused]] uint16                   _pendingHighSurrogate;                       /**< 짝을 기다리는 서로게이트의 앞 반쪽입니다(Win32 WM_CHAR). 0 이면 없습니다. */
+        uint8                                     _consumedButtonMask;                         /**< 잠금을 다시 잡느라 삼킨, 아직 떼지 않은 마우스 버튼 비트입니다(`1 << MouseButton`). */
         uint8                                     _bInitialized                    : 1;
         uint8                                     _bInputMuted                     : 1;
         uint8                                     _bWindowFocused                  : 1; /**< 창이 포커스를 가지고 있는지 나타냅니다(포커스 메시지로 갱신하며, 창 없는 테스트에서는 true). */
@@ -572,6 +579,7 @@ namespace sw
         uint64                                    _humanInputSerial{ 0 };               /**< 사람이 낸 OS 키보드 · 마우스 입력 수(`recordNativeEvent`) */
         DevCounter                                _rawMouseEventCount;                  /**< OS 에서 받은 원시 마우스 이동 보고 수(`getRawMouseEventCount`) */
         Subscription                              _sessionPlayback;                     /**< 세션 입력 기록 재생의 붙임입니다(`playSessionRecording`). */
+        SubscriptionList                          _keyboardFocusSubscriptions;          /**< 키보드를 쥔 구독입니다(`claimKeyboardFocus`). */
         SubscriptionList                          _virtualInputSubscriptions;           /**< 가상 입력 붙임의 구독입니다. 다른 멤버보다 먼저 닫히게 맨 끝에 둔다. */
 
     private:

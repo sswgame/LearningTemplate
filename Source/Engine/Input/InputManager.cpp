@@ -106,6 +106,7 @@ namespace sw
         , _arrCapturedKeyMask{}
         , _arrCapturedGamepadMask{}
         , _arrSavedAccessibilityFlags{}
+        , _arrKeyboardClaimCount{}
         , _keyboardFocus{ InputKeyboardFocus::Game }
         , _cursorShape{ CursorShape::Arrow }
         , _pendingHighSurrogate{ 0 }
@@ -119,6 +120,7 @@ namespace sw
         , _bNativeWindowFocused{ SW_FALSE }
         , _bAccessibilityShortcutsDisabled{ SW_FALSE }
         , _bBackgroundGamepadInput{ SW_TRUE }
+        , _keyboardFocusSubscriptions{ SW_DELEGATE_METHOD( SubscriptionList::ReleaseFunction, &InputManager::releaseKeyboardFocus, this ) }
         , _virtualInputSubscriptions{ SW_DELEGATE_METHOD( SubscriptionList::ReleaseFunction, &InputManager::releaseVirtualInput, this ) }
     {
     }
@@ -175,6 +177,12 @@ namespace sw
         if ( _bInitialized == SW_FALSE )
             return;
 
+        _keyboardFocusSubscriptions.detachAll();
+        for ( uint32& claimCount : _arrKeyboardClaimCount )
+        {
+            claimCount = 0;
+        }
+        _keyboardFocus = InputKeyboardFocus::Game;
         _virtualInputSubscriptions.detachAll();
         _listVirtualInput.clear();
         releaseMouseLockMode();
@@ -890,9 +898,31 @@ namespace sw
         return _listUserDevices.empty() ? nullptr : "local users";
     }
 
-    void InputManager::setKeyboardFocus( InputKeyboardFocus focus )
+    Subscription InputManager::claimKeyboardFocus( InputKeyboardFocus owner )
     {
-        if ( focus == InputKeyboardFocus::Count )
+        SW_ASSERT( owner != InputKeyboardFocus::Game && owner != InputKeyboardFocus::Count );
+        if ( owner == InputKeyboardFocus::Game || owner == InputKeyboardFocus::Count )
+            return Subscription{};
+        ++_arrKeyboardClaimCount[static_cast<size_t>( owner )];
+        syncKeyboardFocus();
+        return _keyboardFocusSubscriptions.issue( static_cast<uint64>( owner ) );
+    }
+
+    void InputManager::releaseKeyboardFocus( uint64 ownerID )
+    {
+        --_arrKeyboardClaimCount[static_cast<size_t>( ownerID )];
+        syncKeyboardFocus();
+    }
+
+    void InputManager::syncKeyboardFocus()
+    {
+        InputKeyboardFocus focus = InputKeyboardFocus::Game;
+        for ( size_t ownerIndex = 0; ownerIndex < kKeyboardFocusCount; ++ownerIndex )
+        {
+            if ( _arrKeyboardClaimCount[ownerIndex] > 0 )
+                focus = static_cast<InputKeyboardFocus>( ownerIndex );
+        }
+        if ( _keyboardFocus == focus )
             return;
         _keyboardFocus = focus;
         // 글을 받는 포커스만 입력기를 켠다 - 게임이 키보드를 가진 동안 입력기가 WASD 를 조합으로 가져가지 않는다(언리얼 · SDL 도 글 칸에서만 켠다). 도구 창은 에디터가 글 칸마다 따로 알린다.
