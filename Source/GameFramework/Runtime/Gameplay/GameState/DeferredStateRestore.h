@@ -27,7 +27,7 @@ namespace sw
     /**
      * @class DeferredStateRestore
      * @brief 열기(카탈로그 · 설정) 전에 받은 복원 바이트를 들고 있다가 열 때 적용하는 칸입니다. 월드 상태(`GameStateComponent`)와 플레이어 상태 컴포넌트가 멤버로 듭니다.
-     * @details 세이브 복원(`ComponentStateStore::restore`)은 디렉터의 `startGame`(열기)보다 먼저 올 수 있고, 읽기에는 카탈로그가 있어야 한다(일지는 카탈로그에 없는
+     * @details 세이브 복원(`ComponentStateCodec::restoreObject`)은 디렉터의 `startGame`(열기)보다 먼저 올 수 있고, 읽기에는 카탈로그가 있어야 한다(일지는 카탈로그에 없는
      *          퀘스트를 버린다). 열린 뒤에 받은 바이트는 바로 적용한다. 새 판인지(`isFreshGame`)는 디렉터가 시작값(시작 돈 · 첫 아이템)을 넣을지 볼 때 묻는다.
      *          상태는 구간 표(`StateSectionTableUtil`)로 싣는다. 안쪽 형식의 판 올림 사슬과 "전부 아니면 없음" 을 그 틀이 맡는다.
      */
@@ -69,6 +69,25 @@ namespace sw
             _heldBytes = std::move( bytes );
             if ( _bOpen == SW_TRUE && apply( component ) )
                 _bFreshGame = SW_FALSE;
+        }
+
+        /**
+         * @brief 열린 상태를 다시 읽힌 카탈로그에 다시 묶습니다 — 상태를 뜨고, @p bind 로 새 판에 열고, 같은 상태를 읽습니다(항목은 id 로 다시 찾는다). 게임 스레드 · 틱 밖에서 부릅니다.
+         * @details 디렉터의 다시 묶기(`GameModeComponent::applyReloadedAssets`)와 같은 길이다. 디렉터가 다시 열어도 이 컴포넌트는 이미 열려 새 판을 받지 않으므로 스스로 따라간다.
+         */
+        template <typename TComponent, typename TBind>
+        void rebind( TComponent& component, const TBind& bind )
+        {
+            if ( _bOpen == SW_FALSE )
+                return;
+            Archive state;
+            StateIO::writeObject( component, state );
+            state.setReadModeAndResetPosition( true );
+            bind();
+            if ( component.readState( state ) )
+                SW_LOG_INFO_ID( "DeferredStateRestore.CatalogRebound", "%#: a reloaded catalog is applied to the open state", component.getTypeName().c_str() );
+            else
+                SW_LOG_WARNING_ID( "DeferredStateRestore.CatalogRefused", "%#: the open state does not fit the reloaded catalog (see the messages above) - it starts fresh", component.getTypeName().c_str() );
         }
 
         /**

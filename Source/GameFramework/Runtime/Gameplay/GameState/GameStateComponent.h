@@ -12,6 +12,7 @@
 #include "Core/Math/DeterministicRandom.h"
 #include "Core/Memory/Memory.h"
 
+#include "Engine/Asset/Cache/SharedAssetRef.h"
 #include "Engine/Object/Component/Component.h"
 #include "Engine/Reflection/ReflectionMacros.h"
 #include "Engine/Serialization/Format/StateIO.h"
@@ -112,9 +113,9 @@ namespace sw
         /** @brief 날씨가 쓴 머티리얼 칸과 씬 배율을 되돌리고 날씨 소리를 멈춥니다. */
         void onEndPlay() override;
 
-        /** @brief 구간 넷(플래그, 시계, 날씨, 땅)을 씁니다. `ComponentStateStore::capture` 가 부릅니다. 열리기 전이면 보관하고 있던 바이트를 그대로 씁니다. */
+        /** @brief 구간 넷(플래그, 시계, 날씨, 땅)을 씁니다. `ComponentStateCodec::captureObject` 가 부릅니다. 열리기 전이면 보관하고 있던 바이트를 그대로 씁니다. */
         SW_DECLARE_STATE_IO_IN_PLACE();
-        /** @brief 열리기 전이면 보관해 두었다가 `initialize` 에서 적용하고, 열린 뒤면 바로 적용합니다. `ComponentStateStore::restore` 가 부릅니다. */
+        /** @brief 열리기 전이면 보관해 두었다가 `initialize` 에서 적용하고, 열린 뒤면 바로 적용합니다. `ComponentStateCodec::restoreObject` 가 부릅니다. */
         void restoreState( vector<uint8>&& bytes );
 
         bool isInitialized() const { return _restore.isOpen(); }
@@ -161,8 +162,14 @@ namespace sw
         [[nodiscard]] static float32 readWeather( const GameObjectManager& manager, const hashed_string& valueName );
 
     private:
+        /** @brief 날씨를 지금 판의 카탈로그에 다시 묶습니다. */
+        void rebindWeatherCatalog();
+
+    private:
         GameFlags                        _flags;
         WorldClock                       _clock;
+        SharedAssetRef<WeatherCatalog>   _weatherCatalog;  ///< 날씨를 연 카탈로그(다시 읽히면 새 판을 가리킨다)
+        uint32                           _weatherSeed;     ///< 날씨를 연 씨앗(다시 묶을 때 같은 씨앗으로 연다)
         shared_ptr<const WeatherCatalog> _pWeatherCatalog; ///< 날씨가 가리키는 카탈로그의 판(열 때의 스냅숏 — 다시 읽기 정리가 놓아도 날씨의 항목 포인터가 끊기지 않는다)
         WeatherSystem                    _weather;
         WeatherMaterialWriter            _weatherMaterial; ///< 날씨 → 지면 머티리얼 묶음(카탈로그의 바인딩). `_pWeatherCatalog` 뒤에 둔다 — 먼저 사라진다

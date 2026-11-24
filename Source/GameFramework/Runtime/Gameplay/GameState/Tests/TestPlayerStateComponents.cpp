@@ -32,7 +32,7 @@ using namespace sw;
 
 namespace
 {
-    /** @brief @p component 의 상태를 바이트로 떠 냅니다(`ComponentStateStore::capture` 와 같은 길). */
+    /** @brief @p component 의 상태를 바이트로 떠 냅니다(`ComponentStateCodec::captureObject` 와 같은 길). */
     template <typename TComponent>
     vector<uint8> captureState( const TComponent& component )
     {
@@ -208,7 +208,7 @@ SW_TEST_CASE( PlayerStateComponentsTest, OptionalWorldStateIsNullWhenNotOpened )
 
 /**
  * @brief [PlayerStateComponentsTest] 스트리밍 셀에 든 오브젝트의 PROPERTY 밖 상태(지갑)는 셀을 내렸다 올려도, 세이브를 지나 비운 매니저에 다시 지어도 남는다
- * @details 세이브의 컴포넌트 저장소(`ComponentStateStore`)는 컴포넌트 id 로 짝짓는데 셀은 복원 뒤에 지어져 찾을 컴포넌트가 없다 — 떠 둔 엔티티가 함께 싣는다(`ComponentStateCodec`).
+ * @details 세이브의 컴포넌트 저장소(`ComponentStateCodec`)는 컴포넌트 id 로 짝짓는데 셀은 복원 뒤에 지어져 찾을 컴포넌트가 없다 — 떠 둔 엔티티가 함께 싣는다(`ComponentStateCodec`).
  */
 SW_TEST_CASE( PlayerStateComponentsTest, StreamingCellKeepsWalletAcrossUnloadAndSave )
 {
