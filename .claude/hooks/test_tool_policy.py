@@ -70,6 +70,14 @@ class ToolPolicyTest(unittest.TestCase):
         for command in ('until grep -q "x" f; do sleep 5; done; cat f', "until ! tasklist | grep -q git; do :; done", "while true; do sleep 1; done"):
             self.assertIn("no-polling-wait", self.pre("Bash", {"command": command})["hookSpecificOutput"]["permissionDecisionReason"])
 
+    def test_orphan_commands_are_refused(self):
+        for tool, command, rule in (("Monitor", "tail -n +1 -F a.log | grep --line-buffered x", "no-endless-follow"), ("Bash", "tail -f a.log", "no-endless-follow"),
+                                    ("PowerShell", "Get-Content a.log -Wait", "no-endless-follow"), ("Bash", "(timeout 115 py -3 leaf.py | tail -2)", "no-timeout-python"),
+                                    ("Bash", "py -3 a.py; cat > /dev/null; grep x f", "no-stdin-wait")):
+            self.assertIn(rule, self.pre(tool, {"command": command})["hookSpecificOutput"]["permissionDecisionReason"])
+        for command in ("tail -60 a.log | cut -c1-300", "tail -n 5 Full.log", "x | tail -2; rm -f b", "timeout 60 ./App.exe", "echo x | cat > /dev/null", "cat a > /dev/null"):
+            self.assertIsNone(self.pre("Bash", {"command": command}), command)
+
     def test_build_only_in_main_tree(self):
         for command in ("cd D:/P/.claude/worktrees/work-e10 && cmake --build --preset Ninja-Debug", "cmake --preset Ninja-Debug -S .claude/worktrees/x",
                         "cd D:/Projects/Personal/LT-wt/agentcfg && cmake --build --preset Ninja-Release"):

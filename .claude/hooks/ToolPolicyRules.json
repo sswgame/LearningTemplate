@@ -141,6 +141,44 @@
       "hint": "폴링 루프(until/while … sleep, do :; done)는 쓰지 않는다 — 끝날 수 없는 조건이면 셸이 영원히 남고 작업자가 '백그라운드 대기'로 묶인다(2026-11-12 사용자 지적). 긴 명령은 run_in_background 로 돌리고 완료 알림을 기다린다."
     },
     {
+      "name": "no-endless-follow",
+      "tools": [
+        "Bash",
+        "PowerShell",
+        "Monitor"
+      ],
+      "shell": "\\btail\\b[^|;&\\n]*\\s(-[0-9a-zA-Z]*[fF]\\b|--follow|--retry)|\\bGet-Content\\b[^|;\\n]*\\s-Wait\\b",
+      "requiresAny": [
+        "never"
+      ],
+      "hint": "로그를 끝없이 따라가는 명령(tail -f/-F, Get-Content -Wait)은 쓰지 않는다 — 보던 일이 끝나도 스스로 끝나지 않고, MSYS 가 부모를 남기지 않아 작업을 멈춰도 고아로 남는다. 긴 명령은 run_in_background 로 돌려 완료 알림을 받고, 중간은 tail -n 으로 한 번 읽는다."
+    },
+    {
+      "name": "no-timeout-python",
+      "tools": [
+        "Bash",
+        "PowerShell",
+        "Monitor"
+      ],
+      "shell": "\\btimeout\\s+(-\\S+\\s+)*[0-9.]+[smhd]?\\s+(py|python3?)\\b",
+      "requiresAny": [
+        "never"
+      ],
+      "hint": "timeout 으로 파이썬을 끊지 않는다 — 부모만 죽고 병렬 자식이 파이프를 쥔 채 남아 뒤의 tail · 셸이 끝나지 않는다. 오래 걸리면 run_in_background 로 돌리고, 나눠 돌릴 수 있게 스크립트가 항목 수를 받는다."
+    },
+    {
+      "name": "no-stdin-wait",
+      "tools": [
+        "Bash",
+        "Monitor"
+      ],
+      "shell": "(?m)(^|[;&(]\\s*)cat\\s*>\\s*/dev/null",
+      "requiresAny": [
+        "never"
+      ],
+      "hint": "표준 입력을 주지 않은 `cat > /dev/null` 은 쓰지 않는다 — 히어독이 있는 명령은 표준 입력이 열린 채라 끝없이 기다린다."
+    },
+    {
       "name": "one-build-in-main-tree",
       "tools": [
         "Bash",
