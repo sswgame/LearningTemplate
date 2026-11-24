@@ -25,6 +25,7 @@ namespace sw::editor
     {
         _bOpened = true;
         _bDirty  = false;
+        _diskBaseline.capture( span<const AbsolutePath>( &_absolutePath, 1 ) );
         if ( _entry.isTable() )
         {
             const expected<void> opened = _tableDocument.open( _absolutePath );
@@ -57,10 +58,14 @@ namespace sw::editor
         // 페이지별 Save 단추는 패널 저장(`saveDocumentAndClearDirty`)을 지나지 않는다 — 같은 확인을 여기서도 한다.
         if ( EditorContentWrite::warnIfReadOnly( _absolutePath, EditorContentWriteKind::Save ) )
             return false;
+        const span<const AbsolutePath> file( &_absolutePath, 1 );
+        if ( _diskBaseline.validateOverwrite( file ) == false )
+            return false;
         const bool bSaved = _entry.isTable() ? _tableDocument.saveDocument() : _document.saveDocument();
         if ( bSaved == false )
             return false;
         _bDirty = false;
+        _diskBaseline.capture( file );
         // 호스트가 파일에서 읽은 설정(EngineConfig · GameConfig …)이면 제자리에서 다시 읽는다.
         // 방금 쓴 파일을 다시 읽지 못하면(Failed) 읽는 쪽이 오류를 남겼다 — 적용되지 않은 것이다.
         ConfigReloadSubsystem* pConfigReload = editor::findSubsystem<ConfigReloadSubsystem>();
@@ -89,6 +94,7 @@ namespace sw::editor
 
     void ProjectSettingsPage::revert()
     {
+        _diskBaseline.capture( span<const AbsolutePath>( &_absolutePath, 1 ) ); // 디스크에서 다시 읽는다
         if ( _entry.isTable() )
         {
             const expected<void> reverted = _tableDocument.revert();

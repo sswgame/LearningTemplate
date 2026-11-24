@@ -22,6 +22,10 @@ namespace
     class FixedStateCrowd final : public INavCrowd
     {
     public:
+        float3 _receivedPosition{}; ///< 마지막으로 받은 자리
+        uint32 _teleportCount{ 0 };
+        uint32 _syncCount{ 0 };
+
         explicit FixedStateCrowd( const NavCrowdAgentState& state )
             : _state{ state }
         {
@@ -32,10 +36,18 @@ namespace
         void            updateAgentParams( NavCrowdAgentID, const NavCrowdAgentParams& ) override {}
         bool            requestMoveTarget( NavCrowdAgentID, const float3& ) override { return true; }
         void            resetMoveTarget( NavCrowdAgentID ) override {}
-        void            teleportAgent( NavCrowdAgentID, const float3& ) override {}
-        void            syncAgentPosition( NavCrowdAgentID, const float3& ) override {}
-        void            update( float32 ) override {}
-        bool            findAgentState( NavCrowdAgentID, NavCrowdAgentState& outState ) const override
+        void            teleportAgent( NavCrowdAgentID, const float3& position ) override
+        {
+            ++_teleportCount;
+            _receivedPosition = position;
+        }
+        void syncAgentPosition( NavCrowdAgentID, const float3& position ) override
+        {
+            ++_syncCount;
+            _receivedPosition = position;
+        }
+        void update( float32 ) override {}
+        bool findAgentState( NavCrowdAgentID, NavCrowdAgentState& outState ) const override
         {
             outState = _state;
             return true;
@@ -112,4 +124,55 @@ SW_TEST_CASE( NavAgentCrowdSyncTest, BatchedWriteMatchesSetterWrite )
 
     SW_EXPECT_EQUAL( state._position._x, pLooseAgent->getAgentPosition()._x );
     SW_EXPECT_EQUAL( state._velocity._x, pChildAgent->getVelocity()._x );
+}
+
+/**
+ * @brief [NavAgentCrowdSyncTest] 결함: `Transform` 에이전트를 바깥이 0.5 m 보다 작게 밀면(넉백 · 컨베이어) 군중이 모른 채 제자리로 되돌렸고, 그보다 짧은 순간이동은 길을 다시 찾지 않았다
+ *        — 밀림은 군중이 받아들이고, 순간이동이라고 알리면 거리와 무관하게 그 자리에서 다시 찾는다
+ */
+SW_TEST_CASE( NavAgentCrowdSyncTest, OutsidePushAndTeleportReachTheCrowd )
+{
+    NavCrowdAgentState state;
+    state._position   = float3{ 3.0f, 0.0f, -2.0f };
+    state._bOnNavMesh = true;
+    vector<unique_ptr<NavMeshRuntime>> listRuntime;
+    listRuntime.push_back( make_unique<NavMeshRuntime>() );
+    NavMeshRuntime& runtime                = *listRuntime.back();
+    runtime._pNavMesh                      = NavMeshBackend::createNavMesh();
+    unique_ptr<FixedStateCrowd> ownedCrowd = make_unique<FixedStateCrowd>( state );
+    FixedStateCrowd* const      pCrowd     = ownedCrowd.get();
+    runtime._pCrowd                        = std::move( ownedCrowd );
+
+    GameObjectManager      manager;
+    GameObject*            pObject = manager.createGameObject( hashed_string( "Walker" ) );
+    SceneComponent*        pScene  = pObject->addComponent<SceneComponent>();
+    NavMeshAgentComponent* pAgent  = pObject->addComponent<NavMeshAgentComponent>();
+    const auto             step    = [&]()
+    {
+        NavAgentCrowdSync::syncAgentIntoCrowd( *pAgent, runtime, listRuntime );
+        vector<SceneTransformWrite> listWrite;
+        SW_EXPECT_TRUE( NavAgentCrowdSync::writeAgentResult( *pAgent, runtime, 0.1f, listWrite ) );
+        (void)manager.applyTransformBatch( listWrite.data(), static_cast<uint32>( listWrite.size() ) );
+        if ( manager.hasDirtySceneTransforms() )
+            manager.flushSceneTransforms();
+        NavAgentCrowdSync::recordWrittenTransform( *pAgent );
+    };
+    step(); // 군중에 들었다
+    step(); // 스스로 쓴 자리는 바깥의 이동이 아니다
+    SW_EXPECT_EQUAL( 0u, pCrowd->_syncCount );
+    SW_EXPECT_EQUAL( 0u, pCrowd->_teleportCount );
+
+    pScene->setWorldPosition( state._position + float3{ 0.2f, 0.0f, 0.0f } );
+    step();
+    SW_EXPECT_EQUAL( 1u, pCrowd->_syncCount );
+    SW_EXPECT_NEAR( 3.2f, pCrowd->_receivedPosition._x, 1.0e-4f );
+    SW_EXPECT_EQUAL( 0u, pCrowd->_teleportCount );
+
+    pScene->teleportTo( state._position + float3{ 0.3f, 0.0f, 0.0f } );
+    step();
+    SW_EXPECT_EQUAL( 1u, pCrowd->_teleportCount );
+    SW_EXPECT_NEAR( 3.3f, pCrowd->_receivedPosition._x, 1.0e-4f );
+    step();
+    SW_EXPECT_EQUAL( 1u, pCrowd->_teleportCount );
+    SW_EXPECT_EQUAL( 1u, pCrowd->_syncCount );
 }

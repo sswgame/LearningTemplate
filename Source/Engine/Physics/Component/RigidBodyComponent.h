@@ -156,6 +156,8 @@ namespace sw
         /** @brief 쓰는 고정 스텝 그룹마다 메서드를 등록합니다(`registerFixedStep`). */
         void onRegister( GameObjectManager& manager ) override;
         void onPhysicsFrameBegin( const FixedStepContext& context );
+        /** @brief 보간하는 두 자세와 키네마틱 목표를 옮깁니다 — 바디는 물리 씬이 옮긴다(`ScenePhysics::onWorldOriginShifted`). */
+        void onWorldOriginShifted( const float3& delta ) override;
         void onPrePhysicsStep( const FixedStepContext& context );
         void onPhysicsFrameEnd( const FixedStepContext& context );
         void releasePhysics( ScenePhysics& physics ) override;

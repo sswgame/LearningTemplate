@@ -5,6 +5,33 @@
 		<entry key="Amount" text="量" sourceHash="ba98a7152d80b949" />
 		<entry key="Apply" text="適用" sourceHash="b8f855b49234b81b" />
 		<entry key="Cancel" text="キャンセル" sourceHash="2ceb11be2290bb1b" />
+		<entry key="Chat.Blocked"
+		       text="メッセージは単語フィルターでブロックされました"
+		       sourceHash="9f4be67ffd43a11b" />
+		<entry key="Chat.Failed" text="チャットに失敗しました" sourceHash="835a9e246c532850" />
+		<entry key="Chat.InvalidMessage"
+		       text="メッセージが空か正しくありません"
+		       sourceHash="90852f96d275f811" />
+		<entry key="Chat.Muted"
+		       text="チャットが禁止されています(残り{seconds}秒)"
+		       sourceHash="d44ad231e1dc9e57" />
+		<entry key="Chat.NotFound" text="メッセージが見つかりません" sourceHash="9e5e30bbb5ad2ca9" />
+		<entry key="Chat.NotJoinable" text="このチャンネルには参加できません" sourceHash="46a0dd5bcc062ecf" />
+		<entry key="Chat.NotMember" text="このチャンネルに参加していません" sourceHash="3e5bfdfd4245bf3b" />
+		<entry key="Chat.Repeated" text="同じ発言は繰り返せません" sourceHash="3aed68501070baae" />
+		<entry key="Chat.SignIn"
+		       text="チャットするにはサインインしてください"
+		       sourceHash="3e1a44cdd263dd1e" />
+		<entry key="Chat.TargetOffline" text="相手はオフラインです" sourceHash="4e2a36c23fcdbdc0" />
+		<entry key="Chat.TooFast" text="速すぎます。少し待ってください" sourceHash="51ec7c4fa8414af5" />
+		<entry key="Chat.TooFastWait"
+		       text="速すぎます。{milliseconds}ms待ってください"
+		       sourceHash="e5b6fe8229c21b06" />
+		<entry key="Chat.TooManyChannels" text="チャンネルが多すぎます" sourceHash="b67867eff6d1139c" />
+		<entry key="Chat.Unavailable" text="現在チャットは利用できません" sourceHash="97824550bff00311" />
+		<entry key="Chat.UpdateGame"
+		       text="チャットするにはゲームを更新してください"
+		       sourceHash="42ac26bc346890e2" />
 		<entry key="Close" text="閉じる" sourceHash="5e8250fb85d64c23" />
 		<entry key="Corner" text="位置" sourceHash="d66afae9aedadcf0" />
 		<entry key="Debug HUD" text="デバッグ HUD" sourceHash="e7b16707c98cf071" />
@@ -589,18 +616,18 @@
 		<entry key="EdPluginWidget.EventId" text="イベント id" sourceHash="9b572c9af0cf6ef8" />
 		<entry key="EdPluginWidget.EventJson" text="イベント JSON" sourceHash="f9211a1af156135b" />
 		<entry key="EdPluginWidget.From" text="送信元" sourceHash="a6ab5184d6315895" />
-		<entry key="EdPluginWidget.Game" text="게임" sourceHash="b568a67e05a19907" />
+		<entry key="EdPluginWidget.Game" text="ゲーム" sourceHash="b568a67e05a19907" />
 		<entry key="EdPluginWidget.GrantRevoke" text="付与 / 取り消し" sourceHash="b43e7fa0410aeb6e" />
 		<entry key="EdPluginWidget.Kind" text="種類" sourceHash="70af97de3ad8fb23" />
 		<entry key="EdPluginWidget.LiveEvents" text="ライブイベント" sourceHash="b5622b26740874ec" />
-		<entry key="EdPluginWidget.Loop" text="반복" sourceHash="4efee5b48a4593cb" />
+		<entry key="EdPluginWidget.Loop" text="ループ" sourceHash="4efee5b48a4593cb" />
 		<entry key="EdPluginWidget.MaintenanceAnnouncement"
 		       text="メンテナンス / お知らせ"
 		       sourceHash="85b0db04bdd7964f" />
 		<entry key="EdPluginWidget.MemoTicket" text="メモ(チケット)" sourceHash="fdcbf34ceeb42ab6" />
 		<entry key="EdPluginWidget.MessageKey" text="メッセージキー" sourceHash="a982200e6ce2d4db" />
 		<entry key="EdPluginWidget.Options" text="オプション" sourceHash="463b8c4e92751ba5" />
-		<entry key="EdPluginWidget.Play" text="재생" sourceHash="cd105819b5a10243" />
+		<entry key="EdPluginWidget.Play" text="再生" sourceHash="cd105819b5a10243" />
 		<entry key="EdPluginWidget.Preview" text="プレビュー" sourceHash="417b90913e05bc17" />
 		<entry key="EdPluginWidget.Problems" text="問題" sourceHash="0e6bbd9fe1101fbd" />
 		<entry key="EdPluginWidget.ReasonCode" text="理由コード" sourceHash="e4e83587c443b062" />
@@ -612,7 +639,7 @@
 		       text="範囲(all またはサーバー種別)"
 		       sourceHash="b549f10e94463f43" />
 		<entry key="EdPluginWidget.Skeletons" text="スケルトン" sourceHash="ddf41736311408a7" />
-		<entry key="EdPluginWidget.Stop" text="정지" sourceHash="d9ad53251f2330a5" />
+		<entry key="EdPluginWidget.Stop" text="停止" sourceHash="d9ad53251f2330a5" />
 		<entry key="EdPluginWidget.SubjectPrefix" text="サブジェクト接頭辞" sourceHash="f5ff56bd51df1f21" />
 		<entry key="EdPluginWidget.To" text="宛先" sourceHash="09353907b5c79284" />
 		<entry key="EdPluginWidget.Wires" text="ワイヤー" sourceHash="b1344bf526482d11" />
@@ -653,18 +680,41 @@
 		<entry key="EditorTip.ZoneRevertParam"
 		       text="このパラメーターにプリセットの値を再び使います。"
 		       sourceHash="2216bc5d4a3af475" />
+		<entry key="FriendList.Idle"
+		       text="更新を押すとフレンド一覧を表示します"
+		       sourceHash="1bf7709ef94325c5" />
+		<entry key="FriendList.LoadFailed"
+		       text="フレンド一覧を読み込めませんでした(エラー {error})"
+		       sourceHash="126516148f7f55b3" />
+		<entry key="FriendList.Loading" text="フレンドを読み込み中..." sourceHash="fd7afe91ccb1c0b8" />
+		<entry key="FriendList.None" text="フレンドはまだいません" sourceHash="2736cb628dbd9e09" />
+		<entry key="FriendList.PendingRequests"
+		       text="{title}  (保留中の申請 {count}件)"
+		       sourceHash="edf972fdfe13cb2e" />
+		<entry key="FriendList.PresenceAway" text="離席中" sourceHash="6f3fb3842ffa02bb" />
+		<entry key="FriendList.PresenceBusy" text="取り込み中" sourceHash="ff75d19be2aea620" />
+		<entry key="FriendList.PresenceInGame" text="ゲーム中" sourceHash="751b555ee38fcef8" />
+		<entry key="FriendList.PresenceOffline" text="オフライン" sourceHash="574193ebbf068988" />
+		<entry key="FriendList.PresenceOnline" text="オンライン" sourceHash="abf0e099159a8caa" />
+		<entry key="FriendList.PresenceUnknown" text="不明" sourceHash="498865c7bd1f3959" />
+		<entry key="FriendList.Row" text="#{account}  {presence}" sourceHash="2db55beacdf5ec2a" />
+		<entry key="FriendList.RowActivity" text="#{account}  {presence}  {activity}" sourceHash="b1fda9d92194f095" />
+		<entry key="FriendList.Title" text="フレンド" sourceHash="4c675180cc54b9ba" />
 		<entry key="Inventory.Done" text="完了しました。" sourceHash="7301570d0bb8fc6d" />
 		<entry key="Inventory.DropTitle" text="いくつ捨てますか?" sourceHash="5851b629b00886c2" />
 		<entry key="Inventory.EmptySlot" text="空きスロットです。" sourceHash="b56cc9d513099dfd" />
+		<entry key="Inventory.EquipLine" text="{slot}: {item}" sourceHash="49a515e2a7dc7316" />
 		<entry key="Inventory.InvalidCount" text="その数量は指定できません。" sourceHash="e710ff918fd580da" />
 		<entry key="Inventory.InvalidSlot"
 		       text="そのスロットには入れられません。"
 		       sourceHash="af46c51eb2b0ce83" />
+		<entry key="Inventory.ItemCount" text="{item} x{count}" sourceHash="35b4cb38ae71afeb" />
 		<entry key="Inventory.NoRoom" text="バッグがいっぱいです。" sourceHash="3034de0a57eb2551" />
 		<entry key="Inventory.NotUsable" text="使用できません。" sourceHash="fee7c8ce0b060e74" />
 		<entry key="Inventory.Picked" text="置く場所を選んでください。" sourceHash="76033ca89d70f4b0" />
 		<entry key="Inventory.Refused" text="そこには装備できません。" sourceHash="e65da3e12aa85757" />
 		<entry key="Inventory.SplitTitle" text="いくつ分けますか?" sourceHash="009e2ff8de6bc491" />
+		<entry key="Inventory.StatLine" text="{stat} {value}" sourceHash="ed0016c573032a8a" />
 		<entry key="Keep" text="維持" sourceHash="d60a7dde73859828" />
 		<entry key="Keep these display settings?"
 		       text="この表示設定を維持しますか?"
@@ -687,11 +737,31 @@
 		       text="キーを押してください。Esc でキャンセル、Esc を 1 秒押し続けると Esc を割り当てます。"
 		       sourceHash="2fe6a469745a3551" />
 		<entry key="Quit Game" text="ゲームを終了" sourceHash="92aee0b2e93f7fd0" />
+		<entry key="ReplayBar.Pause" text="一時停止" sourceHash="061cc20e3432dead" />
+		<entry key="ReplayBar.Play" text="再生" sourceHash="cd105819b5a10243" />
 		<entry key="Resume" text="再開" sourceHash="89118d3a7be870ca" />
 		<entry key="Return to Title" text="タイトルに戻る" sourceHash="6769de3e1eac7922" />
 		<entry key="Revert" text="元に戻す" sourceHash="d89a2e529b31ef43" />
 		<entry key="Reverting in" text="元に戻すまで" sourceHash="9cef80c4c43e7e14" />
 		<entry key="Sections" text="セクション" sourceHash="0337d90cf703df0d" />
+		<entry key="ServerPicker.Idle"
+		       text="更新を押すとサーバー一覧を表示します"
+		       sourceHash="90268a2738feb664" />
+		<entry key="ServerPicker.LoadFailed"
+		       text="サーバー一覧を読み込めませんでした(エラー {error})"
+		       sourceHash="9f1431b46bb9b536" />
+		<entry key="ServerPicker.Loading" text="サーバーを読み込み中..." sourceHash="fc9faff913354a2f" />
+		<entry key="ServerPicker.None"
+		       text="現在利用できるサーバーはありません"
+		       sourceHash="5fd07d96180b4276" />
+		<entry key="ServerPicker.Pick" text="サーバーを選んでください" sourceHash="6711b33edde339d6" />
+		<entry key="ServerPicker.Row" text="{region}  {fill}%  {state}" sourceHash="e8ee51c94be0f27e" />
+		<entry key="ServerPicker.StateDraining" text="退出中" sourceHash="445341bdde0ebac7" />
+		<entry key="ServerPicker.StateMaintenance" text="メンテナンス中" sourceHash="9e7f28b2e900e4a0" />
+		<entry key="ServerPicker.StateOpen" text="受付中" sourceHash="f84f97b4633670e9" />
+		<entry key="ServerPicker.StateStarting" text="起動中" sourceHash="44c11cb1fc7fca39" />
+		<entry key="ServerPicker.StateUnknown" text="不明" sourceHash="498865c7bd1f3959" />
+		<entry key="Shop.BalanceLine" text="{amount} {currency}" sourceHash="cc7c013f5ab43d0a" />
 		<entry key="Shop.Bought" text="購入しました。" sourceHash="7eba7cbbd2693250" />
 		<entry key="Shop.Busy" text="購入処理中です。" sourceHash="839e3be6e938c8ed" />
 		<entry key="Shop.ConfirmAccept" text="購入" sourceHash="166a4319b11387ab" />
@@ -703,6 +773,8 @@
 		<entry key="Shop.LimitReached" text="これ以上購入できません。" sourceHash="90b45ac5c64d58fe" />
 		<entry key="Shop.NoRoom" text="バッグがいっぱいです。" sourceHash="3034de0a57eb2551" />
 		<entry key="Shop.NotEnoughMoney" text="お金が足りません。" sourceHash="7d5f2b96ea36e02c" />
+		<entry key="Shop.OfferRow" text="{item}  {price} {currency}" sourceHash="fb8403757162871e" />
+		<entry key="Shop.OfferRowStock" text="{offer}  ({stock})" sourceHash="97981f7eb4dc983a" />
 		<entry key="Shop.OutOfStock" text="売り切れです。" sourceHash="53429c9af9f7338b" />
 		<entry key="Shop.Purchasing" text="購入中..." sourceHash="4c1549e91d83c479" />
 		<entry key="Shop.Rejected" text="現在は購入できません。" sourceHash="cc4a444b068922aa" />
@@ -722,6 +794,22 @@
 		<entry key="UIMenu.QuitAccept" text="終了" sourceHash="45156213b0fb2396" />
 		<entry key="UIMenu.QuitMessage" text="ゲームを終了しますか?" sourceHash="d9be4613bcb7a27a" />
 		<entry key="UIMenu.QuitTitle" text="ゲームを終了" sourceHash="92aee0b2e93f7fd0" />
+		<entry key="Western.Bounty" text="懸賞金 ${amount}" sourceHash="c58db76a5bd04bb6" />
+		<entry key="Western.Carcasses" text="獲物 {count}" sourceHash="ddc82144621ac028" />
+		<entry key="Western.GaitCanter" text="キャンター" sourceHash="8ddeb8be59f30f00" />
+		<entry key="Western.GaitGallop" text="ギャロップ" sourceHash="5080657618a7ac4a" />
+		<entry key="Western.GaitStanding" text="停止" sourceHash="989261d5eefc4735" />
+		<entry key="Western.GaitTrot" text="トロット" sourceHash="85c8a4fb52a15fd0" />
+		<entry key="Western.GaitWalk" text="常歩" sourceHash="8904bd022d8e7e10" />
+		<entry key="Western.Honor" text="名誉 {honor}({tier})" sourceHash="993157e899c31860" />
+		<entry key="Western.Hungry" text="空腹" sourceHash="d5f6173b71caeddc" />
+		<entry key="Western.Money" text="${amount}" sourceHash="99e2e4655d7f5a1b" />
+		<entry key="Western.OnFoot" text="徒歩 - E: 騎乗  F: 口笛" sourceHash="1682216146fa816d" />
+		<entry key="Western.Pelts" text="毛皮 {count}" sourceHash="85a0fcd45b363acc" />
+		<entry key="Western.Riding"
+		       text="{horse}に騎乗 - {gait} {speed} m/s - E: 降りる  Shift: ギャロップ"
+		       sourceHash="b783302b2e4d4c79" />
+		<entry key="Western.Wanted" text="手配 {level}" sourceHash="d1573e50d443252a" />
 		<entry key="You have changes that are not applied."
 		       text="適用していない変更があります。"
 		       sourceHash="9ea9ff2b01f83378" />

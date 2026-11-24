@@ -1,0 +1,19 @@
+<?asset guid="dfa5a30f9f1641f5a635ed3cbda90bdd"?>
+<Prefab formatVersion="1" name="PlayReloadPreview">
+	<!-- 플레이 중 리로드 시나리오가 프리팹 창에 여는 프리팹 — 게임 모듈의 컴포넌트(모듈을 내릴 때 미리보기가 상태를 맡겼다 되돌린다)와 덮어쓰는 머티리얼을 쓰는 메시를 든다. -->
+	<GameObject _schemaVersion="0" _name="PlayReloadPreview" _bActive="true">
+		<_listComponent>
+			<MeshComponent _localID="163493842152903304" _localPosition="0,0,0"
+			               _localRotation="0,0,0"
+			               _localScale="0.8,0.8,0.8"
+			               _attachOwner="None"
+			               _attachComponent="None"
+			               _meshID="Cube"
+			               _materialPath="game/playground/automation/desktop/editor/playreload/probe.material"
+			               _boundsRadius="0.866"
+			               _gpuSpinSeed="0"
+			               _bVisible="true" />
+			<HotReloadTestComponent _localID="2911901900305039031" _keptValue="17" />
+		</_listComponent>
+	</GameObject>
+</Prefab>

@@ -86,6 +86,60 @@ SW_TEST_CASE( EditorPlaySessionRestoreTest, StopCancelsTravelInFlight )
     SW_EXPECT_TRUE( sceneManager.getActiveScene()->getName() == "Edit" );
 }
 
+/** @brief [EditorPlaySessionRestoreTest] 씬 없이 시작한 플레이의 Stop 은 게임이 연 씬을 내린다 — 남으면 플레이 상태가 편집 씬이 되어 저장이 그 레벨 파일을 덮는다 */
+SW_TEST_CASE( EditorPlaySessionRestoreTest, PlayWithoutSceneEndsWithoutScene )
+{
+    SubsystemScope scope;
+    SceneManager   sceneManager;
+    SW_REQUIRE_TRUE( scope.bind( &sceneManager ) );
+    const ScopedEditorScope scopedEditor( scope );
+    SW_REQUIRE_TRUE( sceneManager.getActiveScene() == nullptr );
+
+    PlaySessionData data;
+    EditorPlaySession::captureSnapshot( data );
+    SW_REQUIRE_NOT_NULL( sceneManager.createEmptyActiveScene( "Game" ) );
+    EditorPlaySession::restoreSnapshot( data );
+    SW_EXPECT_TRUE( sceneManager.getActiveScene() == nullptr );
+
+    // 편집 씬을 연 채 다시 시작하면 앞 플레이의 "씬 없음" 이 남아 편집 씬을 내리지 않는다.
+    SW_REQUIRE_NOT_NULL( EditorPlaySessionRestoreTestInternal::openEditScene( sceneManager ) );
+    EditorPlaySession::captureSnapshot( data );
+    EditorPlaySession::restoreSnapshot( data );
+    SW_REQUIRE_NOT_NULL( sceneManager.getActiveScene() );
+    SW_EXPECT_TRUE( sceneManager.getActiveScene()->getName() == "Edit" );
+}
+
+/** @brief [EditorPlaySessionRestoreTest] 모듈 리로드가 멈춘 씬 로드는 같은 약속으로 다시 떠서 끝난다 — 취소하면 이동 하나가 실패로 사라지고, 새 인스턴스는 그 요청을 다시 받는다 */
+SW_TEST_CASE( EditorPlaySessionRestoreTest, SuspendedTravelFinishesAfterReload )
+{
+    const test::ScopedScratchDomain domain;
+    SceneManager                    sceneManager;
+    SubsystemScope                  scope;
+    SW_REQUIRE_TRUE( scope.bind( &sceneManager ) );
+    const ScopedEditorScope scopedEditor( scope );
+    SW_REQUIRE_NOT_NULL( EditorPlaySessionRestoreTestInternal::openEditScene( sceneManager ) );
+    SW_REQUIRE_TRUE( sceneManager.saveActiveSceneCopy( domain.makeDiskPath( "next.scene.xml" ) ) );
+    const string            nextID = test::ScopedScratchDomain::makeID( "next.scene.xml" ).str();
+    TaskFuture<SceneHandle> travel = sceneManager.requestLoadFuture( nextID, SceneLoadKind::Travel );
+    SW_REQUIRE_TRUE( travel.isValid() );
+
+    sceneManager.suspendPendingLoad();
+    SW_EXPECT_TRUE( sceneManager.isTransitioning() );
+    SW_EXPECT_FALSE( travel.isReady() );
+    vector<string> listReplayed;
+    sceneManager.replayPendingLoadRequests( SW_DELEGATE_LAMBDA( SceneLoadRequestedHandler, [&listReplayed]( const string& path, SceneLoadKind, const TaskFuture<SceneHandle>& )
+    { listReplayed.push_back( path ); } ) );
+    SW_REQUIRE_EQUAL( size_t{ 1 }, listReplayed.size() );
+    SW_EXPECT_TRUE( listReplayed[0] == nextID );
+
+    sceneManager.updateTransitions(); // 다시 띄운다
+    sceneManager.waitForPendingLoad();
+    sceneManager.updateTransitions(); // 받는다
+    SW_REQUIRE_TRUE( travel.isReady() );
+    SW_EXPECT_TRUE( travel.get().isValid() );
+    SW_EXPECT_TRUE( sceneManager.resolveScene( travel.get() ) == sceneManager.getActiveScene() );
+}
+
 /** @brief [EditorPlaySessionRestoreTest] 플레이 중인 씬은 원본 파일에 쓰이지 않는다(사본은 쓴다) — 쓰면 플레이 상태가 레벨 파일을 덮는다 */
 SW_TEST_CASE( EditorPlaySessionRestoreTest, PlayingSceneIsNotWrittenToItsSource )
 {

@@ -430,9 +430,7 @@ namespace sw
         // 플레이어에게 알린다(UI 가 없는 서버 · 테스트는 건너뛴다) — 같은 알림이 떠 있으면 센다.
         if ( IPlayerNotificationSink* const pNotifications = game::findSubsystem<IPlayerNotificationSink>() )
         {
-            string text;
-            text = SW_LOCTEXT( "Notification", "GameSaved", "Game saved" );
-            pNotifications->postNotification( text, 3.0f, PlayerNotificationKind::Info );
+            pNotifications->postNotification( SW_LOCALIZED_MESSAGE( "Notification", "GameSaved" ).str(), 3.0f, PlayerNotificationKind::Info );
         }
     }
 

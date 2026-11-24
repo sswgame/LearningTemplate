@@ -1426,7 +1426,7 @@ namespace sw
                 writer.addLineFormat( "path requests waiting", "%#", pendingPathCount );
                 const DebugHUDRegistry*      pRegistry = engine::findSubsystem<DebugHUDRegistry>();
                 const GameObjectHandle       target    = pRegistry != nullptr ? pRegistry->getTarget() : GameObjectHandle{};
-                const GameObject*            pTarget   = target.isValid() ? pManager->findGameObjectByID( target.objectID() ) : nullptr;
+                const GameObject*            pTarget   = target.isValid() ? pManager->resolveGameObject( target ) : nullptr;
                 const NavMeshAgentComponent* pAgent    = pTarget != nullptr ? pTarget->getComponent<NavMeshAgentComponent>() : nullptr;
                 if ( pAgent == nullptr )
                     return;

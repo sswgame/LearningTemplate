@@ -294,7 +294,7 @@ namespace sw
         if ( pUI == nullptr )
             return;
         UINotificationDef notification{};
-        notification._text = SW_LOCTEXT( "Notification", "ClipboardWriteFailed", "Could not copy to the clipboard." );
+        notification._text = SW_LOCALIZED_MESSAGE( "Notification", "ClipboardWriteFailed" ).str();
         notification._kind = UINotificationKind::Warning;
         engine::getSubsystem<UINotificationService>().post( notification );
     }

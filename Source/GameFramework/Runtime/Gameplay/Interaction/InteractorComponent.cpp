@@ -403,8 +403,9 @@ namespace sw
         const optional<int32>       best = InteractionView::selectBest( viewer, _listCandidate, _bUseLineOfSight ? &lineOfSight : nullptr );
         if ( best.has_value() )
         {
-            const size_t index = static_cast<size_t>( *best );
-            setFocus( GameObjectHandle::make( _listCandidate[index]._objectID ), _listCandidateComponent[index] );
+            const size_t            index  = static_cast<size_t>( *best );
+            const GameObject* const pFocus = manager.findGameObjectByID( _listCandidate[index]._objectID );
+            setFocus( pFocus != nullptr ? pFocus->getHandle() : GameObjectHandle{}, _listCandidateComponent[index] );
         }
         else
         {

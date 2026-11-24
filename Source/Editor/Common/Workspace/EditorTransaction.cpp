@@ -10,6 +10,7 @@
 #include "Editor/Common/Workspace/EditorSelection.h"
 #include "Editor/Common/Workspace/EditorService.h"
 #include "Editor/Common/Workspace/EditorWorkspace.h"
+#include "Editor/Common/Workspace/Play/EditorPlaySession.h"
 #include "Editor/Common/Workspace/Undo/CommandStack.h"
 
 #include "Engine/Object/GameObject/GameObject.h"
@@ -178,6 +179,10 @@ namespace sw::editor
 {
     void EditorTransaction::markActiveSceneDirty()
     {
+        // 플레이 중의 활성 씬은 사본이다 — Stop 이 되돌리므로 편집 씬은 바뀌지 않는다. 기록은 맡겨 둔 내역 밖의 스택이 Stop 과 함께 버린다(`CommandStack::suspendHistory`).
+        // 메뉴 · 콘솔 · 요청 줄 · 시나리오 단계가 모두 이 문을 지난다 — 입구마다 묻지 않는다.
+        if ( EditorPlaySession::isStopped() == false )
+            return;
         EditorContext*   pContext   = editor::findSubsystem<EditorContext>();
         EditorWorkspace* pWorkspace = ( pContext != nullptr ) ? &pContext->getSubsystem<EditorWorkspace>() : editor::findSubsystem<EditorWorkspace>();
         if ( pWorkspace != nullptr )

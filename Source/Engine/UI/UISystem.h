@@ -376,11 +376,11 @@ namespace sw
         /** @brief 모듈 다시 로드로 닫은 문서 화면을 다시 엽니다(다음 `update` 앞). */
         void reopenClosedScreens();
         /**
-         * @brief 바인딩 단계입니다. 텍스트 버전(현지화)이 바뀌었으면 글꼴 대체 연쇄를 비우고 모든 위젯에 알린 뒤(`Widget::onTextRevisionChanged`),
+         * @brief 바인딩 단계입니다. 텍스트 버전(현지화)이 바뀌었으면 글꼴 대체 연쇄를 비우고(위젯에는 트리마다의 레이아웃이 알린다),
          *        화면마다 바인딩 집합을 돌립니다. 연결되지 않았으면 연결하고, 바뀐 소스의 필드만 씁니다. 텍스트 버전이 바뀌면 형식 바인딩도 다시 평가합니다.
          */
         void updateBindings();
-        /** @brief 입력 장치 종류(글리프)가 바뀌었으면 화면 위젯마다 `onInputGlyphsChanged` 를 부릅니다(액션 태그가 있는 텍스트를 다시 배치합니다). */
+        /** @brief 입력 장치 종류나 키 바인딩이 바뀌었으면 글리프 번호를 올립니다 — 트리마다의 레이아웃이 위젯에 알립니다(액션 태그가 있는 텍스트를 다시 배치합니다). */
         void refreshInputGlyphs();
         /** @brief 지금 문화권 출처입니다. `setLocalization` 으로 받은 것(기동이 엔진 서비스를 넘긴다)이고, 받지 않았으면 nullptr 입니다. */
         const LocalizationManager* findLocalization() const;
@@ -506,6 +506,8 @@ namespace sw
         uint32                       _nextPushOrder;
         uint32                       _textRevision;            ///< 마지막 바인딩 단계가 본 텍스트 버전입니다.
         uint32                       _converterRevision;       ///< 마지막 바인딩 단계가 본 변환기 표 번호입니다(`UIBindingConverterRegistry::getRevision`).
+        uint32                       _glyphRevision;           ///< 액션 글리프가 바뀔 때마다 오르는 번호입니다(입력 장치 종류 · 키 재배치).
+        uint32                       _glyphBindingRevision;    ///< 마지막으로 본 게임 · UI 입력 맵의 바인딩 번호 합입니다.
         InputGlyphStyle              _glyphStyle;              ///< 마지막으로 본 입력 장치 종류입니다(`refreshInputGlyphs`).
         uint8                        _bPendingClose       : 1; ///< 닫기를 요청한 화면이 있는지 나타냅니다.
         uint8                        _bTextRevisionKnown  : 1; ///< `_textRevision` 을 한 번 읽었는지 나타냅니다.

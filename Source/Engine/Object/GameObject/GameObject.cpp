@@ -68,7 +68,7 @@ namespace sw
     static_assert( sizeof( GameObject ) <=
                        ( sizeof( uint64 ) + sizeof( hashed_string ) + sizeof( GameObjectManager* ) + sizeof( atomic<bool> ) * 4 + sizeof( uint32 ) +
                          sizeof( vector<Component*, InlineAllocator<Component*, 4>> ) + sizeof( atomic<Component*> ) + sizeof( unique_ptr<GameObjectEvents> ) + sizeof( TickItemList ) +
-                         sizeof( uint32 ) * TickRegistry::kGroupCount + sizeof( uint32 ) + sizeof( atomic<uint8> ) + sizeof( bool ) + sizeof( uint32 ) + sizeof( bool ) + alignof( GameObject ) - 1 ) /
+                         sizeof( uint32 ) * TickRegistry::kGroupCount + sizeof( uint32 ) + sizeof( atomic<uint8> ) + sizeof( bool ) + sizeof( uint32 ) + sizeof( bool ) + sizeof( uint16 ) + alignof( GameObject ) - 1 ) /
                            alignof( GameObject ) * alignof( GameObject ),
                    "GameObject has padding between fields (or a field was added without adding its size here)" );
 
@@ -98,6 +98,7 @@ namespace sw
         , _bTransient{ false }
         , _siblingOrder{ 0 }
         , _bAlwaysLoaded{ false }
+        , _handleGeneration{ 0 }
     {
     }
 

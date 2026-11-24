@@ -8,6 +8,8 @@
 
 #include "Editor/Common/Commands/Asset/EditorDocumentAutosave.h"
 
+#include "Engine/Content/AssetRegistry.h"
+
 namespace
 {
     struct EditorDocumentAutosaveTestInternal
@@ -94,4 +96,39 @@ SW_TEST_CASE( EditorDocumentAutosaveTest, StateDocumentCopyKeepsItsPanel )
     SW_REQUIRE_EQUAL( size_t{ 1 }, listEntry.size() );
     SW_EXPECT_EQUAL( sw::string( "projectsettings" ), listEntry[0]._panelID );
     SW_EXPECT_EQUAL( entry._documentPath, listEntry[0]._documentPath );
+}
+
+/** @brief [EditorDocumentAutosaveTest] 문서를 옮긴 뒤에도 사본은 그 문서의 것이다 — 경로로 적으면 옛 자리에 새로 생긴 문서가 남의 사본을 이어받는다 */
+SW_TEST_CASE( EditorDocumentAutosaveTest, CopyFollowsTheMovedDocument )
+{
+    using Internal                                   = EditorDocumentAutosaveTestInternal;
+    const sw::AbsolutePath             sessionFolder = sw::test::makeScratchPath( "DocumentAutosave" );
+    const sw::AbsolutePath             projectRoot   = sw::test::makeScratchPath( "Project" );
+    const sw::vector<sw::AbsolutePath> listSession{ sessionFolder };
+    const auto                         entry   = Internal::makeEntry( projectRoot.str() );
+    const sw::string                   newPath = "game/playground/materials/moved/probe.material";
+    sw::vector<sw::AssetRegistryLayer> listLayer;
+    listLayer.push_back( sw::AssetRegistryLayer{ "test", { sw::AssetRegistryEntry{ sw::AssetGUID::create(), entry._documentPath } } } );
+    sw::AssetRegistry previous = sw::AssetRegistry::install( std::move( *sw::AssetRegistry::merge( listLayer ) ) );
+    SW_EXPECT_TRUE( entry.write( sessionFolder ) );
+    SW_EXPECT_TRUE( sw::AssetRegistry::move( entry._documentPath, newPath ) );
+
+    sw::vector<sw::editor::EditorDocumentAutosaveEntry> listEntry;
+    sw::editor::EditorDocumentAutosaveEntry::scan( listSession, projectRoot.str(), &Internal::computeKeptSourceHash, listEntry );
+    SW_EXPECT_EQUAL( size_t{ 1 }, listEntry.size() );
+    for ( const sw::editor::EditorDocumentAutosaveEntry& recovered : listEntry )
+    {
+        SW_EXPECT_TRUE( recovered._documentPath == newPath );
+        SW_EXPECT_TRUE( recovered._refusal.empty() );
+        SW_EXPECT_TRUE( recovered.isCopyOf( newPath ) );
+        SW_EXPECT_FALSE( recovered.isCopyOf( entry._documentPath ) );
+    }
+
+    // 지운 문서(색인에 없다)의 사본은 다른 문서에 얹지 않는다.
+    (void)sw::AssetRegistry::install( sw::AssetRegistry{} );
+    sw::editor::EditorDocumentAutosaveEntry::scan( listSession, projectRoot.str(), &Internal::computeKeptSourceHash, listEntry );
+    SW_EXPECT_EQUAL( size_t{ 1 }, listEntry.size() );
+    if ( listEntry.empty() == false )
+        SW_EXPECT_FALSE( listEntry[0]._refusal.empty() );
+    (void)sw::AssetRegistry::install( std::move( previous ) );
 }

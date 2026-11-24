@@ -63,6 +63,9 @@ namespace sw
         // 씬 로드를 누가 요청했든 받아들임 알림으로 로딩 화면을 띄운다(언리얼 로딩 화면 모듈이 PreLoadMap 을 구독하는 것과 같다). 첫 씬 요청(onInitialize) 앞에 건다.
         if ( pSceneManager != nullptr )
             _sceneLoadRequestedSubscription = pSceneManager->onSceneLoadRequested().add( SW_DELEGATE_METHOD( SceneLoadRequestedHandler, &GameSceneFlow::onSceneLoadRequested, this ) );
+        // 리로드 앞의 인스턴스가 기다리던 이동은 씬 매니저가 다시 띄운다 — 이 인스턴스가 세이브 막기와 끝 알림을 이어받는다.
+        if ( pSceneManager != nullptr && _bResumingWorld == SW_TRUE )
+            pSceneManager->replayPendingLoadRequests( SW_DELEGATE_METHOD( SceneLoadRequestedHandler, &GameSceneFlow::onSceneLoadRequested, this ) );
         return SubsystemInitResult::Succeeded;
     }
 

@@ -24,7 +24,7 @@ namespace sw
 
     /**
      * @struct ConfirmDialogDesc
-     * @brief 대화 상자에 보일 글입니다. 넷 모두 필수이며 현지화 키이거나 원문입니다(`TextWidget::setText` 와 같은 규칙 — 바인딩이 문화권으로 해석한다).
+     * @brief 대화 상자에 보일 글입니다. 넷 모두 필수이며 현지화 키 · 메시지(`LocalizedMessage`) · 원문입니다(`TextWidget::setText` 와 같은 규칙 — 바인딩이 문화권으로 해석한다).
      */
     struct ConfirmDialogDesc
     {

@@ -178,7 +178,7 @@ namespace
                 case ReflectBuiltinIndex::kGameObjectHandle:
                 {
                     GameObjectHandle& handle = *static_cast<GameObjectHandle*>( pValue );
-                    handle                   = GameObjectHandle::make( handle.objectID() + 1 );
+                    handle                   = GameObjectHandle::make( handle.objectID() + 1, 0 );
                     return true;
                 }
                 default:
@@ -273,7 +273,7 @@ SW_TEST_CASE( StateHashTest, LayoutAndHandHandlerPropertiesFold )
     SW_REQUIRE_NOT_NULL( pProbe );
     pProbe->_cell         = int2{ 3, -4 };
     pProbe->_label        = hashed_string( "Gate" );
-    pProbe->_targetObject = GameObjectHandle::make( 9 );
+    pProbe->_targetObject = GameObjectHandle::make( 9, 0 );
     const uint64 first    = foldComponentState( *pProbe );
     SW_EXPECT_EQUAL( foldComponentState( *pProbe ), first );
 

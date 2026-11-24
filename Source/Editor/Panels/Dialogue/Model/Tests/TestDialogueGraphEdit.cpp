@@ -35,7 +35,7 @@ SW_TEST_CASE( DialogueGraphEditTest, SpeakersAreAddedAndRemovedByID )
     SW_EXPECT_EQUAL( kDialogueNoSpeaker, graph._listNode.back()._speaker );
     DialogueGraphAsset reread;
     SW_EXPECT_TRUE( reread.loadFromXMLText( graph.toXML() ) );
-    SW_EXPECT_EQUAL( string( "Guard" ), reread.resolveSpeakerName( guardID ) );
+    SW_EXPECT_EQUAL( string( "Guard" ), reread.getSpeakerName( guardID ) );
 }
 
 // 지운 선택지의 링크는 사라지고, 뒤 선택지의 링크는 같은 선택지를 계속 가리킨다.

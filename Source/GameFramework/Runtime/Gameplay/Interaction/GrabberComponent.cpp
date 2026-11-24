@@ -11,6 +11,7 @@
 #include "Engine/Console/DevCommandRegistry.h"
 #include "Engine/Object/Component/SceneComponent.h"
 #include "Engine/Object/GameObject/GameObject.h"
+#include "Engine/Object/GameObject/GameObjectEvents.h"
 #include "Engine/Object/GameObject/GameObjectManagerResolve.inl"
 #include "Engine/Object/GameObject/Registry/ComponentRegistry.h"
 #include "Engine/Object/GameObject/Registry/TagIndex.h"
@@ -34,9 +35,10 @@ namespace sw
         return true;
     }
 
-    void TransformGrabPhysics::release( GameObject& holder, GameObject& target, const float3& velocity )
+    void TransformGrabPhysics::release( GameObject& holder, GameObject& target, const float3& velocity, PhysicsBodyType bodyType )
     {
         (void)holder;
+        (void)bodyType;
         (void)velocity; // 강체가 없으면 속도를 받을 곳이 없다 - 놓은 자리에 남는다. 던지려면 대상에 강체를 둔다(RigidBodyGrabPhysics)
         SceneComponent* pTargetScene = target.getPrimarySceneComponent();
         if ( pTargetScene != nullptr )
@@ -57,13 +59,13 @@ namespace sw
         return true;
     }
 
-    void RigidBodyGrabPhysics::release( GameObject& holder, GameObject& target, const float3& velocity )
+    void RigidBodyGrabPhysics::release( GameObject& holder, GameObject& target, const float3& velocity, PhysicsBodyType bodyType )
     {
         RigidBodyComponent*   pBody3D = target.getComponent<RigidBodyComponent>();
         RigidBody2DComponent* pBody2D = target.getComponent<RigidBody2DComponent>();
         if ( pBody3D == nullptr && pBody2D == nullptr )
         {
-            _transform.release( holder, target, velocity );
+            _transform.release( holder, target, velocity, bodyType );
             return;
         }
         SceneComponent* pTargetScene = target.getPrimarySceneComponent();
@@ -71,21 +73,28 @@ namespace sw
             pTargetScene->detachFromComponent( AttachRule::KeepWorld );
         if ( pBody3D != nullptr )
         {
-            pBody3D->setBodyType( PhysicsBodyType::Dynamic );
-            pBody3D->setLinearVelocity( velocity );
-            pBody3D->wake();
+            pBody3D->setBodyType( bodyType );
+            if ( bodyType == PhysicsBodyType::Dynamic )
+            {
+                pBody3D->setLinearVelocity( velocity );
+                pBody3D->wake();
+            }
         }
         if ( pBody2D != nullptr )
         {
-            pBody2D->setBodyType( PhysicsBodyType::Dynamic );
-            pBody2D->setLinearVelocity( float2{ velocity._x, velocity._y } );
-            pBody2D->wake();
+            pBody2D->setBodyType( bodyType );
+            if ( bodyType == PhysicsBodyType::Dynamic )
+            {
+                pBody2D->setLinearVelocity( float2{ velocity._x, velocity._y } );
+                pBody2D->wake();
+            }
         }
     }
 
     GrabberComponent::GrabberComponent()
         : _holdOffset{ 0.0f, 1.0f, 0.6f }
         , _held{}
+        , _heldBodyType{ PhysicsBodyType::Dynamic }
         , _grabButton{}
         , _grabbableTags{}
         , _reach{ 1.5f }
@@ -93,6 +102,8 @@ namespace sw
         , _fallback{}
         , _grabIndex{}
         , _listTagged{}
+        , _unloadSubscription{}
+        , _heldUnloadSubscription{}
     {
         setCanEverTick( true );
     }
@@ -105,7 +116,7 @@ namespace sw
         _grabIndex                  = pPawn != nullptr ? pPawn->findButton( _grabButton ) : nullopt;
         GameObjectManager* pManager = pOwner != nullptr ? getOwner()->getMutableManager() : nullptr;
         if ( GameObject* const pHeld = pManager != nullptr ? pManager->resolveGameObject( _held ) : nullptr )
-            pHeld->setKeptWhenParentDestroyed( true ); // 쥔 채 되살아났다
+            watchHeld( *pHeld ); // 쥔 채 되살아났다
         if ( _grabButton.empty() == false && _grabIndex.has_value() == false )
             SW_LOG_ERROR_ID( "GrabberComponent.GrabButtonNotOnPawn", "Grabber on '%#' listens to button '%#' but its object has no pawn with that button - the button does nothing",
                              pOwner != nullptr ? pOwner->getName().c_str() : "?", _grabButton.c_str() );
@@ -192,11 +203,37 @@ namespace sw
         const bool  bCannotGrab = pOwner == nullptr || &target == pOwner || isHolding() || findHolderOf( target ) != nullptr; // 남의 손에서 빼앗으면 두 쪽이 같은 것을 쥔 줄 안다
         if ( bCannotGrab )
             return false;
+        // 붙이기가 키네마틱으로 바꾸기 전에 적는다. 놓으면 이 종류로 돌아간다 — 저작된 키네마틱을 놓는다고 동적으로 바꾸지 않는다.
+        const RigidBodyComponent*   pBody3D  = target.getComponent<RigidBodyComponent>();
+        const RigidBody2DComponent* pBody2D  = target.getComponent<RigidBody2DComponent>();
+        const PhysicsBodyType       bodyType = pBody3D != nullptr ? pBody3D->getBodyType() : ( pBody2D != nullptr ? pBody2D->getBodyType() : PhysicsBodyType::Dynamic );
         if ( getBackend().attach( *pOwner, target, _holdOffset ) == false )
             return false;
-        _held = target.getHandle();
-        target.setKeptWhenParentDestroyed( true ); // 손에 붙어도 집은 쪽의 일부가 아니다
+        _heldBodyType = bodyType;
+        _held         = target.getHandle();
+        watchHeld( target );
         return true;
+    }
+
+    void GrabberComponent::watchHeld( GameObject& held )
+    {
+        held.setKeptWhenParentDestroyed( true ); // 손에 붙어도 집은 쪽의 일부가 아니다
+        _heldUnloadSubscription = held.getOrCreateEvents()._unloading.add( [this]( const GameObjectUnloadInfo& info )
+        { handleUnloading( info ); } );
+    }
+
+    void GrabberComponent::handleUnloading( const GameObjectUnloadInfo& info )
+    {
+        const GameObject* const pHeld = findHeld();
+        // 한쪽만 내려가면 지금 놓는다 — 떠 둔 상태가 "쥐고 있다" 로 남으면 다시 오를 때 그 사이 다른 곳에 있는 것을 쥔 줄 안다.
+        if ( pHeld != nullptr && info.contains( pHeld->getObjectID() ) != info.contains( getOwner()->getObjectID() ) )
+            (void)dropHeld();
+    }
+
+    void GrabberComponent::onRegister( GameObjectManager& manager )
+    {
+        Component::onRegister( manager );
+        _unloadSubscription = GameObjectEvents::listen<&GrabberComponent::handleUnloading>( *this, &GameObjectEvents::_unloading );
     }
 
     const GrabberComponent* GrabberComponent::findHolderOf( const GameObject& object )
@@ -217,10 +254,11 @@ namespace sw
         GameObject* const pOwner = getOwner();
         GameObject* const pHeld  = isHolding() ? pOwner->getMutableManager()->resolveGameObject( _held ) : nullptr;
         _held                    = GameObjectHandle{};
+        _heldUnloadSubscription.reset();
         if ( pHeld == nullptr )
             return false;
         pHeld->setKeptWhenParentDestroyed( false );
-        getBackend().release( *pOwner, *pHeld, velocity );
+        getBackend().release( *pOwner, *pHeld, velocity, _heldBodyType );
         return true;
     }
 } // namespace sw

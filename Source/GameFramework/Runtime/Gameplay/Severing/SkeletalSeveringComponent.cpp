@@ -176,6 +176,33 @@ namespace sw
                 return listLevel;
             }
 
+            /** @brief 떨어진 조각의 정점과 스킨입니다(바인드 자세). */
+            struct SeverPieces
+            {
+                vector<RHIVertex>      _listVertex{};
+                vector<MeshSkinVertex> _listSkin{};
+            };
+
+            /**
+             * @brief @p mesh 에서 영역 하나를 뺀 새 메시를 만듭니다(남은 몸 캡 · 낮은 상세 단계 포함). 잘린 삼각형이 없으면 @p mesh 그대로이고 @p outPieces 는 비어 있습니다.
+             */
+            static shared_ptr<Mesh> severMesh( const shared_ptr<Mesh>& mesh, const Skeleton& skeleton, const FitTables& regionTable, uint32 regionIndex, SeverPieces& outPieces )
+            {
+                SeverResult result;
+                if ( computeSeveredTriangles( *mesh, skeleton, regionTable, regionIndex, result ) == false )
+                    return mesh;
+                vector<RHIVertex>      listKeptVertex;
+                vector<MeshSkinVertex> listKeptSkin;
+                splitByTriangle( *mesh, result, listKeptVertex, listKeptSkin, outPieces._listVertex, outPieces._listSkin );
+                shared_ptr<Mesh> kept = Mesh::create( MeshCPUAccess::Keep );
+                kept->setVertices( std::move( listKeptVertex ) );
+                kept->setSkin( std::move( listKeptSkin ), mesh->getSkinBinding() );
+                // 낮은 단계도 같이 자른다(스킨을 먼저 둔 뒤 — `setSkin` 은 LOD 를 뗀다). 받지 못하면 setLODs 가 오류를 남기고 LOD 0 만 남는다.
+                if ( mesh->getLODs().empty() == false )
+                    (void)kept->setLODs( severLODLevels( *mesh, skeleton, regionTable, regionIndex ) );
+                return kept;
+            }
+
             /**
              * @brief 조각 정점을 현재 포즈로 스키닝해 월드로 옮기고, 무게중심 기준 좌표로 바꿉니다. 무게중심을 돌려줍니다.
              * @details 볼록 껍질 점은 고르게 솎아 `kMaxHullPoint` 개 안팎으로 @p outHull 에 담는다.
@@ -284,8 +311,11 @@ namespace sw
         , _listSeveredRegion{}
         , _pRegionTable{}
         , _listPiece{}
+        , _meshSubscription{}
         , _pIntactMesh{}
+        , _pSeveredMesh{}
         , _bTableLoaded{ false }
+        , _bRestorePending{ false }
     {
         setCanEverTick( false );
     }
@@ -294,7 +324,8 @@ namespace sw
     {
         Component::onBeginPlay();
         loadRegionTable();
-        setCanEverTick( _listSeveredRegion.empty() == false ); // 되돌린 영역이 있을 때만 — 몸 메시(외형이 합친 것)는 시작 뒤에 선다
+        _bRestorePending = _listSeveredRegion.empty() == false;
+        setCanEverTick( _bRestorePending ); // 되돌린 영역이 있을 때만 — 몸 메시(외형이 합친 것)와 래그돌 바디는 시작 뒤에 선다
     }
 
     void SkeletalSeveringComponent::onTick( TickContext& context )
@@ -302,7 +333,7 @@ namespace sw
         Component::onTick( context );
         GameObject* const            pOwner = getOwner();
         const SkeletalMeshComponent* pUnit  = pOwner != nullptr ? pOwner->getComponent<SkeletalMeshComponent>() : nullptr;
-        if ( _pIntactMesh != nullptr || _listSeveredRegion.empty() )
+        if ( _bRestorePending == false )
         {
             setCanEverTick( false );
             return;
@@ -322,20 +353,20 @@ namespace sw
         SkeletalMeshComponent* pUnit  = pOwner != nullptr ? pOwner->getComponent<SkeletalMeshComponent>() : nullptr;
         if ( pUnit == nullptr || pUnit->getMesh() == nullptr )
             return;
-        vector<hashed_string> listRegion;
-        listRegion.swap( _listSeveredRegion );
-        for ( const hashed_string& region : listRegion )
+        _bRestorePending = false;
+        severCurrentMesh( *pUnit ); // 표보다 먼저 선 메시는 사건 때 자르지 못했다
+        for ( size_t index = 0; index < _listSeveredRegion.size(); )
         {
-            vector<RHIVertex>      listPieceVertex;
-            vector<MeshSkinVertex> listPieceSkin;
-            const optional<uint32> regionIndex = findRegionIndex( region );
-            if ( regionIndex.has_value() == false || cutBodyMesh( *pUnit, *regionIndex, listPieceVertex, listPieceSkin ) == false )
+            const optional<uint32> regionIndex = findRegionIndex( _listSeveredRegion[index] );
+            if ( regionIndex.has_value() )
             {
-                SW_LOG_WARNING_ID( "SkeletalSevering.RestoreSkipped", "'%#': the saved severed region '%#' has nothing to cut on this body - it stays whole", pOwner->getName().c_str(), region.c_str() );
+                applySeveredRegion( *regionIndex );
+                ++index;
                 continue;
             }
-            applySeveredRegion( *regionIndex );
-            _listSeveredRegion.push_back( region );
+            SW_LOG_WARNING_ID( "SkeletalSevering.RestoreSkipped", "'%#': the saved severed region '%#' is not in '%#' - it stays whole", pOwner->getName().c_str(), _listSeveredRegion[index].c_str(),
+                               _regionTablePath.c_str() );
+            _listSeveredRegion.erase( _listSeveredRegion.begin() + static_cast<ptrdiff_t>( index ) );
         }
     }
 
@@ -366,7 +397,9 @@ namespace sw
         if ( _pIntactMesh != nullptr && pUnit != nullptr )
             pUnit->setMesh( std::move( _pIntactMesh ) );
         _pIntactMesh.reset();
+        _pSeveredMesh.reset();
         _listSeveredRegion.clear();
+        _bRestorePending = false;
         return SpawnStateReset::Reset;
     }
 
@@ -442,7 +475,33 @@ namespace sw
     void SkeletalSeveringComponent::onRegister( GameObjectManager& manager )
     {
         Component::onRegister( manager );
-        _hitSubscription = GameObjectEvents::listen<&SkeletalSeveringComponent::handleHit>( *this, &GameObjectEvents::_hitReceived );
+        _hitSubscription  = GameObjectEvents::listen<&SkeletalSeveringComponent::handleHit>( *this, &GameObjectEvents::_hitReceived );
+        _meshSubscription = GameObjectEvents::listen<&SkeletalSeveringComponent::handleSkinnedMeshResolved>( *this, &GameObjectEvents::_skinnedMeshResolved );
+    }
+
+    void SkeletalSeveringComponent::handleSkinnedMeshResolved( const SkeletalMeshComponent& unit )
+    {
+        SkeletalMeshComponent* pUnit = getOwner() != nullptr ? getOwner()->getComponent<SkeletalMeshComponent>() : nullptr;
+        if ( pUnit == &unit )
+            severCurrentMesh( *pUnit );
+    }
+
+    void SkeletalSeveringComponent::severCurrentMesh( SkeletalMeshComponent& unit )
+    {
+        using Internal = SkeletalSeveringComponentInternal;
+        if ( _listSeveredRegion.empty() || _pRegionTable == nullptr || unit.getMesh() == nullptr || unit.getMesh() == _pSeveredMesh || unit.getMesh()->hasSkin() == false )
+            return;
+        _pIntactMesh             = unit.getMesh();
+        shared_ptr<Mesh> current = _pIntactMesh;
+        for ( const hashed_string& region : _listSeveredRegion )
+        {
+            const optional<uint32> regionIndex = findRegionIndex( region );
+            Internal::SeverPieces  pieces;
+            if ( regionIndex.has_value() )
+                current = Internal::severMesh( current, unit.getSkeleton(), *_pRegionTable, *regionIndex, pieces ); // 새 메시에 그 영역이 없으면 그대로다
+        }
+        _pSeveredMesh = current;
+        unit.setMesh( std::move( current ) );
     }
 
     void SkeletalSeveringComponent::handleHit( const HitInfo& hit )
@@ -483,11 +542,18 @@ namespace sw
         if ( VectorUtil::contains( _listSeveredRegion, region ) )
             return false;
 
-        // 1) · 2) 몸 메시에서 뺀다.
-        vector<RHIVertex>      listPieceVertex;
-        vector<MeshSkinVertex> listPieceSkin;
-        if ( cutBodyMesh( *pUnit, *foundRegion, listPieceVertex, listPieceSkin ) == false )
+        // 1 · 2) 몸 메시에서 영역을 빼고 남은 몸으로 바꾼다.
+        const shared_ptr<Mesh> mesh = pUnit->getMesh();
+        Internal::SeverPieces  pieces;
+        shared_ptr<Mesh>       kept = Internal::severMesh( mesh, pUnit->getSkeleton(), *_pRegionTable, *foundRegion, pieces );
+        if ( kept == mesh )
             return false;
+        if ( _pIntactMesh == nullptr )
+            _pIntactMesh = mesh; // 처음 자를 때만 — 다음 영역은 이미 자른 몸에서 자른다
+        _pSeveredMesh                           = kept;
+        vector<RHIVertex>&      listPieceVertex = pieces._listVertex;
+        vector<MeshSkinVertex>& listPieceSkin   = pieces._listSkin;
+        pUnit->setMesh( std::move( kept ) );
 
         // 3) 떨어진 조각: 현재 포즈로 스키닝해 정적 메시로 만들고, 그 정점의 볼록 껍질로 강체를 만든다.
         PhysicsShapeDesc3D hull;
@@ -521,31 +587,6 @@ namespace sw
 
         applySeveredRegion( *foundRegion );
         _listSeveredRegion.push_back( region );
-        return true;
-    }
-
-    bool SkeletalSeveringComponent::cutBodyMesh( SkeletalMeshComponent& unit, uint32 regionIndex, vector<RHIVertex>& outListPieceVertex, vector<MeshSkinVertex>& outListPieceSkin )
-    {
-        using Internal = SkeletalSeveringComponentInternal;
-        // 1) 위상: 위치로 이은 형상과 정점마다 영역을 구해 자른다.
-        const shared_ptr<Mesh> mesh = unit.getMesh();
-        SeverResult            result;
-        if ( Internal::computeSeveredTriangles( *mesh, unit.getSkeleton(), *_pRegionTable, regionIndex, result ) == false )
-            return false;
-
-        // 2) 남은 몸: 잘린 삼각형을 빼고 남은 몸 캡을 붙인 메시로 바꾼다.
-        vector<RHIVertex>      listKeptVertex;
-        vector<MeshSkinVertex> listKeptSkin;
-        Internal::splitByTriangle( *mesh, result, listKeptVertex, listKeptSkin, outListPieceVertex, outListPieceSkin );
-        shared_ptr<Mesh> kept = Mesh::create( MeshCPUAccess::Keep );
-        kept->setVertices( std::move( listKeptVertex ) );
-        kept->setSkin( std::move( listKeptSkin ), mesh->getSkinBinding() );
-        // 낮은 단계도 같이 자른다(스킨을 먼저 둔 뒤 — `setSkin` 은 LOD 를 뗀다). 받지 못하면 setLODs 가 오류를 남기고 LOD 0 만 남는다.
-        if ( mesh->getLODs().empty() == false )
-            (void)kept->setLODs( Internal::severLODLevels( *mesh, unit.getSkeleton(), *_pRegionTable, regionIndex ) );
-        if ( _pIntactMesh == nullptr )
-            _pIntactMesh = mesh; // 처음 자를 때만 — 다음 영역은 이미 자른 몸에서 자른다
-        unit.setMesh( std::move( kept ) );
         return true;
     }
 

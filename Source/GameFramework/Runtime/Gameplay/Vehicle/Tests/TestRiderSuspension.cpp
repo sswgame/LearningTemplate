@@ -8,10 +8,12 @@
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
 #include "Engine/Physics/Component/CharacterControllerComponent.h"
+#include "Engine/Physics/Component/RigidBodyComponent.h"
 
 #include "GameFramework/Runtime/Character/Control/Controller/IntentTrackControllerComponent.h"
 #include "GameFramework/Runtime/Character/Control/Pawn/CharacterMovementComponent.h"
 #include "GameFramework/Runtime/Character/Control/Pawn/PawnComponent.h"
+#include "GameFramework/Runtime/Gameplay/Vehicle/DismountOnDeathComponent.h"
 #include "GameFramework/Runtime/Gameplay/Vehicle/VehicleSeatComponent.h"
 
 using namespace sw;
@@ -110,5 +112,28 @@ SW_TEST_CASE( RiderSuspensionTest, MotionResettingTeleportClearsTheWalkVelocity 
     rig._pController->teleportTo( float3{ 20.0f, 0.0f, 0.0f }, TeleportType::ResetPhysics );
     rig._manager.update( kRiderFrame );
     SW_EXPECT_NEAR( 0.0f, rig._pMovement->getHorizontalVelocity()._x, 1.0e-4f );
+    rig._manager.endPlay();
+}
+
+/** @brief [RiderSuspensionTest] 쓰러져 물리로 떨어진 탑승자는 부활까지 멈춰 있고, 부활하면 물리를 끝내고 다시 걷는다 */
+SW_TEST_CASE( RiderSuspensionTest, FallenRiderWalksAgainOnRevival )
+{
+    RiderSuspensionRig rig;
+    GameObject* const  pRider = rig._pRiderPawn->getOwner();
+    (void)pRider->addComponent<RigidBodyComponent>();
+    rig._manager.beginPlay();
+    SW_REQUIRE_TRUE( VehicleSeatComponent::mount( *rig._pRiderPawn, *rig._pSeat ) == MountResult::Mounted );
+    rig._manager.update( kRiderFrame ); // 붙인 컴포넌트가 시작한다
+    SW_REQUIRE_TRUE( VehicleSeatComponent::dismount( *rig._pRiderPawn, true ) );
+    SW_EXPECT_TRUE( rig._pController->isSuspended() );
+    SW_EXPECT_TRUE( rig._pSeat->isFree() );
+
+    DismountOnDeathComponent* pFall = pRider->getComponent<DismountOnDeathComponent>();
+    SW_REQUIRE_NOT_NULL( pFall );
+    HealthChangedEvent revived{};
+    revived._kind = HealthChangeKind::Reset;
+    pFall->onHealthChanged( revived );
+    rig._manager.update( kRiderFrame );
+    SW_EXPECT_FALSE( rig._pController->isSuspended() );
     rig._manager.endPlay();
 }

@@ -4,8 +4,9 @@
 
 #include "Editor/Common/Workspace/EditorSelection.h"
 
-#include "Engine/Foundation/GameObjectHandle.h"
 #include "Engine/Object/GameObject/GameObject.h"
+#include "Engine/Object/GameObject/GameObjectManager.h"
+#include "Engine/Scene/Scene.h"
 
 namespace sw::editor
 {
@@ -17,9 +18,11 @@ namespace sw::editor
 
     void EditorSelectionUpdateQueue::applyTo( EditorSelection& selection )
     {
+        Scene* const             pScene   = selection.getScene();
+        GameObjectManager* const pManager = pScene != nullptr ? pScene->getObjectManager() : nullptr;
         for ( const CommandStack::ObjectEditEvent& event : _listPending )
         {
-            GameObject* pTarget = selection.findObject( GameObjectHandle::make( event._objectID ) );
+            GameObject* pTarget = pManager != nullptr ? pManager->findGameObjectByID( event._objectID ) : nullptr;
             if ( event._kind == ObjectEditKind::Destroyed )
             {
                 if ( pTarget == nullptr )

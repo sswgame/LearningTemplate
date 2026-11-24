@@ -131,6 +131,11 @@ namespace sw
          *          id 범위는 0 이다. 플레이 중 지운 오브젝트는 적지 않아 다시 올려도 없다(언리얼 레벨 스트리밍의 상태 보존 · 세이브 델타와 같은 생각).
          */
         void captureCellNodes( const vector<uint64>& listObjectID, vector<SceneDocument::SceneObjectNode>& outListNode ) const;
+        /**
+         * @brief 곧 내릴 오브젝트를 뜹니다 — 함께 내려가는 것마다 `GameObjectEvents::_unloading` 을 낸 뒤의 `captureCellNodes` 입니다. 내리는 쪽은 이것으로 뜨고 `unloadCell` 을 부릅니다.
+         * @details 세이브에 싣는 뜨기(오브젝트가 남는다)만 `captureCellNodes` 를 바로 부른다.
+         */
+        void captureNodesForUnload( const vector<uint64>& listObjectID, vector<SceneDocument::SceneObjectNode>& outListNode );
         /** @brief 데이터 레이어 묶음의 엔티티를 이 씬에 더해 짓습니다(`SceneDataLayerSubsystem` 이 부릅니다). 셀과 같은 길이고, 프리팹을 찾지 못한 엔티티는 보관합니다(저장이 다시 쓴다). 내릴 때는 `unloadCell` 입니다. */
         [[nodiscard]] bool instantiateLayerNodes( const vector<SceneDocument::SceneObjectNode>& listNode, vector<uint64>& outListObjectID );
         /** @brief 다음 `instantiate` 가 처음 상태와 상관없이 모든 데이터 레이어를 켜고 짓습니다. 쿠커가 씁니다 — 모든 엔티티를 지어 봐야 상태 · 자리 · 참조를 안다. */

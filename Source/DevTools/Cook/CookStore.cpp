@@ -11,6 +11,7 @@
 #include "Engine/Content/AssetPaths.h"
 #include "Engine/Content/ContentHash.h"
 #include "Engine/Foundation/EngineServices.h"
+#include "Engine/Serialization/Inherit/ResourceTags.h"
 
 namespace sw
 {
@@ -73,6 +74,19 @@ namespace sw
             return false;
         }
         return true;
+    }
+
+    CookJobDesc CookStore::makeJobDesc( const CookJobDesc& desc, string_view output )
+    {
+        CookJobDesc          jobDesc = desc.forOutput( output );
+        const ResourceTagSet tags    = engine::getSubsystem<ResourceTags>().capture();
+        for ( const string& tag : tags.getTags() )
+        {
+            const ResourceTagAxis* const pAxis = ResourceTags::findAxisOfTag( tag );
+            if ( pAxis != nullptr && pAxis->_timing == ResourceTagTiming::Cook )
+                jobDesc._target.append( "," ).append( tag );
+        }
+        return jobDesc;
     }
 
     uint64 CookStore::hashOutputFile( const AbsolutePath& outputPath ) const

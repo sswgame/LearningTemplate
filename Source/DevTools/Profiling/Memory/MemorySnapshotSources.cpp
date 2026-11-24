@@ -282,7 +282,7 @@ namespace sw
         }
         if ( const SceneManager* pScenes = engine::findSubsystem<SceneManager>(); pScenes != nullptr )
         {
-            vector<const Scene*> listScene;
+            vector<Scene*> listScene;
             pScenes->collectAllScenes( listScene );
             for ( const Scene* pScene : listScene )
             {

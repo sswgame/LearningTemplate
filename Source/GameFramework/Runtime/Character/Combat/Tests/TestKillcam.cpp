@@ -68,12 +68,12 @@ SW_TEST_CASE( KillcamTest, ProjectileEventsBecomeHits )
     second._hit._position  = float3{ 5.0f, 0.0f, 0.0f };
     ProjectileEvent bounce = hit;
     bounce._kind           = ProjectileEvent::Kind::Bounced;
-    SW_EXPECT_TRUE( shot.addProjectileEvent( hit, GameObjectHandle::make( 7 ), false ) );
-    SW_EXPECT_TRUE( shot.addProjectileEvent( second, GameObjectHandle::make( 8 ), true ) );
+    SW_EXPECT_TRUE( shot.addProjectileEvent( hit, GameObjectHandle::make( 7, 0 ), false ) );
+    SW_EXPECT_TRUE( shot.addProjectileEvent( second, GameObjectHandle::make( 8, 0 ), true ) );
     SW_EXPECT_FALSE( shot.addProjectileEvent( bounce, GameObjectHandle{}, false ) );
     SW_REQUIRE_EQUAL( size_t{ 2 }, shot.getHits().size() );
     SW_EXPECT_NEAR( 5.0f, shot.getHits()[1]._distance, 1e-5f );
-    SW_EXPECT_TRUE( shot.getHits()[1]._target == GameObjectHandle::make( 8 ) );
+    SW_EXPECT_TRUE( shot.getHits()[1]._target == GameObjectHandle::make( 8, 0 ) );
     SW_EXPECT_TRUE( shot.hasKill() );
 }
 

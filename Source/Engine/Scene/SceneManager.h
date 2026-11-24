@@ -249,7 +249,14 @@ namespace sw
         uint64 getSceneGeneration() const { return _sceneGeneration; }
         /** @brief 비동기 로드가 진행 중이거나 교체 대기면 true 입니다. */
         bool isTransitioning() const;
-        /** @brief 진행 중인 비동기 씬 로드를 취소하거나 끝날 때까지 기다리고 대기열을 비웁니다(핫 리로드 · 종료 펜스용). */
+        /**
+         * @brief 모듈을 내리기 앞에 도는 씬 로드를 멈추고 지은 씬을 없앱니다. 요청은 남아 다음 `updateTransitions` 가 새 타입 표로 다시 띄웁니다.
+         * @details 요청자의 약속은 그대로다 — 리로드가 이동 하나를 실패로 만들지 않는다. 새로 선 모듈은 `replayPendingLoadRequests` 로 그 요청을 다시 받는다.
+         */
+        void suspendPendingLoad();
+        /** @brief 아직 끝나지 않은 로드 요청(도는 것 · 대기열)을 @p handler 에 요청 순서로 다시 알립니다. 리로드 뒤 새로 구독한 쪽이 이어받습니다. */
+        void replayPendingLoadRequests( const SceneLoadRequestedHandler& handler ) const;
+        /** @brief 진행 중인 비동기 씬 로드를 취소하거나 끝날 때까지 기다리고 대기열을 비웁니다(플레이 종료 · 종료 펜스용). */
         void cancelPendingAsyncLoads();
         /**
          * @brief 앱이 끝나는 중이니 도는 비동기 로드는 일찍 끝내라는 협조 신호를 올립니다(기다리지 않는다). 로드 잡은 시작 앞과 파싱 뒤(인스턴스화 앞)에서 읽고 돌아간다.
@@ -273,15 +280,11 @@ namespace sw
         /** @brief 로드된 씬을 모두 반환합니다. */
         const vector<unique_ptr<Scene>>& getLoadedScenes() const { return _listLoadedScene; }
         /**
-         * @brief 이 매니저가 가진 씬을 모두(로드된 씬, 미리보기 씬 차례) @p outListScene 에 담습니다.
-         * @details 모듈 경계(언로드 전에 그 모듈의 컴포넌트를 지우기 · 틱 단계 다시 짓기)는 모든 씬이 대상이다 — 미리보기 씬을 빠뜨리면 열린 편집기가 사라진 코드의 컴포넌트를 틱한다.
+         * @brief 올라와 있는 모든 씬(로드된 씬, 미리보기 씬 차례)을 @p outListScene 에 모읍니다(비우고 채운다).
+         * @details "어느 씬을 훑을 것인가" 를 한 곳에서 정한다 — 모듈 경계(언로드 전에 그 모듈의 컴포넌트를 지우기 · 틱 단계 다시 짓기)와 씬 사이 참조 검사
+         *          (`SceneObjectReference::findReferenceTo`)는 모든 씬이 대상이다. 미리보기 씬을 빠뜨리면 열린 편집기가 사라진 코드의 컴포넌트를 틱한다.
          */
-        void collectScenes( vector<Scene*>& outListScene ) const;
-        /**
-         * @brief 올라와 있는 모든 씬(로드된 씬 + 미리보기 씬)을 @p outListScene 에 모읍니다(비우고 채운다).
-         * @details "어느 씬을 훑을 것인가" 를 한 곳에서 정한다 — 씬 사이 참조 검사(`SceneObjectReference::findReferenceTo`)처럼 전 씬을 훑는 쪽이 이것을 쓴다.
-         */
-        void collectAllScenes( vector<const Scene*>& outListScene ) const;
+        void collectAllScenes( vector<Scene*>& outListScene ) const;
         /** @brief 이 매니저와 그 씬이 쓰는 엔진 서비스 묶음입니다. */
         const SceneEngineServices& getEngineServices() const { return _services; }
 
@@ -353,7 +356,7 @@ namespace sw
          * @details 요청 경로와 대기열 경로가 **같은 자리**로 모입니다 — 대기열에 넣은 요청자가 쥔 future 와 실제 로드의 약속이
          *          갈리지 않게.
          */
-        bool dispatchLoad( string_view path, TaskPromise<SceneHandle> promise );
+        bool dispatchLoad( string_view path, TaskPromise<SceneHandle> promise, SceneLoadKind kind );
         /** @brief 워커에서 씬을 로드하는 잡 본문입니다. TaskArgs 는 AsyncLoadSlot shared_ptr 와 경로 문자열입니다. */
         static void loadSceneAsyncJob( const TaskArgs& args );
 
@@ -379,6 +382,7 @@ namespace sw
         uint32                    _nextPreviewKey;    ///< 다음 미리보기 씬 키(1 부터, 줄이지 않는다)
         uint8                     _bWorldPlaying : 1; ///< `setWorldPlaying`
         uint8                     _bInitialized  : 1;
+        uint8                     _bRestartLoad  : 1; ///< `suspendPendingLoad` 가 멈춰 둔 로드가 있다 — 다음 `updateTransitions` 가 같은 약속으로 다시 띄운다
         uint64                    _sceneGeneration;
         ISceneRenderBinding*      _pRenderBinding;
         SceneEngineServices       _services; ///< 생성자가 읽고 `initializeSubsystem` 이 다시 읽은 엔진 서비스 묶음(빌림)
@@ -386,6 +390,8 @@ namespace sw
         shared_ptr<AsyncLoadSlot> _asyncLoad;
         string                    _queuedPath;
         string                    _inFlightPath;  ///< 지금 도는 로드의 경로(`dispatchLoad`). 대기열 요청이 다른 경로면 그 로드를 멈춘다
+        SceneLoadKind             _inFlightKind;  ///< `_inFlightPath` 를 요청한 까닭
+        SceneLoadKind             _queuedKind;    ///< `_queuedPath` 를 요청한 까닭
         string                    _chunkWaitPath; ///< 미룬 청크(`AssetManager::prepareSceneChunks`)가 준비되기를 기다리는 씬 — 비어 있지 않으면 로드를 아직 띄우지 않았다(약속은 `_asyncLoad`)
         /** @brief 대기열에 든 요청의 약속. 대기열은 한 자리이므로 이것도 하나다. */
         TaskPromise<SceneHandle> _queuedPromise;

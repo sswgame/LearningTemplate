@@ -32,7 +32,7 @@ namespace sw
         struct FarmVillageGameModeComponentInternal
         {
             static constexpr uint32 kStateTag     = FourCCUtil::make( "FVIL" );
-            static constexpr uint32 kStateVersion = 2; ///< 2 판: 머리 뒤에 `ScheduleSaveState`(리플렉션 바이너리)
+            static constexpr uint32 kStateVersion = 3; ///< 3 판: 예약의 씬이 경로 대신 GUID 참조다(`SceneObjectReference::_targetScene`)
 
             /** @brief 시계의 지금 시각을 0 일 0:00 부터 센 분으로 바꿉니다(일정 시스템의 시간 축). */
             static int32 computeAbsoluteMinute( const WorldClock& clock )

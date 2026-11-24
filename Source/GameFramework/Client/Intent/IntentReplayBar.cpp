@@ -6,6 +6,7 @@
 #include "Core/String/fixed_string.h"
 #include "Core/String/formatString.h"
 
+#include "Engine/Localization/LocText.h"
 #include "Engine/UI/Screen/UIScreen.h"
 #include "Engine/UI/UISystem.h"
 #include "Engine/UI/WidgetTree/WidgetTree.h"
@@ -206,6 +207,6 @@ namespace sw
             return;
         TextWidget* pLabel = pScreen->getTree().findWidget<TextWidget>( hashed_string( IntentReplayBarInternal::kPlayPauseLabel ) );
         if ( pLabel != nullptr )
-            pLabel->setText( _bPaused != SW_FALSE ? "Play" : "Pause" );
+            pLabel->setText( _bPaused != SW_FALSE ? SW_LOCKEYREF( "ReplayBar", "Play" ) : SW_LOCKEYREF( "ReplayBar", "Pause" ) );
     }
 } // namespace sw

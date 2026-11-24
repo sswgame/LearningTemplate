@@ -600,3 +600,41 @@ SW_TEST_CASE( UILayoutPanelsTest, MeasureHonoursOverrideMinAndMax )
     SW_EXPECT_EQUAL( 25.0f, fixed.getDesiredSize()._y );
     SW_EXPECT_EQUAL( 5.0f, small.getDesiredSize()._x );
 }
+
+namespace
+{
+    /** @brief 알림을 세는 위젯입니다. */
+    class RevisionProbeWidget final : public Widget
+    {
+    public:
+        uint32 _textCount{ 0 };
+        uint32 _glyphCount{ 0 };
+
+    public:
+        void onTextRevisionChanged() override { ++_textCount; }
+        void onInputGlyphsChanged() override { ++_glyphCount; }
+    };
+} // namespace
+
+/** @brief [UILayoutPassTest] 텍스트 버전 · 글리프 번호가 바뀐 컨텍스트로 도는 트리는 화면 스택 밖(World 위젯 · 미리보기)이어도 제 위젯에 알린다 */
+SW_TEST_CASE( UILayoutPassTest, TreesAnnounceRevisionChanges )
+{
+    WidgetTree                      tree;
+    BoxPanel&                       box   = UITestUtil::setRoot<BoxPanel>( tree );
+    unique_ptr<RevisionProbeWidget> owned = make_unique<RevisionProbeWidget>();
+    RevisionProbeWidget* const      pLeaf = owned.get();
+    (void)box.addChild( std::move( owned ) );
+    UILayoutContext context{};
+    context._viewportSize = float2{ 100.0f, 100.0f };
+    (void)UILayoutPass::update( tree, context );
+    SW_EXPECT_EQUAL( 0u, pLeaf->_textCount );
+    context._textRevision = 1;
+    (void)UILayoutPass::update( tree, context );
+    (void)UILayoutPass::update( tree, context );
+    SW_EXPECT_EQUAL( 1u, pLeaf->_textCount );
+    SW_EXPECT_EQUAL( 0u, pLeaf->_glyphCount );
+    context._glyphRevision = 1;
+    (void)UILayoutPass::update( tree, context );
+    SW_EXPECT_EQUAL( 1u, pLeaf->_textCount );
+    SW_EXPECT_EQUAL( 1u, pLeaf->_glyphCount );
+}

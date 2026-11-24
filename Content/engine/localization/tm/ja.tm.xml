@@ -1,6 +1,9 @@
 <?asset guid="2e251ec4c0aa8d94f1de60740556d3d8"?>
 <TranslationMemory culture="ja">
 	<entries>
+		<entry source="#{account}  {presence}" text="#{account}  {presence}" />
+		<entry source="#{account}  {presence}  {activity}" text="#{account}  {presence}  {activity}" />
+		<entry source="${amount}" text="${amount}" />
 		<entry source="(CPU only)" text="(CPU のみ)" />
 		<entry source="(None)" text="(なし)" />
 		<entry source="(none)" text="(なし)" />
@@ -74,6 +77,7 @@
 		<entry source="Bought." text="購入しました。" />
 		<entry source="Bounds and cells of every housing plot in the scene, with its id and size"
 		       text="シーンのハウジング敷地ごとの境界とマス、ID とサイズ" />
+		<entry source="Bounty ${amount}" text="懸賞金 ${amount}" />
 		<entry source="Buy" text="購入" />
 		<entry source="Buy {item} for {price} {currency}?" text="{item}を{price} {currency}で購入しますか?" />
 		<entry source="CPU only (Recompute Normals)" text="CPU のみ (法線の再計算)" />
@@ -81,9 +85,13 @@
 		<entry source="Camera Shake" text="カメラの揺れ" />
 		<entry source="Camera View" text="カメラ視点" />
 		<entry source="Cancel" text="キャンセル" />
+		<entry source="Canter" text="キャンター" />
 		<entry source="Capacity" text="定員" />
+		<entry source="Carcasses {count}" text="獲物 {count}" />
 		<entry source="Center" text="中心" />
 		<entry source="Chains" text="チェーン" />
+		<entry source="Chat failed" text="チャットに失敗しました" />
+		<entry source="Chat is not available right now" text="現在チャットは利用できません" />
 		<entry source="Check" text="チェック" />
 		<entry source="Choose where to put it." text="置く場所を選んでください。" />
 		<entry source="Clamped to range: {clamped}" text="範囲に収めた: {clamped}" />
@@ -107,6 +115,10 @@
 		<entry source="Cost" text="費用" />
 		<entry source="Could not copy to the clipboard."
 		       text="クリップボードにコピーできませんでした。" />
+		<entry source="Could not load the friend list (error {error})"
+		       text="フレンド一覧を読み込めませんでした(エラー {error})" />
+		<entry source="Could not load the server list (error {error})"
+		       text="サーバー一覧を読み込めませんでした(エラー {error})" />
 		<entry source="Could not reach the store. The wallet shows what the server holds."
 		       text="ストアに接続できませんでした。ウォレットにはサーバーの値が表示されます。" />
 		<entry source="Count" text="数" />
@@ -181,10 +193,12 @@
 		<entry source="Foliage Density" text="植生の密度" />
 		<entry source="Follow game clock" text="ゲーム時計に合わせる" />
 		<entry source="Foot lift (m)" text="足の持ち上げ(m)" />
+		<entry source="Friends" text="フレンド" />
 		<entry source="From" text="送信元" />
 		<entry source="GM connection: {stateText}" text="GM 接続: {stateText}" />
 		<entry source="GM password" text="GM パスワード" />
-		<entry source="Game" text="게임" />
+		<entry source="Gallop" text="ギャロップ" />
+		<entry source="Game" text="ゲーム" />
 		<entry source="Game saved" text="ゲームを保存しました" />
 		<entry source="Game time" text="ゲーム時刻" />
 		<entry source="Gamepad Sensitivity" text="ゲームパッド感度" />
@@ -208,9 +222,11 @@
 		<entry source="Highlight drive" text="ハイライトするドライブ" />
 		<entry source="Hit" text="被弾" />
 		<entry source="Hold" text="長押し" />
+		<entry source="Honor {honor} ({tier})" text="名誉 {honor}({tier})" />
 		<entry source="How root and pelvis movement is carried over (scaled by the pelvis height ratio, copied, or kept in place)"
 		       text="ルートと骨盤の動きの移し方(骨盤の高さ比で拡縮・コピー・その場)" />
 		<entry source="How strongly the layer covers the skin" text="レイヤーが肌を覆う強さ" />
+		<entry source="Hungry" text="空腹" />
 		<entry source="IK goal" text="IK ゴール" />
 		<entry source="Infinite" text="無限" />
 		<entry source="Inherited from the base entry. Picking a value writes it on this entry."
@@ -248,10 +264,12 @@
 		<entry source="Load the items file and the appearance folder to pick items and see rule explanations."
 		       text="アイテムファイルと外見フォルダを読み込むと、アイテムを選んでルールの説明を見られます。" />
 		<entry source="Loading" text="読み込み中" />
+		<entry source="Loading friends..." text="フレンドを読み込み中..." />
+		<entry source="Loading servers..." text="サーバーを読み込み中..." />
 		<entry source="Look up an account to see its balances and sanctions"
 		       text="アカウントを検索すると残高と制裁が見えます" />
 		<entry source="Lookup" text="検索" />
-		<entry source="Loop" text="반복" />
+		<entry source="Loop" text="ループ" />
 		<entry source="Low" text="低" />
 		<entry source="Main Menu" text="メインメニュー" />
 		<entry source="Maintenance / Notice" text="メンテナンス / お知らせ" />
@@ -262,7 +280,11 @@
 		<entry source="Master Volume" text="マスター音量" />
 		<entry source="Medium" text="中" />
 		<entry source="Memo (ticket)" text="メモ(チケット)" />
+		<entry source="Message is empty or not valid" text="メッセージが空か正しくありません" />
 		<entry source="Message key" text="メッセージキー" />
+		<entry source="Message not found" text="メッセージが見つかりません" />
+		<entry source="Message was blocked by the word filter"
+		       text="メッセージは単語フィルターでブロックされました" />
 		<entry source="Mirror" text="ミラー" />
 		<entry source="Mirror bone" text="ボーンをミラー" />
 		<entry source="Modifiers" text="モディファイア" />
@@ -292,6 +314,7 @@
 		<entry source="No entry uses this one." text="この項目を使う項目はありません。" />
 		<entry source="No fit result yet. The preview scene solves the fit when a slider is released."
 		       text="まだフィット結果がありません。スライダーを離すとプレビューシーンがフィットします。" />
+		<entry source="No friends yet" text="フレンドはまだいません" />
 		<entry source="No in-process game is registered (NetSimGameRegistry) - only games with a kit session (INetSimSession) can run here."
 		       text="インプロセスゲームが登録されていません(NetSimGameRegistry) — キットセッション(INetSimSession)のあるゲームだけがここで動きます。" />
 		<entry source="No login handler is bound: GM commands are refused as not logged in"
@@ -305,6 +328,7 @@
 		<entry source="No rule fired." text="発動したルールはありません。" />
 		<entry source="No schedule system is running. Start play with NPCs that have schedules."
 		       text="スケジュールシステムが動いていません。スケジュールを持つ NPC でプレイを始めてください。" />
+		<entry source="No server is available right now" text="現在利用できるサーバーはありません" />
 		<entry source="No skin layers. Add makeup or a tattoo from the list above."
 		       text="スキンレイヤーがありません。上のリストからメイクやタトゥーを追加してください。" />
 		<entry source="No target" text="対象なし" />
@@ -316,6 +340,7 @@
 		<entry source="Off" text="オフ" />
 		<entry source="Offset" text="位置" />
 		<entry source="Offset (m)" text="オフセット(m)" />
+		<entry source="On foot - E: mount  F: whistle" text="徒歩 - E: 騎乗  F: 口笛" />
 		<entry source="Opacity" text="不透明度" />
 		<entry source="Open a .cameras.xml preset file to see its cameras here. Edit presets in the Catalog Editor."
 		       text=".cameras.xml プリセットファイルを開くとここにカメラが表示されます。プリセットの編集はカタログエディタで行います。" />
@@ -336,12 +361,15 @@
 		<entry source="Owned Tags" text="所有タグ" />
 		<entry source="Parent" text="親" />
 		<entry source="Park" text="パーク" />
+		<entry source="Pause" text="一時停止" />
 		<entry source="Pause Menu" text="ポーズメニュー" />
 		<entry source="Paused" text="一時停止中" />
+		<entry source="Pelts {count}" text="毛皮 {count}" />
 		<entry source="Penetration {partA} / {partB}: {vertexCount} points, depth {maxDepth}"
 		       text="貫通 {partA} / {partB}: 点 {vertexCount} 個、深さ {maxDepth}" />
 		<entry source="Pick a base preset to see which rules hid or changed what."
 		       text="基準プリセットを選ぶと、どのルールが何を隠した・変えたかが見えます。" />
+		<entry source="Pick a server" text="サーバーを選んでください" />
 		<entry source="Pick a zone profile (*.zone.xml) to see its modules."
 		       text="モジュールを見るにはゾーンプロファイル(*.zone.xml)を選んでください。" />
 		<entry source="Pick an ability system..." text="アビリティシステムを選択..." />
@@ -350,13 +378,15 @@
 		<entry source="Pick section in Preview" text="プレビューで区間を選ぶ" />
 		<entry source="Place" text="場所" />
 		<entry source="Place in Preview" text="プレビューで配置" />
-		<entry source="Play" text="재생" />
+		<entry source="Play" text="再生" />
 		<entry source="Plots" text="敷地" />
 		<entry source="Point" text="点" />
 		<entry source="Position" text="位置" />
 		<entry source="Post notice" text="お知らせを掲示" />
 		<entry source="Post-Processing Quality" text="ポストプロセス品質" />
 		<entry source="Presets (user data)" text="プリセット(ユーザーデータ)" />
+		<entry source="Press Refresh to list friends" text="更新を押すとフレンド一覧を表示します" />
+		<entry source="Press Refresh to list servers" text="更新を押すとサーバー一覧を表示します" />
 		<entry source="Press a key. Escape cancels; hold Escape for one second to bind it."
 		       text="キーを押してください。Esc でキャンセル、Esc を 1 秒押し続けると Esc を割り当てます。" />
 		<entry source="Preview" text="プレビュー" />
@@ -423,6 +453,8 @@
 		<entry source="Ride" text="アトラクション" />
 		<entry source="Ride footprints, entrances and coaster tracks of the ThemePark layout file (rides.xml)"
 		       text="ThemePark 配置ファイル(rides.xml)のアトラクションの足跡、入口、コースターのトラック" />
+		<entry source="Riding {horse} - {gait} {speed} m/s - E: dismount  Shift: gallop"
+		       text="{horse}に騎乗 - {gait} {speed} m/s - E: 降りる  Shift: ギャロップ" />
 		<entry source="Roles" text="役割" />
 		<entry source="Root and pelvis" text="ルートと骨盤" />
 		<entry source="Rotation" text="回転" />
@@ -477,6 +509,7 @@
 		<entry source="Sharp" text="くっきり" />
 		<entry source="Show HUD (Ctrl+F3)" text="HUD を表示 (Ctrl+F3)" />
 		<entry source="Show Tutorials" text="チュートリアルを表示" />
+		<entry source="Sign in to chat" text="チャットするにはサインインしてください" />
 		<entry source="Skeleton" text="スケルトン" />
 		<entry source="Skeletons" text="スケルトン" />
 		<entry source="Skin UV of the layer centre" text="レイヤー中心の肌UV" />
@@ -504,6 +537,7 @@
 		<entry source="Sprint" text="ダッシュ" />
 		<entry source="Stacks" text="スタック" />
 		<entry source="Stage" text="ステージ" />
+		<entry source="Standing" text="停止" />
 		<entry source="Start (s)" text="開始(秒)" />
 		<entry source="Start Game" text="ゲーム開始" />
 		<entry source="Start an empty profile at this resource id (an existing file is opened instead)"
@@ -512,7 +546,7 @@
 		<entry source="Start maintenance" text="メンテナンス開始" />
 		<entry source="Stereo" text="ステレオ" />
 		<entry source="Stick Dead Zone" text="スティックのデッドゾーン" />
-		<entry source="Stop" text="정지" />
+		<entry source="Stop" text="停止" />
 		<entry source="Stop picking" text="選択をやめる" />
 		<entry source="Stores the Preview tab's picture in the user data slot of the preset of this name (save the preset first)"
 		       text="プレビュータブの画像をこの名前のプリセットのユーザーデータ枠に保存します(先にプリセットを保存してください)" />
@@ -532,6 +566,7 @@
 		<entry source="Text Size" text="文字サイズ" />
 		<entry source="Texture Quality" text="テクスチャ品質" />
 		<entry source="That amount is not possible." text="その数量は指定できません。" />
+		<entry source="That player is offline" text="相手はオフラインです" />
 		<entry source="That slot cannot take it." text="そのスロットには入れられません。" />
 		<entry source="The catalog file the game reads. Edits keep its comments and layout."
 		       text="ゲームが読むカタログファイルです。編集してもコメントと配置は残ります。" />
@@ -553,6 +588,7 @@
 		       text="対象のオブジェクトはもう存在しません。" />
 		<entry source="This cannot be bought now." text="現在は購入できません。" />
 		<entry source="This cannot be used." text="使用できません。" />
+		<entry source="This channel cannot be joined" text="このチャンネルには参加できません" />
 		<entry source="This file could not be opened: {statusText}"
 		       text="このファイルを開けません: {statusText}" />
 		<entry source="This game has no park layout data ({path})"
@@ -562,11 +598,15 @@
 		<entry source="Time (s)" text="時間(秒)" />
 		<entry source="To" text="宛先" />
 		<entry source="Toggle" text="切り替え" />
+		<entry source="Too fast, try again soon" text="速すぎます。少し待ってください" />
+		<entry source="Too fast, wait {milliseconds} ms" text="速すぎます。{milliseconds}ms待ってください" />
+		<entry source="Too many channels" text="チャンネルが多すぎます" />
 		<entry source="Total cost {cost}  ·  starting cash {cash}  ·  entry fee {fee}  ·  layout issues {issues}"
 		       text="総費用 {cost}  ·  初期資金 {cash}  ·  入場料 {fee}  ·  配置の問題 {issues}" />
 		<entry source="Translation" text="移動" />
 		<entry source="Travel" text="移動" />
 		<entry source="Tritanopia" text="3 型色覚 (青)" />
+		<entry source="Trot" text="トロット" />
 		<entry source="Turn a target bone in its parent space (degrees) so the target reference matches the source reference, e.g. lower the arms of a T-pose source onto an A-pose target"
 		       text="ターゲットの基準ポーズがソースと合うよう、ターゲットのボーンを親空間で回します(度) — 例: T ポーズのソースを A ポーズのターゲットに合わせて腕を下げる" />
 		<entry source="UI Scale" text="UI の拡大率" />
@@ -578,6 +618,7 @@
 		<entry source="Undo pose" text="ポーズを元に戻す" />
 		<entry source="Unsupported" text="非対応" />
 		<entry source="Up" text="上" />
+		<entry source="Update the game to chat" text="チャットするにはゲームを更新してください" />
 		<entry source="Upscaler" text="アップスケーラー" />
 		<entry source="Use Selection" text="選択を使用" />
 		<entry source="Use selected object" text="選択中のオブジェクトを使う" />
@@ -592,6 +633,8 @@
 		<entry source="Viewport gizmo editing needs the preview scene (EditorMultiWorld)."
 		       text="ビューポートギズモ編集にはプレビューシーン(EditorMultiWorld)が必要です。" />
 		<entry source="Voice Volume" text="ボイスの音量" />
+		<entry source="Walk" text="常歩" />
+		<entry source="Wanted {level}" text="手配 {level}" />
 		<entry source="Warp File (.mfwarp)" text="ワープファイル (.mfwarp)" />
 		<entry source="Warp end (s)" text="ワープ終了(秒)" />
 		<entry source="Wearing {slot} on base preset ''{basePresetID}'' (assembled {appearance} times)"
@@ -608,26 +651,40 @@
 		<entry source="Wrinkle intensity" text="しわの強さ" />
 		<entry source="Wrinkles" text="しわ" />
 		<entry source="Yaw (deg)" text="ヨー(度)" />
+		<entry source="You already said that" text="同じ発言は繰り返せません" />
+		<entry source="You are muted ({seconds} s left)" text="チャットが禁止されています(残り{seconds}秒)" />
 		<entry source="You cannot buy this any more." text="これ以上購入できません。" />
 		<entry source="You cannot equip this there." text="そこには装備できません。" />
 		<entry source="You have changes that are not applied." text="適用していない変更があります。" />
+		<entry source="You have not joined this channel" text="このチャンネルに参加していません" />
 		<entry source="Your bag is full." text="バッグがいっぱいです。" />
 		<entry source="Zone modules" text="ゾーンモジュール" />
 		<entry source="Zoom fit" text="ズームフィット" />
 		<entry source="[action=UI.Accept] Select" text="[action=UI.Accept] 選択" />
 		<entry source="added here" text="ここで追加" />
+		<entry source="away" text="離席中" />
+		<entry source="busy" text="取り込み中" />
 		<entry source="changed here" text="ここで変更" />
+		<entry source="draining" text="退出中" />
+		<entry source="in game" text="ゲーム中" />
 		<entry source="inherited" text="継承" />
+		<entry source="maintenance" text="メンテナンス中" />
 		<entry source="mapped" text="マップ済み" />
 		<entry source="no mapping" text="マッピングなし" />
+		<entry source="offline" text="オフライン" />
 		<entry source="offset {offsetX}, {offsetY}, {offsetZ}  distance {distance}  pitch {pitch}  yaw {yaw}  fov {computeFieldOfViewY}"
 		       text="オフセット {offsetX}, {offsetY}, {offsetZ}  距離 {distance}  ピッチ {pitch}  ヨー {yaw}  視野角 {computeFieldOfViewY}" />
+		<entry source="online" text="オンライン" />
+		<entry source="open" text="受付中" />
 		<entry source="removed here" text="ここで削除" />
 		<entry source="replaced here" text="ここで置換" />
 		<entry source="scRGB" text="scRGB" />
+		<entry source="starting" text="起動中" />
 		<entry source="tick {tick}  input focus: world {inputFocus}"
 		       text="ティック {tick}  入力フォーカス: ワールド {inputFocus}" />
+		<entry source="unknown" text="不明" />
 		<entry source="unsupported" text="非対応" />
+		<entry source="{amount} {currency}" text="{amount} {currency}" />
 		<entry source="{anchor}  clip {clip}  {stage} {clipSeconds} s{f}"
 		       text="{anchor}  クリップ {clip}  {stage} {clipSeconds} 秒{f}" />
 		<entry source="{boneCount, plural, one {# bone} other {# bones}}, {overridesCount} overridden{dirty}"
@@ -643,6 +700,8 @@
 		<entry source="{focused}Server" text="{focused}サーバー" />
 		<entry source="{issueCount, plural, one {# problem} other {# problems}}" text="問題 {issueCount} 個" />
 		<entry source="{issueCount} problems" text="問題 {issueCount} 個" />
+		<entry source="{item}  {price} {currency}" text="{item}  {price} {currency}" />
+		<entry source="{item} x{count}" text="{item} x{count}" />
 		<entry source="{name} - {nodesCount, plural, one {# node} other {# nodes}}, {wiresCount, plural, one {# wire} other {# wires}}, {issueCount, plural, one {# problem} other {# problems}}"
 		       text="{name} - ノード {nodesCount} 個、ワイヤー {wiresCount} 本、問題 {issueCount} 個" />
 		<entry source="{name} - {nodesCount} nodes, {wiresCount} wires, {issueCount} problems"
@@ -655,11 +714,17 @@
 		       text="ノード {nodeCount} 個 | 問題 {issueCount} 個" />
 		<entry source="{nodeCount} nodes | {issueCount} problems"
 		       text="ノード {nodeCount} 個 | 問題 {issueCount} 個" />
+		<entry source="{offer}  ({stock})" text="{offer}  ({stock})" />
+		<entry source="{region}  {fill}%  {state}" text="{region}  {fill}%  {state}" />
 		<entry source="{role, select, anchor {anchor} required {required} other {optional}}  clip {clip}  {stage} {clipSeconds} s{clipLength, select, unknown {  (clip length unknown - pick a prefab)} other {}}"
 		       text="{role, select, anchor {アンカー} required {必須} other {任意}}  クリップ {clip}  {stage} {clipSeconds} 秒{clipLength, select, unknown {  (クリップの長さ不明 - プレハブを選んでください)} other {}}" />
 		<entry source="{slotsCount, plural, one {# slot} other {# slots}}, {setsCount, plural, one {# set} other {# sets}}, {presetsCount, plural, one {# preset} other {# presets}}"
 		       text="スロット {slotsCount} 個、セット {setsCount} 個、プリセット {presetsCount} 個" />
 		<entry source="{slotsCount} slots, {setsCount} sets, {presetsCount} presets"
 		       text="スロット {slotsCount} 個、セット {setsCount} 個、プリセット {presetsCount} 個" />
+		<entry source="{title}  ({count, plural, one {# pending request} other {# pending requests}})"
+		       text="{title}  (保留中の申請 {count}件)" />
+		<entry source="{stat} {value}" text="{stat} {value}" />
+		<entry source="{slot}: {item}" text="{slot}: {item}" />
 	</entries>
 </TranslationMemory>

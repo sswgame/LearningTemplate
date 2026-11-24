@@ -18,6 +18,7 @@
 #include "Engine/Asset/Cache/SharedAssetRef.h"
 #include "Engine/Foundation/GameObjectHandle.h"
 #include "Engine/Object/Component/Component.h"
+#include "Engine/Object/Component/SceneTeleportCursor.h"
 #include "Engine/Presentation/IUILayerVisibility.h"
 #include "Engine/Reflection/ReflectionMacros.h"
 #include "Engine/Serialization/Serializer/CatalogKey.h"
@@ -200,6 +201,8 @@ namespace sw
 
     private:
         CameraTarget computeTarget() const;
+        /** @brief 대상이 지난 계산 뒤 순간이동했으면 디렉터에 알립니다(`CameraDirector::onTargetTeleported`). */
+        void consumeTargetTeleport();
         /** @brief 켜진 상황(코드 + 누르고 있는 액션)을 선택 프리셋에 적용하고, 보일 프리셋이 지난번과 다르면 켭니다. */
         void refreshContextPreset();
         /** @brief 상황 액션(`<Context action>`)을 누르고 있는 상황을 `_listHeldContext` 에 모읍니다. 입력을 읽지 않으면 비웁니다. */
@@ -293,6 +296,8 @@ namespace sw
         hashed_string                       _contextPreset;        ///< 상황을 적용해 마지막으로 켠 프리셋. 바뀔 때만 켠다(직접 켠 프리셋과 다투지 않는다)
         vector<hashed_string>               _listContext;          ///< 코드가 켠 상황(`setContext`)
         vector<hashed_string>               _listHeldContext;      ///< 이번 프레임 액션을 누르고 있는 상황
+        GameObjectHandle                    _teleportTarget;       ///< `_targetTeleport` 이 마지막에 본 대상
+        SceneTeleportCursor                 _targetTeleport;       ///< 대상이 순간이동했는지 읽는 자리
         float32                             _pendingDeltaTime;     ///< 틱이 모은 시간. 미룬 계산이 쓴다
         bool                                _bResolvePending;      ///< 틱 안에서 계산을 미뤘다 — 카메라 시스템이 늦은 틱 뒤에 푼다
     };

@@ -7,6 +7,7 @@
  *          부르는 차례는 구독 차례다. 사건 안에서 구독 · 해지 · 스폰 · 파괴를 해도 된다(`MulticastDelegate::broadcast` — 해지는 즉시 무효, 새 구독은 다음 사건부터).
  */
 #pragma once
+#include "Core/Container/span.h"
 #include "Core/Delegate/Delegate.h"
 #include "Core/Delegate/Subscription.h"
 #include "Core/Foundation/Macros.h"
@@ -18,6 +19,25 @@
 
 namespace sw
 {
+    class SkeletalMeshComponent;
+
+    /** @brief 씬의 일부(스트리밍 셀 · 데이터 레이어 묶음)가 상태를 남기고 내려가며 함께 내려가는 오브젝트들입니다. 알림 동안만 삽니다. */
+    struct GameObjectUnloadInfo
+    {
+        vector_reference<const uint64> _listObjectID; ///< 함께 내려가는 오브젝트 id
+
+        /** @brief @p objectID 도 함께 내려가면 true 입니다 — 다시 오를 때 함께 돌아온다. */
+        bool contains( uint64 objectID ) const
+        {
+            for ( const uint64 unloadedID : _listObjectID )
+            {
+                if ( unloadedID == objectID )
+                    return true;
+            }
+            return false;
+        }
+    };
+
     /**
      * @struct GameObjectEvents
      * @brief 오브젝트의 사건 델리게이트입니다. 칸 하나가 사건 하나이고, 내는 곳은 칸 설명에 적힌 시스템 하나다.
@@ -46,6 +66,16 @@ namespace sw
         MulticastDelegate<void( const HitInfo& )> _hitReceived;
         /** @brief 이 오브젝트의 애니메이션이 게임플레이 이벤트 알림을 울렸다(알림 테이블의 `AbilityEvent`). 애니메이션 알림 처리기가 낸다. */
         MulticastDelegate<void( const AnimationNotifyInfo& )> _animationNotify;
+        /**
+         * @brief 이 오브젝트의 스킨드 유닛이 그릴 메시를 다시 정했다(외형 조립 · 메시 id · 다시 읽기). `SkeletalMeshComponent` 가 게임 스레드에서 낸다.
+         * @details 유닛의 메시를 고쳐 쓰는 쪽(절단)이 새 메시에 다시 적용하는 자리다 — 한 번 건 메시는 다음 조립이 덮는다.
+         */
+        MulticastDelegate<void( const SkeletalMeshComponent& )> _skinnedMeshResolved;
+        /**
+         * @brief 이 오브젝트가 셀 · 데이터 레이어 묶음과 함께 내려간다 — 상태를 뜨기 **앞**이다(`Scene::captureNodesForUnload`, 게임 스레드의 틱 밖). 세이브에 싣는 뜨기는 내지 않는다.
+         * @details 함께 내려가지 않는 오브젝트와 맺은 관계(탑승 · 쥠)를 여기서 푼다 — 뜬 뒤에 풀면 떠 둔 상태는 "맺어져 있다" 로 남아, 다시 오를 때 그 사이 떠난 상대를 되잡는다.
+         */
+        MulticastDelegate<void( const GameObjectUnloadInfo& )> _unloading;
         /** @brief 이 오브젝트의 태그가 바뀌었다(인자는 바뀐 뒤의 태그). `TagComponent` 가 게임 스레드의 틱 밖에서 낸다. */
         MulticastDelegate<void( const TagContainer& )> _tagsChanged;
 

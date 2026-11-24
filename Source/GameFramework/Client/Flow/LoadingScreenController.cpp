@@ -7,7 +7,6 @@
 
 #include "Engine/Foundation/DeterministicRun.h"
 #include "Engine/Localization/LocText.h"
-#include "Engine/Localization/LocalizationManager.h"
 #include "Engine/Scene/SceneManager.h"
 #include "Engine/Serialization/XML/XMLDocument.h"
 #include "Engine/Serialization/XML/XMLReadUtil.h"
@@ -417,10 +416,7 @@ namespace sw
             pTip->setVisibility( WidgetVisibility::Collapsed );
             return;
         }
-        // 팁은 현지화 키(원문)다 — 지금 문화권의 글로 푼다(표에 없으면 원문 그대로).
-        const LocalizationManager* pLocalization = game::findSubsystem<LocalizationManager>();
-        const utf8*                pFound        = pLocalization != nullptr ? pLocalization->findStringByText( _currentTip ) : nullptr;
-        pTip->setText( pFound != nullptr ? pFound : _currentTip.c_str() );
+        pTip->setText( _currentTip ); // 팁은 현지화 키(원문)다 — 글 위젯이 그릴 때 푼다(표에 없으면 원문 그대로)
         pTip->setVisibility( WidgetVisibility::HitTestInvisible );
     }
 } // namespace sw

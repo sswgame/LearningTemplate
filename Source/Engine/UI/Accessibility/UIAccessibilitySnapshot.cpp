@@ -4,6 +4,7 @@
 
 #include "Core/Foundation/Constants.h"
 
+#include "Engine/Localization/LocText.h"
 #include "Engine/Reflection/ReflectionCast.h"
 #include "Engine/UI/WidgetTree/PanelWidget.h"
 #include "Engine/UI/WidgetTree/Widget.h"
@@ -35,6 +36,9 @@ namespace sw
                         if ( pLabel != nullptr )
                             info._name = collectLabelOf( *pLabel );
                     }
+                    // 적어 둔 이름은 키이거나 원문이다 — 읽을 때 푼다(글 위젯의 보이는 글은 이미 푼 것이라 다시 풀지 않는다).
+                    if ( info._name.empty() == false && info._name == widget.getAccessibleName() )
+                        info._name = LocalizedText::resolveNow( info._name );
                     if ( widget.isEnabledInHierarchy() == false )
                         info._states |= AccessibleState::kDisabled;
                     if ( widget.supportsFocus() )
@@ -90,7 +94,7 @@ namespace sw
                     {
                         if ( inoutLabel.empty() == false )
                             inoutLabel += ' ';
-                        inoutLabel += info._name;
+                        inoutLabel += info._name == widget.getAccessibleName() ? LocalizedText::resolveNow( info._name ) : info._name;
                     }
                     return;
                 }
