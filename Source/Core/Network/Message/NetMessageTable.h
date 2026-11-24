@@ -189,8 +189,8 @@ namespace sw
 {
     /**
      * @brief 월드(씬)의 것을 가리키는 메시지의 표입니다 — 오브젝트 번호 · 엔티티 번호 · 부지처럼 씬이 바뀌면 다른 것을 뜻하는 값을 싣는 표는 이 형식이다.
-     * @details 종류 뒤에 보낸 쪽 월드의 세대 한 바이트가 저절로 실리고(`NetMessageWriter`), 라우터가 처리기에 넘기기 전에 가른다 — 앞 월드의 늦은 메시지는 버리고, 아직 서지 않은 월드의
-     *          신뢰 메시지는 그 월드의 씬이 설 때까지 보류한다. 키트마다 세대 칸을 적고 견주면 빠뜨린 메시지가 새로 생긴다(실제로 하우징 · 복제 스냅샷이 빠져 있었다).
+     * @details 종류 뒤에 보낸 쪽 월드의 세대 한 바이트가 저절로 실리고(`NetMessageWriter`), 라우터가 처리기에 넘기기 전에 가른다. 서버는 같은 월드에 들어온
+     *          연결에만 보낸다(`INetPeers::isInWorld`) — 나머지는 들어올 때 처리기가 처음부터 보낸다. 키트마다 세대 칸을 적고 견주면 빠뜨린 메시지가 새로 생긴다(실제로 하우징 · 복제 스냅샷이 빠져 있었다).
      */
     template <uint8 RangeBase, typename... TMessage>
     struct NetWorldMessageTable : NetMessageTable<RangeBase, TMessage...>
@@ -230,13 +230,30 @@ namespace sw
     };
 
     /**
+     * @class NetWorldMessageHandler
+     * @brief 월드 범위 표의 처리기 기반입니다. 상태는 연결이 아니라 월드에 들고 남에 매입니다 — 연결 사건은 볼 수 없습니다.
+     * @details 연결이 열린 때 상태를 보내면 아직 씬을 읽는 클라이언트에 닿지 않고, 서버가 씬을 바꾸면 이미 붙어 있던 클라이언트는 아무것도 받지 못한다(둘 다 실제로 있던 결함이다).
+     *          서버는 `onPeerEnteredWorld` · `onPeerLeftWorld`, 클라이언트는 `onWorldOpened` 를 쓴다.
+     */
+    class NetWorldMessageHandler : public INetMessageHandler
+    {
+    public:
+        void onConnectionOpened( int32 connectionID ) final { (void)connectionID; }
+        void onConnectionClosed( int32 connectionID, NetDisconnectReason reason ) final
+        {
+            (void)connectionID;
+            (void)reason;
+        }
+    };
+
+    /**
      * @class NetTableHandler
      * @brief 표 @p TTable 의 메시지 @p TReceived 들을 받는 처리기의 기반입니다. 영역 · 마스크 · 디스패치를 표가 맡습니다.
      * @details 파생은 받는 메시지마다 `NetHandleResult receive( TMessage, const NetMessageContext&, BitReader& )` 를 둡니다(public). 빠지면 컴파일되지 않는다.
      *          한 영역을 둘이 나눠 받으면(락스텝 · 롤백) 각자 자기 메시지만 적는다 — 라우터가 겹침을 거절한다.
      */
     template <typename TDerived, typename TTable, typename... TReceived>
-    class NetTableHandler : public INetMessageHandler
+    class NetTableHandler : public std::conditional_t<TTable::kWorldScoped, NetWorldMessageHandler, INetMessageHandler>
     {
     public:
         static constexpr uint16 kReceivedMask = TTable::template makeMask<TReceived...>();

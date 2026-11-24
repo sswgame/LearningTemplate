@@ -58,6 +58,7 @@ namespace
                 (void)cluster.addEndpoint( static_cast<uint16>( 5000 + index ), fixed );
             }
             (void)cluster.connectClients( 30 ); // 같은 판을 두 번 돌려 바이트를 비교하는 테스트 — 연결 실패는 해시가 달라 드러난다
+            cluster.enterWorld();
         }
 
         /** @brief 권위 서버 판 — 클라이언트마다 받은 메시지 바이트의 해시입니다. */

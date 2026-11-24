@@ -184,8 +184,8 @@ namespace sw
         NetHandleResult receive( NetClientServerMessage::SnapshotAck, const NetMessageContext& context, const NetSnapshotAckBody& body );
         NetHandleResult receive( NetClientServerMessage::Input, const NetMessageContext& context, BitReader& body );
         /** @brief 연결별 상태(확인 틱, 입력 큐, 처리한 입력 틱)를 초기화합니다. 같은 슬롯에 새로 온 클라이언트가 이전 상태를 물려받지 않게 합니다. */
-        void onConnectionOpened( int32 connectionID ) override;
-        void onConnectionClosed( int32 connectionID, NetDisconnectReason reason ) override;
+        void onPeerEnteredWorld( int32 connectionID ) override;
+        void onPeerLeftWorld( int32 connectionID ) override;
 
         /**
          * @brief 그 틱의 입력을 꺼냅니다. 아직 도착하지 않았으면 가장 최근 입력을 반복하고 @p outbExact 를 false 로 둡니다. 받은 입력이 하나도 없으면 false 를 반환합니다.

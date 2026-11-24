@@ -147,7 +147,7 @@ namespace sw
      *     server.update();                   // 세션 갱신(프레임 시스템 단계) 뒤 — 같은 프레임에 보낸다
      * @endcode
      */
-    class SW_KIT_API PairedAnimationReplicationServer : public INetMessageHandler
+    class SW_KIT_API PairedAnimationReplicationServer : public NetWorldMessageHandler
     {
     public:
         PairedAnimationReplicationServer();
@@ -159,13 +159,13 @@ namespace sw
 
         uint8  getMessageRangeBase() const override { return NetPairedAnimationMessage::Table::kRangeBase; }
         uint32 getWireVersion() const override { return NetPairedAnimationMessage::Table::computeWireVersion(); } // 보내기만 한다 — 보내는 표의 판을 낸다
-        /** @brief 받는 종류가 없습니다(연결 사건만 받습니다). */
+        /** @brief 받는 종류가 없습니다(월드에 들고 남만 받습니다). */
         uint16                  getMessageKindMask() const override { return 0; }
         NetMessageDirectionMask getMessageDirectionMask() const override { return NetMessageDirectionMask{}; }
         NetHandleResult         handleNetMessage( const NetMessageContext& context, BitReader& body ) override;
         /** @brief 다음 `update` 에서 재생 중인 세션마다 상태를 그 연결에 보냅니다. */
-        void onConnectionOpened( int32 connectionID ) override;
-        void onConnectionClosed( int32 connectionID, NetDisconnectReason reason ) override;
+        void onPeerEnteredWorld( int32 connectionID ) override;
+        void onPeerLeftWorld( int32 connectionID ) override;
 
         /**
          * @brief 재생 중인 세션의 복제 상태를 만듭니다. 메시지와 롤백 소유 상태(`ReplicationServer::setOwnerState` 에 `PairedAnimationNetState::write` 의 바이트)가 함께 씁니다.

@@ -31,6 +31,7 @@ namespace
             (void)_cluster.addEndpoint( 4100, settings ); // 빈 클러스터라 포트가 겹치지 않는다
             (void)_cluster.addEndpoint( 4200, settings );
             SW_EXPECT_TRUE( _cluster.connectClients( 30 ) );
+            _cluster.enterWorld();
             SW_EXPECT_TRUE( _server.initialize( &_cluster.getServer(), ReplicationServerConfig{} ) );
             SW_EXPECT_TRUE( _client.initialize( &_cluster.getClient( 0 ), _worldClock, ReplicationClientConfig{} ) );
             vector<int32> listConnection;

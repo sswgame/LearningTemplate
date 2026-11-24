@@ -66,6 +66,7 @@ namespace
         {
             BitWriter writer;
             writer.writeBits( NetMMOMessage::kEnter, 8 );
+            writer.writeBits( 0, 8 ); // 월드 세대
             writer.writeVarUint( tick );
             writer.writeBool( true );
             MMOEntityEnterHeader header;
@@ -85,6 +86,7 @@ namespace
         {
             BitWriter writer;
             writer.writeBits( NetMMOMessage::kUpdate, 8 );
+            writer.writeBits( 0, 8 ); // 월드 세대
             writer.writeVarUint( tick );
             writer.writeBool( true );
             MMOEntityUpdateHeader header;
@@ -101,6 +103,7 @@ namespace
         {
             BitWriter writer;
             writer.writeBits( NetMMOMessage::kLeave, 8 );
+            writer.writeBits( 0, 8 ); // 월드 세대
             writer.writeVarUint( 1 );
             writer.writeVarUint( entityID );
             return writer.getBytes();
@@ -453,6 +456,7 @@ namespace
                 if ( pScene->instantiate( makeDocument() ) == false )
                     return false;
             }
+            _cluster.enterWorld();
             MMOReplicatorConfig mmoSettings;
             mmoSettings._enterRadius = 15.0f;
             mmoSettings._leaveRadius = 20.0f;

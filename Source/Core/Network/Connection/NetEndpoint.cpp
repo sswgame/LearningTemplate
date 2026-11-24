@@ -2,6 +2,7 @@
 
 #include "Core/Network/Connection/NetEndpoint.h"
 
+#include "Core/Algorithm/VectorUtil.h"
 #include "Core/Concurrency/thread.h"
 #include "Core/Foundation/Constants.h"
 #include "Core/Hash/HashUtil.h"
@@ -20,6 +21,30 @@
 #include <limits>
 #include <mutex>
 #include <thread>
+
+namespace sw
+{
+    bool INetPeers::isInWorld( int32 connectionID ) const
+    {
+        if ( isServer() == false )
+            return connectionID == 0 && getWorldGeneration() != 0;
+        return _setInWorld.find( connectionID ) != _setInWorld.end();
+    }
+
+    void INetPeers::collectInWorld( vector<int32>& outListConnection ) const
+    {
+        outListConnection.assign( _setInWorld.begin(), _setInWorld.end() );
+        VectorUtil::sort( outListConnection ); // 집합의 차례는 정해져 있지 않다
+    }
+
+    void INetPeers::setInWorld( int32 connectionID, bool bInWorld )
+    {
+        if ( bInWorld )
+            _setInWorld.insert( connectionID );
+        else
+            _setInWorld.erase( connectionID );
+    }
+} // namespace sw
 
 namespace sw
 {

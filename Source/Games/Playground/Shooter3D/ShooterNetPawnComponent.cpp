@@ -432,7 +432,7 @@ namespace sw
         // 세션 역할만 보면 티켓을 요구하지 않는 설정의 매치 서버가 아무 연결에나 배정받은 사람의 몸을 넘긴다. 매칭 없는 서버(개발 접속 · 한 프로세스 재생)는 붙은 차례다.
         const bool bAccountRequired = ShooterNetPawnComponentInternal::findBackfillSender() != nullptr;
         _listConnectionScratch.clear();
-        peers.collectConnected( _listConnectionScratch );
+        peers.collectInWorld( _listConnectionScratch ); // 씬을 읽는 중인 연결의 몸은 아직 세우지 않는다 — 조종할 사람이 없다
         for ( const int32 connectionID : _listConnectionScratch )
         {
             const uint64 accountID = peers.getConnectionPrincipal( connectionID );

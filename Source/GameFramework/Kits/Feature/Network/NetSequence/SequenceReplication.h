@@ -8,7 +8,7 @@
  *          - **대상.** `Everyone` 은 연결된 모두, `Activator` 는 활성자 폰을 가진 연결 하나(`PawnComponent::findInputConnection` — 언리얼 `Client` RPC 의 소유 연결)다.
  *            가진 연결이 없는 폰(리슨 서버 호스트의 폰)이면 원격에 보낼 곳이 없다. 여러 플레이어의 `Activator` 재생은 함께 돈다 — 서버는 플레이어마다 시간만 재는 디렉터를 두고
  *            (`SequenceTriggerComponent::getPlays`), 클라이언트에는 씬의 디렉터 번호를 보내 자기 월드의 디렉터 하나로 튼다.
- *          - **늦은 참가.** 연결이 열리면 다음 갱신에서 재생 중인 `Everyone` 재생마다 그때의 프레임으로 시작을 그 연결에만 보낸다 — 클라이언트는 그 프레임부터 튼다
+ *          - **늦은 참가.** 클라이언트가 월드에 들어오면 다음 갱신에서 재생 중인 `Everyone` 재생마다 그때의 프레임으로 시작을 그 연결에만 보낸다 — 클라이언트는 그 프레임부터 튼다
  *            (`SequencePlayerComponent::playFromFrame`, 지난 이벤트는 쏘지 않는다).
  *          - **끝.** 서버의 디렉터가 재생을 멈추면(정상 끝 · 건너뛰기 · 멈춤) 끝 메시지를 대상에게 보내고, 클라이언트는 아직 재생 중이면 끝으로 건너뛴다(`skipToEnd`).
  *          - **건너뛰기는 서버가 검증한다.** 클라이언트의 로컬 건너뛰기(`Cutscene.Skip`)는 그 클라이언트에서 바로 끝나고, `Activator` 재생이면 요청(재생 번호)을 서버에 보낸다.
@@ -131,8 +131,8 @@ namespace sw
 
         NetHandleResult receive( NetSequenceMessage::SkipRequest, const NetMessageContext& context, const SequenceNetSkipRequestBody& body );
         /** @brief 다음 `update` 에서 재생 중인 전원 재생마다 시작을 그 연결에 보냅니다. */
-        void onConnectionOpened( int32 connectionID ) override;
-        void onConnectionClosed( int32 connectionID, NetDisconnectReason reason ) override;
+        void onPeerEnteredWorld( int32 connectionID ) override;
+        void onPeerLeftWorld( int32 connectionID ) override;
 
         /** @brief 살아 있는(끝을 보내지 않은) 재생 수입니다. */
         uint32                          getActivePlayCount() const { return static_cast<uint32>( _listPlay.size() ); }
@@ -198,6 +198,8 @@ namespace sw
         /** @brief 로컬에서 먼저 끝난 `Activator` 재생마다 건너뛰기 요청을 한 번 보냅니다(게임 스레드, 틱 밖). */
         void update();
 
+        /** @brief 서버의 새 월드에 들어왔습니다 — 앞 월드의 재생 번호를 잊습니다(서버는 씬마다 1 부터 매긴다). */
+        void            onWorldOpened( uint32 generation ) override;
         NetHandleResult receive( NetSequenceMessage::Start, const NetMessageContext& context, const SequenceNetStartBody& body );
         NetHandleResult receive( NetSequenceMessage::End, const NetMessageContext& context, const SequenceNetEndBody& body );
 

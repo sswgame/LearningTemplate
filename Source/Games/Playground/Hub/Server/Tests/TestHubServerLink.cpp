@@ -125,6 +125,7 @@ namespace
                 _pServerPeers->setAccount( _cluster.getClient( index ).getClientIndex().value(), 1000 + static_cast<uint64>( index ) );
                 SW_EXPECT_TRUE( _arrClient[index].initialize( _cluster.getClient( index ), _arrClientRouter[index] ) );
             }
+            _serverRouter.openWorld( *_pServerPeers, 0 ); // 클라이언트는 알림을 받고 같은 씬(0)으로 들어온다
         }
 
         [[nodiscard]] bool startServer( HubServerLink& server )

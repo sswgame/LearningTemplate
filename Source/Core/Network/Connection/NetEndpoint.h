@@ -60,6 +60,7 @@
 #pragma once
 #include "Core/Concurrency/atomic.h"
 #include "Core/Concurrency/mutex.h"
+#include "Core/Container/unordered_set.h"
 #include "Core/Container/vector.h"
 #include "Core/Foundation/Constants.h"
 #include "Core/Foundation/Expected.h"
@@ -258,12 +259,27 @@ namespace sw
         /** @brief 이쪽 월드의 세대입니다(0 이면 없다). 월드 범위 메시지(`NetWorldMessageTable`)를 보낼 때 실린다. 라우터만 바꾼다(`NetMessageRouter::openWorld` · `setLocalScene`). */
         uint8 getWorldGeneration() const { return _worldGeneration.load( std::memory_order_relaxed ); }
         void  setWorldGeneration( uint8 generation ) { _worldGeneration.store( generation, std::memory_order_relaxed ); }
+        /**
+         * @brief 그 연결이 이쪽과 같은 월드에 있으면 true 입니다. 월드 범위 메시지는 이 연결에만 나갑니다. 클라이언트는 서버(연결 0)와 같은 월드에 있을 때입니다.
+         * @details 씬을 읽는 중이거나 다른 씬에 있는 연결에 보내면 받을 대상이 없다 — 언리얼이 `NotifyLoadedWorld` 앞의 연결에 액터를 복제하지 않고, 유니티 NGO 가 씬 동기화를 마친
+         *          클라이언트에게만 스폰을 보내는 자리다. 게임 스레드에서만 바뀌고(라우터), 나눠 도는 송신은 그동안 읽기만 한다.
+         */
+        bool isInWorld( int32 connectionID ) const;
+        /** @brief 같은 월드에 있는 연결을 모읍니다(서버). */
+        void collectInWorld( vector<int32>& outListConnection ) const;
+        /** @brief 같은 월드에 있는 연결 수입니다(서버). */
+        int32 getInWorldCount() const { return static_cast<int32>( _setInWorld.size() ); }
+        /** @brief 연결 @p connectionID 가 월드에 들어왔습니다 · 나갔습니다. 라우터만 부릅니다. */
+        void setInWorld( int32 connectionID, bool bInWorld );
+        /** @brief 아무도 월드에 없습니다(새 월드를 열었다). 라우터만 부릅니다. */
+        void clearInWorld() { _setInWorld.clear(); }
 
         /** @brief 큐에 넣은 메시지의 종류별 셈입니다. @p outTable 에 **더합니다**(샤드 묶음은 샤드마다 더한다) — 새로 셀 때는 빈 표를 넘긴다. */
         virtual void addSentKindStats( NetMessageKindStatsTable& outTable ) const = 0;
 
     private:
-        atomic<uint8> _worldGeneration{ 0 };
+        unordered_set<int32> _setInWorld{}; ///< 같은 월드에 있는 연결(서버)
+        atomic<uint8>        _worldGeneration{ 0 };
     };
 } // namespace sw
 

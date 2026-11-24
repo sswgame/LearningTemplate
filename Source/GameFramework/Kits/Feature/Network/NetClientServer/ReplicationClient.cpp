@@ -67,9 +67,9 @@ namespace sw
         _renderClock.reset();  // 새 서버의 틱은 이전 서버보다 작을 수 있으므로 첫 스냅샷에서 다시 맞춘다(월드의 시계는 라우터가 되돌린다)
     }
 
-    void ReplicationClient::onConnectionOpened( int32 connectionID )
+    void ReplicationClient::onWorldOpened( uint32 generation )
     {
-        (void)connectionID;
+        (void)generation;
         resetHistory();
     }
 

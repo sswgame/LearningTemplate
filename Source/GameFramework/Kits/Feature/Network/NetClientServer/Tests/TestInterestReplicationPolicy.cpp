@@ -81,6 +81,7 @@ namespace
                 (void)cluster.addEndpoint( static_cast<uint16>( 4400 + index ), settings );
             }
             (void)cluster.connectClients( 30 ); // 연결 실패는 해시가 0 이 되어 드러난다
+            cluster.enterWorld();
 
             InterestReplicationPolicy interest;
             SW_EXPECT_TRUE( interest.initialize( 16.0f, 40.0f, 48.0f ) );

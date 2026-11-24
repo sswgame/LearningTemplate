@@ -95,14 +95,13 @@ namespace sw
             _listClient[static_cast<size_t>( connectionID )] = ClientState{};
     }
 
-    void ReplicationServer::onConnectionOpened( int32 connectionID )
+    void ReplicationServer::onPeerEnteredWorld( int32 connectionID )
     {
-        resetClient( connectionID );
+        resetClient( connectionID ); // 처음부터 — 그 연결의 앞 월드에서 확인한 기준선을 잇지 않는다
     }
 
-    void ReplicationServer::onConnectionClosed( int32 connectionID, NetDisconnectReason reason )
+    void ReplicationServer::onPeerLeftWorld( int32 connectionID )
     {
-        (void)reason;
         resetClient( connectionID );
     }
 
@@ -160,7 +159,7 @@ namespace sw
         if ( _pHost == nullptr )
             return;
         // 클라이언트 상태는 나눠 실행하기 전에 모두 확보한다. `acquireClient` 는 목록을 키울 수 있기 때문이다. 나눠 실행하는 동안에는 아무도 목록을 건드리지 않는다.
-        _pHost->collectConnected( _listConnectionScratch );
+        _pHost->collectInWorld( _listConnectionScratch ); // 씬을 읽는 중이거나 다른 씬에 있는 연결에는 보내지 않는다
         _listClientScratch.resize( _listConnectionScratch.size() );
         bool bNeedsAllIndex = false; // 첫 스냅샷을 받는 연결이 있으면 휴면 엔티티까지 후보로 둔다
         for ( size_t index = 0; index < _listConnectionScratch.size(); ++index )

@@ -220,7 +220,7 @@ namespace sw
      * @code
      *     server.initialize( &host, &manager, settings );
      *     server.registerObject( netID, *pFracture );           // 서버와 클라이언트가 같은 번호를 쓴다(씬 엔티티 순서 등)
-     *     _subscription = router.registerHandler( &server );         // 라우터가 연결 이벤트도 넘겨 준다(늦은 참가 스냅숏). 구독이 사라지면 뗀다
+     *     _subscription = router.registerHandler( &server );         // 라우터가 월드에 들고 남도 넘겨 준다(늦은 참가 스냅숏). 구독이 사라지면 뗀다
      *     server.update( serverTick );                          // 월드 틱 뒤에 부른다
      * @endcode
      */
@@ -236,10 +236,10 @@ namespace sw
         void update( uint32 serverTick );
 
         NetHandleResult receive( NetDestructionMessage::SnapshotRequest, const NetMessageContext& context, const DestructionSnapshotRequestBody& body );
-        /** @brief 클라이언트가 들어오면 호출합니다. 이벤트가 있는 오브젝트마다 다음 `update` 에서 스냅숏을 보냅니다. */
-        void onConnectionOpened( int32 connectionID ) override;
+        /** @brief 클라이언트가 월드에 들어오면 호출합니다. 이벤트가 있는 오브젝트마다 다음 `update` 에서 스냅숏을 보냅니다. */
+        void onPeerEnteredWorld( int32 connectionID ) override;
         /** @brief 그 연결에 쌓인 스냅숏 요청을 지웁니다. */
-        void onConnectionClosed( int32 connectionID, NetDisconnectReason reason ) override;
+        void onPeerLeftWorld( int32 connectionID ) override;
 
         const DestructionReplicationStats& getStats() const { return _stats; }
 
@@ -323,8 +323,8 @@ namespace sw
         void registerObject( NetObjectID netID, FractureBaseComponent& component );
         /** @brief 월드 틱 앞에 부릅니다. 지난 틱에 적용된 상태로 해시를 비교하고, 렌더 틱을 월드의 시계에 맞춰 덩어리 자세를 보간합니다. */
         void update();
-        /** @brief 새 서버에 붙었습니다 — 그리던 시각을 잊습니다. */
-        void onConnectionOpened( int32 connectionID ) override;
+        /** @brief 서버의 새 월드(새 연결 포함)에 들어왔습니다 — 앞 월드의 이벤트 번호 · 그리던 시각을 버리고, 앞 월드의 이벤트가 쌓인 오브젝트는 스냅숏을 요청합니다. */
+        void onWorldOpened( uint32 generation ) override;
         /** @brief 테스트용 결함 주입입니다. 그 오브젝트의 다음 이벤트 하나를 적용하지 않고 건너뛰며, 해시 불일치에서 스냅숏 복구까지의 흐름을 확인할 때 씁니다. */
         void skipNextEvent( NetObjectID netID );
 

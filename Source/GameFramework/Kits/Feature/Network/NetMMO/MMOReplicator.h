@@ -65,7 +65,7 @@ namespace sw
         using Enter  = NetMessageDef<0, NetMessageDirection::ToClient, NetChannelKind::ReliableOrdered, 3>; ///< 판 3: 엔티티 머리를 칸 선언(`MMOEntityEnterHeader`)으로 쓴다(2: 정적 id)
         using Leave  = NetMessageDef<1, NetMessageDirection::ToClient, NetChannelKind::ReliableOrdered>;
         using Update = NetMessageDef<2, NetMessageDirection::ToClient, NetChannelKind::Unreliable, 5>; ///< 서버 → 클라이언트(비신뢰, 전달 통지). 통지 값은 서버 틱이다. 판 5: 엔티티 머리를 칸 선언(`MMOEntityUpdateHeader`)으로 쓴다(4: 전달 통지 판정)
-        using Table  = NetMessageTable<NetKitMessageRange::kMMO, Enter, Leave, Update>;
+        using Table  = NetWorldMessageTable<NetKitMessageRange::kMMO, Enter, Leave, Update>;           ///< 엔티티 id · 서버 틱은 서버 월드의 것이다
 
         static constexpr uint8 kEnter  = Table::getKindOf<Enter>();
         static constexpr uint8 kLeave  = Table::getKindOf<Leave>();
@@ -211,6 +211,9 @@ namespace sw
         /** @brief 갱신 하나(값 = 그 틱)의 판정을 그 관찰자의 판정 테이블에 적습니다. 다음 `update` 가 전송 중인 갱신을 판정할 때 읽는다. */
         void onDeliveryNotification( const NetDeliveryNotification& notification ) override;
         void onConnectionClosed( int32 connectionID, NetDisconnectReason reason ) override;
+        /** @brief 그 관찰자가 본 것을 잊습니다 — 들어온 클라이언트의 화면은 비어 있다(새로 보임부터 다시 보낸다). 관찰자 자체는 게임이 정한 그대로다. */
+        void onPeerEnteredWorld( int32 connectionID ) override;
+        void onPeerLeftWorld( int32 connectionID ) override;
 
         /**
          * @brief 호스트, 설정, 월드 격자, 정책을 받아 시작합니다.
@@ -313,6 +316,8 @@ namespace sw
         };
 
         void updateObserverRange( uint32 start, uint32 end );
+        /** @brief 그 관찰자가 본 것 · 보낸 것을 잊습니다. */
+        void clearVisible( int32 connectionID );
         void updateObserver( int32 connectionID, Observer& observer, float32 deltaTime, ObserverScratch& scratch );
         /** @brief 보이지 않게 된 엔티티를 조각나지 않는 크기(`NetConnection::kMaxSingleMessageSize`)로 쪼개 보내고, 보낸 것만 보이는 목록에서 뺍니다. 못 보낸 엔티티가 시작하는 `_listLeave` 의 인덱스를 반환합니다. */
         size_t sendLeaves( int32 connectionID, Observer& observer, ObserverScratch& scratch );
@@ -441,8 +446,8 @@ namespace sw
         NetHandleResult receive( NetMMOMessage::Enter, const NetMessageContext& context, BitReader& body );
         NetHandleResult receive( NetMMOMessage::Leave, const NetMessageContext& context, BitReader& body );
         NetHandleResult receive( NetMMOMessage::Update, const NetMessageContext& context, BitReader& body );
-        /** @brief 서버에 (다시) 연결되면 호출합니다. 보이던 엔티티와 보류한 엔티티를 비우며, 새 연결은 새로 보임부터 다시 받습니다. */
-        void onConnectionOpened( int32 connectionID ) override;
+        /** @brief 서버의 새 월드(새 연결 포함)에 들어왔습니다. 보이던 엔티티와 보류한 엔티티를 비우며, 새로 보임부터 다시 받습니다. */
+        void onWorldOpened( uint32 generation ) override;
         void pollEvents( vector<MMOClientEvent>& outListEvent );
 
         /**

@@ -170,7 +170,7 @@ namespace sw
         return DestructionReplicationInternal::resolveFracture( _pManager, entry._component );
     }
 
-    void DestructionReplicationServer::onConnectionOpened( int32 connectionID )
+    void DestructionReplicationServer::onPeerEnteredWorld( int32 connectionID )
     {
         for ( const Entry& entry : _listEntry )
         {
@@ -178,9 +178,8 @@ namespace sw
         }
     }
 
-    void DestructionReplicationServer::onConnectionClosed( int32 connectionID, NetDisconnectReason reason )
+    void DestructionReplicationServer::onPeerLeftWorld( int32 connectionID )
     {
-        (void)reason;
         for ( size_t index = _listRequest.size(); index > 0; --index )
         {
             if ( _listRequest[index - 1]._connectionID == connectionID )
@@ -212,8 +211,8 @@ namespace sw
 
     int32 DestructionReplicationServer::broadcastMessage()
     {
-        const int32 connectedCount = _pHost->getConnectedCount();
-        return countBroadcast( connectedCount, _writer.broadcastMessage( *_pHost ) );
+        const int32 peerCount = _pHost->getInWorldCount();
+        return countBroadcast( peerCount, _writer.broadcastMessage( *_pHost ) );
     }
 
     int32 DestructionReplicationServer::countBroadcast( int32 connectedCount, int32 sentCount )
@@ -741,10 +740,21 @@ namespace sw
         _renderClock.observeSample( serverTick );
     }
 
-    void DestructionReplicationClient::onConnectionOpened( int32 connectionID )
+    void DestructionReplicationClient::onWorldOpened( uint32 generation )
     {
-        (void)connectionID;
-        _renderClock.reset(); // 새 서버의 틱은 앞 서버보다 작을 수 있다(월드의 시계는 라우터가 되돌린다)
+        (void)generation;
+        _renderClock.reset(); // 새 월드의 틱은 앞 월드보다 작다(월드의 시계는 라우터가 되돌린다)
+        for ( Entry& entry : _listEntry )
+        {
+            const bool bTouched = entry._nextEventIndex != 0;
+            entry._listFutureEvent.clear();
+            entry._listChunk.clear();
+            entry._listHashCheck.clear();
+            entry._nextEventIndex    = 0;
+            entry._bAwaitingSnapshot = SW_FALSE;
+            if ( bTouched )
+                requestSnapshot( entry ); // 이쪽에는 앞 월드의 파편이 남아 있다
+        }
     }
 
     void DestructionReplicationClient::update()

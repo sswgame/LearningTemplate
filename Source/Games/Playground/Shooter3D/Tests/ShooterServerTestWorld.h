@@ -45,11 +45,17 @@ namespace sw
 
         vector<Link> _listLink{};
 
-        void connect( int32 connectionID, uint64 accountID ) { _listLink.push_back( Link{ accountID, connectionID } ); }
+        /** @brief 붙어 서버의 월드에 들어왔습니다. */
+        void connect( int32 connectionID, uint64 accountID )
+        {
+            _listLink.push_back( Link{ accountID, connectionID } );
+            setInWorld( connectionID, true );
+        }
         void drop( int32 connectionID )
         {
             VectorUtil::removeIf( _listLink, [connectionID]( const Link& link )
             { return link._connectionID == connectionID; } );
+            setInWorld( connectionID, false );
         }
 
         bool               sendMessage( int32, NetChannelKind, const uint8*, int32 ) override { return true; }

@@ -219,14 +219,13 @@ namespace sw
         return NetHandleResult::Handled; // 넘친 다시 맞추기 요청은 버린다 — 클라이언트는 델타를 버리며 기다리다 다시 요청하지 않으므로 다음 틱의 같은 요청이 온다
     }
 
-    void HousingReplicationServer::onConnectionOpened( int32 connectionID )
+    void HousingReplicationServer::onPeerEnteredWorld( int32 connectionID )
     {
         VectorUtil::addUnique( _listJoined, connectionID );
     }
 
-    void HousingReplicationServer::onConnectionClosed( int32 connectionID, NetDisconnectReason reason )
+    void HousingReplicationServer::onPeerLeftWorld( int32 connectionID )
     {
-        (void)reason;
         (void)VectorUtil::removeValue( _listJoined, connectionID );
         (void)VectorUtil::removeIf( _listPending, [connectionID]( const PendingEdit& edit )
         { return edit._connectionID == connectionID; } );
@@ -272,7 +271,7 @@ namespace sw
                 ++_stats._appliedCount;
             reply( edit._connectionID, edit._requestID, edit._plotHash, result, placementID );
         }
-        _pHost->collectConnected( _listConnected );
+        _pHost->collectInWorld( _listConnected );
         vector<int32> listFresh;
         for ( const HousingNetPlotRef& plot : listPlot )
         {
@@ -610,9 +609,17 @@ namespace sw
 
     bool HousingReplicationClient::isAwaitingServer()
     {
-        if ( _pHost != nullptr && _pHost->getConnectedCount() > 0 )
+        if ( _pHost != nullptr && _pHost->isInWorld( 0 ) )
             _bServerReached = SW_TRUE;
         return _bServerReached == SW_FALSE;
+    }
+
+    void HousingReplicationClient::onWorldOpened( uint32 generation )
+    {
+        (void)generation;
+        _listOp.clear();
+        _listAssembly.clear();
+        _listAwaitingSnapshot.clear();
     }
 
     uint32 HousingReplicationClient::sendEdit( const hashed_string& plotID, const HousingEditRequest& request )

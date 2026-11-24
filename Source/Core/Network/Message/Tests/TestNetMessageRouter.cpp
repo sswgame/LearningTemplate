@@ -867,7 +867,13 @@ namespace
     {
     public:
         vector<uint64> _listNumber{};
+        vector<int32>  _listEntered{};
+        vector<int32>  _listLeft{};
+        uint32         _openedCount{ 0 };
 
+        void            onPeerEnteredWorld( int32 connectionID ) override { _listEntered.push_back( connectionID ); }
+        void            onPeerLeftWorld( int32 connectionID ) override { _listLeft.push_back( connectionID ); }
+        void            onWorldOpened( uint32 ) override { ++_openedCount; }
         NetHandleResult receive( WorldTestMessage::Order, const NetMessageContext& context, BitReader& body )
         {
             (void)context;
@@ -885,58 +891,122 @@ namespace
         static constexpr uint64 kFirstScene  = 11;
         static constexpr uint64 kSecondScene = 22;
 
+        /** @brief 같은 월드의 상대 모두에게 보내고 보낸 수를 돌려줍니다. */
         template <typename TMessage>
-        static void send( INetPeers& peers, uint64 number )
+        static int32 send( INetPeers& peers, uint64 number )
         {
             NetMessageWriter writer;
             writer.beginMessage<WorldTestMessage::Table, TMessage>().writeVarUint( number );
-            SW_REQUIRE_TRUE( writer.sendMessageToPeers( peers ) > 0 );
+            return writer.sendMessageToPeers( peers );
         }
     };
 } // namespace
 
 /**
- * @brief [NetMessageRouterTest] 서버가 새 씬을 먼저 열면 그 신뢰 메시지는 앞 씬의 처리기에 닿지 않고 클라이언트의 씬이 설 때까지 기다린다 — 앞 씬의 늦은 메시지는 새 씬에 닿지 않는다
+ * @brief [NetMessageRouterTest] 월드 범위 메시지는 같은 씬을 세운 클라이언트에만 나간다 — 서버가 새 씬을 먼저 열면 클라이언트가 들어올 때까지 보내지 않고, 들어오면 처리기가 한 번 안다
  */
 SW_TEST_CASE( NetMessageRouterTest, WorldMessagesReachOnlyTheirOwnScene )
+{
+    HoldTestRig            rig;
+    WorldTestHandler       serverHandler;
+    const sw::Subscription serverSubscription = rig._serverRouter.registerHandler( &serverHandler );
+    rig._clientRouter.setLocalScene( rig._pair.getClient( 0 ), WorldTestUtil::kFirstScene );
+    SW_EXPECT_EQUAL( 0, WorldTestUtil::send<WorldTestMessage::Order>( rig._pair.getClient( 0 ), 80 ) ); // 아직 서버의 월드를 모른다
+    rig._serverRouter.openWorld( rig._pair.getServer(), WorldTestUtil::kFirstScene );
+    SW_EXPECT_EQUAL( 0, WorldTestUtil::send<WorldTestMessage::Order>( rig._pair.getServer(), 70 ) ); // 아직 아무도 들어오지 않았다
+    WorldTestHandler firstScene;
+    sw::Subscription firstSubscription = rig._clientRouter.registerHandler( &firstScene );
+    rig.pollAll();
+    SW_EXPECT_EQUAL( size_t{ 1 }, serverHandler._listEntered.size() );
+    SW_EXPECT_EQUAL( 1u, firstScene._openedCount );
+    SW_EXPECT_EQUAL( 1, WorldTestUtil::send<WorldTestMessage::Order>( rig._pair.getServer(), 1 ) );
+    rig.pollAll();
+    SW_REQUIRE_EQUAL( size_t{ 1 }, firstScene._listNumber.size() );
+
+    // 서버가 다음 씬을 연다 — 클라이언트는 아직 앞 씬이라 받지 않고, 앞 씬에서 이미 보낸 것은 새 씬에 닿지 않는다.
+    SW_EXPECT_EQUAL( 1, WorldTestUtil::send<WorldTestMessage::Order>( rig._pair.getClient( 0 ), 90 ) );
+    rig._serverRouter.openWorld( rig._pair.getServer(), WorldTestUtil::kSecondScene );
+    SW_EXPECT_EQUAL( size_t{ 1 }, serverHandler._listLeft.size() );
+    SW_EXPECT_EQUAL( 0, WorldTestUtil::send<WorldTestMessage::Order>( rig._pair.getServer(), 2 ) );
+    rig.pollAll();
+    SW_EXPECT_EQUAL( size_t{ 1 }, firstScene._listNumber.size() );
+    SW_EXPECT_EQUAL( 0u, static_cast<uint32>( rig._clientRouter.getWorldGeneration() ) );
+    SW_EXPECT_TRUE( serverHandler._listNumber.empty() );
+    SW_EXPECT_TRUE( rig._serverRouter.getOtherWorldCount().get() >= 1u );
+
+    // 새 씬이 서면 들어온다.
+    firstSubscription.reset();
+    WorldTestHandler       secondScene;
+    const sw::Subscription secondSubscription = rig._clientRouter.registerHandler( &secondScene );
+    rig._clientRouter.setLocalScene( rig._pair.getClient( 0 ), WorldTestUtil::kSecondScene );
+    SW_EXPECT_EQUAL( 1, WorldTestUtil::send<WorldTestMessage::Order>( rig._pair.getClient( 0 ), 91 ) );
+    rig.pollAll();
+    SW_EXPECT_EQUAL( size_t{ 2 }, serverHandler._listEntered.size() );
+    SW_EXPECT_EQUAL( 1, WorldTestUtil::send<WorldTestMessage::Order>( rig._pair.getServer(), 4 ) );
+    rig.pollAll();
+    SW_REQUIRE_EQUAL( size_t{ 1 }, secondScene._listNumber.size() );
+    SW_EXPECT_EQUAL( uint64{ 4 }, secondScene._listNumber[0] );
+    SW_REQUIRE_EQUAL( size_t{ 1 }, serverHandler._listNumber.size() );
+    SW_EXPECT_EQUAL( uint64{ 91 }, serverHandler._listNumber[0] );
+}
+
+/** @brief [NetMessageRouterTest] 늦게 단 서버 처리기도 이미 들어와 있는 연결을 한 번 알고, 같은 씬을 다시 세우거나(클라이언트) 다시 열면(서버) 다시 들어온 것이다 */
+SW_TEST_CASE( NetMessageRouterTest, EnteredPeersReachLateHandlersAndReenterSameScene )
 {
     HoldTestRig rig;
     rig._serverRouter.openWorld( rig._pair.getServer(), WorldTestUtil::kFirstScene );
     rig._clientRouter.setLocalScene( rig._pair.getClient( 0 ), WorldTestUtil::kFirstScene );
     rig.pollAll();
-    WorldTestHandler       serverHandler;
-    WorldTestHandler       firstScene;
-    const sw::Subscription serverSubscription = rig._serverRouter.registerHandler( &serverHandler );
-    sw::Subscription       firstSubscription  = rig._clientRouter.registerHandler( &firstScene );
-    WorldTestUtil::send<WorldTestMessage::Order>( rig._pair.getServer(), 1 );
+    WorldTestHandler       lateHandler; // 서버 씬의 처리기는 씬이 시작할 때 달린다 — 그 앞에 들어온 클라이언트가 있다
+    const sw::Subscription lateSubscription = rig._serverRouter.registerHandler( &lateHandler );
+    WorldTestHandler       clientHandler;
+    const sw::Subscription clientSubscription = rig._clientRouter.registerHandler( &clientHandler );
     rig.pollAll();
-    SW_REQUIRE_EQUAL( size_t{ 1 }, firstScene._listNumber.size() );
+    SW_EXPECT_EQUAL( size_t{ 1 }, lateHandler._listEntered.size() );
 
-    // 서버가 다음 씬을 열고 보낸다 — 클라이언트는 아직 앞 씬이다. 비신뢰는 버린다.
-    rig._serverRouter.openWorld( rig._pair.getServer(), WorldTestUtil::kSecondScene );
-    WorldTestUtil::send<WorldTestMessage::Order>( rig._pair.getServer(), 2 );
-    WorldTestUtil::send<WorldTestMessage::Pose>( rig._pair.getServer(), 3 );
-    WorldTestUtil::send<WorldTestMessage::Order>( rig._pair.getServer(), 4 );
-    WorldTestUtil::send<WorldTestMessage::Order>( rig._pair.getClient( 0 ), 90 ); // 앞 씬에서 늦게 보낸 것이다 — 서버의 새 씬에 닿지 않는다
+    rig._clientRouter.setLocalScene( rig._pair.getClient( 0 ), WorldTestUtil::kFirstScene ); // 이쪽만 같은 씬을 다시 세웠다
     rig.pollAll();
-    SW_EXPECT_EQUAL( size_t{ 1 }, firstScene._listNumber.size() );
-    SW_EXPECT_EQUAL( 0u, static_cast<uint32>( rig._clientRouter.getWorldGeneration() ) );
-    SW_EXPECT_TRUE( serverHandler._listNumber.empty() );
-    SW_EXPECT_EQUAL( 2, rig._clientRouter.getHeldMessageCount() );
+    SW_EXPECT_EQUAL( size_t{ 1 }, lateHandler._listLeft.size() );
+    SW_EXPECT_EQUAL( size_t{ 2 }, lateHandler._listEntered.size() );
 
-    // 새 씬이 서면 온 순서대로 닿는다.
-    firstSubscription.reset();
-    WorldTestHandler       secondScene;
-    const sw::Subscription secondSubscription = rig._clientRouter.registerHandler( &secondScene );
-    rig._clientRouter.setLocalScene( rig._pair.getClient( 0 ), WorldTestUtil::kSecondScene );
-    WorldTestUtil::send<WorldTestMessage::Order>( rig._pair.getClient( 0 ), 91 );
+    rig._serverRouter.openWorld( rig._pair.getServer(), WorldTestUtil::kFirstScene ); // 서버가 같은 씬을 다시 열었다(재대결)
     rig.pollAll();
-    SW_REQUIRE_EQUAL( size_t{ 2 }, secondScene._listNumber.size() );
-    SW_EXPECT_EQUAL( uint64{ 2 }, secondScene._listNumber[0] );
-    SW_EXPECT_EQUAL( uint64{ 4 }, secondScene._listNumber[1] );
-    SW_REQUIRE_EQUAL( size_t{ 1 }, serverHandler._listNumber.size() );
-    SW_EXPECT_EQUAL( uint64{ 91 }, serverHandler._listNumber[0] );
-    SW_EXPECT_TRUE( rig._serverRouter.getOtherWorldCount().get() >= 1u );
+    SW_EXPECT_EQUAL( size_t{ 3 }, lateHandler._listEntered.size() );
+    SW_EXPECT_EQUAL( 1u, clientHandler._openedCount ); // 앞 월드의 상태를 버리는 자리다
+
+    rig._clientRouter.setLocalScene( rig._pair.getClient( 0 ), WorldTestUtil::kSecondScene ); // 다른 씬으로 나갔다
+    rig.pollAll();
+    SW_EXPECT_EQUAL( size_t{ 3 }, lateHandler._listLeft.size() );
+    SW_EXPECT_EQUAL( 0, rig._pair.getServer().getInWorldCount() );
+}
+
+/** @brief [NetMessageRouterTest] 들고 남을 되풀이해 월드 상태를 거듭 받아 가는 연결은 끊고, 서버가 보낸 들고 남은 거절한다 */
+SW_TEST_CASE( NetMessageRouterTest, PresenceSpamAndWrongDirectionDisconnect )
+{
+    {
+        HoldTestRig rig;
+        rig._serverRouter.openWorld( rig._pair.getServer(), WorldTestUtil::kFirstScene );
+        rig.pollAll();
+        SW_EXPECT_LOG( "Net.RouterMessageMalformed" );
+        NetMessageWriter writer;
+        writer.begin( NetMessageRange::kRouterPresenceKind ).writeBits( 1, 8 );
+        for ( int32 index = 0; index <= NetMessageRouter::kMaxPresencePerWindow; ++index )
+        {
+            SW_REQUIRE_TRUE( writer.send( rig._pair.getClient( 0 ), 0, NetChannelKind::ReliableOrdered ) );
+        }
+        rig.pollAll();
+        SW_EXPECT_EQUAL( 0, rig._pair.getServer().getConnectedCount() );
+        SW_EXPECT_EQUAL( 0, rig._pair.getServer().getInWorldCount() );
+    }
+    {
+        HoldTestRig rig;
+        SW_EXPECT_LOG( "Net.RouterWrongDirection" );
+        NetMessageWriter writer;
+        writer.begin( NetMessageRange::kRouterPresenceKind ).writeBits( 1, 8 );
+        SW_REQUIRE_TRUE( writer.send( rig._pair.getServer(), 0, NetChannelKind::ReliableOrdered ) );
+        rig.pollAll();
+        SW_EXPECT_TRUE( rig._pair.getClient( 0 ).getConnectionState( 0 ) != NetConnectionState::Connected );
+    }
 }
 
 /** @brief [NetMessageRouterTest] 월드의 서버 시계는 같은 씬의 클라이언트에만 닿고, 새 월드에서는 처음부터다 — 앞 월드의 시각을 이어 보지 않는다 */

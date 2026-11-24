@@ -90,14 +90,13 @@ namespace sw
         return NetHandleResult::Handled;
     }
 
-    void SequenceReplicationServer::onConnectionOpened( int32 connectionID )
+    void SequenceReplicationServer::onPeerEnteredWorld( int32 connectionID )
     {
         _listJoiningConnection.push_back( connectionID );
     }
 
-    void SequenceReplicationServer::onConnectionClosed( int32 connectionID, NetDisconnectReason reason )
+    void SequenceReplicationServer::onPeerLeftWorld( int32 connectionID )
     {
-        (void)reason;
         VectorUtil::removeFirst( _listJoiningConnection, connectionID );
     }
 
@@ -289,6 +288,12 @@ namespace sw
                 ++_stats._skipRequestCount;
             play._bSkipRequested = SW_TRUE;
         }
+    }
+
+    void SequenceReplicationClient::onWorldOpened( uint32 generation )
+    {
+        (void)generation;
+        _listPlay.clear();
     }
 
     NetHandleResult SequenceReplicationClient::receive( NetSequenceMessage::Start, const NetMessageContext& context, const SequenceNetStartBody& body )

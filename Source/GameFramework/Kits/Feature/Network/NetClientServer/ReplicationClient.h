@@ -77,8 +77,8 @@ namespace sw
          */
         [[nodiscard]] bool initialize( INetPeers* pHost, NetClock& worldClock, const ReplicationClientConfig& settings );
         NetHandleResult    receive( NetClientServerMessage::Snapshot, const NetMessageContext& context, BitReader& body );
-        /** @brief 서버에 (다시) 연결되면 호출합니다. 받은 스냅샷과 렌더 시각을 초기화하며, 새 서버의 틱은 이전 서버보다 작을 수 있기 때문입니다. */
-        void onConnectionOpened( int32 connectionID ) override;
+        /** @brief 서버의 새 월드(새 연결 포함)에 들어왔습니다. 받은 스냅샷과 화면 시각을 처음부터 다시 합니다 — 새 월드의 틱은 앞 월드보다 작다. */
+        void onWorldOpened( uint32 generation ) override;
         /**
          * @brief 화면 시각을 월드의 서버 시계에 맞춥니다. 라우터가 프레임에 한 번, 메시지를 다 나눠 준 뒤 부릅니다.
          * @details 그 프레임의 표본(적 · 남의 몸 · 발동 도장)이 모두 이 값을 쓴다 — 프레임 중간에 시계를 움직이면 앞 틱의 표본과 뒤 틱의 표본이 다른 시각으로 갈린다

@@ -266,6 +266,28 @@ namespace sw
         removeObserver( connectionID );
     }
 
+    void MMOReplicator::onPeerEnteredWorld( int32 connectionID )
+    {
+        clearVisible( connectionID );
+    }
+
+    void MMOReplicator::onPeerLeftWorld( int32 connectionID )
+    {
+        clearVisible( connectionID );
+    }
+
+    void MMOReplicator::clearVisible( int32 connectionID )
+    {
+        if ( connectionID < 0 || connectionID >= static_cast<int32>( _listObserver.size() ) )
+            return;
+        Observer& observer = _listObserver[static_cast<size_t>( connectionID )];
+        if ( observer._bActive == SW_FALSE )
+            return;
+        observer._mapVisible.clear();
+        observer._prioritizer = NetPrioritizer{};
+        observer._updateResult.reset();
+    }
+
     int32 MMOReplicator::getVisibleCount( int32 connectionID ) const
     {
         return connectionID >= 0 && connectionID < static_cast<int32>( _listObserver.size() )
@@ -604,9 +626,9 @@ namespace sw
         return pObject != nullptr && pObject->isPendingDestroy() == false ? idIter->second : 0;
     }
 
-    void MMOClientView::onConnectionOpened( int32 connectionID )
+    void MMOClientView::onWorldOpened( uint32 generation )
     {
-        (void)connectionID;
+        (void)generation;
         _mapEntity.clear();
         _mapBoundObject.clear();
         _heldCount = 0;

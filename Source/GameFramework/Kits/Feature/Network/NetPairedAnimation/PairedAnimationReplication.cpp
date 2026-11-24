@@ -137,14 +137,13 @@ namespace sw
         return NetHandleResult::NotMine; // 종류 마스크가 0 이라 라우터가 넘기지 않는다
     }
 
-    void PairedAnimationReplicationServer::onConnectionOpened( int32 connectionID )
+    void PairedAnimationReplicationServer::onPeerEnteredWorld( int32 connectionID )
     {
         _listJoiningConnection.push_back( connectionID );
     }
 
-    void PairedAnimationReplicationServer::onConnectionClosed( int32 connectionID, NetDisconnectReason reason )
+    void PairedAnimationReplicationServer::onPeerLeftWorld( int32 connectionID )
     {
-        (void)reason;
         VectorUtil::removeFirst( _listJoiningConnection, connectionID );
     }
 

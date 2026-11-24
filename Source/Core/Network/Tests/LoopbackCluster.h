@@ -45,6 +45,8 @@ namespace sw::test
          * @return listen · connect 를 모두 시작했고 클라이언트가 모두 연결됐으면 true 입니다.
          */
         [[nodiscard]] bool connectClients( int32 stepCount, float64 deltaTime = 1.0 / 60.0 );
+        /** @brief 라우터 없는 테스트에서 붙은 클라이언트를 모두 서버의 월드(세대 1)에 넣습니다 — 월드 범위 메시지는 같은 월드의 연결에만 나간다. */
+        void enterWorld();
         /** @brief 엔드포인트마다 네트워크 스레드를 띄웁니다. 하나라도 못 띄우면 false 입니다. */
         [[nodiscard]] bool startThreads( const NetEndpointThreadConfig& settings = NetEndpointThreadConfig{} );
         /** @brief 스레드를 모두 멈춥니다(여러 번 불러도 된다). 그 뒤 `step` 을 다시 쓸 수 있다. */

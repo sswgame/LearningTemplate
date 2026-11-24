@@ -202,7 +202,7 @@ SW_TEST_CASE( SequenceNetSimTest, SkipRequestIsCheckedAgainstTheOwningConnection
     INetPeers&  firstPeers      = pFirst->getPeers();
     const uint8 worldGeneration = firstPeers.getWorldGeneration();
     SW_EXPECT_NOT_EQUAL( 0u, static_cast<uint32>( worldGeneration ) );
-    firstPeers.setWorldGeneration( static_cast<uint8>( worldGeneration - 1u ) ); // 앞 월드에서 보낸 것처럼
+    firstPeers.setWorldGeneration( static_cast<uint8>( worldGeneration + 1u ) ); // 다른 월드에서 보낸 것처럼
     SW_REQUIRE_TRUE( ( writer.writeMessage<NetSequenceMessage::Table, NetSequenceMessage::SkipRequest>( request ) ) );
     SW_REQUIRE_TRUE( writer.sendMessage( firstPeers, 0 ) );
     firstPeers.setWorldGeneration( worldGeneration );

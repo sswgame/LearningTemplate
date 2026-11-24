@@ -57,6 +57,22 @@ namespace sw::test
         return bStarted && areClientsConnected();
     }
 
+    void LoopbackCluster::enterWorld()
+    {
+        constexpr uint8 kGeneration = 1;
+        getServer().setWorldGeneration( kGeneration );
+        vector<int32> listConnection;
+        getServer().collectConnected( listConnection );
+        for ( const int32 connectionID : listConnection )
+        {
+            getServer().setInWorld( connectionID, true );
+        }
+        for ( int32 clientIndex = 0; clientIndex < getClientCount(); ++clientIndex )
+        {
+            getClient( clientIndex ).setWorldGeneration( kGeneration );
+        }
+    }
+
     bool LoopbackCluster::startThreads( const NetEndpointThreadConfig& settings )
     {
         SW_ASSERT( _listThread.empty() && "LoopbackCluster::startThreads called twice" );
