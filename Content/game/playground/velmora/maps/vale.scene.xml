@@ -150,5 +150,14 @@
 				</_listComponent>
 			</GameObject>
 		</entity>
+		<!-- 룸 이벤트(문 잠김 · 방 비움 · 쓰러짐)를 HUD 와 카메라에 잇는다. -->
+		<entity id="12" name="RoomHUD">
+			<GameObject _schemaVersion="0" _name="RoomHUD" _bActive="true">
+				<_listComponent>
+					<HUDControllerComponent _localID="17122754535480611078" _componentName="HUDControllerComponent" _bActive="true" _documentPath="game/playground/ui/actionroom.ui.xml" />
+					<ActionRoomHUDComponent _localID="5120394671823349907" _componentName="ActionRoomHUDComponent" _bActive="true" />
+				</_listComponent>
+			</GameObject>
+		</entity>
 	</entities>
 </Scene>

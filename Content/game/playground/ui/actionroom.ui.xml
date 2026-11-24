@@ -1,0 +1,21 @@
+<?asset guid="40d0aa0b4253d754d4447f50f6980bba"?>
+<!-- 액션 룸 HUD — ActionRoomHUDViewModel(GF_Client_ActionCombat). 룸 이벤트가 없으면 모두 접힌다. -->
+<UIDocument _schemaVersion="1">
+	<UIScreenDef _layer="HUD" _bTakesFocus="false" _bShowCursor="false" />
+	<SafeZonePanel _visibility="SelfHitTestInvisible">
+		<CanvasPanel _visibility="SelfHitTestInvisible">
+			<TextWidget _name="GateLocked" _text="Gate locked" _styleClass="hud" _visibility="{bind:_gateLockedVisibility}">
+				<_slot _anchorMin="0.5,0" _anchorMax="0.5,0" _offsetMin="-240,48" _offsetMax="240,84" />
+				<_style _alignment="Center" />
+			</TextWidget>
+			<TextWidget _name="Cleared" _text="Room cleared" _styleClass="hud" _visibility="{bind:_clearedVisibility}">
+				<_slot _anchorMin="0.5,0.3" _anchorMax="0.5,0.3" _offsetMin="-240,-18" _offsetMax="240,18" />
+				<_style _alignment="Center" />
+			</TextWidget>
+			<TextWidget _name="Defeated" _text="Defeated" _styleClass="hud" _visibility="{bind:_defeatedVisibility}">
+				<_slot _anchorMin="0.5,0.3" _anchorMax="0.5,0.3" _offsetMin="-240,-18" _offsetMax="240,18" />
+				<_style _alignment="Center" />
+			</TextWidget>
+		</CanvasPanel>
+	</SafeZonePanel>
+</UIDocument>

@@ -2,7 +2,7 @@
  * @file ActionCombatEvents.h
  * @brief 액션 룸과 전투 룸의 이벤트입니다. 채널은 GameEvents.h 의 `gameEventChannel()`("game")입니다.
  * @details 세 이벤트 모두 프레임워크가 낸다(`GameEventUtil::send`). 이벤트 버스를 비우는 스레드에서 보내면 그 자리에서 전달하고, 다른 스레드에서 보내면 다음 `processEvents` 에 전달한다.
- *          모두 `ActionRoom` 의 상태가 바뀌는 시점에 낸다(유닛의 피해는 `DamageEvents.h`).
+ *          모두 `ActionRoom` 의 상태가 바뀌는 시점에 낸다(유닛의 피해는 `DamageEvents.h`). 클라이언트의 `ActionRoomHUDComponent` 가 받아 HUD 알림과 카메라 흔들림으로 보인다.
  */
 #pragma once
 #include "Core/Container/string.h"

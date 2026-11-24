@@ -2,6 +2,7 @@
 
 #include "GameFramework/Client/HUD/MinimapComponent.h"
 
+#include "Core/Event/EventDispatcher.h"
 #include "Core/Math/MathUtil.h"
 
 #include "Engine/Automation/Watch/AutomationWatch.h"
@@ -18,8 +19,11 @@
 
 #include "GameFramework/Client/HUD/HUDControllerComponent.h"
 #include "GameFramework/Client/HUD/MinimapMarkerComponent.h"
+#include "GameFramework/Runtime/Character/Control/ControlEvents.h"
 #include "GameFramework/Runtime/Character/Control/Intent/ControlIntent.h"
 #include "GameFramework/Runtime/Character/Control/Pawn/PawnComponent.h"
+#include "GameFramework/Runtime/Foundation/Framework/GameEvents.h"
+#include "GameFramework/Runtime/Foundation/Framework/GameService.h"
 
 namespace sw
 {
@@ -105,6 +109,8 @@ namespace sw
         , _range{ 30.0f }
         , _bRotateWithView{ false }
         , _captureCamera{}
+        , _followTarget{}
+        , _possessionSubscription{}
         , _listDotMarker{}
     {
     }
@@ -115,6 +121,35 @@ namespace sw
         const GameObject* pOwner = getOwner();
         if ( pOwner != nullptr && pOwner->getComponent<HUDControllerComponent>() == nullptr )
             SW_LOG_ERROR_ID( "Minimap.NoHUD", "Minimap of '%#' needs a HUDControllerComponent on the same object", pOwner->getName().c_str() );
+        _followTarget                      = GameObjectHandle{};
+        EventDispatcher* const pDispatcher = game::findSubsystem<EventDispatcher>();
+        if ( pDispatcher != nullptr )
+            _possessionSubscription = pDispatcher->subscribe<PossessionChangedEvent>(
+                gameEventChannel(), SW_DELEGATE_METHOD( Delegate<void( const PossessionChangedEvent& )>, &MinimapComponent::onPossessionChanged, this ) );
+    }
+
+    void MinimapComponent::onEndPlay()
+    {
+        _possessionSubscription.reset();
+        Component::onEndPlay();
+    }
+
+    void MinimapComponent::onPossessionChanged( const PossessionChangedEvent& event )
+    {
+        const GameObject* const pOwner = getOwner();
+        if ( pOwner == nullptr )
+            return;
+        const GameObjectHandle current = _followTarget.isValid() ? _followTarget : pOwner->getHandle();
+        if ( event._previousPawn != current && event._pawn != pOwner->getHandle() )
+            return;                  // 남의 빙의다
+        _followTarget = event._pawn; // 놓기만 했으면 무효 — 이 오브젝트로 돌아온다
+    }
+
+    const GameObject* MinimapComponent::findFollowTarget() const
+    {
+        const GameObject* const pOwner    = getOwner();
+        const GameObject* const pFollowed = pOwner != nullptr && pOwner->getManager() != nullptr ? pOwner->getManager()->resolveGameObject( _followTarget ) : nullptr;
+        return pFollowed != nullptr ? pFollowed : pOwner;
     }
 
     MinimapPlacement MinimapComponent::computePlacement( const float3& center, float32 yaw, float32 range, const float2& halfSize, const float3& target )
@@ -136,9 +171,9 @@ namespace sw
 
     MinimapPlacement MinimapComponent::computeMarkerPlacement( const MinimapMarkerComponent& marker ) const
     {
-        const GameObject*     pOwner  = getOwner();
-        const SceneComponent* pRoot   = pOwner != nullptr ? pOwner->getPrimarySceneComponent() : nullptr;
-        const SceneComponent* pTarget = marker.getOwner() != nullptr ? marker.getOwner()->getPrimarySceneComponent() : nullptr;
+        const GameObject*     pFollowed = findFollowTarget();
+        const SceneComponent* pRoot     = pFollowed != nullptr ? pFollowed->getPrimarySceneComponent() : nullptr;
+        const SceneComponent* pTarget   = marker.getOwner() != nullptr ? marker.getOwner()->getPrimarySceneComponent() : nullptr;
         if ( pRoot == nullptr || pTarget == nullptr )
         {
             MinimapPlacement outside;
@@ -150,7 +185,8 @@ namespace sw
 
     float32 MinimapComponent::computeYaw() const
     {
-        const PawnComponent* pPawn = _bRotateWithView && getOwner() != nullptr ? getOwner()->getComponent<PawnComponent>() : nullptr;
+        const GameObject*    pFollowed = _bRotateWithView ? findFollowTarget() : nullptr;
+        const PawnComponent* pPawn     = pFollowed != nullptr ? pFollowed->getComponent<PawnComponent>() : nullptr;
         return pPawn != nullptr ? pPawn->getIntent()._controlYaw : 0.0f;
     }
 
@@ -158,7 +194,8 @@ namespace sw
     {
         GameObject* const     pCameraObject = manager.resolveGameObject( _captureCamera );
         CameraComponent*      pCamera       = pCameraObject != nullptr ? pCameraObject->getComponent<CameraComponent>() : nullptr;
-        const SceneComponent* pRoot         = getOwner() != nullptr ? getOwner()->getPrimarySceneComponent() : nullptr;
+        const GameObject*     pFollowed     = findFollowTarget();
+        const SceneComponent* pRoot         = pFollowed != nullptr ? pFollowed->getPrimarySceneComponent() : nullptr;
         if ( pCamera == nullptr || pRoot == nullptr )
             return; // 카메라가 파괴되었다
         const float3 center = pRoot->getWorldPosition();
