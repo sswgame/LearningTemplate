@@ -240,6 +240,8 @@ namespace sw
          * @details 질의 거리는 막는 상자까지라 엄폐물 뒤의 적은 맞지 않는다. 피해 배율은 맞은 바디의 히트 존(머리 ×2 등)이 정한다(`CharacterRayHit::makeHitInfo`).
          */
         void resolveShots( GameObjectManager& manager );
+        /** @brief 다른 플레이어 @p inoutVictim 을 때립니다(서버, 틱 뒤 · 게임 스레드). 쓰러뜨렸으면 처치로 셉니다. 산 사람을 때렸으면 true 입니다. */
+        bool strikePlayer( ShooterPlayerComponent& inoutVictim, float32 damage );
         /** @brief 근접 창의 이번 프레임 칼날을 쓸어 맞힙니다(틱 뒤 · 게임 스레드). 클라이언트는 맞음을 서버에 주장합니다. */
         void resolveMelee( GameObjectManager& manager );
         /**

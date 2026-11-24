@@ -107,3 +107,23 @@ SW_TEST_CASE( LagCompensationTest, BodyIsAVerticalCapsule )
     SW_EXPECT_EQUAL( 1u, history.raycastAt( 0.0f, float3{ 0.0f, 5.0f, 10.0f }, float3{ 0.0f, -1.0f, 0.0f }, 100.0f, 0, distance ) );
     SW_EXPECT_NEAR( 3.0f, distance, 1e-3f );
 }
+
+/** @brief [LagCompensationTest] 두꺼운 선분은 보던 시각의 캡슐에 닿은 몸을 모두 모은다 — 몸 안에서 시작해도 닿고, 지금 자리 · 빼라는 몸 · 두께 밖은 닿지 않는다. */
+SW_TEST_CASE( LagCompensationTest, ThickSegmentCollectsEveryRewoundBodyItTouches )
+{
+    LagCompensationHistory history( 16 );
+    LagCompensationTestUtil::recordWalker( history, 0.5f, 2.0f ); // 틱 n 에 (n, 0, 10)
+    vector<uint32> listTouched;
+    history.collectTouchedAt( 4.0f, float3{ 3.0f, 1.0f, 10.0f }, float3{ 3.4f, 1.0f, 10.0f }, 0.15f, 0, listTouched ); // 옆에서 0.6 + 두께
+    SW_REQUIRE_EQUAL( size_t{ 1 }, listTouched.size() );
+    SW_EXPECT_EQUAL( LagCompensationTestUtil::kWalkerID, listTouched[0] );
+    history.collectTouchedAt( 4.0f, float3{ 4.0f, 1.0f, 10.0f }, float3{ 4.0f, 1.0f, 12.0f }, 0.1f, 0, listTouched ); // 몸 안에서 시작한다
+    SW_EXPECT_EQUAL( size_t{ 2 }, listTouched.size() );
+    history.collectTouchedAt( 9.0f, float3{ 3.0f, 1.0f, 10.0f }, float3{ 3.4f, 1.0f, 10.0f }, 0.15f, 0, listTouched );                                  // 지금은 비켜 있다
+    history.collectTouchedAt( 4.0f, float3{ 3.0f, 1.0f, 10.0f }, float3{ 3.4f, 1.0f, 10.0f }, 0.05f, 0, listTouched );                                  // 두께가 모자란다
+    history.collectTouchedAt( 4.0f, float3{ 3.0f, 2.5f, 10.0f }, float3{ 5.0f, 2.5f, 10.0f }, 0.15f, 0, listTouched );                                  // 머리 위로 지난다
+    history.collectTouchedAt( 4.0f, float3{ 3.0f, 1.0f, 10.0f }, float3{ 5.0f, 1.0f, 10.0f }, 0.15f, LagCompensationTestUtil::kWalkerID, listTouched ); // 빼라는 몸
+    SW_EXPECT_EQUAL( size_t{ 2 }, listTouched.size() );
+    history.collectTouchedAt( 4.0f, float3{ 4.0f, 1.0f, 9.2f }, float3{ 4.0f, 1.0f, 9.2f }, 0.4f, 0, listTouched ); // 점(움직이지 않은 칼날)
+    SW_EXPECT_EQUAL( size_t{ 3 }, listTouched.size() );
+}

@@ -935,12 +935,9 @@ namespace sw
                     killcamHit._distance = hitDistance;
                     if ( pVictim != nullptr )
                     {
-                        const bool bAlive = pVictim->isAlive();
-                        pVictim->takeDamage( shot._damage );
-                        bAnyHit             = bAnyHit || bAlive;
-                        killcamHit._bKilled = bAlive && pVictim->isAlive() == false ? SW_TRUE : SW_FALSE;
-                        if ( killcamHit._bKilled == SW_TRUE )
-                            recordKill();
+                        const bool bHitLanded = strikePlayer( *pVictim, shot._damage );
+                        bAnyHit               = bAnyHit || bHitLanded;
+                        killcamHit._bKilled   = bHitLanded && pVictim->isAlive() == false ? SW_TRUE : SW_FALSE;
                     }
                     else if ( bPredicted == false )
                     {
@@ -1050,11 +1047,37 @@ namespace sw
             if ( bPredicted && pEnemy != nullptr )
                 pNetPawn->queueMeleeClaim( pEnemy->getNetEntityID() );
         }
-        if ( bPredicted == false && hitCount > 0 )
+        bool bHitLanded = bPredicted == false && hitCount > 0;
+        if ( pNetPawn != nullptr && pNetPawn->isServer() )
+        {
+            // 다른 플레이어는 히트박스가 없다 — 사격과 같은 되감은 캡슐로 판정한다. 창 하나에 한 번이다.
+            vector<GameObjectHandle> listPlayer;
+            pNetPawn->collectRewoundMelee( manager, *pOwner, _listMeleePrevious, _listMeleeCurrent, _meleeRadius, listPlayer );
+            for ( const GameObjectHandle target : listPlayer )
+            {
+                GameObject*             pTarget = manager.resolveGameObject( target );
+                ShooterPlayerComponent* pVictim = pTarget != nullptr ? pTarget->getComponent<ShooterPlayerComponent>() : nullptr;
+                if ( pVictim == nullptr || VectorUtil::contains( _listMeleeHitTarget, target ) )
+                    continue;
+                _listMeleeHitTarget.push_back( target );
+                bHitLanded = strikePlayer( *pVictim, _meleeDamage ) || bHitLanded;
+            }
+        }
+        if ( bHitLanded )
             recordMeleeHit();
         _listMeleePrevious.swap( _listMeleeCurrent );
         if ( fraction >= 1.0f )
             _bMeleeActive = SW_FALSE;
+    }
+
+    bool ShooterPlayerComponent::strikePlayer( ShooterPlayerComponent& inoutVictim, float32 damage )
+    {
+        if ( inoutVictim.isAlive() == false )
+            return false;
+        inoutVictim.takeDamage( damage );
+        if ( inoutVictim.isAlive() == false )
+            recordKill();
+        return true;
     }
 
     bool ShooterPlayerComponent::findMuzzlePosition( float3& outMuzzle )

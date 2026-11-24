@@ -188,6 +188,11 @@ namespace sw
          * @return 맞았으면 true 이고 @p outHit 에 맞은 바디입니다(거리는 옮긴 광선 기준이며 옮긴 길이와 같은 방향의 값이다).
          */
         [[nodiscard]] bool raycastRewound( const GameObjectManager& manager, const GameObject& shooter, const Ray& ray, float32 maxDistance, uint32 layerMask, uint64 ignoreObjectID, CharacterRayHit& outHit );
+        /**
+         * @brief 서버의 근접 판정 가운데 다른 플레이어 몫입니다 — 이번 프레임의 칼날(@p listPrevious → @p listCurrent 의 점마다, 그리고 지금 칼날)이 닿은 몸을 모읍니다(씬 자리, 틱 뒤 · 게임 스레드).
+         * @details 사격과 같은 되감은 캡슐이다(휘두른 클라이언트가 보던 틱). 적은 물리 히트박스(`MeleeHit::sweep`)가 맡으므로 들지 않는다. 같은 몸이 겹쳐 들 수 있다.
+         */
+        void collectRewoundMelee( const GameObjectManager& manager, const GameObject& shooter, const vector<float3>& listPrevious, const vector<float3>& listCurrent, float32 radius, vector<GameObjectHandle>& outListTarget ) const;
         /** @brief 몸 @p pawnObject 를 조종하는 계정의 매치 점수를 순위표에 냅니다(서버, 틱 뒤 · 게임 스레드). 판이 끝날 때 플레이어가 부릅니다 — 클라이언트 · 매치가 아닌 판은 아무 일도 없다. */
         void reportMatchScore( const GameObject& pawnObject );
         /** @brief 매치 서버의 판이면 true 입니다(활성 미니게임이 매치이고 이 월드가 서버다). */

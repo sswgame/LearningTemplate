@@ -1169,6 +1169,31 @@ namespace sw
         return true;
     }
 
+    void ShooterNetPawnComponent::collectRewoundMelee( const GameObjectManager& manager, const GameObject& shooter, const vector<float3>& listPrevious, const vector<float3>& listCurrent, float32 radius,
+                                                       vector<GameObjectHandle>& outListTarget ) const
+    {
+        const ServerPawn* const pShooter = findServerPawn( shooter.getHandle() );
+        if ( pShooter == nullptr || listCurrent.empty() )
+            return;
+        const float32      viewTick  = findShotViewTick( manager, *pShooter );
+        const uint32       shooterID = makePawnEntityID( *pShooter );
+        const WorldOrigin& origin    = manager.getWorldOrigin(); // 기록은 절대, 칼날은 씬 자리다
+        vector<uint32>     listTouched;
+        if ( listPrevious.size() == listCurrent.size() )
+        {
+            for ( size_t pointIndex = 0; pointIndex < listCurrent.size(); ++pointIndex )
+            {
+                _lagHistory.collectTouchedAt( viewTick, origin.toAbsolute( listPrevious[pointIndex] ), origin.toAbsolute( listCurrent[pointIndex] ), radius, shooterID, listTouched );
+            }
+        }
+        _lagHistory.collectTouchedAt( viewTick, origin.toAbsolute( listCurrent.front() ), origin.toAbsolute( listCurrent.back() ), radius, shooterID, listTouched );
+        for ( const uint32 entityID : listTouched )
+        {
+            if ( entityID < kEnemyEntityIDBase )
+                outListTarget.push_back( _listServerPawn[entityID - kPawnEntityID]._object );
+        }
+    }
+
     bool ShooterNetPawnComponent::writeOwnerState( const ShooterOwnerNetState& state, vector<uint8>& outBytes )
     {
         return ShooterNetPawnComponentInternal::writeState( state, outBytes ); // 칸 선언이 곧 바이트다 — 스키마는 핸드셰이크가 확인했다(`PlaygroundGame::onRegisterReplicatedTypes`)

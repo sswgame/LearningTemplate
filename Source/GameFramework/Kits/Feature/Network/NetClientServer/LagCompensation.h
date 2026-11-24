@@ -38,6 +38,11 @@ namespace sw
         bool sampleAt( float32 tick, uint32 entityID, LagRecord& outRecord ) const;
         /** @brief 그 시각의 광선 명중을 판정해 가장 가까운 몸을 반환합니다(@p direction 은 단위 벡터). 맞은 몸이 없으면 0을 반환하고 @p outDistance 는 @p maxDistance 입니다. 광선의 출발점이 몸 안이면 그 몸은 맞지 않습니다. */
         uint32 raycastAt( float32 tick, const float3& origin, const float3& direction, float32 maxDistance, uint32 ignoreEntityID, float32& outDistance ) const;
+        /**
+         * @brief 그 시각에 두께 @p radius 의 선분(@p start ~ @p end — 근접 칼날)이 닿은 몸의 id 를 모두 @p outListEntityID 뒤에 붙입니다(가까운 차례가 아니다). 선분이 몸 안에서 시작해도 닿은 것입니다.
+         * @details 몸은 `raycastAt` 과 같은 되감은 캡슐이다. 선분 · 캡슐 축의 최단 거리로 본다.
+         */
+        void   collectTouchedAt( float32 tick, const float3& start, const float3& end, float32 radius, uint32 ignoreEntityID, vector<uint32>& outListEntityID ) const;
         uint32 getNewestTick() const { return _listFrame.getNewestTick(); }
 
     private:

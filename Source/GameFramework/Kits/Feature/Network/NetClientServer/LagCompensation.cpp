@@ -25,6 +25,33 @@ namespace sw
                 outDistance = along - MathUtil::sqrt( radiusSquared - closestSquared );
                 return outDistance >= 0.0f;
             }
+
+            /** @brief 두 선분의 최단 거리 제곱입니다(길이 0 인 선분은 점이다). */
+            static float32 computeSegmentDistanceSquared( const float3& startA, const float3& endA, const float3& startB, const float3& endB )
+            {
+                const float3  alongA      = endA - startA;
+                const float3  alongB      = endB - startB;
+                const float3  between     = startA - startB;
+                const float32 lengthA     = alongA.getLengthSquared();
+                const float32 lengthB     = alongB.getLengthSquared();
+                const float32 projectionB = alongB.dot( between );
+                float32       ratioA      = 0.0f;
+                float32       ratioB      = 0.0f;
+                if ( lengthA > MathUtil::kEpsilon )
+                {
+                    const float32 projectionA = alongA.dot( between );
+                    const float32 crossing    = alongA.dot( alongB );
+                    const float32 determinant = lengthA * lengthB - crossing * crossing;
+                    ratioA                    = determinant > MathUtil::kEpsilon ? MathUtil::saturate( ( crossing * projectionB - projectionA * lengthB ) / determinant ) : 0.0f; // 나란하면 아무 점에서 시작한다
+                    ratioB                    = lengthB > MathUtil::kEpsilon ? MathUtil::saturate( ( crossing * ratioA + projectionB ) / lengthB ) : 0.0f;
+                    ratioA                    = MathUtil::saturate( ( crossing * ratioB - projectionA ) / lengthA ); // 자른 B 에 가장 가까운 A 의 점
+                }
+                else if ( lengthB > MathUtil::kEpsilon )
+                {
+                    ratioB = MathUtil::saturate( projectionB / lengthB );
+                }
+                return ( startA + alongA * ratioA - startB - alongB * ratioB ).getLengthSquared();
+            }
         };
     } // namespace
 
@@ -139,5 +166,23 @@ namespace sw
         }
         outDistance = bestDistance;
         return bestID;
+    }
+
+    void LagCompensationHistory::collectTouchedAt( float32 tick, const float3& start, const float3& end, float32 radius, uint32 ignoreEntityID, vector<uint32>& outListEntityID ) const
+    {
+        const vector<LagRecord>* pNewest = _listFrame.hasNewest() ? _listFrame.find( _listFrame.getNewestTick() ) : nullptr;
+        if ( pNewest == nullptr )
+            return;
+        for ( const LagRecord& current : *pNewest )
+        {
+            LagRecord past;
+            if ( current._entityID == ignoreEntityID || sampleAt( tick, current._entityID, past ) == false )
+                continue;
+            const float3  bottom     = past._height > 0.0f ? past._position + float3{ 0.0f, past._radius, 0.0f } : past._position;
+            const float32 axisLength = MathUtil::max( 0.0f, past._height - past._radius * 2.0f );
+            const float32 reach      = past._radius + radius;
+            if ( LagCompensationInternal::computeSegmentDistanceSquared( start, end, bottom, bottom + float3{ 0.0f, axisLength, 0.0f } ) <= reach * reach )
+                outListEntityID.push_back( current._entityID );
+        }
     }
 } // namespace sw
