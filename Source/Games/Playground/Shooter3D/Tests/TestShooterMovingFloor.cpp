@@ -394,7 +394,7 @@ SW_TEST_CASE( ShooterMovingFloorNetTest, CrossingAndJumpingStayPredicted, ._time
 /** @brief [ShooterFloorRewindTest] 빠른 바닥 위의 두 사람 — 과거를 보고 쏜 탄도 쏜 사람이 본 바닥 위의 자리를 맞힌다(절대 자리로 되감으면 바닥이 간 만큼 빗나간다) */
 SW_TEST_CASE( ShooterFloorRewindTest, ShotsHitTheBodyWhereTheShooterSawItOnTheFloor )
 {
-    SW_EXPECT_LOG( "AudioEngine.UnknownAudioEvent" ); // 맞음 소리 — 사운드 이벤트 표가 없다
+    ShooterServerTestWorld::expectHitSound();
     SW_EXPECT_LOG( "PrefabPool.PrefabPoolCannotSpawn" );
     ShooterServerTestWorld world{ ShooterServerTestWorld::WeaponTable::Present };
     game::ScopedGameScope  scopedScope( world._scope );
