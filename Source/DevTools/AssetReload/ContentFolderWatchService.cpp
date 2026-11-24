@@ -33,7 +33,7 @@ namespace sw
 
     Subscription ContentFolderWatchService::watchAssetFolder( string_view folderID, const vector<string>& listExtension, const ChangedDelegate& onChanged )
     {
-        vector<string> listDiskFolder;
+        vector<AbsolutePath> listDiskFolder;
         engine::getSubsystem<AssetPaths>().collectLooseFolders( folderID, listDiskFolder );
         if ( listDiskFolder.empty() )
         {
@@ -41,9 +41,9 @@ namespace sw
             return {};
         }
         unique_ptr<Watch> watch = make_unique<Watch>();
-        for ( const string& diskFolder : listDiskFolder )
+        for ( const AbsolutePath& diskFolder : listDiskFolder )
         {
-            Subscription match = _fileWatch.watch( FileUtil::toDiskPath( diskFolder ), FileWatchDepth::Tree, listExtension, SW_DELEGATE_METHOD( FileChangeDelegate, &Watch::onFileChanged, watch.get() ) );
+            Subscription match = _fileWatch.watch( diskFolder, FileWatchDepth::Tree, listExtension, SW_DELEGATE_METHOD( FileChangeDelegate, &Watch::onFileChanged, watch.get() ) );
             if ( match.isActive() == false )
                 return {}; // 감시 창구가 이유를 남겼다
             watch->_listMatch.push_back( std::move( match ) );

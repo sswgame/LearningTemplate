@@ -17,7 +17,7 @@ namespace
     struct TestPackManagerInternal
     {
         /** @brief @p packPath 에 항목들을 담은 팩을 씁니다. @p mountDomain 이 비면 패치 팩이다(항목이 전체 경로). */
-        static bool writePack( const string& packPath, string_view mountDomain, const vector<std::pair<string, string>>& listEntry )
+        static bool writePack( const AbsolutePath& packPath, string_view mountDomain, const vector<std::pair<string, string>>& listEntry )
         {
             return PackTestUtil::writeTextPack( packPath, mountDomain, listEntry );
         }
@@ -37,12 +37,12 @@ SW_TEST_CASE( PackManagerTest, PatchReplacesAndRemovesForDomainAndDomainlessKeys
     const AbsolutePath base  = root.join( "engine.pack" );
     const AbsolutePath patch = root.join( "patch_1.pack" );
     SW_REQUIRE_TRUE( FileUtil::ensureDirectoryExists( root ) );
-    SW_REQUIRE_TRUE( Internal::writePack( base.str(), "engine", {
-                                                                    {"textures/a.txt",  "old"},
-                                                                    {"textures/b.txt", "gone"},
-                                                                    {"textures/c.txt", "kept"}
+    SW_REQUIRE_TRUE( Internal::writePack( base, "engine", {
+                                                              {"textures/a.txt",  "old"},
+                                                              {"textures/b.txt", "gone"},
+                                                              {"textures/c.txt", "kept"}
     } ) );
-    SW_REQUIRE_TRUE( Internal::writePack( patch.str(), {
+    SW_REQUIRE_TRUE( Internal::writePack( patch, {
     },
                                           { { "engine/textures/a.txt", "new" } } ) );
 
@@ -63,8 +63,8 @@ SW_TEST_CASE( PackManagerTest, FindsDLCDomainPacks )
     const AbsolutePath root = test::makeScratchPath( "Packs" );
     const AbsolutePath dlc  = root.join( "seasonal.pack" ); // 이름은 도메인을 말하지 않는다
     SW_REQUIRE_TRUE( FileUtil::ensureDirectoryExists( root ) );
-    SW_REQUIRE_TRUE( Internal::writePack( dlc.str(), "dlc/winter", {
-                                                                       { "maps/snow.txt", "snow" }
+    SW_REQUIRE_TRUE( Internal::writePack( dlc, "dlc/winter", {
+                                                                 { "maps/snow.txt", "snow" }
     } ) );
 
     PackManager packs;
@@ -80,10 +80,10 @@ SW_TEST_CASE( PackManagerTest, RejectsPackMountedAgainstItsDomain )
     const AbsolutePath domain = root.join( "engine.pack" );
     const AbsolutePath patch  = root.join( "patch_1.pack" );
     SW_REQUIRE_TRUE( FileUtil::ensureDirectoryExists( root ) );
-    SW_REQUIRE_TRUE( Internal::writePack( domain.str(), "engine", {
-                                                                      { "a.txt", "a" }
+    SW_REQUIRE_TRUE( Internal::writePack( domain, "engine", {
+                                                                { "a.txt", "a" }
     } ) );
-    SW_REQUIRE_TRUE( Internal::writePack( patch.str(), {
+    SW_REQUIRE_TRUE( Internal::writePack( patch, {
     },
                                           { { "engine/a.txt", "b" } } ) );
 
@@ -100,8 +100,8 @@ SW_TEST_CASE( PackManagerTest, ScansAndReadsPacksThroughTheContentFileSource )
     const AbsolutePath diskRoot = test::makeScratchPath( "Packs" );
     const AbsolutePath diskPack = diskRoot.join( "engine.pack" );
     SW_REQUIRE_TRUE( FileUtil::ensureDirectoryExists( diskRoot ) );
-    SW_REQUIRE_TRUE( Internal::writePack( diskPack.str(), "engine", {
-                                                                        { "data/a.txt", "from memory" }
+    SW_REQUIRE_TRUE( Internal::writePack( diskPack, "engine", {
+                                                                  { "data/a.txt", "from memory" }
     } ) );
     vector<uint8> packBytes;
     SW_REQUIRE_TRUE( FileUtil::readFile( diskPack, packBytes ) );
@@ -125,8 +125,8 @@ SW_TEST_CASE( PackManagerTest, PackOutsideTheSearchPriorityNeedsAnExplicitPriori
     const AbsolutePath root = test::makeScratchPath( "Packs" );
     const AbsolutePath dlc  = root.join( "seasonal.pack" );
     SW_REQUIRE_TRUE( FileUtil::ensureDirectoryExists( root ) );
-    SW_REQUIRE_TRUE( Internal::writePack( dlc.str(), "dlc/winter", {
-                                                                       { "maps/snow.txt", "snow" }
+    SW_REQUIRE_TRUE( Internal::writePack( dlc, "dlc/winter", {
+                                                                 { "maps/snow.txt", "snow" }
     } ) );
 
     SW_EXPECT_LOG( "Pack.NoPriority" );
@@ -142,7 +142,7 @@ SW_TEST_CASE( PackManagerTest, PatchPackAloneAnswersItsFullPaths )
     const AbsolutePath root = test::makeScratchPath( "Packs" );
     const AbsolutePath mod  = root.join( "mod.pack" );
     SW_REQUIRE_TRUE( FileUtil::ensureDirectoryExists( root ) );
-    SW_REQUIRE_TRUE( Internal::writePack( mod.str(), {
+    SW_REQUIRE_TRUE( Internal::writePack( mod, {
     },
                                           { { "mods/lantern/data/lantern.xml", "lamp" }, { "game/playground/data/welcome.xml", "modded" } } ) );
 
@@ -176,8 +176,8 @@ SW_TEST_CASE( PackManagerTest, DLCPackNeedsAnEntitlementValidator )
     SW_REQUIRE_TRUE( FileUtil::ensureDirectoryExists( root ) );
     PackWriterDesc desc = PackTestUtil::makeDesc( "dlc/paid" );
     desc._dlcAppID      = 4242;
-    SW_REQUIRE_TRUE( PackTestUtil::writePack( dlc.str(), desc, {
-                                                                   { "maps/gold.txt", vector<uint8>{ 'g', 'o', 'l', 'd' } }
+    SW_REQUIRE_TRUE( PackTestUtil::writePack( dlc, desc, {
+                                                             { "maps/gold.txt", vector<uint8>{ 'g', 'o', 'l', 'd' } }
     } ) );
 
     PackManager packs;
@@ -209,14 +209,14 @@ SW_TEST_CASE( PackManagerTest, SiblingPacksOverlapIsAnError )
     const AbsolutePath second = root.join( "game_split.1.pack" );
     const AbsolutePath clash  = root.join( "game_split.2.pack" );
     SW_REQUIRE_TRUE( FileUtil::ensureDirectoryExists( root ) );
-    SW_REQUIRE_TRUE( Internal::writePack( first.str(), "game/split", {
-                                                                         { "maps/a.txt", "a" }
+    SW_REQUIRE_TRUE( Internal::writePack( first, "game/split", {
+                                                                   { "maps/a.txt", "a" }
     } ) );
-    SW_REQUIRE_TRUE( Internal::writePack( second.str(), "game/split", {
-                                                                          { "maps/b.txt", "b" }
+    SW_REQUIRE_TRUE( Internal::writePack( second, "game/split", {
+                                                                    { "maps/b.txt", "b" }
     } ) );
-    SW_REQUIRE_TRUE( Internal::writePack( clash.str(), "game/split", {
-                                                                         { "maps/a.txt", "again" }
+    SW_REQUIRE_TRUE( Internal::writePack( clash, "game/split", {
+                                                                   { "maps/a.txt", "again" }
     } ) );
 
     PackManager packs;

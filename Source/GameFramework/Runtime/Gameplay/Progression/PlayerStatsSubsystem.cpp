@@ -174,7 +174,7 @@ namespace sw
             return SubsystemInitResult::Failed;
         }
         const string                      gameName = FileUtil::getFileNamePart( FileUtil::trimTrailingSlashes( game::getSubsystem<const GameConfig>()._packRoot.get() ) );
-        const string                      folder   = FileUtil::joinPath( FileUtil::joinPath( FileUtil::getDirectoryPart( pUserSettings->getUserFilePath().str() ), Internal::kPlatformFolderName ), gameName );
+        const AbsolutePath                folder   = pUserSettings->getUserFilePath().getParent().join( Internal::kPlatformFolderName ).join( gameName );
         unique_ptr<LocalPlatformServices> pLocal   = make_unique<LocalPlatformServices>( folder );
         _stats.initialize( _pCatalog.get() );
         if ( _achievements.initialize( _pCatalog.get(), &_stats, pLocal.get() ) == false )

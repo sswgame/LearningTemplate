@@ -231,7 +231,7 @@ namespace sw
                     outReply = makeNoPlotReply( listArgument[0] );
                     return true;
                 }
-                if ( pPlot->saveToFile( path ) == false )
+                if ( pPlot->saveToFile( FileUtil::toDiskPath( path ) ) == false )
                 {
                     outReply = "housing: save failed (see the log)";
                     return true;
@@ -254,7 +254,7 @@ namespace sw
                     outReply = makeNoPlotReply( listArgument[0] );
                     return true;
                 }
-                if ( pPlot->loadFromFile( path ) == false )
+                if ( pPlot->loadFromFile( FileUtil::toDiskPath( path ) ) == false )
                 {
                     outReply = "housing: load failed (see the log)";
                     return true;
@@ -514,17 +514,17 @@ namespace sw
             SW_LOG_ERROR_ID( "HousingPlot.StateNotRestored", "Housing plot '%#': the saved state could not be read - the plot keeps its current layout", _settings._plotID.c_str() );
     }
 
-    bool HousingPlotComponent::saveToFile( string_view absolutePath ) const
+    bool HousingPlotComponent::saveToFile( const AbsolutePath& absolutePath ) const
     {
         Archive archive;
         writeState( archive );
-        if ( FileUtil::writeFile( FileUtil::toDiskPath( absolutePath ), archive.getData(), archive.getSize() ) )
+        if ( FileUtil::writeFile( absolutePath, archive.getData(), archive.getSize() ) )
             return true;
-        SW_LOG_ERROR_ID( "HousingPlot.SaveWriteFailed", "Housing plot '%#': cannot write '%#'", _settings._plotID.c_str(), absolutePath );
+        SW_LOG_ERROR_ID( "HousingPlot.SaveWriteFailed", "Housing plot '%#': cannot write '%#'", _settings._plotID.c_str(), absolutePath.str() );
         return false;
     }
 
-    bool HousingPlotComponent::loadFromFile( string_view absolutePath )
+    bool HousingPlotComponent::loadFromFile( const AbsolutePath& absolutePath )
     {
         if ( _netRole == HousingNetRole::Client )
         {
@@ -532,9 +532,9 @@ namespace sw
             return false;
         }
         vector<uint8> bytes;
-        if ( FileUtil::readFile( FileUtil::toDiskPath( absolutePath ), bytes ) == false )
+        if ( FileUtil::readFile( absolutePath, bytes ) == false )
         {
-            SW_LOG_ERROR_ID( "HousingPlot.LoadReadFailed", "Housing plot '%#': cannot read '%#'", _settings._plotID.c_str(), absolutePath );
+            SW_LOG_ERROR_ID( "HousingPlot.LoadReadFailed", "Housing plot '%#': cannot read '%#'", _settings._plotID.c_str(), absolutePath.str() );
             return false;
         }
         Archive archive( bytes.data(), bytes.size() );

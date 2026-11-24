@@ -50,10 +50,10 @@ SW_TEST_CASE( ImportConfigReadTest, MissingRuleFilesAreErrors )
     const sw::AbsolutePath missing = sw::test::makeScratchPath( "NoImportConfig.json" );
     SW_EXPECT_LOG( "TextureImportConfig.FailedReadTextureImportConfigFile" );
     sw::editor::TextureImportConfig textureConfig;
-    SW_EXPECT_FALSE( textureConfig.loadFromFile( missing.str() ) );
+    SW_EXPECT_FALSE( textureConfig.loadFromFile( missing ) );
     SW_EXPECT_LOG( "ModelImportConfig.FailedReadModelImportConfigFile" );
     sw::editor::ModelImportConfig modelConfig;
-    SW_EXPECT_FALSE( modelConfig.loadFromFile( missing.str() ) );
+    SW_EXPECT_FALSE( modelConfig.loadFromFile( missing ) );
 }
 
 /**

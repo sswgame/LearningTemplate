@@ -100,13 +100,13 @@ namespace sw::editor
     bool AssetImportRuleUtil::readMetaOverrides( string_view sourcePath, vector<AssetImportOverride>& outListOverride )
     {
         outListOverride.clear();
-        const string           metaPath = AssetMeta::makePath( sourcePath );
+        const AbsolutePath     metaPath = FileUtil::toDiskPath( AssetMeta::makePath( sourcePath ) );
         string                 text;
-        const OptionalFileRead read = FileUtil::readOptionalTextFile( FileUtil::toDiskPath( metaPath ), text );
+        const OptionalFileRead read = FileUtil::readOptionalTextFile( metaPath, text );
         if ( read == OptionalFileRead::Missing )
             return true;
         AssetMeta meta;
-        if ( read == OptionalFileRead::Failed || meta.parseXML( text, metaPath ).has_value() == false )
+        if ( read == OptionalFileRead::Failed || meta.parseXML( text, metaPath.str() ).has_value() == false )
         {
             SW_LOG_ERROR_ID( "AssetImportConfig.MetaUnreadable", "Could not read the import overrides of '%#' - fix its .meta before importing", metaPath.c_str() );
             return false;

@@ -68,7 +68,7 @@ namespace sw
             /** @brief 작업 폴더를 실행 파일 폴더로 옮깁니다. */
             static void enterExecutableDirectory()
             {
-                const string executablePath = FileUtil::getExecutablePath();
+                const string executablePath = FileUtil::getExecutablePath().str();
                 if ( executablePath.empty() )
                     return;
                 (void)FileUtil::setCurrentPath( FileUtil::getDirectoryPart( executablePath ) ); // 실패는 setCurrentPath 가 로그로 남긴다

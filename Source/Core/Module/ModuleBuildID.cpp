@@ -67,7 +67,7 @@ namespace sw
                 if ( pQuery->_bMain == false && containsAddress( pInfo, pQuery->_address ) == false )
                     return 0;
                 pQuery->_bFound             = true;
-                pQuery->_result._modulePath = ( pInfo->dlpi_name != nullptr && pInfo->dlpi_name[0] != '\0' ) ? pInfo->dlpi_name : FileUtil::getExecutablePath();
+                pQuery->_result._modulePath = ( pInfo->dlpi_name != nullptr && pInfo->dlpi_name[0] != '\0' ) ? pInfo->dlpi_name : FileUtil::getExecutablePath().str();
                 for ( uint16 headerIndex = 0; headerIndex < pInfo->dlpi_phnum; ++headerIndex )
                 {
                     const ElfW( Phdr ) & header = pInfo->dlpi_phdr[headerIndex];

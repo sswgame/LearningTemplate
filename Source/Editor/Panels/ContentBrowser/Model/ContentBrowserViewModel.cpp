@@ -43,20 +43,20 @@ namespace sw::editor
             struct State
             {
                 vector<ContentBrowserRequest> _listRequest;
-                string                        _selectedAssetAbs;
+                AbsolutePath                  _selectedAssetAbs;
             };
         };
     } // namespace
 
-    void ContentBrowserViewModel::postRequest( ContentBrowserRequestKind kind, string_view absolutePath )
+    void ContentBrowserViewModel::postRequest( ContentBrowserRequestKind kind, const AbsolutePath& absolutePath )
     {
-        getEditorState<ContentBrowserViewModelRequests::State>()._listRequest.push_back( ContentBrowserRequest{ kind, string{ absolutePath } } );
+        getEditorState<ContentBrowserViewModelRequests::State>()._listRequest.push_back( ContentBrowserRequest{ kind, absolutePath } );
         EditorContext* pContext = editor::findSubsystem<EditorContext>();
         if ( pContext != nullptr )
             pContext->getSubsystem<EditorWorkspace>().requestOpenPanelByID( editorpanel::kContentBrowser.getView() );
     }
 
-    string ContentBrowserViewModel::findPublishedSelection()
+    AbsolutePath ContentBrowserViewModel::findPublishedSelection()
     {
         return getEditorState<ContentBrowserViewModelRequests::State>()._selectedAssetAbs;
     }
@@ -72,8 +72,8 @@ namespace sw::editor
             {
                 case ContentBrowserRequestKind::Reveal:
                 {
-                    openFolder( FileUtil::getDirectoryPart( request._absolutePath ) );
-                    selectAssetPath( request._absolutePath );
+                    openFolder( request._absolutePath.getParent() );
+                    selectAssetPath( request._absolutePath.str() );
                     break;
                 }
                 case ContentBrowserRequestKind::OpenFolder:
@@ -243,9 +243,7 @@ namespace sw::editor
 
     void ContentBrowserViewModel::update( bool bSearchActive )
     {
-        string& publishedSelection = getEditorState<ContentBrowserViewModelRequests::State>()._selectedAssetAbs;
-        if ( publishedSelection != _selectedAssetAbs )
-            publishedSelection = _selectedAssetAbs; // 대상 없는 에셋 명령(단축키)이 읽는다 — 명령은 창 인스턴스를 모른다
+        getEditorState<ContentBrowserViewModelRequests::State>()._selectedAssetAbs = _selectedAssetAbs; // 대상 없는 에셋 명령(단축키)이 읽는다 — 명령은 창 인스턴스를 모른다
         if ( bSearchActive != _bListingRecursive )
         {
             _bListingRecursive = bSearchActive;
@@ -268,7 +266,7 @@ namespace sw::editor
     {
         _folderCache.clear();
         _listEntry.clear();
-        _selectedAssetAbs.clear();
+        _selectedAssetAbs = {};
         refreshRoots();
         refreshCurrentFolder();
     }
@@ -283,7 +281,7 @@ namespace sw::editor
                 return;
             ContentBrowserRoot root;
             root._displayName  = string{ name };
-            root._absolutePath = FileUtil::normalizeSeparators( path );
+            root._absolutePath = FileUtil::toDiskPath( FileUtil::normalizeSeparators( path ) );
             _listRoot.push_back( std::move( root ) );
         };
 
@@ -295,28 +293,28 @@ namespace sw::editor
         }
         const string& packRoot = editor::getSubsystem<const GameConfig>()._packRoot.get();
         if ( packRoot.empty() == false )
-            addRoot( packRoot, EditorPaths::findContentFolder( packRoot ) );
+            addRoot( packRoot, EditorPaths::findContentFolder( packRoot ).str() );
         if ( _bShowAllPacks || packRoot.empty() )
         {
             vector<string> listPackDomain;
-            (void)AssetPaths::collectGamePackDomains( FileUtil::toDiskPath( editor::getSubsystem<AssetPaths>().getRootFolderPath() ), listPackDomain ); // game/ 이 없으면 팩 루트가 없다
+            (void)AssetPaths::collectGamePackDomains( editor::getSubsystem<AssetPaths>().getRootFolderPath(), listPackDomain ); // game/ 이 없으면 팩 루트가 없다
             for ( const string& packDomain : listPackDomain )
             {
                 const string packName = FileUtil::normalizePath( packDomain ).str();
                 if ( packName != FileUtil::normalizePath( packRoot ).str() )
-                    addRoot( packName, EditorPaths::findContentFolder( packDomain ) );
+                    addRoot( packName, EditorPaths::findContentFolder( packDomain ).str() );
             }
         }
-        addRoot( constant::path::kEnginePack, EditorPaths::findContentFolder( constant::path::kEnginePack ) );
-        addRoot( constant::path::kCommonPack, EditorPaths::findContentFolder( constant::path::kCommonPack ) );
-        addRoot( constant::path::kEditorPack, EditorPaths::findContentFolder( constant::path::kEditorPack ) );
+        addRoot( constant::path::kEnginePack, EditorPaths::findContentFolder( constant::path::kEnginePack ).str() );
+        addRoot( constant::path::kCommonPack, EditorPaths::findContentFolder( constant::path::kCommonPack ).str() );
+        addRoot( constant::path::kEditorPack, EditorPaths::findContentFolder( constant::path::kEditorPack ).str() );
 
         // 처음이거나 지금 폴더가 숨긴 게임 팩 안에 있으면 첫 루트로 이동한다. 루트가 아닌 다른 도메인(자동화 사본 `scratch/` - `content.open` 이 연다)은 그대로 둔다 -
         // 예전에는 "어느 루트 아래도 아니면" 이동해, 루트를 다시 만드는 순간(시나리오 단계 초기화 뒤) 연 사본 폴더에서 쫓겨났다.
-        const ComparableDiskPath selectedFolder       = FileUtil::makeComparableDiskPath( _selectedFolderAbs );
-        const string             gamePacksFolder      = EditorPaths::findContentFolder( constant::path::kGamePack );
+        const ComparableDiskPath selectedFolder       = FileUtil::makeComparableDiskPath( _selectedFolderAbs.str() );
+        const string             gamePacksFolder      = EditorPaths::findContentFolder( constant::path::kGamePack ).str();
         const bool               bSelectedIsUnderRoot = VectorUtil::containsIf( _listRoot, [&]( const ContentBrowserRoot& root )
-                      { return FileUtil::startsWithPathComponent( selectedFolder, FileUtil::makeComparableDiskPath( root._absolutePath ) ); } );
+                      { return FileUtil::startsWithPathComponent( selectedFolder, FileUtil::makeComparableDiskPath( root._absolutePath.str() ) ); } );
         const bool               bInHiddenGamePack =
             bSelectedIsUnderRoot == false && gamePacksFolder.empty() == false && FileUtil::startsWithPathComponent( selectedFolder, FileUtil::makeComparableDiskPath( gamePacksFolder ) );
         if ( ( selectedFolder.empty() || bInHiddenGamePack ) && _listRoot.empty() == false )
@@ -351,7 +349,7 @@ namespace sw::editor
 
     void ContentBrowserViewModel::refreshCurrentFolder()
     {
-        _folderJob.request( _selectedFolderAbs, _bListingRecursive );
+        _folderJob.request( _selectedFolderAbs.str(), _bListingRecursive );
         _bFolderDirty = SW_FALSE;
     }
 
@@ -376,24 +374,24 @@ namespace sw::editor
         _folderCache.clear();
     }
 
-    void ContentBrowserViewModel::openFolder( string_view absolutePath )
+    void ContentBrowserViewModel::openFolder( const AbsolutePath& absolutePath )
     {
         vector<ContentBrowserBreadcrumb> listBreadcrumb;
         makeTrailForFolder( absolutePath, listBreadcrumb );
         selectFolder( absolutePath, listBreadcrumb );
     }
 
-    void ContentBrowserViewModel::selectFolder( string_view absolutePath, const vector<ContentBrowserBreadcrumb>& listBreadcrumb, bool bRecordHistory )
+    void ContentBrowserViewModel::selectFolder( const AbsolutePath& absolutePath, const vector<ContentBrowserBreadcrumb>& listBreadcrumb, bool bRecordHistory )
     {
-        const string normalizedPath = FileUtil::normalizeSeparators( absolutePath );
+        const AbsolutePath normalizedPath = absolutePath;
         if ( bRecordHistory )
             _history.record( normalizedPath, listBreadcrumb );
 
         // 탐색과 I/O 는 실제 파일 시스템의 대소문자를 쓰고, 새로 만드는 파일 이름은 소문자다(리소스 id 규칙).
         _selectedFolderAbs = normalizedPath;
         _listBreadcrumb    = listBreadcrumb;
-        _selectedAssetAbs.clear();
-        _bFolderDirty = SW_TRUE;
+        _selectedAssetAbs  = {};
+        _bFolderDirty      = SW_TRUE;
     }
 
     void ContentBrowserViewModel::selectBreadcrumb( size_t breadcrumbIndex )
@@ -405,11 +403,11 @@ namespace sw::editor
         selectFolder( listBreadcrumb.back()._absolutePath, listBreadcrumb );
     }
 
-    void ContentBrowserViewModel::makeTrailForFolder( string_view folderAbs, vector<ContentBrowserBreadcrumb>& outListBreadcrumb ) const
+    void ContentBrowserViewModel::makeTrailForFolder( const AbsolutePath& folderAbs, vector<ContentBrowserBreadcrumb>& outListBreadcrumb ) const
     {
         for ( const ContentBrowserRoot& root : _listRoot )
         {
-            if ( FileUtil::isPathAtOrUnderRoot( root._absolutePath, folderAbs ) )
+            if ( FileUtil::isPathAtOrUnderRoot( root._absolutePath.str(), folderAbs.str() ) )
             {
                 ContentBrowserBreadcrumb::makeFolderTrail( root._displayName, root._absolutePath, folderAbs, outListBreadcrumb );
                 return;
@@ -463,9 +461,9 @@ namespace sw::editor
         const auto filePath = editor::getSubsystem<AssetPaths>().findLooseFile( FileUtil::normalizePath( assetID ).str() ); // 디스크 파일(없으면 비어 있다)
         if ( filePath.has_value() == false )
             return false; // 쿠킹 묶음에만 있는 애셋 — 보일 폴더가 없다
-        openFolder( FileUtil::getDirectoryPart( filePath->str() ) );
+        openFolder( filePath->getParent() );
         // 폴더를 고르면 선택이 비므로 그 뒤에 고른다 — 목록이 새로 와도 경로로 고르므로 그 타일이 고른 채 선다.
-        _selectedAssetAbs = FileUtil::normalizeSeparators( filePath->str() );
+        _selectedAssetAbs = *filePath;
         editor::getSubsystem<EditorContext>().getSubsystem<EditorWorkspace>().setFocusedAssetPath( string{ assetID }.c_str() );
         return true;
     }
@@ -474,7 +472,7 @@ namespace sw::editor
     {
         for ( const AssetEntry& entry : _listEntry )
         {
-            if ( FileUtil::isSameDiskPath( entry._absolutePath, absolutePath ) )
+            if ( FileUtil::isSameDiskPath( entry._absolutePath.str(), absolutePath ) )
             {
                 selectAsset( entry );
                 return;
@@ -499,15 +497,15 @@ namespace sw::editor
 
     bool ContentBrowserViewModel::isSelected( const AssetEntry& entry, bool bFolderToo ) const
     {
-        if ( FileUtil::isSameDiskPath( entry._absolutePath, _selectedAssetAbs ) )
+        if ( FileUtil::isSameDiskPath( entry._absolutePath.str(), _selectedAssetAbs.str() ) )
             return true;
-        return bFolderToo && entry._bIsDirectory && FileUtil::isSameDiskPath( entry._absolutePath, _selectedFolderAbs );
+        return bFolderToo && entry._bIsDirectory && FileUtil::isSameDiskPath( entry._absolutePath.str(), _selectedFolderAbs.str() );
     }
 
-    void ContentBrowserViewModel::selectAfterFileChange( string_view absolutePath )
+    void ContentBrowserViewModel::selectAfterFileChange( const AbsolutePath& absolutePath )
     {
         // 감시도 같은 변경을 알리지만 한두 프레임 늦다. 결과를 아는 위치에서 바로 다시 읽는다.
-        _selectedAssetAbs = FileUtil::normalizeSeparators( absolutePath );
+        _selectedAssetAbs = absolutePath;
         _bFolderDirty     = SW_TRUE;
         _folderCache.clear();
         // 이 변경 전에 시작한 스캔은 이동이 고친 색인을 오래된 결과로 덮어쓴다. 그 결과를 버리고 새로 스캔한다.
@@ -519,7 +517,7 @@ namespace sw::editor
         string folderAbs;
         if ( ContentBrowserFileActions::createFolder( _selectedFolderAbs, folderAbs ) == false )
             return false;
-        selectAfterFileChange( folderAbs );
+        selectAfterFileChange( FileUtil::toDiskPath( folderAbs ) );
         return true;
     }
 
@@ -528,20 +526,20 @@ namespace sw::editor
         string assetAbs;
         if ( ContentBrowserFileActions::createAsset( _selectedFolderAbs, assetTemplate, assetAbs ) == false )
             return false;
-        selectAfterFileChange( assetAbs );
+        selectAfterFileChange( FileUtil::toDiskPath( assetAbs ) );
         return true;
     }
 
-    bool ContentBrowserViewModel::duplicateAsset( string_view absolutePath )
+    bool ContentBrowserViewModel::duplicateAsset( const AbsolutePath& absolutePath )
     {
         string assetAbs;
         if ( ContentBrowserFileActions::duplicateAsset( absolutePath, assetAbs ) == false )
             return false;
-        selectAfterFileChange( assetAbs );
+        selectAfterFileChange( FileUtil::toDiskPath( assetAbs ) );
         return true;
     }
 
-    bool ContentBrowserViewModel::beginRename( string_view absolutePath, string& outStem )
+    bool ContentBrowserViewModel::beginRename( const AbsolutePath& absolutePath, string& outStem )
     {
         const bool bStarted = _fileActions.beginRename( absolutePath, outStem );
         if ( bStarted )
@@ -581,7 +579,7 @@ namespace sw::editor
             SW_LOG_INFO_ID( "ContentBrowserViewModel.MoveWaitsForReferenceIndex", "Rename waits for the reference index to catch up with the last file change" );
             return true;
         }
-        string destinationAbs;
+        AbsolutePath destinationAbs;
         if ( _fileActions.commitRename( newName, *pIndex, destinationAbs ) == false )
             return false;
         selectAfterFileChange( destinationAbs );
@@ -590,11 +588,11 @@ namespace sw::editor
 
     bool ContentBrowserViewModel::isRenaming( const AssetEntry& entry ) const
     {
-        const string& renamingAbs = _fileActions.getRenamingPath();
-        return renamingAbs.empty() == false && FileUtil::isSameDiskPath( entry._absolutePath, renamingAbs );
+        const AbsolutePath& renamingAbs = _fileActions.getRenamingPath();
+        return renamingAbs.empty() == false && FileUtil::isSameDiskPath( entry._absolutePath.str(), renamingAbs.str() );
     }
 
-    bool ContentBrowserViewModel::moveAssetToFolder( string_view sourceAbs, string_view folderAbs )
+    bool ContentBrowserViewModel::moveAssetToFolder( const AbsolutePath& sourceAbs, const AbsolutePath& folderAbs )
     {
         EditorAssetIndex* pIndex = findCurrentReferenceIndex();
         if ( pIndex == nullptr )
@@ -606,14 +604,14 @@ namespace sw::editor
         string destinationAbs;
         if ( ContentBrowserFileActions::moveAssetToFolder( sourceAbs, folderAbs, *pIndex, destinationAbs ) == false )
             return false;
-        selectAfterFileChange( destinationAbs );
+        selectAfterFileChange( FileUtil::toDiskPath( destinationAbs ) );
         return true;
     }
 
-    void ContentBrowserViewModel::requestMoveToFolder( string_view sourceAbs, string_view folderAbs )
+    void ContentBrowserViewModel::requestMoveToFolder( const AbsolutePath& sourceAbs, const AbsolutePath& folderAbs )
     {
-        _moveRequestSourceAbs = FileUtil::normalizeSeparators( sourceAbs );
-        _moveRequestFolderAbs = FileUtil::normalizeSeparators( folderAbs );
+        _moveRequestSourceAbs = sourceAbs;
+        _moveRequestFolderAbs = folderAbs;
         _moveRequestPlan      = EditorAssetMovePlan{};
         _bMoveRequestPlanned  = SW_FALSE;
     }
@@ -634,8 +632,8 @@ namespace sw::editor
 
     bool ContentBrowserViewModel::confirmMoveRequest()
     {
-        const string sourceAbs = _moveRequestSourceAbs;
-        const string folderAbs = _moveRequestFolderAbs;
+        const AbsolutePath sourceAbs = _moveRequestSourceAbs;
+        const AbsolutePath folderAbs = _moveRequestFolderAbs;
         cancelMoveRequest();
         if ( sourceAbs.empty() )
             return false;
@@ -644,10 +642,10 @@ namespace sw::editor
 
     void ContentBrowserViewModel::cancelMoveRequest()
     {
-        _moveRequestSourceAbs.clear();
-        _moveRequestFolderAbs.clear();
-        _moveRequestPlan     = EditorAssetMovePlan{};
-        _bMoveRequestPlanned = SW_FALSE;
+        _moveRequestSourceAbs = {};
+        _moveRequestFolderAbs = {};
+        _moveRequestPlan      = EditorAssetMovePlan{};
+        _bMoveRequestPlanned  = SW_FALSE;
     }
 
     bool ContentBrowserViewModel::confirmDeleteAsset()
@@ -655,8 +653,8 @@ namespace sw::editor
         if ( _fileActions.confirmDelete() == false )
             return false;
         // 지운 파일이 목록과 선택에 남지 않도록 지금 폴더를 다시 읽는다. 파일 감시도 같은 변경을 알리지만 한두 프레임 늦다.
-        _selectedAssetAbs.clear();
-        _bFolderDirty = SW_TRUE;
+        _selectedAssetAbs = {};
+        _bFolderDirty     = SW_TRUE;
         _folderCache.clear();
         return true;
     }
@@ -668,7 +666,7 @@ namespace sw::editor
             SW_LOG_WARNING_ID( "ContentBrowserViewModel.SelectDestinationFolderBefore", "Select a destination folder before importing." );
             return;
         }
-        _importFolderAbs = _selectedFolderAbs;
+        _importFolderAbs = _selectedFolderAbs.str();
         _importQueue.openDialog( _importFolderAbs );
     }
 
@@ -738,12 +736,12 @@ namespace sw::editor
     {
         if ( entry._bIsDirectory )
             return {};
-        return ContentBrowserViewModelInternal::getSourceControl().describeStatus( entry._absolutePath, entry._bReadOnly );
+        return ContentBrowserViewModelInternal::getSourceControl().describeStatus( entry._absolutePath.str(), entry._bReadOnly );
     }
 
     bool ContentBrowserViewModel::isLocked( const AssetEntry& entry )
     {
-        return ContentBrowserViewModelInternal::getSourceControl().findLock( entry._absolutePath ) != nullptr;
+        return ContentBrowserViewModelInternal::getSourceControl().findLock( entry._absolutePath.str() ) != nullptr;
     }
 
     bool ContentBrowserViewModel::openAsset( string_view assetPath )

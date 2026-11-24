@@ -185,7 +185,7 @@ namespace sw
         const AbsolutePath crashFolder = FileUtil::toDiskPath( engine::getSubsystem<CrashHandler>().getReportFolder() );
         if ( crashFolder.empty() )
             return; // 로그 폴더가 서지 않았다 — 덤프를 놓을 곳이 없다
-        const AbsolutePath reportsFolder = FileUtil::toDiskPath( FileUtil::joinPath( FileUtil::getDirectoryPart( FileUtil::trimTrailingSlashes( crashFolder.str() ) ), ServerObservabilityInternal::kServerReportsFolderName ) );
+        const AbsolutePath reportsFolder = crashFolder.getParent().join( ServerObservabilityInternal::kServerReportsFolderName );
         if ( FileUtil::ensureDirectoryExists( reportsFolder ) == false )
             return; // 실패는 ensureDirectoryExists 가 남겼다
         string          netStatsLine;

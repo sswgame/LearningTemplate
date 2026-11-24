@@ -9,6 +9,7 @@
 #include "Core/Container/string.h"
 #include "Core/Container/vector.h"
 #include "Core/Log/Logger.h"
+#include "Core/Path/AbsolutePath.h"
 #include "Core/Testing/TestFramework.h"
 
 #include "Engine/Content/Pack/PackWriter.h"
@@ -35,24 +36,24 @@ namespace sw
         }
 
         /** @brief @p listEntry 를 경로 해시 순으로 세워 @p packPath 에 씁니다. 실패하면 이유를 테스트 로그에 남기고 false 입니다. */
-        static bool writePack( string_view packPath, const PackWriterDesc& desc, vector<std::pair<string, vector<uint8>>> listEntry )
+        static bool writePack( const AbsolutePath& packPath, const PackWriterDesc& desc, vector<std::pair<string, vector<uint8>>> listEntry )
         {
             VectorUtil::sort( listEntry, []( const std::pair<string, vector<uint8>>& left, const std::pair<string, vector<uint8>>& right )
             { return PackStreamWriter::makePathHash( left.first ) < PackStreamWriter::makePathHash( right.first ); } );
             PackStreamWriter writer;
-            expected<void>   step = writer.open( FileUtil::toDiskPath( packPath ), desc );
+            expected<void>   step = writer.open( packPath, desc );
             for ( size_t index = 0; index < listEntry.size() && step.has_value(); ++index )
             {
                 step = writer.append( listEntry[index].first, PackEntryStorage::Blocks, std::move( listEntry[index].second ) );
             }
             const expected<PackWriteResult> closed = step.has_value() ? writer.close() : expected<PackWriteResult>( unexpected( step.error() ) );
             if ( closed.has_value() == false )
-                SW_LOG_WARNING_ID( "PackTestUtil.WriteFailed", "Test pack '%#' was not written: %# '%#'", packPath, closed.error().message(), closed.error().detail() );
+                SW_LOG_WARNING_ID( "PackTestUtil.WriteFailed", "Test pack '%#' was not written: %# '%#'", packPath.str(), closed.error().message(), closed.error().detail() );
             return closed.has_value();
         }
 
         /** @brief 글 항목으로 압축 없는 팩을 씁니다. @p mountDomain 이 비면 패치 팩이다(항목이 전체 경로). */
-        static bool writeTextPack( string_view packPath, string_view mountDomain, const vector<std::pair<string, string>>& listEntry )
+        static bool writeTextPack( const AbsolutePath& packPath, string_view mountDomain, const vector<std::pair<string, string>>& listEntry )
         {
             vector<std::pair<string, vector<uint8>>> listByteEntry;
             for ( const std::pair<string, string>& entry : listEntry )

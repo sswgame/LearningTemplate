@@ -26,29 +26,29 @@ namespace sw::editor
     /** @brief 문서 사본 하나(쓸 것 또는 복구 후보)와 그 디스크 규칙입니다. 세션 폴더만 받는다 — 단위 테스트가 스크래치 폴더로 부른다. */
     struct EditorDocumentAutosaveEntry
     {
-        string _documentPath;           ///< 문서의 리소스 id. 상태 문서(`_panelID` 가 있다)면 그 문서가 저장할 파일(`makeFileID`)이다
-        string _panelID;                ///< 상태 문서(프로젝트 설정 · 전역 변수 · 메시 모디파이어)의 패널 id. 비면 에셋 문서다 — 복원이 이 패널을 연다
-        string _text;                   ///< 문서 글(쓸 때만 — 복구 후보는 `_textAbs` 에서 읽는다)
-        string _textAbs;                ///< 사본 글 파일의 디스크 경로(복구 후보)
-        string _projectRoot;            ///< 사본을 쓴 프로젝트 루트
-        uint64 _sourceContentHash{ 0 }; ///< 사본을 쓸 때 원본 파일의 내용 해시(`ContentHash`). 0 은 원본이 아직 없는 새 문서다
-        int64  _savedTicks{ 0 };        ///< 사본을 쓴 시각(`FileUtil::getCurrentFileWriteTime` 눈금 — 복구 후보만, 메타에서 읽는다)
-        string _refusal;                ///< 복원할 수 없는 이유(비면 복원할 수 있다)
+        string       _documentPath;           ///< 문서의 리소스 id. 상태 문서(`_panelID` 가 있다)면 그 문서가 저장할 파일(`makeFileID`)이다
+        string       _panelID;                ///< 상태 문서(프로젝트 설정 · 전역 변수 · 메시 모디파이어)의 패널 id. 비면 에셋 문서다 — 복원이 이 패널을 연다
+        string       _text;                   ///< 문서 글(쓸 때만 — 복구 후보는 `_textAbs` 에서 읽는다)
+        AbsolutePath _textAbs;                ///< 사본 글 파일의 디스크 경로(복구 후보)
+        string       _projectRoot;            ///< 사본을 쓴 프로젝트 루트
+        uint64       _sourceContentHash{ 0 }; ///< 사본을 쓸 때 원본 파일의 내용 해시(`ContentHash`). 0 은 원본이 아직 없는 새 문서다
+        int64        _savedTicks{ 0 };        ///< 사본을 쓴 시각(`FileUtil::getCurrentFileWriteTime` 눈금 — 복구 후보만, 메타에서 읽는다)
+        string       _refusal;                ///< 복원할 수 없는 이유(비면 복원할 수 있다)
 
         /** @brief 세션 폴더 안 문서 사본 폴더 이름입니다(씬 칸과 겹치지 않는다 — 씬 칸은 `.scene.xml` 사본을 든다). */
         static constexpr const utf8* kFolderName = "documents";
 
         /** @brief 이 사본의 글과 메타를 `<sessionFolder>/documents/` 에 씁니다(앞 사본을 덮는다). 메타를 쓰지 못하면 글도 지운다 — 어디 것인지 모르는 사본은 복구하지 않는다. */
-        [[nodiscard]] bool write( string_view sessionFolder ) const;
+        [[nodiscard]] bool write( const AbsolutePath& sessionFolder ) const;
         /** @brief 이 복구 후보의 사본 글을 읽습니다. 읽지 못하면 false 입니다. */
         [[nodiscard]] bool readText( string& outText ) const;
         /** @brief 문서 @p documentPath 의 사본을 지웁니다(정상 저장 · 다시 읽기 · 복원). 없으면 아무것도 하지 않는다. */
-        static void remove( string_view sessionFolder, string_view documentPath );
+        static void remove( const AbsolutePath& sessionFolder, string_view documentPath );
         /**
          * @brief 세션 폴더들의 문서 사본을 복구 후보로 모읍니다. @p projectRoot 가 아닌 프로젝트, @p computeSourceHash 가 사본 때와 다른 원본은 거절 이유를 단다.
          * @param computeSourceHash 후보가 가리키는 원본의 내용 해시(없으면 0). 테스트는 고정 값을 준다.
          */
-        static void scan( const vector<string>& listSessionFolder, string_view projectRoot, uint64 ( *computeSourceHash )( const EditorDocumentAutosaveEntry& entry ),
+        static void scan( const vector<AbsolutePath>& listSessionFolder, string_view projectRoot, uint64 ( *computeSourceHash )( const EditorDocumentAutosaveEntry& entry ),
                           vector<EditorDocumentAutosaveEntry>& outListEntry );
         /** @brief 상태 문서가 저장할 파일 @p absolutePath 의 사본 id 입니다 — 프로젝트 아래면 프로젝트 기준 경로, 밖이면 그 경로 그대로입니다. */
         [[nodiscard]] static string makeFileID( string_view absolutePath );
@@ -59,7 +59,7 @@ namespace sw::editor
     /** @brief 워커가 쓸 사본 묶음입니다 — 세션 폴더와 문서 사본들. */
     struct EditorDocumentAutosaveBatch
     {
-        string                              _sessionFolder;
+        AbsolutePath                        _sessionFolder;
         vector<EditorDocumentAutosaveEntry> _listEntry;
     };
 

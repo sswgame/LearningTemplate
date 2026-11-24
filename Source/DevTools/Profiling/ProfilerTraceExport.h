@@ -165,7 +165,7 @@ namespace sw
         /** @brief 파일을 읽어 `parseTraceJSON` 으로 해석합니다(`_sourcePath` 에 경로). */
         [[nodiscard]] static expected<ProfilerLoadedTrace> loadTraceFile( const AbsolutePath& path );
         /** @brief 기본 저장 폴더(`<프로젝트>/Saved/Traces`)에서 가장 최근 `.trace.json` 의 경로입니다. 없으면 빈 글. */
-        static string findLatestTraceFile();
+        static AbsolutePath findLatestTraceFile();
 
         /**
          * @brief 최근 @p frameCount 프레임을 모아 @p path 에 저장합니다.

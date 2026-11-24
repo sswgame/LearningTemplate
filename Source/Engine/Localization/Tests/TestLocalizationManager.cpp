@@ -27,7 +27,7 @@ namespace
         static sw::string text( const utf8* pText ) { return pText != nullptr ? sw::string( pText ) : sw::string( "<null>" ); }
 
         /** @brief en 원문 셋 · ko 번역 둘(하나는 낡음) · ko_kr 번역 하나 · ja 번역 하나(검토 표시)의 프로젝트입니다. 프로젝트 파일의 디스크 경로를 돌려준다. */
-        static sw::string writeSampleProject( const sw::AbsolutePath& folder )
+        static sw::AbsolutePath writeSampleProject( const sw::AbsolutePath& folder )
         {
             const sw::string projectPath = LocalizationTestUtil::writeProject( folder, "en", R"([ "ko", "ko_kr", "ja" ])" ).str();
             LocalizationTestUtil::writeSourceTable( folder.str(), "en", R"("ui.title": { "source": "Mystery Island", "maxLength": 20 },
@@ -40,7 +40,7 @@ namespace
             LocalizationTestUtil::writeTranslation( folder.str(), "ko", koEntries.view() );
             LocalizationTestUtil::writeTranslation( folder.str(), "ko_kr", R"json("ui.quit": { "text": "종료(한국)" })json" );
             LocalizationTestUtil::writeTranslation( folder.str(), "ja", R"("ui.title": { "text": "神秘の島", "review": true }, "ui.quit": { "text": "終了" })" );
-            return projectPath;
+            return sw::FileUtil::toDiskPath( projectPath );
         }
     };
 
@@ -112,11 +112,11 @@ SW_TEST_CASE( LocalizationManagerTest, NonSingletonIndependence )
 SW_TEST_CASE( LocalizationManagerTest, ProjectCultureChainSkipsStaleAndReviewTranslations )
 {
     const ScopedScratchDomain domain;
-    const sw::string          projectPath = Internal::writeSampleProject( domain.getFolder() );
+    const sw::string          projectPath = Internal::writeSampleProject( domain.getFolder() ).str();
 
     sw::LocalizationManager loc;
     SW_REQUIRE_TRUE( LocalizationTestUtil::loadEngineCultures( loc ) );
-    SW_REQUIRE_TRUE( loc.mountProject( ScopedScratchDomain::toID( projectPath ), sw::LocalizationScope::Game ) );
+    SW_REQUIRE_TRUE( loc.mountProject( ScopedScratchDomain::toID( sw::FileUtil::toDiskPath( projectPath ) ), sw::LocalizationScope::Game ) );
     SW_EXPECT_EQUAL( sw::string( "en" ), loc.getCurrentLanguage() ); // 처음 올린 프로젝트의 원문 문화권
 
     SW_REQUIRE_TRUE( loc.setCurrentLanguage( "ko-KR" ) );
@@ -190,10 +190,10 @@ SW_TEST_CASE( LocalizationManagerTest, ReloadChangedFilePicksUpNewTextAndKeepsOl
 {
     const ScopedScratchDomain domain;
     const sw::AbsolutePath    folder      = domain.getFolder();
-    const sw::string          projectPath = Internal::writeSampleProject( folder );
+    const sw::string          projectPath = Internal::writeSampleProject( folder ).str();
 
     sw::LocalizationManager loc;
-    SW_REQUIRE_TRUE( loc.mountProject( ScopedScratchDomain::toID( projectPath ), sw::LocalizationScope::Game ) );
+    SW_REQUIRE_TRUE( loc.mountProject( ScopedScratchDomain::toID( sw::FileUtil::toDiskPath( projectPath ) ), sw::LocalizationScope::Game ) );
     SW_REQUIRE_TRUE( loc.setCurrentLanguage( "ko" ) );
     const utf8* pHeld = loc.getString( sw::hashed_string( "ui.title" ) );
     SW_EXPECT_EQUAL( sw::string( "신비의 섬" ), Internal::text( pHeld ) );
@@ -204,7 +204,7 @@ SW_TEST_CASE( LocalizationManagerTest, ReloadChangedFilePicksUpNewTextAndKeepsOl
     const uint32           revisionBefore = loc.getTextRevision();
 
     LocalizationTestUtil::writeTranslation( folder.str(), "ko", R"("ui.title": { "text": "수수께끼 섬" })" );
-    const sw::AssetID changedID = ScopedScratchDomain::toID( sw::FileUtil::joinPath( folder.str(), "ko.translation.xml" ) );
+    const sw::AssetID changedID = ScopedScratchDomain::toID( folder.join( "ko.translation.xml" ) );
     SW_EXPECT_TRUE( loc.isProjectFile( changedID.view() ) );
     SW_EXPECT_TRUE( loc.reloadChangedFile( changedID.view() ) == sw::ReloadResult::Reloaded );
     SW_EXPECT_EQUAL( sw::string( "수수께끼 섬" ), Internal::text( loc.getString( sw::hashed_string( "ui.title" ) ) ) );
@@ -239,8 +239,8 @@ SW_TEST_CASE( LocalizationManagerTest, UnmountingGameProjectsKeepsEngineStrings 
     LocalizationTestUtil::writeSourceTable( gameFolder.str(), "en", R"("g.key": { "source": "Game" })" );
 
     sw::LocalizationManager loc;
-    SW_REQUIRE_TRUE( loc.mountProject( ScopedScratchDomain::toID( enginePath.str() ), sw::LocalizationScope::Engine ) );
-    SW_REQUIRE_TRUE( loc.mountProject( ScopedScratchDomain::toID( LocalizationTestUtil::writeProject( gameFolder, "en", "[]" ).str() ), sw::LocalizationScope::Game ) );
+    SW_REQUIRE_TRUE( loc.mountProject( ScopedScratchDomain::toID( enginePath ), sw::LocalizationScope::Engine ) );
+    SW_REQUIRE_TRUE( loc.mountProject( ScopedScratchDomain::toID( LocalizationTestUtil::writeProject( gameFolder, "en", "[]" ) ), sw::LocalizationScope::Game ) );
     SW_EXPECT_EQUAL( sw::string( "Game" ), Internal::text( loc.getString( sw::hashed_string( "g.key" ) ) ) );
 
     loc.unmountProjects( sw::LocalizationScope::Game );
@@ -290,9 +290,9 @@ SW_TEST_CASE( LocalizationManagerTest, LanguageChangedCallbackNotification )
  */
 SW_TEST_CASE_F( LocalizationManagerEngineTest, InitializeMountsTheGameProject )
 {
-    const sw::string projectPath = Internal::writeSampleProject( _domain.getFolder() );
+    const sw::string projectPath = Internal::writeSampleProject( _domain.getFolder() ).str();
 
-    SW_REQUIRE_TRUE( _loc.initialize( ScopedScratchDomain::toID( projectPath ), "ko_KR", "en_US" ) );
+    SW_REQUIRE_TRUE( _loc.initialize( ScopedScratchDomain::toID( sw::FileUtil::toDiskPath( projectPath ) ), "ko_KR", "en_US" ) );
     SW_EXPECT_EQUAL( sw::string( "ko_kr" ), _loc.getCurrentLanguage() );
     SW_EXPECT_EQUAL( sw::string( "en_us" ), _loc.getFallbackLanguage() );
     SW_EXPECT_EQUAL( sw::string( "신비의 섬" ), Internal::text( _loc.getString( sw::hashed_string( "ui.title" ) ) ) );
@@ -374,7 +374,7 @@ SW_TEST_CASE( LocalizationManagerTest, LanguageCodeSpellingsNameOneLanguage )
     LocalizationTestUtil::writeTranslation( folder.str(), "ko_kr", R"("UI_PLAY": { "text": "플레이" })" );
 
     sw::LocalizationManager loc;
-    SW_REQUIRE_TRUE( loc.initialize( ScopedScratchDomain::toID( projectPath ), "ko_KR", "en_US" ) );
+    SW_REQUIRE_TRUE( loc.initialize( ScopedScratchDomain::toID( sw::FileUtil::toDiskPath( projectPath ) ), "ko_KR", "en_US" ) );
     SW_EXPECT_EQUAL( sw::string( "ko_kr" ), loc.getCurrentLanguage() );
     SW_EXPECT_EQUAL( sw::string( "플레이" ), Internal::text( loc.getString( sw::hashed_string( "UI_PLAY" ) ) ) );
     SW_EXPECT_EQUAL( sw::string( "English" ), Internal::text( loc.getString( sw::hashed_string( "UI_ONLY_EN" ) ) ) );

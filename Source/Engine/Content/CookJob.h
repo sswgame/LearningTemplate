@@ -170,7 +170,7 @@ namespace sw
          *          목록 입력의 id 는 폴더의 절대 경로다(리소스 id 로 줄이지 않는다 — 도메인 폴더는 id 로 줄이면 같은 폴더로 돌아오지 않는다).
          * @return 폴더가 없으면 빈 목록으로 true, 순회가 도중에 멈췄으면(부분 목록 — 구울 것을 빠뜨린다) false 입니다.
          */
-        [[nodiscard]] static bool collectFiles( const AbsolutePath& folderPath, string_view extension, vector<string>& outListFile );
+        [[nodiscard]] static bool collectFiles( const AbsolutePath& folderPath, string_view extension, vector<AbsolutePath>& outListFile );
         /** @brief 목록 입력의 해시입니다. 폴더 기준 상대 경로를 정렬해 해시합니다. 폴더가 없거나 순회가 도중에 멈췄으면 0 입니다. */
         static uint64 computeListingHash( const AbsolutePath& folderPath, string_view extension );
 

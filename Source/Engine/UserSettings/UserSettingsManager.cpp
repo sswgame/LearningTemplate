@@ -342,9 +342,9 @@ namespace sw
         return true;
     }
 
-    string UserSettingsManager::makeDefaultUserFilePath( string_view gameName )
+    AbsolutePath UserSettingsManager::makeDefaultUserFilePath( string_view gameName )
     {
-        return FileUtil::joinPath( UserDataPath::getConfigDirectory( gameName ), UserSettingsFileEntry::kFileName );
+        return UserDataPath::getConfigDirectory( gameName ).join( UserSettingsFileEntry::kFileName );
     }
 
     // ------------------------------------------------------------------------------
@@ -1240,7 +1240,7 @@ namespace sw
             {
                 StringBuilder<constant::buffer::kMax256> basePath;
                 basePath.appendFormat( "%#/Automation/UserSettings/%#", ProcessRoots::get()._saved.str(), Process::getCurrentProcessID() );
-                setUserFilePath( FileUtil::joinPath( FileUtil::reserveUniquePath( FileUtil::toDiskPath( basePath.view() ), {}, true ).str(), UserSettingsFileEntry::kFileName ) );
+                setUserFilePath( FileUtil::reserveUniquePath( FileUtil::toDiskPath( basePath.view() ), {}, true ).join( UserSettingsFileEntry::kFileName ) );
             }
             else
                 setUserFilePath( makeDefaultUserFilePath( gameName ) );

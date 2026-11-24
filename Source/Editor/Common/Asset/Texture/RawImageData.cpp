@@ -46,12 +46,12 @@ namespace sw::editor
 
 namespace sw::editor
 {
-    bool RawImageData::loadImage( string_view filePath, RawImageData& outImage )
+    bool RawImageData::loadImage( const AbsolutePath& filePath, RawImageData& outImage )
     {
         vector<uint8> bytes;
         if ( AssetSourceLocator::readBytes( filePath, bytes ) == false )
         {
-            SW_LOG_ERROR_ID( "RawImageData.FailedReadImageFile", "Failed to read image file: %#", filePath );
+            SW_LOG_ERROR_ID( "RawImageData.FailedReadImageFile", "Failed to read image file: %#", filePath.str() );
             return false;
         }
 

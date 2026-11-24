@@ -21,7 +21,7 @@ namespace sw::editor
         collectFilesToSave( listPath );
         for ( const string& path : listPath )
         {
-            if ( EditorContentWrite::warnIfReadOnly( path, EditorContentWriteKind::Save ) )
+            if ( EditorContentWrite::warnIfReadOnly( FileUtil::toDiskPath( path ), EditorContentWriteKind::Save ) )
                 return false;
         }
         if ( saveDocument() == false )

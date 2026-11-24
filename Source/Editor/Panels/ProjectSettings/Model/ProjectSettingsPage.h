@@ -7,6 +7,7 @@
 #include "Core/Container/vector.h"
 #include "Core/Foundation/Types.h"
 #include "Core/Memory/Memory.h"
+#include "Core/Path/AbsolutePath.h"
 
 #include "Editor/Panels/ProjectSettings/Model/ProjectSettingsDocument.h"
 #include "Editor/Panels/ProjectSettings/Model/ProjectSettingsEntry.h"
@@ -31,7 +32,7 @@ namespace sw::editor
         ProjectSettingsEntry        _entry;
         ProjectSettingsDocument     _document;      ///< 반사 형식 페이지의 문서
         ProjectSettingsJSONDocument _tableDocument; ///< 표 페이지(`ProjectSettingsEntry::isTable`)의 문서
-        string                      _absolutePath;
+        AbsolutePath                _absolutePath;
         bool                        _bOpened{ false };    ///< NOLINT(sw-bool-flag): 집합체다
         bool                        _bTypeFound{ false }; ///< NOLINT(sw-bool-flag): 집합체다
         bool                        _bDirty{ false };     ///< NOLINT(sw-bool-flag): 집합체다

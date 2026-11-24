@@ -6,6 +6,7 @@
 #include "Core/Container/string.h"
 #include "Core/Container/vector.h"
 #include "Core/Foundation/Types.h"
+#include "Core/Path/AbsolutePath.h"
 
 #include "Editor/Common/Workspace/EditorPanelVisibility.h"
 
@@ -34,18 +35,18 @@ namespace sw::editor
          */
         [[nodiscard]] static bool sanitizeName( string_view name, string& outName );
         /** @brief 기본 레이아웃 폴더(`Saved/Editor/Layouts`)입니다. 에디터 상태 폴더를 찾지 못하면 빈 문자열입니다. */
-        static string getDefaultFolder();
+        static AbsolutePath getDefaultFolder();
         /** @brief 레이아웃의 도킹 배치 파일 경로입니다. */
-        static string makeImguiINIPath( string_view folder, string_view name );
+        static AbsolutePath makeImguiINIPath( const AbsolutePath& folder, string_view name );
         /** @brief 레이아웃의 패널 가시성 파일 경로입니다. */
-        static string makeVisibilityPath( string_view folder, string_view name );
+        static AbsolutePath makeVisibilityPath( const AbsolutePath& folder, string_view name );
         /** @brief 폴더의 레이아웃 이름을 사전순으로 채웁니다(도킹 배치 파일이 있는 것만). */
-        static void collectNames( string_view folder, vector<string>& outListName );
+        static void collectNames( const AbsolutePath& folder, vector<string>& outListName );
         /** @brief 레이아웃 파일 둘을 씁니다. 폴더가 없으면 만듭니다. */
-        [[nodiscard]] static bool save( string_view folder, string_view name, string_view imguiINIText, const EditorPanelVisibility& panelVisibility );
+        [[nodiscard]] static bool save( const AbsolutePath& folder, string_view name, string_view imguiINIText, const EditorPanelVisibility& panelVisibility );
         /** @brief 레이아웃 파일 둘을 읽습니다. 가시성 파일은 없어도 됩니다(빈 테이블). 깨진 가시성 파일은 경고를 남기고 빈 테이블입니다(도킹 배치는 읽는다). */
-        [[nodiscard]] static bool load( string_view folder, string_view name, string& outImguiINIText, EditorPanelVisibility& outPanelVisibility );
+        [[nodiscard]] static bool load( const AbsolutePath& folder, string_view name, string& outImguiINIText, EditorPanelVisibility& outPanelVisibility );
         /** @brief 레이아웃 파일 둘을 지웁니다. */
-        [[nodiscard]] static bool remove( string_view folder, string_view name );
+        [[nodiscard]] static bool remove( const AbsolutePath& folder, string_view name );
     };
 } // namespace sw::editor

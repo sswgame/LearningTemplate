@@ -151,15 +151,15 @@ namespace sw
         return FileUtil::writeFile( absPath, writer.getBytes().data(), static_cast<uint64>( writer.getByteCount() ) );
     }
 
-    expected<void> ControlIntentHistory::loadFromFile( string_view path )
+    expected<void> ControlIntentHistory::loadFromFile( const AbsolutePath& path )
     {
         vector<uint8> bytes;
-        if ( FileUtil::readFile( FileUtil::toDiskPath( path ), bytes ) == false )
+        if ( FileUtil::readFile( path, bytes ) == false )
         {
             reset();
-            return unexpected( Error{ ErrorKind::NotFound, "the intent recording could not be read", path } );
+            return unexpected( Error{ ErrorKind::NotFound, "the intent recording could not be read", path.str() } );
         }
-        return loadFromBytes( bytes, path );
+        return loadFromBytes( bytes, path.str() );
     }
 
     expected<void> ControlIntentHistory::loadFromAsset( const AssetID& assetID )

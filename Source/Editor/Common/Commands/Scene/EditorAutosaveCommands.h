@@ -15,6 +15,7 @@
 #include "Core/Container/string.h"
 #include "Core/Container/vector.h"
 #include "Core/Foundation/Types.h"
+#include "Core/Path/AbsolutePath.h"
 
 namespace sw::editor
 {
@@ -23,14 +24,14 @@ namespace sw::editor
     /** @brief 복구 후보 하나(씬 하나의 가장 새 사본)입니다. */
     struct EditorAutosaveEntry
     {
-        string _snapshotAbs;            ///< 가장 새 사본의 디스크 경로
-        string _snapshotID;             ///< 그 사본의 리소스 id(`autosave/…` — 붙인 도메인)
-        string _sourceID;               ///< 원래 씬의 리소스 id. 비면 저장한 적 없는 새 씬이다
-        string _projectRoot;            ///< 사본을 쓴 프로젝트 루트
-        int64  _savedTicks{ 0 };        ///< 사본을 쓴 시각(`FileUtil::getCurrentFileWriteTime` 눈금)
-        uint64 _sourceContentHash{ 0 }; ///< 그때 원본 파일의 내용 해시(`ContentHash`). 0 은 메타에 없음 — 바뀐 원본으로 거절한다
-        uint32 _generationCount{ 0 };   ///< 남은 세대 수
-        string _refusal;                ///< 복원할 수 없는 이유(비면 복원할 수 있다)
+        AbsolutePath _snapshotAbs;            ///< 가장 새 사본의 디스크 경로
+        string       _snapshotID;             ///< 그 사본의 리소스 id(`autosave/…` — 붙인 도메인)
+        string       _sourceID;               ///< 원래 씬의 리소스 id. 비면 저장한 적 없는 새 씬이다
+        string       _projectRoot;            ///< 사본을 쓴 프로젝트 루트
+        int64        _savedTicks{ 0 };        ///< 사본을 쓴 시각(`FileUtil::getCurrentFileWriteTime` 눈금)
+        uint64       _sourceContentHash{ 0 }; ///< 그때 원본 파일의 내용 해시(`ContentHash`). 0 은 메타에 없음 — 바뀐 원본으로 거절한다
+        uint32       _generationCount{ 0 };   ///< 남은 세대 수
+        string       _refusal;                ///< 복원할 수 없는 이유(비면 복원할 수 있다)
     };
 
     /** @brief 세션을 내리는 까닭입니다. 편집기 종료만 폴더를 지운다. */
@@ -54,17 +55,17 @@ namespace sw::editor
         int64 _startTicks{ 0 }; ///< 세션을 연 시각(`FileUtil::getCurrentFileWriteTime` 눈금) — 같은 pid 를 OS 가 다시 쓴 세션과 가른다
 
         /** @brief 이 세션의 폴더 `<root>/<pid>-<시각>` 입니다. */
-        string makeFolder( string_view root ) const;
+        AbsolutePath makeFolder( const AbsolutePath& root ) const;
         /**
          * @brief 이 세션을 엽니다 — 자기 폴더와 잠금을 쓰고, 잠금 pid 가 죽은 세션 폴더를 넘겨받는다(잠금을 이 세션으로 고쳐 쓴다).
          * @param outListRecoveredFolder 넘겨받은 폴더(앞서 이 세션이 넘겨받은 것 포함 — 리로드 뒤에도 복구 후보를 다시 보인다). 살아 있는 다른 세션은 넣지 않는다.
          * @return 자기 폴더 · 잠금을 쓰지 못하면 false 입니다.
          */
-        [[nodiscard]] bool open( string_view root, vector<string>& outListRecoveredFolder ) const;
+        [[nodiscard]] bool open( const AbsolutePath& root, vector<AbsolutePath>& outListRecoveredFolder ) const;
         /** @brief 편집기 종료입니다 — 잠금 pid 가 @p processID 인 폴더(자기 것 + 넘겨받은 것)만 지운다. 다른 에디터의 폴더는 그대로다. */
-        static void removeOwned( string_view root, int32 processID );
+        static void removeOwned( const AbsolutePath& root, int32 processID );
         /** @brief 세션 폴더 @p sessionFolder 의 잠금을 읽습니다. 없거나 깨졌으면 false 입니다. */
-        [[nodiscard]] static bool readLock( string_view sessionFolder, EditorAutosaveSession& outSession );
+        [[nodiscard]] static bool readLock( const AbsolutePath& sessionFolder, EditorAutosaveSession& outSession );
     };
 
     /**
@@ -104,7 +105,7 @@ namespace sw::editor
         /** @brief 이번 세션에 복원을 끝낸 수입니다(감시 값 `Editor.AutosaveRestoredCount`). */
         static uint32 getRestoredCount();
         /** @brief 이 세션의 사본 폴더입니다. 세션을 아직 열지 않았거나 열지 못했으면(또는 에디터 상태가 없는 호스트면) 빈 글입니다 — 문서 사본(`EditorDocumentAutosaveEntry`)도 이 안에 쓴다. */
-        static string getSessionFolder();
+        static AbsolutePath getSessionFolder();
         /** @brief 문서 패널의 복구 후보입니다(감사 E-1). 씬 후보와 같이 지난 세션이 비정상 종료했을 때(또는 `autosave.rescan`)만 찬다. */
         static const vector<EditorDocumentAutosaveEntry>& getRecoverableDocuments();
         /**

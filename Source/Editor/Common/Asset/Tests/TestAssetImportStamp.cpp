@@ -18,9 +18,9 @@ using namespace sw::editor;
 namespace
 {
     /** @brief 부모 폴더를 만들고 글을 씁니다. */
-    bool writeText( const string& path, string_view text )
+    bool writeText( const AbsolutePath& path, string_view text )
     {
-        return FileUtil::ensureParentDirectoryExists( FileUtil::toDiskPath( path ) ) && FileUtil::writeTextFile( FileUtil::toDiskPath( path ), text );
+        return FileUtil::ensureParentDirectoryExists( path ) && FileUtil::writeTextFile( path, text );
     }
 
     /** @brief `things_raw/<y>.src` 를 `things/<y>.out` 과 옆 폴더 `things/<y>/side.txt` 로 쓰는 임포터입니다. */
@@ -32,33 +32,32 @@ namespace
         {
         }
 
-        string_view getRawFolderName() const override { return "things_raw"; }
-        string_view getStampHeader() const override { return "fake-things 1"; }
-        string_view getImportedLabel() const override { return "thing"; }
-        bool        isSourceFile( string_view path ) const override { return FileUtil::hasAnyExtension( path, { ".src", ".alt" } ); }
-        string      makeImportedPath( string_view sourcePath ) const override { return AssetImportStampUtil::makeImportedPath( sourcePath, "things_raw", "things", ".out" ); }
-        uint64      computeSourceHash( string_view sourcePath, string_view /*assetPath*/ ) const override
+        string_view  getRawFolderName() const override { return "things_raw"; }
+        string_view  getStampHeader() const override { return "fake-things 1"; }
+        string_view  getImportedLabel() const override { return "thing"; }
+        bool         isSourceFile( string_view path ) const override { return FileUtil::hasAnyExtension( path, { ".src", ".alt" } ); }
+        AbsolutePath makeImportedPath( string_view sourcePath ) const override { return AssetImportStampUtil::makeImportedPath( sourcePath, "things_raw", "things", ".out" ); }
+        uint64       computeSourceHash( const AbsolutePath& sourcePath, string_view /*assetPath*/ ) const override
         {
             return HashUtil::combine( AssetImportStampUtil::computeFileHash( sourcePath ), HashUtil::computeStringHash64( _settings.c_str(), _settings.size(), false ) );
         }
         uint64 findCodeFingerprint() const override { return 1; }
-        void   collectImportedFiles( string_view importedPath, vector<string>& outListPath ) const override
+        void   collectImportedFiles( const AbsolutePath& importedPath, vector<AbsolutePath>& outListPath ) const override
         {
-            const string sidePath = FileUtil::joinPath( FileUtil::removeExtension( importedPath ), "side.txt" );
-            for ( const string& path : { string( importedPath ), sidePath } )
+            for ( const AbsolutePath& path : { importedPath, importedPath.removeExtension().join( "side.txt" ) } )
             {
-                if ( FileUtil::isRegularFile( FileUtil::toDiskPath( path ) ) )
+                if ( FileUtil::isRegularFile( path ) )
                     outListPath.push_back( path );
             }
         }
         uint32      getImportCount() const { return _importCount.load(); }
         const utf8* findUnsupportedReason( string_view /*sourcePath*/ ) const override { return nullptr; }
-        bool        importSource( string_view /*sourcePath*/, string_view importedPath, string_view /*assetPath*/ ) const override
+        bool        importSource( const AbsolutePath& /*sourcePath*/, const AbsolutePath& importedPath, string_view /*assetPath*/ ) const override
         {
             _importCount.fetch_add( 1 );
             StringBuilder<constant::buffer::kMax256> textBuilder;
             textBuilder.appendFormat( "out:%#", _settings );
-            return writeText( string( importedPath ), textBuilder.view() ) && writeText( FileUtil::joinPath( FileUtil::removeExtension( importedPath ), "side.txt" ), "side" );
+            return writeText( importedPath, textBuilder.view() ) && writeText( importedPath.removeExtension().join( "side.txt" ), "side" );
         }
 
     private:
@@ -70,19 +69,19 @@ namespace
     class EditedSourceImporter final : public FakeThingImporter
     {
     public:
-        bool importSource( string_view sourcePath, string_view importedPath, string_view assetPath ) const override
+        bool importSource( const AbsolutePath& sourcePath, const AbsolutePath& importedPath, string_view assetPath ) const override
         {
             const bool bImported = FakeThingImporter::importSource( sourcePath, importedPath, assetPath );
-            return bImported && ( getImportCount() > 1 || writeText( string( sourcePath ), "edited while importing" ) );
+            return bImported && ( getImportCount() > 1 || writeText( sourcePath, "edited while importing" ) );
         }
     };
 
     /** @brief 같은 원본(`pack/things_raw/a.src`)을 둔 새 체크아웃 폴더입니다(결과 · 스탬프 없음). */
-    string makeCheckout( string_view name )
+    AbsolutePath makeCheckout( string_view name )
     {
         const AbsolutePath root = test::makeScratchPath( name );
-        (void)writeText( FileUtil::joinPath( root.str(), "pack/things_raw/a.src" ), "a" );
-        return root.str();
+        (void)writeText( root.join( "pack/things_raw/a.src" ), "a" );
+        return root;
     }
 } // namespace
 
@@ -93,22 +92,22 @@ namespace
 SW_TEST_CASE( AssetImportStampTest, RemovingASourceRemovesItsResult )
 {
     const AbsolutePath root = test::makeScratchPath( "AssetImportStampOrphan" );
-    SW_REQUIRE_TRUE( writeText( FileUtil::joinPath( root.str(), "pack/things_raw/gone.src" ), "a" ) );
-    SW_REQUIRE_TRUE( writeText( FileUtil::joinPath( root.str(), "pack/things_raw/kept.src" ), "b" ) );
+    SW_REQUIRE_TRUE( writeText( root.join( "pack/things_raw/gone.src" ), "a" ) );
+    SW_REQUIRE_TRUE( writeText( root.join( "pack/things_raw/kept.src" ), "b" ) );
     const FakeThingImporter importer;
     const DerivedDataCache  cache = DerivedDataCacheTestAccess::make( vector<DerivedDataLayer>{
         DerivedDataLayer{ test::makeScratchPath( "ImportDDC" ), DerivedDataAccess::ReadWrite }
     } ); // 프로젝트 DDC 에 쓰지 않는다
-    SW_REQUIRE_TRUE( AssetImportStampUtil::importAll( root.str(), importer, AssetImportMode::ImportStale, nullptr, cache ).isClean() );
+    SW_REQUIRE_TRUE( AssetImportStampUtil::importAll( root, importer, AssetImportMode::ImportStale, nullptr, cache ).isClean() );
     SW_REQUIRE_TRUE( FileUtil::exists( root.join( "pack/things/gone.out" ) ) );
     SW_REQUIRE_TRUE( FileUtil::exists( root.join( "pack/things/gone/side.txt" ) ) );
 
     SW_REQUIRE_TRUE( FileUtil::removeFile( root.join( "pack/things_raw/gone.src" ) ) );
-    SW_EXPECT_TRUE( AssetImportStampUtil::importAll( root.str(), importer, AssetImportMode::ImportStale, nullptr, cache ).isClean() );
+    SW_EXPECT_TRUE( AssetImportStampUtil::importAll( root, importer, AssetImportMode::ImportStale, nullptr, cache ).isClean() );
     SW_EXPECT_FALSE( FileUtil::exists( root.join( "pack/things/gone.out" ) ) );
     SW_EXPECT_FALSE( FileUtil::exists( root.join( "pack/things/gone" ) ) );
     SW_EXPECT_TRUE( FileUtil::exists( root.join( "pack/things/kept.out" ) ) );
-    SW_EXPECT_TRUE( AssetImportStampUtil::importAll( root.str(), importer, AssetImportMode::CheckOnly, nullptr, cache ).isClean() );
+    SW_EXPECT_TRUE( AssetImportStampUtil::importAll( root, importer, AssetImportMode::CheckOnly, nullptr, cache ).isClean() );
 
     SW_EXPECT_TRUE( FileUtil::removeDirectory( root ) );
 }
@@ -119,16 +118,16 @@ SW_TEST_CASE( AssetImportStampTest, RemovingASourceRemovesItsResult )
 SW_TEST_CASE( AssetImportStampTest, RemovingASourceKeepsFilesTheImporterDoesNotOwn )
 {
     const AbsolutePath root = test::makeScratchPath( "AssetImportStampHandFile" );
-    SW_REQUIRE_TRUE( writeText( FileUtil::joinPath( root.str(), "pack/things_raw/gone.src" ), "a" ) );
+    SW_REQUIRE_TRUE( writeText( root.join( "pack/things_raw/gone.src" ), "a" ) );
     const FakeThingImporter importer;
     const DerivedDataCache  cache = DerivedDataCacheTestAccess::make( vector<DerivedDataLayer>{
         DerivedDataLayer{ test::makeScratchPath( "ImportDDC" ), DerivedDataAccess::ReadWrite }
     } );
-    SW_REQUIRE_TRUE( AssetImportStampUtil::importAll( root.str(), importer, AssetImportMode::ImportStale, nullptr, cache ).isClean() );
-    SW_REQUIRE_TRUE( writeText( FileUtil::joinPath( root.str(), "pack/things/gone/hand.txt" ), "hand" ) ); // 커밋한 손 데이터 — 결과가 아니다
+    SW_REQUIRE_TRUE( AssetImportStampUtil::importAll( root, importer, AssetImportMode::ImportStale, nullptr, cache ).isClean() );
+    SW_REQUIRE_TRUE( writeText( root.join( "pack/things/gone/hand.txt" ), "hand" ) ); // 커밋한 손 데이터 — 결과가 아니다
 
     SW_REQUIRE_TRUE( FileUtil::removeFile( root.join( "pack/things_raw/gone.src" ) ) );
-    SW_EXPECT_TRUE( AssetImportStampUtil::importAll( root.str(), importer, AssetImportMode::ImportStale, nullptr, cache ).isClean() );
+    SW_EXPECT_TRUE( AssetImportStampUtil::importAll( root, importer, AssetImportMode::ImportStale, nullptr, cache ).isClean() );
     SW_EXPECT_FALSE( FileUtil::exists( root.join( "pack/things/gone.out" ) ) );
     SW_EXPECT_FALSE( FileUtil::exists( root.join( "pack/things/gone/side.txt" ) ) );
     SW_EXPECT_TRUE( FileUtil::exists( root.join( "pack/things/gone/hand.txt" ) ) );
@@ -144,20 +143,20 @@ SW_TEST_CASE( AssetImportStampTest, StaleSourceIsServedFromCache )
     const DerivedDataCache  cache     = DerivedDataCacheTestAccess::make( vector<DerivedDataLayer>{
         DerivedDataLayer{ test::makeScratchPath( "ImportDDC" ), DerivedDataAccess::ReadWrite }
     } );
-    const string            firstRoot = makeCheckout( "ImportCacheFirst" );
+    const AbsolutePath      firstRoot = makeCheckout( "ImportCacheFirst" );
     const FakeThingImporter first;
     SW_REQUIRE_TRUE( AssetImportStampUtil::importAll( firstRoot, first, AssetImportMode::ImportStale, nullptr, cache ).isClean() );
     SW_REQUIRE_EQUAL( 1u, first.getImportCount() );
 
-    const string             secondRoot = makeCheckout( "ImportCacheSecond" );
+    const AbsolutePath       secondRoot = makeCheckout( "ImportCacheSecond" );
     const FakeThingImporter  second;
     const AssetImportSummary summary = AssetImportStampUtil::importAll( secondRoot, second, AssetImportMode::ImportStale, nullptr, cache );
     SW_EXPECT_TRUE( summary.isClean() );
     SW_EXPECT_EQUAL( 0u, second.getImportCount() );
     SW_EXPECT_EQUAL( 1u, summary._importedCount );
     string text;
-    SW_EXPECT_TRUE( FileUtil::readTextFile( FileUtil::toDiskPath( FileUtil::joinPath( secondRoot, "pack/things/a.out" ) ), text ) && text == "out:default" );
-    SW_EXPECT_TRUE( FileUtil::readTextFile( FileUtil::toDiskPath( FileUtil::joinPath( secondRoot, "pack/things/a/side.txt" ) ), text ) && text == "side" );
+    SW_EXPECT_TRUE( FileUtil::readTextFile( secondRoot.join( "pack/things/a.out" ), text ) && text == "out:default" );
+    SW_EXPECT_TRUE( FileUtil::readTextFile( secondRoot.join( "pack/things/a/side.txt" ), text ) && text == "side" );
     // 받은 결과로 스탬프도 맞았다 — 다음 대조는 깨끗하다.
     SW_EXPECT_TRUE( AssetImportStampUtil::importAll( secondRoot, second, AssetImportMode::CheckOnly, nullptr, cache ).isClean() );
 }
@@ -170,7 +169,7 @@ SW_TEST_CASE( AssetImportStampTest, SourceChangedWhileImportingIsNotRecorded )
     const DerivedDataCache     cache = DerivedDataCacheTestAccess::make( vector<DerivedDataLayer>{
         DerivedDataLayer{ test::makeScratchPath( "ImportDDC" ), DerivedDataAccess::ReadWrite }
     } );
-    const string               root  = makeCheckout( "ImportSourceChanged" );
+    const AbsolutePath         root  = makeCheckout( "ImportSourceChanged" );
     const EditedSourceImporter edited;
     SW_EXPECT_FALSE( AssetImportStampUtil::importAll( root, edited, AssetImportMode::ImportStale, nullptr, cache ).isClean() );
 
@@ -191,8 +190,8 @@ SW_TEST_CASE( AssetImportStampTest, SourcesWritingOneResultAreReported )
     const DerivedDataCache cache = DerivedDataCacheTestAccess::make( vector<DerivedDataLayer>{
         DerivedDataLayer{ test::makeScratchPath( "ImportDDC" ), DerivedDataAccess::ReadWrite }
     } );
-    const string           root  = makeCheckout( "ImportCollision" );
-    SW_REQUIRE_TRUE( writeText( FileUtil::joinPath( root, "pack/things_raw/a.alt" ), "alt" ) );
+    const AbsolutePath     root  = makeCheckout( "ImportCollision" );
+    SW_REQUIRE_TRUE( writeText( root.join( "pack/things_raw/a.alt" ), "alt" ) );
     const FakeThingImporter  importer;
     const AssetImportSummary imported = AssetImportStampUtil::importAll( root, importer, AssetImportMode::ImportStale, nullptr, cache );
     SW_REQUIRE_EQUAL( static_cast<size_t>( 1 ), imported._listProblem.size() );
@@ -202,10 +201,10 @@ SW_TEST_CASE( AssetImportStampTest, SourcesWritingOneResultAreReported )
     SW_EXPECT_EQUAL( static_cast<size_t>( 1 ), AssetImportStampUtil::importAll( root, importer, AssetImportMode::ImportStale, nullptr, cache )._listProblem.size() );
     SW_EXPECT_EQUAL( 1u, importer.getImportCount() );
     // 앞 원본을 지우면 결과는 남은 원본의 것이다 — 사라진 원본의 결과로 지우지 않는다.
-    SW_REQUIRE_TRUE( FileUtil::removeFile( FileUtil::toDiskPath( FileUtil::joinPath( root, "pack/things_raw/a.alt" ) ) ) );
+    SW_REQUIRE_TRUE( FileUtil::removeFile( root.join( "pack/things_raw/a.alt" ) ) );
     SW_EXPECT_TRUE( AssetImportStampUtil::importAll( root, importer, AssetImportMode::ImportStale, nullptr, cache ).isClean() );
-    SW_EXPECT_TRUE( FileUtil::exists( FileUtil::toDiskPath( FileUtil::joinPath( root, "pack/things/a.out" ) ) ) );
-    SW_REQUIRE_TRUE( writeText( FileUtil::joinPath( root, "pack/things_raw/a.alt" ), "alt" ) );
+    SW_EXPECT_TRUE( FileUtil::exists( root.join( "pack/things/a.out" ) ) );
+    SW_REQUIRE_TRUE( writeText( root.join( "pack/things_raw/a.alt" ), "alt" ) );
     // 범위를 정한 임포트(핫 리로드)도 범위 밖 원본의 결과를 덮지 않는다.
     SW_EXPECT_EQUAL( static_cast<size_t>( 1 ), AssetImportStampUtil::importSources( root, importer, vector<string>{ "pack/things_raw/a.src" }, nullptr, cache )._listProblem.size() );
     SW_EXPECT_EQUAL( 2u, importer.getImportCount() ); // 앞에서 a.src 를 한 번 더 임포트했다
@@ -222,10 +221,10 @@ SW_TEST_CASE( AssetImportStampTest, DifferentSettingsMiss )
     const FakeThingImporter first( "fast" );
     SW_REQUIRE_TRUE( AssetImportStampUtil::importAll( makeCheckout( "ImportSettingsFirst" ), first, AssetImportMode::ImportStale, nullptr, cache ).isClean() );
 
-    const string            secondRoot = makeCheckout( "ImportSettingsSecond" );
+    const AbsolutePath      secondRoot = makeCheckout( "ImportSettingsSecond" );
     const FakeThingImporter second( "best" );
     SW_EXPECT_TRUE( AssetImportStampUtil::importAll( secondRoot, second, AssetImportMode::ImportStale, nullptr, cache ).isClean() );
     SW_EXPECT_EQUAL( 1u, second.getImportCount() );
     string text;
-    SW_EXPECT_TRUE( FileUtil::readTextFile( FileUtil::toDiskPath( FileUtil::joinPath( secondRoot, "pack/things/a.out" ) ), text ) && text == "out:best" );
+    SW_EXPECT_TRUE( FileUtil::readTextFile( secondRoot.join( "pack/things/a.out" ), text ) && text == "out:best" );
 }

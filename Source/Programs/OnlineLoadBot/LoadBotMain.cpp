@@ -137,17 +137,17 @@ namespace sw
              * @brief 부하 선언(Automation `<Load clients rampUpSeconds durationSeconds>`)을 읽어 시나리오에 넣습니다 — 부하 값의 정본은 이것 하나다.
              * @return 파일을 못 읽거나 `<Load>` 가 없거나 봇 수가 0 이면 그 이유입니다(대상은 경로 · 시나리오 읽기 글).
              */
-            [[nodiscard]] static expected<void> readLoad( const string& loadPath, LoadBotScenario& inoutScenario )
+            [[nodiscard]] static expected<void> readLoad( const AbsolutePath& loadPath, LoadBotScenario& inoutScenario )
             {
                 string text;
-                if ( FileUtil::readTextFile( FileUtil::toDiskPath( loadPath ), text ) == false )
-                    return unexpected( Error{ ErrorKind::NotFound, "cannot read the load declaration", loadPath } );
+                if ( FileUtil::readTextFile( loadPath, text ) == false )
+                    return unexpected( Error{ ErrorKind::NotFound, "cannot read the load declaration", loadPath.str() } );
                 AutomationScenario declaration;
-                if ( const expected<void> parsed = declaration.parse( text, loadPath ); parsed.has_value() == false )
+                if ( const expected<void> parsed = declaration.parse( text, loadPath.str() ); parsed.has_value() == false )
                     return unexpected( Error{ ErrorKind::InvalidArgument, "the load declaration does not parse", parsed.error().message() }.appendDetail( parsed.error().detail() ) );
                 const AutomationLoad& load = declaration.getTestOptions()._load;
                 if ( load._bDeclared == false || load._clientCount == 0 )
-                    return unexpected( Error{ ErrorKind::InvalidArgument, "needs <Load clients=\"N\" rampUpSeconds=\"S\" durationSeconds=\"S\"/> with clients > 0", loadPath } );
+                    return unexpected( Error{ ErrorKind::InvalidArgument, "needs <Load clients=\"N\" rampUpSeconds=\"S\" durationSeconds=\"S\"/> with clients > 0", loadPath.str() } );
                 inoutScenario._botCount   = static_cast<int32>( load._clientCount );
                 inoutScenario._rampUpMs   = static_cast<int64>( load._rampUpSeconds * constant::time::kMillisecondsPerSecond );
                 inoutScenario._durationMs = static_cast<int64>( load._durationSeconds * constant::time::kMillisecondsPerSecond );
@@ -183,8 +183,8 @@ namespace sw
                 const LoadBotOptions& options      = *readOptionsResult;
                 const bool            bLocalServer = options._localServerPort >= 0;
 
-                expected<LoadBotScenario> loadedScenario = LoadBotScenario::loadFromFile( options._scenarioPath );
-                const expected<void>      loaded         = loadedScenario.has_value() ? readLoad( options._loadPath, *loadedScenario ) : expected<void>( unexpected( loadedScenario.error() ) );
+                expected<LoadBotScenario> loadedScenario = LoadBotScenario::loadFromFile( FileUtil::toDiskPath( options._scenarioPath ) );
+                const expected<void>      loaded         = loadedScenario.has_value() ? readLoad( FileUtil::toDiskPath( options._loadPath ), *loadedScenario ) : expected<void>( unexpected( loadedScenario.error() ) );
                 if ( loaded.has_value() == false )
                 {
                     SW_LOG_ERROR_ID( "OnlineLoadBot.OnlineLoadBot", "OnlineLoadBot: %#: %#", loaded.error().message(), loaded.error().detail() );

@@ -40,7 +40,7 @@ namespace
     struct FileLocalFixture
     {
         test::LocalStoreSealParts      _seal{};
-        string                         _root{ test::makeScratchPath( "local_store_file" ).str() };
+        AbsolutePath                   _root{ test::makeScratchPath( "local_store_file" ) };
         FileLocalSlotStorage           _directStorage{ _root }; ///< 같은 폴더의 두 번째 바닥 — 저장소가 쉬는 동안 봉투를 직접 본다
         unique_ptr<ThreadedLocalStore> _store{};
 
@@ -100,7 +100,7 @@ SW_TEST_CASE( LocalStoreFileTest, SlotIsAFileUnderTheRootAndLeftoverTempFilesAre
 {
     const AbsolutePath root = test::makeScratchPath( "local_store_layout" );
     {
-        FileLocalSlotStorage storage{ root.str() };
+        FileLocalSlotStorage storage{ root };
         const vector<uint8>  envelopeBytes{ 1, 2, 3 };
         SW_REQUIRE_TRUE( storage.writeSlot( "save/slot0", envelopeBytes ) == LocalStoreResult::Ok );
         SW_EXPECT_TRUE( FileUtil::isRegularFile( root.join( "save/slot0.swls" ) ) );
@@ -108,15 +108,15 @@ SW_TEST_CASE( LocalStoreFileTest, SlotIsAFileUnderTheRootAndLeftoverTempFilesAre
     const AbsolutePath leftover = root.join( "save/slot0.swls.tmp2147483644_0" ); // 꺼진 쓰기의 찌꺼기(있을 수 없는 pid — 죽은 쓰는 쪽)
     SW_REQUIRE_TRUE( FileUtil::writeFile( leftover, reinterpret_cast<const uint8*>( "x" ), 1 ) );
     // 살아 있는 프로세스(이 프로세스)의 임시 파일은 다른 인스턴스가 쓰는 중인 것이다 — 남긴다(병렬 백엔드 실행이 서로의 쓰기를 지우던 결함)
-    StringBuilder<constant::file::kMaxPathSize> inFlightBuilder;
-    inFlightBuilder.append( FileUtil::joinPath( root.str(), "save/slot0.swls.tmp" ).c_str() ).append( static_cast<uint64>( Process::getCurrentProcessID() ) ).append( "_0" );
-    const string inFlight{ inFlightBuilder.c_str() };
-    SW_REQUIRE_TRUE( FileUtil::writeFile( FileUtil::toDiskPath( inFlight ), reinterpret_cast<const uint8*>( "y" ), 1 ) );
+    StringBuilder<constant::buffer::kMax64> inFlightName;
+    inFlightName.appendFormat( "save/slot0.swls.tmp%#_0", static_cast<uint64>( Process::getCurrentProcessID() ) );
+    const AbsolutePath inFlight = root.join( inFlightName.view() );
+    SW_REQUIRE_TRUE( FileUtil::writeFile( inFlight, reinterpret_cast<const uint8*>( "y" ), 1 ) );
     SW_EXPECT_LOG( "LocalStore.LeftoverTempRemoved" );
-    FileLocalSlotStorage restarted{ root.str() };
+    FileLocalSlotStorage restarted{ root };
     SW_EXPECT_FALSE( FileUtil::exists( leftover ) );
-    SW_EXPECT_TRUE( FileUtil::exists( FileUtil::toDiskPath( inFlight ) ) );
-    SW_REQUIRE_TRUE( FileUtil::removeFile( FileUtil::toDiskPath( inFlight ) ) );
+    SW_EXPECT_TRUE( FileUtil::exists( inFlight ) );
+    SW_REQUIRE_TRUE( FileUtil::removeFile( inFlight ) );
     vector<LocalSlotInfo> listSlotInfo;
     SW_EXPECT_TRUE( restarted.listSlots( "", listSlotInfo ) == LocalStoreResult::Ok );
     SW_REQUIRE_EQUAL( size_t( 1 ), listSlotInfo.size() );
@@ -170,7 +170,7 @@ namespace
 
         uint8 arrKey[ILocalStoreKeyProvider::kKeySize]{};
         {
-            LocalDeviceKeyProvider keyProvider{ keyPath.str(), &provider };
+            LocalDeviceKeyProvider keyProvider{ keyPath, &provider };
             SW_EXPECT_LOG( "LocalDeviceKeyProvider.UnreadableKeyReplaced" );
             SW_REQUIRE_TRUE( keyProvider.getSealKey( arrKey ) ); // 예전에는 IOError 로 멈춰 사용자가 파일을 지울 때까지 저장 · 읽기가 막혔다
         }
@@ -181,7 +181,7 @@ namespace
         SW_EXPECT_TRUE( keptBytes == keyBytes ); // 지우지 않는다 — 다른 사용자의 파일이었으면 되돌려 놓을 수 있다
 
         uint8                  arrReloadedKey[ILocalStoreKeyProvider::kKeySize]{};
-        LocalDeviceKeyProvider restarted{ keyPath.str(), &provider };
+        LocalDeviceKeyProvider restarted{ keyPath, &provider };
         SW_REQUIRE_TRUE( restarted.getSealKey( arrReloadedKey ) );
         SW_EXPECT_TRUE( std::memcmp( arrKey, arrReloadedKey, sizeof( arrKey ) ) == 0 );
     }
@@ -211,12 +211,12 @@ SW_TEST_CASE( LocalStoreFileTest, CorruptSlotFallsBackToThePreviousGeneration )
     SW_REQUIRE_TRUE( Contract::write( fixture.getStore(), "save/slot0", Contract::makeText( "second" ) ) == LocalStoreResult::Ok );
     fixture._store.reset(); // 쓰기를 마친 뒤 파일을 직접 고친다
 
-    const string                             slotPath = fixture._directStorage.makeSlotPath( "save/slot0" );
+    const AbsolutePath                       slotPath = fixture._directStorage.makeSlotPath( "save/slot0" );
     StringBuilder<constant::buffer::kMax512> previousPath;
-    previousPath.appendFormat( "%#%#", slotPath, FileLocalSlotStorage::kPreviousGenerationSuffix );
+    previousPath.appendFormat( "%#%#", slotPath.str(), FileLocalSlotStorage::kPreviousGenerationSuffix );
     SW_REQUIRE_TRUE( FileUtil::isRegularFile( FileUtil::toDiskPath( previousPath.view() ) ) );
     const uint8 arrGarbage[4] = { 0xDE, 0xAD, 0xBE, 0xEF };
-    SW_REQUIRE_TRUE( FileUtil::writeFile( FileUtil::toDiskPath( slotPath ), arrGarbage, sizeof( arrGarbage ) ) );
+    SW_REQUIRE_TRUE( FileUtil::writeFile( slotPath, arrGarbage, sizeof( arrGarbage ) ) );
 
     fixture.restart();
     {

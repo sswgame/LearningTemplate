@@ -26,7 +26,7 @@ namespace sw::editor
         _bDirty  = false;
         if ( _entry.isTable() )
         {
-            const expected<void> opened = _tableDocument.open( _absolutePath );
+            const expected<void> opened = _tableDocument.open( _absolutePath.str() );
             _bTypeFound                 = opened.has_value();
             if ( opened.has_value() == false )
                 SW_LOG_WARNING_ID( "ProjectSettingsPanel.ProjectSettingsTableCouldNot", "Project settings: %# could not be opened - %# (%#)", _absolutePath.c_str(), opened.error().message(),
@@ -39,7 +39,7 @@ namespace sw::editor
             _bTypeFound = false;
             return;
         }
-        if ( _document.open( *pType, _absolutePath, _entry._elementName ) == ConfigReadResult::Invalid )
+        if ( _document.open( *pType, _absolutePath.str(), _entry._elementName ) == ConfigReadResult::Invalid )
             SW_LOG_WARNING_ID( "ProjectSettingsPanel.ProjectSettingsCouldNot", "Project settings: %# could not be opened - see the errors above", _absolutePath.c_str() );
         _bDirty = false;
     }
@@ -63,7 +63,7 @@ namespace sw::editor
         // 호스트가 파일에서 읽은 설정(EngineConfig · GameConfig …)이면 제자리에서 다시 읽는다.
         // 방금 쓴 파일을 다시 읽지 못하면(Failed) 읽는 쪽이 오류를 남겼다 — 적용되지 않은 것이다.
         ConfigReloadSubsystem* pConfigReload = editor::findSubsystem<ConfigReloadSubsystem>();
-        outApplied                           = pConfigReload != nullptr && pConfigReload->reloadChangedFile( _absolutePath ) == ReloadResult::Reloaded;
+        outApplied                           = pConfigReload != nullptr && pConfigReload->reloadChangedFile( _absolutePath.str() ) == ReloadResult::Reloaded;
         return true;
     }
 
@@ -132,8 +132,8 @@ namespace sw::editor
 
         // 활성 팩의 `<Engine>` 요소(창 제목 · 렌더 파이프라인 · 스키마 · UI 규칙) — 게임의 엔진 설정은 프리셋이 아니라 팩 gamesettings.xml 에 있다.
         // 유니티 · 언리얼의 Project Settings 처럼 열린 프로젝트(활성 게임) 하나만 고친다.
-        const DataPath& packRoot   = editor::getSubsystem<const GameConfig>()._packRoot;
-        const string    packFolder = packRoot.isSet() ? EditorPaths::findContentFolder( packRoot.get() ) : string{};
+        const DataPath&    packRoot   = editor::getSubsystem<const GameConfig>()._packRoot;
+        const AbsolutePath packFolder = packRoot.isSet() ? EditorPaths::findContentFolder( packRoot.get() ) : AbsolutePath{};
         // 팩 폴더를 못 찾았는데 빈 루트에 이어 붙이면 상대 경로가 돼 작업 폴더의 파일을 열고 쓴다 — 페이지를 만들지 않고 알린다.
         if ( packRoot.isSet() && packFolder.empty() )
             SW_LOG_ERROR_ID( "ProjectSettingsPanel.ProjectSettingsActivePack", "Project settings: the active pack folder '%#' was not found - its <Engine> settings page is not listed", packRoot.get().c_str() );
@@ -144,7 +144,7 @@ namespace sw::editor
             pPackPage->_entry._typeName               = pPackPage->_entry._page;
             pPackPage->_entry._elementName            = PackEngineSettings::kElementName;
             pPackPage->_entry._relativePath           = FileUtil::joinPath( FileUtil::joinPath( constant::path::kContentFolder, packRoot.get() ), PackEngineSettings::kPackRelativePath );
-            pPackPage->_entry._absolutePath           = FileUtil::joinPath( packFolder, PackEngineSettings::kPackRelativePath );
+            pPackPage->_entry._absolutePath           = packFolder.join( PackEngineSettings::kPackRelativePath );
             pPackPage->_absolutePath                  = pPackPage->_entry._absolutePath;
             pPackPage->_bTypeFound                    = registry.findType( PackEngineSettings::StaticType()->_name ) != nullptr;
             outListPage.push_back( std::move( pPackPage ) );
@@ -157,9 +157,9 @@ namespace sw::editor
             return;
         }
         vector<ProjectSettingsEntry> listEntry;
-        ProjectSettingsEntry::collectLoaded( *pConfigManager, ProcessRoots::get()._project.str(), listEntry );
+        ProjectSettingsEntry::collectLoaded( *pConfigManager, ProcessRoots::get()._project, listEntry );
         vector<ProjectSettingsEntry> listTable;
-        (void)ProjectSettingsEntry::collectTables( ProcessRoots::get()._project.str(), listEntry, listTable ); // 못 훑으면 오류를 남겼다 — 형식 페이지는 그대로 보인다
+        (void)ProjectSettingsEntry::collectTables( ProcessRoots::get()._project, listEntry, listTable ); // 못 훑으면 오류를 남겼다 — 형식 페이지는 그대로 보인다
         for ( ProjectSettingsEntry& table : listTable )
             listEntry.push_back( std::move( table ) );
         for ( ProjectSettingsEntry& entry : listEntry )

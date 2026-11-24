@@ -407,7 +407,7 @@ namespace sw
         }
         else if ( written.has_value() && bSlotLayout )
         {
-            const expected<uint64> fileHash = ContentHash::computeFileStream( _packPath.str() );
+            const expected<uint64> fileHash = ContentHash::computeFileStream( _packPath );
             if ( fileHash.has_value() == false )
                 return fail( fileHash.error() );
             written->_contentHash = *fileHash;

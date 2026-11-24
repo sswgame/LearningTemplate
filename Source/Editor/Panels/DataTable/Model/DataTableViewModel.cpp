@@ -285,7 +285,7 @@ namespace sw::editor
         if ( _bLocalizationDirty )
             EditorDataTableCommands::collectLocalizationFiles( _localizationSheet, outListPath );
         if ( _gameDataPath.empty() == false )
-            outListPath.push_back( _gameDataPath );
+            outListPath.push_back( _gameDataPath.str() );
     }
 
     void DataTableViewModel::revertLocalization()
@@ -443,23 +443,23 @@ namespace sw::editor
         _bGameDataLoaded  = SW_TRUE;
     }
 
-    string DataTableViewModel::makeGameDataAssetID( string_view absolutePath )
+    string DataTableViewModel::makeGameDataAssetID( const AbsolutePath& absolutePath )
     {
         return editor::getSubsystem<AssetPaths>().toAssetID( absolutePath );
     }
 
-    bool DataTableViewModel::openGameDataFile( string_view absolutePath )
+    bool DataTableViewModel::openGameDataFile( const AbsolutePath& absolutePath )
     {
         // 읽지 못하면 아무 파일도 열지 않는다 — 앞 파일의 글을 그대로 들고 열면, 저장할 때 **앞 파일의 내용을 이 파일에** 쓴다.
         string text;
-        if ( FileUtil::readTextFile( FileUtil::toDiskPath( absolutePath ), text ) == false )
+        if ( FileUtil::readTextFile( absolutePath, text ) == false )
         {
-            SW_LOG_ERROR_ID( "DataTablePanel.CouldNotReadGame", "Could not read game data table '%#' - it is not opened", string( absolutePath ).c_str() );
-            _gameDataPath.clear();
+            SW_LOG_ERROR_ID( "DataTablePanel.CouldNotReadGame", "Could not read game data table '%#' - it is not opened", string( absolutePath.str() ).c_str() );
+            _gameDataPath = {};
             openGameDataText( string{} ); // 읽은 것이 없다 - 테이블을 비운다
             return false;
         }
-        _gameDataPath = string( absolutePath );
+        _gameDataPath = absolutePath;
         openGameDataText( std::move( text ) );
         return true;
     }
@@ -477,7 +477,7 @@ namespace sw::editor
     {
         if ( _gameDataPath.empty() )
             return false;
-        const string fileName = FileUtil::getFileNamePart( _gameDataPath );
+        const string fileName = FileUtil::getFileNamePart( _gameDataPath.str() );
         if ( _gameDataDocument.isParsed() == false )
         {
             SW_LOG_ERROR_ID( "DataTablePanel.GameDataNotValidXML", "Game data table '%#' is not saved - the text is not valid XML: %#", fileName.c_str(), _gameDataDocument.getError().c_str() );
@@ -485,7 +485,7 @@ namespace sw::editor
         }
         if ( EditorContentWrite::warnIfReadOnly( _gameDataPath, EditorContentWriteKind::Save ) ) // Save File 단추는 패널 저장을 지나지 않는다 — 같은 확인을 여기서도
             return false;
-        if ( FileUtil::writeTextFile( FileUtil::toDiskPath( _gameDataPath ), _selectedGameDataRawText ) == false )
+        if ( FileUtil::writeTextFile( _gameDataPath, _selectedGameDataRawText ) == false )
         {
             SW_LOG_ERROR_ID( "DataTablePanel.CouldNotWriteGame", "Could not write game data table '%#'", _gameDataPath.c_str() );
             return false;

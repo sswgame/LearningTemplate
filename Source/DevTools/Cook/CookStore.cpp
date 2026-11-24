@@ -151,7 +151,7 @@ namespace sw
             return 0;
         }
         constexpr string_view kRecordSuffix = ".cookrec";
-        const AbsolutePath    recordRoot    = FileUtil::toDiskPath( FileUtil::trimTrailingSlashes( FileUtil::normalizeSeparators( _recordRootPath.str() ) ) );
+        const AbsolutePath    recordRoot    = _recordRootPath.join( {} );
         vector<AbsolutePath>  listRecord;
         // 기록 폴더가 아직 없으면 지울 옛 출력도 없다. 도중에 멈춘 목록이면 지울 것을 빠뜨리므로 실패로 센다(경로는 collectFiles 가 알린다).
         if ( FileUtil::isDirectory( recordRoot ) && FileUtil::collectFiles( recordRoot, kRecordSuffix, listRecord, true ) == false )

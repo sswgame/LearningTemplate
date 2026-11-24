@@ -92,7 +92,7 @@ namespace sw
          * @brief 사용자 설정 파일 경로 @p userSettingsFilePath 와 같은 폴더의 사용자 바인딩 파일 경로입니다. 설정 파일 경로가 비었으면(테스트, 헤드리스) 빈 경로입니다.
          * @details 자동화가 사용자 설정 파일 자리를 옮기면(무인 실행 · `-gv_userSettingsFile`) 이 파일도 같이 옮겨 간다.
          */
-        static string makeUserBindingsPath( string_view userSettingsFilePath );
+        static AbsolutePath makeUserBindingsPath( const AbsolutePath& userSettingsFilePath );
         /**
          * @brief @p map 에서 **기본 바인딩과 다른 슬롯만** @p filePath 에 씁니다. 다른 것이 없으면 파일을 지웁니다. 키보드 키 · 단축키는 수정 키(`modifier`)도 함께 적습니다.
          * @details 디버그 키 맵과 에디터 입력 맵(`EditorInputActions`)이 같은 형식 · 같은 함수로 사용자 재배치를 저장한다.
@@ -110,7 +110,7 @@ namespace sw
          * @brief 이 디버그 키 맵의 사용자 바인딩 파일 경로를 정합니다(`makeUserBindingsPath`). 맵을 처음 만들 때 이 파일의 재배치를 읽으므로 첫 `update` 전에 부릅니다.
          *        빈 경로면 읽지도 저장하지도 않습니다(테스트, 헤드리스).
          */
-        void          setUserBindingsPath( string_view filePath ) { _userBindingsPath = FileUtil::toDiskPath( filePath ); }
+        void          setUserBindingsPath( const AbsolutePath& filePath ) { _userBindingsPath = filePath; }
         const string& getUserBindingsPath() const { return _userBindingsPath.str(); }
         /** @brief 디버그 키 맵의 재배치를 사용자 파일에 저장합니다. 경로가 없으면 false 입니다. */
         [[nodiscard]] bool saveUserBindings() const;

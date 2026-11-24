@@ -210,46 +210,46 @@ namespace sw::editor
         return bAllKnown;
     }
 
-    void ContentBrowserCollectionStore::loadFiles( string_view localFilePath, string_view sharedFilePath )
+    void ContentBrowserCollectionStore::loadFiles( const AbsolutePath& localFilePath, const AbsolutePath& sharedFilePath )
     {
         _bLocalUnread  = loadFile( localFilePath, false ) ? SW_FALSE : SW_TRUE;
         _bSharedUnread = loadFile( sharedFilePath, true ) ? SW_FALSE : SW_TRUE;
     }
 
-    bool ContentBrowserCollectionStore::loadFile( string_view filePath, bool bShared )
+    bool ContentBrowserCollectionStore::loadFile( const AbsolutePath& filePath, bool bShared )
     {
         if ( filePath.empty() )
             return true;
         string                 text;
-        const OptionalFileRead read  = FileUtil::readOptionalTextFile( FileUtil::toDiskPath( filePath ), text );
+        const OptionalFileRead read  = FileUtil::readOptionalTextFile( filePath, text );
         const bool             bRead = read == OptionalFileRead::Missing || ( read == OptionalFileRead::Read && fromText( FileUtil::skipUTF8Bom( text ), bShared ) );
         if ( bRead == false )
-            SW_LOG_ERROR_ID( "ContentBrowserCollectionStore.NotRead", "Content Browser collections '%#' could not be read completely - it is not written back until it is fixed and the editor is reopened", string( filePath ).c_str() );
+            SW_LOG_ERROR_ID( "ContentBrowserCollectionStore.NotRead", "Content Browser collections '%#' could not be read completely - it is not written back until it is fixed and the editor is reopened", string( filePath.str() ).c_str() );
         return bRead;
     }
 
-    bool ContentBrowserCollectionStore::saveFile( string_view filePath, bool bShared ) const
+    bool ContentBrowserCollectionStore::saveFile( const AbsolutePath& filePath, bool bShared ) const
     {
         if ( ( bShared ? _bSharedUnread : _bLocalUnread ) == SW_TRUE )
         {
-            SW_LOG_ERROR_ID( "ContentBrowserCollectionStore.NotOverwritten", "Content Browser collections were not saved: '%#' was not read completely and writing would lose the rest of it", string( filePath ).c_str() );
+            SW_LOG_ERROR_ID( "ContentBrowserCollectionStore.NotOverwritten", "Content Browser collections were not saved: '%#' was not read completely and writing would lose the rest of it", string( filePath.str() ).c_str() );
             return false;
         }
-        if ( filePath.empty() || FileUtil::ensureParentDirectoryExists( FileUtil::toDiskPath( filePath ) ) == false || FileUtil::writeTextFile( FileUtil::toDiskPath( filePath ), toText( bShared ) ) == false )
+        if ( filePath.empty() || FileUtil::ensureParentDirectoryExists( filePath ) == false || FileUtil::writeTextFile( filePath, toText( bShared ) ) == false )
         {
-            SW_LOG_WARNING_ID( "ContentBrowserCollectionStore.NotSaved", "Content Browser collections could not be saved to %#", string( filePath ).c_str() );
+            SW_LOG_WARNING_ID( "ContentBrowserCollectionStore.NotSaved", "Content Browser collections could not be saved to %#", string( filePath.str() ).c_str() );
             return false;
         }
         return true;
     }
 
-    string ContentBrowserCollectionStore::getLocalFilePath()
+    AbsolutePath ContentBrowserCollectionStore::getLocalFilePath()
     {
-        return EditorPaths::resolveEditorStateFile( kLocalFileName ).str();
+        return EditorPaths::resolveEditorStateFile( kLocalFileName );
     }
 
-    string ContentBrowserCollectionStore::getSharedFilePath()
+    AbsolutePath ContentBrowserCollectionStore::getSharedFilePath()
     {
-        return FileUtil::joinPath( ProcessRoots::get()._project.str(), kSharedFileName );
+        return ProcessRoots::get()._project.join( kSharedFileName );
     }
 } // namespace sw::editor

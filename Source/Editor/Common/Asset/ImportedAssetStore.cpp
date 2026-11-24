@@ -46,9 +46,9 @@ namespace sw::editor
         return string( text.c_str(), text.size() );
     }
 
-    bool ImportedAssetStore::writeResultText( string_view diskPath, string_view text )
+    bool ImportedAssetStore::writeResultText( const AbsolutePath& diskPath, string_view text )
     {
-        return FileUtil::ensureParentDirectoryExists( FileUtil::toDiskPath( diskPath ) ) && FileUtil::writeTextFile( FileUtil::toDiskPath( diskPath ), text );
+        return FileUtil::ensureParentDirectoryExists( diskPath ) && FileUtil::writeTextFile( diskPath, text );
     }
 
     string ImportedAssetStore::findDomainFolder( string_view sourcePath )
@@ -60,27 +60,27 @@ namespace sw::editor
         return at == string::npos ? string{} : normalized.substr( 0, at );
     }
 
-    string ImportedAssetStore::makeStorePath( string_view domainFolder, string_view kind, string_view key, string_view extension )
+    AbsolutePath ImportedAssetStore::makeStorePath( string_view domainFolder, string_view kind, string_view key, string_view extension )
     {
         StringBuilder<constant::buffer::kMax256> pathBuilder;
         pathBuilder.appendFormat( "%#/%#/%#/%#/%#%#", domainFolder, kModelFolderName, kStoreFolderName, kind, key, extension );
-        return string( pathBuilder.view() );
+        return FileUtil::toDiskPath( pathBuilder.view() );
     }
 
-    bool ImportedAssetStore::writeIfAbsent( string_view storePath, const void* pBytes, size_t byteCount )
+    bool ImportedAssetStore::writeIfAbsent( const AbsolutePath& storePath, const void* pBytes, size_t byteCount )
     {
         // 잠그지 않는다: 병렬 임포트의 두 원본이 같은 키를 써도 키가 내용 지문이라 같은 바이트이고, `FileUtil::writeFile` 은 저마다의 임시 파일에 쓴 뒤
         // 바꿔 끼운다(언리얼 DDC 의 내용 주소 쓰기와 같다) — 프로세스 전역 잠금이 지킬 상태가 없다.
-        const string path{ storePath };
-        if ( FileUtil::exists( FileUtil::toDiskPath( path ) ) )
+        const AbsolutePath path{ storePath };
+        if ( FileUtil::exists( path ) )
         {
             vector<uint8> existing;
-            const bool    bSame = FileUtil::readFile( FileUtil::toDiskPath( path ), existing ) && existing.size() == byteCount && ( byteCount == 0 || Memory::compare( existing.data(), pBytes, byteCount ) == 0 );
+            const bool    bSame = FileUtil::readFile( path, existing ) && existing.size() == byteCount && ( byteCount == 0 || Memory::compare( existing.data(), pBytes, byteCount ) == 0 );
             if ( bSame == false )
                 SW_LOG_ERROR_ID( "ImportedAssetStore.ContentMismatch", "Shared import result '%#' exists with other bytes (a hash collision or a hand edit) - delete it and import again", path.c_str() );
             return bSame;
         }
-        if ( FileUtil::ensureParentDirectoryExists( FileUtil::toDiskPath( path ) ) == false || FileUtil::writeFile( FileUtil::toDiskPath( path ), static_cast<const uint8*>( pBytes ), byteCount ) == false )
+        if ( FileUtil::ensureParentDirectoryExists( path ) == false || FileUtil::writeFile( path, static_cast<const uint8*>( pBytes ), byteCount ) == false )
         {
             SW_LOG_ERROR_ID( "ImportedAssetStore.WriteFailed", "Failed to write shared import result '%#'", path.c_str() );
             return false;
@@ -88,17 +88,17 @@ namespace sw::editor
         return true;
     }
 
-    bool ImportedAssetStore::writeSourceIfAbsent( const AssetPaths& assetPaths, string_view sourcePath, const void* pBytes, size_t byteCount )
+    bool ImportedAssetStore::writeSourceIfAbsent( const AssetPaths& assetPaths, const AbsolutePath& sourcePath, const void* pBytes, size_t byteCount )
     {
         if ( writeIfAbsent( sourcePath, pBytes, byteCount ) == false )
             return false;
         const string       assetID  = assetPaths.toAssetID( sourcePath );
-        const AbsolutePath metaPath = AssetMeta::makePath( FileUtil::toDiskPath( sourcePath ) );
+        const AbsolutePath metaPath = AssetMeta::makePath( sourcePath );
         if ( assetID.empty() || FileUtil::isRegularFile( metaPath ) )
             return true;
         if ( FileUtil::writeTextFile( metaPath, AssetMeta::makeText( assetID, AssetGUID::fromName( assetID ) ) ) )
             return true;
-        SW_LOG_ERROR_ID( "ImportedAssetStore.MetaWriteFailed", "Failed to write the asset identity beside '%#'", sourcePath );
+        SW_LOG_ERROR_ID( "ImportedAssetStore.MetaWriteFailed", "Failed to write the asset identity beside '%#'", sourcePath.str() );
         return false;
     }
 
@@ -139,14 +139,14 @@ namespace sw::editor
             {
                 StringBuilder<constant::buffer::kMax512> fileBuilder;
                 fileBuilder.appendFormat( "%#%#", string_view( normalized ).substr( 0, rootEnd + 1 ), reference );
-                fileHash = AssetImportStampUtil::computeFileHash( fileBuilder.view() );
+                fileHash = AssetImportStampUtil::computeFileHash( FileUtil::toDiskPath( fileBuilder.view() ) );
             }
             hash = HashUtil::computeStringHash64( reinterpret_cast<const utf8*>( &fileHash ), sizeof( fileHash ), false, hash );
         }
         return hash;
     }
 
-    void ImportedAssetStore::collectReferencedFiles( string_view importedPath, string_view text, vector<string>& outListPath )
+    void ImportedAssetStore::collectReferencedFiles( string_view importedPath, string_view text, vector<AbsolutePath>& outListPath )
     {
         vector<string> listReference;
         collectReferences( text, listReference );
@@ -163,15 +163,15 @@ namespace sw::editor
             {
                 StringBuilder<constant::buffer::kMax512> fileBuilder;
                 fileBuilder.appendFormat( "%#%#", string_view( normalized ).substr( 0, rootEnd + 1 ), reference );
-                outListPath.push_back( string( fileBuilder.view() ) );
+                outListPath.push_back( FileUtil::toDiskPath( fileBuilder.view() ) );
             }
         }
     }
 
-    uint32 ImportedAssetStore::removeUnreferenced( string_view resourceRoot, vector<string>& inoutListProblem )
+    uint32 ImportedAssetStore::removeUnreferenced( const AbsolutePath& resourceRoot, vector<string>& inoutListProblem )
     {
-        const string   root = FileUtil::trimTrailingSlashes( FileUtil::normalizeSeparators( resourceRoot ) );
-        vector<string> listFolder;
+        const AbsolutePath root = resourceRoot.join( {} );
+        vector<string>     listFolder;
         // 옛 작업 도메인 자리(`Content/scratch/`)의 찌꺼기는 보지 않는다(EditorContentScan 이 뺀다)
         if ( root.empty() || EditorContentScan::collectFolders( root, listFolder, true ) == false )
             return 0;

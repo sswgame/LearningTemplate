@@ -12,6 +12,7 @@
 #include "Core/Foundation/Macros.h"
 #include "Core/Foundation/Types.h"
 #include "Core/Memory/Memory.h"
+#include "Core/Path/AbsolutePath.h"
 
 #include "DevTools/Profiling/Memory/MemorySnapshot.h"
 #include "DevTools/Profiling/Memory/MemorySnapshotExport.h"
@@ -77,7 +78,7 @@ namespace sw::editor
         shared_ptr<const MemorySnapshot> _pSnapshot{};
         CSVTable                         _table{};
         string                           _fileName{};
-        string                           _folder{};
+        AbsolutePath                     _folder{};
         uint8                            _bWholeSnapshot{ SW_FALSE };
     };
 
@@ -169,7 +170,7 @@ namespace sw::editor
         /** @brief 시트의 형식 거르기 값을 모읍니다(보는 스냅숏의 거르기 칸 글, 이름 순). */
         void collectFilterOptions( vector<string>& outListOption ) const;
         /** @brief 내보내기 폴더를 잡습니다. 못 잡으면 이유를 상태 줄에 두고 빈 글입니다. */
-        string reserveExportFolder();
+        AbsolutePath reserveExportFolder();
 
     private:
         vector<shared_ptr<const MemorySnapshot>> _listSnapshot;

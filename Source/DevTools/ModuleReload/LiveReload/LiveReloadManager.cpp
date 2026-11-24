@@ -774,8 +774,8 @@ namespace sw
         if ( prepared._pHandle == nullptr )
             return false;
 
-        const string previousTempModule = context._tempModulePath.str();
-        void*        pPreviousHandle    = context._pLibraryModule;
+        const AbsolutePath previousTempModule = context._tempModulePath;
+        void*              pPreviousHandle    = context._pLibraryModule;
 
         BLOCK( "Swap Module Handles" )
         {

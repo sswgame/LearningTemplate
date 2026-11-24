@@ -53,8 +53,8 @@ namespace sw::editor
 
     bool ProfilerCaptureViewModel::saveCapture() const
     {
-        const string path = getCaptureFilePath();
-        if ( FileUtil::ensureParentDirectoryExists( FileUtil::toDiskPath( path ) ) && _scopeHistory.saveToFile( path ) )
+        const AbsolutePath path = getCaptureFilePath();
+        if ( FileUtil::ensureParentDirectoryExists( path ) && _scopeHistory.saveToFile( path ) )
         {
             SW_LOG_INFO_ID( "ProfilerCaptureViewModel.ProfilerCaptureSaved", "Profiler capture saved: %#", path.c_str() );
             return true;
@@ -65,7 +65,7 @@ namespace sw::editor
 
     bool ProfilerCaptureViewModel::loadCapture()
     {
-        const string path = getCaptureFilePath();
+        const AbsolutePath path = getCaptureFilePath();
         if ( _scopeHistory.loadFromFile( path ) == false )
         {
             SW_LOG_WARNING_ID( "ProfilerCaptureViewModel.ProfilerCaptureCouldNot2", "Profiler capture could not be loaded: %#", path.c_str() );
@@ -77,9 +77,9 @@ namespace sw::editor
         return true;
     }
 
-    string ProfilerCaptureViewModel::getCaptureFilePath()
+    AbsolutePath ProfilerCaptureViewModel::getCaptureFilePath()
     {
-        return FileUtil::joinPath( FileUtil::joinPath( ProcessRoots::get()._saved.str(), "Profiler" ), "ProfilerCapture.txt" );
+        return ProcessRoots::get()._saved.join( "Profiler" ).join( "ProfilerCapture.txt" );
     }
 
     void ProfilerCaptureViewModel::setSort( ProfilerSortColumn column, bool bDescending )

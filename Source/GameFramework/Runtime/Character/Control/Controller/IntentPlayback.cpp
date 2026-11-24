@@ -70,7 +70,7 @@ namespace sw
         return started;
     }
 
-    expected<uint32> IntentPlayback::startFromFile( GameObjectManager& manager, string_view path, bool bReturnWhenDone )
+    expected<uint32> IntentPlayback::startFromFile( GameObjectManager& manager, const AbsolutePath& path, bool bReturnWhenDone )
     {
         ControlIntentHistory history;
         if ( expected<void> loaded = history.loadFromFile( path ); loaded.has_value() == false )
@@ -162,7 +162,7 @@ namespace sw
                 string path;
                 if ( DevCommandRegistry::readDiskPathArgument( listArgument[0], path, outReply ) == false )
                     return true;
-                const expected<uint32> startedCount = IntentPlayback::startFromFile( *pManager, string_view( path.c_str(), path.size() ), true );
+                const expected<uint32> startedCount = IntentPlayback::startFromFile( *pManager, FileUtil::toDiskPath( string_view( path.c_str(), path.size() ) ), true );
                 if ( startedCount.has_value() == false )
                 {
                     StringBuilder<constant::buffer::kMax256> replyBuilder;

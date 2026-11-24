@@ -29,9 +29,9 @@ namespace sw
             /** @brief 빌드 트리(바이너리 폴더의 부모 — `ModuleCompiler` 가 `cmake --build` 를 부르는 자리)입니다. 없으면(패키지 · 복사한 바이너리) 빈 글입니다. */
             static AbsolutePath findBuildDirectory()
             {
-                const AbsolutePath parentDir  = FileUtil::toDiskPath( FileUtil::getDirectoryPart( FileUtil::trimTrailingSlashes( ProcessRoots::get()._binary.str() ) ) );
+                const AbsolutePath parentDir  = ProcessRoots::get()._binary.getParent();
                 const bool         bBuildTree = FileUtil::isRegularFile( parentDir.join( "build.ninja" ) ) || FileUtil::isRegularFile( parentDir.join( "CMakeCache.txt" ) );
-                return FileUtil::toDiskPath( bBuildTree ? parentDir.str() : string{} );
+                return bBuildTree ? parentDir : AbsolutePath{};
             }
 
             /** @brief 판 머리를 판 글로 덮습니다(원본은 실행기에 맡긴다 — 시나리오 끝에 되돌린다). 실패하면 그 까닭입니다. */

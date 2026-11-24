@@ -70,12 +70,12 @@ namespace sw
              * @brief builtins 표를 읽어 TYPE · CONTAINER 줄을 적힌 순서대로 돌려줍니다. 주석 · 전처리 줄은 건너뜁니다.
              * @details 맵 채우기와 `ReflectBuiltins.gen.cpp` 쓰기가 함께 씁니다.
              */
-            [[nodiscard]] static bool readRows( const string_view absPath, vector<BuiltinRow>& outListRow )
+            [[nodiscard]] static bool readRows( const AbsolutePath& absPath, vector<BuiltinRow>& outListRow )
             {
                 string text;
-                if ( FileUtil::readTextFile( FileUtil::toDiskPath( absPath ), text ) == false )
+                if ( FileUtil::readTextFile( absPath, text ) == false )
                 {
-                    SW_LOG_ERROR_ID( "ReflectBuiltinsLoader.FailedReadBuiltins", "Failed to read builtins: %#", absPath );
+                    SW_LOG_ERROR_ID( "ReflectBuiltinsLoader.FailedReadBuiltins", "Failed to read builtins: %#", absPath.str() );
                     return false;
                 }
 
@@ -108,7 +108,7 @@ namespace sw
                     }
                     if ( bParsed == false || row._listArgument.size() < minArgumentCount )
                     {
-                        SW_LOG_ERROR_ID( "ReflectBuiltinsLoader.MalformedBuiltinsLineNeeds", "%#: malformed builtins line (needs at least %# arguments): %#", absPath, static_cast<uint32>( minArgumentCount ), line );
+                        SW_LOG_ERROR_ID( "ReflectBuiltinsLoader.MalformedBuiltinsLineNeeds", "%#: malformed builtins line (needs at least %# arguments): %#", absPath.str(), static_cast<uint32>( minArgumentCount ), line );
                         return false;
                     }
                     outListRow.push_back( std::move( row ) );
@@ -312,7 +312,7 @@ namespace sw
 
 namespace sw
 {
-    bool loadReflectBuiltins( const string_view absPath, ParserSession& outSession )
+    bool loadReflectBuiltins( const AbsolutePath& absPath, ParserSession& outSession )
     {
         vector<ReflectBuiltinsLoaderInternal::BuiltinRow> listRow;
         if ( ReflectBuiltinsLoaderInternal::readRows( absPath, listRow ) == false )
@@ -329,11 +329,11 @@ namespace sw
             if ( row._bContainer == SW_TRUE )
             {
                 ContainerTypeRule rule;
-                if ( ReflectBuiltinsLoaderInternal::readContainerRule( absPath, listArgument, rule ) == false )
+                if ( ReflectBuiltinsLoaderInternal::readContainerRule( absPath.str(), listArgument, rule ) == false )
                     return false;
                 if ( outSession._containerTypeMap.registerRule( rule ) == false )
                 {
-                    SW_LOG_ERROR_ID( "ReflectBuiltinsLoader.BadCONTAINERRow", "%#: bad CONTAINER row '%#'", absPath, listArgument[0] );
+                    SW_LOG_ERROR_ID( "ReflectBuiltinsLoader.BadCONTAINERRow", "%#: bad CONTAINER row '%#'", absPath.str(), listArgument[0] );
                     return false;
                 }
                 ++containerCount;
@@ -341,7 +341,7 @@ namespace sw
             else
             {
                 BuiltinTypeTraits traits;
-                if ( ReflectBuiltinsLoaderInternal::readTraits( absPath, listArgument, traits ) == false )
+                if ( ReflectBuiltinsLoaderInternal::readTraits( absPath.str(), listArgument, traits ) == false )
                     return false;
                 outSession._typeNameMap.registerEntry( listArgument[0], string( ReflectBuiltinsLoaderInternal::getNamespace( listArgument ) ),
                                                        ReflectBuiltinsLoaderInternal::getAliases( listArgument ) );
@@ -355,18 +355,18 @@ namespace sw
         const bool               bFixedArrayRow = pFixedArray != nullptr && pFixedArray->_kind == ContainerKind::Sequence && pFixedArray->_bFixed == SW_TRUE;
         if ( bFixedArrayRow == false )
         {
-            SW_LOG_ERROR_ID( "ReflectBuiltinsLoader.MissingFixedArrayRow", "%#: needs a CONTAINER row '%#' with kind Sequence and the Fixed role (C arrays use it)", absPath,
+            SW_LOG_ERROR_ID( "ReflectBuiltinsLoader.MissingFixedArrayRow", "%#: needs a CONTAINER row '%#' with kind Sequence and the Fixed role (C arrays use it)", absPath.str(),
                              annotation::kFixedArrayTypeName );
             return false;
         }
 
         outSession._typeNameMap.setLoaded( true );
         outSession._containerTypeMap.setLoaded( true );
-        SW_LOG_TRACE_ID( "ReflectBuiltinsLoader.TypesContainers", "types=%# containers=%# (%#)", typeCount, containerCount, absPath );
+        SW_LOG_TRACE_ID( "ReflectBuiltinsLoader.TypesContainers", "types=%# containers=%# (%#)", typeCount, containerCount, absPath.str() );
         return typeCount > 0 || containerCount > 0;
     }
 
-    bool emitReflectBuiltinsGen( const string_view builtinsAbsPath, const string_view outCppAbsPath, const string_view moduleName, const ParserSession& session )
+    bool emitReflectBuiltinsGen( const AbsolutePath& builtinsAbsPath, const AbsolutePath& outCppAbsPath, const string_view moduleName, const ParserSession& session )
     {
         vector<ReflectBuiltinsLoaderInternal::BuiltinRow> listRow;
         if ( ReflectBuiltinsLoaderInternal::readRows( builtinsAbsPath, listRow ) == false )
@@ -376,7 +376,7 @@ namespace sw
         const EmitTemplateStore& tpls = session._emitTemplateStore;
 
         string out       = tpls.render( EmitTemplate::BuiltinFileHeader, {
-                                                                       {templatekey::kSourcePath,                   builtinsAbsPath},
+                                                                       {templatekey::kSourcePath,             builtinsAbsPath.str()},
                                                                        {    templatekey::kBanner, sw::config::kTextReflectionBanner}
         } );
         uint32 typeCount = 0;
@@ -413,14 +413,14 @@ namespace sw
 
         if ( typeCount == 0 )
         {
-            SW_LOG_ERROR_ID( "ReflectBuiltinsLoader.EmitNoTYPERows", "emit: no TYPE rows in %#", builtinsAbsPath );
+            SW_LOG_ERROR_ID( "ReflectBuiltinsLoader.EmitNoTYPERows", "emit: no TYPE rows in %#", builtinsAbsPath.str() );
             return false;
         }
         out += tpls.render( EmitTemplate::BuiltinFileFooter, {} );
 
-        if ( GeneratedFileUtil::writeIfChanged( string( outCppAbsPath ), out ) == false )
+        if ( GeneratedFileUtil::writeIfChanged( outCppAbsPath, out ) == false )
             return false;
-        SW_LOG_TRACE_ID( "ReflectBuiltinsLoader.EmittedTYPERegistrars", "Emitted %# TYPE registrars → %#", typeCount, outCppAbsPath );
+        SW_LOG_TRACE_ID( "ReflectBuiltinsLoader.EmittedTYPERegistrars", "Emitted %# TYPE registrars → %#", typeCount, outCppAbsPath.str() );
         return true;
     }
 } // namespace sw

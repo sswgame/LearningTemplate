@@ -45,25 +45,25 @@ SW_TEST_CASE( AssetSourceLocatorTest, BesideFileThenStoreThenError )
 
     const AbsolutePath beside = root.join( "models_raw/beside.glb" );
     Util::write( beside, "beside" );
-    const expected<AbsolutePath> besidePath = AssetSourceLocator::resolve( beside.str() );
+    const expected<AbsolutePath> besidePath = AssetSourceLocator::resolve( beside );
     SW_REQUIRE_TRUE( besidePath.has_value() );
     SW_EXPECT_TRUE( *besidePath == beside );
 
     const AbsolutePath stored = root.join( "models_raw/stored.glb" );
     Util::write( AssetMeta::makePath( stored ), Util::makeStoredMeta( "stored.glb" ) );
-    const expected<AbsolutePath> notFetched = AssetSourceLocator::resolveInStore( stored.str(), storeRoot );
+    const expected<AbsolutePath> notFetched = AssetSourceLocator::resolveInStore( stored, storeRoot );
     SW_REQUIRE_FALSE( notFetched.has_value() );
     SW_EXPECT_TRUE( notFetched.error().kind() == ErrorKind::NotFound );
 
     const AbsolutePath storeFile = storeRoot.join( "01" ).join( "23" ).join( Util::kHash );
     Util::write( storeFile, "stored" );
-    const expected<AbsolutePath> storePath = AssetSourceLocator::resolveInStore( stored.str(), storeRoot );
+    const expected<AbsolutePath> storePath = AssetSourceLocator::resolveInStore( stored, storeRoot );
     SW_REQUIRE_TRUE( storePath.has_value() );
     SW_EXPECT_TRUE( *storePath == storeFile );
 
     const AbsolutePath lost = root.join( "models_raw/lost.glb" );
     Util::write( AssetMeta::makePath( lost ), AssetMeta::makeText( "models_raw/lost.glb", AssetGUID::create() ) );
-    SW_EXPECT_FALSE( AssetSourceLocator::resolveInStore( lost.str(), storeRoot ).has_value() );
+    SW_EXPECT_FALSE( AssetSourceLocator::resolveInStore( lost, storeRoot ).has_value() );
 }
 
 /** @brief [AssetSourceLocatorTest] 파일 없이 저장소 주소만 적은 원본만 더한다 — 있는 파일과 짝 잃은 서술은 더하지 않는다 */
@@ -77,7 +77,7 @@ SW_TEST_CASE( AssetSourceLocatorTest, OnlyStoredSourcesWithoutAFileAreListed )
     Util::write( AssetMeta::makePath( root.join( "lost.glb" ) ), AssetMeta::makeText( "lost.glb", AssetGUID::create() ) );
 
     vector<string> listSourcePath;
-    AssetSourceLocator::collectStoredSources( root.str(), listSourcePath );
+    AssetSourceLocator::collectStoredSources( root, listSourcePath );
     SW_REQUIRE_EQUAL( size_t{ 1 }, listSourcePath.size() );
     SW_EXPECT_TRUE( StringUtil::endsWith( listSourcePath[0], "/sub/stored.glb" ) );
 }

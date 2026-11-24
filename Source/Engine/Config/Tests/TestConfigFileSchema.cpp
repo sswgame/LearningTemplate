@@ -198,13 +198,13 @@ SW_TEST_CASE( ConfigFileSchemaTest, EveryConfigFileLoadsStrictly )
     SW_REQUIRE_FALSE( projectRoot.empty() );
     const sw::AbsolutePath configRoot = projectRoot.join( "Config" );
 
-    sw::vector<sw::string> listFilePath;
+    sw::vector<sw::AbsolutePath> listFilePath;
     SW_REQUIRE_TRUE( sw::FileUtil::collectFiles( configRoot, "", listFilePath, true ) );
 
     uint32 loadedCount{ 0 };
-    for ( const sw::string& filePath : listFilePath )
+    for ( const sw::AbsolutePath& filePath : listFilePath )
     {
-        const sw::string normalized = sw::FileUtil::normalizeSeparators( filePath );
+        const sw::string normalized = sw::FileUtil::normalizeSeparators( filePath.str() );
         SW_REQUIRE_TRUE_MSG( sw::StringUtil::startsWith( normalized, projectRoot.str() ), normalized.c_str() );
         sw::string relative = normalized.substr( projectRoot.str().size() );
         while ( relative.empty() == false && relative.front() == '/' )
@@ -220,7 +220,7 @@ SW_TEST_CASE( ConfigFileSchemaTest, EveryConfigFileLoadsStrictly )
 
         sw::fixed_string<sw::constant::buffer::kMax512> loadMessage;
         sw::formatstring( loadMessage.data(), loadMessage.capacity(), "%# could not be read strictly (the reason is in the log above)", relative );
-        SW_EXPECT_TRUE_MSG( pKind->_pLoad( filePath ), loadMessage );
+        SW_EXPECT_TRUE_MSG( pKind->_pLoad( filePath.str() ), loadMessage );
         ++loadedCount;
     }
     // 엔진 설정 + 메모리 예산 + 팩 설정 + 게임 프리셋 — 경로를 못 찾아 0 이면 이 테스트는 아무것도 보지 않은 것이다.

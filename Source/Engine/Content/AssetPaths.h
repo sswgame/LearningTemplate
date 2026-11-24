@@ -46,7 +46,7 @@ namespace sw
          * @brief 작업 도메인(`kScratchDomain`)의 디스크 폴더(`<실행 뿌리>/scratch` — `ProcessRoots::_run`)입니다. 프로세스 동안 바뀌지 않는다.
          * @details 폴더는 처음 쓸 때 생긴다(없어도 도메인이다 — 배포 실행이 기동마다 폴더를 만들지 않게).
          */
-        [[nodiscard]] static const string& getScratchFolderPath();
+        [[nodiscard]] static const AbsolutePath& getScratchFolderPath();
 
         /**
          * @brief 콘텐츠 뿌리 @p contentRoot 아래 확장자 @p extension(비면 모두)의 파일을 하위까지 모읍니다 — 작업 도메인(`kScratchDomain`)은 뺀다.
@@ -108,7 +108,7 @@ namespace sw
          * @details 도메인이 붙은 id 는 그 도메인 폴더 하나, 도메인 없는 키는 검색 순서의 모든 리소스 폴더 아래 같은 하위 폴더다 — 팩 나열(우선순위 순 합집합)과 같은 규칙.
          *          `findLooseFile` 은 이긴 하나만 돌려줘, 나열에 쓰면 소스 구성에서만 다른 도메인의 파일이 빠졌다.
          */
-        void collectLooseFolders( string_view folderID, vector<string>& outListFolder ) const;
+        void collectLooseFolders( string_view folderID, vector<AbsolutePath>& outListFolder ) const;
 
         /**
          * @brief 리소스 id 를 디스크 경로로 풉니다(`toAssetID` 의 짝) — 낱개 파일 · 폴더의 자리를 정하는 입구 하나다(엔진의 `save*` 는 이 결과 `AbsolutePath` 만 받는다).
@@ -134,13 +134,13 @@ namespace sw
 
         /**
          * @brief **디스크 경로**를 리소스 id(전역 id. 예: `game/playground/maps/x.scene.xml`, 소문자와 `/`)로 바꿉니다.
-         * @param diskPath 절대 디스크 경로입니다(상대 경로는 OS 경계가 거절한다 - `File.RelativePath`).
+         * @param diskPath 디스크 경로입니다.
          * @return 리소스 id 입니다. 붙인 디스크 도메인(`mountDiskDomain`) 폴더 아래면 `<도메인>/…`, 리소스 루트 아래면 루트 기준입니다. 그 밖이면 빈 문자열입니다.
          * @details 예전에는 한 함수가 디스크 경로 · 프로젝트 기준 경로(`Content/…`) · 리소스 id 를 모두 받고 상대 글이 무엇인지 추측했다 — 작업 폴더 기준 디스크
          *          경로(`Saved/…`)가 id 로 읽혀 쿠킹 기록 · 버그 리포트 저장이 다른 파일을 가리켰다. 이제 글 정규화는 `normalizeAssetID` 이고, 둘 다 받는 입구는 없다
          *          (언리얼 `FPackageName::TryConvertFilenameToLongPackageName` 과 이름 검사가 따로인 것과 같다).
          */
-        string toAssetID( string_view diskPath ) const;
+        string toAssetID( const AbsolutePath& diskPath ) const;
         /**
          * @brief 리소스 id 글을 맞춥니다(소문자 · `/` · 앞의 `./` 를 뗀다). 디스크를 보지 않는 순수 글 변환입니다.
          * @return 맞춘 id 입니다. 비었거나 `..` 로 올라가거나 디스크 경로(절대)면 빈 문자열입니다.
@@ -179,13 +179,13 @@ namespace sw
         void collectMountedDiskDomains( vector<string>& outListDomain ) const;
 
         /** @brief `Content/` 폴더의 절대 경로입니다. 표시와 감시용 최상위이며 검색 루트는 아닙니다. 참조는 이 객체가 사는 동안 유효합니다. */
-        const string& getRootFolderPath() const;
+        const AbsolutePath& getRootFolderPath() const;
         /**
          * @brief 리소스 id @p resourceID 가 상대 경로로 놓이는 뿌리입니다 — 작업 도메인(`scratch/…`)은 실행 뿌리(`getScratchFolderPath` 의 부모), 나머지는 `getRootFolderPath`.
          * @details `<뿌리>/<id>` 로 디스크 자리를 잇고 `원본 경로 - 뿌리` 로 id 를 되돌리는 코드(임포트 스탬프 · 임포터)가 작업 도메인 id 도 같은 규칙으로 다루게 한다.
          *          붙인 디스크 도메인(`mountDiskDomain`)은 이 모양이 아니다(그 폴더 이름이 도메인 이름과 다르다) — 그 id 는 `toDiskPath` 로 푼다.
          */
-        [[nodiscard]] const string& getRootFolderPathFor( string_view resourceID ) const;
+        [[nodiscard]] const AbsolutePath& getRootFolderPathFor( string_view resourceID ) const;
 
         /**
          * @brief 리소스 검색 루트 우선순위를 설정합니다(예: EngineConfig._listResourcePriority).

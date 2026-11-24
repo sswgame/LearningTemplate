@@ -189,7 +189,7 @@ namespace sw
             return;
         _report._rhiBackend = string( rhiBackend );
         _report._scene      = string( activeSceneID );
-        (void)_report.saveToFile( FileUtil::toDiskPath( gv_profileReportPath.get().c_str() ) );
+        (void)_report.saveToFile( gv_profileReportPath.getPath() );
     }
 
     void FrameProfileSession::fillReport( const FrameProfiler& profiler, uint64 frames, int64 elapsedMicro )

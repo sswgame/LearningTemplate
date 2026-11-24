@@ -47,27 +47,27 @@ namespace
             return settings;
         }
 
-        static bool writeText( const string& path, string_view text )
+        static bool writeText( const AbsolutePath& path, string_view text )
         {
-            return FileUtil::ensureDirectoryExists( FileUtil::toDiskPath( FileUtil::getDirectoryPart( path ) ) ) && FileUtil::writeTextFile( FileUtil::toDiskPath( path ), text );
+            return FileUtil::ensureDirectoryExists( path.getParent() ) && FileUtil::writeTextFile( path, text );
         }
 
         /** @brief 설치 폴더에 매니페스트를 씁니다(덮어쓰기는 기본 리소스 하나). */
-        static bool writeManifest( const string& installFolder, string_view id )
+        static bool writeManifest( const AbsolutePath& installFolder, string_view id )
         {
             StringBuilder<constant::buffer::kMax512> text;
             text.appendFormat( R"(<Mod id="%#" version="1.0.0" minContentVersion="1" maxContentVersion="1" priority="0"><Override path="%#"/></Mod>)", id, kBasePath );
-            return writeText( FileUtil::joinPath( FileUtil::joinPath( installFolder, id ), ModManifest::kFileName ), text.view() );
+            return writeText( installFolder.join( id ).join( ModManifest::kFileName ), text.view() );
         }
 
         /** @brief 소스 모드 하나(새 리소스 하나 + 기본 리소스 덮어쓰기)를 씁니다. */
-        static bool writeSourceMod( const string& installFolder, string_view id )
+        static bool writeSourceMod( const AbsolutePath& installFolder, string_view id )
         {
-            const string                             content = FileUtil::joinPath( FileUtil::joinPath( installFolder, id ), ModPackBuilder::kSourceFolderName );
+            const AbsolutePath                       content = installFolder.join( id ).join( ModPackBuilder::kSourceFolderName );
             StringBuilder<constant::buffer::kMax256> dataFilePath;
             dataFilePath.appendFormat( "mods/%#/data/lamp.txt", id );
-            return writeManifest( installFolder, id ) && writeText( FileUtil::joinPath( content, dataFilePath.view() ), "lamp" ) &&
-                   writeText( FileUtil::joinPath( content, kBasePath ), "modded" );
+            return writeManifest( installFolder, id ) && writeText( content.join( dataFilePath.view() ), "lamp" ) &&
+                   writeText( content.join( kBasePath ), "modded" );
         }
 
         static string read( string_view assetID )
@@ -76,11 +76,11 @@ namespace
             return AssetIO::readTextAsset( AssetID{ string{ assetID } }, text ) ? text : string{ "<missing>" };
         }
 
-        static ModSessionRequest makeRequest( const string& root, vector<string> listID )
+        static ModSessionRequest makeRequest( const AbsolutePath& root, vector<string> listID )
         {
             ModSessionRequest request;
-            request._installFolder = FileUtil::joinPath( root, "Mods" );
-            request._buildFolder   = FileUtil::joinPath( root, "Built" );
+            request._installFolder = root.join( "Mods" );
+            request._buildFolder   = root.join( "Built" );
             request._listEnabledID = std::move( listID );
             return request;
         }
@@ -91,9 +91,9 @@ SW_TEST_CASE( ModSessionTest, SourceModOverridesAndReleases )
 {
     using Internal = TestModSessionInternal;
     test::ScopedScratchDomain domain;
-    SW_REQUIRE_TRUE( Internal::writeText( domain.makeDiskPath( "data/welcome.xml" ).str(), "base" ) );
+    SW_REQUIRE_TRUE( Internal::writeText( domain.makeDiskPath( "data/welcome.xml" ), "base" ) );
     const AbsolutePath      root    = test::makeScratchPath( "ModRoot" );
-    const ModSessionRequest request = Internal::makeRequest( root.str(), { "lantern" } );
+    const ModSessionRequest request = Internal::makeRequest( root, { "lantern" } );
     SW_REQUIRE_TRUE( Internal::writeSourceMod( request._installFolder, "lantern" ) );
 
     AssetManager& assets = engine::getSubsystem<AssetManager>();
@@ -118,11 +118,11 @@ SW_TEST_CASE( ModSessionTest, PackedModMatchesItsSourceHash )
 {
     using Internal = TestModSessionInternal;
     test::ScopedScratchDomain domain;
-    SW_REQUIRE_TRUE( Internal::writeText( domain.makeDiskPath( "data/welcome.xml" ).str(), "base" ) );
+    SW_REQUIRE_TRUE( Internal::writeText( domain.makeDiskPath( "data/welcome.xml" ), "base" ) );
     const AbsolutePath      root    = test::makeScratchPath( "ModRoot" );
-    const ModSessionRequest request = Internal::makeRequest( root.str(), { "lantern" } );
-    const string            modDir  = FileUtil::joinPath( request._installFolder, "lantern" );
-    const string            source  = FileUtil::joinPath( modDir, ModPackBuilder::kSourceFolderName );
+    const ModSessionRequest request = Internal::makeRequest( root, { "lantern" } );
+    const AbsolutePath      modDir  = request._installFolder.join( "lantern" );
+    const AbsolutePath      source  = modDir.join( ModPackBuilder::kSourceFolderName );
     AssetManager&           assets  = engine::getSubsystem<AssetManager>();
     SW_REQUIRE_TRUE( Internal::writeSourceMod( request._installFolder, "lantern" ) );
 
@@ -132,8 +132,8 @@ SW_TEST_CASE( ModSessionTest, PackedModMatchesItsSourceHash )
         SW_REQUIRE_TRUE( session.apply( getContentPreparationTokenForTest(), request, Internal::makeSettings() ) );
         sourceHash = session.getDigest()._configHash;
     }
-    SW_REQUIRE_TRUE( ModPackBuilder::buildFromFolder( source, FileUtil::joinPath( modDir, ModPackBuilder::kPackFileName ), Internal::makeSettings() ) );
-    SW_REQUIRE_TRUE( FileUtil::removeDirectory( FileUtil::toDiskPath( source ) ) );
+    SW_REQUIRE_TRUE( ModPackBuilder::buildFromFolder( source, modDir.join( ModPackBuilder::kPackFileName ), Internal::makeSettings() ) );
+    SW_REQUIRE_TRUE( FileUtil::removeDirectory( source ) );
 
     ModAllowList allowList;
     {
@@ -160,16 +160,16 @@ SW_TEST_CASE( ModSessionTest, RejectsUntrustedFolders )
 {
     using Internal = TestModSessionInternal;
     test::ScopedScratchDomain domain;
-    SW_REQUIRE_TRUE( Internal::writeText( domain.makeDiskPath( "data/welcome.xml" ).str(), "base" ) );
+    SW_REQUIRE_TRUE( Internal::writeText( domain.makeDiskPath( "data/welcome.xml" ), "base" ) );
     const AbsolutePath root     = test::makeScratchPath( "ModRoot" );
     AssetManager&      assets   = engine::getSubsystem<AssetManager>();
     const auto         tryApply = [&assets, &root]( vector<string> listID )
     {
         ModSession session( assets );
-        const bool bApplied = session.apply( getContentPreparationTokenForTest(), TestModSessionInternal::makeRequest( root.str(), std::move( listID ) ), TestModSessionInternal::makeSettings() );
+        const bool bApplied = session.apply( getContentPreparationTokenForTest(), TestModSessionInternal::makeRequest( root, std::move( listID ) ), TestModSessionInternal::makeSettings() );
         return bApplied || assets.getPackManager().hasPatchPacks(); // 실패한 적용은 아무것도 남기지 않는다
     };
-    const string installFolder = Internal::makeRequest( root.str(), {} )._installFolder;
+    const AbsolutePath installFolder = Internal::makeRequest( root, {} )._installFolder;
 
     SW_EXPECT_LOG( "ModSession.BadID" );
     SW_EXPECT_FALSE( tryApply( { "../outside" } ) );
@@ -178,7 +178,7 @@ SW_TEST_CASE( ModSessionTest, RejectsUntrustedFolders )
 
     // 묶은 팩과 소스 폴더가 함께 있으면 어느 쪽이 켜졌는지 모른다.
     SW_REQUIRE_TRUE( Internal::writeSourceMod( installFolder, "both" ) );
-    SW_REQUIRE_TRUE( Internal::writeText( FileUtil::joinPath( FileUtil::joinPath( installFolder, "both" ), ModPackBuilder::kPackFileName ), "not a pack" ) );
+    SW_REQUIRE_TRUE( Internal::writeText( installFolder.join( "both" ).join( ModPackBuilder::kPackFileName ), "not a pack" ) );
     SW_EXPECT_LOG( "ModSession.PackShape" );
     SW_EXPECT_FALSE( tryApply( { "both" } ) );
 
@@ -186,7 +186,7 @@ SW_TEST_CASE( ModSessionTest, RejectsUntrustedFolders )
     const auto writePack = [&installFolder]( string_view id, const vector<std::pair<string, string>>& listEntry )
     {
         return TestModSessionInternal::writeManifest( installFolder, id ) &&
-               PackTestUtil::writeTextPack( FileUtil::joinPath( FileUtil::joinPath( installFolder, id ), ModPackBuilder::kPackFileName ), "", listEntry );
+               PackTestUtil::writeTextPack( installFolder.join( id ).join( ModPackBuilder::kPackFileName ), "", listEntry );
     };
     SW_REQUIRE_TRUE( writePack( "sneaky", {
                                               {         Internal::kBasePath, "modded"},
@@ -218,9 +218,9 @@ SW_TEST_CASE( ModSessionTest, RejectsUntrustedFolders )
 
     // 매니페스트 id 와 폴더 이름이 다르다(다른 모드를 흉내 낸다).
     SW_REQUIRE_TRUE( Internal::writeManifest( installFolder, "real" ) );
-    SW_REQUIRE_TRUE( FileUtil::ensureDirectoryExists( FileUtil::toDiskPath( FileUtil::joinPath( installFolder, "fake" ) ) ) );
-    SW_REQUIRE_TRUE( FileUtil::copyFile( FileUtil::toDiskPath( FileUtil::joinPath( FileUtil::joinPath( installFolder, "real" ), ModManifest::kFileName ) ),
-                                         FileUtil::toDiskPath( FileUtil::joinPath( FileUtil::joinPath( installFolder, "fake" ), ModManifest::kFileName ) ) ) );
+    SW_REQUIRE_TRUE( FileUtil::ensureDirectoryExists( installFolder.join( "fake" ) ) );
+    SW_REQUIRE_TRUE( FileUtil::copyFile( installFolder.join( "real" ).join( ModManifest::kFileName ),
+                                         installFolder.join( "fake" ).join( ModManifest::kFileName ) ) );
     SW_EXPECT_LOG( "ModSession.IDMismatch" );
     SW_EXPECT_FALSE( tryApply( { "fake" } ) );
 
@@ -234,19 +234,19 @@ SW_TEST_CASE( ModSessionTest, LayerModAddsEntriesAndReleases )
     using Internal = TestModSessionInternal;
     test::ScopedScratchDomain domain;
     const string              basePath = "testproject/data/quests.xml";
-    SW_REQUIRE_TRUE( Internal::writeText( domain.makeDiskPath( "data/quests.xml" ).str(),
+    SW_REQUIRE_TRUE( Internal::writeText( domain.makeDiskPath( "data/quests.xml" ),
                                           R"(<QuestCatalog><Quest id="base_quest"><Stage id="done" complete="true"/></Quest></QuestCatalog>)" ) );
     const AbsolutePath                       root    = test::makeScratchPath( "ModRoot" );
-    const ModSessionRequest                  request = Internal::makeRequest( root.str(), { "tide" } );
-    const string                             modDir  = FileUtil::joinPath( request._installFolder, "tide" );
-    const string                             content = FileUtil::joinPath( modDir, ModPackBuilder::kSourceFolderName );
+    const ModSessionRequest                  request = Internal::makeRequest( root, { "tide" } );
+    const AbsolutePath                       modDir  = request._installFolder.join( "tide" );
+    const AbsolutePath                       content = modDir.join( ModPackBuilder::kSourceFolderName );
     StringBuilder<constant::buffer::kMax256> layerRelative;
     layerRelative.appendFormat( "%#/%#", ModManifest::makeLayerRoot( "tide" ), basePath );
-    const string                             layerFile     = FileUtil::joinPath( content, layerRelative.view() );
+    const AbsolutePath                       layerFile     = content.join( layerRelative.view() );
     const vector<string>                     listLayerBase = engine::getSubsystem<ResourceComposition>().getLayers();
     StringBuilder<constant::buffer::kMax512> manifestText;
     manifestText.appendFormat( R"(<Mod id="tide" version="1.0.0" minContentVersion="1" maxContentVersion="1" priority="0"><Layer path="%#"/></Mod>)", basePath );
-    SW_REQUIRE_TRUE( Internal::writeText( FileUtil::joinPath( modDir, ModManifest::kFileName ), manifestText.view() ) );
+    SW_REQUIRE_TRUE( Internal::writeText( modDir.join( ModManifest::kFileName ), manifestText.view() ) );
     SW_REQUIRE_TRUE( Internal::writeText( layerFile, R"(<QuestCatalog><Quest id="tide_quest"><Stage id="done" complete="true"/></Quest></QuestCatalog>)" ) );
 
     AssetManager& assets = engine::getSubsystem<AssetManager>();
@@ -267,8 +267,8 @@ SW_TEST_CASE( ModSessionTest, LayerModAddsEntriesAndReleases )
     // 밝히지 않은 층 파일.
     StringBuilder<constant::buffer::kMax256> sneakyRelative;
     sneakyRelative.appendFormat( "%#/testproject/data/welcome.xml", ModManifest::makeLayerRoot( "tide" ) );
-    SW_REQUIRE_TRUE( Internal::writeText( FileUtil::joinPath( content, sneakyRelative.view() ), "sneaky" ) );
-    SW_REQUIRE_TRUE( Internal::writeText( domain.makeDiskPath( "data/welcome.xml" ).str(), "base" ) );
+    SW_REQUIRE_TRUE( Internal::writeText( content.join( sneakyRelative.view() ), "sneaky" ) );
+    SW_REQUIRE_TRUE( Internal::writeText( domain.makeDiskPath( "data/welcome.xml" ), "base" ) );
     ModSession sneaky( assets );
     SW_EXPECT_LOG( "ModSession.UndeclaredLayer" );
     SW_EXPECT_FALSE( sneaky.apply( getContentPreparationTokenForTest(), request, Internal::makeSettings() ) );
@@ -281,7 +281,7 @@ SW_TEST_CASE( ModSessionTest, NoModsChangesNothing )
 {
     AssetManager& assets = engine::getSubsystem<AssetManager>();
     ModSession    session( assets );
-    SW_EXPECT_TRUE( session.apply( getContentPreparationTokenForTest(), TestModSessionInternal::makeRequest( test::makeScratchPath( "ModRoot" ).str(), {} ), TestModSessionInternal::makeSettings() ) );
+    SW_EXPECT_TRUE( session.apply( getContentPreparationTokenForTest(), TestModSessionInternal::makeRequest( test::makeScratchPath( "ModRoot" ), {} ), TestModSessionInternal::makeSettings() ) );
     SW_EXPECT_EQUAL( uint64{ 0 }, session.getDigest()._configHash );
     SW_EXPECT_FALSE( assets.getPackManager().hasPatchPacks() );
 }
@@ -293,12 +293,12 @@ SW_TEST_CASE( ModSessionTest, ModAssetsResolveByGUIDWhileApplied )
 {
     using Internal = TestModSessionInternal;
     test::ScopedScratchDomain domain;
-    SW_REQUIRE_TRUE( Internal::writeText( domain.makeDiskPath( "data/welcome.xml" ).str(), "base" ) );
+    SW_REQUIRE_TRUE( Internal::writeText( domain.makeDiskPath( "data/welcome.xml" ), "base" ) );
     const AbsolutePath      root    = test::makeScratchPath( "ModIndexRoot" );
-    const ModSessionRequest request = Internal::makeRequest( root.str(), { "lantern" } );
-    const string            source  = FileUtil::joinPath( FileUtil::joinPath( request._installFolder, "lantern" ), ModPackBuilder::kSourceFolderName );
+    const ModSessionRequest request = Internal::makeRequest( root, { "lantern" } );
+    const AbsolutePath      source  = request._installFolder.join( "lantern" ).join( ModPackBuilder::kSourceFolderName );
     SW_REQUIRE_TRUE( Internal::writeSourceMod( request._installFolder, "lantern" ) );
-    SW_REQUIRE_TRUE( Internal::writeText( FileUtil::joinPath( source, "mods/lantern/data/lamp.xml" ), R"(<?asset guid="0000000000000000000000000000c0de"?><Lamp/>)" ) );
+    SW_REQUIRE_TRUE( Internal::writeText( source.join( "mods/lantern/data/lamp.xml" ), R"(<?asset guid="0000000000000000000000000000c0de"?><Lamp/>)" ) );
     const AssetGUID guid = *AssetGUID::tryParse( "0000000000000000000000000000c0de" );
 
     AssetManager& assets = engine::getSubsystem<AssetManager>();
@@ -318,12 +318,12 @@ SW_TEST_CASE( ModSessionTest, ModIndexCannotRedirectAKnownGUID )
     using Internal = TestModSessionInternal;
     SW_EXPECT_LOG( "ModSession.IndexRedirectsAsset" );
     test::ScopedScratchDomain domain;
-    SW_REQUIRE_TRUE( Internal::writeText( domain.makeDiskPath( "data/welcome.xml" ).str(), "base" ) );
+    SW_REQUIRE_TRUE( Internal::writeText( domain.makeDiskPath( "data/welcome.xml" ), "base" ) );
     const AbsolutePath      root    = test::makeScratchPath( "ModIndexRedirectRoot" );
-    const ModSessionRequest request = Internal::makeRequest( root.str(), { "lantern" } );
-    const string            source  = FileUtil::joinPath( FileUtil::joinPath( request._installFolder, "lantern" ), ModPackBuilder::kSourceFolderName );
+    const ModSessionRequest request = Internal::makeRequest( root, { "lantern" } );
+    const AbsolutePath      source  = request._installFolder.join( "lantern" ).join( ModPackBuilder::kSourceFolderName );
     SW_REQUIRE_TRUE( Internal::writeSourceMod( request._installFolder, "lantern" ) );
-    SW_REQUIRE_TRUE( Internal::writeText( FileUtil::joinPath( source, "mods/lantern/data/lamp.xml" ), R"(<?asset guid="0000000000000000000000000000beef"?><Lamp/>)" ) );
+    SW_REQUIRE_TRUE( Internal::writeText( source.join( "mods/lantern/data/lamp.xml" ), R"(<?asset guid="0000000000000000000000000000beef"?><Lamp/>)" ) );
     const AssetGUID guid = *AssetGUID::tryParse( "0000000000000000000000000000beef" );
 
     AssetManager& assets = engine::getSubsystem<AssetManager>();
@@ -349,9 +349,9 @@ SW_TEST_CASE( ModSessionTest, ModPackStoresTexturesUncompressed )
     const AbsolutePath packPath    = root.join( ModPackBuilder::kPackFileName );
     const string       texturePath = "mods/stone/textures/stone.dds";
     const string       dataPath    = "mods/stone/data/stone.txt";
-    SW_REQUIRE_TRUE( Internal::writeText( FileUtil::joinPath( source.str(), texturePath ), "not really a dds - bytes only" ) );
-    SW_REQUIRE_TRUE( Internal::writeText( FileUtil::joinPath( source.str(), dataPath ), "stone" ) );
-    SW_REQUIRE_TRUE( ModPackBuilder::buildFromFolder( source.str(), packPath.str(), Internal::makeSettings() ) );
+    SW_REQUIRE_TRUE( Internal::writeText( source.join( texturePath ), "not really a dds - bytes only" ) );
+    SW_REQUIRE_TRUE( Internal::writeText( source.join( dataPath ), "stone" ) );
+    SW_REQUIRE_TRUE( ModPackBuilder::buildFromFolder( source, packPath, Internal::makeSettings() ) );
 
     PackReader reader;
     SW_REQUIRE_TRUE( reader.open( packPath.str() ) );

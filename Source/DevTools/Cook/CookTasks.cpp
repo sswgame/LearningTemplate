@@ -62,7 +62,7 @@ namespace sw
             [[nodiscard]] static bool cookSceneStage( const AbsolutePath& cookedDir, const CookStore& cookStore, const uint64 reflectionFingerprint, const AnimationCrowdSettings& crowdSettings,
                                                       bool bCrowdSettingsLoaded )
             {
-                const AbsolutePath resourceRoot     = FileUtil::toDiskPath( engine::getSubsystem<AssetPaths>().getRootFolderPath() );
+                const AbsolutePath resourceRoot     = engine::getSubsystem<AssetPaths>().getRootFolderPath();
                 uint32             sceneFailedCount = 0;
                 // 쿠킹용 씬도 런타임 씬과 같은 엔진 서비스 묶음(씬 매니저의 것 — 의존 칸에 있다)으로 짓는다.
                 const SceneEngineServices& sceneServices = engine::getSubsystem<SceneManager>().getEngineServices();
@@ -172,7 +172,7 @@ namespace sw
 
                 PackCookParams params;
                 params._projectRoot  = ProcessRoots::get()._project; // 참조 칸 표(`Config/Dev/AssetReferenceFields*.json`) — 쓰는 것만 담는 고르기가 읽는다
-                params._resourceRoot = FileUtil::toDiskPath( engine::getSubsystem<AssetPaths>().getRootFolderPath() );
+                params._resourceRoot = engine::getSubsystem<AssetPaths>().getRootFolderPath();
                 params._cookedDir    = cookedDir;
                 (void)commandLine.getArgument( CommandLineArgument::PACK_DIR, params._packOutputDir ); // 비면 cookAllPacks 가 오류로 멈춘다
                 params._shaderFolder = shaderFolder;
@@ -199,7 +199,7 @@ namespace sw
                 (void)commandLine.getArgument( CommandLineArgument::PACK_BUILD, build );
                 if ( build.empty() )
                     return PackPatchBuilder::writeNoPatchingRecord( params._packOutputDir.join( PackBuildRecord::kFileName ) );
-                return PackPatchBuilder::writeBuildRecord( params._packOutputDir.str(), build, params._packOutputDir.join( PackBuildRecord::kFileName ) );
+                return PackPatchBuilder::writeBuildRecord( params._packOutputDir, build, params._packOutputDir.join( PackBuildRecord::kFileName ) );
             }
 
             /**

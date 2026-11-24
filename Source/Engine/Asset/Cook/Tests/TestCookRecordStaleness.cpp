@@ -100,8 +100,8 @@ SW_TEST_CASE( CookRecordStalenessTest, EachInputKindGoesStaleWhenItsSourceChange
         SW_REQUIRE_TRUE( FileUtil::ensureDirectoryExists( folder ) && FileUtil::writeTextFile( folder.join( "a.entry" ), "a" ) );
         CookRecord record;
         {
-            CookJob        job( Internal::makeDesc() );
-            vector<string> listFile;
+            CookJob              job( Internal::makeDesc() );
+            vector<AbsolutePath> listFile;
             SW_REQUIRE_TRUE( CookJob::collectFiles( folder, ".entry", listFile ) );
             record = Internal::roundTrip( job, recordPath );
         }

@@ -11,6 +11,7 @@
 #include "Core/Container/vector.h"
 #include "Core/Foundation/Macros.h"
 #include "Core/Foundation/Types.h"
+#include "Core/Path/AbsolutePath.h"
 
 #include "Engine/Graphics/RHI/Diagnostics/RHIMemoryTracker.h"
 
@@ -74,7 +75,7 @@ namespace sw::editor
         [[nodiscard]] static uint32 getWorkerCount();
 #if !defined( SW_SHIPPING )
         /** @brief 멀티 프로세스 재생이 Stop 뒤에 합쳐 아직 열지 않은 트레이스 경로를 꺼냅니다. 없으면 빈 글입니다(한 번만 돌려준다). */
-        [[nodiscard]] static string takeMergedNetPlayTrace();
+        [[nodiscard]] static AbsolutePath takeMergedNetPlayTrace();
 #endif
 
         /** @brief 활성 씬의 오브젝트 · 컴포넌트 분포를 모읍니다(@p outState 를 비우고 채운다). 씬이 없으면 `_bHasScene` 이 거짓입니다. */

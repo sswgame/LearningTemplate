@@ -11,11 +11,11 @@ using namespace sw;
 
 SW_TEST_CASE( UserDataPathTest, GameFolderIsLowercaseAndRelativePathsResolveUnderData )
 {
-    const string dataDirectory   = UserDataPath::getDataDirectory( "Playground" );
-    const string configDirectory = UserDataPath::getConfigDirectory( "Playground" );
+    const string dataDirectory   = UserDataPath::getDataDirectory( "Playground" ).str();
+    const string configDirectory = UserDataPath::getConfigDirectory( "Playground" ).str();
     SW_EXPECT_TRUE( FileUtil::getFileNamePart( dataDirectory ) == "playground" );
     SW_EXPECT_TRUE( FileUtil::getFileNamePart( configDirectory ) == "playground" );
-    SW_EXPECT_TRUE( FileUtil::getFileNamePart( UserDataPath::getDataDirectory( "" ) ) == "default" );
+    SW_EXPECT_TRUE( FileUtil::getFileNamePart( UserDataPath::getDataDirectory( "" ).str() ) == "default" );
 }
 
 /**
@@ -27,7 +27,7 @@ SW_TEST_CASE( UserDataPathTest, LocalStoreLocationKeepsTheChosenKind )
     const optional<LocalStoreLocation> saves = LocalStoreLocation::tryUnderUserData( "saves" );
     SW_REQUIRE_TRUE( saves.has_value() );
     SW_EXPECT_TRUE( saves->getKind() == LocalStoreLocation::Kind::UnderUserData );
-    SW_EXPECT_TRUE( saves->resolveDiskPath( "Playground" ) == FileUtil::joinPath( UserDataPath::getDataDirectory( "Playground" ), "saves" ) );
+    SW_EXPECT_TRUE( saves->resolveDiskPath( "Playground" ) == UserDataPath::getDataDirectory( "Playground" ).join( "saves" ) );
 
     SW_EXPECT_FALSE( LocalStoreLocation::tryUnderUserData( "" ).has_value() );
     SW_EXPECT_FALSE( LocalStoreLocation::tryUnderUserData( "C:foo" ).has_value() );
@@ -40,7 +40,7 @@ SW_TEST_CASE( UserDataPathTest, LocalStoreLocationKeepsTheChosenKind )
     SW_REQUIRE_TRUE( absolutePath.has_value() );
     const LocalStoreLocation absolute = LocalStoreLocation::absolute( *absolutePath );
     SW_EXPECT_TRUE( absolute.getKind() == LocalStoreLocation::Kind::Absolute );
-    SW_EXPECT_TRUE( absolute.resolveDiskPath( "Playground" ) == absolutePath->str() );
+    SW_EXPECT_TRUE( absolute.resolveDiskPath( "Playground" ) == *absolutePath );
     SW_EXPECT_TRUE( LocalStoreLocation::memory().getKind() == LocalStoreLocation::Kind::Memory );
 }
 
@@ -53,15 +53,15 @@ SW_TEST_CASE( UserDataPathTest, RootOverrideVariableMovesDataAndConfigTogether )
     string     previous;
     const bool bHadValue = ProcessEnvironment::tryRead( kUserDataRootVariable, previous );
     SW_REQUIRE_TRUE( ProcessEnvironment::tryUnset( kUserDataRootVariable ) );
-    const string osRuleDirectory = UserDataPath::getConfigDirectory( "Playground" );
+    const string osRuleDirectory = UserDataPath::getConfigDirectory( "Playground" ).str();
 
     SW_REQUIRE_TRUE( ProcessEnvironment::trySet( kUserDataRootVariable, "sw_override_root" ) );
     const string expected = FileUtil::joinPath( "sw_override_root", "playground" );
-    SW_EXPECT_TRUE( UserDataPath::getDataDirectory( "Playground" ) == expected );
-    SW_EXPECT_TRUE( UserDataPath::getConfigDirectory( "Playground" ) == expected );
+    SW_EXPECT_TRUE( UserDataPath::getDataDirectory( "Playground" ).str() == expected );
+    SW_EXPECT_TRUE( UserDataPath::getConfigDirectory( "Playground" ).str() == expected );
 
     SW_REQUIRE_TRUE( ProcessEnvironment::tryUnset( kUserDataRootVariable ) );
-    SW_EXPECT_TRUE( UserDataPath::getConfigDirectory( "Playground" ) == osRuleDirectory );
+    SW_EXPECT_TRUE( UserDataPath::getConfigDirectory( "Playground" ).str() == osRuleDirectory );
     if ( bHadValue )
         SW_EXPECT_TRUE( ProcessEnvironment::trySet( kUserDataRootVariable, previous ) );
 }

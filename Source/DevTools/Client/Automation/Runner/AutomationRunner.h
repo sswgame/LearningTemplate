@@ -152,12 +152,12 @@ namespace sw
         [[nodiscard]] static string findBackendName();
 
         /** @brief 시나리오 파일(리소스 경로 또는 절대 경로)을 읽습니다. 읽지 못하면 결과가 LoadError 이고 다음 `onFrameEnd` 에서 끝납니다. */
-        void startFromPath( const AssetID& assetID, string_view reportPath );
+        void startFromPath( const AssetID& assetID, const AbsolutePath& reportPath );
         /**
          * @brief XML 글로 시작합니다(테스트). 형식 오류면 false 이고 결과는 LoadError 입니다.
          * @details 이 구성에 없는 단계(Shipping 의 `DevCommand`)가 들었으면 false 이고 결과는 Skipped 입니다(`startFromPath` 도 같다).
          */
-        [[nodiscard]] bool startFromText( string_view xmlText, string_view reportPath = {} );
+        [[nodiscard]] bool startFromText( string_view xmlText, const AbsolutePath& reportPath = {} );
 
         /**
          * @brief 시작 조건을 보기 전에 @p scenePath 가 활성 씬이기를 기다립니다 — 게임이 기동하며 그 씬을 열고(`gv_firstScene`), 다른 씬이 서면 이것이 엽니다.
@@ -230,7 +230,7 @@ namespace sw
         void                        restoreFileAtEnd( string absolutePath, string originalText ) override;
         [[nodiscard]] bool          restoreFilesNow() override;
         /** @brief 이 시나리오의 산출물 폴더(`Saved/Automation/<이름>/`)입니다. */
-        const string& getOutputDirectory() const override { return _outputDirectory; }
+        const AbsolutePath& getOutputDirectory() const override { return _outputDirectory; }
         /** @brief 상대 경로면 산출물 폴더 아래로 둡니다(단계 처리기가 파일을 쓸 때). */
         AbsolutePath resolveOutputPath( string_view file ) const override;
         /** @brief 지금 시나리오 프레임(시작 전이면 0)입니다. */
@@ -386,7 +386,7 @@ namespace sw
         AutomationStepTimeline            _run;          ///< 진행 상태(프레임 · 단계 순번 · 대기 · 시한 · 스크린샷 대기열). 판정은 읽지 않는다
         AutomationReportWriter            _reportWriter; ///< 보고 경로 · JSON 보고 쓰기
         AutomationTimeline                _wallProfile;  ///< 벽시계가 프레임 종류(고정 대기 · 조건 대기 · 단계 …)별로 어디에 쓰였는지(보고의 `timeline`)
-        string                            _outputDirectory;
+        AbsolutePath                      _outputDirectory;
         FileUtil::WriteFilterRegistration _writeFilterRegistration; ///< 쥔 쓰기 입구 게이트(`AutomationScratchWorkspace::acquireWriteFilter` — `endRun` 이나 소멸자가 놓는다)
         uint8                             _bStarted        : 1;
         uint8                             _bEnded          : 1;

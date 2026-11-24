@@ -59,11 +59,11 @@ namespace sw::editor
         if ( EditorFontSetupInternal::readTypography( fontSize, iconScale ) == false )
             return false;
         // 후보가 데이터다. 하나도 없으면 ImGui 기본 글꼴로 대신하지 않고 멈춘다 — 대신하면 한글 · 아이콘이 빈 상자로 그려져도 원인이 로그 한 줄에 묻힌다.
-        const string basePath   = findFontFile( data._listBaseFont );
-        const string monoPath   = findFontFile( data._listMonoFont );
-        const string koreanPath = findFontFile( data._listKoreanFont );
-        const string kanaPath   = findFontFile( data._listJapaneseFont );
-        const string iconPath   = findFontFile( vector<string>{ EditorPaths::kIconFontFileName } );
+        const AbsolutePath basePath   = findFontFile( data._listBaseFont );
+        const AbsolutePath monoPath   = findFontFile( data._listMonoFont );
+        const string       koreanPath = findFontFile( data._listKoreanFont ).str();
+        const string       kanaPath   = findFontFile( data._listJapaneseFont ).str();
+        const string       iconPath   = findFontFile( vector<string>{ EditorPaths::kIconFontFileName } ).str();
         if ( basePath.empty() )
             SW_LOG_ERROR_ID( "EditorFontSetup.NoBaseFontEditortooldefaults", "No base font from editortooldefaults.json _listBaseFont exists under editor/fonts or the OS font folders" );
         if ( monoPath.empty() )

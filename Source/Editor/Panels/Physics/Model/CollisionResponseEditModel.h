@@ -9,6 +9,7 @@
 #include "Core/Container/string.h"
 #include "Core/Foundation/Types.h"
 #include "Core/Name/hashed_string.h"
+#include "Core/Path/AbsolutePath.h"
 
 #include "Editor/Common/Workspace/Asset/EditorAssetType.h"
 
@@ -28,11 +29,11 @@ namespace sw::editor
         void bindDocumentEditRecorder( const DocumentEditRecorder& recorder ) { _pEditRecorder = &recorder; }
 
         /** @brief 디스크 파일 @p diskPath 를 읽습니다. 없으면 `Missing`, 읽었지만 물리 설정으로 틀리면 `Malformed` 입니다(저장은 기반이 막는다). */
-        ToolAssetLoadResult loadDocument( string_view diskPath );
+        ToolAssetLoadResult loadDocument( const AbsolutePath& diskPath );
         /** @brief 원문 @p text 를 문서로 둡니다(테스트 · 읽기). 물리 설정으로 읽히면 true 입니다. */
         [[nodiscard]] bool loadText( string_view text );
         /** @brief 원문을 디스크 파일 @p diskPath 에 씁니다. 실패하면 상태 줄에 까닭을 두고 false 입니다. */
-        [[nodiscard]] bool saveDocument( string_view diskPath );
+        [[nodiscard]] bool saveDocument( const AbsolutePath& diskPath );
 
         string captureText() const { return _text; }
         /** @brief 되돌리기 단계의 원문을 적용합니다. 읽히지 않으면 경고하고 빈 표입니다. */

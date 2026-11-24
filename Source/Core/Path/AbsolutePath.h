@@ -51,6 +51,11 @@ namespace sw
          *          — 성분을 바꾸는 일은 `join` · `getParent` 가 맡는다. 언리얼 `FPaths` 의 이름 붙이기 · `std::filesystem::path::operator+=` 와 같은 자리다.
          */
         [[nodiscard]] AbsolutePath appendSuffix( string_view suffix ) const;
+        /**
+         * @brief 마지막 성분의 확장자(점 포함)를 뗀 경로입니다(`a/b.png` → `a/b`). 확장자가 없거나 점으로 시작하는 이름이면 이 경로 그대로다.
+         * @details `FileUtil::removeExtension` 의 형식 판이다 — 확장자 바꾸기는 `removeExtension().appendSuffix( … )` 로 잇는다.
+         */
+        [[nodiscard]] AbsolutePath removeExtension() const;
 
         /** @brief 경로 글입니다(구분자 `/`). */
         [[nodiscard]] const string& str() const { return _path; }

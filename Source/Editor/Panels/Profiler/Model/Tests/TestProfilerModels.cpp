@@ -55,7 +55,7 @@ namespace
             SW_EXPECT_TRUE( history.capture( profiler ) );
         }
 
-        static string makeTempPath( const utf8* pName ) { return test::makeScratchPath( pName ).str(); }
+        static AbsolutePath makeTempPath( const utf8* pName ) { return test::makeScratchPath( pName ); }
     };
     using Util = ProfilerModelTestUtil;
 } // namespace
@@ -403,11 +403,11 @@ SW_TEST_CASE( ProfilerScopeHistoryTest, FileRoundTripKeepsTheSeries )
     Util::addFrame( *pProfiler, history, slot, 1 );
     Util::addFrame( *pProfiler, history, slot, 2 );
 
-    const string path = Util::makeTempPath( "SwProfilerRoundTrip.txt" );
+    const AbsolutePath path = Util::makeTempPath( "SwProfilerRoundTrip.txt" );
     SW_REQUIRE_TRUE( history.saveToFile( path ) );
     ProfilerScopeHistory loaded;
     SW_REQUIRE_TRUE( loaded.loadFromFile( path ) );
-    (void)FileUtil::removeFile( FileUtil::toDiskPath( path ) );
+    (void)FileUtil::removeFile( path );
 
     SW_EXPECT_EQUAL( 4u, loaded.getWindowFrame() );
     SW_EXPECT_EQUAL( uint64{ 2 }, loaded.getCapturedFrameCount() );
@@ -436,7 +436,7 @@ SW_TEST_CASE( ProfilerScopeHistoryTest, BadFilesAreRefused )
     ProfilerScopeHistory      history( 4 );
     Util::addFrame( *pProfiler, history, slot, 1 );
 
-    const string path = Util::makeTempPath( "SwProfilerBad.txt" );
+    const AbsolutePath path = Util::makeTempPath( "SwProfilerBad.txt" );
     SW_EXPECT_LOG( "File.NotFound" );
     SW_EXPECT_FALSE( history.loadFromFile( Util::makeTempPath( "SwProfilerNoSuchFile.txt" ) ) );
     const utf8* const arrBad[] = {
@@ -449,10 +449,10 @@ SW_TEST_CASE( ProfilerScopeHistoryTest, BadFilesAreRefused )
     };
     for ( const utf8* pText : arrBad )
     {
-        SW_REQUIRE_TRUE( FileUtil::writeTextFile( FileUtil::toDiskPath( path ), pText ) );
+        SW_REQUIRE_TRUE( FileUtil::writeTextFile( path, pText ) );
         SW_EXPECT_FALSE( history.loadFromFile( path ) );
     }
-    (void)FileUtil::removeFile( FileUtil::toDiskPath( path ) );
+    (void)FileUtil::removeFile( path );
     SW_EXPECT_EQUAL( 4u, history.getWindowFrame() );
     float32 value = 0.0f;
     SW_EXPECT_TRUE( history.readValue( "A", 0, value ) );
@@ -463,11 +463,11 @@ SW_TEST_CASE( ProfilerScopeHistoryTest, CapturingAfterALoadStartsANewRecording )
 {
     unique_ptr<FrameProfiler> pProfiler = Util::makeProfiler();
     const uint32              slot      = pProfiler->registerScope( "Live" );
-    const string              path      = Util::makeTempPath( "SwProfilerResume.txt" );
-    SW_REQUIRE_TRUE( FileUtil::writeTextFile( FileUtil::toDiskPath( path ), "SWProfilerCapture 1\nwindow 3\ncaptured 3\n0\tOldRun\t7.0,7.0,7.0\n" ) );
+    const AbsolutePath        path      = Util::makeTempPath( "SwProfilerResume.txt" );
+    SW_REQUIRE_TRUE( FileUtil::writeTextFile( path, "SWProfilerCapture 1\nwindow 3\ncaptured 3\n0\tOldRun\t7.0,7.0,7.0\n" ) );
     ProfilerScopeHistory history( 3 );
     SW_REQUIRE_TRUE( history.loadFromFile( path ) );
-    (void)FileUtil::removeFile( FileUtil::toDiskPath( path ) );
+    (void)FileUtil::removeFile( path );
 
     Util::addFrame( *pProfiler, history, slot, 5 );
     float32 value = 0.0f;

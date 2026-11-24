@@ -174,7 +174,7 @@ namespace sw::editor
                             return giveUpCapture( runner, step, *pPending, "the editor window contents to hold still before the UI capture", "LayoutStill" );
                         return runner.holdUntilReady( step, input, false, std::numeric_limits<uint32>::max(), "the editor window contents to hold still before the UI capture" );
                     }
-                    pPending->_ticket          = pCapture->request( runner.resolveOutputPath( step.readValidatedProperties<EditorCaptureParams>()._file ).str() );
+                    pPending->_ticket          = pCapture->request( runner.resolveOutputPath( step.readValidatedProperties<EditorCaptureParams>()._file ) );
                     pPending->_bRequested      = SW_TRUE;
                     pPending->_phaseFrameCount = 0;
                 }

@@ -220,7 +220,7 @@ namespace sw
     void TelemetryService::initialize( const AbsolutePath& spoolFolder, const TelemetryContext& context )
     {
         using Internal                = TelemetryServiceInternal;
-        const AbsolutePath folderPath = FileUtil::toDiskPath( FileUtil::trimTrailingSlashes( spoolFolder.str() ) );
+        const AbsolutePath folderPath = spoolFolder.join( {} );
 
         // 지난 실행이 닫지 못하고 남긴 파일까지 이어 받는다 — 동의가 켜지면 올리고, 동의가 꺼지면 `setConsent( false )` 가 지운다. 폴더 읽기는 잠금 밖이다.
         vector<string>       listLeftover;
@@ -336,11 +336,11 @@ namespace sw
         {
             CrashReportService& crashReports = engine::getSubsystem<CrashReportService>();
             const AbsolutePath  reportsFolder =
-                FileUtil::toDiskPath( FileUtil::joinPath( FileUtil::getDirectoryPart( FileUtil::trimTrailingSlashes( crashFolder.str() ) ), CrashReportService::kReportsFolderName ) );
+                crashFolder.getParent().join( CrashReportService::kReportsFolderName );
             crashReports.initialize( crashFolder, reportsFolder, ProcessSession::getID() );
             crashReports.bindConsentSetting( userSettings );
-            crashReports.setReporterExecutable( FileUtil::getExecutablePath() ); // App 이 -crash-reporter 를 알아듣는다(App::initialize 헤드리스 분기)
-            (void)crashReports.collectNewCrashes();                              // 모은 수는 쓰지 않는다 — 보고 프로세스가 폴더를 다시 본다
+            crashReports.setReporterExecutable( FileUtil::getExecutablePath().str() ); // App 이 -crash-reporter 를 알아듣는다(App::initialize 헤드리스 분기)
+            (void)crashReports.collectNewCrashes();                                    // 모은 수는 쓰지 않는다 — 보고 프로세스가 폴더를 다시 본다
             (void)crashReports.launchReporterProcess();
         }
         return SubsystemInitResult::Succeeded;

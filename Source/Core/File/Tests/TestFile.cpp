@@ -345,7 +345,7 @@ SW_TEST_CASE( FileTest, WriteAndReadFile )
  */
 SW_TEST_CASE( FileTest, ExecutablePathPointsAtARealFile )
 {
-    const sw::AbsolutePath executablePath = sw::FileUtil::toDiskPath( sw::FileUtil::getExecutablePath() );
+    const sw::AbsolutePath executablePath = sw::FileUtil::getExecutablePath();
 
     SW_REQUIRE_TRUE( executablePath.empty() == false );
     SW_EXPECT_TRUE_MSG( sw::FileUtil::exists( executablePath ), "the executable path names a missing file - it was cut or broken" );
@@ -356,7 +356,7 @@ SW_TEST_CASE( FileTest, ExecutablePathPointsAtARealFile )
     SW_EXPECT_TRUE_MSG( sw::FileUtil::isDirectory( executableDirectory ), "the executable directory does not exist" );
 
     // 두 번 물어도 같은 답이어야 한다(버퍼를 키우는 루프가 상태를 남기지 않는다).
-    SW_EXPECT_TRUE( sw::FileUtil::getExecutablePath() == executablePath.str() );
+    SW_EXPECT_TRUE( sw::FileUtil::getExecutablePath().str() == executablePath.str() );
 }
 
 /**

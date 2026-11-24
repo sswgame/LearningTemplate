@@ -57,7 +57,7 @@ SW_TEST_CASE( TranslationMemoryTest, SavingKeepsTheAssetIdentityHeader )
     memory.setCulture( "ko" );
     SW_REQUIRE_TRUE( sw::FileUtil::writeTextFile( memoryPath, sw::AssetGUIDHeader::write( memory.saveToXMLText(), guid ) ) );
     (void)memory.addPair( "Open the door", "문을 연다" );
-    SW_REQUIRE_TRUE( memory.saveToFile( memoryPath.str() ) );
+    SW_REQUIRE_TRUE( memory.saveToFile( memoryPath ) );
 
     sw::SourceStringTable table;
     SW_REQUIRE_TRUE( sw::FileUtil::writeTextFile( tablePath, sw::AssetGUIDHeader::write( table.saveToXMLText(), guid ) ) );

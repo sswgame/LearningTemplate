@@ -246,20 +246,20 @@ SW_TEST_CASE( PackSceneChunkPlanTest, CookingAnotherGameKeepsTheChunkManifest )
     SW_REQUIRE_EQUAL( size_t{ 1 }, readA._listScene.size() );
     SW_EXPECT_EQUAL( string( "game/a/maps/one.scene.xml" ), readA._listScene[0]._sceneID );
 
-    PackChunkManifest merged;
-    vector<string>    listFile;
+    PackChunkManifest    merged;
+    vector<AbsolutePath> listFile;
     SW_REQUIRE_TRUE( FileUtil::collectFiles( root, "", listFile, false ) );
     uint32 manifestCount = 0;
-    for ( const string& path : listFile )
+    for ( const AbsolutePath& path : listFile )
     {
         string_view fileName;
-        FileUtil::getFileNamePart( path, fileName );
+        FileUtil::getFileNamePart( path.str(), fileName );
         if ( PackChunkManifest::isFileName( fileName ) == false )
             continue;
         ++manifestCount;
         string            text;
         PackChunkManifest one;
-        SW_REQUIRE_TRUE( FileUtil::readTextFile( FileUtil::toDiskPath( path ), text ) && PackChunkManifest::parse( text, path, one ) && merged.merge( one, path ) );
+        SW_REQUIRE_TRUE( FileUtil::readTextFile( path, text ) && PackChunkManifest::parse( text, path.str(), one ) && merged.merge( one, path.str() ) );
     }
     SW_EXPECT_EQUAL( 4u, manifestCount ); // engine · common · game_a · game_b
     SW_EXPECT_EQUAL( size_t{ 2 }, merged._listScene.size() );

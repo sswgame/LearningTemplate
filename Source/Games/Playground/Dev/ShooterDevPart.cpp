@@ -68,7 +68,7 @@ namespace sw
             {
                 if ( ShooterAutoPlayOptions* const pOptions = game::findSubsystem<ShooterAutoPlayOptions>() )
                     pOptions->_pForceMelee = nullptr;
-                if ( _motionTrace.empty() == false && FileUtil::writeTextFile( FileUtil::toDiskPath( gv_shooterMotionTrace.get() ), _motionTrace ) == false )
+                if ( _motionTrace.empty() == false && FileUtil::writeTextFile( gv_shooterMotionTrace.getPath(), _motionTrace ) == false )
                     SW_LOG_WARNING_ID( "ShooterGameMode.MotionTraceCouldNot", "[Shooter] motion trace '%#' could not be written", gv_shooterMotionTrace.get().c_str() );
             }
 

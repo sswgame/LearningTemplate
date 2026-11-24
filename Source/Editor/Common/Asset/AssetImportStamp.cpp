@@ -69,11 +69,11 @@ namespace sw::editor
             }
 
             /** @brief 스탬프를 읽습니다. 없거나 머리 줄이 다르면 빈 표입니다(= 모든 원본이 어긋남). 형식이 아닌 줄은 건너뜁니다. */
-            static void readStamp( const string& stampPath, string_view header, flat_map<string, StampEntry>& outMapEntry )
+            static void readStamp( const AbsolutePath& stampPath, string_view header, flat_map<string, StampEntry>& outMapEntry )
             {
                 outMapEntry.clear();
                 string text;
-                if ( FileUtil::readOptionalTextFile( FileUtil::toDiskPath( stampPath ), text ) != OptionalFileRead::Read )
+                if ( FileUtil::readOptionalTextFile( stampPath, text ) != OptionalFileRead::Read )
                     return;
 
                 bool bHeaderSeen = false;
@@ -136,24 +136,24 @@ namespace sw::editor
             }
 
             /** @brief 스탬프를 씁니다. 내용이 같으면 쓰지 않습니다 — 맞는 트리에서 임포트를 돌려도 작업 트리가 더러워지지 않습니다. */
-            static void writeStampIfChanged( const string& stampPath, string_view header, const flat_map<string, StampEntry>& mapCurrent, AssetImportSummary& inoutSummary )
+            static void writeStampIfChanged( const AbsolutePath& stampPath, string_view header, const flat_map<string, StampEntry>& mapCurrent, AssetImportSummary& inoutSummary )
             {
-                const bool bStampExists = FileUtil::exists( FileUtil::toDiskPath( stampPath ) );
+                const bool bStampExists = FileUtil::exists( stampPath );
                 if ( mapCurrent.empty() && bStampExists == false )
                     return;
                 const string stampText = makeStampText( header, mapCurrent );
                 string       existingText;
-                if ( bStampExists && FileUtil::readTextFile( FileUtil::toDiskPath( stampPath ), existingText ) )
+                if ( bStampExists && FileUtil::readTextFile( stampPath, existingText ) )
                 {
                     // 체크아웃이 줄 끝을 CRLF 로 바꿔 둘 수 있으므로 CR 은 빼고 비교한다.
                     VectorUtil::removeValue( existingText, '\r' );
                     if ( existingText == stampText )
                         return;
                 }
-                if ( FileUtil::writeTextFile( FileUtil::toDiskPath( stampPath ), stampText ) == false )
+                if ( FileUtil::writeTextFile( stampPath, stampText ) == false )
                 {
                     StringBuilder<constant::buffer::kMax512> problemBuilder;
-                    problemBuilder.appendFormat( "스탬프를 쓰지 못했습니다: %#", stampPath );
+                    problemBuilder.appendFormat( "스탬프를 쓰지 못했습니다: %#", stampPath.str() );
                     inoutSummary._listProblem.push_back( string( problemBuilder.view() ) );
                 }
             }
@@ -161,10 +161,10 @@ namespace sw::editor
             /** @brief 원본 파일 하나의 입력입니다. 준비 단계(직렬)가 채우고, 병렬 구간에서는 읽기만 합니다. */
             struct SourceFile
             {
-                string _sourcePath;
-                string _relativePath; ///< 원본 폴더 기준
-                string _assetPath;    ///< 리소스 루트 기준
-                string _importedPath;
+                AbsolutePath _sourcePath;
+                string       _relativePath; ///< 원본 폴더 기준
+                string       _assetPath;    ///< 리소스 루트 기준
+                AbsolutePath _importedPath;
             };
 
             /** @brief 원본 파일 하나의 결과입니다. 파일마다 자기 칸에만 쓰고, 요약과 스탬프 표에 합치는 일은 파일 순서대로 직렬로 합니다. */
@@ -190,8 +190,8 @@ namespace sw::editor
             /** @brief 결과 파일 이름의 기준 폴더(끝에 `/`)입니다. 경로가 박히는 종류는 리소스 루트, 아니면 결과 파일의 폴더입니다(`isImportedPathEmbedded`). */
             static string makeCacheNameBase( const IRawAssetImporter& importer, const SourceFile& file )
             {
-                string base = importer.isImportedPathEmbedded() ? file._sourcePath.substr( 0, file._sourcePath.size() - file._assetPath.size() )
-                                                                : FileUtil::getDirectoryPart( FileUtil::normalizeSeparators( file._importedPath ) );
+                string base = importer.isImportedPathEmbedded() ? file._sourcePath.str().substr( 0, file._sourcePath.str().size() - file._assetPath.size() )
+                                                                : FileUtil::getDirectoryPart( FileUtil::normalizeSeparators( file._importedPath.str() ) );
                 if ( base.empty() == false && base.back() != '/' )
                     base.push_back( '/' );
                 return base;
@@ -211,25 +211,24 @@ namespace sw::editor
              */
             [[nodiscard]] static bool packImportedFiles( const IRawAssetImporter& importer, const SourceFile& file, vector<uint8>& outPayload )
             {
-                vector<string> listPath;
+                vector<AbsolutePath> listPath;
                 importer.collectImportedFiles( file._importedPath, listPath );
                 if ( listPath.empty() )
                     return false;
                 const string base = makeCacheNameBase( importer, file );
-                for ( string& path : listPath )
+                for ( const AbsolutePath& path : listPath )
                 {
-                    path = FileUtil::normalizeSeparators( path );
-                    if ( path.size() <= base.size() || StringUtil::startsWith( path, base ) == false )
+                    if ( path.str().size() <= base.size() || StringUtil::startsWith( path.str(), base ) == false )
                         return false;
                 }
                 VectorUtil::sort( listPath );
                 outPayload.clear();
-                for ( const string& path : listPath )
+                for ( const AbsolutePath& path : listPath )
                 {
                     vector<uint8> bytes;
-                    if ( FileUtil::readFile( FileUtil::toDiskPath( path ), bytes ) == false )
+                    if ( FileUtil::readFile( path, bytes ) == false )
                         return false;
-                    string head( string_view( path ).substr( base.size() ) );
+                    string head( string_view( path.str() ).substr( base.size() ) );
                     head.push_back( '\n' );
                     HexUtil::appendUint64( head, bytes.size() );
                     head.push_back( '\n' );
@@ -275,11 +274,11 @@ namespace sw::editor
                 if ( listEntry.empty() )
                     return false;
 
-                vector<string> listOld;
+                vector<AbsolutePath> listOld;
                 importer.collectImportedFiles( file._importedPath, listOld );
-                for ( const string& oldPath : listOld )
+                for ( const AbsolutePath& oldPath : listOld )
                 {
-                    if ( isSharedStorePath( oldPath ) == false && FileUtil::removeFile( FileUtil::toDiskPath( oldPath ) ) == false )
+                    if ( isSharedStorePath( oldPath.str() ) == false && FileUtil::removeFile( oldPath ) == false )
                         return false;
                 }
                 const string base = makeCacheNameBase( importer, file );
@@ -287,11 +286,11 @@ namespace sw::editor
                 {
                     StringBuilder<constant::buffer::kMax256> pathBuilder;
                     pathBuilder.appendFormat( "%#%#", base, entry._name );
-                    const string path( pathBuilder.view() );
-                    const uint8* pBytes = payload.data() + entry._offset;
-                    const bool   bWritten =
-                        isSharedStorePath( path ) ? ImportedAssetStore::writeIfAbsent( path, pBytes, entry._size )
-                                                    : FileUtil::ensureParentDirectoryExists( FileUtil::toDiskPath( path ) ) && FileUtil::writeFile( FileUtil::toDiskPath( path ), pBytes, entry._size );
+                    const AbsolutePath path( FileUtil::toDiskPath( pathBuilder.view() ) );
+                    const uint8*       pBytes = payload.data() + entry._offset;
+                    const bool         bWritten =
+                        isSharedStorePath( path.str() ) ? ImportedAssetStore::writeIfAbsent( path, pBytes, entry._size )
+                                                                : FileUtil::ensureParentDirectoryExists( path ) && FileUtil::writeFile( path, pBytes, entry._size );
                     if ( bWritten == false )
                         return false;
                 }
@@ -348,7 +347,7 @@ namespace sw::editor
                 /** @brief 원본 하나를 대조하고, 어긋났고 ImportStale 이면 임포트합니다. 결과는 @p outResult 에만 씁니다. */
                 void importFile( const SourceFile& file, FileResult& outResult ) const
                 {
-                    const utf8* const pUnsupportedReason = _pImporter->findUnsupportedReason( file._sourcePath );
+                    const utf8* const pUnsupportedReason = _pImporter->findUnsupportedReason( file._sourcePath.str() );
                     if ( pUnsupportedReason != nullptr )
                     {
                         StringBuilder<constant::buffer::kMax512> problemBuilder;
@@ -484,7 +483,7 @@ namespace sw::editor
                 unordered_set<string> uniqueKey;
                 for ( const SourceFile& file : listFile )
                 {
-                    listKey.push_back( makeFootprintKey( file._importedPath ) );
+                    listKey.push_back( makeFootprintKey( file._importedPath.str() ) );
                     if ( listKey.back().empty() == false )
                         uniqueKey.insert( listKey.back() );
                 }
@@ -527,15 +526,15 @@ namespace sw::editor
              * @details 단계는 준비(직렬: 파일 목록 · 사슬) → 병렬 임포트(의존 없는 사슬) → 직렬 임포트(`hasOrderDependency` 인 원본이 든 사슬) → 합치기(직렬, 파일 순서)입니다.
              *          파일마다 결과가 자기 칸에 담기고 요약 · 스탬프 표는 파일 순서대로만 만들어지므로, 문제 목록의 순서와 스탬프의 내용은 직렬로 돌 때와 같습니다.
              */
-            static void importRawFolder( const string& rootDir, const string& rawFolder, const IRawAssetImporter& importer, AssetImportMode mode,
+            static void importRawFolder( const string& rootDir, const AbsolutePath& rawFolder, const IRawAssetImporter& importer, AssetImportMode mode,
                                          const unordered_set<string>* pScope, TaskManager* pTaskManager, const DerivedDataCache* pDerivedDataCache, AssetImportSummary& inoutSummary )
             {
-                const string                 stampPath = FileUtil::joinPath( rawFolder, importer.getStampFileName() );
+                const AbsolutePath           stampPath = rawFolder.join( importer.getStampFileName() );
                 flat_map<string, StampEntry> mapStamped;
                 readStamp( stampPath, importer.getStampHeader(), mapStamped );
 
                 vector<string> listPath;
-                (void)EditorContentScan::collectFiles( rawFolder, "", listPath, true ); // 폴더는 방금 훑어서 찾았다
+                (void)EditorContentScan::collectFiles( rawFolder.str(), "", listPath, true ); // 폴더는 방금 훑어서 찾았다
                 AssetSourceLocator::collectStoredSources( rawFolder, listPath );
                 VectorUtil::sort( listPath );
 
@@ -544,16 +543,16 @@ namespace sw::editor
                 for ( const string& path : listPath )
                 {
                     SourceFile file;
-                    file._sourcePath           = FileUtil::normalizeSeparators( path );
-                    const bool bSkipSourceFile = importer.isSourceFile( file._sourcePath ) == false || file._sourcePath.size() <= rawFolder.size() + 1 || file._sourcePath.size() <= rootDir.size() + 1;
+                    file._sourcePath           = FileUtil::toDiskPath( FileUtil::normalizeSeparators( path ) );
+                    const bool bSkipSourceFile = importer.isSourceFile( file._sourcePath.str() ) == false || file._sourcePath.str().size() <= rawFolder.str().size() + 1 || file._sourcePath.str().size() <= rootDir.size() + 1;
                     if ( bSkipSourceFile )
                         continue;
 
-                    file._relativePath = file._sourcePath.substr( rawFolder.size() + 1 );
-                    file._assetPath    = file._sourcePath.substr( rootDir.size() + 1 );
-                    file._importedPath = importer.makeImportedPath( file._sourcePath );
+                    file._relativePath = file._sourcePath.str().substr( rawFolder.str().size() + 1 );
+                    file._assetPath    = file._sourcePath.str().substr( rootDir.size() + 1 );
+                    file._importedPath = importer.makeImportedPath( file._sourcePath.str() );
                     // 두 원본이 한 결과에 쓰면(`a.jpg` · `a.png` → `a.dds`) 돌 때마다 서로 덮어 둘 다 영원히 어긋난다 — 뒤의 것을 문제로 알리고 임포트하지 않는다.
-                    const auto owner       = mapImportedOwner.emplace( makeImportedKey( file._importedPath ), file._assetPath );
+                    const auto owner       = mapImportedOwner.emplace( makeImportedKey( file._importedPath.str() ), file._assetPath );
                     const bool bOutOfScope = pScope != nullptr && pScope->find( makeScopeKey( file._assetPath ) ) == pScope->end();
                     if ( bOutOfScope )
                         continue; // 범위 밖 원본은 읽지도 해시하지도 않는다
@@ -578,7 +577,7 @@ namespace sw::editor
                     bool bOrderDependent = false;
                     for ( const uint32 fileIndex : listChain[chainIndex] )
                     {
-                        bOrderDependent = bOrderDependent || ( mode == AssetImportMode::ImportStale && importer.hasOrderDependency( listFile[fileIndex]._sourcePath, listFile[fileIndex]._assetPath ) );
+                        bOrderDependent = bOrderDependent || ( mode == AssetImportMode::ImportStale && importer.hasOrderDependency( listFile[fileIndex]._sourcePath.str(), listFile[fileIndex]._assetPath ) );
                     }
                     if ( bOrderDependent )
                         listSerialChain.push_back( chainIndex );
@@ -637,18 +636,18 @@ namespace sw::editor
                 {
                     if ( mapCurrent.find( relativePath ) != mapCurrent.end() )
                         continue;
-                    const string sourcePath = FileUtil::joinPath( rawFolder, relativePath );
-                    if ( FileUtil::exists( FileUtil::toDiskPath( sourcePath ) ) )
+                    const AbsolutePath sourcePath = rawFolder.join( relativePath );
+                    if ( FileUtil::exists( sourcePath ) )
                         continue; // 원본은 있다 — 위에서 어긋남 · 실패로 이미 보고했다
                     if ( mode == AssetImportMode::CheckOnly )
                     {
                         StringBuilder<constant::buffer::kMax512> problemBuilder;
-                        problemBuilder.appendFormat( "%#: 원본이 없는데 스탬프에 남아 있습니다", string_view( sourcePath ).substr( rootDir.size() + 1 ) );
+                        problemBuilder.appendFormat( "%#: 원본이 없는데 스탬프에 남아 있습니다", string_view( sourcePath.str() ).substr( rootDir.size() + 1 ) );
                         inoutSummary._listProblem.push_back( string( problemBuilder.view() ) );
                         continue;
                     }
-                    const string importedPath = importer.makeImportedPath( sourcePath );
-                    if ( mapImportedOwner.contains( makeImportedKey( importedPath ) ) )
+                    const AbsolutePath importedPath = importer.makeImportedPath( sourcePath.str() );
+                    if ( mapImportedOwner.contains( makeImportedKey( importedPath.str() ) ) )
                         continue; // 남은 원본이 그 결과의 주인이다(`a.png` 를 지우고 `a.jpg` 를 두었다)
                     if ( bLiveAncestorBuilt == false )
                     {
@@ -681,36 +680,36 @@ namespace sw::editor
              *          공유 저장소 파일은 다른 원본도 쓰므로 두고(`ImportedAssetStore::removeUnreferenced` 가 거둔다), 옆 폴더 아래에 남은 원본의 결과 자리가 있으면
              *          (@p uniqueLiveAncestor — 남은 자리의 조상 `collectFootprintAncestors`) 옆 폴더 안은 두고 나머지만 지운다.
              */
-            static void removeOrphanedResult( const IRawAssetImporter& importer, const string& importedPath, const unordered_set<string>& uniqueLiveAncestor, AssetImportSummary& inoutSummary )
+            static void removeOrphanedResult( const IRawAssetImporter& importer, const AbsolutePath& importedPath, const unordered_set<string>& uniqueLiveAncestor, AssetImportSummary& inoutSummary )
             {
-                const string footprint = makeFootprintKey( importedPath );
+                const string footprint = makeFootprintKey( importedPath.str() );
                 if ( footprint.empty() )
                     return;
-                const string sideFolder = FileUtil::normalizeSeparators( FileUtil::removeExtension( importedPath ) );
-                const bool   bSideInUse = uniqueLiveAncestor.contains( footprint );
+                const AbsolutePath sideFolder = importedPath.removeExtension();
+                const bool         bSideInUse = uniqueLiveAncestor.contains( footprint );
 
-                vector<string> listResult;
+                vector<AbsolutePath> listResult;
                 importer.collectImportedFiles( importedPath, listResult );
-                for ( const string& result : listResult )
+                for ( const AbsolutePath& result : listResult )
                 {
-                    const bool bInSideFolder = FileUtil::isPathAtOrUnderRoot( sideFolder, FileUtil::normalizeSeparators( result ) );
-                    if ( isSharedStorePath( result ) || ( bSideInUse && bInSideFolder ) || FileUtil::removeFile( FileUtil::toDiskPath( result ) ) )
+                    const bool bInSideFolder = FileUtil::isPathAtOrUnderRoot( sideFolder.str(), FileUtil::normalizeSeparators( result.str() ) );
+                    if ( isSharedStorePath( result.str() ) || ( bSideInUse && bInSideFolder ) || FileUtil::removeFile( result ) )
                         continue;
                     StringBuilder<constant::buffer::kMax512> problemBuilder;
-                    problemBuilder.appendFormat( "%#: 원본이 사라진 결과를 지우지 못했습니다", result );
+                    problemBuilder.appendFormat( "%#: 원본이 사라진 결과를 지우지 못했습니다", result.str() );
                     inoutSummary._listProblem.push_back( string( problemBuilder.view() ) );
                 }
 
                 vector<string> listRemaining;
-                const bool     bSideFolder = FileUtil::isDirectory( FileUtil::toDiskPath( sideFolder ) );
-                const bool     bSideEmpty  = bSideFolder && EditorContentScan::collectFiles( sideFolder, "", listRemaining, true ) && listRemaining.empty();
-                if ( bSideEmpty && FileUtil::removeDirectory( FileUtil::toDiskPath( sideFolder ) ) == false )
+                const bool     bSideFolder = FileUtil::isDirectory( sideFolder );
+                const bool     bSideEmpty  = bSideFolder && EditorContentScan::collectFiles( sideFolder.str(), "", listRemaining, true ) && listRemaining.empty();
+                if ( bSideEmpty && FileUtil::removeDirectory( sideFolder ) == false )
                 {
                     StringBuilder<constant::buffer::kMax512> problemBuilder;
-                    problemBuilder.appendFormat( "%#: 원본이 사라진 결과의 옆 폴더를 지우지 못했습니다", sideFolder );
+                    problemBuilder.appendFormat( "%#: 원본이 사라진 결과의 옆 폴더를 지우지 못했습니다", sideFolder.str() );
                     inoutSummary._listProblem.push_back( string( problemBuilder.view() ) );
                 }
-                SW_LOG_INFO_ID( "AssetImportStamp.RemovedOrphanedResult", "Removed '%#' - its source is gone", importedPath );
+                SW_LOG_INFO_ID( "AssetImportStamp.RemovedOrphanedResult", "Removed '%#' - its source is gone", importedPath.str() );
             }
 
             /** @brief 범위 표의 열쇠입니다 — 구분자를 `/` 로 맞춘 소문자 리소스 경로(파일 이름의 대소문자는 OS 가 구분하지 않는다). */
@@ -727,18 +726,18 @@ namespace sw::editor
             }
 
             /** @brief 리소스 루트 아래 모든 원본 폴더를 대조합니다. @p pScope 가 있으면 그 원본(리소스 경로 열쇠)만 대조하고 임포트합니다. */
-            static AssetImportSummary importFolders( string_view resourceRoot, const IRawAssetImporter& importer, AssetImportMode mode, const unordered_set<string>* pScope,
+            static AssetImportSummary importFolders( const AbsolutePath& resourceRoot, const IRawAssetImporter& importer, AssetImportMode mode, const unordered_set<string>* pScope,
                                                      TaskManager* pTaskManager, const DerivedDataCache* pDerivedDataCache )
             {
                 AssetImportSummary summary;
-                const string       rootDir = FileUtil::trimTrailingSlashes( FileUtil::normalizeSeparators( resourceRoot ) );
+                const AbsolutePath rootDir = resourceRoot.join( {} );
 
                 vector<string> listFolder;
                 // 옛 작업 도메인 자리(`Content/scratch/`)의 찌꺼기는 임포트하지 않는다(EditorContentScan 이 뺀다)
                 if ( rootDir.empty() || EditorContentScan::collectFolders( rootDir, listFolder, true ) == false )
                 {
                     StringBuilder<constant::buffer::kMax512> problemBuilder;
-                    problemBuilder.appendFormat( "리소스 루트를 훑지 못했습니다: %#", rootDir );
+                    problemBuilder.appendFormat( "리소스 루트를 훑지 못했습니다: %#", rootDir.str() );
                     summary._listProblem.push_back( string( problemBuilder.view() ) );
                     return summary;
                 }
@@ -750,13 +749,13 @@ namespace sw::editor
                     collectScopeFolders( *pScope, uniqueScopeFolder );
                 for ( const string& folder : listFolder )
                 {
-                    const string normalizedFolder = FileUtil::normalizeSeparators( folder );
-                    if ( FileUtil::getFileNamePart( normalizedFolder ) != importer.getRawFolderName() )
+                    const AbsolutePath normalizedFolder = FileUtil::toDiskPath( FileUtil::normalizeSeparators( folder ) );
+                    if ( FileUtil::getFileNamePart( normalizedFolder.str() ) != importer.getRawFolderName() )
                         continue;
-                    const bool bOutOfScope = pScope != nullptr && ( normalizedFolder.size() <= rootDir.size() + 1 || uniqueScopeFolder.contains( makeScopeKey( string_view( normalizedFolder ).substr( rootDir.size() + 1 ) ) ) == false );
+                    const bool bOutOfScope = pScope != nullptr && ( normalizedFolder.str().size() <= rootDir.str().size() + 1 || uniqueScopeFolder.contains( makeScopeKey( string_view( normalizedFolder.str() ).substr( rootDir.str().size() + 1 ) ) ) == false );
                     if ( bOutOfScope )
                         continue;
-                    importRawFolder( rootDir, normalizedFolder, importer, mode, pScope, pTaskManager, pDerivedDataCache, summary );
+                    importRawFolder( rootDir.str(), normalizedFolder, importer, mode, pScope, pTaskManager, pDerivedDataCache, summary );
                 }
                 return summary;
             }
@@ -766,50 +765,50 @@ namespace sw::editor
 
 namespace sw::editor
 {
-    uint64 IRawAssetImporter::computeImportedHash( string_view importedPath ) const
+    uint64 IRawAssetImporter::computeImportedHash( const AbsolutePath& importedPath ) const
     {
         return AssetImportStampUtil::computeFileHash( importedPath );
     }
 
-    void IRawAssetImporter::collectImportedFiles( string_view importedPath, vector<string>& outListPath ) const
+    void IRawAssetImporter::collectImportedFiles( const AbsolutePath& importedPath, vector<AbsolutePath>& outListPath ) const
     {
-        if ( FileUtil::isRegularFile( FileUtil::toDiskPath( importedPath ) ) )
-            outListPath.push_back( string( importedPath ) );
+        if ( FileUtil::isRegularFile( importedPath ) )
+            outListPath.push_back( importedPath );
     }
 
-    AssetImportSummary AssetImportStampUtil::importAll( string_view resourceRoot, const IRawAssetImporter& importer, AssetImportMode mode, TaskManager* pTaskManager,
+    AssetImportSummary AssetImportStampUtil::importAll( const AbsolutePath& resourceRoot, const IRawAssetImporter& importer, AssetImportMode mode, TaskManager* pTaskManager,
                                                         const DerivedDataCache& derivedDataCache )
     {
         return AssetImportStampInternal::importFolders( resourceRoot, importer, mode, nullptr, pTaskManager, &derivedDataCache );
     }
 
-    vector<string> AssetImportStampUtil::collectSourceAssetPaths( string_view resourceRoot, const IRawAssetImporter& importer )
+    vector<string> AssetImportStampUtil::collectSourceAssetPaths( const AbsolutePath& resourceRoot, const IRawAssetImporter& importer )
     {
-        const string   rootDir = FileUtil::trimTrailingSlashes( FileUtil::normalizeSeparators( resourceRoot ) );
-        vector<string> listFolder;
-        vector<string> listAssetPath;
+        const AbsolutePath rootDir = resourceRoot.join( {} );
+        vector<string>     listFolder;
+        vector<string>     listAssetPath;
         if ( rootDir.empty() || EditorContentScan::collectFolders( rootDir, listFolder, true ) == false )
             return listAssetPath;
         for ( const string& folder : listFolder )
         {
-            const string normalizedFolder = FileUtil::normalizeSeparators( folder );
-            if ( FileUtil::getFileNamePart( normalizedFolder ) != importer.getRawFolderName() )
+            const AbsolutePath normalizedFolder = FileUtil::toDiskPath( FileUtil::normalizeSeparators( folder ) );
+            if ( FileUtil::getFileNamePart( normalizedFolder.str() ) != importer.getRawFolderName() )
                 continue;
             vector<string> listPath;
-            (void)EditorContentScan::collectFiles( normalizedFolder, "", listPath, true );
+            (void)EditorContentScan::collectFiles( normalizedFolder.str(), "", listPath, true );
             AssetSourceLocator::collectStoredSources( normalizedFolder, listPath );
             for ( const string& path : listPath )
             {
                 const string sourcePath = FileUtil::normalizeSeparators( path );
-                if ( importer.isSourceFile( sourcePath ) && sourcePath.size() > rootDir.size() + 1 )
-                    listAssetPath.push_back( sourcePath.substr( rootDir.size() + 1 ) );
+                if ( importer.isSourceFile( sourcePath ) && sourcePath.size() > rootDir.str().size() + 1 )
+                    listAssetPath.push_back( sourcePath.substr( rootDir.str().size() + 1 ) );
             }
         }
         VectorUtil::sort( listAssetPath );
         return listAssetPath;
     }
 
-    AssetImportSummary AssetImportStampUtil::importSources( string_view resourceRoot, const IRawAssetImporter& importer, const vector<string>& listAssetPath,
+    AssetImportSummary AssetImportStampUtil::importSources( const AbsolutePath& resourceRoot, const IRawAssetImporter& importer, const vector<string>& listAssetPath,
                                                             TaskManager* pTaskManager, const DerivedDataCache& derivedDataCache )
     {
         unordered_set<string> uniqueScope;
@@ -820,7 +819,7 @@ namespace sw::editor
         return AssetImportStampInternal::importFolders( resourceRoot, importer, AssetImportMode::ImportStale, &uniqueScope, pTaskManager, &derivedDataCache );
     }
 
-    string AssetImportStampUtil::makeImportedPath( string_view rawPath, string_view rawFolderName, string_view importedFolderName, string_view importedExtension )
+    AbsolutePath AssetImportStampUtil::makeImportedPath( string_view rawPath, string_view rawFolderName, string_view importedFolderName, string_view importedExtension )
     {
         string rawFolder;
         string relativePath;
@@ -829,13 +828,13 @@ namespace sw::editor
 
         const string domainFolder   = FileUtil::getDirectoryPart( rawFolder );
         const string importedFolder = domainFolder.empty() ? string( importedFolderName ) : FileUtil::joinPath( domainFolder, importedFolderName );
-        return FileUtil::replaceExtension( FileUtil::joinPath( importedFolder, relativePath ), importedExtension );
+        return FileUtil::toDiskPath( FileUtil::replaceExtension( FileUtil::joinPath( importedFolder, relativePath ), importedExtension ) );
     }
 
-    uint64 AssetImportStampUtil::computeFileHash( string_view path )
+    uint64 AssetImportStampUtil::computeFileHash( const AbsolutePath& path )
     {
         vector<uint8> bytes;
-        const bool    bUnreadableFile = FileUtil::exists( FileUtil::toDiskPath( path ) ) == false || FileUtil::readFile( FileUtil::toDiskPath( path ), bytes ) == false || bytes.empty();
+        const bool    bUnreadableFile = FileUtil::exists( path ) == false || FileUtil::readFile( path, bytes ) == false || bytes.empty();
         if ( bUnreadableFile )
             return 0;
         return HashUtil::computeStringHash64( reinterpret_cast<const utf8*>( bytes.data() ), bytes.size(), false );

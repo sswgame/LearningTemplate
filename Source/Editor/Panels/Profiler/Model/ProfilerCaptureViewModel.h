@@ -8,6 +8,7 @@
 #include "Core/Container/vector.h"
 #include "Core/Foundation/Constants.h"
 #include "Core/Foundation/Types.h"
+#include "Core/Path/AbsolutePath.h"
 
 #include "Editor/Panels/Profiler/Model/ProfilerScopeHistory.h"
 
@@ -58,7 +59,7 @@ namespace sw::editor
         /** @brief 캡처 파일을 읽습니다. 성공하면 새 프레임이 덮어쓰지 않게 수집을 멈추고 true 입니다. */
         bool loadCapture();
         /** @brief 캡처 파일 경로(`Saved/Profiler/ProfilerCapture.txt`)입니다. */
-        static string getCaptureFilePath();
+        static AbsolutePath getCaptureFilePath();
 
         /** @brief 테이블의 "Last" 열이 보여 줄 프레임입니다. 0 이 가장 최근입니다. */
         uint32 getSelectedFrameOffset() const { return _rowQuery._frameOffset; }

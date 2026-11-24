@@ -79,7 +79,7 @@ namespace sw
             /** @brief 감시 값 `UserData.Root` — 이 실행의 사용자 데이터 폴더(활성 게임)입니다. 실행마다 다른 경로라 `<Record>` 로 견주지 않는다(진단용). */
             [[nodiscard]] static bool readRoot( const AutomationWatchQuery& /*query*/, AutomationWatchValue& outValue )
             {
-                outValue.setText( UserDataPath::getDataDirectory( GameSelection::getName() ) );
+                outValue.setText( UserDataPath::getDataDirectory( GameSelection::getName() ).str() );
                 return true;
             }
 
@@ -131,7 +131,7 @@ namespace sw
     {
         vector<string> listFolder{ FileUtil::joinPath( ProcessRoots::get()._project.str(), config::kDirSavedEditor ) };
         // 게임마다 폴더의 부모(`SWEngine` · `swengine`) — 모든 게임의 사람 세이브 · 설정이다. 모르면(샌드박스) 그 칸이 없다.
-        const string listGameFolder[] = { UserDataPath::findPlatformDataDirectory( "" ).str(), UserDataPath::findPlatformConfigDirectory( "" ) };
+        const string listGameFolder[] = { UserDataPath::findPlatformDataDirectory( "" ).str(), UserDataPath::findPlatformConfigDirectory( "" ).str() };
         for ( const string& gameFolder : listGameFolder )
         {
             if ( gameFolder.empty() == false )

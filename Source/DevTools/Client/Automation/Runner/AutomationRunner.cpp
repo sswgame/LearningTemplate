@@ -121,11 +121,9 @@ namespace sw
              * @details 실행마다 새 폴더다 - 만들기가 곧 자리 잡기(`reserveUniquePath`)다. 예전에는 시나리오 이름만이라 나란히 도는 실행(백엔드 넷)이 같은 사진을 덮어썼고,
              *          그다음엔 프로세스 id 폴더를 그대로 써 Windows 가 다시 쓴 id 의 옛 산출물 위에 이어 썼다.
              */
-            static string makeOutputDirectory( string_view scenarioName )
+            static AbsolutePath makeOutputDirectory( string_view scenarioName )
             {
-                StringBuilder<constant::buffer::kMax256> textBuilder;
-                textBuilder.appendFormat( "%#/%#/%#", makeAutomationOutputFolderPath(), string( scenarioName ), Process::getCurrentProcessID() );
-                return FileUtil::reserveUniquePath( FileUtil::toDiskPath( textBuilder.view() ), {}, true ).str();
+                return FileUtil::reserveUniquePath( makeAutomationOutputFolderPath().join( scenarioName ).join( to_string( Process::getCurrentProcessID() ) ), {}, true );
             }
 
             /**
@@ -224,7 +222,7 @@ namespace sw
         _writeFilterRegistration.reset();
     }
 
-    void AutomationRunner::startFromPath( const AssetID& assetID, string_view reportPath )
+    void AutomationRunner::startFromPath( const AssetID& assetID, const AbsolutePath& reportPath )
     {
         const string_view scenarioPath = assetID.view();
         markWallStart();
@@ -296,7 +294,7 @@ namespace sw
         return false;
     }
 
-    bool AutomationRunner::startFromText( string_view xmlText, string_view reportPath )
+    bool AutomationRunner::startFromText( string_view xmlText, const AbsolutePath& reportPath )
     {
         markWallStart();
         _reportWriter.setReportPath( reportPath );
@@ -321,7 +319,7 @@ namespace sw
     bool AutomationRunner::prepareScratchFolders()
     {
         // 사본 id 는 시나리오가 적은 그대로다 — 작업 도메인이 이 프로세스의 실행 뿌리 아래라(`AssetPaths::getScratchFolderPath`) 나란히 도는 App 과 겹치지 않는다.
-        _scenario.bindOutputDirectory( _outputDirectory ); // `{out}` — 산출물 폴더도 프로세스마다다(두 시작 길 모두 여기를 지난다)
+        _scenario.bindOutputDirectory( _outputDirectory.str() ); // `{out}` — 산출물 폴더도 프로세스마다다(두 시작 길 모두 여기를 지난다)
         for ( const AutomationScratchFolder& folder : _scenario.getTestOptions()._listScratchFolder )
         {
             const expected<void> prepared = AutomationScratchWorkspace::prepare( folder );
@@ -617,7 +615,7 @@ namespace sw
         GlobalVariableManager&    variables        = engine::getSubsystem<GlobalVariableManager>();
         const GlobalVariableInfo* pReportPath      = variables.findVariable( "gv_profileReportPath" );
         const bool                bReportPathGiven = pReportPath != nullptr && pReportPath->getValueAsString().empty() == false;
-        if ( bReportPathGiven == false && variables.setValueFromString( "gv_profileReportPath", FileUtil::joinPath( _outputDirectory, "profile.report.json" ) ) == false )
+        if ( bReportPathGiven == false && variables.setValueFromString( "gv_profileReportPath", _outputDirectory.join( "profile.report.json" ).str() ) == false )
         {
             finish( AutomationRunResult::failed( AutomationFailureKind::LoadError, "<Load> could not set gv_profileReportPath", {} ) );
             return;
@@ -1179,12 +1177,7 @@ namespace sw
 
     AbsolutePath AutomationRunner::resolveOutputPath( string_view file ) const
     {
-        const bool bAbsolute = file.empty() == false && ( file[0] == '/' || file[0] == '\\' || ( file.size() > 1 && file[1] == ':' ) );
-        if ( bAbsolute )
-            return FileUtil::toDiskPath( file );
-        StringBuilder<constant::buffer::kMax1024> path;
-        path.appendFormat( "%#/%#", _outputDirectory, file );
-        return FileUtil::toDiskPath( path.view() );
+        return FileUtil::isAbsolutePath( file ) ? FileUtil::toDiskPath( file ) : _outputDirectory.join( file );
     }
 
     void AutomationRunner::endRun( InputManager* pInput )

@@ -143,7 +143,7 @@ namespace sw
         }
         AbsolutePath found = symbolDirectory.join( fileName );
         if ( FileUtil::exists( found ) == false )
-            found = FileUtil::toDiskPath( FileUtil::exists( besideLibrary ) ? besideLibrary.str() : string{} );
+            found = FileUtil::exists( besideLibrary ) ? besideLibrary : AbsolutePath{};
         return found;
     }
 

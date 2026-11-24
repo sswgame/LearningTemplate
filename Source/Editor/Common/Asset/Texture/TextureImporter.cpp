@@ -179,7 +179,7 @@ namespace sw::editor
         };
 
         /** @brief 임포트 결과(밉까지 끝난 이미지)를 DDS 로 쓰고 결과를 채웁니다. 8비트 경로와 HDR 경로가 함께 쓰며, 둘 다 원본 채널 수를 넘깁니다. */
-        [[nodiscard]] bool saveImportedDDSInternal( const DirectX::ScratchImage& finalImage, uint32 sourceChannelCount, [[maybe_unused]] string_view sourcePath, string_view outputPath,
+        [[nodiscard]] bool saveImportedDDSInternal( const DirectX::ScratchImage& finalImage, uint32 sourceChannelCount, [[maybe_unused]] const AbsolutePath& sourcePath, const AbsolutePath& outputPath,
                                                     TextureImportResult* pOutResult )
         {
             // 엔진 `DDSLoader` 의 옛 머리(DX9 픽셀 형식) 경로는 1 채널 휘도(L8)를 모른다. R8_UNORM 은 DX10 머리로 써서 DXGI 번호(61)를 그대로 싣는다.
@@ -190,24 +190,24 @@ namespace sw::editor
             if ( FAILED( hrSave ) )
             {
                 SW_LOG_ERROR_ID( "TextureImporter.DirectXSaveToDDSMemoryFailedHr", "DirectX::SaveToDDSMemory failed (hr=0x%#) for %#", Fmt( static_cast<uint32>( hrSave ), Format( 8, Format::Padding::Zero ).hex() ),
-                                 outputPath );
+                                 outputPath.str() );
                 return false;
             }
 
             // 파일은 엔진의 쓰기 입구로만 쓴다 — 쓰기 게이트를 지나고, 임시 파일에 다 쓴 뒤 바꿔 끼워 쓰는 중인 DDS 를 런타임 리로드가 읽지 않는다(DirectXTex 의 파일 쓰기는 제자리에 쓴다).
-            const bool bWritten = FileUtil::ensureParentDirectoryExists( FileUtil::toDiskPath( outputPath ) ) &&
-                                  FileUtil::writeFile( FileUtil::toDiskPath( outputPath ), static_cast<const uint8*>( fileBytes.GetConstBufferPointer() ), fileBytes.GetBufferSize() );
+            const bool bWritten = FileUtil::ensureParentDirectoryExists( outputPath ) &&
+                                  FileUtil::writeFile( outputPath, static_cast<const uint8*>( fileBytes.GetConstBufferPointer() ), fileBytes.GetBufferSize() );
             if ( bWritten == false )
             {
-                SW_LOG_ERROR_ID( "TextureImporter.ImportedTextureNotWritten", "Could not write the imported texture %#", outputPath );
+                SW_LOG_ERROR_ID( "TextureImporter.ImportedTextureNotWritten", "Could not write the imported texture %#", outputPath.str() );
                 return false;
             }
 
             const DirectX::TexMetadata& metadata        = finalImage.GetMetadata();
             const uint32                mipCount        = static_cast<uint32>( metadata.mipLevels );
             uint64                      outputSizeBytes = 0;
-            if ( FileUtil::tryGetFileSize( FileUtil::toDiskPath( outputPath ), outputSizeBytes ) == false )
-                SW_LOG_WARNING_ID( "TextureImporter.ImportedTextureButCannot", "Imported texture %# but cannot read its size", outputPath );
+            if ( FileUtil::tryGetFileSize( outputPath, outputSizeBytes ) == false )
+                SW_LOG_WARNING_ID( "TextureImporter.ImportedTextureButCannot", "Imported texture %# but cannot read its size", outputPath.str() );
             if ( pOutResult != nullptr )
             {
                 pOutResult->_width              = static_cast<uint32>( metadata.width );
@@ -218,8 +218,8 @@ namespace sw::editor
                 pOutResult->_bSuccess           = SW_TRUE;
             }
             uint64 sourceSizeBytes = 0;
-            (void)FileUtil::tryGetFileSize( FileUtil::toDiskPath( sourcePath ), sourceSizeBytes ); // 로그 한 줄의 숫자다 - 읽은 원본이라 늘 있다
-            SW_LOG_INFO_ID( "TextureImporter.ImportedTextureFormatMips", "Imported texture: %# -> %# (Format: %#, Mips: %#, %# -> %# bytes)", sourcePath, outputPath,
+            (void)FileUtil::tryGetFileSize( sourcePath, sourceSizeBytes ); // 로그 한 줄의 숫자다 - 읽은 원본이라 늘 있다
+            SW_LOG_INFO_ID( "TextureImporter.ImportedTextureFormatMips", "Imported texture: %# -> %# (Format: %#, Mips: %#, %# -> %# bytes)", sourcePath.str(), outputPath.str(),
                             static_cast<uint32>( metadata.format ), mipCount, sourceSizeBytes, outputSizeBytes );
             return true;
         }
@@ -318,19 +318,19 @@ namespace sw::editor
          * @brief `.hdr`(Radiance RGBE)을 부동소수점으로 읽어 BC6H_UF16 또는 R16G16B16A16_FLOAT 로 임포트합니다.
          * @details 규칙의 포맷이 다른 것(8비트)이면 실패로 알린다. 1 을 넘는 값을 자르지 않기 위해서다. 밉은 선형 값 그대로 섞으며 sRGB 가 아니다.
          */
-        [[nodiscard]] bool importHDRTextureInternal( string_view sourcePath, string_view outputPath, const TextureImportRule& rule, TaskManager* pTaskManager,
+        [[nodiscard]] bool importHDRTextureInternal( const AbsolutePath& sourcePath, const AbsolutePath& outputPath, const TextureImportRule& rule, TaskManager* pTaskManager,
                                                      TextureImportResult* pOutResult )
         {
             const DXGI_FORMAT targetFormat = resolveFormatInternal( rule._format, false );
             if ( targetFormat != DXGI_FORMAT_BC6H_UF16 && targetFormat != DXGI_FORMAT_R16G16B16A16_FLOAT )
             {
-                SW_LOG_ERROR_ID( "TextureImporter.HDRSourceNeedsFormat", "HDR source needs format bc6h or rgba16f (rule format '%#'): %#", TextureImportFormatUtil::getName( rule._format ), sourcePath );
+                SW_LOG_ERROR_ID( "TextureImporter.HDRSourceNeedsFormat", "HDR source needs format bc6h or rgba16f (rule format '%#'): %#", TextureImportFormatUtil::getName( rule._format ), sourcePath.str() );
                 return false;
             }
             vector<uint8> bytes;
             if ( AssetSourceLocator::readBytes( sourcePath, bytes ) == false )
             {
-                SW_LOG_ERROR_ID( "TextureImporter.HDRSourceUnreadable", "Failed to read HDR source: %#", sourcePath );
+                SW_LOG_ERROR_ID( "TextureImporter.HDRSourceUnreadable", "Failed to read HDR source: %#", sourcePath.str() );
                 return false;
             }
             DirectX::TexMetadata  metadata{};
@@ -339,11 +339,11 @@ namespace sw::editor
             if ( FAILED( hr ) )
             {
                 SW_LOG_ERROR_ID( "TextureImporter.DirectXLoadFromHDRMemoryFailedHr", "DirectX::LoadFromHDRMemory failed (hr=0x%#) for %#", Fmt( static_cast<uint32>( hr ), Format( 8, Format::Padding::Zero ).hex() ),
-                                 sourcePath );
+                                 sourcePath.str() );
                 return false;
             }
             DirectX::ScratchImage finalImage;
-            if ( encodeTextureMipsInternal( *sourceImage.GetImage( 0, 0, 0 ), rule._bGenerateMips == SW_TRUE, targetFormat, compressFlagsInternal( rule ), sourcePath, pTaskManager, finalImage ) == false )
+            if ( encodeTextureMipsInternal( *sourceImage.GetImage( 0, 0, 0 ), rule._bGenerateMips == SW_TRUE, targetFormat, compressFlagsInternal( rule ), sourcePath.str(), pTaskManager, finalImage ) == false )
                 return false;
             // Radiance RGBE 는 알파 없는 RGB 세 채널이다.
             constexpr uint32 kHDRSourceChannelCount = 3;
@@ -432,16 +432,16 @@ namespace sw::editor
             {
             }
 
-            string_view getRawFolderName() const override { return TextureImporterInternal::kRawTextureFolder; }
-            string_view getStampHeader() const override { return TextureImporterInternal::kImportStampHeader; }
-            string_view getImportedLabel() const override { return "DDS"; }
-            uint64      findCodeFingerprint() const override { return CookCodeFingerprint::find( "TextureImport" ); }
-            bool        isSourceFile( string_view path ) const override { return TextureImporterInternal::isSourceImage( path ); }
-            string      makeImportedPath( string_view sourcePath ) const override { return TextureImporter::makeImportedTexturePath( sourcePath ); }
-            uint64      computeSourceHash( string_view sourcePath, string_view assetPath ) const override
+            string_view  getRawFolderName() const override { return TextureImporterInternal::kRawTextureFolder; }
+            string_view  getStampHeader() const override { return TextureImporterInternal::kImportStampHeader; }
+            string_view  getImportedLabel() const override { return "DDS"; }
+            uint64       findCodeFingerprint() const override { return CookCodeFingerprint::find( "TextureImport" ); }
+            bool         isSourceFile( string_view path ) const override { return TextureImporterInternal::isSourceImage( path ); }
+            AbsolutePath makeImportedPath( string_view sourcePath ) const override { return TextureImporter::makeImportedTexturePath( sourcePath ); }
+            uint64       computeSourceHash( const AbsolutePath& sourcePath, string_view assetPath ) const override
             {
                 TextureImportRule rule;
-                if ( findRule( sourcePath, assetPath, rule ) == false )
+                if ( findRule( sourcePath.str(), assetPath, rule ) == false )
                     return 0; // 규칙이 겹치는 원본은 해시를 만들지 않는다(0 = 읽지 못함). 어긋남으로 잡히고 임포트도 같은 오류로 멈춘다
                 return TextureImporter::computeSourceHash( sourcePath, rule );
             }
@@ -450,10 +450,10 @@ namespace sw::editor
                 (void)sourcePath;
                 return nullptr;
             }
-            [[nodiscard]] bool importSource( string_view sourcePath, string_view importedPath, string_view assetPath ) const override
+            [[nodiscard]] bool importSource( const AbsolutePath& sourcePath, const AbsolutePath& importedPath, string_view assetPath ) const override
             {
                 TextureImportRule rule;
-                if ( findRule( sourcePath, assetPath, rule ) == false )
+                if ( findRule( sourcePath.str(), assetPath, rule ) == false )
                     return false;
                 return TextureImporter::importTexture( sourcePath, importedPath, rule, nullptr, _pTaskManager );
             }
@@ -504,11 +504,11 @@ namespace sw::editor
                 return string( nameBuilder.view() );
             }
 
-            string_view getStampHeader() const override { return "SWTEXVARIANT 1"; }
-            string_view getStampFileName() const override { return _stampFileName; }
-            string_view getImportedLabel() const override { return "variant DDS"; }
-            string      makeImportedPath( string_view sourcePath ) const override { return TextureFormatFamily::makeVariantPath( TextureImporter::makeImportedTexturePath( sourcePath ), _family._suffix ); }
-            uint64      computeSourceHash( string_view sourcePath, string_view assetPath ) const override
+            string_view  getStampHeader() const override { return "SWTEXVARIANT 1"; }
+            string_view  getStampFileName() const override { return _stampFileName; }
+            string_view  getImportedLabel() const override { return "variant DDS"; }
+            AbsolutePath makeImportedPath( string_view sourcePath ) const override { return FileUtil::toDiskPath( TextureFormatFamily::makeVariantPath( TextureImporter::makeImportedTexturePath( sourcePath ).str(), _family._suffix ) ); }
+            uint64       computeSourceHash( const AbsolutePath& sourcePath, string_view assetPath ) const override
             {
                 const uint64 sourceHash = TextureRawImporter::computeSourceHash( sourcePath, assetPath );
                 if ( sourceHash == 0 )
@@ -521,10 +521,10 @@ namespace sw::editor
                 }
                 return hash;
             }
-            [[nodiscard]] bool importSource( string_view sourcePath, string_view importedPath, string_view assetPath ) const override
+            [[nodiscard]] bool importSource( const AbsolutePath& sourcePath, const AbsolutePath& importedPath, string_view assetPath ) const override
             {
                 TextureImportRule rule;
-                if ( findRule( sourcePath, assetPath, rule ) == false )
+                if ( findRule( sourcePath.str(), assetPath, rule ) == false )
                     return false;
                 return TextureImporter::cookTextureVariant( sourcePath, importedPath, rule, _family, _pTaskManager );
             }
@@ -548,7 +548,7 @@ namespace sw::editor
         }
     } // namespace
 
-    bool TextureImporter::cookTextureVariant( string_view sourcePath, string_view outputPath, const TextureImportRule& rule, const TextureFormatFamily& family, TaskManager* pTaskManager )
+    bool TextureImporter::cookTextureVariant( const AbsolutePath& sourcePath, const AbsolutePath& outputPath, const TextureImportRule& rule, const TextureFormatFamily& family, TaskManager* pTaskManager )
     {
         const TextureFormatUsage usage = TextureImportFormatUtil::getUsage( rule._format );
         if ( usage == TextureFormatUsage::Raw )
@@ -558,7 +558,7 @@ namespace sw::editor
         {
             if ( format != RHIFormat::R16G16B16A16_FLOAT )
             {
-                SW_LOG_ERROR_ID( "TextureImporter.VariantHDRFormat", "Texture format family '%#' needs R16G16B16A16_FLOAT for HDR sources (no HDR encoder for the others): %#", family._name, sourcePath );
+                SW_LOG_ERROR_ID( "TextureImporter.VariantHDRFormat", "Texture format family '%#' needs R16G16B16A16_FLOAT for HDR sources (no HDR encoder for the others): %#", family._name, sourcePath.str() );
                 return false;
             }
             TextureImportRule hdrRule = rule;
@@ -567,14 +567,14 @@ namespace sw::editor
         }
         if ( TextureBlockEncoder::isEncodable( format ) == false )
         {
-            SW_LOG_ERROR_ID( "TextureImporter.VariantNoEncoder", "Texture format family '%#' names a format the cooker cannot encode (RHIFormat %#): %#", family._name, static_cast<uint32>( format ), sourcePath );
+            SW_LOG_ERROR_ID( "TextureImporter.VariantNoEncoder", "Texture format family '%#' names a format the cooker cannot encode (RHIFormat %#): %#", family._name, static_cast<uint32>( format ), sourcePath.str() );
             return false;
         }
 
         RawImageData rawImage;
         if ( RawImageData::loadImage( sourcePath, rawImage ) == false || rawImage.isValid() == false )
         {
-            SW_LOG_ERROR_ID( "TextureImporter.VariantDecodeFailed", "Failed to decode source image: %#", sourcePath );
+            SW_LOG_ERROR_ID( "TextureImporter.VariantDecodeFailed", "Failed to decode source image: %#", sourcePath.str() );
             return false;
         }
         // 인코더는 RGBA 순서를 읽는다 — 규칙의 BGRA 는 BC 파일의 바이트 배치라 여기서는 뜻이 없다.
@@ -591,7 +591,7 @@ namespace sw::editor
         baseImage.slicePitch = baseImage.rowPitch * static_cast<size_t>( rawImage._height );
         baseImage.pixels     = rawImage._bytes.data();
         DirectX::ScratchImage mipChain;
-        if ( buildMipChainInternal( baseImage, rule._bGenerateMips == SW_TRUE, true, sourcePath, mipChain ) == false )
+        if ( buildMipChainInternal( baseImage, rule._bGenerateMips == SW_TRUE, true, sourcePath.str(), mipChain ) == false )
             return false;
 
         const DirectX::TexMetadata& metadata = mipChain.GetMetadata();
@@ -602,14 +602,14 @@ namespace sw::editor
             if ( pImage == nullptr || TextureBlockEncoder::encodeMip( format, pImage->pixels, static_cast<uint32>( pImage->width ), static_cast<uint32>( pImage->height ), payload ) == false )
                 return false;
         }
-        if ( FileUtil::ensureParentDirectoryExists( FileUtil::toDiskPath( outputPath ) ) == false )
+        if ( FileUtil::ensureParentDirectoryExists( outputPath ) == false )
             return false;
         const uint32 width    = static_cast<uint32>( metadata.width );
         const uint32 rowBytes = ( width + 3 ) / 4 * RHIFormatUtil::getBlockInfo( format )._blockBytes;
-        return ImageFileWriter::writeDDS( FileUtil::toDiskPath( outputPath ), payload, width, static_cast<uint32>( metadata.height ), static_cast<uint32>( metadata.mipLevels ), variantDXGIFormatInternal( format ), rowBytes );
+        return ImageFileWriter::writeDDS( outputPath, payload, width, static_cast<uint32>( metadata.height ), static_cast<uint32>( metadata.mipLevels ), variantDXGIFormatInternal( format ), rowBytes );
     }
 
-    AssetImportSummary TextureImporter::cookTextureVariants( string_view resourceRoot, const TextureImportConfig& config, const TextureFormatFamily& family, AssetImportMode mode )
+    AssetImportSummary TextureImporter::cookTextureVariants( const AbsolutePath& resourceRoot, const TextureImportConfig& config, const TextureFormatFamily& family, AssetImportMode mode )
     {
         TaskManager* const               pTaskManager = editor::findSubsystem<TaskManager>(); // 선택: 없으면 이 스레드가 직렬로 굽는다(`importAllTextures` 와 같다)
         const TextureVariantRawImporter  importer{ config, pTaskManager, family };
@@ -623,25 +623,25 @@ namespace sw::editor
         return AssetImportStampUtil::importAll( resourceRoot, importer, mode, pTaskManager, *derivedDataCache );
     }
 
-    bool TextureImporter::importTexture( string_view sourcePath, string_view outputPath, const TextureImportRule& rule, TextureImportResult* pOutResult, TaskManager* pTaskManager )
+    bool TextureImporter::importTexture( const AbsolutePath& sourcePath, const AbsolutePath& outputPath, const TextureImportRule& rule, TextureImportResult* pOutResult, TaskManager* pTaskManager )
     {
         if ( pOutResult != nullptr )
         {
-            pOutResult->_sourcePath = string( sourcePath );
-            pOutResult->_outputPath = string( outputPath );
+            pOutResult->_sourcePath = string( sourcePath.str() );
+            pOutResult->_outputPath = string( outputPath.str() );
             pOutResult->_bSuccess   = SW_FALSE;
-            (void)FileUtil::tryGetFileSize( FileUtil::toDiskPath( sourcePath ), pOutResult->_sourceSizeBytes ); // 실패 보고다 - 원본이 없으면 크기 칸은 처음 값(0) 그대로
+            (void)FileUtil::tryGetFileSize( sourcePath, pOutResult->_sourceSizeBytes ); // 실패 보고다 - 원본이 없으면 크기 칸은 처음 값(0) 그대로
         }
 
         // `.hdr`(Radiance RGBE)은 1 을 넘는 값을 가진다. 8비트 디코더(stb)를 거치지 않고 부동소수점으로 읽어 HDR 포맷으로만 임포트한다.
-        if ( FileUtil::hasExtension( sourcePath, ".hdr" ) )
+        if ( FileUtil::hasExtension( sourcePath.str(), ".hdr" ) )
             return importHDRTextureInternal( sourcePath, outputPath, rule, pTaskManager, pOutResult );
 
         // 1) RawImageData 로 소스 이미지를 디코딩한다
         RawImageData rawImage;
         if ( RawImageData::loadImage( sourcePath, rawImage ) == false || rawImage.isValid() == false )
         {
-            SW_LOG_ERROR_ID( "TextureImporter.FailedDecodeSourceImage", "Failed to decode source image: %#", sourcePath );
+            SW_LOG_ERROR_ID( "TextureImporter.FailedDecodeSourceImage", "Failed to decode source image: %#", sourcePath.str() );
             return false;
         }
 
@@ -666,7 +666,7 @@ namespace sw::editor
 
         // 3) 밉맵(켜져 있으면)과 4) 압축 또는 포맷 변환
         DirectX::ScratchImage finalImage;
-        if ( encodeTextureMipsInternal( baseImage, rule._bGenerateMips == SW_TRUE, targetFormat, compressFlagsInternal( rule ), sourcePath, pTaskManager, finalImage ) == false )
+        if ( encodeTextureMipsInternal( baseImage, rule._bGenerateMips == SW_TRUE, targetFormat, compressFlagsInternal( rule ), sourcePath.str(), pTaskManager, finalImage ) == false )
             return false;
 
         // 5) DDS 파일로 저장한다
@@ -711,8 +711,8 @@ namespace sw::editor
         if ( FileUtil::hasExtension( relativePath, ".dds" ) )
             return false;
 
-        const string& resourceRoot = assetPaths.getRootFolderPathFor( relativePath ); // 워커다 — 잡을 올린 에디터 스레드가 넘긴 경로 상태를 쓴다. 작업 도메인 사본은 실행 뿌리 아래다
-        const string  normalized   = FileUtil::normalizeSeparators( FileUtil::joinPath( resourceRoot, relativePath ) );
+        const AbsolutePath& resourceRoot = assetPaths.getRootFolderPathFor( relativePath ); // 워커다 — 잡을 올린 에디터 스레드가 넘긴 경로 상태를 쓴다. 작업 도메인 사본은 실행 뿌리 아래다
+        const string        normalized   = FileUtil::normalizeSeparators( FileUtil::joinPath( resourceRoot.str(), relativePath ) );
         if ( makeImportedTexturePath( normalized ).empty() )
         {
             SW_LOG_WARNING_ID( "TextureImporter.SourceImagesMustUnder", "Source images must be under `%#` to be imported: %#", TextureImporterInternal::kRawTextureFolder, relativePath );
@@ -743,7 +743,7 @@ namespace sw::editor
         return true;
     }
 
-    AssetImportSummary TextureImporter::importAllTextures( string_view resourceRoot, const TextureImportConfig& config, AssetImportMode mode )
+    AssetImportSummary TextureImporter::importAllTextures( const AbsolutePath& resourceRoot, const TextureImportConfig& config, AssetImportMode mode )
     {
         // 작업 시스템은 여기(호출 스레드)서 한 번 찾아 값으로 넘긴다 — 임포트는 워커에서 도는데 워커는 에디터 서비스 범위를 읽지 않는다(`findEditorScope`).
         TaskManager* const               pTaskManager = editor::findSubsystem<TaskManager>(); // 선택: 없으면 이 스레드가 직렬로 임포트한다(계약)
@@ -780,13 +780,13 @@ namespace sw::editor
         return summary;
     }
 
-    string TextureImporter::makeImportedTexturePath( string_view rawTexturePath )
+    AbsolutePath TextureImporter::makeImportedTexturePath( string_view rawTexturePath )
     {
         return AssetImportStampUtil::makeImportedPath( rawTexturePath, TextureImporterInternal::kRawTextureFolder, TextureImporterInternal::kImportedTextureFolder,
                                                        ".dds" );
     }
 
-    uint64 TextureImporter::computeSourceHash( string_view sourcePath, const TextureImportRule& rule )
+    uint64 TextureImporter::computeSourceHash( const AbsolutePath& sourcePath, const TextureImportRule& rule )
     {
         vector<uint8> bytes;
         if ( AssetSourceLocator::readBytes( sourcePath, bytes ) == false )
@@ -810,8 +810,8 @@ namespace sw::editor
         return HashUtil::computeStringHash64( ruleText.c_str(), ruleText.size(), false, contentHash );
     }
 
-    string TextureImporter::makeDefaultImportConfigPath()
+    AbsolutePath TextureImporter::makeDefaultImportConfigPath()
     {
-        return FileUtil::joinPath( FileUtil::joinPath( ProcessRoots::get()._project.str(), config::kDirConfigEditor ), EditorPaths::kTextureImportConfigFileName );
+        return ProcessRoots::get()._project.join( config::kDirConfigEditor ).join( EditorPaths::kTextureImportConfigFileName );
     }
 } // namespace sw::editor

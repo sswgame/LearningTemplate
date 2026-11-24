@@ -20,17 +20,17 @@ namespace
      * @brief 삼각형 둘(프리미티브마다 하나, 머티리얼 0 · 1)인 glTF 를 `<root>/models_raw/pair.gltf` 에 씁니다(바깥 `.bin`, 기본색 이미지는 `textures_raw/`).
      * @param bTextured true 면 머티리얼 0 이 기본색 텍스처를 가진다.
      */
-    bool writeTwoMaterialGltf( const string& root, bool bTextured, string& outSourcePath )
+    bool writeTwoMaterialGltf( const AbsolutePath& root, bool bTextured, string& outSourcePath )
     {
-        const string modelFolder   = FileUtil::joinPath( root, "models_raw" );
-        const string textureFolder = FileUtil::joinPath( root, "textures_raw/pair" );
-        if ( FileUtil::ensureDirectoryExists( FileUtil::toDiskPath( modelFolder ) ) == false || FileUtil::ensureDirectoryExists( FileUtil::toDiskPath( textureFolder ) ) == false )
+        const AbsolutePath modelFolder   = root.join( "models_raw" );
+        const AbsolutePath textureFolder = root.join( "textures_raw/pair" );
+        if ( FileUtil::ensureDirectoryExists( modelFolder ) == false || FileUtil::ensureDirectoryExists( textureFolder ) == false )
             return false;
-        if ( FileUtil::writeTextFile( FileUtil::toDiskPath( FileUtil::joinPath( textureFolder, "wood.png" ) ), "wood" ) == false )
+        if ( FileUtil::writeTextFile( textureFolder.join( "wood.png" ), "wood" ) == false )
             return false;
         // 위치 6 개(삼각형 둘) — 바닥면의 두 삼각형이다.
         const float32 arrPosition[18]{ 0, 0, 0, 1, 0, 0, 0, 0, 1, 1, 0, 0, 1, 0, 1, 0, 0, 1 };
-        if ( FileUtil::writeFile( FileUtil::toDiskPath( FileUtil::joinPath( modelFolder, "pair.bin" ) ), reinterpret_cast<const uint8*>( arrPosition ), sizeof( arrPosition ) ) == false )
+        if ( FileUtil::writeFile( modelFolder.join( "pair.bin" ), reinterpret_cast<const uint8*>( arrPosition ), sizeof( arrPosition ) ) == false )
             return false;
         const string                              texture = bTextured ? R"(, "pbrMetallicRoughness": { "baseColorTexture": { "index": 0 }, "metallicFactor": 0 })" : "";
         StringBuilder<constant::buffer::kMax2048> json;
@@ -44,7 +44,7 @@ namespace
             "materials": [ { "name": "Wood", "alphaMode": "MASK", "alphaCutoff": 0.3, "doubleSided": true%# }, { "name": "Stone", "pbrMetallicRoughness": { "baseColorFactor": [ 0.5, 0.5, 0.5, 1 ] } } ],
             "meshes": [ { "primitives": [ { "attributes": { "POSITION": 0 }, "material": 0 }, { "attributes": { "POSITION": 1 }, "material": 1 } ] } ] })",
                            texture );
-        outSourcePath = FileUtil::joinPath( modelFolder, "pair.gltf" );
+        outSourcePath = FileUtil::joinPath( modelFolder.str(), "pair.gltf" );
         return FileUtil::writeTextFile( FileUtil::toDiskPath( outSourcePath ), json.view() );
     }
 } // namespace
@@ -57,10 +57,10 @@ SW_TEST_CASE( ModelImportSectionsTest, TexturedMultiMaterialGltfSplitsIntoSectio
 {
     const AbsolutePath root = test::makeScratchPath( "ModelImportSections" );
     string             sourcePath;
-    SW_REQUIRE_TRUE( writeTwoMaterialGltf( root.str(), true, sourcePath ) );
+    SW_REQUIRE_TRUE( writeTwoMaterialGltf( root, true, sourcePath ) );
 
     ModelImportResult result;
-    SW_REQUIRE_TRUE( ModelImporter::readModelAsset( sourcePath, ModelImportRule{}, result ) );
+    SW_REQUIRE_TRUE( ModelImporter::readModelAsset( FileUtil::toDiskPath( sourcePath ), ModelImportRule{}, result ) );
     SW_REQUIRE_EQUAL( size_t{ 2 }, result._listPBRMaterial.size() );
     SW_EXPECT_EQUAL( string( "wood" ), result._listPBRMaterial[0]._name );
     SW_EXPECT_EQUAL( string( "wood_albedo" ), result._listPBRMaterial[0]._albedo._fileStem );
@@ -98,7 +98,7 @@ SW_TEST_CASE( ModelImportSectionsTest, NonJointNodeBetweenJointsKeepsTheBonePlac
     listByte[36 + 8] = 1; // 셋째 정점은 둘째 관절
     Memory::copy( listByte.data() + 48, arrWeight, sizeof( arrWeight ) );
     SW_REQUIRE_TRUE( FileUtil::writeFile( root.join( "models_raw/rig.bin" ), listByte.data(), listByte.size() ) );
-    const string_view json       = R"({ "asset": { "version": "2.0" }, "scene": 0, "scenes": [ { "nodes": [ 0, 3 ] } ],
+    const string_view  json       = R"({ "asset": { "version": "2.0" }, "scene": 0, "scenes": [ { "nodes": [ 0, 3 ] } ],
         "nodes": [ { "name": "Hips", "children": [ 1 ] }, { "name": "Offset", "translation": [ 0, 2, 0 ], "children": [ 2 ] }, { "name": "Spine", "translation": [ 0, 1, 0 ] },
                    { "name": "Body", "mesh": 0, "skin": 0 } ],
         "skins": [ { "joints": [ 0, 2 ] } ],
@@ -107,8 +107,8 @@ SW_TEST_CASE( ModelImportSectionsTest, NonJointNodeBetweenJointsKeepsTheBonePlac
         "accessors": [ { "bufferView": 0, "componentType": 5126, "count": 3, "type": "VEC3", "min": [ 0, 0, 0 ], "max": [ 1, 0, 1 ] },
                        { "bufferView": 1, "componentType": 5121, "count": 3, "type": "VEC4" }, { "bufferView": 2, "componentType": 5126, "count": 3, "type": "VEC4" } ],
         "meshes": [ { "primitives": [ { "attributes": { "POSITION": 0, "JOINTS_0": 1, "WEIGHTS_0": 2 } } ] } ] })";
-    const string      sourcePath = root.join( "models_raw/rig.gltf" ).str();
-    SW_REQUIRE_TRUE( FileUtil::writeTextFile( FileUtil::toDiskPath( sourcePath ), json ) );
+    const AbsolutePath sourcePath = root.join( "models_raw/rig.gltf" );
+    SW_REQUIRE_TRUE( FileUtil::writeTextFile( sourcePath, json ) );
 
     ModelImportResult result;
     SW_REQUIRE_TRUE( ModelImporter::readModelAsset( sourcePath, ModelImportRule{}, result ) );
@@ -125,16 +125,16 @@ SW_TEST_CASE( ModelImportSectionsTest, SourceHashFollowsTheBodyMesh )
 {
     const test::EditorScratchDomain domain;
     string                          sourcePath;
-    SW_REQUIRE_TRUE( writeTwoMaterialGltf( domain.makeDiskPath( "garment" ).str(), false, sourcePath ) );
+    SW_REQUIRE_TRUE( writeTwoMaterialGltf( domain.makeDiskPath( "garment" ), false, sourcePath ) );
     ModelImportRule rule{};
     rule._bodySurface = test::EditorScratchDomain::makeID( "body.mesh" );
     SW_REQUIRE_TRUE( FileUtil::writeTextFile( domain.makeDiskPath( "body.mesh" ), "body one" ) );
-    const uint64 before = ModelImporter::computeSourceHash( sourcePath, rule, {} );
+    const uint64 before = ModelImporter::computeSourceHash( FileUtil::toDiskPath( sourcePath ), rule, {} );
     SW_EXPECT_TRUE( before != 0 );
-    SW_EXPECT_EQUAL( before, ModelImporter::computeSourceHash( sourcePath, rule, {} ) );
+    SW_EXPECT_EQUAL( before, ModelImporter::computeSourceHash( FileUtil::toDiskPath( sourcePath ), rule, {} ) );
 
     SW_REQUIRE_TRUE( FileUtil::writeTextFile( domain.makeDiskPath( "body.mesh" ), "body two" ) );
-    SW_EXPECT_TRUE( before != ModelImporter::computeSourceHash( sourcePath, rule, {} ) );
+    SW_EXPECT_TRUE( before != ModelImporter::computeSourceHash( FileUtil::toDiskPath( sourcePath ), rule, {} ) );
 }
 
 /**
@@ -144,10 +144,10 @@ SW_TEST_CASE( ModelImportSectionsTest, UntexturedMultiMaterialGltfStaysOneMesh )
 {
     const AbsolutePath root = test::makeScratchPath( "ModelImportSectionsFlat" );
     string             sourcePath;
-    SW_REQUIRE_TRUE( writeTwoMaterialGltf( root.str(), false, sourcePath ) );
+    SW_REQUIRE_TRUE( writeTwoMaterialGltf( root, false, sourcePath ) );
 
     ModelImportResult result;
-    SW_REQUIRE_TRUE( ModelImporter::readModelAsset( sourcePath, ModelImportRule{}, result ) );
+    SW_REQUIRE_TRUE( ModelImporter::readModelAsset( FileUtil::toDiskPath( sourcePath ), ModelImportRule{}, result ) );
     SW_EXPECT_TRUE( result._listPBRMaterial.empty() );
     SW_EXPECT_TRUE( result._listSection.empty() );
     SW_EXPECT_TRUE( result._mesh._listSection.empty() );
@@ -168,9 +168,9 @@ SW_TEST_CASE( ModelImportSectionsTest, SideFolderKeepsNestedSourceResults )
     SW_REQUIRE_TRUE( write( "models/hero.mesh" ) && write( "models/hero/hero.animset.xml" ) && write( "models/hero/parts/cape.mesh" ) );
     SW_REQUIRE_TRUE( write( "models/hero/sword.mesh" ) && write( "models/hero/sword.fracture" ) && write( "models/hero/sword/materials/steel.material" ) );
 
-    const string   heroMesh = root.join( "models/hero.mesh" ).str();
-    vector<string> listSide;
-    ModelImporter::collectSideFiles( heroMesh, listSide );
+    const AbsolutePath heroMesh = root.join( "models/hero.mesh" );
+    vector<string>     listSide;
+    ModelImporter::collectSideFiles( heroMesh.str(), listSide );
     SW_REQUIRE_EQUAL( size_t{ 2 }, listSide.size() );
     SW_EXPECT_TRUE( listSide[0].find( "hero/hero.animset.xml" ) != string::npos );
     SW_EXPECT_TRUE( listSide[1].find( "hero/parts/cape.mesh" ) != string::npos );
@@ -179,7 +179,7 @@ SW_TEST_CASE( ModelImportSectionsTest, SideFolderKeepsNestedSourceResults )
     SW_REQUIRE_TRUE( FileUtil::writeTextFile( root.join( "models/hero/sword.mesh" ), "again" ) );
     SW_EXPECT_EQUAL( before, ModelImporter::computeImportedHash( heroMesh ) );
 
-    SW_EXPECT_TRUE( ModelImporter::clearSideFiles( heroMesh ) );
+    SW_EXPECT_TRUE( ModelImporter::clearSideFiles( heroMesh.str() ) );
     SW_EXPECT_FALSE( FileUtil::exists( root.join( "models/hero/hero.animset.xml" ) ) );
     SW_EXPECT_FALSE( FileUtil::exists( root.join( "models/hero/parts/cape.mesh" ) ) );
     SW_EXPECT_TRUE( FileUtil::exists( root.join( "models/hero/sword.mesh" ) ) );

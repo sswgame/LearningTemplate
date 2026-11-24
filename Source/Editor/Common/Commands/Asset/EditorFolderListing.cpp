@@ -27,16 +27,16 @@ namespace sw::editor
                 atomic<uint64> _scanCount{ 0 }; ///< `collectChildFolders` 가 디스크를 읽은 횟수. `getChildFolderScanCount` 가 반환한다
             };
 
-            static void appendFolderListingEntry( vector<EditorFolderListingEntry>& outList, const string& path, bool bIsDirectory, const AssetPaths& assetPaths )
+            static void appendFolderListingEntry( vector<EditorFolderListingEntry>& outList, const AbsolutePath& path, bool bIsDirectory, const AssetPaths& assetPaths )
             {
                 EditorFolderListingEntry item;
-                item._absolutePath = FileUtil::normalizeSeparators( path );
-                item._name         = FileUtil::getFileNamePart( item._absolutePath );
+                item._absolutePath = path;
+                item._name         = FileUtil::getFileNamePart( item._absolutePath.str() );
                 item._bIsDirectory = bIsDirectory;
                 if ( item._bIsDirectory == false )
                 {
                     item._extension = FileUtil::getExtension( item._name );
-                    item._bReadOnly = FileUtil::isReadOnlyFile( FileUtil::toDiskPath( item._absolutePath ) );
+                    item._bReadOnly = FileUtil::isReadOnlyFile( item._absolutePath );
                 }
 
                 // 리소스 id(소문자) — 리소스 루트 아래와 작업 도메인(실행 뿌리 아래 `scratch/`)을 한 규칙으로 푼다(`AssetPaths::toAssetID`, 대소문자는 OS 규칙).
@@ -52,11 +52,11 @@ namespace sw::editor
 
 namespace sw::editor
 {
-    void EditorFolderListing::collectFolderListing( const AssetPaths& assetPaths, string_view folderAbs, vector<EditorFolderListingEntry>& outList, bool bRecursive,
+    void EditorFolderListing::collectFolderListing( const AssetPaths& assetPaths, const AbsolutePath& folderAbs, vector<EditorFolderListingEntry>& outList, bool bRecursive,
                                                     const StopToken& stopToken )
     {
         outList.clear();
-        if ( folderAbs.empty() || FileUtil::isDirectory( FileUtil::toDiskPath( folderAbs ) ) == false )
+        if ( folderAbs.empty() || FileUtil::isDirectory( folderAbs ) == false )
             return;
 
         // 워커(`EditorFolderListingJob`)에서 돈다 — 경로 상태는 부른 쪽이 넘긴 @p assetPaths 다(읽기만 한다).
@@ -64,17 +64,17 @@ namespace sw::editor
         vector<string> listFile;
         // 표시용 목록이다(폴더는 위에서 확인했다) — 도중에 멈춘 목록은 collect 가 경로와 함께 알리고, 모은 데까지 보인다.
         (void)EditorContentScan::collectFolders( folderAbs, listFolder, false );
-        (void)EditorContentScan::collectFiles( folderAbs, {}, listFile, bRecursive, stopToken );
+        (void)EditorContentScan::collectFiles( folderAbs.str(), {}, listFile, bRecursive, stopToken );
 
         for ( const string& folder : listFolder )
         {
-            EditorFolderListingInternal::appendFolderListingEntry( outList, folder, true, assetPaths );
+            EditorFolderListingInternal::appendFolderListingEntry( outList, FileUtil::toDiskPath( folder ), true, assetPaths );
         }
         for ( const string& file : listFile )
         {
             if ( stopToken.isStopRequested() )
                 return;
-            EditorFolderListingInternal::appendFolderListingEntry( outList, file, false, assetPaths );
+            EditorFolderListingInternal::appendFolderListingEntry( outList, FileUtil::toDiskPath( file ), false, assetPaths );
         }
         // 곁 파일(텍스처 형식 변형 · 파생 데이터 — `SW_ASSET_COMPANION`)은 원본 에셋의 일부다 — 따로 보이지 않는다. 보이면 썸네일 · 열기가 이 플랫폼이 못 읽는
         // 형식(ASTC · ETC2 를 데스크톱 D3D12)을 텍스처로 만들다 실패했다(언리얼 콘텐츠 브라우저도 플랫폼 파생 데이터를 에셋으로 보이지 않는다).
@@ -93,11 +93,11 @@ namespace sw::editor
         { return entry._bIsDirectory == false && uniqueCompanion.contains( FileUtil::normalizePath( entry._relativePath ).str() ); } );
     }
 
-    void EditorFolderListing::collectChildFolders( string_view folderAbs, vector<string>& outList )
+    void EditorFolderListing::collectChildFolders( const AbsolutePath& folderAbs, vector<string>& outList )
     {
         outList.clear();
         ++getEditorState<EditorFolderListingInternal::ScanStats>()._scanCount;
-        if ( folderAbs.empty() || FileUtil::isDirectory( FileUtil::toDiskPath( folderAbs ) ) == false )
+        if ( folderAbs.empty() || FileUtil::isDirectory( folderAbs ) == false )
             return;
 
         // 표시용 목록 — 도중에 멈춘 것은 collectFolders 가 알리고 모은 데까지 보인다.

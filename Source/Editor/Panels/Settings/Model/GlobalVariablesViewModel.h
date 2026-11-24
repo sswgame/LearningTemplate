@@ -10,6 +10,7 @@
 #include "Core/Container/vector.h"
 #include "Core/Foundation/Types.h"
 #include "Core/Memory/Memory.h"
+#include "Core/Path/AbsolutePath.h"
 
 #include "Editor/Common/Commands/EditorBackgroundIO.h"
 
@@ -62,7 +63,7 @@ namespace sw::editor
          */
         [[nodiscard]] bool savePreset( string_view presetName );
         /** @brief 프리셋 파일 @p presetFile 의 값을 지금 값으로 두고 되돌리기 한 단계로 기록합니다. 읽지 못하면 값이 그대로이고 로그에 남고 false 입니다. */
-        [[nodiscard]] bool loadPreset( const string& presetFile );
+        [[nodiscard]] bool loadPreset( const AbsolutePath& presetFile );
         /**
          * @brief 프리셋 목록 훑기 결과를 받고, 다시 훑어야 하면 훑기를 겁니다. 프리셋 팝업이 열린 동안 그리기마다 부릅니다.
          * @return 훑는 중이면 true 입니다(목록을 보이지 않는다).

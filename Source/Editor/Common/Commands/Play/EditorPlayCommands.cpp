@@ -170,7 +170,7 @@ namespace sw::editor
         return true;
     }
 
-    ProcessCommand EditorPlayCommands::makeStandaloneCommand( const CommandLineManager& parent, string_view executablePath, string_view scenePath, string_view extraArguments )
+    ProcessCommand EditorPlayCommands::makeStandaloneCommand( const CommandLineManager& parent, const AbsolutePath& executablePath, string_view scenePath, string_view extraArguments )
     {
         StringBuilder<constant::buffer::kMax256> sceneArgument;
         sceneArgument.appendFormat( "-gv_firstScene=%#", scenePath );

@@ -38,6 +38,7 @@
 #include "Core/Memory/Memory.h"
 #include "Core/Network/Message/NetStatsReport.h"
 #include "Core/Network/Transport/NetEmulation.h"
+#include "Core/Path/AbsolutePath.h"
 #include "Core/Time/MonotonicClock.h"
 
 #include "Editor/Common/EditorExports.h"
@@ -67,7 +68,7 @@ namespace sw::editor
     {
         string                  _label;
         string                  _lastLine;
-        string                  _tracePath;
+        AbsolutePath            _tracePath;
         NetEmulationReport      _emulationReport{};          ///< 마지막으로 받은 `net.emulation stats` 의 답
         uint32                  _emulationReportCount{ 0 };  ///< 받은 보고 수 — 새 보고가 왔는지 이 값으로 본다
         NetStatsReport          _statsReport{};              ///< 마지막으로 받은 `net.stats` 의 답(Profiler 탭)
@@ -212,12 +213,12 @@ namespace sw::editor
         /** @brief 패널 필터용 최근 줄입니다. `update` 가 채웁니다. */
         const vector<EditorNetPlayLogLine>& getLogLines() const { return _listLogLine; }
         /** @brief 지난 `stop` 이 합친 트레이스 경로입니다. 없으면 빈 문자열입니다. */
-        const string& getMergedTracePath() const { return _mergedTracePath; }
+        const string& getMergedTracePath() const { return _mergedTracePath.str(); }
         /**
          * @brief 지난 `stop` 이 합쳤고 아직 아무도 열지 않은 트레이스 경로를 한 번 내줍니다. 다음 호출부터는 빈 문자열입니다.
          * @details 멈추는 길이 셋(툴바 · Session 탭 · `netplay.stop`)이라 여는 일을 각 길에 두지 않는다 — Profiler 창의 프레임 단계가 프레임마다 이것을 묻고 연다.
          */
-        [[nodiscard]] string takeUnopenedMergedTrace();
+        [[nodiscard]] AbsolutePath takeUnopenedMergedTrace();
         /**
          * @brief 새로 띄운 에디터와 같은 자리로 되돌립니다 — 돌던 세션을 멈추고, 다음 Play 구성을 기본값으로 두고, 아직 열지 않은 합친 트레이스를 버립니다.
          * @details 자동화 체인의 단계 되돌리기가 부른다. 필드를 밖에서 하나씩 되돌리면 빠지는 것이 생겼다(열지 않은 트레이스가 다음 단계의 Profiler 를 Timeline 으로 열었다).
@@ -263,11 +264,11 @@ namespace sw::editor
         /** @brief 멈춤을 끝까지 이 스레드에서 기다립니다(소멸 · 자동화 단계 되돌리기 - 다음 일이 새 세션과 같은 자리를 바란다). */
         void stopAndWait();
         /** @brief 거둔 프로세스의 남은 줄 · 종료 코드를 로그로 남기고 합친 경로를 받아 멈춤을 끝냅니다. */
-        void finishStop( const string& mergedTracePath );
+        void finishStop( const AbsolutePath& mergedTracePath );
         /** @brief 프로세스 하나를 인자 목록 @p listArgument 로 띄우고 읽기 스레드를 붙입니다(셸을 거치지 않는다 — `ProcessCommand`). */
-        [[nodiscard]] bool launchChild( const string& label, const string& executablePath, vector<string> listArgument, const string& tracePath );
+        [[nodiscard]] bool launchChild( const string& label, const AbsolutePath& executablePath, vector<string> listArgument, const AbsolutePath& tracePath );
         /** @brief 트레이스 폴더 안의 `<이름>.trace.json` 경로를 만듭니다. 트레이스가 꺼져 있으면 빈 문자열입니다. */
-        string makeTracePath( const string& fileStem ) const;
+        AbsolutePath makeTracePath( const string& fileStem ) const;
 
     private:
         /** @class Processes @brief `IEditorNetPlayProcesses` 를 세션의 같은 이름 함수로 넘깁니다(수명은 세션과 같다). */
@@ -295,8 +296,8 @@ namespace sw::editor
         unique_ptr<EditorNetPlayStopJob> _pStopJob;            ///< 읽기 스레드 합류 · 트레이스 합치기 잡
         vector<EditorNetPlayLogLine>     _listLogLine;
         vector<EditorNetPlayLogLine>     _listPollScratch;
-        string                           _traceDirectory;
-        string                           _mergedTracePath;
+        AbsolutePath                     _traceDirectory;
+        AbsolutePath                     _mergedTracePath;
         string                           _debugChannelToken; ///< 전용 서버의 디버그 채널 토큰(세션마다 새로). 채널이 없으면 비어 있다
         EditorNetPlaySettings            _settings;          ///< 실행 중인 세션의 구성
         EditorNetPlaySettings            _pendingSettings;   ///< 다음 세션의 구성(`getSettings`)

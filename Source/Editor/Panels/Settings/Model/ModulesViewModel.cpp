@@ -52,11 +52,11 @@ namespace sw::editor
             }
 
             /** @brief 폴더 @p directory 의 카탈로그를 읽고 해석합니다. 실패하면 경고를 남기고 해석을 비웁니다. 워커에서도 부른다(읽는 것은 인자와 빌드 상수뿐이다). */
-            static ModuleCatalogSnapshot loadSnapshot( string_view directory )
+            static ModuleCatalogSnapshot loadSnapshot( const AbsolutePath& directory )
             {
                 ModuleCatalogSnapshot      snapshot;
                 const ModuleResolveContext context = makeResolveContext();
-                expected<void>             loaded  = snapshot._catalog.loadDirectory( FileUtil::toDiskPath( directory ) );
+                expected<void>             loaded  = snapshot._catalog.loadDirectory( directory );
                 if ( loaded.has_value() )
                     loaded = snapshot._catalog.resolve( context, snapshot._resolution );
                 if ( loaded.has_value() )
@@ -65,15 +65,15 @@ namespace sw::editor
                 StringBuilder<constant::buffer::kMax512> errorBuilder;
                 errorBuilder.appendFormat( "%# (%#)", loaded.error().message(), loaded.error().detail() );
                 snapshot._loadError = string( errorBuilder.view() );
-                SW_LOG_WARNING_ID( "ModulesPanel.ModulesCatalogCouldNot", "Modules: the catalog in %# could not be resolved - %#", string( directory ).c_str(), snapshot._loadError.c_str() );
+                SW_LOG_WARNING_ID( "ModulesPanel.ModulesCatalogCouldNot", "Modules: the catalog in %# could not be resolved - %#", string( directory.str() ).c_str(), snapshot._loadError.c_str() );
                 return snapshot;
             }
         };
     } // namespace
 
-    void ModuleCatalogLoadJob::request( string_view directory )
+    void ModuleCatalogLoadJob::request( const AbsolutePath& directory )
     {
-        const uint32 generation = beginRequest( string( directory ) );
+        const uint32 generation = beginRequest( directory );
         submitJob( "ModuleCatalogLoad", SW_DELEGATE_FUNCTION( TaskArgsDelegate, ModuleCatalogLoadJob::runJob ), MakeTaskArgs( _pState, generation ) );
     }
 
@@ -81,7 +81,7 @@ namespace sw::editor
     {
         const shared_ptr<State> pState     = args.get<shared_ptr<State>>( 0 );
         const uint32            generation = args.get<uint32>( 1 );
-        string                  directory;
+        AbsolutePath            directory;
         if ( readInput( pState, generation, directory ) == false || isStopRaised( readStopSignal( pState ) ) )
             return;
         publish( pState, generation, ModulesViewModelInternal::loadSnapshot( directory ) );
@@ -106,7 +106,7 @@ namespace sw::editor
 
     void ModulesViewModel::requestReload()
     {
-        _loadJob.request( ModuleLibraryUtil::getModuleDirectory().str() );
+        _loadJob.request( ModuleLibraryUtil::getModuleDirectory() );
     }
 
     void ModulesViewModel::pollReload()
@@ -116,7 +116,7 @@ namespace sw::editor
             applySnapshot( std::move( snapshot ) );
     }
 
-    void ModulesViewModel::reloadFrom( string_view directory )
+    void ModulesViewModel::reloadFrom( const AbsolutePath& directory )
     {
         applySnapshot( ModulesViewModelInternal::loadSnapshot( directory ) );
     }
@@ -211,33 +211,33 @@ namespace sw::editor
             _pendingModule.clear();
             return;
         }
-        applyPendingTo( manifestPath->str() );
+        applyPendingTo( *manifestPath );
     }
 
-    void ModulesViewModel::applyPendingTo( const string& path )
+    void ModulesViewModel::applyPendingTo( const AbsolutePath& path )
     {
         if ( writeProjectOverride( path ) )
             _bChangedSinceStart = SW_TRUE;
         _pendingModule.clear();
     }
 
-    bool ModulesViewModel::writeProjectOverride( const string& path )
+    bool ModulesViewModel::writeProjectOverride( const AbsolutePath& path )
     {
         const ModuleManifest* pManifest = _catalog.findManifest( _pendingModule );
         string                text;
         string                rewritten;
-        if ( pManifest == nullptr || FileUtil::readTextFile( FileUtil::toDiskPath( path ), text ) == false )
+        if ( pManifest == nullptr || FileUtil::readTextFile( path, text ) == false )
         {
             SW_LOG_WARNING_ID( "ModulesPanel.ModulesProjectManifestCould", "Modules: the project manifest %# could not be read", path.c_str() );
             return false;
         }
-        if ( FileUtil::isReadOnlyFile( FileUtil::toDiskPath( path ) ) )
+        if ( FileUtil::isReadOnlyFile( path ) )
         {
             SW_LOG_WARNING_ID( "ModulesPanel.ModulesReadOnlyCheck", "Modules: %# is read-only - check it out first", path.c_str() );
             return false;
         }
         if ( EditorModuleOverrideUtil::setOverride( text, _pendingModule, _bPendingEnabled, pManifest->_bEnabledByDefault, rewritten ) == false ||
-             FileUtil::writeTextFile( FileUtil::toDiskPath( path ), rewritten ) == false )
+             FileUtil::writeTextFile( path, rewritten ) == false )
         {
             SW_LOG_WARNING_ID( "ModulesPanel.ModulesProjectManifestCould2", "Modules: the project manifest %# could not be rewritten", path.c_str() );
             return false;

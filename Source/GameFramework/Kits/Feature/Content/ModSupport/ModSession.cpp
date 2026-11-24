@@ -190,19 +190,18 @@ namespace sw
         release();
     }
 
-    string ModSession::getInstallFolder()
+    AbsolutePath ModSession::getInstallFolder()
     {
         // 패키지는 실행 파일 옆 `Mods/`(사용자가 넣는 자리), 저장소에서는 시연 모드가 시나리오 · 테스트 자료라 `Test/Mods/` 다.
         // 패키지 판정은 ProcessRoots 의 규칙(프로젝트 루트가 바이너리 폴더 — `Content` 가 없다)을 그대로 쓴다.
         const ProcessRoots& roots    = ProcessRoots::get();
         const bool          bPackage = roots._project.str() == roots._binary.str();
-        return bPackage ? FileUtil::joinPath( roots._binary.str(), ModSessionInternal::kInstallFolderName )
-                        : FileUtil::joinPath( roots._project.str(), ModSessionInternal::kSourceTreeInstallFolder );
+        return bPackage ? roots._binary.join( ModSessionInternal::kInstallFolderName ) : roots._project.join( ModSessionInternal::kSourceTreeInstallFolder );
     }
 
-    string ModSession::getExportFolder()
+    AbsolutePath ModSession::getExportFolder()
     {
-        return FileUtil::joinPath( ProcessRoots::get()._saved.str(), ModSessionInternal::kExportFolderName );
+        return ProcessRoots::get()._saved.join( ModSessionInternal::kExportFolderName );
     }
 
     bool ModSession::exportPackedMod( string_view id, string_view packRoot, string& outFolder )
@@ -229,27 +228,27 @@ namespace sw
         vector<ModManifest> listManifest;
         if ( loadManifests( request, settings, listManifest ) == false ) // id 와 폴더 이름 · 매니페스트 크기 · 형식을 마운트와 같은 길로 본다
             return false;
-        const string modFolder    = FileUtil::joinPath( request._installFolder, id );
-        const string sourceFolder = FileUtil::joinPath( modFolder, ModPackBuilder::kSourceFolderName );
-        if ( FileUtil::isDirectory( FileUtil::toDiskPath( sourceFolder ) ) == false )
+        const AbsolutePath modFolder    = request._installFolder.join( id );
+        const AbsolutePath sourceFolder = modFolder.join( ModPackBuilder::kSourceFolderName );
+        if ( FileUtil::isDirectory( sourceFolder ) == false )
         {
             SW_LOG_ERROR_ID( "ModSession.ExportNoSource", "mod.pack: '%#' has no %#/ source folder to pack", string( id ), ModPackBuilder::kSourceFolderName );
             return false;
         }
-        const string exportFolder = FileUtil::joinPath( getExportFolder(), id );
-        const string packPath     = FileUtil::joinPath( exportFolder, ModPackBuilder::kPackFileName );
-        const string manifestPath = FileUtil::joinPath( exportFolder, ModManifest::kFileName );
-        const bool   bExported    = FileUtil::ensureDirectoryExists( FileUtil::toDiskPath( exportFolder ) ) && ModPackBuilder::buildFromFolder( sourceFolder, packPath, settings ) &&
-                               FileUtil::copyFile( FileUtil::toDiskPath( FileUtil::joinPath( modFolder, ModManifest::kFileName ) ), FileUtil::toDiskPath( manifestPath ) );
+        const AbsolutePath exportFolder = getExportFolder().join( id );
+        const AbsolutePath packPath     = exportFolder.join( ModPackBuilder::kPackFileName );
+        const AbsolutePath manifestPath = exportFolder.join( ModManifest::kFileName );
+        const bool         bExported    = FileUtil::ensureDirectoryExists( exportFolder ) && ModPackBuilder::buildFromFolder( sourceFolder, packPath, settings ) &&
+                               FileUtil::copyFile( modFolder.join( ModManifest::kFileName ), manifestPath );
         if ( bExported == false )
         {
-            (void)FileUtil::removeFile( FileUtil::toDiskPath( packPath ) ); // 반쯤 쓴 배포 형태를 남기지 않는다(패키지가 베끼지 않게)
-            (void)FileUtil::removeFile( FileUtil::toDiskPath( manifestPath ) );
-            SW_LOG_ERROR_ID( "ModSession.ExportFailed", "mod.pack: '%#' could not be packed into %#", string( id ), exportFolder );
+            (void)FileUtil::removeFile( packPath ); // 반쯤 쓴 배포 형태를 남기지 않는다(패키지가 베끼지 않게)
+            (void)FileUtil::removeFile( manifestPath );
+            SW_LOG_ERROR_ID( "ModSession.ExportFailed", "mod.pack: '%#' could not be packed into %#", string( id ), exportFolder.str() );
             return false;
         }
-        outFolder = exportFolder;
-        SW_LOG_INFO_ID( "ModSession.Exported", "Mod '%#' packed for shipping: %#", string( id ), exportFolder );
+        outFolder = exportFolder.str();
+        SW_LOG_INFO_ID( "ModSession.Exported", "Mod '%#' packed for shipping: %#", string( id ), exportFolder.str() );
         return true;
     }
 
@@ -269,7 +268,7 @@ namespace sw
         if ( ModSupportSettings::loadFromAsset( AssetID{ settingsPath }, settings ) == false )
             return false;
         request._installFolder = getInstallFolder();
-        request._buildFolder   = FileUtil::joinPath( ProcessRoots::get()._saved.str(), ModSessionInternal::kInstallFolderName );
+        request._buildFolder   = ProcessRoots::get()._saved.join( ModSessionInternal::kInstallFolderName );
         return apply( token, request, settings );
     }
 
@@ -298,7 +297,7 @@ namespace sw
             const ModManifest& manifest = listManifest[manifestIndex];
             string             packPath;
             ModDigestEntry     entry;
-            if ( preparePack( request, manifest, settings, packPath ) == false || validatePack( packPath, manifest, settings, entry._contentHash ) == false )
+            if ( preparePack( request, manifest, settings, packPath ) == false || validatePack( FileUtil::toDiskPath( packPath ), manifest, settings, entry._contentHash ) == false )
             {
                 release();
                 return false;
@@ -432,10 +431,10 @@ namespace sw
         }
         _listOverridePath.clear();
         _listLayerPath.clear();
-        for ( const string& builtPath : _listBuiltPackPath )
+        for ( const AbsolutePath& builtPath : _listBuiltPackPath )
         {
-            if ( FileUtil::removeFile( FileUtil::toDiskPath( builtPath ) ) == false )
-                SW_LOG_WARNING_ID( "ModSession.BuiltPackKept", "The mod pack built for this session could not be removed: %#", builtPath );
+            if ( FileUtil::removeFile( builtPath ) == false )
+                SW_LOG_WARNING_ID( "ModSession.BuiltPackKept", "The mod pack built for this session could not be removed: %#", builtPath.str() );
         }
         _listBuiltPackPath.clear();
         _digest = ModSetDigest{};
@@ -456,26 +455,26 @@ namespace sw
                 SW_LOG_ERROR_ID( "ModSession.BadID", "Requested mod id '%#' must be 1 to %# characters of a-z, 0-9 and _", id, ModManifest::kMaxIDLength );
                 return false;
             }
-            const string manifestPath = FileUtil::joinPath( FileUtil::joinPath( request._installFolder, id ), ModManifest::kFileName );
-            uint64       manifestSize = 0;
-            if ( FileUtil::tryGetFileSize( FileUtil::toDiskPath( manifestPath ), manifestSize ) == false )
+            const AbsolutePath manifestPath = request._installFolder.join( id ).join( ModManifest::kFileName );
+            uint64             manifestSize = 0;
+            if ( FileUtil::tryGetFileSize( manifestPath, manifestSize ) == false )
             {
-                SW_LOG_ERROR_ID( "ModSession.MissingMod", "Requested mod '%#' is not installed (no %#)", id, manifestPath );
+                SW_LOG_ERROR_ID( "ModSession.MissingMod", "Requested mod '%#' is not installed (no %#)", id, manifestPath.str() );
                 return false;
             }
             if ( manifestSize > settings._maxManifestBytes )
             {
-                SW_LOG_ERROR_ID( "ModSession.ManifestTooLarge", "Mod manifest '%#' is %# bytes, more than %#", manifestPath, manifestSize, settings._maxManifestBytes );
+                SW_LOG_ERROR_ID( "ModSession.ManifestTooLarge", "Mod manifest '%#' is %# bytes, more than %#", manifestPath.str(), manifestSize, settings._maxManifestBytes );
                 return false;
             }
             string text;
-            if ( FileUtil::readTextFile( FileUtil::toDiskPath( manifestPath ), text ) == false )
+            if ( FileUtil::readTextFile( manifestPath, text ) == false )
             {
-                SW_LOG_ERROR_ID( "ModSession.CannotReadManifest", "Mod manifest '%#' could not be read", manifestPath );
+                SW_LOG_ERROR_ID( "ModSession.CannotReadManifest", "Mod manifest '%#' could not be read", manifestPath.str() );
                 return false;
             }
             ModManifest manifest;
-            if ( ModManifest::parseXMLText( text, manifestPath, manifest ) == false )
+            if ( ModManifest::parseXMLText( text, manifestPath.str(), manifest ) == false )
                 return false;
             if ( manifest._id != id )
             {
@@ -489,12 +488,12 @@ namespace sw
 
     bool ModSession::preparePack( const ModSessionRequest& request, const ModManifest& manifest, const ModSupportSettings& settings, string& outPackPath )
     {
-        const string modFolder    = FileUtil::joinPath( request._installFolder, manifest._id );
-        const string packPath     = FileUtil::joinPath( modFolder, ModPackBuilder::kPackFileName );
-        const string sourceFolder = FileUtil::joinPath( modFolder, ModPackBuilder::kSourceFolderName );
-        uint64       packSize     = 0;
-        const bool   bPacked      = FileUtil::tryGetFileSize( FileUtil::toDiskPath( packPath ), packSize );
-        const bool   bSource      = FileUtil::isDirectory( FileUtil::toDiskPath( sourceFolder ) );
+        const AbsolutePath modFolder    = request._installFolder.join( manifest._id );
+        const AbsolutePath packPath     = modFolder.join( ModPackBuilder::kPackFileName );
+        const AbsolutePath sourceFolder = modFolder.join( ModPackBuilder::kSourceFolderName );
+        uint64             packSize     = 0;
+        const bool         bPacked      = FileUtil::tryGetFileSize( packPath, packSize );
+        const bool         bSource      = FileUtil::isDirectory( sourceFolder );
         if ( bPacked == bSource )
         {
             SW_LOG_ERROR_ID( "ModSession.PackShape", "Mod '%#' must have exactly one of %# (packed) and %#/ (source) - it has %#", manifest._id, ModPackBuilder::kPackFileName,
@@ -503,7 +502,7 @@ namespace sw
         }
         if ( bPacked )
         {
-            outPackPath = packPath;
+            outPackPath = packPath.str();
             return true;
         }
         // 소스 모드는 개발 구성의 제작 반복용이다 — 배포 구성은 묶은 팩만 받는다(낱개 파일을 읽지 않는 규칙과 같다).
@@ -512,53 +511,53 @@ namespace sw
             SW_LOG_ERROR_ID( "ModSession.SourceModInShipping", "Mod '%#' is a source folder - a packaged game loads only packed mods (%#)", manifest._id, ModPackBuilder::kPackFileName );
             return false;
         }
-        if ( FileUtil::ensureDirectoryExists( FileUtil::toDiskPath( request._buildFolder ) ) == false )
+        if ( FileUtil::ensureDirectoryExists( request._buildFolder ) == false )
         {
-            SW_LOG_ERROR_ID( "ModSession.NoBuildFolder", "The mod build folder '%#' could not be created", request._buildFolder );
+            SW_LOG_ERROR_ID( "ModSession.NoBuildFolder", "The mod build folder '%#' could not be created", request._buildFolder.str() );
             return false;
         }
         // 프로세스마다 다른 이름이다 — 시나리오 체인은 백엔드마다 자식 프로세스가 같은 폴더를 동시에 쓰고, 마운트한 팩은 열려 있어 바꿔 쓸 수 없다.
         StringBuilder<constant::buffer::kMax256> textBuilder;
         textBuilder.appendFormat( "%#.%#.pack", manifest._id, Process::getCurrentProcessID() );
-        const string builtPath = FileUtil::joinPath( request._buildFolder, textBuilder.view() );
+        const AbsolutePath builtPath = request._buildFolder.join( textBuilder.view() );
         if ( ModPackBuilder::buildFromFolder( sourceFolder, builtPath, settings ) == false )
             return false;
         _listBuiltPackPath.push_back( builtPath );
-        outPackPath = builtPath;
+        outPackPath = builtPath.str();
         return true;
     }
 
-    bool ModSession::validatePack( string_view packPath, const ModManifest& manifest, const ModSupportSettings& settings, uint64& outContentHash )
+    bool ModSession::validatePack( const AbsolutePath& packPath, const ModManifest& manifest, const ModSupportSettings& settings, uint64& outContentHash )
     {
         uint64 packSize = 0;
-        if ( FileUtil::tryGetFileSize( FileUtil::toDiskPath( packPath ), packSize ) == false || packSize > settings._maxPackBytes )
+        if ( FileUtil::tryGetFileSize( packPath, packSize ) == false || packSize > settings._maxPackBytes )
         {
-            SW_LOG_ERROR_ID( "ModSession.PackTooLarge", "Mod pack '%#' is unreadable or larger than %# bytes", packPath, settings._maxPackBytes );
+            SW_LOG_ERROR_ID( "ModSession.PackTooLarge", "Mod pack '%#' is unreadable or larger than %# bytes", packPath.str(), settings._maxPackBytes );
             return false;
         }
         // 내용 해시는 팩을 조각으로 읽어 센다(원시 바이트의 FNV-1a 64 — 허용 목록의 `contentHash` 와 같은 값). 팩을 한 벡터로 들지 않는다.
         const expected<uint64> packHash = ContentHash::computeFileStream( packPath );
         if ( packHash.has_value() == false )
         {
-            SW_LOG_ERROR_ID( "ModSession.CannotReadPack", "Mod pack '%#' could not be read", packPath );
+            SW_LOG_ERROR_ID( "ModSession.CannotReadPack", "Mod pack '%#' could not be read", packPath.str() );
             return false;
         }
         outContentHash = *packHash;
 
         PackReader reader;
-        if ( reader.open( packPath ) == false )
+        if ( reader.open( packPath.str() ) == false )
         {
-            SW_LOG_ERROR_ID( "ModSession.NotAPack", "Mod pack '%#' is not a valid pack", packPath );
+            SW_LOG_ERROR_ID( "ModSession.NotAPack", "Mod pack '%#' is not a valid pack", packPath.str() );
             return false;
         }
         if ( reader.getMountDomain().empty() == false )
         {
-            SW_LOG_ERROR_ID( "ModSession.PackHasDomain", "Mod pack '%#' names mount domain '%#' - a mod pack holds full resource paths (no domain)", packPath, reader.getMountDomain() );
+            SW_LOG_ERROR_ID( "ModSession.PackHasDomain", "Mod pack '%#' names mount domain '%#' - a mod pack holds full resource paths (no domain)", packPath.str(), reader.getMountDomain() );
             return false;
         }
         if ( reader.getFileCount() > settings._maxEntryCount )
         {
-            SW_LOG_ERROR_ID( "ModSession.TooManyEntries", "Mod pack '%#' holds %# files, more than %#", packPath, reader.getFileCount(), settings._maxEntryCount );
+            SW_LOG_ERROR_ID( "ModSession.TooManyEntries", "Mod pack '%#' holds %# files, more than %#", packPath.str(), reader.getFileCount(), settings._maxEntryCount );
             return false;
         }
         vector<string> listEntryPath;
@@ -583,31 +582,31 @@ namespace sw
             // 층 폴더의 파일은 엔진 층이 기본 리소스에 얹으므로 밝힌 층만 둔다(정책을 지나지 않은 차이를 막는다).
             if ( StringUtil::startsWith( entryPath, layerPrefix ) && VectorUtil::contains( manifest._listLayer, entryPath.substr( layerPrefix.size() ) ) == false )
             {
-                SW_LOG_ERROR_ID( "ModSession.UndeclaredLayer", "Mod pack '%#': '%#' is in the layer folder but '%#' is not a declared <Layer>", packPath, entryPath,
+                SW_LOG_ERROR_ID( "ModSession.UndeclaredLayer", "Mod pack '%#': '%#' is in the layer folder but '%#' is not a declared <Layer>", packPath.str(), entryPath,
                                  entryPath.substr( layerPrefix.size() ) );
                 return false;
             }
             PackFileEntry entry;
             if ( reader.getFileEntry( entryPath, entry ) == false || entry._uncompressedSize > settings._maxEntryBytes )
             {
-                SW_LOG_ERROR_ID( "ModSession.EntryTooLarge", "Mod pack '%#': '%#' is unreadable or larger than %# bytes", packPath, entryPath, settings._maxEntryBytes );
+                SW_LOG_ERROR_ID( "ModSession.EntryTooLarge", "Mod pack '%#': '%#' is unreadable or larger than %# bytes", packPath.str(), entryPath, settings._maxEntryBytes );
                 return false;
             }
             if ( AssetPaths::normalizeAssetID( entryPath ) != entryPath )
             {
-                SW_LOG_ERROR_ID( "ModSession.BadEntryPath", "Mod pack '%#': '%#' is not a resource id in normal form (lowercase, '/', no '..')", packPath, entryPath );
+                SW_LOG_ERROR_ID( "ModSession.BadEntryPath", "Mod pack '%#': '%#' is not a resource id in normal form (lowercase, '/', no '..')", packPath.str(), entryPath );
                 return false;
             }
             if ( entryPath == AssetPackIndex::kFileName )
             {
-                if ( ModSessionInternal::isModIndexOwnContent( reader, packPath, contentPrefix, uniqueEntryPath ) == false )
+                if ( ModSessionInternal::isModIndexOwnContent( reader, packPath.str(), contentPrefix, uniqueEntryPath ) == false )
                     return false;
                 continue;
             }
             const bool bOwnContent = StringUtil::startsWith( entryPath, contentPrefix );
             if ( bOwnContent == false && uniqueOverride.contains( entryPath ) == false )
             {
-                SW_LOG_ERROR_ID( "ModSession.UndeclaredEntry", "Mod pack '%#': '%#' is neither under '%#' nor a declared <Override>", packPath, entryPath, contentPrefix );
+                SW_LOG_ERROR_ID( "ModSession.UndeclaredEntry", "Mod pack '%#': '%#' is neither under '%#' nor a declared <Override>", packPath.str(), entryPath, contentPrefix );
                 return false;
             }
         }

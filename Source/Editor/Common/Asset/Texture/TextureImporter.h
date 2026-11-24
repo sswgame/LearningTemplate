@@ -3,6 +3,7 @@
 #include "Core/Container/vector.h"
 #include "Core/Foundation/Macros.h"
 #include "Core/Foundation/Types.h"
+#include "Core/Path/AbsolutePath.h"
 
 namespace sw
 {
@@ -76,7 +77,7 @@ namespace sw::editor
          * @details 일괄 임포트는 이 함수를 워커에서 부른다. 워커는 에디터 서비스 범위를 읽을 수 없으므로(`findEditorScope`) 작업 시스템은 안에서 찾지 않고 인자로 받는다.
          * @return 성공하면 true 입니다.
          */
-        [[nodiscard]] static bool importTexture( string_view sourcePath, string_view outputPath, const TextureImportRule& rule, TextureImportResult* pOutResult = nullptr,
+        [[nodiscard]] static bool importTexture( const AbsolutePath& sourcePath, const AbsolutePath& outputPath, const TextureImportRule& rule, TextureImportResult* pOutResult = nullptr,
                                                  TaskManager* pTaskManager = nullptr );
 
         /** @brief 스위즐이나 그린 채널 반전 같은 채널 조작을 적용합니다. */
@@ -103,35 +104,35 @@ namespace sw::editor
          * @param resourceRoot `Content/` 의 절대 경로입니다.
          * @param config 원본마다 규칙을 고르는 임포트 설정입니다. 리소스 루트 기준 상대 경로로 매칭합니다.
          */
-        [[nodiscard]] static AssetImportSummary importAllTextures( string_view resourceRoot, const TextureImportConfig& config, AssetImportMode mode );
+        [[nodiscard]] static AssetImportSummary importAllTextures( const AbsolutePath& resourceRoot, const TextureImportConfig& config, AssetImportMode mode );
 
         /**
          * @brief 원본 하나를 형식 묶음 @p family 의 쿠킹 변형으로 @p outputPath 에 씁니다. 원본 + 규칙이 중간본이고, 압축은 묶음마다 여기서 한다.
          * @details 밉 체인까지는 BC 임포트와 같은 함수다(같은 4 배수 다시 표본 · 같은 필터). 비압축 용도는 규칙 그대로, HDR 은 묶음의 형식(R16G16B16A16_FLOAT)으로 임포트한다. 인코더가 없는 형식이면 오류다.
          */
-        [[nodiscard]] static bool cookTextureVariant( string_view sourcePath, string_view outputPath, const TextureImportRule& rule, const TextureFormatFamily& family, TaskManager* pTaskManager = nullptr );
+        [[nodiscard]] static bool cookTextureVariant( const AbsolutePath& sourcePath, const AbsolutePath& outputPath, const TextureImportRule& rule, const TextureFormatFamily& family, TaskManager* pTaskManager = nullptr );
 
         /**
          * @brief 접미사를 가진 묶음 @p family(ASTC · ETC2 — 모든 배포 대상의 합, `TextureFormatFamily::resolveCookFamilies`)로 모든 원본의 변형을 굽습니다(`App --cook-texture-variants` · `--check-texture-variants`).
          * @details 임포트한 DDS 곁에 쓰고 원본 폴더의 `import<접미사>.stamp` 로 대조한다(`AssetImportStampUtil`). 곁 파일 규칙으로 팩에 담긴다(`SW_ASSET_COMPANION`).
          */
-        [[nodiscard]] static AssetImportSummary cookTextureVariants( string_view resourceRoot, const TextureImportConfig& config, const TextureFormatFamily& family, AssetImportMode mode );
+        [[nodiscard]] static AssetImportSummary cookTextureVariants( const AbsolutePath& resourceRoot, const TextureImportConfig& config, const TextureFormatFamily& family, AssetImportMode mode );
 
         /**
          * @brief 원본 경로에 해당하는 DDS 경로를 만듭니다(`<x>/textures_raw/<y>.png` → `<x>/textures/<y>.dds`). `textures_raw/` 구간이 없으면 빈 문자열입니다.
          */
-        static string makeImportedTexturePath( string_view rawTexturePath );
+        static AbsolutePath makeImportedTexturePath( string_view rawTexturePath );
 
         /**
          * @brief 원본 바이트, 규칙(해석한 DXGI 포맷, 스위즐, 밉, sRGB, 그린 반전), 임포터 버전을 섞어 FNV-1a 64 해시를 계산합니다. 읽지 못하면 0 입니다.
          */
-        static uint64 computeSourceHash( string_view sourcePath, const TextureImportRule& rule );
+        static uint64 computeSourceHash( const AbsolutePath& sourcePath, const TextureImportRule& rule );
 
         /**
          * @brief 에디터 설정을 거치지 않은 기본 임포트 설정 경로(`<프로젝트>/Config/Editor/TextureImportConfig.json`)를 반환합니다.
          * @details 헤드리스 임포트와 테스트가 쓴다. 에디터가 떠 있을 때는 `EditorToolDefaults` 가 정한 경로를 쓴다(`importChangedSourceImage`).
          *          프로젝트 루트(`ProcessRoots`)는 기동 때 정한 값이라 워커에서 불러도 된다.
          */
-        static string makeDefaultImportConfigPath();
+        static AbsolutePath makeDefaultImportConfigPath();
     };
 } // namespace sw::editor

@@ -63,12 +63,12 @@ namespace sw::editor
     {
     }
 
-    bool TextureImportConfig::loadFromFile( string_view configPath )
+    bool TextureImportConfig::loadFromFile( const AbsolutePath& configPath )
     {
         string text;
-        if ( FileUtil::readOptionalTextFile( FileUtil::toDiskPath( configPath ), text ) != OptionalFileRead::Read || text.empty() )
+        if ( FileUtil::readOptionalTextFile( configPath, text ) != OptionalFileRead::Read || text.empty() )
         {
-            SW_LOG_ERROR_ID( "TextureImportConfig.FailedReadTextureImportConfigFile", "Failed to read TextureImportConfig file: %#", configPath );
+            SW_LOG_ERROR_ID( "TextureImportConfig.FailedReadTextureImportConfigFile", "Failed to read TextureImportConfig file: %#", configPath.str() );
             return false;
         }
         return loadFromJSONString( text );
@@ -267,12 +267,12 @@ namespace sw::editor
         return match;
     }
 
-    string TextureImportConfig::makeSharedSourcePath( string_view domainFolder, string_view ruleName, string_view key, string_view extension )
+    AbsolutePath TextureImportConfig::makeSharedSourcePath( string_view domainFolder, string_view ruleName, string_view key, string_view extension )
     {
         const string                             rule = ruleName.empty() ? string( kSharedDefaultRuleName ) : StringUtil::toLower( ruleName );
         StringBuilder<constant::buffer::kMax256> pathBuilder;
         pathBuilder.appendFormat( "%#/textures_raw/%#/%#/%#%#", domainFolder, kSharedFolderName, rule, key, extension );
-        return string( pathBuilder.view() );
+        return FileUtil::toDiskPath( pathBuilder.view() );
     }
 
     string TextureImportConfig::makeSelectionText() const

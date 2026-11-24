@@ -15,6 +15,7 @@
 #include "Core/Container/vector.h"
 #include "Core/Foundation/Expected.h"
 #include "Core/Foundation/Types.h"
+#include "Core/Path/AbsolutePath.h"
 
 #include "Editor/Common/EditorExports.h"
 
@@ -62,7 +63,7 @@ namespace sw::editor
         static constexpr const utf8* kExtension  = ".tokens.json"; ///< 토큰 파일 접미사
 
         /** @brief 토큰 폴더의 절대 경로입니다. 리소스 루트가 없으면 빈 문자열입니다. */
-        static string getFolderPath();
+        static AbsolutePath getFolderPath();
         /** @brief 폴더에 있는 벌의 이름(접미사를 뺀 파일 이름)을 이름순으로 씁니다. */
         static void listThemeNames( vector<string>& outListName );
         /** @brief @p name 벌을 읽고 해석합니다. 실패하면 그 이유입니다(대상은 파일 경로 · 키). */

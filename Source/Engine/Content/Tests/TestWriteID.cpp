@@ -15,7 +15,7 @@ SW_TEST_CASE( WriteIDTest, GlobalIDKeepsItsDomain )
 {
     const optional<AbsolutePath> path = engine::getSubsystem<AssetPaths>().toDiskPath( "common/materials/new_not_yet.material" );
     SW_REQUIRE_TRUE( path.has_value() );
-    SW_EXPECT_EQUAL( engine::getSubsystem<AssetPaths>().toAssetID( path->str() ), string( "common/materials/new_not_yet.material" ) );
+    SW_EXPECT_EQUAL( engine::getSubsystem<AssetPaths>().toAssetID( *path ), string( "common/materials/new_not_yet.material" ) );
 }
 
 /**
@@ -32,7 +32,7 @@ SW_TEST_CASE( WriteIDTest, MixedCaseIDWritesLowercaseInTheResourceTree )
     string relative;
     SW_REQUIRE_TRUE( FileUtil::tryMakePathUnderRoot( domainRoot->str(), path->str(), relative ) );
     SW_EXPECT_EQUAL( string( "write_id_test_not_yet/mixedcase.xml" ), relative ); // 원래 철자를 돌려주는 판정이라 대소문자가 그대로 보인다
-    SW_EXPECT_EQUAL( string( "engine/write_id_test_not_yet/mixedcase.xml" ), assetPaths.toAssetID( path->str() ) );
+    SW_EXPECT_EQUAL( string( "engine/write_id_test_not_yet/mixedcase.xml" ), assetPaths.toAssetID( *path ) );
 }
 
 /**
@@ -80,7 +80,7 @@ SW_TEST_CASE( WriteIDTest, RelativeKeyWritesTheFileReadingPicked )
     // engine 에만 있는 상대 키 — 읽기가 고른 그 파일에 쓴다(검색 순서의 앞 도메인에 새로 만들지 않는다).
     const optional<AbsolutePath> path = engine::getSubsystem<AssetPaths>().toDiskPath( "shaders/forward_lit.hlsl" );
     SW_REQUIRE_TRUE( path.has_value() );
-    SW_EXPECT_EQUAL( engine::getSubsystem<AssetPaths>().toAssetID( path->str() ), string( "engine/shaders/forward_lit.hlsl" ) );
+    SW_EXPECT_EQUAL( engine::getSubsystem<AssetPaths>().toAssetID( *path ), string( "engine/shaders/forward_lit.hlsl" ) );
 }
 
 // 작업 도메인은 폴더가 아직 없어도 도메인이다(빈 트리의 첫 쓰기) — 상대 키로 거절하지 않는다.
@@ -88,7 +88,7 @@ SW_TEST_CASE( WriteIDTest, ScratchDomainNeedsNoFolderYet )
 {
     const optional<AbsolutePath> path = engine::getSubsystem<AssetPaths>().toDiskPath( "scratch/write_id_test_not_yet/new.appearance.xml" );
     SW_REQUIRE_TRUE( path.has_value() );
-    SW_EXPECT_EQUAL( engine::getSubsystem<AssetPaths>().toAssetID( path->str() ), string( "scratch/write_id_test_not_yet/new.appearance.xml" ) );
+    SW_EXPECT_EQUAL( engine::getSubsystem<AssetPaths>().toAssetID( *path ), string( "scratch/write_id_test_not_yet/new.appearance.xml" ) );
 }
 
 SW_TEST_CASE( WriteIDTest, MissingRelativeKeyHasNoDomain )

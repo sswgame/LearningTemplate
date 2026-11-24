@@ -40,7 +40,7 @@ namespace sw::editor
         const AbsolutePath path = EditorPaths::resolveEditorStateFile( kFileName );
         if ( path.empty() )
             return;
-        if ( _layout.saveToFile( path.str() ) == false )
+        if ( _layout.saveToFile( path ) == false )
             SW_LOG_WARNING_ID( "SceneViewOverlayLayoutStore.CouldNotSaveViewport", "Could not save the viewport overlay layout to '%#'", path.c_str() );
     }
 

@@ -90,7 +90,7 @@ namespace sw
             {
                 string          _backend{};
                 AbsolutePath    _logPath{};
-                string          _reportPath{};
+                AbsolutePath    _reportPath{};
                 AbsolutePath    _runRoot{}; ///< 자식의 실행 뿌리(`<부모 실행 뿌리>/<백엔드>`) — 죽이기 전 덤프도 여기 쓴다
                 ProcessCommand  _command{}; ///< 띄울 명령(슬롯이 비면 띄운다)
                 ProcessOptions  _options{}; ///< 자식의 환경(실행 뿌리 · 사용자 데이터 뿌리)
@@ -313,7 +313,7 @@ namespace sw
                     writer.key( "log" );
                     writer.valueString( pChild->_logPath.str() );
                     writer.key( "report" );
-                    writer.valueString( pChild->_reportPath );
+                    writer.valueString( pChild->_reportPath.str() );
                     writer.endObject();
                 }
                 writer.endArray();
@@ -522,7 +522,7 @@ namespace sw
         const string scenarioStem = getAutomationScenarioStem( options._scenarioPath ); // x.scenario.xml → x(스크립트의 `ScenarioDeclaration.stem` 과 같은 규칙)
         // 실행마다 새 폴더다(`reserveUniquePath`) - 프로세스 id 는 Windows 가 다시 쓴다.
         StringBuilder<constant::buffer::kMax256> textBuilder3;
-        textBuilder3.appendFormat( "%#/%#/per-backend-%#", makeAutomationOutputFolderPath(), scenarioStem, Process::getCurrentProcessID() );
+        textBuilder3.appendFormat( "%#/%#/per-backend-%#", makeAutomationOutputFolderPath().str(), scenarioStem, Process::getCurrentProcessID() );
         const string defaultFolder = FileUtil::reserveUniquePath( FileUtil::toDiskPath( textBuilder3.view() ), {}, true ).str();
 
         // 넘겨받은 인자가 창 위치를 정했으면(손으로 돌린 실행) 그것을 따른다. 칸 간격(클라이언트 크기 + 틀 두께)은 자식 창이 스스로 정한다(`GenericWindow::createMainWindow`).
@@ -566,10 +566,10 @@ namespace sw
             {
                 defaultPath.clear();
                 defaultPath.appendFormat( "%#/%#.json", defaultFolder, backend );
-                pChild->_reportPath = string( defaultPath.view() );
+                pChild->_reportPath = FileUtil::toDiskPath( defaultPath.view() );
             }
             else
-                pChild->_reportPath = insertBackendSuffix( options._reportPath.str(), backend ).str();
+                pChild->_reportPath = insertBackendSuffix( options._reportPath.str(), backend );
             // 앞 실행이 같은 경로에 남긴 단계 보고를 지운다 — 이번에 돌지 않은 단계의 낡은 기록을 견주지 않게. 없으면 지울 것이 없다(결과는 보지 않는다).
             const size_t stageCountOfChild = AutomationScenarioChain::splitList( scenarioList ).size();
             for ( size_t stage = 0; stage < stageCountOfChild; ++stage )
@@ -586,7 +586,7 @@ namespace sw
             argument.appendFormat( "-log-file=%#", pChild->_logPath.str() );
             listArgument.emplace_back( argument.view() );
             argument.clear();
-            argument.appendFormat( "-scenario-report=%#", pChild->_reportPath );
+            argument.appendFormat( "-scenario-report=%#", pChild->_reportPath.str() );
             listArgument.emplace_back( argument.view() );
             if ( bTileWindows )
             {
@@ -605,8 +605,7 @@ namespace sw
             }
             listArgument.insert( listArgument.end(), options._listPassThroughArgument.begin(), options._listPassThroughArgument.end() );
 
-            const optional<AbsolutePath> executable = AbsolutePath::tryMake( options._executablePath );
-            pChild->_command                        = executable.has_value() ? ProcessCommand::at( *executable, std::move( listArgument ) ) : ProcessCommand{};
+            pChild->_command = options._executablePath.empty() ? ProcessCommand{} : ProcessCommand::at( options._executablePath, std::move( listArgument ) );
             // 자식마다 제 실행 뿌리(`<이 실행 뿌리>/<백엔드>`) — 사용자 데이터 · 에디터 상태 · 시나리오 사본이 그 아래라 자식끼리 한 폴더를 다투지 않는다
             // (예전에는 한 자식이 다른 자식의 쓰는 중인 세이브 임시 파일을 잔재로 지웠다 — 와일드웨스트). 그 폴더의 주인은 이 부모다 — 띄우기 전에 비운다.
             const AbsolutePath childRunRoot = ProcessRoots::get()._run.join( backend );

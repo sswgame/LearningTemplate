@@ -146,14 +146,14 @@ namespace sw::editor
                 const shared_ptr<EditorUICaptureWrite> pWrite    = args.get<shared_ptr<EditorUICaptureWrite>>( 0 );
                 const shared_ptr<atomic<uint32>>       pInFlight = args.get<shared_ptr<atomic<uint32>>>( 1 );
                 const EditorUICaptureWrite&            write     = *pWrite;
-                const string&                          path      = write._job._path;
+                const AbsolutePath&                    path      = write._job._path;
                 vector<uint8>                          rgbaBytes;
                 bool                                   bWritten = false;
                 if ( RenderTargetImageFile::unpackRGBA8( write._bytes, write._layout, write._format, rgbaBytes ) )
                 {
                     const float64 magentaFraction = computeMagentaFraction( rgbaBytes );
-                    (void)FileUtil::ensureParentDirectoryExists( FileUtil::toDiskPath( path ) ); // 만들지 못하면 아래 쓰기가 경로와 함께 실패를 남긴다
-                    bWritten = RenderTargetImageFile::writeRGBA8File( rgbaBytes, write._layout._width, write._layout._height, FileUtil::toDiskPath( path ) );
+                    (void)FileUtil::ensureParentDirectoryExists( path ); // 만들지 못하면 아래 쓰기가 경로와 함께 실패를 남긴다
+                    bWritten = RenderTargetImageFile::writeRGBA8File( rgbaBytes, write._layout._width, write._layout._height, path );
                     if ( bWritten )
                     {
                         SW_LOG_INFO_ID( "EditorUICapture.EditorUICaptureX", "Editor UI capture -> %# (%#x%#, windows %#, clipped %# [%#], magenta %#)", path.c_str(), write._layout._width, write._layout._height,
@@ -180,11 +180,11 @@ namespace sw::editor
 
 namespace sw::editor
 {
-    uint32 EditorUICapture::request( string_view path )
+    uint32 EditorUICapture::request( const AbsolutePath& path )
     {
         EditorUICaptureJob job{};
         job._ticket = _nextTicket++;
-        job._path   = string{ path };
+        job._path   = path;
         _listQueued.push_back( std::move( job ) );
         return _listQueued.back()._ticket;
     }
@@ -228,7 +228,7 @@ namespace sw::editor
         if ( bGlobalDue )
         {
             _bGlobalRequested = SW_TRUE;
-            (void)request( gv_screenshotEditor.get() ); // 결과는 쓰기 워커(`runWriteJob`)가 로그로 남기고 우편함에 알린다
+            (void)request( gv_screenshotEditor.getPath() ); // 결과는 쓰기 워커(`runWriteJob`)가 로그로 남기고 우편함에 알린다
             _listQueued.back()._bFromStartupArgument = true;
         }
         if ( _listQueued.empty() )

@@ -58,7 +58,7 @@ namespace sw::editor
         /** @brief XML 텍스트에서 읽어 현재 내용을 바꿉니다. 규칙에 어긋나면 현재 내용을 그대로 두고 false 입니다(이유는 로그). 성공하면 기록을 지우고 "저장된 상태" 로 맞춥니다. */
         [[nodiscard]] bool loadFromXMLText( string_view xmlText, string_view sourceName );
         /** @brief 파일을 읽습니다. 파일이 없거나 읽지 못하면 false 입니다. */
-        [[nodiscard]] bool loadFromFile( string_view absolutePath );
+        [[nodiscard]] bool loadFromFile( const AbsolutePath& absolutePath );
         /** @brief 현재 내용을 파일 형식으로 씁니다. */
         string saveToXMLText() const { return PairedAnimationDef::makeXMLText( _content, ResourceFieldWrite::OmitDefaults ); }
         /** @brief 규칙을 본 뒤 파일에 씁니다. 규칙에 어긋나거나 쓰지 못하면 쓰지 않고 이유(`Error`)를 돌려줍니다. 성공하면 "저장된 상태" 로 맞춥니다. */

@@ -26,7 +26,7 @@ namespace
         static ContentBrowserDroppedFile makeFile( string path, uint64 byteSize, bool bRegularFile )
         {
             ContentBrowserDroppedFile file{};
-            file._path         = std::move( path );
+            file._path         = FileUtil::toDiskPath( std::move( path ) );
             file._byteSize     = byteSize;
             file._bRegularFile = bRegularFile;
             return file;

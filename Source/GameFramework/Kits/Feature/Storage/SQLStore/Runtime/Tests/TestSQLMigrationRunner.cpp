@@ -36,18 +36,18 @@ namespace
     struct MigrationFolderFixture
     {
         test::ScopedScratchDomain _domain{};
-        string                    _diskFolder{};
+        AbsolutePath              _diskFolder{};
         string                    _folderID{};
 
         MigrationFolderFixture()
-            : _diskFolder{ _domain.makeDiskFolder( "sql" ).str() }
+            : _diskFolder{ _domain.makeDiskFolder( "sql" ) }
         {
             StringBuilder<constant::buffer::kMax128> folderID;
             folderID.appendFormat( "%#/sql", test::ScopedScratchDomain::kDomain );
             _folderID = string( folderID.view() );
         }
 
-        void write( string_view fileName, string_view text ) { SW_EXPECT_TRUE( FileUtil::writeTextFile( FileUtil::toDiskPath( FileUtil::joinPath( _diskFolder, fileName ) ), text ) ); }
+        void write( string_view fileName, string_view text ) { SW_EXPECT_TRUE( FileUtil::writeTextFile( _diskFolder.join( fileName ), text ) ); }
 
         /** @brief `<Migration _name="…" />` 를 이름마다 적은 목록 파일을 씁니다. */
         void writeList( std::initializer_list<const utf8*> listName )

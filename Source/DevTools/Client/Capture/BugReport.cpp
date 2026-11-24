@@ -73,12 +73,12 @@ namespace sw
             }
 
             /** @brief 씬 원본 바이트의 해시입니다. 원본 경로는 리소스 id 이거나 절대 경로다(`Scene::getSourcePath`). 못 읽으면 빈 값. */
-            static string computeSceneHash( const string& scenePath )
+            static string computeSceneHash( const AbsolutePath& scenePath )
             {
                 if ( scenePath.empty() )
                     return string{};
                 vector<uint8> bytes;
-                const bool    bRead = FileUtil::isAbsolutePath( scenePath ) ? AssetIO::readBinaryFile( FileUtil::toDiskPath( scenePath ), bytes ) : AssetIO::readBinaryAsset( AssetID( scenePath ), bytes );
+                const bool    bRead = FileUtil::isAbsolutePath( scenePath.str() ) ? AssetIO::readBinaryFile( scenePath, bytes ) : AssetIO::readBinaryAsset( AssetID( scenePath.str() ), bytes );
                 if ( bRead == false )
                     return string{};
                 return BugReport::formatHash( HashUtil::appendBytes64( HashUtil::kFNVOffset64, bytes.data(), bytes.size() ) );
@@ -430,7 +430,7 @@ namespace sw
         {
             inputs._pSceneManager          = &sceneManager;
             inputs._report._scenePath      = pScene->getSourcePath();
-            inputs._report._sceneHash      = BugReportInternal::computeSceneHash( pScene->getSourcePath() );
+            inputs._report._sceneHash      = BugReportInternal::computeSceneHash( FileUtil::toDiskPath( pScene->getSourcePath() ) );
             const CameraComponent* pCamera = BugReportInternal::findViewCamera( *pScene );
             if ( pCamera != nullptr )
             {

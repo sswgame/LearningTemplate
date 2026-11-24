@@ -140,7 +140,7 @@ namespace
                 dependencies._pBus      = _bus.get();
                 dependencies._pPresence = &_presence;
             }
-            settings._ignoredCharactersPath = FileUtil::joinPath( ProcessRoots::get()._project.str(), "Config/Server/chat_ignored_characters.txt" );
+            settings._ignoredCharactersPath = ProcessRoots::get()._project.join( "Config/Server/chat_ignored_characters.txt" );
             SW_EXPECT_TRUE( _service.initialize( dependencies, settings ) );
             _directory._listOnline = vector<AccountID>{ kAlice, kBob, kCarol };
         }
@@ -283,12 +283,12 @@ SW_TEST_CASE( ChatServiceTest, InitializeNeedsDependenciesAndFiles )
     dependencies._pStore            = &store;
     dependencies._pDirectory        = &directory;
     ChatServiceConfig settings      = makeChatSettings();
-    settings._ignoredCharactersPath = FileUtil::joinPath( ProcessRoots::get()._project.str(), "Config/Server/chat_ignored_characters.txt" );
-    settings._bannedWordsPath       = test::makeScratchPath( "missing_banned.txt" ).str();
+    settings._ignoredCharactersPath = ProcessRoots::get()._project.join( "Config/Server/chat_ignored_characters.txt" );
+    settings._bannedWordsPath       = test::makeScratchPath( "missing_banned.txt" );
     SW_EXPECT_FALSE( service.initialize( dependencies, settings ) );
 
-    settings._bannedWordsPath.clear();
-    settings._spam = ChatSpamConfig{}; // 도배 한도가 비었다 — 코드 기본값으로 열리지 않는다
+    settings._bannedWordsPath = {};
+    settings._spam            = ChatSpamConfig{}; // 도배 한도가 비었다 — 코드 기본값으로 열리지 않는다
     SW_EXPECT_FALSE( service.initialize( dependencies, settings ) );
 }
 
@@ -434,7 +434,7 @@ SW_TEST_CASE( ChatServiceTest, SpamAndFilterApplyToSends )
     settings._spam._burstCount       = 3;
     settings._spam._refillIntervalMs = 1000;
     settings._spam._maxRepeatCount   = 1;
-    settings._bannedWordsPath        = bannedPath.str();
+    settings._bannedWordsPath        = bannedPath;
     ChatFixture rig( database, nullptr, kServerA, settings );
     SW_EXPECT_TRUE( rig.join( kAlice ) == ChatResult::Ok );
 

@@ -105,33 +105,33 @@ namespace sw::editor
             static string makeTreePath( string_view diskPath )
             {
                 string relative;
-                if ( FileUtil::tryMakePathUnderRoot( AssetPaths::getScratchFolderPath(), diskPath, relative ) )
+                if ( FileUtil::tryMakePathUnderRoot( AssetPaths::getScratchFolderPath().str(), diskPath, relative ) )
                 {
                     StringBuilder<constant::buffer::kMax256> idBuilder;
                     idBuilder.appendFormat( "%#/%#", AssetPaths::kScratchDomain, relative );
                     return string( idBuilder.view() );
                 }
-                if ( FileUtil::tryMakePathUnderRoot( editor::getSubsystem<AssetPaths>().getRootFolderPath(), diskPath, relative ) == false ||
+                if ( FileUtil::tryMakePathUnderRoot( editor::getSubsystem<AssetPaths>().getRootFolderPath().str(), diskPath, relative ) == false ||
                      FileUtil::startsWithPathComponent( FileUtil::normalizePath( relative ), AssetPaths::kScratchDomain ) )
                     return {};
                 return relative;
             }
 
             /** @brief 트리 표기 @p treePath(`makeTreePath`)의 디스크 경로입니다 — 작업 도메인은 실행 뿌리 아래, 나머지는 리소스 루트 아래. */
-            static string makeDiskPath( string_view treePath )
+            static AbsolutePath makeDiskPath( string_view treePath )
             {
                 // 작업 도메인 아래 부분은 원래 표기 그대로 잇는다(접은 키로 자르면 리눅스에서 다른 파일이 된다).
                 string rest;
                 if ( treePath == AssetPaths::kScratchDomain || FileUtil::tryMakePathUnderRoot( AssetPaths::kScratchDomain, treePath, rest ) )
-                    return FileUtil::joinPath( AssetPaths::getScratchFolderPath(), rest );
-                return FileUtil::joinPath( editor::getSubsystem<AssetPaths>().getRootFolderPath(), treePath );
+                    return AssetPaths::getScratchFolderPath().join( rest );
+                return editor::getSubsystem<AssetPaths>().getRootFolderPath().join( treePath );
             }
 
             /** @brief 감시 사건의 트리 표기(`makeTreePath`)입니다. 사건의 `_directory` 는 감시 루트(리소스 루트 · 작업 도메인 폴더)이고 `_filename` 은 그 아래 상대 경로다(`FileWatcher::pushChange`). */
             static string makeEventPath( const FileChangeEvent& changeEvent ) { return makeTreePath( FileUtil::joinPath( changeEvent._directory, changeEvent._filename ) ); }
 
             /** @brief 울타리 표지 파일의 절대 경로입니다. */
-            static string makeFenceMarkerPath() { return FileUtil::joinPath( AssetPaths::getScratchFolderPath(), kFenceFileName ); }
+            static AbsolutePath makeFenceMarkerPath() { return AssetPaths::getScratchFolderPath().join( kFenceFileName ); }
 
             /**
              * @brief 감시 사건이 울타리 표지 파일의 것이면 true 입니다 — 바뀐 파일로 세지 않는다(에셋이 아니다).
@@ -141,7 +141,7 @@ namespace sw::editor
             {
                 string_view leafName{};
                 FileUtil::getFileNamePart( changeEvent._filename, leafName );
-                return leafName == kFenceFileName && FileUtil::isSameDiskPath( FileUtil::joinPath( changeEvent._directory, changeEvent._filename ), makeFenceMarkerPath() );
+                return leafName == kFenceFileName && FileUtil::isSameDiskPath( FileUtil::joinPath( changeEvent._directory, changeEvent._filename ), makeFenceMarkerPath().str() );
             }
 
             /** @brief 시작 차단 조건 — 시나리오 사본 폴더를 새로 만든 뒤 파일 감시가 그 쓰기를 알릴 때까지 진행 중입니다. 에디터가 없으면 해당 없음입니다. */
@@ -245,18 +245,18 @@ namespace sw::editor
         }
         const FileChangeDelegate fileWatchDelegate{ SW_DELEGATE_METHOD( FileChangeDelegate, &AssetHotReload::onResourceFileChanged, this ) };
         const FileChangeDelegate treeWatchDelegate{ SW_DELEGATE_METHOD( FileChangeDelegate, &AssetHotReload::onResourceTreeChanged, this ) };
-        const string&            rootFolder = editor::getSubsystem<AssetPaths>().getRootFolderPath();
-        _resourceWatch                      = pFileWatch->watch( FileUtil::toDiskPath( rootFolder ), FileWatchDepth::Tree, listExtension, fileWatchDelegate );
+        const AbsolutePath&      rootFolder = editor::getSubsystem<AssetPaths>().getRootFolderPath();
+        _resourceWatch                      = pFileWatch->watch( rootFolder, FileWatchDepth::Tree, listExtension, fileWatchDelegate );
         if ( _resourceWatch.isActive() == false )
             return false; // 감시 창구가 이유를 남겼다
         // 디스크 목록을 가진 화면(콘텐츠 브라우저)이 다시 읽을 때를 알도록, 종류와 무관하게 모든 변경을 센다.
-        _contentWatch = pFileWatch->watch( FileUtil::toDiskPath( rootFolder ), FileWatchDepth::Tree, {}, treeWatchDelegate );
+        _contentWatch = pFileWatch->watch( rootFolder, FileWatchDepth::Tree, {}, treeWatchDelegate );
         // 작업 도메인(시나리오 사본 · 가져오기 · 미리보기)은 리소스 루트 밖, 실행 뿌리 아래라 따로 건다. 못 걸면 작업 도메인의 바깥 변경만 다시 읽지 않는다.
-        const string& scratchFolder = AssetPaths::getScratchFolderPath();
-        if ( FileUtil::ensureDirectoryExists( FileUtil::toDiskPath( scratchFolder ) ) )
+        const AbsolutePath& scratchFolder = AssetPaths::getScratchFolderPath();
+        if ( FileUtil::ensureDirectoryExists( scratchFolder ) )
         {
-            _scratchResourceWatch = pFileWatch->watch( FileUtil::toDiskPath( scratchFolder ), FileWatchDepth::Tree, listExtension, fileWatchDelegate );
-            _scratchContentWatch  = pFileWatch->watch( FileUtil::toDiskPath( scratchFolder ), FileWatchDepth::Tree, {}, treeWatchDelegate );
+            _scratchResourceWatch = pFileWatch->watch( scratchFolder, FileWatchDepth::Tree, listExtension, fileWatchDelegate );
+            _scratchContentWatch  = pFileWatch->watch( scratchFolder, FileWatchDepth::Tree, {}, treeWatchDelegate );
         }
         return _resourceWatch.isActive();
     }
@@ -356,12 +356,12 @@ namespace sw::editor
         if ( _pIdentityRules == nullptr )
             return;
         // 원본 곁의 서술이 바뀌면 정체성은 원본의 것이다.
-        const bool   bSidecar = StringUtil::endsWith( assetID, AssetMeta::kExtension );
-        const string targetID = bSidecar ? assetID.substr( 0, assetID.size() - AssetMeta::kExtension.size() ) : assetID;
-        const string absPath  = AssetHotReloadInternal::makeDiskPath( targetID );
-        if ( FileUtil::isRegularFile( FileUtil::toDiskPath( absPath ) ) == false )
+        const bool         bSidecar = StringUtil::endsWith( assetID, AssetMeta::kExtension );
+        const string       targetID = bSidecar ? assetID.substr( 0, assetID.size() - AssetMeta::kExtension.size() ) : assetID;
+        const AbsolutePath absPath  = AssetHotReloadInternal::makeDiskPath( targetID );
+        if ( FileUtil::isRegularFile( absPath ) == false )
             return;
-        const optional<AssetGUID> guid = _pIdentityRules->readIdentity( FileUtil::toDiskPath( absPath ), targetID );
+        const optional<AssetGUID> guid = _pIdentityRules->readIdentity( absPath, targetID );
         if ( guid.has_value() )
             AssetRegistry::record( *guid, targetID );
     }
@@ -388,7 +388,7 @@ namespace sw::editor
         using Internal = AssetHotReloadInternal;
         if ( _scratchContentWatch.isActive() == false )
             return false; // 사본(작업 도메인)을 보는 감시가 없다 — 기다릴 사건이 오지 않는다
-        const string markerPath = Internal::makeFenceMarkerPath();
+        const AbsolutePath markerPath = Internal::makeFenceMarkerPath();
         if ( _bFenceWaiting == false )
         {
             const uint64 prepareCount = AutomationScratchWorkspace::getPrepareCount();
@@ -397,9 +397,9 @@ namespace sw::editor
             // 사본을 새로 만들었다 — 감시 트리에 표지를 쓰고 그 사건이 오기를 기다린다.
             _fenceArmedCount = prepareCount;
             _bFenceSeen      = SW_FALSE;
-            if ( FileUtil::writeTextFile( FileUtil::toDiskPath( markerPath ), "fence" ) == false )
+            if ( FileUtil::writeTextFile( markerPath, "fence" ) == false )
             {
-                SW_LOG_ERROR_ID( "AssetHotReload.CouldNotWriteFence", "[ContentWatchFence] could not write the fence marker %# - the content index may be read before the file watch reports the scratch copy", markerPath );
+                SW_LOG_ERROR_ID( "AssetHotReload.CouldNotWriteFence", "[ContentWatchFence] could not write the fence marker %# - the content index may be read before the file watch reports the scratch copy", markerPath.str() );
                 _fencePrepareCount = prepareCount;
                 return false;
             }
@@ -423,7 +423,7 @@ namespace sw::editor
             SW_LOG_ERROR_ID( "AssetHotReload.AssetImportDidNot", "[ContentWatchFence] the asset import did not finish within %# ms - the scenario starts anyway", Internal::kFenceImportTimeoutMilliseconds );
         }
         _fenceImportDeadlineNanoseconds = 0;
-        (void)FileUtil::removeFile( FileUtil::toDiskPath( markerPath ) ); // 표지는 한 번 쓰고 지운다 — 못 지워도 다음 울타리가 덮어쓴다
+        (void)FileUtil::removeFile( markerPath ); // 표지는 한 번 쓰고 지운다 — 못 지워도 다음 울타리가 덮어쓴다
         _bFenceWaiting     = SW_FALSE;
         _fencePrepareCount = _fenceArmedCount;
         return false;
@@ -471,7 +471,7 @@ namespace sw::editor
     {
         // 사건을 꺼낸 때 파일이 이미 없으면(이름을 바꾸고 지운 사본 폴더의 늦은 "바뀜" 사건) 다시 읽을 내용이 없다 — 지운 사건이다.
         // 캐시의 다시 읽기는 파일을 디스크에서 읽어 `File.NotFound` 를 남겼다(시나리오 `assetmanage` 다음 단계에서 났다).
-        if ( FileUtil::exists( FileUtil::toDiskPath( AssetHotReloadInternal::makeDiskPath( relativePath ) ) ) == false )
+        if ( FileUtil::exists( AssetHotReloadInternal::makeDiskPath( relativePath ) ) == false )
         {
             SW_LOG_INFO_ID( "AssetHotReload.ChangedFileGone", "Hot reload skipped %# - the file was removed before its change was handled", relativePath.c_str() );
             return;
@@ -509,7 +509,7 @@ namespace sw::editor
         const auto itApplied = _mapAppliedContentHash.find( FileUtil::normalizePath( relativePath ).str() );
         if ( itApplied == _mapAppliedContentHash.end() )
             return false;
-        const bool bSame = ContentHash::computeFile( FileUtil::toDiskPath( AssetHotReloadInternal::makeDiskPath( relativePath ) ) ) == itApplied->second;
+        const bool bSame = ContentHash::computeFile( AssetHotReloadInternal::makeDiskPath( relativePath ) ) == itApplied->second;
         if ( bSame == false )
             _mapAppliedContentHash.erase( itApplied ); // 그 뒤에 바깥에서 또 바뀌었다 — 반영한다
         return bSame;

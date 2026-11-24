@@ -400,7 +400,7 @@ namespace sw
             /** @brief DXC 라이브러리의 `DxcCreateInstance` 주소를 찾습니다(`ShaderCompiler::findDXCCreateInstance` 가 한 번 부른다). 빌드가 DXC 를 실행 파일 옆에 둔다(배포 구성의 테스트는 TestBin) - 다른 곳을 찾아다니지 않는다. */
             static void* loadDXCCreateInstance()
             {
-                const string                 libraryText = FileUtil::joinPath( FileUtil::getDirectoryPart( FileUtil::getExecutablePath() ), ModuleLibraryUtil::formatSharedLibraryName( "dxcompiler" ) );
+                const string                 libraryText = FileUtil::joinPath( FileUtil::getDirectoryPart( FileUtil::getExecutablePath().str() ), ModuleLibraryUtil::formatSharedLibraryName( "dxcompiler" ) );
                 const optional<AbsolutePath> libraryPath = AbsolutePath::tryMake( libraryText );
                 if ( libraryPath.has_value() == false )
                 {
@@ -521,7 +521,7 @@ namespace sw
     #else
         #error "Unsupported platform"
     #endif
-                const AbsolutePath           tintText = FileUtil::toDiskPath( FileUtil::joinPath( FileUtil::getDirectoryPart( FileUtil::getExecutablePath() ), kTintName ) );
+                const AbsolutePath           tintText = FileUtil::getExecutablePath().getParent().join( kTintName );
                 const optional<AbsolutePath> tintPath = AbsolutePath::tryMake( tintText.str() );
                 if ( tintPath.has_value() == false || FileUtil::isRegularFile( tintText ) == false )
                     return unexpected( Error{ ErrorKind::NotFound, "Tint (SPIR-V -> WGSL) is not next to the executable - the WebGPU shader target needs it (docs/agents/Platform.md)", tintText.str() } );

@@ -87,7 +87,7 @@ namespace sw
              * @brief 항목 @p entryCount 개를 경로 해시 순으로 @p packPath 에 스트림으로 씁니다. 항목 i 의 바이트는 `makeEntryBytes( i, listSize[i] )` 다.
              * @details 스트림 쓰기는 경로 해시 오름차순만 받는다 — 번호를 해시로 세운 뒤 그 순서로 바이트를 만든다(팩 전체를 들지 않는다).
              */
-            [[nodiscard]] static optional<PackWriteResult> writeEntries( const string& packPath, const PackWriterDesc& desc, const vector<size_t>& listSize, vector<uint64>& outListHash )
+            [[nodiscard]] static optional<PackWriteResult> writeEntries( const AbsolutePath& packPath, const PackWriterDesc& desc, const vector<size_t>& listSize, vector<uint64>& outListHash )
             {
                 const uint32   entryCount = static_cast<uint32>( listSize.size() );
                 vector<uint32> listOrder( entryCount );
@@ -100,7 +100,7 @@ namespace sw
                 VectorUtil::sort( listOrder, [&outListHash]( uint32 left, uint32 right )
                 { return outListHash[left] < outListHash[right]; } );
                 PackStreamWriter writer;
-                expected<void>   step = writer.open( FileUtil::toDiskPath( packPath ), desc );
+                expected<void>   step = writer.open( packPath, desc );
                 for ( size_t order = 0; order < listOrder.size() && step.has_value(); ++order )
                 {
                     const uint32 index = listOrder[order];
@@ -113,7 +113,7 @@ namespace sw
             }
 
             /** @brief `index300k` 를 @p packPath 에 쓰고 항목의 경로 해시를 @p outListHash 에 담습니다. */
-            [[nodiscard]] static bool writeIndexPack( const string& packPath, vector<uint64>& outListHash )
+            [[nodiscard]] static bool writeIndexPack( const AbsolutePath& packPath, vector<uint64>& outListHash )
             {
                 uint64         state = 0x9E3779B97F4A7C15ull;
                 vector<size_t> listSize( kIndexEntryCount );
@@ -146,7 +146,7 @@ SW_TEST_CASE( PackScaleTest, Index300k, ._tags = "bench", ._disabledReason = "be
     using Internal              = PackScaleInternal;
     const AbsolutePath packPath = test::makeScratchPath( "index300k.pack" );
     vector<uint64>     listHash;
-    SW_REQUIRE_TRUE( Internal::writeIndexPack( packPath.str(), listHash ) );
+    SW_REQUIRE_TRUE( Internal::writeIndexPack( packPath, listHash ) );
 
     vector<int64> listMountNanos;
     for ( uint32 repeat = 0; repeat < Internal::kMountRepeatCount; ++repeat )
@@ -204,7 +204,7 @@ SW_TEST_CASE( PackScaleTest, Patch1g, ._tags = "bench", ._disabledReason = "benc
     PackWriterDesc              desc      = PackTestUtil::makeDesc( "" );
     desc._pDigestProvider                 = pProvider;
     vector<uint64>                  listHash;
-    const optional<PackWriteResult> written = Internal::writeEntries( packPath.str(), desc, vector<size_t>( Internal::kPatchEntryCount, Internal::kPatchEntryBytes ), listHash );
+    const optional<PackWriteResult> written = Internal::writeEntries( packPath, desc, vector<size_t>( Internal::kPatchEntryCount, Internal::kPatchEntryBytes ), listHash );
     SW_REQUIRE_TRUE( written.has_value() );
 
     const Stopwatch watch;

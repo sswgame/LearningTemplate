@@ -7,18 +7,18 @@
 
 namespace sw::editor
 {
-    bool EditorUserFile::quarantineCorruptFile( string_view filePath, string_view reason )
+    bool EditorUserFile::quarantineCorruptFile( const AbsolutePath& filePath, string_view reason )
     {
-        const string                             source( filePath );
+        const AbsolutePath                       source( filePath );
         StringBuilder<constant::buffer::kMax512> destinationBuilder;
-        destinationBuilder.appendFormat( "%#%#", source, kCorruptSuffix );
-        const string destination( destinationBuilder.view() );
-        if ( FileUtil::copyFile( FileUtil::toDiskPath( source ), FileUtil::toDiskPath( destination ) ) == false || FileUtil::removeFile( FileUtil::toDiskPath( source ) ) == false )
+        destinationBuilder.appendFormat( "%#%#", source.str(), kCorruptSuffix );
+        const AbsolutePath destination( FileUtil::toDiskPath( destinationBuilder.view() ) );
+        if ( FileUtil::copyFile( source, destination ) == false || FileUtil::removeFile( source ) == false )
         {
-            SW_LOG_ERROR_ID( "EditorUserFile.UserFileBrokenCould", "User file %# is broken (%#) and could not be moved to %# - it is left in place", source, string( reason ), destination );
+            SW_LOG_ERROR_ID( "EditorUserFile.UserFileBrokenCould", "User file %# is broken (%#) and could not be moved to %# - it is left in place", source.str(), string( reason ), destination.str() );
             return false;
         }
-        SW_LOG_ERROR_ID( "EditorUserFile.UserFileBrokenMoved", "User file %# is broken (%#) - moved it to %# and starting a new one", source, string( reason ), destination );
+        SW_LOG_ERROR_ID( "EditorUserFile.UserFileBrokenMoved", "User file %# is broken (%#) - moved it to %# and starting a new one", source.str(), string( reason ), destination.str() );
         return true;
     }
 } // namespace sw::editor

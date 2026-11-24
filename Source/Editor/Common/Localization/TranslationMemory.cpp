@@ -70,12 +70,12 @@ namespace sw
         return {};
     }
 
-    expected<void> TranslationMemory::loadFromFile( string_view absolutePath )
+    expected<void> TranslationMemory::loadFromFile( const AbsolutePath& absolutePath )
     {
         string text;
-        if ( FileUtil::readTextFile( FileUtil::toDiskPath( absolutePath ), text ) == false )
-            return unexpected( Error{ ErrorKind::NotFound, "cannot read the file", absolutePath } );
-        return loadFromXMLText( text, absolutePath );
+        if ( FileUtil::readTextFile( absolutePath, text ) == false )
+            return unexpected( Error{ ErrorKind::NotFound, "cannot read the file", absolutePath.str() } );
+        return loadFromXMLText( text, absolutePath.str() );
     }
 
     string TranslationMemory::saveToXMLText() const
@@ -93,15 +93,15 @@ namespace sw
         return document.saveToString();
     }
 
-    bool TranslationMemory::saveToFile( string_view absolutePath ) const
+    bool TranslationMemory::saveToFile( const AbsolutePath& absolutePath ) const
     {
         // 정체성 머리는 있던 파일의 것을 옮겨 쓴다(문서를 통째로 다시 쓰면 잃는다).
         string       existing;
-        const bool   bExisting = FileUtil::readOptionalTextFile( FileUtil::toDiskPath( absolutePath ), existing ) == OptionalFileRead::Read;
+        const bool   bExisting = FileUtil::readOptionalTextFile( absolutePath, existing ) == OptionalFileRead::Read;
         const string text      = bExisting ? AssetGUIDHeader::carryOver( existing, saveToXMLText() ) : saveToXMLText();
         if ( bExisting && existing == text )
             return true;
-        return FileUtil::ensureParentDirectoryExists( FileUtil::toDiskPath( absolutePath ) ) && FileUtil::writeTextFile( FileUtil::toDiskPath( absolutePath ), text );
+        return FileUtil::ensureParentDirectoryExists( absolutePath ) && FileUtil::writeTextFile( absolutePath, text );
     }
 
     bool TranslationMemory::addPair( string_view source, string_view text )

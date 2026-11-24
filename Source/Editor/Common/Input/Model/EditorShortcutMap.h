@@ -9,6 +9,7 @@
 #include "Core/Container/vector.h"
 #include "Core/Foundation/Types.h"
 #include "Core/Name/hashed_string.h"
+#include "Core/Path/AbsolutePath.h"
 
 #include "Editor/Common/EditorExports.h"
 #include "Editor/Common/EditorExtensionRegistry.h"
@@ -112,7 +113,7 @@ namespace sw::editor
         /** @brief 기본과 다른 액션 수입니다(감시 값 `Editor.ShortcutOverrideCount`). */
         uint32 countModifiedShortcuts() const;
         /** @brief 사용자 재배치 파일 경로입니다(`Saved/Editor/editorbindings.xml`). */
-        static string getUserBindingsPath();
+        static AbsolutePath getUserBindingsPath();
 
     private:
         /** @brief 기본 맵을 다시 읽고, 확장 맵을 더하고, 같은 레이어 겹침을 검사하고, 사용자 재배치를 입힙니다. 실패하면 false 입니다. */

@@ -526,7 +526,7 @@ namespace sw::editor
                 if ( ImGui::Selectable( entry._fileName.c_str(), bSelected ) && bSelected == false )
                 {
                     // 콘텐츠 브라우저와 같은 길 — 리소스 id 로 바꿔 문서 열기(포커스)로 넘기고, 다음 그리기의 `updateFocusedDocument` 가 연다.
-                    const string assetID = DataTableViewModel::makeGameDataAssetID( entry._absolutePath );
+                    const string assetID = DataTableViewModel::makeGameDataAssetID( FileUtil::toDiskPath( entry._absolutePath ) );
                     if ( assetID.empty() == false )
                         requestOpenDocument( assetID );
                 }

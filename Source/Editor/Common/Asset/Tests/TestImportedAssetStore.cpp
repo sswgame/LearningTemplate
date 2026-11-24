@@ -95,8 +95,8 @@ SW_TEST_CASE( ImportedAssetStoreTest, ClipSettingsTextIgnoresOtherRuleProperties
 SW_TEST_CASE( ImportedAssetStoreTest, WriteIfAbsentSharesAndRefusesOtherBytes )
 {
     const AbsolutePath root = test::makeScratchPath( "ImportedAssetStore" );
-    const string       path = ImportedAssetStore::makeStorePath( root.str(), "clips", "aaaa", ".animclip" );
-    SW_EXPECT_TRUE( StringUtil::endsWith( path, "/models/_shared/clips/aaaa.animclip" ) );
+    const AbsolutePath path = ImportedAssetStore::makeStorePath( root.str(), "clips", "aaaa", ".animclip" );
+    SW_EXPECT_TRUE( StringUtil::endsWith( path.str(), "/models/_shared/clips/aaaa.animclip" ) );
     const string bytes = "first";
     SW_REQUIRE_TRUE( ImportedAssetStore::writeIfAbsent( path, bytes.data(), bytes.size() ) );
     SW_EXPECT_TRUE( ImportedAssetStore::writeIfAbsent( path, bytes.data(), bytes.size() ) );
@@ -104,7 +104,7 @@ SW_TEST_CASE( ImportedAssetStoreTest, WriteIfAbsentSharesAndRefusesOtherBytes )
     SW_EXPECT_LOG( "ImportedAssetStore.ContentMismatch" );
     SW_EXPECT_FALSE( ImportedAssetStore::writeIfAbsent( path, other.data(), other.size() ) );
     string text;
-    SW_REQUIRE_TRUE( FileUtil::readTextFile( FileUtil::toDiskPath( path ), text ) );
+    SW_REQUIRE_TRUE( FileUtil::readTextFile( path, text ) );
     SW_EXPECT_EQUAL( bytes, text );
     SW_EXPECT_TRUE( FileUtil::removeDirectory( root ) );
 }
@@ -204,8 +204,8 @@ SW_TEST_CASE( ImportedAssetStoreTest, ReferencesAreFoundAndMixedIntoTheHash )
     const AbsolutePath two     = root.join( "common/models/_shared/clips/bbbb.animclip" );
     const AbsolutePath mesh    = root.join( "common/models/knight.mesh" );
     const string       content = "bytes";
-    SW_REQUIRE_TRUE( ImportedAssetStore::writeIfAbsent( one.str(), content.data(), content.size() ) );
-    SW_REQUIRE_TRUE( ImportedAssetStore::writeIfAbsent( two.str(), content.data(), content.size() ) );
+    SW_REQUIRE_TRUE( ImportedAssetStore::writeIfAbsent( one, content.data(), content.size() ) );
+    SW_REQUIRE_TRUE( ImportedAssetStore::writeIfAbsent( two, content.data(), content.size() ) );
     const uint64 before = ImportedAssetStore::mixReferencedFiles( mesh.str(), text, 1 );
     SW_EXPECT_EQUAL( before, ImportedAssetStore::mixReferencedFiles( mesh.str(), text, 1 ) );
     SW_REQUIRE_TRUE( FileUtil::removeFile( two ) );
@@ -222,14 +222,14 @@ SW_TEST_CASE( ImportedAssetStoreTest, RemovesOnlyUnreferencedFiles )
     const AbsolutePath kept    = root.join( "common/models/_shared/clips/aaaa.animclip" );
     const AbsolutePath stale   = root.join( "common/models/_shared/clips/bbbb.animclip" );
     const string       content = "bytes";
-    SW_REQUIRE_TRUE( ImportedAssetStore::writeIfAbsent( kept.str(), content.data(), content.size() ) );
-    SW_REQUIRE_TRUE( ImportedAssetStore::writeIfAbsent( stale.str(), content.data(), content.size() ) );
+    SW_REQUIRE_TRUE( ImportedAssetStore::writeIfAbsent( kept, content.data(), content.size() ) );
+    SW_REQUIRE_TRUE( ImportedAssetStore::writeIfAbsent( stale, content.data(), content.size() ) );
     const AbsolutePath setPath = root.join( "common/models/knight/knight.animset.xml" );
     SW_REQUIRE_TRUE( FileUtil::ensureParentDirectoryExists( setPath ) );
     SW_REQUIRE_TRUE( FileUtil::writeTextFile( setPath, R"(<AnimationSet formatVersion="0"><clip name="a" path="common/models/_shared/clips/aaaa.animclip"/></AnimationSet>)" ) );
 
     vector<string> listProblem;
-    SW_EXPECT_EQUAL( uint32{ 1 }, ImportedAssetStore::removeUnreferenced( root.str(), listProblem ) );
+    SW_EXPECT_EQUAL( uint32{ 1 }, ImportedAssetStore::removeUnreferenced( root, listProblem ) );
     SW_EXPECT_TRUE( listProblem.empty() );
     SW_EXPECT_TRUE( FileUtil::exists( kept ) );
     SW_EXPECT_FALSE( FileUtil::exists( stale ) );
@@ -246,8 +246,8 @@ SW_TEST_CASE( ImportedAssetStoreTest, SharedTextureSourceUsesRuleInItsFolder )
         "rules": [ { "name": "Normal_Maps", "format": "BC5", "sRGB": false, "filter": { "includePatterns": ["*_normal.*"] } },
                    { "name": "Vrm_Character", "format": "BC3", "filter": { "includePatterns": ["**/textures_raw/avatar/**"] } } ]
     })" ) );
-    const string normalPath = TextureImportConfig::makeSharedSourcePath( "game/x", "Normal_Maps", "aaaa", ".png" );
-    const string colorPath  = TextureImportConfig::makeSharedSourcePath( "game/x", "Vrm_Character", "aaaa", ".png" );
+    const string normalPath = TextureImportConfig::makeSharedSourcePath( "game/x", "Normal_Maps", "aaaa", ".png" ).str();
+    const string colorPath  = TextureImportConfig::makeSharedSourcePath( "game/x", "Vrm_Character", "aaaa", ".png" ).str();
     SW_EXPECT_EQUAL( string( "game/x/textures_raw/_shared/normal_maps/aaaa.png" ), normalPath );
     SW_EXPECT_TRUE( normalPath != colorPath );
     SW_EXPECT_EQUAL( string( "normal_maps" ), TextureImportConfig::findSharedRuleName( normalPath ) );
@@ -258,10 +258,10 @@ SW_TEST_CASE( ImportedAssetStoreTest, SharedTextureSourceUsesRuleInItsFolder )
     SW_EXPECT_TRUE( normal._rule._format == TextureImportFormat::BC5 );
     const TextureImportRuleMatch color = config.findMatchingRule( colorPath );
     SW_EXPECT_TRUE( color._rule._format == TextureImportFormat::BC3 );
-    const TextureImportRuleMatch none = config.findMatchingRule( TextureImportConfig::makeSharedSourcePath( "game/x", {}, "aaaa", ".png" ) );
+    const TextureImportRuleMatch none = config.findMatchingRule( TextureImportConfig::makeSharedSourcePath( "game/x", {}, "aaaa", ".png" ).str() );
     SW_EXPECT_FALSE( none._bMatched ); // 설정 파일이 없을 때 고른 기본 규칙
     SW_EXPECT_FALSE( none.hasError() );
-    SW_EXPECT_TRUE( config.findMatchingRule( TextureImportConfig::makeSharedSourcePath( "game/x", "gone", "aaaa", ".png" ) ).hasError() );
+    SW_EXPECT_TRUE( config.findMatchingRule( TextureImportConfig::makeSharedSourcePath( "game/x", "gone", "aaaa", ".png" ).str() ).hasError() );
 }
 
 /**
@@ -272,24 +272,24 @@ SW_TEST_CASE( ImportedAssetStoreTest, ResultsCarryNoIdentityAndContentAddressedS
     const test::EditorScratchDomain domain;
     const AssetPaths&               assetPaths   = editor::getSubsystem<AssetPaths>();
     const AbsolutePath              skeletonPath = domain.makeDiskPath( "models/knight/knight.skeleton.xml" );
-    SW_REQUIRE_TRUE( ImportedAssetStore::writeResultText( skeletonPath.str(), R"(<Skeleton formatVersion="0"/>)" ) );
+    SW_REQUIRE_TRUE( ImportedAssetStore::writeResultText( skeletonPath, R"(<Skeleton formatVersion="0"/>)" ) );
     string text;
     SW_REQUIRE_TRUE( FileUtil::readTextFile( skeletonPath, text ) );
     SW_EXPECT_TRUE( AssetGUIDHeader::read( text )._state == AssetGUIDHeaderState::Missing );
 
     const AbsolutePath  imagePath = domain.makeDiskPath( "textures_raw/_shared/albedo/00ff00ff00ff00ff.png" );
     const vector<uint8> bytes{ 1, 2, 3 };
-    SW_REQUIRE_TRUE( ImportedAssetStore::writeSourceIfAbsent( assetPaths, imagePath.str(), bytes.data(), bytes.size() ) );
+    SW_REQUIRE_TRUE( ImportedAssetStore::writeSourceIfAbsent( assetPaths, imagePath, bytes.data(), bytes.size() ) );
     SW_REQUIRE_TRUE( FileUtil::readTextFile( AssetMeta::makePath( imagePath ), text ) );
     AssetMeta                 meta;
     const optional<AssetGUID> guid = meta.parseXML( text, "00ff00ff00ff00ff.png.meta" );
     SW_REQUIRE_TRUE( guid.has_value() );
-    SW_EXPECT_TRUE( *guid == AssetGUID::fromName( assetPaths.toAssetID( imagePath.str() ) ) );
+    SW_EXPECT_TRUE( *guid == AssetGUID::fromName( assetPaths.toAssetID( imagePath ) ) );
 
     // 이미 있는 서술은 그대로다 — 다시 임포트해도 정체성이 바뀌지 않는다.
     const string kept = AssetMeta::makeText( "00ff00ff00ff00ff.png", AssetGUID::create() );
     SW_REQUIRE_TRUE( FileUtil::writeTextFile( AssetMeta::makePath( imagePath ), kept ) );
-    SW_REQUIRE_TRUE( ImportedAssetStore::writeSourceIfAbsent( assetPaths, imagePath.str(), bytes.data(), bytes.size() ) );
+    SW_REQUIRE_TRUE( ImportedAssetStore::writeSourceIfAbsent( assetPaths, imagePath, bytes.data(), bytes.size() ) );
     SW_REQUIRE_TRUE( FileUtil::readTextFile( AssetMeta::makePath( imagePath ), text ) );
     SW_EXPECT_EQUAL( kept, text );
 }

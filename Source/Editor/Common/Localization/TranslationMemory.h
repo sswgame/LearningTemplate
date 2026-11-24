@@ -12,6 +12,7 @@
 #include "Core/Foundation/Expected.h"
 #include "Core/Foundation/Macros.h"
 #include "Core/Foundation/Types.h"
+#include "Core/Path/AbsolutePath.h"
 
 #include "Editor/Common/EditorExports.h"
 
@@ -51,9 +52,9 @@ namespace sw
         /** @brief 글을 읽습니다. 틀리면 그 까닭이고 내용은 그대로입니다. */
         [[nodiscard]] expected<void> loadFromXMLText( string_view xmlText, string_view sourceName );
         /** @brief 파일을 읽습니다. 못 읽거나 틀리면 그 까닭입니다. */
-        [[nodiscard]] expected<void> loadFromFile( string_view absolutePath );
+        [[nodiscard]] expected<void> loadFromFile( const AbsolutePath& absolutePath );
         string                       saveToXMLText() const;
-        [[nodiscard]] bool           saveToFile( string_view absolutePath ) const;
+        [[nodiscard]] bool           saveToFile( const AbsolutePath& absolutePath ) const;
 
         /** @brief 쌍을 넣습니다(같은 원문이면 번역을 바꿉니다). 바뀌었으면 true 입니다. */
         bool addPair( string_view source, string_view text );

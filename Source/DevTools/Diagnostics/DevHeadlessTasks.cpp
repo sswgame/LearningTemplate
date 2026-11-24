@@ -153,7 +153,7 @@ namespace sw
                 string                                  lipSyncOutputDir;       // 비면 음성 곁(소스 트리)
                 (void)context._commandLine.getArgument( CommandLineArgument::LIPSYNC_DIR, lipSyncOutputDir );
                 if ( pLipSyncSettings != nullptr )
-                    lipSyncCount = LipSyncImport::importAll( FileUtil::toDiskPath( engine::getSubsystem<AssetPaths>().getRootFolderPath() ), lipSyncOutputDir, *pLipSyncSettings, lipSyncFailedCount );
+                    lipSyncCount = LipSyncImport::importAll( engine::getSubsystem<AssetPaths>().getRootFolderPath(), lipSyncOutputDir, *pLipSyncSettings, lipSyncFailedCount );
                 else
                     ++lipSyncFailedCount;
                 SW_LOG_INFO_ID( "Headless.ImportedVisemeTracksFailures", "Imported %# viseme tracks (%# failures).", lipSyncCount, lipSyncFailedCount );

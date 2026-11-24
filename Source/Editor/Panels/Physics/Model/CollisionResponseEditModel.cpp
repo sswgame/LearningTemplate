@@ -43,10 +43,10 @@ namespace sw::editor
     {
     }
 
-    ToolAssetLoadResult CollisionResponseEditModel::loadDocument( string_view diskPath )
+    ToolAssetLoadResult CollisionResponseEditModel::loadDocument( const AbsolutePath& diskPath )
     {
         string text;
-        if ( FileUtil::readTextFile( FileUtil::toDiskPath( diskPath ), text ) == false )
+        if ( FileUtil::readTextFile( diskPath, text ) == false )
         {
             _status = "The physics settings file could not be read";
             return ToolAssetLoadResult::Missing;
@@ -61,9 +61,9 @@ namespace sw::editor
         return acceptText( string( text ) );
     }
 
-    bool CollisionResponseEditModel::saveDocument( string_view diskPath )
+    bool CollisionResponseEditModel::saveDocument( const AbsolutePath& diskPath )
     {
-        if ( FileUtil::writeTextFile( FileUtil::toDiskPath( diskPath ), _text ) == false )
+        if ( FileUtil::writeTextFile( diskPath, _text ) == false )
         {
             _status = "Not saved: the file could not be written (see the log)";
             return false;

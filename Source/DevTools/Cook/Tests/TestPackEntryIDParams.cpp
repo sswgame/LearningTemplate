@@ -126,13 +126,13 @@ SW_TEST_CASE( PackEntryIDPropertiesTest, EveryFieldHoldingAnEntryIDIsListed )
     PackConfig config;
     SW_REQUIRE_TRUE( ConfigManager::readConfigFile( config, FileUtil::joinPath( ProcessRoots::get()._project.str(), PackConfig::kConfigPath ) ) == ConfigReadResult::Loaded );
     // 쿠커와 같이 모든 게임 프리셋의 규칙을 엔진 규칙 뒤에 합친다 — 게임만 쓰는 칸(`_listVillagerPreset`)은 그 게임 설정에 있다.
-    const AbsolutePath gameConfigFolder = ProcessRoots::get()._project.join( GameConfig::kConfigFolder );
-    vector<string>     listGameConfig;
+    const AbsolutePath   gameConfigFolder = ProcessRoots::get()._project.join( GameConfig::kConfigFolder );
+    vector<AbsolutePath> listGameConfig;
     SW_REQUIRE_TRUE( FileUtil::collectFiles( gameConfigFolder, ".json", listGameConfig, false ) );
-    for ( const string& gameConfigPath : listGameConfig )
+    for ( const AbsolutePath& gameConfigPath : listGameConfig )
     {
         GameConfig gameConfig;
-        SW_REQUIRE_TRUE( ConfigManager::readConfigFile( gameConfig, gameConfigPath ) == ConfigReadResult::Loaded );
+        SW_REQUIRE_TRUE( ConfigManager::readConfigFile( gameConfig, gameConfigPath.str() ) == ConfigReadResult::Loaded );
         config._cookRules.mergeGameRules( gameConfig._packRoot.get(), gameConfig._cookRules );
     }
     const PackCookRules& rules = config._cookRules;
@@ -144,8 +144,8 @@ SW_TEST_CASE( PackEntryIDPropertiesTest, EveryFieldHoldingAnEntryIDIsListed )
     const JSONValue listExempt = exemptionDoc.getRoot().get( "listExempt" );
     SW_REQUIRE_TRUE( listExempt.isArray() );
 
-    const AbsolutePath contentRoot = ProcessRoots::get()._content;
-    vector<string>     listFile;
+    const AbsolutePath   contentRoot = ProcessRoots::get()._content;
+    vector<AbsolutePath> listFile;
     SW_REQUIRE_TRUE( FileUtil::collectFiles( contentRoot, "", listFile, true ) );
 
     // 카탈로그 줄마다 항목 id 를 모은다.
@@ -153,17 +153,17 @@ SW_TEST_CASE( PackEntryIDPropertiesTest, EveryFieldHoldingAnEntryIDIsListed )
     for ( const PackEntryCatalog& rule : rules._listEntryCatalog )
     {
         uint32 entryCount = 0;
-        for ( const string& file : listFile )
+        for ( const AbsolutePath& file : listFile )
         {
-            const string                             normalized = FileUtil::normalizeSeparators( file );
+            const AbsolutePath                       normalized = file;
             StringBuilder<constant::buffer::kMax256> suffix;
             suffix.appendFormat( "/%#", rule._path );
-            if ( StringUtil::endsWith( normalized, suffix.view() ) == false )
+            if ( StringUtil::endsWith( normalized.str(), suffix.view() ) == false )
                 continue;
             string      text;
             XMLDocument doc;
-            SW_REQUIRE_TRUE( FileUtil::readTextFile( FileUtil::toDiskPath( normalized ), text ) );
-            SW_REQUIRE_TRUE( doc.parse( text, normalized ) );
+            SW_REQUIRE_TRUE( FileUtil::readTextFile( normalized, text ) );
+            SW_REQUIRE_TRUE( doc.parse( text, normalized.str() ) );
             for ( XMLNode entry = doc.getRoot().findChild( rule._entryElement.c_str() ); entry.isValid(); entry = entry.findNextSibling( rule._entryElement.c_str() ) )
             {
                 const string_view id = entry.getAttributeText( rule._idAttribute.c_str() );
@@ -200,19 +200,19 @@ SW_TEST_CASE( PackEntryIDPropertiesTest, EveryFieldHoldingAnEntryIDIsListed )
 
     // 쿠킹하는 데이터의 모든 칸을 본다.
     uint32 scannedCount = 0;
-    for ( const string& file : listFile )
+    for ( const AbsolutePath& file : listFile )
     {
-        const string normalized = FileUtil::normalizeSeparators( file );
-        if ( StringUtil::endsWith( normalized, ".xml" ) == false || StringUtil::startsWith( normalized, contentRoot.str() ) == false )
+        const AbsolutePath normalized = file;
+        if ( StringUtil::endsWith( normalized.str(), ".xml" ) == false || StringUtil::startsWith( normalized.str(), contentRoot.str() ) == false )
             continue;
-        string_view relativePath = string_view( normalized ).substr( contentRoot.str().size() );
+        string_view relativePath = string_view( normalized.str() ).substr( contentRoot.str().size() );
         if ( relativePath.empty() == false && relativePath.front() == '/' )
             relativePath.remove_prefix( 1 );
         if ( Util::isSkipped( relativePath ) )
             continue;
         string      text;
         XMLDocument doc;
-        if ( FileUtil::readTextFile( FileUtil::toDiskPath( normalized ), text ) == false || doc.parse( text, normalized ) == false || doc.getRoot().isValid() == false )
+        if ( FileUtil::readTextFile( normalized, text ) == false || doc.parse( text, normalized.str() ) == false || doc.getRoot().isValid() == false )
             continue; // 읽지 못하는 글은 런타임 검증의 몫이다
         scan._relativePath = string( relativePath );
         scan._pRule        = Util::findRule( rules, relativePath );

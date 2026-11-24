@@ -10,6 +10,7 @@
 #include "Core/Container/string.h"
 #include "Core/Container/vector.h"
 #include "Core/Foundation/Types.h"
+#include "Core/Path/AbsolutePath.h"
 #include "Core/Process/Process.h"
 
 namespace sw
@@ -26,6 +27,6 @@ namespace sw
          * @brief 엔진 실행 파일 @p executablePath 를 @p listArgument 로 띄우는 명령입니다. @p parent 가 자동화 실행이면 `-unattended` 를 더합니다(이미 있으면 그대로).
          * @return 경로가 절대 경로가 아니면 빈 명령입니다 — 띄우기가 실패로 알린다.
          */
-        [[nodiscard]] static ProcessCommand makeCommand( const CommandLineManager& parent, string_view executablePath, vector<string> listArgument );
+        [[nodiscard]] static ProcessCommand makeCommand( const CommandLineManager& parent, const AbsolutePath& executablePath, vector<string> listArgument );
     };
 } // namespace sw

@@ -337,8 +337,8 @@ SW_TEST_CASE( RenderPipelineAssetTest, ChildPipelineMergesItsBase )
 /** @brief [RenderPipelineAssetTest] 쿠킹이 펼친 글은 원본을 합쳐 읽은 것과 같은 값이고, 부모를 가리키지 않는다(팩 쿠커의 펼치기와 같은 함수) */
 SW_TEST_CASE( RenderPipelineAssetTest, CookedFlatTextReadsLikeTheSource )
 {
-    const string&   contentRoot = engine::getSubsystem<AssetPaths>().getRootFolderPath();
-    const TypeInfo& typeInfo    = *RenderPipelineDesc::StaticType();
+    const AbsolutePath& contentRoot = engine::getSubsystem<AssetPaths>().getRootFolderPath();
+    const TypeInfo&     typeInfo    = *RenderPipelineDesc::StaticType();
     for ( const utf8* pID : { "engine/pipeline/forwardtoonpipeline.xml", "engine/pipeline/forwardprepasspipeline.xml", "engine/pipeline/forward2dpipeline.xml", "engine/pipeline/forwardpipelinestaged.xml",
                               "game/playground/pipeline/extensionpasspipeline.xml", "game/playground/pipeline/geometrystagepipeline.xml", "game/playground/pipeline/computepasspipeline.xml" } )
     {
@@ -346,7 +346,7 @@ SW_TEST_CASE( RenderPipelineAssetTest, CookedFlatTextReadsLikeTheSource )
         SW_REQUIRE_TRUE( AssetIO::readTextAsset( AssetID{ pID }, sourceText ) );
         SW_EXPECT_FALSE( DataInheritance::findBasePath( sourceText ).empty() );
 
-        DataInheritanceDiskSource source{ FileUtil::toDiskPath( contentRoot ), 8u }; // 설정(`EngineConfig.json`)과 같은 깊이 상한
+        DataInheritanceDiskSource source{ contentRoot, 8u }; // 설정(`EngineConfig.json`)과 같은 깊이 상한
         string                    flatText;
         bool                      bComposed = false;
         SW_REQUIRE_TRUE( ResourceComposer::compose( sourceText, pID, ResourceContext::forPackCook( source ), flatText, bComposed ) );

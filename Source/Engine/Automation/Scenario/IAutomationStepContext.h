@@ -104,7 +104,7 @@ namespace sw
         [[nodiscard]] virtual bool restoreFilesNow() = 0;
 
         /** @brief 이 시나리오의 산출물 폴더입니다. */
-        virtual const string& getOutputDirectory() const = 0;
+        virtual const AbsolutePath& getOutputDirectory() const = 0;
         /** @brief 상대 경로면 산출물 폴더 아래로 둡니다(단계가 파일을 쓸 때). */
         virtual AbsolutePath resolveOutputPath( string_view file ) const = 0;
         /** @brief 지금 시나리오 프레임(시작 전이면 0)입니다. */

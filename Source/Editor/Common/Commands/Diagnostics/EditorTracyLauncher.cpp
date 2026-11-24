@@ -41,19 +41,19 @@ namespace sw::editor
         const optional<AbsolutePath> resolved = AbsolutePath::tryResolve( configuredPath, projectRoot );
         if ( resolved.has_value() == false )
             return false;
-        const string& place = resolved->str();
+        const AbsolutePath place = *resolved;
         // 폴더를 가리키면 그 안의 실행 파일, 파일을 가리키면 그대로. 폴더를 먼저 본다 — `exists` 는 폴더에도 true 다.
-        if ( FileUtil::isDirectory( FileUtil::toDiskPath( place ) ) )
+        if ( FileUtil::isDirectory( place ) )
         {
-            const string inFolder = FileUtil::joinPath( place, getViewerFileName() );
-            if ( FileUtil::exists( FileUtil::toDiskPath( inFolder ) ) == false )
+            const AbsolutePath inFolder = place.join( getViewerFileName() );
+            if ( FileUtil::exists( inFolder ) == false )
                 return false;
-            outPath = inFolder;
+            outPath = inFolder.str();
             return true;
         }
-        if ( FileUtil::exists( FileUtil::toDiskPath( place ) ) == false )
+        if ( FileUtil::exists( place ) == false )
             return false;
-        outPath = place;
+        outPath = place.str();
         return true;
     }
 

@@ -14,7 +14,7 @@ SW_TEST_CASE( LocalPlatformServicesTest, ProgressSurvivesARestart )
 {
     const AbsolutePath folder = test::makeScratchPath( "local_platform" );
     {
-        LocalPlatformServices platform( folder.str() );
+        LocalPlatformServices platform( folder );
         SW_EXPECT_TRUE( platform.unlockAchievement( "first_blood" ) );
         SW_EXPECT_TRUE( platform.unlockAchievement( "first_blood" ) );
         SW_EXPECT_TRUE( platform.unlockAchievement( "long run" ) );
@@ -22,7 +22,7 @@ SW_TEST_CASE( LocalPlatformServicesTest, ProgressSurvivesARestart )
         SW_EXPECT_TRUE( platform.setStat( "kills", -3 ) );
         platform.update();
     }
-    const LocalPlatformServices restarted( folder.str() );
+    const LocalPlatformServices restarted( folder );
     SW_REQUIRE_EQUAL( size_t{ 2 }, restarted.getUnlockedAchievements().size() );
     SW_EXPECT_EQUAL( string( "first_blood" ), restarted.getUnlockedAchievements()[0] );
     SW_EXPECT_EQUAL( string( "long run" ), restarted.getUnlockedAchievements()[1] );
@@ -33,7 +33,7 @@ SW_TEST_CASE( LocalPlatformServicesTest, ProgressSurvivesARestart )
 /** @brief [LocalPlatformServicesTest] 다음 실행이 다른 이름 · 값으로 읽을 글(빈 이름 · 줄바꿈 · `=` · 앞뒤 공백)은 거절한다 */
 SW_TEST_CASE( LocalPlatformServicesTest, RefusesTextThatReadsBackDifferently )
 {
-    LocalPlatformServices platform( test::makeScratchPath( "local_platform" ).str() );
+    LocalPlatformServices platform( test::makeScratchPath( "local_platform" ) );
     SW_EXPECT_FALSE( platform.unlockAchievement( "" ) );
     SW_EXPECT_FALSE( platform.unlockAchievement( "a\nb" ) );
     SW_EXPECT_FALSE( platform.unlockAchievement( " padded" ) );
@@ -48,7 +48,7 @@ SW_TEST_CASE( LocalPlatformServicesTest, RefusesTextThatReadsBackDifferently )
 /** @brief [LocalPlatformServicesTest] 클라우드 파일은 왕복하고, 폴더 밖 · 드라이브 · 대체 스트림을 가리키는 이름은 읽기 · 쓰기 모두 거절한다 */
 SW_TEST_CASE( LocalPlatformServicesTest, CloudFilesStayInTheFolder )
 {
-    LocalPlatformServices platform( test::makeScratchPath( "local_platform" ).str() );
+    LocalPlatformServices platform( test::makeScratchPath( "local_platform" ) );
     const vector<uint8>   bytes{ 1, 2, 3 };
     vector<uint8>         read{ 9 };
     SW_EXPECT_FALSE( platform.readCloudFile( "save.bin", read ) );
@@ -74,7 +74,7 @@ SW_TEST_CASE( LocalPlatformServicesTest, ReadsDamagedLinesWithoutGuessing )
     SW_REQUIRE_TRUE( FileUtil::ensureDirectoryExists( folder ) );
     SW_REQUIRE_TRUE( FileUtil::writeTextFile( folder.join( LocalPlatformServices::kStatsFileName ), "kills=abc\n=5\nnoequals\nwins=7\r\n" ) );
     SW_REQUIRE_TRUE( FileUtil::writeTextFile( folder.join( LocalPlatformServices::kAchievementsFileName ), "one\n\n one \r\ntwo" ) );
-    const LocalPlatformServices platform( folder.str() );
+    const LocalPlatformServices platform( folder );
     SW_EXPECT_EQUAL( int64{ 0 }, platform.getStat( "kills" ) );
     SW_EXPECT_EQUAL( int64{ 7 }, platform.getStat( "wins" ) );
     SW_REQUIRE_EQUAL( size_t{ 2 }, platform.getUnlockedAchievements().size() );

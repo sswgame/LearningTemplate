@@ -33,7 +33,7 @@ namespace sw
             static constexpr size_t kMinCacheEntryBytes = 28;
 
             /** @brief 파일을 조각으로 읽어 해시를 구하고 읽은 바이트를 @p inoutByteCount 에 더합니다(캐시 밖 본체). 못 읽으면 0 입니다. */
-            static uint64 readFileHash( string_view absPath, atomic<uint64>& inoutByteCount )
+            static uint64 readFileHash( const AbsolutePath& absPath, atomic<uint64>& inoutByteCount )
             {
                 uint64                 byteCount = 0;
                 const expected<uint64> hash      = ContentHash::computeFileStream( absPath, &byteCount );
@@ -63,17 +63,17 @@ namespace sw
         return HashUtil::appendBytes64( state, pData, size );
     }
 
-    expected<uint64> ContentHash::computeFileStream( string_view absPath, uint64* pOutByteCount )
+    expected<uint64> ContentHash::computeFileStream( const AbsolutePath& absPath, uint64* pOutByteCount )
     {
         uint64 fileSize = 0;
-        if ( FileUtil::tryGetFileSize( FileUtil::toDiskPath( absPath ), fileSize ) == false )
-            return unexpected( Error{ ErrorKind::NotFound, "file cannot be sized for its content hash", absPath } );
+        if ( FileUtil::tryGetFileSize( absPath, fileSize ) == false )
+            return unexpected( Error{ ErrorKind::NotFound, "file cannot be sized for its content hash", absPath.str() } );
         uint64        state = kInitialState;
         vector<uint8> chunk;
         for ( uint64 offset = 0; offset < fileSize; offset += kStreamChunkBytes )
         {
-            if ( FileUtil::readFile( FileUtil::toDiskPath( absPath ), chunk, offset, kStreamChunkBytes ) == false || chunk.empty() )
-                return unexpected( Error{ ErrorKind::ExternalFailure, "file cannot be read for its content hash", absPath } );
+            if ( FileUtil::readFile( absPath, chunk, offset, kStreamChunkBytes ) == false || chunk.empty() )
+                return unexpected( Error{ ErrorKind::ExternalFailure, "file cannot be read for its content hash", absPath.str() } );
             state = appendBytes( state, chunk.data(), chunk.size() );
             if ( pOutByteCount != nullptr )
                 *pOutByteCount += chunk.size();
@@ -157,7 +157,7 @@ namespace sw
             }
         }
 
-        const uint64 hash = ContentHashInternal::readFileHash( absPath.str(), _hashedByteCount );
+        const uint64 hash = ContentHashInternal::readFileHash( absPath, _hashedByteCount );
         // 자기 쓰기도 시간 창이 지나야 남긴다 — 쓴 그 틱에 바깥 도구가 같은 크기로 다시 쓰면 도장으로 알 길이 없다(두 프로세스의 순서 없는 경합).
         if ( bStamped == false || hash == 0 || ContentHash::isStampStable( stamp ) == false )
             return hash;

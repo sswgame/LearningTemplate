@@ -70,7 +70,7 @@ namespace sw::editor
             /** @brief 마지막으로 `asset.open` 한 임시 에셋의 상태입니다. 감시 값 `Editor.TempAssetExists` 가 읽는다. 에디터 범위의 상태 저장소가 소유한다. */
             struct TempAssetState
             {
-                string _lastPath{}; ///< 마지막으로 연 임시 에셋의 절대 경로. 연 적이 없으면 비어 있다
+                AbsolutePath _lastPath{}; ///< 마지막으로 연 임시 에셋의 절대 경로. 연 적이 없으면 비어 있다
             };
 
             /**
@@ -82,7 +82,7 @@ namespace sw::editor
                 string absolutePath;
                 if ( DevCommandRegistry::readDiskPathArgument( path, absolutePath, outReply ) == false )
                     return false;
-                const string automationFolder = makeAutomationOutputFolderPath();
+                const string automationFolder = makeAutomationOutputFolderPath().str();
                 if ( FileUtil::isPathAtOrUnderRoot( automationFolder, absolutePath ) == false )
                 {
                     StringBuilder<constant::buffer::kMax256> replyBuilder;
@@ -90,7 +90,7 @@ namespace sw::editor
                     outReply = string( replyBuilder.view() );
                     return false;
                 }
-                const string& resourceRoot = editor::getSubsystem<AssetPaths>().getRootFolderPath();
+                const string& resourceRoot = editor::getSubsystem<AssetPaths>().getRootFolderPath().str();
                 if ( resourceRoot.empty() == false && FileUtil::isPathAtOrUnderRoot( resourceRoot, absolutePath ) )
                 {
                     StringBuilder<constant::buffer::kMax256> replyBuilder;
@@ -123,7 +123,7 @@ namespace sw::editor
                     outReply = string( replyBuilder.view() );
                     return false;
                 }
-                getEditorState<TempAssetState>()._lastPath = absolutePath;
+                getEditorState<TempAssetState>()._lastPath = FileUtil::toDiskPath( absolutePath );
                 StringBuilder<constant::buffer::kMax256> replyBuilder;
                 replyBuilder.appendFormat( "opening %#", absolutePath );
                 outReply = string( replyBuilder.view() );
@@ -373,7 +373,7 @@ namespace sw::editor
                     return unexpected( Error{ ErrorKind::NotFound, "no scratch asset (does the scenario declare <Scratch>?)", listArgument[0] } );
                 if ( destinationPath.has_value() == false )
                     return unexpected( Error{ ErrorKind::NotFound, "the destination id has no disk place", listArgument[1] } );
-                return EditorAssetMove{ sourcePath->str(), destinationPath->str() };
+                return EditorAssetMove{ *sourcePath, *destinationPath };
             }
 
             /**
@@ -574,7 +574,7 @@ namespace sw::editor
                     outReply = string( replyBuilder.view() );
                     return false;
                 }
-                if ( EditorAssetFileCommands::replaceAssetContent( targetPath->str(), sourcePath ) == false )
+                if ( EditorAssetFileCommands::replaceAssetContent( *targetPath, FileUtil::toDiskPath( sourcePath ) ) == false )
                 {
                     StringBuilder<constant::buffer::kMax256> replyBuilder;
                     replyBuilder.appendFormat( "could not replace '%#'", targetID );
@@ -622,8 +622,8 @@ namespace sw::editor
             /** @brief 마지막 `asset.open` 의 파일이 디스크에 있으면 1 입니다. 연 적이 없으면 0 입니다. */
             [[nodiscard]] static bool readTempAssetExists( const GameObjectManager* /*pManager*/, float64& outValue )
             {
-                const string& path = getEditorState<TempAssetState>()._lastPath;
-                outValue           = ( path.empty() == false && FileUtil::exists( FileUtil::toDiskPath( path ) ) ) ? 1.0 : 0.0;
+                const AbsolutePath& path = getEditorState<TempAssetState>()._lastPath;
+                outValue                 = ( path.empty() == false && FileUtil::exists( path ) ) ? 1.0 : 0.0;
                 return true;
             }
 
@@ -664,7 +664,7 @@ namespace sw::editor
                     return false;
                 }
                 // 캐시 · 놓인 프리팹 표는 리소스 id 로 찾는다 — 작업 폴더의 `Saved/` 는 시나리오가 붙인 디스크 도메인이다.
-                const string prefabID = editor::getSubsystem<AssetPaths>().toAssetID( absolutePath );
+                const string prefabID = editor::getSubsystem<AssetPaths>().toAssetID( FileUtil::toDiskPath( absolutePath ) );
                 if ( prefabID.empty() )
                 {
                     StringBuilder<constant::buffer::kMax256> replyBuilder;
@@ -698,7 +698,7 @@ namespace sw::editor
                     string absolutePath;
                     if ( resolveTempAssetPath( listArgument[0], absolutePath, outReply ) == false )
                         return false;
-                    path = editor::getSubsystem<AssetPaths>().toAssetID( absolutePath ); // 시나리오가 붙인 `saved` 도메인의 id
+                    path = editor::getSubsystem<AssetPaths>().toAssetID( FileUtil::toDiskPath( absolutePath ) ); // 시나리오가 붙인 `saved` 도메인의 id
                     if ( path.empty() )
                     {
                         StringBuilder<constant::buffer::kMax256> replyBuilder;

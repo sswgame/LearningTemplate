@@ -121,9 +121,9 @@ namespace sw
     AbsolutePath ModuleCompiler::findBuildDirectory() const
     {
         // 빌드 트리는 바이너리 폴더(Bin)의 부모다. 없으면(패키지 · 복사한 바이너리) 빈 글 - 예전에는 Bin 으로 물러나 `cmake --build` 가 엉뚱한 이유로 실패했다.
-        const AbsolutePath parentDir  = FileUtil::toDiskPath( FileUtil::getDirectoryPart( FileUtil::trimTrailingSlashes( ProcessRoots::get()._binary.str() ) ) );
+        const AbsolutePath parentDir  = ProcessRoots::get()._binary.getParent();
         const bool         bBuildTree = FileUtil::isRegularFile( parentDir.join( "build.ninja" ) ) || FileUtil::isRegularFile( parentDir.join( "CMakeCache.txt" ) );
-        return FileUtil::toDiskPath( bBuildTree ? parentDir.str() : string{} );
+        return bBuildTree ? parentDir : AbsolutePath{};
     }
 
     void ModuleCompiler::failBeforeBuild( const string& moduleName )

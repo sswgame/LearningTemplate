@@ -6,6 +6,7 @@
 #include "Core/Container/string.h"
 #include "Core/Container/vector.h"
 #include "Core/Foundation/Types.h"
+#include "Core/Path/AbsolutePath.h"
 #include "Core/String/fixed_string.h"
 
 #include "Editor/Common/GUI/EditorThumbnailCache.h"
@@ -57,7 +58,7 @@ namespace sw::editor
         // 1-1) 삭제와 테스트용 함수. 우클릭 Delete 는 requestDeleteAsset, 확인 모달, confirmDeleteAsset 순서로 진행한다. 자체 테스트도 같은 경로를 부른다
         // ------------------------------------------------------------------------------
         /** @brief 폴더로 이동합니다. 그 폴더가 속한 콘텐츠 루트에서 브레드크럼 경로도 함께 만듭니다. */
-        void openFolder( string_view absolutePath ) { _model.openFolder( absolutePath ); }
+        void openFolder( const AbsolutePath& absolutePath ) { _model.openFolder( absolutePath ); }
         /** @brief 리소스 id @p assetID 의 폴더로 가서 그 애셋을 고르고 작업 공간 포커스(인스펙터)를 옮깁니다(`ContentBrowserViewModel::revealAsset`). 디스크에 없는 애셋이면 false 입니다. */
         [[nodiscard]] bool revealAsset( string_view assetID ) { return _model.revealAsset( assetID ); }
         /** @brief 현재 폴더 목록의 항목 수를 반환합니다. 필터를 적용하기 전의 수입니다. */
@@ -65,7 +66,7 @@ namespace sw::editor
         /** @brief 폴더 목록을 다시 읽도록 예약했거나 읽는 중이면 true 입니다. */
         bool isFolderRefreshPending() const { return _model.isFolderRefreshPending(); }
         /** @brief 에셋 삭제 확인 모달을 엽니다. 실제 삭제는 사용자가 확인한 뒤 `confirmDeleteAsset` 이 합니다. */
-        void requestDeleteAsset( string_view absolutePath );
+        void requestDeleteAsset( const AbsolutePath& absolutePath );
         /**
          * @brief 확인을 기다리던 에셋을 OS 휴지통으로 보냅니다. 성공하면 선택을 비우고 폴더 목록을 다시 읽게 합니다.
          * @return 휴지통으로 보냈으면 true 입니다. 기다리던 에셋이 없거나 보내지 못했으면 false 이며, 실패는 `EditorAssetFileCommands::moveToTrash` 가 알립니다.
@@ -109,15 +110,15 @@ namespace sw::editor
         // 1-3) 에셋 관리. 툴바 Add, `asset.*` 명령(맥락 메뉴 · 단축키), 폴더로 드래그 앤 드롭이 부르는 함수다
         // ------------------------------------------------------------------------------
         /** @brief 지금 고른 에셋의 절대 경로입니다. 없으면 빈 문자열입니다. */
-        const string& getSelectedAssetPath() const { return _model.getSelectedAssetPath(); }
+        const string& getSelectedAssetPath() const { return _model.getSelectedAssetPath().str(); }
         /** @brief 지금 목록에 있는 @p absolutePath 항목을 고릅니다. 목록에 없으면 아무 일도 없습니다. */
         void selectAssetPath( string_view absolutePath ) { _model.selectAssetPath( absolutePath ); }
         /** @brief 에셋을 같은 폴더에 복제하고 사본을 선택합니다. */
-        bool duplicateAsset( string_view absolutePath ) { return _model.duplicateAsset( absolutePath ); }
+        bool duplicateAsset( const AbsolutePath& absolutePath ) { return _model.duplicateAsset( absolutePath ); }
         /** @brief 에셋 이름을 제자리에서 바꾸는 입력을 시작합니다. 입력란에는 확장자를 뺀 이름이 들어갑니다. 폴더는 받지 않습니다. */
-        void beginRename( string_view absolutePath );
+        void beginRename( const AbsolutePath& absolutePath );
         /** @brief 이름을 바꾸는 중인 에셋의 경로를 반환합니다. 없으면 빈 문자열입니다. */
-        const string& getRenamingPath() const { return _model.getRenamingPath(); }
+        const AbsolutePath& getRenamingPath() const { return _model.getRenamingPath(); }
         /** @brief 이름 바꾸기를 @p newName 으로 끝냅니다. 확장자는 생략해도 됩니다. 참조를 고치고 새 이름을 선택합니다. */
         bool commitRename( string_view newName ) { return _model.commitRename( newName ); }
         /** @brief 썸네일 캐시가 보관한 텍스처 썸네일 수를 반환합니다. */
@@ -156,7 +157,7 @@ namespace sw::editor
         /** @brief 왼쪽 루트와 폴더 트리를 그립니다. */
         void drawSourcesSection();
         /** @brief 폴더 트리 노드 하나를 재귀로 그립니다. */
-        void drawFolderTreeNode( string_view folderPath, string_view label, int32 depth );
+        void drawFolderTreeNode( const AbsolutePath& folderPath, string_view label, int32 depth );
         /** @brief 오른쪽 애셋 타일 또는 리스트를 그립니다. */
         void drawAssetView();
         /**
@@ -201,7 +202,7 @@ namespace sw::editor
         /** @brief 이름을 바꾸는 중인 항목의 입력란을 그립니다. Enter 를 누르거나 다른 곳을 클릭하면 확정하고, Escape 를 누르면 취소합니다. */
         void drawRenameField( float32 width );
         /** @brief 바로 앞 위젯을 에셋 드롭 대상으로 만듭니다. 에셋을 놓으면 @p folderAbs 로 옮깁니다. */
-        void acceptAssetDrop( string_view folderAbs );
+        void acceptAssetDrop( const AbsolutePath& folderAbs );
         /** @brief 애셋 항목의 썸네일이나 아이콘을 그립니다. */
         void drawAssetThumbnail( ImDrawList* pDrawList, const float2& minPos, const float2& maxPos,
                                  const AssetEntry& entry );

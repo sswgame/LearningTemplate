@@ -61,7 +61,7 @@ namespace sw
         AutomationReportWriter();
 
         /** @brief 보고를 쓸 경로입니다. 비우면 보고를 쓰지 않습니다. */
-        void setReportPath( string_view reportPath ) { _reportPath = FileUtil::toDiskPath( reportPath ); }
+        void setReportPath( const AbsolutePath& reportPath ) { _reportPath = reportPath; }
         /** @brief 정한 보고 경로입니다(비면 보고를 쓰지 않는다). 행 감시가 정상 보고와 같은 자리에 쓰려고 읽는다. */
         const AbsolutePath& getReportPath() const { return _reportPath; }
         /** @brief 보고 파일을 씁니다. 경로가 비어 있으면 아무것도 하지 않고, 쓰지 못하면 경고를 남깁니다. */

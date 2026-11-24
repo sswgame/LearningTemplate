@@ -5,6 +5,7 @@
 #pragma once
 #include "Core/Container/string.h"
 #include "Core/Foundation/Types.h"
+#include "Core/Path/AbsolutePath.h"
 #include "Core/Process/Process.h"
 
 namespace sw
@@ -44,6 +45,6 @@ namespace sw::editor
          * @brief 새 창 플레이의 명령입니다 — 실행 파일, `-gv_firstScene=<씬>`, 환경설정의 덧붙일 인자(`StringUtil::splitQuotedTokens` 으로 나눈다) 순서입니다.
          *        엔진 자식이라 @p parent 가 자동화 실행이면 `-unattended` 가 붙는다(`EngineChildProcess`).
          */
-        static ProcessCommand makeStandaloneCommand( const CommandLineManager& parent, string_view executablePath, string_view scenePath, string_view extraArguments );
+        static ProcessCommand makeStandaloneCommand( const CommandLineManager& parent, const AbsolutePath& executablePath, string_view scenePath, string_view extraArguments );
     };
 } // namespace sw::editor

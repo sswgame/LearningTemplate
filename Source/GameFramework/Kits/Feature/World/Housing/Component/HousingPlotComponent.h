@@ -15,6 +15,7 @@
 #include "Core/Foundation/Macros.h"
 #include "Core/Foundation/Types.h"
 #include "Core/Memory/Memory.h"
+#include "Core/Path/AbsolutePath.h"
 
 #include "Engine/Asset/AssetRef.h"
 #include "Engine/Asset/Cache/SharedAssetRef.h"
@@ -83,9 +84,9 @@ namespace sw
         float2 computeLocalPosition( const float3& worldPosition ) const;
 
         /** @brief 부지 상태(배치 · 지갑)를 파일에 씁니다. 실패하면 까닭을 남기고 false 입니다. */
-        [[nodiscard]] bool saveToFile( string_view absolutePath ) const;
+        [[nodiscard]] bool saveToFile( const AbsolutePath& absolutePath ) const;
         /** @brief 파일의 부지 상태로 바꿉니다(뷰는 다음 틱에 다시 세운다). 읽지 못하면 까닭을 남기고 지금 상태를 그대로 둡니다. */
-        [[nodiscard]] bool loadFromFile( string_view absolutePath );
+        [[nodiscard]] bool loadFromFile( const AbsolutePath& absolutePath );
 
         const HousingLayout& getLayout() const { return _layout; }
         const Wallet&        getWallet() const { return _wallet; }

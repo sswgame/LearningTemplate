@@ -86,11 +86,11 @@ namespace sw
         return _mapDebugAction->wasActionTriggered( actionName );
     }
 
-    string DebugKeyActions::makeUserBindingsPath( string_view userSettingsFilePath )
+    AbsolutePath DebugKeyActions::makeUserBindingsPath( const AbsolutePath& userSettingsFilePath )
     {
         if ( userSettingsFilePath.empty() )
             return {};
-        return FileUtil::joinPath( FileUtil::getDirectoryPart( userSettingsFilePath ), kUserBindingsFileName );
+        return userSettingsFilePath.getParent().join( kUserBindingsFileName );
     }
 
     bool DebugKeyActions::saveUserBindings( const InputMap& map, const AbsolutePath& filePath )

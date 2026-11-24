@@ -162,9 +162,9 @@ namespace sw::editor
             SW_LOG_WARNING_ID( "ProfilerTimelineViewModel.TimelineTraceNotSaved", "Timeline trace not saved: %#", reply );
     }
 
-    bool ProfilerTimelineViewModel::loadTraceFile( string_view path )
+    bool ProfilerTimelineViewModel::loadTraceFile( const AbsolutePath& path )
     {
-        expected<ProfilerLoadedTrace> loaded = ProfilerTraceExport::loadTraceFile( FileUtil::toDiskPath( path ) );
+        expected<ProfilerLoadedTrace> loaded = ProfilerTraceExport::loadTraceFile( path );
         if ( loaded.has_value() == false )
         {
             StringBuilder<constant::buffer::kMax512> statusBuilder;
@@ -177,7 +177,7 @@ namespace sw::editor
         _bLoadedTrace    = SW_TRUE;
         _bTimelineZoomed = SW_FALSE;
         StringBuilder<constant::buffer::kMax256> traceStatusBuilder;
-        traceStatusBuilder.appendFormat( "Loaded %# (%# threads, %# scopes)", FileUtil::getFileNamePart( path ), _loadedTrace._listThread.size(), _loadedTrace._listSlotName.size() );
+        traceStatusBuilder.appendFormat( "Loaded %# (%# threads, %# scopes)", FileUtil::getFileNamePart( path.str() ), _loadedTrace._listThread.size(), _loadedTrace._listSlotName.size() );
         _traceStatus = string( traceStatusBuilder.view() );
         SW_LOG_INFO_ID( "ProfilerTimelineViewModel.TraceLoaded", "Trace loaded: %#", _traceStatus );
         return true;
@@ -185,7 +185,7 @@ namespace sw::editor
 
     bool ProfilerTimelineViewModel::loadLatestTrace()
     {
-        const string path = ProfilerTraceExport::findLatestTraceFile();
+        const AbsolutePath path = ProfilerTraceExport::findLatestTraceFile();
         if ( path.empty() )
         {
             _traceStatus = "No trace in Saved/Traces - press Save Trace first";

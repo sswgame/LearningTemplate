@@ -20,7 +20,7 @@ namespace
     struct PackPatchTestUtil
     {
         /** @brief 서명 채널의 패치 팩(블록 해시 표 + 색인 요약)을 씁니다. */
-        static optional<PackWriteResult> writeSignedPack( const string& packPath, INetSecurityProvider& provider )
+        static optional<PackWriteResult> writeSignedPack( const AbsolutePath& packPath, INetSecurityProvider& provider )
         {
             vector<std::pair<string, vector<uint8>>> listEntry;
             listEntry.emplace_back( "game/test/data/a.xml", vector<uint8>( 3000, uint8{ 'a' } ) );
@@ -30,7 +30,7 @@ namespace
             PackWriterDesc desc   = PackTestUtil::makeDesc( "" );
             desc._pDigestProvider = &provider;
             PackStreamWriter writer;
-            expected<void>   step = writer.open( FileUtil::toDiskPath( packPath ), desc );
+            expected<void>   step = writer.open( packPath, desc );
             for ( size_t index = 0; index < listEntry.size() && step.has_value(); ++index )
             {
                 step = writer.append( listEntry[index].first, PackEntryStorage::Blocks, std::move( listEntry[index].second ) );
@@ -74,7 +74,7 @@ SW_TEST_CASE( PackPatchTest, TamperedIndexFailsAtMount )
     test::FakeNetSecurityProvider provider;
     provider._bHashOk           = SW_TRUE;
     const AbsolutePath packPath = test::makeScratchPath( "patch_2.pack" );
-    const auto         written  = Util::writeSignedPack( packPath.str(), provider );
+    const auto         written  = Util::writeSignedPack( packPath, provider );
     SW_REQUIRE_TRUE( written.has_value() && written->_indexDigest.has_value() );
     const PackIndexTrust trust{ &provider, *written->_indexDigest };
 
@@ -87,8 +87,8 @@ SW_TEST_CASE( PackPatchTest, TamperedIndexFailsAtMount )
     SW_EXPECT_FALSE( packs.mountPatchPack( packPath.str(), 100, {}, &trust ) );
 
     // 서명하지 않은 쓰기의 팩(블록 해시 표 없음)은 색인 요약이 맞아도 신뢰로 열지 않는다.
-    SW_REQUIRE_TRUE( PackTestUtil::writeTextPack( packPath.str(), "", {
-                                                                          { "game/test/data/a.xml", "a" }
+    SW_REQUIRE_TRUE( PackTestUtil::writeTextPack( packPath, "", {
+                                                                    { "game/test/data/a.xml", "a" }
     } ) );
     vector<uint8> fileBytes;
     SW_REQUIRE_TRUE( FileUtil::readFile( packPath, fileBytes ) );
@@ -107,7 +107,7 @@ SW_TEST_CASE( PackPatchTest, TamperedPayloadBlockFailsAtRead )
     test::FakeNetSecurityProvider provider;
     provider._bHashOk           = SW_TRUE;
     const AbsolutePath packPath = test::makeScratchPath( "patch_3.pack" );
-    const auto         written  = Util::writeSignedPack( packPath.str(), provider );
+    const auto         written  = Util::writeSignedPack( packPath, provider );
     SW_REQUIRE_TRUE( written.has_value() && written->_indexDigest.has_value() );
     const PackIndexTrust trust{ &provider, *written->_indexDigest };
 

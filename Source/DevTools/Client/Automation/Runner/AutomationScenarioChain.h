@@ -33,7 +33,7 @@ namespace sw
         /** @brief `a,b,c` 를 경로 목록으로 가릅니다. 각 경로의 앞뒤 공백을 떼고 빈 항목은 버립니다. */
         static vector<string> splitList( string_view text );
         /** @brief 단계 @p stageIndex(0 부터)의 보고 경로입니다. 단계가 하나면 @p reportPath 그대로이고, 여럿이면 확장자 앞에 `.<번호>`(1 부터)를 붙입니다. 빈 경로는 빈 채로 둡니다. */
-        static AbsolutePath makeStageReportPath( string_view reportPath, size_t stageIndex, size_t stageCount );
+        static AbsolutePath makeStageReportPath( const AbsolutePath& reportPath, size_t stageIndex, size_t stageCount );
 
         /**
          * @brief 목록으로 시작합니다. 빈 목록이면 끝난 것으로 봅니다. @p bKeepGoing 이면 실패한 단계 뒤에도 다음 단계를 돌립니다.

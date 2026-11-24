@@ -44,7 +44,7 @@ namespace sw::editor
             struct RecordState
             {
                 ScenarioRecorder _recorder{};
-                string           _outputPath{}; ///< 녹화가 끝나면 쓸 경로
+                string           _outputPath{}; ///< 녹화가 끝나면 쓸 경로(`Saved/Automation/…` 글)
             };
 
             static RecordState& getState() { return getEditorState<RecordState>(); }
@@ -74,12 +74,13 @@ namespace sw::editor
                     return false;
                 }
                 ScenarioRecordSettings settings;
-                settings._name                    = FileUtil::removeExtension( FileUtil::removeExtension( FileUtil::getFileNamePart( getState()._outputPath ) ) ); // a.scenario.xml → a
-                const GenericWindow* pWindow      = editor::getSubsystem<MainWindowSubsystem>().getWindow();
-                settings._clientWidth             = pWindow != nullptr ? pWindow->getWidth() : 0;
-                settings._clientHeight            = pWindow != nullptr ? pWindow->getHeight() : 0;
-                const ScenarioRecordOutput output = getState()._recorder.stop( settings );
-                if ( FileUtil::ensureParentDirectoryExists( FileUtil::toDiskPath( getState()._outputPath ) ) == false || FileUtil::writeTextFile( FileUtil::toDiskPath( getState()._outputPath ), output._xmlText ) == false )
+                settings._name                      = FileUtil::removeExtension( FileUtil::removeExtension( FileUtil::getFileNamePart( getState()._outputPath ) ) ); // a.scenario.xml → a
+                const GenericWindow* pWindow        = editor::getSubsystem<MainWindowSubsystem>().getWindow();
+                settings._clientWidth               = pWindow != nullptr ? pWindow->getWidth() : 0;
+                settings._clientHeight              = pWindow != nullptr ? pWindow->getHeight() : 0;
+                const ScenarioRecordOutput output   = getState()._recorder.stop( settings );
+                const AbsolutePath         diskPath = ScenarioRecorder::makeOutputDiskPath( getState()._outputPath );
+                if ( FileUtil::ensureParentDirectoryExists( diskPath ) == false || FileUtil::writeTextFile( diskPath, output._xmlText ) == false )
                 {
                     StringBuilder<constant::buffer::kMax256> replyBuilder;
                     replyBuilder.appendFormat( "could not write '%#'", getState()._outputPath );

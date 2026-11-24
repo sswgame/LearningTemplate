@@ -5,6 +5,8 @@
  *          `ParserSession::_config` 로 내려 보냅니다(프로세스 전역으로 두지 않습니다).
  */
 #pragma once
+#include "Core/Path/AbsolutePath.h"
+
 #include "Engine/EngineMinimal.h"
 
 namespace sw
@@ -36,7 +38,7 @@ namespace sw
          *          시각도 봅니다 — 보지 않으면 설정을 고쳐도 산출물이 옛 모양으로 남습니다(CMake 는 DEPENDS 로 파서를 다시 부르지만
          *          파서가 스스로 "최신" 이라며 건너뛴다).
          */
-        vector<string> _listLoadedFile;
+        vector<AbsolutePath> _listLoadedFile;
         /**
          * @brief 묶음 파싱이 실패해 헤더마다 다시 파싱할 때 동시에 여는 TU 의 상한입니다(`tuning.max_parallel_parses`, 필수).
          * @details TU 하나가 엔진 공통 헤더 전체를 들고 메모리 대역을 나눠 쓴다 — 16 개를 함께 돌리면 한 파싱이 1.0 초에서 2.1 초로 늘었다(`ReflectionPipeline::parsePending` 주석의 실측).
@@ -53,7 +55,7 @@ namespace sw
          * @brief 커밋된 기본 설정(`--config`, 절대 경로)과 그 옆의 로컬 설정 · 툴체인 설정을 읽고 대상 인자(`--target-arg`)를 붙입니다. 플랫폼별 인자는 대상 매크로의 플랫폼으로 고른다.
          * @return 절대 경로가 아니거나, 기본 설정이 없거나 깨졌거나, 필수 값이 빠졌거나, clang 인자가 없으면 이유를 알리고 false. 코드에 기본값을 두지 않는다.
          */
-        [[nodiscard]] bool load( const string& defaultsPath, const vector<string>& listTargetArg );
+        [[nodiscard]] bool load( const AbsolutePath& defaultsPath, const vector<string>& listTargetArg );
 
         /**
          * @brief 기본 인자에 포함 경로와 강제 include 를 붙여 최종 clang 인자를 만듭니다.

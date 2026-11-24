@@ -166,7 +166,7 @@ SW_TEST_CASE( LiveReloadLogicTest, DeferredUnloadKeepsRecentBatches )
 {
     DeferredLibraryUnloadQueue queue( 2 );
     queue.unloadOldestBatch(); // 비어 있으면 아무 일도 없다
-    queue.deferUnload( "Null", nullptr, "ignored" );
+    queue.deferUnload( "Null", nullptr, FileUtil::toDiskPath( "ignored" ) );
     SW_EXPECT_EQUAL( 0u, queue.getLibraryCount() );
 
     const AbsolutePath a1 = DeferredUnloadTestUtil::makeShadowFile( "a1" );
@@ -175,15 +175,15 @@ SW_TEST_CASE( LiveReloadLogicTest, DeferredUnloadKeepsRecentBatches )
     const AbsolutePath c  = DeferredUnloadTestUtil::makeShadowFile( "c" );
 
     queue.beginBatch();
-    queue.deferUnload( "A1", DeferredUnloadTestUtil::openSystemLibrary(), a1.str() );
-    queue.deferUnload( "A2", DeferredUnloadTestUtil::openSystemLibrary(), a2.str() );
+    queue.deferUnload( "A1", DeferredUnloadTestUtil::openSystemLibrary(), a1 );
+    queue.deferUnload( "A2", DeferredUnloadTestUtil::openSystemLibrary(), a2 );
     queue.beginBatch();
-    queue.deferUnload( "B", DeferredUnloadTestUtil::openSystemLibrary(), b.str() );
+    queue.deferUnload( "B", DeferredUnloadTestUtil::openSystemLibrary(), b );
     SW_EXPECT_EQUAL( 3u, queue.getLibraryCount() );
     SW_EXPECT_TRUE( FileUtil::exists( a1 ) );
 
     queue.beginBatch();
-    queue.deferUnload( "C", DeferredUnloadTestUtil::openSystemLibrary(), c.str() ); // 배치 A 가 최근 둘 밖으로 나간다
+    queue.deferUnload( "C", DeferredUnloadTestUtil::openSystemLibrary(), c ); // 배치 A 가 최근 둘 밖으로 나간다
     SW_EXPECT_EQUAL( 2u, queue.getLibraryCount() );
     SW_EXPECT_FALSE( FileUtil::exists( a1 ) );
     SW_EXPECT_FALSE( FileUtil::exists( a2 ) );
@@ -204,7 +204,7 @@ SW_TEST_CASE( LiveReloadLogicTest, DeferredUnloadWithoutKeepingAnyBatch )
 {
     DeferredLibraryUnloadQueue queue( 0 );
     const AbsolutePath         path = DeferredUnloadTestUtil::makeShadowFile( "now" );
-    queue.deferUnload( "Now", DeferredUnloadTestUtil::openSystemLibrary(), path.str() );
+    queue.deferUnload( "Now", DeferredUnloadTestUtil::openSystemLibrary(), path );
     SW_EXPECT_EQUAL( 0u, queue.getLibraryCount() );
     SW_EXPECT_FALSE( FileUtil::exists( path ) );
 }

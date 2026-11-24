@@ -245,7 +245,7 @@ namespace sw
             static bool runLayoutDump( IAutomationStepContext& runner, const AutomationStep& step )
             {
                 const string       file = step.readValidatedProperties<AutomationFileStepParams>()._file;
-                const AbsolutePath path = FileUtil::toDiskPath( FileUtil::isAbsolutePath( file ) ? file : FileUtil::joinPath( runner.getOutputDirectory(), file ) );
+                const AbsolutePath path = runner.resolveOutputPath( file );
                 if ( FileUtil::ensureParentDirectoryExists( path ) == false || FileUtil::writeTextFile( path, engine::getSubsystem<UISystem>().makeLayoutDump() ) == false )
                 {
                     fixed_string<constant::buffer::kMax512> message;

@@ -51,7 +51,7 @@ namespace sw
                 string absPath;
                 if ( makeAbsoluteDiskPath( diskPath, absPath ) == false )
                     return false;
-                outSource = engine::getSubsystem<AssetPaths>().toAssetID( absPath );
+                outSource = engine::getSubsystem<AssetPaths>().toAssetID( FileUtil::toDiskPath( absPath ) );
                 outKind   = CookInputKind::Resource;
                 if ( outSource.empty() )
                 {
@@ -182,7 +182,7 @@ namespace sw
             (void)pJob->recordDiskInput( diskPath, 0 ); // 실패는 오류 로그로 남는다 — 읽기는 이미 실패라 돌려줄 것이 없다
     }
 
-    bool CookJob::collectFiles( const AbsolutePath& folderPath, string_view extension, vector<string>& outListFile )
+    bool CookJob::collectFiles( const AbsolutePath& folderPath, string_view extension, vector<AbsolutePath>& outListFile )
     {
         outListFile.clear();
         // 폴더가 없으면 빈 목록이 맞다(목록 해시 0 으로 기록된다). 도중에 멈춘 부분 목록은 구울 것을 빠뜨리므로 실패다(`FileUtil::collectFiles` 가 경로를 알린다).

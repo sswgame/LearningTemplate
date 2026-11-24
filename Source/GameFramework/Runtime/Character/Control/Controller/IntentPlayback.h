@@ -9,6 +9,7 @@
 #include "Core/Container/string.h"
 #include "Core/Foundation/Macros.h"
 #include "Core/Foundation/Types.h"
+#include "Core/Path/AbsolutePath.h"
 
 #include "GameFramework/GameFrameworkExports.h"
 
@@ -45,6 +46,6 @@ namespace sw
          * @brief `.swintent` 파일을 읽어 `start` 합니다. 재생을 시작한 트랙 수이고, 파일을 읽지 못하면 그 이유입니다(재생한 트랙이 0 이어도 읽었으면 성공).
 
          */
-        [[nodiscard]] static expected<uint32> startFromFile( GameObjectManager& manager, string_view path, bool bReturnWhenDone );
+        [[nodiscard]] static expected<uint32> startFromFile( GameObjectManager& manager, const AbsolutePath& path, bool bReturnWhenDone );
     };
 } // namespace sw

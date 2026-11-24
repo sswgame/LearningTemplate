@@ -19,11 +19,11 @@ namespace sw
     {
         struct NetSecurityInternal
         {
-            [[nodiscard]] static expected<void> readPem( const string& fileName, string& outText )
+            [[nodiscard]] static expected<void> readPem( const AbsolutePath& fileName, string& outText )
             {
-                if ( FileUtil::readTextFile( FileUtil::toDiskPath( fileName ), outText ) )
+                if ( FileUtil::readTextFile( fileName, outText ) )
                     return {};
-                return unexpected( Error{ ErrorKind::NotFound, "cannot read the PEM file", fileName } );
+                return unexpected( Error{ ErrorKind::NotFound, "cannot read the PEM file", fileName.str() } );
             }
         };
 
@@ -98,9 +98,9 @@ namespace sw
         TLSContextConfig settings;
         settings._role                 = TLSRole::Server;
         settings._privateKeyPassphrase = string( privateKeyPassphrase );
-        expected<void> pem             = Internal::readPem( *certificatePath, settings._certificatePem );
+        expected<void> pem             = Internal::readPem( FileUtil::toDiskPath( *certificatePath ), settings._certificatePem );
         if ( pem.has_value() )
-            pem = Internal::readPem( *privateKeyPath, settings._privateKeyPem );
+            pem = Internal::readPem( FileUtil::toDiskPath( *privateKeyPath ), settings._privateKeyPem );
         if ( pem.has_value() == false )
         {
             StringUtil::wipeSecret( settings._privateKeyPassphrase );
@@ -126,12 +126,12 @@ namespace sw
             string privateKeyPath;
             if ( expected<void> dev = ensureDevCertificate( provider, *trustPath, privateKeyPath ); dev.has_value() == false )
                 return unexpected( dev.error() );
-            if ( expected<void> pem = Internal::readPem( *trustPath, settings._trustPem ); pem.has_value() == false )
+            if ( expected<void> pem = Internal::readPem( FileUtil::toDiskPath( *trustPath ), settings._trustPem ); pem.has_value() == false )
                 return unexpected( pem.error() );
             if ( provider.computeCertificateSHA256( settings._trustPem, settings._pinnedCertificateSHA256Hex ) == false )
                 return unexpected( Error{ ErrorKind::ExternalFailure, "cannot compute the SHA-256 of the development certificate", *trustPath } );
         }
-        else if ( expected<void> pem = Internal::readPem( *trustPath, settings._trustPem ); pem.has_value() == false )
+        else if ( expected<void> pem = Internal::readPem( FileUtil::toDiskPath( *trustPath ), settings._trustPem ); pem.has_value() == false )
         {
             return unexpected( pem.error() );
         }

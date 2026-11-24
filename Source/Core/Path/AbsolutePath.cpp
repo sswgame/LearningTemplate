@@ -188,4 +188,14 @@ namespace sw
         appended.append( _path ).append( suffix.data(), suffix.size() );
         return AbsolutePath{ std::move( appended ) };
     }
+
+    AbsolutePath AbsolutePath::removeExtension() const
+    {
+        const size_t slash     = _path.rfind( '/' );
+        const size_t nameStart = slash == string::npos ? 0 : slash + 1;
+        const size_t dot       = _path.rfind( '.' );
+        if ( dot == string::npos || dot <= nameStart )
+            return *this;
+        return AbsolutePath{ _path.substr( 0, dot ) };
+    }
 } // namespace sw

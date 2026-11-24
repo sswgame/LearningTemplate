@@ -504,7 +504,7 @@ namespace sw::editor
         }
         else if ( _bPresetDirty == SW_TRUE && presetPoll == EditorTaskPoll::Idle )
         {
-            _presetJob.request( EditorGlobalVariableCommands::getComponentPresetFolderPath(), ".preset.xml", false );
+            _presetJob.request( EditorGlobalVariableCommands::getComponentPresetFolderPath().str(), ".preset.xml", false );
         }
         Component* pComp = InspectorViewModelInternal::findTargetComponent( target );
         if ( pComp == nullptr )
@@ -533,7 +533,7 @@ namespace sw::editor
     {
         Component*        pComp = InspectorViewModelInternal::findTargetComponent( target );
         EditorTransaction transaction; // 하위 메뉴(`inspector.component.presets`)가 고른 끝 — 씬을 바꾸는 여기서 거래를 연다
-        if ( pComp == nullptr || EditorTransformCommands::loadComponentPreset( transaction, pComp, string( presetFile ) ) == false )
+        if ( pComp == nullptr || EditorTransformCommands::loadComponentPreset( transaction, pComp, FileUtil::toDiskPath( presetFile ) ) == false )
             SW_LOG_ERROR_ID( "InspectorPanel.CouldNotApplyComponent", "Could not apply component preset '%#'", presetFile );
     }
 

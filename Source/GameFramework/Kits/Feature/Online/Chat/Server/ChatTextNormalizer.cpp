@@ -11,13 +11,13 @@
 
 namespace sw
 {
-    bool ChatTextNormalizer::loadFromFile( string_view path )
+    bool ChatTextNormalizer::loadFromFile( const AbsolutePath& path )
     {
         _listIgnored.clear();
         string content;
-        if ( FileUtil::readTextFile( FileUtil::toDiskPath( path ), content ) == false )
+        if ( FileUtil::readTextFile( path, content ) == false )
         {
-            SW_LOG_ERROR_ID( "ChatTextNormalizer.CannotRead", "Chat ignored-character file '%#' could not be read", path );
+            SW_LOG_ERROR_ID( "ChatTextNormalizer.CannotRead", "Chat ignored-character file '%#' could not be read", path.str() );
             return false;
         }
         vector<uint32> listCodepoint;
@@ -30,7 +30,7 @@ namespace sw
             uint32 codepoint{ 0 };
             if ( StringUtil::tryParseCodepointNotation( line, codepoint ) == false || codepoint == 0 )
             {
-                SW_LOG_ERROR_ID( "ChatTextNormalizer.BadLine", "Chat ignored-character file '%#' has a line that is not U+XXXX: '%#'", path, line );
+                SW_LOG_ERROR_ID( "ChatTextNormalizer.BadLine", "Chat ignored-character file '%#' has a line that is not U+XXXX: '%#'", path.str(), line );
                 bValid = false;
                 return;
             }

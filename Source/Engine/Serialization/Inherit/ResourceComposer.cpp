@@ -854,7 +854,7 @@ namespace sw
         if ( engine::getSubsystem<ResourceComposition>().getLayers().empty() == false )
         {
             const AssetPaths* pPaths = engine::findSubsystem<AssetPaths>();
-            const string      id     = pPaths != nullptr ? pPaths->toAssetID( absPath.str() ) : string{};
+            const string      id     = pPaths != nullptr ? pPaths->toAssetID( absPath ) : string{};
             if ( id.empty() == false && engine::getSubsystem<ResourceComposition>().isLayered( id ) )
             {
                 SW_LOG_ERROR_ID( "ResourceLayer.SaveWouldBake", "'%#' was read with a resource layer over it - not saved, the layer's values would be written into the original (edit the layer file instead)", id );

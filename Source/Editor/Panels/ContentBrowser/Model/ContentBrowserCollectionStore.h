@@ -12,6 +12,7 @@
 #include "Core/Container/vector.h"
 #include "Core/Foundation/Macros.h"
 #include "Core/Foundation/Types.h"
+#include "Core/Path/AbsolutePath.h"
 
 namespace sw::editor
 {
@@ -88,13 +89,13 @@ namespace sw::editor
         [[nodiscard]] bool fromText( string_view text, bool bShared );
 
         /** @brief 두 파일을 읽습니다. 없는 파일은 빈 목록이다(처음 실행). 다 읽지 못한 파일은 오류를 남기고 그 범위의 쓰기를 막습니다(`saveFile`). */
-        void loadFiles( string_view localFilePath, string_view sharedFilePath );
+        void loadFiles( const AbsolutePath& localFilePath, const AbsolutePath& sharedFilePath );
         /** @brief 한 범위의 파일을 씁니다. 실패했거나 그 파일을 다 읽지 못했으면(덮으면 읽지 못한 내용을 잃는다) 알리고 false 입니다. */
-        [[nodiscard]] bool saveFile( string_view filePath, bool bShared ) const;
+        [[nodiscard]] bool saveFile( const AbsolutePath& filePath, bool bShared ) const;
         /** @brief 로컬 파일 경로입니다(에디터 상태 폴더의 `kLocalFileName`). */
-        static string getLocalFilePath();
+        static AbsolutePath getLocalFilePath();
         /** @brief 공유 파일 경로입니다(프로젝트 루트 아래 `kSharedFileName`). */
-        static string getSharedFilePath();
+        static AbsolutePath getSharedFilePath();
 
         static constexpr const utf8* kLocalFileName  = "ContentBrowserCollectionStore.txt";
         static constexpr const utf8* kSharedFileName = "Config/Editor/ContentCollections.txt";
@@ -103,7 +104,7 @@ namespace sw::editor
         /** @brief `findCollection` 의 고칠 수 있는 짝입니다. */
         ContentBrowserCollection* findCollectionMutable( string_view name, bool bShared );
         /** @brief 한 범위의 파일을 읽습니다. 있는데 다 읽지 못했으면 오류를 남기고 false 입니다. */
-        [[nodiscard]] bool loadFile( string_view filePath, bool bShared );
+        [[nodiscard]] bool loadFile( const AbsolutePath& filePath, bool bShared );
 
     private:
         vector<ContentBrowserSavedSearch> _listSavedSearch;

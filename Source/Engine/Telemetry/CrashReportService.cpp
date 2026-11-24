@@ -140,12 +140,12 @@ namespace sw
 
             /** @brief 그 세션의 로그(`*_<세션>.txt`)를 이름 순으로 이어 끝 @p maxBytes 만 남깁니다. */
             /** @brief 세션의 로그 — 고정 이름(@p fixedLogPath, 크래시 컨텍스트의 `LogFile`)이면 그 파일, 아니면 크래시 폴더의 `*_<세션>.txt` 를 시간 순으로 잇는다. */
-            static string collectSessionLog( const AbsolutePath& crashFolder, string_view sessionID, string_view fixedLogPath, uint64 maxBytes )
+            static string collectSessionLog( const AbsolutePath& crashFolder, string_view sessionID, const AbsolutePath& fixedLogPath, uint64 maxBytes )
             {
                 vector<AbsolutePath> listFile;
                 string               log;
                 if ( fixedLogPath.empty() == false )
-                    log = readText( FileUtil::toDiskPath( fixedLogPath ) );
+                    log = readText( fixedLogPath );
                 else if ( FileUtil::collectFiles( crashFolder, "", listFile, false ) == false )
                     return log;
                 VectorUtil::sort( listFile );
@@ -216,8 +216,8 @@ namespace sw
 
     void CrashReportService::initialize( const AbsolutePath& crashFolder, const AbsolutePath& reportsFolder, string_view currentSessionID )
     {
-        _crashFolder      = FileUtil::toDiskPath( FileUtil::trimTrailingSlashes( crashFolder.str() ) );
-        _reportsFolder    = FileUtil::toDiskPath( FileUtil::trimTrailingSlashes( reportsFolder.str() ) );
+        _crashFolder      = crashFolder.join( {} );
+        _reportsFolder    = reportsFolder.join( {} );
         _currentSessionID = string( currentSessionID );
         _bInitialized     = SW_TRUE;
     }
@@ -307,13 +307,13 @@ namespace sw
         Internal::readContextInto( contextText, context );
         // 자주 보는 칸은 맨 위에 — 받는 쪽 목록 화면이 컨텍스트를 풀지 않고 보인다.
         // 값을 먼저 꺼낸다 — 루트에 칸을 더하면 루트의 멤버 저장소가 옮겨 가 앞서 받은 핸들(context)이 낡는다.
-        const string reason       = context.get( "reason" ).asString();
-        const string buildID      = context.get( "BuildID" ).asString();
-        const string build        = context.get( "Build" ).asString();
-        const string platform     = context.get( "Platform" ).asString();
-        const string rhi          = context.get( "RHI" ).asString();
-        const string gpu          = context.get( "GPU" ).asString();
-        const string fixedLogPath = context.get( CrashContextStore::kLogFileKey ).asString();
+        const string       reason       = context.get( "reason" ).asString();
+        const string       buildID      = context.get( "BuildID" ).asString();
+        const string       build        = context.get( "Build" ).asString();
+        const string       platform     = context.get( "Platform" ).asString();
+        const string       rhi          = context.get( "RHI" ).asString();
+        const string       gpu          = context.get( "GPU" ).asString();
+        const AbsolutePath fixedLogPath = FileUtil::toDiskPath( context.get( CrashContextStore::kLogFileKey ).asString() );
         root.set( "reason" ).setString( reason );
         root.set( "buildID" ).setString( buildID );
         root.set( "build" ).setString( build );
@@ -497,7 +497,7 @@ namespace sw
     {
         using Internal = CrashReportServiceInternal;
         vector<AbsolutePath> listFolder;
-        Internal::collectBundleFolders( FileUtil::toDiskPath( FileUtil::trimTrailingSlashes( reportsFolder.str() ) ), listFolder );
+        Internal::collectBundleFolders( reportsFolder.join( {} ), listFolder );
         uint32 sentCount = 0;
         for ( const AbsolutePath& folder : listFolder )
         {

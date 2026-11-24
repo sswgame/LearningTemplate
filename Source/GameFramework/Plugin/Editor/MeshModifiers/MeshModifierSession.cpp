@@ -774,7 +774,7 @@ namespace sw::editor
         const auto path = editor::getSubsystem<AssetPaths>().findLooseFile( MeshModifierStack::makeSidecarPath( _meshPath ) );
         if ( path.has_value() == false )
             return false;
-        if ( _stack.loadFromFile( path->str() ) == false )
+        if ( _stack.loadFromFile( *path ) == false )
         {
             SW_LOG_WARNING_ID( "MeshModifierSession.MeshModifierStackCould2", "Mesh modifier stack %# could not be read", path->c_str() );
             return false;
@@ -816,7 +816,7 @@ namespace sw::editor
         }
         SW_LOG_INFO_ID( "MeshModifierSession.BakedMeshWritten", "Baked mesh written to %#", path->c_str() );
         if ( pOutPath != nullptr )
-            *pOutPath = editor::getSubsystem<AssetPaths>().toAssetID( path->str() );
+            *pOutPath = editor::getSubsystem<AssetPaths>().toAssetID( *path );
         return true;
     }
 

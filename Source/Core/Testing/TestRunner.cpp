@@ -609,16 +609,8 @@ namespace sw::test
 
     void TestRunnerInternal::launchSelf( vector<string> listArgument, float32 timeoutSeconds, ChildRunResult& outResult )
     {
-        ChildRunResult&              result     = outResult;
-        const optional<AbsolutePath> executable = AbsolutePath::tryMake( FileUtil::getExecutablePath() );
-        if ( executable.has_value() == false )
-        {
-            StringBuilder<constant::buffer::kMax1024> message;
-            message.appendFormat( "the test executable path is not absolute: %#", FileUtil::getExecutablePath() );
-            reportFailure( __FILE__, __LINE__, message.view() );
-            return;
-        }
-        const ProcessCommand command = ProcessCommand::at( *executable, std::move( listArgument ) );
+        ChildRunResult&      result  = outResult;
+        const ProcessCommand command = ProcessCommand::at( FileUtil::getExecutablePath(), std::move( listArgument ) );
         ProcessOptions       options;
         options._workingDirectory = FileUtil::getCurrentPath().str();
         Process process;
@@ -1188,8 +1180,8 @@ namespace sw::test
             formatstring( arrBuffer, constant::buffer::kMax1024, "[ WARNING  ] the scratch folder could not be removed: %#", scratchRoot.str() );
             Internal::writeLine( arrBuffer );
         }
-        const AbsolutePath reportPath = FileUtil::toDiskPath( options._reportPath.empty() == false ? options._reportPath : bKeepScratch ? FileUtil::joinPath( scratchRoot.str(), "report.json" )
-                                                                                                                                        : string{} );
+        const AbsolutePath reportPath = options._reportPath.empty() == false ? FileUtil::toDiskPath( options._reportPath ) : bKeepScratch ? scratchRoot.join( "report.json" )
+                                                                                                                                          : AbsolutePath{};
         if ( reportPath.empty() == false )
         {
             StringBuilder<constant::buffer::kMax4096> report; // 직렬화 글이라 잘리면 안 된다 — 넘치면 힙으로 자란다

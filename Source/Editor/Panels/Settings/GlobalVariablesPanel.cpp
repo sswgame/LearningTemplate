@@ -324,7 +324,7 @@ namespace sw::editor
             for ( const string& presetFile : _model.getPresetFiles() )
             {
                 const string displayName = GlobalVariablesViewModel::makePresetDisplayName( presetFile );
-                if ( ImGui::MenuItem( displayName.c_str() ) && _model.loadPreset( presetFile ) )
+                if ( ImGui::MenuItem( displayName.c_str() ) && _model.loadPreset( FileUtil::toDiskPath( presetFile ) ) )
                     markSessionDirty();
             }
         }

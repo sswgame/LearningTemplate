@@ -26,7 +26,7 @@ using namespace sw;
 SW_TEST_CASE( ShaderCookCoverageTest, RequestsCarryTheirAssetOrigin )
 {
     vector<ShaderCookRequest> listRequest;
-    const AbsolutePath        engineRoot = FileUtil::toDiskPath( FileUtil::joinPath( engine::getSubsystem<AssetPaths>().getRootFolderPath(), "engine" ) );
+    const AbsolutePath        engineRoot = engine::getSubsystem<AssetPaths>().getRootFolderPath().join( "engine" );
     SW_REQUIRE_TRUE( ShaderCookRequestCollector::collectAllRequests( engineRoot, listRequest ) );
     bool bGTAOFromPipeline = false;
     bool bTableRequest     = false;
@@ -47,7 +47,7 @@ SW_TEST_CASE( ShaderCookCoverageTest, EveryEngineShaderFieldIsCooked )
     SW_REQUIRE_NOT_NULL( pAssets.get() );
     vector<ShaderCookRequest> listRequest;
     // 엔진 도메인만 훑는다(파이프라인 XML 의 전체 화면 패스 기본 셰이더까지 — 전체 콘텐츠의 머티리얼은 느리다)
-    const AbsolutePath engineRoot = FileUtil::toDiskPath( FileUtil::joinPath( engine::getSubsystem<AssetPaths>().getRootFolderPath(), "engine" ) );
+    const AbsolutePath engineRoot = engine::getSubsystem<AssetPaths>().getRootFolderPath().join( "engine" );
     SW_REQUIRE_TRUE( ShaderCookRequestCollector::collectAllRequests( engineRoot, listRequest ) );
 
     uint32 shaderFieldCount = 0;

@@ -29,19 +29,19 @@ namespace sw::editor
         _listMove.push_back( std::move( move ) );
     }
 
-    void ContentBrowserMoveQueue::addMove( string_view sourceAbs, string_view folderAbs )
+    void ContentBrowserMoveQueue::addMove( const AbsolutePath& sourceAbs, const AbsolutePath& folderAbs )
     {
         for ( Move& move : _listMove )
         {
-            if ( move._bRename == false && FileUtil::isSameDiskPath( move._sourceAbs, sourceAbs ) )
+            if ( move._bRename == false && FileUtil::isSameDiskPath( move._sourceAbs.str(), sourceAbs.str() ) )
             {
-                move._folderAbs = string( folderAbs );
+                move._folderAbs = folderAbs;
                 return;
             }
         }
         Move move;
-        move._sourceAbs = string( sourceAbs );
-        move._folderAbs = string( folderAbs );
+        move._sourceAbs = sourceAbs;
+        move._folderAbs = folderAbs;
         _listMove.push_back( std::move( move ) );
     }
 
@@ -66,40 +66,40 @@ namespace sw::editor
     {
     }
 
-    bool ContentBrowserFileActions::createFolder( string_view parentAbs, string& outFolderAbs )
+    bool ContentBrowserFileActions::createFolder( const AbsolutePath& parentAbs, string& outFolderAbs )
     {
         if ( parentAbs.empty() )
             return false;
         return EditorAssetFileCommands::createFolder( parentAbs, outFolderAbs );
     }
 
-    bool ContentBrowserFileActions::createAsset( string_view folderAbs, const EditorNewAssetTemplate& assetTemplate, string& outAssetAbs )
+    bool ContentBrowserFileActions::createAsset( const AbsolutePath& folderAbs, const EditorNewAssetTemplate& assetTemplate, string& outAssetAbs )
     {
         if ( folderAbs.empty() )
             return false;
         return EditorAssetFileCommands::createAsset( folderAbs, assetTemplate, outAssetAbs );
     }
 
-    bool ContentBrowserFileActions::duplicateAsset( string_view sourceAbs, string& outAssetAbs )
+    bool ContentBrowserFileActions::duplicateAsset( const AbsolutePath& sourceAbs, string& outAssetAbs )
     {
         if ( sourceAbs.empty() )
             return false;
         return EditorAssetFileCommands::duplicateAsset( sourceAbs, outAssetAbs );
     }
 
-    expected<vector<EditorAssetMove>> ContentBrowserFileActions::collectMovesToFolder( string_view sourceAbs, string_view folderAbs )
+    expected<vector<EditorAssetMove>> ContentBrowserFileActions::collectMovesToFolder( const AbsolutePath& sourceAbs, const AbsolutePath& folderAbs )
     {
-        if ( FileUtil::isDirectory( FileUtil::toDiskPath( sourceAbs ) ) )
+        if ( FileUtil::isDirectory( sourceAbs ) )
             return EditorAssetFileCommands::collectFolderMoves( sourceAbs, folderAbs );
-        const string destinationAbs = FileUtil::joinPath( folderAbs, FileUtil::getFileNamePart( sourceAbs ) );
-        if ( FileUtil::isSameDiskPath( destinationAbs, sourceAbs ) )
-            return unexpected( Error{ ErrorKind::InvalidArgument, "it is already in that folder", FileUtil::getFileNamePart( sourceAbs ) } );
+        const AbsolutePath destinationAbs = folderAbs.join( FileUtil::getFileNamePart( sourceAbs.str() ) );
+        if ( FileUtil::isSameDiskPath( destinationAbs.str(), sourceAbs.str() ) )
+            return unexpected( Error{ ErrorKind::InvalidArgument, "it is already in that folder", FileUtil::getFileNamePart( sourceAbs.str() ) } );
         return vector<EditorAssetMove>{
-            EditorAssetMove{ string( sourceAbs ), destinationAbs }
+            EditorAssetMove{ sourceAbs, destinationAbs }
         };
     }
 
-    bool ContentBrowserFileActions::planMoveToFolder( string_view sourceAbs, string_view folderAbs, const EditorAssetIndex& index, EditorAssetMovePlan& outPlan )
+    bool ContentBrowserFileActions::planMoveToFolder( const AbsolutePath& sourceAbs, const AbsolutePath& folderAbs, const EditorAssetIndex& index, EditorAssetMovePlan& outPlan )
     {
         const expected<vector<EditorAssetMove>> listMove = collectMovesToFolder( sourceAbs, folderAbs );
         if ( listMove.has_value() == false )
@@ -113,7 +113,7 @@ namespace sw::editor
         return EditorAssetFileCommands::planAssetMoves( *listMove, index, outPlan );
     }
 
-    bool ContentBrowserFileActions::moveAssetToFolder( string_view sourceAbs, string_view folderAbs, EditorAssetIndex& inoutIndex, string& outDestinationAbs )
+    bool ContentBrowserFileActions::moveAssetToFolder( const AbsolutePath& sourceAbs, const AbsolutePath& folderAbs, EditorAssetIndex& inoutIndex, string& outDestinationAbs )
     {
         const expected<vector<EditorAssetMove>> collected = collectMovesToFolder( sourceAbs, folderAbs );
         if ( collected.has_value() == false )
@@ -122,40 +122,40 @@ namespace sw::editor
             return false;
         }
         const vector<EditorAssetMove>& listMove = *collected;
-        const bool                     bFolder  = FileUtil::isDirectory( FileUtil::toDiskPath( sourceAbs ) );
+        const bool                     bFolder  = FileUtil::isDirectory( sourceAbs );
         EditorAssetMovePlan            plan;
         if ( EditorAssetFileCommands::applyAssetMoves( listMove, inoutIndex, plan ) == false )
             return false; // 이유와 되돌림은 applyAssetMoves 가 알렸다
-        outDestinationAbs = bFolder ? FileUtil::joinPath( folderAbs, FileUtil::getFileNamePart( sourceAbs ) ) : listMove.front()._destinationAbs;
+        outDestinationAbs = bFolder ? FileUtil::joinPath( folderAbs.str(), FileUtil::getFileNamePart( sourceAbs.str() ) ) : listMove.front()._destinationAbs.str();
         if ( bFolder )
         {
             // 파일은 모두 옮겼다 — 빈 폴더 나무만 남았을 때만 지운다(`removeDirectory` 는 재귀라, 그 사이 누가 넣은 파일이 있으면 지우지 않고 둔다)
-            vector<string> listLeftFile;
-            const bool     bListed = FileUtil::collectFiles( FileUtil::toDiskPath( sourceAbs ), "", listLeftFile, true );
-            if ( bListed == false || listLeftFile.empty() == false || FileUtil::removeDirectory( FileUtil::toDiskPath( sourceAbs ) ) == false )
+            vector<AbsolutePath> listLeftFile;
+            const bool           bListed = FileUtil::collectFiles( sourceAbs, "", listLeftFile, true );
+            if ( bListed == false || listLeftFile.empty() == false || FileUtil::removeDirectory( sourceAbs ) == false )
                 SW_LOG_WARNING_ID( "ContentBrowserFileActions.SourceFolderKept", "Moved every file of '%#' but kept the folder (not empty or could not be removed)",
-                                   FileUtil::getFileNamePart( sourceAbs ) );
+                                   FileUtil::getFileNamePart( sourceAbs.str() ) );
         }
         return true;
     }
 
-    bool ContentBrowserFileActions::beginRename( string_view absolutePath, string& outStem )
+    bool ContentBrowserFileActions::beginRename( const AbsolutePath& absolutePath, string& outStem )
     {
-        if ( absolutePath.empty() || FileUtil::isDirectory( FileUtil::toDiskPath( absolutePath ) ) )
+        if ( absolutePath.empty() || FileUtil::isDirectory( absolutePath ) )
             return false;
         string suffix;
-        EditorAssetFileCommands::splitAssetName( FileUtil::getFileNamePart( absolutePath ), outStem, suffix );
-        _renamingAbs = FileUtil::normalizeSeparators( absolutePath );
+        EditorAssetFileCommands::splitAssetName( FileUtil::getFileNamePart( absolutePath.str() ), outStem, suffix );
+        _renamingAbs = absolutePath;
         return true;
     }
 
-    bool ContentBrowserFileActions::commitRename( string_view newName, EditorAssetIndex& inoutIndex, string& outDestinationAbs )
+    bool ContentBrowserFileActions::commitRename( string_view newName, EditorAssetIndex& inoutIndex, AbsolutePath& outDestinationAbs )
     {
-        const string renamingAbs = _renamingAbs;
-        _renamingAbs.clear();
+        const AbsolutePath renamingAbs = _renamingAbs;
+        _renamingAbs                   = {};
         if ( renamingAbs.empty() )
             return false;
-        string destinationAbs;
+        AbsolutePath destinationAbs;
         if ( makeRenameDestination( renamingAbs, newName, destinationAbs ) == false )
             return false;
         uint32 fixedFileCount{ 0 };
@@ -165,19 +165,19 @@ namespace sw::editor
         return true;
     }
 
-    bool ContentBrowserFileActions::makeRenameDestination( string_view sourceAbs, string_view newName, string& outDestinationAbs )
+    bool ContentBrowserFileActions::makeRenameDestination( const AbsolutePath& sourceAbs, string_view newName, AbsolutePath& outDestinationAbs )
     {
         if ( newName.empty() )
             return false;
         string stem;
         string suffix;
-        EditorAssetFileCommands::splitAssetName( FileUtil::getFileNamePart( sourceAbs ), stem, suffix );
+        EditorAssetFileCommands::splitAssetName( FileUtil::getFileNamePart( sourceAbs.str() ), stem, suffix );
         // 확장자는 그대로 둔다. 확장자까지 입력했으면 그것을 쓴다.
         string fileName = FileUtil::normalizePath( newName ).str();
         if ( suffix.empty() == false && StringUtil::endsWith( fileName, suffix ) == false )
             fileName += suffix;
-        outDestinationAbs = FileUtil::joinPath( FileUtil::getDirectoryPart( sourceAbs ), fileName );
-        return FileUtil::isSameDiskPath( outDestinationAbs, sourceAbs ) == false;
+        outDestinationAbs = sourceAbs.getParent().join( fileName );
+        return FileUtil::isSameDiskPath( outDestinationAbs.str(), sourceAbs.str() ) == false;
     }
 
     bool ContentBrowserFileActions::confirmDelete()
@@ -185,7 +185,7 @@ namespace sw::editor
         if ( _pendingDeleteAbs.empty() )
             return false;
         const bool bDeleted = EditorAssetFileCommands::moveToTrash( _pendingDeleteAbs );
-        _pendingDeleteAbs.clear();
+        _pendingDeleteAbs   = {};
         return bDeleted;
     }
 } // namespace sw::editor

@@ -144,7 +144,7 @@ namespace sw
         if ( expected<void> valid = folder.validate(); valid.has_value() == false )
             return valid;
         const AssetPaths&            assetPaths = engine::getSubsystem<AssetPaths>();
-        const AbsolutePath           sourceDir  = FileUtil::toDiskPath( FileUtil::joinPath( assetPaths.getRootFolderPath(), folder._sourceID ) );
+        const AbsolutePath           sourceDir  = assetPaths.getRootFolderPath().join( folder._sourceID );
         const optional<AbsolutePath> scratchAt  = assetPaths.toDiskPath( folder._scratchID ); // 실행 뿌리 아래다(`AssetPaths::getScratchFolderPath`)
         if ( FileUtil::isDirectory( sourceDir ) == false )
         {

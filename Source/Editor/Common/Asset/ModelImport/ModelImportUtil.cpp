@@ -47,19 +47,20 @@ namespace sw::editor
         return pURI != nullptr && pURI[0] != '\0' && StringUtil::startsWith( pURI, "data:" ) == false;
     }
 
-    string ModelImportUtil::resolveURI( string_view sourcePath, const utf8* pURI )
+    AbsolutePath ModelImportUtil::resolveURI( const AbsolutePath& sourcePath, const utf8* pURI )
     {
         string decoded{ pURI };
         decoded.push_back( '\0' ); // cgltf 는 널로 끝나는 글을 제자리에서 푼다
         decoded.resize( cgltf_decode_uri( decoded.data() ) );
-        string path = FileUtil::joinPath( FileUtil::getDirectoryPart( sourcePath ), decoded );
+        // `../` 을 푼다 — 원본 옆이 아닌 textures_raw 의 이미지를 가리키는 glTF(`join` 은 상위 탈출을 거절한다).
+        const optional<AbsolutePath> path = AbsolutePath::tryResolve( decoded, sourcePath.getParent() );
+        if ( path.has_value() == false )
+            return {};
         string canonicalPath;
-        if ( FileUtil::makeCanonicalPath( FileUtil::toDiskPath( path ), canonicalPath ) ) // `../` 을 푼다 — 원본 옆이 아닌 textures_raw 의 이미지를 가리키는 glTF
-            path = FileUtil::normalizeSeparators( canonicalPath );
-        return path;
+        return FileUtil::makeCanonicalPath( *path, canonicalPath ) ? FileUtil::toDiskPath( canonicalPath ) : *path;
     }
 
-    uint64 ModelImportUtil::mixExternalFiles( string_view sourcePath, const vector<uint8>& listByte, string_view imageRuleText, uint64 hash )
+    uint64 ModelImportUtil::mixExternalFiles( const AbsolutePath& sourcePath, const vector<uint8>& listByte, string_view imageRuleText, uint64 hash )
     {
         const cgltf_options options = makeOptions();
         cgltf_data*         pData   = nullptr;
@@ -80,7 +81,7 @@ namespace sw::editor
         for ( cgltf_size bufferIndex = 0; bufferIndex < pData->buffers_count; ++bufferIndex )
         {
             if ( isExternalURI( pData->buffers[bufferIndex].uri ) )
-                mixFile( resolveURI( sourcePath, pData->buffers[bufferIndex].uri ) );
+                mixFile( resolveURI( sourcePath, pData->buffers[bufferIndex].uri ).str() );
         }
         bool bHasEmbeddedImage = false; // 텍스처 원본 폴더 밖의 이미지는 공유 원본으로 꺼낸다 — 어느 폴더인지는 텍스처 규칙이 정한다
         for ( cgltf_size imageIndex = 0; imageIndex < pData->images_count; ++imageIndex )
@@ -90,7 +91,7 @@ namespace sw::editor
                 bHasEmbeddedImage = true;
                 continue;
             }
-            const string imagePath = resolveURI( sourcePath, pData->images[imageIndex].uri );
+            const string imagePath = resolveURI( sourcePath, pData->images[imageIndex].uri ).str();
             if ( imagePath.find( rawMarker.view() ) != string::npos )
                 continue;
             bHasEmbeddedImage = true;

@@ -15,25 +15,25 @@
 
 namespace sw::editor
 {
-    optional<string> EditorContentWrite::findReadOnlyAtOrUnder( string_view absolutePath )
+    optional<string> EditorContentWrite::findReadOnlyAtOrUnder( const AbsolutePath& absolutePath )
     {
         if ( absolutePath.empty() )
             return nullopt;
-        const string path = FileUtil::normalizeSeparators( absolutePath );
-        if ( FileUtil::isDirectory( FileUtil::toDiskPath( path ) ) == false )
-            return FileUtil::isReadOnlyFile( FileUtil::toDiskPath( path ) ) ? optional<string>{ path } : nullopt; // 없는 파일(새로 만들 자리)은 막지 않는다
-        vector<string> listFile;
-        if ( FileUtil::collectFiles( FileUtil::toDiskPath( path ), "", listFile, true ) == false )
+        const AbsolutePath path = absolutePath;
+        if ( FileUtil::isDirectory( path ) == false )
+            return FileUtil::isReadOnlyFile( path ) ? optional<string>{ path.str() } : nullopt; // 없는 파일(새로 만들 자리)은 막지 않는다
+        vector<AbsolutePath> listFile;
+        if ( FileUtil::collectFiles( path, "", listFile, true ) == false )
             return nullopt; // 목록을 못 읽은 폴더는 옮기기 · 지우기 자체가 이유를 남기고 진다
-        for ( const string& filePath : listFile )
+        for ( const AbsolutePath& filePath : listFile )
         {
-            if ( FileUtil::isReadOnlyFile( FileUtil::toDiskPath( filePath ) ) )
-                return FileUtil::normalizeSeparators( filePath );
+            if ( FileUtil::isReadOnlyFile( filePath ) )
+                return FileUtil::normalizeSeparators( filePath.str() );
         }
         return nullopt;
     }
 
-    bool EditorContentWrite::warnIfReadOnly( string_view absolutePath, const EditorContentWriteKind kind )
+    bool EditorContentWrite::warnIfReadOnly( const AbsolutePath& absolutePath, const EditorContentWriteKind kind )
     {
         const optional<string> readOnlyPath = findReadOnlyAtOrUnder( absolutePath );
         if ( readOnlyPath.has_value() == false )

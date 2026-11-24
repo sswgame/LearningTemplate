@@ -135,32 +135,32 @@ namespace sw::editor
         }
     }
 
-    bool InspectorFavorites::loadFromFile( string_view filePath )
+    bool InspectorFavorites::loadFromFile( const AbsolutePath& filePath )
     {
         _listKey.clear();
         if ( filePath.empty() )
             return false;
         string text;
-        if ( FileUtil::readOptionalTextFile( FileUtil::toDiskPath( filePath ), text ) != OptionalFileRead::Read )
+        if ( FileUtil::readOptionalTextFile( filePath, text ) != OptionalFileRead::Read )
             return false; // 없으면 처음이다, 못 읽었으면 readOptionalTextFile 이 오류로 남겼다
         fromText( FileUtil::skipUTF8Bom( text ) );
         return true;
     }
 
-    bool InspectorFavorites::saveToFile( string_view filePath ) const
+    bool InspectorFavorites::saveToFile( const AbsolutePath& filePath ) const
     {
         if ( filePath.empty() )
             return false;
-        if ( FileUtil::ensureParentDirectoryExists( FileUtil::toDiskPath( filePath ) ) == false || FileUtil::writeTextFile( FileUtil::toDiskPath( filePath ), toText() ) == false )
+        if ( FileUtil::ensureParentDirectoryExists( filePath ) == false || FileUtil::writeTextFile( filePath, toText() ) == false )
         {
-            SW_LOG_WARNING_ID( "InspectorFavorites.InspectorFavoritesCouldNot", "Inspector favorites could not be saved to %#", string( filePath ).c_str() );
+            SW_LOG_WARNING_ID( "InspectorFavorites.InspectorFavoritesCouldNot", "Inspector favorites could not be saved to %#", string( filePath.str() ).c_str() );
             return false;
         }
         return true;
     }
 
-    string InspectorFavorites::getFilePath() const
+    AbsolutePath InspectorFavorites::getFilePath() const
     {
-        return EditorPaths::resolveEditorStateFile( _pFileName ).str();
+        return EditorPaths::resolveEditorStateFile( _pFileName );
     }
 } // namespace sw::editor

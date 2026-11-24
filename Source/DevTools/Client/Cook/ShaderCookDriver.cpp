@@ -454,7 +454,7 @@ namespace sw
         }
 
         // 루트를 주지 않으면 찾아 둔 리소스 루트다. 그것도 없으면 쿠킹하지 못한다(작업 폴더 기준 "Resource" 로 짐작하지 않는다).
-        const AbsolutePath rootDir = FileUtil::toDiskPath( resourceRoot.empty() ? engine::getSubsystem<AssetPaths>().getRootFolderPath() : string( resourceRoot ) );
+        const AbsolutePath rootDir = resourceRoot.empty() ? engine::getSubsystem<AssetPaths>().getRootFolderPath() : FileUtil::toDiskPath( resourceRoot );
         if ( rootDir.empty() || FileUtil::isDirectory( rootDir ) == false )
         {
             SW_LOG_ERROR_ID( "ShaderCooker.ContentRootDirectoryDoes", "Content root directory does not exist: '%#'", rootDir.c_str() );
@@ -610,7 +610,7 @@ namespace sw
         using Internal                       = ShaderCookDriverInternal;
         const AssetPaths&         assetPaths = engine::getSubsystem<AssetPaths>();
         vector<ShaderCookRequest> listRequest;
-        if ( ShaderCookRequestCollector::collectAllRequests( FileUtil::toDiskPath( assetPaths.getRootFolderPath() ), listRequest ) == false )
+        if ( ShaderCookRequestCollector::collectAllRequests( assetPaths.getRootFolderPath(), listRequest ) == false )
         {
             outListProblem.emplace_back( "shader cook requests could not be collected - cannot tell which domains are cooked" );
             return;
@@ -646,7 +646,7 @@ namespace sw
     {
         outMapBinaryOrigin.clear();
         vector<ShaderCookRequest> listRequest;
-        if ( ShaderCookRequestCollector::collectAllRequests( FileUtil::toDiskPath( engine::getSubsystem<AssetPaths>().getRootFolderPath() ), listRequest ) == false )
+        if ( ShaderCookRequestCollector::collectAllRequests( engine::getSubsystem<AssetPaths>().getRootFolderPath(), listRequest ) == false )
             return false;
         for ( const ShaderCookRequest& request : listRequest )
         {

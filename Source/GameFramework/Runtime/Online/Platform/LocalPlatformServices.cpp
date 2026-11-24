@@ -10,7 +10,7 @@
 
 namespace sw
 {
-    LocalPlatformServices::LocalPlatformServices( string_view folder )
+    LocalPlatformServices::LocalPlatformServices( const AbsolutePath& folder )
         : _folder{ folder }
         , _listUnlocked{}
         , _mapStat{}
@@ -23,7 +23,7 @@ namespace sw
         , _reserved{ 0 }
     {
         string                 text;
-        const OptionalFileRead achievementsRead = FileUtil::readOptionalTextFile( FileUtil::toDiskPath( FileUtil::joinPath( _folder, kAchievementsFileName ) ), text );
+        const OptionalFileRead achievementsRead = FileUtil::readOptionalTextFile( _folder.join( kAchievementsFileName ), text );
         if ( achievementsRead == OptionalFileRead::Failed )
         {
             _bAchievementsKept = SW_FALSE;
@@ -69,8 +69,8 @@ namespace sw
     {
         if ( isPlainFileName( fileName ) == false )
             return false;
-        const string path = FileUtil::joinPath( FileUtil::joinPath( _folder, kCloudFolderName ), fileName );
-        return FileUtil::ensureParentDirectoryExists( FileUtil::toDiskPath( path ) ) && FileUtil::writeFileDurable( FileUtil::toDiskPath( path ), bytes.data(), bytes.size() );
+        const AbsolutePath path = _folder.join( kCloudFolderName ).join( fileName );
+        return FileUtil::ensureParentDirectoryExists( path ) && FileUtil::writeFileDurable( path, bytes.data(), bytes.size() );
     }
 
     bool LocalPlatformServices::readCloudFile( string_view fileName, vector<uint8>& outBytes )
@@ -78,10 +78,10 @@ namespace sw
         outBytes.clear();
         if ( isPlainFileName( fileName ) == false )
             return false;
-        const string path = FileUtil::joinPath( FileUtil::joinPath( _folder, kCloudFolderName ), fileName );
-        if ( FileUtil::exists( FileUtil::toDiskPath( path ) ) == false )
+        const AbsolutePath path = _folder.join( kCloudFolderName ).join( fileName );
+        if ( FileUtil::exists( path ) == false )
             return false;
-        if ( FileUtil::readFile( FileUtil::toDiskPath( path ), outBytes ) == false )
+        if ( FileUtil::readFile( path, outBytes ) == false )
         {
             outBytes.clear();
             return false;
@@ -114,8 +114,8 @@ namespace sw
             {
                 text.appendFormat( "%#\n", achievementID );
             }
-            const string path   = FileUtil::joinPath( _folder, kAchievementsFileName );
-            const bool   bSaved = FileUtil::ensureParentDirectoryExists( FileUtil::toDiskPath( path ) ) && FileUtil::writeTextFileDurable( FileUtil::toDiskPath( path ), text.view() );
+            const AbsolutePath path   = _folder.join( kAchievementsFileName );
+            const bool         bSaved = FileUtil::ensureParentDirectoryExists( path ) && FileUtil::writeTextFileDurable( path, text.view() );
             if ( bSaved == false )
                 SW_LOG_WARNING_ID( "LocalPlatformServices.AchievementsNotSaved", "Local platform: '%#' could not be written - tried again on the next update", path.c_str() );
             _bAchievementsDirty = bSaved ? SW_FALSE : SW_TRUE;
@@ -149,7 +149,7 @@ namespace sw
     void LocalPlatformServices::reportUnreadable( const utf8* pFileName ) const
     {
         SW_LOG_ERROR_ID( "LocalPlatformServices.FileUnreadable", "Local platform: '%#' in '%#' exists but could not be read - it is left untouched and changes of this run are not saved", pFileName,
-                         _folder );
+                         _folder.str() );
     }
 
     bool LocalPlatformServices::writeKeyValueFile( const utf8* pFileName, const flat_map<string, string>& mapValue ) const
@@ -159,8 +159,8 @@ namespace sw
         {
             text.appendFormat( "%#=%#\n", key, value );
         }
-        const string path   = FileUtil::joinPath( _folder, pFileName );
-        const bool   bSaved = FileUtil::ensureParentDirectoryExists( FileUtil::toDiskPath( path ) ) && FileUtil::writeTextFileDurable( FileUtil::toDiskPath( path ), text.view() );
+        const AbsolutePath path   = _folder.join( pFileName );
+        const bool         bSaved = FileUtil::ensureParentDirectoryExists( path ) && FileUtil::writeTextFileDurable( path, text.view() );
         if ( bSaved == false )
             SW_LOG_WARNING_ID( "LocalPlatformServices.FileNotSaved", "Local platform: '%#' could not be written - tried again on the next update", path.c_str() );
         return bSaved;
@@ -169,7 +169,7 @@ namespace sw
     bool LocalPlatformServices::readKeyValueFile( const utf8* pFileName, flat_map<string, string>& outMapValue ) const
     {
         string                 text;
-        const OptionalFileRead read = FileUtil::readOptionalTextFile( FileUtil::toDiskPath( FileUtil::joinPath( _folder, pFileName ) ), text );
+        const OptionalFileRead read = FileUtil::readOptionalTextFile( _folder.join( pFileName ), text );
         if ( read != OptionalFileRead::Read )
             return read == OptionalFileRead::Missing; // 없으면 처음 실행이다
         StringUtil::forEachLine( text, [&outMapValue]( string_view line )

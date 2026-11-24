@@ -6,6 +6,7 @@
 #include "Core/Foundation/Expected.h"
 #include "Core/Foundation/Macros.h"
 #include "Core/Foundation/Types.h"
+#include "Core/Path/AbsolutePath.h"
 
 #include "Editor/Common/Asset/AssetImportPathFilter.h"
 
@@ -148,7 +149,7 @@ namespace sw::editor
         ~TextureImportConfig() = default;
 
         /** @brief 파일에서 설정을 로드하고 프리셋 상속 트리를 해석합니다. 규칙 파일은 필수다 — 없거나 읽지 못하면 오류를 남기고 false 입니다(기본 규칙으로 임포트하면 결과가 말없이 바뀐다). */
-        [[nodiscard]] bool loadFromFile( string_view configPath );
+        [[nodiscard]] bool loadFromFile( const AbsolutePath& configPath );
 
         /** @brief JSON 문자열에서 설정을 파싱합니다. */
         [[nodiscard]] bool loadFromJSONString( string_view jsonString );
@@ -176,7 +177,7 @@ namespace sw::editor
         /** @brief 규칙이 없을 때(설정 파일 없음)의 공유 원본 폴더 이름입니다. */
         static constexpr string_view kSharedDefaultRuleName = "default";
         /** @brief 규칙 @p ruleName 으로 임포트할 공유 원본의 경로입니다(`<x>/textures_raw/_shared/<소문자 규칙>/<키><확장자>`). */
-        static string makeSharedSourcePath( string_view domainFolder, string_view ruleName, string_view key, string_view extension );
+        static AbsolutePath makeSharedSourcePath( string_view domainFolder, string_view ruleName, string_view key, string_view extension );
         /**
          * @brief 경로로 규칙을 고르는 칸(이름 · 조건)만 적은 글입니다. 규칙의 압축 설정은 들지 않는다.
          * @details 모델이 꺼낸 내장 이미지는 고른 규칙의 이름이 원본 폴더다 — 이 글이 바뀌면 그 자리가 바뀔 수 있어 모델의 원본 해시에 섞는다(`ModelImportUtil::mixExternalFiles`). 설정만 바뀐 규칙은 텍스처 임포트가 따라간다.

@@ -6,6 +6,7 @@
  */
 #include "pch.h"
 
+#include "Core/File/FileUtil.h"
 #include "Core/Log/Logger.h"
 
 #include "Editor/Common/Localization/LocalizationTools.h"
@@ -18,7 +19,7 @@ namespace sw::editor
     namespace
     {
         /** @brief 작업 하나를 돌립니다. 성공하면 true 입니다(모르는 작업은 false). */
-        bool runTask( EditorLocalizationTask task, string_view poPath, string_view projectArgument )
+        bool runTask( EditorLocalizationTask task, const AbsolutePath& poPath, string_view projectArgument )
         {
             switch ( task )
             {
@@ -42,7 +43,7 @@ extern "C" SW_MODULE_API int32 runEditorLocalizationTask( uint32 task, const utf
     // 인스턴스가 없는 헤드리스 호출이라 서비스 범위를 이 호출 동안만 묶는다(`importEditorAssets` 와 같은 길).
     if ( pService != nullptr )
         sw::editor::bindEditorService( *pService );
-    const bool bSucceeded = sw::editor::runTask( static_cast<sw::EditorLocalizationTask>( task ), pPoPath != nullptr ? pPoPath : "",
+    const bool bSucceeded = sw::editor::runTask( static_cast<sw::EditorLocalizationTask>( task ), pPoPath != nullptr ? sw::FileUtil::toDiskPath( pPoPath ) : sw::AbsolutePath{},
                                                  pProjectArgument != nullptr ? pProjectArgument : "" );
     if ( pService != nullptr )
         sw::editor::unbindEditorService();

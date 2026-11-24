@@ -192,7 +192,7 @@ namespace sw
             /** @brief 훑은 파일 @p absPath 의 에셋 id(리소스 루트 `Content/` 기준 정규화 경로 — 팩 고르기의 id 와 같은 규칙)입니다. 훑는 루트가 도메인 하나여도 같다. 출처 칸에 든다. */
             static string makeOriginID( const string& absPath )
             {
-                const string resourceRoot = engine::getSubsystem<AssetPaths>().getRootFolderPath();
+                const string resourceRoot = engine::getSubsystem<AssetPaths>().getRootFolderPath().str();
                 string       relativePath;
                 if ( FileUtil::tryMakePathUnderRoot( resourceRoot, absPath, relativePath ) == false )
                 {

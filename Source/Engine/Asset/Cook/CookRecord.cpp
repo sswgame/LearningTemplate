@@ -588,7 +588,7 @@ namespace sw
 
     bool DerivedDataCache::store( uint64 key, string_view keyDescription, const AbsolutePath& sourcePath ) const
     {
-        const expected<uint64> payloadHash = ContentHash::computeFileStream( sourcePath.str() );
+        const expected<uint64> payloadHash = ContentHash::computeFileStream( sourcePath );
         if ( payloadHash.has_value() == false )
         {
             SW_LOG_WARNING_ID( "DDC.SourceUnreadable", "DDC: cannot read '%#' to store it - the next run cooks it again", sourcePath.str() );

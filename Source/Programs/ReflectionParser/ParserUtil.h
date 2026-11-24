@@ -20,12 +20,12 @@ namespace sw
          * @brief 출력 디렉터리 + stem + 확장자(.gen.cpp / .gen.h)로 생성 경로를 만듭니다.
          * @note FileUtil::normalizePath 는 Windows 에서 소문자로 바꾸므로, CMake OUTPUT 과 맞추려고 쓰지 않습니다.
          */
-        static string makeGeneratedPath( const string& outputDir, const string& sourceFilePath,
-                                         const string_view extension )
+        static AbsolutePath makeGeneratedPath( const AbsolutePath& outputDir, const AbsolutePath& sourceFilePath,
+                                               const string_view extension )
         {
-            string fileName = FileUtil::removeExtension( FileUtil::getFileNamePart( sourceFilePath ) );
+            string fileName = FileUtil::removeExtension( FileUtil::getFileNamePart( sourceFilePath.str() ) );
             fileName += extension;
-            return FileUtil::joinPath( outputDir, fileName );
+            return outputDir.join( fileName );
         }
 
         /** @brief `<>` · `()` 밖의 `,` 만 분할하고 각 토큰을 trim 합니다(`flat_map<K, V>` · builtins 의 Layout 칸 `f32(_x,_y)` 가 한 토큰). */

@@ -142,7 +142,7 @@ namespace sw
         {
             parts._pUserSettings->addStartupSchema( &EngineDefaultAssets::_debugHUDSettingsSchema );
             if ( gv_userSettingsFile.get().empty() == false )
-                parts._pUserSettings->setUserFilePath( gv_userSettingsFile.get() );
+                parts._pUserSettings->setUserFilePath( gv_userSettingsFile.getPath() );
         }
         // 클라이언트 전용 부분(셰이더 라이브 리로드 · 디버그 HUD) — 전용 서버는 그 소스를 짓지 않아 창구가 없다.
         if ( IDevToolsClientPart* const pClientPart = IDevToolsClientPart::find() )

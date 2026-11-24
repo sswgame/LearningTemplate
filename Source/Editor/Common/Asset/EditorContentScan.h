@@ -37,13 +37,13 @@ namespace sw::editor
         /** @brief @p folder(디스크 경로) 아래 파일입니다. 확장자 @p extension 이 비면 모두입니다. */
         [[nodiscard]] static bool collectFiles( string_view folder, string_view extension, vector<string>& outListFilePath, bool bRecursive, const StopToken& stopToken = {} );
         /** @brief @p folder(디스크 경로, 하위까지) 아래 원본 곁 서술(`.meta`)입니다 — 파일 없이 서술만 있는 원본을 찾는 쪽(`AssetSourceLocator`)이 쓴다. */
-        [[nodiscard]] static bool collectSidecarFiles( string_view folder, vector<string>& outListFilePath );
+        [[nodiscard]] static bool collectSidecarFiles( const AbsolutePath& folder, vector<string>& outListFilePath );
         /** @brief @p folder(디스크 경로) 아래 폴더입니다. */
-        [[nodiscard]] static bool collectFolders( string_view folder, vector<string>& outListFolder, bool bRecursive );
+        [[nodiscard]] static bool collectFolders( const AbsolutePath& folder, vector<string>& outListFolder, bool bRecursive );
         /**
          * @brief 에디터의 리소스 트리 전체 — 리소스 루트 @p contentRoot 와 작업 도메인 폴더(@p scratchFolder, 아직 없으면 뺀다) — 아래 파일입니다.
          * @details 트리 전체를 보는 쪽(에셋 색인)이 부른다. 작업 도메인 파일의 id 는 `AssetPaths::toAssetID` 로 푼다(루트 기준 상대 경로가 아니다).
          */
-        [[nodiscard]] static bool collectTreeFiles( string_view contentRoot, string_view scratchFolder, vector<EditorContentFile>& outListFile, const StopToken& stopToken = {} );
+        [[nodiscard]] static bool collectTreeFiles( const AbsolutePath& contentRoot, const AbsolutePath& scratchFolder, vector<EditorContentFile>& outListFile, const StopToken& stopToken = {} );
     };
 } // namespace sw::editor

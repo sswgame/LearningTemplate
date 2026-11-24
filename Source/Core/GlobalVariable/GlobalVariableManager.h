@@ -151,6 +151,9 @@ namespace sw
     public:
         using GlobalString::GlobalString;
         GlobalDiskPath() = default;
+
+        /** @brief 값을 디스크 경로로 읽습니다. 값이 비면 빈 경로입니다(받을 때 절대 경로로 세웠다). */
+        [[nodiscard]] AbsolutePath getPath() const { return AbsolutePath::tryMake( get() ).value_or( AbsolutePath{} ); }
     };
 
     /** @brief 디스크 경로 변수입니다. 저장은 `GlobalString` 이다. */

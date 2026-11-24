@@ -38,7 +38,7 @@ namespace sw
     /** @struct AutomationPerBackendOptions @brief 백엔드마다 실행 하나의 입력입니다. */
     struct AutomationPerBackendOptions
     {
-        string                 _executablePath{};                      ///< 자식으로 띄울 App(이 프로세스의 실행 파일)
+        AbsolutePath           _executablePath{};                      ///< 자식으로 띄울 App(이 프로세스의 실행 파일)
         string                 _scenarioPath{};                        ///< `-scenario` 의 값 그대로
         vector<string>         _listBackend{};                         ///< 명령줄 이름(`dx11` · `vk` …) — 쿠킹 표 순서
         vector<string>         _listPassThroughArgument{};             ///< 자식에 그대로 넘길 원본 인자(`<Launch>` 값 · `-unattended` …) — 백엔드 목록 · 로그 · 보고 · 백엔드 인자는 뺐다

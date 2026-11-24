@@ -73,7 +73,7 @@ SW_TEST_CASE( DataTableViewModelTest, OpeningLoadsTheFile )
     const DocumentEditRecorder recorder{ SW_DELEGATE_LAMBDA( DocumentEditRecorder::RecordDelegate, []( string_view ) {} ) };
     DataTableViewModel         model{ recorder };
     SW_EXPECT_TRUE( model.getGameDataPath().empty() );
-    SW_REQUIRE_TRUE( model.openGameDataFile( files._second._absolutePath ) );
+    SW_REQUIRE_TRUE( model.openGameDataFile( FileUtil::toDiskPath( files._second._absolutePath ) ) );
     SW_EXPECT_TRUE( model.getGameDataPath() == files._second._absolutePath );
     SW_EXPECT_TRUE( model.getGameDataRawText() == "<Second b=\"2\"/>" );
     SW_EXPECT_TRUE( model.getGameDataDocument().isParsed() );
@@ -87,7 +87,7 @@ SW_TEST_CASE( DataTableViewModelTest, ReloadedListKeepsTheOpenFile )
     const DocumentEditRecorder recorder{ SW_DELEGATE_LAMBDA( DocumentEditRecorder::RecordDelegate, []( string_view ) {} ) };
     DataTableViewModel         model{ recorder };
     model.setGameDataFiles( { files._first, files._second } );
-    SW_REQUIRE_TRUE( model.openGameDataFile( files._second._absolutePath ) );
+    SW_REQUIRE_TRUE( model.openGameDataFile( FileUtil::toDiskPath( files._second._absolutePath ) ) );
     model.replaceGameDataRawText( "<Second b=\"9\"/>" );
 
     model.setGameDataFiles( { files._first } ); // 연 파일이 목록에서 빠졌다
@@ -104,11 +104,11 @@ SW_TEST_CASE( DataTableViewModelTest, SaveWritesAndReopenRestores )
     const DataTableTestFiles   files;
     const DocumentEditRecorder recorder{ SW_DELEGATE_LAMBDA( DocumentEditRecorder::RecordDelegate, []( string_view ) {} ) };
     DataTableViewModel         model{ recorder };
-    SW_REQUIRE_TRUE( model.openGameDataFile( files._first._absolutePath ) );
+    SW_REQUIRE_TRUE( model.openGameDataFile( FileUtil::toDiskPath( files._first._absolutePath ) ) );
     const uint32 loadCount = model.getGameDataLoadCount();
 
     model.replaceGameDataRawText( "<First a=\"5\"/>" );
-    SW_REQUIRE_TRUE( model.openGameDataFile( files._first._absolutePath ) );
+    SW_REQUIRE_TRUE( model.openGameDataFile( FileUtil::toDiskPath( files._first._absolutePath ) ) );
     SW_EXPECT_FALSE( model.isGameDataDirty() );
     SW_EXPECT_TRUE( model.getGameDataRawText() == "<First a=\"1\"/>" );
     SW_EXPECT_TRUE( *model.getGameDataDocument().findCellValue( 0, "a" ) == "1" );
@@ -129,7 +129,7 @@ SW_TEST_CASE( DataTableViewModelTest, TableEditUpdatesTheRawText )
     const DataTableTestFiles   files;
     const DocumentEditRecorder recorder{ SW_DELEGATE_LAMBDA( DocumentEditRecorder::RecordDelegate, []( string_view ) {} ) };
     DataTableViewModel         model{ recorder };
-    SW_REQUIRE_TRUE( model.openGameDataFile( files._first._absolutePath ) );
+    SW_REQUIRE_TRUE( model.openGameDataFile( FileUtil::toDiskPath( files._first._absolutePath ) ) );
     SW_REQUIRE_TRUE( model.editGameDataDocument().setCell( 0, "a", "3" ) );
     model.commitGameDataTableEdit();
     SW_EXPECT_TRUE( model.isGameDataDirty() );
@@ -145,8 +145,8 @@ SW_TEST_CASE( DataTableViewModelTest, UnreadableFileIsNotOpened )
     const AbsolutePath         missingPath = test::makeScratchPath( "SwDataTableMissing.xml" );
     const DocumentEditRecorder recorder{ SW_DELEGATE_LAMBDA( DocumentEditRecorder::RecordDelegate, []( string_view ) {} ) };
     DataTableViewModel         model{ recorder };
-    SW_REQUIRE_TRUE( model.openGameDataFile( files._first._absolutePath ) );
-    SW_EXPECT_FALSE( model.openGameDataFile( missingPath.str() ) );
+    SW_REQUIRE_TRUE( model.openGameDataFile( FileUtil::toDiskPath( files._first._absolutePath ) ) );
+    SW_EXPECT_FALSE( model.openGameDataFile( missingPath ) );
     SW_EXPECT_TRUE( model.getGameDataPath().empty() );
     SW_EXPECT_TRUE( model.getGameDataRawText().empty() );
     SW_EXPECT_FALSE( model.saveGameDataFile() ); // 쓸 곳이 없다
@@ -263,7 +263,7 @@ SW_TEST_CASE( DataTableViewModelTest, BrokenXMLIsNotSaved )
     const DataTableTestFiles   files;
     const DocumentEditRecorder recorder{ SW_DELEGATE_LAMBDA( DocumentEditRecorder::RecordDelegate, []( string_view ) {} ) };
     DataTableViewModel         model{ recorder };
-    SW_REQUIRE_TRUE( model.openGameDataFile( files._first._absolutePath ) );
+    SW_REQUIRE_TRUE( model.openGameDataFile( FileUtil::toDiskPath( files._first._absolutePath ) ) );
     model.replaceGameDataRawText( "<First a=" );
     SW_EXPECT_FALSE( model.getGameDataDocument().isParsed() );
     SW_EXPECT_FALSE( model.saveDocument() );
@@ -280,7 +280,7 @@ SW_TEST_CASE( DataTableViewModelTest, RawEditInPlaceUpdatesTheDocument )
     const DataTableTestFiles   files;
     const DocumentEditRecorder recorder{ SW_DELEGATE_LAMBDA( DocumentEditRecorder::RecordDelegate, []( string_view ) {} ) };
     DataTableViewModel         model{ recorder };
-    SW_REQUIRE_TRUE( model.openGameDataFile( files._first._absolutePath ) );
+    SW_REQUIRE_TRUE( model.openGameDataFile( FileUtil::toDiskPath( files._first._absolutePath ) ) );
     model.editGameDataRawText() = "<First a=\"8\"/>";
     model.commitGameDataRawEdit();
     SW_EXPECT_TRUE( model.isGameDataDirty() );
@@ -441,7 +441,7 @@ SW_TEST_CASE( DataTableViewModelTest, GameDataEditNotifiesAndUndoTextRoundTrips 
     { ++notifyCount; } ) };
     DataTableViewModel         model{ recorder };
     SW_EXPECT_TRUE( model.captureGameDataText().empty() ); // 열린 표가 없으면 되돌릴 글이 없다
-    SW_REQUIRE_TRUE( model.openGameDataFile( files._first._absolutePath ) );
+    SW_REQUIRE_TRUE( model.openGameDataFile( FileUtil::toDiskPath( files._first._absolutePath ) ) );
     const string before = model.captureGameDataText();
 
     model.replaceGameDataRawText( "<First a=\"7\"/>" );

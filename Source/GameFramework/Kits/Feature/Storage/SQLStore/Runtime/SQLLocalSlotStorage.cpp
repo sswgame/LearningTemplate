@@ -121,7 +121,7 @@ namespace sw
     {
         // 메모리 자리는 SQLite 의 메모리 데이터베이스다 - 그 약속(`:memory:`)은 이 바닥만 안다(예전에는 경로 글로 모든 바닥에 통했다).
         const bool                      bMemory      = location.getKind() == LocalStoreLocation::Kind::Memory;
-        const string                    databasePath = bMemory ? string( kMemoryDatabasePath ) : FileUtil::joinPath( location.resolveDiskPath( gameName ), kDatabaseFileName );
+        const string                    databasePath = bMemory ? string( kMemoryDatabasePath ) : location.resolveDiskPath( gameName ).join( kDatabaseFileName ).str();
         unique_ptr<SQLLocalSlotStorage> storage      = sw::make_unique<SQLLocalSlotStorage>();
         if ( expected<void> initialized = storage->initialize( databasePath ); initialized.has_value() == false )
             return unexpected( initialized.error() );

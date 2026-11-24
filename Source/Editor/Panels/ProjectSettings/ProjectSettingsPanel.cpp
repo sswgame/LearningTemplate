@@ -144,7 +144,7 @@ namespace sw::editor
         for ( const unique_ptr<Page>& pPage : _listPage )
         {
             if ( pPage->_bDirty )
-                outListPath.push_back( pPage->_absolutePath );
+                outListPath.push_back( pPage->_absolutePath.str() );
         }
     }
 
@@ -152,7 +152,7 @@ namespace sw::editor
     {
         for ( const unique_ptr<Page>& pPage : _listPage )
         {
-            if ( FileUtil::isSameDiskPath( pPage->_absolutePath, absolutePath ) )
+            if ( FileUtil::isSameDiskPath( pPage->_absolutePath.str(), absolutePath ) )
                 return pPage.get();
         }
         return nullptr;

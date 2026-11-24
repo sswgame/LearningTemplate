@@ -103,7 +103,7 @@ SW_TEST_CASE( DomainRoundTripTest, OnlyTheOpenedDomainFileChanges )
     // 도메인을 비운 편집은 읽은 그 파일(승자)에 쓴다 — 다른 도메인 파일은 그대로다.
     const optional<AbsolutePath> relativeTarget = paths.toDiskPath( Internal::kRelative );
     SW_REQUIRE_TRUE( relativeTarget.has_value() );
-    SW_EXPECT_EQUAL( Internal::makeID( winner ), paths.toAssetID( relativeTarget->str() ) );
+    SW_EXPECT_EQUAL( Internal::makeID( winner ), paths.toAssetID( *relativeTarget ) );
     SW_REQUIRE_TRUE( FileUtil::writeTextFile( *relativeTarget, "edited-relative" ) );
     SW_EXPECT_EQUAL( string( "edited-relative" ), Internal::readDisk( winner ) );
     SW_EXPECT_EQUAL( loser, Internal::readDisk( loser ) );

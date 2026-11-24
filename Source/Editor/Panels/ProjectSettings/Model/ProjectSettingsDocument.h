@@ -6,6 +6,7 @@
 #include "Core/Container/string.h"
 #include "Core/Foundation/Expected.h"
 #include "Core/Foundation/Types.h"
+#include "Core/Path/AbsolutePath.h"
 
 #include "Editor/Common/Workspace/Undo/EditorDocumentState.h"
 
@@ -93,7 +94,7 @@ namespace sw::editor
         /** @brief 기본값 인스턴스입니다. 없으면 nullptr 입니다. */
         const void*     getDefaultInstance() const { return _default.get(); }
         const TypeInfo* getType() const { return _pType; }
-        const string&   getPath() const { return _path; }
+        const string&   getPath() const { return _path.str(); }
 
     private:
         /** @brief 파일 글 @p fileText 를 @p pInstance 에 엄격하게 읽습니다(JSON 은 파일 전체, 요소 모드는 그 요소). 요소가 없으면 `Missing` 입니다. */
@@ -107,7 +108,7 @@ namespace sw::editor
         const TypeInfo*   _pType;
         ReflectedInstance _current; ///< 편집할 현재 값(타입의 기본 생성자로 만든다)
         ReflectedInstance _default; ///< 기본값
-        string            _path;
+        AbsolutePath      _path;
         string            _elementName; ///< 비면 파일 전체(JSON), 있으면 XML 파일 안의 그 요소
 
         EditorDocumentState<string> _state; ///< 마지막으로 읽거나 저장한 차이 글

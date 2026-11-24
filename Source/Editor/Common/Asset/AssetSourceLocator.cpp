@@ -32,9 +32,9 @@ namespace sw::editor
         };
     } // namespace
 
-    expected<AbsolutePath> AssetSourceLocator::resolve( string_view sourcePath )
+    expected<AbsolutePath> AssetSourceLocator::resolve( const AbsolutePath& sourcePath )
     {
-        const AbsolutePath diskPath = FileUtil::toDiskPath( sourcePath );
+        const AbsolutePath diskPath = sourcePath;
         if ( FileUtil::isRegularFile( diskPath ) )
             return diskPath;
         const expected<AbsolutePath> storeRoot = loadStoreRoot();
@@ -43,33 +43,33 @@ namespace sw::editor
         return resolveInStore( sourcePath, *storeRoot );
     }
 
-    expected<AbsolutePath> AssetSourceLocator::resolveInStore( string_view sourcePath, const AbsolutePath& storeRoot )
+    expected<AbsolutePath> AssetSourceLocator::resolveInStore( const AbsolutePath& sourcePath, const AbsolutePath& storeRoot )
     {
-        const AbsolutePath diskPath = FileUtil::toDiskPath( sourcePath );
+        const AbsolutePath diskPath = sourcePath;
         if ( FileUtil::isRegularFile( diskPath ) )
             return diskPath;
         const optional<AssetSourceAddress> address = AssetSourceLocatorInternal::findStoredAddress( diskPath );
         if ( address.has_value() == false )
-            return unexpected( Error{ ErrorKind::NotFound, "the source file is missing and its .meta names no stored source", sourcePath } );
+            return unexpected( Error{ ErrorKind::NotFound, "the source file is missing and its .meta names no stored source", sourcePath.str() } );
         AbsolutePath storePath = makeStorePath( storeRoot, *address );
         if ( FileUtil::isRegularFile( storePath ) )
             return storePath;
         return unexpected( Error{ ErrorKind::NotFound, "the source is not in the local source store - fetch it first", storePath.str() } );
     }
 
-    bool AssetSourceLocator::readBytes( string_view sourcePath, vector<uint8>& outBytes )
+    bool AssetSourceLocator::readBytes( const AbsolutePath& sourcePath, vector<uint8>& outBytes )
     {
         const expected<AbsolutePath> contentPath = resolve( sourcePath );
         if ( contentPath.has_value() == false )
         {
-            if ( AssetSourceLocatorInternal::findStoredAddress( FileUtil::toDiskPath( sourcePath ) ).has_value() )
-                SW_LOG_ERROR_ID( "AssetSourceLocator.StoredSourceNotFound", "Source '%#': %# '%#'", sourcePath, contentPath.error().message(), contentPath.error().detail() );
+            if ( AssetSourceLocatorInternal::findStoredAddress( sourcePath ).has_value() )
+                SW_LOG_ERROR_ID( "AssetSourceLocator.StoredSourceNotFound", "Source '%#': %# '%#'", sourcePath.str(), contentPath.error().message(), contentPath.error().detail() );
             return false;
         }
         return FileUtil::readFile( *contentPath, outBytes ) && outBytes.empty() == false;
     }
 
-    void AssetSourceLocator::collectStoredSources( string_view folder, vector<string>& inoutListSourcePath )
+    void AssetSourceLocator::collectStoredSources( const AbsolutePath& folder, vector<string>& inoutListSourcePath )
     {
         unordered_set<string> uniqueListed;
         for ( const string& path : inoutListSourcePath )
@@ -78,12 +78,12 @@ namespace sw::editor
         (void)EditorContentScan::collectSidecarFiles( folder, listMetaPath ); // 폴더를 훑지 못한 까닭은 FileUtil 이 남긴다
         for ( const string& metaPath : listMetaPath )
         {
-            const string       sourcePath = FileUtil::normalizeSeparators( string_view( metaPath ).substr( 0, metaPath.size() - AssetMeta::kExtension.size() ) );
-            const AbsolutePath diskPath   = FileUtil::toDiskPath( sourcePath );
-            if ( uniqueListed.find( sourcePath ) != uniqueListed.end() || FileUtil::isRegularFile( diskPath ) )
+            const AbsolutePath sourcePath = FileUtil::toDiskPath( FileUtil::normalizeSeparators( string_view( metaPath ).substr( 0, metaPath.size() - AssetMeta::kExtension.size() ) ) );
+            const AbsolutePath diskPath   = sourcePath;
+            if ( uniqueListed.find( sourcePath.str() ) != uniqueListed.end() || FileUtil::isRegularFile( diskPath ) )
                 continue; // 파일이 있다(거의 모든 원본 — 서술을 열지 않는다)
             if ( AssetSourceLocatorInternal::findStoredAddress( diskPath ).has_value() )
-                inoutListSourcePath.push_back( sourcePath );
+                inoutListSourcePath.push_back( sourcePath.str() );
         }
     }
 

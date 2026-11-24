@@ -53,20 +53,20 @@ namespace sw::editor
     void BugReportViewModel::readRows()
     {
         _listRow.clear();
-        vector<string> listFolder;
+        vector<AbsolutePath> listFolder;
         if ( FileUtil::collectFolders( BugReport::getRoot(), listFolder, false ) == false )
             return; // 아직 한 번도 모으지 않았으면 루트가 없다
         // 이름이 yyyyMMdd-HHmmss(-n) 이라 이름 역순이 최근 순이다(BugReport::findLatestDirectory 와 같은 규칙).
-        VectorUtil::sort( listFolder, []( const string& lhs, const string& rhs )
+        VectorUtil::sort( listFolder, []( const AbsolutePath& lhs, const AbsolutePath& rhs )
         { return rhs < lhs; } );
         _listRow.reserve( listFolder.size() );
-        for ( const string& folder : listFolder )
+        for ( const AbsolutePath& folder : listFolder )
         {
             BugReportRow row{};
-            row._directory = folder;
-            row._name      = FileUtil::getFileNamePart( folder );
+            row._directory = folder.str();
+            row._name      = FileUtil::getFileNamePart( folder.str() );
             BugReport report;
-            if ( BugReport::readInfo( FileUtil::toDiskPath( folder ), report ) )
+            if ( BugReport::readInfo( folder, report ) )
                 row._note = report._note;
             _listRow.push_back( std::move( row ) );
         }

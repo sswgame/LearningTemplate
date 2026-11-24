@@ -268,7 +268,7 @@ namespace sw
         }
         // 디버그 키(콘솔 여는 키 …)를 플레이어가 바꾼 것도 사용자 설정과 같은 폴더에 둔다. 디버그 키 맵은 처음 돌 때 만들므로 그 전에 경로를 알려 준다.
         if ( bDedicatedServer == false && _headlessState.isHeadless() == false )
-            _pDebugKeyActions->setUserBindingsPath( DebugKeyActions::makeUserBindingsPath( engine::getSubsystem<UserSettingsManager>().getUserFilePath().str() ) );
+            _pDebugKeyActions->setUserBindingsPath( DebugKeyActions::makeUserBindingsPath( engine::getSubsystem<UserSettingsManager>().getUserFilePath() ) );
         // 장면별 프레임 시간 · flush 는 프레임 훅으로 돈다(씬 틱 뒤 — `TelemetryService::onAfterSceneTick` 훅). 텔레메트리가 섰을 때만 붙인다.
         // 떼는 것은 `shutdown` 이 단계 종료 전에 구독을 모두 끊는 것으로 끝난다.
         if ( telemetryService.isInitialized() )

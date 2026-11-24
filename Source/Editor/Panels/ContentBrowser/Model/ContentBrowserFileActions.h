@@ -7,6 +7,7 @@
 #include "Core/Container/vector.h"
 #include "Core/Foundation/Expected.h"
 #include "Core/Foundation/Types.h"
+#include "Core/Path/AbsolutePath.h"
 
 #include "Editor/Common/Commands/Asset/EditorAssetMove.h"
 
@@ -31,16 +32,16 @@ namespace sw::editor
         /** @brief 기다리는 옮기기 하나입니다. 이름 바꾸기면 `_newName`, 폴더로 옮기기면 `_sourceAbs` · `_folderAbs` 입니다. */
         struct Move
         {
-            bool   _bRename{ false }; ///< NOLINT(sw-bool-flag): 집합체다(중괄호 · 지정 초기화로 만든다) — C++17 비트필드는 기본값을 둘 수 없어 `T x;` 가 값을 남기지 않는다
-            string _newName{};
-            string _sourceAbs{};
-            string _folderAbs{};
+            bool         _bRename{ false }; ///< NOLINT(sw-bool-flag): 집합체다(중괄호 · 지정 초기화로 만든다) — C++17 비트필드는 기본값을 둘 수 없어 `T x;` 가 값을 남기지 않는다
+            string       _newName{};
+            AbsolutePath _sourceAbs{};
+            AbsolutePath _folderAbs{};
         };
 
         ContentBrowserMoveQueue();
 
         void addRename( string_view newName );
-        void addMove( string_view sourceAbs, string_view folderAbs );
+        void addMove( const AbsolutePath& sourceAbs, const AbsolutePath& folderAbs );
         /** @brief 기다리는 이름 바꾸기를 버립니다. */
         void discardRename();
         /** @brief 가장 먼저 온 옮기기를 꺼냅니다. 없으면 false 입니다. */
@@ -71,18 +72,18 @@ namespace sw::editor
         // 1) 한 번에 끝나는 작업. 성공하면 결과 경로를 돌려준다. 실패는 `EditorAssetFileCommands` 가 알린다
         // ------------------------------------------------------------------------------
         /** @brief @p parentAbs 에 새 폴더를 만듭니다. @p parentAbs 가 비어 있으면 false 입니다. */
-        [[nodiscard]] static bool createFolder( string_view parentAbs, string& outFolderAbs );
+        [[nodiscard]] static bool createFolder( const AbsolutePath& parentAbs, string& outFolderAbs );
         /** @brief @p folderAbs 에 새 에셋을 만듭니다. @p folderAbs 가 비어 있으면 false 입니다. */
-        [[nodiscard]] static bool createAsset( string_view folderAbs, const EditorNewAssetTemplate& assetTemplate, string& outAssetAbs );
+        [[nodiscard]] static bool createAsset( const AbsolutePath& folderAbs, const EditorNewAssetTemplate& assetTemplate, string& outAssetAbs );
         /** @brief 에셋을 같은 폴더에 복제합니다. @p sourceAbs 가 비어 있으면 false 입니다. */
-        static bool duplicateAsset( string_view sourceAbs, string& outAssetAbs );
+        static bool duplicateAsset( const AbsolutePath& sourceAbs, string& outAssetAbs );
         /**
          * @brief 에셋(폴더면 그 안 전부)을 @p folderAbs 로 옮기고 참조를 고칩니다 — 트랜잭션이다(`EditorAssetFileCommands::applyAssetMoves`). 폴더는 다 옮긴 뒤 빈 원본을 지운다.
          * @return 이미 그 폴더에 있거나, 자기 안으로 옮기거나, 고칠 수 없는 참조가 있거나, 쓰기가 졌으면(되돌린다) false 입니다.
          */
-        [[nodiscard]] static bool moveAssetToFolder( string_view sourceAbs, string_view folderAbs, EditorAssetIndex& inoutIndex, string& outDestinationAbs );
+        [[nodiscard]] static bool moveAssetToFolder( const AbsolutePath& sourceAbs, const AbsolutePath& folderAbs, EditorAssetIndex& inoutIndex, string& outDestinationAbs );
         /** @brief `moveAssetToFolder` 가 할 일을 디스크를 건드리지 않고 계획합니다(확인 대화상자의 미리보기). 옮길 수 없으면 false 이고 `_failure` 에 이유입니다. */
-        [[nodiscard]] static bool planMoveToFolder( string_view sourceAbs, string_view folderAbs, const EditorAssetIndex& index, EditorAssetMovePlan& outPlan );
+        [[nodiscard]] static bool planMoveToFolder( const AbsolutePath& sourceAbs, const AbsolutePath& folderAbs, const EditorAssetIndex& index, EditorAssetMovePlan& outPlan );
 
         // ------------------------------------------------------------------------------
         // 2) 이름 바꾸기. beginRename 으로 시작하고 commitRename 이나 cancelRename 으로 끝낸다
@@ -92,31 +93,31 @@ namespace sw::editor
          * @param outStem 입력란에 미리 넣을, 확장자를 뺀 이름입니다.
          * @return 시작했으면 true 입니다.
          */
-        bool beginRename( string_view absolutePath, string& outStem );
+        bool beginRename( const AbsolutePath& absolutePath, string& outStem );
         /** @brief 이름을 바꾸는 중인 에셋의 경로를 반환합니다. 없으면 빈 문자열입니다. */
-        const string& getRenamingPath() const { return _renamingAbs; }
+        const AbsolutePath& getRenamingPath() const { return _renamingAbs; }
         /** @brief 이름 바꾸기를 끝냅니다. 바꾸지 않습니다. */
-        void cancelRename() { _renamingAbs.clear(); }
+        void cancelRename() { _renamingAbs = {}; }
         /**
          * @brief 이름 바꾸기를 @p newName 으로 끝냅니다. 성공하든 실패하든 이름 바꾸기 상태는 끝납니다.
          * @return 옮겼으면 true 이고 @p outDestinationAbs 에 새 경로가 들어갑니다.
          */
-        bool commitRename( string_view newName, EditorAssetIndex& inoutIndex, string& outDestinationAbs );
+        bool commitRename( string_view newName, EditorAssetIndex& inoutIndex, AbsolutePath& outDestinationAbs );
         /**
          * @brief 이름 바꾸기의 대상 경로를 만듭니다. @p newName 에 확장자가 없으면 원래 확장자를 붙입니다.
          * @return 이름이 비었거나 대상이 원래 경로와 같으면 false 입니다.
          */
-        static bool makeRenameDestination( string_view sourceAbs, string_view newName, string& outDestinationAbs );
+        static bool makeRenameDestination( const AbsolutePath& sourceAbs, string_view newName, AbsolutePath& outDestinationAbs );
 
         // ------------------------------------------------------------------------------
         // 3) 삭제. requestDelete 로 대상을 정하고, 사용자가 확인하면 confirmDelete 로 휴지통에 보낸다
         // ------------------------------------------------------------------------------
         /** @brief 삭제 확인을 기다릴 에셋을 정합니다. */
-        void requestDelete( string_view absolutePath ) { _pendingDeleteAbs = string{ absolutePath }; }
+        void requestDelete( const AbsolutePath& absolutePath ) { _pendingDeleteAbs = absolutePath; }
         /** @brief 삭제 확인을 기다리는 에셋을 반환합니다. 없으면 빈 문자열입니다. */
-        const string& getPendingDeletePath() const { return _pendingDeleteAbs; }
+        const AbsolutePath& getPendingDeletePath() const { return _pendingDeleteAbs; }
         /** @brief 기다리던 삭제를 취소합니다. */
-        void cancelDelete() { _pendingDeleteAbs.clear(); }
+        void cancelDelete() { _pendingDeleteAbs = {}; }
         /**
          * @brief 기다리던 에셋을 OS 휴지통으로 보냅니다. 성공하든 실패하든 기다리던 삭제는 끝납니다.
          * @return 휴지통으로 보냈으면 true 입니다. 기다리던 에셋이 없으면 false 입니다.
@@ -125,10 +126,10 @@ namespace sw::editor
 
     private:
         /** @brief 폴더(그 안 파일 전부) 또는 파일 하나를 @p folderAbs 로 옮기는 목록입니다. 옮길 수 없으면 그 이유입니다. */
-        [[nodiscard]] static expected<vector<EditorAssetMove>> collectMovesToFolder( string_view sourceAbs, string_view folderAbs );
+        [[nodiscard]] static expected<vector<EditorAssetMove>> collectMovesToFolder( const AbsolutePath& sourceAbs, const AbsolutePath& folderAbs );
 
     private:
-        string _renamingAbs;      ///< 이름을 바꾸는 중인 에셋. 비어 있으면 없음
-        string _pendingDeleteAbs; ///< 삭제 확인을 기다리는 에셋. 비어 있으면 없음
+        AbsolutePath _renamingAbs;      ///< 이름을 바꾸는 중인 에셋. 비어 있으면 없음
+        AbsolutePath _pendingDeleteAbs; ///< 삭제 확인을 기다리는 에셋. 비어 있으면 없음
     };
 } // namespace sw::editor

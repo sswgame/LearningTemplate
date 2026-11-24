@@ -48,14 +48,14 @@ namespace
     unordered_set<string> scanSourceIconNames()
     {
         unordered_set<string> setName;
-        vector<string>        listFile;
+        vector<AbsolutePath>  listFile;
         const bool            bCollected = FileUtil::collectFiles( ProcessRoots::get()._project.join( "Source" ), "", listFile, true );
         SW_EXPECT_TRUE( bCollected );
-        for ( const string& filePath : listFile )
+        for ( const AbsolutePath& filePath : listFile )
         {
-            const bool bCode = FileUtil::hasExtension( filePath, ".cpp" ) || FileUtil::hasExtension( filePath, ".h" ) || FileUtil::hasExtension( filePath, ".inl" );
+            const bool bCode = FileUtil::hasExtension( filePath.str(), ".cpp" ) || FileUtil::hasExtension( filePath.str(), ".h" ) || FileUtil::hasExtension( filePath.str(), ".inl" );
             string     text;
-            if ( bCode == false || StringUtil::contains( filePath, "graphify-out" ) || FileUtil::readTextFile( FileUtil::toDiskPath( filePath ), text ) == false )
+            if ( bCode == false || StringUtil::contains( filePath.str(), "graphify-out" ) || FileUtil::readTextFile( filePath, text ) == false )
                 continue;
             collectNameLiterals( text, "SW_EDITOR_ICON_NAME", setName );
             collectNameLiterals( text, "SW_EDITOR_ICON", setName );

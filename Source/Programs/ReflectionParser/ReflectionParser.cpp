@@ -46,7 +46,7 @@ namespace sw
             {
                 if ( session._emitTemplateStore.loadDirectory( options._emitTemplatesDir, sw::config::kExtReflectionTemplate ) )
                     return true;
-                SW_LOG_ERROR_ID( "ReflectionParser.FailedLoad", "Failed to load %#: %#", cli::kEmitTemplates, options._emitTemplatesDir );
+                SW_LOG_ERROR_ID( "ReflectionParser.FailedLoad", "Failed to load %#: %#", cli::kEmitTemplates, options._emitTemplatesDir.str() );
                 return false;
             }
 
@@ -56,7 +56,7 @@ namespace sw
                 session._typeNameMap.setStripPrefixes( session._config._listTypeStripPrefix );
                 if ( loadReflectBuiltins( options._builtinsPath, session ) == false )
                 {
-                    SW_LOG_ERROR_ID( "ReflectionParser.FailedLoad", "Failed to load %#: %#", cli::kBuiltins, options._builtinsPath );
+                    SW_LOG_ERROR_ID( "ReflectionParser.FailedLoad", "Failed to load %#: %#", cli::kBuiltins, options._builtinsPath.str() );
                     return false;
                 }
                 return true;

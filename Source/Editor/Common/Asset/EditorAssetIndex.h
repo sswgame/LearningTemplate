@@ -93,7 +93,7 @@ namespace sw::editor
          * @details @p stopToken 이 올라가면 남은 파일을 읽지 않고 돌아온다 — 결과는 불완전하니 부른 쪽이 신호를 다시 읽고 버린다.
          *          @p pCache(판 `kScanPayloadVersion`)를 주면 크기 · 시각이 그대로인 파일은 열지 않는다. 작업 도메인(실행마다 새 사본)의 파일은 캐시에 두지 않는다.
          */
-        static void scan( string_view resourceRoot, string_view scratchFolder, EditorAssetIndexData& outData, TaskManager* pTaskManager, const StopToken& stopToken = {}, AssetScanCache* pCache = nullptr );
+        static void scan( const AbsolutePath& resourceRoot, const AbsolutePath& scratchFolder, EditorAssetIndexData& outData, TaskManager* pTaskManager, const StopToken& stopToken = {}, AssetScanCache* pCache = nullptr );
         /** @brief 훑기 캐시에 두는 값(`EditorAssetContent`)의 판입니다. 참조 뽑기(`extractLinks` · 도메인 표) · 텍스트 에셋 판정 · 정체성 읽기 규칙을 바꾸면 올린다. */
         static constexpr uint32 kScanPayloadVersion = 1;
         /** @brief 스캔한 결과로 색인을 바꿉니다. 이후 `isReady` 가 true 입니다. */
@@ -103,7 +103,7 @@ namespace sw::editor
          * @details 옮기기 · 이름 바꾸기는 옛 id 와 새 id 둘을 넘긴다. GUID 참조는 정체성이 따라가므로 참조자를 다시 읽지 않는다.
          *          작업 도메인 id(`scratch/…`)는 @p resourceRoot 가 아니라 실행 뿌리 아래에서 읽는다(`AssetPaths::getScratchFolderPath`).
          */
-        void applyChanges( string_view resourceRoot, const vector<string>& listChangedID );
+        void applyChanges( const AbsolutePath& resourceRoot, const vector<string>& listChangedID );
         /** @brief 파일 하나의 글을 디스크 없이 넣습니다(테스트 · 저장 직후의 글). @p assetID 는 디스크 표기 그대로 받는다. @p text 는 텍스트 에셋일 때만 읽는다. */
         void applyText( string_view assetID, string_view text, const FileStamp& fileStamp = {} );
 
@@ -150,7 +150,7 @@ namespace sw::editor
         /** @brief 파일 @p displayPath(디스크 표기)의 줄을 넣습니다(있던 줄은 먼저 뺀다). */
         static void insertEntry( EditorAssetIndexData& inoutData, string_view displayPath, const FileStamp& fileStamp, EditorAssetContent&& content );
         /** @brief 파일 @p displayPath 를 디스크에서 읽어 줄을 고칩니다. 크기 · 시각이 같으면(@p bForce 가 아니면) 열지 않는다. 없으면 줄을 뺀다. */
-        static void refreshFromDisk( EditorAssetIndexData& inoutData, string_view resourceRoot, string_view displayPath, bool bForce );
+        static void refreshFromDisk( EditorAssetIndexData& inoutData, const AbsolutePath& resourceRoot, string_view displayPath, bool bForce );
 
     private:
         EditorAssetIndexData   _data;
@@ -165,11 +165,11 @@ namespace sw::editor
      * @class EditorAssetIndexScanJob
      * @brief 에셋 색인의 전체 스캔(`EditorAssetIndex::scan`)을 워커에서 돌립니다.
      */
-    class EditorAssetIndexScanJob final : public EditorBackgroundTask<string, EditorAssetIndexData>
+    class EditorAssetIndexScanJob final : public EditorBackgroundTask<AbsolutePath, EditorAssetIndexData>
     {
     public:
         /** @brief 워커에 @p resourceRoot 아래 스캔을 요청합니다. 이미 대기 중이면 세대를 올리고 오래된 결과는 버립니다. 작업 관리자는 부른 쪽(UI 스레드)이 찾아 넘깁니다. */
-        void request( string_view resourceRoot, TaskManager* pTaskManager );
+        void request( const AbsolutePath& resourceRoot, TaskManager* pTaskManager );
 
     private:
         static void runJob( const TaskArgs& args );

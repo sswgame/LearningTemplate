@@ -8,6 +8,7 @@
 #include "Core/Foundation/Expected.h"
 #include "Core/Foundation/Macros.h"
 #include "Core/Foundation/Types.h"
+#include "Core/Path/AbsolutePath.h"
 
 #include "DevTools/DevToolsAPI.h"
 
@@ -106,6 +107,8 @@ namespace sw
         [[nodiscard]] static bool mountSavedDomain();
         /** @brief 녹화 경로(`isAllowedOutputPath`)를 다시 돌릴 때의 리소스 id 로 바꿉니다. 허락되지 않은 경로면 빈 문자열입니다. */
         static string makeReplayID( string_view outputPath );
+        /** @brief 녹화 경로(`isAllowedOutputPath`)를 쓸 디스크 자리로 바꿉니다 — `Saved/` 는 작업 폴더가 아니라 이 실행의 저장 폴더다. 허락되지 않은 경로면 빈 경로입니다. */
+        static AbsolutePath makeOutputDiskPath( string_view outputPath );
         /**
          * @brief 검사점 하나(`감시 값`, `감시 값@대상`, `감시 값@대상@키`)를 지금 값으로 읽습니다. 모르는 감시 값이거나 값이 없으면 그 이유입니다.
          * @details 녹화를 멈출 때 부른다. 그 프레임의 씬 틱 뒤 값이라 재생에서도 같은 프레임 끝에 같은 값이 나와야 한다.

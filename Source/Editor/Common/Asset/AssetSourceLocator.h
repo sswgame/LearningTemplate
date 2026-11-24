@@ -29,14 +29,14 @@ namespace sw::editor
          * @brief 원본 @p sourcePath(디스크 경로)의 바이트가 있는 파일입니다 — 그 자리에 있으면 그 파일(설정을 읽지 않는다), 없고 서술이 저장소 주소를 적었으면 설정한 저장소의 파일.
          * @return 원본도 저장소 주소도 없거나, 저장소 설정이 틀렸거나, 로컬 저장소에 그 내용이 없으면 까닭입니다.
          */
-        [[nodiscard]] static expected<AbsolutePath> resolve( string_view sourcePath );
+        [[nodiscard]] static expected<AbsolutePath> resolve( const AbsolutePath& sourcePath );
         /** @brief `resolve` 를 저장소 뿌리 @p storeRoot 로 합니다. */
-        [[nodiscard]] static expected<AbsolutePath> resolveInStore( string_view sourcePath, const AbsolutePath& storeRoot );
+        [[nodiscard]] static expected<AbsolutePath> resolveInStore( const AbsolutePath& sourcePath, const AbsolutePath& storeRoot );
         /** @brief 원본 @p sourcePath 의 바이트를 읽습니다(`resolve`). 풀지 못했거나 읽지 못했거나 비었으면 false 입니다 — 저장소 주소를 풀지 못한 까닭은 오류로 남기고, 없는 파일은 부르는 쪽이 알린다. */
-        [[nodiscard]] static bool readBytes( string_view sourcePath, vector<uint8>& outBytes );
+        [[nodiscard]] static bool readBytes( const AbsolutePath& sourcePath, vector<uint8>& outBytes );
 
         /** @brief @p folder(하위까지)에서 파일은 없고 서술이 저장소 주소를 적은 원본의 디스크 경로를 @p inoutListSourcePath(그 폴더에서 찾은 파일들) 끝에 더합니다 — 원본을 훑는 쪽이 파일 목록에 더한다. */
-        static void collectStoredSources( string_view folder, vector<string>& inoutListSourcePath );
+        static void collectStoredSources( const AbsolutePath& folder, vector<string>& inoutListSourcePath );
 
         /** @brief 저장소 안의 파일 자리입니다(`<뿌리>/<앞 두 자>/<다음 두 자>/<SHA-256>`). */
         [[nodiscard]] static AbsolutePath makeStorePath( const AbsolutePath& storeRoot, const AssetSourceAddress& address );

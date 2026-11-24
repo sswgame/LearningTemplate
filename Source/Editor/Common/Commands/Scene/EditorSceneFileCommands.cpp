@@ -251,14 +251,14 @@ namespace sw::editor
         const string  sourceID     = pScene != nullptr ? pScene->getSourcePath() : string{};
         // 읽기 전용 검사는 쓰기와 같은 해석으로 푼 자리를 본다(R7). 소스가 없거나 못 풀면 SceneManager 가 이유를 남기고 실패한다.
         const optional<AbsolutePath> targetPath = sourceID.empty() ? nullopt : editor::getSubsystem<AssetPaths>().toDiskPath( sourceID );
-        if ( targetPath.has_value() && EditorContentWrite::warnIfReadOnly( targetPath->str(), EditorContentWriteKind::Save ) )
+        if ( targetPath.has_value() && EditorContentWrite::warnIfReadOnly( *targetPath, EditorContentWriteKind::Save ) )
             return false;
         return finishSave( sceneManager.saveActiveScene(), sourceID );
     }
 
     bool EditorSceneFileCommands::saveActiveSceneAs( const AbsolutePath& absPath )
     {
-        if ( EditorContentWrite::warnIfReadOnly( absPath.str(), EditorContentWriteKind::Save ) )
+        if ( EditorContentWrite::warnIfReadOnly( absPath, EditorContentWriteKind::Save ) )
             return false;
         return finishSave( editor::getSubsystem<SceneManager>().saveActiveSceneAs( absPath ), absPath.str() );
     }
@@ -335,7 +335,7 @@ namespace sw::editor
                 if ( listArgument.size() != 1 || EditorAssetFileCommands::readSourceFileArgument( listArgument[0], absolutePath, outReply ) == false )
                     return false;
                 // 씬은 리소스 id 로 연다 - 리소스 트리 · 붙인 디스크 도메인 밖의 파일은 씬의 소스가 될 수 없다.
-                const string sceneID = editor::getSubsystem<AssetPaths>().toAssetID( absolutePath );
+                const string sceneID = editor::getSubsystem<AssetPaths>().toAssetID( FileUtil::toDiskPath( absolutePath ) );
                 if ( sceneID.empty() )
                 {
                     StringBuilder<constant::buffer::kMax256> replyBuilder;

@@ -114,7 +114,7 @@ namespace sw::editor
         const string                            name{ presetName };
         fixed_string<constant::buffer::kMax256> fileName;
         formatstring( fileName.data(), fileName.capacity(), "%#%#", name, GlobalVariablesViewModelInternal::kPresetSuffix );
-        const string presetPath = FileUtil::joinPath( EditorGlobalVariableCommands::getPresetFolderPath(), fileName );
+        const AbsolutePath presetPath = EditorGlobalVariableCommands::getPresetFolderPath().join( fileName );
         // 이름 붙인 프리셋 저장은 세션 문서의 저장이 아니다. 세션의 dirty 는 건드리지 않는다.
         if ( EditorGlobalVariableCommands::savePreset( presetPath, name.c_str() ) == false )
         {
@@ -125,7 +125,7 @@ namespace sw::editor
         return true;
     }
 
-    bool GlobalVariablesViewModel::loadPreset( const string& presetFile )
+    bool GlobalVariablesViewModel::loadPreset( const AbsolutePath& presetFile )
     {
         // 읽은 프리셋이 현재 값이 된다. 저장된 세션과 다르므로 dirty 다(패널이 둔다). 읽지 못하면 값이 그대로다.
         selectEdit( EditorGlobalVariableCommands::collectPresetVariables( presetFile ) );
@@ -140,7 +140,7 @@ namespace sw::editor
 
     bool GlobalVariablesViewModel::pollPresetFiles()
     {
-        return pollPresetFilesIn( EditorGlobalVariableCommands::getPresetFolderPath() );
+        return pollPresetFilesIn( EditorGlobalVariableCommands::getPresetFolderPath().str() );
     }
 
     bool GlobalVariablesViewModel::pollPresetFilesIn( string_view presetFolder )
@@ -270,12 +270,12 @@ namespace sw::editor
 
     void GlobalVariablesViewModel::collectFilesToSave( vector<string>& outListPath )
     {
-        outListPath.push_back( EditorGlobalVariableCommands::getSessionPresetPath() );
+        outListPath.push_back( EditorGlobalVariableCommands::getSessionPresetPath().str() );
     }
 
     bool GlobalVariablesViewModel::isSessionFile( string_view absolutePath )
     {
-        return FileUtil::isSameDiskPath( EditorGlobalVariableCommands::getSessionPresetPath(), absolutePath );
+        return FileUtil::isSameDiskPath( EditorGlobalVariableCommands::getSessionPresetPath().str(), absolutePath );
     }
 
     string GlobalVariablesViewModel::makeSessionText()

@@ -363,14 +363,14 @@ namespace sw
         if ( isLooseFileAllowed( pPackManager ) || engine::getSubsystem<AssetPaths>().isMountedDiskDomainID( folder ) )
         {
             // 검색 순서의 모든 도메인 폴더를 합친다 — 팩 나열과 같은 합집합(같은 이름은 아래 정렬에서 앞선 표기가 남는다).
-            vector<string> listDiskFolder;
+            vector<AbsolutePath> listDiskFolder;
             engine::getSubsystem<AssetPaths>().collectLooseFolders( folder, listDiskFolder );
-            for ( const string& diskFolder : listDiskFolder )
+            for ( const AbsolutePath& diskFolder : listDiskFolder )
             {
                 vector<string> listDiskFile;
-                if ( ContentFileSource::getCurrent().collectFiles( diskFolder, listDiskFile ) == false )
+                if ( ContentFileSource::getCurrent().collectFiles( diskFolder.str(), listDiskFile ) == false )
                 {
-                    SW_LOG_ERROR_ID( "AssetIO.CannotListResourceFolder2", "Cannot list the resource folder '%#' (%#)", folder, diskFolder );
+                    SW_LOG_ERROR_ID( "AssetIO.CannotListResourceFolder2", "Cannot list the resource folder '%#' (%#)", folder, diskFolder.str() );
                     return AssetFolderListing::Failed;
                 }
                 bFolderFound = true;

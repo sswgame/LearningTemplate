@@ -222,7 +222,7 @@ SW_TEST_CASE( TextureBlockEncoderTest, CookedVariantLoadsWithTheFamilyFormat )
     family._mask   = RHIFormat::ASTC_4x4_UNORM;
     family._hdr    = RHIFormat::R16G16B16A16_FLOAT;
 
-    SW_REQUIRE_TRUE( TextureImporter::cookTextureVariant( sourcePath.str(), outputPath.str(), TextureImportRule{}, family ) ); // 기본 규칙은 BC7 · 밉 — 용도는 색
+    SW_REQUIRE_TRUE( TextureImporter::cookTextureVariant( sourcePath, outputPath, TextureImportRule{}, family ) ); // 기본 규칙은 BC7 · 밉 — 용도는 색
     vector<uint8> output;
     SW_REQUIRE_TRUE( FileUtil::readFile( outputPath, output ) );
     DDSImageData image;
@@ -234,7 +234,7 @@ SW_TEST_CASE( TextureBlockEncoderTest, CookedVariantLoadsWithTheFamilyFormat )
 
     TextureImportRule rawRule;
     rawRule._format = TextureImportFormat::R8G8B8A8;
-    SW_REQUIRE_TRUE( TextureImporter::cookTextureVariant( sourcePath.str(), outputPath.str(), rawRule, family ) );
+    SW_REQUIRE_TRUE( TextureImporter::cookTextureVariant( sourcePath, outputPath, rawRule, family ) );
     output.clear();
     SW_REQUIRE_TRUE( FileUtil::readFile( outputPath, output ) );
     SW_REQUIRE_TRUE( DDSLoader::loadFromMemory( output.data(), output.size(), image ) );

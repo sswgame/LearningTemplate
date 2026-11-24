@@ -80,7 +80,7 @@ namespace sw::editor
 
 namespace sw::editor
 {
-    EditorUserFileResult EditorPreferencesStore::loadAll( string_view filePath )
+    EditorUserFileResult EditorPreferencesStore::loadAll( const AbsolutePath& filePath )
     {
         using SettingsRegistry = EditorSettingsRegistryInternal::SettingsRegistry;
         for ( uint32 index = 0; index < SettingsRegistry::getCount(); ++index )
@@ -89,10 +89,10 @@ namespace sw::editor
             if ( registration._pfnGetType() != nullptr )
                 EditorSettingsRegistryInternal::markLoaded( registration );
         }
-        if ( FileUtil::isRegularFile( FileUtil::toDiskPath( filePath ) ) == false )
+        if ( FileUtil::isRegularFile( filePath ) == false )
             return EditorUserFileResult::Missing;
         JSONDocument document;
-        if ( document.loadFromFile( FileUtil::toDiskPath( filePath ) ) == false || document.getRoot().isObject() == false )
+        if ( document.loadFromFile( filePath ) == false || document.getRoot().isObject() == false )
         {
             // 깨진 사용자 파일은 치우고 새로 쓴다 — 그대로 두면 다음 저장이 사용자가 고친 값을 말없이 덮는다.
             if ( EditorUserFile::quarantineCorruptFile( filePath, "not a JSON object" ) )
@@ -113,7 +113,7 @@ namespace sw::editor
         return EditorUserFileResult::Loaded;
     }
 
-    uint32 EditorPreferencesStore::loadNewSections( string_view filePath )
+    uint32 EditorPreferencesStore::loadNewSections( const AbsolutePath& filePath )
     {
         using SettingsRegistry = EditorSettingsRegistryInternal::SettingsRegistry;
         vector<const EditorSettingsRegistration*> listPending;
@@ -125,10 +125,10 @@ namespace sw::editor
             EditorSettingsRegistryInternal::markLoaded( registration );
             listPending.push_back( &registration );
         }
-        if ( listPending.empty() || FileUtil::isRegularFile( FileUtil::toDiskPath( filePath ) ) == false )
+        if ( listPending.empty() || FileUtil::isRegularFile( filePath ) == false )
             return 0;
         JSONDocument document;
-        if ( document.loadFromFile( FileUtil::toDiskPath( filePath ) ) == false || document.getRoot().isObject() == false )
+        if ( document.loadFromFile( filePath ) == false || document.getRoot().isObject() == false )
         {
             // 실행 중에 깨졌다 — 기동 때와 같은 한 경로로 치운다. 새 파일은 다음 saveAll 이 쓴다(지금 쓰면 saveAll 이 이 함수를 다시 부른다).
             (void)EditorUserFile::quarantineCorruptFile( filePath, "not a JSON object" ); // 못 옮겼으면 이유를 오류로 남겼다
@@ -159,7 +159,7 @@ namespace sw::editor
         return false;
     }
 
-    bool EditorPreferencesStore::saveAll( string_view filePath )
+    bool EditorPreferencesStore::saveAll( const AbsolutePath& filePath )
     {
         // 다시 올라온 확장 모듈의 섹션은 아직 기본값이다. 그대로 쓰면 파일에 있던 그 섹션 값이 지워지므로 먼저 읽어 입힌다.
         (void)EditorPreferencesStore::loadNewSections( filePath ); // 입힌 수는 쓰지 않는다
@@ -170,7 +170,7 @@ namespace sw::editor
         // 지금 등록되지 않은 섹션(먼저 내려간 모듈 — 모듈이 내려갈 때마다 저장한다)은 파일에 있던 그대로 둔다. 등록된 섹션만으로 새로 쓰면
         // 종료 중 앞서 내려간 모듈의 값이 지워져 다시 켜면 기본값이었다(테마 액센트 — statedir/savedstate).
         JSONDocument previous;
-        if ( FileUtil::isRegularFile( FileUtil::toDiskPath( filePath ) ) && previous.loadFromFile( FileUtil::toDiskPath( filePath ) ) && previous.getRoot().isObject() )
+        if ( FileUtil::isRegularFile( filePath ) && previous.loadFromFile( filePath ) && previous.getRoot().isObject() )
         {
             for ( const string& sectionID : previous.getRoot().getMemberNames() )
             {
@@ -198,12 +198,12 @@ namespace sw::editor
             root.set( registration._pID ).assignFrom( section );
             keyCount += writtenCount;
         }
-        if ( FileUtil::ensureParentDirectoryExists( FileUtil::toDiskPath( filePath ) ) == false || document.saveToFile( FileUtil::toDiskPath( filePath ), 4 ) == false )
+        if ( FileUtil::ensureParentDirectoryExists( filePath ) == false || document.saveToFile( filePath, 4 ) == false )
         {
-            SW_LOG_WARNING_ID( "EditorPreferences.EditorPreferencesCouldNot", "Editor preferences could not be saved to %#", string( filePath ).c_str() );
+            SW_LOG_WARNING_ID( "EditorPreferences.EditorPreferencesCouldNot", "Editor preferences could not be saved to %#", string( filePath.str() ).c_str() );
             return false;
         }
-        SW_LOG_INFO_ID( "EditorSettings.Saved", "Editor preferences saved: %# key(s) -> %#", keyCount, string( filePath ).c_str() );
+        SW_LOG_INFO_ID( "EditorSettings.Saved", "Editor preferences saved: %# key(s) -> %#", keyCount, string( filePath.str() ).c_str() );
         return true;
     }
 
@@ -253,10 +253,10 @@ namespace sw::editor
             registration._pfnOnChanged();
     }
 
-    uint32 EditorPreferencesStore::countSavedKeys( string_view filePath )
+    uint32 EditorPreferencesStore::countSavedKeys( const AbsolutePath& filePath )
     {
         JSONDocument document;
-        const bool   bUnreadableSettingsFile = FileUtil::isRegularFile( FileUtil::toDiskPath( filePath ) ) == false || document.loadFromFile( FileUtil::toDiskPath( filePath ) ) == false || document.getRoot().isObject() == false;
+        const bool   bUnreadableSettingsFile = FileUtil::isRegularFile( filePath ) == false || document.loadFromFile( filePath ) == false || document.getRoot().isObject() == false;
         if ( bUnreadableSettingsFile )
             return 0;
         uint32 keyCount{ 0 };
@@ -267,9 +267,9 @@ namespace sw::editor
         return keyCount;
     }
 
-    string EditorPreferencesStore::getDefaultFilePath()
+    AbsolutePath EditorPreferencesStore::getDefaultFilePath()
     {
-        return EditorPaths::resolveEditorStateFile( kFileName ).str();
+        return EditorPaths::resolveEditorStateFile( kFileName );
     }
 
     EditorUserFileResult EditorPreferencesStore::open()

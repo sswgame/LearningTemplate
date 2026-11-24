@@ -800,14 +800,14 @@ namespace sw
         return trace;
     }
 
-    string ProfilerTraceExport::findLatestTraceFile()
+    AbsolutePath ProfilerTraceExport::findLatestTraceFile()
     {
         vector<AbsolutePath> listFile;
         const AbsolutePath   folder = ProcessRoots::get()._saved.join( "Traces" );
         if ( FileUtil::collectFiles( folder, ".json", listFile, false ) == false )
             return {};
-        string latest;
-        int64  latestStamp = -1;
+        AbsolutePath latest;
+        int64        latestStamp = -1;
         for ( const AbsolutePath& file : listFile )
         {
             const string name = FileUtil::getFileNamePart( file.str() );
@@ -824,7 +824,7 @@ namespace sw
             if ( stamp > latestStamp )
             {
                 latestStamp = stamp;
-                latest      = file.str();
+                latest      = file;
             }
         }
         return latest;
@@ -953,7 +953,7 @@ namespace sw
         ProfilerTraceMeta meta = makeCurrentMeta( session._longRecordingProcessName );
         meta._bTruncated       = bTruncated;
 
-        const AbsolutePath savedPath = FileUtil::toDiskPath( session._longRecordingPath.empty() ? makeDefaultTracePath( "trace", meta._wallUnixMilliseconds ).str() : session._longRecordingPath );
+        const AbsolutePath savedPath = session._longRecordingPath.empty() ? makeDefaultTracePath( "trace", meta._wallUnixMilliseconds ) : FileUtil::toDiskPath( session._longRecordingPath );
         string             reply;
         if ( writeTraceFile( savedPath, listThread, listFrameBegin, collectSlotNames( profiler ), meta, reply ) == false )
         {

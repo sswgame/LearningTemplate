@@ -27,27 +27,27 @@ namespace
         /** @brief 케이스 폴더에 저장소의 엔진 설정을 바탕으로, 고정 스텝 수만 바꾸는 덮어쓰기를 그 옆에 둔 프로젝트입니다. */
         struct OverriddenProject
         {
-            string _basePath;
-            string _overridePath;
-            string _baseText;
+            AbsolutePath _basePath;
+            AbsolutePath _overridePath;
+            string       _baseText;
         };
 
         static OverriddenProject makeProject( string_view caseName )
         {
-            const string      root = FileUtil::normalizeSeparators( test::makeScratchPath( caseName ).str() );
-            OverriddenProject project;
-            project._basePath     = FileUtil::joinPath( root, "Config/Engine/EngineConfig.json" );
-            project._overridePath = FileUtil::joinPath( root, PlatformConfigOverride::makeEngineConfigPath( "Test" ) );
+            const AbsolutePath root = test::makeScratchPath( caseName );
+            OverriddenProject  project;
+            project._basePath     = root.join( "Config/Engine/EngineConfig.json" );
+            project._overridePath = root.join( PlatformConfigOverride::makeEngineConfigPath( "Test" ) );
             SW_EXPECT_TRUE( FileUtil::readTextFile( ProcessRoots::get()._project.join( "Config/Engine/EngineConfig.json" ), project._baseText ) );
-            SW_EXPECT_TRUE( FileUtil::ensureParentDirectoryExists( FileUtil::toDiskPath( project._basePath ) ) && FileUtil::writeTextFile( FileUtil::toDiskPath( project._basePath ), project._baseText ) );
-            SW_EXPECT_TRUE( FileUtil::ensureParentDirectoryExists( FileUtil::toDiskPath( project._overridePath ) ) && FileUtil::writeTextFile( FileUtil::toDiskPath( project._overridePath ), kOverrideText ) );
+            SW_EXPECT_TRUE( FileUtil::ensureParentDirectoryExists( project._basePath ) && FileUtil::writeTextFile( project._basePath, project._baseText ) );
+            SW_EXPECT_TRUE( FileUtil::ensureParentDirectoryExists( project._overridePath ) && FileUtil::writeTextFile( project._overridePath, kOverrideText ) );
             return project;
         }
 
-        static EngineConfig readEngineConfig( const string& path )
+        static EngineConfig readEngineConfig( const AbsolutePath& path )
         {
             string text;
-            SW_EXPECT_TRUE( FileUtil::readTextFile( FileUtil::toDiskPath( path ), text ) );
+            SW_EXPECT_TRUE( FileUtil::readTextFile( path, text ) );
             EngineConfig config;
             SW_EXPECT_TRUE( ConfigManager::readConfigJSON( config, text, path.c_str() ) );
             return config;
@@ -60,19 +60,19 @@ namespace
  */
 SW_TEST_CASE( ProjectSettingsDocumentTest, EveryGamePresetOpensEditsAndSaves )
 {
-    vector<string> listPath;
+    vector<AbsolutePath> listPath;
     SW_REQUIRE_TRUE( FileUtil::collectFiles( ProcessRoots::get()._project.join( "Config/Game" ), ".json", listPath, false ) );
     SW_REQUIRE_FALSE( listPath.empty() );
-    const string root = FileUtil::normalizeSeparators( test::makeScratchPath( "settings_game_presets" ).str() );
-    for ( const string& sourcePath : listPath )
+    const AbsolutePath root = test::makeScratchPath( "settings_game_presets" );
+    for ( const AbsolutePath& sourcePath : listPath )
     {
         string text;
-        SW_REQUIRE_TRUE( FileUtil::readTextFile( FileUtil::toDiskPath( sourcePath ), text ) );
-        const string copyPath = FileUtil::joinPath( root, FileUtil::getFileNamePart( sourcePath ) );
-        SW_REQUIRE_TRUE( FileUtil::ensureParentDirectoryExists( FileUtil::toDiskPath( copyPath ) ) && FileUtil::writeTextFile( FileUtil::toDiskPath( copyPath ), text ) );
+        SW_REQUIRE_TRUE( FileUtil::readTextFile( sourcePath, text ) );
+        const AbsolutePath copyPath = root.join( FileUtil::getFileNamePart( sourcePath.str() ) );
+        SW_REQUIRE_TRUE( FileUtil::ensureParentDirectoryExists( copyPath ) && FileUtil::writeTextFile( copyPath, text ) );
 
         ProjectSettingsDocument document;
-        SW_REQUIRE_TRUE( document.open( *GameConfig::StaticType(), copyPath ) == ConfigReadResult::Loaded );
+        SW_REQUIRE_TRUE( document.open( *GameConfig::StaticType(), copyPath.str() ) == ConfigReadResult::Loaded );
         SW_EXPECT_FALSE( document.isModified() );
         GameConfig* const pConfig    = static_cast<GameConfig*>( document.getInstance() );
         const DataPath    packRoot   = pConfig->_packRoot;
@@ -83,7 +83,7 @@ SW_TEST_CASE( ProjectSettingsDocumentTest, EveryGamePresetOpensEditsAndSaves )
         SW_EXPECT_FALSE( document.isModified() );
 
         ProjectSettingsDocument reopened;
-        SW_REQUIRE_TRUE( reopened.open( *GameConfig::StaticType(), copyPath ) == ConfigReadResult::Loaded );
+        SW_REQUIRE_TRUE( reopened.open( *GameConfig::StaticType(), copyPath.str() ) == ConfigReadResult::Loaded );
         GameConfig* const pSaved = static_cast<GameConfig*>( reopened.getInstance() );
         SW_EXPECT_EQUAL( string{ "game/savedpack" }, pSaved->_packRoot.get() );
         SW_EXPECT_EQUAL( fieldCount, pSaved->_cookRules._listEntryIDField.size() );
@@ -98,7 +98,7 @@ SW_TEST_CASE( ProjectSettingsDocumentTest, UndoTextRestoresTheEditedInstance )
 {
     const ProjectSettingsDocumentTestUtil::OverriddenProject project = ProjectSettingsDocumentTestUtil::makeProject( "ProjectSettingsUndoText" );
     ProjectSettingsDocument                                  document;
-    SW_REQUIRE_TRUE( document.open( *EngineConfig::StaticType(), project._basePath ) == ConfigReadResult::Loaded );
+    SW_REQUIRE_TRUE( document.open( *EngineConfig::StaticType(), project._basePath.str() ) == ConfigReadResult::Loaded );
     const string before = document.captureText();
     SW_EXPECT_FALSE( before.empty() );
 
@@ -127,7 +127,7 @@ SW_TEST_CASE( ProjectSettingsDocumentTest, SavingTheBaseDoesNotLeakThePlatformOv
     SW_REQUIRE_TRUE( baseStep != 2u ); // 덮어쓰기와 같으면 샜는지 가릴 수 없다
 
     ProjectSettingsDocument document;
-    SW_REQUIRE_TRUE( document.open( *EngineConfig::StaticType(), project._basePath ) == ConfigReadResult::Loaded );
+    SW_REQUIRE_TRUE( document.open( *EngineConfig::StaticType(), project._basePath.str() ) == ConfigReadResult::Loaded );
     EngineConfig* const pConfig = static_cast<EngineConfig*>( document.getInstance() );
     SW_REQUIRE_TRUE( pConfig != nullptr );
     SW_EXPECT_EQUAL( baseStep, pConfig->_maxFixedStepPerFrame ); // 합친 값이 아니라 바탕 파일 값
@@ -145,7 +145,7 @@ SW_TEST_CASE( ProjectSettingsDocumentTest, SavingTheBaseDoesNotLeakThePlatformOv
     SW_EXPECT_EQUAL( editedDepth, baseAfter._dataInheritanceMaxDepth );
     SW_EXPECT_EQUAL( baseStep, baseAfter._maxFixedStepPerFrame );
     string overrideAfter;
-    SW_REQUIRE_TRUE( FileUtil::readTextFile( FileUtil::toDiskPath( project._overridePath ), overrideAfter ) );
+    SW_REQUIRE_TRUE( FileUtil::readTextFile( project._overridePath, overrideAfter ) );
     SW_EXPECT_EQUAL( string( Util::kOverrideText ), overrideAfter );
 }
 
@@ -158,7 +158,7 @@ SW_TEST_CASE( ProjectSettingsDocumentTest, SavingTheOverrideLeavesTheBaseUntouch
     const Util::OverriddenProject project = Util::makeProject( "settings_override_table" );
 
     ProjectSettingsJSONDocument table;
-    SW_REQUIRE_TRUE( table.open( project._overridePath ).has_value() );
+    SW_REQUIRE_TRUE( table.open( project._overridePath.str() ).has_value() );
     SW_REQUIRE_TRUE( table.isReadOnly() == false );
     const ProjectSettingsJSONNode& root = table.getNode( ProjectSettingsJSONDocument::kRootNode );
     SW_REQUIRE_EQUAL( root._listChild.size(), size_t{ 1 } );
@@ -166,9 +166,9 @@ SW_TEST_CASE( ProjectSettingsDocumentTest, SavingTheOverrideLeavesTheBaseUntouch
     SW_REQUIRE_TRUE( table.saveDocument() );
 
     string overrideAfter;
-    SW_REQUIRE_TRUE( FileUtil::readTextFile( FileUtil::toDiskPath( project._overridePath ), overrideAfter ) );
+    SW_REQUIRE_TRUE( FileUtil::readTextFile( project._overridePath, overrideAfter ) );
     SW_EXPECT_EQUAL( string( "{\n    \"_maxFixedStepPerFrame\": 3\n}\n" ), overrideAfter );
     string baseAfter;
-    SW_REQUIRE_TRUE( FileUtil::readTextFile( FileUtil::toDiskPath( project._basePath ), baseAfter ) );
+    SW_REQUIRE_TRUE( FileUtil::readTextFile( project._basePath, baseAfter ) );
     SW_EXPECT_TRUE( baseAfter == project._baseText );
 }

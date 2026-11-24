@@ -630,4 +630,11 @@ namespace sw
         replayID.appendFormat( "%#%#", kSavedDomain, outputPath.substr( firstSlash ) );
         return string( replayID.view() );
     }
+
+    AbsolutePath ScenarioRecorder::makeOutputDiskPath( string_view outputPath )
+    {
+        if ( isAllowedOutputPath( outputPath ) == false )
+            return {};
+        return ProcessRoots::get()._saved.join( outputPath.substr( outputPath.find( '/' ) ) );
+    }
 } // namespace sw

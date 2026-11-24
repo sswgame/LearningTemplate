@@ -163,8 +163,8 @@ namespace sw
             static_assert( std::is_base_of_v<IConfig, T>, "T must inherit from IConfig" );
 
             const AbsolutePath     resolvedPath         = resolveConfigPath( filePath );
-            const AbsolutePath     resolvedOverridePath = FileUtil::toDiskPath( overridePath.empty() ? string() : resolveConfigPath( overridePath ).str() );
-            const AbsolutePath     resolvedQualityPath  = FileUtil::toDiskPath( qualityTier.empty() ? string() : resolveConfigPath( qualityPath ).str() );
+            const AbsolutePath     resolvedOverridePath = overridePath.empty() ? AbsolutePath{} : resolveConfigPath( overridePath );
+            const AbsolutePath     resolvedQualityPath  = qualityTier.empty() ? AbsolutePath{} : resolveConfigPath( qualityPath );
             string                 jsonStr;
             string                 label;
             const OptionalFileRead read = readLayeredFile( resolvedPath, resolvedOverridePath, resolvedQualityPath, qualityTier, jsonStr, label );

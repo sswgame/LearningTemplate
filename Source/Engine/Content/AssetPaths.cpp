@@ -35,10 +35,10 @@ namespace sw
          */
         struct AssetPathTable
         {
-            AbsolutePath   _resourceRootFolderPath{}; ///< Content/ 최상위 루트(유일한 기준점)
-            vector<string> _listSearchPriority{};     ///< 검색 우선순위 토큰 목록
-            vector<string> _listResourceFolder{};     ///< findLooseFile 의 검색 루트 목록
-            vector<string> _listHostExcludedGroup{};  ///< 이 호스트가 읽지 않는 에셋 묶음(`Texture` · `ShaderBinary` · `Audio`, 종류 표의 `_excludeGroup`)
+            AbsolutePath         _resourceRootFolderPath{}; ///< Content/ 최상위 루트(유일한 기준점)
+            vector<string>       _listSearchPriority{};     ///< 검색 우선순위 토큰 목록
+            vector<AbsolutePath> _listResourceFolder{};     ///< findLooseFile 의 검색 루트 목록
+            vector<string>       _listHostExcludedGroup{};  ///< 이 호스트가 읽지 않는 에셋 묶음(`Texture` · `ShaderBinary` · `Audio`, 종류 표의 `_excludeGroup`)
         };
 
         /**
@@ -49,8 +49,8 @@ namespace sw
          */
         struct ResolvedEntry
         {
-            string _path{};
-            uint64 _epoch{ 0 };
+            AbsolutePath _path{};
+            uint64       _epoch{ 0 };
         };
 
         /**
@@ -67,8 +67,18 @@ namespace sw
         /** @brief `mountDiskDomain` 으로 붙인 도메인 하나입니다. */
         struct MountedDiskDomain
         {
-            string _domain; ///< 소문자 도메인 이름(`/` 없음)
-            string _folder; ///< 정규화한 절대 디스크 폴더(끝 `/` 없음)
+            string       _domain; ///< 소문자 도메인 이름(`/` 없음)
+            AbsolutePath _folder; ///< 디스크 폴더(끝 `/` 없음)
+        };
+
+        /** @brief 리소스 id 하나가 가리키는 디스크 자리입니다 — 도메인 루트 폴더와 그 아래 키(빈 키는 도메인 루트 자신). */
+        struct DomainLocation
+        {
+            AbsolutePath _root;
+            string       _key;
+
+            /** @brief 가리키는 디스크 경로입니다. */
+            AbsolutePath makePath() const { return _root.join( _key ); }
         };
 
         /** @brief `readBasePriority` 의 결과입니다. 오류 문장은 부르는 쪽이 정적 초기화 가드 밖에서 로그합니다. */
@@ -152,37 +162,32 @@ namespace sw
             /** @brief 두 표의 내용이 같으면 true 입니다(`publishTable` 이 같은 표를 다시 쓴다). */
             static bool isSameTable( const AssetPathTable& left, const AssetPathTable& right )
             {
-                return left._resourceRootFolderPath.str() == right._resourceRootFolderPath.str() &&
+                return left._resourceRootFolderPath == right._resourceRootFolderPath &&
                        left._listSearchPriority == right._listSearchPriority && left._listResourceFolder == right._listResourceFolder &&
                        left._listHostExcludedGroup == right._listHostExcludedGroup;
             }
 
-            /** @brief @p root 아래 도메인(과 하위 폴더)의 디스크 폴더입니다. 없으면 빈 글입니다(새 표를 짓는 동안 그 표의 루트로 푼다). */
-            static string findDomainFolderUnder( const AbsolutePath& root, string_view domainName, string_view subFolder )
+            /** @brief @p root 아래 도메인의 디스크 폴더입니다. 없으면 빈 경로입니다(새 표를 짓는 동안 그 표의 루트로 푼다). */
+            static AbsolutePath findDomainFolderUnder( const AbsolutePath& root, string_view domainName )
             {
                 if ( root.empty() || domainName.empty() )
                     return {};
-                const AbsolutePath domainDir = root.join( domainName );
-                if ( FileUtil::isDirectory( domainDir ) == false )
-                    return {};
-                if ( subFolder.empty() )
-                    return FileUtil::normalizeSeparators( domainDir.str() );
-                const AbsolutePath targetDir = domainDir.join( subFolder );
-                return FileUtil::isDirectory( targetDir ) ? FileUtil::normalizeSeparators( targetDir.str() ) : string{};
+                AbsolutePath domainDir = root.join( domainName );
+                return FileUtil::isDirectory( domainDir ) ? domainDir : AbsolutePath{};
             }
 
             /** @brief @p root 와 우선순위 @p listPriority 로 검색 루트 목록을 짓습니다(디스크를 본다 — 잠금 밖에서 부른다). */
-            static vector<string> buildResourceFolders( const AbsolutePath& root, const vector<string>& listPriority )
+            static vector<AbsolutePath> buildResourceFolders( const AbsolutePath& root, const vector<string>& listPriority )
             {
-                vector<string> listFolder;
+                vector<AbsolutePath> listFolder;
                 if ( root.empty() )
                     return listFolder;
                 listFolder.reserve( 16 );
                 // 순서는 우선순위 그대로 두고 같은 폴더는 한 번만 넣는다.
                 unordered_set<string> uniqueFolder;
-                const auto            appendFolder = [&listFolder, &uniqueFolder]( const string& folder )
+                const auto            appendFolder = [&listFolder, &uniqueFolder]( const AbsolutePath& folder )
                 {
-                    if ( uniqueFolder.insert( folder ).second )
+                    if ( uniqueFolder.insert( folder.str() ).second )
                         listFolder.push_back( folder );
                 };
                 for ( const string& tokenRaw : listPriority )
@@ -192,17 +197,17 @@ namespace sw
                     {
                         // 게임 프리셋을 읽기 전(기동의 리소스 루트 단계 - 서비스 표가 서기 전이거나 아직 읽지 않았다)에는 활성 팩이 아직 없다 - 그때는 game/ 아래 팩만 순서에 넣는다.
                         const GameConfig*  pGameConfig = engine::findSubsystem<GameConfig>();
-                        const AbsolutePath activePack  = FileUtil::toDiskPath( pGameConfig != nullptr && pGameConfig->_packRoot.isSet() ? findDomainFolderUnder( root, pGameConfig->_packRoot.get(), {} ) : string() );
-                        if ( activePack.empty() == false && FileUtil::isDirectory( activePack ) )
-                            appendFolder( FileUtil::normalizeSeparators( activePack.str() ) );
-                        const string gameDir = findDomainFolderUnder( root, constant::path::kGamePack, {} );
+                        const AbsolutePath activePack  = pGameConfig != nullptr && pGameConfig->_packRoot.isSet() ? findDomainFolderUnder( root, pGameConfig->_packRoot.get() ) : AbsolutePath{};
+                        if ( activePack.empty() == false )
+                            appendFolder( activePack );
+                        const AbsolutePath gameDir = findDomainFolderUnder( root, constant::path::kGamePack );
                         if ( gameDir.empty() == false )
                         {
                             vector<string> listPackDomain;
                             (void)AssetPaths::collectGamePackDomains( root, listPackDomain ); // 다 읽지 못하면 이유를 남겼다 - 읽은 팩만 찾는다
                             for ( const string& packDomain : listPackDomain )
                             {
-                                appendFolder( FileUtil::normalizeSeparators( FileUtil::joinPath( root.str(), packDomain ) ) );
+                                appendFolder( root.join( packDomain ) );
                             }
                             appendFolder( gameDir );
                         }
@@ -210,7 +215,7 @@ namespace sw
                     else
                     {
                         // 모든 도메인 · 커스텀 팩 · DLC · 모드를 이름으로 푼다("engine", "common", "editor", "dlc/expansion1", "mods/pack1")
-                        const string domainDir = findDomainFolderUnder( root, token, {} );
+                        const AbsolutePath domainDir = findDomainFolderUnder( root, token );
                         if ( domainDir.empty() == false )
                             appendFolder( domainDir );
                     }
@@ -219,7 +224,7 @@ namespace sw
             }
 
             /** @brief 칸이 믿을 만한지 가르는 에포크입니다. 음성 칸(@p path 가 빔)은 만든 횟수, 양성 칸은 지운 횟수입니다. */
-            static uint64 selectEpoch( const string& path, uint64 creationEpoch, uint64 removalEpoch ) { return path.empty() ? creationEpoch : removalEpoch; }
+            static uint64 selectEpoch( const AbsolutePath& path, uint64 creationEpoch, uint64 removalEpoch ) { return path.empty() ? creationEpoch : removalEpoch; }
 
             /** @brief 푼 경로 캐시의 계측 칸입니다(`AssetPath`: 적중 = 캐시가 답함, 실패 = 디스크를 훑음). 계측 레지스트리의 손잡이라 객체 상태가 아니다. */
             static const CacheStatsHandle& getPathStats()
@@ -242,7 +247,7 @@ namespace sw
             }
 
             /** @brief 캐시에서 찾습니다. 찾았으면 true 이고 @p outPath 가 비면 "없음" 입니다. 기억한 뒤 파일이 만들어졌거나(음성 칸) 지워진(양성 칸) 낡은 칸은 없는 것으로 칩니다. */
-            [[nodiscard]] static bool findResolved( State& state, const string& cacheKey, string& outPath )
+            [[nodiscard]] static bool findResolved( State& state, const string& cacheKey, AbsolutePath& outPath )
             {
                 const uint64      creationEpoch = FileUtil::getCreationEpoch();
                 const uint64      removalEpoch  = FileUtil::getRemovalEpoch();
@@ -257,7 +262,7 @@ namespace sw
             }
 
             /** @brief 푼 결과(@p path 가 비면 "없음")를 저장합니다. @p stamp 의 검색 목록 세대가 이미 낡았으면 저장하지 않습니다. */
-            static void storeResolved( State& state, string&& cacheKey, const string& path, const PathCacheStamp& stamp )
+            static void storeResolved( State& state, string&& cacheKey, const AbsolutePath& path, const PathCacheStamp& stamp )
             {
                 const ScopedMemoryTag memoryScope{ kCacheMemoryTag };
                 ScopedLock<mutex>     lock( state._cacheMutex );
@@ -282,34 +287,30 @@ namespace sw
     #error "Unsupported platform"
 #endif
 
-            /** @brief 소문자 id 의 첫 성분이 붙인 도메인이면 그 폴더와 나머지 키를 줍니다. */
-            [[nodiscard]] static bool findMountedDiskDomain( State& state, string_view lowerRel, string& outRoot, string& outKeyUnderRoot )
+            /** @brief 소문자 id 의 첫 성분이 붙인 도메인이면 그 폴더와 나머지 키입니다. */
+            [[nodiscard]] static optional<DomainLocation> findMountedDiskDomain( State& state, string_view lowerRel )
             {
                 const size_t firstSlash = lowerRel.find( '/' );
                 if ( firstSlash == string_view::npos || firstSlash == 0 )
-                    return false;
+                    return nullopt;
                 const string_view domain = lowerRel.substr( 0, firstSlash );
                 ScopedLock<mutex> lock{ state._diskDomainMutex };
                 for ( const MountedDiskDomain& mounted : state._listDiskDomain )
                 {
                     if ( mounted._domain == domain )
-                    {
-                        outRoot         = mounted._folder;
-                        outKeyUnderRoot = string( lowerRel.substr( firstSlash + 1 ) );
-                        return true;
-                    }
+                        return DomainLocation{ mounted._folder, string( lowerRel.substr( firstSlash + 1 ) ) };
                 }
-                return false;
+                return nullopt;
             }
 
             /** @brief 절대 경로 @p absolutePath 가 붙인 디스크 도메인 폴더 아래면 그 도메인의 id(`<도메인>/<폴더 아래 경로>`)를 적고 true 입니다. */
-            [[nodiscard]] static bool findDiskDomainID( State& state, const string& absolutePath, string& outID )
+            [[nodiscard]] static bool findDiskDomainID( State& state, const AbsolutePath& absolutePath, string& outID )
             {
                 ScopedLock<mutex> lock{ state._diskDomainMutex };
                 for ( const MountedDiskDomain& mounted : state._listDiskDomain )
                 {
                     string relative;
-                    if ( FileUtil::tryMakePathUnderRoot( mounted._folder, absolutePath, relative ) == false ) // 대소문자는 OS 규칙
+                    if ( FileUtil::tryMakePathUnderRoot( mounted._folder.str(), absolutePath.str(), relative ) == false ) // 대소문자는 OS 규칙
                         continue;
                     StringBuilder<constant::buffer::kMax256> builder;
                     builder.appendFormat( "%#/%#", mounted._domain, FileUtil::normalizePath( relative ).str() ); // id 는 소문자다
@@ -365,58 +366,47 @@ namespace sw
             /**
              * @brief 전역 ID(`engine/` · `common/` · `editor/` · `game/<pack>/`)를 도메인 루트로 매핑합니다.
              * @param lowerRel normalizePath 한 상대 키
-             * @param outRoot 도메인 절대 루트
-             * @param outKeyUnderRoot 그 루트 아래 상대 키(팩 이름만 있으면 빈 문자열)
-             * @return 알려진 전역 ID 이고 그 루트가 있으면 true 입니다.
+             * @return 알려진 전역 ID 이고 그 루트가 있으면 도메인 루트와 그 아래 키입니다(팩 이름만 있으면 빈 키).
              */
-            static bool mapGlobalIDToRoot( State& state, string_view lowerRel, string& outRoot, string& outKeyUnderRoot )
+            [[nodiscard]] static optional<DomainLocation> mapGlobalIDToRoot( State& state, string_view lowerRel )
             {
-                outRoot.clear();
-                outKeyUnderRoot.clear();
-
                 // 0. 붙인 디스크 도메인(`mountDiskDomain`)은 리소스 루트와 무관하게 그 폴더로 푼다.
                 const bool bAssetID = lowerRel.empty() == false && FileUtil::isAbsolutePath( lowerRel ) == false;
-                if ( bAssetID && findMountedDiskDomain( state, lowerRel, outRoot, outKeyUnderRoot ) )
-                    return true;
+                if ( bAssetID )
+                {
+                    if ( optional<DomainLocation> mounted = findMountedDiskDomain( state, lowerRel ); mounted.has_value() )
+                        return mounted;
+                }
                 // 리소스 id 구간 판정은 접은 키 형식으로 한다(`PathKey` — 이미 접은 글이라 다시 접어도 같다).
                 const PathKey key = FileUtil::normalizePath( lowerRel );
                 // 작업 도메인은 실행 뿌리 아래다(`getScratchFolderPath`) — 처음 쓸 때 생기는 폴더라 아직 없어도 도메인이다(빈 트리의 첫 쓰기가 상대 키로 거절되지 않게).
                 if ( bAssetID && FileUtil::startsWithPathComponent( key, AssetPaths::kScratchDomain ) )
-                {
-                    outRoot         = AssetPaths::getScratchFolderPath();
-                    outKeyUnderRoot = FileUtil::suffixAfterPathComponent( key, AssetPaths::kScratchDomain );
-                    return true;
-                }
+                    return DomainLocation{ AssetPaths::getScratchFolderPath(), FileUtil::suffixAfterPathComponent( key, AssetPaths::kScratchDomain ) };
 
                 const AbsolutePath& resourceRoot      = getTable( state )._resourceRootFolderPath; // 표는 놓지 않으므로 참조가 유효하다
                 const bool          bUnresolvablePath = resourceRoot.empty() || lowerRel.empty() || FileUtil::isAbsolutePath( lowerRel );
                 if ( bUnresolvablePath )
-                    return false;
+                    return nullopt;
 
                 // 1. game/<pack>/... 형식을 쪼갠다
                 if ( FileUtil::startsWithPathComponent( key, constant::path::kGamePack ) )
                 {
-                    const string rest  = FileUtil::suffixAfterPathComponent( key, constant::path::kGamePack );
-                    const size_t slash = rest.find( '/' );
-                    if ( slash == string::npos )
-                    {
-                        outRoot         = FileUtil::joinPath( FileUtil::joinPath( resourceRoot.str(), constant::path::kGamePack ), rest );
-                        outKeyUnderRoot = {};
-                        return FileUtil::isDirectory( FileUtil::toDiskPath( outRoot ) );
-                    }
-                    outRoot         = FileUtil::joinPath( FileUtil::joinPath( resourceRoot.str(), constant::path::kGamePack ), rest.substr( 0, slash ) );
-                    outKeyUnderRoot = rest.substr( slash + 1 );
-                    return FileUtil::isDirectory( FileUtil::toDiskPath( outRoot ) );
+                    const string   rest  = FileUtil::suffixAfterPathComponent( key, constant::path::kGamePack );
+                    const size_t   slash = rest.find( '/' );
+                    DomainLocation location{ resourceRoot.join( constant::path::kGamePack ).join( rest.substr( 0, slash ) ), slash == string::npos ? string{} : rest.substr( slash + 1 ) };
+                    if ( FileUtil::isDirectory( location._root ) == false )
+                        return nullopt;
+                    return location;
                 }
 
                 // 2. 그 밖의 도메인(<domain>/<key>)을 이름으로 푼다(engine, common, editor, dlc, mods 등). 도메인 이름만이면(`engine`) 그 도메인 루트다(빈 키) -
                 //    `game` 은 팩 이름까지가 도메인이라 이름만으로는 도메인이 아니다.
                 const bool bBareDomain = lowerRel.find( '/' ) == string_view::npos && lowerRel.find( ':' ) == string_view::npos && lowerRel != constant::path::kGamePack;
-                if ( bBareDomain && FileUtil::isDirectory( resourceRoot.join( lowerRel ) ) )
+                if ( bBareDomain )
                 {
-                    outRoot         = FileUtil::joinPath( resourceRoot.str(), lowerRel );
-                    outKeyUnderRoot = {};
-                    return true;
+                    DomainLocation location{ resourceRoot.join( lowerRel ), {} };
+                    if ( FileUtil::isDirectory( location._root ) )
+                        return location;
                 }
                 const size_t firstSlash = lowerRel.find( '/' );
                 if ( firstSlash != string::npos && firstSlash > 0 )
@@ -424,50 +414,41 @@ namespace sw
                     const string_view domain = lowerRel.substr( 0, firstSlash );
                     if ( domain.find( ':' ) == string_view::npos )
                     {
-                        const AbsolutePath candidateDomainDir = resourceRoot.join( domain );
-                        if ( FileUtil::isDirectory( candidateDomainDir ) )
-                        {
-                            outRoot         = candidateDomainDir.str();
-                            outKeyUnderRoot = string( lowerRel.substr( firstSlash + 1 ) );
-                            return true;
-                        }
+                        DomainLocation location{ resourceRoot.join( domain ), string( lowerRel.substr( firstSlash + 1 ) ) };
+                        if ( FileUtil::isDirectory( location._root ) )
+                            return location;
                     }
                 }
 
-                return false;
+                return nullopt;
             }
 
             /**
              * @brief 검색 · 도메인 루트 하나 아래에 파일이 있으면 절대 경로를 반환합니다.
              * @param root 절대 루트
-             * @param relFile 루트(또는 folder) 아래 상대 파일
-             * @param relFolder 선택적 하위 폴더(비우면 root 바로 아래)
-             * @return 있으면 normalizeSeparators 한 절대 경로, 없으면 빈 문자열
+             * @param relFile 루트 아래 상대 파일
+             * @return 있으면 그 경로, 없으면 빈 경로
              */
-            static AbsolutePath tryUnderRoot( string_view root, string_view relFile, string_view relFolder )
+            static AbsolutePath tryUnderRoot( const AbsolutePath& root, string_view relFile )
             {
                 if ( root.empty() )
                     return {};
                 // 빈 키는 도메인 루트 자신이다(`game/playground` 처럼 팩 폴더를 가리키는 id — `mapGlobalIDToRoot` 가 빈 키로 돌려준다).
-                const string       base         = relFolder.empty() ? string( root ) : FileUtil::joinPath( root, relFolder );
-                const AbsolutePath absolutePath = FileUtil::toDiskPath( relFile.empty() ? base : FileUtil::joinPath( base, relFile ) );
-                if ( FileUtil::exists( absolutePath ) )
-                    return absolutePath;
-                return {};
+                AbsolutePath absolutePath = root.join( relFile );
+                return FileUtil::exists( absolutePath ) ? absolutePath : AbsolutePath{};
             }
 
             /**
              * @brief 검색 루트 목록을 돌며 tryUnderRoot 를 부릅니다.
              * @param listRoot findLooseFile 검색 루트들
              * @param relFile 상대 파일 키
-             * @param relFolder 선택적 하위 폴더
-             * @return 처음 찾은 절대 경로입니다. 없으면 빈 문자열입니다.
+             * @return 처음 찾은 절대 경로입니다. 없으면 빈 경로입니다.
              */
-            static string tryResolveAmong( const vector<string>& listRoot, string_view relFile, string_view relFolder )
+            static AbsolutePath tryResolveAmong( const vector<AbsolutePath>& listRoot, string_view relFile )
             {
-                for ( const string& root : listRoot )
+                for ( const AbsolutePath& root : listRoot )
                 {
-                    const string hit = tryUnderRoot( root, relFile, relFolder ).str();
+                    AbsolutePath hit = tryUnderRoot( root, relFile );
                     if ( hit.empty() == false )
                         return hit;
                 }
@@ -562,7 +543,7 @@ namespace sw
         SW_LOG_INFO_ID( "AssetPaths.RootFolder", "RootFolder : %#", rootPath.str() );
         // Content/ 최상위 루트. 모든 도메인은 이 아래에서 이름으로 푼다.
         // 패키지에는 `Content` 가 없다(팩만) - 그때 느슨한 리소스 루트는 비어 있다.
-        const AbsolutePath resourceRootFolderPath = FileUtil::toDiskPath( FileUtil::isDirectory( ProcessRoots::get()._content ) ? ProcessRoots::get()._content.str() : string{} );
+        const AbsolutePath resourceRootFolderPath = FileUtil::isDirectory( ProcessRoots::get()._content ) ? ProcessRoots::get()._content : AbsolutePath{};
 
         vector<string> listSearchPriority = AssetPathsInternal::getTable( *_pState )._listSearchPriority;
         if ( listSearchPriority.empty() )
@@ -575,7 +556,7 @@ namespace sw
         }
 
         // 루트 · 우선순위 · 검색 루트를 한 표로 한 번에 갈아 끼운다(읽는 쪽이 새 루트와 옛 검색 루트를 섞어 보지 않는다).
-        vector<string> listAssetFolder = AssetPathsInternal::buildResourceFolders( resourceRootFolderPath, listSearchPriority );
+        vector<AbsolutePath> listAssetFolder = AssetPathsInternal::buildResourceFolders( resourceRootFolderPath, listSearchPriority );
         (void)AssetPathsInternal::publishTable( *_pState, [&]( AssetPathTable& table )
         {
             table._resourceRootFolderPath = resourceRootFolderPath;
@@ -608,53 +589,52 @@ namespace sw
         // 세대는 찾기 전에 잡는다 — 찾는 동안 검색 목록이 바뀌었거나 파일이 만들어졌으면 이 결과는 낡은 채로 저장되지 못하거나(목록) 다음 조회에서 버려진다(음성).
         const PathCacheStamp stamp = AssetPathsInternal::captureStamp( state );
         {
-            string cached;
+            AbsolutePath cached;
             if ( AssetPathsInternal::findResolved( state, cacheKey, cached ) )
             {
                 AssetPathsInternal::getPathStats().recordHit();
                 if ( cached.empty() )
                     AssetPathsInternal::getMissingStats().recordHit();
-                return cached.empty() ? nullopt : AbsolutePath::tryMake( cached );
+                return cached.empty() ? nullopt : optional<AbsolutePath>{ std::move( cached ) };
             }
         }
         AssetPathsInternal::getPathStats().recordMiss();
 
         const string lowerFile = FileUtil::normalizePath( resourceID ).str();
 
-        string found;
-        string domainRoot;
-        string keyUnderRoot;
-        if ( AssetPathsInternal::mapGlobalIDToRoot( state, lowerFile, domainRoot, keyUnderRoot ) )
+        AbsolutePath found;
+        if ( const optional<DomainLocation> location = AssetPathsInternal::mapGlobalIDToRoot( state, lowerFile ); location.has_value() )
         {
-            found = AssetPathsInternal::tryUnderRoot( domainRoot, keyUnderRoot, {} ).str();
+            found = AssetPathsInternal::tryUnderRoot( location->_root, location->_key );
 #if defined( SW_PLATFORM_POSIX )
             // 대소문자를 가리는 파일시스템: 소문자 키로 못 찾았으면 원래 표기로 다시 찾는다.
             if ( found.empty() && lowerFile != resourceID )
             {
                 const string raw    = FileUtil::normalizeSeparators( resourceID );
                 const size_t slash  = raw.find( '/' );
-                const string rawKey = slash != string::npos ? raw.substr( slash + 1 ) : keyUnderRoot;
-                found               = AssetPathsInternal::tryUnderRoot( domainRoot, rawKey, {} ).str();
+                const string rawKey = slash != string::npos ? raw.substr( slash + 1 ) : location->_key;
+                found               = AssetPathsInternal::tryUnderRoot( location->_root, rawKey );
             }
             // 붙인 디스크 도메인의 폴더는 대소문자가 섞일 수 있고, 기록해 둔 id(쿠킹 입력 등)는 소문자뿐이라 원래 표기가 없다 — 폴더를 훑어 소문자가 같은 항목으로 푼다.
             // 리소스 트리의 도메인은 소문자 규칙이라 훑지 않는다(없는 파일을 묻는 호출이 훑기를 부르지 않게).
-            string mountedRoot;
-            string mountedKey;
-            if ( found.empty() && AssetPathsInternal::findMountedDiskDomain( state, lowerFile, mountedRoot, mountedKey ) )
+            if ( found.empty() )
             {
-                const AbsolutePath hit = FileUtil::findPathIgnoringCase( FileUtil::toDiskPath( mountedRoot ), mountedKey );
-                if ( hit.empty() == false && FileUtil::exists( hit ) )
-                    found = hit.str();
+                if ( const optional<DomainLocation> mounted = AssetPathsInternal::findMountedDiskDomain( state, lowerFile ); mounted.has_value() )
+                {
+                    const AbsolutePath hit = FileUtil::findPathIgnoringCase( mounted->_root, mounted->_key );
+                    if ( hit.empty() == false && FileUtil::exists( hit ) )
+                        found = hit;
+                }
             }
 #endif
         }
         else
         {
-            const vector<string>& listAssetFolder = AssetPathsInternal::getTable( state )._listResourceFolder; // 표 하나를 잡아 그 안에서 읽는다
-            found                                 = AssetPathsInternal::tryResolveAmong( listAssetFolder, lowerFile, {} );
+            const vector<AbsolutePath>& listAssetFolder = AssetPathsInternal::getTable( state )._listResourceFolder; // 표 하나를 잡아 그 안에서 읽는다
+            found                                       = AssetPathsInternal::tryResolveAmong( listAssetFolder, lowerFile );
 #if defined( SW_PLATFORM_POSIX )
             if ( found.empty() && lowerFile != resourceID )
-                found = AssetPathsInternal::tryResolveAmong( listAssetFolder, resourceID, {} );
+                found = AssetPathsInternal::tryResolveAmong( listAssetFolder, resourceID );
 #endif
         }
 
@@ -662,47 +642,47 @@ namespace sw
             AssetPathsInternal::getMissingStats().recordMiss();
         // 없음도 저장한다(음성 결과) — 같은 없는 파일을 묻는 호출(선택적 파일 · 팩에만 있는 에셋)이 매번 모든 검색 루트를 훑지 않게.
         AssetPathsInternal::storeResolved( state, std::move( cacheKey ), found, stamp );
-        return found.empty() ? nullopt : AbsolutePath::tryMake( found );
+        return found.empty() ? nullopt : optional<AbsolutePath>{ std::move( found ) };
     }
 
-    void AssetPaths::collectLooseFolders( string_view folderID, vector<string>& outListFolder ) const
+    void AssetPaths::collectLooseFolders( string_view folderID, vector<AbsolutePath>& outListFolder ) const
     {
         outListFolder.clear();
         if ( folderID.empty() || FileUtil::isAbsolutePath( folderID ) || hasParentDirectoryComponent( folderID ) )
             return;
         State&       state       = *_pState;
         const string lowerFolder = FileUtil::normalizePath( folderID ).str();
-        string       domainRoot;
-        string       keyUnderRoot;
-        if ( AssetPathsInternal::mapGlobalIDToRoot( state, lowerFolder, domainRoot, keyUnderRoot ) )
+        if ( AssetPathsInternal::mapGlobalIDToRoot( state, lowerFolder ).has_value() )
         {
             // 도메인이 정해진 id 는 폴더가 하나다 — 대소문자 처리까지 하는 `findLooseFile` 로 푼다.
             const optional<AbsolutePath> found = findLooseFile( folderID );
             if ( found.has_value() && FileUtil::isDirectory( *found ) )
-                outListFolder.push_back( found->str() );
+                outListFolder.push_back( *found );
             return;
         }
         const string rawFolder = FileUtil::normalizeSeparators( folderID );
-        for ( const string& root : AssetPathsInternal::getTable( state )._listResourceFolder )
+        for ( const AbsolutePath& root : AssetPathsInternal::getTable( state )._listResourceFolder )
         {
             // 리소스 트리는 소문자 규칙이다. 원래 표기는 대소문자를 가리는 파일시스템에서 소문자로 못 찾았을 때만 본다.
-            AbsolutePath found = AssetPathsInternal::tryUnderRoot( root, lowerFolder, {} );
+            AbsolutePath found = AssetPathsInternal::tryUnderRoot( root, lowerFolder );
             if ( found.empty() && rawFolder != lowerFolder )
-                found = AssetPathsInternal::tryUnderRoot( root, rawFolder, {} );
+                found = AssetPathsInternal::tryUnderRoot( root, rawFolder );
             if ( found.empty() == false && FileUtil::isDirectory( found ) )
-                outListFolder.push_back( std::move( found.str() ) );
+                outListFolder.push_back( std::move( found ) );
         }
     }
 
-    string AssetPaths::toAssetID( string_view diskPath ) const
+    string AssetPaths::toAssetID( const AbsolutePath& diskPath ) const
     {
-        string absolutePath;
-        if ( diskPath.empty() || FileUtil::makeAbsolutePath( diskPath, absolutePath ) == false )
+        if ( diskPath.empty() )
             return {};
-        absolutePath = FileUtil::normalizeSeparators( absolutePath );
+        string absoluteText;
+        if ( FileUtil::makeAbsolutePath( diskPath.str(), absoluteText ) == false ) // `..` 를 접는다 — 접지 않은 글은 루트 밖을 안으로 본다
+            return {};
+        const AbsolutePath absolutePath = FileUtil::toDiskPath( absoluteText );
         // 작업 도메인이 먼저다 — 그 폴더는 실행 산출물 폴더 아래라 시나리오가 붙인 `saved` 도메인(`Saved/`)도 품는다.
         string underScratch;
-        if ( FileUtil::tryMakePathUnderRoot( getScratchFolderPath(), absolutePath, underScratch ) )
+        if ( FileUtil::tryMakePathUnderRoot( getScratchFolderPath().str(), absolutePath.str(), underScratch ) )
         {
             StringBuilder<constant::buffer::kMax256> builder;
             builder.appendFormat( "%#/%#", kScratchDomain, underScratch );
@@ -712,12 +692,12 @@ namespace sw
         // 붙인 디스크 도메인(시나리오의 `Saved/` 등) 아래면 그 도메인의 id 다 — 리소스 입구는 OS 경로를 받지 않는다.
         if ( AssetPathsInternal::findDiskDomainID( *_pState, absolutePath, domainID ) )
             return normalizeAssetID( domainID );
-        const string root = FileUtil::trimTrailingSlashes( FileUtil::normalizeSeparators( getRootFolderPath() ) );
-        string       underRoot;
-        if ( root.empty() || FileUtil::makeRelativePath( root, absolutePath, underRoot ) == false )
+        const AbsolutePath& root = getRootFolderPath();
+        string              underRoot;
+        if ( root.empty() || FileUtil::makeRelativePath( root.str(), absolutePath.str(), underRoot ) == false )
             return {};
         // 리소스 트리 안의 `scratch/` 는 작업 도메인의 옛 자리에 남은 찌꺼기다 — 그 id 는 실행 뿌리의 사본을 가리키므로 돌려주지 않는다(디스크 경로라 OS 규칙으로 견준다).
-        if ( FileUtil::isPathAtOrUnderRoot( FileUtil::joinPath( root, kScratchDomain ), absolutePath ) )
+        if ( FileUtil::isPathAtOrUnderRoot( root.join( kScratchDomain ).str(), absolutePath.str() ) )
             return {};
         return normalizeAssetID( underRoot );
     }
@@ -747,29 +727,29 @@ namespace sw
             return nullopt;
         }
         // 이미 있는 파일이면 그 디스크 경로가 답이다(덮어쓸 자리). 상대 키는 읽기가 검색 순서로 고른 그 파일이다.
-        const optional<AbsolutePath> existing = findLooseFile( id );
-        string                       result   = existing.has_value() ? existing->str() : string{};
-        string                       domainRoot;
-        string                       keyUnderRoot;
-        const bool                   bGlobalID = AssetPathsInternal::mapGlobalIDToRoot( *_pState, id, domainRoot, keyUnderRoot );
-        if ( result.empty() && bGlobalID == false )
+        optional<AbsolutePath> existing = findLooseFile( id );
+        if ( existing.has_value() )
+            return existing;
+        const optional<DomainLocation> location = AssetPathsInternal::mapGlobalIDToRoot( *_pState, id );
+        if ( location.has_value() == false )
         {
             SW_LOG_ERROR_ID( "AssetPaths.WriteRelativeKeyMissing", "'%#' is a relative key with no file yet - give the domain (e.g. game/<pack>/%#) to create it", resourceID, id );
             return nullopt;
         }
+        AbsolutePath result = location->makePath();
+        // 붙인 디스크 도메인의 폴더는 대소문자가 섞일 수 있다. 대소문자를 구분하는 파일 시스템에서 소문자 키를 그대로 이으면 이미 있는 폴더 옆에 대소문자만 다른 새 폴더가 생기므로,
+        // 있는 성분은 디스크 표기를 쓰고 없는 성분부터는 id 의 표기를 쓴다. 리소스 트리의 도메인은 소문자 규칙이라 훑지 않고 새 성분도 소문자다(Windows 도 그대로 소문자로 잇는다).
+        if constexpr ( AssetPathsInternal::kCaseSensitiveFileSystem )
+        {
+            if ( const optional<DomainLocation> mounted = AssetPathsInternal::findMountedDiskDomain( *_pState, id ); mounted.has_value() )
+                result = FileUtil::makePathIgnoringCase( mounted->_root, mounted->_key );
+        }
         if ( result.empty() )
         {
-            // 붙인 디스크 도메인의 폴더는 대소문자가 섞일 수 있다. 대소문자를 구분하는 파일 시스템에서 소문자 키를 그대로 이으면 이미 있는 폴더 옆에 대소문자만 다른 새 폴더가 생기므로,
-            // 있는 성분은 디스크 표기를 쓰고 없는 성분부터는 id 의 표기를 쓴다. 리소스 트리의 도메인은 소문자 규칙이라 훑지 않고 새 성분도 소문자다(Windows 도 그대로 소문자로 잇는다).
-            string     mountedRoot;
-            string     mountedKey;
-            const bool bMixedCaseDomain = AssetPathsInternal::kCaseSensitiveFileSystem && AssetPathsInternal::findMountedDiskDomain( *_pState, id, mountedRoot, mountedKey );
-            result                      = bMixedCaseDomain ? FileUtil::makePathIgnoringCase( FileUtil::toDiskPath( mountedRoot ), id.substr( id.find( '/' ) + 1 ) ).str() : FileUtil::joinPath( domainRoot, keyUnderRoot );
+            SW_LOG_ERROR_ID( "AssetPaths.WriteNotResourceID", "'%#' resolved to '%#', which is not an absolute disk path", resourceID, location->_key );
+            return nullopt;
         }
-        optional<AbsolutePath> absPath = AbsolutePath::tryMake( result );
-        if ( absPath.has_value() == false )
-            SW_LOG_ERROR_ID( "AssetPaths.WriteNotResourceID", "'%#' resolved to '%#', which is not an absolute disk path", resourceID, result );
-        return absPath;
+        return result;
     }
 
     bool AssetPaths::mountDiskDomain( string_view domainName, const AbsolutePath& diskFolder )
@@ -781,41 +761,41 @@ namespace sw
             SW_LOG_ERROR_ID( "AssetPaths.MountNameInvalid", "Cannot mount disk domain '%#' - the name is one path component without ':'", domainName );
             return false;
         }
-        const AbsolutePath folder = FileUtil::toDiskPath( FileUtil::trimTrailingSlashes( FileUtil::normalizeSeparators( diskFolder.str() ) ) );
-        if ( FileUtil::isAbsolutePath( folder.str() ) == false || FileUtil::isDirectory( folder ) == false )
+        const AbsolutePath folder = diskFolder.empty() ? AbsolutePath{} : diskFolder.join( {} );
+        if ( folder.empty() || FileUtil::isDirectory( folder ) == false )
         {
             SW_LOG_ERROR_ID( "AssetPaths.MountFolderMissing", "Cannot mount disk domain '%#' - '%#' is not an existing absolute folder", domainName, diskFolder.str() );
             return false;
         }
-        const string root = FileUtil::trimTrailingSlashes( FileUtil::normalizeSeparators( AssetPathsInternal::getTable( *_pState )._resourceRootFolderPath.str() ) );
-        if ( root.empty() == false && FileUtil::isPathAtOrUnderRoot( root, folder.str() ) )
+        const AbsolutePath& root = AssetPathsInternal::getTable( *_pState )._resourceRootFolderPath;
+        if ( root.empty() == false && FileUtil::isPathAtOrUnderRoot( root.str(), folder.str() ) )
         {
             SW_LOG_ERROR_ID( "AssetPaths.MountInsideContentRoot", "Cannot mount disk domain '%#' - '%#' is inside the content root (packs-only builds would read loose assets)", domainName, diskFolder.str() );
             return false;
         }
         // 락 안에서는 목록만 만지고, 오류는 이미 붙은 폴더를 적어 두었다가 락을 놓은 뒤에 남긴다(락을 쥔 채 로그를 부르지 않는다 — 로그 싱크가 무엇을 하든
         // 이 락과 얽히지 않게 한다).
-        State& state = *_pState;
-        string conflictFolder;
-        bool   bConflict{ false };
+        State&       state = *_pState;
+        AbsolutePath conflictFolder;
+        bool         bConflict{ false };
         {
             ScopedLock<mutex> lock{ state._diskDomainMutex };
             for ( const MountedDiskDomain& mounted : state._listDiskDomain )
             {
                 if ( mounted._domain != domain )
                     continue;
-                if ( FileUtil::isSameDiskPath( mounted._folder, folder.str() ) ) // 디스크 폴더다 — 접은 키로 견주면 리눅스에서 대소문자만 다른 폴더가 같아진다
+                if ( FileUtil::isSameDiskPath( mounted._folder.str(), folder.str() ) ) // 디스크 폴더다 — 접은 키로 견주면 리눅스에서 대소문자만 다른 폴더가 같아진다
                     return true;
                 conflictFolder = mounted._folder;
                 bConflict      = true;
                 break;
             }
             if ( bConflict == false )
-                state._listDiskDomain.push_back( MountedDiskDomain{ domain, folder.str() } );
+                state._listDiskDomain.push_back( MountedDiskDomain{ domain, folder } );
         }
         if ( bConflict )
         {
-            SW_LOG_ERROR_ID( "AssetPaths.MountConflict", "Cannot mount disk domain '%#' at '%#' - it is already mounted at '%#'", domainName, diskFolder.str(), conflictFolder );
+            SW_LOG_ERROR_ID( "AssetPaths.MountConflict", "Cannot mount disk domain '%#' at '%#' - it is already mounted at '%#'", domainName, diskFolder.str(), conflictFolder.str() );
             return false;
         }
         clearPathCache();
@@ -850,10 +830,8 @@ namespace sw
 
     bool AssetPaths::isMountedDiskDomainID( string_view assetID ) const
     {
-        string root;
-        string key;
         return assetID.empty() == false && FileUtil::isAbsolutePath( assetID ) == false &&
-               AssetPathsInternal::findMountedDiskDomain( *_pState, FileUtil::normalizePath( assetID ).str(), root, key );
+               AssetPathsInternal::findMountedDiskDomain( *_pState, FileUtil::normalizePath( assetID ).str() ).has_value();
     }
 
     void AssetPaths::collectMountedDiskDomains( vector<string>& outListDomain ) const
@@ -866,22 +844,21 @@ namespace sw
         }
     }
 
-    const string& AssetPaths::getScratchFolderPath()
+    const AbsolutePath& AssetPaths::getScratchFolderPath()
     {
         // 실행 뿌리는 프로세스 동안 바뀌지 않는다(`ProcessRoots`) — 한 번 잇는다.
-        static const string s_scratchFolderPath = FileUtil::normalizeSeparators( FileUtil::joinPath( ProcessRoots::get()._run.str(), kScratchDomain ) );
+        static const AbsolutePath s_scratchFolderPath = ProcessRoots::get()._run.join( kScratchDomain );
         return s_scratchFolderPath;
     }
 
-    const string& AssetPaths::getRootFolderPath() const
+    const AbsolutePath& AssetPaths::getRootFolderPath() const
     {
-        return AssetPathsInternal::getTable( *_pState )._resourceRootFolderPath.str(); // 표는 놓지 않으므로 참조가 유효하다
+        return AssetPathsInternal::getTable( *_pState )._resourceRootFolderPath; // 표는 놓지 않으므로 참조가 유효하다
     }
 
-    const string& AssetPaths::getRootFolderPathFor( string_view resourceID ) const
+    const AbsolutePath& AssetPaths::getRootFolderPathFor( string_view resourceID ) const
     {
-        static const string s_runRootPath = FileUtil::normalizeSeparators( ProcessRoots::get()._run.str() ); // 작업 도메인 폴더의 부모 — 프로세스 동안 바뀌지 않는다
-        return FileUtil::startsWithPathComponent( FileUtil::normalizePath( resourceID ), kScratchDomain ) ? s_runRootPath : getRootFolderPath();
+        return FileUtil::startsWithPathComponent( FileUtil::normalizePath( resourceID ), kScratchDomain ) ? ProcessRoots::get()._run : getRootFolderPath();
     }
 
     bool AssetPaths::setSearchPriority( const vector<string>& listPriority )
@@ -894,7 +871,7 @@ namespace sw
             AssetPathsInternal::assertSerialPhase( "setSearchPriority" );
 
         // 검색 루트는 디스크를 보고 짓는다 — 잠금 밖에서 지은 뒤 우선순위와 함께 한 표로 갈아 끼운다.
-        vector<string> listAssetFolder = AssetPathsInternal::buildResourceFolders( AssetPathsInternal::getTable( *_pState )._resourceRootFolderPath, listPriority );
+        vector<AbsolutePath> listAssetFolder = AssetPathsInternal::buildResourceFolders( AssetPathsInternal::getTable( *_pState )._resourceRootFolderPath, listPriority );
         (void)AssetPathsInternal::publishTable( *_pState, [&]( AssetPathTable& table )
         {
             table._listSearchPriority = listPriority;

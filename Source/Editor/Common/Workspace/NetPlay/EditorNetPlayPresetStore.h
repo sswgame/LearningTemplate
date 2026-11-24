@@ -9,6 +9,7 @@
 #include "Core/Container/vector.h"
 #include "Core/Foundation/Expected.h"
 #include "Core/Foundation/Types.h"
+#include "Core/Path/AbsolutePath.h"
 
 #include "Editor/Common/Config/EditorUserFile.h"
 #include "Editor/Common/EditorExports.h"
@@ -33,7 +34,7 @@ namespace sw::editor
          * @return 없으면 `Missing`(빈 목록). 형식이 틀렸거나 칸이 빠졌거나 이름이 비었거나 겹치거나 고른 이름이 목록에 없으면 `.corrupt` 로 치우고
          *         오류를 남긴 뒤 빈 파일을 새로 쓰고 `Recovered`(`EditorUserFile`). 깨진 파일의 일부 값을 쓰지 않는다.
          */
-        [[nodiscard]] EditorUserFileResult load( string_view filePath );
+        [[nodiscard]] EditorUserFileResult load( const AbsolutePath& filePath );
         /**
          * @brief @p name 으로 @p settings 를 저장하고(같은 이름이 있으면 덮는다) 그 프리셋을 고른 것으로 둔 뒤 파일을 씁니다.
          * @return 이름이 비었거나, `load` 하지 않았거나, 파일을 쓰지 못하면 false 입니다(이유는 오류로 남긴다).
@@ -52,7 +53,7 @@ namespace sw::editor
         const string&                      getSelectedPresetName() const { return _file._selectedPresetName; }
 
         /** @brief 에디터가 쓰는 저장 파일 경로입니다(에디터 상태 폴더의 `kFileName`). */
-        static string getDefaultFilePath();
+        static AbsolutePath getDefaultFilePath();
 
     private:
         /** @brief 이름이 비지 않고 겹치지 않으며 고른 이름이 목록에 있는지 봅니다. 아니면 첫 이유입니다. */
@@ -64,6 +65,6 @@ namespace sw::editor
 
     private:
         EditorNetPlayPresetFile _file;
-        string                  _filePath; ///< `load` 가 연 파일. 비어 있으면 바꾸는 호출이 실패한다
+        AbsolutePath            _filePath; ///< `load` 가 연 파일. 비어 있으면 바꾸는 호출이 실패한다
     };
 } // namespace sw::editor

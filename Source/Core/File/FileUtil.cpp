@@ -798,13 +798,13 @@ namespace sw
         return ensureDirectoryExists( getDirectoryPart( filePath ) );
     }
 
-    string FileUtil::getExecutablePath()
+    AbsolutePath FileUtil::getExecutablePath()
     {
         // 실행 파일 경로를 못 얻으면 어느 루트도 정할 수 없다 - 빈 글로 물러나지 않고 멈춘다(예전에는 빈 글을 받은 쪽마다 따로 실패했다).
         string executablePath;
         if ( PlatformFileSystem::getExecutablePath( executablePath ) == false || executablePath.empty() )
             reportFatalError( "The executable path could not be queried from the OS" );
-        return executablePath;
+        return toDiskPath( executablePath );
     }
 
     bool FileUtil::getFileStamp( string_view fileName, FileStamp& outStamp )

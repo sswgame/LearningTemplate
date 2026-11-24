@@ -99,7 +99,7 @@ namespace sw::editor
 
 namespace sw::editor
 {
-    string EditorThemeTokens::getFolderPath()
+    AbsolutePath EditorThemeTokens::getFolderPath()
     {
         return EditorPaths::findContentFolder( FileUtil::joinPath( constant::path::kEditorPack, kFolderName ) );
     }
@@ -107,17 +107,17 @@ namespace sw::editor
     void EditorThemeTokens::listThemeNames( vector<string>& outListName )
     {
         outListName.clear();
-        const string folder = getFolderPath();
+        const AbsolutePath folder = getFolderPath();
         if ( folder.empty() )
             return;
         // 폴더가 없으면 목록이 비고, 부르는 쪽이 기본 벌을 찾다 실패를 남긴다.
-        (void)FileUtil::forEachDirectoryEntry( FileUtil::toDiskPath( folder ), false, &EditorThemeTokensInternal::addThemeName, &outListName );
+        (void)FileUtil::forEachDirectoryEntry( folder, false, &EditorThemeTokensInternal::addThemeName, &outListName );
         VectorUtil::sort( outListName );
     }
 
     expected<EditorThemeConfig> EditorThemeTokens::loadTheme( string_view name )
     {
-        const string folder = getFolderPath();
+        const string folder = getFolderPath().str();
         if ( folder.empty() )
             return unexpected( Error{ ErrorKind::NotFound, "the content root is not mounted" } );
         string fileName{ name };

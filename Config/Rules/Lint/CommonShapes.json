@@ -2,8 +2,7 @@
     "_comment": "Scripts/lint/common_shapes.py 의 예외. 규칙마다 '자리' → 까닭이다.",
     "_enumNameSwitch": {
         "Source/Engine/Serialization/Fixed/FixedLayout.cpp|FixedReadResult": "리플렉션 생성 코드(ReflectGenerated.h)가 이 헤더를 끌어 ENUM() 을 달 수 없는 아래 층이다",
-        "Source/Engine/Graphics/RHI/Vulkan/VulkanRHIDevice.cpp|?": "바깥 표준 철자(VkResult 상수)다",
-        "Source/Engine/Animation/Rig/RigConstraintNodes.cpp|Mode": ".cpp 안 열거라 리플렉션이 보지 못한다. 글은 노드 종류 이름이다"
+        "Source/Engine/Graphics/RHI/Vulkan/VulkanRHIDevice.cpp|?": "바깥 표준 철자(VkResult 상수)다"
     },
     "_firstComponent": {
         "Source/Engine/Automation/Watch/AutomationComponentWatch.h": "기반 자신이다"
@@ -60,7 +59,7 @@
         "Source/Editor/Common/Commands/Asset/EditorDataTableCommands.cpp|dataFolder": "데이터 표 폴더 하나(재귀 아님)다 — scratch 를 지나지 않는다",
         "Source/Editor/Panels/ContentBrowser/Model/ContentBrowserFileActions.cpp|sourceAbs": "사람이 옮기려고 고른 폴더 하나에 남은 파일이다 — 그 폴더를 통째로 다룬다",
         "Source/Editor/Panels/ProjectSettings/Model/ProjectSettingsEntry.cpp|configFolder": "프로젝트 설정 창이 표 페이지로 여는 `Config/` 다 — 리소스 트리(Content) 밖이라 다른 프로세스의 시나리오 사본이 없다",
-        "Source/Editor/Panels/ProjectSettings/Model/ProjectSettingsEntry.cpp|FileUtil::joinPath( projectRoot": "게임별 프리셋 폴더(`Config/Game` · `Config/Server`)다 — 리소스 트리(Content) 밖이라 다른 프로세스의 시나리오 사본이 없다"
+        "Source/Editor/Panels/ProjectSettings/Model/ProjectSettingsEntry.cpp|projectRoot.join( presetFolder )": "게임별 프리셋 폴더(`Config/Game` · `Config/Server`)다 — 리소스 트리(Content) 밖이라 다른 프로세스의 시나리오 사본이 없다"
     },
     "_nameHashKey": {
         "Source/Engine/Reflection/TypeRegistry.cpp": "기반 자신이다 — 해시 표는 NameHashIndex(find 로 종류 · 지운 이름을 먼저 본다)이고, tryFindNameHashClash 는 열거자 해시 충돌을 찾는 검사 표다",

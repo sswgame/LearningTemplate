@@ -48,13 +48,13 @@ namespace
         }
 
         /** @brief @p root 아래 @p fileCount 개의 합성 트리를 씁니다. */
-        static bool writeTree( const string& root, uint32 fileCount )
+        static bool writeTree( const AbsolutePath& root, uint32 fileCount )
         {
             for ( uint32 fileIndex = 0; fileIndex < fileCount; ++fileIndex )
             {
-                const string absPath = FileUtil::joinPath( root, makeAssetID( fileIndex ) );
-                if ( ( fileIndex % kFilePerFolder == 0 && FileUtil::ensureParentDirectoryExists( FileUtil::toDiskPath( absPath ) ) == false ) ||
-                     FileUtil::writeTextFile( FileUtil::toDiskPath( absPath ), makeText( fileIndex, fileCount ) ) == false )
+                const AbsolutePath absPath = root.join( makeAssetID( fileIndex ) );
+                if ( ( fileIndex % kFilePerFolder == 0 && FileUtil::ensureParentDirectoryExists( absPath ) == false ) ||
+                     FileUtil::writeTextFile( absPath, makeText( fileIndex, fileCount ) ) == false )
                     return false;
             }
             return true;
@@ -77,11 +77,11 @@ SW_TEST_CASE( EditorAssetIndexTest, ScanCostBySize, ._tags = "bench", ._disabled
         StringBuilder<constant::buffer::kMax64> folderName;
         folderName.appendFormat( "tree%#", fileCount );
         const AbsolutePath root = sw::test::makeScratchPath( folderName.view() );
-        SW_REQUIRE_TRUE( Internal::writeTree( root.str(), fileCount ) );
+        SW_REQUIRE_TRUE( Internal::writeTree( root, fileCount ) );
 
         EditorAssetIndexData data{};
         const int64          scanStart = MonotonicClock::nowNanoseconds();
-        EditorAssetIndex::scan( root.str(), {}, data, nullptr );
+        EditorAssetIndex::scan( root, {}, data, nullptr );
         const int64 scanNanoseconds = MonotonicClock::nowNanoseconds() - scanStart;
         SW_EXPECT_EQUAL( fileCount, data._scannedFileCount );
         SW_EXPECT_EQUAL( static_cast<size_t>( fileCount ), data._mapReferrer.size() ); // 파일마다 넷이 가리킨다
@@ -97,7 +97,7 @@ SW_TEST_CASE( EditorAssetIndexTest, ScanCostBySize, ._tags = "bench", ._disabled
             changedText.append( repeat + 1, ' ' );
             SW_REQUIRE_TRUE( FileUtil::writeTextFile( root.join( changedID ), changedText ) );
             const int64 refreshStart = MonotonicClock::nowNanoseconds();
-            index.applyChanges( root.str(), { changedID } );
+            index.applyChanges( root, { changedID } );
             refreshNanoseconds += MonotonicClock::nowNanoseconds() - refreshStart;
         }
         refreshNanoseconds /= kRefreshRepeatCount;

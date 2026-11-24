@@ -163,7 +163,7 @@ namespace sw::editor
             SW_LOG_WARNING_ID( "ModelImporter.VRMAvatarNamesNodes", "VRM '%#': avatar names nodes that are not skin joints (%# bones): %#", sourcePath, listMissing.size(), Internal::joinNames( listMissing ).c_str() );
     }
 
-    bool ModelImportVrm::writeVrmAvatar( const ModelImportResult& result, string_view sourcePath, string_view sideFolder, string_view stem )
+    bool ModelImportVrm::writeVrmAvatar( const ModelImportResult& result, string_view sourcePath, const AbsolutePath& sideFolder, string_view stem )
     {
         using Internal = ModelImportVrmInternal;
         if ( result._avatar.isEmpty() )
@@ -172,7 +172,7 @@ namespace sw::editor
             SW_LOG_WARNING_ID( "ModelImporter.VRMAvatarValuesNot", "VRM '%#': avatar values that are not imported (ignored): %#", sourcePath, Internal::joinNames( result._listIgnoredAvatarKey ).c_str() );
         StringBuilder<constant::buffer::kMax256> fileNameBuilder;
         fileNameBuilder.appendFormat( "%#%#", stem, VrmAvatarDef::kExtension );
-        const string avatarPath = FileUtil::joinPath( sideFolder, fileNameBuilder.view() );
+        const AbsolutePath avatarPath = sideFolder.join( fileNameBuilder.view() );
         if ( ImportedAssetStore::writeResultText( avatarPath, VrmAvatarDef::makeAvatarXML( result._avatar ) ) == false )
         {
             SW_LOG_ERROR_ID( "ModelImporter.FailedWriteAvatar", "Failed to write avatar %#", avatarPath.c_str() );
@@ -187,7 +187,7 @@ namespace sw::editor
         {
             fileNameBuilder.clear();
             fileNameBuilder.appendFormat( "%#%#", stem, FacialRig::kExtension );
-            const string facialPath = FileUtil::joinPath( sideFolder, fileNameBuilder.view() );
+            const AbsolutePath facialPath = sideFolder.join( fileNameBuilder.view() );
             if ( ImportedAssetStore::writeResultText( facialPath, VrmRuntimeAssets::makeFacialRigXML( result._avatar, &listNotConverted ) ) == false )
             {
                 SW_LOG_ERROR_ID( "ModelImporter.FailedWriteFacialRig", "Failed to write facial rig %#", facialPath.c_str() );
@@ -200,7 +200,7 @@ namespace sw::editor
         {
             fileNameBuilder.clear();
             fileNameBuilder.appendFormat( "%#%#", stem, RigAsset::kExtension );
-            const string rigPath = FileUtil::joinPath( sideFolder, fileNameBuilder.view() );
+            const AbsolutePath rigPath = sideFolder.join( fileNameBuilder.view() );
             if ( ImportedAssetStore::writeResultText( rigPath, VrmRuntimeAssets::makeSpringRigXML( result._avatar, result._skeleton, &listNotConverted ) ) == false )
             {
                 SW_LOG_ERROR_ID( "ModelImporter.FailedWriteSpringRig", "Failed to write spring rig %#", rigPath.c_str() );
@@ -225,7 +225,7 @@ namespace sw::editor
         return listMeshSection;
     }
 
-    bool ModelImportVrm::writeSectionPrefab( const AssetPaths& assetPaths, const ModelImportResult& result, string_view meshPath, string_view sideFolder, string_view stem )
+    bool ModelImportVrm::writeSectionPrefab( const AssetPaths& assetPaths, const ModelImportResult& result, const AbsolutePath& meshPath, const AbsolutePath& sideFolder, string_view stem )
     {
         using Internal = ModelImportVrmInternal;
         if ( result._listSection.empty() )
@@ -235,7 +235,7 @@ namespace sw::editor
         {
             StringBuilder<constant::buffer::kMax256> nameBuilder;
             nameBuilder.appendFormat( "%#%#", stem, extension );
-            return assetPaths.toAssetID( FileUtil::joinPath( sideFolder, nameBuilder.view() ) );
+            return assetPaths.toAssetID( sideFolder.join( nameBuilder.view() ) );
         };
         // 임포트가 쓰는 프리팹은 공유 머티리얼을 바로 가리킨다 — 같은 값의 구간이 머티리얼 객체 하나를 나눠 쓴다(인스턴스 값은 `MaterialInstance` 사본에 있어 섞이지 않는다).
         bool bMissingMaterial = false;
@@ -284,19 +284,19 @@ namespace sw::editor
 
         if ( bMissingMaterial )
         {
-            SW_LOG_ERROR_ID( "ModelImporter.SectionMaterialMissing", "Section prefab of '%#': a section material was not written", meshPath );
+            SW_LOG_ERROR_ID( "ModelImporter.SectionMaterialMissing", "Section prefab of '%#': a section material was not written", meshPath.str() );
             return false;
         }
         StringBuilder<constant::buffer::kMax256> prefabNameBuilder;
         prefabNameBuilder.appendFormat( "%#.prefab.xml", stem );
-        const string prefabPath = FileUtil::joinPath( sideFolder, prefabNameBuilder.view() );
-        const bool   bWritten   = ImportedAssetStore::writeResultText( prefabPath, prefabDocument.saveToString() );
+        const AbsolutePath prefabPath = sideFolder.join( prefabNameBuilder.view() );
+        const bool         bWritten   = ImportedAssetStore::writeResultText( prefabPath, prefabDocument.saveToString() );
         if ( bWritten == false )
         {
             SW_LOG_ERROR_ID( "ModelImporter.FailedWriteCharacterPrefab", "Failed to write section prefab %#", prefabPath.c_str() );
             return false;
         }
-        SW_LOG_INFO_ID( "ModelImporter.ModelCharacterPrefabSections", "Model '%#': prefab with %# sections -> %#", meshPath, result._listSection.size(), prefabPath.c_str() );
+        SW_LOG_INFO_ID( "ModelImporter.ModelCharacterPrefabSections", "Model '%#': prefab with %# sections -> %#", meshPath.str(), result._listSection.size(), prefabPath.c_str() );
         return true;
     }
 

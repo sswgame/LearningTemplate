@@ -19,17 +19,17 @@ namespace sw::editor
     {
     }
 
-    EditorUserFileResult EditorNetPlayPresetStore::load( string_view filePath )
+    EditorUserFileResult EditorNetPlayPresetStore::load( const AbsolutePath& filePath )
     {
-        _filePath = string( filePath );
+        _filePath = filePath;
         _file     = EditorNetPlayPresetFile{};
-        if ( FileUtil::isRegularFile( FileUtil::toDiskPath( filePath ) ) == false )
+        if ( FileUtil::isRegularFile( filePath ) == false )
             return EditorUserFileResult::Missing;
 
         // 따로 읽고 맞을 때만 들인다 — 깨진 파일의 앞부분 값이 섞이면 어느 것이 사용자가 저장한 값인지 아무도 모른다.
         string                  jsonText;
         EditorNetPlayPresetFile loaded{};
-        const bool              bRead      = FileUtil::readTextFile( FileUtil::toDiskPath( filePath ), jsonText ) && ConfigManager::readConfigJSON( loaded, jsonText, _filePath.c_str() );
+        const bool              bRead      = FileUtil::readTextFile( filePath, jsonText ) && ConfigManager::readConfigJSON( loaded, jsonText, _filePath.c_str() );
         const expected<void>    consistent = bRead ? validateConsistent( loaded ) : expected<void>( unexpected( Error{ ErrorKind::InvalidArgument, "not a preset file - see the errors above" } ) );
         if ( consistent.has_value() )
         {
@@ -96,9 +96,9 @@ namespace sw::editor
         return presetIndex.has_value() == false ? nullptr : &_file._listPreset[*presetIndex]._settings;
     }
 
-    string EditorNetPlayPresetStore::getDefaultFilePath()
+    AbsolutePath EditorNetPlayPresetStore::getDefaultFilePath()
     {
-        return EditorPaths::resolveEditorStateFile( kFileName ).str();
+        return EditorPaths::resolveEditorStateFile( kFileName );
     }
 
     expected<void> EditorNetPlayPresetStore::validateConsistent( const EditorNetPlayPresetFile& file )
@@ -141,9 +141,9 @@ namespace sw::editor
             SW_LOG_ERROR_ID( "NetPlayPresets.MultiplayerPresetsChangedBefore", "Multiplayer presets were changed before a preset file was loaded - nothing written" );
             return false;
         }
-        if ( FileUtil::ensureParentDirectoryExists( FileUtil::toDiskPath( _filePath ) ) == false || JSONSerializer::saveToFile( FileUtil::toDiskPath( _filePath ), &file, *EditorNetPlayPresetFile::StaticType() ) == false )
+        if ( FileUtil::ensureParentDirectoryExists( _filePath ) == false || JSONSerializer::saveToFile( _filePath, &file, *EditorNetPlayPresetFile::StaticType() ) == false )
         {
-            SW_LOG_ERROR_ID( "NetPlayPresets.MultiplayerPresetsCouldNot", "Multiplayer presets could not be saved to %#", _filePath );
+            SW_LOG_ERROR_ID( "NetPlayPresets.MultiplayerPresetsCouldNot", "Multiplayer presets could not be saved to %#", _filePath.str() );
             return false;
         }
         _file = std::move( file );

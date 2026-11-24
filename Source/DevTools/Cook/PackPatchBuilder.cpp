@@ -40,22 +40,22 @@ namespace sw
                     SW_LOG_ERROR_ID( "PackPatchBuilder.PackFolderDoesNot", "Pack folder '%#' does not exist", packsDirectory.str() );
                     return false;
                 }
-                vector<string> listFile;
+                vector<AbsolutePath> listFile;
                 if ( FileUtil::collectFiles( packsDirectory, "", listFile, false ) == false )
                 {
                     SW_LOG_ERROR_ID( "PackPatchBuilder.PackFolderCouldNot", "Pack folder '%#' could not be listed completely", packsDirectory.str() );
                     return false;
                 }
                 VectorUtil::sort( listFile );
-                for ( const string& file : listFile )
+                for ( const AbsolutePath& file : listFile )
                 {
-                    if ( StringUtil::endsWith( file, PackPatchManifest::kManifestExtension, true ) )
+                    if ( StringUtil::endsWith( file.str(), PackPatchManifest::kManifestExtension, true ) )
                     {
-                        SW_LOG_ERROR_ID( "PackPatchBuilder.PackFolderHoldsPatch", "Pack folder '%#' holds the patch %# - give the base packs of the build, not a patched install", packsDirectory.str(), file );
+                        SW_LOG_ERROR_ID( "PackPatchBuilder.PackFolderHoldsPatch", "Pack folder '%#' holds the patch %# - give the base packs of the build, not a patched install", packsDirectory.str(), file.str() );
                         return false;
                     }
-                    if ( StringUtil::endsWith( file, kPackExtension, true ) )
-                        outListPackPath.push_back( file );
+                    if ( StringUtil::endsWith( file.str(), kPackExtension, true ) )
+                        outListPackPath.push_back( file.str() );
                 }
                 unordered_map<string, size_t> mapFullPathToPack;
                 for ( size_t packIndex = 0; packIndex < outListPackPath.size(); ++packIndex )
@@ -157,7 +157,7 @@ namespace sw
              *        쓰지 못하면 오류를 남기고 false 입니다.
              */
             [[nodiscard]] static bool writeChangedFiles( const PackPatchBuildParams& params, const vector<string>& listPackPath, const vector<Source>& listSource, const PackDelta& delta,
-                                                         const string& packPath, PackWriteResult& outResult )
+                                                         const AbsolutePath& packPath, PackWriteResult& outResult )
             {
                 unordered_map<string, size_t> mapFullPathToSource;
                 for ( size_t sourceIndex = 0; sourceIndex < listSource.size(); ++sourceIndex )
@@ -180,14 +180,14 @@ namespace sw
                 PackWriterDesc writerDesc   = params._writerDesc;
                 writerDesc._pDigestProvider = params._signer._pProvider;
                 PackStreamWriter writer;
-                expected<void>   step = writer.open( FileUtil::toDiskPath( packPath ), writerDesc );
+                expected<void>   step = writer.open( packPath, writerDesc );
                 for ( size_t index = 0; index < listChangedPath.size() && step.has_value(); ++index )
                 {
                     const string& changedPath = listChangedPath[index];
                     const auto    sourceIt    = mapFullPathToSource.find( changedPath );
                     if ( sourceIt == mapFullPathToSource.end() )
                     {
-                        SW_LOG_ERROR_ID( "PackPatchBuilder.ChangedPathNotPacks", "Changed path '%#' is not in the packs of '%#' (internal mismatch)", changedPath, params._packsDirectory );
+                        SW_LOG_ERROR_ID( "PackPatchBuilder.ChangedPathNotPacks", "Changed path '%#' is not in the packs of '%#' (internal mismatch)", changedPath, params._packsDirectory.str() );
                         return false;
                     }
                     const Source& source = listSource[sourceIt->second];
@@ -203,7 +203,7 @@ namespace sw
                 const expected<PackWriteResult> closed = step.has_value() ? writer.close() : expected<PackWriteResult>( unexpected( step.error() ) );
                 if ( closed.has_value() == false )
                 {
-                    SW_LOG_ERROR_ID( "PackPatchBuilder.PatchPackCouldNot", "Patch pack could not be written to '%#': %# '%#'", packPath, closed.error().message(), closed.error().detail() );
+                    SW_LOG_ERROR_ID( "PackPatchBuilder.PatchPackCouldNot", "Patch pack could not be written to '%#': %# '%#'", packPath.str(), closed.error().message(), closed.error().detail() );
                     return false;
                 }
                 outResult = *closed;
@@ -248,18 +248,18 @@ namespace sw
         return build != "." && build != "..";
     }
 
-    bool PackPatchBuilder::collectBuildEntries( string_view packsDirectory, vector<PackContentEntry>& outListEntry )
+    bool PackPatchBuilder::collectBuildEntries( const AbsolutePath& packsDirectory, vector<PackContentEntry>& outListEntry )
     {
         vector<string>                           listPackPath;
         vector<PackPatchBuilderInternal::Source> listSource;
         outListEntry.clear();
-        if ( PackPatchBuilderInternal::scanPacks( FileUtil::toDiskPath( packsDirectory ), listPackPath, listSource ) == false )
+        if ( PackPatchBuilderInternal::scanPacks( packsDirectory, listPackPath, listSource ) == false )
             return false;
         outListEntry = PackPatchBuilderInternal::makeEntries( listSource );
         return true;
     }
 
-    bool PackPatchBuilder::writeBuildRecord( string_view packsDirectory, string_view build, const AbsolutePath& recordPath )
+    bool PackPatchBuilder::writeBuildRecord( const AbsolutePath& packsDirectory, string_view build, const AbsolutePath& recordPath )
     {
         if ( isValidBuildName( build ) == false )
         {
@@ -301,7 +301,7 @@ namespace sw
 
         vector<string>           listPackPath;
         vector<Internal::Source> listSource;
-        if ( Internal::scanPacks( FileUtil::toDiskPath( params._packsDirectory ), listPackPath, listSource ) == false )
+        if ( Internal::scanPacks( params._packsDirectory, listPackPath, listSource ) == false )
             return false;
         PackBuildRecord current;
         current._build     = params._newBuild;
@@ -320,7 +320,7 @@ namespace sw
         manifest._toBuild                                     = params._newBuild;
         manifest._packFileName                                = makePatchPackFileName( params._newBuild );
         manifest._listRemovedPath                             = delta._listRemovedPath;
-        const string                             packPath     = FileUtil::joinPath( params._outputDirectory.str(), manifest._packFileName );
+        const AbsolutePath                       packPath     = params._outputDirectory.join( manifest._packFileName );
         const AbsolutePath                       manifestPath = params._outputDirectory.join( makeManifestFileName( params._newBuild ) );
         StringBuilder<constant::buffer::kMax128> recordFileName;
         recordFileName.appendFormat( "%#%#", params._newBuild, PackBuildRecord::kExtension );
@@ -333,7 +333,7 @@ namespace sw
         {
             if ( writeResult._indexDigest.has_value() == false )
             {
-                SW_LOG_ERROR_ID( "PackPatchBuilder.PatchPackNoIndexDigest", "Patch pack '%#' has no index digest to sign", packPath );
+                SW_LOG_ERROR_ID( "PackPatchBuilder.PatchPackNoIndexDigest", "Patch pack '%#' has no index digest to sign", packPath.str() );
                 return false;
             }
             if ( PackPatchManifest::sign( *params._signer._pProvider, params._signer._privateKeyPem, *writeResult._indexDigest, manifest ) == false )
@@ -346,7 +346,7 @@ namespace sw
             SW_LOG_ERROR_ID( "PackPatchBuilder.PatchFilesCouldNot", "Patch files could not be written to '%#'", params._outputDirectory.str() );
             return false;
         }
-        SW_LOG_INFO_ID( "PackPatchBuilder.PackPatchChangedRemoved", "Pack patch %# -> %#: %# changed, %# removed -> %#", previous._build, params._newBuild, delta._listChangedPath.size(), delta._listRemovedPath.size(), packPath );
+        SW_LOG_INFO_ID( "PackPatchBuilder.PackPatchChangedRemoved", "Pack patch %# -> %#: %# changed, %# removed -> %#", previous._build, params._newBuild, delta._listChangedPath.size(), delta._listRemovedPath.size(), packPath.str() );
         return true;
     }
 } // namespace sw

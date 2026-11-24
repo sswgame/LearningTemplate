@@ -120,20 +120,20 @@ namespace sw::editor
     {
         _listGame.clear();
         _gameIndex = 0;
-        vector<string> listFile;
+        vector<AbsolutePath> listFile;
         (void)FileUtil::collectFiles( ProcessRoots::get()._project.join( "Config/Game" ), "", listFile, false ); // 폴더가 없으면 게임이 없다
         const string& packRoot = editor::getSubsystem<const GameConfig>()._packRoot.get();
-        for ( const string& filePath : listFile )
+        for ( const AbsolutePath& filePath : listFile )
         {
-            if ( StringUtil::endsWith( filePath, ".json", true ) == false )
+            if ( StringUtil::endsWith( filePath.str(), ".json", true ) == false )
                 continue;
             string                                  text;
             fixed_string<constant::buffer::kMax256> quotedRoot;
             formatstring( quotedRoot.data(), quotedRoot.capacity(), "\"%#\"", packRoot );
-            const bool bGameUsesPackRoot = FileUtil::readTextFile( FileUtil::toDiskPath( filePath ), text ) && packRoot.empty() == false && StringUtil::contains( text, quotedRoot, true );
+            const bool bGameUsesPackRoot = FileUtil::readTextFile( filePath, text ) && packRoot.empty() == false && StringUtil::contains( text, quotedRoot, true );
             if ( bGameUsesPackRoot )
                 _gameIndex = static_cast<uint32>( _listGame.size() );
-            _listGame.push_back( FileUtil::removeExtension( FileUtil::getFileNamePart( filePath ) ) );
+            _listGame.push_back( FileUtil::removeExtension( FileUtil::getFileNamePart( filePath.str() ) ) );
         }
         _bGamesLoaded = SW_TRUE;
     }
@@ -157,7 +157,7 @@ namespace sw::editor
             listArgument.push_back( "--skip-build" );
             // 빌드를 건너뛰면 이 에디터의 Bin 을 스테이징한다(그 타깃의 Shipping 빌드가 없어도 흐름을 볼 수 있다). 다른 플랫폼은 그 프리셋의 Bin 이다 — 이 에디터의 산출물이 아니다.
             if ( isDesktopPlatform() )
-                listArgument.insert( listArgument.end(), { "--bin-dir", FileUtil::getDirectoryPart( FileUtil::getExecutablePath() ) } );
+                listArgument.insert( listArgument.end(), { "--bin-dir", FileUtil::getDirectoryPart( FileUtil::getExecutablePath().str() ) } );
         }
         if ( _bSkipCook )
             listArgument.push_back( "--skip-cook" );

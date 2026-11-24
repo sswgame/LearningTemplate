@@ -58,7 +58,7 @@ namespace sw
                 if ( pBuffer == nullptr || pBuffer->_listSample.empty() )
                     return;
                 vector<float32>&   listSample   = pBuffer->_listSample;
-                const AbsolutePath path         = FileUtil::toDiskPath( gv_audioDumpPath.get() );
+                const AbsolutePath path         = gv_audioDumpPath.getPath();
                 const uint32       channelCount = AudioChannelLayoutUtil::getChannelCount( layout );
                 vector<uint8>      bytes;
                 AudioWAVEncoder::encodeFloat32( listSample.data(), static_cast<uint32>( listSample.size() / channelCount ), channelCount,

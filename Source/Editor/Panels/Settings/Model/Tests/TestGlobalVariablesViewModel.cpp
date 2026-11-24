@@ -189,7 +189,7 @@ SW_TEST_CASE( GlobalVariablesViewModelUndoTest, EditsPresetAndResetAllUndoAsOneS
     SW_REQUIRE_TRUE( FileUtil::ensureParentDirectoryExists( presetPath ) );
     SW_REQUIRE_TRUE( FileUtil::writeTextFile( presetPath, bCulling ? R"(<GlobalVariablesPreset><Var name="gv_shadowCascadeCulling" value="false"/></GlobalVariablesPreset>)"
                                                                    : R"(<GlobalVariablesPreset><Var name="gv_shadowCascadeCulling" value="true"/></GlobalVariablesPreset>)" ) );
-    SW_REQUIRE_TRUE( model.loadPreset( presetPath.str() ) );
+    SW_REQUIRE_TRUE( model.loadPreset( presetPath ) );
     SW_EXPECT_TRUE( pCulling->getValueAsBool() != bCulling );
 
     model.resetAllToDefault();

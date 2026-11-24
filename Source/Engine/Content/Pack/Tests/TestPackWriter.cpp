@@ -56,7 +56,7 @@ SW_TEST_CASE( PackWriterTest, StreamedPackReadsBackEveryEntry )
 {
     const AbsolutePath                             packPath  = test::makeScratchPath( "SwPackWriterTest.pack" );
     const vector<std::pair<string, vector<uint8>>> listEntry = Util::makeEntries();
-    SW_REQUIRE_TRUE( PackTestUtil::writePack( packPath.str(), PackTestUtil::makeDesc( "game/test", PackCompressionKind::Zlib ), listEntry ) );
+    SW_REQUIRE_TRUE( PackTestUtil::writePack( packPath, PackTestUtil::makeDesc( "game/test", PackCompressionKind::Zlib ), listEntry ) );
 
     PackReader reader;
     SW_REQUIRE_TRUE( reader.open( packPath.str() ) );

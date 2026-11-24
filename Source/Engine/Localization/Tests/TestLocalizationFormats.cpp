@@ -338,12 +338,11 @@ SW_TEST_CASE( TimeZoneTest, TableRejectsBadRowsAndUnknownNamesAreNotFound )
     const sw::AbsolutePath              folder     = domain.getFolder();
     const auto                          writeTable = [&folder]( const utf8* pFileName, sw::string_view rows ) -> sw::AssetID
     {
-        sw::StringBuilder<sw::constant::buffer::kMax512> path;
-        path.appendFormat( "%#/%#", folder.str(), pFileName );
+        const sw::AbsolutePath                            path = folder.join( pFileName );
         sw::StringBuilder<sw::constant::buffer::kMax1024> text;
         text.appendFormat( "<TimeZoneTable><_listZone>%#</_listZone></TimeZoneTable>", rows );
-        SW_EXPECT_TRUE( sw::FileUtil::writeTextFile( sw::FileUtil::toDiskPath( path.view() ), text.view() ) );
-        return sw::test::ScopedScratchDomain::toID( path.view() );
+        SW_EXPECT_TRUE( sw::FileUtil::writeTextFile( path, text.view() ) );
+        return sw::test::ScopedScratchDomain::toID( path );
     };
     const sw::string utcRow = R"(<TimeZoneInfo _name="UTC" _standardOffsetMinutes="0" _daylightRule="None" />)";
 
@@ -508,7 +507,7 @@ SW_TEST_CASE( LocalizationBinaryTableTest, ManagerCooksAndLoadsWithoutAuthoringF
     using sw::test::LocalizationTestUtil;
     const sw::test::ScopedScratchDomain domain;
     const sw::AbsolutePath              folder  = domain.getFolder();
-    const sw::string                    project = LocalizationTestUtil::writeProject( folder, "en", R"([ "ko" ])" ).str();
+    const sw::AbsolutePath              project = LocalizationTestUtil::writeProject( folder, "en", R"([ "ko" ])" );
     LocalizationTestUtil::writeSourceTable( folder.str(), "en", R"("ui.start": { "source": "Start" }, "ui.quit": { "source": "Quit" })" );
     const sw::string                                 staleHash = sw::SourceTextEntry::formatSourceHash( sw::SourceTextEntry::computeSourceHash( "Begin" ) );
     sw::StringBuilder<sw::constant::buffer::kMax256> koEntries;
@@ -621,7 +620,7 @@ SW_TEST_CASE( LocalizationBinaryTableTest, CookedProjectReadsOnlyTheLookupChain 
     SW_REQUIRE_EQUAL( size_t( 2 ), listCulture.size() );
     SW_EXPECT_EQUAL( sw::string( "en" ), listCulture[0] );
     SW_EXPECT_EQUAL( sw::string( "ko" ), listCulture[1] );
-    const sw::AssetID projectID = sw::test::ScopedScratchDomain::toID( project.str() );
+    const sw::AssetID projectID = sw::test::ScopedScratchDomain::toID( project );
     for ( const sw::string& culture : listCulture )
     {
         sw::vector<uint8>       bytes;
@@ -697,7 +696,7 @@ SW_TEST_CASE( LocalizationKeyIndexTest, ManagerRefusesCollidingKeys )
     using sw::test::LocalizationTestUtil;
     const sw::test::ScopedScratchDomain domain;
     const sw::AbsolutePath              folder  = domain.getFolder();
-    const sw::string                    project = LocalizationTestUtil::writeProject( folder, "en", R"([ "ko" ])" ).str();
+    const sw::AbsolutePath              project = LocalizationTestUtil::writeProject( folder, "en", R"([ "ko" ])" );
     LocalizationTestUtil::writeSourceTable( folder.str(), "en", R"("ui.start": { "source": "Start" }, "ui.quit": { "source": "Quit" })" );
 
     sw::LocalizationManager manager;

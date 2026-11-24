@@ -168,10 +168,10 @@ SW_TEST_CASE( ProjectSettingsEntryTest, TablesSkipTypedFiles )
 {
     const AbsolutePath           projectRoot = ProcessRoots::get()._project;
     vector<ProjectSettingsEntry> listTyped( 1 );
-    listTyped[0]._absolutePath = FileUtil::normalizeSeparators( FileUtil::joinPath( projectRoot.str(), "Config/Engine/EngineConfig.json" ) );
+    listTyped[0]._absolutePath = projectRoot.join( "Config/Engine/EngineConfig.json" );
     listTyped[0]._typeName     = "EngineConfig";
     vector<ProjectSettingsEntry> listTable;
-    SW_REQUIRE_TRUE( ProjectSettingsEntry::collectTables( projectRoot.str(), listTyped, listTable ) );
+    SW_REQUIRE_TRUE( ProjectSettingsEntry::collectTables( projectRoot, listTyped, listTable ) );
     bool bNamingWords = false;
     for ( const ProjectSettingsEntry& table : listTable )
     {
@@ -192,8 +192,8 @@ SW_TEST_CASE( ProjectSettingsEntryTest, OtherGamePresetsAreTyped )
     listTyped[0]._page         = "GameConfig";
     listTyped[0]._typeName     = "GameConfig";
     listTyped[0]._relativePath = "Config/Game/Playground.json";
-    listTyped[0]._absolutePath = FileUtil::normalizeSeparators( FileUtil::joinPath( projectRoot.str(), listTyped[0]._relativePath ) );
-    ProjectSettingsEntry::addOtherGamePresets( projectRoot.str(), listTyped );
+    listTyped[0]._absolutePath = projectRoot.join( listTyped[0]._relativePath );
+    ProjectSettingsEntry::addOtherGamePresets( projectRoot, listTyped );
     SW_EXPECT_EQUAL( listTyped[0]._gameName, string( "Playground" ) );
     const ProjectSettingsEntry* pOtherGame = nullptr;
     for ( const ProjectSettingsEntry& entry : listTyped )
@@ -204,7 +204,7 @@ SW_TEST_CASE( ProjectSettingsEntryTest, OtherGamePresetsAreTyped )
     SW_EXPECT_EQUAL( pOtherGame->_relativePath, string( "Config/Game/NileCity.json" ) );
 
     vector<ProjectSettingsEntry> listTable;
-    SW_REQUIRE_TRUE( ProjectSettingsEntry::collectTables( projectRoot.str(), listTyped, listTable ) );
+    SW_REQUIRE_TRUE( ProjectSettingsEntry::collectTables( projectRoot, listTyped, listTable ) );
     for ( const ProjectSettingsEntry& table : listTable )
         SW_EXPECT_FALSE( StringUtil::startsWith( table._relativePath, "Config/Game/" ) );
 }

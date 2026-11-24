@@ -10,6 +10,7 @@
 #include "Core/Diagnostics/ProfilerTimeline.h"
 #include "Core/Foundation/Constants.h"
 #include "Core/Foundation/Types.h"
+#include "Core/Path/AbsolutePath.h"
 
 #include "DevTools/Profiling/ProfilerTraceExport.h"
 
@@ -105,7 +106,7 @@ namespace sw::editor
         /** @brief 최근 프레임을 `Saved/Traces` 에 씁니다. 결과를 로그에 남깁니다. */
         void saveTrace( const FrameProfiler& profiler ) const;
         /** @brief 지정한 파일을 불러옵니다. 성공하면 true 이며, 결과 한 줄은 `getTraceStatus` 에 남습니다. */
-        [[nodiscard]] bool loadTraceFile( string_view path );
+        [[nodiscard]] bool loadTraceFile( const AbsolutePath& path );
         /** @brief 저장 폴더의 가장 최근 트레이스를 불러옵니다. 성공하면 true 입니다. */
         [[nodiscard]] bool loadLatestTrace();
         /** @brief 불러온 트레이스를 내립니다. */

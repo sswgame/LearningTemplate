@@ -33,7 +33,7 @@ namespace sw
 
     Subscription FileWatchService::watch( const AbsolutePath& folder, FileWatchDepth depth, const vector<string>& listExtension, const FileChangeDelegate& onMatch )
     {
-        const AbsolutePath normalizedFolder = FileUtil::toDiskPath( FileUtil::trimTrailingSlashes( FileUtil::normalizeSeparators( folder.str() ) ) );
+        const AbsolutePath normalizedFolder = folder.join( {} );
         if ( normalizedFolder.empty() )
         {
             SW_LOG_WARNING_ID( "FileWatchService.EmptyFolder", "File watch: the folder is empty (no content root folder) - hot reload is off" );

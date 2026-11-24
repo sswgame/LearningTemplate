@@ -55,7 +55,7 @@ namespace sw
              * @brief 바이너리 폴더(`Bin`)입니다 - 실행 파일의 폴더. 모든 실행 파일이 `Bin` 에 있다 — GameFramework · 키트를 쓰는 실행 파일도 그 DLL 을 직접 링크하지 않고
              *        엔진 기동 뒤에 모듈로 올린다(키트 DLL 사본을 옆에 둔 `ToolBin` · `TestBin` 은 없앴다, `Programs/OnlineLoadBot/LoadBotModuleEntry.h`).
              */
-            static AbsolutePath findBinaryFolder() { return FileUtil::toDiskPath( FileUtil::getDirectoryPart( FileUtil::getExecutablePath() ) ); }
+            static AbsolutePath findBinaryFolder() { return FileUtil::getExecutablePath().getParent(); }
 #else
     #error "Unsupported platform"
 #endif

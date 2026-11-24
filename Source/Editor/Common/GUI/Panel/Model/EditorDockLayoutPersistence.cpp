@@ -54,7 +54,7 @@ namespace sw::editor
         string safeName;
         if ( EditorLayoutStore::sanitizeName( name, safeName ) == false )
             return false;
-        const string targetFolder = folder.empty() ? EditorLayoutStore::getDefaultFolder() : string( folder );
+        const AbsolutePath targetFolder = folder.empty() ? EditorLayoutStore::getDefaultFolder() : FileUtil::toDiskPath( folder );
         if ( targetFolder.empty() )
             return false;
 
@@ -77,7 +77,7 @@ namespace sw::editor
         string safeName;
         if ( EditorLayoutStore::sanitizeName( name, safeName ) == false )
             return false;
-        const string sourceFolder = folder.empty() ? EditorLayoutStore::getDefaultFolder() : string( folder );
+        const AbsolutePath sourceFolder = folder.empty() ? EditorLayoutStore::getDefaultFolder() : FileUtil::toDiskPath( folder );
         if ( EditorLayoutStore::load( sourceFolder, safeName, _pendingLayoutINI, _pendingLayoutVisibility ) == false )
         {
             SW_LOG_WARNING_ID( "EditorDockLayout.LayoutNotFound", "Layout '%#' was not found in %#", safeName.c_str(), sourceFolder.c_str() );
@@ -90,7 +90,7 @@ namespace sw::editor
     void EditorDockLayout::initializePersistencePaths()
     {
         _imguiINIPath.clear();
-        _panelVisibilityPath.clear();
+        _panelVisibilityPath = {};
 
         const AbsolutePath imguiPath   = EditorPaths::resolveEditorStateFile( EditorPaths::kImguiINIFileName );
         const AbsolutePath windowsPath = EditorPaths::resolveEditorStateFile( EditorPaths::kPanelVisibilityFileName );
@@ -101,7 +101,7 @@ namespace sw::editor
         }
 
         _imguiINIPath        = imguiPath.str();
-        _panelVisibilityPath = windowsPath.str();
+        _panelVisibilityPath = windowsPath;
         SW_LOG_TRACE_ID( "EditorDockLayout.LayoutPersistenceDir", "Layout persistence dir: %#", imguiPath.getParent().c_str() );
     }
 
@@ -153,7 +153,7 @@ namespace sw::editor
 
         // 처음 실행이면 파일이 없다(등록한 기본 가시성 그대로). 깨진 파일은 키와 함께 오류를 남기고 지금 상태로 둔다.
         EditorPanelVisibility  visibility;
-        const ConfigReadResult visibilityResult = visibility.loadFromFile( _panelVisibilityPath );
+        const ConfigReadResult visibilityResult = visibility.loadFromFile( _panelVisibilityPath.str() );
         if ( visibilityResult != ConfigReadResult::Loaded )
         {
             if ( visibilityResult == ConfigReadResult::Invalid )

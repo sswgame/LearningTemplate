@@ -32,7 +32,7 @@ namespace
 
         static bool writePack( const AbsolutePath& folder, const vector<std::pair<string, string>>& listEntry )
         {
-            return FileUtil::ensureDirectoryExists( folder ) && PackTestUtil::writeTextPack( FileUtil::joinPath( folder.str(), "game.pack" ), "game", listEntry );
+            return FileUtil::ensureDirectoryExists( folder ) && PackTestUtil::writeTextPack( folder.join( "game.pack" ), "game", listEntry );
         }
 
         static string read( const PackManager& packs, string_view path )
@@ -63,7 +63,7 @@ SW_TEST_CHILD_ROLE( PackPatchCommandLineTest, WriteInputs )
                                                                          {"edit.txt",  "new"},
                                                                          {"made.txt",   "hi"}
     } ) );
-    SW_REQUIRE_TRUE( PackPatchBuilder::writeBuildRecord( oldFolder.str(), "1", oldFolder.join( PackBuildRecord::kFileName ) ) );
+    SW_REQUIRE_TRUE( PackPatchBuilder::writeBuildRecord( oldFolder, "1", oldFolder.join( PackBuildRecord::kFileName ) ) );
 
     string       privateKeyPem;
     NetPublicKey publicKey;

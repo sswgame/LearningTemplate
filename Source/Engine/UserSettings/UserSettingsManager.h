@@ -219,7 +219,7 @@ namespace sw
         /** @brief `saveUserFile` 이 쓰는 JSON 글입니다. 값에 잘못된 UTF-8 이 있으면 오류입니다(`UserSettingsFileEntry::makeJSON`). */
         [[nodiscard]] expected<string> makeUserJSON() const;
         /** @brief `applyPending` 이 저장할 경로입니다. 비면 저장하지 않습니다(테스트와 헤드리스). 초기화 전에 정하면(기동 확장) 초기화가 그 자리를 읽고 쓴다. */
-        void                setUserFilePath( string_view filePath ) { _userFilePath = FileUtil::toDiskPath( filePath ); }
+        void                setUserFilePath( const AbsolutePath& filePath ) { _userFilePath = filePath; }
         const AbsolutePath& getUserFilePath() const { return _userFilePath; }
         /** @brief 사용자 파일을 읽었는지(첫 실행이 아닌지) 반환합니다. */
         bool hasLoadedUserFile() const { return _bUserFileLoaded; }
@@ -227,7 +227,7 @@ namespace sw
          * @brief 사용자 폴더의 설정 파일 경로입니다. Windows 는 `%LOCALAPPDATA%/SWEngine/<game>/usersettings.json` 이고,
          *        Linux 는 `$XDG_CONFIG_HOME`(없으면 `~/.config`)`/swengine/<game>/usersettings.json` 입니다. 사용자 폴더를 모르면 `Saved/<game>/` 를 씁니다(`UserDataPath::getConfigDirectory`).
          */
-        static string makeDefaultUserFilePath( string_view gameName );
+        static AbsolutePath makeDefaultUserFilePath( string_view gameName );
 
         // ------------------------------------------------------------------------------
         // 3) 기동: 품질 자동 선택과 전체 적용

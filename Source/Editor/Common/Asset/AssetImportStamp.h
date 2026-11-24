@@ -9,6 +9,7 @@
 #include "Core/Container/vector.h"
 #include "Core/Foundation/Macros.h"
 #include "Core/Foundation/Types.h"
+#include "Core/Path/AbsolutePath.h"
 
 namespace sw
 {
@@ -92,20 +93,20 @@ namespace sw::editor
         /** @brief 임포트하는 원본 확장자인지 확인합니다. `import.stamp` 같은 파일은 원본이 아닙니다. */
         virtual bool isSourceFile( string_view path ) const = 0;
         /** @brief 원본 경로에 해당하는 결과 경로를 반환합니다. 원본 폴더 구간이 없으면 빈 문자열입니다. */
-        virtual string makeImportedPath( string_view sourcePath ) const = 0;
+        virtual AbsolutePath makeImportedPath( string_view sourcePath ) const = 0;
         /** @brief 원본 바이트, 적용한 규칙, 임포터 버전을 섞은 해시입니다. 읽지 못하면 0 입니다. */
-        virtual uint64 computeSourceHash( string_view sourcePath, string_view assetPath ) const = 0;
+        virtual uint64 computeSourceHash( const AbsolutePath& sourcePath, string_view assetPath ) const = 0;
         /**
          * @brief 임포트 결과의 해시입니다. 결과가 없으면 0 입니다. 기본은 결과 파일 하나의 바이트입니다.
          * @details 결과가 여러 파일인 종류는 그것을 모두 섞어 반환한다. 스킨드 모델은 메시와 옆 폴더의 스켈레톤, 클립이 해당한다. 그래야 옆 파일을 손대거나
          *          지워도 어긋남으로 잡힌다.
          */
-        virtual uint64 computeImportedHash( string_view importedPath ) const;
+        virtual uint64 computeImportedHash( const AbsolutePath& importedPath ) const;
         /**
          * @brief 임포트 결과 파일(절대 경로) 목록입니다. 기본은 결과 파일 하나입니다(있으면). `computeImportedHash` 가 섞는 파일과 같아야 합니다.
          * @details DDC 가 이 파일들을 (이름, 바이트) 한 덩어리로 담고 히트에서 그대로 되살린다 — 빠진 파일은 히트 뒤에 없다.
          */
-        virtual void collectImportedFiles( string_view importedPath, vector<string>& outListPath ) const;
+        virtual void collectImportedFiles( const AbsolutePath& importedPath, vector<AbsolutePath>& outListPath ) const;
         /** @brief DDC 키에 넣는 임포터 코드 지문(`CookCodeFingerprint::find`)입니다. 0 이면 `Config/Dev/CookCodeInputs.json` 에 없는 것이라 DDC 를 쓰는 임포트가 오류로 멈춥니다. */
         virtual uint64 findCodeFingerprint() const = 0;
         /**
@@ -126,7 +127,7 @@ namespace sw::editor
          * @details 스레드 계약: 워커에서 서로 다른 원본에 대해 동시에 불린다(같은 결과 경로를 쓰는 원본은 한 스레드가 순서대로). 이 임포터의 공유 상태, `AssetPaths` 의 전역 쓰기,
          *          에디터 서비스 범위(`findEditorScope`)를 건드리지 않는다.
          */
-        [[nodiscard]] virtual bool importSource( string_view sourcePath, string_view importedPath, string_view assetPath ) const = 0;
+        [[nodiscard]] virtual bool importSource( const AbsolutePath& sourcePath, const AbsolutePath& importedPath, string_view assetPath ) const = 0;
     };
 } // namespace sw::editor
 
@@ -157,10 +158,10 @@ namespace sw::editor
          * @param pTaskManager 사슬을 나눠 돌 작업 시스템(빌림, nullptr 이면 이 스레드가 직렬로). 부르는 쪽이 찾아 넘긴다 — 워커에서 불릴 수 있어 여기서는 에디터 서비스 범위(`findEditorScope`)를 읽지 않는다.
          * @param derivedDataCache 결과를 찾고 넣는 DDC(보통 `DerivedDataCache::open` — 부르는 쪽이 읽어 넘긴다, 테스트는 임시 폴더 층)
          */
-        [[nodiscard]] static AssetImportSummary importAll( string_view resourceRoot, const IRawAssetImporter& importer, AssetImportMode mode, TaskManager* pTaskManager,
+        [[nodiscard]] static AssetImportSummary importAll( const AbsolutePath& resourceRoot, const IRawAssetImporter& importer, AssetImportMode mode, TaskManager* pTaskManager,
                                                            const DerivedDataCache& derivedDataCache );
         /** @brief 리소스 루트 아래 모든 원본 폴더의 원본 경로(루트 기준 — 규칙을 고르는 경로)를 정렬해 돌려줍니다(`importAll` 이 훑는 원본과 같다). */
-        [[nodiscard]] static vector<string> collectSourceAssetPaths( string_view resourceRoot, const IRawAssetImporter& importer );
+        [[nodiscard]] static vector<string> collectSourceAssetPaths( const AbsolutePath& resourceRoot, const IRawAssetImporter& importer );
 
         /**
          * @brief @p listAssetPath(리소스 루트 기준, 구분자 · 대소문자 무시)의 원본만 스탬프와 대조하고 어긋났으면 임포트합니다(ImportStale). 에디터 핫 리로드가 바뀐 원본만 임포트하는 길입니다.
@@ -171,16 +172,16 @@ namespace sw::editor
          *          작업 시스템(@p pTaskManager, `importAll` 과 같음)을 부르는 쪽이 넘기므로 에디터 스레드에서도 워커에서도 부를 수 있다.
          *          DDC(@p derivedDataCache)는 `importAll` 과 같이 쓴다.
          */
-        [[nodiscard]] static AssetImportSummary importSources( string_view resourceRoot, const IRawAssetImporter& importer, const vector<string>& listAssetPath,
+        [[nodiscard]] static AssetImportSummary importSources( const AbsolutePath& resourceRoot, const IRawAssetImporter& importer, const vector<string>& listAssetPath,
                                                                TaskManager* pTaskManager, const DerivedDataCache& derivedDataCache );
 
         /**
          * @brief 원본 경로를 결과 경로로 바꿉니다(`<x>/<rawFolder>/<y>.<ext>` → `<x>/<importedFolder>/<y><importedExtension>`).
          * @details 원본 폴더 이름은 경로 구간 경계에서만 찾는다. `my_textures_raw_backup` 은 해당하지 않는다. 없으면 빈 문자열을 반환한다.
          */
-        static string makeImportedPath( string_view rawPath, string_view rawFolderName, string_view importedFolderName, string_view importedExtension );
+        static AbsolutePath makeImportedPath( string_view rawPath, string_view rawFolderName, string_view importedFolderName, string_view importedExtension );
 
         /** @brief 파일 바이트 그대로 계산한 FNV-1a 64 해시입니다. 파일이 없거나 비어 있으면 0 입니다. */
-        static uint64 computeFileHash( string_view path );
+        static uint64 computeFileHash( const AbsolutePath& path );
     };
 } // namespace sw::editor

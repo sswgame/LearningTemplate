@@ -159,7 +159,7 @@ namespace sw::editor
             _status = string( status.view() );
             return ToolAssetLoadResult::Malformed;
         }
-        if ( _model.loadFromFile( readPath->str() ) == false )
+        if ( _model.loadFromFile( *readPath ) == false )
         {
             StringBuilder<constant::buffer::kMax512> status;
             status.appendFormat( "The paired animation '%#' could not be read - see the log", readPath->str() );

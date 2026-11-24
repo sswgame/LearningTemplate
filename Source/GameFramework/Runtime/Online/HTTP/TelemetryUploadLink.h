@@ -15,6 +15,7 @@
 #include "Core/Container/string.h"
 #include "Core/Foundation/Types.h"
 #include "Core/Memory/Memory.h"
+#include "Core/Path/AbsolutePath.h"
 #include "Core/Task/DedicatedWorker.h"
 
 #include "Engine/Telemetry/CrashReportUploader.h"
@@ -60,7 +61,7 @@ namespace sw
         /** @brief 크래시 보고 일 하나 — 묶음 폴더입니다. */
         struct CrashUploadJob
         {
-            string _reportsFolder{};
+            AbsolutePath _reportsFolder{};
         };
 
         [[nodiscard]] expected<void> linkTelemetry( const string& endpoint );

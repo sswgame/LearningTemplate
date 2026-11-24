@@ -12,6 +12,7 @@
 #include "Core/Math/VectorMath.h"
 #include "Core/Memory/Memory.h"
 #include "Core/Name/hashed_string.h"
+#include "Core/Path/AbsolutePath.h"
 
 #include "Editor/Common/Workspace/Asset/EditorAssetType.h"
 
@@ -178,7 +179,7 @@ namespace sw::editor
 
     private:
         unique_ptr<ReflectedXMLDocument> _pDocument;      ///< 편집 사본(원문이 정본)
-        string                           _loadedDiskPath; ///< 읽은 에셋의 디스크 경로. 풀지 못했으면 비어 있다
+        AbsolutePath                     _loadedDiskPath; ///< 읽은 에셋의 디스크 경로. 풀지 못했으면 비어 있다
         vector<RagdollPreviewBodyRow>    _listBodyRow;
         string                           _bodyPrefabPath;    ///< 입력란의 몸 프리팹 경로(Spawn 을 눌러야 적용한다)
         string                           _activePrefabPath;  ///< Spawn 으로 확정한 몸 프리팹 경로

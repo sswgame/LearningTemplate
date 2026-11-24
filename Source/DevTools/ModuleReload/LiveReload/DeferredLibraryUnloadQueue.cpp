@@ -21,14 +21,14 @@ namespace sw
         ++_batchID;
     }
 
-    void DeferredLibraryUnloadQueue::deferUnload( string_view moduleName, void* pHandle, string_view shadowPath )
+    void DeferredLibraryUnloadQueue::deferUnload( string_view moduleName, void* pHandle, const AbsolutePath& shadowPath )
     {
         if ( pHandle == nullptr )
             return;
 
         DeferredLibrary deferredLibrary{};
         deferredLibrary._moduleName = string{ moduleName };
-        deferredLibrary._shadowPath = FileUtil::toDiskPath( shadowPath );
+        deferredLibrary._shadowPath = shadowPath;
         deferredLibrary._pHandle    = pHandle;
         deferredLibrary._batchID    = _batchID;
         _listLibrary.push_back( std::move( deferredLibrary ) );

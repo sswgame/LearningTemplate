@@ -12,6 +12,7 @@
 #include "Core/Container/string.h"
 #include "Core/Container/vector.h"
 #include "Core/Foundation/Types.h"
+#include "Core/Path/AbsolutePath.h"
 
 #include "Editor/Common/Commands/Asset/EditorAssetIndexEntry.h"
 #include "Editor/Common/Commands/Asset/EditorFolderListingEntry.h"
@@ -29,9 +30,9 @@ namespace sw::editor
     /** @brief 폴더, 확장자, 재귀 여부로 파일을 모으는 잡의 입력입니다. */
     struct EditorFileCollectInput
     {
-        string _folder;
-        string _extension;
-        bool   _bRecursive{ SW_FALSE }; ///< NOLINT(sw-bool-flag): 집합체다(중괄호 · 지정 초기화로 만든다) — C++17 비트필드는 기본값을 둘 수 없어 `T x;` 가 값을 남기지 않는다
+        AbsolutePath _folder;
+        string       _extension;
+        bool         _bRecursive{ SW_FALSE }; ///< NOLINT(sw-bool-flag): 집합체다(중괄호 · 지정 초기화로 만든다) — C++17 비트필드는 기본값을 둘 수 없어 `T x;` 가 값을 남기지 않는다
     };
 } // namespace sw::editor
 
@@ -40,8 +41,8 @@ namespace sw::editor
     /** @brief 폴더 하나의 직속 항목을 모으는 잡의 입력입니다. */
     struct EditorFolderListingInput
     {
-        string _folder;
-        bool   _bRecursive{ SW_FALSE }; ///< 하위 폴더의 파일까지 모은다(검색 중) NOLINT(sw-bool-flag): 집합체다(중괄호 · 지정 초기화로 만든다) — C++17 비트필드는 기본값을 둘 수 없어 `T x;` 가 값을 남기지 않는다
+        AbsolutePath _folder;
+        bool         _bRecursive{ SW_FALSE }; ///< 하위 폴더의 파일까지 모은다(검색 중) NOLINT(sw-bool-flag): 집합체다(중괄호 · 지정 초기화로 만든다) — C++17 비트필드는 기본값을 둘 수 없어 `T x;` 가 값을 남기지 않는다
     };
 } // namespace sw::editor
 
@@ -85,7 +86,7 @@ namespace sw::editor
      * @class EditorGameDataScanJob
      * @brief 게임 데이터 XML 파일 목록을 워커에서 모읍니다.
      */
-    class EditorGameDataScanJob final : public EditorBackgroundTask<string, vector<GameDataFileEntry>>
+    class EditorGameDataScanJob final : public EditorBackgroundTask<AbsolutePath, vector<GameDataFileEntry>>
     {
     public:
         /** @brief 워커에 XML 목록 스캔을 요청합니다. data 폴더는 호출한(에디터) 스레드에서 찾아 넘긴다 — 에디터 상태는 워커가 읽지 않는다. */

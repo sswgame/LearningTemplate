@@ -95,7 +95,7 @@ namespace sw::editor
          * @return 이 요청의 표입니다 — 결과는 `findImageFileResult` 로 읽는다(같은 실행의 다른 요청과 섞이지 않는다). 렌더 타깃이 없거나 아직 그리지 않았거나
          *         경로가 절대 경로가 아니면 0 이고 아무것도 요청하지 않습니다.
          */
-        [[nodiscard]] uint32 requestImageFile( string_view path );
+        [[nodiscard]] uint32 requestImageFile( const AbsolutePath& path );
         /**
          * @brief 이 뷰포트의 렌더 타깃을 PNG 바이트로 받을 요청을 넣고 그 표를 돌려줍니다 — 파일을 거치지 않는다(`RenderThread::requestScreenshotPNGBytes`). 끝은 그 표로 `findImageFileResult`, 바이트는 `takeImagePNGBytes` 로 받는다.
          * @details 한 번이라도 그린 뷰포트만 쓸 수 있다. 캐릭터 편집 창의 프리셋 썸네일이 쓴다. @p requestName 은 로그에 남길 이름이다.

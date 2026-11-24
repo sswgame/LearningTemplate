@@ -66,13 +66,13 @@ namespace sw::editor
         if ( acceptDocumentToLoad().empty() )
             return ToolAssetLoadResult::Missing; // 아직 고르지 않았다
         const optional<AbsolutePath> diskPath = getDocumentDiskPath();
-        return diskPath.has_value() ? _model.loadDocument( diskPath->str() ) : ToolAssetLoadResult::Missing;
+        return diskPath.has_value() ? _model.loadDocument( *diskPath ) : ToolAssetLoadResult::Missing;
     }
 
     bool CollisionResponsePanel::saveDocument()
     {
         const optional<AbsolutePath> diskPath = getDocumentDiskPath();
-        if ( diskPath.has_value() == false || _model.saveDocument( diskPath->str() ) == false )
+        if ( diskPath.has_value() == false || _model.saveDocument( *diskPath ) == false )
             return false; // 까닭은 상태 줄에 있다
         syncDocumentUndoBaseline();
         return true;

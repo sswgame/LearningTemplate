@@ -49,7 +49,7 @@ namespace sw::editor
         /** @brief XML 텍스트에서 읽어 현재 내용을 바꿉니다. 실패하면 현재 내용을 그대로 두고 false 입니다. 성공하면 기록을 지우고 "저장된 상태" 로 맞춥니다. */
         [[nodiscard]] bool loadFromXMLText( string_view xmlText, string_view sourceName );
         /** @brief 파일을 읽습니다. 파일이 없거나 읽지 못하면 false 입니다. */
-        [[nodiscard]] bool loadFromFile( string_view absolutePath );
+        [[nodiscard]] bool loadFromFile( const AbsolutePath& absolutePath );
         /** @brief 새 문서로 비웁니다. 기록을 지우고 "저장된 상태" 로 맞춥니다. */
         void clear();
         /** @brief 현재 내용을 XML 텍스트로 씁니다. */

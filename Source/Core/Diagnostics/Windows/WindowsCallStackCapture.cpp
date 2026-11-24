@@ -30,7 +30,7 @@ namespace sw
          */
         void appendExecutableFolderToSymbolPath( HANDLE process )
         {
-            const string executablePath = FileUtil::getExecutablePath();
+            const string executablePath = FileUtil::getExecutablePath().str();
             if ( executablePath.empty() )
                 return;
             const wstring executableFolder  = StringUtil::utf8ToUTF16( FileUtil::toNativeSeparators( FileUtil::getDirectoryPart( executablePath ) ).c_str() );

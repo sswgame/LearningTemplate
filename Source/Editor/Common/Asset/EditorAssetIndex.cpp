@@ -122,7 +122,7 @@ namespace sw::editor
             static string makeDisplayPath( string_view resourceRoot, string_view filePath )
             {
                 string underScratch;
-                if ( FileUtil::tryMakePathUnderRoot( AssetPaths::getScratchFolderPath(), filePath, underScratch ) )
+                if ( FileUtil::tryMakePathUnderRoot( AssetPaths::getScratchFolderPath().str(), filePath, underScratch ) )
                 {
                     StringBuilder<constant::buffer::kMax256> idBuilder;
                     idBuilder.appendFormat( "%#/%#", AssetPaths::kScratchDomain, underScratch );
@@ -136,20 +136,20 @@ namespace sw::editor
             }
 
             /** @brief 표시 경로 @p displayPath 의 디스크 자리입니다(`makeDisplayPath` 의 짝 — 작업 도메인은 실행 뿌리 아래, 나머지는 @p resourceRoot 아래). */
-            static string makeDiskPath( string_view resourceRoot, string_view displayPath )
+            static AbsolutePath makeDiskPath( const AbsolutePath& resourceRoot, string_view displayPath )
             {
                 // 작업 도메인 아래 부분은 원래 표기 그대로 잇는다(접은 키로 자르면 리눅스에서 다른 파일이 된다).
                 string rest;
                 if ( displayPath == AssetPaths::kScratchDomain || FileUtil::tryMakePathUnderRoot( AssetPaths::kScratchDomain, displayPath, rest ) )
-                    return FileUtil::joinPath( AssetPaths::getScratchFolderPath(), rest );
-                return FileUtil::joinPath( resourceRoot, displayPath );
+                    return AssetPaths::getScratchFolderPath().join( rest );
+                return resourceRoot.join( displayPath );
             }
 
             /** @brief 색인의 열쇠(소문자 리소스 id)입니다. */
             static string makeKey( string_view displayPath ) { return FileUtil::normalizePath( displayPath ).str(); }
 
             /** @brief 원본 @p absPath 곁의 `.meta` 를 읽습니다. 없거나 읽지 못하면 false 입니다(정체성 없음 — 결함 알림은 `asset-ids` · `AssetDatabase` 가 한다). */
-            static bool readMetaText( string_view absPath, string& outText ) { return FileUtil::readOptionalTextFile( AssetMeta::makePath( FileUtil::toDiskPath( absPath ) ), outText ) == OptionalFileRead::Read; }
+            static bool readMetaText( const AbsolutePath& absPath, string& outText ) { return FileUtil::readOptionalTextFile( AssetMeta::makePath( absPath ), outText ) == OptionalFileRead::Read; }
 
             static bool lessByReferrerLine( const EditorAssetReference& left, const EditorAssetReference& right )
             {
@@ -187,7 +187,7 @@ namespace sw::editor
             /** @brief 전체 스캔의 병렬 본문입니다. 파일마다 **자기 칸**에만 쓰므로 잠금이 없다. */
             struct ScanJob
             {
-                string_view     _resourceRoot;
+                AbsolutePath    _resourceRoot;
                 const ScanFile* _pFile{ nullptr };
                 StopToken       _stopToken{};
 
@@ -196,11 +196,11 @@ namespace sw::editor
                 {
                     if ( outRead._bCached == SW_TRUE || _stopToken.isStopRequested() )
                         return; // 멈추면 결과는 불완전하니 부른 쪽이 신호를 다시 읽고 버린다
-                    const string absPath = makeDiskPath( _resourceRoot, _pFile[index]._displayPath );
-                    string       text;
+                    const AbsolutePath absPath = makeDiskPath( _resourceRoot, _pFile[index]._displayPath );
+                    string             text;
                     // 목록을 모은 뒤 지워진 파일(에디터가 옮기는 중)은 읽지 않는다 — readTextFile 은 없는 파일을 오류로 남긴다.
                     const bool bText = outRead._bTextAsset == SW_TRUE;
-                    const bool bRead = bText ? FileUtil::readOptionalTextFile( FileUtil::toDiskPath( absPath ), text ) == OptionalFileRead::Read : readMetaText( absPath, text );
+                    const bool bRead = bText ? FileUtil::readOptionalTextFile( absPath, text ) == OptionalFileRead::Read : readMetaText( absPath, text );
                     if ( bRead )
                         outRead._content = EditorAssetIndex::makeContent( bText ? &text : nullptr, bText ? nullptr : &text );
                     outRead._bRead = bRead || bText == false ? SW_TRUE : SW_FALSE; // 원본은 `.meta` 가 없어도 정체성이 없는 파일로 안다
@@ -387,12 +387,12 @@ namespace sw::editor
         }
     }
 
-    void EditorAssetIndex::refreshFromDisk( EditorAssetIndexData& inoutData, string_view resourceRoot, string_view displayPath, bool bForce )
+    void EditorAssetIndex::refreshFromDisk( EditorAssetIndexData& inoutData, const AbsolutePath& resourceRoot, string_view displayPath, bool bForce )
     {
-        const string assetID = EditorAssetIndexInternal::makeKey( displayPath );
-        const string absPath = EditorAssetIndexInternal::makeDiskPath( resourceRoot, displayPath );
-        FileStamp    stamp{};
-        if ( FileUtil::getFileStamp( FileUtil::toDiskPath( absPath ), stamp ) == false )
+        const string       assetID = EditorAssetIndexInternal::makeKey( displayPath );
+        const AbsolutePath absPath = EditorAssetIndexInternal::makeDiskPath( resourceRoot, displayPath );
+        FileStamp          stamp{};
+        if ( FileUtil::getFileStamp( absPath, stamp ) == false )
         {
             removeEntry( inoutData, assetID );
             return;
@@ -403,7 +403,7 @@ namespace sw::editor
         string text;
         if ( isTextAsset( assetID ) )
         {
-            const bool bRead = FileUtil::readOptionalTextFile( FileUtil::toDiskPath( absPath ), text ) == OptionalFileRead::Read;
+            const bool bRead = FileUtil::readOptionalTextFile( absPath, text ) == OptionalFileRead::Read;
             insertEntry( inoutData, displayPath, stamp, makeContent( bRead ? &text : nullptr, nullptr ) ); // 읽지 못한 글은 참조가 없는 것과 같다
             return;
         }
@@ -411,7 +411,7 @@ namespace sw::editor
         insertEntry( inoutData, displayPath, stamp, makeContent( nullptr, bMeta ? &text : nullptr ) );
     }
 
-    void EditorAssetIndex::scan( string_view resourceRoot, string_view scratchFolder, EditorAssetIndexData& outData, TaskManager* pTaskManager, const StopToken& stopToken, AssetScanCache* pCache )
+    void EditorAssetIndex::scan( const AbsolutePath& resourceRoot, const AbsolutePath& scratchFolder, EditorAssetIndexData& outData, TaskManager* pTaskManager, const StopToken& stopToken, AssetScanCache* pCache )
     {
         using Internal = EditorAssetIndexInternal;
         const Stopwatch stopwatch;
@@ -425,7 +425,7 @@ namespace sw::editor
         listScan.reserve( listFile.size() );
         for ( const EditorContentFile& file : listFile )
         {
-            string displayPath = Internal::makeDisplayPath( resourceRoot, file._path );
+            string displayPath = Internal::makeDisplayPath( resourceRoot.str(), file._path );
             if ( displayPath.empty() == false )
                 listScan.push_back( Internal::ScanFile{ std::move( displayPath ), file._fileStamp, file._sidecarStamp } );
         }
@@ -487,21 +487,21 @@ namespace sw::editor
         _bReady = SW_TRUE;
     }
 
-    void EditorAssetIndex::applyChanges( string_view resourceRoot, const vector<string>& listChangedID )
+    void EditorAssetIndex::applyChanges( const AbsolutePath& resourceRoot, const vector<string>& listChangedID )
     {
         for ( const string& changed : listChangedID )
         {
-            const string displayPath = FileUtil::normalizeSeparators( changed );
-            const string assetID     = EditorAssetIndexInternal::makeKey( displayPath );
-            const string absPath     = EditorAssetIndexInternal::makeDiskPath( resourceRoot, displayPath );
-            if ( FileUtil::isDirectory( FileUtil::toDiskPath( absPath ) ) )
+            const string       displayPath = FileUtil::normalizeSeparators( changed );
+            const string       assetID     = EditorAssetIndexInternal::makeKey( displayPath );
+            const AbsolutePath absPath     = EditorAssetIndexInternal::makeDiskPath( resourceRoot, displayPath );
+            if ( FileUtil::isDirectory( absPath ) )
             {
                 // 폴더가 생겼다(옮겨 왔다) — 그 아래 파일을 하나씩 넣는다. `.meta` 는 전체 훑기와 같은 규칙으로 빠진다(EditorContentScan).
                 vector<string> listFile;
-                (void)EditorContentScan::collectFiles( absPath, "", listFile, true );
+                (void)EditorContentScan::collectFiles( absPath.str(), "", listFile, true );
                 for ( const string& filePath : listFile )
                 {
-                    const string fileDisplayPath = EditorAssetIndexInternal::makeDisplayPath( resourceRoot, filePath );
+                    const string fileDisplayPath = EditorAssetIndexInternal::makeDisplayPath( resourceRoot.str(), filePath );
                     if ( fileDisplayPath.empty() == false )
                         refreshFromDisk( _data, resourceRoot, fileDisplayPath, false );
                 }
@@ -516,7 +516,7 @@ namespace sw::editor
                     refreshFromDisk( _data, resourceRoot, sourceDisplayPath, true );
                 continue;
             }
-            if ( _data._mapEntry.contains( assetID ) || FileUtil::isRegularFile( FileUtil::toDiskPath( absPath ) ) )
+            if ( _data._mapEntry.contains( assetID ) || FileUtil::isRegularFile( absPath ) )
             {
                 refreshFromDisk( _data, resourceRoot, displayPath, false );
                 continue;
@@ -652,9 +652,9 @@ namespace sw::editor
 
 namespace sw::editor
 {
-    void EditorAssetIndexScanJob::request( string_view resourceRoot, TaskManager* pTaskManager )
+    void EditorAssetIndexScanJob::request( const AbsolutePath& resourceRoot, TaskManager* pTaskManager )
     {
-        const uint32 generation = beginRequest( string{ resourceRoot } );
+        const uint32 generation = beginRequest( resourceRoot );
         submitJob( "EditorAssetIndexScan", SW_DELEGATE_FUNCTION( TaskArgsDelegate, EditorAssetIndexScanJob::runJob ), MakeTaskArgs( _pState, generation, pTaskManager ) );
     }
 
@@ -664,7 +664,7 @@ namespace sw::editor
         const uint32            generation = args.get<uint32>( 1 );
         TaskManager* const      pTasks     = args.get<TaskManager*>( 2 );
 
-        string resourceRoot;
+        AbsolutePath resourceRoot;
         if ( readInput( pState, generation, resourceRoot ) == false )
             return;
 

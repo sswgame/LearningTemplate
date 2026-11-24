@@ -448,7 +448,7 @@ SW_TEST_CASE( PackReaderTest, RangeReadEqualsTheSameSliceOfAWholeRead )
     vector<std::pair<string, vector<uint8>>> listEntry;
     listEntry.emplace_back( "textures/mips.dds", content );
     listEntry.emplace_back( "small.txt", vector<uint8>{ 'h', 'i' } );
-    SW_REQUIRE_TRUE( PackTestUtil::writePack( packPath.str(), PackTestUtil::makeDesc( "game/test", PackCompressionKind::Zlib ), listEntry ) );
+    SW_REQUIRE_TRUE( PackTestUtil::writePack( packPath, PackTestUtil::makeDesc( "game/test", PackCompressionKind::Zlib ), listEntry ) );
 
     PackReader reader;
     SW_REQUIRE_TRUE( reader.open( packPath.str() ) );

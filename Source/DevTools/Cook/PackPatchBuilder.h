@@ -44,7 +44,7 @@ namespace sw
     struct PackPatchBuildParams
     {
         PackPatchSigner _signer{};             ///< 선택. 제공자가 있으면 패치 목록에 팩 해시와 서명을 적는다
-        string          _packsDirectory{};     ///< 새 빌드의 기본 팩 폴더(`App --cook-packs` 가 쓴 `-pack-dir`)
+        AbsolutePath    _packsDirectory{};     ///< 새 빌드의 기본 팩 폴더(`App --cook-packs` 가 쓴 `-pack-dir`)
         AbsolutePath    _previousRecordPath{}; ///< 이전 빌드의 내용 목록 파일(`*.packbuild.xml`)
         string          _newBuild{};           ///< 새 빌드 번호. 파일 이름에 들어가므로 글자 · 숫자 · `.` · `_` · `-` 만 쓴다
         AbsolutePath    _outputDirectory{};    ///< 패치 팩 · 패치 목록 · 새 빌드의 내용 목록을 쓸 폴더
@@ -68,10 +68,10 @@ namespace sw
          * @brief @p packsDirectory 의 모든 기본 팩이 담은 파일의 전체 가상 경로와 내용 해시를 모읍니다(경로 사전순).
          * @return 폴더에 패치 목록이 있거나, 팩을 열지 못했거나, 같은 전체 경로가 두 팩에 있으면 이유를 남기고 false 입니다.
          */
-        [[nodiscard]] static bool collectBuildEntries( string_view packsDirectory, vector<PackContentEntry>& outListEntry );
+        [[nodiscard]] static bool collectBuildEntries( const AbsolutePath& packsDirectory, vector<PackContentEntry>& outListEntry );
 
         /** @brief @p packsDirectory 의 팩 내용 목록을 빌드 @p build 의 기록으로 @p recordPath 에 씁니다(기본 팩 폴더에는 `PackBuildRecord::kFileName`). */
-        [[nodiscard]] static bool writeBuildRecord( string_view packsDirectory, string_view build, const AbsolutePath& recordPath );
+        [[nodiscard]] static bool writeBuildRecord( const AbsolutePath& packsDirectory, string_view build, const AbsolutePath& recordPath );
         /** @brief 패치를 쓰지 않는 빌드의 기록(`patching="none"`, 번호 · 내용 목록 없음)을 @p recordPath 에 씁니다. 빌드 번호를 주지 않은 쿠킹이 쓴다 — 기록이 없는 것으로 대신하지 않는다. */
         [[nodiscard]] static bool writeNoPatchingRecord( const AbsolutePath& recordPath );
 

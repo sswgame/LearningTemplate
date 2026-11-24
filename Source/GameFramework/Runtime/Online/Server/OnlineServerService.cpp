@@ -59,7 +59,7 @@ namespace sw
         const bool bNoServerConfig = context._pServerConfig == nullptr || context._serverConfigPath.empty();
         if ( bNoServerConfig )
             return {}; // 서버 설정이 없는 호스트(테스트)에서는 할 일이 없다
-        const string path = OnlineServerConfig::makeConfigPath( context._serverConfigPath );
+        const string path = OnlineServerConfig::makeConfigPath( context._serverConfigPath ).str();
         // 설정 타입이 이 모듈에 있다 — 엔진의 ConfigManager 는 모듈보다 오래 살므로 테이블에 등록하지 않고 이 서비스가 직접 소유한다.
         OnlineServerConfig     onlineConfig;
         const ConfigReadResult result = ConfigManager::readConfigFileInto( path, onlineConfig );
