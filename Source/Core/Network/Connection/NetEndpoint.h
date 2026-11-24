@@ -237,7 +237,8 @@ namespace sw
         [[nodiscard]] virtual bool sendNotifiedMessage( int32 connectionID, const uint8* pData, int32 size, uint32 tag ) = 0;
         /** @brief 연결된 모두에게 보냅니다. @p exceptID 는 제외합니다(-1 이면 제외 없음). 반환값은 보낸 수입니다. */
         virtual int32 broadcast( NetChannelKind channel, const uint8* pData, int32 size, int32 exceptID = constant::invalid_index::kInt32 ) = 0;
-        virtual void  disconnect( int32 connectionID )                                                                                      = 0;
+        /** @brief 연결을 닫습니다. @p linger 만큼 확인되지 않은 신뢰 메시지를 비운 뒤 닫힘 사건이 나고, 그동안의 상태는 Disconnecting 입니다. 이미 닫는 중이면 짧은 쪽이 남습니다. */
+        virtual void disconnect( int32 connectionID, NetLinger linger ) = 0;
         /** @brief 쌓인 연결 사건과 받은 메시지를 모두 꺼냅니다(`NetEndpoint::pollInbound` 와 같은 약속 — 사건이 메시지보다 앞에 온다). */
         virtual void               pollInbound( NetInbound& outInbound )                                        = 0;
         virtual bool               isServer() const                                                             = 0;
@@ -356,9 +357,10 @@ namespace sw
         void addSentKindStats( NetMessageKindStatsTable& outTable ) const SW_EXCLUDES_LOCK( _mutex ) override;
         /** @brief 받은 메시지 하나를 꺼냅니다. 연결 순서대로, 채널은 신뢰 순서, 신뢰 순서 없음, 순서만, 비신뢰 순(채널 값 순)으로 확인합니다. */
         [[nodiscard]] bool receiveMessage( int32& outConnectionID, NetChannelKind& outChannel, vector<uint8>& outBuffer ) SW_EXCLUDES_LOCK( _mutex );
-        void               disconnect( int32 connectionID ) SW_EXCLUDES_LOCK( _mutex ) override;
-        void               disconnectAll() SW_EXCLUDES_LOCK( _mutex );
-        void               pollEvents( vector<NetEndpointEvent>& outListEvent ) SW_EXCLUDES_LOCK( _mutex );
+        void               disconnect( int32 connectionID, NetLinger linger ) SW_EXCLUDES_LOCK( _mutex ) override;
+        /** @brief 모든 연결을 비우지 않고 바로 닫습니다 — 엔드포인트를 없애기 직전이라 비울 `update` 가 더 돌지 않는다. */
+        void disconnectAll() SW_EXCLUDES_LOCK( _mutex );
+        void pollEvents( vector<NetEndpointEvent>& outListEvent ) SW_EXCLUDES_LOCK( _mutex );
         /**
          * @brief 쌓인 연결 사건과 받은 메시지를 **잠금 한 번에** 모두 꺼냅니다. @p outInbound 를 비운 뒤 채우며, 사건이 메시지보다 앞에 옵니다.
          * @details 닫힌 연결의 받은 메시지는 연결을 닫을 때 지워지므로, 꺼낸 메시지는 모두 지금 그 슬롯에 있는 연결의 것이다.

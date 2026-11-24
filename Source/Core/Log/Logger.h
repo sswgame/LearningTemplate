@@ -78,7 +78,7 @@ namespace sw
          * @brief 크래시 경로에서 부릅니다: 큐에 남은 줄과 장치 버퍼를 **지금 이 스레드에서** 내보냅니다. 락을 바로 잡지 못하면 포기합니다.
          * @details 감싸는 싱크(테스트 프레임워크)는 감싼 싱크로 넘깁니다. 비동기 큐가 없는 싱크는 아무것도 하지 않아도 됩니다.
          */
-        virtual void flushForCrash() {}
+        virtual void waitUpToCrash() {}
         /**
          * @brief 줄마다 JSON 한 줄을 표준 출력에 쓰는 장치(`JSONLinesLogOutput`)를 달고 콘솔 장치를 끕니다(컨테이너 · 로그 수집기용, 운영 설정 `_bJSONLogs`). 두 번 불러도 한 번입니다.
          * @return 켰으면 true. 장치를 달 수 없는 싱크(감싸는 싱크 · 비동기 큐가 없는 싱크)는 기본 구현이 false 를 돌려줍니다 — 부른 쪽이 알려야 합니다.
@@ -105,7 +105,7 @@ namespace sw
     public:
         Logger() = delete;
 
-        /** @brief 전역 싱크의 `flushForCrash` 입니다. 크래시 핸들러가 리포트를 쓴 뒤 부릅니다. */
+        /** @brief 전역 싱크의 `waitUpToCrash` 입니다. 크래시 핸들러가 리포트를 쓴 뒤 부릅니다. */
         static void flushGlobalForCrash();
         /** @brief 매크로가 쓸 전역 싱크를 바꿉니다. */
         static void setGlobalSink( ILogSink* pSink );

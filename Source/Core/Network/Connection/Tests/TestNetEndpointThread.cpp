@@ -283,7 +283,7 @@ SW_TEST_CASE( NetEndpointThreadTest, ConnectionsChurnWhileGameThreadsSendAndPoll
     for ( int32 round = 0; round < kChurnRound; ++round )
     {
         NetEndpoint& client = cluster.getClient( round % kClientCount );
-        client.disconnect( 0 );
+        client.disconnect( 0, NetLinger::none() );
         const TaskFuture<NetConnectResult> future = client.connectAsync( NetAddress::makeLoopback( 4000 ) );
         bAllReconnected                           = bAllReconnected && future.waitFor( NetEndpointThreadTestInternal::kFutureWaitMilli ) && future.get().isConnected();
     }
@@ -332,7 +332,7 @@ SW_TEST_CASE( NetEndpointThreadTest, ConnectAsyncReportsEveryFailure )
 
     // 기다리는 중에 끊으면 Requested, 다시 연결하면 앞의 것도 Requested.
     const TaskFuture<NetConnectResult> abandoned = cluster.getClient( 3 ).connectAsync( NetAddress::makeLoopback( 4999 ) );
-    cluster.getClient( 3 ).disconnect( 0 );
+    cluster.getClient( 3 ).disconnect( 0, NetLinger::none() );
     SW_REQUIRE_TRUE( abandoned.waitFor( NetEndpointThreadTestInternal::kFutureWaitMilli ) );
     SW_EXPECT_TRUE( abandoned.get()._reason == NetDisconnectReason::Requested );
     const TaskFuture<NetConnectResult> replaced = cluster.getClient( 3 ).connectAsync( NetAddress::makeLoopback( 4999 ) );
@@ -427,7 +427,7 @@ SW_TEST_CASE( NetEndpointThreadTest, UDPHostsRunOnThreadsOverLocalhost )
     SW_EXPECT_EQUAL( 20, received );
 
     // 끊김 알림은 바로 나간다 — 서버가 타임아웃 전에 안다.
-    client.disconnect( 0 );
+    client.disconnect( 0, NetLinger::none() );
     SW_EXPECT_TRUE( test::waitUntil( [&server]()
     { return server.getConnectedCount() == 0; }, 1.0 ) );
     clientThread.stop();

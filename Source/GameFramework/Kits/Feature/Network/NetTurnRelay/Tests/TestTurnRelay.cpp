@@ -39,7 +39,7 @@ namespace
         }
         bool               sendNotifiedMessage( int32, const uint8*, int32, uint32 ) override { return false; }
         int32              broadcast( NetChannelKind, const uint8*, int32, int32 ) override { return 0; }
-        void               disconnect( int32 connectionID ) override { _listDisconnected.push_back( connectionID ); }
+        void               disconnect( int32 connectionID, NetLinger ) override { _listDisconnected.push_back( connectionID ); }
         void               pollInbound( NetInbound& ) override {}
         bool               isServer() const override { return true; }
         NetConnectionState getConnectionState( int32 ) const override { return NetConnectionState::Connected; }

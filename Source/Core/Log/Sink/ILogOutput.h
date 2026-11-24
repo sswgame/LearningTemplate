@@ -53,7 +53,7 @@ namespace sw
         virtual void flushWithoutWaiting() {}
         /**
          * @brief 크래시 경로에서 큐에 남은 한 줄을 씁니다. **기다리지 않습니다** — 장치 락을 바로 잡지 못하면 그 줄을 버리고 돌아옵니다.
-         * @details `write` 는 장치 락에서 기다린다 — 그 락을 쥔 채 죽은 스레드가 있으면 크래시 보고가 멈춤이 된다(`AsyncLogSink::flushForCrash`).
+         * @details `write` 는 장치 락에서 기다린다 — 그 락을 쥔 채 죽은 스레드가 있으면 크래시 보고가 멈춤이 된다(`AsyncLogSink::waitUpToCrash`).
          *          기본은 버리기다(크래시 경로에서 멈추는 것보다 줄을 잃는 쪽이 낫다). 파일 · 콘솔처럼 크래시 전 줄이 필요한 장치는 `try_lock` 으로 구현한다.
          */
         virtual void writeWithoutWaiting( const LogRecord& record ) { (void)record; }

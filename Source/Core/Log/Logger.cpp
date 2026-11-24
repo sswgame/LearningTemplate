@@ -82,7 +82,7 @@ namespace sw
     {
         ILogSink* pSink = s_globalSink.load( std::memory_order_acquire );
         if ( pSink != nullptr )
-            pSink->flushForCrash();
+            pSink->waitUpToCrash();
     }
 
     void Logger::setRuntimeVerbosity( LogLevel level )

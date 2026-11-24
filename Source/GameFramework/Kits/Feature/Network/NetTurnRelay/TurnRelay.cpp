@@ -170,7 +170,7 @@ namespace sw
         if ( pendingCount >= kMaxPendingPerConnection )
         {
             SW_LOG_WARNING_ID( "TurnRelay.ConnectionDoesNotAcknowledge", "connection %# does not acknowledge - %# messages are waiting, disconnecting it", connectionID, pendingCount );
-            _pHost->disconnect( connectionID );
+            _pHost->disconnect( connectionID, NetLinger::none() );
             return;
         }
         optional<NetQueuedMessage> queued = _messageWriter.makeQueuedMessage();

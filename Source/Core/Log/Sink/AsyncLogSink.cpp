@@ -241,7 +241,7 @@ namespace sw
         return _onLogWritten.add( listener );
     }
 
-    void AsyncLogSink::flushForCrash()
+    void AsyncLogSink::waitUpToCrash()
     {
         // 크래시 경로다. 로거 락을 쥔 채 죽은 스레드가 있으면 기다리지 않고 포기한다.
         ILogOutput* arrDevice[_s_kMaxOutput]{};

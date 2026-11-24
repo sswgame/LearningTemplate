@@ -41,6 +41,8 @@ namespace sw
         float64                     _lastReceiveTime{ 0.0 };
         float64                     _lastSendTime{ -1.0 };
         float64                     _connectStartTime{ 0.0 };
+        float64                     _lingerSeconds{ 0.0 };                      ///< Disconnecting 인 동안 비울 시간(초). 첫 갱신이 기한으로 바꾼다
+        float64                     _lingerDeadline{ -1.0 };                    ///< 비우기의 기한. 음수면 아직 정하지 않았다
         float64                     _sendCredit{ 0.0 };                         ///< 대역폭 토큰(바이트). 0보다 크면 꽉 찬 패킷을 보낼 수 있다. 보낸 뒤에는 음수가 될 수 있다.
         float64                     _lastCreditTime{ -1.0 };                    ///< 토큰을 마지막으로 채운 시각. 음수면 아직 채운 적이 없다는 뜻이며, 연결되면 가득 채운다.
         NetSendThrottle             _sendThrottle{};                            ///< 토큰이 차는 속도(`NetEndpointConfig::_sendThrottle` 이 있을 때만 조절한다).
@@ -52,6 +54,9 @@ namespace sw
          *          게임 스레드가 끊김을 알기 전에는 그 번호가 A 다(언리얼은 UNetConnection 객체가 신원, 유니티 NGO 는 단조 증가 clientId).
          */
         uint8 _bReleasePending{ SW_FALSE };
+
+        /** @brief 패킷을 주고받는 연결인가입니다 — 닫는 중(비우는 중)도 확인을 주고받는다. */
+        bool isEstablished() const { return _state == NetConnectionState::Connected || _state == NetConnectionState::Disconnecting; }
 
         /** @brief 연결 값입니다. 두 솔트를 섞은 값으로, 같은 주소의 옛 연결이나 위조 패킷을 걸러 냅니다. */
         uint64 getConnectionToken() const { return _clientSalt ^ _serverSalt; }

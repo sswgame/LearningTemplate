@@ -58,6 +58,8 @@ namespace sw
         slot._state           = NetConnectionState::Disconnected;
         slot._bReleasePending = bHoldUntilReleased ? SW_TRUE : SW_FALSE;
         slot._connection.reset();
+        slot._lingerSeconds  = 0.0;
+        slot._lingerDeadline = -1.0;
         if ( bHoldUntilReleased == false )
         {
             const auto freeIter = std::lower_bound( _listFreeSlot.begin(), _listFreeSlot.end(), slotIndex, []( int32 free, int32 index )

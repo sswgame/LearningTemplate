@@ -104,12 +104,12 @@ namespace sw
         return sentCount;
     }
 
-    void NetEndpointShardSet::disconnect( int32 connectionID )
+    void NetEndpointShardSet::disconnect( int32 connectionID, NetLinger linger )
     {
         int32        localConnectionID = constant::invalid_index::kInt32;
         NetEndpoint* pShard            = findShard( connectionID, localConnectionID );
         if ( pShard != nullptr )
-            pShard->disconnect( localConnectionID );
+            pShard->disconnect( localConnectionID, linger );
     }
 
     void NetEndpointShardSet::pollInbound( NetInbound& outInbound )

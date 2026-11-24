@@ -50,7 +50,7 @@ namespace
         bool               trySendMessage( int32, NetChannelKind, const uint8*, int32 ) override { return true; }
         bool               sendNotifiedMessage( int32, const uint8*, int32, uint32 ) override { return true; }
         int32              broadcast( NetChannelKind, const uint8*, int32, int32 ) override { return 0; }
-        void               disconnect( int32 ) override {}
+        void               disconnect( int32, NetLinger ) override {}
         void               pollInbound( NetInbound& ) override {}
         bool               isServer() const override { return true; }
         NetConnectionState getConnectionState( int32 connectionID ) const override { return VectorUtil::findBy<&Link::_connectionID>( _listLink, connectionID ) != nullptr ? NetConnectionState::Connected : NetConnectionState::Disconnected; }

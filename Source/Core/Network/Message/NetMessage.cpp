@@ -285,7 +285,7 @@ namespace sw
         {
             _malformedCount.add();
             SW_LOG_WARNING_ID( "Net.RouterTableVersionMalformed", "NetMessageRouter: connection %# sent a broken message table version notice - disconnecting it", connectionID );
-            peers.disconnect( connectionID );
+            peers.disconnect( connectionID, NetLinger::none() );
             _listRefusedConnection.push_back( connectionID );
             return;
         }
@@ -323,7 +323,7 @@ namespace sw
         {
             _malformedCount.add();
             SW_LOG_WARNING_ID( "Net.RouterWorldMalformed", "NetMessageRouter: connection %# sent a broken world generation - disconnecting it", connectionID );
-            peers.disconnect( connectionID );
+            peers.disconnect( connectionID, NetLinger::none() );
             _listRefusedConnection.push_back( connectionID );
             return;
         }
@@ -347,7 +347,7 @@ namespace sw
             SW_LOG_ERROR_ID( "Net.MessageTableVersionMismatch",
                              "NetMessageRouter: connection %# uses message table version %# for range 0x%02x but this build uses %# - disconnecting it (the two builds disagree on that kit's messages)",
                              connectionID, peer._wireVersion, static_cast<int32>( peer._rangeBase ), ownVersion );
-            peers.disconnect( connectionID );
+            peers.disconnect( connectionID, NetLinger::none() );
             _listRefusedConnection.push_back( connectionID );
             _mapPeerWireVersion.erase( iter );
             return true;
@@ -416,7 +416,7 @@ namespace sw
         _malformedCount.add();
         SW_LOG_WARNING_ID( "Net.RouterWrongDirection", "NetMessageRouter: connection %# sent message kind 0x%02x that does not travel toward the %# - disconnecting it", connectionID,
                            static_cast<int32>( kind ), role == NetPeerRole::Server ? "server" : "client" );
-        peers.disconnect( connectionID );
+        peers.disconnect( connectionID, NetLinger::none() );
         _listRefusedConnection.push_back( connectionID );
     }
 

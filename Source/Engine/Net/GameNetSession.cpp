@@ -855,7 +855,7 @@ namespace sw
             // 게임플레이 값이 클라이언트마다 다르면 판정이 어긋난다 — 받지 않는다(`docs/agents/DataInheritance.md` 조건 절의 네트워크).
             SW_LOG_ERROR_ID( "Net.ResourceDigestMismatch", "Net session client %# composed '%#' differently from the server (load-axis conditions or resource layers differ) - disconnecting it",
                              mismatch._peer, mismatch._assetID );
-            _peers.disconnect( mismatch._peer );
+            _peers.disconnect( mismatch._peer, NetLinger::none() );
             _digestComparer.removePeer( mismatch._peer );
         }
     }
@@ -892,7 +892,7 @@ namespace sw
         if ( _digestComparer.addPeerLine( context._connectionID, entry, MonotonicClock::nowNanoseconds() ) == false )
         {
             SW_LOG_ERROR_ID( "Net.ResourceDigestFlood", "Net session client %# sent more than %# resource composition lines - disconnecting it", context._connectionID, ResourceDigestComparer::kMaxLinesPerPeer );
-            _peers.disconnect( context._connectionID );
+            _peers.disconnect( context._connectionID, NetLinger::none() );
             _digestComparer.removePeer( context._connectionID );
         }
         return NetHandleResult::Handled;

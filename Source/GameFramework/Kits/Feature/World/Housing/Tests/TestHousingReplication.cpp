@@ -65,7 +65,7 @@ namespace
             }
             return count;
         }
-        void               disconnect( int32 ) override {}
+        void               disconnect( int32, NetLinger ) override {}
         void               pollInbound( NetInbound& ) override {}
         bool               isServer() const override { return _bServer != SW_FALSE; }
         NetConnectionState getConnectionState( int32 ) const override { return NetConnectionState::Connected; }

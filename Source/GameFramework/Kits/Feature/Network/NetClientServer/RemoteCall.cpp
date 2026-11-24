@@ -631,7 +631,7 @@ namespace sw
                 SW_LOG_WARNING_ID( "RemoteCall.ValidationFailed", "Remote call %# from connection %# failed its validator - disconnecting the connection", pFunction->_name.c_str(),
                                    context._connectionID );
                 if ( _pPeers != nullptr )
-                    _pPeers->disconnect( context._connectionID );
+                    _pPeers->disconnect( context._connectionID, NetLinger::none() );
                 return NetHandleResult::Handled;
             }
         }
@@ -682,7 +682,7 @@ namespace sw
         ++_stats._violationCount;
         SW_LOG_WARNING_ID( "RemoteCall.Violation", "Remote call (function id %#) from connection %# was refused (%#) - disconnecting the connection", functionID, connectionID, pWhy );
         if ( _pPeers != nullptr )
-            _pPeers->disconnect( connectionID );
+            _pPeers->disconnect( connectionID, NetLinger::none() );
     }
 
     // ------------------------------------------------------------------------------

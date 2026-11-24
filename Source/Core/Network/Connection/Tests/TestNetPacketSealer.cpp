@@ -393,7 +393,7 @@ SW_TEST_CASE( NetPacketSealerTest, EncryptedEndpointsExchangeAndReconnectWithFre
         if ( round == 1 )
             break;
         // 서버가 끊는다 — 봉인한 끊기 패킷을 클라이언트가 잠금 밖에서 열어 Remote 로 끊는다. 서버가 끊김 사건을 꺼내야 슬롯 0 을 다시 준다.
-        cluster.getServer().disconnect( 0 );
+        cluster.getServer().disconnect( 0, NetLinger::none() );
         cluster.run( 0.2 );
         SW_REQUIRE_TRUE( cluster.getClient( 0 ).getConnectionState( 0 ) == NetConnectionState::Disconnected );
         vector<NetEndpointEvent> listEvent;

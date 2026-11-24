@@ -1001,7 +1001,7 @@ SW_TEST_CASE( LogTest, CrashFlushDoesNotWaitOnAHeldOutputLock )
     { return pBlocking->_bHeld.load(); } ) ); // 작업 스레드가 장치 락을 쥔 채 멈췄다
     logger.writeLog( sw::LogLevel::Info, "Test", "left in the queue", __FILE__, __LINE__ );
 
-    logger.flushForCrash();
+    logger.waitUpToCrash();
     const bool bReturnedWhileHeld = pBlocking->_bOpen.load() == false; // 문이 시한으로 열리기 전에 돌아왔다
     pBlocking->_bOpen.store( true );
     logger.shutdown();

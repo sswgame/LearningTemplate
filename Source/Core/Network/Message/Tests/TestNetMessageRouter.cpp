@@ -337,7 +337,7 @@ SW_TEST_CASE( NetMessageRouterTest, RouterTellsHandlersAboutConnectionsBeforeThe
     SW_REQUIRE_TRUE( messageWriter.send( pair.getClient( 0 ), 0, NetChannelKind::ReliableOrdered ) );
     pair.run( 0.2 );
     (void)router.poll( pair.getServer() );
-    pair.getClient( 0 ).disconnect( 0 );
+    pair.getClient( 0 ).disconnect( 0, NetLinger::none() );
     pair.run( 0.2 );
     (void)router.poll( pair.getServer() );
     SW_EXPECT_TRUE( tracker._log == "OMC" );
