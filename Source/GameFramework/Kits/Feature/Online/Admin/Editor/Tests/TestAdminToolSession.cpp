@@ -183,7 +183,7 @@ SW_TEST_CASE( AdminToolSessionTest, ServerOnlyCommandsReportUnavailable )
     session.requestLookup( AdminToolSessionTestUtil::kPlayer );
     session.requestPostAnnouncement( 1, "text", 0, 60, "ticket" );
     SW_EXPECT_TRUE( session.getLastResult().hasError( OnlineError::kUnavailable ) );
-    SW_EXPECT_EQUAL( string( "ServerDirectory: error 5" ), session.getStatusLine() );
+    SW_EXPECT_EQUAL( string( "ServerDirectory: Unavailable (5)" ), session.getStatusLine() );
     session.requestReports( true );
     SW_EXPECT_TRUE( session.getReports().empty() );
     session.requestLiveEvents();
@@ -200,7 +200,7 @@ SW_TEST_CASE( AdminToolSessionTest, LiveProviderWithoutClientAnswersUnavailable 
     session.requestLookup( AdminToolSessionTestUtil::kPlayer );
     SW_EXPECT_TRUE( session.getLastResult().hasError( OnlineError::kUnavailable ) );
     SW_EXPECT_EQUAL( 0, session.getPendingCount() );
-    SW_EXPECT_TRUE( session.getStatusLine().find( "error" ) != string::npos ); // 오류 코드를 보인다
+    SW_EXPECT_TRUE( session.getStatusLine().find( "Unavailable" ) != string::npos ); // 오류 코드를 보인다
 
     session.useFake();
     session.requestLookup( AdminToolSessionTestUtil::kPlayer );
