@@ -96,7 +96,7 @@
 						</_listShape>
 					</RigidBodyComponent>
 					<MeshComponent _localID="163493842152903304" _localPosition="0,0.4,0" _localRotation="0,0,0" _localScale="1.2,0.6,2" _attachOwner="None" _attachComponent="#ae80bcb72e918025" _meshID="Cube" _materialPath="engine/materials/prototypegrid_light.material" _boundsRadius="2" />
-					<PawnComponent _localID="11149290121538025405" _moveAction="None" _lookAction="None" _upAction="None" _inputLayer="None" _aiControllerPrefab="" _maxPitch="80.21409" _autoPossess="None" _bLockMouse="false">
+					<PawnComponent _localID="11149290121538025405" _moveAction="None" _lookAction="None" _upAction="None" _aiControllerPrefab="" _maxPitch="80.21409" _autoPossess="None" _bLockMouse="false">
 						<_listButton />
 						<_listAnalog />
 					</PawnComponent>
@@ -109,7 +109,7 @@
 				<_listComponent>
 					<CharacterControllerComponent _localID="1851894784675401076" _localPosition="10,0.05,0" _localRotation="0,0,0" _localScale="1,1,1" _attachOwner="None" _attachComponent="None" _radius="0.3" _halfHeight="0.6" _stepHeight="0.3" _maxSlopeAngle="45" _gravityScale="1" _mass="70" _layer="Character" />
 					<MeshComponent _localID="163493842152903304" _localPosition="0,0.9,0" _localRotation="0,0,0" _localScale="0.6,0.9,0.6" _attachOwner="None" _attachComponent="#19b3407eb1f9cd74" _meshID="Capsule" _materialPath="engine/materials/prototypegrid_dark.material" _boundsRadius="1.2" />
-					<PawnComponent _localID="11149290121538025405" _moveAction="None" _lookAction="None" _upAction="None" _inputLayer="None" _aiControllerPrefab="" _maxPitch="80.21409" _autoPossess="None" _bLockMouse="false">
+					<PawnComponent _localID="11149290121538025405" _moveAction="None" _lookAction="None" _upAction="None" _aiControllerPrefab="" _maxPitch="80.21409" _autoPossess="None" _bLockMouse="false">
 						<_listButton />
 						<_listAnalog />
 					</PawnComponent>

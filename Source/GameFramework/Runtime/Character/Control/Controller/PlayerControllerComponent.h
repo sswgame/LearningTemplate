@@ -4,6 +4,7 @@
  * @details 입력을 매핑(InputMap)으로 의도로 바꾼다. 매핑 층을 읽는 **유일한** 조종자이다.
  */
 #pragma once
+#include "Core/Container/vector.h"
 #include "Core/Foundation/Macros.h"
 #include "Core/Foundation/Types.h"
 #include "Core/Name/hashed_string.h"
@@ -97,7 +98,7 @@ namespace sw
         PROPERTY( Category = "Player", DisplayName = "Mouse Lock Action", Tooltip = "InputMap action that releases and re-locks the cursor of a pawn that wants mouse lock (Esc)" )
         hashed_string _mouseLockAction;
 
-        hashed_string                   _pushedLayer;             ///< 빙의 때 넣은 레이어(뺄 때 이름으로)
+        vector<hashed_string>           _listPushedLayer;         ///< 빙의 때 넣은 레이어들(뺄 때 이름으로)
         GameObjectHandle                _previousPawn;            ///< 마지막으로 놓은 폰의 오브젝트(이벤트의 앞 폰)
         TComponentHandle<PawnComponent> _warnedPawn;              ///< 빠진 액션을 이미 경고한 폰
         uint8                           _bMouseLockRequested : 1; ///< 빙의한 폰을 위해 잠금을 유지하려 한다(토글 액션이 뒤집는다)

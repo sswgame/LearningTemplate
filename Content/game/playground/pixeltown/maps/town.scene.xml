@@ -91,7 +91,6 @@
 					<PawnComponent _localID="11149290121538025405" _moveAction="Move"
 					               _lookAction="None"
 					               _upAction="None"
-					               _inputLayer="None"
 					               _aiControllerPrefab=""
 					               _maxPitch="80.21409"
 					               _autoPossess="Player0">
