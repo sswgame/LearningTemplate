@@ -776,7 +776,7 @@ namespace sw
             return false;
 
         // 청크 목록이 적은 팩(씬 청크 · 공유 청크)은 기동 필수가 아니다 — 씬을 열 때 마운트한다(`PackChunkLoader`). 목록을 못 읽으면 어느 팩이 필수인지 모르므로 아무것도 마운트하지 않는다.
-        _packsDirectory = string( packsDirectory );
+        _packsDirectory = FileUtil::trimTrailingSlashes( packsDirectory );
         _chunkManifest  = PackChunkManifest{};
         for ( const string& candidate : listCandidateFile )
         {
@@ -865,9 +865,16 @@ namespace sw
         return true;
     }
 
+    string PackManager::makePackKey( string_view fileName ) const
+    {
+        StringBuilder<constant::buffer::kMax512> key;
+        key.appendFormat( "%#/%#", _packsDirectory, fileName );
+        return string( key.view() );
+    }
+
     bool PackManager::mountPatchChain( string_view packsDirectory, const vector<PackPatchManifest>& listManifest, vector<string>& listMountedPath )
     {
-        const string recordPath = FileUtil::joinPath( packsDirectory, PackBuildRecord::kFileName );
+        const string recordPath = makePackKey( PackBuildRecord::kFileName );
         string       recordText;
         if ( ContentFileSource::getCurrent().readTextFile( recordPath, recordText ) == false )
         {
@@ -904,7 +911,7 @@ namespace sw
         for ( size_t orderIndex = 0; orderIndex < listOrder.size(); ++orderIndex )
         {
             const PackPatchManifest& manifest = listManifest[listOrder[orderIndex]];
-            const string             packPath = FileUtil::joinPath( packsDirectory, manifest._packFileName );
+            const string             packPath = makePackKey( manifest._packFileName );
             if ( ContentFileSource::getCurrent().isFile( packPath ) == false )
             {
                 SW_LOG_ERROR_ID( "PackManager.PackPatchNamesBut", "Pack patch %# -> %# names %# but the file is missing from %#", manifest._fromBuild, manifest._toBuild, manifest._packFileName, packsDirectory );

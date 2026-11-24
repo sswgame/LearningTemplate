@@ -30,16 +30,16 @@ namespace
         static sw::AbsolutePath writeSampleProject( const sw::AbsolutePath& folder )
         {
             const sw::string projectPath = LocalizationTestUtil::writeProject( folder, "en", R"([ "ko", "ko_kr", "ja" ])" ).str();
-            LocalizationTestUtil::writeSourceTable( folder.str(), "en", R"("ui.title": { "source": "Mystery Island", "maxLength": 20 },
+            LocalizationTestUtil::writeSourceTable( folder, "en", R"("ui.title": { "source": "Mystery Island", "maxLength": 20 },
                                                                 "ui.start": { "source": "Start Game" },
                                                                 "ui.quit": { "source": "Quit" })" );
             const sw::string                                 titleHash = sw::SourceTextEntry::formatSourceHash( sw::SourceTextEntry::computeSourceHash( "Mystery Island" ) );
             const sw::string                                 staleHash = sw::SourceTextEntry::formatSourceHash( sw::SourceTextEntry::computeSourceHash( "Begin" ) );
             sw::StringBuilder<sw::constant::buffer::kMax256> koEntries;
             koEntries.appendFormat( "\"ui.title\": { \"text\": \"신비의 섬\", \"sourceHash\": \"%#\" }, \"ui.start\": { \"text\": \"시작\", \"sourceHash\": \"%#\" }", titleHash, staleHash );
-            LocalizationTestUtil::writeTranslation( folder.str(), "ko", koEntries.view() );
-            LocalizationTestUtil::writeTranslation( folder.str(), "ko_kr", R"json("ui.quit": { "text": "종료(한국)" })json" );
-            LocalizationTestUtil::writeTranslation( folder.str(), "ja", R"("ui.title": { "text": "神秘の島", "review": true }, "ui.quit": { "text": "終了" })" );
+            LocalizationTestUtil::writeTranslation( folder, "ko", koEntries.view() );
+            LocalizationTestUtil::writeTranslation( folder, "ko_kr", R"json("ui.quit": { "text": "종료(한국)" })json" );
+            LocalizationTestUtil::writeTranslation( folder, "ja", R"("ui.title": { "text": "神秘の島", "review": true }, "ui.quit": { "text": "終了" })" );
             return sw::FileUtil::toDiskPath( projectPath );
         }
     };
@@ -203,7 +203,7 @@ SW_TEST_CASE( LocalizationManagerTest, ReloadChangedFilePicksUpNewTextAndKeepsOl
     { ++notifiedCount; } );
     const uint32           revisionBefore = loc.getTextRevision();
 
-    LocalizationTestUtil::writeTranslation( folder.str(), "ko", R"("ui.title": { "text": "수수께끼 섬" })" );
+    LocalizationTestUtil::writeTranslation( folder, "ko", R"("ui.title": { "text": "수수께끼 섬" })" );
     const sw::AssetID changedID = ScopedScratchDomain::toID( folder.join( "ko.translation.xml" ) );
     SW_EXPECT_TRUE( loc.isProjectFile( changedID.view() ) );
     SW_EXPECT_TRUE( loc.reloadChangedFile( changedID.view() ) == sw::ReloadResult::Reloaded );
@@ -236,7 +236,7 @@ SW_TEST_CASE( LocalizationManagerTest, UnmountingGameProjectsKeepsEngineStrings 
     SW_REQUIRE_TRUE( sw::FileUtil::ensureDirectoryExists( engineFolder ) );
     SW_REQUIRE_TRUE( sw::FileUtil::writeTextFile( enginePath, R"(<LocalizationProject name="engineTest" sourceCulture="en"><stringTables><item>e.strings.xml</item></stringTables></LocalizationProject>)" ) );
     SW_REQUIRE_TRUE( sw::FileUtil::writeTextFile( engineFolder.join( "e.strings.xml" ), R"(<SourceStringTable culture="en"><entries><entry key="e.key" source="Engine" /></entries></SourceStringTable>)" ) );
-    LocalizationTestUtil::writeSourceTable( gameFolder.str(), "en", R"("g.key": { "source": "Game" })" );
+    LocalizationTestUtil::writeSourceTable( gameFolder, "en", R"("g.key": { "source": "Game" })" );
 
     sw::LocalizationManager loc;
     SW_REQUIRE_TRUE( loc.mountProject( ScopedScratchDomain::toID( enginePath ), sw::LocalizationScope::Engine ) );
@@ -369,9 +369,9 @@ SW_TEST_CASE( LocalizationManagerTest, LanguageCodeSpellingsNameOneLanguage )
     const ScopedScratchDomain domain;
     const sw::AbsolutePath    folder      = domain.getFolder();
     const sw::string          projectPath = LocalizationTestUtil::writeProject( folder, "en_us", R"([ "ja-JP", "KO_kr" ])" ).str();
-    LocalizationTestUtil::writeSourceTable( folder.str(), "en_us", R"("UI_PLAY": { "source": "Play" }, "UI_ONLY_EN": { "source": "English" })" );
-    LocalizationTestUtil::writeTranslation( folder.str(), "ja_jp", R"("UI_PLAY": { "text": "プレイ" })" );
-    LocalizationTestUtil::writeTranslation( folder.str(), "ko_kr", R"("UI_PLAY": { "text": "플레이" })" );
+    LocalizationTestUtil::writeSourceTable( folder, "en_us", R"("UI_PLAY": { "source": "Play" }, "UI_ONLY_EN": { "source": "English" })" );
+    LocalizationTestUtil::writeTranslation( folder, "ja_jp", R"("UI_PLAY": { "text": "プレイ" })" );
+    LocalizationTestUtil::writeTranslation( folder, "ko_kr", R"("UI_PLAY": { "text": "플레이" })" );
 
     sw::LocalizationManager loc;
     SW_REQUIRE_TRUE( loc.initialize( ScopedScratchDomain::toID( sw::FileUtil::toDiskPath( projectPath ) ), "ko_KR", "en_US" ) );

@@ -47,17 +47,17 @@ namespace sw
         /** @brief 명령줄 인자입니다(`LoadBotMainInternal::readOptions` 가 `CommandLineManager` 로 읽는다). 경로는 모두 기동 때 절대화된 것이다. */
         struct LoadBotOptions
         {
-            string _scenarioPath{};     ///< `--scenario=<json>` — 단계 나무(필수)
-            string _loadPath{};         ///< `--load=<.scenario.xml>` — 봇 수 · 늘리는 시간 · 길이의 정본 `<Load>`(필수)
-            string _onlineConfigPath{}; ///< `--online-config=<LoadBot.online.json>` — 로컬 서버의 키트 목록 · 옵션(`--local-server` 와 필수)
-            string _storeConfigPath{};  ///< `--store-config=<서버 설정 json>` — 로컬 서버의 저장소 · 캐시(없으면 메모리)
-            string _reportPath{};
-            string _serverAddress{};
-            string _gameAddress{};  ///< `--game=<ip:port>` — 전용 서버의 게임 UDP 포트. 시나리오의 `game_connect` 가 붙는다(서버 디버깅 S5)
-            string _tlsTrustFile{}; ///< `--tls=<PEM>` — 신뢰할 인증서(필수 값 - 비우면 개발용 인증서로 대신하지 않는다)
-            int32  _maxErrorPercent{ 1 };
-            int32  _localServerPort{ -1 }; ///< `--local-server=<port>` — 0 이면 OS 가 고른다. 음수면 로컬 서버를 띄우지 않는다
-            uint8  _bLightHash{ SW_FALSE };
+            AbsolutePath _scenarioPath{};     ///< `--scenario=<json>` — 단계 나무(필수)
+            AbsolutePath _loadPath{};         ///< `--load=<.scenario.xml>` — 봇 수 · 늘리는 시간 · 길이의 정본 `<Load>`(필수)
+            AbsolutePath _onlineConfigPath{}; ///< `--online-config=<LoadBot.online.json>` — 로컬 서버의 키트 목록 · 옵션(`--local-server` 와 필수)
+            AbsolutePath _storeConfigPath{};  ///< `--store-config=<서버 설정 json>` — 로컬 서버의 저장소 · 캐시(없으면 메모리)
+            AbsolutePath _reportPath{};
+            string       _serverAddress{};
+            string       _gameAddress{};  ///< `--game=<ip:port>` — 전용 서버의 게임 UDP 포트. 시나리오의 `game_connect` 가 붙는다(서버 디버깅 S5)
+            AbsolutePath _tlsTrustFile{}; ///< `--tls=<PEM>` — 신뢰할 인증서(필수 값 - 비우면 개발용 인증서로 대신하지 않는다)
+            int32        _maxErrorPercent{ 1 };
+            int32        _localServerPort{ -1 }; ///< `--local-server=<port>` — 0 이면 OS 가 고른다. 음수면 로컬 서버를 띄우지 않는다
+            uint8        _bLightHash{ SW_FALSE };
         };
 
         struct LoadBotMainInternal
@@ -183,8 +183,8 @@ namespace sw
                 const LoadBotOptions& options      = *readOptionsResult;
                 const bool            bLocalServer = options._localServerPort >= 0;
 
-                expected<LoadBotScenario> loadedScenario = LoadBotScenario::loadFromFile( FileUtil::toDiskPath( options._scenarioPath ) );
-                const expected<void>      loaded         = loadedScenario.has_value() ? readLoad( FileUtil::toDiskPath( options._loadPath ), *loadedScenario ) : expected<void>( unexpected( loadedScenario.error() ) );
+                expected<LoadBotScenario> loadedScenario = LoadBotScenario::loadFromFile( options._scenarioPath );
+                const expected<void>      loaded         = loadedScenario.has_value() ? readLoad( options._loadPath, *loadedScenario ) : expected<void>( unexpected( loadedScenario.error() ) );
                 if ( loaded.has_value() == false )
                 {
                     SW_LOG_ERROR_ID( "OnlineLoadBot.OnlineLoadBot", "OnlineLoadBot: %#: %#", loaded.error().message(), loaded.error().detail() );
@@ -201,19 +201,19 @@ namespace sw
                 {
                     LoadBotLocalServerSettings serverSettings;
                     // 전용 서버의 `<이름>.online.json` 과 같은 로더로 읽는다(모르는 키 · 범위 밖 값은 오류).
-                    const ConfigReadResult configRead = ConfigManager::readConfigFileInto( options._onlineConfigPath, serverSettings._config );
+                    const ConfigReadResult configRead = ConfigManager::readConfigFileInto( options._onlineConfigPath.str(), serverSettings._config );
                     if ( configRead != ConfigReadResult::Loaded )
                     {
-                        SW_LOG_ERROR_ID( "OnlineLoadBot.OnlineLoadBotOnlineConfig", "OnlineLoadBot: online config '%#' is %#", options._onlineConfigPath, configRead == ConfigReadResult::Missing ? "missing" : "invalid" );
+                        SW_LOG_ERROR_ID( "OnlineLoadBot.OnlineLoadBotOnlineConfig", "OnlineLoadBot: online config '%#' is %#", options._onlineConfigPath.str(), configRead == ConfigReadResult::Missing ? "missing" : "invalid" );
                         return Exit::kExitUsage;
                     }
                     if ( options._storeConfigPath.empty() == false )
                     {
                         // 전용 서버의 `<이름>.json` 과 같은 로더로 읽는다 — 저장소 · 캐시 항목과 비밀 환경 변수 이름만 쓴다
-                        const ConfigReadResult storeRead = ConfigManager::readConfigFileInto( options._storeConfigPath, storeConfig );
+                        const ConfigReadResult storeRead = ConfigManager::readConfigFileInto( options._storeConfigPath.str(), storeConfig );
                         if ( storeRead != ConfigReadResult::Loaded )
                         {
-                            SW_LOG_ERROR_ID( "OnlineLoadBot.OnlineLoadBotStoreConfig", "OnlineLoadBot: store config '%#' is %#", options._storeConfigPath, storeRead == ConfigReadResult::Missing ? "missing" : "invalid" );
+                            SW_LOG_ERROR_ID( "OnlineLoadBot.OnlineLoadBotStoreConfig", "OnlineLoadBot: store config '%#' is %#", options._storeConfigPath.str(), storeRead == ConfigReadResult::Missing ? "missing" : "invalid" );
                             return Exit::kExitUsage;
                         }
                         serverSettings._pStoreConfig = &storeConfig;
@@ -249,7 +249,7 @@ namespace sw
                 unique_ptr<ITLSContext> tlsContext;
                 if ( options._tlsTrustFile.empty() == false )
                 {
-                    expected<unique_ptr<ITLSContext>> created = NetSecurity::createClientTLSContext( game::getSubsystem<INetSecurityProvider>(), options._tlsTrustFile, "" );
+                    expected<unique_ptr<ITLSContext>> created = NetSecurity::createClientTLSContext( game::getSubsystem<INetSecurityProvider>(), options._tlsTrustFile.str(), "" );
                     if ( created.has_value() == false )
                     {
                         SW_LOG_ERROR_ID( "OnlineLoadBot.OnlineLoadBotTLSClientContext", "OnlineLoadBot: TLS client context failed: %# (%#)", created.error().message(), created.error().detail() );
@@ -299,10 +299,10 @@ namespace sw
                     const expected<string> report = metrics.formatJSON( runner.getScenario(), elapsedMs );
                     if ( report.has_value() == false )
                         SW_LOG_ERROR_ID( "OnlineLoadBot.ReportNotWritable", "OnlineLoadBot: report could not be written as JSON: %# (%#)", report.error().message(), report.error().detail() );
-                    bReportFailed = report.has_value() == false || FileUtil::writeTextFile( FileUtil::toDiskPath( options._reportPath ), *report ) == false;
+                    bReportFailed = report.has_value() == false || FileUtil::writeTextFile( options._reportPath, *report ) == false;
                 }
                 if ( bReportFailed )
-                    SW_LOG_ERROR_ID( "OnlineLoadBot.OnlineLoadBotCannotWriteReport", "OnlineLoadBot: cannot write report '%#'", options._reportPath );
+                    SW_LOG_ERROR_ID( "OnlineLoadBot.OnlineLoadBotCannotWriteReport", "OnlineLoadBot: cannot write report '%#'", options._reportPath.str() );
                 localServer.shutdown();
 
                 if ( bReportFailed )

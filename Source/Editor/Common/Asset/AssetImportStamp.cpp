@@ -833,7 +833,11 @@ namespace sw::editor
 
     AbsolutePath AssetImportStampUtil::makeImportedPath( const AbsolutePath& rawPath, string_view rawFolderName, string_view importedFolderName, string_view importedExtension )
     {
-        return FileUtil::toDiskPath( makeImportedPath( string_view{ rawPath.str() }, rawFolderName, importedFolderName, importedExtension ) );
+        string rawFolder;
+        string relativePath;
+        if ( AssetImportStampInternal::splitRawPath( rawPath.str(), rawFolderName, rawFolder, relativePath ) == false )
+            return {};
+        return FileUtil::toDiskPath( rawFolder ).getParent().join( importedFolderName ).join( relativePath ).removeExtension().appendSuffix( importedExtension );
     }
 
     uint64 AssetImportStampUtil::computeFileHash( const AbsolutePath& path )

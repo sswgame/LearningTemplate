@@ -52,20 +52,20 @@ namespace sw
         /** @brief 디렉터리를(재귀면 하위 디렉터리까지) inotify 에 등록합니다. */
         bool addWatchRecursive( const AbsolutePath& directoryPath );
         /** @brief 디렉터리 하나만 inotify 에 등록하고 wd 맵에 넣습니다. */
-        bool addWatchDirectory( string_view directoryPath );
+        bool addWatchDirectory( const AbsolutePath& directoryPath );
         /** @brief wd 를 해제하고 맵에서 지웁니다. */
         void removeWatch( int32 watchDescriptor );
         /** @brief 절대 경로를 감시 루트 기준 상대 경로로 바꿔 큐에 넣습니다. */
-        void pushRelativeChange( FileWatcherAction action, string_view absoluteDirectory, string_view name );
+        void pushRelativeChange( FileWatcherAction action, const AbsolutePath& absoluteDirectory, string_view name );
 
     private:
         // 큐 · 뮤텍스 · 감시 경로 · 넘침 표시는 FileWatcher 가 가진다. 세 플랫폼이 똑같이 가져야 하는 것들이다.
-        sw::thread                                        _workerThread;
-        mutex                                             _watchMutex;
-        flat_map<int32, string> _mapWatchDescriptorToPath SW_GUARDED_BY( _watchMutex ); ///< 감시 워커(이벤트 경로 풀기)와 부른 스레드(감시 더하기 · 멈추기)가 함께 본다
-        int32                                             _inotifyFd;
-        int32                                             _wakeFd;
-        atomic<bool>                                      _bIsWatching;
-        uint8                                             _bRecursive : 1;
+        sw::thread                                              _workerThread;
+        mutex                                                   _watchMutex;
+        flat_map<int32, AbsolutePath> _mapWatchDescriptorToPath SW_GUARDED_BY( _watchMutex ); ///< 감시 워커(이벤트 경로 풀기)와 부른 스레드(감시 더하기 · 멈추기)가 함께 본다
+        int32                                                   _inotifyFd;
+        int32                                                   _wakeFd;
+        atomic<bool>                                            _bIsWatching;
+        uint8                                                   _bRecursive : 1;
     };
 } // namespace sw

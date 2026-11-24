@@ -127,11 +127,11 @@ namespace sw
             }
 
             /** @brief 번역 메모리 경로(`<프로젝트 폴더>/tm/<culture>.tm.xml`)입니다. */
-            static AbsolutePath makeMemoryPath( string_view projectPath, string_view culture )
+            static AbsolutePath makeMemoryPath( const AbsolutePath& projectPath, string_view culture )
             {
                 StringBuilder<constant::buffer::kMax256> fileNameBuilder;
                 fileNameBuilder.appendFormat( "%#/%#%#", TranslationMemory::kFolderName, CultureTable::normalizeCode( culture ), TranslationMemory::kExtension );
-                return FileUtil::toDiskPath( LocalizationProject::makeSiblingPath( projectPath, fileNameBuilder.view() ) );
+                return LocalizationProject::makeSiblingPath( projectPath, fileNameBuilder.view() );
             }
 
             /** @brief 번역 메모리를 읽습니다. 없으면 빈 메모리입니다. 읽지 못하면 문제로 알리고 false 를 반환합니다. */
@@ -247,12 +247,12 @@ namespace sw
              * @brief 문화권 번역 테이블 하나를 수집 결과에 맞춥니다. 해시가 없는 번역에 해시를 기록하고, 현재 번역을 번역 메모리에 쌓고, 원문 테이블에 없는 키의 번역을 빼고,
              *        없거나 오래된 번역을 메모리로 미리 채운 뒤 상태를 세고 검사합니다.
              */
-            static void updateTranslation( const string& projectPath, const string& culture, const flat_map<string, const SourceTextEntry*>& mapSource, bool bWrite,
+            static void updateTranslation( const AbsolutePath& projectPath, const string& culture, const flat_map<string, const SourceTextEntry*>& mapSource, bool bWrite,
                                            LocalizationGatherResult& inoutResult )
             {
                 LocalizationCultureReport& cultureReport = inoutResult._listCulture.emplace_back();
                 cultureReport._culture                   = culture;
-                const AbsolutePath path                  = FileUtil::toDiskPath( LocalizationProject::makeTranslationPath( projectPath, culture ) );
+                const AbsolutePath path                  = LocalizationProject::makeTranslationPath( projectPath, culture );
                 const AbsolutePath memoryPath            = makeMemoryPath( projectPath, culture );
                 TranslationTable   translation;
                 translation.setCulture( culture );
@@ -338,10 +338,10 @@ namespace sw
 
             /** @brief 프로젝트와 원문 테이블들을 읽어 키에서 원문 테이블 행으로의 대응을 만듭니다. */
             [[nodiscard]] static bool loadProjectSources( string_view projectPath, LocalizationProject& outProject, vector<SourceStringTable>& outListTable,
-                                                          flat_map<string, const SourceTextEntry*>& outMapSource, string& outAbsolutePath )
+                                                          flat_map<string, const SourceTextEntry*>& outMapSource, AbsolutePath& outAbsolutePath )
             {
-                outAbsolutePath = resolveAbsolutePath( projectPath ).str();
-                if ( const expected<void> read = outProject.loadFromFile( FileUtil::toDiskPath( outAbsolutePath ) ); read.has_value() == false )
+                outAbsolutePath = resolveAbsolutePath( projectPath );
+                if ( const expected<void> read = outProject.loadFromFile( outAbsolutePath ); read.has_value() == false )
                 {
                     SW_LOG_ERROR_ID( "LocalizationTools.LocalizationProjectNotLoaded", "Localization project is not loaded: %# (%#)", read.error().message(), read.error().detail() );
                     return false;
@@ -349,7 +349,7 @@ namespace sw
                 outListTable.assign( outProject._listStringTable.size(), SourceStringTable{} );
                 for ( size_t tableIndex = 0; tableIndex < outListTable.size(); ++tableIndex )
                 {
-                    const AbsolutePath tablePath = FileUtil::toDiskPath( LocalizationProject::makeSiblingPath( outAbsolutePath, outProject._listStringTable[tableIndex] ) );
+                    const AbsolutePath tablePath = LocalizationProject::makeSiblingPath( outAbsolutePath, outProject._listStringTable[tableIndex] );
                     if ( const expected<void> read = outListTable[tableIndex].loadFromFile( tablePath ); read.has_value() == false )
                     {
                         SW_LOG_ERROR_ID( "LocalizationTools.StringTableNotLoaded", "String table is not loaded: %# (%#)", read.error().message(), read.error().detail() );
@@ -374,12 +374,12 @@ namespace sw
             }
 
             /** @brief 수집이 쓰는 원문 테이블들을 읽습니다. 아직 없는 테이블은 원문 문화권의 빈 테이블입니다(첫 수집이 만든다). 읽지 못하면 false 입니다. */
-            [[nodiscard]] static bool loadGatherTables( const string& absoluteProjectPath, const LocalizationProject& project, vector<SourceStringTable>& outListTable )
+            [[nodiscard]] static bool loadGatherTables( const AbsolutePath& absoluteProjectPath, const LocalizationProject& project, vector<SourceStringTable>& outListTable )
             {
                 outListTable.assign( project._listStringTable.size(), SourceStringTable{} );
                 for ( size_t tableIndex = 0; tableIndex < outListTable.size(); ++tableIndex )
                 {
-                    const AbsolutePath tablePath = FileUtil::toDiskPath( LocalizationProject::makeSiblingPath( absoluteProjectPath, project._listStringTable[tableIndex] ) );
+                    const AbsolutePath tablePath = LocalizationProject::makeSiblingPath( absoluteProjectPath, project._listStringTable[tableIndex] );
                     if ( FileUtil::exists( tablePath ) == false )
                     {
                         outListTable[tableIndex].setCulture( project._sourceCulture );
@@ -562,7 +562,7 @@ namespace sw
         outResult._projectName = project._name;
 
         vector<SourceStringTable> listTable;
-        if ( Internal::loadGatherTables( absolute.str(), project, listTable ) == false )
+        if ( Internal::loadGatherTables( absolute, project, listTable ) == false )
             return false;
         SourceStringTable&               gatherTable = listTable.front();
         vector<const SourceStringTable*> listOtherTable;
@@ -570,7 +570,7 @@ namespace sw
         {
             listOtherTable.push_back( &listTable[tableIndex] );
         }
-        outResult._gatherTablePath = FileUtil::toDiskPath( LocalizationProject::makeSiblingPath( absolute.str(), project._listStringTable.front() ) );
+        outResult._gatherTablePath = LocalizationProject::makeSiblingPath( absolute, project._listStringTable.front() );
 
         // 1) 코드 2) 데이터
         TextGatherer gatherer;
@@ -598,7 +598,7 @@ namespace sw
         Internal::collectSourceEntries( listTable, mapSource );
         for ( const string& culture : project._listCulture )
         {
-            Internal::updateTranslation( absolute.str(), culture, mapSource, bWrite, outResult );
+            Internal::updateTranslation( absolute, culture, mapSource, bWrite, outResult );
             outResult._listCulture.back()._bStaged = project.isStagedCulture( culture );
         }
         return true;
@@ -701,7 +701,7 @@ namespace sw
         LocalizationProject                      project;
         vector<SourceStringTable>                listTable;
         flat_map<string, const SourceTextEntry*> mapSource;
-        string                                   absolute;
+        AbsolutePath                             absolute;
         if ( LocalizationToolsInternal::loadProjectSources( projectPath, project, listTable, mapSource, absolute ) == false )
             return false;
 
@@ -712,8 +712,8 @@ namespace sw
             result._culture                    = culture;
             StringBuilder<constant::buffer::kMax256> fileNameBuilder;
             fileNameBuilder.appendFormat( "%#/%#%#", PortableObjectFile::kFolderName, culture, PortableObjectFile::kExtension );
-            result._path                       = FileUtil::toDiskPath( LocalizationProject::makeSiblingPath( absolute, fileNameBuilder.view() ) );
-            const AbsolutePath translationPath = FileUtil::toDiskPath( LocalizationProject::makeTranslationPath( absolute, culture ) );
+            result._path                       = LocalizationProject::makeSiblingPath( absolute, fileNameBuilder.view() );
+            const AbsolutePath translationPath = LocalizationProject::makeTranslationPath( absolute, culture );
             TranslationTable   translation;
             translation.setCulture( culture );
             if ( const expected<void> read = FileUtil::exists( translationPath ) ? translation.loadFromFile( translationPath ) : expected<void>{}; read.has_value() == false )
@@ -754,7 +754,7 @@ namespace sw
         LocalizationProject                      project;
         vector<SourceStringTable>                listTable;
         flat_map<string, const SourceTextEntry*> mapSource;
-        string                                   absolute;
+        AbsolutePath                             absolute;
         if ( LocalizationToolsInternal::loadProjectSources( projectPath, project, listTable, mapSource, absolute ) == false )
             return false;
 
@@ -788,7 +788,7 @@ namespace sw
         }
         outResult._culture = culture;
 
-        const AbsolutePath translationPath = FileUtil::toDiskPath( LocalizationProject::makeTranslationPath( absolute, culture ) );
+        const AbsolutePath translationPath = LocalizationProject::makeTranslationPath( absolute, culture );
         TranslationTable   translation;
         translation.setCulture( culture );
         if ( const expected<void> read = FileUtil::exists( translationPath ) ? translation.loadFromFile( translationPath ) : expected<void>{}; read.has_value() == false )

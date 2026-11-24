@@ -185,7 +185,7 @@ namespace sw
 
     AbsolutePath ContentHashCache::makeLocalCachePath()
     {
-        return AbsolutePath::tryMake( FileUtil::joinPath( ProcessRoots::get()._derivedData.str(), "ContentHashCache.bin" ) ).value();
+        return ProcessRoots::get()._derivedData.join( "ContentHashCache.bin" );
     }
 
     expected<void> ContentHashCache::load( const AbsolutePath& cachePath )

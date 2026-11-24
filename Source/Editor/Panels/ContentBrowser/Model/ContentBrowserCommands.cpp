@@ -66,19 +66,19 @@ namespace sw::editor
 
             static bool canLock( const EditorCommandTarget& target )
             {
-                return hasFileTarget( target ) && getSourceControl().getProvider().canLock() && getSourceControl().findLock( findTargetPath( target ).str() ) == nullptr;
+                return hasFileTarget( target ) && getSourceControl().getProvider().canLock() && getSourceControl().findLock( findTargetPath( target ) ) == nullptr;
             }
 
             static bool canUnlock( const EditorCommandTarget& target )
             {
-                return hasFileTarget( target ) && getSourceControl().getProvider().canLock() && getSourceControl().findLock( findTargetPath( target ).str() ) != nullptr;
+                return hasFileTarget( target ) && getSourceControl().getProvider().canLock() && getSourceControl().findLock( findTargetPath( target ) ) != nullptr;
             }
 
             static bool canRefreshSourceControl( const EditorCommandTarget& target ) { return hasFileTarget( target ) && getSourceControl().getProvider().canLock(); }
 
-            static void lockAsset( const EditorCommandTarget& target ) { (void)getSourceControl().requestLock( findTargetPath( target ).str() ); } // 결과는 공급자가 알린다
+            static void lockAsset( const EditorCommandTarget& target ) { (void)getSourceControl().requestLock( findTargetPath( target ) ); } // 결과는 공급자가 알린다
 
-            static void unlockAsset( const EditorCommandTarget& target ) { (void)getSourceControl().requestUnlock( findTargetPath( target ).str() ); } // 결과는 공급자가 알린다
+            static void unlockAsset( const EditorCommandTarget& target ) { (void)getSourceControl().requestUnlock( findTargetPath( target ) ); } // 결과는 공급자가 알린다
 
             static void refreshSourceControl( const EditorCommandTarget& /*target*/ ) { getSourceControl().requestRefresh(); }
 

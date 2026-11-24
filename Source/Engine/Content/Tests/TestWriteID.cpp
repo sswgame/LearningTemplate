@@ -107,7 +107,7 @@ SW_TEST_CASE( WriteIDTest, DiskPathIsNotAResourceID )
 {
     // 디스크 경로는 쓰기 입구에 들어오지 않는다 — 디스크에 쓰는 쪽은 `save*(AbsolutePath)` 를 바로 부른다.
     SW_EXPECT_LOG( "AssetPaths.WriteNotResourceID" );
-    SW_EXPECT_FALSE( engine::getSubsystem<AssetPaths>().toDiskPath( FileUtil::joinPath( ProcessRoots::get()._content.str(), "engine/x.txt" ) ).has_value() );
+    SW_EXPECT_FALSE( engine::getSubsystem<AssetPaths>().toDiskPath( ProcessRoots::get()._content.join( "engine/x.txt" ).str() ).has_value() );
     SW_EXPECT_TRUE( AssetPaths::normalizeAssetID( ProcessRoots::get()._content.str() ).empty() );
 }
 
@@ -117,5 +117,5 @@ SW_TEST_CASE( WriteIDTest, BareDomainIsTheDomainRoot )
     const optional<AbsolutePath> path = engine::getSubsystem<AssetPaths>().toDiskPath( "engine" );
     SW_REQUIRE_TRUE( path.has_value() );
     SW_EXPECT_TRUE( FileUtil::isDirectory( *path ) );
-    SW_EXPECT_EQUAL( FileUtil::joinPath( ProcessRoots::get()._content.str(), "engine" ), path->str() );
+    SW_EXPECT_EQUAL( ProcessRoots::get()._content.join( "engine" ).str(), path->str() );
 }

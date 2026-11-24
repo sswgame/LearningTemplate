@@ -20,7 +20,7 @@ namespace sw
         struct RenderDocCaptureInternal
         {
             /** @brief 캡처 파일 경로 템플릿입니다(RenderDoc 이 `_frame<N>.rdc` 를 붙입니다). 실행 산출물 루트(`ProcessRoots::_saved`) 아래다. */
-            static string makeCaptureFilePathTemplate() { return FileUtil::joinPath( ProcessRoots::get()._saved.str(), "RenderDoc/capture" ); }
+            static string makeCaptureFilePathTemplate() { return ProcessRoots::get()._saved.join( "RenderDoc/capture" ).str(); }
 
             inline static RENDERDOC_API_1_6_0* _s_pAPI = nullptr;
             inline static atomic<bool>         _s_bTried{ false };
@@ -32,10 +32,10 @@ namespace sw
                 string programFiles;
                 if ( ProcessEnvironment::tryReadNonEmpty( "ProgramFiles", programFiles ) == false )
                     return nullptr;
-                const optional<AbsolutePath> libraryPath = AbsolutePath::tryMake( FileUtil::joinPath( FileUtil::joinPath( programFiles, "RenderDoc" ), libraryName ) );
-                if ( libraryPath.has_value() == false || FileUtil::isRegularFile( *libraryPath ) == false )
+                const AbsolutePath libraryPath = AbsolutePath::tryMake( programFiles ).value_or( AbsolutePath{} ).join( "RenderDoc" ).join( libraryName );
+                if ( libraryPath.empty() || FileUtil::isRegularFile( libraryPath ) == false )
                     return nullptr; // 설치하지 않았다 - 로드 실패 경고를 내지 않는다
-                return ModuleLibraryUtil::loadLibraryAt( *libraryPath );
+                return ModuleLibraryUtil::loadLibraryAt( libraryPath );
 #elif defined( SW_PLATFORM_POSIX )
                 return ModuleLibraryUtil::loadSystemLibrary( libraryName );
 #else

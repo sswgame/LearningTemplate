@@ -135,7 +135,7 @@ namespace sw
         unordered_map<string, FileWatcherAction> mapLastAction;
         for ( FileChangeEvent& changeEvent : listEvent )
         {
-            const string key = FileUtil::joinPath( changeEvent._directory, changeEvent._filename );
+            const string key = changeEvent.makePath().str();
             const auto   it  = mapLastAction.find( key );
             if ( it != mapLastAction.end() && it->second == changeEvent._action )
                 continue;
@@ -148,9 +148,9 @@ namespace sw
     {
         for ( const FileChangeEvent& changeEvent : listEvent )
         {
-            const string             fullPath       = FileUtil::joinPath( changeEvent._directory, changeEvent._filename );
-            const ComparableDiskPath comparablePath = FileUtil::makeComparableDiskPath( fullPath );
-            const ComparableDiskPath comparableDir  = FileUtil::makeComparableDiskPath( FileUtil::getDirectoryPart( FileUtil::normalizeSeparators( fullPath ) ) );
+            const AbsolutePath       fullPath       = changeEvent.makePath();
+            const ComparableDiskPath comparablePath = FileUtil::makeComparableDiskPath( fullPath.str() );
+            const ComparableDiskPath comparableDir  = FileUtil::makeComparableDiskPath( fullPath.getParent().str() );
             // **콜백이 감시를 등록 · 해제할 수 있다.** 인덱스로 돌면서 델리게이트를 부르기 전에 복사한다(`MulticastDelegate::broadcast` 와 같은 모양). 순회 도중 앞쪽 감시가
             // 빠지면 뒤의 하나가 당겨져 건너뛰어질 수 있는데, 부르는 도중 목록을 바꾼 쪽이 감수한다.
             for ( size_t watchIndex = 0; watchIndex < _listWatch.size(); ++watchIndex )
@@ -200,7 +200,7 @@ namespace sw
         unordered_set<string> uniqueSetEmittedPath;
         for ( const FileChangeEvent& changeEvent : inoutListEvent )
         {
-            uniqueSetEmittedPath.insert( FileUtil::makeComparableDiskPath( FileUtil::joinPath( changeEvent._directory, changeEvent._filename ) ).str() ); // 디스크 경로라 OS 규칙(리눅스는 대소문자를 가른다)
+            uniqueSetEmittedPath.insert( FileUtil::makeComparableDiskPath( changeEvent.makePath().str() ).str() ); // 디스크 경로라 OS 규칙(리눅스는 대소문자를 가른다)
         }
 
         // 되찾은 개수를 쓰는 곳은 아래 로그뿐이다. SW_LOG_INFO 는 Shipping 에서 통째로 사라지므로

@@ -316,7 +316,7 @@ namespace sw::editor
         stopAndWait(); // 읽기 스레드를 남긴 채 사라지지 않는다. 합친 경로는 쓸 곳이 없다 - 로그에 남는다
     }
 
-    string EditorNetPlaySession::makeDefaultExecutablePath( const utf8* pBaseName )
+    AbsolutePath EditorNetPlaySession::makeDefaultExecutablePath( const utf8* pBaseName )
     {
 #if defined( SW_PLATFORM_WINDOWS )
         fixed_string<constant::buffer::kMax64> fileName;
@@ -324,7 +324,7 @@ namespace sw::editor
 #else
         const string_view fileName = pBaseName;
 #endif
-        return FileUtil::joinPath( ProcessRoots::get()._binary.str(), fileName );
+        return ProcessRoots::get()._binary.join( fileName );
     }
 
     void EditorNetPlaySession::readChildOutput( ChildProcess* pChild )
@@ -490,8 +490,8 @@ namespace sw::editor
             }
         }
 #endif
-        const AbsolutePath                      serverPath = FileUtil::toDiskPath( settings._serverExecutablePath.empty() ? makeDefaultExecutablePath( "Server" ) : settings._serverExecutablePath );
-        const AbsolutePath                      clientPath = FileUtil::toDiskPath( settings._clientExecutablePath.empty() ? makeDefaultExecutablePath( "App" ) : settings._clientExecutablePath );
+        const AbsolutePath                      serverPath = settings._serverExecutablePath.empty() ? makeDefaultExecutablePath( "Server" ) : FileUtil::toDiskPath( settings._serverExecutablePath );
+        const AbsolutePath                      clientPath = settings._clientExecutablePath.empty() ? makeDefaultExecutablePath( "App" ) : FileUtil::toDiskPath( settings._clientExecutablePath );
         StringBuilder<constant::buffer::kMax64> listenArgument;
         listenArgument.appendFormat( "-gv_netListenPort=%#", _port );
         StringBuilder<constant::buffer::kMax64> connectArgument;

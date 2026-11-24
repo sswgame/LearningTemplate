@@ -141,8 +141,8 @@ SW_TEST_CASE( PackPatchBuilderTest, PatchTurnsTheOldBuildIntoTheNewOne )
     SW_EXPECT_TRUE( manifest._signatureHex.empty() ); // 서명 제공자가 없으면 서명하지 않는다
 
     PackManager packs;
-    SW_REQUIRE_TRUE( packs.mountPack( FileUtil::joinPath( oldFolder.str(), "game.pack" ), 1 ) );
-    SW_REQUIRE_TRUE( packs.mountPatchPack( FileUtil::joinPath( output.str(), manifest._packFileName ), 100, manifest._listRemovedPath ) );
+    SW_REQUIRE_TRUE( packs.mountPack( oldFolder.join( "game.pack" ).str(), 1 ) );
+    SW_REQUIRE_TRUE( packs.mountPatchPack( output.join( manifest._packFileName ).str(), 100, manifest._listRemovedPath ) );
     SW_EXPECT_EQUAL( string( "same" ), Util::read( packs, "game/keep.txt" ) );
     SW_EXPECT_EQUAL( string( "new" ), Util::read( packs, "game/edit.txt" ) );
     SW_EXPECT_EQUAL( string( "hi" ), Util::read( packs, "game/made.txt" ) );

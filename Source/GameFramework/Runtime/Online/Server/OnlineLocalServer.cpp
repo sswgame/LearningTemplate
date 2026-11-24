@@ -53,7 +53,7 @@ namespace sw
         expected<unique_ptr<IOnlineLocalServer>> createLocalServer( string_view serverConfigPath, const IClock& clock, UnixMilliseconds nowMs ) override
         {
             const string              serverPath{ serverConfigPath };
-            const string              onlinePath = OnlineServerConfig::makeConfigPath( serverConfigPath ).str();
+            const string              onlinePath = OnlineServerConfig::makeConfigPath( serverConfigPath );
             ServerConfig              serverConfig;
             OnlineServerRuntimeConfig settings;
             if ( ConfigManager::readConfigFileInto( serverPath, serverConfig ) != ConfigReadResult::Loaded || ConfigManager::readConfigFileInto( onlinePath, settings._config ) != ConfigReadResult::Loaded )

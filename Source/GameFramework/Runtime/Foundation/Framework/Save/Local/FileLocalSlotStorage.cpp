@@ -58,11 +58,10 @@ namespace sw
 
     LocalStoreResult FileLocalSlotStorage::readPreviousSlot( const string& slot, vector<uint8>& outEnvelopeBytes )
     {
-        StringBuilder<constant::buffer::kMax512> path;
-        path.appendFormat( "%#%#", makeSlotPath( slot ).str(), kPreviousGenerationSuffix );
-        if ( FileUtil::isRegularFile( FileUtil::toDiskPath( path.view() ) ) == false )
+        const AbsolutePath path = makeSlotPath( slot ).appendSuffix( kPreviousGenerationSuffix );
+        if ( FileUtil::isRegularFile( path ) == false )
             return LocalStoreResult::NotFound;
-        return FileUtil::readFile( FileUtil::toDiskPath( path.view() ), outEnvelopeBytes ) ? LocalStoreResult::Ok : LocalStoreResult::IOError;
+        return FileUtil::readFile( path, outEnvelopeBytes ) ? LocalStoreResult::Ok : LocalStoreResult::IOError;
     }
 
     LocalStoreResult FileLocalSlotStorage::eraseSlot( const string& slot )

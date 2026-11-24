@@ -495,7 +495,7 @@ namespace sw
                     llvmPath = pEnvLlvm;
             }
 
-            const AbsolutePath llvmClangDir = FileUtil::toDiskPath( FileUtil::joinPath( llvmPath, _llvmClangRel ) );
+            const AbsolutePath llvmClangDir = FileUtil::toDiskPath( llvmPath ).join( _llvmClangRel );
             if ( FileUtil::isDirectory( llvmClangDir ) )
             {
                 vector<AbsolutePath> listClangSubFolder;
@@ -521,7 +521,7 @@ namespace sw
         if ( kPlatformParserKey == "windows" ) // 대상이 Windows 일 때만 MSVC · SDK 헤더를 읽는다(교차 대상은 자기 sysroot 를 `--target-arg` 로 받는다)
             BLOCK( "Locate MSVC and Windows SDK Includes" )
             {
-                const AbsolutePath msvcInc = FileUtil::toDiskPath( FileUtil::joinPath( msvcToolsDir, _msvcIncludeRel ) );
+                const AbsolutePath msvcInc = FileUtil::toDiskPath( msvcToolsDir ).join( _msvcIncludeRel );
                 if ( msvcToolsDir.empty() == false && FileUtil::isDirectory( msvcInc ) )
                 {
                     _listBaseArg.emplace_back( _flagIsystem );
@@ -530,9 +530,7 @@ namespace sw
 
                 if ( winSdkDir.empty() == false && winSdkVer.empty() == false )
                 {
-                    const AbsolutePath ucrtPath = FileUtil::toDiskPath( FileUtil::joinPath(
-                        FileUtil::joinPath( FileUtil::joinPath( winSdkDir, _winSdkIncludeRel ), winSdkVer ),
-                        _winSdkUcrtRel ) );
+                    const AbsolutePath ucrtPath = FileUtil::toDiskPath( winSdkDir ).join( _winSdkIncludeRel ).join( winSdkVer ).join( _winSdkUcrtRel );
                     if ( FileUtil::isDirectory( ucrtPath ) )
                     {
                         _listBaseArg.emplace_back( _flagIsystem );

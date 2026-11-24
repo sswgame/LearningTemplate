@@ -79,7 +79,7 @@ namespace sw
     {
         if ( changeEvent._action == FileWatcherAction::Removed )
             return;
-        const string fullPath = FileUtil::joinPath( changeEvent._directory, changeEvent._filename );
+        const string fullPath = changeEvent.makePath().str();
         // 모르는 파일은 NotTracked 로 지나간다. 깨진 파일은 읽는 쪽이 키 이름과 오류를 남겼다 — 이전 값으로 돈다는 것만 덧붙인다.
         const float64      startSeconds = MonotonicClock::nowSeconds();
         const ReloadResult result       = reloadChangedFile( fullPath );

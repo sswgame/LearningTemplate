@@ -53,7 +53,7 @@ namespace sw
                 FileState& state = _pShared->_mapState[packName];
                 if ( state == FileState::Unknown )
                 {
-                    if ( ContentFileSource::getCurrent().isFile( FileUtil::joinPath( packsDirectory, packName ) ) )
+                    if ( ContentFileSource::getCurrent().isFile( _packs.makePackKey( packName ) ) )
                         state = FileState::Local;
                     else if ( _pSource != nullptr )
                     {
@@ -79,7 +79,7 @@ namespace sw
         for ( const string& packName : listToFetch )
         {
             const shared_ptr<SharedState> pShared = _pShared;
-            _pSource->fetch( packName, FileUtil::toDiskPath( FileUtil::joinPath( packsDirectory, packName ) ), SW_DELEGATE_LAMBDA( PackChunkFetchDoneDelegate, [pShared, packName]( bool bFetched )
+            _pSource->fetch( packName, FileUtil::toDiskPath( _packs.makePackKey( packName ) ), SW_DELEGATE_LAMBDA( PackChunkFetchDoneDelegate, [pShared, packName]( bool bFetched )
             {
                 ScopedLock<mutex> lock{ pShared->_mutex };
                 pShared->_mapState[packName] = bFetched ? FileState::Local : FileState::Failed;
@@ -94,7 +94,7 @@ namespace sw
     {
         for ( const string& packName : listPackFileName )
         {
-            const string packPath = FileUtil::joinPath( _packs.getPacksDirectory(), packName );
+            const string packPath = _packs.makePackKey( packName );
             const bool   bMounted = _packs.mountPack( packPath );
             if ( bMounted == false )
                 SW_LOG_ERROR_ID( "PackChunkLoader.MountFailed", "Chunk pack '%#' could not be mounted - the scenes that need it cannot open", packPath );

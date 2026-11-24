@@ -564,7 +564,7 @@ namespace sw::editor
         }
         StringBuilder<constant::buffer::kMax256> fileNameBuilder;
         fileNameBuilder.appendFormat( "%#.material", fileStem );
-        const string materialPath = FileUtil::joinPath( FileUtil::joinPath( sideFolder.str(), ModelImportUtil::kMaterialFolder ), fileNameBuilder.view() );
+        const AbsolutePath materialPath = sideFolder.join( ModelImportUtil::kMaterialFolder ).join( fileNameBuilder.view() );
         if ( writeSharedMaterial( assetPaths, document.saveToString(), templateText, pDefaultAssets->_pbrMaterialTemplate.get(), fileStem, sourcePath, sideFolder ) == false )
         {
             SW_LOG_ERROR_ID( "ModelImporter.FailedWritePBRMaterial", "Failed to write PBR material %#", materialPath.c_str() );

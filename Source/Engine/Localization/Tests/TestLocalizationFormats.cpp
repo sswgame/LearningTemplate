@@ -508,11 +508,11 @@ SW_TEST_CASE( LocalizationBinaryTableTest, ManagerCooksAndLoadsWithoutAuthoringF
     const sw::test::ScopedScratchDomain domain;
     const sw::AbsolutePath              folder  = domain.getFolder();
     const sw::AbsolutePath              project = LocalizationTestUtil::writeProject( folder, "en", R"([ "ko" ])" );
-    LocalizationTestUtil::writeSourceTable( folder.str(), "en", R"("ui.start": { "source": "Start" }, "ui.quit": { "source": "Quit" })" );
+    LocalizationTestUtil::writeSourceTable( folder, "en", R"("ui.start": { "source": "Start" }, "ui.quit": { "source": "Quit" })" );
     const sw::string                                 staleHash = sw::SourceTextEntry::formatSourceHash( sw::SourceTextEntry::computeSourceHash( "Begin" ) );
     sw::StringBuilder<sw::constant::buffer::kMax256> koEntries;
     koEntries.appendFormat( "\"ui.start\": { \"text\": \"시작\" }, \"ui.quit\": { \"text\": \"종료\", \"sourceHash\": \"%#\" }", staleHash );
-    LocalizationTestUtil::writeTranslation( folder.str(), "ko", koEntries.view() );
+    LocalizationTestUtil::writeTranslation( folder, "ko", koEntries.view() );
 
     sw::LocalizationManager cooker;
     SW_REQUIRE_TRUE( cooker.mountProject( sw::test::ScopedScratchDomain::toID( project ), sw::LocalizationScope::Game ) );
@@ -606,12 +606,12 @@ SW_TEST_CASE( LocalizationBinaryTableTest, CookedProjectReadsOnlyTheLookupChain 
     const sw::test::ScopedScratchDomain domain;
     const sw::AbsolutePath              folder  = domain.getFolder();
     const sw::AbsolutePath              project = LocalizationTestUtil::writeProject( folder, "en", R"([ "ko", "ja" ])", R"("stagedCultures": [ "ko" ])" );
-    LocalizationTestUtil::writeSourceTable( folder.str(), "en", R"("ui.start": { "source": "Start" }, "ui.quit": { "source": "Quit" })" );
+    LocalizationTestUtil::writeSourceTable( folder, "en", R"("ui.start": { "source": "Start" }, "ui.quit": { "source": "Quit" })" );
     const sw::string                                 staleHash = sw::SourceTextEntry::formatSourceHash( sw::SourceTextEntry::computeSourceHash( "Begin" ) );
     sw::StringBuilder<sw::constant::buffer::kMax256> koEntries;
     koEntries.appendFormat( "\"ui.start\": { \"text\": \"시작\" }, \"ui.quit\": { \"text\": \"종료\", \"sourceHash\": \"%#\" }", staleHash );
-    LocalizationTestUtil::writeTranslation( folder.str(), "ko", koEntries.view() );
-    LocalizationTestUtil::writeTranslation( folder.str(), "ja", R"("ui.start": { "text": "開始" })" );
+    LocalizationTestUtil::writeTranslation( folder, "ko", koEntries.view() );
+    LocalizationTestUtil::writeTranslation( folder, "ja", R"("ui.start": { "text": "開始" })" );
 
     // 쿠커와 같은 길: 원문 + 출시 문화권만 굽는다(ja 는 번역 중이라 굽지 않는다).
     sw::LocalizationProject projectDoc;
@@ -627,7 +627,7 @@ SW_TEST_CASE( LocalizationBinaryTableTest, CookedProjectReadsOnlyTheLookupChain 
         sw::LocalizationManager cookManager; // 쿠커(DevTools `LocalizationCooker::cookCulture`)와 같은 길 — 프로젝트 하나만 올린 새 관리자
         SW_REQUIRE_TRUE( cookManager.mountProject( projectID, sw::LocalizationScope::Game ) );
         SW_REQUIRE_TRUE( cookManager.cookBinaryTable( culture, bytes ) );
-        SW_REQUIRE_TRUE( sw::FileUtil::writeFile( sw::FileUtil::toDiskPath( projectDoc.makeCookedTablePath( project.str(), culture ) ), bytes.data(), bytes.size() ) );
+        SW_REQUIRE_TRUE( sw::FileUtil::writeFile( project.getParent().join( sw::FileUtil::getFileNamePart( projectDoc.makeCookedTablePath( "engine/test.locproject.xml", culture ) ) ), bytes.data(), bytes.size() ) );
     }
 
     // 배포본에는 저작 표가 없다 — 지워도 읽힌다.
@@ -697,7 +697,7 @@ SW_TEST_CASE( LocalizationKeyIndexTest, ManagerRefusesCollidingKeys )
     const sw::test::ScopedScratchDomain domain;
     const sw::AbsolutePath              folder  = domain.getFolder();
     const sw::AbsolutePath              project = LocalizationTestUtil::writeProject( folder, "en", R"([ "ko" ])" );
-    LocalizationTestUtil::writeSourceTable( folder.str(), "en", R"("ui.start": { "source": "Start" }, "ui.quit": { "source": "Quit" })" );
+    LocalizationTestUtil::writeSourceTable( folder, "en", R"("ui.start": { "source": "Start" }, "ui.quit": { "source": "Quit" })" );
 
     sw::LocalizationManager manager;
     sw::LocalizationManagerTestAccess::setCheckKeyHash( manager, &craftSameKeyHash );

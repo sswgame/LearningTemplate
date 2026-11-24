@@ -6,6 +6,7 @@
 #include "Core/Container/string.h"
 #include "Core/Container/vector.h"
 #include "Core/Foundation/Types.h"
+#include "Core/Path/AbsolutePath.h"
 
 #include "Editor/Common/Asset/EditorAssetIndex.h"
 
@@ -25,7 +26,7 @@ namespace sw::editor
          * @brief 에셋의 참조를 찾아 결과를 바꿉니다.
          * @param bDependencies false 면 그 에셋을 사용하는 쪽(Find References)을, true 면 그 에셋이 사용하는 쪽(Show Dependencies)을 찾습니다.
          */
-        void query( const EditorAssetIndex& index, string_view absolutePath, bool bDependencies );
+        void query( const EditorAssetIndex& index, const AbsolutePath& absolutePath, bool bDependencies );
 
         /** @brief 마지막 질의의 대상 리소스 id 를 반환합니다. */
         const string& getQueryID() const { return _queryID; }

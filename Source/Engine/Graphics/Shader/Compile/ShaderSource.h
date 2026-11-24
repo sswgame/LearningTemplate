@@ -127,7 +127,7 @@ namespace sw
         /**
          * @brief 컴파일러가 고른 후보 경로 @p candidatePath 를 읽습니다(DXC — 검색 폴더마다 후보를 묻는다). 엄격한 절대 경로인 정규 파일만 받습니다. 없는 후보는 로그 없이 빈 값입니다(다음 폴더로 넘어간다).
          */
-        [[nodiscard]] optional<AbsolutePath> readInclude( string_view candidatePath, vector<uint8>& outBytes ) const;
+        [[nodiscard]] optional<AbsolutePath> readInclude( const AbsolutePath& candidate, vector<uint8>& outBytes ) const;
         /**
          * @brief 소스 도메인의 `shaders` 폴더 @p shadersFolder 의 헤더가 include 루트(engine · common)의 헤더와 같은 상대 경로를 가지면 그 쌍을 @p outListProblem 에 적습니다.
          * @details include 검색은 자기 폴더가 먼저라 같은 이름의 헤더가 엔진 헤더를 조용히 가린다. 가림은 고르지 않고 오류로 멈춘다. 컴파일과 쿠킹본 판정이 부른다.

@@ -72,9 +72,9 @@ namespace sw::editor
 
     AbsolutePath EditorPaths::resolveEditorStateFile( const utf8* pFileName )
     {
-        // 이름이 없으면 빈 경로다(그 경로의 I/O 는 없는 파일처럼 실패한다 — `FileUtil::toDiskPath` 의 빈 글과 같다).
+        // 이름이 없으면 빈 경로다(그 경로의 I/O 는 없는 파일처럼 실패한다).
         if ( StringUtil::isNullOrEmpty( pFileName ) )
-            return FileUtil::toDiskPath( {} );
+            return {};
         return getEditorStateDirectory().join( pFileName );
     }
 

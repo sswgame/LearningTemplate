@@ -229,7 +229,7 @@ namespace sw::editor
         EditorNetPlayPresetStore& getPresetStore() { return _presetStore; }
 
         /** @brief 이 플랫폼의 기본 실행 파일 경로입니다. 에디터 실행 파일 옆이며, Windows 에서는 @p pBaseName 에 `.exe` 를 붙입니다. */
-        static string makeDefaultExecutablePath( const utf8* pBaseName );
+        static AbsolutePath makeDefaultExecutablePath( const utf8* pBaseName );
         /**
          * @brief `App` 창 @p windowIndex 번째(0 부터 — 리슨 호스트가 있으면 호스트가 0)의 창 크기 · 바둑판 칸 인자(`-W=… -H=… -WinTile=… -WinTileColumns=…`)입니다.
          * @details 창은 왼쪽 위부터 `_windowColumnCount` 개씩 한 줄에 놓고 다음 줄로 내려간다. 셀 사이는 창 틀(제목 줄 · 테두리)만큼 띄우는데, 그 두께는

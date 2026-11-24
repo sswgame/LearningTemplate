@@ -462,6 +462,11 @@ namespace sw
         return FileUtil::joinPath( FileUtil::getDirectoryPart( projectPath ), fileName );
     }
 
+    AbsolutePath LocalizationProject::makeSiblingPath( const AbsolutePath& projectPath, string_view fileName )
+    {
+        return projectPath.getParent().join( fileName );
+    }
+
     bool LocalizationProject::isStagedCulture( string_view culture ) const
     {
         const string normalized = CultureTable::normalizeCode( culture );
@@ -487,6 +492,13 @@ namespace sw
     }
 
     string LocalizationProject::makeTranslationPath( string_view projectPath, string_view culture )
+    {
+        StringBuilder<constant::buffer::kMax256> fileName;
+        fileName.appendFormat( "%#%#", CultureTable::normalizeCode( culture ), TranslationTable::kExtension );
+        return makeSiblingPath( projectPath, fileName.view() );
+    }
+
+    AbsolutePath LocalizationProject::makeTranslationPath( const AbsolutePath& projectPath, string_view culture )
     {
         StringBuilder<constant::buffer::kMax256> fileName;
         fileName.appendFormat( "%#%#", CultureTable::normalizeCode( culture ), TranslationTable::kExtension );

@@ -97,9 +97,9 @@ SW_TEST_CASE( FileSystemTest, RelativePathIsTextual )
 {
     const AbsolutePath root = test::makeScratchPath( "rel" );
     string             relative;
-    SW_REQUIRE_TRUE( FileUtil::makeRelativePath( root.str(), FileUtil::joinPath( root.str(), "x/y.txt" ), relative ) );
+    SW_REQUIRE_TRUE( FileUtil::makeRelativePath( root.str(), root.join( "x/y.txt" ).str(), relative ) );
     SW_EXPECT_EQUAL( string( "x/y.txt" ), relative );
-    SW_REQUIRE_TRUE( FileUtil::makeRelativePath( FileUtil::joinPath( root.str(), "x/z" ), FileUtil::joinPath( root.str(), "w" ), relative ) );
+    SW_REQUIRE_TRUE( FileUtil::makeRelativePath( root.join( "x/z" ).str(), root.join( "w" ).str(), relative ) );
     SW_EXPECT_EQUAL( string( "../../w" ), relative );
     SW_REQUIRE_TRUE( FileUtil::makeRelativePath( root.str(), root.str(), relative ) );
     SW_EXPECT_EQUAL( string( "." ), relative );

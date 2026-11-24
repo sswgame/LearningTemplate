@@ -142,8 +142,7 @@ namespace sw
                           record._year, record._month, record._day, record._hour, ProcessSession::getID() );
             _currentLogFileName = expectedFileName.c_str();
 
-            const string logPath = FileUtil::joinPath( _logFolderPath.str(), _currentLogFileName );
-            _pFile               = PlatformFileUtil::openFile( logPath.c_str(), "a" );
+            _pFile = PlatformFileUtil::openFile( _logFolderPath.join( _currentLogFileName ).c_str(), "a" );
         }
 
         if ( _pFile == nullptr )
@@ -160,7 +159,7 @@ namespace sw
         if ( _pFile == nullptr )
             return {};
         // 고정 경로는 이미 절대 경로다(open). 기본 이름은 폴더 안의 파일 이름만 들고 있다.
-        return _fixedFilePath.empty() ? FileUtil::joinPath( _logFolderPath.str(), _currentLogFileName ) : _currentLogFileName;
+        return _fixedFilePath.empty() ? _logFolderPath.join( _currentLogFileName ).str() : _currentLogFileName;
     }
 
     void FileLogOutput::flushWithoutWaiting()

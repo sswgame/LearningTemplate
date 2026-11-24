@@ -73,7 +73,7 @@ namespace sw::editor
                 case ContentBrowserRequestKind::Reveal:
                 {
                     openFolder( request._absolutePath.getParent() );
-                    selectAssetPath( request._absolutePath.str() );
+                    selectAssetPath( request._absolutePath );
                     break;
                 }
                 case ContentBrowserRequestKind::OpenFolder:
@@ -275,13 +275,13 @@ namespace sw::editor
     {
         _listRoot.clear();
 
-        const auto addRoot = [this]( string_view name, string_view path )
+        const auto addRoot = [this]( string_view name, const AbsolutePath& path )
         {
-            if ( path.empty() || FileUtil::isDirectory( FileUtil::toDiskPath( path ) ) == false )
+            if ( path.empty() || FileUtil::isDirectory( path ) == false )
                 return;
             ContentBrowserRoot root;
             root._displayName  = string{ name };
-            root._absolutePath = FileUtil::toDiskPath( FileUtil::normalizeSeparators( path ) );
+            root._absolutePath = path;
             _listRoot.push_back( std::move( root ) );
         };
 
@@ -293,7 +293,7 @@ namespace sw::editor
         }
         const string& packRoot = editor::getSubsystem<const GameConfig>()._packRoot.get();
         if ( packRoot.empty() == false )
-            addRoot( packRoot, EditorPaths::findContentFolder( packRoot ).str() );
+            addRoot( packRoot, EditorPaths::findContentFolder( packRoot ) );
         if ( _bShowAllPacks || packRoot.empty() )
         {
             vector<string> listPackDomain;
@@ -302,12 +302,12 @@ namespace sw::editor
             {
                 const string packName = FileUtil::normalizePath( packDomain ).str();
                 if ( packName != FileUtil::normalizePath( packRoot ).str() )
-                    addRoot( packName, EditorPaths::findContentFolder( packDomain ).str() );
+                    addRoot( packName, EditorPaths::findContentFolder( packDomain ) );
             }
         }
-        addRoot( constant::path::kEnginePack, EditorPaths::findContentFolder( constant::path::kEnginePack ).str() );
-        addRoot( constant::path::kCommonPack, EditorPaths::findContentFolder( constant::path::kCommonPack ).str() );
-        addRoot( constant::path::kEditorPack, EditorPaths::findContentFolder( constant::path::kEditorPack ).str() );
+        addRoot( constant::path::kEnginePack, EditorPaths::findContentFolder( constant::path::kEnginePack ) );
+        addRoot( constant::path::kCommonPack, EditorPaths::findContentFolder( constant::path::kCommonPack ) );
+        addRoot( constant::path::kEditorPack, EditorPaths::findContentFolder( constant::path::kEditorPack ) );
 
         // 처음이거나 지금 폴더가 숨긴 게임 팩 안에 있으면 첫 루트로 이동한다. 루트가 아닌 다른 도메인(자동화 사본 `scratch/` - `content.open` 이 연다)은 그대로 둔다 -
         // 예전에는 "어느 루트 아래도 아니면" 이동해, 루트를 다시 만드는 순간(시나리오 단계 초기화 뒤) 연 사본 폴더에서 쫓겨났다.
@@ -468,11 +468,11 @@ namespace sw::editor
         return true;
     }
 
-    void ContentBrowserViewModel::selectAssetPath( string_view absolutePath )
+    void ContentBrowserViewModel::selectAssetPath( const AbsolutePath& absolutePath )
     {
         for ( const AssetEntry& entry : _listEntry )
         {
-            if ( FileUtil::isSameDiskPath( entry._absolutePath.str(), absolutePath ) )
+            if ( FileUtil::isSameDiskPath( entry._absolutePath.str(), absolutePath.str() ) )
             {
                 selectAsset( entry );
                 return;
@@ -709,9 +709,9 @@ namespace sw::editor
             return;
         }
         vector<AbsolutePath> listSourcePath;
-        for ( const string& path : listPath )
+        for ( const string& pickedPath : listPath )
         {
-            listSourcePath.push_back( FileUtil::toDiskPath( path ) ); // 파일 대화상자가 고른 글이다
+            listSourcePath.push_back( FileUtil::toDiskPath( pickedPath ) ); // 파일 대화상자가 고른 글이다
         }
         if ( EditorAssetFileCommands::importFiles( _importFolderAbs, listSourcePath ) > 0 )
             _bFolderDirty = SW_TRUE;
@@ -722,7 +722,7 @@ namespace sw::editor
         return ContentBrowserViewModelInternal::getHotReload().isReferenceIndexCurrent();
     }
 
-    void ContentBrowserViewModel::showReferences( string_view absolutePath, bool bDependencies )
+    void ContentBrowserViewModel::showReferences( const AbsolutePath& absolutePath, bool bDependencies )
     {
         _referenceSearch.query( getReferenceIndex(), absolutePath, bDependencies );
     }
@@ -741,12 +741,12 @@ namespace sw::editor
     {
         if ( entry._bIsDirectory )
             return {};
-        return ContentBrowserViewModelInternal::getSourceControl().describeStatus( entry._absolutePath.str(), entry._bReadOnly );
+        return ContentBrowserViewModelInternal::getSourceControl().describeStatus( entry._absolutePath, entry._bReadOnly );
     }
 
     bool ContentBrowserViewModel::isLocked( const AssetEntry& entry )
     {
-        return ContentBrowserViewModelInternal::getSourceControl().findLock( entry._absolutePath.str() ) != nullptr;
+        return ContentBrowserViewModelInternal::getSourceControl().findLock( entry._absolutePath ) != nullptr;
     }
 
     bool ContentBrowserViewModel::openAsset( string_view assetPath )

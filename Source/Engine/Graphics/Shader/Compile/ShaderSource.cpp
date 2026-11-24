@@ -170,27 +170,25 @@ namespace sw
     {
         for ( const AbsolutePath& root : input._listIncludeRoot )
         {
-            const string                 candidate = FileUtil::normalizeSeparators( FileUtil::joinPath( root.str(), includeName ) );
-            const optional<AbsolutePath> found     = readInclude( candidate, outBytes );
-            if ( found.has_value() )
+            const optional<AbsolutePath> candidate = AbsolutePath::isStrictAbsolute( includeName ) ? nullopt : AbsolutePath::tryResolve( includeName, root );
+            if ( candidate.has_value() == false )
+                continue;
+            if ( const optional<AbsolutePath> found = readInclude( *candidate, outBytes ); found.has_value() )
                 return found;
         }
         return nullopt;
     }
 
-    optional<AbsolutePath> ShaderIncludeResolver::readInclude( string_view candidatePath, vector<uint8>& outBytes ) const
+    optional<AbsolutePath> ShaderIncludeResolver::readInclude( const AbsolutePath& candidate, vector<uint8>& outBytes ) const
     {
         outBytes.clear();
-        const optional<AbsolutePath> candidate = AbsolutePath::tryMake( candidatePath );
-        if ( candidate.has_value() == false )
-            return nullopt;
-        if ( FileUtil::isRegularFile( *candidate ) == false )
+        if ( FileUtil::isRegularFile( candidate ) == false )
         {
-            CookJob::allowMissingDiskRead( *candidate ); // 작업이 없으면 적지 않는다
+            CookJob::allowMissingDiskRead( candidate ); // 작업이 없으면 적지 않는다
             return nullopt;
         }
         // 실패 로그는 readFile 이, 입력으로 적지 못한 까닭은 작업이 남긴다.
-        if ( FileUtil::readFile( *candidate, outBytes ) == false || CookJob::allowDiskRead( *candidate, outBytes.data(), outBytes.size() ) == false )
+        if ( FileUtil::readFile( candidate, outBytes ) == false || CookJob::allowDiskRead( candidate, outBytes.data(), outBytes.size() ) == false )
             return nullopt;
         return candidate;
     }

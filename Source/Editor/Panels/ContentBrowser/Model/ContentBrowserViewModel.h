@@ -213,7 +213,7 @@ namespace sw::editor
         /** @brief 항목을 고릅니다. 파일이면 작업 공간 포커스도 그 에셋으로 옮긴다. */
         void selectAsset( const AssetEntry& entry );
         /** @brief 지금 목록에 있는 @p absolutePath 항목을 고릅니다. 목록에 없으면 아무 일도 없습니다. */
-        void selectAssetPath( string_view absolutePath );
+        void selectAssetPath( const AbsolutePath& absolutePath );
         /**
          * @brief 리소스 id @p assetID 의 폴더로 가서 그 애셋을 고릅니다(언리얼 "Browse to Asset" · Ctrl+B). 메인 씬에서 고른 오브젝트의 애셋(`EditorSelectionSync`)을 찾아갈 때 쓴다.
          * @return 디스크에 없는 애셋(쿠킹 묶음에만 있다)이면 false 이고 아무것도 바꾸지 않는다.
@@ -284,7 +284,7 @@ namespace sw::editor
         bool                                 isReferenceIndexCurrent() const;
         const ContentBrowserReferenceSearch& getReferenceSearch() const { return _referenceSearch; }
         /** @brief 에셋의 참조(@p bDependencies 면 의존)를 찾습니다. 결과는 `getReferenceSearch` 입니다. */
-        void showReferences( string_view absolutePath, bool bDependencies );
+        void showReferences( const AbsolutePath& absolutePath, bool bDependencies );
         /** @brief 에디터 전역의 참조 역색인입니다(`AssetHotReload::getReferenceIndex`). */
         static const EditorAssetIndex& getReferenceIndex();
         /** @brief 역색인 스캔이 워커에서 진행 중이면 true 입니다. */

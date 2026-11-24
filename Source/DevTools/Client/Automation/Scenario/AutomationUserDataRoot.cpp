@@ -109,9 +109,9 @@ namespace sw
         return ProcessRoots::get()._saved.join( "Automation" );
     }
 
-    string AutomationUserDataRoot::makeRunUserDataRoot( string_view runRoot )
+    AbsolutePath AutomationUserDataRoot::makeRunUserDataRoot( const AbsolutePath& runRoot )
     {
-        return FileUtil::joinPath( runRoot, kRunSubfolder );
+        return runRoot.join( kRunSubfolder );
     }
 
     expected<void> AutomationUserDataRoot::validateUnderBase( string_view root, string_view baseFolder )
@@ -129,7 +129,7 @@ namespace sw
 
     vector<string> AutomationUserDataRoot::makePersonFolders()
     {
-        vector<string> listFolder{ FileUtil::joinPath( ProcessRoots::get()._project.str(), config::kDirSavedEditor ) };
+        vector<string> listFolder{ ProcessRoots::get()._project.join( config::kDirSavedEditor ).str() };
         // 게임마다 폴더의 부모(`SWEngine` · `swengine`) — 모든 게임의 사람 세이브 · 설정이다. 모르면(샌드박스) 그 칸이 없다.
         const string listGameFolder[] = { UserDataPath::findPlatformDataDirectory( "" ).str(), UserDataPath::findPlatformConfigDirectory( "" ).str() };
         for ( const string& gameFolder : listGameFolder )
@@ -181,7 +181,7 @@ namespace sw
         if ( bAllowOutside )
             return string{}; // 사람이 고른 OS 사용자 폴더 그대로
         // 실행 뿌리는 실행마다 새 폴더다 — 옛 실행의 세이브가 없어 비울 것도, 거둘 형제도 없다(거두기는 `SavedCleanup`).
-        root = makeRunUserDataRoot( ProcessRoots::get()._run.str() );
+        root = makeRunUserDataRoot( ProcessRoots::get()._run ).str();
         if ( expected<void> under = validateUnderBase( root, getBaseFolder().str() ); under.has_value() == false )
             return unexpected( under.error() ); // 부모가 실행 뿌리를 자동화 폴더 밖에 줬다
         if ( ProcessEnvironment::trySet( kUserDataRootVariable, root ) == false )

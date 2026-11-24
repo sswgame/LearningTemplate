@@ -19,19 +19,18 @@ namespace sw
         {
             static string makeFolderName( string_view gameName ) { return gameName.empty() ? string( "default" ) : StringUtil::toLower( gameName ); }
 
-            /** @brief @p pRootEnvironment 가 있으면 그 아래, 없으면 `$HOME/<homeRelative>` 아래 `<vendor>/<game>` 입니다. 둘 다 없으면 빈 글. */
+            /** @brief @p pRootEnvironment 가 있으면 그 아래, 없으면 `$HOME/<homeRelative>` 아래 `<vendor>/<game>` 입니다. 둘 다 없으면 빈 경로. */
             static AbsolutePath makeUnderEnvironment( const utf8* pRootEnvironment, const utf8* pHomeRelative, const utf8* pVendor, string_view gameName )
             {
                 string root;
                 if ( ProcessEnvironment::tryReadNonEmpty( pRootEnvironment, root ) )
-                    return FileUtil::toDiskPath( FileUtil::joinPath( FileUtil::joinPath( root, pVendor ), makeFolderName( gameName ) ) );
+                    return FileUtil::toDiskPath( root ).join( pVendor ).join( makeFolderName( gameName ) );
                 if ( pHomeRelative == nullptr )
                     return {};
                 string home;
                 if ( ProcessEnvironment::tryReadNonEmpty( "HOME", home ) == false )
                     return {};
-                const utf8* pHome = home.c_str();
-                return FileUtil::toDiskPath( FileUtil::joinPath( FileUtil::joinPath( FileUtil::joinPath( pHome, pHomeRelative ), pVendor ), makeFolderName( gameName ) ) );
+                return FileUtil::toDiskPath( home ).join( pHomeRelative ).join( pVendor ).join( makeFolderName( gameName ) );
             }
 
             /** @brief OS 사용자 폴더를 모를 때 멈춥니다 - 작업 폴더의 `Saved` 로 대신하면(옛 폴백) 세이브 · 설정이 띄운 자리마다 갈렸다. */
@@ -46,7 +45,7 @@ namespace sw
                 string root;
                 if ( ProcessEnvironment::tryReadNonEmpty( kUserDataRootVariable, root ) == false )
                     return {};
-                return FileUtil::toDiskPath( FileUtil::joinPath( root, makeFolderName( gameName ) ) );
+                return FileUtil::toDiskPath( root ).join( makeFolderName( gameName ) );
             }
         };
     } // namespace

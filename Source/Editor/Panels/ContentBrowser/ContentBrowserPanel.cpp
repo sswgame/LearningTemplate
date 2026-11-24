@@ -170,14 +170,14 @@ namespace sw::editor
                 return EditorPanelManager::findPanelInEditorContext<ContentBrowserPanel>();
             }
 
-            /** @brief 에셋 페이로드 id 의 디스크 자리(절대 경로)입니다. 모르는 id 이거나 디스크에 없으면 빈 문자열입니다. */
-            static string findAssetDiskPath( uint64 assetID )
+            /** @brief 에셋 페이로드 id 의 디스크 자리(절대 경로)입니다. 모르는 id 이거나 디스크에 없으면 빈 경로입니다. */
+            static AbsolutePath findAssetDiskPath( uint64 assetID )
             {
                 string resourceID;
                 if ( EditorWidgets::findAssetPayload( assetID, resourceID ) == false )
-                    return string{};
+                    return {};
                 const optional<AbsolutePath> diskPath = EditorPaths::getAssetPaths().findLooseFile( resourceID );
-                return diskPath.has_value() ? string( diskPath->str() ) : string{};
+                return diskPath.value_or( AbsolutePath{} );
             }
 
             [[nodiscard]] static bool readSavedSearchCount( const GameObjectManager* /*pManager*/, float64& outValue )
@@ -203,7 +203,7 @@ namespace sw::editor
             static void selectOnlyAsset( uint64 assetID )
             {
                 ContentBrowserPanel* pPanel = findWritablePanel();
-                const string         path   = findAssetDiskPath( assetID );
+                const AbsolutePath   path   = findAssetDiskPath( assetID );
                 if ( pPanel != nullptr && path.empty() == false )
                     pPanel->selectAssetPath( path );
             }
@@ -821,7 +821,7 @@ namespace sw::editor
         ImGui::EndPopup();
     }
 
-    void ContentBrowserPanel::showReferences( string_view absolutePath, bool bDependencies )
+    void ContentBrowserPanel::showReferences( const AbsolutePath& absolutePath, bool bDependencies )
     {
         _model.showReferences( absolutePath, bDependencies );
         _bOpenReferenceResults = SW_TRUE;
@@ -901,7 +901,7 @@ namespace sw::editor
             else if ( request._kind == ContentBrowserRequestKind::Delete )
                 requestDeleteAsset( request._absolutePath );
             else
-                showReferences( request._absolutePath.str(), request._kind == ContentBrowserRequestKind::ShowDependencies );
+                showReferences( request._absolutePath, request._kind == ContentBrowserRequestKind::ShowDependencies );
         }
     }
 

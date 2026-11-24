@@ -45,11 +45,11 @@ namespace sw
              * @details 이름만 대소문자가 다른 항목이 여럿이어도 같은 답이 나오게, 소문자가 같은 항목 중 정렬 순으로 앞선 것을 고른다.
              * @return 찾으면 true 이고 @p outName 이 디스크 표기입니다. 폴더를 열지 못했거나 항목이 없으면 false 입니다.
              */
-            [[nodiscard]] static bool findEntryIgnoringCase( const string& directory, string_view component, string& outName )
+            [[nodiscard]] static bool findEntryIgnoringCase( const AbsolutePath& directory, string_view component, string& outName )
             {
                 const PathKey lowerComponent = FileUtil::normalizePath( component );
                 outName.clear();
-                (void)FileUtil::forEachDirectoryEntry( FileUtil::toDiskPath( directory ), false, [&outName, &lowerComponent]( const DirectoryEntry& entry )
+                (void)FileUtil::forEachDirectoryEntry( directory, false, [&outName, &lowerComponent]( const DirectoryEntry& entry )
                 {
                     const size_t      nameStart = entry._path.rfind( '/' );
                     const string_view name      = nameStart == string_view::npos ? entry._path : entry._path.substr( nameStart + 1 );
@@ -61,19 +61,19 @@ namespace sw
             }
 
             /** @brief @p path 에 체크아웃하지 않은 파일(`FileUtil::findNotOpenForEdit`)이 있으면 경로와 이유를 오류로 남기고 true 입니다 — 지우기 · 옮기기 · 덮는 복사의 입구가 부른다. */
-            [[nodiscard]] static bool refuseNotOpenForEdit( string_view path, const utf8* pAction )
+            [[nodiscard]] static bool refuseNotOpenForEdit( const AbsolutePath& path, const utf8* pAction )
             {
-                const optional<AbsolutePath> lockedPath = FileUtil::findNotOpenForEdit( FileUtil::toDiskPath( path ) );
+                const optional<AbsolutePath> lockedPath = FileUtil::findNotOpenForEdit( path );
                 if ( lockedPath.has_value() == false )
                     return false;
-                SW_LOG_ERROR_ID( "File.NotOpenForEdit", "Refused to %# %# - '%#' is read-only (not checked out), check it out first", pAction, path, lockedPath->str() );
+                SW_LOG_ERROR_ID( "File.NotOpenForEdit", "Refused to %# %# - '%#' is read-only (not checked out), check it out first", pAction, path.str(), lockedPath->str() );
                 return true;
             }
 
             /** @brief 실패한 쓰기의 임시 파일을 지웁니다. 지우지 못하면 경고합니다 — 원본 옆에 `.tmp<pid>_<번호>` 가 남습니다. */
-            static void discardTempFile( const string& tempPath )
+            static void discardTempFile( const AbsolutePath& tempPath )
             {
-                if ( FileUtil::removeFile( FileUtil::toDiskPath( tempPath ) ) == false )
+                if ( FileUtil::removeFile( tempPath ) == false )
                     SW_LOG_WARNING_ID( "FileUtil.FailedRemoveTemporaryFile", "Failed to remove the temporary file %# - delete it by hand", tempPath.c_str() );
             }
 
@@ -85,22 +85,21 @@ namespace sw
              *          언리얼 `FFileHelper::SaveArrayToFile` 과 같은 방식(임시 파일 → 이름 바꾸기)입니다.
              *          @p durability 가 `Durable` 이면 닫기 전에 내용을, 바꿔 끼운 뒤 폴더 항목을 저장 장치까지 내린다 — 전원이 나가도 옛 것이거나 새 것이다.
              */
-            [[nodiscard]] static bool writeAtomically( string_view fileName, const void* pData, size_t size, FileSyncMode durability )
+            [[nodiscard]] static bool writeAtomically( const AbsolutePath& fileName, const void* pData, size_t size, FileSyncMode durability )
             {
                 const FileWriteResult result = writeAtomicallyQuiet( fileName, pData, size, durability );
                 if ( result == FileWriteResult::WriteFailed )
-                    SW_LOG_ERROR_ID( "File.WriteFailed", "Failed to write %# bytes to %# — the original file was left untouched", size, fileName );
+                    SW_LOG_ERROR_ID( "File.WriteFailed", "Failed to write %# bytes to %# — the original file was left untouched", size, fileName.str() );
                 else
                     logWriteResult( result, fileName );
                 return result == FileWriteResult::Written;
             }
 
             /** @brief `writeAtomically` 의 본체입니다 — 실패를 로그 없이 결과로 돌려준다(게이트 거절은 `isWriteAllowed` 가 남긴다). 설명은 `writeAtomically`. */
-            [[nodiscard]] static FileWriteResult writeAtomicallyQuiet( string_view fileName, const void* pData, size_t size, FileSyncMode durability )
+            [[nodiscard]] static FileWriteResult writeAtomicallyQuiet( const AbsolutePath& fileName, const void* pData, size_t size, FileSyncMode durability )
             {
-                string filePath;
-                string tempPath;
-                if ( prepareAtomicWrite( fileName, filePath, tempPath ) == false )
+                AbsolutePath tempPath;
+                if ( prepareAtomicWrite( fileName, tempPath ) == false )
                     return FileWriteResult::Refused;
 
                 FILE* pFile = PlatformFileUtil::openFile( tempPath.c_str(), "wb" );
@@ -116,48 +115,46 @@ namespace sw
                     discardTempFile( tempPath );
                     return FileWriteResult::WriteFailed;
                 }
-                return replaceAtomicallyQuiet( tempPath, filePath, durability );
+                return replaceAtomicallyQuiet( tempPath, fileName, durability );
             }
 
             /** @brief 거절 · 교체 실패를 오류로 남깁니다(로그 있는 입구 `writeAtomically` · `AtomicFileWriter` · `FileUtil::replaceFile` 이 함께 쓴다). 쓰기 실패는 부르는 쪽이 크기와 함께 남긴다. */
-            static void logWriteResult( FileWriteResult result, string_view fileName )
+            static void logWriteResult( FileWriteResult result, const AbsolutePath& fileName )
             {
                 // 읽기 전용이 아닌 거절은 쓰기 게이트(`isWriteAllowed`)가 이미 남겼다
-                if ( result == FileWriteResult::Refused && FileUtil::isReadOnlyFile( FileUtil::toDiskPath( fileName ) ) )
-                    SW_LOG_ERROR_ID( "File.WriteReadOnly", "Refused to replace the read-only file %# - make it writable (check it out) first", fileName );
+                if ( result == FileWriteResult::Refused && FileUtil::isReadOnlyFile( fileName ) )
+                    SW_LOG_ERROR_ID( "File.WriteReadOnly", "Refused to replace the read-only file %# - make it writable (check it out) first", fileName.str() );
                 else if ( result == FileWriteResult::ReplaceFailed )
-                    SW_LOG_ERROR_ID( "File.WriteFailed", "Failed to replace %# with the newly written file — the original file was left untouched", fileName );
+                    SW_LOG_ERROR_ID( "File.WriteFailed", "Failed to replace %# with the newly written file — the original file was left untouched", fileName.str() );
             }
 
             /**
              * @brief 원자적 쓰기의 앞 절반입니다 — 쓰기 게이트 · 읽기 전용을 보고 같은 폴더의 임시 경로를 정합니다(로그 없음 — `beginAtomicWrite` 가 남긴다).
              * @return 쓸 수 없는 대상이면 false 입니다(게이트 거절은 `isWriteAllowed` 가 남긴다).
              */
-            [[nodiscard]] static bool prepareAtomicWrite( string_view fileName, string& outFilePath, string& outTempPath )
+            [[nodiscard]] static bool prepareAtomicWrite( const AbsolutePath& filePath, AbsolutePath& outTempPath )
             {
-                const string filePath = FileUtil::normalizeSeparators( fileName );
-                if ( FileUtil::isWriteAllowed( FileUtil::toDiskPath( filePath ) ) == false )
+                if ( FileUtil::isWriteAllowed( filePath ) == false )
                     return false;
                 // 읽기 전용 대상은 어느 플랫폼에서도 바꿔 끼우지 않는다 — POSIX `rename` 은 대상 권한을 보지 않아 버전 관리 잠금(git LFS lockable)이 조용히 뚫리고,
                 // Windows 는 바꿔 끼우기가 져 아래 재시도(20 ms × 10)를 헛되이 잔다. 언리얼 `IFileManager::Move` 도 읽기 전용 대상은 덮지 않는다(EvenIfReadOnly 를 따로 받는다).
-                if ( FileUtil::isReadOnlyFile( FileUtil::toDiskPath( filePath ) ) )
+                if ( FileUtil::isReadOnlyFile( filePath ) )
                     return false;
-                outTempPath = FileUtil::makeWriteTempPath( FileUtil::toDiskPath( filePath ) ).str();
-                outFilePath = filePath;
+                outTempPath = FileUtil::makeWriteTempPath( filePath );
                 return true;
             }
 
             /** @brief `prepareAtomicWrite` 에 거절 로그를 더한 것입니다(`AtomicFileWriter` · `FileUtil::replaceFile` 이 쓴다). */
-            [[nodiscard]] static bool beginAtomicWrite( string_view fileName, string& outFilePath, string& outTempPath )
+            [[nodiscard]] static bool beginAtomicWrite( const AbsolutePath& fileName, AbsolutePath& outTempPath )
             {
-                if ( prepareAtomicWrite( fileName, outFilePath, outTempPath ) )
+                if ( prepareAtomicWrite( fileName, outTempPath ) )
                     return true;
                 logWriteResult( FileWriteResult::Refused, fileName );
                 return false;
             }
 
             /** @brief 원자적 쓰기의 뒤 절반입니다 — 다 쓰고 닫은 임시 파일을 대상과 바꿔 끼웁니다. 못 바꾸면 임시 파일을 지우고 `ReplaceFailed` 입니다(로그 없음). */
-            [[nodiscard]] static FileWriteResult replaceAtomicallyQuiet( const string& tempPath, const string& filePath, FileSyncMode durability )
+            [[nodiscard]] static FileWriteResult replaceAtomicallyQuiet( const AbsolutePath& tempPath, const AbsolutePath& filePath, FileSyncMode durability )
             {
                 // 다른 프로세스(파일 감시 · 백신 · 에디터)가 대상을 잠깐 쥐고 있으면 Windows 의 바꿔치기가 실패한다. 잠깐 기다렸다 다시 한다.
                 constexpr uint32 kReplaceAttemptCount = 10;
@@ -165,10 +162,10 @@ namespace sw
                 {
                     if ( PlatformFileUtil::replaceFile( tempPath.c_str(), filePath.c_str() ) )
                     {
-                        if ( durability == FileSyncMode::Durable && PlatformFileUtil::flushDirectoryToStorage( FileUtil::getDirectoryPart( filePath ).c_str() ) == false )
+                        if ( durability == FileSyncMode::Durable && PlatformFileUtil::flushDirectoryToStorage( filePath.getParent().c_str() ) == false )
                             SW_LOG_WARNING_ID( "File.DirectoryFlushFailed", "Replaced %# but could not flush its folder entry to storage", filePath.c_str() );
                         FileUtil::recordFileCreated();
-                        PlatformFileUtil::recordFileWritten( filePath );
+                        PlatformFileUtil::recordFileWritten( filePath.str() );
                         return FileWriteResult::Written;
                     }
                     ThreadUtil::sleepForMilliseconds( 20 );
@@ -178,7 +175,7 @@ namespace sw
             }
 
             /** @brief `writeFile` · `writeFileDurable` 의 본체입니다 — 크기를 확인하고 원자적으로 씁니다. */
-            [[nodiscard]] static bool writeBytes( string_view fileName, const uint8* pData, const uint64 size, const FileSyncMode durability )
+            [[nodiscard]] static bool writeBytes( const AbsolutePath& fileName, const uint8* pData, const uint64 size, const FileSyncMode durability )
             {
                 if ( size == 0 || pData == nullptr )
                     return false;
@@ -187,7 +184,7 @@ namespace sw
                 {
                     if ( size > static_cast<uint64>( std::numeric_limits<size_t>::max() ) )
                     {
-                        SW_LOG_ERROR_ID( "File.WriteTooLarge", "Writing %# refused: %# bytes do not fit this target's address space", fileName, size );
+                        SW_LOG_ERROR_ID( "File.WriteTooLarge", "Writing %# refused: %# bytes do not fit this target's address space", fileName.str(), size );
                         return false;
                     }
                 }
@@ -201,16 +198,15 @@ namespace sw
              *          공유는 읽기 · 쓰기 · 지우기를 막지 않는다 - 읽는 동안에도 저장(`writeAtomically`)이 이 파일을 새 파일로 바꿔 끼울 수 있다.
              */
             template <typename BufferType>
-            [[nodiscard]] static OptionalFileRead readRange( string_view fileName, uint64 offset, uint64 maxReadCount, BufferType& outBuffer, bool bMissingIsError )
+            [[nodiscard]] static OptionalFileRead readRange( const AbsolutePath& fileName, uint64 offset, uint64 maxReadCount, BufferType& outBuffer, bool bMissingIsError )
             {
-                const string           filePath = FileUtil::normalizeSeparators( fileName );
-                const NativeFileHandle handle   = PlatformFileUtil::openNativeFileForRead( filePath.c_str() );
+                const NativeFileHandle handle = PlatformFileUtil::openNativeFileForRead( fileName.c_str() );
                 if ( handle == kInvalidNativeFileHandle )
                 {
                     // 열지 못한 뒤 없으면 "없음" 이다(그 사이 지워진 것도 없음이다). 있는데 못 열었으면(권한 · 잠금) 늘 오류다.
-                    if ( bMissingIsError == false && FileUtil::exists( FileUtil::toDiskPath( filePath ) ) == false )
+                    if ( bMissingIsError == false && FileUtil::exists( fileName ) == false )
                         return OptionalFileRead::Missing;
-                    SW_LOG_ERROR_ID( "File.NotFound", "File not found: %#", fileName );
+                    SW_LOG_ERROR_ID( "File.NotFound", "File not found: %#", fileName.str() );
                     return OptionalFileRead::Failed;
                 }
 
@@ -218,14 +214,14 @@ namespace sw
                 if ( fileSize < 0 )
                 {
                     PlatformFileUtil::closeNativeFile( handle );
-                    SW_LOG_ERROR_ID( "FileUtil.FailedQuerySize", "Failed to query size of: %#", fileName );
+                    SW_LOG_ERROR_ID( "FileUtil.FailedQuerySize", "Failed to query size of: %#", fileName.str() );
                     return OptionalFileRead::Failed;
                 }
                 const uint64 uFileSize = static_cast<uint64>( fileSize );
                 if ( offset > uFileSize )
                 {
                     PlatformFileUtil::closeNativeFile( handle );
-                    SW_LOG_ERROR_ID( "File.ReadPastEnd", "Read offset %# exceeds size %# of: %#", offset, uFileSize, fileName );
+                    SW_LOG_ERROR_ID( "File.ReadPastEnd", "Read offset %# exceeds size %# of: %#", offset, uFileSize, fileName.str() );
                     return OptionalFileRead::Failed;
                 }
 
@@ -239,19 +235,19 @@ namespace sw
                 if ( bRead == false || readBytes != static_cast<size_t>( dataSize ) )
                 {
                     outBuffer.clear();
-                    SW_LOG_ERROR_ID( "FileUtil.ShortReadBytes", "Short read (%# of %# bytes) from: %#", readBytes, dataSize, fileName );
+                    SW_LOG_ERROR_ID( "FileUtil.ShortReadBytes", "Short read (%# of %# bytes) from: %#", readBytes, dataSize, fileName.str() );
                     return OptionalFileRead::Failed;
                 }
                 return OptionalFileRead::Read;
             }
 
             /** @brief `readTextFile` · `readOptionalTextFile` 의 본체입니다 - 읽고, 연 횟수를 세고, UTF-8 BOM 을 뗀다. @p bMissingIsError 만 다르다. */
-            [[nodiscard]] static OptionalFileRead readText( string_view fileName, string& outText, bool bMissingIsError )
+            [[nodiscard]] static OptionalFileRead readText( const AbsolutePath& fileName, string& outText, bool bMissingIsError )
             {
                 const OptionalFileRead result = readRange( fileName, 0, std::numeric_limits<uint64>::max(), outText, bMissingIsError );
                 if ( result != OptionalFileRead::Read )
                     return result;
-                PlatformFileUtil::recordFileOpenedForRead( fileName, outText.size() ); // 디스크 흉내 지연은 위치 지정 읽기가 이미 냈다
+                PlatformFileUtil::recordFileOpenedForRead( fileName.str(), outText.size() ); // 디스크 흉내 지연은 위치 지정 읽기가 이미 냈다
 
                 // BOM 판정의 기준은 skipUTF8Bom 이다. 여기서 바이트를 따로 세면 한쪽만 고쳤을 때 읽기 경로와 질의 경로가 서로 다른 답을 준다.
                 const string_view withoutBom = FileUtil::skipUTF8Bom( outText );
@@ -329,17 +325,17 @@ namespace sw
             }
 
             /** @brief 폴더 하나와 그 아래를 만듭니다. 이 호출이 하나라도 만들었으면 true 입니다(이미 있거나 다른 스레드가 먼저 만들었으면 false). */
-            static bool createDirectoryTree( string_view path )
+            static bool createDirectoryTree( const AbsolutePath& path )
             {
-                if ( PlatformFileSystem::createDirectory( path ) )
+                if ( PlatformFileSystem::createDirectory( path.str() ) )
                     return true;
-                if ( FileUtil::isDirectory( FileUtil::toDiskPath( path ) ) )
+                if ( FileUtil::isDirectory( path ) )
                     return false;
-                const string parent = FileUtil::getDirectoryPart( path );
+                const AbsolutePath parent = path.getParent();
                 if ( parent.empty() || parent == path )
                     return false;
                 const bool bParentCreated = createDirectoryTree( parent );
-                return PlatformFileSystem::createDirectory( path ) || bParentCreated;
+                return PlatformFileSystem::createDirectory( path.str() ) || bParentCreated;
             }
 
             static bool collectChild( void* pContext, string_view name, const PlatformFileSystem::FileStatus& status )
@@ -681,6 +677,11 @@ namespace sw
     {
         if ( root.empty() )
             return {};
+        if ( AbsolutePath::isStrictAbsolute( root ) )
+        {
+            SW_LOG_ERROR_ID( "File.JoinDiskPath", "joinPath was given the disk path '%#' - join disk paths with AbsolutePath::join", root );
+            return {};
+        }
 
         const string_view r = FileUtilInternal::trimTrailingSeparatorView( root );
 
@@ -792,10 +793,10 @@ namespace sw
         return ComparableDiskPath{ std::move( text ) };
     }
 
-    bool FileUtil::ensureParentDirectoryExists( string_view filePath )
+    bool FileUtil::ensureParentDirectoryExists( const AbsolutePath& filePath )
     {
         // 구분자 정규화까지 `ensureDirectoryExists` 와 같게 한다.
-        return ensureDirectoryExists( getDirectoryPart( filePath ) );
+        return ensureDirectoryExists( filePath.getParent() );
     }
 
     AbsolutePath FileUtil::getExecutablePath()
@@ -807,11 +808,11 @@ namespace sw
         return toDiskPath( executablePath );
     }
 
-    bool FileUtil::getFileStamp( string_view fileName, FileStamp& outStamp )
+    bool FileUtil::getFileStamp( const AbsolutePath& fileName, FileStamp& outStamp )
     {
         // 크기와 시각을 한 번의 조회로 얻는다(`getFileSize` · `getFileWriteTime` 두 번이 아니라). 폴더는 false 다.
         PlatformFileSystem::FileStatus status;
-        if ( PlatformFileSystem::queryStatus( fileName, status ) == false || status._kind != PlatformFileSystem::FileKind::File )
+        if ( PlatformFileSystem::queryStatus( fileName.str(), status ) == false || status._kind != PlatformFileSystem::FileKind::File )
             return false;
         outStamp._sizeBytes = status._size;
         outStamp._writeTime = static_cast<uint64>( status._writeTicks );
@@ -848,14 +849,14 @@ namespace sw
         FileUtilInternal::s_writeCounters._createRule.store( rule, std::memory_order_release );
     }
 
-    bool FileUtil::isWriteAllowed( string_view path )
+    bool FileUtil::isWriteAllowed( const AbsolutePath& path )
     {
         if ( const WriteFilter filter = FileUtilInternal::s_writeCounters._writeFilterSlot.get(); filter != nullptr )
         {
-            const expected<void> evaluation = filter( path );
+            const expected<void> evaluation = filter( path.str() );
             if ( evaluation.has_value() == false )
             {
-                SW_LOG_ERROR_ID( "File.WriteRefused", "Changing %# was refused: %# (%#)", path, evaluation.error().message(), evaluation.error().detail() );
+                SW_LOG_ERROR_ID( "File.WriteRefused", "Changing %# was refused: %# (%#)", path.str(), evaluation.error().message(), evaluation.error().detail() );
                 return false;
             }
         }
@@ -870,22 +871,22 @@ namespace sw
         return FileUtilInternal::s_writeCounters._checkoutRule.exchange( rule, std::memory_order_acq_rel );
     }
 
-    optional<AbsolutePath> FileUtil::findNotOpenForEdit( string_view path )
+    optional<AbsolutePath> FileUtil::findNotOpenForEdit( const AbsolutePath& path )
     {
         const CheckoutRule             rule = FileUtilInternal::s_writeCounters._checkoutRule.load( std::memory_order_acquire );
         PlatformFileSystem::FileStatus status;
-        if ( rule == nullptr || path.empty() || PlatformFileSystem::queryStatus( path, status ) == false )
+        if ( rule == nullptr || path.empty() || PlatformFileSystem::queryStatus( path.str(), status ) == false )
             return nullopt; // 없는 자리는 지우거나 옮길 것이 없다
         if ( status._kind == PlatformFileSystem::FileKind::File )
-            return status._bReadOnly && rule( path ) ? optional<AbsolutePath>{ toDiskPath( path ) } : nullopt;
+            return status._bReadOnly && rule( path.str() ) ? optional<AbsolutePath>{ path } : nullopt;
         if ( status._kind != PlatformFileSystem::FileKind::Directory || status._bLink )
             return nullopt; // 폴더 링크는 링크만 지운다(가리키는 폴더는 그대로다)
         optional<AbsolutePath> found;
         (void)forEachDirectoryEntry( path, true, [&found, rule]( const DirectoryEntry& entry )
         {
-            if ( entry._bDirectory == false && isReadOnlyFile( entry._path ) && rule( entry._path ) )
+            if ( entry._bDirectory == false && isReadOnlyFile( entry.makePath() ) && rule( entry._path ) )
             {
-                found = toDiskPath( entry._path );
+                found = entry.makePath();
                 return false;
             }
             return true;
@@ -893,52 +894,51 @@ namespace sw
         return found;
     }
 
-    bool FileUtil::isCreateAllowed( string_view path )
+    bool FileUtil::isCreateAllowed( const AbsolutePath& path )
     {
         // 이름 규칙은 새로 생기는 자리만 본다 — 있는 파일을 덮어쓰거나 지우는 것은 이름을 만들지 않는다.
         const WriteFilter rule = FileUtilInternal::s_writeCounters._createRule.load( std::memory_order_acquire );
         if ( rule == nullptr || exists( path ) )
             return true;
-        const expected<void> evaluation = rule( path );
+        const expected<void> evaluation = rule( path.str() );
         if ( evaluation.has_value() )
             return true;
-        SW_LOG_ERROR_ID( "File.CreateRefused", "Creating %# was refused: %# (%#)", path, evaluation.error().message(), evaluation.error().detail() );
+        SW_LOG_ERROR_ID( "File.CreateRefused", "Creating %# was refused: %# (%#)", path.str(), evaluation.error().message(), evaluation.error().detail() );
         return false;
     }
 
-    bool FileUtil::writeFile( string_view fileName, const uint8* pData, const uint64 size )
+    bool FileUtil::writeFile( const AbsolutePath& fileName, const uint8* pData, const uint64 size )
     {
         return FileUtilInternal::writeBytes( fileName, pData, size, FileSyncMode::Fast );
     }
 
-    FileWriteResult FileUtil::tryWriteFile( string_view fileName, const uint8* pData, const uint64 size )
+    FileWriteResult FileUtil::tryWriteFile( const AbsolutePath& fileName, const uint8* pData, const uint64 size )
     {
         if ( size == 0 || pData == nullptr || size > static_cast<uint64>( std::numeric_limits<size_t>::max() ) )
             return FileWriteResult::WriteFailed;
         return FileUtilInternal::writeAtomicallyQuiet( fileName, pData, static_cast<size_t>( size ), FileSyncMode::Fast );
     }
 
-    bool FileUtil::writeFileDurable( string_view fileName, const uint8* pData, const uint64 size )
+    bool FileUtil::writeFileDurable( const AbsolutePath& fileName, const uint8* pData, const uint64 size )
     {
         return FileUtilInternal::writeBytes( fileName, pData, size, FileSyncMode::Durable );
     }
 
-    bool FileUtil::readFile( string_view fileName, vector<uint8>& outBytes, const uint64 offset, const uint64 maxReadCount )
+    bool FileUtil::readFile( const AbsolutePath& fileName, vector<uint8>& outBytes, const uint64 offset, const uint64 maxReadCount )
     {
         if ( FileUtilInternal::readRange( fileName, offset, maxReadCount, outBytes, true ) != OptionalFileRead::Read )
             return false;
-        PlatformFileUtil::recordFileOpenedForRead( fileName, outBytes.size() ); // 디스크 흉내 지연은 위치 지정 읽기가 이미 냈다
+        PlatformFileUtil::recordFileOpenedForRead( fileName.str(), outBytes.size() ); // 디스크 흉내 지연은 위치 지정 읽기가 이미 냈다
         return true;
     }
 
-    bool FileUtil::readStreamTextFile( string_view fileName, string& outText, const uint64 maxBytes )
+    bool FileUtil::readStreamTextFile( const AbsolutePath& fileName, string& outText, const uint64 maxBytes )
     {
         outText.clear();
-        const string filePath = normalizeSeparators( fileName );
-        FILE*        pFile    = PlatformFileUtil::openFile( filePath.c_str(), "rb" );
+        FILE* pFile = PlatformFileUtil::openFile( fileName.c_str(), "rb" );
         if ( pFile == nullptr )
         {
-            SW_LOG_ERROR_ID( "File.NotFound", "File not found: %#", fileName );
+            SW_LOG_ERROR_ID( "File.NotFound", "File not found: %#", fileName.str() );
             return false;
         }
         // 크기를 재지 않고 끝(EOF)까지 덩이로 읽는다 — 의사 파일은 크기를 0 으로 알린다.
@@ -958,19 +958,19 @@ namespace sw
         if ( bReadError || bWithinLimit == false )
         {
             outText.clear();
-            SW_LOG_ERROR_ID( "FileUtil.FailedReadEnd", "Failed to read %# to the end (%#)", fileName, bReadError ? "read error" : "larger than the limit" );
+            SW_LOG_ERROR_ID( "FileUtil.FailedReadEnd", "Failed to read %# to the end (%#)", fileName.str(), bReadError ? "read error" : "larger than the limit" );
             return false;
         }
-        PlatformFileUtil::recordFileOpenedForRead( fileName, outText.size() );
+        PlatformFileUtil::recordFileOpenedForRead( fileName.str(), outText.size() );
         return true;
     }
 
-    bool FileUtil::readTextFile( string_view fileName, string& outText )
+    bool FileUtil::readTextFile( const AbsolutePath& fileName, string& outText )
     {
         return FileUtilInternal::readText( fileName, outText, true ) == OptionalFileRead::Read;
     }
 
-    OptionalFileRead FileUtil::readOptionalTextFile( string_view fileName, string& outText )
+    OptionalFileRead FileUtil::readOptionalTextFile( const AbsolutePath& fileName, string& outText )
     {
         return FileUtilInternal::readText( fileName, outText, false );
     }
@@ -985,27 +985,26 @@ namespace sw
         return bWritten;
     }
 
-    bool FileUtil::writeTextFile( string_view fileName, string_view text )
+    bool FileUtil::writeTextFile( const AbsolutePath& fileName, string_view text )
     {
         return FileUtilInternal::writeAtomically( fileName, text.data(), text.size(), FileSyncMode::Fast );
     }
 
-    bool FileUtil::writeTextFileDurable( string_view fileName, string_view text )
+    bool FileUtil::writeTextFileDurable( const AbsolutePath& fileName, string_view text )
     {
         return FileUtilInternal::writeAtomically( fileName, text.data(), text.size(), FileSyncMode::Durable );
     }
 
-    bool FileUtil::appendTextFile( string_view fileName, string_view text )
+    bool FileUtil::appendTextFile( const AbsolutePath& fileName, string_view text )
     {
-        const string filePath = normalizeSeparators( fileName );
-        if ( isWriteAllowed( filePath ) == false )
+        if ( isWriteAllowed( fileName ) == false )
             return false;
-        FILE* pFile = PlatformFileUtil::openFile( filePath.c_str(), "ab" );
+        FILE* pFile = PlatformFileUtil::openFile( fileName.c_str(), "ab" );
         if ( pFile == nullptr )
             return false;
         const size_t written = text.empty() ? 0 : std::fwrite( text.data(), 1, text.size(), pFile );
         const bool   bClosed = std::fclose( pFile ) == 0;
-        PlatformFileUtil::recordFileWritten( filePath ); // 끊긴 덧붙이기도 내용을 바꿨다
+        PlatformFileUtil::recordFileWritten( fileName.str() ); // 끊긴 덧붙이기도 내용을 바꿨다
         if ( written != text.size() || bClosed == false )
             return false;
         recordFileCreated();
@@ -1029,41 +1028,6 @@ namespace sw
             PlatformFileUtil::recordFileWritten( path );
         }
         return bMoved;
-    }
-
-    bool FileUtil::isWriteAllowed( const AbsolutePath& path )
-    {
-        return isWriteAllowed( path.str() );
-    }
-
-    bool FileUtil::isCreateAllowed( const AbsolutePath& path )
-    {
-        return isCreateAllowed( path.str() );
-    }
-
-    optional<AbsolutePath> FileUtil::findNotOpenForEdit( const AbsolutePath& path )
-    {
-        return findNotOpenForEdit( path.str() );
-    }
-
-    AbsolutePath FileUtil::findPathIgnoringCase( const AbsolutePath& root, string_view lowerRelative )
-    {
-        return findPathIgnoringCase( root.str(), lowerRelative );
-    }
-
-    AbsolutePath FileUtil::makePathIgnoringCase( const AbsolutePath& root, string_view relative )
-    {
-        return makePathIgnoringCase( root.str(), relative );
-    }
-
-    bool FileUtil::makeCanonicalPath( const AbsolutePath& path, string& outResult )
-    {
-        return makeCanonicalPath( path.str(), outResult );
-    }
-
-    AbsolutePath FileUtil::reserveUniquePath( const AbsolutePath& basePath, string_view extension, bool bDirectory, uint32 maxAttempt, string_view numberSeparator )
-    {
-        return reserveUniquePath( basePath.str(), extension, bDirectory, maxAttempt, numberSeparator );
     }
 
     string_view FileUtil::skipUTF8Bom( string_view text )
@@ -1090,10 +1054,10 @@ namespace sw
         }
     }
 
-    AbsolutePath FileUtil::findPathIgnoringCase( string_view root, string_view lowerRelative )
+    AbsolutePath FileUtil::findPathIgnoringCase( const AbsolutePath& root, string_view lowerRelative )
     {
-        string current = trimTrailingSlashes( normalizeSeparators( root ) );
-        size_t start   = 0;
+        AbsolutePath current = root.join( {} );
+        size_t       start   = 0;
         while ( start < lowerRelative.size() )
         {
             size_t end = lowerRelative.find( '/', start );
@@ -1106,16 +1070,16 @@ namespace sw
             string match;
             if ( FileUtilInternal::findEntryIgnoringCase( current, component, match ) == false )
                 return {};
-            current = joinPath( current, match );
+            current = current.join( match );
         }
-        return toDiskPath( current );
+        return current;
     }
 
-    AbsolutePath FileUtil::makePathIgnoringCase( string_view root, string_view relative )
+    AbsolutePath FileUtil::makePathIgnoringCase( const AbsolutePath& root, string_view relative )
     {
-        string current  = trimTrailingSlashes( normalizeSeparators( root ) );
-        bool   bPresent = true; // 앞 성분까지 디스크에 있다 — 없는 성분 아래는 있을 수 없어 더 훑지 않는다
-        size_t start    = 0;
+        AbsolutePath current  = root.join( {} );
+        bool         bPresent = true; // 앞 성분까지 디스크에 있다 — 없는 성분 아래는 있을 수 없어 더 훑지 않는다
+        size_t       start    = 0;
         while ( start < relative.size() )
         {
             size_t end = relative.find_first_of( "/\\", start );
@@ -1128,16 +1092,16 @@ namespace sw
             string match;
             if ( bPresent && FileUtilInternal::findEntryIgnoringCase( current, component, match ) )
             {
-                current = joinPath( current, match );
+                current = current.join( match );
                 continue;
             }
             bPresent = false;
-            current  = joinPath( current, component );
+            current  = current.join( component );
         }
-        return toDiskPath( current );
+        return current;
     }
 
-    bool FileUtil::collectFiles( string_view directory, string_view filterExtension, vector<AbsolutePath>& outListFilePath, const bool bRecursive, const StopToken& stopToken )
+    bool FileUtil::collectFiles( const AbsolutePath& directory, string_view filterExtension, vector<AbsolutePath>& outListFilePath, const bool bRecursive, const StopToken& stopToken )
     {
         if ( isDirectory( directory ) == false )
             return false;
@@ -1154,11 +1118,11 @@ namespace sw
         } );
         const bool bStopped   = stopToken.isStopRequested();
         if ( bWalked == false && bStopped == false )
-            SW_LOG_WARNING_ID( "FileUtil.CollectingFilesUnderStopped", "Collecting files under '%#' stopped partway - the list is incomplete", directory );
+            SW_LOG_WARNING_ID( "FileUtil.CollectingFilesUnderStopped", "Collecting files under '%#' stopped partway - the list is incomplete", directory.str() );
         return bWalked;
     }
 
-    bool FileUtil::collectFolders( string_view directory, vector<AbsolutePath>& outListFolder, const bool bRecursive )
+    bool FileUtil::collectFolders( const AbsolutePath& directory, vector<AbsolutePath>& outListFolder, const bool bRecursive )
     {
         if ( isDirectory( directory ) == false )
             return false;
@@ -1170,7 +1134,7 @@ namespace sw
             return true;
         } );
         if ( bWalked == false )
-            SW_LOG_WARNING_ID( "FileUtil.CollectingFoldersUnderStopped", "Collecting folders under '%#' stopped partway - the list is incomplete", directory );
+            SW_LOG_WARNING_ID( "FileUtil.CollectingFoldersUnderStopped", "Collecting folders under '%#' stopped partway - the list is incomplete", directory.str() );
         return bWalked;
     }
 
@@ -1239,195 +1203,23 @@ namespace sw
         return AbsolutePath{ string{} };
     }
 
-    bool FileUtil::ensureParentDirectoryExists( const AbsolutePath& filePath )
-    {
-        return ensureParentDirectoryExists( filePath.str() );
-    }
-
-    bool FileUtil::ensureDirectoryExists( const AbsolutePath& directoryPath )
-    {
-        return ensureDirectoryExists( directoryPath.str() );
-    }
-
-    bool FileUtil::exists( const AbsolutePath& path )
-    {
-        return exists( path.str() );
-    }
-
-    bool FileUtil::isDirectory( const AbsolutePath& path )
-    {
-        return isDirectory( path.str() );
-    }
-
-    bool FileUtil::isRegularFile( const AbsolutePath& path )
-    {
-        return isRegularFile( path.str() );
-    }
-
-    bool FileUtil::isReadOnlyFile( const AbsolutePath& fileName )
-    {
-        return isReadOnlyFile( fileName.str() );
-    }
-
-    bool FileUtil::setWritable( const AbsolutePath& path, bool bWritable )
-    {
-        return setWritable( path.str(), bWritable );
-    }
-
-    bool FileUtil::tryGetFileTimestamp( const AbsolutePath& fileName, uint64& outSeconds )
-    {
-        return tryGetFileTimestamp( fileName.str(), outSeconds );
-    }
-
-    bool FileUtil::getFileWriteTime( const AbsolutePath& path, int64& outTicks )
-    {
-        return getFileWriteTime( path.str(), outTicks );
-    }
-
-    bool FileUtil::setFileWriteTime( const AbsolutePath& path, int64 ticks )
-    {
-        return setFileWriteTime( path.str(), ticks );
-    }
-
-    bool FileUtil::tryGetFileSize( const AbsolutePath& fileName, uint64& outSize )
-    {
-        return tryGetFileSize( fileName.str(), outSize );
-    }
-
-    bool FileUtil::getFileStamp( const AbsolutePath& fileName, FileStamp& outStamp )
-    {
-        return getFileStamp( fileName.str(), outStamp );
-    }
-
-    bool FileUtil::copyFile( const AbsolutePath& source, const AbsolutePath& destination )
-    {
-        return copyFile( source.str(), destination.str() );
-    }
-
-    bool FileUtil::removeFile( const AbsolutePath& path )
-    {
-        return removeFile( path.str() );
-    }
-
-    bool FileUtil::replaceFile( const AbsolutePath& tempPath, const AbsolutePath& targetPath )
-    {
-        return replaceFile( tempPath.str(), targetPath.str() );
-    }
-
-    bool FileUtil::tryRemoveFile( const AbsolutePath& path )
-    {
-        return tryRemoveFile( path.str() );
-    }
-
-    bool FileUtil::removeDirectory( const AbsolutePath& path )
-    {
-        return removeDirectory( path.str() );
-    }
-
-    bool FileUtil::renamePath( const AbsolutePath& from, const AbsolutePath& to )
-    {
-        return renamePath( from.str(), to.str() );
-    }
-
-    bool FileUtil::writeFile( const AbsolutePath& fileName, const uint8* pData, uint64 size )
-    {
-        return writeFile( fileName.str(), pData, size );
-    }
-
-    FileWriteResult FileUtil::tryWriteFile( const AbsolutePath& fileName, const uint8* pData, uint64 size )
-    {
-        return tryWriteFile( fileName.str(), pData, size );
-    }
-
-    bool FileUtil::writeFileDurable( const AbsolutePath& fileName, const uint8* pData, uint64 size )
-    {
-        return writeFileDurable( fileName.str(), pData, size );
-    }
-
-    bool FileUtil::readFile( const AbsolutePath& fileName, vector<uint8>& outBytes, uint64 offset, uint64 maxReadCount )
-    {
-        return readFile( fileName.str(), outBytes, offset, maxReadCount );
-    }
-
-    bool FileUtil::readTextFile( const AbsolutePath& fileName, string& outText )
-    {
-        return readTextFile( fileName.str(), outText );
-    }
-
-    OptionalFileRead FileUtil::readOptionalTextFile( const AbsolutePath& fileName, string& outText )
-    {
-        return readOptionalTextFile( fileName.str(), outText );
-    }
-
-    bool FileUtil::readStreamTextFile( const AbsolutePath& fileName, string& outText, uint64 maxBytes )
-    {
-        return readStreamTextFile( fileName.str(), outText, maxBytes );
-    }
-
-    bool FileUtil::writeTextFile( const AbsolutePath& fileName, string_view text )
-    {
-        return writeTextFile( fileName.str(), text );
-    }
-
-    bool FileUtil::writeTextFileDurable( const AbsolutePath& fileName, string_view text )
-    {
-        return writeTextFileDurable( fileName.str(), text );
-    }
-
-    bool FileUtil::appendTextFile( const AbsolutePath& fileName, string_view text )
-    {
-        return appendTextFile( fileName.str(), text );
-    }
-
-    bool FileUtil::forEachDirectoryEntry( const AbsolutePath& directory, bool bRecursive, DirectoryEntryVisitFn visit, void* pContext )
-    {
-        return forEachDirectoryEntry( directory.str(), bRecursive, visit, pContext );
-    }
-
-    bool FileUtil::collectFiles( const AbsolutePath& directory, string_view filterExtension, vector<AbsolutePath>& outListFilePath, bool bRecursive, const StopToken& stopToken )
-    {
-        return collectFiles( directory.str(), filterExtension, outListFilePath, bRecursive, stopToken );
-    }
-
-    bool FileUtil::collectFolders( const AbsolutePath& directory, vector<AbsolutePath>& outListFolder, bool bRecursive )
-    {
-        return collectFolders( directory.str(), outListFolder, bRecursive );
-    }
-
-    bool FileUtil::collectFiles( const AbsolutePath& directory, string_view filterExtension, vector<string>& outListFilePath, bool bRecursive, const StopToken& stopToken )
-    {
-        vector<AbsolutePath> listPath;
-        const bool           bWalked = collectFiles( directory, filterExtension, listPath, bRecursive, stopToken );
-        for ( const AbsolutePath& path : listPath )
-            outListFilePath.push_back( path.str() );
-        return bWalked;
-    }
-
-    bool FileUtil::collectFolders( const AbsolutePath& directory, vector<string>& outListFolder, bool bRecursive )
-    {
-        vector<AbsolutePath> listPath;
-        const bool           bWalked = collectFolders( directory, listPath, bRecursive );
-        for ( const AbsolutePath& path : listPath )
-            outListFolder.push_back( path.str() );
-        return bWalked;
-    }
-
     bool FileUtil::makeAbsolutePath( string_view path, string& outResult )
     {
         return PlatformFileSystem::makeAbsolute( path, outResult );
     }
 
-    bool FileUtil::makeCanonicalPath( string_view path, string& outResult )
+    optional<AbsolutePath> FileUtil::makeCanonicalPath( const AbsolutePath& path )
     {
-        return PlatformFileSystem::makeCanonical( path, outResult );
+        string canonical;
+        return PlatformFileSystem::makeCanonical( path.str(), canonical ) ? AbsolutePath::tryMake( canonical ) : nullopt;
     }
 
-    bool FileUtil::ensureDirectoryExists( string_view directoryPath )
+    bool FileUtil::ensureDirectoryExists( const AbsolutePath& directoryPath )
     {
         if ( directoryPath.empty() || isDirectory( directoryPath ) )
             return true;
 
-        const string directory = trimTrailingSlashes( normalizeSeparators( directoryPath ) );
+        const AbsolutePath directory = directoryPath.join( {} );
         // 새 폴더도 새 자리다 — 이름 규칙(리소스 트리는 소문자)을 지난다. 자동화 쓰기 게이트는 보지 않는다(이미 있는 폴더에 흔히 부르는 입구다 — `bindWriteFilter`).
         if ( isCreateAllowed( directory ) == false )
             return false;
@@ -1437,39 +1229,39 @@ namespace sw
         // 같은 이름의 파일이 막고 있으면 여전히 실패다.
         if ( isDirectory( directory ) == false )
         {
-            SW_LOG_ERROR_ID( "File.CreateDirectoryFailed", "Could not create directory '%#': %#", directoryPath, PlatformFileSystem::describeLastError().c_str() );
+            SW_LOG_ERROR_ID( "File.CreateDirectoryFailed", "Could not create directory '%#': %#", directoryPath.str(), PlatformFileSystem::describeLastError().c_str() );
             return false;
         }
         return true;
     }
 
-    AbsolutePath FileUtil::reserveUniquePath( string_view basePath, string_view extension, bool bDirectory, uint32 maxAttempt, string_view numberSeparator )
+    AbsolutePath FileUtil::reserveUniquePath( const AbsolutePath& basePath, string_view extension, bool bDirectory, uint32 maxAttempt, string_view numberSeparator )
     {
         if ( basePath.empty() || ensureParentDirectoryExists( basePath ) == false )
             return {};
         for ( uint32 attempt = 1; attempt <= maxAttempt; ++attempt )
         {
-            string path{ basePath };
+            AbsolutePath path = basePath;
             if ( attempt > 1 )
             {
                 utf8 arrNumber[constant::buffer::kMax64];
                 formatstring( arrNumber, constant::buffer::kMax64, "%#%#", numberSeparator, attempt );
-                path.append( arrNumber );
+                path = path.appendSuffix( arrNumber );
             }
-            path.append( extension );
+            path = path.appendSuffix( extension );
             if ( isWriteAllowed( path ) == false )
                 return {};
             if ( bDirectory )
             {
                 // createDirectory 는 이 호출이 만들었을 때만 true 다 - 이미 있으면(다른 프로세스가 먼저 잡았으면) 다음 번호로.
-                if ( PlatformFileSystem::createDirectory( path ) )
+                if ( PlatformFileSystem::createDirectory( path.str() ) )
                 {
                     recordFileCreated();
-                    return toDiskPath( path );
+                    return path;
                 }
                 if ( exists( path ) == false )
                 {
-                    SW_LOG_ERROR_ID( "File.CreateDirectoryFailed", "Could not create directory '%#': %#", path, PlatformFileSystem::describeLastError().c_str() );
+                    SW_LOG_ERROR_ID( "File.CreateDirectoryFailed", "Could not create directory '%#': %#", path.str(), PlatformFileSystem::describeLastError().c_str() );
                     return {};
                 }
                 continue;
@@ -1480,48 +1272,48 @@ namespace sw
             {
                 std::fclose( pFile );
                 recordFileCreated();
-                PlatformFileUtil::recordFileWritten( path );
-                return toDiskPath( path );
+                PlatformFileUtil::recordFileWritten( path.str() );
+                return path;
             }
             if ( exists( path ) == false )
             {
-                SW_LOG_ERROR_ID( "File.CreateFailed", "Could not create file '%#'", path );
+                SW_LOG_ERROR_ID( "File.CreateFailed", "Could not create file '%#'", path.str() );
                 return {};
             }
         }
-        SW_LOG_ERROR_ID( "File.CreateFailed", "Every name from '%#%#' to suffix %#%# is taken", basePath, extension, numberSeparator, maxAttempt );
+        SW_LOG_ERROR_ID( "File.CreateFailed", "Every name from '%#%#' to suffix %#%# is taken", basePath.str(), extension, numberSeparator, maxAttempt );
         return {};
     }
 
-    bool FileUtil::exists( string_view path )
+    bool FileUtil::exists( const AbsolutePath& path )
     {
         PlatformFileSystem::FileStatus status;
-        return PlatformFileSystem::queryStatus( path, status );
+        return PlatformFileSystem::queryStatus( path.str(), status );
     }
 
-    bool FileUtil::isDirectory( string_view path )
+    bool FileUtil::isDirectory( const AbsolutePath& path )
     {
         PlatformFileSystem::FileStatus status;
-        return PlatformFileSystem::queryStatus( path, status ) && status._kind == PlatformFileSystem::FileKind::Directory;
+        return PlatformFileSystem::queryStatus( path.str(), status ) && status._kind == PlatformFileSystem::FileKind::Directory;
     }
 
-    bool FileUtil::isRegularFile( string_view path )
+    bool FileUtil::isRegularFile( const AbsolutePath& path )
     {
         PlatformFileSystem::FileStatus status;
-        return PlatformFileSystem::queryStatus( path, status ) && status._kind == PlatformFileSystem::FileKind::File;
+        return PlatformFileSystem::queryStatus( path.str(), status ) && status._kind == PlatformFileSystem::FileKind::File;
     }
 
-    bool FileUtil::isReadOnlyFile( string_view fileName )
+    bool FileUtil::isReadOnlyFile( const AbsolutePath& fileName )
     {
         PlatformFileSystem::FileStatus status;
-        return PlatformFileSystem::queryStatus( fileName, status ) && status._kind == PlatformFileSystem::FileKind::File && status._bReadOnly;
+        return PlatformFileSystem::queryStatus( fileName.str(), status ) && status._kind == PlatformFileSystem::FileKind::File && status._bReadOnly;
     }
 
-    bool FileUtil::setWritable( string_view path, const bool bWritable )
+    bool FileUtil::setWritable( const AbsolutePath& path, const bool bWritable )
     {
-        if ( PlatformFileSystem::setWritable( path, bWritable ) == false )
+        if ( PlatformFileSystem::setWritable( path.str(), bWritable ) == false )
         {
-            SW_LOG_WARNING_ID( "FileUtil.CouldNotMake", "Could not make '%#' %#: %#", path, bWritable ? "writable" : "read-only", PlatformFileSystem::describeLastError().c_str() );
+            SW_LOG_WARNING_ID( "FileUtil.CouldNotMake", "Could not make '%#' %#: %#", path.str(), bWritable ? "writable" : "read-only", PlatformFileSystem::describeLastError().c_str() );
             return false;
         }
         return true;
@@ -1548,11 +1340,11 @@ namespace sw
         return true;
     }
 
-    bool FileUtil::tryGetFileTimestamp( string_view fileName, uint64& outSeconds )
+    bool FileUtil::tryGetFileTimestamp( const AbsolutePath& fileName, uint64& outSeconds )
     {
         // 있는지 따로 묻지 않는다 - 묻고 나서 읽는 사이에 지워지면(파일 감시 · 핫 리로드) 어긋난다. 한 번 묻는다.
         PlatformFileSystem::FileStatus status;
-        if ( PlatformFileSystem::queryStatus( fileName, status ) == false )
+        if ( PlatformFileSystem::queryStatus( fileName.str(), status ) == false )
             return false;
         outSeconds = static_cast<uint64>( status._writeTicks / kFileTimeTicksPerSecond );
         return true;
@@ -1563,24 +1355,24 @@ namespace sw
         return static_cast<uint64>( getCurrentFileWriteTime() / kFileTimeTicksPerSecond );
     }
 
-    bool FileUtil::getFileWriteTime( string_view path, int64& outTicks )
+    bool FileUtil::getFileWriteTime( const AbsolutePath& path, int64& outTicks )
     {
         outTicks = 0;
         PlatformFileSystem::FileStatus status;
-        if ( PlatformFileSystem::queryStatus( path, status ) == false )
+        if ( PlatformFileSystem::queryStatus( path.str(), status ) == false )
             return false;
         outTicks = status._writeTicks;
         return true;
     }
 
-    bool FileUtil::setFileWriteTime( string_view path, const int64 ticks )
+    bool FileUtil::setFileWriteTime( const AbsolutePath& path, const int64 ticks )
     {
-        if ( PlatformFileSystem::setWriteTicks( path, ticks ) == false )
+        if ( PlatformFileSystem::setWriteTicks( path.str(), ticks ) == false )
         {
-            SW_LOG_WARNING_ID( "FileUtil.CouldNotSetWrite", "Could not set the write time of '%#': %#", path, PlatformFileSystem::describeLastError().c_str() );
+            SW_LOG_WARNING_ID( "FileUtil.CouldNotSetWrite", "Could not set the write time of '%#': %#", path.str(), PlatformFileSystem::describeLastError().c_str() );
             return false;
         }
-        PlatformFileUtil::recordFileWritten( path ); // 내용은 그대로지만 도장이 바뀌었다 — 옛 시각으로 되돌리면 다른 내용의 옛 도장과 겹칠 수 있다
+        PlatformFileUtil::recordFileWritten( path.str() ); // 내용은 그대로지만 도장이 바뀌었다 — 옛 시각으로 되돌리면 다른 내용의 옛 도장과 겹칠 수 있다
         return true;
     }
 
@@ -1589,27 +1381,27 @@ namespace sw
         return PlatformFileSystem::getNowTicks();
     }
 
-    bool FileUtil::tryGetFileSize( string_view fileName, uint64& outSize )
+    bool FileUtil::tryGetFileSize( const AbsolutePath& fileName, uint64& outSize )
     {
         // 크기만 알면 되므로 파일을 열지 않는다.
         PlatformFileSystem::FileStatus status;
-        if ( PlatformFileSystem::queryStatus( fileName, status ) == false || status._kind != PlatformFileSystem::FileKind::File )
+        if ( PlatformFileSystem::queryStatus( fileName.str(), status ) == false || status._kind != PlatformFileSystem::FileKind::File )
             return false;
         outSize = status._size;
         return true;
     }
 
-    bool FileUtil::copyFile( string_view source, string_view destination )
+    bool FileUtil::copyFile( const AbsolutePath& source, const AbsolutePath& destination )
     {
         if ( isWriteAllowed( destination ) == false )
             return false;
-        if ( PlatformFileSystem::copyFileOverwrite( source, destination ) == false )
+        if ( PlatformFileSystem::copyFileOverwrite( source.str(), destination.str() ) == false )
         {
-            SW_LOG_ERROR_ID( "FileUtil.CopyFileFailed", "copyFile '%#' -> '%#' failed: %#", source, destination, PlatformFileSystem::describeLastError().c_str() );
+            SW_LOG_ERROR_ID( "FileUtil.CopyFileFailed", "copyFile '%#' -> '%#' failed: %#", source.str(), destination.str(), PlatformFileSystem::describeLastError().c_str() );
             return false;
         }
-        recordFileCreated();                                // 복사는 대상 파일을 만든다(없는 파일을 기억한 캐시가 버린다)
-        PlatformFileUtil::recordFileWritten( destination ); // 복사는 원본의 쓰기 시각을 옮길 수 있다 — 도장만으로는 대상이 바뀐 것을 모른다
+        recordFileCreated();                                      // 복사는 대상 파일을 만든다(없는 파일을 기억한 캐시가 버린다)
+        PlatformFileUtil::recordFileWritten( destination.str() ); // 복사는 원본의 쓰기 시각을 옮길 수 있다 — 도장만으로는 대상이 바뀐 것을 모른다
         return true;
     }
 
@@ -1625,17 +1417,16 @@ namespace sw
         return targetPath.appendSuffix( tempPathBuilder.view() );
     }
 
-    bool FileUtil::replaceFile( string_view tempPath, string_view targetPath )
+    bool FileUtil::replaceFile( const AbsolutePath& tempPath, const AbsolutePath& targetPath )
     {
-        string filePath;
-        string unusedTempPath;
-        if ( FileUtilInternal::beginAtomicWrite( targetPath, filePath, unusedTempPath ) == false )
+        AbsolutePath unusedTempPath;
+        if ( FileUtilInternal::beginAtomicWrite( targetPath, unusedTempPath ) == false )
         {
             (void)tryRemoveFile( tempPath );
             return false;
         }
-        const FileWriteResult result = FileUtilInternal::replaceAtomicallyQuiet( FileUtil::normalizeSeparators( tempPath ), filePath, FileSyncMode::Fast );
-        FileUtilInternal::logWriteResult( result, filePath );
+        const FileWriteResult result = FileUtilInternal::replaceAtomicallyQuiet( tempPath, targetPath, FileSyncMode::Fast );
+        FileUtilInternal::logWriteResult( result, targetPath );
         return result == FileWriteResult::Written;
     }
 
@@ -1656,50 +1447,50 @@ namespace sw
         return Process::isProcessAlive( static_cast<int32>( processID ) ) == false;
     }
 
-    bool FileUtil::removeFile( string_view path )
+    bool FileUtil::removeFile( const AbsolutePath& path )
     {
         if ( path.empty() )
             return true;
         if ( exists( path ) && isWriteAllowed( path ) == false ) // 없는 파일을 지우는 정리는 바꾸는 것이 아니다
             return false;
-        if ( PlatformFileSystem::removeEntry( path ) )
+        if ( PlatformFileSystem::removeEntry( path.str() ) )
         {
             recordFileRemoved(); // 지웠다(있는 파일을 기억한 캐시가 버린다)
-            PlatformFileUtil::recordFileWritten( path );
+            PlatformFileUtil::recordFileWritten( path.str() );
         }
         if ( exists( path ) == false )
             return true;
-        SW_LOG_WARNING_ID( "FileUtil.CouldNotRemove", "Could not remove '%#': %#", path, PlatformFileSystem::describeLastError().c_str() );
+        SW_LOG_WARNING_ID( "FileUtil.CouldNotRemove", "Could not remove '%#': %#", path.str(), PlatformFileSystem::describeLastError().c_str() );
         return false;
     }
 
-    bool FileUtil::tryRemoveFile( string_view path )
+    bool FileUtil::tryRemoveFile( const AbsolutePath& path )
     {
         if ( path.empty() )
             return true;
         if ( exists( path ) && isWriteAllowed( path ) == false )
             return false;
-        if ( PlatformFileSystem::removeEntry( path ) )
+        if ( PlatformFileSystem::removeEntry( path.str() ) )
         {
             recordFileRemoved();
-            PlatformFileUtil::recordFileWritten( path );
+            PlatformFileUtil::recordFileWritten( path.str() );
         }
         return exists( path ) == false;
     }
 
-    bool FileUtil::renamePath( string_view from, string_view to )
+    bool FileUtil::renamePath( const AbsolutePath& from, const AbsolutePath& to )
     {
         if ( from.empty() || to.empty() || exists( to ) || isWriteAllowed( from ) == false || isWriteAllowed( to ) == false )
             return false;
-        if ( PlatformFileUtil::replaceFile( string( from ).c_str(), string( to ).c_str() ) == false ) // 폴더는 대상이 없을 때 옮겨진다(MoveFileExW · rename)
+        if ( PlatformFileUtil::replaceFile( from.c_str(), to.c_str() ) == false ) // 폴더는 대상이 없을 때 옮겨진다(MoveFileExW · rename)
             return false;
         recordFileRemoved(); // 옛 경로는 낡았다
-        PlatformFileUtil::recordFileWritten( from );
-        PlatformFileUtil::recordFileWritten( to ); // 이름 바꾸기는 쓰기 시각을 그대로 옮긴다 — 도장만으로는 대상이 바뀐 것을 모른다
+        PlatformFileUtil::recordFileWritten( from.str() );
+        PlatformFileUtil::recordFileWritten( to.str() ); // 이름 바꾸기는 쓰기 시각을 그대로 옮긴다 — 도장만으로는 대상이 바뀐 것을 모른다
         return true;
     }
 
-    bool FileUtil::removeDirectory( string_view path )
+    bool FileUtil::removeDirectory( const AbsolutePath& path )
     {
         if ( path.empty() )
             return true;
@@ -1707,9 +1498,9 @@ namespace sw
             return false;
 
         PlatformFileSystem::FileStatus status;
-        if ( PlatformFileSystem::queryStatus( path, status ) )
+        if ( PlatformFileSystem::queryStatus( path.str(), status ) )
         {
-            const string directory      = trimTrailingSlashes( normalizeSeparators( path ) );
+            const string directory      = trimTrailingSlashes( path.str() );
             const bool   bRealDirectory = status._kind == PlatformFileSystem::FileKind::Directory && status._bLink == false;
             const size_t removedCount   = bRealDirectory ? FileUtilInternal::removeTree( directory ) : ( PlatformFileSystem::removeEntry( directory ) ? 1 : 0 );
             if ( removedCount > 0 )
@@ -1720,7 +1511,7 @@ namespace sw
         }
         if ( isDirectory( path ) == false )
             return true;
-        SW_LOG_WARNING_ID( "FileUtil.CouldNotRemoveDirectory", "Could not remove directory '%#': %#", path, PlatformFileSystem::describeLastError().c_str() );
+        SW_LOG_WARNING_ID( "FileUtil.CouldNotRemoveDirectory", "Could not remove directory '%#': %#", path.str(), PlatformFileSystem::describeLastError().c_str() );
         return false;
     }
 
@@ -1732,13 +1523,13 @@ namespace sw
         return toDiskPath( trimTrailingSlashes( temp ) ); // OS 가 준 끝 구분자는 여기서 한 규칙으로 뗀다(드라이브 루트는 남긴다)
     }
 
-    bool FileUtil::forEachDirectoryEntry( string_view directory, const bool bRecursive, const DirectoryEntryVisitFn visit, void* pContext )
+    bool FileUtil::forEachDirectoryEntry( const AbsolutePath& directory, const bool bRecursive, const DirectoryEntryVisitFn visit, void* pContext )
     {
         if ( visit == nullptr || directory.empty() )
             return false;
 
         FileUtilInternal::WalkContext walk;
-        walk._directory  = trimTrailingSlashes( normalizeSeparators( directory ) );
+        walk._directory  = trimTrailingSlashes( directory.str() );
         walk._bRecursive = bRecursive;
         walk._visit      = visit;
         walk._pContext   = pContext;
@@ -1764,12 +1555,13 @@ namespace sw
     expected<void> AtomicFileWriter::open( const AbsolutePath& filePath )
     {
         if ( _pFile != nullptr )
-            return unexpected( Error{ ErrorKind::InvalidArgument, "atomic file writer is already open", _filePath } );
-        if ( FileUtilInternal::beginAtomicWrite( filePath.str(), _filePath, _tempPath ) == false )
+            return unexpected( Error{ ErrorKind::InvalidArgument, "atomic file writer is already open", _filePath.str() } );
+        if ( FileUtilInternal::beginAtomicWrite( filePath, _tempPath ) == false )
             return unexpected( Error{ ErrorKind::ExternalFailure, "target cannot be written", filePath.str() } );
-        _pFile = PlatformFileUtil::openFile( _tempPath.c_str(), "wb" );
+        _filePath = filePath;
+        _pFile    = PlatformFileUtil::openFile( _tempPath.c_str(), "wb" );
         if ( _pFile == nullptr )
-            return unexpected( Error{ ErrorKind::ExternalFailure, "temporary file cannot be opened", _tempPath } );
+            return unexpected( Error{ ErrorKind::ExternalFailure, "temporary file cannot be opened", _tempPath.str() } );
         _size = 0;
         return {};
     }
@@ -1780,7 +1572,7 @@ namespace sw
             return unexpected( Error{ ErrorKind::InvalidArgument, "atomic file writer is not open" } );
         if ( size > 0 && std::fwrite( pData, 1, size, _pFile ) != size )
         {
-            const string tempPath = _tempPath;
+            const string tempPath = _tempPath.str();
             discard();
             return unexpected( Error{ ErrorKind::ExternalFailure, "write failed (disk full?)", tempPath } );
         }
@@ -1806,7 +1598,7 @@ namespace sw
         const bool  bWritten = PlatformFileUtil::seekTo( _pFile, static_cast<int64>( _size + size - 1 ), SEEK_SET ) && std::fwrite( &zero, 1, 1, _pFile ) == 1;
         if ( bWritten == false )
         {
-            const string tempPath = _tempPath;
+            const string tempPath = _tempPath.str();
             discard();
             return unexpected( Error{ ErrorKind::ExternalFailure, "seek or write failed (disk full?)", tempPath } );
         }
@@ -1819,12 +1611,12 @@ namespace sw
         if ( _pFile == nullptr )
             return unexpected( Error{ ErrorKind::InvalidArgument, "atomic file writer is not open" } );
         if ( offset > _size || size > _size - offset )
-            return unexpected( Error{ ErrorKind::InvalidArgument, "writeAt goes past the written end", _tempPath } );
+            return unexpected( Error{ ErrorKind::InvalidArgument, "writeAt goes past the written end", _tempPath.str() } );
         const bool bWritten = PlatformFileUtil::seekTo( _pFile, static_cast<int64>( offset ), SEEK_SET ) && ( size == 0 || std::fwrite( pData, 1, size, _pFile ) == size ) &&
                               PlatformFileUtil::seekTo( _pFile, static_cast<int64>( _size ), SEEK_SET );
         if ( bWritten == false )
         {
-            const string tempPath = _tempPath;
+            const string tempPath = _tempPath.str();
             discard();
             return unexpected( Error{ ErrorKind::ExternalFailure, "seek or write failed", tempPath } );
         }
@@ -1835,14 +1627,14 @@ namespace sw
     {
         if ( _pFile == nullptr )
             return unexpected( Error{ ErrorKind::InvalidArgument, "atomic file writer is not open" } );
-        const string          filePath = _filePath;
+        const AbsolutePath    filePath = _filePath;
         const FileWriteResult result   = tryCommit();
         if ( result == FileWriteResult::WriteFailed )
-            return unexpected( Error{ ErrorKind::ExternalFailure, "flush or close failed - the original file was left untouched", filePath } );
+            return unexpected( Error{ ErrorKind::ExternalFailure, "flush or close failed - the original file was left untouched", filePath.str() } );
         if ( result == FileWriteResult::ReplaceFailed )
         {
             FileUtilInternal::logWriteResult( result, filePath );
-            return unexpected( Error{ ErrorKind::ExternalFailure, "replacing the target failed - the original file was left untouched", filePath } );
+            return unexpected( Error{ ErrorKind::ExternalFailure, "replacing the target failed - the original file was left untouched", filePath.str() } );
         }
         return {};
     }
@@ -1852,13 +1644,13 @@ namespace sw
         if ( _pFile == nullptr )
             return FileWriteResult::WriteFailed;
         // 4 KB 보다 작은 쓰기는 stdio 버퍼에 머물다 fclose 에서야 디스크로 가므로, 가득 찬 디스크는 flush · close 만 알려 준다(`writeAtomically` 와 같다).
-        const bool bFlushed   = std::fflush( _pFile ) == 0;
-        const bool bClosed    = std::fclose( _pFile ) == 0;
-        _pFile                = nullptr;
-        const string tempPath = std::move( _tempPath );
-        const string filePath = std::move( _filePath );
-        _tempPath.clear();
-        _filePath.clear();
+        const bool bFlushed         = std::fflush( _pFile ) == 0;
+        const bool bClosed          = std::fclose( _pFile ) == 0;
+        _pFile                      = nullptr;
+        const AbsolutePath tempPath = std::move( _tempPath );
+        const AbsolutePath filePath = std::move( _filePath );
+        _tempPath                   = {};
+        _filePath                   = {};
         if ( bFlushed == false || bClosed == false )
         {
             FileUtilInternal::discardTempFile( tempPath );
@@ -1874,8 +1666,8 @@ namespace sw
         (void)std::fclose( _pFile ); // 버리는 파일이다 — 닫기 실패는 지우기가 드러낸다
         _pFile = nullptr;
         FileUtilInternal::discardTempFile( _tempPath );
-        _tempPath.clear();
-        _filePath.clear();
-        _size = 0;
+        _tempPath = {};
+        _filePath = {};
+        _size     = 0;
     }
 } // namespace sw

@@ -223,16 +223,12 @@ namespace sw::editor
 
         AbsolutePath fullPath( filePath );
         if ( StringUtil::endsWith( fullPath.str(), EditorTransformCommandsInternal::kPresetSuffix, true ) == false )
-        {
-            StringBuilder<constant::buffer::kMax256> pathBuilder;
-            pathBuilder.appendFormat( "%#%#", FileUtil::removeExtension( fullPath.str() ), EditorTransformCommandsInternal::kPresetSuffix );
-            fullPath = FileUtil::toDiskPath( pathBuilder.view() );
-        }
+            fullPath = fullPath.removeExtension().appendSuffix( EditorTransformCommandsInternal::kPresetSuffix );
         if ( FileUtil::ensureParentDirectoryExists( fullPath ) == false )
             return false;
 
         // 저장 입구(`saveToFile`)가 빈 직렬화 결과를 거절하고 이유를 남긴다.
-        return XMLSerializer::saveToFile( fullPath.str(), pComp, *pComp->getTypeInfo() );
+        return XMLSerializer::saveToFile( fullPath, pComp, *pComp->getTypeInfo() );
     }
 
     bool EditorTransformCommands::loadComponentPreset( EditorTransaction& /*transaction*/, Component* pComp, const AbsolutePath& presetFilePath )

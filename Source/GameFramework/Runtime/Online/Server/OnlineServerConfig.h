@@ -172,6 +172,6 @@ namespace sw
         int32 _ttlSweepMinuteOfDay{ 0 };
 
         /** @brief 서버 설정 파일 경로에서 온라인 설정 파일 경로를 만듭니다(`x.json` → `x.online.json`). */
-        static AbsolutePath makeConfigPath( string_view serverConfigPath );
+        static string makeConfigPath( string_view serverConfigPath );
     };
 } // namespace sw

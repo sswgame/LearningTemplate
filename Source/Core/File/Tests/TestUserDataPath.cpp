@@ -36,11 +36,10 @@ SW_TEST_CASE( UserDataPathTest, LocalStoreLocationKeepsTheChosenKind )
     SW_EXPECT_FALSE( LocalStoreLocation::tryUnderUserData( FileUtil::getCurrentPath().str() ).has_value() );
     SW_EXPECT_TRUE( LocalStoreLocation::tryUnderUserData( "saves/..hidden" ).has_value() ); // `..` 로 시작할 뿐인 이름은 마디 `..` 가 아니다
 
-    const optional<AbsolutePath> absolutePath = AbsolutePath::tryMake( FileUtil::joinPath( FileUtil::getCurrentPath().str(), "elsewhere/saves" ) );
-    SW_REQUIRE_TRUE( absolutePath.has_value() );
-    const LocalStoreLocation absolute = LocalStoreLocation::absolute( *absolutePath );
+    const AbsolutePath       absolutePath = test::makeScratchPath( "elsewhere/saves" );
+    const LocalStoreLocation absolute     = LocalStoreLocation::absolute( absolutePath );
     SW_EXPECT_TRUE( absolute.getKind() == LocalStoreLocation::Kind::Absolute );
-    SW_EXPECT_TRUE( absolute.resolveDiskPath( "Playground" ) == *absolutePath );
+    SW_EXPECT_TRUE( absolute.resolveDiskPath( "Playground" ) == absolutePath );
     SW_EXPECT_TRUE( LocalStoreLocation::memory().getKind() == LocalStoreLocation::Kind::Memory );
 }
 
@@ -55,10 +54,11 @@ SW_TEST_CASE( UserDataPathTest, RootOverrideVariableMovesDataAndConfigTogether )
     SW_REQUIRE_TRUE( ProcessEnvironment::tryUnset( kUserDataRootVariable ) );
     const string osRuleDirectory = UserDataPath::getConfigDirectory( "Playground" ).str();
 
-    SW_REQUIRE_TRUE( ProcessEnvironment::trySet( kUserDataRootVariable, "sw_override_root" ) );
-    const string expected = FileUtil::joinPath( "sw_override_root", "playground" );
-    SW_EXPECT_TRUE( UserDataPath::getDataDirectory( "Playground" ).str() == expected );
-    SW_EXPECT_TRUE( UserDataPath::getConfigDirectory( "Playground" ).str() == expected );
+    const AbsolutePath overrideRoot = test::makeScratchPath( "sw_override_root" );
+    SW_REQUIRE_TRUE( ProcessEnvironment::trySet( kUserDataRootVariable, overrideRoot.str() ) );
+    const AbsolutePath expected = overrideRoot.join( "playground" );
+    SW_EXPECT_TRUE( UserDataPath::getDataDirectory( "Playground" ) == expected );
+    SW_EXPECT_TRUE( UserDataPath::getConfigDirectory( "Playground" ) == expected );
 
     SW_REQUIRE_TRUE( ProcessEnvironment::tryUnset( kUserDataRootVariable ) );
     SW_EXPECT_TRUE( UserDataPath::getConfigDirectory( "Playground" ).str() == osRuleDirectory );

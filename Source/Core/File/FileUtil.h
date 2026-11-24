@@ -152,7 +152,7 @@ namespace sw
          */
         [[nodiscard]] static bool makeAbsolutePath( string_view path, string& outResult );
         /** @brief 비교 · 맵 키가 아니라 **실제** 경로를 만듭니다(링크 · `.` · `..` · 8.3 짧은 이름을 풀어서). 경로가 없으면 false 입니다. 구분자는 `/` 입니다. */
-        [[nodiscard]] static bool makeCanonicalPath( const AbsolutePath& path, string& outResult );
+        [[nodiscard]] static optional<AbsolutePath> makeCanonicalPath( const AbsolutePath& path );
         /** @brief 경로가 절대 경로인지 확인합니다. */
         static bool isAbsolutePath( string_view path );
         /**
@@ -189,10 +189,11 @@ namespace sw
          */
         static string trimTrailingSlashes( string_view path );
         /**
-         * @brief 루트와 상대 경로를 `/` 로 이어 붙입니다.
-         * @param root 절대 · 상대 루트(끝 슬래시와 구분자는 정규화합니다)
+         * @brief 글 경로(리소스 id · 설정이 적는 프로젝트 상대 경로 · 폴더 이름)를 `/` 로 이어 붙입니다.
+         * @details 디스크 경로는 받지 않는다 — 절대 루트면 오류(`File.JoinDiskPath`)를 남기고 빈 글이다. 디스크 경로는 `AbsolutePath::join` 이 잇는다(`..` · 널을 거절하고 형식이 남는다).
+         * @param root 글 루트(끝 슬래시와 구분자는 정규화합니다)
          * @param relative 루트 아래 상대 경로(앞 슬래시 허용, 비어 있으면 root 만)
-         * @return `root` 또는 `root/relative`. root 가 비어 있으면 빈 문자열입니다.
+         * @return `root` 또는 `root/relative`. root 가 비어 있거나 디스크 경로면 빈 문자열입니다.
          */
         static string joinPath( string_view root, string_view relative );
         /**
@@ -436,7 +437,10 @@ namespace sw
         template <typename Func>
         [[nodiscard]] static bool forEachDirectoryEntry( const AbsolutePath& directory, bool bRecursive, Func&& func )
         {
-            return forEachDirectoryEntry( string_view{ directory.str() }, bRecursive, static_cast<Func&&>( func ) );
+            using FuncType = std::remove_reference_t<Func>;
+            return forEachDirectoryEntry( directory, bRecursive, []( void* pContext, const DirectoryEntry& entry ) -> bool
+            { return ( *static_cast<FuncType*>( pContext ) )( entry ); },
+                                          const_cast<void*>( static_cast<const void*>( std::addressof( func ) ) ) );
         }
         /**
          * @brief 소문자 키(`normalizePath` 한 상대 경로)의 실제 디스크 표기를 찾습니다.
@@ -468,62 +472,8 @@ namespace sw
          * @param stopToken 협조 중단 신호입니다(`StopSource::getToken`). 올라가면 알리지 않고 멈추고 false 를 돌려줍니다 — 부른 쪽이 신호를 다시 읽고 목록을 버린다. 기본값(묶이지 않은 토큰)이면 끝까지 훑는다.
          */
         [[nodiscard]] static bool collectFiles( const AbsolutePath& directory, string_view filterExtension, vector<AbsolutePath>& outListFilePath, bool bRecursive, const StopToken& stopToken = {} );
-        /** @brief `collectFiles` 의 글 목록 판입니다 — 형식으로 옮기지 않은 자리(리플렉션 파서 · 에셋 색인)만 쓴다. 새 코드는 형식 판을 쓴다. */
-        [[nodiscard]] static bool collectFiles( const AbsolutePath& directory, string_view filterExtension, vector<string>& outListFilePath, bool bRecursive, const StopToken& stopToken = {} );
         /** @brief 디렉터리 아래의 폴더를 모읍니다(경로 규칙 · 반환은 collectFiles 와 같습니다). */
         [[nodiscard]] static bool collectFolders( const AbsolutePath& directory, vector<AbsolutePath>& outListFolder, bool bRecursive );
-        /** @brief `collectFolders` 의 글 목록 판입니다 — 형식으로 옮기지 않은 자리만 쓴다. 새 코드는 형식 판을 쓴다. */
-        [[nodiscard]] static bool collectFolders( const AbsolutePath& directory, vector<string>& outListFolder, bool bRecursive );
-
-    private:
-        // 디스크 I/O 의 문자열 경로 판 — 구현은 이것이고 위의 `const AbsolutePath&` 판이 넘긴다. 바깥 호출이 문자열을 넘기면 형식 판이 아니라 이것이 골라져
-        // 접근 오류가 난다(논리 경로 글이 I/O 에 들어가지 못한다). 문자열은 `toDiskPath` 로 올린다.
-        [[nodiscard]] static bool                   forEachDirectoryEntry( string_view directory, bool bRecursive, DirectoryEntryVisitFn visit, void* pContext );
-        [[nodiscard]] static bool                   ensureParentDirectoryExists( string_view filePath );
-        [[nodiscard]] static bool                   ensureDirectoryExists( string_view directoryPath );
-        static bool                                 exists( string_view path );
-        static bool                                 isDirectory( string_view path );
-        static bool                                 isRegularFile( string_view path );
-        static bool                                 isReadOnlyFile( string_view fileName );
-        [[nodiscard]] static bool                   setWritable( string_view path, bool bWritable );
-        [[nodiscard]] static bool                   tryGetFileTimestamp( string_view fileName, uint64& outSeconds );
-        [[nodiscard]] static bool                   getFileWriteTime( string_view path, int64& outTicks );
-        [[nodiscard]] static bool                   setFileWriteTime( string_view path, int64 ticks );
-        [[nodiscard]] static bool                   tryGetFileSize( string_view fileName, uint64& outSize );
-        [[nodiscard]] static bool                   getFileStamp( string_view fileName, FileStamp& outStamp );
-        [[nodiscard]] static bool                   copyFile( string_view source, string_view destination );
-        [[nodiscard]] static bool                   removeFile( string_view path );
-        [[nodiscard]] static bool                   replaceFile( string_view tempPath, string_view targetPath );
-        [[nodiscard]] static bool                   tryRemoveFile( string_view path );
-        [[nodiscard]] static bool                   removeDirectory( string_view path );
-        [[nodiscard]] static bool                   renamePath( string_view from, string_view to );
-        [[nodiscard]] static bool                   writeFile( string_view fileName, const uint8* pData, uint64 size );
-        [[nodiscard]] static FileWriteResult        tryWriteFile( string_view fileName, const uint8* pData, uint64 size );
-        [[nodiscard]] static bool                   writeFileDurable( string_view fileName, const uint8* pData, uint64 size );
-        [[nodiscard]] static bool                   readFile( string_view fileName, vector<uint8>& outBytes, uint64 offset = 0, uint64 maxReadCount = MathUtil::kMaxUInt64 );
-        [[nodiscard]] static bool                   readTextFile( string_view fileName, string& outText );
-        [[nodiscard]] static OptionalFileRead       readOptionalTextFile( string_view fileName, string& outText );
-        [[nodiscard]] static bool                   readStreamTextFile( string_view fileName, string& outText, uint64 maxBytes );
-        [[nodiscard]] static bool                   writeTextFile( string_view fileName, string_view text );
-        [[nodiscard]] static bool                   writeTextFileDurable( string_view fileName, string_view text );
-        [[nodiscard]] static bool                   appendTextFile( string_view fileName, string_view text );
-        [[nodiscard]] static bool                   collectFiles( string_view directory, string_view filterExtension, vector<AbsolutePath>& outListFilePath, bool bRecursive, const StopToken& stopToken = {} );
-        [[nodiscard]] static bool                   collectFolders( string_view directory, vector<AbsolutePath>& outListFolder, bool bRecursive );
-        [[nodiscard]] static bool                   makeCanonicalPath( string_view path, string& outResult );
-        [[nodiscard]] static AbsolutePath           reserveUniquePath( string_view basePath, string_view extension, bool bDirectory, uint32 maxAttempt, string_view numberSeparator );
-        [[nodiscard]] static bool                   isWriteAllowed( string_view path );
-        [[nodiscard]] static bool                   isCreateAllowed( string_view path );
-        [[nodiscard]] static optional<AbsolutePath> findNotOpenForEdit( string_view path );
-        [[nodiscard]] static AbsolutePath           findPathIgnoringCase( string_view root, string_view lowerRelative );
-        [[nodiscard]] static AbsolutePath           makePathIgnoringCase( string_view root, string_view relative );
-        template <typename Func>
-        [[nodiscard]] static bool forEachDirectoryEntry( string_view directory, bool bRecursive, Func&& func )
-        {
-            using FuncType = std::remove_reference_t<Func>;
-            return forEachDirectoryEntry( directory, bRecursive, []( void* pContext, const DirectoryEntry& entry ) -> bool
-            { return ( *static_cast<FuncType*>( pContext ) )( entry ); },
-                                          const_cast<void*>( static_cast<const void*>( std::addressof( func ) ) ) );
-        }
 
     private:
         /** @brief 글 @p path 가 @p component 자체이거나 `component/` 로 시작하는지 봅니다 — 형식 있는 `startsWithPathComponent` 둘이 함께 쓴다. */
@@ -571,9 +521,9 @@ namespace sw
         void discard();
 
     private:
-        FILE*  _pFile;
-        string _filePath;
-        string _tempPath;
-        uint64 _size;
+        FILE*        _pFile;
+        AbsolutePath _filePath;
+        AbsolutePath _tempPath;
+        uint64       _size;
     };
 } // namespace sw

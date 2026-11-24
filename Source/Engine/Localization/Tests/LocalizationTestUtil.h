@@ -38,7 +38,7 @@ namespace sw::test
          */
         static AbsolutePath writeProject( const AbsolutePath& folder, string_view sourceCulture, string_view culturesJSON, string_view extraProperties = {} )
         {
-            const string                             projectPath = FileUtil::joinPath( folder.str(), "test.locproject.xml" );
+            const AbsolutePath                       projectPath = folder.join( "test.locproject.xml" );
             StringBuilder<constant::buffer::kMax512> json;
             json.appendFormat( "{ \"cultures\": %#, \"stringTables\": [ \"test.strings.xml\" ]", culturesJSON );
             if ( extraProperties.empty() == false )
@@ -50,7 +50,7 @@ namespace sw::test
                 fixed_string<constant::buffer::kMax1024> message;
                 formatstring( message.data(), message.capacity(), "test project fields are not JSON: %#", json.view() );
                 reportFailure( __FILE__, __LINE__, message );
-                return FileUtil::toDiskPath( projectPath );
+                return projectPath;
             }
             XMLDocument   document;
             const XMLNode root = document.appendRoot( "LocalizationProject" );
@@ -65,17 +65,17 @@ namespace sw::test
                     (void)listNode.appendChild( "item", string_view{ list.at( index ).asString() } );
                 }
             }
-            if ( FileUtil::ensureDirectoryExists( folder ) == false || FileUtil::writeTextFile( FileUtil::toDiskPath( projectPath ), document.saveToString() ) == false )
+            if ( FileUtil::ensureDirectoryExists( folder ) == false || FileUtil::writeTextFile( projectPath, document.saveToString() ) == false )
             {
                 fixed_string<constant::buffer::kMax512> message;
-                formatstring( message.data(), message.capacity(), "could not write %#", projectPath );
+                formatstring( message.data(), message.capacity(), "could not write %#", projectPath.str() );
                 reportFailure( __FILE__, __LINE__, message );
             }
-            return FileUtil::toDiskPath( projectPath );
+            return projectPath;
         }
 
         /** @brief 원문 표를 씁니다. @p entriesJSON 은 `"Key": { "source": "…" }, …` 처럼 entries 객체의 안쪽입니다(`source` · `context` · `comment` · `maxLength` · `origins`). */
-        static void writeSourceTable( const string& folder, string_view culture, string_view entriesJSON )
+        static void writeSourceTable( const AbsolutePath& folder, string_view culture, string_view entriesJSON )
         {
             StringBuilder<constant::buffer::kMax1024> entriesText;
             entriesText.appendFormat( "{ %# }", entriesJSON );
@@ -101,11 +101,11 @@ namespace sw::test
                     entry._listOrigin.push_back( origins.at( index ).asString() );
                 }
             }
-            save( table, FileUtil::joinPath( folder, "test.strings.xml" ) );
+            save( table, folder.join( "test.strings.xml" ) );
         }
 
         /** @brief 번역 표를 씁니다. @p entriesJSON 은 `"Key": { "text": "…" }, …` 입니다(`text` · `sourceHash` · `review` · `translatorComment`). */
-        static void writeTranslation( const string& folder, string_view culture, string_view entriesJSON )
+        static void writeTranslation( const AbsolutePath& folder, string_view culture, string_view entriesJSON )
         {
             StringBuilder<constant::buffer::kMax1024> entriesText;
             entriesText.appendFormat( "{ %# }", entriesJSON );
@@ -134,7 +134,7 @@ namespace sw::test
             }
             StringBuilder<constant::buffer::kMax64> fileName;
             fileName.appendFormat( "%#.translation.xml", culture );
-            save( table, FileUtil::joinPath( folder, fileName.view() ) );
+            save( table, folder.join( fileName.view() ) );
         }
 
         /** @brief 엔진 문화권 표를 읽은 매니저를 준비합니다. */
@@ -142,14 +142,13 @@ namespace sw::test
 
     private:
         template <typename TTable>
-        static void save( const TTable& table, const string& path )
+        static void save( const TTable& table, const AbsolutePath& path )
         {
-            const optional<AbsolutePath> absPath = AbsolutePath::tryMake( path );
-            const bool                   bSaved  = absPath.has_value() && FileUtil::ensureParentDirectoryExists( FileUtil::toDiskPath( path ) ) && table.saveToFile( *absPath );
+            const bool bSaved = FileUtil::ensureParentDirectoryExists( path ) && table.saveToFile( path );
             if ( bSaved == false )
             {
                 fixed_string<constant::buffer::kMax512> message;
-                formatstring( message.data(), message.capacity(), "could not write %#", path );
+                formatstring( message.data(), message.capacity(), "could not write %#", path.str() );
                 reportFailure( __FILE__, __LINE__, message );
             }
         }

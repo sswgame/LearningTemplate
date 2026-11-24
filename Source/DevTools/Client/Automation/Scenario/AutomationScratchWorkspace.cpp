@@ -101,11 +101,11 @@ namespace sw
                 // 프로젝트 루트의 추적 폴더 — 허용 목록에 든 하위 폴더만 연다.
                 for ( const string_view folder : kTrackedFolders )
                 {
-                    if ( FileUtil::isPathAtOrUnderRoot( FileUtil::joinPath( projectRoot.str(), folder ), path ) == false )
+                    if ( FileUtil::isPathAtOrUnderRoot( projectRoot.join( folder ).str(), path ) == false )
                         continue;
                     const bool bAllowed = std::any_of( std::begin( kAllowedConfigWrites ), std::end( kAllowedConfigWrites ), [&]( string_view allowed )
                     {
-                        return FileUtil::isPathAtOrUnderRoot( FileUtil::joinPath( projectRoot.str(), allowed ), path );
+                        return FileUtil::isPathAtOrUnderRoot( projectRoot.join( allowed ).str(), path );
                     } );
                     if ( bAllowed )
                         return {};

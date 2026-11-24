@@ -134,7 +134,7 @@ SW_TEST_CASE( PseudoLocalizerTest, PseudoCultureIsSelectableAtRuntime )
     using sw::test::LocalizationTestUtil;
     const sw::test::ScopedScratchDomain domain;
     const sw::AbsolutePath              folder = domain.getFolder();
-    LocalizationTestUtil::writeSourceTable( folder.str(), "en", R"("menu.start": { "source": "Start" }, "menu.items": { "source": "{n, plural, one {# item} other {# items}}" })" );
+    LocalizationTestUtil::writeSourceTable( folder, "en", R"("menu.start": { "source": "Start" }, "menu.items": { "source": "{n, plural, one {# item} other {# items}}" })" );
 
     sw::LocalizationManager loc;
     SW_REQUIRE_TRUE( LocalizationTestUtil::loadEngineCultures( loc ) );

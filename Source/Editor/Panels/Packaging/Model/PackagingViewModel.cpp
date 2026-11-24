@@ -141,7 +141,7 @@ namespace sw::editor
     ProcessCommand PackagingViewModel::makeCommand() const
     {
         const AbsolutePath projectRoot  = ProcessRoots::get()._project;
-        ProcessCommand     command      = EditorExternalToolJob::makePythonScriptCommand( FileUtil::joinPath( projectRoot.str(), kScriptRelativePath ) );
+        ProcessCommand     command      = EditorExternalToolJob::makePythonScriptCommand( projectRoot.join( kScriptRelativePath ).str() );
         vector<string>&    listArgument = command._listArgument;
         listArgument.insert( listArgument.end(), { "--platform", kArrPlatform[_platformIndex] } );
         if ( isDesktopPlatform() )

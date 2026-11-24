@@ -200,13 +200,13 @@ namespace sw::editor
                     return false;
                 // 내보내기가 쓰는 자리다(`LocalizationTools::exportProjectPo` — 프로젝트 곁의 `po/<문화권>.po`)
                 StringBuilder<constant::buffer::kMax1024> argument;
-                argument.appendFormat( "--import-po=%#/po/%#.po", FileUtil::getDirectoryPart( _localizationSheet._projectPath ), _localizationSheet._listCulture[cultureIndex] );
+                argument.appendFormat( "--import-po=%#/po/%#.po", _localizationSheet._projectPath.getParent().str(), _localizationSheet._listCulture[cultureIndex] );
                 listArgument.push_back( string( argument.view() ) );
                 break;
             }
         }
         StringBuilder<constant::buffer::kMax1024> project;
-        project.appendFormat( "-loc-project=%#", _localizationSheet._projectPath );
+        project.appendFormat( "-loc-project=%#", _localizationSheet._projectPath.str() );
         listArgument.push_back( string( project.view() ) );
         ProcessCommand command = EngineChildProcess::makeCommand( editor::getSubsystem<CommandLineManager>(), FileUtil::getExecutablePath(), std::move( listArgument ) );
         if ( _pLocalizationToolJob->request( std::move( command ), ProcessRoots::get()._project.str() ) == false )
@@ -294,7 +294,7 @@ namespace sw::editor
             return;
         clearLocalizationHistory();
         // 읽지 못한 테이블은 비어 보이고, 저장은 그 파일을 덮지 않는다(`saveLocalization`).
-        if ( EditorDataTableCommands::loadLocalizationProject( _localizationSheet._projectPath, _localizationSheet ) == false )
+        if ( EditorDataTableCommands::loadLocalizationProject( _localizationSheet._projectPath.str(), _localizationSheet ) == false )
             SW_LOG_WARNING_ID( "DataTablePanel.SomeLocalizationFilesCould", "Some localization files could not be read - see the warnings above" );
         _bLocalizationLoaded = SW_TRUE;
         _bLocalizationDirty  = SW_FALSE;

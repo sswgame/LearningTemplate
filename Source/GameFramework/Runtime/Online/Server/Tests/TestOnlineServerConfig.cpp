@@ -112,9 +112,9 @@ SW_TEST_CASE( OnlineServerConfigTest, ResolveFileHandlesEmptyAndRelativePaths )
  */
 SW_TEST_CASE( OnlineServerConfigTest, ConfigPathReplacesJSONExtension )
 {
-    SW_EXPECT_EQUAL( sw::string( "Config/Server/Playground.online.json" ), sw::OnlineServerConfig::makeConfigPath( "Config/Server/Playground.json" ).str() );
-    SW_EXPECT_EQUAL( sw::string( "Config/Server/Playground.online.json" ), sw::OnlineServerConfig::makeConfigPath( "Config/Server/Playground" ).str() );
-    SW_EXPECT_EQUAL( sw::string( "a.b.online.json" ), sw::OnlineServerConfig::makeConfigPath( "a.b.json" ).str() );
+    SW_EXPECT_EQUAL( sw::string( "Config/Server/Playground.online.json" ), sw::OnlineServerConfig::makeConfigPath( "Config/Server/Playground.json" ) );
+    SW_EXPECT_EQUAL( sw::string( "Config/Server/Playground.online.json" ), sw::OnlineServerConfig::makeConfigPath( "Config/Server/Playground" ) );
+    SW_EXPECT_EQUAL( sw::string( "a.b.online.json" ), sw::OnlineServerConfig::makeConfigPath( "a.b.json" ) );
 }
 
 /**
@@ -190,7 +190,7 @@ SW_TEST_CASE( OnlineServerConfigTest, RepositoryOnlineConfigsResolve )
         sw::string serverText;
         sw::string onlineText;
         SW_REQUIRE_TRUE( sw::FileUtil::readTextFile( filePath, serverText ) );
-        SW_REQUIRE_TRUE_MSG( sw::FileUtil::readTextFile( sw::OnlineServerConfig::makeConfigPath( filePath.str() ), onlineText ), filePath.c_str() );
+        SW_REQUIRE_TRUE_MSG( sw::FileUtil::readTextFile( sw::FileUtil::toDiskPath( sw::OnlineServerConfig::makeConfigPath( filePath.str() ) ), onlineText ), filePath.c_str() );
         sw::ConfigManager manager;
         SW_REQUIRE_TRUE_MSG( manager.loadConfigFromJSON<sw::ServerConfig>( serverText, filePath.c_str() ), filePath.c_str() );
         SW_REQUIRE_TRUE_MSG( manager.loadConfigFromJSON<sw::OnlineServerConfig>( onlineText, filePath.c_str() ), filePath.c_str() );

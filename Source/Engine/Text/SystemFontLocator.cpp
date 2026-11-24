@@ -69,19 +69,19 @@ namespace sw
             if ( written != 0 && written < required )
             {
                 windowsDirectory.resize( written );
-                SystemFontLocatorInternal::appendIfDirectory( listDirectory, FileUtil::toDiskPath( FileUtil::joinPath( StringUtil::utf16ToUTF8( windowsDirectory.c_str() ), "Fonts" ) ) );
+                SystemFontLocatorInternal::appendIfDirectory( listDirectory, FileUtil::toDiskPath( StringUtil::utf16ToUTF8( windowsDirectory.c_str() ) ).join( "Fonts" ) );
             }
         }
         // 관리자 권한 없이 설치한 글꼴(Windows 10 1809+)은 사용자 폴더에 있다.
         string localAppData;
         if ( ProcessEnvironment::tryReadNonEmpty( "LOCALAPPDATA", localAppData ) ) // 빈 값이면 현재 폴더 아래 상대 경로를 뒤지게 되므로 없는 것으로 본다
-            SystemFontLocatorInternal::appendIfDirectory( listDirectory, FileUtil::toDiskPath( FileUtil::joinPath( localAppData, "Microsoft/Windows/Fonts" ) ) );
+            SystemFontLocatorInternal::appendIfDirectory( listDirectory, FileUtil::toDiskPath( localAppData ).join( "Microsoft/Windows/Fonts" ) );
 #elif defined( SW_PLATFORM_LINUX )
         SystemFontLocatorInternal::appendIfDirectory( listDirectory, FileUtil::toDiskPath( "/usr/share/fonts" ) );
         SystemFontLocatorInternal::appendIfDirectory( listDirectory, FileUtil::toDiskPath( "/usr/local/share/fonts" ) );
         string home;
         if ( ProcessEnvironment::tryReadNonEmpty( "HOME", home ) )
-            SystemFontLocatorInternal::appendIfDirectory( listDirectory, FileUtil::toDiskPath( FileUtil::joinPath( home, ".local/share/fonts" ) ) );
+            SystemFontLocatorInternal::appendIfDirectory( listDirectory, FileUtil::toDiskPath( home ).join( ".local/share/fonts" ) );
 #elif defined( SW_PLATFORM_ANDROID )
         SystemFontLocatorInternal::appendIfDirectory( listDirectory, FileUtil::toDiskPath( "/system/fonts" ) ); // 앱이 읽을 수 있는 시스템 폰트(Roboto · NotoSansCJK)
         SystemFontLocatorInternal::appendIfDirectory( listDirectory, FileUtil::toDiskPath( "/product/fonts" ) );

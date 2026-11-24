@@ -23,7 +23,7 @@ namespace sw::editor
         /** @brief @p listPath 의 지금 글을 붙잡고 있는 파일을 모두 읽기 전용으로 둡니다. 앞 잠금이 남아 있으면 먼저 풉니다. 하나라도 못 읽거나 못 잠그면 이유이고 잠근 것은 되돌립니다. */
         [[nodiscard]] static expected<void> lock( const vector<AbsolutePath>& listPath );
         /** @brief 잠근 파일의 쓰기를 모두 되돌리고 장부를 지웁니다. 잠긴 동안 글이 바뀐(없던 파일이 생긴) 첫 경로를 돌려주고, 모두 그대로면 빈 값입니다. */
-        [[nodiscard]] static optional<string> unlock();
+        [[nodiscard]] static optional<AbsolutePath> unlock();
         /** @brief 앞 프로세스가 장부에 남긴 잠금을 풉니다(장부가 없으면 할 일이 없다). 체인 단계 초기화와 `lock` 이 부른다. */
         static void releaseStaleLocks();
         /** @brief 지금 잠근 파일 수입니다(테스트 확인용). */

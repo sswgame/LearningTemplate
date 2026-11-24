@@ -37,6 +37,9 @@ namespace sw
         FileWatcherAction _action;
         string            _directory;
         string            _filename;
+
+        /** @brief 바뀐 파일의 디스크 경로입니다(`_directory` 아래 `_filename`). 리스캔 신호(이름 없음)는 감시 폴더다. */
+        [[nodiscard]] AbsolutePath makePath() const { return AbsolutePath::tryMake( _directory ).value_or( AbsolutePath{} ).join( _filename ); }
     };
 } // namespace sw
 

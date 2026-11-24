@@ -25,14 +25,14 @@ namespace sw
                 return *absolute;
             }
 
-            /** @brief @p startFolder 에서 위로 올라가며 `Content` 가 있는 첫 폴더를 찾습니다. 없으면 빈 글입니다. */
-            static string findProjectRoot( const AbsolutePath& startFolder )
+            /** @brief @p startFolder 에서 위로 올라가며 `Content` 가 있는 첫 폴더를 찾습니다. 없으면 빈 경로입니다. */
+            static AbsolutePath findProjectRoot( const AbsolutePath& startFolder )
             {
                 AbsolutePath folder = startFolder;
                 while ( folder.empty() == false )
                 {
                     if ( FileUtil::isDirectory( folder.join( constant::path::kContentFolder ) ) )
-                        return folder.str();
+                        return folder;
                     const AbsolutePath parent = folder.getParent();
                     if ( parent.empty() || parent.str() == folder.str() )
                         break;
@@ -61,22 +61,21 @@ namespace sw
 #endif
 
             /** @brief 실행 뿌리입니다 — 부모가 준 폴더(`kRunRootVariable`), 없으면 이 실행만의 이름(`<pid>-<시작 ns>` — Windows 가 pid 를 다시 써도 겹치지 않는다). */
-            static string findRunRoot( const string& binary, bool& bOutFromParent )
+            static AbsolutePath findRunRoot( const AbsolutePath& binary, bool& bOutFromParent )
             {
                 string run;
                 bOutFromParent = ProcessEnvironment::tryReadNonEmpty( kRunRootVariable, run );
                 if ( bOutFromParent )
-                    return run;
-                const string                            runsFolder = FileUtil::joinPath( FileUtil::joinPath( binary, constant::path::kSavedFolder ), "Automation/Runs" );
+                    return requireAbsolute( run, "run" );
                 StringBuilder<constant::buffer::kMax64> runName;
                 runName.appendFormat( "%#-%#", Process::getCurrentProcessID(), MonotonicClock::nowNanoseconds() );
-                return FileUtil::joinPath( runsFolder, runName.view() );
+                return binary.join( constant::path::kSavedFolder ).join( "Automation/Runs" ).join( runName.view() );
             }
 
             static ProcessRoots make()
             {
                 const AbsolutePath binary  = findBinaryFolder();
-                string             project = findProjectRoot( binary );
+                AbsolutePath       project = findProjectRoot( binary );
 #if defined( SW_PLATFORM_ANDROID )
                 // 팩은 APK 안이라 `<앱 폴더>/Packs` 가 디스크에 없다 — 콘텐츠 소스가 그 경로를 assets/Packs 로 옮긴다. 프로젝트 루트는 앱 폴더다(패키지와 같다).
                 if ( project.empty() )
@@ -84,20 +83,20 @@ namespace sw
 #endif
                 // 패키지(배포 스테이징)는 `Content` 없이 실행 파일 옆에 `Packs` 만 둔다 - 그때 프로젝트 루트는 바이너리 폴더다. 둘 다 없으면 리소스를 찾을 곳이 없다.
                 if ( project.empty() && FileUtil::isDirectory( binary.join( constant::path::kPacksFolder ) ) )
-                    project = binary.str();
+                    project = binary;
                 if ( project.empty() )
                     reportFatalError( "ProcessRoots: no '%#' folder above the binaries '%#' and no '%#' beside them", constant::path::kContentFolder, binary.str(), constant::path::kPacksFolder );
 
-                bool         bRunFromParent = false;
-                const string run            = findRunRoot( binary.str(), bRunFromParent );
-                ProcessRoots roots{
-                    requireAbsolute( binary.str(), "binary" ),
-                    requireAbsolute( project, "project" ),
-                    requireAbsolute( FileUtil::joinPath( project, constant::path::kContentFolder ), "content" ),
-                    requireAbsolute( FileUtil::joinPath( binary.str(), constant::path::kPacksFolder ), "packs" ),
-                    requireAbsolute( FileUtil::joinPath( binary.str(), constant::path::kSavedFolder ), "saved" ),
-                    requireAbsolute( FileUtil::joinPath( project, constant::path::kSavedFolder ), "derived data" ),
-                    requireAbsolute( run, "run" ),
+                bool               bRunFromParent = false;
+                const AbsolutePath run            = findRunRoot( binary, bRunFromParent );
+                ProcessRoots       roots{
+                    binary,
+                    project,
+                    project.join( constant::path::kContentFolder ),
+                    binary.join( constant::path::kPacksFolder ),
+                    binary.join( constant::path::kSavedFolder ),
+                    project.join( constant::path::kSavedFolder ),
+                    run,
                     static_cast<uint8>( bRunFromParent ? 1 : 0 ),
                 };
                 return roots;

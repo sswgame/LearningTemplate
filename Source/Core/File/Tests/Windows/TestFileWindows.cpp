@@ -61,7 +61,7 @@ SW_TEST_CASE( FileTest, PathQueriesBeyond4096CharactersSucceed )
     SW_REQUIRE_TRUE( sw::FileUtil::makeAbsolutePath( dir, absolutePath ) );
     SW_EXPECT_EQUAL( dir.size(), absolutePath.size() );
 
-    sw::string canonicalPath;
-    SW_REQUIRE_TRUE( sw::FileUtil::makeCanonicalPath( sw::FileUtil::toDiskPath( dir ), canonicalPath ) );
-    SW_EXPECT_TRUE( canonicalPath.size() >= 4300 );
+    const sw::optional<sw::AbsolutePath> canonicalPath = sw::FileUtil::makeCanonicalPath( sw::FileUtil::toDiskPath( dir ) );
+    SW_REQUIRE_TRUE( canonicalPath.has_value() );
+    SW_EXPECT_TRUE( canonicalPath->str().size() >= 4300 );
 }

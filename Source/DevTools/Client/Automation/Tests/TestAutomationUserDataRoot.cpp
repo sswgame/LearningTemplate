@@ -143,7 +143,7 @@ SW_TEST_CASE( AutomationUserDataRootTest, SessionRejectsRootOutsideTheAutomation
     SW_EXPECT_TRUE( accepted.has_value() && *accepted == inside );
     path.clear();
     path.appendFormat( "%#/userdata", inside );
-    SW_EXPECT_TRUE( sw::AutomationUserDataRoot::makeRunUserDataRoot( inside ) == sw::string( path.view() ) );
+    SW_EXPECT_TRUE( sw::AutomationUserDataRoot::makeRunUserDataRoot( sw::FileUtil::toDiskPath( inside ) ).str() == sw::string( path.view() ) );
 }
 
 /**

@@ -275,7 +275,7 @@ namespace sw
                 {
                     string vulkanSdkEnv;
                     if ( ProcessEnvironment::tryReadNonEmpty( "VULKAN_SDK", vulkanSdkEnv ) )
-                        bLayerPathSet = ProcessEnvironment::trySet( "VK_ADD_LAYER_PATH", FileUtil::joinPath( vulkanSdkEnv, "Bin" ) );
+                        bLayerPathSet = ProcessEnvironment::trySet( "VK_ADD_LAYER_PATH", FileUtil::toDiskPath( vulkanSdkEnv ).join( "Bin" ).str() );
                 }
                 if ( bLayerPathSet == false )
                     SW_LOG_WARNING_ID( "Vulkan.CouldNotPointVulkan", "Could not point the Vulkan loader at the validation layer - the layer check below decides" );

@@ -85,9 +85,7 @@ namespace sw::editor
                 entry._projectRoot  = EditorAutosaveCommands::findMetaValue( metaText, "project" );
                 (void)StringUtil::parseUint64( EditorAutosaveCommands::findMetaValue( metaText, "sourceHash" ), entry._sourceContentHash ); // 없으면 0 — 새 문서로 본다
                 (void)StringUtil::parseInt64( EditorAutosaveCommands::findMetaValue( metaText, "saved" ), entry._savedTicks );              // 없으면 0 — 창이 "-" 로 보인다
-                StringBuilder<constant::buffer::kMax512> textPathBuilder;
-                textPathBuilder.appendFormat( "%#%#", string_view( file.str() ).substr( 0, file.str().size() - string_view( Internal::kMetaSuffix ).size() ), Internal::kTextSuffix );
-                entry._textAbs = FileUtil::toDiskPath( textPathBuilder.view() );
+                entry._textAbs = file.removeExtension().appendSuffix( Internal::kTextSuffix );
                 if ( entry._documentPath.empty() || FileUtil::exists( entry._textAbs ) == false )
                     continue; // 짝이 없는 메타 — 복구할 글이 없다
                 // 다른 프로젝트 · 바뀐 원본에는 적용하지 않는다(씬 자동 저장과 같은 규칙) — 사본이 남의 일을 덮지 않게.

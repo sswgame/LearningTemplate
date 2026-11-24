@@ -606,7 +606,7 @@ namespace sw
             pChild->_options._listEnvironment.push_back( ProcessEnvironmentEntry{ kRunRootVariable, childRunRoot.str() } );
             // 이 부모가 건 사용자 데이터 뿌리는 환경으로 물려 가므로 자식마다 덮는다. 비면(사람이 OS 폴더를 고름) 환경을 그대로 물려준다.
             if ( options._userDataRoot.empty() == false )
-                pChild->_options._listEnvironment.push_back( ProcessEnvironmentEntry{ kUserDataRootVariable, AutomationUserDataRoot::makeRunUserDataRoot( childRunRoot.str() ) } );
+                pChild->_options._listEnvironment.push_back( ProcessEnvironmentEntry{ kUserDataRootVariable, AutomationUserDataRoot::makeRunUserDataRoot( childRunRoot ).str() } );
             pChild->_bPending = true;
             listChild.push_back( std::move( pChild ) );
         }
@@ -655,7 +655,7 @@ namespace sw
                     text.appendFormat( "could not create the run root %#", child._runRoot.str() );
                     where = string( text.view() );
                 }
-                else if ( const expected<string> dump = child._process.requestDump( FileUtil::joinPath( child._runRoot.str(), Internal::kKillDumpFileName ) ); dump.has_value() )
+                else if ( const expected<string> dump = child._process.requestDump( child._runRoot.join( Internal::kKillDumpFileName ).str() ); dump.has_value() )
                     where = *dump;
                 else
                 {

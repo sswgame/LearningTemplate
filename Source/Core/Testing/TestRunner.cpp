@@ -504,7 +504,7 @@ namespace sw::test
         }
         StringBuilder<constant::buffer::kMax256> snapshotName;
         snapshotName.appendFormat( "%#.%#.txt", TestRunnerInternal::toFileName( caseName ), name );
-        const AbsolutePath path = FileUtil::toDiskPath( FileUtil::joinPath( FileUtil::joinPath( FileUtil::getDirectoryPart( pFile ), "Snapshots" ), snapshotName.view() ) );
+        const AbsolutePath path = FileUtil::toDiskPath( pFile ).getParent().join( "Snapshots" ).join( snapshotName.view() );
         string             normalized( actual );
         normalized.erase( std::remove( normalized.begin(), normalized.end(), '\r' ), normalized.end() );
         string     expected;
@@ -987,7 +987,7 @@ namespace sw::test
         // 쓰기 폴더는 이 실행만의 이름이다(`<프로세스 id>-<시작 시각 ns>`) — Windows 가 프로세스 id 를 다시 써도 옛 실행의 폴더를 이어 쓰지 않는다.
         // 미리 만들지 않는다: 케이스가 처음 쓸 때 만든다(`makeScratchPath`). 그래서 쓰기 폴더를 안 쓰고 끝나는 실행(일부러 멈추는 자식 프로세스)이 빈 폴더를 남기지 않는다.
         string baseRoot;
-        if ( FileUtil::makeAbsolutePath( options._scratchRoot.empty() ? FileUtil::joinPath( ProcessRoots::get()._saved.str(), "Test" ) : options._scratchRoot, baseRoot ) == false )
+        if ( FileUtil::makeAbsolutePath( options._scratchRoot.empty() ? ProcessRoots::get()._saved.join( "Test" ).str() : options._scratchRoot, baseRoot ) == false )
         {
             Internal::writeLine( "[  ERROR   ] the scratch folder cannot be made absolute - no case runs" );
             Internal::writeResultLine( "FAILED", 0, 0, 0 );

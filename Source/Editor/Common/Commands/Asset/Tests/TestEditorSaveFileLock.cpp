@@ -33,7 +33,7 @@ SW_TEST_CASE( EditorSaveFileLockTest, LockIsReleasedWhenTheStateGoes )
     const ScopedEditorScope scopedEditor( scope );
 
     const AbsolutePath path = makeLockTarget( "engineconfig.xml", "kept" );
-    SW_REQUIRE_TRUE( EditorSaveFileLock::lock( { path.str() } ).has_value() );
+    SW_REQUIRE_TRUE( EditorSaveFileLock::lock( { path } ).has_value() );
     SW_EXPECT_TRUE( FileUtil::isReadOnlyFile( path ) );
     SW_EXPECT_EQUAL( EditorSaveFileLock::getLockedCount(), 1u );
 
@@ -52,13 +52,13 @@ SW_TEST_CASE( EditorSaveFileLockTest, UnlockReportsAChangedFile )
 
     const AbsolutePath kept    = makeLockTarget( "kept.xml", "kept" );
     const AbsolutePath changed = makeLockTarget( "changed.xml", "before" );
-    SW_REQUIRE_TRUE( EditorSaveFileLock::lock( { kept.str(), changed.str() } ).has_value() );
+    SW_REQUIRE_TRUE( EditorSaveFileLock::lock( { kept, changed } ).has_value() );
     SW_REQUIRE_TRUE( FileUtil::setWritable( changed, true ) );
     SW_REQUIRE_TRUE( FileUtil::writeTextFile( changed, "after" ) );
 
-    const optional<string> changedPath = EditorSaveFileLock::unlock();
+    const optional<AbsolutePath> changedPath = EditorSaveFileLock::unlock();
     SW_REQUIRE_TRUE( changedPath.has_value() );
-    SW_EXPECT_EQUAL( *changedPath, changed.str() );
+    SW_EXPECT_TRUE( *changedPath == changed );
     SW_EXPECT_FALSE( FileUtil::isReadOnlyFile( kept ) );
     SW_EXPECT_EQUAL( EditorSaveFileLock::getLockedCount(), 0u );
 }
@@ -72,7 +72,7 @@ SW_TEST_CASE( EditorSaveFileLockTest, LedgerLeftoversAreRestored )
     const ScopedEditorScope scopedEditor( scope );
 
     const AbsolutePath path = makeLockTarget( "leftover.xml", "kept" );
-    SW_REQUIRE_TRUE( EditorSaveFileLock::lock( { path.str() } ).has_value() );
+    SW_REQUIRE_TRUE( EditorSaveFileLock::lock( { path } ).has_value() );
     EditorSaveFileLock::releaseStaleLocks(); // 같은 장부를 다음 실행이 읽은 것과 같다
     SW_EXPECT_FALSE( FileUtil::isReadOnlyFile( path ) );
     SW_EXPECT_FALSE( EditorSaveFileLock::unlock().has_value() );

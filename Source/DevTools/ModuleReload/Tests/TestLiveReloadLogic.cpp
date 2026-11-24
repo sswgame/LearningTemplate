@@ -166,7 +166,7 @@ SW_TEST_CASE( LiveReloadLogicTest, DeferredUnloadKeepsRecentBatches )
 {
     DeferredLibraryUnloadQueue queue( 2 );
     queue.unloadOldestBatch(); // 비어 있으면 아무 일도 없다
-    queue.deferUnload( "Null", nullptr, FileUtil::toDiskPath( "ignored" ) );
+    queue.deferUnload( "Null", nullptr, test::makeScratchPath( "ignored" ) );
     SW_EXPECT_EQUAL( 0u, queue.getLibraryCount() );
 
     const AbsolutePath a1 = DeferredUnloadTestUtil::makeShadowFile( "a1" );

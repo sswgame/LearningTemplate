@@ -80,7 +80,7 @@ SW_TEST_CASE( FileTest, FileUtilPathOperations )
 
 /**
  * @brief [FileTest] 끝 구분자는 한 규칙으로 뗀다 — 루트(`/` · `C:/` · `C:\`)는 남기고, 여러 구분자는 모두 떼며, 빈 글은 빈 글이다.
- *        `joinPath` · `getDirectoryPart` 도 같은 규칙이라 드라이브 루트를 `C:`(그 드라이브의 현재 폴더)로 망치지 않는다
+ *        `getDirectoryPart` 도 같은 규칙이라 드라이브 루트를 `C:`(그 드라이브의 현재 폴더)로 망치지 않는다
  * @details 변이: 드라이브 루트 멈춤을 지우면 `C:/` 가 `C:` 가 되어 진다. 예전 내부 규칙(`a//` 를 남김)으로 돌리면 여러 슬래시 줄이 진다.
  */
 SW_TEST_CASE( FileTest, TrimTrailingSlashesKeepsRoots )
@@ -98,9 +98,10 @@ SW_TEST_CASE( FileTest, TrimTrailingSlashesKeepsRoots )
     SW_EXPECT_EQUAL( sw::string( "//server/share" ), sw::FileUtil::trimTrailingSlashes( "//server/share/" ) );
     SW_EXPECT_EQUAL( sw::string( "\\\\server\\share" ), sw::FileUtil::trimTrailingSlashes( "\\\\server\\share\\\\" ) );
 
-    SW_EXPECT_EQUAL( sw::string( "C:/x" ), sw::FileUtil::joinPath( "C:/", "x" ) );
-    SW_EXPECT_EQUAL( sw::string( "C:/" ), sw::FileUtil::joinPath( "C:\\", "" ) );
-    SW_EXPECT_EQUAL( sw::string( "/x" ), sw::FileUtil::joinPath( "/", "x" ) );
+    SW_EXPECT_EQUAL( sw::string( "engine/x" ), sw::FileUtil::joinPath( "engine\\", "/x" ) );
+    SW_EXPECT_EQUAL( sw::string( "engine" ), sw::FileUtil::joinPath( "engine/", "" ) );
+    SW_EXPECT_LOG( "File.JoinDiskPath" ); // 디스크 경로는 `AbsolutePath::join` 이 잇는다
+    SW_EXPECT_TRUE( sw::FileUtil::joinPath( sw::test::makeScratchPath( "root" ).str(), "x" ).empty() );
 
     SW_EXPECT_EQUAL( sw::string( "C:/" ), sw::FileUtil::getDirectoryPart( "C:/Games/" ) );
     SW_EXPECT_EQUAL( sw::string( "/" ), sw::FileUtil::getDirectoryPart( "/home" ) );
@@ -432,10 +433,11 @@ SW_TEST_CASE( FileTest, CollectedPathsAreSortedOnEveryPlatform )
         SW_REQUIRE_TRUE( sw::FileUtil::writeTextFile( folder.join( "same.txt" ), "a" ) );
     }
 
-    sw::vector<sw::string> listFile{ "keep-first" }; // 부른 쪽이 넣어 둔 항목은 건드리지 않는다
+    const sw::AbsolutePath       keptPath = rootDir.join( "keep-first" );
+    sw::vector<sw::AbsolutePath> listFile{ keptPath }; // 부른 쪽이 넣어 둔 항목은 건드리지 않는다
     SW_EXPECT_TRUE( sw::FileUtil::collectFiles( rootDir, ".txt", listFile, true ) );
     SW_REQUIRE_EQUAL( size_t( 6 ), listFile.size() );
-    SW_EXPECT_TRUE( listFile[0] == "keep-first" );
+    SW_EXPECT_TRUE( listFile[0] == keptPath );
     SW_EXPECT_TRUE( std::is_sorted( listFile.begin() + 1, listFile.end() ) );
 
     sw::vector<sw::AbsolutePath> listFolder;
@@ -703,7 +705,7 @@ SW_TEST_CASE( FileTest, FindPathIgnoringCaseReturnsTheDiskSpelling )
     SW_REQUIRE_TRUE( sw::FileUtil::writeTextFile( root.join( "MixedDir/Sub/File.TXT" ), "x" ) );
 
     const sw::AbsolutePath found = sw::FileUtil::findPathIgnoringCase( root, "mixeddir/sub/file.txt" );
-    SW_EXPECT_EQUAL( sw::FileUtil::joinPath( sw::FileUtil::normalizeSeparators( root.str() ), "MixedDir/Sub/File.TXT" ), found.str() );
+    SW_EXPECT_EQUAL( root.join( "MixedDir/Sub/File.TXT" ).str(), found.str() );
     SW_EXPECT_TRUE( sw::FileUtil::exists( found ) );
     SW_EXPECT_TRUE( sw::FileUtil::findPathIgnoringCase( root, "mixeddir/sub/missing.txt" ).empty() );
     SW_EXPECT_TRUE( sw::FileUtil::findPathIgnoringCase( root, "nodir/sub/file.txt" ).empty() );
@@ -722,12 +724,12 @@ SW_TEST_CASE( FileTest, MakePathIgnoringCaseKeepsExistingSpellingAndAppendsTheRe
     const sw::string base = sw::FileUtil::normalizeSeparators( root.str() );
 
     // 있는 파일: 디스크 표기로 풀려 같은 파일을 가리킨다(둘째 쓰기가 옆 파일을 만들지 않는다).
-    SW_EXPECT_EQUAL( sw::FileUtil::joinPath( base, "MixedDir/Sub/File.TXT" ), sw::FileUtil::makePathIgnoringCase( root, "mixeddir/sub/file.txt" ).str() );
+    SW_EXPECT_EQUAL( root.join( "MixedDir/Sub/File.TXT" ).str(), sw::FileUtil::makePathIgnoringCase( root, "mixeddir/sub/file.txt" ).str() );
     // 새 파일: 있는 폴더는 디스크 표기이고 파일 이름은 받은 표기다. 구분자는 `\` 도 받는다.
-    SW_EXPECT_EQUAL( sw::FileUtil::joinPath( base, "MixedDir/Sub/New.Txt" ), sw::FileUtil::makePathIgnoringCase( root, "MIXEDDIR\\sub/New.Txt" ).str() );
+    SW_EXPECT_EQUAL( root.join( "MixedDir/Sub/New.Txt" ).str(), sw::FileUtil::makePathIgnoringCase( root, "MIXEDDIR\\sub/New.Txt" ).str() );
     // 새 폴더: 없는 성분부터는 받은 표기를 그대로 잇고 그 아래는 훑지 않는다.
-    SW_EXPECT_EQUAL( sw::FileUtil::joinPath( base, "MixedDir/Fresh/Deep/x.txt" ), sw::FileUtil::makePathIgnoringCase( root, "mixeddir/Fresh/Deep/x.txt" ).str() );
-    SW_EXPECT_EQUAL( sw::FileUtil::joinPath( base, "NoDir/a.txt" ), sw::FileUtil::makePathIgnoringCase( root, "NoDir/a.txt" ).str() );
+    SW_EXPECT_EQUAL( root.join( "MixedDir/Fresh/Deep/x.txt" ).str(), sw::FileUtil::makePathIgnoringCase( root, "mixeddir/Fresh/Deep/x.txt" ).str() );
+    SW_EXPECT_EQUAL( root.join( "NoDir/a.txt" ).str(), sw::FileUtil::makePathIgnoringCase( root, "NoDir/a.txt" ).str() );
     SW_EXPECT_EQUAL( base, sw::FileUtil::makePathIgnoringCase( root, "" ).str() );
 }
 
@@ -792,7 +794,7 @@ SW_TEST_CASE( FileTest, LinuxTrashFollowsFreedesktop )
     const bool             bHadDataHome = sw::ProcessEnvironment::tryRead( "XDG_DATA_HOME", savedDataHome );
     const sw::AbsolutePath root         = sw::test::makeScratchPath( "TrashRoot" );
     SW_REQUIRE_TRUE( sw::FileUtil::ensureDirectoryExists( root ) );
-    SW_REQUIRE_TRUE( sw::ProcessEnvironment::trySet( "XDG_DATA_HOME", sw::FileUtil::joinPath( root.str(), "data" ) ) );
+    SW_REQUIRE_TRUE( sw::ProcessEnvironment::trySet( "XDG_DATA_HOME", root.join( "data" ).str() ) );
     SW_EXPECT_TRUE( sw::PlatformFileUtil::hasRecycleBin() );
 
     const sw::AbsolutePath path = root.join( "my file.txt" );
@@ -815,7 +817,7 @@ SW_TEST_CASE( FileTest, LinuxTrashFollowsFreedesktop )
     SW_REQUIRE_TRUE( sw::FileUtil::readTextFile( root.join( "data/Trash/files/my file.txt" ), text ) );
     SW_EXPECT_EQUAL( sw::string( "first" ), text );
 
-    SW_EXPECT_FALSE( sw::PlatformFileUtil::moveToRecycleBin( { sw::FileUtil::joinPath( root.str(), "nothing.txt" ) } ) );
+    SW_EXPECT_FALSE( sw::PlatformFileUtil::moveToRecycleBin( { root.join( "nothing.txt" ).str() } ) );
     SW_EXPECT_FALSE( sw::FileUtil::exists( root.join( "data/Trash/info/nothing.txt.trashinfo" ) ) );
 
     if ( bHadDataHome )
@@ -842,14 +844,14 @@ SW_TEST_CASE( FileTest, LinuxTrashUsesVolumeTrashAcrossFileSystems )
 
     sw::string savedDataHome;
     const bool bHadDataHome = sw::ProcessEnvironment::tryRead( "XDG_DATA_HOME", savedDataHome );
-    SW_REQUIRE_TRUE( sw::ProcessEnvironment::trySet( "XDG_DATA_HOME", sw::FileUtil::joinPath( root.str(), "data" ) ) );
+    SW_REQUIRE_TRUE( sw::ProcessEnvironment::trySet( "XDG_DATA_HOME", root.join( "data" ).str() ) );
 
     sw::fixed_string<sw::constant::buffer::kMax64> name;
     sw::formatstring( name.data(), name.capacity(), "sw_volume_trash_%#.txt", static_cast<uint64>( ::getpid() ) );
-    const sw::string path = sw::FileUtil::joinPath( "/dev/shm", name.view() );
-    SW_REQUIRE_TRUE( sw::FileUtil::writeTextFile( sw::FileUtil::toDiskPath( path ), "volume" ) );
-    SW_REQUIRE_TRUE( sw::FileUtil::moveToRecycleBin( { sw::FileUtil::toDiskPath( path ) } ) );
-    SW_EXPECT_FALSE( sw::FileUtil::exists( sw::FileUtil::toDiskPath( path ) ) );
+    const sw::AbsolutePath path = sw::FileUtil::toDiskPath( "/dev/shm" ).join( name.view() );
+    SW_REQUIRE_TRUE( sw::FileUtil::writeTextFile( path, "volume" ) );
+    SW_REQUIRE_TRUE( sw::FileUtil::moveToRecycleBin( { path } ) );
+    SW_EXPECT_FALSE( sw::FileUtil::exists( path ) );
 
     const uint64                                    uid = static_cast<uint64>( ::getuid() );
     sw::fixed_string<sw::constant::buffer::kMax256> trashedFile;

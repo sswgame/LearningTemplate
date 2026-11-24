@@ -22,10 +22,10 @@ namespace sw::editor
 
             static AbsolutePath getLedgerPath() { return makeAutomationOutputFolderPath().join( kLedgerFileName ); }
 
-            /** @brief 잠근 파일 글(디스크 경로 → 글, 없던 파일은 빈 값)입니다. 사라질 때(소멸 · `EditorStateStore::resetAll`) 쓰기를 되돌린다 — 시나리오가 어떻게 끝나든 잠금이 남지 않게. */
+            /** @brief 잠근 파일 글(파일마다 글, 없던 파일은 빈 값)입니다. 사라질 때(소멸 · `EditorStateStore::resetAll`) 쓰기를 되돌린다 — 시나리오가 어떻게 끝나든 잠금이 남지 않게. */
             struct LockState
             {
-                unordered_map<string, optional<string>> _mapTextByPath;
+                vector<pair<AbsolutePath, optional<string>>> _listLockedText;
 
                 LockState()                              = default;
                 LockState( const LockState& )            = delete;
@@ -36,14 +36,14 @@ namespace sw::editor
             /** @brief 잠근 파일의 쓰기를 모두 되돌리고 장부를 지웁니다. 글을 견주지 않는다(`unlock` 이 견준다). */
             static void releaseAll( LockState& state )
             {
-                if ( state._mapTextByPath.empty() )
+                if ( state._listLockedText.empty() )
                     return;
-                for ( const auto& [path, savedText] : state._mapTextByPath )
+                for ( const auto& [path, savedText] : state._listLockedText )
                 {
-                    if ( FileUtil::isRegularFile( FileUtil::toDiskPath( path ) ) )
-                        (void)FileUtil::setWritable( FileUtil::toDiskPath( path ), true ); // 못 풀면 setWritable 이 경로와 이유를 남긴다
+                    if ( FileUtil::isRegularFile( path ) )
+                        (void)FileUtil::setWritable( path, true ); // 못 풀면 setWritable 이 경로와 이유를 남긴다
                 }
-                state._mapTextByPath.clear();
+                state._listLockedText.clear();
                 (void)FileUtil::removeFile( getLedgerPath() ); // 못 지우면 removeFile 이 알린다 — 다음 releaseStaleLocks 가 이미 쓰기 가능한 파일을 다시 풀 뿐이다
             }
 
@@ -73,7 +73,7 @@ namespace sw::editor
                 Internal::releaseAll( state );
                 return unexpected( Error{ ErrorKind::ExternalFailure, "could not read a file to lock", path.str() } );
             }
-            state._mapTextByPath.insert_or_assign( path.str(), bExists ? optional<string>{ std::move( text ) } : nullopt );
+            state._listLockedText.emplace_back( path, bExists ? optional<string>{ std::move( text ) } : nullopt );
             if ( bExists && FileUtil::setWritable( path, false ) == false )
             {
                 Internal::releaseAll( state );
@@ -83,18 +83,18 @@ namespace sw::editor
         return {};
     }
 
-    optional<string> EditorSaveFileLock::unlock()
+    optional<AbsolutePath> EditorSaveFileLock::unlock()
     {
-        using Internal             = EditorSaveFileLockInternal;
-        Internal::LockState& state = Internal::getState();
-        optional<string>     changedPath;
-        for ( const auto& [path, savedText] : state._mapTextByPath )
+        using Internal               = EditorSaveFileLockInternal;
+        Internal::LockState&   state = Internal::getState();
+        optional<AbsolutePath> changedPath;
+        for ( const auto& [path, savedText] : state._listLockedText )
         {
-            const bool bExists = FileUtil::isRegularFile( FileUtil::toDiskPath( path ) );
+            const bool bExists = FileUtil::isRegularFile( path );
             if ( bExists )
-                (void)FileUtil::setWritable( FileUtil::toDiskPath( path ), true ); // 견주기보다 먼저 푼다
+                (void)FileUtil::setWritable( path, true ); // 견주기보다 먼저 푼다
             string     text;
-            const bool bSame = savedText.has_value() ? ( bExists && FileUtil::readTextFile( FileUtil::toDiskPath( path ), text ) && text == *savedText ) : bExists == false;
+            const bool bSame = savedText.has_value() ? ( bExists && FileUtil::readTextFile( path, text ) && text == *savedText ) : bExists == false;
             if ( bSame == false && changedPath.has_value() == false )
                 changedPath = path;
         }
@@ -125,6 +125,6 @@ namespace sw::editor
 
     uint32 EditorSaveFileLock::getLockedCount()
     {
-        return static_cast<uint32>( EditorSaveFileLockInternal::getState()._mapTextByPath.size() );
+        return static_cast<uint32>( EditorSaveFileLockInternal::getState()._listLockedText.size() );
     }
 } // namespace sw::editor

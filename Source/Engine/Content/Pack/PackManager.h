@@ -179,6 +179,8 @@ namespace sw
         const PackChunkManifest& getChunkManifest() const { return _chunkManifest; }
         /** @brief `scanAndMountPacks` 가 훑은 팩 폴더입니다(아직 훑지 않았으면 빈 글). */
         const string& getPacksDirectory() const { return _packsDirectory; }
+        /** @brief 팩 폴더의 파일 @p fileName 을 콘텐츠 소스(`ContentFileSource`)가 찾는 열쇠입니다 — 소스마다 디스크 경로이거나 번들 · 내려받은 표의 열쇠라 글이다. */
+        [[nodiscard]] string makePackKey( string_view fileName ) const;
 
         /**
          * @brief 패치 목록의 서명을 마운트 전에 확인하게 합니다. `scanAndMountPacks` 보다 먼저, 기동 스레드에서 한 번 부릅니다.

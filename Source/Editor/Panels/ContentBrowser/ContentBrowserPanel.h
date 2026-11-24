@@ -103,7 +103,7 @@ namespace sw::editor
          * @brief 에셋의 참조를 찾아 결과 창을 엽니다.
          * @param bDependencies false 면 그 에셋을 사용하는 쪽(Find References)을, true 면 그 에셋이 사용하는 쪽(Show Dependencies)을 찾습니다.
          */
-        void showReferences( string_view absolutePath, bool bDependencies );
+        void showReferences( const AbsolutePath& absolutePath, bool bDependencies );
         /** @brief 마지막 참조 찾기의 결과 행 수를 반환합니다. */
         uint32 getReferenceResultCount() const { return static_cast<uint32>( _model.getReferenceSearch().getResultList().size() ); }
         // ------------------------------------------------------------------------------
@@ -112,7 +112,7 @@ namespace sw::editor
         /** @brief 지금 고른 에셋의 절대 경로입니다. 없으면 빈 문자열입니다. */
         const string& getSelectedAssetPath() const { return _model.getSelectedAssetPath().str(); }
         /** @brief 지금 목록에 있는 @p absolutePath 항목을 고릅니다. 목록에 없으면 아무 일도 없습니다. */
-        void selectAssetPath( string_view absolutePath ) { _model.selectAssetPath( absolutePath ); }
+        void selectAssetPath( const AbsolutePath& absolutePath ) { _model.selectAssetPath( absolutePath ); }
         /** @brief 에셋을 같은 폴더에 복제하고 사본을 선택합니다. */
         bool duplicateAsset( const AbsolutePath& absolutePath ) { return _model.duplicateAsset( absolutePath ); }
         /** @brief 에셋 이름을 제자리에서 바꾸는 입력을 시작합니다. 입력란에는 확장자를 뺀 이름이 들어갑니다. 폴더는 받지 않습니다. */

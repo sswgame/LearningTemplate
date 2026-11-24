@@ -120,18 +120,18 @@ namespace sw::editor
             enqueue( SourceControlOperation::Refresh, {} );
     }
 
-    bool EditorSourceControl::requestLock( string_view absolutePath )
+    bool EditorSourceControl::requestLock( const AbsolutePath& absolutePath )
     {
-        const string repositoryPath = makeRepositoryPath( _repositoryRoot, absolutePath );
+        const string repositoryPath = makeRepositoryPath( _repositoryRoot, absolutePath.str() );
         if ( _pProvider->canLock() == false || repositoryPath.empty() )
             return false;
         enqueue( SourceControlOperation::Lock, repositoryPath );
         return true;
     }
 
-    bool EditorSourceControl::requestUnlock( string_view absolutePath )
+    bool EditorSourceControl::requestUnlock( const AbsolutePath& absolutePath )
     {
-        const string repositoryPath = makeRepositoryPath( _repositoryRoot, absolutePath );
+        const string repositoryPath = makeRepositoryPath( _repositoryRoot, absolutePath.str() );
         if ( _pProvider->canLock() == false || repositoryPath.empty() )
             return false;
         enqueue( SourceControlOperation::Unlock, repositoryPath );
@@ -323,16 +323,16 @@ namespace sw::editor
         }
     }
 
-    const SourceControlLock* EditorSourceControl::findLock( string_view absolutePath ) const
+    const SourceControlLock* EditorSourceControl::findLock( const AbsolutePath& absolutePath ) const
     {
-        const string repositoryPath = makeRepositoryPath( _repositoryRoot, absolutePath );
+        const string repositoryPath = makeRepositoryPath( _repositoryRoot, absolutePath.str() );
         if ( repositoryPath.empty() )
             return nullptr;
         return VectorUtil::findIf( _listLock, [&]( const SourceControlLock& lock )
         { return StringUtil::equals( lock._path, repositoryPath, true ); } );
     }
 
-    string EditorSourceControl::describeStatus( string_view absolutePath, bool bReadOnly ) const
+    string EditorSourceControl::describeStatus( const AbsolutePath& absolutePath, bool bReadOnly ) const
     {
         const SourceControlLock* pLock = findLock( absolutePath );
         if ( pLock != nullptr )

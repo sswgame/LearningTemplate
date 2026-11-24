@@ -56,8 +56,7 @@ namespace sw::editor
         const optional<AbsolutePath> path = AbsolutePath::tryResolve( decoded, sourcePath.getParent() );
         if ( path.has_value() == false )
             return {};
-        string canonicalPath;
-        return FileUtil::makeCanonicalPath( *path, canonicalPath ) ? FileUtil::toDiskPath( canonicalPath ) : *path;
+        return FileUtil::makeCanonicalPath( *path ).value_or( *path );
     }
 
     uint64 ModelImportUtil::mixExternalFiles( const AbsolutePath& sourcePath, const vector<uint8>& listByte, string_view imageRuleText, uint64 hash )

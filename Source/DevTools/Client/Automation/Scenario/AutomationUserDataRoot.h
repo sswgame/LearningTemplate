@@ -34,7 +34,7 @@ namespace sw
         /** @brief 자동화 사용자 데이터 뿌리가 놓일 수 있는 폴더(`<Saved>/Automation` — 실행 뿌리 `Runs/…` 와 손으로 고른 `UserData/…`)입니다. */
         static AbsolutePath getBaseFolder();
         /** @brief 실행 뿌리 @p runRoot 의 사용자 데이터 뿌리(`<실행 뿌리>/userdata`)입니다. */
-        static string makeRunUserDataRoot( string_view runRoot );
+        static AbsolutePath makeRunUserDataRoot( const AbsolutePath& runRoot );
         /**
          * @brief 뿌리 @p root 가 @p baseFolder 의 아래(그 폴더 자신은 아님)인 엄격한 절대 경로인지 봅니다. `..` 마디는 거절합니다(정규화 전 글로 폴더를 벗어날 수 있다).
          * @return 아니면 그 이유(뿌리가 대상)입니다.

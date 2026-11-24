@@ -128,7 +128,7 @@ namespace sw::editor
             }
 
             /** @brief 감시 사건의 트리 표기(`makeTreePath`)입니다. 사건의 `_directory` 는 감시 루트(리소스 루트 · 작업 도메인 폴더)이고 `_filename` 은 그 아래 상대 경로다(`FileWatcher::pushChange`). */
-            static string makeEventPath( const FileChangeEvent& changeEvent ) { return makeTreePath( FileUtil::joinPath( changeEvent._directory, changeEvent._filename ) ); }
+            static string makeEventPath( const FileChangeEvent& changeEvent ) { return makeTreePath( changeEvent.makePath().str() ); }
 
             /** @brief 울타리 표지 파일의 절대 경로입니다. */
             static AbsolutePath makeFenceMarkerPath() { return AssetPaths::getScratchFolderPath().join( kFenceFileName ); }
@@ -141,7 +141,7 @@ namespace sw::editor
             {
                 string_view leafName{};
                 FileUtil::getFileNamePart( changeEvent._filename, leafName );
-                return leafName == kFenceFileName && FileUtil::isSameDiskPath( FileUtil::joinPath( changeEvent._directory, changeEvent._filename ), makeFenceMarkerPath().str() );
+                return leafName == kFenceFileName && FileUtil::isSameDiskPath( changeEvent.makePath().str(), makeFenceMarkerPath().str() );
             }
 
             /** @brief 시작 차단 조건 — 시나리오 사본 폴더를 새로 만든 뒤 파일 감시가 그 쓰기를 알릴 때까지 진행 중입니다. 에디터가 없으면 해당 없음입니다. */

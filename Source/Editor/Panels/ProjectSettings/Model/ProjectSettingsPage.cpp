@@ -26,7 +26,7 @@ namespace sw::editor
         _bDirty  = false;
         if ( _entry.isTable() )
         {
-            const expected<void> opened = _tableDocument.open( _absolutePath.str() );
+            const expected<void> opened = _tableDocument.open( _absolutePath );
             _bTypeFound                 = opened.has_value();
             if ( opened.has_value() == false )
                 SW_LOG_WARNING_ID( "ProjectSettingsPanel.ProjectSettingsTableCouldNot", "Project settings: %# could not be opened - %# (%#)", _absolutePath.c_str(), opened.error().message(),

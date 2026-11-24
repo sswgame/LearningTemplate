@@ -57,13 +57,13 @@ namespace sw
         return unexpected( error );
     }
 
-    AbsolutePath OnlineServerConfig::makeConfigPath( string_view serverConfigPath )
+    string OnlineServerConfig::makeConfigPath( string_view serverConfigPath )
     {
         string_view stem = serverConfigPath;
         if ( StringUtil::endsWith( stem, OnlineServerConfigInternal::kJSONExtension ) )
             stem = stem.substr( 0, stem.size() - OnlineServerConfigInternal::kJSONExtension.size() );
         StringBuilder<constant::buffer::kMax256> path;
         path.appendFormat( "%#%#", stem, OnlineServerConfigInternal::kOnlineExtension );
-        return FileUtil::toDiskPath( path.view() );
+        return string( path.view() );
     }
 } // namespace sw
