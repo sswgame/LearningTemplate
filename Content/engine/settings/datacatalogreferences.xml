@@ -152,6 +152,7 @@
 	<Field owner="MetroidvaniaGameModeComponent" field="_listSite" tag="MetroidvaniaSiteDef"/>
 	<CatalogKey tag="WeaponDef" catalog="WeaponCatalog" entry="Weapon"/>
 	<Field owner="ShooterPlayerComponent" field="_listWeaponID" tag="WeaponDef"/>
+	<Field owner="BattleRoyaleGameModeComponent" field="_listWeaponID" tag="WeaponDef"/>
 	<CatalogKey tag="RTSUnitDef" catalog="RTSCatalog" entry="Unit"/>
 	<Field owner="FrontierSkirmishGameModeComponent" field="_workerUnit" tag="RTSUnitDef"/>
 	<Field owner="FrontierSkirmishGameModeComponent" field="_soldierUnit" tag="RTSUnitDef"/>

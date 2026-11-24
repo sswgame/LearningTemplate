@@ -15,9 +15,7 @@
 #include "Engine/Object/GameObject/GameObjectManager.h"
 #include "Engine/Serialization/Format/StateIO.h"
 
-#include "GameFramework/Runtime/Foundation/Framework/GameService.h"
 #include "GameFramework/Runtime/Foundation/Framework/Minigame/MinigameStack.h"
-#include "GameFramework/Runtime/Gameplay/Inventory/ItemCatalog.h"
 
 namespace sw
 {
@@ -26,7 +24,7 @@ namespace sw
         struct BattleRoyaleGameModeComponentInternal
         {
             static constexpr uint32 kStateTag     = FourCCUtil::make( "BRGM" );
-            static constexpr uint32 kStateVersion = 1;
+            static constexpr uint32 kStateVersion = 2; ///< 2: 사람마다 든 총이 실린다
 
             static constexpr const utf8* kWinResult  = "win";
             static constexpr const utf8* kLoseResult = "lose";
@@ -36,7 +34,7 @@ namespace sw
             static constexpr uint32 kPersonSalt = 2;
             static constexpr uint32 kLootSalt   = 3;
 
-            static constexpr uint32 kMinPersonBytes     = 22; ///< 사람 하나: 대기(4) + 시각(4) + 깃발(1) + 자리(12) + 단계(1)
+            static constexpr uint32 kMinPersonBytes     = 22; ///< 사람 하나(무기 상태를 뺀 최소): 시각(4) + 깃발(1) + 자리(12) + 단계(1) + 총(4)
             static constexpr uint32 kMinGroundItemBytes = 20; ///< 무더기 하나: 위치(8) + 이름(4) + 개수(4) + 지점(4)
 
             static constexpr float32 kAttackRangeRatio = 0.8f; ///< 컴퓨터는 사거리의 이 비율까지 다가간다(사거리 끝에서 멈칫거리지 않게)
@@ -51,6 +49,7 @@ namespace sw
     SW_AUTOMATION_GETTER_WATCH( battleRoyalePhase, "BattleRoyale.Phase", "Battle royale phase (0 drop, 1 battle, 2 ended)", BattleRoyaleGameModeComponent, &BattleRoyaleGameModeComponent::getPhase );
     SW_AUTOMATION_GETTER_WATCH( battleRoyaleRemaining, "BattleRoyale.Remaining", "People not dead (downed included)", BattleRoyaleGameModeComponent, &BattleRoyaleGameModeComponent::getRemaining );
     SW_AUTOMATION_GETTER_WATCH( battleRoyaleZoneRadius, "BattleRoyale.ZoneRadius", "Radius of the safe zone (m)", BattleRoyaleGameModeComponent, &BattleRoyaleGameModeComponent::getZoneRadius );
+    SW_AUTOMATION_GETTER_WATCH( battleRoyalePlayerMagazine, "BattleRoyale.PlayerMagazine", "Rounds in the player weapon", BattleRoyaleGameModeComponent, &BattleRoyaleGameModeComponent::getPlayerMagazine );
     SW_AUTOMATION_GETTER_WATCH( battleRoyalePlayerDropStage, "BattleRoyale.PlayerDropStage", "Player drop stage (0 on the plane, 1 falling, 2 landed)", BattleRoyaleGameModeComponent,
                                 &BattleRoyaleGameModeComponent::getPlayerDropStage );
 
@@ -64,22 +63,24 @@ namespace sw
         , _bodyRadius{ 0.35f }
         , _eyeHeight{ 1.2f }
         , _botRouteInterval{ 0.5f }
-        , _weaponDamage{ 22.0f }
-        , _weaponRange{ 14.0f }
-        , _playerFireInterval{ 0.4f }
-        , _botFireInterval{ 0.9f }
+        , _listWeaponID{}
+        , _startReserveAmmo{ 24 }
         , _playerHitChance{ 0.75f }
-        , _botHitChance{ 0.45f }
+        , _botHitChance{ 0.3f }
         , _headChance{ 0.2f }
         , _pickupRadius{ 1.5f }
         , _reviveRange{ 1.5f }
         , _botRescueRange{ 20.0f }
+        , _botLootRange{ 40.0f }
         , _lootDataPath{}
         , _lootSpotKind{}
         , _listLootPosition{}
         , _resultHoldSeconds{ 3.0f }
         , _victoryMoney{ 60 }
         , _pCatalog{}
+        , _pWeaponCatalog{}
+        , _pProjectileCatalog{}
+        , _pItemCatalog{}
         , _pLootCatalog{}
         , _terrain{}
         , _match{}
@@ -98,6 +99,7 @@ namespace sw
         , _bFireHeld{ SW_FALSE }
         , _bUseHeld{ SW_FALSE }
         , _bUseQueued{ SW_FALSE }
+        , _bFireQueued{ SW_FALSE }
         , _reserved{ 0 }
     {
     }
@@ -106,8 +108,7 @@ namespace sw
 
     bool BattleRoyaleGameModeComponent::openMatch( BattleRoyaleMatch& outMatch ) const
     {
-        // 아이템 카탈로그는 게임이 걸었을 때만 있다(가방 무게) — 이 판의 장비는 배틀로얄 카탈로그의 것이라 없어도 된다.
-        if ( outMatch.initialize( _pCatalog.get(), game::findSubsystem<const ItemCatalog>(), _pLootCatalog.get(), _seed, &_terrain ) == false )
+        if ( outMatch.initialize( _pCatalog.get(), _pItemCatalog.get(), _pLootCatalog.get(), _seed, &_terrain ) == false )
         {
             SW_LOG_ERROR_ID( "BattleRoyale.OpenFailed", "Battle royale game mode: the zone refused the catalog map size - the match does not open" );
             return false;
@@ -138,7 +139,10 @@ namespace sw
         {
             Person entry;
             entry._jumpTime = _random.nextRange( _flightPath.computeJumpOpenTime(), _flightPath.computeJumpCloseTime() );
-            _listPerson.push_back( entry );
+            if ( equipWeapon( entry, 0 ) == false )
+                return false; // 총 목록은 여는 순간 이미 봤다
+            entry._weapon.addReserveAmmo( _startReserveAmmo );
+            _listPerson.push_back( std::move( entry ) );
         }
         _listGroundItem.clear();
         if ( _pLootCatalog != nullptr )
@@ -156,7 +160,8 @@ namespace sw
 
     bool BattleRoyaleGameModeComponent::startGame()
     {
-        if ( acquireBoundCatalog( _pCatalog ) == false )
+        const bool bBound = acquireBoundCatalog( _pCatalog ) && acquireBoundCatalog( _pWeaponCatalog ) && acquireBoundCatalog( _pProjectileCatalog ) && acquireBoundCatalog( _pItemCatalog );
+        if ( bBound == false || validateWeapons() == false )
             return false;
         const bool bNeedsLoot = _listLootPosition.empty() == false || _pCatalog->getSupplyDropSettings()._listTime.empty() == false;
         _pLootCatalog         = SharedAssetRef<LootCatalog>{};
@@ -177,6 +182,7 @@ namespace sw
         _bFireHeld   = SW_FALSE;
         _bUseHeld    = SW_FALSE;
         _bUseQueued  = SW_FALSE;
+        _bFireQueued = SW_FALSE;
         return true;
     }
 
@@ -190,6 +196,8 @@ namespace sw
     {
         if ( isAcceptingInput() == false )
             return false;
+        if ( bFireHeld && _bFireHeld == SW_FALSE )
+            _bFireQueued = SW_TRUE;
         _commandMove = move;
         _bFireHeld   = bFireHeld ? SW_TRUE : SW_FALSE;
         _bUseHeld    = bUseHeld ? SW_TRUE : SW_FALSE;
@@ -288,7 +296,8 @@ namespace sw
             if ( entry._skydiver.isLanded() )
                 landPerson( person );
         }
-        _bUseQueued = SW_FALSE;
+        _bUseQueued  = SW_FALSE;
+        _bFireQueued = SW_FALSE;
         if ( landedCount < personCount )
             return;
         _phase = BattleRoyalePhase::Battle;
@@ -369,35 +378,171 @@ namespace sw
         _match.setPlayerPosition( person, float2{ MathUtil::clamp( position._x, 0.0f, mapSize ), MathUtil::clamp( position._y, 0.0f, mapSize ) } );
     }
 
-    void BattleRoyaleGameModeComponent::fire( int32 person, float32 interval, float32 hitChance )
+    bool BattleRoyaleGameModeComponent::validateWeapons() const
     {
-        Person& entry = _listPerson[static_cast<size_t>( person )];
-        if ( entry._weaponCooldown.isActive() )
+        bool bValid = _listWeaponID.empty() == false;
+        for ( const CatalogKey<WeaponDef>& weaponID : _listWeaponID )
+        {
+            const WeaponDef* const     pWeapon     = _pWeaponCatalog->find( weaponID.key() );
+            const ProjectileDef* const pProjectile = pWeapon != nullptr ? _pProjectileCatalog->find( pWeapon->_projectileID.key() ) : nullptr;
+            const bool                 bUsable     = pProjectile != nullptr && pWeapon->canAccept( *pProjectile ) && _pItemCatalog->find( pWeapon->_itemID.key() ) != nullptr &&
+                                 _pItemCatalog->find( pWeapon->_ammoID.key() ) != nullptr;
+            if ( bUsable == false )
+                SW_LOG_ERROR_ID( "BattleRoyale.WeaponRefused", "Battle royale game mode: weapon '%#' needs a projectile it accepts, an item and an ammo item in the tables - the match does not open",
+                                 weaponID.c_str() );
+            bValid = bValid && bUsable;
+        }
+        if ( _listWeaponID.empty() )
+            SW_LOG_ERROR_ID( "BattleRoyale.NoWeapon", "Battle royale game mode: the weapon list is empty - the match does not open" );
+        return bValid;
+    }
+
+    bool BattleRoyaleGameModeComponent::equipWeapon( Person& inoutPerson, int32 weaponIndex ) const
+    {
+        if ( weaponIndex < 0 || static_cast<size_t>( weaponIndex ) >= _listWeaponID.size() )
+            return false;
+        const WeaponDef* const     pWeapon     = _pWeaponCatalog->find( _listWeaponID[static_cast<size_t>( weaponIndex )].key() );
+        const ProjectileDef* const pProjectile = pWeapon != nullptr ? _pProjectileCatalog->find( pWeapon->_projectileID.key() ) : nullptr;
+        if ( pProjectile == nullptr || inoutPerson._weapon.equip( *pWeapon, *pProjectile, 0 ) == false )
+            return false;
+        inoutPerson._weaponIndex = weaponIndex;
+        return true;
+    }
+
+    optional<int32> BattleRoyaleGameModeComponent::findWeaponIndex( const hashed_string& itemID ) const
+    {
+        for ( size_t weaponIndex = 0; weaponIndex < _listWeaponID.size(); ++weaponIndex )
+        {
+            const WeaponDef* const pWeapon = _pWeaponCatalog->find( _listWeaponID[weaponIndex].key() );
+            if ( pWeapon != nullptr && pWeapon->_itemID.key() == itemID )
+                return static_cast<int32>( weaponIndex );
+        }
+        return nullopt;
+    }
+
+    bool BattleRoyaleGameModeComponent::isAmmoItem( const hashed_string& itemID ) const
+    {
+        for ( const CatalogKey<WeaponDef>& weaponID : _listWeaponID )
+        {
+            const WeaponDef* const pWeapon = _pWeaponCatalog->find( weaponID.key() );
+            if ( pWeapon != nullptr && pWeapon->_ammoID.key() == itemID )
+                return true;
+        }
+        return false;
+    }
+
+    const ItemDef* BattleRoyaleGameModeComponent::findPlayerWeaponItem() const
+    {
+        return _listPerson.empty() ? nullptr : _pItemCatalog->find( _listPerson[kPlayer]._weapon.getDef()._itemID.key() );
+    }
+
+    int32 BattleRoyaleGameModeComponent::countSpareAmmo( int32 person ) const
+    {
+        const WeaponState& weapon = _listPerson[static_cast<size_t>( person )]._weapon;
+        return weapon.getReserveAmmo() + _match.findPlayer( person )->_inventory.getItemCount( weapon.getDef()._ammoID.key() );
+    }
+
+    void BattleRoyaleGameModeComponent::updateWeapon( int32 person, float32 deltaTime )
+    {
+        WeaponState& weapon = _listPerson[static_cast<size_t>( person )]._weapon;
+        weapon.update( deltaTime );
+        BattleRoyalePlayer& player = *_match.findPlayerMutable( person );
+        if ( weapon.getMagazineAmmo() == 0 )
+            (void)player._loadout.tryReload( weapon, player._inventory ); // 재장전 중이거나 탄이 없으면 그대로다
+    }
+
+    void BattleRoyaleGameModeComponent::fire( int32 person, bool bTriggerJustPressed, float32 hitChance )
+    {
+        WeaponState& weapon = _listPerson[static_cast<size_t>( person )]._weapon;
+        if ( weapon.isCoolingDown() || weapon.isReloading() )
             return;
-        const optional<int32> target = findVisibleEnemy( person, _weaponRange );
+        const optional<int32> target = findVisibleEnemy( person, weapon.getShot()._range );
         if ( target.has_value() == false )
             return;
-        entry._weaponCooldown.restart( interval );
-        if ( _random.nextChance( hitChance ) == false )
+        const float2  from     = _match.findPlayer( person )->_position;
+        const float2  to       = _match.findPlayer( *target )->_position;
+        const float32 distance = float2::getDistance( from, to );
+        const float2  aim      = BattleRoyaleGameModeComponentInternal::makeDirection( from, to );
+        Ray           ray;
+        ray._origin    = float3{ from._x, _groundHeight + _eyeHeight, from._y };
+        ray._direction = float3{ aim._x, 0.0f, aim._y };
+        WeaponShot shot;
+        if ( weapon.pullTrigger( ray, bTriggerJustPressed, shot ) != WeaponFireResult::Fired )
             return;
-        const BattleRoyaleHitZone hitZone = _random.nextChance( _headChance ) ? BattleRoyaleHitZone::Head : BattleRoyaleHitZone::Body;
-        (void)_match.applyDamage( *target, person, _weaponDamage, hitZone ); // 결과는 알림으로 읽는다
+        for ( size_t pellet = 0; pellet < shot._listRay.size() && _match.findPlayer( *target )->isAlive(); ++pellet )
+        {
+            if ( _random.nextChance( hitChance ) == false )
+                continue;
+            const BattleRoyaleHitZone hitZone = _random.nextChance( _headChance ) ? BattleRoyaleHitZone::Head : BattleRoyaleHitZone::Body;
+            (void)_match.applyDamage( *target, person, weapon.getShot().computeDamage( distance, hitZone == BattleRoyaleHitZone::Head ), hitZone ); // 결과는 알림으로 읽는다
+        }
+    }
+
+    optional<float2> BattleRoyaleGameModeComponent::findWantedItem( int32 person, float32 range ) const
+    {
+        const BattleRoyalePlayer& player      = *_match.findPlayer( person );
+        const Person&             entry       = _listPerson[static_cast<size_t>( person )];
+        const WeaponDef&          weapon      = entry._weapon.getDef();
+        const bool                bNeedsAmmo  = countSpareAmmo( person ) < weapon._magazineSize;
+        float32                   bestSquared = range * range;
+        optional<float2>          best{};
+        for ( const BattleRoyaleGroundItem& item : _listGroundItem )
+        {
+            const float32 distanceSquared = float2::getDistanceSquared( player._position, item._position );
+            if ( distanceSquared > bestSquared )
+                continue;
+            const optional<int32> weaponIndex = findWeaponIndex( item._itemID );
+            const bool            bBetter     = weaponIndex.has_value() && *weaponIndex > entry._weaponIndex;
+            const bool            bAmmo       = bNeedsAmmo && item._itemID == weapon._ammoID.key() && player._inventory.hasRoomFor( item._itemID, item._count );
+            if ( bBetter == false && bAmmo == false )
+                continue;
+            bestSquared = distanceSquared;
+            best        = item._position;
+        }
+        return best;
+    }
+
+    bool BattleRoyaleGameModeComponent::tryTakeItem( int32 person, const BattleRoyaleGroundItem& item )
+    {
+        BattleRoyalePlayer&   player      = *_match.findPlayerMutable( person );
+        Person&               entry       = _listPerson[static_cast<size_t>( person )];
+        const optional<int32> weaponIndex = findWeaponIndex( item._itemID );
+        if ( weaponIndex.has_value() )
+        {
+            if ( *weaponIndex <= entry._weaponIndex )
+                return false;
+            // 놓는 총의 탄은 챙긴다(자리가 모자라면 그만큼 버린다).
+            const hashed_string oldAmmoID = entry._weapon.getDef()._ammoID.key();
+            const int32         oldAmmo   = entry._weapon.getMagazineAmmo() + entry._weapon.getReserveAmmo();
+            if ( equipWeapon( entry, *weaponIndex ) == false )
+                return false;
+            if ( oldAmmo > 0 )
+                (void)player._inventory.addItem( oldAmmoID, oldAmmo );
+            SW_LOG_INFO_ID( "BattleRoyale.WeaponTaken", "[BattleRoyale] person %# takes weapon '%#'", person, entry._weapon.getDef()._id.c_str() );
+            return true;
+        }
+        if ( isAmmoItem( item._itemID ) )
+        {
+            const bool bRoom = player._inventory.hasRoomFor( item._itemID, item._count );
+            if ( bRoom )
+                (void)player._inventory.addItem( item._itemID, item._count ); // 자리를 봤다
+            return bRoom;
+        }
+        // 같은 슬롯을 이미 채웠으면 남겨 둔다 — 뒤에 오는 사람이 줍는다.
+        const BattleRoyaleArmorDef* const pArmor = _pCatalog->findArmor( item._itemID );
+        if ( pArmor == nullptr )
+            return player._loadout.getBackpackID().empty() && player._loadout.tryEquipBackpack( item._itemID, player._inventory );
+        const BattleRoyaleArmorSlot& slot = pArmor->_slot == BattleRoyaleCatalog::getHelmetSlotName() ? player._loadout.getHelmet() : player._loadout.getVest();
+        return slot.isEmpty() && player._loadout.tryEquipArmor( item._itemID );
     }
 
     void BattleRoyaleGameModeComponent::pickUpItems( int32 person )
     {
-        BattleRoyalePlayer& player = *_match.findPlayerMutable( person );
-        const size_t        before = _listGroundItem.size();
+        const float2 position = _match.findPlayer( person )->_position;
+        const size_t before   = _listGroundItem.size();
         (void)VectorUtil::removeIf( _listGroundItem, [&]( const BattleRoyaleGroundItem& item )
         {
-            if ( float2::getDistanceSquared( item._position, player._position ) > _pickupRadius * _pickupRadius )
-                return false;
-            // 같은 슬롯을 이미 채웠으면 남겨 둔다 — 뒤에 오는 사람이 줍는다.
-            const BattleRoyaleArmorDef* const pArmor = _pCatalog->findArmor( item._itemID );
-            if ( pArmor == nullptr )
-                return player._loadout.getBackpackID().empty() && player._loadout.tryEquipBackpack( item._itemID, player._inventory );
-            const BattleRoyaleArmorSlot& slot = pArmor->_slot == BattleRoyaleCatalog::getHelmetSlotName() ? player._loadout.getHelmet() : player._loadout.getVest();
-            return slot.isEmpty() && player._loadout.tryEquipArmor( item._itemID );
+            return float2::getDistanceSquared( item._position, position ) <= _pickupRadius * _pickupRadius && tryTakeItem( person, item );
         } );
         if ( _listGroundItem.size() != before )
             ++_groundItemRevision;
@@ -417,7 +562,7 @@ namespace sw
         }
         movePerson( kPlayer, _commandMove, _playerSpeed, deltaTime );
         if ( _bFireHeld == SW_TRUE )
-            fire( kPlayer, _playerFireInterval, _playerHitChance );
+            fire( kPlayer, _bFireQueued == SW_TRUE, _playerHitChance );
     }
 
     void BattleRoyaleGameModeComponent::stepBot( int32 person, float32 deltaTime )
@@ -427,7 +572,7 @@ namespace sw
         const BattleRoyaleZone&   zone         = _match.getZone();
         const bool                bOutside     = zone.isInside( self._position ) == false;
         const bool                bMustMoveOn  = zone.getStage() == BattleRoyaleZoneStage::Shrinking && float2::getDistance( self._position, zone.getNextCenter() ) > zone.getNextRadius();
-        const optional<int32>     enemyInRange = findVisibleEnemy( person, _weaponRange * Internal::kAttackRangeRatio );
+        const optional<int32>     enemyInRange = canShoot( person ) ? findVisibleEnemy( person, _listPerson[static_cast<size_t>( person )]._weapon.getShot()._range * Internal::kAttackRangeRatio ) : nullopt;
         const bool                bReviving    = self._revivingTarget >= 0;
         const optional<int32>     downedMate   = findDownedMate( person, _botRescueRange );
         const bool                bRescue      = downedMate.has_value() && enemyInRange.has_value() == false && bOutside == false;
@@ -451,11 +596,14 @@ namespace sw
         }
         else if ( enemyInRange.has_value() == false )
         {
-            const optional<int32> enemy = findNearestEnemy( person );
-            if ( enemy.has_value() )
+            const optional<float2> wantedItem = findWantedItem( person, _botLootRange );
+            const optional<int32>  enemy      = findNearestEnemy( person );
+            if ( wantedItem.has_value() )
+                walkRoute( person, *wantedItem, deltaTime );
+            else if ( enemy.has_value() )
                 walkRoute( person, _match.findPlayer( *enemy )->_position, deltaTime );
         }
-        fire( person, _botFireInterval, _botHitChance );
+        fire( person, true, _botHitChance );
     }
 
     void BattleRoyaleGameModeComponent::stepBattle( float32 deltaTime )
@@ -463,16 +611,17 @@ namespace sw
         const bool bAutoPlay = isAutoPlayOn();
         for ( int32 person = 0; person < getPersonCount() && _match.getMatchState().getPhase() == MatchPhase::InProgress; ++person )
         {
-            (void)_listPerson[static_cast<size_t>( person )]._weaponCooldown.update( deltaTime ); // 끝났는지는 쏠 때 본다
             if ( _match.findPlayer( person )->isAlive() == false )
                 continue;
+            updateWeapon( person, deltaTime );
             if ( person == kPlayer && bAutoPlay == false )
                 stepPlayer( deltaTime );
             else
                 stepBot( person, deltaTime );
             pickUpItems( person );
         }
-        _bUseQueued = SW_FALSE;
+        _bUseQueued  = SW_FALSE;
+        _bFireQueued = SW_FALSE;
         _match.update( deltaTime );
     }
 
@@ -576,11 +725,15 @@ namespace sw
         {
             float3                position = person._skydiver.getPosition();
             BattleRoyaleFallStage stage    = person._skydiver.getStage();
-            io.value( person._weaponCooldown );
             io.value( person._jumpTime );
             io.flag( person._bJumped );
             io.value( position );
             io.enumValue( stage, BattleRoyaleFallStage::Landed );
+            io.value( person._weaponIndex );
+            // 총의 정의 · 탄은 표의 것이다 — 같은 총을 먼저 든 뒤 상태를 읽는다(무기 상태의 계약).
+            if ( io.isReading() && io.check( equipWeapon( person, person._weaponIndex ) ) == false )
+                return;
+            io.value( person._weapon );
             if ( io.isWriting() || io.isOk() == false )
                 return;
             // 낙하산은 저장한 단계까지 다시 편다. 땅에 닿은 사람은 바닥 높이에서 시작하면 닿은 상태다.

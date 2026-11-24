@@ -219,7 +219,12 @@
 		<entity id="10" name="BattleRoyaleGameMode">
 			<GameObject _schemaVersion="0" _name="BattleRoyaleGameMode" _bActive="true">
 				<_listComponent>
-					<BattleRoyaleGameModeComponent _localID="3374221220806048208" _squadCount="3" _squadSize="2" _seed="7" _playerSpeed="5" _botSpeed="4" _bodyRadius="0.35" _eyeHeight="1.2" _botRouteInterval="0.5" _weaponDamage="15" _weaponRange="14" _playerFireInterval="0.4" _botFireInterval="0.9" _playerHitChance="0.75" _botHitChance="0.45" _headChance="0.2" _pickupRadius="1.5" _reviveRange="1.5" _botRescueRange="20" _lootDataPath="game/playground/battleroyale/data/island.loot.xml" _lootSpotKind="crate" _resultHoldSeconds="3" _victoryMoney="60">
+					<BattleRoyaleGameModeComponent _localID="3374221220806048208" _squadCount="3" _squadSize="2" _seed="7" _playerSpeed="5" _botSpeed="4" _bodyRadius="0.35" _eyeHeight="1.2" _botRouteInterval="0.5" _startReserveAmmo="24" _playerHitChance="0.75" _botHitChance="0.3" _headChance="0.2" _pickupRadius="1.5" _reviveRange="1.5" _botRescueRange="20" _botLootRange="40" _lootDataPath="game/playground/battleroyale/data/island.loot.xml" _lootSpotKind="crate" _resultHoldSeconds="3" _victoryMoney="60">
+						<_listWeaponID>
+							<item>br_pistol</item>
+							<item>br_shotgun</item>
+							<item>br_rifle</item>
+						</_listWeaponID>
 						<_listLootPosition>
 							<item>27,34</item>
 							<item>66,30</item>

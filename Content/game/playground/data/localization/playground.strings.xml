@@ -146,6 +146,11 @@
 				<item>game/playground/battleroyale/ui/hud.ui.xml</item>
 			</origins>
 		</entry>
+		<entry key="Light Ammo" source="Light Ammo" context="Item name">
+			<origins>
+				<item>common/data/items.xml</item>
+			</origins>
+		</entry>
 		<entry key="Longbow" source="Longbow" context="Item name">
 			<origins>
 				<item>common/data/items.xml</item>
@@ -188,6 +193,11 @@
 				<item>common/data/items.xml</item>
 			</origins>
 		</entry>
+		<entry key="Rifle Ammo" source="Rifle Ammo" context="Item name">
+			<origins>
+				<item>common/data/items.xml</item>
+			</origins>
+		</entry>
 		<entry key="Round Shield" source="Round Shield" context="Item name">
 			<origins>
 				<item>common/data/items.xml</item>
@@ -199,6 +209,11 @@
 			</origins>
 		</entry>
 		<entry key="Rusted Helm" source="Rusted Helm" context="Item name">
+			<origins>
+				<item>common/data/items.xml</item>
+			</origins>
+		</entry>
+		<entry key="Shotgun Shells" source="Shotgun Shells" context="Item name">
 			<origins>
 				<item>common/data/items.xml</item>
 			</origins>

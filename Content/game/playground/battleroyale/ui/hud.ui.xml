@@ -20,6 +20,18 @@
 			<TextWidget _name="ZoneSeconds" _text="{bind:_zoneSeconds}" _styleClass="hud" _visibility="HitTestInvisible" _bLocalized="false">
 				<_slot _anchorMin="0,0" _anchorMax="0,0" _offsetMin="156,40" _offsetMax="236,76" />
 			</TextWidget>
+			<TextWidget _name="WeaponName" _text="{bind:_weaponName}" _styleClass="hud" _visibility="HitTestInvisible">
+				<_slot _anchorMin="1,1" _anchorMax="1,1" _offsetMin="-448,-120" _offsetMax="-48,-84" />
+				<_style _alignment="End" />
+			</TextWidget>
+			<TextWidget _name="Magazine" _text="{bind:_magazine}" _styleClass="hud" _visibility="HitTestInvisible" _bLocalized="false">
+				<_slot _anchorMin="1,1" _anchorMax="1,1" _offsetMin="-228,-80" _offsetMax="-148,-44" />
+				<_style _alignment="End" />
+			</TextWidget>
+			<TextWidget _name="SpareAmmo" _text="{bind:_spareAmmo}" _styleClass="hud" _visibility="HitTestInvisible" _bLocalized="false">
+				<_slot _anchorMin="1,1" _anchorMax="1,1" _offsetMin="-128,-80" _offsetMax="-48,-44" />
+				<_style _alignment="End" />
+			</TextWidget>
 			<TextWidget _name="DropHint" _text="Use - jump off the plane" _styleClass="hud" _visibility="{bind:_dropHintVisibility}">
 				<_slot _anchorMin="0.5,1" _anchorMax="0.5,1" _offsetMin="-400,-160" _offsetMax="400,-120" />
 				<_style _alignment="Center" />

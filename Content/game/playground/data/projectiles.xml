@@ -22,6 +22,11 @@
   <Projectile id="mech_beam" tags="Ammo.MechBeam" damage="24" speed="38" range="55" radius="0.3" gravityScale="0"/>
   <Projectile id="mech_missile" tags="Ammo.MechMissile" damage="60" speed="20" range="60" radius="0.5" gravityScale="0"/>
 
+  <!-- 배틀로얄 미니게임(minigames/battleroyale)의 탄 — 사람은 바디 없는 점이라 사거리 · 피해만 쓴다(명중은 디렉터의 확률). -->
+  <Projectile id="br_light_round" tags="Ammo.RoyaleLight" damage="12" range="14" speed="0" headshotMultiplier="1.5"/>
+  <Projectile id="br_shell" _base="br_light_round" tags="Ammo.RoyaleShell" damage="9" range="10"/>
+  <Projectile id="br_rifle_round" _base="br_light_round" tags="Ammo.RoyaleRifle" damage="11" range="22"/>
+
   <Impact id="body_incendiary" surface="Body" when="Ammo.Incendiary" color="4,0.8,0.1,1" size="0.32"/>
   <Impact id="body" surface="Body" color="1,0.45,0.2,1" size="0.18"/>
   <Impact id="cover" surface="Cover" color="0.9,0.85,0.6,1" size="0.1"/>

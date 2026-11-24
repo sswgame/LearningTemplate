@@ -1,4 +1,4 @@
-// BattleRoyaleGameModeTest — 배틀로얄 디렉터: 명령은 판이 열린 동안만 받고, 카탈로그가 없으면 열지 않으며, 낙하 → 전투 → 구역이 점이 되어 판이 끝나는 한 바퀴를 돌고 도중 상태 바이트를 왕복한다(nogpu, 에셋 없음).
+// BattleRoyaleGameModeTest — 배틀로얄 디렉터: 명령은 판이 열린 동안만 받고, 카탈로그가 없으면 열지 않으며, 낙하 → 전투 → 구역이 점이 되어 판이 끝나는 한 바퀴를 돌고 도중 상태 바이트를 왕복한다. 표에 없는 총은 거절하고, 바닥의 더 나은 총과 탄을 주워 바꿔 든다(nogpu).
 #include "pch.h"
 
 #include "Core/Subsystem/SubsystemScope.h"
@@ -22,9 +22,39 @@ namespace
   <Flight speed="50" altitude="20" jumpStart="0" jumpEnd="0.5" offset="0.2"/>
   <Fall freeFallSpeed="40" freeFallHorizontal="5" parachuteSpeed="20" parachuteHorizontal="5" autoOpenHeight="5"/>
   <Zone startRadius="0"><Phase wait="0.5" shrink="0.5" ratio="0" damage="100"/></Zone>
+  <LootSpot id="supply" table="airdrop" chance="1"/>
 </BattleRoyaleCatalog>)";
 
-    constexpr const utf8* kBattleRoyaleGameModeXML = R"(<BattleRoyaleGameModeComponent _squadCount="2" _squadSize="1" _seed="7" _playerHitChance="0" _botHitChance="0" />)";
+    constexpr const utf8* kBattleRoyaleDirectorProjectileXML = R"(<ProjectileCatalog>
+  <Projectile id="light" tags="Ammo.Light" damage="10" range="10"/>
+  <Projectile id="heavy" tags="Ammo.Heavy" damage="20" range="20"/>
+</ProjectileCatalog>)";
+
+    constexpr const utf8* kBattleRoyaleDirectorWeaponXML = R"(<WeaponCatalog>
+  <Weapon id="first" item="pistol" ammo="ammo_light" projectile="light" accepts="Ammo.Light" magazineSize="12" maxReserveAmmo="60"/>
+  <Weapon id="better" item="scifi_rifle" ammo="ammo_rifle" projectile="heavy" accepts="Ammo.Heavy" magazineSize="24" maxReserveAmmo="120" automatic="true"/>
+</WeaponCatalog>)";
+
+    constexpr const utf8* kBattleRoyaleDirectorItemXML = R"(<ItemCatalog>
+  <Item id="pistol" name="Pistol"/>
+  <Item id="scifi_rifle" name="Rifle"/>
+  <Item id="ammo_light" name="Light" maxStack="60" weight="0"/>
+  <Item id="ammo_rifle" name="Heavy" maxStack="90" weight="0"/>
+</ItemCatalog>)";
+
+    constexpr const utf8* kBattleRoyaleGameModeXML = R"(<BattleRoyaleGameModeComponent _squadCount="2" _squadSize="1" _seed="7" _playerHitChance="0" _botHitChance="0" _startReserveAmmo="24">
+  <_listWeaponID><item>first</item><item>better</item></_listWeaponID>
+</BattleRoyaleGameModeComponent>)";
+
+    // 보급 상자 표(총 · 탄을 늘 준다)의 무더기 하나가 맵 가운데에 있고 줍는 거리가 맵만 하다 — 어디에 내려도 첫 걸음에 줍는다.
+    constexpr const utf8* kBattleRoyaleLootXML = R"(<BattleRoyaleGameModeComponent _squadCount="2" _squadSize="1" _seed="7" _playerHitChance="0" _botHitChance="0" _startReserveAmmo="24" _pickupRadius="100" _lootDataPath="game/playground/battleroyale/data/island.loot.xml" _lootSpotKind="supply">
+  <_listWeaponID><item>first</item><item>better</item></_listWeaponID>
+  <_listLootPosition><item>25,25</item></_listLootPosition>
+</BattleRoyaleGameModeComponent>)";
+
+    constexpr const utf8* kBattleRoyaleUnknownWeaponXML = R"(<BattleRoyaleGameModeComponent _squadCount="2" _squadSize="1" _seed="7">
+  <_listWeaponID><item>first</item><item>missing</item></_listWeaponID>
+</BattleRoyaleGameModeComponent>)";
 
     constexpr float32 kBattleRoyaleGameModeFrame      = 1.0f / 60.0f;
     constexpr int32   kBattleRoyaleGameModeFrameLimit = 600;
@@ -33,16 +63,23 @@ namespace
     struct BattleRoyaleDirectorTest
     {
         BattleRoyaleCatalog            _catalog{};
+        WeaponCatalog                  _weapons{};
+        ProjectileCatalog              _projectiles{};
+        ItemCatalog                    _items{};
         SubsystemScope                 _scope{};
         GameObjectManager              _manager{};
         BattleRoyaleGameModeComponent* _pGameMode{ nullptr };
 
-        [[nodiscard]] bool open()
+        [[nodiscard]] bool open( const utf8* pDirectorXML = kBattleRoyaleGameModeXML )
         {
-            if ( _catalog.loadFromXMLText( kBattleRoyaleDirectorXML, "BattleRoyaleGameModeTest" ) == false || _scope.bind<const BattleRoyaleCatalog>( &_catalog ) == false )
+            const bool bLoaded = _catalog.loadFromXMLText( kBattleRoyaleDirectorXML, "BattleRoyaleGameModeTest" ) && _weapons.loadFromXMLText( kBattleRoyaleDirectorWeaponXML, "BattleRoyaleGameModeTest" ) &&
+                                 _projectiles.loadFromXMLText( kBattleRoyaleDirectorProjectileXML, "BattleRoyaleGameModeTest" ) && _items.loadFromXMLText( kBattleRoyaleDirectorItemXML, "BattleRoyaleGameModeTest" );
+            const bool bBound = bLoaded && _scope.bind<const BattleRoyaleCatalog>( &_catalog ) && _scope.bind<const WeaponCatalog>( &_weapons ) &&
+                                _scope.bind<const ProjectileCatalog>( &_projectiles ) && _scope.bind<const ItemCatalog>( &_items );
+            if ( bBound == false )
                 return false;
             _pGameMode = _manager.createGameObject( hashed_string( "Director" ) )->addComponent<BattleRoyaleGameModeComponent>();
-            return _pGameMode != nullptr && XMLSerializer::deserialize( _pGameMode, *BattleRoyaleGameModeComponent::StaticType(), kBattleRoyaleGameModeXML );
+            return _pGameMode != nullptr && XMLSerializer::deserialize( _pGameMode, *BattleRoyaleGameModeComponent::StaticType(), pDirectorXML );
         }
 
         /** @brief 단계가 @p phase 에 닿을 때까지 프레임을 돌립니다. 상한 안에 닿았으면 true 입니다. */
@@ -115,5 +152,45 @@ SW_TEST_CASE( BattleRoyaleGameModeTest, DropThenZoneEndsTheMatch )
     SW_REQUIRE_TRUE( test.runUntil( BattleRoyalePhase::Ended ) );
     SW_EXPECT_FALSE( test._pGameMode->isAcceptingInput() );
     SW_EXPECT_TRUE( test._pGameMode->getRemaining() <= 1 );
+    test._manager.endPlay();
+}
+
+/** @brief [BattleRoyaleGameModeTest] 총 목록에 표에 없는 총이 있으면 오류를 남기고 판을 열지 않는다 */
+SW_TEST_CASE( BattleRoyaleGameModeTest, UnknownWeaponDoesNotOpen )
+{
+    SW_EXPECT_LOG( "BattleRoyale.WeaponRefused" );
+    BattleRoyaleDirectorTest test;
+    SW_REQUIRE_TRUE( test.open( kBattleRoyaleUnknownWeaponXML ) );
+    game::ScopedGameScope scopedScope( test._scope );
+    test._manager.beginPlay();
+    SW_EXPECT_FALSE( test._pGameMode->isStarted() );
+    test._manager.endPlay();
+}
+
+/** @brief [BattleRoyaleGameModeTest] 바닥의 더 나은 총은 탄창을 채워 바꿔 들고 그 탄은 더 넣을 탄이 되며, 든 총과 탄이 상태로 왕복한다 */
+SW_TEST_CASE( BattleRoyaleGameModeTest, BetterWeaponAndAmmoArePickedUp )
+{
+    BattleRoyaleDirectorTest test;
+    SW_REQUIRE_TRUE( test.open( kBattleRoyaleLootXML ) );
+    game::ScopedGameScope scopedScope( test._scope );
+    test._manager.beginPlay();
+    SW_REQUIRE_TRUE( test._pGameMode->isStarted() );
+    SW_EXPECT_EQUAL( 12, test._pGameMode->getPlayerMagazine() );
+    SW_EXPECT_EQUAL( 24, test._pGameMode->getPlayerSpareAmmo() );
+    SW_REQUIRE_TRUE( test.runUntil( BattleRoyalePhase::Battle ) );
+    test._manager.update( kBattleRoyaleGameModeFrame * 2.0f );
+    const ItemDef* const pItem = test._pGameMode->findPlayerWeaponItem();
+    SW_REQUIRE_NOT_NULL( pItem );
+    SW_EXPECT_TRUE( pItem->_id == hashed_string( "scifi_rifle" ) );
+    SW_EXPECT_EQUAL( 24, test._pGameMode->getPlayerMagazine() );
+    const int32 spareAmmo = test._pGameMode->getPlayerSpareAmmo();
+    SW_EXPECT_TRUE( spareAmmo >= 48 );
+
+    Archive written;
+    test._pGameMode->writeState( written );
+    vector<uint8> bytes( written.getData(), written.getData() + written.getSize() );
+    test._pGameMode->restoreState( std::move( bytes ) );
+    SW_EXPECT_EQUAL( 24, test._pGameMode->getPlayerMagazine() );
+    SW_EXPECT_EQUAL( spareAmmo, test._pGameMode->getPlayerSpareAmmo() );
     test._manager.endPlay();
 }

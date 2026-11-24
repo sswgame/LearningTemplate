@@ -166,6 +166,12 @@ msgstr "마지막 분대 - 승리했습니다"
 
 #. Context: Item name
 #: common/data/items.xml
+msgctxt "Light Ammo"
+msgid "Light Ammo"
+msgstr "경량 탄약"
+
+#. Context: Item name
+#: common/data/items.xml
 msgctxt "Longbow"
 msgid "Longbow"
 msgstr "장궁"
@@ -202,6 +208,12 @@ msgstr "펌프 산탄총"
 
 #. Context: Item name
 #: common/data/items.xml
+msgctxt "Rifle Ammo"
+msgid "Rifle Ammo"
+msgstr "소총 탄약"
+
+#. Context: Item name
+#: common/data/items.xml
 msgctxt "Round Shield"
 msgid "Round Shield"
 msgstr "둥근 방패"
@@ -217,6 +229,12 @@ msgstr "둥근 방패(병합)"
 msgctxt "Rusted Helm"
 msgid "Rusted Helm"
 msgstr "녹슨 투구"
+
+#. Context: Item name
+#: common/data/items.xml
+msgctxt "Shotgun Shells"
+msgid "Shotgun Shells"
+msgstr "산탄"
 
 #. Context: Subtitle speaker (audio event SubtitleGuideLine)
 #: game/playground/audio/playground.audioevents.xml

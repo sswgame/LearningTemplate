@@ -13,4 +13,8 @@
           spreadPerShot="0.8" spreadRecovery="6" recoilPitch="1.1" magazineSize="12" maxReserveAmmo="96" pelletCount="1" automatic="false"/>
   <!-- 기체 대전 미니게임(minigames/mecharena)의 주무기 — 기체(data/mechs.xml)의 Shot 슬롯이 가리킨다. 사격장은 이 탄을 받지 않는다. -->
   <Weapon id="mech_rifle" projectile="mech_beam" accepts="Ammo.MechBeam" fireInterval="0.35" reloadTime="1.6" minSpread="0.5" maxSpread="2" spreadPerShot="0.4" spreadRecovery="4" magazineSize="8" maxReserveAmmo="400" pelletCount="1" automatic="true"/>
+  <!-- 배틀로얄 미니게임(minigames/battleroyale)의 총 — 디렉터의 _listWeaponID 가 나쁜 것부터 든다. ammo 는 바닥에서 줍는 탄 아이템이다. 사격장은 이 탄을 받지 않는다. -->
+  <Weapon id="br_pistol" item="scifi_pistol" ammo="ammo_light" projectile="br_light_round" accepts="Ammo.RoyaleLight" fireInterval="0.4" reloadTime="1.4" minSpread="0.5" maxSpread="2" spreadPerShot="0.4" spreadRecovery="6" magazineSize="12" maxReserveAmmo="60" pelletCount="1" automatic="false"/>
+  <Weapon id="br_shotgun" item="scifi_shotgun" ammo="ammo_shell" projectile="br_shell" accepts="Ammo.RoyaleShell" fireInterval="0.9" reloadTime="2.2" minSpread="5" maxSpread="6.5" spreadPerShot="1.5" spreadRecovery="4" magazineSize="5" maxReserveAmmo="25" pelletCount="5" automatic="false" twoHanded="true"/>
+  <Weapon id="br_rifle" item="scifi_rifle" ammo="ammo_rifle" projectile="br_rifle_round" accepts="Ammo.RoyaleRifle" fireInterval="0.2" reloadTime="1.9" minSpread="0.4" maxSpread="3" spreadPerShot="0.4" spreadRecovery="7" magazineSize="24" maxReserveAmmo="120" pelletCount="1" automatic="true" twoHanded="true"/>
 </WeaponCatalog>

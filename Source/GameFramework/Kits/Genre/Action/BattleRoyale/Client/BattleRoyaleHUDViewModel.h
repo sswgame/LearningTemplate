@@ -1,8 +1,9 @@
 /**
  * @file BattleRoyaleHUDViewModel.h
- * @brief 배틀로얄 HUD 문서가 보이는 값(체력 · 남은 인원 · 구역 시간 · 안내 · 결과)입니다 — 뷰 컴포넌트는 세터만 부르고, 문서의 `{bind:필드}` 가 위젯 칸에 잇습니다.
+ * @brief 배틀로얄 HUD 문서가 보이는 값(체력 · 총과 탄 · 남은 인원 · 구역 시간 · 안내 · 결과)입니다 — 뷰 컴포넌트는 세터만 부르고, 문서의 `{bind:필드}` 가 위젯 칸에 잇습니다.
  */
 #pragma once
+#include "Core/Container/string.h"
 #include "Core/Foundation/Types.h"
 
 #include "Engine/Presentation/UIViewModel.h"
@@ -31,6 +32,8 @@ namespace sw
 
         /** @brief 체력 비율(0..1)입니다. */
         void setHealth( float32 ratio );
+        /** @brief 든 총의 이름(아이템 표의 원문 — 글 위젯이 문화권에 맞게 풀어 보인다)과 탄창 · 더 넣을 탄입니다. */
+        void setWeapon( string_view name, int32 magazine, int32 spareAmmo );
         /** @brief 죽지 않은 사람 수입니다. */
         void setRemaining( int32 remaining );
         /** @brief 구역의 지금 단계가 끝날 때까지 남은 시간(초)입니다. 보이는 값은 올린 정수다. */
@@ -47,6 +50,12 @@ namespace sw
     private:
         PROPERTY( DisplayName = "Health Ratio", Min = 0.0, Max = 1.0, Units = ratio )
         float32 _healthRatio;
+        PROPERTY( DisplayName = "Weapon Name" )
+        string _weaponName;
+        PROPERTY( DisplayName = "Magazine" )
+        int32 _magazine;
+        PROPERTY( DisplayName = "Spare Ammo" )
+        int32 _spareAmmo;
         PROPERTY( DisplayName = "Remaining People" )
         int32 _remaining;
         PROPERTY( DisplayName = "Zone Seconds" )

@@ -9,6 +9,9 @@ namespace sw
     BattleRoyaleHUDViewModel::BattleRoyaleHUDViewModel()
         : UIViewModel{}
         , _healthRatio{ 1.0f }
+        , _weaponName{}
+        , _magazine{ 0 }
+        , _spareAmmo{ 0 }
         , _remaining{ 0 }
         , _zoneSeconds{ 0 }
         , _dropHintVisibility{ WidgetVisibility::Collapsed }
@@ -28,6 +31,13 @@ namespace sw
     void BattleRoyaleHUDViewModel::setHealth( float32 ratio )
     {
         (void)setField( _healthRatio, MathUtil::clamp( ratio, 0.0f, 1.0f ), "_healthRatio" );
+    }
+
+    void BattleRoyaleHUDViewModel::setWeapon( string_view name, int32 magazine, int32 spareAmmo )
+    {
+        (void)setField( _weaponName, string( name ), "_weaponName" );
+        (void)setField( _magazine, magazine, "_magazine" );
+        (void)setField( _spareAmmo, spareAmmo, "_spareAmmo" );
     }
 
     void BattleRoyaleHUDViewModel::setRemaining( int32 remaining )

@@ -26,15 +26,18 @@
 		<entry key="Knight Helmet (Merged)" text="기사 투구(병합)" sourceHash="bd029e7ca9b9d6ac" />
 		<entry key="Knight Sword (Merged)" text="기사 검(병합)" sourceHash="3c4283c2efbf5e38" />
 		<entry key="Last squad standing - you win" text="마지막 분대 - 승리했습니다" sourceHash="ddaaaecde8b4a637" />
+		<entry key="Light Ammo" text="경량 탄약" sourceHash="f3408f7b1fa03c57" />
 		<entry key="Longbow" text="장궁" sourceHash="1ca5e729801861e9" />
 		<entry key="Mech destroyed - special picks the next mech" text="기체 격추 - 특수기로 다음 기체를 고릅니다" sourceHash="3711c7fb7ac4eee8" />
 		<entry key="Notched Blade" text="이 빠진 칼" sourceHash="0bda544f4c061f1a" />
 		<entry key="People left" text="남은 인원" sourceHash="6f27a40f6f8161a7" />
 		<entry key="Pistol" text="권총" sourceHash="9fbfefa835da8476" />
 		<entry key="Pump Shotgun" text="펌프 산탄총" sourceHash="91f761c37c27a1e1" />
+		<entry key="Rifle Ammo" text="소총 탄약" sourceHash="ed6ae1c9694f9861" />
 		<entry key="Round Shield" text="둥근 방패" sourceHash="b63752b781a90fd4" />
 		<entry key="Round Shield (Merged)" text="둥근 방패(병합)" sourceHash="42c4611c12baf19f" />
 		<entry key="Rusted Helm" text="녹슨 투구" sourceHash="e74fbfb19151f99e" />
+		<entry key="Shotgun Shells" text="산탄" sourceHash="c27d7c643a7aea30" />
 		<entry key="Subtitle.Guide" text="안내인" sourceHash="7bf3b283b3f22c4b" />
 		<entry key="Subtitle.GuideLine" text="등불 길을 따라 옛 다리로 가세요." sourceHash="330029ad4a1d3f28" />
 		<entry key="Subtitle.LongLine"
