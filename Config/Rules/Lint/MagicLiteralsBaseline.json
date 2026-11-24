@@ -17,7 +17,7 @@
     "Source/Core/Container/PagedArray.h": {"integer": 2},
     "Source/Core/Container/span.h": {"minus-one": 1},
     "Source/Core/Container/string.h": {"hex": 1},
-    "Source/Core/Container/vector.h": {"minus-one": 1, "integer": 1},
+    "Source/Core/Container/vector.h": {"integer": 1},
     "Source/Core/Diagnostics/CacheStats.h": {"integer": 1},
     "Source/Core/Diagnostics/MemoryProfiler.cpp": {"integer": 5},
     "Source/Core/Diagnostics/MemoryProfiler.h": {"integer": 1},

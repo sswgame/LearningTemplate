@@ -3,6 +3,7 @@
  * @brief 프레임 아레나(`LinearAllocator`)에서 잡는 `vector` 입니다 — 한 프레임 안에서만 사는 지역 목록이 힙을 건드리지 않게 합니다.
  * @details 아레나 주인이 프레임 경계(그 아레나에서 잡은 목록이 하나도 살아 있지 않을 때)에 `LinearAllocator::reset` 을 부른다. 원소의 소멸자는 돌지만
  *          메모리는 돌려주지 않는다(`deallocate` 가 없다) — 늘어난 뒤 버린 앞 버퍼도 reset 까지 남는다. 언리얼 `TArray<T, TMemStackAllocator<>>`(FMemStack) 자리다.
+ *          따로 된 구현이 아니라 `vector` 에 아레나 할당자를 준 것이라 std 짝이 없고, `SW_ENABLE_STL_CONTAINER` 는 안쪽 `vector` 의 저장만 바꾼다.
  */
 #pragma once
 #include "Core/Container/vector.h"
