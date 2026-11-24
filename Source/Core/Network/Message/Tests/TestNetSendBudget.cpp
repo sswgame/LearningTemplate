@@ -34,6 +34,16 @@ SW_TEST_CASE( NetSendBudgetTest, SendBudgetClampsToMessageLimit )
     SW_EXPECT_EQUAL( 0, NetSendBudget( -5 ).getMaxBits() );
 }
 
+/** @brief [NetSendBudgetTest] 예산보다 큰 첫 항목은 채널 상한 안에서 실린다 — 막으면 막힌 회선에서 큰 항목이 영영 나가지 못한다 */
+SW_TEST_CASE( NetSendBudgetTest, FirstItemLargerThanTheBudgetStillGoes )
+{
+    NetSendBudget budget( 100 );
+    budget.reserveBits( 16 );
+    SW_EXPECT_FALSE( budget.tryReserveBits( NetConnection::kMaxSingleMessageSize * 8 ) ); // 채널 상한은 넘지 못한다
+    SW_EXPECT_TRUE( budget.tryReserveBits( 300 * 8 ) );
+    SW_EXPECT_FALSE( budget.tryReserveBits( 1 ) ); // 둘째부터는 예산이다
+}
+
 /**
  * @brief [NetSendBudgetTest] 키트 틱 예산은 설정과 연결 상한의 몫(초당 바이트 × 틱 간격 × 0.5) 중 작은 것이다 — 상한 · 간격을 모르면 설정 그대로
  */

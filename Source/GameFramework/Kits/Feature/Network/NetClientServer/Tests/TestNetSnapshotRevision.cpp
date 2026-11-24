@@ -282,3 +282,24 @@ SW_TEST_CASE( NetSnapshotRevisionTest, AckedBaselineCarriesOnlyChangedEntity )
     SW_EXPECT_TRUE( pChanged->_buffer == NetSnapshotRevisionTestInternal::makeBytes( 200, 32 ) );
     SW_EXPECT_EQUAL( size_t{ 10 }, pLatest->_listEntity.size() );
 }
+
+/** @brief [NetSnapshotRevisionTest] 예산이 소유자 상태만으로 차도 우선도가 가장 높은 엔티티 하나는 실린다 — 막힌 회선에서 남의 폰이 굶지 않는다. */
+SW_TEST_CASE( NetSnapshotRevisionTest, OneEntityGoesEvenWhenTheOwnerStateFillsTheBudget )
+{
+    using Internal = NetSnapshotRevisionTestInternal;
+    vector<NetEntityState> listWorld;
+    listWorld.push_back( Internal::makeEntity( 1, 1, 11, 10 ) );
+    listWorld.push_back( Internal::makeEntity( 2, 1, 22, 21 ) );
+    const vector<uint32> listRelevant{ 0, 1 };
+    const vector<int32>  listOrder{ 1, 0 }; // 2 가 먼저다
+    NetOwnerState        ownerState;
+    ownerState._buffer.assign( 200, uint8{ 7 } );
+    ownerState._bPresent = SW_TRUE;
+    const NetDeltaSource source{ listWorld, listRelevant, listOrder, ownerState, 6, 0 };
+    BitWriter            writer;
+    NetSentSnapshot      written;
+    vector<uint8>        listCurrent;
+    NetSnapshot::writeDelta( writer, source, nullptr, 133, written, listCurrent );
+    SW_REQUIRE_EQUAL( size_t{ 1 }, written._listEntity.size() );
+    SW_EXPECT_EQUAL( uint32{ 2 }, written._listEntity[0]._entityID );
+}
