@@ -5,6 +5,8 @@
 #include "Core/Serialization/BitStream.h"
 #include "Core/Testing/TestFramework.h"
 
+#include "Engine/Object/GameObject/GameObjectManager.h"
+
 #include "GameFramework/Kits/Feature/Network/NetPairedAnimation/PairedAnimationReplication.h"
 
 using namespace sw;
@@ -57,4 +59,22 @@ SW_TEST_CASE( PairedAnimationNetStateTest, StateRoundTripsAndRejectsOverLimits )
     PairedAnimationNetState cleared = sent;
     SW_EXPECT_FALSE( PairedAnimationNetState::read( truncatedReader, cleared ) );
     SW_EXPECT_TRUE( cleared._assetPath.empty() ); // 깨졌으면 비운다
+}
+
+/** @brief [PairedAnimationNetStateTest] 앞 씬의 세대를 실은 세션 상태는 소비하고 버린다 — 이름이 같은 새 씬의 오브젝트에 세션을 잇지 않는다. */
+SW_TEST_CASE( PairedAnimationNetStateTest, StateFromAnEarlierWorldIsDropped )
+{
+    GameObjectManager                manager;
+    PairedAnimationReplicationClient client;
+    client.initialize( &manager );
+    PairedAnimationNetState state;
+    state._assetPath           = "Character/Paired/Missing.pairedanim.json";
+    state._snapshot._sessionID = 9;
+    NetMessageWriter messageWriter;
+    BitWriter&       writer = messageWriter.beginMessage<NetPairedAnimationMessage::Table, NetPairedAnimationMessage::SessionState>();
+    writer.writeUint32( 7 ); // 이 월드는 링크가 없어 0 이다
+    SW_REQUIRE_TRUE( state.write( writer ) );
+    SW_EXPECT_TRUE( NetHandleResult::Handled == client.handleMessage( 0, messageWriter.getBytes() ) );
+    SW_EXPECT_EQUAL( 0u, client.getStats()._rejectedCount ); // 적용을 시도하지 않았다(없는 에셋이면 거절로 센다)
+    SW_EXPECT_EQUAL( 0u, client.getStats()._appliedCount );
 }

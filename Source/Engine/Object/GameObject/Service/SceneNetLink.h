@@ -63,7 +63,10 @@ namespace sw
         /** @brief 씬을 비워도 링크는 월드의 성질이라 남깁니다. */
         void onSceneCleared() override {}
 
-        /** @brief 링크를 올립니다. 세 칸 중 하나라도 비면 오류를 남기고 올리지 않습니다(false). */
+        /**
+         * @brief 링크를 올립니다. 세 칸 중 하나라도 비면 오류를 남기고 올리지 않습니다(false).
+         * @details 서버 역할이면 라우터에 새 월드 세대를 연다(`NetMessageRouter::openWorld`) — 씬을 받아들일 때마다 한 번 올리므로 월드가 곧 세대다.
+         */
         [[nodiscard]] bool bind( const NetLinkValue& value );
         /** @brief 링크를 비웁니다(월드가 혼자 도는 월드로 돌아간다). */
         void unbind() { _value = NetLinkValue{}; }
@@ -76,6 +79,8 @@ namespace sw
 
         /** @brief 올라 있으면 true 입니다. 거짓이면 이 월드는 네트워크가 없습니다. */
         [[nodiscard]] bool isBound() const { return _value.isComplete(); }
+        /** @brief 이 월드의 세대입니다(서버가 정한다). 오브젝트 번호를 실은 메시지는 이 값을 함께 싣고, 받는 쪽은 자기 값과 다르면 버린다. 링크가 비었으면 0 입니다. */
+        [[nodiscard]] uint32 getWorldGeneration() const;
         /** @brief 올라 있는 값입니다(`isBound` 일 때만 씁니다). */
         [[nodiscard]] const NetLinkValue& get() const { return _value; }
 

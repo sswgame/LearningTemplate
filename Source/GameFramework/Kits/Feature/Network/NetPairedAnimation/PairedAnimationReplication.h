@@ -79,6 +79,8 @@ namespace sw
         REFLECT_BODY();
         PROPERTY()
         uint32 _sessionID{ 0 };
+        PROPERTY()
+        uint32 _worldGeneration{ 0 }; ///< 서버 월드의 세대(`SceneNetLink::getWorldGeneration`) — 다르면 앞 씬의 늦은 메시지라 버린다
     };
 
     /**
@@ -88,7 +90,7 @@ namespace sw
      */
     struct NetPairedAnimationMessage
     {
-        using SessionState = NetMessageDef<0, NetMessageDirection::ToClient, NetChannelKind::ReliableOrdered, 3>;                                 ///< 세션 상태(시작 · 늦은 참가). 판 3: 칸 선언(`PairedAnimationSessionStateBody`)으로 쓴다(2: 번호 64 비트)
+        using SessionState = NetMessageDef<0, NetMessageDirection::ToClient, NetChannelKind::ReliableOrdered, 4>;                                 ///< 세션 상태(시작 · 늦은 참가). 판 4: 월드 세대가 앞에 온다. 3: 칸 선언(`PairedAnimationSessionStateBody`)으로 쓴다(2: 번호 64 비트)
         using SessionEnd   = NetMessageBodyDef<1, NetMessageDirection::ToClient, NetChannelKind::ReliableOrdered, PairedAnimationSessionEndBody>; ///< 세션 끝 — 상태 메시지 뒤에 닿아야 한다
         using Table        = NetMessageTable<NetKitMessageRange::kPairedAnimation, SessionState, SessionEnd>;
 

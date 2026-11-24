@@ -443,6 +443,50 @@ SW_TEST_CASE( NetMessageRouterTest, OneRangeHasOneTableVersionAndTheRouterKindIs
     SW_EXPECT_FALSE( router.registerHandler( &otherTable ).isActive() );
     SW_EXPECT_LOG( "Net.RouterKindReserved" );
     SW_EXPECT_FALSE( router.registerHandler( &routerKind ).isActive() );
+    NetMessageRouterTestInternal::CountingHandler worldKind{ NetMessageRange::kEngine, NetMessageRange::kRouterWorldKind, 9u };
+    SW_EXPECT_LOG( "Net.RouterKindReserved" );
+    SW_EXPECT_FALSE( router.registerHandler( &worldKind ).isActive() );
+}
+
+/**
+ * @brief [NetMessageRouterTest] 서버의 월드 세대가 연결된 클라이언트와 뒤에 붙은 클라이언트에 닿고, 세션이 닫히면 0 이 된다
+ */
+SW_TEST_CASE( NetMessageRouterTest, WorldGenerationReachesEveryClient )
+{
+    test::LoopbackCluster pair( 81u );
+    NetTestUtil::addServerAndClient( pair, NetEndpointConfig{} );
+    NetMessageRouter serverRouter;
+    NetMessageRouter clientRouter;
+    SW_REQUIRE_TRUE( pair.getServer().listen() );
+    serverRouter.openWorld( pair.getServer() ); // 아직 아무도 없다 — 붙을 때 받는다
+    SW_REQUIRE_TRUE( pair.getClient( 0 ).connect( NetAddress::makeLoopback( 4000 ) ) );
+    const auto pollAll = [&]()
+    {
+        for ( int32 round = 0; round < 10; ++round )
+        {
+            pair.run( 0.05 );
+            (void)serverRouter.poll( pair.getServer() );
+            (void)clientRouter.poll( pair.getClient( 0 ) );
+        }
+    };
+    pollAll();
+    SW_EXPECT_EQUAL( 1u, serverRouter.getWorldGeneration() );
+    SW_EXPECT_EQUAL( 1u, clientRouter.getWorldGeneration() );
+    serverRouter.openWorld( pair.getServer() );
+    SW_EXPECT_EQUAL( 1u, clientRouter.getWorldGeneration() ); // 닿기 전이다
+    pollAll();
+    SW_EXPECT_EQUAL( 2u, clientRouter.getWorldGeneration() );
+
+    // 세대는 서버가 정한다 — 클라이언트가 보내면 끊는다.
+    NetMessageWriter messageWriter;
+    messageWriter.begin( NetMessageRange::kRouterWorldKind ).writeUint32( 77u );
+    SW_REQUIRE_TRUE( messageWriter.send( pair.getClient( 0 ), 0, NetChannelKind::ReliableOrdered ) );
+    SW_EXPECT_LOG( "Net.RouterWrongDirection" );
+    pollAll();
+    SW_EXPECT_EQUAL( 2u, serverRouter.getWorldGeneration() );
+    SW_EXPECT_TRUE( pair.getClient( 0 ).getConnectionState( 0 ) != NetConnectionState::Connected );
+    clientRouter.closeSession();
+    SW_EXPECT_EQUAL( 0u, clientRouter.getWorldGeneration() );
 }
 
 /**

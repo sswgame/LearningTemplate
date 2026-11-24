@@ -63,6 +63,8 @@ namespace sw
         NetObjectID _netID{ 0 };
         PROPERTY()
         uint32 _eventCount{ 0 }; ///< 스냅숏이 담은 이벤트 수 — 다음 이벤트 번호다
+        PROPERTY()
+        uint32 _worldGeneration{ 0 }; ///< 서버 월드의 세대(`SceneNetLink::getWorldGeneration`) — 다르면 앞 씬의 늦은 메시지라 버린다
         PROPERTY( MaxCount = NetConnection::kMaxReliableMessageSize, Min = 0, Max = 255 )
         vector<uint8> _bytes{}; ///< `FractureBaseComponent::makeNetworkSnapshot`
     };
@@ -78,6 +80,8 @@ namespace sw
         uint32 _eventCount{ 0 };
         PROPERTY()
         uint64 _hash{ 0 };
+        PROPERTY()
+        uint32 _worldGeneration{ 0 }; ///< 서버 월드의 세대(`SceneNetLink::getWorldGeneration`) — 다르면 앞 씬의 늦은 메시지라 버린다
     };
 
     /** @brief 스냅숏 요청(클라이언트 → 서버) 본문입니다. */
@@ -87,6 +91,8 @@ namespace sw
         REFLECT_BODY();
         PROPERTY()
         NetObjectID _netID{ 0 };
+        PROPERTY()
+        uint32 _worldGeneration{ 0 }; ///< 서버 월드의 세대(`SceneNetLink::getWorldGeneration`) — 다르면 앞 씬의 늦은 메시지라 버린다
     };
 
     /**
@@ -166,9 +172,9 @@ namespace sw
      */
     struct NetDestructionMessage
     {
-        using Event           = NetMessageDef<0, NetMessageDirection::ToClient, NetChannelKind::ReliableUnordered, 3>;                         ///< 판 3: 칸 선언으로 쓴다(2: 번호 64 비트). 이벤트 하나. 받는 쪽이 번호로 순서를 맞춘다
+        using Event           = NetMessageDef<0, NetMessageDirection::ToClient, NetChannelKind::ReliableUnordered, 4>;                         ///< 판 4: 월드 세대가 앞에 온다. 3: 칸 선언으로 쓴다(2: 번호 64 비트). 이벤트 하나. 받는 쪽이 번호로 순서를 맞춘다
         using Snapshot        = NetMessageBodyDef<1, NetMessageDirection::ToClient, NetChannelKind::ReliableOrdered, DestructionSnapshotBody>; ///< 오브젝트 하나의 상태 스냅숏(64 KB 까지, 조각이 아니라 메시지 하나)
-        using Pose            = NetMessageSenderChannelDef<2, NetMessageDirection::ToClient, NetChannelKind::Unreliable, 3>;                   ///< 판 3: 자세마다 이어짐 비트 · 칸 선언(2: 번호 64 비트). 움직이는 중에는 비신뢰, 멈추면 신뢰 순서로 보낸다(`beginMessage( channel )`)
+        using Pose            = NetMessageSenderChannelDef<2, NetMessageDirection::ToClient, NetChannelKind::Unreliable, 4>;                   ///< 판 4: 월드 세대가 번호 앞에 온다. 3: 자세마다 이어짐 비트 · 칸 선언(2: 번호 64 비트). 움직이는 중에는 비신뢰, 멈추면 신뢰 순서로 보낸다(`beginMessage( channel )`)
         using Hash            = NetMessageBodyDef<3, NetMessageDirection::ToClient, NetChannelKind::ReliableOrdered, DestructionHashBody>;
         using SnapshotRequest = NetMessageBodyDef<4, NetMessageDirection::ToServer, NetChannelKind::ReliableOrdered, DestructionSnapshotRequestBody>;
         using Table           = NetMessageTable<NetKitMessageRange::kDestruction, Event, Snapshot, Pose, Hash, SnapshotRequest>;

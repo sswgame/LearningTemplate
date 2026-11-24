@@ -32,7 +32,14 @@ namespace sw
             return false;
         }
         _value = value;
+        if ( value._role == NetLinkRole::Server )
+            value._pRouter->openWorld( *value._pPeers );
         return true;
+    }
+
+    uint32 SceneNetLink::getWorldGeneration() const
+    {
+        return isBound() ? _value._pRouter->getWorldGeneration() : 0u;
     }
 
     const NetLinkValue* SceneNetLink::findBoundFor( const Component& component )

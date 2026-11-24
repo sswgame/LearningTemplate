@@ -159,7 +159,7 @@ namespace sw
 
         static_assert( sizeof...( TMessage ) > 0, "a message table needs at least one message" );
         // 라우터의 판 알림 종류(엔진 영역 0x0F)를 표 메시지가 쓰면 받는 라우터가 그 메시지를 판 알림으로 읽는다(상대 판을 빈 목록으로 덮어 판 맞춤이 꺼진다).
-        static_assert( ( ( RangeBase + TMessage::kOffset != NetMessageRange::kRouterWireVersionKind ) && ... ), "the router owns the table version notice kind" );
+        static_assert( ( ( NetMessageRange::isRouterKind( RangeBase + TMessage::kOffset ) == false ) && ... ), "the router owns the table version and world generation kinds" );
     };
 } // namespace sw
 

@@ -95,7 +95,7 @@ namespace sw
 
     bool HubClientLink::initialize( INetPeers& peers, NetMessageRouter& router )
     {
-        _remoteCalls.initialize( &peers );
+        _remoteCalls.initialize( &peers, &router );
         if ( _remoteCalls.registerTarget( RemoteCallTargets::kSessionTargetID, *HubAvatarAgent::StaticType(), &_agent ) == false )
             return false;
         _listSubscription.push_back( router.registerHandler( &_remoteCalls ) );

@@ -130,6 +130,7 @@ SW_TEST_CASE( DestructionReplicationTest, PoseMessagesRejectTrailingBytesAndNonF
     DestructionExactPoseNetState pose; // 회전 기본값 — 단위 사원수
     writer.writeBits( NetDestructionMessage::kPose, 8 );
     writer.writeBool( true );  // 멈춤 — 정확한 자세
+    writer.writeUint32( 0 );   // 월드 세대
     writer.writeVarUint( 42 ); // 오브젝트(등록 없음 — 소비하고 버린다)
     writer.writeVarUint( 3 );  // 틱
     writer.writeBool( true );  // 자세가 이어진다
@@ -147,6 +148,7 @@ SW_TEST_CASE( DestructionReplicationTest, PoseMessagesRejectTrailingBytesAndNonF
     writer.clear();
     writer.writeBits( NetDestructionMessage::kPose, 8 );
     writer.writeBool( true );
+    writer.writeUint32( 0 );
     writer.writeVarUint( 42 );
     writer.writeVarUint( 3 );
     writer.writeBool( true );

@@ -149,6 +149,7 @@ namespace sw
         , _mapPeerWireVersion{}
         , _listRefusedConnection{}
         , _sessionSerial{ 0 }
+        , _worldGeneration{ 0 }
         , _bWireVersionsChanged{ SW_FALSE }
     {
     }
@@ -184,10 +185,10 @@ namespace sw
         for ( int32 offset = 0; offset < NetMessageRange::kSize; ++offset )
         {
             const int32 kind        = static_cast<int32>( rangeBase ) + offset;
-            const bool  bRouterKind = kind == NetMessageRange::kRouterWireVersionKind && ( ( ( kindMask | notifiedMask ) >> offset ) & 1u ) != 0;
+            const bool  bRouterKind = NetMessageRange::isRouterKind( kind ) && ( ( ( kindMask | notifiedMask ) >> offset ) & 1u ) != 0;
             if ( bRouterKind )
             {
-                SW_LOG_ERROR_ID( "Net.RouterKindReserved", "NetMessageRouter: message kind 0x%02x belongs to the router (table version notice) - the new handler is refused", kind );
+                SW_LOG_ERROR_ID( "Net.RouterKindReserved", "NetMessageRouter: message kind 0x%02x belongs to the router - the new handler is refused", kind );
                 return Subscription{};
             }
             const bool bClaimed = ( ( kindMask >> offset ) & 1u ) != 0 && kind < kKindCount && _arrKindHandler[kind] != nullptr;
@@ -217,6 +218,7 @@ namespace sw
         _mapPeerWireVersion.clear();
         _listRefusedConnection.clear();
         ++_sessionSerial;
+        _worldGeneration      = 0;
         _bWireVersionsChanged = SW_FALSE;
     }
 
@@ -289,6 +291,47 @@ namespace sw
         }
         _mapPeerWireVersion[connectionID] = std::move( listPeer );
         (void)disconnectOnWireVersionMismatch( peers, connectionID );
+    }
+
+    void NetMessageRouter::openWorld( INetPeers& peers )
+    {
+        SW_ASSERT( peers.isServer() ); // 세대는 서버가 정한다 — 클라이언트는 받기만 한다
+        _worldGeneration = _worldGeneration == ~0u ? 1u : _worldGeneration + 1u;
+        sendWorldGeneration( peers, constant::invalid_index::kInt32 );
+    }
+
+    void NetMessageRouter::sendWorldGeneration( INetPeers& peers, int32 connectionID )
+    {
+        NetMessageWriter messageWriter;
+        messageWriter.begin( NetMessageRange::kRouterWorldKind ).writeUint32( _worldGeneration );
+        if ( connectionID == constant::invalid_index::kInt32 )
+            (void)messageWriter.sendToPeers( peers, NetChannelKind::ReliableOrdered ); // 연결이 없으면 보낼 곳이 없다 — 연결이 열릴 때 보낸다
+        else
+            (void)messageWriter.send( peers, connectionID, NetChannelKind::ReliableOrdered ); // 닫히는 중이면 보낼 곳이 없다
+    }
+
+    void NetMessageRouter::receiveWorldGeneration( INetPeers& peers, int32 connectionID, const uint8* pData, int32 size )
+    {
+        if ( peers.isServer() )
+        {
+            refuseWrongDirection( peers, connectionID, pData[0], NetPeerRole::Server );
+            return;
+        }
+        BitReader    body( pData + 1, size - 1 );
+        const uint32 generation = body.readUint32();
+        if ( body.hasOverflowed() || generation == 0 )
+        {
+            _malformedCount.add();
+            SW_LOG_WARNING_ID( "Net.RouterWorldMalformed", "NetMessageRouter: connection %# sent a broken world generation - disconnecting it", connectionID );
+            peers.disconnect( connectionID );
+            _listRefusedConnection.push_back( connectionID );
+            return;
+        }
+        _worldGeneration = generation;
+        for ( INetMessageHandler* pHandler : _listHandler )
+        {
+            pHandler->onWorldOpened( generation );
+        }
     }
 
     bool NetMessageRouter::disconnectOnWireVersionMismatch( INetPeers& peers, int32 connectionID )
@@ -414,6 +457,10 @@ namespace sw
         const NetPeerRole role = peers.isServer() ? NetPeerRole::Server : NetPeerRole::Client;
         for ( const NetEndpointEvent& event : _inbound._listEvent )
         {
+            // 월드 세대는 처리기가 열림 사건에서 보내는 첫 메시지보다 먼저 닿는다(같은 신뢰 순서 채널).
+            const bool bTellWorld = event._kind == NetEndpointEvent::Kind::Connected && role == NetPeerRole::Server && _worldGeneration != 0;
+            if ( bTellWorld )
+                sendWorldGeneration( peers, event._connectionID );
             dispatchEvent( event );
             if ( event._kind == NetEndpointEvent::Kind::Connected )
             {
@@ -455,6 +502,11 @@ namespace sw
             if ( message._size > 0 && pData[0] == NetMessageRange::kRouterWireVersionKind )
             {
                 receiveWireVersions( peers, message._connectionID, pData, message._size );
+                continue;
+            }
+            if ( message._size > 0 && pData[0] == NetMessageRange::kRouterWorldKind )
+            {
+                receiveWorldGeneration( peers, message._connectionID, pData, message._size );
                 continue;
             }
             const bool bWrongDirection = message._size > 0 && _arrKindHandler[pData[0]] != nullptr && isInboundAllowed( pData[0], role ) == false;

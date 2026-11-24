@@ -240,6 +240,11 @@ namespace sw
             (void)reason;
         }
         /**
+         * @brief 클라이언트가 서버의 새 월드 세대를 받았습니다(`NetMessageRouter::openWorld`). 같은 `poll` 의 뒤따르는 메시지보다 먼저 부른다.
+         * @details 세대를 세션 번호로 쓰는 처리기(락스텝 판)가 그 세대의 첫 메시지를 받기 전에 갈아 끼우는 자리다. 서버 쪽에는 부르지 않는다(스스로 열었다).
+         */
+        virtual void onWorldOpened( uint32 generation ) { (void)generation; }
+        /**
          * @brief 영역 안에서 이 처리기가 전달 통지를 달아 보내는(`INetPeers::sendNotifiedMessage`) 종류의 마스크입니다. 비트 n 이 (영역 + n)입니다.
          * @details 라우터는 그 종류의 판정을 이 처리기의 `onDeliveryNotification` 에 넘긴다. 받는 종류 마스크와 따로 세며, 한 종류를 둘이 보내겠다고 하면 나중 것을 받지 않는다.
          */
@@ -320,6 +325,15 @@ namespace sw
         /** @brief 지금 세션의 번호입니다(`closeSession` 마다 는다). 번호가 다르면 닫힌 세션의 것이다. */
         uint32 getSessionSerial() const { return _sessionSerial; }
         /**
+         * @brief 서버가 새 월드(씬)를 열었습니다 — 세대를 하나 올리고 연결된 모두에게 알립니다(뒤에 붙는 연결은 열릴 때 받는다).
+         * @details 오브젝트 번호는 씬마다 다시 매겨진다(씬 번호는 이름 해시라 다음 씬의 같은 이름과 겹친다). 번호를 실은 메시지는 이 세대를 함께 싣고 다르면 버린다
+         *          (`SceneNetLink::getWorldGeneration`). 유니티 NGO 처럼 번호를 다시 쓰지 않는 길은 양쪽이 이름으로 따로 내는 씬 번호를 덮지 못해, 언리얼이 레벨 이동마다 NetGUID 를
+         *          새로 짜는 것처럼 서버가 정하는 세대로 가른다. 양쪽이 따로 세면 클라이언트 혼자 씬을 다시 여는 때 어긋난다.
+         */
+        void openWorld( INetPeers& peers );
+        /** @brief 지금 월드의 세대입니다. 서버는 자기가 연 것, 클라이언트는 서버에게 받은 것이다. 아직 없으면 0. */
+        uint32 getWorldGeneration() const { return _worldGeneration; }
+        /**
          * @brief 메시지 하나를 그 종류의 처리기에 넘깁니다. 처리기가 없으면(빈 메시지도) NotMine 을 반환합니다.
          * @details 받는 쪽 역할 @p role 로 갈 수 없는 종류(서버가 받은 `ToClient` 종류)는 처리기에 넘기지 않고 세고 Malformed 를 반환합니다.
          *          `poll` 은 그 연결도 끊는다 — 반대 방향 종류는 상대가 프로토콜을 어긴 것이다.
@@ -356,6 +370,10 @@ namespace sw
         void sendWireVersions( INetPeers& peers, int32 connectionID );
         /** @brief 상대 @p connectionID 의 판 알림을 읽어 들고 이 쪽과 견줍니다. 깨졌거나 다르면 연결을 끊습니다. */
         void receiveWireVersions( INetPeers& peers, int32 connectionID, const uint8* pData, int32 size );
+        /** @brief 지금 월드 세대를 @p connectionID 에(-1 이면 상대 모두에게) 보냅니다. */
+        void sendWorldGeneration( INetPeers& peers, int32 connectionID );
+        /** @brief 서버가 보낸 월드 세대를 읽어 들고 처리기에 알립니다. 깨졌거나 서버가 받은 것이면 연결을 끊습니다. */
+        void receiveWorldGeneration( INetPeers& peers, int32 connectionID, const uint8* pData, int32 size );
         /** @brief 종류 @p kind 를 역할 @p role 쪽이 받을 수 있으면 true 입니다(맡은 처리기의 방향 선언). */
         bool isInboundAllowed( uint8 kind, NetPeerRole role ) const;
         /** @brief 반대 방향 종류를 보낸 연결 @p connectionID 를 세고 끊습니다. 같은 `poll` 의 남은 메시지도 넘기지 않는다. */
@@ -385,6 +403,7 @@ namespace sw
         unordered_map<int32, vector<PeerWireVersion>> _mapPeerWireVersion;    ///< 연결마다 상대가 알린 표 판. 연결이 닫히면 지운다
         vector<int32>                                 _listRefusedConnection; ///< 이번 `poll` 에서 판이 달라 끊은 연결 — 남은 메시지를 넘기지 않는다
         uint32                                        _sessionSerial;         ///< 지금 세션의 번호(`closeSession` 이 올린다)
+        uint32                                        _worldGeneration;       ///< 서버가 연 월드의 세대(`openWorld`). 0 이면 아직 없다
         uint8                                         _bWireVersionsChanged;  ///< 등록이 바뀌었다 — 다음 `poll` 이 상대 모두에게 알리고 들고 있는 상대 판과 견준다
         /** @brief 이 객체가 내준 처리기 등록 구독입니다. 풀리면 `releaseHandler` 가 불린다. 맨 끝 멤버라 먼저 사라져 남은 구독을 무효화한다. */
         ItemSubscriptionList<INetMessageHandler> _subscriptions{ SW_DELEGATE_METHOD( ItemSubscriptionList<INetMessageHandler>::ReleaseFunction, &NetMessageRouter::releaseHandler, this ) };

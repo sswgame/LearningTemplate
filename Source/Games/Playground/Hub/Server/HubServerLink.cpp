@@ -69,7 +69,7 @@ namespace sw
         if ( _replicator.initialize( &peers, MMOReplicatorConfig{}, _grid ) == false )
             return false;
         _mapPublished.clear(); // 복제기를 새로 세웠다 — 모두 다시 올린다
-        if ( _remoteCalls.initialize( &peers, RemoteCallServerConfig{ rules._remoteCallBurstCount, rules._remoteCallRefillMilliseconds } ) == false )
+        if ( _remoteCalls.initialize( &peers, &router, RemoteCallServerConfig{ rules._remoteCallBurstCount, rules._remoteCallRefillMilliseconds } ) == false )
             return false;
         _listSubscription.push_back( router.registerHandler( &_remoteCalls ) );
         _listSubscription.push_back( router.registerHandler( &_replicator ) );
