@@ -138,6 +138,13 @@ namespace sw
                                                      vector<string>& inoutListLoadTag );
 
         /**
+         * @brief 층 글 @p layerText(조건을 푼 것)를 리소스 @p assetID 의 합친 글 @p inoutText 위에 얹습니다. 층의 부모는 늘 그 리소스이므로 층은 `_base` 를 적지 않습니다.
+         * @details 읽기의 층 단계와 팩 쿠킹의 층 검사(`PackCooker`)가 같은 함수를 쓴다. 합치기 규칙은 @p context 의 형식에서 온다(카탈로그 표 문맥은 표를 읽는다).
+         * @return 층이 `_base` 를 적었거나 · XML 이 아니거나 · 합치지 못하면 오류를 남기고 false 입니다(@p inoutText 는 그대로).
+         */
+        [[nodiscard]] static bool mergeLayer( string_view layerText, string_view layerID, const ResourceContext& context, string_view assetID, string& inoutText );
+
+        /**
          * @brief 저장할 글 @p savedText 에 원본 @p sourceText 의 조건을 되돌립니다. 편집기 사본은 지금 태그로 푼 값을 들어(형식의 칸에 조건이 들 자리가 없다) 그대로 쓰면 `_when` 이 사라지고 푼 값이 파일에 박힌다.
          * @details 언리얼이 플랫폼별 값을 편집 값과 따로 두는 것과 같은 결과를 글 수준에서 얻는다(기억에 의존). 규칙(열쇠 · 스키마)을 쓰지 않는다 — 읽기의 조건 단계와 같은 까닭이다.
          *          - 참인 조건이 정한 칸: 값이 그대로면 원본의 값을 되돌리고, 바뀌었으면 편집이 그 조건의 값이다(같은 태그로 다시 읽으면 편집한 값이다. 다른 태그의 값은 건드리지 않는다).

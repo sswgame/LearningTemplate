@@ -16,6 +16,7 @@
 #include "Engine/Reflection/TypeInfo.h"
 #include "Engine/Reflection/TypeRegistry.h"
 #include "Engine/Serialization/Inherit/DataCatalogReferences.h"
+#include "Engine/Serialization/Inherit/ResourceComposer.h"
 #include "Engine/Serialization/Serializer/CatalogKey.h"
 #include "Engine/Serialization/XML/XMLDocument.h"
 #include "Engine/Serialization/XML/XMLFields.h"
@@ -169,6 +170,36 @@ SW_TEST_CASE( DataCatalogReferencesTest, InEntryReferencesStayInTheEntry )
     SW_EXPECT_TRUE( validateText( rules, R"(<Quests><Quest id="q"><Stage id="a" next="b"/><Stage id="b"/></Quest></Quests>)" ) );
     SW_EXPECT_LOG( "XMLCatalog.UnknownReference" );
     SW_EXPECT_FALSE( validateText( rules, R"(<Quests><Quest id="q"><Stage id="a" next="b"/></Quest><Quest id="r"><Stage id="b"/></Quest></Quests>)" ) );
+}
+
+/** @brief [DataCatalogReferencesTest] 덮어쓰기 층의 행은 원본의 행을 가리키고 부모로 삼을 수 있다 — 층만 보면 깨진 참조이고, 원본과 합친 문서(`ResourceComposer::mergeLayer`)에서 본다 */
+SW_TEST_CASE( DataCatalogReferencesTest, LayerRowsReferToTheBaseRows )
+{
+    DataCatalogReferenceRules rules;
+    SW_REQUIRE_TRUE( rules.loadFromXMLText( R"(<DataCatalogReferenceTable><Catalog root="ItemCatalog">
+  <Reference owner="Item" attribute="upgrade" target="Item"/>
+</Catalog></DataCatalogReferenceTable>)",
+                                            "table" ) );
+    constexpr const utf8* kBase  = R"(<ItemCatalog><Item id="a" name="n" category="C"/></ItemCatalog>)";
+    constexpr const utf8* kLayer = R"(<ItemCatalog><Item id="b" _base="a" upgrade="a"/></ItemCatalog>)";
+    SW_EXPECT_LOG( "XMLCatalog.UnknownReference" );
+    SW_EXPECT_FALSE( validateText( rules, kLayer ) );
+
+    string mergedText{ kBase };
+    SW_REQUIRE_TRUE( ResourceComposer::mergeLayer( kLayer, "layers/x/items.xml", ResourceContext::forDocument(), "items.xml", mergedText ) );
+    SW_EXPECT_TRUE( validateText( rules, mergedText ) );
+    XMLDocument merged;
+    SW_REQUIRE_TRUE( merged.parse( mergedText ) );
+    const XMLNode added = merged.getRoot().findChild( "Item" ).findNextSibling( "Item" );
+    SW_EXPECT_EQUAL( string( "C" ), string( added.getAttributeText( "category" ) ) );
+
+    // 원본에도 층에도 없는 id 는 합쳐도 깨진 참조다. 층은 부모를 적지 않는다.
+    string brokenText{ kBase };
+    SW_REQUIRE_TRUE( ResourceComposer::mergeLayer( R"(<ItemCatalog><Item id="b" upgrade="nobody"/></ItemCatalog>)", "layer", ResourceContext::forDocument(), "items.xml", brokenText ) );
+    SW_EXPECT_LOG( "XMLCatalog.UnknownReference" );
+    SW_EXPECT_FALSE( validateText( rules, brokenText ) );
+    SW_EXPECT_LOG( "ResourceLayer.HasBase" );
+    SW_EXPECT_FALSE( ResourceComposer::mergeLayer( R"(<ItemCatalog _base="items.xml"/>)", "layer", ResourceContext::forDocument(), "items.xml", mergedText ) );
 }
 
 /** @brief [DataCatalogReferencesTest] 지운 항목의 id(`absent`)는 이 파일에 없어야 한다 — 아직 있으면 하나마다 알리고 false 다. `optional` 과 함께 적으면 표 오류다 */
