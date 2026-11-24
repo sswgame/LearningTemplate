@@ -13,6 +13,7 @@
 
 #include "GameFramework/Runtime/Foundation/Framework/Minigame/MinigameStack.h"
 #include "GameFramework/Runtime/Foundation/Random/GameRandom.h"
+#include "GameFramework/Runtime/World/Query/WalkSweep.h"
 
 namespace sw
 {
@@ -31,7 +32,6 @@ namespace sw
             static constexpr const utf8* kEventHit         = "JRPGHit";
             static constexpr const utf8* kEventHurt        = "JRPGHurt";
             static constexpr const utf8* kEventTimed       = "JRPGTimed";
-            static constexpr const utf8* kEventSpell       = "JRPGSpell";
             static constexpr const utf8* kEventHeal        = "JRPGHeal";
             static constexpr const utf8* kEventLevelUp     = "JRPGLevelUp";
             static constexpr const utf8* kEventEquip       = "JRPGEquip";
@@ -53,10 +53,6 @@ namespace sw
                     case JRPGBattleEvent::Kind::TimedBlock:
                     {
                         return kEventTimed;
-                    }
-                    case JRPGBattleEvent::Kind::SpellCast:
-                    {
-                        return kEventSpell;
                     }
                     case JRPGBattleEvent::Kind::Healed:
                     case JRPGBattleEvent::Kind::Revived:
@@ -100,6 +96,7 @@ namespace sw
         , _trailMax{ 14.0f, 3.0f }
         , _useRadius{ 1.0f }
         , _moveSpeed{ 4.0f }
+        , _bodyRadius{ 0.3f }
         , _stepLength{ 1.0f }
         , _battleSettings{}
         , _listTimingWindow{}
@@ -471,8 +468,9 @@ namespace sw
     void JRPGGameModeComponent::updateExplore( float32 deltaTime )
     {
         const float2 before = _playerPosition;
-        _playerPosition._x  = MathUtil::clamp( before._x + _commandMove._x * _moveSpeed * deltaTime, _trailMin._x, _trailMax._x );
-        _playerPosition._y  = MathUtil::clamp( before._y + _commandMove._y * _moveSpeed * deltaTime, _trailMin._y, _trailMax._y );
+        const float2 step   = WalkSweep::walkOnGround( getObjectManager(), getPlayerPosition(), _commandMove * ( _moveSpeed * deltaTime ), _bodyRadius );
+        _playerPosition._x  = MathUtil::clamp( before._x + step._x, _trailMin._x, _trailMax._x );
+        _playerPosition._y  = MathUtil::clamp( before._y + step._y, _trailMin._y, _trailMax._y );
 
         const float32 walkedX = _playerPosition._x - before._x;
         const float32 walkedY = _playerPosition._y - before._y;
@@ -511,14 +509,32 @@ namespace sw
         SW_LOG_INFO_ID( "JRPG.BattleStarted", "[JRPG] battle %# against %# enemies (boss %#)", _battleCount, _battle.getEnemies().size(), static_cast<int32>( _bBossBattle ) );
     }
 
+    void JRPGGameModeComponent::queueBattleSound( const JRPGBattleEvent& event )
+    {
+        if ( const utf8* const pSound = JRPGGameModeComponentInternal::findSound( event ) )
+            getSoundQueue().queueEvent( pSound );
+        hashed_string techniqueSound;
+        if ( event._kind == JRPGBattleEvent::Kind::Attack && event._bEnemyActor == false && event._actor.has_value() )
+        {
+            const JRPGClassDef* const pClass = _pCatalog->findClass( _party.getMember( *event._actor )._classID );
+            techniqueSound                   = pClass != nullptr ? pClass->_attackSound : hashed_string{};
+        }
+        else if ( event._kind == JRPGBattleEvent::Kind::SpellCast )
+        {
+            const JRPGSpellDef* const pSpell = _pCatalog->findSpell( event._id );
+            techniqueSound                   = pSpell != nullptr ? pSpell->_castSound : hashed_string{};
+        }
+        if ( techniqueSound.empty() == false )
+            getSoundQueue().queueEvent( techniqueSound.c_str() ); // 이름 표의 글은 사라지지 않는다
+    }
+
     void JRPGGameModeComponent::settleBattle()
     {
         _listBattleEvent.clear();
         _battle.pollEvents( _listBattleEvent );
         for ( const JRPGBattleEvent& event : _listBattleEvent )
         {
-            if ( const utf8* const pSound = JRPGGameModeComponentInternal::findSound( event ) )
-                getSoundQueue().queueEvent( pSound );
+            queueBattleSound( event );
             _timedCount += event._kind == JRPGBattleEvent::Kind::TimedHit || event._kind == JRPGBattleEvent::Kind::TimedBlock ? 1 : 0;
             if ( event._kind == JRPGBattleEvent::Kind::Defeated )
                 SW_LOG_INFO_ID( "JRPG.Defeated", "[JRPG] '%#' is down", event._id.c_str() );

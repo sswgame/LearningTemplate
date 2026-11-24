@@ -5,6 +5,8 @@
 #include "Core/Math/MathUtil.h"
 
 #include "Engine/Character/Hit/CharacterHit.h"
+#include "Engine/Object/GameObject/GameObjectManager.h"
+#include "Engine/Object/GameObject/WorldOrigin.h"
 
 namespace sw
 {
@@ -42,5 +44,14 @@ namespace sw
             remaining           = ( direction - normal * into ) * ( length - moved );
         }
         return position;
+    }
+
+    float2 WalkSweep::walkOnGround( const GameObjectManager* pManager, const AbsolutePosition& foot, const float2& delta, float32 radius )
+    {
+        if ( pManager == nullptr )
+            return delta;
+        const float3 center = pManager->getWorldOrigin().toLocal( foot + float3{ 0.0f, radius + kSkin, 0.0f } );
+        const float3 walked = slide( *pManager, center, delta, radius ) - center;
+        return float2{ walked._x, walked._z };
     }
 } // namespace sw

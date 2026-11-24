@@ -35,6 +35,15 @@
 				<_listComponent>
 					<MeshComponent _localID="163493842152903304" _localPosition="2,0.75,3.4" _localRotation="0,0,0" _localScale="0.8,1.5,0.8" _attachOwner="None" _attachComponent="None"
 					               _meshID="Cube" _materialPath="engine/materials/prototypegrid_dark.material" _boundsRadius="0.866" _bVisible="true" />
+					<RigidBodyComponent _localID="7198733165449302788" _localPosition="0,0,0" _localRotation="0,0,0" _localScale="1,1,1" _attachOwner="None" _attachOwnerID="0" _attachComponent="#0244d8c8807cd288"
+					                    _bodyType="Static" _layer="Static" _material="None" _mass="0">
+						<_listShape>
+							<PhysicsShapeDesc3D _type="Box" _halfExtents="0.5,0.5,0.5" _radius="0.5" _halfHeight="0.5" _localPosition="0,0,0" _localRotation="0,0,0" _material="None">
+								<_listPoint />
+								<_listIndex />
+							</PhysicsShapeDesc3D>
+						</_listShape>
+					</RigidBodyComponent>
 				</_listComponent>
 			</GameObject>
 		</entity>
@@ -43,6 +52,15 @@
 				<_listComponent>
 					<MeshComponent _localID="163493842152903304" _localPosition="10,0.75,-3.4" _localRotation="0,0,0" _localScale="0.8,1.5,0.8" _attachOwner="None" _attachComponent="None"
 					               _meshID="Cube" _materialPath="engine/materials/prototypegrid_dark.material" _boundsRadius="0.866" _bVisible="true" />
+					<RigidBodyComponent _localID="7198733165449302788" _localPosition="0,0,0" _localRotation="0,0,0" _localScale="1,1,1" _attachOwner="None" _attachOwnerID="0" _attachComponent="#0244d8c8807cd288"
+					                    _bodyType="Static" _layer="Static" _material="None" _mass="0">
+						<_listShape>
+							<PhysicsShapeDesc3D _type="Box" _halfExtents="0.5,0.5,0.5" _radius="0.5" _halfHeight="0.5" _localPosition="0,0,0" _localRotation="0,0,0" _material="None">
+								<_listPoint />
+								<_listIndex />
+							</PhysicsShapeDesc3D>
+						</_listShape>
+					</RigidBodyComponent>
 				</_listComponent>
 			</GameObject>
 		</entity>

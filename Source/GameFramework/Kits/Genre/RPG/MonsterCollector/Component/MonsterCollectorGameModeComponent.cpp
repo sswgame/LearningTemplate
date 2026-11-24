@@ -12,6 +12,7 @@
 #include "Engine/Serialization/Format/StateIO.h"
 
 #include "GameFramework/Runtime/Foundation/Framework/Minigame/MinigameStack.h"
+#include "GameFramework/Runtime/World/Query/WalkSweep.h"
 
 namespace sw
 {
@@ -24,6 +25,67 @@ namespace sw
 
             static constexpr const utf8* kWinResult  = "win";
             static constexpr const utf8* kLoseResult = "lose";
+
+            // 사운드 이벤트 이름 — 클립 · 범위 · 상한은 게임의 사운드 이벤트 데이터(audioevents.xml)가 정한다.
+            static constexpr const utf8* kEventEncounter = "MonsterCollectorEncounter";
+            static constexpr const utf8* kEventHit       = "MonsterCollectorHit";
+            static constexpr const utf8* kEventFainted   = "MonsterCollectorFainted";
+            static constexpr const utf8* kEventLevelUp   = "MonsterCollectorLevelUp";
+            static constexpr const utf8* kEventEvolved   = "MonsterCollectorEvolved";
+            static constexpr const utf8* kEventSwitched  = "MonsterCollectorSwitched";
+            static constexpr const utf8* kEventShake     = "MonsterCollectorShake";
+            static constexpr const utf8* kEventCaptured  = "MonsterCollectorCaptured";
+            static constexpr const utf8* kEventBrokeFree = "MonsterCollectorBrokeFree";
+            static constexpr const utf8* kEventEscaped   = "MonsterCollectorEscaped";
+            static constexpr const utf8* kEventRest      = "MonsterCollectorRest";
+            static constexpr const utf8* kEventWon       = "MonsterCollectorWon";
+            static constexpr const utf8* kEventLost      = "MonsterCollectorLost";
+
+            /** @brief 전투 알림 @p kind 에 낼 소리입니다. 소리가 없는 알림이면 nullptr 입니다. */
+            static const utf8* findSound( MonsterBattleEvent::Kind kind )
+            {
+                switch ( kind )
+                {
+                    case MonsterBattleEvent::Kind::Damage:
+                    case MonsterBattleEvent::Kind::StatusDamage:
+                    case MonsterBattleEvent::Kind::WeatherDamage:
+                    {
+                        return kEventHit;
+                    }
+                    case MonsterBattleEvent::Kind::Fainted:
+                    {
+                        return kEventFainted;
+                    }
+                    case MonsterBattleEvent::Kind::LevelUp:
+                    {
+                        return kEventLevelUp;
+                    }
+                    case MonsterBattleEvent::Kind::Switched:
+                    {
+                        return kEventSwitched;
+                    }
+                    case MonsterBattleEvent::Kind::CaptureShake:
+                    {
+                        return kEventShake;
+                    }
+                    case MonsterBattleEvent::Kind::Captured:
+                    {
+                        return kEventCaptured;
+                    }
+                    case MonsterBattleEvent::Kind::BrokeFree:
+                    {
+                        return kEventBrokeFree;
+                    }
+                    case MonsterBattleEvent::Kind::Escaped:
+                    {
+                        return kEventEscaped;
+                    }
+                    default:
+                    {
+                        return nullptr;
+                    }
+                }
+            }
         };
     } // namespace
 
@@ -62,6 +124,7 @@ namespace sw
         , _fieldMax{ 16.0f, 4.0f }
         , _useRadius{ 1.0f }
         , _moveSpeed{ 4.0f }
+        , _bodyRadius{ 0.3f }
         , _stepLength{ 1.0f }
         , _seed{ 7 }
         , _resultHoldSeconds{ 3.0f }
@@ -206,6 +269,7 @@ namespace sw
         _storage.restoreParty();
         _remainingBallCount = MathUtil::max( _remainingBallCount, _ballCount );
         _encounterCounter.restartGrace();
+        getSoundQueue().queueEvent( MonsterCollectorGameModeComponentInternal::kEventRest );
         SW_LOG_INFO_ID( "MonsterCollector.Rested", "[MonsterCollector] the party rested, %# balls", _remainingBallCount );
         return true;
     }
@@ -213,8 +277,9 @@ namespace sw
     void MonsterCollectorGameModeComponent::updateExplore( float32 deltaTime )
     {
         const float2 before = _playerPosition;
-        _playerPosition._x  = MathUtil::clamp( before._x + _commandMove._x * _moveSpeed * deltaTime, _fieldMin._x, _fieldMax._x );
-        _playerPosition._y  = MathUtil::clamp( before._y + _commandMove._y * _moveSpeed * deltaTime, _fieldMin._y, _fieldMax._y );
+        const float2 step   = WalkSweep::walkOnGround( getObjectManager(), getPlayerPosition(), _commandMove * ( _moveSpeed * deltaTime ), _bodyRadius );
+        _playerPosition._x  = MathUtil::clamp( before._x + step._x, _fieldMin._x, _fieldMax._x );
+        _playerPosition._y  = MathUtil::clamp( before._y + step._y, _fieldMin._y, _fieldMax._y );
 
         const float32 walkedX = _playerPosition._x - before._x;
         const float32 walkedY = _playerPosition._y - before._y;
@@ -246,6 +311,7 @@ namespace sw
         _battle.initialize( _pCatalog.get(), _pChart.get(), GameRandom::deriveSeed( _seed, static_cast<uint32>( _battleCount ) ) );
         _battle.start( _storage.getParty(), listFoe, true );
         _phase = MonsterCollectorPhase::Battle;
+        getSoundQueue().queueEvent( MonsterCollectorGameModeComponentInternal::kEventEncounter );
         SW_LOG_INFO_ID( "MonsterCollector.BattleStarted", "[MonsterCollector] battle %# - a wild '%#' of level %#", _battleCount, speciesID.c_str(), level );
         settleBattle(); // 모두 쓰러진 파티로 열린 전투는 바로 끝난다
     }
@@ -283,12 +349,22 @@ namespace sw
         return true;
     }
 
+    void MonsterCollectorGameModeComponent::queueBattleSound( const MonsterBattleEvent& event )
+    {
+        if ( const utf8* const pSound = MonsterCollectorGameModeComponentInternal::findSound( event._kind ) )
+            getSoundQueue().queueEvent( pSound );
+        const MonsterMoveDef* const pMove = event._kind == MonsterBattleEvent::Kind::MoveUsed ? _pCatalog->findMove( event._id ) : nullptr;
+        if ( pMove != nullptr && pMove->_useSound.empty() == false )
+            getSoundQueue().queueEvent( pMove->_useSound.c_str() ); // 이름 표의 글은 사라지지 않는다
+    }
+
     void MonsterCollectorGameModeComponent::settleBattle()
     {
         _listBattleEvent.clear();
         _battle.pollEvents( _listBattleEvent );
         for ( const MonsterBattleEvent& event : _listBattleEvent )
         {
+            queueBattleSound( event );
             if ( event._kind == MonsterBattleEvent::Kind::Fainted )
                 SW_LOG_INFO_ID( "MonsterCollector.Fainted", "[MonsterCollector] '%#' of side %# fainted", event._id.c_str(), event._side );
             else if ( event._kind == MonsterBattleEvent::Kind::LevelUp )
@@ -324,6 +400,7 @@ namespace sw
             const hashed_string targetID = MonsterInstance::findEvolution( *_pCatalog, monster, hashed_string{} );
             if ( targetID.empty() || MonsterInstance::evolve( *_pCatalog, monster, targetID ) == false )
                 continue;
+            getSoundQueue().queueEvent( MonsterCollectorGameModeComponentInternal::kEventEvolved );
             SW_LOG_INFO_ID( "MonsterCollector.Evolved", "[MonsterCollector] a party monster evolved into '%#'", targetID.c_str() );
         }
     }
@@ -332,6 +409,7 @@ namespace sw
     {
         _phase = phase;
         _resultHold.start( _resultHoldSeconds );
+        getSoundQueue().queueEvent( phase == MonsterCollectorPhase::Victory ? MonsterCollectorGameModeComponentInternal::kEventWon : MonsterCollectorGameModeComponentInternal::kEventLost );
         if ( phase == MonsterCollectorPhase::Victory )
             SW_LOG_INFO_ID( "MonsterCollector.Victory", "[MonsterCollector] %# monsters caught in %# battles", _captureCount, _battleCount );
         else

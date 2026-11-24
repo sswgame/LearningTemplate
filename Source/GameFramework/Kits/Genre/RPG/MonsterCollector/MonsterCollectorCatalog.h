@@ -156,6 +156,8 @@ namespace sw
         PROPERTY( Required )
         string _name{};
         PROPERTY()
+        hashed_string _useSound{}; ///< 쓸 때의 사운드 이벤트(`*.audioevents.xml`). 비면 소리가 없다
+        PROPERTY()
         hashed_string _type{};
         PROPERTY( Name = "weather" )
         hashed_string _weatherID{}; ///< 비어 있지 않으면 날씨를 부른다(비바라기)

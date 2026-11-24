@@ -67,6 +67,8 @@ namespace sw
         hashed_string _priceUpAction;
         PROPERTY( Category = "Input", DisplayName = "Price Down Action", Tooltip = "InputMap action that lowers the price of the chosen dish (required)" )
         hashed_string _priceDownAction;
+        PROPERTY( Category = "Input", DisplayName = "Station Action", Tooltip = "InputMap action that adds a cooking station for the chosen dish (required)" )
+        hashed_string _stationAction;
         PROPERTY( Category = "Input", DisplayName = "Open Action", Tooltip = "InputMap action that opens the day, or starts the next one after closing (required)" )
         hashed_string _openAction;
         PROPERTY( Category = "View", DisplayName = "Seat Origin", Tooltip = "Absolute ground-plane position (X, Z) of the first seat" )

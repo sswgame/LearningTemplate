@@ -26,9 +26,10 @@ namespace
   <Dish id="bowl" name="Bowl" recipe="bowl" price="40"/>
   <Customer id="porter" patience="60" budget="1.2" tipRate="0" eat="2"/>
   <Arrival hour="11" rate="30"/>
+  <ExperienceCurve base="20" exponent="0" maxLevel="5"/>
 </RestaurantCatalog>)";
 
-    constexpr const utf8* kRestaurantRecipeXML = R"(<RecipeCatalog><Recipe id="bowl" time="1"><In item="noodle"/><Out item="bowl"/></Recipe></RecipeCatalog>)";
+    constexpr const utf8* kRestaurantRecipeXML = R"(<RecipeCatalog><Recipe id="bowl" station="Stove" time="1"><In item="noodle"/><Out item="bowl"/></Recipe></RecipeCatalog>)";
 
     constexpr const utf8* kRestaurantShopXML = R"(<ShopCatalog><Shop id="market" buybackLimit="0"><Stock item="noodle" price="5"/></Shop></ShopCatalog>)";
 
@@ -53,7 +54,7 @@ namespace
                 return false;
             StringBuilder<constant::buffer::kMax1024> sceneText;
             sceneText.appendFormat( "<RestaurantGameModeComponent _shops=\"%#\" _shop=\"market\" _buyCount=\"5\" _pantrySlotCount=\"20\" _startGold=\"100\" _dailyWage=\"10\" _priceStep=\"4\" "
-                                    "_minutesPerSecond=\"8\" _dayCount=\"%#\" _targetProfit=\"%#\"><_listIngredient><item>noodle</item></_listIngredient>"
+                                    "_minutesPerSecond=\"8\" _dayCount=\"%#\" _targetProfit=\"%#\" _stationPrice=\"15\"><_listIngredient><item>noodle</item></_listIngredient><_listStation><item>Stove</item></_listStation>"
                                     "<_settings _marketVolatility=\"0\"/></RestaurantGameModeComponent>",
                                     test::ScopedScratchDomain::makeID( "diner/market.shops.xml" ).str(), dayCount, targetProfit );
             _pGameMode = _manager.createGameObject( hashed_string( "Director" ) )->addComponent<RestaurantGameModeComponent>();
@@ -86,6 +87,7 @@ SW_TEST_CASE( RestaurantGameModeTest, CommandsBeforeTheRestaurantOpensAreRefused
     SW_REQUIRE_NOT_NULL( pGameMode );
     SW_EXPECT_FALSE( pGameMode->submitBuy( 0 ) );
     SW_EXPECT_FALSE( pGameMode->submitPriceChange( 0, 1 ) );
+    SW_EXPECT_FALSE( pGameMode->submitAddStation( 0 ) );
     SW_EXPECT_FALSE( pGameMode->submitOpen() );
     SW_EXPECT_FALSE( pGameMode->submitNextDay() );
     SW_EXPECT_EQUAL( 0, pGameMode->getFirstMenuPrice() );
@@ -190,6 +192,32 @@ SW_TEST_CASE( RestaurantGameModeTest, OpenDaySurvivesARoundTrip )
     SW_EXPECT_EQUAL( 2, restored._pGameMode->getPhase() );
     SW_EXPECT_EQUAL( source._pGameMode->getTotalProfit(), restored._pGameMode->getTotalProfit() );
     SW_EXPECT_EQUAL( source._pGameMode->getGold(), restored._pGameMode->getGold() );
+    SW_EXPECT_EQUAL( source._pGameMode->getReputation(), restored._pGameMode->getReputation() );
+    SW_EXPECT_EQUAL( source._pGameMode->getBestCookLevel(), restored._pGameMode->getBestCookLevel() );
     restored._manager.endPlay();
     source._manager.endPlay();
+}
+
+/** @brief [RestaurantGameModeTest] 준비 중에 들인 조리 스테이션은 돈과 이익에서 빠지고, 요리한 만큼 요리사가 자라며 만족한 손님이 평판을 올린다 */
+SW_TEST_CASE( RestaurantGameModeTest, StationsStaffAndReputationGrow )
+{
+    const test::ScopedScratchDomain domain;
+    RestaurantGameModeFixture       fixture;
+    SW_REQUIRE_TRUE( fixture.initialize( domain, 2, 100 ) );
+    game::ScopedGameScope scopedScope( fixture._scope );
+    fixture.beginPlay();
+    SW_EXPECT_EQUAL( 1, fixture._pGameMode->getFirstStationCount() );
+    SW_EXPECT_FALSE( fixture._pGameMode->submitAddStation( 1 ) ); // 없는 요리
+    SW_REQUIRE_TRUE( fixture._pGameMode->submitAddStation( 0 ) );
+    SW_EXPECT_EQUAL( 2, fixture._pGameMode->getFirstStationCount() );
+    SW_EXPECT_EQUAL( 85, fixture._pGameMode->getGold() );
+    SW_EXPECT_EQUAL( -15, fixture._pGameMode->getTotalProfit() );
+    SW_REQUIRE_TRUE( fixture._pGameMode->submitBuy( 0 ) );
+    SW_REQUIRE_TRUE( fixture._pGameMode->submitOpen() );
+    SW_EXPECT_FALSE( fixture._pGameMode->submitAddStation( 0 ) ); // 영업 중에는 들이지 않는다
+    fixture.runUntilClosed( 200 );
+    SW_EXPECT_EQUAL( 140, fixture._pGameMode->getTotalProfit() ); // 5 × 40 - 5 × 5 - 급여 20 - 15
+    SW_EXPECT_EQUAL( 3, fixture._pGameMode->getBestCookLevel() ); // 요리 다섯 × 경험치 10 = 50, 레벨마다 20
+    SW_EXPECT_TRUE( fixture._pGameMode->getReputation() > 0 );
+    fixture._manager.endPlay();
 }

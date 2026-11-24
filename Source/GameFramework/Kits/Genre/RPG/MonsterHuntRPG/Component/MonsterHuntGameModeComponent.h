@@ -205,12 +205,18 @@ namespace sw
         float32 _senseRadius;
         PROPERTY( Category = "Field", DisplayName = "Move Speed", Min = 0.0, Units = "m/s" )
         float32 _moveSpeed;
+        PROPERTY( Category = "Field", DisplayName = "Body Radius", Tooltip = "Radius of the walking body against the static bodies of the scene", Min = 0.05, Units = m )
+        float32 _bodyRadius;
         PROPERTY( Category = "Hunter", DisplayName = "Max HP", Min = 1 )
         int32 _playerMaxHP;
         PROPERTY( Category = "Hunter", DisplayName = "Fast Damage", Min = 0.0 )
         float32 _fastDamage;
         PROPERTY( Category = "Hunter", DisplayName = "Strong Damage", Min = 0.0 )
         float32 _strongDamage;
+        PROPERTY( Category = "Hunter", DisplayName = "Fast Sound", Tooltip = "Sound event of the fast swing; empty = silent" )
+        hashed_string _fastSound;
+        PROPERTY( Category = "Hunter", DisplayName = "Strong Sound", Tooltip = "Sound event of the strong swing; empty = silent" )
+        hashed_string _strongSound;
         PROPERTY( Category = "Hunter", DisplayName = "Attack Reach", Min = 0.1, Units = m )
         float32 _attackReach;
         PROPERTY( Category = "Hunter", DisplayName = "Sign Reach", Min = 0.1, Units = m )

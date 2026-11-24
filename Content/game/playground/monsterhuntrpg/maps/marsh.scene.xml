@@ -35,6 +35,15 @@
 				<_listComponent>
 					<MeshComponent _localID="163493842152903304" _localPosition="17,0.75,2.5" _localRotation="0,0,0" _localScale="1.5,1.5,1.5" _attachOwner="None" _attachComponent="None"
 					               _meshID="Cube" _materialPath="engine/materials/prototypegrid_light.material" _boundsRadius="0.866" _bVisible="true" />
+					<RigidBodyComponent _localID="7198733165449302788" _localPosition="0,0,0" _localRotation="0,0,0" _localScale="1,1,1" _attachOwner="None" _attachOwnerID="0" _attachComponent="#0244d8c8807cd288"
+					                    _bodyType="Static" _layer="Static" _material="None" _mass="0">
+						<_listShape>
+							<PhysicsShapeDesc3D _type="Box" _halfExtents="0.5,0.5,0.5" _radius="0.5" _halfHeight="0.5" _localPosition="0,0,0" _localRotation="0,0,0" _material="None">
+								<_listPoint />
+								<_listIndex />
+							</PhysicsShapeDesc3D>
+						</_listShape>
+					</RigidBodyComponent>
 				</_listComponent>
 			</GameObject>
 		</entity>
@@ -43,6 +52,33 @@
 				<_listComponent>
 					<MeshComponent _localID="163493842152903304" _localPosition="17,0.75,-2.5" _localRotation="0,0,0" _localScale="1.5,1.5,1.5" _attachOwner="None" _attachComponent="None"
 					               _meshID="Cube" _materialPath="engine/materials/prototypegrid_light.material" _boundsRadius="0.866" _bVisible="true" />
+					<RigidBodyComponent _localID="7198733165449302788" _localPosition="0,0,0" _localRotation="0,0,0" _localScale="1,1,1" _attachOwner="None" _attachOwnerID="0" _attachComponent="#0244d8c8807cd288"
+					                    _bodyType="Static" _layer="Static" _material="None" _mass="0">
+						<_listShape>
+							<PhysicsShapeDesc3D _type="Box" _halfExtents="0.5,0.5,0.5" _radius="0.5" _halfHeight="0.5" _localPosition="0,0,0" _localRotation="0,0,0" _material="None">
+								<_listPoint />
+								<_listIndex />
+							</PhysicsShapeDesc3D>
+						</_listShape>
+					</RigidBodyComponent>
+				</_listComponent>
+			</GameObject>
+		</entity>
+		<!-- 시작 자리 서쪽의 그루터기 — 정적 바디가 길을 막는다(시나리오가 막히는 자리 x -0.78 을 본다). -->
+		<entity id="6" name="MireStump">
+			<GameObject _schemaVersion="0" _name="MireStump" _bActive="true">
+				<_listComponent>
+					<MeshComponent _localID="163493842152903304" _localPosition="-1.5,0.4,0" _localRotation="0,0,0" _localScale="0.8,0.8,0.8" _attachOwner="None" _attachComponent="None"
+					               _meshID="Cube" _materialPath="engine/materials/prototypegrid_light.material" _boundsRadius="0.866" _bVisible="true" />
+					<RigidBodyComponent _localID="7198733165449302788" _localPosition="0,0,0" _localRotation="0,0,0" _localScale="1,1,1" _attachOwner="None" _attachOwnerID="0" _attachComponent="#0244d8c8807cd288"
+					                    _bodyType="Static" _layer="Static" _material="None" _mass="0">
+						<_listShape>
+							<PhysicsShapeDesc3D _type="Box" _halfExtents="0.5,0.5,0.5" _radius="0.5" _halfHeight="0.5" _localPosition="0,0,0" _localRotation="0,0,0" _material="None">
+								<_listPoint />
+								<_listIndex />
+							</PhysicsShapeDesc3D>
+						</_listShape>
+					</RigidBodyComponent>
 				</_listComponent>
 			</GameObject>
 		</entity>
@@ -73,6 +109,8 @@
 					                              _playerMaxHP="100"
 					                              _fastDamage="20"
 					                              _strongDamage="35"
+					                              _fastSound="MonsterHuntFast"
+					                              _strongSound="MonsterHuntStrong"
 					                              _attackReach="2"
 					                              _signReach="5"
 					                              _attackCooldownSeconds="0.4"

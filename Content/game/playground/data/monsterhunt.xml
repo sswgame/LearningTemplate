@@ -14,7 +14,7 @@
 	</Monster>
 	<Item id="howler_oil" kind="Oil" element="HowlerOil" hits="6" charges="1"/>
 	<Item id="amber_tonic" kind="Potion" toxicity="25" duration="10" charges="2"/>
-	<Sign id="gust" element="Gust" cost="30" power="15" altSkill="twin_gust" altCost="40" altPowerScale="2"/>
+	<Sign id="gust" castSound="MonsterHuntGust" element="Gust" cost="30" power="15" altSkill="twin_gust" altCost="40" altPowerScale="2"/>
 	<!-- 스킬 슬롯 — 첫 그룹은 처음부터, 둘째 그룹은 레벨 5 에 열린다. 같은 그룹의 같은 색 스킬마다 변이원이 세진다. -->
 	<SlotGroup level="1" slots="2"/>
 	<SlotGroup level="5" slots="2"/>

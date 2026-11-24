@@ -12,6 +12,8 @@ namespace sw
         , _gold{ 0 }
         , _totalProfit{ 0 }
         , _targetProfit{ 0 }
+        , _reputation{ 0 }
+        , _cookLevel{ 0 }
         , _hour{ 0 }
         , _servedCount{ 0 }
         , _seatedCount{ 0 }
@@ -57,6 +59,12 @@ namespace sw
         (void)setField( _gold, gold, "_gold" );
         (void)setField( _totalProfit, totalProfit, "_totalProfit" );
         (void)setField( _targetProfit, targetProfit, "_targetProfit" );
+    }
+
+    void RestaurantHUDViewModel::setHouse( int32 reputation, int32 cookLevel )
+    {
+        (void)setField( _reputation, reputation, "_reputation" );
+        (void)setField( _cookLevel, cookLevel, "_cookLevel" );
     }
 
     void RestaurantHUDViewModel::setCustomers( int32 hour, int32 servedCount, int32 seatedCount )

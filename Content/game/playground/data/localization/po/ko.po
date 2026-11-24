@@ -115,9 +115,9 @@ msgstr "맑은국수"
 
 #. Context: TextWidget._text
 #: game/playground/restaurantsim/ui/hud.ui.xml
-msgctxt "Buy (J)   Price up (K)   Price down (L)   Open (Enter)"
-msgid "Buy (J)   Price up (K)   Price down (L)   Open (Enter)"
-msgstr "사기 (J)   가격 올리기 (K)   가격 내리기 (L)   열기 (Enter)"
+msgctxt "Buy (J)   Price up (K)   Price down (L)   Add station (F)   Open (Enter)"
+msgid "Buy (J)   Price up (K)   Price down (L)   Add station (F)   Open (Enter)"
+msgstr "사기 (J)   가격 올리기 (K)   가격 내리기 (L)   스테이션 들이기 (F)   열기 (Enter)"
 
 #. Context: TextWidget._text
 #: game/playground/restaurantsim/ui/hud.ui.xml
@@ -179,6 +179,12 @@ msgstr "콤보"
 msgctxt "Commander"
 msgid "Commander"
 msgstr "지휘관"
+
+#. Context: TextWidget._text
+#: game/playground/restaurantsim/ui/hud.ui.xml
+msgctxt "Cook level"
+msgid "Cook level"
+msgstr "요리사 레벨"
 
 #. Context: TextWidget._text
 #: game/playground/coopscavenger/ui/hud.ui.xml
@@ -693,6 +699,12 @@ msgstr "할당량을 채웠습니다"
 msgctxt "Quota missed"
 msgid "Quota missed"
 msgstr "할당량을 채우지 못했습니다"
+
+#. Context: TextWidget._text
+#: game/playground/restaurantsim/ui/hud.ui.xml
+msgctxt "Reputation"
+msgid "Reputation"
+msgstr "평판"
 
 #. Context: TextWidget._text
 #: game/playground/monstercollector/ui/hud.ui.xml

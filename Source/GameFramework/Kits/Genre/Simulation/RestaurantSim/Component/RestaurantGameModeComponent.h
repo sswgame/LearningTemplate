@@ -25,6 +25,7 @@
 #include "GameFramework/Runtime/Gameplay/Inventory/Inventory.h"
 #include "GameFramework/Runtime/Gameplay/Inventory/Shop.h"
 #include "GameFramework/Runtime/Gameplay/Inventory/Wallet.h"
+#include "GameFramework/Runtime/Gameplay/Progression/Reputation.h"
 
 namespace sw
 {
@@ -62,6 +63,8 @@ namespace sw
         [[nodiscard]] bool submitBuy( int32 ingredientIndex );
         /** @brief 카탈로그의 @p dishIndex 번째 요리 가격을 @p steps × `_priceStep` 만큼 바꿉니다(1 아래로 내려가지 않는다). 준비 중이 아니거나 없는 요리이면 false 입니다. */
         [[nodiscard]] bool submitPriceChange( int32 dishIndex, int32 steps );
+        /** @brief 카탈로그의 @p dishIndex 번째 요리를 만드는 조리 스테이션을 하나 더 들입니다(`_stationPrice`). 준비 중이 아니거나 스테이션이 없는 요리이거나 돈이 모자라면 false 입니다. */
+        [[nodiscard]] bool submitAddStation( int32 dishIndex );
         /** @brief 문을 엽니다. 준비 중이 아니면 false 입니다. */
         [[nodiscard]] bool submitOpen();
         /** @brief 결산을 덮고 다음 날 준비로 넘어갑니다(재료가 하루 늙는다). 결산 중이 아니면 false 입니다. */
@@ -85,6 +88,12 @@ namespace sw
         /** @brief 지난 결산까지의 이익 합입니다. */
         int32 getTotalProfit() const { return static_cast<int32>( _totalProfit ); }
         int32 getTargetProfit() const { return _targetProfit; }
+        /** @brief 손님 평판(공유 평판의 세력 `_settings._reputationFaction`)입니다. */
+        int32 getReputation() const { return _simulation.getReputation(); }
+        /** @brief 요리사 가운데 가장 높은 레벨입니다. */
+        int32 getBestCookLevel() const { return _simulation.findBestCookLevel(); }
+        /** @brief 첫 요리의 조리 스테이션 수입니다(감시 값). 판이 열리기 전이면 0 입니다. */
+        int32 getFirstStationCount() const;
         /** @brief 카탈로그의 첫 요리 가격입니다(감시 값). 판이 열리기 전이면 0 입니다. */
         int32 getFirstMenuPrice() const;
 
@@ -99,6 +108,8 @@ namespace sw
     private:
         /** @brief 식당 @p outSimulation 을 이 판의 카탈로그 · 지갑 · 창고로 엽니다(직원은 고용하지 않는다). */
         void initializeSimulation( RestaurantSimulation& outSimulation );
+        /** @brief 카탈로그의 @p dishIndex 번째 요리를 만드는 스테이션입니다. 없는 요리이거나 아무 데서나 만드는 요리면 비어 있습니다. */
+        hashed_string findDishStation( int32 dishIndex ) const;
         /** @brief 영업 시간이 지났고 남은 손님이 없으면 true 입니다. */
         bool isDayOver() const;
         /** @brief 문을 닫고 결산합니다. 마지막 날이면 승패를 정합니다. */
@@ -119,6 +130,12 @@ namespace sw
         int32 _pantrySlotCount;
         PROPERTY( Category = "Market", DisplayName = "Start Gold", Min = 0 )
         int32 _startGold;
+        PROPERTY( Category = "Kitchen", DisplayName = "Stations", Tooltip = "Cooking stations of the kitchen, one entry per station (list a kind twice for two)" )
+        vector<hashed_string> _listStation;
+        PROPERTY( Category = "Kitchen", DisplayName = "Station Price", Tooltip = "Gold for one more station of a kind", Min = 0 )
+        int32 _stationPrice;
+        PROPERTY( Category = "Business", DisplayName = "Reputation", Tooltip = "Faction catalog of the guests' reputation; empty = reputation without tiers" )
+        AssetRef<ReputationCatalog> _reputationCatalog;
         PROPERTY( Category = "Staff", DisplayName = "Cooks", Min = 1 )
         int32 _cookCount;
         PROPERTY( Category = "Staff", DisplayName = "Servers", Min = 1 )
@@ -143,8 +160,10 @@ namespace sw
         SharedAssetRef<RestaurantCatalog> _pCatalog;
         SharedAssetRef<RecipeCatalog>     _pRecipes;
         SharedAssetRef<ShopCatalog>       _pShops;
-        Wallet                            _wallet; ///< 이 판의 돈(식당이 빌린다) — 결과 값으로만 바탕 판에 나간다
-        Inventory                         _pantry; ///< 이 판의 창고(식당이 빌린다)
+        SharedAssetRef<ReputationCatalog> _pReputationCatalog; ///< 단계를 적지 않은 판이면 비었다
+        ReputationState                   _reputation;         ///< 손님 평판(식당이 빌린다)
+        Wallet                            _wallet;             ///< 이 판의 돈(식당이 빌린다) — 결과 값으로만 바탕 판에 나간다
+        Inventory                         _pantry;             ///< 이 판의 창고(식당이 빌린다)
         RestaurantSimulation              _simulation;
         vector<RestaurantEvent>           _listEvent;
         Countdown                         _resultHold; ///< 판이 끝난 뒤 미니게임을 끝내기까지(결과를 보여 주는 시간)

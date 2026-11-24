@@ -20,7 +20,7 @@
 		<entry key="Boost overheated" text="부스트 과열" sourceHash="e0efd5a0e587bb71" />
 		<entry key="Bramble Sprite" text="가시덤불 정령" sourceHash="820f516764689b41" />
 		<entry key="Broth Bowl" text="맑은국수" sourceHash="70e1759a4b511942" />
-		<entry key="Buy (J)   Price up (K)   Price down (L)   Open (Enter)" text="사기 (J)   가격 올리기 (K)   가격 내리기 (L)   열기 (Enter)" sourceHash="60ece787ba2f8265" />
+		<entry key="Buy (J)   Price up (K)   Price down (L)   Add station (F)   Open (Enter)" text="사기 (J)   가격 올리기 (K)   가격 내리기 (L)   스테이션 들이기 (F)   열기 (Enter)" sourceHash="5eaf4e0df278044f" />
 		<entry key="Buy more while open (J)" text="영업 중에도 살 수 있습니다 (J)" sourceHash="5a2d858e87b12bb2" />
 		<entry key="Card cost" text="카드 비용" sourceHash="41a0e7d730a44d50" />
 		<entry key="Caught" text="포획" sourceHash="124f7a6bf27434e5" />
@@ -31,6 +31,7 @@
 		<entry key="Coins" text="동전" sourceHash="50972cf4a4489a2d" />
 		<entry key="Combo" text="콤보" sourceHash="2d258cf48ffbba41" />
 		<entry key="Commander" text="지휘관" sourceHash="86f5c914f970d605" />
+		<entry key="Cook level" text="요리사 레벨" sourceHash="109cb4a29d9591cb" />
 		<entry key="Credits" text="크레딧" sourceHash="7a391ae3182a86b5" />
 		<entry key="CutA" text="컷 A" sourceHash="770f429cae410066" />
 		<entry key="CutB" text="컷 B" sourceHash="770f419cae40feb3" />
@@ -127,6 +128,7 @@
 		<entry key="Quota left" text="남은 할당량" sourceHash="913455f852906b9c" />
 		<entry key="Quota met" text="할당량을 채웠습니다" sourceHash="566d23b8c27de155" />
 		<entry key="Quota missed" text="할당량을 채우지 못했습니다" sourceHash="0ea5365921488764" />
+		<entry key="Reputation" text="평판" sourceHash="a33d061d2ade20aa" />
 		<entry key="Rest at the camp (E)" text="야영지에서 쉬기 (E)" sourceHash="21be64b41ec275ea" />
 		<entry key="Rest at the inn (E)   Change class (F)" text="여관에서 쉬기 (E)   전직 (F)" sourceHash="9517be2c638c4cff" />
 		<entry key="Reward" text="보상" sourceHash="f04b30586054b5da" />

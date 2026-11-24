@@ -20,6 +20,10 @@
 		<bind source="Key" code="L"/>
 		<bind source="Gamepad" code="B"/>
 	</action>
+	<action name="Restaurant.Station" layer="Restaurant" trigger="Pressed">
+		<bind source="Key" code="F"/>
+		<bind source="Gamepad" code="LeftShoulder"/>
+	</action>
 	<action name="Restaurant.Open" layer="Restaurant" trigger="Pressed">
 		<bind source="Key" code="Enter"/>
 		<bind source="Gamepad" code="A"/>

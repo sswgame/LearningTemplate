@@ -99,7 +99,7 @@
 				<item>game/playground/data/restaurant.xml</item>
 			</origins>
 		</entry>
-		<entry key="Buy (J)   Price up (K)   Price down (L)   Open (Enter)" source="Buy (J)   Price up (K)   Price down (L)   Open (Enter)" context="TextWidget._text">
+		<entry key="Buy (J)   Price up (K)   Price down (L)   Add station (F)   Open (Enter)" source="Buy (J)   Price up (K)   Price down (L)   Add station (F)   Open (Enter)" context="TextWidget._text">
 			<origins>
 				<item>game/playground/restaurantsim/ui/hud.ui.xml</item>
 			</origins>
@@ -153,6 +153,11 @@
 		<entry key="Commander" source="Commander" context="TextWidget._text">
 			<origins>
 				<item>game/playground/sidescrollconquest/ui/hud.ui.xml</item>
+			</origins>
+		</entry>
+		<entry key="Cook level" source="Cook level" context="TextWidget._text">
+			<origins>
+				<item>game/playground/restaurantsim/ui/hud.ui.xml</item>
 			</origins>
 		</entry>
 		<entry key="Credits" source="Credits" context="TextWidget._text">
@@ -619,6 +624,11 @@
 		<entry key="Quota missed" source="Quota missed" context="TextWidget._text">
 			<origins>
 				<item>game/playground/coopscavenger/ui/hud.ui.xml</item>
+			</origins>
+		</entry>
+		<entry key="Reputation" source="Reputation" context="TextWidget._text">
+			<origins>
+				<item>game/playground/restaurantsim/ui/hud.ui.xml</item>
 			</origins>
 		</entry>
 		<entry key="Rest at the camp (E)" source="Rest at the camp (E)" context="TextWidget._text">

@@ -49,9 +49,21 @@
 			<TextWidget _name="IngredientCount" _text="{bind:_ingredientCount}" _styleClass="hud" _visibility="HitTestInvisible" _bLocalized="false">
 				<_slot _anchorMin="0,0" _anchorMax="0,0" _offsetMin="628,80" _offsetMax="708,116" />
 			</TextWidget>
+			<TextWidget _text="Reputation" _styleClass="hud" _visibility="HitTestInvisible">
+				<_slot _anchorMin="1,0" _anchorMax="1,0" _offsetMin="-328,40" _offsetMax="-148,76" />
+			</TextWidget>
+			<TextWidget _name="Reputation" _text="{bind:_reputation}" _styleClass="hud" _visibility="HitTestInvisible" _bLocalized="false">
+				<_slot _anchorMin="1,0" _anchorMax="1,0" _offsetMin="-140,40" _offsetMax="-48,76" />
+			</TextWidget>
+			<TextWidget _text="Cook level" _styleClass="hud" _visibility="HitTestInvisible">
+				<_slot _anchorMin="1,0" _anchorMax="1,0" _offsetMin="-328,80" _offsetMax="-148,116" />
+			</TextWidget>
+			<TextWidget _name="CookLevel" _text="{bind:_cookLevel}" _styleClass="hud" _visibility="HitTestInvisible" _bLocalized="false">
+				<_slot _anchorMin="1,0" _anchorMax="1,0" _offsetMin="-140,80" _offsetMax="-48,116" />
+			</TextWidget>
 			<CanvasPanel _visibility="{bind:_prepareVisibility}">
 				<_slot _anchorMin="0,0" _anchorMax="1,1" _offsetMin="0,0" _offsetMax="0,0" />
-				<TextWidget _text="Buy (J)   Price up (K)   Price down (L)   Open (Enter)" _styleClass="hud" _visibility="HitTestInvisible">
+				<TextWidget _text="Buy (J)   Price up (K)   Price down (L)   Add station (F)   Open (Enter)" _styleClass="hud" _visibility="HitTestInvisible">
 					<_slot _anchorMin="0,1" _anchorMax="0,1" _offsetMin="48,-84" _offsetMax="1048,-48" />
 				</TextWidget>
 			</CanvasPanel>

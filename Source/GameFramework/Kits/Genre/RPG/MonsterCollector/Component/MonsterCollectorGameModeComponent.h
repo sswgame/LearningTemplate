@@ -125,6 +125,8 @@ namespace sw
         [[nodiscard]] bool playRound( const MonsterAction& action );
         /** @brief 야생의 기술 슬롯입니다 — 기대 피해가 가장 큰 것, 쓸 것이 없으면 비어 있습니다. */
         [[nodiscard]] optional<int32> findFoeMoveSlot() const;
+        /** @brief 전투 알림의 소리를 쌓습니다 — 쓴 기술은 기술 표의 소리, 나머지는 이 판의 이벤트다. */
+        void queueBattleSound( const MonsterBattleEvent& event );
         /** @brief 라운드 뒤: 알림을 로그로 내고 전투가 끝났으면 파티를 돌려받아 다음 단계로 넘깁니다. */
         void settleBattle();
         /** @brief 전투가 끝난 뒤 진화 조건이 맞은 파티 개체를 진화시킵니다. */
@@ -169,6 +171,8 @@ namespace sw
         float32 _useRadius;
         PROPERTY( Category = "Field", DisplayName = "Move Speed", Min = 0.0, Units = "m/s" )
         float32 _moveSpeed;
+        PROPERTY( Category = "Field", DisplayName = "Body Radius", Tooltip = "Radius of the walking body against the static bodies of the scene", Min = 0.05, Units = m )
+        float32 _bodyRadius;
         PROPERTY( Category = "Field", DisplayName = "Step Length", Tooltip = "Distance walked per encounter step", Min = 0.1, Units = m )
         float32 _stepLength;
         PROPERTY( Category = "Rules", DisplayName = "Seed", Min = 1 )

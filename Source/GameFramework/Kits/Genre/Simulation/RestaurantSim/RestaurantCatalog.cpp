@@ -30,6 +30,7 @@ namespace sw
         , _ingredientCatalog{}
         , _customerCatalog{}
         , _weatherCatalog{}
+        , _staffCurve{}
         , _arrArrivalRate{}
         , _openHour{ RestaurantCatalogRootDef{}._openHour }
         , _closeHour{ RestaurantCatalogRootDef{}._closeHour }
@@ -78,6 +79,7 @@ namespace sw
             Element::of<&RestaurantCatalog::_ingredientCatalog>( "Ingredient" ).uncounted(),
             Element::of<&RestaurantCatalog::loadArrival>( "Arrival" ).uncounted(),
             Element::of<&RestaurantCatalog::_weatherCatalog>( "Weather" ).uncounted(),
+            Element::of<&RestaurantCatalog::loadStaffCurve>( "ExperienceCurve" ).uncounted(),
         };
         return XMLCatalogReadResult::readInDocumentOrder( *this, root, sourceName, kArrElement )._loadedCount;
     }
@@ -88,6 +90,15 @@ namespace sw
         if ( XMLFields::readProperties( node, arrival, sourceName ) == false )
             return false;
         _arrArrivalRate[arrival._hour] = arrival._rate;
+        return true;
+    }
+
+    bool RestaurantCatalog::loadStaffCurve( const XMLNode& node, string_view sourceName )
+    {
+        ExperienceCurve curve;
+        if ( curve.loadFromXML( node, sourceName ) == false )
+            return false;
+        _staffCurve = curve;
         return true;
     }
 

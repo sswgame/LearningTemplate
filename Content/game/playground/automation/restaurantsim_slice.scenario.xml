@@ -5,7 +5,7 @@
   플레이어와 같은 입력 맵 액션(Move · Restaurant.*)과 세이브 메뉴 자리의 개발 명령(game.save · game.load)만 쓴다.
   디렉터는 키트 RestaurantGameModeComponent, 입력 · 그리기 · HUD 는 클라이언트 모듈 GF_Client_RestaurantSim 의 RestaurantCounterComponent.
   돈: 시작 200 — 국수 열 개 50, 생선 열 개 80. 하루(11 ~ 13 시)는 12 초 남짓이다. 손님이 고르는 요리 · 팁은 시드 난수라 판정은 손님 수 · 목표로 한다.
-  감시 값: Restaurant.Phase(0 준비, 1 영업, 2 결산, 3 승리, 4 패배) · Day · Gold · Served · TotalProfit · MenuPrice · Minigame.LastResult.
+  감시 값: Restaurant.Phase(0 준비, 1 영업, 2 결산, 3 승리, 4 패배) · Day · Gold · Served · TotalProfit · MenuPrice · Reputation · BestCookLevel · Stations · Minigame.LastResult.
   실행: ctest -R Scenario.playground
 -->
 <Scenario name="game.playground.restaurantsim_slice" fixedDelta="0.0166667" timeoutFrames="6000" startAfter="ScenePlaying" startTimeoutFrames="900" input="exclusive">
@@ -23,6 +23,16 @@
 	<AdvanceSimulation frames="20"/> <!-- 한 번 기울였다 놓는 시간 — 줄이 하나 옮는다(시간이 내용) -->
 	<Action name="Restaurant.Buy"/>
 	<WaitUntil watch="Restaurant.Gold" equals="70" timeoutFrames="30"/>
+	<!-- 조리 스테이션 — 첫 줄(국수)로 돌아와 화구를 하나 더 들인다. 들인 돈은 이익에서 뺀다 -->
+	<Expect watch="Restaurant.Stations" equals="1"/>
+	<ActionAxis name="Move" x="1" seconds="0.2"/>
+	<AdvanceSimulation frames="20"/> <!-- 줄이 하나 옮는 시간(시간이 내용) -->
+	<Action name="Restaurant.Station"/>
+	<WaitUntil watch="Restaurant.Stations" equals="2" timeoutFrames="30"/>
+	<Expect watch="Restaurant.Gold" equals="50"/>
+	<Expect watch="Restaurant.TotalProfit" equals="-20"/>
+	<Expect watch="Restaurant.Reputation" equals="50"/>
+	<Expect watch="Restaurant.BestCookLevel" equals="1"/>
 	<!-- 영업 — 첫 손님이 계산한 뒤 저장하고, 조금 더 돌린 뒤 불러온다 -->
 	<Action name="Restaurant.Open"/>
 	<WaitUntil watch="Restaurant.Phase" equals="1" timeoutFrames="30"/>
@@ -38,6 +48,9 @@
 	<WaitUntil watch="Restaurant.Phase" equals="2" timeoutFrames="1500"/>
 	<Expect watch="Restaurant.Served" atLeast="5"/>
 	<Expect watch="Restaurant.TotalProfit" atLeast="75"/>
+	<Expect watch="Restaurant.Reputation" atLeast="51"/>
+	<Expect watch="Restaurant.BestCookLevel" atLeast="2"/>
+	<Expect watch="Restaurant.Stations" equals="2"/>
 	<ExpectLog id="Restaurant.DayClosed" count="1"/>
 	<!-- 다음 날 — 생선이 상하고, 재료 한 줄을 더 사서 연다 -->
 	<Action name="Restaurant.Open"/>

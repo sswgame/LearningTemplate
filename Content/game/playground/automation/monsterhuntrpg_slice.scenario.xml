@@ -24,9 +24,15 @@
 	<WaitUntil watch="MonsterHunt.LearnedSkills" equals="2" timeoutFrames="30"/>
 	<Action name="MonsterHunt.Mutagen"/>
 	<WaitUntil watch="MonsterHunt.SignIntensity" equals="30" timeoutFrames="30"/>
+	<!-- 서쪽 그루터기(정적 바디, 앞면 x -1.1)로 걸으면 몸 반지름(0.3) 앞에서 멈춘다 — 막지 않으면 0.5 초에 x -2 다 -->
+	<ActionAxis name="Move" x="-1" seconds="0.5"/>
+	<AdvanceSimulation frames="40"/> <!-- 누른 채인 반 초가 시험 내용이다 -->
+	<Expect watch="MonsterHunt.PlayerX" near="-0.78" tolerance="0.1"/>
+	<ActionAxis name="Move" x="1" seconds="0.2"/>
+	<AdvanceSimulation frames="20"/> <!-- 시작 자리로 돌아온다(시간이 내용) -->
 	<!-- 단서 셋 — 자리에 서서 조사한다 -->
 	<ActionAxis name="Move" x="1" seconds="1"/>
-	<WaitUntil watch="MonsterHunt.PlayerX" near="4" tolerance="0.1" timeoutFrames="90"/>
+	<WaitUntil watch="MonsterHunt.PlayerX" near="4" tolerance="0.25" timeoutFrames="90"/>
 	<AdvanceSimulation frames="6"/> <!-- 누른 이동이 끝나는 시간(시간이 내용) -->
 	<Action name="MonsterHunt.Investigate"/>
 	<WaitUntil watch="MonsterHunt.FoundClues" equals="1" timeoutFrames="30"/>

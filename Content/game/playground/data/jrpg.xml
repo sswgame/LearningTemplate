@@ -7,18 +7,18 @@
 -->
 <JRPGCatalog>
 	<ExperienceCurve base="60" exponent="1.5" maxLevel="20"/>
-	<Class id="lantern_guard" name="Lantern Guard" hp="100" mp="0" str="80" agi="50" vit="20" intellect="5" luck="5" growHP="12" growMP="0" growStr="4" growAgi="2" growVit="3" growIntellect="1" growLuck="1" attackType="Sword"/>
-	<Class id="wick_mage" name="Wick Mage" hp="80" mp="24" str="60" agi="40" vit="12" intellect="40" luck="5" growHP="7" growMP="4" growStr="2" growAgi="2" growVit="2" growIntellect="5" growLuck="1" attackType="Blunt">
+	<Class id="lantern_guard" name="Lantern Guard" hp="100" mp="0" str="80" agi="50" vit="20" intellect="5" luck="5" growHP="12" growMP="0" growStr="4" growAgi="2" growVit="3" growIntellect="1" growLuck="1" attackSound="JRPGBlade" attackType="Sword"/>
+	<Class id="wick_mage" name="Wick Mage" hp="80" mp="24" str="60" agi="40" vit="12" intellect="40" luck="5" growHP="7" growMP="4" growStr="2" growAgi="2" growVit="2" growIntellect="5" growLuck="1" attackSound="JRPGStaff" attackType="Blunt">
 		<Learn level="1" spell="spark"/>
 		<Learn level="3" spell="balm"/>
 	</Class>
 	<!-- 쉼터가 가르치는 직업 — 잉걸의 책(common/data/items.xml)이 있어야 한다. 전직하면 능력치가 절반에서 다시 자란다. -->
-	<Class id="ember_sage" name="Ember Sage" hp="70" mp="30" str="30" agi="36" vit="10" intellect="50" luck="5" growHP="6" growMP="6" growStr="1" growAgi="2" growVit="2" growIntellect="7" growLuck="1" attackType="Blunt" requires="tome_ember">
+	<Class id="ember_sage" name="Ember Sage" hp="70" mp="30" str="30" agi="36" vit="10" intellect="50" luck="5" growHP="6" growMP="6" growStr="1" growAgi="2" growVit="2" growIntellect="7" growLuck="1" attackSound="JRPGStaff" attackType="Blunt" requires="tome_ember">
 		<Learn level="1" spell="cinder_wave"/>
 	</Class>
-	<Spell id="spark" name="Spark" mp="4" power="30" type="Fire"/>
-	<Spell id="cinder_wave" name="Cinder Wave" mp="6" power="24" type="Fire" target="All"/>
-	<Spell id="balm" name="Balm" kind="Heal" mp="3" power="30"/>
+	<Spell id="spark" name="Spark" mp="4" power="30" type="Fire" castSound="JRPGSpark"/>
+	<Spell id="cinder_wave" name="Cinder Wave" mp="6" power="24" type="Fire" target="All" castSound="JRPGSpark"/>
+	<Spell id="balm" name="Balm" kind="Heal" mp="3" power="30" castSound="JRPGBalm"/>
 	<Spell id="gloom" name="Gloom" power="24" type="Dark" target="All"/>
 	<Enemy id="bramble_sprite" name="Bramble Sprite" hp="10" str="10" agi="4" vit="0" exp="10" gold="3"/>
 	<Enemy id="dusk_moth" name="Dusk Moth" hp="10" str="8" agi="6" vit="0" exp="14" gold="4" weak="Fire"/>

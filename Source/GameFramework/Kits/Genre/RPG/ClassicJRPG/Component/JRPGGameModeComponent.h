@@ -162,6 +162,8 @@ namespace sw
         void openBattle( const vector<hashed_string>& listEnemyID, bool bBoss );
         /** @brief @p firstMember 부터 살아 있는 첫 멤버입니다. 없으면 비어 있습니다. */
         [[nodiscard]] optional<int32> findLivingMember( int32 firstMember ) const;
+        /** @brief 전투 알림의 소리를 쌓습니다 — 멤버의 공격 · 주문은 직업 · 주문 표의 소리, 나머지는 이 판의 이벤트다. */
+        void queueBattleSound( const JRPGBattleEvent& event );
         /** @brief 라운드 뒤: 알림을 로그로 내고 승패를 정합니다. */
         void settleBattle();
         /** @brief 승리 · 패배로 판을 끝내고 결과를 보여 주는 시간을 셉니다. */
@@ -188,6 +190,8 @@ namespace sw
         float32 _useRadius;
         PROPERTY( Category = "Trail", DisplayName = "Move Speed", Min = 0.0, Units = "m/s" )
         float32 _moveSpeed;
+        PROPERTY( Category = "Trail", DisplayName = "Body Radius", Tooltip = "Radius of the walking body against the static bodies of the scene", Min = 0.05, Units = m )
+        float32 _bodyRadius;
         PROPERTY( Category = "Trail", DisplayName = "Step Length", Tooltip = "Distance walked per encounter step", Min = 0.1, Units = m )
         float32 _stepLength;
         PROPERTY( Category = "Battle", DisplayName = "Battle Settings" )

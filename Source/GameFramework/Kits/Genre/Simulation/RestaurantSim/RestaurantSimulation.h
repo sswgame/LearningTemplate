@@ -333,8 +333,12 @@ namespace sw
         float32 computeRating() const;
         int32   getReputation() const;
         /** @brief 조리 중인 주문 수를 반환합니다. */
-        int32                             countCooking() const;
-        int32                             countOccupiedSeats() const;
+        int32 countCooking() const;
+        int32 countOccupiedSeats() const;
+        /** @brief 조리 스테이션 @p station 의 수입니다(두지 않은 종류면 0). */
+        int32 countStations( const hashed_string& station ) const;
+        /** @brief 요리사 가운데 가장 높은 레벨입니다(요리사가 없으면 0). */
+        int32                             findBestCookLevel() const;
         const vector<StaffMember>&        getStaff() const { return _listStaff; }
         const vector<RestaurantCustomer>& getCustomers() const { return _listCustomer; }
         const deque<KitchenOrder>&        getOrders() const { return _listOrder; }
@@ -378,8 +382,6 @@ namespace sw
 
         [[nodiscard]] optional<int32> findCustomerIndex( int32 customerID ) const;
         optional<int32>               findIdleStaff( StaffRole role ) const;
-        int32                         findBestCookLevel() const;
-        int32                         countStations( const hashed_string& station ) const;
         int32                         countCookingAt( const hashed_string& station ) const;
         const MenuEntry*              findMenuEntry( const hashed_string& dishID ) const;
         const RecipeDef*              findRecipe( const DishDef& dish ) const;

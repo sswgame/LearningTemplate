@@ -20,6 +20,7 @@
 		<entry source="Boost overheated" text="부스트 과열" />
 		<entry source="Bramble Sprite" text="가시덤불 정령" />
 		<entry source="Broth Bowl" text="맑은국수" />
+		<entry source="Buy (J)   Price up (K)   Price down (L)   Add station (F)   Open (Enter)" text="사기 (J)   가격 올리기 (K)   가격 내리기 (L)   스테이션 들이기 (F)   열기 (Enter)" />
 		<entry source="Buy (J)   Price up (K)   Price down (L)   Open (Enter)" text="사기 (J)   가격 올리기 (K)   가격 내리기 (L)   열기 (Enter)" />
 		<entry source="Buy more while open (J)" text="영업 중에도 살 수 있습니다 (J)" />
 		<entry source="Card cost" text="카드 비용" />
@@ -32,6 +33,7 @@
 		<entry source="Combat Helmet" text="전투 헬멧" />
 		<entry source="Combo" text="콤보" />
 		<entry source="Commander" text="지휘관" />
+		<entry source="Cook level" text="요리사 레벨" />
 		<entry source="Credits" text="크레딧" />
 		<entry source="CutA" text="컷 A" />
 		<entry source="CutB" text="컷 B" />
@@ -137,6 +139,7 @@
 		<entry source="Recon Helmet" text="정찰 헬멧" />
 		<entry source="Recon Patch" text="정찰 패치" />
 		<entry source="Recon Vest" text="정찰 조끼" />
+		<entry source="Reputation" text="평판" />
 		<entry source="Rest at the camp (E)" text="야영지에서 쉬기 (E)" />
 		<entry source="Rest at the inn (E)   Change class (F)" text="여관에서 쉬기 (E)   전직 (F)" />
 		<entry source="Reward" text="보상" />

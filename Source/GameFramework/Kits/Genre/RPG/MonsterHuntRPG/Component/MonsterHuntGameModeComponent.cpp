@@ -15,6 +15,7 @@
 #include "GameFramework/Runtime/Foundation/Framework/Minigame/MinigameStack.h"
 #include "GameFramework/Runtime/Foundation/GameData/DepletingValue.h"
 #include "GameFramework/Runtime/Foundation/GameData/StatBlock.h"
+#include "GameFramework/Runtime/World/Query/WalkSweep.h"
 
 namespace sw
 {
@@ -34,11 +35,9 @@ namespace sw
             static constexpr const utf8* kEventLearn    = "MonsterHuntLearn";
             static constexpr const utf8* kEventMutagen  = "MonsterHuntMutagen";
             static constexpr const utf8* kEventMonster  = "MonsterHuntMonster";
-            static constexpr const utf8* kEventSwing    = "MonsterHuntSwing";
             static constexpr const utf8* kEventHit      = "MonsterHuntHit";
             static constexpr const utf8* kEventHurt     = "MonsterHuntHurt";
             static constexpr const utf8* kEventDodge    = "MonsterHuntDodge";
-            static constexpr const utf8* kEventSign     = "MonsterHuntSign";
             static constexpr const utf8* kEventPotion   = "MonsterHuntPotion";
             static constexpr const utf8* kEventWon      = "MonsterHuntWon";
             static constexpr const utf8* kEventLost     = "MonsterHuntLost";
@@ -85,9 +84,12 @@ namespace sw
         , _fieldMax{ 20.0f, 4.0f }
         , _senseRadius{ 3.0f }
         , _moveSpeed{ 4.0f }
+        , _bodyRadius{ 0.3f }
         , _playerMaxHP{ 100 }
         , _fastDamage{ 20.0f }
         , _strongDamage{ 35.0f }
+        , _fastSound{}
+        , _strongSound{}
         , _attackReach{ 2.0f }
         , _signReach{ 5.0f }
         , _attackCooldownSeconds{ 0.4f }
@@ -380,7 +382,9 @@ namespace sw
         if ( _combat.performAction( bStrong ? MonsterHuntAction::StrongAttack : MonsterHuntAction::FastAttack ) != MonsterHuntCombatResult::Ok )
             return false;
         _attackCooldown.start( _attackCooldownSeconds );
-        getSoundQueue().queueEvent( MonsterHuntGameModeComponentInternal::kEventSwing );
+        const hashed_string& swingSound = bStrong ? _strongSound : _fastSound;
+        if ( swingSound.empty() == false )
+            getSoundQueue().queueEvent( swingSound.c_str() ); // 이름 표의 글은 사라지지 않는다
         if ( computeMonsterDistance() > _attackReach )
             return true; // 빗나갔다 — 오일 횟수는 쓰지 않는다
         StatBlock stats;
@@ -411,7 +415,9 @@ namespace sw
         const MonsterHuntSignCast cast = _combat.castSign( _sign.key(), bAlternate, &_skills, stats, _pChart.get() );
         if ( cast._result != MonsterHuntCombatResult::Ok )
             return false;
-        getSoundQueue().queueEvent( MonsterHuntGameModeComponentInternal::kEventSign );
+        const MonsterHuntSignDef* const pSign = _pCatalog->findSign( _sign.key() );
+        if ( pSign != nullptr && pSign->_castSound.empty() == false )
+            getSoundQueue().queueEvent( pSign->_castSound.c_str() );
         damageMonster( cast._power, cast._element );
         return true;
     }
@@ -477,8 +483,8 @@ namespace sw
         const float32 approach = MathUtil::min( _monsterSpeed * deltaTime, distance - _monsterReach );
         if ( approach > 0.0f )
         {
-            _monsterPosition._x += ( _playerPosition._x - _monsterPosition._x ) / distance * approach;
-            _monsterPosition._y += ( _playerPosition._y - _monsterPosition._y ) / distance * approach;
+            const float2 toPlayer = ( _playerPosition - _monsterPosition ) * ( approach / distance );
+            _monsterPosition += WalkSweep::walkOnGround( getObjectManager(), getMonsterPosition(), toPlayer, _bodyRadius ); // 바위에 막히면 따라 미끄러진다
         }
         const bool bInReach = computeMonsterDistance() <= _monsterReach + MathUtil::kLooseEpsilon;
         if ( _monsterAttack.updateRepeat( deltaTime, _monsterAttackSeconds, bInReach ) == false || _dodge.isActive() )
@@ -506,8 +512,9 @@ namespace sw
             return; // 흥정은 명령이 진행한다
         if ( isAlive() )
         {
-            _playerPosition._x = MathUtil::clamp( _playerPosition._x + _commandMove._x * _moveSpeed * deltaTime, _fieldMin._x, _fieldMax._x );
-            _playerPosition._y = MathUtil::clamp( _playerPosition._y + _commandMove._y * _moveSpeed * deltaTime, _fieldMin._y, _fieldMax._y );
+            const float2 step  = WalkSweep::walkOnGround( getObjectManager(), getPlayerPosition(), _commandMove * ( _moveSpeed * deltaTime ), _bodyRadius );
+            _playerPosition._x = MathUtil::clamp( _playerPosition._x + step._x, _fieldMin._x, _fieldMax._x );
+            _playerPosition._y = MathUtil::clamp( _playerPosition._y + step._y, _fieldMin._y, _fieldMax._y );
             if ( _phase == MonsterHuntPhase::Hunt )
                 updateHunt( deltaTime );
             return;

@@ -83,6 +83,8 @@ namespace sw
         string _name{};
         PROPERTY()
         hashed_string _attackType{}; ///< 기본 공격의 피해 유형(잠금 깨기와 약점에 쓰며 "Sword", "Blunt" 같은 값이다)
+        PROPERTY()
+        hashed_string _attackSound{}; ///< 기본 공격의 사운드 이벤트(`*.audioevents.xml`). 비면 소리가 없다
         PROPERTY( Name = "requires" )
         hashed_string          _requiredItem{}; ///< 이 직업으로 바꾸려면 가지고 있어야 하는 아이템(DQ3 현자의 깨달음의 책)
         vector<JRPGLearnEntry> _listLearn{};
@@ -105,6 +107,8 @@ namespace sw
         string _name{};
         PROPERTY( Name = "type" )
         hashed_string _damageType{}; ///< 잠금 깨기와 약점에 쓰는 피해 유형
+        PROPERTY()
+        hashed_string _castSound{}; ///< 쓸 때의 사운드 이벤트. 비면 소리가 없다
         PROPERTY( Name = "manual" )
         hashed_string _manualID{}; ///< 비어 있지 않으면 그 비급의 초식이다(숙련 단계로 해금되고, 쓸 때마다 숙련이 오른다)
         PROPERTY( Min = 0 )

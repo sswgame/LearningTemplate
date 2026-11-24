@@ -55,7 +55,9 @@
 					                             _buyCount="10"
 					                             _pantrySlotCount="60"
 					                             _startGold="200"
-					                             _cookCount="1"
+					                             _stationPrice="20"
+					                             _reputationCatalog="game/playground/restaurantsim/data/friendship.xml"
+					                             _cookCount="2"
 					                             _serverCount="1"
 					                             _dailyWage="15"
 					                             _weather="clear"
@@ -68,6 +70,10 @@
 							<item>broth_noodle</item>
 							<item>harbor_fish</item>
 						</_listIngredient>
+						<_listStation>
+							<item>Stove</item>
+							<item>Grill</item>
+						</_listStation>
 						<_settings _marketVolatility="0" _seatCount="4" />
 					</RestaurantGameModeComponent>
 					<RestaurantCounterComponent _localID="16741858994222196965"
@@ -75,6 +81,7 @@
 					                            _buyAction="Restaurant.Buy"
 					                            _priceUpAction="Restaurant.PriceUp"
 					                            _priceDownAction="Restaurant.PriceDown"
+					                            _stationAction="Restaurant.Station"
 					                            _openAction="Restaurant.Open"
 					                            _seatOrigin="0,0"
 					                            _seatSpacing="1.6"

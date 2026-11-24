@@ -20,13 +20,58 @@ namespace sw
         struct RestaurantGameModeComponentInternal
         {
             static constexpr uint32 kStateTag     = FourCCUtil::make( "RSGM" );
-            static constexpr uint32 kStateVersion = 1;
+            static constexpr uint32 kStateVersion = 2; ///< 2: 평판
 
             static constexpr const utf8* kWinResult      = "win";
             static constexpr const utf8* kLoseResult     = "lose";
             static constexpr const utf8* kCookName       = "cook"; ///< 직원 이름(레벨 오름 알림의 id)
             static constexpr const utf8* kServerName     = "server";
             static constexpr float32     kMinutesPerHour = 60.0f;
+
+            // 사운드 이벤트 이름 — 클립 · 범위 · 상한은 게임의 사운드 이벤트 데이터(audioevents.xml)가 정한다.
+            static constexpr const utf8* kEventBuy     = "RestaurantBuy";
+            static constexpr const utf8* kEventStation = "RestaurantStation";
+            static constexpr const utf8* kEventOpen    = "RestaurantOpen";
+            static constexpr const utf8* kEventClose   = "RestaurantClose";
+            static constexpr const utf8* kEventArrived = "RestaurantArrived";
+            static constexpr const utf8* kEventCooked  = "RestaurantCooked";
+            static constexpr const utf8* kEventPaid    = "RestaurantPaid";
+            static constexpr const utf8* kEventLeft    = "RestaurantLeft";
+            static constexpr const utf8* kEventLevelUp = "RestaurantLevelUp";
+            static constexpr const utf8* kEventWon     = "RestaurantWon";
+            static constexpr const utf8* kEventLost    = "RestaurantLost";
+
+            /** @brief 식당 알림 @p kind 에 낼 소리입니다. 소리가 없는 알림이면 nullptr 입니다. */
+            static const utf8* findSound( RestaurantEvent::Kind kind )
+            {
+                switch ( kind )
+                {
+                    case RestaurantEvent::Kind::CustomerArrived:
+                    {
+                        return kEventArrived;
+                    }
+                    case RestaurantEvent::Kind::DishCooked:
+                    {
+                        return kEventCooked;
+                    }
+                    case RestaurantEvent::Kind::CustomerPaid:
+                    {
+                        return kEventPaid;
+                    }
+                    case RestaurantEvent::Kind::CustomerLeft:
+                    {
+                        return kEventLeft;
+                    }
+                    case RestaurantEvent::Kind::StaffLevelUp:
+                    {
+                        return kEventLevelUp;
+                    }
+                    default:
+                    {
+                        return nullptr;
+                    }
+                }
+            }
         };
     } // namespace
 
@@ -36,6 +81,9 @@ namespace sw
     SW_AUTOMATION_GETTER_WATCH( restaurantGold, "Restaurant.Gold", "Gold of the restaurant", RestaurantGameModeComponent, &RestaurantGameModeComponent::getGold );
     SW_AUTOMATION_GETTER_WATCH( restaurantServed, "Restaurant.Served", "Customers who paid today", RestaurantGameModeComponent, &RestaurantGameModeComponent::getServed );
     SW_AUTOMATION_GETTER_WATCH( restaurantTotalProfit, "Restaurant.TotalProfit", "Profit of the closed days", RestaurantGameModeComponent, &RestaurantGameModeComponent::getTotalProfit );
+    SW_AUTOMATION_GETTER_WATCH( restaurantReputation, "Restaurant.Reputation", "Reputation among the guests", RestaurantGameModeComponent, &RestaurantGameModeComponent::getReputation );
+    SW_AUTOMATION_GETTER_WATCH( restaurantCookLevel, "Restaurant.BestCookLevel", "Highest level among the cooks", RestaurantGameModeComponent, &RestaurantGameModeComponent::getBestCookLevel );
+    SW_AUTOMATION_GETTER_WATCH( restaurantStations, "Restaurant.Stations", "Cooking stations for the first dish", RestaurantGameModeComponent, &RestaurantGameModeComponent::getFirstStationCount );
     SW_AUTOMATION_GETTER_WATCH( restaurantMenuPrice, "Restaurant.MenuPrice", "Menu price of the first dish", RestaurantGameModeComponent, &RestaurantGameModeComponent::getFirstMenuPrice );
 
     RestaurantGameModeComponent::RestaurantGameModeComponent()
@@ -45,6 +93,9 @@ namespace sw
         , _buyCount{ 5 }
         , _pantrySlotCount{ 40 }
         , _startGold{ 200 }
+        , _listStation{}
+        , _stationPrice{ 0 }
+        , _reputationCatalog{}
         , _cookCount{ 1 }
         , _serverCount{ 1 }
         , _dailyWage{ 15 }
@@ -58,6 +109,8 @@ namespace sw
         , _pCatalog{}
         , _pRecipes{}
         , _pShops{}
+        , _pReputationCatalog{}
+        , _reputation{}
         , _wallet{}
         , _pantry{}
         , _simulation{}
@@ -73,8 +126,8 @@ namespace sw
 
     void RestaurantGameModeComponent::initializeSimulation( RestaurantSimulation& outSimulation )
     {
-        // 평판 · 시계 · 아이템 카탈로그 · 직원 경험치 곡선은 쓰지 않는 판이다(nullptr 이면 끈다).
-        outSimulation.initialize( _pCatalog.get(), _pRecipes.get(), nullptr, _pShops.get(), nullptr, &_wallet, nullptr, nullptr, _pantry, _settings );
+        // 시계 · 아이템 카탈로그는 쓰지 않는 판이다(nullptr 이면 끈다) — 날은 이 디렉터가 세고 재료는 아이템 정의 없이 쌓는다.
+        outSimulation.initialize( _pCatalog.get(), _pRecipes.get(), nullptr, _pShops.get(), _pCatalog->findStaffCurve(), &_wallet, &_reputation, nullptr, _pantry, _settings );
     }
 
     bool RestaurantGameModeComponent::startGame()
@@ -89,11 +142,18 @@ namespace sw
         }
         if ( _pantry.initialize( nullptr, _pantrySlotCount ) == false )
             return false;
+        if ( _reputationCatalog.empty() == false && acquireRequired( _reputationCatalog.path(), _pReputationCatalog ) == false )
+            return false;
+        _reputation.initialize( _pReputationCatalog.get() );
         _wallet.clear();
         if ( _startGold > 0 )
             _wallet.add( Wallet::getDefaultCurrency(), _startGold );
         _simulation = RestaurantSimulation{};
         initializeSimulation( _simulation );
+        for ( const hashed_string& station : _listStation )
+        {
+            _simulation.setStationCount( station, _simulation.countStations( station ) + 1 );
+        }
         for ( int32 cookIndex = 0; cookIndex < _cookCount; ++cookIndex )
         {
             (void)_simulation.hireStaff( hashed_string( RestaurantGameModeComponentInternal::kCookName ), StaffRole::Cook, _dailyWage ); // 번호는 쓰지 않는다
@@ -116,6 +176,31 @@ namespace sw
         return static_cast<int32>( _wallet.getBalance( Wallet::getDefaultCurrency() ) );
     }
 
+    hashed_string RestaurantGameModeComponent::findDishStation( int32 dishIndex ) const
+    {
+        if ( isStarted() == false || dishIndex < 0 || dishIndex >= static_cast<int32>( _pCatalog->getDishes().size() ) )
+            return hashed_string{};
+        const RecipeDef* const pRecipe = _pRecipes->find( _pCatalog->getDishes()[static_cast<size_t>( dishIndex )]._recipeID );
+        return pRecipe != nullptr ? pRecipe->_station : hashed_string{};
+    }
+
+    int32 RestaurantGameModeComponent::getFirstStationCount() const
+    {
+        return _simulation.countStations( findDishStation( 0 ) );
+    }
+
+    bool RestaurantGameModeComponent::submitAddStation( int32 dishIndex )
+    {
+        const hashed_string station = findDishStation( dishIndex );
+        if ( _phase != RestaurantPhase::Prepare || station.empty() || ( _stationPrice > 0 && _wallet.trySpend( Wallet::getDefaultCurrency(), _stationPrice ) == false ) )
+            return false;
+        _simulation.setStationCount( station, _simulation.countStations( station ) + 1 );
+        _totalProfit -= _stationPrice; // 들인 돈도 장사의 비용이다
+        getSoundQueue().queueEvent( RestaurantGameModeComponentInternal::kEventStation );
+        SW_LOG_INFO_ID( "Restaurant.StationAdded", "[Restaurant] %# '%#' stations, %# gold left", _simulation.countStations( station ), station.c_str(), getGold() );
+        return true;
+    }
+
     int32 RestaurantGameModeComponent::getFirstMenuPrice() const
     {
         if ( isStarted() == false || _pCatalog->getDishes().empty() )
@@ -135,6 +220,7 @@ namespace sw
             SW_LOG_INFO_ID( "Restaurant.BuyRefused", "[Restaurant] could not buy %# '%#' (result %#)", _buyCount, itemID.c_str(), static_cast<int32>( result ) );
             return false;
         }
+        getSoundQueue().queueEvent( RestaurantGameModeComponentInternal::kEventBuy );
         SW_LOG_INFO_ID( "Restaurant.Bought", "[Restaurant] bought %# '%#', %# gold left", _buyCount, itemID.c_str(), getGold() );
         return true;
     }
@@ -154,6 +240,7 @@ namespace sw
             return false;
         _simulation.openDay( _weather );
         _phase = RestaurantPhase::Open;
+        getSoundQueue().queueEvent( RestaurantGameModeComponentInternal::kEventOpen );
         SW_LOG_INFO_ID( "Restaurant.Opened", "[Restaurant] day %# is open", _day );
         return true;
     }
@@ -163,6 +250,7 @@ namespace sw
         if ( isStarted() == false || _phase != RestaurantPhase::Closed )
             return false;
         _simulation.advanceDay();
+        _reputation.advanceDay();
         reportEvents();
         ++_day;
         _phase = RestaurantPhase::Prepare;
@@ -187,17 +275,20 @@ namespace sw
         if ( _day < _dayCount )
         {
             _phase = RestaurantPhase::Closed;
+            getSoundQueue().queueEvent( RestaurantGameModeComponentInternal::kEventClose );
             return;
         }
         _resultHold.start( _resultHoldSeconds );
         if ( _targetProfit <= _totalProfit )
         {
             _phase = RestaurantPhase::Victory;
+            getSoundQueue().queueEvent( RestaurantGameModeComponentInternal::kEventWon );
             SW_LOG_INFO_ID( "Restaurant.Victory", "[Restaurant] the target %# is reached", _targetProfit );
         }
         else
         {
             _phase = RestaurantPhase::Defeat;
+            getSoundQueue().queueEvent( RestaurantGameModeComponentInternal::kEventLost );
             SW_LOG_INFO_ID( "Restaurant.Defeat", "[Restaurant] the target %# is not reached", _targetProfit );
         }
     }
@@ -208,7 +299,11 @@ namespace sw
         _simulation.pollEvents( _listEvent );
         for ( const RestaurantEvent& event : _listEvent )
         {
-            if ( event._kind == RestaurantEvent::Kind::IngredientSpoiled )
+            if ( const utf8* const pSound = RestaurantGameModeComponentInternal::findSound( event._kind ) )
+                getSoundQueue().queueEvent( pSound );
+            if ( event._kind == RestaurantEvent::Kind::StaffLevelUp )
+                SW_LOG_INFO_ID( "Restaurant.StaffLevelUp", "[Restaurant] a '%#' reached level %#", event._id.c_str(), event._value );
+            else if ( event._kind == RestaurantEvent::Kind::IngredientSpoiled )
                 SW_LOG_INFO_ID( "Restaurant.IngredientSpoiled", "[Restaurant] %# '%#' spoiled", event._value, event._id.c_str() );
         }
     }
@@ -252,6 +347,7 @@ namespace sw
         // 날 · 이익 합 · 단계는 상태 칸이다(`GameModeComponent::serializeState`). 식당은 같은 카탈로그 · 설정으로 연 뒤에 읽는다(키트 계약).
         Wallet               restoredWallet;
         Inventory            restoredPantry;
+        ReputationState      restoredReputation;
         RestaurantSimulation restoredSimulation;
         Countdown            resultHold = _resultHold;
         if ( io.isReading() )
@@ -262,10 +358,12 @@ namespace sw
                 io.fail();
                 return;
             }
-            initializeSimulation( restoredSimulation ); // 빌린 지갑 · 창고는 이 디렉터의 칸이다 — 읽는 동안은 건드리지 않는다
+            restoredReputation.initialize( _pReputationCatalog.get() );
+            initializeSimulation( restoredSimulation ); // 빌린 지갑 · 창고 · 평판은 이 디렉터의 칸이다 — 읽는 동안은 건드리지 않는다
         }
         io.value( io.isWriting() ? _wallet : restoredWallet );
         io.value( io.isWriting() ? _pantry : restoredPantry );
+        io.value( io.isWriting() ? _reputation : restoredReputation );
         io.value( io.isWriting() ? _simulation : restoredSimulation );
         io.value( resultHold );
         io.end();
@@ -275,6 +373,7 @@ namespace sw
             return;
         _wallet     = std::move( restoredWallet );
         _pantry     = std::move( restoredPantry );
+        _reputation = std::move( restoredReputation );
         _simulation = std::move( restoredSimulation );
         _resultHold = resultHold;
     }

@@ -54,6 +54,7 @@ namespace sw
         , _buyAction{}
         , _priceUpAction{}
         , _priceDownAction{}
+        , _stationAction{}
         , _openAction{}
         , _seatOrigin{ 0.0f, 0.0f }
         , _seatSpacing{ 1.5f }
@@ -92,12 +93,12 @@ namespace sw
     {
         Component::onBeginPlay();
         setTickGroup( TickGroup::PostUpdate );
-        const bool bMarketNamed = _moveAction.empty() == false && _buyAction.empty() == false && _openAction.empty() == false;
+        const bool bMarketNamed = _moveAction.empty() == false && _buyAction.empty() == false && _stationAction.empty() == false && _openAction.empty() == false;
         const bool bPriceNamed  = _priceUpAction.empty() == false && _priceDownAction.empty() == false;
         _bActionsValid          = bMarketNamed && bPriceNamed ? SW_TRUE : SW_FALSE;
         if ( _bActionsValid == SW_FALSE )
-            SW_LOG_ERROR_ID( "Restaurant.CounterActionMissing", "Restaurant counter: move '%#', buy '%#', open '%#', price up '%#' and price down '%#' actions must all be named - the counter reads no input",
-                             _moveAction.c_str(), _buyAction.c_str(), _openAction.c_str(), _priceUpAction.c_str(), _priceDownAction.c_str() );
+            SW_LOG_ERROR_ID( "Restaurant.CounterActionMissing", "Restaurant counter: move '%#', buy '%#', station '%#', open '%#', price up '%#' and price down '%#' actions must all be named - the counter reads no input",
+                             _moveAction.c_str(), _buyAction.c_str(), _stationAction.c_str(), _openAction.c_str(), _priceUpAction.c_str(), _priceDownAction.c_str() );
         _row      = 0;
         _lastStep = 0;
     }
@@ -153,6 +154,8 @@ namespace sw
             (void)director.submitPriceChange( _row, RestaurantCounterComponentInternal::kPriceChange );
         if ( input.wasActionTriggered( _priceDownAction ) )
             (void)director.submitPriceChange( _row, -RestaurantCounterComponentInternal::kPriceChange );
+        if ( input.wasActionTriggered( _stationAction ) )
+            (void)director.submitAddStation( _row );
         if ( input.wasActionTriggered( _openAction ) )
             (void)( director.getGamePhase() == RestaurantPhase::Closed ? director.submitNextDay() : director.submitOpen() );
     }
@@ -173,6 +176,7 @@ namespace sw
         _hudViewModel->setPhase( director.getGamePhase() );
         _hudViewModel->setDay( director.getDay(), director.getDayCount() );
         _hudViewModel->setMoney( director.getGold(), director.getTotalProfit(), director.getTargetProfit() );
+        _hudViewModel->setHouse( director.getReputation(), director.getBestCookLevel() );
         _hudViewModel->setCustomers( hour, director.getServed(), simulation.countOccupiedSeats() );
         const vector<DishDef>& listDish        = pCatalog->getDishes();
         const size_t           row             = static_cast<size_t>( _row );

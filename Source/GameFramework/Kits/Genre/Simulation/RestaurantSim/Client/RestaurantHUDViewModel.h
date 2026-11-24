@@ -38,6 +38,8 @@ namespace sw
         void setMoney( int32 gold, int32 totalProfit, int32 targetProfit );
         /** @brief 문을 연 뒤의 시각(시)과 계산한 손님 · 앉은 손님 수입니다. */
         void setCustomers( int32 hour, int32 servedCount, int32 seatedCount );
+        /** @brief 손님 평판과 요리사의 가장 높은 레벨입니다. */
+        void setHouse( int32 reputation, int32 cookLevel );
         /** @brief 고른 줄의 요리 이름(현지화 키) · 가격과 재료의 남은 수입니다. */
         void setSelection( string_view dishName, int32 price, int32 ingredientCount );
 
@@ -58,6 +60,10 @@ namespace sw
         int32 _totalProfit;
         PROPERTY( DisplayName = "Target Profit" )
         int32 _targetProfit;
+        PROPERTY( DisplayName = "Reputation" )
+        int32 _reputation;
+        PROPERTY( DisplayName = "Cook Level" )
+        int32 _cookLevel;
         PROPERTY( DisplayName = "Hour" )
         int32 _hour;
         PROPERTY( DisplayName = "Served" )
