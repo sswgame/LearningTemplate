@@ -37,8 +37,6 @@
 #include "GameFramework/Runtime/Foundation/Framework/GameService.h"
 #include "GameFramework/Runtime/Gameplay/Gimmick/Movement/InterpToMovementComponent.h"
 #include "GameFramework/Runtime/Gameplay/Gimmick/Movement/TickedFloorStep.h"
-#include "GameFramework/Runtime/Gameplay/Vehicle/MountInteractionComponent.h"
-#include "GameFramework/Runtime/Gameplay/Vehicle/VehicleExitComponent.h"
 #include "GameFramework/Runtime/Gameplay/Vehicle/VehicleSeatComponent.h"
 
 #include "Games/Playground/Hub/HubWorldComponent.h"
@@ -232,12 +230,12 @@ namespace sw
         if ( bServer == false )
             return;
         _tick = link._pRouter->getWorldClock().getWholeTick( _stride );
-        // 서버 씬의 플레이어 오브젝트는 아무도 조종하지 않는다 — 나는 자리에 선 캡슐이 접속한 폰을 막지 않게 물리 몸만 끈다(튜닝의 원본으로는 남는다).
+        // 서버 씬의 플레이어 오브젝트는 아무도 조종하지 않는다 — 나는 자리에 선 캡슐이 접속한 폰을 막지 않게 물리 몸만 멈춘다(튜닝의 원본으로는 남는다).
         const GameObjectManager*      pManager    = getOwner()->getManager();
         const GameObject*             pLocal      = pManager != nullptr ? pManager->resolveGameObject( _localPawn ) : nullptr;
         CharacterControllerComponent* pController = pLocal != nullptr ? pLocal->getComponent<CharacterControllerComponent>() : nullptr;
         if ( pController != nullptr )
-            pController->setActive( false );
+            _localBodySuspension = pController->suspend();
         SW_LOG_INFO_ID( "Hub.PawnReplicationStarted", "[Hub] a server-authoritative pawn stands for each connected account (%# Hz)", static_cast<int32>( MathUtil::round( 1.0f / _tickInterval ) ) );
     }
 
@@ -260,30 +258,18 @@ namespace sw
         }
         _listRemotePawn.clear();
         GameObject* pLocal = manager.resolveGameObject( _localPawn );
-        if ( pLocal != nullptr && _role == Role::Server )
-        {
-            CharacterControllerComponent* pController = pLocal->getComponent<CharacterControllerComponent>();
-            if ( pController != nullptr )
-                pController->setActive( true );
-        }
-        else if ( pLocal != nullptr && _localAvatarID != 0 )
+        _localBodySuspension.reset();
+        if ( pLocal != nullptr && _localAvatarID != 0 )
         {
             CharacterMovementComponent* pMovement = pLocal->getComponent<CharacterMovementComponent>();
             if ( pMovement != nullptr )
                 pMovement->setNetDriven( false );
-            MountInteractionComponent* pInteraction = pLocal->getComponent<MountInteractionComponent>();
-            if ( pInteraction != nullptr )
-                pInteraction->setActive( true );
         }
         for ( size_t mountIndex = 0; mountIndex < _listMount.size(); ++mountIndex )
         {
             MountMovementComponent* pMount = findMount( manager, static_cast<uint8>( mountIndex + 1u ) );
-            if ( pMount == nullptr )
-                continue;
-            (void)pMount->setNetDriven( false ); // 끄기는 실패하지 않는다
-            VehicleExitComponent* pExit = pMount->getOwner()->getComponent<VehicleExitComponent>();
-            if ( pExit != nullptr )
-                pExit->setActive( true );
+            if ( pMount != nullptr )
+                (void)pMount->setNetDriven( false ); // 끄기는 실패하지 않는다
         }
         _localAvatarID = 0;
         _role          = Role::None;
@@ -573,17 +559,11 @@ namespace sw
         if ( pController->getCharacterHandle().isValid() == false )
             return false; // 몸은 다음 물리 프레임에 선다
         pMovement->setNetDriven( true );
-        MountInteractionComponent* pInteraction = pObject->getComponent<MountInteractionComponent>();
-        if ( pInteraction != nullptr )
-            pInteraction->setActive( false ); // 버튼은 의도로 서버의 폰에 닿는다
         for ( size_t mountIndex = 0; mountIndex < _listMount.size(); ++mountIndex )
         {
             MountMovementComponent* pMount = findMount( manager, static_cast<uint8>( mountIndex + 1u ) );
-            if ( pMount == nullptr || pMount->setNetDriven( true ) == false )
-                continue;
-            VehicleExitComponent* pExit = pMount->getOwner()->getComponent<VehicleExitComponent>();
-            if ( pExit != nullptr )
-                pExit->setActive( false );
+            if ( pMount != nullptr )
+                (void)pMount->setNetDriven( true ); // 켤 수 없는 탈것이면 오류를 남기고 틱이 그대로 몬다
         }
         _prediction       = ClientPrediction<HubPawnState, HubPawnInput>{};
         _previousPosition = AbsolutePosition{ manager.getWorldOrigin().toAbsolute( pController->getMotionState()._position ) };
@@ -793,10 +773,6 @@ namespace sw
                 pRemote              = &_listRemotePawn.emplace_back(); // 세우지 못해도 목록에 둔다 — 프레임마다 다시 시도하지 않는다
                 pRemote->_entityID   = entityID;
                 pRemote->_object     = pSpawned != nullptr ? pSpawned->getHandle() : GameObjectHandle{};
-                // 남의 폰은 서버의 폰이 타고 내린다 — 모습은 상호작용을 하지 않는다.
-                MountInteractionComponent* pInteraction = pSpawned != nullptr ? pSpawned->getComponent<MountInteractionComponent>() : nullptr;
-                if ( pInteraction != nullptr )
-                    pInteraction->setActive( false );
             }
             pRemote->_floorNumber                     = floorNumber;
             pRemote->_floorLocalPosition              = floorNumber != 0 ? float3::transform( position - floorPosition, std::as_const( floorRotation ).inverse() ) : float3{};
@@ -807,8 +783,12 @@ namespace sw
             CharacterControllerComponent* pController = pObject != nullptr ? pObject->getComponent<CharacterControllerComponent>() : nullptr;
             if ( pRoot == nullptr || pMovement == nullptr || pController == nullptr )
                 continue;
-            pController->setActive( ratio.choose( from._mountNumber, to._mountNumber ) == 0 ); // 탄 사람의 캡슐은 서버에도 없다(`VehicleSeatComponent::mount`)
-            pRoot->setWorldPosition( position );                                               // 손으로 돌리는 몸이라 옮긴 자리에 캡슐만 따라간다(걸음은 돌지 않는다)
+            // 탄 사람의 캡슐은 서버에도 없다(`VehicleSeatComponent::mount`).
+            if ( ratio.choose( from._mountNumber, to._mountNumber ) == 0 )
+                pRemote->_seatSuspension.reset();
+            else if ( pRemote->_seatSuspension.isActive() == false )
+                pRemote->_seatSuspension = pController->suspend();
+            pRoot->setWorldPosition( position ); // 손으로 돌리는 몸이라 옮긴 자리에 캡슐만 따라간다(걸음은 돌지 않는다)
             if ( yaw != pMovement->getFacingYaw() )
                 pMovement->setFacingYaw( yaw );
         }

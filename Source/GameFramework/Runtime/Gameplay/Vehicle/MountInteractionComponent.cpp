@@ -5,7 +5,9 @@
 #include "Core/Foundation/Constants.h"
 
 #include "Engine/Object/GameObject/GameObject.h"
+#include "Engine/Object/GameObject/GameObjectManager.h"
 #include "Engine/Object/GameObject/GameObjectManagerResolve.inl"
+#include "Engine/Object/GameObject/Service/SceneNetLink.h"
 
 #include "GameFramework/Runtime/Character/Control/Pawn/PawnComponent.h"
 #include "GameFramework/Runtime/Gameplay/Vehicle/VehicleSeatComponent.h"
@@ -44,8 +46,8 @@ namespace sw
     {
         GameObject*    pOwner = getOwner();
         PawnComponent* pPawn  = pOwner != nullptr ? pOwner->getComponent<PawnComponent>() : nullptr;
-        if ( pPawn == nullptr )
-            return;
+        if ( pPawn == nullptr || pOwner->getManager()->getSubsystem<SceneNetLink>().hasAuthority() == false )
+            return; // 접속한 클라이언트의 버튼은 의도로 서버의 폰에 닿는다 — 타고 내리는 것은 서버가 정한다
         const VehicleSeatComponent* pCurrentSeat = VehicleSeatComponent::findSeatOf( *pPawn );
         if ( pCurrentSeat != nullptr )
         {

@@ -195,6 +195,7 @@ namespace sw
         struct RemotePawn
         {
             GameObjectHandle _object{};
+            Subscription     _seatSuspension{};     ///< 타고 있는 동안의 캡슐 멈춤
             float3           _floorLocalPosition{}; ///< 그린 바닥 기준의 자리(`_floorNumber` 일 때)
             uint32           _entityID{ 0 };
             uint8            _floorNumber{ 0 };  ///< 디딘 바닥의 번호(0 이면 없다)
@@ -288,7 +289,8 @@ namespace sw
         ReplicationServer                            _server;
         ReplicationClient                            _client;
         InterestReplicationPolicy                    _interest;
-        Subscription                                 _routerSubscription; ///< 라우터에 단 `_server` 또는 `_client` 의 등록(처리기보다 뒤에 선언 — 먼저 풀린다)
+        Subscription                                 _routerSubscription;  ///< 라우터에 단 `_server` 또는 `_client` 의 등록(처리기보다 뒤에 선언 — 먼저 풀린다)
+        Subscription                                 _localBodySuspension; ///< 서버 — 아무도 조종하지 않는 씬의 플레이어 몸의 멈춤
         ClientPrediction<HubPawnState, HubPawnInput> _prediction;
         PredictionSmoother                           _smoother;
         vector<ServerPawn>                           _listServerPawn;

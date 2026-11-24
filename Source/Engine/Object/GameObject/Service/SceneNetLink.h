@@ -99,6 +99,8 @@ namespace sw
         [[nodiscard]] float32 computeSecondsSince( uint32 serverTick ) const;
         /** @brief 이 월드의 세대입니다(서버가 정한다). 월드 범위 메시지에 저절로 실리고 라우터가 가른다(`NetWorldMessageTable`). 링크가 비었으면 0 입니다. */
         [[nodiscard]] uint8 getWorldGeneration() const;
+        /** @brief 이 월드가 게임 상태를 정하는 쪽이면 true 입니다 — 혼자 하는 월드나 서버다. 클라이언트 월드는 서버가 정한 결과를 복제로 받는다(언리얼 `HasAuthority`). */
+        [[nodiscard]] bool hasAuthority() const { return isBound() == false || _value._role != NetLinkRole::Client; }
         /** @brief 올라 있는 값입니다(`isBound` 일 때만 씁니다). */
         [[nodiscard]] const NetLinkValue& get() const { return _value; }
 

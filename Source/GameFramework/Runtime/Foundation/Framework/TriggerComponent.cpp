@@ -191,8 +191,7 @@ namespace sw
         if ( authority == TriggerAuthority::Local )
             return true;
         // 서버 판정 — 클라이언트 월드도 같은 트리거 계약으로 진입을 내지만 일하지 않는다(서버가 낸 결과를 복제로 받는다).
-        const SceneNetLink& link = manager.getSubsystem<SceneNetLink>();
-        return link.isBound() == false || link.get()._role != NetLinkRole::Client;
+        return manager.getSubsystem<SceneNetLink>().hasAuthority();
     }
 
     bool TriggerComponent::hasActivationAuthority() const

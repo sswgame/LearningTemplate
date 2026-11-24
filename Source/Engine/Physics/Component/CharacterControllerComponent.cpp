@@ -568,13 +568,7 @@ namespace sw
             return;
         _bManualSimulation = bNewManual;
         // 걸음의 주인이 바뀐다 — 앞 주인이 쓰지 않은 한 번짜리 요청(점프 · 발사 · 루트 모션 · 멈춤 …)과 프레임 값은 다음 주인의 것이 아니다. 유지하는 이동 요청만 남긴다.
-        editCommand( []( CharacterCommand3D& command )
-        {
-            CharacterCommand3D kept{};
-            kept._moveVelocity      = command._moveVelocity;
-            kept._verticalMoveSpeed = command._verticalMoveSpeed;
-            command                 = kept;
-        } );
+        discardPendingCommands();
         _physicsStep.assumeHeld(); // 게임 스레드, 틱 밖 — 스텝 훅과 겹치지 않는다
         _frameRootMotionVelocity = float3{};
         _frameSurfaceVelocity    = float3{};
@@ -643,7 +637,8 @@ namespace sw
             } );
             _previousPosition = state._position;
         }
-        else
+        // 멈춤 요청은 이미 옮겨 둔 루트 모션도 지운다(물리 스텝과 같다).
+        if ( pass != CharacterMotionPass::Live || command._bPendingStop )
             _frameRootMotionVelocity = float3{};
         command._moveVelocity      = float3{ input._moveVelocity._x, 0.0f, input._moveVelocity._z };
         command._verticalMoveSpeed = input._verticalMoveSpeed;

@@ -10,8 +10,11 @@
 #include "Engine/Object/GameObject/Serialization/ObjectStateSerializer.h"
 
 #include "GameFramework/Runtime/Character/Control/Controller/IntentTrackControllerComponent.h"
+#include "GameFramework/Runtime/Character/Control/Controller/RemoteControllerComponent.h"
 #include "GameFramework/Runtime/Character/Control/Pawn/PawnComponent.h"
+#include "GameFramework/Runtime/Foundation/Framework/Tests/SceneNetLinkTestBinding.h"
 #include "GameFramework/Runtime/Gameplay/Vehicle/DismountOnDeathComponent.h"
+#include "GameFramework/Runtime/Gameplay/Vehicle/MountInteractionComponent.h"
 #include "GameFramework/Runtime/Gameplay/Vehicle/MountMovementComponent.h"
 #include "GameFramework/Runtime/Gameplay/Vehicle/VehicleSeatComponent.h"
 
@@ -351,4 +354,38 @@ SW_TEST_CASE( VehicleSeatTest, SeatMeasuresBrakingAndLeansTheRiderForward )
     SW_REQUIRE_TRUE( VehicleSeatComponent::dismount( *rig._pRiderPawn, false ) );
     rig.update();
     SW_EXPECT_NEAR( 0.0f, rig._pSeat->getRideAcceleration()._z, 1e-6f );
+}
+
+/**
+ * @brief [VehicleSeatTest] 타고 내리는 것은 게임 상태를 정하는 쪽만 한다 — 접속한 클라이언트 월드의 버튼은 태우지 않고, 서버 월드의 같은 버튼은 태운다
+ * @details 예전에는 복제가 상호작용 컴포넌트를 끄고 켜서, 원래 꺼져 있던 것까지 세션이 끝나면 켰다.
+ */
+SW_TEST_CASE( VehicleSeatTest, OnlyTheAuthorityMounts )
+{
+    for ( const NetLinkRole role : { NetLinkRole::Client, NetLinkRole::Server } )
+    {
+        GameObjectManager manager;
+        GameObject*       pRider  = manager.createGameObject( hashed_string( "Rider" ) );
+        const bool        bLoaded = ObjectStateSerializer::loadFromXMLString( pRider,
+                                                                              R"(<GameObject _schemaVersion="0" _name="Rider" _bActive="true"><_listComponent><SceneComponent _localPosition="0,0,0" />)"
+                                                                                     R"(<PawnComponent _autoPossess="None"><_listButton><item>Ride</item></_listButton></PawnComponent>)"
+                                                                                     R"(<MountInteractionComponent _interactButton="Ride" /></_listComponent></GameObject>)",
+                                                                              ObjectLoadContext{ SerializePurpose::Authoring } );
+        SW_REQUIRE_TRUE( bLoaded );
+        GameObject* pVehicle = manager.createGameObject( hashed_string( "Cart" ) );
+        (void)pVehicle->addComponent<SceneComponent>();
+        VehicleSeatComponent* pSeat = pVehicle->addComponent<VehicleSeatComponent>();
+        pSeat->setDriverSeat( false );
+        const SceneNetLinkTestBinding link{ manager, role };
+        RemoteControllerComponent*    pRemote = RemoteControllerComponent::spawnForConnection( manager, hashed_string( "Remote" ), 0, *pRider->getComponent<PawnComponent>() );
+        SW_REQUIRE_NOT_NULL( pRemote );
+        manager.beginPlay();
+        ControlIntent press;
+        press.setButton( 0, true );
+        press.addTrigger( 0, 0.0f, 0.0f, ControlViewTick::makePresent() );
+        pRemote->receiveIntent( 0, press );
+        manager.update( 1.0f / 60.0f );
+        SW_EXPECT_EQUAL( role == NetLinkRole::Client, pSeat->isFree() );
+        manager.endPlay();
+    }
 }
