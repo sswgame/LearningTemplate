@@ -36,11 +36,16 @@ namespace sw
         unique_ptr<NetSlotSecurity> _security{};   ///< 암호화 방식일 때만 있다.
         unique_ptr<NetConnection>   _connection{}; ///< 살아 있는(Connecting · Connected) 동안만 있다(`NetSlotTable::open` 이 만들고 `close` 가 놓는다).
         NetAddress                  _address{};
+        NetAddress                  _probeAddress{}; ///< 확인하는 중인 새 주소(서버) — `_probeToken` 이 0 이면 없다
+        uint64                      _probeToken{ 0 };
+        float64                     _probeTime{ 0.0 }; ///< 경로 확인을 마지막으로 보낸 때
         uint64                      _clientSalt{ 0 };
         uint64                      _serverSalt{ 0 };
         float64                     _lastReceiveTime{ 0.0 };
         float64                     _lastSendTime{ -1.0 };
         float64                     _connectStartTime{ 0.0 };
+        float64                     _lingerSeconds{ 0.0 };                      ///< Disconnecting 인 동안 비울 시간(초). 첫 갱신이 기한으로 바꾼다
+        float64                     _lingerDeadline{ -1.0 };                    ///< 비우기의 기한. 음수면 아직 정하지 않았다
         float64                     _sendCredit{ 0.0 };                         ///< 대역폭 토큰(바이트). 0보다 크면 꽉 찬 패킷을 보낼 수 있다. 보낸 뒤에는 음수가 될 수 있다.
         float64                     _lastCreditTime{ -1.0 };                    ///< 토큰을 마지막으로 채운 시각. 음수면 아직 채운 적이 없다는 뜻이며, 연결되면 가득 채운다.
         NetSendThrottle             _sendThrottle{};                            ///< 토큰이 차는 속도(`NetEndpointConfig::_sendThrottle` 이 있을 때만 조절한다).
@@ -52,6 +57,9 @@ namespace sw
          *          게임 스레드가 끊김을 알기 전에는 그 번호가 A 다(언리얼은 UNetConnection 객체가 신원, 유니티 NGO 는 단조 증가 clientId).
          */
         uint8 _bReleasePending{ SW_FALSE };
+
+        /** @brief 패킷을 주고받는 연결인가입니다 — 닫는 중(비우는 중)도 확인을 주고받는다. */
+        bool isEstablished() const { return _state == NetConnectionState::Connected || _state == NetConnectionState::Disconnecting; }
 
         /** @brief 연결 값입니다. 두 솔트를 섞은 값으로, 같은 주소의 옛 연결이나 위조 패킷을 걸러 냅니다. */
         uint64 getConnectionToken() const { return _clientSalt ^ _serverSalt; }
@@ -122,6 +130,10 @@ namespace sw
 
         /** @brief 이 주소에 묶인 슬롯 번호입니다. 없으면 비어 있습니다. */
         [[nodiscard]] optional<int32> findByAddress( const NetAddress& address ) const;
+        /** @brief 데이터 패킷에 실린 연결 값(아래 32 비트)의 슬롯 번호입니다(`bindToken` 한 것만). 없으면 비어 있습니다. */
+        [[nodiscard]] optional<int32> findByToken( uint32 connectionToken ) const;
+        /** @brief 슬롯의 연결 값을 맵에 넣습니다(두 솔트가 정해진 뒤). 같은 값이 이미 있으면 앞선 연결을 둡니다. 닫으면 저절로 빠집니다. */
+        void bindToken( int32 slotIndex );
         /** @brief 슬롯의 주소를 정하고 주소 맵에 묶습니다. */
         void bindAddress( int32 slotIndex, const NetAddress& address );
         /** @brief 슬롯의 주소를 주소 맵에서 풉니다. 같은 주소가 다른 슬롯에 묶여 있으면 그대로 둡니다. */
@@ -142,6 +154,7 @@ namespace sw
         vector<NetEndpointSlot>                            _listSlot;
         vector<NetLiveSlot>                                _listLiveSlot;     ///< 살아 있는 슬롯, 번호 오름차순 — 순서를 번호 순으로 두어 사건 · 메시지를 꺼내는 순서가 예전 전 슬롯 훑기와 같다.
         vector<int32>                                      _listFreeSlot;     ///< 빈 슬롯, 번호 내림차순 — 끝이 가장 낮은 번호다.
+        unordered_map<uint32, int32>                       _mapSlotByToken;   ///< 연결 값 → 슬롯 — 주소가 바뀐 연결을 찾는다(QUIC 의 연결 ID 자리)
         unordered_map<NetAddress, int32, NetAddress::Hash> _mapSlotByAddress; ///< 연결이 많아도 패킷마다 선형 탐색하지 않게 한다. 키는 주소 전체다 — 줄인 키는 IPv6 두 상대를 한 슬롯에 묶는다
     };
 } // namespace sw

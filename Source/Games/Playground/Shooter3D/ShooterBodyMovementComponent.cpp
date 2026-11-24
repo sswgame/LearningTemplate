@@ -26,6 +26,7 @@ namespace sw
         , _moveVelocity{ 0.0f, 0.0f, 0.0f }
         , _displayOffset{ 0.0f, 0.0f, 0.0f }
         , _verticalSpeed{ 0.0f }
+        , _teleportCount{ 0 }
         , _bOnGround{ SW_TRUE }
         , _bSuspended{ SW_FALSE }
         , _bNetDriven{ SW_FALSE }
@@ -43,7 +44,18 @@ namespace sw
         return SpawnStateReset::Reset;
     }
 
-    bool ShooterBodyMovementComponent::stepMovement( const vector<ShooterArenaBox>& listBox, float32 deltaTime )
+    void ShooterBodyMovementComponent::copyTuning( const ShooterBodyMovementComponent& source )
+    {
+        _sprintButton = source._sprintButton;
+        _jumpButton   = source._jumpButton;
+        _walkSpeed    = source._walkSpeed;
+        _sprintSpeed  = source._sprintSpeed;
+        _jumpSpeed    = source._jumpSpeed;
+        _gravity      = source._gravity;
+        _radius       = source._radius;
+    }
+
+    bool ShooterBodyMovementComponent::stepMovement( const vector<ShooterArenaBox>& listBox, const vector<ShooterFloorStep>& listFloor, float32 deltaTime )
     {
         if ( deltaTime <= 0.0f || _bNetDriven == SW_TRUE )
             return false;
@@ -52,7 +64,7 @@ namespace sw
         const ShooterMoveInput input   = pPawn != nullptr && _bSuspended == SW_FALSE ? makeInput( pPawn->getIntent() ) : ShooterMoveInput{};
         const float3           before  = _position;
         bool                   bLanded = false;
-        const ShooterMoveState next    = simulate( listBox, getState(), input, deltaTime, bLanded );
+        const ShooterMoveState next    = simulate( listBox, listFloor, getState(), input, deltaTime, bLanded );
         setState( next, float3{ next._position._x - before._x, 0.0f, next._position._z - before._z } * ( 1.0f / deltaTime ) );
         return bLanded;
     }
@@ -76,13 +88,14 @@ namespace sw
         return input;
     }
 
-    ShooterMoveState ShooterBodyMovementComponent::simulate( const vector<ShooterArenaBox>& listBox, const ShooterMoveState& state, const ShooterMoveInput& input, float32 deltaTime,
+    ShooterMoveState ShooterBodyMovementComponent::simulate( const vector<ShooterArenaBox>& listBox, const vector<ShooterFloorStep>& listFloor, const ShooterMoveState& state, const ShooterMoveInput& input, float32 deltaTime,
                                                              bool& outbLanded ) const
     {
         outbLanded             = false;
         ShooterMoveState next  = state;
         const float32    speed = input._bSprint == SW_TRUE ? _sprintSpeed : _walkSpeed;
-        float3           feet  = state._position + input._move * ( speed * deltaTime );
+        const float3     start = ShooterFloorStep::carryStanding( listFloor, state._position, state._bOnGround == SW_TRUE ); // 딛은 바닥이 먼저 실어 나른다
+        float3           feet  = start + input._move * ( speed * deltaTime );
         if ( input._bJump == SW_TRUE && next._bOnGround == SW_TRUE )
         {
             next._verticalSpeed = _jumpSpeed;
@@ -90,12 +103,17 @@ namespace sw
         }
         next._verticalSpeed -= _gravity * deltaTime;
         feet._y += next._verticalSpeed * deltaTime;
-        if ( feet._y <= 0.0f )
+        const float32 ground = ShooterFloorStep::computeGround( listFloor, feet, start._y );
+        if ( feet._y <= ground )
         {
             outbLanded          = next._bOnGround == SW_FALSE;
-            feet._y             = 0.0f;
+            feet._y             = ground;
             next._verticalSpeed = 0.0f;
             next._bOnGround     = SW_TRUE;
+        }
+        else
+        {
+            next._bOnGround = SW_FALSE; // 뛰었거나 바닥 끝에서 내려섰다
         }
         next._position = ShooterArenaMath::resolveCircle( listBox, feet, _radius );
         return next;
@@ -124,6 +142,7 @@ namespace sw
         _moveVelocity  = float3{ 0.0f, 0.0f, 0.0f };
         _verticalSpeed = 0.0f;
         _bOnGround     = SW_TRUE;
+        ++_teleportCount;
     }
 } // namespace sw
 

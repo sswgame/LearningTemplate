@@ -41,6 +41,7 @@
 #include "Engine/Serialization/Inherit/DataInheritance.h"
 #include "Engine/Serialization/Inherit/ResourceComposer.h"
 #include "Engine/Serialization/Inherit/ResourceComposition.h"
+#include "Engine/Serialization/XML/XMLBinary.h"
 #include "Engine/Serialization/XML/XMLDocument.h"
 
 #include "sw/config/CookContract.gen.h"
@@ -614,6 +615,18 @@ namespace sw
                     {
                         SW_LOG_ERROR_ID( "PackCooker.PackCookBrokenReference", "Pack cook: '%#' names ids that are not in the file (rules in %#)", absPath.str(), DataCatalogReferenceRules::kTableAssetID );
                         return false;
+                    }
+                }
+                // 카탈로그는 이진 쿠킹본으로 담는다(`XMLBinary`). 로드 축 조건이 남은 글은 읽을 때 풀어야 하므로 글로 둔다.
+                const bool bPlainCatalog = references.isCookedRootMentioned( packedText ) && packedText.find( DataInheritance::kWhenElement ) == string_view::npos;
+                if ( bPlainCatalog )
+                {
+                    XMLDocument   doc;
+                    vector<uint8> cookedBytes;
+                    if ( doc.parse( packedText, absPath.str() ) && references.isCookedRoot( doc.getRoot().getName() ) && XMLBinary::encode( doc.getRoot(), cookedBytes ) )
+                    {
+                        bytes = std::move( cookedBytes );
+                        return true;
                     }
                 }
                 if ( bComposed )

@@ -57,7 +57,7 @@ namespace sw
 {
     /**
      * @class XMLNode
-     * @brief XMLDocument 안의 가벼운 핸들입니다. clear 나 destroy 이후에는 무효가 됩니다.
+     * @brief XMLDocument 안의 가벼운 핸들입니다. clear 나 destroy 이후에는 무효가 됩니다. 글을 읽은 문서와 이진 쿠킹본(`XMLBinary`)이 같은 핸들이다 — 읽는 쪽은 가르지 않는다.
      */
     class SW_API XMLNode
     {
@@ -365,6 +365,8 @@ namespace sw
         /** @brief 읽기 오류의 대상 글 `<경로>:<줄>: <까닭>` 입니다. 줄을 모르면(0 — `computeLineNumber`) 경로와 까닭만 적습니다. */
         static string makeSourceError( string_view path, uint32 line, string_view message );
 
+        /** @brief 이진 쿠킹본(`XMLBinary`)을 읽은 문서이면 true 입니다 — 쿠커가 부모 · 조건 · 참조 규칙을 이미 풀고 본 한 벌이다. 읽기 전용이다(쓰기 함수는 아무것도 하지 않는다). */
+        bool isCooked() const;
         /** @brief 첫 엘리먼트를 반환합니다. pName 이 있으면 이름으로 찾습니다(철자 그대로 — 대소문자가 다르면 없는 이름). */
         XMLNode getRoot( const utf8* pName = nullptr ) const;
 
@@ -392,7 +394,9 @@ namespace sw
         [[nodiscard]] bool parseComposed( string_view xmlText, string_view sourceName, const ResourceContext& context );
 
     private:
-        /** @brief `parse` · `parseKeepingComments` 의 본문입니다. */
+        /** @brief 이진 쿠킹본을 그대로 듭니다(글자 해석 없음). 깨졌으면 까닭을 남기고 false 입니다. */
+        [[nodiscard]] bool attachCooked( string_view bytes, string_view sourceName );
+        /** @brief `parse` · `parseKeepingComments` 의 본문입니다. 이진 쿠킹본이면 `attachCooked` 입니다. */
         [[nodiscard]] bool parseText( string_view xmlText, string_view sourceName, bool bKeepComments );
 
     private:

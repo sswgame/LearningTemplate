@@ -75,11 +75,8 @@ namespace sw
             _missingTickCount.add( firstTick - _nextInputTick ); // 고리에서 밀려난 틱
             _nextInputTick = newestTick + 1u;
             ControlIntent merged{};
-            uint32        triggered    = 0;
-            bool          bTriggerLook = false;
-            float32       triggerYaw   = 0.0f;
-            float32       triggerPitch = 0.0f;
-            bool          bRead        = false;
+            ControlIntent triggers{}; // 사건은 자기 시선 · 시각을 들고 다녀 모아도 섞이지 않는다
+            bool          bRead = false;
             for ( uint32 tick = firstTick; tick <= newestTick; ++tick )
             {
                 const ControlIntent* pReceived = _received.find( tick );
@@ -89,29 +86,17 @@ namespace sw
                     continue;
                 }
                 merged = *pReceived;
-                triggered |= pReceived->_buttonTriggered;
-                if ( pReceived->_bTriggerLook )
-                {
-                    bTriggerLook = true;
-                    triggerYaw   = pReceived->_triggerYaw;
-                    triggerPitch = pReceived->_triggerPitch;
-                }
+                triggers.appendTriggers( *pReceived );
                 bRead = true;
                 _received.remove( tick );
             }
             if ( bRead )
             {
-                _lastIntent                  = merged;
-                _lastIntent._buttonTriggered = 0;
-                _lastIntent._bTriggerLook    = false;
-                _lastIntent._triggerYaw      = 0.0f;
-                _lastIntent._triggerPitch    = 0.0f;
-                _bHasLastIntent              = true;
-                merged._buttonTriggered      = triggered;
-                merged._bTriggerLook         = bTriggerLook;
-                merged._triggerYaw           = triggerYaw;
-                merged._triggerPitch         = triggerPitch;
-                outIntent                    = merged;
+                merged._listTrigger.clear();
+                _lastIntent     = merged;
+                _bHasLastIntent = true;
+                merged.appendTriggers( triggers );
+                outIntent = merged;
                 setControlRotation( merged._controlYaw, merged._controlPitch );
                 return;
             }

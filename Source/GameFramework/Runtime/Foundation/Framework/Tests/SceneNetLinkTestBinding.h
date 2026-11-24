@@ -27,7 +27,7 @@ namespace sw
         bool               trySendMessage( int32, NetChannelKind, const uint8*, int32 ) override { return false; }
         bool               sendNotifiedMessage( int32, const uint8*, int32, uint32 ) override { return false; }
         int32              broadcast( NetChannelKind, const uint8*, int32, int32 ) override { return 0; }
-        void               disconnect( int32 ) override {}
+        void               disconnect( int32, NetLinger ) override {}
         void               pollInbound( NetInbound& ) override {}
         bool               isServer() const override { return _role == NetLinkRole::Server; }
         NetConnectionState getConnectionState( int32 ) const override { return NetConnectionState::Disconnected; }
@@ -58,7 +58,7 @@ namespace sw
             link._pRouter         = &_router;
             link._role            = role;
             link._bTicketRequired = bTicketRequired ? SW_TRUE : SW_FALSE;
-            SW_REQUIRE_TRUE( _manager.getSubsystem<SceneNetLink>().bind( link ) );
+            SW_REQUIRE_TRUE( _manager.getSubsystem<SceneNetLink>().bind( link, 0 ) );
         }
         /** @brief 세션이 닫힌 것처럼 라우터를 닫습니다 — 링크는 저절로 빈 것이 된다. */
         void closeSession() { _router.closeSession(); }

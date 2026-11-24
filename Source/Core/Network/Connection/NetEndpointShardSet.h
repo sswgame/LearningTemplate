@@ -55,7 +55,7 @@ namespace sw
         [[nodiscard]] bool trySendMessage( int32 connectionID, NetChannelKind channel, const uint8* pData, int32 size ) override;
         [[nodiscard]] bool sendNotifiedMessage( int32 connectionID, const uint8* pData, int32 size, uint32 tag ) override;
         int32              broadcast( NetChannelKind channel, const uint8* pData, int32 size, int32 exceptID = constant::invalid_index::kInt32 ) override;
-        void               disconnect( int32 connectionID ) override;
+        void               disconnect( int32 connectionID, NetLinger linger ) override;
         /** @brief 샤드마다 꺼내 하나로 모읍니다. 모든 샤드의 사건이 모든 메시지보다 앞에 오고, 연결 ID 는 접어 넣은 값입니다. */
         void               pollInbound( NetInbound& outInbound ) override;
         bool               isServer() const override;

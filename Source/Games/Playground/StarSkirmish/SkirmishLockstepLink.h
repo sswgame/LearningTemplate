@@ -7,6 +7,7 @@
  *          - 입력은 상대가 붙은 뒤에만 낸다. 붙기 전에 낸 입력은 받을 쪽이 없어 사라지고, 그 틱은 영영 모이지 않는다. 두 세션은 링크를 열 때 바로 서서 먼저 온 입력도 받는다.
  *          - `kChecksumInterval` 틱마다 판 상태(세이브와 같은 바이트)의 해시를 맞춘다. 어긋나면 비동기로 알리고 그 틱을 남긴다(에이지 오브 엠파이어의 동기 검사).
  *          - 일시정지 · 속도는 락스텝에서 쓰지 않는다(두 프로세스가 같은 걸음이어야 한다). 늦은 쪽을 기다리는 동안 판이 멈춘다(`LockstepSession::getStallCount`).
+ *          - 판 번호는 서버 월드의 세대다(`NetMessageRouter::getWorldGeneration`). 먼저 연 쪽이 낸 입력은 상대의 첫 입력이 오면 다시 보낸다(`LockstepSession`).
  *          - 판 중간에 붙기(상태 동기화)는 없다. 서버가 기동할 때 클라이언트 하나를 기다린다.
  */
 #pragma once
@@ -50,8 +51,9 @@ namespace sw
         /** @brief 이 화면이 맡은 플레이어입니다(혼자 하면 0). 세션이 닫힌 뒤에도 그 판이 끝날 때까지 같다. */
         int32 getLocalPlayer() const { return _localPlayer; }
         /**
-         * @brief 판 도중에 넷 세션이 닫혔으면 락스텝을 놓고 true 입니다(한 번). 맡은 플레이어는 그대로다.
-         * @details 멈춘 채 기다리지 않는다 — 남은 사람이 이 프로세스의 판을 이어 한다(나간 상대의 유닛은 명령을 받지 않는다).
+         * @brief 판 도중에 상대를 잃었으면 락스텝을 놓고 true 입니다(한 번). 맡은 플레이어는 그대로다.
+         * @details 잃은 것은 셋이다 — 넷 세션이 닫혔다, 판의 월드에 들어왔던 상대가 나갔다(연결이 끊김 · 다른 씬), 두 판이 어긋났다(체크섬).
+         *          멈춘 채 기다리지 않는다 — 남은 사람이 이 프로세스의 판을 이어 한다(나간 상대의 유닛은 명령을 받지 않는다). 어긋난 판을 함께 잇지 않는다.
          */
         [[nodiscard]] bool releaseLostSession();
         /** @brief 명령을 다음 내 입력에 싣습니다. 열려 있지 않으면 false 입니다. */
@@ -67,7 +69,8 @@ namespace sw
         int32 getAppliedCommandCount( int32 player ) const;
 
     private:
-        [[nodiscard]] bool isPeerConnected() const;
+        /** @brief 상대가 이 판의 월드(씬)에 들어와 있으면 true 입니다. 붙기만 하고 씬을 읽는 상대에게 낸 입력은 받을 처리기가 없어 사라진다. */
+        [[nodiscard]] bool isPeerInWorld() const;
 
     private:
         LockstepSession        _session;
@@ -82,6 +85,7 @@ namespace sw
         int32                  _arrAppliedCount[kPlayerCount];
         uint8                  _bPendingInput   : 1;
         uint8                  _bReportedDesync : 1;
-        [[maybe_unused]] uint8 _reserved        : 6;
+        uint8                  _bPeerJoined     : 1; ///< 상대가 판의 월드에 들어온 적이 있다 — 그 뒤 없으면 나간 것이다
+        [[maybe_unused]] uint8 _reserved        : 5;
     };
 } // namespace sw

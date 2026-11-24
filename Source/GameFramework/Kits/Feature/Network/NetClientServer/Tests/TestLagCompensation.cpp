@@ -107,3 +107,72 @@ SW_TEST_CASE( LagCompensationTest, BodyIsAVerticalCapsule )
     SW_EXPECT_EQUAL( 1u, history.raycastAt( 0.0f, float3{ 0.0f, 5.0f, 10.0f }, float3{ 0.0f, -1.0f, 0.0f }, 100.0f, 0, distance ) );
     SW_EXPECT_NEAR( 3.0f, distance, 1e-3f );
 }
+
+/** @brief [LagCompensationTest] 두꺼운 선분은 보던 시각의 캡슐에 닿은 몸을 모두 모은다 — 몸 안에서 시작해도 닿고, 지금 자리 · 빼라는 몸 · 두께 밖은 닿지 않는다. */
+SW_TEST_CASE( LagCompensationTest, ThickSegmentCollectsEveryRewoundBodyItTouches )
+{
+    LagCompensationHistory history( 16 );
+    LagCompensationTestUtil::recordWalker( history, 0.5f, 2.0f ); // 틱 n 에 (n, 0, 10)
+    vector<uint32> listTouched;
+    history.collectTouchedAt( 4.0f, float3{ 3.0f, 1.0f, 10.0f }, float3{ 3.4f, 1.0f, 10.0f }, 0.15f, 0, listTouched ); // 옆에서 0.6 + 두께
+    SW_REQUIRE_EQUAL( size_t{ 1 }, listTouched.size() );
+    SW_EXPECT_EQUAL( LagCompensationTestUtil::kWalkerID, listTouched[0] );
+    history.collectTouchedAt( 4.0f, float3{ 4.0f, 1.0f, 10.0f }, float3{ 4.0f, 1.0f, 12.0f }, 0.1f, 0, listTouched ); // 몸 안에서 시작한다
+    SW_EXPECT_EQUAL( size_t{ 2 }, listTouched.size() );
+    history.collectTouchedAt( 9.0f, float3{ 3.0f, 1.0f, 10.0f }, float3{ 3.4f, 1.0f, 10.0f }, 0.15f, 0, listTouched );                                  // 지금은 비켜 있다
+    history.collectTouchedAt( 4.0f, float3{ 3.0f, 1.0f, 10.0f }, float3{ 3.4f, 1.0f, 10.0f }, 0.05f, 0, listTouched );                                  // 두께가 모자란다
+    history.collectTouchedAt( 4.0f, float3{ 3.0f, 2.5f, 10.0f }, float3{ 5.0f, 2.5f, 10.0f }, 0.15f, 0, listTouched );                                  // 머리 위로 지난다
+    history.collectTouchedAt( 4.0f, float3{ 3.0f, 1.0f, 10.0f }, float3{ 5.0f, 1.0f, 10.0f }, 0.15f, LagCompensationTestUtil::kWalkerID, listTouched ); // 빼라는 몸
+    SW_EXPECT_EQUAL( size_t{ 2 }, listTouched.size() );
+    history.collectTouchedAt( 4.0f, float3{ 4.0f, 1.0f, 9.2f }, float3{ 4.0f, 1.0f, 9.2f }, 0.4f, 0, listTouched ); // 점(움직이지 않은 칼날)
+    SW_EXPECT_EQUAL( size_t{ 3 }, listTouched.size() );
+}
+
+/** @brief [LagCompensationTest] 쓰러진 틱 뒤 · 생기기 전의 시각에는 그 몸이 없고, 순간 이동 사이는 잇지 않는다 — 클라이언트 화면과 같은 규칙이다. */
+SW_TEST_CASE( LagCompensationTest, AbsentAndTeleportedBodiesFollowTheDisplayRule )
+{
+    LagCompensationHistory  history( 16 );
+    const vector<LagRecord> listNobody;
+    vector<LagRecord>       listBody;
+    LagRecord&              body = listBody.emplace_back();
+    body._position               = float3{ 0.0f, 0.0f, 10.0f };
+    body._entityID               = 1;
+    history.record( 0, listNobody ); // 틱 1 에 생겨난다
+    history.record( 1, listBody );
+    history.record( 2, listBody );
+    body._position      = float3{ 50.0f, 0.0f, 10.0f };
+    body._teleportCount = 1;
+    history.record( 3, listBody );   // 다시 태어났다
+    history.record( 4, listNobody ); // 쓰러졌다
+    LagRecord record;
+    SW_EXPECT_FALSE( history.sampleAt( 0.5, 1, record ) );
+    SW_REQUIRE_TRUE( history.sampleAt( 2.5, 1, record ) );
+    SW_EXPECT_NEAR( 0.0f, record._position._x, 1e-4f ); // 25 m 의 허공이 아니다
+    SW_REQUIRE_TRUE( history.sampleAt( 3.5, 1, record ) );
+    SW_EXPECT_NEAR( 50.0f, record._position._x, 1e-4f ); // 화면에는 아직 서 있다
+    SW_EXPECT_FALSE( history.sampleAt( 4.0, 1, record ) );
+    vector<LagRecord> listPast;
+    history.collectAt( 3.5, 0, listPast );
+    SW_EXPECT_TRUE( listPast.empty() ); // 지금 쓰러진 몸은 맞지 않는다
+}
+
+/** @brief [LagCompensationTest] 히트박스 바디는 자세까지 되감는다 — 과거 자세의 바디를 쏜 광선이 지금 자세의 바디를 같은 자리로 쏜다. */
+SW_TEST_CASE( LagCompensationTest, BodyPoseMovesTheRayToTheCurrentBody )
+{
+    LagBodyPose past;
+    past._position = float3{ 2.0f, 1.0f, 10.0f };
+    past._rotation = quaternion::Identity;
+    LagBodyPose now;
+    now._position = float3{ -3.0f, 1.5f, 8.0f };
+    now._rotation = quaternion::makeFromAxisAngle( float3{ 0.0f, 1.0f, 0.0f }, MathUtil::kHalfPi );
+    Ray ray;
+    ray._origin     = float3{ 2.2f, 1.1f, 0.0f };
+    ray._direction  = float3{ 0.0f, 0.0f, 1.0f };
+    const Ray moved = past.moveRayTo( now, ray );
+    // 바디 로컬에서 본 광선이 같다.
+    const float3 pastLocal = float3::transform( ray.getPoint( 10.0f ) - past._position, std::as_const( past )._rotation.inverse() );
+    const float3 nowLocal  = float3::transform( moved.getPoint( 10.0f ) - now._position, std::as_const( now )._rotation.inverse() );
+    SW_EXPECT_TRUE( float3::getDistance( pastLocal, nowLocal ) < 1e-3f );
+    SW_EXPECT_NEAR( 1.0f, moved._direction.getLength(), 1e-4f );
+    SW_EXPECT_NEAR( 0.2f, nowLocal._x, 1e-3f );
+}

@@ -60,8 +60,9 @@ SW_TEST_CASE( VehicleInputTest, WheeledVehicleDriveProjectsOnTheCarHeading )
 SW_TEST_CASE( VehicleInputTest, KinematicCarProjectsOnYawAndCarriesButtons )
 {
     ControlIntent intent = Util::makeMove( 0.0f, 1.0f );
-    intent.setButton( 0, true, false );
-    intent.setButton( 1, true, true );
+    intent.setButton( 0, true );
+    intent.setButton( 1, true );
+    intent.addTrigger( 1, 0.0f, 0.0f, ControlViewTick::makePresent() );
     const KinematicVehicleInput straight = KinematicVehicleComponent::toVehicleInput( intent, 0.0f, 0, 1, sw::nullopt );
     SW_EXPECT_TRUE( MathUtil::abs( straight._throttle - 1.0f ) < 1.0e-4f );
     SW_EXPECT_TRUE( MathUtil::abs( straight._steer ) < 1.0e-4f );

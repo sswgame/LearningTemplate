@@ -62,7 +62,7 @@ namespace sw
         , _walkClipSpeed{ 0.3f }
         , _position{ 0.0f, 0.0f, 0.0f }
         , _yaw{ 0.0f }
-        , _replicaPreviousPosition{ 0.0f, 0.0f, 0.0f }
+        , _replicaVelocity{ 0.0f, 0.0f, 0.0f }
         , _healthMachine{}
         , _speed{ 3.0f }
         , _phaseTime{ 0.0f }
@@ -128,12 +128,12 @@ namespace sw
     void ShooterEnemyComponent::launchReplica( GameObjectHandle gameMode, const AbsolutePosition& position, float32 yaw )
     {
         (void)_healthMachine.initialize( ShooterEnemyComponentInternal::makeHealthSettings( 1.0f ) ); // 1 은 범위 안이다 — 체력은 서버 몫이고 살아 있음만 뜻한다
-        _gameMode                = gameMode;
-        _position                = position._value;
-        _replicaPreviousPosition = position._value;
-        _yaw                     = yaw;
-        _bLaunched               = SW_TRUE;
-        _bReplica                = SW_TRUE;
+        _gameMode        = gameMode;
+        _position        = position._value;
+        _replicaVelocity = float3{ 0.0f, 0.0f, 0.0f };
+        _yaw             = yaw;
+        _bLaunched       = SW_TRUE;
+        _bReplica        = SW_TRUE;
         enterPhase( ShooterEnemyPhase::Rising );
         GameObject*     pOwner = getOwner();
         SceneComponent* pScene = pOwner != nullptr ? pOwner->getPrimarySceneComponent() : nullptr;
@@ -175,10 +175,11 @@ namespace sw
         return SpawnStateReset::Reset;
     }
 
-    void ShooterEnemyComponent::setReplicatedPose( const AbsolutePosition& position, float32 yaw, ShooterEnemyPhase phase )
+    void ShooterEnemyComponent::setReplicatedPose( const AbsolutePosition& position, const float3& velocity, float32 yaw, ShooterEnemyPhase phase )
     {
-        _position = position._value;
-        _yaw      = yaw;
+        _position        = position._value;
+        _replicaVelocity = velocity;
+        _yaw             = yaw;
         if ( phase == _phase )
             return;
         _bHitPending = phase == ShooterEnemyPhase::Staggered ? SW_TRUE : SW_FALSE;
@@ -188,14 +189,12 @@ namespace sw
     void ShooterEnemyComponent::updateReplica( float32 step )
     {
         _phaseTime += step;
-        const float3  moved    = float3{ _position._x - _replicaPreviousPosition._x, 0.0f, _position._z - _replicaPreviousPosition._z };
-        const float32 speed    = moved.getLength() / step;
+        const float32 speed    = float3{ _replicaVelocity._x, 0.0f, _replicaVelocity._z }.getLength();
         float32       moveCode = ShooterAnimationParameter::kMoveIdle;
         if ( speed > _walkClipSpeed )
             moveCode = speed >= _runSpeed ? ShooterAnimationParameter::kMoveRun : ShooterAnimationParameter::kMoveWalk;
-        _replicaPreviousPosition = _position;
-        GameObject*     pOwner   = getOwner();
-        SceneComponent* pScene   = pOwner != nullptr ? pOwner->getPrimarySceneComponent() : nullptr;
+        GameObject*     pOwner = getOwner();
+        SceneComponent* pScene = pOwner != nullptr ? pOwner->getPrimarySceneComponent() : nullptr;
         if ( pScene != nullptr )
         {
             pScene->setZeroOriginPosition( _position );
@@ -239,6 +238,9 @@ namespace sw
             return; // 쓰러질 때 다시 보낸 치명 사본이다(`deliverFatalHit`)
         if ( applyDamage( hit._damage * hit._damageMultiplier ) == false )
             return;
+        ShooterPlayerComponent* const pKiller = hit._pInstigator != nullptr ? hit._pInstigator->getComponent<ShooterPlayerComponent>() : nullptr;
+        if ( pKiller != nullptr )
+            pKiller->recordKill();
         // 쓰러졌다 — 치명 신호를 같은 오브젝트에 다시 보낸다. 래그돌(`_bRagdollOnFatalHit`)이 맞은 바디에 맞은 방향의 충격량을 주며 넘어가고,
         // 절단이 있는 적(해골)은 맞은 영역을 잘라 낸다. 래그돌이 없는 프리팹은 데이터 오류다(쓰러짐 클립만 돈다).
         const GameObject*       pOwner   = getOwner();
@@ -296,12 +298,13 @@ namespace sw
         _phaseTime += step;
 
         // 판단은 AI 조종자가 했다 — 여기는 폰의 의도(이동 축 · 조종 요 · Attack)만 읽는다.
-        const PawnComponent* pPawn       = pOwner->getComponent<PawnComponent>();
-        const bool           bAttackHeld = pPawn != nullptr && pPawn->isButtonDown( pPawn->findButton( hashed_string( ShooterEnemyComponentInternal::kAttackButton ) ) );
-        const float32        controlYaw  = pPawn != nullptr ? pPawn->getIntent()._controlYaw : _yaw;
-        const float3         target      = pGameMode->getPlayerFeet()._value;
-        const float3         toTarget    = float3{ target._x - _position._x, 0.0f, target._z - _position._z };
-        const float32        distance    = toTarget.getLength();
+        const PawnComponent*     pPawn       = pOwner->getComponent<PawnComponent>();
+        const bool               bAttackHeld = pPawn != nullptr && pPawn->isButtonDown( pPawn->findButton( hashed_string( ShooterEnemyComponentInternal::kAttackButton ) ) );
+        const float32            controlYaw  = pPawn != nullptr ? pPawn->getIntent()._controlYaw : _yaw;
+        const ShooterPlayerView* pTarget     = pGameMode->findNearestPlayer( AbsolutePosition{ _position } );
+        const float3             target      = pTarget != nullptr ? pTarget->_feet._value : _position;
+        const float3             toTarget    = float3{ target._x - _position._x, 0.0f, target._z - _position._z };
+        const float32            distance    = toTarget.getLength();
         // 휘두르기 간격 — 쫓는 동안 Attack 이 눌려 있으면 간격마다 한 번, 지나친 몫을 잇는다(`Countdown::updateRepeat`). 쿨다운은 어느 단계에서도 흐른다.
         const bool bWantSwing = _phase == ShooterEnemyPhase::Chasing && bAttackHeld;
         const bool bSwing     = _attackCooldown.updateRepeat( step, _attackInterval, bWantSwing );
@@ -325,8 +328,8 @@ namespace sw
                 if ( _bAttackLanded == SW_FALSE && _bAttackHitEvent == SW_TRUE )
                 {
                     _bAttackLanded = SW_TRUE;
-                    if ( distance < _reach * 1.25f )
-                        requestPlayerDamage( pGameMode->getPlayer() );
+                    if ( pTarget != nullptr && distance < _reach * 1.25f )
+                        requestPlayerDamage( pTarget->_object );
                 }
                 if ( _phaseTime >= _attackLength )
                 {
@@ -359,7 +362,7 @@ namespace sw
         if ( pMovement != nullptr )
         {
             pMovement->setSuspended( _phase != ShooterEnemyPhase::Chasing );
-            (void)pMovement->stepMovement( pGameMode->getBoxes(), step );
+            (void)pMovement->stepMovement( pGameMode->getBoxes(), pGameMode->getFloorSteps(), step );
             _position              = pMovement->getFeetPosition()._value;
             const float3& velocity = pMovement->getMoveVelocity();
             const float32 speed    = MathUtil::sqrt( velocity._x * velocity._x + velocity._z * velocity._z );

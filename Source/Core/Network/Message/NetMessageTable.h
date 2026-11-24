@@ -55,6 +55,27 @@ namespace sw
         static constexpr NetChannelPolicy kChannelPolicy = NetChannelPolicy::SenderChooses;
     };
 
+    /**
+     * @brief 서술자 @p TMessage 에 보류를 선언합니다 — 받는 쪽이 아직 처리할 수 없으면(`NetHandleResult::NotReady`) @p HoldMilliseconds 동안 들고 있다가 순서대로 다시 주고, 끝내 못 전하면 보낸 쪽에 알린다.
+     * @details 전달 약속은 채널 이름이 아니라 메시지 선언이 갖는다. 처리기에 `uint64 readHoldKey( TMessage, BitReader ) const`(같은 열쇠끼리 순서를 지킨다)가 없으면 컴파일되지 않는다.
+     */
+    template <typename TMessage, uint32 HoldMilliseconds>
+    struct NetHeldMessageDef : TMessage
+    {
+        static_assert( HoldMilliseconds > 0, "a held message needs a time limit" );
+        static constexpr uint32 kHoldMilliseconds = HoldMilliseconds;
+    };
+
+    /** @brief 메시지 서술자 @p TMessage 가 보류를 선언했으면 true 입니다(`NetHeldMessageDef`). */
+    template <typename TMessage, typename = void>
+    struct NetMessageIsHeld : std::false_type
+    {
+    };
+    template <typename TMessage>
+    struct NetMessageIsHeld<TMessage, std::void_t<decltype( TMessage::kHoldMilliseconds )>> : std::true_type
+    {
+    };
+
     /** @brief 메시지 서술자 @p TMessage 가 본문 형식(`Body`)을 가지면 true 입니다 — 표가 본문을 읽어 처리기에 넘긴다. */
     template <typename TMessage, typename = void>
     struct NetMessageHasBody : std::false_type
@@ -72,7 +93,8 @@ namespace sw
     template <uint8 RangeBase, typename... TMessage>
     struct NetMessageTable
     {
-        static constexpr uint8 kRangeBase = RangeBase;
+        static constexpr uint8 kRangeBase   = RangeBase;
+        static constexpr bool  kWorldScoped = false; ///< 종류 뒤에 월드 세대를 싣는 표인가(`NetWorldMessageTable`)
 
         /** @brief 메시지 @p TOne 이 이 표에 있는지 봅니다. */
         template <typename TOne>
@@ -159,12 +181,26 @@ namespace sw
 
         static_assert( sizeof...( TMessage ) > 0, "a message table needs at least one message" );
         // 라우터의 판 알림 종류(엔진 영역 0x0F)를 표 메시지가 쓰면 받는 라우터가 그 메시지를 판 알림으로 읽는다(상대 판을 빈 목록으로 덮어 판 맞춤이 꺼진다).
-        static_assert( ( ( RangeBase + TMessage::kOffset != NetMessageRange::kRouterWireVersionKind ) && ... ), "the router owns the table version notice kind" );
+        static_assert( ( ( NetMessageRange::isRouterKind( RangeBase + TMessage::kOffset ) == false ) && ... ), "the router owns the table version and world generation kinds" );
     };
 } // namespace sw
 
 namespace sw
 {
+    /**
+     * @brief 월드(씬)의 것을 가리키는 메시지의 표입니다 — 오브젝트 번호 · 엔티티 번호 · 부지처럼 씬이 바뀌면 다른 것을 뜻하는 값을 싣는 표는 이 형식이다.
+     * @details 종류 뒤에 보낸 쪽 월드의 세대 한 바이트가 저절로 실리고(`NetMessageWriter`), 라우터가 처리기에 넘기기 전에 가른다. 서버는 같은 월드에 들어온
+     *          연결에만 보낸다(`INetPeers::isInWorld`) — 나머지는 들어올 때 처리기가 처음부터 보낸다. 키트마다 세대 칸을 적고 견주면 빠뜨린 메시지가 새로 생긴다(실제로 하우징 · 복제 스냅샷이 빠져 있었다).
+     */
+    template <uint8 RangeBase, typename... TMessage>
+    struct NetWorldMessageTable : NetMessageTable<RangeBase, TMessage...>
+    {
+        static constexpr bool kWorldScoped = true;
+
+        /** @brief 세대 바이트가 있는 선 형식이라 같은 메시지의 보통 표와 판이 다르다. */
+        static uint32 computeWireVersion() { return HashUtil::fnvStep32( NetMessageTable<RangeBase, TMessage...>::computeWireVersion(), 1u ); }
+    };
+
     /**
      * @struct NetMessageDelivery
      * @brief 표 메시지 하나를 처리기의 `receive` 오버로드로 넘깁니다. 표 처리기(`NetTableHandler`)와 역할마다 마스크를 고르는 처리기(엔진 세션)가 함께 쓴다.
@@ -194,13 +230,30 @@ namespace sw
     };
 
     /**
+     * @class NetWorldMessageHandler
+     * @brief 월드 범위 표의 처리기 기반입니다. 상태는 연결이 아니라 월드에 들고 남에 매입니다 — 연결 사건은 볼 수 없습니다.
+     * @details 연결이 열린 때 상태를 보내면 아직 씬을 읽는 클라이언트에 닿지 않고, 서버가 씬을 바꾸면 이미 붙어 있던 클라이언트는 아무것도 받지 못한다(둘 다 실제로 있던 결함이다).
+     *          서버는 `onPeerEnteredWorld` · `onPeerLeftWorld`, 클라이언트는 `onWorldOpened` 를 쓴다.
+     */
+    class NetWorldMessageHandler : public INetMessageHandler
+    {
+    public:
+        void onConnectionOpened( int32 connectionID ) final { (void)connectionID; }
+        void onConnectionClosed( int32 connectionID, NetDisconnectReason reason ) final
+        {
+            (void)connectionID;
+            (void)reason;
+        }
+    };
+
+    /**
      * @class NetTableHandler
      * @brief 표 @p TTable 의 메시지 @p TReceived 들을 받는 처리기의 기반입니다. 영역 · 마스크 · 디스패치를 표가 맡습니다.
      * @details 파생은 받는 메시지마다 `NetHandleResult receive( TMessage, const NetMessageContext&, BitReader& )` 를 둡니다(public). 빠지면 컴파일되지 않는다.
      *          한 영역을 둘이 나눠 받으면(락스텝 · 롤백) 각자 자기 메시지만 적는다 — 라우터가 겹침을 거절한다.
      */
     template <typename TDerived, typename TTable, typename... TReceived>
-    class NetTableHandler : public INetMessageHandler
+    class NetTableHandler : public std::conditional_t<TTable::kWorldScoped, NetWorldMessageHandler, INetMessageHandler>
     {
     public:
         static constexpr uint16 kReceivedMask = TTable::template makeMask<TReceived...>();
@@ -215,7 +268,46 @@ namespace sw
             return TTable::template dispatch<NetHandleResult>( context._kind, visitor, NetHandleResult::Handled ); // 마스크가 거른 뒤라 표 밖 종류는 오지 않는다
         }
 
+        bool   isWorldScoped() const final { return TTable::kWorldScoped; }
+        uint32 getHoldLimit( uint8 kind ) const final
+        {
+            HoldVisitor visitor{};
+            return TTable::template dispatch<uint32>( kind, visitor, 0u );
+        }
+        uint64 readHoldKey( uint8 kind, BitReader body ) const final
+        {
+            HoldKeyVisitor visitor{ static_cast<const TDerived&>( *this ), body };
+            return TTable::template dispatch<uint64>( kind, visitor, uint64{ 0 } );
+        }
+
     private:
+        struct HoldVisitor
+        {
+            template <typename TMessage>
+            uint32 visit()
+            {
+                if constexpr ( NetMessageIsHeld<TMessage>::value )
+                    return TMessage::kHoldMilliseconds;
+                else
+                    return 0u;
+            }
+        };
+
+        struct HoldKeyVisitor
+        {
+            const TDerived& _handler;
+            BitReader&      _body;
+
+            template <typename TMessage>
+            uint64 visit()
+            {
+                if constexpr ( NetMessageIsHeld<TMessage>::value && ( std::is_same_v<TMessage, TReceived> || ... ) )
+                    return _handler.readHoldKey( TMessage{}, _body );
+                else
+                    return 0;
+            }
+        };
+
         struct ReceiveVisitor
         {
             TDerived&                _handler;

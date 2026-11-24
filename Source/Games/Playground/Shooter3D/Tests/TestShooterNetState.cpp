@@ -46,30 +46,58 @@ SW_TEST_CASE( ShooterNetStateTest, EnemyStateRoundTripsWithinQuantizationStep )
     SW_EXPECT_FALSE( ReplicatedLayout::writeFull( badPhase, badWriter ) );
 }
 
-/** @brief [ShooterNetStateTest] 소유자 상태는 걸음 상태 · 맞힌 발 수 · 처치 수 · 체력을 한 선언으로 왕복하고, 잘린 바이트는 읽지 않는다. */
+/** @brief [ShooterNetStateTest] 남의 몸 상태는 양자화 간격 안에서 돌아오고, 없는 무기 슬롯은 쓰지 않는다. 몸과 적의 엔티티 번호는 겹치지 않는다. */
+SW_TEST_CASE( ShooterNetStateTest, PawnStateRoundTripsWithinQuantizationStep )
+{
+    ShooterPawnNetState sent;
+    sent._position    = float3{ 4.0f, 0.0f, -16.0f };
+    sent._yaw         = -2.5f;
+    sent._weaponIndex = 2;
+    sent._bAlive      = SW_FALSE;
+    BitWriter writer;
+    SW_REQUIRE_TRUE( ReplicatedLayout::writeFull( sent, writer ) );
+    BitReader           reader( writer.getBytes().data(), static_cast<int32>( writer.getBytes().size() ) );
+    ShooterPawnNetState received;
+    SW_REQUIRE_TRUE( ReplicatedLayout::readFull( reader, received, nullptr ) == FixedReadResult::Ok );
+    SW_EXPECT_TRUE( ( received._position - sent._position ).getLength() <= 0.01f );
+    SW_EXPECT_TRUE( MathUtil::abs( received._yaw - sent._yaw ) <= 0.001f );
+    SW_EXPECT_EQUAL( sent._weaponIndex, received._weaponIndex );
+    SW_EXPECT_EQUAL( sent._bAlive, received._bAlive );
+
+    sent._weaponIndex = 3;
+    BitWriter badWriter;
+    SW_EXPECT_FALSE( ReplicatedLayout::writeFull( sent, badWriter ) );
+    SW_EXPECT_TRUE( ShooterNetPawnComponent::kPawnEntityID + ShooterNetPawnComponent::kMaxSeat <= ShooterNetPawnComponent::kEnemyEntityIDBase );
+}
+
+/** @brief [ShooterNetStateTest] 소유자 상태는 걸음 상태 · 서버 판정 결과 · 내 몸의 엔티티를 한 선언으로 왕복하고, 잘린 바이트는 읽지 않는다. */
 SW_TEST_CASE( ShooterNetStateTest, OwnerStateRoundTripsAsOneDeclaration )
 {
-    ShooterMoveState move;
-    move._position      = float3{ 3.0f, 1.5f, -2.25f };
-    move._verticalSpeed = -4.5f;
-    move._bOnGround     = SW_FALSE;
+    ShooterOwnerNetState sent;
+    sent._move._position      = float3{ 3.0f, 1.5f, -2.25f };
+    sent._move._verticalSpeed = -4.5f;
+    sent._move._bOnGround     = SW_FALSE;
+    sent._confirmedHitCount   = 17;
+    sent._killCount           = 9;
+    sent._pawnEntityID        = ShooterNetPawnComponent::kPawnEntityID + 1u;
+    sent._bOut                = SW_TRUE;
+    sent._health              = 62.5f;
     vector<uint8> bytes;
-    SW_REQUIRE_TRUE( ShooterNetPawnComponent::writeOwnerState( move, 17u, 9u, 62.5f, bytes ) );
+    SW_REQUIRE_TRUE( ShooterNetPawnComponent::writeOwnerState( sent, bytes ) );
 
-    ShooterMoveState readMove;
-    uint32           hitCount  = 0;
-    uint32           killCount = 0;
-    float32          health    = 0.0f;
-    SW_REQUIRE_TRUE( ShooterNetPawnComponent::readOwnerState( bytes, readMove, hitCount, killCount, health ) );
-    SW_EXPECT_TRUE( readMove._position == move._position );
-    SW_EXPECT_EQUAL( move._verticalSpeed, readMove._verticalSpeed );
-    SW_EXPECT_EQUAL( move._bOnGround, readMove._bOnGround );
-    SW_EXPECT_EQUAL( uint32{ 17 }, hitCount );
-    SW_EXPECT_EQUAL( uint32{ 9 }, killCount );
-    SW_EXPECT_EQUAL( 62.5f, health );
+    ShooterOwnerNetState received;
+    SW_REQUIRE_TRUE( ShooterNetPawnComponent::readOwnerState( bytes, received ) );
+    SW_EXPECT_TRUE( received._move._position == sent._move._position );
+    SW_EXPECT_EQUAL( sent._move._verticalSpeed, received._move._verticalSpeed );
+    SW_EXPECT_EQUAL( sent._move._bOnGround, received._move._bOnGround );
+    SW_EXPECT_EQUAL( sent._confirmedHitCount, received._confirmedHitCount );
+    SW_EXPECT_EQUAL( sent._killCount, received._killCount );
+    SW_EXPECT_EQUAL( sent._pawnEntityID, received._pawnEntityID );
+    SW_EXPECT_EQUAL( sent._bOut, received._bOut );
+    SW_EXPECT_EQUAL( sent._health, received._health );
 
     const vector<uint8> truncated( bytes.begin(), bytes.begin() + static_cast<std::ptrdiff_t>( bytes.size() / 2 ) );
-    SW_EXPECT_FALSE( ShooterNetPawnComponent::readOwnerState( truncated, readMove, hitCount, killCount, health ) );
+    SW_EXPECT_FALSE( ShooterNetPawnComponent::readOwnerState( truncated, received ) );
 }
 
 /** @brief [ShooterNetPawnTest] 플레이 중에 세션이 닫히면 역할을 놓고 몸이 혼자 하는 길로 돌아온다 — 아무도 옮기지 않는 몸(netDriven)이 남지 않는다. */

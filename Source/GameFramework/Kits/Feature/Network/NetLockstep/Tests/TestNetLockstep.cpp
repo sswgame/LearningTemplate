@@ -125,10 +125,11 @@ namespace
         };
 
         /** @brief 플레이어 1 의 롤백 입력 메시지 — 확인 · 이점은 비우고 [@p first, @p first + 입력 수) 프레임을 싣는다. */
-        static void sendRollbackInput( RollbackSession& session, int32 first, const vector<uint8>& listInput )
+        static void sendRollbackInput( RollbackSession& session, int32 first, const vector<uint8>& listInput, uint32 matchID = 0 )
         {
             NetMessageWriter writer;
             BitWriter&       body = writer.begin( NetLockstepMessage::kRollbackInput );
+            body.writeVarUint( matchID );
             body.writeVarUint( 1 );
             body.writeVarUint( 0 );
             for ( int32 player = 0; player < 2; ++player )
@@ -330,6 +331,126 @@ SW_TEST_CASE( NetLockstepTest, RollbackIgnoresInputsOutsideTheFrameWindow )
 }
 
 /**
+ * @brief [NetLockstepTest] 같은 연결에서 다음 판을 열면 지난 판(다른 판 번호)의 늦은 입력 · 체크섬 · 이탈 · 롤백 입력은 새 판에 닿지 않고, 깨진 메시지로 보지도 않는다
+ */
+SW_TEST_CASE( NetLockstepTest, LateMessagesOfThePreviousMatchAreIgnored )
+{
+    LockstepSession session;
+    LockstepConfig  settings;
+    settings._inputDelay = 0;
+    settings._matchID    = 2;
+    SW_REQUIRE_TRUE( session.initialize( nullptr, 2, 0, settings ) );
+    NetMessageWriter  writer;
+    LockstepInputBody input;
+    input._matchID = 1;
+    input._player  = 1;
+    input._input   = vector<uint8>{ 0x77 };
+    SW_REQUIRE_TRUE( ( writer.writeMessage<NetLockstepMessage::Table, NetLockstepMessage::Input>( input ) ) );
+    SW_EXPECT_TRUE( NetHandleResult::Handled == session.handleMessage( 0, writer.getBytes() ) );
+    LockstepLeaveBody leave;
+    leave._matchID = 1;
+    leave._player  = 1;
+    SW_REQUIRE_TRUE( ( writer.writeMessage<NetLockstepMessage::Table, NetLockstepMessage::Leave>( leave ) ) );
+    SW_EXPECT_TRUE( NetHandleResult::Handled == session.handleMessage( 0, writer.getBytes() ) );
+    LockstepChecksumBody checksum;
+    checksum._matchID = 1;
+    checksum._player  = 1;
+    SW_REQUIRE_TRUE( ( writer.writeMessage<NetLockstepMessage::Table, NetLockstepMessage::Checksum>( checksum ) ) );
+    SW_EXPECT_TRUE( NetHandleResult::Handled == session.handleMessage( 0, writer.getBytes() ) );
+    SW_EXPECT_EQUAL( 0, session.getQueuedTickCount() );
+    SW_EXPECT_EQUAL( 0, session.getPendingChecksumCount() );
+    SW_EXPECT_EQUAL( LockstepSession::kNoLeaveTick, session.getLeaveTick( 1 ) );
+
+    input._matchID = 2;
+    input._input   = vector<uint8>{ 0x11 };
+    SW_REQUIRE_TRUE( ( writer.writeMessage<NetLockstepMessage::Table, NetLockstepMessage::Input>( input ) ) );
+    SW_EXPECT_TRUE( NetHandleResult::Handled == session.handleMessage( 0, writer.getBytes() ) );
+    SW_REQUIRE_TRUE( session.submitLocalInput( vector<uint8>{ 0x22 } ) );
+    vector<vector<uint8>> listInput;
+    SW_REQUIRE_TRUE( session.tryAdvance( listInput ) );
+    SW_EXPECT_TRUE( listInput[1] == vector<uint8>{ 0x11 } );
+
+    NetLockstepTestInternal::InputRecordingGame game;
+    RollbackSession                             rollback;
+    RollbackConfig                              rollbackSettings;
+    rollbackSettings._matchID = 2;
+    SW_REQUIRE_TRUE( rollback.initialize( nullptr, &game, 2, 0, rollbackSettings ) );
+    NetLockstepTestInternal::sendRollbackInput( rollback, 2, vector<uint8>{ 2, 3 }, 1 );
+    for ( int32 frame = 0; frame < 4; ++frame )
+    {
+        SW_EXPECT_TRUE( rollback.advanceFrame( 0 ) );
+    }
+    SW_EXPECT_EQUAL( rollbackSettings._inputDelay - 1, rollback.getConfirmedFrame() ); // 지연 프레임까지만 안다
+}
+
+/**
+ * @brief [NetLockstepTest] 같은 연결의 재대결 — 먼저 연 클라이언트가 옛 세대를 들었다가 서버가 새 월드를 열면 갈아 끼우고, 서로 씬을 읽는 동안 버려진 입력을 첫 입력에 다시 받는다
+ */
+SW_TEST_CASE( NetLockstepTest, RematchFollowsTheServerWorldAndResendsLostInputs )
+{
+    test::LoopbackCluster cluster( 33u );
+    NetLockstepTestInternal::connectLockstepCluster( cluster, 1, NetEmulationConditions{} );
+    SW_REQUIRE_TRUE( cluster.areClientsConnected() );
+    NetMessageRouter serverRouter;
+    NetMessageRouter clientRouter;
+    LockstepConfig   settings;
+    settings._bMatchFollowsWorld = true;
+    const auto pollAll           = [&]()
+    {
+        for ( int32 step = 0; step < 12; ++step )
+        {
+            cluster.step();
+            (void)serverRouter.poll( cluster.getServer() );
+            (void)clientRouter.poll( cluster.getClient( 0 ) );
+        }
+    };
+    serverRouter.openWorld( cluster.getServer(), 0 );
+    pollAll();
+    SW_REQUIRE_EQUAL( 1u, static_cast<uint32>( clientRouter.getWorldGeneration() ) );
+
+    // 클라이언트가 먼저 다음 판을 연다 — 아직 세대 1 이다. 서버는 처리기가 없어 그 입력을 버린다.
+    LockstepSession client;
+    settings._matchID = clientRouter.getWorldGeneration();
+    SW_REQUIRE_TRUE( client.initialize( &cluster.getClient( 0 ), 2, 1, settings ) );
+    const Subscription clientSubscription = clientRouter.registerHandler( &client );
+    SW_REQUIRE_TRUE( client.submitLocalInput( vector<uint8>{ 0x11 } ) );
+    pollAll();
+
+    // 서버가 새 월드를 열고 바로 입력을 낸다.
+    serverRouter.openWorld( cluster.getServer(), 0 );
+    LockstepSession server;
+    settings._matchID = serverRouter.getWorldGeneration();
+    SW_REQUIRE_TRUE( server.initialize( &cluster.getServer(), 2, 0, settings ) );
+    const Subscription serverSubscription = serverRouter.registerHandler( &server );
+    SW_REQUIRE_TRUE( server.submitLocalInput( vector<uint8>{ 0x22 } ) );
+    pollAll();
+
+    vector<vector<uint8>> listServerInput;
+    vector<vector<uint8>> listClientInput;
+    for ( int32 tick = 0; tick <= settings._inputDelay; ++tick )
+    {
+        SW_REQUIRE_TRUE( server.tryAdvance( listServerInput ) );
+        SW_REQUIRE_TRUE( client.tryAdvance( listClientInput ) );
+    }
+    SW_EXPECT_TRUE( listServerInput[1] == vector<uint8>{ 0x11 } );
+    SW_EXPECT_TRUE( listServerInput == listClientInput );
+
+    // 진행한 판은 서버가 또 새 월드를 열어도 지난 판이다 — 새 판의 입력을 받지 않는다.
+    const uint32 tickBefore = client.getCurrentTick();
+    serverRouter.openWorld( cluster.getServer(), 0 );
+    settings._matchID = serverRouter.getWorldGeneration();
+    SW_REQUIRE_TRUE( server.initialize( &cluster.getServer(), 2, 0, settings ) );
+    for ( uint32 tick = 0; tick <= tickBefore; ++tick )
+    {
+        SW_REQUIRE_TRUE( server.submitLocalInput( vector<uint8>{ 0x33 } ) );
+    }
+    SW_REQUIRE_TRUE( client.submitLocalInput( vector<uint8>{ 0x44 } ) );
+    pollAll();
+    SW_EXPECT_FALSE( client.tryAdvance( listClientInput ) );
+    SW_EXPECT_EQUAL( tickBefore, client.getCurrentTick() );
+}
+
+/**
  * @brief [NetLockstepTest] 범위 밖 롤백 설정은 조용히 범위 안으로 맞추지 않고 오류로 거절하며, 거절된 세션은 진행하지 않는다
  * @details 예전에는 지연 20 을 8 로, 예측 0 을 1 로 바꿔 돌았다. 내 번호가 범위 밖이어도 받았다.
  */
@@ -508,6 +629,7 @@ SW_TEST_CASE( NetLockstepTest, RollbackInputRejectsTrailingBytesAndTruncation )
     SW_REQUIRE_TRUE( session.initialize( nullptr, &game, 2, 0, RollbackConfig{} ) );
     NetMessageWriter writer;
     BitWriter&       body = writer.begin( NetLockstepMessage::kRollbackInput );
+    body.writeVarUint( 0 ); // 판 번호
     body.writeVarUint( 1 ); // 플레이어
     body.writeVarUint( 0 ); // 프레임
     for ( int32 player = 0; player < 2; ++player )

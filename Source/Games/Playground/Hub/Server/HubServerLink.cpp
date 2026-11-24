@@ -21,7 +21,8 @@ namespace sw
          * @brief MMO 복제에 올리는 아바타 자리의 간격(m)입니다. 여기의 자리는 관심 영역 중심 · 보이는 목록에만 쓴다 — 걷는 동안 틱마다 다시 올리지 않게 굵게 자른다.
          *        보이는 움직임은 폰 복제(`HubPawnReplicationComponent`)가 틱마다 싣는다.
          */
-        constexpr float32 kAvatarInterestStep = 1.0f;
+        constexpr float32 kAvatarInterestStep   = 1.0f;
+        constexpr float64 kReplacedFlushSeconds = 2.0; ///< 같은 계정이 다시 붙어 닫는 앞 연결에 남은 신뢰 메시지(행동 결과)를 비울 시간
 
         float3 makeInterestPosition( const float3& position )
         {
@@ -69,7 +70,7 @@ namespace sw
         if ( _replicator.initialize( &peers, MMOReplicatorConfig{}, _grid ) == false )
             return false;
         _mapPublished.clear(); // 복제기를 새로 세웠다 — 모두 다시 올린다
-        if ( _remoteCalls.initialize( &peers, RemoteCallServerConfig{ rules._remoteCallBurstCount, rules._remoteCallRefillMilliseconds } ) == false )
+        if ( _remoteCalls.initialize( &peers, &router, RemoteCallServerConfig{ rules._remoteCallBurstCount, rules._remoteCallRefillMilliseconds } ) == false )
             return false;
         _listSubscription.push_back( router.registerHandler( &_remoteCalls ) );
         _listSubscription.push_back( router.registerHandler( &_replicator ) );
@@ -171,7 +172,7 @@ namespace sw
             ++_stats._refusedCount;
             // 허브 서버는 티켓을 요구하는 세션에서만 선다(`HubWorldComponent`) — 여기까지 온 주체 없는 연결은 인증기가 걸렀어야 할 것이라 끊는다(심층 방어).
             SW_LOG_WARNING_ID( "Hub.NoAccount", "[Hub] connection %# has no account - the hub needs a game connect ticket (server config _bGameConnectTicket); disconnecting it", connectionID );
-            _pPeers->disconnect( connectionID );
+            _pPeers->disconnect( connectionID, NetLinger::none() );
             return;
         }
         // 같은 계정이 이미 들어와 있거나 읽는 중이면 앞 연결을 저장하고 끊는다 — 저장이 읽기보다 먼저 맡겨지므로 새 연결은 그 진행을 읽는다.
@@ -193,7 +194,7 @@ namespace sw
             SW_LOG_INFO_ID( "Hub.SessionReplaced", "[Hub] account %# connected again on %# - the session on %# is saved and closed", accountID, connectionID, previousConnectionID );
             releaseAgent( previousConnectionID );
             _mapPendingAccount.erase( previousConnectionID );
-            _pPeers->disconnect( previousConnectionID );
+            _pPeers->disconnect( previousConnectionID, NetLinger::waitUpTo( kReplacedFlushSeconds ) );
         }
         _mapPendingAccount[connectionID] = accountID;
         _profiles.requestLoad( accountID );
@@ -241,7 +242,7 @@ namespace sw
         if ( load._bOk == SW_FALSE )
         {
             ++_stats._refusedCount;
-            _pPeers->disconnect( connectionID );
+            _pPeers->disconnect( connectionID, NetLinger::none() );
             return;
         }
         HubProfile profile = load._profile;
@@ -256,7 +257,7 @@ namespace sw
         {
             _world.removeAvatar( pAgent->_avatarID );
             ++_stats._refusedCount;
-            _pPeers->disconnect( connectionID );
+            _pPeers->disconnect( connectionID, NetLinger::none() );
             return;
         }
         _replicator.setObserver( connectionID, pAgent->_avatarID );

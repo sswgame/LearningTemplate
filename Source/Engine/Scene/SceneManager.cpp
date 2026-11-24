@@ -233,11 +233,6 @@ namespace sw
                 SW_LOG_WARNING_ID( "SceneManager.SceneCouldNotAcquire", "Scene '%#' could not acquire its default material", pScene->getName() );
             _pRenderBinding->bindSceneDefaults( *pScene );
         }
-        // 넷 링크는 플레이가 시작되기 전(활성화 · `beginPlay` 앞)에 올린다. 미리보기 씬은 만드는 쪽(가상 서버 하니스)이 자기 링크를 올린다.
-        GameObjectManager* const pNewManager = pScene->getObjectManager();
-        if ( role != SceneRole::Preview && _netLink.isComplete() && pNewManager != nullptr )
-            (void)pNewManager->getSubsystem<SceneNetLink>().bind( _netLink );
-
         if ( role == SceneRole::Preview )
         {
             _listPreviewScene.push_back( PreviewSceneEntry{ _nextPreviewKey++, std::move( scene ), ScenePreviewPolicy{} } );
@@ -1095,7 +1090,12 @@ namespace sw
         const bool bEndOutgoingPlay = _bWorldPlaying && _pActiveScene != nullptr && _pActiveScene->getObjectManager() != nullptr;
         if ( bEndOutgoingPlay )
             _pActiveScene->getObjectManager()->endPlay();
-        _pActiveScene                 = pScene;
+        _pActiveScene = pScene;
+        // 넷 링크는 플레이가 시작되기 전(`beginPlay` 앞)에 활성 씬에만 올린다 — 올리는 것이 곧 월드를 여는 것이라, 겹쳐 올린 씬(`Loaded`)이 월드를 바꾸지 않는다.
+        // 미리보기 씬은 만드는 쪽(가상 서버 하니스)이 자기 링크를 올린다.
+        GameObjectManager* const pNewManager = pScene != nullptr ? pScene->getObjectManager() : nullptr;
+        if ( _netLink.isComplete() && pNewManager != nullptr )
+            (void)pNewManager->getSubsystem<SceneNetLink>().bind( _netLink, SceneNetLink::computeSceneID( pScene->getSourcePath() ) );
         const bool bBeginIncomingPlay = _bWorldPlaying && pScene != nullptr && pScene->getObjectManager() != nullptr;
         if ( bBeginIncomingPlay )
             pScene->getObjectManager()->beginPlay();
@@ -1109,7 +1109,7 @@ namespace sw
             return;
         SceneNetLink& link = pActive->getSubsystem<SceneNetLink>();
         if ( value.isComplete() )
-            (void)link.bind( value );
+            (void)link.bind( value, SceneNetLink::computeSceneID( _pActiveScene->getSourcePath() ) );
         else
             link.unbind();
     }

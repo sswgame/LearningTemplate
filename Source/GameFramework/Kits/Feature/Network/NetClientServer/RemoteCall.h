@@ -47,6 +47,7 @@
 namespace sw
 {
     class INetPeers;
+    class NetMessageRouter;
 
     struct FunctionInfo;
     struct TypeInfo;
@@ -82,7 +83,8 @@ namespace sw
          * @brief 호출 하나 — 순번(varuint) · 대상 id(varuint) · 함수 번호(32 비트, 이름 해시) · 인자 수(varuint) · 인자들(타입별 이진 꼴). 클라이언트 → 서버는 `Server` 함수, 서버 → 클라이언트는 `Client` · `Multicast` 함수다.
          *        판 2: 함수 이름 글 대신 함수 번호를 싣는다. 판 3: 인자를 글 대신 타입별 이진 꼴로 싣는다.
          */
-        using Call = NetMessageSenderChannelDef<0, NetMessageDirection::Both, NetChannelKind::ReliableOrdered, 3>; ///< 채널은 함수의 `Reliable` 이 고른다(`beginMessage( channel )`)
+        static constexpr uint32 kCallHoldMilliseconds = 10000;                                                                                                                                  ///< 대상이 아직 서지 않은 신뢰 호출을 기다리는 시간(씬 로드 · 스폰 복제)
+        using Call                                    = NetHeldMessageDef<NetMessageSenderChannelDef<0, NetMessageDirection::Both, NetChannelKind::ReliableOrdered, 5>, kCallHoldMilliseconds>; ///< 판 5: 월드 세대가 8 비트다. 4: 월드 대상(세션 대상 0 이 아닌 번호) 뒤에 월드 세대가 온다. 채널은 함수의 `Reliable` 이 고른다(`beginMessage( channel )`)
         /** @brief 서버 → 클라이언트. 받지 못한 호출(`RemoteCallRejectedBody`). */
         using Rejected = NetMessageBodyDef<1, NetMessageDirection::ToClient, NetChannelKind::ReliableOrdered, RemoteCallRejectedBody>;
         using Table    = NetMessageTable<NetKitMessageRange::kRemoteCall, Call, Rejected>;
@@ -112,6 +114,7 @@ namespace sw
         uint64 _rejectedCount{ 0 };         ///< 거절 알림을 돌려준 호출(대상 · 함수 없음, 인자)
         uint64 _validationFailedCount{ 0 }; ///< 검증 짝이 거짓이라 연결을 끊은 호출
         uint64 _violationCount{ 0 };        ///< 주인 아님 · 역할 · 채널을 어겨 연결을 끊은 호출
+        uint64 _deliveryFailedCount{ 0 };   ///< 클라이언트가 대상을 기다리다 부르지 못했다고 알려 온 신뢰 호출
         uint64 _rateLimitedCount{ 0 };      ///< 호출률 상한(연결 · 함수)을 넘어 거절한 호출(`_rejectedCount` 에도 든다)
     };
 
@@ -183,7 +186,7 @@ namespace sw
      * @class RemoteCallServer
      * @brief 서버 쪽입니다. 클라이언트가 부른 `Server` 함수를 주인 · 역할 · 채널 · 검증을 거쳐 부르고, 주인 클라이언트의 `Client` 함수를 부릅니다.
      * @code
-     *     if ( server.initialize( &peers, config ) == false ) ...; // 호출률 상한이 없으면 오류
+     *     if ( server.initialize( &peers, &router, config ) == false ) ...; // 호출률 상한이 없으면 오류
      *     _subscription = router.registerHandler( &server );
      *     if ( server.registerTarget( creatureID, *Creature::StaticType(), &creature, connectionID ) == false ) ...; // 계약을 어긴 타입은 등록되지 않는다
      *     (void)server.registerSessionTarget( connectionID, *HubAvatarAgent::StaticType(), &agent );      // 그 연결의 id 0
@@ -204,8 +207,8 @@ namespace sw
          */
         void setClock( ClockFunction pClock );
 
-        /** @brief 보낼 창구와 호출률 상한을 받습니다. 상한이 0 이하면 오류를 남기고 false 입니다(기본값으로 대신하지 않는다). */
-        [[nodiscard]] bool initialize( INetPeers* pPeers, const RemoteCallServerConfig& config );
+        /** @brief 보낼 창구 · 월드 세대를 묻는 라우터(직접 전달하는 테스트는 nullptr — 세대 0) · 호출률 상한을 받습니다. 상한이 0 이하면 오류를 남기고 false 입니다(기본값으로 대신하지 않는다). */
+        [[nodiscard]] bool initialize( INetPeers* pPeers, const NetMessageRouter* pRouter, const RemoteCallServerConfig& config );
         /**
          * @brief 대상을 등록합니다. 연결 @p ownerConnectionID 만 이 대상의 `Server` 함수를 부를 수 있습니다.
          * @return 타입이 원격 호출 계약을 어기거나(`RemoteCallTargets::validateRemoteCallContract`), 인스턴스가 없거나, id 가 0(세션)이거나 이미 있으면 오류를 남기고 false 입니다
@@ -227,6 +230,10 @@ namespace sw
         [[nodiscard]] bool callSession( int32 connectionID, string_view functionName, const vector<ReflectedValue>& listArg );
 
         NetHandleResult receive( NetRemoteCallMessage::Call, const NetMessageContext& context, BitReader& body );
+        /** @brief 보류의 열쇠는 대상 번호다 — 같은 대상의 호출끼리 순서를 지킨다. */
+        uint64 readHoldKey( NetRemoteCallMessage::Call, BitReader& body ) const;
+        /** @brief 클라이언트가 대상이 서기를 기다리다 끝내 부르지 못했습니다 — 세고 알린다. */
+        void onMessageDeliveryFailed( int32 connectionID, uint8 kind, uint64 key, NetDeliveryFailure reason ) override;
         /** @brief 그 연결이 주인인 대상과 그 연결의 세션을 지웁니다(같은 연결 ID 를 다음 연결이 다시 쓴다). */
         void onConnectionClosed( int32 connectionID, NetDisconnectReason reason ) override;
 
@@ -257,6 +264,7 @@ namespace sw
         RemoteCallStats                                 _stats;
         NetMessageWriter                                _messageWriter;
         INetPeers*                                      _pPeers;
+        const NetMessageRouter*                         _pRouter; ///< 월드 세대를 묻는다(소유하지 않음)
         ClockFunction                                   _pClock;
     };
 } // namespace sw
@@ -267,7 +275,7 @@ namespace sw
      * @class RemoteCallClient
      * @brief 클라이언트 쪽입니다. 서버의 `Server` 함수를 부르고, 서버가 부른 `Client` · `Multicast` 함수를 등록한 대상에서 부릅니다.
      * @code
-     *     client.initialize( &peers );
+     *     client.initialize( &peers, &router );
      *     const uint32 sequence = client.callServer( avatarID, *HubAvatar::StaticType(), "attackCreature", { ReflectedValue::make( creatureID ) } );
      *     client.pollRejections( listNotification ); // sequence 가 있으면 서버가 받지 않았다
      * @endcode
@@ -277,7 +285,12 @@ namespace sw
     public:
         RemoteCallClient();
 
-        void initialize( INetPeers* pPeers ) { _pPeers = pPeers; }
+        /** @param pRouter 월드 세대를 묻는 라우터. 없으면(직접 전달하는 테스트) 세대 0 이다 */
+        void initialize( INetPeers* pPeers, const NetMessageRouter* pRouter )
+        {
+            _pPeers  = pPeers;
+            _pRouter = pRouter;
+        }
         /** @brief 서버가 부를 대상(`Client` · `Multicast` 함수를 가진)을 등록합니다. 계약을 어기거나 같은 id 가 있으면 오류를 남기고 false 입니다. */
         [[nodiscard]] bool registerTarget( uint32 targetID, const TypeInfo& type, void* pInstance );
         void               unregisterTarget( uint32 targetID );
@@ -288,6 +301,8 @@ namespace sw
         [[nodiscard]] uint32 callServer( uint32 targetID, const TypeInfo& type, string_view functionName, const vector<ReflectedValue>& listArg );
 
         NetHandleResult receive( NetRemoteCallMessage::Call, const NetMessageContext& context, BitReader& body );
+        /** @brief 보류의 열쇠는 대상 번호다 — 같은 대상의 호출끼리 순서를 지킨다. */
+        uint64          readHoldKey( NetRemoteCallMessage::Call, BitReader& body ) const;
         NetHandleResult receive( NetRemoteCallMessage::Rejected, const NetMessageContext& context, const RemoteCallRejectedBody& body );
 
         /** @brief 쌓인 거절 알림을 @p outListNotification 뒤에 옮깁니다. */
@@ -299,6 +314,7 @@ namespace sw
         EventBuffer<RemoteCallRejectNotification> _rejections;
         NetMessageWriter                          _messageWriter;
         INetPeers*                                _pPeers;
+        const NetMessageRouter*                   _pRouter; ///< 월드 세대를 묻는다(소유하지 않음)
         uint64                                    _invokedCount;
         uint32                                    _nextSequence;
     };

@@ -136,7 +136,7 @@ namespace sw
                outChannel.registerReplicatedType<HubEntityNetState>( static_cast<uint8>( HubEntityType::kHerb ) ) &&
                outChannel.registerReplicatedType<HubPawnState>( static_cast<uint8>( HubPawnReplicationComponent::kOwnerStateSchemaID ) ) &&
                outChannel.registerReplicatedType<HubPawnPose>( static_cast<uint8>( HubPawnReplicationComponent::kPawnTypeID ) ) &&
-               outChannel.registerReplicatedType<ShooterMoveState>( static_cast<uint8>( ShooterNetPawnComponent::kPawnTypeID ) ) &&
+               outChannel.registerReplicatedType<ShooterPawnNetState>( static_cast<uint8>( ShooterNetPawnComponent::kPawnTypeID ) ) &&
                outChannel.registerReplicatedType<ShooterEnemyNetState>( static_cast<uint8>( ShooterNetPawnComponent::kEnemyTypeID ) ) &&
                outChannel.registerReplicatedType<ShooterOwnerNetState>( static_cast<uint8>( ShooterNetPawnComponent::kOwnerStateSchemaID ) );
     }

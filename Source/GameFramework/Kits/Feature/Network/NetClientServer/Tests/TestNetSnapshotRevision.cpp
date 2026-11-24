@@ -43,6 +43,7 @@ namespace
     {
         test::LoopbackCluster _cluster{ 11u };
         ReplicationServer     _server;
+        NetClock              _worldClock;
         ReplicationClient     _client;
         size_t                _receivedBytes{ 0 }; ///< 마지막 `pollUntilDelivered` 동안 클라이언트가 받은 바이트
 
@@ -52,8 +53,9 @@ namespace
             (void)_cluster.addEndpoint( 4300, settings ); // 빈 클러스터라 포트가 겹치지 않는다
             (void)_cluster.addEndpoint( 4400, settings );
             SW_EXPECT_TRUE( _cluster.connectClients( 30 ) );
+            _cluster.enterWorld();
             SW_EXPECT_TRUE( _server.initialize( &_cluster.getServer(), ReplicationServerConfig{} ) );
-            SW_EXPECT_TRUE( _client.initialize( &_cluster.getClient( 0 ), ReplicationClientConfig{} ) );
+            SW_EXPECT_TRUE( _client.initialize( &_cluster.getClient( 0 ), _worldClock, ReplicationClientConfig{} ) );
         }
 
         void pollUntilDelivered()
@@ -279,4 +281,25 @@ SW_TEST_CASE( NetSnapshotRevisionTest, AckedBaselineCarriesOnlyChangedEntity )
     SW_REQUIRE_NOT_NULL( pChanged );
     SW_EXPECT_TRUE( pChanged->_buffer == NetSnapshotRevisionTestInternal::makeBytes( 200, 32 ) );
     SW_EXPECT_EQUAL( size_t{ 10 }, pLatest->_listEntity.size() );
+}
+
+/** @brief [NetSnapshotRevisionTest] 예산이 소유자 상태만으로 차도 우선도가 가장 높은 엔티티 하나는 실린다 — 막힌 회선에서 남의 폰이 굶지 않는다. */
+SW_TEST_CASE( NetSnapshotRevisionTest, OneEntityGoesEvenWhenTheOwnerStateFillsTheBudget )
+{
+    using Internal = NetSnapshotRevisionTestInternal;
+    vector<NetEntityState> listWorld;
+    listWorld.push_back( Internal::makeEntity( 1, 1, 11, 10 ) );
+    listWorld.push_back( Internal::makeEntity( 2, 1, 22, 21 ) );
+    const vector<uint32> listRelevant{ 0, 1 };
+    const vector<int32>  listOrder{ 1, 0 }; // 2 가 먼저다
+    NetOwnerState        ownerState;
+    ownerState._buffer.assign( 200, uint8{ 7 } );
+    ownerState._bPresent = SW_TRUE;
+    const NetDeltaSource source{ listWorld, listRelevant, listOrder, ownerState, 6, 0 };
+    BitWriter            writer;
+    NetSentSnapshot      written;
+    vector<uint8>        listCurrent;
+    NetSnapshot::writeDelta( writer, source, nullptr, 133, written, listCurrent );
+    SW_REQUIRE_EQUAL( size_t{ 1 }, written._listEntity.size() );
+    SW_EXPECT_EQUAL( uint32{ 2 }, written._listEntity[0]._entityID );
 }

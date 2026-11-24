@@ -29,6 +29,7 @@ namespace sw
             static constexpr const utf8* kKeyStructElement  = "Struct";     ///< 표: 구조체 칸 한 줄(칸 이름으로 적힌 자식 원소의 형식)
             static constexpr const utf8* kKeyTypeElement    = "Element";    ///< 표: 정의 형식 ↔ 카탈로그 원소 한 줄
             static constexpr const utf8* kKeyDerivedElement = "Derived";    ///< 표: 물려받은 형식 한 줄(바탕의 칸 줄을 따라간다)
+            static constexpr const utf8* kCookedElement     = "Cooked";     ///< 표: 팩에 이진 쿠킹본으로 담는 카탈로그 루트 한 줄
             static constexpr const utf8* kListItemElement   = "item";       ///< 리플렉션 XML 이 목록 원소를 적는 원소 이름(`<_listX><item>…</item></_listX>`)
             static constexpr const utf8* kDefaultTargetKey  = "id";         ///< 가리키는 원소의 id 속성(적지 않으면)
 
@@ -213,6 +214,7 @@ namespace sw
         , _listKeyStruct{}
         , _listKeyElement{}
         , _listKeyDerived{}
+        , _listCookedRoot{}
     {
     }
 
@@ -236,6 +238,7 @@ namespace sw
         _listKeyStruct.clear();
         _listKeyElement.clear();
         _listKeyDerived.clear();
+        _listCookedRoot.clear();
         XMLDocument doc;
         if ( doc.parse( tableText, sourceName ) == false || doc.getRoot().isValid() == false )
         {
@@ -249,6 +252,7 @@ namespace sw
         const vector<string_view> listKeyStructRequired{ "owner", "field", "type" };
         const vector<string_view> listKeyTypeRequired{ "type", "catalog", "path" };
         const vector<string_view> listKeyDerivedRequired{ "type", "base" };
+        const vector<string_view> listCookedRequired{ "root" };
         bool                      bValid = true;
         for ( XMLNode catalog = doc.getRoot().findChild(); catalog.isValid(); catalog = catalog.findNextSibling() )
         {
@@ -325,6 +329,20 @@ namespace sw
                 _listKeyElement.push_back( std::move( row ) );
                 continue;
             }
+            if ( StringUtil::equals( catalog.getName(), Internal::kCookedElement ) )
+            {
+                const string_view cookedRoot = catalog.getAttributeText( "root" );
+                const bool        bRow       = Internal::validateKeyRowAttributes( catalog, listCookedRequired, {}, sourceName );
+                if ( bRow == false || isCookedRoot( cookedRoot ) )
+                {
+                    if ( bRow )
+                        SW_LOG_ERROR_ID( "DataCatalogReferences.RuleInvalid", "%#: <%# root=\"%#\"> is written twice", sourceName, Internal::kCookedElement, cookedRoot );
+                    bValid = false;
+                    continue;
+                }
+                _listCookedRoot.emplace_back( cookedRoot );
+                continue;
+            }
             if ( StringUtil::equals( catalog.getName(), Internal::kKeyDerivedElement ) )
             {
                 if ( Internal::validateKeyRowAttributes( catalog, listKeyDerivedRequired, {}, sourceName ) == false )
@@ -398,6 +416,7 @@ namespace sw
             _listKeyStruct.clear();
             _listKeyElement.clear();
             _listKeyDerived.clear();
+            _listCookedRoot.clear();
         }
         return bValid;
     }
@@ -472,6 +491,18 @@ namespace sw
     {
         return VectorUtil::containsIf( _listRule, [rootName]( const DataCatalogReferenceRule& rule )
         { return rule._rootName == rootName; } );
+    }
+
+    bool DataCatalogReferenceRules::isCookedRoot( string_view rootName ) const
+    {
+        return VectorUtil::containsIf( _listCookedRoot, [rootName]( const string& root )
+        { return root == rootName; } );
+    }
+
+    bool DataCatalogReferenceRules::isCookedRootMentioned( string_view text ) const
+    {
+        return VectorUtil::containsIf( _listCookedRoot, [text]( const string& root )
+        { return DataCatalogReferencesInternal::isElementMentioned( text, root ); } );
     }
 
     bool DataCatalogReferenceRules::isRootMentioned( string_view text ) const

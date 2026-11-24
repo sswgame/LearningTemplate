@@ -5,6 +5,7 @@
 #pragma once
 #include "Core/Container/string.h"
 #include "Core/Container/vector.h"
+#include "Core/Delegate/Subscription.h"
 #include "Core/Foundation/Expected.h"
 #include "Core/Foundation/Macros.h"
 #include "Core/Foundation/Types.h"
@@ -23,6 +24,8 @@
 
 namespace sw
 {
+    struct SceneLoadCompletedEvent;
+
     class ScreenFade;
     class UIScreen;
     class UISystem;
@@ -54,6 +57,8 @@ namespace sw
      *            팁 목록은 gamesettings 의 `_loadingTips` 파일(`loadTipsFromResource`)이 채운다.
      *          - **페이드**: `ScreenFade::getOverlayAlpha` 가 0 보다 크면 Overlay 층(입력 없음, 로딩 화면 아래)에 전체 화면 검은 패널을 띄우고 불투명도를 그 알파로 둔다.
      *            0 이 되면 닫는다.
+     *          - **실패 알림**: 게임 이동 씬 로드가 실패하면(`SceneLoadCompletedEvent` — 앞 씬에 남는다) 엔진 확인 대화 상자로 알리고 다시 시도할지 묻는다. 뒤 요청에 밀린 로드는
+     *            실패가 아니라 알리지 않고, 그 뒤 로드가 서면 떠 있던 알림을 닫는다.
      *          UI 시스템이 없으면(전용 서버, 헤드리스) 아무것도 하지 않는다. 게임 스레드에서만 써야 한다.
      */
     class SW_GF_API LoadingScreenController final : public GameInstanceSubsystem
@@ -64,7 +69,7 @@ namespace sw
         /** @brief gamesettings 의 로딩 문서와 UI 시스템을 묶습니다. UI 시스템이 없으면(전용 서버) 아무것도 띄우지 않습니다. */
         SubsystemInitResult initializeSubsystem() override;
         /** @brief UI 시스템을 풉니다(연 화면을 닫는다). */
-        void shutdownSubsystem() override { bindUISystem( nullptr ); }
+        void shutdownSubsystem() override;
 
         /** @brief 문서에서 이 이름의 위젯을 돌립니다. 속도는 초당 라디안이며 3π/2 는 270° 입니다. */
         static constexpr float32 kSpinnerRadiansPerSecond = MathUtil::kPi * 1.5f;
@@ -115,14 +120,19 @@ namespace sw
         float32 getShownSeconds() const { return _shownSeconds; }
         /** @brief 지금 띄운 로딩 화면을 반환합니다. 없으면 nullptr 이며, 포인터는 그 호출 안에서만 씁니다. */
         UIScreen* findLoadingScreen() const;
+        /** @brief 씬 로드 실패를 알리는 대화 상자가 떠 있으면 true 입니다. */
+        bool isShowingLoadFailure() const;
         /** @brief 페이드 패널 화면을 반환합니다. 없으면 nullptr 이며, 페이드 알파가 0 이면 닫혀 있습니다. */
         UIScreen* findFadeScreen() const;
         /** @brief 지금 고른 팁 키입니다. 없으면 빈 글입니다. */
         const string& getCurrentTip() const { return _currentTip; }
 
     private:
-        /** @brief 로딩 화면과 페이드 화면을 닫습니다. */
+        /** @brief 로딩 화면 · 페이드 화면 · 실패 알림을 닫습니다. */
         void closeScreens();
+        /** @brief 씬 로드가 끝났습니다 — 실패면 알리고, 성공이면 앞선 실패의 알림을 닫습니다. */
+        void onSceneLoadCompleted( const SceneLoadCompletedEvent& event );
+        void closeLoadFailure();
         /** @brief 페이드 패널을 알파에 맞춥니다. 알파가 0 이면 닫고, 0 보다 크면 열고 불투명도를 맞춥니다. */
         void syncFadeOverlay( float32 alpha );
         /** @brief 진행 슬라이더(`Progress`)를 로드 진행에 맞춥니다. 진행을 모르면 접는다. 문서에 슬라이더가 없으면 아무것도 하지 않는다. */
@@ -155,8 +165,10 @@ namespace sw
         UISystem*             _pUISystem;
         UIScreenHandle        _loadingScreen;
         UIScreenHandle        _fadeScreen;
+        UIScreenHandle        _loadFailureDialog;
         float32               _shownSeconds;
         float32               _spinnerAngle;
+        Subscription          _sceneLoadSubscription;
         GameRandom            _tipRandom; ///< 팁 고르기 난수(`setSettings` 가 시드를 다시 설정한다)
     };
 } // namespace sw

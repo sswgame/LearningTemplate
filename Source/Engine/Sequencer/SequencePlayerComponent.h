@@ -74,6 +74,11 @@ namespace sw
          * @details 늦게 들어온 클라이언트가 서버의 지금 프레임부터 잇는다(언리얼 `ULevelSequencePlayer` 복제의 `PlayFrom`/`SetPlaybackPosition` 자리).
          */
         void playFromFrame( int32 frame );
+        /**
+         * @brief 재생을 @p seconds 만큼 바로 진행합니다 — 지나는 이벤트를 쏘고 묶인 오브젝트에 적용한다(게임 스레드, 틱 밖). 재생 중이 아니거나 0 이하면 할 일이 없다.
+         * @details 늦게 닿은 시작(망 지연 · 재전송)이 흐른 시간을 따라잡는 자리다 — 점프(`playFromFrame`)와 달리 그 사이의 이벤트를 잃지 않는다.
+         */
+        void advance( float32 seconds );
         FUNCTION( Category = "Playback", DisplayName = "Stop", CallInEditor )
         void stop();
         FUNCTION( Category = "Playback", DisplayName = "Pause", CallInEditor )
@@ -172,6 +177,8 @@ namespace sw
         /** @brief `play` · `playFromFrame` 의 공통 시작입니다. @p startFrame 이 없으면 진행 방향의 처음에서 튼다. */
         void startPlayback( optional<int32> startFrame );
         void applyTimeline( const SequencePlaybackStep& step );
+        /** @brief 민 구간(`_pendingStep`)을 적용하고, 그 갱신에서 멈췄으면 끝냅니다(게임 스레드, 틱 밖). */
+        void applyPendingStep();
         /** @brief 재생을 끝냅니다(클래스 머리말의 재생 계약). @p kind 는 기록에 남길 끝의 종류입니다. 쥔 것이 없으면 아무것도 하지 않는다. */
         void endPlayback( SequenceHistoryKind kind );
         /** @brief 카메라 신호의 초 단위 값과 대상을 채워 알리고 기록합니다. */

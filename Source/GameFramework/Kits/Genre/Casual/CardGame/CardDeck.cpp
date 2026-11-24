@@ -4,6 +4,7 @@
 
 #include "Core/Algorithm/VectorUtil.h"
 #include "Core/Foundation/Constants.h"
+#include "Core/Serialization/LittleEndianUtil.h"
 
 #include "Engine/Reflection/TypeFqn.h"
 #include "Engine/Serialization/Format/Archive.h"
@@ -68,6 +69,22 @@ namespace sw
     void CardPile::shuffle( GameRandom& random )
     {
         random.shuffle( _listCard ); // 기반의 Fisher-Yates 를 쓴다
+    }
+
+    void CardPile::shuffleSecret( const SipHashKey& key, uint64 dealID, uint32 shuffleIndex )
+    {
+        // PRF 입력: 판 번호 · 섞은 차례 · 카드 칸
+        uint8  arrBytes[sizeof( uint64 ) + sizeof( uint32 ) * 2];
+        uint8* pShuffle = arrBytes + sizeof( uint64 );
+        uint8* pIndex   = pShuffle + sizeof( uint32 );
+        LittleEndianUtil::writeUint64( arrBytes, dealID );
+        LittleEndianUtil::writeUint32( pShuffle, shuffleIndex );
+        for ( size_t index = _listCard.size(); index > 1; --index )
+        {
+            LittleEndianUtil::writeUint32( pIndex, static_cast<uint32>( index ) );
+            const uint64 value = SecureUtil::sipHash24( key, arrBytes, sizeof( arrBytes ) ); // 64 비트라 한 덱 크기로 나눈 치우침은 무시할 만하다
+            std::swap( _listCard[index - 1], _listCard[static_cast<size_t>( value % index )] );
+        }
     }
 
     bool CardPile::deal( vector<CardPile>& inoutListHand, int32 cardsEach )

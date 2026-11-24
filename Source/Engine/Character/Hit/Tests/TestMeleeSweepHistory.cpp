@@ -15,6 +15,7 @@ namespace
     struct MeleeSweepHistoryTestRig
     {
         static constexpr uint64 kAttackerID = 11;
+        static constexpr uint32 kStep       = 5; ///< 휘두른 걸음(입력 틱)
 
         GameObjectManager _manager;
         MeleeSweepHistory _ledger;
@@ -32,6 +33,7 @@ namespace
             MeleeHitParams params;
             params._radius = 0.2f;
             params._damage = 12.0f;
+            params._step   = kStep;
             const vector<float3> listPrevious;
             vector<float3>       listCurrent;
             listCurrent.push_back( float3{ 0.0f, 0.0f, 0.0f } );
@@ -48,7 +50,7 @@ SW_TEST_CASE( MeleeSweepHistoryTest, ConfirmsAClaimTheBladeCovers )
     rig.advance( 5 );
     rig.recordSweep();
     MeleeHitParams params;
-    MeleeHitClaim  claim{ rig._ledger.getFrame() + MeleeSweepHistory::kClaimSlackFrames, 3 };
+    MeleeHitClaim  claim{ MeleeSweepHistoryTestRig::kStep + MeleeSweepHistory::kClaimSlackSteps, 3 };
     SW_EXPECT_TRUE( rig._ledger.verify( MeleeSweepHistoryTestRig::kAttackerID, claim, float3{ 0.5f, 0.6f, 0.0f }, 0.4f, &params ) == MeleeClaimResult::Confirmed );
     SW_EXPECT_NEAR( 12.0f, params._damage, 1e-5f );
 }
@@ -58,7 +60,7 @@ SW_TEST_CASE( MeleeSweepHistoryTest, RefusesATargetOutsideTheBlade )
 {
     MeleeSweepHistoryTestRig rig;
     rig.recordSweep();
-    const MeleeHitClaim claim{ rig._ledger.getFrame(), 3 };
+    const MeleeHitClaim claim{ MeleeSweepHistoryTestRig::kStep, 3 };
     SW_EXPECT_TRUE( rig._ledger.verify( MeleeSweepHistoryTestRig::kAttackerID, claim, float3{ 0.5f, 3.0f, 0.0f }, 0.4f, nullptr ) == MeleeClaimResult::OutOfBlade );
 }
 
@@ -68,9 +70,9 @@ SW_TEST_CASE( MeleeSweepHistoryTest, RefusesAClaimWithoutASweep )
     MeleeSweepHistoryTestRig rig;
     rig.recordSweep();
     const float3        center{ 0.5f, 0.1f, 0.0f };
-    const MeleeHitClaim sameFrame{ rig._ledger.getFrame(), 3 };
+    const MeleeHitClaim sameFrame{ MeleeSweepHistoryTestRig::kStep, 3 };
     SW_EXPECT_TRUE( rig._ledger.verify( 99, sameFrame, center, 0.4f, nullptr ) == MeleeClaimResult::NoSweep );
-    const MeleeHitClaim farFrame{ rig._ledger.getFrame() + MeleeSweepHistory::kClaimSlackFrames + 1u, 3 };
+    const MeleeHitClaim farFrame{ MeleeSweepHistoryTestRig::kStep + MeleeSweepHistory::kClaimSlackSteps + 1u, 3 };
     SW_EXPECT_TRUE( rig._ledger.verify( MeleeSweepHistoryTestRig::kAttackerID, farFrame, center, 0.4f, nullptr ) == MeleeClaimResult::NoSweep );
 }
 
@@ -94,6 +96,7 @@ SW_TEST_CASE( MeleeSweepHistoryTest, ClaimHitAddsTheTargetOncePerWindow )
     MeleeHitParams           params;
     params._radius = 0.2f;
     params._damage = 5.0f;
+    params._step   = MeleeSweepHistoryTestRig::kStep;
     const vector<float3> listPrevious;
     vector<float3>       listCurrent;
     listCurrent.push_back( float3{ 0.0f, 0.0f, 0.0f } );
@@ -101,7 +104,7 @@ SW_TEST_CASE( MeleeSweepHistoryTest, ClaimHitAddsTheTargetOncePerWindow )
     rig._ledger.record( pAttacker->getObjectID(), params, listPrevious, listCurrent );
 
     vector<GameObjectHandle> listHitTarget;
-    const MeleeHitClaim      claim{ rig._ledger.getFrame(), 3 };
+    const MeleeHitClaim      claim{ MeleeSweepHistoryTestRig::kStep, 3 };
     const float3             center{ 0.5f, 0.1f, 0.0f };
     SW_EXPECT_TRUE( rig._ledger.claimHit( *pAttacker, *pTarget, claim, center, 0.4f, listHitTarget ) == MeleeClaimResult::Confirmed );
     SW_EXPECT_EQUAL( size_t{ 1 }, listHitTarget.size() );
@@ -122,7 +125,7 @@ SW_TEST_CASE( MeleeSweepHistoryTest, ClaimWireFormatRoundTrips )
     BitReader     reader( writer.getBytes().data(), writer.getByteCount() );
     MeleeHitClaim received;
     SW_REQUIRE_TRUE( MeleeHitClaim::read( reader, received ) );
-    SW_EXPECT_EQUAL( 77u, received._frame );
+    SW_EXPECT_EQUAL( 77u, received._step );
     SW_EXPECT_EQUAL( uint64{ 123456789012ull }, received._targetID );
 
     BitReader empty( writer.getBytes().data(), 0 );

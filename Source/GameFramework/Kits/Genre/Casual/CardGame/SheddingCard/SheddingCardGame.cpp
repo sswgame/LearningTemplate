@@ -21,7 +21,7 @@ namespace sw
             static constexpr int32 kWildCopyCount  = 4;
             static constexpr int32 kActionPoints   = 20;
             static constexpr int32 kWildPoints     = 50;
-            static constexpr int32 kDeckCardCount  = 108;
+            static constexpr int32 kDeckCardCount  = SheddingCardGame::kDeckCardCount;
             static constexpr int32 kFirstCardTries = kDeckCardCount;
 
             static bool isWildValue( uint8 rank ) { return rank == static_cast<uint8>( SheddingCardValue::Wild ) || rank == static_cast<uint8>( SheddingCardValue::WildDrawFour ); }
@@ -68,6 +68,9 @@ namespace sw
         , _discardPile{}
         , _settings{}
         , _random{}
+        , _shuffleKey{}
+        , _dealID{ 0 }
+        , _shuffleCount{ 0 }
         , _currentPlayer{ 0 }
         , _direction{ 1 }
         , _pendingDraw{ 0 }
@@ -116,28 +119,53 @@ namespace sw
     {
         if ( SheddingCardGameInternal::acceptSettings( settings ) == false )
             return false;
-        GameRandom         random( seed );
+        GameRandom random( seed );
+        CardPile   deck;
+        makeDeck( deck );
+        deck.shuffle( random );
         SheddingCardLayout layout;
-        makeDeck( layout._drawPile );
-        layout._drawPile.shuffle( random );
-        layout._listHand.resize( static_cast<size_t>( settings._playerCount ) );
-        (void)layout._drawPile.deal( layout._listHand, settings._handSize );
+        makeDealtLayout( settings, std::move( deck ), layout );
+        return initializeFromLayout( settings, layout, random.getState() );
+    }
+
+    bool SheddingCardGame::initializeSecret( const SheddingCardSettings& settings, const SipHashKey& shuffleKey, uint64 dealID )
+    {
+        if ( SheddingCardGameInternal::acceptSettings( settings ) == false )
+            return false;
+        CardPile deck;
+        makeDeck( deck );
+        deck.shuffleSecret( shuffleKey, dealID, 0 );
+        SheddingCardLayout layout;
+        makeDealtLayout( settings, std::move( deck ), layout );
+        if ( initializeFromLayout( settings, layout ) == false )
+            return false;
+        _shuffleKey   = shuffleKey;
+        _dealID       = dealID;
+        _shuffleCount = 1;
+        return true;
+    }
+
+    void SheddingCardGame::makeDealtLayout( const SheddingCardSettings& settings, CardPile&& deck, SheddingCardLayout& outLayout )
+    {
+        outLayout           = SheddingCardLayout{};
+        outLayout._drawPile = std::move( deck );
+        outLayout._listHand.resize( static_cast<size_t>( settings._playerCount ) );
+        (void)outLayout._drawPile.deal( outLayout._listHand, settings._handSize );
         // 와일드가 아닌 첫 장을 뒤집는다. 와일드는 더미 맨 아래로 보낸다.
         for ( int32 attempt = 0; attempt < SheddingCardGameInternal::kFirstCardTries; ++attempt )
         {
             Card card;
-            if ( layout._drawPile.draw( card ) == false )
+            if ( outLayout._drawPile.draw( card ) == false )
                 break;
             if ( SheddingCardGameInternal::isWildValue( card._rank ) )
             {
-                layout._drawPile.pushBottom( card );
+                outLayout._drawPile.pushBottom( card );
                 continue;
             }
-            layout._discardPile.push( card );
-            layout._color = static_cast<SheddingCardColor>( card._suit );
+            outLayout._discardPile.push( card );
+            outLayout._color = static_cast<SheddingCardColor>( card._suit );
             break;
         }
-        return initializeFromLayout( settings, layout, random.getState() );
     }
 
     bool SheddingCardGame::initializeFromLayout( const SheddingCardSettings& settings, const SheddingCardLayout& layout, uint32 seed )
@@ -160,6 +188,9 @@ namespace sw
         _drawPile       = layout._drawPile;
         _discardPile    = layout._discardPile;
         _random         = GameRandom( seed );
+        _shuffleKey     = nullopt;
+        _dealID         = 0;
+        _shuffleCount   = 0;
         _currentPlayer  = layout._firstPlayer;
         _direction      = 1;
         _pendingDraw    = 0;
@@ -213,7 +244,10 @@ namespace sw
                 if ( _discardPile.draw( top ) == false )
                     break;
                 (void)_discardPile.drawInto( _drawPile, _discardPile.getCount() );
-                _drawPile.shuffle( _random );
+                if ( _shuffleKey.has_value() )
+                    _drawPile.shuffleSecret( *_shuffleKey, _dealID, _shuffleCount++ );
+                else
+                    _drawPile.shuffle( _random );
                 _discardPile.push( top );
                 _eventBuffer.push( SheddingCardEvent{ nullopt, _drawPile.getCount(), Card::kNoCard, SheddingCardEvent::Kind::Reshuffled } );
             }

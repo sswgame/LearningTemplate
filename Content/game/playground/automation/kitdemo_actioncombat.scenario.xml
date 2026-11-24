@@ -12,6 +12,9 @@
 	<WaitUntil watch="ActionCombat.Alive" equals="2" timeoutFrames="120"/>
 	<Expect watch="ActionCombat.Phase" equals="0"/>
 	<Expect watch="ActionCombat.PlayerHP" equals="100"/>
+	<!-- 룸 이벤트가 HUD 에 닿는다 — 싸우는 동안 문이 잠겼다 -->
+	<WaitUntil watch="ActionCombat.HUDGateLocked" equals="1" timeoutFrames="30"/>
+	<Expect watch="ActionCombat.HUDNotification" equals="0"/>
 	<!-- 게임 기능 ActionCombat 가 받는 이름 Combatant 의 허수아비에 키트의 체력 컴포넌트를 붙였다 -->
 	<Expect watch="GameFeature.AddedComponents" equals="1"/>
 	<Expect watch="Object.Property" target="TrainingDummy" key="UnitStatsComponent._bIsDead" equals="0"/>
@@ -29,6 +32,7 @@
 	<Action name="KitDemo.Attack"/>
 	<WaitUntil watch="ActionCombat.Phase" equals="1" timeoutFrames="60"/>
 	<ExpectLog id="ActionCombat.HallCleared" count="1"/>
+	<WaitUntil watch="ActionCombat.HUDNotification" equals="1" timeoutFrames="30"/>
 	<!-- 보스 룸이 열린다(1 초) -->
 	<WaitUntil watch="ActionCombat.Phase" equals="2" timeoutFrames="120"/>
 	<Expect watch="ActionCombat.Alive" equals="1"/>
@@ -46,6 +50,7 @@
 	<Expect watch="ActionCombat.Alive" equals="0"/>
 	<Expect watch="ActionCombat.PlayerHP" equals="100"/>
 	<ExpectLog id="ActionCombat.Victory" count="1"/>
+	<WaitUntil watch="ActionCombat.HUDNotification" equals="1" timeoutFrames="30"/>
 	<Record watch="ActionCombat.PlayerX"/>
 	<Pass/>
 </Scenario>

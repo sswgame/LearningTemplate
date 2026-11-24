@@ -220,6 +220,13 @@ namespace sw
         _bitCount = bitCount;
     }
 
+    void BitWriter::overwriteByte( int32 byteIndex, uint8 value )
+    {
+        SW_CHECK_INDEX_OR_END( byteIndex, static_cast<int32>( _buffer.size() ) );
+        if ( 0 <= byteIndex && byteIndex < static_cast<int32>( _buffer.size() ) && ( byteIndex + 1 ) * 8 <= _bitCount )
+            _buffer[static_cast<size_t>( byteIndex )] = value;
+    }
+
     // ------------------------------------------------------------------------------
     // BitReader
     // ------------------------------------------------------------------------------

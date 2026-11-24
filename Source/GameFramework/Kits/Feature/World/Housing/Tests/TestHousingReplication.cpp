@@ -65,7 +65,7 @@ namespace
             }
             return count;
         }
-        void               disconnect( int32 ) override {}
+        void               disconnect( int32, NetLinger ) override {}
         void               pollInbound( NetInbound& ) override {}
         bool               isServer() const override { return _bServer != SW_FALSE; }
         NetConnectionState getConnectionState( int32 ) const override { return NetConnectionState::Connected; }
@@ -118,6 +118,8 @@ namespace
     /** @brief 서버 하나(부지 "home")와 클라이언트 여럿을 가짜 상대로 잇습니다. 연결 번호는 클라이언트 순번입니다. */
     struct HousingNetRig
     {
+        static constexpr uint8 kGeneration = 1; ///< 서버와 클라이언트가 함께 있는 월드
+
         struct Client
         {
             FakeHousingPeers                    _peers{ false };
@@ -169,8 +171,11 @@ namespace
             _serverPeers._listPrincipal.back() = principal;
             client._pPlot                      = make_unique<HousingNetTestPlotState>( _settings, _catalog, 100000 );
             client._replication.initialize( &client._peers );
+            client._peers.setWorldGeneration( kGeneration );
+            _serverPeers.setWorldGeneration( kGeneration );
             _serverPeers._listConnected.push_back( connectionID );
-            _server.onConnectionOpened( connectionID );
+            _serverPeers.setInWorld( connectionID, true );
+            _server.onPeerEnteredWorld( connectionID );
             return client;
         }
 
@@ -224,7 +229,8 @@ namespace
         void disconnect( int32 connectionID )
         {
             (void)VectorUtil::removeValue( _serverPeers._listConnected, connectionID );
-            _server.onConnectionClosed( connectionID, NetDisconnectReason::Timeout );
+            _serverPeers.setInWorld( connectionID, false );
+            _server.onPeerLeftWorld( connectionID );
         }
 
         /** @brief 클라이언트의 마지막 판정입니다(이번 틱에 하나 이상 받았어야 한다). */
@@ -238,7 +244,7 @@ namespace
 } // namespace
 
 /**
- * @brief [HousingReplicationTest] 붙었던 서버와 끊기면 답이 오지 않는 것을 안다 — 아직 붙지 않은 것과 다르고, 다시 붙으면 돌아온다
+ * @brief [HousingReplicationTest] 들어갔던 서버의 월드와 떨어지면(끊김 · 다른 씬) 답이 오지 않는 것을 안다 — 아직 들어가지 않은 것과 다르고, 다시 들어가면 돌아온다
  */
 SW_TEST_CASE( HousingReplicationTest, ClientKnowsItsServerIsLost )
 {
@@ -247,13 +253,15 @@ SW_TEST_CASE( HousingReplicationTest, ClientKnowsItsServerIsLost )
     client.initialize( &peers );
     SW_EXPECT_TRUE( client.isAwaitingServer() );
     SW_EXPECT_FALSE( client.isServerLost() );
-    peers._listConnected.push_back( 0 );
+    peers._listConnected.push_back( 0 ); // 붙었지만 씬을 읽는 중이다
+    SW_EXPECT_TRUE( client.isAwaitingServer() );
+    peers.setWorldGeneration( 1 );
     SW_EXPECT_FALSE( client.isAwaitingServer() );
     SW_EXPECT_FALSE( client.isServerLost() );
-    peers._listConnected.clear();
+    peers.setWorldGeneration( 0 );
     SW_EXPECT_FALSE( client.isAwaitingServer() );
     SW_EXPECT_TRUE( client.isServerLost() );
-    peers._listConnected.push_back( 0 );
+    peers.setWorldGeneration( 1 );
     SW_EXPECT_FALSE( client.isServerLost() );
 }
 
@@ -374,6 +382,7 @@ SW_TEST_CASE( HousingReplicationTest, ServerChecksReachRateAndRawValues )
         HousingNetRig    rig( 100 );
         NetMessageWriter writer;
         BitWriter&       body = writer.begin( NetHousingMessage::kEdit );
+        body.writeBits( 0, 8 ); // 월드 세대
         body.writeVarUint( 1 );
         body.writeVarUint( static_cast<uint64>( hashed_string( "home" ).getHash() ) );
         body.writeBits( static_cast<uint32>( HousingEditOp::Place ), 3 );
@@ -385,6 +394,7 @@ SW_TEST_CASE( HousingReplicationTest, ServerChecksReachRateAndRawValues )
         body.writeBool( false );
         SW_EXPECT_TRUE( rig._server.handleMessage( 0, writer.getBytes().data(), writer.getByteCount(), NetChannelKind::ReliableOrdered ) == NetHandleResult::Malformed );
         BitWriter& badOp = writer.begin( NetHousingMessage::kEdit );
+        badOp.writeBits( 0, 8 ); // 월드 세대
         badOp.writeVarUint( 2 );
         badOp.writeVarUint( static_cast<uint64>( hashed_string( "home" ).getHash() ) );
         badOp.writeBits( 7u, 3 );
@@ -599,6 +609,7 @@ SW_TEST_CASE( HousingReplicationTest, BodyMessagesRejectUnknownValuesAndTruncati
 
     // 판정 — 결과 열거자 자리에 등록 밖 값을 꾸민다(요청 번호 · 부지 해시 뒤 8 비트 0xFF).
     BitWriter& badReply = writer.begin( NetHousingMessage::kReply );
+    badReply.writeBits( 0, 8 ); // 월드 세대
     badReply.writeVarUint( 1 );
     badReply.writeVarUint( 7 );
     badReply.writeBits( 0xFFu, 8 );
@@ -629,6 +640,7 @@ SW_TEST_CASE( HousingReplicationTest, HandBodiesRejectTrailingTailsAndUnknownOwn
         HousingNetRig    rig( 100 );
         NetMessageWriter writer;
         BitWriter&       claim = writer.begin( NetHousingMessage::kEdit );
+        claim.writeBits( 0, 8 ); // 월드 세대
         claim.writeVarUint( 1 );
         claim.writeVarUint( static_cast<uint64>( hashed_string( "home" ).getHash() ) );
         claim.writeBits( static_cast<uint32>( HousingEditOp::Claim ), 3 );
@@ -642,6 +654,7 @@ SW_TEST_CASE( HousingReplicationTest, HandBodiesRejectTrailingTailsAndUnknownOwn
     const auto               writeDeltaHead = [&writer]( uint32 owner, uint64 removedCount ) -> BitWriter&
     {
         BitWriter& delta = writer.begin( NetHousingMessage::kPlotDelta );
+        delta.writeBits( 0, 8 );     // 월드 세대
         delta.writeVarUint( 7 );     // 부지
         delta.writeBits( owner, 2 ); // 주인
         delta.writeVarInt( 0 );      // 잔액

@@ -9,9 +9,11 @@
 #include "Core/Foundation/Macros.h"
 #include "Core/Foundation/Types.h"
 #include "Core/Math/Math.h"
+#include "Core/Math/MathUtil.h"
 #include "Core/Name/hashed_string.h"
 
 #include "Engine/Foundation/GameObjectHandle.h"
+#include "Engine/Foundation/WorldOrigin.h"
 #include "Engine/Object/Component/Component.h"
 #include "Engine/Reflection/ReflectionMacros.h"
 
@@ -23,6 +25,22 @@ namespace sw
     class GameObject;
     class SkeletalAnimatorComponent;
 
+    /** @brief 몸이 이번 프레임에 따르는 것입니다 — 플레이어에서 읽거나(자기 몸) 스냅샷에서 받는다(남의 몸). */
+    struct ShooterAvatarPose
+    {
+        AbsolutePosition _feet{};
+        float3           _velocity{ 0.0f, 0.0f, 0.0f }; ///< 수평 속도(월드, m/s)
+        float32          _yaw{ 0.0f };                  ///< 보는 요(라디안)
+        float32          _timeSinceShot{ MathUtil::kMaxFloat };
+        uint32           _hitReactionCount{ 0 };
+        uint8            _bAlive{ SW_TRUE };
+        uint8            _bOnGround{ SW_TRUE };
+        uint8            _bTwoHanded{ SW_FALSE };
+    };
+} // namespace sw
+
+namespace sw
+{
     /**
      * @class ShooterAvatarComponent
      * @brief 몸 프리팹(`prefabs/player_body.prefab.xml` — 스킨드 메시 · 애니메이터 · 외형과 같은 오브젝트)의 컴포넌트입니다. 플레이어가 세우고 `setPlayer` 로 잇습니다.
@@ -59,6 +77,10 @@ namespace sw
          * @details 플레이어의 주 장면 컴포넌트가 1인칭 카메라라 리그 대상의 오프셋(카메라 앞)이 보는 곳이다. 리그가 없으면 걸지 않는다(시선 없이 몸만 따른다).
          */
         void setPlayer( GameObject* pPlayer );
+        /**
+         * @brief 남의 몸의 모습입니다(네트 클라이언트) — 플레이어 오브젝트 대신 이 자세를 따릅니다. 처음 부를 때 3인칭으로 세우고 몸 리그의 시선 원천을 몸 자신에게 겁니다.
+         */
+        void setReplicatedPose( const ShooterAvatarPose& pose );
         /**
          * @brief 1인칭이면 몸은 보이고 머리만 숨깁니다 — 같은 오브젝트의 리그(`PoseModifierComponent`)의 슬롯 `_firstPersonHeadSlot`(머리 `ScaleBone`)을 켜고,
          *        외형의 칸 `_listFirstPersonHiddenSlot`(머리 장비 · 손 무기) 부품을 숨깁니다. 3인칭이면 둘 다 되돌립니다.
@@ -138,8 +160,10 @@ namespace sw
         float3                 _gunBeforePrevious; ///< 그 앞 표본
         uint32                 _gunSampleCount;    ///< 이번 걸음의 표본 수(2 차 차분은 셋째부터)
         float32                _gunJerkMax;        ///< 이번 걸음의 2 차 차분 최댓값(`getGunJerkMax`)
+        ShooterAvatarPose      _replicatedPose;    ///< 남의 몸이면 따르는 자세(`_bReplicated`)
         uint8                  _bYawReady         : 1;
         uint8                  _bStrideErrorShown : 1; ///< 노드가 없다는 오류를 한 번만 남긴다
-        [[maybe_unused]] uint8 _reserved          : 6;
+        uint8                  _bReplicated       : 1; ///< 플레이어 대신 `_replicatedPose` 를 따른다
+        [[maybe_unused]] uint8 _reserved          : 5;
     };
 } // namespace sw

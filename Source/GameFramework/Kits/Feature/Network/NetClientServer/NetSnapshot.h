@@ -38,8 +38,8 @@ namespace sw
     {
         using Snapshot    = NetMessageDef<0, NetMessageDirection::ToClient, NetChannelKind::UnreliableSequenced, 2>;                      ///< 판 2: 바뀐 엔티티를 통째 또는 바뀐 조각(`NetSnapshot::kDeltaChunkBytes`)만 싣는다
         using SnapshotAck = NetMessageBodyDef<1, NetMessageDirection::ToServer, NetChannelKind::UnreliableSequenced, NetSnapshotAckBody>; ///< 옛 확인은 새 확인이 덮는다
-        using Input       = NetMessageDef<2, NetMessageDirection::ToServer, NetChannelKind::Unreliable, 7>;                               ///< 비신뢰 — 입력 창을 겹쳐 보내고 서버가 틱 번호로 거르므로 순서 보장이 필요 없다(언리얼 이동 RPC 와 같다).                      ///< 판 7: 주장 뒤에 그 의도를 낸 폰의 엔티티 id 가 붙는다(6: 의도 끝에 발동 순간 시선 필드(선택), 5: 입력 항목마다의 보던 틱 스탬프, 4: 소유자 상태 필드)
-        using Table       = NetMessageTable<NetKitMessageRange::kClientServer, Snapshot, SnapshotAck, Input>;
+        using Input       = NetMessageDef<2, NetMessageDirection::ToServer, NetChannelKind::Unreliable, 8>;                               ///< 비신뢰 — 입력 창을 겹쳐 보내고 서버가 틱 번호로 거르므로 순서 보장이 필요 없다(언리얼 이동 RPC 와 같다).                      ///< 판 8: 발동이 사건 목록(버튼 · 시선 · 보던 시각)이고 보던 시각이 항목 스탬프에서 의도 안으로 옮겼다. 7: 주장 뒤에 그 의도를 낸 폰의 엔티티 id 가 붙는다(6: 의도 끝에 발동 순간 시선 필드(선택), 5: 입력 항목마다의 보던 틱 스탬프, 4: 소유자 상태 필드)
+        using Table       = NetWorldMessageTable<NetKitMessageRange::kClientServer, Snapshot, SnapshotAck, Input>;
 
         static constexpr uint8 kSnapshot    = Table::getKindOf<Snapshot>();
         static constexpr uint8 kSnapshotAck = Table::getKindOf<SnapshotAck>();
@@ -47,13 +47,12 @@ namespace sw
 
         static constexpr int32 kMaxInputBytes      = 255; ///< 틱 하나의 입력 상한. 클라이언트는 넘는 입력을 보내지 않고, 서버는 넘는 길이를 손상된 메시지로 본다
         static constexpr int32 kMaxInputCount      = 32;  ///< 입력 메시지 하나에 싣는 입력 수의 상한이자, 클라이언트가 확인을 기다리며 보관하는 입력 수의 상한이다. 두 쪽이 같은 값을 쓴다
-        static constexpr int32 kViewTickStampScale = 256; ///< 입력 항목 스탬프는 그 입력을 만들 때 보던 틱(소수) × 이 값이다(1/256 틱 단위)
         static constexpr int32 kMaxClaimsPerIntent = 8;   ///< 의도 입력 하나(`ReplicationClient::sendIntent`)에 싣는 맞음 주장의 상한. 의도 + 주장이 `kMaxInputBytes` 안에 든다
         /**
-         * @brief 입력 묶음의 전송 형식입니다. 길이를 붙인 덩어리로 보내고, 항목마다 스탬프(그 입력을 만들 때 보던 틱 × `kViewTickStampScale`)를 싣습니다.
-         * @details 스탬프가 항목마다라서 다시 보낸 옛 입력도 그 입력의 보던 틱으로 랙 보정한다(메시지마다 하나면 옛 입력을 최신 틱으로 판정한다). 형식을 바꾸면 와이어 버전을 올린다.
+         * @brief 입력 묶음의 전송 형식입니다. 길이를 붙인 덩어리로 보냅니다. 형식을 바꾸면 와이어 버전을 올린다.
+         * @details 보던 시각은 의도 안에 있다(`ControlIntent::_viewTick` · 발동 사건마다) — 다시 보낸 옛 입력도 그 입력의 시각으로 랙 보정한다.
          */
-        static constexpr NetInputFormat kInputFormat{ 0, kMaxInputBytes, kMaxInputCount, SW_TRUE };
+        static constexpr NetInputFormat kInputFormat{ 0, kMaxInputBytes, kMaxInputCount };
     };
 } // namespace sw
 

@@ -6,6 +6,7 @@
   ① 서로의 폰이 보이면 남쪽(-Z) 로 걷는다 — 자기 폰이 걷고(예측), 상대가 반대쪽으로 걷는 것이 보인다(복제). 걷는 동안 상대의 자리를 기다린다(둘이 같은 때 시작하지 않아도 된다).
      상대가 보는 문턱(2.5 m)은 자기가 멈추는 자리(5 m)보다 안쪽이다 — 먼저 끝난 쪽이 나가기 전에 상대가 본다.
   ② 어긋난 예측: 개발 명령 teleport 로 클라이언트의 자리만 20 m 옮긴다(속도 치트와 같은 모양) — 서버의 자리는 그대로이고, 되감아 맞춰 걷던 자리로 돌아온다(Hub.PawnCorrections).
+  ③ 카드 탁자 뒤 ④ 움직이는 바닥: 왕복 발판에 올라 실려 간다(Hub.PawnFloor · Hub.PawnFloorSlip).
   넷 걸음은 실제 시간으로 돌아 기다림은 실제 시간 시한(timeoutWallSeconds)이다. 회선 흉내 아래라 보정 횟수는 하한만 본다.
 -->
 <Scenario name="game.playground.netpair.hub_walk_south" fixedDelta="0.0166667" timeoutFrames="36000" startAfter="ScenePlaying" startTimeoutFrames="900" input="exclusive">
@@ -30,6 +31,10 @@
 	<DevCommand line="hub.cards join"/>
 	<WaitUntil watch="Hub.CardsStarted" equals="1" timeoutWallSeconds="60"/>
 	<Expect watch="Hub.CardsSeat" atLeast="0"/>
+	<!-- 서버가 나눈 패 — 내 손패는 일곱 장이 다 오고 상대는 장수만 온다. HUD 가 그 패를 보인다 -->
+	<WaitUntil watch="Hub.CardsHand" atLeast="7" timeoutWallSeconds="20"/>
+	<Expect watch="Hub.CardsOpponentHand" atLeast="7"/>
+	<WaitUntil watch="Hub.CardsHUDShown" equals="1" timeoutWallSeconds="10"/>
 	<WaitUntil watch="Hub.CardsMyTurn" equals="1" timeoutWallSeconds="30"/>
 	<DevCommand line="hub.cards draw"/>
 	<WaitUntil watch="Hub.CardsMyTurn" equals="0" timeoutWallSeconds="20"/>
@@ -37,6 +42,24 @@
 	<DevCommand line="hub.cards draw"/>
 	<WaitUntil watch="Hub.CardsActions" atLeast="4" timeoutWallSeconds="30"/>
 	<Expect watch="Hub.CardsRejected" equals="0"/>
+	<!-- ④ 움직이는 바닥: 왕복 발판(FloorShuttle, 번호 1)에 걸어 올라 서 있는다 — 예측한 폰이 바닥과 함께 실려 가고(밀린 거리가 작다), 서버가 되돌리지 않아 계속 그 위다(회선 흉내 아래) -->
+	<Press slot="Key.D"/>
+	<WaitUntil watch="Object.X" target="Player" atLeast="6.5" timeoutWallSeconds="20"/>
+	<Release slot="Key.D"/>
+	<Press slot="Key.S"/>
+	<WaitUntil watch="Object.Z" target="Player" atMost="-12" timeoutWallSeconds="20"/>
+	<Release slot="Key.S"/>
+	<WaitUntil watch="Hub.PawnFloor" equals="1" timeoutWallSeconds="20"/>
+	<WaitUntil watch="Object.X" target="FloorShuttle" atLeast="8.5" timeoutWallSeconds="20"/>
+	<WaitUntil watch="Object.X" target="FloorShuttle" atMost="5.5" timeoutWallSeconds="20"/>
+	<Expect watch="Hub.PawnFloor" equals="1"/>
+	<Expect watch="Hub.PawnFloorSlip" atMost="0.5"/>
+	<!-- 상대가 본 자리와 견줄 줄(`Scripts net-pair mmo`) — 상대가 남길 틈으로 바닥이 한 번 더 오간다 -->
+	<DevCommand line="hub.floor"/>
+	<WaitUntil watch="Object.X" target="FloorShuttle" atLeast="8.5" timeoutWallSeconds="20"/>
+	<WaitUntil watch="Object.X" target="FloorShuttle" atMost="5.5" timeoutWallSeconds="20"/>
+	<Expect watch="Hub.PawnFloor" equals="1"/>
+	<Expect watch="Object.Y" target="Player" near="0.2" tolerance="0.2"/>
 	<DevCommand line="hub.status"/>
 	<Pass/>
 </Scenario>

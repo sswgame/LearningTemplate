@@ -126,8 +126,9 @@ namespace sw
     public:
         REFLECT_BODY();
 
-        static constexpr uint32 kStateTag     = FourCCUtil::make( "CSHD" );
-        static constexpr uint32 kStateVersion = 1;
+        static constexpr uint32 kStateTag      = FourCCUtil::make( "CSHD" );
+        static constexpr uint32 kStateVersion  = 1;
+        static constexpr int32  kDeckCardCount = 108;
 
         SheddingCardGame();
 
@@ -136,6 +137,11 @@ namespace sw
          * @return 설정이 범위 안이면 true 입니다. 밖이면 오류를 남기고 false 이며 상태를 바꾸지 않습니다.
          */
         [[nodiscard]] bool initialize( const SheddingCardSettings& settings, uint32 seed );
+        /**
+         * @brief `initialize` 와 같되 나눌 때 · 다시 섞을 때 비밀 키 @p shuffleKey 로 섞습니다(`CardPile::shuffleSecret`). 같은 키 · 판 번호 @p dealID 면 같은 판입니다.
+         * @details 패를 숨기는 온라인 판의 서버가 쓴다. 키는 상태 바이트에 싣지 않으므로 이 판은 저장하지 않는다 — 서버가 행동을 다시 돌려 되살린다.
+         */
+        [[nodiscard]] bool initializeSecret( const SheddingCardSettings& settings, const SipHashKey& shuffleKey, uint64 dealID );
         /** @brief 정해진 배치로 시작합니다. 설정이 범위 밖이거나 손패 수가 인원과 다르거나 첫 차례가 인원 밖이면 오류를 남기고 false 이며 상태를 바꾸지 않습니다. */
         [[nodiscard]] bool initializeFromLayout( const SheddingCardSettings& settings, const SheddingCardLayout& layout, uint32 seed = GameRandom::kDefaultSeed );
 
@@ -173,9 +179,11 @@ namespace sw
         void  pollEvents( vector<SheddingCardEvent>& outListEvent );
 
     private:
-        int32 findNextPlayer( int32 player, int32 steps ) const;
-        int32 drawInto( int32 player, int32 count );
-        bool  hasColor( int32 player, SheddingCardColor color, uint16 exceptCardID ) const;
+        /** @brief 섞인 더미 @p deck 에서 손패를 나누고 첫 장을 뒤집은 배치를 만듭니다. */
+        static void makeDealtLayout( const SheddingCardSettings& settings, CardPile&& deck, SheddingCardLayout& outLayout );
+        int32       findNextPlayer( int32 player, int32 steps ) const;
+        int32       drawInto( int32 player, int32 count );
+        bool        hasColor( int32 player, SheddingCardColor color, uint16 exceptCardID ) const;
 
     private:
         vector<CardPile>                      _listHand;
@@ -184,6 +192,9 @@ namespace sw
         CardPile                              _discardPile;
         SheddingCardSettings                  _settings;
         GameRandom                            _random;
+        optional<SipHashKey>                  _shuffleKey;   ///< 있으면 다시 섞을 때 난수 대신 이 키를 쓴다(`initializeSecret`)
+        uint64                                _dealID;       ///< 비밀 섞기의 판 번호
+        uint32                                _shuffleCount; ///< 비밀 섞기를 한 횟수(섞을 때마다 순서가 다르게)
         PROPERTY( RuntimeState, Min = 0 )
         int32 _currentPlayer;
         PROPERTY( RuntimeState, Min = -1, Max = 1 )

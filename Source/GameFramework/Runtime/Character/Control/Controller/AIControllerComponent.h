@@ -118,6 +118,8 @@ namespace sw
          * @details 가상이 아니다 — 판단은 트리 데이터의 일이고 파생은 감각만 덮어쓴다(언리얼 `AAIController` + BT 서비스 · 트리의 나눔).
          */
         void think( const ControlFrameContext& context, const PawnComponent& pawn );
+        /** @brief 이번 틱의 이동 · 조종 회전을 @p inoutIntent 에 넣습니다. */
+        void produceMove( const ControlFrameContext& context, const PawnComponent& pawn, ControlIntent& inoutIntent );
         /** @brief 이번 틱에 갈 월드 방향(XZ, 길이 0..1)을 정합니다. 닿았으면 목적지를 지웁니다. */
         float3 computeMoveDirection( const PawnComponent& pawn, const float3& pawnPosition );
         /** @brief 내비 에이전트(SteerOnly)가 낸 속도를 이동 방향으로 씁니다. 목적지를 한 번 요청하고, 닿거나 경로가 없으면 목적지를 지웁니다. */
@@ -143,8 +145,9 @@ namespace sw
         ControlIntent                     _pending;   ///< 이번 틱에 쌓인 버튼 발동 · 아날로그
         float3                            _destination;
         float3                            _focusPoint;
-        uint32                            _heldButtonMask; ///< `holdButton` 으로 누르고 있는 버튼
-        NavMoveStatus                     _moveStatus;     ///< 내비 에이전트가 없을 때의 상태
+        uint32                            _pressedButtonMask; ///< `pressButton` 으로 이번 틱에 누른 버튼
+        uint32                            _heldButtonMask;    ///< `holdButton` 으로 누르고 있는 버튼
+        NavMoveStatus                     _moveStatus;        ///< 내비 에이전트가 없을 때의 상태
         uint8                             _bHasDestination  : 1;
         uint8                             _bHasFocus        : 1;
         uint8                             _bDestinationSent : 1; ///< 지금 목적지를 내비 에이전트에 걸었다

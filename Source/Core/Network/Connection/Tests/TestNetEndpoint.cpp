@@ -297,7 +297,7 @@ SW_TEST_CASE( NetEndpointTest, HostsRejectFullServersForeignProtocolsAndDetectDi
     SW_EXPECT_EQUAL( 1, server.getConnectedCount() );
 
     // 끊기 — 클라이언트가 끊으면 서버가 알고, 자리가 빈다.
-    first.disconnect( 0 );
+    first.disconnect( 0, NetLinger::none() );
     runAll( 0.2, true, true );
     listEvent.clear();
     server.pollEvents( listEvent );
@@ -353,7 +353,7 @@ SW_TEST_CASE( NetEndpointTest, ClosedSlotIsNotReusedBeforeTheGameThreadSeesTheDi
     server.pollEvents( listEvent );
     SW_REQUIRE_EQUAL( 1, server.getConnectedCount() );
 
-    first.disconnect( 0 );
+    first.disconnect( 0, NetLinger::none() );
     runAll( 0.2 ); // 서버가 끊김을 처리했지만 게임 스레드는 아직 꺼내지 않았다
     SW_REQUIRE_TRUE( second.connect( NetAddress::makeLoopback( 4100 ) ) );
     runAll( 0.5 );
@@ -725,7 +725,7 @@ SW_TEST_CASE( NetEndpointTest, ServerTellsManyClientsApartByAddress )
     SW_EXPECT_EQUAL( kClientCount, receivedCount );
 
     // 하나가 끊고 다시 붙어도 주소로 바른 자리를 찾는다.
-    arrClient[7].disconnect( 0 );
+    arrClient[7].disconnect( 0, NetLinger::none() );
     runAll( 0.2 );
     SW_EXPECT_EQUAL( kClientCount - 1, server.getConnectedCount() );
     SW_REQUIRE_TRUE( arrClient[7].connect( NetAddress::makeLoopback( 4000 ) ) );
@@ -802,7 +802,7 @@ SW_TEST_CASE( NetEndpointTest, DisconnectMidMessageLeavesNoFragmentsBehind )
     SW_REQUIRE_TRUE( pServerSide != nullptr );
     SW_REQUIRE_TRUE( pServerSide->getStats()._receivedPacketCount > 3 ); // 서버는 앞 조각을 모으는 중이다
 
-    cluster.getClient( 0 ).disconnect( 0 );
+    cluster.getClient( 0 ).disconnect( 0, NetLinger::none() );
     cluster.run( 0.5 );
     SW_REQUIRE_EQUAL( 0, cluster.getServer().getConnectedCount() );
     SW_REQUIRE_TRUE( cluster.getClient( 0 ).connect( NetAddress::makeLoopback( 4000 ) ) );
@@ -910,8 +910,14 @@ SW_TEST_CASE( NetEndpointTest, FullReliableWindowClosesInsteadOfDroppingMessages
     {
         ++queuedCount;
     }
-    SW_EXPECT_EQUAL( NetConnection::kReliableWindow - 1, queuedCount );
+    SW_EXPECT_EQUAL( NetConnection::kReliableBulkWindow, queuedCount );
     SW_EXPECT_EQUAL( 1, server.getConnectedCount() ); // 역압만 알렸다
+    // 나눠 보내는 쪽이 자기 몫을 다 채워도 닫는 보내기의 자리는 남는다 — 큰 전송 사이의 작은 메시지가 연결을 닫지 않는다.
+    for ( int32 index = queuedCount; index < NetConnection::kReliableWindow - 1; ++index )
+    {
+        SW_REQUIRE_TRUE( server.sendMessage( 0, NetChannelKind::ReliableOrdered, payload, static_cast<int32>( sizeof( payload ) ) ) );
+    }
+    SW_EXPECT_EQUAL( 1, server.getConnectedCount() );
 
     SW_EXPECT_LOG( "Net.ReliableOverflow" );
     SW_EXPECT_FALSE( server.sendMessage( 0, NetChannelKind::ReliableOrdered, payload, static_cast<int32>( sizeof( payload ) ) ) );
@@ -970,7 +976,7 @@ SW_TEST_CASE( NetEndpointTest, ReconnectWaitsForHeldSlotInsteadOfServerFull )
     vector<NetEndpointEvent> listEvent;
     cluster.getServer().pollEvents( listEvent );
 
-    cluster.getClient( 0 ).disconnect( 0 );
+    cluster.getClient( 0 ).disconnect( 0, NetLinger::none() );
     SW_REQUIRE_TRUE( cluster.getClient( 0 ).connect( NetAddress::makeLoopback( 4000 ) ) );
     cluster.run( 0.5 ); // 서버는 끊김을 받았지만 사건을 아직 꺼내지 않았다 — 슬롯 0 은 붙잡혀 있다
     SW_EXPECT_TRUE( cluster.getClient( 0 ).getConnectionState( 0 ) == NetConnectionState::Connecting );
@@ -979,4 +985,78 @@ SW_TEST_CASE( NetEndpointTest, ReconnectWaitsForHeldSlotInsteadOfServerFull )
     SW_EXPECT_TRUE( listEvent.empty() == false && listEvent.back()._kind == NetEndpointEvent::Kind::Disconnected );
     cluster.run( 0.5 );
     SW_EXPECT_TRUE( cluster.getClient( 0 ).getConnectionState( 0 ) == NetConnectionState::Connected );
+}
+
+/** @brief [NetEndpointTest] 끊김 알림을 모두 잃어도 상대의 다음 패킷에 다시 알려 타임아웃(5 초) 전에 끊긴다 */
+SW_TEST_CASE( NetEndpointTest, LostDisconnectIsSentAgainToAPeerStillTalking )
+{
+    NetEndpointConfig settings;
+    settings._debugHold = NetDebugHold::Off;
+    test::LoopbackCluster cluster( 93u );
+    NetTestUtil::addServerAndClient( cluster, settings );
+    SW_REQUIRE_TRUE( cluster.connectClients( 30 ) );
+    NetEmulationConditions conditions;
+    conditions._lossRate = 1.0f;
+    cluster.setConditions( conditions );
+    cluster.getServer().disconnect( 0, NetLinger::none() ); // 알림 셋을 모두 잃는다
+    cluster.run( 0.1 );
+    SW_EXPECT_TRUE( cluster.areClientsConnected() );
+    cluster.setConditions( NetEmulationConditions{} );
+    cluster.run( 2.0 );
+    SW_EXPECT_TRUE( cluster.getClient( 0 ).getConnectionState( 0 ) == NetConnectionState::Disconnected );
+    vector<NetEndpointEvent> listEvent;
+    cluster.getClient( 0 ).pollEvents( listEvent );
+    SW_REQUIRE_TRUE( listEvent.empty() == false );
+    SW_EXPECT_TRUE( listEvent.back()._reason == NetDisconnectReason::Remote );
+}
+
+/**
+ * @brief [NetEndpointTest] 닫기 전에 비울 시간을 주면 방금 보낸 신뢰 메시지가 손실 속에서도 닿은 뒤 닫히고, 상대가 사라졌으면 기한에 닫힌다 — 비우는 동안은 새로 보내지 못한다
+ */
+SW_TEST_CASE( NetEndpointTest, LingerDeliversReliableMessagesBeforeClosing )
+{
+    NetEndpointConfig settings;
+    settings._debugHold = NetDebugHold::Off;
+    test::LoopbackCluster cluster( 91u );
+    NetTestUtil::addServerAndClient( cluster, settings );
+    SW_REQUIRE_TRUE( cluster.connectClients( 30 ) );
+    NetEmulationConditions conditions;
+    conditions._latency  = 0.03;
+    conditions._lossRate = 0.4f;
+    cluster.setConditions( conditions );
+    const vector<uint8> bytes( 3000, uint8{ 0x5A } ); // 조각 셋
+    SW_REQUIRE_TRUE( cluster.getServer().sendMessage( 0, NetChannelKind::ReliableOrdered, bytes ) );
+    cluster.getServer().disconnect( 0, NetLinger::waitUpTo( 10.0 ) );
+    SW_EXPECT_TRUE( cluster.getServer().getConnectionState( 0 ) == NetConnectionState::Disconnecting );
+    SW_EXPECT_FALSE( cluster.getServer().sendMessage( 0, NetChannelKind::ReliableOrdered, bytes ) );
+    vector<uint8> received;
+    bool          bReceived = false;
+    for ( int32 step = 0; step < 600 && bReceived == false; ++step )
+    {
+        cluster.step( 1.0 / 60.0 );
+        int32          connectionID = -1;
+        NetChannelKind channel      = NetChannelKind::Unreliable;
+        bReceived                   = cluster.getClient( 0 ).receiveMessage( connectionID, channel, received );
+    }
+    SW_EXPECT_TRUE( bReceived );
+    SW_EXPECT_TRUE( received == bytes );
+    cluster.run( 3.0 );
+    vector<NetEndpointEvent> listEvent;
+    cluster.getServer().pollEvents( listEvent );
+    SW_REQUIRE_TRUE( listEvent.empty() == false );
+    SW_EXPECT_TRUE( listEvent.back()._kind == NetEndpointEvent::Kind::Disconnected );
+    SW_EXPECT_TRUE( listEvent.back()._reason == NetDisconnectReason::Requested );
+
+    // 상대에게 하나도 닿지 않으면 기한에 닫는다.
+    test::LoopbackCluster lost( 92u );
+    NetTestUtil::addServerAndClient( lost, settings );
+    SW_REQUIRE_TRUE( lost.connectClients( 30 ) );
+    conditions._lossRate = 1.0f;
+    lost.setConditions( conditions );
+    SW_REQUIRE_TRUE( lost.getServer().sendMessage( 0, NetChannelKind::ReliableOrdered, bytes ) );
+    lost.getServer().disconnect( 0, NetLinger::waitUpTo( 0.5 ) );
+    lost.run( 0.3 );
+    SW_EXPECT_TRUE( lost.getServer().getConnectionState( 0 ) == NetConnectionState::Disconnecting );
+    lost.run( 0.4 );
+    SW_EXPECT_TRUE( lost.getServer().getConnectionState( 0 ) == NetConnectionState::Disconnected );
 }

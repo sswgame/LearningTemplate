@@ -80,6 +80,7 @@ namespace sw
         static constexpr int32   kMaxReliablePerPacket      = 64;  ///< 패킷 하나에 싣는 신뢰 메시지 상한(보낸 패킷 기록이 힙을 쓰지 않게 한다).
         static constexpr int32   kMaxNotifiedPerPacket      = 8;   ///< 패킷 하나에 싣는 전달 통지 메시지 상한(넘는 것은 다음 패킷에 싣는다).
         static constexpr int32   kReliableWindow            = 256; ///< 확인되지 않은 신뢰 메시지의 상한. 넘으면 `sendMessage` 가 거절한다(막힘). 2 의 거듭제곱(`SequenceBuffer`).
+        static constexpr int32   kReliableBulkWindow        = 128; ///< `NetEndpoint::trySendMessage` 가 쓰는 신뢰 창의 몫. 나머지는 닫는 보내기(`sendMessage`)의 것이다 — 큰 상태를 나눠 보내는 쪽이 창을 다 채우면 그 뒤의 작은 메시지 하나가 연결을 닫는다
         static constexpr uint32  kPacketWindow              = 256; ///< 보낸 · 받은 패킷을 기억하는 슬롯 수. 2 의 거듭제곱(`SequenceBuffer`).
         static constexpr int32   kPacketHeaderBits          = 16 + 16 + 32;
         static constexpr int32   kFastResendGap             = 3;    ///< 이만큼 뒤의 패킷이 확인됐는데 확인이 없으면 잃은 것으로 본다.
@@ -106,6 +107,7 @@ namespace sw
         static_assert( ( 1 << kMessageSizeBits ) > kMaxSingleMessageSize, "the length field must hold one whole fragment" );
         static_assert( kMaxReliableMessageSize % kMaxSingleMessageSize == 0 && kMaxReliableMessageSize / kMaxSingleMessageSize < kReliableWindow,
                        "a whole reliable message must fit in the reliable window" );
+        static_assert( kMaxReliableMessageSize / kMaxSingleMessageSize <= kReliableBulkWindow, "a whole reliable message must fit in the bulk share of the reliable window" );
 
         NetConnection();
 
@@ -117,6 +119,8 @@ namespace sw
         [[nodiscard]] bool sendMessage( NetChannelKind channel, const uint8* pData, int32 size );
         /** @brief @p size 바이트 신뢰 메시지(조각 모두)를 지금 신뢰 창이 받을 수 없으면 true 입니다. */
         bool isReliableWindowFull( int32 size ) const;
+        /** @brief 같되 나눠 보내는 쪽의 몫(`kReliableBulkWindow`)을 봅니다. */
+        bool isReliableBulkWindowFull( int32 size ) const;
         /**
          * @brief 비신뢰 메시지를 전달 통지 @p tag 를 달아 넣습니다. 판정은 `pollDeliveryNotifications` 가 메시지마다 한 번 돌려줍니다.
          * @details 메시지는 1 바이트 이상(첫 바이트가 종류)이고 `kMaxSingleMessageSize` 이하여야 합니다. 어기면 오류 로그와 함께 false 이고 통지도 나지 않습니다.

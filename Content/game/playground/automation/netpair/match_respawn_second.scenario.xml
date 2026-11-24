@@ -1,0 +1,35 @@
+<?xml version="1.0" encoding="utf-8"?>
+<?asset guid="94daa5dce578ffa6b6f031d82a7f632e"?>
+<!--
+  온라인 매치에서 두 사람이 동시에 두고 서로 쓰러뜨린다(둘째 사람) — match_respawn_first 의 짝. 첫 사람이 두고 있는 매치 서버의 빈 자리로 들어간다.
+  ① 첫 사람이 보이면(Shooter.RemotePawnCount) 바라보고 쏜다 — 서버가 되감아 판정하고 처치 수가 오른다.
+  ② 첫 사람이 되갚아 쓰러지면 같은 매치에서 가득 찬 체력으로 다시 태어난다. 스스로 나가 허브로 돌아온다.
+-->
+<Scenario name="game.playground.netpair.match_respawn_second" fixedDelta="0.0166667" timeoutFrames="120000" startAfter="ScenePlaying" startTimeoutFrames="900">
+	<Variable name="gv_playgroundAutoPlay" value="0"/>
+	<DevCommand line="online.connect"/>
+	<WaitUntil watch="Online.SessionState" atLeast="3" timeoutWallSeconds="30"/>
+	<DevCommand line="playground.online.login 2"/>
+	<WaitUntil watch="Playground.OnlineLoggedIn" equals="1" timeoutWallSeconds="30"/>
+	<DevCommand line="playground.online.joinhub 127.0.0.1:17977"/>
+	<WaitUntil watch="Hub.AvatarID" atLeast="1" timeoutWallSeconds="60"/>
+	<!-- ① -->
+	<DevCommand line="minigame.enter shooter3d_match"/>
+	<WaitUntil watch="Playground.MatchState" equals="4" timeoutWallSeconds="120"/>
+	<WaitUntil watch="Shooter.ServerHealth" atLeast="50" timeoutWallSeconds="60"/>
+	<WaitUntil watch="Shooter.RemotePawnCount" equals="1" timeoutWallSeconds="60"/>
+	<DevCommand line="cheat.shooter.face"/>
+	<Press slot="Mouse.Left"/>
+	<WaitUntil watch="Shooter.ServerKillCount" atLeast="1" timeoutWallSeconds="30"/>
+	<Release slot="Mouse.Left"/>
+	<!-- ② 쓰러짐 → 다시 태어남 -->
+	<WaitUntil watch="Shooter.ServerHealth" atMost="0" timeoutWallSeconds="60"/>
+	<WaitUntil watch="Shooter.ServerHealth" atLeast="50" timeoutWallSeconds="30"/>
+	<Expect watch="Minigame.RestoreCount" equals="0"/>
+	<DevCommand line="minigame.quit"/>
+	<WaitUntil watch="Minigame.RestoreCount" equals="1" timeoutWallSeconds="60"/>
+	<WaitUntil watch="Playground.MatchState" equals="0" timeoutWallSeconds="60"/>
+	<WaitUntil watch="Hub.AvatarID" atLeast="1" timeoutWallSeconds="60"/>
+	<DevCommand line="online.disconnect"/>
+	<Pass/>
+</Scenario>

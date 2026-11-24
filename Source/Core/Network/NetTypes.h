@@ -31,6 +31,20 @@ namespace sw
          * @details 영역마다 쓰는 메시지 표의 와이어 판(`INetMessageHandler::getWireVersion`)을 상대와 맞춰 보는 알림이다. 몸: 수(varuint) · (영역 8 비트, 판 32 비트) 들.
          */
         static constexpr uint8 kRouterWireVersionKind = kEngine + kSize - 1;
+        /** @brief 라우터가 쓰는 또 한 종류(엔진 영역 0x0D, 서버 → 클라이언트) — 서버의 월드 세대 알림이다(`NetMessageRouter::openWorld`). 몸: 세대 8 비트 · 씬 번호(varuint). 처리기는 맡지 못한다. */
+        static constexpr uint8 kRouterWorldKind = kEngine + kSize - 3;
+
+        /** @brief 라우터가 쓰는 또 한 종류(엔진 영역 0x0C, 양방향) — 보류한 메시지를 끝내 전하지 못했다고 보낸 쪽에 알린다. 몸: 종류 8 비트 · 까닭 2 비트 · 보류 열쇠(varuint). */
+        static constexpr uint8 kRouterDeliveryFailedKind = kEngine + kSize - 4;
+
+        /** @brief 라우터가 쓰는 또 한 종류(엔진 영역 0x0B, 서버 → 클라이언트, 비신뢰) — 월드의 서버 시계 알림이다(`NetMessageRouter::advanceWorldClock`). 몸: 세대 8 비트 · 서버 틱(varuint). */
+        static constexpr uint8 kRouterClockKind = kEngine + kSize - 5;
+
+        /** @brief 라우터가 쓰는 또 한 종류(엔진 영역 0x0A, 클라이언트 → 서버) — 클라이언트가 서버의 월드에 들어왔다(세대) · 나갔다(0)(`NetMessageRouter::setLocalScene`). 몸: 세대 8 비트. */
+        static constexpr uint8 kRouterPresenceKind = kEngine + kSize - 6;
+
+        /** @brief 라우터가 스스로 읽는 종류면 true 입니다. 처리기 · 메시지 표가 쓰지 못한다. */
+        static constexpr bool isRouterKind( int32 kind ) { return kind == kRouterWireVersionKind || kind == kRouterWorldKind || kind == kRouterDeliveryFailedKind || kind == kRouterClockKind || kind == kRouterPresenceKind; }
 
         static constexpr bool isInRange( uint8 kind, uint8 rangeBase ) { return kind >= rangeBase && kind < rangeBase + kSize; }
     };
@@ -46,7 +60,7 @@ namespace sw
      */
     struct NetWireVersion
     {
-        static constexpr uint32 kCore = 12; ///< 12: 엔진 영역 부하 메시지(`net.traffic`)가 라우터 판 알림 종류(0x0F)에서 0x0E 로 옮겼다. 11: 게임 영역이 0x80 에서 0xC0 으로 옮겨 키트 영역이 0x10..0xBF 가 됐다. 10: 라우터가 영역마다 메시지 표의 판을 알리는 종류(`NetMessageRange::kRouterWireVersionKind`)가 생겼다. 9: 엔진 세션 영역에 합성 해시 메시지(`kResourceDigest`, 클라이언트 → 서버)가 생겼다. 8: 엔진 세션 영역에 서버 종료 통지 메시지(`kShutdownNotice`)가 생겼다. 7: 엔진 세션 영역(`NetMessageRange::kEngine`)에 서버 틱 메시지가 생겼다. 6: 데이터 패킷 본문 첫머리에 디버거 대기 1비트(`NetDebugHold`)가 추가됐다.
+        static constexpr uint32 kCore = 18; ///< 18: 주소가 바뀐 암호화 연결의 경로 확인 패킷(`NetEndpoint::PacketKind::PathProbe`)이 생겼다. 17: 클라이언트가 서버의 월드에 들고 남을 알리는 종류(`NetMessageRange::kRouterPresenceKind`)가 생겼고, 서버는 들어온 연결에만 월드 범위 메시지를 보낸다. 16: 라우터가 월드의 서버 시계를 알리는 종류(`NetMessageRange::kRouterClockKind`)가 생겼다. 15: 월드 세대 알림이 8 비트 세대 · 씬 번호가 되고, 월드 범위 표의 메시지는 종류 뒤에 세대 한 바이트를 싣는다. 14: 보류한 메시지를 전하지 못했다고 알리는 종류(`NetMessageRange::kRouterDeliveryFailedKind`)가 생겼다. 13: 라우터가 서버의 월드 세대를 알리는 종류(`NetMessageRange::kRouterWorldKind`)가 생겼다. 12: 엔진 영역 부하 메시지(`net.traffic`)가 라우터 판 알림 종류(0x0F)에서 0x0E 로 옮겼다. 11: 게임 영역이 0x80 에서 0xC0 으로 옮겨 키트 영역이 0x10..0xBF 가 됐다. 10: 라우터가 영역마다 메시지 표의 판을 알리는 종류(`NetMessageRange::kRouterWireVersionKind`)가 생겼다. 9: 엔진 세션 영역에 합성 해시 메시지(`kResourceDigest`, 클라이언트 → 서버)가 생겼다. 8: 엔진 세션 영역에 서버 종료 통지 메시지(`kShutdownNotice`)가 생겼다. 7: 엔진 세션 영역(`NetMessageRange::kEngine`)에 서버 틱 메시지가 생겼다. 6: 데이터 패킷 본문 첫머리에 디버거 대기 1비트(`NetDebugHold`)가 추가됐다.
 
         /** @brief 계층별 버전을 값 하나로 섞습니다. FNV-1a 이므로 순서도 결과에 반영됩니다. */
         static constexpr uint32 combine( std::initializer_list<uint32> listVersion )
@@ -136,7 +150,32 @@ namespace sw
         Disconnected = 0,
         Connecting, ///< 클라이언트가 요청과 챌린지 응답을 보내는 중이다.
         Connected,
-        Disconnecting
+        Disconnecting ///< 닫는 중이다 — 확인되지 않은 신뢰 메시지만 비운다(`NetLinger`). 새로 보내지도 받지도 않는다
+    };
+
+    /**
+     * @class NetLinger
+     * @brief 연결을 닫기 전에 확인되지 않은 신뢰 메시지를 비울 시간입니다. 닫는 쪽이 늘 고릅니다(기본값이 없다).
+     * @details 바로 닫으면 방금 보낸 신뢰 메시지(거절 까닭 · 저장 결과)가 손실 하나로 사라진다. Valve GameNetworkingSockets `CloseConnection` 의 `bEnableLinger` · 소켓 `SO_LINGER` 자리.
+     */
+    class NetLinger
+    {
+    public:
+        /** @brief 비우지 않고 바로 닫습니다(상대가 프로토콜을 어겼다 · 보낼 것이 없다). */
+        static constexpr NetLinger none() { return NetLinger{ 0.0 }; }
+        /** @brief 확인되지 않은 신뢰 메시지가 모두 확인되거나 @p seconds 가 지나면 닫습니다. 그동안 새로 보내지도 받지도 않는다. */
+        static constexpr NetLinger waitUpTo( float64 seconds ) { return NetLinger{ seconds }; }
+
+        constexpr float64 getSeconds() const { return _seconds; }
+
+    private:
+        constexpr explicit NetLinger( float64 seconds )
+            : _seconds{ seconds }
+        {
+        }
+
+    private:
+        float64 _seconds;
     };
 
     /** @brief 연결이 끊긴 까닭입니다. */

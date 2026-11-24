@@ -11,6 +11,7 @@
 #pragma once
 #include "Core/Container/string.h"
 #include "Core/Container/vector.h"
+#include "Core/Foundation/Expected.h"
 #include "Core/Foundation/Macros.h"
 #include "Core/Foundation/Types.h"
 #include "Core/Math/Math.h"
@@ -34,6 +35,7 @@
 
 #include "Games/Playground/Shooter3D/ShooterBlockerComponent.h"
 #include "Games/Playground/Shooter3D/ShooterEnemyComponent.h"
+#include "Games/Playground/Shooter3D/ShooterFloor.h"
 
 namespace sw
 {
@@ -69,12 +71,21 @@ namespace sw
         uint32            _appearanceSeed{ 0 }; ///< 외형 씨앗 — 복제 모습이 같은 얼굴이 되게 함께 보낸다
         float32           _yaw{ 0.0f };
         ShooterEnemyPhase _phase{ ShooterEnemyPhase::Rising };
-        uint8             _kindIndex{ 0 }; ///< 적 종류(`_listEnemyKind` 의 자리, `kEliteKindIndex` 는 정예)
+        uint8             _kindIndex{ 0 };     ///< 적 종류(`_listEnemyKind` 의 자리, `kEliteKindIndex` 는 정예)
+        uint8             _teleportCount{ 0 }; ///< 순간 이동 번호(서버가 복제할 때 채운다)
     };
 } // namespace sw
 
 namespace sw
 {
+    /** @brief 이번 프레임에 판을 두는 플레이어 하나입니다. 디렉터가 `PrePhysics` 에서 기록하고 적이 읽습니다. */
+    struct ShooterPlayerView
+    {
+        GameObjectHandle _object{};
+        AbsolutePosition _feet{};
+        uint8            _bAlive{ SW_TRUE };
+    };
+
     /**
      * @brief 적 한 종류입니다 — 생물마다 스켈레톤 · 애니메이션 그래프 · 물리(맞음 상자) · 알림 표가 달라 프리팹이 종류의 정본이고, 외형 프리셋이 그 몸의 모습이다.
      * @details 언리얼 스폰 표의 행이 클래스(Blueprint)를 가리키는 것과 같다 — 프리팹 하나에 프리셋만 바꾸던 예전 모양은 사람형 해골 한 종류만 받았다.
@@ -121,6 +132,7 @@ namespace sw
     struct ShooterReplicatedEnemy
     {
         AbsolutePosition  _position{};
+        float3            _velocity{};
         float32           _yaw{ 0.0f };
         uint32            _netEntityID{ 0 };
         uint32            _appearanceSeed{ 0 };
@@ -155,7 +167,8 @@ namespace sw
         SW_REGISTERED_COMPONENT( ShooterGameModeComponent );
 
         /** @brief `ShooterEnemyView::_kindIndex` 의 정예 표시입니다. */
-        static constexpr uint8 kEliteKindIndex = 255;
+        static constexpr uint32 kMaxFloor       = 8; ///< 씬에 둘 수 있는 움직이는 바닥 수(`ShooterPawnNetState::_floorNumber` 의 Max)
+        static constexpr uint8  kEliteKindIndex = 255;
 
         ShooterGameModeComponent();
         virtual ~ShooterGameModeComponent() override;
@@ -177,12 +190,24 @@ namespace sw
         void spawnTracer( const float3& from, const float3& to, float32 width, const float4& color, float32 lifetime );
 
         // ---- 다른 컴포넌트가 읽는 것(PrePhysics 뒤의 그룹) ----
-        const vector<ShooterArenaBox>&  getBoxes() const { return _listBox; }
+        const vector<ShooterArenaBox>& getBoxes() const { return _listBox; }
+        /** @brief 이번 프레임의 움직이는 바닥입니다(네트가 움직이지 않는 몸 — 적 · 혼자 하는 플레이어). */
+        const vector<ShooterFloorStep>& getFloorSteps() const { return _listFloorStep; }
+        /** @brief 바닥 시각 @p fromSeconds 에서 @p toSeconds 까지의 걸음을 냅니다. 차례가 곧 바닥 번호다(서버 · 클라이언트가 같다). */
+        void computeFloorSteps( float64 fromSeconds, float64 toSeconds, vector<ShooterFloorStep>& outListFloor ) const;
+        /** @brief 바닥 @p floorNumber(1 부터)의 그 시각 자세(절대)입니다. 없거나 사라졌으면 false 입니다. */
+        [[nodiscard]] bool              computeFloorPose( uint8 floorNumber, float64 seconds, float3& outPosition, float32& outYaw ) const;
         const vector<ShooterEnemyView>& getEnemyViews() const { return _listEnemyView; }
-        /** @brief 이번 프레임의 플레이어 발 위치입니다. 적이 이쪽으로 옵니다. */
-        const AbsolutePosition& getPlayerFeet() const { return _playerFeet; }
-        bool                    isPlayerAlive() const { return _bPlayerAlive == SW_TRUE; }
-        GameObjectHandle        getPlayer() const { return _player; }
+        /** @brief @p from 에서 가장 가까운 산 플레이어입니다(적이 이쪽으로 온다). 산 사람이 없으면 가장 가까운 쓰러진 사람이고, 판을 두는 사람이 없으면 nullptr 입니다. */
+        const ShooterPlayerView* findNearestPlayer( const AbsolutePosition& from ) const;
+        /** @brief 이번 프레임에 판을 두는 플레이어들입니다(혼자 · 클라이언트는 씬의 플레이어 하나, 서버는 접속한 몸마다 하나). */
+        const vector<ShooterPlayerView>& getPlayerViews() const { return _listPlayerView; }
+        /** @brief 씬의 플레이어입니다. 네트 세션(`ShooterNetPawnComponent`)도 이 오브젝트에 있다. */
+        GameObjectHandle getPlayer() const { return _player; }
+        /** @brief 매치가 한 사람의 판을 끝내는 쓰러짐 횟수입니다. 그 전에는 자리에서 다시 태어난다. */
+        int32 getMatchDownLimit() const { return _matchDownLimit; }
+        /** @brief 다음에 모을 결과(`collectMinigameResult`)의 처치 수를 정합니다 — 매치 서버는 사람마다 결과를 낸다. */
+        void setResultKillCount( uint32 killCount ) { _resultKillCount = killCount; }
         /** @brief 스폰한 적 수입니다(쓰러져 정리를 기다리는 것 포함 — 진단 · 개발 기록이 읽는다). */
         uint32 getEnemyCount() const { return static_cast<uint32>( _listEnemy.size() ); }
         /** @brief 스폰한 적 @p index 의 오브젝트입니다(스폰 순서). */
@@ -240,7 +265,18 @@ namespace sw
         };
 
     private:
+        /** @brief 움직이는 바닥 하나입니다. */
+        struct ArenaFloor
+        {
+            GameObjectHandle _object{};
+            float3           _halfSize{};
+        };
+
         void collectBoxes();
+        /** @brief 씬의 움직이는 바닥(`InterpToMovementComponent` 를 가진 상자 강체)을 이름 차례로 모읍니다 — 차례가 곧 복제하는 바닥 번호라 서버 · 클라이언트가 같아야 한다. */
+        void collectFloors();
+        /** @brief 이번 프레임의 바닥 걸음을 냅니다(`getFloorSteps`). */
+        void updateFloorSteps();
         void startPacing();
         void applyDirectorEvents();
         /** @brief 페이싱 프로필이 다시 읽혔으면(핫 리로드) 판을 이어 새 프로필로 옮깁니다(`AIDirector::rebindProfile`). 구조가 바뀌었으면 이 판은 옛 프로필로 돈다. */
@@ -300,8 +336,13 @@ namespace sw
         float32 _nearEnemyDistance;
         PROPERTY( Category = "Pacing", DisplayName = "Repair Health Per Scale", Tooltip = "Health one unit of a repair reward restores", Min = 0.0 )
         float32 _repairHealthPerScale;
+        PROPERTY( Category = "Match", DisplayName = "Match Down Limit", Tooltip = "Times one player may fall in an online match before that player's match ends; before that the player is born again", Min = 1 )
+        int32 _matchDownLimit;
 
         vector<ShooterArenaBox>             _listBox;
+        vector<ArenaFloor>                  _listFloor;     ///< 움직이는 바닥(번호 차례)
+        vector<ShooterFloorStep>            _listFloorStep; ///< 이번 프레임의 바닥 걸음
+        float64                             _floorSeconds;  ///< 지난 프레임의 바닥 시각
         vector<ShooterEnemyView>            _listEnemyView;
         shared_ptr<const AIDirectorProfile> _pProfile; ///< 페이싱 프로필(공유 캐시의 한 벌, 떼어 내는 종류 — 다시 읽으면 감독이 번호를 이어 새 객체로 옮긴다)
         SharedAssetRef<SpawnTable>          _pTable;
@@ -316,19 +357,22 @@ namespace sw
         vector<ShooterReplicatedEnemy>      _listPendingReplica; ///< 틱 뒤에 세울 복제 모습
         MaterialTintCache                   _tintCache;          ///< 효과 색(같은 색은 나눠 쓴다).
         GameObjectHandle                    _autoPlayController; ///< 자동 플레이 AI 조종자 오브젝트(스폰한 것이며 정리할 목록에 들어 있다).
-        AbsolutePosition                    _playerFeet;
-        float32                             _pendingHeal; ///< 감독의 수리 보상. 틱이 끝난 뒤 플레이어 체력에 반영한다.
-        uint32                              _spawnCursor; ///< 다음 적의 스폰 위치 순번.
+        vector<ShooterPlayerView>           _listPlayerView;
+        vector<GameObjectHandle>            _listPlayerScratch;
+        optional<uint32>                    _resultKillCount; ///< 결과로 낼 처치 수(비었으면 이 판의 처치 수)
+        float32                             _pendingHeal;     ///< 감독의 수리 보상. 틱이 끝난 뒤 플레이어 체력에 반영한다.
+        uint32                              _spawnCursor;     ///< 다음 적의 스폰 위치 순번.
         PROPERTY( RuntimeState )
         uint32                              _killCount;
-        AssetReloadWatch<AIDirectorProfile> _profileReload;    ///< 프로필을 받을 때의 프로필 캐시 다시 읽기 횟수(바뀌면 판을 이어 새 프로필로 옮긴다)
-        uint32                              _nextEnemyNetID;   ///< 다음 적의 복제 엔티티 번호
-        int8                                _appliedAutoPlay;  ///< 플레이어 폰에 맞춰 둔 자동 플레이(-1 아직, 0 끔, 1 켬).
-        uint8                               _bAmmoPending : 1; ///< 탄 보상. 틱이 끝난 뒤 플레이어 탄을 채운다.
-        uint8                               _bPacingReady : 1; ///< 프로필과 스폰 테이블을 읽었다.
-        uint8                               _bPlayerAlive : 1;
-        uint8                               _bReplica     : 1; ///< 네트 클라이언트의 월드다(판을 돌리지 않고 스냅샷의 적을 그린다)
-        uint8                               _bMatchEnded  : 1; ///< 매치를 끝내고 돌아갈 맵을 기다린다(`endMatch`)
-        [[maybe_unused]] uint8              _reserved     : 3;
+        AssetReloadWatch<AIDirectorProfile> _profileReload;   ///< 프로필을 받을 때의 프로필 캐시 다시 읽기 횟수(바뀌면 판을 이어 새 프로필로 옮긴다)
+        uint32                              _nextEnemyNetID;  ///< 다음 적의 복제 엔티티 번호
+        int8                                _appliedAutoPlay; ///< 플레이어 폰에 맞춰 둔 자동 플레이(-1 아직, 0 끔, 1 켬).
+        PROPERTY( Category = "Match", DisplayName = "Spawn Enemies", Tooltip = "Enemies come (off: players only fight each other)" )
+        uint8                  _bSpawnEnemies : 1;
+        uint8                  _bAmmoPending  : 1; ///< 탄 보상. 틱이 끝난 뒤 플레이어 탄을 채운다.
+        uint8                  _bPacingReady  : 1; ///< 프로필과 스폰 테이블을 읽었다.
+        uint8                  _bReplica      : 1; ///< 네트 클라이언트의 월드다(판을 돌리지 않고 스냅샷의 적을 그린다)
+        uint8                  _bMatchEnded   : 1; ///< 매치를 끝내고 돌아갈 맵을 기다린다(`endMatch`)
+        [[maybe_unused]] uint8 _reserved      : 3;
     };
 } // namespace sw

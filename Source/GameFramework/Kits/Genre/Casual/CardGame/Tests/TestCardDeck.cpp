@@ -222,3 +222,22 @@ SW_TEST_CASE( CardDeckTest, PileStateRoundTripsAndRejectsTruncation )
     SW_REQUIRE_TRUE( kept.readState( readingEmpty ) );
     SW_EXPECT_TRUE( kept.isEmpty() );
 }
+
+/** @brief [CardDeckTest] 비밀 키 셔플은 같은 키 · 판 번호 · 차례면 같은 순서이고, 하나라도 다르면 다른 순서다. 카드는 잃거나 겹치지 않는다 */
+SW_TEST_CASE( CardDeckTest, SecretShuffleFollowsTheKey )
+{
+    const auto makeSecretDeck = []( uint64 key, uint64 dealID, uint32 shuffleIndex )
+    {
+        sw::CardPile pile;
+        sw::CardPile::makeStandardDeck( pile );
+        pile.shuffleSecret( sw::SipHashKey{ key, 2 }, dealID, shuffleIndex );
+        return pile;
+    };
+    const sw::CardPile base = makeSecretDeck( 1, 5, 0 );
+    SW_EXPECT_EQUAL( 52, base.getCount() );
+    SW_EXPECT_FALSE( sw::CardPile::hasDuplicateID( sw::vector<const sw::CardPile*>{ &base } ) );
+    SW_EXPECT_TRUE( base.getCards() == makeSecretDeck( 1, 5, 0 ).getCards() );
+    SW_EXPECT_FALSE( base.getCards() == makeSecretDeck( 9, 5, 0 ).getCards() );
+    SW_EXPECT_FALSE( base.getCards() == makeSecretDeck( 1, 6, 0 ).getCards() );
+    SW_EXPECT_FALSE( base.getCards() == makeSecretDeck( 1, 5, 1 ).getCards() );
+}

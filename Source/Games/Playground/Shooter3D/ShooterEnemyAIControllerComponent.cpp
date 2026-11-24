@@ -26,17 +26,18 @@ namespace sw
         const ShooterEnemyComponent*    pEnemy     = pPawnOwner != nullptr ? pPawnOwner->getComponent<ShooterEnemyComponent>() : nullptr;
         const ShooterGameModeComponent* pGameMode =
             pManager != nullptr && pEnemy != nullptr ? GameModeComponent::resolve<ShooterGameModeComponent>( *pManager, pEnemy->getGameMode() ) : nullptr;
-        if ( pGameMode == nullptr || pEnemy->isAlive() == false )
+        const ShooterPlayerView* pTarget = pGameMode != nullptr ? pGameMode->findNearestPlayer( pEnemy->getPosition() ) : nullptr;
+        if ( pTarget == nullptr || pEnemy->isAlive() == false )
         {
             blackboard.clearValue( "PlayerFeet" );
             return;
         }
-        const AbsolutePosition& target = pGameMode->getPlayerFeet();
+        const AbsolutePosition& target = pTarget->_feet;
         blackboard.setVector( "PlayerFeet", pManager->getWorldOrigin().toLocal( target ) ); // 이동 · 시선은 씬 자리다
         blackboard.setFloat( "PlayerDistance", float3::getHorizontalDistance( target._value, pEnemy->getPosition()._value ) );
         blackboard.setFloat( "Reach", pEnemy->getReach() );
         blackboard.setFloat( "StopDistance", pEnemy->getReach() * pEnemy->getStopFraction() );
-        blackboard.setBool( "PlayerAlive", pGameMode->isPlayerAlive() );
+        blackboard.setBool( "PlayerAlive", pTarget->_bAlive == SW_TRUE );
         const ShooterEnemyPhase phase = pEnemy->getPhase();
         blackboard.setBool( "Rising", phase == ShooterEnemyPhase::Rising );
         blackboard.setBool( "Chasing", phase == ShooterEnemyPhase::Chasing );

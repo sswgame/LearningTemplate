@@ -59,7 +59,7 @@ namespace sw
      * @brief 한 씬의 파괴 복제(서버 또는 클라이언트 한쪽)와 해시 기록입니다. 자세한 계약은 파일 머리말을 보세요.
      * @code
      *     session.initialize( host, router, manager, DestructionNetSide::Server, settings );
-     *     session.update( deltaTime ); // 서버는 월드 틱 뒤, 클라이언트는 받은 메시지를 나눈 뒤
+     *     session.update(); // 서버는 월드 틱 뒤, 클라이언트는 받은 메시지를 나눈 뒤
      *     session.shutdown();
      * @endcode
      */
@@ -81,13 +81,13 @@ namespace sw
         /** @brief 처리기를 떼고 클라이언트면 해시 대조 요약 한 줄을 남깁니다. 두 번 불러도 됩니다. */
         void shutdown();
         /**
-         * @brief 서버는 새 사건 · 자세 · 해시를 보내고(틱 번호를 하나 올린다), 클라이언트는 받은 상태를 적용합니다. 그 뒤 사건 수가 바뀐 오브젝트의 해시를 남깁니다.
+         * @brief 서버는 새 사건 · 자세 · 해시를 월드의 서버 틱(`NetClock`)으로 보내고, 클라이언트는 받은 상태를 적용합니다. 그 뒤 사건 수가 바뀐 오브젝트의 해시를 남깁니다.
          * @details 그 전에 번호표의 생성 번호가 바뀌었으면 새로 번호를 받은 파괴 오브젝트를 등록한다.
          */
-        void update( float32 deltaTime );
+        void update();
 
         bool isActive() const { return _routerSubscription.isActive(); }
-        /** @brief 서버가 다음에 보낼 틱 번호입니다(`update` 마다 하나 오른다). 클라이언트는 0 입니다. */
+        /** @brief 서버가 마지막으로 보낸 서버 틱입니다. 클라이언트는 0 입니다. */
         uint32             getServerTick() const { return _serverTick; }
         DestructionNetSide getSide() const { return _side; }
         uint32             getObjectCount() const { return static_cast<uint32>( _listEntry.size() ); }
@@ -130,6 +130,7 @@ namespace sw
         vector<DestructionHashRecord>      _listRecord;
         GameObjectManager*                 _pManager;           ///< 번호표가 있는 씬(빌린 것)
         Subscription                       _routerSubscription; ///< 라우터에 단 처리기(`_server` 또는 `_client`)의 등록. 처리기보다 뒤에 선언한다 — 먼저 풀린다
+        const NetClock*                    _pWorldClock;        ///< 월드의 서버 시계(라우터가 든다)
         uint32                             _serverTick;
         uint32                             _seenSpawnedRevision; ///< 마지막으로 훑은 번호표의 생성 번호 판
         DestructionNetSide                 _side;

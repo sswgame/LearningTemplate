@@ -954,7 +954,6 @@
     "Source/Games/Playground/Shooter3D/ShooterAvatarComponent.cpp": {"float": 2},
     "Source/Games/Playground/Shooter3D/ShooterEnemyComponent.cpp": {"float": 3},
     "Source/Games/Playground/Shooter3D/ShooterGameModeComponent.cpp": {"minus-one": 2, "float": 4, "integer": 2},
-    "Source/Games/Playground/Shooter3D/ShooterNetPawnComponent.cpp": {"minus-one": 3},
     "Source/Games/Playground/Shooter3D/ShooterNetSimGame.cpp": {"float": 2},
     "Source/Games/Playground/Shooter3D/ShooterPlayerComponent.cpp": {"float": 10, "hex": 1},
     "Source/Programs/OnlineLoadBot/LoadBot.cpp": {"float": 1},

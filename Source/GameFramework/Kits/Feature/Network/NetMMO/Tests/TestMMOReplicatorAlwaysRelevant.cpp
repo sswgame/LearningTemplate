@@ -83,6 +83,7 @@ SW_TEST_CASE( MMOReplicatorAlwaysRelevantTest, AlwaysRelevantCandidatesAreAskedW
         SW_REQUIRE_TRUE( cluster.addEndpoint( static_cast<uint16>( 5100 + index ), settings ).has_value() );
     }
     SW_REQUIRE_TRUE( cluster.connectClients( 30 ) );
+    cluster.enterWorld();
 
     MMOReplicatorConfig mmoSettings;
     mmoSettings._enterRadius = 50.0f;
@@ -134,6 +135,7 @@ namespace
     void writeMMOEnterForTest( BitWriter& writer, uint32 entityID )
     {
         writer.writeBits( NetMMOMessage::kEnter, 8 );
+        writer.writeBits( 0, 8 ); // 월드 세대
         writer.writeVarUint( 7 ); // 틱
         writer.writeBool( true );
         MMOEntityEnterHeader header;
@@ -162,9 +164,10 @@ SW_TEST_CASE( MMOReplicatorTest, ClientViewRejectsTrailingBytesAndHugeCounts )
 
     writer.clear();
     writer.writeBits( NetMMOMessage::kLeave, 8 );
+    writer.writeBits( 0, 8 );        // 월드 세대
     writer.writeVarUint( 1u << 20 ); // 조각 하나에 들 수 없는 수
     SW_EXPECT_TRUE( NetHandleResult::Malformed == view.handleMessage( 0, writer.getBytes() ) );
-    const uint8 arrTruncatedEnter[] = { NetMMOMessage::kEnter, 7, 0x80 };
-    SW_EXPECT_TRUE( NetHandleResult::Malformed == view.handleMessage( 0, arrTruncatedEnter, 3 ) );
+    const uint8 arrTruncatedEnter[] = { NetMMOMessage::kEnter, 0, 7, 0x80 };
+    SW_EXPECT_TRUE( NetHandleResult::Malformed == view.handleMessage( 0, arrTruncatedEnter, 4 ) );
     SW_EXPECT_EQUAL( 1, view.getEntityCount() );
 }

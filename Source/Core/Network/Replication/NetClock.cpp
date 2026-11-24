@@ -6,64 +6,111 @@
 
 namespace sw
 {
+    namespace
+    {
+        constexpr float64 kNetClockRounding = 1.0e-3; ///< 프레임 길이를 더한 실수가 정수 틱 바로 아래에 걸린 것을 그 틱으로 본다
+    } // namespace
+
     NetClock::NetClock()
-        : _settings{}
-        , _serverTick{ 0.0f }
-        , _renderTick{ kNoRenderTick }
+        : _serverTick{ 0.0 }
         , _newestTick{ 0 }
-        , _bHasServerTick{ SW_FALSE }
+        , _side{ NetClockSide::Replica }
+        , _bObserved{ SW_FALSE }
     {
     }
 
-    void NetClock::initialize( const NetClockConfig& settings )
+    optional<uint32> NetClock::computeStride( float32 intervalSeconds )
     {
-        _settings = settings;
-        reset();
+        constexpr float32 kStrideTolerance = 1.0e-2f;
+        const float32     stride           = intervalSeconds / kTickSeconds;
+        const float32     rounded          = MathUtil::round( stride );
+        if ( rounded < 1.0f || MathUtil::abs( stride - rounded ) > kStrideTolerance )
+            return nullopt;
+        return static_cast<uint32>( rounded );
     }
 
-    void NetClock::reset()
+    void NetClock::reset( NetClockSide side )
     {
-        _serverTick     = 0.0f;
-        _renderTick     = kNoRenderTick;
-        _newestTick     = 0;
-        _bHasServerTick = SW_FALSE;
-    }
-
-    float32 NetClock::getTickInterval() const
-    {
-        return MathUtil::max( MathUtil::kLooseEpsilon, _settings._tickInterval );
-    }
-
-    float32 NetClock::computeInterpolationDelay() const
-    {
-        return MathUtil::max( _settings._interpolationDelay, _settings._sampleInterval * kSampleIntervalsBehind );
-    }
-
-    void NetClock::observeServerTick( uint32 serverTick )
-    {
-        const float64 tick = static_cast<float64>( serverTick );
-        if ( _bHasServerTick == SW_FALSE )
-        {
-            _serverTick     = tick;
-            _renderTick     = tick - static_cast<float64>( computeInterpolationDelay() / getTickInterval() );
-            _newestTick     = serverTick;
-            _bHasServerTick = SW_TRUE;
-            return;
-        }
-        _newestTick = MathUtil::max( _newestTick, serverTick );
-        _serverTick = MathUtil::max( _serverTick, tick );
+        _serverTick = 0.0;
+        _newestTick = 0;
+        _side       = side;
+        _bObserved  = SW_FALSE;
     }
 
     void NetClock::advance( float32 deltaTime )
     {
-        if ( _bHasServerTick == SW_FALSE || deltaTime <= 0.0f )
+        if ( deltaTime <= 0.0f || hasServerTick() == false )
             return;
-        // 추정은 흐르는 시간만큼 앞으로 가되 받은 가장 새 틱 + 지연을 넘지 않는다(렌더 틱이 받은 틱을 지나치지 않게). 렌더 틱은 뒤로 가지 않는다 — 지연이 커져도
-        // (표본 간격이 늘었다) · 받은 틱이 끊겨도 멈춰 기다린다.
-        const float64 tickInterval = static_cast<float64>( getTickInterval() );
-        const float64 delayTicks   = static_cast<float64>( computeInterpolationDelay() ) / tickInterval;
-        const float64 ceiling      = static_cast<float64>( _newestTick ) + delayTicks;
-        _serverTick                = MathUtil::min( _serverTick + static_cast<float64>( deltaTime ) / tickInterval, ceiling );
-        _renderTick                = MathUtil::max( _renderTick, _serverTick - delayTicks );
+        const float64 elapsed = static_cast<float64>( deltaTime ) / static_cast<float64>( kTickSeconds );
+        if ( _side == NetClockSide::Authority )
+        {
+            _serverTick += MathUtil::min( elapsed, static_cast<float64>( kMaxTicksPerAdvance ) );
+            return;
+        }
+        const float64 ceiling = static_cast<float64>( _newestTick ) + static_cast<float64>( kMaxLeadSeconds / kTickSeconds );
+        _serverTick           = MathUtil::max( _serverTick, MathUtil::min( _serverTick + elapsed, ceiling ) );
+    }
+
+    void NetClock::observe( uint32 serverTick )
+    {
+        if ( _side == NetClockSide::Authority )
+            return;
+        _newestTick = _bObserved == SW_TRUE ? MathUtil::max( _newestTick, serverTick ) : serverTick;
+        _serverTick = MathUtil::max( _serverTick, static_cast<float64>( serverTick ) );
+        _bObserved  = SW_TRUE;
+    }
+
+    uint32 NetClock::getWholeTick() const
+    {
+        return static_cast<uint32>( _serverTick + kNetClockRounding );
+    }
+} // namespace sw
+
+namespace sw
+{
+    NetRenderClock::NetRenderClock()
+        : _settings{}
+        , _renderTick{ kNoRenderTick }
+        , _newestTick{ 0 }
+        , _bHasSample{ SW_FALSE }
+        , _bRendering{ SW_FALSE }
+    {
+    }
+
+    void NetRenderClock::initialize( const NetRenderClockConfig& settings )
+    {
+        SW_ASSERT( settings._stride > 0 );
+        _settings = settings;
+        reset();
+    }
+
+    void NetRenderClock::reset()
+    {
+        _renderTick = kNoRenderTick;
+        _newestTick = 0;
+        _bHasSample = SW_FALSE;
+        _bRendering = SW_FALSE;
+    }
+
+    void NetRenderClock::observeSample( uint32 tick )
+    {
+        _newestTick = _bHasSample == SW_TRUE ? MathUtil::max( _newestTick, tick ) : tick;
+        _bHasSample = SW_TRUE;
+    }
+
+    float32 NetRenderClock::computeInterpolationDelay() const
+    {
+        return MathUtil::max( _settings._interpolationDelay, _settings._sampleInterval * kSampleIntervalsBehind );
+    }
+
+    void NetRenderClock::follow( const NetClock& clock )
+    {
+        if ( _bHasSample == SW_FALSE || clock.hasServerTick() == false )
+            return;
+        const float64 delayTicks = static_cast<float64>( computeInterpolationDelay() / NetClock::kTickSeconds );
+        const float64 behind     = ( clock.getServerTick() - delayTicks ) / static_cast<float64>( _settings._stride );
+        const float64 target     = MathUtil::min( behind, static_cast<float64>( _newestTick ) ); // 받은 표본을 지나치지 않는다(내다보지 않는다)
+        _renderTick              = _bRendering == SW_TRUE ? MathUtil::max( _renderTick, target ) : target;
+        _bRendering              = SW_TRUE;
     }
 } // namespace sw

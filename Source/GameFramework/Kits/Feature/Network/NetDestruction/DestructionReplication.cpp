@@ -129,6 +129,7 @@ namespace sw
         , _pHost{ nullptr }
         , _pManager{ nullptr }
         , _hashTime{ 0.0f }
+        , _lastTick{ 0 }
     {
     }
 
@@ -141,6 +142,7 @@ namespace sw
         _listRequest.clear();
         _stats    = DestructionReplicationStats{};
         _hashTime = 0.0f;
+        _lastTick = 0;
     }
 
     void DestructionReplicationServer::registerObject( NetObjectID netID, FractureBaseComponent& component )
@@ -168,7 +170,7 @@ namespace sw
         return DestructionReplicationInternal::resolveFracture( _pManager, entry._component );
     }
 
-    void DestructionReplicationServer::onConnectionOpened( int32 connectionID )
+    void DestructionReplicationServer::onPeerEnteredWorld( int32 connectionID )
     {
         for ( const Entry& entry : _listEntry )
         {
@@ -176,9 +178,8 @@ namespace sw
         }
     }
 
-    void DestructionReplicationServer::onConnectionClosed( int32 connectionID, NetDisconnectReason reason )
+    void DestructionReplicationServer::onPeerLeftWorld( int32 connectionID )
     {
-        (void)reason;
         for ( size_t index = _listRequest.size(); index > 0; --index )
         {
             if ( _listRequest[index - 1]._connectionID == connectionID )
@@ -210,8 +211,8 @@ namespace sw
 
     int32 DestructionReplicationServer::broadcastMessage()
     {
-        const int32 connectedCount = _pHost->getConnectedCount();
-        return countBroadcast( connectedCount, _writer.broadcastMessage( *_pHost ) );
+        const int32 peerCount = _pHost->getInWorldCount();
+        return countBroadcast( peerCount, _writer.broadcastMessage( *_pHost ) );
     }
 
     int32 DestructionReplicationServer::countBroadcast( int32 connectedCount, int32 sentCount )
@@ -227,6 +228,9 @@ namespace sw
     {
         if ( _pHost == nullptr )
             return;
+        // 간격은 흐른 서버 틱으로 잰다 — 서버의 프레임 길이가 자세 · 해시의 주기를 바꾸지 않는다.
+        const float32 elapsedSeconds = serverTick > _lastTick ? static_cast<float32>( serverTick - _lastTick ) * NetClock::kTickSeconds : 0.0f;
+        _lastTick                    = serverTick;
         for ( Entry& entry : _listEntry )
         {
             FractureBaseComponent* pComponent = resolve( entry );
@@ -241,16 +245,18 @@ namespace sw
         {
             Entry*                 pEntry     = findEntry( request._netID );
             FractureBaseComponent* pComponent = pEntry != nullptr ? resolve( *pEntry ) : nullptr;
-            if ( pComponent != nullptr && sendSnapshot( *pEntry, *pComponent, request._connectionID ) == false )
+            const bool             bBlocked   = VectorUtil::containsIf( _listRequest, [&request]( const Request& waiting )
+                          { return waiting._connectionID == request._connectionID; } ); // 이 연결은 이번 틱에 이미 막혔다 — 스냅숏을 헛되이 만들지 않는다
+            if ( pComponent != nullptr && ( bBlocked || sendSnapshot( *pEntry, *pComponent, request._connectionID ) == false ) )
                 _listRequest.push_back( request ); // 신뢰 창이 찼으므로 다음 틱에 다시 보낸다. 연결이 닫히면 onConnectionClosed 가 지운다
         }
         for ( Entry& entry : _listEntry )
         {
             FractureBaseComponent* pComponent = resolve( entry );
             if ( pComponent != nullptr )
-                sendPoses( entry, *pComponent, serverTick );
+                sendPoses( entry, *pComponent, serverTick, elapsedSeconds );
         }
-        _hashTime += _settings._tickInterval;
+        _hashTime += elapsedSeconds;
         if ( _hashTime + MathUtil::kLooseEpsilon >= _settings._hashInterval )
         {
             _hashTime = 0.0f;
@@ -312,7 +318,8 @@ namespace sw
             ++_stats._sendRejectedCount;
             return true;
         }
-        if ( _writer.sendMessage( *_pHost, connectionID ) == false )
+        // 늦은 참가는 부서진 오브젝트마다 하나씩 받는다 — 창이 차면 닫지 않고 다음 틱에 잇는다.
+        if ( _writer.trySendMessage( *_pHost, connectionID ) == false )
         {
             ++_stats._sendRejectedCount;
             return false;
@@ -322,13 +329,13 @@ namespace sw
         return true;
     }
 
-    void DestructionReplicationServer::sendPoses( Entry& entry, FractureBaseComponent& component, uint32 serverTick )
+    void DestructionReplicationServer::sendPoses( Entry& entry, FractureBaseComponent& component, uint32 serverTick, float32 elapsedSeconds )
     {
         using Internal = DestructionReplicationInternal;
         if ( component.isStateReady() == false || component.isFractured() == false )
             return;
         const float32 period = Internal::computePosePeriod( component );
-        entry._poseTime += _settings._tickInterval;
+        entry._poseTime += elapsedSeconds;
         const bool bDue = entry._poseTime + MathUtil::kLooseEpsilon >= period;
         if ( bDue )
             entry._poseTime = 0.0f;
@@ -468,22 +475,22 @@ namespace sw
         , _writer{}
         , _pHost{ nullptr }
         , _pManager{ nullptr }
-        , _clock{}
+        , _pWorldClock{ nullptr }
+        , _renderClock{}
     {
     }
 
-    void DestructionReplicationClient::initialize( INetPeers* pHost, GameObjectManager* pManager, const DestructionReplicationConfig& settings )
+    void DestructionReplicationClient::initialize( INetPeers* pHost, GameObjectManager* pManager, NetClock& worldClock, const DestructionReplicationConfig& settings )
     {
         _pHost    = pHost;
         _pManager = pManager;
         _settings = settings;
         _listEntry.clear();
-        _stats = DestructionReplicationStats{};
-        NetClockConfig clockSettings;
-        clockSettings._tickInterval       = settings._tickInterval;
-        clockSettings._interpolationDelay = settings._interpolationDelay;
-        clockSettings._sampleInterval     = 0.0f; // 등록하는 오브젝트의 자세 간격으로 키운다(registerObject)
-        _clock.initialize( clockSettings );
+        _stats       = DestructionReplicationStats{};
+        _pWorldClock = &worldClock;
+        NetRenderClockConfig clockSettings;
+        clockSettings._interpolationDelay = settings._interpolationDelay; // 표본 간격은 등록하는 오브젝트의 자세 간격으로 키운다(registerObject)
+        _renderClock.initialize( clockSettings );
     }
 
     void DestructionReplicationClient::registerObject( NetObjectID netID, FractureBaseComponent& component )
@@ -498,7 +505,7 @@ namespace sw
         *pEntry            = Entry{};
         pEntry->_netID     = netID;
         pEntry->_component = TComponentHandle<FractureBaseComponent>{ &component };
-        _clock.setSampleInterval( MathUtil::max( _clock.getSampleInterval(), DestructionReplicationInternal::computePosePeriod( component ) ) );
+        _renderClock.setSampleInterval( MathUtil::max( _renderClock.getSampleInterval(), DestructionReplicationInternal::computePosePeriod( component ) ) );
     }
 
     void DestructionReplicationClient::skipNextEvent( NetObjectID netID )
@@ -536,7 +543,7 @@ namespace sw
         }
         Entry* pEntry = findEntry( netID );
         if ( pEntry == nullptr )
-            outEarly = NetHandleResult::Handled; // 이 클라이언트에 없는 오브젝트이므로 메시지를 소비하고 버린다
+            outEarly = NetHandleResult::Handled; // 이 클라이언트에 없는 오브젝트 — 소비하고 버린다
         return pEntry;
     }
 
@@ -550,7 +557,7 @@ namespace sw
             return early;
         const uint32 serverTick = reader.readVarUint32();
         const uint32 index      = reader.readVarUint32();
-        _clock.observeServerTick( serverTick );
+        observeTick( serverTick );
         BufferedEvent buffered;
         buffered._index = index;
         // 예전에는 등록 밖 피해 종류가 넘침 없이 false 를 돌려 Handled 로 조용히 버려졌다 — 깨진 메시지로 센다.
@@ -702,7 +709,7 @@ namespace sw
         }
         if ( reader.readEnd() == false )
             return false;
-        _clock.observeServerTick( tick );
+        observeTick( tick );
         Entry* pEntry = findEntry( netID );
         if ( pEntry == nullptr )
             return true; // 이 클라이언트에 없는 오브젝트 — 소비하고 버린다
@@ -728,12 +735,38 @@ namespace sw
         return true;
     }
 
-    void DestructionReplicationClient::update( float32 deltaTime )
+    void DestructionReplicationClient::observeTick( uint32 serverTick )
+    {
+        if ( _pWorldClock == nullptr )
+            return; // 시작하지 않은 클라이언트다(등록한 오브젝트도 없다)
+        _pWorldClock->observe( serverTick );
+        _renderClock.observeSample( serverTick );
+    }
+
+    void DestructionReplicationClient::onWorldOpened( uint32 generation )
+    {
+        (void)generation;
+        _renderClock.reset(); // 새 월드의 틱은 앞 월드보다 작다(월드의 시계는 라우터가 되돌린다)
+        for ( Entry& entry : _listEntry )
+        {
+            const bool bTouched = entry._nextEventIndex != 0;
+            entry._listFutureEvent.clear();
+            entry._listChunk.clear();
+            entry._listHashCheck.clear();
+            entry._nextEventIndex    = 0;
+            entry._bAwaitingSnapshot = SW_FALSE;
+            if ( bTouched )
+                requestSnapshot( entry ); // 이쪽에는 앞 월드의 파편이 남아 있다
+        }
+    }
+
+    void DestructionReplicationClient::update()
     {
         // 서버 틱 추정값은 틱마다 흐르고 받은 틱보다 뒤처지지 않는다. 그래서 자세가 오지 않는 동안(모두 멈춘 상태)에도 렌더 틱이 서버 시각을 따라간다(NetClock, 받은 가장 새 틱까지).
         // 지연은 설정값과 가장 긴 자세 간격 × 2 중 큰 값이다. 간격 하나만 두면 자세 하나를 잃거나 지터로 늦을 때마다 뒤 자세가 없어 덩어리가 멈춰 선다.
         // 빨리 떨어지는 덩어리는 이때 미터 단위로 어긋난다.
-        _clock.advance( deltaTime );
+        if ( _pWorldClock != nullptr )
+            _renderClock.follow( *_pWorldClock );
         for ( Entry& entry : _listEntry )
         {
             FractureBaseComponent* pComponent = resolve( entry );
@@ -801,7 +834,7 @@ namespace sw
 
     void DestructionReplicationClient::driveChunks( Entry& entry, FractureBaseComponent& component )
     {
-        const float64 renderTick = _clock.getRenderTick();
+        const float64 renderTick = _renderClock.getRenderTick();
         if ( renderTick < 0.0 )
             return;
         // 그룹 번호는 늘어나기만 한다. 지금 가장 큰 번호보다 작은데 없는 그룹은 갈라져 사라진 것이고, 큰 번호는 그 이벤트가 아직 오지 않은 것이다. 자세를 먼저 받은 경우이다.
@@ -826,19 +859,14 @@ namespace sw
             // 렌더 틱을 사이에 둔 두 자세를 고른다. 뒤 자세가 없으면 마지막 것을 쓰고 미래를 예측하지 않는다.
             const InterpolationBuffer<ChunkPose>::Sample* pFrom = nullptr;
             const InterpolationBuffer<ChunkPose>::Sample* pTo   = nullptr;
-            float32                                       alpha = 0.0f;
-            const InterpolationBracketKind                kind  = track._poseBuffer.findBracket( renderTick, pFrom, pTo, alpha );
+            NetSampleRatio                                ratio = NetSampleRatio::makeHeld();
+            const InterpolationBracketKind                kind  = track._poseBuffer.findBracket( renderTick, pFrom, pTo, ratio );
             // 첫 자세보다 이전 시점을 그리는 동안은 바디를 움직이지 않는다. 그 덩어리는 같은 이벤트와 같은 시드로 서버와 같은 속도로 생성되어 혼자 날아간다.
             const bool bBeforeFirst = kind == InterpolationBracketKind::Empty || kind == InterpolationBracketKind::BeforeFirst;
             if ( bBeforeFirst )
                 continue;
-            float3     position = pFrom->_value._position;
-            quaternion rotation = pFrom->_value._rotation;
-            if ( kind == InterpolationBracketKind::Between )
-            {
-                position = pFrom->_value._position + ( pTo->_value._position - pFrom->_value._position ) * alpha;
-                rotation = quaternion::lerp( pFrom->_value._rotation, pTo->_value._rotation, alpha );
-            }
+            const float3     position = ratio.interpolate( pFrom->_value._position, pTo->_value._position );
+            const quaternion rotation = ratio.interpolate( pFrom->_value._rotation, pTo->_value._rotation );
             component.driveGroup( track._groupID, position, rotation );
             // 지난 표본은 하나만 남긴다. 보간의 앞쪽 표본으로 쓴다.
             track._poseBuffer.removeConsumed( renderTick );

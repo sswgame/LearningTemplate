@@ -4,6 +4,8 @@
  * @details 메시지가 채널 상한(`NetConnection::getMaxMessageSize` — 순서만 · 비신뢰는 `kMaxSingleMessageSize`, 신뢰 순서는 `kMaxReliableMessageSize`)을 넘으면
  *          보내기가 오류와 함께 통째로 버린다. 그래서 예산은 그 상한(생성자의 `limitBytes`, 기본은 조각나지 않는 상한)으로 자르고, 항목 크기는 어림이 아니라
  *          `BitMath::computeVarUintBits` · `computeBlobBits` 로 정확히 센다. 목록 길이처럼 항목보다 먼저 쓰는 필드는 가장 큰 값으로 미리 잡는다.
+ *          예산보다 큰 항목도 **첫 항목이면** 채널 상한 안에서 싣는다 — 회선이 막혀 예산이 항목보다 작아지면(하한 16 KB/s 는 60 Hz 에서 133 바이트) 그 항목은 우선도가 아무리 쌓여도
+ *          영영 나가지 못하고 로그도 없었다. 항목마다 하나는 나아가고 넘친 만큼은 송신 속도(토큰)가 거른다(언리얼이 액터를 쓴 뒤에 포화를 보는 것과 같다).
  *          키트 틱 예산의 기본은 `computeTickBudget( 설정값, 연결의 지금 송신 속도(`NetConnectionStats::_sendBytesPerSecond`), 틱 간격 )` — 설정과 그 연결 속도의 할당량 중 작은 것이다(속도는 `NetSendThrottle` 이 RTT · 손실로 조절한다).
  * @code
  *     BitWriter&    writer = _messageWriter.begin( kKind );
@@ -46,18 +48,22 @@ namespace sw
          */
         explicit NetSendBudget( int32 maxBytes, int32 limitBytes = NetConnection::kMaxSingleMessageSize )
             : _maxBits{ clampBytes( maxBytes, limitBytes ) * 8 }
+            , _limitBits{ clampBytes( limitBytes, limitBytes ) * 8 }
             , _usedBits{ 0 }
+            , _bReserved{ SW_FALSE }
         {
         }
 
         /** @brief 반드시 쓰는 비트(이미 쓴 머리 · 끝 표시)를 셉니다. 넘쳐도 센다 — `hasExceeded` 로 본다. */
         void reserveBits( int32 bitCount ) { _usedBits += bitCount > 0 ? bitCount : 0; }
-        /** @brief 남은 예산에 @p bitCount 가 들어가면 세고 true 입니다. 안 들어가면 세지 않는다(작은 다음 항목은 들어갈 수 있다). */
+        /** @brief 남은 예산(첫 항목은 채널 상한)에 @p bitCount 가 들어가면 세고 true 입니다. 안 들어가면 세지 않는다(작은 다음 항목은 들어갈 수 있다). */
         [[nodiscard]] bool tryReserveBits( int32 bitCount )
         {
-            if ( bitCount < 0 || bitCount > _maxBits - _usedBits )
+            const int32 maxBits = _bReserved == SW_FALSE ? _limitBits : _maxBits;
+            if ( bitCount < 0 || bitCount > maxBits - _usedBits )
                 return false;
             _usedBits += bitCount;
+            _bReserved = SW_TRUE;
             return true;
         }
 
@@ -75,6 +81,8 @@ namespace sw
         }
 
         int32 _maxBits;
+        int32 _limitBits; ///< 채널 상한 — 첫 항목의 예산
         int32 _usedBits;
+        uint8 _bReserved; ///< 항목을 하나 실었다
     };
 } // namespace sw

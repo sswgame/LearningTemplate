@@ -15,7 +15,7 @@
 
 namespace sw
 {
-    /** @brief 기믹(위험 지대, 폭발, 포탑)이 오브젝트에 피해를 줬음을 알립니다. */
+    /** @brief 기믹(위험 지대, 폭발, 포탑)이 오브젝트에 피해를 줬음을 알립니다. 프레임워크의 받는 쪽은 없다 — 피해는 기믹이 맞음 길(`CharacterRayHit::deliverHit`)로 직접 전하고, 이 이벤트는 게임의 규칙 · 통계 몫이다. */
     struct SW_GF_API GimmickDamageEvent final : EventBase
     {
         GameObjectHandle _target{};
@@ -30,7 +30,7 @@ namespace sw
 {
     /**
      * @brief 연출 신호입니다. 공포 트리거, 폭발, 파괴 단계에서 냅니다(`GimmickUtil::sendCue`). 프리팹 · 소리 연출은 내는 쪽이 큐 표로 바로 걸고,
-     *        이 이벤트는 이름으로 더 받을 쪽(게임 규칙 · 시퀀서 · 퀘스트)의 몫입니다.
+     *        이 이벤트는 이름으로 더 받을 쪽(게임 규칙 · 시퀀서 · 퀘스트)의 몫이라 프레임워크가 구독하지 않습니다.
      */
     struct SW_GF_API GimmickCueEvent final : EventBase
     {
@@ -45,7 +45,7 @@ namespace sw
 
 namespace sw
 {
-    /** @brief 소리를 냈음을 알립니다. 잠입 게임에서 반경 안의 AI 가 이 소리를 듣습니다(`AIStimulus::makeHearing`). */
+    /** @brief 소리를 냈음을 알립니다. 잠입 게임에서 반경 안의 AI 는 소리를 낸 쪽이 자극으로 직접 알리고(`AIStimulusSourceComponent::reportNoise`), 이 이벤트는 게임의 표시(소음 HUD) 몫이라 프레임워크가 구독하지 않습니다. */
     struct SW_GF_API GimmickNoiseEvent final : EventBase
     {
         GameObjectHandle _source{};

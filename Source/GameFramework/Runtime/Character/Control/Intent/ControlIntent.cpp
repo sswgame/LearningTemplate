@@ -85,13 +85,87 @@ namespace sw
 
 namespace sw
 {
-    void ControlIntent::setButton( optional<int32> buttonIndex, bool bDown, bool bTriggered )
+    ControlViewTick ControlViewTick::makeSeen( float64 serverTick )
+    {
+        return ControlViewTick{ static_cast<uint64>( MathUtil::max( 0.0, serverTick ) * static_cast<float64>( kStampsPerTick ) ) };
+    }
+
+    void ControlViewTick::write( BitWriter& writer ) const
+    {
+        writer.writeBool( isPresent() );
+        if ( isPresent() == false )
+            writer.writeVarUint( _stamp );
+    }
+
+    ControlViewTick ControlViewTick::read( BitReader& reader )
+    {
+        return reader.readBool() ? makePresent() : ControlViewTick{ reader.readVarUint() };
+    }
+
+    ControlTrigger::ControlTrigger( int32 buttonIndex, float32 yaw, float32 pitch, ControlViewTick viewTick )
+        : _viewTick{ viewTick }
+        , _buttonIndex{ buttonIndex }
+        , _yaw{ MathUtil::wrapAngle( yaw ) }
+        , _pitch{ pitch }
+    {
+    }
+
+    void ControlTrigger::clampViewTick( float64 lowestTick, float64 highestTick )
+    {
+        _viewTick = ControlViewTick::makeSeen( MathUtil::clamp( _viewTick.getServerTick( highestTick ), lowestTick, highestTick ) );
+    }
+} // namespace sw
+
+namespace sw
+{
+    void ControlIntent::setButton( optional<int32> buttonIndex, bool bDown )
     {
         if ( isInRange( buttonIndex ) == false )
             return;
         const uint32 bit = 1u << *buttonIndex;
         _buttonDown      = bDown ? ( _buttonDown | bit ) : ( _buttonDown & ~bit );
-        _buttonTriggered = bTriggered ? ( _buttonTriggered | bit ) : ( _buttonTriggered & ~bit );
+    }
+
+    bool ControlIntent::wasTriggered( optional<int32> buttonIndex ) const
+    {
+        if ( isInRange( buttonIndex ) == false )
+            return false;
+        for ( const ControlTrigger& trigger : _listTrigger )
+        {
+            if ( trigger.getButton() == *buttonIndex )
+                return true;
+        }
+        return false;
+    }
+
+    void ControlIntent::addTrigger( optional<int32> buttonIndex, float32 yaw, float32 pitch, ControlViewTick viewTick )
+    {
+        if ( isInRange( buttonIndex ) )
+            _listTrigger.push_back( ControlTrigger{ *buttonIndex, yaw, pitch, viewTick } );
+    }
+
+    void ControlIntent::appendTriggers( const ControlIntent& other )
+    {
+        _listTrigger.insert( _listTrigger.end(), other._listTrigger.begin(), other._listTrigger.end() );
+    }
+
+    void ControlIntent::setViewTick( ControlViewTick viewTick )
+    {
+        _viewTick = viewTick;
+        for ( ControlTrigger& trigger : _listTrigger )
+        {
+            trigger.setViewTick( viewTick );
+        }
+    }
+
+    void ControlIntent::clampViewTicks( float64 lowestTick, float64 presentTick )
+    {
+        const float64 intentTick = MathUtil::clamp( _viewTick.getServerTick( presentTick ), lowestTick, presentTick );
+        _viewTick                = ControlViewTick::makeSeen( intentTick );
+        for ( ControlTrigger& trigger : _listTrigger )
+        {
+            trigger.clampViewTick( lowestTick, intentTick );
+        }
     }
 
     float3 ControlIntent::computeWorldMove() const
@@ -124,13 +198,6 @@ namespace sw
         _move = move;
     }
 
-    void ControlIntent::setTriggerLook( float32 yaw, float32 pitch )
-    {
-        _bTriggerLook = true;
-        _triggerYaw   = MathUtil::wrapAngle( yaw );
-        _triggerPitch = pitch;
-    }
-
     bool ControlIntent::write( BitWriter& writer ) const
     {
         using Internal = ControlIntentInternal;
@@ -147,15 +214,19 @@ namespace sw
         {
             bWritten = bWritten && Internal::writeValue( writer, analog, kAxisSteps, Internal::kAxisMaxStep );
         }
-        if ( bWritten == false )
+        if ( bWritten == false || _listTrigger.size() > static_cast<size_t>( kMaxTriggers ) )
             return false;
         writer.writeVarUint( _buttonDown );
-        writer.writeVarUint( _buttonTriggered );
-        writer.writeBool( _bTriggerLook );
-        if ( _bTriggerLook == false )
-            return true;
-        return Internal::writeValue( writer, MathUtil::wrapAngle( _triggerYaw ), kAngleStepsPerRadian, Internal::kYawMaxStep ) &&
-               Internal::writeValue( writer, _triggerPitch, kAngleStepsPerRadian, Internal::kPitchMaxStep );
+        _viewTick.write( writer );
+        writer.writeVarUint( _listTrigger.size() );
+        for ( const ControlTrigger& trigger : _listTrigger )
+        {
+            bWritten = bWritten && writer.writeInt( trigger.getButton(), 0, kButtonCount - 1 ) &&
+                       Internal::writeValue( writer, trigger.getYaw(), kAngleStepsPerRadian, Internal::kYawMaxStep ) &&
+                       Internal::writeValue( writer, trigger.getPitch(), kAngleStepsPerRadian, Internal::kPitchMaxStep );
+            trigger.getViewTick().write( writer );
+        }
+        return bWritten;
     }
 
     bool ControlIntent::read( BitReader& reader )
@@ -169,15 +240,17 @@ namespace sw
         {
             bRead = bRead && Internal::readValue( reader, kAxisSteps, Internal::kAxisMaxStep, analog );
         }
-        _buttonDown      = reader.readVarUint32();
-        _buttonTriggered = reader.readVarUint32();
-        _bTriggerLook    = reader.readBool();
-        _triggerYaw      = 0.0f;
-        _triggerPitch    = 0.0f;
-        if ( _bTriggerLook )
+        _buttonDown = reader.readVarUint32();
+        _viewTick   = ControlViewTick::read( reader );
+        _listTrigger.clear();
+        const uint32 triggerCount = reader.readCount( static_cast<uint32>( kMaxTriggers ) ); // 상한을 넘는 수는 깨진 것이다(할당하지 않는다)
+        for ( uint32 triggerIndex = 0; bRead && reader.hasOverflowed() == false && triggerIndex < triggerCount; ++triggerIndex )
         {
-            bRead = bRead && Internal::readValue( reader, kAngleStepsPerRadian, Internal::kYawMaxStep, _triggerYaw ) &&
-                    Internal::readValue( reader, kAngleStepsPerRadian, Internal::kPitchMaxStep, _triggerPitch );
+            const int32 buttonIndex = reader.readInt( 0, kButtonCount - 1 );
+            float32     yaw         = 0.0f;
+            float32     pitch       = 0.0f;
+            bRead                   = Internal::readValue( reader, kAngleStepsPerRadian, Internal::kYawMaxStep, yaw ) && Internal::readValue( reader, kAngleStepsPerRadian, Internal::kPitchMaxStep, pitch );
+            addTrigger( buttonIndex, yaw, pitch, ControlViewTick::read( reader ) );
         }
         if ( bRead == false || reader.hasOverflowed() )
         {
@@ -201,8 +274,11 @@ namespace sw
         {
             analog = Internal::quantizeValue( analog, kAxisSteps, Internal::kAxisMaxStep );
         }
-        _triggerYaw   = _bTriggerLook ? Internal::quantizeValue( MathUtil::wrapAngle( _triggerYaw ), kAngleStepsPerRadian, Internal::kYawMaxStep ) : 0.0f;
-        _triggerPitch = _bTriggerLook ? Internal::quantizeValue( _triggerPitch, kAngleStepsPerRadian, Internal::kPitchMaxStep ) : 0.0f;
+        for ( ControlTrigger& trigger : _listTrigger )
+        {
+            trigger = ControlTrigger{ trigger.getButton(), Internal::quantizeValue( trigger.getYaw(), kAngleStepsPerRadian, Internal::kYawMaxStep ),
+                                      Internal::quantizeValue( trigger.getPitch(), kAngleStepsPerRadian, Internal::kPitchMaxStep ), trigger.getViewTick() };
+        }
     }
 
     bool ControlIntent::operator==( const ControlIntent& other ) const
@@ -213,7 +289,6 @@ namespace sw
                 return false;
         }
         return _move._x == other._move._x && _move._y == other._move._y && _moveUp == other._moveUp && _controlYaw == other._controlYaw &&
-               _controlPitch == other._controlPitch && _buttonDown == other._buttonDown && _buttonTriggered == other._buttonTriggered &&
-               _bTriggerLook == other._bTriggerLook && _triggerYaw == other._triggerYaw && _triggerPitch == other._triggerPitch;
+               _controlPitch == other._controlPitch && _buttonDown == other._buttonDown && _viewTick == other._viewTick && _listTrigger == other._listTrigger;
     }
 } // namespace sw

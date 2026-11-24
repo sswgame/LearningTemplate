@@ -137,7 +137,7 @@ namespace sw
         using PlotDelta = NetMessageDef<3, NetMessageDirection::ToClient, NetChannelKind::ReliableOrdered, 2>; ///< 판 2: 변환을 칸 선언(`HousingTransformNetState`)으로 쓴다
         /** @brief 클라이언트 → 서버. 부지 상태를 처음부터 다시 달라는 요청(`HousingSnapshotRequestBody`). */
         using SnapshotRequest = NetMessageBodyDef<4, NetMessageDirection::ToServer, NetChannelKind::ReliableOrdered, HousingSnapshotRequestBody>;
-        using Table           = NetMessageTable<NetKitMessageRange::kHousing, Edit, Reply, PlotSnapshot, PlotDelta, SnapshotRequest>;
+        using Table           = NetWorldMessageTable<NetKitMessageRange::kHousing, Edit, Reply, PlotSnapshot, PlotDelta, SnapshotRequest>;
 
         static constexpr uint8 kEdit            = Table::getKindOf<Edit>();
         static constexpr uint8 kReply           = Table::getKindOf<Reply>();
@@ -260,8 +260,8 @@ namespace sw
 
         NetHandleResult receive( NetHousingMessage::Edit, const NetMessageContext& context, BitReader& body );
         NetHandleResult receive( NetHousingMessage::SnapshotRequest, const NetMessageContext& context, const HousingSnapshotRequestBody& body );
-        void            onConnectionOpened( int32 connectionID ) override;
-        void            onConnectionClosed( int32 connectionID, NetDisconnectReason reason ) override;
+        void            onPeerEnteredWorld( int32 connectionID ) override;
+        void            onPeerLeftWorld( int32 connectionID ) override;
 
         /** @brief 아직 다 보내지 못한 조각 전송 수입니다(신뢰 창이 차 다음 틱으로 넘긴 것 포함). */
         size_t                         getTransferCount() const { return _listTransfer.size(); }
@@ -377,10 +377,12 @@ namespace sw
         void initialize( INetPeers* pHost );
         /** @brief 요청을 서버에 보냅니다. 보낸 요청 번호(1 부터)이고 보내지 못했으면 0 입니다. */
         [[nodiscard]] uint32 sendEdit( const hashed_string& plotID, const HousingEditRequest& request );
-        /** @brief 서버에 아직 한 번도 붙지 않았으면 true 입니다 — 그동안 요청은 보내지 말고 들고 있는다(붙은 뒤 끊긴 것과 다르다, 그때는 답이 오지 않는다). */
+        /** @brief 서버의 월드에 아직 한 번도 들어가지 않았으면 true 입니다 — 그동안 요청은 보내지 말고 들고 있는다(들어간 뒤 끊긴 것과 다르다, 그때는 답이 오지 않는다). */
         bool isAwaitingServer();
-        /** @brief 붙었던 서버와 끊겨 있으면 true 입니다 — 보낸 요청의 답이 오지 않는다. */
-        bool isServerLost() const { return _bServerReached == SW_TRUE && ( _pHost == nullptr || _pHost->getConnectedCount() <= 0 ); }
+        /** @brief 서버의 새 월드에 들어왔습니다 — 앞 월드에서 모으던 조각 · 적용을 기다리던 것을 버립니다(서버가 부지 상태를 처음부터 보낸다). */
+        void onWorldOpened( uint32 generation ) override;
+        /** @brief 들어갔던 서버의 월드와 떨어져 있으면(끊김 · 다른 씬) true 입니다 — 보낸 요청의 답이 오지 않는다. */
+        bool isServerLost() const { return _bServerReached == SW_TRUE && ( _pHost == nullptr || _pHost->isInWorld( 0 ) == false ); }
         /** @brief 받은 상태 · 델타를 받은 순서대로 적용하고 판정을 @p outListReply 에 더합니다. 목록에 아직 없는 부지의 것은 들고 있다가 그 부지가 생기면 적용한다. */
         void update( const vector<HousingNetPlotRef>& listPlot, vector<HousingEditReply>& outListReply );
         /** @brief 마지막으로 받은 부지의 주인입니다(받은 적이 없으면 `None`). */

@@ -2,10 +2,13 @@
 
 #include "GameFramework/Runtime/Gameplay/Gimmick/Movement/InterpToMovementComponent.h"
 
+#include "Core/Network/Replication/NetClock.h"
+
 #include "Engine/Foundation/WorldOrigin.h"
 #include "Engine/Object/Component/SceneComponent.h"
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
+#include "Engine/Object/GameObject/Service/SceneNetLink.h"
 #include "Engine/Object/GameObject/Tick/TickContext.h"
 
 #include "GameFramework/Runtime/Character/Control/ControlSystem.h"
@@ -17,7 +20,9 @@ namespace sw
         , _segmentSeconds{ 2.0f }
         , _tickSeconds{ constant::time::kDefaultFixedStepSeconds }
         , _bPingPong{ true }
+        , _turnRate{ Radians::fromRadians( 0.0f ) }
         , _startPosition{}
+        , _startRotation{}
         , _bStarted{ false }
         , _boundTickSource{}
         , _bWarnedNoTick{ false }
@@ -32,6 +37,7 @@ namespace sw
         if ( pScene != nullptr && _bStarted == false )
         {
             _startPosition = pOwner->getManager()->getWorldOrigin().toAbsolute( pScene->getWorldPosition() );
+            _startRotation = pScene->getLocalRotation();
             _bStarted      = true;
         }
         registerSubTick( TickGroup::DuringPhysics, kApplySubTickID );
@@ -67,7 +73,20 @@ namespace sw
                 (void)addSubTickPrerequisite( kApplySubTickID, source, TickPrerequisiteKind::ReadsWrites );
             _boundTickSource = source;
         }
-        applyTick( pControl->getServerTick() );
+        const optional<float64> seconds = findCurrentSeconds( context.getManager() );
+        if ( seconds.has_value() )
+            applySeconds( *seconds );
+    }
+
+    optional<float64> InterpToMovementComponent::findCurrentSeconds( const GameObjectManager& manager ) const
+    {
+        const SceneNetLink& link = manager.getSubsystem<SceneNetLink>();
+        if ( link.isBound() && link.get()._role == NetLinkRole::Server )
+            return static_cast<float64>( link.getServerClock().getWholeTick() ) * static_cast<float64>( NetClock::kTickSeconds ); // 서버의 바닥은 월드의 서버 시계다
+        const ControlSystem* pControl = ControlSystem::find( manager );
+        if ( pControl == nullptr )
+            return nullopt;
+        return static_cast<float64>( pControl->getServerTick() ) * static_cast<float64>( _tickSeconds );
     }
 
     void InterpToMovementComponent::setPath( const vector<float3>& listWaypoint, float32 segmentSeconds, bool bPingPong )
@@ -77,14 +96,32 @@ namespace sw
         _bPingPong      = bPingPong;
     }
 
-    void InterpToMovementComponent::applyTick( uint32 tick )
+    bool InterpToMovementComponent::computePose( float64 seconds, float3& outPosition, quaternion& outRotation ) const
+    {
+        const GameObject* pOwner = getOwner();
+        if ( pOwner == nullptr || _bStarted == false )
+            return false;
+        outPosition = pOwner->getManager()->getWorldOrigin().toLocal( _startPosition ) + computeOffset( _listWaypoint, _segmentSeconds, _bPingPong, seconds );
+        outRotation = quaternion::makeFromYawPitchRoll( _startRotation._y + computeTurn( _turnRate, seconds ), _startRotation._x, _startRotation._z );
+        return true;
+    }
+
+    float32 InterpToMovementComponent::computeTurn( Radians turnRate, float64 seconds )
+    {
+        // 큰 틱에서도 각을 잃지 않게 한 바퀴로 먼저 줄인다.
+        const float64 turn = static_cast<float64>( turnRate.radians() ) * seconds;
+        return static_cast<float32>( turn - static_cast<float64>( MathUtil::kTwoPi ) * static_cast<float64>( static_cast<int64>( turn / static_cast<float64>( MathUtil::kTwoPi ) ) ) );
+    }
+
+    void InterpToMovementComponent::applySeconds( float64 seconds )
     {
         GameObject*     pOwner = getOwner();
         SceneComponent* pScene = pOwner != nullptr ? pOwner->getPrimarySceneComponent() : nullptr;
         if ( pScene == nullptr || _bStarted == false )
             return;
-        const float64 seconds = static_cast<float64>( tick ) * static_cast<float64>( _tickSeconds );
         pScene->setWorldPosition( pOwner->getManager()->getWorldOrigin().toLocal( _startPosition ) + computeOffset( _listWaypoint, _segmentSeconds, _bPingPong, seconds ) );
+        if ( _turnRate.radians() != 0.0f )
+            pScene->setLocalRotation( float3{ _startRotation._x, _startRotation._y + computeTurn( _turnRate, seconds ), _startRotation._z } );
     }
 
     float3 InterpToMovementComponent::computeOffset( const vector<float3>& listWaypoint, float32 segmentSeconds, bool bPingPong, float64 seconds )

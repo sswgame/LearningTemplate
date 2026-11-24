@@ -41,15 +41,13 @@ namespace sw
      * @struct NetInputFormat
      * @brief 입력 번들의 와이어 형식입니다.
      * @details 보내는 쪽과 받는 쪽이 같은 값을 써야 한다(키트가 상수로 둔다). 값을 바꾸면 그 키트의 와이어 버전을 올린다.
-     *          번들은 첫 틱(가변 정수), 개수(가변 정수), 항목들로 이루어진다.
-     *          `_bStamped` 이면 항목마다 스탬프(가변 정수)를 먼저 싣는다. 바이트는 `_fixedEntryBytes` 가 있으면 그 크기 그대로, 없으면 길이를 붙인 덩어리(`writeBlob`)로 싣는다.
+     *          번들은 첫 틱(가변 정수), 개수(가변 정수), 항목들로 이루어진다. 바이트는 `_fixedEntryBytes` 가 있으면 그 크기 그대로, 없으면 길이를 붙인 덩어리(`writeBlob`)로 싣는다.
      */
     struct NetInputFormat
     {
         int32 _fixedEntryBytes{ 0 }; ///< 0보다 크면 항목마다 이 크기의 바이트를 길이 필드 없이 싣는다(롤백 버튼은 1바이트). 0이면 길이를 붙인 덩어리로 싣는다.
         int32 _maxEntryBytes{ 255 }; ///< 덩어리 하나의 상한. 넘는 입력은 넣지 않고(`push`, `store` 가 false), 받는 쪽은 상한을 넘는 길이를 깨진 번들으로 본다.
         int32 _maxEntryCount{ 32 };  ///< 번들 하나의 항목 수 상한. 보내는 쪽은 이만큼까지 싣고, 받는 쪽은 넘는 개수를 깨진 번들으로 본다.
-        uint8 _bStamped{ SW_FALSE }; ///< 항목마다 스탬프(가변 정수)를 싣는다. 입력이 만들어진 순간(서브틱 시각, 그때 보던 틱)을 항목과 함께 보낼 때 쓴다.
 
         /** @brief 이 형식에 실을 수 있는 항목 크기인지 반환합니다. */
         constexpr bool isValidEntrySize( int32 byteCount ) const
@@ -66,7 +64,6 @@ namespace sw
     {
         vector<uint8> _bytes{};
         uint32        _tick{ 0 };
-        uint32        _stamp{ 0 }; ///< `NetInputFormat::_bStamped` 일 때 항목과 함께 온 값(아니면 0).
     };
 } // namespace sw
 
@@ -103,9 +100,8 @@ namespace sw
         void reset();
         /**
          * @brief @p tick 의 내 입력을 넣습니다. 형식에 맞지 않는 크기이거나 이미 있는 틱이면 넣지 않고 false 를 반환합니다(처음 값이 남는다).
-         * @param stamp `NetInputFormat::_bStamped` 일 때 항목과 함께 보내는 값입니다(아니면 싣지 않는다).
          */
-        [[nodiscard]] bool push( uint32 tick, const uint8* pData, int32 byteCount, uint32 stamp = 0 );
+        [[nodiscard]] bool push( uint32 tick, const uint8* pData, int32 byteCount );
         /** @brief 상대가 빈틈없이 받은 다음 틱을 알립니다. 그 앞은 다시 싣지 않습니다. 줄어드는 값(늦게 도착한 옛 확인)과 아직 넣지 않은 틱은 무시합니다. */
         void acknowledge( uint32 firstMissingTick );
         /**
@@ -167,7 +163,7 @@ namespace sw
          */
         void setWindow( uint32 first, uint32 end );
         /** @brief 입력 하나를 넣습니다. 창 밖이거나 이미 있는 틱이거나 형식에 맞지 않는 크기면 넣지 않고 false 를 반환합니다. */
-        [[nodiscard]] bool store( uint32 tick, const uint8* pData, int32 byteCount, uint32 stamp = 0 );
+        [[nodiscard]] bool store( uint32 tick, const uint8* pData, int32 byteCount );
         /**
          * @brief 번들 하나를 읽어 창 안의 새 틱만 넣습니다. 깨졌으면 하나도 넣지 않고 false 를 반환합니다(받은 쪽은 메시지를 깨진 것으로 센다).
          * @details 번들은 메시지의 끝이다 — 남는 비트(`BitReader::readEnd`)도 깨짐이다. 넣기 전에 끝까지 훑어 보므로 깨진 메시지의 앞 입력이 버퍼에 남지 않는다.

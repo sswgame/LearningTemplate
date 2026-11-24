@@ -72,6 +72,8 @@ namespace sw
         int32 _maxPrediction{ 8 }; ///< 확인된 상대 입력보다 이 프레임 수를 넘겨 앞서지 않는다(1 ~ `RollbackSession::kMaxPrediction`)
         PROPERTY( Min = 0 )
         int32 _maxFrameAdvantage{ 2 }; ///< 상대보다 이 프레임 수를 넘겨 앞서면 한 프레임 쉰다. 0이면 쉬지 않는다
+        PROPERTY()
+        uint32 _matchID{ 0 }; ///< 판 번호. 방 · 매치가 정해 모두에게 같은 값을 준다 — 비신뢰 채널이라 지난 판의 입력이 다음 판에 늦게 올 수 있다(GGPO 의 동기 난수 자리)
     };
 } // namespace sw
 
@@ -92,7 +94,7 @@ namespace sw
         static constexpr int32 kMaxPrediction = 16;
         static constexpr int32 kMaxInputDelay = 8;
         /** @brief 롤백 입력 묶음의 전송 형식입니다. 버튼 1바이트를 길이 필드 없이 담으며, 메시지 하나에 `kFrameWindow` 개까지 들어갑니다. */
-        static constexpr NetInputFormat kInputFormat{ 1, 1, kFrameWindow, SW_FALSE };
+        static constexpr NetInputFormat kInputFormat{ 1, 1, kFrameWindow };
         // 확인되지 않은 내 입력은 (예측 + 지연) × 2 + 1 프레임을 넘지 않는다. 메시지 하나와 받는 창 안에 들어야 다시 보낼 수 있기 때문이다.
         static_assert( 2 * ( kMaxPrediction + kMaxInputDelay ) + 1 < kFrameWindow, "unacknowledged inputs must fit one message and the receive window" );
 

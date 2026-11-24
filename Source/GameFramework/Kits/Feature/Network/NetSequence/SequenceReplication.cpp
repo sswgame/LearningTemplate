@@ -10,6 +10,7 @@
 #include "Engine/Object/GameObject/GameObjectManagerResolve.inl"
 #include "Engine/Object/GameObject/Registry/ComponentRegistry.h"
 #include "Engine/Object/GameObject/Service/NetObjectTable.h"
+#include "Engine/Object/GameObject/Service/SceneNetLink.h"
 #include "Engine/Sequencer/SequencePlayerComponent.h"
 
 #include "GameFramework/Runtime/Character/Control/ControlSystem.h"
@@ -90,14 +91,13 @@ namespace sw
         return NetHandleResult::Handled;
     }
 
-    void SequenceReplicationServer::onConnectionOpened( int32 connectionID )
+    void SequenceReplicationServer::onPeerEnteredWorld( int32 connectionID )
     {
         _listJoiningConnection.push_back( connectionID );
     }
 
-    void SequenceReplicationServer::onConnectionClosed( int32 connectionID, NetDisconnectReason reason )
+    void SequenceReplicationServer::onPeerLeftWorld( int32 connectionID )
     {
-        (void)reason;
         VectorUtil::removeFirst( _listJoiningConnection, connectionID );
     }
 
@@ -147,11 +147,12 @@ namespace sw
         if ( pPlayer == nullptr || pPlayer->isPlaying() == false )
             return false;
         SequenceNetStartBody body;
-        body._playID    = play._playID;
-        body._director  = play._directorNetID;
-        body._activator = play._activatorNetID;
-        body._frame     = static_cast<uint32>( pPlayer->getCurrentFrame() > 0 ? pPlayer->getCurrentFrame() : 0 );
-        body._audience  = static_cast<uint8>( play._audience );
+        body._playID     = play._playID;
+        body._director   = play._directorNetID;
+        body._activator  = play._activatorNetID;
+        body._frame      = static_cast<uint32>( pPlayer->getCurrentFrame() > 0 ? pPlayer->getCurrentFrame() : 0 );
+        body._audience   = static_cast<uint8>( play._audience );
+        body._serverTick = _pManager->getSubsystem<SceneNetLink>().getServerTick();
         return _writer.writeMessage<NetSequenceMessage::Table, NetSequenceMessage::Start>( body );
     }
 
@@ -291,6 +292,12 @@ namespace sw
         }
     }
 
+    void SequenceReplicationClient::onWorldOpened( uint32 generation )
+    {
+        (void)generation;
+        _listPlay.clear();
+    }
+
     NetHandleResult SequenceReplicationClient::receive( NetSequenceMessage::Start, const NetMessageContext& context, const SequenceNetStartBody& body )
     {
         (void)context;
@@ -331,6 +338,7 @@ namespace sw
         }
         _listPlay.push_back( Play{ body._playID, pDirector->getHandle(), audience, SW_FALSE } );
         ++_stats._startAppliedCount;
+        pPlayer->advance( _pManager->getSubsystem<SceneNetLink>().computeSecondsSince( body._serverTick ) ); // 오는 동안 흐른 만큼 따라잡는다
         return NetHandleResult::Handled;
     }
 

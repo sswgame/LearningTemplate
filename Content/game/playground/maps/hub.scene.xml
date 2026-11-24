@@ -187,9 +187,74 @@
 							<item>5</item>
 							<item>6</item>
 						</_listMount>
+						<_listFloor>
+							<item>320</item>
+							<item>321</item>
+							<item>322</item>
+						</_listFloor>
 					</HubPawnReplicationComponent>
-					<!-- 접속한 두 사람의 카드 탁자(턴 중계) — 개발 명령 hub.cards. -->
+					<!-- 접속한 두 사람의 카드 탁자(턴 중계) — 개발 명령 hub.cards. 손패는 서버가 나눈 것만 HUD 에 보인다. -->
 					<HubCardTableComponent _localID="11840276335901482617" _componentName="HubCardTableComponent" _bActive="true" />
+					<HUDControllerComponent _localID="17122754535480611078" _componentName="HUDControllerComponent" _bActive="true" _documentPath="game/playground/ui/hub_cards.ui.xml" />
+				</_listComponent>
+			</GameObject>
+		</entity>
+		<!-- 움직이는 바닥 셋(왕복 · 승강기 · 회전판) — 틱의 함수라 접속한 폰의 예측 · 서버 · 다시 돌리기가 같은 자세 위에서 걷는다(HubServer 의 _listFloor 차례가 번호). 빠르기는 허브 걸음 한도(6 m/s) 안이다. -->
+		<entity id="320" name="FloorShuttle">
+			<GameObject _schemaVersion="0" _name="FloorShuttle" _bActive="true" _bAlwaysLoaded="true">
+				<_listComponent>
+					<RigidBodyComponent _localID="7198733165449302788" _localPosition="5,0.1,-12" _localRotation="0,0,0" _localScale="1,1,1" _attachOwner="None" _attachComponent="None" _bodyType="Kinematic" _layer="Default" _material="Default" _mass="0" _bTrigger="false">
+						<_listShape>
+							<PhysicsShapeDesc3D _type="Box" _halfExtents="2,0.1,2" _radius="0.5" _halfHeight="0.5" _localPosition="0,0,0" _localRotation="0,0,0" _material="Default">
+								<_listPoint />
+								<_listIndex />
+							</PhysicsShapeDesc3D>
+						</_listShape>
+					</RigidBodyComponent>
+					<MeshComponent _localID="163493842152903304" _localPosition="0,0,0" _localRotation="0,0,0" _localScale="4,0.2,4" _attachOwner="None" _attachComponent="#63e709ac676dd304" _meshID="Cube" _materialPath="engine/materials/prototypegrid_orange.material" _boundsRadius="0.866" />
+					<InterpToMovementComponent _localID="1626856420196830213" _segmentSeconds="4" _tickSeconds="0.0166667" _bPingPong="true" _turnRate="0">
+						<_listWaypoint>
+							<item>4,0,0</item>
+						</_listWaypoint>
+					</InterpToMovementComponent>
+				</_listComponent>
+			</GameObject>
+		</entity>
+		<entity id="321" name="FloorLift">
+			<GameObject _schemaVersion="0" _name="FloorLift" _bActive="true" _bAlwaysLoaded="true">
+				<_listComponent>
+					<RigidBodyComponent _localID="7198733165449302788" _localPosition="5,0.1,-20" _localRotation="0,0,0" _localScale="1,1,1" _attachOwner="None" _attachComponent="None" _bodyType="Kinematic" _layer="Default" _material="Default" _mass="0" _bTrigger="false">
+						<_listShape>
+							<PhysicsShapeDesc3D _type="Box" _halfExtents="2,0.1,2" _radius="0.5" _halfHeight="0.5" _localPosition="0,0,0" _localRotation="0,0,0" _material="Default">
+								<_listPoint />
+								<_listIndex />
+							</PhysicsShapeDesc3D>
+						</_listShape>
+					</RigidBodyComponent>
+					<MeshComponent _localID="163493842152903304" _localPosition="0,0,0" _localRotation="0,0,0" _localScale="4,0.2,4" _attachOwner="None" _attachComponent="#63e709ac676dd304" _meshID="Cube" _materialPath="engine/materials/prototypegrid_orange.material" _boundsRadius="0.866" />
+					<InterpToMovementComponent _localID="1626856420196830213" _segmentSeconds="4" _tickSeconds="0.0166667" _bPingPong="true" _turnRate="0">
+						<_listWaypoint>
+							<item>0,3,0</item>
+						</_listWaypoint>
+					</InterpToMovementComponent>
+				</_listComponent>
+			</GameObject>
+		</entity>
+		<entity id="322" name="FloorRotating">
+			<GameObject _schemaVersion="0" _name="FloorRotating" _bActive="true" _bAlwaysLoaded="true">
+				<_listComponent>
+					<RigidBodyComponent _localID="7198733165449302788" _localPosition="5,0.1,-28" _localRotation="0,0,0" _localScale="1,1,1" _attachOwner="None" _attachComponent="None" _bodyType="Kinematic" _layer="Default" _material="Default" _mass="0" _bTrigger="false">
+						<_listShape>
+							<PhysicsShapeDesc3D _type="Box" _halfExtents="2,0.1,2" _radius="0.5" _halfHeight="0.5" _localPosition="0,0,0" _localRotation="0,0,0" _material="Default">
+								<_listPoint />
+								<_listIndex />
+							</PhysicsShapeDesc3D>
+						</_listShape>
+					</RigidBodyComponent>
+					<MeshComponent _localID="163493842152903304" _localPosition="0,0,0" _localRotation="0,0,0" _localScale="4,0.2,4" _attachOwner="None" _attachComponent="#63e709ac676dd304" _meshID="Cube" _materialPath="engine/materials/prototypegrid_orange.material" _boundsRadius="0.866" />
+					<InterpToMovementComponent _localID="1626856420196830213" _segmentSeconds="2" _tickSeconds="0.0166667" _bPingPong="true" _turnRate="30">
+						<_listWaypoint />
+					</InterpToMovementComponent>
 				</_listComponent>
 			</GameObject>
 		</entity>

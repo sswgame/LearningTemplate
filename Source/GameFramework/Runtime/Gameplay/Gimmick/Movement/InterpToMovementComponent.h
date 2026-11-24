@@ -1,11 +1,12 @@
 /**
  * @file InterpToMovementComponent.h
- * @brief 틱 번호의 함수로 움직이는 바닥(엘리베이터 · 왕복 발판)입니다. 서버와 클라이언트가 같은 틱에 같은 자리를 냅니다.
+ * @brief 틱 번호의 함수로 움직이는 바닥(엘리베이터 · 왕복 발판 · 회전판)입니다. 서버와 클라이언트가 같은 틱에 같은 자리를 냅니다.
  */
 #pragma once
 #include "Core/Container/vector.h"
 #include "Core/Foundation/Types.h"
 #include "Core/Math/Math.h"
+#include "Core/Math/Radians.h"
 
 #include "Engine/Object/Component/Component.h"
 #include "Engine/Reflection/ReflectionMacros.h"
@@ -19,7 +20,7 @@ namespace sw
      * @brief 플레이 시작 자리에서 경유점(`_listWaypoint`, 시작 자리 기준 오프셋)을 차례로 지나는 바닥입니다. 자리는 **틱 번호의 순수 함수**입니다(`computeOffset`).
      * @details 결정: 움직이는 바닥 위 캐릭터의 예측이 서버와 어긋나지 않으려면, 바닥이 "지금까지 쌓은 시간" 이 아니라 "이 틱의 자리" 로 정해져야 한다.
      *          쌓은 시간은 프레임 수 · 멈춤 · 접속 시점에 따라 갈라지지만, 틱의 함수는 같은 틱이면 어디서 다시 돌려도 같다(되감아 다시 시뮬레이션해도 같다).
-     *          틱은 씬의 서버 틱(`ControlSystem::getServerTick` — 조종 틱에 넷 키트가 알린 차이를 더한 값)이다. 조종 시스템이 없는 씬에서는 틱이 없으므로
+     *          틱은 씬의 서버 틱이다 — 서버는 월드의 서버 시계(`SceneNetLink::getServerClock`), 클라이언트와 혼자 하는 게임은 `ControlSystem::getServerTick`(조종 틱에 예측하는 쪽이 알린 차이를 더한 값). 조종 시스템이 없는 씬에서는 틱이 없으므로
      *          움직이지 않고 한 번 알린다(쌓은 시간으로 대신하지 않는다).
      *          자리는 서브틱(`kApplySubTickID`, DuringPhysics)에서 낸다. 씬에 서버 틱을 알리는 틱이 있으면(`ControlSystem::getServerTickSource`) 그것을 선행 조건으로 걸어
      *          같은 프레임에 알린 틱을 읽는다 — 예전에는 알리는 쪽이 씬의 바닥을 모두 돌며 칸마다 차이를 써 넣어(틱 안 씬 순회) 바닥 틱과 겹쳤고 프레임 차이가 순서에 달렸다.
@@ -31,6 +32,7 @@ namespace sw
     {
     public:
         REFLECT_BODY();
+        SW_REGISTERED_COMPONENT( InterpToMovementComponent );
 
         InterpToMovementComponent();
         virtual ~InterpToMovementComponent() override = default;
@@ -50,10 +52,21 @@ namespace sw
          *        @p bPingPong 이면 끝에서 되돌아갑니다. 경유점이 없거나 구간 시간이 0 이하이면 0 입니다.
          */
         static float3 computeOffset( const vector<float3>& listWaypoint, float32 segmentSeconds, bool bPingPong, float64 seconds );
+        /** @brief @p seconds 동안 돈 요(라디안, 한 바퀴 안)입니다. */
+        static float32 computeTurn( Radians turnRate, float64 seconds );
         /** @brief 경로를 정합니다 — 코드로 바닥을 세우는 쪽(테스트 · 키트)이 플레이 시작 전에 부릅니다. 데이터로 세우는 씬은 속성을 씁니다. */
         void setPath( const vector<float3>& listWaypoint, float32 segmentSeconds, bool bPingPong );
-        /** @brief 틱 @p tick 의 자리로 옮깁니다. */
-        void applyTick( uint32 tick );
+        /** @brief 틱 @p tick 의 자세로 트랜스폼을 옮깁니다. */
+        void applyTick( uint32 tick ) { applySeconds( static_cast<float64>( tick ) * static_cast<float64>( _tickSeconds ) ); }
+        /** @brief 바닥 시각 @p seconds(틱 × 틱 길이, 두 틱 사이면 그리기)의 자세로 트랜스폼을 옮깁니다. 네트 걸음의 간격이 이 바닥의 틱 길이와 달라도 같은 시각이면 같은 자세다. */
+        void applySeconds( float64 seconds );
+        /** @brief 바닥 시각 @p seconds 의 자세입니다(씬 자리) — 시각의 순수 함수라 서버 · 예측 · 다시 돌리기 · 원격 표시가 같은 값을 얻습니다. 시작하지 않았으면 false 입니다. */
+        [[nodiscard]] bool computePose( float64 seconds, float3& outPosition, quaternion& outRotation ) const;
+        /** @brief 이번 프레임의 바닥 시각(초)입니다 — 서버는 월드의 서버 시계, 그 밖은 조종 틱(예측하는 쪽이 알린 차이 포함). 조종 시스템이 없는 씬이면 없음입니다. */
+        [[nodiscard]] optional<float64> findCurrentSeconds( const GameObjectManager& manager ) const;
+        /** @brief 회전 빠르기(요, 라디안/초)를 정합니다 — 코드로 세우는 쪽이 플레이 시작 전에 부릅니다. */
+        void    setTurnRate( Radians turnRate ) { _turnRate = turnRate; }
+        Radians getTurnRate() const { return _turnRate; }
 
     private:
         PROPERTY( Category = "Path", DisplayName = "Waypoints", Tooltip = "Offsets from the start position, visited in order", Units = m, Meta = "Shape=Points,ShapeAxes=World" )
@@ -64,9 +77,13 @@ namespace sw
         float32 _tickSeconds;
         PROPERTY( Category = "Path", DisplayName = "Ping Pong", Tooltip = "Go back along the path instead of looping to the start" )
         bool _bPingPong;
+        PROPERTY( Category = "Path", DisplayName = "Turn Rate", Tooltip = "Yaw speed of a turntable (per second), a function of the tick like the path" )
+        Radians _turnRate;
 
         PROPERTY( RuntimeState, Category = "Path", DisplayName = "Start Position", Tooltip = "Runtime: absolute position the path starts from", Units = m )
         float3 _startPosition; ///< 절대 자리 — 지나던 중에 내렸다 올린 바닥(스트리밍 셀 · 세이브)도 처음 자리에서 잰다
+        PROPERTY( RuntimeState, Category = "Path", DisplayName = "Start Rotation", Tooltip = "Runtime: local rotation the turn starts from", Units = rad )
+        float3 _startRotation;
         PROPERTY( RuntimeState, Category = "Path", DisplayName = "Started", Tooltip = "Runtime" )
         bool _bStarted;
 

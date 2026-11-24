@@ -14,7 +14,7 @@
 namespace sw
 {
     /**
-     * @brief 유닛이 피해를 받아 HP 가 깎였음을 알립니다(언리얼 `OnTakeAnyDamage`). HP 바와 피해 숫자가 구독합니다.
+     * @brief 유닛이 피해를 받아 HP 가 깎였음을 알립니다(언리얼 `OnTakeAnyDamage`). 받는 쪽은 액션 룸 HUD(`ActionRoomHUDComponent` — 카메라 흔들림)이고, HP 바와 피해 숫자는 체력 원천 · 피해 숫자 창구가 직접 잇는다.
      * @details `UnitStatsComponent` 가 HP 를 깎는 **한 곳**에서만 낸다. 투사체, 공격 판정, 게임 코드의 `takeDamage` 가 모두 그곳을 지난다. 무적이나 죽음 때문에 깎이지 않은 피해는 내지 않는다.
      *
      *          게임 스레드(이벤트 버스를 비우는 스레드)에서 적용되면 그 자리에서 낸다(`publish`). 그러면 구독자는 같은 프레임에 받는다. 다른 스레드에서 적용되면 큐에 넣고(`push`) 다음 `processEvents` 에서 받는다.

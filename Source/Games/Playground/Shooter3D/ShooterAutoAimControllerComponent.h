@@ -25,7 +25,7 @@ namespace sw
      */
     /**
      * @struct ShooterAutoPlayOptions
-     * @brief 자동 플레이 조종자 모두에 걸리는 게임 범위 값입니다. 게임 기능 `사격장` 가 게임 범위에 겁니다(`ShooterGameFeature.cpp`). 게임 스레드에서 씁니다.
+     * @brief 자동 플레이 조종자 · 게임 모드에 걸리는 게임 범위의 개발 값입니다. 게임 기능 `사격장` 가 게임 범위에 겁니다(`ShooterGameFeature.cpp`). 게임 스레드에서 씁니다.
      * @details 조종자마다 밀어 넣지 않고 조종자가 읽는다 — 한 프로세스 재생(넷 시뮬)의 서버 · 클라이언트 월드는 활성 씬과 다른 매니저라, 활성 씬의 조종자만 켜면
      *          그 월드의 자동 플레이는 근접을 누르지 않았다(playground.shooter3d_netauthority). 게임 범위는 월드와 상관없이 하나다.
      */
@@ -37,6 +37,9 @@ namespace sw
          */
         const int32* _pForceMelee{ nullptr };
 
+        const int32* _pEnemiesOff{ nullptr }; ///< 감독이 적을 내지 않을 스위치입니다(`-gv_shooterNoEnemies` — 두 사람 대전 시나리오). 판이 시작할 때 본다
+
+        bool isEnemiesOff() const { return _pEnemiesOff != nullptr && *_pEnemiesOff != 0; }
         bool isMeleeForced() const { return _pForceMelee != nullptr && *_pForceMelee != 0; }
     };
 

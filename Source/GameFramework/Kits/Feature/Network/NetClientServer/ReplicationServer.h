@@ -184,8 +184,8 @@ namespace sw
         NetHandleResult receive( NetClientServerMessage::SnapshotAck, const NetMessageContext& context, const NetSnapshotAckBody& body );
         NetHandleResult receive( NetClientServerMessage::Input, const NetMessageContext& context, BitReader& body );
         /** @brief 연결별 상태(확인 틱, 입력 큐, 처리한 입력 틱)를 초기화합니다. 같은 슬롯에 새로 온 클라이언트가 이전 상태를 물려받지 않게 합니다. */
-        void onConnectionOpened( int32 connectionID ) override;
-        void onConnectionClosed( int32 connectionID, NetDisconnectReason reason ) override;
+        void onPeerEnteredWorld( int32 connectionID ) override;
+        void onPeerLeftWorld( int32 connectionID ) override;
 
         /**
          * @brief 그 틱의 입력을 꺼냅니다. 아직 도착하지 않았으면 가장 최근 입력을 반복하고 @p outbExact 를 false 로 둡니다. 받은 입력이 하나도 없으면 false 를 반환합니다.
@@ -220,12 +220,6 @@ namespace sw
          * @details 틱과 상태는 늘 한 번에 정한다. 상태가 `NetSnapshot::kMaxEntityBytes` 를 넘으면 오류를 남기고 정하지 않으며 false 를 반환한다.
          */
         [[nodiscard]] bool setOwnerState( int32 connectionID, uint32 inputTick, const vector<uint8>& buffer );
-        /**
-         * @brief 마지막으로 꺼낸 입력(`popInput`)을 만들 때 클라이언트가 보던 **서버 틱**입니다. 보간 지연만큼 과거이며 소수이고, 랙 보정에서 되감을 때 씁니다.
-         * @details 입력 항목마다 온 스탬프이므로 다시 보낸 옛 입력은 그 입력의 시점이다. 서버의 지금 틱(`beginTick`) 이후와 `_maxViewLagTicks` 보다 오래된 값은 잘라 낸다.
-         *          입력 틱과 서버 틱은 다른 시계다 — 늦게 붙은 클라이언트의 입력 틱은 서버 틱보다 한참 작다. `popInput` 앞에 `beginTick` 을 부른다.
-         */
-        float32            getClientViewTick( int32 connectionID ) const;
         uint32             getAckedTick( int32 connectionID ) const;
         const NetSnapshot& getWorldSnapshot() const { return _world; }
         /** @brief 상한을 넘어서 복제하지 않은 `setEntity` 호출 수입니다. */
@@ -246,7 +240,7 @@ namespace sw
             NetInputReceiveBuffer           _input{};       ///< 받은 입력. 받은 가장 새 틱을 따라가는 창이며 꺼낸 틱은 버린다
             vector<uint8>                   _lastInput{};
             NetOwnerState                   _ownerState{}; ///< 이 클라이언트가 조종하는 엔티티의 상태와 그 입력 틱. 스냅샷마다 싣는다
-            float32                         _viewTick{ 0.0f };
+            float64                         _viewTick{ 0.0 };
             float32                         _inputBudget{ 0.0f };      ///< 지금 꺼낼 수 있는 입력 수(`accumulateInputBudget` 이 채우고 `popNextIntent` 가 쓴다)
             int32                           _snapshotBudgetBytes{ 0 }; ///< 이번 `sendSnapshots` 의 예산(그 연결의 지금 송신 속도에서). 나눠 실행하기 전에 정하며 워커는 읽기만 한다
             uint32                          _ackedTick{ 0 };

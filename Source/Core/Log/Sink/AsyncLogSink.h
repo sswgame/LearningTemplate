@@ -80,7 +80,7 @@ namespace sw
          * @details 크래시 리포트 · "로그 + std::abort" 치명 경로가 부릅니다 — 큐에 넣기만 하고 프로세스가 끝나면 크래시 직전의 경고 · 정보
          *          줄과 파일의 stdio 버퍼가 사라집니다.
          */
-        void flushForCrash() override;
+        void waitUpToCrash() override;
         /** @brief `JSONLinesLogOutput` 을 달고 콘솔 장치를 끕니다(두 번째부터는 true 만 돌려줍니다). 장치 상한에 걸리면 false 입니다. */
         bool enableJSONLinesOutput() override;
 

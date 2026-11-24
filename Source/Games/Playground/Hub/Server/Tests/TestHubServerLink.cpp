@@ -36,7 +36,7 @@ namespace
         bool               trySendMessage( int32 connectionID, NetChannelKind channel, const uint8* pData, int32 size ) override { return _inner.trySendMessage( connectionID, channel, pData, size ); }
         bool               sendNotifiedMessage( int32 connectionID, const uint8* pData, int32 size, uint32 tag ) override { return _inner.sendNotifiedMessage( connectionID, pData, size, tag ); }
         int32              broadcast( NetChannelKind channel, const uint8* pData, int32 size, int32 exceptID ) override { return _inner.broadcast( channel, pData, size, exceptID ); }
-        void               disconnect( int32 connectionID ) override { _inner.disconnect( connectionID ); }
+        void               disconnect( int32 connectionID, NetLinger linger ) override { _inner.disconnect( connectionID, linger ); }
         void               pollInbound( NetInbound& outInbound ) override { _inner.pollInbound( outInbound ); }
         bool               isServer() const override { return _inner.isServer(); }
         NetConnectionState getConnectionState( int32 connectionID ) const override { return _inner.getConnectionState( connectionID ); }
@@ -125,6 +125,7 @@ namespace
                 _pServerPeers->setAccount( _cluster.getClient( index ).getClientIndex().value(), 1000 + static_cast<uint64>( index ) );
                 SW_EXPECT_TRUE( _arrClient[index].initialize( _cluster.getClient( index ), _arrClientRouter[index] ) );
             }
+            _serverRouter.openWorld( *_pServerPeers, 0 ); // 클라이언트는 알림을 받고 같은 씬(0)으로 들어온다
         }
 
         [[nodiscard]] bool startServer( HubServerLink& server )

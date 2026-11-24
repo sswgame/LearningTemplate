@@ -11,7 +11,8 @@
  *            의도로 서버의 폰에 닿고, 서버 상태의 탈것 번호가 바뀌면 클라이언트가 자리를 맞춘다(언리얼 `Possess` → `ClientRestart`). 타지 않은 말은 서버 권위 + 보간이다.
  *          - 남: 폰 · 말은 엔티티(`HubPawnPose`)로 오고 렌더 시각의 앞뒤 스냅샷을 보간해 프리팹 모습에 둔다. 캡슐은 켜 둔다(막히는 느낌이 서버와 같게 — 자리는 보간 지연만큼 과거다).
  *          고정 틱은 **실제 시간**으로 센다 — 게임 시간은 배율 · 정지 · 시나리오의 고정 프레임이 걸려 서버와 다르게 흐른다.
- *          shortcut: 자리는 월드 원점이 옮겨지지 않는 크기(±`HubRules::_worldHalfExtent`)의 허브만 본다 — 원점 이동(LWC)을 켜는 큰 허브가 되면 선의 자리를 절대 자리로 바꾼다.
+ *          **자리는 모두 절대다** — 선의 상태 · 모습, 예측 기록, 허브 규칙(`moveAvatar` · 경계), 관심 영역. 씬의 몸(물리 · 트랜스폼)에 닿는 자리에서만 그 월드의 원점으로 옮긴다
+ *          (`toLocalState` · `toAbsoluteState`). 서버와 클라이언트의 원점이 달라도, 예측 도중 원점이 옮겨져도 기록과 서버 상태가 같은 자리를 말한다.
  */
 #pragma once
 #include "Core/Container/vector.h"
@@ -42,14 +43,16 @@
 namespace sw
 {
     struct NetLinkValue;
+    struct WorldOrigin;
 
+    class ControlSystem;
     class GameObject;
     class GameObjectManager;
     class HubWorldComponent;
     class PawnComponent;
 
     /**
-     * @brief 자기 폰 하나의 이동 상태입니다 — 걷는 몸, 탄 말, 지금 어느 쪽인가. 소유자 상태의 바이트이자 예측 기록의 상태다(`ReplicatedLayout`, 양자화하지 않는다).
+     * @brief 자기 폰 하나의 이동 상태입니다(자리는 절대) — 걷는 몸, 탄 말, 지금 어느 쪽인가. 소유자 상태의 바이트이자 예측 기록의 상태다(`ReplicatedLayout`, 양자화하지 않는다).
      * @details 칸을 바꾸면 와이어 버전이 바뀐다(`PlaygroundGame::onRegisterReplicatedTypes`).
      */
     REFLECT()
@@ -65,6 +68,12 @@ namespace sw
 
         PROPERTY( Replicated, Min = 0, Max = 8 )
         uint8 _mountNumber{ 0 }; ///< 탄 말의 번호(`_listMount` 차례 + 1). 0 이면 걷는다. 범위는 cpp 의 static_assert 가 `kMaxMount` 와 맞춘다
+
+        PROPERTY( Replicated )
+        int32 _floorTickOffset{ 0 }; ///< 움직이는 바닥의 틱 − 입력 틱. 서버가 연결마다 정한다 — 예측 · 다시 돌리기가 서버와 같은 틱의 바닥 위에서 걷는다
+
+        PROPERTY( Replicated, Min = 0, Max = 1 )
+        uint8 _bFloorTickKnown{ SW_FALSE }; ///< `_floorTickOffset` 이 정해졌다(아니면 바닥을 놓지 않는다)
     };
 
     /** @brief 남에게 보이는 폰 · 말 하나의 엔티티 상태입니다. 보간해 그리기만 하므로 양자화한다. */
@@ -73,8 +82,8 @@ namespace sw
     {
         REFLECT_BODY();
 
-        PROPERTY( Replicated, Min = -4096, Max = 4096, Step = 0.01 )
-        float3 _position{}; ///< 폰은 루트(발 · 탔으면 안장), 말은 루트(m, 1 cm 간격)
+        PROPERTY( Replicated, Min = -32768, Max = 32768, Step = 0.01 )
+        float3 _position{}; ///< 폰은 루트(발 · 탔으면 안장), 말은 루트(절대, m, 1 cm 간격)
 
         PROPERTY( Replicated, Min = -3.2, Max = 3.2, Step = 0.001 )
         float32 _yaw{ 0.0f }; ///< 라디안, [-π, π] 로 감은 값
@@ -84,6 +93,12 @@ namespace sw
 
         PROPERTY( Replicated, Min = 0, Max = 4 )
         uint8 _gait{ 0 }; ///< 말 — `MountGait`
+
+        PROPERTY( Replicated )
+        uint8 _teleportCount{ 0 }; ///< 순간 이동 · 타고 내림 번호 — 다른 두 표본은 잇지 않는다(`NetSampleRatio`)
+
+        PROPERTY( Replicated, Min = 0, Max = 16 )
+        uint8 _floorNumber{ 0 }; ///< 폰 — 디딘 움직이는 바닥의 번호(`_listFloor` 차례 + 1, 0 이면 없다). 0 이 아니면 `_position` · `_yaw` 는 그 바닥 기준이다
     };
 
     /** @brief 입력 틱 하나입니다 — 의도와 그 의도를 낸 폰의 엔티티 id. 버튼 비트는 폰 스키마의 차례라 다른 폰의 것이면 움직임 없이(시선만) 쓴다. */
@@ -91,11 +106,14 @@ namespace sw
     {
         ControlIntent _intent{};
         uint32        _pawnEntityID{ 0 };
+        uint32        _inputTick{ 0 }; ///< 이 입력의 틱 — 상태의 `_floorTickOffset` 을 더하면 바닥의 틱이다
     };
 } // namespace sw
 
 namespace sw
 {
+    class TickedFloorStep;
+
     /**
      * @class HubPawnReplicationComponent
      * @brief 허브의 폰 복제입니다. 규칙은 파일 머리말을 보세요.
@@ -109,9 +127,10 @@ namespace sw
 
         /** @brief 소유자 상태(`HubPawnState`)의 복제 스키마를 핸드셰이크에 올리는 번호입니다. 허브의 MMO 엔티티 종류(`HubEntityType`)와 겹치지 않는다. */
         static constexpr uint32 kOwnerStateSchemaID = 4;
-        static constexpr uint32 kPawnTypeID         = 5; ///< 폰 엔티티(`HubPawnPose`, id 는 아바타 번호)
-        static constexpr uint32 kMountTypeID        = 6; ///< 말 엔티티(`HubPawnPose`)
-        static constexpr uint32 kMaxMount           = 8; ///< 씬에 둘 수 있는 말 수(`_mountNumber` 의 Max)
+        static constexpr uint32 kPawnTypeID         = 5;  ///< 폰 엔티티(`HubPawnPose`, id 는 아바타 번호)
+        static constexpr uint32 kMountTypeID        = 6;  ///< 말 엔티티(`HubPawnPose`)
+        static constexpr uint32 kMaxMount           = 8;  ///< 씬에 둘 수 있는 말 수(`_mountNumber` 의 Max)
+        static constexpr uint32 kMaxFloor           = 16; ///< 씬에 둘 수 있는 움직이는 바닥 수(`_floorNumber` 의 Max)
         /** @brief 말 n 의 엔티티 id 는 이 수 + n 입니다. 아바타 번호(`HubWorld::kPlacementIDBase` 아래) 위다. */
         static constexpr uint32 kMountEntityIDBase = 200000;
 
@@ -131,8 +150,22 @@ namespace sw
         [[nodiscard]] static bool writeState( const HubPawnState& state, vector<uint8>& outBytes );
         /** @brief 소유자 상태를 읽습니다. 깨졌거나 범위 밖이면 false 이고 @p outState 는 그대로입니다. */
         [[nodiscard]] static bool readState( const vector<uint8>& bytes, HubPawnState& outState );
+        /** @brief 절대 자리의 상태를 원점 @p origin 인 씬의 상태로 옮깁니다(몸에 넣기 전). 타지 않았으면 말 상태는 뜻이 없어 그대로입니다. */
+        [[nodiscard]] static HubPawnState toLocalState( const WorldOrigin& origin, const HubPawnState& state );
+        /** @brief 씬의 상태를 절대 자리의 상태로 옮깁니다(몸에서 읽은 뒤). */
+        [[nodiscard]] static HubPawnState toAbsoluteState( const WorldOrigin& origin, const HubPawnState& state );
         /** @brief 두 상태가 같다고 볼 만큼 가까운가입니다 — 같은 몸(탈것 번호)이고 자리가 @p tolerance 안이며 이동 방식 · 걸음새가 같다. */
         static bool isClose( const HubPawnState& left, const HubPawnState& right, float32 tolerance );
+        /** @brief 지금 디딘 바닥에서 자기 폰이 밀린 거리(m)입니다 — 바닥 위에서 걷지 않는데 이 값이 자라면 실려 가지 못한 것이다(감시 값). 바닥 위가 아니면 0 입니다. */
+        float32 getFloorSlip() const { return _floorSlip; }
+        /** @brief 자기 폰이 디딘 움직이는 바닥의 번호입니다(0 이면 없다). */
+        int32 getFloorNumber() const { return static_cast<int32>( _floorNumber ); }
+        /** @brief 그 바닥 기준의 자기 폰 자리입니다(`getFloorNumber` 가 0 이면 뜻이 없다). */
+        const float3& getFloorLocalPosition() const { return _floorLocalPosition; }
+        /** @brief 움직이는 바닥 위에 보이는 첫 남의 폰이 디딘 바닥의 번호입니다(0 이면 없다). */
+        int32 getRemoteFloorNumber() const;
+        /** @brief 그 남의 폰을 그린 자리입니다(바닥 기준). */
+        float3 getRemoteFloorLocalPosition() const;
 
     private:
         enum class Role : uint8
@@ -147,20 +180,29 @@ namespace sw
         {
             GameObjectHandle _object{};
             GameObjectHandle _controller{};       ///< 원격 조종자 오브젝트
-            float3           _acceptedPosition{}; ///< 허브 규칙이 받은 마지막 자리 — 받지 않은 걸음은 여기로 되돌린다
+            float3           _acceptedPosition{}; ///< 허브 규칙이 받은 마지막 자리(절대) — 받지 않은 걸음은 여기로 되돌린다
             uint32           _avatarID{ 0 };
             int32            _connectionID{ constant::invalid_index::kInt32 };
-            uint8            _bSeen{ SW_FALSE }; ///< 이번 프레임의 접속 목록에 있다
+            uint8            _bSeen{ SW_FALSE };  ///< 이번 프레임의 접속 목록에 있다
+            uint8            _teleportCount{ 0 }; ///< 규칙이 받은 자리로 되돌리거나 타고 내릴 때마다 오른다
+            uint8            _mountNumber{ 0 };   ///< 마지막으로 낸 탈것 번호(바뀌면 순간 이동이다)
+            int64            _floorTick{ 0 };     ///< 마지막 명령이 푼 바닥 틱(바닥 기준 자리를 이 자세로 잰다)
+            int32            _floorTickOffset{ 0 };
+            uint8            _bFloorTickKnown{ SW_FALSE };
         };
 
         /** @brief 클라이언트 — 남의 폰 모습 하나입니다. */
         struct RemotePawn
         {
             GameObjectHandle _object{};
+            float3           _floorLocalPosition{}; ///< 그린 바닥 기준의 자리(`_floorNumber` 일 때)
             uint32           _entityID{ 0 };
+            uint8            _floorNumber{ 0 };  ///< 디딘 바닥의 번호(0 이면 없다)
             uint8            _bSeen{ SW_FALSE }; ///< 이번 프레임의 보이는 목록에 있다
         };
 
+        /** @brief 바닥 위에 보이는 첫 남의 폰입니다. 없으면 nullptr 입니다. */
+        const RemotePawn* findRemoteRider() const;
         /** @brief 넷 걸음 한 프레임입니다(틱 뒤 · 게임 스레드). */
         void runNetFrame( GameObjectManager& manager );
         /** @brief 허브 링크가 섰으면 역할에 맞는 복제기를 한 번 세웁니다. */
@@ -173,7 +215,7 @@ namespace sw
         int32 consumeTicks( float32 seconds );
 
         // 서버
-        void runServerFrame( GameObjectManager& manager, const HubWorldComponent& hub, float32 seconds );
+        void runServerFrame( GameObjectManager& manager, const HubWorldComponent& hub, const NetLinkValue& link, float32 seconds );
         void syncServerPawnList( GameObjectManager& manager, const HubWorldComponent& hub );
         void spawnServerPawn( GameObjectManager& manager, const HubWorldComponent& hub, const HubAvatarSession& session );
         void removeServerPawn( GameObjectManager& manager, const ServerPawn& pawn );
@@ -196,19 +238,27 @@ namespace sw
         void         updateRemotePawnList( GameObjectManager& manager );
 
         // 공용
-        /** @brief 한 틱의 다음 상태입니다 — 서버 · 예측 · 다시 돌리기가 이 한 함수다(끝 자리는 허브 경계 안으로 자른다). */
+        /** @brief 한 틱의 다음 상태입니다(절대 → 절대) — 서버 · 예측 · 다시 돌리기가 이 한 함수다(끝 자리는 허브 경계 안으로 자른다). */
         HubPawnState simulateTick( GameObjectManager& manager, const HubWorldComponent& hub, GameObject& pawnObject, const HubPawnState& state, const HubPawnInput& input, uint32 avatarID,
                                    CharacterMotionPass pass ) const;
         HubPawnState captureState( GameObjectManager& manager, const GameObject& pawnObject ) const;
         /** @brief 상태를 몸(걷는 몸 또는 탄 말)에 옮깁니다. */
         void        applyState( GameObjectManager& manager, GameObject& pawnObject, const HubPawnState& state ) const;
-        GameObject* spawnPawnObject( GameObjectManager& manager, const utf8* pName, const float3& position ) const;
+        GameObject* spawnPawnObject( GameObjectManager& manager, const utf8* pName, const float3& localPosition ) const;
         /** @brief 이 폰이 운전석에 앉은 말의 번호입니다(0 이면 앉지 않았다). */
-        uint8                     findMountNumber( const GameObjectManager& manager, const GameObject& pawnObject ) const;
-        MountMovementComponent*   findMount( GameObjectManager& manager, uint8 mountNumber ) const;
+        uint8                   findMountNumber( const GameObjectManager& manager, const GameObject& pawnObject ) const;
+        MountMovementComponent* findMount( GameObjectManager& manager, uint8 mountNumber ) const;
+        /** @brief 이 폰이 디딘 움직이는 바닥의 번호입니다(0 이면 없다). */
+        uint8 findFloorNumber( const GameObjectManager& manager, const GameObject& pawnObject ) const;
+        /** @brief 바닥 @p floorNumber 의 틱 @p tick 자세입니다. 없는 바닥이면 false 입니다. */
+        [[nodiscard]] bool computeFloorPose( const GameObjectManager& manager, uint8 floorNumber, float64 tick, float3& outPosition, quaternion& outRotation ) const;
+        /** @brief 네트 틱 @p netTick 을 씬의 바닥이 읽는 조종 틱으로 알립니다. */
+        void publishFloorTick( ControlSystem& control, int64 netTick ) const;
+        /** @brief 클라이언트가 지금 그리는 바닥 틱(소수)입니다. */
+        float64                   computeDisplayFloorTick() const;
+        void                      updateFloorSlip( GameObjectManager& manager, const GameObject& pawnObject, bool bWalking );
         static uint32             makePawnEntityID( uint32 avatarID, uint8 mountNumber ) { return mountNumber != 0 ? kMountEntityIDBase + mountNumber - 1u : avatarID; }
         [[nodiscard]] static bool writePose( const HubPawnPose& pose, vector<uint8>& outBytes );
-        [[nodiscard]] static bool readPose( const vector<uint8>& bytes, HubPawnPose& outPose );
 
         PROPERTY( Required, Category = "Network", DisplayName = "Pawn Prefab", Tooltip = "Body spawned for each connected account (on the server) and for each other player (on a client)" )
         AssetRef<PrefabAsset> _pawnPrefab;
@@ -216,6 +266,8 @@ namespace sw
         GameObjectHandle _localPawn;
         PROPERTY( Category = "Network", DisplayName = "Mounts", Tooltip = "Horses of this scene (at most 8), in an order the server and the clients share" )
         vector<GameObjectHandle> _listMount;
+        PROPERTY( Category = "Network", DisplayName = "Moving Floors", Tooltip = "Floors that move as a function of the tick (at most 16), in an order the server and the clients share" )
+        vector<GameObjectHandle> _listFloor;
         PROPERTY( Category = "Network", DisplayName = "Tick Interval", Min = 0.001, Units = s, Tooltip = "Fixed step of the networked movement; the server simulation and the client prediction use the same step" )
         float32 _tickInterval;
         PROPERTY( Category = "Network", DisplayName = "Smoothing Half Life", Min = 0.001, Units = s, Tooltip = "Time for half of a prediction correction to fade out on screen" )
@@ -245,19 +297,23 @@ namespace sw
         vector<MeleeHitClaim>                        _listClaimScratch;  ///< 서버 — 허브에는 근접 주장이 없다(꺼내는 형식이 요구한다)
         vector<uint32>                               _listEntityScratch; ///< 클라이언트 — 보이는 엔티티
         vector<uint8>                                _bytesScratch;
-        float3                                       _previousPosition;     ///< 클라이언트 — 자기 폰의 지난 틱 자리(그리기 보간)
+        TickedFloorStep*                             _pFloorStep;           ///< 이번 넷 프레임의 바닥 장치(프레임 동안만, 소유하지 않음)
+        float3                                       _floorLocalPosition;   ///< 클라이언트 — 디딘 바닥 기준의 자리(밀림 감시)
+        float32                                      _floorSlip;            ///< 클라이언트 — 디딘 바닥에서 밀린 거리
+        int32                                        _floorTickOffset;      ///< 클라이언트 — 서버가 정해 준 바닥 틱 차이
+        float3                                       _previousPosition;     ///< 클라이언트 — 자기 폰의 지난 틱 자리(절대, 그리기 보간)
         int64                                        _lastFrameNanoseconds; ///< 지난 넷 걸음 프레임의 실제 시각(0 이면 아직 없다)
         float32                                      _accumulator;
-        float32                                      _pendingTriggerYaw;   ///< 클라이언트 — 모은 발동 순간의 시선
-        float32                                      _pendingTriggerPitch; ///< 클라이언트 — 모은 발동 순간의 시선
-        uint32                                       _pendingTriggered;    ///< 클라이언트 — 다음 입력 틱에 실을 발동 비트
+        vector<ControlTrigger>                       _listPendingTrigger;  ///< 클라이언트 — 다음 입력 틱에 실을 발동 사건
         uint32                                       _pendingPawnEntityID; ///< 클라이언트 — 모은 발동을 낸 폰(폰이 바뀌면 모은 것을 버린다)
-        uint32                                       _tick;                ///< 서버 — 시뮬레이션 틱, 클라이언트 — 예측한 입력 틱
+        uint32                                       _stride;              ///< 이 컴포넌트의 틱 하나가 월드의 서버 틱 몇 개인지
+        uint32                                       _tick;                ///< 서버 — 월드의 서버 시계에서 낸 시뮬레이션 틱, 클라이언트 — 예측한 입력 틱
         uint32                                       _reconciledTick;      ///< 클라이언트 — 마지막으로 맞춘 소유자 상태의 입력 틱
         uint32                                       _localAvatarID;       ///< 클라이언트 — 예측하는 자기 아바타(0 이면 아직 없다)
         Role                                         _role;
-        uint8                                        _bStartTried         : 1; ///< 지금 링크로 복제기를 세워 봤다(실패해도 다시 하지 않는다 — 오류는 한 번 알린다)
-        uint8                                        _bPendingTriggerLook : 1; ///< 클라이언트 — `_pendingTriggerYaw` · `_pendingTriggerPitch` 가 채워졌다
-        [[maybe_unused]] uint8                       _reserved            : 6;
+        uint8                                        _floorNumber;     ///< 클라이언트 — 디딘 바닥(밀림 감시)
+        uint8                                        _bFloorTickKnown; ///< 클라이언트 — `_floorTickOffset` 을 받았다
+        uint8                                        _bStartTried : 1; ///< 지금 링크로 복제기를 세워 봤다(실패해도 다시 하지 않는다 — 오류는 한 번 알린다)
+        [[maybe_unused]] uint8                       _reserved    : 7;
     };
 } // namespace sw

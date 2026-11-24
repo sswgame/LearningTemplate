@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="utf-8"?>
+<?asset guid="fe94a59815d14de1bd3e305bbc017a94"?>
+<!--
+  움직이는 바닥 위의 사람 대전 — 사격장 매치(shooter3d_match)와 같은 규칙이고 맵만 다르다(적이 없다). 허브 입구는 없다. 매칭 모드의 서버 종류가 달라 아레나 서버에 배정되지 않는다.
+  `py -3 -m Scripts net-pair match` 의 둘째 단계가 본다(automation/netpair/match_floor_first · match_floor_second).
+-->
+<Minigame name="shooter3d_floormatch" map="game/playground/shooter3d/maps/movingfloor.scene.xml" entry="SceneSwitch" save="Blocked" matchMode="floor_solo" matchBoard="arena_kills" matchScore="kills" inputContexts="Movement,Traversal,Look,Camera,CameraOrbit,Shooter"/>

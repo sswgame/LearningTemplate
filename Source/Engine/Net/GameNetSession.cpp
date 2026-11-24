@@ -222,6 +222,8 @@ namespace sw
         , _digestSentRevision{ 0 }
         , _digestServerConnection{ -1 }
         , _shutdownNotice{}
+        , _lostReason{}
+        , _bServerJoined{ SW_FALSE }
         , _bShutdownNoticeKnown{ SW_FALSE }
         , _bServerTickKnown{ SW_FALSE }
         , _clientHostFrameNumber{ 0 }
@@ -621,6 +623,8 @@ namespace sw
         _bConnectFailureReported = SW_FALSE;
         _bServerTickKnown        = SW_FALSE;
         _bShutdownNoticeKnown    = SW_FALSE;
+        _bServerJoined           = SW_FALSE;
+        _lostReason.reset();
     }
 
     void GameNetSession::update()
@@ -630,9 +634,25 @@ namespace sw
         reportConnectResult();
         _listEventScratch.clear();
         (void)_router.poll( _peers, nullptr, &_listEventScratch ); // 처리기가 없는 메시지는 버린다(맡은 키트가 없다)
+        recordServerLoss();
         logEvents( EventPhase::Running );
         recordMetrics();
         updateResourceDigest();
+    }
+
+    void GameNetSession::recordServerLoss()
+    {
+        if ( _role != GameNetRole::Client )
+            return;
+        for ( const NetEndpointEvent& event : _listEventScratch )
+        {
+            const bool bConnected = event._kind == NetEndpointEvent::Kind::Connected;
+            if ( bConnected )
+                _lostReason.reset();
+            else if ( _bServerJoined == SW_TRUE ) // 붙지 못한 시도의 끝은 잃은 것이 아니다(`hasConnectFailed`)
+                _lostReason = event._reason;
+            _bServerJoined = bConnected ? SW_TRUE : SW_FALSE;
+        }
     }
 
     void GameNetSession::logEvents( EventPhase phase ) const
@@ -866,7 +886,7 @@ namespace sw
             // 게임플레이 값이 클라이언트마다 다르면 판정이 어긋난다 — 받지 않는다(`docs/agents/DataInheritance.md` 조건 절의 네트워크).
             SW_LOG_ERROR_ID( "Net.ResourceDigestMismatch", "Net session client %# composed '%#' differently from the server (load-axis conditions or resource layers differ) - disconnecting it",
                              mismatch._peer, mismatch._assetID );
-            _peers.disconnect( mismatch._peer );
+            _peers.disconnect( mismatch._peer, NetLinger::none() );
             _digestComparer.removePeer( mismatch._peer );
         }
     }
@@ -903,7 +923,7 @@ namespace sw
         if ( _digestComparer.addPeerLine( context._connectionID, entry, MonotonicClock::nowNanoseconds() ) == false )
         {
             SW_LOG_ERROR_ID( "Net.ResourceDigestFlood", "Net session client %# sent more than %# resource composition lines - disconnecting it", context._connectionID, ResourceDigestComparer::kMaxLinesPerPeer );
-            _peers.disconnect( context._connectionID );
+            _peers.disconnect( context._connectionID, NetLinger::none() );
             _digestComparer.removePeer( context._connectionID );
         }
         return NetHandleResult::Handled;

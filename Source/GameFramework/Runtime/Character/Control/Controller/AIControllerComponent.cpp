@@ -61,6 +61,7 @@ namespace sw
         , _pending{}
         , _destination{}
         , _focusPoint{}
+        , _pressedButtonMask{ 0 }
         , _heldButtonMask{ 0 }
         , _moveStatus{ NavMoveStatus::Idle }
         , _bHasDestination{ SW_FALSE }
@@ -80,16 +81,17 @@ namespace sw
         _runner.reset();
         _thinkSchedule = ControlFrameInterval{};
         _blackboard.clear();
-        _stateName        = hashed_string{};
-        _pending          = ControlIntent{};
-        _destination      = float3{};
-        _focusPoint       = float3{};
-        _heldButtonMask   = 0;
-        _moveStatus       = NavMoveStatus::Idle;
-        _bHasDestination  = SW_FALSE;
-        _bHasFocus        = SW_FALSE;
-        _bDestinationSent = SW_FALSE;
-        _bStopPending     = SW_FALSE;
+        _stateName         = hashed_string{};
+        _pending           = ControlIntent{};
+        _destination       = float3{};
+        _focusPoint        = float3{};
+        _pressedButtonMask = 0;
+        _heldButtonMask    = 0;
+        _moveStatus        = NavMoveStatus::Idle;
+        _bHasDestination   = SW_FALSE;
+        _bHasFocus         = SW_FALSE;
+        _bDestinationSent  = SW_FALSE;
+        _bStopPending      = SW_FALSE;
         return SpawnStateReset::Reset;
     }
 
@@ -146,12 +148,25 @@ namespace sw
 
     void AIControllerComponent::produceIntent( const ControlFrameContext& context, const PawnComponent& pawn, ControlIntent& outIntent )
     {
-        using Internal = AIControllerComponentInternal;
         // 틱 사이(think 밖)에 부른 pressButton · setAnalog 도 이번 의도에 싣는다 — 낸 뒤에 비운다.
         think( context, pawn );
-        outIntent = _pending;
-        _pending  = ControlIntent{};
-        outIntent._buttonDown |= _heldButtonMask;
+        outIntent           = _pending;
+        outIntent._viewTick = context._viewTick;
+        _pending            = ControlIntent{};
+        outIntent._buttonDown |= _heldButtonMask | _pressedButtonMask;
+        produceMove( context, pawn, outIntent );
+        // 발동은 이번 틱의 조종 회전으로 낸다.
+        for ( int32 buttonIndex = 0; buttonIndex < ControlIntent::kButtonCount; ++buttonIndex )
+        {
+            if ( ( _pressedButtonMask & ( 1u << buttonIndex ) ) != 0 )
+                outIntent.addTrigger( buttonIndex, getControlYaw(), getControlPitch(), context._viewTick );
+        }
+        _pressedButtonMask = 0;
+    }
+
+    void AIControllerComponent::produceMove( const ControlFrameContext& context, const PawnComponent& pawn, ControlIntent& inoutIntent )
+    {
+        using Internal = AIControllerComponentInternal;
 
         const GameObject*     pPawnOwner = pawn.getOwner();
         const SceneComponent* pScene     = pPawnOwner != nullptr ? pPawnOwner->getPrimarySceneComponent() : nullptr;
@@ -182,8 +197,8 @@ namespace sw
         setControlRotation( yaw, pitch );
 
         // 이동 축은 이번 조종 요 기준이다(시스템이 같은 요를 의도에 넣는다).
-        outIntent._controlYaw = yaw;
-        outIntent.setWorldMove( moveDirection );
+        inoutIntent._controlYaw = yaw;
+        inoutIntent.setWorldMove( moveDirection );
     }
 
     float3 AIControllerComponent::computeMoveDirection( const PawnComponent& pawn, const float3& pawnPosition )
@@ -294,9 +309,10 @@ namespace sw
 
     void AIControllerComponent::pressButton( const hashed_string& name )
     {
-        const PawnComponent* pPawn = findPawn();
-        if ( pPawn != nullptr )
-            _pending.setButton( pPawn->findButton( name ), true, true );
+        const PawnComponent*  pPawn       = findPawn();
+        const optional<int32> buttonIndex = pPawn != nullptr ? pPawn->findButton( name ) : nullopt;
+        if ( ControlIntent::isInRange( buttonIndex ) )
+            _pressedButtonMask |= 1u << *buttonIndex;
     }
 
     void AIControllerComponent::holdButton( const hashed_string& name, bool bHeld )

@@ -5,8 +5,6 @@
 #include "Core/Math/MathUtil.h"
 #include "Core/Network/Connection/NetEndpoint.h"
 #include "Core/Network/Message/NetSendBudget.h"
-#include "Core/Network/Replication/InterpolationBuffer.h"
-#include "Core/Serialization/BitStream.h"
 
 #include "Engine/Character/Hit/MeleeSweepHistory.h"
 
@@ -21,13 +19,15 @@ namespace sw
         , _inputWindow{}
         , _settings{}
         , _pHost{ nullptr }
-        , _clock{}
+        , _pWorldClock{ nullptr }
+        , _renderClock{}
+        , _stride{ 1 }
         , _decodeFailureCount{}
         , _messageWriter{}
     {
     }
 
-    bool ReplicationClient::initialize( INetPeers* pHost, const ReplicationClientConfig& settings )
+    bool ReplicationClient::initialize( INetPeers* pHost, NetClock& worldClock, const ReplicationClientConfig& settings )
     {
         // 실패하면 호스트 없는 클라이언트로 남기고 지난 설정을 그대로 둔다. 값을 범위 안으로 맞춰 돌지 않는다.
         _pHost                  = nullptr;
@@ -37,13 +37,21 @@ namespace sw
             SW_LOG_ERROR_ID( "ReplicationClient.ReplicationClientRefusedStartSettings", "ReplicationClient: refused to start - settings '%#'", rangeError.c_str() );
             return false;
         }
-        _pHost    = pHost;
-        _settings = settings;
-        NetClockConfig clockSettings;
-        clockSettings._tickInterval       = settings._tickInterval;
+        const optional<uint32> stride = NetClock::computeStride( settings._tickInterval );
+        if ( stride.has_value() == false )
+        {
+            SW_LOG_ERROR_ID( "ReplicationClient.ReplicationClientTickInterval", "ReplicationClient: refused to start - tick interval %# s is not a multiple of the server tick (%# s)", settings._tickInterval, NetClock::kTickSeconds );
+            return false;
+        }
+        _pHost       = pHost;
+        _settings    = settings;
+        _pWorldClock = &worldClock;
+        _stride      = *stride;
+        NetRenderClockConfig clockSettings;
+        clockSettings._stride             = _stride;
         clockSettings._interpolationDelay = settings._interpolationDelay;
-        clockSettings._sampleInterval     = settings._tickInterval; // 스냅샷은 서버 틱마다 온다
-        _clock.initialize( clockSettings );
+        clockSettings._sampleInterval     = settings._tickInterval; // 스냅샷은 그 틱마다 온다
+        _renderClock.initialize( clockSettings );
 
         _listSnapshot.initialize( settings._historySize ); // 범위(4 이상)는 위에서 봤다
         _inputWindow.initialize( NetClientServerMessage::kMaxInputCount, NetClientServerMessage::kInputFormat );
@@ -56,12 +64,12 @@ namespace sw
     {
         _listSnapshot.reset(); // 스냅샷 버퍼는 그대로 남아 다음 연결이 재사용한다
         _inputWindow.reset();  // 새 서버이므로 이전 확인은 이 연결의 것이 아니다
-        _clock.reset();        // 새 서버의 틱은 이전 서버보다 작을 수 있으므로 첫 스냅샷에서 다시 맞춘다
+        _renderClock.reset();  // 새 서버의 틱은 이전 서버보다 작을 수 있으므로 첫 스냅샷에서 다시 맞춘다(월드의 시계는 라우터가 되돌린다)
     }
 
-    void ReplicationClient::onConnectionOpened( int32 connectionID )
+    void ReplicationClient::onWorldOpened( uint32 generation )
     {
-        (void)connectionID;
+        (void)generation;
         resetHistory();
     }
 
@@ -74,14 +82,6 @@ namespace sw
     {
         const NetSnapshot* pLatest = getLatest();
         return pLatest != nullptr && pLatest->_ownerState._bPresent == SW_TRUE ? &pLatest->_ownerState : nullptr;
-    }
-
-    optional<int64> ReplicationClient::findServerTickOffset() const
-    {
-        const NetOwnerState* pOwner = findOwnerState();
-        if ( pOwner == nullptr )
-            return nullopt;
-        return static_cast<int64>( getLatest()->_tick ) - static_cast<int64>( pOwner->_inputTick );
     }
 
     NetHandleResult ReplicationClient::receive( NetClientServerMessage::Snapshot, const NetMessageContext& context, BitReader& body )
@@ -107,7 +107,8 @@ namespace sw
             return NetHandleResult::Malformed;                             // 적용 전에 본다 — 남는 바이트가 있는 스냅샷은 복원하지 않는다
         _inputWindow.acknowledge( _decodeScratch._firstMissingInputTick ); // 서버가 빈틈없이 받은 다음 틱이다. 그 이전 입력은 다시 싣지 않는다
         std::swap( _listSnapshot.acquire( tick ), _decodeScratch );        // 가장 새 틱도 이 스냅샷이 된다. 밀려난 이전 스냅샷의 버퍼는 다음 복원에 재사용한다
-        _clock.observeServerTick( tick );                                  // 첫 스냅샷이면 렌더 틱을 바로 (그 틱 − 지연)에 둔다
+        _pWorldClock->observe( tick * _stride );
+        _renderClock.observeSample( tick );
         NetSnapshotAckBody ack;
         ack._tick = tick;
         if ( _pHost != nullptr && _messageWriter.writeMessage<NetClientServerMessage::Table, NetClientServerMessage::SnapshotAck>( ack ) )
@@ -115,18 +116,17 @@ namespace sw
         return NetHandleResult::Handled;
     }
 
-    void ReplicationClient::update( float32 deltaTime )
+    void ReplicationClient::onPollFinished()
     {
-        // 렌더 틱은 서버 틱 추정값에서 지연을 뺀 값이다.
-        // 추정값은 받은 스냅샷 틱의 하한에 흐른 시간을 더한 것이고 받은 가장 새 틱 + 지연까지만 간다. 그래서 통신이 끊겨도 되돌아가지 않고 받은 틱을 지나치지도 않는다.
-        _clock.advance( deltaTime );
+        if ( _pWorldClock != nullptr )
+            _renderClock.follow( *_pWorldClock );
     }
 
-    void ReplicationClient::findBracket( const NetSnapshot*& pOutFrom, const NetSnapshot*& pOutTo, float32& outAlpha ) const
+    void ReplicationClient::findBracket( const NetSnapshot*& pOutFrom, const NetSnapshot*& pOutTo, NetSampleRatio& outRatio ) const
     {
         pOutFrom = nullptr;
         pOutTo   = nullptr;
-        outAlpha = 0.0f;
+        outRatio = NetSampleRatio::makeHeld();
         if ( _listSnapshot.hasNewest() == false )
             return;
         const float64 renderTick = getRenderTick();
@@ -154,28 +154,29 @@ namespace sw
             pOutTo = pOutFrom; // 새 스냅샷이 늦으므로 마지막 것에서 멈춘다. 외삽하지 않는다
             return;
         }
-        outAlpha = NetInterpolationUtil::computeAlpha( pOutFrom->_tick, pOutTo->_tick, renderTick );
+        outRatio = NetSampleRatio::make( pOutFrom->_tick, pOutTo->_tick, renderTick );
     }
 
-    bool ReplicationClient::sampleEntity( uint32 entityID, const NetEntityState*& pOutFrom, const NetEntityState*& pOutTo, float32& outAlpha ) const
+    bool ReplicationClient::findSample( uint32 entityID, uint32 typeID, const NetEntityState*& pOutFrom, const NetEntityState*& pOutTo, NetSampleRatio& outRatio ) const
     {
         const NetSnapshot* pFrom = nullptr;
         const NetSnapshot* pTo   = nullptr;
-        findBracket( pFrom, pTo, outAlpha );
+        findBracket( pFrom, pTo, outRatio );
         pOutFrom = pFrom != nullptr ? pFrom->findEntity( entityID ) : nullptr;
         pOutTo   = pTo != nullptr ? pTo->findEntity( entityID ) : nullptr;
-        if ( pOutFrom == nullptr && pOutTo == nullptr )
+        // 같은 번호를 다른 종류가 다시 쓰면 앞의 것이 사라지고 새것이 생긴 것이다.
+        if ( pOutFrom != nullptr && pOutFrom->_typeID != typeID )
+            pOutFrom = nullptr;
+        if ( pOutTo != nullptr && pOutTo->_typeID != typeID )
+            pOutTo = nullptr;
+        if ( outRatio.isPresent( pOutFrom != nullptr, pOutTo != nullptr ) == false )
             return false;
-        if ( pOutFrom == nullptr )
-        {
-            pOutFrom = pOutTo; // 새로 생긴 엔티티이므로 다음 스냅샷부터 쓴다
-            outAlpha = 1.0f;
-        }
-        if ( pOutTo == nullptr )
-        {
-            pOutTo   = pOutFrom; // 사라지는 중이므로 마지막 모습을 쓴다
-            outAlpha = 0.0f;
-        }
+        if ( pOutFrom != nullptr && pOutTo != nullptr )
+            return true;
+        // 사라지는 중이거나 막 생겼다 — 있는 쪽 하나 그대로다.
+        pOutFrom = pOutFrom != nullptr ? pOutFrom : pOutTo;
+        pOutTo   = pOutFrom;
+        outRatio = NetSampleRatio::makeHeld();
         return true;
     }
 
@@ -184,8 +185,8 @@ namespace sw
         outListEntity.clear();
         const NetSnapshot* pFrom = nullptr;
         const NetSnapshot* pTo   = nullptr;
-        float32            alpha = 0.0f;
-        findBracket( pFrom, pTo, alpha );
+        NetSampleRatio     ratio = NetSampleRatio::makeHeld();
+        findBracket( pFrom, pTo, ratio );
         if ( pFrom == nullptr )
             return;
         for ( const NetEntityState& entity : pFrom->_listEntity )
@@ -203,9 +204,7 @@ namespace sw
             return false;
         }
         // 틱이 건너뛰면 그 틱부터 다시 쌓고, 틱이 줄면(새 게임 판) 확인까지 비우고 다시 쌓는다. 같은 틱이면 처음 값이 남고 지금 창만 다시 보낸다.
-        // 스탬프는 이 입력을 만든 순간 보던 틱이다 — 다시 보낼 때도 이 값이 같이 가서 서버가 옛 입력을 그 입력의 시점으로 랙 보정한다.
-        const uint32 viewTickStamp = static_cast<uint32>( MathUtil::max( 0.0, getRenderTick() ) * static_cast<float64>( NetClientServerMessage::kViewTickStampScale ) );
-        (void)_inputWindow.push( tick, listInput.data(), static_cast<int32>( listInput.size() ), viewTickStamp );
+        (void)_inputWindow.push( tick, listInput.data(), static_cast<int32>( listInput.size() ) );
         if ( _pHost == nullptr )
             return true;
         BitWriter& writer = _messageWriter.beginMessage<NetClientServerMessage::Table, NetClientServerMessage::Input>();

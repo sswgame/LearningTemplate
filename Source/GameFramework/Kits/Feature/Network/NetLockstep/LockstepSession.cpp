@@ -21,10 +21,13 @@ namespace sw
         , _playerCount{ 0 }
         , _localPlayer{ 0 }
         , _inputDelay{ 0 }
+        , _matchID{ 0 }
         , _stallCount{ 0 }
         , _currentTick{ 0 }
         , _desyncTick{ 0 }
         , _bDesynced{ SW_FALSE }
+        , _bMatchFollowsWorld{ SW_FALSE }
+        , _reserved{ 0 }
         , _messageWriter{}
     {
     }
@@ -45,10 +48,12 @@ namespace sw
                              rangeError.empty() ? "within range" : rangeError.c_str() );
             return false;
         }
-        _pHost       = pHost;
-        _playerCount = playerCount;
-        _localPlayer = localPlayer;
-        _inputDelay  = settings._inputDelay;
+        _pHost              = pHost;
+        _playerCount        = playerCount;
+        _localPlayer        = localPlayer;
+        _inputDelay         = settings._inputDelay;
+        _matchID            = settings._matchID;
+        _bMatchFollowsWorld = settings._bMatchFollowsWorld ? SW_TRUE : SW_FALSE;
         _listTickInput.initialize( static_cast<int32>( kInputWindow ) );
         _listTickChecksum.initialize( static_cast<int32>( 2 * kChecksumWindow ) );
         _listNextInputTick.assign( static_cast<size_t>( _playerCount ), 0u );
@@ -100,6 +105,48 @@ namespace sw
         return true;
     }
 
+    bool LockstepSession::isWaitingForFirstInput() const
+    {
+        for ( int32 player = 0; player < _playerCount; ++player )
+        {
+            if ( player != _localPlayer && _listNextInputTick[static_cast<size_t>( player )] != static_cast<uint32>( _inputDelay ) )
+                return false;
+        }
+        return true;
+    }
+
+    void LockstepSession::resendInputs( int32 player, int32 connectionID )
+    {
+        if ( _pHost == nullptr )
+            return;
+        for ( uint32 tick = static_cast<uint32>( _inputDelay ); tick < _listNextInputTick[static_cast<size_t>( player )]; ++tick )
+        {
+            const TickInput* pTickInput = _listTickInput.find( tick );
+            if ( pTickInput == nullptr || pTickInput->_listHas[static_cast<size_t>( player )] == SW_FALSE )
+                continue; // 이미 진행한 틱이다
+            LockstepInputBody body;
+            body._matchID = _matchID;
+            body._player  = player;
+            body._tick    = tick;
+            body._input   = pTickInput->_listInput[static_cast<size_t>( player )];
+            if ( _messageWriter.writeMessage<NetLockstepMessage::Table, NetLockstepMessage::Input>( body ) == false )
+                continue; // 받을 때 길이를 봤다 — 여기서 넘치지 않는다
+            if ( connectionID == constant::invalid_index::kInt32 )
+                (void)_messageWriter.sendMessageToPeers( *_pHost );
+            else
+                (void)_messageWriter.sendMessage( *_pHost, connectionID ); // 닫히는 중이면 보낼 곳이 없다
+        }
+    }
+
+    void LockstepSession::onWorldOpened( uint32 generation )
+    {
+        const bool bChangeMatch = isStarted() && _bMatchFollowsWorld != SW_FALSE && generation != _matchID && isWaitingForFirstInput();
+        if ( bChangeMatch == false )
+            return;
+        _matchID = generation;
+        resendInputs( _localPlayer, constant::invalid_index::kInt32 ); // 옛 번호로 낸 것은 서버가 버렸다
+    }
+
     bool LockstepSession::submitLocalInput( const vector<uint8>& listInput )
     {
         if ( isStarted() == false )
@@ -113,9 +160,10 @@ namespace sw
         if ( tick > _currentTick + kMaxInputLead || storeInput( _localPlayer, tick, listInput ) == false )
             return false;
         LockstepInputBody body;
-        body._player = _localPlayer;
-        body._tick   = tick;
-        body._input  = listInput;
+        body._matchID = _matchID;
+        body._player  = _localPlayer;
+        body._tick    = tick;
+        body._input   = listInput;
         if ( _pHost != nullptr && _messageWriter.writeMessage<NetLockstepMessage::Table, NetLockstepMessage::Input>( body ) )
             (void)_messageWriter.sendMessageToPeers( *_pHost );
         return true;
@@ -196,6 +244,7 @@ namespace sw
     {
         storeChecksum( _localPlayer, tick, checksum );
         LockstepChecksumBody body;
+        body._matchID  = _matchID;
         body._player   = _localPlayer;
         body._tick     = tick;
         body._checksum = checksum;
@@ -228,8 +277,9 @@ namespace sw
         const uint32 tick = MathUtil::max( _listNextInputTick[static_cast<size_t>( player )], _currentTick );
         applyLeave( player, tick );
         LockstepLeaveBody body;
-        body._player = player;
-        body._tick   = tick;
+        body._matchID = _matchID;
+        body._player  = player;
+        body._tick    = tick;
         if ( _messageWriter.writeMessage<NetLockstepMessage::Table, NetLockstepMessage::Leave>( body ) )
             (void)_messageWriter.broadcastMessage( *_pHost );
     }
@@ -241,7 +291,7 @@ namespace sw
         const uint32 tick   = body._tick;
         // 이탈은 서버만 정한다.
         const bool bServer     = _pHost != nullptr && _pHost->isServer();
-        const bool bApplyLeave = bServer == false && 0 < player && player < _playerCount && hasLeft( player ) == false;
+        const bool bApplyLeave = body._matchID == _matchID && bServer == false && 0 < player && player < _playerCount && hasLeft( player ) == false;
         if ( bApplyLeave )
             applyLeave( player, tick );
         return NetHandleResult::Handled;
@@ -253,10 +303,20 @@ namespace sw
         const uint32 tick   = body._tick;
         // 서버는 클라이언트가 자기 번호로만 보내게 한다. 다른 플레이어의 입력을 위조하지 못하게 하려는 것이다.
         const bool bServer = _pHost != nullptr && _pHost->isServer();
-        if ( bServer && player != context._connectionID + 1 )
+        if ( body._matchID != _matchID || ( bServer && player != context._connectionID + 1 ) )
+            return NetHandleResult::Handled; // 지난 판의 늦은 입력이거나 남의 번호다
+        if ( storeInput( player, tick, body._input ) == false || _pHost == nullptr )
             return NetHandleResult::Handled;
-        if ( storeInput( player, tick, body._input ) && _pHost != nullptr )
-            (void)NetMessageRouter::relayToOtherPeers( *_pHost, context ); // 받아들인 입력만 전달한다. 버린 입력이 다른 클라이언트의 순서를 어지럽히지 않게 하려는 것이다
+        // 그 플레이어의 첫 입력이다 — 이제 이 판을 열었다. 앞서 낸 입력은 그쪽이 씬을 읽는 동안(처리기 없음) · 지난 판일 때 버려졌으므로 다시 보낸다(겹친 것은 받는 쪽이 버린다).
+        if ( tick == static_cast<uint32>( _inputDelay ) )
+        {
+            for ( int32 stored = 0; stored < _playerCount; ++stored )
+            {
+                if ( stored == _localPlayer || ( bServer && stored != player ) )
+                    resendInputs( stored, context._connectionID );
+            }
+        }
+        (void)NetMessageRouter::relayToOtherPeers( *_pHost, context ); // 받아들인 입력만 전달한다. 버린 입력이 다른 클라이언트의 순서를 어지럽히지 않게 하려는 것이다
         return NetHandleResult::Handled;
     }
 
@@ -264,7 +324,7 @@ namespace sw
     {
         const int32 player  = body._player;
         const bool  bServer = _pHost != nullptr && _pHost->isServer();
-        if ( bServer && player != context._connectionID + 1 )
+        if ( body._matchID != _matchID || ( bServer && player != context._connectionID + 1 ) )
             return NetHandleResult::Handled;
         storeChecksum( player, body._tick, body._checksum );
         if ( _pHost != nullptr )

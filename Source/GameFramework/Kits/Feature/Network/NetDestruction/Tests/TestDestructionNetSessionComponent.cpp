@@ -31,7 +31,7 @@ namespace
         bool               trySendMessage( int32, NetChannelKind, const uint8*, int32 ) override { return false; }
         bool               sendNotifiedMessage( int32, const uint8*, int32, uint32 ) override { return false; }
         int32              broadcast( NetChannelKind, const uint8*, int32, int32 ) override { return 0; }
-        void               disconnect( int32 ) override {}
+        void               disconnect( int32, NetLinger ) override {}
         void               pollInbound( NetInbound& ) override {}
         bool               isServer() const override { return true; }
         NetConnectionState getConnectionState( int32 ) const override { return NetConnectionState::Disconnected; }
@@ -59,7 +59,7 @@ SW_TEST_CASE( DestructionNetSessionComponentTest, ServerSessionUpdatesOncePerFra
     link._pPeers  = &peers;
     link._pRouter = &router;
     link._role    = NetLinkRole::Server;
-    SW_REQUIRE_TRUE( manager.getSubsystem<SceneNetLink>().bind( link ) );
+    SW_REQUIRE_TRUE( manager.getSubsystem<SceneNetLink>().bind( link, 0 ) );
     DestructionNetSessionComponent*     pComponent = manager.createGameObject( hashed_string( "DestructionNet" ) )->addComponent<DestructionNetSessionComponent>();
     DestructionTickReaderTestComponent* pReader    = manager.createGameObject( hashed_string( "Reader" ) )->addComponent<DestructionTickReaderTestComponent>();
     pReader->_pSession                             = pComponent;
@@ -129,6 +129,7 @@ SW_TEST_CASE( DestructionReplicationTest, PoseMessagesRejectTrailingBytesAndNonF
     BitWriter                    writer;
     DestructionExactPoseNetState pose; // 회전 기본값 — 단위 사원수
     writer.writeBits( NetDestructionMessage::kPose, 8 );
+    writer.writeBits( 0, 8 );  // 월드 세대(라우터 없는 직접 전달)
     writer.writeBool( true );  // 멈춤 — 정확한 자세
     writer.writeVarUint( 42 ); // 오브젝트(등록 없음 — 소비하고 버린다)
     writer.writeVarUint( 3 );  // 틱
@@ -146,6 +147,7 @@ SW_TEST_CASE( DestructionReplicationTest, PoseMessagesRejectTrailingBytesAndNonF
     // 자리에 NaN 비트를 실은 자세 — 칸 선언의 범위가 거절한다.
     writer.clear();
     writer.writeBits( NetDestructionMessage::kPose, 8 );
+    writer.writeBits( 0, 8 ); // 월드 세대(라우터 없는 직접 전달)
     writer.writeBool( true );
     writer.writeVarUint( 42 );
     writer.writeVarUint( 3 );

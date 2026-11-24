@@ -2,6 +2,7 @@
 #include "pch.h"
 
 #include "Core/Event/EventDispatcher.h"
+#include "Core/Subsystem/SubsystemScope.h"
 #include "Core/Testing/TestFramework.h"
 
 #define SW_TEST_INTERNAL // 임시 리소스 도메인 픽스처(`ScopedScratchDomain`)와 엔진 서비스를 직접 쓴다
@@ -14,6 +15,7 @@
 #include "GameFramework/Client/Flow/LoadingScreenController.h"
 #include "GameFramework/Runtime/Foundation/Framework/Flow/GameSceneFlow.h"
 #include "GameFramework/Runtime/Foundation/Framework/Flow/ScreenTransitionManager.h"
+#include "GameFramework/Runtime/Foundation/Framework/GameEventUtil.h"
 #include "GameFramework/Runtime/Foundation/Framework/GameEvents.h"
 #include "GameFramework/Runtime/Foundation/Framework/GameService.h"
 #include "GameFramework/Runtime/Foundation/Framework/Save/SaveLock.h"
@@ -63,6 +65,24 @@ SW_TEST_CASE( GameFlowTest, LoadingScreenWithoutUISystem )
     controller.update( 0.5f, false, sw::nullopt, fade );
     SW_EXPECT_NULL( controller.findFadeScreen() );
     SW_EXPECT_TRUE( controller.getCurrentTip().empty() );
+}
+
+/** @brief [GameFlowTest] 씬 로드 실패 이벤트는 UI 가 없는 호스트(전용 서버 · 헤드리스)에서 아무 화면도 열지 않고, 컨트롤러가 내려간 뒤에는 받지 않는다 */
+SW_TEST_CASE( GameFlowTest, FailedSceneLoadWithoutUISystem )
+{
+    EventDispatcher dispatcher;
+    SubsystemScope  scope;
+    SW_REQUIRE_TRUE( scope.bind<EventDispatcher>( &dispatcher ) );
+    game::ScopedGameScope   scopedScope( scope );
+    LoadingScreenController controller;
+    SW_REQUIRE_TRUE( controller.initializeSubsystem() == SubsystemInitResult::Succeeded );
+    SceneLoadCompletedEvent failed;
+    failed._bSuccess = false;
+    GameEventUtil::send( failed );
+    SW_EXPECT_FALSE( controller.isShowingLoadFailure() );
+    controller.shutdownSubsystem();
+    GameEventUtil::send( failed );
+    SW_EXPECT_FALSE( controller.isShowingLoadFailure() );
 }
 
 /** @brief [GameFlowTest] 타이틀 씬이 없는 게임은 타이틀 요청이 false 이고 "타이틀로" 명령을 걸지 않는다("시작" 은 건다) */

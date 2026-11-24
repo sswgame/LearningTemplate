@@ -115,8 +115,10 @@ namespace sw
         , _gunBeforePrevious{ 0.0f, 0.0f, 0.0f }
         , _gunSampleCount{ 0 }
         , _gunJerkMax{ 0.0f }
+        , _replicatedPose{}
         , _bYawReady{ SW_FALSE }
         , _bStrideErrorShown{ SW_FALSE }
+        , _bReplicated{ SW_FALSE }
         , _reserved{ 0 }
     {
         setCanEverTick( true );
@@ -135,6 +137,16 @@ namespace sw
         PoseModifierComponent* pRig   = pOwner != nullptr ? pOwner->getComponent<PoseModifierComponent>() : nullptr;
         if ( pRig != nullptr && _lookSourceObject.empty() == false )
             pRig->bindObject( _lookSourceObject, pPlayer );
+    }
+
+    void ShooterAvatarComponent::setReplicatedPose( const ShooterAvatarPose& pose )
+    {
+        _replicatedPose = pose;
+        if ( _bReplicated == SW_TRUE )
+            return;
+        _bReplicated = SW_TRUE;
+        setPlayer( getOwner() ); // 남의 카메라는 이 화면에 없다 — 몸 자신의 앞이 보는 곳이다
+        setFirstPerson( false );
     }
 
     void ShooterAvatarComponent::setFirstPerson( bool bFirstPerson )
@@ -249,25 +261,37 @@ namespace sw
         const ShooterPlayerComponent* pPlayer             = pObject != nullptr ? pObject->getComponent<ShooterPlayerComponent>() : nullptr;
         SkeletalAnimatorComponent*    pAnimator           = pOwner != nullptr ? pOwner->getComponent<SkeletalAnimatorComponent>() : nullptr;
         SceneComponent*               pScene              = pOwner != nullptr ? pOwner->getPrimarySceneComponent() : nullptr;
-        const bool                    bMissingAvatarParts = pPlayer == nullptr || pScene == nullptr || context.getDeltaTime() <= 0.0f;
+        const bool                    bMissingAvatarParts = ( pPlayer == nullptr && _bReplicated == SW_FALSE ) || pScene == nullptr || context.getDeltaTime() <= 0.0f;
         if ( bMissingAvatarParts )
             return;
+        ShooterAvatarPose pose = _replicatedPose;
+        if ( _bReplicated == SW_FALSE )
+        {
+            pose._feet             = pPlayer->getDisplayFeetPosition();
+            pose._velocity         = pPlayer->getMoveVelocity();
+            pose._yaw              = pPlayer->getLookYaw();
+            pose._timeSinceShot    = pPlayer->getTimeSinceShot();
+            pose._hitReactionCount = pPlayer->getHitReactionCount();
+            pose._bAlive           = pPlayer->isAlive() ? SW_TRUE : SW_FALSE;
+            pose._bOnGround        = pPlayer->isOnGround() ? SW_TRUE : SW_FALSE;
+            pose._bTwoHanded       = pPlayer->getWeapon( pPlayer->getWeaponIndex() ).getDef()._bTwoHanded;
+        }
         const float32 step = MathUtil::min( context.getDeltaTime(), 0.1f );
         sampleGunJerk( _locomotion.getDirection() != LocomotionDirection::Idle );
 
         // 몸은 발 자리에 서서 보는 쪽을 본다(KayKit 은 +Z 가 앞).
         // 시점이 한 프레임에 크게 돌아도(마우스 휙 · 표적 바꾸기) 몸은 각속도 상한으로 따라간다.
-        _bodyYaw   = _bYawReady == SW_TRUE ? OrientationUtil::turnTowardAngle( _bodyYaw, pPlayer->getLookYaw(), _turnRate * step ) : pPlayer->getLookYaw();
+        _bodyYaw   = _bYawReady == SW_TRUE ? OrientationUtil::turnTowardAngle( _bodyYaw, pose._yaw, _turnRate * step ) : pose._yaw;
         _bYawReady = SW_TRUE;
-        pScene->setZeroOriginPosition( pPlayer->getDisplayFeetPosition()._value );
+        pScene->setZeroOriginPosition( pose._feet._value );
         pScene->setLocalRotation( float3{ 0.0f, _bodyYaw, 0.0f } );
         if ( pAnimator == nullptr )
             return;
 
-        const bool bAlive = pPlayer->isAlive();
-        if ( pPlayer->getHitReactionCount() != _lastHitReaction )
+        const bool bAlive = pose._bAlive == SW_TRUE;
+        if ( pose._hitReactionCount != _lastHitReaction )
         {
-            _lastHitReaction = pPlayer->getHitReactionCount();
+            _lastHitReaction = pose._hitReactionCount;
             if ( bAlive )
             {
                 _hitTimer = _hitPause;
@@ -277,14 +301,14 @@ namespace sw
         _hitTimer -= step;
         AnimationParameterSet& parameters = pAnimator->getParameters();
         // 대각선 · 임계값 근처에서 상태가 오가면 클립이 매번 처음부터 다시 돈다 — 히스테리시스로 고르고 바뀐 것은 잠깐 이어져야 받아들인다.
-        const LocomotionDirection candidate     = LocomotionMath::classifyFrom( _locomotion.getDirection(), pPlayer->getMoveVelocity(), _bodyYaw,
-                                                                                pPlayer->isOnGround(), _walkThreshold );
+        const LocomotionDirection candidate     = LocomotionMath::classifyFrom( _locomotion.getDirection(), pose._velocity, _bodyYaw,
+                                                                                pose._bOnGround == SW_TRUE, _walkThreshold );
         const LocomotionDirection direction     = _locomotion.update( candidate, step );
-        const float2              localVelocity = LocomotionMath::computeLocalVelocity( pPlayer->getMoveVelocity(), _bodyYaw );
+        const float2              localVelocity = LocomotionMath::computeLocalVelocity( pose._velocity, _bodyYaw );
         parameters.setFloat( hashed_string( ShooterAnimationParameter::kMove ), ShooterAvatarComponentInternal::computeMoveCode( direction, localVelocity._x, _runThreshold ) );
         parameters.setBool( hashed_string( ShooterAnimationParameter::kDead ), bAlive == false );
         // 발 미끄러짐 — 이동 클립의 발 속도에 실제 수평 속도를 맞추고(언리얼 재생 속도 매칭), 범위에 막힌 몫은 보폭 워핑이 맡는다. 쓰러지면 클립 그대로.
-        const float3& velocity    = pPlayer->getMoveVelocity();
+        const float3& velocity    = pose._velocity;
         const float32 moveSpeed   = MathUtil::sqrt( velocity._x * velocity._x + velocity._z * velocity._z );
         const float32 footSpeed   = bAlive ? computeLocomotionFootSpeed( *pAnimator, direction ) : 0.0f;
         const float32 playRate    = LocomotionSpeedUtil::computePlayRate( moveSpeed, footSpeed, _minPlayRate, _maxPlayRate );
@@ -295,7 +319,7 @@ namespace sw
         // 상체 — 겨눈 자세는 늘, 쏘는 동작은 막 쏜 동안. 맞음 · 쓰러짐 동안은 비켜선다.
         const bool    bUpperBodyFree = bAlive && _hitTimer <= 0.0f;
         const float32 aimTarget      = bUpperBodyFree ? 1.0f : 0.0f;
-        const float32 shootTarget    = bUpperBodyFree && pPlayer->getTimeSinceShot() < 0.2f ? 1.0f : 0.0f;
+        const float32 shootTarget    = bUpperBodyFree && pose._timeSinceShot < 0.2f ? 1.0f : 0.0f;
         _aimWeight                   = MathUtil::moveToward( _aimWeight, aimTarget, _layerBlendRate * step );
         _shootWeight                 = MathUtil::moveToward( _shootWeight, shootTarget, _layerBlendRate * 2.0f * step );
         // 레이어(클립 · 상체 마스크)는 그래프 데이터("layers" · "bone_masks")가 갖는다 — 코드는 가중치 파라미터만 쓴다.
@@ -303,7 +327,7 @@ namespace sw
         parameters.setFloat( hashed_string( ShooterAnimationParameter::kShootWeight ), _shootWeight );
         // 두 손 무기는 리그가 몸을 돌리고 오른손을 견착 자리에 IK 로 둔다(왼손은 총의 SupportHand). 상체 층(권총 클립)은 손가락 쥠과 몸의 반동만 맡는다 —
         // 한 손 권총 자세로 소총을 들면 머리 옆으로 간다. 언리얼 ALS · 유니티 Animation Rigging 의 두 손 무기 IK 와 같은 자리다.
-        const bool             bTwoHanded = pPlayer->getWeapon( pPlayer->getWeaponIndex() ).getDef()._bTwoHanded == SW_TRUE;
+        const bool             bTwoHanded = pose._bTwoHanded == SW_TRUE;
         PoseModifierComponent* pRig       = pOwner->getComponent<PoseModifierComponent>();
         if ( pRig != nullptr )
             pRig->setSlotWeight( _twoHandHoldSlot, bTwoHanded ? _aimWeight : 0.0f );

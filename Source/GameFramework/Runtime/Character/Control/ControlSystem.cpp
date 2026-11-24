@@ -60,6 +60,7 @@ namespace sw
         , _pInputCaptureOverride{ nullptr }
         , _serverTickSource{}
         , _serverTickOffset{ 0 }
+        , _viewTick{ ControlViewTick::makePresent() }
         , _tick{ 0 }
         , _bRecording{ SW_FALSE }
         , _reserved{ 0 }
@@ -165,6 +166,7 @@ namespace sw
         context._pInputCapture = findInputCapture();
         context._deltaTime     = deltaTime;
         context._tick          = _tick;
+        context._viewTick      = _viewTick;
 
         // 레지스트리의 창은 등록 · 해제가 일어나면 버려야 한다 — 조종자가 판단 중에 오브젝트를 만들 수 있으므로 자리 번호로 돌며 매번 크기를 다시 본다.
         const ComponentRegistry::View<PawnComponent> pawnView = manager.getComponentRegistry().getAll<PawnComponent>();
@@ -192,6 +194,7 @@ namespace sw
             const float32 pitch  = MathUtil::clamp( pController->getControlPitch() + offset._y, -pPawn->getMaxPitch(), pPawn->getMaxPitch() );
             pController->setControlRotation( MathUtil::wrapAngle( pController->getControlYaw() + offset._x ), pitch );
             ControlIntent intent{};
+            intent._viewTick = _viewTick;
             pController->produceIntent( context, *pPawn, intent );
             intent._controlYaw   = pController->getControlYaw();
             intent._controlPitch = pController->getControlPitch();

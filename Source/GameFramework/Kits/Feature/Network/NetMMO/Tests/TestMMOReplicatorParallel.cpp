@@ -43,6 +43,7 @@ namespace
                 (void)cluster.addEndpoint( static_cast<uint16>( 5000 + index ), fixed );
             }
             (void)cluster.connectClients( 30 ); // 같은 판을 두 번 돌려 바이트를 비교하는 테스트 — 연결 실패는 해시가 달라 드러난다
+            cluster.enterWorld();
         }
 
         /** @brief MMO 판 — 관찰자마다 받은 메시지 바이트의 해시 + 보낸 갱신 수(마지막 칸)입니다. */

@@ -58,6 +58,7 @@ namespace
                 (void)cluster.addEndpoint( static_cast<uint16>( 5000 + index ), fixed );
             }
             (void)cluster.connectClients( 30 ); // 같은 판을 두 번 돌려 바이트를 비교하는 테스트 — 연결 실패는 해시가 달라 드러난다
+            cluster.enterWorld();
         }
 
         /** @brief 권위 서버 판 — 클라이언트마다 받은 메시지 바이트의 해시입니다. */
@@ -74,11 +75,12 @@ namespace
             serverSettings._snapshotBudgetBytes = 400; // 예산이 모자라 우선도 순서가 결과를 바꾼다
             SW_EXPECT_TRUE( server.initialize( &cluster.getServer(), serverSettings, &policy ) );
             server.setTaskManager( pTaskManager, 1 );
+            NetClock                        worldClock;
             ChunkedArray<ReplicationClient> listReplication; // 메시지 처리기(NetTableHandler)라 주소가 걸린다 — 옮기지 않는다
             for ( int32 index = 0; index < cluster.getClientCount(); ++index )
             {
                 listReplication.emplace_back();
-                SW_EXPECT_TRUE( listReplication.back().initialize( &cluster.getClient( index ), ReplicationClientConfig{} ) );
+                SW_EXPECT_TRUE( listReplication.back().initialize( &cluster.getClient( index ), worldClock, ReplicationClientConfig{} ) );
             }
 
             vector<uint64> listHash( kClientCount, HashUtil::kFNVOffset64 );
@@ -108,7 +110,7 @@ namespace
                         listHash[static_cast<size_t>( index )] = mixBytes( listHash[static_cast<size_t>( index )], buffer );
                         (void)listReplication[static_cast<size_t>( index )].handleMessage( 0, buffer ); // 받은 스냅샷 — 판의 결과는 해시가 본다
                     }
-                    listReplication[static_cast<size_t>( index )].update( 1.0f / 60.0f );
+                    listReplication[static_cast<size_t>( index )].onPollFinished();
                 }
             }
             for ( int32 index = 0; index < kClientCount; ++index )

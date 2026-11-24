@@ -38,6 +38,7 @@ namespace
         test::LoopbackCluster  _cluster{ 13u };
         DormancyCountingPolicy _policy;
         ReplicationServer      _server;
+        NetClock               _worldClock;
         ReplicationClient      _client;
 
         ReplicationDormancyTestRig()
@@ -46,10 +47,11 @@ namespace
             (void)_cluster.addEndpoint( 4500, settings ); // 빈 클러스터라 포트가 겹치지 않는다
             (void)_cluster.addEndpoint( 4600, settings );
             SW_EXPECT_TRUE( _cluster.connectClients( 30 ) );
+            _cluster.enterWorld();
             ReplicationServerConfig serverSettings;
             serverSettings._dormancyTicks = 4;
             SW_EXPECT_TRUE( _server.initialize( &_cluster.getServer(), serverSettings, &_policy ) );
-            SW_EXPECT_TRUE( _client.initialize( &_cluster.getClient( 0 ), ReplicationClientConfig{} ) );
+            SW_EXPECT_TRUE( _client.initialize( &_cluster.getClient( 0 ), _worldClock, ReplicationClientConfig{} ) );
         }
 
         void pollUntilDelivered()

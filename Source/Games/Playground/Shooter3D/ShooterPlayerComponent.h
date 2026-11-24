@@ -23,6 +23,7 @@
 
 #include "GameFramework/Runtime/Character/Combat/Health/HealthStateMachine.h"
 #include "GameFramework/Runtime/Character/Combat/Weapon/Weapon.h"
+#include "GameFramework/Runtime/Character/Control/Intent/ControlIntent.h"
 #include "GameFramework/Runtime/Foundation/Framework/GameFrameworkComponent.h"
 #include "GameFramework/Runtime/Foundation/Framework/Presentation/GameSound.h"
 #include "GameFramework/Runtime/Gameplay/Appearance/AppearanceSocketRig.h"
@@ -35,6 +36,7 @@ namespace sw
     class PawnComponent;
     class ShooterBodyMovementComponent;
     class ShooterGameModeComponent;
+    class ShooterNetPawnComponent;
 
     /**
      * @class ShooterPlayerComponent
@@ -75,10 +77,15 @@ namespace sw
         static constexpr int32 kWeaponCount = 3;
 
         /**
-         * @brief 폰의 의도가 고른 무기 슬롯입니다 — 버튼 Weapon1..3 은 그 슬롯, SwitchWeapon 은 같은 이름 아날로그의 부호대로 앞 · 뒤로 한 칸(끝에서 돈다).
+         * @brief 의도 @p intent(버튼 차례는 폰 @p pawn 의 스키마)가 고른 무기 슬롯입니다 — 버튼 Weapon1..3 은 그 슬롯, SwitchWeapon 은 같은 이름 아날로그의 부호대로 앞 · 뒤로 한 칸(끝에서 돈다).
          * @return 발동한 것이 없거나 방향이 0 이면 @p currentSlot 그대로입니다. 둘 다 발동하면 SwitchWeapon 이 이긴다.
          */
-        [[nodiscard]] static int32 chooseWeaponSlot( const PawnComponent& pawn, int32 currentSlot );
+        [[nodiscard]] static int32 chooseWeaponSlot( const PawnComponent& pawn, const ControlIntent& intent, int32 currentSlot );
+        /**
+         * @brief 발에서 눈까지의 높이를 고릅니다. 네트가 움직이는 몸은 설정값 하나다 — 서버의 몸에는 보이는 몸이 없어 소켓 높이를 쓰면 발사 자리가 갈린다.
+         * @details 혼자 하는 몸은 보이는 몸의 눈 소켓(@p bodyEyeHeight — 조립 전이면 0)에 다리 올림을 더한 값입니다.
+         */
+        [[nodiscard]] static float32 chooseEyeHeight( float32 settingHeight, float32 bodyEyeHeight, float32 bodyLegLift, bool bNetDriven );
 
         ShooterPlayerComponent();
         virtual ~ShooterPlayerComponent() override;
@@ -88,15 +95,32 @@ namespace sw
         void onTick( TickContext& context ) override;
         void onWorldOriginShifted( const float3& delta ) override;
 
-        /** @brief 적에게 맞았습니다(틱이 끝난 뒤 게임 스레드에서 부릅니다). 디렉터의 긴장도 신호가 되고, 쓰러지면 쓰러짐 클립이 끝난 뒤 판을 처음부터 다시 시작합니다. */
+        /** @brief 적 · 다른 플레이어에게 맞았습니다(틱이 끝난 뒤 게임 스레드에서 부릅니다). 디렉터의 긴장도 신호가 되고, 쓰러지면 쓰러짐 클립이 끝난 뒤 다시 시작합니다(`finishDown`). */
         void takeDamage( float32 amount );
+        /** @brief 규칙 설정(체력 · 무기 · 근접 · 몸 · 게임 모드)을 @p source 에서 옮기고 처음 자리를 @p spawnPosition 으로 둡니다 — 서버가 접속에 세운 몸이며 화면 · HUD 가 없습니다. 플레이를 시작하기 전에 부릅니다. */
+        void copySetup( const ShooterPlayerComponent& source, const float3& spawnPosition );
+        /** @brief 이 사람이 쓰러뜨린 수를 하나 셉니다(서버 · 혼자, 틱이 끝난 뒤 게임 스레드). */
+        void recordKill() { ++_killCount; }
+        /** @brief 매치의 기록(처치 · 쓰러짐)을 지우고 처음 자리에서 다시 시작합니다(틱 뒤 · 게임 스레드) — 앞사람이 나간 자리를 다음 사람이 이어받지 않게. */
+        void resetMatch();
         /** @brief 판을 처음부터 다시 엽니다(틱 뒤 · 게임 스레드) — 디렉터가 적을 걷고 감독을 다시 돌리며, 플레이어는 처음 자리에서 다시 시작합니다. */
         void restartRound();
         /**
          * @brief 서버 판정 결과를 받습니다(클라이언트의 넷 폰이 소유자 상태에서 부른다). 맞힌 발 수가 오르면 맞음 표시 · 소리를 내고, HUD 체력은 이 값을 보입니다.
          * @details 클라이언트의 사격은 탄도선 · 탄착만 예측한다 — 맞음을 전달하지 않고 표시도 서버가 인정한 뒤에 낸다(언리얼 Lyra 의 서버 확인 맞음 표시와 같은 자리, 기억에 의존).
          */
-        void applyServerReport( uint32 confirmedHitCount, uint32 killCount, float32 health );
+        void applyServerReport( uint32 confirmedHitCount, uint32 killCount, float32 health, bool bOut );
+        /**
+         * @brief 네트 걸음 하나의 발동입니다(서버 · 클라이언트 예측, 틱 뒤 · 게임 스레드) — 이동을 마친 자리에서 무기를 @p step 만큼 진행하고 의도의 발사 · 근접을 바로 판정합니다.
+         * @details 이동과 발동이 명령 하나의 한 걸음이다(Valve usercmd — `PlayerRunCommand` 안에서 이동 뒤 `ItemPostFrame`, 언리얼 ServerMove 의 저장된 이동마다 처리). 프레임 틱의 사격은
+         *          합친 의도 · 컴포넌트 틱 차례에 달렸다 — 네트가 움직이는 몸은 그 길을 쓰지 않는다.
+         * @param commandTick 이 명령의 입력 틱입니다(근접 주장을 맞추는 번호).
+         */
+        void stepNetCommand( GameObjectManager& manager, const ControlIntent& intent, float32 step, uint32 commandTick );
+        /** @brief 이 플레이어의 몸 프리팹을 하나 세웁니다(게임 스레드, 틱 밖) — 자기 몸과 남의 모습이 같은 몸이다. 프리팹에 `ShooterAvatarComponent` 가 없으면 오류를 남기고 빈 핸들입니다. */
+        GameObjectHandle spawnBodyObject( GameObjectManager& manager, const utf8* pName ) const;
+        /** @brief `spawnBodyObject` 로 세운 몸을 외형 부품까지 지웁니다. 이미 없으면 아무 일도 없습니다. */
+        static void destroyBodyObject( GameObjectManager& manager, GameObjectHandle body );
         /** @brief 지금 근접 창에서 이미 맞힌 오브젝트입니다. 서버가 주장을 인정할 때 스윕과 같은 목록을 써 창 하나에 한 번만 맞게 합니다. */
         vector<GameObjectHandle>& getMeleeHitTargets() { return _listMeleeHitTarget; }
         /** @brief 근접이 닿는 거리입니다(자동 플레이 AI 가 휘두를지 정한다). */
@@ -161,6 +185,14 @@ namespace sw
         uint32      getHitCount() const { return _hitCount; }
         /** @brief 매치 서버가 알려 준 이 판의 처치 수입니다(접속하지 않았으면 0). */
         uint32 getServerKillCount() const { return _serverKillCount; }
+        /** @brief 매치 서버가 알려 준 체력입니다(아직 받지 않았으면 -1). */
+        float32 getServerHealth() const { return _bServerHealth == SW_TRUE ? _serverHealth : -1.0f; }
+        /** @brief 매치 서버가 이 사람을 쓰러뜨려 다시 태어나기를 기다리면 true 입니다(클라이언트). 걷지도 쏘지도 않는다. */
+        bool isServerDown() const { return _bServerHealth == SW_TRUE && _serverHealth <= 0.0f; }
+        /** @brief 이 사람의 처치 수입니다(서버 · 혼자). */
+        uint32 getKillCount() const { return _killCount; }
+        /** @brief 매치에서 정해진 횟수만큼 쓰러져 이 사람의 판이 끝났으면 true 입니다(서버). */
+        bool isOut() const { return _bOut == SW_TRUE; }
 
     private:
         /** @brief 이번 발의 탄도선 하나입니다. 틱이 끝난 뒤 디렉터의 풀에서 꺼냅니다. */
@@ -178,17 +210,29 @@ namespace sw
          */
         struct PendingShot
         {
-            Ray           _ray{};
-            float3        _muzzle{};              ///< 탄도선 시작점(`_bHasMuzzle` 일 때만 뜻이 있다)
-            hashed_string _projectileID{};        ///< 장전한 탄(맞음 표 · 맞음 동작을 찾는다)
-            float4        _tracerColor{};         ///< 탄의 궤적 색
-            float32       _tracerWidth{ 0.0f };   ///< 탄의 궤적 두께
-            float32       _coverDistance{ 0.0f }; ///< 막는 상자 · 바닥 · 사거리 중 가까운 것(m)
-            float32       _range{ 0.0f };         ///< 탄 사거리(m) — 이보다 짧으면 무언가에 닿았다
-            float32       _damage{ 0.0f };
-            int32         _pierceCount{ 0 }; ///< 탄이 더 꿰뚫는 적 수(`ResolvedShot::_pierceCount`)
-            uint32        _volley{ 0 };
-            bool          _bHasMuzzle{ false }; ///< 총구를 찾았다. 아니면 판정만 하고 탄도선을 내지 않는다(대신 쓸 자리는 없다)
+            Ray             _ray{};
+            float3          _muzzle{};              ///< 탄도선 시작점(`_bHasMuzzle` 일 때만 뜻이 있다)
+            hashed_string   _projectileID{};        ///< 장전한 탄(맞음 표 · 맞음 동작을 찾는다)
+            float4          _tracerColor{};         ///< 탄의 궤적 색
+            float32         _tracerWidth{ 0.0f };   ///< 탄의 궤적 두께
+            float32         _coverDistance{ 0.0f }; ///< 막는 상자 · 바닥 · 사거리 중 가까운 것(m)
+            float32         _range{ 0.0f };         ///< 탄 사거리(m) — 이보다 짧으면 무언가에 닿았다
+            float32         _damage{ 0.0f };
+            int32           _pierceCount{ 0 }; ///< 탄이 더 꿰뚫는 적 수(`ResolvedShot::_pierceCount`)
+            uint32          _volley{ 0 };
+            ControlViewTick _viewTick{ ControlViewTick::makePresent() }; ///< 쏜 사람이 보던 시각(서버가 이 시각으로 되감는다)
+            bool            _bHasMuzzle{ false };                        ///< 총구를 찾았다. 아니면 판정만 하고 탄도선을 내지 않는다(대신 쓸 자리는 없다)
+        };
+
+        /** @brief 근접 창의 칼날 한 번입니다 — 걸음(네트) · 프레임(혼자)마다 하나다. */
+        struct PendingSwing
+        {
+            ControlViewTick _viewTick{ ControlViewTick::makePresent() };
+            float3          _eye{};
+            float32         _yaw{ 0.0f };
+            float32         _pitch{ 0.0f };
+            float32         _fraction{ 0.0f };
+            uint32          _step{ 0 }; ///< 휘두른 입력 틱(네트가 아니면 0)
         };
 
         /** @brief 낼 탄착 효과 하나입니다. 틱이 끝난 뒤 디렉터의 풀에서 꺼냅니다. */
@@ -207,11 +251,19 @@ namespace sw
          */
         [[nodiscard]] bool equipWeapons();
         /** @brief 의도의 무기 버튼(`chooseWeaponSlot`)과 Reload 를 무기에 반영합니다. */
-        void applyWeaponIntent( const PawnComponent& pawn );
+        void applyWeaponIntent( const PawnComponent& pawn, const ControlIntent& intent );
+        /** @brief 의도 하나의 발사 · 근접을 광선 · 칼날로 쌓습니다(`resolveShots` · `resolveMelee` 가 판정한다). 혼자 하는 프레임과 네트 걸음이 같은 이 함수를 쓴다. */
+        void runIntent( const ShooterGameModeComponent& gameMode, FirstPersonCameraComponent& camera, const PawnComponent& pawn, const ControlIntent& intent, float32 step, uint32 commandTick );
+        /** @brief 무기의 연사 · 재장전 시간을 흘립니다. */
+        void advanceWeapons( float32 step );
+        /** @brief 발에서 눈까지의 높이입니다(`chooseEyeHeight`). */
+        float32 computeEyeHeight() const;
+        /** @brief 발사 · 근접의 눈 자리입니다(씬) — 예측 보정 오프셋이 없는 시뮬레이션 자리다. */
+        float3 computeAimOrigin() const;
         /** @brief 같은 오브젝트의 몸 이동입니다. 없으면 nullptr 입니다. */
         ShooterBodyMovementComponent* findMovement() const;
         /** @brief 방아쇠를 당깁니다. 눈에서 @p aimDirection 으로 쏘고, 반동은 @p camera 에 준다. */
-        void fireWeapon( const ShooterGameModeComponent& gameMode, FirstPersonCameraComponent& camera, const float3& aimDirection, bool bJustPressed );
+        void fireWeapon( const ShooterGameModeComponent& gameMode, FirstPersonCameraComponent& camera, const float3& aimDirection, ControlViewTick viewTick, bool bJustPressed );
         /** @brief 광선 하나가 막는 상자 · 바닥에 닿는 거리입니다(닿지 않으면 사거리). 틱 안에서 부르며 물리를 묻지 않습니다. */
         float32 traceCover( const ShooterGameModeComponent& gameMode, const Ray& ray ) const;
         /**
@@ -219,6 +271,8 @@ namespace sw
          * @details 질의 거리는 막는 상자까지라 엄폐물 뒤의 적은 맞지 않는다. 피해 배율은 맞은 바디의 히트 존(머리 ×2 등)이 정한다(`CharacterRayHit::makeHitInfo`).
          */
         void resolveShots( GameObjectManager& manager );
+        /** @brief 다른 플레이어 @p inoutVictim 을 때립니다(서버, 틱 뒤 · 게임 스레드). 쓰러뜨렸으면 처치로 셉니다. 산 사람을 때렸으면 true 입니다. */
+        bool strikePlayer( ShooterPlayerComponent& inoutVictim, float32 damage );
         /** @brief 근접 창의 이번 프레임 칼날을 쓸어 맞힙니다(틱 뒤 · 게임 스레드). 클라이언트는 맞음을 서버에 주장합니다. */
         void resolveMelee( GameObjectManager& manager );
         /**
@@ -237,9 +291,13 @@ namespace sw
         /** @brief 같은 오브젝트의 HUD 뷰모델에 조준선과 맞음 표시의 가시성, 체력, 탄약, 무기 이름을 넣습니다(틱이 끝난 뒤 게임 스레드에서). HUD 가 없으면 아무것도 하지 않습니다. */
         void updateHUD();
         void resetRound();
-        void scheduleFlush();
-        void flushPending();
-        bool hasPending() const;
+        /** @brief 쓰러짐 클립이 끝났습니다(틱 뒤 · 게임 스레드) — 혼자면 판을 끝내거나 다시 열고, 서버면 다시 태어나게 하거나 매치의 판을 끝냅니다. */
+        void finishDown( GameObjectManager& manager, ShooterGameModeComponent* pGameMode );
+        /** @brief 이 씬의 네트 세션입니다(씬의 플레이어 오브젝트에 있다 — 서버가 세운 몸도 같은 것을 쓴다). 없으면 nullptr 입니다. */
+        ShooterNetPawnComponent* findNetPawn( GameObjectManager& manager ) const;
+        void                     scheduleFlush();
+        void                     flushPending();
+        bool                     hasPending() const;
         /** @brief 몸을 스폰합니다(게임 스레드, 틱 밖). */
         void spawnBody();
         /** @brief 1인칭인지 아닌지에 따라 손에 든 총과 몸의 가시성을 맞춥니다(게임 스레드). 조준선은 `updateHUD` 가 맞춥니다. */
@@ -291,6 +349,7 @@ namespace sw
         HealthStateMachine              _healthMachine;
         AppearanceSocketSetCache        _weaponSockets; ///< 1인칭 총구. 무기 외형의 소켓 에셋.
         vector<PendingShot>             _listPendingShot;
+        vector<PendingSwing>            _listPendingSwing;
         vector<float3>                  _listMeleePrevious;  ///< 지난 프레임의 칼날(근접 창의 첫 프레임은 비었다)
         vector<float3>                  _listMeleeCurrent;   ///< 이번 프레임의 칼날
         vector<GameObjectHandle>        _listMeleeHitTarget; ///< 이번 근접 창에서 이미 맞힌 오브젝트
@@ -314,6 +373,8 @@ namespace sw
         uint32                          _shotCount;
         uint32                          _hitCount;
         uint32                          _hitReactionCount;
+        uint32                          _killCount;               ///< 이 사람의 처치 수
+        int32                           _downCount;               ///< 매치에서 쓰러진 횟수(서버)
         uint32                          _serverKillCount;         ///< 서버가 알려 준 이 판의 처치 수(`_bServerHealth` 일 때만 뜻이 있다 — 접속한 매치의 결과)
         uint8                           _bWeaponModelDirty   : 1; ///< 틱이 끝난 뒤 몸의 무기(MainHand 칸)를 바꾼다.
         uint8                           _bViewWeaponSynced   : 1; ///< 1인칭 총이 몸의 MainHand 부품을 따랐다. 아니면 틱이 끝날 때마다 다시 본다(몸 조립은 틱 뒤에 미뤄진다)
@@ -325,6 +386,9 @@ namespace sw
         uint8                           _bServerHealth       : 1; ///< 네트 클라이언트 — 체력은 서버의 값이다
         uint8                           _bMeleeActive        : 1; ///< 근접 창이 열려 있다
         uint8                           _bBodyMuzzleFound    : 1; ///< 지난 틱 뒤에 몸 외형의 총구 소켓을 찾았다(`refreshBodySnapshot`)
-        [[maybe_unused]] uint8          _reserved            : 5;
+        uint8                           _bServerOut          : 1; ///< 네트 클라이언트 — 매치 서버가 이 사람의 판을 끝냈다
+        uint8                           _bOut                : 1; ///< 서버 — 매치에서 정해진 횟수만큼 쓰러졌다
+        uint8                           _bRemoteBody         : 1; ///< 서버가 접속에 세운 몸이다 — 이 화면의 플레이어가 아니다(1인칭 · HUD · 총구 연출이 없다)
+        [[maybe_unused]] uint8          _reserved            : 2;
     };
 } // namespace sw

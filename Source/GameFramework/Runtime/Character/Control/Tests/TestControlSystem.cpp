@@ -64,9 +64,9 @@ namespace
             intent._controlPitch = -0.5f;
             intent._arrAnalog[0] = 1.0f;
             intent._arrAnalog[3] = -1.0f;
-            intent.setButton( 0, true, true );
-            intent.setButton( 31, true, false );
-            intent.setTriggerLook( 0.5f, 0.25f );
+            intent.setButton( 0, true );
+            intent.setButton( 31, true );
+            intent.addTrigger( 0, 0.5f, 0.25f, ControlViewTick::makeSeen( 12.5 ) );
             return intent;
         }
     };
@@ -77,19 +77,21 @@ namespace
 SW_TEST_CASE( ControlIntentTest, ButtonsAreBitsAndOutOfRangeIsIgnored )
 {
     ControlIntent intent;
-    intent.setButton( 3, true, false );
-    intent.setButton( 4, false, true );
+    intent.setButton( 3, true );
+    intent.addTrigger( 4, 0.0f, 0.0f, ControlViewTick::makePresent() );
     SW_EXPECT_TRUE( intent.isDown( 3 ) );
     SW_EXPECT_FALSE( intent.wasTriggered( 3 ) );
     SW_EXPECT_TRUE( intent.wasTriggered( 4 ) );
     SW_EXPECT_FALSE( intent.isDown( 4 ) );
-    intent.setButton( 3, false, false );
+    intent.setButton( 3, false );
     SW_EXPECT_FALSE( intent.isDown( 3 ) );
 
     // 폰에 없는 버튼(-1)은 늘 꺼져 있고 쓰기도 할 일이 없다.
     const ControlIntent before = intent;
-    intent.setButton( -1, true, true );
-    intent.setButton( ControlIntent::kButtonCount, true, true );
+    intent.setButton( -1, true );
+    intent.setButton( ControlIntent::kButtonCount, true );
+    intent.addTrigger( -1, 0.0f, 0.0f, ControlViewTick::makePresent() );
+    intent.addTrigger( ControlIntent::kButtonCount, 0.0f, 0.0f, ControlViewTick::makePresent() );
     SW_EXPECT_TRUE( intent == before );
     SW_EXPECT_FALSE( intent.isDown( -1 ) );
     SW_EXPECT_FALSE( intent.wasTriggered( 32 ) );
@@ -142,7 +144,16 @@ SW_TEST_CASE( ControlIntentTest, WireFormatMatchesQuantize )
     SW_EXPECT_TRUE( read == intent );
     SW_EXPECT_TRUE( read.isDown( 31 ) );
     SW_EXPECT_TRUE( read.wasTriggered( 0 ) );
-    SW_EXPECT_TRUE( read._bTriggerLook );
+    SW_REQUIRE_EQUAL( size_t{ 1 }, read._listTrigger.size() );
+    SW_EXPECT_NEAR( 12.5, read._listTrigger[0].getViewTick().getServerTick( 0.0 ), 1e-6 );
+
+    // 상한을 넘는 발동은 쓰지 않는다 — 받는 쪽도 깨진 것으로 본다.
+    for ( int32 index = 0; index < ControlIntent::kMaxTriggers; ++index )
+    {
+        intent.addTrigger( 1, 0.0f, 0.0f, ControlViewTick::makePresent() );
+    }
+    BitWriter crowded;
+    SW_EXPECT_FALSE( intent.write( crowded ) );
 }
 
 // 0 과 ±1 은 그대로 남는다 — 0 이 흐르면 서 있는 폰이 조금씩 움직인다.

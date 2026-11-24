@@ -343,6 +343,7 @@ namespace sw
         , _selfMailSentCount{ 0 }
         , _matchState{ PlaygroundMatchState::None }
         , _bHubTicket{ SW_FALSE }
+        , _bReconnectHub{ SW_FALSE }
         , _bFriendsBound{ SW_FALSE }
     {
     }
@@ -443,6 +444,7 @@ namespace sw
         pollMatches( session );
         updateMatchConnect( session );
         updateMatchExit( session );
+        updateHubLoss( session );
     }
 
     void PlaygroundOnlineFlow::pollMatches( OnlineSession& session )
@@ -593,6 +595,45 @@ namespace sw
             reconnectHub( session );
     }
 
+    bool PlaygroundOnlineFlow::shouldReconnectHub( NetDisconnectReason reason, const optional<GameShutdownNotice>& notification )
+    {
+        if ( notification.has_value() )
+            return notification->_reason == GameShutdownReason::ServerRestart;
+        return reason == NetDisconnectReason::Timeout;
+    }
+
+    void PlaygroundOnlineFlow::updateHubLoss( OnlineSession& session )
+    {
+        GameNetSession& netSession = game::getSubsystem<GameNetSession>();
+        if ( _matchState == PlaygroundMatchState::HubLost )
+        {
+            if ( _bReconnectHub == SW_TRUE )
+            {
+                reconnectHub( session );
+                return;
+            }
+            netSession.shutdown();
+            clearMatch();
+            return;
+        }
+        // 미니게임 안이면 허브 씬으로 돌아온 뒤에 본다 — 다시 건 링크가 혼자 하는 미니게임 씬에 닿지 않게.
+        const MinigameFlow& minigames = game::getSubsystem<MinigameFlow>();
+        const bool          bInHub    = _matchState == PlaygroundMatchState::None && minigames.getStack().isEmpty() && minigames.isEntering() == false && minigames.isLeaving() == false;
+        if ( bInHub == false || netSession.getRole() != GameNetRole::Client || netSession.getLostReason().has_value() == false )
+            return;
+        GameShutdownNotice           received;
+        optional<GameShutdownNotice> notification;
+        if ( netSession.tryGetShutdownNotice( received ) )
+            notification = received;
+        _bReconnectHub = shouldReconnectHub( *netSession.getLostReason(), notification ) ? SW_TRUE : SW_FALSE;
+        SW_LOG_WARNING_ID( "Playground.HubLost", "[Playground] lost the hub server (%#) - %#", toString( *netSession.getLostReason() ),
+                           _bReconnectHub == SW_TRUE ? "joining it again" : "the player stays in an offline hub" );
+        _hubAddress = netSession.getServerAddress();
+        _bHubTicket = netSession.isTicketBound() ? SW_TRUE : SW_FALSE;
+        _matchState = PlaygroundMatchState::HubLost;
+        game::getSubsystem<SceneManager>().setNetLink( NetLinkValue{} ); // 씬의 처리기가 내려간 뒤(다음 프레임)에 세션을 닫는다
+    }
+
     void PlaygroundOnlineFlow::reconnectHub( OnlineSession& session )
     {
         GameNetSession& netSession = game::getSubsystem<GameNetSession>();
@@ -626,6 +667,7 @@ namespace sw
         _matchMinigame = hashed_string{};
         _hubAddress    = NetAddress{};
         _bHubTicket    = SW_FALSE;
+        _bReconnectHub = SW_FALSE;
     }
 
     void PlaygroundOnlineFlow::requestSubmitKills( OnlineSession& session, int64 kills )

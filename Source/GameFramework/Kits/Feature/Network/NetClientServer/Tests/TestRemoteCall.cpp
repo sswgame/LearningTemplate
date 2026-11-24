@@ -29,6 +29,8 @@ namespace
     struct RemoteCallTestRig
     {
         test::LoopbackCluster _cluster{ 11u };
+        NetMessageRouter      _serverRouter; ///< 월드 세대만 쓴다(메시지는 직접 전달한다)
+        NetMessageRouter      _clientRouter;
         RemoteCallServer      _server;
         RemoteCallClient      _client;
         RemoteCallTestAvatar  _serverAvatar;
@@ -41,10 +43,10 @@ namespace
             (void)_cluster.addEndpoint( 4300, settings );
             (void)_cluster.addEndpoint( 4400, settings );
             SW_EXPECT_TRUE( _cluster.connectClients( 30 ) );
-            SW_EXPECT_TRUE( _server.initialize( &_cluster.getServer(), callLimit ) );
+            SW_EXPECT_TRUE( _server.initialize( &_cluster.getServer(), &_serverRouter, callLimit ) );
             _server.setClock( []() -> int64
             { return 0; } ); // 버킷이 다시 차지 않는다 — 상한 판정이 실행 속도(ASan)에 달리지 않게
-            _client.initialize( &_cluster.getClient( 0 ) );
+            _client.initialize( &_cluster.getClient( 0 ), &_clientRouter );
             vector<int32> listConnection;
             _cluster.getServer().collectConnected( listConnection );
             SW_EXPECT_EQUAL( size_t{ 1 }, listConnection.size() );
@@ -97,6 +99,8 @@ namespace
             BitWriter&       writer = messageWriter.begin( NetRemoteCallMessage::kCall );
             writer.writeVarUint( 1 );
             writer.writeVarUint( targetID );
+            if ( targetID != RemoteCallTargets::kSessionTargetID )
+                writer.writeBits( _serverRouter.getWorldGeneration(), 8 );
             writer.writeUint32( hashed_string::computeHash( functionName ) ); // 함수 번호 = 이름 해시(`RemoteCallTargets::getFunctionID`)
             writer.writeVarUint( argumentCount );
             writeArguments( writer );
@@ -367,9 +371,9 @@ SW_TEST_CASE( RemoteCallTest, ServerRefusesAMissingRateLimit )
 {
     RemoteCallServer server;
     SW_EXPECT_LOG( "RemoteCall.RateLimitMissing" );
-    SW_EXPECT_FALSE( server.initialize( nullptr, RemoteCallServerConfig{} ) );
+    SW_EXPECT_FALSE( server.initialize( nullptr, nullptr, RemoteCallServerConfig{} ) );
     SW_EXPECT_LOG( "RemoteCall.RateLimitMissing" );
-    SW_EXPECT_FALSE( server.initialize( nullptr, RemoteCallServerConfig{ 4, 0 } ) );
+    SW_EXPECT_FALSE( server.initialize( nullptr, nullptr, RemoteCallServerConfig{ 4, 0 } ) );
 }
 
 /**
@@ -405,6 +409,36 @@ SW_TEST_CASE( RemoteCallTest, RateOnANonServerFunctionIsRefused )
 }
 
 /**
+ * @brief [RemoteCallTest] 대상보다 먼저 온 신뢰 호출은 버리지 않고 미룬다(라우터가 보류한다) — 비신뢰 호출은 미루지 않고, 뒤 월드의 호출은 같은 번호의 대상이 있어도 부르지 않는다
+ */
+SW_TEST_CASE( RemoteCallTest, ReliableCallWaitsForItsTarget )
+{
+    RemoteCallTestRig rig;
+    NetMessageWriter  messageWriter;
+    const auto        writeCall = [&messageWriter]( uint8 worldGeneration )
+    {
+        BitWriter& writer = messageWriter.begin( NetRemoteCallMessage::kCall );
+        writer.writeVarUint( 0 );
+        writer.writeVarUint( kAvatarID );
+        writer.writeBits( worldGeneration, 8 );
+        writer.writeUint32( hashed_string::computeHash( "receiveHealth" ) );
+        writer.writeVarUint( 1 );
+        writer.writeVarInt( 42 );
+    };
+    writeCall( 0 );
+    const uint8* pData = messageWriter.getBytes().data();
+    const int32  size  = messageWriter.getByteCount();
+    SW_EXPECT_TRUE( NetHandleResult::NotReady == rig._client.handleMessage( 0, pData, size, NetChannelKind::ReliableOrdered ) );
+    SW_EXPECT_LOG( "RemoteCall.ClientCallDropped" );
+    SW_EXPECT_TRUE( NetHandleResult::Handled == rig._client.handleMessage( 0, pData, size, NetChannelKind::Unreliable ) );
+    SW_REQUIRE_TRUE( rig._client.registerTarget( kAvatarID, *RemoteCallTestAvatar::StaticType(), &rig._clientAvatar ) );
+    SW_EXPECT_TRUE( NetHandleResult::Handled == rig._client.handleMessage( 0, pData, size, NetChannelKind::ReliableOrdered ) );
+    SW_EXPECT_EQUAL( 42, rig._clientAvatar._shownHealth );
+    writeCall( 7 ); // 뒤 월드의 호출이다 — 그 씬이 설 때까지 기다린다
+    SW_EXPECT_TRUE( NetHandleResult::NotReady == rig._client.handleMessage( 0, messageWriter.getBytes().data(), messageWriter.getByteCount(), NetChannelKind::ReliableOrdered ) );
+}
+
+/**
  * @brief [RemoteCallTest] 거절 본문은 고정 배치형이다 — 옛 형식(까닭 1 바이트) · 잘린 본문은 깨진 메시지이고 알림이 쌓이지 않는다. 온전한 거절은 쌓인다
  */
 SW_TEST_CASE( RemoteCallTest, RejectedBodyRefusesOldLayoutAndTruncation )
@@ -432,6 +466,33 @@ SW_TEST_CASE( RemoteCallTest, RejectedBodyRefusesOldLayoutAndTruncation )
 }
 
 /**
+ * @brief [RemoteCallTest] 앞 씬에서 보낸 월드 대상 호출은 새 씬의 같은 번호 대상에 닿지 않는다 — 세션 대상은 씬이 바뀌어도 그대로 불린다
+ */
+SW_TEST_CASE( RemoteCallTest, CallFromAnEarlierWorldIsRejected )
+{
+    RemoteCallTestRig rig;
+    SW_REQUIRE_TRUE( rig._server.registerTarget( kAvatarID, *RemoteCallTestAvatar::StaticType(), &rig._serverAvatar, rig._connectionID ) );
+    // 클라이언트가 아직 새 세대를 모른 채 보낸다(0) — 서버는 그 사이 새 씬을 열었다.
+    SW_EXPECT_NOT_EQUAL( 0u, rig._client.callServer( kAvatarID, *RemoteCallTestAvatar::StaticType(), "attackTarget", { ReflectedValue::make( int32{ 7 } ), ReflectedValue::make( int32{ 20 } ) } ) );
+    rig._serverRouter.openWorld( rig._cluster.getServer(), 0 );
+    rig.pollUntilDelivered();
+    SW_EXPECT_EQUAL( uint64{ 0 }, rig._server.getStats()._invokedCount );
+    vector<RemoteCallRejectNotification> listNotification;
+    rig._client.pollRejections( listNotification );
+    SW_REQUIRE_EQUAL( size_t{ 1 }, listNotification.size() );
+    SW_EXPECT_TRUE( listNotification[0]._error == RemoteCallError::UnknownTarget );
+
+    // 지금 세대를 실은 호출은 닿는다.
+    SW_EXPECT_TRUE( NetHandleResult::Handled == rig.craftCall( kAvatarID, "attackTarget", { 7, 20 }, NetChannelKind::ReliableOrdered ) );
+    SW_EXPECT_EQUAL( uint64{ 1 }, rig._server.getStats()._invokedCount );
+
+    // 세션 대상은 세대를 싣지 않는다 — 씬이 바뀌어도 그 연결의 것이다.
+    SW_REQUIRE_TRUE( rig._server.registerSessionTarget( rig._connectionID, *RemoteCallTestAvatar::StaticType(), &rig._serverAvatar ) );
+    SW_EXPECT_TRUE( NetHandleResult::Handled == rig.craftCall( RemoteCallTargets::kSessionTargetID, "attackTarget", { 7, 20 }, NetChannelKind::ReliableOrdered ) );
+    SW_EXPECT_EQUAL( uint64{ 2 }, rig._server.getStats()._invokedCount );
+}
+
+/**
  * @brief [RemoteCallTest] 손 본문 호출 — 인자 뒤 남는 바이트 · 상한 넘는 인자 수 · 잘린 호출은 깨진 메시지이고 몸을 부르지 않는다
  */
 SW_TEST_CASE( RemoteCallTest, CallBodyRejectsTrailingBytesAndHugeArgumentCounts )
@@ -442,7 +503,8 @@ SW_TEST_CASE( RemoteCallTest, CallBodyRejectsTrailingBytesAndHugeArgumentCounts 
     BitWriter&       writer = messageWriter.begin( NetRemoteCallMessage::kCall );
     writer.writeVarUint( 1 );
     writer.writeVarUint( kAvatarID );
-    writer.writeUint32( 0 );
+    writer.writeBits( 0, 8 ); // 월드 세대
+    writer.writeUint32( 0 );  // 함수 번호
     writer.writeVarUint( 0 );
     writer.writeBits( 0xFFu, 8 ); // 남는 바이트
     SW_EXPECT_TRUE( NetHandleResult::Malformed == rig._server.handleMessage( rig._connectionID, messageWriter.getBytes() ) );
@@ -450,7 +512,8 @@ SW_TEST_CASE( RemoteCallTest, CallBodyRejectsTrailingBytesAndHugeArgumentCounts 
     BitWriter& hugeCount = messageWriter.begin( NetRemoteCallMessage::kCall );
     hugeCount.writeVarUint( 2 );
     hugeCount.writeVarUint( kAvatarID );
-    hugeCount.writeUint32( 0 );
+    hugeCount.writeBits( 0, 8 ); // 월드 세대
+    hugeCount.writeUint32( 0 );  // 함수 번호
     hugeCount.writeVarUint( static_cast<uint64>( NetRemoteCallMessage::kMaxArgumentCount ) + 1 );
     SW_EXPECT_TRUE( NetHandleResult::Malformed == rig._server.handleMessage( rig._connectionID, messageWriter.getBytes() ) );
 

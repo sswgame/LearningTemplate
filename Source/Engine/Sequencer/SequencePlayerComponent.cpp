@@ -225,13 +225,24 @@ namespace sw
         _pendingStep = _player.update( context.getDeltaTime() );
         // 묶인 오브젝트(남의 오브젝트)에 값 · 스폰 · 구간을 적용하는 것은 틱 뒤(같은 프레임)에 한다 — 틱은 시간만 민다.
         context.deferPostTickOnComponent( *this, []( SequencePlayerComponent& self )
-        {
-            self.applyTimeline( self._pendingStep );
-            self.applyConfine();
-            // 루프가 아니면 끝 프레임을 적용한 갱신에서 플레이어가 멈춘다 — 그때 끝낸다.
-            if ( self._player.isPlaying() == false )
-                self.endPlayback( SequenceHistoryKind::Finished );
-        } );
+        { self.applyPendingStep(); } );
+    }
+
+    void SequencePlayerComponent::applyPendingStep()
+    {
+        applyTimeline( _pendingStep );
+        applyConfine();
+        // 루프가 아니면 끝 프레임을 적용한 갱신에서 플레이어가 멈춘다 — 그때 끝낸다.
+        if ( _player.isPlaying() == false )
+            endPlayback( SequenceHistoryKind::Finished );
+    }
+
+    void SequencePlayerComponent::advance( float32 seconds )
+    {
+        if ( _player.isPlaying() == false || seconds <= 0.0f )
+            return;
+        _pendingStep = _player.update( seconds );
+        applyPendingStep();
     }
 
     void SequencePlayerComponent::play()

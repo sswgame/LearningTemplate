@@ -15,17 +15,17 @@ namespace sw
 {
     void MeleeHitClaim::write( BitWriter& writer ) const
     {
-        writer.writeVarUint( _frame );
+        writer.writeVarUint( _step );
         writer.writeVarUint( _targetID );
     }
 
     bool MeleeHitClaim::read( BitReader& reader, MeleeHitClaim& outClaim )
     {
-        const uint64 frame    = reader.readVarUint();
+        const uint64 step     = reader.readVarUint();
         const uint64 targetID = reader.readVarUint();
-        if ( reader.hasOverflowed() || frame > MathUtil::kMaxUInt32 )
+        if ( reader.hasOverflowed() || step > MathUtil::kMaxUInt32 )
             return false;
-        outClaim._frame    = static_cast<uint32>( frame );
+        outClaim._step     = static_cast<uint32>( step );
         outClaim._targetID = targetID;
         return true;
     }
@@ -126,8 +126,8 @@ namespace sw
         bool bAnySweep = false;
         for ( const SweepRecord& record : _listRecord )
         {
-            const uint32 distance = record._frame > claim._frame ? record._frame - claim._frame : claim._frame - record._frame;
-            if ( record._attackerID != attackerID || distance > kClaimSlackFrames )
+            const uint32 distance = record._params._step > claim._step ? record._params._step - claim._step : claim._step - record._params._step;
+            if ( record._attackerID != attackerID || distance > kClaimSlackSteps )
                 continue;
             bAnySweep = true;
             if ( containsSphere( record, targetCenter, targetRadius ) == false )

@@ -146,7 +146,8 @@ SW_TEST_CASE( OverworldTileMoverTest, InteractWinsOverMoveAndIsConsumedOnce )
     OverworldFixture rig;
     ControlIntent    intent;
     intent._move = float2{ 1.0f, 0.0f };
-    intent.setButton( OverworldFixture::kInteractButton, true, true );
+    intent.setButton( OverworldFixture::kInteractButton, true );
+    intent.addTrigger( OverworldFixture::kInteractButton, 0.0f, 0.0f, ControlViewTick::makePresent() );
     rig._mover.update( 0.0f, intent, OverworldFixture::kInteractButton );
     SW_EXPECT_EQUAL( 2, rig._mover.getTileX() );
     SW_EXPECT_TRUE( rig._mover.getLocomotion().getState() == LocomotionState::Interact );

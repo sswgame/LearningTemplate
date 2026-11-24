@@ -24,6 +24,7 @@ namespace sw
         , _arrAppliedCount{ 0, 0 }
         , _bPendingInput{ SW_FALSE }
         , _bReportedDesync{ SW_FALSE }
+        , _bPeerJoined{ SW_FALSE }
         , _reserved{ 0 }
     {
     }
@@ -47,7 +48,11 @@ namespace sw
             SW_LOG_ERROR_ID( "SkirmishLockstep.HandlerTaken", "[Skirmish] the lockstep message range is taken by another handler - the network match cannot start" );
             return false;
         }
-        if ( _session.initialize( &pNetSession->getPeers(), kPlayerCount, localPlayer, LockstepConfig{} ) == false )
+        // 판 번호는 서버 월드의 세대다 — 판마다 씬을 다시 열므로 두 쪽이 함께 아는 값이고, 같은 연결의 재대결에서 지난 판의 늦은 입력이 거절된다.
+        LockstepConfig config;
+        config._matchID            = pNetSession->getRouter().getWorldGeneration();
+        config._bMatchFollowsWorld = true;
+        if ( _session.initialize( &pNetSession->getPeers(), kPlayerCount, localPlayer, config ) == false )
         {
             _handlerSubscription.reset();
             return false; // 까닭은 세션이 남겼다
@@ -68,13 +73,19 @@ namespace sw
         _arrAppliedCount[1] = 0;
         _bPendingInput      = SW_FALSE;
         _bReportedDesync    = SW_FALSE;
+        _bPeerJoined        = SW_FALSE;
         _listLocalCommand.clear();
         _listPendingInput.clear();
     }
 
     bool SkirmishLockstepLink::releaseLostSession()
     {
-        if ( _pNetSession == nullptr || isActive() )
+        if ( _pNetSession == nullptr )
+            return false;
+        const bool bPeerInWorld = isActive() && isPeerInWorld();
+        const bool bPeerLeft    = _bPeerJoined != SW_FALSE && bPeerInWorld == false;
+        _bPeerJoined            = bPeerInWorld ? SW_TRUE : _bPeerJoined;
+        if ( isActive() && bPeerLeft == false && _bReportedDesync == SW_FALSE )
             return false;
         const int32 localPlayer = _localPlayer;
         close();
@@ -95,18 +106,24 @@ namespace sw
         return 0 <= player && player < kPlayerCount ? _arrAppliedCount[player] : 0;
     }
 
-    bool SkirmishLockstepLink::isPeerConnected() const
+    bool SkirmishLockstepLink::isPeerInWorld() const
     {
-        return _pNetSession != nullptr && _pNetSession->getConnectedCount() > 0;
+        if ( _pNetSession == nullptr )
+            return false;
+        const INetPeers& peers = _pNetSession->getPeers();
+        if ( peers.isServer() )
+            return peers.getInWorldCount() > 0;
+        // 서버가 다음 씬을 열면 세대가 달라진다 — 그 뒤의 입력은 지난 판의 것이라 서버가 받지 않는다.
+        return peers.getConnectedCount() > 0 && peers.isInWorld( 0 ) && peers.getWorldGeneration() == _session.getMatchID();
     }
 
     int32 SkirmishLockstepLink::advance( float32 deltaTime, float32 step, SkirmishMatch& match )
     {
         if ( isActive() == false )
             return 0;
-        // 걸음마다 입력 하나를 낸다. 상대가 붙기 전에는 내지 않는다 - 받을 쪽이 없는 입력은 사라지고 그 틱은 영영 모이지 않는다.
+        // 걸음마다 입력 하나를 낸다. 상대가 판의 씬에 들어오기 전에는 내지 않는다 - 받을 쪽이 없는 입력은 사라지고 그 틱은 영영 모이지 않는다.
         _accumulator = MathUtil::min( _accumulator + deltaTime, step * static_cast<float32>( kMaxCatchUpSteps ) );
-        while ( isPeerConnected() && _accumulator >= step )
+        while ( isPeerInWorld() && _accumulator >= step )
         {
             if ( _bPendingInput == SW_FALSE )
             {

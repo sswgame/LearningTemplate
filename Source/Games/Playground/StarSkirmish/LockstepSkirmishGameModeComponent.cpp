@@ -78,7 +78,7 @@ namespace sw
     void LockstepSkirmishGameModeComponent::stepMatch( float32 deltaTime )
     {
         if ( _lockstep.releaseLostSession() )
-            SW_LOG_WARNING_ID( "LockstepSkirmish.SessionLost", "[Skirmish] the network session closed during the match - the match goes on here without the other player" );
+            SW_LOG_INFO_ID( "LockstepSkirmish.PeerLost", "[Skirmish] the other player left the match - it goes on here without the other player" );
         if ( _lockstep.isActive() )
             (void)_lockstep.advance( deltaTime, getWorld().getSettings()._fixedStep, getMutableMatch() ); // 두 프로세스가 같은 걸음으로 돈다 - 속도 · 일시정지는 쓰지 않는다
         else
