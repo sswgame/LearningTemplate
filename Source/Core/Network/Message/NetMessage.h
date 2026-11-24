@@ -281,7 +281,7 @@ namespace sw
             return 0;
         }
         /** @brief 보류하는 종류의 열쇠(대상 · 세션 번호)입니다. 같은 연결 · 영역 · 열쇠의 메시지는 앞의 것이 전해질 때까지 순서대로 기다립니다. @p body 는 종류 바이트 다음부터인 사본입니다. */
-        virtual uint64 readHoldKey( uint8 kind, BitReader body ) const
+        virtual uint64 readMessageHoldKey( uint8 kind, BitReader body ) const
         {
             (void)kind;
             (void)body;

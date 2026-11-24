@@ -4,7 +4,7 @@
   py -3 -m Scripts lockstep-pair run                 # 기본: Ninja-Release, 자동 플레이(두 AI 가 양쪽 프로세스에서 같은 판 규칙으로 돈다)
   py -3 -m Scripts lockstep-pair run --seconds 90
 
-두 프로세스 모두 자동 플레이라 사람 입력은 없다. 클라이언트(1 번)에 개발 명령 `skirmish.order` 로 병력 공격 이동을 한 번 내 사람 명령이 락스텝 입력으로 건너가는지 본다.
+두 프로세스 모두 자동 플레이라 사람 입력은 없다. 1 번에게 병력이 생기면 클라이언트(1 번)에 개발 명령 `skirmish.order` 로 병력 공격 이동을 한 번 내 사람 명령이 락스텝 입력으로 건너가는지 본다.
 판정: 두 로그에 락스텝 시작 줄이 있고, 끝의 `skirmish.lockstep` 상태 줄에서 두 프로세스가 `--min-ticks` 틱 넘게 진행했고 비동기(desynced)가 0 이며,
       1 번이 낸 명령이 두 프로세스에서 같은 수로 적용됐고(0 보다 크다), 두 로그에 허용 밖 `[Error]` · `[Warning]` 이 없다. 판 해시는 세션이 `kChecksumInterval` 틱마다 맞춘다.
 """
@@ -24,6 +24,8 @@ from common.process_group import CheckResult, ProcessGroup, problem_lines, repor
 _OPENED = re.compile(r"\[Skirmish\] lockstep match - you are player (\d)")
 _STATUS = re.compile(r"skirmish lockstep: player (\d) tick (\d+) stalls (\d+) desynced (\d) applied (\d+) (\d+)")
 _PRESET = "Ninja-Release"  # build/<프리셋>/Bin 의 App 을 쓴다
+_ARMY = re.compile(r"\[Skirmish\] t=\d+s .*\| p1 workers \d+ army [1-9]")  # 1 번에게 병력이 생긴 판 상태 줄(`SkirmishMatch` 가 30 초마다 남긴다)
+_ARMY_TIMEOUT_SECONDS = 420.0  # 병력이 생기기를 기다리는 최대 초(판의 시간은 실제 시간과 같다)
 _GAME = "Playground"
 _MINIGAME = "starskirmish"
 _TIMEOUT_SECONDS = 90.0  # 락스텝 시작 줄을 기다리는 최대 초
@@ -94,9 +96,11 @@ def _run(argument: argparse.Namespace) -> int:
                                         app_arguments.variable("gv_userSettingsFile", group.out_dir / "client.usersettings.json")])
         try:
             if host.wait_for(_OPENED, _TIMEOUT_SECONDS) and client.wait_for(_OPENED, _TIMEOUT_SECONDS):
-                time.sleep(argument.seconds / 2)  # AI 가 병력을 모을 때까지
+                # 병력은 AI 가 건물을 짓고 뽑아야 생긴다 - 시각이 아니라 판의 상태로 기다린다(병력 없이 낸 명령은 실을 것이 없다)
+                if not client.wait_for(_ARMY, _ARMY_TIMEOUT_SECONDS):
+                    return group.fail(f"player 1 never had an army (logs: {host.log} {client.log})")
                 client.send("skirmish.order 32 32")
-                time.sleep(argument.seconds / 2)
+                time.sleep(argument.seconds)
                 host.send("skirmish.lockstep")
                 client.send("skirmish.lockstep")
                 time.sleep(2.0)
@@ -113,6 +117,6 @@ def main(list_argument: list[str]) -> int:
     parser = argparse.ArgumentParser(prog="py -3 -m Scripts lockstep-pair", description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     sub = parser.add_subparsers(dest="mode", required=True)
     run_parser = sub.add_parser("run", help="호스트와 클라이언트를 띄워 락스텝 대전을 돌리고 판정한다")
-    run_parser.add_argument("--seconds", type=float, default=60.0, help="락스텝이 선 뒤 판을 돌리는 초(반에 1 번 명령을 낸다)")
+    run_parser.add_argument("--seconds", type=float, default=30.0, help="1 번이 명령을 낸 뒤 판을 더 돌리는 초")
     run_parser.add_argument("--min-ticks", type=int, default=600, help="두 프로세스가 넘어야 할 락스텝 틱 수(20 Hz)")
     return _run(parser.parse_args(list_argument))

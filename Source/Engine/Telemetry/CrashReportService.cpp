@@ -422,7 +422,15 @@ namespace sw
         VectorUtil::sort( listByTime );
         for ( size_t index = 0; index + kMaxReports < listByTime.size(); ++index )
         {
-            (void)FileUtil::removeDirectory( listByTime[index].second ); // 실패는 removeDirectory 가 경고로 남기고, 다음 정리가 다시 지운다
+            // 같은 폴더를 쓰는 다른 프로세스(서버 · 클라이언트를 함께 띄운 실행)도 같은 묶음을 정리한다 — 이름을 옮긴 하나만 지운다. 옮기지 못했으면 남이 지우는 중이거나 읽는 중이다(다음 정리가 다시 본다).
+            const AbsolutePath& bundle = listByTime[index].second;
+            string_view         bundleName;
+            FileUtil::getFileNamePart( bundle.str(), bundleName );
+            StringBuilder<constant::buffer::kMax256> claimedName;
+            claimedName.appendFormat( "removing_%#", bundleName );
+            const AbsolutePath claimed = bundle.getParent().join( claimedName.view() );
+            if ( FileUtil::renamePath( bundle, claimed ) )
+                (void)FileUtil::removeDirectory( claimed ); // 실패는 removeDirectory 가 경고로 남긴다
         }
     }
 

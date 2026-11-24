@@ -706,7 +706,7 @@ namespace sw
         }
         const int32  headSize         = pHandler->isWorldScoped() ? 2 : 1;
         const uint32 holdMilliseconds = bReliable ? pHandler->getHoldLimit( pData[0] ) : 0u;
-        const uint64 key              = holdMilliseconds != 0u && message._size >= headSize ? pHandler->readHoldKey( pData[0], BitReader( pData + headSize, message._size - headSize ) ) : 0u;
+        const uint64 key              = holdMilliseconds != 0u && message._size >= headSize ? pHandler->readMessageHoldKey( pData[0], BitReader( pData + headSize, message._size - headSize ) ) : 0u;
         if ( holdMilliseconds != 0u && isBlockedByHeld( message._connectionID, rangeBase, key ) )
         {
             holdMessage( peers, message, pData, key, static_cast<int64>( holdMilliseconds ), false ); // 같은 대상의 앞 메시지가 기다린다 — 앞지르지 않는다
@@ -755,7 +755,7 @@ namespace sw
                     if ( bEarlierWaits == false )
                         held._bMissingHandler = SW_FALSE;
                     if ( bEarlierWaits == false && size >= headSize && pHandler->getHoldLimit( held._buffer[0] ) != 0u )
-                        held._key = pHandler->readHoldKey( held._buffer[0], BitReader( held._buffer.data() + headSize, size - headSize ) );
+                        held._key = pHandler->readMessageHoldKey( held._buffer[0], BitReader( held._buffer.data() + headSize, size - headSize ) );
                 }
                 const bool bBlocked = held._bMissingHandler == SW_TRUE || VectorUtil::contains( _listRefusedConnection, held._connectionID ) ||
                                       ( pHandler->getHoldLimit( held._buffer[0] ) != 0u && isBlockedByHeld( held._connectionID, held._rangeBase, held._key ) );
