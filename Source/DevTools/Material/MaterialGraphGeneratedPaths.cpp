@@ -87,10 +87,10 @@ namespace sw
              */
             static void carryStaleMeta( const string& staleShaderPath, const string& currentShaderPath )
             {
-                const AbsolutePath staleMetaPath = AssetMeta::makePath( staleShaderPath );
+                const AbsolutePath staleMetaPath = AssetMeta::makePath( FileUtil::toDiskPath( staleShaderPath ) );
                 if ( FileUtil::exists( staleMetaPath ) == false )
                     return;
-                const AbsolutePath currentMetaPath = AssetMeta::makePath( currentShaderPath );
+                const AbsolutePath currentMetaPath = AssetMeta::makePath( FileUtil::toDiskPath( currentShaderPath ) );
                 if ( FileUtil::exists( currentMetaPath ) == false )
                 {
                     string                    metaText;

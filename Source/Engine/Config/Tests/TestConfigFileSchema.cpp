@@ -205,8 +205,8 @@ SW_TEST_CASE( ConfigFileSchemaTest, EveryConfigFileLoadsStrictly )
     for ( const sw::string& filePath : listFilePath )
     {
         const sw::string normalized = sw::FileUtil::normalizeSeparators( filePath );
-        SW_REQUIRE_TRUE_MSG( sw::StringUtil::startsWith( normalized, projectRoot ), normalized.c_str() );
-        sw::string relative = normalized.substr( projectRoot.size() );
+        SW_REQUIRE_TRUE_MSG( sw::StringUtil::startsWith( normalized, projectRoot.str() ), normalized.c_str() );
+        sw::string relative = normalized.substr( projectRoot.str().size() );
         while ( relative.empty() == false && relative.front() == '/' )
         {
             relative.erase( 0, 1 );

@@ -276,11 +276,11 @@ namespace sw
         _source        = address->toText();
     }
 
-    AbsolutePath AssetMeta::makePath( string_view sourcePath )
+    string AssetMeta::makePath( string_view sourcePath )
     {
         StringBuilder<constant::buffer::kMax512> builder;
         builder.appendFormat( "%#%#", sourcePath, kExtension );
-        return FileUtil::toDiskPath( builder.view() );
+        return string( builder.view() );
     }
 
     string AssetMeta::makeText( string_view sourcePath, const AssetGUID& guid, const vector<AssetImportOverride>& listOverride )
@@ -317,7 +317,7 @@ namespace sw
                 const AbsolutePath metaPath = AssetMeta::makePath( absPath );
                 AssetMeta          copied;
                 string             copiedText;
-                const bool         bCopied = FileUtil::isRegularFile( metaPath ) && FileUtil::readTextFile( metaPath, copiedText ) && copied.parseXML( copiedText, AssetMeta::makePath( assetID ).str() ).has_value();
+                const bool         bCopied = FileUtil::isRegularFile( metaPath ) && FileUtil::readTextFile( metaPath, copiedText ) && copied.parseXML( copiedText, AssetMeta::makePath( assetID ) ).has_value();
                 if ( FileUtil::writeTextFile( metaPath, AssetMeta::makeText( assetID, guid, bCopied ? copied._listImportOverride : vector<AssetImportOverride>{} ) ) )
                 {
                     AssetRegistry::record( guid, assetID );
@@ -491,7 +491,7 @@ namespace sw
                     break;
                 }
                 case AssetIdentityKind::Source:
-                    if ( setSidecarID.contains( Internal::toLowerID( AssetMeta::makePath( assetID ).str() ) ) )
+                    if ( setSidecarID.contains( Internal::toLowerID( AssetMeta::makePath( assetID ) ) ) )
                         break;
                     if ( rules.isUnderDerivedFolder( assetID ) )
                         listOutputID.push_back( &assetID );
@@ -588,7 +588,7 @@ namespace sw
         if ( bHeader == false && FileUtil::isRegularFile( metaPath ) && FileUtil::readTextFile( metaPath, text ) )
         {
             AssetMeta meta;
-            return meta.parseXML( text, AssetMeta::makePath( assetID ).str() );
+            return meta.parseXML( text, AssetMeta::makePath( assetID ) );
         }
         // 자기 정체성이 없는 산출물 자리의 파일은 임포트 산출물이다 — 원본의 `.meta` 와 산출물 이름이 정체성이다.
         if ( isUnderDerivedFolder( assetID ) == false || absPath.str().size() <= assetID.size() )
@@ -602,7 +602,7 @@ namespace sw
             if ( FileUtil::isRegularFile( sourceMetaPath ) == false || FileUtil::readTextFile( sourceMetaPath, text ) == false )
                 continue;
             AssetMeta                 meta;
-            const optional<AssetGUID> sourceGUID = meta.parseXML( text, AssetMeta::makePath( source._sourceID ).str() );
+            const optional<AssetGUID> sourceGUID = meta.parseXML( text, AssetMeta::makePath( source._sourceID ) );
             return sourceGUID.has_value() ? optional<AssetGUID>{ AssetGUID::fromName( *sourceGUID, source._outputName ) } : nullopt;
         }
         return nullopt;

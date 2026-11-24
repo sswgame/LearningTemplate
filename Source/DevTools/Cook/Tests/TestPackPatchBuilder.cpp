@@ -59,12 +59,12 @@ SW_TEST_CASE( PackPatchBuilderTest, BuildNameIsFileNameSafe )
 SW_TEST_CASE( PackPatchBuilderTest, CollectsFullPathsInOrder )
 {
     const AbsolutePath folder = test::makeScratchPath( "Base" );
-    SW_REQUIRE_TRUE( Util::writePack( folder.str(), "game.pack", "game", {
-                                                                             {"z.txt", "zz"},
-                                                                             {"a.txt", "aa"}
+    SW_REQUIRE_TRUE( Util::writePack( folder, "game.pack", "game", {
+                                                                       {"z.txt", "zz"},
+                                                                       {"a.txt", "aa"}
     } ) );
-    SW_REQUIRE_TRUE( Util::writePack( folder.str(), "engine.pack", "engine", {
-                                                                                 { "b.txt", "bb" }
+    SW_REQUIRE_TRUE( Util::writePack( folder, "engine.pack", "engine", {
+                                                                           { "b.txt", "bb" }
     } ) );
 
     vector<PackContentEntry> listEntry;
@@ -82,11 +82,11 @@ SW_TEST_CASE( PackPatchBuilderTest, SamePathInTwoPacksIsRejected )
 {
     SW_EXPECT_LOG( "PackPatchBuilder.PathMoreOnePack" );
     const AbsolutePath folder = test::makeScratchPath( "Dup" );
-    SW_REQUIRE_TRUE( Util::writePack( folder.str(), "one.pack", "game", {
-                                                                            { "a.txt", "1" }
+    SW_REQUIRE_TRUE( Util::writePack( folder, "one.pack", "game", {
+                                                                      { "a.txt", "1" }
     } ) );
-    SW_REQUIRE_TRUE( Util::writePack( folder.str(), "two.pack", "game", {
-                                                                            { "a.txt", "2" }
+    SW_REQUIRE_TRUE( Util::writePack( folder, "two.pack", "game", {
+                                                                      { "a.txt", "2" }
     } ) );
     vector<PackContentEntry> listEntry;
     SW_EXPECT_FALSE( PackPatchBuilder::collectBuildEntries( folder.str(), listEntry ) );
@@ -101,8 +101,8 @@ SW_TEST_CASE( PackPatchBuilderTest, RefusesFoldersThatAreNotABaseBuild )
     SW_EXPECT_FALSE( PackPatchBuilder::collectBuildEntries( test::makeScratchPath( "NoSuchFolder" ).str(), listEntry ) );
 
     const AbsolutePath folder = test::makeScratchPath( "Patched" );
-    SW_REQUIRE_TRUE( Util::writePack( folder.str(), "game.pack", "game", {
-                                                                             { "a.txt", "1" }
+    SW_REQUIRE_TRUE( Util::writePack( folder, "game.pack", "game", {
+                                                                       { "a.txt", "1" }
     } ) );
     SW_REQUIRE_TRUE( FileUtil::writeTextFile( folder.join( PackPatchBuilder::makeManifestFileName( "2" ) ), "<x/>" ) );
     SW_EXPECT_FALSE( PackPatchBuilder::collectBuildEntries( folder.str(), listEntry ) );
@@ -116,15 +116,15 @@ SW_TEST_CASE( PackPatchBuilderTest, PatchTurnsTheOldBuildIntoTheNewOne )
     const AbsolutePath newFolder  = root.join( "new" );
     const AbsolutePath output     = root.join( "out" );
     const AbsolutePath recordPath = root.join( "1.packbuild.xml" );
-    SW_REQUIRE_TRUE( Util::writePack( oldFolder.str(), "game.pack", "game", {
-                                                                                {"keep.txt", "same"},
-                                                                                {"edit.txt",  "old"},
-                                                                                {"gone.txt",  "bye"}
+    SW_REQUIRE_TRUE( Util::writePack( oldFolder, "game.pack", "game", {
+                                                                          {"keep.txt", "same"},
+                                                                          {"edit.txt",  "old"},
+                                                                          {"gone.txt",  "bye"}
     } ) );
-    SW_REQUIRE_TRUE( Util::writePack( newFolder.str(), "game.pack", "game", {
-                                                                                {"keep.txt", "same"},
-                                                                                {"edit.txt",  "new"},
-                                                                                {"made.txt",   "hi"}
+    SW_REQUIRE_TRUE( Util::writePack( newFolder, "game.pack", "game", {
+                                                                          {"keep.txt", "same"},
+                                                                          {"edit.txt",  "new"},
+                                                                          {"made.txt",   "hi"}
     } ) );
     SW_REQUIRE_TRUE( PackPatchBuilder::writeBuildRecord( oldFolder.str(), "1", recordPath ) );
 
@@ -164,8 +164,8 @@ SW_TEST_CASE( PackPatchBuilderTest, SameContentIsRejected )
     const AbsolutePath root       = test::makeScratchPath( "Same" );
     const AbsolutePath folder     = root.join( "packs" );
     const AbsolutePath recordPath = root.join( "1.packbuild.xml" );
-    SW_REQUIRE_TRUE( Util::writePack( folder.str(), "game.pack", "game", {
-                                                                             { "a.txt", "1" }
+    SW_REQUIRE_TRUE( Util::writePack( folder, "game.pack", "game", {
+                                                                       { "a.txt", "1" }
     } ) );
     SW_REQUIRE_TRUE( PackPatchBuilder::writeBuildRecord( folder.str(), "1", recordPath ) );
     SW_EXPECT_FALSE( PackPatchBuilder::makePatch( Util::makeParams( folder.str(), recordPath, root.join( "out" ), "2" ) ) );
@@ -185,8 +185,8 @@ SW_TEST_CASE( PackPatchBuilderTest, BadInputIsRejected )
     const AbsolutePath output     = root.join( "out" );
     const AbsolutePath recordPath = root.join( "1.packbuild.xml" );
     const AbsolutePath noPatching = root.join( "none.packbuild.xml" );
-    SW_REQUIRE_TRUE( Util::writePack( folder.str(), "game.pack", "game", {
-                                                                             { "a.txt", "1" }
+    SW_REQUIRE_TRUE( Util::writePack( folder, "game.pack", "game", {
+                                                                       { "a.txt", "1" }
     } ) );
     SW_REQUIRE_TRUE( PackPatchBuilder::writeBuildRecord( folder.str(), "1", recordPath ) );
     SW_REQUIRE_TRUE( PackPatchBuilder::writeNoPatchingRecord( noPatching ) );

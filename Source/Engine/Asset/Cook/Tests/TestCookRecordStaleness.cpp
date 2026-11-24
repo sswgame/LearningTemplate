@@ -86,7 +86,7 @@ SW_TEST_CASE( CookRecordStalenessTest, EachInputKindGoesStaleWhenItsSourceChange
         {
             CookJob       job( Internal::makeDesc() );
             vector<uint8> bytes;
-            SW_REQUIRE_TRUE( AssetIO::readBinaryFile( diskPath.str(), bytes ) );
+            SW_REQUIRE_TRUE( AssetIO::readBinaryFile( diskPath, bytes ) );
             record = Internal::roundTrip( job, recordPath );
         }
         Internal::expectFreshSingleInput( record, CookInputKind::DiskFile );

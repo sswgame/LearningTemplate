@@ -231,12 +231,12 @@ SW_TEST_CASE( PackSceneChunkPlanTest, CookingAnotherGameKeepsTheChunkManifest )
         "game/a/maps/one.scene.xml",
         { "common.shared", "game_a.scene_a_one" }
     } );
-    SW_REQUIRE_TRUE( PackCooker::writeChunkManifests( root.str(), { "engine", "common", "game/a" }, cookA ) );
+    SW_REQUIRE_TRUE( PackCooker::writeChunkManifests( root, { "engine", "common", "game/a" }, cookA ) );
 
     PackChunkManifest cookB;
     cookB._listChunk.push_back( PackChunkFiles{ "game_b.scene_b_two", { "game_b.scene_b_two.0.pack" } } );
     cookB._listScene.push_back( PackSceneEntry{ "game/b/maps/two.scene.xml", { "game_b.scene_b_two" } } );
-    SW_REQUIRE_TRUE( PackCooker::writeChunkManifests( root.str(), { "engine", "common", "game/b" }, cookB ) );
+    SW_REQUIRE_TRUE( PackCooker::writeChunkManifests( root, { "engine", "common", "game/b" }, cookB ) );
 
     // A 의 목록은 그대로다. 공용 · 엔진은 마지막 쿠킹(B)의 것이다(팩 파일과 같은 단위).
     string textA;

@@ -83,7 +83,7 @@ SW_TEST_CASE( PackWriterTest, OutOfOrderAppendIsAnError )
         std::swap( first, second ); // 두 번째가 해시가 더 작게
 
     PackStreamWriter outOfOrder;
-    SW_REQUIRE_TRUE( outOfOrder.open( packPath.str(), PackTestUtil::makeDesc( "game/test" ) ).has_value() );
+    SW_REQUIRE_TRUE( outOfOrder.open( packPath, PackTestUtil::makeDesc( "game/test" ) ).has_value() );
     SW_REQUIRE_TRUE( outOfOrder.append( first, PackEntryStorage::Blocks, vector<uint8>{ 1, 2, 3 } ).has_value() );
     const expected<void> refused = outOfOrder.append( second, PackEntryStorage::Blocks, vector<uint8>{ 4 } );
     SW_REQUIRE_FALSE( refused.has_value() );
@@ -93,7 +93,7 @@ SW_TEST_CASE( PackWriterTest, OutOfOrderAppendIsAnError )
     SW_EXPECT_FALSE( FileUtil::exists( packPath ) );
 
     PackStreamWriter twice;
-    SW_REQUIRE_TRUE( twice.open( packPath.str(), PackTestUtil::makeDesc( "game/test" ) ).has_value() );
+    SW_REQUIRE_TRUE( twice.open( packPath, PackTestUtil::makeDesc( "game/test" ) ).has_value() );
     SW_REQUIRE_TRUE( twice.append( "Data/Same.xml", PackEntryStorage::Blocks, vector<uint8>{ 1 } ).has_value() );
     const expected<void> duplicate = twice.append( "data/same.xml", PackEntryStorage::Blocks, vector<uint8>{ 2 } );
     SW_REQUIRE_FALSE( duplicate.has_value() );
@@ -105,7 +105,7 @@ SW_TEST_CASE( PackWriterTest, OutOfOrderAppendIsAnError )
     PackWriterDesc   noBlockSize = PackTestUtil::makeDesc( "game/test" );
     PackStreamWriter unset;
     noBlockSize._blockSize = 0;
-    SW_EXPECT_FALSE( unset.open( packPath.str(), noBlockSize ).has_value() );
+    SW_EXPECT_FALSE( unset.open( packPath, noBlockSize ).has_value() );
 }
 
 // 쓰는 동안 센 내용 해시가 쓴 파일을 읽어 센 해시와 같다 — 쿠킹 기록이 출력을 다시 읽지 않는 근거다.
@@ -116,7 +116,7 @@ SW_TEST_CASE( PackWriterTest, WriteResultHashEqualsHashOfTheFile )
     VectorUtil::sort( listEntry, []( const std::pair<string, vector<uint8>>& left, const std::pair<string, vector<uint8>>& right )
     { return PackStreamWriter::makePathHash( left.first ) < PackStreamWriter::makePathHash( right.first ); } );
     PackStreamWriter writer;
-    SW_REQUIRE_TRUE( writer.open( packPath.str(), PackTestUtil::makeDesc( "game/test", PackCompressionKind::Zlib ) ).has_value() );
+    SW_REQUIRE_TRUE( writer.open( packPath, PackTestUtil::makeDesc( "game/test", PackCompressionKind::Zlib ) ).has_value() );
     for ( std::pair<string, vector<uint8>>& entry : listEntry )
     {
         SW_REQUIRE_TRUE( writer.append( entry.first, PackEntryStorage::Blocks, std::move( entry.second ) ).has_value() );
@@ -149,10 +149,10 @@ SW_TEST_CASE( PackWriterTest, SlotLayoutRepacksWhenThisBuildLeavesTooManyHoles )
         { return PackStreamWriter::makePathHash( left.first ) < PackStreamWriter::makePathHash( right.first ); } );
         PackWriterDesc desc    = PackTestUtil::makeDesc( "game/test" );
         desc._layoutMode       = PackLayoutMode::Slot;
-        desc._previousPackPath = packPath.str();
+        desc._previousPackPath = packPath;
         desc._maxHolePercent   = 25;
         PackStreamWriter writer;
-        expected<void>   step = writer.open( packPath.str(), desc );
+        expected<void>   step = writer.open( packPath, desc );
         for ( size_t index = 0; index < listEntry.size() && step.has_value(); ++index )
         {
             step = writer.append( listEntry[index].first, PackEntryStorage::Blocks, std::move( listEntry[index].second ) );

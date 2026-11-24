@@ -70,7 +70,7 @@ namespace sw
          */
         [[nodiscard]] static bool readTextFile( const AbsolutePath& filePath, string& outText );
         /** @brief 디스크 경로의 파일을 바이트로 읽습니다. 리소스 id 로 풀지 않습니다. 쿠킹 기록 규칙은 `readTextFile` 과 같습니다. */
-        [[nodiscard]] static bool readBinaryFile( string_view filePath, vector<uint8>& outBytes );
+        [[nodiscard]] static bool readBinaryFile( const AbsolutePath& filePath, vector<uint8>& outBytes );
 
         /**
          * @brief 상대 리소스 경로의 바이너리 데이터를 로드합니다. 찾는 순서는 `readTextAsset` 와 같습니다.

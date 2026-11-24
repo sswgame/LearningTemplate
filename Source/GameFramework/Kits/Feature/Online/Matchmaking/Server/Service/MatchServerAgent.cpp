@@ -259,11 +259,11 @@ namespace sw
         }
         if ( reply._result != EphemeralResult::Ok )
             return; // 수명이 다한 기록이다. 끝나는 시각까지 다시 읽지 않는다
-        MatchFormed match;
-        uint32      readVersion = 0;
-        if ( MixedBuildCodec::decode( reply._value.data(), reply._value.size(), MatchFormed::kBusVersion, match, readVersion ) != MixedBuildReadResult::Read )
+        MatchFormed          match;
+        const MixedBuildRead read = MixedBuildCodec::decode( reply._value.data(), reply._value.size(), MatchFormed::kBusVersion, match );
+        if ( read._result != MixedBuildReadResult::Read )
         {
-            SW_LOG_WARNING_ID( "MatchServerAgent.MatchRecordUnreadable", "MatchServerAgent: match record '%#' (version %#) could not be read - its players are refused", recordName, readVersion );
+            SW_LOG_WARNING_ID( "MatchServerAgent.MatchRecordUnreadable", "MatchServerAgent: match record '%#' (version %#) could not be read - its players are refused", recordName, read._readVersion );
             return;
         }
         acceptMatch( match, recordIt->second );

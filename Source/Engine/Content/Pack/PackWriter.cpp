@@ -149,7 +149,7 @@ namespace sw
         _state                          = State::Open;
         const AbsolutePath packDiskPath = packPath;
         if ( FileUtil::ensureParentDirectoryExists( packDiskPath ) == false )
-            return fail( Error{ ErrorKind::ExternalFailure, "pack parent folder cannot be made", packPath } );
+            return fail( Error{ ErrorKind::ExternalFailure, "pack parent folder cannot be made", packPath.str() } );
         // 앞 빌드 팩은 바꿔 끼우기 전까지 그대로라(임시 파일에 쓴다) 열기 뒤에 읽어도 된다.
         const expected<void> opened = _file.open( packDiskPath );
         if ( opened.has_value() == false )
@@ -512,8 +512,8 @@ namespace sw
             for ( uint64 copied = 0; copied < storedSize; copied += chunk.size() )
             {
                 const uint64 size = storedSize - copied < PackWriterInternal::kCompactChunkBytes ? storedSize - copied : PackWriterInternal::kCompactChunkBytes;
-                if ( FileUtil::readFile( FileUtil::toDiskPath( _packPath ), chunk, oldOffset + copied, size ) == false || chunk.size() != size )
-                    return unexpected( Error{ ErrorKind::ExternalFailure, "slot layout pack cannot be read back for compaction", _packPath } );
+                if ( FileUtil::readFile( _packPath, chunk, oldOffset + copied, size ) == false || chunk.size() != size )
+                    return unexpected( Error{ ErrorKind::ExternalFailure, "slot layout pack cannot be read back for compaction", _packPath.str() } );
                 const expected<void> appended = writeBytes( _file.getSize(), chunk.data(), chunk.size() );
                 if ( appended.has_value() == false )
                     return unexpected( appended.error() );

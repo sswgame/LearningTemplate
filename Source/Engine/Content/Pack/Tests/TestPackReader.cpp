@@ -99,7 +99,7 @@ namespace
         AbsolutePath _path;
 
         PackTestFile()
-            : _path{ test::makeScratchPath( "SwPackReaderTest.pack" ).str() }
+            : _path{ test::makeScratchPath( "SwPackReaderTest.pack" ) }
         {
         }
         ~PackTestFile() { (void)FileUtil::removeFile( _path ); }
@@ -529,7 +529,7 @@ SW_TEST_CASE( PackReaderTest, StoredEntryRangeReadReturnsTheSameSpan )
     const string        compressedPath = "data/level.xml";
     const bool          bStoredFirst   = PackStreamWriter::makePathHash( storedPath ) < PackStreamWriter::makePathHash( compressedPath );
     PackStreamWriter    writer;
-    SW_REQUIRE_TRUE( writer.open( packPath.str(), PackTestUtil::makeDesc( "game/test", PackCompressionKind::Zlib ) ).has_value() );
+    SW_REQUIRE_TRUE( writer.open( packPath, PackTestUtil::makeDesc( "game/test", PackCompressionKind::Zlib ) ).has_value() );
     for ( uint32 order = 0; order < 2; ++order )
     {
         const bool bStored = ( order == 0 ) == bStoredFirst;

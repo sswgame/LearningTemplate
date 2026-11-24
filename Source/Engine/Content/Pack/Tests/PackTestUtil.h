@@ -40,7 +40,7 @@ namespace sw
             VectorUtil::sort( listEntry, []( const std::pair<string, vector<uint8>>& left, const std::pair<string, vector<uint8>>& right )
             { return PackStreamWriter::makePathHash( left.first ) < PackStreamWriter::makePathHash( right.first ); } );
             PackStreamWriter writer;
-            expected<void>   step = writer.open( packPath, desc );
+            expected<void>   step = writer.open( FileUtil::toDiskPath( packPath ), desc );
             for ( size_t index = 0; index < listEntry.size() && step.has_value(); ++index )
             {
                 step = writer.append( listEntry[index].first, PackEntryStorage::Blocks, std::move( listEntry[index].second ) );

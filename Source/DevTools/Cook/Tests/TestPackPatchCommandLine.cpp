@@ -53,15 +53,15 @@ SW_TEST_CHILD_ROLE( PackPatchCommandLineTest, WriteInputs )
     SW_REQUIRE_TRUE_MSG( pProvider != nullptr, "no INetSecurityProvider is published - GameFramework is not loaded" );
 
     const AbsolutePath oldFolder = root.join( Util::kOldFolder );
-    SW_REQUIRE_TRUE( Util::writePack( oldFolder.str(), {
-                                                           {"keep.txt", "same"},
-                                                           {"edit.txt",  "old"},
-                                                           {"gone.txt",  "bye"}
+    SW_REQUIRE_TRUE( Util::writePack( oldFolder, {
+                                                     {"keep.txt", "same"},
+                                                     {"edit.txt",  "old"},
+                                                     {"gone.txt",  "bye"}
     } ) );
-    SW_REQUIRE_TRUE( Util::writePack( FileUtil::joinPath( root.str(), Util::kNewFolder ), {
-                                                                                              {"keep.txt", "same"},
-                                                                                              {"edit.txt",  "new"},
-                                                                                              {"made.txt",   "hi"}
+    SW_REQUIRE_TRUE( Util::writePack( root.join( Util::kNewFolder ), {
+                                                                         {"keep.txt", "same"},
+                                                                         {"edit.txt",  "new"},
+                                                                         {"made.txt",   "hi"}
     } ) );
     SW_REQUIRE_TRUE( PackPatchBuilder::writeBuildRecord( oldFolder.str(), "1", oldFolder.join( PackBuildRecord::kFileName ) ) );
 

@@ -30,6 +30,13 @@ namespace sw
         Unreadable,
         OutOfRange
     };
+
+    /** @brief `MixedBuildCodec::decode` 가 읽은 결과와 버전 머리입니다. */
+    struct [[nodiscard]] MixedBuildRead
+    {
+        MixedBuildReadResult _result{ MixedBuildReadResult::Unreadable };
+        uint32               _readVersion{ 0 }; ///< 받은 바이트의 버전 머리입니다. 머리가 없으면 0 입니다
+    };
 } // namespace sw
 
 namespace sw
@@ -56,23 +63,24 @@ namespace sw
 
         /** @brief @p pData 를 읽습니다. `Read` 일 때만 @p outValue 를 바꿉니다. 로그는 부르는 쪽이 정합니다(받은 바이트입니다). */
         template <typename T>
-        static MixedBuildReadResult decode( const uint8* pData, const size_t dataSize, const uint32 expectedVersion, T& outValue, uint32& outReadVersion )
+        static MixedBuildRead decode( const uint8* pData, const size_t dataSize, const uint32 expectedVersion, T& outValue )
         {
-            T decoded{};
-            switch ( BinarySerializer::deserializeExactVersion( expectedVersion, &decoded, *T::StaticType(), pData, dataSize, outReadVersion, getReadContext() ) )
+            T                            decoded{};
+            const BinaryExactVersionRead read = BinarySerializer::deserializeExactVersion( expectedVersion, &decoded, *T::StaticType(), pData, dataSize, getReadContext() );
+            switch ( read._result )
             {
                 case BinaryExactVersionResult::Read:
                     break;
                 case BinaryExactVersionResult::VersionMismatch:
-                    return MixedBuildReadResult::VersionMismatch;
+                    return { MixedBuildReadResult::VersionMismatch, read._readVersion };
                 case BinaryExactVersionResult::Unreadable:
-                    return MixedBuildReadResult::Unreadable;
+                    return { MixedBuildReadResult::Unreadable, read._readVersion };
             }
             BitWriter scratch;
             if ( FixedLayout::write( decoded, scratch ) == false )
-                return MixedBuildReadResult::OutOfRange;
+                return { MixedBuildReadResult::OutOfRange, read._readVersion };
             outValue = std::move( decoded );
-            return MixedBuildReadResult::Read;
+            return { MixedBuildReadResult::Read, read._readVersion };
         }
 
     private:

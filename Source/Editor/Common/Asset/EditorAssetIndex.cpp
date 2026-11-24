@@ -149,7 +149,7 @@ namespace sw::editor
             static string makeKey( string_view displayPath ) { return FileUtil::normalizePath( displayPath ).str(); }
 
             /** @brief 원본 @p absPath 곁의 `.meta` 를 읽습니다. 없거나 읽지 못하면 false 입니다(정체성 없음 — 결함 알림은 `asset-ids` · `AssetDatabase` 가 한다). */
-            static bool readMetaText( string_view absPath, string& outText ) { return FileUtil::readOptionalTextFile( AssetMeta::makePath( absPath ), outText ) == OptionalFileRead::Read; }
+            static bool readMetaText( string_view absPath, string& outText ) { return FileUtil::readOptionalTextFile( AssetMeta::makePath( FileUtil::toDiskPath( absPath ) ), outText ) == OptionalFileRead::Read; }
 
             static bool lessByReferrerLine( const EditorAssetReference& left, const EditorAssetReference& right )
             {

@@ -21,7 +21,7 @@ SW_TEST_CASE( CookJobTest, RecordsDiskReadsAsAbsoluteDiskInputs )
     CookJob        job( CookJobDesc{ ._cookerName = "Fake", ._codeFingerprint = 1, ._target = "Test", ._settingsHash = 0 } );
     vector<uint8>  bytes;
     vector<string> listFile;
-    SW_REQUIRE_TRUE( AssetIO::readBinaryFile( filePath.str(), bytes ) );
+    SW_REQUIRE_TRUE( AssetIO::readBinaryFile( filePath, bytes ) );
     SW_REQUIRE_TRUE( CookJob::collectFiles( folder, ".txt", listFile ) );
 
     SW_REQUIRE_EQUAL( size_t( 2 ), job.getInputs().size() );

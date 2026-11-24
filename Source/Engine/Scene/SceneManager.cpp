@@ -375,7 +375,7 @@ namespace sw
         if ( gv_scenePreload == false )
             return nullptr;
         // 목록은 쿠킹이 굽는다 — 쿠킹 전 Dev 실행은 목록이 없고, 그 씬은 예전처럼 에셋을 잡을 때 읽는다.
-        const string listPath = ScenePreloadList::makeListPath( path ).str();
+        const string listPath = ScenePreloadList::makeListPath( path );
         if ( listPath.empty() || AssetIO::hasAsset( AssetID{ listPath } ) == false )
             return nullptr;
         vector<string> listAsset;

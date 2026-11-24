@@ -232,11 +232,11 @@ namespace sw::editor
                     uniqueSource.insert( FileUtil::normalizeSeparators( move._sourceAbs ) );
                 for ( const EditorAssetMove& move : listMove )
                 {
-                    const string sidecar = AssetMeta::makePath( move._sourceAbs ).str();
+                    const string sidecar = AssetMeta::makePath( move._sourceAbs );
                     if ( isSidecar( move._sourceAbs ) || FileUtil::isRegularFile( FileUtil::toDiskPath( sidecar ) ) == false )
                         continue;
                     if ( uniqueSource.count( FileUtil::normalizeSeparators( sidecar ) ) == 0 )
-                        listResult.push_back( EditorAssetMove{ sidecar, AssetMeta::makePath( move._destinationAbs ).str() } );
+                        listResult.push_back( EditorAssetMove{ sidecar, AssetMeta::makePath( move._destinationAbs ) } );
                 }
                 return listResult;
             }
@@ -803,7 +803,7 @@ namespace sw::editor
 
         // 에셋과 곁의 정체성 서술(.meta)을 한 번에 보낸다 — 휴지통에서 되살리면 둘이 함께 온다.
         const string         assetPath = FileUtil::normalizeSeparators( absolutePath );
-        const AbsolutePath   metaPath  = AssetMeta::makePath( assetPath );
+        const AbsolutePath   metaPath  = AssetMeta::makePath( FileUtil::toDiskPath( assetPath ) );
         vector<AbsolutePath> listPath{ FileUtil::toDiskPath( assetPath ) };
         if ( FileUtil::isRegularFile( metaPath ) )
             listPath.push_back( metaPath );
@@ -827,7 +827,7 @@ namespace sw::editor
             return false;
         }
         // .meta 는 에셋이 실제로 지워진 뒤에만 지운다 — 남은 에셋에서 정체성을 떼면 다음에 새 GUID 를 받아 가리키던 참조가 끊긴다.
-        const string metaPath = AssetMeta::makePath( abs ).str();
+        const string metaPath = AssetMeta::makePath( abs );
         if ( FileUtil::isRegularFile( FileUtil::toDiskPath( metaPath ) ) && FileUtil::removeFile( FileUtil::toDiskPath( metaPath ) ) == false )
             SW_LOG_WARNING_ID( "EditorAssetFileCommands.DeletedButMetaKept", "Deleted '%#' but its .meta could not be removed - delete it too (asset-ids reports it)", abs );
         return true;

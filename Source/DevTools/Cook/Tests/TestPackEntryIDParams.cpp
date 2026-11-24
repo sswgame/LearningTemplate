@@ -203,9 +203,9 @@ SW_TEST_CASE( PackEntryIDPropertiesTest, EveryFieldHoldingAnEntryIDIsListed )
     for ( const string& file : listFile )
     {
         const string normalized = FileUtil::normalizeSeparators( file );
-        if ( StringUtil::endsWith( normalized, ".xml" ) == false || StringUtil::startsWith( normalized, contentRoot ) == false )
+        if ( StringUtil::endsWith( normalized, ".xml" ) == false || StringUtil::startsWith( normalized, contentRoot.str() ) == false )
             continue;
-        string_view relativePath = string_view( normalized ).substr( contentRoot.size() );
+        string_view relativePath = string_view( normalized ).substr( contentRoot.str().size() );
         if ( relativePath.empty() == false && relativePath.front() == '/' )
             relativePath.remove_prefix( 1 );
         if ( Util::isSkipped( relativePath ) )

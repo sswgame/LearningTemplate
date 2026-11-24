@@ -37,7 +37,7 @@ namespace sw::editor
             static string findMetaPath( string_view assetID )
             {
                 const optional<AbsolutePath> diskPath = editor::getSubsystem<AssetPaths>().toDiskPath( assetID );
-                return diskPath.has_value() ? AssetMeta::makePath( diskPath->str() ).str() : string{};
+                return diskPath.has_value() ? AssetMeta::makePath( *diskPath ).str() : string{};
             }
 
             /** @brief 서술 글을 읽습니다. 없거나 읽지 못하면 false 입니다. */

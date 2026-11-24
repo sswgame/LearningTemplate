@@ -34,7 +34,7 @@ namespace sw
         };
     } // namespace
 
-    AbsolutePath ScenePreloadList::makeListPath( string_view scenePath )
+    string ScenePreloadList::makeListPath( string_view scenePath )
     {
         for ( const string_view suffix : { ScenePreloadListInternal::kSceneXML, ScenePreloadListInternal::kSceneBin } )
         {
@@ -42,7 +42,7 @@ namespace sw
             {
                 StringBuilder<constant::buffer::kMax512> builder;
                 builder.appendFormat( "%#%#", scenePath.substr( 0, scenePath.size() - suffix.size() ), kExtension );
-                return FileUtil::toDiskPath( builder.view() );
+                return string( builder.view() );
             }
         }
         return {};

@@ -51,7 +51,7 @@ namespace sw
                 {
                     if ( StringUtil::endsWith( file, PackPatchManifest::kManifestExtension, true ) )
                     {
-                        SW_LOG_ERROR_ID( "PackPatchBuilder.PackFolderHoldsPatch", "Pack folder '%#' holds the patch %# - give the base packs of the build, not a patched install", packsDirectory, file );
+                        SW_LOG_ERROR_ID( "PackPatchBuilder.PackFolderHoldsPatch", "Pack folder '%#' holds the patch %# - give the base packs of the build, not a patched install", packsDirectory.str(), file );
                         return false;
                     }
                     if ( StringUtil::endsWith( file, kPackExtension, true ) )
@@ -92,7 +92,7 @@ namespace sw
                         source._pathInPack  = pathInPack;
                         if ( mapFullPathToPack.emplace( source._fullPath, packIndex ).second == false )
                         {
-                            SW_LOG_ERROR_ID( "PackPatchBuilder.PathMoreOnePack", "Path '%#' is in more than one pack of '%#' - a build lists each path once", source._fullPath, packsDirectory );
+                            SW_LOG_ERROR_ID( "PackPatchBuilder.PathMoreOnePack", "Path '%#' is in more than one pack of '%#' - a build lists each path once", source._fullPath, packsDirectory.str() );
                             return false;
                         }
                         outListSource.push_back( std::move( source ) );
@@ -180,7 +180,7 @@ namespace sw
                 PackWriterDesc writerDesc   = params._writerDesc;
                 writerDesc._pDigestProvider = params._signer._pProvider;
                 PackStreamWriter writer;
-                expected<void>   step = writer.open( packPath, writerDesc );
+                expected<void>   step = writer.open( FileUtil::toDiskPath( packPath ), writerDesc );
                 for ( size_t index = 0; index < listChangedPath.size() && step.has_value(); ++index )
                 {
                     const string& changedPath = listChangedPath[index];
@@ -253,7 +253,7 @@ namespace sw
         vector<string>                           listPackPath;
         vector<PackPatchBuilderInternal::Source> listSource;
         outListEntry.clear();
-        if ( PackPatchBuilderInternal::scanPacks( packsDirectory, listPackPath, listSource ) == false )
+        if ( PackPatchBuilderInternal::scanPacks( FileUtil::toDiskPath( packsDirectory ), listPackPath, listSource ) == false )
             return false;
         outListEntry = PackPatchBuilderInternal::makeEntries( listSource );
         return true;
@@ -301,7 +301,7 @@ namespace sw
 
         vector<string>           listPackPath;
         vector<Internal::Source> listSource;
-        if ( Internal::scanPacks( params._packsDirectory, listPackPath, listSource ) == false )
+        if ( Internal::scanPacks( FileUtil::toDiskPath( params._packsDirectory ), listPackPath, listSource ) == false )
             return false;
         PackBuildRecord current;
         current._build     = params._newBuild;

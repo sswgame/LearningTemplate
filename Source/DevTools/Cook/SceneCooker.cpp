@@ -460,8 +460,8 @@ namespace sw
             const bool bSceneWritten = result == CookResult::Cooked || result == CookResult::Reused;
             if ( bSceneWritten == false )
                 continue;
-            const string       preloadID     = ScenePreloadList::makeListPath( outputID ).str();
-            const AbsolutePath preloadPath   = ScenePreloadList::makeListPath( outputPath );
+            const string       preloadID     = ScenePreloadList::makeListPath( outputID );
+            const AbsolutePath preloadPath   = FileUtil::toDiskPath( ScenePreloadList::makeListPath( outputPath ) );
             const CookResult   preloadResult = store.cookFile( preloadDesc, preloadID, preloadPath.str(), [&]()
               { return SceneCookerInternal::cookPreloadList( SceneIterationKey{}, services, scenePath, preloadPath ); } );
             outFailedCount += preloadResult == CookResult::Failed ? 1u : 0u;

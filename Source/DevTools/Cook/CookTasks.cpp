@@ -37,6 +37,7 @@
 #include "Engine/Graphics/Shader/Compile/ShaderRequestLog.h"
 #include "Engine/Input/Map/InputMapBundle.h"
 #include "Engine/Reflection/TypeInfo.h"
+#include "Engine/Reflection/TypeRegistry.h"
 #include "Engine/Scene/SceneManager.h"
 
 namespace sw
@@ -353,7 +354,7 @@ namespace sw
                 }
                 // 셰이더 굽기 · 판정은 세션 밖에서(`cookShadersForPack` 설명). 씬 단계보다 먼저 하므로 깨진 셰이더로 씬을 굽는 시간을 쓰지 않는다.
                 unordered_map<string, vector<vector<string>>> mapRequestedShaderBinary;
-                if ( ( bCookPacks || bCookAll ) && cookShadersForPack( commandLine, cookedDir.str(), mapRequestedShaderBinary ) == false )
+                if ( ( bCookPacks || bCookAll ) && cookShadersForPack( commandLine, cookedDir, mapRequestedShaderBinary ) == false )
                     return false;
                 // 리플렉션 지문은 세션 밖에서 한 번 — 기본 인스턴스를 만들며 게임 설정의 `<Defaults>` 를 읽을 수 있다(그 값은 지문에 든다).
                 const bool   bCooksScenes          = bCookScenes || bCookAll;
@@ -365,7 +366,7 @@ namespace sw
                     bSucceeded = cookSceneStage( cookedDir, cookStore, reflectionFingerprint, crowdSettings, bCrowdSettingsLoaded );
                 // 씬 단계가 실패하면 팩을 베이크하지 않는다 — 빠진 산출물로 베이크한 팩은 배포본에서야 실패가 드러난다.
                 if ( bSucceeded && ( bCookPacks || bCookAll ) )
-                    bSucceeded = cookPackStage( commandLine, context._bDedicatedServer, cookedDir.str(), cookStore, std::move( mapRequestedShaderBinary ) );
+                    bSucceeded = cookPackStage( commandLine, context._bDedicatedServer, cookedDir, cookStore, std::move( mapRequestedShaderBinary ) );
                 // 변경 없는 두 번째 쿠킹은 0 이어야 한다(도장만 본다 — `Pack.Scale` 측정의 입력 읽기 값).
                 SW_LOG_INFO_ID( "Headless.CookHashedBytes", "Cook hashed %# input bytes", hashCache.getHashedByteCount() - hashedBytesBefore );
                 const expected<void> hashSave = hashCache.save();

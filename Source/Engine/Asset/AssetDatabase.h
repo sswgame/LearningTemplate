@@ -189,7 +189,7 @@ namespace sw
         /** @brief 원본을 @p sourcePath 로 옮긴 서술로 고칩니다 — 이름만 바꾸고 GUID · 내용 주소 · 임포트 예외는 그대로입니다(읽은 서술에만 부른다). */
         void renameSource( string_view sourcePath );
         /** @brief 원본 리소스 id @p sourcePath 의 서술 id(`<id>.meta`)입니다 — 색인 키 · 오류 표시용 글. 디스크 자리는 `AbsolutePath` 판입니다. */
-        static AbsolutePath makePath( string_view sourcePath );
+        static string makePath( string_view sourcePath );
         /** @brief 원본 디스크 경로 @p sourcePath 의 서술 디스크 경로(`<경로>.meta`)입니다 — 글로 잇고 다시 올리지 않는다(`AbsolutePath::appendSuffix`). */
         [[nodiscard]] static AbsolutePath makePath( const AbsolutePath& sourcePath ) { return sourcePath.appendSuffix( kExtension ); }
         /** @brief 곁의 원본 @p sourcePath 에 @p guid 를 주는 서술 글입니다. 임포트 예외 @p listOverride 를 함께 든다(복사는 예외를 지킨다 — 옮기기는 `renameSource`). */

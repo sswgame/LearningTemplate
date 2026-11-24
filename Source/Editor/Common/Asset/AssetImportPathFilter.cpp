@@ -100,7 +100,7 @@ namespace sw::editor
     bool AssetImportRuleUtil::readMetaOverrides( string_view sourcePath, vector<AssetImportOverride>& outListOverride )
     {
         outListOverride.clear();
-        const string           metaPath = AssetMeta::makePath( sourcePath ).str();
+        const string           metaPath = AssetMeta::makePath( sourcePath );
         string                 text;
         const OptionalFileRead read = FileUtil::readOptionalTextFile( FileUtil::toDiskPath( metaPath ), text );
         if ( read == OptionalFileRead::Missing )

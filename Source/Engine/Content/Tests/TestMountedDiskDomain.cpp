@@ -128,7 +128,7 @@ SW_TEST_CASE( MountedDiskDomainTest, ResourceEntryRefusesOSPathsInEveryContentSo
     for ( const ContentSource source : { ContentSource::Cooked, ContentSource::Source } )
     {
         contentSource._packs.setContentSource( source );
-        SW_EXPECT_FALSE( AssetIO::readTextAsset( AssetID{ insideRoot }, content ) );
+        SW_EXPECT_FALSE( AssetIO::readTextAsset( AssetID{ insideRoot.str() }, content ) );
         SW_EXPECT_FALSE( AssetIO::readTextAsset( AssetID{ outsideRoot.str() }, content ) );
         SW_EXPECT_FALSE( AssetIO::hasAsset( AssetID{ outsideRoot.str() } ) );
         // 붙인 디스크 도메인은 쿠킹본 정책에서도 디스크에서 읽는다.

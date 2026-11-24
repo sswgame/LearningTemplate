@@ -107,7 +107,7 @@ namespace sw
         desc._blockSize        = settings._packBlockSize;
         desc._writeWindowBytes = settings._maxEntryBytes; // 창은 항목 하나의 한계와 같다 — 모드 팩의 메모리 상한이 이미 받아들인 값이다
         PackStreamWriter writer;
-        expected<void>   step = writer.open( packPath, desc );
+        expected<void>   step = writer.open( FileUtil::toDiskPath( packPath ), desc );
         for ( size_t index = 0; index < listOrdered.size() && step.has_value(); ++index )
         {
             const string& filePath = listOrdered[index].second;

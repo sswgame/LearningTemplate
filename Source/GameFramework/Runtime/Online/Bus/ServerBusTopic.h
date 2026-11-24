@@ -108,12 +108,11 @@ namespace sw
         /** @brief 주제를 이미 확인한 메시지를 읽고, 실패를 알립니다. 두 주제 정의가 함께 씁니다. */
         static ServerBusReadResult decode( const ServerBusMessage& message, T& outMessage )
         {
-            uint32                     readVersion = 0;
-            const MixedBuildReadResult result      = MixedBuildCodec::decode( message._bytes.data(), message._bytes.size(), T::kBusVersion, outMessage, readVersion );
-            if ( result == MixedBuildReadResult::Read )
+            const MixedBuildRead read = MixedBuildCodec::decode( message._bytes.data(), message._bytes.size(), T::kBusVersion, outMessage );
+            if ( read._result == MixedBuildReadResult::Read )
                 return ServerBusReadResult::Read;
-            const ServerBusReadResult busResult = toBusResult( result );
-            ServerBusReadLog::recordRejected( T::StaticType()->_fullyQualifiedName, message._topic, busResult, readVersion );
+            const ServerBusReadResult busResult = toBusResult( read._result );
+            ServerBusReadLog::recordRejected( T::StaticType()->_fullyQualifiedName, message._topic, busResult, read._readVersion );
             return busResult;
         }
 

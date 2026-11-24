@@ -33,7 +33,7 @@ namespace sw
         /**
          * @brief 씬 파일 경로(`….scene.xml` 또는 `….scene.bin`)의 프리로드 목록 경로(`….preload.json`)를 만듭니다. 씬 파일이 아니면 빈 문자열입니다.
          */
-        static AbsolutePath makeListPath( string_view scenePath );
+        static string makeListPath( string_view scenePath );
 
         /** @brief @p objects 의 모든 오브젝트 컴포넌트에서 에셋 경로를 모아 @p outListPath 에 오름차순 · 중복 없이 채웁니다(먼저 비운다). */
         static void collect( SceneIterationKey key, const GameObjectManager& objects, vector<string>& outListPath );

@@ -25,6 +25,13 @@ namespace sw
         Unreadable       ///< 버전 머리가 없거나 본문을 컨텍스트의 정책으로 읽지 못했습니다
     };
 
+    /** @brief `BinarySerializer::deserializeExactVersion` 이 읽은 결과와 버전 머리입니다. */
+    struct [[nodiscard]] BinaryExactVersionRead
+    {
+        BinaryExactVersionResult _result{ BinaryExactVersionResult::Unreadable };
+        uint32                   _readVersion{ 0 }; ///< 읽은 버전 머리입니다. 머리가 없으면 0 입니다
+    };
+
     /**
      * @class BinarySerializer
      * @brief TypeInfo 로 객체를 콤팩트 바이너리 버퍼에 쓰고 읽습니다(압축 직렬화도 함께 지원합니다).
@@ -134,10 +141,9 @@ namespace sw
          * @details 혼합 빌드 사이의 메시지와 캐시가 씁니다. 모르는 이름 · 읽지 못한 필드의 처리는 @p context 의 두 플래그
          *          (`setSkipUnknownProperties` · `setSkipUnreadableProperties`)가 정하고, 중첩 구조체까지 같은 정책입니다. 기본 컨텍스트를 받지 않습니다 —
          *          부르는 쪽이 정책을 고릅니다. 실패해도 이미 쓴 프로퍼티는 되돌리지 않으므로 임시 객체에 읽습니다.
-         * @param outReadVersion 읽은 버전 머리입니다. 머리가 없으면 0 입니다.
          */
-        static BinaryExactVersionResult deserializeExactVersion( uint32 expectedVersion, void* pInstance, const TypeInfo& typeInfo, const uint8* pData,
-                                                                 size_t dataSize, uint32& outReadVersion, const SerializeContext& context );
+        static BinaryExactVersionRead deserializeExactVersion( uint32 expectedVersion, void* pInstance, const TypeInfo& typeInfo, const uint8* pData,
+                                                               size_t dataSize, const SerializeContext& context );
 
         // ------------------------------------------------------------------------------
         // 4) 압축 바이너리 직렬화 (CompressionStream 통합)

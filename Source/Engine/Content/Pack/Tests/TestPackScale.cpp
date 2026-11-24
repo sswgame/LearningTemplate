@@ -100,7 +100,7 @@ namespace sw
                 VectorUtil::sort( listOrder, [&outListHash]( uint32 left, uint32 right )
                 { return outListHash[left] < outListHash[right]; } );
                 PackStreamWriter writer;
-                expected<void>   step = writer.open( packPath, desc );
+                expected<void>   step = writer.open( FileUtil::toDiskPath( packPath ), desc );
                 for ( size_t order = 0; order < listOrder.size() && step.has_value(); ++order )
                 {
                     const uint32 index = listOrder[order];

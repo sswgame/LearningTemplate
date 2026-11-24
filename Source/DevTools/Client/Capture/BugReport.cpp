@@ -78,7 +78,7 @@ namespace sw
                 if ( scenePath.empty() )
                     return string{};
                 vector<uint8> bytes;
-                const bool    bRead = FileUtil::isAbsolutePath( scenePath ) ? AssetIO::readBinaryFile( scenePath, bytes ) : AssetIO::readBinaryAsset( AssetID( scenePath ), bytes );
+                const bool    bRead = FileUtil::isAbsolutePath( scenePath ) ? AssetIO::readBinaryFile( FileUtil::toDiskPath( scenePath ), bytes ) : AssetIO::readBinaryAsset( AssetID( scenePath ), bytes );
                 if ( bRead == false )
                     return string{};
                 return BugReport::formatHash( HashUtil::appendBytes64( HashUtil::kFNVOffset64, bytes.data(), bytes.size() ) );

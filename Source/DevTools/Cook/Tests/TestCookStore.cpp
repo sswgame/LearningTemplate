@@ -44,7 +44,7 @@ namespace
             {
                 ++_bakeCount;
                 vector<uint8> bytes;
-                if ( AssetIO::readBinaryFile( _inputPath.str(), bytes ) == false )
+                if ( AssetIO::readBinaryFile( _inputPath, bytes ) == false )
                     return CookStep::Failed;
                 StringBuilder<constant::buffer::kMax256> text;
                 text.appendFormat( "baked:%#", string_view( reinterpret_cast<const char*>( bytes.data() ), bytes.size() ) );
