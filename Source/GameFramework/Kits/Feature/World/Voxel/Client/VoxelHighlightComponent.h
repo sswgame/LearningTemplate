@@ -30,6 +30,8 @@ namespace sw
     public:
         REFLECT_BODY();
 
+        static constexpr TickGroup kTickGroup = TickGroup::PostUpdate; ///< 플레이어(DuringPhysics)가 이번 프레임에 겨눈 블록을 정한 뒤에 읽습니다.
+
         static constexpr int32 kLevelCount = 4;
 
         VoxelHighlightComponent();

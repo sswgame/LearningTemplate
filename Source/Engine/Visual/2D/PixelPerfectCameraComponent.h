@@ -63,6 +63,8 @@ namespace sw
     {
     public:
         REFLECT_BODY();
+
+        static constexpr TickGroup kTickGroup = TickGroup::PostPhysics; ///< 카메라를 따라가게 하는 컴포넌트(앞 그룹) 뒤, 시차 레이어(PostUpdate) 앞.
         PixelPerfectCameraComponent();
         virtual ~PixelPerfectCameraComponent() override = default;
 

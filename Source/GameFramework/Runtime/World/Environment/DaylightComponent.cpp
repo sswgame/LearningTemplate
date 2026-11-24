@@ -29,13 +29,6 @@ namespace sw
         setCanEverTick( true );
     }
 
-    void DaylightComponent::onBeginPlay()
-    {
-        Component::onBeginPlay();
-        // 디렉터(PrePhysics)가 이 프레임의 시간을 흘린 뒤에 읽는다.
-        setTickGroup( TickGroup::PostUpdate );
-    }
-
     void DaylightComponent::onTick( TickContext& context )
     {
         Component::onTick( context );

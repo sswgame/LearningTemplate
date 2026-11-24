@@ -107,7 +107,6 @@ namespace sw
     void CreatureTownViewComponent::onBeginPlay()
     {
         Component::onBeginPlay();
-        setTickGroup( TickGroup::PostUpdate );
         _pValidatedCatalog         = nullptr;
         _bViewsRejected            = SW_FALSE;
         const bool bActionsMissing = _talkAction.empty() || _talkSpecies.empty();

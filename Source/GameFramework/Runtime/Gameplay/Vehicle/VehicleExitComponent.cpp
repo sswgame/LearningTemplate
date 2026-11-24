@@ -23,7 +23,6 @@ namespace sw
     void VehicleExitComponent::onBeginPlay()
     {
         Component::onBeginPlay();
-        setTickGroup( TickGroup::PrePhysics );
         const GameObject*    pOwner = getOwner();
         const PawnComponent* pPawn  = pOwner != nullptr ? pOwner->getComponent<PawnComponent>() : nullptr;
         _exitIndex                  = pPawn != nullptr ? pPawn->findButton( _exitButton ) : nullopt;

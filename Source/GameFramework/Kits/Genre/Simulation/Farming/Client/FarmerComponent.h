@@ -34,10 +34,11 @@ namespace sw
     public:
         REFLECT_BODY();
 
+        static constexpr TickGroup kTickGroup = TickGroup::PostUpdate; ///< 디렉터(PrePhysics)가 이 프레임의 이동을 끝낸 뒤에 읽는다.
+
         FarmerComponent();
         virtual ~FarmerComponent() override = default;
 
-        void onBeginPlay() override;
         void onTick( TickContext& context ) override;
 
     private:

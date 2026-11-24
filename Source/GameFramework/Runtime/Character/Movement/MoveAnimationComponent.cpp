@@ -27,8 +27,6 @@ namespace sw
     void MoveAnimationComponent::onBeginPlay()
     {
         Component::onBeginPlay();
-        // 몸을 옮기는 쪽(디렉터 PrePhysics · 뷰 PostUpdate)이 이번 프레임 자리를 쓴 뒤에 읽는다.
-        setTickGroup( TickGroup::PostUpdate );
         _bHasLast = SW_FALSE;
         _speed    = 0.0f;
     }

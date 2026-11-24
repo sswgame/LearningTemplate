@@ -115,7 +115,6 @@ namespace sw
     void UnitStatsComponent::onBeginPlay()
     {
         Component::onBeginPlay();
-        setTickGroup( TickGroup::DuringPhysics );
         IHealthSource::notifyHealthChanged( _healthSourcePort, getOwner(), true );
     }
 

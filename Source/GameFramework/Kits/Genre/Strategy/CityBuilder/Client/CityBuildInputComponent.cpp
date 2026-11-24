@@ -111,7 +111,6 @@ namespace sw
     void CityBuildInputComponent::onBeginPlay()
     {
         Component::onBeginPlay();
-        setTickGroup( TickGroup::PostUpdate );
         // 입력 액션은 입력 맵에 있어야 한다. 입력이 없는 실행(헤드리스)은 보지 않는다.
         const InputManager* const pInput = game::findSubsystem<InputManager>();
         const bool                bValid = pInput != nullptr && InputActionCheckUtil::hasAllActions( pInput->getInputMap(),

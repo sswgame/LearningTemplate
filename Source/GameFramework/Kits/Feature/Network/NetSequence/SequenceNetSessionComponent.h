@@ -28,6 +28,8 @@ namespace sw
     public:
         REFLECT_BODY();
 
+        static constexpr TickGroup kTickGroup = TickGroup::PostUpdate; ///< 트리거 · 디렉터의 틱 뒤에 보낸다 — 마지막 그룹에서 돈다.
+
         SequenceNetSessionComponent();
         ~SequenceNetSessionComponent() override = default;
 

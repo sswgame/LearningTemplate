@@ -22,13 +22,6 @@ namespace sw
         setCanEverTick( true );
     }
 
-    void ParkGuestComponent::onBeginPlay()
-    {
-        Component::onBeginPlay();
-        // 디렉터(PrePhysics)가 이 프레임의 시뮬레이션을 끝낸 뒤에 읽는다.
-        setTickGroup( TickGroup::PostUpdate );
-    }
-
     void ParkGuestComponent::assignGuest( GameObjectHandle gameMode, int32 guestIndex )
     {
         bindGameMode( gameMode );

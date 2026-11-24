@@ -74,6 +74,8 @@ namespace sw
     public:
         REFLECT_BODY();
 
+        static constexpr TickGroup kTickGroup = TickGroup::PrePhysics;
+
         GimmickCircuitComponent();
         virtual ~GimmickCircuitComponent() override = default;
 

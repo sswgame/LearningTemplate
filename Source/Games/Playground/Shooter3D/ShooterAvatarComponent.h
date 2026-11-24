@@ -46,6 +46,8 @@ namespace sw
     public:
         REFLECT_BODY();
 
+        static constexpr TickGroup kTickGroup = TickGroup::PostPhysics; ///< 플레이어(DuringPhysics)가 움직인 뒤에 읽는다.
+
         ShooterAvatarComponent();
         virtual ~ShooterAvatarComponent() override = default;
 

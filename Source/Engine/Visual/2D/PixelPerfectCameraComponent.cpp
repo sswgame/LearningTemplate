@@ -45,8 +45,6 @@ namespace sw
     void PixelPerfectCameraComponent::onBeginPlay()
     {
         Component::onBeginPlay();
-        // 카메라를 따라가게 하는 컴포넌트(앞 그룹) 뒤, 시차 레이어(PostUpdate) 앞.
-        setTickGroup( TickGroup::PostPhysics );
         GameObject*        pOwner   = getOwner();
         GameObjectManager* pManager = ( pOwner != nullptr ) ? pOwner->getMutableManager() : nullptr;
         if ( pManager != nullptr )

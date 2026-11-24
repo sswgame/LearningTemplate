@@ -22,13 +22,6 @@ namespace sw
         setCanEverTick( true );
     }
 
-    void CoasterCarComponent::onBeginPlay()
-    {
-        Component::onBeginPlay();
-        // 디렉터(PrePhysics)가 열차를 나아가게 한 뒤에 읽는다.
-        setTickGroup( TickGroup::PostUpdate );
-    }
-
     void CoasterCarComponent::assignCar( GameObjectHandle gameMode, int32 coasterIndex, int32 carIndex )
     {
         bindGameMode( gameMode );

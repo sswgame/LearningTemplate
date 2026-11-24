@@ -28,6 +28,8 @@ namespace sw
     public:
         REFLECT_BODY();
 
+        static constexpr TickGroup kTickGroup = TickGroup::PostUpdate; ///< 몸을 옮기는 쪽(디렉터 PrePhysics · 뷰 PostUpdate)이 이번 프레임 자리를 쓴 뒤에 읽는다.
+
         MoveAnimationComponent();
         virtual ~MoveAnimationComponent() override = default;
 

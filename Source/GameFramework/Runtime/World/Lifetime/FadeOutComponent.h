@@ -26,6 +26,8 @@ namespace sw
     {
     public:
         REFLECT_BODY();
+
+        static constexpr TickGroup kTickGroup = TickGroup::PostPhysics;
         FadeOutComponent();
         virtual ~FadeOutComponent() override = default;
 

@@ -199,7 +199,6 @@ namespace sw
         , _reserved{ 0 }
     {
         setCanEverTick( true );
-        setTickGroup( TickGroup::PostUpdate );
     }
 
     FoliageComponent::~FoliageComponent()

@@ -49,7 +49,6 @@ namespace sw
     void ActionPlatformerAvatarComponent::onBeginPlay()
     {
         Component::onBeginPlay();
-        setTickGroup( TickGroup::PostUpdate );
         _bActionsValid = _moveAction.empty() == false && _jumpAction.empty() == false ? SW_TRUE : SW_FALSE;
         if ( _bActionsValid == SW_FALSE )
             SW_LOG_ERROR_ID( "ActionPlatformer.AvatarActionMissing", "Action platformer avatar: move '%#' and jump '%#' actions must both be named - the avatar reads no input", _moveAction.c_str(),

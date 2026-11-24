@@ -16,7 +16,6 @@ namespace sw
     BoatHelmComponent::BoatHelmComponent()
     {
         setCanEverTick( true );
-        setTickGroup( TickGroup::PrePhysics );
     }
 
     BoatHelmInput BoatHelmComponent::toHelmInput( const ControlIntent& intent, const float3& boatForward )

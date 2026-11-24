@@ -26,6 +26,8 @@ namespace sw
     {
     public:
         REFLECT_BODY();
+
+        static constexpr TickGroup kTickGroup = TickGroup::PostPhysics; ///< 물리가 이번 프레임 위치로 옮긴 뒤에 쓴다.
         MeleeHitboxComponent();
         virtual ~MeleeHitboxComponent() override = default;
 

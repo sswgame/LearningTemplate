@@ -82,7 +82,6 @@ namespace sw
     void SRPGCursorComponent::onBeginPlay()
     {
         Component::onBeginPlay();
-        setTickGroup( TickGroup::PostUpdate );
         _bActionsValid = _moveAction.empty() == false && _confirmAction.empty() == false && _endTurnAction.empty() == false ? SW_TRUE : SW_FALSE;
         if ( _bActionsValid == SW_FALSE )
             SW_LOG_ERROR_ID( "SRPG.CursorActionMissing", "SRPG cursor: move '%#', confirm '%#' and end turn '%#' actions must all be named - the cursor reads no input", _moveAction.c_str(),

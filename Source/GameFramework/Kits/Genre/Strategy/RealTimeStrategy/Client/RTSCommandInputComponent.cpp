@@ -136,12 +136,6 @@ namespace sw
         return pOwner != nullptr ? pOwner->getComponent<SkirmishGameModeComponent>() : nullptr;
     }
 
-    void RTSCommandInputComponent::onBeginPlay()
-    {
-        Component::onBeginPlay();
-        setTickGroup( TickGroup::PostUpdate );
-    }
-
     void RTSCommandInputComponent::onTick( TickContext& context )
     {
         Component::onTick( context );

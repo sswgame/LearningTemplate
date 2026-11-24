@@ -46,13 +46,6 @@ namespace sw
         setCanEverTick( true );
     }
 
-    void StressTestCombatComponent::onBeginPlay()
-    {
-        Component::onBeginPlay();
-        // 애니메이션과 물리가 끝난 뒤에 실행합니다. 이번 프레임의 손 위치로 칼을 맞추고, 이번 프레임에 울린 알림을 셉니다.
-        setTickGroup( TickGroup::PostUpdate );
-    }
-
     GameObject* StressTestCombatComponent::spawnEnemy( GameObjectManager& objects, const StressTestSceneSettings& settings, const hashed_string& name,
                                                        const float3& position )
     {

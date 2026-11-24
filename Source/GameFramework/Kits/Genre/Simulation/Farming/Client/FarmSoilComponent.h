@@ -25,10 +25,11 @@ namespace sw
     public:
         REFLECT_BODY();
 
+        static constexpr TickGroup kTickGroup = TickGroup::PostUpdate; ///< 디렉터(PrePhysics)가 이 프레임의 행동을 끝낸 뒤에 읽는다.
+
         FarmSoilComponent();
         virtual ~FarmSoilComponent() override = default;
 
-        void onBeginPlay() override;
         void onTick( TickContext& context ) override;
 
         /** @brief 따라갈 디렉터와 칸 번호(행 우선)를 정합니다(밭 뷰가 스폰한 뒤 부른다). */

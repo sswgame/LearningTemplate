@@ -40,6 +40,8 @@ namespace sw
     public:
         REFLECT_BODY();
 
+        static constexpr TickGroup kTickGroup = TickGroup::PostPhysics; ///< 몸이 이번 프레임에 간 자리
+
         MinimapComponent();
         ~MinimapComponent() override = default;
 

@@ -93,6 +93,8 @@ namespace sw
     public:
         REFLECT_BODY();
 
+        static constexpr TickGroup kTickGroup = TickGroup::PostUpdate;
+
         /** @brief 레이어 수의 상한(스플랫 RGBA 둘)입니다. `SurfaceLayerWeights::kLayerCount` 가 정본이다. */
         static constexpr uint32 kMaxLayerCount = SurfaceLayerWeights::kLayerCount;
 

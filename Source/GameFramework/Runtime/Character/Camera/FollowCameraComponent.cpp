@@ -26,8 +26,6 @@ namespace sw
     void FollowCameraComponent::onBeginPlay()
     {
         Component::onBeginPlay();
-        // 플레이어 컨트롤러(DuringPhysics)가 옮긴 자리가 적용된 뒤(물리 뒤 단계)에 읽는다.
-        setTickGroup( TickGroup::PostUpdate );
         applyToCamera( float3{ 0.0f, 0.0f, 0.0f } );
     }
 

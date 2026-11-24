@@ -19,6 +19,8 @@ namespace sw
     {
     public:
         REFLECT_BODY();
+
+        static constexpr TickGroup kTickGroup = TickGroup::DuringPhysics;
         REFLECT_INTERFACE( IHealthSource, _healthSourcePort );
         REFLECT_INTERFACE( IHitReceiver, _hitReceiverPort );
         /** @brief 피해가 HP 에 닿는 시점에 호출되는 델리게이트입니다(`registerDamageApplied`). */

@@ -23,7 +23,6 @@ namespace sw
     void FadeOutComponent::onBeginPlay()
     {
         Component::onBeginPlay();
-        setTickGroup( TickGroup::PostPhysics );
 
         GameObject* pOwner = getOwner();
 

@@ -23,10 +23,11 @@ namespace sw
     public:
         REFLECT_BODY();
 
+        static constexpr TickGroup kTickGroup = TickGroup::PostUpdate; ///< 명령 입력은 틱 뒤에 끌기를 정한다 — 여기서 읽는 것은 지난 프레임의 끌기다.
+
         RTSDragBoxComponent();
         virtual ~RTSDragBoxComponent() override = default;
 
-        void onBeginPlay() override;
         void onTick( TickContext& context ) override;
     };
 } // namespace sw

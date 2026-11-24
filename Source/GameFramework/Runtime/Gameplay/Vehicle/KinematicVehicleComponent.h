@@ -41,6 +41,8 @@ namespace sw
     {
     public:
         REFLECT_BODY();
+
+        static constexpr TickGroup kTickGroup = TickGroup::PrePhysics;
         REFLECT_INTERFACE( IBoostReceiver, _boostReceiverPort );
 
         KinematicVehicleComponent();

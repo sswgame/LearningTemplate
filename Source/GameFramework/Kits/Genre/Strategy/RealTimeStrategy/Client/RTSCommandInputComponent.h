@@ -46,6 +46,8 @@ namespace sw
     public:
         REFLECT_BODY();
 
+        static constexpr TickGroup kTickGroup = TickGroup::PostUpdate;
+
         /** @brief 고르기 · 끌기는 틱 뒤 게임 스레드에서만 바뀝니다 — 유닛 뷰 · 끌기 상자가 병렬 틱에서 읽어도 됩니다(자기 틱이 쓰는 것은 따로 둔 `_bInputLive` 뿐이다). */
         static constexpr bool   kTickReadSafe = true;
         static constexpr uint32 kStateTag     = FourCCUtil::make( "RTSI" );
@@ -56,8 +58,6 @@ namespace sw
 
         /** @brief 같은 오브젝트의 디렉터를 찾아 핸들로 듭니다. 없으면 오류를 남기고 아무것도 하지 않습니다. */
         void onRegister( GameObjectManager& manager ) override;
-        /** @brief 틱 그룹은 뷰의 `PostUpdate` 입니다. 고르기는 지우지 않습니다(복원이 먼저 올 수 있다). */
-        void onBeginPlay() override;
         /** @brief 알림 · 입력 처리를 틱 뒤 게임 스레드로 미룹니다. */
         void onTick( TickContext& context ) override;
 

@@ -118,7 +118,6 @@ namespace sw
     void SpriteAnimatorComponent::onBeginPlay()
     {
         Component::onBeginPlay();
-        setTickGroup( TickGroup::PostPhysics );
 
         tryLoadAnimationGraph();
 

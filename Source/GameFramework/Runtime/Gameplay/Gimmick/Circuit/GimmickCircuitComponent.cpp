@@ -306,7 +306,6 @@ namespace sw
     void GimmickCircuitComponent::onBeginPlay()
     {
         Component::onBeginPlay();
-        setTickGroup( TickGroup::PrePhysics );
         const bool bRestoreState = _circuit.isBuilt() == false && rebuild() && _state.isEmpty() == false;
         if ( bRestoreState )
             applySavedState( _state );

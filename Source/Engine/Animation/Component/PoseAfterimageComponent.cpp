@@ -43,7 +43,6 @@ namespace sw
     void PoseAfterimageComponent::onBeginPlay()
     {
         Component::onBeginPlay();
-        setTickGroup( TickGroup::PostUpdate ); // 이번 프레임의 포즈가 나온 뒤에 고정한다
         if ( _opacityOverLife._listKey.empty() )
             SW_LOG_ERROR_ID( "PoseAfterimage.NoOpacityCurve", "Pose afterimage on '%#' has no opacity keys - afterimages stay invisible", getOwner() != nullptr ? getOwner()->getName().c_str() : "?" );
         // 사본 풀은 시작할 때 꺼 둔 채 만든다 — 틱 안에서 오브젝트를 만들지 않는다.

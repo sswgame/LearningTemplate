@@ -23,8 +23,6 @@ namespace sw
     void PairedAnimationNetSessionComponent::onBeginPlay()
     {
         Component::onBeginPlay();
-        // 세션 갱신(프레임 시스템 단계) 뒤에 보낸다 — 마지막 그룹에서 돈다.
-        setTickGroup( TickGroup::PostUpdate );
 
         // 넷 링크는 이 컴포넌트의 월드(오브젝트 매니저)에 올라 있다 - 전역 세션을 찾지 않는다(`SceneNetLink`). 링크가 비면 혼자 하는 게임이다.
         GameObject*         pOwner   = getOwner();

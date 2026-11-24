@@ -60,7 +60,6 @@ namespace sw
     void ArenaViewComponent::onBeginPlay()
     {
         Component::onBeginPlay();
-        setTickGroup( TickGroup::PostUpdate );
         _projectilePool = PrefabPool( _projectilePrefab.path(), _projectilePoolSize );
     }
 

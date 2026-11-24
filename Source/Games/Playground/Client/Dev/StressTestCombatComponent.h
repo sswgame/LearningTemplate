@@ -33,10 +33,11 @@ namespace sw
     public:
         REFLECT_BODY();
 
+        static constexpr TickGroup kTickGroup = TickGroup::PostUpdate; ///< 애니메이션과 물리가 끝난 뒤에 실행합니다. 이번 프레임의 손 위치로 칼을 맞추고, 이번 프레임에 울린 알림을 셉니다.
+
         StressTestCombatComponent();
         virtual ~StressTestCombatComponent() override = default;
 
-        void onBeginPlay() override;
         void onTick( TickContext& context ) override;
 
         /** @brief 래그돌을 가진 걷는 스켈레톤 적 하나를 @p position 에 스폰합니다. `-gv_stressTestRagdolls` 군중도 이 함수를 씁니다. 에셋 경로는 @p settings 의 `_combat*` 값입니다. */

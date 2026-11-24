@@ -69,7 +69,6 @@ namespace sw
     void HealthBarComponent::onBeginPlay()
     {
         Component::onBeginPlay();
-        setTickGroup( TickGroup::PostUpdate );
 
         // 같은 오브젝트의 체력 원천이 있으면 그 비율에서 시작한다 — 원천보다 먼저 시작하든, 맞은 뒤에 붙든 같다. 원천이 없으면 저장된 칸이다.
         GameObject* pOwner = getOwner();

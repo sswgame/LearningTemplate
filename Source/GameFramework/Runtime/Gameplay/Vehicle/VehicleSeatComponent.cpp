@@ -107,12 +107,6 @@ namespace sw
         Component::onUnregister( manager );
     }
 
-    void VehicleSeatComponent::onBeginPlay()
-    {
-        Component::onBeginPlay();
-        setTickGroup( TickGroup::PostPhysics );
-    }
-
     void VehicleSeatComponent::onTick( TickContext& context )
     {
         using Internal = VehicleSeatComponentInternal;

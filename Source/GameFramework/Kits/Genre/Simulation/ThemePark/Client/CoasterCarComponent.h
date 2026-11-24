@@ -24,10 +24,11 @@ namespace sw
     public:
         REFLECT_BODY();
 
+        static constexpr TickGroup kTickGroup = TickGroup::PostUpdate; ///< 디렉터(PrePhysics)가 열차를 나아가게 한 뒤에 읽는다.
+
         CoasterCarComponent();
         virtual ~CoasterCarComponent() override = default;
 
-        void onBeginPlay() override;
         void onTick( TickContext& context ) override;
 
         /** @brief 따라갈 디렉터 · 코스터 번호 · 칸 번호(0 이 맨 앞)를 정합니다. */

@@ -40,7 +40,6 @@ namespace sw
     void CityFastForwardInputComponent::onBeginPlay()
     {
         Component::onBeginPlay();
-        setTickGroup( TickGroup::PostUpdate );
         _bActionValid = _fastForwardAction.empty() == false ? SW_TRUE : SW_FALSE;
         if ( _bActionValid == SW_FALSE )
             SW_LOG_ERROR_ID( "City.FastForwardActionMissing", "City fast forward input: the action must be named - it reads no input" );

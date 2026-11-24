@@ -43,12 +43,6 @@ namespace sw
     {
     }
 
-    void SpriteComponent::onBeginPlay()
-    {
-        MeshComponent::onBeginPlay();
-        setTickGroup( TickGroup::PrePhysics );
-    }
-
     void SpriteComponent::resolveRenderAssets()
     {
         MeshComponent::resolveRenderAssets();

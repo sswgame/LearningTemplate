@@ -37,8 +37,6 @@ namespace sw
     void MeleeHitboxComponent::onBeginPlay()
     {
         SceneComponent::onBeginPlay();
-        // 물리가 이번 프레임 위치로 옮긴 뒤에 쓴다.
-        setTickGroup( TickGroup::PostPhysics );
         _listPreviousPoint.clear();
     }
 

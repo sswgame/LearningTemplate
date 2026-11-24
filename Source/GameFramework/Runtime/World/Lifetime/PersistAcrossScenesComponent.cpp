@@ -16,7 +16,6 @@ namespace sw
     void PersistAcrossScenesComponent::onBeginPlay()
     {
         Component::onBeginPlay();
-        setTickGroup( TickGroup::PrePhysics );
 
         GameObject* pOwner = getOwner();
         if ( pOwner == nullptr )

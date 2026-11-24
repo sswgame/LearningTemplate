@@ -35,12 +35,13 @@ namespace sw
     public:
         REFLECT_BODY();
 
+        static constexpr TickGroup kTickGroup = TickGroup::PrePhysics;
+
         WesternRiderViewComponent();
         virtual ~WesternRiderViewComponent() override;
 
         /** @brief 같은 오브젝트의 디렉터를 찾아 핸들로 듭니다. 없으면 오류를 남기고 아무것도 하지 않습니다. */
         void onRegister( GameObjectManager& manager ) override;
-        void onBeginPlay() override;
         /** @brief 카메라 초점 · HUD 를 틱 뒤 게임 스레드로 미룹니다. */
         void onTick( TickContext& context ) override;
 

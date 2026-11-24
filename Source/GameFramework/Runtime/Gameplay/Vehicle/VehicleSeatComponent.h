@@ -109,14 +109,14 @@ namespace sw
 
         REFLECT_BODY();
 
+        static constexpr TickGroup kTickGroup = TickGroup::PostPhysics;
+
         VehicleSeatComponent();
         ~VehicleSeatComponent() override = default;
 
         void onRegister( GameObjectManager& manager ) override;
         /** @brief 앉은 쪽이 있으면 내려 줍니다. 탈것이 사라질 때 부릅니다. */
         void onUnregister( GameObjectManager& manager ) override;
-        /** @brief PostPhysics 에서 틱합니다(탈것이 움직인 뒤). */
-        void onBeginPlay() override;
         /** @brief 앉은 쪽이 있으면 좌석 가속도를 재고 탑승 가속감을 냅니다. 비어 있으면 잰 값을 비웁니다. */
         void onTick( TickContext& context ) override;
         /** @brief 지난 틱의 좌석 자리를 옮깁니다. */

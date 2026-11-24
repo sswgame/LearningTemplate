@@ -33,6 +33,8 @@ namespace sw
     public:
         REFLECT_BODY();
 
+        static constexpr TickGroup kTickGroup = TickGroup::PrePhysics;
+
         CharacterMovement2DComponent();
         ~CharacterMovement2DComponent() override = default;
 

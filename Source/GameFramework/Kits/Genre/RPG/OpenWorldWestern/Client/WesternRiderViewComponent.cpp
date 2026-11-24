@@ -89,12 +89,6 @@ namespace sw
         _director = TComponentHandle<WesternGameModeComponent>( pDirector );
     }
 
-    void WesternRiderViewComponent::onBeginPlay()
-    {
-        Component::onBeginPlay();
-        setTickGroup( TickGroup::PrePhysics );
-    }
-
     void WesternRiderViewComponent::onTick( TickContext& context )
     {
         Component::onTick( context );

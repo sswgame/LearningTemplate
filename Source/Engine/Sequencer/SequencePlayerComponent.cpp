@@ -168,7 +168,6 @@ namespace sw
     void SequencePlayerComponent::onBeginPlay()
     {
         Component::onBeginPlay();
-        setTickGroup( TickGroup::PostUpdate );
         loadSequenceFromPath();
         if ( _bAutoPlay == SW_TRUE )
             play();

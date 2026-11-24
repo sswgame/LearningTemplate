@@ -25,7 +25,6 @@ namespace sw
     void WheeledVehicleDriveComponent::onBeginPlay()
     {
         Component::onBeginPlay();
-        setTickGroup( TickGroup::PrePhysics );
         const GameObject*    pOwner = getOwner();
         const PawnComponent* pPawn  = pOwner != nullptr ? pOwner->getComponent<PawnComponent>() : nullptr;
         _handBrakeIndex             = pPawn != nullptr ? pPawn->findButton( _handBrakeButton ) : nullopt;

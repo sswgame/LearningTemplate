@@ -34,6 +34,8 @@ namespace sw
     public:
         REFLECT_BODY();
 
+        static constexpr TickGroup kTickGroup = TickGroup::PostUpdate; ///< 세션 갱신(프레임 시스템 단계) 뒤에 보낸다 — 마지막 그룹에서 돈다.
+
         PairedAnimationNetSessionComponent();
         ~PairedAnimationNetSessionComponent() override = default;
 

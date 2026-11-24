@@ -77,13 +77,6 @@ namespace sw
         _director = TComponentHandle<FarmGameModeComponent>( pDirector );
     }
 
-    void FarmFieldViewComponent::onBeginPlay()
-    {
-        Component::onBeginPlay();
-        // 디렉터와 같은 그룹 — 카메라 디렉터(PostPhysics 틱 뒤)가 이번 프레임의 초점을 읽는다.
-        setTickGroup( TickGroup::PrePhysics );
-    }
-
     void FarmFieldViewComponent::onEndPlay()
     {
         despawnViews();

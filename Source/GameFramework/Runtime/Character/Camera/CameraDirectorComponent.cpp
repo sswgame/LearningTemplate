@@ -254,8 +254,6 @@ namespace sw
     void CameraDirectorComponent::onBeginPlay()
     {
         Component::onBeginPlay();
-        // 대상이 앞 그룹에서 움직인 뒤 입력을 읽고, 포즈는 틱 뒤에 쓴다. 뷰 타깃으로 읽는 매니저(PostUpdate)보다 앞 그룹이다.
-        setTickGroup( TickGroup::PostPhysics );
         GameObject*        pOwner   = getOwner();
         GameObjectManager* pManager = pOwner != nullptr ? pOwner->getMutableManager() : nullptr;
         if ( pManager != nullptr )

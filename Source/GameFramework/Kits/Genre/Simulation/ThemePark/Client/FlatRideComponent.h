@@ -24,10 +24,11 @@ namespace sw
     public:
         REFLECT_BODY();
 
+        static constexpr TickGroup kTickGroup = TickGroup::PostUpdate; ///< 디렉터(PrePhysics)가 이 프레임의 탑승을 정한 뒤에 읽는다.
+
         FlatRideComponent();
         virtual ~FlatRideComponent() override = default;
 
-        void onBeginPlay() override;
         void onTick( TickContext& context ) override;
 
         /** @brief 따라갈 디렉터 · 놀이기구 번호 · 도는 빠르기(rad/s) · 처음 각(공원 원점의 요, rad)을 정합니다. */

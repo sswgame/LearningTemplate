@@ -31,6 +31,8 @@ namespace sw
     public:
         REFLECT_BODY();
 
+        static constexpr TickGroup kTickGroup = TickGroup::PostUpdate; ///< 이번 프레임의 포즈가 나온 뒤에 고정한다
+
         /** @brief 사본 수의 절대 상한입니다(데이터가 이보다 크면 읽기 범위 오류). 투명 그리기 호출을 묶는다. */
         static constexpr uint32 kMaxGhostLimit = 16;
 

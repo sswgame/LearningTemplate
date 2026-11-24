@@ -43,13 +43,6 @@ namespace sw
         setCanEverTick( true );
     }
 
-    void FarmerComponent::onBeginPlay()
-    {
-        Component::onBeginPlay();
-        // 디렉터(PrePhysics)가 이 프레임의 이동을 끝낸 뒤에 읽는다.
-        setTickGroup( TickGroup::PostUpdate );
-    }
-
     void FarmerComponent::onTick( TickContext& context )
     {
         Component::onTick( context );

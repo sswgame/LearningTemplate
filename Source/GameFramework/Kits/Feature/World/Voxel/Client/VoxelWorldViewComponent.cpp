@@ -68,12 +68,6 @@ namespace sw
         _director = TComponentHandle<VoxelGameModeComponent>( pDirector );
     }
 
-    void VoxelWorldViewComponent::onBeginPlay()
-    {
-        Component::onBeginPlay();
-        setTickGroup( TickGroup::PostUpdate );
-    }
-
     void VoxelWorldViewComponent::onEndPlay()
     {
         despawnViews();

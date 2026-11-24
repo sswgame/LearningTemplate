@@ -35,6 +35,8 @@ namespace sw
     public:
         REFLECT_BODY();
 
+        static constexpr TickGroup kTickGroup = TickGroup::PostPhysics; ///< 지역 처리(틱 뒤 `ApplyPrePhysics`)가 이번 프레임에 올린 속성을 읽는다 — 물리 뒤 그룹이라 늘 그 뒤다.
+
         SinkOffsetComponent();
         ~SinkOffsetComponent() override = default;
 

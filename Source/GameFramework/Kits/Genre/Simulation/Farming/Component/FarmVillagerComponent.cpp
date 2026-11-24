@@ -23,13 +23,6 @@ namespace sw
         setCanEverTick( true );
     }
 
-    void FarmVillagerComponent::onBeginPlay()
-    {
-        Component::onBeginPlay();
-        // 마을 디렉터(PrePhysics)가 이 프레임의 일정을 흘린 뒤에 읽는다.
-        setTickGroup( TickGroup::PostUpdate );
-    }
-
     void FarmVillagerComponent::assignVillager( GameObjectHandle gameMode, int32 npcIndex )
     {
         bindGameMode( gameMode );

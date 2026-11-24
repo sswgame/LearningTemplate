@@ -195,7 +195,6 @@ namespace sw
         , _loadedHeightfieldPath{}
     {
         setCanEverTick( true );
-        setTickGroup( TickGroup::PostUpdate );
     }
 
     TerrainComponent::~TerrainComponent()

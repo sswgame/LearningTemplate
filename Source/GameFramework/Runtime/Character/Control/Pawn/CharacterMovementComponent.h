@@ -78,6 +78,8 @@ namespace sw
     public:
         REFLECT_BODY();
 
+        static constexpr TickGroup kTickGroup = TickGroup::PrePhysics;
+
         CharacterMovementComponent();
         ~CharacterMovementComponent() override = default;
 

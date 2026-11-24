@@ -43,8 +43,6 @@ namespace sw
     void DestructionNetSessionComponent::onBeginPlay()
     {
         Component::onBeginPlay();
-        // 서버는 이번 틱의 물리가 만든 사건을 같은 틱에 보낸다 — 마지막 그룹에서 돈다.
-        setTickGroup( TickGroup::PostUpdate );
         _bTickChecked = SW_FALSE;
 
         // 넷 링크는 이 컴포넌트의 월드(오브젝트 매니저)에 올라 있다 - 전역 세션을 찾지 않는다(`SceneNetLink`). 링크가 비면 혼자 하는 게임이다.

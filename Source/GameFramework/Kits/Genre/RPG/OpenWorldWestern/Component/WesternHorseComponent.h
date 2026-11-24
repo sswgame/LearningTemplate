@@ -37,13 +37,14 @@ namespace sw
     public:
         REFLECT_BODY();
 
+        static constexpr TickGroup kTickGroup = TickGroup::PostUpdate; ///< 탈것 컴포넌트(PostPhysics)가 이번 프레임 질주로 스태미나를 쓴 뒤에 회복 · 코어 감소를 흘린다.
+
         static constexpr uint32 kStateTag     = FourCCUtil::make( "WWHS" );
         static constexpr uint32 kStateVersion = 1;
 
         WesternHorseComponent();
         ~WesternHorseComponent() override;
 
-        void onBeginPlay() override;
         void onEndPlay() override;
         void onTick( TickContext& context ) override;
 

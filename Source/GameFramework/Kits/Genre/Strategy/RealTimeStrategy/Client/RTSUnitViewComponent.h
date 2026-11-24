@@ -31,13 +31,14 @@ namespace sw
     public:
         REFLECT_BODY();
 
+        static constexpr TickGroup kTickGroup = TickGroup::PostUpdate; ///< 디렉터(PrePhysics)가 이 프레임의 판을 끝낸 뒤에 읽는다.
+
         RTSUnitViewComponent();
         virtual ~RTSUnitViewComponent() override = default;
 
         void onRegister( GameObjectManager& manager ) override;
         void onUnregister( GameObjectManager& manager ) override;
 
-        void onBeginPlay() override;
         void onTick( TickContext& context ) override;
 
         /** @brief 풀 반환: 자리를 맞추기 전(숨은 채)으로 돌리고 따라가던 유닛 · 입은 모습을 잊습니다. 모델은 전장 뷰가 꺼낸 뒤 다시 겁니다. */

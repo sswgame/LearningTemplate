@@ -65,7 +65,6 @@ namespace sw
     void ActionCombatAvatarComponent::onBeginPlay()
     {
         Component::onBeginPlay();
-        setTickGroup( TickGroup::PostUpdate );
         _bActionsValid = _moveAction.empty() == false && _attackAction.empty() == false && _dashAction.empty() == false ? SW_TRUE : SW_FALSE;
         if ( _bActionsValid == SW_FALSE )
             SW_LOG_ERROR_ID( "ActionCombat.AvatarActionMissing", "Action combat avatar: move '%#', attack '%#' and dash '%#' actions must all be named - the avatar reads no input",
