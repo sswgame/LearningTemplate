@@ -4,13 +4,14 @@
  * @details 월드마다 아레나 씬(`game/playground/shooter3d/maps/arena.scene.xml`)을 그 월드의 씬에 풀어 넣는다. 씬 안의 `ShooterNetPawnComponent` 는 전역 세션이 아니라
  *          월드가 올린 넷 링크(`SceneNetLink`)로 서버 · 클라이언트 역할을 받으므로, 서버 월드 하나와 클라이언트 월드 N 이 서로 다른 역할로 같은 컴포넌트를 돌린다.
  *          - 서버 월드 · 클라이언트 월드 모두 같은 아레나 씬이다. 적은 서버 몫이고 클라이언트 월드의 감독은 넷 링크 역할을 보고 복제 모습만 그린다(`ShooterGameModeComponent`).
- *          - 입력은 입력 초점이 있는 월드의 폰만 읽는다(`NetSimWorld::hasInputFocus`). 나머지 월드의 몸 이동은 멈춤(`setSuspended`)이라 입력이 0 이다.
+ *          - 입력은 입력 초점이 있는 월드의 폰만 읽는다(`NetSimWorld::hasInputFocus`). 나머지 월드의 몸 이동은 멈춤(`suspend` 구독)이라 입력이 0 이다.
  *          - 이 게임의 세션은 가진 메시지가 없다 — 복제는 컴포넌트가 넷 링크의 라우터에 직접 단 키트(`ReplicationServer` · `ReplicationClient`)가 한다.
  *          게임 모듈이 올라오면 `NetSimGameRegistry` 에 등록하고, 내려가기 전에 뺀다.
  */
 #include "pch.h"
 
 #include "Core/Container/vector.h"
+#include "Core/Delegate/Subscription.h"
 #include "Core/Foundation/Types.h"
 #include "Core/Memory/Memory.h"
 
@@ -109,8 +110,10 @@ namespace sw
                     return;
                 GameObject*                   pPawn     = world.getObjectManager().resolveGameObject( _pawnObject );
                 ShooterBodyMovementComponent* pMovement = pPawn != nullptr ? pPawn->getComponent<ShooterBodyMovementComponent>() : nullptr;
-                if ( pMovement != nullptr )
-                    pMovement->setSuspended( world.hasInputFocus() == false );
+                if ( pMovement == nullptr || world.hasInputFocus() )
+                    _bodySuspension.reset();
+                else if ( _bodySuspension.isActive() == false )
+                    _bodySuspension = pMovement->suspend();
             }
 
         private:
@@ -128,8 +131,9 @@ namespace sw
             }
 
         private:
-            GameObjectManager* _pManager;   ///< 이 월드의 매니저(월드가 세션보다 오래 산다)
-            GameObjectHandle   _pawnObject; ///< 이 월드의 플레이어 몸(넷 폰 컴포넌트가 달린 오브젝트)
+            GameObjectManager* _pManager;       ///< 이 월드의 매니저(월드가 세션보다 오래 산다)
+            GameObjectHandle   _pawnObject;     ///< 이 월드의 플레이어 몸(넷 폰 컴포넌트가 달린 오브젝트)
+            Subscription       _bodySuspension; ///< 입력 초점이 없는 동안의 몸 멈춤
         };
 
         /** @brief 이 매니저에서 넷 폰 컴포넌트가 달린 오브젝트(아레나 씬에 하나 — 이 월드의 플레이어 몸)를 찾습니다. 없거나 둘 이상이면(오류) 빈 핸들입니다. */

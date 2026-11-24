@@ -133,6 +133,7 @@ namespace sw
 
     private:
         Subscription _notifySubscription; ///< 애니메이션 알림 사건 구독(`handleAnimationNotify`)
+        Subscription _bodySuspension;     ///< 쫓지 않는 동안의 몸 멈춤(`ShooterBodyMovementComponent::suspend`)
         PROPERTY( Category = "Enemy", DisplayName = "Game Mode", Tooltip = "Object with the ShooterGameModeComponent" )
         GameObjectHandle _gameMode;
         PROPERTY( Category = "Enemy", DisplayName = "Radius", Tooltip = "Capsule radius of the hit box and the body", Min = 0.0, Units = m )

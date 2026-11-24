@@ -108,7 +108,7 @@ namespace sw
         {
             pMovement->teleport( position );
             pMovement->setWalkSpeed( speed );
-            pMovement->setSuspended( true );
+            _bodySuspension = pMovement->suspend();
         }
         NavMeshAgentComponent* pAgent = pOwner != nullptr ? pOwner->getComponent<NavMeshAgentComponent>() : nullptr;
         if ( pAgent != nullptr )
@@ -172,6 +172,7 @@ namespace sw
         _bAttackHitEvent          = SW_FALSE;
         _bHitEventMissingReported = SW_FALSE;
         _bReplica                 = SW_FALSE;
+        _bodySuspension.reset();
         return SpawnStateReset::Reset;
     }
 
@@ -361,7 +362,10 @@ namespace sw
         ShooterBodyMovementComponent* pMovement = pOwner->getComponent<ShooterBodyMovementComponent>();
         if ( pMovement != nullptr )
         {
-            pMovement->setSuspended( _phase != ShooterEnemyPhase::Chasing );
+            if ( _phase == ShooterEnemyPhase::Chasing )
+                _bodySuspension.reset();
+            else if ( _bodySuspension.isActive() == false )
+                _bodySuspension = pMovement->suspend();
             (void)pMovement->stepMovement( pGameMode->getBoxes(), pGameMode->getFloorSteps(), step );
             _position              = pMovement->getFeetPosition()._value;
             const float3& velocity = pMovement->getMoveVelocity();

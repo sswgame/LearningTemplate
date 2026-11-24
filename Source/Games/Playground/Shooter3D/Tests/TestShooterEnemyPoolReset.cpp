@@ -2,6 +2,7 @@
 // 복제 모습이 끈 폰의 자동 빙의도 되돌린다. 인스턴스는 프리팹 대신 같은 컴포넌트를 코드로 단 오브젝트다(nogpu, 에셋 없음).
 #include "pch.h"
 
+#include "Core/Delegate/Subscription.h"
 #include "Core/Testing/TestFramework.h"
 
 #include "Engine/Animation/Component/SkeletalAnimatorComponent.h"
@@ -80,6 +81,29 @@ SW_TEST_CASE( ShooterEnemyPoolResetTest, DeadEnemyComesBackAsFreshSpawn )
     },
                                     AbsolutePosition{ float3{ 0.0f, 0.0f, 0.0f } }, 0.0f, 30.0f, 3.0f ) );
     SW_EXPECT_TRUE( pEnemy->isAlive() );
+}
+
+/** @brief [ShooterEnemyPoolResetTest] 몸 멈춤은 건 쪽마다 따로다 — 다른 쪽이 멈춘 몸은 적을 돌려줘도 멈춰 있고(제 몫만 푼다), 그쪽이 놓아야 움직인다 */
+SW_TEST_CASE( ShooterEnemyPoolResetTest, BodySuspensionsAreOwnedSeparately )
+{
+    GameObjectManager manager;
+    PrefabPool        pool    = Util::makePool();
+    GameObject*       pObject = pool.acquire( manager, "QuadShell" );
+    SW_REQUIRE_NOT_NULL( pObject );
+    ShooterEnemyComponent*        pEnemy    = pObject->getComponent<ShooterEnemyComponent>();
+    ShooterBodyMovementComponent* pMovement = pObject->getComponent<ShooterBodyMovementComponent>();
+    SW_REQUIRE_TRUE( pEnemy != nullptr && pMovement != nullptr );
+    SW_EXPECT_FALSE( pMovement->isSuspended() );
+
+    SW_REQUIRE_TRUE( pEnemy->launch( GameObjectHandle{
+    },
+                                     AbsolutePosition{ float3{ 0.0f, 0.0f, 0.0f } }, 0.0f, 30.0f, 3.0f ) );
+    SW_EXPECT_TRUE( pMovement->isSuspended() ); // 일어나는 중
+    Subscription focus = pMovement->suspend();
+    pool.release( manager, pObject->getHandle() );
+    SW_EXPECT_TRUE( pMovement->isSuspended() );
+    focus.reset();
+    SW_EXPECT_FALSE( pMovement->isSuspended() );
 }
 
 /** @brief [ShooterEnemyPoolResetTest] 복제 모습이 끈 폰의 자동 빙의(AI)는 돌려줄 때 프리팹 값으로 돌아온다 */
