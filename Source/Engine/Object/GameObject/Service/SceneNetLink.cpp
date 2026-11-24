@@ -3,6 +3,9 @@
 #include "Engine/Object/GameObject/Service/SceneNetLink.h"
 
 #include "Core/Hash/HashUtil.h"
+#include "Core/Math/MathUtil.h"
+#include "Core/Network/Connection/NetConnection.h"
+#include "Core/Network/Connection/NetEndpoint.h"
 #include "Core/Network/Message/NetMessage.h"
 #include "Core/Network/Replication/NetClock.h"
 
@@ -65,6 +68,22 @@ namespace sw
     uint64 SceneNetLink::computeSceneID( string_view scenePath )
     {
         return scenePath.empty() ? 0u : HashUtil::computeStringHash64( scenePath.data(), scenePath.size() );
+    }
+
+    uint32 SceneNetLink::getServerTick() const
+    {
+        return isBound() ? _value._pRouter->getWorldClock().getWholeTick() : 0u;
+    }
+
+    float32 SceneNetLink::computeSecondsSince( uint32 serverTick ) const
+    {
+        if ( isBound() == false || _value._pRouter->getWorldClock().hasServerTick() == false )
+            return 0.0f;
+        const NetClock&    clock = _value._pRouter->getWorldClock();
+        NetConnectionStats stats;
+        const bool         bClient = _value._role == NetLinkRole::Client && _value._pPeers->getConnectionStats( 0, stats );
+        const float64      elapsed = ( clock.getServerTick() - static_cast<float64>( serverTick ) ) * static_cast<float64>( NetClock::kTickSeconds );
+        return MathUtil::max( 0.0f, static_cast<float32>( elapsed ) + ( bClient ? stats._rtt * 0.5f : 0.0f ) );
     }
 
     uint8 SceneNetLink::getWorldGeneration() const

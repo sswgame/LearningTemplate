@@ -8,6 +8,8 @@
  *          - **대상.** `Everyone` 은 연결된 모두, `Activator` 는 활성자 폰을 가진 연결 하나(`PawnComponent::findInputConnection` — 언리얼 `Client` RPC 의 소유 연결)다.
  *            가진 연결이 없는 폰(리슨 서버 호스트의 폰)이면 원격에 보낼 곳이 없다. 여러 플레이어의 `Activator` 재생은 함께 돈다 — 서버는 플레이어마다 시간만 재는 디렉터를 두고
  *            (`SequenceTriggerComponent::getPlays`), 클라이언트에는 씬의 디렉터 번호를 보내 자기 월드의 디렉터 하나로 튼다.
+ *          - **시각.** 시작은 서버 틱을 싣고, 받은 클라이언트는 그 뒤 흐른 시간만큼 바로 진행한다(`SequencePlayerComponent::advance` — 그 사이 이벤트도 쏜다). 지연 · 재전송만큼 늦게
+ *            시작하면 지연이 다른 클라이언트끼리, 그리고 서버의 판(문 · 입력 막기)과 어긋난다.
  *          - **늦은 참가.** 클라이언트가 월드에 들어오면 다음 갱신에서 재생 중인 `Everyone` 재생마다 그때의 프레임으로 시작을 그 연결에만 보낸다 — 클라이언트는 그 프레임부터 튼다
  *            (`SequencePlayerComponent::playFromFrame`, 지난 이벤트는 쏘지 않는다).
  *          - **끝.** 서버의 디렉터가 재생을 멈추면(정상 끝 · 건너뛰기 · 멈춤) 끝 메시지를 대상에게 보내고, 클라이언트는 아직 재생 중이면 끝으로 건너뛴다(`skipToEnd`).
@@ -54,6 +56,8 @@ namespace sw
         NetObjectID _activator{ 0 }; ///< 틀게 한 활성자(폰)
         PROPERTY()
         uint32 _frame{ 0 }; ///< 서버의 지금 프레임 — 늦은 참가는 여기부터 튼다
+        PROPERTY()
+        uint32 _serverTick{ 0 }; ///< `_frame` 이던 서버 틱(`SceneNetLink::getServerTick`) — 받는 쪽이 그 뒤 흐른 만큼 따라잡는다
         PROPERTY( Min = 0, Max = 1 )
         uint8 _audience{ 0 }; ///< `SequenceTriggerAudience`
     };

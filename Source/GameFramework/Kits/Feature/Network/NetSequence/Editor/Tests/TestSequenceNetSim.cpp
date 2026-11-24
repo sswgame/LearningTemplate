@@ -125,6 +125,31 @@ SW_TEST_CASE( SequenceNetSimTest, EveryonePlaysForAllAndLateJoinFollowsTheServer
     SW_EXPECT_EQUAL( 0u, pServerNet->getServer().getActivePlayCount() );
 }
 
+/** @brief [SequenceNetSimTest] 지연이 다른 두 클라이언트도 서버와 같은 프레임을 본다 — 시작이 오는 동안 흐른 만큼 따라잡는다(받은 때부터 틀면 지연만큼 늦다) */
+SW_TEST_CASE( SequenceNetSimTest, StartsCatchUpWithTheServerClock, ._timeoutSeconds = 120 )
+{
+    SequenceHarnessFixture fixture;
+    NetSimHarness&         harness = fixture._harness;
+    NetEmulationConditions slow;
+    slow._latency = 0.2; // 30 fps 로 여섯 프레임
+    harness.setLinkConditions( fixture._firstClient, NetSimLinkConditions::makeSymmetric( slow ) );
+    harness.stepTicks( 240 ); // 왕복 시간의 평활값이 자리를 잡는다
+    SW_REQUIRE_TRUE( SequenceNetSimGame::activateTrigger( harness.getServer(), SequenceNetSimGame::kEveryoneTrigger, 1 ) );
+    SW_EXPECT_TRUE( fixture.waitPlaying( fixture._firstClient, SequenceNetSimGame::kEveryoneDirector, true, 60 ) );
+    SW_EXPECT_TRUE( fixture.waitPlaying( fixture._secondClient, SequenceNetSimGame::kEveryoneDirector, true, 60 ) );
+    harness.stepTicks( 30 );
+    const SequencePlayerComponent* pServerPlayer = SequenceNetSimGame::findDirector( harness.getServer(), SequenceNetSimGame::kEveryoneDirector );
+    SW_REQUIRE_NOT_NULL( pServerPlayer );
+    for ( const int32 worldIndex : { fixture._firstClient, fixture._secondClient } )
+    {
+        NetSimWorld* pWorld = harness.findClient( worldIndex );
+        SW_REQUIRE_NOT_NULL( pWorld );
+        const SequencePlayerComponent* pPlayer = SequenceNetSimGame::findDirector( *pWorld, SequenceNetSimGame::kEveryoneDirector );
+        SW_REQUIRE_NOT_NULL( pPlayer );
+        SW_EXPECT_NEAR( static_cast<float32>( pServerPlayer->getCurrentFrame() ), static_cast<float32>( pPlayer->getCurrentFrame() ), 2.0f );
+    }
+}
+
 /** @brief [SequenceNetSimTest] 그 플레이어만 재생은 활성자 폰을 가진 클라이언트만 틀고, 진행은 그 플레이어의 상태에 적혀 다른 플레이어는 따로 한 번 튼다 */
 SW_TEST_CASE( SequenceNetSimTest, ActivatorPlaysOnlyForThatPlayerAndRecordsPerPlayer, ._timeoutSeconds = 120 )
 {
