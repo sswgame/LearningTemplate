@@ -7,6 +7,7 @@
 #include "Engine/Object/Component/SceneComponent.h"
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
+#include "Engine/Object/GameObject/Serialization/ObjectStateSerializer.h"
 
 #include "GameFramework/Runtime/Character/Control/Controller/IntentTrackControllerComponent.h"
 #include "GameFramework/Runtime/Character/Control/Pawn/PawnComponent.h"
@@ -200,6 +201,47 @@ SW_TEST_CASE( VehicleSeatTest, RiderSurvivesTheVehicle )
     SW_EXPECT_NEAR( 2.0f, rig._pRiderRoot->getWorldPosition()._x, 1e-3f );     // 지금 자리에 남는다
     SW_EXPECT_TRUE( rig._pRiderRoot->getParent() == nullptr );
     SW_EXPECT_TRUE( VehicleSeatComponent::findSeatOf( *rig._pRiderPawn ) == nullptr );
+    SW_EXPECT_TRUE( rig._pRiderPawn->getController() == rig._pController->getHandle() );
+}
+
+/** @brief [VehicleSeatTest] 탈것을 모는 동안에도 탑승자의 조종자 오브젝트(가방 · 일지 주인)를 찾고, 내리면 평소 길이다 */
+SW_TEST_CASE( VehicleSeatTest, RiderKeepsItsPlayerWhileDriving )
+{
+    VehicleFixture    rig;
+    GameObject* const pPlayer = rig._pController->getOwner();
+    SW_REQUIRE_TRUE( VehicleSeatComponent::mount( *rig._pRiderPawn, *rig._pSeat ) == MountResult::Mounted );
+    SW_EXPECT_FALSE( rig._pRiderPawn->isPossessed() );
+    SW_EXPECT_TRUE( PawnComponent::findControllerObject( rig._manager, *rig._pRider ) == pPlayer );
+    SW_REQUIRE_TRUE( VehicleSeatComponent::dismount( *rig._pRiderPawn, false ) );
+    SW_EXPECT_TRUE( PawnComponent::findControllerObject( rig._manager, *rig._pRider ) == pPlayer );
+    rig._pController->unpossess();
+    SW_EXPECT_TRUE( PawnComponent::findControllerObject( rig._manager, *rig._pRider ) == nullptr ); // 내린 뒤의 끈은 남지 않는다
+}
+
+/** @brief [VehicleSeatTest] 탄 채 찍은 상태(미니게임에서 돌아오기 · 세이브 · 핫 리로드)를 되살리면 다시 앉아 있다 — 빙의 · 이동 멈춤은 상태에 실리지 않아 다시 만든다 */
+SW_TEST_CASE( VehicleSeatTest, RestoredRiderSitsAgain )
+{
+    VehicleFixture rig;
+    SW_REQUIRE_TRUE( VehicleSeatComponent::mount( *rig._pRiderPawn, *rig._pSeat ) == MountResult::Mounted );
+    vector<uint8> bytes;
+    SW_REQUIRE_TRUE( ObjectStateSerializer::saveToBinaryBuffer( rig._pVehicle, bytes, ObjectSaveOptions{ SerializePurpose::Snapshot } ) );
+    SW_REQUIRE_TRUE( VehicleSeatComponent::dismount( *rig._pRiderPawn, false ) );
+    rig._manager.destroyGameObject( rig._pVehicle );
+    rig.update();
+
+    // 탑승자는 그대로 있고 탈것이 되살아난다 — 되살아난 씬에서는 조종자가 자기 폰을 다시 쥐고 있다.
+    GameObject*       pRestored = rig._manager.createGameObject( hashed_string( "Car" ) );
+    ObjectLoadContext context{ SerializePurpose::Snapshot };
+    SW_REQUIRE_TRUE( ObjectStateSerializer::loadFromBinaryBuffer( pRestored, bytes.data(), bytes.size(), context ) != 0 );
+    VehicleSeatComponent* pSeat = pRestored->getComponent<VehicleSeatComponent>();
+    PawnComponent*        pPawn = pRestored->getComponent<PawnComponent>();
+    SW_REQUIRE_TRUE( pSeat != nullptr && pPawn != nullptr );
+    rig.update();
+    rig.update();
+    SW_EXPECT_TRUE( pSeat->getOccupant() == rig._pRider->getHandle() );
+    SW_EXPECT_TRUE( pPawn->getController() == rig._pController->getHandle() );
+    SW_EXPECT_TRUE( rig._pRiderRoot->getParent() == pRestored->getPrimarySceneComponent() );
+    SW_REQUIRE_TRUE( VehicleSeatComponent::dismount( *rig._pRiderPawn, false ) );
     SW_EXPECT_TRUE( rig._pRiderPawn->getController() == rig._pController->getHandle() );
 }
 

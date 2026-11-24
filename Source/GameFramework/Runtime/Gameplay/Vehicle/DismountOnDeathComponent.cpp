@@ -11,15 +11,21 @@
 
 namespace sw
 {
-    DismountOnDeathComponent::DismountOnDeathComponent() = default;
+    DismountOnDeathComponent::DismountOnDeathComponent()
+        : _healthListenerPort{}
+        , _bFallen{ SW_FALSE }
+        , _reserved{ 0 }
+    {
+    }
 
     void DismountOnDeathComponent::onHealthChanged( const HealthChangedEvent& event )
     {
-        if ( event._kind != HealthChangeKind::Died )
-            return;
         GameObject*        pOwner   = getOwner();
         GameObjectManager* pManager = pOwner != nullptr ? pOwner->getMutableManager() : nullptr;
-        if ( pManager != nullptr )
+        if ( pManager != nullptr && event._kind == HealthChangeKind::Reset && _bFallen == SW_TRUE )
+            pManager->executeOrDeferPostTickOnComponent( *this, []( DismountOnDeathComponent& component )
+            { component.resumeAfterFall(); } );
+        if ( pManager != nullptr && event._kind == HealthChangeKind::Died )
             pManager->executeOrDeferPostTickOnComponent( *this, []( DismountOnDeathComponent& component )
             { component.forceDismount(); } );
     }
@@ -39,6 +45,14 @@ namespace sw
         PawnComponent* pPawn  = pOwner != nullptr ? pOwner->getComponent<PawnComponent>() : nullptr;
         if ( pPawn != nullptr )
             (void)VehicleSeatComponent::dismount( *pPawn, true );
+    }
+
+    void DismountOnDeathComponent::resumeAfterFall()
+    {
+        if ( _bFallen == SW_FALSE || getOwner() == nullptr )
+            return;
+        _bFallen = SW_FALSE;
+        VehicleSeatComponent::resumeFallenRider( *getOwner() );
     }
 
     void DismountOnDeathComponent::HealthListenerPort::onHealthChanged( const HealthChangedEvent& event )

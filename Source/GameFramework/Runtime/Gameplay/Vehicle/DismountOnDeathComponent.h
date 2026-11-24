@@ -1,6 +1,6 @@
 /**
  * @file DismountOnDeathComponent.h
- * @brief 탑승자가 쓰러지면 강제로 내리게 합니다. 같은 오브젝트의 체력 신호(`IHealthListener`)를 듣습니다. `VehicleSeatComponent::mount` 가 탑승자에게 이 컴포넌트를 붙입니다.
+ * @brief 탑승자가 쓰러지면 강제로 내리게 하고, 부활하면 다시 걷게 합니다. 같은 오브젝트의 체력 신호(`IHealthListener`)를 듣습니다. `VehicleSeatComponent::mount` 가 탑승자에게 이 컴포넌트를 붙입니다.
  */
 #pragma once
 #include "Core/Foundation/Macros.h"
@@ -33,10 +33,14 @@ namespace sw
         void onHealthChanged( const HealthChangedEvent& event );
         /** @brief 탑승자가 사라지면 좌석을 비웁니다. 끊긴 핸들을 든 좌석은 다시 탈 수 없습니다. */
         void onUnregister( GameObjectManager& manager ) override;
+        /** @brief 물리로 떨어져 걷기가 꺼진 채인지입니다(`VehicleSeatComponent` 가 내릴 때 적는다). 부활(`HealthChangeKind::Reset`)이 되돌린다. */
+        void setFallen( bool bFallen ) { _bFallen = bFallen ? SW_TRUE : SW_FALSE; }
 
     private:
         /** @brief 틱 뒤에 실행합니다. 앉아 있으면 강제로 내립니다. */
         void forceDismount();
+        /** @brief 틱 뒤에 실행합니다. 물리로 떨어진 채면 다시 걷게 합니다. */
+        void resumeAfterFall();
 
     private:
         /** @brief 체력 변화 계약을 주인의 `onHealthChanged` 로 넘기는 포트입니다(`REFLECT_INTERFACE`). */
@@ -44,6 +48,8 @@ namespace sw
         {
             void onHealthChanged( const HealthChangedEvent& event ) override;
         };
-        HealthListenerPort _healthListenerPort;
+        HealthListenerPort     _healthListenerPort;
+        uint8                  _bFallen  : 1; ///< 물리로 떨어져 걷기가 꺼져 있다
+        [[maybe_unused]] uint8 _reserved : 7;
     };
 } // namespace sw

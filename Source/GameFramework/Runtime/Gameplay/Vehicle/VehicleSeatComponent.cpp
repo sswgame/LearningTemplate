@@ -8,7 +8,7 @@
 #include "Engine/Character/Socket/SocketBindingComponent.h"
 #include "Engine/Object/Component/SceneComponent.h"
 #include "Engine/Object/GameObject/GameObject.h"
-#include "Engine/Object/GameObject/GameObjectManager.h"
+#include "Engine/Object/GameObject/GameObjectManagerResolve.inl"
 #include "Engine/Object/GameObject/Registry/ComponentRegistry.h"
 #include "Engine/Object/GameObject/Tick/TickContext.h"
 
@@ -79,6 +79,7 @@ namespace sw
         , _bFieldOfViewKickArmed{ 1 }
         , _bBumpArmed{ 1 }
         , _bRidePending{ 0 }
+        , _bRestorePending{ 0 }
         , _reservedRideFlags{ 0 }
     {
         setCanEverTick( true );
@@ -88,6 +89,12 @@ namespace sw
     {
         Component::onRegister( manager );
         (void)VehicleSeatSystem::getOrCreate( manager );
+    }
+
+    void VehicleSeatComponent::onBeginPlay()
+    {
+        Component::onBeginPlay();
+        _bRestorePending = _occupant.isValid() ? SW_TRUE : SW_FALSE;
     }
 
     void VehicleSeatComponent::onUnregister( GameObjectManager& manager )
@@ -109,6 +116,12 @@ namespace sw
     {
         using Internal = VehicleSeatComponentInternal;
         Component::onTick( context );
+        if ( _bRestorePending == SW_TRUE )
+        {
+            context.deferPostTickOnComponent( *this, []( VehicleSeatComponent& seat )
+            { seat.restoreRider(); } );
+            return;
+        }
         GameObject*           pVehicle = getOwner();
         const SceneComponent* pRoot    = pVehicle != nullptr ? pVehicle->getPrimarySceneComponent() : nullptr;
         if ( isFree() || pRoot == nullptr || context.getDeltaTime() <= 0.0f )
