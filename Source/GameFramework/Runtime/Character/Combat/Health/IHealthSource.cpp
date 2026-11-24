@@ -6,8 +6,10 @@
 
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Object/GameObject/GameObjectEvents.h"
+#include "Engine/Object/GameObject/GameObjectManager.h"
 
 #include "GameFramework/Runtime/Character/Combat/Health/IHealthListener.h"
+#include "GameFramework/Runtime/Character/Combat/TargetFilter.h"
 
 namespace sw
 {
@@ -19,6 +21,29 @@ namespace sw
             if ( reading._bHasHealth == SW_FALSE || reading._maxHealth <= 0.0f )
                 return 0.0f;
             return MathUtil::saturate( reading._health / reading._maxHealth );
+        }
+
+        /**
+         * @brief 주인의 쓰러짐 태그를 맞춥니다. 저작 중(플레이 밖)에는 손대지 않습니다 — 태그가 씬 파일에 박힌다.
+         * @details 태그 쓰기는 틱 뒤다. 미룬 동안 다시 바뀔 수 있어 그때의 체력을 다시 읽는다(한 틱 안의 쓰러짐 → 부활).
+         */
+        void syncDeadTag( const GameObject& owner, bool bDead )
+        {
+            const GameObjectManager* const pManager = owner.getManager();
+            if ( pManager == nullptr || pManager->hasBegunPlay() == false || owner.hasTag( TargetFilter::getDeadTag(), true ) == bDead )
+                return;
+            const GameObjectHandle handle = owner.getHandle();
+            pManager->executeOrDeferPostTickOnScene( [handle]( GameObjectManager& manager )
+            {
+                GameObject* const          pObject = manager.resolveGameObject( handle );
+                const IHealthSource* const pSource = pObject != nullptr ? pObject->findInterface<IHealthSource>() : nullptr;
+                if ( pSource == nullptr )
+                    return;
+                if ( pSource->getHealthReading()._bDead == SW_TRUE )
+                    pObject->addTag( TargetFilter::getDeadTag() );
+                else
+                    pObject->removeTag( TargetFilter::getDeadTag() );
+            } );
         }
     } // namespace
 } // namespace sw
@@ -46,6 +71,7 @@ namespace sw
             event._kind = HealthChangeKind::Died;
         else
             event._kind = HealthChangeKind::Changed;
+        syncDeadTag( *pOwner, reading._bDead == SW_TRUE );
         IHealthListener::broadcast( *pOwner, event );
     }
 

@@ -15,8 +15,8 @@
 #include "Engine/Object/GameObject/Tick/TickInterval.h"
 #include "Engine/Physics/PhysicsSystem.h"
 
-#include "GameFramework/Runtime/Character/AI/AIStimulusSourceComponent.h"
 #include "GameFramework/Runtime/Character/Combat/Projectile/ResolvedShot.h"
+#include "GameFramework/Runtime/Character/Combat/TargetFilter.h"
 #include "GameFramework/Runtime/Character/Combat/Weapon/Ballistics.h"
 #include "GameFramework/Runtime/Gameplay/Gimmick/Combat/GimmickDamageUtil.h"
 #include "GameFramework/Runtime/Gameplay/Interaction/InteractionView.h"
@@ -203,9 +203,7 @@ namespace sw
         for ( const GameObject* pObject : _listTagged )
         {
             const SceneComponent* pOther = pObject->getPrimarySceneComponent();
-            // 숨은 것은 AI 시각과 같이 보이지 않는다 — 숨는 곳의 태그를 묻지 않으면 사람 눈만 속이고 포탑은 계속 쏜다.
-            const bool bCannotSee = pOther == nullptr || pObject->isActiveInHierarchy() == false || pObject->hasTag( AIStimulusSourceComponent::getHiddenTag(), true );
-            if ( bCannotSee )
+            if ( pOther == nullptr || TargetFilter::isSelectable( *pObject ) == false )
                 continue;
             InteractionCandidate candidate;
             candidate._position    = pOther->getWorldPosition();
