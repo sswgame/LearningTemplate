@@ -38,7 +38,8 @@ namespace sw
         if ( tree._listStyleDirty.empty() )
             return 0;
         // 목록을 떼어 순회한다. 다시 맞추며 거는 무효화(kLayout, kPaint)가 목록을 건드리지 않게 하기 위해서다.
-        vector<WidgetID> listDirty;
+        vector<WidgetID>& listDirty = tree._listStylePassScratch; // 트리가 든 버퍼와 맞바꾼다(용량을 프레임 사이에 지킨다)
+        listDirty.clear();
         listDirty.swap( tree._listStyleDirty );
         uint32 restyledCount = 0;
         for ( const WidgetID& id : listDirty )

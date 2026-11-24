@@ -121,7 +121,9 @@ namespace sw
 
         // 루트 목록을 먼저 떼어 둔다. 순회하는 동안에는 arrange 의 기하 변경으로 그리기 더티만 생긴다. 목록 순서대로 처리하고, 이미 위에서 다시 측정한 루트는
         // 비트가 지워져 건너뛴다. 처리 순서와 상관없이 마지막에 배치한 쪽이 맞다. 조상이 나중이면 조상이 다시 배치한다.
-        vector<WidgetID> listRoot;
+        // 지역 벡터와 바꾸면 더티가 생긴 프레임마다 두 목록의 용량을 버리고 다시 잡는다 — 트리가 든 버퍼와 맞바꿔 용량을 지킨다.
+        vector<WidgetID>& listRoot = tree._listLayoutPassScratch;
+        listRoot.clear();
         listRoot.swap( tree._listLayoutDirtyRoot );
 
         const bool bInsetsChanged = tree._layoutSafeInsets != context._safeInsets;

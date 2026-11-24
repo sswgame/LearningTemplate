@@ -32,6 +32,8 @@ namespace sw
         , _listLayoutDirtyRoot{}
         , _listPaintDirty{}
         , _listStyleDirty{}
+        , _listLayoutPassScratch{}
+        , _listStylePassScratch{}
         , _pFocusManager{ nullptr }
         , _pScreen{ nullptr }
         , _focusedWidget{ kInvalidWidgetID }
