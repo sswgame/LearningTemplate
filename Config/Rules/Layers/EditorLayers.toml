@@ -126,6 +126,7 @@ defaultBan = [
 "Editor/Common/Workspace/Play/EditorSessionPolicy.h" = "미저장 · 플레이 중 편집 판정 값(EditorPanel 이 쓴다)"
 "Editor/Common/Workspace/Asset/EditorAssetType.h" = "에셋 종류 서술(EditorPanel 이 쓴다)"
 "Editor/Common/Workspace/Asset/EditorAssetTypeID.h" = "에셋 종류를 가리키는 값과 에디터 전용 종류 id(EditorPanel · 패널 열기 요청이 값으로 든다 — 등록 표 EditorAssetType.h 에서 나눈 잎)"
+"Editor/Common/Workspace/Asset/EditorDiskBaseline.h" = "연 파일의 디스크 내용 해시를 드는 값 형식(문서 패널 바탕이 든다 — Core 와 내보내기만 include)"
 "Editor/Common/Commands/EditorCommandText.h" = "명령의 표시 · 배치 데이터(라벨 · 아이콘 · 메뉴) — 값이고, 허용한 EditorCommandRegistry.h 가 include 한다"
 "Engine/Object/GameObject/Service/ScenePreviewPolicy.h" = "미리보기 씬 틱 정책 값(집합체) — 미리보기 패널이 getPreviewPolicy 로 돌려준다"
 "Editor/Common/Commands/Diagnostics/EditorModuleDetail.h" = "모듈 창 상세 한 모듈의 값(집합체) — makeDetail 이 채우고 View 가 그린다"
