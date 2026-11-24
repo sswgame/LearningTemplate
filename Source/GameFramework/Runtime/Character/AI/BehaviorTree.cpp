@@ -411,7 +411,9 @@ namespace sw
         GameplayContext world = _world;
         world.set<BlackboardSlot>( &blackboard );
         world.set<BlackboardWriteSlot>( &blackboard );
-        world.setSeed( GameConditions::makeSeed( _tickCount++, 0 ) );
+        world.setSeed( GameConditions::makeSeed( _tickCount, 0 ) );
+        if ( deltaTime > 0.0f )
+            ++_tickCount; // 시간이 멈춘 틱을 세면 로딩 · 일시 정지 길이에 따라 확률 조건이 달라진다
         _actionContext._world     = world;
         _actionContext._pOwner    = pOwner;
         _actionContext._deltaTime = deltaTime;

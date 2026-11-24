@@ -172,9 +172,10 @@ namespace sw
     void FacialAnimationComponent::onBeginPlay()
     {
         Component::onBeginPlay();
-        // 깜빡임 · 사카드가 캐릭터마다 다른 박자로 돌게 씨앗을 컴포넌트 id 로 섞는다(결정적).
-        const uint64 mixed = getHandle().componentID() * HashUtil::kGoldenRatio64;
-        _random.setSeed( static_cast<uint32>( mixed ^ ( mixed >> 32 ) ) | 1u ); // `| 1` — 0 이 아닌 씨앗
+        // 깜빡임 · 사카드가 캐릭터마다 다른 박자로 돌게 씨앗을 주인의 이름으로 정한다 — 이름은 씬 안에서 겹치지 않고 씬이 정한다. 컴포넌트 id 는 앞서 돈 씬이 몇 개를 만들었는지에 달렸다.
+        const GameObject* const pOwner = getOwner();
+        const string_view       name   = pOwner != nullptr ? string_view{ pOwner->getName().c_str() } : string_view{};
+        _random.setSeed( HashUtil::computeStringHash32( name.data(), name.size(), false ) | 1u ); // `| 1` — 0 이 아닌 씨앗
         // 경로로 이미 읽었으면(`setFacialRigPath` · `setFacialRig`) 그대로 둔다 — 시작 전에 정한 표정 · 말하기를 지우지 않게.
         if ( _binding.isAnimationActive() == false )
             loadRig();

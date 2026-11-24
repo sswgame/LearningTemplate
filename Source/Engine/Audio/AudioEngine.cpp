@@ -1534,6 +1534,7 @@ namespace sw
             fresh._pDesc    = entry.second._pDesc;
             entry.second    = std::move( fresh );
         }
+        _random = DeterministicRandom64{}; // 무작위로 고른 클립이 자막을 정한다 — 앞 게임이 쓴 만큼 밀린 채 시작하지 않는다
         _snapshotMixer.clearSnapshots();
         _mapParameter.clear();
         for ( const auto& entry : _mapLibrary )
