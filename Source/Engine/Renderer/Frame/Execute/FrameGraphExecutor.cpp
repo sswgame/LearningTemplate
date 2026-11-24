@@ -104,6 +104,12 @@ namespace sw
                 static const hashed_string kName( "PreviousSceneDepth" );
                 return RenderGraphTextureSRV{ kName };
             }
+            /** @brief 지난 프레임의 비 가림 맵 깊이 — 깊이 히스토리 패스가 셰이더 읽기로 읽는다. 셰이더 읽기에서 시작해 장면 깊이(깊이 쓰기)와 이름을 나눈다(그래프는 이름마다 상태 하나). */
+            static RenderGraphTextureSRV rainOcclusionDepth()
+            {
+                static const hashed_string kName( "RainOcclusionDepth" );
+                return RenderGraphTextureSRV{ kName };
+            }
             /** @brief 뷰마다 깊이 히스토리(R32) — 깊이 히스토리 패스가 그리고(렌더 타깃) HZB 짓기 · GPU 입자가 RW 텍스처로 읽는다(UAV 읽기). */
             static RenderGraphRenderTarget depthHistory()
             {
@@ -798,7 +804,7 @@ namespace sw
         if ( canCopyRainOcclusion() )
         {
             const uint32 rainSlot = static_cast<uint32>( _state._listView.size() );
-            table.registerTexture( FrameResource::previousSceneDepth()._name, rainSlot, _state._rainOcclusion.getDepth()._texture, RenderGraphAccess::ShaderRead );
+            table.registerTexture( FrameResource::rainOcclusionDepth()._name, 0, _state._rainOcclusion.getDepth()._texture, RenderGraphAccess::ShaderRead );
             table.registerTexture( FrameResource::depthHistory()._name, rainSlot, _state._rainOcclusion.getParticleDepth()._texture, RenderGraphAccess::UnorderedAccessRead );
         }
     }
