@@ -303,6 +303,8 @@ namespace
 /** @brief [ShooterMovingFloorNetTest] 지연 · 손실에서도 바닥 위에 선 자기 몸은 보정 없이 실려 가고, 두 화면에서 남의 몸이 서버와 같은 간격으로 붙어 보인다 — 늦게 들어온 쪽도 같다 */
 SW_TEST_CASE( ShooterMovingFloorNetTest, RidersStayTogetherOnEveryScreen, ._timeoutSeconds = 120 )
 {
+    SW_EXPECT_LOG( "Control.IntentButtonNotInInputMap" ); // 클라이언트의 감독이 플레이어 조종자에게 폰을 쥐이는데 테스트에는 입력 맵이 없다
+    SW_EXPECT_LOG( "Control.AxisActionNotInInputMap" );
     SW_EXPECT_LOG( "PrefabPool.PrefabPoolCannotSpawn" );
     ShooterNetRig rig{
         float3{ 12.0f, 0.25f, 12.0f }
@@ -350,6 +352,8 @@ SW_TEST_CASE( ShooterMovingFloorNetTest, RidersStayTogetherOnEveryScreen, ._time
 /** @brief [ShooterMovingFloorNetTest] 바닥에서 옆 바닥으로 옮겨 타고 땅으로 뛰어내렸다가 다시 뛰어 올라타도 예측이 서버와 맞는다 */
 SW_TEST_CASE( ShooterMovingFloorNetTest, CrossingAndJumpingStayPredicted, ._timeoutSeconds = 120 )
 {
+    SW_EXPECT_LOG( "Control.IntentButtonNotInInputMap" ); // 클라이언트의 감독이 플레이어 조종자에게 폰을 쥐이는데 테스트에는 입력 맵이 없다
+    SW_EXPECT_LOG( "Control.AxisActionNotInInputMap" );
     SW_EXPECT_LOG( "PrefabPool.PrefabPoolCannotSpawn" );
     ShooterNetRig rig{
         float3{ 8.0f, 0.25f, 2.0f }
