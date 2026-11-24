@@ -1766,9 +1766,11 @@
       "listPathTextField": [],
       "listTextField": [
         "_id",
+        "_itemID",
         "_lootSpotKind",
         "_slot",
         "id",
+        "itemID",
         "lootSpotKind",
         "slot"
       ]
@@ -2783,6 +2785,7 @@
         "_houseObject",
         "_id",
         "_listOpenRequest",
+        "_listResident",
         "_name",
         "_speciesID",
         "_to",
@@ -2796,6 +2799,7 @@
         "houseObject",
         "id",
         "listOpenRequest",
+        "listResident",
         "name",
         "requests",
         "speciesID",

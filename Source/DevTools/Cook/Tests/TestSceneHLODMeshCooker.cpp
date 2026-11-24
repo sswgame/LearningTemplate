@@ -10,6 +10,7 @@
 #include "Engine/Content/Tests/ScopedScratchDomain.h"
 #include "Engine/Graphics/Mesh/Mesh.h"
 #include "Engine/Graphics/Mesh/MeshAssetFormat.h"
+#include "Engine/Graphics/Mesh/MeshCache.h"
 #include "Engine/Graphics/Mesh/MeshUtil.h"
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Object/GameObject/GameObjectManager.inl"
@@ -89,7 +90,13 @@ SW_TEST_CASE( SceneHLODMeshCookerTest, ProxiesDrawSectionsOfOneCookedMesh )
     SW_REQUIRE_TRUE( MeshAssetFormat::readFromBytes( bytes.data(), bytes.size(), readBack ) );
     SW_REQUIRE_EQUAL( size_t{ 2 }, readBack._listSection.size() );
 
-    const string           meshID   = "test/hlodmesh.hlod.mesh";
+    // 대리가 그릴 메시를 실제로 두고 먼저 받아 쥔다 — 없는 파일의 비동기 로드는 이 테스트가 끝난 뒤 다른 테스트에 경고를 낸다.
+    StringBuilder<constant::buffer::kMax256> meshIDBuilder;
+    meshIDBuilder.appendFormat( "%#/hlodmesh.hlod.mesh", test::ScopedScratchDomain::kDomain );
+    const string meshID( meshIDBuilder.view() );
+    SW_REQUIRE_TRUE( FileUtil::writeFile( domain.makeDiskPath( "hlodmesh.hlod.mesh" ), bytes.data(), bytes.size() ) );
+    const shared_ptr<Mesh> mesh = MeshCache::acquire( meshID, MeshCPUAccess::Keep );
+    SW_REQUIRE_TRUE( mesh != nullptr );
     const optional<uint32> replaced = SceneHLODMeshCooker::replaceMergedProxies( doc, meshID );
     SW_REQUIRE_TRUE( replaced.has_value() );
     SW_EXPECT_EQUAL( 2u, *replaced );
