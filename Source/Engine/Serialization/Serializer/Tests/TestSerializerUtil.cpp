@@ -617,6 +617,24 @@ SW_TEST_CASE( BinarySerializerTest, CorruptPayloadSizeAndCountAreRejected )
     SW_EXPECT_FALSE( BinarySerializer::deserialize( &read, type, corruptCount.data(), corruptCount.size(), cookContext ) );
 }
 
+/** @brief [BinarySerializerTest] 배치 스트림이 담지 못하는 쓰기(모르는 칸을 다시 싣기 · 저작이 아닌 목적)는 오류로 멈춘다 */
+SW_TEST_CASE( BinarySerializerTest, SchemaLayoutRejectsWhatItCannotHold )
+{
+    const SerializerSampleGroup source;
+    const TypeInfo&             type        = *SerializerSampleGroup::StaticType();
+    SerializeContext            cookContext = SerializeContext::deriveFromDefault( SerializePurpose::Authoring );
+    cookContext.setSchemaLayout( true );
+    SerializeContext saveContext = SerializeContext::deriveFromDefault( SerializePurpose::SaveGame );
+    saveContext.setSchemaLayout( true );
+
+    SchemaOrphanValue unknown;
+    unknown._nameHash = hashed_string::computeHash( "_fieldOfAnotherBuild" );
+    vector<uint8> bytes;
+    SW_EXPECT_LOG( "BinarySerializer.SchemaLayoutCannotHold" );
+    SW_EXPECT_FALSE( BinarySerializer::serializeKeepingUnknown( &source, type, vector<SchemaOrphanValue>{ unknown }, bytes, cookContext ) );
+    SW_EXPECT_FALSE( BinarySerializer::serialize( &source, type, bytes, saveContext ) );
+}
+
 /** @brief [XMLSerializerPropertyTest] 되풀이된 원소와 자리가 틀린 칸(속성 값을 원소로, 원소 칸을 속성으로)은 모르는 칸으로 알린다 — 알림 없이 초기값이 되지 않는다 */
 SW_TEST_CASE( XMLSerializerPropertyTest, RepeatedAndMisplacedPropertiesAreReported )
 {

@@ -1611,10 +1611,12 @@ SW_TEST_CASE( ReflectionTypeRegistryTest, DerivedPropertyListFollowsItsBase )
     SW_REQUIRE_NOT_NULL( pDerived );
     SW_EXPECT_EQUAL( 2u, pDerived->getPropertiesWithBase().size() );
 
-    // 기반이 바뀌어 다시 올라온다(핫 리로드). 파생 모듈은 그대로다 — 파생 쪽 목록이 새 기반을 본다.
-    base._listProperty = { makeProperty( "_a", 0 ), makeProperty( "_c", 4 ) };
+    // 기반이 바뀌어 다시 올라온다(핫 리로드). 파생 모듈은 그대로다 — 파생 쪽 목록 · 배치 해시가 새 기반을 본다.
+    const uint32 layoutHashBefore = pDerived->getSchemaLayoutHash();
+    base._listProperty            = { makeProperty( "_a", 0 ), makeProperty( "_c", 4 ) };
     registry.registerClass( base );
     SW_EXPECT_EQUAL( 3u, pDerived->getPropertiesWithBase().size() );
+    SW_EXPECT_TRUE( layoutHashBefore != pDerived->getSchemaLayoutHash() );
     SW_EXPECT_NOT_NULL( pDerived->findPropertyInHierarchy( sw::hashed_string( "_c" ) ) );
 
     // 기반 모듈만 내려간다 — 파생 쪽 목록에 내려간 모듈의 프로퍼티가 남지 않는다.
@@ -1622,6 +1624,41 @@ SW_TEST_CASE( ReflectionTypeRegistryTest, DerivedPropertyListFollowsItsBase )
     SW_EXPECT_EQUAL( 1u, pDerived->getPropertiesWithBase().size() );
     SW_EXPECT_NULL( pDerived->findPropertyInHierarchy( sw::hashed_string( "_a" ) ) );
     registry.unregisterTypesByModule( "TestMergeDerived" );
+}
+
+/**
+ * @brief [ReflectionTypeRegistryTest] 쿠킹 배치 해시는 저작 저장이 쓰는 칸의 이름 · 형식(원소 · 키까지)만 본다 — 세이브 역할과 이름 공간 한정 철자는 같은 배치다
+ */
+SW_TEST_CASE( ReflectionTypeRegistryTest, SchemaLayoutHashFollowsTheAuthoredProperties )
+{
+    const auto computeHash = []( const utf8* pTypeName, const uint32 flags, const utf8* pElementTypeName )
+    {
+        sw::PropertyInfo property{ sw::hashed_string( "_value" ), sw::hashed_string( pTypeName ), 0 };
+        property._elementTypeName = sw::hashed_string( pElementTypeName );
+        if ( flags != 0 )
+        {
+            sw::PropertyMetadata& metadata = property._metadata.edit();
+            metadata._bTransient           = ( flags & 1u ) != 0 ? SW_TRUE : SW_FALSE;
+            metadata._bRuntimeState        = ( flags & 2u ) != 0 ? SW_TRUE : SW_FALSE;
+            metadata._bSaveGame            = ( flags & 4u ) != 0 ? SW_TRUE : SW_FALSE;
+        }
+        sw::TypeInfo info;
+        info._name               = sw::hashed_string( "SchemaLayoutHashType" );
+        info._fullyQualifiedName = sw::hashed_string( "swtest::SchemaLayoutHashType" );
+        info._size               = 8;
+        info._listProperty       = { property };
+        info.computeDerivedFlags();
+        return info.getSchemaLayoutHash();
+    };
+    const uint32 plain = computeHash( "int32", 0u, "" );
+    SW_EXPECT_EQUAL( plain, computeHash( "int32", 4u, "" ) ); // 세이브 역할은 쿠킹본이 싣는 칸을 바꾸지 않는다
+    SW_EXPECT_TRUE( plain != computeHash( "int32", 1u, "" ) );
+    SW_EXPECT_TRUE( plain != computeHash( "int32", 2u, "" ) );
+    SW_EXPECT_TRUE( plain != computeHash( "float32", 0u, "" ) );
+    SW_EXPECT_TRUE( computeHash( "vector", 0u, "int32" ) != computeHash( "vector", 0u, "float32" ) );
+    SW_EXPECT_EQUAL( computeHash( "Foo", 0u, "" ), computeHash( "sw::editor::Foo", 0u, "" ) );
+    SW_EXPECT_EQUAL( computeHash( "Ref<editor::Foo, Bar>", 0u, "" ), computeHash( "sw::Ref<Foo,sw::Bar>", 0u, "" ) );
+    SW_EXPECT_TRUE( computeHash( "Ref<Foo>", 0u, "" ) != computeHash( "Ref<Bar>", 0u, "" ) );
 }
 
 /**

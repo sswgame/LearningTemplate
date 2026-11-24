@@ -211,6 +211,9 @@ namespace sw
                 return static_cast<float64>( value );
         }
 
+        /** @brief 저작 저장(`SerializePurpose::Authoring`)이 쓰는 칸이면 true 입니다. 저장 목적 판정과 쿠킹 배치 해시(`TypeInfo::getSchemaLayoutHash`)가 같은 칸을 보게 여기 하나다. */
+        bool isAuthored() const noexcept { return _bTransient == SW_FALSE && _bRuntimeState == SW_FALSE; }
+
         /** @brief 에디터 메타데이터입니다. 붙지 않았으면 기본값(`PropertyEditorMetadata::getDefault`)입니다. */
         const PropertyEditorMetadata& getEditor() const noexcept;
     };

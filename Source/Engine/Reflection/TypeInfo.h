@@ -296,7 +296,7 @@ namespace sw
          *          구하지 않은 채 물으면 멈춘다.
          */
         atomic<uint8> _derivedFlags{ 0 };
-        /** @brief 상속 포함 프로퍼티 배치(이름 · 형식 · 저장 역할의 차례)의 해시입니다. 판정과 함께 구하고 같은 "구했다" 비트로 발행한다(`TypeInfo::getSchemaLayoutHash`). */
+        /** @brief 저작 저장이 쓰는 칸의 상속 포함 배치 해시입니다. 판정과 함께 구하고 같은 "구했다" 비트로 발행한다(`TypeInfo::getSchemaLayoutHash`). */
         atomic<uint32> _schemaLayoutHash{ 0 };
         uint8          _bIsCacheBuilt{ SW_FALSE }; ///< 자기 이름 맵(`_mapNameToProperty` · `_mapNameToMethod`)을 지었다. 아니면 이름 조회는 선형으로 찾는다
     };
@@ -420,8 +420,10 @@ namespace sw
         bool isPrimitive() const noexcept { return _bPrimitive != SW_FALSE; }
 
         /**
-         * @brief 상속 포함 프로퍼티 배치의 해시입니다(`computeDerivedFlags` 가 구한 값). 이름 · 형식 · 저장 역할(Transient · RuntimeState · SaveGame)의 차례가 같으면 같다.
-         * @details 쿠킹 상태의 태그 없는 바이너리(`BinarySerializer` 의 배치 스트림)가 쓴 빌드와 읽는 빌드의 배치가 같은지 이것으로 본다. 이름 해시는 글에서 나와 실행마다 같다.
+         * @brief 저작 저장이 쓰는 칸(`PropertyMetadata::isAuthored`)의 상속 포함 배치 해시입니다(`computeDerivedFlags` 가 구한 값). 이름 · 형식(컨테이너면 원소 · 키까지)의 차례가 같으면 같다.
+         * @details 쿠킹 상태의 태그 없는 바이너리(`BinarySerializer` 의 배치 스트림, 저작 목적만)가 쓴 빌드와 읽는 빌드의 배치가 같은지 이것으로 본다. 저작 저장이 쓰지 않는 칸과
+         *          세이브 · 복제 역할은 배치에 들지 않아 바꿔도 쿠킹본이 낡지 않는다. 형식 이름은 이름 공간 한정 · 공백을 뺀 철자로 접는다 — 대상마다(libclang 판 · 별칭) 다를 수 있는
+         *          철자가 같은 배치를 가르지 않는다. 글에서 나와 실행마다 같다.
          */
         uint32 getSchemaLayoutHash() const;
         /** @brief 직렬화나 복사에서 memcpy POD 경로를 쓸 수 있으면 true 입니다(`computeDerivedFlags` 가 구한 값). */

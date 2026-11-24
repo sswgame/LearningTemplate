@@ -13,6 +13,7 @@
 #include "Core/Memory/MemoryBlock.h"
 #include "Core/Name/hashed_string.h"
 #include "Core/String/StringBuilder.h"
+#include "Core/String/StringUtil.h"
 
 #include "Engine/Foundation/EngineServices.h"
 #include "Engine/Reflection/ReflectionCast.h"
@@ -56,6 +57,49 @@ namespace sw
                 if ( lhs._fullyQualifiedName.isPredefinedType( kNone ) == false )
                     return lhs._fullyQualifiedName == rhs._fullyQualifiedName && lhs._fullyQualifiedName.empty() == false;
                 return lhs._name.isPredefinedType( kNone ) == false && lhs._name == rhs._name && lhs._name.empty() == false;
+            }
+
+            /**
+             * @brief 형식 이름의 해시입니다. 이름 공간 한정(`sw::editor::`)과 공백은 접지 않습니다.
+             * @details 파서가 적는 철자는 libclang 판과 소스의 적은 꼴(한정했는지)에 따라 다를 수 있다. 쿠킹본은 대상(Windows · Linux · Android · 웹)이 나눠 쓰므로 같은 형식이
+             *          철자 때문에 갈리면 안 된다. 다른 이름 공간의 같은 이름은 같은 해시다 — 구조체 값은 제 배치 해시를 따로 싣고 열거형은 이름으로 실어 어긋나면 거기서 드러난다.
+             */
+            static uint64 computeTypeNameHash( const hashed_string& typeName )
+            {
+                const auto isIdentifierChar = []( const utf8 ch )
+                { return ( 'a' <= ch && ch <= 'z' ) || ( 'A' <= ch && ch <= 'Z' ) || StringUtil::isDigitChar( ch ) || ch == '_'; };
+                const string_view text = typeName.view();
+                uint32            hash = 0;
+                size_t            from = 0;
+                while ( from < text.size() )
+                {
+                    size_t to = from;
+                    while ( to < text.size() && isIdentifierChar( text[to] ) )
+                        ++to;
+                    const bool bIdentifier = to > from;
+                    const bool bQualifier  = bIdentifier && text.substr( to, 2 ) == "::";
+                    if ( bIdentifier == false )
+                        ++to;
+                    const bool bSkipped = bQualifier || text[from] == ':' || text[from] == ' ';
+                    if ( bSkipped == false )
+                        hash = HashUtil::computeStringHash32( text.data() + from, to - from, false, hash );
+                    from = to;
+                }
+                return hash;
+            }
+
+            /** @brief 칸 하나의 배치 해시입니다 — 이름과 형식이고, 컨테이너면 원소 · 키 형식과 안쪽 단계까지입니다(`getSchemaLayoutHash`). */
+            static uint64 computePropertyLayoutHash( const PropertyInfo& prop )
+            {
+                uint64 hash = HashUtil::combine( prop.getNameHash(), computeTypeNameHash( prop._typeName ) );
+                hash        = HashUtil::combine( hash, computeTypeNameHash( prop._elementTypeName ) );
+                hash        = HashUtil::combine( hash, computeTypeNameHash( prop._keyTypeName ) );
+                for ( const NestedContainerInfo* pLevel = prop._nestedContainer; pLevel != nullptr; pLevel = pLevel->_elementNested )
+                {
+                    hash = HashUtil::combine( hash, computeTypeNameHash( pLevel->_elementTypeName ) );
+                    hash = HashUtil::combine( hash, computeTypeNameHash( pLevel->_keyTypeName ) );
+                }
+                return hash;
             }
         };
     } // namespace
@@ -401,8 +445,8 @@ namespace sw
         uint64 layoutHash = 0;
         for ( const PropertyInfo& prop : getPropertiesWithBase() )
         {
-            const uint64 storageRole = ( prop._metadata->_bTransient == SW_TRUE ? 1u : 0u ) | ( prop._metadata->_bRuntimeState == SW_TRUE ? 2u : 0u ) | ( prop._metadata->_bSaveGame == SW_TRUE ? 4u : 0u );
-            layoutHash               = HashUtil::combine( HashUtil::combine( HashUtil::combine( layoutHash, prop.getNameHash() ), prop._typeName.getHash() ), storageRole );
+            if ( prop._metadata->isAuthored() )
+                layoutHash = HashUtil::combine( layoutHash, TypeInfoInternal::computePropertyLayoutHash( prop ) );
             if ( prop._metadata->_bSaveGame == SW_TRUE )
                 bSaveGame = true;
             if ( bPOD == false )

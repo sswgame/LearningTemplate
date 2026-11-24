@@ -390,7 +390,7 @@ namespace sw
             switch ( context.getPurpose() )
             {
                 case SerializePurpose::Authoring:
-                    return prop._metadata->_bRuntimeState == SW_FALSE;
+                    return prop._metadata->isAuthored();
                 case SerializePurpose::Snapshot:
                     return true;
                 case SerializePurpose::SaveGame:

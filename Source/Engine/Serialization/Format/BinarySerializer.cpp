@@ -3,7 +3,6 @@
 #include "Engine/Serialization/Format/BinarySerializer.h"
 
 #include "Core/Compression/CompressionStream.h"
-#include "Core/Hash/HashUtil.h"
 #include "Core/Log/LogOnce.h"
 #include "Core/Log/Logger.h"
 #include "Core/Serialization/ByteStream.h"
@@ -40,13 +39,6 @@ namespace sw
             static constexpr uint32 kTaggedCountMask    = ( 1u << kTaggedVersionShift ) - 1;
             /** @brief 머리의 버전 바이트에서 배치 스트림(이름 · 형식 태그가 없고 머리 뒤에 배치 해시가 있다)을 나타내는 비트입니다. 값 인코딩의 버전은 나머지 비트다. */
             static constexpr uint32 kSchemaLayoutBit = 0x80u;
-
-            /** @brief 배치 스트림의 해시입니다 — 타입의 프로퍼티 배치와 저장 목적(싣는 칸을 고른다)입니다. */
-            static uint32 computeLayoutKey( const TypeInfo& typeInfo, const SerializeContext& context )
-            {
-                const uint64 hash = HashUtil::combine( typeInfo.getSchemaLayoutHash(), static_cast<uint64>( context.getPurpose() ) );
-                return static_cast<uint32>( hash ^ ( hash >> 32 ) );
-            }
 
             /**
              * @brief 이 빌드가 읽을 수 있는 버전인지 확인합니다. 현재 버전 하나뿐입니다. 더 높은 버전은 앞선 빌드가 쓴 것이고, 낮은 버전을 올리는 단계는 없습니다
@@ -310,9 +302,9 @@ namespace sw
                 const uint32 writtenKey = reader.readPod<uint32>();
                 if ( reader.hasOverflowed() )
                     return FieldReadResult::FieldFailed;
-                if ( writtenKey != computeLayoutKey( state._typeInfo, state._context ) )
+                if ( writtenKey != state._typeInfo.getSchemaLayoutHash() )
                 {
-                    SW_LOG_ERROR_ID( "BinarySerializer.SchemaLayoutMismatch", "%#: the cooked state was written for another layout of this type or another save purpose - not read, cook it again",
+                    SW_LOG_ERROR_ID( "BinarySerializer.SchemaLayoutMismatch", "%#: the cooked state was written for another layout of this type - not read, cook it again",
                                      state._typeInfo._name.c_str() );
                     return FieldReadResult::FieldFailed;
                 }
@@ -551,9 +543,15 @@ namespace sw
                 return false;
             }
         }
-        // 배치 스트림에는 모르는 칸을 실을 자리가 없다(쿠킹은 이 빌드의 칸만 쓴다).
-        const bool bSchemaLayout = context.usesSchemaLayout();
-        SW_ASSERT( bSchemaLayout == false || listUnknown.empty() );
+        // 배치 스트림에는 모르는 칸을 실을 자리가 없다(쿠킹은 이 빌드의 칸만 쓴다). 배치 해시는 저작 저장이 쓰는 칸의 것이라 다른 목적의 칸 집합을 나타내지 못한다.
+        const bool bSchemaLayout     = context.usesSchemaLayout();
+        const bool bCannotHoldLayout = bSchemaLayout && ( listUnknown.empty() == false || context.getPurpose() != SerializePurpose::Authoring );
+        if ( bCannotHoldLayout )
+        {
+            SW_LOG_ERROR_ID( "BinarySerializer.SchemaLayoutCannotHold", "%#: a schema layout stream cannot hold %# kept unknown field(s) or a non-authoring save - the object is not written",
+                             typeInfo._name.c_str(), static_cast<uint32>( listUnknown.size() ) );
+            return false;
+        }
         ByteWriter writer( outListBuffer );
         uint32     propCount{ static_cast<uint32>( listUnknown.size() ) };
         // 칸 차례(기반부터)는 걷기 한 곳이 정한다(`ReflectPropertyVisitor`) — 세는 걸음과 쓰는 걸음이 같은 칸을 같은 차례로 본다.
@@ -570,7 +568,7 @@ namespace sw
         const uint32 versionByte = static_cast<uint32>( kCurrentBinaryWireVersion ) | ( bSchemaLayout ? BinarySerializerInternal::kSchemaLayoutBit : 0u );
         writer.writePod( propCount | ( versionByte << BinarySerializerInternal::kTaggedVersionShift ) );
         if ( bSchemaLayout )
-            writer.writePod( BinarySerializerInternal::computeLayoutKey( typeInfo, context ) );
+            writer.writePod( typeInfo.getSchemaLayoutHash() );
 
         const bool bAllWritten = propertyVisitor.visitProperties( typeInfo, pInstance, [&]( const ReflectVisitConstField& field )
         {
