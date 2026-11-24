@@ -39,7 +39,7 @@ namespace sw
         // 2) SRV(t#, space0): 네 백엔드 공통 슬롯
         // ------------------------------------------------------------------------------
         /**
-         * @brief 에뮬 백엔드(DX11 · GL)의 엔진 텍스처 칸 레지스터 t32..t57 입니다 — 역할 하나가 칸 하나(`emulated::kEngineTextureNames` 의 순서)입니다.
+         * @brief 에뮬 백엔드(DX11 · GL)의 엔진 텍스처 칸 레지스터 t32..t58 입니다 — 역할 하나가 칸 하나(`emulated::kEngineTextureNames` 의 순서)입니다.
          * @details GL 텍스처 유닛은 레지스터 번호 그대로다(머티리얼 칸과 같은 규칙 — 유닛 t32..). DX12 · Vulkan 은 선언하지 않는다.
          */
         inline constexpr uint32 kEngineTexture0     = SW_SLOT_ENGINE_TEX0;
@@ -371,7 +371,7 @@ namespace sw
         /**
          * @brief WebGPU 바인드 그룹 0 의 번호입니다. binding = 레지스터 종류별 시프트 + 번호(DXC -fvk-b/t/s/u-shift 와 같은 값)이고 그룹은 하나다.
          * @details 셰이더는 이 값을 읽지 않는다 — DXC 인자(ShaderCompiler)와 백엔드의 바인드 그룹(WebGPURHICommandContext)과 리플렉션의 번호 되돌림(ShaderReflectionData)만 쓴다.
-         *          t 띠가 엔진 텍스처 칸(t32..t57)까지 가므로 t 폭이 가장 넓다. 샘플러가 따로 있다 — WGSL 은 텍스처 · 샘플러를 나눠 받는다(DX11 과 같은 모양, GL 의 결합 샘플러가 아니다).
+         *          t 띠가 엔진 텍스처 칸(t32..t58)까지 가므로 t 폭이 가장 넓다. 샘플러가 따로 있다 — WGSL 은 텍스처 · 샘플러를 나눠 받는다(DX11 과 같은 모양, GL 의 결합 샘플러가 아니다).
          */
         namespace wgpu
         {
@@ -469,8 +469,8 @@ namespace sw
         static_assert( kInstanceBuffer == 4, "t0..t3 은 비어 있고 띠는 인스턴스 버퍼 t4 부터다 — 띠를 내리면 DX12 테이블 · Vulkan 범위 · GL SSBO 번호가 함께 움직인다" );
         static_assert( kEngineTexture0 >= kMaterialTexture0 + kMaterialTextureCount && kEngineTexture0 >= vk::kRangeSize,
                        "엔진 텍스처 칸(에뮬)은 t 띠 · 머티리얼 칸 위다 — DX11 SRV 128 칸 안이고, GL 은 유닛을 칸 번호로 옮긴다" );
-        static_assert( SW_SLOT_ENGINE_TEX25 == SW_SLOT_ENGINE_TEX0 + 25 && kEngineTextureCount == 26 && kEngineTexture0 + kEngineTextureCount <= gl::kTextureUnitLimit,
-                       "엔진 텍스처 칸은 연속 26 칸이다. GL 텍스처 유닛은 머티리얼 칸처럼 레지스터 번호 그대로(t32..)라 GL 백엔드가 유닛 64 개 안에서 묶는다 (binding.hlsli 의 선언과 같다)" );
+        static_assert( SW_SLOT_ENGINE_TEX26 == SW_SLOT_ENGINE_TEX0 + 26 && kEngineTextureCount == 27 && kEngineTexture0 + kEngineTextureCount <= gl::kTextureUnitLimit,
+                       "엔진 텍스처 칸은 연속 27 칸이다. GL 텍스처 유닛은 머티리얼 칸처럼 레지스터 번호 그대로(t32..)라 GL 백엔드가 유닛 64 개 안에서 묶는다 (binding.hlsli 의 선언과 같다)" );
         static_assert( kMaterialBuffer == kInstanceBuffer + 1, "머티리얼 데이터 버퍼는 인스턴스 버퍼 바로 다음이어야 한다" );
         static_assert( kMaterialTexture0 == vk::kRangeSize && kSRVSlotCount <= kMaterialTexture0,
                        "머티리얼 텍스처 슬롯(에뮬)은 Vulkan t 밴드 바로 뒤에 둔다 — DX12 테이블 · Vulkan t 밴드 밖이고 SRV 띠가 자라도 겹치지 않는다" );
@@ -544,6 +544,7 @@ namespace sw
                 "DBufferB",             ///< DBuffer 데칼 노멀(rgb 덮인 월드 노멀 × 0.5 + 0.5, a 남은 비율)
                 "DBufferC",             ///< DBuffer 데칼 거칠기 · 금속도(r · g 덮인 값, a 남은 비율)
                 "SkyClouds",            ///< 볼륨 구름(VolumetricClouds 출력, 저해상도 — 산란 rgb · 불투명도 a) — 스카이 패스가 선언했고 이번 뷰에 볼륨 구름이 있을 때만
+                "RainOcclusion",        ///< 비 가림 맵의 깊이(FrameRainOcclusion) — 젖는 표면(지형 · 환경 표면 · 변형 지면 · 물)이 읽는다. 씬이 켜고 날씨가 있는 프레임만(웹은 읽지 않는다)
             };
             static_assert( sizeof( kEngineTextureNames ) / sizeof( kEngineTextureNames[0] ) == kEngineTextureCount, "엔진 텍스처 칸 표와 칸 수(SW_ENGINE_TEXTURE_COUNT)가 다르다" );
 

@@ -350,6 +350,7 @@ namespace sw
         ensurePassResources();
         ensureTransientResources( packet._viewportWidth, packet._viewportHeight );
         resetPassCbRing();
+        prepareRainOcclusion( packet );
         _passExecutor.setIdentityWorld( _state._frameContext );
         // 시드는 씬 경로와 같은 updatePassConstants 로 채운다. 따로 채우면 라이트, 블룸, 아웃라인 색 상수가
         // 빠지기 쉽다. 뷰-투영은 패킷의 주 시점이다(역행렬과 절두체도 함께 갱신된다).
@@ -787,6 +788,8 @@ namespace sw
         context._passValues.setFloat4( passConstantNames()._materialGlobalWeather, _state._materialGlobals._weather );
         context._passValues.setFloat4( passConstantNames()._materialGlobalRain, _state._materialGlobals._rain );
         context._passValues.setFloat4( passConstantNames()._materialGlobalEnvironment, _state._materialGlobals._environment );
+        context._passValues.setMatrix( passConstantNames()._rainOcclusionViewProj, _state._rainOcclusion.getViewProjection() );
+        context._passValues.setFloat4( passConstantNames()._rainOcclusionParams, _state._rainOcclusion.getShaderParams() );
         context._passValues.setFloat4( passConstantNames()._outlineColor, kDefaultOutlineColor );
         // 지난 프레임 어느 뷰도 묻지 않은 후처리 텍스처를 놓는다 — 이번 프레임의 뷰들이 묻기 전에 한 번.
         _state._pathTextures.pruneUnused();
@@ -907,6 +910,7 @@ namespace sw
         _state._deform._meshMorphPool.release( _pDevice );
         _state._deform._vertexAnimationPool.release( _pDevice );
         _state._lightBuffer.release( _pDevice );
+        _state._rainOcclusion.release( _pDevice );
         _fog.release();
         _state._probeUpdater.release( _pDevice );
         _state._lensFlare.release( _pDevice );
@@ -932,7 +936,7 @@ namespace sw
     {
         const uint32 batchCount = static_cast<uint32>( _state._gpuScene.getOpaqueBatches().size() + _state._gpuScene.getTransparentBatches().size() );
         // 그림자 패스는 타일(캐스케이드 · 점광 · 스폿 면)마다 씬을 한 번씩 그린다 — 어림값의 그림자 한 번을 타일 수로 바꾼다.
-        const uint32 shadowTileCount = MathUtil::max( _passExecutor.computeShadowTileCountPerView(), 1u );
+        const uint32 shadowTileCount = MathUtil::max( _passExecutor.computeShadowTileCountPerView(), 1u ) + ( _state._rainOcclusion.isActive() ? 1u : 0u ); // 비 가림 맵도 씬 한 번이다
         // 모듈 프록시의 요소는 요소마다 슬롯을 하나씩 쓴다(`drawExtensionElements`) — 그리는 패스 · 뷰 수를 모르므로 넉넉히 네 배로 어림한다(모자라면 링이 알리고 다음 프레임이 키운다).
         const uint32 moduleElementCount = static_cast<uint32>( _extensionHost.getDrawElements().size() ) * 4u;
         // 데칼은 텍스처가 같은 이웃 묶음마다 슬롯 하나다(에뮬 백엔드 — 네이티브 bindless 는 패스에 하나, `executeDecalPass`). 묶음 수 상한은 데칼 수다 — 그리는 뷰 수를 모르므로 두 배로 어림한다.
@@ -1243,7 +1247,24 @@ namespace sw
         // 점광 · 스폿 컬링 슬롯은 캐스케이드 슬롯 뒤다. 잡아 둔 칸(`_listLocalShadowCullInput`) 수만큼 슬롯을 지켜 빛이 들고 나도 슬롯 수가 흔들리지 않는다.
         _state._localShadowCullSlotBase = _state._cascadeCullSlotBase + _state._cascadeCullCount;
         _state._localShadowCullCount    = prepareLocalShadowCullInputs();
-        _state._gpuScene.setCullViewCount( _pDevice, _state._localShadowCullSlotBase + static_cast<uint32>( _state._listLocalShadowCullInput.size() ) );
+        // 비 가림 맵의 컬링 슬롯은 맨 뒤다 — 맵을 그리는 프레임만 하나 늘린다.
+        const uint32 rainCullSlot = _state._localShadowCullSlotBase + static_cast<uint32>( _state._listLocalShadowCullInput.size() );
+        _state._rainOcclusion.setCullSlot( rainCullSlot );
+        _state._gpuScene.setCullViewCount( _pDevice, rainCullSlot + ( _state._rainOcclusion.isActive() ? 1u : 0u ) );
+    }
+
+    void FrameRenderer::prepareRainOcclusion( const RenderFramePacket& packet )
+    {
+        // 읽는 것이 있는 프레임만 그린다 — 날씨 값이 모두 0 이고 맵을 읽는 강수도 없으면 비용이 없다.
+        const float4& weather    = packet._materialGlobals._weather;
+        const bool    bWet       = weather._x > 0.0f || weather._y > 0.0f || weather._z > 0.0f || packet._materialGlobals._rain._x > 0.0f;
+        const bool    bParticles = VFXGPUSimulation::usesRainOcclusion( _state._gpuScene.getParticleBatches(), _state._gpuScene.getVFXMeshEmitters() );
+        // 그림자 PSO 로 그린다(깊이만 쓰는 같은 셰이더 · 머티리얼 변형) — 깊이 형식도 그 PSO 의 것이다. 그림자 패스가 없는 파이프라인(2D)은 맵이 없다.
+        RHIPipelineStateDesc         shadowDesc{};
+        const RHIPipelineStateHandle shadowPSO   = _psoManager.getEnginePSO( RenderPassKind::Shadow );
+        const bool                   bHasDesc    = shadowPSO != 0 && _psoManager.findDesc( shadowPSO, shadowDesc );
+        const RHIFormat              depthFormat = bHasDesc ? shadowDesc._depthStencilFormat : RHIFormat::Unknown;
+        _state._rainOcclusion.beginFrame( _pDevice, packet._rainOcclusion, packet._cameraPos, depthFormat, bWet || bParticles, bParticles );
     }
 
     uint32 FrameRenderer::prepareLocalShadowCullInputs()

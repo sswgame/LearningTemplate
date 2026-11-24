@@ -122,6 +122,9 @@ namespace sw
         // 표면 변형 층도 씬이 갖는다 — 없으면 빈 값이라 셰이더가 정점을 옮기지 않는다.
         if ( pEnvironment == nullptr || pEnvironment->findSurfaceDeform( packet._surfaceDeform ) == false )
             packet._surfaceDeform = SurfaceDeformBinding{};
+        // 비 가림 맵 — 씬이 켜고 품질이 크기를 정한다(0 이면 없다).
+        if ( pEnvironment != nullptr && pEnvironment->findRainOcclusion( packet._rainOcclusion ) )
+            packet._rainOcclusion._resolution = engine::getSubsystem<EngineConfig>()._render._rainOcclusionResolution;
         packet._materialGlobals = pEnvironment != nullptr ? pEnvironment->collectMaterialGlobals() : MaterialGlobals{};
         return lights;
     }

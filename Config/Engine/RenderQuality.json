@@ -4,6 +4,7 @@
         "_shadowLocalMinTileResolution": 64,
         "_shadowLocalCullSlotLimit": 4,
         "_maxExtraViewCount": 4,
+        "_rainOcclusionResolution": 256,
         "_skyClouds": {
             "_bVolumetric": false
         },
@@ -28,6 +29,7 @@
         "_shadowLocalMinTileResolution": 256,
         "_shadowLocalCullSlotLimit": 32,
         "_maxExtraViewCount": 16,
+        "_rainOcclusionResolution": 1024,
         "_skyClouds": {
             "_viewStepCount": 80
         },

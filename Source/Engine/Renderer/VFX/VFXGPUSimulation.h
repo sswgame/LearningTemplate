@@ -23,6 +23,7 @@ namespace sw
 {
     struct GPUParticleBatch;
     struct GPUVFXMeshEmitter;
+    struct VFXCollisionDef;
 
     class FrameBufferTable;
     class IRHICommandList;
@@ -49,6 +50,7 @@ namespace sw
     struct VFXSimulationFrameInput
     {
         VFXDepthHistoryInput    _depth{};
+        VFXDepthHistoryInput    _rainOcclusion{};     ///< 지난 프레임의 비 가림 맵(`FrameRainOcclusion`) — `VFXCollisionMethod::RainOcclusion` 방출기가 장면 깊이 대신 읽는다
         RHIBufferHandle         _instanceBuffer{ 0 }; ///< GPUScene 인스턴스 버퍼(메시 입자가 쓴다)
         RHIUnorderedAccessIndex _instanceUAV{ kInvalidDescriptorIndex };
         RHIBufferHandle         _lightBuffer{ 0 };                    ///< 라이트 버퍼(`GPULightBuffer`) — 파티클 라이트가 GPU 구간에 쓴다
@@ -130,6 +132,8 @@ namespace sw
         static VFXGPULightAssignment assignLightRanges( const vector<GPUParticleBatch>& listBatch, const vector<GPUVFXMeshEmitter>& listMeshEmitter,
                                                         vector<VFXGPULightRange>& outListRange );
 
+        /** @brief 비 가림 맵을 읽는 방출기(`VFXCollisionMethod::RainOcclusion`)가 있으면 true 입니다 — 렌더러가 맵을 그릴지 정합니다. */
+        [[nodiscard]] static bool usesRainOcclusion( const vector<GPUParticleBatch>& listBatch, const vector<GPUVFXMeshEmitter>& listMeshEmitter );
         /**
          * @brief 이번 프레임의 GPU 배치 · GPU 메시 방출기마다 상태를 갖추고 매개변수를 올립니다. **기록 시작 전에**(GPUScene 을 올린 뒤) 부릅니다.
          * @details PSO 가 없으면 한 번 오류를 남기고 그 방출기를 그리지 않는다 — CPU 로 바꿔 그리지 않는다(대상은 데이터가 정했다).
@@ -254,6 +258,8 @@ namespace sw
         EmitterState* prepareEmitterState( IRHIDevice& device, const VFXGPUEmitterRequest& request );
         /** @brief @p state 의 시뮬레이션 디스패치를 붙입니다(밀린 단계가 없고 이미 돌았으면 매개변수를 버리고 붙이지 않는다). */
         void appendSimulation( EmitterState& state, const VFXGPUEmitterRequest& request, const float4x4& world, bool bRibbon, const VFXGPULightRange& lightRange );
+        /** @brief @p collision 의 방법이 견주는 깊이입니다 — 비 가림 맵이면 맵, 그 밖은 장면 깊이입니다. */
+        const VFXDepthHistoryInput& getCollisionDepth( const VFXCollisionDef& collision ) const;
         /** @brief @p state 의 이번 프레임 매개변수 구간을 `_listParamWord` 끝에 붙이고 디스패치할 단계 수를 돌려줍니다. */
         uint32 appendParams( EmitterState& state, const VFXGPUEmitterRequest& request, const float4x4& world, bool bRibbon, const VFXGPULightRange& lightRange );
         /** @brief 메시 방출기 @p emitter 의 인스턴스 쓰기 구간을 붙입니다. */

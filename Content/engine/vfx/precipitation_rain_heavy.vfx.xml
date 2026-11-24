@@ -1,0 +1,24 @@
+<?xml version="1.0" encoding="utf-8"?>
+<?asset guid="28aec32ab585430da8b934ddfa2b94b1"?>
+<!-- 굵은 비(GPU) — precipitation_rain 과 같은 줄기를 네 배 넘게 떨어뜨린다. 지붕 아래에는 비 가림 맵(RainOcclusionComponent)으로 들지 않는다 — 물리 광선이 없어 방울 수가 CPU 비용이 아니다.
+     입자는 방출기를 따라 움직인다(GPU 는 로컬 공간뿐 — 비는 떨어지는 속도가 커 눈에 띄지 않는다).
+     맵이 없는 씬 · 품질(모바일 · 웹)에서는 가려지지 않으므로 거기서는 precipitation_rain(물리 광선)을 쓴다. 텍스처는 Kenney 파티클 팩(CC0). -->
+<VFXEffectDef>
+	<_listUserParameter>
+		<VFXUserParameterDef _name="Intensity" _value="1, 1, 1, 1"/>
+	</_listUserParameter>
+	<_listEmitter>
+		<VFXEmitterDef _name="Streaks" _texturePath="engine/textures/particles/kenney_particle/trace_07.dds" _blendMode="Alpha" _bLooping="true"
+		               _maxParticles="4000" _duration="1" _spawnRate="3400" _lifetimeMin="1.1" _lifetimeMax="1.1"
+		               _spawnHalfExtents="10, 1, 10" _velocityMin="-0.4, -16, -0.4" _velocityMax="0.4, -13, 0.4" _gravity="0, 0, 0" _tintParameter="Intensity">
+			<_collision _mode="Kill" _method="RainOcclusion"/>
+			<_sizeOverLife><_listKey><FloatCurveKey _time="0" _value="0.4" _interpolation="Linear"/></_listKey></_sizeOverLife>
+			<_colorOverLife>
+				<_red><_listKey><FloatCurveKey _time="0" _value="0.72" _interpolation="Linear"/></_listKey></_red>
+				<_green><_listKey><FloatCurveKey _time="0" _value="0.78" _interpolation="Linear"/></_listKey></_green>
+				<_blue><_listKey><FloatCurveKey _time="0" _value="0.86" _interpolation="Linear"/></_listKey></_blue>
+				<_alpha><_listKey><FloatCurveKey _time="0" _value="0.45" _interpolation="Linear"/></_listKey></_alpha>
+			</_colorOverLife>
+		</VFXEmitterDef>
+	</_listEmitter>
+</VFXEffectDef>

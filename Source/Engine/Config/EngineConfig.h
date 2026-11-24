@@ -489,6 +489,12 @@ namespace sw
         PROPERTY()
         SkyLightConfig _skyLight{};
 
+        /**
+         * @brief 비 가림 맵(`RainOcclusionComponent`)의 한 변 텍셀 수입니다. 0 이면 맵이 없다(표면은 어디서나 젖고, 맵을 읽는 GPU 강수는 가려지지 않는다 — 모바일 · 웹).
+         */
+        PROPERTY( Min = 0, Max = 2048 )
+        uint32 _rainOcclusionResolution{};
+
         /** @brief 볼륨 구름의 품질입니다(켬 · 걸음 수 · 기록 비율 — `SkyCloudConfig`). */
         PROPERTY()
         SkyCloudConfig _skyClouds{};

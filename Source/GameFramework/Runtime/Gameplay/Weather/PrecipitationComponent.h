@@ -20,6 +20,7 @@ namespace sw
      *          (`VFXCollisionMode::Kill`) 지붕 아래에는 비가 들지 않는다 — 실내 차폐를 따로 굽지 않는다(언리얼 Niagara 의 충돌 강수, 유니티 VFX Graph 의 깊이 충돌 자리).
      *          물리 광선이라 화면 밖 지붕도 막는다.
      *          지붕이 `_height` 보다 높은 실내는 효과가 태어날 때 하늘을 보아 막는다(`VFXCollisionDef::_openSkyDistance`).
+     *          방울이 많은 강수는 비 가림 맵을 읽는 GPU 효과(`VFXCollisionMethod::RainOcclusion` — engine/vfx/precipitation_rain_heavy)를 쓴다.
      */
     REFLECT( Category = "Environment", DisplayName = "Precipitation", Tooltip = "Plays the effect on this object above the main view while a weather value is above 0 (rain, snow)" )
     class SW_GF_API PrecipitationComponent : public Component

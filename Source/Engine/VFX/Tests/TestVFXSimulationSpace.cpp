@@ -71,13 +71,14 @@ namespace
     using Util = VFXSimulationSpaceTestUtil;
 } // namespace
 
-/** @brief [VFXSimulationSpaceTest] 생성 상자의 입자는 모두 상자 안이고 한 점에 모이지 않는다 — 상자와 월드 공간은 CPU 에서만 돈다 */
+/** @brief [VFXSimulationSpaceTest] 생성 상자의 입자는 모두 상자 안이고 한 점에 모이지 않는다 — 월드 공간은 CPU 에서만 돌고, 로컬 공간의 상자는 GPU 도 같은 난수로 낸다 */
 SW_TEST_CASE( VFXSimulationSpaceTest, ParticlesSpawnInsideTheBox )
 {
     const VFXEmitterDef emitter = Util::makeEmitter( VFXSimulationSpace::World );
     SW_EXPECT_TRUE( emitter.validate( "test" ) );
     SW_EXPECT_TRUE( emitter.computeSupportedTargets().has( VFXSimulationTarget::CPU ) );
     SW_EXPECT_FALSE( emitter.computeSupportedTargets().has( VFXSimulationTarget::GPU ) );
+    SW_EXPECT_TRUE( Util::makeEmitter( VFXSimulationSpace::Local ).computeSupportedTargets().has( VFXSimulationTarget::GPU ) );
     VFXCPUSimulation simulation{ make_shared<const VFXEmitterDef>( emitter ), 7u, 1.0f };
     for ( uint32 step = 0; step < 10; ++step )
         simulation.step( Util::kStep, nullptr );

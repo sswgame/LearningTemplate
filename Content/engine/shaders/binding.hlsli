@@ -39,7 +39,7 @@
  *   ├────────┼──────────────────┼─────────────────────────────────────────┼──────────────────────────────────────────┤
  *   │ DX12   │ 네이티브 bindless│ t0 space1 무제한 배열(힙 전체 테이블)   │ 배열 원소 번호                           │
  *   │ Vulkan │ 네이티브 bindless│ set 1 binding 0 무제한 배열             │ 배열 원소 번호                           │
- *   │ DX11   │ 슬롯 에뮬        │ 엔진 t32..t57 · 머티리얼 t16..t31       │ 엔진: PassCB 인덱스와 값 비교로 슬롯 선택│
+ *   │ DX11   │ 슬롯 에뮬        │ 엔진 t32..t58 · 머티리얼 t16..t31       │ 엔진: PassCB 인덱스와 값 비교로 슬롯 선택│
  *   │ OpenGL │ 슬롯 에뮬        │ 텍스처 유닛 16..49(결합)        │ 머티리얼: 서수 0..15 (DX11 과 같다)      │
  *   └────────┴──────────────────┴─────────────────────────────────────────┴──────────────────────────────────────────┘
  *   네이티브인지는 common.hlsli 의 `SW_NATIVE_BINDLESS` 가 정한다(ShaderCompiler 가 DX12 · Vulkan 에만 SW_BINDLESS=1 을 준다).
@@ -348,11 +348,14 @@ SW_DECLARE_CBUFFER( PassCB, SW_SLOT_PASS_CB )
     float4 g_MaterialGlobalWeather;     // x 젖음(0..1), y 웅덩이(0..1), z 눈(0..1), w 설선 높이(m) — 파라미터 묶음 engine/materials/weather.matparams.xml 의 Weather
     float4 g_MaterialGlobalRain;        // x 비 세기(0..1 — 웅덩이 빗방울 링), yzw 0(예비) — 같은 묶음의 Rain
     float4 g_MaterialGlobalEnvironment; // xyz 환경의 기준 시점(게임 카메라 위치 — 식생 거리 페이드), w 환경 시간(초 — 바람, 결정적 사진은 멈춘다)
+    // 비 가림 맵(C++ FrameRainOcclusion) — 위에서 내려다본 정사영 뷰-투영과 (깊이 바이어스 NDC, 노멀 오프셋 m, 1 / 한 변, 켬 1). 맵이 없는 프레임은 w 가 0 이다. 텍스처는 엔진 칸 RainOcclusion
+    float4x4 g_RainOcclusionViewProj;
+    float4   g_RainOcclusionParams;
     // 엔진 텍스처 인덱스 g_<이름>Index — 이름은 C++ 표 shaderslot::emulated::kEngineTextureNames 하나가 정하고 컴파일러가 SW_ENGINE_TEXTURE_INDEX_<칸> 으로 넣는다.
     // 손으로 적지 않는다: 표에 없는 엔진 텍스처 인덱스가 생기면 에뮬 백엔드(DX11 · GL)가 칸을 몰라 자홍을 낸다(뜻은 표의 주석). 걸려 있지 않은 역할은 kInvalidIndex 다.
-    // 아래 26 줄은 SW_ENGINE_TEXTURE_COUNT 와 같은 수다.
-#if !defined( SW_ENGINE_TEXTURE_INDEX_0 ) || !defined( SW_ENGINE_TEXTURE_INDEX_25 ) || defined( SW_ENGINE_TEXTURE_INDEX_26 ) || SW_ENGINE_TEXTURE_COUNT != 26
-    #error "SW_ENGINE_TEXTURE_INDEX_* missing or count changed - ShaderCompiler::appendEngineDefines injects them from shaderslot::emulated::kEngineTextureNames; match the 26 fields below"
+    // 아래 27 줄은 SW_ENGINE_TEXTURE_COUNT 와 같은 수다.
+#if !defined( SW_ENGINE_TEXTURE_INDEX_0 ) || !defined( SW_ENGINE_TEXTURE_INDEX_26 ) || defined( SW_ENGINE_TEXTURE_INDEX_27 ) || SW_ENGINE_TEXTURE_COUNT != 27
+    #error "SW_ENGINE_TEXTURE_INDEX_* missing or count changed - ShaderCompiler::appendEngineDefines injects them from shaderslot::emulated::kEngineTextureNames; match the 27 fields below"
 #endif
     uint  SW_ENGINE_TEXTURE_INDEX_0;
     uint  SW_ENGINE_TEXTURE_INDEX_1;
@@ -380,6 +383,7 @@ SW_DECLARE_CBUFFER( PassCB, SW_SLOT_PASS_CB )
     uint  SW_ENGINE_TEXTURE_INDEX_23;
     uint  SW_ENGINE_TEXTURE_INDEX_24;
     uint  SW_ENGINE_TEXTURE_INDEX_25;
+    uint  SW_ENGINE_TEXTURE_INDEX_26;
     uint  g_Flags;
     uint  g_SwInstancesIndex;          // 인스턴스 구조버퍼가 걸려 있으면 유효, kInvalidIndex 면 g_World 폴백 (풀스크린·픽스처)
     uint  g_SwInstanceCount;           // 인스턴스 버퍼 원소 수 — 범위 밖 인덱스를 막는다 (DX12 루트 SRV 는 경계 검사가 없다)

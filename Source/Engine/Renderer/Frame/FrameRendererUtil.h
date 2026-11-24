@@ -374,6 +374,8 @@ namespace sw
         hashed_string _bloomDirtMask{ "BloomDirtMask" };
         /// 표면 변형 층의 높이 텍스처(패킷의 `SurfaceDeformBinding`) — 씬 지오메트리 패스의 정점 셰이더가 `g_SurfaceDeformIndex` 로 읽는다. 텍스처 캐시가 소유한 CPU 텍스처다.
         hashed_string _surfaceDeform{ "SurfaceDeform" };
+        /// 비 가림 맵의 깊이(`FrameRainOcclusion`) — 표면 셰이더가 `g_RainOcclusionIndex` 로 읽는다. 렌더러가 소유한 텍스처다.
+        hashed_string _rainOcclusion{ "RainOcclusion" };
     };
 } // namespace sw
 
@@ -435,6 +437,9 @@ namespace sw
         hashed_string _materialGlobalWeather{ "g_MaterialGlobalWeather" };
         hashed_string _materialGlobalRain{ "g_MaterialGlobalRain" };
         hashed_string _materialGlobalEnvironment{ "g_MaterialGlobalEnvironment" };
+        /// @brief 비 가림 맵의 뷰-투영과 (깊이 바이어스 NDC, 노멀 오프셋 m, 1 / 한 변, 켬)입니다(`FrameRainOcclusion`).
+        hashed_string _rainOcclusionViewProj{ "g_RainOcclusionViewProj" };
+        hashed_string _rainOcclusionParams{ "g_RainOcclusionParams" };
         /// @brief 안개 패스의 진단 보기입니다(`FrameFog::makeDebugParams`, fog.hlsl).
         hashed_string _fogDebugParams{ "g_FogDebugParams" };
         hashed_string _postProcessMaterial{ "g_PostProcessMaterial" };   ///< 후처리 머티리얼 그리기마다의 무게(x)

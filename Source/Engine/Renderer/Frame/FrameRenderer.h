@@ -398,6 +398,8 @@ namespace sw
          * @return 슬롯 수(0 이면 쓰지 않음)
          */
         uint32 prepareCascadeCullInputs();
+        /** @brief 이번 프레임의 비 가림 맵을 준비합니다(`FrameRainOcclusion::beginFrame`) — 읽는 것(날씨 값 · 맵을 읽는 강수)이 있을 때만 그린다. 패스 상수를 채우기 전에 부른다. */
+        void prepareRainOcclusion( const RenderFramePacket& packet );
         /**
          * @brief 그림자를 드리우는 점광 · 스폿마다의 컬링 슬롯을 맞춥니다(상수 버퍼 · 절두체). 상한은 `RenderConfig::_shadowLocalCullSlotLimit`(감사 RN-5).
          * @return 이번 프레임에 자기 슬롯을 가진 빛 수(0 이면 모든 타일이 합친 칸)

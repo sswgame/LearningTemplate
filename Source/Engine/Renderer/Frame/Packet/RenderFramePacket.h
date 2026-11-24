@@ -5,6 +5,7 @@
 #pragma once
 #include "Engine/EngineMinimal.h"
 #include "Engine/Environment/Fog/FogSettings.h"
+#include "Engine/Environment/Rain/RainOcclusionSettings.h"
 #include "Engine/Environment/Sky/SkyGradient.h"
 #include "Engine/Environment/Surface/SurfaceDeformBinding.h"
 #include "Engine/Graphics/Canvas/CanvasDrawList.h"
@@ -112,6 +113,8 @@ namespace sw
         FogSettings _fog;
         /** @brief 씬의 표면 변형 층(`SurfaceDeformSystem`)입니다. 핸들이 비면 층이 없고 셰이더는 정점을 옮기지 않는다(`g_SurfaceDeformParams.z` 가 0). */
         SurfaceDeformBinding _surfaceDeform;
+        /** @brief 씬의 비 가림 맵 값(`RainOcclusionComponent`)입니다. 해상도가 0 이면 맵이 없다(컴포넌트 없음 · 품질이 껐다). */
+        RainOcclusionSettings _rainOcclusion;
         /** @brief 이 프레임의 전역 머티리얼 값(날씨 · 환경 시간)입니다(`SceneEnvironment::collectMaterialGlobals` → PassCB `g_MaterialGlobal*`). */
         MaterialGlobals _materialGlobals;
         /** @brief 이번 프레임의 추가 뷰(CCTV, 백미러, 분할 화면, PiP)입니다. 쉬는 뷰도 실립니다(`RenderViewRequest::_bRender`). */
@@ -176,6 +179,7 @@ namespace sw
             , _skyLight{}
             , _fog{}
             , _surfaceDeform{}
+            , _rainOcclusion{}
             , _materialGlobals{}
             , _listView{}
             , _canvas{}
@@ -238,6 +242,7 @@ namespace sw
             _skyLight        = float4{};
             _fog             = FogSettings{};
             _surfaceDeform   = SurfaceDeformBinding{};
+            _rainOcclusion   = RainOcclusionSettings{};
             _materialGlobals = MaterialGlobals{};
             _listView.clear();
             _canvas.clear();

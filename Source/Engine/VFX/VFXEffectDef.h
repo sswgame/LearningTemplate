@@ -84,6 +84,7 @@ namespace sw
     {
         PhysicsRaycast, ///< 물리 씬(3D)에 한 단계의 선분을 쏜다 — CPU 전용(게임 스레드의 물리 씬)
         SceneDepth,     ///< 주 시점의 지난 프레임 깊이와 비교한다 — GPU 전용. 화면 밖 · 가려진 면은 못 본다(`VFXCollisionDef` 설명)
+        RainOcclusion,  ///< 위에서 내려다본 비 가림 맵(`RainOcclusionComponent`)과 비교한다 — GPU 전용, 없애기(Kill)만. 맵이 덮는 범위의 지붕 아래면 화면 밖이어도 사라진다
     };
 } // namespace sw
 
@@ -145,7 +146,9 @@ namespace sw
      *          `SceneDepth`(GPU): 입자를 주 시점의 **지난 프레임** 깊이(`FrameRenderer` 의 깊이 히스토리)에 투영해, 깊이 면 뒤로 `_depthThickness` 안쪽에
      *          들어가면 닿은 것으로 본다. 법선은 깊이의 이웃 텍셀 기울기다(언리얼 Niagara GPU 깊이 버퍼 충돌). 한계: 화면 밖과 가려진 면(다른 물체 뒤)은
      *          보지 못하고, 깊이 두께보다 빨리 지나가면 뚫고, 한 프레임 늦은 깊이라 빠르게 움직이는 면은 어긋난다. 추가 뷰의 깊이는 쓰지 않는다.
-     *          두 방법 모두 입자 크기는 보지 않는다(점 충돌).
+     *          `RainOcclusion`(GPU): 지난 프레임의 비 가림 맵(위에서 내려다본 깊이)보다 아래면 사라진다 — 많은 빗방울을 물리 광선 없이 실내에서 뺀다(Godot GPUParticles 의 높이 맵 충돌).
+     *          씬에 맵이 없거나 품질(`RenderConfig::_rainOcclusionResolution` 0 — 모바일 · 웹)이 껐으면 가려지지 않는다.
+     *          모든 방법이 입자 크기는 보지 않는다(점 충돌).
      */
     REFLECT()
     struct SW_API VFXCollisionDef
@@ -157,7 +160,7 @@ namespace sw
 
         PROPERTY( Tooltip = "What a particle does when it hits something" )
         VFXCollisionMode _mode{ VFXCollisionMode::None };
-        PROPERTY( Tooltip = "How hits are found: PhysicsRaycast (CPU simulation) or SceneDepth (GPU simulation, last frame's main view depth)" )
+        PROPERTY( Tooltip = "How hits are found: PhysicsRaycast (CPU simulation), SceneDepth (GPU simulation, last frame's main view depth) or RainOcclusion (GPU simulation, Kill only, the scene's rain occlusion map)" )
         VFXCollisionMethod _method{ VFXCollisionMethod::PhysicsRaycast };
         PROPERTY( Min = 0.0, Units = m, Tooltip = "SceneDepth: how far behind the depth surface still counts as a hit (required above 0 for SceneDepth)" )
         float32 _depthThickness{ 0.0f };
@@ -300,7 +303,7 @@ namespace sw
         float32 _lifetimeMin{ 0.0f };
         PROPERTY( Min = 0.0, Units = s, Tooltip = "Longest particle life (required)" )
         float32 _lifetimeMax{ 0.0f };
-        PROPERTY( Tooltip = "Half size of the box around the emitter the particles are born in (zero = the emitter point; CPU simulation)" )
+        PROPERTY( Tooltip = "Half size of the box around the emitter the particles are born in (zero = the emitter point)" )
         float3 _spawnHalfExtents{};
         PROPERTY( Tooltip = "Space the particles live in: Local follows the emitter, World stays where each particle was born (CPU simulation)" )
         VFXSimulationSpace _space{ VFXSimulationSpace::Local };

@@ -442,6 +442,50 @@ namespace sw
         return nullptr;
     }
 
+    void FramePassExecutor::registerRainOcclusion( FramePassContext& context )
+    {
+        const FrameRainOcclusion& rain = _state._rainOcclusion;
+        if ( rain.isDrawn() )
+            context._resourceRegistry.registerTexture( attachmentNames()._rainOcclusion, rain.getDepth()._texture, rain.getDepth()._srv );
+    }
+
+    void FramePassExecutor::drawRainOcclusion()
+    {
+        FrameRainOcclusion&          rain = _state._rainOcclusion;
+        const RHIPipelineStateHandle pso  = _psoManager.getEnginePSO( RenderPassKind::Shadow );
+        if ( rain.isActive() == false || pso == 0 || _pCmd == nullptr )
+            return;
+        SW_PROFILE_SCOPE( "RT.RainOcclusion" );
+        // 그림자 타일과 같은 그리기다 — 그림자 PSO · 머티리얼 변형이 g_LightViewProj 로 투영한다. 컬링만 맵의 슬롯이다.
+        FramePassContext context = _state._frameContext;
+        context._pCmd            = _pCmd;
+        context._passType        = RenderPassKind::Shadow;
+        context._cullViewIndex   = rain.getCullSlot();
+        context._resourceRegistry.reset();
+        registerLightBuffer( context );
+        registerSurfaceDeformLayer( context );
+        if ( acquirePassCb( context ) == false ) // 링 고갈 — 이 프레임은 맵이 없다(걸지 않는다)
+            return;
+        context._passValues.setMatrix( passConstantNames()._lightViewProj, rain.getViewProjection() );
+
+        const RHITextureSlot& depth = rain.getDepth();
+        _pCmd->prepareTextureForRenderTarget( depth._texture );
+        RHIRenderPassBeginInfo beginInfo{};
+        beginInfo._bBindColor       = SW_FALSE;
+        beginInfo._colorTargetCount = 0;
+        beginInfo._depthTarget      = depth._texture;
+        beginInfo._depthLoadOp      = RHIRenderPassLoadOp::Clear;
+        beginInfo._depthStoreOp     = RHIRenderPassStoreOp::Store;
+        beginInfo._clearDepth       = 1.0f;
+        beginInfo._width            = depth._width;
+        beginInfo._height           = depth._height;
+        _pCmd->beginRenderPass( beginInfo );
+        drawSceneMeshes( context, pso, false );
+        _pCmd->endRenderPass();
+        _pCmd->prepareTextureForShaderRead( depth._texture );
+        rain.markDrawn();
+    }
+
     void FramePassExecutor::registerSurfaceDeformLayer( FramePassContext& context )
     {
         if ( _state._surfaceDeform._texture.isReady() == false )

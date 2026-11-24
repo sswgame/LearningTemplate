@@ -188,6 +188,7 @@ namespace sw
         // 그래서 인스턴스 버퍼(지오메트리 패스 전용)와 달리 여기서 모든 패스에 바인딩한다.
         registerLightBuffer( context );
         registerSurfaceDeformLayer( context );
+        registerRainOcclusion( context );
         // 후처리 텍스처(LUT · 먼지 마스크)도 패스를 가리지 않는다 — 톤맵이 Tonemap 패스에도 후처리 체인(Present)에도 있고, 파이프라인 XML 이 자리를 정한다.
         registerPostProcessTextures( context );
 
@@ -1405,6 +1406,7 @@ namespace sw
         context._passType = RenderPassKind::Invalid;
         registerLightBuffer( context );
         registerSurfaceDeformLayer( context );
+        registerRainOcclusion( context );
         ExtensionViewInfo view{};
         view._bMainView = _pActiveView == &_state.getMainView();
         view._width     = activePool().getWidth();

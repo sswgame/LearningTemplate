@@ -78,6 +78,7 @@
             "_filterMipCount": 6,
             "_captureIntervalFrames": 30
         },
+        "_rainOcclusionResolution": 512,
         "_skyClouds": {
             "_bVolumetric": true,
             "_viewStepCount": 48,

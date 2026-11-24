@@ -232,7 +232,7 @@ float evaluateCurve( uint firstRow, uint keyCount, float time )
     return value;
 }
 
-/** @brief 입자 번호 @p particleIndex 의 처음 상태입니다 — 수명 → 속도 x → y → z 순으로 난수를 하나씩 쓴다(CPU 와 같은 순서). */
+/** @brief 입자 번호 @p particleIndex 의 처음 상태입니다 — 수명 → 속도 x → y → z → 상자 x → y → z 순으로 난수를 하나씩 쓴다(CPU 와 같은 순서. 상자는 뒤라 점 생성의 수열이 그대로다). */
 VFXParticleState makeParticle( uint2 particleIndex )
 {
     const uint4  seedRow     = loadParamRow( SW_VFX_PARAM_ROW_SEED );
@@ -245,7 +245,11 @@ VFXParticleState makeParticle( uint2 particleIndex )
     particle._velocityLifetime.x = lerpFloat( velocityMin.x, velocityMax.x, nextUnitFloat( state, seedRow.zw ) );
     particle._velocityLifetime.y = lerpFloat( velocityMin.y, velocityMax.y, nextUnitFloat( state, seedRow.zw ) );
     particle._velocityLifetime.z = lerpFloat( velocityMin.z, velocityMax.z, nextUnitFloat( state, seedRow.zw ) );
+    const float4 spawnBox        = asfloat( loadParamRow( SW_VFX_PARAM_ROW_SPAWN_BOX ) );
     particle._positionAge        = float4( 0.0f, 0.0f, 0.0f, 0.0f );
+    particle._positionAge.x      = lerpFloat( -spawnBox.x, spawnBox.x, nextUnitFloat( state, seedRow.zw ) );
+    particle._positionAge.y      = lerpFloat( -spawnBox.y, spawnBox.y, nextUnitFloat( state, seedRow.zw ) );
+    particle._positionAge.z      = lerpFloat( -spawnBox.z, spawnBox.z, nextUnitFloat( state, seedRow.zw ) );
     particle._particleIndex      = uint4( particleIndex, 0u, 0u );
     return particle;
 }
