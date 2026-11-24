@@ -154,6 +154,8 @@ _MMO_PAWN_SCENARIOS = (("game/playground/automation/netpair/hub_walk_north.scena
                        ("game/playground/automation/netpair/hub_walk_south.scenario.xml", "hub_south"))
 _MMO_PAWN_EMULATION = {"gv_netEmulationLatencyMs": "60", "gv_netEmulationJitterMs": "10", "gv_netEmulationLossPercent": "3"}
 _MMO_ACCEPTED = re.compile(r"entered the hub as avatar \d+ on connection \d+ \(level (\d+), (new account|stored progress)\)")
+_MMO_FLOOR = re.compile(r"\[Hub\] floor self=(\d+) x=(-?[\d.]+) z=(-?[\d.]+) seen=(\d+) x=(-?[\d.]+) z=(-?[\d.]+)")
+_MMO_FLOOR_TOLERANCE = 0.3  # 바닥 위에 선 자리(m) - 절대 자리로 보내면 보간 지연만큼 어긋난다
 _MMO_SAVED = re.compile(r"\[Hub\] profile of account \d+ saved")
 
 
@@ -172,6 +174,14 @@ def check_mmo_logs(server_text: str, list_client_text: list[str]) -> CheckResult
         result.problems += [f"a walker was admitted with '{entry[1]}' - expected a new account" for entry in list_admitted[2:] if entry[1] != "new account"]
     if _MMO_SAVED.search(server_text) is None:
         result.problems.append("the server log has no 'profile of account N saved' line - the session end did not save")
+    # 남쪽 클라이언트가 바닥 위에 선 자기 자리와 북쪽 클라이언트가 본 그 폰의 자리(둘 다 바닥 기준).
+    list_floor = [match for text in list_client_text for match in _MMO_FLOOR.findall(text)]
+    own = [(float(x), float(z)) for floor, x, z, *_ in list_floor if floor != "0"]
+    seen = [(float(x), float(z)) for _, _, _, floor, x, z in list_floor if floor != "0"]
+    if len(own) != 1 or len(seen) != 1:
+        result.problems.append(f"expected one rider and one viewer of the moving floor - found {len(own)} and {len(seen)} 'floor self=' lines")
+    elif max(abs(own[0][0] - seen[0][0]), abs(own[0][1] - seen[0][1])) > _MMO_FLOOR_TOLERANCE:
+        result.problems.append(f"the rider stands at {own[0]} on the moving floor but the other client shows it at {seen[0]}")
     result.problems += problem_lines("server", server_text)
     for index, text in enumerate(list_client_text):
         result.problems += problem_lines(f"client {index + 1}", text)

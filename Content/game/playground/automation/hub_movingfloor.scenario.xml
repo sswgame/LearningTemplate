@@ -30,5 +30,8 @@
 	<Expect watch="Object.Y" target="Player" near="0.2" tolerance="0.15"/>
 	<Expect watch="Object.X" target="Player" near="5" tolerance="1.6"/>
 	<Expect watch="Object.Z" target="Player" near="-28" tolerance="1.6"/>
+	<!-- ④ 세 바닥이 보이는 자리의 사진 — 회전판 위에 선 채로 찍는다(골든은 통합에서 뜬다) -->
+	<Screenshot file="hub_movingfloor.ppm" stability="Assets"/>
+	<ExpectImage file="hub_movingfloor.ppm" golden="hub_movingfloor"/>
 	<Pass/>
 </Scenario>

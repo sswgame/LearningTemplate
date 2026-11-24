@@ -54,6 +54,11 @@
 	<WaitUntil watch="Object.X" target="FloorShuttle" atMost="5.5" timeoutWallSeconds="20"/>
 	<Expect watch="Hub.PawnFloor" equals="1"/>
 	<Expect watch="Hub.PawnFloorSlip" atMost="0.5"/>
+	<!-- 상대가 본 자리와 견줄 줄(`Scripts net-pair mmo`) — 상대가 남길 틈으로 바닥이 한 번 더 오간다 -->
+	<DevCommand line="hub.floor"/>
+	<WaitUntil watch="Object.X" target="FloorShuttle" atLeast="8.5" timeoutWallSeconds="20"/>
+	<WaitUntil watch="Object.X" target="FloorShuttle" atMost="5.5" timeoutWallSeconds="20"/>
+	<Expect watch="Hub.PawnFloor" equals="1"/>
 	<Expect watch="Object.Y" target="Player" near="0.2" tolerance="0.2"/>
 	<DevCommand line="hub.status"/>
 	<Pass/>
