@@ -173,6 +173,14 @@ namespace sw
         const AutosaveSlotInfo* findLatestSlot() const;
         const AutosaveSlotInfo* findLatestSlot( AutosaveTrigger trigger ) const;
 
+        /**
+         * @brief 진행이 통째로 바뀌었습니다(세이브를 적용했다 · 다른 게임을 시작한다). 앞 진행의 마지막 체크포인트 · 쌓인 요청 · 간격 시계를 잊습니다.
+         * @details 잊지 않으면 되돌린 진행에서 같은 체크포인트에 다시 닿아도 저장하지 않고, 앞 진행의 요청이 새 진행을 그 까닭 · 이름으로 저장한다.
+         */
+        void resetProgress();
+        /** @brief 게임을 처음부터 시작합니다(타이틀로 · 시작) — 진행을 잊고 플레이 시간을 0 으로 두며, 끝나지 않은 되돌리기를 잊습니다. */
+        void beginNewGame();
+
         bool hasPendingRequest() const { return _bPending == SW_TRUE; }
         /** @brief 맡긴 되돌리기(슬롯 읽기 또는 게임의 적용)가 아직 끝나지 않았으면 true 입니다. */
         bool isRestoring() const { return _restoreRequest.isActive() || _restoringSlot.empty() == false; }
@@ -216,6 +224,7 @@ namespace sw
         hashed_string            _lastCheckpointID;
         hashed_string            _restoringCheckpointID; ///< 읽기를 맡긴 체크포인트 되돌리기(비면 가장 새 슬롯 되돌리기)
         string                   _restoringSlot;         ///< 게임이 적용 중인 되돌리기의 슬롯(비면 없음) — 완료가 비운다
+        float64                  _restoringPlayTime;     ///< 되돌리는 슬롯의 플레이 시간 — 성공한 되돌리기가 이어 센다
         float64                  _playTime;
         float64                  _lastSaveTime; ///< 마지막 자동 저장의 플레이 시간(음수면 아직 없음)
         float32                  _intervalTimer;

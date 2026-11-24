@@ -461,6 +461,7 @@ SW_TEST_CASE( ControlSystemTest, AutoPossessSpawnsAnAIThatDiesWithThePawn )
     const ControllerComponent* pController = manager.resolveComponent( pPawn->getController() );
     SW_REQUIRE_NOT_NULL( pController );
     SW_EXPECT_TRUE( pController->isSpawnedForPawn() );
+    SW_EXPECT_TRUE( pController->getOwner()->isTransient() ); // 세이브 · 핫 리로드가 싣지 않는다 — 복원한 폰이 다시 세운다
     const GameObjectHandle controllerObject = pController->getOwner()->getHandle();
 
     manager.destroyGameObject( pObject );
