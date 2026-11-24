@@ -176,7 +176,10 @@ namespace sw
             cmd.endRenderPass();
             // 그린 텍스처는 셰이더가 읽는다(머티리얼 · 에디터 ImGui 이미지) — 카메라 렌더 텍스처 출력과 같이 읽기 상태로 둔다(Vulkan 레이아웃).
             cmd.prepareTextureForShaderRead( texture );
-            pState->_drawnRevision = hasAllTextures( target._list ) ? target._contentRevision : 0;
+            // 이미지가 온 프레임의 셰이더 가시 사본은 아직 자리 텍스처일 수 있다(예약한 번호의 다시 묶기는 다음 프레임부터 보인다 — `Light2DCookieAtlas` 와 같다). 두 프레임 이어 다 와 있을 때 굳힌다.
+            const bool bWhole      = hasAllTextures( target._list );
+            pState->_drawnRevision = bWhole && pState->_bDrawnWhole == SW_TRUE ? target._contentRevision : 0;
+            pState->_bDrawnWhole   = bWhole ? SW_TRUE : SW_FALSE;
             pState->_drawnTexture  = texture;
         }
     }
