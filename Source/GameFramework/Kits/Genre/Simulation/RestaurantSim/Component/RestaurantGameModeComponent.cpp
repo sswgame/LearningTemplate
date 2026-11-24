@@ -41,6 +41,13 @@ namespace sw
             static constexpr const utf8* kEventWon     = "RestaurantWon";
             static constexpr const utf8* kEventLost    = "RestaurantLost";
 
+            /** @brief 씬이 단계를 적지 않은 판은 줄 없는 카탈로그입니다(평판 값만 센다). */
+            static const ReputationCatalog& getReputationCatalog( const ReputationCatalog* pScene )
+            {
+                static const ReputationCatalog s_withoutTier{};
+                return pScene != nullptr ? *pScene : s_withoutTier;
+            }
+
             /** @brief 식당 알림 @p kind 에 낼 소리입니다. 소리가 없는 알림이면 nullptr 입니다. */
             static const utf8* findSound( RestaurantEvent::Kind kind )
             {
@@ -143,11 +150,11 @@ namespace sw
         }
         WorldClockSettings clockSettings;
         clockSettings._startHour = static_cast<float32>( _pCatalog->getOpenHour() );
-        if ( _pantry.initialize( _pItemCatalog.get(), _pantrySlotCount ) == false || _clock.initialize( clockSettings ) == false )
+        if ( _pantry.initialize( *_pItemCatalog, _pantrySlotCount ) == false || _clock.initialize( clockSettings ) == false )
             return false;
         if ( _reputationCatalog.empty() == false && acquireRequired( _reputationCatalog.path(), _pReputationCatalog ) == false )
             return false;
-        _reputation.initialize( _pReputationCatalog.get() );
+        _reputation.initialize( RestaurantGameModeComponentInternal::getReputationCatalog( _pReputationCatalog.get() ) );
         _wallet.clear();
         if ( _startGold > 0 )
             _wallet.add( Wallet::getDefaultCurrency(), _startGold );
@@ -357,13 +364,13 @@ namespace sw
         Countdown            resultHold = _resultHold;
         if ( io.isReading() )
         {
-            if ( _pCatalog == nullptr || _pRecipes == nullptr || _pShops == nullptr || _pItemCatalog == nullptr || restoredPantry.initialize( _pItemCatalog.get(), _pantrySlotCount ) == false )
+            if ( _pCatalog == nullptr || _pRecipes == nullptr || _pShops == nullptr || _pItemCatalog == nullptr || restoredPantry.initialize( *_pItemCatalog, _pantrySlotCount ) == false )
             {
                 SW_LOG_ERROR_ID( "Restaurant.StateNeedsCatalog", "Restaurant game mode: state read before the restaurant, recipe, shop and item catalogs are loaded - refused" );
                 io.fail();
                 return;
             }
-            restoredReputation.initialize( _pReputationCatalog.get() );
+            restoredReputation.initialize( RestaurantGameModeComponentInternal::getReputationCatalog( _pReputationCatalog.get() ) );
             initializeSimulation( restoredSimulation ); // 빌린 지갑 · 창고 · 평판은 이 디렉터의 칸이다 — 읽는 동안은 건드리지 않는다
         }
         io.value( io.isWriting() ? _wallet : restoredWallet );

@@ -201,7 +201,7 @@ SW_TEST_CASE( AdventureWeaponWearTest, WearsWarnsOnceAndBreaksWithBonus )
     sw::ItemCatalog items;
     SW_REQUIRE_TRUE( items.loadFromXMLText( kWearItemXML, "AdventureWeaponWearTest" ) );
     sw::Inventory inventory;
-    SW_REQUIRE_TRUE( inventory.initialize( &items, 2 ) );
+    SW_REQUIRE_TRUE( inventory.initialize( items, 2 ) );
     SW_REQUIRE_EQUAL( 1, inventory.addItem( kSword, 1 ) );
     const sw::AdventureWeaponWear wear;
 
@@ -237,7 +237,7 @@ SW_TEST_CASE( AdventureWeaponWearTest, ThrowWearsMoreAndOutOfRangeIsSafe )
     sw::ItemCatalog items;
     SW_REQUIRE_TRUE( items.loadFromXMLText( kWearItemXML, "AdventureWeaponWearTest" ) );
     sw::Inventory inventory;
-    SW_REQUIRE_TRUE( inventory.initialize( &items, 2 ) );
+    SW_REQUIRE_TRUE( inventory.initialize( items, 2 ) );
     SW_REQUIRE_EQUAL( 1, inventory.addItem( kSword, 1 ) );
     SW_REQUIRE_EQUAL( 1, inventory.addItem( kRock, 1 ) );
     sw::AdventureWeaponWear wear;

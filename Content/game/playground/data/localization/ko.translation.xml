@@ -53,7 +53,7 @@
 		<entry key="Escaped" text="탈출했습니다" sourceHash="c586f95cd0c57d26" />
 		<entry key="Every room is lit" text="모든 방에 불을 켰습니다" sourceHash="ebb0223331e334bc" />
 		<entry key="Explored %" text="탐색 %" sourceHash="dba317bb17831f87" />
-		<entry key="Fast (J)   Strong (K)   Dodge (Shift)   Sign (Q)   Twin sign (R)   Oil (1)   Potion (2)" text="빠르게 (J)   강하게 (K)   회피 (Shift)   표식 (Q)   쌍표식 (R)   오일 (1)   물약 (2)" sourceHash="20ac59e768361d42" />
+		<entry key="Fast (J)   Strong (K)   Dodge (Shift)   Sign (Q)   Twin sign (R)   Oil (1)   Potion (2)   Brew (B)" text="빠르게 (J)   강하게 (K)   회피 (Shift)   표식 (Q)   쌍표식 (R)   오일 (1)   물약 (2)   만들기 (B)" sourceHash="b8be52d68ee0706f" />
 		<entry key="Fernling" text="고사리돌이" sourceHash="431067eaf36b2340" />
 		<entry key="Fernwarden" text="고사리지기" sourceHash="d2277637def3ba7d" />
 		<entry key="Finish!" text="결승!" sourceHash="24650730cce4bae9" />
@@ -104,6 +104,7 @@
 		<entry key="MP" text="마력" sourceHash="09166a07b5ad3538" />
 		<entry key="Mech destroyed - special picks the next mech" text="기체 격추 - 특수기로 다음 기체를 고릅니다" sourceHash="3711c7fb7ac4eee8" />
 		<entry key="Mind the pond - nobody swims in it." text="연못을 조심하게 - 아무도 거기서 헤엄치지 않는다네." sourceHash="805022e3109d8d1e" />
+		<entry key="Mire Fat" text="늪 기름" sourceHash="0b2a66fbc7efcd55" />
 		<entry key="Monster" text="괴물" sourceHash="3ac88ea2efcb0d51" />
 		<entry key="Move" text="기술" sourceHash="379c18aec5654894" />
 		<entry key="Next day (Enter)" text="다음 날 (Enter)" sourceHash="7aa8dc32ae4a024f" />

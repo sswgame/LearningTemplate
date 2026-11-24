@@ -121,6 +121,7 @@ namespace sw
         , _winReward{ 0 }
         , _pCatalog{}
         , _pGraphAsset{}
+        , _pItemCatalog{}
         , _graph{}
         , _flags{}
         , _bag{}
@@ -146,12 +147,12 @@ namespace sw
         _graph = *_pGraphAsset;
         _graph.resetState();
         _flags.clear();
-        return _itemBox.initialize( nullptr, _boxSlotCount ) && _session.initialize( *_pCatalog, _graph, _stage._startArea, _flags, _bag, _itemBox );
+        return _itemBox.initialize( *_pItemCatalog, _boxSlotCount ) && _session.initialize( *_pCatalog, _graph, _stage._startArea, _flags, _bag, _itemBox );
     }
 
     bool SurvivalHorrorGameModeComponent::startGame()
     {
-        if ( acquireBoundCatalog( _pCatalog ) == false || acquireRequired( _areaGraph, _pGraphAsset ) == false )
+        if ( acquireBoundCatalog( _pCatalog ) == false || acquireBoundCatalog( _pItemCatalog ) == false || acquireRequired( _areaGraph, _pGraphAsset ) == false )
             return false;
         if ( _stage.validate( *_pCatalog, *_pGraphAsset ) == false || openSession() == false )
             return false;
@@ -500,7 +501,7 @@ namespace sw
         if ( io.isOk() == false )
             return;
         // 세션은 그래프 · 깃발 · 가방 · 상자를 빌린다 — 지역 사본에 읽으면 빌린 주소가 사본을 가리킨다. 새로 연 세션에 바로 읽고, 거절되면 `onStateRestored` 가 새 판을 연다.
-        const bool bBound = _pCatalog != nullptr && _pGraphAsset != nullptr;
+        const bool bBound = _pCatalog != nullptr && _pGraphAsset != nullptr && _pItemCatalog != nullptr;
         if ( io.isReading() && ( bBound == false || openSession() == false ) )
         {
             SW_LOG_ERROR_ID( "SurvivalHorror.StateNeedsCatalog", "Survival horror game mode: state read before the catalog and the area graph are bound - refused" );

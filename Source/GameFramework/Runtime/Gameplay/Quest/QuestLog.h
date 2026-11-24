@@ -118,7 +118,8 @@ namespace sw
 
         QuestLog();
 
-        void initialize( const QuestCatalog* pCatalog );
+        /** @brief 카탈로그를 빌려 빈 일지를 엽니다. 열지 않은 일지는 시작할 퀘스트가 없고 읽은 진행을 그대로 둔다. */
+        void initialize( const QuestCatalog& catalog );
         /** @brief 보상 동작(`<Reward><Action>`)이 쓸 문맥입니다. 값을 복사합니다. 주지 않으면 세계 칸이 없어 동작이 실패합니다. */
         void setActionContext( const GameplayContext& context ) { _actionWorld = context; }
 

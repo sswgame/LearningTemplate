@@ -303,6 +303,9 @@
 	<CatalogKey tag="SkillTreeDef" catalog="SkillTreeCatalog" entry="Tree"/>
 	<Field owner="MonsterHuntGameModeComponent" field="_contract" tag="MonsterHuntContractDef"/>
 	<Field owner="MonsterHuntGameModeComponent" field="_skillTree" tag="SkillTreeDef"/>
+	<CatalogKey tag="RecipeDef" catalog="RecipeCatalog" entry="Recipe"/>
+	<Field owner="MonsterHuntGameModeComponent" field="_brewRecipe" tag="RecipeDef"/>
+	<Field owner="MonsterHuntGameModeComponent" field="_listBrewItem" tag="ItemDef"/>
 	<Field owner="MonsterHuntGameModeComponent" field="_listMutagen" tag="MonsterHuntMutagenDef"/>
 	<Field owner="MonsterHuntGameModeComponent" field="_monster" tag="MonsterHuntMonsterDef"/>
 	<Field owner="MonsterHuntGameModeComponent" field="_oil" tag="MonsterHuntAlchemyDef"/>

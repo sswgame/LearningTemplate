@@ -22,14 +22,13 @@ namespace sw
     class ItemCatalog;
 
     /**
-     * @brief 가방을 여는 설정입니다. 카탈로그는 소유하지 않고 참조만 하므로 컴포넌트보다 오래 살아 있어야 합니다(보통 디렉터 · 게임 인스턴스가 보관한다).
+     * @brief 가방을 여는 설정입니다.
      * @details 슬롯 수의 범위는 `PROPERTY( Min )` 이고, 벗어나면 `InventoryComponent::initialize` 가 오류로 거절한다(`ConfigRangeUtil`). 가방이 없는 게임은 컴포넌트를 붙이지 않는다.
      */
     REFLECT()
     struct SW_GF_API InventorySettings
     {
         REFLECT_BODY();
-        const ItemCatalog* _pItemCatalog{ nullptr };
         PROPERTY( Min = 1 )
         int32 _slotCount{ 0 }; ///< 가방의 슬롯 수. 기본값 0 은 범위 밖이라 여는 쪽이 반드시 적는다
     };
@@ -57,7 +56,7 @@ namespace sw
          * @brief 가방을 엽니다. 첫 호출만 설정을 쓰고, 들고 있던 복원 바이트가 있으면 그것으로 복원합니다. 디렉터의 `startGame` 이 부릅니다(`PlayerComponentUtil::openOnOwner`).
          * @return 새 판, 복원, 이미 열림, 거절(설정이 범위 밖 — 오류를 남겼다) 중 하나입니다.
          */
-        [[nodiscard]] GameStateInitResult initialize( const InventorySettings& settings );
+        [[nodiscard]] GameStateInitResult initialize( const ItemCatalog& itemCatalog, const InventorySettings& settings );
 
         /** @brief 씬의 컴포넌트 레지스트리에 오릅니다(`PlayerComponentUtil::findOpen`). */
         void onRegister( GameObjectManager& manager ) override;

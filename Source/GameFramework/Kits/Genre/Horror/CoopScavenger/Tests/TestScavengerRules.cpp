@@ -228,8 +228,10 @@ namespace
             random.setSeed( 3 );
             sw::SpawnDirector director;
             director.initialize( nullptr, 1u );
-            sw::ShopManager shop;
-            shop.initialize( nullptr, nullptr );
+            const sw::ShopCatalog noShop{};
+            const sw::ItemCatalog noItem{};
+            sw::ShopManager       shop;
+            shop.initialize( noShop, noItem );
 
             sw::Archive written;
             ScavengerStateBytes::writeHeader( written, _expedition );

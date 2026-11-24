@@ -48,4 +48,8 @@
 		<bind source="Key" code="Digit4"/>
 		<bind source="Gamepad" code="DPadDown"/>
 	</action>
+	<action name="MonsterHunt.Brew" layer="MonsterHunt" trigger="Pressed">
+		<bind source="Key" code="B"/>
+		<bind source="Gamepad" code="RightThumb"/>
+	</action>
 </InputMap>

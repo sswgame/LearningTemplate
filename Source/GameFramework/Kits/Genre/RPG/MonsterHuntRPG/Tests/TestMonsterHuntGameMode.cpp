@@ -43,6 +43,8 @@ namespace
     constexpr const utf8* kHuntChartXML =
         R"(<ElementChart><Element id="Beast"/><Element id="BeastOil"/><Element id="Gust"/><Rule attack="BeastOil" defend="Beast" multiplier="1.5"/></ElementChart>)";
 
+    constexpr const utf8* kHuntRecipeXML = R"(<RecipeCatalog><Recipe id="beast_oil"><In item="fat" count="1"/><Out item="beast_oil"/></Recipe></RecipeCatalog>)";
+
     constexpr const utf8* kHuntSkillTreeXML = R"(<SkillTreeCatalog><Tree id="hunter">
   <Skill id="twin"/>
   <Skill id="edge" requires="twin"><Stats attackPower="50"/></Skill>
@@ -54,7 +56,8 @@ namespace
     struct MonsterHuntGameModeFixture
     {
         MonsterHuntCatalog            _catalog;
-        RecipeCatalog                 _recipes; ///< 만드는 것이 없는 판
+        RecipeCatalog                 _recipes;
+        ItemCatalog                   _items;
         SubsystemScope                _scope;
         GameObjectManager             _manager;
         MonsterHuntGameModeComponent* _pGameMode{ nullptr };
@@ -64,7 +67,8 @@ namespace
             (void)domain.makeDiskFolder( "marsh" ); // 폴더만 만든다
             if ( FileUtil::writeTextFile( domain.makeDiskPath( "marsh/oils.elementchart.xml" ), kHuntChartXML ) == false )
                 return false;
-            if ( FileUtil::writeTextFile( domain.makeDiskPath( "marsh/hunter.skilltrees.xml" ), kHuntSkillTreeXML ) == false || _scope.bind<const RecipeCatalog>( &_recipes ) == false )
+            if ( _recipes.loadFromXMLText( kHuntRecipeXML, "MonsterHuntGameModeTest" ) == false || FileUtil::writeTextFile( domain.makeDiskPath( "marsh/hunter.skilltrees.xml" ), kHuntSkillTreeXML ) == false || _scope.bind<const RecipeCatalog>( &_recipes ) == false ||
+                 _scope.bind<const ItemCatalog>( &_items ) == false )
                 return false;
             if ( _catalog.loadFromXMLText( kHuntCatalogXML, "MonsterHuntGameModeTest" ) == false || _scope.bind<const MonsterHuntCatalog>( &_catalog ) == false )
                 return false;
@@ -72,7 +76,7 @@ namespace
             sceneText.appendFormat( "<MonsterHuntGameModeComponent _contract=\"ferry\" _monster=\"howler\" _askStep=\"30\" _elementChart=\"%#\" _oil=\"beast_oil\" _potion=\"tonic\" _sign=\"gust\" "
                                     "_startPosition=\"0,0\" _spawnPosition=\"1,0\" _playerMaxHP=\"40\" _fastDamage=\"20\" _attackReach=\"2\" _signReach=\"5\" _attackCooldownSeconds=\"0.25\" "
                                     "_dodgeSeconds=\"0.5\" _monsterMaxHP=\"90\" _monsterDamage=\"15\" _monsterReach=\"1.5\" _monsterSpeed=\"0\" _monsterAttackSeconds=\"2\" "
-                                    "_skillTreeCatalog=\"%#\" _skillTree=\"hunter\" _skillPoints=\"2\" _attackStat=\"attackPower\"><_listMutagen><item>gland</item></_listMutagen></MonsterHuntGameModeComponent>",
+                                    "_skillTreeCatalog=\"%#\" _skillTree=\"hunter\" _skillPoints=\"2\" _attackStat=\"attackPower\" _brewRecipe=\"beast_oil\"><_listBrewItem><item>fat</item></_listBrewItem><_listMutagen><item>gland</item></_listMutagen></MonsterHuntGameModeComponent>",
                                     test::ScopedScratchDomain::makeID( "marsh/oils.elementchart.xml" ).str(), test::ScopedScratchDomain::makeID( "marsh/hunter.skilltrees.xml" ).str() );
             _pGameMode = _manager.createGameObject( hashed_string( "Director" ) )->addComponent<MonsterHuntGameModeComponent>();
             return _pGameMode != nullptr && XMLSerializer::deserialize( _pGameMode, *MonsterHuntGameModeComponent::StaticType(), sceneText.view() );
@@ -113,6 +117,7 @@ SW_TEST_CASE( MonsterHuntGameModeTest, CommandsBeforeTheContractOpensAreRefused 
     SW_EXPECT_FALSE( pGameMode->submitSign( false ) );
     SW_EXPECT_FALSE( pGameMode->submitOil() );
     SW_EXPECT_FALSE( pGameMode->submitPotion() );
+    SW_EXPECT_FALSE( pGameMode->submitBrew() );
     SW_EXPECT_FALSE( pGameMode->submitLearnSkill() );
     SW_EXPECT_FALSE( pGameMode->submitMutagen() );
 }
@@ -123,9 +128,10 @@ SW_TEST_CASE( MonsterHuntGameModeTest, ContractWithoutElementChartDoesNotOpen )
     SW_EXPECT_LOG( "GameMode.RequiredAssetMissing" );
     MonsterHuntCatalog catalog;
     RecipeCatalog      recipes;
+    ItemCatalog        items;
     SubsystemScope     scope;
     SW_REQUIRE_TRUE( catalog.loadFromXMLText( kHuntCatalogXML, "MonsterHuntGameModeTest" ) );
-    SW_REQUIRE_TRUE( scope.bind<const MonsterHuntCatalog>( &catalog ) && scope.bind<const RecipeCatalog>( &recipes ) );
+    SW_REQUIRE_TRUE( scope.bind<const MonsterHuntCatalog>( &catalog ) && scope.bind<const RecipeCatalog>( &recipes ) && scope.bind<const ItemCatalog>( &items ) );
     game::ScopedGameScope         scopedScope( scope );
     GameObjectManager             manager;
     MonsterHuntGameModeComponent* pGameMode = manager.createGameObject( hashed_string( "Director" ) )->addComponent<MonsterHuntGameModeComponent>();
@@ -281,4 +287,22 @@ SW_TEST_CASE( MonsterHuntGameModeTest, SkillsAndMutagensStrengthenTheHunterAndSu
     SW_EXPECT_FALSE( restored._pGameMode->submitLearnSkill() );
     restored._manager.endPlay();
     source._manager.endPlay();
+}
+
+/** @brief [MonsterHuntGameModeTest] 재료로 만든 오일은 사용 횟수가 다시 차 한 번 더 바를 수 있고, 재료가 다하면 만들지 못한다 */
+SW_TEST_CASE( MonsterHuntGameModeTest, BrewRefillsTheOil )
+{
+    const test::ScopedScratchDomain domain;
+    MonsterHuntGameModeFixture      fixture;
+    SW_REQUIRE_TRUE( fixture.initialize( domain ) );
+    game::ScopedGameScope scopedScope( fixture._scope );
+    fixture.beginPlay();
+    SW_EXPECT_FALSE( fixture._pGameMode->submitBrew() ); // 의뢰를 받은 뒤다
+    SW_REQUIRE_TRUE( fixture.beginHunt() );
+    SW_REQUIRE_TRUE( fixture._pGameMode->submitOil() );
+    SW_EXPECT_FALSE( fixture._pGameMode->submitOil() ); // 횟수가 다했다
+    SW_REQUIRE_TRUE( fixture._pGameMode->submitBrew() );
+    SW_EXPECT_FALSE( fixture._pGameMode->submitBrew() ); // 재료가 다했다
+    SW_EXPECT_TRUE( fixture._pGameMode->submitOil() );
+    fixture._manager.endPlay();
 }

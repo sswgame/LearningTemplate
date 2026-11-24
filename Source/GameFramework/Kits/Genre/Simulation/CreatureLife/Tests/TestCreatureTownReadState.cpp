@@ -153,7 +153,7 @@ SW_TEST_CASE_F( CreatureTownReadStateTest, RealAndCraftedStatesRead )
     sw::Archive written;
     _town.writeState( written );
     sw::CreatureTown restored;
-    SW_REQUIRE_TRUE( restored.initialize( &_catalog, nullptr, nullptr, nullptr, kTownSize, kTownSize ) );
+    SW_REQUIRE_TRUE( restored.initialize( &_catalog, _reputation, _questLog, _clock, kTownSize, kTownSize ) );
     sw::Archive reading( written.getData(), written.getSize() );
     SW_REQUIRE_TRUE( restored.readState( reading ) );
     SW_EXPECT_EQUAL( size_t( 1 ), restored.getCreatures().size() );

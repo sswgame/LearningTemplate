@@ -167,7 +167,7 @@ namespace
         {
             SW_REQUIRE_TRUE( _catalog.loadFromXMLText( kJRPGXML, "JRPGTest" ) );
             SW_REQUIRE_TRUE( _itemCatalog.loadFromXMLText( kItemXML, "JRPGTest" ) );
-            SW_REQUIRE_TRUE( _inventory.initialize( &_itemCatalog, 5 ) );
+            SW_REQUIRE_TRUE( _inventory.initialize( _itemCatalog, 5 ) );
             initializeParty( _party );
             sw::TimingWindow window;
             window._grade      = "Good";
@@ -1351,7 +1351,7 @@ SW_TEST_CASE_F( JRPGRulesTest, BattleDeterminism )
 {
     const auto setup = [this]( JRPGBattleRun& run ) -> bool
     {
-        if ( run._inventory.initialize( &_itemCatalog, 5 ) == false )
+        if ( run._inventory.initialize( _itemCatalog, 5 ) == false )
             return false;
         run._party.initialize( _catalog, _itemCatalog, run._inventory, run._wallet );
         if ( run._party.addMember( "hero", "Hero", "hero" ) != 0 || run._party.addMember( "mage", "Mage", "mage" ) != 1 )

@@ -186,7 +186,7 @@ namespace sw
 
     bool JRPGGameModeComponent::openParty()
     {
-        if ( _bag.initialize( _pItemCatalog.get(), _bagSlotCount ) == false )
+        if ( _bag.initialize( *_pItemCatalog, _bagSlotCount ) == false )
             return false; // 까닭은 가방이 남겼다
         for ( const CatalogKey<ItemDef>& item : _listStartItem )
         {
@@ -683,7 +683,7 @@ namespace sw
                 io.fail();
                 return;
             }
-            if ( io.check( restoredBag.initialize( _pItemCatalog.get(), _bagSlotCount ) ) == false )
+            if ( io.check( restoredBag.initialize( *_pItemCatalog, _bagSlotCount ) ) == false )
                 return;
             restoredParty.initialize( *_pCatalog, *_pItemCatalog, _bag, _wallet );
             restoredWalker.initialize( *_pCatalog, _seed );

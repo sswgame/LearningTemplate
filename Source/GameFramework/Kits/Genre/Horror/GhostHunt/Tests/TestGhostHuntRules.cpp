@@ -12,6 +12,7 @@
 #include "GameFramework/Kits/Genre/Horror/GhostHunt/GhostMansion.h"
 #include "GameFramework/Runtime/Foundation/Condition/GameFlags.h"
 #include "GameFramework/Runtime/Gameplay/Inventory/Inventory.h"
+#include "GameFramework/Runtime/Gameplay/Inventory/ItemCatalog.h"
 #include "GameFramework/Runtime/Gameplay/Inventory/ItemStackList.h"
 #include "GameFramework/Runtime/Gameplay/Inventory/LootTable.h"
 #include "GameFramework/Runtime/Gameplay/Inventory/Wallet.h"
@@ -164,6 +165,7 @@ namespace
         LootCatalog               _loot{};
         AreaGraph                 _graph{};
         GameFlags                 _flags{};
+        ItemCatalog               _items{}; ///< 아이템 정의가 없는 판(겹침 수 1)
         Inventory                 _bag{};
         Wallet                    _wallet{};
         GhostMansion              _mansion{};
@@ -174,7 +176,7 @@ namespace
             SW_REQUIRE_TRUE( _catalog.loadFromXMLText( kGhostHuntXML, "GhostHuntRulesTest" ) );
             SW_REQUIRE_TRUE( _loot.loadFromXMLText( kGhostHuntLootXML, "GhostHuntRulesTest" ) );
             SW_REQUIRE_TRUE( _graph.loadFromXMLText( kGhostHuntGraphXML, "GhostHuntRulesTest" ) );
-            SW_REQUIRE_TRUE( _bag.initialize( nullptr, 4 ) );
+            SW_REQUIRE_TRUE( _bag.initialize( _items, 4 ) );
             SW_REQUIRE_TRUE( open( _mansion, 5u ) );
         }
 
@@ -886,7 +888,7 @@ SW_TEST_CASE_F( GhostHuntRulesTest, PartialCatchKeepsRoomDark )
  */
 SW_TEST_CASE_F( GhostHuntRulesTest, FullBagKeepsTheKeyForLater )
 {
-    SW_REQUIRE_TRUE( _bag.initialize( nullptr, 0 ) );
+    SW_REQUIRE_TRUE( _bag.initialize( _items, 0 ) );
     SW_REQUIRE_TRUE( _mansion.enterRoom( "foyer" ) == 1 );
     catchRoomGhosts();
     _mansion.update( 0.01f );
@@ -894,7 +896,7 @@ SW_TEST_CASE_F( GhostHuntRulesTest, FullBagKeepsTheKeyForLater )
     SW_EXPECT_EQUAL( 0, countEvents( GhostMansionEventKind::KeyAwarded ) );
     SW_EXPECT_EQUAL( 0, _bag.getItemCount( "parlorKey" ) );
 
-    SW_REQUIRE_TRUE( _bag.initialize( nullptr, 4 ) ); // 자리가 났다
+    SW_REQUIRE_TRUE( _bag.initialize( _items, 4 ) ); // 자리가 났다
     (void)_mansion.enterRoom( "foyer" );
     SW_EXPECT_EQUAL( 1, countEvents( GhostMansionEventKind::KeyAwarded ) );
     SW_EXPECT_EQUAL( 1, _bag.getItemCount( "parlorKey" ) );

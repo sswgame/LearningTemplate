@@ -32,6 +32,7 @@
 #include "GameFramework/Runtime/Foundation/Framework/GameModeComponent.h"
 #include "GameFramework/Runtime/Gameplay/Inventory/Crafting.h"
 #include "GameFramework/Runtime/Gameplay/Inventory/Inventory.h"
+#include "GameFramework/Runtime/Gameplay/Inventory/ItemCatalog.h"
 #include "GameFramework/Runtime/Gameplay/Progression/SkillTree.h"
 #include "GameFramework/Runtime/Gameplay/Quest/QuestCatalog.h"
 #include "GameFramework/Runtime/Gameplay/Quest/QuestLog.h"
@@ -91,6 +92,8 @@ namespace sw
         [[nodiscard]] bool submitMutagen();
         /** @brief 칼에 오일을 바릅니다. 남은 사용 횟수가 없으면 false 입니다. */
         [[nodiscard]] bool submitOil();
+        /** @brief 재료로 연금술 물건을 만듭니다(`_brewRecipe`). 만든 오일 · 물약은 사용 횟수가 가득 찬다. 레시피를 적지 않은 판이거나 재료가 모자라면 false 입니다. */
+        [[nodiscard]] bool submitBrew();
         /** @brief 물약을 마십니다. 효과 동안 `_potionHealPerSecond` 로 회복합니다. 횟수가 없거나 독성이 넘치면 false 입니다. */
         [[nodiscard]] bool submitPotion();
 
@@ -186,6 +189,10 @@ namespace sw
         CatalogKey<MonsterHuntAlchemyDef> _oil;
         PROPERTY( Category = "Gear", DisplayName = "Potion", Tooltip = "Alchemy potion id (catalog) in the bag" )
         CatalogKey<MonsterHuntAlchemyDef> _potion;
+        PROPERTY( Category = "Gear", DisplayName = "Brew Recipe", Tooltip = "Recipe (recipe catalog) the hunter can brew; empty = no brewing" )
+        CatalogKey<RecipeDef> _brewRecipe;
+        PROPERTY( Category = "Gear", DisplayName = "Brew Items", Tooltip = "Item ids in the bag at the start for brewing (list an id twice for two)" )
+        vector<CatalogKey<ItemDef>> _listBrewItem;
         PROPERTY( Category = "Gear", DisplayName = "Sign", Tooltip = "Sign id (catalog) the hunter casts" )
         CatalogKey<MonsterHuntSignDef> _sign;
         PROPERTY( Category = "Skills", DisplayName = "Skill Trees", Tooltip = "Skill tree catalog; empty = a hunter without skills" )
@@ -254,6 +261,7 @@ namespace sw
         SharedAssetRef<MonsterHuntCatalog>    _pCatalog;
         SharedAssetRef<ElementChart>          _pChart;
         SharedAssetRef<RecipeCatalog>         _pRecipes;
+        SharedAssetRef<ItemCatalog>           _pItemCatalog;
         SharedAssetRef<QuestCatalog>          _pQuests;  ///< 퀘스트를 적지 않은 계약이면 비었다
         QuestLog                              _questLog; ///< 계약 퀘스트(`MonsterHuntContractDef::_questID`)만 진행한다 — 조사가 빌린다
         vector<QuestEvent>                    _listQuestEvent;

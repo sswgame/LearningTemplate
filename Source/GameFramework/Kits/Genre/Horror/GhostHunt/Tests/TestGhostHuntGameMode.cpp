@@ -42,6 +42,7 @@ namespace
     {
         test::ScopedScratchDomain _domain{};
         GhostCatalog              _catalog{};
+        ItemCatalog               _items{};
         SubsystemScope            _scope{};
 
         [[nodiscard]] bool setUp()
@@ -49,7 +50,7 @@ namespace
             (void)_domain.makeDiskFolder( "ghosthunt/data" ); // 폴더만 만든다
             return FileUtil::writeTextFile( _domain.makeDiskPath( "ghosthunt/data/mansion.areas.xml" ), kGhostHuntGameModeAreas ) &&
                    FileUtil::writeTextFile( _domain.makeDiskPath( "ghosthunt/data/mansion.loot.xml" ), kGhostHuntGameModeLoot ) &&
-                   _catalog.loadFromXMLText( kGhostHuntGameModeXML, "GhostHuntGameModeTest" ) && _scope.bind<GhostCatalog>( &_catalog );
+                   _catalog.loadFromXMLText( kGhostHuntGameModeXML, "GhostHuntGameModeTest" ) && _scope.bind<GhostCatalog>( &_catalog ) && _scope.bind<const ItemCatalog>( &_items );
         }
 
         static bool setProperty( GhostHuntGameModeComponent& director, const utf8* pName, const string& text )

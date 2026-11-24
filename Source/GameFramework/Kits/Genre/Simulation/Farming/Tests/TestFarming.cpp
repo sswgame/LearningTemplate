@@ -235,7 +235,7 @@ SW_TEST_CASE( FarmingTest, ShippingBinSellsAtCatalogPrices )
     sw::ItemCatalog items;
     catalog.fillItemCatalog( items, 99 );
     sw::Inventory bag;
-    SW_REQUIRE_TRUE( bag.initialize( &items, 4 ) );
+    SW_REQUIRE_TRUE( bag.initialize( items, 4 ) );
     SW_REQUIRE_EQUAL( 3, bag.addItem( kTurnip, 3 ) );
     SW_REQUIRE_EQUAL( 2, bag.addItem( kTurnipSeed, 2 ) );
 

@@ -119,7 +119,7 @@ SW_TEST_CASE_F( CreatureTownRulesTest, GiftTakesOneItemOncePerDay )
     sw::ItemCatalog items;
     SW_REQUIRE_TRUE( items.loadFromXMLText( kRulesItemXML, "CreatureTownRulesTest" ) );
     sw::Inventory inventory;
-    SW_REQUIRE_TRUE( inventory.initialize( &items, 2 ) );
+    SW_REQUIRE_TRUE( inventory.initialize( items, 2 ) );
     SW_REQUIRE_EQUAL( 2, inventory.addItem( kGiftItem, 2 ) );
 
     SW_EXPECT_TRUE( _town.giveGift( kSprout, kGiftItem, inventory ) == sw::CreatureInteractResult::UnknownCreature ); // 아직 오지 않았다

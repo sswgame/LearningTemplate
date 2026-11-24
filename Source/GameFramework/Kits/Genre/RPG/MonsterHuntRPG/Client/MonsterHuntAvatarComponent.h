@@ -81,6 +81,8 @@ namespace sw
         hashed_string _alternateSignAction;
         PROPERTY( Category = "Input", DisplayName = "Learn Action", Tooltip = "InputMap action that learns the next skill (required)" )
         hashed_string _learnAction;
+        PROPERTY( Category = "Input", DisplayName = "Brew Action", Tooltip = "InputMap action that brews from the bag (required)" )
+        hashed_string _brewAction;
         PROPERTY( Category = "Input", DisplayName = "Mutagen Action", Tooltip = "InputMap action that slots the next mutagen (required)" )
         hashed_string _mutagenAction;
 

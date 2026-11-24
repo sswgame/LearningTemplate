@@ -40,6 +40,7 @@ namespace sw
             static constexpr const utf8* kEventHurt     = "MonsterHuntHurt";
             static constexpr const utf8* kEventDodge    = "MonsterHuntDodge";
             static constexpr const utf8* kEventPotion   = "MonsterHuntPotion";
+            static constexpr const utf8* kEventBrew     = "MonsterHuntBrew";
             static constexpr const utf8* kEventWon      = "MonsterHuntWon";
             static constexpr const utf8* kEventLost     = "MonsterHuntLost";
 
@@ -73,6 +74,8 @@ namespace sw
         , _elementChart{}
         , _oil{}
         , _potion{}
+        , _brewRecipe{}
+        , _listBrewItem{}
         , _sign{}
         , _skillTreeCatalog{}
         , _skillTree{}
@@ -108,6 +111,7 @@ namespace sw
         , _pCatalog{}
         , _pChart{}
         , _pRecipes{}
+        , _pItemCatalog{}
         , _pQuests{}
         , _questLog{}
         , _listQuestEvent{}
@@ -153,11 +157,23 @@ namespace sw
 
     bool MonsterHuntGameModeComponent::openBag()
     {
-        if ( _bag.initialize( nullptr, _bagSlotCount ) == false )
+        if ( _bag.initialize( *_pItemCatalog, _bagSlotCount ) == false )
             return false;
         _alchemy.initialize( *_pCatalog, *_pRecipes );
         const vector<hashed_string>& listAlcohol = _pCatalog->getAlchemy()._listAlcohol;
         const bool                   bPacked     = _bag.addItem( _oil.key(), 1 ) == 1 && _bag.addItem( _potion.key(), 1 ) == 1 && listAlcohol.empty() == false && _bag.addItem( listAlcohol.front(), 1 ) == 1;
+        for ( const CatalogKey<ItemDef>& item : _listBrewItem )
+        {
+            if ( _bag.addItem( item.key(), 1 ) == 1 )
+                continue;
+            SW_LOG_ERROR_ID( "MonsterHunt.BrewItemNotPacked", "Monster hunt game mode: brew item '%#' does not fit %# slots - the contract does not open", item.c_str(), _bagSlotCount );
+            return false;
+        }
+        if ( _brewRecipe.empty() == false && _pRecipes->find( _brewRecipe.key() ) == nullptr )
+        {
+            SW_LOG_ERROR_ID( "MonsterHunt.UnknownBrewRecipe", "Monster hunt game mode: the recipe catalog has no '%#' - the contract does not open", _brewRecipe.c_str() );
+            return false;
+        }
         if ( bPacked == false )
             SW_LOG_ERROR_ID( "MonsterHunt.BagNotPacked", "Monster hunt game mode: oil '%#', potion '%#' and the first alcohol of the catalog do not fit %# slots - the contract does not open", _oil.c_str(),
                              _potion.c_str(), _bagSlotCount );
@@ -167,12 +183,12 @@ namespace sw
     bool MonsterHuntGameModeComponent::openQuest()
     {
         const hashed_string& questID = _pCatalog->findContract( _contract.key() )->_questID; // 계약은 validateSetup 이 보았다
-        _questLog.initialize( nullptr );
+        _questLog                    = QuestLog{};
         if ( questID.empty() )
             return true;
         if ( acquireRequired( _quests.path(), _pQuests ) == false )
             return false;
-        _questLog.initialize( _pQuests.get() );
+        _questLog.initialize( *_pQuests );
         const QuestStartResult result = _questLog.start( questID, _hunterLevel );
         if ( result == QuestStartResult::Ok )
             return true;
@@ -282,7 +298,7 @@ namespace sw
 
     bool MonsterHuntGameModeComponent::startGame()
     {
-        if ( acquireBoundCatalog( _pCatalog ) == false || acquireBoundCatalog( _pRecipes ) == false || acquireRequired( _elementChart.path(), _pChart ) == false || validateSetup() == false || openQuest() == false )
+        if ( acquireBoundCatalog( _pCatalog ) == false || acquireBoundCatalog( _pRecipes ) == false || acquireBoundCatalog( _pItemCatalog ) == false || acquireRequired( _elementChart.path(), _pChart ) == false || validateSetup() == false || openQuest() == false )
             return false;
         const bool bOpened = _haggle.initialize( _pCatalog.get(), _contract.key() ) && _investigation.initialize( *_pCatalog, _contract.key(), _questLog ) &&
                              _combat.initialize( _pCatalog.get(), _seed ) && openBag() && openSkills();
@@ -457,6 +473,15 @@ namespace sw
         return isStarted() && isAlive() && _alchemy.applyOil( _oil.key(), _bag ) == MonsterHuntUseResult::Ok;
     }
 
+    bool MonsterHuntGameModeComponent::submitBrew()
+    {
+        if ( isStarted() == false || isAlive() == false || _brewRecipe.empty() || _alchemy.brew( _brewRecipe.key(), _bag, hashed_string{}, _hunterLevel ) != CraftResult::Ok )
+            return false;
+        getSoundQueue().queueEvent( MonsterHuntGameModeComponentInternal::kEventBrew );
+        SW_LOG_INFO_ID( "MonsterHunt.Brewed", "[MonsterHunt] brewed '%#'", _brewRecipe.c_str() );
+        return true;
+    }
+
     bool MonsterHuntGameModeComponent::submitPotion()
     {
         if ( isStarted() == false || isAlive() == false || _alchemy.drink( _potion.key(), _bag ) != MonsterHuntUseResult::Ok )
@@ -599,18 +624,19 @@ namespace sw
         Countdown                resultHold     = _resultHold;
         if ( io.isReading() )
         {
-            const bool bReady = _pCatalog != nullptr && _pChart != nullptr && _pRecipes != nullptr && restoredHaggle.initialize( _pCatalog.get(), _contract.key() ) &&
+            const bool bReady = _pCatalog != nullptr && _pChart != nullptr && _pRecipes != nullptr && _pItemCatalog != nullptr && restoredHaggle.initialize( _pCatalog.get(), _contract.key() ) &&
                                 restoredInvestigation.initialize( *_pCatalog, _contract.key(), _questLog ) && restoredCombat.initialize( _pCatalog.get(), _seed ) &&
-                                restoredBag.initialize( nullptr, _bagSlotCount );
+                                restoredBag.initialize( *_pItemCatalog, _bagSlotCount );
             if ( bReady == false )
             {
-                SW_LOG_ERROR_ID( "MonsterHunt.StateNeedsCatalog", "Monster hunt game mode: state read before the catalog, the recipes and the element chart are loaded - refused" );
+                SW_LOG_ERROR_ID( "MonsterHunt.StateNeedsCatalog", "Monster hunt game mode: state read before the catalog, the recipes, the items and the element chart are loaded - refused" );
                 io.fail();
                 return;
             }
             restoredBestiary.initialize( *_pCatalog, *_pChart );
             restoredAlchemy.initialize( *_pCatalog, *_pRecipes );
-            restoredQuestLog.initialize( _pQuests.get() );
+            if ( _pQuests != nullptr )
+                restoredQuestLog.initialize( *_pQuests );
             restoredMutagens.initialize( *_pCatalog, _hunterLevel );
             restoredSkills.initialize( _skills.getTree() );
             restoredSkills.addPoints( _skillPoints );

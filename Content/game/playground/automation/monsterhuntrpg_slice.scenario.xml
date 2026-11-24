@@ -61,6 +61,13 @@
 	<WaitUntil watch="MonsterHunt.MonsterInReach" equals="1" timeoutFrames="180"/>
 	<Action name="MonsterHunt.Fast"/>
 	<WaitUntil watch="MonsterHunt.MonsterHP" equals="48" timeoutFrames="30"/>
+	<Expect watch="MonsterHunt.OilHits" equals="5"/>
+	<!-- 늪 기름 둘로 오일을 다시 만들어 칼에 새로 바른다(횟수가 다한 오일이 다시 찬다) -->
+	<Action name="MonsterHunt.Brew"/>
+	<AdvanceSimulation frames="3"/> <!-- 만든 뒤에 바른다 -->
+	<Action name="MonsterHunt.Oil"/>
+	<WaitUntil watch="MonsterHunt.OilHits" equals="6" timeoutFrames="30"/>
+	<ExpectLog id="MonsterHunt.Brewed" count="1"/>
 	<WaitUntil watch="MonsterHunt.AttackReady" equals="1" timeoutFrames="60"/>
 	<Action name="MonsterHunt.Fast"/>
 	<WaitUntil watch="MonsterHunt.MonsterHP" equals="15" timeoutFrames="30"/>

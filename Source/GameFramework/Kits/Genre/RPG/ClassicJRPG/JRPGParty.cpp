@@ -106,7 +106,7 @@ namespace sw
         member._id      = memberID;
         member._classID = classID;
         member._name    = string( name );
-        member._equipment.initialize( _pItemCatalog, _equipLayout, nullptr, nullptr );
+        member._equipment.initialize( *_pItemCatalog, _equipLayout, nullptr, nullptr );
         for ( int32 index = 0; index < kJRPGStatCount; ++index )
         {
             member._arrStat[index] = pClass->_arrBase[index];
@@ -287,7 +287,7 @@ namespace sw
         {
             if ( io.isReading() )
             {
-                member._equipment.initialize( _pItemCatalog, _equipLayout, nullptr, nullptr );
+                member._equipment.initialize( *_pItemCatalog, _equipLayout, nullptr, nullptr );
             }
             const size_t slotTotal = member._equipment.getSlots().size();
             uint32       slotCount = static_cast<uint32>( slotTotal );

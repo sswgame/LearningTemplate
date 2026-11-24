@@ -326,9 +326,9 @@ msgstr "탐색 %"
 
 #. Context: TextWidget._text
 #: game/playground/monsterhuntrpg/ui/hud.ui.xml
-msgctxt "Fast (J)   Strong (K)   Dodge (Shift)   Sign (Q)   Twin sign (R)   Oil (1)   Potion (2)"
-msgid "Fast (J)   Strong (K)   Dodge (Shift)   Sign (Q)   Twin sign (R)   Oil (1)   Potion (2)"
-msgstr "빠르게 (J)   강하게 (K)   회피 (Shift)   표식 (Q)   쌍표식 (R)   오일 (1)   물약 (2)"
+msgctxt "Fast (J)   Strong (K)   Dodge (Shift)   Sign (Q)   Twin sign (R)   Oil (1)   Potion (2)   Brew (B)"
+msgid "Fast (J)   Strong (K)   Dodge (Shift)   Sign (Q)   Twin sign (R)   Oil (1)   Potion (2)   Brew (B)"
+msgstr "빠르게 (J)   강하게 (K)   회피 (Shift)   표식 (Q)   쌍표식 (R)   오일 (1)   물약 (2)   만들기 (B)"
 
 #. Context: Monster name
 #: game/playground/data/monstercollector.xml
@@ -634,6 +634,12 @@ msgstr "기체 격추 - 특수기로 다음 기체를 고릅니다"
 msgctxt "Mind the pond - nobody swims in it."
 msgid "Mind the pond - nobody swims in it."
 msgstr "연못을 조심하게 - 아무도 거기서 헤엄치지 않는다네."
+
+#. Context: Item name
+#: common/data/items.xml
+msgctxt "Mire Fat"
+msgid "Mire Fat"
+msgstr "늪 기름"
 
 #. Context: TextWidget._text
 #: game/playground/monsterhuntrpg/ui/hud.ui.xml

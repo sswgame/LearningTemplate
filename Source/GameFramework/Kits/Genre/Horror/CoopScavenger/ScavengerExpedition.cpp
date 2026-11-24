@@ -82,7 +82,7 @@ namespace sw
         _pWeather       = &weather;
         _facility.bindFlags( flags );
         _facility.bindCatalog( &catalog );
-        _shop.initialize( &data._shopCatalog, &data._itemCatalog );
+        _shop.initialize( data._shopCatalog, data._itemCatalog );
         _pShipStorage = &shipStorage;
         _listCrew.clear();
         _listCrew.resize( static_cast<size_t>( crewCount ) );

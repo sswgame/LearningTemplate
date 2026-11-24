@@ -94,6 +94,7 @@
 					                              _elementChart="game/playground/monsterhuntrpg/data/hunt.elementchart.xml"
 					                              _oil="howler_oil"
 					                              _potion="amber_tonic"
+					                              _brewRecipe="howler_oil"
 					                              _sign="gust"
 					                              _skillTreeCatalog="game/playground/monsterhuntrpg/data/hunter.skilltrees.xml"
 					                              _skillTree="marsh_hunter"
@@ -124,6 +125,10 @@
 					                              _monsterAttackSeconds="2"
 					                              _seed="7"
 					                              _resultHoldSeconds="3">
+						<_listBrewItem>
+							<item>mire_fat</item>
+							<item>mire_fat</item>
+						</_listBrewItem>
 						<_listMutagen>
 							<item>gale_gland</item>
 						</_listMutagen>
@@ -139,6 +144,7 @@
 					                            _investigateAction="MonsterHunt.Investigate"
 					                            _alternateSignAction="MonsterHunt.AlternateSign"
 					                            _learnAction="MonsterHunt.Learn"
+					                            _brewAction="MonsterHunt.Brew"
 					                            _mutagenAction="MonsterHunt.Mutagen"
 					                            _bodyPrefab="game/playground/prefabs/ruleviews/person.prefab.xml"
 					                            _markerPrefab="game/playground/prefabs/ruleviews/cube.prefab.xml" />

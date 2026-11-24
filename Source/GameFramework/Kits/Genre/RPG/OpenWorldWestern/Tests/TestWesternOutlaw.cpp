@@ -10,6 +10,7 @@
 #include "GameFramework/Kits/Genre/RPG/OpenWorldWestern/WesternOutlaw.h"
 #include "GameFramework/Runtime/Foundation/Condition/GameFlags.h"
 #include "GameFramework/Runtime/Gameplay/Inventory/Inventory.h"
+#include "GameFramework/Runtime/Gameplay/Inventory/ItemCatalog.h"
 #include "GameFramework/Runtime/Gameplay/Inventory/LootTable.h"
 #include "GameFramework/Runtime/Gameplay/Inventory/Wallet.h"
 #include "GameFramework/Runtime/Gameplay/Progression/Reputation.h"
@@ -54,16 +55,17 @@ namespace
         WorldClock      _clock{};
         WeatherSystem   _weather{}; ///< 날씨 줄이 없다 — 기온은 지역 값 그대로다
         LootCatalog     _loot{};
+        ItemCatalog     _items{}; ///< 아이템 정의가 없는 판(겹침 수 1)
         Inventory       _bag{};
         WesternOutlaw   _outlaw{};
 
         OutlawRig()
         {
             SW_REQUIRE_TRUE( _catalog.loadFromXMLText( kOutlawXML, "WesternOutlawTest" ) );
-            _reputation.initialize( &_catalog.getHonorReputation() );
+            _reputation.initialize( _catalog.getHonorReputation() );
             SW_REQUIRE_TRUE( _clock.initialize( WorldClockSettings{} ) );
             SW_REQUIRE_TRUE( _loot.loadFromXMLText( kOutlawLootXML, "WesternOutlawTestLoot" ) );
-            SW_REQUIRE_TRUE( _bag.initialize( nullptr, 4 ) );
+            SW_REQUIRE_TRUE( _bag.initialize( _items, 4 ) );
             SW_REQUIRE_TRUE( _outlaw.initialize( &_catalog, &_loot, _wallet, _reputation, _clock, _flags, _weather, &_bag, hashed_string( "frontier" ), 20.0f, AIPerceptionSettings{} ) );
         }
 

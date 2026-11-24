@@ -15,6 +15,7 @@
 #include "GameFramework/Runtime/Gameplay/Gimmick/Loot/Tests/ItemReceiverTestComponent.h"
 #include "GameFramework/Runtime/Gameplay/Interaction/InteractableComponent.h"
 #include "GameFramework/Runtime/Gameplay/Inventory/InventoryComponent.h"
+#include "GameFramework/Runtime/Gameplay/Inventory/ItemCatalog.h"
 #include "GameFramework/Runtime/Gameplay/Inventory/PickupComponent.h"
 
 using namespace sw;
@@ -37,9 +38,10 @@ SW_TEST_CASE( LootGrantTest, ItemBoxFillsThePlayerBag )
     ItemBoxComponent*          pBoxB       = manager.createGameObject( hashed_string( "BoxB" ) )->addComponent<ItemBoxComponent>(); // 연 상자는 숨는다 — 열 때마다 새 상자
     SW_REQUIRE_NOT_NULL( pBoxA );
     SW_REQUIRE_NOT_NULL( pBoxB );
+    const ItemCatalog itemCatalog{};
     InventorySettings settings;
     settings._slotCount = 4;
-    SW_REQUIRE_TRUE( pBag->initialize( settings ) == GameStateInitResult::Fresh );
+    SW_REQUIRE_TRUE( pBag->initialize( itemCatalog, settings ) == GameStateInitResult::Fresh );
     manager.beginPlay();
     pPlayer->possess( *pPawn );
 

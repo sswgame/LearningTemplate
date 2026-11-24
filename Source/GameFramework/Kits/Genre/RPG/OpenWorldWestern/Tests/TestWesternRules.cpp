@@ -270,7 +270,7 @@ namespace
 
         WesternHonorTest()
         {
-            _reputation.initialize( &_catalog.getHonorReputation() );
+            _reputation.initialize( _catalog.getHonorReputation() );
             _honor.initialize( _catalog, _reputation );
         }
     };
@@ -343,7 +343,7 @@ SW_TEST_CASE_F( WesternLawTest, MaskedBountyAndWantedlessCrime )
     SW_EXPECT_EQUAL( 26, _law.getBounty( _region ) ); // 51 × 0.5 = 25.5
 
     sw::WesternLawState other;
-    other.initialize( &_catalog );
+    other.initialize( _catalog );
     (void)other.commitCrime( "littering", _region, sw::float3{}, { makeWitness( 2, false ) }, _sight, false );
     SW_EXPECT_EQUAL( 1, other.countPendingReports() );
     other.update( 0.01f );
@@ -424,7 +424,7 @@ SW_TEST_CASE_F( WesternLawTest, WantedCoolsWhileUnseen )
     SW_EXPECT_TRUE( _law.findPursuit( _region ) == nullptr );
 
     sw::WesternLawState fresh;
-    fresh.initialize( &_catalog );
+    fresh.initialize( _catalog );
     (void)fresh.commitCrime( "murder", _region, sw::float3{}, { makeWitness( 1, true ) }, _sight, false );
     (void)fresh.commitCrime( "murder", _region, sw::float3{}, { makeWitness( 1, true ) }, _sight, false );
     SW_REQUIRE_TRUE( fresh.findPursuit( _region ) != nullptr );
@@ -490,7 +490,7 @@ SW_TEST_CASE_F( WesternLawTest, UnknownRegionDoesNotPoisonState )
     sw::Archive written;
     _law.writeState( written );
     sw::WesternLawState restored;
-    restored.initialize( &_catalog );
+    restored.initialize( _catalog );
     sw::Archive reading( written.getData(), written.getSize() );
     SW_REQUIRE_TRUE( restored.readState( reading ) );
 

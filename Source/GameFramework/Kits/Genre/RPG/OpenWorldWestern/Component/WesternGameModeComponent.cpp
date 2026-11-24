@@ -98,9 +98,8 @@ namespace sw
         const GameObject* const pPlayerState = requirePlayerState();
         if ( pPlayerState == nullptr )
             return false; // 까닭은 베이스가 남겼다
-        const ReputationCatalog* const pHonor      = &_pWesternCatalog->getHonorReputation();
-        ReputationComponent* const     pReputation = PlayerComponentUtil::openOn<ReputationComponent>( *pPlayerState, pHonor );
-        WalletComponent* const         pWallet     = PlayerComponentUtil::requireOn<WalletComponent>( *pPlayerState );
+        ReputationComponent* const pReputation = PlayerComponentUtil::openOn<ReputationComponent>( *pPlayerState, _pWesternCatalog->getHonorReputation() );
+        WalletComponent* const     pWallet     = PlayerComponentUtil::requireOn<WalletComponent>( *pPlayerState );
         if ( pReputation == nullptr || pWallet == nullptr )
             return false;                                                                  // 까닭은 찾기 · 열기가 남겼다
         InventoryComponent* const pBag = pPlayerState->getComponent<InventoryComponent>(); // 가방은 선택이다 — 프레리 씬은 붙이지 않는다

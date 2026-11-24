@@ -265,7 +265,7 @@
 				<item>game/playground/metroidvania/ui/hud.ui.xml</item>
 			</origins>
 		</entry>
-		<entry key="Fast (J)   Strong (K)   Dodge (Shift)   Sign (Q)   Twin sign (R)   Oil (1)   Potion (2)" source="Fast (J)   Strong (K)   Dodge (Shift)   Sign (Q)   Twin sign (R)   Oil (1)   Potion (2)" context="TextWidget._text">
+		<entry key="Fast (J)   Strong (K)   Dodge (Shift)   Sign (Q)   Twin sign (R)   Oil (1)   Potion (2)   Brew (B)" source="Fast (J)   Strong (K)   Dodge (Shift)   Sign (Q)   Twin sign (R)   Oil (1)   Potion (2)   Brew (B)" context="TextWidget._text">
 			<origins>
 				<item>game/playground/monsterhuntrpg/ui/hud.ui.xml</item>
 			</origins>
@@ -523,6 +523,11 @@
 		<entry key="Mind the pond - nobody swims in it." source="Mind the pond - nobody swims in it." context="Dialogue line">
 			<origins>
 				<item>game/playground/pixeltown/dialogue/elder.dialogue.xml</item>
+			</origins>
+		</entry>
+		<entry key="Mire Fat" source="Mire Fat" context="Item name">
+			<origins>
+				<item>common/data/items.xml</item>
 			</origins>
 		</entry>
 		<entry key="Monster" source="Monster" context="TextWidget._text">

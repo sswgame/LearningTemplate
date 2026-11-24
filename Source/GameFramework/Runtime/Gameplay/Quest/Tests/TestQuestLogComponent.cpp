@@ -53,7 +53,7 @@ SW_TEST_CASE( QuestLogComponentTest, CountsOnlyWhatItsOwnPawnDid )
     GameObject*                pAnimal     = manager.createGameObject( hashed_string( "Animal" ) );
     pEnemy->addTag( TagID::request( "Enemy.Wolf" ) );
     pAnimal->addTag( TagID::request( "Animal.Deer" ) );
-    SW_REQUIRE_TRUE( pQuests->initialize( &catalog ) == GameStateInitResult::Fresh );
+    SW_REQUIRE_TRUE( pQuests->initialize( catalog ) == GameStateInitResult::Fresh );
     manager.beginPlay();
     pPlayer->possess( *pPawn );
     QuestLog& log = pQuests->getQuestLog();

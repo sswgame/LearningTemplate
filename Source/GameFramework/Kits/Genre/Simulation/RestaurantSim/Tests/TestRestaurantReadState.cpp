@@ -553,8 +553,10 @@ SW_TEST_CASE( RestaurantReadStateTestShop, ShopStateRefusesNegativePrices )
         written << sellModifier;
         written << daysSinceRestock;
         written << static_cast<uint32>( 0 ); // 되사기
-        sw::ShopManager state;
-        state.initialize( nullptr, nullptr );
+        const sw::ShopCatalog noShop{};
+        const sw::ItemCatalog noItem{};
+        sw::ShopManager       state;
+        state.initialize( noShop, noItem );
         sw::Archive reading( written.getData(), written.getSize() );
         return state.readState( reading );
     };

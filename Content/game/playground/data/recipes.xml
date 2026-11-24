@@ -6,4 +6,6 @@
 <RecipeCatalog>
 	<Recipe id="broth_bowl" station="Stove" time="3"><In item="broth_noodle"/><Out item="broth_bowl"/></Recipe>
 	<Recipe id="char_fish" station="Grill" time="4"><In item="harbor_fish"/><Out item="char_fish"/></Recipe>
+	<!-- 늪지 사냥 미니게임(monsterhuntrpg/maps/marsh)의 오일 — 늪 기름 둘로 바로 만든다. -->
+	<Recipe id="howler_oil"><In item="mire_fat" count="2"/><Out item="howler_oil"/></Recipe>
 </RecipeCatalog>

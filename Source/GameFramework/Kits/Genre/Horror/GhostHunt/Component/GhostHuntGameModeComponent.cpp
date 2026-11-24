@@ -153,6 +153,7 @@ namespace sw
         , _pCatalog{}
         , _pGraphAsset{}
         , _pLoot{}
+        , _pItemCatalog{}
         , _graph{}
         , _flags{}
         , _bag{}
@@ -178,12 +179,12 @@ namespace sw
         _graph.resetState();
         _flags.clear();
         _wallet.clear();
-        return _bag.initialize( nullptr, _bagSlotCount ) && _mansion.initialize( *_pCatalog, *_pLoot, _graph, _flags, _bag, _wallet, _seed );
+        return _bag.initialize( *_pItemCatalog, _bagSlotCount ) && _mansion.initialize( *_pCatalog, *_pLoot, _graph, _flags, _bag, _wallet, _seed );
     }
 
     bool GhostHuntGameModeComponent::startGame()
     {
-        if ( acquireBoundCatalog( _pCatalog ) == false || acquireRequired( _areaGraph, _pGraphAsset ) == false || acquireRequired( _loot, _pLoot ) == false )
+        if ( acquireBoundCatalog( _pCatalog ) == false || acquireBoundCatalog( _pItemCatalog ) == false || acquireRequired( _areaGraph, _pGraphAsset ) == false || acquireRequired( _loot, _pLoot ) == false )
             return false;
         const AreaDef* const pStart = _pGraphAsset->findArea( _startRoom );
         if ( pStart == nullptr )
@@ -501,7 +502,7 @@ namespace sw
         if ( io.isOk() == false )
             return;
         // 저택은 그래프 · 깃발 · 가방 · 지갑을 빌린다 — 지역 사본에 읽으면 빌린 주소가 사본을 가리킨다. 새로 연 저택에 바로 읽고, 거절되면 `onStateRestored` 가 새 판을 연다.
-        const bool bBound = _pCatalog != nullptr && _pGraphAsset != nullptr && _pLoot != nullptr;
+        const bool bBound = _pCatalog != nullptr && _pGraphAsset != nullptr && _pLoot != nullptr && _pItemCatalog != nullptr;
         if ( io.isReading() && ( bBound == false || openMansion() == false ) )
         {
             SW_LOG_ERROR_ID( "GhostHunt.StateNeedsCatalog", "Ghost hunt game mode: state read before the catalog and the area graph are bound - refused" );

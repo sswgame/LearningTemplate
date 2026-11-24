@@ -1162,6 +1162,11 @@
 				<AudioClipEntry _path="common/sounds/kenney_rpg_audio/cloth3.ogg" />
 			</_listClip>
 		</AudioEventDef>
+		<AudioEventDef _name="MonsterHuntBrew" _bus="sfx" _priority="60" _maxInstances="1" _steal="Oldest">
+			<_listClip>
+				<AudioClipEntry _path="common/sounds/kenney_rpg_audio/metal_pot2.ogg" />
+			</_listClip>
+		</AudioEventDef>
 		<AudioEventDef _name="MonsterHuntPotion" _bus="sfx" _priority="60" _maxInstances="1" _steal="Oldest">
 			<_listClip>
 				<AudioClipEntry _path="common/sounds/kenney_rpg_audio/handle_small_leather.ogg" />

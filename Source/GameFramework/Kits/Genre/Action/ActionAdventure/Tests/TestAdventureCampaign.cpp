@@ -99,7 +99,7 @@ SW_TEST_CASE( AdventureCampaignTest, RegionLoopCompletesTheQuest )
     QuestLog  log;
     GameFlags flags;
     Wallet    wallet;
-    log.initialize( &quests );
+    log.initialize( quests );
     AdventureCampaign campaign;
     SW_REQUIRE_TRUE( campaign.initialize( TestAdventureCampaignInternal::makeVitals(), hashed_string( "hearth" ), hashed_string( "velmora" ) ) );
     const AdventureRegionDef& hearth = *regions.find( hashed_string( "hearth" ) );
@@ -134,7 +134,7 @@ SW_TEST_CASE( AdventureCampaignTest, FlagPrefixSeparatesCampaigns )
     SW_REQUIRE_TRUE( quests.loadFromXMLText( kBaseQuestXML, "AdventureCampaignTest" ) );
     QuestLog  log;
     GameFlags flags;
-    log.initialize( &quests );
+    log.initialize( quests );
     AdventureCampaign first;
     AdventureCampaign second;
     SW_REQUIRE_TRUE( first.initialize( TestAdventureCampaignInternal::makeVitals(), hashed_string( "hearth" ), hashed_string( "velmora" ) ) );
@@ -193,7 +193,7 @@ SW_TEST_CASE( AdventureCampaignTest, QuestLogCarriesAcrossTheExpansion )
     SW_REQUIRE_TRUE( expandedQuests.loadFromXMLText( kExpandedQuestXML, "AdventureCampaignTest" ) );
 
     QuestLog baseLog;
-    baseLog.initialize( &baseQuests );
+    baseLog.initialize( baseQuests );
     SW_REQUIRE_TRUE( baseLog.start( hashed_string( "oath" ), 0 ) == QuestStartResult::Ok );
     (void)baseLog.notify( hashed_string( "Enter" ), hashed_string( "ridge" ) );
     (void)baseLog.notify( hashed_string( "Light" ), hashed_string( "ridge_beacon" ) );
@@ -203,7 +203,7 @@ SW_TEST_CASE( AdventureCampaignTest, QuestLogCarriesAcrossTheExpansion )
     baseLog.writeState( baseSave );
 
     QuestLog expandedLog;
-    expandedLog.initialize( &expandedQuests );
+    expandedLog.initialize( expandedQuests );
     Archive baseReading( baseSave.getData(), baseSave.getSize() );
     SW_REQUIRE_TRUE( expandedLog.readState( baseReading ) );
     SW_EXPECT_TRUE( expandedLog.getStatus( hashed_string( "oath" ) ) == QuestStatus::Completed );
@@ -212,7 +212,7 @@ SW_TEST_CASE( AdventureCampaignTest, QuestLogCarriesAcrossTheExpansion )
     expandedLog.writeState( expandedSave );
 
     QuestLog backLog;
-    backLog.initialize( &baseQuests );
+    backLog.initialize( baseQuests );
     Archive readingExpanded( expandedSave.getData(), expandedSave.getSize() );
     SW_EXPECT_LOG( "QuestLog.QuestLogSavedQuestNot" );
     SW_REQUIRE_TRUE( backLog.readState( readingExpanded ) );

@@ -56,7 +56,7 @@ namespace
             , _log{}
         {
             SW_REQUIRE_TRUE( _catalog.loadFromXMLText( kQuestXML, "QuestLogTest" ) );
-            _log.initialize( &_catalog );
+            _log.initialize( _catalog );
         }
 
         int32 countEvents( QuestEvent::Kind kind )
@@ -240,7 +240,7 @@ SW_TEST_CASE_F( QuestLogTest, StateRoundTrips )
     _log.writeState( archive );
 
     QuestLog restored;
-    restored.initialize( &_catalog );
+    restored.initialize( _catalog );
     Archive reading( archive.getData(), archive.getSize() );
     SW_REQUIRE_TRUE( restored.readState( reading ) );
     SW_EXPECT_TRUE( restored.getStatus( "intro" ) == QuestStatus::Completed );
@@ -268,7 +268,7 @@ SW_TEST_CASE_F( QuestLogTest, SaveSurvivesChangedData )
     QuestCatalog changed;
     SW_REQUIRE_TRUE( changed.loadFromXMLText( kChangedQuestXML, "QuestLogTest" ) );
     QuestLog restored;
-    restored.initialize( &changed );
+    restored.initialize( changed );
     Archive reading( archive.getData(), archive.getSize() );
     SW_REQUIRE_TRUE( restored.readState( reading ) );
 

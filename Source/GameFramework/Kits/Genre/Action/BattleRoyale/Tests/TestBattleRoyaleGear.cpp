@@ -173,7 +173,7 @@ SW_TEST_CASE( BattleRoyaleLoadoutTest, BackpackControlsCarryLimit )
     SW_EXPECT_NEAR( 50.0f, loadout.computeCarryLimit( kBag ), kGearTolerance );
 
     sw::Inventory inventory;
-    SW_REQUIRE_TRUE( inventory.initialize( &items, 4, loadout.computeCarryLimit() ) );
+    SW_REQUIRE_TRUE( inventory.initialize( items, 4, loadout.computeCarryLimit() ) );
     SW_EXPECT_EQUAL( 1, inventory.addItem( kRock, 2 ) ); // 무게 15 하나만 든다
 
     SW_EXPECT_FALSE( loadout.tryEquipBackpack( sw::hashed_string( "sack" ), inventory ) );
@@ -199,7 +199,7 @@ SW_TEST_CASE( BattleRoyaleLoadoutTest, ReloadTakesOnlyWhatItNeeds )
     sw::ItemCatalog items;
     SW_REQUIRE_TRUE( items.loadFromXMLText( kGearItemXML, "items" ) );
     sw::Inventory inventory;
-    SW_REQUIRE_TRUE( inventory.initialize( &items, 4 ) );
+    SW_REQUIRE_TRUE( inventory.initialize( items, 4 ) );
     SW_REQUIRE_EQUAL( 100, inventory.addItem( kAmmo, 100 ) );
     const sw::BattleRoyaleLoadout loadout;
 
@@ -226,7 +226,7 @@ SW_TEST_CASE( BattleRoyaleLoadoutTest, ReloadTakesOnlyWhatItNeeds )
     SW_EXPECT_EQUAL( 2, capped.getReserveAmmo() );
 
     sw::Inventory empty;
-    SW_REQUIRE_TRUE( empty.initialize( &items, 4 ) );
+    SW_REQUIRE_TRUE( empty.initialize( items, 4 ) );
     sw::WeaponState dry;
     SW_REQUIRE_TRUE( dry.equip( BattleRoyaleGearTestUtil::makeRifle( 50 ), sw::ProjectileDef{}, 0 ) );
     BattleRoyaleGearTestUtil::shoot( dry, 1 );
@@ -244,7 +244,7 @@ SW_TEST_CASE( BattleRoyaleLoadoutTest, StateRoundTripAndRejection )
     sw::ItemCatalog items;
     SW_REQUIRE_TRUE( items.loadFromXMLText( kGearItemXML, "items" ) );
     sw::Inventory inventory;
-    SW_REQUIRE_TRUE( inventory.initialize( &items, 4, 100.0f ) );
+    SW_REQUIRE_TRUE( inventory.initialize( items, 4, 100.0f ) );
 
     sw::BattleRoyaleLoadout original;
     original.initialize( catalog );

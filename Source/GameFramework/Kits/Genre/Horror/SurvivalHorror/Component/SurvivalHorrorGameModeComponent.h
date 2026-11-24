@@ -29,6 +29,7 @@
 #include "GameFramework/Runtime/Foundation/Framework/GameModeComponent.h"
 #include "GameFramework/Runtime/Gameplay/Inventory/GridInventory.h"
 #include "GameFramework/Runtime/Gameplay/Inventory/Inventory.h"
+#include "GameFramework/Runtime/Gameplay/Inventory/ItemCatalog.h"
 #include "GameFramework/Runtime/World/Land/AreaGraph.h"
 
 namespace sw
@@ -189,10 +190,11 @@ namespace sw
 
         SharedAssetRef<SurvivalHorrorCatalog> _pCatalog;
         SharedAssetRef<AreaGraph>             _pGraphAsset;
-        AreaGraph                             _graph;   ///< 방문 상태를 가진 이 판의 사본(세션이 빌린다)
-        GameFlags                             _flags;   ///< 한 판의 문 · 퍼즐(세션이 빌린다)
-        GridInventory                         _bag;     ///< 한 판의 격자 가방(세션이 빌린다)
-        Inventory                             _itemBox; ///< 한 판의 아이템 상자(세션이 빌린다)
+        SharedAssetRef<ItemCatalog>           _pItemCatalog; ///< 가방 · 상자의 겹침 수(게임 범위의 아이템 카탈로그)
+        AreaGraph                             _graph;        ///< 방문 상태를 가진 이 판의 사본(세션이 빌린다)
+        GameFlags                             _flags;        ///< 한 판의 문 · 퍼즐(세션이 빌린다)
+        GridInventory                         _bag;          ///< 한 판의 격자 가방(세션이 빌린다)
+        Inventory                             _itemBox;      ///< 한 판의 아이템 상자(세션이 빌린다)
         SurvivalHorrorSession                 _session;
         SurvivalHorrorEncounter               _encounter;    ///< `_encounterSpot` 이 있을 때만 뜻이 있다
         SurvivalHorrorCommand                 _command;      ///< 마지막 입력 — 클라이언트가 프레임마다 덮으므로 싣지 않는다

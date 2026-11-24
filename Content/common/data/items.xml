@@ -46,4 +46,6 @@
   <!-- 항구 식당 미니게임(game/playground restaurantsim)의 재료(장 · 레시피가 이 id 를 가리킨다). 외형이 없다. -->
   <Item id="broth_noodle" name="Broth Noodles" category="Food" maxStack="20"/>
   <Item id="harbor_fish" name="Harbor Fish" category="Food" maxStack="20"/>
+  <!-- 늪지 사냥 미니게임(game/playground monsterhuntrpg)의 오일 재료. 외형이 없다. -->
+  <Item id="mire_fat" name="Mire Fat" category="Material" maxStack="10"/>
 </ItemCatalog>

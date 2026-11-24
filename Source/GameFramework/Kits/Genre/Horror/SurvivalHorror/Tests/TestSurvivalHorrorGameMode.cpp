@@ -40,13 +40,14 @@ namespace
     {
         test::ScopedScratchDomain _domain{};
         SurvivalHorrorCatalog     _catalog{};
+        ItemCatalog               _items{};
         SubsystemScope            _scope{};
 
         [[nodiscard]] bool setUp()
         {
             (void)_domain.makeDiskFolder( "survival/data" ); // 폴더만 만든다
             return FileUtil::writeTextFile( _domain.makeDiskPath( "survival/data/house.areas.xml" ), kSurvivalGameModeAreas ) &&
-                   _catalog.loadFromXMLText( kSurvivalGameModeXML, "SurvivalHorrorGameModeTest" ) && _scope.bind<SurvivalHorrorCatalog>( &_catalog );
+                   _catalog.loadFromXMLText( kSurvivalGameModeXML, "SurvivalHorrorGameModeTest" ) && _scope.bind<SurvivalHorrorCatalog>( &_catalog ) && _scope.bind<const ItemCatalog>( &_items );
         }
 
         /** @brief 홀 가운데(4,4)에서 시작해 열쇠 · 지하실의 괴물을 지나 출구로 가는 집입니다. */

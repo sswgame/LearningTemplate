@@ -13,6 +13,7 @@
 #include "GameFramework/Runtime/Foundation/Condition/GameFlags.h"
 #include "GameFramework/Runtime/Gameplay/Inventory/GridInventory.h"
 #include "GameFramework/Runtime/Gameplay/Inventory/Inventory.h"
+#include "GameFramework/Runtime/Gameplay/Inventory/ItemCatalog.h"
 #include "GameFramework/Runtime/World/Land/AreaGraph.h"
 
 #include <utility>
@@ -128,6 +129,7 @@ namespace
         AreaGraph                   _graph{};
         GameFlags                   _flags{};
         GridInventory               _grid{};
+        ItemCatalog                 _items{}; ///< 아이템 정의가 없는 판(겹침 수 1)
         Inventory                   _box{};
         SurvivalHorrorSession       _session{};
         vector<SurvivalHorrorEvent> _listEvent{};
@@ -136,7 +138,7 @@ namespace
         {
             SW_REQUIRE_TRUE( _catalog.loadFromXMLText( kSurvivalHorrorXML, "SurvivalHorrorRulesTest" ) );
             SW_REQUIRE_TRUE( _graph.loadFromXMLText( kSurvivalHorrorGraphXML, "SurvivalHorrorRulesTest" ) );
-            SW_REQUIRE_TRUE( _box.initialize( nullptr, 4 ) );
+            SW_REQUIRE_TRUE( _box.initialize( _items, 4 ) );
             SW_REQUIRE_TRUE( open() );
         }
 

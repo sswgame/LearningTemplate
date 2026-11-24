@@ -48,6 +48,7 @@ namespace sw
         , _investigateAction{}
         , _alternateSignAction{}
         , _learnAction{}
+        , _brewAction{}
         , _mutagenAction{}
         , _bodyPrefab{}
         , _markerPrefab{}
@@ -83,16 +84,16 @@ namespace sw
         Component::onBeginPlay();
         setTickGroup( TickGroup::PostUpdate );
         _bActionsValid = SW_TRUE;
-        for ( const hashed_string* pAction : { &_moveAction, &_fastAction, &_strongAction, &_dodgeAction, &_signAction, &_oilAction, &_potionAction, &_investigateAction, &_alternateSignAction, &_learnAction, &_mutagenAction } )
+        for ( const hashed_string* pAction : { &_moveAction, &_fastAction, &_strongAction, &_dodgeAction, &_signAction, &_oilAction, &_potionAction, &_investigateAction, &_alternateSignAction, &_learnAction, &_brewAction, &_mutagenAction } )
         {
             if ( pAction->empty() )
                 _bActionsValid = SW_FALSE;
         }
         if ( _bActionsValid == SW_FALSE )
             SW_LOG_ERROR_ID( "MonsterHunt.AvatarActionMissing",
-                             "Monster hunt avatar: move '%#', fast '%#', strong '%#', dodge '%#', sign '%#', alternate sign '%#', oil '%#', potion '%#', learn '%#', mutagen '%#' and investigate '%#' actions must all be named - the avatar reads no input",
+                             "Monster hunt avatar: move '%#', fast '%#', strong '%#', dodge '%#', sign '%#', alternate sign '%#', oil '%#', potion '%#', learn '%#', brew '%#', mutagen '%#' and investigate '%#' actions must all be named - the avatar reads no input",
                              _moveAction.c_str(), _fastAction.c_str(), _strongAction.c_str(), _dodgeAction.c_str(), _signAction.c_str(), _alternateSignAction.c_str(), _oilAction.c_str(), _potionAction.c_str(),
-                             _learnAction.c_str(), _mutagenAction.c_str(), _investigateAction.c_str() );
+                             _learnAction.c_str(), _brewAction.c_str(), _mutagenAction.c_str(), _investigateAction.c_str() );
     }
 
     void MonsterHuntAvatarComponent::onEndPlay()
@@ -152,6 +153,8 @@ namespace sw
             (void)director.submitSign( true );
         if ( input.wasActionTriggered( _learnAction ) )
             (void)director.submitLearnSkill();
+        if ( input.wasActionTriggered( _brewAction ) )
+            (void)director.submitBrew();
         if ( input.wasActionTriggered( _mutagenAction ) )
             (void)director.submitMutagen();
         if ( input.wasActionTriggered( _oilAction ) )

@@ -81,7 +81,7 @@
 				<TextWidget _name="Toxicity" _text="{bind:_toxicity}" _styleClass="hud" _visibility="HitTestInvisible" _bLocalized="false">
 					<_slot _anchorMin="0,0" _anchorMax="0,0" _offsetMin="608,120" _offsetMax="688,156" />
 				</TextWidget>
-				<TextWidget _text="Fast (J)   Strong (K)   Dodge (Shift)   Sign (Q)   Twin sign (R)   Oil (1)   Potion (2)" _styleClass="hud" _visibility="HitTestInvisible">
+				<TextWidget _text="Fast (J)   Strong (K)   Dodge (Shift)   Sign (Q)   Twin sign (R)   Oil (1)   Potion (2)   Brew (B)" _styleClass="hud" _visibility="HitTestInvisible">
 					<_slot _anchorMin="0,1" _anchorMax="0,1" _offsetMin="48,-84" _offsetMax="1048,-48" />
 				</TextWidget>
 			</CanvasPanel>

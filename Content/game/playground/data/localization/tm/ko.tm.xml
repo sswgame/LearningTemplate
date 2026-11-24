@@ -55,6 +55,7 @@
 		<entry source="Every room is lit" text="모든 방에 불을 켰습니다" />
 		<entry source="Explored %" text="탐색 %" />
 		<entry source="Fast (J)   Strong (K)   Dodge (Shift)   Sign (Q)   Twin sign (R)   Oil (1)   Potion (2)" text="빠르게 (J)   강하게 (K)   회피 (Shift)   표식 (Q)   쌍표식 (R)   오일 (1)   물약 (2)" />
+		<entry source="Fast (J)   Strong (K)   Dodge (Shift)   Sign (Q)   Twin sign (R)   Oil (1)   Potion (2)   Brew (B)" text="빠르게 (J)   강하게 (K)   회피 (Shift)   표식 (Q)   쌍표식 (R)   오일 (1)   물약 (2)   만들기 (B)" />
 		<entry source="Fatigues" text="전투복" />
 		<entry source="Fernling" text="고사리돌이" />
 		<entry source="Fernwarden" text="고사리지기" />
@@ -112,6 +113,7 @@
 		<entry source="MP" text="마력" />
 		<entry source="Mech destroyed - special picks the next mech" text="기체 격추 - 특수기로 다음 기체를 고릅니다" />
 		<entry source="Mind the pond - nobody swims in it." text="연못을 조심하게 - 아무도 거기서 헤엄치지 않는다네." />
+		<entry source="Mire Fat" text="늪 기름" />
 		<entry source="Monster" text="괴물" />
 		<entry source="Move" text="기술" />
 		<entry source="Movement on the ridge. Stay low." text="능선에 움직임이 있다. 몸을 낮춰." />

@@ -51,7 +51,7 @@ namespace sw
          * @brief 일지를 엽니다. 첫 호출만 카탈로그를 쓰고, 들고 있던 복원 바이트가 있으면 그것으로 복원합니다(카탈로그에 없는 퀘스트는 버린다 — 그래서 열고 나서 읽는다).
          * @return 새 판, 복원, 이미 열림 중 하나입니다.
          */
-        [[nodiscard]] GameStateInitResult initialize( const QuestCatalog* pCatalog );
+        [[nodiscard]] GameStateInitResult initialize( const QuestCatalog& catalog );
 
         /** @brief 씬의 컴포넌트 레지스트리에 오르고 "game" 채널의 쓰러짐 · 상호작용 완료를 구독합니다(버스가 없는 프로세스는 구독하지 않는다). */
         void onRegister( GameObjectManager& manager ) override;

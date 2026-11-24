@@ -119,7 +119,7 @@ namespace
             SW_REQUIRE_TRUE( _catalog.loadFromXMLText( kMonsterHuntXML, "MonsterHuntTest" ) );
             SW_REQUIRE_TRUE( _itemCatalog.loadFromXMLText( kMonsterHuntItemXML, "MonsterHuntTest" ) );
             SW_REQUIRE_TRUE( _recipeCatalog.loadFromXMLText( kMonsterHuntRecipeXML, "MonsterHuntTest" ) );
-            SW_REQUIRE_TRUE( _inventory.initialize( &_itemCatalog, 16 ) );
+            SW_REQUIRE_TRUE( _inventory.initialize( _itemCatalog, 16 ) );
             SW_EXPECT_EQUAL( 40, _inventory.addItem( "herb", 40 ) );
             _alchemy.initialize( _catalog, _recipeCatalog );
         }
@@ -848,7 +848,7 @@ SW_TEST_CASE_F( MonsterHuntContractTest, InvestigationDrivesQuestLog )
 </Quest></QuestCatalog>)";
     SW_REQUIRE_TRUE( questCatalog.loadFromXMLText( kQuestXML, "MonsterHuntTest" ) );
     sw::QuestLog questLog;
-    questLog.initialize( &questCatalog );
+    questLog.initialize( questCatalog );
     SW_REQUIRE_EQUAL( sw::QuestStartResult::Ok, questLog.start( "griffin_quest", 1 ) );
 
     sw::MonsterHuntInvestigation investigation;

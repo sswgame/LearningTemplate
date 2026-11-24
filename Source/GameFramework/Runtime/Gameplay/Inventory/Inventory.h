@@ -77,8 +77,8 @@ namespace sw
 
         Inventory();
 
-        /** @brief 슬롯 수나 최대 무게가 음수이면 오류를 남기고 false 입니다(조용히 0 으로 맞추지 않습니다). */
-        [[nodiscard]] bool initialize( const ItemCatalog* pCatalog, int32 slotCount, float32 maxWeight = 0.0f );
+        /** @brief 슬롯 수나 최대 무게가 음수이면 오류를 남기고 false 입니다(조용히 0 으로 맞추지 않습니다). 카탈로그는 빌린다 — 아이템 정의가 없는 판은 줄 없는 카탈로그를 준다(겹침 수 1). */
+        [[nodiscard]] bool initialize( const ItemCatalog& catalog, int32 slotCount, float32 maxWeight = 0.0f );
         /** @brief 슬롯 수를 바꿉니다(가방 교체). 슬롯이 줄어서 넘치는 것은 @p outListOverflow 로 나오며, 바닥에 떨어뜨리는 데 씁니다. */
         void resize( int32 slotCount, vector<InventorySlot>& outListOverflow );
         /** @brief 최대 무게가 음수이면 오류를 남기고 false 입니다. */

@@ -15,6 +15,7 @@
 #include "GameFramework/Runtime/Gameplay/Ability/TagCountTable.h"
 #include "GameFramework/Runtime/Gameplay/Inventory/WalletComponent.h"
 #include "GameFramework/Runtime/Gameplay/Progression/ReputationComponent.h"
+#include "GameFramework/Runtime/Gameplay/Quest/QuestCatalog.h"
 #include "GameFramework/Runtime/Gameplay/Quest/QuestLogComponent.h"
 
 using namespace sw;
@@ -141,7 +142,9 @@ SW_TEST_CASE( MinigameRewardTest, ResultValuesReachThePlayerState )
     WalletComponent* const     pWallet     = pController->addComponent<WalletComponent>();
     ReputationComponent* const pReputation = pController->addComponent<ReputationComponent>();
     QuestLogComponent* const   pQuestLog   = pController->addComponent<QuestLogComponent>();
-    SW_REQUIRE_TRUE( pReputation->initialize( nullptr ) != GameStateInitResult::Refused );
+    const ReputationCatalog    reputationCatalog{};
+    const QuestCatalog         questCatalog{};
+    SW_REQUIRE_TRUE( pReputation->initialize( reputationCatalog ) != GameStateInitResult::Refused );
     const hashed_string gold( "Gold" );
     const hashed_string town( "town" );
     rig._pReward->setPlayerRewardTable( pController->getHandle(), vector<MinigameRewardCurrency>{
@@ -168,7 +171,7 @@ SW_TEST_CASE( MinigameRewardTest, ResultValuesReachThePlayerState )
     SW_EXPECT_FALSE( rig._pReward->applyResult( MinigameRewardFixture::makeResult( {
         MinigameResultValue{ hashed_string( "round" ), 1 }
     } ) ) );
-    SW_REQUIRE_TRUE( pQuestLog->initialize( nullptr ) != GameStateInitResult::Refused );
+    SW_REQUIRE_TRUE( pQuestLog->initialize( questCatalog ) != GameStateInitResult::Refused );
     SW_EXPECT_TRUE( rig._pReward->applyResult( MinigameRewardFixture::makeResult( {
         MinigameResultValue{ hashed_string( "round" ), 1 }
     } ) ) );
