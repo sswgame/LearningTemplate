@@ -3004,8 +3004,8 @@
 		       sourceHash="b9a5ddb967c9d069" />
 		<entry key="EditorScene.HierarchyAllTypes" text="모든 종류" sourceHash="81c540e467783095" />
 		<entry key="EditorScene.HierarchyEmptyScene"
-		       text="이 씬에는 아직 오브젝트가 없습니다. 여기서 더하거나 Content Browser 의 프리팹 · 메시를 씬 뷰로 끌어 놓으세요."
-		       sourceHash="b16da8b061cdd523" />
+		       text="이 씬에는 아직 카메라뿐입니다. 여기서 오브젝트를 더하거나 Content Browser 의 프리팹 · 메시를 씬 뷰로 끌어 놓으세요."
+		       sourceHash="c45eb83fb7d55a15" />
 		<entry key="EditorScene.HierarchyNoActiveScene" text="활성 씬이 없습니다." sourceHash="554770b7cdf6d60a" />
 		<entry key="EditorScene.HierarchySearch"
 		       text="오브젝트 이름 검색, 컴포넌트 타입(t:Mesh), 태그(tag:Player) 필터를 지원합니다"

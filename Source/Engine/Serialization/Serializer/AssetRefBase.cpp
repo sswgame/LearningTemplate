@@ -12,7 +12,7 @@ namespace sw
 {
     bool AssetRefBase::isPathOfTarget( string_view path, const AssetTypeDef& type )
     {
-        if ( type.isBuiltinName( path ) )
+        if ( type.isBuiltinName( path ) || type._runtimePath.matches( path ) )
             return true;
         for ( uint32 index = 0; index < type._suffixCount; ++index )
         {
@@ -27,7 +27,7 @@ namespace sw
 
     bool AssetRefBase::isBuiltin() const
     {
-        return _pTargetType->isBuiltinName( _path );
+        return _pTargetType->isBuiltinName( _path ) || _pTargetType->_runtimePath.matches( _path );
     }
 
     bool AssetRefBase::assign( string_view text )

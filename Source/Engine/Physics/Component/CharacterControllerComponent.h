@@ -169,8 +169,10 @@ namespace sw
         bool isGrounded() const { return _bGrounded; }
         /** @brief 마지막 스텝의 바닥 법선입니다. */
         float3 getGroundNormal() const { return _state._groundNormal; }
-        /** @brief 마지막 스텝에서 실제로 난 속도입니다. */
+        /** @brief 마지막 스텝에서 실제로 난 속도입니다(막힌 몫은 빠진다 — 서 있으면 0). */
         float3 getVelocity() const { return _state._velocity; }
+        /** @brief 마지막 스텝에 내려 한 속도입니다(걷기 · 필드 · 공중 관성 · 수직 — 막히기 전). 벽에 부딪히는 세기처럼 막힌 몫이 필요한 쪽이 읽는다. 게임 스레드에서 부릅니다. */
+        float3 getRequestedStepVelocity() const;
         /** @brief 마지막 스텝 뒤의 발 자리입니다(보간 전). */
         float3 getSimulatedPosition() const { return _state._position; }
         /** @brief 캐릭터 핸들입니다(시작 전이면 무효). */

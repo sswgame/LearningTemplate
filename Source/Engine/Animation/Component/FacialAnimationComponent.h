@@ -163,7 +163,7 @@ namespace sw
          *          리그 데이터만 본다 — 번호가 안 맞아 실제로는 아무것도 안 쓰는 경우도 쓴다고 센다(공유만 놓칠 뿐 쓰기를 놓치지는 않는다).
          */
         bool isDrivingFace() const;
-        /** @brief 후처리 단계 — 모프 가중치 · 눈 본을 겁니다. */
+        /** @brief 후처리 단계 — 모프 가중치 · 눈 본을 겁니다. 메시가 아직 없으면(읽는 중) 아무것도 하지 않습니다. */
         void applyFace( SkeletalMeshComponent& skeletalMesh );
         /** @brief 포즈 하나(표정 · 비즘)를 가중치만큼 유닛에 더합니다. */
         void addPose( SkeletalMeshComponent& skeletalMesh, const vector<optional<uint32>>& listTargetIndex, const FacialPose& pose, float32 weight ) const;

@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
 <?asset guid="3540b4e29d394c97aa8bd78a7959cc72"?>
 <!-- 야외 활동 장소(maps/outdoors)의 입력 — 걷기 · 점프 · 상호작용은 공용 액션이고, 위아래(헤엄 · 사다리)와 이모트만 여기 있다.
-     꺼진 레이어 Outdoors 이고 플레이어 폰의 입력 레이어(_inputLayer)가 쥔 동안 켠다 — 평원(West.*)의 같은 키(F · G · R)와 함께 발화하지 않는다. -->
+     꺼진 레이어 Outdoors 이고 플레이어 폰의 입력 레이어 목록(_listInputLayer — 걷기 · 몸 이동 · 상호작용과 함께)이 쥔 동안 켠다 — 평원(West.*)의 같은 키(F · G · R)와 함께 발화하지 않는다. -->
 <InputMap>
 	<layers>
 		<layer name="Outdoors" enabled="0" blockLower="0"/>

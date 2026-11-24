@@ -161,7 +161,7 @@ namespace sw::editor
 
         // 표는 위, 상세는 아래 — 줄은 선과 정렬로만 나눈다(얼룩 줄 없음)
         const float32             tableHeight = ImGui::GetContentRegionAvail().y * 0.45f;
-        constexpr ImGuiTableFlags kFlags      = ImGuiTableFlags_BordersInnerH | ImGuiTableFlags_Resizable | ImGuiTableFlags_ScrollY | ImGuiTableFlags_SizingStretchProp;
+        constexpr ImGuiTableFlags kFlags      = ImGuiTableFlags_BordersInnerH | ImGuiTableFlags_NoBordersInBody | ImGuiTableFlags_Resizable | ImGuiTableFlags_ScrollY | ImGuiTableFlags_SizingStretchProp; // 줄 전체가 고르기다 — 몸의 칸 경계가 누름을 먹지 않게 칸 폭은 머리에서만 끈다
         if ( ImGui::BeginTable( "##scc_changes", 3, kFlags, ImVec2( 0.0f, tableHeight ) ) )
         {
             ImGui::TableSetupColumn( "Status", ImGuiTableColumnFlags_WidthFixed, 120.0f * EditorThemeUtil::getDPIScale() );

@@ -97,7 +97,9 @@ namespace sw
                     (void)params._prefab.assign( context._entry.getTextParam( s_prefab ) );
                     const AssetRef<PrefabAsset>& prefab = params._prefab;
                     float4x4                     world;
-                    (void)context._component.findSocketWorldTransform( context._entry.getNameParam( s_socket ), world ); // 없으면 오브젝트 루트 변환이 담긴다(선언 설명)
+                    const hashed_string          socketName = context._entry.getNameParam( s_socket );
+                    if ( context._component.findSocketWorldTransform( socketName, world ) == false ) // 오브젝트 루트 변환이 담긴다(선언 설명)
+                        context._component.reportMissingSocket( socketName );
                     const float3       offset   = context._entry.getVectorParam( s_offset );
                     const float3       position = float3::transform( offset, world );
                     GameObjectManager* pManager = context._owner.getMutableManager();
@@ -202,16 +204,26 @@ namespace sw
                 void onNotifyEnd( AnimationNotifyContext& context ) const override { trace( context ); }
 
             private:
-                /** @brief 칼날 위 표본점(소켓 A → B, 양 끝 포함)입니다. */
+                /** @brief 칼날 위 표본점(소켓 A → B, 양 끝 포함)입니다. 소켓이 없으면 오류를 남기고 비웁니다(루트를 칼날로 쓰지 않는다 — 발밑만 쓸어 아무도 맞지 않는 채 조용했다). */
                 static void collectBlade( const AnimationNotifyContext& context, vector<float3>& outListPoint )
                 {
                     static const hashed_string s_socketA( "socketA" );
                     static const hashed_string s_socketB( "socketB" );
                     static const hashed_string s_samples( "samples" );
-                    const float3               pointA      = context._component.findSocketWorldPosition( context._entry.getNameParam( s_socketA ) );
-                    const float3               pointB      = context._component.findSocketWorldPosition( context._entry.getNameParam( s_socketB ) );
-                    const uint32               sampleCount = static_cast<uint32>( MathUtil::clamp( context._entry.getFloatParam( s_samples ), 2.0f, 16.0f ) );
-                    MeleeHit::makeBlade( pointA, pointB, sampleCount, outListPoint );
+                    outListPoint.clear();
+                    const hashed_string socketA = context._entry.getNameParam( s_socketA );
+                    const hashed_string socketB = context._entry.getNameParam( s_socketB );
+                    float4x4            worldA;
+                    float4x4            worldB;
+                    const bool          bFoundA = context._component.findSocketWorldTransform( socketA, worldA );
+                    const bool          bFoundB = context._component.findSocketWorldTransform( socketB, worldB );
+                    if ( bFoundA == false || bFoundB == false )
+                    {
+                        context._component.reportMissingSocket( bFoundA ? socketB : socketA );
+                        return;
+                    }
+                    const uint32 sampleCount = static_cast<uint32>( MathUtil::clamp( context._entry.getFloatParam( s_samples ), 2.0f, 16.0f ) );
+                    MeleeHit::makeBlade( worldA.getTranslation(), worldB.getTranslation(), sampleCount, outListPoint );
                 }
 
                 /** @brief 지난 위치에서 현재 위치까지 쓸고, 현재 위치를 다음 기준으로 넘깁니다. */

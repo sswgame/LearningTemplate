@@ -2545,8 +2545,8 @@
 		<entry source="This object is part of another scene placed in this one"
 		       text="다른 씬을 이 씬에 넣은 인스턴스의 일부입니다" />
 		<entry source="This row has no child fields to show" text="이 행에는 보일 자식 칸이 없습니다" />
-		<entry source="This scene has no objects yet. Add one here, or drag a prefab or mesh from the Content Browser into the scene view."
-		       text="이 씬에는 아직 오브젝트가 없습니다. 여기서 더하거나 Content Browser 의 프리팹 · 메시를 씬 뷰로 끌어 놓으세요." />
+		<entry source="This scene has nothing but its camera yet. Add an object here, or drag a prefab or mesh from the Content Browser into the scene view."
+		       text="이 씬에는 아직 카메라뿐입니다. 여기서 오브젝트를 더하거나 Content Browser 의 프리팹 · 메시를 씬 뷰로 끌어 놓으세요." />
 		<entry source="This scene was built from a cooked file and is already split into cells. Open the scene file to preview the split."
 		       text="이 씬은 쿠킹본에서 지어져 이미 셀로 나뉘어 있습니다. 나눔을 미리 보려면 씬 파일을 엽니다." />
 		<entry source="This sequence has no bindings." text="이 시퀀스에는 바인딩이 없습니다." />
