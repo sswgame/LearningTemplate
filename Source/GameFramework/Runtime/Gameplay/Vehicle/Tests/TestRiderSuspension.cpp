@@ -118,6 +118,7 @@ SW_TEST_CASE( RiderSuspensionTest, MotionResettingTeleportClearsTheWalkVelocity 
 /** @brief [RiderSuspensionTest] 쓰러져 물리로 떨어진 탑승자는 부활까지 멈춰 있고, 부활하면 물리를 끝내고 다시 걷는다 */
 SW_TEST_CASE( RiderSuspensionTest, FallenRiderWalksAgainOnRevival )
 {
+    SW_EXPECT_LOG( "Ragdoll.RagdollNoSkeletalMeshComponentObject" );
     RiderSuspensionRig rig;
     GameObject* const  pRider = rig._pRiderPawn->getOwner();
     (void)pRider->addComponent<RigidBodyComponent>();

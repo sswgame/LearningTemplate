@@ -253,7 +253,7 @@ namespace sw
     {
         GameObject*            pOwner = getOwner();
         SkeletalMeshComponent* pUnit  = pOwner != nullptr ? pOwner->getComponent<SkeletalMeshComponent>() : nullptr;
-        if ( pUnit == _pUnit )
+        if ( pUnit != nullptr && pUnit == _pUnit )
             return;
         unbindFromUnit();
         _pUnit = pUnit;
