@@ -148,6 +148,7 @@ namespace sw
         , _unclaimedNotificationCount{ 0 }
         , _mapPeerWireVersion{}
         , _listRefusedConnection{}
+        , _sessionSerial{ 0 }
         , _bWireVersionsChanged{ SW_FALSE }
     {
     }
@@ -206,6 +207,17 @@ namespace sw
         rebuildKindTable();
         _bWireVersionsChanged = SW_TRUE;
         return _subscriptions.issue( pHandler );
+    }
+
+    void NetMessageRouter::closeSession()
+    {
+        _subscriptions.detachAll();
+        _listHandler.clear();
+        rebuildKindTable();
+        _mapPeerWireVersion.clear();
+        _listRefusedConnection.clear();
+        ++_sessionSerial;
+        _bWireVersionsChanged = SW_FALSE;
     }
 
     void NetMessageRouter::releaseHandler( INetMessageHandler* pHandler )

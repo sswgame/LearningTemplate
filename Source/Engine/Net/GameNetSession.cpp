@@ -593,6 +593,8 @@ namespace sw
         if ( _role != GameNetRole::None )
             SW_LOG_INFO_ID( "GameNetSession.NetSessionClosed", "Net session closed (%#)", getEnumName( _role ) );
         _routerSubscription.reset();
+        if ( _role != GameNetRole::None )
+            _router.closeSession(); // 씬의 컴포넌트가 쥔 처리기 등록 · 링크가 여기서 함께 끝난다 — 다음 세션이 닫힌 세션의 처리기를 부르지 않는다
         _peers.shutdown();
         _listShard.clear(); // 샤드마다 스레드 → 호스트 → 흉내 → 소켓 순으로 내린다(`Shard` 의 선언 순서)
         _connectFuture = TaskFuture<NetConnectResult>{};

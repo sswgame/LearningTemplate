@@ -5,7 +5,7 @@
  *          그래서 컴포넌트는 **자기 오브젝트 매니저에서** 링크를 찾고, 링크는 월드를 만드는 쪽이 올린다 — 실제 게임은 씬 매니저가 새로 받아들이는 씬에 전역 세션의 값을 넣고
  *          (`SceneManager::setNetLink`), 하니스 월드(`NetSimWorld`)는 자기 호스트의 값을 넣는다. 언리얼 `UWorld::GetNetDriver()` 가 월드마다 넷 드라이버를 쥐는 것과 같은 자리다.
  *          링크가 비어 있으면(`isBound` 거짓) "이 월드는 네트워크 없이 혼자 도는 월드" 라는 뜻이다. 전역 세션으로 대신 찾아가는 폴백은 없다.
- *          가리키는 창구 · 라우터는 소유하지 않는다 — 올린 쪽이 월드보다 오래 살거나 월드를 비우기 전에 `unbind` 한다.
+ *          가리키는 창구 · 라우터는 소유하지 않는다 — 올린 쪽이 월드보다 오래 살거나 월드를 비우기 전에 `unbind` 한다. 세션만 닫히면(객체는 남는다) 링크는 저절로 빈 것이 된다.
  */
 #pragma once
 #include "Core/Foundation/Macros.h"
@@ -33,9 +33,11 @@ namespace sw
         INetPeers*        _pPeers{ nullptr };  ///< 보내고 연결을 묻는 창구
         NetMessageRouter* _pRouter{ nullptr }; ///< 받은 메시지를 나눠 주는 라우터(처리기를 단다)
         NetLinkRole       _role{ NetLinkRole::Server };
+        uint32            _sessionSerial{ 0 };          ///< 만든 때의 라우터 세션 번호(`NetMessageRouter::getSessionSerial`). 달라졌으면 그 세션은 닫혔다
         uint8             _bTicketRequired{ SW_FALSE }; ///< 서버 — 세션이 모든 연결에 접속 티켓(로그인 계정)을 요구한다. 계정이 있어야 하는 게임 서버는 이 값을 보고 선다(세션 설정이 정한다)
 
-        [[nodiscard]] bool isComplete() const { return _pPeers != nullptr && _pRouter != nullptr; }
+        /** @brief 창구 · 라우터가 있고 그 세션이 아직 열려 있으면 true 입니다 — 닫힌 세션의 링크는 비어 있는 것과 같다(같은 라우터로 새 세션이 열려도 되살아나지 않는다). */
+        [[nodiscard]] SW_API bool isComplete() const;
     };
 
     /**
