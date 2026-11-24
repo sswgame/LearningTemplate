@@ -49,7 +49,9 @@ namespace sw::editor
         [[nodiscard]] bool saveDocument() override;
         /** @brief 세션의 사이드카 문서 하나입니다(`MeshModifierSession::findSidecarPath`). */
         void collectFilesToSave( vector<AbsolutePath>& outListPath ) const override;
-        bool canSaveDocument() const override;
+        /** @brief 대상을 바꿀 때마다 사이드카를 새로 읽으므로 세션이 기준을 적고 본다(`MeshModifierSession::saveSidecar`). */
+        [[nodiscard]] bool validateDiskBeforeSave( const vector<AbsolutePath>& /*listPath*/ ) override { return true; }
+        bool               canSaveDocument() const override;
         /** @brief 스택은 패널 밖의 세션(`MeshModifierSession`)에 살아 있어 창을 닫아도 잃지 않는다 — 닫기는 묻지 않고, 종료 확인만 미저장 스택을 묻는다. */
         bool shouldAskBeforeClose() const override { return false; }
 

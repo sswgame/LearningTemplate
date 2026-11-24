@@ -60,7 +60,8 @@ namespace sw
         uint64 _sceneGeneration;
         string _sceneName;
         string _sceneSourcePath;
-        uint8  _bHasSnapshot : 1; ///< 스냅샷을 찍었다(씬 없이 누른 Play 는 되돌릴 것이 없다)
+        uint8  _bHasSnapshot         : 1; ///< 스냅샷을 찍었다
+        uint8  _bStartedWithoutScene : 1; ///< 활성 씬 없이 Play 를 시작했다 — Stop 은 플레이가 연 씬을 모두 내려 씬 없는 상태로 되돌린다
 
         ScenePlaySnapshot()
             : _listSnapshot{}
@@ -70,6 +71,7 @@ namespace sw
             , _sceneName{}
             , _sceneSourcePath{}
             , _bHasSnapshot{ SW_FALSE }
+            , _bStartedWithoutScene{ SW_FALSE }
         {
         }
     };

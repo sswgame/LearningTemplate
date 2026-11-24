@@ -348,6 +348,8 @@ namespace sw
         [[nodiscard]] bool loadFromFile( const AbsolutePath& absPath );
         /** @brief `loadFromFile` 의 데이터 문서 판입니다(`parseData`). 리소스 id 가 아니라 디스크 경로로 고른 데이터 파일을 리소스 읽기와 같은 길로 읽습니다. */
         [[nodiscard]] bool loadDataFile( const AbsolutePath& absPath );
+        /** @brief `loadDataFile` 과 같되 합치기 규칙을 읽는 쪽이 고릅니다(`loadResourceAs` 의 디스크 판). @p pOutBaseID 는 펼치기 전 원문의 `_base` 입니다. */
+        [[nodiscard]] bool loadDataFileAs( const AbsolutePath& absPath, const ResourceContext& context, string* pOutBaseID );
 
         /**
          * @brief 리소스 id · OS 절대 경로 · 작업 경로를 `AssetIO::readTextAsset` 로 읽고 `parseData` 합니다(낱개 파일 · 팩).

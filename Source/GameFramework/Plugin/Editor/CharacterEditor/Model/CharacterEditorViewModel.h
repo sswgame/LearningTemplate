@@ -16,6 +16,8 @@
 #include "Core/Name/hashed_string.h"
 #include "Core/String/fixed_string.h"
 
+#include "Editor/Common/Workspace/Asset/EditorDiskBaseline.h"
+
 #include "Engine/Asset/Cache/SharedAssetRef.h"
 
 #include "GameFramework/Plugin/Editor/CharacterEditor/Model/AppearanceEditModel.h"
@@ -131,7 +133,7 @@ namespace sw::editor
          *          외형 선택은 파일이 아니라 사용자 프리셋 저장소에 쓰므로 여기에 들지 않는다(프리셋 저장 단추가 따로 표시한다).
          */
         bool isDirty() const { return _sockets.isDirty() || _pose.isDirty() || isBodyDataDirty(); }
-        /** @brief 미저장인 파일(`isDirty` 의 목록)을 씁니다. 하나라도 못 쓰면 false 이고 까닭은 상태 줄에 남습니다. */
+        /** @brief 미저장인 파일(`isDirty` 의 목록)을 씁니다. 하나라도 못 쓰면(연 뒤 밖에서 바뀐 파일의 첫 저장 포함 — `EditorDiskBaseline`) false 이고 까닭은 상태 줄에 남습니다. */
         [[nodiscard]] bool saveFiles( float64 nowSeconds );
         /** @brief `saveFiles` 가 쓸 파일입니다(소켓 · 포즈는 리소스 id, 몸 데이터는 디스크 경로). */
         void collectFilesToSave( vector<string>& outListAssetID ) const;
@@ -284,6 +286,7 @@ namespace sw::editor
         AppearanceSelection                    _stagedSelection;     ///< 쓰는 중인 저장의 선택(`_bStagedSelection` 일 때) - 끝나면 "저장된 상태"
         string                                 _thumbnailPresetName; ///< 썸네일을 쓰는 중인 프리셋
         string                                 _thumbnailSlot;       ///< 그 썸네일 슬롯
+        EditorDiskBaseline                     _diskBaseline;        ///< 소켓 · 포즈 · 몸 데이터 파일을 읽은(쓴) 때의 내용
         Subscription                           _presetRequest;       ///< 프리셋 슬롯 읽기 · 쓰기(하나씩)
         Subscription                           _thumbnailRequest;    ///< 썸네일 슬롯 쓰기
         CharacterEditorPaths                   _paths;

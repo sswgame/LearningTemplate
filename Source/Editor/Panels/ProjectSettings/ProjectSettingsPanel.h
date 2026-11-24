@@ -57,7 +57,9 @@ namespace sw::editor
         [[nodiscard]] bool saveDocument() override;
         /** @brief 고친 설정 파일들(`ProjectSettingsPage::_absolutePath`)입니다 — `saveDocument` 가 고친 페이지만 쓴다. */
         void collectFilesToSave( vector<AbsolutePath>& outListPath ) const override;
-        void revertDocument() override;
+        /** @brief 페이지마다 자기 파일의 기준을 들고 저장할 때 본다(`ProjectSettingsPage::saveDocument`) — 페이지별 Save 단추도 같은 길이다. */
+        [[nodiscard]] bool validateDiskBeforeSave( const vector<AbsolutePath>& /*listPath*/ ) override { return true; }
+        void               revertDocument() override;
         /** @brief 고친 설정 파일 하나의 저장 글입니다(`ProjectSettingsPage::tryMakeText`). */
         [[nodiscard]] expected<string> tryMakeFileText( const AbsolutePath& absolutePath ) const override;
         [[nodiscard]] bool             isEditingFile( const AbsolutePath& absolutePath ) override;

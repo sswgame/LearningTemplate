@@ -14,6 +14,7 @@
 #include "Core/Math/VectorMath.h"
 
 #include "Editor/Common/EditorSubsystem.h"
+#include "Editor/Common/Workspace/Asset/EditorDiskBaseline.h"
 #include "Editor/Common/Workspace/Undo/EditSnapshotHistory.h"
 
 #include "Engine/Foundation/GameObjectHandle.h"
@@ -272,6 +273,7 @@ namespace sw::editor
         vector<float3>              _listSourcePosition; ///< 원본 정점 위치(스택 입력 위치 · 원본 상자)
         EditSnapshotHistory<string> _history;            ///< 스택 글(JSON) 되돌리기
         expected<string>            _savedStackText;     ///< 마지막으로 읽거나 쓴 사이드카의 스택 저장 글(`isStackUnsaved` 의 기준). 못 만들었으면 오류 값이다
+        EditorDiskBaseline          _sidecarBaseline;    ///< 사이드카를 읽은(쓴) 때의 내용 — 그 사이 밖에서 바뀐 사이드카를 말없이 덮지 않는다
         string                      _meshPath;
         MeshModifierBounds          _sourceBounds;
         GameObjectHandle            _target;

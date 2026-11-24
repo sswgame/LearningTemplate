@@ -64,8 +64,9 @@ endfunction()
 
 if(CMAKE_CROSSCOMPILING OR SW_SHIPPING_BUILD)
 	# 교차 빌드(Android · 웹)의 App 은 이 기계에서 돌지 않고 배포 구성에는 쿠커가 없다 — 호스트 개발 빌드의 App(서버 타깃은 Server)이 굽는다(cmake/Modules/Build/HostTools.cmake).
-	# 팩 내용은 다른 배포 대상과 같다. 대상마다 다른 것은 둘뿐이다:
+	# 팩 내용은 다른 배포 대상과 같다. 대상마다 다른 것은 셋뿐이다:
 	#   - 셰이더 바이너리: 이 빌드의 배포 백엔드(SW_SHIPPING_RHI_BACKEND — Android Vulkan, 웹 WebGPU)를 명령줄 이름(CookContract.json command_line_name)으로 넘긴다.
+	#   - 조건(`_when`)의 platform 축: 이 빌드의 플랫폼(`--cook-platform`).
 	#   - 텍스처(교차 빌드만): 모든 배포 대상의 형식 변형(ASTC · ETC2 — EngineConfig.json _textureFormats)을 먼저 굽는다(--cook-texture-variants, 에디터 모듈이 있는 개발 빌드의 일).
 	#     팩은 곁 파일 규칙으로 변형을 함께 담고, 실행이 플랫폼의 대상(_listPlatform)에서 장치가 지원하는 첫 묶음을 고른다.
 	# shortcut: 같은 작업 트리의 데스크톱 팩도 구워 둔 변형을 곁 파일로 담는다(배포 크기), 크기가 문제가 되면 PackCooker 가 굽는 대상의 묶음 변형만 담게 한다.
@@ -86,6 +87,10 @@ if(CMAKE_CROSSCOMPILING OR SW_SHIPPING_BUILD)
 	unset(host_exe_suffix)
 	sw_check_rhi_backend_name("${SW_SHIPPING_RHI_BACKEND}")
 	set(shipping_backend_flag "-${SW_RHI_BACKEND_${SW_SHIPPING_RHI_BACKEND}_COMMAND_LINE_NAME}")
+	# 리소스 조건(`_when`)의 platform 축은 굽는 App 이 아니라 이 빌드의 플랫폼이다 — 호스트 App 이 구운 Android 팩이 Windows 조건을 푼 채 나가지 않게.
+	string(TOLOWER "${SW_PLATFORM_NAME}" cook_platform)
+	list(APPEND cook_args "--cook-platform=${cook_platform}")
+	unset(cook_platform)
 	if(NOT SW_STATIC_MODULES)
 		message(FATAL_ERROR "[Cook] cross and shipping builds link modules statically (SW_STATIC_MODULES) - the cook command chain below needs the input fingerprint wrapper")
 	endif()
