@@ -1,9 +1,17 @@
+/**
+ * @file ScheduleDebugPanel.cpp
+ * @brief NPC 하루 일정 디버그 창입니다. 살아 있는 `ScheduleSystem` 의 NPC 를 골라 오늘 타임라인 표와 "지금 왜 이 행동인가"(`explainNPC`) 글을 보입니다.
+ * @details 언리얼 Mass/StateTree 디버거 · 유니티 Timeline 디버그 창의 자리다. 일정 시스템을 바꾸지 않는다 — 읽기 질의(`getPlan` · `getNPCView` · `explainNPC` · `dumpTimeline`)만 쓴다.
+ *          시각 슬라이더는 시뮬레이션을 돌리지 않고 오늘 계획에서 그 시각을 덮는 칸을 짚어 보일 뿐이다. 시스템은 매 프레임 `ScheduleSystem::collectLiveSystems` 로 다시 찾는다(포인터를 프레임 너머로 들고 있지 않는다).
+ *          고름 · 미리 볼 시각 · 행 · 설명 글 · 게시 값은 `ScheduleDebugViewModel`(Model/, ImGui 없음)이 들고, 이 창은 그 값(`ScheduleDebugViewState`)만 그리고 의도를 명령으로 넘긴다.
+ */
 #include "pch.h"
 
-#include "GameFramework/Plugin/Editor/GameplayTools/Schedule/ScheduleDebugPanel.h"
+#include "Core/Foundation/Types.h"
 
 #include "Editor/Common/Commands/EditorCommandIDs.h"
 #include "Editor/Common/GUI/EditorChrome.h"
+#include "Editor/Common/GUI/Panel/EditorPanel.h"
 #include "Editor/Common/GUI/Panel/EditorPanelManager.h"
 #include "Editor/Common/Input/EditorCommandGUI.h"
 #include "Editor/Common/Widgets/EditorWidgets.h"
@@ -12,12 +20,44 @@
 #include "Engine/Automation/Watch/AutomationWatch.h"
 #include "Engine/Localization/LocText.h"
 
+#include "GameFramework/Plugin/Editor/GameplayTools/Schedule/Model/ScheduleDebugViewModel.h"
 #include "GameFramework/Runtime/Character/AI/Schedule/ScheduleCatalog.h"
 
 #include <imgui.h>
 
 namespace sw::editor
 {
+    /**
+     * @class ScheduleDebugPanel
+     * @brief NPC 일정 타임라인 · 설명 창입니다.
+     */
+    class ScheduleDebugPanel final : public EditorPanel
+    {
+    public:
+        /** @brief 패널 id 입니다. 등록(`SW_EDITOR_PANEL`)과 조회(`EditorPanelManager::findPanel<…>`)가 모두 이 상수에서 온다. */
+        static constexpr const utf8* kPanelID = "npc_schedule";
+        /** @brief 처음 열 때의 크기(글자 수)입니다. */
+        static constexpr EditorTextExtent kInitialPanelSize = EditorTextExtent::ofText( 120.0f, 33.0f );
+
+        ScheduleDebugPanel();
+
+        const utf8*      getPanelTitle() const override { return "NPC Schedule"; }
+        EditorTextExtent getInitialPanelSize() const override { return kInitialPanelSize; }
+        void             drawContent() override;
+
+        /** @brief 자동화 감시 값이 읽는 값입니다(모델이 그리기마다 게시한다). */
+        const ScheduleDebugPublished& getPublished() const { return _model.getPublished(); }
+
+    private:
+        void drawNPCList();
+        void drawTimeline();
+        void drawExplanation();
+
+    private:
+        ScheduleDebugViewModel _model;
+        ScheduleDebugViewState _state; ///< 이번 프레임 값(`_model.gather`) — 멤버라 벡터 자리를 다시 쓴다
+    };
+
     namespace
     {
         struct ScheduleDebugPanelInternal

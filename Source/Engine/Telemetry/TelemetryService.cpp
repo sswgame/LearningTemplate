@@ -7,6 +7,7 @@
 #include "Core/File/FileUtil.h"
 #include "Core/Foundation/BuildInfo.h"
 #include "Core/Hash/HashUtil.h"
+#include "Core/Log/ScopedDeferredLog.h"
 #include "Core/Math/MathUtil.h"
 #include "Core/Module/ModuleBuildID.h"
 #include "Core/Process/ProcessSession.h"
@@ -270,7 +271,8 @@ namespace sw
         _pSettings     = nullptr;
         uint64 lastJob = 0;
         {
-            ScopedLock<mutex> lock{ _mutex };
+            const ScopedDeferredLog deferredLog;
+            ScopedLock<mutex>       lock{ _mutex };
             if ( _bInitialized == SW_FALSE )
                 return;
             if ( _bConsent == SW_TRUE )
@@ -354,25 +356,28 @@ namespace sw
 
     bool TelemetryService::loadSchema( const AssetID& assetID )
     {
-        ScopedLock<mutex> lock{ _mutex };
-        const bool        bLoaded = _schema.loadFromAsset( assetID );
+        const ScopedDeferredLog deferredLog;
+        ScopedLock<mutex>       lock{ _mutex };
+        const bool              bLoaded = _schema.loadFromAsset( assetID );
         _listEventOccurrence.resize( _schema.getEvents().size(), 0u );
         return bLoaded;
     }
 
     bool TelemetryService::loadSchemaText( string_view xmlText, string_view sourceName )
     {
-        ScopedLock<mutex> lock{ _mutex };
-        const bool        bLoaded = _schema.loadFromXMLText( xmlText, sourceName );
+        const ScopedDeferredLog deferredLog;
+        ScopedLock<mutex>       lock{ _mutex };
+        const bool              bLoaded = _schema.loadFromXMLText( xmlText, sourceName );
         _listEventOccurrence.resize( _schema.getEvents().size(), 0u );
         return bLoaded;
     }
 
     void TelemetryService::setConsent( bool bEnabled )
     {
-        ScopedLock<mutex> lock{ _mutex };
-        const bool        bWasEnabled = _bConsent == SW_TRUE;
-        _bConsent                     = bEnabled ? SW_TRUE : SW_FALSE;
+        const ScopedDeferredLog deferredLog;
+        ScopedLock<mutex>       lock{ _mutex };
+        const bool              bWasEnabled = _bConsent == SW_TRUE;
+        _bConsent                           = bEnabled ? SW_TRUE : SW_FALSE;
         if ( _bInitialized == SW_FALSE )
             return;
         if ( bEnabled == false )
@@ -436,7 +441,8 @@ namespace sw
         }
         uint64 lastJob = 0;
         {
-            ScopedLock<mutex> lock{ _mutex };
+            const ScopedDeferredLog deferredLog;
+            ScopedLock<mutex>       lock{ _mutex };
             if ( _bInitialized == SW_TRUE && _bConsent == SW_TRUE )
                 (void)submitSpoolJobLocked( TelemetrySpoolJobKind::Close );
             lastJob = _lastSubmittedJob;
@@ -458,7 +464,8 @@ namespace sw
 
     TelemetryRecordResult TelemetryService::record( const TelemetryEvent& event )
     {
-        ScopedLock<mutex> lock{ _mutex };
+        const ScopedDeferredLog deferredLog;
+        ScopedLock<mutex>       lock{ _mutex };
         return recordLocked( event );
     }
 
@@ -616,7 +623,8 @@ namespace sw
 
     void TelemetryService::update( float32 deltaSeconds )
     {
-        ScopedLock<mutex> lock{ _mutex };
+        const ScopedDeferredLog deferredLog;
+        ScopedLock<mutex>       lock{ _mutex };
         if ( _bInitialized == SW_FALSE || deltaSeconds <= 0.0f )
             return;
         _sessionSeconds += static_cast<float64>( deltaSeconds );
@@ -631,8 +639,9 @@ namespace sw
 
     void TelemetryService::recordFrame( string_view sceneID, float32 deltaSeconds )
     {
-        ScopedLock<mutex> lock{ _mutex };
-        const bool        bTelemetryDisabled = _bInitialized == SW_FALSE || _bConsent == SW_FALSE || deltaSeconds <= 0.0f;
+        const ScopedDeferredLog deferredLog;
+        ScopedLock<mutex>       lock{ _mutex };
+        const bool              bTelemetryDisabled = _bInitialized == SW_FALSE || _bConsent == SW_FALSE || deltaSeconds <= 0.0f;
         if ( bTelemetryDisabled )
             return;
         if ( _currentScene != sceneID )
@@ -671,7 +680,8 @@ namespace sw
     {
         uint64 lastJob = 0;
         {
-            ScopedLock<mutex> lock{ _mutex };
+            const ScopedDeferredLog deferredLog;
+            ScopedLock<mutex>       lock{ _mutex };
             if ( _bInitialized == SW_TRUE && _bConsent == SW_TRUE )
                 (void)submitSpoolJobLocked( TelemetrySpoolJobKind::Write );
             lastJob = _lastSubmittedJob;
@@ -706,7 +716,8 @@ namespace sw
         (void)bStopping; // 정지 중에 꺼낸 일도 끝까지 한다(받은 사건을 잃지 않는다) — 소멸자의 stop 앞에서 shutdown 이 이미 기다려 실제로는 남은 일이 없다
         {
             // 디스크 쓰기는 스풀 잠금 아래다 — 이 잠금은 워커와 조회만 잡고 게임 루프(`record` · `update`)는 잡지 않는다.
-            ScopedLock<mutex> spoolLock{ _spoolMutex };
+            const ScopedDeferredLog deferredLog;
+            ScopedLock<mutex>       spoolLock{ _spoolMutex };
             if ( job._kind == TelemetrySpoolJobKind::Purge )
             {
                 purgeSpoolLocked();
@@ -859,7 +870,8 @@ namespace sw
             }
             bool bNext = false;
             {
-                ScopedLock<mutex> spoolLock{ _spoolMutex };
+                const ScopedDeferredLog deferredLog;
+                ScopedLock<mutex>       spoolLock{ _spoolMutex };
                 _pUploadingWith = nullptr;
                 if ( bRead == false )
                 {

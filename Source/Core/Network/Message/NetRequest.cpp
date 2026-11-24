@@ -3,6 +3,7 @@
 #include "Core/Network/Message/NetRequest.h"
 
 #include "Core/Hash/HashUtil.h"
+#include "Core/Log/ScopedDeferredLog.h"
 #include "Core/Math/SecureRandom.h"
 #include "Core/Network/Message/StreamMessageEndpoint.h"
 #include "Core/Time/Clock.h"
@@ -138,7 +139,8 @@ namespace sw
         NetRequestStatus failure     = NetRequestStatus::Ok;
         uint64           requestID   = 0;
         {
-            ScopedLock<mutex> lock{ _mutex };
+            const ScopedDeferredLog deferredLog;
+            ScopedLock<mutex>       lock{ _mutex };
             if ( _pEndpoint == nullptr || static_cast<int32>( _mapPending.size() ) >= _maxPendingRequests )
             {
                 failure = NetRequestStatus::Overloaded;
@@ -193,8 +195,9 @@ namespace sw
     {
         Pending pending;
         {
-            ScopedLock<mutex> lock{ _mutex };
-            const auto        found = _mapPending.find( requestID );
+            const ScopedDeferredLog deferredLog;
+            ScopedLock<mutex>       lock{ _mutex };
+            const auto              found = _mapPending.find( requestID );
             if ( found == _mapPending.end() )
                 return false;
             pending = std::move( found->second );
@@ -340,8 +343,9 @@ namespace sw
 
     bool NetRequestServer::registerMethod( uint16 method, const NetRequestFunction& function )
     {
-        ScopedLock<mutex> lock{ _mutex };
-        const bool        bInserted = _mapHandler.emplace( method, function ).second;
+        const ScopedDeferredLog deferredLog;
+        ScopedLock<mutex>       lock{ _mutex };
+        const bool              bInserted = _mapHandler.emplace( method, function ).second;
         if ( bInserted == false )
             SW_LOG_ERROR_ID( "NetRequest.NetRequestServerMethodAlreadyRegistered", "NetRequestServer: method %# is already registered - two handlers claim one method number", static_cast<uint32>( method ) );
         return bInserted;
@@ -361,7 +365,8 @@ namespace sw
 
     void NetRequestServer::sendResponse( StreamConnectionHandle handle, uint64 requestID, NetRequestStatus status, const uint8* pBody, int32 bodySize )
     {
-        ScopedLock<mutex> lock{ _writerMutex };
+        const ScopedDeferredLog deferredLog;
+        ScopedLock<mutex>       lock{ _writerMutex };
         _writer.clear();
         _writer.writeVarUint( requestID );
         _writer.writeBits( static_cast<uint32>( status ), 8 );

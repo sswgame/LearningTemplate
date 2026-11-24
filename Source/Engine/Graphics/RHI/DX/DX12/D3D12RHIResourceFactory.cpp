@@ -5,6 +5,7 @@
 #include "Core/Concurrency/mutex.h"
 #include "Core/Container/IndexFreeList.h"
 #include "Core/Log/LogOnce.h"
+#include "Core/Log/ScopedDeferredLog.h"
 #include "Core/Math/MathUtil.h"
 #include "Core/String/StringUtil.h"
 
@@ -286,7 +287,8 @@ namespace sw
         if ( pDest == nullptr )
             return;
 
-        ScopedLock<mutex> uploadLock{ _pDevice->_uploadSlotMutex };
+        const ScopedDeferredLog deferredLog;
+        ScopedLock<mutex>       uploadLock{ _pDevice->_uploadSlotMutex };
 
         // **조각을 모두 한 스테이징에 모아 한 번만 제출한다.** 조각마다 부르면 스테이징 확보와 큐
         // 제출이 그만큼 되풀이돼 비용이 구간 수에 선형으로 붙는다(호출당 ~3.3 us).
@@ -978,7 +980,8 @@ namespace sw
         record._mipLevels      = mipLevels;
         bool bViewsCreated     = pNative != nullptr;
         {
-            ScopedLock<mutex> offscreenLock{ _pDevice->_offscreenViewMutex };
+            const ScopedDeferredLog deferredLog;
+            ScopedLock<mutex>       offscreenLock{ _pDevice->_offscreenViewMutex };
             for ( uint32 viewIndex = 0; bViewsCreated && desc._bIsRenderTarget && viewIndex < mipLevels * desc._arraySize; ++viewIndex )
             {
                 const uint32                mip   = viewIndex / desc._arraySize;
@@ -1379,6 +1382,7 @@ namespace sw
     {
         const bool bUAV = ( registry == BindlessRegistry::UnorderedAccess );
 
+        const ScopedDeferredLog                                      deferredLog;
         UniqueLock<shared_mutex>                                     lock{ _pDevice->_bindlessMutex };
         RHIBindlessRegistry<D3D12RHIDevice::BindlessResourceRecord>& target = bUAV ? _pDevice->_uavRegistry : _pDevice->_srvRegistry;
         // 이미 빈 슬롯을 다시 프리리스트에 넣으면 같은 인덱스가 두 리소스에 발급된다 — 등록표가 거절한다.

@@ -264,15 +264,16 @@ namespace sw
             /** @brief 푼 결과(@p path 가 비면 "없음")를 저장합니다. @p stamp 의 검색 목록 세대가 이미 낡았으면 저장하지 않습니다. */
             static void storeResolved( State& state, string&& cacheKey, const AbsolutePath& path, const PathCacheStamp& stamp )
             {
-                const ScopedMemoryTag memoryScope{ kCacheMemoryTag };
-                ScopedLock<mutex>     lock( state._cacheMutex );
+                const ScopedMemoryTag   memoryScope{ kCacheMemoryTag };
+                const CacheStatsHandle& stats = getPathStats(); // 처음 부르면 로그를 쓸 수 있다 — 잠그기 전에 받는다
+                ScopedLock<mutex>       lock( state._cacheMutex );
                 if ( stamp._layoutGeneration != state._layoutGeneration )
                     return;
                 const auto inserted           = state._mapResolvedPath.try_emplace( std::move( cacheKey ) );
                 inserted.first->second._path  = path;
                 inserted.first->second._epoch = selectEpoch( path, stamp._creationEpoch, stamp._removalEpoch );
                 if ( inserted.second )
-                    getPathStats().addItemCount( 1 );
+                    stats.addItemCount( 1 );
             }
 
             /**
@@ -899,13 +900,14 @@ namespace sw
 
     void AssetPaths::clearPathCache()
     {
-        State&            state = *_pState;
-        ScopedLock<mutex> lock( state._cacheMutex );
+        State&                  state = *_pState;
+        const CacheStatsHandle& stats = AssetPathsInternal::getPathStats();
+        ScopedLock<mutex>       lock( state._cacheMutex );
         // `clear()` 는 버킷 · 밀집 배열을 남긴다 — 검색 목록이 바뀐 뒤의 캐시가 자란 만큼 남지 않게 저장소까지 놓는다. 끝의 반납은 이 객체의 소멸이 한다.
         // 세대를 올려, 이 순간 이전의 검색 목록으로 풀던 호출이 결과를 새 캐시에 넣지 못하게 한다(`storeResolved`).
         ++state._layoutGeneration;
-        AssetPathsInternal::getPathStats().addItemCount( -static_cast<int64>( state._mapResolvedPath.size() ) );
-        AssetPathsInternal::getPathStats().recordClear();
+        stats.addItemCount( -static_cast<int64>( state._mapResolvedPath.size() ) );
+        stats.recordClear();
         state._mapResolvedPath = unordered_map<string, ResolvedEntry>{};
     }
 

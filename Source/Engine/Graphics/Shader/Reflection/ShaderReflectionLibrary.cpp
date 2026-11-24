@@ -8,6 +8,7 @@
 #include "Core/Encoding/FourCCUtil.h"
 #include "Core/File/FileUtil.h"
 #include "Core/Log/Logger.h"
+#include "Core/Log/ScopedDeferredLog.h"
 #include "Core/Memory/Memory.h"
 #include "Core/String/StringUtil.h"
 
@@ -306,6 +307,7 @@ namespace sw
 
         // 매니페스트는 셰이더 서브시스템이 든다 — 엔진 서비스가 없으면 멈춘다(쿠킹본 정책은 엔진 안에서만 돈다).
         ShaderReflectionManifestCache&                            manifests = engine::getSubsystem<ShaderCache>().getReflectionManifests();
+        const ScopedDeferredLog                                   deferredLog;
         ScopedLock<mutex>                                         lock{ manifests._mutex };
         unordered_map<string, ShaderReflectionLibrary::EntryMap>& mapManifest = manifests._mapManifest;
 

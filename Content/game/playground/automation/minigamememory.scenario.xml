@@ -2,8 +2,8 @@
 <?asset guid="475df1a7bc6546afb012df1e78af40e5"?>
 <!--
   미니게임에서 나올 때 메모리를 돌려주는지 재는 시나리오 — 들어가기(minigame.enter) → 나오기(minigame.leave)를 네 번 되풀이하고, 나올 때마다
-  감시 값 Minigame.LeaveAssetCacheBytes(에셋 캐시가 쥔 바이트 추정 합) · Minigame.LeaveHeapBytes(힙 바이트)를 기록한다(docs/NEXT.md 측정 게임 프레임워크).
-  첫 회차는 캐시 · 풀이 차는 몫이라 둘째 회차부터의 기울기를 본다. 판정 문턱은 측정 뒤에 정한다 — 지금은 기록과 범위 해제 검사(LeakCount)만 판정한다.
+  감시 값 Minigame.LeaveAssetCacheBytes(에셋 캐시가 쥔 바이트 추정 합) · Minigame.LeaveHeapBytes(힙 바이트)를 기록한다.
+  첫 회차는 캐시 · 풀이 차는 몫이라 둘째 회차부터의 기울기를 본다. 판정은 범위 해제 검사(LeakCount)만 하고 나머지는 기록이다.
   무대는 minigame.scenario.xml 과 같다: 첫 씬 maps/fogshowcase 에서 minigames/smoketest(맵 editortest, 게임 기능 없음)로 들어간다.
   실행: App -scenario=game/playground/automation/minigamememory.scenario.xml -unattended (체인: ctest -R Scenario.playground)
 -->

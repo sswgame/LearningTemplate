@@ -723,7 +723,7 @@ namespace sw
                 SW_LOG_ERROR_ID( "Server.ServerServicesCouldNot", "Server services could not be restarted after the module reload - fix the error and reload again" );
         }
         const ModuleFrameState& frameState = _launch.getModuleManager()->getFrameState();
-        _launch.getEngine().update( deltaSeconds, FrameViewports{}, ViewCameraProviderDelegate{}, frameState._bTickScene == SW_TRUE ? SceneTick::Run : SceneTick::Pause );
+        _launch.getEngine().update( deltaSeconds, frameState._bTickScene == SW_TRUE ? SceneTick::Run : SceneTick::Pause );
         _launch.getEngine().endFrame();
     }
 

@@ -5,6 +5,7 @@
 #include "Core/Concurrency/mutex.h"
 #include "Core/Foundation/PlatformOSHeaders.h"
 #include "Core/Log/LogOnce.h"
+#include "Core/Log/ScopedDeferredLog.h"
 #include "Core/Math/MathUtil.h"
 
 #include "Engine/Foundation/EngineServices.h"
@@ -777,7 +778,8 @@ namespace sw
             ringOffset += mipSpan._sizeBytes;
         }
 
-        ScopedLock<mutex> transferLock{ _pDevice->_transferMutex };
+        const ScopedDeferredLog deferredLog;
+        ScopedLock<mutex>       transferLock{ _pDevice->_transferMutex };
         return RHITextureTransferDriver::runJob<VulkanRHIDevice::VulkanTransferJob>(
             ring, span, _pDevice->_transferSerials, [this]( VulkanRHIDevice::VulkanTransferJob& job )
         { return _pDevice->beginTransferJob( job ); },
@@ -838,7 +840,8 @@ namespace sw
         Memory::copy( ring.getSpanMemory( span )._pMapped + ringOffset, desc._pData, static_cast<size_t>( usedBytes ) );
         _pDevice->_memoryAllocator.flush( ring.getSpanMemory( span ), ringOffset, usedBytes );
 
-        ScopedLock<mutex> transferLock{ _pDevice->_transferMutex };
+        const ScopedDeferredLog deferredLog;
+        ScopedLock<mutex>       transferLock{ _pDevice->_transferMutex };
         return RHITextureTransferDriver::runJob<VulkanRHIDevice::VulkanTransferJob>(
             ring, span, _pDevice->_transferSerials, [this]( VulkanRHIDevice::VulkanTransferJob& job )
         { return _pDevice->beginTransferJob( job ); },
@@ -1002,8 +1005,9 @@ namespace sw
             return RHITransferSubmit::fromUnaccepted( allocateResult );
         const uint64 ringOffset = alignUpToMultiple( span.getOffsetBytes(), copyAlignment );
 
-        ScopedLock<mutex> transferLock{ _pDevice->_transferMutex };
-        VkImageLayout     layoutAfter{ VK_IMAGE_LAYOUT_UNDEFINED }; // 기록이 정하고 레코드 갱신이 읽는다
+        const ScopedDeferredLog deferredLog;
+        ScopedLock<mutex>       transferLock{ _pDevice->_transferMutex };
+        VkImageLayout           layoutAfter{ VK_IMAGE_LAYOUT_UNDEFINED }; // 기록이 정하고 레코드 갱신이 읽는다
         // 구간에는 시리얼을 붙이지 않는다 — 가져가거나 버릴 때까지 결과가 링에 남아야 한다(`runReadbackJob`).
         return RHITextureTransferDriver::runReadbackJob<VulkanRHIDevice::VulkanTransferJob>(
             ring, span, _pDevice->_transferSerials, [this]( VulkanRHIDevice::VulkanTransferJob& job )
@@ -1188,6 +1192,7 @@ namespace sw
         if ( _pDevice->_transferSerials.isTextureReadyToRegister( record._transferSerials, texture ) == false )
             return kInvalidDescriptorIndex;
 
+        const ScopedDeferredLog  deferredLog;
         UniqueLock<shared_mutex> registryLock{ _pDevice->_bindlessMutex };
         VulkanRHIDevice* const   pDevice         = _pDevice;
         const RHIDescriptorIndex descriptorIndex = _pDevice->_textureRegistry.allocate( texture, [pDevice, sampleView, sampleLayout]( RHIDescriptorIndex index )
@@ -1211,6 +1216,7 @@ namespace sw
 
         // 버퍼는 인덱스 → 핸들 표에만 올린다. 실제 VkBuffer · 오프셋은 슬롯 세트를 쓰는 순간(flushSlotSet)에 푼다.
         // 링 상수버퍼의 프레임 오프셋도 그때 더한다.
+        const ScopedDeferredLog  deferredLog;
         UniqueLock<shared_mutex> registryLock{ _pDevice->_bindlessMutex };
         const RHIDescriptorIndex index = _pDevice->_bufferRegistry.allocate( buffer );
         if ( index == kInvalidDescriptorIndex )
@@ -1237,6 +1243,7 @@ namespace sw
                              slice._offset, slice._size );
             return kInvalidDescriptorIndex;
         }
+        const ScopedDeferredLog  deferredLog;
         UniqueLock<shared_mutex> registryLock{ _pDevice->_bindlessMutex };
         const RHIDescriptorIndex index = _pDevice->_bufferRegistry.allocate( slice._buffer );
         if ( index == kInvalidDescriptorIndex )
@@ -1252,6 +1259,7 @@ namespace sw
     void VulkanRHIResourceFactory::unregisterBindlessResource( RHIBufferSRVIndex index )
     {
         _pDevice->requireRegistryMutableNow( "unregisterBindlessResource" );
+        const ScopedDeferredLog  deferredLog;
         UniqueLock<shared_mutex> registryLock{ _pDevice->_bindlessMutex };
         // 버퍼가 소유하지 않는 인덱스(텍스처 SRV 인덱스가 잘못 넘어왔거나 이중 해제)를 프리리스트에
         // 넣으면 다음 registerBindlessBufferSRV 가 살아 있는 다른 버퍼의 슬롯을 덮어쓴다. 실제로
@@ -1332,6 +1340,7 @@ namespace sw
         if ( index == kInvalidDescriptorIndex )
             return;
         // 주인 텍스처의 번호 목록은 등록표가 든다 — `release` 가 목록에서도 지우므로 나중의 destroyTexture 가 같은 번호를 두 번 반납하지 않는다.
+        const ScopedDeferredLog  deferredLog;
         UniqueLock<shared_mutex> registryLock{ _pDevice->_bindlessMutex };
         if ( _pDevice->_textureRegistry.release( index, RHIBindlessReuse::AfterFence ) == false )
         {
@@ -1361,6 +1370,7 @@ namespace sw
         _pDevice->requireRegistryMutableNow( "registerBindlessBufferUAV" );
         if ( _pDevice->resolveAllocatedBuffer( buffer ) == nullptr )
             return kInvalidDescriptorIndex;
+        const ScopedDeferredLog   deferredLog;
         UniqueLock<shared_mutex>  registryLock{ _pDevice->_bindlessMutex };
         VulkanRHIDevice::UAVEntry entry{};
         entry._buffer                  = buffer;
@@ -1385,6 +1395,7 @@ namespace sw
             return kInvalidDescriptorIndex;
 
         // 버퍼 UAV 와 같은 인덱스 공간이다. 인덱스가 곧 RW 텍스처 배열(set 1 binding 3)의 원소다.
+        const ScopedDeferredLog   deferredLog;
         UniqueLock<shared_mutex>  registryLock{ _pDevice->_bindlessMutex };
         VulkanRHIDevice::UAVEntry entry{};
         entry._texture                   = texture;

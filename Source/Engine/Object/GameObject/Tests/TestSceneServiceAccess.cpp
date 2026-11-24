@@ -1,4 +1,4 @@
-// SceneServiceAccessTest — 씬 서비스 등록 줄의 갱신 접근 선언을 매니저가 다른 서비스의 넘긴 일(창)과 견주는지 본다(NEXT 5-3 2(b)).
+// SceneServiceAccessTest — 씬 서비스 등록 줄의 갱신 접근 선언을 매니저가 다른 서비스의 넘긴 일(창)과 견주는지 본다.
 #include "pch.h"
 
 #include "Core/Testing/TestFramework.h"

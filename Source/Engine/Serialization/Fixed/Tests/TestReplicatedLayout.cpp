@@ -129,7 +129,7 @@ SW_TEST_CASE( ReplicatedLayoutTest, QuantizedFloatRoundTripsWithinHalfAStep )
 }
 
 /**
- * @brief [ReplicatedLayoutTest] 엔티티 하나의 복제 상태 쓰기 비용(ns) — 전체 코덱 `FixedLayout::write` 의 1.5 배 안이 목표다(docs/NEXT.md 5-4 N1)
+ * @brief [ReplicatedLayoutTest] 엔티티 하나의 복제 상태 쓰기 비용(ns) — 전체 코덱 `FixedLayout::write` 의 1.5 배 안이 목표다
  * @details 재는 법: Release `App --test --test-filter=ReplicatedLayoutTest.EncodeCost` 5 번, 로그 `ReplicatedLayoutTest.EncodeCost` 의 중앙값. 넘으면 해석기의 칸 건너뛰기를 본다.
  */
 SW_TEST_CASE( ReplicatedLayoutTest, EncodeCost, ._tags = "bench" )

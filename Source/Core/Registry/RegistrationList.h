@@ -900,11 +900,19 @@ namespace sw
         // 등록 · 해제 · 찾기가 저마다 "잠금 + 목록 호출 하나" 인 표(동작 · 조건 · 존 모듈 · 드라이버)가 람다를 함수마다 적지 않게 한다. 한 잠금 안에서 여러 단계를
         // 하면 `withLock` 을 쓴다 — `withLock` 의 람다 안에서 이 판을 부르면 같은 잠금을 다시 잡아 멈춘다.
 
-        /** @brief 잠금을 잡고 `RegistrationList::addLogged` 합니다. */
+        /** @brief 잠금을 잡고 `RegistrationList::add` 하고, 거절 로그는 놓은 뒤에 남깁니다(`RegistrationList::addLogged` 와 같은 글). */
         RegistrationResult addLogged( T* pItem, const utf8* pWhat, string_view name = {}, int32 order = 0 )
         {
-            ScopedLock<mutex> lock{ _mutex };
-            return _list.addLogged( pItem, pWhat, name, order );
+            RegistrationResult result{ RegistrationResult::NullItem };
+            const void*        pFirst{ nullptr };
+            {
+                ScopedLock<mutex> lock{ _mutex };
+                result = _list.add( pItem, name, order );
+                if ( result == RegistrationResult::DuplicateName )
+                    pFirst = _list.findByName( name );
+            }
+            reportRegistrationRejected( result, pWhat, name, pFirst ); // 로그는 잠금 밖이다(잎 잠금)
+            return result;
         }
         /** @brief 잠금을 잡고 `RegistrationList::remove` 합니다. */
         [[nodiscard]] bool remove( const T* pItem )

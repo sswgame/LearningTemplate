@@ -585,7 +585,6 @@ namespace sw
         return readStateEnvelope( purpose, inBytes.data(), static_cast<uint32>( inBytes.size() ) ).has_value();
     }
 
-    // 측정 문턱(Android 4 ms)을 재는 자리 — 넘기 전에는 감시 값만 둔다(`docs/NEXT.md` 측정 게임 프레임워크).
     SW_AUTOMATION_WATCH( saveCaptureMs, "Save.CaptureMs", "Game-thread milliseconds of the save-game capture in the last profiled frame (profiler scope GT.Save.capture; no value while the profiler is off)",
                          &GameInstanceInternal::readCaptureMilliseconds<false> );
     SW_AUTOMATION_WATCH( saveCapturePeakMs, "Save.CapturePeakMs", "Longest save-game capture in game-thread milliseconds over the profiler window (p100 of GT.Save.capture; no value while the profiler is off)",

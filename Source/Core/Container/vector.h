@@ -386,7 +386,7 @@ namespace sw
     {
         constexpr bool bZeroBytesIsValue = std::is_arithmetic_v<T> || std::is_enum_v<T> || std::is_pointer_v<T>;
         // 이보다 짧은 구간은 원소 루프로 둔다. 크기가 변수인 memset 은 함수 호출이라 한 개씩 늘리는 `resize( size() + 1 )` 이
-        // 두 배 느려졌다(ContainerBenchTest Release 1.3 → 2.5 ns/op). 최적화 빌드는 짧은 루프를 저장 몇 개로 펼친다.
+        // 두 배 느려졌다(Release 1.3 → 2.5 ns/op). 최적화 빌드는 짧은 루프를 저장 몇 개로 펼친다.
         constexpr size_t kMinBulkInitializeCount = 64;
         if constexpr ( bZeroBytesIsValue )
         {

@@ -2,8 +2,8 @@
  * @file TestEditorAssetIndexCost.cpp
  * @brief 에디터 에셋 색인의 비용을 잽니다 — 합성 트리 크기별 전체 스캔과 파일 하나 바뀜(UI 스레드)의 ns. 전체 스캔은 캐시 없는 첫 스캔이다(다음부터는 훑기 캐시 `AssetScanCache`).
  *
- * 재는 법(통합 담당): `App --test --test-filter=EditorAssetIndexTest.ScanCostBySize` 를 Release 로 5 번 돌려 로그 `EditorAssetIndexTest.ScanCost` 의
- * 크기별 중앙값을 본다. 옛 참조 역색인 값은 R0 커밋(`EditorReferenceIndexTest.ScanCostBySize`)에서 잰다. 바뀜 1 ms 미만이 목표다.
+ * 재는 법: `App --test --test-filter=EditorAssetIndexTest.ScanCostBySize` 를 Release 로 5 번 돌려 로그 `EditorAssetIndexTest.ScanCost` 의
+ * 크기별 중앙값을 본다.
  */
 #include "pch.h"
 
@@ -63,7 +63,7 @@ namespace
 } // namespace
 
 /**
- * @brief [EditorAssetIndexTest] 합성 트리(1 만 · 10 만 파일, 참조 평균 4)의 전체 스캔과 파일 하나 바뀜의 ns 를 로그로 남깁니다. 시간 문턱은 두지 않는다 — 판정은 통합 담당의 반복 측정이다.
+ * @brief [EditorAssetIndexTest] 합성 트리(1 만 · 10 만 파일, 참조 평균 4)의 전체 스캔과 파일 하나 바뀜의 ns 를 로그로 남깁니다. 시간 문턱은 두지 않는다.
  * @details 전체 스캔은 작업 관리자 없이(호출 스레드 하나) 잰다 — 에디터는 워커로 나누므로 기동 시간의 상한이다. 파일 하나 바뀜은 UI 스레드가 하는 일 그대로다.
  */
 SW_TEST_CASE( EditorAssetIndexTest, ScanCostBySize, ._tags = "bench", ._disabledReason = "bench - Release 에서 --test-run-disabled 로 돌린다" )

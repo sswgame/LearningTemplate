@@ -11,6 +11,7 @@
 #include "Core/File/FileUtil.h"
 #include "Core/Log/LogTypes.h"
 #include "Core/Log/Logger.h"
+#include "Core/Log/ScopedDeferredLog.h"
 #include "Core/Log/Sink/AsyncLogSink.h"
 #include "Core/Log/Sink/ConsoleLogOutput.h"
 #include "Core/Log/Sink/FileLogOutput.h"
@@ -439,6 +440,36 @@ SW_TEST_CASE( LogTest, NonUTF8FallbackSafety )
 
     SW_REQUIRE_EQUAL( 1u, capture.getCount() );
     SW_EXPECT_TRUE( sw::StringUtil::startsWith( capture.getEntries()[0]._message, "[TestLog] Bad:" ) );
+}
+
+/**
+ * @brief [LogTest] 잠금 안의 줄은 놓은 뒤 남긴 순서대로 나온다 — 안쪽 범위가 끝나도 바깥 잠금을 쥔 동안은 나오지 않는다
+ */
+SW_TEST_CASE( LogTest, DeferredLinesAppearAfterTheOutermostLockIsReleased )
+{
+    LogCapture capture;
+    SW_REQUIRE_TRUE( capture.isAttached() );
+
+    sw::mutex outerMutex;
+    sw::mutex innerMutex;
+    {
+        const sw::ScopedDeferredLog deferredLog;
+        sw::ScopedLock<sw::mutex>   outerLock{ outerMutex };
+        SW_LOG_INFO_ID( "TestLog.DeferredOrder", "%#first", kCapturePrefix );
+        {
+            const sw::ScopedDeferredLog innerDeferredLog;
+            sw::ScopedLock<sw::mutex>   innerLock{ innerMutex };
+            SW_LOG_INFO_ID( "TestLog.DeferredOrder", "%#second", kCapturePrefix );
+        }
+        SW_EXPECT_EQUAL( 0u, capture.getCount() );
+    }
+    SW_REQUIRE_EQUAL( 2u, capture.getCount() );
+    SW_EXPECT_TRUE( capture.getEntries()[0]._message == "[TestLog] first" );
+    SW_EXPECT_TRUE( capture.getEntries()[1]._message == "[TestLog] second" );
+    SW_EXPECT_EQUAL( 2u, capture.countWithID( "TestLog.DeferredOrder" ) );
+
+    SW_LOG_INFO_ID( "TestLog.DeferredOrder", "%#after", kCapturePrefix );
+    SW_EXPECT_EQUAL( 3u, capture.getCount() );
 }
 
 /**

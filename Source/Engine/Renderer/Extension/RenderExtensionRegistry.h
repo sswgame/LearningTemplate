@@ -18,6 +18,7 @@
 #include "Core/Foundation/Macros.h"
 #include "Core/Foundation/Types.h"
 #include "Core/Log/LogOnce.h"
+#include "Core/Log/ScopedDeferredLog.h"
 #include "Core/Memory/Memory.h"
 #include "Core/Name/hashed_string.h"
 #include "Core/Subsystem/ServiceSlot.h"
@@ -51,14 +52,16 @@ namespace sw
         {
         public:
             explicit RenderScope( RenderExtensionRegistry& registry )
-                : _lock{ registry._runMutex }
+                : _deferredLog{}
+                , _lock{ registry._runMutex }
             {
             }
             RenderScope( const RenderScope& )            = delete;
             RenderScope& operator=( const RenderScope& ) = delete;
 
         private:
-            ScopedLock<mutex> _lock;
+            const ScopedDeferredLog _deferredLog; ///< 잠금보다 먼저 — 구간(기록 · 제출 · 모듈 코드)이 남긴 줄은 놓은 뒤에 쓴다
+            ScopedLock<mutex>       _lock;
         };
 
         SubsystemInitResult        initializeSubsystem() override { return SubsystemInitResult::Succeeded; }

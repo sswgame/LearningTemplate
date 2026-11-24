@@ -1,4 +1,4 @@
-// SceneSpatialGridTest — 씬 공간 색인이 움직인 항목만 버퍼마다 고쳐 넣고(증분), 일이 도는 동안 질의가 앞 버퍼를 읽으며(이중 버퍼), 뺀 항목을 바로 숨기는지 본다(NEXT 5-3 6).
+// SceneSpatialGridTest — 씬 공간 색인이 움직인 항목만 버퍼마다 고쳐 넣고(증분), 일이 도는 동안 질의가 앞 버퍼를 읽으며(이중 버퍼), 뺀 항목을 바로 숨기는지 본다.
 #include "pch.h"
 
 #include "Core/Testing/TestFramework.h"

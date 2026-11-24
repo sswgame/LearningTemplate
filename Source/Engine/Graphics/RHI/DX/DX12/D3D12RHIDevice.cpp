@@ -7,6 +7,7 @@
 #include "Core/Diagnostics/CrashHandler.h"
 #include "Core/Foundation/BuildInfo.h"
 #include "Core/Log/LogOnce.h"
+#include "Core/Log/ScopedDeferredLog.h"
 
 #include "Engine/Graphics/Debug/GPUBreadcrumbs.h"
 #include "Engine/Graphics/RHI/DX/DX12/D3D12RHICommandContext.h"
@@ -311,6 +312,7 @@ namespace sw
     void D3D12RHIDevice::flushBindlessRingSlot()
     {
         // 미러를 비우므로 배타 락이다(rebind 가 같은 락 아래에서 예약한다). 죽은 번호(그 사이 해제)는 건너뛴다 — 번호는 펜스 뒤에야 다시 나간다.
+        const ScopedDeferredLog  deferredLog;
         UniqueLock<shared_mutex> registryLock{ _bindlessMutex };
         const uint32             slot = _frameRing.currentIndex();
         _bindlessRingMirror.flushSlot( slot, [this, slot]( RHIDescriptorIndex index )
@@ -325,7 +327,8 @@ namespace sw
 
     uint32 D3D12RHIDevice::acquireOnlineBlock()
     {
-        ScopedLock<mutex> lock{ _onlineBlockMutex };
+        const ScopedDeferredLog deferredLog;
+        ScopedLock<mutex>       lock{ _onlineBlockMutex };
         // 프레임 끝까지 기다리지 않고 펜스가 지난 묶음을 먼저 거둔다 — 한 프레임에 리스트가 많으면(미리보기 씬 · 컴퓨트) 블록 수보다 리스트가 많다.
         if ( _freeOnlineBlock.empty() )
             recycleCompletedOnlineBlocksLocked( _fence->GetCompletedValue() );
@@ -1253,7 +1256,8 @@ namespace sw
         if ( _frameStreamState._bRecording != SW_FALSE && _commandList != nullptr )
         {
             {
-                ScopedLock<mutex> uploadLock{ _uploadSlotMutex };
+                const ScopedDeferredLog deferredLog;
+                ScopedLock<mutex>       uploadLock{ _uploadSlotMutex };
                 flushPendingUploads( true );
             }
             _frameStreamContext->endRenderPass();
@@ -1365,7 +1369,8 @@ namespace sw
 
         // 이 리스트가 방금 올린 버퍼를 읽을 수 있다. 열어 둔 업로드 복사를 먼저 내보낸다.
         {
-            ScopedLock<mutex> uploadLock{ _uploadSlotMutex };
+            const ScopedDeferredLog deferredLog;
+            ScopedLock<mutex>       uploadLock{ _uploadSlotMutex };
             flushPendingUploads( true );
         }
         ID3D12CommandList* arr[] = { pList };
@@ -1442,7 +1447,8 @@ namespace sw
 
         // 여기까지 기록된 구조 버퍼 갱신 복사가 이 리스트들보다 먼저 가야 한다. 앞에 끼운다. **실행까지 업로드 락을 쥔다** — 닫아서 대기열에 넣은 복사
         // 리스트를 실행 전에 다른 스레드의 갱신이 `Reset` 하면 그 복사가 사라진다.
-        ScopedLock<mutex> uploadLock{ _uploadSlotMutex };
+        const ScopedDeferredLog deferredLog;
+        ScopedLock<mutex>       uploadLock{ _uploadSlotMutex };
         flushPendingUploads( false );
         _commandQueue->ExecuteCommandLists( static_cast<UINT>( _listPendingSubmit.size() ), _listPendingSubmit.data() );
         _listPendingSubmit.clear();
@@ -1463,7 +1469,8 @@ namespace sw
         }
         // 구조 버퍼 복사가 앞에 끼고, 실행까지 업로드 락을 쥔다(submitPendingIfImmediate 와 같은 이유).
         {
-            ScopedLock<mutex> uploadLock{ _uploadSlotMutex };
+            const ScopedDeferredLog deferredLog;
+            ScopedLock<mutex>       uploadLock{ _uploadSlotMutex };
             flushPendingUploads( false );
             if ( _listPendingSubmit.empty() == false )
                 _commandQueue->ExecuteCommandLists( static_cast<UINT>( _listPendingSubmit.size() ), _listPendingSubmit.data() );
@@ -1585,7 +1592,8 @@ namespace sw
         UINT64  fenceToWait{ 0 };
         HRESULT signalHr{ S_OK };
         {
-            ScopedLock<mutex> uploadLock{ _uploadSlotMutex };
+            const ScopedDeferredLog deferredLog;
+            ScopedLock<mutex>       uploadLock{ _uploadSlotMutex };
             flushPendingUploads( true );
             fenceToWait = _fenceValue.load();
             signalHr    = _commandQueue->Signal( _fence.Get(), fenceToWait );
@@ -2059,7 +2067,8 @@ namespace sw
                 _computeWaitedValue = _computeFenceValue;
             }
             {
-                ScopedLock<mutex> uploadLock{ _uploadSlotMutex };
+                const ScopedDeferredLog deferredLog;
+                ScopedLock<mutex>       uploadLock{ _uploadSlotMutex };
                 flushPendingUploads( false );
 
                 // 프레임 세그먼트와 패스 리스트를 기록 순서 그대로 한 번에 제출한다.
@@ -2471,7 +2480,8 @@ namespace sw
         if ( submitResult != RHISubmitResult::Accepted || outSpan.isSolo() == false )
             return submitResult;
         // 할당기가 단독 구간을 내줬다면 앞선 단독 구간은 이미 돌아왔다 — 남은 버퍼(아직 회수가 지우지 않은 것)를 GPU 가 더 쓰지 않는다.
-        ScopedLock<mutex> soloLock{ ring._soloMutex };
+        const ScopedDeferredLog deferredLog;
+        ScopedLock<mutex>       soloLock{ ring._soloMutex };
         destroyMappedStagingBuffer( ring._soloBuffer, ring._pSoloMapped );
         if ( createMappedStagingBuffer( ring._heapType, outSpan.getSizeBytes(), ring._soloBuffer, ring._pSoloMapped ) )
             return RHISubmitResult::Accepted;
@@ -2541,7 +2551,8 @@ namespace sw
             return 0;
         }
 
-        ScopedLock<mutex> submitLock{ _transferSubmitMutex };
+        const ScopedDeferredLog deferredLog;
+        ScopedLock<mutex>       submitLock{ _transferSubmitMutex };
         // 기록하는 사이에 장치를 잃었으면(다른 스레드의 손실 · rhi.removeDevice) 내지 않는다.
         if ( pollDeviceLost() )
         {
@@ -2618,8 +2629,9 @@ namespace sw
 
     bool D3D12RHIDevice::isTextureReadyToRegister( RHITextureHandle texture )
     {
-        ScopedLock<mutex> lock{ _textureTransferMutex };
-        const auto        foundIt = _mapTextureTransferMarks.find( texture );
+        const ScopedDeferredLog deferredLog;
+        ScopedLock<mutex>       lock{ _textureTransferMutex };
+        const auto              foundIt = _mapTextureTransferMarks.find( texture );
         return foundIt == _mapTextureTransferMarks.end() || _transferSerials.isTextureReadyToRegister( foundIt->second, texture );
     }
 

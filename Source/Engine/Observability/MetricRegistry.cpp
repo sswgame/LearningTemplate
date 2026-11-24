@@ -4,6 +4,7 @@
 
 #include "Core/Algorithm/VectorUtil.h"
 #include "Core/Log/Logger.h"
+#include "Core/Log/ScopedDeferredLog.h"
 #include "Core/Math/BitUtil.h"
 #include "Core/Memory/Memory.h"
 #include "Core/String/StringUtil.h"
@@ -235,8 +236,9 @@ namespace sw
             labelText.push_back( '"' );
         }
 
-        ScopedLock<mutex> lock{ _mutex };
-        Family*           pFamily = nullptr;
+        const ScopedDeferredLog deferredLog;
+        ScopedLock<mutex>       lock{ _mutex };
+        Family*                 pFamily = nullptr;
         for ( unique_ptr<Family>& family : _listFamily )
         {
             if ( family->_name == name )

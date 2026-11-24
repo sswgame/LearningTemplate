@@ -154,8 +154,6 @@ endfunction()
 #    pch: 부분마다 `CoreMinimal.h` 의 include 가운데 그 티어 이하만 담은 생성 헤더를 쓴다 — 소스의 `#include "pch.h"` 는 그대로 두고 생성 폴더만 다르다.
 #    위 티어 선언(티어 3 코드의 `formatString`, Log 아래의 `SW_LOG_*` …)을 pch 가 몰래 넣어 주지 않는다. Engine 층 부분처럼 pch 는 부분 수만큼 짓는다.
 # ------------------------------------------------------------------------------
-# 잎 잠금 단언(잠금을 쥔 채 로그를 쓰면 Debug 에서 멈춘다) — 위반 자리를 다 고친 뒤 켠다(NEXT 의 lockfmt 후속). 꺼져 있으면 단언 대신 아무것도 하지 않는다.
-option(SW_ENFORCE_LEAF_LOCK_LOG "Debug: assert when a log is written while a sw::mutex is held (leaf lock rule)" OFF)
 file(STRINGS "${CMAKE_CURRENT_SOURCE_DIR}/CoreMinimal.h" list_core_minimal_line REGEX "^#include \"Core/[^\"]+\"")
 set_property(DIRECTORY APPEND PROPERTY CMAKE_CONFIGURE_DEPENDS "${CMAKE_CURRENT_SOURCE_DIR}/CoreMinimal.h")
 set(list_core_objects "")
@@ -199,9 +197,6 @@ foreach(tier IN LISTS list_core_tier)
 	# 부분마다 pch 를 따로 지으므로(clang 은 pch 와 `-D` 가 다르면 거부) 정의가 달라도 된다.
 	if(NOT tier LESS core_tier_Log)
 		target_compile_definitions(${part_name} PRIVATE "SW_LOG_TAG=\"Engine\"" "SW_REGISTRAR_MODULE=\"Engine\"")
-		if(SW_ENFORCE_LEAF_LOCK_LOG)
-			target_compile_definitions(${part_name} PRIVATE SW_ENFORCE_LEAF_LOCK_LOG)
-		endif()
 	endif()
 	sw_configure_pch(${part_name} "${pch_entry_dir}/pch.h")
 	sw_set_unity_build(${part_name})

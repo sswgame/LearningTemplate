@@ -1,9 +1,15 @@
+/**
+ * @file UIDemoScreen.cpp
+ * @brief 개발용 UI 테스트 화면입니다(`-gv_uiDemo=1`). 텍스트, 버튼 다섯 개, 슬라이더, 체크, 진행 막대, 콤보, 입력 필드를 한 패널에 띄웁니다.
+ */
 #include "pch.h"
-
-#include "Games/Playground/Client/Dev/UIDemoScreen.h"
 
 #include "Core/Container/string.h"
 #include "Core/Container/vector.h"
+#include "Core/Foundation/Macros.h"
+#include "Core/Foundation/Types.h"
+#include "Core/GlobalVariable/GlobalVariableManager.h"
+#include "Core/Memory/Memory.h"
 
 #include "Engine/UI/Layout/BoxPanel.h"
 #include "Engine/UI/Layout/CanvasPanel.h"
@@ -21,6 +27,20 @@
 #include "Engine/UI/Widgets/TextWidget.h"
 
 #include "GameFramework/Runtime/Foundation/Framework/GameService.h"
+
+namespace sw
+{
+    /**
+     * @struct UIDemoScreen
+     * @brief 코드로 만든 위젯 트리가 게임 창에 보이는지(네 백엔드 스크린샷)와 패드로 포커스가 옮겨지는지 확인하는 화면입니다. 에셋 없이 동작합니다(이미지 없음).
+     * @details 아래 화면 스위치(`SW_UI_SCREEN_SWITCH`)가 `gv_uiDemo` 를 보고 열고 닫는다(`UISystem::update` 가 돌린다). 열 때 입력 방식을 탐색으로 두어 첫 버튼에 포커스 테두리가 보인다.
+     */
+    struct UIDemoScreen
+    {
+        /** @brief 테스트 화면을 만듭니다(Menu 레이어, 게임 정지 없음, 기본 포커스는 첫 버튼). */
+        static unique_ptr<UIScreen> create();
+    };
+} // namespace sw
 
 SW_TEST_GLOBAL_VARIABLE( bool, gv_uiDemo, false,
                          "UI 테스트 화면을 띄운다 — 글 · 버튼 다섯 · 슬라이더 · 체크 · 진행 · 콤보 · 입력 필드 · 그리기 견본(둥근 상자 · 자르기 · 9-슬라이스 · 오른쪽에서 왼쪽 글)" );

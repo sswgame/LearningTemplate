@@ -5,6 +5,7 @@
 #include "Core/Algorithm/CompareUtil.h"
 #include "Core/Algorithm/VectorUtil.h"
 #include "Core/GlobalVariable/GlobalVariableManager.h"
+#include "Core/Log/ScopedDeferredLog.h"
 #include "Core/Math/MathUtil.h"
 #include "Core/Task/TaskManager.h"
 #include "Core/Time/MonotonicClock.h"
@@ -134,8 +135,9 @@ namespace sw
         EnumArray<AssetLoadPhase, uint32> arrSlot{};
         const bool                        bFrameProfiler = engine::areEngineServicesBound();
         {
-            ScopedLock<mutex> lock{ _mutex };
-            KindEntry*        pEntry = nullptr;
+            const ScopedDeferredLog deferredLog;
+            ScopedLock<mutex>       lock{ _mutex };
+            KindEntry*              pEntry = nullptr;
             for ( KindEntry& entry : _listKind )
             {
                 if ( entry._summary._kind == record._kind )

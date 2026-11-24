@@ -3,7 +3,7 @@
  * @brief 엔진의 잠금 타입(`sw::mutex` · `sw::shared_mutex`)과 잠금 가드(`ScopedLock` · `ScopedSharedLock` · `UniqueLock`, `ScopedLock.h`)입니다.
  * @details 잠금은 잎 잠금이다 — 쥔 채 로그 · 콜백 · 장치 · 외부 호출을 하지 않는다(결정 5-3). 그 규칙을 세 겹으로 지킨다.
  *          - 형식: 잠금 타입은 `SW_CAPABILITY` 이고(`ThreadSafety.h`), clang 빌드는 `-Wthread-safety` 로 `SW_GUARDED_BY` · `SW_REQUIRES_LOCK` 계약을 컴파일 때 본다.
- *          - 실행(Debug): 이 스레드가 쥔 잠금 수(`mutex::getHeldLockDepth`)를 세고 로거가 0 을 단언한다 — 호출 그래프를 건너는 위반은 형식이 못 본다.
+ *          - 실행(검사 구성): 이 스레드가 쥔 잠금 수(`mutex::getHeldLockDepth`)를 세고 로거가 0 을 단언한다. 잠금 안의 호출이 남기는 줄은 `ScopedDeferredLog` 이 놓은 뒤로 미룬다 — 호출 그래프를 건너는 위반은 형식이 못 본다.
  *          - 교착 검출(배포가 아닌 구성, 시작 인자 `-deadlock-detection` 으로 켠다 — `mutex::enableLockTracking`): 독점 잠금의 시도 · 획득 · 해제를 관찰자에 알린다.
  *          `std::mutex` · `std::shared_mutex` 를 직접 쓰면 셋이 모두 꺼지므로 직접 쓰지 않는다.
  */
@@ -103,7 +103,7 @@ namespace sw
         static void enableLockTracking();
 
         /**
-         * @brief 이 스레드가 지금 쥔 `mutex` · `shared_mutex` 수입니다(공유 잠금 포함). Debug 만 세고 다른 구성은 늘 0 입니다.
+         * @brief 이 스레드가 지금 쥔 `mutex` · `shared_mutex` 수입니다(공유 잠금 포함). 검사 구성만 세고 배포 구성은 늘 0 입니다.
          * @details 관찰자(교착 검출기)의 훅 안에서는 0 입니다 — 검출기의 보고는 잠금 진단 자체라 잎 규칙 밖이다. 로거가 0 을 단언합니다.
          */
         static uint32 getHeldLockDepth();
@@ -173,7 +173,7 @@ namespace sw
 {
     /**
      * @brief 이 범위에서 쓰는 로그를 잎 잠금 규칙(`mutex::getHeldLockDepth`)에서 뺍니다.
-     * @details 잠금 진단(교착 검출기)의 보고는 잠금 상태 자체를 알리는 글이라 잠금을 쥔 채 쓸 수밖에 없다. 다른 곳은 쓰지 않는다.
+     * @details 잠금 진단(교착 검출기)과 단언 · 아래 티어의 보고 · 크래시 경로는 잠금을 쥔 채 쓸 수밖에 없다. 다른 곳은 쓰지 않는다 — 로그를 잠금 밖으로 옮기거나 `ScopedDeferredLog` 로 미룬다.
      */
     class SW_API ScopedLeafLockExemption
     {

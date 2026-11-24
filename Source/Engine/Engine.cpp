@@ -590,6 +590,11 @@ namespace sw
         }
     }
 
+    void Engine::update( float32 deltaTime, SceneTick sceneTick )
+    {
+        update( deltaTime, FrameViewports{}, ViewCameraProviderDelegate{}, sceneTick );
+    }
+
     void Engine::endFrame()
     {
         {

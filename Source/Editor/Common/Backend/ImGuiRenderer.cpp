@@ -3,6 +3,7 @@
 #include "Editor/Common/Backend/ImGuiRenderer.h"
 
 #include "Core/Log/LogOnce.h"
+#include "Core/Log/ScopedDeferredLog.h"
 #include "Core/Math/BitUtil.h"
 #include "Core/Math/MathUtil.h"
 
@@ -269,7 +270,8 @@ namespace sw::editor
         // 2) 칸의 bindless 번호 — 패스 기록 밖(present 훅)이라 등록할 수 있다. 패널이 넘긴 텍스처는 내력을 모르므로 첫 업로드가 끝났는지 묻고, 끝나지 않았으면 이번 프레임은
         //    그 텍스처를 그리지 않고 다음 프레임에 다시 묻는다(뒤의 구간 갱신은 막지 않는다 — `RHITextureTransferSerials`). 이 렌더러가 만든 텍스처는 연산을 적용할 때 등록했다.
         {
-            ScopedLock<mutex> lock{ _textureMutex };
+            const ScopedDeferredLog deferredLog;
+            ScopedLock<mutex>       lock{ _textureMutex };
             _listFrameSRV.resize( _listTextureSlot.size() );
             for ( size_t slotIndex = 0; slotIndex < _listTextureSlot.size(); ++slotIndex )
             {

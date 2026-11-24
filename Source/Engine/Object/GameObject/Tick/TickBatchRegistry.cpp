@@ -7,6 +7,7 @@
 #include "Engine/Object/GameObject/Tick/TickBatchRegistry.h"
 
 #include "Core/Foundation/BuildInfo.h"
+#include "Core/Log/ScopedDeferredLog.h"
 
 #include "Engine/Foundation/EngineServices.h"
 #include "Engine/Foundation/EngineSubsystemRegistration.h"
@@ -20,7 +21,8 @@ namespace sw
         if ( entry._pStaticType == nullptr || ( entry._mode == TickMode::Batch && entry._pFunction == nullptr ) )
             return false;
         {
-            ScopedLock<mutex> lock{ _mutex };
+            const ScopedDeferredLog deferredLog;
+            ScopedLock<mutex>       lock{ _mutex };
             (void)_listEntry.addLogged( &entry, "Tick batch entry" ); // 같은 줄을 다시 올리면 `AlreadyPresent` 라 할 일이 없다
         }
         _generation.fetch_add( 1, std::memory_order_acq_rel );

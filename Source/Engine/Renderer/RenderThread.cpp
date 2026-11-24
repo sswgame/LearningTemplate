@@ -562,6 +562,7 @@ namespace sw
         {
             // 렌더 스레드가 멈추는 중이라 집어 가지 않았다 — 맡긴 것을 거둔다(명령의 수명은 이 함수 안이다).
             _pPendingCommand = nullptr;
+            lock.unlock();
             SW_LOG_ERROR_ID( "RenderThread.RenderThreadStoppedBefore", "The render thread stopped before running the render command" );
             return false;
         }

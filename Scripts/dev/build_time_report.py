@@ -1,4 +1,4 @@
-"""`.ninja_log` 로 리플렉션 생성 TU(`generated/**.gen*.cpp`)가 전체 컴파일 CPU 시간에서 차지하는 비중을 낸다(NEXT 5-4 W-R0 · W-R5 목표 8 % 미만).
+"""`.ninja_log` 로 리플렉션 생성 TU(`generated/**.gen*.cpp`)가 전체 컴파일 CPU 시간에서 차지하는 비중을 낸다(목표 8 % 미만).
 
   py -3 Scripts/dev/build_time_report.py                       # build/Ninja-Debug
   py -3 Scripts/dev/build_time_report.py --preset Ninja-Release --top 20
