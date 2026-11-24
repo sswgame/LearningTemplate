@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="utf-8"?>
+<?asset guid="db36341cb45a419781b6306b02073706"?>
+<!--
+  메트로배니아 미니게임의 방 그래프 — 사각형은 칸 좌표(m)이고 디렉터가 지금 방을 아는 데 쓴다. 알현실은 2단 점프(ability_wings)가 있어야 들어간다.
+-->
+<AreaGraph>
+	<Area id="hall" name="Hall" region="caverns" x="0" y="0" w="13" h="10"/>
+	<Area id="gallery" name="Gallery" region="caverns" x="13" y="0" w="12" h="10"/>
+	<Area id="throne" name="Throne" region="caverns" x="25" y="0" w="15" h="10"/>
+	<Link from="hall" to="gallery" kind="Passage"/>
+	<Link from="gallery" to="throne" kind="Ledge" requires="ability_wings"/>
+</AreaGraph>

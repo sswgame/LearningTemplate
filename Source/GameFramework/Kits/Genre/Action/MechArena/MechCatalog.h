@@ -91,6 +91,8 @@ namespace sw
         PROPERTY( Name = "stagger", Min = 0.0 )
         float32 _staggerTime{ 0.2f }; ///< Shot 과 Special 이 거는 경직(Melee 는 기술의 hitstun 을 쓴다)
         PROPERTY()
+        hashed_string _fireSound{}; ///< Special 이 쏠 때의 사운드 이벤트(Shot 은 무기 표의 것). 비면 소리가 없다
+        PROPERTY()
         MechWeaponKind _kind{ MechWeaponKind::Shot };
     };
 } // namespace sw

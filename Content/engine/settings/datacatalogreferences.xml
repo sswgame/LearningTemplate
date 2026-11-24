@@ -154,8 +154,24 @@
 	<Field owner="ConquestGameModeComponent" field="_startBuilding" tag="ConquestBuildingDef"/>
 	<Field owner="ConquestGameModeComponent" field="_startSite" tag="ConquestSiteDef"/>
 	<Field owner="ConquestGameModeComponent" field="_trainUnit" tag="ConquestUnitDef"/>
+	<CatalogKey tag="FighterDef" catalog="FighterCatalog" entry="Fighter"/>
+	<Field owner="FightingGameModeComponent" field="_playerFighter" tag="FighterDef"/>
+	<Field owner="FightingGameModeComponent" field="_opponentFighter" tag="FighterDef"/>
+	<CatalogKey tag="MechDef" catalog="MechCatalog" entry="Mech"/>
+	<CatalogKey tag="MechSkillDef" catalog="MechCatalog" entry="Skill"/>
+	<Field owner="MechArenaGameModeComponent" field="_listPlayerMech" tag="MechDef"/>
+	<Field owner="MechArenaGameModeComponent" field="_listPlayerSkill" tag="MechSkillDef"/>
+	<Field owner="MechArenaGameModeComponent" field="_listAllyMech" tag="MechDef"/>
+	<Field owner="MechArenaGameModeComponent" field="_listEnemyMech" tag="MechDef"/>
+	<CatalogKey tag="MetroidvaniaEnemyDef" catalog="Metroidvania" entry="Enemy"/>
+	<CatalogKey tag="MetroidvaniaPickupDef" catalog="Metroidvania" entry="Pickup"/>
+	<CatalogKey tag="MetroidvaniaSiteDef" catalog="Metroidvania" entry="Site"/>
+	<Field owner="MetroidvaniaGameModeComponent" field="_listEnemyKind" tag="MetroidvaniaEnemyDef"/>
+	<Field owner="MetroidvaniaGameModeComponent" field="_listPickup" tag="MetroidvaniaPickupDef"/>
+	<Field owner="MetroidvaniaGameModeComponent" field="_listSite" tag="MetroidvaniaSiteDef"/>
 	<CatalogKey tag="WeaponDef" catalog="WeaponCatalog" entry="Weapon"/>
 	<Field owner="ShooterPlayerComponent" field="_listWeaponID" tag="WeaponDef"/>
+	<Field owner="BattleRoyaleGameModeComponent" field="_listWeaponID" tag="WeaponDef"/>
 	<CatalogKey tag="RTSUnitDef" catalog="RTSCatalog" entry="Unit"/>
 	<Field owner="FrontierSkirmishGameModeComponent" field="_workerUnit" tag="RTSUnitDef"/>
 	<Field owner="FrontierSkirmishGameModeComponent" field="_soldierUnit" tag="RTSUnitDef"/>

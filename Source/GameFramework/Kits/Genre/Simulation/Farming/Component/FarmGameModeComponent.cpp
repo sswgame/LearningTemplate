@@ -29,6 +29,7 @@
 #include "GameFramework/Runtime/Gameplay/Inventory/Shop.h"
 #include "GameFramework/Runtime/Gameplay/Inventory/WalletComponent.h"
 #include "GameFramework/Runtime/World/Environment/WorldClock.h"
+#include "GameFramework/Runtime/World/Query/WalkSweep.h"
 
 namespace sw
 {
@@ -114,6 +115,7 @@ namespace sw
         , _autoFarmerPrefab{}
         , _playerStart{ 6.0f, 0.0f, -1.2f }
         , _walkSpeed{ 4.0f }
+        , _bodyRadius{ 0.3f }
         , _reach{ 0.9f }
         , _nearDistance{ 1.7f }
         , _walkMarginMin{ 5.0f }
@@ -440,7 +442,12 @@ namespace sw
         const float32 length = direction.getLength();
         if ( length < FarmGameModeComponentInternal::kMinMoveLength )
             return;
-        const float3 step  = direction * ( _walkSpeed * deltaTime * MathUtil::min( length, 1.0f ) / length );
+        float3 step = direction * ( _walkSpeed * deltaTime * MathUtil::min( length, 1.0f ) / length );
+        if ( const GameObjectManager* const pManager = getObjectManager() )
+        {
+            const float3 center = pManager->getWorldOrigin().toLocal( _playerPosition + float3{ 0.0f, _bodyRadius + WalkSweep::kSkin, 0.0f } );
+            step                = WalkSweep::slide( *pManager, center, float2{ step._x, step._z }, _bodyRadius ) - center;
+        }
         _playerPosition._x = MathUtil::clamp( _playerPosition._x + step._x, -_walkMarginMin, static_cast<float32>( _field.getWidth() ) + _walkMarginMax );
         _playerPosition._z = MathUtil::clamp( _playerPosition._z + step._z, -_walkMarginMin, static_cast<float32>( _field.getHeight() ) + _walkMarginMax );
         // 네 방향으로 맞춘다. 대각선이면 더 큰 축을 쓴다.

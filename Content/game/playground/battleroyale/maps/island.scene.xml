@@ -1,0 +1,256 @@
+<?asset guid="dd141af2a6a34c3eaa6f49ad9b679a5c"?>
+<Scene formatVersion="3" name="BattleRoyaleIsland">
+	<!-- 배틀로얄 미니게임 판(minigames/battleroyale) — 판 좌표 x · z 0..100 이 그대로 씬 자리다. 건물 · 땅은 정적 바디라 걷기 · 시야를 막고, 내비메시는 정적 바디만으로 굽는다(사람 · 구역 원판 메시는 들지 않는다). 사람 · 구역 원판은 BattleRoyaleViewComponent 가 옮긴다. RouteSouth · RouteNorth 는 건물 하나를 사이에 둔 길 표지다(시나리오가 돌아가는 길을 잰다). -->
+	<SceneSettings _bStreaming="false" _unloadMargin="0" _maxCellLoadsPerFrame="0" _addToWorldBudgetMicroseconds="0">
+		<_cellGrid _cellSize="0" _loadingRadius="0" />
+	</SceneSettings>
+	<entities>
+		<entity id="1" name="Camera">
+			<GameObject _schemaVersion="0" _name="Camera" _bActive="true">
+				<_listComponent>
+					<CameraComponent _localID="17709685451340727998" _localPosition="50,18,36" _localRotation="0.9380474,0,0" _localScale="1,1,1" _attachOwner="None" _attachComponent="None" _fovY="40.107045" _nearZ="0.1" _farZ="400" _orthoHeight="10" _priority="0" _role="Game" _bOrthographic="false" />
+					<FollowCameraComponent _localID="15357652970512560881" _gameMode="10" _offset="0,18,-14" _minFarPlane="400" />
+				</_listComponent>
+			</GameObject>
+		</entity>
+		<entity id="2" name="Sun">
+			<GameObject _schemaVersion="0" _name="Sun" _bActive="true">
+				<_listComponent>
+					<DirectionalLightComponent _localID="51927904365891271" _localPosition="0,0,0" _localRotation="0.9,-2.1,0" _localScale="1,1,1" _attachOwner="None" _attachComponent="None" _color="1,0.95,0.85" _intensity="1.4" _ambient="0.35" _shadowExtent="24" _shadowDistance="60" _bCastShadow="true" />
+				</_listComponent>
+			</GameObject>
+		</entity>
+		<entity id="3" name="Ground">
+			<GameObject _schemaVersion="0" _name="Ground" _bActive="true">
+				<_listComponent>
+					<RigidBodyComponent _localID="7198733165449302788" _localPosition="50,-0.5,50" _localRotation="0,0,0" _localScale="1,1,1" _attachOwner="None" _attachComponent="None" _bodyType="Static" _layer="Static" _material="None" _mass="0">
+						<_listShape>
+							<PhysicsShapeDesc3D _type="Box" _halfExtents="70,0.5,70" _radius="0.5" _halfHeight="0.5" _localPosition="0,0,0" _localRotation="0,0,0" _material="None">
+								<_listPoint />
+								<_listIndex />
+							</PhysicsShapeDesc3D>
+						</_listShape>
+					</RigidBodyComponent>
+					<MeshComponent _localID="163493842152903304" _localPosition="0,0.4,0" _localRotation="0,0,0" _localScale="140,0.1,140" _attachOwner="None" _attachComponent="#63e709ac676dd304" _meshID="Cube" _materialPath="engine/materials/prototypegrid_dark.material" _boundsRadius="0.866" _bVisible="true" />
+					<NavMeshSurfaceComponent _localID="4521272121032625094" _geometrySource="PhysicsColliders" _boundsHalfExtents="52,6,52">
+						<_listAgentType>
+							<item>Humanoid</item>
+						</_listAgentType>
+						<_listExcludeTag />
+					</NavMeshSurfaceComponent>
+				</_listComponent>
+			</GameObject>
+		</entity>
+		<entity id="4" name="ZoneDisc">
+			<GameObject _schemaVersion="0" _name="ZoneDisc" _bActive="true">
+				<_listComponent>
+					<MeshComponent _localID="163493842152903304" _localPosition="50,0,50" _localRotation="0,0,0" _localScale="100,0.02,100" _attachOwner="None" _attachComponent="None" _meshID="Cylinder" _materialPath="engine/materials/prototypegrid_light.material" _boundsRadius="0.866" _bVisible="true" />
+				</_listComponent>
+			</GameObject>
+		</entity>
+		<entity id="5" name="NextZoneDisc">
+			<GameObject _schemaVersion="0" _name="NextZoneDisc" _bActive="true">
+				<_listComponent>
+					<MeshComponent _localID="163493842152903304" _localPosition="50,0.02,50" _localRotation="0,0,0" _localScale="50,0.02,50" _attachOwner="None" _attachComponent="None" _meshID="Cylinder" _materialPath="engine/materials/prototypegrid_orange.material" _boundsRadius="0.866" _bVisible="true" />
+				</_listComponent>
+			</GameObject>
+		</entity>
+		<entity id="20" name="Person0">
+			<GameObject _schemaVersion="0" _name="Person0" _bActive="true">
+				<_listComponent>
+					<MeshComponent _localID="163493842152903304" _localPosition="40,0.9,20" _localRotation="0,0,0" _localScale="0.8,1.8,0.8" _attachOwner="None" _attachComponent="None" _meshID="Cube" _materialPath="engine/materials/prototypegrid_light.material" _boundsRadius="0.866" _bVisible="true" />
+				</_listComponent>
+			</GameObject>
+		</entity>
+		<entity id="21" name="Person1">
+			<GameObject _schemaVersion="0" _name="Person1" _bActive="true">
+				<_listComponent>
+					<MeshComponent _localID="163493842152903304" _localPosition="44,0.9,20" _localRotation="0,0,0" _localScale="0.8,1.8,0.8" _attachOwner="None" _attachComponent="None" _meshID="Cube" _materialPath="engine/materials/prototypegrid_light.material" _boundsRadius="0.866" _bVisible="true" />
+				</_listComponent>
+			</GameObject>
+		</entity>
+		<entity id="22" name="Person2">
+			<GameObject _schemaVersion="0" _name="Person2" _bActive="true">
+				<_listComponent>
+					<MeshComponent _localID="163493842152903304" _localPosition="48,0.9,20" _localRotation="0,0,0" _localScale="0.8,1.8,0.8" _attachOwner="None" _attachComponent="None" _meshID="Cube" _materialPath="engine/materials/prototypegrid_orange.material" _boundsRadius="0.866" _bVisible="true" />
+				</_listComponent>
+			</GameObject>
+		</entity>
+		<entity id="23" name="Person3">
+			<GameObject _schemaVersion="0" _name="Person3" _bActive="true">
+				<_listComponent>
+					<MeshComponent _localID="163493842152903304" _localPosition="52,0.9,20" _localRotation="0,0,0" _localScale="0.8,1.8,0.8" _attachOwner="None" _attachComponent="None" _meshID="Cube" _materialPath="engine/materials/prototypegrid_orange.material" _boundsRadius="0.866" _bVisible="true" />
+				</_listComponent>
+			</GameObject>
+		</entity>
+		<entity id="24" name="Person4">
+			<GameObject _schemaVersion="0" _name="Person4" _bActive="true">
+				<_listComponent>
+					<MeshComponent _localID="163493842152903304" _localPosition="56,0.9,20" _localRotation="0,0,0" _localScale="0.8,1.8,0.8" _attachOwner="None" _attachComponent="None" _meshID="Cube" _materialPath="engine/materials/prototypegrid_dark.material" _boundsRadius="0.866" _bVisible="true" />
+				</_listComponent>
+			</GameObject>
+		</entity>
+		<entity id="25" name="Person5">
+			<GameObject _schemaVersion="0" _name="Person5" _bActive="true">
+				<_listComponent>
+					<MeshComponent _localID="163493842152903304" _localPosition="60,0.9,20" _localRotation="0,0,0" _localScale="0.8,1.8,0.8" _attachOwner="None" _attachComponent="None" _meshID="Cube" _materialPath="engine/materials/prototypegrid_dark.material" _boundsRadius="0.866" _bVisible="true" />
+				</_listComponent>
+			</GameObject>
+		</entity>
+		<entity id="30" name="Building0">
+			<GameObject _schemaVersion="0" _name="Building0" _bActive="true">
+				<_listComponent>
+					<RigidBodyComponent _localID="7198733165449302788" _localPosition="22,1.5,30" _localRotation="0,0,0" _localScale="1,1,1" _attachOwner="None" _attachComponent="None" _bodyType="Static" _layer="Static" _material="None" _mass="0">
+						<_listShape>
+							<PhysicsShapeDesc3D _type="Box" _halfExtents="3.0,1.5,2.0" _radius="0.5" _halfHeight="0.5" _localPosition="0,0,0" _localRotation="0,0,0" _material="None">
+								<_listPoint />
+								<_listIndex />
+							</PhysicsShapeDesc3D>
+						</_listShape>
+					</RigidBodyComponent>
+					<MeshComponent _localID="163493842152903304" _localPosition="0,0,0" _localRotation="0,0,0" _localScale="6,3,4" _attachOwner="None" _attachComponent="#63e709ac676dd304" _meshID="Cube" _materialPath="engine/materials/prototypegrid_light.material" _boundsRadius="0.866" _bVisible="true" />
+				</_listComponent>
+			</GameObject>
+		</entity>
+		<entity id="31" name="Building1">
+			<GameObject _schemaVersion="0" _name="Building1" _bActive="true">
+				<_listComponent>
+					<RigidBodyComponent _localID="7198733165449302788" _localPosition="70,1.25,24" _localRotation="0,0,0" _localScale="1,1,1" _attachOwner="None" _attachComponent="None" _bodyType="Static" _layer="Static" _material="None" _mass="0">
+						<_listShape>
+							<PhysicsShapeDesc3D _type="Box" _halfExtents="2.5,1.25,4.0" _radius="0.5" _halfHeight="0.5" _localPosition="0,0,0" _localRotation="0,0,0" _material="None">
+								<_listPoint />
+								<_listIndex />
+							</PhysicsShapeDesc3D>
+						</_listShape>
+					</RigidBodyComponent>
+					<MeshComponent _localID="163493842152903304" _localPosition="0,0,0" _localRotation="0,0,0" _localScale="5,2.5,8" _attachOwner="None" _attachComponent="#63e709ac676dd304" _meshID="Cube" _materialPath="engine/materials/prototypegrid_light.material" _boundsRadius="0.866" _bVisible="true" />
+				</_listComponent>
+			</GameObject>
+		</entity>
+		<entity id="32" name="Building2">
+			<GameObject _schemaVersion="0" _name="Building2" _bActive="true">
+				<_listComponent>
+					<RigidBodyComponent _localID="7198733165449302788" _localPosition="34,1.5,72" _localRotation="0,0,0" _localScale="1,1,1" _attachOwner="None" _attachComponent="None" _bodyType="Static" _layer="Static" _material="None" _mass="0">
+						<_listShape>
+							<PhysicsShapeDesc3D _type="Box" _halfExtents="4.0,1.5,2.5" _radius="0.5" _halfHeight="0.5" _localPosition="0,0,0" _localRotation="0,0,0" _material="None">
+								<_listPoint />
+								<_listIndex />
+							</PhysicsShapeDesc3D>
+						</_listShape>
+					</RigidBodyComponent>
+					<MeshComponent _localID="163493842152903304" _localPosition="0,0,0" _localRotation="0,0,0" _localScale="8,3,5" _attachOwner="None" _attachComponent="#63e709ac676dd304" _meshID="Cube" _materialPath="engine/materials/prototypegrid_light.material" _boundsRadius="0.866" _bVisible="true" />
+				</_listComponent>
+			</GameObject>
+		</entity>
+		<entity id="33" name="Building3">
+			<GameObject _schemaVersion="0" _name="Building3" _bActive="true">
+				<_listComponent>
+					<RigidBodyComponent _localID="7198733165449302788" _localPosition="76,2.0,70" _localRotation="0,0,0" _localScale="1,1,1" _attachOwner="None" _attachComponent="None" _bodyType="Static" _layer="Static" _material="None" _mass="0">
+						<_listShape>
+							<PhysicsShapeDesc3D _type="Box" _halfExtents="3.0,2.0,3.0" _radius="0.5" _halfHeight="0.5" _localPosition="0,0,0" _localRotation="0,0,0" _material="None">
+								<_listPoint />
+								<_listIndex />
+							</PhysicsShapeDesc3D>
+						</_listShape>
+					</RigidBodyComponent>
+					<MeshComponent _localID="163493842152903304" _localPosition="0,0,0" _localRotation="0,0,0" _localScale="6,4,6" _attachOwner="None" _attachComponent="#63e709ac676dd304" _meshID="Cube" _materialPath="engine/materials/prototypegrid_light.material" _boundsRadius="0.866" _bVisible="true" />
+				</_listComponent>
+			</GameObject>
+		</entity>
+		<entity id="34" name="Building4">
+			<GameObject _schemaVersion="0" _name="Building4" _bActive="true">
+				<_listComponent>
+					<RigidBodyComponent _localID="7198733165449302788" _localPosition="50,0.75,50" _localRotation="0,0,0" _localScale="1,1,1" _attachOwner="None" _attachComponent="None" _bodyType="Static" _layer="Static" _material="None" _mass="0">
+						<_listShape>
+							<PhysicsShapeDesc3D _type="Box" _halfExtents="2.0,0.75,2.0" _radius="0.5" _halfHeight="0.5" _localPosition="0,0,0" _localRotation="0,0,0" _material="None">
+								<_listPoint />
+								<_listIndex />
+							</PhysicsShapeDesc3D>
+						</_listShape>
+					</RigidBodyComponent>
+					<MeshComponent _localID="163493842152903304" _localPosition="0,0,0" _localRotation="0,0,0" _localScale="4,1.5,4" _attachOwner="None" _attachComponent="#63e709ac676dd304" _meshID="Cube" _materialPath="engine/materials/prototypegrid_light.material" _boundsRadius="0.866" _bVisible="true" />
+				</_listComponent>
+			</GameObject>
+		</entity>
+		<entity id="35" name="Building5">
+			<GameObject _schemaVersion="0" _name="Building5" _bActive="true">
+				<_listComponent>
+					<RigidBodyComponent _localID="7198733165449302788" _localPosition="12,1.0,60" _localRotation="0,0,0" _localScale="1,1,1" _attachOwner="None" _attachComponent="None" _bodyType="Static" _layer="Static" _material="None" _mass="0">
+						<_listShape>
+							<PhysicsShapeDesc3D _type="Box" _halfExtents="1.5,1.0,3.0" _radius="0.5" _halfHeight="0.5" _localPosition="0,0,0" _localRotation="0,0,0" _material="None">
+								<_listPoint />
+								<_listIndex />
+							</PhysicsShapeDesc3D>
+						</_listShape>
+					</RigidBodyComponent>
+					<MeshComponent _localID="163493842152903304" _localPosition="0,0,0" _localRotation="0,0,0" _localScale="3,2,6" _attachOwner="None" _attachComponent="#63e709ac676dd304" _meshID="Cube" _materialPath="engine/materials/prototypegrid_light.material" _boundsRadius="0.866" _bVisible="true" />
+				</_listComponent>
+			</GameObject>
+		</entity>
+		<entity id="36" name="Building6">
+			<GameObject _schemaVersion="0" _name="Building6" _bActive="true">
+				<_listComponent>
+					<RigidBodyComponent _localID="7198733165449302788" _localPosition="60,1.0,88" _localRotation="0,0,0" _localScale="1,1,1" _attachOwner="None" _attachComponent="None" _bodyType="Static" _layer="Static" _material="None" _mass="0">
+						<_listShape>
+							<PhysicsShapeDesc3D _type="Box" _halfExtents="5.0,1.0,1.5" _radius="0.5" _halfHeight="0.5" _localPosition="0,0,0" _localRotation="0,0,0" _material="None">
+								<_listPoint />
+								<_listIndex />
+							</PhysicsShapeDesc3D>
+						</_listShape>
+					</RigidBodyComponent>
+					<MeshComponent _localID="163493842152903304" _localPosition="0,0,0" _localRotation="0,0,0" _localScale="10,2,3" _attachOwner="None" _attachComponent="#63e709ac676dd304" _meshID="Cube" _materialPath="engine/materials/prototypegrid_light.material" _boundsRadius="0.866" _bVisible="true" />
+				</_listComponent>
+			</GameObject>
+		</entity>
+		<entity id="40" name="RouteSouth">
+			<GameObject _schemaVersion="0" _name="RouteSouth" _bActive="true">
+				<_listComponent>
+					<SceneComponent _localID="12574257654564749349" _localPosition="22,0,27" _localRotation="0,0,0" _localScale="1,1,1" _attachOwner="None" _attachComponent="None" />
+				</_listComponent>
+			</GameObject>
+		</entity>
+		<entity id="41" name="RouteNorth">
+			<GameObject _schemaVersion="0" _name="RouteNorth" _bActive="true">
+				<_listComponent>
+					<SceneComponent _localID="12574257654564749349" _localPosition="22,0,33" _localRotation="0,0,0" _localScale="1,1,1" _attachOwner="None" _attachComponent="None" />
+				</_listComponent>
+			</GameObject>
+		</entity>
+		<entity id="10" name="BattleRoyaleGameMode">
+			<GameObject _schemaVersion="0" _name="BattleRoyaleGameMode" _bActive="true">
+				<_listComponent>
+					<BattleRoyaleGameModeComponent _localID="3374221220806048208" _squadCount="3" _squadSize="2" _seed="7" _playerSpeed="5" _botSpeed="4" _bodyRadius="0.35" _eyeHeight="1.2" _botRouteInterval="0.5" _startReserveAmmo="24" _playerHitChance="0.75" _botHitChance="0.3" _headChance="0.2" _pickupRadius="1.5" _reviveRange="1.5" _botRescueRange="20" _botLootRange="40" _lootDataPath="game/playground/battleroyale/data/island.loot.xml" _lootSpotKind="crate" _resultHoldSeconds="3" _victoryMoney="60">
+						<_listWeaponID>
+							<item>br_pistol</item>
+							<item>br_shotgun</item>
+							<item>br_rifle</item>
+						</_listWeaponID>
+						<_listLootPosition>
+							<item>27,34</item>
+							<item>66,30</item>
+							<item>40,68</item>
+							<item>70,66</item>
+							<item>53,46</item>
+							<item>16,56</item>
+							<item>58,84</item>
+							<item>30,50</item>
+							<item>48,60</item>
+							<item>62,48</item>
+						</_listLootPosition>
+					</BattleRoyaleGameModeComponent>
+					<BattleRoyaleViewComponent _localID="3398962045018356957" _moveAction="Move" _fireAction="BattleRoyale.Fire" _useAction="BattleRoyale.Use" _zoneDisc="4" _nextZoneDisc="5" _personHeight="1.8" _personWidth="0.8" _itemPrefab="game/playground/battleroyale/prefabs/item.prefab.xml" _itemPoolSize="24">
+						<_listPersonBody>
+							<item>20</item>
+							<item>21</item>
+							<item>22</item>
+							<item>23</item>
+							<item>24</item>
+							<item>25</item>
+						</_listPersonBody>
+					</BattleRoyaleViewComponent>
+					<HUDControllerComponent _localID="17122754535480611078" _documentPath="game/playground/battleroyale/ui/hud.ui.xml" />
+				</_listComponent>
+			</GameObject>
+		</entity>
+	</entities>
+</Scene>

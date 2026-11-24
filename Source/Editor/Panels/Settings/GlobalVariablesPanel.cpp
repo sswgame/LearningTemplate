@@ -101,7 +101,7 @@ namespace sw::editor
             }
 
             /** @brief 비밀 값은 가린 글만 보인다. 값은 명령줄 · 콘솔로 준다(칸에서 고치면 가린 글에 이어 쓰게 된다). */
-            static bool drawSecretWidget( GlobalVariableInfo& info )
+            static bool drawSecretWidget( GlobalVariablesViewModel& /*model*/, GlobalVariableInfo& info )
             {
                 ImGui::TextUnformatted( info.getValueAsString().c_str() );
                 return false;

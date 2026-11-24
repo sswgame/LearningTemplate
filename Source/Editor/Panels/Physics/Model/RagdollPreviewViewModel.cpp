@@ -436,7 +436,7 @@ namespace sw::editor
         {
             for ( const PhysicsShapeDesc3D& shape : static_cast<const PhysicsAssetBodyDef*>( editSelectedBody() )->_listShape )
             {
-                PhysicsDebugDraw::drawShape3D( renderer, shape, editPosition, editRotation, colors._selectedJoint );
+                IPhysicsDebugRenderer::drawShape3D( renderer, shape, editPosition, editRotation, colors._selectedJoint );
             }
         }
 

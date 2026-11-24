@@ -105,7 +105,7 @@ namespace sw
         static const hashed_string s_clear( Internal::kEventClear );
         static const hashed_string s_defeat( Internal::kEventDefeat );
         (void)quests.notify( s_clear, region._id );
-        for ( const ActionRoomSpawnDef& boss : region._listBossSpawn )
+        for ( const AdventureSpawnDef& boss : region._listBossSpawn )
         {
             (void)quests.notify( s_defeat, boss._monsterID );
         }

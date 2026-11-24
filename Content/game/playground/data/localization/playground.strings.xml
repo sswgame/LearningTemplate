@@ -24,6 +24,16 @@
 				<item>game/playground/sidescrollconquest/ui/hud.ui.xml</item>
 			</origins>
 		</entry>
+		<entry key="Allied strength" source="Allied strength" context="TextWidget._text">
+			<origins>
+				<item>game/playground/mecharena/ui/hud.ui.xml</item>
+			</origins>
+		</entry>
+		<entry key="Allied strength broken - you lose" source="Allied strength broken - you lose" context="TextWidget._text">
+			<origins>
+				<item>game/playground/mecharena/ui/hud.ui.xml</item>
+			</origins>
+		</entry>
 		<entry key="Another player wins" source="Another player wins" context="TextWidget._text">
 			<origins>
 				<item>game/playground/partyarena/ui/hud.ui.xml</item>
@@ -72,6 +82,11 @@
 		<entry key="Bone Shield" source="Bone Shield" context="Item name">
 			<origins>
 				<item>common/data/items.xml</item>
+			</origins>
+		</entry>
+		<entry key="Boost overheated" source="Boost overheated" context="TextWidget._text">
+			<origins>
+				<item>game/playground/mecharena/ui/hud.ui.xml</item>
 			</origins>
 		</entry>
 		<entry key="Bramble Sprite" source="Bramble Sprite" context="JRPG name">
@@ -170,6 +185,11 @@
 				<item>game/playground/coopscavenger/ui/hud.ui.xml</item>
 			</origins>
 		</entry>
+		<entry key="Double K.O. - the bout is a draw" source="Double K.O. - the bout is a draw" context="TextWidget._text">
+			<origins>
+				<item>game/playground/fighting/ui/hud.ui.xml</item>
+			</origins>
+		</entry>
 		<entry key="Draw pile" source="Draw pile" context="TextWidget._text">
 			<origins>
 				<item>game/playground/cardgame/ui/hud.ui.xml</item>
@@ -205,6 +225,16 @@
 				<item>game/playground/cardgame/ui/hud.ui.xml</item>
 			</origins>
 		</entry>
+		<entry key="Enemy strength" source="Enemy strength" context="TextWidget._text">
+			<origins>
+				<item>game/playground/mecharena/ui/hud.ui.xml</item>
+			</origins>
+		</entry>
+		<entry key="Enemy strength broken - you win" source="Enemy strength broken - you win" context="TextWidget._text">
+			<origins>
+				<item>game/playground/mecharena/ui/hud.ui.xml</item>
+			</origins>
+		</entry>
 		<entry key="Energy" source="Energy" context="TextWidget._text">
 			<origins>
 				<item>game/playground/cardgame/ui/hud.ui.xml</item>
@@ -218,6 +248,11 @@
 		<entry key="Every room is lit" source="Every room is lit" context="TextWidget._text">
 			<origins>
 				<item>game/playground/ghosthunt/ui/hud.ui.xml</item>
+			</origins>
+		</entry>
+		<entry key="Explored %" source="Explored %" context="TextWidget._text">
+			<origins>
+				<item>game/playground/metroidvania/ui/hud.ui.xml</item>
 			</origins>
 		</entry>
 		<entry key="Fast (J)   Strong (K)   Dodge (Shift)   Sign (Q)   Twin sign (R)   Oil (1)   Potion (2)" source="Fast (J)   Strong (K)   Dodge (Shift)   Sign (Q)   Twin sign (R)   Oil (1)   Potion (2)" context="TextWidget._text">
@@ -240,6 +275,11 @@
 				<item>game/playground/kartracing/ui/hud.ui.xml</item>
 			</origins>
 		</entry>
+		<entry key="Flasks" source="Flasks" context="TextWidget._text">
+			<origins>
+				<item>game/playground/metroidvania/ui/hud.ui.xml</item>
+			</origins>
+		</entry>
 		<entry key="Follow the lantern trail to its end" source="Follow the lantern trail to its end" context="TextWidget._text">
 			<origins>
 				<item>game/playground/classicjrpg/ui/hud.ui.xml</item>
@@ -253,6 +293,11 @@
 		<entry key="Generators left" source="Generators left" context="TextWidget._text">
 			<origins>
 				<item>game/playground/asymmetrichorror/ui/hud.ui.xml</item>
+			</origins>
+		</entry>
+		<entry key="Geo" source="Geo" context="TextWidget._text">
+			<origins>
+				<item>game/playground/metroidvania/ui/hud.ui.xml</item>
 			</origins>
 		</entry>
 		<entry key="Get ready!" source="Get ready!" context="TextWidget._text">
@@ -289,7 +334,17 @@
 				<item>game/playground/monsterhuntrpg/ui/hud.ui.xml</item>
 			</origins>
 		</entry>
+		<entry key="Health Potion" source="Health Potion" context="Item name">
+			<origins>
+				<item>common/data/items.xml</item>
+			</origins>
+		</entry>
 		<entry key="Heraldic Cape" source="Heraldic Cape" context="Item name">
+			<origins>
+				<item>common/data/items.xml</item>
+			</origins>
+		</entry>
+		<entry key="High Heels" source="High Heels" context="Item name">
 			<origins>
 				<item>common/data/items.xml</item>
 			</origins>
@@ -324,6 +379,16 @@
 				<item>game/playground/survivalhorror/ui/hud.ui.xml</item>
 			</origins>
 		</entry>
+		<entry key="K.O. - you lose the bout" source="K.O. - you lose the bout" context="TextWidget._text">
+			<origins>
+				<item>game/playground/fighting/ui/hud.ui.xml</item>
+			</origins>
+		</entry>
+		<entry key="K.O. - you win the bout" source="K.O. - you win the bout" context="TextWidget._text">
+			<origins>
+				<item>game/playground/fighting/ui/hud.ui.xml</item>
+			</origins>
+		</entry>
 		<entry key="Karts" source="Karts" context="TextWidget._text">
 			<origins>
 				<item>game/playground/kartracing/ui/hud.ui.xml</item>
@@ -345,6 +410,11 @@
 			</origins>
 		</entry>
 		<entry key="Knight Helmet (Merged)" source="Knight Helmet (Merged)" context="Item name">
+			<origins>
+				<item>common/data/items.xml</item>
+			</origins>
+		</entry>
+		<entry key="Knight Helmet (Tintable)" source="Knight Helmet (Tintable)" context="Item name">
 			<origins>
 				<item>common/data/items.xml</item>
 			</origins>
@@ -374,6 +444,11 @@
 				<item>game/playground/kartracing/ui/hud.ui.xml</item>
 			</origins>
 		</entry>
+		<entry key="Last squad standing - you win" source="Last squad standing - you win" context="TextWidget._text">
+			<origins>
+				<item>game/playground/battleroyale/ui/hud.ui.xml</item>
+			</origins>
+		</entry>
 		<entry key="Leaf Slap" source="Leaf Slap" context="Monster name">
 			<origins>
 				<item>game/playground/data/monstercollector.xml</item>
@@ -389,12 +464,22 @@
 				<item>game/playground/rhythm/ui/hud.ui.xml</item>
 			</origins>
 		</entry>
+		<entry key="Light Ammo" source="Light Ammo" context="Item name">
+			<origins>
+				<item>common/data/items.xml</item>
+			</origins>
+		</entry>
 		<entry key="Light: stun an attacking ghost - Vacuum: pull it in - Use: surge or search" source="Light: stun an attacking ghost - Vacuum: pull it in - Use: surge or search" context="TextWidget._text">
 			<origins>
 				<item>game/playground/ghosthunt/ui/hud.ui.xml</item>
 			</origins>
 		</entry>
 		<entry key="Longbow" source="Longbow" context="Item name">
+			<origins>
+				<item>common/data/items.xml</item>
+			</origins>
+		</entry>
+		<entry key="Low Boots" source="Low Boots" context="Item name">
 			<origins>
 				<item>common/data/items.xml</item>
 			</origins>
@@ -407,6 +492,11 @@
 		<entry key="MP" source="MP" context="TextWidget._text">
 			<origins>
 				<item>game/playground/classicjrpg/ui/hud.ui.xml</item>
+			</origins>
+		</entry>
+		<entry key="Mech destroyed - special picks the next mech" source="Mech destroyed - special picks the next mech" context="TextWidget._text">
+			<origins>
+				<item>game/playground/mecharena/ui/hud.ui.xml</item>
 			</origins>
 		</entry>
 		<entry key="Mind the pond - nobody swims in it." source="Mind the pond - nobody swims in it." context="Dialogue line">
@@ -447,6 +537,11 @@
 		<entry key="Oil" source="Oil" context="TextWidget._text">
 			<origins>
 				<item>game/playground/monsterhuntrpg/ui/hud.ui.xml</item>
+			</origins>
+		</entry>
+		<entry key="People left" source="People left" context="TextWidget._text">
+			<origins>
+				<item>game/playground/battleroyale/ui/hud.ui.xml</item>
 			</origins>
 		</entry>
 		<entry key="Pistol" source="Pistol" context="Weapon name">
@@ -541,6 +636,11 @@
 				<item>game/playground/monsterhuntrpg/ui/hud.ui.xml</item>
 			</origins>
 		</entry>
+		<entry key="Rifle Ammo" source="Rifle Ammo" context="Item name">
+			<origins>
+				<item>common/data/items.xml</item>
+			</origins>
+		</entry>
 		<entry key="Ripplet" source="Ripplet" context="Monster name">
 			<origins>
 				<item>game/playground/data/monstercollector.xml</item>
@@ -609,6 +709,11 @@
 		<entry key="Served" source="Served" context="TextWidget._text">
 			<origins>
 				<item>game/playground/restaurantsim/ui/hud.ui.xml</item>
+			</origins>
+		</entry>
+		<entry key="Shotgun Shells" source="Shotgun Shells" context="Item name">
+			<origins>
+				<item>common/data/items.xml</item>
 			</origins>
 		</entry>
 		<entry key="Sign power" source="Sign power" context="TextWidget._text">
@@ -789,6 +894,11 @@
 				<item>game/playground/classicjrpg/ui/hud.ui.xml</item>
 			</origins>
 		</entry>
+		<entry key="The warden has fallen" source="The warden has fallen" context="TextWidget._text">
+			<origins>
+				<item>game/playground/metroidvania/ui/hud.ui.xml</item>
+			</origins>
+		</entry>
 		<entry key="The warrior wakes." source="The warrior wakes." context="SequenceTrackItem._text">
 			<origins>
 				<item>game/playground/data/cinematic.seq.xml</item>
@@ -809,9 +919,19 @@
 				<item>common/data/items.xml</item>
 			</origins>
 		</entry>
+		<entry key="Trout" source="Trout" context="Item name">
+			<origins>
+				<item>common/data/items.xml</item>
+			</origins>
+		</entry>
 		<entry key="Turn" source="Turn" context="TextWidget._text">
 			<origins>
 				<item>game/playground/cardgame/ui/hud.ui.xml</item>
+			</origins>
+		</entry>
+		<entry key="Use - jump off the plane" source="Use - jump off the plane" context="TextWidget._text">
+			<origins>
+				<item>game/playground/battleroyale/ui/hud.ui.xml</item>
 			</origins>
 		</entry>
 		<entry key="Use move (J)   Ball (K)   Switch (L)   Run (R)" source="Use move (J)   Ball (K)   Switch (L)   Run (R)" context="TextWidget._text">
@@ -869,14 +989,34 @@
 				<item>game/playground/monstercollector/ui/hud.ui.xml</item>
 			</origins>
 		</entry>
+		<entry key="Wild Herb" source="Wild Herb" context="Item name">
+			<origins>
+				<item>common/data/items.xml</item>
+			</origins>
+		</entry>
+		<entry key="Wood Log" source="Wood Log" context="Item name">
+			<origins>
+				<item>common/data/items.xml</item>
+			</origins>
+		</entry>
 		<entry key="Wrong way!" source="Wrong way!" context="TextWidget._text">
 			<origins>
 				<item>game/playground/kartracing/ui/hud.ui.xml</item>
 			</origins>
 		</entry>
+		<entry key="You are down - wait for your squad" source="You are down - wait for your squad" context="TextWidget._text">
+			<origins>
+				<item>game/playground/battleroyale/ui/hud.ui.xml</item>
+			</origins>
+		</entry>
 		<entry key="You died" source="You died" context="TextWidget._text">
 			<origins>
 				<item>game/playground/survivalhorror/ui/hud.ui.xml</item>
+			</origins>
+		</entry>
+		<entry key="You fell - your geo lies where you died" source="You fell - your geo lies where you died" context="TextWidget._text">
+			<origins>
+				<item>game/playground/metroidvania/ui/hud.ui.xml</item>
 			</origins>
 		</entry>
 		<entry key="You got out" source="You got out" context="TextWidget._text">
@@ -912,6 +1052,16 @@
 		<entry key="Your home is lost" source="Your home is lost" context="TextWidget._text">
 			<origins>
 				<item>game/playground/sidescrollconquest/ui/hud.ui.xml</item>
+			</origins>
+		</entry>
+		<entry key="Your squad is out" source="Your squad is out" context="TextWidget._text">
+			<origins>
+				<item>game/playground/battleroyale/ui/hud.ui.xml</item>
+			</origins>
+		</entry>
+		<entry key="Zone" source="Zone" context="TextWidget._text">
+			<origins>
+				<item>game/playground/battleroyale/ui/hud.ui.xml</item>
 			</origins>
 		</entry>
 	</entries>

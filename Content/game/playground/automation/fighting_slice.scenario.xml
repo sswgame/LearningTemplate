@@ -1,0 +1,35 @@
+<?xml version="1.0" encoding="utf-8"?>
+<?asset guid="f8aeaaaa5b9b48d892151790c8a84211"?>
+<!--
+  격투 미니게임(fighting — GF_Fighting 키트)의 한 판 — 열림 → 플레이어 입력(하단 · 물러서기) → 자동 플레이(두 쪽 모두 컴퓨터)로 대전 끝 → 결과 보고 → 허브.
+  플레이어 조작은 입력 맵 액션(Move · Fighting.*)으로만 한다. 승자는 손놀림 시드에 달려 판정하지 않는다 — 대전이 끝나고 결과가 나가는 것을 본다.
+  감시 값: Fighting.MatchWinner(0 플레이어, 1 상대, 2 무승부, −1 진행) · .Round · .OpponentHealth · .PlayerState(0 중립, 1 공격).
+  실행: ctest -R Scenario.playground · App -scenario=game/playground/automation/fighting_slice.scenario.xml -unattended
+-->
+<Scenario name="game.playground.fighting_slice" fixedDelta="0.0166667" timeoutFrames="7200" startAfter="ScenePlaying" startTimeoutFrames="900" input="exclusive">
+	<Launch variable="gv_firstMinigame" value="fighting"/>
+	<Variable name="gv_playgroundAutoPlay" value="0"/>
+	<WaitUntil watch="Minigame.Active" is="fighting" timeoutWallSeconds="60"/>
+	<WaitUntil watch="Fighting.Round" atLeast="1" timeoutFrames="120"/>
+	<Expect watch="Save.Blocked" equals="1"/>
+	<Expect watch="Fighting.MatchWinner" equals="-1"/>
+	<Expect watch="Fighting.OpponentHealth" equals="150"/>
+	<!-- 하단 버튼 한 번 = 공격 상태에 든다(중립이 아니면 선입력이 잊힐 수 있어 중립에서 누른다 — 상대는 아직 걸어오는 중이다) -->
+	<WaitUntil watch="Fighting.PlayerState" equals="0" timeoutFrames="300"/>
+	<Action name="Fighting.Low"/>
+	<WaitUntil watch="Fighting.PlayerState" equals="1" timeoutFrames="30"/>
+	<!-- 자동 플레이로 대전을 끝까지 — 라운드 20 초 · 두 라운드 선승이라 길어도 세 라운드다 -->
+	<Variable name="gv_playgroundAutoPlay" value="1"/>
+	<WaitUntil watch="Fighting.MatchWinner" atLeast="0" timeoutFrames="5400"/>
+	<ExpectLog id="Fighting.RoundEnd" atLeast="2"/>
+	<ExpectLog id="Fighting.MatchEnd" count="1"/>
+	<!-- 결과를 3 초 보인 뒤 스스로 끝나 허브(입구 씬)로 간다 -->
+	<WaitUntil watch="Minigame.Active" is="none" timeoutFrames="600"/>
+	<AdvanceSimulation frames="2"/>
+	<WaitUntil watch="Scene.Transitioning" equals="0" timeoutWallSeconds="60"/>
+	<ExpectActiveScene path="game/playground/maps/hub.scene.xml"/>
+	<ExpectLog id="MinigameFlow.Finished" contains="'fighting' finished" count="1"/>
+	<Expect watch="Minigame.LeakCount" equals="0"/>
+	<Variable name="gv_playgroundAutoPlay" value="0"/>
+	<Pass/>
+</Scenario>

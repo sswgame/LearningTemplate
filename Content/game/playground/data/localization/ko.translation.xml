@@ -5,7 +5,11 @@
 		<entry key="Accuracy (%)" text="정확도(%)" sourceHash="67e78eeed325a546" />
 		<entry key="Actor" text="배우" sourceHash="f865a44470a1eb3a" />
 		<entry key="All sites" text="모든 거점" sourceHash="2942d2349667a12c" />
+		<entry key="Allied strength" text="아군 전력" sourceHash="8d3ba6769f2ebd03" />
+		<entry key="Allied strength broken - you lose" text="아군 전력이 바닥났습니다 - 패배" sourceHash="7fc102a6588e40a9" />
 		<entry key="Another player wins" text="다른 사람이 우승했다" sourceHash="cdb3fdf6a7c0f200" />
+		<entry key="ArrivalCutA" text="도착 컷 A" sourceHash="26b905e2200d2699" />
+		<entry key="ArrivalCutB" text="도착 컷 B" sourceHash="26b902e2200d2180" />
 		<entry key="Assault Rifle" text="돌격 소총" sourceHash="67220abc0f738d9a" />
 		<entry key="Attack (J)   Spell (K)   Defend (L)   Flee (R)" text="공격 (J)   주문 (K)   방어 (L)   도망 (R)" sourceHash="a5fc363affec7aa6" />
 		<entry key="Attack power" text="공격력" sourceHash="b759cb47dd7308d8" />
@@ -13,6 +17,7 @@
 		<entry key="Balm" text="연고" sourceHash="c13bdaa7a88916b7" />
 		<entry key="Bone Axe" text="뼈 도끼" sourceHash="9e2cdbf7cb3d6953" />
 		<entry key="Bone Shield" text="뼈 방패" sourceHash="0201be6b95ece038" />
+		<entry key="Boost overheated" text="부스트 과열" sourceHash="e0efd5a0e587bb71" />
 		<entry key="Bramble Sprite" text="가시덤불 정령" sourceHash="820f516764689b41" />
 		<entry key="Broth Bowl" text="맑은국수" sourceHash="70e1759a4b511942" />
 		<entry key="Buy (J)   Price up (K)   Price down (L)   Open (Enter)" text="사기 (J)   가격 올리기 (K)   가격 내리기 (L)   열기 (Enter)" sourceHash="60ece787ba2f8265" />
@@ -32,51 +37,71 @@
 		<entry key="Dark rooms" text="어두운 방" sourceHash="26d45aeeea26be71" />
 		<entry key="Day" text="날" sourceHash="e0955919920ee87d" />
 		<entry key="Days left" text="남은 날" sourceHash="7be26c4efaf887eb" />
+		<entry key="Double K.O. - the bout is a draw" text="더블 K.O. 시합이 무승부입니다" sourceHash="2f4f1c8b2a8b8859" />
 		<entry key="Draw pile" text="뽑을 더미" sourceHash="73e96b4125f82831" />
 		<entry key="Dusk Moth" text="땅거미 나방" sourceHash="6a5fe98cf648b21c" />
+		<entry key="Elder" text="장로" sourceHash="424dbc1360c76777" />
 		<entry key="Ember Sage" text="잉걸현자" sourceHash="9441758da0ec4d94" />
 		<entry key="Ember Tome" text="잉걸의 책" sourceHash="093cdb520ac886e7" />
 		<entry key="Enemy health" text="상대 체력" sourceHash="0d8b794c5bf4bf63" />
 		<entry key="Enemy intent" text="상대가 할 일" sourceHash="edcc8c6379d35fef" />
+		<entry key="Enemy strength" text="적군 전력" sourceHash="b5143e5e2a708834" />
+		<entry key="Enemy strength broken - you win" text="적군 전력이 바닥났습니다 - 승리" sourceHash="3ecc332ccec2feeb" />
 		<entry key="Energy" text="에너지" sourceHash="db6622a51b2a94f5" />
 		<entry key="Escaped" text="탈출했습니다" sourceHash="c586f95cd0c57d26" />
 		<entry key="Every room is lit" text="모든 방에 불을 켰습니다" sourceHash="ebb0223331e334bc" />
+		<entry key="Explored %" text="탐색 %" sourceHash="dba317bb17831f87" />
 		<entry key="Fast (J)   Strong (K)   Dodge (Shift)   Sign (Q)   Twin sign (R)   Oil (1)   Potion (2)" text="빠르게 (J)   강하게 (K)   회피 (Shift)   표식 (Q)   쌍표식 (R)   오일 (1)   물약 (2)" sourceHash="20ac59e768361d42" />
 		<entry key="Fernling" text="고사리돌이" sourceHash="431067eaf36b2340" />
 		<entry key="Fernwarden" text="고사리지기" sourceHash="d2277637def3ba7d" />
 		<entry key="Finish!" text="결승!" sourceHash="24650730cce4bae9" />
+		<entry key="Flasks" text="물약" sourceHash="75a3f0cc809b1eb9" />
 		<entry key="Follow the lantern trail to its end" text="등불 길의 끝까지 가세요" sourceHash="0929e78693e66e6f" />
+		<entry key="GateCut" text="문 컷" sourceHash="14d8a97b531f1462" />
 		<entry key="Generators left" text="남은 발전기" sourceHash="91d6d40e5ad59434" />
+		<entry key="Geo" text="지오" sourceHash="eaeb8c19986395a2" />
 		<entry key="Get ready!" text="준비!" sourceHash="c8e029afe946a77f" />
 		<entry key="Gilded Knight Helmet" text="금박 기사 투구" sourceHash="78c4a96597a1f01e" />
 		<entry key="Glintbug" text="반짝벌레" sourceHash="e0094e14afa8ed53" />
 		<entry key="Gloom" text="어스름" sourceHash="38abc03c467d546b" />
 		<entry key="Gold" text="금" sourceHash="c416c97e0d3218b3" />
 		<entry key="HP" text="체력" sourceHash="09276807b5bba505" />
+		<entry key="Health Potion" text="체력 물약" sourceHash="8e172b1950cb2862" />
 		<entry key="Heraldic Cape" text="문장 망토" sourceHash="6f86256a16ab8f26" />
+		<entry key="High Heels" text="하이힐" sourceHash="226fd9be54338c36" />
 		<entry key="Hollow Stag" text="텅 빈 수사슴" sourceHash="0b3a71e1453de039" />
 		<entry key="Hour" text="시각" sourceHash="6b0bffd88024372f" />
 		<entry key="In orbit - pull the lever to land" text="궤도 - 레버를 당겨 착륙하세요" sourceHash="ce7df723d869830d" />
 		<entry key="It is too dark to see" text="너무 어두워 보이지 않습니다" sourceHash="b738d1982b5607a4" />
 		<entry key="Item ready" text="아이템 있음" sourceHash="c21723a998b01759" />
 		<entry key="Items" text="물건" sourceHash="fe386c25c1567ecf" />
+		<entry key="K.O. - you lose the bout" text="K.O. 시합에서 졌습니다" sourceHash="fb3474b00a384899" />
+		<entry key="K.O. - you win the bout" text="K.O. 시합에서 이겼습니다" sourceHash="f24709a43b0f812e" />
 		<entry key="Karts" text="달리는 차" sourceHash="bfe9eadf3ab05f4c" />
 		<entry key="Keys" text="열쇠" sourceHash="d5c688de734bde0d" />
 		<entry key="Knight Helmet" text="기사 투구" sourceHash="4733227ae193d121" />
 		<entry key="Knight Helmet (Dyeable)" text="기사 투구(염색 가능)" sourceHash="ff08b0d01b60fde4" />
 		<entry key="Knight Helmet (Merged)" text="기사 투구(병합)" sourceHash="bd029e7ca9b9d6ac" />
+		<entry key="Knight Helmet (Tintable)" text="기사 투구(착색 가능)" sourceHash="59e9a748e13a4333" />
 		<entry key="Knight Sword (Merged)" text="기사 검(병합)" sourceHash="3c4283c2efbf5e38" />
 		<entry key="Lantern Blade" text="등불의 검" sourceHash="83b85711b9754469" />
 		<entry key="Lantern Guard" text="등불지기" sourceHash="3a83771027d72ef6" />
 		<entry key="Lap" text="바퀴" sourceHash="2507a819b896044a" />
 		<entry key="Laps to race" text="모두 몇 바퀴" sourceHash="afba7a5bea202185" />
+		<entry key="Last squad standing - you win" text="마지막 분대 - 승리했습니다" sourceHash="ddaaaecde8b4a637" />
 		<entry key="Leaf Slap" text="잎 치기" sourceHash="8dbfd28a806dd0e1" />
 		<entry key="Learn (3)   Mutagen (4)" text="배우기 (3)   변이원 (4)" sourceHash="d31264c5c4ae5c03" />
 		<entry key="Life" text="라이프" sourceHash="3cdd76b47fc6df9f" />
+		<entry key="Light Ammo" text="경량 탄약" sourceHash="f3408f7b1fa03c57" />
 		<entry key="Light: stun an attacking ghost - Vacuum: pull it in - Use: surge or search" text="손전등: 공격하는 유령을 기절 - 청소기: 빨아들이기 - 쓰기: 서지 · 뒤지기" sourceHash="97bb2ad103e4ee65" />
 		<entry key="Longbow" text="장궁" sourceHash="1ca5e729801861e9" />
+		<entry key="Low Boots" text="낮은 장화" sourceHash="69c0a6d537704324" />
 		<entry key="Lv" text="레벨" sourceHash="09195207b5af4247" />
 		<entry key="MP" text="마력" sourceHash="09166a07b5ad3538" />
+		<entry key="Mech destroyed - special picks the next mech" text="기체 격추 - 특수기로 다음 기체를 고릅니다" sourceHash="3711c7fb7ac4eee8" />
+		<entry key="Mind the pond - nobody swims in it."
+		       text="연못을 조심하게 - 아무도 거기서 헤엄치지 않는다네."
+		       sourceHash="805022e3109d8d1e" />
 		<entry key="Monster" text="괴물" sourceHash="3ac88ea2efcb0d51" />
 		<entry key="Move" text="기술" sourceHash="379c18aec5654894" />
 		<entry key="Next day (Enter)" text="다음 날 (Enter)" sourceHash="7aa8dc32ae4a024f" />
@@ -84,6 +109,7 @@
 		<entry key="Notched Blade" text="이 빠진 칼" sourceHash="0bda544f4c061f1a" />
 		<entry key="Nudge" text="툭 치기" sourceHash="2fb30900ca892138" />
 		<entry key="Oil" text="오일" sourceHash="3029d319bf980a3b" />
+		<entry key="People left" text="남은 인원" sourceHash="6f27a40f6f8161a7" />
 		<entry key="Pistol" text="권총" sourceHash="9fbfefa835da8476" />
 		<entry key="Place" text="순위" sourceHash="13b3f5afa0862d1c" />
 		<entry key="Points" text="순위 점수" sourceHash="cabf78417c4e5d86" />
@@ -92,6 +118,9 @@
 		<entry key="Population cap" text="인구 한도" sourceHash="3fbe2133d5b90dae" />
 		<entry key="Press J as the bar fills to block" text="막대가 찰 때 J 를 눌러 막으세요" sourceHash="f853a419a5e2297a" />
 		<entry key="Press J as the bar fills to strike twice" text="막대가 찰 때 J 를 눌러 두 번 치세요" sourceHash="4829d8edc34ab273" />
+		<entry key="Press [action=Farm.Use] to work the soil with your tool"
+		       text="[action=Farm.Use] 을(를) 눌러 도구로 흙을 일구세요"
+		       sourceHash="42a1af95d883d019" />
 		<entry key="Price" text="가격" sourceHash="eed76e8afe9f604a" />
 		<entry key="Profit" text="이익" sourceHash="a02dacfa52831687" />
 		<entry key="Pump Shotgun" text="펌프 산탄총" sourceHash="91f761c37c27a1e1" />
@@ -101,6 +130,7 @@
 		<entry key="Rest at the camp (E)" text="야영지에서 쉬기 (E)" sourceHash="21be64b41ec275ea" />
 		<entry key="Rest at the inn (E)   Change class (F)" text="여관에서 쉬기 (E)   전직 (F)" sourceHash="9517be2c638c4cff" />
 		<entry key="Reward" text="보상" sourceHash="f04b30586054b5da" />
+		<entry key="Rifle Ammo" text="소총 탄약" sourceHash="ed6ae1c9694f9861" />
 		<entry key="Ripplet" text="물결이" sourceHash="f309afbd4e7031f9" />
 		<entry key="Root Grip" text="뿌리 잡기" sourceHash="8b4d68f973cc9f2f" />
 		<entry key="Round" text="라운드" sourceHash="43f1ffa8263b3f7b" />
@@ -115,6 +145,7 @@
 		<entry key="Seated" text="착석" sourceHash="2a87a5f144f4ecc9" />
 		<entry key="Seconds to start" text="출발까지(초)" sourceHash="ed5e407701501a9b" />
 		<entry key="Served" text="계산" sourceHash="5afcb4918bbba2b0" />
+		<entry key="Shotgun Shells" text="산탄" sourceHash="c27d7c643a7aea30" />
 		<entry key="Sign power" text="표식 위력" sourceHash="63f388e6f5a1f1b5" />
 		<entry key="Sites held" text="내 거점" sourceHash="a17607d12fde5a3e" />
 		<entry key="Skill check - press Use" text="스킬 체크 - 쓰기를 누르세요" sourceHash="4873706293d39b49" />
@@ -152,22 +183,35 @@
 		<entry key="The party has fainted" text="파티가 모두 쓰러졌습니다" sourceHash="6f1d260f83a6a84b" />
 		<entry key="The party has fallen" text="일행이 쓰러졌습니다" sourceHash="b9e9faeca81d229e" />
 		<entry key="The trail is safe again" text="길이 다시 안전해졌습니다" sourceHash="ecbbdec92e6e0755" />
+		<entry key="The warden has fallen" text="파수꾼이 쓰러졌습니다" sourceHash="f907141e36178ebd" />
 		<entry key="The warrior wakes." text="전사가 깨어난다." sourceHash="2cbe2d95a0824eaf" />
 		<entry key="Time left" text="남은 시간" sourceHash="ab77d17fb8dfa0bd" />
 		<entry key="Toxicity" text="독성" sourceHash="d8e6f54fe8f1ee58" />
 		<entry key="Travel Cape" text="여행 망토" sourceHash="9b537522d0556b6c" />
+		<entry key="Trout" text="송어" sourceHash="f554010d683976b5" />
 		<entry key="Turn" text="턴" sourceHash="b1288bfb6b36f2da" />
+		<entry key="Use - jump off the plane" text="쓰기 - 비행기에서 뛰어내리기" sourceHash="ce3ab2b99b177051" />
 		<entry key="Use move (J)   Ball (K)   Switch (L)   Run (R)" text="기술 (J)   볼 (K)   교체 (L)   도망 (R)" sourceHash="318701a944661fe0" />
 		<entry key="Use: pick up, load, sell - Lever: land or take off" text="쓰기: 줍기 · 싣기 · 팔기 - 레버: 착륙 · 이륙" sourceHash="c5294d467edea709" />
 		<entry key="Use: repair, open, rescue, heal - hold to struggle" text="쓰기: 수리 · 문 열기 · 구출 · 치료 - 누르고 있으면 몸부림" sourceHash="237f9cd52a7dde50" />
 		<entry key="Use: take, read, unlock, fight - Light: flashlight - Heal: use or mix" text="쓰기: 줍기 · 읽기 · 풀기 · 싸우기 - 손전등 - 회복: 쓰거나 섞기" sourceHash="6c154f992f08428d" />
 		<entry key="Walk the glade to meet wild monsters" text="풀밭을 걸어 야생 몬스터를 만나세요" sourceHash="a70f2a9658f6b001" />
 		<entry key="Wear gear (Q)" text="장비 끼기 (Q)" sourceHash="6d605b639de7aa0f" />
+		<entry key="Welcome to Dry Gulch."
+		       text="드라이 걸치에 온 것을 환영하네."
+		       sourceHash="06afd11cd91933e0" />
+		<entry key="Welcome to Pixel Town, traveller."
+		       text="픽셀 마을에 온 것을 환영하네, 여행자여."
+		       sourceHash="a6a13f44ce9c7093" />
 		<entry key="Wick Mage" text="심지술사" sourceHash="e463ec8fd5641a0f" />
 		<entry key="Wick Robe" text="심지 옷" sourceHash="287c63537afbe5e7" />
 		<entry key="Wild" text="야생" sourceHash="cd41040253e7fcd5" />
+		<entry key="Wild Herb" text="들풀" sourceHash="27860e9704b41dbc" />
+		<entry key="Wood Log" text="통나무" sourceHash="9412ff7c0bf7220a" />
 		<entry key="Wrong way!" text="역주행!" sourceHash="623106a22d3ea698" />
+		<entry key="You are down - wait for your squad" text="기절했습니다 - 동료를 기다리세요" sourceHash="995b14b904f5e596" />
 		<entry key="You died" text="죽었습니다" sourceHash="52251b2b9e12b2da" />
+		<entry key="You fell - your geo lies where you died" text="쓰러졌습니다 - 지오는 죽은 자리에 남습니다" sourceHash="fe7253fea05f4d7f" />
 		<entry key="You got out" text="빠져나왔습니다" sourceHash="857fee2454ef5eba" />
 		<entry key="You were defeated" text="쓰러졌다" sourceHash="f5c64297b464777d" />
 		<entry key="You win the battle!" text="전투에서 이겼다!" sourceHash="f2e59839f909bdf4" />
@@ -175,5 +219,7 @@
 		<entry key="Your block" text="내 방어" sourceHash="9221517fcf7ae61b" />
 		<entry key="Your health" text="내 체력" sourceHash="8ea172c6c43fca5c" />
 		<entry key="Your home is lost" text="본진을 잃었다" sourceHash="72e7c7228a2ce48b" />
+		<entry key="Your squad is out" text="분대가 탈락했습니다" sourceHash="d6fb3828410be124" />
+		<entry key="Zone" text="구역" sourceHash="1667f96d19635ec7" />
 	</entries>
 </TranslationTable>

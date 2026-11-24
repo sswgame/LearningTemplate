@@ -1,0 +1,35 @@
+<?xml version="1.0" encoding="utf-8"?>
+<?asset guid="4a40a26d405a4aa082ed206870ebc8f2"?>
+<!--
+  메트로배니아 미니게임(minigames/metroidvania)의 입력 차이 — Playground 공통 묶음(data/gamesettings.xml 의 <inputMap> 줄) 위에 얹힌다. 달리기 · 사다리는 공통 Move 축이다.
+  레이어 Metroidvania 는 꺼져 있고 미니게임의 inputContexts 가 들어가 있는 동안만 켠다. 막기는 누른 순간 패리, 누른 채 가드다.
+-->
+<InputMap>
+	<layers>
+		<layer name="Metroidvania" enabled="0" blockLower="0"/>
+	</layers>
+	<action name="Metroidvania.Jump" layer="Metroidvania" trigger="Down">
+		<bind source="Key" code="Space"/>
+		<bind source="Gamepad" code="A"/>
+	</action>
+	<action name="Metroidvania.Attack" layer="Metroidvania" trigger="Pressed">
+		<bind source="Key" code="J"/>
+		<bind source="Gamepad" code="X"/>
+	</action>
+	<action name="Metroidvania.Guard" layer="Metroidvania" trigger="Down">
+		<bind source="Key" code="K"/>
+		<bind source="Gamepad" code="LeftShoulder"/>
+	</action>
+	<action name="Metroidvania.Dash" layer="Metroidvania" trigger="Pressed">
+		<bind source="Key" code="LeftShift"/>
+		<bind source="Gamepad" code="B"/>
+	</action>
+	<action name="Metroidvania.Use" layer="Metroidvania" trigger="Pressed">
+		<bind source="Key" code="E"/>
+		<bind source="Gamepad" code="Y"/>
+	</action>
+	<action name="Metroidvania.Flask" layer="Metroidvania" trigger="Pressed">
+		<bind source="Key" code="Q"/>
+		<bind source="Gamepad" code="RightShoulder"/>
+	</action>
+</InputMap>

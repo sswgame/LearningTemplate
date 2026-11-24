@@ -2,11 +2,11 @@
 <?asset guid="01285eea14034d928deb4273e19b0345"?>
 <!--
   허브의 미니게임 입구 — 정의(minigames/*.minigame.xml)의 portalSlot 하나가 입구 하나다(maps/hub 의 MinigamePortals 가 prefabs/minigameportal 를 세운다).
-  미니게임(pixeltown · harvestvalley · voxelcraft · frontiertown · meadowvillage · themepark · abilityarena · velmora · starskirmish · kartracing · partyarena · rhythm · cardgame · sidescrollconquest · asymmetrichorror · coopscavenger · ghosthunt · survivalhorror · classicjrpg · monstercollector · monsterhuntrpg · restaurantsim)의 입구에 플레이어를 세워 들어가고, minigame.leave 로 나와 마을이 복원되는지 본다.
+  미니게임(pixeltown · harvestvalley · voxelcraft · frontiertown · meadowvillage · themepark · abilityarena · velmora · starskirmish · fighting · battleroyale · mecharena · metroidvania · kartracing · partyarena · rhythm · cardgame · sidescrollconquest · asymmetrichorror · coopscavenger · ghosthunt · survivalhorror · classicjrpg · monstercollector · monsterhuntrpg · restaurantsim)의 입구에 플레이어를 세워 들어가고, minigame.leave 로 나와 마을이 복원되는지 본다.
   돌아온 자리는 입구 안이다 — 다시 세운 입구가 나타난 플레이어를 세지 않는다(_spawnInside Ignore). 입구를 더하면 여기에 한 묶음을 더한다.
   실행: App -scenario=game/playground/automation/hub_portals.scenario.xml -unattended (체인: ctest -R Scenario.playground)
 -->
-<Scenario name="game.playground.hub_portals" fixedDelta="0.0166667" timeoutFrames="18000" startAfter="ScenePlaying" startTimeoutFrames="900" input="exclusive">
+<Scenario name="game.playground.hub_portals" fixedDelta="0.0166667" timeoutFrames="21600" startAfter="ScenePlaying" startTimeoutFrames="900" input="exclusive">
 	<Launch variable="gv_firstScene" value="game/playground/maps/hub.scene.xml"/>
 	<Variable name="gv_playgroundAutoPlay" value="0"/>
 	<WaitUntil watch="Assets.Pending" equals="0" timeoutWallSeconds="60"/>
@@ -173,6 +173,61 @@
 	<WaitUntil watch="Minigame.RestoreCount" differsFrom="restored_survivalhorror" timeoutWallSeconds="60"/>
 	<ExpectActiveScene path="game/playground/maps/hub.scene.xml"/>
 	<WaitUntil watch="Input.VirtualCursorEnabled" equals="0" timeoutFrames="60"/>
+
+	<!-- fighting — 자리 11. 돌아온 수는 들어가기 전 값과 견준다(입구를 더하거나 빼도 이 묶음은 그대로다) -->
+	<WaitUntil watch="Assets.Pending" equals="0" timeoutWallSeconds="60"/>
+	<Expect watch="Object.X" target="MinigamePortal_fighting" near="-3" tolerance="0.01"/>
+	<Expect watch="Object.Z" target="MinigamePortal_fighting" near="39" tolerance="0.01"/>
+	<Store watch="Minigame.RestoreCount" as="restoredBefore_fighting"/>
+	<DevCommand line="teleport Player -3 0.05 39"/>
+	<WaitUntil watch="Minigame.Active" is="fighting" timeoutWallSeconds="60"/>
+	<ExpectActiveScene path="game/playground/fighting/maps/ring.scene.xml"/>
+	<WaitUntil watch="Assets.Pending" equals="0" timeoutWallSeconds="60"/>
+	<DevCommand line="minigame.leave"/>
+	<WaitUntil watch="Minigame.RestoreCount" differsFrom="restoredBefore_fighting" timeoutWallSeconds="60"/>
+	<ExpectActiveScene path="game/playground/maps/hub.scene.xml"/>
+
+
+	<!-- battleroyale — 자리 12. 돌아온 수는 들어가기 전 값과 견준다(입구를 더하거나 빼도 이 묶음은 그대로다) -->
+	<WaitUntil watch="Assets.Pending" equals="0" timeoutWallSeconds="60"/>
+	<Expect watch="Object.X" target="MinigamePortal_battleroyale" near="4" tolerance="0.01"/>
+	<Expect watch="Object.Z" target="MinigamePortal_battleroyale" near="39" tolerance="0.01"/>
+	<Store watch="Minigame.RestoreCount" as="restoredBefore_battleroyale"/>
+	<DevCommand line="teleport Player 4 0.05 39"/>
+	<WaitUntil watch="Minigame.Active" is="battleroyale" timeoutWallSeconds="60"/>
+	<ExpectActiveScene path="game/playground/battleroyale/maps/island.scene.xml"/>
+	<WaitUntil watch="Assets.Pending" equals="0" timeoutWallSeconds="60"/>
+	<DevCommand line="minigame.leave"/>
+	<WaitUntil watch="Minigame.RestoreCount" differsFrom="restoredBefore_battleroyale" timeoutWallSeconds="60"/>
+	<ExpectActiveScene path="game/playground/maps/hub.scene.xml"/>
+
+
+	<!-- mecharena — 자리 13. 돌아온 수는 들어가기 전 값과 견준다(입구를 더하거나 빼도 이 묶음은 그대로다) -->
+	<WaitUntil watch="Assets.Pending" equals="0" timeoutWallSeconds="60"/>
+	<Expect watch="Object.X" target="MinigamePortal_mecharena" near="11" tolerance="0.01"/>
+	<Expect watch="Object.Z" target="MinigamePortal_mecharena" near="39" tolerance="0.01"/>
+	<Store watch="Minigame.RestoreCount" as="restoredBefore_mecharena"/>
+	<DevCommand line="teleport Player 11 0.05 39"/>
+	<WaitUntil watch="Minigame.Active" is="mecharena" timeoutWallSeconds="60"/>
+	<ExpectActiveScene path="game/playground/mecharena/maps/colony.scene.xml"/>
+	<WaitUntil watch="Assets.Pending" equals="0" timeoutWallSeconds="60"/>
+	<DevCommand line="minigame.leave"/>
+	<WaitUntil watch="Minigame.RestoreCount" differsFrom="restoredBefore_mecharena" timeoutWallSeconds="60"/>
+	<ExpectActiveScene path="game/playground/maps/hub.scene.xml"/>
+
+
+	<!-- metroidvania — 자리 14. 돌아온 수는 들어가기 전 값과 견준다(입구를 더하거나 빼도 이 묶음은 그대로다) -->
+	<WaitUntil watch="Assets.Pending" equals="0" timeoutWallSeconds="60"/>
+	<Expect watch="Object.X" target="MinigamePortal_metroidvania" near="18" tolerance="0.01"/>
+	<Expect watch="Object.Z" target="MinigamePortal_metroidvania" near="39" tolerance="0.01"/>
+	<Store watch="Minigame.RestoreCount" as="restoredBefore_metroidvania"/>
+	<DevCommand line="teleport Player 18 0.05 39"/>
+	<WaitUntil watch="Minigame.Active" is="metroidvania" timeoutWallSeconds="60"/>
+	<ExpectActiveScene path="game/playground/metroidvania/maps/caverns.scene.xml"/>
+	<WaitUntil watch="Assets.Pending" equals="0" timeoutWallSeconds="60"/>
+	<DevCommand line="minigame.leave"/>
+	<WaitUntil watch="Minigame.RestoreCount" differsFrom="restoredBefore_metroidvania" timeoutWallSeconds="60"/>
+
 	<!-- kartracing — 자리 15 -->
 	<WaitUntil watch="Assets.Pending" equals="0" timeoutWallSeconds="60"/>
 	<Expect watch="Object.X" target="MinigamePortal_kartracing" near="25" tolerance="0.01"/>

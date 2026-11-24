@@ -1,0 +1,34 @@
+<?xml version="1.0" encoding="utf-8"?>
+<?asset guid="e0a6a3fd1b9c4f1c8c7d2e95b40f6a18"?>
+<!--
+  에디터 시나리오 — 스플라인 조절점 손잡이: 조절점 셋짜리 스플라인(splinehandle/splinehandle.scene.xml)을 고르면 프로퍼티 선언(`Shape=Points`)만으로 점마다 손잡이가 선다
+  (표식 propertyshape.handle._listControlPoint.<자리>). 가운데 점을 끌면 되돌리기 하나가 남고(Editor.PropertyShapeCommitCount) Ctrl+Z 로 점이 처음 자리로 돌아온다.
+  곡선은 시각화 gameplay.splines(기본 켜짐)가 그린다 — 캡처로 본다.
+  실행: App -EnableEditor -scenario=game/playground/automation/editor/splinehandle.scenario.xml -unattended
+-->
+<Scenario name="editor.splinehandle" fixedDelta="0.0166667" timeoutFrames="900" startAfter="Immediately" input="exclusive">
+	<DevCommand line="scene.open game/playground/automation/editor/splinehandle/splinehandle.scene.xml"/>
+	<EditorWaitStable/>
+	<WaitUntil watch="Scene.Transitioning" equals="0" timeoutWallSeconds="60"/>
+	<ResizeWindow width="1920" height="1080"/>
+	<Variable name="gv_editorUiScale" value="1"/>
+	<DevCommand line="layout.reset"/>
+	<EditorWaitStable/>
+	<EditorClick mark="hierarchy.row.Path"/>
+	<WaitUntil watch="Editor.PropertyShapeHandleCount" equals="3" timeoutFrames="60"/>
+	<Expect watch="Editor.PropertyShapePointSum" near="0.5" tolerance="0.001"/>
+	<EditorWaitStable/>
+	<CaptureEditorUI file="splinehandle/selected.png"/>
+	<Store watch="Editor.PropertyShapeCommitCount" as="commits"/>
+	<EditorDrag mark="propertyshape.handle._listControlPoint.1" dx="0" dy="-60"/>
+	<WaitUntil watch="Editor.PropertyShapeCommitCount" increaseFrom="commits" increaseBy="1" timeoutFrames="150"/>
+	<Expect watch="Editor.UndoCount" atLeast="1"/>
+	<Expect watch="Editor.PropertyShapePointSum" atLeast="0.51"/>
+	<EditorWaitStable/>
+	<CaptureEditorUI file="splinehandle/dragged.png"/>
+	<EditorKey key="Ctrl+Z"/>
+	<WaitUntil watch="Editor.PropertyShapePointSum" near="0.5" tolerance="0.001" timeoutFrames="60"/>
+	<EditorWaitStable/>
+	<Variable name="gv_editorUiScale" value="0"/>
+	<Pass/>
+</Scenario>

@@ -482,6 +482,17 @@ namespace sw
         return scale;
     }
 
+    void MechArenaWorld::queueWeaponSound( GameSoundQueue& inoutQueue )
+    {
+        for ( MechPilot& pilot : _listPilot )
+        {
+            for ( WeaponState& weapon : pilot._listWeaponState )
+            {
+                weapon.queueSound( inoutQueue );
+            }
+        }
+    }
+
     void MechArenaWorld::pollEvents( vector<MechArenaEvent>& outListEvent )
     {
         _eventBuffer.moveAllTo( outListEvent );

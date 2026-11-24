@@ -1,0 +1,37 @@
+<?xml version="1.0" encoding="utf-8"?>
+<?asset guid="d5cb057c3bf84e2082a8d50d0d6975d6"?>
+<!--
+  기체 대전 미니게임(mecharena — GF_MechArena 키트)의 한 판 — 출격 → 플레이어 입력(사격) → 자동 플레이로 격추가 쌓여 판 끝 → 결과 보고 → 허브.
+  플레이어 조작은 입력 맵 액션의 키(MechArena.Fire = J)로만 한다. 이긴 팀은 씨앗에 달려 판정하지 않는다 — 탄창이 줄고 격추가 나오고 판이 끝나 결과가 나가는 것을 본다.
+  판 규칙: 팀 게이지 800, 시간 제한 90 초(끝나면 게이지가 많은 쪽이 이긴다) — 길어도 5400 프레임이다.
+  감시 값: MechArena.Ended · .PlayerState(1 움직임, 2 다운, 3 격추, 4 판 끝) · .PlayerAmmo · .EnemyGauge.
+  실행: ctest -R Scenario.playground · App -scenario=game/playground/automation/mecharena_slice.scenario.xml -unattended
+-->
+<Scenario name="game.playground.mecharena_slice" fixedDelta="0.0166667" timeoutFrames="9000" startAfter="ScenePlaying" startTimeoutFrames="900" input="exclusive">
+	<Launch variable="gv_firstMinigame" value="mecharena"/>
+	<Variable name="gv_playgroundAutoPlay" value="0"/>
+	<WaitUntil watch="Minigame.Active" is="mecharena" timeoutWallSeconds="60"/>
+	<Expect watch="Save.Blocked" equals="1"/>
+	<WaitUntil watch="MechArena.PlayerState" equals="1" timeoutFrames="120"/>
+	<Expect watch="MechArena.Ended" equals="0"/>
+	<Expect watch="MechArena.EnemyGauge" equals="800"/>
+	<Expect watch="MechArena.PlayerAmmo" equals="8"/>
+	<!-- 사격을 누르면 탄창이 준다 -->
+	<Press slot="Key.J"/>
+	<WaitUntil watch="MechArena.PlayerAmmo" atMost="7" timeoutFrames="30"/>
+	<Release slot="Key.J"/>
+	<!-- 자동 플레이로 판을 끝까지 -->
+	<Variable name="gv_playgroundAutoPlay" value="1"/>
+	<WaitUntil watch="MechArena.Ended" equals="1" timeoutFrames="6000"/>
+	<ExpectLog id="MechArena.Destroyed" atLeast="1"/>
+	<ExpectLog id="MechArena.MatchEnd" count="1"/>
+	<!-- 결과를 3 초 보인 뒤 스스로 끝나 허브(입구 씬)로 간다 -->
+	<WaitUntil watch="Minigame.Active" is="none" timeoutFrames="600"/>
+	<AdvanceSimulation frames="2"/>
+	<WaitUntil watch="Scene.Transitioning" equals="0" timeoutWallSeconds="60"/>
+	<ExpectActiveScene path="game/playground/maps/hub.scene.xml"/>
+	<ExpectLog id="MinigameFlow.Finished" contains="'mecharena' finished" count="1"/>
+	<Expect watch="Minigame.LeakCount" equals="0"/>
+	<Variable name="gv_playgroundAutoPlay" value="0"/>
+	<Pass/>
+</Scenario>

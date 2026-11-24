@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="utf-8"?>
+<?asset guid="251c7cca4aba4d00904c28f400a6af88"?>
+<!--
+  기체 대전 미니게임의 근접 기술(60 Hz). 기체(data/mechs.xml)의 Melee 슬롯이 콤보 단으로 가리킨다 — 닿는 거리는 슬롯의 range 다.
+-->
+<MoveCatalog>
+	<Move id="mech_slash" startup="8" active="4" recovery="14" damage="45" hitstun="18"><Cancel moves="mech_cleave" from="10" to="25"/></Move>
+	<Move id="mech_cleave" startup="10" active="5" recovery="20" damage="70" hitstun="20" knockdown="true"/>
+</MoveCatalog>

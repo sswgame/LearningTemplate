@@ -36,6 +36,18 @@ msgid "All sites"
 msgstr "모든 거점"
 
 #. Context: TextWidget._text
+#: game/playground/mecharena/ui/hud.ui.xml
+msgctxt "Allied strength"
+msgid "Allied strength"
+msgstr "아군 전력"
+
+#. Context: TextWidget._text
+#: game/playground/mecharena/ui/hud.ui.xml
+msgctxt "Allied strength broken - you lose"
+msgid "Allied strength broken - you lose"
+msgstr "아군 전력이 바닥났습니다 - 패배"
+
+#. Context: TextWidget._text
 #: game/playground/partyarena/ui/hud.ui.xml
 msgctxt "Another player wins"
 msgid "Another player wins"
@@ -82,6 +94,12 @@ msgstr "뼈 도끼"
 msgctxt "Bone Shield"
 msgid "Bone Shield"
 msgstr "뼈 방패"
+
+#. Context: TextWidget._text
+#: game/playground/mecharena/ui/hud.ui.xml
+msgctxt "Boost overheated"
+msgid "Boost overheated"
+msgstr "부스트 과열"
 
 #. Context: JRPG name
 #: game/playground/data/jrpg.xml
@@ -199,6 +217,12 @@ msgid "Days left"
 msgstr "남은 날"
 
 #. Context: TextWidget._text
+#: game/playground/fighting/ui/hud.ui.xml
+msgctxt "Double K.O. - the bout is a draw"
+msgid "Double K.O. - the bout is a draw"
+msgstr "더블 K.O. 시합이 무승부입니다"
+
+#. Context: TextWidget._text
 #: game/playground/cardgame/ui/hud.ui.xml
 msgctxt "Draw pile"
 msgid "Draw pile"
@@ -235,6 +259,18 @@ msgid "Enemy intent"
 msgstr "상대가 할 일"
 
 #. Context: TextWidget._text
+#: game/playground/mecharena/ui/hud.ui.xml
+msgctxt "Enemy strength"
+msgid "Enemy strength"
+msgstr "적군 전력"
+
+#. Context: TextWidget._text
+#: game/playground/mecharena/ui/hud.ui.xml
+msgctxt "Enemy strength broken - you win"
+msgid "Enemy strength broken - you win"
+msgstr "적군 전력이 바닥났습니다 - 승리"
+
+#. Context: TextWidget._text
 #: game/playground/cardgame/ui/hud.ui.xml
 msgctxt "Energy"
 msgid "Energy"
@@ -251,6 +287,12 @@ msgstr "탈출했습니다"
 msgctxt "Every room is lit"
 msgid "Every room is lit"
 msgstr "모든 방에 불을 켰습니다"
+
+#. Context: TextWidget._text
+#: game/playground/metroidvania/ui/hud.ui.xml
+msgctxt "Explored %"
+msgid "Explored %"
+msgstr "탐색 %"
 
 #. Context: TextWidget._text
 #: game/playground/monsterhuntrpg/ui/hud.ui.xml
@@ -277,6 +319,12 @@ msgid "Finish!"
 msgstr "결승!"
 
 #. Context: TextWidget._text
+#: game/playground/metroidvania/ui/hud.ui.xml
+msgctxt "Flasks"
+msgid "Flasks"
+msgstr "물약"
+
+#. Context: TextWidget._text
 #: game/playground/classicjrpg/ui/hud.ui.xml
 msgctxt "Follow the lantern trail to its end"
 msgid "Follow the lantern trail to its end"
@@ -293,6 +341,12 @@ msgstr ""
 msgctxt "Generators left"
 msgid "Generators left"
 msgstr "남은 발전기"
+
+#. Context: TextWidget._text
+#: game/playground/metroidvania/ui/hud.ui.xml
+msgctxt "Geo"
+msgid "Geo"
+msgstr "지오"
 
 #. Context: TextWidget._text
 #: game/playground/kartracing/ui/hud.ui.xml
@@ -377,6 +431,18 @@ msgid "Items"
 msgstr "물건"
 
 #. Context: TextWidget._text
+#: game/playground/fighting/ui/hud.ui.xml
+msgctxt "K.O. - you lose the bout"
+msgid "K.O. - you lose the bout"
+msgstr "K.O. 시합에서 졌습니다"
+
+#. Context: TextWidget._text
+#: game/playground/fighting/ui/hud.ui.xml
+msgctxt "K.O. - you win the bout"
+msgid "K.O. - you win the bout"
+msgstr "K.O. 시합에서 이겼습니다"
+
+#. Context: TextWidget._text
 #: game/playground/kartracing/ui/hud.ui.xml
 msgctxt "Karts"
 msgid "Karts"
@@ -436,6 +502,12 @@ msgctxt "Laps to race"
 msgid "Laps to race"
 msgstr "모두 몇 바퀴"
 
+#. Context: TextWidget._text
+#: game/playground/battleroyale/ui/hud.ui.xml
+msgctxt "Last squad standing - you win"
+msgid "Last squad standing - you win"
+msgstr "마지막 분대 - 승리했습니다"
+
 #. Context: Monster name
 #: game/playground/data/monstercollector.xml
 msgctxt "Leaf Slap"
@@ -453,6 +525,12 @@ msgstr "배우기 (3)   변이원 (4)"
 msgctxt "Life"
 msgid "Life"
 msgstr "라이프"
+
+#. Context: Item name
+#: common/data/items.xml
+msgctxt "Light Ammo"
+msgid "Light Ammo"
+msgstr "경량 탄약"
 
 #. Context: TextWidget._text
 #: game/playground/ghosthunt/ui/hud.ui.xml
@@ -477,6 +555,12 @@ msgstr "레벨"
 msgctxt "MP"
 msgid "MP"
 msgstr "마력"
+
+#. Context: TextWidget._text
+#: game/playground/mecharena/ui/hud.ui.xml
+msgctxt "Mech destroyed - special picks the next mech"
+msgid "Mech destroyed - special picks the next mech"
+msgstr "기체 격추 - 특수기로 다음 기체를 고릅니다"
 
 #. Context: TextWidget._text
 #: game/playground/monsterhuntrpg/ui/hud.ui.xml
@@ -519,6 +603,12 @@ msgstr "툭 치기"
 msgctxt "Oil"
 msgid "Oil"
 msgstr "오일"
+
+#. Context: TextWidget._text
+#: game/playground/battleroyale/ui/hud.ui.xml
+msgctxt "People left"
+msgid "People left"
+msgstr "남은 인원"
 
 #. Context: Weapon name
 #: common/data/items.xml
@@ -622,6 +712,12 @@ msgctxt "Reward"
 msgid "Reward"
 msgstr "보상"
 
+#. Context: Item name
+#: common/data/items.xml
+msgctxt "Rifle Ammo"
+msgid "Rifle Ammo"
+msgstr "소총 탄약"
+
 #. Context: Monster name
 #: game/playground/data/monstercollector.xml
 msgctxt "Ripplet"
@@ -705,6 +801,12 @@ msgstr "출발까지(초)"
 msgctxt "Served"
 msgid "Served"
 msgstr "계산"
+
+#. Context: Item name
+#: common/data/items.xml
+msgctxt "Shotgun Shells"
+msgid "Shotgun Shells"
+msgstr "산탄"
 
 #. Context: TextWidget._text
 #: game/playground/monsterhuntrpg/ui/hud.ui.xml
@@ -917,6 +1019,12 @@ msgctxt "The trail is safe again"
 msgid "The trail is safe again"
 msgstr "길이 다시 안전해졌습니다"
 
+#. Context: TextWidget._text
+#: game/playground/metroidvania/ui/hud.ui.xml
+msgctxt "The warden has fallen"
+msgid "The warden has fallen"
+msgstr "파수꾼이 쓰러졌습니다"
+
 #. Context: SequenceTrackItem._text
 #: game/playground/data/cinematic.seq.xml
 msgctxt "The warrior wakes."
@@ -940,12 +1048,17 @@ msgstr "독성"
 msgctxt "Travel Cape"
 msgid "Travel Cape"
 msgstr "여행 망토"
-
 #. Context: TextWidget._text
 #: game/playground/cardgame/ui/hud.ui.xml
 msgctxt "Turn"
 msgid "Turn"
 msgstr "턴"
+
+#. Context: TextWidget._text
+#: game/playground/battleroyale/ui/hud.ui.xml
+msgctxt "Use - jump off the plane"
+msgid "Use - jump off the plane"
+msgstr "쓰기 - 비행기에서 뛰어내리기"
 
 #. Context: TextWidget._text
 #: game/playground/monstercollector/ui/hud.ui.xml
@@ -1008,10 +1121,22 @@ msgid "Wrong way!"
 msgstr "역주행!"
 
 #. Context: TextWidget._text
+#: game/playground/battleroyale/ui/hud.ui.xml
+msgctxt "You are down - wait for your squad"
+msgid "You are down - wait for your squad"
+msgstr "기절했습니다 - 동료를 기다리세요"
+
+#. Context: TextWidget._text
 #: game/playground/survivalhorror/ui/hud.ui.xml
 msgctxt "You died"
 msgid "You died"
 msgstr "죽었습니다"
+
+#. Context: TextWidget._text
+#: game/playground/metroidvania/ui/hud.ui.xml
+msgctxt "You fell - your geo lies where you died"
+msgid "You fell - your geo lies where you died"
+msgstr "쓰러졌습니다 - 지오는 죽은 자리에 남습니다"
 
 #. Context: TextWidget._text
 #: game/playground/survivalhorror/ui/hud.ui.xml
@@ -1054,3 +1179,16 @@ msgstr "내 체력"
 msgctxt "Your home is lost"
 msgid "Your home is lost"
 msgstr "본진을 잃었다"
+
+#. Context: TextWidget._text
+#: game/playground/battleroyale/ui/hud.ui.xml
+msgctxt "Your squad is out"
+msgid "Your squad is out"
+msgstr "분대가 탈락했습니다"
+
+#. Context: TextWidget._text
+#: game/playground/battleroyale/ui/hud.ui.xml
+msgctxt "Zone"
+msgid "Zone"
+msgstr "구역"
+

@@ -1008,10 +1008,11 @@ SW_TEST_CASE( RenderGraphTest, PlanOmitsDisabledPassesAndReadsTheForwardedSource
     } );
     SW_EXPECT_TRUE( graph.selectPlan( listState ) ); // 두 번째부터 다시 쓴다
 
+    vector<RenderGraphBarrier> listBarrier; // 그래프의 콜백이 쥔다 — 마지막 실행까지 산다
+    collectBarriers( graph, listBarrier );
     for ( const bool bParallel : { false, true } )
     {
-        vector<RenderGraphBarrier> listBarrier;
-        collectBarriers( graph, listBarrier );
+        listBarrier.clear();
         RenderGraphExecutionContext context;
         test::FakeRHIDevice         device;
         test::FakeRHICommandList    cmd( 0 );

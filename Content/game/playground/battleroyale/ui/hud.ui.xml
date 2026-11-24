@@ -1,0 +1,53 @@
+<?asset guid="6198e66065af4f138ad6d205e66cd744"?>
+<UIDocument _schemaVersion="1">
+	<UIScreenDef _layer="HUD" _bTakesFocus="false" _bShowCursor="false" />
+	<SafeZonePanel _visibility="SelfHitTestInvisible">
+		<CanvasPanel _visibility="SelfHitTestInvisible">
+			<ProgressBarWidget _name="Health" _percent="{bind:_healthRatio}" _visibility="HitTestInvisible" _fillColor="0.25,0.75,0.35,1" _backgroundColor="0,0,0,0.55">
+				<_slot _anchorMin="0,1" _anchorMax="0,1" _offsetMin="48,-76" _offsetMax="368,-56" />
+			</ProgressBarWidget>
+			<TextWidget _name="RemainingLabel" _text="People left" _styleClass="hud" _visibility="HitTestInvisible">
+				<_slot _anchorMin="1,0" _anchorMax="1,0" _offsetMin="-368,40" _offsetMax="-108,76" />
+				<_style _alignment="End" />
+			</TextWidget>
+			<TextWidget _name="Remaining" _text="{bind:_remaining}" _styleClass="hud" _visibility="HitTestInvisible" _bLocalized="false">
+				<_slot _anchorMin="1,0" _anchorMax="1,0" _offsetMin="-100,40" _offsetMax="-48,76" />
+				<_style _alignment="End" />
+			</TextWidget>
+			<TextWidget _name="ZoneLabel" _text="Zone" _styleClass="hud" _visibility="HitTestInvisible">
+				<_slot _anchorMin="0,0" _anchorMax="0,0" _offsetMin="48,40" _offsetMax="148,76" />
+			</TextWidget>
+			<TextWidget _name="ZoneSeconds" _text="{bind:_zoneSeconds}" _styleClass="hud" _visibility="HitTestInvisible" _bLocalized="false">
+				<_slot _anchorMin="0,0" _anchorMax="0,0" _offsetMin="156,40" _offsetMax="236,76" />
+			</TextWidget>
+			<TextWidget _name="WeaponName" _text="{bind:_weaponName}" _styleClass="hud" _visibility="HitTestInvisible">
+				<_slot _anchorMin="1,1" _anchorMax="1,1" _offsetMin="-448,-120" _offsetMax="-48,-84" />
+				<_style _alignment="End" />
+			</TextWidget>
+			<TextWidget _name="Magazine" _text="{bind:_magazine}" _styleClass="hud" _visibility="HitTestInvisible" _bLocalized="false">
+				<_slot _anchorMin="1,1" _anchorMax="1,1" _offsetMin="-228,-80" _offsetMax="-148,-44" />
+				<_style _alignment="End" />
+			</TextWidget>
+			<TextWidget _name="SpareAmmo" _text="{bind:_spareAmmo}" _styleClass="hud" _visibility="HitTestInvisible" _bLocalized="false">
+				<_slot _anchorMin="1,1" _anchorMax="1,1" _offsetMin="-128,-80" _offsetMax="-48,-44" />
+				<_style _alignment="End" />
+			</TextWidget>
+			<TextWidget _name="DropHint" _text="Use - jump off the plane" _styleClass="hud" _visibility="{bind:_dropHintVisibility}">
+				<_slot _anchorMin="0.5,1" _anchorMax="0.5,1" _offsetMin="-400,-160" _offsetMax="400,-120" />
+				<_style _alignment="Center" />
+			</TextWidget>
+			<TextWidget _name="DownedText" _text="You are down - wait for your squad" _styleClass="hud" _visibility="{bind:_downedVisibility}">
+				<_slot _anchorMin="0.5,0.5" _anchorMax="0.5,0.5" _offsetMin="-400,40" _offsetMax="400,100" />
+				<_style _alignment="Center" />
+			</TextWidget>
+			<TextWidget _name="WinText" _text="Last squad standing - you win" _styleClass="hud" _visibility="{bind:_winVisibility}">
+				<_slot _anchorMin="0.5,0.5" _anchorMax="0.5,0.5" _offsetMin="-400,-40" _offsetMax="400,20" />
+				<_style _alignment="Center" />
+			</TextWidget>
+			<TextWidget _name="LoseText" _text="Your squad is out" _styleClass="hud" _visibility="{bind:_loseVisibility}">
+				<_slot _anchorMin="0.5,0.5" _anchorMax="0.5,0.5" _offsetMin="-400,-40" _offsetMax="400,20" />
+				<_style _alignment="Center" />
+			</TextWidget>
+		</CanvasPanel>
+	</SafeZonePanel>
+</UIDocument>

@@ -258,7 +258,7 @@ SW_TEST_CASE( GameStateSnapshotTest, ReadSceneIDPeeksTheHeaderOnly )
     SW_REQUIRE_TRUE( sceneID.has_value() );
     SW_EXPECT_TRUE( *sceneID == "scenes/a.scene" );
     const optional<vector<uint8>> minigameBytes = GameStateSnapshot::readMinigameBytes( saveA.data(), static_cast<uint32>( saveA.size() ) );
-    SW_EXPECT_TRUE( minigameBytes.has_value() && *minigameBytes == vector<uint8>{ 7, 8, 9 } ); // 찍은 미니게임 칸 스택도 머리에서 읽는다
+    SW_EXPECT_TRUE( ( minigameBytes.has_value() && *minigameBytes == vector<uint8>{ 7, 8, 9 } ) ); // 찍은 미니게임 칸 스택도 머리에서 읽는다
     SW_EXPECT_EQUAL( 1u, countObjects( *pSceneB ) );
 
     // 머리가 없는 버퍼 · 머리 앞에서 잘린 버퍼는 없음이다.

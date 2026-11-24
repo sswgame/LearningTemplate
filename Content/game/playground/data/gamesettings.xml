@@ -58,6 +58,14 @@
   <!-- 사격장 미니게임(minigames/shooter3d)의 사격 · 재장전 · 무기 고르기 · 시점 — 꺼진 레이어 Shooter(미니게임이 켠다). 시점 확대 · 궤도는 공통. -->
   <inputMap path="common/input/cameraorbit.input.xml"/>
   <inputMap path="game/playground/shooter3d/data/shooter.input.xml"/>
+  <!-- 메트로배니아 미니게임(minigames/metroidvania)의 입력 — 꺼진 레이어(미니게임이 켠다). 걷기는 공통. -->
+  <inputMap path="game/playground/metroidvania/data/metroidvania.input.xml"/>
+  <!-- 기체 대전 미니게임(minigames/mecharena)의 입력 — 꺼진 레이어(미니게임이 켠다). 걷기는 공통. -->
+  <inputMap path="game/playground/mecharena/data/mecharena.input.xml"/>
+  <!-- 배틀로얄 미니게임(minigames/battleroyale)의 입력 — 꺼진 레이어(미니게임이 켠다). 걷기는 공통. -->
+  <inputMap path="game/playground/battleroyale/data/battleroyale.input.xml"/>
+  <!-- 격투 미니게임(minigames/fighting)의 입력 — 꺼진 레이어(미니게임이 켠다). 걷기는 공통. -->
+  <inputMap path="game/playground/fighting/data/fighting.input.xml"/>
   <!-- 비대칭 공포 미니게임(minigames/asymmetrichorror)의 쓰기 — 꺼진 레이어 AsymmetricHorror(미니게임이 켠다). 로컬 사용자 둘이 같은 액션을 자기 장치로 읽는다. -->
   <inputMap path="game/playground/asymmetrichorror/data/asymmetrichorror.input.xml"/>
   <!-- 협동 수집 공포 미니게임(minigames/coopscavenger)의 쓰기 · 레버 — 꺼진 레이어 CoopScavenger(미니게임이 켠다). 로컬 사용자 둘이 같은 액션을 자기 장치로 읽는다. -->

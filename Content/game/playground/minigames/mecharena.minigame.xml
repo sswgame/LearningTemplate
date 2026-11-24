@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="utf-8"?>
+<?asset guid="0174890bb42547acaa3dcfdfc30445eb"?>
+<!--
+  기체 대전 미니게임(둘 대 둘, 플레이어 말고는 컴퓨터 — 팀 전력 게이지가 먼저 바닥나는 쪽이 진다) — MechArena 키트. 기체(data/mechs.xml)는 게임 기능 MechArena 가 미니게임 범위에 건다.
+  맵의 MechArenaGameMode 오브젝트에 MechArenaGameModeComponent → MechArenaViewComponent(GF_Client_MechArena) → HUDControllerComponent 가 그 순서로 붙는다.
+  입력은 걷기 공통 레이어와 MechArena 레이어(mecharena/data/mecharena.input.xml)만 켠다. 짧은 대전이라 안에서 저장하지 않는다.
+  시나리오 automation/mecharena_slice 가 실행 전역 변수 gv_firstMinigame 로 들어간다.
+-->
+<Minigame name="mecharena" map="game/playground/mecharena/maps/colony.scene.xml" entry="SceneSwitch" portalSlot="13" save="Blocked" features="MechArena" inputContexts="Movement,MechArena" catalogs="MechCatalog"/>

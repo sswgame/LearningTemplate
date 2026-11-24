@@ -109,7 +109,6 @@ namespace sw
             SW_LOG_ERROR_ONCE_ID( "Canvas.GPUProjectedMarkersReference", "GPU-projected markers reference GPUScene instances but the instance buffer is not available - the markers are not placed" );
             return;
         }
-        using Internal = CanvasMarkerProjectionInternal;
         SW_PROFILE_SCOPE( "RT.Canvas.MarkerProject" );
         // 앵커 원소는 사각형 버퍼의 맨 앞이다. 쓰기 앞 UAV · 캔버스 그리기 앞 셰이더 읽기 · 인스턴스 버퍼 읽기는 프레임 그래프가 낸다
         // (`CanvasMarkers` · `InstanceBuffer` — `FrameGraphExecutor::beginFrame` 이 등록한다. 인스턴스 버퍼는 쓰는 패스가 없는 프레임에 셰이더 읽기로 쉰다).

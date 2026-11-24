@@ -5,6 +5,7 @@
 #include "Core/Testing/TestFramework.h"
 
 #include "Engine/Asset/Cache/SharedAssetCache.h"
+#define SW_TEST_INTERNAL // 임시 리소스 도메인 픽스처(`ScopedScratchDomain`)가 엔진 서비스를 직접 쓴다
 #include "Engine/Content/Tests/ScopedScratchDomain.h"
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"

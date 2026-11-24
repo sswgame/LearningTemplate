@@ -1,0 +1,27 @@
+<?xml version="1.0" encoding="utf-8"?>
+<?asset guid="a532fcce7ad94928aa79c69800493497"?>
+<!--
+  격투 미니게임(minigames/fighting)의 입력 차이 — Playground 공통 묶음(data/gamesettings.xml 의 <inputMap> 줄) 위에 얹힌다. 걷기 · 앉기 · 옆걸음 · 점프는 공통 Move 축이다.
+  레이어 Fighting 은 꺼져 있고 미니게임의 inputContexts 가 들어가 있는 동안만 켠다 — 허브 · 다른 미니게임의 같은 키와 겹치지 않는다.
+-->
+<InputMap>
+	<layers>
+		<layer name="Fighting" enabled="0" blockLower="0"/>
+	</layers>
+	<action name="Fighting.Hand" layer="Fighting" trigger="Pressed">
+		<bind source="Key" code="J"/>
+		<bind source="Gamepad" code="X"/>
+	</action>
+	<action name="Fighting.Kick" layer="Fighting" trigger="Pressed">
+		<bind source="Key" code="K"/>
+		<bind source="Gamepad" code="Y"/>
+	</action>
+	<action name="Fighting.Low" layer="Fighting" trigger="Pressed">
+		<bind source="Key" code="L"/>
+		<bind source="Gamepad" code="A"/>
+	</action>
+	<action name="Fighting.Throw" layer="Fighting" trigger="Pressed">
+		<bind source="Key" code="U"/>
+		<bind source="Gamepad" code="B"/>
+	</action>
+</InputMap>
