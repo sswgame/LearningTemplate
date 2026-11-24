@@ -18,6 +18,7 @@
 #include "GameFramework/Kits/Genre/Horror/CoopScavenger/Component/ScavengerGameModeComponent.h"
 #include "GameFramework/Runtime/Foundation/Framework/GameService.h"
 #include "GameFramework/Runtime/Foundation/Framework/Minigame/MinigameStack.h"
+#include "GameFramework/Runtime/Foundation/Framework/Presentation/Tests/RecordingSoundPlayer.h"
 #include "GameFramework/Runtime/Gameplay/GameState/GameStateComponent.h"
 #include "GameFramework/Runtime/Gameplay/Inventory/ItemCatalog.h"
 
@@ -50,6 +51,7 @@ namespace
         test::ScopedScratchDomain _domain{};
         ScavengerCatalog          _catalog{};
         ItemCatalog               _items{};
+        RecordingSoundPlayer      _soundPlayer{};
         SubsystemScope            _scope{};
 
         [[nodiscard]] bool setUp()
@@ -58,7 +60,7 @@ namespace
             return FileUtil::writeTextFile( _domain.makeDiskPath( "scavenger/data/threats.spawns.xml" ), kScavengerGameModeThreats ) &&
                    FileUtil::writeTextFile( _domain.makeDiskPath( "scavenger/data/terminal.shops.xml" ), kScavengerGameModeShops ) &&
                    FileUtil::writeTextFile( _domain.makeDiskPath( "scavenger/data/moon.weather.xml" ), kScavengerGameModeWeather ) &&
-                   _items.loadFromXMLText( kScavengerGameModeItems, "ScavengerGameModeTest" ) && _scope.bind<ItemCatalog>( &_items ) &&
+                   _items.loadFromXMLText( kScavengerGameModeItems, "ScavengerGameModeTest" ) && _scope.bind<ISoundPlayer>( &_soundPlayer ) && _scope.bind<ItemCatalog>( &_items ) &&
                    _catalog.loadFromXMLText( kScavengerGameModeXML, "ScavengerGameModeTest" ) && _scope.bind<ScavengerCatalog>( &_catalog );
         }
 

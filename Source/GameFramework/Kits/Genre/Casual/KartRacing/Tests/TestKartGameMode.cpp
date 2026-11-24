@@ -18,6 +18,7 @@
 #include "GameFramework/Kits/Genre/Casual/KartRacing/Component/KartGameModeComponent.h"
 #include "GameFramework/Runtime/Foundation/Framework/GameService.h"
 #include "GameFramework/Runtime/Foundation/Framework/Minigame/MinigameStack.h"
+#include "GameFramework/Runtime/Foundation/Framework/Presentation/Tests/RecordingSoundPlayer.h"
 
 using namespace sw;
 
@@ -35,6 +36,7 @@ namespace
     {
         const test::ScopedScratchDomain   _domain;
         KartTrackCatalog                  _tracks{};
+        RecordingSoundPlayer              _soundPlayer{};
         SubsystemScope                    _scope{};
         unique_ptr<game::ScopedGameScope> _pScopeBinding{};
         GameObjectManager                 _manager{};
@@ -43,7 +45,7 @@ namespace
         KartGameModeTest()
         {
             SW_REQUIRE_TRUE( _tracks.loadFromXMLText( kKartTrackXML, "KartGameModeTest" ) );
-            SW_REQUIRE_TRUE( _scope.bind<const KartTrackCatalog>( &_tracks ) );
+            SW_REQUIRE_TRUE( _scope.bind<ISoundPlayer>( &_soundPlayer ) && _scope.bind<const KartTrackCatalog>( &_tracks ) );
             SW_REQUIRE_TRUE( FileUtil::writeTextFile( _domain.makeDiskPath( "kart.vehicle.xml" ), kKartVehicleXML ) );
             _pScopeBinding = make_unique<game::ScopedGameScope>( _scope );
             _pGameMode     = _manager.createGameObject( hashed_string( "Director" ) )->addComponent<KartGameModeComponent>();

@@ -1042,17 +1042,17 @@ SW_TEST_CASE_F( MonsterHuntMutagensTest, StatsCountMatchingColorsInOpenGroups )
     SW_EXPECT_EQUAL( 0, _mutagens.countMatches( 2 ) );
 
     sw::StatBlock stats;
-    _mutagens.computeStats( stats );
+    _mutagens.addStats( stats );
     SW_EXPECT_NEAR( 9.0f, stats.getValue( "attackPower" ), kMonsterHuntTolerance );
 
     _mutagens.clearSlot( 0, 1 );
     stats.clear();
-    _mutagens.computeStats( stats );
+    _mutagens.addStats( stats );
     SW_EXPECT_NEAR( 7.0f, stats.getValue( "attackPower" ), kMonsterHuntTolerance );
 
     _mutagens.setCharacterLevel( 0 );
     stats.clear();
-    _mutagens.computeStats( stats );
+    _mutagens.addStats( stats );
     SW_EXPECT_NEAR( 0.0f, stats.getValue( "attackPower" ), kMonsterHuntTolerance );
     sw::vector<sw::hashed_string> listSkill;
     _mutagens.collectEquippedSkills( listSkill );

@@ -13,6 +13,7 @@
 #include "Engine/Asset/Cache/SharedAssetCache.h"
 #include "Engine/Content/AssetTypeRegistry.h"
 #include "Engine/Reflection/ReflectionMacros.h"
+#include "Engine/Serialization/Serializer/CatalogKey.h"
 
 #include "GameFramework/GameFrameworkExports.h"
 #include "GameFramework/Runtime/Foundation/GameData/GameCatalog.h"
@@ -22,6 +23,7 @@
 namespace sw
 {
     class XMLNode;
+    struct ItemDef;
 
     /** @brief 능력치입니다. XML 속성 이름은 `hp mp str agi vit intellect luck` 이고, 성장치는 `growHP` 처럼 씁니다. */
     enum class JRPGStat : uint8
@@ -86,7 +88,7 @@ namespace sw
         PROPERTY()
         hashed_string _attackSound{}; ///< 기본 공격의 사운드 이벤트(`*.audioevents.xml`). 비면 소리가 없다
         PROPERTY( Name = "requires" )
-        hashed_string          _requiredItem{}; ///< 이 직업으로 바꾸려면 가지고 있어야 하는 아이템(DQ3 현자의 깨달음의 책)
+        CatalogKey<ItemDef>    _requiredItem{}; ///< 이 직업으로 바꾸려면 가지고 있어야 하는 아이템(DQ3 현자의 깨달음의 책)
         vector<JRPGLearnEntry> _listLearn{};
         int32                  _arrBase[kJRPGStatCount]{ 20, 0, 5, 5, 5, 5, 5 };
         int32                  _arrGrowth[kJRPGStatCount]{ 5, 0, 2, 2, 2, 1, 1 };

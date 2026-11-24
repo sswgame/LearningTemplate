@@ -13,6 +13,7 @@
 #include "GameFramework/Kits/Genre/Strategy/SideScrollConquest/Component/ConquestGameModeComponent.h"
 #include "GameFramework/Runtime/Foundation/Framework/GameService.h"
 #include "GameFramework/Runtime/Foundation/Framework/Minigame/MinigameStack.h"
+#include "GameFramework/Runtime/Foundation/Framework/Presentation/Tests/RecordingSoundPlayer.h"
 
 using namespace sw;
 
@@ -31,6 +32,7 @@ namespace
     struct ConquestGameModeTest
     {
         ConquestCatalog                   _catalog{};
+        RecordingSoundPlayer              _soundPlayer{};
         SubsystemScope                    _scope{};
         unique_ptr<game::ScopedGameScope> _pScopeBinding{};
         GameObjectManager                 _manager{};
@@ -39,7 +41,7 @@ namespace
         ConquestGameModeTest()
         {
             SW_REQUIRE_TRUE( _catalog.loadFromXMLText( kConquestXML, "ConquestGameModeTest" ) );
-            SW_REQUIRE_TRUE( _scope.bind<const ConquestCatalog>( &_catalog ) );
+            SW_REQUIRE_TRUE( _scope.bind<ISoundPlayer>( &_soundPlayer ) && _scope.bind<const ConquestCatalog>( &_catalog ) );
             _pScopeBinding = make_unique<game::ScopedGameScope>( _scope );
             _pGameMode     = _manager.createGameObject( hashed_string( "Director" ) )->addComponent<ConquestGameModeComponent>();
             SW_REQUIRE_NOT_NULL( _pGameMode );

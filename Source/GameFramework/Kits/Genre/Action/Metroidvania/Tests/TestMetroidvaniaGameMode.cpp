@@ -12,6 +12,7 @@
 #include "GameFramework/Kits/Genre/Action/Metroidvania/Component/MetroidvaniaGameModeComponent.h"
 #include "GameFramework/Runtime/Foundation/Framework/GameService.h"
 #include "GameFramework/Runtime/Foundation/Framework/Minigame/MinigameStack.h"
+#include "GameFramework/Runtime/Foundation/Framework/Presentation/Tests/RecordingSoundPlayer.h"
 
 using namespace sw;
 
@@ -43,13 +44,14 @@ namespace
     struct MetroidvaniaDirectorTest
     {
         MetroidvaniaCatalog            _catalog{};
+        RecordingSoundPlayer           _soundPlayer{};
         SubsystemScope                 _scope{};
         GameObjectManager              _manager{};
         MetroidvaniaGameModeComponent* _pGameMode{ nullptr };
 
         [[nodiscard]] bool open( const utf8* pDirectorXML )
         {
-            if ( _catalog.loadFromXMLText( kMetroidvaniaDirectorCatalogXML, "MetroidvaniaGameModeTest" ) == false || _scope.bind<const MetroidvaniaCatalog>( &_catalog ) == false )
+            if ( _catalog.loadFromXMLText( kMetroidvaniaDirectorCatalogXML, "MetroidvaniaGameModeTest" ) == false || _scope.bind<ISoundPlayer>( &_soundPlayer ) == false || _scope.bind<const MetroidvaniaCatalog>( &_catalog ) == false )
                 return false;
             _pGameMode = _manager.createGameObject( hashed_string( "Director" ) )->addComponent<MetroidvaniaGameModeComponent>();
             return _pGameMode != nullptr && XMLSerializer::deserialize( _pGameMode, *MetroidvaniaGameModeComponent::StaticType(), pDirectorXML );

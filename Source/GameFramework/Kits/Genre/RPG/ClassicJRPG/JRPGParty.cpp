@@ -143,7 +143,7 @@ namespace sw
             return JRPGClassChangeResult::Dead;
         if ( member._level.getLevel() < minLevel )
             return JRPGClassChangeResult::LevelTooLow;
-        if ( pClass->_requiredItem.empty() == false && _pInventory->hasItem( pClass->_requiredItem ) == false )
+        if ( pClass->_requiredItem.empty() == false && _pInventory->hasItem( pClass->_requiredItem.key() ) == false )
             return JRPGClassChangeResult::MissingItem;
 
         member._classID = classID;

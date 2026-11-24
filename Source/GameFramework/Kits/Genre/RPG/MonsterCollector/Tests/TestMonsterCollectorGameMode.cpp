@@ -16,6 +16,7 @@
 
 #include "GameFramework/Kits/Genre/RPG/MonsterCollector/Component/MonsterCollectorGameModeComponent.h"
 #include "GameFramework/Runtime/Foundation/Framework/GameService.h"
+#include "GameFramework/Runtime/Foundation/Framework/Presentation/Tests/RecordingSoundPlayer.h"
 
 using namespace sw;
 
@@ -38,6 +39,7 @@ namespace
     struct MonsterCollectorGameModeFixture
     {
         MonsterCollectorCatalog            _catalog;
+        RecordingSoundPlayer               _soundPlayer{};
         SubsystemScope                     _scope;
         GameObjectManager                  _manager;
         MonsterCollectorGameModeComponent* _pGameMode{ nullptr };
@@ -47,7 +49,7 @@ namespace
             (void)domain.makeDiskFolder( "glade" ); // 폴더만 만든다
             if ( FileUtil::writeTextFile( domain.makeDiskPath( "glade/types.elementchart.xml" ), kCollectorChartXML ) == false )
                 return false;
-            if ( _catalog.loadFromXMLText( kCollectorGameModeXML, "MonsterCollectorGameModeTest" ) == false || _scope.bind<const MonsterCollectorCatalog>( &_catalog ) == false )
+            if ( _catalog.loadFromXMLText( kCollectorGameModeXML, "MonsterCollectorGameModeTest" ) == false || _scope.bind<ISoundPlayer>( &_soundPlayer ) == false || _scope.bind<const MonsterCollectorCatalog>( &_catalog ) == false )
                 return false;
             StringBuilder<constant::buffer::kMax1024> sceneText;
             sceneText.appendFormat( "<MonsterCollectorGameModeComponent _elementChart=\"%#\" _starterLevel=\"10\" _area=\"glade\" _encounterRate=\"1\" _graceSteps=\"3\" _ballCount=\"3\" _ballMultiplier=\"3\" "

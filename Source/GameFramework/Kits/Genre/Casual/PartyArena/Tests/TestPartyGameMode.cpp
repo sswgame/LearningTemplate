@@ -14,6 +14,7 @@
 #include "GameFramework/Kits/Genre/Casual/PartyArena/TrampolineBot.h"
 #include "GameFramework/Runtime/Foundation/Framework/GameService.h"
 #include "GameFramework/Runtime/Foundation/Framework/Minigame/MinigameStack.h"
+#include "GameFramework/Runtime/Foundation/Framework/Presentation/Tests/RecordingSoundPlayer.h"
 
 using namespace sw;
 
@@ -28,6 +29,7 @@ namespace
     struct PartyGameModeTest
     {
         PartyRoundSeries                  _rounds{};
+        RecordingSoundPlayer              _soundPlayer{};
         SubsystemScope                    _scope{};
         unique_ptr<game::ScopedGameScope> _pScopeBinding{};
         GameObjectManager                 _manager{};
@@ -36,7 +38,7 @@ namespace
         PartyGameModeTest()
         {
             SW_REQUIRE_TRUE( _rounds.loadFromXMLText( kPartyRoundXML, "PartyGameModeTest" ) );
-            SW_REQUIRE_TRUE( _scope.bind<const PartyRoundSeries>( &_rounds ) );
+            SW_REQUIRE_TRUE( _scope.bind<ISoundPlayer>( &_soundPlayer ) && _scope.bind<const PartyRoundSeries>( &_rounds ) );
             _pScopeBinding = make_unique<game::ScopedGameScope>( _scope );
             _pGameMode     = _manager.createGameObject( hashed_string( "Director" ) )->addComponent<PartyGameModeComponent>();
             SW_REQUIRE_NOT_NULL( _pGameMode );

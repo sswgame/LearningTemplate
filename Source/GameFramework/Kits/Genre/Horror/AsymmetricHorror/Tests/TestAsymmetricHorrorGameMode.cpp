@@ -14,6 +14,7 @@
 #include "GameFramework/Kits/Genre/Horror/AsymmetricHorror/Component/AsymmetricHorrorGameModeComponent.h"
 #include "GameFramework/Runtime/Foundation/Framework/GameService.h"
 #include "GameFramework/Runtime/Foundation/Framework/Minigame/MinigameStack.h"
+#include "GameFramework/Runtime/Foundation/Framework/Presentation/Tests/RecordingSoundPlayer.h"
 
 using namespace sw;
 
@@ -32,9 +33,10 @@ namespace
     struct AsymmetricGameModeBench
     {
         AsymmetricHorrorRulesCatalog _catalog{};
+        RecordingSoundPlayer         _soundPlayer{};
         SubsystemScope               _scope{};
 
-        [[nodiscard]] bool setUp() { return _catalog.loadFromXMLText( kAsymmetricGameModeXML, "AsymmetricHorrorGameModeTest" ) && _scope.bind<AsymmetricHorrorRulesCatalog>( &_catalog ); }
+        [[nodiscard]] bool setUp() { return _catalog.loadFromXMLText( kAsymmetricGameModeXML, "AsymmetricHorrorGameModeTest" ) && _scope.bind<ISoundPlayer>( &_soundPlayer ) && _scope.bind<AsymmetricHorrorRulesCatalog>( &_catalog ); }
 
         /** @brief 발전기 · 탈출구가 손 닿는 곳에 있는 무대입니다. 살인마는 @p killerStart 에 섭니다. */
         static AsymmetricHorrorStage makeStage( const float3& killerStart )

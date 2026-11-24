@@ -153,7 +153,7 @@ namespace sw
         int32 getRank( const hashed_string& skillID ) const;
         int32 getPoints() const { return _points; }
         int32 getSpentPoints() const;
-        /** @brief 배운 스킬의 능력치에 랭크를 곱한 값을 더합니다. */
+        /** @brief @p outStats 를 비우고 배운 스킬의 능력치에 랭크를 곱한 값으로 채웁니다. */
         void computeStats( StatBlock& outStats ) const;
         /** @brief 랭크 1 이상인 스킬이 주는 어빌리티 id 목록입니다. */
         void                collectAbilities( vector<hashed_string>& outListAbility ) const;
