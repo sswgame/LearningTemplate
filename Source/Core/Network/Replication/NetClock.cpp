@@ -13,6 +13,7 @@ namespace sw
 
     NetClock::NetClock()
         : _serverTick{ 0.0 }
+        , _newestAge{ 0.0 }
         , _newestTick{ 0 }
         , _side{ NetClockSide::Replica }
         , _bObserved{ SW_FALSE }
@@ -32,6 +33,7 @@ namespace sw
     void NetClock::reset( NetClockSide side )
     {
         _serverTick = 0.0;
+        _newestAge  = 0.0;
         _newestTick = 0;
         _side       = side;
         _bObserved  = SW_FALSE;
@@ -47,6 +49,7 @@ namespace sw
             _serverTick += MathUtil::min( elapsed, static_cast<float64>( kMaxTicksPerAdvance ) );
             return;
         }
+        _newestAge += elapsed;
         const float64 ceiling = static_cast<float64>( _newestTick ) + static_cast<float64>( kMaxLeadSeconds / kTickSeconds );
         _serverTick           = MathUtil::max( _serverTick, MathUtil::min( _serverTick + elapsed, ceiling ) );
     }
@@ -55,9 +58,18 @@ namespace sw
     {
         if ( _side == NetClockSide::Authority )
             return;
-        _newestTick = _bObserved == SW_TRUE ? MathUtil::max( _newestTick, serverTick ) : serverTick;
+        if ( _bObserved == SW_FALSE || serverTick > _newestTick )
+        {
+            _newestTick = serverTick;
+            _newestAge  = 0.0;
+        }
         _serverTick = MathUtil::max( _serverTick, static_cast<float64>( serverTick ) );
         _bObserved  = SW_TRUE;
+    }
+
+    float64 NetClock::getReceivedTick() const
+    {
+        return _side == NetClockSide::Authority ? _serverTick : static_cast<float64>( _newestTick ) + _newestAge;
     }
 
     uint32 NetClock::getWholeTick() const
