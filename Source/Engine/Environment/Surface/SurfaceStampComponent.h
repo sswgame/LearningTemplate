@@ -13,6 +13,7 @@
 
 #include "Engine/Environment/Surface/SurfaceStamp.h"
 #include "Engine/Object/Component/Component.h"
+#include "Engine/Object/Component/SceneTeleportCursor.h"
 #include "Engine/Reflection/ReflectionMacros.h"
 
 namespace sw
@@ -71,6 +72,7 @@ namespace sw
 
         SurfaceStampHandle     _held;
         float3                 _lastPoint;
+        SceneTeleportCursor    _teleport;
         uint8                  _bHasLastPoint : 1;
         uint8                  _bStampChecked : 1; ///< 도장 칸 사이의 규칙(`SurfaceStampDef::validate`)을 처음 찍기 전에 한 번 봤다
         uint8                  _bValidStamp   : 1; ///< 그 검사를 지났다 — 틀린 도장은 오류를 한 번 남기고 찍지 않는다

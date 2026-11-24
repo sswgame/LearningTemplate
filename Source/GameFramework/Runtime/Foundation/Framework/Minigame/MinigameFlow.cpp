@@ -296,7 +296,6 @@ namespace sw
         , _sceneLoadRequested{}
         , _worldPlayChanged{}
         , _leakCount{ 0 }
-        , _pendingRestoredResult{}
         , _restoreCount{ 0 }
         , _lastLoad{ 0 }
         , _awaitedLoad{ 0 }
@@ -322,9 +321,8 @@ namespace sw
         _sceneLoadRequested.reset();
         _worldPlayChanged.reset();
         _pendingEnter.clear();
-        _pendingPlacement      = nullopt;
-        _pendingLeave          = nullopt;
-        _pendingRestoredResult = nullopt;
+        _pendingPlacement = nullopt;
+        _pendingLeave     = nullopt;
         _pReturning.reset();
         _pPreviousStack.reset();
         deactivateScope(); // 게임 범위 기능은 게임 인스턴스가 이 뒤에 끈다(미니게임의 해제 검사는 그것이 켜진 채로 찍었다)
@@ -686,22 +684,7 @@ namespace sw
             deliverResult( result );
             return true;
         }
-        // 씬으로 돌아간다 — 찍은 씬(씬 전환) 또는 입구 씬(돌아올 씬 없음). 갈래가 늘면 아래 visit 이 빠진 갈래를 컴파일 오류로 알린다.
-        const string scenePath = std::visit(
-            []( const auto& returnPoint ) -> string
-        {
-            using T = std::decay_t<decltype( returnPoint )>;
-            if constexpr ( std::is_same_v<T, MinigameSuspendedScene> )
-                return returnPoint._scenePath;
-            else if constexpr ( std::is_same_v<T, MinigameEntranceReturn> )
-                return game::getSubsystem<GameSceneFlow>().getEntranceScene();
-            else
-            {
-                static_assert( std::is_same_v<T, MinigameSubLevelReturn>, "every return point kind has a way back" );
-                return returnPoint._scenePath; // 위에서 처리했다
-            }
-        },
-            frame._returnPoint );
+        const string scenePath = findReturnScene( frame );
         if ( scenePath.empty() || requestAwaitedScene( scenePath, &MinigameFlow::onReturnLoaded ) == false )
         {
             SW_LOG_ERROR_ID( "MinigameFlow.ReturnRequestRefused", "Leaving minigame '%#' is refused - the scene to return to '%#' could not be requested (an entry with no scene to return to needs GameSettings entranceScene or startMap)",
@@ -712,8 +695,28 @@ namespace sw
         }
         // 덮였던 미니게임은 씬 복원 전에 켠다 — 돌아간 씬의 컴포넌트가 씬 적용(`beginPlay`) 때 그 서비스를 찾는다. 결과는 복원 뒤에 넘긴다.
         activateTop();
-        _pReturning = make_unique<PendingReturn>( PendingReturn{ std::move( frame ), std::move( result ) } );
+        _pReturning = make_unique<PendingReturn>( PendingReturn{ std::move( frame ), std::move( result ), scenePath } );
         return true;
+    }
+
+    string MinigameFlow::findReturnScene( const MinigameFrame& frame )
+    {
+        // 찍은 씬(씬 전환) 또는 입구 씬(돌아올 씬 없음). 갈래가 늘면 아래 visit 이 빠진 갈래를 컴파일에서 잡는다.
+        return std::visit(
+            []( const auto& returnPoint ) -> string
+        {
+            using T = std::decay_t<decltype( returnPoint )>;
+            if constexpr ( std::is_same_v<T, MinigameSuspendedScene> )
+                return returnPoint._scenePath;
+            else if constexpr ( std::is_same_v<T, MinigameEntranceReturn> )
+                return game::getSubsystem<GameSceneFlow>().getEntranceScene();
+            else
+            {
+                static_assert( std::is_same_v<T, MinigameSubLevelReturn>, "every return point kind has a way back" );
+                return returnPoint._scenePath; // 바탕 씬에 얹혀 있다
+            }
+        },
+            frame._returnPoint );
     }
 
     bool MinigameFlow::isInSavedMinigame( const vector<MinigameSavedFrame>& listFrame ) const
@@ -870,19 +873,15 @@ namespace sw
 
     void MinigameFlow::update()
     {
-        // 되살린 씬의 결과를 먼저 알린다 — 앞 프레임에 되살린 오브젝트가 상태를 받고 시작한 뒤라 보상이 복원에 덮이지 않는다.
-        if ( _pendingRestoredResult.has_value() )
-        {
-            MinigameResult restored = std::move( *_pendingRestoredResult );
-            _pendingRestoredResult  = nullopt;
-            deliverResult( restored );
-        }
+        // 되살린 씬의 결과를 먼저 알린다 — 앞 프레임에 되살린 오브젝트가 상태를 받고 시작한 뒤라 보상이 복원 값에 덮이지 않는다.
+        deliverPendingResults();
         dropFailedSubLevel(); // 하위 레벨 맵은 비동기로 읽는다 — 읽지 못했으면 진입을 되돌린다
         // 다시 읽힌 카탈로그를 먼저 건다 — 이 프레임의 진입 · 컴포넌트가 새 판을 찾는다.
         if ( _pActive != nullptr )
             _pActive->rebindReloadedCatalogs();
         // 나가기가 먼저다 — 같은 프레임에 끝난 미니게임의 트리거가 다음 진입을 맡겨도 끝낸 칸 위에 쌓지 않는다(나가기가 맵을 기다리면 진입은 `rejectIfLoadPending` 이 거절한다).
-        if ( _pendingLeave.has_value() )
+        // 다른 진입 · 나가기가 맵을 기다리는 동안은 미룬다 — 거절되면 끝난 판의 결과가 사라지고 그 판은 다시 끝내지 않는다.
+        if ( _pendingLeave.has_value() && isEntering() == false && isLeaving() == false )
         {
             MinigameResult pending = std::move( *_pendingLeave );
             _pendingLeave          = nullopt;
@@ -969,14 +968,28 @@ namespace sw
         _onFinished.broadcast( result );
     }
 
+    void MinigameFlow::deliverPendingResults()
+    {
+        const SceneManager* const pSceneManager = game::findSubsystem<SceneManager>();
+        const Scene* const        pScene        = MinigameFlowInternal::findActivePlayScene();
+        if ( _stack.getResultCount() == 0 || pScene == nullptr || pSceneManager->isTransitioning() || isEntering() || isLeaving() )
+            return;
+        // 꺼낸 뒤에 넘긴다 — 받는 쪽이 다시 나가기 · 들어가기를 맡겨도 같은 결과가 두 번 가지 않는다.
+        for ( const MinigameResult& result : _stack.takeResults( pScene->getSourcePath() ) )
+        {
+            deliverResult( result );
+        }
+    }
+
     void MinigameFlow::onSceneLoadRequested( const string& scenePath, SceneLoadKind kind, const TaskFuture<SceneHandle>& future )
     {
         (void)future;
         if ( kind != SceneLoadKind::Travel || _bRequestingScene == SW_TRUE )
             return; // 도구가 연 씬이거나 이 흐름의 요청이다
-        if ( _stack.isEmpty() && isLeaving() == false )
-            return;
-        clearForOutsideTravel( scenePath );
+        if ( _stack.isEmpty() == false || isLeaving() )
+            clearForOutsideTravel( scenePath );
+        if ( game::getSubsystem<GameSceneFlow>().isTitleScene( scenePath ) )
+            _stack.clearResults(); // 하던 게임이 끝났다 — 다음 게임의 허브가 지난 게임의 보상을 받지 않는다
     }
 
     void MinigameFlow::onWorldPlayChanged( bool bPlaying )
@@ -988,10 +1001,10 @@ namespace sw
         }
         // 컴포넌트가 끝난 뒤다 — 에디터가 멈춘 플레이의 범위 · 칸 · 맡긴 일이 다음 플레이에 남지 않게 한다.
         _pendingEnter.clear();
-        _pendingPlacement      = nullopt;
-        _pendingRestoredResult = nullopt;
+        _pendingPlacement = nullopt;
         if ( _stack.isEmpty() == false || isLeaving() )
             clearForOutsideTravel( "(the world stopped playing)" );
+        _stack.clearResults();
     }
 
     void MinigameFlow::enterMinigameOfActiveScene()
@@ -1036,6 +1049,15 @@ namespace sw
     {
         SW_LOG_INFO_ID( "MinigameFlow.ClearedByTravel", "Travel to '%#' was requested outside the minigame flow - the stacked minigames and the scenes to return to are dropped",
                         scenePath.c_str() );
+        // 끝난 판의 결과는 그 바탕 씬이 다시 설 때 받는다 — 이동이 세이브 불러오기 · 타이틀이면 그쪽이 버린다.
+        if ( _pReturning != nullptr )
+            _stack.pushResult( _pReturning->_scenePath, std::move( _pReturning->_result ) );
+        MinigameFrame* const pTop = _stack.findTop();
+        if ( _pendingLeave.has_value() && pTop != nullptr )
+        {
+            pTop->removeMatchScore( _pendingLeave->_listValue );
+            _stack.pushResult( findReturnScene( *pTop ), MinigameResult{ pTop->_definition._name, _pendingLeave->_resultName, std::move( _pendingLeave->_listValue ) } );
+        }
         _pReturning.reset();     // 저장 막기도 풀린다 — 새 씬(세이브 · 타이틀)이 바깥 진행이다
         _pPreviousStack.reset(); // 세이브의 맵을 기다리던 부른 쪽은 밀려난 로드의 끝(nullptr)을 받는다
         _pendingLeave = nullopt; // 맡긴 나가기의 칸은 방금 버렸다
@@ -1061,8 +1083,9 @@ namespace sw
         const unique_ptr<PendingReturn> pReturn = std::move( _pReturning ); // 끝나면 저장 막기가 풀린다
         if ( pScene == nullptr )
         {
-            SW_LOG_ERROR_ID( "MinigameFlow.ReturnSceneNotOpened", "The scene to return to did not open (failed or replaced by a later request) - the captured scene and the result of '%#' are dropped",
+            SW_LOG_ERROR_ID( "MinigameFlow.ReturnSceneNotOpened", "The scene to return to did not open (failed or replaced by a later request) - the captured scene is dropped and the result of '%#' waits for that scene",
                              pReturn->_result._minigame.c_str() );
+            _stack.pushResult( pReturn->_scenePath, std::move( pReturn->_result ) );
             return;
         }
         // 세이브 불러오기와 같은 길이다 — 찍은 씬을 연 뒤 같은 목적의 봉투를 읽는다(`GameInstance::onSaveSceneLoaded`). 입구 씬은 새로 연 그대로다.
@@ -1080,7 +1103,7 @@ namespace sw
             ++_restoreCount;
             SW_LOG_INFO_ID( "MinigameFlow.Restored", "Returned to '%#' - the captured scene is restored", pSuspended->_scenePath.c_str() );
             // 복원은 오브젝트를 되살리고 상태 적용 · 시작은 그 뒤 단계다 — 지금 알리면 보상이 복원 값에 덮인다(언리얼 레벨 전환 뒤 BeginPlay 이후의 결과 전달과 같은 자리).
-            _pendingRestoredResult = std::move( pReturn->_result );
+            _stack.pushResult( pReturn->_scenePath, std::move( pReturn->_result ) );
             return;
         }
         // 복원이 파생 인스턴스 상태까지 되감았다 — 미니게임에서 번 것은 그 위에 얹는다.
@@ -1133,7 +1156,7 @@ namespace sw
             SW_LOG_ERROR_ID( "MinigameFlow.InputContextNeedsInput", "Minigame '%#' lists input contexts but the engine service InputManager is not bound to the game services", definition._name.c_str() );
             return false;
         }
-        InputMap& inputMap = pInput->getInputMap();
+        const InputMap& inputMap = pInput->getInputMap();
         for ( const hashed_string& layer : definition._listInputContext )
         {
             if ( inputMap.hasLayer( layer ) == false )
@@ -1141,10 +1164,7 @@ namespace sw
                 SW_LOG_ERROR_ID( "MinigameFlow.InputContextMissing", "Minigame '%#': input context '%#' is not a layer of the game input map bundle", definition._name.c_str(), layer.c_str() );
                 return false;
             }
-            inputMap.pushLayer( layer );
-            // 같은 입력 맵을 끌 때 찾는다 — 입력 서비스는 엔진 수명이라 미니게임보다 오래 산다.
-            scope.addCleanup( SW_DELEGATE_LAMBDA( Delegate<void()>, [pInput, layer]()
-            { pInput->getInputMap().popLayer( layer ); } ) );
+            scope.holdSubscription( pInput->pushSharedLayer( layer ) ); // 한 화면의 모든 사용자가 같은 문맥이다
         }
         return true;
     }

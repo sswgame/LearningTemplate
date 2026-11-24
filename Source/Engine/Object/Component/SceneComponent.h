@@ -56,6 +56,7 @@ namespace sw
     {
         TeleportPhysics, ///< 경로를 쓸지 않고 옮긴다 — 속도는 잇는다(리스폰 뒤에도 떨어지던 몸은 계속 떨어진다)
         ResetPhysics,    ///< 옮기고 운동(강체 속도 · 캐릭터 이동 상태)도 지운다 — "그 자리에 멈춰 놓기"
+        WorldOriginShift ///< 월드 원점이 옮겨져 좌표만 바뀌었다(`Scene::shiftWorldOrigin`) — 물리 · 화면 속도는 순간이동처럼 잇지 않고, 나타나기 · 지난 자리 지우기 같은 게임의 순간이동 처리는 하지 않는다
     };
 
     /**
@@ -161,6 +162,12 @@ namespace sw
          *          @p type 이 `ResetPhysics` 면 아래 물리 컴포넌트의 운동도 지운다(언리얼 `ETeleportType::ResetPhysics`, 고도 `teleport`).
          */
         void teleportTo( const float3& worldPosition, TeleportType type = TeleportType::TeleportPhysics );
+        /** @brief 이 컴포넌트(또는 조상)가 순간이동한 횟수입니다(감긴다, 원점 이동은 세지 않는다). 지난 자리를 든 쪽은 `SceneTeleportCursor` 로 바뀜을 본다 — 거리로 짐작하지 않는다. */
+        uint16 getTeleportSerial() const { return _teleportSerial.load( std::memory_order_relaxed ); }
+        /** @brief 그 가운데 운동까지 지운(`TeleportType::ResetPhysics`) 횟수입니다(감긴다). */
+        uint16 getMotionResetSerial() const { return _motionResetSerial.load( std::memory_order_relaxed ); }
+        /** @brief 월드 원점 이동으로 좌표만 바뀐 횟수입니다(감긴다). */
+        uint16 getOriginShiftSerial() const { return _originShiftSerial.load( std::memory_order_relaxed ); }
         /**
          * @brief 월드 트랜스폼(행렬)을 정합니다. 부모 기준으로 분해해 로컬 위치, 회전, 스케일을 씁니다(언리얼의 `SetWorldTransform`).
          * @details 회전은 이 엔진의 오일러 규칙(`quaternion::getEulerAngles` 이며 `makeFromYawPitchRoll` 의 역)으로 기록한다. ImGuizmo 의 XYZ
@@ -411,5 +418,9 @@ namespace sw
          * @details 원자값으로 둔 이유는, 배치 쓰기의 워커 둘이 같은 루트 아래의 자식을 써서 동시에 올리려 할 때 한 번만 올라가게 하려는 것이다(exchange).
          */
         atomic<uint8> _bQueuedDirtyRoot;
+        /** @brief 순간이동 횟수 · 그중 운동까지 지운 횟수 · 원점 이동 횟수입니다(`teleportTo` — 틱 중 워커가 남의 자식 것도 올린다). 저장하지 않습니다. */
+        atomic<uint16> _teleportSerial;
+        atomic<uint16> _motionResetSerial;
+        atomic<uint16> _originShiftSerial;
     };
 } // namespace sw

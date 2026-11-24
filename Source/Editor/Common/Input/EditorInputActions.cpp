@@ -50,8 +50,7 @@ namespace sw::editor
         : _shortcuts{}
         , _listQueuedCommand{}
         , _arrForwardedKey{}
-        , _focusBeforeTool{ InputKeyboardFocus::Game }
-        , _bToolOwnsKeyboard{ SW_FALSE }
+        , _toolFocus{}
         , _bCommandsSuspended{ SW_FALSE }
     {
     }
@@ -75,9 +74,7 @@ namespace sw::editor
         // 입력 매니저는 에디터보다 오래 산다 — 키보드 주인과 넣은 키를 돌려 두고, 맵이 그것을 가리킨 채 남지 않게 끊는다(끊긴 맵의 `update` 는 아무것도 하지 않는다).
         InputManager& input = editor::getSubsystem<InputManager>();
         releaseForwardedKeys( input );
-        if ( _bToolOwnsKeyboard && input.getKeyboardFocus() == InputKeyboardFocus::Tool )
-            input.setKeyboardFocus( _focusBeforeTool );
-        _bToolOwnsKeyboard = SW_FALSE;
+        _toolFocus.reset();
         _shortcuts.disconnect();
     }
 
@@ -145,22 +142,10 @@ namespace sw::editor
 
     void EditorInputActions::applyKeyboardOwner( bool bEditorOwns )
     {
-        InputManager&            input   = editor::getSubsystem<InputManager>();
-        const InputKeyboardFocus current = input.getKeyboardFocus();
-        if ( bEditorOwns && current != InputKeyboardFocus::Tool )
-        {
-            _focusBeforeTool   = current;
-            _bToolOwnsKeyboard = SW_TRUE;
-            input.setKeyboardFocus( InputKeyboardFocus::Tool );
-            return;
-        }
-        if ( bEditorOwns == false && _bToolOwnsKeyboard )
-        {
-            // 그동안 다른 주인(콘솔)이 포커스를 바꿨으면 그쪽을 존중하고 돌리지 않는다.
-            if ( current == InputKeyboardFocus::Tool )
-                input.setKeyboardFocus( _focusBeforeTool );
-            _bToolOwnsKeyboard = SW_FALSE;
-        }
+        if ( bEditorOwns == false )
+            _toolFocus.reset();
+        else if ( _toolFocus.isActive() == false )
+            _toolFocus = editor::getSubsystem<InputManager>().claimKeyboardFocus( InputKeyboardFocus::Tool );
     }
 
     void EditorInputActions::forwardEditorKeyboard( bool bEditorOwnsKeyboard )

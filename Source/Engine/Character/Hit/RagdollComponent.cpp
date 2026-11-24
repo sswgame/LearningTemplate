@@ -126,6 +126,7 @@ namespace sw
         , _listKinematicStartRotation{}
         , _listKinematicTargetRotation{}
         , _listPendingImpulse{}
+        , _listDetachedBone{}
         , _physicsPose{}
         , _pBoneNameSkeleton{ nullptr }
         , _pUnit{ nullptr }
@@ -158,6 +159,7 @@ namespace sw
 
     void RagdollComponent::onEndPlay()
     {
+        _controllerSuspension.reset();
         unbindFromUnit();
         PhysicsComponent::onEndPlay();
     }
@@ -172,8 +174,7 @@ namespace sw
 
     SpawnStateReset RagdollComponent::resetToSpawnState()
     {
-        if ( _state == RagdollState::Ragdoll )
-            setControllerActive( true ); // `startRagdoll` 이 끈 것이다(기상은 스스로 다시 켠다)
+        _controllerSuspension.reset(); // `startRagdoll` 이 세운 것이다(기상은 스스로 놓는다)
         const size_t bodyCount = _ragdoll._listBody.size();
         _state                 = RagdollState::Animated;
         _listBodyWeight.assign( bodyCount, 0.0f );
@@ -183,6 +184,7 @@ namespace sw
         _listPartialMask.clear();
         _listBlendStartWeight.clear();
         _listPendingImpulse.clear();
+        _listDetachedBone.clear();
         _flinchLayer.reset(); // 애니메이터의 코드 레이어는 애니메이터 되돌리기가 걷는다 — 다음 맞음이 다시 단다
         _partialWeight    = 1.0f;
         _sleepElapsed     = 0.0f;
@@ -341,15 +343,27 @@ namespace sw
 
     void RagdollComponent::detachBoneBodies( const vector<hashed_string>& listBone )
     {
+        // 이름을 남긴다 — 바디를 다시 지으면(끄고 켜기 · 에셋 다시 읽기) 다시 떼어야 잘려 나간 영역의 보이지 않는 바디가 되살아나지 않는다.
+        for ( const hashed_string& bone : listBone )
+        {
+            (void)VectorUtil::addUnique( _listDetachedBone, bone );
+        }
         ScenePhysics*    pPhysics = getScenePhysics();
         IPhysicsScene3D* pScene   = pPhysics != nullptr ? pPhysics->findScene3D() : nullptr;
-        if ( pScene == nullptr || _asset == nullptr )
+        if ( pScene != nullptr )
+            applyDetachedBones( *pScene );
+    }
+
+    void RagdollComponent::applyDetachedBones( IPhysicsScene3D& scene )
+    {
+        if ( _asset == nullptr || _listDetachedBone.empty() )
             return;
-        const size_t  bodyCount = _ragdoll._listBody.size();
-        vector<uint8> listDetached( bodyCount, SW_FALSE );
+        IPhysicsScene3D* const pScene    = &scene;
+        const size_t           bodyCount = _ragdoll._listBody.size();
+        vector<uint8>          listDetached( bodyCount, SW_FALSE );
         for ( size_t body = 0; body < bodyCount && body < _asset->_listBody.size(); ++body )
         {
-            if ( VectorUtil::contains( listBone, _asset->_listBody[body]._bone ) )
+            if ( VectorUtil::contains( _listDetachedBone, _asset->_listBody[body]._bone ) )
                 listDetached[body] = SW_TRUE;
         }
         // 관절을 먼저 지운다. 빠진 바디를 잇는 관절이 남으면 솔버가 넓은 단계 밖의 바디를 만진다.
@@ -385,12 +399,12 @@ namespace sw
         return zone._name.empty() ? nullptr : &zone;
     }
 
-    void RagdollComponent::setControllerActive( bool bActive )
+    void RagdollComponent::suspendController()
     {
         GameObject*                   pOwner      = getOwner();
         CharacterControllerComponent* pController = pOwner != nullptr ? pOwner->getComponent<CharacterControllerComponent>() : nullptr;
-        if ( pController != nullptr && pController->isSelfActive() != bActive )
-            pController->setActive( bActive );
+        if ( pController != nullptr && _controllerSuspension.isActive() == false )
+            _controllerSuspension = pController->suspend();
     }
 
     void RagdollComponent::startRagdoll( const float3& impulse, optional<uint32> bodyIndex )
@@ -401,7 +415,7 @@ namespace sw
         _bGettingUp   = false;
         if ( bodyIndex.has_value() && impulse.getLengthSquared() > 0.0f )
             _listPendingImpulse.push_back( PendingImpulse{ impulse, float3{}, *bodyIndex } );
-        setControllerActive( false );
+        suspendController();
         if ( _pUnit != nullptr )
             _pUnit->markPoseDirty();
     }
@@ -698,7 +712,7 @@ namespace sw
         _state            = RagdollState::BlendingBack;
         _bGettingUp       = true;
         (void)pAnimator->play( clipName, false, 0.0f );
-        setControllerActive( true );
+        _controllerSuspension.reset();
         _pUnit->markPoseDirty();
         return true;
     }
@@ -742,6 +756,7 @@ namespace sw
             _listKinematicStartRotation.resize( bodyCount );
             _listKinematicTargetRotation.resize( bodyCount );
             (void)consumeTeleport();
+            applyDetachedBones( *pScene );
         }
         if ( _ragdoll.isEmpty() )
             return;

@@ -42,6 +42,9 @@ namespace sw
     class SlotHandleTable
     {
     public:
+        /** @brief `takeAndHoldSlot` 이 세워 두지 않은(다시 쓰지 않는) 칸을 뜻합니다. */
+        static constexpr uint32 kInvalidIndex = constant::invalid_index::kUint32;
+
         /** @brief 값을 넣고 핸들을 반환합니다. */
         SlotHandle insert( T value )
         {
@@ -102,6 +105,44 @@ namespace sw
             return true;
         }
 
+        /**
+         * @brief `take` 와 같지만 칸을 다시 내주지 않고 세워 둡니다 — 부르는 쪽이 `reuseHeldSlot( outIndex )` 을 부를 때 다시 쓸 수 있다.
+         * @details 락 없는 `get` 이 준 포인터를 쥔 다른 스레드가 같은 칸에 들어온 새 값을 옛 핸들의 값으로 읽지 못하게 한다. 값이 소멸할 것이 없는 형식이면 칸에 그대로 남겨
+         *          쥔 쪽이 끝까지 옛 값을 읽고, 아니면 옮겨 내 빈 값이 된다(자원의 참조를 세워 두는 동안 쥐지 않는다).
+         * @param outIndex 세워 둔 칸입니다. 세대가 다 된 칸은 다시 쓰지 않으므로 `kInvalidIndex` 입니다.
+         */
+        bool takeAndHoldSlot( SlotHandle handle, T& outValue, uint32& outIndex )
+        {
+            ScopedLock<mutex> lock{ _mutex };
+            Slot*             pSlot = findOccupiedSlot( handle );
+            if ( pSlot == nullptr )
+                return false;
+            if constexpr ( std::is_trivially_destructible_v<T> )
+            {
+                outValue = pSlot->_value;
+            }
+            else
+            {
+                outValue      = std::move( pSlot->_value );
+                pSlot->_value = T{};
+            }
+            outIndex = kInvalidIndex;
+            if ( releaseSlot( *pSlot ) )
+            {
+                outIndex = handle.index();
+                ++_heldCount;
+            }
+            return true;
+        }
+
+        /** @brief `takeAndHoldSlot` 이 세워 둔 칸을 다시 내줄 수 있게 합니다. */
+        void reuseHeldSlot( uint32 index )
+        {
+            ScopedLock<mutex> lock{ _mutex };
+            --_heldCount;
+            _freeSlot.push( index );
+        }
+
         /** @brief 핸들이 가리키는 슬롯을 비워 핸들을 무효로 만듭니다. */
         void erase( SlotHandle handle )
         {
@@ -155,7 +196,7 @@ namespace sw
         uint32 size() const
         {
             ScopedLock<mutex> lock{ _mutex };
-            return _slotCount - static_cast<uint32>( _freeSlot.size() ) - _retiredCount;
+            return _slotCount - static_cast<uint32>( _freeSlot.size() ) - _retiredCount - _heldCount;
         }
 
         /** @brief 테이블이 비어 있는지 반환합니다. */
@@ -223,17 +264,22 @@ namespace sw
         /** @brief 슬롯을 비우고 세대를 올린 뒤 프리 리스트에 넣습니다(뮤텍스를 잡은 상태에서 부릅니다). */
         void freeSlot( uint32 index, Slot& slot ) SW_REQUIRES_LOCK( _mutex )
         {
-            slot._value             = T{};
+            slot._value = T{};
+            if ( releaseSlot( slot ) )
+                _freeSlot.push( index ); // 세대를 올린 바로 이 자리가 반납이다 — 이중 반납은 `findOccupiedSlot` 의 세대 검사가 막는다
+        }
+
+        /** @brief 칸의 점유를 풀고 세대를 올립니다(뮤텍스를 잡은 상태에서 부릅니다). 세대가 한 바퀴 돌아 버린 칸이면 false 입니다. */
+        bool releaseSlot( Slot& slot ) SW_REQUIRES_LOCK( _mutex )
+        {
             const uint32 generation = slot.generation( std::memory_order_relaxed );
             // 점유 해제와 세대 증가를 한 번의 store 로 발행한다. 둘로 나누면 그 사이에 락 없이 읽는 쪽이
             // "점유 중 + 옛 세대" 를 보고 비워지는 중인 값의 주소를 받아 간다.
             slot._state.store( SlotHandle::nextGeneration( generation, Slot::kGenerationMask ), std::memory_order_release );
-            if ( SlotHandle::isLastGeneration( generation, Slot::kGenerationMask ) )
-            {
-                ++_retiredCount; // 세대가 한 바퀴 돌았다 — 다시 쓰면 한 바퀴 전 핸들이 새 값을 가리킨다. 칸 하나를 버린다
-                return;
-            }
-            _freeSlot.push( index ); // 세대를 올린 바로 이 자리가 반납이다 — 이중 반납은 `findOccupiedSlot` 의 세대 검사가 막는다
+            if ( SlotHandle::isLastGeneration( generation, Slot::kGenerationMask ) == false )
+                return true;
+            ++_retiredCount; // 세대가 한 바퀴 돌았다 — 다시 쓰면 한 바퀴 전 핸들이 새 값을 가리킨다. 칸 하나를 버린다
+            return false;
         }
 
     private:
@@ -242,6 +288,7 @@ namespace sw
         mutable mutex           _mutex;
         uint32 _slotCount       SW_GUARDED_BY( _mutex ){ 0 }; ///< 지금까지 쓴 슬롯 수. 뮤텍스 안에서만 읽고 쓴다
         uint32 _retiredCount    SW_GUARDED_BY( _mutex ){ 0 }; ///< 세대가 한 바퀴 돌아 은퇴시킨 슬롯 수(`SlotHandle::isLastGeneration`)
+        uint32 _heldCount       SW_GUARDED_BY( _mutex ){ 0 }; ///< 세워 둔 슬롯 수(`takeAndHoldSlot`)
     };
 
     /**

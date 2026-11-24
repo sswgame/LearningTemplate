@@ -28,7 +28,7 @@ namespace sw
     struct SaveGameSavedEvent;
     struct SceneLoadCompletedEvent;
 
-    class ScreenFade;
+    class ScreenTransitionManager;
     class UIScreen;
     class UISystem;
 
@@ -111,9 +111,9 @@ namespace sw
          * @brief 한 프레임을 넘깁니다.
          * @param bLoading 아직 로드 중이면 true 이다. 씬 로드 요청이 남았거나 씬 매니저가 전환 중일 때이다.
          * @param loadProgress 로드 진행(0~1)입니다. 모르면 비웁니다 — 진행 슬라이더(`Progress`)를 접는다.
-         * @param fade     그릴 화면 페이드이다. 로딩 화면을 닫을 때 페이드 인을 시작한다. 페이드를 진행시키는 것(`ScreenFade::update`)은 주인(전환 관리자)의 일이다.
+         * @param transition 그릴 화면 페이드를 쥔 전환 관리자이다. 로딩 화면을 닫을 때 밝히기를 청한다(`fadeInFromBlack`). 페이드를 진행시키는 것(`ScreenFade::update`)은 주인(전환 관리자)의 일이다.
          */
-        void update( float32 deltaSeconds, bool bLoading, optional<float32> loadProgress, ScreenFade& fade );
+        void update( float32 deltaSeconds, bool bLoading, optional<float32> loadProgress, ScreenTransitionManager& transition );
         /** @brief 게임 인스턴스의 씬 흐름이 받는 창구(`ILoadingScreen`)입니다. 컨트롤러가 그 인터페이스를 함께 상속하지 않는다(다중 상속 금지 — 린트 `cpp-shape`). */
         ILoadingScreen& getLoadingScreen() { return _loadingScreenPort; }
 
@@ -162,7 +162,7 @@ namespace sw
 
             [[nodiscard]] bool hasLoadingScreenDocument() const override { return _owner.hasLoadingScreenDocument(); }
             bool               beginLoading() override { return _owner.beginLoading(); }
-            void               update( float32 deltaSeconds, bool bLoading, optional<float32> loadProgress, ScreenFade& fade ) override { _owner.update( deltaSeconds, bLoading, loadProgress, fade ); }
+            void               update( float32 deltaSeconds, bool bLoading, optional<float32> loadProgress, ScreenTransitionManager& transition ) override { _owner.update( deltaSeconds, bLoading, loadProgress, transition ); }
 
         private:
             LoadingScreenController& _owner;

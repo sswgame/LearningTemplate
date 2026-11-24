@@ -10,6 +10,7 @@
 #include "Core/Name/hashed_string.h"
 
 #include "Engine/Object/Component/Component.h"
+#include "Engine/Object/Component/SceneTeleportCursor.h"
 #include "Engine/Physics/Component/CharacterControllerComponent.h"
 #include "Engine/Reflection/ReflectionMacros.h"
 
@@ -68,7 +69,7 @@ namespace sw
      *          입력은 의도뿐이고 방식 상태(`_bClimbing` · `_climbReleaseLeft`)는 상태 칸이라 되감기 · 예측이 같은 의도 열로 같은 궤적을 낸다.
      *          PrePhysics 틱에서 폰의 의도를 읽고 `setMoveVelocity` · `jump` 를 부릅니다(컨트롤러 요청은 틱 안에서 불러도 된다). 수평 속도는 목표 속도로
      *          `_acceleration`(목표가 있을 때) · `_deceleration`(멈출 때)만큼 다가갑니다. 그래서 의도가 0/1 로 끊겨도 부드럽게 움직입니다.
-     *          탑승 중(`setSuspended( true )`)에는 아무것도 하지 않습니다(컨트롤러 속도도 0 으로 둔다).
+     *          컨트롤러가 멈춰 있으면(`CharacterControllerComponent::suspend` — 탑승 · 래그돌) 걷지 않습니다(이어 오던 속도와 컨트롤러 요청을 0 으로 둔다).
      *          **네트워크 예측**(`setNetDriven`): 켜면 틱이 아무것도 하지 않고, 고정 넷 틱의 걸음(`simulate`)이 컨트롤러까지 움직인다 — 서버 시뮬레이션 · 클라이언트 예측 · 되감아 다시 돌리기가
      *          이 한 함수다(`ShooterBodyMovementComponent::simulate` 와 같은 계약, `ClientPrediction` 이 쓴다). 틱과 걸음이 의도를 이동 입력으로 바꾸는 계산(`advance`)도 하나다.
      */
@@ -87,9 +88,6 @@ namespace sw
         void onBeginPlay() override;
         void onTick( TickContext& context ) override;
 
-        /** @brief 멈춰 둡니다(탑승 · 연출). 멈추는 순간 수평 속도를 0 으로 둡니다. */
-        void setSuspended( bool bSuspended );
-        bool isSuspended() const { return _bSuspended == SW_TRUE; }
         /** @brief 지난 틱에 오르기 구역에 매달려 있었으면 true 입니다. */
         bool isClimbing() const { return _bClimbing; }
         /** @brief 지금 수평 속도입니다(애니메이션 · 감시 값이 읽는다). */
@@ -173,11 +171,11 @@ namespace sw
         PROPERTY( RuntimeState, Category = "Movement", DisplayName = "Climbing", Tooltip = "Runtime" )
         bool _bClimbing;
 
+        SceneTeleportCursor    _teleport;  ///< 운동을 지우는 순간이동이면 걷는 속도 · 매달림도 지운다
         float32                _facingYaw; ///< 몸의 요
         optional<int32>        _sprintIndex;
         optional<int32>        _jumpIndex;
-        uint8                  _bSuspended : 1;
         uint8                  _bNetDriven : 1; ///< 고정 넷 틱이 움직인다(`setNetDriven`)
-        [[maybe_unused]] uint8 _reserved   : 6;
+        [[maybe_unused]] uint8 _reserved   : 7;
     };
 } // namespace sw

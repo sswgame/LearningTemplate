@@ -6,6 +6,9 @@
 #include "Engine/Content/AssetIO.h"
 #include "Engine/Content/CookJob.h"
 
+#define SW_TEST_INTERNAL // 임시 리소스 도메인 픽스처(`ScopedScratchDomain`)가 엔진 서비스를 직접 쓴다
+#include "Engine/Content/Tests/ScopedScratchDomain.h"
+
 using namespace sw;
 
 /**
@@ -57,4 +60,25 @@ SW_TEST_CASE( CookJobTest, SameSourceIgnoresTheContentHash )
         SW_EXPECT_FALSE( first.isSameSource( other ) );
         SW_EXPECT_TRUE( first.makeSourceKey() != other.makeSourceKey() );
     }
+}
+
+/** @brief [CookJobTest] 작업 안에서 "없음" 을 물은 것도 입력(해시 0)이다 — 있을 때만 읽는 리소스(층 파일)가 나중에 생기면 다시 굽는다. 있는 것은 뒤따르는 읽기가 기록한다 */
+SW_TEST_CASE( CookJobTest, ExistenceQueriesRecordTheMissingResource )
+{
+    const test::ScopedScratchDomain domain;
+    const AssetID                   missingID = test::ScopedScratchDomain::makeID( "layer.xml" );
+    const AssetID                   presentID = test::ScopedScratchDomain::makeID( "base.xml" );
+    SW_REQUIRE_TRUE( FileUtil::writeTextFile( domain.makeDiskPath( "base.xml" ), "<A/>" ) );
+
+    const CookJob job{ CookJobDesc{} };
+    SW_EXPECT_FALSE( AssetIO::hasAsset( missingID ) );
+    SW_EXPECT_TRUE( AssetIO::hasAsset( presentID ) );
+    SW_REQUIRE_EQUAL( size_t{ 1 }, job.getInputs().size() );
+    const CookInput& input = job.getInputs().front();
+    SW_EXPECT_TRUE( input._kind == CookInputKind::Resource );
+    SW_EXPECT_EQUAL( uint64{ 0 }, input._contentHash );
+    SW_EXPECT_EQUAL( uint64{ 0 }, input.computeCurrentHash() );
+
+    SW_REQUIRE_TRUE( FileUtil::writeTextFile( domain.makeDiskPath( "layer.xml" ), "<A/>" ) );
+    SW_EXPECT_TRUE( input.computeCurrentHash() != 0 ); // 생겼다 — 기록은 낡았다
 }

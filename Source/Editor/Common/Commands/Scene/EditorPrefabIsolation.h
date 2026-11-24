@@ -84,6 +84,8 @@ namespace sw::editor
          * @return 단계가 있어 빠져나왔으면 true 입니다.
          */
         [[nodiscard]] bool pop( GameObjectManager* pManager, PrefabIsolationFrame& outFrame );
+        /** @brief 프리팹 파일이 @p oldPath 에서 @p newPath 로 옮겨졌으면 그것을 고치던 단계의 저장 자리를 새 자리로 바꿉니다. */
+        void remapPath( string_view oldPath, string_view newPath );
         /** @brief 모든 단계를 버립니다. 오브젝트는 다시 보이게 하지 않으며, 씬을 비우거나 문서를 바꿀 때 씁니다. */
         void clear() { _listFrame.clear(); }
 

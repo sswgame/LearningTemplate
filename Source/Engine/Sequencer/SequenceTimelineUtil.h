@@ -4,6 +4,7 @@
  */
 #pragma once
 #include "Core/Container/vector.h"
+#include "Core/Delegate/Subscription.h"
 #include "Core/Foundation/Macros.h"
 #include "Core/Foundation/Types.h"
 #include "Core/Memory/Memory.h"
@@ -34,6 +35,7 @@ namespace sw
         CinematicBegin, ///< 컷이 없던 때 첫 컷이 시작했다 — 게임 카메라 화면에서 `_blendSeconds` 동안 섞어 들어간다
         CinematicEnd,   ///< 덮던 컷이 모두 끝났다(재생을 멈춘 때 포함) — 마지막 컷 화면에서 게임 카메라로 `_blendSeconds` 동안 섞어 나온다
         CutPrewarm,     ///< 컷이 `_framesUntil` 프레임 뒤에 시작한다 — 그 카메라를 "곧 볼 시점(대기 뷰)" 으로 등록할 때(언리얼 preroll)
+        PlaybackEnd,    ///< 재생이 끝났다(끝 · 멈춤 — 컷이 덮고 있었으면 `CinematicEnd` 다음). 항목 · 대상이 없다
         Shake,          ///< 카메라 흔들림 항목이 시작했다 — 대상 카메라를 구간 길이만큼 흔든다
     };
 } // namespace sw
@@ -93,14 +95,23 @@ namespace sw
     /** @brief 구간 처리기가 있는 항목(애니메이션 · 소리 · 자막) 하나의 재생 상태입니다. 들어간 뒤 나갈 때까지 산다. */
     struct SW_API SequenceSpanState
     {
-        SharedAssetRef<AnimationClip> _clip;           ///< 애니메이션: 들어갈 때 잡은 클립(머무는 동안 다시 찾지 않는다)
-        uint64                        _playingID;      ///< 소리: 낸 소리의 재생 id(엔진이 없으면 0)
-        uint32                        _subtitleLineID; ///< 자막: 올린 줄 번호(`ISubtitleSink::postSubtitle`, 없으면 0) — 나갈 때(멈춤 · 되감기 · 건너뛰기) 내린다
-        uint32                        _itemIndex;      ///< 시퀀스의 항목 번호
+        SharedAssetRef<AnimationClip> _clip;             ///< 애니메이션: 들어갈 때 잡은 클립(머무는 동안 다시 찾지 않는다)
+        Subscription                  _animatorOverride; ///< 애니메이션: 대상 애니메이터에 연 덮어쓰기 자리(놓으면 이 구간의 것만 사라진다)
+        uint64                        _overrideID;       ///< 애니메이션: 그 자리의 번호
+        uint64                        _playingID;        ///< 소리: 낸 소리의 재생 id(엔진이 없으면 0)
+        uint32                        _subtitleLineID;   ///< 자막: 올린 줄 번호(`ISubtitleSink::postSubtitle`, 없으면 0) — 나갈 때(멈춤 · 되감기 · 건너뛰기) 내린다
+        uint32                        _itemIndex;        ///< 시퀀스의 항목 번호
         uint8                         _bInside  : 1;
         [[maybe_unused]] uint8        _reserved : 7;
 
         explicit SequenceSpanState( uint32 itemIndex );
+        ~SequenceSpanState() = default;
+
+        // 덮어쓰기 자리의 주인이라 복사하지 않는다.
+        SequenceSpanState( const SequenceSpanState& )                = delete;
+        SequenceSpanState& operator=( const SequenceSpanState& )     = delete;
+        SequenceSpanState( SequenceSpanState&& ) noexcept            = default;
+        SequenceSpanState& operator=( SequenceSpanState&& ) noexcept = default;
     };
 
     /**
@@ -123,10 +134,17 @@ namespace sw
         vector<SequenceSpawnedObject> _listSpawned;
         vector<SequenceSpanState>     _listSpan;
         vector<SequenceRestoreEntry>  _listRestore;
+        Subscription                  _cameraCut;            ///< 카메라 컷 자리(`CameraRegistry::setCutCamera`). 컷 트랙이 있는 시퀀스만 쥔다
         uint8                         _bRestoreCaptured : 1; ///< `_listRestore` 가 이번 재생의 시작 상태다
         [[maybe_unused]] uint8        _reserved         : 7;
 
         SequencePlaybackState();
+        ~SequencePlaybackState() = default;
+
+        SequencePlaybackState( const SequencePlaybackState& )            = delete;
+        SequencePlaybackState& operator=( const SequencePlaybackState& ) = delete;
+        SequencePlaybackState( SequencePlaybackState&& )                 = delete;
+        SequencePlaybackState& operator=( SequencePlaybackState&& )      = delete;
     };
 
     /**
@@ -182,14 +200,15 @@ namespace sw
         /**
          * @brief 그 프레임의 클립 활성 상태, 카메라 컷, 키 트랙 값을 적용합니다(상태 — 이벤트는 보지 않는다, `applyPlayback`).
          * @details 묶이지 않은 바인딩의 항목 · 트랙은 건너뛴다(재생은 시작 때 누락을 오류로 멈춘다 — `SequencePlayerComponent::play`). 구간 동작은 `applySpans` 가 따로 돈다.
+         * @param inoutCameraCut 컷 트랙이 있는 시퀀스가 재생 동안 쥐는 컷 자리(`CameraRegistry::setCutCamera`). 끝낼 때 부르는 쪽이 푼다.
          */
-        static void applyFrame( GameObjectManager* pManager, const SequenceAsset& asset, const SequenceBindingView& bindings, int32 frame );
+        static void applyFrame( GameObjectManager* pManager, const SequenceAsset& asset, const SequenceBindingView& bindings, int32 frame, Subscription& inoutCameraCut );
         /**
          * @brief 플레이어의 갱신 하나를 적용합니다 — 지금 프레임의 상태(`applyFrame`)를 쓰고, 지난 구간마다(`PlaybackSegment::hasCrossed`) 문턱을 넘은 이벤트를 구간 순서대로 모읍니다.
          * @param pOutListCrossedEvent nullptr 가 아니면 이번에 지난 이벤트 항목들로 **채웁니다**(먼저 비웁니다). 가리키는 항목은 @p asset 의 원소라 에셋보다 오래 살지 않습니다.
          * @details 역방향 구간도 쏜다(언리얼 이벤트 트랙의 기본). 점프 갱신(구간 없음)은 쏘지 않는다.
          */
-        static void applyPlayback( GameObjectManager* pManager, const SequenceAsset& asset, const SequencePlaybackStep& step, const SequenceBindingView& bindings,
+        static void applyPlayback( GameObjectManager* pManager, const SequenceAsset& asset, const SequencePlaybackStep& step, const SequenceBindingView& bindings, Subscription& inoutCameraCut,
                                    vector<const SequenceTrackItem*>* pOutListCrossedEvent = nullptr );
         /** @brief 바인딩 @p bindingID 가 묶인 살아 있는 오브젝트입니다. 관리자가 없거나 묶이지 않았거나 지워졌으면 nullptr 입니다. 재생 · 미리보기 · 에디터의 키 찍기가 같은 규칙을 쓴다. */
         static GameObject* findTarget( GameObjectManager* pManager, const SequenceBindingView& bindings, uint32 bindingID );
@@ -226,8 +245,6 @@ namespace sw
         static void applySpawns( GameObjectManager* pManager, const SequenceAsset& asset, int32 frame, vector<SequenceSpawnedObject>& inoutListSpawned );
         /** @brief 시퀀스가 스폰한 오브젝트를 모두 지우고 목록을 비웁니다. 재생을 멈출 때 부릅니다. */
         static void releaseSpawns( GameObjectManager* pManager, vector<SequenceSpawnedObject>& inoutListSpawned );
-        /** @brief 시퀀스에 카메라 컷이 있으면 컷을 풉니다(게임 카메라가 원래 규칙으로 돌아간다). 재생을 멈출 때 부릅니다. */
-        static void releaseCameraCut( GameObjectManager* pManager, const SequenceAsset& asset );
         /**
          * @brief 구간 처리기가 있는 항목(애니메이션 · 소리 · 자막)을 @p frame 에 맞춥니다 — 구간에 들어가면 들어가기, 머무는 동안 머물기, 벗어나면 나가기를 부른다(`SequenceSpanHandler`).
          * @details 구간 상태는 @p inoutListSpan 이 쥔다(항목 번호로 찾는다). 대상이 필요한 항목인데 바인딩이 묶이지 않았으면 들어가지 않는다.

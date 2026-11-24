@@ -12,6 +12,7 @@
 #include "GameFramework/Kits/Genre/RPG/OpenWorldWestern/Component/FollowOwnerAIControllerComponent.h"
 #include "GameFramework/Kits/Genre/RPG/OpenWorldWestern/Component/WesternDeedComponent.h"
 #include "GameFramework/Kits/Genre/RPG/OpenWorldWestern/WesternCatalog.h"
+#include "GameFramework/Runtime/Character/Combat/TargetFilter.h"
 #include "GameFramework/Runtime/Character/Control/Pawn/PawnComponent.h"
 #include "GameFramework/Runtime/Gameplay/GameState/GameStateComponent.h"
 #include "GameFramework/Runtime/Gameplay/GameState/PlayerComponentUtil.h"
@@ -282,7 +283,10 @@ namespace sw
         const SceneComponent* pRoot    = pPawn != nullptr && pPawn->getOwner() != nullptr ? pPawn->getOwner()->getPrimarySceneComponent() : nullptr;
         if ( pManager == nullptr || pRoot == nullptr || _outlaw.getWantedLevel() <= 0 )
             return;
-        WesternWitnessComponent::collect( *pManager, _listWitness ); // 수집이 먼저 비운다 — 멤버는 용량만 넘긴다(수배 중 프레임마다 힙 할당을 하지 않는다)
+        if ( TargetFilter::isSelectable( *pPawn->getOwner() ) == false ) // 숨었거나 쓰러진 사람은 보이지 않는다(AI 시각 · 포탑과 같은 판정)
+            _listWitness.clear();
+        else
+            WesternWitnessComponent::collect( *pManager, _listWitness ); // 수집이 먼저 비운다 — 멤버는 용량만 넘긴다(수배 중 프레임마다 힙 할당을 하지 않는다)
         _outlaw.updateSeenByLaw( pRoot->getWorldPosition(), _listWitness );
     }
 } // namespace sw

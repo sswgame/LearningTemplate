@@ -15,8 +15,8 @@
 #include "Engine/Object/GameObject/Tick/TickInterval.h"
 #include "Engine/Physics/PhysicsSystem.h"
 
-#include "GameFramework/Runtime/Character/AI/AIStimulusSourceComponent.h"
 #include "GameFramework/Runtime/Character/Combat/Projectile/ResolvedShot.h"
+#include "GameFramework/Runtime/Character/Combat/TargetFilter.h"
 #include "GameFramework/Runtime/Character/Combat/Weapon/Ballistics.h"
 #include "GameFramework/Runtime/Gameplay/Gimmick/Combat/GimmickDamageUtil.h"
 #include "GameFramework/Runtime/Gameplay/Interaction/InteractionView.h"
@@ -101,6 +101,7 @@ namespace sw
         , _listShotTarget{}
         , _projectiles{}
         , _previousTarget{}
+        , _targetTeleport{}
         , _previousTargetPosition{}
     {
     }
@@ -203,9 +204,7 @@ namespace sw
         for ( const GameObject* pObject : _listTagged )
         {
             const SceneComponent* pOther = pObject->getPrimarySceneComponent();
-            // 숨은 것은 AI 시각과 같이 보이지 않는다 — 숨는 곳의 태그를 묻지 않으면 사람 눈만 속이고 포탑은 계속 쏜다.
-            const bool bCannotSee = pOther == nullptr || pObject->isActiveInHierarchy() == false || pObject->hasTag( AIStimulusSourceComponent::getHiddenTag(), true );
-            if ( bCannotSee )
+            if ( pOther == nullptr || TargetFilter::isSelectable( *pObject ) == false )
                 continue;
             InteractionCandidate candidate;
             candidate._position    = pOther->getWorldPosition();
@@ -225,10 +224,13 @@ namespace sw
         }
 
         // 조준: 요를 겨눌 곳 쪽으로 돌린다. 날아가는 탄은 대상이 움직인 만큼 앞을 겨눈다 — 처음 본 스텝은 속도를 모르므로 멈춘 것으로 본다.
-        const float3 targetPosition = listCandidate[static_cast<size_t>( *pick )]._position;
-        const float3 targetVelocity = _previousTarget == _target ? ( targetPosition - _previousTargetPosition ) * ( 1.0f / constant::time::kDefaultFixedStepSeconds ) : float3{};
-        _previousTarget             = _target;
-        _previousTargetPosition     = targetPosition;
+        const float3                targetPosition = listCandidate[static_cast<size_t>( *pick )]._position;
+        const GameObject* const     pTarget        = pManager->resolveGameObject( _target );
+        const SceneComponent* const pTargetScene   = pTarget != nullptr ? pTarget->getPrimarySceneComponent() : nullptr;
+        const bool                  bTeleported    = pTargetScene != nullptr && _targetTeleport.consume( *pTargetScene ).has_value();
+        const float3                targetVelocity = _previousTarget == _target && bTeleported == false ? ( targetPosition - _previousTargetPosition ) * ( 1.0f / constant::time::kDefaultFixedStepSeconds ) : float3{};
+        _previousTarget                            = _target;
+        _previousTargetPosition                    = targetPosition;
         float3        aimPoint{};
         float3        direction{};
         const bool    bCanHit    = computeAim( origin, targetPosition, targetVelocity, _projectileSpeed, _projectileGravityScale, aimPoint, direction );

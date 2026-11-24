@@ -703,6 +703,12 @@
 				<item>Source/Editor/Common/Widgets/EditorWidgets.cpp</item>
 			</origins>
 		</entry>
+		<entry key="EdCommon.ContentChangedOnDisk"
+		       source="{path} changed on disk after it was opened - reopen it to keep that version, or save again to overwrite it">
+			<origins>
+				<item>Source/Editor/Common/Workspace/Asset/EditorDiskBaseline.cpp</item>
+			</origins>
+		</entry>
 		<entry key="EdCommon.ContentReadOnly" source="{path} is read-only - Check Out (lock) it in the Content Browser first">
 			<origins>
 				<item>Source/Editor/Common/Commands/Asset/EditorContentWrite.cpp</item>

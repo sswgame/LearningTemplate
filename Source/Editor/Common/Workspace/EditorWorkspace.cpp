@@ -2,6 +2,8 @@
 
 #include "Editor/Common/Workspace/EditorWorkspace.h"
 
+#include "Core/Algorithm/VectorUtil.h"
+#include "Core/Container/span.h"
 #include "Core/Container/unordered_map.h"
 #include "Core/String/StringUtil.h"
 
@@ -10,6 +12,7 @@
 #include "Editor/Common/Workspace/EditorService.h"
 #include "Editor/Common/Workspace/Play/EditorPlaySession.h"
 
+#include "Engine/Content/AssetPaths.h"
 #include "Engine/Object/Component/Component.h"
 #include "Engine/Object/Component/ComponentStableKey.h"
 #include "Engine/Object/GameObject/GameObject.h"
@@ -45,6 +48,7 @@ namespace sw::editor
         , _copiedComponentXML{}
         , _copiedComponentTypeName{}
         , _pendingSceneMutex{}
+        , _sceneDiskBaseline{}
         , _arrCameraBookmark{}
         , _uniqueLockedObjectID{}
         , _gizmoOperation{ 0 }
@@ -144,40 +148,33 @@ namespace sw::editor
         _scrollToComponentID = _selectedComponentID;
     }
 
-    void EditorWorkspace::remapSelectionByObjectName( GameObjectManager* pGameObjectManager )
+    void EditorWorkspace::captureSceneDiskBaseline()
     {
-        if ( pGameObjectManager == nullptr )
+        const Scene* const pScene = editor::getActiveScene();
+        if ( pScene == nullptr || pScene->getSourcePath().empty() )
             return;
+        const optional<AbsolutePath> path = editor::getSubsystem<AssetPaths>().toDiskPath( pScene->getSourcePath() );
+        if ( path.has_value() )
+            _sceneDiskBaseline.capture( span<const AbsolutePath>( &*path, 1 ) );
+    }
 
-        const string name = getSelectedObjectName();
-        if ( name.empty() )
-        {
-            _selectedComponentID = 0;
+    bool EditorWorkspace::validateSceneDiskOverwrite( const AbsolutePath& path )
+    {
+        return _sceneDiskBaseline.validateOverwrite( span<const AbsolutePath>( &path, 1 ) );
+    }
+
+    void EditorWorkspace::refreshSelectionAfterRestore()
+    {
+        if ( _pEditorSelection == nullptr )
+            return;
+        // 오브젝트는 원래 id 로 돌아왔다 — 선택(핸들)은 그대로 맞고, 플레이 중에 생긴 것만 빠진다. 컴포넌트는 다시 만들어져 번호가 바뀌었을 수 있어 씬 파일과 같은 키로 다시 찾는다.
+        _pEditorSelection->pruneInvalid();
+        GameObject* const pPrimary = _pEditorSelection->getPrimaryObject();
+        Component* const  pResolved =
+            ( pPrimary != nullptr && _selectedComponentKey.empty() == false ) ? ComponentStableKey::findComponent( pPrimary, _selectedComponentKey ) : nullptr;
+        _selectedComponentID = pResolved != nullptr ? pResolved->getComponentID() : 0;
+        if ( pResolved == nullptr )
             _selectedComponentKey.clear();
-            return;
-        }
-
-        GameObject* pObj = pGameObjectManager->findGameObjectByName( hashed_string( name.c_str() ) );
-        if ( pObj == nullptr )
-        {
-            clearSelection();
-            return;
-        }
-
-        if ( _pEditorSelection != nullptr )
-            _pEditorSelection->selectObject( pObj, SelectionMode::Replace );
-
-        if ( _selectedComponentKey.empty() )
-        {
-            _selectedComponentID = 0;
-            return;
-        }
-
-        Component* pResolved = ComponentStableKey::findComponent( pObj, _selectedComponentKey );
-        if ( pResolved != nullptr )
-            _selectedComponentID = pResolved->getComponentID();
-        else
-            _selectedComponentID = 0;
     }
 
     void EditorWorkspace::notifyAssetsMoved( const EditorAssetMoveEvent& event )
@@ -204,6 +201,16 @@ namespace sw::editor
                 pScene->setSourcePath( itScene->second ); // 다음 저장(Ctrl+S)이 새 자리에 쓴다 — 옛 자리에 파일을 다시 만들지 않는다
             // 씬이 든 참조(컴포넌트 칸 · 엔티티 프리팹 · 중첩 부품)를 새 id 로 바꿔 끼운다 — 다시 읽지 않아 되돌리기 · 선택이 그대로이고, 디스크 글은 이미 고쳤으니 dirty 로 만들지 않는다.
             (void)EditorAssetReferenceUtil::remapScene( *pScene, mapOldToNew );
+            // 옮긴 씬 파일 · 글을 고친 참조 씬의 디스크는 편집기가 바꾼 것이다(미저장 참조 씬은 계획이 거절했다).
+            if ( itScene != mapOldToNew.end() || VectorUtil::contains( event._listRewrittenID, pScene->getSourcePath() ) )
+                captureSceneDiskBaseline();
+        }
+        // 미리보기 씬(프리팹 · 캐릭터 창)도 같은 참조를 든다 — 옛 경로로 남으면 그 창의 다음 저장이 정체성을 찾지 못해 없는 경로를 적는다.
+        SceneManager* const pSceneManager = editor::findSubsystem<SceneManager>();
+        if ( pSceneManager != nullptr )
+        {
+            for ( const PreviewSceneEntry& preview : pSceneManager->getPreviewScenes() )
+                (void)EditorAssetReferenceUtil::remapScene( *preview._scene, mapOldToNew );
         }
         if ( _pEditorSelection != nullptr )
             _pEditorSelection->remapAssets( mapOldToNew ); // 고른 에셋 경로도 글이다 — 옛 id 로 남으면 인스펙터 · 명령이 없는 파일을 가리킨다

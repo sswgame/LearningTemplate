@@ -17,6 +17,7 @@
 #include "Engine/Object/GameObject/Registry/ComponentRegistry.h"
 #include "Engine/Object/GameObject/Service/SceneSpatialGrid.h"
 
+#include "GameFramework/Runtime/Character/Combat/TargetFilter.h"
 #include "GameFramework/Runtime/Character/Control/Pawn/PawnComponent.h"
 #include "GameFramework/Runtime/Foundation/Framework/GameService.h"
 #include "GameFramework/Runtime/Gameplay/Ability/AbilitySystemComponent.h"
@@ -512,8 +513,15 @@ namespace sw
 
         InteractionView viewer;
         makeView( viewer );
-        gatherCandidates( manager, owner, viewer );
-        if ( _session.isActive() )
+        // 쓰러진 몸은 상호작용하지 않는다 — 조종은 그대로라 누른 채 죽으면 쥐고 있던 상호작용이 끝까지 간다.
+        const bool bDead = owner.hasTag( TargetFilter::getDeadTag(), true );
+        if ( bDead )
+            _listCandidate.clear();
+        else
+            gatherCandidates( manager, owner, viewer );
+        if ( _session.isActive() && bDead )
+            _session.cancel();
+        else if ( _session.isActive() )
             updateActiveSession( manager, viewer, context.getDeltaTime(), bHeld, bPressed );
         else
             updateFocusAndBegin( manager, owner, viewer, bPressed );

@@ -204,6 +204,19 @@ namespace sw
         SW_LOG_INFO_ID( "SceneManager.ShutDown", "Shut down." );
     }
 
+    void SceneManager::collectScenes( vector<Scene*>& outListScene ) const
+    {
+        outListScene.clear();
+        outListScene.reserve( _listLoadedScene.size() + _listPreviewScene.size() );
+        for ( const unique_ptr<Scene>& scene : _listLoadedScene )
+        {
+            if ( scene != nullptr )
+                outListScene.push_back( scene.get() );
+        }
+        for ( const PreviewSceneEntry& preview : _listPreviewScene )
+            outListScene.push_back( preview._scene.get() );
+    }
+
     Scene* SceneManager::createScene( string_view name )
     {
         const ScopedMemoryTag memoryScope{ kSubsystemMemoryTag };
@@ -608,6 +621,12 @@ namespace sw
         if ( _saveBlockReason.empty() == false )
         {
             SW_LOG_ERROR_ID( "Scene.SaveRefused", "Scene save refused — %#", _saveBlockReason );
+            return false;
+        }
+        // 플레이 중인 씬은 저작 상태가 아니다 — 원본 파일에는 쓰지 않는다(사본은 쓴다 - 버그 보고).
+        if ( _bWorldPlaying && sourceID.empty() == false )
+        {
+            SW_LOG_ERROR_ID( "SceneManager.SceneSaveWhilePlaying", "Scene save refused - the world is playing, '%#' would be overwritten with the play state", sourceID );
             return false;
         }
         Scene* pScene = getActiveScene();

@@ -98,7 +98,7 @@ namespace sw
         [[nodiscard]] SpawnStateReset resetToSpawnState() override;
 
         /**
-         * @brief 쓰러진 상태(`RagdollState::Ragdoll`)만 싣습니다 — 쓰러질 때 끈 컨트롤러는 그대로 실리므로, 이것이 없으면 불러온 몸이 움직이지 못한 채 서 있다.
+         * @brief 쓰러진 상태(`RagdollState::Ragdoll`)만 싣습니다 — 이것이 없으면 쓰러진 몸이 불러온 뒤 다시 서 있다(체력은 0 인 채로).
          * @details 누운 자세는 싣지 않는다 — 되돌린 몸은 그 자리에서 다시 쓰러진다. 부분 래그돌 · 반응 · 기상은 잠깐의 섞임이라 애니메이션으로 시작한다.
          */
         SW_DECLARE_STATE_IO_IN_PLACE();
@@ -185,8 +185,10 @@ namespace sw
         void updateWeights( SkeletalMeshComponent& unit, float32 deltaSeconds );
         /** @brief 후처리 단계에서 애니메이션 포즈와 물리 자세를 뼈 가중치로 섞습니다(워커). */
         void blendPhysicsPose( SkeletalMeshComponent& unit );
-        /** @brief 이 오브젝트의 캐릭터 컨트롤러를 켜고 끕니다(래그돌 동안 캡슐이 남지 않게). */
-        void setControllerActive( bool bActive );
+        /** @brief 이 오브젝트의 캐릭터 컨트롤러를 시뮬레이션에서 뺍니다(래그돌 동안 캡슐이 막지 않게). 놓기는 `_controllerSuspension` 을 비우는 것이다 — 남이 세운 것은 그대로다. */
+        void suspendController();
+        /** @brief 떼어 낸 뼈(`_listDetachedBone`)의 바디와 관절을 시뮬레이션에서 뺍니다. 바디를 지을 때마다 부릅니다. */
+        void applyDetachedBones( IPhysicsScene3D& scene );
         /** @brief 래그돌 동안 관절 모터를 섞기 전 애니메이션 포즈로 끌고(`_poweredMaxTorque` > 0), 벗어나면 끕니다. */
         void drivePoweredMotors( IPhysicsScene3D& scene );
 
@@ -223,9 +225,10 @@ namespace sw
         bool _bAutoGetUp;
 
         RagdollAnimationBinding        _binding;
-        Subscription                   _bindingRegistration; ///< 유닛 단계 작업 등록 구독(놓으면 유닛에서 빠진다)
-        Subscription                   _boneRequirement;     ///< 바디 본을 유닛 본 LOD 의 핵심 본으로 지키는 구독(`requirePhysicsBones`)
-        Subscription                   _hitSubscription;     ///< 맞음 사건 구독(`handleHit`)
+        Subscription                   _bindingRegistration;  ///< 유닛 단계 작업 등록 구독(놓으면 유닛에서 빠진다)
+        Subscription                   _boneRequirement;      ///< 바디 본을 유닛 본 LOD 의 핵심 본으로 지키는 구독(`requirePhysicsBones`)
+        Subscription                   _controllerSuspension; ///< 래그돌 동안 쥐는 캐릭터 컨트롤러 멈춤
+        Subscription                   _hitSubscription;      ///< 맞음 사건 구독(`handleHit`)
         SharedAssetRef<PhysicsAsset>   _asset;
         PhysicsRagdoll                 _ragdoll;
         vector<hashed_string>          _listBoneName;
@@ -243,7 +246,8 @@ namespace sw
         vector<quaternion>             _listKinematicStartRotation;
         vector<quaternion>             _listKinematicTargetRotation;
         vector<PendingImpulse>         _listPendingImpulse;
-        Pose                           _physicsPose; ///< 후처리용 스크래치 버퍼다.
+        vector<hashed_string>          _listDetachedBone; ///< 떼어 낸 뼈(절단) — 바디를 다시 지어도 떼어 둔다
+        Pose                           _physicsPose;      ///< 후처리용 스크래치 버퍼다.
         const Skeleton*                _pBoneNameSkeleton;
         SkeletalMeshComponent*         _pUnit;
         AssetReloadWatch<PhysicsAsset> _assetReload;

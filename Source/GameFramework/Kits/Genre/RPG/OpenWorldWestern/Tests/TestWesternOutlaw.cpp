@@ -2,12 +2,17 @@
 
 #include "Core/Testing/TestFramework.h"
 
+#include "Engine/Object/Component/SceneComponent.h"
+#include "Engine/Object/GameObject/GameObject.h"
+#include "Engine/Object/GameObject/GameObjectManager.h"
 #include "Engine/Serialization/Format/Archive.h"
 #include "Engine/Serialization/Format/StateIO.h"
 #include "Engine/Serialization/Format/Tests/StateBytesTestUtil.h"
 
+#include "GameFramework/Kits/Genre/RPG/OpenWorldWestern/Component/WesternDeedComponent.h"
 #include "GameFramework/Kits/Genre/RPG/OpenWorldWestern/WesternCatalog.h"
 #include "GameFramework/Kits/Genre/RPG/OpenWorldWestern/WesternOutlaw.h"
+#include "GameFramework/Runtime/Character/Combat/TargetFilter.h"
 #include "GameFramework/Runtime/Foundation/Condition/GameFlags.h"
 #include "GameFramework/Runtime/Gameplay/Inventory/Inventory.h"
 #include "GameFramework/Runtime/Gameplay/Inventory/ItemCatalog.h"
@@ -343,4 +348,20 @@ SW_TEST_CASE( WesternOutlawTest, LootAnimalsNeedALootCatalogAndABag )
     WesternOutlaw outlaw;
     SW_EXPECT_FALSE( outlaw.initialize( &rig._catalog, nullptr, rig._wallet, rig._reputation, rig._clock, rig._flags, rig._weather, &rig._bag, hashed_string( "frontier" ), 20.0f, AIPerceptionSettings{} ) );
     SW_EXPECT_FALSE( outlaw.initialize( &rig._catalog, &rig._loot, rig._wallet, rig._reputation, rig._clock, rig._flags, rig._weather, nullptr, hashed_string( "frontier" ), 20.0f, AIPerceptionSettings{} ) );
+}
+
+/** @brief [WesternOutlawTest] 쓰러진 목격자는 모으지 않는다 — 시체가 신고하거나 법 쪽의 눈이 되지 않는다 */
+SW_TEST_CASE( WesternOutlawTest, DeadWitnessIsNotCollected )
+{
+    GameObjectManager manager;
+    GameObject* const pLawman = manager.createGameObject( hashed_string( "Lawman" ) );
+    (void)pLawman->addComponent<SceneComponent>();
+    (void)pLawman->addComponent<WesternWitnessComponent>();
+    manager.beginPlay();
+    vector<WesternWitness> listWitness;
+    WesternWitnessComponent::collect( manager, listWitness );
+    SW_EXPECT_EQUAL( size_t{ 1 }, listWitness.size() );
+    pLawman->addTag( TargetFilter::getDeadTag() );
+    WesternWitnessComponent::collect( manager, listWitness );
+    SW_EXPECT_TRUE( listWitness.empty() );
 }

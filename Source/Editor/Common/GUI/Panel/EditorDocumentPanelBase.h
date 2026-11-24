@@ -11,6 +11,7 @@
 #include "Core/Foundation/Expected.h"
 
 #include "Editor/Common/GUI/Panel/EditorPanel.h"
+#include "Editor/Common/Workspace/Asset/EditorDiskBaseline.h"
 
 namespace sw::editor
 {
@@ -49,6 +50,7 @@ namespace sw::editor
          * @brief `saveDocument()` 를 호출하고 성공했을 때만 dirty 를 지웁니다.
          * @details 모든 저장 경로가 이 함수를 거친다. 파생 클래스가 각자 구현하면 실패해도 dirty 를 지워 편집이 조용히 사라지거나, 성공해도 계속 미저장으로 남는다.
          *          저장이 쓸 파일(`collectFilesToSave`) 중 하나라도 읽기 전용(버전 관리가 잠그지 않음)이면 `saveDocument` 를 부르지 않고 알린다 — 씬 저장 · 옮기기 · 삭제와 같은 확인(`EditorContentWrite::warnIfReadOnly`)이다.
+         *          연 뒤 밖에서 바뀐 파일이 있으면(`EditorDiskBaseline`) 첫 저장은 쓰지 않고 알린다. 다시 저장하면 덮어쓴다.
          * @return 저장에 성공했으면 true 입니다. false 이면 dirty 는 그대로 남습니다.
          */
         [[nodiscard]] bool saveDocumentAndClearDirty();
@@ -87,6 +89,8 @@ namespace sw::editor
          *          빠뜨리면 그 파일은 확인 없이 Core 원자적 쓰기에서 알림 없이 진다. 유니티 `AssetModificationProcessor.OnWillSaveAssets( paths )` 가 저장할 경로 목록으로 체크아웃을 묻는 자리다.
          */
         virtual void collectFilesToSave( vector<AbsolutePath>& outListPath ) const = 0;
+        /** @brief 저장하지 않은 문서의 글입니다(글이 없는 문서는 빈 글). 옮기기 계획이 디스크에 없는 새 참조를 여기서 찾는다(`EditorOpenDocument`). */
+        virtual string captureUnsavedText() const { return {}; }
         /** @brief 닫기 확인(Save / Don't Save / Cancel)을 기다리는 중이면 true 입니다. */
         bool isCloseConfirmPending() const { return _bConfirmClose; }
         /**
@@ -120,6 +124,7 @@ namespace sw::editor
             , _bDocumentDirty{ SW_FALSE }
             , _bConfirmClose{ SW_FALSE }
             , _lastCaptureMicroseconds{ 0 }
+            , _diskBaseline{}
         {
         }
 
@@ -143,8 +148,14 @@ namespace sw::editor
         void markDocumentDirty() { _bDocumentDirty = SW_TRUE; }
         /** @brief 저장이나 되돌리기 직후 dirty 를 지웁니다. */
         void clearDocumentDirty() { _bDocumentDirty = SW_FALSE; }
+        /** @brief 저장 앞에 부릅니다. 기본은 아무 일도 하지 않습니다(`EditorDocumentPanel` 이 옮긴 문서를 다시 읽는다). */
+        virtual void prepareDocumentForSave() {}
         /** @brief 문서를 디스크에 씁니다. 성공하면 true 입니다. */
         [[nodiscard]] virtual bool saveDocument() = 0;
+        /** @brief 문서가 디스크와 같아졌을 때(읽은 직후) 저장이 쓸 파일의 지금 내용을 기준으로 적습니다(`EditorDiskBaseline`). */
+        void captureDiskBaseline();
+        /** @brief 연 뒤 밖에서 바뀐 파일을 덮을 저장이면 알리고 false 입니다. 자기 규칙으로 이미 보는 패널(카탈로그 — 덮기 전 글을 이전 파일로 남긴다)만 재정의한다. */
+        [[nodiscard]] virtual bool validateDiskBeforeSave( const vector<AbsolutePath>& listPath );
         /**
          * @brief 지금 저장해도 되면 true 입니다. false 이면 `saveDocumentAndClearDirty` 가 `saveDocument` 를 호출하지 않고 false 를 반환합니다.
          * @details 문서를 읽지 못한 패널(깨졌거나 새 형식)은 이전 문서의 데이터를 가지고 있다. 그대로 쓰면 읽지 못한 파일을 이전 문서로 덮어쓴다.
@@ -165,8 +176,9 @@ namespace sw::editor
         void drawCloseConfirm();
 
     private:
-        uint8  _bDocumentDirty : 1;
-        uint8  _bConfirmClose  : 1;      ///< 닫으려다 미저장 확인을 기다리는 중
-        uint64 _lastCaptureMicroseconds; ///< `getLastCaptureMicroseconds` — 문서 패널 기반(`EditorDocumentPanel`)이 편집 알림의 글 만들기를 잰다
+        uint8              _bDocumentDirty : 1;
+        uint8              _bConfirmClose  : 1;      ///< 닫으려다 미저장 확인을 기다리는 중
+        uint64             _lastCaptureMicroseconds; ///< `getLastCaptureMicroseconds` — 문서 패널 기반(`EditorDocumentPanel`)이 편집 알림의 글 만들기를 잰다
+        EditorDiskBaseline _diskBaseline;            ///< 읽은(쓴) 때의 디스크 내용(`captureDiskBaseline` · `validateDiskBeforeSave`)
     };
 } // namespace sw::editor

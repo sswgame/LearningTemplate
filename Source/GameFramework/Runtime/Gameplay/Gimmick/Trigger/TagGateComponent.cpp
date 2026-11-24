@@ -57,8 +57,8 @@ namespace sw
         for ( const GameObject* pObject : _listTagged )
         {
             const SceneComponent* pOther = pObject->getPrimarySceneComponent();
-            if ( pOther == nullptr || pObject->getObjectID() == selfID )
-                continue;
+            if ( pOther == nullptr || pObject->getObjectID() == selfID || pObject->isActiveInHierarchy() == false )
+                continue; // 꺼진 것(주운 열쇠 · 풀에 돌아간 것)은 앞에 서 있지 않다
             float3 offset = pOther->getWorldPosition() - center;
             if ( _bPlanar )
                 offset._z = 0.0f;

@@ -312,6 +312,16 @@ namespace sw
         _pContext->CopySubresourceRegion( pTarget, 0, 0, 0, 0, pSource, 0, &region );
     }
 
+    uint64 D3D11RHICommandContext::findBufferBytes( RHIBufferHandle buffer ) const
+    {
+        ID3D11Buffer* const pBuffer = _pDevice->resolveBuffer( buffer );
+        if ( pBuffer == nullptr )
+            return 0;
+        D3D11_BUFFER_DESC desc{};
+        pBuffer->GetDesc( &desc );
+        return desc.ByteWidth;
+    }
+
     void D3D11RHICommandContext::copyBufferRegionNative( RHIBufferHandle destination, uint64 destinationOffset, RHIBufferHandle source, uint64 sourceOffset, uint64 sizeBytes )
     {
         ID3D11Buffer* pSource = _pDevice->resolveBuffer( source );

@@ -73,15 +73,15 @@ namespace sw
         , _computeClockAgeFrames{ 0 }
         , _bComputeTimestampComparable{ SW_FALSE }
         , _timestampRing{}
-        , _gpuBuffers{}
-        , _gpuTextures{}
+        , _gpuBuffers{ getBeginFrameCount() }
+        , _gpuTextures{ getBeginFrameCount() }
         , _offscreenViewMutex{}
         , _nextOffscreenRTVIndex{ 0 }
         , _nextOffscreenDSVIndex{ 0 }
         , _freeOffscreenRTV{}
         , _freeOffscreenDSV{}
         , _constantBufferMirror{}
-        , _pipelineStates{}
+        , _pipelineStates{ getBeginFrameCount() }
         , _swapChain{}
         , _bBindlessRootSignature{ SW_FALSE }
         , _bValidationLayer{ SW_FALSE }

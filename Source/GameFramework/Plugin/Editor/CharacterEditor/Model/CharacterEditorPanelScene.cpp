@@ -262,6 +262,12 @@ namespace sw::editor
         return StringUtil::endsWith( assetPath, SocketSet::kExtension );
     }
 
+    void CharacterEditorPanel::onAssetMoved( string_view oldPath, string_view newPath )
+    {
+        if ( string_view( _document.getPaths()._socketPath.c_str() ) == oldPath )
+            _document.editPaths()._socketPath = newPath;
+    }
+
     ToolAssetLoadResult CharacterEditorPanel::loadDocument()
     {
         // 콘텐츠 브라우저에서 고른 소켓 파일이 있으면 그것을, 없으면 경로 칸(팩 데이터의 소켓 파일)을 연다.

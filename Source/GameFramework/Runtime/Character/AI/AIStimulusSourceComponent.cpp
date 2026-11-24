@@ -11,6 +11,7 @@
 #include "Engine/Object/GameObject/Service/SceneSpatialGrid.h"
 
 #include "GameFramework/Runtime/Character/AI/AIPerception.h"
+#include "GameFramework/Runtime/Character/Combat/TargetFilter.h"
 
 namespace sw
 {
@@ -123,7 +124,7 @@ namespace sw
                     const float3 position = pScene->getWorldPosition();
                     if ( kindIndex == static_cast<size_t>( AIStimulusKind::Sight ) )
                     {
-                        if ( pObject->hasTag( getHiddenTag(), true ) == false )
+                        if ( TargetFilter::isSelectable( *pObject ) )
                             outListStimulus.push_back( AIStimulus::makeSight( position, pObject->getObjectID() ) );
                     }
                     else if ( source._noiseRadius > 0.0f )

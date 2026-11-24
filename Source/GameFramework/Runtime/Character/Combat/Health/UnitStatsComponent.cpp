@@ -99,6 +99,7 @@ namespace sw
     {
         _hp                   = hp;
         _maxHP                = maxHP;
+        _bIsDead              = hp <= 0; // 새 체력이 상태를 정한다 — 쓰러진 유닛을 다시 세우면 살아 있다
         _attack               = attack;
         _defense              = defense;
         _moveSpeed            = moveSpeed;

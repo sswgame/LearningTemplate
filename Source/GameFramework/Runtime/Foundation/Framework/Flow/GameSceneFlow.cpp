@@ -88,7 +88,7 @@ namespace sw
         const float32 realDeltaTime = game::getSubsystem<GameTimeScale>().getUnscaledDeltaTime();
         _screenTransition.update( realDeltaTime );
         if ( _pLoadingScreen != nullptr )
-            _pLoadingScreen->update( realDeltaTime, bLoading, loadProgress, _screenTransition.fade() );
+            _pLoadingScreen->update( realDeltaTime, bLoading, loadProgress, _screenTransition );
         if ( _listPendingSceneLoad.empty() == false )
             publishFinishedSceneLoads();
     }
@@ -168,6 +168,11 @@ namespace sw
     bool GameSceneFlow::hasTitleScene() const
     {
         return _settings._titleScene.isSet();
+    }
+
+    bool GameSceneFlow::isTitleScene( const string& scenePath ) const
+    {
+        return _settings._titleScene.isSet() && _settings._titleScene.get() == scenePath;
     }
 
     void GameSceneFlow::holdSessionCommand( Subscription registration )

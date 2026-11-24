@@ -271,15 +271,16 @@ namespace sw
         // 언리얼 게임이 세이브의 맵 이름으로 `OpenLevel` 한 뒤 적용하는 것과 같다(유니티는 `LoadSceneAsync` 의 완료에서 적용). 미니게임은 URL 로 경험 · 게임 모드를 함께 싣는 자리다.
         const optional<string>        savedSceneID  = GameStateSnapshot::readSceneID( bytes.data(), static_cast<uint32>( bytes.size() ) );
         const optional<vector<uint8>> minigameBytes = GameStateSnapshot::readMinigameBytes( bytes.data(), static_cast<uint32>( bytes.size() ) );
-        vector<MinigameSavedFrame>    listFrame;
-        const bool                    bHeaderRead = savedSceneID.has_value() && minigameBytes.has_value() && MinigameStack::readSaveState( *minigameBytes, listFrame );
+        MinigameSavedState            minigameState;
+        const bool                    bHeaderRead = savedSceneID.has_value() && minigameBytes.has_value() && MinigameStack::readSaveState( *minigameBytes, minigameState );
         if ( bHeaderRead == false )
         {
             publishSlotLoaded( slot, false, onApplied, sessionTravel ); // 머리가 틀린 까닭은 읽기가 남겼다
             return;
         }
-        MinigameFlow& minigameFlow = _owner.getSubsystem<MinigameFlow>();
-        const bool    bInMinigame  = minigameFlow.isInSavedMinigame( listFrame );
+        vector<MinigameSavedFrame>& listFrame    = minigameState._listFrame;
+        MinigameFlow&               minigameFlow = _owner.getSubsystem<MinigameFlow>();
+        const bool                  bInMinigame  = minigameFlow.isInSavedMinigame( listFrame );
         // 맡긴 이동이 남았으면 활성 씬은 곧 내려간다 — 거기 풀면 성공을 알린 뒤 씬과 함께 사라진다. 세이브의 씬을 다시 요청해 그 이동을 대신한다.
         const bool bStaysInScene = bInMinigame && sceneFlow.hasPendingSceneLoad() == false && *savedSceneID == GameSaveSlotsInternal::findActiveSceneID();
         if ( savedSceneID->empty() || bStaysInScene )
@@ -330,6 +331,11 @@ namespace sw
         const optional<GameStateSnapshot::SaveInfo> info = GameStateSnapshot::readSaveInfo( bytes.data(), static_cast<uint32>( bytes.size() ) );
         if ( info.has_value() )
             _playTime = info->_playTime;
+        // 넘기지 못한 결과도 이 세이브의 것이 된다 — 앞 진행이 번 것은 버린다(머리는 앞에서 읽혔다).
+        const optional<vector<uint8>> minigameBytes = GameStateSnapshot::readMinigameBytes( bytes.data(), static_cast<uint32>( bytes.size() ) );
+        MinigameSavedState            minigameState;
+        if ( minigameBytes.has_value() && MinigameStack::readSaveState( *minigameBytes, minigameState ) )
+            _owner.getSubsystem<MinigameFlow>().setPendingResults( std::move( minigameState._listResult ) );
         return true;
     }
 

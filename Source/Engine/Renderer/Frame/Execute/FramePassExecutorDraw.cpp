@@ -219,6 +219,7 @@ namespace sw
             const PassConstantNames&     names     = passConstantNames();
             const RHIPipelineStateHandle pso       = _psoManager.getEnginePSO( RenderPassKind::Shadow );
             const uint32                 viewCull  = context._cullViewIndex;
+            const uint32                 pending   = _pendingPSOBatchCount.load( std::memory_order_relaxed );
             context._shadowCasterFilter            = ShadowCasterFilter::StaticOnly;
             const vector<ShadowTileDraw>& listTile = _state._frameShadow._listLocalTile;
             for ( uint32 tileIndex = 0; tileIndex < static_cast<uint32>( listTile.size() ); ++tileIndex )
@@ -241,6 +242,9 @@ namespace sw
             context._passValues.setMatrix( names._lightViewProj, _pActiveView->_shadow._lightViewProj );
             context._pCmd->endRenderPass();
             cache.markRebuilt();
+            // PSO 를 만드는 중인 배치는 이 층에서 빠졌다(병렬 기록 중인 다른 패스의 몫이 섞일 수 있다 — 한 번 더 다시 그릴 뿐이다).
+            if ( _pendingPSOBatchCount.load( std::memory_order_relaxed ) != pending )
+                cache.markIncomplete();
             // 층은 이 패스가 깊이 쓰기로 선언했고 다시 그리는 프레임에만 등록했다(`registerViewResources`) — 복원이 읽도록 셰이더 읽기로 옮긴다.
             // 다시 그리지 않는 프레임은 지난번 다시 그린 뒤의 셰이더 읽기 그대로다(전이 없음).
             context._pGraphPass->transition( ViewGraphResource::shadowCacheLayer(), RenderGraphAccess::ShaderRead );

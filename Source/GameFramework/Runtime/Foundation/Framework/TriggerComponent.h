@@ -148,6 +148,9 @@ namespace sw
          */
         [[nodiscard]] bool   hasActivationAuthority() const;
         const hashed_string& getProgressFlag() const { return _progressFlag; }
+        /** @brief @p object 가 거리로 재는 활성자인지 · 그래서 지금 안에 있는지입니다(거리로 재는 활성자는 이탈 사건이 없다). */
+        bool isMeasuredByDistance( GameObjectHandle object ) const { return _radius > 0.0f && _activator == object; }
+        bool isInsideByDistance( GameObjectHandle object ) const { return isMeasuredByDistance( object ) && _bActivatorInside; }
 
     private:
         /** @brief 볼륨이 나타났다(시작 · 다시 켜짐) — 나타남 창을 다시 연다. */

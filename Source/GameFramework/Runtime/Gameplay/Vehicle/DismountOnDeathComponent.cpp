@@ -2,6 +2,7 @@
 
 #include "GameFramework/Runtime/Gameplay/Vehicle/DismountOnDeathComponent.h"
 
+#include "Engine/Character/Socket/SocketBindingComponent.h"
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Object/GameObject/GameObjectManagerResolve.inl"
 
@@ -13,6 +14,7 @@ namespace sw
 {
     DismountOnDeathComponent::DismountOnDeathComponent()
         : _healthListenerPort{}
+        , _movementSuspension{}
         , _bFallen{ SW_FALSE }
         , _reserved{ 0 }
     {
@@ -47,12 +49,20 @@ namespace sw
             (void)VehicleSeatComponent::dismount( *pPawn, true );
     }
 
+    void DismountOnDeathComponent::holdFall( Subscription&& suspension )
+    {
+        _bFallen            = SW_TRUE;
+        _movementSuspension = std::move( suspension );
+    }
+
     void DismountOnDeathComponent::resumeAfterFall()
     {
         if ( _bFallen == SW_FALSE || getOwner() == nullptr )
             return;
         _bFallen = SW_FALSE;
-        VehicleSeatComponent::resumeFallenRider( *getOwner() );
+        if ( SocketBindingComponent* const pBinding = getOwner()->getComponent<SocketBindingComponent>() )
+            pBinding->endPhysics();
+        _movementSuspension.reset();
     }
 
     void DismountOnDeathComponent::HealthListenerPort::onHealthChanged( const HealthChangedEvent& event )

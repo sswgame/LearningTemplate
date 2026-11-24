@@ -67,6 +67,7 @@ namespace sw
         , _binding{ *this }
         , _pSkeletalMesh{ nullptr }
         , _previousPosition{}
+        , _teleport{}
         , _measuredVelocity{}
         , _orientationAngle{ 0.0f }
         , _strideScale{ 1.0f }
@@ -126,6 +127,8 @@ namespace sw
         if ( pRoot == nullptr )
             return;
         // 속도 — 캐릭터 컨트롤러가 있으면 그 마지막 스텝의 속도, 없으면 트랜스폼 변화 ÷ 프레임 시간.
+        if ( _teleport.consume( *pRoot ).has_value() )
+            _bHasPrevious = false; // 순간이동은 걸음이 아니다
         const float3                        position    = pRoot->getWorldPosition();
         const CharacterControllerComponent* pController = pOwner->getComponent<CharacterControllerComponent>();
         if ( pController != nullptr && pController->hasBegunPlay() )

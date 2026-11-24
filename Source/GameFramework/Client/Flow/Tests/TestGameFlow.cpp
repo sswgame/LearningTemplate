@@ -55,16 +55,16 @@ SW_TEST_CASE( GameFlowTest, LoadingScreenWithoutUISystem )
     SW_EXPECT_FALSE( controller.isShowing() );
     SW_EXPECT_NULL( controller.findLoadingScreen() );
 
-    ScreenFade fade;
-    controller.update( 0.5f, false, sw::optional<float32>{ 0.5f }, fade );
+    ScreenTransitionManager transition;
+    controller.update( 0.5f, false, sw::optional<float32>{ 0.5f }, transition );
     SW_EXPECT_NEAR( 0.0f, controller.getShownSeconds(), 1.0e-6f );
-    SW_EXPECT_NEAR( 0.0f, fade.getOverlayAlpha(), 1.0e-6f );
+    SW_EXPECT_NEAR( 0.0f, transition.fade().getOverlayAlpha(), 1.0e-6f );
     SW_EXPECT_NULL( controller.findFadeScreen() );
 
-    fade.beginFadeOut( 0.1f );
-    fade.update( 0.05f ); // 어두워지는 중이어도 패널을 열 UI 가 없다
-    SW_EXPECT_TRUE( fade.getOverlayAlpha() > 0.0f );
-    controller.update( 0.5f, false, sw::nullopt, fade );
+    SW_REQUIRE_TRUE( transition.beginTransition( Delegate<void()>{}, 0.1f, 0.1f ).has_value() );
+    transition.update( 0.05f ); // 어두워지는 중이어도 패널을 열 UI 가 없다
+    SW_EXPECT_TRUE( transition.fade().getOverlayAlpha() > 0.0f );
+    controller.update( 0.5f, false, sw::nullopt, transition );
     SW_EXPECT_NULL( controller.findFadeScreen() );
     SW_EXPECT_TRUE( controller.getCurrentTip().empty() );
 }

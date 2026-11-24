@@ -285,11 +285,8 @@ namespace sw
             stopOutput();
         _bOutputOpen = SW_FALSE;
         _pEngine->releaseAudioThread(); // 장치 스레드가 끝났다 — 다음 렌더 스레드(오프라인 · 종료)가 받는다
-        // 리스너(덤프 파일)는 채널 수가 하나다. 옛 레이아웃의 스트림을 먼저 끝낸다.
-        AudioRenderListenerRegistry::notifyStreamEnded( _pEngine->getChannelLayout() );
-        const bool               bChanged = _pEngine->setChannelLayout( layout );
+        const bool               bChanged = applyChannelLayout( layout );
         const AudioChannelLayout current  = _pEngine->getChannelLayout();
-        _listOfflineBlock.assign( static_cast<size_t>( audio::kBlockFrameCount ) * AudioChannelLayoutUtil::getChannelCount( current ), 0.0f );
         if ( bChanged )
             _speakerMode = mode;
         if ( _bDeviceOpen )
@@ -330,6 +327,17 @@ namespace sw
         _musicPlayingID = 0;
         _bInitialized   = SW_FALSE;
         SW_LOG_INFO_ID( "AudioService.ShutDown", "Shut down." );
+    }
+
+    bool AudioService::applyChannelLayout( AudioChannelLayout layout )
+    {
+        if ( layout == _pEngine->getChannelLayout() )
+            return true;
+        // 리스너(덤프 파일)는 채널 수가 하나다. 옛 레이아웃의 스트림을 먼저 끝낸다.
+        AudioRenderListenerRegistry::notifyStreamEnded( _pEngine->getChannelLayout() );
+        const bool bChanged = _pEngine->setChannelLayout( layout );
+        _listOfflineBlock.assign( static_cast<size_t>( audio::kBlockFrameCount ) * AudioChannelLayoutUtil::getChannelCount( _pEngine->getChannelLayout() ), 0.0f );
+        return bChanged;
     }
 
     void AudioService::closeOutput()
@@ -380,11 +388,15 @@ namespace sw
         AudioOutputDevice device{};
         if ( openDevice( device ) == false )
             return;
-        // 엔진의 지금 레이아웃으로 잇는다 — 새 장치가 그 채널 수를 못 받으면(5.1 로 돌다 스테레오 헤드폰) 스피커 모드 협상(`setSpeakerMode`)이 바꿀 일이다. 여기서는 열지 않는다.
-        const AudioChannelLayout layout       = _pEngine->getChannelLayout();
-        const bool               bFitsChannel = device._channelCount >= AudioChannelLayoutUtil::getChannelCount( layout );
+        // 처음 열 때와 같은 규칙(`resolveLayout`)으로 새 장치에 맞춘다 — 자동이면 5.1 로 돌다 꽂은 스테레오 헤드폰으로 내려가고, 명시한 모드를 못 받는 장치면 열지 않고 다시 시도한다
+        // (언리얼 오디오 믹서의 장치 바꾸기도 새 장치의 채널 수로 다시 선다). 예전에는 지금 레이아웃보다 채널이 적은 장치를 끝없이 거절해 소리가 돌아오지 않았다.
+        AudioChannelLayout layout{ AudioChannelLayout::Stereo };
+        const bool         bResolved = resolveLayout( _speakerMode, device, layout );
+        if ( bResolved )
+            (void)applyChannelLayout( layout ); // 그래프가 거절하면 지금 레이아웃으로 이어 연다(이유는 엔진이 남긴다)
+        layout = _pEngine->getChannelLayout();
         _pEngine->releaseAudioThread(); // 렌더를 부를 스레드가 바뀐다(오프라인 → 장치 스레드)
-        if ( bFitsChannel == false || startOutput( layout ) == false )
+        if ( bResolved == false || startOutput( layout ) == false )
         {
             _pEngine->releaseAudioThread();
             closeDevice();

@@ -17,8 +17,11 @@ namespace sw
     SW_GLOBAL_VARIABLE( float32, gv_timeScale, 1.0f, "게임 시간 배율 (1=실시간, 0.25=슬로 모션, 0=멈춤)" );
 
     GameTimeScale::GameTimeScale()
-        : _pauseRequestCount{ 0 }
+        : _arrPauseRequestCount{}
+        , _worldTimeShareCount{ 0 }
         , _unscaledDeltaSeconds{ -1.0f }
+        , _pauseSubscriptions{ SW_DELEGATE_METHOD( SubscriptionList::ReleaseFunction, &GameTimeScale::releasePauseRequest, this ) }
+        , _worldTimeShareSubscriptions{ SW_DELEGATE_METHOD( SubscriptionList::ReleaseFunction, &GameTimeScale::releaseWorldTimeShare, this ) }
     {
     }
 
@@ -34,7 +37,10 @@ namespace sw
 
     bool GameTimeScale::isPaused() const
     {
-        return _pauseRequestCount.load( std::memory_order_relaxed ) > 0;
+        if ( _arrPauseRequestCount[static_cast<uint32>( GamePauseReason::Host )].load( std::memory_order_relaxed ) > 0 )
+            return true;
+        const bool bPlayerPause = _arrPauseRequestCount[static_cast<uint32>( GamePauseReason::Player )].load( std::memory_order_relaxed ) > 0;
+        return bPlayerPause && _worldTimeShareCount.load( std::memory_order_relaxed ) == 0;
     }
 
     void GameTimeScale::set( float32 scale )
@@ -42,20 +48,36 @@ namespace sw
         gv_timeScale = MathUtil::clamp( scale, kMinScale, kMaxScale );
     }
 
-    void GameTimeScale::addPauseRequest()
+    Subscription GameTimeScale::addPauseRequest( GamePauseReason reason )
     {
-        _pauseRequestCount.fetch_add( 1, std::memory_order_relaxed );
+        _arrPauseRequestCount[static_cast<uint32>( reason )].fetch_add( 1, std::memory_order_relaxed );
+        return _pauseSubscriptions.issue( static_cast<uint64>( reason ) );
     }
 
-    void GameTimeScale::removePauseRequest()
+    void GameTimeScale::releasePauseRequest( uint64 reason )
     {
-        SW_ASSERT( _pauseRequestCount.load( std::memory_order_relaxed ) > 0 );
-        _pauseRequestCount.fetch_sub( 1, std::memory_order_relaxed );
+        _arrPauseRequestCount[reason].fetch_sub( 1, std::memory_order_relaxed );
+    }
+
+    Subscription GameTimeScale::shareWorldTime()
+    {
+        _worldTimeShareCount.fetch_add( 1, std::memory_order_relaxed );
+        return _worldTimeShareSubscriptions.issue( 0 );
+    }
+
+    void GameTimeScale::releaseWorldTimeShare( [[maybe_unused]] uint64 unusedID )
+    {
+        _worldTimeShareCount.fetch_sub( 1, std::memory_order_relaxed );
     }
 
     uint32 GameTimeScale::getPauseRequestCount() const
     {
-        return _pauseRequestCount.load( std::memory_order_relaxed );
+        uint32 count = 0;
+        for ( const atomic<uint32>& reasonCount : _arrPauseRequestCount )
+        {
+            count += reasonCount.load( std::memory_order_relaxed );
+        }
+        return count;
     }
 
     void GameTimeScale::setUnscaledDeltaTime( float32 deltaSeconds )

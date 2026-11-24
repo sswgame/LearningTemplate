@@ -31,7 +31,7 @@ namespace sw::editor
     } // namespace
 
     SequencerViewModel::SequencerViewModel()
-        : _listPreviewSpan{}
+        : _preview{}
         , _listPreviewSpawn{}
         , _listNoSlot{}
         , _contextPlayer{}
@@ -143,14 +143,14 @@ namespace sw::editor
     {
         const SequencePlayerComponent* pContext = findBindingContext( documentPath );
         const float32                  fps      = pContext != nullptr ? pContext->getFramesPerSecond() : SequencerViewModelInternal::kDefaultFramesPerSecond;
-        EditorViewportPreview::applySequenceFrame( asset, makeBindingView( asset, pContext ), frame, fps, _listPreviewSpan );
+        EditorViewportPreview::applySequenceFrame( asset, makeBindingView( asset, pContext ), frame, fps, _preview );
     }
 
     void SequencerViewModel::releasePreview( const SequenceAsset& asset, string_view documentPath )
     {
         GameObjectManager* pManager = editor::getActiveObjectManager();
-        SequenceTimelineUtil::releaseSpans( pManager, asset, makeBindingView( asset, findBindingContext( documentPath ) ), SequencerViewModelInternal::kDefaultFramesPerSecond, _listPreviewSpan );
-        SequenceTimelineUtil::releaseCameraCut( pManager, asset );
+        SequenceTimelineUtil::releaseSpans( pManager, asset, makeBindingView( asset, findBindingContext( documentPath ) ), SequencerViewModelInternal::kDefaultFramesPerSecond, _preview._listSpan );
+        _preview._cameraCut.reset();
     }
 
     EditorAssetType SequencerViewModel::getDocumentType()

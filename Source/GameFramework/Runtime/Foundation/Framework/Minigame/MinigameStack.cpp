@@ -20,12 +20,49 @@ namespace sw
     {
         struct MinigameStackInternal
         {
-            static constexpr uint32 kMinBytesPerFrame = sizeof( uint32 ) + sizeof( uint8 ); ///< 이름 길이 + 갈래 번호
+            static constexpr uint32 kMinBytesPerFrame  = sizeof( uint32 ) + sizeof( uint8 ); ///< 이름 길이 + 갈래 번호
+            static constexpr uint32 kMinBytesPerResult = sizeof( uint32 ) * 4;               ///< 씬 · 미니게임 · 결과 이름 길이 + 값 수
+            static constexpr uint32 kMinBytesPerValue  = sizeof( uint32 ) + sizeof( int64 ); ///< 이름 길이 + 수
 
             /** @brief 씬을 GUID 참조로 적습니다 — 세이브가 남은 뒤 씬을 옮겨도 풀린다. */
             static void writeScene( Archive& arch, const string& scenePath )
             {
                 arch.writeString( AssetRegistry::makeReferenceText( scenePath, AssetRegistry::resolveGUID( scenePath ) ) );
+            }
+
+            /** @brief 넘기지 못한 결과 하나를 씁니다. */
+            static void writeResult( Archive& arch, const MinigamePendingResult& pending )
+            {
+                writeScene( arch, pending._scenePath );
+                arch.writeString( pending._result._minigame.view() );
+                arch.writeString( pending._result._resultName.view() );
+                arch << static_cast<uint32>( pending._result._listValue.size() );
+                for ( const MinigameResultValue& value : pending._result._listValue )
+                {
+                    arch.writeString( value._name.view() );
+                    arch << value._amount;
+                }
+            }
+
+            /** @brief `writeResult` 의 짝입니다. 잘렸거나 씬이 없으면 없음입니다. */
+            static optional<MinigamePendingResult> readResult( Archive& arch )
+            {
+                const expected<AssetReferenceTarget> scene = AssetRedirect::readSavedReference( arch.readString() );
+                MinigamePendingResult                pending;
+                pending._result._minigame   = hashed_string( arch.readString() );
+                pending._result._resultName = hashed_string( arch.readString() );
+                const uint32 count          = arch.readCount( kMinBytesPerValue );
+                for ( uint32 index = 0; index < count && arch.isError() == false; ++index )
+                {
+                    MinigameResultValue value;
+                    value._name = hashed_string( arch.readString() );
+                    arch >> value._amount;
+                    pending._result._listValue.push_back( std::move( value ) );
+                }
+                if ( arch.isError() || scene.has_value() == false || scene->_path.empty() )
+                    return nullopt;
+                pending._scenePath = scene->_path;
+                return pending;
             }
 
             /** @brief 돌아올 자리 하나를 갈래 번호와 함께 씁니다. */
@@ -102,7 +139,7 @@ namespace sw
     void MinigameStack::writeSaveState( vector<uint8>& outBytes ) const
     {
         outBytes.clear();
-        if ( _listFrame.empty() )
+        if ( _listFrame.empty() && _listResult.empty() )
             return;
         Archive arch;
         arch << static_cast<uint32>( _listFrame.size() );
@@ -111,12 +148,18 @@ namespace sw
             arch.writeString( frame._definition._name.view() );
             MinigameStackInternal::writeReturnPoint( arch, frame._returnPoint );
         }
+        arch << static_cast<uint32>( _listResult.size() );
+        for ( const MinigamePendingResult& pending : _listResult )
+        {
+            MinigameStackInternal::writeResult( arch, pending );
+        }
         outBytes.assign( arch.getData(), arch.getData() + arch.getSize() );
     }
 
-    bool MinigameStack::readSaveState( const vector<uint8>& bytes, vector<MinigameSavedFrame>& outListFrame )
+    bool MinigameStack::readSaveState( const vector<uint8>& bytes, MinigameSavedState& outState )
     {
-        vector<MinigameSavedFrame> listFrame;
+        MinigameSavedState          state;
+        vector<MinigameSavedFrame>& listFrame = state._listFrame;
         if ( bytes.empty() == false )
         {
             Archive      arch( bytes.data(), bytes.size() );
@@ -129,14 +172,23 @@ namespace sw
                     break;
                 listFrame.push_back( MinigameSavedFrame{ hashed_string( name ), std::move( *returnPoint ) } );
             }
-            if ( arch.isError() || count == 0 || listFrame.size() != count || arch.getRemainingBytes() != 0 )
+            const uint32 resultCount = listFrame.size() == count ? arch.readCount( MinigameStackInternal::kMinBytesPerResult ) : 0;
+            for ( uint32 index = 0; index < resultCount && arch.isError() == false; ++index )
+            {
+                optional<MinigamePendingResult> pending = MinigameStackInternal::readResult( arch );
+                if ( pending.has_value() == false )
+                    break;
+                state._listResult.push_back( std::move( *pending ) );
+            }
+            const bool bRead = arch.isError() == false && listFrame.size() == count && state._listResult.size() == resultCount && arch.getRemainingBytes() == 0;
+            if ( bRead == false || ( count == 0 && resultCount == 0 ) )
             {
                 SW_LOG_ERROR_ID( "MinigameStack.SaveStateNotRead", "The minigames this save was made in could not be read (%# of %# frames) - the save is not used",
                                  static_cast<uint32>( listFrame.size() ), count );
                 return false;
             }
         }
-        outListFrame = std::move( listFrame );
+        outState = std::move( state );
         return true;
     }
 
@@ -168,6 +220,24 @@ namespace sw
             return;
         VectorUtil::removeIf( inoutListValue, [this]( const MinigameResultValue& value )
         { return value._name == _definition._matchScore; } );
+    }
+
+    void MinigameStack::pushResult( const string& scenePath, MinigameResult result )
+    {
+        _listResult.push_back( MinigamePendingResult{ scenePath, std::move( result ) } );
+    }
+
+    vector<MinigameResult> MinigameStack::takeResults( const string& scenePath )
+    {
+        vector<MinigameResult> listTaken;
+        for ( MinigamePendingResult& pending : _listResult )
+        {
+            if ( pending._scenePath == scenePath )
+                listTaken.push_back( std::move( pending._result ) );
+        }
+        VectorUtil::removeIf( _listResult, [&scenePath]( const MinigamePendingResult& pending )
+        { return pending._scenePath == scenePath; } );
+        return listTaken;
     }
 
     void MinigameStack::push( MinigameFrame frame )

@@ -20,10 +20,13 @@ namespace
         static inline int32 s_openCount        = 0;
         static inline bool  s_bDeviceAvailable = true;
 
+        static inline sw::AudioChannelLayout s_deviceLayout = sw::AudioChannelLayout::Stereo; ///< 장치가 알리는 채널 배치다
+
         static void reset()
         {
             s_openCount        = 0;
             s_bDeviceAvailable = true;
+            s_deviceLayout     = sw::AudioChannelLayout::Stereo;
         }
         static sw::unique_ptr<sw::IAudioOutputDevice> create( sw::AudioService& /*service*/ ) { return sw::make_unique<FakeOutputDevice>(); }
 
@@ -32,8 +35,8 @@ namespace
             ++s_openCount;
             if ( s_bDeviceAvailable == false )
                 return false;
-            outDevice._channelCount = 2;
-            outDevice._channelMask  = sw::AudioChannelLayoutUtil::getChannelMask( sw::AudioChannelLayout::Stereo );
+            outDevice._channelCount = sw::AudioChannelLayoutUtil::getChannelCount( s_deviceLayout );
+            outDevice._channelMask  = sw::AudioChannelLayoutUtil::getChannelMask( s_deviceLayout );
             return true;
         }
         bool startOutput( sw::AudioChannelLayout layout ) override
@@ -93,6 +96,27 @@ SW_TEST_CASE( AudioServiceTest, OutputLossFallsBackToOfflineRender )
     for ( int32 tick = 0; tick < 40 && service.isOutputOpen() == false; ++tick )
         service.update( 0.1f ); // 백오프(1 · 2 초 …) 안에 다시 연다
     SW_EXPECT_TRUE( service.isOutputOpen() );
+}
+
+/**
+ * @brief [AudioServiceTest] 5.1 장치를 잃고 스테레오 장치가 기본이 되면(헤드폰을 꽂음) 자동 스피커 모드는 스테레오로 내려 다시 연다
+ * @details 변이: 다시 열 때 지금 레이아웃(5.1)의 채널 수만 보면 스테레오 장치를 끝없이 거절해 출력이 열리지 않는다.
+ */
+SW_TEST_CASE( AudioServiceTest, ReopenFollowsTheNewDeviceLayout )
+{
+    FakeOutputDevice::reset();
+    FakeOutputDevice::s_deviceLayout = sw::AudioChannelLayout::Surround51;
+    sw::AudioService service{ &FakeOutputDevice::create };
+    SW_REQUIRE_TRUE( service.initialize( makeOutputConfig() ) );
+    SW_REQUIRE_TRUE( service.getEngine().getChannelLayout() == sw::AudioChannelLayout::Surround51 );
+
+    FakeOutputDevice::s_deviceLayout = sw::AudioChannelLayout::Stereo;
+    SW_EXPECT_LOG( "AudioService.OutputLost" );
+    service.notifyOutputLost();
+    for ( int32 tick = 0; tick < 40 && ( tick == 0 || service.isOutputOpen() == false ); ++tick )
+        service.update( 0.1f ); // 백오프(1 · 2 초 …) 안에 다시 연다
+    SW_EXPECT_TRUE( service.isOutputOpen() );
+    SW_EXPECT_TRUE( service.getEngine().getChannelLayout() == sw::AudioChannelLayout::Stereo );
 }
 
 /** @brief [AudioServiceTest] 다시 열기 상한이 첫 간격보다 작으면 초기화가 실패한다 — 코드 기본값으로 대신하지 않는다. */

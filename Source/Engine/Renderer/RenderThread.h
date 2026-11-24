@@ -197,7 +197,9 @@ namespace sw
         /** @brief 우편함의 `requestScreenshot` 요청을 이번 프레임의 작업으로 받습니다. 프레임 본문 앞에서 부릅니다. */
         void takeScreenshotRequest();
         /** @brief 받은 `requestScreenshot` 요청을 이번 프레임에 쓸 차례면 씁니다. `endFrame` 뒤에 부릅니다. */
-        void writeRequestedScreenshot();
+        void writeRequestedScreenshot( bool bGraphDrew );
+        /** @brief 패킷이 실은 사진을 쓰지 못했다고 알리고 기다리는 쪽을 깨웁니다 — 이 프레임을 그리지 않았거나 읽지 못했다. */
+        void reportPacketScreenshotNotWritten( const RenderFramePacket& packet ) const;
         /**
          * @brief 에디터 렌더 타깃 창이 `RenderTargetRegistry::requestReadback` 으로 요청한 타깃을 CPU 로 읽어 레지스트리에 보관합니다. `endFrame` 뒤에 부릅니다.
          * @details 읽기 티켓은 요청한 프레임에 기다리지 않고(RHIAsyncUploads U9) 이후 프레임의 호출이 `pollTransfer` 로 보고 `Complete` 일 때 가져갑니다. 읽는 중에는 새 요청을

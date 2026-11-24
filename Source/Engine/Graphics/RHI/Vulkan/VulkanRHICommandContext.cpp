@@ -678,12 +678,6 @@ namespace sw
         const bool                           bNothingToCopy = cmd == VK_NULL_HANDLE || pSource == nullptr || pTarget == nullptr || pSource->_buffer == VK_NULL_HANDLE || pTarget->_buffer == VK_NULL_HANDLE || sizeBytes == 0;
         if ( bNothingToCopy )
             return;
-        if ( sizeBytes > pSource->_sizeBytes || sizeBytes > pTarget->_sizeBytes )
-        {
-            SW_LOG_ERROR_ID( "VulkanRHICommandContext.CopyBufferToReadbackOutside", "copyBufferToReadback: %# bytes do not fit the source (%# bytes) and the readback buffer (%# bytes); skipped", sizeBytes,
-                             pSource->_sizeBytes, pTarget->_sizeBytes );
-            return;
-        }
         // 복사는 렌더 패스 밖에서만 기록한다.
         if ( _pState->_bRenderPassActive == SW_TRUE )
         {
@@ -695,6 +689,12 @@ namespace sw
         vkCmdCopyBuffer( cmd, pSource->_buffer, pTarget->_buffer, 1, &region );
     }
 
+    uint64 VulkanRHICommandContext::findBufferBytes( RHIBufferHandle buffer ) const
+    {
+        const VulkanRHIDevice::VulkanBufferRecord* const pRecord = _pDevice->resolveAllocatedBuffer( buffer );
+        return pRecord != nullptr && pRecord->_buffer != VK_NULL_HANDLE ? pRecord->_sizeBytes : 0;
+    }
+
     void VulkanRHICommandContext::copyBufferRegionNative( RHIBufferHandle destination, uint64 destinationOffset, RHIBufferHandle source, uint64 sourceOffset, uint64 sizeBytes )
     {
         VkCommandBuffer                      cmd     = commandBuffer();
@@ -702,16 +702,6 @@ namespace sw
         VulkanRHIDevice::VulkanBufferRecord* pTarget = _pDevice->resolveAllocatedBuffer( destination );
         if ( cmd == VK_NULL_HANDLE || pSource == nullptr || pTarget == nullptr || pSource->_buffer == VK_NULL_HANDLE || pTarget->_buffer == VK_NULL_HANDLE )
             return;
-        // 범위 밖 복사는 로버스트 접근이 막지 않는다 — 같은 메모리 블록의 이웃 버퍼(VMA 하위 할당)를 조용히 덮는다. 앞단(`IRHICommandContext`)은 버퍼 크기를 몰라 여기서 본다.
-        // https://registry.khronos.org/vulkan/specs/latest/man/html/vkCmdCopyBuffer.html (VUID-vkCmdCopyBuffer-size-00115 · 00116)
-        const bool bSourceInside = sizeBytes <= pSource->_sizeBytes && sourceOffset <= pSource->_sizeBytes - sizeBytes;
-        const bool bTargetInside = sizeBytes <= pTarget->_sizeBytes && destinationOffset <= pTarget->_sizeBytes - sizeBytes;
-        if ( bSourceInside == false || bTargetInside == false )
-        {
-            SW_LOG_ERROR_ID( "VulkanRHICommandContext.CopyBufferRegionOutside", "copyBufferRegion: %# bytes from %# of a %#-byte buffer to %# of a %#-byte buffer is outside a buffer; skipped", sizeBytes,
-                             sourceOffset, pSource->_sizeBytes, destinationOffset, pTarget->_sizeBytes );
-            return;
-        }
         if ( _pState->_bRenderPassActive == SW_TRUE ) // 복사는 렌더 패스 밖에서만 기록한다
         {
             vkCmdEndRenderPass( cmd );

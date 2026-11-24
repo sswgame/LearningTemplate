@@ -5,6 +5,7 @@
  */
 #pragma once
 #include "Core/Container/vector.h"
+#include "Core/Delegate/Subscription.h"
 #include "Core/Foundation/Macros.h"
 #include "Core/Foundation/Types.h"
 #include "Core/Name/hashed_string.h"
@@ -83,8 +84,6 @@ namespace sw
         void sendPossessionChanged( const GameObjectHandle& pawnObject );
         /** @brief 잠금과 커서 숨김을 @p bLocked 로 맞춥니다. 이 조종자가 건 것만 풉니다. */
         void applyMouseLock( InputManager& input, bool bLocked );
-        /** @brief 이 매니저의 플레이어 입력을 반환합니다. 조종 시스템이 없으면(씬을 비우는 중) 게임 서비스의 것을 반환합니다. */
-        static InputManager* findInputManager( const GameObjectManager& manager );
 
     private:
         PROPERTY( Category = "Player", DisplayName = "View Blend", Tooltip = "Blend used when the view target follows possession" )
@@ -98,11 +97,11 @@ namespace sw
         PROPERTY( Category = "Player", DisplayName = "Mouse Lock Action", Tooltip = "InputMap action that releases and re-locks the cursor of a pawn that wants mouse lock (Esc)" )
         hashed_string _mouseLockAction;
 
-        vector<hashed_string>           _listPushedLayer;         ///< 빙의 때 넣은 레이어들(뺄 때 이름으로)
+        vector<Subscription>            _listPawnLayer;           ///< 빙의한 폰의 입력 레이어(`InputMap::pushLayer`)
+        Subscription                    _mouseLock;               ///< 이 조종자가 쥔 마우스 잠금(`InputManager::claimMouseLock`)
         GameObjectHandle                _previousPawn;            ///< 마지막으로 놓은 폰의 오브젝트(이벤트의 앞 폰)
         TComponentHandle<PawnComponent> _warnedPawn;              ///< 빠진 액션을 이미 경고한 폰
         uint8                           _bMouseLockRequested : 1; ///< 빙의한 폰을 위해 잠금을 유지하려 한다(토글 액션이 뒤집는다)
-        uint8                           _bMouseLockApplied   : 1; ///< 이 조종자가 입력 관리자에 잠금을 적용했다(빙의를 풀 때 해제한다)
-        [[maybe_unused]] uint8          _reserved            : 6;
+        [[maybe_unused]] uint8          _reserved            : 7;
     };
 } // namespace sw

@@ -10,6 +10,7 @@
 #include "Core/Container/span.h"
 #include "Core/Container/string.h"
 #include "Core/Container/vector.h"
+#include "Core/Delegate/Subscription.h"
 #include "Core/Foundation/Constants.h"
 #include "Core/Foundation/Types.h"
 #include "Core/Name/hashed_string.h"
@@ -20,7 +21,6 @@
 #include "Editor/Common/EditorSubsystem.h"
 #include "Editor/Common/Input/Model/EditorShortcutMap.h"
 
-#include "Engine/Input/InputKeyboardFocus.h"
 #include "Engine/Input/KeyCodeUtil.h"
 
 namespace sw::editor
@@ -121,8 +121,7 @@ namespace sw::editor
         EditorShortcutMap     _shortcuts;              ///< 맵 · 판정 · 재배치(Model)
         vector<QueuedCommand> _listQueuedCommand;      ///< `queueCommand` 가 넣은 것(다음 `processFrame` 이 비운다)
         EnumArray<Key, bool>  _arrForwardedKey;        ///< 에디터 창에서 넣은 눌린 키(키보드를 놓으면 놓는다)
-        InputKeyboardFocus    _focusBeforeTool;        ///< `Tool` 로 바꾸기 전의 키보드 주인(게임 스레드 — `applyKeyboardOwner`)
-        uint8                 _bToolOwnsKeyboard  : 1; ///< 이 서브시스템이 키보드 포커스를 `Tool` 로 둔 중이면 true
+        Subscription          _toolFocus;              ///< 에디터 창이 키보드를 가진 동안 쥔 `Tool` 포커스(게임 스레드 — `applyKeyboardOwner`)
         uint8                 _bCommandsSuspended : 1; ///< 재배치 창이 키를 받는 중이면 true
     };
 } // namespace sw::editor

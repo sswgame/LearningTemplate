@@ -174,6 +174,12 @@ namespace sw
         {
             return bHasMergedParts && bMeshMerged == false && bAssemblyInFlight;
         }
+        /**
+         * @brief 부품을 베이크가 걸릴 때까지 숨길지입니다 — 피팅하는 스킨드 부품이 아직 베이크한 메시를 받지 않았고 조립이 도는 중입니다.
+         * @details 피팅 전의 옷은 몸을 뚫고 나온다. 보임을 정하는 자리(`applyVisibility`)가 함께 묻는다 — 조립을 거는 자리에서만 숨기면 기다리는 동안 보임을
+         *          바꾼 쪽(1인칭 · 슬롯 숨김)이 피팅 전의 옷을 드러낸다.
+         */
+        [[nodiscard]] static bool isFitAwaited( bool bFittedPart, bool bBaked, bool bAssemblyInFlight ) { return bFittedPart && bBaked == false && bAssemblyInFlight; }
 
         /** @brief 프리셋과 시드를 바꾸고 다시 조립합니다. 슬롯 덮어쓰기는 그대로 둡니다. 선택으로 입히던 것(`applySelection` · `previewSelection`)은 풀고 프리셋 길로 돌아갑니다. */
         FUNCTION( Category = "Appearance", Exec )
@@ -473,6 +479,8 @@ namespace sw
         bool hasMergedParts() const;
         /** @brief 지금 상태로 `isMergedMeshAwaited` 를 묻습니다. */
         bool isAwaitingMergedMesh() const;
+        /** @brief 부품 @p spawned 에 지금 상태로 `isFitAwaited` 를 묻습니다. */
+        bool isAwaitingFit( const SpawnedPart& spawned ) const;
         /**
          * @brief 워커가 합친 메시(@p build 의 `_merged`, 비어 있지 않아야 한다)를 몸 유닛에 걸고 합친 부품의 조각마다 구간 컴포넌트를 둡니다.
          * @return 주인 오브젝트가 없으면 false 입니다(몸 원본만 그려진다).

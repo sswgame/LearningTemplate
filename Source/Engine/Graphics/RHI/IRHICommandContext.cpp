@@ -285,15 +285,38 @@ namespace sw
 
     void IRHICommandContext::copyBufferToReadback( RHIBufferHandle source, RHIBufferHandle readback, uint32 sizeBytes )
     {
+        const uint64 sourceBytes   = findBufferBytes( source );
+        const uint64 readbackBytes = findBufferBytes( readback );
+        if ( sourceBytes == 0 || readbackBytes == 0 )
+            return; // 놓은 핸들이다
+        if ( sizeBytes > sourceBytes || sizeBytes > readbackBytes )
+        {
+            SW_LOG_ERROR_ID( "RHI.CopyBufferToReadbackOutside", "copyBufferToReadback: %# bytes do not fit the source (%# bytes) and the readback buffer (%# bytes); skipped", sizeBytes, sourceBytes, readbackBytes );
+            return;
+        }
         endRenderPassBefore( "copyBufferToReadback" );
         copyBufferToReadbackNative( source, readback, sizeBytes );
     }
 
     void IRHICommandContext::copyBufferRegion( RHIBufferHandle destination, uint64 destinationOffset, RHIBufferHandle source, uint64 sourceOffset, uint64 sizeBytes )
     {
-        // 빈 복사 · 같은 버퍼(겹칠 수 있다 — DX12 · Vulkan 은 미정의)는 기록하지 않는다. 범위 검사는 백엔드가 버퍼 크기를 아는 곳에서 한다.
+        // 빈 복사 · 같은 버퍼(겹칠 수 있다 — DX12 · Vulkan 은 미정의)는 기록하지 않는다.
         if ( sizeBytes == 0 || destination == 0 || source == 0 || destination == source )
             return;
+        const uint64 sourceBytes      = findBufferBytes( source );
+        const uint64 destinationBytes = findBufferBytes( destination );
+        if ( sourceBytes == 0 || destinationBytes == 0 )
+            return; // 놓은 핸들이다
+        // 범위 밖 복사를 다섯 백엔드가 저마다 다루면 Vulkan(하위 할당)은 이웃 버퍼를 조용히 덮고 GL 은 그 복사만, WebGPU 는 명령 묶음 전체를 버린다 — 한 곳에서 거절하고 알린다.
+        // https://registry.khronos.org/vulkan/specs/latest/man/html/vkCmdCopyBuffer.html (VUID-vkCmdCopyBuffer-size-00115 · 00116)
+        const bool bSourceInside      = sizeBytes <= sourceBytes && sourceOffset <= sourceBytes - sizeBytes;
+        const bool bDestinationInside = sizeBytes <= destinationBytes && destinationOffset <= destinationBytes - sizeBytes;
+        if ( bSourceInside == false || bDestinationInside == false )
+        {
+            SW_LOG_ERROR_ID( "RHI.CopyBufferRegionOutside", "copyBufferRegion: %# bytes from %# of a %#-byte buffer to %# of a %#-byte buffer is outside a buffer; skipped", sizeBytes, sourceOffset, sourceBytes,
+                             destinationOffset, destinationBytes );
+            return;
+        }
         endRenderPassBefore( "copyBufferRegion" );
         copyBufferRegionNative( destination, destinationOffset, source, sourceOffset, sizeBytes );
     }

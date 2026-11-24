@@ -143,6 +143,8 @@ namespace sw
                 unordered_map<uint64, vector<SavedComponentState>> mapState;
                 if ( readComponentStates( componentBytes, mapState ) == false || appendStatesToObjects( sceneBytes, mapState ) == false )
                     return false;
+                if ( minigameBytes.empty() == false )
+                    minigameBytes.resize( minigameBytes.size() + sizeof( uint32 ), 0 ); // 칸 뒤에 넘기지 못한 결과 수가 생겼다(`MinigameStack::writeSaveState`) — 옛 세이브는 0
                 Archive out;
                 out << kMagic << kVersion << processToken;
                 out.writeString( sceneReference );

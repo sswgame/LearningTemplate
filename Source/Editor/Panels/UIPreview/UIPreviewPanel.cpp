@@ -305,7 +305,10 @@ namespace sw::editor
         if ( bDirty )
             markDocumentDirty();
         else
+        {
             clearDocumentDirty();
+            captureDiskBaseline(); // 모델이 디스크 문서로 다시 지었다(바깥 변경의 핫 리로드도)
+        }
     }
 
     void UIPreviewPanel::shutdown()

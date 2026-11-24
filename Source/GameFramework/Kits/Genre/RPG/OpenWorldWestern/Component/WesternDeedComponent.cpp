@@ -11,6 +11,7 @@
 #include "Engine/Object/GameObject/Registry/ComponentRegistry.h"
 
 #include "GameFramework/Kits/Genre/RPG/OpenWorldWestern/Component/WesternGameModeComponent.h"
+#include "GameFramework/Runtime/Character/Combat/TargetFilter.h"
 #include "GameFramework/Runtime/Gameplay/Interaction/InteractionView.h"
 
 #include <algorithm>
@@ -27,10 +28,11 @@ namespace sw
         outListWitness.clear();
         for ( const WesternWitnessComponent* pWitness : manager.getComponentRegistry().getAll<WesternWitnessComponent>() )
         {
-            const GameObject*     pOwner = pWitness->getOwner();
-            const SceneComponent* pScene = pOwner != nullptr ? pOwner->getPrimarySceneComponent() : nullptr;
-            if ( pScene == nullptr || pOwner->isActiveInHierarchy() == false )
-                continue;
+            const GameObject*     pOwner     = pWitness->getOwner();
+            const SceneComponent* pScene     = pOwner != nullptr ? pOwner->getPrimarySceneComponent() : nullptr;
+            const bool            bCannotSee = pScene == nullptr || pOwner->isActiveInHierarchy() == false || pOwner->hasTag( TargetFilter::getDeadTag(), true );
+            if ( bCannotSee )
+                continue; // 쓰러진 목격자는 보지도 신고하지도 못한다
             WesternWitness witness;
             witness._id       = pOwner->getObjectID();
             witness._position = pScene->getWorldPosition();
