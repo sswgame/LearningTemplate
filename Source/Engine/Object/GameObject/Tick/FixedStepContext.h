@@ -38,8 +38,9 @@ namespace sw
     class FixedStepContext final
     {
     public:
-        FixedStepContext( ScenePhysics& physics, float32 fixedDeltaTime, uint32 stepIndex, uint32 stepCount, float32 alpha )
+        FixedStepContext( ScenePhysics& physics, float32 frameDeltaTime, float32 fixedDeltaTime, uint32 stepIndex, uint32 stepCount, float32 alpha )
             : _pPhysics{ &physics }
+            , _frameDeltaTime{ frameDeltaTime }
             , _fixedDeltaTime{ fixedDeltaTime }
             , _stepIndex{ stepIndex }
             , _stepCount{ stepCount }
@@ -49,6 +50,8 @@ namespace sw
 
         /** @brief 이 물리 프레임을 도는 씬 물리입니다. */
         ScenePhysics& getPhysics() const { return *_pPhysics; }
+        /** @brief 이 물리 프레임의 게임 시간(초)입니다 — 시간이 서면 0. */
+        float32 getFrameDeltaTime() const { return _frameDeltaTime; }
         /** @brief 고정 스텝 길이(초)입니다. */
         float32 getFixedDeltaTime() const { return _fixedDeltaTime; }
         /** @brief 이 프레임의 몇 번째 스텝인지입니다(0 부터). */
@@ -60,6 +63,7 @@ namespace sw
 
     private:
         ScenePhysics* _pPhysics;
+        float32       _frameDeltaTime;
         float32       _fixedDeltaTime;
         uint32        _stepIndex;
         uint32        _stepCount;

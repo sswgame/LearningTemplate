@@ -262,8 +262,9 @@ namespace sw
         bool               bClimb = false;
         float3             surfaceVelocity{};
         float32            moveScale = 1.0f;
-        const bool         bManual   = _bManualSimulation == SW_TRUE;
-        editCommand( [&field, &climbVelocity, &bClimb, &surfaceVelocity, &moveScale, bManual]( CharacterCommand3D& command )
+        float3             rootMotion{};
+        const bool         bManual = _bManualSimulation == SW_TRUE;
+        editCommand( [&field, &climbVelocity, &bClimb, &surfaceVelocity, &moveScale, &rootMotion, bManual]( CharacterCommand3D& command )
         {
             field                  = command._pendingField;
             command._pendingField  = PhysicsFieldSample{};
@@ -272,19 +273,23 @@ namespace sw
             command._bPendingClimb = false;
             if ( bManual == false )
                 return;
-            // 손으로 돌리는 걸음은 프레임과 걸음 크기가 다르다 — 면 속도 · 이동 계수도 필드처럼 프레임마다 옮겨 두고 걸음이 그 값을 쓴다(걸음 없는 프레임에 쌓이지 않게).
+            // 손으로 돌리는 걸음은 프레임과 걸음 크기가 다르다 — 면 속도 · 이동 계수 · 루트 모션도 필드처럼 프레임마다 옮겨 두고 걸음이 그 값을 쓴다(걸음 없는 프레임에 쌓이지 않게).
             surfaceVelocity                 = command._pendingSurfaceVelocity;
             moveScale                       = command._pendingMoveScale;
+            rootMotion                      = command._pendingRootMotion;
             command._pendingSurfaceVelocity = float3{};
             command._pendingMoveScale       = 1.0f;
+            command._pendingRootMotion      = float3{};
         } );
         _frameField         = field;
         _frameClimbVelocity = climbVelocity;
         _bFrameClimb        = bClimb ? SW_TRUE : SW_FALSE;
         if ( bManual )
         {
-            _frameSurfaceVelocity = surfaceVelocity;
-            _frameMoveScale       = moveScale;
+            const float32 frameSeconds = context.getFrameDeltaTime();
+            _frameSurfaceVelocity      = surfaceVelocity;
+            _frameMoveScale            = moveScale;
+            _frameRootMotionVelocity   = frameSeconds > 0.0f ? rootMotion * ( 1.0f / frameSeconds ) : float3{}; // 시간이 서면 걸음도 없다
             _reportedMoveScale.store( moveScale, std::memory_order_relaxed );
         }
         if ( consumeRebuild() )
@@ -536,10 +541,22 @@ namespace sw
         const uint8 bNewManual = bManual ? SW_TRUE : SW_FALSE;
         if ( _bManualSimulation == bNewManual )
             return;
-        _bManualSimulation   = bNewManual;
-        _previousPosition    = _state._position;
-        _motionDisplayOffset = float3{};
-        _motionDisplayAlpha  = 1.0f;
+        _bManualSimulation = bNewManual;
+        // 걸음의 주인이 바뀐다 — 앞 주인이 쓰지 않은 한 번짜리 요청(점프 · 발사 · 루트 모션 · 멈춤 …)과 프레임 값은 다음 주인의 것이 아니다. 유지하는 이동 요청만 남긴다.
+        editCommand( []( CharacterCommand3D& command )
+        {
+            CharacterCommand3D kept{};
+            kept._moveVelocity      = command._moveVelocity;
+            kept._verticalMoveSpeed = command._verticalMoveSpeed;
+            command                 = kept;
+        } );
+        _physicsStep.assumeHeld(); // 게임 스레드, 틱 밖 — 스텝 훅과 겹치지 않는다
+        _frameRootMotionVelocity = float3{};
+        _frameSurfaceVelocity    = float3{};
+        _frameMoveScale          = 1.0f;
+        _previousPosition        = _state._position;
+        _motionDisplayOffset     = float3{};
+        _motionDisplayAlpha      = 1.0f;
     }
 
     CharacterMotionState CharacterControllerComponent::getMotionState() const
@@ -586,35 +603,35 @@ namespace sw
             return state;
         setMotionState( state );
         CharacterCommand3D command{};
-        _frameRootMotionVelocity = float3{};
+        const float3       frameRootMotion = _frameRootMotionVelocity; // 프레임의 값이다 — 한 프레임에 실제 걸음이 여럿이면 저마다 쓰고, 다시 돌리는 걸음은 보지 않는다
         if ( pass == CharacterMotionPass::Live )
         {
             // 밖에서 쌓은 충격은 실제 걸음이 한 번 쓴다 — 다시 돌리는 걸음은 보지 않는다.
             editCommand( [&command]( CharacterCommand3D& pending )
             {
-                command._pendingJumpSpeed  = pending._pendingJumpSpeed;
-                command._pendingLaunch     = pending._pendingLaunch;
-                command._pendingRootMotion = pending._pendingRootMotion;
-                command._bPendingStop      = pending._bPendingStop;
-                pending._pendingJumpSpeed  = 0.0f;
-                pending._pendingLaunch     = float3{};
-                pending._pendingRootMotion = float3{};
-                pending._bPendingStop      = false;
+                command._pendingJumpSpeed = pending._pendingJumpSpeed;
+                command._pendingLaunch    = pending._pendingLaunch;
+                command._bPendingStop     = pending._bPendingStop;
+                pending._pendingJumpSpeed = 0.0f;
+                pending._pendingLaunch    = float3{};
+                pending._bPendingStop     = false;
             } );
-            _frameRootMotionVelocity = command._pendingRootMotion * ( 1.0f / deltaTime );
-            _previousPosition        = state._position;
+            _previousPosition = state._position;
         }
+        else
+            _frameRootMotionVelocity = float3{};
         command._moveVelocity      = float3{ input._moveVelocity._x, 0.0f, input._moveVelocity._z };
         command._verticalMoveSpeed = input._verticalMoveSpeed;
         if ( input._jumpSpeed > 0.0f )
             command._pendingJumpSpeed = input._jumpSpeed;
         if ( input._launchVelocity.getLengthSquared() > 0.0f )
             command._pendingLaunch = input._launchVelocity;
-        _bFrameClimb        = input._bClimb;
-        _frameClimbVelocity = input._climbVelocity;
-        _queuedStepVelocity = beginStep( command, MathUtil::min( _frameMoveScale, MathUtil::max( input._moveScale, 0.0f ) ), pScene->getGravity()._y, deltaTime );
-        _state              = pass == CharacterMotionPass::Live ? pScene->moveCharacter( _character, _queuedStepVelocity, deltaTime )
-                                                                : pScene->replayCharacterMove( _character, _queuedStepVelocity, deltaTime );
+        _bFrameClimb             = input._bClimb;
+        _frameClimbVelocity      = input._climbVelocity;
+        _queuedStepVelocity      = beginStep( command, MathUtil::min( _frameMoveScale, MathUtil::max( input._moveScale, 0.0f ) ), pScene->getGravity()._y, deltaTime );
+        _frameRootMotionVelocity = frameRootMotion;
+        _state                   = pass == CharacterMotionPass::Live ? pScene->moveCharacter( _character, _queuedStepVelocity, deltaTime )
+                                                                     : pScene->replayCharacterMove( _character, _queuedStepVelocity, deltaTime );
         finishStep( deltaTime );
         return getMotionState();
     }

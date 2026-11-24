@@ -230,7 +230,7 @@ namespace sw
 
         /**
          * @brief 이 캐릭터의 걸음을 물리 고정 스텝 대신 부른 쪽이 `simulateMotion` 으로 돌립니다(유니티 `Physics.simulationMode = Script`, Godot 의 손 `move_and_slide` 자리). 게임 스레드, 틱 밖에서 부릅니다.
-         * @details 끄면 다음 물리 프레임부터 지금 상태에서 고정 스텝이 잇는다.
+         * @details 끄면 다음 물리 프레임부터 지금 상태에서 고정 스텝이 잇는다. 바뀔 때 쓰지 않은 한 번짜리 요청(점프 · 발사 · 루트 모션 …)은 버리고 이동 요청만 남긴다.
          */
         void setManualSimulation( bool bManual );
         bool isManualSimulation() const { return _bManualSimulation == SW_TRUE; }
