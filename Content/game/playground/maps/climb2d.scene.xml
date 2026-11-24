@@ -58,7 +58,7 @@
 			<GameObject _schemaVersion="0" _name="Hero" _bActive="true">
 				<_listComponent>
 					<CharacterController2DComponent _localID="17067313868497496670" _localPosition="-2,0.1,0" _localRotation="0,0,0" _localScale="1,1,1" _attachOwner="None" _attachComponent="None" _radius="0.3" _halfHeight="0.4" _maxSlopeAngle="45" _gravityScale="1" _layer="Character" _bInnerBody="true" />
-					<PawnComponent _localID="11149290121538025405" _moveAction="None" _lookAction="None" _upAction="None" _inputLayer="None" _aiControllerPrefab="" _maxPitch="80.21409" _autoPossess="None" _bLockMouse="false">
+					<PawnComponent _localID="11149290121538025405" _moveAction="None" _lookAction="None" _upAction="None" _aiControllerPrefab="" _maxPitch="80.21409" _autoPossess="None" _bLockMouse="false">
 						<_listButton>
 							<item>Jump</item>
 						</_listButton>

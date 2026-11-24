@@ -28,7 +28,7 @@ namespace sw
         , _lookSensitivity{ 0.0022f }
         , _bManageViewTarget{ true }
         , _mouseLockAction{ CommonInputActions::kToggleMouseLock } // 엔진 공용 액션 이름 — ControlSystem 이 코드로 붙이는 컨트롤러도 같은 값이다
-        , _pushedLayer{}
+        , _listPushedLayer{}
         , _previousPawn{}
         , _warnedPawn{}
         , _bMouseLockRequested{ SW_FALSE }
@@ -153,15 +153,14 @@ namespace sw
                                pInput->getLocalUserCount() );
         if ( pUserMap != nullptr )
         {
-            if ( pawn.getInputLayer().empty() == false )
+            for ( const hashed_string& layer : pawn.getInputLayers() )
             {
                 // pushLayer 는 없는 레이어를 빈 레이어로 만들어 넣는다 — 이름이 틀리면 그 레이어의 액션이 켜지지 않는 것을 알 길이 없어 미는 쪽에서 알린다.
-                if ( _warnedPawn != pawn.getHandle() && pUserMap->hasLayer( pawn.getInputLayer() ) == false )
-                    SW_LOG_WARNING_ID( "Control.InputLayerNotInInputMap", "Pawn '%#' input layer '%#' is not in the InputMap - pushing it enables no action", pPawnOwner->getName().c_str(),
-                                       pawn.getInputLayer().c_str() );
-                pUserMap->pushLayer( pawn.getInputLayer() );
-                _pushedLayer = pawn.getInputLayer();
+                if ( _warnedPawn != pawn.getHandle() && pUserMap->hasLayer( layer ) == false )
+                    SW_LOG_WARNING_ID( "Control.InputLayerNotInInputMap", "Pawn '%#' input layer '%#' is not in the InputMap - pushing it enables no action", pPawnOwner->getName().c_str(), layer.c_str() );
+                pUserMap->pushLayer( layer );
             }
+            _listPushedLayer = pawn.getInputLayers();
             if ( _warnedPawn != pawn.getHandle() )
             {
                 _warnedPawn = TComponentHandle<PawnComponent>{ &pawn };
@@ -186,12 +185,15 @@ namespace sw
         const ControlSystem* pSystem  = pManager != nullptr ? ControlSystem::find( *pManager ) : nullptr;
         InputManager*        pInput   = pSystem != nullptr ? pSystem->findInputManager() : nullptr;
         InputMap* const      pUserMap = pInput != nullptr ? pInput->findUserMap( _playerIndex ) : nullptr;
-        if ( pUserMap != nullptr && _pushedLayer.empty() == false )
-            pUserMap->popLayer( _pushedLayer );
+        for ( size_t index = _listPushedLayer.size(); index > 0; --index )
+        {
+            if ( pUserMap != nullptr )
+                pUserMap->popLayer( _listPushedLayer[index - 1] );
+        }
         _bMouseLockRequested = SW_FALSE;
         if ( pInput != nullptr )
             applyMouseLock( *pInput, false );
-        _pushedLayer  = hashed_string{};
+        _listPushedLayer.clear();
         _previousPawn = pawn.getOwner() != nullptr ? pawn.getOwner()->getHandle() : GameObjectHandle{};
         if ( isSwitchingPawn() == false )
             sendPossessionChanged( GameObjectHandle{} );
@@ -200,13 +202,24 @@ namespace sw
     void PlayerControllerComponent::warnMissingActions( const PawnComponent& pawn, const InputMap& inputMap )
     {
         const utf8* pPawnName = pawn.getOwner() != nullptr ? pawn.getOwner()->getName().c_str() : "?";
+        // 폰이 제 레이어를 쌓으면 그 밖의 레이어는 꺼진다 — 목록에서 빠진 레이어의 액션은 로그 없이 영영 눌리지 않는다.
+        const bool bOwnLayers   = pawn.getInputLayers().empty() == false;
+        const auto warnLayerOff = [&inputMap, pPawnName, bOwnLayers]( const hashed_string& name )
+        {
+            const hashed_string layer = inputMap.findBindingLayer( name, 0 );
+            if ( bOwnLayers && layer.empty() == false && inputMap.isLayerEnabled( layer ) == false )
+                SW_LOG_WARNING_ID( "Control.ActionLayerNotInPawnLayers", "Pawn '%#' action '%#' is in the input layer '%#' that the pawn's input layers leave off - a player cannot use it", pPawnName, name.c_str(),
+                                   layer.c_str() );
+        };
         for ( const hashed_string& name : pawn.getButtonNames() )
         {
+            warnLayerOff( name );
             if ( inputMap.getActionHandle( name ).isValid() == false )
                 SW_LOG_WARNING_ID( "Control.IntentButtonNotInInputMap", "Pawn '%#' intent button '%#' has no InputMap action - a player cannot press it", pPawnName, name.c_str() );
         }
         for ( const hashed_string& name : pawn.getAnalogNames() )
         {
+            warnLayerOff( name );
             if ( inputMap.getActionHandle( name ).isValid() == false )
                 SW_LOG_WARNING_ID( "Control.IntentAnalogNotInInputMap", "Pawn '%#' intent analog '%#' has no InputMap action - a player cannot drive it", pPawnName, name.c_str() );
         }
@@ -214,6 +227,7 @@ namespace sw
         const hashed_string* arrAxisAction[] = { &pawn.getMoveAction(), &pawn.getLookAction(), &pawn.getUpAction() };
         for ( const hashed_string* pAction : arrAxisAction )
         {
+            warnLayerOff( *pAction );
             if ( pAction->empty() == false && inputMap.getActionHandle( *pAction ).isValid() == false )
                 SW_LOG_WARNING_ID( "Control.AxisActionNotInInputMap", "Pawn '%#' axis action '%#' has no InputMap action - a player cannot drive it", pPawnName, pAction->c_str() );
         }

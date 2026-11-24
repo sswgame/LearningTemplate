@@ -21,6 +21,7 @@
 	<Intent pawn="Kart" move="0,1" frames="360"/>
 	<WaitUntil watch="Object.Property" target="BoostPad" key="BoostPadComponent._boostCount" equals="1" timeoutFrames="300"/>
 	<WaitUntil watch="Vehicle.ForwardSpeed" target="Kart" atLeast="31" timeoutFrames="90"/>
+	<Expect watch="Object.Y" target="Kart" near="0" tolerance="0.05"/> <!-- 제 몸을 딛지 않고 땅을 달린다 -->
 
 	<!-- ③ 소리 → 경비 -->
 	<Expect watch="AI.State" target="GuardBrain" is="Idle"/>

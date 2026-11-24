@@ -356,6 +356,17 @@ namespace
         void                shutdownSubsystem() override {}
         const utf8*         getSubsystemName() const override { return "HostModuleProbe"; }
     };
+
+    /** @brief 호스트 모듈에 보인다고 선언한, 서브시스템이 아닌 멤버 형식입니다. */
+    struct DeclaredMember
+    {
+        static constexpr SubsystemModuleVisibility kModuleVisibility = SubsystemModuleVisibility::HostModules;
+    };
+
+    /** @brief 노출을 선언하지 않은 멤버 형식입니다. */
+    struct PlainMember
+    {
+    };
 } // namespace
 
 /**
@@ -377,6 +388,24 @@ SW_TEST_CASE( SubsystemScopeTest, HostModuleVisibilityFollowsTheDeclaration )
 
     scope.destroyAll();
     SW_EXPECT_TRUE( scope.findHostModuleVisibleInScope( getSubsystemTypeHash<HostModuleProbeSubsystem>() ) == nullptr ); // 지운 서브시스템을 가리키지 않는다
+}
+
+/** @brief [SubsystemScopeTest] 서브시스템이 드러낸 멤버는 멤버의 형식이 선언한 호스트 모듈 노출을 따른다 — 선언하지 않은 멤버는 보이지 않고 주인과 함께 사라진다 */
+SW_TEST_CASE( SubsystemScopeTest, ExposedMemberFollowsItsOwnDeclaration )
+{
+    SubsystemScope       scope;
+    ScopeProbeSubsystem& owner = scope.emplaceSubsystem<ScopeProbeSubsystem>( nullptr );
+    DeclaredMember       declared{};
+    PlainMember          plain{};
+    SW_EXPECT_TRUE( scope.exposeMember<DeclaredMember>( owner, declared ) );
+    SW_EXPECT_TRUE( scope.exposeMember<PlainMember>( owner, plain ) );
+
+    SW_EXPECT_TRUE( scope.findHostModuleVisibleInScope( getSubsystemTypeHash<DeclaredMember>() ) == &declared );
+    SW_EXPECT_TRUE( scope.findHostModuleVisibleInScope( getSubsystemTypeHash<PlainMember>() ) == nullptr );
+    SW_EXPECT_TRUE( scope.find<PlainMember>() == &plain );
+
+    scope.destroyAll();
+    SW_EXPECT_TRUE( scope.findHostModuleVisibleInScope( getSubsystemTypeHash<DeclaredMember>() ) == nullptr );
 }
 
 /**

@@ -3,7 +3,9 @@
 #include "Core/Testing/TestFramework.h"
 
 #include "Editor/Panels/Scene/Model/HierarchyRowTree.h"
+#include "Editor/Panels/Scene/Model/HierarchyViewModel.h"
 
+#include "Engine/Object/Component/CameraComponent.h"
 #include "Engine/Object/Component/SceneComponent.h"
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
@@ -123,4 +125,28 @@ SW_TEST_CASE( HierarchyRowTreeTest, FilterKeepsAncestorsAndHiddenRootIsLeftOut )
     SW_EXPECT_FALSE( rows.isFilterActive() );
     SW_EXPECT_TRUE( rows.getVisibleRootCount() == 1u );
     SW_EXPECT_FALSE( rows.findObjectRowIndex( pOther->getObjectID() ).has_value() );
+}
+
+/**
+ * @brief [HierarchyRowTreeTest] 씬이 세운 기본 게임 카메라뿐인 루트만 빈 씬이다 — 활성 게임 카메라가 아니거나, 자식 · 다른 컴포넌트가 있으면 사람이 놓은 것이다
+ */
+SW_TEST_CASE( HierarchyRowTreeTest, OnlyABareActiveGameCameraIsAnEmptyScene )
+{
+    using sw::editor::HierarchyViewModel;
+    using Internal = HierarchyRowTreeTestInternal;
+
+    sw::GameObjectManager manager;
+    sw::GameObject*       pCameraObject = manager.createGameObject( sw::hashed_string( "GameCamera" ) );
+    sw::GameObject*       pOther        = Internal::spawn( manager, "Prop" );
+    SW_REQUIRE_NOT_NULL( pCameraObject );
+    SW_REQUIRE_NOT_NULL( pOther );
+    const sw::CameraComponent* pCamera = pCameraObject->addComponent<sw::CameraComponent>();
+    SW_REQUIRE_NOT_NULL( pCamera );
+
+    SW_EXPECT_TRUE( HierarchyViewModel::isBareGameCamera( *pCameraObject, pCamera ) );
+    SW_EXPECT_FALSE( HierarchyViewModel::isBareGameCamera( *pCameraObject, nullptr ) );
+    SW_EXPECT_FALSE( HierarchyViewModel::isBareGameCamera( *pOther, pCamera ) );
+
+    SW_REQUIRE_TRUE( pOther->attachToParent( pCameraObject ) );
+    SW_EXPECT_FALSE( HierarchyViewModel::isBareGameCamera( *pCameraObject, pCamera ) );
 }

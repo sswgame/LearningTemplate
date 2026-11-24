@@ -33,7 +33,20 @@ namespace sw::editor
             SW_LOG_ERROR_ID( "EditorIcon.TableCannotRead", "Editor icon table could not be read: %#", assetID.view() );
             return false;
         }
-        return loadFromXMLText( text, assetID.view() );
+        if ( loadFromXMLText( text, assetID.view() ) == false )
+            return false;
+        // 코드가 쓰는 이름은 컴파일 때 목록으로 막았다 — 목록과 표가 어긋나면 그리기 전에(기동에서) 멈춘다.
+        bool bComplete = true;
+        for ( const utf8* pName : EditorIconName::kArrName )
+        {
+            if ( findGlyph( hashed_string{ pName } ) != nullptr )
+                continue;
+            SW_LOG_ERROR_ID( "EditorIcon.CodeNameNotInTable", "Editor icon '%#' (EditorIconName::kArrName) is not in %#", pName, assetID.view() );
+            bComplete = false;
+        }
+        if ( bComplete == false )
+            *this = EditorIconGlyphTable{};
+        return bComplete;
     }
 
     bool EditorIconGlyphTable::loadFromXMLText( string_view xmlText, string_view sourceName )

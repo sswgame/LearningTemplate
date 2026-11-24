@@ -1,18 +1,15 @@
-// EditorIconNames — 아이콘 이름 → 코드포인트 표(`sweditoricons.glyphs.xml`)가 엄격하게 읽히고, 코드(`SW_EDITOR_ICON` · `SW_EDITOR_ICON_NAME`) · 컴포넌트 메타(`Icon=`) ·
-// 컴포넌트 아이콘 표가 쓰는 이름이 모두 표에 있으며, 깨진 표(겹친 이름 · Missing 없음 · 틀린 코드포인트)는 읽지 않는다. 테마 키 검사(`EditorThemeKeys`)와 같은 자리다(nogpu).
+// EditorIconNames — 아이콘 이름 → 코드포인트 표(`sweditoricons.glyphs.xml`)가 엄격하게 읽히고, 코드가 쓰는 이름 목록(`EditorIconName::kArrName` — 목록 밖의 리터럴은 컴파일되지 않는다) ·
+// 컴포넌트 메타(`Icon=`) · 컴포넌트 아이콘 표가 쓰는 이름이 모두 표에 있으며, 깨진 표(겹친 이름 · Missing 없음 · 틀린 코드포인트)는 읽지 않는다. 테마 키 검사(`EditorThemeKeys`)와 같은 자리다(nogpu).
 #include "pch.h"
 
-#include "Core/Container/unordered_set.h"
-#include "Core/File/FileUtil.h"
-#include "Core/File/ProcessRoots.h"
 #include "Core/String/StringBuilder.h"
-#include "Core/String/StringUtil.h"
 #include "Core/String/fixed_string.h"
 #include "Core/String/formatString.h"
 #include "Core/Testing/TestFramework.h"
 
 #include "Editor/Common/Config/EditorComponentIconTable.h"
 #include "Editor/Common/Config/EditorIconGlyphTable.h"
+#include "Editor/Common/Config/EditorIconName.h"
 #include "Editor/Common/Config/EditorPaths.h"
 #include "Editor/Common/Workspace/EditorService.h"
 
@@ -24,45 +21,6 @@ using namespace sw::editor;
 
 namespace
 {
-    /** @brief @p text 에서 `macro( "이름" )` 의 이름을 모읍니다. 매크로 정의처럼 리터럴이 오지 않는 자리는 건너뛴다. */
-    void collectNameLiterals( string_view text, string_view macro, unordered_set<string>& outSetName )
-    {
-        for ( size_t pos = text.find( macro ); pos != string_view::npos; pos = text.find( macro, pos + 1 ) )
-        {
-            size_t cursor = pos + macro.size();
-            while ( cursor < text.size() && text[cursor] == ' ' )
-                ++cursor;
-            if ( cursor >= text.size() || text[cursor] != '(' )
-                continue;
-            ++cursor;
-            while ( cursor < text.size() && text[cursor] == ' ' )
-                ++cursor;
-            if ( cursor >= text.size() || text[cursor] != '"' )
-                continue;
-            const size_t end = text.find( '"', cursor + 1 );
-            if ( end != string_view::npos )
-                outSetName.insert( string( text.substr( cursor + 1, end - cursor - 1 ) ) );
-        }
-    }
-
-    unordered_set<string> scanSourceIconNames()
-    {
-        unordered_set<string> setName;
-        vector<string>        listFile;
-        const bool            bCollected = FileUtil::collectFiles( ProcessRoots::get()._project.join( "Source" ), "", listFile, true );
-        SW_EXPECT_TRUE( bCollected );
-        for ( const string& filePath : listFile )
-        {
-            const bool bCode = FileUtil::hasExtension( filePath, ".cpp" ) || FileUtil::hasExtension( filePath, ".h" ) || FileUtil::hasExtension( filePath, ".inl" );
-            string     text;
-            if ( bCode == false || StringUtil::contains( filePath, "graphify-out" ) || FileUtil::readTextFile( FileUtil::toDiskPath( filePath ), text ) == false )
-                continue;
-            collectNameLiterals( text, "SW_EDITOR_ICON_NAME", setName );
-            collectNameLiterals( text, "SW_EDITOR_ICON", setName );
-        }
-        return setName;
-    }
-
     EditorIconGlyphTable loadEngineTable()
     {
         EditorIconGlyphTable table;
@@ -82,13 +40,14 @@ SW_TEST_CASE( EditorIconNames, EveryNameCodeAndDataUseIsInTheTable )
     SW_REQUIRE_TRUE( hasIcon( table, EditorIconGlyphTable::kMissingIconName ) );
     SW_REQUIRE_TRUE( table.getGlyphRanges().empty() == false && table.getGlyphRanges().back() == 0 );
 
-    const unordered_set<string> setSourceName = scanSourceIconNames();
-    SW_REQUIRE_TRUE( setSourceName.size() > 50 ); // 소스를 못 훑었으면 아래가 아무것도 증명하지 못한다
-    for ( const string& name : setSourceName )
+    static_assert( EditorIconName::findIndex( "Sp" ) == EditorIconName::kCount, "a prefix of a name is not the name" );
+    static_assert( EditorIconName::findIndex( "" ) == EditorIconName::kCount, "an empty literal is not a name" );
+    static_assert( SW_EDITOR_ICON_NAME( "Spline" ).isEmpty() == false && EditorIconName{}.isEmpty(), "names come from the list" );
+    for ( const utf8* pName : EditorIconName::kArrName )
     {
         fixed_string<constant::buffer::kMax256> message;
-        formatstring( message.data(), message.capacity(), "code names icon '%#' which the icon table does not have", name );
-        SW_EXPECT_TRUE_MSG( hasIcon( table, name ), message.c_str() );
+        formatstring( message.data(), message.capacity(), "EditorIconName lists '%#' which the icon table does not have", pName );
+        SW_EXPECT_TRUE_MSG( hasIcon( table, pName ), message.c_str() );
     }
 
     EditorComponentIconTable componentTable;

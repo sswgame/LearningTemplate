@@ -376,8 +376,8 @@ namespace sw::editor
         // 행이 모두 필터에 걸러지면 빈 상자 대신 이유를 보여 준다.
         if ( _state._visibleRootCount == 0 && _state._bFilterActive != 0 )
             EditorWidgets::drawNoSearchResultHint( EditorListFilter{ _filterBuffer.c_str() }.getText() );
-        // 새 씬의 첫 행동을 잇는다 — 빈 트리만 두면 무엇으로 시작하는지 메뉴를 뒤져야 한다.
-        if ( _state._visibleRootCount == 0 && _state._bFilterActive == 0 )
+        // 새 씬의 첫 행동을 잇는다 — 카메라 줄만 두면 무엇으로 시작하는지 메뉴를 뒤져야 한다.
+        if ( _state._bEmptyScene != 0 )
         {
             EditorWidgets::drawEmptyHint( SW_LOCKEY( "EditorScene", "HierarchyEmptyScene" ) );
             (void)EditorCommandGUI::drawCommandButton( editorcommand::kSceneObjectCreate );

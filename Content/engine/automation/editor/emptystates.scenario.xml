@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
 <?asset guid="0d8b1be02f0c4d6c9c31f4ce5a7b9e62"?>
 <!--
-  에디터 시나리오 — 빈 상태의 다음 행동: 새 씬의 Hierarchy 는 빈 트리 대신 이유와 오브젝트 만들기 단추(toolbar.scene.object.create)를 보이고, 누르면 오브젝트가 하나 생기며 단추가 사라진다.
+  에디터 시나리오 — 빈 상태의 다음 행동: 새 씬의 Hierarchy 는 씬이 세운 게임 카메라 한 줄(GameCamera — 에디터 카메라는 줄이 없다) 아래에 이유와 오브젝트 만들기 단추(toolbar.scene.object.create)를 보이고, 누르면 오브젝트가 하나 생기며 단추가 사라진다.
   Map Check 에 결과가 있으면 다음 행동 한 줄, 첫 패키징 전의 Packaging 창은 로그 상자에 할 일을 보인다 — 글은 캡처로 본다.
   실행: App -EnableEditor -scenario=engine/automation/editor/emptystates.scenario.xml -unattended
 -->
@@ -13,13 +13,13 @@
 	<DevCommand line="editor scene.new"/>
 	<EditorWaitStable/>
 	<WaitUntil watch="Scene.Transitioning" equals="0" timeoutWallSeconds="60"/>
-	<WaitUntil watch="Scene.ObjectCount" equals="0" timeoutFrames="60"/>
+	<WaitUntil watch="Editor.HierarchyVisibleRoots" equals="1" timeoutFrames="60"/>
 	<EditorWaitStable/>
 	<CaptureEditorUI file="emptystates/newscene.png" maxMagentaFraction="0"/>
 	<EditorClick mark="toolbar.scene.object.create" state="Down"/>
 	<AdvanceSimulation frames="3"/> <!-- 누름 · 뗌을 다른 프레임에 둔다(프레임 경계) -->
 	<EditorClick mark="toolbar.scene.object.create" state="Up"/>
-	<WaitUntil watch="Scene.ObjectCount" equals="1" timeoutFrames="60"/>
+	<WaitUntil watch="Editor.HierarchyVisibleRoots" equals="2" timeoutFrames="60"/>
 	<Expect watch="Editor.UndoCount" atLeast="1"/>
 	<EditorWaitStable/>
 	<DevCommand line="panel.focus packaging"/>
@@ -33,6 +33,13 @@
 	<WaitUntil watch="Editor.MapCheckFixableRows" equals="1" timeoutFrames="60"/>
 	<EditorWaitStable/>
 	<CaptureEditorUI file="emptystates/mapcheck.png" maxMagentaFraction="0"/>
+	<ExpectLog id="ObjectValidation.Issue" contains="ZeroRadiusLight" atLeast="1"/> <!-- 씬에 심은 오류 -->
+	<!-- 오류를 심은 씬을 열어 둔 채 끝내지 않는다(mapcheck 와 같은 규칙) -->
+	<EditorWaitStable/>
+	<DevCommand line="scene.open game/playground/maps/editortest.scene.xml"/>
+	<EditorWaitStable/>
+	<WaitUntil watch="Scene.Transitioning" equals="0" timeoutWallSeconds="60"/>
+	<EditorWaitStable/>
 	<Variable name="gv_editorUiScale" value="0"/>
 	<Pass/>
 </Scenario>

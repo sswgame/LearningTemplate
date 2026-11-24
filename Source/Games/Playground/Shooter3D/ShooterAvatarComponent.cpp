@@ -120,13 +120,13 @@ namespace sw
         , _reserved{ 0 }
     {
         setCanEverTick( true );
+        // 플레이어(DuringPhysics)가 움직인 뒤에 읽는다. 편집 중인 씬은 플레이 시작 없이 틱하므로 생성 때 정한다(같은 그룹이면 병렬 읽기가 겹친다).
+        setTickGroup( TickGroup::PostPhysics );
     }
 
     void ShooterAvatarComponent::onBeginPlay()
     {
         Component::onBeginPlay();
-        // 플레이어(DuringPhysics)가 움직인 뒤에 읽는다.
-        setTickGroup( TickGroup::PostPhysics );
         _mapClipFootSpeed.clear(); // 클립을 다시 읽었을 수 있다(핫 리로드)
     }
 

@@ -107,7 +107,7 @@ namespace sw
         /** @brief 레지스트리의 종류 이름입니다. `AssetManager::getAssetCache<T>()` 가 이것으로 찾습니다. */
         static constexpr const utf8* kAssetKindName = "Texture";
         /// @brief 렌더 텍스처 경로의 접두사입니다.
-        static constexpr const utf8* kRenderTargetPrefix = "rendertarget/";
+        static constexpr const utf8* kRenderTargetPrefix = IRenderTargetDeclarationSink::kPathPrefix;
         /// @brief 크기를 알리지 않은 렌더 텍스처의 한 변(px)입니다.
         static constexpr uint32 kDefaultRenderTargetSize = 256;
         /// @brief CPU 텍스처 경로의 접두사입니다(`createCPUTexture`).
