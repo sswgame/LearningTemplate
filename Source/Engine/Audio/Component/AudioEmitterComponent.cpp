@@ -12,7 +12,6 @@ namespace sw
     AudioEmitterComponent::AudioEmitterComponent()
         : _lastAudioPosition{}
         , _seenTransformVersion{ 0 }
-        , _bHasLastAudioPosition{ false }
         , _event{}
         , _bPlayOnBeginPlay{ true }
         , _bStopOnEndPlay{ true }
@@ -68,7 +67,8 @@ namespace sw
 
     void AudioEmitterComponent::onWorldOriginShifted( const float3& delta )
     {
-        _lastAudioPosition += delta;
+        if ( _lastAudioPosition.has_value() )
+            *_lastAudioPosition += delta;
     }
 
     AudioPlayingID AudioEmitterComponent::post( const hashed_string& eventName )

@@ -44,11 +44,11 @@ namespace sw
             }
 
             /** @brief 지난 자리와 지금 자리로 속도를 측정합니다(한계로 묶음). 첫 프레임은 0 입니다. */
-            static float3 computeVelocity( const float3& position, const float3& lastPosition, bool bHasLast, float32 deltaSeconds )
+            static float3 computeVelocity( const float3& position, const optional<float3>& lastPosition, float32 deltaSeconds )
             {
-                if ( bHasLast == false || deltaSeconds <= 1e-5f )
+                if ( lastPosition.has_value() == false || deltaSeconds <= 1e-5f )
                     return float3{};
-                float3        velocity = ( position - lastPosition ) / deltaSeconds;
+                float3        velocity = ( position - *lastPosition ) / deltaSeconds;
                 const float32 speed    = velocity.getLength();
                 if ( speed > kMaxSpeed )
                     velocity *= kMaxSpeed / speed;
@@ -69,13 +69,13 @@ namespace sw
             {
                 const GameObject*            pTarget  = query.findTargetObject();
                 const AudioEmitterComponent* pEmitter = pTarget != nullptr ? pTarget->getComponent<AudioEmitterComponent>() : nullptr;
-                if ( pEmitter == nullptr || pEmitter->_bHasLastAudioPosition == false )
+                if ( pEmitter == nullptr || pEmitter->_lastAudioPosition.has_value() == false )
                 {
                     outValue.setText( query.describeMissing( "audio emitter updated by the scene audio" ) );
                     return false;
                 }
                 const float3& listener = query._pManager->getSubsystem<SceneAudio>().getPrimaryListenerPosition();
-                outValue.setNumber( static_cast<float64>( float3::getDistance( pEmitter->_lastAudioPosition, listener ) ) );
+                outValue.setNumber( static_cast<float64>( float3::getDistance( *pEmitter->_lastAudioPosition, listener ) ) );
                 return true;
             }
 
@@ -184,7 +184,6 @@ namespace sw
         , _mutex{}
         , _occlusionCursor{ 0 }
         , _activeListenerMask{ 0 }
-        , _bHasLastCameraPosition{ SW_FALSE }
         , _bUpdateEnabled{ SW_TRUE }
     {
     }
@@ -211,7 +210,7 @@ namespace sw
         }
         _activeListenerMask = 0;
         _listZoneValue.clear();
-        _bHasLastCameraPosition = SW_FALSE;
+        _lastCameraPosition.reset();
     }
 
     void SceneAudio::onSceneCleared()
@@ -323,7 +322,8 @@ namespace sw
             pEngine->shiftWorldOrigin( delta );
         ScopedLock<mutex> lock{ _mutex };
         _primaryListenerPosition += delta;
-        _lastCameraPosition += delta;
+        if ( _lastCameraPosition.has_value() )
+            *_lastCameraPosition += delta;
     }
 
     float32 SceneAudio::findZoneIntensity( const hashed_string& snapshot ) const
@@ -352,7 +352,7 @@ namespace sw
             const bool         bPoseUnchanged = pListener->_bHasLastState && version == pListener->_seenTransformVersion;
             AudioListenerState state          = pListener->makeListenerState( bPoseUnchanged );
             if ( bPoseUnchanged == false )
-                state._velocity = SceneAudioInternal::computeVelocity( state._position, pListener->_lastState._position, pListener->_bHasLastState, deltaSeconds );
+                state._velocity = SceneAudioInternal::computeVelocity( state._position, pListener->_bHasLastState ? optional<float3>{ pListener->_lastState._position } : nullopt, deltaSeconds );
             pListener->_lastState            = state;
             pListener->_seenTransformVersion = version;
             pListener->_bHasLastState        = true;
@@ -369,7 +369,7 @@ namespace sw
             state._position = world.getTranslation();
             state._forward  = float3::transformVector( float3( 0.0f, 0.0f, 1.0f ), world ).normalize();
             state._up       = float3::transformVector( float3( 0.0f, 1.0f, 0.0f ), world ).normalize();
-            state._velocity = SceneAudioInternal::computeVelocity( state._position, _lastCameraPosition, _bHasLastCameraPosition, deltaSeconds );
+            state._velocity = SceneAudioInternal::computeVelocity( state._position, _lastCameraPosition, deltaSeconds );
             if ( pCamera->isOrthographic() )
             {
                 state._mode            = AudioSpatialMode::Screen2D;
@@ -377,7 +377,6 @@ namespace sw
             }
             state._bActive           = SW_TRUE;
             _lastCameraPosition      = state._position;
-            _bHasLastCameraPosition  = SW_TRUE;
             _primaryListenerPosition = state._position;
             audioEngine.setListener( 0, state );
             listenerMask = 1u;
@@ -417,12 +416,11 @@ namespace sw
         {
             AudioEmitterComponent& emitter  = *arrEmitter[index];
             const uint32           version  = emitter.getWorldTransformVersion();
-            const bool             bUnmoved = emitter._bHasLastAudioPosition && bListenerMoved == false && version == emitter._seenTransformVersion;
-            outMotion._position             = bUnmoved ? emitter._lastAudioPosition : emitter.computeAudioPosition( listener );
-            outMotion._velocity             = bUnmoved ? float3{} : SceneAudioInternal::computeVelocity( outMotion._position, emitter._lastAudioPosition, emitter._bHasLastAudioPosition, deltaSeconds );
+            const bool             bUnmoved = emitter._lastAudioPosition.has_value() && bListenerMoved == false && version == emitter._seenTransformVersion;
+            outMotion._position             = bUnmoved ? *emitter._lastAudioPosition : emitter.computeAudioPosition( listener );
+            outMotion._velocity             = bUnmoved ? float3{} : SceneAudioInternal::computeVelocity( outMotion._position, emitter._lastAudioPosition, deltaSeconds );
             emitter._lastAudioPosition      = outMotion._position;
             emitter._seenTransformVersion   = version;
-            emitter._bHasLastAudioPosition  = true;
         } );
         for ( uint32 index = 0; index < count; ++index )
             audioEngine.setEmitter( arrEmitter[index]->getEmitterID(), _listEmitterMotion[index]._position, _listEmitterMotion[index]._velocity );
@@ -453,7 +451,7 @@ namespace sw
                 AudioEmitterComponent* pEmitter = _listEmitterSnapshot[( _occlusionCursor + validateIndex ) % emitterCount];
                 if ( pEmitter->usesOcclusion() == false )
                     continue;
-                audioEngine.setEmitterPropagation( pEmitter->getEmitterID(), pQuery->computePropagation( _primaryListenerPosition, pEmitter->_lastAudioPosition ) );
+                audioEngine.setEmitterPropagation( pEmitter->getEmitterID(), pQuery->computePropagation( _primaryListenerPosition, pEmitter->_lastAudioPosition.value_or( float3{} ) ) );
             }
             _occlusionCursor = ( _occlusionCursor + checkCount ) % emitterCount;
         }
