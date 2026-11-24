@@ -404,11 +404,11 @@ SW_TEST_CASE_F( TurnRelayTest, FullWindowResumesInUpdate )
 SW_TEST_CASE_F( TurnRelayTest, ActionsWaitBehindQueuedNotifications )
 {
     addClient()._relay.join( 7 );
+    poll(); // 자리를 받은 쪽만 행동을 낼 수 있다 — 방의 세대를 모르는 행동은 지난 판의 것이라 거절된다
+    SW_REQUIRE_EQUAL( 0, relay( 0 ).getSeat() );
     addClient()._relay.join( 7 );
-    _serverPeers._heldFragmentCount = NetConnection::kReliableWindow; // 시작 알림이 줄에 쌓인다
-    {
-        poll();
-    }
+    _serverPeers._heldFragmentCount = NetConnection::kReliableWindow; // 둘째의 입장 · 두 사람의 시작 알림이 줄에 쌓인다
+    poll();
     SW_REQUIRE_TRUE( _serverPeers._listSent.empty() );
     SW_REQUIRE_NOT_NULL( _server.findRoom( 7 ) );
     SW_REQUIRE_TRUE( _server.findRoom( 7 )->_bStarted == SW_TRUE );
@@ -422,16 +422,18 @@ SW_TEST_CASE_F( TurnRelayTest, ActionsWaitBehindQueuedNotifications )
     SW_EXPECT_TRUE( _serverPeers._listSent.empty() );
 
     _server.update( 0 );
-    vector<uint8> listKind;
+    vector<uint8> arrListKind[2];
     for ( const FakeNetPeers::Sent& sent : _serverPeers._listSent )
     {
-        if ( sent._connectionID == 0 )
-            listKind.push_back( sent._bytes[0] );
+        arrListKind[sent._connectionID].push_back( sent._bytes[0] );
     }
-    SW_REQUIRE_EQUAL( listKind.size(), size_t{ 3 } );
-    SW_EXPECT_EQUAL( listKind[0], NetTurnRelayMessage::kJoined );
-    SW_EXPECT_EQUAL( listKind[1], NetTurnRelayMessage::kStarted );
-    SW_EXPECT_EQUAL( listKind[2], NetTurnRelayMessage::kApplied );
+    SW_REQUIRE_EQUAL( arrListKind[0].size(), size_t{ 2 } );
+    SW_EXPECT_EQUAL( arrListKind[0][0], NetTurnRelayMessage::kStarted );
+    SW_EXPECT_EQUAL( arrListKind[0][1], NetTurnRelayMessage::kApplied );
+    SW_REQUIRE_EQUAL( arrListKind[1].size(), size_t{ 3 } );
+    SW_EXPECT_EQUAL( arrListKind[1][0], NetTurnRelayMessage::kJoined );
+    SW_EXPECT_EQUAL( arrListKind[1][1], NetTurnRelayMessage::kStarted );
+    SW_EXPECT_EQUAL( arrListKind[1][2], NetTurnRelayMessage::kApplied );
 }
 
 // 알림을 읽지 않는 연결은 상한에서 끊는다. 끊긴 연결의 큐는 다음 연결이 물려받지 않는다.

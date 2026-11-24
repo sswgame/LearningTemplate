@@ -36,6 +36,25 @@ SW_TEST_CASE( GameNetSessionTicketLinkTest, LinkFollowsTheServerConfig )
     session.getConnectSecurity().setProvider( nullptr );
 }
 
+/** @brief [GameNetSessionTicketLinkTest] 결함: 엔진 종료가 모듈 라이브러리를 내린 뒤에 세션을 닫아, 봉인기를 만든 모듈의 사라진 코드를 불렀다 — 종료의 앞 단계(`stopSubsystem`)에서 이미 닫힌다 */
+SW_TEST_CASE( GameNetSessionTicketLinkTest, EncryptedSessionClosesBeforeModulesUnload )
+{
+    test::FakeNetSecurityProvider provider;
+    GameNetSession                session{ engine::getSubsystem<ResourceComposition>() };
+    session.getConnectSecurity().setProvider( &provider );
+    ServerConfig config;
+    config._listenAddress      = "127.0.0.1";
+    config._gamePort           = 0; // 운영체제가 고른다
+    config._bGameConnectTicket = true;
+    GameNetSessionParams params;
+    SW_REQUIRE_TRUE( session.makeServerParams( config, params ) );
+    SW_REQUIRE_TRUE( session.initialize( params ) );
+    session.stopSubsystem();
+    SW_EXPECT_FALSE( session.isActive() );
+    session.shutdownSubsystem(); // 이미 닫혔다
+    session.getConnectSecurity().setProvider( nullptr );
+}
+
 /** @brief [GameNetSessionTicketLinkTest] 닫힌 세션의 링크는 비고, 같은 세션 객체로 새로 열어도 되살아나지 않는다 — 새로 만든 링크만 쓸 수 있다 */
 SW_TEST_CASE( GameNetSessionTicketLinkTest, ClosedSessionLinkStaysEmpty )
 {

@@ -211,7 +211,7 @@ namespace sw
         , _bindSerial{ 0 }
         , _sentClock{ 0 }
         , _worldSceneID{ 0 }
-        , _localSceneID{ 0 }
+        , _localSceneID{}
         , _announcedGeneration{ 0 }
         , _worldGeneration{ 0 }
         , _bWireVersionsChanged{ SW_FALSE }
@@ -287,7 +287,7 @@ namespace sw
         _listHeld.clear();
         ++_sessionSerial;
         _worldSceneID         = 0;
-        _localSceneID         = 0;
+        _localSceneID         = nullopt;
         _announcedGeneration  = 0;
         _worldGeneration      = 0;
         _sentClock            = 0;
@@ -426,7 +426,7 @@ namespace sw
 
     void NetMessageRouter::updateClientWorld( INetPeers& peers )
     {
-        const uint8 generation = _localSceneID == _worldSceneID ? _announcedGeneration : uint8{ 0 };
+        const uint8 generation = _localSceneID == _worldSceneID ? _announcedGeneration : uint8{ 0 }; // 아직 씬을 세우지 않았으면(빈 값) 어느 월드에도 들지 않는다
         if ( generation == _worldGeneration )
             return;
         setWorldGeneration( peers, generation );

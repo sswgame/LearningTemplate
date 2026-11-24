@@ -215,14 +215,11 @@ def _run_mmo(argument: argparse.Namespace) -> int:
                 server.stop()
                 return group.fail(f"client {index + 1} ({scenario}) exited with code {client.return_code} (log: {client.log})")
             time.sleep(1.0)  # 서버가 나간 연결을 알아채고 진행을 저장할 틈
-        # 두 클라이언트를 함께 — 서로의 폰이 걷는 것을 보고, 회선 흉내 아래에서 어긋난 예측이 되돌아온다. 같은 파일을 쓰지 않게 사용자 데이터 폴더를 가른다.
+        # 두 클라이언트를 함께 — 서로의 폰이 걷는 것을 보고, 회선 흉내 아래에서 어긋난 예측이 되돌아온다. 무인 실행의 사용자 데이터는 프로세스마다 제 폴더다(`AutomationUserDataRoot`).
         list_walker = []
         for scenario, account in _MMO_PAWN_SCENARIOS:
-            user_data = group.out_dir / f"{account}_userdata"
-            user_data.mkdir(parents=True, exist_ok=True)
             list_walker.append(group.start(account, [client_exe, app_arguments.option("game", _MMO_GAME), app_arguments.option("scenario", scenario), app_arguments.flag("unattended"),
-                                                     *app_arguments.variables(_MMO_PAWN_EMULATION)],
-                                           environment={USER_DATA_ROOT_ENVIRONMENT: str(user_data)}, stdin=False))
+                                                     *app_arguments.variables(_MMO_PAWN_EMULATION)], stdin=False))
         for walker in list_walker:
             walker.wait(_TIMEOUT_SECONDS * 4)
             if walker.return_code != 0:
@@ -519,12 +516,10 @@ def _run_two_players(group: ProcessGroup, argument_name: str, entered: re.Patter
             return None
 
         def start_client(name: str) -> ChildProcess:
-            user_data = group.out_dir / f"{name}_userdata"
-            user_data.mkdir()  # 두 클라이언트가 같은 파일을 쓰지 않게 가른다
+            # 무인 실행의 사용자 데이터는 프로세스마다 Saved/Automation 아래 제 폴더다 — 밖을 가리키면 App 이 시작을 거절한다(`AutomationUserDataRoot`).
             scenario = f"game/playground/automation/netpair/match_{argument_name}_{name}.scenario.xml"
             return group.start(name, [client_exe, app_arguments.option("game", _GAME), app_arguments.option("scenario", scenario), app_arguments.flag("unattended"),
-                                      app_arguments.variable("gv_onlineServerAddress", f"127.0.0.1:{_MATCH_HUB_SERVICE_PORT}")],
-                               environment={USER_DATA_ROOT_ENVIRONMENT: str(user_data)}, stdin=False)
+                                      app_arguments.variable("gv_onlineServerAddress", f"127.0.0.1:{_MATCH_HUB_SERVICE_PORT}")], stdin=False)
 
         first = start_client("first")
         steps_done = first.wait_for(entered, _TIMEOUT_SECONDS * 3)

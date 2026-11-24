@@ -76,7 +76,7 @@
 	<Expect watch="Hub.LastResult" equals="9"/>
 	<Expect watch="Hub.PartySize" equals="1"/>
 	<!-- 하위 레벨 미니게임(카드 탁자 — 허브가 그대로다)에 다녀와도 허브 서버의 세션이 이어진다: 진행 · 복제가 그대로이고 행동이 계속 판정된다. 씬을 바꾸는 미니게임은 접속 중에 거절된다(MinigameFlow) -->
-	<DevCommand line="minigame.enter cardtable"/>
+	<DevCommand line="minigame.enter cardtable CardTableGate"/>
 	<WaitUntil watch="Scene.LoadedSubLevelCount" equals="1" timeoutWallSeconds="60"/>
 	<DevCommand line="minigame.leave"/>
 	<WaitUntil watch="Scene.SubLevelCount" equals="0" timeoutWallSeconds="60"/>
