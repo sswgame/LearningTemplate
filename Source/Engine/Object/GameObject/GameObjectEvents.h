@@ -18,6 +18,8 @@
 
 namespace sw
 {
+    class SkeletalMeshComponent;
+
     /**
      * @struct GameObjectEvents
      * @brief 오브젝트의 사건 델리게이트입니다. 칸 하나가 사건 하나이고, 내는 곳은 칸 설명에 적힌 시스템 하나다.
@@ -46,6 +48,11 @@ namespace sw
         MulticastDelegate<void( const HitInfo& )> _hitReceived;
         /** @brief 이 오브젝트의 애니메이션이 게임플레이 이벤트 알림을 울렸다(알림 테이블의 `AbilityEvent`). 애니메이션 알림 처리기가 낸다. */
         MulticastDelegate<void( const AnimationNotifyInfo& )> _animationNotify;
+        /**
+         * @brief 이 오브젝트의 스킨드 유닛이 그릴 메시를 다시 정했다(외형 조립 · 메시 id · 다시 읽기). `SkeletalMeshComponent` 가 게임 스레드에서 낸다.
+         * @details 유닛의 메시를 고쳐 쓰는 쪽(절단)이 새 메시에 다시 적용하는 자리다 — 한 번 건 메시는 다음 조립이 덮는다.
+         */
+        MulticastDelegate<void( const SkeletalMeshComponent& )> _skinnedMeshResolved;
         /** @brief 이 오브젝트의 태그가 바뀌었다(인자는 바뀐 뒤의 태그). `TagComponent` 가 게임 스레드의 틱 밖에서 낸다. */
         MulticastDelegate<void( const TagContainer& )> _tagsChanged;
 

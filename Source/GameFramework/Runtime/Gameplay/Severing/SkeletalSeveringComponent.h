@@ -35,6 +35,7 @@ namespace sw
 {
     class CharacterSurfaceState;
     class Mesh;
+    class SkeletalMeshComponent;
     class ValidationContext;
 } // namespace sw
 
@@ -96,6 +97,11 @@ namespace sw
     private:
         /** @brief 치명적 맞음(`HitInfo::_bFatal`, `GameObjectEvents::_hitReceived`)이 잘라 낼 수 있는 영역의 뼈에 들면 그 영역을 자릅니다. */
         void handleHit( const HitInfo& hit );
+        /**
+         * @brief 유닛이 그릴 메시를 다시 정했습니다(의상 · 외형 조립) — 이미 자른 영역을 새 메시에서도 자릅니다. 조각은 다시 띄우지 않습니다.
+         * @details 자르기 전의 몸 메시(`_pIntactMesh`)도 새 메시가 된다 — 풀 반환이 옛 외형을 되돌려 걸지 않는다.
+         */
+        void handleSkinnedMeshResolved( const SkeletalMeshComponent& unit );
         void loadRegionTable();
         /** @brief 떨어뜨린 조각 오브젝트를 모두 지웁니다. */
         void destroyPieces();
@@ -118,8 +124,10 @@ namespace sw
         SharedAssetRef<FitTables> _pRegionTable; ///< 영역 표(공유 캐시의 한 벌). 받지 못했으면 nullptr
         vector<hashed_string>     _listSeveredRegion;
         vector<GameObjectHandle>  _listPiece;
-        Subscription              _hitSubscription; ///< 맞음 사건 구독(`handleHit`)
-        shared_ptr<Mesh>          _pIntactMesh;     ///< 처음 자르기 전의 몸 메시(자른 적이 없으면 nullptr) — 풀 반환이 다시 건다
+        Subscription              _hitSubscription;  ///< 맞음 사건 구독(`handleHit`)
+        Subscription              _meshSubscription; ///< 유닛 메시 사건 구독(`handleSkinnedMeshResolved`)
+        shared_ptr<Mesh>          _pIntactMesh;      ///< 자르기 전의 지금 몸 메시(자른 적이 없으면 nullptr) — 풀 반환이 다시 건다
+        shared_ptr<Mesh>          _pSeveredMesh;     ///< 이 컴포넌트가 건 잘린 메시(유닛이 이것을 그리면 다시 자를 것이 없다)
         bool                      _bTableLoaded;
     };
 } // namespace sw
