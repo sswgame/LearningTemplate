@@ -5,7 +5,7 @@
 
 #include "Engine/Graphics/RHI/IRHICommandList.h"
 #include "Engine/Graphics/RHI/Tests/RHIFakeDevice.h"
-#include "Engine/Renderer/Frame/Extension/FrameExtensionHost.h"
+#include "Engine/Renderer/Extension/FrameExtensionHost.h"
 #include "Engine/Renderer/Frame/FrameRendererUtil.h"
 #include "Engine/Renderer/Frame/Packet/RenderFrameSettings.h"
 #include "Engine/Renderer/Frame/PostProcess/FrameAutoExposure.h"

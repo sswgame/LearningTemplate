@@ -22,7 +22,7 @@
 #include "Engine/Object/GameObject/Registry/PrimitiveRegistry.h"
 #include "Engine/Object/Prefab/PrefabCache.h"
 #include "Engine/Reflection/ReflectionCast.h"
-#include "Engine/Renderer/Frame/Capture/RenderTargetImageFile.h"
+#include "Engine/Renderer/Capture/RenderTargetImageFile.h"
 #include "Engine/Renderer/Frame/View/RenderViewCollector.h"
 #include "Engine/Scene/Scene.h"
 #include "Engine/Visual/Component/DirectionalLightComponent.h"

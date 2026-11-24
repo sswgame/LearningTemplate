@@ -24,7 +24,7 @@
 #include "Engine/Graphics/RHI/Transfer/RHITransferUtil.h"
 #include "Engine/Profiling/FrameProfiler.h"
 #include "Engine/Profiling/ProfilerBackend.h"
-#include "Engine/Renderer/Frame/Capture/RenderTargetImageFile.h"
+#include "Engine/Renderer/Capture/RenderTargetImageFile.h"
 #include "Engine/Renderer/Frame/FrameRenderer.h"
 #include "Engine/Renderer/Frame/OffscreenSceneRenderers.h"
 #include "Engine/Renderer/Frame/PostProcess/FrameFog.h"

@@ -540,7 +540,7 @@
     "Source/Engine/Reflection/TypeRegistry.cpp": {"integer": 1},
     "Source/Engine/Renderer/Capture/PortraitStudio.cpp": {"float": 6, "integer": 2},
     "Source/Engine/Renderer/EngineRenderDriver.cpp": {"integer": 5},
-    "Source/Engine/Renderer/Frame/Capture/RenderTargetImageFile.cpp": {"integer": 3},
+    "Source/Engine/Renderer/Capture/RenderTargetImageFile.cpp": {"integer": 3},
     "Source/Engine/Renderer/Frame/Execute/FrameGraphExecutor.cpp": {"float": 3},
     "Source/Engine/Renderer/Frame/Execute/FramePassExecutor.cpp": {"float": 4},
     "Source/Engine/Renderer/Frame/FrameRenderer.cpp": {"float": 1, "integer": 2},

@@ -1,6 +1,6 @@
 #include "pch.h"
 
-#include "Engine/Renderer/Frame/Capture/RenderTargetImageFile.h"
+#include "Engine/Renderer/Capture/RenderTargetImageFile.h"
 
 #include "Core/Math/NormalizedInt.h"
 #include "Core/Math/OctahedralNormal.h"

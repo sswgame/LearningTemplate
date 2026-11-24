@@ -4,7 +4,7 @@
  */
 #include "pch.h"
 
-#include "Engine/Renderer/Frame/Extension/FrameExtensionHost.h"
+#include "Engine/Renderer/Extension/FrameExtensionHost.h"
 
 #include "Core/Algorithm/VectorUtil.h"
 #include "Core/Hash/HashUtil.h"

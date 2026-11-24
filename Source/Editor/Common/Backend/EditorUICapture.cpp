@@ -21,7 +21,7 @@
 #include "Engine/Graphics/RHI/IRHIResourceFactory.h"
 #include "Engine/Graphics/RHI/RHITypes.h"
 #include "Engine/Graphics/RHI/Transfer/RHITransferUtil.h"
-#include "Engine/Renderer/Frame/Capture/RenderTargetImageFile.h"
+#include "Engine/Renderer/Capture/RenderTargetImageFile.h"
 
 #include <imgui.h>
 #include <cstring>
