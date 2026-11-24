@@ -41,11 +41,8 @@ namespace sw
         void stopOutput() override;
         /** @brief 출력을 멈춥니다(장치를 따로 잡지 않는다). */
         void closeDevice() override;
-        /**
-         * @brief 언더런 수입니다 — 0 을 낸다.
-         * @details shortcut: 링이 빈 것은 워클릿(JS) 쪽만 안다. 워클릿이 빈 횟수를 공유 상태 칸에 올리면 그 값을 읽는다(웹 끊김 보고가 생기면).
-         */
-        uint64 getUnderrunCount() const override { return 0; }
+        /** @brief 워클릿이 공유 상태에 올린 언더런 수입니다. 스트림이 닫혀 있으면 0 입니다. */
+        uint64 getUnderrunCount() const override;
 
     private:
         /** @brief 믹서 스레드 본문입니다. 링에 블록 하나만큼 자리가 날 때까지 기다렸다가 렌더해 넣습니다. */

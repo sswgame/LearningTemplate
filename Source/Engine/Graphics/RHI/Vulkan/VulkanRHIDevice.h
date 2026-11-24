@@ -335,6 +335,7 @@ namespace sw
         /** @brief 서피스 제약으로 계약 포맷을 낼 수 없는 경우가 있으므로 실제로 채택한 포맷을 보고합니다. */
         RHIFormat     getBackBufferFormat() const override { return _swapChain.getActualBackBufferFormat(); }
         RHIColorSpace getBackBufferColorSpace() const override { return _swapChain.getColorSpace(); }
+        void          refreshDisplayOutputSupport() override;
         /**
          * @brief 큐 호출(`vkQueueSubmit` · `vkQueueWaitIdle` · `vkWaitForFences`)의 결과를 봅니다. 성공이면 아무것도 하지 않습니다.
          * @details 실패면 어디서(@p pWhere) · 무슨 `VkResult` 인지와 마지막으로 제출 순서에 넣은 패스(이벤트 마커)를 오류 로그로 남긴다.

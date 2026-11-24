@@ -259,7 +259,7 @@ namespace sw
          * @return 창이 없어 물을 곳이 없으면 false 입니다. true 인데 목록이 비면 그 창 시스템에 지금 출력이 없는 것이다(모니터 없는 Wayland 컴포지터는 정상이다). 받는 쪽은 값을 지어내지 않는다.
          */
         [[nodiscard]] virtual bool tryGetMonitors( vector<WindowMonitor>& outListMonitor ) const = 0;
-        /** @brief 모니터 값이 바뀔 때마다(모니터 연결 · 해상도 · 작업 영역 · 배율) 올라가는 수입니다. 값을 들고 있는 쪽은 이것이 달라질 때 `tryGetMonitors` 를 다시 부릅니다. */
+        /** @brief 모니터 값이 바뀌거나(모니터 연결 · 해상도 · 작업 영역 · 배율) 창이 다른 모니터로 옮겨질 때마다 올라가는 수입니다. 값을 들고 있는 쪽은 이것이 달라질 때 `tryGetMonitors` 를 다시 부릅니다. */
         [[nodiscard]] uint32 getMonitorGeneration() const { return _monitorGeneration; }
 
         // ---- 창이 스스로 하는 포인터 동작(리눅스 입력 관리자가 읽는다) ----

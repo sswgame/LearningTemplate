@@ -224,6 +224,7 @@ namespace sw
         /** @brief 스왑체인이 만든 백버퍼 포맷입니다. 백버퍼 PSO 의 렌더 타깃 포맷이 여기서 나옵니다. */
         RHIFormat     getBackBufferFormat() const override { return _swapChain.isValid() ? _swapChain.getFormat() : _backBufferFormat; }
         RHIColorSpace getBackBufferColorSpace() const override { return _swapChain.getColorSpace(); }
+        void          refreshDisplayOutputSupport() override { _swapChain.refreshDisplayOutputSupport(); }
 
         /** @brief VS 가 GPUScene 인스턴스 버퍼를 구조 버퍼 SRV(g_SwInstances, t4)로 읽을 수 있어 true 입니다. */
         bool supportsInstancedSceneDraw() const override { return true; }

@@ -168,3 +168,30 @@ SW_TEST_CASE( PhysicsOverlapTrackerTest, StayOncePerPairPerFrame )
     tracker.finishFrame( listTransition, listStay, true );
     SW_EXPECT_TRUE( listTransition.empty() && listStay.empty() );
 }
+
+/** @brief [PhysicsOverlapTrackerTest] 진입 결과의 스텝은 그 쌍이 이번 프레임에 처음 시작한 스텝이다 — 같은 프레임의 뒤 바디가 덮지 않고, 다음 진입은 새로 잰다 */
+SW_TEST_CASE( PhysicsOverlapTrackerTest, EntryCarriesTheFirstBeginStep )
+{
+    using Internal = TestPhysicsOverlapTrackerInternal;
+    PhysicsOverlapTracker       tracker;
+    vector<PhysicsOverlapEvent> listTransition;
+    vector<PhysicsOverlapEvent> listStay;
+    PhysicsOverlapEvent         first = Internal::makeEvent( Internal::kHero, 1, 100, PhysicsContactPhase::Begin );
+    first._step                       = 7;
+    PhysicsOverlapEvent second        = Internal::makeEvent( Internal::kHero, 2, 100, PhysicsContactPhase::Begin );
+    second._step                      = 8;
+    tracker.record( first );
+    tracker.record( second );
+    tracker.finishFrame( listTransition, listStay, false );
+    SW_REQUIRE_EQUAL( 1u, static_cast<uint32>( listTransition.size() ) );
+    SW_EXPECT_EQUAL( uint64{ 7 }, listTransition[0]._step );
+
+    tracker.record( Internal::makeEvent( Internal::kHero, 1, 100, PhysicsContactPhase::End ) );
+    tracker.record( Internal::makeEvent( Internal::kHero, 2, 100, PhysicsContactPhase::End ) );
+    tracker.finishFrame( listTransition, listStay, false );
+    first._step = 12;
+    tracker.record( first );
+    tracker.finishFrame( listTransition, listStay, false );
+    SW_REQUIRE_EQUAL( 1u, static_cast<uint32>( listTransition.size() ) );
+    SW_EXPECT_EQUAL( uint64{ 12 }, listTransition[0]._step );
+}

@@ -44,7 +44,7 @@ namespace sw
 
     /**
      * @brief @p pSwapChain 이 놓인 모니터가 받는 출력을 묻습니다. 묻지 못하면(출력 없음 · DXGI 1.6 없음 · WARP) SDR 만입니다 — 능력 표가 정한 길이지 실패가 아니다.
-     * @note shortcut: 창을 다른 모니터로 옮기기만 하면(크기 그대로) 다시 묻지 않는다 — 스왑체인을 만들거나 크기 · 색 공간을 바꿀 때만 묻는다. 모니터마다 HDR 이 다른 기계가 보이면 창 이동 통보에서 다시 묻는다.
+     * @details 스왑체인을 만들거나 크기 · 색 공간을 바꿀 때, 창이 다른 모니터로 옮겨졌을 때(`IRHIDevice::refreshDisplayOutputSupport`) 묻는다.
      */
     inline DXGIDisplayOutputSupport queryDXGIDisplayOutputSupport( IDXGISwapChain* pSwapChain )
     {

@@ -1735,6 +1735,11 @@ namespace sw
         return true;
     }
 
+    void VulkanRHIDevice::refreshDisplayOutputSupport()
+    {
+        _swapChain.refreshDisplayOutputSupport( _physicalDevice );
+    }
+
     void VulkanRHIDevice::applyHDRMetadata()
     {
         // 확장이 없으면 표시 엔진의 기본값이다(알릴 길이 없다 — 능력이 정한 길). 스왑체인을 다시 만들면 메타데이터가 사라지므로 재생성마다 부른다.

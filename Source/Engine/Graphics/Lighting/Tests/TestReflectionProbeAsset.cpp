@@ -575,7 +575,7 @@ SW_TEST_CASE( ReflectionProbeAssetTest, ParallaxDirectionPointsAtTheBoxHit )
     SW_EXPECT_TRUE( Util::isNear( expected, ReflectionProbeAsset::computeParallaxDirection( float3{ 4.0f, 0.0f, 0.0f }, up, center, half, center ), 0.0001f ) );
 }
 
-/** @brief [ReflectionProbeAssetTest] 원본 밉은 2×2 상자 평균이고, 한 변이 홀수가 되면 멈추며, 밉 0 이 없거나 밉 수가 0 이면 거절한다 */
+/** @brief [ReflectionProbeAssetTest] 원본 밉은 2×2 입체각 가중 평균이고, 한 변이 홀수가 되면 멈추며, 밉 0 이 없거나 밉 수가 0 이면 거절한다 */
 SW_TEST_CASE( ReflectionProbeAssetTest, RadianceMapMipsAverageAndStopAtAnOddSize )
 {
     OctahedralRadianceMap map;
@@ -596,9 +596,22 @@ SW_TEST_CASE( ReflectionProbeAssetTest, RadianceMapMipsAverageAndStopAtAnOddSize
     SW_REQUIRE_EQUAL( 3u, map.getMipCount() );
     SW_EXPECT_EQUAL( 6u, map._listMip[1]._resolution );
     SW_EXPECT_EQUAL( 3u, map._listMip[2]._resolution );
-    // 밉 1 의 (1, 0) 은 밉 0 의 (2, 0) (3, 0) (2, 1) (3, 1) 평균 = (2 + 3 + 14 + 15) / 4.
-    SW_EXPECT_NEAR( 8.5f, map._listMip[1]._listTexel[1]._x, 1.0e-5f );
-    SW_EXPECT_NEAR( 1.0f, map._listMip[2]._listTexel[4]._y, 1.0e-6f );
+    // 밉 1 의 (1, 0) 은 밉 0 의 (2, 0) (3, 0) (2, 1) (3, 1) 을 입체각(방향의 L1 길이³)으로 섞은 값이다 — 무게가 달라 상자 평균 8.5 와 다르다.
+    float32 weightedSum = 0.0f;
+    float32 weightSum   = 0.0f;
+    for ( uint32 y = 0; y < 2u; ++y )
+    {
+        for ( uint32 x = 2; x < 4u; ++x )
+        {
+            const float3  direction = OctahedralRadianceMap::computeTexelDirection( 12, x, y );
+            const float32 axisSum   = MathUtil::abs( direction._x ) + MathUtil::abs( direction._y ) + MathUtil::abs( direction._z );
+            weightedSum += static_cast<float32>( y * 12u + x ) * axisSum * axisSum * axisSum;
+            weightSum += axisSum * axisSum * axisSum;
+        }
+    }
+    SW_EXPECT_NEAR( weightedSum / weightSum, map._listMip[1]._listTexel[1]._x, 1.0e-4f );
+    SW_EXPECT_TRUE( MathUtil::abs( map._listMip[1]._listTexel[1]._x - 8.5f ) > 0.01f );
+    SW_EXPECT_NEAR( 1.0f, map._listMip[2]._listTexel[4]._y, 1.0e-5f );
 
     // 다시 지으면 밉 0 만 남기고 새로 만든다.
     SW_REQUIRE_TRUE( map.buildMips( 2 ) );

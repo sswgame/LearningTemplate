@@ -390,6 +390,11 @@ namespace sw
          */
         void resize( uint32 width, uint32 height );
         /**
+         * @brief 스왑체인이 놓인 모니터의 출력 능력(`RHICapabilities::_displayOutputSupport`)을 다시 묻습니다 — 창이 다른 모니터로 옮겨졌을 때. 렌더 스레드가 쉬는 동안 게임 스레드가 부른다.
+         * @details 스왑체인은 건드리지 않는다. 기본은 화면 출력을 고르지 않는 백엔드(SDR 만)의 길이다.
+         */
+        virtual void refreshDisplayOutputSupport() {}
+        /**
          * @brief 주 스왑체인의 색 공간을 바꿉니다 — 백버퍼 포맷이 함께 바뀐다(`getSwapChainFormat`). 렌더 스레드를 세운 뒤 부른다(창 크기 바뀜과 같은 길 — 이 함수가 GPU 를 비운다).
          * @details 능력(`RHICapabilities::_displayOutputSupport`)에 없는 색 공간이면 오류를 남기고 false 이며 색 공간은 그대로다 — 부르는 쪽이 `DisplayOutputDesc::resolve` 로 먼저 맞춘다.
          *          HDR10 이면 @p metadata 를 스왑체인에 알린다(DXGI `SetHDRMetaData` · Vulkan `vkSetHdrMetadataEXT`). 언리얼 `RHIHDRChangeColorSpace` 자리다.

@@ -145,6 +145,8 @@ namespace sw
         , _listBodyPoseSlot2D{}
         , _listFrameEvent3D{}
         , _listFrameEvent2D{}
+        , _listStepEventEnd3D{}
+        , _listStepEventEnd2D{}
         , _poseRead3D{}
         , _poseRead2D{}
         , _listPoseWrite{}
@@ -691,12 +693,16 @@ namespace sw
             const vector<PhysicsContactEvent2D>& listEvent = _pScene2D->getContactEvents();
             _listFrameEvent2D.insert( _listFrameEvent2D.end(), listEvent.begin(), listEvent.end() );
         }
+        _listStepEventEnd3D.push_back( _listFrameEvent3D.size() );
+        _listStepEventEnd2D.push_back( _listFrameEvent2D.size() );
     }
 
     void ScenePhysics::step( float32 deltaTime )
     {
         _listFrameEvent3D.clear();
         _listFrameEvent2D.clear();
+        _listStepEventEnd3D.clear();
+        _listStepEventEnd2D.clear();
         _listSweptOverlap2D.clear();
         // 물리 컴포넌트도 바디도 없는 씬은 아무것도 하지 않는다(시간도 쌓지 않는다 — 처음 바디가 생긴 프레임이 따라잡느라 여러 스텝을 돌지 않게).
         const bool bHasJobs = getComponentCount() != 0 || _pScene3D != nullptr || _pScene2D != nullptr;
@@ -807,16 +813,23 @@ namespace sw
         };
         // 겹침은 바디 쌍으로 나누지 않는다 — 추적기가 오브젝트 쌍으로 세어 아래에서 한 번에 낸다(트리거 계약: 몸이 여럿이어도 한 번, 이탈 먼저).
         const auto recordOverlap = [this]( uint64 objectA, uint64 objectB, PhysicsBodyHandle bodyA, PhysicsBodyHandle bodyB, bool bTriggerA, bool bTriggerB, bool bIs2D,
-                                           float32 hitFraction, PhysicsContactPhase phase )
-        { _overlapTracker.record( PhysicsOverlapEvent{ objectA, objectB, bodyA, bodyB, hitFraction, phase, bTriggerA, bTriggerB, bIs2D } ); };
+                                           float32 hitFraction, PhysicsContactPhase phase, uint64 step )
+        { _overlapTracker.record( PhysicsOverlapEvent{ objectA, objectB, bodyA, bodyB, hitFraction, phase, bTriggerA, bTriggerB, bIs2D, step } ); };
+        // 알림이 온 스텝 — 쌓은 차례가 스텝 차례라 경계 목록으로 가른다.
+        const uint64 firstStep  = _stepCount + 1u - static_cast<uint64>( _listStepEventEnd3D.size() );
+        size_t       stepIndex  = 0;
+        size_t       eventIndex = 0;
         for ( const PhysicsContactEvent3D& event : listEvent3D )
         {
+            while ( _listStepEventEnd3D[stepIndex] <= eventIndex )
+                ++stepIndex;
+            ++eventIndex;
             recordLog( event._userDataA, event._userDataB, event._point, event._normal, event._impulse, event._phase, event.isOverlap(), false );
             const bool bTriggerA = event._bTriggerA == SW_TRUE;
             const bool bTriggerB = event._bTriggerB == SW_TRUE;
             if ( event.isOverlap() )
             {
-                recordOverlap( event._userDataA, event._userDataB, event._bodyA, event._bodyB, bTriggerA, bTriggerB, false, 1.0f, event._phase );
+                recordOverlap( event._userDataA, event._userDataB, event._bodyA, event._bodyB, bTriggerA, bTriggerB, false, 1.0f, event._phase, firstStep + stepIndex );
                 continue;
             }
             deliverEvent( manager, event._userDataA, event._userDataB, event._bodyA, event._bodyB, event._point, event._normal, event._impulse, event._phase,
@@ -828,13 +841,20 @@ namespace sw
         // (그 사이 센서가 같은 쌍의 시작을 내면 쌍은 안에 남아 진입만 난다).
         for ( const SweptOverlap2D& swept : listSwept )
         {
+            // 길의 시작에서 이미 겹쳤으면 첫 스텝의 겹침이다 — 길 위에서 닿은 것은 걸어 든 것이라 스텝이 없다(나타남이 아니다).
+            const uint64 sweptStep = swept._hitFraction <= 0.0f ? firstStep : 0u;
             for ( const PhysicsContactPhase phase : { PhysicsContactPhase::Begin, PhysicsContactPhase::End } )
             {
-                recordOverlap( swept._selfUserData, swept._otherUserData, swept._selfBody, swept._otherBody, swept._bSelfTrigger, swept._bOtherTrigger, true, swept._hitFraction, phase );
+                recordOverlap( swept._selfUserData, swept._otherUserData, swept._selfBody, swept._otherBody, swept._bSelfTrigger, swept._bOtherTrigger, true, swept._hitFraction, phase, sweptStep );
             }
         }
+        stepIndex  = 0;
+        eventIndex = 0;
         for ( const PhysicsContactEvent2D& event : listEvent2D )
         {
+            while ( _listStepEventEnd2D[stepIndex] <= eventIndex )
+                ++stepIndex;
+            ++eventIndex;
             const float3 point{ event._point._x, event._point._y, 0.0f };
             const float3 normal{ event._normal._x, event._normal._y, 0.0f };
             recordLog( event._userDataA, event._userDataB, point, normal, event._impulse, event._phase, event.isOverlap(), true );
@@ -842,7 +862,7 @@ namespace sw
             const bool bTriggerB = event._bTriggerB == SW_TRUE;
             if ( event.isOverlap() )
             {
-                recordOverlap( event._userDataA, event._userDataB, event._bodyA, event._bodyB, bTriggerA, bTriggerB, true, 1.0f, event._phase );
+                recordOverlap( event._userDataA, event._userDataB, event._bodyA, event._bodyB, bTriggerA, bTriggerB, true, 1.0f, event._phase, firstStep + stepIndex );
                 continue;
             }
             deliverEvent( manager, event._userDataA, event._userDataB, event._bodyA, event._bodyB, point, normal, event._impulse, event._phase, bTriggerA, bTriggerB, false,
@@ -859,10 +879,10 @@ namespace sw
             // 진입이 상대 첫 바디의 첫 스텝에서 왔으면 "안에서 생김" 이다(`markObjectSpawned`) — 받는 쪽이 프레임 수 창 없이 나타남을 가린다.
             const bool bBegin = event._phase == PhysicsContactPhase::Begin;
             deliverEvent( manager, event._objectA, event._objectB, event._bodyA, event._bodyB, zero, zero, 0.0f, event._phase, event._bTriggerA, event._bTriggerB, true,
-                          event._bIs2D, event._hitFraction, bBegin && isSpawnedThisFrame( event._objectB ) );
+                          event._bIs2D, event._hitFraction, bBegin && isSpawnedInStep( event._objectB, event._step ) );
             if ( event._objectA != event._objectB ) // 자기 몸과 자기 트리거의 겹침은 한 번만 받는다
                 deliverEvent( manager, event._objectB, event._objectA, event._bodyB, event._bodyA, zero, zero, 0.0f, event._phase, event._bTriggerB, event._bTriggerA,
-                              true, event._bIs2D, event._hitFraction, bBegin && isSpawnedThisFrame( event._objectA ) );
+                              true, event._bIs2D, event._hitFraction, bBegin && isSpawnedInStep( event._objectA, event._step ) );
         };
         for ( const PhysicsOverlapEvent& event : _listOverlapTransition )
         {
@@ -879,13 +899,11 @@ namespace sw
         _listSpawnedObject.push_back( SpawnedObject{ objectID, _stepCount } );
     }
 
-    bool ScenePhysics::isSpawnedThisFrame( uint64 objectID ) const
+    bool ScenePhysics::isSpawnedInStep( uint64 objectID, uint64 step ) const
     {
-        // 표시는 첫 스텝을 지난 나눠 주기에서 지운다(`deliverFrameEvents`) — 남아 있고 그 뒤 스텝이 돌았으면 이번 프레임의 스텝이 첫 스텝이다.
-        // shortcut: 한 프레임에 스텝이 여럿이면 첫 스텝 뒤 스텝(같은 프레임)에 걸어 들어온 진입도 나타남으로 친다 — 진입에 스텝 번호를 실을 일이 생기면 쌍마다 첫 시작 스텝을 든다.
         for ( const SpawnedObject& spawned : _listSpawnedObject )
         {
-            if ( spawned._objectID == objectID && spawned._stepCount < _stepCount )
+            if ( spawned._objectID == objectID && spawned._stepCount + 1u == step && step <= _stepCount )
                 return true;
         }
         return false;

@@ -132,8 +132,10 @@ namespace sw
         DXGISwapChainBuffers makeBuffers() const { return DXGISwapChainBuffers{ _swapChain.Get(), _bufferCount, _width, _height, _swapChainFlags, _sdrFormat }; }
         /** @brief 창이 놓인 모니터가 받는 출력입니다(만들 때 · 크기 · 색 공간을 바꿀 때 묻는다 — `queryDXGIDisplayOutputSupport`). */
         const DXGIDisplayOutputSupport& getDisplayOutputSupport() const { return _displayOutputSupport; }
-        uint32                          getWidth() const override { return _width; }
-        uint32                          getHeight() const override { return _height; }
+        /** @brief 창이 놓인 모니터가 받는 출력을 다시 묻습니다(창이 다른 모니터로 옮겨졌을 때). */
+        void   refreshDisplayOutputSupport() { _displayOutputSupport = queryDXGIDisplayOutputSupport( _swapChain.Get() ); }
+        uint32 getWidth() const override { return _width; }
+        uint32 getHeight() const override { return _height; }
 
         /** @brief 현재 백버퍼 리소스를 반환합니다. 준비 안 됐으면 nullptr 입니다. */
         ID3D12Resource* getCurrentBackBuffer() const;

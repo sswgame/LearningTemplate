@@ -23,12 +23,14 @@ namespace sw
      */
     struct WebAudioStreamState
     {
-        CircularAudioBuffer _ring;   ///< 믹서 스레드 → 워클릿 샘플(인터리브)입니다.
-        atomic<uint32>      _status; ///< 0 이면 흐른다. 브라우저 쪽이 출력을 잃으면(워클릿 오류 · 모듈 읽기 실패) 1 을 쓴다.
+        CircularAudioBuffer _ring;          ///< 믹서 스레드 → 워클릿 샘플(인터리브)입니다.
+        atomic<uint32>      _status;        ///< 0 이면 흐른다. 브라우저 쪽이 출력을 잃으면(워클릿 오류 · 모듈 읽기 실패) 1 을 쓴다.
+        atomic<uint32>      _underrunCount; ///< 소리가 흐르기 시작한 뒤 워클릿이 한 묶음을 다 채우지 못한 수다(남은 칸은 무음). 워클릿만 올린다.
 
         explicit WebAudioStreamState( uint32 capacity )
             : _ring{ capacity }
             , _status{ 0 }
+            , _underrunCount{ 0 }
         {
         }
     };
@@ -38,7 +40,7 @@ namespace sw
 extern "C"
 {
     int  swWebAudioIsAvailable();
-    int  swWebAudioStart( uint32* pReadIndex, uint32* pWriteIndex, float32* pSample, uint32 capacity, uint32 channelCount, uint32 sampleRate, uint32* pStatus, void* pState );
+    int  swWebAudioStart( uint32* pReadIndex, uint32* pWriteIndex, float32* pSample, uint32 capacity, uint32 channelCount, uint32 sampleRate, uint32* pStatus, uint32* pUnderrunCount, void* pState );
     void swWebAudioStop( int contextID );
 
     /** @brief (브라우저 메인 스레드) AudioContext 를 다 닫은 뒤 JS 가 공유 상태를 돌려준다 — 그때서야 워클릿이 링을 만지지 않는다. */
@@ -113,7 +115,7 @@ namespace sw
         unique_ptr<WebAudioStreamState> state        = make_unique<WebAudioStreamState>( Internal::kRingFrameCount * channelCount );
         CircularAudioBuffer&            ring         = state->_ring;
         const int32                     contextID    = swWebAudioStart( ring.getReadIndexAddress(), ring.getWriteIndexAddress(), ring.getSampleData(), ring.getCapacity(), channelCount, audio::kSampleRate,
-                                                                        reinterpret_cast<uint32*>( &state->_status ), state.get() );
+                                                                        reinterpret_cast<uint32*>( &state->_status ), reinterpret_cast<uint32*>( &state->_underrunCount ), state.get() );
         if ( contextID == 0 )
         {
             // 워클릿을 만들기 전에 졌다 — 링을 읽는 쪽이 없으니 여기서 놓는다.
@@ -168,6 +170,11 @@ namespace sw
         swWebAudioStop( _impl->_contextID ); // 닫기가 끝나면 브라우저 쪽이 공유 상태를 놓는다
         _impl->_pState    = nullptr;
         _impl->_contextID = 0;
+    }
+
+    uint64 WebAudioBackend::getUnderrunCount() const
+    {
+        return _impl->_pState != nullptr ? _impl->_pState->_underrunCount.load( std::memory_order_relaxed ) : 0u;
     }
 
     void WebAudioBackend::closeDevice()
