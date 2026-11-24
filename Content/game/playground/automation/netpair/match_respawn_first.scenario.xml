@@ -1,0 +1,35 @@
+<?xml version="1.0" encoding="utf-8"?>
+<?asset guid="886f4df206379b5282fb0376ffbd770c"?>
+<!--
+  온라인 매치에서 쓰러지고 다시 태어나기(첫 사람) — `py -3 -m Scripts net-pair respawn` 이 허브 서버 · 매치 서버 · 두 클라이언트로 돈다. 매치 서버의 몸은 하나라 한 번에 한 사람이 자리를 갖는다.
+  ① 허브 → 줄 → 매치 서버. 서버가 알린 체력(Shooter.ServerHealth)이 온다.
+  ② 실행기가 매치 서버에서 이 사람을 쓰러뜨린다(cheat.shooter.down) — 서버가 정한 쓰러짐이 매치를 끝내고 허브로 돌아온다. 그 자리는 줄 서 있던 둘째 사람에게 간다.
+  ③ 다시 줄을 서면 둘째가 쓰러질 때까지 기다렸다가 자리를 얻고, 앞 판의 죽음 없이 가득 찬 체력으로 태어난다. 스스로 나가 허브로 돌아온다.
+-->
+<Scenario name="game.playground.netpair.match_respawn_first" fixedDelta="0.0166667" timeoutFrames="120000" startAfter="ScenePlaying" startTimeoutFrames="900">
+	<Variable name="gv_playgroundAutoPlay" value="0"/>
+	<!-- ① -->
+	<DevCommand line="online.connect"/>
+	<WaitUntil watch="Online.SessionState" atLeast="3" timeoutWallSeconds="30"/>
+	<DevCommand line="playground.online.login"/>
+	<WaitUntil watch="Playground.OnlineLoggedIn" equals="1" timeoutWallSeconds="30"/>
+	<DevCommand line="playground.online.joinhub 127.0.0.1:17977"/>
+	<WaitUntil watch="Hub.AvatarID" atLeast="1" timeoutWallSeconds="60"/>
+	<DevCommand line="minigame.enter shooter3d_match"/>
+	<WaitUntil watch="Playground.MatchState" equals="4" timeoutWallSeconds="90"/>
+	<WaitUntil watch="Shooter.ServerHealth" atLeast="50" timeoutWallSeconds="60"/>
+	<!-- ② 쓰러짐 → 허브 -->
+	<WaitUntil watch="Minigame.RestoreCount" equals="1" timeoutWallSeconds="120"/>
+	<WaitUntil watch="Playground.MatchState" equals="0" timeoutWallSeconds="60"/>
+	<WaitUntil watch="Hub.AvatarID" atLeast="1" timeoutWallSeconds="60"/>
+	<!-- ③ 다시 태어남 -->
+	<DevCommand line="minigame.enter shooter3d_match"/>
+	<WaitUntil watch="Playground.MatchState" equals="4" timeoutWallSeconds="120"/>
+	<WaitUntil watch="Shooter.ServerHealth" atLeast="50" timeoutWallSeconds="60"/>
+	<DevCommand line="minigame.quit"/>
+	<WaitUntil watch="Minigame.RestoreCount" equals="2" timeoutWallSeconds="60"/>
+	<WaitUntil watch="Playground.MatchState" equals="0" timeoutWallSeconds="60"/>
+	<WaitUntil watch="Hub.AvatarID" atLeast="1" timeoutWallSeconds="60"/>
+	<DevCommand line="online.disconnect"/>
+	<Pass/>
+</Scenario>

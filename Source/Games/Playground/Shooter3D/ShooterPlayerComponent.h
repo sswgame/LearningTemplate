@@ -163,6 +163,8 @@ namespace sw
         uint32      getHitCount() const { return _hitCount; }
         /** @brief 매치 서버가 알려 준 이 판의 처치 수입니다(접속하지 않았으면 0). */
         uint32 getServerKillCount() const { return _serverKillCount; }
+        /** @brief 매치 서버가 알려 준 체력입니다(아직 받지 않았으면 -1). */
+        float32 getServerHealth() const { return _bServerHealth == SW_TRUE ? _serverHealth : -1.0f; }
 
     private:
         /** @brief 이번 발의 탄도선 하나입니다. 틱이 끝난 뒤 디렉터의 풀에서 꺼냅니다. */

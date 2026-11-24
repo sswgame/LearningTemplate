@@ -263,6 +263,31 @@ namespace sw
                 return true;
             }
 
+            /** @brief `cheat.shooter.down` — 살아 있는 슈터 플레이어를 바로 쓰러뜨립니다(면역은 끈다). 쓰러짐 뒤 판 다시 열기 · 매치 끝내기를 적을 기다리지 않고 보는 시나리오의 손입니다. */
+            static bool runDown( const vector<string>& listArgument, string& outReply )
+            {
+                if ( listArgument.empty() == false )
+                    return false;
+                expected<vector<ShooterPlayerComponent*>> collected = collectPlayers();
+                if ( collected.has_value() == false )
+                {
+                    outReply = string( collected.error().message() );
+                    return true;
+                }
+                const vector<ShooterPlayerComponent*> listPlayer = std::move( *collected );
+                int32                                 downCount  = 0;
+                for ( ShooterPlayerComponent* pPlayer : listPlayer )
+                {
+                    pPlayer->setDamageImmune( false );
+                    pPlayer->takeDamage( pPlayer->getMaxHealth() );
+                    downCount += pPlayer->isAlive() ? 0 : 1;
+                }
+                StringBuilder<constant::buffer::kMax256> replyBuilder;
+                replyBuilder.appendFormat( "cheat.shooter.down downed %# of %# player(s)", downCount, listPlayer.size() );
+                outReply = string( replyBuilder.view() );
+                return true;
+            }
+
             /** @brief `cheat.shooter.projectile [id]` — 슈터 플레이어의 지금 무기에 탄을 장전합니다. id 를 빼면 그 무기의 기본 탄입니다(무기 · 탄 조합 시나리오). */
             static bool runProjectile( const vector<string>& listArgument, string& outReply )
             {
@@ -1283,9 +1308,11 @@ namespace sw
     SW_DEV_COMMAND( CheatAmmo, "cheat.ammo", "cheat.ammo", "Add two magazines of reserve ammo to every weapon of every shooter player", &ShooterDevCommandsInternal::runAmmo );
     SW_DEV_COMMAND( CheatShooterHeal, "cheat.shooter.heal", "cheat.shooter.heal", "Fill the health of every living shooter player", &ShooterDevCommandsInternal::runHeal );
     SW_DEV_COMMAND( CheatShooterGod, "cheat.shooter.god", "cheat.shooter.god", "Toggle damage immunity of every shooter player", &ShooterDevCommandsInternal::runGod );
+    SW_DEV_COMMAND( CheatShooterDown, "cheat.shooter.down", "cheat.shooter.down", "Down every living shooter player at once (clears damage immunity)", &ShooterDevCommandsInternal::runDown );
     SW_DEV_COMMAND( ShooterProjectile, "cheat.shooter.projectile", "cheat.shooter.projectile [projectile id]",
                     "Load a projectile into the current weapon of every shooter player (no id: the weapon's own projectile)", &ShooterDevCommandsInternal::runProjectile );
     SW_AUTOMATION_GETTER_WATCH( shooterEnemyHitCount, "Shooter.EnemyHitCount", "Shots of the first shooter player that hit an enemy", ShooterPlayerComponent, &ShooterPlayerComponent::getHitCount );
+    SW_AUTOMATION_GETTER_WATCH( shooterServerHealth, "Shooter.ServerHealth", "Health the match server last reported to the first shooter player (-1 before the first report)", ShooterPlayerComponent, &ShooterPlayerComponent::getServerHealth );
     SW_AUTOMATION_GETTER_WATCH( shooterServerKillCount, "Shooter.ServerKillCount", "Kills the match server last reported to the first shooter player (0 without a server)", ShooterPlayerComponent, &ShooterPlayerComponent::getServerKillCount );
     SW_AUTOMATION_COMPONENT_WATCH( shooterPlayerControllerKind, "Shooter.PlayerControllerKind", "Who possesses the first shooter player: 0 the player, 1 an AI (auto play), -1 none", ShooterPlayerComponent, &ShooterPlayerComponentInternal::readControllerKind );
 
