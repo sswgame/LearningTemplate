@@ -3,6 +3,8 @@
  * @brief Vulkan Memory Allocator(VMA)로 버퍼 · 이미지와 그 장치 메모리를 만드는 자리입니다(Vulkan · VMA 헤더 없이 읽힌다).
  */
 #pragma once
+#include "Core/Concurrency/mutex.h"
+#include "Core/Container/vector.h"
 #include "Core/Foundation/Macros.h"
 #include "Core/Foundation/Types.h"
 
@@ -87,14 +89,45 @@ namespace sw
         /** @brief GPU 가 쓴 구간을 CPU 가 읽을 수 있게 합니다(일관 메모리면 VMA 가 아무것도 하지 않는다). 오프셋은 할당의 시작에서 센다. */
         void invalidate( const VulkanAllocation& allocation, uint64 offsetBytes, uint64 sizeBytes );
 
+        /**
+         * @brief @p allocation 의 자리와 겹치는 산 할당, 그 자리를 앞서 썼던 할당(이름 · 크기 · 만든 프레임 · 놓은 프레임)을 로그로 남깁니다(개발 진단 — 버퍼 내용이 깨졌을 때).
+         * @details 깨진 바이트가 앞 주인의 모양이면 놓은 뒤의 GPU 쓰기이고, 산 할당이 겹치면 같은 메모리가 두 번 나간 것이다. 배포본은 아무것도 하지 않는다.
+         */
+        void reportPlacement( const VulkanAllocation& allocation ) const;
         /** @brief 이 프로세스의 힙별 사용량과 예산입니다(사용량은 모든 힙, 예산 · 남은 양은 기기 로컬 힙). `VK_EXT_memory_budget` 이 없으면 false 입니다(VMA 의 어림값을 드라이버 값으로 내지 않는다). */
         [[nodiscard]] bool queryBudget( RHIMemoryBudget& outBudget ) const;
         /** @brief 살아 있는 `VkDeviceMemory` 수입니다(블록 + 전용 할당 — 장치 한도 `maxMemoryAllocationCount` 의 분자이고 한도는 VMA 가 지킨다). */
         uint32 computeBlockCount() const;
 
     private:
-        VmaAllocator _allocator{ nullptr };
-        VkDevice     _device{ nullptr };
-        uint8        _bMemoryBudget{ SW_FALSE };
+        /** @brief 할당 하나가 차지한 구간입니다(개발 진단). */
+        struct Placement
+        {
+            VkDeviceMemory _memory{ nullptr };
+            uint64         _offset{ 0 };
+            uint64         _size{ 0 };
+            const utf8*    _pName{ nullptr }; ///< 만드는 쪽의 문자열 리터럴
+            uint64         _createdFrame{ 0 };
+            uint64         _freedFrame{ 0 }; ///< 0 이면 산 할당
+
+            /** @brief 같은 메모리 블록에서 구간이 겹치면 true 입니다. */
+            bool overlaps( const Placement& other ) const { return _memory == other._memory && _offset < other._offset + other._size && other._offset < _offset + _size; }
+        };
+        static constexpr size_t kFreedPlacementCount = 4096; ///< 기억하는 놓은 할당 수 — 넘으면 오래된 것부터 잊는다
+
+        /** @brief 새 할당의 구간을 적고, 산 할당과 겹치면 오류를 남깁니다. 배포본은 아무것도 하지 않는다. */
+        void recordPlacement( const VulkanAllocation& allocation, const utf8* pName );
+        /** @brief 놓을 할당의 구간을 산 목록에서 놓은 목록으로 옮깁니다(놓기 앞에 부른다). 배포본은 아무것도 하지 않는다. */
+        void recordRelease( const VulkanAllocation& allocation );
+
+    private:
+        VmaAllocator                 _allocator{ nullptr };
+        VkDevice                     _device{ nullptr };
+        uint8                        _bMemoryBudget{ SW_FALSE };
+        mutable mutex                _placementMutex;
+        uint64 _currentFrame         SW_GUARDED_BY( _placementMutex ){ 0 };
+        size_t _freedCursor          SW_GUARDED_BY( _placementMutex ){ 0 };
+        vector<Placement> _listLive  SW_GUARDED_BY( _placementMutex );
+        vector<Placement> _listFreed SW_GUARDED_BY( _placementMutex ); ///< 고리(`_freedCursor` 가 다음 자리)
     };
 } // namespace sw

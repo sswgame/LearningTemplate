@@ -9,6 +9,7 @@
 #include "Engine/Graphics/Mesh/Mesh.h"
 #include "Engine/Graphics/Mesh/MeshRenderData.h"
 #include "Engine/Graphics/RHI/IRHICommandList.h"
+#include "Engine/Graphics/RHI/IRHIDevice.h"
 #include "Engine/Graphics/RHI/RHIMeshVertexLayout.h"
 #include "Engine/Graphics/RHI/RHIMeshVertexStreams.h"
 #include "Engine/Renderer/Debug/RenderDebugRegistry.h"
@@ -23,6 +24,7 @@ namespace sw
             /// 한 번에 견주는 CPU 정점의 상한입니다. 넘는 메시는 견주지 않고 수를 로그에 적는다 — 시나리오 무대의 메시는 모두 든다.
             static constexpr uint32 kMaxExpectedBytes = 16u * 1024u * 1024u;
             static constexpr uint32 kWordBytes        = static_cast<uint32>( sizeof( uint32 ) );
+            static constexpr uint32 kMaxReportedWords = 32u; ///< 메시 하나에 남기는 다른 단어의 상한
 
             /** @brief @p byteOffset 이 든 4 바이트 정렬 단어를 읽습니다(로그용). */
             static uint32 readWord( const uint8* pByte, uint32 byteOffset )
@@ -44,6 +46,22 @@ namespace sw
                                  difference->_differingByteCount, Fmt( readWord( pExpected, difference->_byteOffset ), Format( 8, Format::Padding::Zero ).hexUpper() ),
                                  Fmt( readWord( pActual, difference->_byteOffset ), Format( 8, Format::Padding::Zero ).hexUpper() ) );
                 return difference->_differingByteCount;
+            }
+
+            /** @brief 두 사본의 다른 단어(4 바이트)를 차례로 로그로 남깁니다(상한 `kMaxReportedWords`). */
+            static void reportWords( const uint8* pExpected, const uint8* pActual, uint32 byteCount )
+            {
+                uint32 reportedCount = 0;
+                for ( uint32 byteOffset = 0; byteOffset + kWordBytes <= byteCount && reportedCount < kMaxReportedWords; byteOffset += kWordBytes )
+                {
+                    const uint32 expected = readWord( pExpected, byteOffset );
+                    const uint32 actual   = readWord( pActual, byteOffset );
+                    if ( expected == actual )
+                        continue;
+                    ++reportedCount;
+                    SW_LOG_INFO_ID( "MeshVertexCheck.Word", "  byte %#: expected 0x%#, got 0x%#", byteOffset, Fmt( expected, Format( 8, Format::Padding::Zero ).hexUpper() ),
+                                    Fmt( actual, Format( 8, Format::Padding::Zero ).hexUpper() ) );
+                }
             }
 
             /** @brief CPU 정점의 첫 영 길이 노멀을 로그로 남깁니다 — 정점 셰이더에서 NaN 이 되는 값인데, GPU 사본이 같으면 바이트 대조로는 드러나지 않는다. */
@@ -113,6 +131,7 @@ namespace sw
             checked._expectedOffset = static_cast<uint32>( _listExpected.size() );
             checked._byteCount      = RHIMeshVertexStreams::computeBufferBytes( checked._format, vertexCount );
             checked._batchIndex     = static_cast<uint32>( batchIndex );
+            checked._proxyBuffer    = pMesh->getRenderData().getVertexBuffer();
             if ( checked._byteCount > Internal::kMaxExpectedBytes - checked._expectedOffset )
             {
                 ++skippedCount;
@@ -167,7 +186,7 @@ namespace sw
         _bPending = _readback.request( cmd, _probeBuffer._buffer, RHIBufferState::CopyDest, ++_tag ) ? SW_TRUE : SW_FALSE;
     }
 
-    void MeshVertexCheck::report( const vector<uint8>& listByte ) const
+    void MeshVertexCheck::report( const IRHIDevice& device, const vector<uint8>& listByte ) const
     {
         using Internal            = MeshVertexCheckInternal;
         uint32 differingMeshCount = 0;
@@ -180,6 +199,10 @@ namespace sw
             const uint32       proxyBytes = Internal::reportCopy( checked._name, "render proxy", checked._format, checked._vertexCount, pExpected, pProxy );
             const uint32       drawnBytes = Internal::reportCopy( checked._name, "drawn vertex buffer", checked._format, checked._vertexCount, pExpected, pProxy + checked._byteCount );
             differingMeshCount += proxyBytes + drawnBytes > 0 ? 1u : 0u;
+            // 깨진 바이트의 모양과 그 메모리의 앞 주인을 함께 남긴다 — 어느 쓰기가 덮었는지 갈린다.
+            Internal::reportWords( pExpected, proxyBytes > 0 ? pProxy : pProxy + checked._byteCount, checked._byteCount );
+            if ( proxyBytes > 0 )
+                device.reportBufferPlacement( checked._proxyBuffer );
         }
         SW_LOG_INFO_ID( "MeshVertexCheck.Done", "Mesh vertex check: %# of %# meshes differ from their CPU vertices", differingMeshCount, static_cast<uint32>( _listMesh.size() ) );
     }
@@ -192,7 +215,7 @@ namespace sw
             uint64        tag = 0;
             if ( _readback.takeLatest( listByte, tag ) == false || tag != _tag )
                 return; // 한 번에 하나만 되읽는다 — 새 요청은 우편함에 남아 다음 차례를 기다린다
-            report( listByte );
+            report( device, listByte );
             release( &device );
         }
         if ( registry.takeMeshVertexCheckRequest() == false )
