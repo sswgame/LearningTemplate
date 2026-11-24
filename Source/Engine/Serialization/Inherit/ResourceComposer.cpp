@@ -21,6 +21,7 @@
 #include "Engine/Serialization/Inherit/ResourceTags.h"
 #include "Engine/Serialization/XML/XMLBinary.h"
 #include "Engine/Serialization/XML/XMLDocument.h"
+#include "Engine/Serialization/XML/XMLReadUtil.h"
 
 namespace sw
 {
@@ -44,13 +45,7 @@ namespace sw
                     outText = _baseText;
                     return true;
                 }
-                if ( AssetIO::readTextAsset( AssetID{ assetID }, outText ) == false )
-                    return false;
-                // 팩의 카탈로그는 이진 쿠킹본이다 — 부모로 합칠 때는 글로 되살린다.
-                if ( XMLBinary::isBinary( outText ) == false )
-                    return true;
-                const string cookedBytes = std::move( outText );
-                return XMLBinary::decodeText( cookedBytes, outText );
+                return XMLReadUtil::readText( AssetID{ assetID }, outText );
             }
 
         private:
@@ -672,7 +667,7 @@ namespace sw
                     if ( AssetIO::hasAsset( layerID ) == false )
                         continue;
                     string layerText;
-                    if ( AssetIO::readTextAsset( layerID, layerText ) == false )
+                    if ( XMLReadUtil::readText( layerID, layerText ) == false )
                     {
                         SW_LOG_ERROR_ID( "ResourceLayer.NotRead", "Resource layer '%#' could not be read", layerID.view() );
                         return false;

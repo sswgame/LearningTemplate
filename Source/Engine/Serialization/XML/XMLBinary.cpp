@@ -149,9 +149,10 @@ namespace sw
         const auto                isLater     = []( uint32 target, uint32 self, uint32 count )
         { return target == kNone || ( self < target && target < count ); }; // 뒤만 가리킨다 — 순환이 없다
         // 레코드마다 가리키는 곳이 하나다 — 나눠 가진 가지가 있으면 따라가는 횟수가 끝없이 불어난다.
-        vector<uint8> listNodeUsed( header._nodeCount, uint8{ SW_FALSE } );
-        vector<uint8> listAttributeUsed( header._attributeCount, uint8{ SW_FALSE } );
-        const auto    claim = []( vector<uint8>& inoutListUsed, uint32 index )
+        vector<uint8>  listNodeUsed( header._nodeCount, uint8{ SW_FALSE } );
+        vector<uint32> listDepth( header._nodeCount, 1u ); // 가리키는 곳이 늘 뒤라 한 번 훑으면 모두 정해진다
+        vector<uint8>  listAttributeUsed( header._attributeCount, uint8{ SW_FALSE } );
+        const auto     claim = []( vector<uint8>& inoutListUsed, uint32 index )
         {
             if ( index == kNone )
                 return true;
@@ -167,6 +168,12 @@ namespace sw
                                 isLater( node._nextSibling, index, header._nodeCount );
             if ( bValid == false || claim( listNodeUsed, node._firstChild ) == false || claim( listNodeUsed, node._nextSibling ) == false || claim( listAttributeUsed, node._firstAttribute ) == false )
                 return false;
+            if ( listDepth[index] > XMLDocument::kMaxDepth )
+                return false;
+            if ( node._firstChild != kNone )
+                listDepth[node._firstChild] = listDepth[index] + 1;
+            if ( node._nextSibling != kNone )
+                listDepth[node._nextSibling] = listDepth[index];
         }
         const uint64 attributeBase = sizeof( XMLBinaryHeader ) + uint64{ header._nodeCount } * sizeof( XMLBinaryNode );
         for ( uint32 index = 0; index < header._attributeCount; ++index )

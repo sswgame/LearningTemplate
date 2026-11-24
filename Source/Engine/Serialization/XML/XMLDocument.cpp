@@ -413,6 +413,32 @@ namespace sw
                 return pugi::xml_node{};
             }
 
+            /** @brief 원소 중첩이 상한(`XMLDocument::kMaxDepth`)을 넘으면 true 입니다. 부모 포인터로 돌아 스택 · 할당이 없다. */
+            [[nodiscard]] static bool isTooDeep( const pugi::xml_node& document )
+            {
+                uint32         depth = 0;
+                pugi::xml_node node  = document;
+                while ( true )
+                {
+                    if ( depth > XMLDocument::kMaxDepth && node.type() == pugi::node_element )
+                        return true;
+                    if ( const pugi::xml_node child = node.first_child() )
+                    {
+                        ++depth;
+                        node = child;
+                        continue;
+                    }
+                    while ( node != document && node.next_sibling().empty() )
+                    {
+                        node = node.parent();
+                        --depth;
+                    }
+                    if ( node == document )
+                        return false;
+                    node = node.next_sibling();
+                }
+            }
+
             // 이름은 철자 그대로 찾는다(XMLNode 머리말) — pugixml 의 child · attribute 가 그 비교다.
             static pugi::xml_node findChild( pugi::xml_node parent, const utf8* pName )
             {
@@ -947,6 +973,16 @@ namespace sw
             StringBuilder<constant::buffer::kMax256> error;
             error.appendFormat( "%#: no element", source );
             _lastError = string( error.view() );
+            return false;
+        }
+
+        if ( XMLDocumentInternal::isTooDeep( _impl->doc ) )
+        {
+            StringBuilder<constant::buffer::kMax256> error;
+            error.appendFormat( "%#: elements nest deeper than %#", source, kMaxDepth );
+            _lastError = string( error.view() );
+            SW_LOG_ERROR_ID( "Xml.TooDeep", "%#", _lastError );
+            _impl->doc.reset();
             return false;
         }
 

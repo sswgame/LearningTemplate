@@ -621,12 +621,22 @@ namespace sw
                 const bool bPlainCatalog = references.isCookedRootMentioned( packedText ) && packedText.find( DataInheritance::kWhenElement ) == string_view::npos;
                 if ( bPlainCatalog )
                 {
-                    XMLDocument   doc;
-                    vector<uint8> cookedBytes;
-                    if ( doc.parse( packedText, absPath.str() ) && references.isCookedRoot( doc.getRoot().getName() ) && XMLBinary::encode( doc.getRoot(), cookedBytes ) )
+                    XMLDocument doc;
+                    const bool  bParsed = doc.parse( packedText, absPath.str() );
+                    if ( bParsed && references.isCookedRoot( doc.getRoot().getName() ) )
                     {
-                        bytes = std::move( cookedBytes );
-                        return true;
+                        vector<uint8> cookedBytes;
+                        if ( XMLBinary::encode( doc.getRoot(), cookedBytes ) )
+                        {
+                            bytes = std::move( cookedBytes );
+                            return true;
+                        }
+                    }
+                    // 읽지 못한 카탈로그를 글로 담지 않는다 — 배포본에서야 드러난다. 루트가 다른 글(이름이 글 속에 나왔을 뿐이다)은 그대로 담는다.
+                    if ( StringUtil::endsWith( relativePath, ".xml", true ) && ( bParsed == false || references.isCookedRoot( doc.getRoot().getName() ) ) )
+                    {
+                        SW_LOG_ERROR_ID( "PackCooker.CatalogNotCooked", "Pack cook: catalog '%#' could not be cooked to binary (%#)", absPath.str(), doc.getLastError() );
+                        return false;
                     }
                 }
                 if ( bComposed )

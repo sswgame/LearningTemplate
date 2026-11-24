@@ -6,6 +6,8 @@
 #include "Core/Log/Logger.h"
 #include "Core/String/StringUtil.h"
 
+#include "Engine/Content/AssetIO.h"
+#include "Engine/Serialization/XML/XMLBinary.h"
 #include "Engine/Serialization/XML/XMLDocument.h"
 
 namespace sw
@@ -136,6 +138,19 @@ namespace sw
             text.append( to_string( pValue[index] ) );
         }
         return text;
+    }
+
+    bool XMLReadUtil::readText( const AssetID& assetID, string& outText )
+    {
+        if ( AssetIO::readTextAsset( assetID, outText ) == false )
+            return false;
+        if ( XMLBinary::isBinary( outText ) == false )
+            return true;
+        const string cookedBytes = std::move( outText );
+        if ( XMLBinary::decodeText( cookedBytes, outText ) )
+            return true;
+        SW_LOG_ERROR_ID( "Xml.CookedBroken", "%#: the cooked document is broken or of another version - cook the pack again", assetID.view() );
+        return false;
     }
 
     bool XMLReadUtil::loadRootOrWarn( XMLDocument& outDocument, const AssetID& assetID, const utf8* pRootName, XMLNode& outRoot, string& outSourceName )
