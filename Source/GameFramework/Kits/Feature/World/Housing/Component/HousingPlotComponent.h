@@ -137,8 +137,10 @@ namespace sw
         void takeOutgoingEdits( vector<HousingEditRequest>& outListRequest );
         /** @brief 서버의 판정 하나를 받습니다(마지막 결과 · 고스트를 맞춘다). */
         void receiveNetReply( HousingPlaceResult result );
-        /** @brief 보내지 못한 요청 하나를 잊습니다(연결이 닫혔다). */
+        /** @brief 보내지 못한 요청 하나를 잊습니다. */
         void abandonNetRequest();
+        /** @brief 쌓였거나 답을 기다리는 요청을 모두 버립니다(서버와 끊겼거나 세션이 닫혔다 — 답이 오지 않는다). */
+        void abandonNetRequests();
         void setReplicatedOwner( HousingPlotOwner owner ) { _replicatedOwner = owner; }
         /** @brief 오브젝트 루트를 부지 변환(자리 · 요)에 둡니다. */
         void   placeObject( GameObject& object, const HousingTransform& transform ) const;

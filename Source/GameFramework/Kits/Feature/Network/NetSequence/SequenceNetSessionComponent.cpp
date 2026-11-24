@@ -68,6 +68,8 @@ namespace sw
         context.deferPostTickOnComponent( *this, []( SequenceNetSessionComponent& component, GameObjectManager& manager )
         {
             (void)manager;
+            if ( component._routerSubscription.isActive() == false )
+                return; // 틱과 틱 뒤 사이에 세션이 닫혔다
             if ( component._bServer == SW_TRUE )
                 component._server.update();
             else
