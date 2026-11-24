@@ -1,65 +1,19 @@
 #include "pch.h"
 
 #include "Core/Container/unordered_map.h"
+#include "Core/Network/Connection/NetConnection.h"
 #include "Core/Network/Connection/NetEndpoint.h"
+#include "Core/Network/Tests/FakeNetPeers.h"
 #include "Core/Serialization/BitStream.h"
 #include "Core/Testing/TestFramework.h"
 
 #include "GameFramework/Kits/Feature/Network/NetTurnRelay/TurnRelay.h"
 
 using namespace sw;
+using test::FakeNetPeers;
 
 namespace
 {
-    /** @brief 보낸 메시지를 쌓기만 하는 상대입니다. 창이 차면 `_bWindowFull` 로 거절합니다. */
-    class FakeTurnPeers final : public INetPeers
-    {
-    public:
-        struct Sent
-        {
-            vector<uint8> _bytes{};
-            int32         _connectionID{ -1 };
-        };
-
-        vector<Sent>  _listSent{};
-        vector<int32> _listDisconnected{};
-        int32         _sendBudget{ -1 }; ///< 남은 보내기 수. 음수면 무한이다
-        uint8         _bWindowFull{ SW_FALSE };
-
-        /** @brief 창이 차면 연결을 닫는다(`NetEndpoint::sendMessage` 와 같다) — 기다릴 쪽이 이것을 쓰면 테스트가 진다. */
-        bool sendMessage( int32 connectionID, NetChannelKind channel, const uint8* pData, int32 size ) override
-        {
-            if ( trySendMessage( connectionID, channel, pData, size ) )
-                return true;
-            _listDisconnected.push_back( connectionID );
-            return false;
-        }
-        bool trySendMessage( int32 connectionID, NetChannelKind channel, const uint8* pData, int32 size ) override
-        {
-            (void)channel;
-            if ( _bWindowFull != SW_FALSE || _sendBudget == 0 )
-                return false;
-            if ( _sendBudget > 0 )
-                --_sendBudget;
-            _listSent.push_back( Sent{ vector<uint8>( pData, pData + size ), connectionID } );
-            return true;
-        }
-        bool               sendNotifiedMessage( int32, const uint8*, int32, uint32 ) override { return false; }
-        int32              broadcast( NetChannelKind, const uint8*, int32, int32 ) override { return 0; }
-        void               disconnect( int32 connectionID, NetLinger ) override { _listDisconnected.push_back( connectionID ); }
-        void               pollInbound( NetInbound& ) override {}
-        bool               isServer() const override { return true; }
-        NetConnectionState getConnectionState( int32 ) const override { return NetConnectionState::Connected; }
-        bool               getConnectionStats( int32, NetConnectionStats& ) const override { return false; }
-        NetAddress         getConnectionAddress( int32 ) const override { return NetAddress{}; }
-        uint64             getConnectionPrincipal( int32 ) const override { return 0; }
-        optional<int32>    getClientIndex() const override { return nullopt; }
-        int32              getConnectedCount() const override { return 0; }
-        void               collectConnected( vector<int32>& ) const override {}
-        bool               isConnectionSaturated( int32 ) const override { return false; }
-        void               addSentKindStats( NetMessageKindStatsTable& ) const override {}
-    };
-
     /** @brief 서버 하나와 클라이언트 여럿을 가짜 상대로 잇습니다. 연결 번호는 클라이언트 순번입니다. */
     struct TurnRelayTest
     {
@@ -67,16 +21,16 @@ namespace
 
         struct Client
         {
-            FakeTurnPeers   _peers;
+            FakeNetPeers    _peers{ false };
             TurnRelayClient _relay;
         };
 
-        FakeTurnPeers              _serverPeers;
+        FakeNetPeers               _serverPeers;
         TurnRelayServer            _server;
         vector<unique_ptr<Client>> _listClient;
 
         TurnRelayTest()
-            : _serverPeers{}
+            : _serverPeers{ true }
             , _server{}
             , _listClient{}
         {
@@ -89,6 +43,8 @@ namespace
         {
             _listClient.push_back( make_unique<Client>() );
             _listClient.back()->_relay.initialize( &_listClient.back()->_peers );
+            _listClient.back()->_peers.connect( 0 );
+            _serverPeers.connect( static_cast<int32>( _listClient.size() ) - 1 );
             return *_listClient.back();
         }
 
@@ -101,17 +57,15 @@ namespace
                 bMoved = false;
                 for ( int32 index = 0; index < static_cast<int32>( _listClient.size() ); ++index )
                 {
-                    vector<FakeTurnPeers::Sent> listSent = std::move( _listClient[static_cast<size_t>( index )]->_peers._listSent );
-                    _listClient[static_cast<size_t>( index )]->_peers._listSent.clear();
-                    for ( const FakeTurnPeers::Sent& sent : listSent )
+                    const vector<FakeNetPeers::Sent> listSent = _listClient[static_cast<size_t>( index )]->_peers.takeSent();
+                    for ( const FakeNetPeers::Sent& sent : listSent )
                     {
                         SW_EXPECT_TRUE( _server.handleMessage( index, sent._bytes.data(), static_cast<int32>( sent._bytes.size() ), NetChannelKind::ReliableOrdered ) == NetHandleResult::Handled );
                         bMoved = true;
                     }
                 }
-                vector<FakeTurnPeers::Sent> listOut = std::move( _serverPeers._listSent );
-                _serverPeers._listSent.clear();
-                for ( const FakeTurnPeers::Sent& sent : listOut )
+                const vector<FakeNetPeers::Sent> listOut = _serverPeers.takeSent();
+                for ( const FakeNetPeers::Sent& sent : listOut )
                 {
                     SW_EXPECT_TRUE( _listClient[static_cast<size_t>( sent._connectionID )]->_relay.handleMessage( 0, sent._bytes.data(), static_cast<int32>( sent._bytes.size() ), NetChannelKind::ReliableOrdered ) == NetHandleResult::Handled );
                     bMoved = true;
@@ -401,7 +355,7 @@ SW_TEST_CASE_F( TurnRelayTest, SeatsCannotBeStolen )
 SW_TEST_CASE_F( TurnRelayTest, FullWindowResumesInUpdate )
 {
     startRoom();
-    _serverPeers._bWindowFull = SW_TRUE;
+    _serverPeers._heldFragmentCount = NetConnection::kReliableWindow;
     (void)relay( 0 ).submitAction( makeAction( 1 ) );
     poll();
     (void)relay( 1 ).submitAction( makeAction( 2 ) );
@@ -410,7 +364,7 @@ SW_TEST_CASE_F( TurnRelayTest, FullWindowResumesInUpdate )
     SW_EXPECT_TRUE( _serverPeers._listDisconnected.empty() ); // 멈춘 것이지 닫은 것이 아니다
     SW_EXPECT_EQUAL( _server.findRoom( 7 )->_listAction.size(), size_t{ 2 } );
 
-    _serverPeers._bWindowFull = SW_FALSE;
+    _serverPeers._heldFragmentCount = 0;
     _server.update( 0 );
     poll();
     SW_EXPECT_EQUAL( relay( 0 ).getActions().size(), size_t{ 2 } );
@@ -423,7 +377,7 @@ SW_TEST_CASE_F( TurnRelayTest, ActionsWaitBehindQueuedNotifications )
 {
     addClient()._relay.join( 7 );
     addClient()._relay.join( 7 );
-    _serverPeers._bWindowFull = SW_TRUE; // 시작 알림이 줄에 쌓인다
+    _serverPeers._heldFragmentCount = NetConnection::kReliableWindow; // 시작 알림이 줄에 쌓인다
     {
         poll();
     }
@@ -432,17 +386,16 @@ SW_TEST_CASE_F( TurnRelayTest, ActionsWaitBehindQueuedNotifications )
     SW_REQUIRE_TRUE( _server.findRoom( 7 )->_bStarted == SW_TRUE );
 
     // 창이 하나 열린 프레임에 행동이 먼저 도착해도, 줄 선 알림보다 앞서 나가지 않는다.
-    _serverPeers._bWindowFull = SW_FALSE;
+    _serverPeers._heldFragmentCount = 0;
     (void)relay( 0 ).submitAction( makeAction( 1 ) );
-    vector<FakeTurnPeers::Sent> listSubmit = std::move( _listClient[0]->_peers._listSent );
-    _listClient[0]->_peers._listSent.clear();
+    const vector<FakeNetPeers::Sent> listSubmit = _listClient[0]->_peers.takeSent();
     SW_REQUIRE_EQUAL( listSubmit.size(), size_t{ 1 } );
     SW_EXPECT_TRUE( _server.handleMessage( 0, listSubmit[0]._bytes.data(), static_cast<int32>( listSubmit[0]._bytes.size() ), NetChannelKind::ReliableOrdered ) == NetHandleResult::Handled );
     SW_EXPECT_TRUE( _serverPeers._listSent.empty() );
 
     _server.update( 0 );
     vector<uint8> listKind;
-    for ( const FakeTurnPeers::Sent& sent : _serverPeers._listSent )
+    for ( const FakeNetPeers::Sent& sent : _serverPeers._listSent )
     {
         if ( sent._connectionID == 0 )
             listKind.push_back( sent._bytes[0] );
@@ -457,7 +410,7 @@ SW_TEST_CASE_F( TurnRelayTest, ActionsWaitBehindQueuedNotifications )
 SW_TEST_CASE_F( TurnRelayTest, ConnectionThatNeverDrainsIsDropped )
 {
     startRoom();
-    _serverPeers._bWindowFull = SW_TRUE;
+    _serverPeers._heldFragmentCount = NetConnection::kReliableWindow;
     SW_EXPECT_LOG( "TurnRelay.ConnectionDoesNotAcknowledge" );
     for ( int32 index = 0; index <= TurnRelayServer::kMaxPendingPerConnection; ++index )
     {
@@ -468,7 +421,7 @@ SW_TEST_CASE_F( TurnRelayTest, ConnectionThatNeverDrainsIsDropped )
     SW_EXPECT_EQUAL( _serverPeers._listDisconnected[0], 0 );
 
     _server.onConnectionClosed( 0, NetDisconnectReason::Remote );
-    _serverPeers._bWindowFull = SW_FALSE;
+    _serverPeers._heldFragmentCount = 0;
     _server.update( 0 );
     SW_EXPECT_TRUE( _serverPeers._listSent.empty() );
 }
@@ -536,7 +489,7 @@ SW_TEST_CASE( TurnRelayPolicyTest, RoomAndHistoryLimitsRefuseMore )
 SW_TEST_CASE( TurnRelayPolicyTest, BadConfigRefusesToStart )
 {
     SW_EXPECT_LOG( "TurnRelay.TurnRelayServerRefusedStartSettings" );
-    FakeTurnPeers   peers;
+    FakeNetPeers    peers{ true };
     TurnRelayServer server;
     TurnRelayConfig config;
     config._seatCount = 0;
@@ -598,7 +551,8 @@ SW_TEST_CASE( TurnRelayWireTest, BodyRevisionFollowsTheBodySchema )
 // 서술자가 있는 메시지는 서술자의 채널로만 나간다 — 호출부가 채널을 고르는 함수로 보내려 하면 오류와 함께 보내지 않는다.
 SW_TEST_CASE( TurnRelayWireTest, TypedMessagesCannotTakeACallerChosenChannel )
 {
-    FakeTurnPeers    peers;
+    FakeNetPeers peers{ false };
+    peers.connect( 0 );
     TurnJoinBody     join;
     NetMessageWriter writer;
     join._roomID = 7;

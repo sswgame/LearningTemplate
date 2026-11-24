@@ -4,6 +4,7 @@
 
 #include "Core/Network/Connection/NetEndpoint.h"
 #include "Core/Network/Message/NetMessage.h"
+#include "Core/Network/Tests/FakeNetPeers.h"
 #include "Core/Testing/TestFramework.h"
 
 #include "Engine/Object/GameObject/GameObject.h"
@@ -13,6 +14,7 @@
 #include "Games/Playground/Hub/HubCardTableComponent.h"
 
 using namespace sw;
+using test::FakeNetPeers;
 
 namespace
 {
@@ -133,54 +135,10 @@ SW_TEST_CASE( HubCardTableTest, SeatViewHidesTheOtherHand )
 
 namespace
 {
-    /** @brief 보낸 메시지를 쌓기만 하는 상대입니다. */
-    class FakeCardPeers final : public INetPeers
-    {
-    public:
-        struct Sent
-        {
-            vector<uint8> _bytes{};
-            int32         _connectionID{ -1 };
-        };
-
-        vector<Sent> _listSent{};
-
-        explicit FakeCardPeers( bool bServer )
-            : _bServer{ static_cast<uint8>( bServer ? SW_TRUE : SW_FALSE ) }
-            , _reserved{ 0 }
-        {
-        }
-
-        bool sendMessage( int32 connectionID, NetChannelKind channel, const uint8* pData, int32 size ) override { return trySendMessage( connectionID, channel, pData, size ); }
-        bool trySendMessage( int32 connectionID, NetChannelKind, const uint8* pData, int32 size ) override
-        {
-            _listSent.push_back( Sent{ vector<uint8>( pData, pData + size ), connectionID } );
-            return true;
-        }
-        bool               sendNotifiedMessage( int32, const uint8*, int32, uint32 ) override { return false; }
-        int32              broadcast( NetChannelKind, const uint8*, int32, int32 ) override { return 0; }
-        void               disconnect( int32, NetLinger ) override {}
-        void               pollInbound( NetInbound& ) override {}
-        bool               isServer() const override { return _bServer != SW_FALSE; }
-        NetConnectionState getConnectionState( int32 ) const override { return NetConnectionState::Connected; }
-        bool               getConnectionStats( int32, NetConnectionStats& ) const override { return false; }
-        NetAddress         getConnectionAddress( int32 ) const override { return NetAddress{}; }
-        uint64             getConnectionPrincipal( int32 ) const override { return 0; }
-        optional<int32>    getClientIndex() const override { return nullopt; }
-        int32              getConnectedCount() const override { return 1; }
-        void               collectConnected( vector<int32>& outListConnection ) const override { outListConnection.clear(); }
-        bool               isConnectionSaturated( int32 ) const override { return false; }
-        void               addSentKindStats( NetMessageKindStatsTable& ) const override {}
-
-    private:
-        uint8                  _bServer  : 1;
-        [[maybe_unused]] uint8 _reserved : 7;
-    };
-
     /** @brief 카드 탁자 하나가 있는 월드입니다. */
     struct HubCardTestWorld
     {
-        FakeCardPeers          _peers;
+        FakeNetPeers           _peers;
         NetMessageRouter       _router;
         GameObjectManager      _manager;
         HubCardTableComponent* _pTable;
@@ -222,6 +180,11 @@ SW_TEST_CASE( HubCardTableTest, TwoClientsPlayOnViewsDealtByTheServer )
 {
     HubCardTestWorld server( NetLinkRole::Server );
     HubCardTestWorld arrClient[2] = { HubCardTestWorld( NetLinkRole::Client ), HubCardTestWorld( NetLinkRole::Client ) };
+    for ( int32 index = 0; index < 2; ++index )
+    {
+        server._peers.connect( index );
+        arrClient[index]._peers.connect( 0 );
+    }
 
     const auto poll = [&server, &arrClient]()
     {
@@ -229,15 +192,13 @@ SW_TEST_CASE( HubCardTableTest, TwoClientsPlayOnViewsDealtByTheServer )
         {
             for ( int32 index = 0; index < 2; ++index )
             {
-                vector<FakeCardPeers::Sent> listSent = std::move( arrClient[index]._peers._listSent );
-                arrClient[index]._peers._listSent.clear();
-                for ( const FakeCardPeers::Sent& sent : listSent )
+                const vector<FakeNetPeers::Sent> listSent = arrClient[index]._peers.takeSent();
+                for ( const FakeNetPeers::Sent& sent : listSent )
                     server.receive( index, sent._bytes );
             }
             server._manager.update( 1.0f / 60.0f );
-            vector<FakeCardPeers::Sent> listOut = std::move( server._peers._listSent );
-            server._peers._listSent.clear();
-            for ( const FakeCardPeers::Sent& sent : listOut )
+            const vector<FakeNetPeers::Sent> listOut = server._peers.takeSent();
+            for ( const FakeNetPeers::Sent& sent : listOut )
                 arrClient[sent._connectionID].receive( 0, sent._bytes );
             for ( HubCardTestWorld& client : arrClient )
                 client._manager.update( 1.0f / 60.0f );

@@ -7,6 +7,7 @@
 #include "Core/Container/vector.h"
 #include "Core/Network/Connection/NetEndpoint.h"
 #include "Core/Network/Message/NetMessage.h"
+#include "Core/Network/Tests/FakeNetPeers.h"
 #include "Core/String/StringBuilder.h"
 #include "Core/Subsystem/SubsystemScope.h"
 #include "Core/Testing/TestFramework.h"
@@ -33,58 +34,6 @@
 
 namespace sw
 {
-    /** @brief 붙은 연결과 그 계정을 테스트가 정하는 상대입니다. 보낸 것은 버립니다. */
-    class ShooterServerTestPeers final : public INetPeers
-    {
-    public:
-        struct Link
-        {
-            uint64 _accountID{ 0 };
-            int32  _connectionID{ -1 };
-        };
-
-        vector<Link> _listLink{};
-
-        /** @brief 붙어 서버의 월드에 들어왔습니다. */
-        void connect( int32 connectionID, uint64 accountID )
-        {
-            _listLink.push_back( Link{ accountID, connectionID } );
-            setInWorld( connectionID, true );
-        }
-        void drop( int32 connectionID )
-        {
-            VectorUtil::removeIf( _listLink, [connectionID]( const Link& link )
-            { return link._connectionID == connectionID; } );
-            setInWorld( connectionID, false );
-        }
-
-        bool               sendMessage( int32, NetChannelKind, const uint8*, int32 ) override { return true; }
-        bool               trySendMessage( int32, NetChannelKind, const uint8*, int32 ) override { return true; }
-        bool               sendNotifiedMessage( int32, const uint8*, int32, uint32 ) override { return true; }
-        int32              broadcast( NetChannelKind, const uint8*, int32, int32 ) override { return 0; }
-        void               disconnect( int32, NetLinger ) override {}
-        void               pollInbound( NetInbound& ) override {}
-        bool               isServer() const override { return true; }
-        NetConnectionState getConnectionState( int32 connectionID ) const override { return VectorUtil::findBy<&Link::_connectionID>( _listLink, connectionID ) != nullptr ? NetConnectionState::Connected : NetConnectionState::Disconnected; }
-        bool               getConnectionStats( int32, NetConnectionStats& ) const override { return false; }
-        NetAddress         getConnectionAddress( int32 ) const override { return NetAddress{}; }
-        uint64             getConnectionPrincipal( int32 connectionID ) const override
-        {
-            const Link* pLink = VectorUtil::findBy<&Link::_connectionID>( _listLink, connectionID );
-            return pLink != nullptr ? pLink->_accountID : 0;
-        }
-        optional<int32> getClientIndex() const override { return nullopt; }
-        int32           getConnectedCount() const override { return static_cast<int32>( _listLink.size() ); }
-        void            collectConnected( vector<int32>& outListConnection ) const override
-        {
-            outListConnection.clear();
-            for ( const Link& link : _listLink )
-                outListConnection.push_back( link._connectionID );
-        }
-        bool isConnectionSaturated( int32 ) const override { return false; }
-        void addSentKindStats( NetMessageKindStatsTable& ) const override {}
-    };
-
     /** @brief 자리 둘(씬의 몸 + 손님 하나)인 서버 월드입니다. 적은 내지 않는다(개발 스위치). 씬의 몸은 (4.7, 0, -10), 손님은 (4, 0, -16)에 선다. */
     struct ShooterServerTestWorld
     {
@@ -98,7 +47,7 @@ namespace sw
         static constexpr float32 kWalkStep   = 0.5f;         ///< 명령 하나(1/30 초)의 걸음
         static constexpr float32 kFrame      = 1.0f / 20.0f; ///< 고정 틱(30 Hz) 하나보다 길다
 
-        ShooterServerTestPeers   _peers;
+        test::FakeNetPeers       _peers;
         NetMessageRouter         _router;
         ShooterAutoPlayOptions   _options;
         WeaponCatalog            _weapons;
@@ -119,7 +68,7 @@ namespace sw
 
         /** @brief @p eyeHeight 는 플레이어의 눈 높이입니다. @p weaponTable 이 Present 면 무기 표를 올려 두 자리 모두 한 방 무기를 쥡니다. */
         explicit ShooterServerTestWorld( WeaponTable weaponTable, float32 eyeHeight = 1.5f )
-            : _peers{}
+            : _peers{ true }
             , _router{}
             , _options{}
             , _weapons{}
@@ -173,13 +122,17 @@ namespace sw
         void advance()
         {
             for ( int32 frame = 0; frame < 4; ++frame )
-                _manager.update( kFrame );
+                advanceFrame();
         }
 
         /** @brief 서버가 지난 넷 틱(30 Hz)입니다. */
         [[nodiscard]] uint32 computeServerTick() { return _router.getWorldClock().getWholeTick( 2u ); }
         /** @brief 한 프레임 돕니다 — 보낸 명령 하나가 걸음 하나다. */
-        void advanceFrame() { _manager.update( kFrame ); }
+        void advanceFrame( float32 deltaTime = kFrame )
+        {
+            _manager.update( deltaTime );
+            (void)_peers.takeSent(); // 보낸 것은 상대가 모두 받았다 — 쌓아 두면 신뢰 창이 차 연결이 닫힌다
+        }
         /** @brief 앉은 차례 @p seatIndex 의 플레이어입니다. */
         [[nodiscard]] ShooterPlayerComponent* findPlayer( size_t seatIndex )
         {
@@ -202,12 +155,15 @@ namespace sw
     public:
         /** @brief 연결 @p connectionID 를 계정 @p accountID 로 붙입니다(서버의 상대 · 라우터 둘 다). */
         ShooterServerTestClient( ShooterServerTestWorld& world, int32 connectionID, uint64 accountID )
-            : _upstream{ world._router, connectionID }
+            : _world{ world }
+            , _upstream{ false }
+            , _connectionID{ connectionID }
             , _clock{}
             , _client{}
             , _tick{ 0 }
         {
-            world._peers.connect( connectionID, accountID );
+            world._peers.connectInWorld( connectionID, accountID );
+            _upstream.connect( 0 );
             NetEndpointEvent opened;
             opened._kind         = NetEndpointEvent::Kind::Connected;
             opened._connectionID = connectionID;
@@ -224,55 +180,25 @@ namespace sw
         {
             ++_tick;
             SW_EXPECT_TRUE( _client.sendIntent( _tick, intent, {} ) );
+            for ( const test::FakeNetPeers::Sent& sent : _upstream.takeSent() )
+            {
+                NetMessageContext context;
+                context._pMessage     = sent._bytes.data();
+                context._messageSize  = static_cast<int32>( sent._bytes.size() );
+                context._connectionID = _connectionID;
+                context._channel      = sent._channel;
+                context._kind         = sent._bytes.empty() ? uint8{ 0 } : sent._bytes[0];
+                SW_EXPECT_TRUE( _world._router.dispatch( NetPeerRole::Server, context, context._pMessage, context._messageSize ) == NetHandleResult::Handled );
+            }
             return _tick;
         }
 
     private:
-        /** @brief 보낸 바이트를 서버 라우터에 바로 넘기는 상대입니다. */
-        class Upstream final : public INetPeers
-        {
-        public:
-            Upstream( NetMessageRouter& router, int32 connectionID )
-                : _pRouter{ &router }
-                , _connectionID{ connectionID }
-            {
-            }
-
-            bool sendMessage( int32, NetChannelKind channel, const uint8* pData, int32 size ) override
-            {
-                NetMessageContext context;
-                context._pMessage     = pData;
-                context._messageSize  = size;
-                context._connectionID = _connectionID;
-                context._channel      = channel;
-                context._kind         = size > 0 ? pData[0] : uint8{ 0 };
-                return _pRouter->dispatch( NetPeerRole::Server, context, pData, size ) == NetHandleResult::Handled;
-            }
-            bool               trySendMessage( int32 connectionID, NetChannelKind channel, const uint8* pData, int32 size ) override { return sendMessage( connectionID, channel, pData, size ); }
-            bool               sendNotifiedMessage( int32, const uint8*, int32, uint32 ) override { return false; }
-            int32              broadcast( NetChannelKind, const uint8*, int32, int32 ) override { return 0; }
-            void               disconnect( int32, NetLinger ) override {}
-            void               pollInbound( NetInbound& ) override {}
-            bool               isServer() const override { return false; }
-            NetConnectionState getConnectionState( int32 ) const override { return NetConnectionState::Connected; }
-            bool               getConnectionStats( int32, NetConnectionStats& ) const override { return false; }
-            NetAddress         getConnectionAddress( int32 ) const override { return NetAddress{}; }
-            uint64             getConnectionPrincipal( int32 ) const override { return 0; }
-            optional<int32>    getClientIndex() const override { return 0; }
-            int32              getConnectedCount() const override { return 1; }
-            void               collectConnected( vector<int32>& outListConnection ) const override { outListConnection.assign( 1, 0 ); }
-            bool               isConnectionSaturated( int32 ) const override { return false; }
-            void               addSentKindStats( NetMessageKindStatsTable& ) const override {}
-
-        private:
-            NetMessageRouter* _pRouter;
-            int32             _connectionID;
-        };
-
-    private:
-        Upstream          _upstream;
-        NetClock          _clock;
-        ReplicationClient _client;
-        uint32            _tick;
+        ShooterServerTestWorld& _world;
+        test::FakeNetPeers      _upstream;
+        int32                   _connectionID;
+        NetClock                _clock;
+        ReplicationClient       _client;
+        uint32                  _tick;
     };
 } // namespace sw

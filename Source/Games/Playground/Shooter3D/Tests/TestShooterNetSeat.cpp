@@ -20,12 +20,12 @@ SW_TEST_CASE( ShooterNetSeatTest, EachConnectionGetsItsOwnBody )
     SW_EXPECT_FALSE( world._pNetPawn->hasController( *world._pPlayer ) ); // 아무도 없다 — 판을 두는 것은 씬의 몸 하나다
     SW_EXPECT_TRUE( world.collectPlayers() == vector<GameObjectHandle>{ world._pPlayer->getHandle() } );
 
-    world._peers.connect( 3, 11 );
+    world._peers.connectInWorld( 3, 11 );
     world.advance();
     SW_EXPECT_TRUE( world._pNetPawn->hasController( *world._pPlayer ) );
     SW_EXPECT_EQUAL( size_t{ 1 }, world.collectPlayers().size() );
 
-    world._peers.connect( 5, 22 );
+    world._peers.connectInWorld( 5, 22 );
     world.advance();
     const vector<GameObjectHandle> listSeated = world.collectPlayers();
     SW_REQUIRE_EQUAL( size_t{ 2 }, listSeated.size() );
@@ -41,7 +41,7 @@ SW_TEST_CASE( ShooterNetSeatTest, EachConnectionGetsItsOwnBody )
     SW_EXPECT_NEAR( -16.0f, pGuestBody->getFeetPosition()._value._z, 1.0e-3f );
     SW_EXPECT_TRUE( world._pNetPawn->hasController( *pGuest ) );
 
-    world._peers.connect( 7, 33 );
+    world._peers.connectInWorld( 7, 33 );
     world.advance();
     SW_EXPECT_TRUE( world.collectPlayers() == listSeated ); // 자리가 다 찼다
 }
@@ -54,8 +54,8 @@ SW_TEST_CASE( ShooterNetSeatTest, LeftSeatsAreCleanedAndNotInherited )
     ShooterServerTestWorld world{ ShooterServerTestWorld::WeaponTable::Absent };
     game::ScopedGameScope  scopedScope( world._scope );
     world._manager.beginPlay();
-    world._peers.connect( 3, 11 );
-    world._peers.connect( 5, 22 );
+    world._peers.connectInWorld( 3, 11 );
+    world._peers.connectInWorld( 5, 22 );
     world.advance();
     vector<GameObjectHandle> listSeated = world.collectPlayers();
     SW_REQUIRE_EQUAL( size_t{ 2 }, listSeated.size() );
@@ -63,7 +63,7 @@ SW_TEST_CASE( ShooterNetSeatTest, LeftSeatsAreCleanedAndNotInherited )
 
     // 끊긴 것을 서버가 보기 전에 같은 id 로 다른 계정이 붙었다
     world._peers.drop( 5 );
-    world._peers.connect( 5, 44 );
+    world._peers.connectInWorld( 5, 44 );
     world.advance();
     listSeated = world.collectPlayers();
     SW_REQUIRE_EQUAL( size_t{ 2 }, listSeated.size() );
@@ -77,7 +77,7 @@ SW_TEST_CASE( ShooterNetSeatTest, LeftSeatsAreCleanedAndNotInherited )
     SW_EXPECT_TRUE( world.collectPlayers() == vector<GameObjectHandle>{ listSeated[1] } );
 
     // 다음 사람은 빈 씬의 몸에 앉는다
-    world._peers.connect( 9, 55 );
+    world._peers.connectInWorld( 9, 55 );
     world.advance();
     SW_EXPECT_TRUE( world._pNetPawn->hasController( *world._pPlayer ) );
     SW_EXPECT_EQUAL( size_t{ 2 }, world.collectPlayers().size() );
