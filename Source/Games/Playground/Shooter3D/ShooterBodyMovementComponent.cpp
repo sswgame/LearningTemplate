@@ -26,6 +26,7 @@ namespace sw
         , _moveVelocity{ 0.0f, 0.0f, 0.0f }
         , _displayOffset{ 0.0f, 0.0f, 0.0f }
         , _verticalSpeed{ 0.0f }
+        , _teleportCount{ 0 }
         , _bOnGround{ SW_TRUE }
         , _bSuspended{ SW_FALSE }
         , _bNetDriven{ SW_FALSE }
@@ -135,6 +136,7 @@ namespace sw
         _moveVelocity  = float3{ 0.0f, 0.0f, 0.0f };
         _verticalSpeed = 0.0f;
         _bOnGround     = SW_TRUE;
+        ++_teleportCount;
     }
 } // namespace sw
 

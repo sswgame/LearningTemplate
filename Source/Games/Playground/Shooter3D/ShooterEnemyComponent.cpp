@@ -62,7 +62,7 @@ namespace sw
         , _walkClipSpeed{ 0.3f }
         , _position{ 0.0f, 0.0f, 0.0f }
         , _yaw{ 0.0f }
-        , _replicaPreviousPosition{ 0.0f, 0.0f, 0.0f }
+        , _replicaVelocity{ 0.0f, 0.0f, 0.0f }
         , _healthMachine{}
         , _speed{ 3.0f }
         , _phaseTime{ 0.0f }
@@ -128,12 +128,12 @@ namespace sw
     void ShooterEnemyComponent::launchReplica( GameObjectHandle gameMode, const AbsolutePosition& position, float32 yaw )
     {
         (void)_healthMachine.initialize( ShooterEnemyComponentInternal::makeHealthSettings( 1.0f ) ); // 1 은 범위 안이다 — 체력은 서버 몫이고 살아 있음만 뜻한다
-        _gameMode                = gameMode;
-        _position                = position._value;
-        _replicaPreviousPosition = position._value;
-        _yaw                     = yaw;
-        _bLaunched               = SW_TRUE;
-        _bReplica                = SW_TRUE;
+        _gameMode        = gameMode;
+        _position        = position._value;
+        _replicaVelocity = float3{ 0.0f, 0.0f, 0.0f };
+        _yaw             = yaw;
+        _bLaunched       = SW_TRUE;
+        _bReplica        = SW_TRUE;
         enterPhase( ShooterEnemyPhase::Rising );
         GameObject*     pOwner = getOwner();
         SceneComponent* pScene = pOwner != nullptr ? pOwner->getPrimarySceneComponent() : nullptr;
@@ -175,10 +175,11 @@ namespace sw
         return SpawnStateReset::Reset;
     }
 
-    void ShooterEnemyComponent::setReplicatedPose( const AbsolutePosition& position, float32 yaw, ShooterEnemyPhase phase )
+    void ShooterEnemyComponent::setReplicatedPose( const AbsolutePosition& position, const float3& velocity, float32 yaw, ShooterEnemyPhase phase )
     {
-        _position = position._value;
-        _yaw      = yaw;
+        _position        = position._value;
+        _replicaVelocity = velocity;
+        _yaw             = yaw;
         if ( phase == _phase )
             return;
         _bHitPending = phase == ShooterEnemyPhase::Staggered ? SW_TRUE : SW_FALSE;
@@ -188,14 +189,12 @@ namespace sw
     void ShooterEnemyComponent::updateReplica( float32 step )
     {
         _phaseTime += step;
-        const float3  moved    = float3{ _position._x - _replicaPreviousPosition._x, 0.0f, _position._z - _replicaPreviousPosition._z };
-        const float32 speed    = moved.getLength() / step;
+        const float32 speed    = float3{ _replicaVelocity._x, 0.0f, _replicaVelocity._z }.getLength();
         float32       moveCode = ShooterAnimationParameter::kMoveIdle;
         if ( speed > _walkClipSpeed )
             moveCode = speed >= _runSpeed ? ShooterAnimationParameter::kMoveRun : ShooterAnimationParameter::kMoveWalk;
-        _replicaPreviousPosition = _position;
-        GameObject*     pOwner   = getOwner();
-        SceneComponent* pScene   = pOwner != nullptr ? pOwner->getPrimarySceneComponent() : nullptr;
+        GameObject*     pOwner = getOwner();
+        SceneComponent* pScene = pOwner != nullptr ? pOwner->getPrimarySceneComponent() : nullptr;
         if ( pScene != nullptr )
         {
             pScene->setZeroOriginPosition( _position );

@@ -762,7 +762,7 @@ namespace sw
                 continue;
             }
             ++enemyIndex;
-            pEnemy->setReplicatedPose( pSample->_position, pSample->_yaw, pSample->_phase );
+            pEnemy->setReplicatedPose( pSample->_position, pSample->_velocity, pSample->_yaw, pSample->_phase );
             ShooterEnemyView view;
             view._object         = record._object;
             view._position       = pSample->_position;

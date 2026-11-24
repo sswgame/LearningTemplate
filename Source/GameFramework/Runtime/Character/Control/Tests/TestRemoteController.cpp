@@ -39,7 +39,9 @@ namespace
             ControlIntent intent;
             intent._move       = float2{ 0.0f, forward };
             intent._controlYaw = 0.5f;
-            intent.setButton( buttonIndex, true, bTriggered );
+            intent.setButton( buttonIndex, true );
+            if ( bTriggered )
+                intent.addTrigger( buttonIndex, intent._controlYaw, 0.0f, ControlViewTick::makePresent() );
             return intent;
         }
     };
@@ -67,17 +69,24 @@ SW_TEST_CASE( RemoteControllerTest, HoldsTheLastIntentAndTriggersOnce )
 SW_TEST_CASE( RemoteControllerTest, MergesTheTicksOfOneFrame )
 {
     RemoteControllerTestRig rig;
-    ControlIntent           first = RemoteControllerTestRig::makeIntent( 1.0f, 1, true );
-    first.setTriggerLook( 0.25f, 0.125f );
+    ControlIntent           first = RemoteControllerTestRig::makeIntent( 1.0f, 1, false );
+    first.addTrigger( 1, 0.25f, 0.125f, ControlViewTick::makeSeen( 10.0 ) );
+    ControlIntent second = RemoteControllerTestRig::makeIntent( -1.0f, 3, false );
+    second.addTrigger( 1, 0.75f, 0.125f, ControlViewTick::makeSeen( 11.0 ) );
     rig._pRemote->receiveIntent( 0, first );
-    rig._pRemote->receiveIntent( 1, RemoteControllerTestRig::makeIntent( -1.0f, 3, false ) );
+    rig._pRemote->receiveIntent( 1, second );
     rig.update();
     SW_EXPECT_TRUE( rig._pPawn->wasButtonTriggered( 1 ) );
     SW_EXPECT_FALSE( rig._pPawn->isButtonDown( 1 ) ); // 눌림은 마지막 틱의 값이다
     SW_EXPECT_TRUE( rig._pPawn->isButtonDown( 3 ) );
     SW_EXPECT_NEAR( -1.0f, rig._pPawn->getIntent()._move._y, 1e-3f );
-    SW_EXPECT_TRUE( rig._pPawn->getIntent()._bTriggerLook );
-    SW_EXPECT_NEAR( 0.25f, rig._pPawn->getIntent()._triggerYaw, 1e-3f );
+    // 같은 버튼의 두 발동이 저마다의 시선 · 보던 시각으로 남는다.
+    const vector<ControlTrigger>& listTrigger = rig._pPawn->getIntent()._listTrigger;
+    SW_REQUIRE_EQUAL( size_t{ 2 }, listTrigger.size() );
+    SW_EXPECT_NEAR( 0.25f, listTrigger[0].getYaw(), 1e-3f );
+    SW_EXPECT_NEAR( 10.0, listTrigger[0].getViewTick().getServerTick( 0.0 ), 1e-6 );
+    SW_EXPECT_NEAR( 0.75f, listTrigger[1].getYaw(), 1e-3f );
+    SW_EXPECT_NEAR( 11.0, listTrigger[1].getViewTick().getServerTick( 0.0 ), 1e-6 );
     SW_EXPECT_EQUAL( 2u, rig._pRemote->getNextInputTick() );
 }
 

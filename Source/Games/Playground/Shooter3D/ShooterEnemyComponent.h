@@ -82,8 +82,8 @@ namespace sw
          * @details 언리얼의 Simulated Proxy 자리다. 폰의 자동 빙의는 끈다(AI 조종자가 서지 않는다).
          */
         void launchReplica( GameObjectHandle gameMode, const AbsolutePosition& position, float32 yaw );
-        /** @brief 복제 모습의 이번 프레임 자리 · 요 · 단계입니다(감독이 받은 스냅샷을 보간해 부른다). */
-        void setReplicatedPose( const AbsolutePosition& position, float32 yaw, ShooterEnemyPhase phase );
+        /** @brief 복제 모습의 이번 프레임 자리 · 속도 · 요 · 단계입니다(감독이 화면 시각의 표본으로 부른다). 속도는 두 스냅샷에서 낸 것이다 — 화면 자리 차이로 재지 않는다. */
+        void setReplicatedPose( const AbsolutePosition& position, const float3& velocity, float32 yaw, ShooterEnemyPhase phase );
 
         bool isLaunched() const { return _bLaunched == SW_TRUE; }
         bool isReplica() const { return _bReplica == SW_TRUE; }
@@ -166,8 +166,8 @@ namespace sw
 
         float3                 _position; ///< 발(절대)
         float32                _yaw;
-        float3                 _replicaPreviousPosition; ///< 복제 모습 — 지난 틱의 자리(걷기 클립을 고르는 빠르기)
-        HealthStateMachine     _healthMachine;           ///< 체력(플레이어와 같은 Base 체력 — 실드 · 회복 · 기절은 쓰지 않는다)
+        float3                 _replicaVelocity; ///< 복제 모습 — 두 스냅샷에서 낸 속도(걷기 클립을 고르는 빠르기)
+        HealthStateMachine     _healthMachine;   ///< 체력(플레이어와 같은 Base 체력 — 실드 · 회복 · 기절은 쓰지 않는다)
         float32                _speed;
         float32                _phaseTime;
         Countdown              _attackCooldown; ///< 휘두르기 간격(늦음을 잇는다)

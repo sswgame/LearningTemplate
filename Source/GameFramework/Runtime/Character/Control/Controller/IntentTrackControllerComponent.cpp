@@ -42,10 +42,10 @@ namespace sw
 
     void IntentTrackControllerComponent::produceIntent( const ControlFrameContext& context, const PawnComponent& pawn, ControlIntent& outIntent )
     {
-        (void)context;
         if ( _cursor < _listIntent.size() )
         {
             outIntent = _listIntent[_cursor];
+            outIntent.setViewTick( context._viewTick ); // 기록한 때의 시각은 이 월드의 것이 아니다
             setControlRotation( outIntent._controlYaw, outIntent._controlPitch );
             ++_cursor;
         }

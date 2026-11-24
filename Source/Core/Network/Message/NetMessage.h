@@ -245,6 +245,11 @@ namespace sw
          */
         virtual void onWorldOpened( uint32 generation ) { (void)generation; }
         /**
+         * @brief 이번 프레임의 사건 · 메시지를 다 나눠 줬습니다(`NetMessageRouter::poll` 의 끝). 게임 프레임(조종 · 틱)은 이 뒤에 돕니다.
+         * @details 프레임 안에서 값이 바뀌면 안 되는 것(화면 시각)을 여기서 한 번 정한다 — 프레임 중간에 움직이면 같은 프레임의 표본끼리 시각이 갈린다.
+         */
+        virtual void onPollFinished() {}
+        /**
          * @brief 영역 안에서 이 처리기가 전달 통지를 달아 보내는(`INetPeers::sendNotifiedMessage`) 종류의 마스크입니다. 비트 n 이 (영역 + n)입니다.
          * @details 라우터는 그 종류의 판정을 이 처리기의 `onDeliveryNotification` 에 넘긴다. 받는 종류 마스크와 따로 세며, 한 종류를 둘이 보내겠다고 하면 나중 것을 받지 않는다.
          */

@@ -80,8 +80,8 @@ namespace
             intent._move         = float2{ 0.0f, 1.0f };
             intent._controlYaw   = 0.75f;
             intent._controlPitch = -0.25f;
-            intent.setButton( 2, true, true );
-            intent.setTriggerLook( 0.5f, 0.125f );
+            intent.setButton( 2, true );
+            intent.addTrigger( 2, 0.5f, 0.125f, ControlViewTick::makePresent() );
             return intent;
         }
     };
@@ -105,10 +105,11 @@ SW_TEST_CASE( ReplicationIntentTest, IntentAndClaimsRoundTrip )
     SW_REQUIRE_TRUE( rig._server.popIntent( rig._connectionID, 1, received, bExact, listClaim ) );
     ControlIntent expected = sent;
     expected.quantize();
+    expected.clampViewTicks( 10.0, 10.0 ); // 지금을 보던 의도다 — 서버 틱 10 이 지금이다
     SW_EXPECT_TRUE( bExact );
     SW_EXPECT_TRUE( received == expected );
     SW_REQUIRE_EQUAL( size_t{ 2 }, listClaim.size() );
-    SW_EXPECT_EQUAL( 1u, listClaim[0]._frame );
+    SW_EXPECT_EQUAL( 1u, listClaim[0]._step );
     SW_EXPECT_EQUAL( uint64{ 7 }, listClaim[0]._targetID );
     SW_EXPECT_EQUAL( uint64{ 9 }, listClaim[1]._targetID );
 }
@@ -160,7 +161,6 @@ SW_TEST_CASE( ReplicationIntentTest, RepeatedInputClearsTriggersAndClaims )
     SW_EXPECT_FALSE( bExact );
     SW_EXPECT_TRUE( received.isDown( 2 ) );
     SW_EXPECT_FALSE( received.wasTriggered( 2 ) );
-    SW_EXPECT_FALSE( received._bTriggerLook );
     SW_EXPECT_NEAR( 0.75f, received._controlYaw, 1e-3f );
     SW_EXPECT_TRUE( listClaim.empty() );
 }
@@ -181,14 +181,16 @@ SW_TEST_CASE( ReplicationIntentTest, ViewTickIsClampedOnTheServerClock )
 {
     ReplicationIntentTestRig rig;
     rig.sendSnapshot( 500 );
-    rig._client.update( 0.0f );
+    rig._client.onPollFinished();
     SW_REQUIRE_TRUE( rig._client.hasSnapshot() );
     const float64 renderTick = rig._client.getRenderTick();
     SW_REQUIRE_TRUE( renderTick > 400.0f ); // 보간 지연만큼 500 의 과거다
 
     const vector<MeleeHitClaim> listNoClaim;
-    SW_REQUIRE_TRUE( rig._client.sendIntent( 1, ReplicationIntentTestRig::makeIntent(), listNoClaim ) );
-    SW_REQUIRE_TRUE( rig._client.sendIntent( 2, ReplicationIntentTestRig::makeIntent(), listNoClaim ) );
+    ControlIntent               seen = ReplicationIntentTestRig::makeIntent();
+    seen.setViewTick( rig._client.getViewTick() );
+    SW_REQUIRE_TRUE( rig._client.sendIntent( 1, seen, listNoClaim ) );
+    SW_REQUIRE_TRUE( rig._client.sendIntent( 2, seen, listNoClaim ) );
     rig.pollUntilDelivered();
 
     rig._server.beginTick( 501 );
@@ -196,12 +198,58 @@ SW_TEST_CASE( ReplicationIntentTest, ViewTickIsClampedOnTheServerClock )
     bool                  bExact = false;
     vector<MeleeHitClaim> listClaim;
     SW_REQUIRE_TRUE( rig._server.popIntent( rig._connectionID, 1, received, bExact, listClaim ) );
-    SW_EXPECT_NEAR( renderTick, rig._server.getClientViewTick( rig._connectionID ), 0.01f );
+    SW_EXPECT_NEAR( renderTick, received._viewTick.getServerTick( 0.0 ), 0.01 );
 
     // 한도보다 오래된 시점은 한도까지만 되감는다(기본 32 틱).
     rig._server.beginTick( 1000 );
     SW_REQUIRE_TRUE( rig._server.popIntent( rig._connectionID, 2, received, bExact, listClaim ) );
-    SW_EXPECT_NEAR( 968.0f, rig._server.getClientViewTick( rig._connectionID ), 0.01f );
+    SW_EXPECT_NEAR( 968.0, received._viewTick.getServerTick( 0.0 ), 0.01 );
+}
+
+/**
+ * @brief [ReplicationIntentTest] 33 ms 늦게 보낸 발동도 누른 순간 보던 시각으로 온다 — 두 입력을 몰아 보내도 앞 발동은 자기 시각이고, 지어낸 시각은 앞서 본 시각과 이 입력의 시각 사이로 잘린다
+ */
+SW_TEST_CASE( ReplicationIntentTest, TriggersKeepTheTickTheySawAndForgedOnesAreClamped )
+{
+    ReplicationIntentTestRig rig;
+    ControlIntent            first = ReplicationIntentTestRig::makeIntent();
+    first._listTrigger.clear();
+    first._viewTick = ControlViewTick::makeSeen( 490.0 );
+    first.addTrigger( 2, 0.5f, 0.125f, ControlViewTick::makeSeen( 489.0 ) ); // 한 프레임 앞에서 눌렀다
+    ControlIntent second = first;
+    second._listTrigger.clear();
+    second._viewTick = ControlViewTick::makeSeen( 492.0 );
+    second.addTrigger( 2, 0.6f, 0.125f, ControlViewTick::makeSeen( 491.0 ) );
+    second.addTrigger( 2, 0.7f, 0.125f, ControlViewTick::makeSeen( 470.0 ) ); // 앞 입력보다 과거를 봤다고 지어냈다
+    second.addTrigger( 2, 0.8f, 0.125f, ControlViewTick::makePresent() );     // 이 입력보다 앞을 봤다고 지어냈다
+    SW_REQUIRE_TRUE( rig._client.sendIntent( 1, first, {} ) );
+    SW_REQUIRE_TRUE( rig._client.sendIntent( 2, second, {} ) );
+    rig.pollUntilDelivered();
+    rig._server.beginTick( 500 );
+    ControlIntent         received;
+    bool                  bExact = false;
+    vector<MeleeHitClaim> listClaim;
+    SW_REQUIRE_TRUE( rig._server.popIntent( rig._connectionID, 1, received, bExact, listClaim ) );
+    SW_REQUIRE_EQUAL( size_t{ 1 }, received._listTrigger.size() );
+    SW_EXPECT_NEAR( 489.0, received._listTrigger[0].getViewTick().getServerTick( 0.0 ), 1e-6 );
+    SW_REQUIRE_TRUE( rig._server.popIntent( rig._connectionID, 2, received, bExact, listClaim ) );
+    SW_REQUIRE_EQUAL( size_t{ 3 }, received._listTrigger.size() );
+    SW_EXPECT_NEAR( 491.0, received._listTrigger[0].getViewTick().getServerTick( 0.0 ), 1e-6 );
+    SW_EXPECT_NEAR( 490.0, received._listTrigger[1].getViewTick().getServerTick( 0.0 ), 1e-6 );
+    SW_EXPECT_NEAR( 492.0, received._listTrigger[2].getViewTick().getServerTick( 0.0 ), 1e-6 );
+}
+
+/** @brief [ReplicationIntentTest] 화면 시각은 프레임 안에서 움직이지 않는다 — 시간을 모아도 라우터가 다음 프레임을 열 때까지 같은 값이다. */
+SW_TEST_CASE( ReplicationIntentTest, RenderTickMovesOnlyBetweenFrames )
+{
+    ReplicationIntentTestRig rig;
+    rig.sendSnapshot( 100 );
+    rig._client.onPollFinished();
+    const float64 renderTick = rig._client.getRenderTick();
+    rig._client.accumulateFrameTime( 1.0f / 30.0f );
+    SW_EXPECT_NEAR( renderTick, rig._client.getRenderTick(), 1e-9 );
+    rig._client.onPollFinished();
+    SW_EXPECT_NEAR( renderTick + 1.0, rig._client.getRenderTick(), 1e-3 );
 }
 
 /** @brief [ReplicationIntentTest] 의도를 낸 폰의 엔티티 id 가 함께 온다 — 빙의가 바뀌는 사이의 의도를 다른 폰의 버튼으로 읽지 않게. */

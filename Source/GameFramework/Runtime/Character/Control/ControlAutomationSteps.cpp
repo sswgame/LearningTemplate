@@ -116,11 +116,15 @@ namespace sw
                         runner.recordFailure( step, message.view() );
                     }
                     else
-                        intent.setButton( buttonIndex, true, false );
+                        intent.setButton( buttonIndex, true );
                 }
 
                 vector<ControlIntent> listIntent( params._frames, intent );
-                listIntent[0]._buttonTriggered = intent._buttonDown;
+                for ( int32 buttonIndex = 0; buttonIndex < ControlIntent::kButtonCount; ++buttonIndex )
+                {
+                    if ( intent.isDown( buttonIndex ) )
+                        listIntent[0].addTrigger( buttonIndex, intent._controlYaw, intent._controlPitch, ControlViewTick::makePresent() ); // 기록 조종자가 낼 때의 시각으로 바꾼다
+                }
 
                 IntentTrackControllerComponent* pTrack = IntentPlayback::getOrCreateTrackController( *pObject->getMutableManager(), params._pawn );
                 if ( pTrack == nullptr )

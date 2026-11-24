@@ -114,6 +114,13 @@ namespace sw
         const SubTickHandle& getServerTickSource() const { return _serverTickSource; }
 
         /**
+         * @brief 로컬 플레이어가 지금 보는 시각을 알립니다 — 복제된 월드를 보간해 그리는 쪽(복제 클라이언트)이 프레임마다 그린 값을 부릅니다. 다음 프레임의 입력이 이 화면을 보고 낸 것이다.
+         * @details 아무도 알리지 않으면 지금(`makePresent`)이다. 게임 스레드의 틱 밖(틱 뒤 작업)에서만 부른다.
+         */
+        void                   publishViewTick( ControlViewTick viewTick ) { _viewTick = viewTick; }
+        const ControlViewTick& getViewTick() const { return _viewTick; }
+
+        /**
          * @brief 의도 기록을 켜거나 끕니다. 켤 때 기록을 비우고 폰마다 @p capacityTicks 틱 크기의 고리를 잡습니다.
          * @details 켠 뒤에는 틱마다 모든 폰의 의도(폰에 넣은 값)를 적는다.
          *          끄면 기록은 남으며, `getHistory` 로 읽어 `.swintent` 로 쓸 수 있다.
@@ -150,6 +157,7 @@ namespace sw
         const IInputCaptureQuery*               _pInputCaptureOverride;
         SubTickHandle                           _serverTickSource; ///< 서버 틱을 알리는 틱(없으면 빈 핸들)
         atomic<int64>                           _serverTickOffset; ///< 서버 틱 − 조종 틱(`publishServerTick`)
+        ControlViewTick                         _viewTick;         ///< 로컬 플레이어가 보는 시각(`publishViewTick`)
         uint32                                  _tick;
         uint8                                   _bRecording : 1;
         [[maybe_unused]] uint8                  _reserved   : 7;

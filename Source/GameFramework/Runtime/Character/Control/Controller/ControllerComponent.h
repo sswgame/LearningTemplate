@@ -13,11 +13,10 @@
 #include "Engine/Reflection/ReflectionMacros.h"
 
 #include "GameFramework/GameFrameworkExports.h"
+#include "GameFramework/Runtime/Character/Control/Intent/ControlIntent.h"
 
 namespace sw
 {
-    struct ControlIntent;
-
     class IInputCaptureQuery;
     class InputManager;
     class PawnComponent;
@@ -28,7 +27,8 @@ namespace sw
         InputManager*             _pInput{ nullptr };        ///< 플레이어 조종자가 읽는 입력. 서버와 헤드리스에서는 없을 수 있다
         const IInputCaptureQuery* _pInputCapture{ nullptr }; ///< 입력을 먼저 가져간 쪽(런타임 UI). 플레이어 조종자가 소비한 입력, 게임 입력 막기, 커서를 본다. 없을 수 있다
         float32                   _deltaTime{ 0.0f };
-        uint32                    _tick{ 0 }; ///< 조종 시스템이 센 틱(기록 · 네트워크 창의 틱 번호)
+        uint32                    _tick{ 0 };                                  ///< 조종 시스템이 센 틱(기록 · 네트워크 창의 틱 번호)
+        ControlViewTick           _viewTick{ ControlViewTick::makePresent() }; ///< 이 프레임의 입력을 낸 사람이 보던 시각(`ControlSystem::publishViewTick`) — 발동 사건에 싣는다
     };
 
     /**

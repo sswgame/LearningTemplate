@@ -97,8 +97,10 @@ namespace sw
         AbsolutePosition getDisplayFeetPosition() const { return AbsolutePosition{ _position + _displayOffset }; }
         /** @brief 빠르기 · 중력 · 반경 · 버튼을 @p source 에서 옮깁니다 — 서버가 세운 몸이 클라이언트가 예측하는 몸과 같은 걸음을 걷는다. */
         void copyTuning( const ShooterBodyMovementComponent& source );
-        /** @brief 발을 @p feet 로 옮기고 속도를 0 으로 둡니다(스폰 · 판 다시 시작). */
+        /** @brief 발을 @p feet 로 옮기고 속도를 0 으로 둡니다(스폰 · 판 다시 시작). 순간 이동 번호가 바뀌어 화면 · 되감기가 두 자리를 잇지 않습니다. */
         void teleport( const AbsolutePosition& feet );
+        /** @brief 순간 이동마다 하나씩 오르는 번호입니다(8 비트로 감는다). */
+        uint8 getTeleportCount() const { return _teleportCount; }
         /** @brief 멈춰 둡니다 — 의도를 버리고 제자리(수평 속도 0). */
         void setSuspended( bool bSuspended ) { _bSuspended = bSuspended ? SW_TRUE : SW_FALSE; }
         bool isSuspended() const { return _bSuspended == SW_TRUE; }
@@ -135,6 +137,7 @@ namespace sw
         float3                 _moveVelocity;  ///< 지난 걸음의 수평 속도
         float3                 _displayOffset; ///< 그릴 때만 더하는 오프셋(예측 보정 녹이기)
         float32                _verticalSpeed;
+        uint8                  _teleportCount; ///< 순간 이동마다 오른다
         uint8                  _bOnGround  : 1;
         uint8                  _bSuspended : 1;
         uint8                  _bNetDriven : 1;

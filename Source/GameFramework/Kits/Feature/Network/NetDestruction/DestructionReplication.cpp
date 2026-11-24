@@ -839,19 +839,14 @@ namespace sw
             // 렌더 틱을 사이에 둔 두 자세를 고른다. 뒤 자세가 없으면 마지막 것을 쓰고 미래를 예측하지 않는다.
             const InterpolationBuffer<ChunkPose>::Sample* pFrom = nullptr;
             const InterpolationBuffer<ChunkPose>::Sample* pTo   = nullptr;
-            float32                                       alpha = 0.0f;
-            const InterpolationBracketKind                kind  = track._poseBuffer.findBracket( renderTick, pFrom, pTo, alpha );
+            NetSampleRatio                                ratio = NetSampleRatio::makeHeld();
+            const InterpolationBracketKind                kind  = track._poseBuffer.findBracket( renderTick, pFrom, pTo, ratio );
             // 첫 자세보다 이전 시점을 그리는 동안은 바디를 움직이지 않는다. 그 덩어리는 같은 이벤트와 같은 시드로 서버와 같은 속도로 생성되어 혼자 날아간다.
             const bool bBeforeFirst = kind == InterpolationBracketKind::Empty || kind == InterpolationBracketKind::BeforeFirst;
             if ( bBeforeFirst )
                 continue;
-            float3     position = pFrom->_value._position;
-            quaternion rotation = pFrom->_value._rotation;
-            if ( kind == InterpolationBracketKind::Between )
-            {
-                position = pFrom->_value._position + ( pTo->_value._position - pFrom->_value._position ) * alpha;
-                rotation = quaternion::lerp( pFrom->_value._rotation, pTo->_value._rotation, alpha );
-            }
+            const float3     position = ratio.interpolate( pFrom->_value._position, pTo->_value._position );
+            const quaternion rotation = ratio.interpolate( pFrom->_value._rotation, pTo->_value._rotation );
             component.driveGroup( track._groupID, position, rotation );
             // 지난 표본은 하나만 남긴다. 보간의 앞쪽 표본으로 쓴다.
             track._poseBuffer.removeConsumed( renderTick );

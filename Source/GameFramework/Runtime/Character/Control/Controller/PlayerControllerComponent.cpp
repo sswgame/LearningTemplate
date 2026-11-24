@@ -97,12 +97,12 @@ namespace sw
             const float32 pitch = MathUtil::clamp( startPitch - look._y * _lookSensitivity, -pawn.getMaxPitch(), pawn.getMaxPitch() );
             setControlRotation( yaw, pitch );
         }
+        // 발동 사건의 시선은 프레임 끝의 조종 회전이다. 폰이 지정한 발동 버튼은 누른 순간의 회전을 안다 — 누름이 이벤트로 온 바인딩만(축 임계 · 길게 누름은 없다).
         const hashed_string& triggerLookButton = pawn.getTriggerLookButton();
+        float32              triggerYaw        = getControlYaw();
+        float32              triggerPitch      = getControlPitch();
         if ( triggerLookButton.empty() == false && wasActionTriggeredForGame( inputMap, pCapture, triggerLookButton ) )
         {
-            // 누름이 이벤트로 온 바인딩만 순간을 안다(축 임계 · 길게 누름은 없다) — 없으면 프레임 끝의 조종 회전이다.
-            float32           triggerYaw   = getControlYaw();
-            float32           triggerPitch = getControlPitch();
             InputPressInstant instant{};
             if ( inputMap.tryGetActionPressInstant( inputMap.getActionHandle( triggerLookButton ), instant ) )
             {
@@ -110,14 +110,19 @@ namespace sw
                 triggerYaw            = startYaw + look._x * _lookSensitivity * fraction._x;
                 triggerPitch          = MathUtil::clamp( startPitch - look._y * _lookSensitivity * fraction._y, -pawn.getMaxPitch(), pawn.getMaxPitch() );
             }
-            outIntent.setTriggerLook( triggerYaw, triggerPitch );
         }
         const vector<hashed_string>& listButton  = pawn.getButtonNames();
         const size_t                 buttonCount = MathUtil::min( listButton.size(), static_cast<size_t>( ControlIntent::kButtonCount ) );
         for ( size_t buttonIndex = 0; buttonIndex < buttonCount; ++buttonIndex )
         {
             const hashed_string& name = listButton[buttonIndex];
-            outIntent.setButton( static_cast<int32>( buttonIndex ), isActionDownForGame( inputMap, pCapture, name ), wasActionTriggeredForGame( inputMap, pCapture, name ) );
+            outIntent.setButton( static_cast<int32>( buttonIndex ), isActionDownForGame( inputMap, pCapture, name ) );
+            if ( wasActionTriggeredForGame( inputMap, pCapture, name ) == false )
+                continue;
+            if ( name == triggerLookButton )
+                outIntent.addTrigger( static_cast<int32>( buttonIndex ), triggerYaw, triggerPitch, context._viewTick );
+            else
+                outIntent.addTrigger( static_cast<int32>( buttonIndex ), getControlYaw(), getControlPitch(), context._viewTick );
         }
         const vector<hashed_string>& listAnalog  = pawn.getAnalogNames();
         const size_t                 analogCount = MathUtil::min( listAnalog.size(), static_cast<size_t>( ControlIntent::kAnalogCount ) );

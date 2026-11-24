@@ -5,8 +5,6 @@
 #include "Core/Math/MathUtil.h"
 #include "Core/Network/Connection/NetEndpoint.h"
 #include "Core/Network/Message/NetSendBudget.h"
-#include "Core/Network/Replication/InterpolationBuffer.h"
-#include "Core/Serialization/BitStream.h"
 
 #include "Engine/Character/Hit/MeleeSweepHistory.h"
 
@@ -22,6 +20,7 @@ namespace sw
         , _settings{}
         , _pHost{ nullptr }
         , _clock{}
+        , _pendingSeconds{ 0.0f }
         , _decodeFailureCount{}
         , _messageWriter{}
     {
@@ -115,18 +114,19 @@ namespace sw
         return NetHandleResult::Handled;
     }
 
-    void ReplicationClient::update( float32 deltaTime )
+    void ReplicationClient::onPollFinished()
     {
         // 렌더 틱은 서버 틱 추정값에서 지연을 뺀 값이다.
         // 추정값은 받은 스냅샷 틱의 하한에 흐른 시간을 더한 것이고 받은 가장 새 틱 + 지연까지만 간다. 그래서 통신이 끊겨도 되돌아가지 않고 받은 틱을 지나치지도 않는다.
-        _clock.advance( deltaTime );
+        _clock.advance( _pendingSeconds );
+        _pendingSeconds = 0.0f;
     }
 
-    void ReplicationClient::findBracket( const NetSnapshot*& pOutFrom, const NetSnapshot*& pOutTo, float32& outAlpha ) const
+    void ReplicationClient::findBracket( const NetSnapshot*& pOutFrom, const NetSnapshot*& pOutTo, NetSampleRatio& outRatio ) const
     {
         pOutFrom = nullptr;
         pOutTo   = nullptr;
-        outAlpha = 0.0f;
+        outRatio = NetSampleRatio::makeHeld();
         if ( _listSnapshot.hasNewest() == false )
             return;
         const float64 renderTick = getRenderTick();
@@ -154,28 +154,29 @@ namespace sw
             pOutTo = pOutFrom; // 새 스냅샷이 늦으므로 마지막 것에서 멈춘다. 외삽하지 않는다
             return;
         }
-        outAlpha = NetInterpolationUtil::computeAlpha( pOutFrom->_tick, pOutTo->_tick, renderTick );
+        outRatio = NetSampleRatio::make( pOutFrom->_tick, pOutTo->_tick, renderTick );
     }
 
-    bool ReplicationClient::sampleEntity( uint32 entityID, const NetEntityState*& pOutFrom, const NetEntityState*& pOutTo, float32& outAlpha ) const
+    bool ReplicationClient::findSample( uint32 entityID, uint32 typeID, const NetEntityState*& pOutFrom, const NetEntityState*& pOutTo, NetSampleRatio& outRatio ) const
     {
         const NetSnapshot* pFrom = nullptr;
         const NetSnapshot* pTo   = nullptr;
-        findBracket( pFrom, pTo, outAlpha );
+        findBracket( pFrom, pTo, outRatio );
         pOutFrom = pFrom != nullptr ? pFrom->findEntity( entityID ) : nullptr;
         pOutTo   = pTo != nullptr ? pTo->findEntity( entityID ) : nullptr;
-        if ( pOutFrom == nullptr && pOutTo == nullptr )
+        // 같은 번호를 다른 종류가 다시 쓰면 앞의 것이 사라지고 새것이 생긴 것이다.
+        if ( pOutFrom != nullptr && pOutFrom->_typeID != typeID )
+            pOutFrom = nullptr;
+        if ( pOutTo != nullptr && pOutTo->_typeID != typeID )
+            pOutTo = nullptr;
+        if ( outRatio.isPresent( pOutFrom != nullptr, pOutTo != nullptr ) == false )
             return false;
-        if ( pOutFrom == nullptr )
-        {
-            pOutFrom = pOutTo; // 새로 생긴 엔티티이므로 다음 스냅샷부터 쓴다
-            outAlpha = 1.0f;
-        }
-        if ( pOutTo == nullptr )
-        {
-            pOutTo   = pOutFrom; // 사라지는 중이므로 마지막 모습을 쓴다
-            outAlpha = 0.0f;
-        }
+        if ( pOutFrom != nullptr && pOutTo != nullptr )
+            return true;
+        // 사라지는 중이거나 막 생겼다 — 있는 쪽 하나 그대로다.
+        pOutFrom = pOutFrom != nullptr ? pOutFrom : pOutTo;
+        pOutTo   = pOutFrom;
+        outRatio = NetSampleRatio::makeHeld();
         return true;
     }
 
@@ -184,8 +185,8 @@ namespace sw
         outListEntity.clear();
         const NetSnapshot* pFrom = nullptr;
         const NetSnapshot* pTo   = nullptr;
-        float32            alpha = 0.0f;
-        findBracket( pFrom, pTo, alpha );
+        NetSampleRatio     ratio = NetSampleRatio::makeHeld();
+        findBracket( pFrom, pTo, ratio );
         if ( pFrom == nullptr )
             return;
         for ( const NetEntityState& entity : pFrom->_listEntity )
@@ -203,9 +204,7 @@ namespace sw
             return false;
         }
         // 틱이 건너뛰면 그 틱부터 다시 쌓고, 틱이 줄면(새 게임 판) 확인까지 비우고 다시 쌓는다. 같은 틱이면 처음 값이 남고 지금 창만 다시 보낸다.
-        // 스탬프는 이 입력을 만든 순간 보던 틱이다 — 다시 보낼 때도 이 값이 같이 가서 서버가 옛 입력을 그 입력의 시점으로 랙 보정한다.
-        const uint32 viewTickStamp = static_cast<uint32>( MathUtil::max( 0.0, getRenderTick() ) * static_cast<float64>( NetClientServerMessage::kViewTickStampScale ) );
-        (void)_inputWindow.push( tick, listInput.data(), static_cast<int32>( listInput.size() ), viewTickStamp );
+        (void)_inputWindow.push( tick, listInput.data(), static_cast<int32>( listInput.size() ) );
         if ( _pHost == nullptr )
             return true;
         BitWriter& writer = _messageWriter.beginMessage<NetClientServerMessage::Table, NetClientServerMessage::Input>();

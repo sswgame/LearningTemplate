@@ -57,6 +57,7 @@ namespace sw
                 ControlIntent neutral;
                 neutral._controlYaw   = intent._controlYaw;
                 neutral._controlPitch = intent._controlPitch;
+                neutral._viewTick     = intent._viewTick;
                 return neutral;
             }
 
@@ -111,16 +112,13 @@ namespace sw
         , _previousPosition{}
         , _lastFrameNanoseconds{ 0 }
         , _accumulator{ 0.0f }
-        , _pendingTriggerYaw{ 0.0f }
-        , _pendingTriggerPitch{ 0.0f }
-        , _pendingTriggered{ 0 }
+        , _listPendingTrigger{}
         , _pendingPawnEntityID{ 0 }
         , _tick{ 0 }
         , _reconciledTick{ 0 }
         , _localAvatarID{ 0 }
         , _role{ Role::None }
         , _bStartTried{ SW_FALSE }
-        , _bPendingTriggerLook{ SW_FALSE }
         , _reserved{ 0 }
     {
         setCanEverTick( true );
@@ -427,7 +425,10 @@ namespace sw
             if ( hub.findServer()->moveAvatar( pawn._avatarID, Internal::getPosition( state ), state._mountNumber != 0 ) == HubActionResult::Ok )
                 pawn._acceptedPosition = Internal::getPosition( state );
             else
+            {
                 Internal::placeAtRest( state, pawn._acceptedPosition ); // 이동기 밖에서 옮겨졌다(순간이동 · 발사) — 규칙이 받은 마지막 자리로 되돌린다
+                ++pawn._teleportCount;
+            }
             applyState( manager, *pObject, state );
             inputTick = _server.popNextIntent( pawn._connectionID, input._intent, input._pawnEntityID, _listClaimScratch );
         }
@@ -443,7 +444,7 @@ namespace sw
     void HubPawnReplicationComponent::publishPoses( GameObjectManager& manager )
     {
         const WorldOrigin& origin = manager.getWorldOrigin();
-        for ( const ServerPawn& pawn : _listServerPawn )
+        for ( ServerPawn& pawn : _listServerPawn )
         {
             const GameObject*                 pObject   = manager.resolveGameObject( pawn._object );
             const SceneComponent*             pRoot     = pObject != nullptr ? pObject->getPrimarySceneComponent() : nullptr;
@@ -451,7 +452,11 @@ namespace sw
             if ( pRoot == nullptr || pMovement == nullptr )
                 continue;
             HubPawnPose pose;
-            pose._mountNumber                    = findMountNumber( manager, *pObject );
+            pose._mountNumber = findMountNumber( manager, *pObject );
+            if ( pose._mountNumber != pawn._mountNumber )
+                ++pawn._teleportCount; // 타고 내림은 자리를 옮긴다 — 선 자리와 안장을 잇지 않는다
+            pawn._mountNumber                    = pose._mountNumber;
+            pose._teleportCount                  = pawn._teleportCount;
             const MountMovementComponent* pMount = pose._mountNumber != 0 ? findMount( manager, pose._mountNumber ) : nullptr;
             pose._position                       = origin.toAbsolute( pMount != nullptr ? pRoot->getWorldPosition() : pMovement->getState()._motion._position );
             pose._yaw                            = MathUtil::wrapAngle( pMount != nullptr ? pMount->getFacingYaw() : pMovement->getFacingYaw() );
@@ -501,10 +506,14 @@ namespace sw
         {
             stepClient( manager, hub, *pPawnObject );
         }
-        _client.update( seconds );
+        _client.accumulateFrameTime( seconds ); // 화면 시각은 다음 프레임의 시작에 옮겨진다
         _smoother.update( seconds );
         applyDisplay( manager, *pPawnObject );
         updateRemotePawnList( manager );
+        // 이번 프레임에 그린 시각이다 — 다음 프레임의 입력은 이 화면을 보고 낸 것이다.
+        ControlSystem* const pControl = ControlSystem::find( manager );
+        if ( pControl != nullptr )
+            pControl->publishViewTick( _client.getViewTick() );
     }
 
     bool HubPawnReplicationComponent::startPrediction( GameObjectManager& manager, uint32 avatarID )
@@ -620,16 +629,14 @@ namespace sw
         {
             // 폰이 바뀌었다 — 앞 폰 스키마의 발동을 새 폰의 버튼으로 보내지 않는다.
             _pendingPawnEntityID = pawnEntityID;
-            _pendingTriggered    = 0;
-            _bPendingTriggerLook = SW_FALSE;
+            _listPendingTrigger.clear();
         }
-        const ControlIntent& intent = controlledPawn.getIntent();
-        _pendingTriggered |= intent._buttonTriggered;
-        if ( intent._bTriggerLook )
+        // 줄에는 상한이 있다 — 입력 틱이 오래 멈춘 동안(끊김)의 누름을 끝없이 쌓지 않는다.
+        constexpr size_t kMaxPendingTrigger = static_cast<size_t>( ControlIntent::kMaxTriggers ) * 4u;
+        for ( const ControlTrigger& trigger : controlledPawn.getIntent()._listTrigger )
         {
-            _bPendingTriggerLook = SW_TRUE;
-            _pendingTriggerYaw   = intent._triggerYaw;
-            _pendingTriggerPitch = intent._triggerPitch;
+            if ( _listPendingTrigger.size() < kMaxPendingTrigger )
+                _listPendingTrigger.push_back( trigger );
         }
     }
 
@@ -637,14 +644,15 @@ namespace sw
     {
         const bool   bSamePawn = _pendingPawnEntityID == pawnEntityID;
         HubPawnInput input;
-        input._pawnEntityID            = pawnEntityID;
-        input._intent                  = controlledPawn.getIntent();
-        input._intent._buttonTriggered = bSamePawn ? _pendingTriggered : 0u;
-        input._intent._bTriggerLook    = bSamePawn && _bPendingTriggerLook == SW_TRUE;
-        input._intent._triggerYaw      = input._intent._bTriggerLook ? _pendingTriggerYaw : 0.0f;
-        input._intent._triggerPitch    = input._intent._bTriggerLook ? _pendingTriggerPitch : 0.0f;
-        _pendingTriggered              = 0;
-        _bPendingTriggerLook           = SW_FALSE;
+        input._pawnEntityID = pawnEntityID;
+        input._intent       = controlledPawn.getIntent();
+        input._intent._listTrigger.clear();
+        if ( bSamePawn == false )
+            return input;
+        // 선에 싣는 상한을 넘는 사건은 다음 입력 틱이 싣는다(사건마다 보던 시각을 든다).
+        const size_t triggerCount = MathUtil::min( _listPendingTrigger.size(), static_cast<size_t>( ControlIntent::kMaxTriggers ) );
+        input._intent._listTrigger.assign( _listPendingTrigger.begin(), _listPendingTrigger.begin() + static_cast<std::ptrdiff_t>( triggerCount ) );
+        _listPendingTrigger.erase( _listPendingTrigger.begin(), _listPendingTrigger.begin() + static_cast<std::ptrdiff_t>( triggerCount ) );
         return input;
     }
 
@@ -679,17 +687,17 @@ namespace sw
         _client.collectVisibleEntities( _listEntityScratch );
         for ( const uint32 entityID : _listEntityScratch )
         {
-            const NetEntityState* pFrom = nullptr;
-            const NetEntityState* pTo   = nullptr;
-            float32               alpha = 0.0f;
-            HubPawnPose           from;
-            HubPawnPose           to;
-            const bool            bSampled = entityID != _localAvatarID && _client.sampleEntity( entityID, pFrom, pTo, alpha ) && readPose( pFrom->_buffer, from ) && readPose( pTo->_buffer, to );
-            if ( bSampled == false )
+            if ( entityID == _localAvatarID )
                 continue;
-            const float3  position = manager.getWorldOrigin().toLocal( float3::lerp( from._position, to._position, alpha ) );
-            const float32 yaw      = MathUtil::wrapAngle( MathUtil::lerpAngle( from._yaw, to._yaw, alpha ) );
-            if ( pTo->_typeID == kMountTypeID )
+            const bool                                  bMount = entityID >= kMountEntityIDBase && entityID - kMountEntityIDBase < kMaxMount;
+            const optional<NetStateSample<HubPawnPose>> sample = _client.sampleState<HubPawnPose>( entityID, bMount ? kMountTypeID : kPawnTypeID );
+            if ( sample.has_value() == false )
+                continue;
+            const HubPawnPose& from     = sample->_from;
+            const HubPawnPose& to       = sample->_to;
+            const float3       position = manager.getWorldOrigin().toLocal( sample->_ratio.interpolate( from._position, to._position ) );
+            const float32      yaw      = sample->_ratio.interpolateAngle( from._yaw, to._yaw );
+            if ( bMount )
             {
                 const uint32            mountIndex = entityID - kMountEntityIDBase;
                 const bool              bListed    = mountIndex < static_cast<uint32>( _listMount.size() );
@@ -700,12 +708,10 @@ namespace sw
                 MountMoveState state = pMount->getState();
                 state._position      = position;
                 state._facingYaw     = yaw;
-                state._gait          = to._gait;
+                state._gait          = sample->_ratio.choose( from._gait, to._gait );
                 pMount->setState( state, position );
                 continue;
             }
-            if ( pTo->_typeID != kPawnTypeID )
-                continue;
             RemotePawn* pRemote = nullptr;
             for ( RemotePawn& remote : _listRemotePawn )
             {
@@ -730,8 +736,8 @@ namespace sw
             CharacterControllerComponent* pController = pObject != nullptr ? pObject->getComponent<CharacterControllerComponent>() : nullptr;
             if ( pRoot == nullptr || pMovement == nullptr || pController == nullptr )
                 continue;
-            pController->setActive( to._mountNumber == 0 ); // 탄 사람의 캡슐은 서버에도 없다(`VehicleSeatComponent::mount`)
-            pRoot->setWorldPosition( position );            // 손으로 돌리는 몸이라 옮긴 자리에 캡슐만 따라간다(걸음은 돌지 않는다)
+            pController->setActive( sample->_ratio.choose( from._mountNumber, to._mountNumber ) == 0 ); // 탄 사람의 캡슐은 서버에도 없다(`VehicleSeatComponent::mount`)
+            pRoot->setWorldPosition( position );                                                        // 손으로 돌리는 몸이라 옮긴 자리에 캡슐만 따라간다(걸음은 돌지 않는다)
             if ( yaw != pMovement->getFacingYaw() )
                 pMovement->setFacingYaw( yaw );
         }
@@ -897,12 +903,6 @@ namespace sw
         const bool bWritten = ReplicatedLayout::writeFull( pose, writer );
         outBytes            = writer.releaseBytes();
         return bWritten;
-    }
-
-    bool HubPawnReplicationComponent::readPose( const vector<uint8>& bytes, HubPawnPose& outPose )
-    {
-        BitReader reader( bytes.data(), static_cast<int32>( bytes.size() ) );
-        return ReplicatedLayout::readFull( reader, outPose, nullptr ) == FixedReadResult::Ok;
     }
 
     bool HubPawnReplicationComponent::isClose( const HubPawnState& left, const HubPawnState& right, float32 tolerance )

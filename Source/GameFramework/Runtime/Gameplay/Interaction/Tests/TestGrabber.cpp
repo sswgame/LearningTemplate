@@ -225,7 +225,8 @@ SW_TEST_CASE( GrabberTest, PawnButtonPicksUpAndPutsDown )
     manager.beginPlay();
 
     ControlIntent press;
-    press.setButton( 0, true, true );
+    press.setButton( 0, true );
+    press.addTrigger( 0, 0.0f, 0.0f, ControlViewTick::makePresent() );
     pRemote->receiveIntent( 0, press );
     manager.update( Util::kFrame );
     SW_EXPECT_TRUE( pGrabber->isHolding() );

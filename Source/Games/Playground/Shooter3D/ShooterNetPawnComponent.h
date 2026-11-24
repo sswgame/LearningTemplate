@@ -8,12 +8,13 @@
  *          - 서버: **접속마다 몸 하나다**(언리얼 DM 의 접속마다 폰 · 유니티 NGO 플레이어 프리팹). 자리 0 은 씬의 플레이어 몸이고 나머지 자리(`_listGuestSpawn`)는 접속이 앉을 때 그 몸의 설정을 옮겨
  *            세우고 나가면 거둔다(`ServerPawn`). 걸음 · 스폰은 남의 오브젝트라 모두 틱 뒤(게임 스레드)에 한다. 틱마다 자리의 연결에서 다음 입력 틱을 꺼내
  *            (`ReplicationServer::popNextIntent`, 온 만큼 흐른 시간의 몫 안에서 — 오지 않았으면 그 자리) `ShooterBodyMovementComponent::simulate` 로 움직이고, 상태를 소유자 상태(그 입력 틱과 한 쌍)와
- *            엔티티로 싣는다. 꺼낸 의도는 원격 조종자(`RemoteControllerComponent`)에도 넣어 서버의 폰이 그 의도로 쏘고 무기를 바꾼다. 엔티티 자리는 관심 영역 정책(`InterestReplicationPolicy`)에 알린다.
+ *            엔티티로 싣는다. 꺼낸 의도는 원격 조종자(`RemoteControllerComponent`)에도 넣어 폰의 시선 · 감시 값이 그 의도를 따른다(사격 · 무기는 걸음이 한다). 엔티티 자리는 관심 영역 정책(`InterestReplicationPolicy`)에 알린다.
  *          - 클라이언트: 틱마다 폰 의도를 보내고(`ReplicationClient::sendIntent`) 바로 같은 함수로 예측한다(`ClientPrediction::record`).
  *            새 소유자 상태가 오면 그 입력 틱의 기록과 비교해(`reconcile`) 다르면 남은 입력을 다시 시뮬레이션하고, 보정 전후 자리 차이를 `PredictionSmoother` 로 녹인다.
- *            발동 비트는 한 프레임만 참이다 — 입력 틱이 없던 프레임의 발동을 프레임마다 모아 다음 입력 틱에 싣는다.
- *          **명중은 서버가 정한다(랙 보정).** 서버는 틱마다 산 적의 자리를 기록하고(`LagCompensationHistory`), 서버의 플레이어가 쏘면 그 의도를 만들 때 클라이언트가 보던 서버 틱
- *          (`ReplicationServer::getClientViewTick`)으로 되감아 명중을 본다(`raycastRewound`). 맞은 몸은 되감은 차이만큼 광선을 옮겨 실제 히트박스(래그돌 바디 — 히트 존 배율)에 다시 묻는다.
+ *            발동은 한 프레임의 사건이다 — 입력 틱이 없던 프레임의 사건을 프레임마다 모아 다음 입력 틱에 싣는다(사건이 자기 시선 · 보던 시각을 든다).
+ *          **이동과 발동은 명령 하나의 한 걸음이다** — 서버 · 예측 모두 이동한 자리에서 바로 무기 · 근접을 판정한다(`ShooterPlayerComponent::stepNetCommand`). 합친 폰 의도로 쏘지 않는다.
+ *          **명중은 서버가 정한다(랙 보정).** 서버는 틱마다 산 적의 자리를 기록하고(`LagCompensationHistory`), 서버의 플레이어가 쏘면 발동이 들고 온 보던 서버 틱
+ *          (`ControlTrigger::getViewTick` — 서버가 자른 값)으로 되감아 명중을 본다(`raycastRewound`). 히트박스(래그돌 바디 — 히트 존 배율)는 바디마다 과거 자세에서 지금 자세로 광선을 옮겨 묻는다(포즈까지 되감는다).
  *          판정 결과(맞힌 발 수 · 체력)는 소유자 상태에 실어 클라이언트 HUD 가 서버의 값을 보인다(`ShooterPlayerComponent::applyServerReport`).
  *          **근접은 주장을 확인한다.** 클라이언트가 예측 스윕으로 맞힌 적을 의도 입력에 주장으로 싣고(`queueMeleeClaim`), 서버는 그 입력을 처리한 프레임의 자기 스윕 기록(`MeleeSweepHistory`)과
  *          클라이언트가 보던 틱으로 되감은 적 자리를 맞춰 인정하면 맞음을 전달한다. 휘두르지 않은 주장은 기록이 없어 거절된다.
@@ -84,6 +85,9 @@ namespace sw
 
         PROPERTY( Replicated )
         uint32 _appearanceSeed{ 0 };
+
+        PROPERTY( Replicated )
+        uint8 _teleportCount{ 0 }; ///< 순간 이동 번호 — 다른 두 표본은 잇지 않는다(`NetSampleRatio`)
     };
 
     /** @brief 플레이어 몸 하나의 엔티티 상태입니다(남에게 보이는 모습). 보간해 그리기만 하므로 양자화한다 — 판정은 서버의 랙 보정 기록이 한다. */
@@ -106,6 +110,9 @@ namespace sw
 
         PROPERTY( Replicated, Min = 0, Max = 1 )
         uint8 _bOnGround{ SW_TRUE };
+
+        PROPERTY( Replicated )
+        uint8 _teleportCount{ 0 }; ///< 순간 이동 · 다시 태어남 번호 — 다른 두 표본은 잇지 않는다(`NetSampleRatio`)
     };
 
     /**
@@ -180,19 +187,19 @@ namespace sw
         uint32 getCorrectionCount() const { return _prediction.getCorrectionCount(); }
 
         /**
-         * @brief 서버의 사격 판정입니다. 지금 폰 의도를 만들 때 클라이언트가 보던 틱으로 되감아 광선 @p ray 가 맞힌 몸을 찾고, 되감은 차이만큼 광선을 옮겨 실제 히트박스에 묻습니다(틱 뒤 · 게임 스레드).
+         * @brief 서버의 사격 판정입니다. 발동이 들고 온 보던 시각 @p viewTick 으로 되감아 광선 @p ray 가 맞힌 몸을 찾습니다 — 히트박스 바디마다 광선을 과거 자세에서 지금 자세로 옮겨 실제 바디에 묻습니다.
          * @details 되감은 몸에 닿지 않으면(클라이언트 화면에 그 자리에 없었으면) 지금 자리에 있어도 맞지 않는다. 맞은 바디가 그 몸의 것이 아니면 맞지 않는다.
          *          다른 플레이어의 몸은 되감은 캡슐이 곧 맞음 상자다 — 맞으면 @p outHit 의 오브젝트가 그 몸이다.
          * @param shooter 쏜 몸입니다(그 자리의 연결이 보던 틱으로 되감는다).
          * @param maxDistance 막는 상자 · 바닥까지의 거리입니다.
          * @return 맞았으면 true 이고 @p outHit 에 맞은 바디입니다(거리는 옮긴 광선 기준이며 옮긴 길이와 같은 방향의 값이다).
          */
-        [[nodiscard]] bool raycastRewound( const GameObjectManager& manager, const GameObject& shooter, const Ray& ray, float32 maxDistance, uint32 layerMask, uint64 ignoreObjectID, CharacterRayHit& outHit );
+        [[nodiscard]] bool raycastRewound( const GameObjectManager& manager, const GameObject& shooter, const Ray& ray, float32 maxDistance, uint32 layerMask, uint64 ignoreObjectID, ControlViewTick viewTick, CharacterRayHit& outHit );
         /**
          * @brief 서버의 근접 판정 가운데 다른 플레이어 몫입니다 — 이번 프레임의 칼날(@p listPrevious → @p listCurrent 의 점마다, 그리고 지금 칼날)이 닿은 몸을 모읍니다(씬 자리, 틱 뒤 · 게임 스레드).
          * @details 사격과 같은 되감은 캡슐이다(휘두른 클라이언트가 보던 틱). 적은 물리 히트박스(`MeleeHit::sweep`)가 맡으므로 들지 않는다. 같은 몸이 겹쳐 들 수 있다.
          */
-        void collectRewoundMelee( const GameObjectManager& manager, const GameObject& shooter, const vector<float3>& listPrevious, const vector<float3>& listCurrent, float32 radius, vector<GameObjectHandle>& outListTarget ) const;
+        void collectRewoundMelee( const GameObjectManager& manager, const GameObject& shooter, const vector<float3>& listPrevious, const vector<float3>& listCurrent, float32 radius, ControlViewTick viewTick, vector<GameObjectHandle>& outListTarget ) const;
         /** @brief 몸 @p pawnObject 를 조종하는 계정의 매치 점수를 순위표에 냅니다(서버, 틱 뒤 · 게임 스레드). 판이 끝날 때 플레이어가 부릅니다 — 클라이언트 · 매치가 아닌 판은 아무 일도 없다. */
         void reportMatchScore( const GameObject& pawnObject );
         /** @brief 매치 서버의 판이면 true 입니다(활성 미니게임이 매치이고 이 월드가 서버다). */
@@ -205,8 +212,8 @@ namespace sw
         uint32 getRemotePawnCount() const { return static_cast<uint32>( _listRemotePawn.size() ); }
         /** @brief @p from 에서 가장 가까운 남의 몸의 발입니다(클라이언트). 보이는 남이 없으면 비어 있습니다. */
         optional<AbsolutePosition> findNearestRemotePawn( const AbsolutePosition& from ) const;
-        /** @brief 예측 스윕이 맞힌 적을 다음 입력 틱에 서버로 주장합니다(클라이언트, 틱 뒤). */
-        void queueMeleeClaim( uint32 enemyEntityID );
+        /** @brief 입력 틱 @p commandTick 의 예측 스윕이 맞힌 적을 다음 입력에 실어 서버로 주장합니다(클라이언트, 틱 뒤). */
+        void queueMeleeClaim( uint32 enemyEntityID, uint32 commandTick );
         /** @brief 입력에 실어 보낸 맞음 주장 수입니다(클라이언트). */
         uint32 getSentClaimCount() const { return _sentClaimCount; }
         /** @brief 인정한 맞음 주장 수입니다(서버). */
@@ -220,7 +227,7 @@ namespace sw
         /** @brief 되감아 맞힌 광선 수입니다(서버). */
         uint32 getRewoundHitCount() const { return _rewoundHitCount; }
         /** @brief 마지막 판정이 되감은 서버 틱 수입니다(서버). 클라이언트의 보간 지연 + 왕복 지연만큼입니다. */
-        float32 getLastRewindTicks() const { return _lastRewindTicks; }
+        float64 getLastRewindTicks() const { return _lastRewindTicks; }
 
         /** @brief 두 상태가 같다고 볼 만큼 가까운가입니다(재조정 판정 — 자리 `_reconcileTolerance` 안, 땅 여부가 같음). */
         bool isClose( const ShooterMoveState& left, const ShooterMoveState& right ) const;
@@ -237,20 +244,16 @@ namespace sw
             Client
         };
 
-        /** @brief 서버가 확인을 기다리는 맞음 주장 하나입니다. 그 프레임의 스윕이 기록될 때까지 두 프레임쯤 기다린다. */
-        struct PendingClaim
-        {
-            MeleeHitClaim _claim{}; ///< `_frame` 은 그 입력을 꺼낸 장부 프레임이다(클라이언트가 보낸 입력 틱에서 옮겼다)
-            float32       _viewTick{ 0.0f };
-        };
+        /** @brief 한 자리가 확인을 기다리는 맞음 주장의 상한입니다. 넘는 주장은 거절한다(보내는 쪽이 줄을 늘릴 수 없다). */
+        static constexpr size_t kMaxPendingClaim = 64;
 
         /** @brief 서버 — 자리 하나입니다. 자리 0 의 몸은 씬의 플레이어, 나머지는 접속이 앉을 때 세운 오브젝트다. */
         struct ServerPawn
         {
             GameObjectHandle        _object{};           ///< 몸. 세우기 전이거나 거뒀으면 비었다
             GameObjectHandle        _remoteController{}; ///< 폰을 쥔 원격 조종자 오브젝트
-            vector<PendingClaim>    _listPendingClaim{}; ///< 확인을 기다리는 맞음 주장
-            TickRingBuffer<float32> _viewTickByInput{};  ///< 입력 틱마다 클라이언트가 보던 서버 틱
+            vector<MeleeHitClaim>   _listPendingClaim{}; ///< 확인을 기다리는 맞음 주장 — 그 걸음 안팎의 입력을 모두 처리한 뒤 본다
+            TickRingBuffer<float64> _viewTickByInput{};  ///< 입력 틱마다 클라이언트가 보던 서버 틱(서버가 자른 값)
             optional<uint32>        _lastInputTick{};    ///< 이번 서버 틱에 꺼낸 마지막 입력 틱
             uint64                  _accountID{ 0 };     ///< 조종 연결의 주체(접속 티켓의 계정, 0 이면 없다)
             uint64                  _leftAccountID{ 0 }; ///< 나간 계정 — `finishLeftPlayer` 가 점수 · 빈 자리를 처리한다
@@ -274,7 +277,9 @@ namespace sw
 
         /** @brief 의도 하나로 몸을 한 걸음 옮깁니다(서버). */
         void stepMovement( ShooterBodyMovementComponent& movement, const vector<ShooterArenaBox>& listBox, const ControlIntent& intent ) const;
-        void stepClient( ShooterBodyMovementComponent& movement, const vector<ShooterArenaBox>& listBox );
+        /** @brief 클라이언트의 이번 프레임 걸음들과 남의 몸 · 화면 시각입니다(틱 뒤 · 게임 스레드) — 서버와 같은 자리에서 같은 순서로 돈다. */
+        void runClientFrame( GameObjectManager& manager );
+        void stepClient( GameObjectManager& manager, ShooterBodyMovementComponent& movement, const vector<ShooterArenaBox>& listBox );
         // 서버(틱 뒤 · 게임 스레드 — 여러 몸을 옮기고 세우고 거둔다)
         void runServerFrame( GameObjectManager& manager );
         void stepServer( GameObjectManager& manager, const vector<ShooterArenaBox>& listBox );
@@ -316,8 +321,10 @@ namespace sw
         void reportSeatCapacity();
         /** @brief 계정 @p accountID 의 매치 점수를 정의의 순위표에 냅니다(서버 권위 제출 — `ILeaderboardScoreSender`). 매치가 아니거나 이미 냈으면 아무 일도 없다. */
         void reportMatchScore( ServerPawn& pawn, const ShooterPlayerComponent& player, uint64 accountID );
-        /** @brief 지금 폰 의도를 만들 때 클라이언트가 보던 서버 틱입니다(조종 시스템이 이번 프레임에 읽은 입력 틱의 스탬프). */
-        float32                           findShotViewTick( const GameObjectManager& manager, const ServerPawn& pawn ) const;
+        /** @brief 적 @p object 의 히트박스 바디 자세를 지금 물리 씬에서 읽습니다(절대 자리, 에셋 바디 순서). 바디가 아직 없으면 비웁니다. */
+        static void collectBodyPoses( const GameObjectManager& manager, const GameObject& object, vector<LagBodyPose>& outListBody );
+        /** @brief 되감은 적 하나의 바디들에 광선을 물어 가장 가까운 맞음을 찾습니다. */
+        [[nodiscard]] static bool         raycastRewoundBodies( const GameObjectManager& manager, const GameObject& object, const LagRecord& past, const Ray& ray, float32 maxDistance, uint32 layerMask, CharacterRayHit& outHit );
         static RemoteControllerComponent* findRemoteController( const GameObjectManager& manager, const ServerPawn& pawn );
         /** @brief 입력 틱이 없는 프레임의 발동까지 놓치지 않게 이번 프레임 폰 의도의 발동을 모읍니다(클라이언트, 프레임마다). */
         void collectPendingTriggers( const ShooterBodyMovementComponent& movement );
@@ -360,23 +367,19 @@ namespace sw
         vector<uint32>                                    _listEntityScratch;
         LagCompensationHistory                            _lagHistory; ///< 서버 — 틱마다 산 적 · 산 플레이어의 자리
         float32                                           _accumulator;
-        float32                                           _pendingTriggerYaw;   ///< 클라이언트 — 모은 발동 순간의 시선
-        float32                                           _pendingTriggerPitch; ///< 클라이언트 — 모은 발동 순간의 시선
-        uint32                                            _pendingTriggered;    ///< 클라이언트 — 다음 입력 틱에 실을 발동 비트
+        vector<ControlTrigger>                            _listPendingTrigger;  ///< 클라이언트 — 다음 입력 틱에 실을 발동 사건
         uint32                                            _tick;                ///< 서버 — 시뮬레이션 틱, 클라이언트 — 예측한 입력 틱
         uint32                                            _pawnEntityID;        ///< 클라이언트 — 서버가 알려 준 내 몸의 엔티티(0 이면 아직)
         uint32                                            _reconciledTick;      ///< 클라이언트 — 마지막으로 맞춘 소유자 상태의 입력 틱
         uint32                                            _rewoundShotCount;    ///< 서버 — 랙 보정으로 판정한 광선 수
         uint32                                            _rewoundHitCount;     ///< 서버 — 되감아 맞힌 광선 수
-        float32                                           _lastRewindTicks;     ///< 서버 — 마지막 판정이 되감은 틱 수
+        float64                                           _lastRewindTicks;     ///< 서버 — 마지막 판정이 되감은 틱 수
         uint32                                            _sentClaimCount;      ///< 클라이언트 — 보낸 주장 수
         uint32                                            _confirmedClaimCount; ///< 서버 — 인정한 주장 수
         uint32                                            _rejectedClaimCount;  ///< 서버 — 거절한 주장 수
-        int32                                             _pendingStepCount;    ///< 서버 — 이번 프레임 틱 뒤에 돌 고정 틱 수
-        float32                                           _frameSeconds;        ///< 클라이언트 — 이번 프레임의 시간(남의 몸의 빠르기)
+        int32                                             _pendingStepCount;    ///< 이번 프레임 틱 뒤에 돌 고정 틱 수
         Role                                              _role;
-        uint8                                             _bPendingTriggerLook : 1; ///< 클라이언트 — `_pendingTriggerYaw` · `_pendingTriggerPitch` 가 채워졌다
-        uint8                                             _bSeatsReported      : 1; ///< 서버 — 자리 수를 매칭에 알렸다
-        [[maybe_unused]] uint8                            _reserved            : 6;
+        uint8                                             _bSeatsReported : 1; ///< 서버 — 자리 수를 매칭에 알렸다
+        [[maybe_unused]] uint8                            _reserved       : 7;
     };
 } // namespace sw

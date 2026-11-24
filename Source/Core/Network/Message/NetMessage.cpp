@@ -525,6 +525,10 @@ namespace sw
             unhandled._channel      = message._channel;
             pOutUnhandled->push_back( std::move( unhandled ) );
         }
+        for ( size_t handlerIndex = 0; handlerIndex < _listHandler.size(); ++handlerIndex ) // 처리기가 그 안에서 구독을 풀 수 있다
+        {
+            _listHandler[handlerIndex]->onPollFinished();
+        }
         return static_cast<int32>( _inbound._listMessage.size() );
     }
 

@@ -4,10 +4,10 @@
  * @details 클라이언트의 근접 판정은 같은 스윕으로 맞음을 예측해 타격감만 낸다(`MeleeHitAuthority::Predicted`). 서버는 자기 시점의 스윕으로 정하는데,
  *          클라이언트가 지연된 월드를 보고 휘둘렀다면 서버의 칼날이 닿는 순간 표적은 이미 비켜서 있을 수 있다. 그래서 클라이언트가 "내가 휘두른 입력 틱에 이 표적이
  *          칼날에 있었다" 를 주장(`MeleeHitClaim`)하면, 서버는 그 주장을 **자기 스윕 기록**과 맞춰 본다.
- *          - 기록: 권위 있는 `MeleeHit::sweep` 이 칼날 표본점 줄(지난 칼날 → 지금 칼날)과 두께 · 피해를 이 장부에 프레임 번호로 적는다. 장부는 서버가
+ *          - 기록: 권위 있는 `MeleeHit::sweep` 이 칼날 표본점 줄(지난 칼날 → 지금 칼날)과 두께 · 피해를 이 장부에 걸음 번호(입력 틱)로 적는다. 장부는 서버가
  *            `getOrCreate` 로 켠 씬에만 있다 — 혼자 하는 게임과 클라이언트는 켜지 않으므로 기록하지 않는다.
- *          - 확인: 서버의 폰 루프가 주장의 입력 틱을 그 입력을 처리한 서버 프레임으로 옮겨(`MeleeHitClaim::_frame`), 지연 보상으로 되감은 표적 자리를 함께 넘긴다.
- *            표적 구(중심 · 반지름)가 그 프레임 안팎(`kClaimSlackFrames`)의 칼날 토막에서 칼날 두께 안에 들면 인정한다. 서버가 그 휘두름을 한 적이 없으면(기록 없음)
+ *          - 확인: 주장의 입력 틱(`MeleeHitClaim::_step`)과 서버가 그 입력으로 휘두른 걸음을 맞춘다 — 서버 프레임으로 맞추면 입력이 몰려 온 프레임에 창을 벗어났다. 지연 보상으로 되감은 표적 자리를 함께 넘긴다.
+ *            표적 구(중심 · 반지름)가 그 걸음 안팎(`kClaimSlackSteps`)의 칼날 토막에서 칼날 두께 안에 들면 인정한다. 서버가 그 휘두름을 한 적이 없으면(기록 없음)
  *            거절한다 — 클라이언트가 휘두르지 않은 맞음을 지어낼 수 없다.
  *          - 피해: 인정된 주장만 `claimHit` 이 기록한 피해 · 충격량으로 전달한다(창에서 이미 맞힌 오브젝트는 건너뛴다). 그 밖의 판정 · 전달은 스윕 한 길 그대로다.
  *          주장의 전송 형식(`write` · `read`)만 정한다. 싣는 곳은 네트 키트의 의도 입력이다(`ReplicationClient::sendIntent`). 사용처: 사격장 플레이어의 근접(`ShooterNetPawnComponent`).
@@ -32,7 +32,7 @@ namespace sw
     /** @brief 클라이언트가 예측으로 본 맞음 하나의 주장입니다. 때린 쪽은 연결의 폰이라 싣지 않고, 표적은 게임이 정한 번호로 보냅니다. */
     struct SW_API MeleeHitClaim
     {
-        uint32 _frame{ 0 };    ///< 이 휘두름 입력을 서버가 처리한 서버 프레임(`MeleeSweepHistory::getFrame` 와 같은 번호)
+        uint32 _step{ 0 };     ///< 휘두른 걸음 번호(클라이언트의 입력 틱) — 서버도 그 입력의 걸음에서 휘두른다(`MeleeHitParams::_step`)
         uint64 _targetID{ 0 }; ///< 게임이 정한 표적 번호(네트워크 엔티티 번호 등). 서버가 오브젝트로 옮긴다
 
         void write( BitWriter& writer ) const;
@@ -62,8 +62,8 @@ namespace sw
         static constexpr const utf8* kFrameSystemKey = "MeleeSweepHistory";
         /** @brief 기록을 보관하는 프레임 수입니다. 지연 보상이 되감는 범위(`ReplicationServerConfig::_maxViewLagTicks` 의 한도 256)보다 짧게 잡지 않는다. */
         static constexpr uint32 kKeepFrameCount = 256;
-        /** @brief 주장의 프레임과 기록의 프레임이 이만큼까지 어긋나도 같은 휘두름으로 본다(입력 틱 → 서버 프레임 옮김의 반올림). */
-        static constexpr uint32 kClaimSlackFrames = 2;
+        /** @brief 주장의 걸음과 기록의 걸음이 이만큼까지 어긋나도 같은 휘두름으로 본다(서버의 창이 예측보다 늦게 열린 때). */
+        static constexpr uint32 kClaimSlackSteps = 2;
         /** @brief 칼날 두께에 더해 주는 여유(미터)입니다. 표적 자리가 지연 보상 표본의 보간이라 생기는 오차다. */
         static constexpr float32 kClaimToleranceMeters = 0.1f;
 
@@ -80,12 +80,10 @@ namespace sw
         /** @brief 프레임 번호를 올리고 보관 밖의 기록을 버립니다(`HitRecord` 쓰기). 씬 데이터는 읽지 않습니다. 스윕 기록(`record`)은 틱에서 부르므로 이 선언 밖입니다. */
         SceneFrameAccess getFrameAccess() const override;
 
-        /** @brief 지금 프레임 번호입니다. 갱신마다 하나 오릅니다. 주장의 `_frame` 이 이 번호를 쓴다. */
-        uint32 getFrame() const { return _frame; }
         /** @brief 지금 보관한 스윕 기록 수입니다(테스트 · 진단). */
         size_t getRecordCount() const { return _listRecord.size(); }
 
-        /** @brief 권위 있는 스윕 하나를 이번 프레임으로 적습니다. `MeleeHit::sweep` 이 부릅니다. */
+        /** @brief 권위 있는 스윕 하나를 때린 쪽의 걸음(`MeleeHitParams::_step`)으로 적습니다. `MeleeHit::sweep` 이 부릅니다. */
         void record( uint64 attackerID, const MeleeHitParams& params, vector_reference<const float3> listPrevious, vector_reference<const float3> listCurrent );
 
         /**

@@ -23,6 +23,7 @@
 
 #include "GameFramework/Runtime/Character/Combat/Health/HealthStateMachine.h"
 #include "GameFramework/Runtime/Character/Combat/Weapon/Weapon.h"
+#include "GameFramework/Runtime/Character/Control/Intent/ControlIntent.h"
 #include "GameFramework/Runtime/Foundation/Framework/GameFrameworkComponent.h"
 #include "GameFramework/Runtime/Foundation/Framework/Presentation/GameSound.h"
 #include "GameFramework/Runtime/Gameplay/Appearance/AppearanceSocketRig.h"
@@ -75,10 +76,10 @@ namespace sw
         static constexpr int32 kWeaponCount = 3;
 
         /**
-         * @brief 폰의 의도가 고른 무기 슬롯입니다 — 버튼 Weapon1..3 은 그 슬롯, SwitchWeapon 은 같은 이름 아날로그의 부호대로 앞 · 뒤로 한 칸(끝에서 돈다).
+         * @brief 의도 @p intent(버튼 차례는 폰 @p pawn 의 스키마)가 고른 무기 슬롯입니다 — 버튼 Weapon1..3 은 그 슬롯, SwitchWeapon 은 같은 이름 아날로그의 부호대로 앞 · 뒤로 한 칸(끝에서 돈다).
          * @return 발동한 것이 없거나 방향이 0 이면 @p currentSlot 그대로입니다. 둘 다 발동하면 SwitchWeapon 이 이긴다.
          */
-        [[nodiscard]] static int32 chooseWeaponSlot( const PawnComponent& pawn, int32 currentSlot );
+        [[nodiscard]] static int32 chooseWeaponSlot( const PawnComponent& pawn, const ControlIntent& intent, int32 currentSlot );
 
         ShooterPlayerComponent();
         virtual ~ShooterPlayerComponent() override;
@@ -106,6 +107,13 @@ namespace sw
          * @details 클라이언트의 사격은 탄도선 · 탄착만 예측한다 — 맞음을 전달하지 않고 표시도 서버가 인정한 뒤에 낸다(언리얼 Lyra 의 서버 확인 맞음 표시와 같은 자리, 기억에 의존).
          */
         void applyServerReport( uint32 confirmedHitCount, uint32 killCount, float32 health, bool bOut );
+        /**
+         * @brief 네트 걸음 하나의 발동입니다(서버 · 클라이언트 예측, 틱 뒤 · 게임 스레드) — 이동을 마친 자리에서 무기를 @p step 만큼 진행하고 의도의 발사 · 근접을 바로 판정합니다.
+         * @details 이동과 발동이 명령 하나의 한 걸음이다(Valve usercmd — `PlayerRunCommand` 안에서 이동 뒤 `ItemPostFrame`, 언리얼 ServerMove 의 저장된 이동마다 처리). 프레임 틱의 사격은
+         *          합친 의도 · 컴포넌트 틱 차례에 달렸다 — 네트가 움직이는 몸은 그 길을 쓰지 않는다.
+         * @param commandTick 이 명령의 입력 틱입니다(근접 주장을 맞추는 번호).
+         */
+        void stepNetCommand( GameObjectManager& manager, const ControlIntent& intent, float32 step, uint32 commandTick );
         /** @brief 이 플레이어의 몸 프리팹을 하나 세웁니다(게임 스레드, 틱 밖) — 자기 몸과 남의 모습이 같은 몸이다. 프리팹에 `ShooterAvatarComponent` 가 없으면 오류를 남기고 빈 핸들입니다. */
         GameObjectHandle spawnBodyObject( GameObjectManager& manager, const utf8* pName ) const;
         /** @brief `spawnBodyObject` 로 세운 몸을 외형 부품까지 지웁니다. 이미 없으면 아무 일도 없습니다. */
@@ -199,17 +207,29 @@ namespace sw
          */
         struct PendingShot
         {
-            Ray           _ray{};
-            float3        _muzzle{};              ///< 탄도선 시작점(`_bHasMuzzle` 일 때만 뜻이 있다)
-            hashed_string _projectileID{};        ///< 장전한 탄(맞음 표 · 맞음 동작을 찾는다)
-            float4        _tracerColor{};         ///< 탄의 궤적 색
-            float32       _tracerWidth{ 0.0f };   ///< 탄의 궤적 두께
-            float32       _coverDistance{ 0.0f }; ///< 막는 상자 · 바닥 · 사거리 중 가까운 것(m)
-            float32       _range{ 0.0f };         ///< 탄 사거리(m) — 이보다 짧으면 무언가에 닿았다
-            float32       _damage{ 0.0f };
-            int32         _pierceCount{ 0 }; ///< 탄이 더 꿰뚫는 적 수(`ResolvedShot::_pierceCount`)
-            uint32        _volley{ 0 };
-            bool          _bHasMuzzle{ false }; ///< 총구를 찾았다. 아니면 판정만 하고 탄도선을 내지 않는다(대신 쓸 자리는 없다)
+            Ray             _ray{};
+            float3          _muzzle{};              ///< 탄도선 시작점(`_bHasMuzzle` 일 때만 뜻이 있다)
+            hashed_string   _projectileID{};        ///< 장전한 탄(맞음 표 · 맞음 동작을 찾는다)
+            float4          _tracerColor{};         ///< 탄의 궤적 색
+            float32         _tracerWidth{ 0.0f };   ///< 탄의 궤적 두께
+            float32         _coverDistance{ 0.0f }; ///< 막는 상자 · 바닥 · 사거리 중 가까운 것(m)
+            float32         _range{ 0.0f };         ///< 탄 사거리(m) — 이보다 짧으면 무언가에 닿았다
+            float32         _damage{ 0.0f };
+            int32           _pierceCount{ 0 }; ///< 탄이 더 꿰뚫는 적 수(`ResolvedShot::_pierceCount`)
+            uint32          _volley{ 0 };
+            ControlViewTick _viewTick{ ControlViewTick::makePresent() }; ///< 쏜 사람이 보던 시각(서버가 이 시각으로 되감는다)
+            bool            _bHasMuzzle{ false };                        ///< 총구를 찾았다. 아니면 판정만 하고 탄도선을 내지 않는다(대신 쓸 자리는 없다)
+        };
+
+        /** @brief 근접 창의 칼날 한 번입니다 — 걸음(네트) · 프레임(혼자)마다 하나다. */
+        struct PendingSwing
+        {
+            ControlViewTick _viewTick{ ControlViewTick::makePresent() };
+            float3          _eye{};
+            float32         _yaw{ 0.0f };
+            float32         _pitch{ 0.0f };
+            float32         _fraction{ 0.0f };
+            uint32          _step{ 0 }; ///< 휘두른 입력 틱(네트가 아니면 0)
         };
 
         /** @brief 낼 탄착 효과 하나입니다. 틱이 끝난 뒤 디렉터의 풀에서 꺼냅니다. */
@@ -228,11 +248,19 @@ namespace sw
          */
         [[nodiscard]] bool equipWeapons();
         /** @brief 의도의 무기 버튼(`chooseWeaponSlot`)과 Reload 를 무기에 반영합니다. */
-        void applyWeaponIntent( const PawnComponent& pawn );
+        void applyWeaponIntent( const PawnComponent& pawn, const ControlIntent& intent );
+        /** @brief 의도 하나의 발사 · 근접을 광선 · 칼날로 쌓습니다(`resolveShots` · `resolveMelee` 가 판정한다). 혼자 하는 프레임과 네트 걸음이 같은 이 함수를 쓴다. */
+        void runIntent( const ShooterGameModeComponent& gameMode, FirstPersonCameraComponent& camera, const PawnComponent& pawn, const ControlIntent& intent, float32 step, uint32 commandTick );
+        /** @brief 무기의 연사 · 재장전 시간을 흘립니다. */
+        void advanceWeapons( float32 step );
+        /** @brief 발에서 눈까지의 높이입니다. 네트가 움직이는 몸은 설정값 하나다 — 서버의 몸에는 보이는 몸이 없어 소켓 높이를 쓰면 발사 자리가 갈린다. */
+        float32 computeEyeHeight() const;
+        /** @brief 발사 · 근접의 눈 자리입니다(씬) — 예측 보정 오프셋이 없는 시뮬레이션 자리다. */
+        float3 computeAimOrigin() const;
         /** @brief 같은 오브젝트의 몸 이동입니다. 없으면 nullptr 입니다. */
         ShooterBodyMovementComponent* findMovement() const;
         /** @brief 방아쇠를 당깁니다. 눈에서 @p aimDirection 으로 쏘고, 반동은 @p camera 에 준다. */
-        void fireWeapon( const ShooterGameModeComponent& gameMode, FirstPersonCameraComponent& camera, const float3& aimDirection, bool bJustPressed );
+        void fireWeapon( const ShooterGameModeComponent& gameMode, FirstPersonCameraComponent& camera, const float3& aimDirection, ControlViewTick viewTick, bool bJustPressed );
         /** @brief 광선 하나가 막는 상자 · 바닥에 닿는 거리입니다(닿지 않으면 사거리). 틱 안에서 부르며 물리를 묻지 않습니다. */
         float32 traceCover( const ShooterGameModeComponent& gameMode, const Ray& ray ) const;
         /**
@@ -318,6 +346,7 @@ namespace sw
         HealthStateMachine              _healthMachine;
         AppearanceSocketSetCache        _weaponSockets; ///< 1인칭 총구. 무기 외형의 소켓 에셋.
         vector<PendingShot>             _listPendingShot;
+        vector<PendingSwing>            _listPendingSwing;
         vector<float3>                  _listMeleePrevious;  ///< 지난 프레임의 칼날(근접 창의 첫 프레임은 비었다)
         vector<float3>                  _listMeleeCurrent;   ///< 이번 프레임의 칼날
         vector<GameObjectHandle>        _listMeleeHitTarget; ///< 이번 근접 창에서 이미 맞힌 오브젝트

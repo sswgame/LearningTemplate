@@ -15,9 +15,8 @@ namespace
 {
     struct NetInputWindowTestInternal
     {
-        static constexpr NetInputFormat kBlobFormat{ 0, 255, 32, SW_FALSE };
-        static constexpr NetInputFormat kButtonFormat{ 1, 1, 64, SW_FALSE };
-        static constexpr NetInputFormat kStampedFormat{ 0, 255, 32, SW_TRUE };
+        static constexpr NetInputFormat kBlobFormat{ 0, 255, 32 };
+        static constexpr NetInputFormat kButtonFormat{ 1, 1, 64 };
 
         /** @brief 보내는 창이 쓴 묶음을 받는 버퍼가 읽습니다(종류 바이트 하나를 앞에 둔 셈으로 예산을 센다). 깨졌으면 false 입니다. */
         static bool deliver( const NetInputSendWindow& window, NetInputReceiveBuffer& buffer, int32 budgetBytes = NetConnection::kMaxSingleMessageSize )
@@ -272,25 +271,6 @@ SW_TEST_CASE( NetInputWindowTest, FixedEntriesMatchTheHandWrittenRollbackLayout 
         SW_EXPECT_EQUAL( manual.getBitCount(), written.getBitCount() );
         SW_EXPECT_TRUE( manual.getBytes() == written.getBytes() );
     }
-}
-
-/**
- * @brief [NetInputWindowTest] 스탬프 형식이면 항목마다 스탬프가 함께 간다(입력이 만들어진 순간 — 서브틱 입력이 쓴다)
- */
-SW_TEST_CASE( NetInputWindowTest, StampsTravelWithEntries )
-{
-    NetInputSendWindow window;
-    window.initialize( 32, NetInputWindowTestInternal::kStampedFormat );
-    const uint8 value = 5;
-    SW_REQUIRE_TRUE( window.push( 7, &value, 1, 1234u ) );
-    SW_REQUIRE_TRUE( window.push( 8, &value, 1, 99u ) );
-    NetInputReceiveBuffer buffer;
-    buffer.initialize( 64, NetInputWindowTestInternal::kStampedFormat, NetInputWindowMode::FollowNewest );
-    SW_REQUIRE_TRUE( NetInputWindowTestInternal::deliver( window, buffer ) );
-    SW_REQUIRE_NOT_NULL( buffer.find( 7 ) );
-    SW_REQUIRE_NOT_NULL( buffer.find( 8 ) );
-    SW_EXPECT_EQUAL( 1234u, buffer.find( 7 )->_stamp );
-    SW_EXPECT_EQUAL( 99u, buffer.find( 8 )->_stamp );
 }
 
 /**

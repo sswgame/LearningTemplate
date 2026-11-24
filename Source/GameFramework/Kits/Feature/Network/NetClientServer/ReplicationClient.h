@@ -10,19 +10,22 @@
 #include "Core/Foundation/Macros.h"
 #include "Core/Foundation/Types.h"
 #include "Core/Network/Message/NetMessage.h"
+#include "Core/Network/Replication/InterpolationBuffer.h"
 #include "Core/Network/Replication/NetClock.h"
 #include "Core/Network/Replication/NetInputWindow.h"
 #include "Core/Network/Replication/TickRingBuffer.h"
+#include "Core/Serialization/BitStream.h"
 
 #include "Engine/Reflection/ReflectionMacros.h"
+#include "Engine/Serialization/Fixed/ReplicatedLayout.h"
 
 #include "GameFramework/GameFrameworkExports.h"
 #include "GameFramework/Kits/Feature/Network/NetClientServer/NetSnapshot.h"
 #include "GameFramework/Kits/Feature/Network/NetKitMessageRange.h"
+#include "GameFramework/Runtime/Character/Control/Intent/ControlIntent.h"
 
 namespace sw
 {
-    struct ControlIntent;
     struct MeleeHitClaim;
 
     class INetPeers;
@@ -46,10 +49,22 @@ namespace sw
 
 namespace sw
 {
+    /** @brief 엔티티 하나의 화면 시각 표본입니다 — 앞뒤 상태와 그 사이의 자리. */
+    template <typename TState>
+    struct NetStateSample
+    {
+        TState         _from;
+        TState         _to;
+        NetSampleRatio _ratio;
+    };
+} // namespace sw
+
+namespace sw
+{
     /**
      * @class ReplicationClient
-     * @brief 받은 스냅샷을 틱 순서로 보관하고, `sampleEntity` 로 렌더 시각을 사이에 둔 두 스냅샷의 엔티티와 그 사이 비율을 돌려줍니다.
-     * @details 위치와 회전을 섞는 일은 게임이 한다.
+     * @brief 받은 스냅샷을 틱 순서로 보관하고, `sampleState` 로 화면 시각의 엔티티 표본을 돌려줍니다.
+     * @details 위치와 회전을 섞는 일은 게임이 한다(`NetSampleRatio` 의 규칙으로).
      */
     class SW_KIT_API ReplicationClient : public NetTableHandler<ReplicationClient, NetClientServerMessage::Table, NetClientServerMessage::Snapshot>
     {
@@ -64,8 +79,14 @@ namespace sw
         NetHandleResult    receive( NetClientServerMessage::Snapshot, const NetMessageContext& context, BitReader& body );
         /** @brief 서버에 (다시) 연결되면 호출합니다. 받은 스냅샷과 렌더 시각을 초기화하며, 새 서버의 틱은 이전 서버보다 작을 수 있기 때문입니다. */
         void onConnectionOpened( int32 connectionID ) override;
-        /** @brief 렌더 시각을 진행합니다. */
-        void update( float32 deltaTime );
+        /**
+         * @brief 이번 프레임이 흐른 시간을 모읍니다. 화면 시각은 여기서 움직이지 않습니다.
+         * @details 화면 시각(`getRenderTick`)은 프레임에 한 번, 라우터가 메시지를 다 나눠 준 뒤(`onPollFinished`) 정해지고 그 프레임의 표본(적 · 남의 몸 · 발동 도장)이 모두 그 값을 쓴다.
+         *          프레임 중간에 시계를 움직이던 API 는 앞 틱의 표본과 뒤 틱의 표본을 다른 시각으로 갈랐다(언리얼 NetworkPrediction 의 보간 시각도 프레임에 하나다).
+         */
+        void accumulateFrameTime( float32 deltaTime ) { _pendingSeconds += deltaTime; }
+        /** @brief 모은 시간만큼 화면 시각을 옮깁니다. 라우터가 부른다. */
+        void onPollFinished() override;
         /**
          * @brief 이 틱의 입력을 넣고, 서버가 확인하지 않은 입력을 오래된 것부터 메시지 상한 안에서 보냅니다.
          * @details 못 실은 새 입력은 다음 메시지가 싣는다.
@@ -82,10 +103,28 @@ namespace sw
         [[nodiscard]] bool sendIntent( uint32 tick, const ControlIntent& intent, vector_reference<const MeleeHitClaim> listClaim, uint32 pawnEntityID = 0 );
 
         /**
-         * @brief 렌더 시각의 엔티티를 앞뒤 스냅샷의 상태와 그 사이 비율(0~1)로 돌려줍니다. 앞 스냅샷에만 있으면 그것 하나만 돌려주고 @p pOutTo 도 같은 것을 가리킵니다.
-         * @return 렌더 시각 근처에 그 엔티티가 없으면 false 입니다.
+         * @brief 종류가 @p typeID 인 엔티티의 화면 시각 표본입니다 — 앞뒤 스냅샷의 상태를 칸 선언(`ReplicatedLayout`)으로 읽고, 순간 이동 번호(`_teleportCount`)까지 보아 잇는 규칙을 정합니다.
+         * @details 섞는 것은 `NetStateSample::_ratio` 의 연산으로만 한다 — 서버의 되감기(`LagCompensationHistory`)와 같은 규칙이다. `TState` 에 `_teleportCount` 가 없으면 컴파일되지 않는다.
+         * @return 그 시각에 없거나(아직 생기지 않음 포함) 종류가 다르거나 깨졌으면 비어 있습니다.
          */
-        bool sampleEntity( uint32 entityID, const NetEntityState*& pOutFrom, const NetEntityState*& pOutTo, float32& outAlpha ) const;
+        template <typename TState>
+        [[nodiscard]] optional<NetStateSample<TState>> sampleState( uint32 entityID, uint32 typeID ) const
+        {
+            const NetEntityState* pFrom = nullptr;
+            const NetEntityState* pTo   = nullptr;
+            NetSampleRatio        ratio = NetSampleRatio::makeHeld();
+            if ( findSample( entityID, typeID, pFrom, pTo, ratio ) == false )
+                return nullopt;
+            NetStateSample<TState> sample{ TState{}, TState{}, ratio };
+            BitReader              fromReader( pFrom->_buffer.data(), static_cast<int32>( pFrom->_buffer.size() ) );
+            BitReader              toReader( pTo->_buffer.data(), static_cast<int32>( pTo->_buffer.size() ) );
+            const bool             bRead = ReplicatedLayout::readFull( fromReader, sample._from, nullptr ) == FixedReadResult::Ok &&
+                               ReplicatedLayout::readFull( toReader, sample._to, nullptr ) == FixedReadResult::Ok;
+            if ( bRead == false )
+                return nullopt;
+            sample._ratio.breakAt( sample._from._teleportCount, sample._to._teleportCount );
+            return sample;
+        }
         /** @brief 렌더 시각에 보이는 엔티티 id 를 모읍니다. 앞 스냅샷을 기준으로 합니다. */
         void collectVisibleEntities( vector<uint32>& outListEntity ) const;
 
@@ -98,8 +137,10 @@ namespace sw
          *          (`ControlSystem::publishServerTick` → `InterpToMovementComponent`)을 그 서버 틱의 자리에 둔다. 서버가 아직 내 상태를 싣지 않았으면 비어 있다.
          */
         [[nodiscard]] optional<int64> findServerTickOffset() const;
-        /** @brief 그리는 서버 틱입니다. 보간 지연만큼 과거이며 소수이고, 서버의 랙 보정이 씁니다. 스냅샷을 받기 전에는 0 입니다. */
-        float64           getRenderTick() const { return _clock.hasServerTick() ? _clock.getRenderTick() : 0.0; }
+        /** @brief 그리는 서버 틱입니다. 보간 지연만큼 과거이며 소수이고, 프레임 안에서 바뀌지 않습니다. 스냅샷을 받기 전에는 0 입니다. */
+        float64 getRenderTick() const { return _clock.hasServerTick() ? _clock.getRenderTick() : 0.0; }
+        /** @brief 그리는 서버 틱을 보는 시각으로 냅니다 — 그린 뒤 `ControlSystem::publishViewTick` 에 넘긴다. */
+        ControlViewTick   getViewTick() const { return ControlViewTick::makeSeen( getRenderTick() ); }
         const DevCounter& getDecodeFailureCount() const { return _decodeFailureCount; }
         bool              hasSnapshot() const { return _listSnapshot.hasNewest(); }
         /** @brief 서버가 아직 확인하지 않은 내 입력 수입니다. 다음 메시지가 다시 싣습니다. */
@@ -107,7 +148,9 @@ namespace sw
 
     private:
         void resetHistory();
-        void findBracket( const NetSnapshot*& pOutFrom, const NetSnapshot*& pOutTo, float32& outAlpha ) const;
+        void findBracket( const NetSnapshot*& pOutFrom, const NetSnapshot*& pOutTo, NetSampleRatio& outRatio ) const;
+        /** @brief 화면 시각을 사이에 둔 두 스냅샷에서 그 엔티티를 찾습니다. 그 시각에 없으면 false 입니다. */
+        [[nodiscard]] bool findSample( uint32 entityID, uint32 typeID, const NetEntityState*& pOutFrom, const NetEntityState*& pOutTo, NetSampleRatio& outRatio ) const;
 
     private:
         TickRingBuffer<NetSnapshot> _listSnapshot;  ///< 받은 스냅샷. 델타의 기준과 보간 구간을 틱으로 찾는다. 가장 새 틱이 마지막으로 받은 것이다
@@ -115,7 +158,8 @@ namespace sw
         NetInputSendWindow          _inputWindow;   ///< 내 입력. 서버가 스냅샷에 실어 돌려준 확인 틱의 다음 틱부터 싣는다
         ReplicationClientConfig     _settings;
         INetPeers*                  _pHost;
-        NetClock                    _clock; ///< 렌더 틱의 시계. 받은 스냅샷 틱의 하한에 흐른 시간을 더하고 지연을 뺀 값이며, 받은 가장 새 틱까지만 가고 되돌아가지 않는다
+        NetClock                    _clock;          ///< 렌더 틱의 시계. 받은 스냅샷 틱의 하한에 흐른 시간을 더하고 지연을 뺀 값이며, 받은 가장 새 틱까지만 가고 되돌아가지 않는다
+        float32                     _pendingSeconds; ///< 다음 `onPollFinished` 가 시계에 넣을 시간
         DevCounter                  _decodeFailureCount;
         NetMessageWriter            _messageWriter; ///< 보낼 메시지. 버퍼를 재사용한다
     };

@@ -42,11 +42,12 @@ namespace
         {
             ControlIntent intent;
             if ( buttonIndex >= 0 )
-                intent.setButton( buttonIndex, true, true );
+                intent.setButton( buttonIndex, true );
+            intent.addTrigger( buttonIndex, 0.0f, 0.0f, ControlViewTick::makePresent() );
             intent._arrAnalog[0] = switchAxis;
             _pRemote->receiveIntent( _tick++, intent );
             _manager.update( 1.0f / 60.0f );
-            return ShooterPlayerComponent::chooseWeaponSlot( *_pPawn, currentSlot );
+            return ShooterPlayerComponent::chooseWeaponSlot( *_pPawn, _pPawn->getIntent(), currentSlot );
         }
     };
     using Rig = ShooterWeaponSwitchTestRig;
@@ -79,7 +80,7 @@ SW_TEST_CASE( ShooterWeaponSwitchTest, NothingHappensWithoutATrigger )
     SW_EXPECT_EQUAL( 1, rig.choose( 1, -1, 1.0f ) );
     SW_EXPECT_EQUAL( 2, rig.choose( 1, Rig::kSwitchButton, 1.0f ) );
     rig._manager.update( 1.0f / 60.0f ); // 마지막 의도를 잇되 발동은 지났다
-    SW_EXPECT_EQUAL( 1, ShooterPlayerComponent::chooseWeaponSlot( *rig._pPawn, 1 ) );
+    SW_EXPECT_EQUAL( 1, ShooterPlayerComponent::chooseWeaponSlot( *rig._pPawn, rig._pPawn->getIntent(), 1 ) );
 
     rig._pPawn->setButtonNames( { hashed_string( "Fire" ) } );
     SW_EXPECT_EQUAL( 1, rig.choose( 1, 0, 1.0f ) );

@@ -12,12 +12,15 @@
 
 #include "Engine/Automation/Watch/AutomationComponentWatch.h"
 #include "Engine/Character/Hit/CharacterHit.h"
+#include "Engine/Character/Hit/RagdollComponent.h"
 #include "Engine/Object/Component/CameraComponent.h"
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Object/GameObject/GameObjectManager.inl"
 #include "Engine/Object/GameObject/GameObjectManagerResolve.inl"
 #include "Engine/Object/GameObject/Registry/ComponentRegistry.h"
 #include "Engine/Object/GameObject/Service/SceneNetLink.h"
+#include "Engine/Physics/IPhysicsScene.h"
+#include "Engine/Physics/Scene/ScenePhysics.h"
 #include "Engine/Serialization/Fixed/ReplicatedLayout.h"
 
 #include "GameFramework/Kits/Feature/Online/Leaderboard/Runtime/LeaderboardScoreSender.h"
@@ -88,6 +91,7 @@ namespace sw
                 ControlIntent still;
                 still._controlYaw   = intent._controlYaw;
                 still._controlPitch = intent._controlPitch;
+                still._viewTick     = intent._viewTick;
                 return still;
             }
 
@@ -122,22 +126,8 @@ namespace sw
                 state._phase          = static_cast<uint8>( view._phase );
                 state._kindIndex      = view._kindIndex;
                 state._appearanceSeed = view._appearanceSeed;
+                state._teleportCount  = view._teleportCount;
                 return writeState( state, outBytes );
-            }
-
-            /** @brief 적 하나의 엔티티 상태를 읽습니다. 깨졌거나 칸이 선언 범위 밖이면 false 입니다. */
-            [[nodiscard]] static bool readEnemy( const vector<uint8>& bytes, ShooterReplicatedEnemy& outEnemy )
-            {
-                BitReader            reader( bytes.data(), static_cast<int32>( bytes.size() ) );
-                ShooterEnemyNetState state;
-                if ( ReplicatedLayout::readFull( reader, state, nullptr ) != FixedReadResult::Ok )
-                    return false;
-                outEnemy._position       = AbsolutePosition{ state._position };
-                outEnemy._yaw            = state._yaw;
-                outEnemy._phase          = static_cast<ShooterEnemyPhase>( state._phase );
-                outEnemy._kindIndex      = state._kindIndex;
-                outEnemy._appearanceSeed = state._appearanceSeed;
-                return true;
             }
 
             /**
@@ -181,24 +171,20 @@ namespace sw
         , _listLagScratch{}
         , _listEnemyEntityID{}
         , _listEntityScratch{}
-        , _lagHistory{ ReplicationServerConfig{}._maxViewLagTicks + 1 } // 입력 스탬프의 되감기 한도(서버 클램프)까지 기억한다
+        , _lagHistory{ ReplicationServerConfig{}._maxViewLagTicks + 1 } // 보던 시각의 되감기 한도(서버 클램프)까지 기억한다
         , _accumulator{ 0.0f }
-        , _pendingTriggerYaw{ 0.0f }
-        , _pendingTriggerPitch{ 0.0f }
-        , _pendingTriggered{ 0 }
+        , _listPendingTrigger{}
         , _tick{ 0 }
         , _pawnEntityID{ 0 }
         , _reconciledTick{ 0 }
         , _rewoundShotCount{ 0 }
         , _rewoundHitCount{ 0 }
-        , _lastRewindTicks{ 0.0f }
+        , _lastRewindTicks{ 0.0 }
         , _sentClaimCount{ 0 }
         , _confirmedClaimCount{ 0 }
         , _rejectedClaimCount{ 0 }
         , _pendingStepCount{ 0 }
-        , _frameSeconds{ 0.0f }
         , _role{ Role::None }
-        , _bPendingTriggerLook{ SW_FALSE }
         , _bSeatsReported{ SW_FALSE }
         , _reserved{ 0 }
     {
@@ -317,6 +303,9 @@ namespace sw
         }
         _listServerPawn.clear();
         _listClaim.clear();
+        _listPendingTrigger.clear();
+        if ( pControl != nullptr )
+            pControl->publishViewTick( ControlViewTick::makePresent() );
         _role = Role::None;
     }
 
@@ -347,28 +336,24 @@ namespace sw
         {
             _accumulator -= _tickInterval;
             ++tickCount;
-            if ( _role == Role::Client )
-                stepClient( *pMovement, *pListBox );
         }
         if ( _accumulator >= _tickInterval )
             _accumulator = 0.0f; // 따라잡지 못한 시간은 버린다 — 몰아 돌린 틱이 다음 프레임을 또 밀지 않게
+        // 걸음은 여러 몸을 옮기고 바로 판정한다(물리 질의 · 남의 체력) — 서버 · 클라이언트 모두 틱 뒤(게임 스레드)의 한 자리에서 돈다.
+        _pendingStepCount += tickCount;
         if ( _role == Role::Server )
         {
-            // 서버의 걸음은 여러 몸을 옮긴다 — 남의 오브젝트라 틱 뒤(게임 스레드)에 돈다. 바닥은 그 틱의 자리를 먼저 본다.
-            _pendingStepCount += tickCount;
             if ( tickCount > 0 )
                 ShooterNetPawnComponentInternal::publishServerTick( getOwner(), static_cast<int64>( _tick ) + _pendingStepCount );
             context.deferPostTickOnComponent( *this, []( ShooterNetPawnComponent& netPawn, GameObjectManager& manager )
             { netPawn.runServerFrame( manager ); } );
         }
-        if ( _role == Role::Client )
+        else
         {
-            _client.update( context.getDeltaTime() );
+            _client.accumulateFrameTime( context.getDeltaTime() ); // 화면 시각은 다음 프레임의 시작에 옮겨진다
             _smoother.update( context.getDeltaTime() );
-            pMovement->setDisplayOffset( _smoother.getOffset() );
-            _frameSeconds = context.getDeltaTime();
             context.deferPostTickOnComponent( *this, []( ShooterNetPawnComponent& netPawn, GameObjectManager& manager )
-            { netPawn.syncRemotePawnList( manager ); } );
+            { netPawn.runClientFrame( manager ); } );
         }
     }
 
@@ -481,10 +466,8 @@ namespace sw
         pawn._lastInputTick                     = nullopt;
         GameObject*                   pObject   = manager.resolveGameObject( pawn._object );
         ShooterBodyMovementComponent* pMovement = pObject != nullptr ? pObject->getComponent<ShooterBodyMovementComponent>() : nullptr;
-        const ShooterPlayerComponent* pPlayer   = pObject != nullptr ? pObject->getComponent<ShooterPlayerComponent>() : nullptr;
+        ShooterPlayerComponent*       pPlayer   = pObject != nullptr ? pObject->getComponent<ShooterPlayerComponent>() : nullptr;
         RemoteControllerComponent*    pRemote   = findRemoteController( manager, pawn );
-        const MeleeSweepHistory*      pLedger   = MeleeSweepHistory::find( manager );
-        const bool                    bDown     = pPlayer != nullptr && pPlayer->isAlive() == false; // 쓰러진 몸은 걷지 않는다 — 클라이언트가 보낸 이동을 쓰지 않는다
         if ( pMovement == nullptr )
             return; // 막 앉아 몸이 아직 서지 않았다
         ControlIntent    intent;
@@ -498,18 +481,21 @@ namespace sw
                 // 클라이언트는 접속 전에도 틱을 센다 — 조종을 맡은 뒤 처음 받은 틱에서 시작한다.
                 if ( pawn._nextInputTick == kInputTickUnknown )
                     pRemote->setNextInputTick( *inputTick );
-                pRemote->receiveIntent( *inputTick, intent ); // 서버의 폰은 이 의도로 쏘고 무기를 바꾼다(다음 조종 시스템 틱)
+                pRemote->receiveIntent( *inputTick, intent ); // 폰의 시선 · 감시 값(다음 조종 시스템 틱). 판정은 아래 걸음이 한다
             }
             pawn._nextInputTick                         = *inputTick + 1u;
-            pawn._viewTickByInput.acquire( *inputTick ) = _server.getClientViewTick( pawn._connectionID );
+            pawn._viewTickByInput.acquire( *inputTick ) = intent._viewTick.getServerTick( static_cast<float64>( _tick ) );
             for ( const MeleeHitClaim& claim : _listClaim )
             {
-                PendingClaim& pending = pawn._listPendingClaim.emplace_back();
-                pending._claim        = claim;
-                pending._claim._frame = pLedger != nullptr ? pLedger->getFrame() : 0u;
-                pending._viewTick     = _server.getClientViewTick( pawn._connectionID );
+                if ( claim._step <= *inputTick && pawn._listPendingClaim.size() < kMaxPendingClaim )
+                    pawn._listPendingClaim.push_back( claim );
+                else
+                    ++_rejectedClaimCount; // 아직 오지 않은 걸음을 지어냈거나 줄이 찼다
             }
+            const bool bDown = pPlayer != nullptr && pPlayer->isAlive() == false; // 쓰러진 몸은 걷지 않는다 — 같은 프레임의 앞 걸음에서 쓰러졌을 수 있다
             stepMovement( *pMovement, listBox, bDown ? Internal::makeStillIntent( intent ) : intent );
+            if ( pPlayer != nullptr )
+                pPlayer->stepNetCommand( manager, intent, _tickInterval, *inputTick ); // 이동한 자리에서 바로 쏜다 — 명령 하나가 한 걸음이다
             inputTick = _server.popNextIntent( pawn._connectionID, intent, pawnEntityID, _listClaim );
         }
         // 조종자가 있는데 입력이 오지 않았으면 그 자리다(언리얼 서버의 원격 폰 — 온 입력은 다음 틱에 몰아서 걷는다). 조종자가 없는 몸은 빈 의도로 계속 돈다(떨어지던 몸이 공중에 남지 않게).
@@ -532,8 +518,9 @@ namespace sw
             }
             const ShooterMoveState move = pMovement->getState();
             ShooterPawnNetState    state;
-            state._position  = move._position;
-            state._bOnGround = move._bOnGround;
+            state._position      = move._position;
+            state._bOnGround     = move._bOnGround;
+            state._teleportCount = pMovement->getTeleportCount();
             if ( pPlayer != nullptr )
             {
                 state._yaw         = MathUtil::wrapAngle( pPlayer->getLookYaw() );
@@ -651,6 +638,7 @@ namespace sw
         pawn._bLeft                       = SW_FALSE;
         pawn._bBodyRequested              = SW_FALSE;
         pawn._listPendingClaim.clear();
+        pawn._viewTickByInput.reset();
         if ( pPlayer != nullptr )
             reportMatchScore( pawn, *pPlayer, accountID );
         if ( accountID != 0 )
@@ -723,7 +711,27 @@ namespace sw
     // ------------------------------------------------------------------------------
     // 클라이언트
     // ------------------------------------------------------------------------------
-    void ShooterNetPawnComponent::stepClient( ShooterBodyMovementComponent& movement, const vector<ShooterArenaBox>& listBox )
+    void ShooterNetPawnComponent::runClientFrame( GameObjectManager& manager )
+    {
+        const int32 stepCount                    = _pendingStepCount;
+        _pendingStepCount                        = 0;
+        ShooterBodyMovementComponent*  pMovement = findMovement();
+        const vector<ShooterArenaBox>* pListBox  = findArenaBoxes();
+        if ( _role != Role::Client || pMovement == nullptr || pListBox == nullptr )
+            return;
+        for ( int32 stepIndex = 0; stepIndex < stepCount; ++stepIndex )
+        {
+            stepClient( manager, *pMovement, *pListBox );
+        }
+        pMovement->setDisplayOffset( _smoother.getOffset() );
+        syncRemotePawnList( manager );
+        // 이번 프레임에 그린 시각이다 — 다음 프레임의 입력은 이 화면을 보고 낸 것이라 발동에 이 값이 실린다.
+        ControlSystem* const pControl = ControlSystem::find( manager );
+        if ( pControl != nullptr )
+            pControl->publishViewTick( _client.getViewTick() );
+    }
+
+    void ShooterNetPawnComponent::stepClient( GameObjectManager& manager, ShooterBodyMovementComponent& movement, const vector<ShooterArenaBox>& listBox )
     {
         ++_tick;
         // 예측하는 이 입력 틱은 서버에서 (입력 틱 + 서버 차이) 틱에 시뮬레이션된다 — 바닥을 그 자리에 둬야 바닥 위 예측이 서버와 맞는다.
@@ -731,12 +739,8 @@ namespace sw
         if ( serverTickOffset.has_value() )
             ShooterNetPawnComponentInternal::publishServerTick( getOwner(), static_cast<int64>( _tick ) + *serverTickOffset );
         const ControlIntent intent = takeNetIntent( movement );
-        // 입력 하나의 상한을 넘는 주장은 다음 입력 틱에 싣는다. `_frame` 은 입력 틱이다 — 서버가 그 입력을 꺼낸 프레임으로 옮긴다.
+        // 입력 하나의 상한을 넘는 주장은 다음 입력 틱에 싣는다. 주장의 걸음은 휘두른 입력 틱이다.
         const size_t claimCount = MathUtil::min( _listClaim.size(), static_cast<size_t>( NetClientServerMessage::kMaxClaimsPerIntent ) );
-        for ( size_t claimIndex = 0; claimIndex < claimCount; ++claimIndex )
-        {
-            _listClaim[claimIndex]._frame = _tick;
-        }
         if ( _client.sendIntent( _tick, intent, vector_reference<const MeleeHitClaim>( _listClaim.data(), claimCount ) ) == false )
             SW_LOG_WARNING_ID( "ShooterNetPawn.ShooterNetPawnInput", "Shooter net pawn: intent of tick %# was not sent", _tick );
         _sentClaimCount += static_cast<uint32>( claimCount );
@@ -787,6 +791,10 @@ namespace sw
             }
         }
         movement.setState( current, float3{ current._position._x - before._position._x, 0.0f, current._position._z - before._position._z } * ( 1.0f / _tickInterval ) );
+        // 서버와 같은 순서다 — 이동한 자리에서 이 명령의 발동을 예측한다.
+        ShooterPlayerComponent* const pPlayer = getOwner()->getComponent<ShooterPlayerComponent>();
+        if ( pPlayer != nullptr && movement.isSuspended() == false )
+            pPlayer->stepNetCommand( manager, intent, _tickInterval, _tick );
     }
 
     ShooterBodyMovementComponent* ShooterNetPawnComponent::findMovement() const
@@ -818,13 +826,13 @@ namespace sw
         const PawnComponent* pPawn = findPawn();
         if ( pPawn == nullptr || movement.isSuspended() )
             return;
-        const ControlIntent& intent = pPawn->getIntent();
-        _pendingTriggered |= intent._buttonTriggered;
-        if ( intent._bTriggerLook )
+        // 줄에는 상한이 있다 — 입력 틱이 오래 멈춘 동안(끊김)의 누름을 끝없이 쌓지 않는다.
+        constexpr size_t              kMaxPendingTrigger = static_cast<size_t>( ControlIntent::kMaxTriggers ) * 4u;
+        const vector<ControlTrigger>& listTrigger        = pPawn->getIntent()._listTrigger;
+        for ( const ControlTrigger& trigger : listTrigger )
         {
-            _bPendingTriggerLook = SW_TRUE;
-            _pendingTriggerYaw   = intent._triggerYaw;
-            _pendingTriggerPitch = intent._triggerPitch;
+            if ( _listPendingTrigger.size() < kMaxPendingTrigger )
+                _listPendingTrigger.push_back( trigger );
         }
     }
 
@@ -838,14 +846,10 @@ namespace sw
             const bool                    bStill  = movement.isSuspended() || ( pPlayer != nullptr && pPlayer->isServerDown() ); // 서버가 쓰러뜨린 몸은 서버에서도 걷지 않는다
             intent                                = bStill ? ShooterNetPawnComponentInternal::makeStillIntent( pPawn->getIntent() ) : pPawn->getIntent();
         }
-        intent._buttonTriggered = _pendingTriggered;
-        intent._bTriggerLook    = _bPendingTriggerLook == SW_TRUE;
-        intent._triggerYaw      = _pendingTriggerYaw;
-        intent._triggerPitch    = _pendingTriggerPitch;
-        _pendingTriggered       = 0;
-        _bPendingTriggerLook    = SW_FALSE;
-        _pendingTriggerYaw      = 0.0f;
-        _pendingTriggerPitch    = 0.0f;
+        // 선에 싣는 상한을 넘는 사건은 다음 입력 틱이 싣는다(사건마다 보던 시각을 들어 늦어도 판정이 같다).
+        const size_t triggerCount = MathUtil::min( _listPendingTrigger.size(), static_cast<size_t>( ControlIntent::kMaxTriggers ) );
+        intent._listTrigger.assign( _listPendingTrigger.begin(), _listPendingTrigger.begin() + static_cast<std::ptrdiff_t>( triggerCount ) );
+        _listPendingTrigger.erase( _listPendingTrigger.begin(), _listPendingTrigger.begin() + static_cast<std::ptrdiff_t>( triggerCount ) );
         return intent;
     }
 
@@ -874,22 +878,36 @@ namespace sw
             const ShooterPlayerComponent*       pPlayer   = pObject != nullptr ? pObject->getComponent<ShooterPlayerComponent>() : nullptr;
             if ( pMovement == nullptr || pPlayer == nullptr || pawn._connectionID < 0 || pPlayer->isAlive() == false )
                 continue;
-            LagRecord& record = _listLagScratch.emplace_back();
-            record._position  = pMovement->getFeetPosition()._value;
-            record._radius    = pMovement->getRadius();
-            record._height    = _pawnHitHeight;
-            record._entityID  = makePawnEntityID( pawn );
+            LagRecord& record     = _listLagScratch.emplace_back();
+            record._position      = pMovement->getFeetPosition()._value;
+            record._radius        = pMovement->getRadius();
+            record._height        = _pawnHitHeight;
+            record._entityID      = makePawnEntityID( pawn );
+            record._teleportCount = pMovement->getTeleportCount();
         }
         const ShooterGameModeComponent* pGameMode = findGameMode();
         if ( pGameMode != nullptr )
         {
-            for ( const ShooterEnemyView& view : pGameMode->getEnemyViews() )
+            for ( const ShooterEnemyView& listed : pGameMode->getEnemyViews() )
             {
-                LagRecord& record = _listLagScratch.emplace_back();
-                record._position  = view._position._value;
-                record._radius    = view._radius;
-                record._height    = view._height;
-                record._entityID  = view._netEntityID;
+                // 감독의 목록은 이번 프레임 앞의 자리다 — 누가 있는지만 쓰고 자리 · 자세는 물리가 끝난 지금 읽는다. 복제 상태와 되감기 기록이 같은 한 시점이다.
+                const GameObject*            pObject = manager.resolveGameObject( listed._object );
+                const ShooterEnemyComponent* pEnemy  = pObject != nullptr ? pObject->getComponent<ShooterEnemyComponent>() : nullptr;
+                if ( pEnemy == nullptr || pEnemy->isAlive() == false )
+                    continue; // 이 프레임의 앞 걸음에서 쓰러졌다
+                ShooterEnemyView view                          = listed;
+                view._position                                 = pEnemy->getPosition();
+                view._yaw                                      = pEnemy->getYaw();
+                view._phase                                    = pEnemy->getPhase();
+                const ShooterBodyMovementComponent* pEnemyBody = pObject->getComponent<ShooterBodyMovementComponent>();
+                view._teleportCount                            = pEnemyBody != nullptr ? pEnemyBody->getTeleportCount() : uint8{ 0 };
+                LagRecord& record                              = _listLagScratch.emplace_back();
+                record._position                               = view._position._value;
+                record._radius                                 = view._radius;
+                record._height                                 = view._height;
+                record._entityID                               = view._netEntityID;
+                record._teleportCount                          = view._teleportCount;
+                collectBodyPoses( manager, *pObject, record._listBody );
                 if ( ShooterNetPawnComponentInternal::writeEnemy( view, _bytesScratch ) )
                     _server.setEntity( view._netEntityID, kEnemyTypeID, _bytesScratch );
                 else
@@ -909,9 +927,10 @@ namespace sw
         _listEnemyEntityID.swap( _listEntityScratch );
     }
 
-    void ShooterNetPawnComponent::queueMeleeClaim( uint32 enemyEntityID )
+    void ShooterNetPawnComponent::queueMeleeClaim( uint32 enemyEntityID, uint32 commandTick )
     {
         MeleeHitClaim& claim = _listClaim.emplace_back();
+        claim._step          = commandTick;
         claim._targetID      = enemyEntityID;
     }
 
@@ -978,26 +997,27 @@ namespace sw
             return;
         }
         size_t keptCount = 0;
-        for ( const PendingClaim& pending : pawn._listPendingClaim )
+        for ( const MeleeHitClaim& claim : pawn._listPendingClaim )
         {
-            // 서버의 폰은 꺼낸 다음 프레임부터 그 의도로 휘두른다 — 맞춰 볼 프레임 안팎의 스윕이 모두 기록될 때까지 기다린다.
-            if ( pLedger->getFrame() <= pending._claim._frame + MeleeSweepHistory::kClaimSlackFrames + 1u )
+            // 그 걸음 안팎의 입력을 모두 처리해야 스윕이 다 적힌다 — 입력이 몰려 와도 걸음 번호로 맞춘다.
+            if ( pawn._nextInputTick <= claim._step + MeleeSweepHistory::kClaimSlackSteps )
             {
-                pawn._listPendingClaim[keptCount++] = pending;
+                pawn._listPendingClaim[keptCount++] = claim;
                 continue;
             }
-            const uint32            entityID = static_cast<uint32>( pending._claim._targetID );
+            const uint32            entityID = static_cast<uint32>( claim._targetID );
             const ShooterEnemyView* pView    = nullptr;
             for ( const ShooterEnemyView& view : pGameMode->getEnemyViews() )
             {
                 if ( view._netEntityID == entityID )
                     pView = &view;
             }
-            LagRecord   past;
-            GameObject* pTarget = pView != nullptr ? manager.resolveGameObject( pView->_object ) : nullptr;
-            if ( pTarget == nullptr || _lagHistory.sampleAt( pending._viewTick, entityID, past ) == false )
+            LagRecord      past;
+            GameObject*    pTarget   = pView != nullptr ? manager.resolveGameObject( pView->_object ) : nullptr;
+            const float64* pViewTick = pawn._viewTickByInput.find( claim._step );
+            if ( pTarget == nullptr || pViewTick == nullptr || _lagHistory.sampleAt( *pViewTick, entityID, past ) == false )
             {
-                ++_rejectedClaimCount; // 표적이 그 사이 쓰러졌거나 지어낸 번호다
+                ++_rejectedClaimCount; // 표적이 그 사이 쓰러졌거나 지어낸 번호 · 걸음이다
                 continue;
             }
             // 장부는 표적을 구로 본다 — 몸 가운데에 몸 전체를 덮는 구다(근접은 뼈마다 가르지 않는다).
@@ -1005,7 +1025,7 @@ namespace sw
             const float32             radius         = MathUtil::max( past._radius, past._height * 0.5f );
             vector<GameObjectHandle>& listHit        = pPlayer->getMeleeHitTargets();
             const size_t              hitCountBefore = listHit.size();
-            if ( pLedger->claimHit( *pObject, *pTarget, pending._claim, center, radius, listHit ) != MeleeClaimResult::Confirmed )
+            if ( pLedger->claimHit( *pObject, *pTarget, claim, center, radius, listHit ) != MeleeClaimResult::Confirmed )
             {
                 ++_rejectedClaimCount;
                 continue;
@@ -1023,27 +1043,26 @@ namespace sw
         _client.collectVisibleEntities( listEntity );
         for ( const uint32 entityID : listEntity )
         {
-            const NetEntityState* pFrom = nullptr;
-            const NetEntityState* pTo   = nullptr;
-            float32               alpha = 0.0f;
-            if ( _client.sampleEntity( entityID, pFrom, pTo, alpha ) == false || pFrom->_typeID != kEnemyTypeID || pTo->_typeID != kEnemyTypeID )
+            const optional<NetStateSample<ShooterEnemyNetState>> sample = _client.sampleState<ShooterEnemyNetState>( entityID, kEnemyTypeID );
+            if ( sample.has_value() == false )
                 continue;
-            ShooterReplicatedEnemy from;
-            ShooterReplicatedEnemy to;
-            if ( ShooterNetPawnComponentInternal::readEnemy( pFrom->_buffer, from ) == false || ShooterNetPawnComponentInternal::readEnemy( pTo->_buffer, to ) == false )
-                continue;
-            to._netEntityID = entityID;
-            to._position    = from._position + ( to._position._value - from._position._value ) * alpha;
-            to._yaw         = from._yaw + MathUtil::wrapAngle( to._yaw - from._yaw ) * alpha;
-            outListEnemy.push_back( to );
+            const ShooterEnemyNetState& from  = sample->_from;
+            const ShooterEnemyNetState& to    = sample->_to;
+            ShooterReplicatedEnemy&     enemy = outListEnemy.emplace_back();
+            enemy._netEntityID                = entityID;
+            enemy._position                   = AbsolutePosition{ sample->_ratio.interpolate( from._position, to._position ) };
+            enemy._velocity                   = sample->_ratio.computeVelocity( from._position, to._position, _tickInterval );
+            enemy._yaw                        = sample->_ratio.interpolateAngle( from._yaw, to._yaw );
+            enemy._phase                      = static_cast<ShooterEnemyPhase>( sample->_ratio.choose( from._phase, to._phase ) );
+            enemy._kindIndex                  = sample->_ratio.choose( from._kindIndex, to._kindIndex );
+            enemy._appearanceSeed             = sample->_ratio.choose( from._appearanceSeed, to._appearanceSeed );
         }
     }
 
     void ShooterNetPawnComponent::syncRemotePawnList( GameObjectManager& manager )
     {
-        using Internal                      = ShooterNetPawnComponentInternal;
         const ShooterPlayerComponent* pSelf = findPlayer();
-        if ( _role != Role::Client || pSelf == nullptr || _frameSeconds <= 0.0f )
+        if ( _role != Role::Client || pSelf == nullptr )
             return;
         for ( RemotePawn& remote : _listRemotePawn )
         {
@@ -1054,42 +1073,38 @@ namespace sw
             _client.collectVisibleEntities( _listEntityScratch );
         for ( const uint32 entityID : _listEntityScratch )
         {
-            const NetEntityState* pFrom = nullptr;
-            const NetEntityState* pTo   = nullptr;
-            float32               alpha = 0.0f;
-            ShooterPawnNetState   from;
-            ShooterPawnNetState   to;
-            const bool            bOther = entityID != _pawnEntityID && _client.sampleEntity( entityID, pFrom, pTo, alpha ) && pFrom->_typeID == kPawnTypeID && pTo->_typeID == kPawnTypeID;
-            if ( bOther == false || Internal::readState( pFrom->_buffer, from ) == false || Internal::readState( pTo->_buffer, to ) == false )
+            const optional<NetStateSample<ShooterPawnNetState>> sample = entityID != _pawnEntityID ? _client.sampleState<ShooterPawnNetState>( entityID, kPawnTypeID ) : nullopt;
+            if ( sample.has_value() == false )
                 continue;
-            RemotePawn* pRemote = VectorUtil::findBy<&RemotePawn::_entityID>( _listRemotePawn, entityID );
+            const ShooterPawnNetState& from        = sample->_from;
+            const ShooterPawnNetState& to          = sample->_to;
+            const uint8                weaponIndex = sample->_ratio.choose( from._weaponIndex, to._weaponIndex );
+            RemotePawn*                pRemote     = VectorUtil::findBy<&RemotePawn::_entityID>( _listRemotePawn, entityID );
             if ( pRemote == nullptr )
             {
                 pRemote            = &_listRemotePawn.emplace_back();
                 pRemote->_entityID = entityID;
                 pRemote->_object   = pSelf->spawnBodyObject( manager, "RemotePlayerBody" );
-                pRemote->_position = AbsolutePosition{ from._position };
                 pRemote->_bArmed   = SW_FALSE;
             }
             ShooterAvatarPose pose;
-            pose._feet       = AbsolutePosition{ from._position + ( to._position - from._position ) * alpha };
-            pose._yaw        = from._yaw + MathUtil::wrapAngle( to._yaw - from._yaw ) * alpha;
-            pose._bAlive     = to._bAlive;
-            pose._bOnGround  = to._bOnGround;
-            pose._bTwoHanded = pSelf->getWeapon( to._weaponIndex ).getDef()._bTwoHanded;
-
-            const float3 moved = pose._feet._value - pRemote->_position._value;
-            pose._velocity     = float3{ moved._x, 0.0f, moved._z } * ( 1.0f / _frameSeconds );
-            pRemote->_position = pose._feet;
+            pose._feet            = AbsolutePosition{ sample->_ratio.interpolate( from._position, to._position ) };
+            pose._yaw             = sample->_ratio.interpolateAngle( from._yaw, to._yaw );
+            pose._bAlive          = sample->_ratio.choose( from._bAlive, to._bAlive );
+            pose._bOnGround       = sample->_ratio.choose( from._bOnGround, to._bOnGround );
+            pose._bTwoHanded      = pSelf->getWeapon( weaponIndex ).getDef()._bTwoHanded;
+            const float3 velocity = sample->_ratio.computeVelocity( from._position, to._position, _tickInterval );
+            pose._velocity        = float3{ velocity._x, 0.0f, velocity._z };
+            pRemote->_position    = pose._feet;
 
             GameObject*             pObject = manager.resolveGameObject( pRemote->_object );
             ShooterAvatarComponent* pAvatar = pObject != nullptr ? pObject->getComponent<ShooterAvatarComponent>() : nullptr;
             if ( pAvatar != nullptr )
                 pAvatar->setReplicatedPose( pose );
             CharacterAppearanceComponent* pAppearance = pObject != nullptr ? pObject->getComponent<CharacterAppearanceComponent>() : nullptr;
-            if ( pAppearance != nullptr && ( pRemote->_bArmed == SW_FALSE || pRemote->_weaponIndex != to._weaponIndex ) )
-                pAppearance->setSlotItem( hashed_string( "MainHand" ), pSelf->getWeaponItem( to._weaponIndex ) );
-            pRemote->_weaponIndex = to._weaponIndex;
+            if ( pAppearance != nullptr && ( pRemote->_bArmed == SW_FALSE || pRemote->_weaponIndex != weaponIndex ) )
+                pAppearance->setSlotItem( hashed_string( "MainHand" ), pSelf->getWeaponItem( weaponIndex ) );
+            pRemote->_weaponIndex = weaponIndex;
             pRemote->_bArmed      = SW_TRUE;
             pRemote->_bSeen       = SW_TRUE;
         }
@@ -1123,59 +1138,120 @@ namespace sw
         return nearest;
     }
 
-    float32 ShooterNetPawnComponent::findShotViewTick( const GameObjectManager& manager, const ServerPawn& pawn ) const
+    void ShooterNetPawnComponent::collectBodyPoses( const GameObjectManager& manager, const GameObject& object, vector<LagBodyPose>& outListBody )
     {
-        const RemoteControllerComponent* pRemote   = findRemoteController( manager, pawn );
-        const uint32                     nextTick  = pRemote != nullptr ? pRemote->getNextInputTick() : 0u;
-        const float32*                   pViewTick = nextTick > 0u ? pawn._viewTickByInput.find( nextTick - 1u ) : nullptr;
-        return pViewTick != nullptr ? *pViewTick : _server.getClientViewTick( pawn._connectionID );
+        outListBody.clear();
+        const RagdollComponent*    pRagdoll = object.getComponent<RagdollComponent>();
+        const IPhysicsBodyScene3D* pScene   = manager.getSubsystem<ScenePhysics>().findScene3D();
+        if ( pRagdoll == nullptr || pScene == nullptr )
+            return;
+        for ( const PhysicsBodyHandle body : pRagdoll->getRagdoll()._listBody )
+        {
+            LagBodyPose& pose = outListBody.emplace_back();
+            if ( pScene->getBodyTransform( body, pose._position, pose._rotation ) == false )
+            {
+                outListBody.clear();
+                return; // 바디가 막 사라졌다 — 일부만으로 판정하지 않는다
+            }
+            pose._position = manager.getWorldOrigin().toAbsolute( pose._position );
+        }
     }
 
-    bool ShooterNetPawnComponent::raycastRewound( const GameObjectManager& manager, const GameObject& shooter, const Ray& ray, float32 maxDistance, uint32 layerMask, uint64 ignoreObjectID, CharacterRayHit& outHit )
+    bool ShooterNetPawnComponent::raycastRewoundBodies( const GameObjectManager& manager, const GameObject& object, const LagRecord& past, const Ray& ray, float32 maxDistance, uint32 layerMask, CharacterRayHit& outHit )
     {
-        const ServerPawn* const pShooter = findServerPawn( shooter.getHandle() );
-        if ( pShooter == nullptr )
+        const RagdollComponent*     pRagdoll = object.getComponent<RagdollComponent>();
+        const IPhysicsQueryScene3D* pScene   = manager.getSubsystem<ScenePhysics>().findScene3D();
+        vector<LagBodyPose>         listNow;
+        collectBodyPoses( manager, object, listNow );
+        // 바디 수가 다르면 그 사이 바디가 다시 만들어졌다 — 짝이 없어 과거 자세로 물을 수 없다.
+        if ( pRagdoll == nullptr || pScene == nullptr || listNow.empty() || listNow.size() != past._listBody.size() )
+            return false;
+        const WorldOrigin& origin      = manager.getWorldOrigin();
+        Ray                absoluteRay = ray;
+        absoluteRay._origin            = origin.toAbsolute( ray._origin );
+        PhysicsQueryFilter filter;
+        filter._layerMask             = layerMask;
+        bool                     bHit = false;
+        vector<PhysicsCastHit3D> listHit;
+        for ( size_t bodyIndex = 0; bodyIndex < listNow.size(); ++bodyIndex )
+        {
+            // 과거 자세의 바디를 쏜 광선을 지금 자세의 바디로 옮겨 실제 셰이프에 묻는다. 다른 바디에 먼저 닿아도 이 바디만 본다.
+            const Ray               moved = past._listBody[bodyIndex].moveRayTo( listNow[bodyIndex], absoluteRay );
+            const PhysicsBodyHandle body  = pRagdoll->getRagdoll()._listBody[bodyIndex];
+            listHit.clear();
+            (void)pScene->raycastAll( origin.toLocal( moved._origin ), moved._direction, maxDistance, filter, listHit );
+            for ( const PhysicsCastHit3D& hit : listHit )
+            {
+                if ( hit._body != body || ( bHit && hit._distance >= outHit._distance ) )
+                    continue;
+                bHit             = true;
+                outHit._pObject  = &object;
+                outHit._body     = body;
+                outHit._point    = ray.getPoint( hit._distance ); // 맞은 자리는 쏜 사람이 본 자리다
+                outHit._normal   = ray._direction * -1.0f;
+                outHit._material = hit._material;
+                outHit._distance = hit._distance;
+                outHit._bIs2D    = false;
+            }
+        }
+        return bHit;
+    }
+
+    bool ShooterNetPawnComponent::raycastRewound( const GameObjectManager& manager, const GameObject& shooter, const Ray& ray, float32 maxDistance, uint32 layerMask, uint64 ignoreObjectID, ControlViewTick viewTick,
+                                                  CharacterRayHit& outHit )
+    {
+        const ServerPawn* const         pShooter  = findServerPawn( shooter.getHandle() );
+        const ShooterGameModeComponent* pGameMode = findGameMode();
+        if ( pShooter == nullptr || pGameMode == nullptr )
             return false; // 자리가 없는 몸은 쏘지 않는다
         ++_rewoundShotCount;
-        const float32 viewTick   = findShotViewTick( manager, *pShooter );
-        const float32 newestTick = static_cast<float32>( _lagHistory.getNewestTick() );
-        _lastRewindTicks         = newestTick - viewTick;
-        float32      distance    = 0.0f;
-        const uint32 entityID    = _lagHistory.raycastAt( viewTick, manager.getWorldOrigin().toAbsolute( ray._origin ), ray._direction, maxDistance, makePawnEntityID( *pShooter ), distance );
-        LagRecord    past;
-        LagRecord    now;
-        const bool   bTracked = entityID != 0 && _lagHistory.sampleAt( viewTick, entityID, past ) && _lagHistory.sampleAt( newestTick, entityID, now );
-        if ( bTracked == false )
-            return false;
-        if ( entityID < kEnemyEntityIDBase )
+        const float64 presentTick = static_cast<float64>( _tick );
+        const float64 seenTick    = viewTick.getServerTick( presentTick );
+        _lastRewindTicks          = presentTick - seenTick;
+        Ray absoluteRay           = ray;
+        absoluteRay._origin       = manager.getWorldOrigin().toAbsolute( ray._origin );
+        vector<LagRecord> listPast;
+        _lagHistory.collectAt( seenTick, makePawnEntityID( *pShooter ), listPast );
+        bool bHit = false;
+        for ( const LagRecord& past : listPast )
         {
-            // 다른 플레이어다 — 되감은 캡슐이 곧 맞음 상자다(몸 프리팹에 히트박스가 없다).
-            const size_t seatIndex = entityID - kPawnEntityID;
-            outHit._pObject        = seatIndex < _listServerPawn.size() ? manager.resolveGameObject( _listServerPawn[seatIndex]._object ) : nullptr;
-            outHit._point          = ray.getPoint( distance );
-            outHit._normal         = ray._direction * -1.0f;
-            outHit._distance       = distance;
-            _rewoundHitCount += outHit._pObject != nullptr ? 1u : 0u;
-            return outHit._pObject != nullptr;
+            CharacterRayHit hit;
+            if ( past._entityID < kEnemyEntityIDBase )
+            {
+                // 다른 플레이어다 — 되감은 캡슐이 곧 맞음 상자다(몸 프리팹에 히트박스가 없다).
+                const size_t seatIndex = past._entityID - kPawnEntityID;
+                if ( seatIndex >= _listServerPawn.size() || LagCompensationHistory::intersectBody( past, absoluteRay._origin, absoluteRay._direction, hit._distance ) == false )
+                    continue;
+                hit._pObject = manager.resolveGameObject( _listServerPawn[seatIndex]._object );
+                hit._point   = ray.getPoint( hit._distance );
+                hit._normal  = ray._direction * -1.0f;
+            }
+            else
+            {
+                const ShooterEnemyView* pView   = VectorUtil::findBy<&ShooterEnemyView::_netEntityID>( pGameMode->getEnemyViews(), past._entityID );
+                const GameObject*       pObject = pView != nullptr ? manager.resolveGameObject( pView->_object ) : nullptr;
+                const bool              bMissed = pObject == nullptr || past.mayIntersect( absoluteRay, maxDistance ) == false ||
+                                     raycastRewoundBodies( manager, *pObject, past, ray, maxDistance, layerMask, hit ) == false;
+                if ( bMissed )
+                    continue;
+            }
+            const bool bFarther = hit._pObject == nullptr || hit._pObject->getObjectID() == ignoreObjectID || hit._distance > maxDistance || ( bHit && hit._distance >= outHit._distance );
+            if ( bFarther )
+                continue;
+            outHit = hit;
+            bHit   = true;
         }
-        // 포즈는 되감지 않는다 — 몸의 이동만 되감아 히트 존(뼈마다의 바디)은 지금 포즈로 본다.
-        const float3 origin = ray._origin + ( now._position - past._position );
-        if ( CharacterRayHit::raycast3D( manager, origin, ray._direction, maxDistance, layerMask, ignoreObjectID, outHit ) == false || outHit._pObject == nullptr )
-            return false;
-        const ShooterEnemyComponent* pEnemy = outHit._pObject->getComponent<ShooterEnemyComponent>();
-        if ( pEnemy == nullptr || pEnemy->getNetEntityID() != entityID )
-            return false;
-        ++_rewoundHitCount;
-        return true;
+        _rewoundHitCount += bHit ? 1u : 0u;
+        return bHit;
     }
 
     void ShooterNetPawnComponent::collectRewoundMelee( const GameObjectManager& manager, const GameObject& shooter, const vector<float3>& listPrevious, const vector<float3>& listCurrent, float32 radius,
-                                                       vector<GameObjectHandle>& outListTarget ) const
+                                                       ControlViewTick viewTick, vector<GameObjectHandle>& outListTarget ) const
     {
         const ServerPawn* const pShooter = findServerPawn( shooter.getHandle() );
         if ( pShooter == nullptr || listCurrent.empty() )
             return;
-        const float32      viewTick  = findShotViewTick( manager, *pShooter );
+        const float64      seenTick  = viewTick.getServerTick( static_cast<float64>( _tick ) );
         const uint32       shooterID = makePawnEntityID( *pShooter );
         const WorldOrigin& origin    = manager.getWorldOrigin(); // 기록은 절대, 칼날은 씬 자리다
         vector<uint32>     listTouched;
@@ -1183,10 +1259,10 @@ namespace sw
         {
             for ( size_t pointIndex = 0; pointIndex < listCurrent.size(); ++pointIndex )
             {
-                _lagHistory.collectTouchedAt( viewTick, origin.toAbsolute( listPrevious[pointIndex] ), origin.toAbsolute( listCurrent[pointIndex] ), radius, shooterID, listTouched );
+                _lagHistory.collectTouchedAt( seenTick, origin.toAbsolute( listPrevious[pointIndex] ), origin.toAbsolute( listCurrent[pointIndex] ), radius, shooterID, listTouched );
             }
         }
-        _lagHistory.collectTouchedAt( viewTick, origin.toAbsolute( listCurrent.front() ), origin.toAbsolute( listCurrent.back() ), radius, shooterID, listTouched );
+        _lagHistory.collectTouchedAt( seenTick, origin.toAbsolute( listCurrent.front() ), origin.toAbsolute( listCurrent.back() ), radius, shooterID, listTouched );
         for ( const uint32 entityID : listTouched )
         {
             if ( entityID < kEnemyEntityIDBase )

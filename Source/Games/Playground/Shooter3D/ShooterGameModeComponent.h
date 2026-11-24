@@ -70,7 +70,8 @@ namespace sw
         uint32            _appearanceSeed{ 0 }; ///< 외형 씨앗 — 복제 모습이 같은 얼굴이 되게 함께 보낸다
         float32           _yaw{ 0.0f };
         ShooterEnemyPhase _phase{ ShooterEnemyPhase::Rising };
-        uint8             _kindIndex{ 0 }; ///< 적 종류(`_listEnemyKind` 의 자리, `kEliteKindIndex` 는 정예)
+        uint8             _kindIndex{ 0 };     ///< 적 종류(`_listEnemyKind` 의 자리, `kEliteKindIndex` 는 정예)
+        uint8             _teleportCount{ 0 }; ///< 순간 이동 번호(서버가 복제할 때 채운다)
     };
 } // namespace sw
 
@@ -130,6 +131,7 @@ namespace sw
     struct ShooterReplicatedEnemy
     {
         AbsolutePosition  _position{};
+        float3            _velocity{};
         float32           _yaw{ 0.0f };
         uint32            _netEntityID{ 0 };
         uint32            _appearanceSeed{ 0 };

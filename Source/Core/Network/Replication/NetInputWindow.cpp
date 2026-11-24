@@ -34,7 +34,7 @@ namespace sw
         _bHasEntry               = SW_FALSE;
     }
 
-    bool NetInputSendWindow::push( uint32 tick, const uint8* pData, int32 byteCount, uint32 stamp )
+    bool NetInputSendWindow::push( uint32 tick, const uint8* pData, int32 byteCount )
     {
         const bool bValidData        = _format.isValidEntrySize( byteCount ) && ( byteCount == 0 || pData != nullptr );
         const bool bCannotStoreInput = _listEntry.getCapacity() == 0 || bValidData == false || tick == TickRingBuffer<NetInputEntry>::kEmpty;
@@ -51,10 +51,9 @@ namespace sw
             entry._bytes.assign( pData, pData + byteCount );
         else
             entry._bytes.clear();
-        entry._tick  = tick;
-        entry._stamp = stamp;
-        _latestTick  = tick;
-        _bHasEntry   = SW_TRUE;
+        entry._tick = tick;
+        _latestTick = tick;
+        _bHasEntry  = SW_TRUE;
         // 고리 한 바퀴보다 오래된 것은 덮였다 — 그만큼 확인이 없으면 가장 오래된 것부터 잊는다.
         const uint32 capacity = static_cast<uint32>( _listEntry.getCapacity() );
         if ( tick - _oldestTick >= capacity )
@@ -112,15 +111,11 @@ namespace sw
 
     int32 NetInputSendWindow::computeEntryBits( const NetInputEntry& entry ) const
     {
-        const int32 stampBits = _format._bStamped == SW_TRUE ? BitMath::computeVarUintBits( entry._stamp ) : 0;
-        const int32 byteBits  = _format._fixedEntryBytes > 0 ? _format._fixedEntryBytes * 8 : BitMath::computeBlobBits( static_cast<int32>( entry._bytes.size() ) );
-        return stampBits + byteBits;
+        return _format._fixedEntryBytes > 0 ? _format._fixedEntryBytes * 8 : BitMath::computeBlobBits( static_cast<int32>( entry._bytes.size() ) );
     }
 
     void NetInputSendWindow::writeEntry( BitWriter& writer, const NetInputEntry& entry ) const
     {
-        if ( _format._bStamped == SW_TRUE )
-            writer.writeVarUint( entry._stamp );
         if ( _format._fixedEntryBytes > 0 )
             writer.writeBytes( entry._bytes.data(), _format._fixedEntryBytes ); // 크기는 `push` 가 맞췄다
         else
@@ -164,7 +159,7 @@ namespace sw
         advanceFirstMissingTick();
     }
 
-    bool NetInputReceiveBuffer::store( uint32 tick, const uint8* pData, int32 byteCount, uint32 stamp )
+    bool NetInputReceiveBuffer::store( uint32 tick, const uint8* pData, int32 byteCount )
     {
         const bool bValidData = _format.isValidEntrySize( byteCount ) && ( byteCount == 0 || pData != nullptr );
         if ( bValidData == false )
@@ -178,8 +173,7 @@ namespace sw
             entry._bytes.assign( pData, pData + byteCount );
         else
             entry._bytes.clear();
-        entry._tick  = tick;
-        entry._stamp = stamp;
+        entry._tick = tick;
         advanceFirstMissingTick();
         return true;
     }
@@ -288,10 +282,6 @@ namespace sw
 
     bool NetInputReceiveBuffer::readEntry( BitReader& reader, NetInputEntry& outEntry ) const
     {
-        const uint64 stamp = _format._bStamped == SW_TRUE ? reader.readVarUint() : 0u;
-        if ( reader.hasOverflowed() || stamp > static_cast<uint64>( kNoWindowEnd ) )
-            return false;
-        outEntry._stamp = static_cast<uint32>( stamp );
         if ( _format._fixedEntryBytes > 0 )
         {
             outEntry._bytes.resize( static_cast<size_t>( _format._fixedEntryBytes ) );
@@ -302,9 +292,6 @@ namespace sw
 
     bool NetInputReceiveBuffer::skipEntry( BitReader& reader ) const
     {
-        const uint64 stamp = _format._bStamped == SW_TRUE ? reader.readVarUint() : 0u;
-        if ( reader.hasOverflowed() || stamp > static_cast<uint64>( kNoWindowEnd ) )
-            return false;
         return _format._fixedEntryBytes > 0 ? reader.skipBytes( _format._fixedEntryBytes ) : reader.skipBlob( _format._maxEntryBytes );
     }
 } // namespace sw

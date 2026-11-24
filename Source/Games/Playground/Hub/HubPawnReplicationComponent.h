@@ -86,6 +86,9 @@ namespace sw
 
         PROPERTY( Replicated, Min = 0, Max = 4 )
         uint8 _gait{ 0 }; ///< 말 — `MountGait`
+
+        PROPERTY( Replicated )
+        uint8 _teleportCount{ 0 }; ///< 순간 이동 · 타고 내림 번호 — 다른 두 표본은 잇지 않는다(`NetSampleRatio`)
     };
 
     /** @brief 입력 틱 하나입니다 — 의도와 그 의도를 낸 폰의 엔티티 id. 버튼 비트는 폰 스키마의 차례라 다른 폰의 것이면 움직임 없이(시선만) 쓴다. */
@@ -158,7 +161,9 @@ namespace sw
             float3           _acceptedPosition{}; ///< 허브 규칙이 받은 마지막 자리(절대) — 받지 않은 걸음은 여기로 되돌린다
             uint32           _avatarID{ 0 };
             int32            _connectionID{ constant::invalid_index::kInt32 };
-            uint8            _bSeen{ SW_FALSE }; ///< 이번 프레임의 접속 목록에 있다
+            uint8            _bSeen{ SW_FALSE };  ///< 이번 프레임의 접속 목록에 있다
+            uint8            _teleportCount{ 0 }; ///< 규칙이 받은 자리로 되돌리거나 타고 내릴 때마다 오른다
+            uint8            _mountNumber{ 0 };   ///< 마지막으로 낸 탈것 번호(바뀌면 순간 이동이다)
         };
 
         /** @brief 클라이언트 — 남의 폰 모습 하나입니다. */
@@ -216,7 +221,6 @@ namespace sw
         MountMovementComponent*   findMount( GameObjectManager& manager, uint8 mountNumber ) const;
         static uint32             makePawnEntityID( uint32 avatarID, uint8 mountNumber ) { return mountNumber != 0 ? kMountEntityIDBase + mountNumber - 1u : avatarID; }
         [[nodiscard]] static bool writePose( const HubPawnPose& pose, vector<uint8>& outBytes );
-        [[nodiscard]] static bool readPose( const vector<uint8>& bytes, HubPawnPose& outPose );
 
         PROPERTY( Required, Category = "Network", DisplayName = "Pawn Prefab", Tooltip = "Body spawned for each connected account (on the server) and for each other player (on a client)" )
         AssetRef<PrefabAsset> _pawnPrefab;
@@ -256,16 +260,13 @@ namespace sw
         float3                                       _previousPosition;     ///< 클라이언트 — 자기 폰의 지난 틱 자리(절대, 그리기 보간)
         int64                                        _lastFrameNanoseconds; ///< 지난 넷 걸음 프레임의 실제 시각(0 이면 아직 없다)
         float32                                      _accumulator;
-        float32                                      _pendingTriggerYaw;   ///< 클라이언트 — 모은 발동 순간의 시선
-        float32                                      _pendingTriggerPitch; ///< 클라이언트 — 모은 발동 순간의 시선
-        uint32                                       _pendingTriggered;    ///< 클라이언트 — 다음 입력 틱에 실을 발동 비트
+        vector<ControlTrigger>                       _listPendingTrigger;  ///< 클라이언트 — 다음 입력 틱에 실을 발동 사건
         uint32                                       _pendingPawnEntityID; ///< 클라이언트 — 모은 발동을 낸 폰(폰이 바뀌면 모은 것을 버린다)
         uint32                                       _tick;                ///< 서버 — 시뮬레이션 틱, 클라이언트 — 예측한 입력 틱
         uint32                                       _reconciledTick;      ///< 클라이언트 — 마지막으로 맞춘 소유자 상태의 입력 틱
         uint32                                       _localAvatarID;       ///< 클라이언트 — 예측하는 자기 아바타(0 이면 아직 없다)
         Role                                         _role;
-        uint8                                        _bStartTried         : 1; ///< 지금 링크로 복제기를 세워 봤다(실패해도 다시 하지 않는다 — 오류는 한 번 알린다)
-        uint8                                        _bPendingTriggerLook : 1; ///< 클라이언트 — `_pendingTriggerYaw` · `_pendingTriggerPitch` 가 채워졌다
-        [[maybe_unused]] uint8                       _reserved            : 6;
+        uint8                                        _bStartTried : 1; ///< 지금 링크로 복제기를 세워 봤다(실패해도 다시 하지 않는다 — 오류는 한 번 알린다)
+        [[maybe_unused]] uint8                       _reserved    : 7;
     };
 } // namespace sw
