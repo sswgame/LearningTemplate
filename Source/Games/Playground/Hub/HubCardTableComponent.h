@@ -85,6 +85,7 @@ namespace sw
     {
     public:
         REFLECT_BODY();
+        SW_REGISTERED_COMPONENT( HubCardTableComponent );
 
         static constexpr uint32 kFirstRoomID       = 1;
         static constexpr int32  kMaxActionsPerRoom = 512; ///< 한 판의 행동 상한(판정이 행동을 다시 돌리는 비용의 상한이기도 하다)
@@ -96,8 +97,6 @@ namespace sw
         /** @brief @p manager 의 월드에서 접속한(클라이언트) 카드 탁자를 찾습니다. 없거나 여럿이면 nullptr 입니다. */
         [[nodiscard]] static HubCardTableComponent* findClientTable( GameObjectManager& manager );
 
-        void onRegister( GameObjectManager& manager ) override;
-        void onUnregister( GameObjectManager& manager ) override;
         void onBeginPlay() override;
         void onEndPlay() override;
         void onTick( TickContext& context ) override;

@@ -39,6 +39,8 @@ namespace sw
         _arrPrimitiveIndex[pageIndex] = kNoPrimitive;
         _arrPendingMask[pageIndex]    = 0;
         _arrFlag[pageIndex]           = 0;
+        _arrMoveInterest[pageIndex]   = 0;
+        _arrMoveQueued[pageIndex]     = 0;
     }
 
     void SceneTransformPage::initializeSlot( uint32 pageIndex, SceneComponent* pOwner )
@@ -57,6 +59,8 @@ namespace sw
         _arrPrimitiveIndex[pageIndex]   = kNoPrimitive;
         _arrPendingMask[pageIndex]      = 0;
         _arrFlag[pageIndex]             = kNotifyOwner;
+        _arrMoveInterest[pageIndex]     = 0;
+        _arrMoveQueued[pageIndex]       = 0;
         ++_arrWorldVersion[pageIndex]; // 월드를 항등으로 썼다. 0 으로 되돌리지 않는다(`_arrWorldVersion` 설명)
     }
 

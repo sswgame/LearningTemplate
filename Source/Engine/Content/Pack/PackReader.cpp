@@ -13,6 +13,7 @@
 #include "Core/Foundation/StdHeaders.h"
 #include "Core/Hash/HashUtil.h"
 #include "Core/Log/Logger.h"
+#include "Core/Log/ScopedDeferredLog.h"
 #include "Core/Memory/Memory.h"
 #include "Core/Network/Security/INetSecurityProvider.h"
 #include "Core/String/StringUtil.h"
@@ -115,8 +116,9 @@ namespace sw
 
     bool PackReader::open( string_view packFilePath, const PackIndexTrust* pTrust )
     {
-        // 잠금은 잎이다 — 오류 · 안내 로그는 잠금을 놓은 뒤에 쓴다(실패 경로는 먼저 닫고 놓는다).
-        UniqueLock<mutex> lock{ _fileMutex };
+        // 잠금은 잎이다 — 오류 · 안내 로그는 잠금을 놓은 뒤에 쓴다(실패 경로는 먼저 닫고 놓고, 콘텐츠 소스가 남기는 줄은 미룬다).
+        const ScopedDeferredLog deferredLog;
+        UniqueLock<mutex>       lock{ _fileMutex };
         closeLocked();
 
         if ( packFilePath.empty() )

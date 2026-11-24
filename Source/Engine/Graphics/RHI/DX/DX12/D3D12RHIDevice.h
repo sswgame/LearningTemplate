@@ -20,6 +20,7 @@
 #include "Engine/Graphics/RHI/Backend/RHIConstantBufferMirror.h"
 #include "Engine/Graphics/RHI/Backend/RHIDescriptorRingMirror.h"
 #include "Engine/Graphics/RHI/Backend/RHIHandleTable.h"
+#include "Engine/Graphics/RHI/Backend/RHIPipelineCacheFile.h"
 #include "Engine/Graphics/RHI/Backend/RHIReleaseQueue.h"
 #include "Engine/Graphics/RHI/Backend/RHISwapChainSet.h"
 #include "Engine/Graphics/RHI/Backend/RHITimestampRing.h"
@@ -730,6 +731,20 @@ namespace sw
         /** @brief 링이 넘어온 슬롯에 옛 값이 남은 상수 버퍼를 마지막 값으로 채웁니다(`RHIConstantBufferMirror`). `waitForRingSlot` 이 부릅니다. */
         void fillConstantBufferSlot();
         /**
+         * @brief 디스크 파이프라인 라이브러리(`ID3D12PipelineLibrary`)를 읽어 엽니다 — Vulkan 파이프라인 캐시와 같은 자리 · 같은 파일 규칙(`RHIPipelineCacheFile`)입니다.
+         * @details 지원하지 않는 드라이버(`D3D12_SHADER_CACHE_SUPPORT_LIBRARY` 없음)나 검증 층을 켠 실행은 열지 않고 파이프라인을 늘 새로 만든다 — 검증 층은 생성 검사를 그대로 보게 둔다.
+         *          다른 드라이버 · 장치의 데이터면 빈 라이브러리로 시작한다(`D3D12_ERROR_DRIVER_VERSION_MISMATCH` · `D3D12_ERROR_ADAPTER_NOT_FOUND`).
+         */
+        void initializePipelineLibrary( IDXGIAdapter1& adapter, float64 saveIntervalSeconds );
+        /** @brief 라이브러리를 저장하고 놓습니다(종료). */
+        void savePipelineLibrary();
+        /** @brief 라이브러리 전체를 바이트로 냅니다(`RHIPipelineCacheFile`). 라이브러리는 스스로 동기화한다 — 워커가 도는 동안 다른 스레드가 파이프라인을 더해도 된다. */
+        [[nodiscard]] bool serializePipelineLibrary( vector<uint8>& outBytes );
+        /** @brief 그래픽스 파이프라인을 라이브러리에서 찾고, 없으면 만들어 넣습니다. 이름은 서술 · 바이트코드 · 루트 시그니처의 해시입니다. */
+        HRESULT createGraphicsPipeline( const D3D12_GRAPHICS_PIPELINE_STATE_DESC& desc, Microsoft::WRL::ComPtr<ID3D12PipelineState>& outPSO );
+        /** @brief 컴퓨트 파이프라인을 라이브러리에서 찾고, 없으면 만들어 넣습니다. */
+        HRESULT createComputePipeline( const D3D12_COMPUTE_PIPELINE_STATE_DESC& desc, Microsoft::WRL::ComPtr<ID3D12PipelineState>& outPSO );
+        /**
          * @brief D3D12 InfoQueue 메시지를 로그로 비웁니다.
          */
         void flushDebugMessages( const utf8* pStage );
@@ -861,8 +876,13 @@ namespace sw
         uint64                                            _computeWaitedValue; ///< 그래픽스 큐가 이미 기다린 컴퓨트 값 — 프레임 끝이 그 위를 모두 기다린다
         Microsoft::WRL::ComPtr<ID3D12DescriptorHeap>      _rtvHeap;            ///< 메인 스왑체인 백버퍼의 RTV 만 든다(오프스크린은 쪽 목록)
         Microsoft::WRL::ComPtr<ID3D12DescriptorHeap>      _cbvHeap;
-        Microsoft::WRL::ComPtr<ID3D12DescriptorHeap>      _offlineViewHeap; ///< CPU 전용 뷰 힙. 슬롯 테이블 CopyDescriptors 의 원본과 null 뷰를 담는다.
-        Microsoft::WRL::ComPtr<ID3D12RootSignature>       _rootSignature;   ///< 그래픽스와 컴퓨트가 같이 쓴다(같은 블롭).
+        Microsoft::WRL::ComPtr<ID3D12DescriptorHeap>      _offlineViewHeap;         ///< CPU 전용 뷰 힙. 슬롯 테이블 CopyDescriptors 의 원본과 null 뷰를 담는다.
+        Microsoft::WRL::ComPtr<ID3D12RootSignature>       _rootSignature;           ///< 그래픽스와 컴퓨트가 같이 쓴다(같은 블롭).
+        uint64                                            _rootSignatureHash{ 0 };  ///< 루트 시그니처 블롭의 해시 — 파이프라인 라이브러리의 이름에 든다
+        Microsoft::WRL::ComPtr<ID3D12PipelineLibrary>     _pipelineLibrary;         ///< 디스크 파이프라인 라이브러리. 없으면 파이프라인을 늘 새로 만든다
+        vector<uint8>                                     _listPipelineLibraryBlob; ///< 라이브러리를 만든 바이트 — 라이브러리가 사본 없이 가리키므로 라이브러리보다 오래 산다
+        RHIPipelineCacheFile                              _pipelineCacheFile;
+        mutex                                             _pipelineLibraryMutex; ///< 라이브러리에서 꺼내기를 줄 세운다(같은 이름을 두 스레드가 함께 꺼내면 안 된다 — D3D12 문서). 잎 락
         Microsoft::WRL::ComPtr<ID3D12CommandSignature>    _drawCommandSignature;
         Microsoft::WRL::ComPtr<ID3D12CommandSignature>    _drawIndexedCommandSignature;
         Microsoft::WRL::ComPtr<ID3D12CommandSignature>    _dispatchCommandSignature;

@@ -10,6 +10,7 @@
 
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Object/GameObject/GameObjectManager.inl"
+#include "Engine/Reflection/TypeInfo.h"
 #include "Engine/Reflection/TypeRegistry.h"
 
 #include "GameFramework/Plugin/Editor/MeshModifiers/Stack/MeshModifier.h"

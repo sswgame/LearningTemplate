@@ -69,6 +69,7 @@ namespace sw
     {
     public:
         REFLECT_BODY();
+        SW_REGISTERED_COMPONENT( GimmickSensorComponent );
 
         /**
          * @brief 병렬 틱 중 남(회로)이 읽어도 됩니다 — 겹침 목록은 게임 스레드의 겹침 사건만 바꾸고, 충격 · 신호는 원자 값입니다.
@@ -80,7 +81,6 @@ namespace sw
         virtual ~GimmickSensorComponent() override = default;
 
         void onRegister( GameObjectManager& manager ) override;
-        void onUnregister( GameObjectManager& manager ) override;
 
         /** @brief 겹친 것으로 인정할 오브젝트인지 판정합니다. 필요한 태그를 모두 가지고 있으면 true 이고, 필요한 태그가 없으면 모든 오브젝트를 인정합니다. */
         bool canAcceptOccupant( const GameObject& object ) const;

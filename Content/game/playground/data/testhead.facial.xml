@@ -59,7 +59,7 @@
 			<item>blinkRight</item>
 		</_listTarget>
 	</_blink>
-	<_gaze _forwardAxis="0,0,1" _maxAngle="0.5235988" _saccadeMinInterval="0.4" _saccadeMaxInterval="1.6" _saccadeAmplitude="0.0349066">
+	<_gaze _forwardAxis="0,0,1" _maxAngle="30" _saccadeMinInterval="0.4" _saccadeMaxInterval="1.6" _saccadeAmplitude="2">
 		<_listEyeBone>
 			<item>eye.l</item>
 			<item>eye.r</item>

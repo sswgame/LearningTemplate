@@ -4,6 +4,7 @@
 
 #include "Core/Concurrency/mutex.h"
 #include "Core/Container/vector.h"
+#include "Core/Log/ScopedDeferredLog.h"
 
 #include "Engine/Foundation/EngineServices.h"
 #include "Engine/Foundation/EngineSubsystemRegistration.h"
@@ -130,7 +131,8 @@ namespace sw
         if ( _bLoadAttempted.load( std::memory_order_acquire ) )
             return;
 
-        ScopedLock<mutex> lock{ _defaultsMutex };
+        const ScopedDeferredLog deferredLog;
+        ScopedLock<mutex>       lock{ _defaultsMutex };
         if ( _bLoadAttempted.load( std::memory_order_relaxed ) )
             return;
 

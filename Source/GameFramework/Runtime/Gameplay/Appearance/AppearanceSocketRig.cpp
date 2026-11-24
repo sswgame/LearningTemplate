@@ -168,7 +168,7 @@ namespace sw
 
     float4x4 AppearanceSocketRig::makePlacementTransform( const AppearancePlacement& placement )
     {
-        const quaternion rotation = quaternion::makeFromYawPitchRoll( placement._rotation * MathUtil::kDegreeToRadian );
+        const quaternion rotation = quaternion::makeFromYawPitchRoll( placement._rotation.radians() );
         return CharacterGeometryUtil::makeTransform( placement._offset, rotation, float3( 1.0f ) );
     }
 
@@ -182,7 +182,7 @@ namespace sw
             SocketDef def;
             def._name        = socketOverride._name;
             def._translation = socketOverride._placement._offset;
-            def._rotation    = quaternion::makeFromYawPitchRoll( socketOverride._placement._rotation * MathUtil::kDegreeToRadian );
+            def._rotation    = quaternion::makeFromYawPitchRoll( socketOverride._placement._rotation.radians() );
             def._fieldMask   = SocketFieldBit::kTranslation | SocketFieldBit::kRotation;
             // 부모 후보는 본 이름이거나 몸 소켓 이름이다. 소켓이면 그 소켓의 부모 본을 따른다. 소켓 위의 소켓은 테이블이 해석하지 않는다.
             for ( const hashed_string& candidate : socketOverride._placement._listSocket )

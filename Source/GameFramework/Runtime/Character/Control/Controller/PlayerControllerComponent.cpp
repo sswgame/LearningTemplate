@@ -37,12 +37,6 @@ namespace sw
     {
     }
 
-    void PlayerControllerComponent::onRegister( GameObjectManager& manager )
-    {
-        ControllerComponent::onRegister( manager );
-        manager.getComponentRegistry().add<PlayerControllerComponent>( this ); // 자동 빙의가 플레이어 번호로 찾는다
-    }
-
     void PlayerControllerComponent::onUnregister( GameObjectManager& manager )
     {
         // 씬을 비우는 중이면 조종 시스템이 먼저 떨어져 놓기(onUnpossessed)가 오지 않는다 — 건 잠금은 여기서 푼다.
@@ -50,7 +44,6 @@ namespace sw
         if ( pInput != nullptr )
             applyMouseLock( *pInput, false );
         _bMouseLockRequested = SW_FALSE;
-        manager.getComponentRegistry().remove<PlayerControllerComponent>( this );
         ControllerComponent::onUnregister( manager );
     }
 

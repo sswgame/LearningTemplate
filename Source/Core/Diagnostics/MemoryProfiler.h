@@ -152,7 +152,7 @@ namespace sw
 
         /**
          * @brief 보고서를 stderr 로 한 줄씩 남깁니다(로거가 종료된 뒤에도 보이게 — CRT 누수 보고와 같은 경로). 엔진 종료 끝에 Debug 에서 부릅니다.
-         * @param maxPrintedEntry 남길 줄 수의 상한입니다(넘으면 줄인 수만 한 줄로 적는다). 잠정 값이고 L2 측정 뒤에 확정합니다.
+         * @param maxPrintedEntry 남길 줄 수의 상한입니다(넘으면 줄인 수만 한 줄로 적는다).
          * @return 보고서의 줄 수입니다(상한으로 줄인 줄도 센다). 보고서가 `_bValid` 가 아니면 오류 한 줄을 남기고 0 입니다.
          */
         uint32 print( const utf8* pPhaseTag, uint32 maxPrintedEntry = kDefaultMaxPrintedEntry ) const;

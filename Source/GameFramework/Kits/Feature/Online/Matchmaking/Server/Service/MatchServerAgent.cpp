@@ -3,6 +3,7 @@
 #include "GameFramework/Kits/Feature/Online/Matchmaking/Server/Service/MatchServerAgent.h"
 
 #include "Core/Algorithm/VectorUtil.h"
+#include "Core/Log/ScopedDeferredLog.h"
 #include "Core/Serialization/BitStream.h"
 
 #include "GameFramework/Kits/Feature/Online/Matchmaking/Runtime/MatchmakingProtocol.h"
@@ -121,7 +122,8 @@ namespace sw
 
     void MatchServerAgent::trimToCapacity()
     {
-        ScopedLock<mutex> lock{ _mutex };
+        const ScopedDeferredLog deferredLog;
+        ScopedLock<mutex>       lock{ _mutex };
         while ( static_cast<int32>( _mapAccountToExpiresMs.size() ) > _seatCapacity )
         {
             const MatchSeat* pOldest      = nullptr;

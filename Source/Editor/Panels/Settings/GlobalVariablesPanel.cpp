@@ -23,7 +23,7 @@
 
 #include "Engine/Localization/LocText.h"
 #include "Engine/Localization/TextFormatter.h"
-#include "Engine/Reflection/Reflection.h"
+#include "Engine/Reflection/EnumInfo.h"
 #include "Engine/Reflection/ReflectionEditorMetadata.h"
 
 #include <imgui.h>

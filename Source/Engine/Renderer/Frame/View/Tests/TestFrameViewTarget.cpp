@@ -15,16 +15,16 @@ SW_TEST_CASE( FrameViewTargetTest, SkippedFrameResetsHistory )
     FrameViewTarget view;
     view.beginViewHistory();
     SW_EXPECT_TRUE( view._bHistoryReset == SW_TRUE ); // 처음 그린다
-    view._bTAAHistoryWritten = SW_TRUE;
+    view._taaHistory.markWritten();
     view.beginViewHistory();
     SW_EXPECT_TRUE( view._bHistoryReset == SW_FALSE );
-    SW_EXPECT_TRUE( view._bTAAHistoryReset == SW_FALSE );
+    SW_EXPECT_FALSE( view._taaHistory.isReset() );
 
     view.markFrameSkipped(); // 10 Hz 뷰 — 다음 몇 프레임은 그리지 않는다
     view.markFrameSkipped();
     view.beginViewHistory();
     SW_EXPECT_TRUE( view._bHistoryReset == SW_TRUE );
-    SW_EXPECT_TRUE( view._bTAAHistoryReset == SW_TRUE );
+    SW_EXPECT_TRUE( view._taaHistory.isReset() );
 
     view.beginViewHistory(); // 다시 이어 그리면 기록을 쓴다
     SW_EXPECT_TRUE( view._bHistoryReset == SW_FALSE );
@@ -35,17 +35,42 @@ SW_TEST_CASE( FrameViewTargetTest, SkyCloudHistoryResetsWhenCloudsDidNotRun )
 {
     FrameViewTarget view;
     view.beginViewHistory();
-    SW_EXPECT_TRUE( view._bSkyCloudHistoryReset == SW_TRUE ); // 처음 그린다
-    view._bSkyCloudHistoryWritten = SW_TRUE;
+    SW_EXPECT_TRUE( view._skyCloudHistory.isReset() ); // 처음 그린다
+    view._skyCloudHistory.markWritten();
     view.beginViewHistory();
-    SW_EXPECT_TRUE( view._bSkyCloudHistoryReset == SW_FALSE );
-    view._bSkyCloudHistoryWritten = SW_FALSE; // 이번 프레임은 구름이 없다
+    SW_EXPECT_FALSE( view._skyCloudHistory.isReset() ); // 이번 프레임은 구름이 없다(쓰지 않는다)
     view.beginViewHistory();
-    SW_EXPECT_TRUE( view._bSkyCloudHistoryReset == SW_TRUE );
-    view._bSkyCloudHistoryWritten = SW_TRUE;
+    SW_EXPECT_TRUE( view._skyCloudHistory.isReset() );
+    view._skyCloudHistory.markWritten();
     view.markFrameSkipped();
     view.beginViewHistory();
-    SW_EXPECT_TRUE( view._bSkyCloudHistoryReset == SW_TRUE );
+    SW_EXPECT_TRUE( view._skyCloudHistory.isReset() );
+}
+
+/** @brief [FrameViewTargetTest] 쉰 프레임 뒤에도 잇는 기록(자동 노출)은 컷 · 새 텍스처에서만 버리고, 번갈아 쓰는 두 칸은 쓴 프레임마다 바뀐다 */
+SW_TEST_CASE( FrameViewTargetTest, KeptHistoryAlternatesAndSurvivesIdleFrames )
+{
+    FrameViewTarget view;
+    view.beginViewHistory();
+    SW_EXPECT_TRUE( view._autoExposureHistory.isReset() ); // 쓴 적이 없다
+    const RHITextureSlot* pFirst = &view._autoExposureHistory.getCurrent();
+    view._autoExposureHistory.markWritten();
+    SW_EXPECT_TRUE( &view._autoExposureHistory.getCurrent() != pFirst );
+    SW_EXPECT_TRUE( &view._autoExposureHistory.getPrevious() == pFirst );
+
+    view.beginViewHistory(); // 재지 않은 프레임
+    view.beginViewHistory();
+    SW_EXPECT_FALSE( view._autoExposureHistory.isReset() );
+    SW_EXPECT_FALSE( view._autoExposureHistory.isWritten() );
+    view._settings._bCut = SW_TRUE;
+    view.beginViewHistory();
+    SW_EXPECT_TRUE( view._autoExposureHistory.isReset() );
+
+    view._settings._bCut = SW_FALSE;
+    view._autoExposureHistory.markWritten();
+    view._autoExposureHistory.release( nullptr ); // 텍스처를 다시 만든다 — 새 텍스처의 값은 읽지 않는다
+    view.beginViewHistory();
+    SW_EXPECT_TRUE( view._autoExposureHistory.isReset() );
 }
 
 /** @brief [FrameViewTargetTest] 컷이 든 프레임은 기록을 버린다 */

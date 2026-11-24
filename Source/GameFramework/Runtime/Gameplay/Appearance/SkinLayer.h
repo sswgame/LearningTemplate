@@ -14,6 +14,7 @@
 #include "Core/Container/vector.h"
 #include "Core/Foundation/Macros.h"
 #include "Core/Foundation/Types.h"
+#include "Core/Math/Radians.h"
 #include "Core/Math/VectorMath.h"
 #include "Core/Name/hashed_string.h"
 
@@ -90,7 +91,7 @@ namespace sw
         float2        _scale{ 1.0f, 1.0f };  ///< 피부 UV 에서 층 하나가 덮는 크기
         hashed_string _layer{};
         float32       _opacity{ 1.0f };
-        float32       _rotationDegrees{ 0.0f };
+        Radians       _rotation{};
         uint8         _bMirror{ SW_FALSE }; ///< u = 0.5 에 대칭인 짝도 그린다(양 볼 홍조 · 양팔 문신)
         uint8         _bHidden{ SW_FALSE }; ///< 목록에 두고 그리지 않는다(편집 창 눈 단추)
 
@@ -99,7 +100,7 @@ namespace sw
 
         static constexpr uint32  kColorSteps  = 255u;
         static constexpr uint32  kFineSteps   = 65535u; ///< 이동 · 크기 · 회전의 격자(16 비트)
-        static constexpr float32 kMaxRotation = 180.0f;
+        static constexpr float32 kMaxRotation = 180.0f; ///< 전송 격자의 끝(도)
 
         /** @brief 전송 정밀도로 맞춥니다(색 · 불투명도 8 비트, 이동 · 크기 · 회전 16 비트). 비트 쓰기 · 읽기(`AppearanceSelection`)가 같은 격자를 쓴다. */
         void quantize();
@@ -140,8 +141,8 @@ namespace sw
         float2 _offset{};
         PROPERTY()
         float2 _scale{};
-        PROPERTY( Name = "rotation", Min = -180.0, Max = 180.0, Units = deg ) // 파일 스키마라 글 그대로 도다 — 읽은 뒤 라디안으로 옮기지 않고 _rotationDegrees 로 둔다
-        float32 _rotationDegrees{ 0.0f };
+        PROPERTY( Name = "rotation", Min = -180.0, Max = 180.0 ) // 경계도 글과 같은 도다(`Radians`)
+        Radians _rotation{};
         PROPERTY( Name = "mirror" )
         bool _bMirror{ false }; ///< NOLINT(sw-bool-flag): 스키마 집합체다(XMLFields 가 칸마다 쓴다)
         PROPERTY( Name = "hidden" )

@@ -51,6 +51,7 @@ namespace sw
     {
     public:
         REFLECT_BODY();
+        SW_REGISTERED_COMPONENT( AdventureGameModeComponent );
 
         static constexpr uint32 kStateTag     = FourCCUtil::make( "VLDR" );
         static constexpr uint32 kStateVersion = 2;
@@ -101,8 +102,6 @@ namespace sw
 
     protected:
         [[nodiscard]] bool startGame() override;
-        void               onRegister( GameObjectManager& manager ) override;
-        void               onUnregister( GameObjectManager& manager ) override;
         void               onGameStarted() override;
         void               updateGame( float32 deltaTime ) override;
         void               onFlush( GameObjectManager& manager, bool bRespawnViews ) override;

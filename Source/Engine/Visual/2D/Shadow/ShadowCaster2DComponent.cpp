@@ -20,18 +20,6 @@ namespace sw
     {
     }
 
-    void ShadowCaster2DComponent::onRegister( GameObjectManager& manager )
-    {
-        SceneComponent::onRegister( manager );
-        manager.getComponentRegistry().add<ShadowCaster2DComponent>( this );
-    }
-
-    void ShadowCaster2DComponent::onUnregister( GameObjectManager& manager )
-    {
-        manager.getComponentRegistry().remove<ShadowCaster2DComponent>( this );
-        SceneComponent::onUnregister( manager );
-    }
-
     void ShadowCaster2DComponent::computeWorldSegments( vector<float4>& outListSegment, vector<float2>& outListOutward ) const
     {
         outListSegment.clear();

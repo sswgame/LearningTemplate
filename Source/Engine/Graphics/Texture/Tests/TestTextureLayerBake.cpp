@@ -17,7 +17,7 @@ SW_TEST_CASE( TextureLayerBakeTest, PacksLayerIntoShaderLayout )
     layer._color           = sw::float4{ 1.0f, 0.0f, 0.5f, 0.25f };
     layer._offset          = sw::float2{ 0.25f, 0.75f };
     layer._scale           = sw::float2{ 2.0f, Constants::kMinScale };
-    layer._rotationDegrees = 90.0f;
+    layer._rotationRadians = sw::MathUtil::kHalfPi;
     layer._regionMin       = sw::float2{ 0.5f, 0.0f };
     layer._regionMax       = sw::float2{ 1.0f, 0.5f };
     layer._roughness       = 0.2f;

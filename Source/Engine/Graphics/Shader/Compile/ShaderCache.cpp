@@ -3,6 +3,8 @@
 #include "Engine/Graphics/Shader/Compile/ShaderCache.h"
 
 #include "Core/CommandLine/CommandLineManager.h"
+#include "Core/Concurrency/DiskIOScope.h"
+#include "Core/Concurrency/Futex.h"
 #include "Core/Concurrency/mutex.h"
 #include "Core/File/FileUtil.h"
 #include "Core/File/ProcessRoots.h"
@@ -10,6 +12,7 @@
 #include "Core/Memory/Memory.h"
 #include "Core/String/StringBuilder.h"
 #include "Core/String/StringUtil.h"
+#include "Core/Task/DedicatedWorker.h"
 #include "Core/Time/MonotonicClock.h"
 
 #include "Engine/Asset/AssetManager.h"
@@ -67,6 +70,27 @@ namespace sw
         return loaded;
     }
 
+    struct ShaderCache::LoadThread
+    {
+        /** @brief 로드 스레드에 넘기는 일입니다 — 부른 스레드가 끝을 기다리므로 그 스택의 것을 가리킨다. */
+        struct Job
+        {
+            const Delegate<void()>* _pBody{ nullptr };
+            atomic<uint32>*         _pDone{ nullptr };
+        };
+
+        mutex                _mutex; ///< 띄우기를 한 번으로 줄인다(부르는 스레드가 여럿일 수 있다)
+        DedicatedWorker<Job> _worker;
+
+        void process( Job& job, bool bStopping )
+        {
+            (void)bStopping; // 받은 일은 멈추는 중에도 끝까지 돈다 — 부른 스레드가 기다린다
+            ( *job._pBody )();
+            job._pDone->store( 1, std::memory_order_release );
+            Futex::wakeAll( *job._pDone );
+        }
+    };
+
     ShaderCache::ShaderCache()
         : _pProvider{}
         , _reflectionManifests{}
@@ -81,6 +105,7 @@ namespace sw
         , _memoryHitCount{}
         , _providerLoadCount{}
         , _compileBusy{}
+        , _pLoadThread{ make_unique<LoadThread>() }
         , _bLiveDebugCodegen{ SW_FALSE }
     {
     }
@@ -157,6 +182,7 @@ namespace sw
     void ShaderCache::shutdown()
     {
         _configReloadedSubscription.reset();
+        _pLoadThread->_worker.stop();
         waitForLoadsInFlight();
         writeRequestLog();
         clearCache();
@@ -207,8 +233,32 @@ namespace sw
         return ShaderHandle{ std::move( pOperation ) };
     }
 
+    void ShaderCache::runOnLoadThread( const Delegate<void()>& body )
+    {
+        atomic<uint32> done{ 0 };
+        {
+            ScopedLock<mutex> lock{ _pLoadThread->_mutex };
+            if ( _pLoadThread->_worker.isRunning() == false )
+                _pLoadThread->_worker.start( ThreadCreationKey{}, "ShaderLoad", SW_DELEGATE_METHOD( DedicatedWorker<LoadThread::Job>::ProcessDelegate, &LoadThread::process, _pLoadThread.get() ) );
+            [[maybe_unused]] const bool bAccepted = _pLoadThread->_worker.submit( LoadThread::Job{ &body, &done } );
+            SW_ASSERT( bAccepted ); // 방금 띄웠거나 돌고 있다 — 멈추기는 렌더 스레드가 멈춘 뒤(`shutdown`)다
+        }
+        while ( done.load( std::memory_order_acquire ) == 0 )
+        {
+            Futex::wait( done, 0 );
+        }
+    }
+
     ShaderCompileResult ShaderCache::getOrCompile( const ShaderCompileDesc& desc )
     {
+        // 로드는 셰이더 소스 지문 · DDC · 쿠킹본을 읽는다 — 디스크를 만지지 않는 스레드(렌더 스레드의 패킷)는 로드 스레드에 맡기고 기다린다.
+        if ( DiskIOForbiddenScope::isActive() )
+        {
+            ShaderCompileResult result;
+            runOnLoadThread( SW_DELEGATE_LAMBDA( Delegate<void()>, [this, &desc, &result]()
+            { result = getOrCompile( desc ); } ) );
+            return result;
+        }
         const ShaderHandle handle = requestWith( desc, AssetLoadStart::OnCallingThread );
         handle.getOperation()->wait();
         // 실패도 결과를 돌려준다 — 부르는 쪽이 컴파일 오류 문구를 드러낸다.
@@ -248,6 +298,14 @@ namespace sw
 
     bool ShaderCache::getReflection( const ShaderCompileDesc& desc, ShaderReflectionData& outReflection )
     {
+        // 공급자가 매니페스트 · 컴파일 결과를 읽는다(`getOrCompile` 과 같은 이유).
+        if ( DiskIOForbiddenScope::isActive() )
+        {
+            bool bFound = false;
+            runOnLoadThread( SW_DELEGATE_LAMBDA( Delegate<void()>, [this, &desc, &outReflection, &bFound]()
+            { bFound = getReflection( desc, outReflection ); } ) );
+            return bFound;
+        }
         const ScopedMemoryTag memoryScope{ kSubsystemMemoryTag };
         return getProvider().getReflection( *this, desc, outReflection );
     }

@@ -152,7 +152,7 @@ namespace sw
                          _folder.str() );
     }
 
-    bool LocalPlatformServices::writeKeyValueFile( const utf8* pFileName, const flat_map<string, string>& mapValue ) const
+    bool LocalPlatformServices::writeKeyValueFile( const utf8* pFileName, const map<string, string>& mapValue ) const
     {
         StringBuilder<constant::buffer::kMax1024> text;
         for ( const auto& [key, value] : mapValue )
@@ -166,7 +166,7 @@ namespace sw
         return bSaved;
     }
 
-    bool LocalPlatformServices::readKeyValueFile( const utf8* pFileName, flat_map<string, string>& outMapValue ) const
+    bool LocalPlatformServices::readKeyValueFile( const utf8* pFileName, map<string, string>& outMapValue ) const
     {
         string                 text;
         const OptionalFileRead read = FileUtil::readOptionalTextFile( _folder.join( pFileName ), text );

@@ -937,16 +937,4 @@ namespace sw
             }
         }
     }
-
-    void HousingPlotComponent::onRegister( GameObjectManager& manager )
-    {
-        GameModeComponent::onRegister( manager );
-        manager.getComponentRegistry().add<HousingPlotComponent>( this );
-    }
-
-    void HousingPlotComponent::onUnregister( GameObjectManager& manager )
-    {
-        manager.getComponentRegistry().remove<HousingPlotComponent>( this );
-        GameModeComponent::onUnregister( manager );
-    }
 } // namespace sw

@@ -48,6 +48,7 @@ namespace sw
     {
     public:
         REFLECT_BODY();
+        SW_REGISTERED_COMPONENT( LightComponent );
 
         /** @brief 기본 소멸자입니다. */
         virtual ~LightComponent() override = default;
@@ -102,11 +103,8 @@ namespace sw
          * @details 렌더 수집기가 빛마다 읽어 패킷에 싣고(`RenderPacketSceneCollector::collectLensFlares`) 렌즈 플레어 패스가 그린다. 못 읽으면 오류를 한 번 남기고 그 빛은 플레어가 없다.
          */
         const string& getLensFlarePath() const { return _lensFlarePath; }
-
-        /** @brief 씬에 붙을 때 빛 레지스트리의 자기 종류 칸에 자기를 등록합니다. */
-        void onRegister( GameObjectManager& manager ) override;
-        /** @brief 씬에서 떨어질 때 등록을 해제합니다. */
-        void onUnregister( GameObjectManager& manager ) override;
+        /** @brief 빛 목록의 칸은 종류입니다(방향광이 0 — 종류 순서로 돌면 앞에 온다). 종류는 만들 때 정해진다. */
+        uint32 getRegistryChannel() const override { return _lightType; }
 
     protected:
         /**

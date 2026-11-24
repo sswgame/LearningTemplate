@@ -199,7 +199,7 @@ namespace sw
             bValid = Check::expect( _blendMode == VFXBlendMode::Alpha, sourceLabel, _name, "_sortMode needs the Alpha blend mode (Additive does not depend on draw order)" ) && bValid;
             bValid = Check::expect( _renderMode == VFXRenderMode::Billboard, sourceLabel, _name, "_sortMode is only for the Billboard render mode (a ribbon's shape is its birth order)" ) && bValid;
             // GPU 정렬은 정렬 모드와 상관없이 워크그룹 하나의 바이토닉 정렬(vfx_particle_sort.hlsl)이다 — 나이 순서도 같은 한도가 걸린다(RN-15 결정 5 를 나이 순서까지 넓혔다).
-            // 넘으면 정렬을 건너뛰지 않고 로드를 멈춘다(CPU 정렬은 한도가 없다). 한도를 푸는 일은 측정 뒤다(PS-3 의 기수 정렬 후보).
+            // 넘으면 정렬을 건너뛰지 않고 로드를 멈춘다(CPU 정렬은 한도가 없다).
             const bool bGPUSorted = computeSupportedTargets().has( VFXSimulationTarget::GPU );
             if ( bGPUSorted )
                 bValid = Check::expect( _maxParticles <= kMaxGPUSortedParticles, sourceLabel, _name,

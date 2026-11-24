@@ -73,15 +73,13 @@ namespace sw
     {
     public:
         REFLECT_BODY();
+        SW_REGISTERED_COMPONENT( GimmickCircuitComponent );
 
         static constexpr TickGroup kTickGroup = TickGroup::PrePhysics;
 
         GimmickCircuitComponent();
         virtual ~GimmickCircuitComponent() override = default;
 
-        /** @brief 씬의 컴포넌트 레지스트리에 올라 "회로를 모두" 를 씬을 훑지 않고 돌려줍니다(`GimmickStateBundle`). */
-        void onRegister( GameObjectManager& manager ) override;
-        void onUnregister( GameObjectManager& manager ) override;
         void onPostLoad() override;
         void onBeginPlay() override;
         void onTick( TickContext& context ) override;

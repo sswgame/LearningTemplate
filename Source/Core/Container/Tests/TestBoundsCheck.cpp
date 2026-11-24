@@ -1,6 +1,6 @@
 // 컨테이너 범위 검사(`SW_CHECK_INDEX` · `SW_CHECK_INDEX_OR_END`) — 경계 밖 접근이 개발 구성에서 단언으로 잡히고(가로채기로 센다), 경계 안 접근은 하나도 잡히지 않는지(음성 대조).
 // 경계 밖 케이스는 가로채기 뒤에도 코드가 이어지므로 원소를 읽지 않고 주소만 만들거나, 할당 · 용량 안쪽 칸만 가리키게 짠다(ASan 이 남의 메모리 접근으로 보지 않게).
-// std 를 감싼 컨테이너(`string` · `ChunkedArray` · `list`)는 Debug 의 MSVC STL 이 먼저 멈추므로 경계 밖을 여기서 부르지 않는다.
+// `string` 의 범위 밖은 StringTest.OutOfRangePositionsAssertAndClamp 가 본다.
 #include "pch.h"
 
 #include "Core/Container/EnumArray.h"

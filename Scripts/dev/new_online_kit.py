@@ -20,9 +20,10 @@ from pathlib import Path
 from common.exit_code import ExitCode
 from common.paths import get_project_root
 
-KIT_ROOT = "Source/GameFramework/Kits/Feature/Online"
+KITS_ROOT = "Source/GameFramework/Kits"
+KIT_ROOT = f"{KITS_ROOT}/Feature/Online"
 RANGE_HEADER = "Source/GameFramework/Runtime/Online/Service/OnlineProtocol.h"
-KIT_NAME_HEADER = "Source/GameFramework/Runtime/Online/Server/OnlineServerKit.h"
+KIT_NAME_HEADER = "Source/GameFramework/Runtime/Online/Service/OnlineServerKitName.h"
 
 
 def make_snake(name: str) -> str:
@@ -344,34 +345,40 @@ SW_TEST_CASE( {name}ProtocolTest, EchoIsInsideTheKitRange )
     return files
 
 
-def add_central_rows(root: Path, name: str, dry_run: bool) -> list[str]:
-    list_changed: list[str] = []
-    range_path = root / RANGE_HEADER
-    text = range_path.read_text(encoding="utf-8")
-    if f"k{name} " not in text and f"k{name}=" not in text:
-        list_base = [int(value, 16) for value in re.findall(r"static constexpr uint16 k\w+\s*=\s*0x([0-9A-Fa-f]{4});", text)]
-        next_base = max(value for value in list_base if value < 0x8000) + 0x0100
-        if next_base >= 0x8000:
-            raise RuntimeError("no free online method range below kGame")
-        anchor = re.search(r"\n(\s*)static constexpr uint16 kGame\s*=", text)
-        if anchor is None:
-            raise RuntimeError("kGame anchor not found in " + RANGE_HEADER)
-        indent = anchor.group(1)
-        text = text[: anchor.start()] + f"\n{indent}static constexpr uint16 k{name} = 0x{next_base:04X};" + text[anchor.start():]
-        list_changed.append(RANGE_HEADER)
-        if dry_run is False:
-            range_path.write_text(text, encoding="utf-8", newline="")
-    name_path = root / KIT_NAME_HEADER
-    text = name_path.read_text(encoding="utf-8")
-    if f"k{name} " not in text and f"k{name}=" not in text:
-        anchor = re.search(r"(\n\s*static constexpr const utf8\* kAdmin\s*=[^\n]*)", text)
-        if anchor is None:
-            raise RuntimeError("kAdmin anchor not found in " + KIT_NAME_HEADER)
-        text = text[: anchor.end()] + f'\n        static constexpr const utf8* k{name} = "{make_lower_camel(name)}";' + text[anchor.end():]
-        list_changed.append(KIT_NAME_HEADER)
-        if dry_run is False:
-            name_path.write_text(text, encoding="utf-8", newline="")
-    return list_changed
+def add_method_range(text: str, name: str) -> str:
+    """메서드 영역 표 글에 다음 빈 칸을 더한다. 이미 있으면 그대로 돌려준다."""
+    if re.search(rf"\bk{name}\s*=", text):
+        return text
+    anchor = re.search(r"\n(\s*)static constexpr uint16 kGame\s*=", text)
+    if anchor is None:
+        raise RuntimeError("kGame anchor not found in " + RANGE_HEADER)
+    list_base = [int(value, 16) for value in re.findall(r"static constexpr uint16 k\w+\s*=\s*0x([0-9A-Fa-f]{4});", text)]
+    next_base = max(value for value in list_base if value < 0x8000) + 0x0100
+    if next_base >= 0x8000:
+        raise RuntimeError("no free online method range below kGame")
+    return text[: anchor.start()] + f"\n{anchor.group(1)}static constexpr uint16 k{name} = 0x{next_base:04X};" + text[anchor.start():]
+
+
+def add_kit_name(text: str, name: str) -> str:
+    """서버 키트 이름 표 글에 한 줄을 더한다. 이미 있으면 그대로 돌려준다."""
+    if re.search(rf"\bk{name}\s*=", text):
+        return text
+    anchor = re.search(r"\n(\s*)static constexpr const utf8\* kAdmin\s*=[^\n]*", text)
+    if anchor is None:
+        raise RuntimeError("kAdmin anchor not found in " + KIT_NAME_HEADER)
+    return text[: anchor.end()] + f'\n{anchor.group(1)}static constexpr const utf8* k{name} = "{make_lower_camel(name)}";' + text[anchor.end():]
+
+
+def describe_invalid_request(root: Path, name: str) -> str | None:
+    """만들 수 없는 까닭을 돌려준다(만들 수 있으면 None)."""
+    if re.fullmatch(r"[A-Z][A-Za-z0-9]+", name) is None:
+        return f"'{name}' is not PascalCase"
+    if (root / KIT_ROOT / name).exists():
+        return f"{KIT_ROOT}/{name} already exists"
+    list_manifest = [path for stem in (f"GF_{name}", f"GF_Server_{name}") for path in sorted((root / KITS_ROOT).rglob(f"{stem}.module.json"))]
+    if list_manifest:
+        return f"module name already used: {list_manifest[0].relative_to(root).as_posix()}"
+    return None
 
 
 def main_new_online_kit(argv: list[str] | None = None) -> int:
@@ -380,23 +387,28 @@ def main_new_online_kit(argv: list[str] | None = None) -> int:
     parser.add_argument("--dry-run", action="store_true", help="만들 파일만 보인다")
     args = parser.parse_args(argv)
     name: str = args.name
-    if re.fullmatch(r"[A-Z][A-Za-z0-9]+", name) is None:
-        print(f"[new-online-kit] '{name}' is not PascalCase", file=sys.stderr)
-        return ExitCode.CHECK_INVALID
     root = get_project_root()
-    kit_directory = root / KIT_ROOT / name
-    if kit_directory.exists():
-        print(f"[new-online-kit] {kit_directory} already exists", file=sys.stderr)
+    reason = describe_invalid_request(root, name)
+    if reason is not None:
+        print(f"[new-online-kit] {reason}", file=sys.stderr)
         return ExitCode.CHECK_INVALID
-    files = make_files(name)
-    for relative, content in files.items():
-        path = kit_directory / relative
+    # 파일을 하나라도 쓰기 전에 중앙 표 두 곳의 자리를 확인한다 — 표가 옮겨졌으면 반쯤 만든 키트를 남기지 않는다.
+    list_table: list[tuple[str, str, str]] = []
+    for relative, add_row in ((RANGE_HEADER, add_method_range), (KIT_NAME_HEADER, add_kit_name)):
+        text = (root / relative).read_bytes().decode("utf-8")
+        list_table.append((relative, text, add_row(text, name)))
+    for relative, content in make_files(name).items():
+        path = root / KIT_ROOT / name / relative
         print(f"[new-online-kit] {'would write' if args.dry_run else 'write'} {path.relative_to(root).as_posix()}")
         if args.dry_run is False:
             path.parent.mkdir(parents=True, exist_ok=True)
             path.write_text(content, encoding="utf-8", newline="")
-    for changed in add_central_rows(root, name, args.dry_run):
-        print(f"[new-online-kit] {'would add a row to' if args.dry_run else 'added a row to'} {changed}")
+    for relative, text, new_text in list_table:
+        if new_text == text:
+            continue
+        print(f"[new-online-kit] {'would add a row to' if args.dry_run else 'added a row to'} {relative}")
+        if args.dry_run is False:
+            (root / relative).write_bytes(new_text.encode("utf-8"))
     if args.dry_run is False:
         print("[new-online-kit] next: py -3 -m Scripts format, then add the kit to the server config `_listKit` (and Programs/OnlineLoadBot to run its tests)")
     return ExitCode.PASSED

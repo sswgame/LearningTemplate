@@ -3,6 +3,7 @@
 #include "GameFramework/Kits/Feature/Storage/CacheStore/Server/Driver/RESP/RESPEphemeralStore.h"
 
 #include "Core/Algorithm/VectorUtil.h"
+#include "Core/Log/ScopedDeferredLog.h"
 #include "Core/Network/Security/INetSecurityProvider.h"
 #include "Core/Time/MonotonicClock.h"
 
@@ -156,7 +157,8 @@ namespace sw
             return;
         {
             // 채널 목록은 다시 연결할 때 잠금 아래에서 다시 구독하며 읽는다(`ensureSubscribeConnection`) — 고치는 것도 잠금 아래에서 한다.
-            ScopedLock<mutex> lock{ _mutex };
+            const ScopedDeferredLog deferredLog;
+            ScopedLock<mutex>       lock{ _mutex };
             // 이미 구독한 채널이면 정렬 · 중복 제거 뒤 개수가 그대로다(채널은 수십 이하, 다시 구독하는 순서는 상관없다).
             const size_t channelCount = _listChannel.size();
             _listChannel.emplace_back( channel );
@@ -178,7 +180,8 @@ namespace sw
     void RESPEphemeralStore::unsubscribe( string_view channel )
     {
         {
-            ScopedLock<mutex> lock{ _mutex };
+            const ScopedDeferredLog deferredLog;
+            ScopedLock<mutex>       lock{ _mutex };
             if ( VectorUtil::removeFirst( _listChannel, channel ) == 0 )
                 return;
             if ( _subscribeConnection.getState() == RESPConnectionState::Closed )
@@ -195,7 +198,8 @@ namespace sw
             pollTransport();
             vector<RESPValue> listValue;
             {
-                ScopedLock<mutex> lock{ _mutex };
+                const ScopedDeferredLog deferredLog;
+                ScopedLock<mutex>       lock{ _mutex };
                 if ( _listChannel.empty() == false )
                     maintainSubscribeConnection();
                 _subscribeConnection.takePushValues( listValue );
@@ -238,14 +242,16 @@ namespace sw
     {
         (void)remote;
         (void)bAccepted;
-        ScopedLock<mutex> lock{ _mutex };
+        const ScopedDeferredLog deferredLog;
+        ScopedLock<mutex>       lock{ _mutex };
         if ( _commandConnection.handleOpened( *_transport.get(), handle ) == false )
             (void)_subscribeConnection.handleOpened( *_transport.get(), handle );
     }
 
     void RESPEphemeralStore::onStreamReceived( StreamConnectionHandle handle, const uint8* pData, int32 size )
     {
-        ScopedLock<mutex> lock{ _mutex };
+        const ScopedDeferredLog deferredLog;
+        ScopedLock<mutex>       lock{ _mutex };
         if ( _commandConnection.handleReceived( *_transport.get(), handle, pData, size ) )
             return;
         if ( _subscribeConnection.handleReceived( *_transport.get(), handle, pData, size ) )
@@ -254,7 +260,8 @@ namespace sw
 
     void RESPEphemeralStore::onStreamClosed( StreamConnectionHandle handle, StreamCloseReason reason )
     {
-        ScopedLock<mutex> lock{ _mutex };
+        const ScopedDeferredLog deferredLog;
+        ScopedLock<mutex>       lock{ _mutex };
         if ( _commandConnection.handleClosed( handle, reason ) == false )
             (void)_subscribeConnection.handleClosed( handle, reason );
     }
@@ -405,7 +412,8 @@ namespace sw
             return;
         bool bSent = false;
         {
-            ScopedLock<mutex> lock{ _mutex };
+            const ScopedDeferredLog deferredLog;
+            ScopedLock<mutex>       lock{ _mutex };
             bSent = _commandConnection.sendCommand( *_transport.get(), command, RESPCommandTag{ operation._reply._requestID, step } );
         }
         if ( bSent )
@@ -707,7 +715,8 @@ namespace sw
             return;
         vector<RESPReplyRecord> listRecord;
         {
-            ScopedLock<mutex> lock{ _mutex };
+            const ScopedDeferredLog deferredLog;
+            ScopedLock<mutex>       lock{ _mutex };
             _commandConnection.abort( *_transport.get(), "request timed out" );
             _commandConnection.takeReplyRecords( listRecord );
         }

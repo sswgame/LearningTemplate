@@ -234,7 +234,7 @@ namespace sw
         uint64 _uploadStagingBytes{ 0 };
         /// @brief 쓰지 않은 업로드 스테이징 블록을 놓기까지의 프레임 수입니다(`EngineConfig::_rhi._uploadStagingIdleFrames`). 블록을 나눠 쓰는 백엔드(Vulkan)는 0 이면 초기화를 거절한다.
         uint32 _uploadStagingIdleFrames{ 0 };
-        /// @brief 파이프라인 캐시 저장 주기(초)입니다(`EngineConfig::_rhi._pipelineCacheSaveIntervalSeconds`). 캐시를 디스크에 두는 백엔드(Vulkan)는 0 이하면 초기화를 거절한다. 리플렉션하지 않는다.
+        /// @brief 파이프라인 캐시 저장 주기(초)입니다(`EngineConfig::_rhi._pipelineCacheSaveIntervalSeconds`). 캐시를 디스크에 두는 백엔드(Vulkan · DX12)는 0 이하면 초기화를 거절한다. 리플렉션하지 않는다.
         float64 _pipelineCacheSaveIntervalSeconds{ 0.0 };
         uint8   _bSoftwareAdapter    : 1; ///< 소프트웨어 래스터라이저로 띄운다(DX12, DX11 WARP, Vulkan CPU 디바이스). CI 러너와 같은 조건을 재현하는 진단 스위치다.
         uint8   _bPreferMinimumPower : 1; ///< 하드웨어 어댑터를 저전력 순서로 고른다(하이브리드 노트북의 내장 GPU — 언리얼 -preferIntel 자리). 기본은 고성능 순서(제조사와 무관)

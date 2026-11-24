@@ -70,6 +70,7 @@ namespace sw
     {
     public:
         REFLECT_BODY();
+        SW_REGISTERED_COMPONENT( WaterBodyComponent );
 
         static constexpr TickGroup kTickGroup = TickGroup::PostUpdate;
 

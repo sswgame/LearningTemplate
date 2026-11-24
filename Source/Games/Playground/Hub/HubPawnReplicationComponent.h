@@ -123,6 +123,7 @@ namespace sw
     {
     public:
         REFLECT_BODY();
+        SW_REGISTERED_COMPONENT( HubPawnReplicationComponent );
 
         /** @brief 소유자 상태(`HubPawnState`)의 복제 스키마를 핸드셰이크에 올리는 번호입니다. 허브의 MMO 엔티티 종류(`HubEntityType`)와 겹치지 않는다. */
         static constexpr uint32 kOwnerStateSchemaID = 4;
@@ -137,9 +138,6 @@ namespace sw
 
         HubPawnReplicationComponent();
         ~HubPawnReplicationComponent() override;
-
-        void onRegister( GameObjectManager& manager ) override;
-        void onUnregister( GameObjectManager& manager ) override;
 
         void onEndPlay() override;
         /** @brief 넷 걸음을 틱 뒤(게임 스레드)로 미룹니다 — 여러 폰의 물리 이동과 스폰이다(`GameModeComponent` 의 규칙과 같은 자리). */

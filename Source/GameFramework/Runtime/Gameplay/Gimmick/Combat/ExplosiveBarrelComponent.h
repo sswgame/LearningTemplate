@@ -3,9 +3,9 @@
  * @brief 피해가 쌓이면 터져 반경 안에 피해를 주는 폭발 드럼통(연쇄 폭발)입니다.
  */
 #pragma once
+#include "Core/Foundation/Constants.h"
 #include "Core/Foundation/Types.h"
 #include "Core/Math/Math.h"
-#include "Core/Time/FixedStepTimer.h"
 
 #include "Engine/Object/Component/Component.h"
 #include "Engine/Reflection/ReflectionMacros.h"
@@ -27,12 +27,12 @@ namespace sw
     {
     public:
         REFLECT_BODY();
+        SW_REGISTERED_COMPONENT( ExplosiveBarrelComponent );
+
+        static constexpr float32 kTickInterval = constant::time::kDefaultFixedStepSeconds; ///< 고정 걸음마다 한 번 — 지연 · 간격을 걸음 수로 센다(프레임 시간과 무관하게 같은 걸음)
 
         ExplosiveBarrelComponent();
         virtual ~ExplosiveBarrelComponent() override = default;
-
-        void onRegister( GameObjectManager& manager ) override;
-        void onUnregister( GameObjectManager& manager ) override;
 
         void    onTick( TickContext& context ) override;
         void    stepOnce();
@@ -62,8 +62,7 @@ namespace sw
         PROPERTY( RuntimeState, Category = "Barrel", DisplayName = "Exploded", Tooltip = "Runtime" )
         bool _bExploded;
 
-        int32          _fuseStepsLeft; ///< 도화선이 다 타기까지 남은 스텝 수(-1 이면 아직 세지 않음)
-        FixedStepTimer _clock;
-        float3         _blastCenter; ///< 터진 자리 — 틱 뒤 `applyRadialDamage` 가 읽는다(틱 뒤 일은 캡처 없이 핸들로 다시 찾는다)
+        int32  _fuseStepsLeft; ///< 도화선이 다 타기까지 남은 스텝 수(-1 이면 아직 세지 않음)
+        float3 _blastCenter;   ///< 터진 자리 — 틱 뒤 `applyRadialDamage` 가 읽는다(틱 뒤 일은 캡처 없이 핸들로 다시 찾는다)
     };
 } // namespace sw

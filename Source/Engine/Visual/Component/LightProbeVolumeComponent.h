@@ -32,6 +32,7 @@ namespace sw
     {
     public:
         REFLECT_BODY();
+        SW_REGISTERED_COMPONENT( LightProbeVolumeComponent );
 
         /** @brief 기본 볼륨 값으로 만듭니다. */
         LightProbeVolumeComponent();
@@ -110,10 +111,6 @@ namespace sw
         /** @brief 베이크 데이터를 바꿀 때마다 오르는 번호입니다. 컴포넌트 번호와 함께 SH9 내용을 가린다 — 같으면 프로브 버퍼 원소를 다시 펼치지 않는다(`LightProbeElementBuilder`). */
         uint32 getProbeDataRevision() const { return _probeDataRevision; }
 
-        /** @brief 씬에 붙을 때 볼륨 레지스트리에 자기를 등록합니다. */
-        void onRegister( GameObjectManager& manager ) override;
-        /** @brief 씬에서 떨어질 때 등록을 해제합니다. */
-        void onUnregister( GameObjectManager& manager ) override;
         /** @brief 씬 · 프리팹에서 읽은 뒤 베이크 데이터를 읽습니다. */
         void onPostLoad() override;
         /** @brief 경로가 바뀌면 베이크 데이터를 다시 읽습니다. */

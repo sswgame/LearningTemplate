@@ -1238,30 +1238,102 @@ namespace sw
     JoltCharacterSnapshotCollision::JoltCharacterSnapshotCollision( const JoltObjectLayerPairFilter& layerFilter )
         : _pLayerFilter{ &layerFilter }
         , _listEntry{}
+        , _mapHandle{}
+        , _grid{ kCellSize }
+        , _nextSequence{ 0 }
     {
     }
 
-    void JoltCharacterSnapshotCollision::add( const JPH::CharacterVirtual* pCharacter, const JPH::CharacterVirtual* pMirror, uint8 layer )
+    void JoltCharacterSnapshotCollision::add( const JPH::CharacterVirtual* pCharacter, JPH::Ref<JPH::CharacterVirtual> pMirror, uint8 layer )
     {
-        _listEntry.push_back( Entry{ pCharacter, pMirror, layer } );
-    }
-
-    uint8 JoltCharacterSnapshotCollision::findLayer( const JPH::CharacterVirtual* pCharacter ) const
-    {
-        for ( const Entry& entry : _listEntry )
-        {
-            if ( entry._pCharacter == pCharacter )
-                return entry._layer;
-        }
-        return 0;
+        const SlotHandle gridHandle = SlotHandle::make( _nextSequence++, 1 );
+        _listEntry.push_back( Entry{ pCharacter, std::move( pMirror ), gridHandle, layer } );
+        _mapHandle[pCharacter] = gridHandle;
+        refreshGrid( _listEntry.back() );
     }
 
     void JoltCharacterSnapshotCollision::remove( const JPH::CharacterVirtual* pCharacter )
     {
-        const auto it = std::find_if( _listEntry.begin(), _listEntry.end(), [pCharacter]( const Entry& entry )
-        { return entry._pCharacter == pCharacter; } );
-        if ( it != _listEntry.end() )
-            _listEntry.erase( it );
+        const Entry* pEntry = findEntry( pCharacter );
+        if ( pEntry == nullptr )
+            return;
+        _grid.remove( pEntry->_gridHandle );
+        _mapHandle.erase( pCharacter );
+        _listEntry.erase( _listEntry.begin() + ( pEntry - _listEntry.data() ) );
+    }
+
+    void JoltCharacterSnapshotCollision::clear()
+    {
+        _listEntry.clear();
+        _mapHandle.clear();
+        _grid.clear();
+    }
+
+    const JoltCharacterSnapshotCollision::Entry* JoltCharacterSnapshotCollision::findEntry( const JPH::CharacterVirtual* pCharacter ) const
+    {
+        const auto it = _mapHandle.find( pCharacter );
+        return it != _mapHandle.end() ? &getEntry( it->second ) : nullptr;
+    }
+
+    const JoltCharacterSnapshotCollision::Entry& JoltCharacterSnapshotCollision::getEntry( SlotHandle gridHandle ) const
+    {
+        const auto it = std::lower_bound( _listEntry.begin(), _listEntry.end(), gridHandle, []( const Entry& entry, SlotHandle handle )
+        { return entry._gridHandle < handle; } );
+        SW_ASSERT( it != _listEntry.end() && it->_gridHandle == gridHandle );
+        return *it;
+    }
+
+    void JoltCharacterSnapshotCollision::refreshGrid( const Entry& entry )
+    {
+        JPH::AABox bounds = entry._pMirror->GetShape()->GetWorldSpaceBounds( entry._pMirror->GetCenterOfMassTransform().ToMat44(), JPH::Vec3::sOne() );
+        bounds.ExpandBy( JPH::Vec3::sReplicate( entry._pMirror->GetCharacterPadding() ) );
+        _grid.update( entry._gridHandle, bounds.mMin.GetX(), bounds.mMin.GetZ(), bounds.mMax.GetX(), bounds.mMax.GetZ() );
+    }
+
+    void JoltCharacterSnapshotCollision::commitPose( const JPH::CharacterVirtual& character )
+    {
+        const Entry* pEntry = findEntry( &character );
+        if ( pEntry == nullptr )
+            return;
+        JPH::CharacterVirtual& mirror = *pEntry->_pMirror;
+        mirror.SetPosition( character.GetPosition() );
+        mirror.SetRotation( character.GetRotation() );
+        mirror.SetLinearVelocity( character.GetLinearVelocity() );
+        refreshGrid( *pEntry );
+    }
+
+    void JoltCharacterSnapshotCollision::setPosition( const JPH::CharacterVirtual& character, JPH::RVec3Arg position )
+    {
+        const Entry* pEntry = findEntry( &character );
+        if ( pEntry == nullptr )
+            return;
+        JPH::CharacterVirtual& mirror = *pEntry->_pMirror;
+        mirror.SetPosition( position );
+        refreshGrid( *pEntry );
+    }
+
+    void JoltCharacterSnapshotCollision::commitShape( const JPH::CharacterVirtual& character, const JPH::BroadPhaseLayerFilter& broadPhaseFilter,
+                                                      const JPH::ObjectLayerFilter& objectLayerFilter, const JPH::BodyFilter& bodyFilter, const JPH::ShapeFilter& shapeFilter,
+                                                      JPH::TempAllocator& allocator )
+    {
+        const Entry* pEntry = findEntry( &character );
+        if ( pEntry == nullptr )
+            return;
+        JPH::CharacterVirtual& mirror = *pEntry->_pMirror;
+        (void)mirror.SetShape( character.GetShape(), FLT_MAX, broadPhaseFilter, objectLayerFilter, bodyFilter, shapeFilter, allocator );
+        refreshGrid( *pEntry );
+    }
+
+    void JoltCharacterSnapshotCollision::collectCandidates( const JPH::AABox& bounds, CandidateList& outListCandidate ) const
+    {
+        const AABB2D queryBounds{
+            float2{bounds.mMin.GetX() - kQuerySlack, bounds.mMin.GetZ() - kQuerySlack},
+            float2{bounds.mMax.GetX() + kQuerySlack, bounds.mMax.GetZ() + kQuerySlack}
+        };
+        _grid.visitAABB( queryBounds, [&outListCandidate]( SlotHandle handle )
+        { outListCandidate.push_back( handle ); } );
+        // 여러 셀에 걸친 상대는 여러 번 온다 — 핸들 순(= 올린 차례)으로 정렬하고 겹친 것을 지운다.
+        VectorUtil::sortUnique( outListCandidate );
     }
 
     void JoltCharacterSnapshotCollision::CollideCharacter( const JPH::CharacterVirtual* pCharacter, JPH::RMat44Arg centerOfMassTransform,
@@ -1273,10 +1345,16 @@ namespace sw
         const JPH::Shape* const   pShape1    = pCharacter->GetShape();
         JPH::CollideShapeSettings settings   = collideShapeSettings;
         const JPH::AABox          bounds1    = pShape1->GetWorldSpaceBounds( transform1, JPH::Vec3::sOne() );
-        const uint8               layer1     = findLayer( pCharacter );
+        const Entry*              pSelf      = findEntry( pCharacter );
+        const uint8               layer1     = pSelf != nullptr ? pSelf->_layer : 0;
         const CollisionLayers&    layers     = _pLayerFilter->getLayers();
-        for ( const Entry& entry : _listEntry )
+        JPH::AABox                query      = pShape1->GetWorldSpaceBounds( centerOfMassTransform.ToMat44(), JPH::Vec3::sOne() );
+        query.ExpandBy( JPH::Vec3::sReplicate( collideShapeSettings.mMaxSeparationDistance ) ); // 상대의 패딩은 격자 상자에 들어 있다
+        CandidateList listCandidate;
+        collectCandidates( query, listCandidate );
+        for ( const SlotHandle candidate : listCandidate )
         {
+            const Entry& entry = getEntry( candidate );
             if ( entry._pCharacter == pCharacter || ioCollector.ShouldEarlyOut() || layers.shouldCollide( layer1, entry._layer ) == false )
                 continue;
             const JPH::Mat44 transform2 = entry._pMirror->GetCenterOfMassTransform().PostTranslated( -baseOffset ).ToMat44();
@@ -1287,7 +1365,7 @@ namespace sw
             bounds2.ExpandBy( JPH::Vec3::sReplicate( settings.mMaxSeparationDistance ) );
             if ( bounds1.Overlaps( bounds2 ) == false )
                 continue;
-            ioCollector.SetUserData( reinterpret_cast<uint64>( entry._pMirror ) );
+            ioCollector.SetUserData( reinterpret_cast<uint64>( entry._pMirror.GetPtr() ) );
             JPH::CollisionDispatch::sCollideShapeVsShape( pShape1, pShape2, JPH::Vec3::sOne(), JPH::Vec3::sOne(), transform1, transform2, JPH::SubShapeIDCreator(),
                                                           JPH::SubShapeIDCreator(), settings, ioCollector );
         }
@@ -1304,10 +1382,20 @@ namespace sw
         const JPH::Vec3        extents      = shapeCast.mShapeWorldBounds.GetExtent() + JPH::Vec3::sReplicate( shapeCastSettings.mExtraConvexRadius );
         JPH::ShapeCastSettings castSettings = shapeCastSettings;
         const JPH::ShapeFilter shapeFilter;
-        const uint8            layer1 = findLayer( pCharacter );
+        const Entry*           pSelf  = findEntry( pCharacter );
+        const uint8            layer1 = pSelf != nullptr ? pSelf->_layer : 0;
         const CollisionLayers& layers = _pLayerFilter->getLayers();
-        for ( const Entry& entry : _listEntry )
+        // 쓸고 지나가는 상자 전체를 격자에서 찾는다(상대의 패딩은 격자 상자에 들어 있다).
+        JPH::AABox query = pCharacter->GetShape()->GetWorldSpaceBounds( centerOfMassTransform.ToMat44(), JPH::Vec3::sOne() );
+        query.ExpandBy( JPH::Vec3::sReplicate( shapeCastSettings.mExtraConvexRadius ) );
+        JPH::AABox swept = query;
+        swept.Translate( direction );
+        query.Encapsulate( swept );
+        CandidateList listCandidate;
+        collectCandidates( query, listCandidate );
+        for ( const SlotHandle candidate : listCandidate )
         {
+            const Entry& entry = getEntry( candidate );
             if ( entry._pCharacter == pCharacter || ioCollector.ShouldEarlyOut() || layers.shouldCollide( layer1, entry._layer ) == false )
                 continue;
             const JPH::Mat44 transform2 = entry._pMirror->GetCenterOfMassTransform().PostTranslated( -baseOffset ).ToMat44();
@@ -1319,7 +1407,7 @@ namespace sw
             bounds2.ExpandBy( extents + JPH::Vec3::sReplicate( padding ) );
             if ( JPH::RayAABoxHits( origin, direction, bounds2.mMin, bounds2.mMax ) == false )
                 continue;
-            ioCollector.SetUserData( reinterpret_cast<uint64>( entry._pMirror ) );
+            ioCollector.SetUserData( reinterpret_cast<uint64>( entry._pMirror.GetPtr() ) );
             JPH::CollisionDispatch::sCastShapeVsShapeWorldSpace( shapeCast, castSettings, pShape2, JPH::Vec3::sOne(), shapeFilter, transform2, JPH::SubShapeIDCreator(),
                                                                  JPH::SubShapeIDCreator(), ioCollector );
         }
@@ -1812,9 +1900,9 @@ namespace sw
         // 다른 캐릭터가 보는 사본 — 같은 셰이프 · 패딩 · id(접촉의 상대 id 가 캐릭터의 것이 된다), 속 바디는 없다(감사 S-8).
         JPH::CharacterVirtualSettings mirrorSettings = settings;
         mirrorSettings.mInnerBodyShape               = nullptr;
-        record._pMirror                              = JoltUtil::createObject<JPH::CharacterVirtual>( &mirrorSettings, JoltUtil::toJolt( desc._position ), JPH::Quat::sIdentity(), desc._userData, &_system );
+        JPH::Ref<JPH::CharacterVirtual> pMirror      = JoltUtil::createObject<JPH::CharacterVirtual>( &mirrorSettings, JoltUtil::toJolt( desc._position ), JPH::Quat::sIdentity(), desc._userData, &_system );
         // 캐릭터끼리 막는다(감사 S-7). 실패해 돌아가는 길 뒤에 올린다 — 목록은 날 포인터라 지운 캐릭터를 남기면 안 된다.
-        _characterSnapshot.add( record._pCharacter.GetPtr(), record._pMirror.GetPtr(), desc._layer );
+        _characterSnapshot.add( record._pCharacter.GetPtr(), std::move( pMirror ), desc._layer );
         record._pCharacter->SetCharacterVsCharacterCollision( &_characterSnapshot );
         record._pCharacter->SetListener( &_characterContactListener );
         return PhysicsCharacterHandle::fromSlot( _characters.insert( std::move( record ) ) );
@@ -1948,10 +2036,7 @@ namespace sw
         state._groundNormal    = state._bGrounded ? JoltUtil::toEngine( virtualCharacter.GetGroundNormal() ) : float3{};
         state._groundBody      = state._bGrounded ? findHandle( virtualCharacter.GetGroundBodyID() ) : PhysicsBodyHandle{};
         // 다른 캐릭터가 이제 이 자리를 본다.
-        JPH::CharacterVirtual& mirror = *record._pMirror;
-        mirror.SetPosition( virtualCharacter.GetPosition() );
-        mirror.SetRotation( virtualCharacter.GetRotation() );
-        mirror.SetLinearVelocity( virtualCharacter.GetLinearVelocity() );
+        _characterSnapshot.commitPose( virtualCharacter );
     }
 
     void JoltPhysicsScene::moveCharacters( span<const PhysicsCharacterMove3D> listMove, float32 deltaTime )
@@ -2031,8 +2116,8 @@ namespace sw
         JPH::CharacterVirtual&                              virtualCharacter = *pRecord->_pCharacter;
         (void)virtualCharacter.SetShape( pShape.GetPtr(), FLT_MAX, _system.GetDefaultBroadPhaseLayerFilter( objectLayer ), _system.GetDefaultLayerFilter( objectLayer ),
                                          bodyFilter, shapeFilter, _tempAllocator );
-        (void)pRecord->_pMirror->SetShape( pShape.GetPtr(), FLT_MAX, _system.GetDefaultBroadPhaseLayerFilter( objectLayer ), _system.GetDefaultLayerFilter( objectLayer ),
-                                           bodyFilter, shapeFilter, _tempAllocator );
+        _characterSnapshot.commitShape( virtualCharacter, _system.GetDefaultBroadPhaseLayerFilter( objectLayer ), _system.GetDefaultLayerFilter( objectLayer ), bodyFilter,
+                                        shapeFilter, _tempAllocator );
         pRecord->_desc._radius     = radius;
         pRecord->_desc._halfHeight = halfHeight;
         // 속 바디는 같은 바디에 셰이프만 간다 — 핸들이 그대로라 접촉 쌍도 이어진다(`setBodyShape` 와 같다).
@@ -2051,7 +2136,7 @@ namespace sw
         if ( pRecord == nullptr || pRecord->_pCharacter == nullptr )
             return;
         pRecord->_pCharacter->SetPosition( JoltUtil::toJolt( position ) );
-        pRecord->_pMirror->SetPosition( JoltUtil::toJolt( position ) );
+        _characterSnapshot.setPosition( *pRecord->_pCharacter, JoltUtil::toJolt( position ) );
         pRecord->_state._position   = position;
         pRecord->_state._groundBody = PhysicsBodyHandle{};
     }

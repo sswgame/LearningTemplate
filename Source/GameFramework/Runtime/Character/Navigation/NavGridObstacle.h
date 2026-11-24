@@ -11,7 +11,7 @@ namespace sw
 {
     class NavGrid;
     class RigidBodyComponent;
-    class WorldOrigin;
+    struct WorldOrigin;
 
     /** @struct NavGridObstacle @brief 파일 머리말 참고. */
     struct SW_GF_API NavGridObstacle

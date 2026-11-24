@@ -32,7 +32,7 @@
 		<View mode="Fixed" offset="17,9,17" aim="Target" />
 		<Lens fieldOfViewY="49.999734" nearPlane="0.1" farPlane="200" />
 		<Framing compose="true" deadZone="0.15,0.15" softZone="0.7,0.7" damping="0.5" />
-		<Noise positionAmplitude="0,0,0" rotationAmplitude="0.002618,0.0043633,0" frequency="0.4" seed="3" />
+		<Noise positionAmplitude="0,0,0" rotationAmplitude="0.15,0.25,0" frequency="0.4" seed="3" />
 	</Preset>
 	<!--
 		돌리 — 아레나 북쪽 레일 위에서 플레이어에 가장 가까운 점에 서서 본다(Cinemachine Spline Dolly). 35 mm 렌즈에 8° 더치, 2.39 레터박스.

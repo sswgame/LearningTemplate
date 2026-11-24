@@ -36,9 +36,7 @@ namespace sw
     {
     public:
         REFLECT_BODY();
-
-        void onRegister( GameObjectManager& manager ) override;
-        void onUnregister( GameObjectManager& manager ) override;
+        SW_REGISTERED_COMPONENT( WesternWitnessComponent );
 
         WesternWitnessComponent();
         ~WesternWitnessComponent() override = default;
@@ -66,9 +64,7 @@ namespace sw
     {
     public:
         REFLECT_BODY();
-
-        void onRegister( GameObjectManager& manager ) override;
-        void onUnregister( GameObjectManager& manager ) override;
+        SW_REGISTERED_COMPONENT( WesternDeedComponent );
 
         WesternDeedComponent();
         ~WesternDeedComponent() override = default;

@@ -29,7 +29,7 @@ namespace sw
                                 ( encodeUnorm8( layer._color._w ) << 24 );
         _arrDword[kRootOffset] = encodeUnorm16( layer._offset._x, 0.0f, 1.0f ) | ( encodeUnorm16( layer._offset._y, 0.0f, 1.0f ) << 16 );
         _arrDword[kRootScale]  = encodeUnorm16( layer._scale._x, kMinScale, kMaxScale ) | ( encodeUnorm16( layer._scale._y, kMinScale, kMaxScale ) << 16 );
-        uint32 rotationFlags   = encodeUnorm16( layer._rotationDegrees, -kMaxRotation, kMaxRotation ) | ( static_cast<uint32>( layer._blend & kBlendMask ) << kBlendShift );
+        uint32 rotationFlags   = encodeUnorm16( layer._rotationRadians * MathUtil::kRadianToDegree, -kMaxRotation, kMaxRotation ) | ( static_cast<uint32>( layer._blend & kBlendMask ) << kBlendShift );
         if ( layer._bPlaced == SW_TRUE )
             rotationFlags |= kFlagPlaced;
         if ( layer._bMirror == SW_TRUE )

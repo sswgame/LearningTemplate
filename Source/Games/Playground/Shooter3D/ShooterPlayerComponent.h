@@ -72,6 +72,7 @@ namespace sw
     {
     public:
         REFLECT_BODY();
+        SW_REGISTERED_COMPONENT( ShooterPlayerComponent );
 
         static constexpr int32 kWeaponCount = 3;
 
@@ -83,9 +84,6 @@ namespace sw
 
         ShooterPlayerComponent();
         virtual ~ShooterPlayerComponent() override;
-
-        void onRegister( GameObjectManager& manager ) override;
-        void onUnregister( GameObjectManager& manager ) override;
 
         void onBeginPlay() override;
         void onEndPlay() override;

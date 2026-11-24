@@ -27,9 +27,7 @@ namespace sw
     {
     public:
         REFLECT_BODY();
-
-        void onRegister( GameObjectManager& manager ) override;
-        void onUnregister( GameObjectManager& manager ) override;
+        SW_REGISTERED_COMPONENT( FollowOwnerAIControllerComponent );
 
         FollowOwnerAIControllerComponent();
         ~FollowOwnerAIControllerComponent() override = default;

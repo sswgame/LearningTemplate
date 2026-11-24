@@ -202,7 +202,7 @@ namespace sw
         void updateUnits( float32 deltaTime );
         void updateUnitViews();
         void updatePlayerRespawn( float32 deltaTime );
-        void logStatus( float32 deltaTime );
+        void logStatus() const override;
         /** @brief 이번 스냅샷으로 투사체를 한 걸음 돌리고, 맞은 유닛에 실은 스펙을 틱 뒤로 미뤄 겁니다. 끝난 탄의 짐을 지웁니다. */
         void stepProjectiles( float32 deltaTime );
         /** @brief 탄 @p projectileID 의 짐을 지웁니다. */
@@ -262,7 +262,6 @@ namespace sw
         GameObjectHandle        _playerObject;       ///< 이번 프레임 스냅샷의 플레이어(`getPlayerObject`).
         GameObjectHandle        _autoBattleObject;   ///< 자동 전투 AI 조종자의 오브젝트(처음 켤 때 스폰한다).
         float32                 _playerRespawnTimer; ///< 0 이상이면 플레이어가 다시 등장하기까지 남은 시간.
-        float32                 _statusLogTimer;
         PROPERTY( RuntimeState )
         uint32 _wave;
         PROPERTY( RuntimeState )

@@ -643,7 +643,7 @@ namespace sw
         ComponentStableKey::assignFreshLocalID( pComp );
     }
 
-    void GameObject::attachCreatedComponent( Component* pComp, const TypeInfo* pTypeInfo, ComponentPoolEntry* pPoolEntry, bool bOverridesTick, TickGroup tickGroup )
+    void GameObject::attachCreatedComponent( Component* pComp, const TypeInfo* pTypeInfo, ComponentPoolEntry* pPoolEntry, bool bOverridesTick, TickGroup tickGroup, float32 tickInterval )
     {
         // id 는 매니저의 번호 공간(`ObjectIDAllocator` — 엔진의 씬들이 나눠 쓴다)이 준다. 상태를 되돌리는 로드 중이면 원래 ID 를 복원하고 공간을 그 뒤로 민다.
         // 다른 일(이름 · 기본값 · 등록)보다 먼저여야 그 안에서 잡는 핸들(서브틱 등)도 이 ID 로 잡힌다.
@@ -655,7 +655,8 @@ namespace sw
         // 주 틱의 기본은 "onTick 을 오버라이드했는가"다(유니티의 Update). 오버라이드한 타입은 생성자의 값(기본은 켜짐, 끄면 꺼짐)을 그대로 둔다.
         if ( bOverridesTick == false )
             pComp->_bCanEverTick = SW_FALSE;
-        pComp->_tickGroup = tickGroup;
+        pComp->_tickGroup    = tickGroup;
+        pComp->_tickInterval = tickInterval;
         pComp->setOwner( this );
         pComp->_pPoolEntry = pPoolEntry;
         pComp->_pTypeInfo  = pTypeInfo; // 타입은 여기서 한 번 정해진다. 이름(아래)은 타입과 무관하다

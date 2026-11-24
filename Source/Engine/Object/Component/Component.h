@@ -155,6 +155,7 @@ namespace sw
     struct SubTickInfo
     {
         uint32                      _subTickID;
+        float32                     _interval; ///< 주기(초). 0 이면 매 프레임
         TickGroup                   _group;
         TickPhase                   _phase;
         uint8                       _priority;
@@ -164,6 +165,7 @@ namespace sw
 
         SubTickInfo()
             : _subTickID{ 0 }
+            , _interval{ 0.0f }
             , _group{ TickGroup::DuringPhysics }
             , _phase{ TickPhase::Normal }
             , _priority{ 0 }
@@ -175,6 +177,7 @@ namespace sw
 
         SubTickInfo( const SubTickInfo& other )
             : _subTickID{ other._subTickID }
+            , _interval{ other._interval }
             , _group{ other._group }
             , _phase{ other._phase }
             , _priority{ other._priority }
@@ -186,6 +189,7 @@ namespace sw
 
         SubTickInfo( SubTickInfo&& other ) noexcept
             : _subTickID{ other._subTickID }
+            , _interval{ other._interval }
             , _group{ other._group }
             , _phase{ other._phase }
             , _priority{ other._priority }
@@ -204,6 +208,7 @@ namespace sw
         SubTickInfo& operator=( SubTickInfo&& other ) noexcept
         {
             _subTickID = other._subTickID;
+            _interval  = other._interval;
             _group     = other._group;
             _phase     = other._phase;
             _priority  = other._priority;
@@ -356,6 +361,13 @@ namespace sw
          *          (뒤 그룹에서 남을 읽던 컴포넌트가 같은 그룹이 되어 병렬 읽기 검사가 멈췄다). 서브틱의 그룹은 등록할 때 정한다(`registerSubTick`).
          */
         static constexpr TickGroup kTickGroup = TickGroup::DuringPhysics;
+        /**
+         * @brief 주 틱(`onTick`)의 주기(초)입니다 — 파생 형식이 같은 이름으로 가립니다(`static constexpr float32 kTickInterval = 0.2f;`). 0 이면 매 프레임입니다.
+         * @details 붙일 때 형식에서 한 번 읽고 바뀌지 않는다(`kTickGroup` 과 같은 길). 틱 시간은 찬 주기 수 × 주기이고 `TickContext::getIntervalCount` 가 그 수다.
+         *          차례 · 위상의 셈은 `TickInterval.h` 한 곳이다 — 컴포넌트가 남은 시간을 손으로 세지 않는다. 언리얼 `PrimaryComponentTick.TickInterval` 자리다
+         *          (유니티 `Update` · Godot `_process` 는 주기가 없어 손 타이머를 든다). 주기가 인스턴스마다 다르면 서브틱(`registerSubTick`)의 주기를 쓴다.
+         */
+        static constexpr float32 kTickInterval = 0.0f;
 
         /** @brief 기본 컴포넌트를 만듭니다. */
         Component();
@@ -406,7 +418,7 @@ namespace sw
         // 겹침 · 접촉 · 맞음 · 애니메이션 알림은 가상 함수가 아니다 — 듣는 컴포넌트만 `onRegister` 에서 `GameObjectEvents::listen` 으로 구독한다(`GameObjectEvents.h`).
         // 모든 컴포넌트에 빈 가상 호출을 훑던 유니티식 메시지 대신 언리얼 액터 델리게이트 자리를 골랐다(듣지 않는 컴포넌트에는 비용이 없다).
         /**
-         * @brief 소유 GameObject 에 붙은 직후 불립니다.
+         * @brief 소유 GameObject 에 붙은 직후 불립니다. 형식이 표시한 씬 레지스트리 목록(`SW_REGISTERED_COMPONENT`)과 내보낸 인터페이스 칸에는 이미 올라 있다.
          * @details 컴포넌트가 어느 레지스트리에 들어가야 하는지는 컴포넌트 자신이 안다. GameObject 가 `castTo` 로
          *          타입을 골라 대신 등록해 주면, 레지스트리가 하나 늘 때마다 GameObject 를 고쳐야 하고
          *          GameObject 가 MeshComponent 같은 하위 타입을 알게 된다.
@@ -415,13 +427,15 @@ namespace sw
          *        파괴 시점에는 그 조회가 엉뚱한 씬을 가리키기 때문이다.
          */
         virtual void onRegister( GameObjectManager& manager ) { (void)manager; }
+        /** @brief 씬 레지스트리 목록 안의 칸입니다(`ComponentRegistry::getAll<T>( 칸 )`). 등록된 동안 바뀌지 않아야 한다 — 한 목록을 종류로 나누는 형식(빛)만 재정의한다. */
+        virtual uint32 getRegistryChannel() const { return 0; }
         /**
          * @brief 아직 등록하지 않았으면 `onRegister` 를 부르고 "등록됨" 으로 기록합니다(게임 스레드). 직접 부르지 말고 매니저(`GameObjectManager::registerComponent`)를 거친다.
          * @details 씬을 짓는 배치(`Scene::instantiate`) 안에서는 매니저가 배치 끝까지 미룬다 — 비동기 로드는 씬을 받는 게임 스레드까지(언리얼: 로딩 스레드는
          *          직렬화만, `OnRegister` · `PostLoad` 는 게임 스레드). 훅은 늘 게임 스레드에서 돈다.
          */
         void dispatchRegister( GameObjectManager& manager );
-        /** @brief 등록했으면 `onUnregister` 를 부르고 "등록됨" 을 지웁니다. 등록하기 전에 해체되면(미룬 등록을 받기 전에 씬을 버림) 아무것도 하지 않습니다. */
+        /** @brief 등록했으면 씬 레지스트리 목록에서 내린 뒤 `onUnregister` 를 부르고 "등록됨" 을 지웁니다. 등록하기 전에 해체되면(미룬 등록을 받기 전에 씬을 버림) 아무것도 하지 않습니다. */
         void dispatchUnregister( GameObjectManager& manager );
         /** @brief `onRegister` 가 불렸고 `onUnregister` 는 아직 불리지 않았으면 true 입니다. */
         bool isRegistered() const { return _bRegistered == SW_TRUE; }
@@ -499,6 +513,7 @@ namespace sw
 
         /**
          * @brief 서브틱을 등록합니다(TickGroup, Phase, Priority 를 지정).
+         * @param interval 주기(초)입니다. 0 이면 매 프레임, 음수나 NaN 이면 오류를 남기고 등록하지 않습니다. 차례의 셈은 주 틱의 주기(`kTickInterval`)와 같습니다.
          * @details 우선순위는 한 단계 안에서의 순서(0..`kMaxTickPriority`)이고, 넘으면 상한으로 제한한다(경고). 그룹이 유효하지 않으면 등록하지 않고 빈 핸들을 반환한다.
          *
          *          **서브틱 목록(`_listSubTick`)을 바꾸는 네 함수(등록, 해제, 선행 조건, 활성)는 틱 중이면 변경을 틱 직후로 미룬다**(구조 변경 큐이며,
@@ -508,7 +523,7 @@ namespace sw
          *          실행 여부(서브틱 1~63 은 원자 마스크, 64 번부터는 `SubTickInfo::_bRunnable`)는 틱 중에 바꿀 수 있도록 원자값이다. 해제하거나 끄면 이 값을 바로
          *          내려서, 이번 틱의 남은 항목이 곧바로 건너뛴다.
          */
-        SubTickHandle registerSubTick( TickGroup group, uint32 subTickID, TickPhase phase = TickPhase::Normal, uint8 priority = 0 );
+        SubTickHandle registerSubTick( TickGroup group, uint32 subTickID, TickPhase phase = TickPhase::Normal, uint8 priority = 0, float32 interval = 0.0f );
         /** @brief 서브틱 하나의 등록을 해제합니다. 있었으면 true 입니다. 틱 중이면 마스크만 바로 내리고 목록은 틱 직후로 미루며, 이때도 true(접수됨)를 반환합니다. */
         bool unregisterSubTick( uint32 subTickID );
         /**
@@ -599,6 +614,8 @@ namespace sw
         bool isSelfActive() const { return _bActive.load( std::memory_order_relaxed ); }
         /** @brief 주 틱의 그룹(`kTickGroup`)입니다. 붙을 때 정해지고 바뀌지 않습니다. */
         TickGroup getTickGroup() const { return static_cast<TickGroup>( _tickGroup ); }
+        /** @brief 주 틱의 주기(`kTickInterval`)입니다. 붙을 때 정해지고 바뀌지 않습니다. */
+        float32 getTickInterval() const { return _tickInterval; }
         /** @brief 주 틱에 참여하면 true 입니다. */
         bool canEverTick() const { return _bCanEverTick == SW_TRUE; }
         /** @brief 틱에 참여할 일이 있으면 true 입니다. 주 틱이 켜졌거나 서브틱이 하나라도 등록되어 있을 때이며, 소유 오브젝트의 틱 항목을 다시 만들지 정하는 기준입니다. */
@@ -697,7 +714,8 @@ namespace sw
          * @details 플래그(4 B) 뒤, `_listSubTick` 앞의 정렬 패딩에 들어간다. 앞쪽으로 옮기면 객체가 커진다. 저장소의 `_mutex` 아래에서만 바뀐다.
          */
         uint32              _poolEntrySlot;
-        vector<SubTickInfo> _listSubTick; ///< 등록된 보조 서브틱 목록
+        vector<SubTickInfo> _listSubTick;  ///< 등록된 보조 서브틱 목록
+        float32             _tickInterval; ///< 주 틱의 주기(초)다. 붙을 때 형식의 `kTickInterval` 을 한 번 적는다(`GameObject::attachCreatedComponent`)
     };
 } // namespace sw
 

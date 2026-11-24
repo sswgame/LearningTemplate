@@ -14,7 +14,6 @@
 #include "Core/Memory/Memory.h"
 #include "Core/Subsystem/SubsystemScope.h"
 
-#include "Engine/Graphics/View/FrameViewports.h"
 #include "Engine/Module/HostInterfaces.h"
 
 #include "ModuleAPI/ABI/GameAPI.h"
@@ -59,13 +58,11 @@ namespace sw
      * @brief 한 프레임 동안 고정되는 호스트 ↔ 모듈 상태입니다.
      * @details 에디터 상태는 DLL 경계를 넘는 함수 포인터 호출로만 알 수 있다. 고정 스텝마다 다시 묻지 않고 한 번 고정해,
      *          프레임 안의 모든 단계가 같은 답을 보게 한다. 필드는 값이 만들어지는 곳에서 채운다. 게임플레이 활성 여부는
-     *          beginFrame(게임 업데이트 전)에서, 게임 뷰와 씬 뷰 RT, 씬 틱 여부는 updateEditorUI(에디터가 이번 프레임 입력을 처리한 뒤)에서
+     *          beginFrame(게임 업데이트 전)에서, 씬 틱 여부는 updateEditorUI(에디터가 이번 프레임 입력을 처리한 뒤)에서
      *          채운다. 순서를 바꾸면 에디터의 Step 한 번이 틱 없이 소비된다.
      */
     struct ModuleFrameState
     {
-        /** @brief 에디터가 이번 프레임에 그려 달라고 요청한 게임 뷰와 씬 뷰 RT 입니다. 보이지 않는 패널의 뷰는 비어 있고, 둘 다 비면 백버퍼에 바로 그립니다. */
-        FrameViewports _views;
         /** @brief 이번 프레임에 게임 모듈의 update/fixedUpdate 를 돌려야 하면 1 입니다. */
         uint8 _bGameplayActive : 1;
         /** @brief 이번 프레임에 씬 GameObject 를 틱해야 하면 1 입니다. */
@@ -79,8 +76,7 @@ namespace sw
 
         /** @brief 에디터가 없을 때의 답(둘 다 돈다)으로 시작합니다. */
         ModuleFrameState()
-            : _views{}
-            , _bGameplayActive{ SW_TRUE }
+            : _bGameplayActive{ SW_TRUE }
             , _bTickScene{ SW_TRUE }
             , _bEditorQuiet{ SW_FALSE }
             , _reserved{ 0 }

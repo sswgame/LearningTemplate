@@ -6,7 +6,7 @@
  * 않으므로 모듈을 로드한 뒤에도 출처가 유지됩니다. 에디터 표시 등은 registerLogWrittenListener 로 구독합니다.
  *
  * **줄의 종류 id.** 테스트가 로그 문장을 부분 문자열로 맞추면 문구를 고칠 때마다 지므로(그래서 `countContaining` 을 없앴다), 테스트가 찾을 줄에는 `SW_LOG_ERROR_ID` · `SW_LOG_WARNING_ID` 로
- * 글자 상수 id 를 붙인다(`LogEntry::_pID`, 테스트는 `ScopedLogCollector::countWithID`). 감싸는 싱크(`ILogSink::writeLogWithID`)는 id 를 그대로 넘겨야 한다.
+ * 글자 상수 id 를 붙인다(`LogEntry::_pID`, 테스트는 `ScopedLogCollector::countWithID`). 감싸는 싱크(`ILogSink::writeEvent`)는 사건을 그대로 넘겨야 한다.
  */
 #pragma once
 #include "Core/Container/string.h"
@@ -53,15 +53,10 @@ namespace sw
         /** @brief 출력 장치와 리스너를 닫습니다. */
         virtual void shutdown() = 0;
         /**
-         * @brief 한 줄을 출력 장치와 리스너에 남깁니다. @p pID 는 줄의 종류 id 입니다(`SW_LOG_ERROR_ID` · `LogEntry::_pID`) — 정적 글자여야 하고 없으면 nullptr 입니다.
-         * @details 감싸는 싱크는 @p pID 를 감싼 싱크로 그대로 넘깁니다. 넘기지 않으면 테스트가 id 로 줄을 찾지 못한다.
+         * @brief 사건 하나를 출력 장치와 리스너에 남깁니다. 시각 · 시계 · 스레드 · 문맥은 @p event 의 것만 씁니다 — 싱크는 다시 재지 않는다.
+         * @details 감싸는 싱크는 @p event 를 감싼 싱크로 그대로 넘깁니다. id 를 넘기지 않으면 테스트가 id 로 줄을 찾지 못한다.
          */
-        virtual void writeLogWithID( LogLevel level, const utf8* pTag, const utf8* pMessage, const utf8* pFile, int32 line, const utf8* pID ) = 0;
-        /** @brief id 가 없는 한 줄입니다(`writeLogWithID` 에 nullptr 를 넘긴다). */
-        void writeLog( LogLevel level, const utf8* pTag, const utf8* pMessage, const utf8* pFile, int32 line )
-        {
-            writeLogWithID( level, pTag, pMessage, pFile, line, nullptr );
-        }
+        virtual void writeEvent( const LogEvent& event ) = 0;
         /**
          * @brief 한 줄이 쓰일 때 호출할 리스너를 붙이고 그 구독을 돌려줍니다. 구독이 사라지면 뗍니다(진행 중인 방송이 끝나기를 기다린다).
          * @details 감싸는 싱크는 감싼 싱크의 구독을 그대로 돌려줍니다. 리스너를 받지 않는 싱크는 빈 구독을 돌려줍니다.
@@ -98,7 +93,7 @@ namespace sw
      * @class Logger
      * @brief 로그 매크로가 호출하는 전역 진입점입니다. 한 줄은 전역 싱크(`ILogSink`)에 넘기고, 싱크가 없으면 버립니다.
      * @details 이 진입점은 파일, 크래시, 모듈을 모르므로 Core 의 아래 계층(Container, Memory, String 등)이 로그를 쓸 수 있습니다.
-     *          포맷, 타임스탬프, 리스너, 비동기 큐, 출력 장치는 싱크(`AsyncLogSink`)가 맡습니다.
+     *          포맷, 리스너, 비동기 큐, 출력 장치는 싱크(`AsyncLogSink`)가 맡습니다.
      */
     class SW_API Logger final
     {
@@ -117,6 +112,8 @@ namespace sw
          * @brief 전역 싱크로 한 줄을 남깁니다. 싱크가 없으면 줄을 버리지 않고 stderr 에 쓰고 비웁니다(기동이 이르거나 로거가 없는 도구에서도 줄이 남는다).
          */
         static void writeLogGlobal( LogLevel level, const utf8* pTag, const utf8* pMessage, const utf8* pFile, int32 line, const utf8* pID = nullptr );
+        /** @brief 이미 남긴 사건을 전역 싱크로 넘깁니다(미룬 줄 — `ScopedDeferredLog`). 사건의 시각 · 순번은 그대로입니다. */
+        static void writeEventGlobal( const LogEvent& event );
         /**
          * @brief `SW_LOG_ASSERT`(Debug)가 멈추기 전에 식 · 메시지 · 위치를 stderr 에 동기로 쓰고 비웁니다.
          * @details 로거는 비동기라 멈추면 큐의 메시지를 잃을 수 있습니다(`SW_ASSERT` 의 `printAssertFailure` 와 같은 이유). 매크로가 이 함수를 거치지 않고는 멈출 수 없게 한 곳에 둡니다.

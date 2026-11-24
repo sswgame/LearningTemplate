@@ -1,16 +1,11 @@
 #include "pch.h"
 
 #include "Core/Testing/TestFramework.h"
-#include "Core/Time/MonotonicClock.h"
 
 #include "GameFramework/Kits/Feature/Online/OnlineCore/Server/Service/OnlineProtocolService.h"
 #include "GameFramework/Runtime/Online/Service/Server/OnlineServiceHost.h"
 
-// OnlineServerCallTableTest — 서버 호출 표: 응답은 한 번이고 어느 순서로 끝나도 남은 수가 맞다. 대기 수 P 에 따른 완료 비용을 잰다(nogpu).
-//
-// 재는 법(통합 담당): `App --test --test-filter=OnlineServerCallTableTest.CompletionCostByPending` 를 Release 로 5 번 돌려
-// 로그 `OnlineServerCallTableTest.CompletionCost` 의 P 별 ns/완료 중앙값을 본다. 판정: 지표 `service_store_pending_peak` 의 실제 최대치 P 에서
-// 선형 표(`HEAD~1` 의 벡터)와 색인 표의 차이가 실행 간 흔들림보다 크면 색인을 둔다. 아니면 그 커밋을 되돌리고 값을 커밋 메시지에 적고 docs/NEXT.md 의 줄을 지운다.
+// OnlineServerCallTableTest — 서버 호출 표: 응답은 한 번이고 어느 순서로 끝나도 남은 수가 맞다(nogpu).
 
 using namespace sw;
 
@@ -65,28 +60,6 @@ SW_TEST_CASE( OnlineServerCallTableTest, OutOfOrderCompletionLeavesNothing )
     OnlineServerCallTable table;
     SW_EXPECT_EQUAL( 37, OnlineServerCallTableTestInternal::openAndFailAll( table, host, 37 ) );
     SW_EXPECT_TRUE( table.isEmpty() );
-}
-
-/** @brief [OnlineServerCallTableTest] 대기 수 P 별 완료 비용(ns/완료)을 로그로 남깁니다. 시간 문턱은 두지 않는다 — 판정은 통합 담당의 반복 측정이다 */
-SW_TEST_CASE( OnlineServerCallTableTest, CompletionCostByPending, ._tags = "bench" )
-{
-    static constexpr int32 kArrPendingCount[] = { 16, 256, 4096 };
-    static constexpr int32 kRepeatCount       = 8;
-
-    OnlineServiceHost host;
-    for ( const int32 pendingCount : kArrPendingCount )
-    {
-        OnlineServerCallTable table;
-        const int64           startNanoseconds = MonotonicClock::nowNanoseconds();
-        for ( int32 repeat = 0; repeat < kRepeatCount; ++repeat )
-        {
-            SW_EXPECT_EQUAL( pendingCount, OnlineServerCallTableTestInternal::openAndFailAll( table, host, pendingCount ) );
-        }
-        const int64 elapsedNanoseconds = MonotonicClock::nowNanoseconds() - startNanoseconds;
-        SW_EXPECT_TRUE( table.isEmpty() );
-        SW_LOG_INFO_ID( "OnlineServerCallTableTest.CompletionCost", "Server call table: pending %# -> %# ns per completion", pendingCount,
-                        elapsedNanoseconds / ( static_cast<int64>( pendingCount ) * kRepeatCount ) );
-    }
 }
 
 /** @brief [OnlineServerCallTableTest] 상한 검사는 방금 연 호출도 센다 — 상한 N 이면 N 개까지 받고 N+1 번째가 넘친다(넘친 요청은 `kBusy`, 감사 O-3) */

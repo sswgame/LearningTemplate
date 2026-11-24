@@ -11,6 +11,7 @@
 #include "Core/Diagnostics/CacheStats.h"
 #include "Core/Foundation/StdHeaders.h"
 #include "Core/Log/Logger.h"
+#include "Core/Log/ScopedDeferredLog.h"
 #include "Core/Memory/Memory.h"
 
 #include "Engine/Asset/AssetManager.h"
@@ -169,17 +170,18 @@ namespace sw
 
         const string key = AssetRegistry::toCacheKey( relativePath );
 
+        const CacheStatsHandle&  stats = getMaterialCacheStats(); // 처음 부르면 로그를 쓸 수 있다 — 잠그기 전에 받는다
         UniqueLock<shared_mutex> lock{ _impl->_mutex };
         Impl::Entry&             entry = _impl->_mapEntry[key];
         if ( entry._material == nullptr )
         {
             entry._material = Material::create();
             entry._path     = key;
-            getMaterialCacheStats().recordMiss();
+            stats.recordMiss();
         }
         else
         {
-            getMaterialCacheStats().recordHit();
+            stats.recordHit();
         }
         ++entry._refCount;
 
@@ -336,6 +338,7 @@ namespace sw
     {
         if ( _impl->_psoWarmCount.load( std::memory_order_acquire ) == 0 )
             return;
+        const ScopedDeferredLog  deferredLog;
         UniqueLock<shared_mutex> lock{ _impl->_mutex };
         auto                     itKey = _impl->_uniquePSOWarmKey.begin();
         while ( itKey != _impl->_uniquePSOWarmKey.end() )
@@ -418,13 +421,14 @@ namespace sw
     {
         if ( _impl != nullptr )
         {
+            const CacheStatsHandle&  stats = getMaterialCacheStats();
             UniqueLock<shared_mutex> lock{ _impl->_mutex };
             _impl->_mapEntry.clear();
             _impl->_uniquePSOWarmKey.clear();
             _impl->_listPSOWarmEntry.clear();
             _impl->_psoWarmCount.store( 0, std::memory_order_release );
             _impl->_psoWarmEntryCount.store( 0, std::memory_order_release );
-            getMaterialCacheStats().recordClear();
+            stats.recordClear();
         }
     }
 } // namespace sw

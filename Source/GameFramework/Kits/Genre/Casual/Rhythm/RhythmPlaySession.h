@@ -196,8 +196,9 @@ namespace sw
         void                   finishIfDone();
 
     private:
-        RhythmPlaySettings              _settings;
-        vector<LaneQueue>               _listLane;
+        RhythmPlaySettings _settings;
+        vector<LaneQueue>  _listLane;
+        PROPERTY( RuntimeState, Min = 0 )
         vector<int32>                   _listGradeCount; ///< 판정기의 창 순서(좁은 것부터)를 따른다
         NotificationBuffer<RhythmEvent> _eventBuffer;
         PROPERTY( RuntimeState )

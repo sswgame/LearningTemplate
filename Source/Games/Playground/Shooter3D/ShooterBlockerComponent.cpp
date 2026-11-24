@@ -54,16 +54,4 @@ namespace sw
         box._max = center + _halfSize;
         return box;
     }
-
-    void ShooterBlockerComponent::onRegister( GameObjectManager& manager )
-    {
-        Component::onRegister( manager );
-        manager.getComponentRegistry().add<ShooterBlockerComponent>( this );
-    }
-
-    void ShooterBlockerComponent::onUnregister( GameObjectManager& manager )
-    {
-        manager.getComponentRegistry().remove<ShooterBlockerComponent>( this );
-        Component::onUnregister( manager );
-    }
 } // namespace sw

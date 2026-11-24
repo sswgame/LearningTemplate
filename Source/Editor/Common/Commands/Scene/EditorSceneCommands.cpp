@@ -543,7 +543,7 @@ namespace sw::editor
             return stats;
 
         // 타입 이름에서 인스턴스 수로의 대응이다. 이름으로 묶으므로 게임과 키트의 것을 포함해 등록된 모든 컴포넌트가 잡힌다.
-        flat_map<string, uint32> mapTypeToCount;
+        map<string, uint32> mapTypeToCount;
 
         pManager->forEachGameObject( editor::EditorSceneIterationAccess::getKey(), [&]( GameObject* pObj )
         {

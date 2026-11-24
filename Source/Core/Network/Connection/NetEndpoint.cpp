@@ -5,6 +5,7 @@
 #include "Core/Concurrency/thread.h"
 #include "Core/Foundation/Constants.h"
 #include "Core/Hash/HashUtil.h"
+#include "Core/Log/ScopedDeferredLog.h"
 #include "Core/Math/MathUtil.h"
 #include "Core/Network/Connection/NetConnection.h"
 #include "Core/Network/Security/INetSecurityProvider.h"
@@ -208,7 +209,8 @@ namespace sw
 
     bool NetEndpoint::listen()
     {
-        ScopedLock<mutex> lock{ _mutex };
+        const ScopedDeferredLog deferredLog;
+        ScopedLock<mutex>       lock{ _mutex };
         if ( _pTransport == nullptr )
             return false;
         if ( isEncrypted() && _settings._security._pProvider == nullptr )
@@ -246,7 +248,8 @@ namespace sw
         bool                    bStarted = false;
         INetTransport*          pWake    = nullptr;
         {
-            ScopedLock<mutex> lock{ _mutex };
+            const ScopedDeferredLog deferredLog;
+            ScopedLock<mutex>       lock{ _mutex };
             finishConnect( NetDisconnectReason::Requested ); // 앞의 비동기 연결은 여기서 끝난다.
             _credentials     = pCredentials != nullptr ? *pCredentials : NetConnectCredentials{};
             _bHasCredentials = pCredentials != nullptr && pCredentials->_tokenSize > 0 ? SW_TRUE : SW_FALSE;
@@ -275,7 +278,8 @@ namespace sw
         TaskFuture<NetConnectResult> future;
         INetTransport*               pWake = nullptr;
         {
-            ScopedLock<mutex> lock{ _mutex };
+            const ScopedDeferredLog deferredLog;
+            ScopedLock<mutex>       lock{ _mutex };
             finishConnect( NetDisconnectReason::Requested );
             _connectPromise  = TaskPromise<NetConnectResult>{};
             future           = _connectPromise.getFuture();
@@ -743,7 +747,8 @@ namespace sw
                 _openedBytes.clear();
                 uint32 protocolID = 0;
                 {
-                    ScopedLock<mutex> lock{ _mutex };
+                    const ScopedDeferredLog deferredLog;
+                    ScopedLock<mutex>       lock{ _mutex };
                     protocolID = _protocolID;
                     for ( int32 index = first; index < last; ++index )
                     {
@@ -754,7 +759,8 @@ namespace sw
                 if ( _listSealed.empty() )
                     continue;
                 openSealedPackets( protocolID );
-                ScopedLock<mutex> lock{ _mutex };
+                const ScopedDeferredLog deferredLog;
+                ScopedLock<mutex>       lock{ _mutex };
                 for ( const SealedDatagram& sealed : _listSealed )
                 {
                     handleOpenedPacket( nowSeconds, sealed );
@@ -762,7 +768,8 @@ namespace sw
             }
             vector<DeferredWarning> listWarning;
             {
-                ScopedLock<mutex> lock{ _mutex };
+                const ScopedDeferredLog deferredLog;
+                ScopedLock<mutex>       lock{ _mutex };
                 updateSlots( nowSeconds );
                 takePending( _flushBatch, _listDeliver );
                 listWarning.swap( _listDeferredWarning );
@@ -1326,7 +1333,8 @@ namespace sw
         bool           bQueued = false;
         INetTransport* pWake   = nullptr;
         {
-            ScopedLock<mutex> lock{ _mutex };
+            const ScopedDeferredLog deferredLog;
+            ScopedLock<mutex>       lock{ _mutex };
             bQueued = sendMessageLocked( connectionID, channel, pData, size, WindowFullPolicy::Close );
             pWake   = consumeWakeRequest();
         }
@@ -1341,7 +1349,8 @@ namespace sw
         bool           bQueued = false;
         INetTransport* pWake   = nullptr;
         {
-            ScopedLock<mutex> lock{ _mutex };
+            const ScopedDeferredLog deferredLog;
+            ScopedLock<mutex>       lock{ _mutex };
             bQueued = sendMessageLocked( connectionID, channel, pData, size, WindowFullPolicy::Report );
             pWake   = consumeWakeRequest();
         }
@@ -1376,9 +1385,10 @@ namespace sw
         bool           bQueued = false;
         INetTransport* pWake   = nullptr;
         {
-            ScopedLock<mutex> lock{ _mutex };
-            NetEndpointSlot*  pSlot = _slotTable.findConnected( connectionID );
-            bQueued                 = pSlot != nullptr && pSlot->_connection->sendNotifiedMessage( pData, size, tag );
+            const ScopedDeferredLog deferredLog;
+            ScopedLock<mutex>       lock{ _mutex };
+            NetEndpointSlot*        pSlot = _slotTable.findConnected( connectionID );
+            bQueued                       = pSlot != nullptr && pSlot->_connection->sendNotifiedMessage( pData, size, tag );
             if ( bQueued )
             {
                 _sentKindStats.add( pData, size );
@@ -1404,6 +1414,7 @@ namespace sw
         int32          sentCount = 0;
         INetTransport* pWake     = nullptr;
         {
+            const ScopedDeferredLog    deferredLog;
             ScopedLock<mutex>          lock{ _mutex };
             const vector<NetLiveSlot>& listLive = _slotTable.getLiveSlots();
             // 뒤에서부터 돈다 — 창이 차 닫힌 연결(`sendMessageLocked`)은 목록에서 빠지고 뒤 칸이 당겨지는데, 뒤 칸은 이미 보냈다.

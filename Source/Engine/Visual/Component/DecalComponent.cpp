@@ -41,14 +41,7 @@ namespace sw
     void DecalComponent::onRegister( GameObjectManager& manager )
     {
         SceneComponent::onRegister( manager );
-        manager.getComponentRegistry().add<DecalComponent>( this );
         setCanEverTick( _lifetimeSeconds > 0.0f ); // 시간 수명이 있을 때만 틱이 나이를 센다 — 비 씻김은 날씨 시스템이 넣는다
-    }
-
-    void DecalComponent::onUnregister( GameObjectManager& manager )
-    {
-        manager.getComponentRegistry().remove<DecalComponent>( this );
-        SceneComponent::onUnregister( manager );
     }
 
     void DecalComponent::onTick( TickContext& context )

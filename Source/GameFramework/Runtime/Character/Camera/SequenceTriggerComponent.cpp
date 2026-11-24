@@ -29,18 +29,6 @@ namespace sw
     {
     }
 
-    void SequenceTriggerComponent::onRegister( GameObjectManager& manager )
-    {
-        TriggerComponent::onRegister( manager );
-        manager.getComponentRegistry().add<SequenceTriggerComponent>( this );
-    }
-
-    void SequenceTriggerComponent::onUnregister( GameObjectManager& manager )
-    {
-        manager.getComponentRegistry().remove<SequenceTriggerComponent>( this );
-        TriggerComponent::onUnregister( manager );
-    }
-
     void SequenceTriggerComponent::onEndPlay()
     {
         GameObject*        pOwner   = getOwner();

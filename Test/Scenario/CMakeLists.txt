@@ -118,7 +118,7 @@ foreach(load_path IN LISTS list_engine_load_scenario)
 	sw_add_load_scenario("${load_path}")
 endforeach()
 
-# 편집기 부하(첫 패널 · Hierarchy 8000 — docs/NEXT.md 측정 E1). 편집기 체인(`Scenario.editor`)은 바로 아래만 줍고 이 하위 폴더는 혼자 돈다.
+# 편집기 부하(첫 패널 · Hierarchy 8000). 편집기 체인(`Scenario.editor`)은 바로 아래만 줍고 이 하위 폴더는 혼자 돈다.
 if(TARGET EditorModule)
 	sw_glob_source_tree(list_editor_load_scenario RELATIVE "${scenario_root}" "${scenario_root}/engine/automation/editor/load/*.scenario.xml")
 	foreach(load_path IN LISTS list_editor_load_scenario)
@@ -156,7 +156,7 @@ foreach(game IN LISTS list_built_game)
 	endif()
 	sw_glob_source_tree(list_scenario RELATIVE "${scenario_root}" ${list_chain_glob})
 	# GPU 가 무거운 미니게임의 시나리오는 제 체인에서 백엔드를 차례로 돌린다 — 넷을 함께 돌려도 빨라지지 않고(사격장 225 초 대 차례로 227 초) 프레임만 7 → 100 ms 로 느려져
-	# 시한(crowd 150 초)에 닿고 골든이 흔들렸다(2026-11-02 측정, NEXT 6.2). 다른 시나리오는 함께 도는 편이 기동을 겹쳐 빠르다.
+	# 시한(crowd 150 초)에 닿고 골든이 흔들렸다(2026-11-02 측정). 다른 시나리오는 함께 도는 편이 기동을 겹쳐 빠르다.
 	# SPLIT independent: 그린 화소 · 기록 · 렌더러 값을 판정하지 않는 시나리오(게임 규칙 · UI 흐름)는 백엔드를 날마다 돌아가며 하나에서만 돈다 — 언리얼은 기능 테스트를 RHI 하나에서, 스크린샷
 	# 테스트만 RHI 마다 돈다(유니티 PlayMode 대 Graphics Test Framework 도 같다). 허브 게임 하나가 모든 시나리오를 안으면서 체인이 길이 × 백엔드 수로 자랐다.
 	# 체인을 샤드로 더 쪼개지 않는다 — 항목이 슬롯을 백엔드 수만큼 쥐어(`PROCESSORS`) 한 기계에서는 샤드가 겹쳐 돌지 못한다(나눌 러너가 있을 때의 일이다).

@@ -56,4 +56,4 @@ cmake --build --preset Ninja-Debug
 
 ## Writing
 
-Use established loanwords and English terms, no coined native words. Log and assert strings stay English. Commit messages: summary line, then `원인:` → `조치:` → `결과:` (commit-msg hook enforced).
+Use established loanwords and English terms, no coined native words. Log and assert strings stay English. Commit messages: summary line, then `원인:` → `조치:` → `결과:` (commit-msg hook enforced). A commit that finishes a `docs/NEXT.md` line ends with the trailer `NEXT: <first words of the line> 끝` (one per line); `py -3 -m Scripts next-done` stops preflight while that line is still there.

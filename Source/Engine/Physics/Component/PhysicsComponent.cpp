@@ -28,6 +28,7 @@ namespace sw
     PhysicsComponent::PhysicsComponent( PhysicsComponentPhase phase )
         : _pScenePhysics{ nullptr }
         , _physicsIndex{ kNotRegistered }
+        , _floorMissingIndex{ kNotRegistered }
         , _syncedTransformVersion{ 0 }
         , _syncedLocalPosition{}
         , _syncedLocalRotation{}

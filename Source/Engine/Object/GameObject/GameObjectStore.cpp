@@ -9,6 +9,7 @@
 #include "Core/Algorithm/VectorUtil.h"
 #include "Core/Concurrency/mutex.h"
 #include "Core/Foundation/StdHeaders.h"
+#include "Core/Log/ScopedDeferredLog.h"
 #include "Core/String/StringBuilder.h"
 #include "Core/String/StringUtil.h"
 
@@ -89,6 +90,7 @@ namespace sw
     GameObject* GameObjectStore::createGameObject( hashed_string name )
     {
         SW_ASSERT( IterationScope::isIterating() == false );
+        const ScopedDeferredLog  deferredLog;
         UniqueLock<shared_mutex> lock{ _mutex };
         return createGameObjectUnlocked( name, allocateID() );
     }
@@ -96,6 +98,7 @@ namespace sw
     GameObject* GameObjectStore::createGameObjectWithID( hashed_string name, uint64 objectID )
     {
         SW_ASSERT( IterationScope::isIterating() == false );
+        const ScopedDeferredLog  deferredLog;
         UniqueLock<shared_mutex> lock{ _mutex };
         if ( objectID == 0 )
             return createGameObjectUnlocked( name, allocateID() );
@@ -143,6 +146,7 @@ namespace sw
             return;
         SW_ASSERT( IterationScope::isIterating() == false );
 
+        const ScopedDeferredLog  deferredLog;
         UniqueLock<shared_mutex> lock{ _mutex };
         if ( findRegisteredUnlocked( pObj->getObjectID() ) != pObj )
             return;

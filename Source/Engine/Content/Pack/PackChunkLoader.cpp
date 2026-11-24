@@ -6,6 +6,7 @@
 #include "Core/File/ContentFileSource.h"
 #include "Core/File/FileUtil.h"
 #include "Core/Log/Logger.h"
+#include "Core/Log/ScopedDeferredLog.h"
 
 #include "Engine/Content/Pack/PackChunkManifest.h"
 #include "Engine/Content/Pack/PackManager.h"
@@ -47,7 +48,8 @@ namespace sw
         bool           bAllMounted = true;
         bool           bFailed     = false;
         {
-            ScopedLock<mutex> lock{ _pShared->_mutex };
+            const ScopedDeferredLog deferredLog;
+            ScopedLock<mutex>       lock{ _pShared->_mutex };
             for ( const string& packName : listPack )
             {
                 FileState& state = _pShared->_mapState[packName];

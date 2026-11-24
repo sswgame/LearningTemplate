@@ -8,6 +8,7 @@
 #include "Core/Foundation/Macros.h"
 #include "Core/Foundation/Types.h"
 #include "Core/Math/Math.h"
+#include "Core/Math/Radians.h"
 #include "Core/Name/hashed_string.h"
 #include "Core/String/formatString.h"
 
@@ -17,7 +18,7 @@
 namespace sw
 {
     /**
-     * @brief 소켓에 붙이는 배치입니다. 소켓 후보 목록(앞에서부터 있는 것을 씀), 로컬 오프셋, 회전(도 단위 오일러 x y z)으로 이루어집니다.
+     * @brief 소켓에 붙이는 배치입니다. 소켓 후보 목록(앞에서부터 있는 것을 씀), 로컬 오프셋, 회전(오일러 x y z — 파일 글은 도)으로 이루어집니다.
      * @details 소켓 이름은 해석된 외형의 한 이름 공간에 속한다. 몸 소켓(본 이름 포함)은 이름 그대로 쓰고, 장착 부품의 소켓은 주인 이름이 앞에 붙는다
      *          (`MainHand.Muzzle`). 첫 마디가 슬롯이나 꾸미기 매개변수 이름이면 부품 소켓이고, 아니면 몸 소켓이다.
      */
@@ -25,7 +26,7 @@ namespace sw
     {
         vector<hashed_string> _listSocket{};
         float3                _offset{};
-        float3                _rotation{};
+        EulerAngles           _rotation{};
 
         bool isEmpty() const { return _listSocket.empty(); }
         bool operator==( const AppearancePlacement& other ) const { return _listSocket == other._listSocket && _offset == other._offset && _rotation == other._rotation; }

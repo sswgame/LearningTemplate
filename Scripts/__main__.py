@@ -55,7 +55,7 @@ _SUBCOMMAND: tuple[Subcommand, ...] = (
     Subcommand("naming-census", "dev.naming_census", "Source 의 모든 이름(형식 · 함수 · 멤버 · 상수 · 매크로 · 파일 · 폴더)을 낱말로 쪼개 종류별로 센다(--out <폴더>) — 이름 전수 대조용"),
     Subcommand("format", "lint.format:main_format", "clang-format(C++ 는 include 순서 포함, 셰이더) · vcpkg format-manifest(vcpkg.json) — 린트 format 의 고치는 명령"),
     Subcommand("tidy", "lint.clang_tidy", "clang-tidy 병렬 실행 · 검사별 집계(본 트리 컴파일 DB 를 읽기만 한다) — 인자 없음: 전체, --changed [기준]: 바뀐 파일만(묶음 검증), --files: 지정 파일"),
-    Subcommand("syntax", "dev.syntax_check", "유니티를 푼 구문 확인(clang-cl -fsyntax-only, 본 트리 컴파일 DB 를 읽기만 한다) — --changed [기준]: 바뀐 파일이 닿는 TU, --all: 전부, --files: 지정 파일, --jobs: 동시 수"),
+    Subcommand("syntax", "dev.syntax_check", "유니티를 푼 구문 확인(clang-cl -fsyntax-only, 본 트리 컴파일 DB 를 읽기만 한다) — --changed [기준]: 바뀐 파일이 닿는 TU, --all: 전부, --files: 지정 파일, --direct: 헤더를 넓히지 않음, --define: 더할 매크로, --jobs: 동시 수"),
     Subcommand("online-local", "net.online_local_run", "온라인 로컬 실행 — 전용 서버와 게임 클라이언트를 띄워 로그인 → 키트 호출까지 돈다. 저장소 · 키트 · 제공자는 --server-config 가 고른다(run · check)"),
     Subcommand("net-pair", "net.net_pair_run", "두 프로세스 온라인 접속 시나리오 — 서버 · 클라이언트로 로그인 → 게임 접속 티켓 → 암호화 UDP 접속(run · check), 허브 서버 저장 후 재접속(mmo)"),
     Subcommand("new-online-kit", "dev.new_online_kit:main_new_online_kit", "온라인 키트 뼈대(Runtime · Server 모듈, 서술자 · 클라이언트 · 서비스 · 조립 · 테스트)를 만들고 중앙 표(메서드 영역 · 서버 키트 이름)에 한 줄씩 더한다"),
@@ -83,6 +83,8 @@ _SUBCOMMAND: tuple[Subcommand, ...] = (
     Subcommand("test-history", "dev.test_history", "테스트 이력(sqlite) — ingest · report(흔들림 · p95 추세) · flaky(끝 줄 FLAKY=) · stage(단계 시간) · quarantine · costs · changed"),
     Subcommand("scenario-bisect", "dev.scenario_bisect", "시나리오 체인의 진 단계를 혼자 → 앞 단계를 붙여 → 이분 탐색으로 다시 돈다(--rerun-failed 는 마지막 보고에서 고른다)"),
     Subcommand("linux-scenarios", "dev.linux_scenarios", "Linux(WSL 클론) 빌드 · 체인 · 새니타이저 · 골든 입구(setup · all · build · chain · stages · rerun · sanitize · goldens …)"),
+    Subcommand("next-done", "dev.next_done", "커밋 꼬리말 `NEXT: <줄 앞말> 끝` 이 가리킨 줄이 docs/NEXT.md 에 그대로 남아 있는지 본다(--base, 묶음 검증 시작에서)"),
+    Subcommand("git-locks", "dev.git_locks", "강제로 끝난 git 이 남긴 빈 잠금 파일(index.lock 등)을 찾는다 — --remove 는 연 프로세스가 없는 빈 것만 지운다"),
     Subcommand("verify-record", "dev.verify_record", "묶음 검증 단계 통과 기록(skip · pass) · Windows 통과 기록(ok, build/verify.ok) · git pre-push 게이트"),
     Subcommand("destruction-net", "net.destruction_net_pair", "파괴 복제 실제 세션 확인 — 서버 · 클라이언트 두 프로세스의 구조 해시 맞대기(run · compare)"),
 )

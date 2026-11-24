@@ -72,13 +72,11 @@ namespace sw
     void NavWanderComponent::onRegister( GameObjectManager& manager )
     {
         Component::onRegister( manager );
-        manager.getComponentRegistry().add<NavWanderComponent>( this );
         _pSceneNavigation = &manager.getSubsystem<SceneNavigation>();
     }
 
     void NavWanderComponent::onUnregister( GameObjectManager& manager )
     {
-        manager.getComponentRegistry().remove<NavWanderComponent>( this );
         _pSceneNavigation = nullptr;
         Component::onUnregister( manager );
     }

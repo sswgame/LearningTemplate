@@ -2,6 +2,7 @@
 
 #include "Engine/Audio/Scene/SceneAudio.h"
 
+#include "Core/Log/ScopedDeferredLog.h"
 #include "Core/Math/MathUtil.h"
 #include "Core/Subsystem/SubsystemScope.h"
 
@@ -202,13 +203,15 @@ namespace sw
 
     Subscription SceneAudio::addListener( AudioListenerComponent* pListener )
     {
-        ScopedLock<mutex> lock{ _mutex };
+        const ScopedDeferredLog deferredLog;
+        ScopedLock<mutex>       lock{ _mutex };
         return _listener.addSubscribed( pListener, "Audio listener" );
     }
 
     Subscription SceneAudio::addEmitter( AudioEmitterComponent* pEmitter )
     {
-        ScopedLock<mutex> lock{ _mutex };
+        const ScopedDeferredLog deferredLog;
+        ScopedLock<mutex>       lock{ _mutex };
         if ( pEmitter == nullptr )
         {
             reportRegistrationRejected( RegistrationResult::NullItem, "Audio emitter", string_view{} );
@@ -221,7 +224,8 @@ namespace sw
 
     Subscription SceneAudio::addReverbZone( AudioReverbZoneComponent* pZone )
     {
-        ScopedLock<mutex> lock{ _mutex };
+        const ScopedDeferredLog deferredLog;
+        ScopedLock<mutex>       lock{ _mutex };
         return _zone.addSubscribed( pZone, "Audio reverb zone" );
     }
 

@@ -50,6 +50,7 @@ namespace sw
     {
     public:
         REFLECT_BODY();
+        SW_REGISTERED_COMPONENT( ZoneVolumeComponent );
 
         ZoneVolumeComponent();
         ~ZoneVolumeComponent() override = default;

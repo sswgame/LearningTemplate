@@ -43,7 +43,7 @@ SW_REFLECT_BUILTIN_TYPE( uint64, uint64, stoull, sw, Number, num, Interp|State, 
 SW_REFLECT_BUILTIN_TYPE( float32, float32, stof, sw, Number, num, Interp|State, float )
 SW_REFLECT_BUILTIN_TYPE( float64, float64, stod, sw, Number, num, Interp|State, double )
 SW_REFLECT_BUILTIN_TYPE( bool, bool, none, -, Checkbox, none, State, _ )
-SW_REFLECT_BUILTIN_TYPE( string, std::string, none, std, Text, none, State, basic_string<char>, sw::string )
+SW_REFLECT_BUILTIN_TYPE( string, sw::string, none, std, Text, none, State, basic_string<char>, sw::string )
 SW_REFLECT_BUILTIN_TYPE( hashed_string, sw::hashed_string, none, sw, Name, none, State, _ )
 SW_REFLECT_BUILTIN_TYPE( float2, sw::float2, none, sw, Vector2, f32(_x,_y), Interp|State, _ )
 SW_REFLECT_BUILTIN_TYPE( float3, sw::float3, none, sw, Vector3, f32(_x,_y,_z), Interp|State, _ )
@@ -79,6 +79,8 @@ SW_REFLECT_BUILTIN_TYPE( OctahedralNormal, sw::OctahedralNormal, packed, sw, Dir
 SW_REFLECT_BUILTIN_TYPE( RGB10A2, sw::RGB10A2, packed, sw, Packed, none, None, _ )
 // 각(`Core/Math/Radians.h`) — 압축 타입은 아니지만 같은 성분 규칙을 탄다. 메모리는 라디안이고 성분(글 · 인스펙터 · 숫자 · Min/Max)은 도다.
 SW_REFLECT_BUILTIN_TYPE( Radians, sw::Radians, packed, sw, Packed, angle, Interp, _ )
+// 오일러 회전(`Core/Math/Radians.h`) — 사람이 적는 회전이다. 성분(글 · 인스펙터)은 도 셋(피치, 요, 롤)이다.
+SW_REFLECT_BUILTIN_TYPE( EulerAngles, sw::EulerAngles, packed, sw, Packed, f32(_pitchRadians,_yawRadians,_rollRadians), None, _ )
 // 정수 2 성분(`Core/Math/VectorMath.h` int2 — 타일 · 셀 좌표). 성분은 float32 로 정확한 정수 범위(±(2^24 - 1))까지만 받는다.
 SW_REFLECT_BUILTIN_TYPE( int2, sw::int2, packed, sw, Packed, i32(_x,_y), State, _ )
 
@@ -86,9 +88,9 @@ SW_REFLECT_BUILTIN_TYPE( int2, sw::int2, packed, sw, Packed, i32(_x,_y), State, 
 // std:: / 서드파티 컨테이너
 // -----------------------------------------------------------------------------
 SW_REFLECT_BUILTIN_CONTAINER( unordered_map, Map, UnorderedMap, None )
-SW_REFLECT_BUILTIN_CONTAINER( flat_map, Map, Map, None )
+SW_REFLECT_BUILTIN_CONTAINER( map, Map, Map, None )
 SW_REFLECT_BUILTIN_CONTAINER( unordered_set, Sequence, UnorderedSet, None )
-SW_REFLECT_BUILTIN_CONTAINER( flat_set, Sequence, Set, None )
+SW_REFLECT_BUILTIN_CONTAINER( set, Sequence, Set, None )
 SW_REFLECT_BUILTIN_CONTAINER( vector, Sequence, Vector, State )
 SW_REFLECT_BUILTIN_CONTAINER( TArray, Sequence, Vector, State )
 SW_REFLECT_BUILTIN_CONTAINER( deque, Sequence, Deque, State )

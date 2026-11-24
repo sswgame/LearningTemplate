@@ -3,7 +3,7 @@
  * @brief 밀집 배열 해시 집합(sw::unordered_set)입니다.
  * @details 순회는 밀집 배열 순서입니다. 버킷 표 · 밀집 노드 배열 · 체인 검색 · 지우기 · 다시 해시는 `unordered_map` 과 함께 쓰는 몸통(`internal::DenseHashTable`)에 있고,
  *          여기에는 이터레이터와 삽입(`insert` · `emplace`)만 있습니다.
- *          모든 컨테이너 형식은 두 구성(`SW_ENABLE_STL_CONTAINER`)에서 같은 구현이고 바뀌는 것은 안쪽 `vector` 의 할당자(`ContainerAllocator`)뿐입니다.
+ *          `SW_ENABLE_STL_CONTAINER` 를 켜면 안쪽 `vector` 와 태그 색인이 std 저장으로 바뀌고 순서 · 무효화 규칙은 같습니다(`Core/Container/DenseHashTable.h`).
  */
 #pragma once
 #include "Core/Concurrency/DataRaceDetector.h"
@@ -184,14 +184,16 @@ namespace sw
         {
             if ( pos == end() )
                 return end();
-            erase( *pos );
+            (void)*pos; // 낡은 이터레이터면 여기서 단언한다(세대 검사)
+            SW_SCOPED_RACE_WRITE();
+            this->eraseAt( pos._index );
             return iterator( this, pos._index );
         }
     };
 
-    /** @brief 버킷 · 밀집 배열(`vector` 둘)과 함수 객체뿐이다. */
+    /** @brief 색인 · 밀집 배열과 함수 객체뿐이다(std 구성의 색인은 노드 컨테이너라 옮길 수 없다). */
     template <typename Key, typename Hash, typename KeyEqual, typename Allocator>
-    struct is_bitwise_relocatable<unordered_set<Key, Hash, KeyEqual, Allocator>> : std::bool_constant<std::is_empty_v<Hash> && std::is_empty_v<KeyEqual>>
+    struct is_bitwise_relocatable<unordered_set<Key, Hash, KeyEqual, Allocator>> : std::bool_constant<kUsesStdContainers == false && std::is_empty_v<Hash> && std::is_empty_v<KeyEqual>>
     {
     };
 } // namespace sw

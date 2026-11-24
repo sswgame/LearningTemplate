@@ -205,9 +205,11 @@ namespace sw
     {
         Component::onRegister( manager );
         // 월드 상태는 씬에 하나다 — 둘째를 들이면 시계 · 날씨를 읽는 쪽(`findOpen`)이 등록 순서에 따라 다른 판을 본다(하위 레벨 미니게임이 바탕 씬에 판 상태를 둔 경우).
-        // 열 때가 아니라 등록에서 거절한다: 둘째는 레지스트리에 오르지 않고 `initialize` 도 거절한다(언리얼은 월드에 AGameState 하나를 GameMode 가 만든다).
+        // 열 때가 아니라 등록에서 거절한다: 둘째는 `initialize` 를 거절해 열리지 않는다(언리얼은 월드에 AGameState 하나를 GameMode 가 만든다). 거절한 것은 첫째가 아니다.
         for ( const GameStateComponent* pRegistered : manager.getComponentRegistry().getAll<GameStateComponent>() )
         {
+            if ( pRegistered == this || pRegistered->_bRefusedInScene == SW_TRUE )
+                continue;
             const GameObject* const pOwner = getOwner();
             const GameObject* const pFirst = pRegistered->getOwner();
             SW_LOG_ERROR_ID( "GameState.SecondInScene", "GameState: refused to register on '%#' - '%#' already holds the world state of this scene (one per scene)",
@@ -216,13 +218,10 @@ namespace sw
             return;
         }
         _bRefusedInScene = SW_FALSE;
-        manager.getComponentRegistry().add<GameStateComponent>( this );
     }
 
     void GameStateComponent::onUnregister( GameObjectManager& manager )
     {
-        if ( _bRefusedInScene == SW_FALSE )
-            manager.getComponentRegistry().remove<GameStateComponent>( this );
         _bRefusedInScene = SW_FALSE;
         Component::onUnregister( manager );
     }

@@ -160,18 +160,6 @@ namespace sw
         return true;
     }
 
-    void LightProbeVolumeComponent::onRegister( GameObjectManager& manager )
-    {
-        SceneComponent::onRegister( manager );
-        manager.getComponentRegistry().add<LightProbeVolumeComponent>( this );
-    }
-
-    void LightProbeVolumeComponent::onUnregister( GameObjectManager& manager )
-    {
-        manager.getComponentRegistry().remove<LightProbeVolumeComponent>( this );
-        SceneComponent::onUnregister( manager );
-    }
-
     void LightProbeVolumeComponent::onPostLoad()
     {
         SceneComponent::onPostLoad();

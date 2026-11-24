@@ -155,6 +155,7 @@ namespace sw
     {
     public:
         REFLECT_BODY();
+        SW_REGISTERED_COMPONENT( ShooterNetPawnComponent );
 
         /** @brief 자리 0 의 몸 엔티티 id 입니다. 자리 n 의 몸은 이 수 + n 이고 적은 `kEnemyEntityIDBase` 부터다. */
         static constexpr uint32 kPawnEntityID = 1;
@@ -172,10 +173,6 @@ namespace sw
 
         ShooterNetPawnComponent();
         ~ShooterNetPawnComponent() override;
-
-        void onRegister( GameObjectManager& manager ) override;
-
-        void onUnregister( GameObjectManager& manager ) override;
 
         void onBeginPlay() override;
         void onEndPlay() override;

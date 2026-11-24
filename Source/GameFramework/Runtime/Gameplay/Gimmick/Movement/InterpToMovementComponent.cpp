@@ -6,7 +6,6 @@
 #include "Engine/Object/Component/SceneComponent.h"
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
-#include "Engine/Object/GameObject/Registry/ComponentRegistry.h"
 #include "Engine/Object/GameObject/Tick/TickContext.h"
 
 #include "GameFramework/Runtime/Character/Control/ControlSystem.h"
@@ -140,17 +139,5 @@ namespace sw
         const float3 from = fromIndex == 0 ? float3{} : listWaypoint[fromIndex - 1];
         const float3 to   = toIndex == 0 ? float3{} : listWaypoint[toIndex - 1];
         return float3::lerp( from, to, alpha );
-    }
-
-    void InterpToMovementComponent::onRegister( GameObjectManager& manager )
-    {
-        Component::onRegister( manager );
-        manager.getComponentRegistry().add<InterpToMovementComponent>( this );
-    }
-
-    void InterpToMovementComponent::onUnregister( GameObjectManager& manager )
-    {
-        manager.getComponentRegistry().remove<InterpToMovementComponent>( this );
-        Component::onUnregister( manager );
     }
 } // namespace sw

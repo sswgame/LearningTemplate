@@ -24,6 +24,7 @@ namespace sw
         , _listGroup{}
         , _uniqueActiveLayer{}
         , _mapObjectGroup{}
+        , _activeSerial{ 0 }
         , _bDirty{ SW_FALSE }
     {
     }
@@ -63,12 +64,13 @@ namespace sw
         VectorUtil::sort( _listGroup, []( const Group& lhs, const Group& rhs )
         { return lhs._listLayer.size() != rhs._listLayer.size() ? lhs._listLayer.size() < rhs._listLayer.size() : lhs._listLayer < rhs._listLayer; } );
         _bDirty = SW_FALSE;
-        publishLayerTags();
+        publishActiveLayers();
         applyGroups();
     }
 
-    void SceneDataLayerSubsystem::publishLayerTags() const
+    void SceneDataLayerSubsystem::publishActiveLayers()
     {
+        ++_activeSerial;
         vector<string> listActive;
         collectActiveLayers( listActive );
         (void)engine::getSubsystem<ResourceTags>().setAxisValues( "layer", listActive ); // '.' 이 든 레이어 이름은 태그가 될 수 없다 — `ResourceTags` 가 오류로 남긴다
@@ -92,7 +94,7 @@ namespace sw
         _mapObjectGroup.clear();
         _pScene = nullptr;
         _bDirty = SW_FALSE;
-        publishLayerTags();
+        publishActiveLayers();
     }
 
     void SceneDataLayerSubsystem::onSceneCleared()
@@ -122,7 +124,7 @@ namespace sw
         else
             _uniqueActiveLayer.erase( key );
         _bDirty = SW_TRUE;
-        publishLayerTags();
+        publishActiveLayers();
         return true;
     }
 
@@ -171,7 +173,7 @@ namespace sw
         }
         rebuildObjectGroupMap();
         _bDirty = SW_FALSE;
-        publishLayerTags();
+        publishActiveLayers();
     }
 
     void SceneDataLayerSubsystem::rebuildObjectGroupMap()
@@ -328,7 +330,7 @@ namespace sw
         }
         rebuildObjectGroupMap();
         _bDirty = SW_TRUE;
-        publishLayerTags();
+        publishActiveLayers();
     }
 
     void SceneDataLayerSubsystem::applyGroups()

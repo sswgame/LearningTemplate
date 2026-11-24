@@ -30,30 +30,6 @@ namespace sw
 namespace sw
 {
     /**
-     * @brief `ReflectBuiltins.xxx` 의 C++ 타입 칸을 값이 실제로 쓰는 타입으로 바꿉니다.
-     * @details 문자열 줄의 칸은 `std::string` 이지만 프로퍼티 · 생성 호출기(`args.get<string>`)는 `sw::string` 입니다
-     *          (STL 컨테이너 빌드가 아니면 둘은 다른 타입이고 크기도 다릅니다). 압축 타입 줄(`sw::half` · `sw::unorm8x4` …)은 이름만 선언된
-     *          채로 쓰입니다(`PackedTypesFwd.h`) — 값 크기가 필요한 번역 단위는 `Core/Math/PackedTypes.h` 를 include 합니다.
-     */
-    template <typename T>
-    struct ReflectBuiltinCppType
-    {
-        using Type = T;
-    };
-
-    template <>
-    struct ReflectBuiltinCppType<std::string>
-    {
-        using Type = string;
-    };
-
-    template <typename T>
-    using ReflectBuiltinCppTypeT = typename ReflectBuiltinCppType<T>::Type;
-} // namespace sw
-
-namespace sw
-{
-    /**
      * @brief 내장 타입의 표 안 자리입니다. 순서는 `ReflectBuiltins.xxx` 의 줄 순서입니다.
      * @details 범위 있는 열거형이라 정수 · -1 감시값과 섞이지 않는다 — "내장 타입이 아님" 은 `kNone`(표 밖, `kCount` 뒤)이다.
      *          줄 이름(`kint8` · `kbool` …)이 정규 이름에 `k` 를 붙인 것이라(`bool` 은 키워드) 없음도 같은 모양 `kNone` 으로 둔다.
@@ -173,7 +149,7 @@ namespace sw
 
 #define SW_REFLECT_BUILTIN_TYPE( Canon, CppType, ... )                               \
     template <>                                                                      \
-    struct ReflectBuiltinOf<ReflectBuiltinCppTypeT<CppType>>                         \
+    struct ReflectBuiltinOf<CppType>                                                 \
     {                                                                                \
         static constexpr ReflectBuiltinIndex kIndex = ReflectBuiltinIndex::k##Canon; \
     };

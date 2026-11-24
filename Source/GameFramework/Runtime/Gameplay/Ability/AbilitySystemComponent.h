@@ -131,6 +131,7 @@ namespace sw
 
     public:
         REFLECT_BODY();
+        SW_REGISTERED_COMPONENT( AbilitySystemComponent );
         REFLECT_INTERFACE( IHealthSource, _healthSourcePort );
         REFLECT_INTERFACE( IHitReceiver, _hitReceiverPort );
 

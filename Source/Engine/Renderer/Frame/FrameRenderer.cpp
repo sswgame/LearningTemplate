@@ -120,7 +120,7 @@ namespace sw
         if ( FrameGraphExecutor::isMeshMorphDiagValid( _state._settings._meshMorphDebugMode ) == false )
         {
             _status        = FrameRendererStatus::Failed;
-            _statusMessage = "-gv_meshMorphDebugMode is not a mesh morph diagnostic mode";
+            _statusMessage = "the frame settings have no valid mesh morph diagnostic mode";
             SW_LOG_ERROR_ID( "FrameRenderer.Initialize", "initialize: %#", _statusMessage );
             return false;
         }
@@ -187,8 +187,8 @@ namespace sw
         // 스냅샷이 가진 머티리얼과 인스턴스의 소유권을 **디바이스가 살아 있을 때** 해제한다. 스냅샷은 소유권을 함께
         // 싣고 있으므로(GPUScene.h) 여기서 비우지 않으면 렌더러가 소멸할 때까지 그것들이 살아 있어, 디바이스가 먼저
         // 사라진 뒤 소멸자가 사라진 디바이스에 GPU 자원을 반환하려 한다(해제 후 사용).
-        _state._graph.releaseCommandLists();
-        _state._frameGraph.releaseCommandLists();
+        _state._graph.releaseDeviceResources();
+        _state._frameGraph.releaseDeviceResources();
         if ( _pDevice != nullptr )
             _state._gpuScene.releaseGPU( _pDevice );
         _state._gpuScene.clear();
@@ -883,8 +883,8 @@ namespace sw
         // 목록은 하나다. 디바이스가 없으면(초기화 실패) 각 release 가 핸들만 잊는다.
         // 병렬 기록용 커맨드 리스트는 이 디바이스의 것이다. 디바이스가 살아 있을 때 놓는다.
         if ( _pDevice != nullptr )
-            _state._graph.releaseCommandLists();
-        _state._frameGraph.releaseCommandLists();
+            _state._graph.releaseDeviceResources();
+        _state._frameGraph.releaseDeviceResources();
 
         // PSO · 레이아웃 · 머티리얼 폴백 버퍼. 빌려 쓰는 저장소(미리보기 씬 렌더러)는 소유자인 주 렌더러가 놓는다(`FramePSOManager::release`).
         _psoManager.release();

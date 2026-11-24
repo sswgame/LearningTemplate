@@ -108,18 +108,6 @@ namespace sw
         Component::onEndPlay();
     }
 
-    void GameModeComponent::onRegister( GameObjectManager& manager )
-    {
-        Component::onRegister( manager );
-        manager.getComponentRegistry().add<GameModeComponent>( this );
-    }
-
-    void GameModeComponent::onUnregister( GameObjectManager& manager )
-    {
-        manager.getComponentRegistry().remove<GameModeComponent>( this );
-        Component::onUnregister( manager );
-    }
-
     bool GameModeComponent::openGame()
     {
         vector<FollowedAsset> listPrevious = std::move( _listFollowedAsset ); // 규칙 객체는 `startGame` 이 다시 묶을 때까지 앞 판을 가리킨다
@@ -213,6 +201,19 @@ namespace sw
         Component::onSubTick( subTickID, context );
         if ( subTickID == kRuleSubTick && _bRuleOnSubTick == SW_TRUE )
             deferRules( context );
+        if ( subTickID == kStatusSubTick )
+        {
+            context.deferPostTickOnComponent( *this, []( GameModeComponent& gameMode )
+            {
+                if ( gameMode._bStarted == SW_TRUE )
+                    gameMode.logStatus();
+            } );
+        }
+    }
+
+    void GameModeComponent::startStatusLog( float32 interval )
+    {
+        (void)registerSubTick( TickGroup::PrePhysics, kStatusSubTick, TickPhase::Normal, 0, interval ); // 핸들은 쓰지 않는다 — id 로 다룬다
     }
 
     void GameModeComponent::deferRules( TickContext& context )
@@ -265,7 +266,7 @@ namespace sw
             return;
         if ( _bViewsSpawned == SW_FALSE )
             scheduleFlush(); // 상태 저장 전에 걷었다(또는 처음) — 지금 상태대로 다시 세운다
-        // 디렉터 계약 ① 의 재는 자리 — 측정 문턱(RTS 유닛 2000 에서 2 ms 등)을 판정할 값을 모든 디렉터가 줄 추가 없이 낸다.
+        // 디렉터 계약 ① 의 재는 자리 — 걸음 시간을 모든 디렉터가 줄 추가 없이 낸다.
         {
             SW_PROFILE_SCOPE( kStepScopeName );
             updateGame( deltaTime );

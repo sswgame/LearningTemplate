@@ -6,6 +6,7 @@
 #include "Core/Serialization/BitStream.h"
 #include "Core/Testing/TestFramework.h"
 
+#include "Engine/Reflection/TypeInfo.h"
 #include "Engine/Reflection/TypeRegistry.h"
 
 #include "GameFramework/Kits/Feature/Network/NetClientServer/RemoteCall.h"

@@ -205,9 +205,10 @@ namespace sw
         /** @brief 발행되는 판 하나입니다. 발행 뒤에는 바뀌지 않는다. */
         struct Snapshot
         {
-            vector<const PropertyInfo*>                       _listProperty;      ///< 기반부터, 파생이 같은 이름을 제자리에서 덮는다
-            unordered_map<hashed_string, const PropertyInfo*> _mapNameToProperty; ///< 이름과 별칭에서 항목으로. 뒤의 항목(파생)이 앞(기반)을 덮는다
-            TypeInterfaceTable                                _interfaces;        ///< 조상부터 합친 인터페이스 표(`REFLECT_INTERFACE`) — 찾기에 사슬 걷기가 없다
+            vector<const PropertyInfo*>                       _listProperty;                ///< 기반부터, 파생이 같은 이름을 제자리에서 덮는다
+            unordered_map<hashed_string, const PropertyInfo*> _mapNameToProperty;           ///< 이름과 별칭에서 항목으로. 뒤의 항목(파생)이 앞(기반)을 덮는다
+            TypeInterfaceTable                                _interfaces;                  ///< 조상부터 합친 인터페이스 표(`REFLECT_INTERFACE`) — 찾기에 사슬 걷기가 없다
+            vector<hashed_string>                             _listRegisteredComponentType; ///< 조상부터 자신까지 씬 레지스트리 목록을 가지는 형식의 FQN(`SW_REGISTERED_COMPONENT`)
         };
 
     private:
@@ -219,7 +220,8 @@ namespace sw
         void publish( unique_ptr<Snapshot> pSnapshot )
         {
             const Snapshot* const pCurrent = _pPublished.load( std::memory_order_relaxed );
-            if ( pCurrent != nullptr && pCurrent->_listProperty == pSnapshot->_listProperty && pCurrent->_interfaces == pSnapshot->_interfaces )
+            if ( pCurrent != nullptr && pCurrent->_listProperty == pSnapshot->_listProperty && pCurrent->_interfaces == pSnapshot->_interfaces &&
+                 pCurrent->_listRegisteredComponentType == pSnapshot->_listRegisteredComponentType )
                 return;
             _pPublished.store( pSnapshot.get(), std::memory_order_release );
             _listOwned.push_back( std::move( pSnapshot ) );
@@ -381,8 +383,10 @@ namespace sw
         /** @brief 내장 스칼라나 문자열 타입입니다(int32, bool, sw::string 등). REFLECT 코드젠이 없습니다. */
         uint8 _bPrimitive : 1;
         /** @brief `REFLECT( Interface )` 형식입니다 — 상태 없는 계약(순수 가상 + vptr 하나, 생성 코드의 `static_assert` 가 지킨다). 만들 수 없고 컴포넌트가 포트 멤버로 내보낸다. */
-        uint8                  _bInterface    : 1;
-        [[maybe_unused]] uint8 _reservedFlags : 4;
+        uint8 _bInterface : 1;
+        /** @brief 씬 레지스트리(`ComponentRegistry`)의 자기 목록을 가지는 컴포넌트입니다(`SW_REGISTERED_COMPONENT` — 이 형식이 스스로 표시한 것만). */
+        uint8                  _bRegisteredComponent : 1;
+        [[maybe_unused]] uint8 _reservedFlags        : 3;
         [[maybe_unused]] uint8 _reservedPadding[3];
 
         static constexpr uint8 kDerivedPODFastPath         = 1u << 0;
@@ -537,6 +541,11 @@ namespace sw
          * @details 부모가 있는 형식은 `rebuildDerivedCaches` 가 지은 판에서 읽는다. 판이 없는 레지스트리 밖 사본은 자기 표다(상속한 표를 지은 적이 없다).
          */
         const TypeInterfaceTable& getInterfacesWithBase() const;
+        /**
+         * @brief 조상부터 자신까지 씬 레지스트리 목록을 가지는 형식(`SW_REGISTERED_COMPONENT`)의 FQN 입니다 — 이 형식의 인스턴스가 오르는 목록들이다.
+         * @details `ComponentRegistry::addComponent` 가 등록마다 읽는다(지어 둔 판 하나 — 사슬을 걷지 않는다).
+         */
+        const vector<hashed_string>& getRegisteredComponentTypes() const;
         /** @brief `REFLECT( Interface )` 형식이면 true 입니다. */
         bool isInterface() const noexcept { return _bInterface != SW_FALSE; }
         /**

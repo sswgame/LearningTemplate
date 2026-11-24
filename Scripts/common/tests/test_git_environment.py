@@ -21,6 +21,10 @@ class GitEnvironmentTest(unittest.TestCase):
     def test_names_match_git(self) -> None:
         self.assertEqual(set(run_git_or_raise(["rev-parse", "--local-env-vars"]).split()), set(common.REPOSITORY_ENVIRONMENT_NAMES))
 
+    def test_read_only_git_takes_no_index_lock(self) -> None:
+        self.assertEqual(os.environ["GIT_OPTIONAL_LOCKS"], "0")
+        self.assertEqual(make_hook_environment()["GIT_OPTIONAL_LOCKS"], "0")
+
     def test_hook_environment_keeps_removed_names(self) -> None:
         self.assertFalse(any(name in os.environ for name in common.REPOSITORY_ENVIRONMENT_NAMES))
         common.HOOK_GIT_ENVIRONMENT["GIT_INDEX_FILE"] = "x/index"

@@ -43,7 +43,8 @@ function(sw_link_whole_archive TARGET_NAME)
 		# libpq)이 따라오지 않는다. 타깃으로도 링크해 전이 의존을 링크 줄에 올린다(같은 아카이브가 한 번 더 나와도 이미 올라온 멤버는 다시 올리지 않는다).
 		target_link_libraries(${TARGET_NAME} PRIVATE ${refl_lib})
 		if(MSVC)
-			target_link_options(${TARGET_NAME} PRIVATE "LINKER:/WHOLEARCHIVE:$<TARGET_FILE:${refl_lib}>")
+			# 링크 옵션으로 주면 명령줄에 그대로 실려 키트가 늘자 cmd 의 한도(8191 자)를 넘었다 — 라이브러리 기능으로 주면 응답 파일(.rsp)에 든다.
+			set_property(TARGET ${TARGET_NAME} PROPERTY LINK_LIBRARY_OVERRIDE_${refl_lib} WHOLE_ARCHIVE)
 		else()
 			target_link_options(${TARGET_NAME} PRIVATE
 				"LINKER:--whole-archive,$<TARGET_FILE:${refl_lib}>,--no-whole-archive")

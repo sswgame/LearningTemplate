@@ -22,6 +22,7 @@
 #include "Engine/Object/GameObject/GameObjectManager.h"
 #include "Engine/Profiling/FrameProfiler.h"
 #include "Engine/Reflection/TypeInfo.h"
+#include "Engine/Reflection/TypeRegistrar.h"
 #include "Engine/Reflection/TypeRegistry.h"
 #include "Engine/Scene/Scene.h"
 #include "Engine/Scene/SceneManager.h"
@@ -210,7 +211,7 @@ namespace sw
             if ( sceneSync == SceneSync::WithScenes )
                 getSubsystem<SceneManager>().waitForPendingLoad();
             {
-                // 계측(NEXT 5-4 W-R0): 등록 시간 · `MemoryTag::Reflection` 살아 있는 바이트 차이 · 상속 캐시를 비운 타입 수. 추적이 꺼져 있으면 바이트는 0 이다.
+                // 계측: 등록 시간 · `MemoryTag::Reflection` 살아 있는 바이트 차이 · 상속 캐시를 비운 타입 수. 추적이 꺼져 있으면 바이트는 0 이다.
                 SW_PROFILE_SCOPE( "Reflection.registerModuleTypes" );
                 TypeRegistry&         registry          = getSubsystem<TypeRegistry>();
                 const MemoryProfiler* pProfiler         = findSubsystem<MemoryProfiler>();

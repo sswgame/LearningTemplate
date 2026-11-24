@@ -34,6 +34,7 @@ namespace sw
     {
     public:
         REFLECT_BODY();
+        SW_REGISTERED_COMPONENT( ReputationComponent );
 
         static constexpr TickGroup kTickGroup = TickGroup::PostPhysics;
 
@@ -49,10 +50,6 @@ namespace sw
          */
         [[nodiscard]] GameStateInitResult initialize( const ReputationCatalog& catalog );
 
-        /** @brief 씬의 컴포넌트 레지스트리에 오릅니다(`PlayerComponentUtil::findOpen`). */
-        void onRegister( GameObjectManager& manager ) override;
-        /** @brief 레지스트리에서 내립니다. */
-        void onUnregister( GameObjectManager& manager ) override;
         /** @brief `_bOpenAtBeginPlay` 면 카탈로그 없이 엽니다. */
         void onBeginPlay() override;
         /** @brief 열렸으면 이번 틱에 월드 상태의 날이 넘어간 수만큼 평판을 식힙니다. */

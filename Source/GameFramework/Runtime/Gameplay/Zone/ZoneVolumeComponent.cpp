@@ -62,14 +62,12 @@ namespace sw
     void ZoneVolumeComponent::onRegister( GameObjectManager& manager )
     {
         SceneComponent::onRegister( manager );
-        manager.getComponentRegistry().add<ZoneVolumeComponent>( this );
         ZoneOccupantIndex::addLayerReader( manager );
         (void)ZoneSystem::getOrCreate( manager );
     }
 
     void ZoneVolumeComponent::onUnregister( GameObjectManager& manager )
     {
-        manager.getComponentRegistry().remove<ZoneVolumeComponent>( this );
         ZoneOccupantIndex::removeLayerReader( manager );
         ZoneSystem::releaseIfUnused( manager );
         SceneComponent::onUnregister( manager );

@@ -4,8 +4,8 @@ Scripts/common — 공용 라이브러리 층(층 0). 위 층(lint · 명령)을
 패키지는 아무 이름도 다시 내보내지 않는다. 쓰는 쪽은 모듈을 이름으로 부른다(`from common.run_process import run_process`) — 어느 모듈에 기대는지가
 import 줄에 보이고, 프로세스마다 쓰지 않는 모듈까지 읽지 않는다. 모듈마다 하는 일은 그 파일 머리말에 있다.
 
-이 파일이 하는 일은 넷이다: 콘솔 인코딩을 UTF-8 로 맞추고, 파이썬 최소 버전을 확인하고, 바이트코드 캐시(`__pycache__`)를 쓰지 않게 하고, 물려받은 git 저장소
-환경 변수를 떼어 둔다. 진입점은 모듈 수준에서 `common` 을 import 해 이것들을 받는다.
+이 파일이 하는 일은 다섯이다: 콘솔 인코딩을 UTF-8 로 맞추고, 파이썬 최소 버전을 확인하고, 바이트코드 캐시(`__pycache__`)를 쓰지 않게 하고, 물려받은 git 저장소
+환경 변수를 떼어 두고, 읽기만 하는 git 이 색인 잠금을 잡지 않게 한다. 진입점은 모듈 수준에서 `common` 을 import 해 이것들을 받는다.
 """
 
 from __future__ import annotations
@@ -30,6 +30,9 @@ REPOSITORY_ENVIRONMENT_NAMES = ("GIT_ALTERNATE_OBJECT_DIRECTORIES", "GIT_CONFIG"
                                 "GIT_WORK_TREE", "GIT_IMPLICIT_WORK_TREE", "GIT_GRAFT_FILE", "GIT_INDEX_FILE", "GIT_NO_REPLACE_OBJECTS", "GIT_REPLACE_REF_BASE",
                                 "GIT_PREFIX", "GIT_SHALLOW_FILE", "GIT_COMMON_DIR")
 HOOK_GIT_ENVIRONMENT: dict[str, str] = {_name: _os.environ.pop(_name) for _name in REPOSITORY_ENVIRONMENT_NAMES if _name in _os.environ}
+
+# 읽기만 하는 git(status · diff)도 색인을 새로 쓰려고 `index.lock` 을 잡는다 — 그때 강제로 끝나면(시한 · 중단) 빈 잠금이 남아 다음 커밋 · 병합이 멈춘다(`dev/git_locks.py`).
+_os.environ["GIT_OPTIONAL_LOCKS"] = "0"
 
 # ------------------------------------------------------------------------------
 # 콘솔 인코딩 — 이 저장소의 스크립트 메시지는 한국어다

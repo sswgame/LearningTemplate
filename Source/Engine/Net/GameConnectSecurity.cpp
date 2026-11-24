@@ -2,6 +2,8 @@
 
 #include "Engine/Net/GameConnectSecurity.h"
 
+#include "Core/Log/ScopedDeferredLog.h"
+
 #include <mutex>
 
 namespace sw
@@ -28,7 +30,8 @@ namespace sw
 
     bool GameConnectSecurity::bindAuthenticator( INetConnectAuthenticator* pAuthenticator )
     {
-        ScopedLock<mutex> lock{ _mutex };
+        const ScopedDeferredLog deferredLog;
+        ScopedLock<mutex>       lock{ _mutex };
         if ( pAuthenticator == nullptr || pAuthenticator == this )
             return false;
         if ( _pAuthenticator != nullptr && _pAuthenticator != pAuthenticator )
@@ -55,7 +58,8 @@ namespace sw
 
     bool GameConnectSecurity::findSessionSecret( const uint8* pToken, int32 tokenSize, NetSessionSecret& outSecret, uint64& outPrincipalID )
     {
-        ScopedLock<mutex> lock{ _mutex };
+        const ScopedDeferredLog deferredLog;
+        ScopedLock<mutex>       lock{ _mutex };
         if ( _pAuthenticator == nullptr )
         {
             // 서비스가 서기 전이다 — 받지 않는다. 처음과 2 의 거듭제곱 번째만 알린다(공격 패킷으로 로그를 채우지 않게).

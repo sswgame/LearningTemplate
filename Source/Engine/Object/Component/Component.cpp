@@ -63,7 +63,7 @@ namespace sw
             static FoldNumberFn findFoldNumber( const ReflectBuiltinIndex builtinIndex )
             {
                 static constexpr FoldNumberFn kArrFoldNumber[] = {
-#define SW_REFLECT_BUILTIN_TYPE( Canon, CppType, ... ) pickFoldNumber<ReflectBuiltinCppTypeT<CppType>, isStateNumber( ReflectBuiltinIndex::k##Canon )>(),
+#define SW_REFLECT_BUILTIN_TYPE( Canon, CppType, ... ) pickFoldNumber<CppType, isStateNumber( ReflectBuiltinIndex::k##Canon )>(),
 #define SW_REFLECT_BUILTIN_CONTAINER( ... )
 #include "Engine/Reflection/ReflectBuiltins.xxx"
 #undef SW_REFLECT_BUILTIN_TYPE
@@ -225,6 +225,7 @@ namespace sw
         , _reservedFlags{ 0 }
         , _poolEntrySlot{ kNotInPoolEntry }
         , _listSubTick{}
+        , _tickInterval{ 0.0f }
     {
         // **여기서 기본값을 적용하지 않는다.** 생성 중에는 객체가 아직 Component 라 가상
         // `getTypeInfo()` 가 **파생 타입이 아니라 기반 타입의 TypeInfo** 를 내놓는다 — MeshComponent 를
@@ -251,8 +252,8 @@ namespace sw
         if ( _bRegistered == SW_TRUE )
             return;
         _bRegistered = SW_TRUE;
-        // 내보낸 인터페이스(`REFLECT_INTERFACE`)는 레지스트리의 인터페이스 칸에 저절로 오른다 — 컴포넌트가 손으로 `add` 하던 자리를 형식의 표가 대신한다.
-        manager.getComponentRegistry().addInterfaces( *this );
+        // 형식의 표시(`SW_REGISTERED_COMPONENT` 목록 · `REFLECT_INTERFACE` 칸)대로 레지스트리에 저절로 오른다 — 손으로 올리는 길은 없다.
+        manager.getComponentRegistry().addComponent( *this );
         onRegister( manager );
     }
 
@@ -267,8 +268,8 @@ namespace sw
         if ( _bRegistered == SW_FALSE )
             return;
         _bRegistered = SW_FALSE;
+        manager.getComponentRegistry().removeComponent( *this ); // 먼저 내린다 — `onUnregister` 의 "남은 것이 없으면 시스템을 뗀다" 가 자신을 세지 않게
         onUnregister( manager );
-        manager.getComponentRegistry().removeInterfaces( *this );
     }
 
     void* Component::findInterfacePort( const TypeInfo* pInterface ) const
@@ -309,13 +310,19 @@ namespace sw
         (void)context;
     }
 
-    SubTickHandle Component::registerSubTick( TickGroup group, uint32 subTickID, TickPhase phase, uint8 priority )
+    SubTickHandle Component::registerSubTick( TickGroup group, uint32 subTickID, TickPhase phase, uint8 priority, float32 interval )
     {
         if ( subTickID == 0 )
             return {};
         if ( isValidTickGroup( group ) == false )
         {
             SW_LOG_WARNING_ID( "Component.SubTickAsksTick", "Sub-tick %# asks for tick group %#, which does not exist - not registered", subTickID, static_cast<uint32>( group ) );
+            return {};
+        }
+        const bool bValidInterval = interval >= 0.0f; // NaN 도 여기서 걸러진다
+        if ( bValidInterval == false )
+        {
+            SW_LOG_ERROR_ID( "Component.SubTickInterval", "Sub-tick %# asks for the interval %# s - an interval is 0 (every frame) or longer; not registered", subTickID, interval );
             return {};
         }
         if ( priority > kMaxTickPriority )
@@ -325,12 +332,13 @@ namespace sw
             priority = kMaxTickPriority;
         }
         // 틱 중이면 목록 · 마스크 모두 틱 뒤로 — 핸들은 목록과 상관없이 정해지므로 바로 돌려준다(헤더 머리말).
-        if ( deferIfStructureFrozen( Delegate<void( Component& )>( [group, subTickID, phase, priority]( Component& self )
-        { self.registerSubTick( group, subTickID, phase, priority ); } ) ) )
+        if ( deferIfStructureFrozen( Delegate<void( Component& )>( [group, subTickID, phase, priority, interval]( Component& self )
+        { self.registerSubTick( group, subTickID, phase, priority, interval ); } ) ) )
             return makeTickHandle( subTickID );
 
         if ( SubTickInfo* pInfo = VectorUtil::findBy<&SubTickInfo::_subTickID>( _listSubTick, subTickID ) )
         {
+            pInfo->_interval = interval;
             pInfo->_group    = group;
             pInfo->_phase    = phase;
             pInfo->_priority = priority;
@@ -343,6 +351,7 @@ namespace sw
 
         SubTickInfo newInfo{};
         newInfo._subTickID = subTickID;
+        newInfo._interval  = interval;
         newInfo._group     = group;
         newInfo._phase     = phase;
         newInfo._priority  = priority;

@@ -4,7 +4,9 @@
 
 #include "Core/Concurrency/atomic.h"
 #include "Core/Concurrency/mutex.h"
+#include "Core/Container/vector.h"
 #include "Core/Foundation/LowLevelReporterSlot.h"
+#include "Core/Log/ScopedDeferredLog.h"
 #include "Core/Math/MathUtil.h"
 #include "Core/Memory/Memory.h"
 #include "Core/String/StringUtil.h"
@@ -20,16 +22,12 @@ namespace sw
 
         /**
          * @brief 싱크가 서기 전에 남은 줄 하나입니다(기동 초기 — 명령줄이 로거보다 먼저 선다). 싱크가 등록되면 넘긴다(`Logger::registerGlobalSink`).
-         * @details 언리얼 FOutputDeviceRedirector 의 backlog 와 같다. 힙을 쓰지 않는다 — 메모리 계층이 서기 전일 수 있다. 태그 · 파일 · id 는 글자 상수라 포인터만 둔다.
+         * @details 언리얼 FOutputDeviceRedirector 의 backlog 와 같다. 힙을 쓰지 않는다 — 메모리 계층이 서기 전일 수 있다. 본문만 사본을 두고, 사건(시각 · 순번 · 글자 상수 포인터)은 남긴 순간의 것을 넘긴다.
          */
         struct BacklogLine
         {
-            LogLevel    _level{ LogLevel::Info };
-            const utf8* _pTag{ nullptr };
-            const utf8* _pFile{ nullptr };
-            const utf8* _pID{ nullptr };
-            int32       _line{ 0 };
-            utf8        _arrMessage[constant::buffer::kMax512]{ 0 };
+            LogEvent _event{};
+            utf8     _arrMessage[constant::buffer::kMax512]{ 0 };
         };
         static constexpr uint32 kMaxBacklogLine = 64;
         BacklogLine             s_arrBacklog[kMaxBacklogLine]{};
@@ -63,7 +61,8 @@ namespace sw
             if ( s_globalSink.load( std::memory_order_acquire ) == nullptr )
                 return false;
 
-            const LogLevel logLevel = level == internal::LowLevelReportLevel::Warning ? LogLevel::Warning : LogLevel::Error;
+            const ScopedLeafLockExemption exemption; // 아래 티어의 보고는 부른 쪽이 잠금을 쥐었는지 모른다
+            const LogLevel                logLevel = level == internal::LowLevelReportLevel::Warning ? LogLevel::Warning : LogLevel::Error;
             if ( Logger::shouldLog( logLevel ) )
                 Logger::writeLogGlobal( logLevel, SW_LOG_TAG, pMessage, pFile, line, pID );
             if ( level == internal::LowLevelReportLevel::Fatal )
@@ -80,6 +79,7 @@ namespace sw
 {
     void Logger::flushGlobalForCrash()
     {
+        ScopedDeferredLog::flushForCrash();
         ILogSink* pSink = s_globalSink.load( std::memory_order_acquire );
         if ( pSink != nullptr )
             pSink->waitUpToCrash();
@@ -134,6 +134,7 @@ namespace sw
 
     bool Logger::reportAssertFailure( const utf8* pTag, const utf8* pExpression, const utf8* pMessage, const utf8* pFile, int32 line, [[maybe_unused]] const utf8* pFunction ) noexcept
     {
+        const ScopedLeafLockExemption exemption; // 단언은 잠금을 쥔 자리에서도 진다 — 보고가 잎 잠금 단언으로 덮이지 않게
 #if defined( SW_DO_CHECKS )
         printAssertFailureToStderr( pExpression, pMessage, pFile, line, pFunction != nullptr ? pFunction : "" );
 #endif
@@ -169,14 +170,21 @@ namespace sw
 
     void Logger::writeLogGlobal( LogLevel level, const utf8* pTag, const utf8* pMessage, const utf8* pFile, int32 line, const utf8* pID )
     {
+        writeEventGlobal( LogEvent{ level, pTag, pMessage, pFile, line, pID } );
+    }
+
+    void Logger::writeEventGlobal( const LogEvent& event )
+    {
+        if ( ScopedDeferredLog::tryDefer( event ) )
+            return;
         ILogSink* pSink = s_globalSink.load( std::memory_order_acquire );
         if ( pSink == nullptr )
         {
             // 싱크가 없으면(기동 초기, 로거 없는 도구) 줄을 잃지 않게 stderr 에 남긴다. 상세도는 부르는 쪽이 이미 걸렀다.
-            const utf8* pLevelName = level == LogLevel::Error ? "Error" : level == LogLevel::Warning ? "Warning"
-                                                                    : level == LogLevel::Info        ? "Info"
-                                                                                                     : "Trace";
-            std::fprintf( stderr, "[%s][%s] %s:%d: %s\n", pLevelName, pTag != nullptr ? pTag : "", pFile != nullptr ? pFile : "", line, pMessage != nullptr ? pMessage : "" );
+            const utf8* pLevelName = event._level == LogLevel::Error ? "Error" : event._level == LogLevel::Warning ? "Warning"
+                                                                           : event._level == LogLevel::Info        ? "Info"
+                                                                                                                   : "Trace";
+            std::fprintf( stderr, "[%s][%s] %s:%d: %s\n", pLevelName, event._pTag != nullptr ? event._pTag : "", event._pFile != nullptr ? event._pFile : "", event._line, event._pMessage != nullptr ? event._pMessage : "" );
             std::fflush( stderr );
 
             ScopedLock<mutex> lock{ s_backlogMutex };
@@ -189,18 +197,14 @@ namespace sw
                     return;
                 }
                 BacklogLine& backlog = s_arrBacklog[s_backlogCount++];
-                backlog._level       = level;
-                backlog._pTag        = pTag;
-                backlog._pFile       = pFile;
-                backlog._pID         = pID;
-                backlog._line        = line;
-                copyTruncated( pMessage, backlog._arrMessage );
+                backlog._event       = event.withMessage( nullptr ); // 본문은 아래 칸에 — 넘길 때 잇는다
+                copyTruncated( event._pMessage, backlog._arrMessage );
                 return;
             }
             // stderr 에 쓰는 사이 싱크가 섰다 — 아래로 내려가 그 싱크에도 쓴다.
         }
 
-        pSink->writeLogWithID( level, pTag, pMessage, pFile, line, pID );
+        pSink->writeEvent( event );
     }
 
     Subscription Logger::registerGlobalListener( const LogWrittenDelegate& listener )
@@ -216,22 +220,33 @@ namespace sw
 
     void Logger::registerGlobalSink( ILogSink* pSink )
     {
-        ScopedLock<mutex> lock{ s_backlogMutex };
-        ILogSink*         pExpected{ nullptr };
-        if ( s_globalSink.compare_exchange_strong( pExpected, pSink, std::memory_order_acq_rel, std::memory_order_relaxed ) == false )
-            return;
-
-        // 싱크가 서기 전에 쌓인 줄을 남은 순서대로 넘긴다 — 로그 파일에 기동 첫 줄부터 남는다.
-        for ( uint32 index = 0; index < s_backlogCount; ++index )
+        // 싱크가 서기 전에 쌓인 줄을 남은 순서대로 넘긴다 — 로그 파일에 기동 첫 줄부터 남는다. 쌓인 줄을 다 넘긴 뒤에야 싱크를 세우므로 새 줄이 앞지르지 않는다.
+        // 넘기는 일은 잠금 밖에서 한다(잎 잠금).
+        vector<BacklogLine> listTaken;
+        uint32              droppedCount = 0;
+        for ( ;; )
         {
-            const BacklogLine& backlog = s_arrBacklog[index];
-            pSink->writeLogWithID( backlog._level, backlog._pTag, backlog._arrMessage, backlog._pFile, backlog._line, backlog._pID );
+            {
+                ScopedLock<mutex> lock{ s_backlogMutex };
+                if ( s_globalSink.load( std::memory_order_acquire ) != nullptr )
+                    return;
+                droppedCount += s_droppedBacklogCount;
+                s_droppedBacklogCount = 0;
+                if ( s_backlogCount == 0 )
+                {
+                    s_globalSink.store( pSink, std::memory_order_release );
+                    break;
+                }
+                listTaken.assign( s_arrBacklog, s_arrBacklog + s_backlogCount );
+                s_backlogCount = 0;
+            }
+            for ( const BacklogLine& backlog : listTaken )
+            {
+                pSink->writeEvent( backlog._event.withMessage( backlog._arrMessage ) );
+            }
         }
-        if ( s_droppedBacklogCount > 0 )
-            pSink->writeLog( LogLevel::Warning, "Log", "Lines logged before the log sink existed overflowed the backlog - only the first ones were kept (raise kMaxBacklogLine)",
-                             __FILE__, __LINE__ );
-        s_backlogCount        = 0;
-        s_droppedBacklogCount = 0;
+        if ( droppedCount > 0 )
+            pSink->writeEvent( LogEvent{ LogLevel::Warning, "Log", "Lines logged before the log sink existed overflowed the backlog - only the first ones were kept (raise kMaxBacklogLine)", __FILE__, __LINE__ } );
     }
 
     void Logger::unregisterGlobalSink( ILogSink* pSink )

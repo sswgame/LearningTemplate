@@ -45,13 +45,11 @@ namespace sw
     {
     public:
         REFLECT_BODY();
+        SW_REGISTERED_COMPONENT( WindComponent );
 
         WindComponent();
         virtual ~WindComponent() override = default;
 
-        /** @brief 씬의 바람 목록(`ComponentRegistry`)에 등록합니다. `findWind` 가 씬 전체를 훑지 않고 이 목록을 봅니다. */
-        void onRegister( GameObjectManager& manager ) override;
-        void onUnregister( GameObjectManager& manager ) override;
         /** @brief 지금 값입니다. */
         WindSettings makeSettings() const;
         void         setDirection( float32 radians ) { _direction = Radians::fromRadians( radians ); }

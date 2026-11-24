@@ -31,6 +31,7 @@ namespace sw
     {
     public:
         REFLECT_BODY();
+        SW_REGISTERED_COMPONENT( TagPostProcessComponent );
 
         TagPostProcessComponent();
         ~TagPostProcessComponent() override = default;

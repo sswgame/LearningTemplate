@@ -56,6 +56,7 @@ namespace sw
     {
     public:
         REFLECT_BODY();
+        SW_REGISTERED_COMPONENT( CameraManagerComponent );
 
         static constexpr TickGroup kTickGroup = TickGroup::PostUpdate; ///< 뷰 타깃을 움직이는 디렉터 · 리그(PostPhysics 까지)의 틱 다음에 읽는다 — 디렉터가 미룬 계산은 카메라 시스템이 이 매니저보다 먼저 푼다.
 

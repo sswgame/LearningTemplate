@@ -8,6 +8,7 @@
 #include "Core/Container/string.h"
 #include "Core/Container/vector.h"
 #include "Core/Math/MathUtil.h"
+#include "Core/Math/Radians.h"
 #include "Core/Name/hashed_string.h"
 #include "Core/String/StringUtil.h"
 
@@ -30,15 +31,15 @@ namespace sw
     {
         struct ControlAutomationStepsInternal
         {
-            /** @brief 있으면 수로 읽습니다. 속성이 없으면 빈 값, 형식이 틀리면 그 글이 대상인 오류입니다. */
-            [[nodiscard]] static expected<optional<float32>> readFloat( const AutomationStep& step, string_view name )
+            /** @brief 있으면 각(글은 도 — 데이터 파일의 `Radians` 칸과 같다)으로 읽습니다. 속성이 없으면 빈 값, 형식이 틀리면 그 글이 대상인 오류입니다. */
+            [[nodiscard]] static expected<optional<Radians>> readAngle( const AutomationStep& step, string_view name )
             {
                 const string* pValue = step.findAttribute( name );
                 if ( pValue == nullptr )
-                    return optional<float32>{};
+                    return optional<Radians>{};
                 float32 value = 0.0f;
                 if ( StringUtil::parseFloat( StringUtil::trim( string_view{ *pValue } ), value ) )
-                    return optional<float32>{ value };
+                    return optional<Radians>{ Radians::fromDegrees( value ) };
                 return unexpected( Error{ ErrorKind::InvalidArgument, "yaw and pitch must be numbers", *pValue } );
             }
 
@@ -66,7 +67,7 @@ namespace sw
                     return read;
                 for ( const string_view name : { string_view{ "yaw" }, string_view{ "pitch" } } )
                 {
-                    const expected<optional<float32>> angle = readFloat( step, name );
+                    const expected<optional<Radians>> angle = readAngle( step, name );
                     if ( angle.has_value() == false )
                         return unexpected( angle.error() );
                 }
@@ -92,14 +93,14 @@ namespace sw
                     return true;
                 }
                 ControlIntent                     intent{};
-                const expected<optional<float32>> yaw   = readFloat( step, "yaw" );
-                const expected<optional<float32>> pitch = readFloat( step, "pitch" );
+                const expected<optional<Radians>> yaw   = readAngle( step, "yaw" );
+                const expected<optional<Radians>> pitch = readAngle( step, "pitch" );
                 if ( yaw.has_value() == false || pitch.has_value() == false )
                     return false;
                 intent._move         = params._move;
                 intent._moveUp       = params._up;
-                intent._controlYaw   = yaw->value_or( pPawn->getIntent()._controlYaw ); // 적지 않으면 지금 바라보는 쪽을 둔다
-                intent._controlPitch = pitch->value_or( pPawn->getIntent()._controlPitch );
+                intent._controlYaw   = yaw->value_or( Radians::fromRadians( pPawn->getIntent()._controlYaw ) ).radians(); // 적지 않으면 지금 바라보는 쪽을 둔다
+                intent._controlPitch = pitch->value_or( Radians::fromRadians( pPawn->getIntent()._controlPitch ) ).radians();
                 string_view rest     = params._buttons;
                 while ( rest.empty() == false )
                 {

@@ -36,16 +36,12 @@ namespace sw
     {
     public:
         REFLECT_BODY();
+        SW_REGISTERED_COMPONENT( PostProcessVolumeComponent );
 
         /** @brief 기본 값(상자 반 크기 5 m, 블렌드 반경 1 m, 무게 1, 우선순위 0, 덮어쓴 칸 없음)으로 만듭니다. */
         PostProcessVolumeComponent();
         /** @brief 기본 소멸자입니다. */
         virtual ~PostProcessVolumeComponent() override = default;
-
-        /** @brief 레지스트리에 등록합니다. */
-        void onRegister( GameObjectManager& manager ) override;
-        /** @brief 레지스트리에서 뺍니다. */
-        void onUnregister( GameObjectManager& manager ) override;
 
         /** @brief @p position 에서의 무게(0..1)입니다 — 모양 안 1, 블렌드 반경 동안 1 → 0, 그 밖 0 에 블렌드 무게를 곱한다. */
         float32 computeWeight( const float3& position ) const;

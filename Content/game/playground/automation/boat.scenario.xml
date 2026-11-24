@@ -48,8 +48,8 @@
 	<Expect watch="Object.DistanceTo" target="Sailor" key="Rowboat" near="1.06" tolerance="0.3"/>
 
 	<!-- 순풍 · 역풍: 의도의 조종 요를 선수 쪽으로 두어 둘 다 "앞으로" 돛을 편다 -->
-	<Intent pawn="Downwind" move="0,1" yaw="1.5708" frames="900"/>
-	<Intent pawn="Upwind" move="0,1" yaw="-1.5708" frames="900"/>
+	<Intent pawn="Downwind" move="0,1" yaw="90" frames="900"/>
+	<Intent pawn="Upwind" move="0,1" yaw="-90" frames="900"/>
 	<AdvanceSimulation frames="720"/> <!-- 순풍 · 역풍 12 초(시간이 내용) -->
 	<Expect watch="Boat.SailForce" target="Downwind" atLeast="100"/>
 	<Expect watch="Boat.ForwardSpeed" target="Downwind" atLeast="1.5"/>

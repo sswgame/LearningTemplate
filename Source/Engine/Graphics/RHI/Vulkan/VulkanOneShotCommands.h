@@ -6,6 +6,7 @@
 #include "Core/Concurrency/mutex.h"
 #include "Core/Foundation/PlatformOSHeaders.h"
 #include "Core/Foundation/StdHeaders.h"
+#include "Core/Log/ScopedDeferredLog.h"
 
 #include "Engine/Graphics/RHI/Vulkan/VulkanResultCheck.h"
 #include "Engine/Profiling/FrameProfiler.h"
@@ -33,7 +34,8 @@ namespace sw
     public:
         /** @brief 일회성 풀 락을 잡고 커맨드 버퍼를 하나 할당해 기록을 시작합니다. 실패하면 `isValid()` 가 false 입니다. */
         VulkanOneShotCommands( VkDevice device, VkCommandPool commandPool, mutex& poolMutex, VkQueue queue, mutex& queueMutex )
-            : _poolLock{ poolMutex }
+            : _deferredLog{}
+            , _poolLock{ poolMutex }
             , _queueMutex{ queueMutex }
             , _device{ device }
             , _commandPool{ commandPool }
@@ -123,6 +125,7 @@ namespace sw
         [[nodiscard]] VkResult getLastResult() const { return _lastResult; }
 
     private:
+        const ScopedDeferredLog _deferredLog; ///< 풀 잠금보다 먼저 — 잠금을 쥔 동안 남긴 줄은 놓은 뒤에 쓴다
         std::unique_lock<mutex> _poolLock;
         mutex&                  _queueMutex;
         VkDevice                _device;

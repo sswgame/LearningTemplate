@@ -75,7 +75,7 @@ namespace sw
             static ValueNumberFn findValueNumber( const ReflectBuiltinIndex builtinIndex )
             {
                 static constexpr ValueNumberFn kArrValueNumber[] = {
-#define SW_REFLECT_BUILTIN_TYPE( Canon, CppType, ... ) pickValueNumber<ReflectBuiltinCppTypeT<CppType>, isStateNumber( ReflectBuiltinIndex::k##Canon )>(),
+#define SW_REFLECT_BUILTIN_TYPE( Canon, CppType, ... ) pickValueNumber<CppType, isStateNumber( ReflectBuiltinIndex::k##Canon )>(),
 #define SW_REFLECT_BUILTIN_CONTAINER( ... )
 #include "Engine/Reflection/ReflectBuiltins.xxx"
 #undef SW_REFLECT_BUILTIN_TYPE

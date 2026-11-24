@@ -19,6 +19,7 @@
 #include "Core/Foundation/Macros.h"
 #include "Core/Foundation/Types.h"
 #include "Core/Math/MatrixMath.h"
+#include "Core/Math/Radians.h"
 #include "Core/Math/VectorMath.h"
 #include "Core/Name/hashed_string.h"
 
@@ -45,7 +46,7 @@ namespace sw
         editor::MirrorAxis _mirrorAxis{ editor::MirrorAxis::X };
     };
 
-    /** @brief `<Bone>` 의 칸입니다. 덮어쓰기 층이라 적은 칸만 표시한다(`BoneOverride::_fieldMask`). 회전은 도 단위 오일러이고 읽은 뒤 쿼터니언으로 옮긴다. */
+    /** @brief `<Bone>` 의 칸입니다. 덮어쓰기 층이라 적은 칸만 표시한다(`BoneOverride::_fieldMask`). 회전은 오일러(글은 도)이고 읽은 뒤 쿼터니언으로 옮긴다. */
     REFLECT()
     struct BoneOverrideParams
     {
@@ -55,8 +56,8 @@ namespace sw
         hashed_string _name{};
         PROPERTY( Units = m )
         float3 _translation{};
-        PROPERTY( Units = deg )
-        float3 _rotation{};
+        PROPERTY()
+        EulerAngles _rotation{};
         PROPERTY()
         float3 _scale{ 1.0f, 1.0f, 1.0f };
     };

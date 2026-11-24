@@ -162,7 +162,7 @@ namespace sw
         /** @brief 하루를 끝냅니다. 정산, 다음 날, 날씨, 밭, 체력 순서로 처리하며, @p bPassedOut 이면 체력을 반만 채웁니다. */
         void endDay( bool bPassedOut );
         void selectSeed( int32 offset );
-        void logStatus( bool bForce );
+        void logFarmStatus( bool bForce );
 
         const hashed_string& getSelectedSeed() const;
         /** @brief 핸들의 오브젝트 위치를 @p outPosition 에 담습니다. 대상을 찾지 못하면 false 이고 @p outPosition 은 그대로입니다. */

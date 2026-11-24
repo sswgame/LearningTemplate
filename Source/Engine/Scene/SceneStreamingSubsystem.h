@@ -186,6 +186,11 @@ namespace sw
          * @details 물리(`ScenePhysics`)가 동적 바디를 쥘지 묻는다. 스트리밍하지 않으면 false 입니다.
          */
         bool isFloorMissing( const float3& position ) const;
+        /**
+         * @brief `isFloorMissing` 의 답이 바뀔 수 있을 때마다 바뀌는 번호입니다 — 조각이 오르내리거나 실패하고, 켜진 레이어가 바뀌고, 조각을 다시 짓는다.
+         * @details 번호가 그대로면 움직이지 않은 자리의 답도 그대로다 — 물리(`ScenePhysics`)가 움직인 것만 다시 묻는다. 스트리밍하지 않으면 쓰지 않는다.
+         */
+        uint64 getFloorSerial() const;
 
         /** @brief 셀을 받았으면 true 입니다. */
         bool isStreaming() const { return _pScene != nullptr; }
@@ -346,6 +351,7 @@ namespace sw
         StreamingSource                       _cameraSource;         ///< `setCameraSource`. 반경은 월드 설정의 로딩 반경
         uint8                                 _bCameraSourceSet : 1; ///< 카메라 원점을 한 번이라도 받았다
         uint8                                 _bExternalSources : 1; ///< 바깥 원점을 쓴다
+        uint64                                _floorSerial;          ///< 조각의 완료 여부(`isSlotUnfinished`)가 바뀐 번호(`getFloorSerial` — 레이어 번호를 더해 낸다)
         uint64                                _changeSerial;         ///< 셀이 오르내린 번호(`getChangeSerial`). 월드를 바꿔도 되돌리지 않는다 — 보는 쪽의 마지막 번호가 늘 지금 이하다
         vector<StreamingCellCoord>            _listScratchCell;      ///< 갱신 중 범위 안 셀(프레임마다 다시 쓴다)
         vector<uint32>                        _listScratchLoad;      ///< 갱신 중 범위 안의 올릴 셀 인덱스(가까운 순)

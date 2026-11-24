@@ -169,11 +169,12 @@ namespace sw::editor
          */
         uint32 beginRequest( TInput input )
         {
+            StopToken         stopToken = acquireEditorBackgroundStopSignal();
             ScopedLock<mutex> lock{ _pState->_mutex };
             ++_pState->_generation;
             _pState->_input     = std::move( input );
             _pState->_result    = TResult{};
-            _pState->_stopToken = acquireEditorBackgroundStopSignal();
+            _pState->_stopToken = std::move( stopToken );
             _pState->_bPending  = SW_TRUE;
             _pState->_bReady    = SW_FALSE;
             return _pState->_generation;

@@ -234,7 +234,7 @@ namespace sw
 
             /**
              * @brief 감시 값 `Minigame.LeaveAssetCacheBytes` 입니다 — 나온 뒤 지금 에셋 캐시가 쥔 바이트 추정 합(CPU + GPU, `AssetCacheBase::collectMemoryEntries`). 미니게임 안이면 값이 없다.
-             * @details 읽을 때 잰다 — 흐름은 칸 · 접근자를 들지 않아 배포에 재는 일도 읽는 API 도 없다. 들어가기 → 나오기를 되풀이하며 회차마다 느는지 본다(판정 문턱은 측정 뒤).
+             * @details 읽을 때 잰다 — 흐름은 칸 · 접근자를 들지 않아 배포에 재는 일도 읽는 API 도 없다. 들어가기 → 나오기를 되풀이하며 회차마다 느는지 본다.
              */
             [[nodiscard]] static bool readLeaveAssetCacheBytes( const GameObjectManager* pObjects, float64& outValue )
             {

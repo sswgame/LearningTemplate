@@ -6,6 +6,7 @@
 
 #include "Engine/Reflection/EnumName.h"
 #include "Engine/Reflection/ReflectionMetadata.h"
+#include "Engine/Reflection/TypeInfo.h"
 #include "Engine/Reflection/TypeRegistry.h"
 
 namespace sw

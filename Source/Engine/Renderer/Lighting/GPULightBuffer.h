@@ -177,7 +177,7 @@ namespace sw
     {
     public:
         /**
-         * @brief GPU 구간(`getGPULightBase` 부터 `getGPULightCount` 개)의 상한입니다 — 프레임 라이트 상한의 4분의 1입니다(측정 뒤 조정).
+         * @brief GPU 구간(`getGPULightBase` 부터 `getGPULightCount` 개)의 상한입니다 — 프레임 라이트 상한의 4분의 1입니다.
          * @details 라이트 버퍼는 [CPU 라이트][GPU 구간][그림자 타일] 순서입니다. GPU 구간은 컴퓨트(vfx_simulate.hlsl)가 파티클 라이트를 쓰는 자리이고, CPU 라이트 바로 뒤라서
          *          셰이더가 보는 라이트 수(`g_SwLightCount`)에 든다 — 라이트 그리드 생산자(light_grid.hlsl)와 조명 커서가 구간을 따로 알 필요가 없다.
          *          CPU 라이트 수는 이 구간만큼 줄여 CPU + GPU 가 `shaderslot::kMaxFrameLight` 를 넘지 않게 한다.

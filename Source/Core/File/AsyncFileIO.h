@@ -140,6 +140,9 @@ namespace sw
     private:
         shared_ptr<AsyncOpenFile> _pOpenFile;
     };
+
+    /** @brief 읽을 파일을 엽니다 — 백엔드 스레드가 요청마다 한 번 부른다(`AsyncFileIO::openAndReadRange`). 열리지 않은 핸들은 `FileNotFound` 다. */
+    using AsyncFileOpenDelegate = Delegate<AsyncFileHandle()>;
 } // namespace sw
 
 namespace sw
@@ -247,6 +250,11 @@ namespace sw
         /** @brief 이미 연 파일의 구간을 읽습니다(팩처럼 한 파일을 여러 번 읽을 때 — 열기가 없다). */
         AsyncReadHandle readRange( const AsyncFileHandle& file, uint64 offset, uint64 size, AsyncIOPriority priority,
                                    const AsyncReadCompleteDelegate& onComplete = {} );
+        /**
+         * @brief 백엔드 스레드에서 @p onOpen 으로 연 파일의 구간을 읽습니다 — 여는 일이 오래 막는 소스(망에서 받아 거울에 두는 Fileserve)가 부른 스레드를 막지 않게.
+         * @details 큐의 우선순위 · 취소 · 완료 계약은 다른 읽기와 같다. 큐에서 취소되면 열지 않는다. @p onOpen 은 요청이 끝날 때까지 살아 있는 것만 붙든다.
+         */
+        AsyncReadHandle openAndReadRange( const AsyncFileOpenDelegate& onOpen, uint64 offset, uint64 size, AsyncIOPriority priority, const AsyncReadCompleteDelegate& onComplete = {} );
         /** @brief 파일 전체를 읽어 결과를 `TaskFuture` 로 돌려줍니다(`then` 으로 이어 붙인다). */
         TaskFuture<AsyncReadResult> readFileFuture( string_view filePath, AsyncIOPriority priority );
 

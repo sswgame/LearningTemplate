@@ -10,7 +10,9 @@
 from __future__ import annotations
 
 import concurrent.futures
+import multiprocessing
 import os
+import threading
 from typing import Callable, Iterable, Iterator, Sequence, TypeVar
 
 from common.exit_code import ExitCode
@@ -94,6 +96,13 @@ def _run_chunk(worker: Callable[[TItem], Iterable[TResult]],
     return [(index, list(worker(item) or ())) for index, item in list_indexed_item]
 
 
+def _exit_with_parent() -> None:
+    """부모가 강제로 끝나면 이 자식도 끝냅니다 — 풀의 자식은 부모의 죽음을 모르고 파이프를 쥔 채 남는다."""
+    parent = multiprocessing.parent_process()
+    if parent is not None:
+        threading.Thread(target=lambda: (parent.join(), os._exit(1)), daemon=True).start()
+
+
 def flat_map_in_processes(
     worker: Callable[[TItem], Iterable[TResult]],
     items: Sequence[TItem],
@@ -118,7 +127,7 @@ def flat_map_in_processes(
         return [result for item in list_item for result in (worker(item) or ())]
 
     list_chunk = [[(index, list_item[index]) for index in range(start, len(list_item), worker_count)] for start in range(worker_count)]
-    with concurrent.futures.ProcessPoolExecutor(max_workers=worker_count) as pool:
+    with concurrent.futures.ProcessPoolExecutor(max_workers=worker_count, initializer=_exit_with_parent) as pool:
         list_indexed = [pair for chunk_result in pool.map(_run_chunk, [worker] * worker_count, list_chunk) for pair in chunk_result]
     list_indexed.sort(key=lambda pair: pair[0])
     return [result for _, list_result in list_indexed for result in list_result]

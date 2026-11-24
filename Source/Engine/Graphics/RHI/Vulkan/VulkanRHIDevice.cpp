@@ -9,14 +9,11 @@
 #include "Core/Log/LogOnce.h"
 #include "Core/Math/MathUtil.h"
 #include "Core/Process/ProcessEnvironment.h"
-#include "Core/Task/TaskManager.h"
-#include "Core/Time/MonotonicClock.h"
 
 #include "Engine/Config/EngineDefaultAssets.h"
 #include "Engine/Foundation/EngineServices.h"
 #include "Engine/Graphics/RHI/Backend/RHILiveCommandListUtil.h"
 #include "Engine/Graphics/RHI/Vulkan/VulkanPhysicalDeviceRank.h"
-#include "Engine/Graphics/RHI/Vulkan/VulkanPipelineCacheFile.h"
 #include "Engine/Graphics/RHI/Vulkan/VulkanRHICommandContext.h"
 #include "Engine/Graphics/RHI/Vulkan/VulkanRHICommandList.h"
 #include "Engine/Graphics/RHI/Vulkan/VulkanRHIResourceFactory.h"
@@ -42,6 +39,7 @@
 #endif
 #include "Core/Diagnostics/CrashHandler.h"
 #include "Core/Foundation/BuildInfo.h"
+#include "Core/Log/ScopedDeferredLog.h"
 
 #include "Engine/Graphics/Debug/GPUBreadcrumbs.h"
 #include "Engine/Graphics/RHI/Diagnostics/RHIMemoryTracker.h"
@@ -238,7 +236,7 @@ namespace sw
             SW_LOG_ERROR_ID( "Vulkan.PipelineCacheSaveIntervalMissing", "EngineConfig _rhi._pipelineCacheSaveIntervalSeconds must be > 0 - the Vulkan backend does not start" );
             return false;
         }
-        _pipelineCacheSaveIntervalNanoseconds = MonotonicClock::secondsToNanoseconds( deviceDesc._pipelineCacheSaveIntervalSeconds );
+        _pipelineCacheSaveIntervalSeconds = deviceDesc._pipelineCacheSaveIntervalSeconds;
 
         // 검증 레이어는 배포가 아닌 구성(레이어를 싣는 구성, `SW_VULKAN_VALIDATION`)에 컴파일돼 있고 켤지는 장치를 만들 때 정한다
         // (EngineConfig `_rhi._validationLayer`, `-rhi-validation` — 언리얼 `-vulkandebug`). 레이어가 없으면 아래 레이어 확인이 끈다.
@@ -672,15 +670,15 @@ namespace sw
     namespace
     {
         /**
-         * @brief @p physicalDevice 의 파이프라인 캐시 파일(`<Bin>/Saved/ShaderCache/vk_pipeline_cache_<vendor>_<device>_<driver>.bin`)입니다.
+         * @brief @p physicalDevice 의 파이프라인 캐시 파일(`<Bin>/Saved/ShaderCache/vk_pipeline_cache_…bin` — `RHIPipelineCacheFile::makeRelativePath`)입니다.
          * @details 작업 폴더가 아니라 실행 파일 폴더 기준이다 — 병렬 실행(ctest -j · 시나리오 행렬)도 같은 `Bin` 을 쓰고, 이 캐시는 같은 빌드의 실행끼리 나누는 것이 목적이다(쓰기는 원자적 바꿔치기라 겹쳐도 깨지지 않는다).
-         *          장치 · 드라이버마다 파일이 따로다(`VulkanPipelineCacheFile`, R-13).
+         *          장치 · 드라이버마다 파일이 따로다(`RHIPipelineCacheFile`, R-13).
          */
         AbsolutePath getVulkanPipelineCachePath( VkPhysicalDevice physicalDevice )
         {
             VkPhysicalDeviceProperties properties{};
             vkGetPhysicalDeviceProperties( physicalDevice, &properties );
-            return ProcessRoots::get()._saved.join( VulkanPipelineCacheFile::makeRelativePath( properties.vendorID, properties.deviceID, properties.driverVersion ) );
+            return ProcessRoots::get()._saved.join( RHIPipelineCacheFile::makeRelativePath( "vk_pipeline_cache", properties.vendorID, properties.deviceID, properties.driverVersion ) );
         }
 
         struct VulkanRHIDeviceInternal
@@ -1635,7 +1633,8 @@ namespace sw
         if ( _windowSwapChains.getRebuildList().empty() )
             return;
         {
-            ScopedLock<mutex> queueLock{ _queueMutex };
+            const ScopedDeferredLog deferredLog;
+            ScopedLock<mutex>       queueLock{ _queueMutex };
             reportQueueResult( static_cast<int32>( vkDeviceWaitIdle( _device ) ), "rebuildPendingWindowSwapChains: vkDeviceWaitIdle" );
         }
         if ( isDeviceLost() == false )
@@ -1705,7 +1704,8 @@ namespace sw
         if ( _device == nullptr )
             return;
         {
-            ScopedLock<mutex> queueLock{ _queueMutex };
+            const ScopedDeferredLog deferredLog;
+            ScopedLock<mutex>       queueLock{ _queueMutex };
             reportQueueResult( static_cast<int32>( vkDeviceWaitIdle( _device ) ), "releaseSurface: vkDeviceWaitIdle" );
         }
         if ( isDeviceLost() == false )
@@ -1738,7 +1738,8 @@ namespace sw
         if ( bCannotRecreateSwapChain )
             return false;
         {
-            ScopedLock<mutex> queueLock{ _queueMutex };
+            const ScopedDeferredLog deferredLog;
+            ScopedLock<mutex>       queueLock{ _queueMutex };
             reportQueueResult( static_cast<int32>( vkDeviceWaitIdle( _device ) ), "recreateSwapChain: vkDeviceWaitIdle" );
         }
         // 대기에서 잃었음을 봤으면 다시 만들지 않는다 — 잃은 장치의 스왑체인 생성은 같은 손실만 다시 듣는다.
@@ -1795,7 +1796,8 @@ namespace sw
         if ( bCannotRecreateSurface )
             return false;
         {
-            ScopedLock<mutex> queueLock{ _queueMutex };
+            const ScopedDeferredLog deferredLog;
+            ScopedLock<mutex>       queueLock{ _queueMutex };
             reportQueueResult( static_cast<int32>( vkDeviceWaitIdle( _device ) ), "recreateSurfaceAndSwapChain: vkDeviceWaitIdle" );
         }
         if ( isDeviceLost() )
@@ -1825,11 +1827,9 @@ namespace sw
         if ( _device == VK_NULL_HANDLE || _physicalDevice == VK_NULL_HANDLE )
             return false;
 
-        vector<uint8>      listCacheData;
-        const AbsolutePath cachePath = getVulkanPipelineCachePath( _physicalDevice );
-        // 못 읽으면 빈 캐시로 시작한다 — 파이프라인을 다시 만들 뿐이다.
-        if ( FileUtil::exists( cachePath ) )
-            (void)FileUtil::readFile( cachePath, listCacheData ); // 못 읽으면 빈 캐시로 시작한다(위 설명)
+        vector<uint8> listCacheData;
+        _pipelineCacheFile.open( getVulkanPipelineCachePath( _physicalDevice ), _pipelineCacheSaveIntervalSeconds,
+                                 SW_DELEGATE_METHOD( RHIPipelineCacheSerializeDelegate, &VulkanRHIDevice::serializePipelineCache, this ), listCacheData );
 
         VkPipelineCacheCreateInfo createInfo{};
         createInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_CACHE_CREATE_INFO;
@@ -1852,8 +1852,6 @@ namespace sw
         {
             SW_LOG_INFO_ID( "Vulkan.LoadedPipelineCacheBytes", "Loaded pipeline cache (%# bytes).", static_cast<uint32>( listCacheData.size() ) );
         }
-        _pipelineCacheLastSaveNanoseconds = MonotonicClock::nowNanoseconds();
-        _pipelineCacheLastSavedBytes      = static_cast<uint64>( listCacheData.size() );
         return _pipelineCache != VK_NULL_HANDLE;
     }
 
@@ -1861,61 +1859,31 @@ namespace sw
     {
         if ( _device == VK_NULL_HANDLE || _pipelineCache == VK_NULL_HANDLE )
             return;
-        if ( engine::areEngineServicesBound() )
-            engine::getSubsystem<TaskManager>().waitStage( _pipelineCacheSaveStage, "VulkanRHIDevice::savePipelineCache" );
-        writePipelineCacheFile();
+        _pipelineCacheFile.saveAndClose();
         vkDestroyPipelineCache( _device, _pipelineCache, nullptr );
         _pipelineCache = VK_NULL_HANDLE;
     }
 
     void VulkanRHIDevice::savePipelineCacheIfDue()
     {
-        if ( _device == VK_NULL_HANDLE || _pipelineCache == VK_NULL_HANDLE || engine::areEngineServicesBound() == false )
-            return; // 서비스(작업 풀)가 없는 도구는 종료 저장만 한다
-        const int64 nowNanoseconds = MonotonicClock::nowNanoseconds();
-        if ( nowNanoseconds - _pipelineCacheLastSaveNanoseconds < _pipelineCacheSaveIntervalNanoseconds )
+        if ( _device == VK_NULL_HANDLE || _pipelineCache == VK_NULL_HANDLE || _pipelineCacheFile.isIntervalPassed() == false )
             return;
         // 크기만 묻는다(버퍼 없이) — 새 파이프라인이 없으면 디스크를 건드리지 않는다. 캐시는 내부 동기화라 워커의 파이프라인 생성과 겹쳐도 된다(외부 동기화 깃발을 쓰지 않는다).
         size_t cacheBytes{ 0 };
-        if ( isVkSuccess( vkGetPipelineCacheData( _device, _pipelineCache, &cacheBytes, nullptr ), "vkGetPipelineCacheData (size)" ) == false )
-            return;
-        if ( VulkanPipelineCacheFile::isPeriodicSaveDue( nowNanoseconds, _pipelineCacheLastSaveNanoseconds, _pipelineCacheSaveIntervalNanoseconds, static_cast<uint64>( cacheBytes ),
-                                                         _pipelineCacheLastSavedBytes ) )
-        {
-            TaskManager& taskManager = engine::getSubsystem<TaskManager>();
-            if ( taskManager.isStageComplete( _pipelineCacheSaveStage ) == false )
-                return; // 앞 저장이 아직 쓰는 중이다(느린 디스크) — 시각을 옮기지 않아 다음 프레임에 다시 본다
-            TaskHandle saveTask = taskManager.emplaceTask( "VulkanPipelineCacheSave", SW_DELEGATE_METHOD( TaskDelegate, &VulkanRHIDevice::writePipelineCacheFile, this ) );
-            taskManager.addToStage( _pipelineCacheSaveStage, saveTask, "VulkanPipelineCacheSave" );
-            saveTask.submit();
-            _pipelineCacheLastSavedBytes = static_cast<uint64>( cacheBytes );
-        }
-        _pipelineCacheLastSaveNanoseconds = nowNanoseconds;
+        if ( isVkSuccess( vkGetPipelineCacheData( _device, _pipelineCache, &cacheBytes, nullptr ), "vkGetPipelineCacheData (size)" ) )
+            _pipelineCacheFile.saveIfDue( static_cast<uint64>( cacheBytes ) );
     }
 
-    void VulkanRHIDevice::writePipelineCacheFile()
+    bool VulkanRHIDevice::serializePipelineCache( vector<uint8>& outBytes )
     {
         size_t dataSize{ 0 };
-        // 캐시를 읽지 못하면 오류로 남기고 저장만 건너뛴다(다음 실행이 파이프라인을 새로 만들 뿐이다).
-        if ( isVkSuccess( vkGetPipelineCacheData( _device, _pipelineCache, &dataSize, nullptr ), "vkGetPipelineCacheData (size)" ) && dataSize > 0 )
-        {
-            vector<uint8> listCacheData( dataSize );
-            if ( isVkSuccess( vkGetPipelineCacheData( _device, _pipelineCache, &dataSize, listCacheData.data() ), "vkGetPipelineCacheData (data)" ) )
-            {
-                const AbsolutePath cachePath = getVulkanPipelineCachePath( _physicalDevice );
-                // 새 파이프라인이 없던 실행은 같은 바이트다 — 다시 쓰지 않는다. 드라이버가 같은 내용에 다른 바이트를 내면 지금처럼 쓴다.
-                vector<uint8> listSavedData;
-                const bool    bUnchanged = FileUtil::exists( cachePath ) && FileUtil::readFile( cachePath, listSavedData ) && listSavedData.size() == dataSize &&
-                                        Memory::compare( listSavedData.data(), listCacheData.data(), dataSize ) == 0;
-                if ( bUnchanged )
-                    SW_LOG_INFO_ID( "Vulkan.PipelineCacheUnchanged", "Pipeline cache unchanged (%# bytes) - not saved.", static_cast<uint32>( dataSize ) );
-                else if ( FileUtil::ensureParentDirectoryExists( cachePath ) &&
-                          FileUtil::writeFile( cachePath, listCacheData.data(), static_cast<uint64>( listCacheData.size() ) ) )
-                    SW_LOG_INFO_ID( "Vulkan.SavedPipelineCacheBytes", "Saved pipeline cache (%# bytes).", static_cast<uint32>( dataSize ) );
-                else
-                    SW_LOG_WARNING_ID( "Vulkan.CouldNotSavePipeline", "Could not save the pipeline cache - the next run builds pipelines from scratch" );
-            }
-        }
+        if ( isVkSuccess( vkGetPipelineCacheData( _device, _pipelineCache, &dataSize, nullptr ), "vkGetPipelineCacheData (size)" ) == false || dataSize == 0 )
+            return false;
+        outBytes.resize( dataSize );
+        if ( isVkSuccess( vkGetPipelineCacheData( _device, _pipelineCache, &dataSize, outBytes.data() ), "vkGetPipelineCacheData (data)" ) == false )
+            return false;
+        outBytes.resize( dataSize );
+        return true;
     }
 
     void VulkanRHIDevice::reportQueueResult( int32 result, const utf8* pWhere )
@@ -2069,7 +2037,8 @@ namespace sw
             // 쌓인 업로드(워커 · 프레임 밖)도 내고 함께 기다린다 — 프레임 없이 기다리는 쪽(도구 · 테스트 · 크기 바꾸기)도 그 내용을 본다.
             const UploadBatch uploadBatch = takeUploadBatch();
             {
-                ScopedLock<mutex> queueLock{ _queueMutex };
+                const ScopedDeferredLog deferredLog;
+                ScopedLock<mutex>       queueLock{ _queueMutex };
                 if ( uploadBatch._buffer != VK_NULL_HANDLE )
                 {
                     VkSubmitInfo uploadInfo{};
@@ -2474,7 +2443,8 @@ namespace sw
         // 이번 프레임 기록 중 등록된 지연 해제(enqueueGPURelease)는 기록 시리얼(`_frameFenceRing`)이 실제로 끝났다고 확인될 때까지(beginFrame) 보류된다.
         if ( _frameStreamContext != nullptr )
             recordSubmittedEventMarker( _frameStreamContext->getLastEventMarker() );
-        UniqueLock<mutex> queueLock{ _queueMutex };
+        const ScopedDeferredLog deferredLog;
+        UniqueLock<mutex>       queueLock{ _queueMutex };
         // 기록하는 사이에 장치를 잃었으면(다른 스레드의 손실 · rhi.removeDevice) 내지 않는다. 버퍼는 위에서 닫았다.
         const bool     bDeviceLost  = isDeviceLost();
         const VkResult submitResult = bDeviceLost ? VK_ERROR_DEVICE_LOST : vkQueueSubmit( _graphicsQueue, 1, &submitInfo, _listInFlightFence[getFrameSlot()] );
@@ -2666,8 +2636,9 @@ namespace sw
         submitInfo.pCommandBuffers    = bHasUpload ? arrSubmitBuffer : &listBuffer;
         recordSubmittedEventMarker( pList->getLastEventMarker() );
         {
-            ScopedLock<mutex> queueLock{ _queueMutex };
-            VkResult          queueResult = isDeviceLost() ? VK_ERROR_DEVICE_LOST : vkQueueSubmit( _graphicsQueue, 1, &submitInfo, VK_NULL_HANDLE );
+            const ScopedDeferredLog deferredLog;
+            ScopedLock<mutex>       queueLock{ _queueMutex };
+            VkResult                queueResult = isDeviceLost() ? VK_ERROR_DEVICE_LOST : vkQueueSubmit( _graphicsQueue, 1, &submitInfo, VK_NULL_HANDLE );
             if ( queueResult == VK_SUCCESS )
                 queueResult = vkQueueWaitIdle( _graphicsQueue );
             reportQueueResult( static_cast<int32>( queueResult ), "executeCommandListImmediate" );
@@ -2734,8 +2705,9 @@ namespace sw
         flushInfo.signalSemaphoreCount = signal != VK_NULL_HANDLE ? 1u : 0u;
         flushInfo.pSignalSemaphores    = &signal;
         {
-            ScopedLock<mutex> queueLock{ _queueMutex };
-            const VkResult    flushResult = isDeviceLost() ? VK_ERROR_DEVICE_LOST : vkQueueSubmit( _graphicsQueue, 1, &flushInfo, VK_NULL_HANDLE );
+            const ScopedDeferredLog deferredLog;
+            ScopedLock<mutex>       queueLock{ _queueMutex };
+            const VkResult          flushResult = isDeviceLost() ? VK_ERROR_DEVICE_LOST : vkQueueSubmit( _graphicsQueue, 1, &flushInfo, VK_NULL_HANDLE );
             reportQueueResult( static_cast<int32>( flushResult ), "vkQueueSubmit (pending graphics)" );
         }
         _listPendingAcquireWait.clear();
@@ -2797,8 +2769,9 @@ namespace sw
     {
         if ( pData == nullptr || sizeBytes == 0 || _uploadCommandPool == VK_NULL_HANDLE )
             return false;
-        constexpr uint64  kCopyAlignment = 4;
-        ScopedLock<mutex> lock{ _uploadMutex };
+        constexpr uint64        kCopyAlignment = 4;
+        const ScopedDeferredLog deferredLog;
+        ScopedLock<mutex>       lock{ _uploadMutex };
         if ( _openUploadBuffer == VK_NULL_HANDLE )
         {
             VkCommandBufferAllocateInfo allocInfo{};
@@ -2866,8 +2839,9 @@ namespace sw
 
     VulkanRHIDevice::UploadBatch VulkanRHIDevice::takeUploadBatch()
     {
-        UploadBatch       batch;
-        ScopedLock<mutex> lock{ _uploadMutex };
+        UploadBatch             batch;
+        const ScopedDeferredLog deferredLog;
+        ScopedLock<mutex>       lock{ _uploadMutex };
         if ( _openUploadBuffer == VK_NULL_HANDLE )
             return batch;
         // 이 버퍼의 복사가 읽는 블록은 모두 GPU 가 끝날 때까지 산다 — 열린 블록도 함께 넘긴다(남은 자리는 버린다; 다음 버퍼는 새 블록을 연다).
@@ -3026,8 +3000,9 @@ namespace sw
         submitInfo.pSignalSemaphores    = &computeDone;
         recordSubmittedEventMarker( pList->getLastEventMarker() );
         {
-            ScopedLock<mutex> queueLock{ _queueMutex };
-            const VkResult    submitResult = isDeviceLost() ? VK_ERROR_DEVICE_LOST : vkQueueSubmit( _asyncComputeQueue, 1, &submitInfo, VK_NULL_HANDLE );
+            const ScopedDeferredLog deferredLog;
+            ScopedLock<mutex>       queueLock{ _queueMutex };
+            const VkResult          submitResult = isDeviceLost() ? VK_ERROR_DEVICE_LOST : vkQueueSubmit( _asyncComputeQueue, 1, &submitInfo, VK_NULL_HANDLE );
             reportQueueResult( static_cast<int32>( submitResult ), "submitAsyncCompute: vkQueueSubmit" );
         }
         _listAsyncSignal.push_back( computeDone );
@@ -3193,7 +3168,8 @@ namespace sw
         if ( submitResult != RHISubmitResult::Accepted || outSpan.isSolo() == false )
             return submitResult;
         // 할당기가 단독 구간을 내줬다면 앞선 단독 구간은 이미 돌아왔다 — 남은 버퍼(아직 회수가 지우지 않은 것)를 GPU 가 더 쓰지 않는다.
-        ScopedLock<mutex> soloLock{ ring._soloMutex };
+        const ScopedDeferredLog deferredLog;
+        ScopedLock<mutex>       soloLock{ ring._soloMutex };
         destroyMappedStagingBuffer( ring._soloBuffer, ring._soloMemory );
         if ( createMappedStagingBuffer( outSpan.getSizeBytes(), usageFlags, "single transfer", ring._soloBuffer, ring._soloMemory ) )
             return RHISubmitResult::Accepted;
@@ -3722,6 +3698,7 @@ namespace sw
 
     void VulkanRHIDevice::flushBindlessRingSlot( uint32 slot )
     {
+        const ScopedDeferredLog  deferredLog;
         UniqueLock<shared_mutex> registryLock{ _bindlessMutex };
         _bindlessRingMirror.flushSlot( slot, [this, slot]( RHIDescriptorIndex index )
         {

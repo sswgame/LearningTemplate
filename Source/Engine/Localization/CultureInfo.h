@@ -5,7 +5,7 @@
  *          코드는 CLDR 형식의 부분 집합을 읽고 쓸 뿐이다(복수형 규칙 문법 `PluralRules.h`, 날짜 패턴 기호 y, M, d, H, h, m, s, a, z). ICU 는 들이지 않는다.
  */
 #pragma once
-#include "Core/Container/flat_map.h"
+#include "Core/Container/map.h"
 #include "Core/Container/string.h"
 #include "Core/Container/vector.h"
 #include "Core/Foundation/Macros.h"
@@ -154,9 +154,9 @@ namespace sw
         PROPERTY()
         vector<string> _listFont; ///< 폰트 대체 목록입니다(패밀리 이름이며 앞이 우선). UI 폰트 렌더러가 읽습니다.
         PROPERTY( Required, Tooltip = "Plural category keyword -> CLDR rule text with its samples (empty when every number is other)" )
-        flat_map<string, string> _pluralRules;
+        map<string, string> _pluralRules;
         PROPERTY( Tooltip = "Ordinal category keyword -> CLDR rule text with its samples" )
-        flat_map<string, string> _ordinalRules;
+        map<string, string> _ordinalRules;
         PROPERTY()
         PseudoLocaleMode _pseudoMode;
         PROPERTY()
@@ -268,8 +268,8 @@ namespace sw
         void clear();
 
     private:
-        flat_map<string, CultureInfo>          _mapCulture;
-        flat_map<string, vector<string>>       _mapNumberingSystem; ///< 숫자 체계 id → 글자 0 ~ 9
+        map<string, CultureInfo>               _mapCulture;
+        map<string, vector<string>>            _mapNumberingSystem; ///< 숫자 체계 id → 글자 0 ~ 9
         shared_ptr<const vector<CurrencyInfo>> _pCurrencyList;      ///< 문화권이 나눠 든다(읽을 때마다 새 목록으로 바꿔 건다)
     };
 } // namespace sw

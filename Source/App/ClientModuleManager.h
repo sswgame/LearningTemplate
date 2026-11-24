@@ -11,6 +11,8 @@
 #include "Core/Container/string.h"
 #include "Core/Container/vector.h"
 
+#include "Engine/Graphics/View/FrameViewports.h"
+
 #include "ModuleAPI/ABI/EditorAPI.h"
 
 #include "ModuleManager/GameModuleManager.h"
@@ -60,6 +62,8 @@ namespace sw
         void endEditorFrame();
         /** @brief 네이티브 창 이벤트를 에디터에 전달합니다. */
         bool onWindowMessage( const NativeWindowEvent& event );
+        /** @brief 에디터가 이번 프레임에 그려 달라고 요청한 게임 뷰와 씬 뷰 RT 입니다(`updateEditorUI` 가 샘플한다). 보이지 않는 패널의 뷰는 비어 있고, 둘 다 비면 백버퍼에 바로 그립니다. */
+        const FrameViewports& getViews() const { return _views; }
         /** @brief 이번 프레임에 씬 뷰를 그리는 에디터 카메라를 에디터에서 조회합니다. */
         CameraComponent* getSceneViewCamera() const;
 
@@ -172,6 +176,7 @@ namespace sw
         EditorAPI                     _editorAPI;
         EditorHandle                  _editor;
         unique_ptr<SubsystemScope>    _editorServices;      ///< 에디터 모듈에 넘긴 호스트 서비스 범위(`rebindModuleService` 가 새로 만든다)
+        FrameViewports                _views;               ///< 이번 프레임에 샘플한 뷰 요청
         vector<EditorExtensionModule> _listEditorExtension; ///< 켜진 확장 모듈(로드 순서이며, `loadModuleLibraries` 가 모은다).
 
         uint8                  _bEnableEditor        : 1;

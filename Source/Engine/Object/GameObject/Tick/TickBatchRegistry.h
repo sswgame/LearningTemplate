@@ -18,13 +18,13 @@
  * - 서브틱 · 여러 항목 오브젝트도 파도로 일괄합니다(`TickRegistry` 머리말). 선행 조건을 건 항목만 모드과 무관하게 스테이지로 갑니다.
  * - 오브젝트 사이의 순서는 정하지 않습니다(병렬). 같은 입력이면 같은 목록이 지어집니다(목록은 등록 · 해제 순서로만 바뀐다).
  *
- * [컴포넌트 틱의 잡 컨텍스트(NEXT 5-3)]
+ * [컴포넌트 틱의 잡 컨텍스트]
  * - 서명: 주 틱은 `onTick( TickContext& context )`, 서브틱은 `onSubTick( uint32 subTickID, TickContext& context )` 다(옛 `float32` 서명은 지웠다).
  *   컨텍스트는 `SceneJobContext`(매니저 읽기 전용 · 시간 · 틱 뒤 큐)에 자기 오브젝트(`getSelf`)를 더한 것이다(`TickContext.h`).
  *   디스패치(`TickBatchOf` · `tickBatchVirtual` · `runTickItem`)가 원소마다 스택에 세운다. 유니티 `IJobEntity` + `EntityCommandBuffer`,
  *   언리얼 `FMassExecutionContext::Defer()` 와 같은 자리다.
  * - 쓰기 가능한 매니저: `GameObject::getManager` 는 const 이고 쓰기는 `getMutableManager` 로 가른다(`TickContext.h`). 틱 본문은 읽기를
- *   `context.getManager()` 로, 남의 오브젝트 쓰기를 `context.deferPostTick` · `deferPostTickOnComponent` 로 한다. 남은 틈은 NEXT 5-3.
+ *   `context.getManager()` 로, 남의 오브젝트 쓰기를 `context.deferPostTick` · `deferPostTickOnComponent` 로 한다.
  *
  * @note 등록 · 해제는 모듈을 올리고 내리는 길에서 일어납니다 — 정적 등록 객체는 만들 때 링크 때 목록(`ModuleObjectRegistrar`, E1 사전 등록 사슬)에만 달리고,
  *       `engine::registerModuleTypes` 가 걷어 서비스 범위의 레지스트리에 붙이며(`attach`), `unregisterModuleTypes` 가 그 모듈의 컴포넌트를 지우기 전에 뗍니다(`detach`).
@@ -44,6 +44,7 @@
 #include "Engine/Module/ModuleEntryRegistrar.h"
 #include "Engine/Object/GameObject/Tick/StructuralChangeBuffer.h"
 #include "Engine/Object/GameObject/Tick/TickContext.h"
+#include "Engine/Object/GameObject/Tick/TickInterval.h"
 #include "Engine/Object/GameObject/Tick/TickRegistry.h"
 #include "Engine/Profiling/FrameProfiler.h"
 #include "Engine/Reflection/ReflectionMacros.h"
@@ -189,7 +190,7 @@ namespace sw
     template <typename TComponent, const utf8* TScopeName>
     struct TickBatchOf
     {
-        static void tickRange( TickThreadState& threadState, const TickBatchElement* pElement, uint32 count, uint32 subTickID, float32 deltaTime )
+        static void tickRange( TickThreadState& threadState, const TickBatchElement* pElement, uint32 count, const TickBatchCall& call )
         {
             SW_PROFILE_SCOPE( TScopeName );
             for ( uint32 index = 0; index < count; ++index )
@@ -198,13 +199,16 @@ namespace sw
                 TComponent*             pComp   = static_cast<TComponent*>( element._pComponent );
                 threadState._pTickingObject     = element._pObject;
                 threadState._pTickWriter        = element._pObject;
-                if ( shouldRunTickElement( *pComp, subTickID ) == false )
+                if ( shouldRunTickElement( *pComp, call._subTickID ) == false )
                     continue;
-                TickContext context{ *element._pObject, deltaTime };
-                if ( subTickID == 0 )
+                const TickTurn turn = call.computeTurn( pComp->getComponentID() );
+                if ( turn._intervalCount == 0 )
+                    continue;
+                TickContext context{ *element._pObject, turn };
+                if ( call._subTickID == 0 )
                     ReflectAccess<TickAccessTag>::onTick( *pComp, context );
                 else
-                    ReflectAccess<TickAccessTag>::onSubTick( *pComp, subTickID, context );
+                    ReflectAccess<TickAccessTag>::onSubTick( *pComp, call._subTickID, context );
             }
         }
     };
@@ -213,7 +217,7 @@ namespace sw
      * @brief 일괄 함수가 등록되지 않은 타입(생성기가 아직 내지 않은 타입 · 테스트 타입 · 모드만 물려받은 파생)의 Batch 모드 함수입니다 — 원소마다 가상 호출합니다.
      * @details Debug 카운터 `GT.Scene.tick.virtualTicks` 를 센다(5-3 측정 기반 — 생성기가 덮을수록 줄어든다).
      */
-    SW_API void tickBatchVirtual( TickThreadState& threadState, const TickBatchElement* pElement, uint32 count, uint32 subTickID, float32 deltaTime );
+    SW_API void tickBatchVirtual( TickThreadState& threadState, const TickBatchElement* pElement, uint32 count, const TickBatchCall& call );
 
     /**
      * @brief `REFLECT( TickMode )` 를 적지 않은 컴포넌트의 등록 줄입니다 — 리플렉션 생성기가 추상이 아닌 컴포넌트마다 냅니다.

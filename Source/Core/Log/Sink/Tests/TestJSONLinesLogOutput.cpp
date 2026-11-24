@@ -65,24 +65,26 @@ SW_TEST_CASE( JSONLinesLogOutputTest, EscapesQuotesBackslashesAndControlCharacte
 SW_TEST_CASE( JSONLinesLogOutputTest, LineHasThePropertiesThatArePresent )
 {
     JSONLogFields params;
-    params._time             = "2026-10-28 9:5:3";
-    params._unixMilliseconds = 1234;
-    params._level            = LogLevel::Warning;
-    params._tag              = "Server";
-    params._message          = "hello \"world\"";
-    params._file             = "A.cpp";
-    params._line             = 7;
+    params._time            = "2026-10-28 9:5:3";
+    params._stamp._time     = UnixMilliseconds{ 1234 };
+    params._stamp._sequence = 5;
+    params._stamp._threadID = 2;
+    params._level           = LogLevel::Warning;
+    params._tag             = "Server";
+    params._message         = "hello \"world\"";
+    params._file            = "A.cpp";
+    params._line            = 7;
     string line;
     JSONLinesLogOutput::appendLine( line, params );
-    SW_EXPECT_TRUE_MSG( line == "{\"time\":\"2026-10-28 9:5:3\",\"ts\":1234,\"level\":\"warning\",\"tag\":\"Server\",\"msg\":\"hello \\\"world\\\"\",\"file\":\"A.cpp\",\"line\":7}\n",
+    SW_EXPECT_TRUE_MSG( line == "{\"time\":\"2026-10-28 9:5:3\",\"ts\":1234,\"seq\":5,\"thread\":2,\"level\":\"warning\",\"tag\":\"Server\",\"msg\":\"hello \\\"world\\\"\",\"file\":\"A.cpp\",\"line\":7}\n",
                         line.c_str() ); // 틱 · 추적 id · 계정 · id 칸은 없는 값이라 빠진다
 
-    params._id                   = "Audit.Login";
-    params._bHasClock            = true;
-    params._clock                = LogClock::Tick;
-    params._clockNumber          = 42;
-    params._context._traceID     = LogTraceID{ 0x0123456789abcdefull, 0x1 };
-    params._context._principalID = 0x42;
+    params._id                          = "Audit.Login";
+    params._stamp._bHasClock            = true;
+    params._stamp._clock                = LogClock::Tick;
+    params._stamp._clockNumber          = 42;
+    params._stamp._context._traceID     = LogTraceID{ 0x0123456789abcdefull, 0x1 };
+    params._stamp._context._principalID = 0x42;
     line.clear();
     JSONLinesLogOutput::appendLine( line, params );
     SW_EXPECT_TRUE_MSG( line.find( "\"tick\":42,\"trace\":\"0123456789abcdef0000000000000001\",\"acct\":\"0000000000000042\",\"id\":\"Audit.Login\",\"msg\"" ) != string::npos,
@@ -97,7 +99,7 @@ SW_TEST_CASE( JSONLinesLogOutputTest, SinkBuildsJSONOnlyWhenAStructuredOutputIsA
     unique_ptr<PlainCaptureOutput> plain  = make_unique<PlainCaptureOutput>();
     PlainCaptureOutput*            pPlain = plain.get();
     SW_REQUIRE_TRUE( logger.addOutput( std::move( plain ) ) );
-    logger.writeLog( LogLevel::Info, "Test", "before", __FILE__, __LINE__ );
+    logger.writeEvent( LogEvent{ LogLevel::Info, "Test", "before", __FILE__, __LINE__ } );
 
     unique_ptr<JSONCaptureOutput> json  = make_unique<JSONCaptureOutput>();
     JSONCaptureOutput*            pJSON = json.get();
@@ -106,7 +108,7 @@ SW_TEST_CASE( JSONLinesLogOutputTest, SinkBuildsJSONOnlyWhenAStructuredOutputIsA
     context._traceID = LogTraceID{ 0, 9 };
     {
         ScopedLogContext scope( context );
-        logger.writeLogWithID( LogLevel::Info, "Test", "after", __FILE__, __LINE__, "Test.Json" );
+        logger.writeEvent( LogEvent{ LogLevel::Info, "Test", "after", __FILE__, __LINE__, "Test.Json" } );
     }
     logger.shutdown();
 

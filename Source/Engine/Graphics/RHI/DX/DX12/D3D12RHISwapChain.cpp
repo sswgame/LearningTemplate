@@ -2,6 +2,8 @@
 
 #include "Engine/Graphics/RHI/DX/DX12/D3D12RHISwapChain.h"
 
+#include "Core/Log/ScopedDeferredLog.h"
+
 #include "Engine/Graphics/RHI/DX/RHIDxResultCheck.h"
 
 #if defined( SW_PLATFORM_WINDOWS )
@@ -230,7 +232,8 @@ namespace sw
 
         // 상태 확인과 배리어 기록이 한 덩어리여야 한다. 병렬 패스 기록에서 이 둘이 갈라지면 두
         // 스레드가 같은 "이전 상태"를 보고 각자 배리어를 기록하고, 두 번째가 before==after 가 된다.
-        ScopedLock<mutex> lock{ _stateMutex };
+        const ScopedDeferredLog deferredLog;
+        ScopedLock<mutex>       lock{ _stateMutex };
         if ( _state == stateAfter )
             return;
 

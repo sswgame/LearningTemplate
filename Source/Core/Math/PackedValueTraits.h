@@ -294,6 +294,31 @@ namespace sw
         [[nodiscard]] static constexpr Radians fromFloats( const PackedFloats& floats ) noexcept { return Radians::fromDegrees( floats._arrValue[0] ); }
     };
 
+    /** @brief 오일러 회전의 바깥 표현은 도 셋(피치, 요, 롤)입니다(`Radians.h`). 성분마다 `PackedValueTraits<Radians>` 와 같은 규칙이다. */
+    template <>
+    struct PackedValueTraits<EulerAngles>
+    {
+        using AngleTraits = PackedValueTraits<Radians>;
+
+        static constexpr uint32  kComponentCount = 3;
+        static constexpr float32 kRangeMin       = AngleTraits::kRangeMin;
+        static constexpr float32 kRangeMax       = AngleTraits::kRangeMax;
+        static constexpr float32 kDragSpeed      = AngleTraits::kDragSpeed;
+
+        [[nodiscard]] static PackedFloats toFloats( const EulerAngles& value ) noexcept
+        {
+            PackedFloats result{};
+            result._arrValue[0] = AngleTraits::toFloats( value.getPitch() )._arrValue[0];
+            result._arrValue[1] = AngleTraits::toFloats( value.getYaw() )._arrValue[0];
+            result._arrValue[2] = AngleTraits::toFloats( value.getRoll() )._arrValue[0];
+            return result;
+        }
+        [[nodiscard]] static EulerAngles fromFloats( const PackedFloats& floats ) noexcept
+        {
+            return EulerAngles::fromDegrees( float3{ floats._arrValue[0], floats._arrValue[1], floats._arrValue[2] } );
+        }
+    };
+
     /**
      * @brief 정수 좌표 `int2` 의 성분은 정수 둘입니다(언리얼 `FIntPoint` 의 X · Y). 범위는 float32 가 정수를 정확히 나타내는 ±(2^24 - 1) 라 왕복이 비트까지 같고,
      *        `kIntegerComponents` 가 소수 성분(`2.5`)을 범위 밖처럼 거절하게 한다(`isPackedFloatsInRange`) — 말없이 반올림하지 않는다.

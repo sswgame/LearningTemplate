@@ -4,20 +4,21 @@
  * @details 생성 코드가 쓰는 헤더는 여기에서만 더하고 뺍니다. FileHeader.tpl / BuiltinFileHeader.tpl 은 이 파일을 include 합니다.
  *          생성 TU 전부가 이 파일을 읽으므로 생성 코드(템플릿 · CodeGenerator)가 실제로 쓰는 이름의 헤더만 둡니다. 원본 헤더가 쓰는
  *          이름은 원본 헤더가 직접 include 합니다(`GameObjectManager.h` 를 두면 생성 TU 마다 헤더 약 24 개를 더 읽습니다).
+ *          형식 정보(`TypeInfo.h` · `PropertyInfo.h` · `EnumInfo.h`)와 레지스트리(`TypeRegistry.h`)는 넣지 않습니다 — 생성 코드는 서술자 표를 사슬에 달기만 하고(`TypeRegistrar.h`),
+ *          그 헤더를 고칠 때마다 생성 단위 전부(컴파일의 약 30 %)가 다시 컴파일되던 자리입니다.
  */
 #pragma once
-#include "Core/Concurrency/atomic.h"
-#include "Core/Container/SlotHandle.h"
-#include "Core/Task/TaskTypes.h"
-
 #include "Engine/Foundation/Foundation.h"
 #include "Engine/Object/Component/Component.h"
 #include "Engine/Object/GameObject/GameObject.h"
-#include "Engine/Reflection/Reflection.h"
+#include "Engine/Reflection/ReflectedValue.h"
+#include "Engine/Reflection/ReflectionContainers.h"
 #include "Engine/Reflection/ReflectionDesc.h"
+#include "Engine/Reflection/ReflectionInvoke.h"
 #include "Engine/Reflection/ReflectionMetadata.h"
 #include "Engine/Reflection/ReflectionUnits.h"
 #include "Engine/Reflection/ReflectionValidation.h"
+#include "Engine/Reflection/TypeRegistrar.h"
 #include "Engine/Serialization/Fixed/FixedFieldDesc.h"
 #include "Engine/Serialization/Fixed/FixedLayout.h"
 
@@ -60,7 +61,7 @@ namespace sw::generated
     }
 
     /**
-     * @brief 타입 서술자의 바탕입니다 — 크기 · 소멸과, 컴파일러가 아는 사실(틱 · 상태 함수 재정의)을 채운다(엔진이 주 틱을 켜는 판정 `HasOnTickOverride_v` 와 같은 답).
+     * @brief 타입 서술자의 바탕입니다 — 크기 · 소멸과, 컴파일러가 아는 사실(틱 · 상태 함수 재정의 · 레지스트리 목록 표시)을 채운다(엔진이 주 틱을 켜는 판정 `HasOnTickOverride_v` 와 같은 답).
      * @details 틱 특성은 컴포넌트만 켠다. 나머지 칸(프로퍼티 표 · 생성 함수 …)은 생성 코드가 `TypeDesc::withX` 로 잇는다.
      */
     template <typename T>
@@ -71,6 +72,7 @@ namespace sw::generated
         {
             flags |= ::sw::HasOnTickOverride_v<T> ? TypeDescFlag::kOverridesTick : 0u;
             flags |= ::sw::HasOnSubTickOverride_v<T> ? TypeDescFlag::kOverridesSubTick : 0u;
+            flags |= ::sw::HasRegistryList<T>::value ? TypeDescFlag::kRegisteredComponent : 0u;
         }
         return TypeDesc::of<T>( pName, pFullyQualifiedName, pParentFQN, pModuleName ).withFlags( flags );
     }

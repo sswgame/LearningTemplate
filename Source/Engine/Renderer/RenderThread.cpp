@@ -2,6 +2,7 @@
 
 #include "Engine/Renderer/RenderThread.h"
 
+#include "Core/Concurrency/DiskIOScope.h"
 #include "Core/Concurrency/ThreadName.h"
 #include "Core/Concurrency/mutex.h"
 #include "Core/Concurrency/thread.h"
@@ -452,7 +453,11 @@ namespace sw
 
             // 링 슬롯에서 그대로 처리한다. 옮겨 오면 링 슬롯의 저장소가 비어 GT 가 다음에 다시 할당한다. 생산자는
             // tail 이 앞으로 갈 때까지 이 슬롯을 덮어쓰지 않는다.
-            executePacket( _arrRingBuffer[currentTail] );
+            // 패킷을 실행하는 동안 이 스레드는 디스크를 만지지 않는다(단언) — 파일은 로드 워커 · IO 스레드 · 셰이더 캐시의 로드 스레드가 읽고 쓴다.
+            {
+                const DiskIOForbiddenScope forbidDiskIO;
+                executePacket( _arrRingBuffer[currentTail] );
+            }
             // 기록과 제출이 끝났다(병렬 기록 밖). 이 프레임까지 기다리던 핸들을 해제한다 — 뒤 패킷이 읽을 수 있는 것은 남는다.
             if ( _pDevice != nullptr )
                 _pDevice->notifyRenderFrameRetired();
@@ -562,6 +567,7 @@ namespace sw
         {
             // 렌더 스레드가 멈추는 중이라 집어 가지 않았다 — 맡긴 것을 거둔다(명령의 수명은 이 함수 안이다).
             _pPendingCommand = nullptr;
+            lock.unlock();
             SW_LOG_ERROR_ID( "RenderThread.RenderThreadStoppedBefore", "The render thread stopped before running the render command" );
             return false;
         }

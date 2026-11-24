@@ -6,7 +6,7 @@
  *          낡은 번역 대신 다음 문화권으로 넘어간다). 모르는 속성 · 자식은 로드 오류이고, 쓰기는 키 사전 순이라 diff 가 작다. 형식은 XML 이다(키는 `<entry key="…">` 의 속성 — 키가 값마다 다른 맵이라 칸 이름으로 쓸 수 없다).
  */
 #pragma once
-#include "Core/Container/flat_map.h"
+#include "Core/Container/map.h"
 #include "Core/Container/string.h"
 #include "Core/Container/vector.h"
 #include "Core/Foundation/Expected.h"
@@ -69,14 +69,14 @@ namespace sw
         SourceTextEntry&       getOrAddEntry( string_view key );
         [[nodiscard]] bool     removeEntry( string_view key );
 
-        const string&                            getCulture() const { return _culture; }
-        void                                     setCulture( string_view culture );
-        const flat_map<string, SourceTextEntry>& getEntries() const { return _mapEntry; }
-        flat_map<string, SourceTextEntry>&       getMutableEntries() { return _mapEntry; }
+        const string&                       getCulture() const { return _culture; }
+        void                                setCulture( string_view culture );
+        const map<string, SourceTextEntry>& getEntries() const { return _mapEntry; }
+        map<string, SourceTextEntry>&       getMutableEntries() { return _mapEntry; }
 
     private:
-        string                            _culture;
-        flat_map<string, SourceTextEntry> _mapEntry;
+        string                       _culture;
+        map<string, SourceTextEntry> _mapEntry;
     };
 } // namespace sw
 
@@ -175,14 +175,14 @@ namespace sw
         /** @brief @p pSource 원문에 대한 @p key 번역의 상태입니다(@p pSource 가 nullptr 이면 원문 테이블에 없는 키입니다). */
         TranslationState computeState( string_view key, const SourceTextEntry* pSource ) const;
 
-        const string&                             getCulture() const { return _culture; }
-        void                                      setCulture( string_view culture );
-        const flat_map<string, TranslationEntry>& getEntries() const { return _mapEntry; }
-        flat_map<string, TranslationEntry>&       getMutableEntries() { return _mapEntry; }
+        const string&                        getCulture() const { return _culture; }
+        void                                 setCulture( string_view culture );
+        const map<string, TranslationEntry>& getEntries() const { return _mapEntry; }
+        map<string, TranslationEntry>&       getMutableEntries() { return _mapEntry; }
 
     private:
-        string                             _culture;
-        flat_map<string, TranslationEntry> _mapEntry;
+        string                        _culture;
+        map<string, TranslationEntry> _mapEntry;
     };
 } // namespace sw
 

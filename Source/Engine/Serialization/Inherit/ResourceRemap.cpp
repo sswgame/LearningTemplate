@@ -6,6 +6,7 @@
 #include "Core/Concurrency/mutex.h"
 #include "Core/Container/vector.h"
 #include "Core/Log/Logger.h"
+#include "Core/Log/ScopedDeferredLog.h"
 #include "Core/String/StringUtil.h"
 #include "Core/Subsystem/ServiceSlot.h"
 #include "Core/Subsystem/Subsystem.h"
@@ -174,7 +175,8 @@ namespace sw
         vector<string>                listLoadTag;
         bool                          bRemapped = false;
         {
-            ScopedLock<mutex> lock{ state._mutex };
+            const ScopedDeferredLog deferredLog;
+            ScopedLock<mutex>       lock{ state._mutex };
             for ( const ResourceRemapInternal::Entry& entry : state._listEntry )
             {
                 if ( entry._assetID != assetID )

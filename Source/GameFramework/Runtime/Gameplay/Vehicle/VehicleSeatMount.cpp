@@ -155,14 +155,19 @@ namespace sw
 
     bool VehicleSeatComponent::dismount( PawnComponent& riderPawn, bool bForced )
     {
-        using Internal                           = VehicleSeatMountInternal;
-        VehicleSeatComponent* pSeat              = findSeatOf( riderPawn );
-        GameObject*           pRider             = riderPawn.getOwner();
-        GameObjectManager*    pManager           = Internal::findManager( riderPawn );
-        const bool            bMissingMountParts = pSeat == nullptr || pRider == nullptr || pManager == nullptr;
+        VehicleSeatComponent* pSeat = findSeatOf( riderPawn );
+        return pSeat != nullptr && pSeat->releaseRider( riderPawn, bForced );
+    }
+
+    bool VehicleSeatComponent::releaseRider( PawnComponent& riderPawn, bool bForced )
+    {
+        using Internal                        = VehicleSeatMountInternal;
+        GameObject*        pRider             = riderPawn.getOwner();
+        GameObjectManager* pManager           = Internal::findManager( riderPawn );
+        const bool         bMissingMountParts = pRider == nullptr || pManager == nullptr;
         if ( bMissingMountParts )
             return false;
-        GameObject*     pVehicle     = pSeat->getOwner();
+        GameObject*     pVehicle     = getOwner();
         SceneComponent* pVehicleRoot = pVehicle != nullptr ? pVehicle->getPrimarySceneComponent() : nullptr;
         SceneComponent* pRiderRoot   = pRider->getPrimarySceneComponent();
 
@@ -175,28 +180,24 @@ namespace sw
         const bool bPlaceRiderAtExit = bForced == false && pVehicleRoot != nullptr && pRiderRoot != nullptr;
         if ( bPlaceRiderAtExit )
         {
-            const float3 exitSpot = Internal::findExitSpot( *pRider, *pSeat, *pVehicleRoot );
+            const float3 exitSpot = Internal::findExitSpot( *pRider, *this, *pVehicleRoot );
             pRiderRoot->teleportTo( exitSpot );
             float3 rotation = pRiderRoot->getLocalRotation();
             rotation._x     = 0.0f;
             rotation._z     = 0.0f;
             pRiderRoot->setLocalRotation( rotation );
         }
-        Internal::setRiderPose( *pRider, pSeat->getRiderPoseParameter(), false );
+        Internal::setRiderPose( *pRider, getRiderPoseParameter(), false );
         if ( bReleasedToPhysics == false )
             Internal::setRiderMovementSuspended( *pRider, false );
 
         // 운전석이면 탔을 때의 조종자가 탑승자를 다시 쥔다. 탈것 폰은 놓여서 의도가 0 이 되므로 멈춰 선다. 탈 때 탈것을 쥐고 있던 조종자(말 AI)는 탈것을 다시 쥔다.
-        ControllerComponent* pController                = pSeat->_occupantController.isValid()
-                                                            ? pManager->resolveComponent( pSeat->_occupantController )
-                                                            : nullptr;
-        ControllerComponent* pPreviousVehicleController = pSeat->_previousVehicleController.isValid()
-                                                            ? pManager->resolveComponent( pSeat->_previousVehicleController )
-                                                            : nullptr;
+        ControllerComponent* pController                = _occupantController.isValid() ? pManager->resolveComponent( _occupantController ) : nullptr;
+        ControllerComponent* pPreviousVehicleController = _previousVehicleController.isValid() ? pManager->resolveComponent( _previousVehicleController ) : nullptr;
         pRider->setKeptWhenParentDestroyed( false );
-        pSeat->_occupant                  = GameObjectHandle{};
-        pSeat->_occupantController        = TComponentHandle<ControllerComponent>{};
-        pSeat->_previousVehicleController = TComponentHandle<ControllerComponent>{};
+        _occupant                  = GameObjectHandle{};
+        _occupantController        = TComponentHandle<ControllerComponent>{};
+        _previousVehicleController = TComponentHandle<ControllerComponent>{};
         if ( pController != nullptr )
             pController->possess( riderPawn );
         PawnComponent* pVehiclePawn            = pVehicle != nullptr ? pVehicle->getComponent<PawnComponent>() : nullptr;

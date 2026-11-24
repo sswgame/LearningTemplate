@@ -42,6 +42,7 @@ Scripts/dev/test_history.py
       (`UnitTests` · `UnitTests.<게임>` · `UnitTests.OnlineKits` — ctest 의 명령을 `ctest --show-only=json-v1` 에서 읽는다)에 `--test-source=` 로 좁혀 돈다.
       에디터 쪽(`/Editor/` 소스 · 편집기 시나리오 · `Content/editor` 데이터)이나 리플렉션 선언(`REFLECT` 이 있는 헤더 — 메타 `Icon=` · 분류 · 표시 이름)이 바뀌었으면 에디터 단위 테스트(`editor.unitTests`)를 편집기 안에서 돈다 — `App --test` 에는 없다.
   (b) 더해지거나 바뀐 `*.scenario.xml`(골든이 바뀌면 그 시나리오)을 하나씩 제 프로세스로, 그 시나리오가 든 ctest 항목의 백엔드마다 돈다.
+  돌 것이 있으면 먼저 프리셋을 증분 빌드한다 — HEAD 와 다른 옛 바이너리로 판정하지 않는다(지면 `CHANGED_FAILED`).
   둘 다 **없는 기준 파일만 쓴다**(`--record-missing-snapshots` · `-scenario-record-missing-golden`) — 쓴 케이스 · 시나리오는 `MissingBaseline` 으로 지고, 쓴 파일(추적 안 된
   `golden/` · `Snapshots/`)이 있으면 목록을 내고 멈춘다. 통합 담당이 보고 커밋한 뒤 `--from changed` 로 다시 돌려 기록 없이 통과해야 한다.
   출력은 표 하나(항목 · 새것/바뀐 것 · 실패 종류 · 까닭 · 그 파일을 더한 갈래)이고, 끝 줄은 `CHANGED_OK=<sha>` 또는 `CHANGED_FAILED` 다. 새 시나리오가 모든 백엔드에서
@@ -68,7 +69,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[1]))   # Scripts
 from common.exit_code import ExitCode  # noqa: E402
 from common.git import run_git, run_git_or_raise  # noqa: E402
 from common.paths import get_build_dir, get_project_root  # noqa: E402
-from common.run_process import ProcessResult, run_process  # noqa: E402
+from common.run_process import ProcessResult, build_preset_or_exit, run_process  # noqa: E402
 
 DEFAULT_DATABASE = Path("Saved") / "TestHistory" / "history.sqlite"
 QUARANTINE_PATH = Path("Config") / "Rules" / "Test" / "Quarantine.json"
@@ -757,6 +758,13 @@ def run_changed(project_root: Path, preset: str, base: str) -> int:
     if not map_folder and not map_scenario and not list_editor_file:
         print(f"CHANGED_OK={sha}")
         return ExitCode.PASSED
+    # ctest 항목도 이 빌드가 정한다(구성이 CMake 파일의 바뀜을 다시 읽는다). 묶음 검증은 앞 단계가 이미 지어 몇 초다.
+    try:
+        build_preset_or_exit(preset, cwd=project_root)
+    except SystemExit as problem:
+        print(f"[Changed] {problem}")
+        print("CHANGED_FAILED")
+        return ExitCode.VIOLATION
     shown = run_process(["ctest", "--show-only=json-v1"], cwd=build_dir)
     if not shown.succeeded:
         print(f"[Changed] ctest 항목을 읽지 못했다: {make_one_line(shown.stderr or shown.stdout)}")

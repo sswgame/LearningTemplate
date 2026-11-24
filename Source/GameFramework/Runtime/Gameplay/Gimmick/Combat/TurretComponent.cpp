@@ -12,6 +12,7 @@
 #include "Engine/Object/GameObject/GameObjectManagerResolve.inl"
 #include "Engine/Object/GameObject/Registry/TagIndex.h"
 #include "Engine/Object/GameObject/Tick/TickContext.h"
+#include "Engine/Object/GameObject/Tick/TickInterval.h"
 #include "Engine/Physics/PhysicsSystem.h"
 
 #include "GameFramework/Runtime/Character/Combat/Projectile/ResolvedShot.h"
@@ -94,7 +95,6 @@ namespace sw
         , _cooldownSteps{ 0 }
         , _shotCount{ 0 }
         , _hitCount{ 0 }
-        , _clock{}
         , _listCandidate{}
         , _listTagged{}
         , _listShotTarget{}
@@ -166,7 +166,7 @@ namespace sw
     void TurretComponent::onTick( TickContext& context )
     {
         Component::onTick( context );
-        const int32 stepCount = _clock.consume( context.getDeltaTime() );
+        const int32 stepCount = context.getIntervalCount();
         for ( int32 stepIndex = 0; stepIndex < stepCount; ++stepIndex )
         {
             stepOnce();
@@ -240,7 +240,7 @@ namespace sw
         const bool bAimed = MathUtil::abs( delta ) <= _aimTolerance.radians() + maxTurn;
         if ( bAimed == false || bCanHit == false || _cooldownSteps > 0 )
             return;
-        _cooldownSteps            = _clock.secondsToSteps( _fireInterval, 1 );
+        _cooldownSteps            = TickIntervalUtil::secondsToCount( kTickInterval, _fireInterval, 1 );
         const GameObject* pVictim = pManager->resolveGameObject( _target );
         if ( pVictim == nullptr )
             return;

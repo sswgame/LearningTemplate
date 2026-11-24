@@ -4,6 +4,7 @@
 
 #include "Core/File/FileUtil.h"
 #include "Core/Log/Logger.h"
+#include "Core/Log/ScopedDeferredLog.h"
 #include "Core/String/StringUtil.h"
 #include "Core/Subsystem/SubsystemScope.h"
 
@@ -24,7 +25,8 @@ namespace sw
 
     bool InputMapExtensionRegistry::registerEntry( const InputMapExtension* pExtension )
     {
-        ScopedLock<mutex> lock{ _mutex };
+        const ScopedDeferredLog deferredLog;
+        ScopedLock<mutex>       lock{ _mutex };
         return _registration.addLogged( pExtension, "Input map extension", pExtension != nullptr ? string_view{ pExtension->_pID } : string_view{} ) == RegistrationResult::Added;
     }
 

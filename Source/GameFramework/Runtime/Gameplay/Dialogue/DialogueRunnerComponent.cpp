@@ -488,16 +488,4 @@ namespace sw
         outNextNodeID = findNextNode( nodeID, input );
         return true;
     }
-
-    void DialogueRunnerComponent::onRegister( GameObjectManager& manager )
-    {
-        Component::onRegister( manager );
-        manager.getComponentRegistry().add<DialogueRunnerComponent>( this );
-    }
-
-    void DialogueRunnerComponent::onUnregister( GameObjectManager& manager )
-    {
-        manager.getComponentRegistry().remove<DialogueRunnerComponent>( this );
-        Component::onUnregister( manager );
-    }
 } // namespace sw

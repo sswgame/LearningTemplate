@@ -17,6 +17,7 @@
 #include "Engine/Reflection/ReflectionUnits.h"
 #include "Engine/Reflection/Tests/ReflectionTestTypes.h"
 #include "Engine/Reflection/Tests/ScopedTestModule.h"
+#include "Engine/Reflection/TypeInfo.h"
 #include "Engine/Reflection/TypeRegistry.h"
 #include "Engine/Serialization/Format/BinarySerializer.h"
 #include "Engine/Serialization/Serializer/Serializer.h"
@@ -88,7 +89,7 @@ SW_TEST_CASE( ReflectionTypeRegistryTest, PrimitiveBuiltins )
     const sw::TypeInfo* str = sw::engine::getSubsystem<sw::TypeRegistry>().findType( sw::hashed_string( "string" ) );
     SW_REQUIRE_NOT_NULL( str );
     SW_EXPECT_TRUE( str->isPrimitive() );
-    SW_EXPECT_EQUAL( sizeof( std::string ), str->_size );
+    SW_EXPECT_EQUAL( sizeof( sw::string ), str->_size );
 
     // ReflectBuiltins 별칭 → canonical TypeInfo (직렬화 핸들러 resolve 용).
     const sw::TypeInfo* viaInt = sw::engine::getSubsystem<sw::TypeRegistry>().findType( sw::hashed_string( "int32" ) );

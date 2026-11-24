@@ -504,6 +504,8 @@ static BatchData BatchData::load( uint batchIndex )
     batch._lodScreenSize       = 0.0f;
     batch._uvDensity           = 0.0f;
     batch._meanEdgeLength      = 0.0f;
+    batch._compactHead         = kInvalidIndex;
+    batch._compactCount        = 0u;
     const bool bValid          = ( g_SwBatchesIndex != kInvalidIndex ) && ( batchIndex < g_SwBatchCount );
     if ( bValid )
         batch = g_SwBatches[batchIndex];
@@ -821,38 +823,40 @@ static uint InstanceData::resolveID( uint instanceSlot )
  */
 static InstanceData InstanceData::load( uint instanceSlot )
 {
-    const uint entry   = InstanceData::resolveEntry( instanceSlot );
-    const uint element = entry & kVisibleEntryIDMask;
+    const uint   entry   = InstanceData::resolveEntry( instanceSlot );
+    const uint   element = entry & kVisibleEntryIDMask;
+    InstanceData instance; // 출구가 하나다 — 이른 반환이면 FXC 가 초기화되지 않은 값으로 본다(X4000)
     if ( g_SwInstancesIndex != kInvalidIndex && element < g_SwInstanceCount )
     {
-        InstanceData instance = g_SwInstances[element];
+        instance = g_SwInstances[element];
         // LOD 크로스페이드 중인 항목은 인스턴스의 등장 비율 대신 상보 디더 값을 받는다(8-1 절). 코드가 0 이면 그대로다.
         instance._appearance = Appearance::computeLODFadeAppearance( instance._appearance, entry >> kVisibleEntryFadeShift );
         // 그리는 배치는 LOD 그룹 머리 + 단계다 — 정점 풀 · 모프(스킨) 시작은 단계 배치 행이 든다. 단계가 0 이면 그대로다.
         instance._meshBatchIndex += ( entry >> kVisibleEntryLevelShift ) & kVisibleEntryLevelMask;
-        return instance;
     }
-    InstanceData instance;
-    instance._world                = g_World;
-    instance._boundsCenter         = float3( 0, 0, 0 );
-    instance._boundsRadius         = 0;
-    instance._meshBatchIndex       = 0;
-    instance._materialIndex        = 0;
-    instance._blendMode            = 0;
-    instance._spinSeed             = 0;
-    instance._uvStart              = 0u;          // (0, 0)
-    instance._uvEnd                = 0xFFFFFFFFu; // (1, 1) — 텍스처 전체
-    instance._tint                 = 0xFFFFFFFFu; // 흰색 불투명
-    instance._pixelSnap            = 0.0f;        // 스냅 없음
-    instance._vertexAnimationPhase = 0.0f;
-    instance._highlight            = 0u;            // 강조 없음
-    instance._appearance           = 1.0f;          // 다 보인다
-    instance._skinSlot             = kInvalidIndex; // 스킨 결과 없음
-    instance._customData0          = float4( 0.0f, 0.0f, 0.0f, 0.0f );
-    instance._customData1          = float4( 0.0f, 0.0f, 0.0f, 0.0f );
-    instance._motionKey            = uint2( 0u, 0u ); // 기록 없음
-    instance._slotSerial           = 0u;
-    instance._instanceFlags        = 0u;
+    else
+    {
+        instance._world                = g_World;
+        instance._boundsCenter         = float3( 0, 0, 0 );
+        instance._boundsRadius         = 0;
+        instance._meshBatchIndex       = 0;
+        instance._materialIndex        = 0;
+        instance._blendMode            = 0;
+        instance._spinSeed             = 0;
+        instance._uvStart              = 0u;          // (0, 0)
+        instance._uvEnd                = 0xFFFFFFFFu; // (1, 1) — 텍스처 전체
+        instance._tint                 = 0xFFFFFFFFu; // 흰색 불투명
+        instance._pixelSnap            = 0.0f;        // 스냅 없음
+        instance._vertexAnimationPhase = 0.0f;
+        instance._highlight            = 0u;            // 강조 없음
+        instance._appearance           = 1.0f;          // 다 보인다
+        instance._skinSlot             = kInvalidIndex; // 스킨 결과 없음
+        instance._customData0          = float4( 0.0f, 0.0f, 0.0f, 0.0f );
+        instance._customData1          = float4( 0.0f, 0.0f, 0.0f, 0.0f );
+        instance._motionKey            = uint2( 0u, 0u ); // 기록 없음
+        instance._slotSerial           = 0u;
+        instance._instanceFlags        = 0u;
+    }
     return instance;
 }
 

@@ -48,7 +48,6 @@ namespace sw
     void ActionRoomHUDComponent::onRegister( GameObjectManager& manager )
     {
         Component::onRegister( manager );
-        manager.getComponentRegistry().add<ActionRoomHUDComponent>( this );
         // 시작(beginPlay)이 아니라 등록에서 구독한다 — 디렉터가 먼저 시작해 첫 룸의 문을 잠그면 그 이벤트를 놓친다.
         EventDispatcher* const pDispatcher = game::findSubsystem<EventDispatcher>();
         if ( pDispatcher == nullptr )
@@ -65,7 +64,6 @@ namespace sw
         _clearedSubscription.reset();
         _defeatedSubscription.reset();
         _damageSubscription.reset();
-        manager.getComponentRegistry().remove<ActionRoomHUDComponent>( this );
         Component::onUnregister( manager );
     }
 

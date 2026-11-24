@@ -9,11 +9,12 @@
  * 쓰는 것과 같습니다. 프레임 비용이 "씬의 오브젝트 수" 가 아니라 "그 타입의 수" 가 됩니다.
  *
  * [규약]
- * - 컴포넌트는 `onRegister` 에서 `add<자기 타입>( this )`, `onUnregister` 에서 `remove<자기 타입>( this )` 를 부릅니다. 두 훅은 등록마다 정확히 한 번이라
+ * - 목록을 가지는 형식은 클래스 본문에 `SW_REGISTERED_COMPONENT( T )` 를 적습니다(`ComponentHandle.h`). 그 형식과 파생의 인스턴스는 등록될 때 저절로 오르고 해제될 때 내립니다
+ *   (`Component::dispatchRegister` · `dispatchUnregister`). 손으로 올리는 길은 없고, 표시가 없는 T 를 찾으면 컴파일되지 않습니다. 두 훅은 등록마다 정확히 한 번이라
  *   (해체는 `destroyComponentInstance` 하나를 지난다) 핫 리로드 · 모듈 해제 · 씬 내리기에서도 목록이 맞습니다. 에디터(플레이 전)에서도 찾아집니다.
- * - 키는 **등록할 때 고른 타입**(`T::StaticType()` 의 정규 이름)과 칸 번호입니다. 파생이 기반의 목록에 들려면 기반 타입으로 등록합니다.
+ * - 키는 **표시한 타입**(`T::StaticType()` 의 정규 이름)과 칸 번호입니다. 파생은 조상의 목록에도 듭니다(자기 목록은 자기도 표시할 때만).
  *   정규 이름이라 모듈을 다시 올려 `TypeInfo` 주소가 바뀌어도 같은 칸입니다.
- * - 칸(`channel`)은 한 타입 안의 하위 목록입니다(빛은 종류 — 방향광 · 점광 · 스포트).
+ * - 칸(`channel`)은 한 타입 안의 하위 목록입니다(빛은 종류 — 방향광 · 점광 · 스포트, `Component::getRegistryChannel`).
  * - 목록은 **등록 순서**를 지키고, 빼도 남은 것의 순서가 그대로입니다(모두 도는 순회가 실행마다 같다). 하나를 고를 때는 등록 순서에 기대지 않습니다 —
  *   씬에 하나여야 하는 것은 `findUnique`(둘이면 오류 · nullptr), 여럿이 맞는 것은 부르는 쪽이 기준(가장 밝은 것 · 가까운 것 · 대상 핸들)을 둡니다.
  * - 활성 여부는 부르는 쪽이 봅니다(`Component::isActive`). 레지스트리는 "무엇이 있나" 만 압니다.
@@ -98,18 +99,6 @@ namespace sw
         ComponentRegistry( const ComponentRegistry& )            = delete;
         ComponentRegistry& operator=( const ComponentRegistry& ) = delete;
 
-        /** @brief @p pComponent 를 타입 T 의 칸 @p channel 에 등록합니다. 이미 있거나 nullptr 이면 무시합니다. */
-        template <typename T>
-        void add( T* pComponent, uint32 channel = 0 )
-        {
-            addEntry( computeTypeKey( T::StaticType() ), channel, pComponent );
-        }
-        /** @brief 등록을 풉니다. 멱등입니다(없으면 할 일이 없다). 남은 것의 순서는 그대로입니다. */
-        template <typename T>
-        void remove( T* pComponent, uint32 channel = 0 )
-        {
-            removeEntry( computeTypeKey( T::StaticType() ), channel, pComponent );
-        }
         /**
          * @brief 한 인터페이스 칸의 목록을 `I*`(각 컴포넌트의 포트)로 보는 창입니다. 등록 · 해제가 일어나면 버립니다.
          * @details 칸에는 컴포넌트가 들고, 항목마다 그 컴포넌트의 인터페이스 표에서 포트를 찾는다(`Component::findInterfacePort`).
@@ -161,12 +150,12 @@ namespace sw
         };
 
         /**
-         * @brief @p component 의 형식이 내보내는 인터페이스(`REFLECT_INTERFACE`, 조상 포함)마다 그 인터페이스 칸(0)에 올립니다. `Component::dispatchRegister` 가 부른다.
+         * @brief @p component 를 형식(조상 포함)이 표시한 목록(`SW_REGISTERED_COMPONENT`, 칸 `getRegistryChannel`)과 내보내는 인터페이스(`REFLECT_INTERFACE`) 칸(0)에 올립니다. `Component::dispatchRegister` 가 부른다.
          * @details 언리얼 `UInterface` 로 찾는 쪽이 객체를 훑는 대신 등록받은 목록을 쓰는 자리다 — 인터페이스로 찾는 씬 전체 조회(`getAllInterfaces`)가 씬을 훑지 않는다.
          */
-        void addInterfaces( Component& component );
-        /** @brief `addInterfaces` 의 반대입니다. 멱등입니다. `Component::dispatchUnregister` 가 부른다. */
-        void removeInterfaces( const Component& component );
+        void addComponent( Component& component );
+        /** @brief `addComponent` 의 반대입니다. 남은 것의 순서는 그대로입니다. 멱등입니다. `Component::dispatchUnregister` 가 부른다. */
+        void removeComponent( const Component& component );
         /** @brief 항목 컴포넌트의 인터페이스 @p pInterface 포트입니다(`Component::findInterfacePort` — 이 헤더는 `Component` 를 전방 선언만 한다). */
         static void* findPort( const Entry& entry, const TypeInfo* pInterface );
         /** @brief 인터페이스 I 를 내보내는 컴포넌트들의 포트(등록 순서)입니다. 없으면 빈 창입니다. */
@@ -181,6 +170,7 @@ namespace sw
         template <typename T>
         View<T> getAll( uint32 channel = 0 ) const
         {
+            static_assert( HasRegistryList<T>::value, "T has no registry list - put SW_REGISTERED_COMPONENT( T ) in the component class body" );
             return View<T>( findEntries( computeTypeKey( T::StaticType() ), channel ) );
         }
         /**
@@ -216,6 +206,7 @@ namespace sw
         template <typename T>
         bool isRegistered( ComponentHandle handle, uint32 channel = 0 ) const
         {
+            static_assert( HasRegistryList<T>::value, "T has no registry list - put SW_REGISTERED_COMPONENT( T ) in the component class body" );
             return containsHandle( computeTypeKey( T::StaticType() ), channel, handle );
         }
 

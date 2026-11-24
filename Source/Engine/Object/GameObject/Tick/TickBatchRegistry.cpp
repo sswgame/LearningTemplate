@@ -7,6 +7,7 @@
 #include "Engine/Object/GameObject/Tick/TickBatchRegistry.h"
 
 #include "Core/Foundation/BuildInfo.h"
+#include "Core/Log/ScopedDeferredLog.h"
 
 #include "Engine/Foundation/EngineServices.h"
 #include "Engine/Foundation/EngineSubsystemRegistration.h"
@@ -20,7 +21,8 @@ namespace sw
         if ( entry._pStaticType == nullptr || ( entry._mode == TickMode::Batch && entry._pFunction == nullptr ) )
             return false;
         {
-            ScopedLock<mutex> lock{ _mutex };
+            const ScopedDeferredLog deferredLog;
+            ScopedLock<mutex>       lock{ _mutex };
             (void)_listEntry.addLogged( &entry, "Tick batch entry" ); // 같은 줄을 다시 올리면 `AlreadyPresent` 라 할 일이 없다
         }
         _generation.fetch_add( 1, std::memory_order_acq_rel );
@@ -60,7 +62,7 @@ namespace sw
         return dispatch;
     }
 
-    void tickBatchVirtual( TickThreadState& threadState, const TickBatchElement* pElement, uint32 count, uint32 subTickID, float32 deltaTime )
+    void tickBatchVirtual( TickThreadState& threadState, const TickBatchElement* pElement, uint32 count, const TickBatchCall& call )
     {
         SW_PROFILE_SCOPE( "GT.Scene.tickBatch.virtual" );
         uint32 tickCount = 0;
@@ -70,13 +72,16 @@ namespace sw
             Component*              pComp   = element._pComponent;
             threadState._pTickingObject     = element._pObject;
             threadState._pTickWriter        = element._pObject;
-            if ( shouldRunTickElement( *pComp, subTickID ) == false )
+            if ( shouldRunTickElement( *pComp, call._subTickID ) == false )
                 continue;
-            TickContext context{ *element._pObject, deltaTime };
-            if ( subTickID == 0 )
+            const TickTurn turn = call.computeTurn( pComp->getComponentID() );
+            if ( turn._intervalCount == 0 )
+                continue;
+            TickContext context{ *element._pObject, turn };
+            if ( call._subTickID == 0 )
                 pComp->onTick( context );
             else
-                pComp->onSubTick( subTickID, context );
+                pComp->onSubTick( call._subTickID, context );
             ++tickCount;
         }
         if constexpr ( build::kDebug )

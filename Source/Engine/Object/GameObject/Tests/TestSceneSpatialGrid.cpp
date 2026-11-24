@@ -1,4 +1,4 @@
-// SceneSpatialGridTest — 씬 공간 색인이 움직인 항목만 버퍼마다 고쳐 넣고(증분), 일이 도는 동안 질의가 앞 버퍼를 읽으며(이중 버퍼), 뺀 항목을 바로 숨기는지 본다(NEXT 5-3 6).
+// SceneSpatialGridTest — 씬 공간 색인이 움직인 항목만 버퍼마다 고쳐 넣고(증분), 일이 도는 동안 질의가 앞 버퍼를 읽으며(이중 버퍼), 뺀 항목을 바로 숨기는지 본다.
 #include "pch.h"
 
 #include "Core/Testing/TestFramework.h"
@@ -76,6 +76,55 @@ SW_TEST_CASE( SceneSpatialGridTest, IncrementalUpdateTouchesOnlyMovedEntries )
     SW_EXPECT_TRUE( listKey[0] == pA && listKey[1] == pB && listKey[2] == pC ); // 올린 순서다
     grid.query( kTestLayer, 29.0f, -1.0f, 31.0f, 1.0f, listKey );
     SW_EXPECT_TRUE( listKey.size() == 1 && listKey[0] == pA );
+}
+
+/**
+ * @brief [SceneSpatialGridTest] 같은 소스의 항목 둘(층마다 하나)이 함께 움직임을 따라가고, 하나를 빼도 남은 것은 계속 따라간다. 소스가 먼저 사라진 항목도 안전하게 빠진다
+ * @details 변이: 소스의 첫 항목만 듣거나 하나를 뺄 때 소스를 그만 들으면 둘째 항목이 옛 자리에 남는다.
+ */
+SW_TEST_CASE( SceneSpatialGridTest, EntriesOfOneSourceMoveTogether )
+{
+    const SpatialGridLayerDesc secondLayer{ "SpatialGridTestSecond", SpatialGridPlane::XZ, 1 };
+    GameObjectManager          manager;
+    SceneSpatialGrid           grid{ manager };
+    SceneComponent*            pSource = makePoint( manager, "Source", float3{ 0.0f, 0.0f, 0.0f } );
+    SlotHandle                 first   = grid.add( kTestLayer, *pSource, *pSource, 0.5f );
+    SlotHandle                 second  = grid.add( secondLayer, *pSource, *pSource, 0.5f );
+    for ( const SpatialGridLayerDesc* pLayer : { &kTestLayer, &secondLayer } )
+    {
+        grid.addLayerReader( *pLayer );
+        grid.requireCellSize( *pLayer, 4.0f );
+    }
+    (void)runGridFrame( grid );
+    (void)runGridFrame( grid );
+
+    vector<Component*> listKey;
+    pSource->setLocalPosition( float3{ 30.0f, 0.0f, 0.0f } );
+    SW_EXPECT_EQUAL( static_cast<uint64>( 2 ), runGridFrame( grid ) ); // 두 층의 뒤 버퍼
+    SW_EXPECT_EQUAL( static_cast<uint64>( 2 ), runGridFrame( grid ) );
+    for ( const SpatialGridLayerDesc* pLayer : { &kTestLayer, &secondLayer } )
+    {
+        grid.query( *pLayer, 29.0f, -1.0f, 31.0f, 1.0f, listKey );
+        SW_EXPECT_TRUE( contains( listKey, pSource ) );
+    }
+
+    grid.remove( first );
+    (void)runGridFrame( grid );
+    (void)runGridFrame( grid );
+    pSource->setLocalPosition( float3{ 60.0f, 0.0f, 0.0f } );
+    (void)runGridFrame( grid );
+    (void)runGridFrame( grid );
+    grid.query( secondLayer, 59.0f, -1.0f, 61.0f, 1.0f, listKey );
+    SW_EXPECT_TRUE( contains( listKey, pSource ) );
+
+    // 소스가 항목보다 먼저 사라진다 — 칸의 주인만 견주므로 놓은 컴포넌트를 읽지 않는다.
+    manager.destroyGameObject( pSource->getOwner() );
+    manager.update( 1.0f / 60.0f );
+    grid.remove( second );
+    (void)runGridFrame( grid );
+    (void)runGridFrame( grid );
+    grid.query( secondLayer, -100.0f, -100.0f, 100.0f, 100.0f, listKey );
+    SW_EXPECT_TRUE( listKey.empty() );
 }
 
 /** @brief [SceneSpatialGridTest] 일을 넘긴 뒤 마치기 전에는 질의가 앞 버퍼(옛 자리)를 보고, 마친 뒤에 새 자리를 본다 */

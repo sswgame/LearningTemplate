@@ -7,6 +7,7 @@
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Object/GameObject/GameObjectEvents.h"
 #include "Engine/Object/GameObject/Tick/TickContext.h"
+#include "Engine/Object/GameObject/Tick/TickInterval.h"
 
 #include "GameFramework/Runtime/Foundation/Random/GameRandom.h"
 #include "GameFramework/Runtime/Gameplay/Gimmick/GimmickUtil.h"
@@ -51,7 +52,6 @@ namespace sw
         , _seed{ 1u }
         , _openCount{ 0 }
         , _respawnStepsLeft{ 0 }
-        , _clock{}
     {
     }
 
@@ -104,7 +104,7 @@ namespace sw
         ++_openCount;
         const bool bSpent = _maxOpenCount > 0 && _openCount >= _maxOpenCount;
         if ( bSpent == false && _respawnDelay > 0.0f )
-            _respawnStepsLeft = _clock.secondsToSteps( _respawnDelay, 1 );
+            _respawnStepsLeft = TickIntervalUtil::secondsToCount( kTickInterval, _respawnDelay, 1 );
         if ( isAvailable() )
             return choice._item; // 늘 있는 상자(낚시터)
         if ( _bHideWhenOpened )
@@ -116,7 +116,7 @@ namespace sw
     void ItemBoxComponent::onTick( TickContext& context )
     {
         Component::onTick( context );
-        const int32 stepCount = _clock.consume( context.getDeltaTime() );
+        const int32 stepCount = context.getIntervalCount();
         for ( int32 stepIndex = 0; stepIndex < stepCount; ++stepIndex )
         {
             stepOnce();

@@ -34,18 +34,6 @@ namespace sw
 
     HousingNetSessionComponent::~HousingNetSessionComponent() = default;
 
-    void HousingNetSessionComponent::onRegister( GameObjectManager& manager )
-    {
-        Component::onRegister( manager );
-        manager.getComponentRegistry().add<HousingNetSessionComponent>( this );
-    }
-
-    void HousingNetSessionComponent::onUnregister( GameObjectManager& manager )
-    {
-        manager.getComponentRegistry().remove<HousingNetSessionComponent>( this );
-        Component::onUnregister( manager );
-    }
-
     void HousingNetSessionComponent::setCallerLocator( const HousingCallerLocator& locator )
     {
         _locateCaller = locator;

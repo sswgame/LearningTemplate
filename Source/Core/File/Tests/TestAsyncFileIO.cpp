@@ -407,6 +407,51 @@ SW_TEST_CASE( AsyncFileIOTest, FutureCarriesTheResult )
 }
 
 /**
+ * @brief [AsyncFileIOTest] openAndReadRange 는 여는 콜백을 백엔드 스레드에서 부르고 구간을 읽으며, 열지 못하면 FileNotFound 다. 결함이면 여는 일(망에서 받기)이 부른 스레드를 막는다
+ */
+SW_TEST_CASE( AsyncFileIOTest, OpenAndReadRangeOpensOnBackendThread )
+{
+    const sw::string path = writeTestFile( "open.bin", 8192 );
+    SW_REQUIRE_FALSE( path.empty() );
+
+    for ( const sw::AsyncIOBackendKind kind : kArrBackendKind )
+    {
+        sw::AsyncFileIO       io;
+        sw::AsyncFileIOConfig settings{};
+        settings._backendKind = kind;
+        SW_REQUIRE_TRUE( io.initialize( settings ) );
+
+        std::thread::id     openThreadID{};
+        sw::AsyncReadResult rangeResult{};
+        const auto          onOpen        = SW_DELEGATE_LAMBDA( sw::AsyncFileOpenDelegate, [&openThreadID, &path]()
+                        {
+            openThreadID = std::this_thread::get_id();
+            return sw::AsyncFileHandle::open( path );
+        } );
+        const auto          onComplete    = SW_DELEGATE_LAMBDA( sw::AsyncReadCompleteDelegate, [&rangeResult]( sw::AsyncReadResult& result )
+                    {
+            rangeResult = std::move( result );
+        } );
+        const auto          onOpenMissing = SW_DELEGATE_LAMBDA( sw::AsyncFileOpenDelegate, []()
+                 {
+            return sw::AsyncFileHandle{};
+        } );
+
+        const sw::AsyncReadHandle range   = io.openAndReadRange( onOpen, 1000, 3000, sw::AsyncIOPriority::Normal, onComplete );
+        const sw::AsyncReadHandle missing = io.openAndReadRange( onOpenMissing, 0, sw::AsyncFileIO::kWholeFile, sw::AsyncIOPriority::Normal );
+        range.wait();
+        missing.wait();
+
+        SW_EXPECT_TRUE( rangeResult.isSucceeded() );
+        SW_EXPECT_EQUAL( rangeResult._bytes.size(), size_t{ 3000 } );
+        SW_EXPECT_TRUE( matchesFileRange( rangeResult._bytes, 1000 ) );
+        SW_EXPECT_TRUE( openThreadID != std::thread::id{} && openThreadID != std::this_thread::get_id() );
+        SW_EXPECT_TRUE( missing.getStatus() == sw::AsyncIOStatus::FileNotFound );
+        io.shutdown();
+    }
+}
+
+/**
  * @brief [AsyncFileIOTest] 연 파일 하나의 구간 64 개를 동시에 걸어도(비동기 · 동기 readAt) 모두 제 내용이다
  */
 SW_TEST_CASE( AsyncFileIOTest, ManyRangesOfOneOpenFile )

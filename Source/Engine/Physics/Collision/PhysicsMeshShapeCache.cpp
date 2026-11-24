@@ -71,23 +71,24 @@ namespace sw
         shared_ptr<const PhysicsMeshShapeData> result;
         const string                           key = PhysicsMeshShapeCacheInternal::makeKey( path );
         // 만든 횟수는 읽기 전에 잡는다 — 읽는 동안 파일이 만들어졌으면 이 결과로 남기는 "읽지 못함" 은 다음 조회에서 낡은 것으로 버려진다.
-        const uint64 creationEpoch = FileUtil::getCreationEpoch();
+        const uint64            creationEpoch = FileUtil::getCreationEpoch();
+        const CacheStatsHandle& stats         = PhysicsMeshShapeCacheInternal::getStats(); // 처음 부르면 로그를 쓸 수 있다 — 잠그기 전에 받는다
         {
             ScopedLock<mutex>                                                                   lock{ _mutex };
             const unordered_map<string, shared_ptr<const PhysicsMeshShapeData>>::const_iterator found = _mapPathToData.find( key );
             if ( found != _mapPathToData.end() )
             {
-                PhysicsMeshShapeCacheInternal::getStats().recordHit();
+                stats.recordHit();
                 return found->second;
             }
             const unordered_map<string, uint64>::const_iterator failed = _mapFailedPathToEpoch.find( key );
             if ( failed != _mapFailedPathToEpoch.end() && failed->second == creationEpoch )
             {
-                PhysicsMeshShapeCacheInternal::getStats().recordHit(); // 읽지 못한 경로를 기억한 답도 적중이다(파일이 만들어지지 않은 동안 같은 파일을 다시 읽지 않는다)
+                stats.recordHit(); // 읽지 못한 경로를 기억한 답도 적중이다(파일이 만들어지지 않은 동안 같은 파일을 다시 읽지 않는다)
                 return result;
             }
         }
-        PhysicsMeshShapeCacheInternal::getStats().recordMiss();
+        stats.recordMiss();
 
         // 읽기와 합치기는 잠금 밖에서 한다(파일 IO). 둘이 같은 경로를 동시에 읽으면 먼저 넣은 쪽이 남고 다른 쪽은 그것을 받는다.
         vector<float3> listPosition;
@@ -117,7 +118,7 @@ namespace sw
         if ( slot == nullptr )
         {
             slot = std::move( loaded );
-            PhysicsMeshShapeCacheInternal::getStats().addItemCount( 1 );
+            stats.addItemCount( 1 );
         }
         result = slot;
         return result;
@@ -180,18 +181,20 @@ namespace sw
     PhysicsMeshShapeTable::~PhysicsMeshShapeTable()
     {
         // 표가 사라지면(서비스 범위가 닫힘) 계측의 항목 수에서 자기 몫을 뺀다 — 칸은 프로세스 끝까지 산다.
-        ScopedLock<mutex> lock{ _mutex };
-        PhysicsMeshShapeCacheInternal::getStats().addItemCount( -static_cast<int64>( _mapPathToData.size() ) );
+        const CacheStatsHandle& stats = PhysicsMeshShapeCacheInternal::getStats();
+        ScopedLock<mutex>       lock{ _mutex };
+        stats.addItemCount( -static_cast<int64>( _mapPathToData.size() ) );
     }
 
     void PhysicsMeshShapeTable::clear()
     {
         // 메시가 다시 읽히면 기하를 버린다.
-        ScopedLock<mutex> lock{ _mutex };
-        PhysicsMeshShapeCacheInternal::getStats().addItemCount( -static_cast<int64>( _mapPathToData.size() ) );
+        const CacheStatsHandle& stats = PhysicsMeshShapeCacheInternal::getStats();
+        ScopedLock<mutex>       lock{ _mutex };
+        stats.addItemCount( -static_cast<int64>( _mapPathToData.size() ) );
         _mapPathToData        = unordered_map<string, shared_ptr<const PhysicsMeshShapeData>>{};
         _mapFailedPathToEpoch = unordered_map<string, uint64>{};
-        PhysicsMeshShapeCacheInternal::getStats().recordClear();
+        stats.recordClear();
     }
 
     size_t PhysicsMeshShapeTable::getCachedCount()

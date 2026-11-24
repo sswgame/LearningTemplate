@@ -474,7 +474,6 @@ namespace sw
     void AbilitySystemComponent::onRegister( GameObjectManager& manager )
     {
         Component::onRegister( manager );
-        manager.getComponentRegistry().add<AbilitySystemComponent>( this );
         // 모듈 내림은 이 컴포넌트만 듣는다(기반 가상 함수로 모든 컴포넌트를 훑지 않는다 — 언리얼 `FCoreUObjectDelegates` 구독 자리).
         _moduleUnloadingSubscription = game::getSubsystem<TypeRegistry>().subscribeModuleUnloading(
             SW_DELEGATE_METHOD( TypeRegistry::ModuleUnloadingDelegate, &AbilitySystemComponent::onModuleUnloading, this ) );
@@ -483,7 +482,6 @@ namespace sw
     void AbilitySystemComponent::onUnregister( GameObjectManager& manager )
     {
         _moduleUnloadingSubscription = Subscription{};
-        manager.getComponentRegistry().remove<AbilitySystemComponent>( this );
         Component::onUnregister( manager );
     }
 

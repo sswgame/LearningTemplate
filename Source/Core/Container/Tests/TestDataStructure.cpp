@@ -12,9 +12,9 @@
 #include "Core/Container/DynamicBitset.h"
 #include "Core/Container/array.h"
 #include "Core/Container/deque.h"
-#include "Core/Container/flat_map.h"
-#include "Core/Container/flat_set.h"
+#include "Core/Container/map.h"
 #include "Core/Container/pair.h"
+#include "Core/Container/set.h"
 #include "Core/Container/string.h"
 #include "Core/Container/unordered_map.h"
 #include "Core/Container/unordered_set.h"
@@ -500,12 +500,12 @@ SW_TEST_CASE( DataStructureTest, ArrayOperations )
 }
 
 /**
- * @brief [DataStructureTest] sw::flat_map 및 sw::flat_set 정렬 컨테이너 연산 검증
+ * @brief [DataStructureTest] sw::map 및 sw::set 정렬 컨테이너 연산 검증
  */
 SW_TEST_CASE( DataStructureTest, MapAndSetOperations )
 {
-    // 1) sw::flat_map
-    sw::flat_map<sw::string, int32> mapA;
+    // 1) sw::map
+    sw::map<sw::string, int32> mapA;
     mapA["Bravo"]   = 20;
     mapA["Alpha"]   = 10;
     mapA["Charlie"] = 30;
@@ -524,8 +524,8 @@ SW_TEST_CASE( DataStructureTest, MapAndSetOperations )
     SW_EXPECT_EQUAL( 2u, mapA.size() );
     SW_EXPECT_FALSE( mapA.contains( "Alpha" ) );
 
-    // 2) sw::flat_set
-    sw::flat_set<int32> setA;
+    // 2) sw::set
+    sw::set<int32> setA;
     setA.insert( 30 );
     setA.insert( 10 );
     setA.insert( 20 );
@@ -1216,7 +1216,7 @@ SW_TEST_CASE( DataStructureTest, DynamicBitsetBlockOperationsMatchBitModel )
  * @brief [DataStructureTest] 네 연관 컨테이너 모두 **키를 만들지 않고** 찾는다
  * @details 0-Alloc 이종 검색은 `unordered_map.h` 가 계약으로 적어 둔 것이다. 이종 `find` 가 빠진 컨테이너는
  *          `string_view` 로 찾을 때 **키를 하나 만들어서** 찾는다.
- *          두 구성(`SW_ENABLE_STL_CONTAINER`)이 같은 컨테이너 구현이라 이 계약도 구성과 무관하다.
+ *          std 저장(`SW_ENABLE_STL_CONTAINER`)도 같은 계약을 지킨다.
  *
  * @note 이 케이스는 **컴파일되는 것 자체가 검사**다. 이종 오버로드가 사라지면 빌드가 선다.
  */
@@ -1226,12 +1226,12 @@ SW_TEST_CASE( DataStructureTest, AssociativeContainersFindWithoutBuildingAKey )
     const sw::string_view probe{ stored.data(), stored.size() };
     const sw::string_view missing{ "engine/shaders/none.hlsl" };
 
-    sw::flat_map<sw::string, int32> orderedMap;
+    sw::map<sw::string, int32> orderedMap;
     orderedMap[stored] = 7;
     SW_EXPECT_TRUE( orderedMap.find( probe ) != orderedMap.end() );
     SW_EXPECT_TRUE( orderedMap.find( missing ) == orderedMap.end() );
 
-    sw::flat_set<sw::string> orderedSet;
+    sw::set<sw::string> orderedSet;
     orderedSet.insert( stored );
     SW_EXPECT_TRUE( orderedSet.find( probe ) != orderedSet.end() );
     SW_EXPECT_TRUE( orderedSet.find( missing ) == orderedSet.end() );
@@ -1559,7 +1559,7 @@ SW_TEST_CASE( DataStructureTest, TryEmplaceKeepsArgumentsAndMapUpperBound )
     mapList.try_emplace( 7, size_t{ 5 } );
     SW_EXPECT_EQUAL( 5u, static_cast<uint32>( mapList.find( 7 )->second.size() ) );
 
-    sw::flat_map<int32, int32> mapSorted;
+    sw::map<int32, int32> mapSorted;
     mapSorted.insert( { 10, 1 } );
     mapSorted.insert( { 20, 2 } );
     mapSorted.insert( { 30, 3 } );
@@ -1595,7 +1595,7 @@ SW_TEST_CASE( UnorderedMapTest, ReservedInsertsDoNotAllocate )
     }
     SW_EXPECT_EQUAL( static_cast<size_t>( kCount ), mapValue.size() );
     SW_EXPECT_EQUAL( static_cast<size_t>( kCount ), setValue.size() );
-    if constexpr ( sw::test::ScopedAllocationCount::kCountsAreActive )
+    if constexpr ( sw::test::ScopedAllocationCount::kCountsAreActive && sw::kUsesStdContainers == false ) // std 색인은 노드마다 할당한다
         SW_EXPECT_EQUAL( uint64{ 0 }, allocationCount );
 }
 
@@ -1640,6 +1640,44 @@ SW_TEST_CASE( UnorderedMapTest, FindOrInsertHashesTheKeyOnce )
 }
 
 /**
+ * @brief [UnorderedMapTest] 이터레이터로 지우면 키를 해시하지 않고, 돌며 지운 뒤에도 남은 원소가 모두 찾힌다
+ * @details 예전에는 이터레이터가 가리키는 키로 다시 찾아 지웠다(해시 + 체인의 키 비교).
+ */
+SW_TEST_CASE( UnorderedMapTest, EraseByIteratorDoesNotHashTheKey )
+{
+    uint32                                    hashCount = 0;
+    sw::unordered_map<HashCountingKey, int32> mapValue;
+    static constexpr int32                    kKeyCount = 100;
+    for ( int32 value = 0; value < kKeyCount; ++value )
+        mapValue.try_emplace( HashCountingKey{ value, &hashCount }, value );
+
+    hashCount = 0;
+    for ( auto it = mapValue.begin(); it != mapValue.end(); )
+    {
+        if ( it->second % 3 == 0 )
+            it = mapValue.erase( it );
+        else
+            ++it;
+    }
+    SW_EXPECT_EQUAL( 0u, hashCount );
+    for ( int32 value = 0; value < kKeyCount; ++value )
+    {
+        const auto found = mapValue.find( HashCountingKey{ value, &hashCount } );
+        SW_EXPECT_EQUAL( value % 3 != 0, found != mapValue.end() );
+        SW_EXPECT_TRUE( found == mapValue.end() || found->second == value );
+    }
+
+    sw::unordered_set<int32> setValue;
+    for ( int32 value = 0; value < kKeyCount; ++value )
+        setValue.insert( value );
+    for ( auto it = setValue.begin(); it != setValue.end(); )
+        it = *it % 2 == 0 ? setValue.erase( it ) : ++it;
+    SW_EXPECT_EQUAL( static_cast<size_t>( kKeyCount / 2 ), setValue.size() );
+    for ( int32 value = 0; value < kKeyCount; ++value )
+        SW_EXPECT_EQUAL( value % 2 != 0, setValue.contains( value ) );
+}
+
+/**
  * @brief [UnorderedSetTest] `unordered_set` 도 `shrink_to_fit` 으로 버퍼를 놓는다(`unordered_map` 과 같은 몸통) — 비운 뒤 놓고 다시 채워도 조회가 맞는다.
  */
 SW_TEST_CASE( UnorderedSetTest, ShrinkToFitKeepsLookupsCorrect )
@@ -1678,14 +1716,14 @@ SW_TEST_CASE( MapTest, RangeBuildKeepsTheFirstOfEqualKeys )
         {3, 7}
     };
 
-    const sw::flat_map<int32, int32> mapBuilt( listInput.begin(), listInput.end() );
+    const sw::map<int32, int32> mapBuilt( listInput.begin(), listInput.end() );
     SW_REQUIRE_EQUAL( 4u, mapBuilt.size() );
     SW_EXPECT_EQUAL( 3, mapBuilt.at( 1 ) );
     SW_EXPECT_EQUAL( 5, mapBuilt.at( 2 ) );
     SW_EXPECT_EQUAL( 1, mapBuilt.at( 3 ) );
     SW_EXPECT_EQUAL( 2, mapBuilt.at( 5 ) );
 
-    sw::flat_map<int32, int32> mapGrown{
+    sw::map<int32, int32> mapGrown{
         {5, 50},
         {4, 40}
     };
@@ -1707,7 +1745,7 @@ SW_TEST_CASE( MapTest, RangeBuildKeepsTheFirstOfEqualKeys )
     {
         listLong.emplace_back( ( index * 7 ) % 37, index );
     }
-    sw::flat_map<int32, int32> mapLong{
+    sw::map<int32, int32> mapLong{
         { 36, -1 }
     };
     mapLong.insert( listLong.begin(), listLong.end() );
@@ -1719,7 +1757,7 @@ SW_TEST_CASE( MapTest, RangeBuildKeepsTheFirstOfEqualKeys )
             SW_EXPECT_EQUAL( index, mapLong.at( ( index * 7 ) % 37 ) ); // 7 과 37 이 서로소라 첫 37 개가 키를 한 번씩 덮는다
     }
 
-    sw::flat_set<int32>     setGrown{ 3, 1, 3 };
+    sw::set<int32>          setGrown{ 3, 1, 3 };
     const sw::vector<int32> listMore{ 4, 0, 1, 4, 2 };
     setGrown.insert( listMore.begin(), listMore.end() );
     SW_REQUIRE_EQUAL( 5u, setGrown.size() );
@@ -1729,6 +1767,42 @@ SW_TEST_CASE( MapTest, RangeBuildKeepsTheFirstOfEqualKeys )
         SW_EXPECT_EQUAL( expected, value );
         ++expected;
     }
+}
+
+/**
+ * @brief [DataStructureTest] 정렬 컨테이너 이터레이터 세대 — 삽입 · 삭제 뒤 옛 이터레이터를 쓰면 두 저장(정렬 벡터 · std 트리) 모두 검사 구성에서 단언하고, 돌려받은 이터레이터는 그대로 쓴다
+ */
+SW_TEST_CASE( DataStructureTest, SortedIteratorGenerationCatchesUseAfterChange )
+{
+    sw::map<int32, int32> map;
+    map.reserve( 16 ); // 옛 이터레이터가 가리키는 자리가 살아 있게 한다 — 세대 단언만 본다
+    for ( int32 key = 0; key < 8; ++key )
+    {
+        map[key] = key * 10;
+    }
+
+    for ( auto it = map.begin(); it != map.end(); )
+    {
+        if ( it->first % 2 == 0 )
+            it = map.erase( it );
+        else
+            ++it;
+    }
+    SW_EXPECT_EQUAL( size_t( 4 ), map.size() );
+
+    // 이미 있는 키를 넣는 것은 자리를 옮기지 않는다.
+    auto kept = map.find( 1 );
+    SW_EXPECT_FALSE( map.insert( { 3, 0 } ).second );
+    SW_EXPECT_EQUAL( 10, kept->second );
+    SW_EXPECT_EQUAL( 7, map.rbegin()->first );
+
+    sw::test::ScopedAssertCapture capture;
+    SW_EXPECT_LOG( SW_ASSERT_LOG_ID ); // 옛 이터레이터 역참조 단언은 이 테스트가 보려는 대상이다
+    auto stale                              = map.find( 3 );
+    map[0]                                  = 1; // 정렬 벡터는 뒤 원소를 민다 — std 트리는 제자리지만 계약은 약한 쪽이다
+    [[maybe_unused]] const int32 movedValue = stale->second;
+    if ( sw::test::ScopedAssertCapture::kAssertsAreActive )
+        SW_EXPECT_EQUAL( 1u, capture.getCount() );
 }
 
 /**

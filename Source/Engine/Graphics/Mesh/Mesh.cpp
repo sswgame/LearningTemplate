@@ -6,6 +6,7 @@
 #include "Core/Concurrency/ScopedLock.h"
 #include "Core/Concurrency/atomic.h"
 #include "Core/Hash/HashUtil.h"
+#include "Core/Log/ScopedDeferredLog.h"
 #include "Core/Math/MathUtil.h"
 
 #include "Engine/Asset/AssetManager.h"
@@ -192,7 +193,8 @@ namespace sw
 
     bool Mesh::retainCPUVertices()
     {
-        ScopedLock<mutex> lock{ _cpuVertexMutex };
+        const ScopedDeferredLog deferredLog;
+        ScopedLock<mutex>       lock{ _cpuVertexMutex };
         if ( _bHoldsCPUVertices.load( std::memory_order_acquire ) == SW_FALSE && reloadCPUVertices() == false )
             return false;
         _cpuAccess.store( MeshCPUAccess::Keep, std::memory_order_release ); // 정점을 채운 뒤다 — 토큰을 얻은 스레드는 채운 정점을 본다
@@ -213,7 +215,8 @@ namespace sw
 
     bool Mesh::ensureCPUVertices()
     {
-        ScopedLock<mutex> lock{ _cpuVertexMutex };
+        const ScopedDeferredLog deferredLog;
+        ScopedLock<mutex>       lock{ _cpuVertexMutex };
         return _bHoldsCPUVertices.load( std::memory_order_acquire ) != SW_FALSE || reloadCPUVertices();
     }
 

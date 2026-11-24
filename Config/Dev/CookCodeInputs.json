@@ -1,6 +1,7 @@
 {
-    "Scene": [ "Source/DevTools/Cook/SceneCooker.cpp", "Source/Engine/Reflection", "Source/Engine/Scene", "Source/Engine/Serialization", "Source/Engine/Object/GameObject/Serialization", "Source/Engine/Object/Prefab" ],
+    "Scene": [ "Source/DevTools/Cook/SceneCooker.cpp", "Source/DevTools/Cook/SceneHLODMeshCooker.cpp", "Source/Engine/Reflection", "Source/Engine/Scene", "Source/Engine/Serialization", "Source/Engine/Object/GameObject/Serialization", "Source/Engine/Object/Prefab" ],
     "ScenePreload": [ "Source/DevTools/Cook/SceneCooker.cpp", "Source/Engine/Object/Component/ComponentAssetPathUtil.cpp", "Source/Engine/Object/GameObject/Serialization", "Source/Engine/Object/Prefab", "Source/Engine/Reflection", "Source/Engine/Scene", "Source/Engine/Serialization" ],
+    "SceneHLODMesh": [ "Source/DevTools/Cook/SceneCooker.cpp", "Source/DevTools/Cook/SceneHLODMeshCooker.cpp", "Source/Engine/Graphics/Mesh", "Source/Engine/Object/GameObject/Serialization", "Source/Engine/Object/Prefab", "Source/Engine/Reflection", "Source/Engine/Scene", "Source/Engine/Serialization", "Source/Engine/Visual/Component/HLODMeshComponent.cpp" ],
     "Prefab": [ "Source/DevTools/Cook/PrefabCooker.cpp", "Source/Engine/Object/Prefab", "Source/Engine/Reflection", "Source/Engine/Serialization" ],
     "NavMesh": [ "Source/DevTools/Cook/SceneNavigationCooker.cpp", "Source/Engine/Navigation", "Source/Engine/Object/GameObject/Serialization", "Source/Engine/Object/Prefab", "Source/Engine/Physics/Collision", "Source/Engine/Reflection", "Source/Engine/Scene", "Source/Engine/Serialization" ],
     "Localization": [ "Source/DevTools/Cook/LocalizationCooker.cpp", "Source/Engine/Localization", "Source/Engine/Serialization" ],

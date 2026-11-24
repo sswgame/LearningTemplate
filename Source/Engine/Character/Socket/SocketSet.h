@@ -21,6 +21,7 @@
 #include "Core/Foundation/Macros.h"
 #include "Core/Foundation/Types.h"
 #include "Core/Math/MatrixMath.h"
+#include "Core/Math/Radians.h"
 #include "Core/Math/VectorMath.h"
 #include "Core/Name/hashed_string.h"
 #include "Core/Path/AbsolutePath.h"
@@ -96,8 +97,8 @@ namespace sw
         hashed_string _kind{};
         PROPERTY( Units = m )
         float3 _translation{};
-        PROPERTY( Units = deg )
-        float3 _rotation{};
+        PROPERTY()
+        EulerAngles _rotation{};
         PROPERTY()
         float3 _scale{ 1.0f, 1.0f, 1.0f };
         PROPERTY()

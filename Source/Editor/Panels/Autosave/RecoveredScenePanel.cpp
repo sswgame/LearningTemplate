@@ -1,15 +1,22 @@
+/**
+ * @file RecoveredScenePanel.cpp
+ * @brief 비정상 종료 뒤 남은 자동 저장 사본을 보이고 복원 · 폐기를 받는 창입니다(언리얼의 Restore Packages 대화상자 자리).
+ * @details 줄은 `RecoveredSceneViewModel::gather` 가 모으고 명령도 그쪽이 받으며, 이 창은 그리기만 한다(MVVM 계약). 후보가 있으면 기동 첫 프레임에 자동 저장이 이 창을 연다.
+ */
 #include "pch.h"
 
-#include "Editor/Panels/Autosave/RecoveredScenePanel.h"
-
+#include "Core/Foundation/Types.h"
 #include "Core/Math/MathUtil.h"
 #include "Core/String/StringBuilder.h"
 #include "Core/String/fixed_string.h"
 
+#include "Editor/Common/GUI/Panel/EditorPanel.h"
 #include "Editor/Common/GUI/Panel/EditorPanelManager.h"
 #include "Editor/Common/GUI/Theme/EditorColorUtil.h"
 #include "Editor/Common/GUI/Theme/EditorThemeUtil.h"
 #include "Editor/Common/Widgets/EditorWidgets.h"
+#include "Editor/Common/Workspace/EditorPanelID.h"
+#include "Editor/Panels/Autosave/Model/RecoveredSceneViewModel.h"
 #include "Editor/SelfTest/EditorSelfTestInput.h"
 
 #include "Engine/Localization/LocText.h"
@@ -19,6 +26,31 @@
 
 namespace sw::editor
 {
+    /** @brief 씬마다 가장 새 사본 한 줄 — 씬 · 언제 · 남은 세대 · 복원할 수 없는 이유, 그리고 Restore · Discard 입니다. 그 아래 문서 패널의 사본 줄이 같은 모양으로 온다. */
+    class RecoveredScenePanel : public EditorPanel
+    {
+    public:
+        /** @brief 패널 id 입니다(`SW_EDITOR_PANEL` — 자동 저장이 같은 상수로 연다). */
+        static constexpr const utf8* kPanelID = editorpanel::kRecoveredScene.c_str();
+
+        /** @brief 창을 만듭니다(닫힌 채 시작한다 — 후보가 있을 때 자동 저장이 연다). */
+        RecoveredScenePanel();
+
+        /** @brief 창 제목입니다. */
+        const utf8* getPanelTitle() const override { return "Recovered Work"; }
+        /** @brief 후보 표를 그립니다 — 씬 줄, 그 아래 문서 줄(감사 E-1). */
+        void drawContent() override;
+
+    private:
+        /** @brief 씬 후보 표입니다. */
+        void drawSceneRows();
+        /** @brief 문서 패널 후보 표입니다 — 문서 · 언제 · 복원할 수 없는 이유, 그리고 Restore · Discard. 단추 표시는 `recoveredWork.restoreDocument.<줄>` · `recoveredWork.discardDocument.<줄>` 이다. */
+        void drawDocumentRows();
+
+    private:
+        RecoveredSceneViewState _viewState; ///< 프레임마다 다시 채운다
+    };
+
     namespace
     {
         /** @brief 두 표(씬 · 문서)가 함께 쓰는 열 크기입니다 — 같은 열은 같은 폭으로 줄이 맞는다. 고정 폭은 DPI 1 기준 픽셀이다. */

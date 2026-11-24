@@ -127,3 +127,28 @@ namespace sw
         ComponentHandle _handle{};
     };
 } // namespace sw
+
+namespace sw
+{
+    /**
+     * @brief @p T 가 **스스로** `SW_REGISTERED_COMPONENT( T )` 로 표시한 형식(씬 레지스트리 `ComponentRegistry` 의 자기 목록을 가지는 컴포넌트)인지입니다. 조상의 표시는 조상의 목록에만 올린다.
+     * @details 표시가 목록의 두 쪽을 함께 정한다 — 생성 코드(`makeTypeDesc`)가 표시를 형식의 표(`TypeInfo::getRegisteredComponentTypes`)에 싣고 `Component::dispatchRegister` 가 그 목록에 올리며,
+     *          찾는 쪽(`getAll<T>` · `findUnique<T>` · `isRegistered<T>`)은 표시가 없는 T 를 컴파일에서 거절한다. 컴포넌트가 `onRegister` 에서 손으로 올리던 때는
+     *          그 줄을 빠뜨린 형식이 컴파일되고 늘 빈 목록이었다(손 등록은 언리얼 서브시스템, 선언이 곧 등록인 것은 Godot 그룹 자리).
+     */
+    template <typename T, typename = void>
+    struct HasRegistryList : std::false_type
+    {
+    };
+
+    template <typename T>
+    struct HasRegistryList<T, std::void_t<typename T::RegisteredComponentType>> : std::is_same<typename T::RegisteredComponentType, T>
+    {
+    };
+} // namespace sw
+
+/**
+ * @brief 컴포넌트 클래스 본문(public, `REFLECT_BODY()` 다음)에 둡니다 — 이 형식과 파생의 모든 인스턴스가 등록되는 동안 씬 레지스트리의 @p Type 목록에 든다.
+ * @details 파생도 자기 목록이 필요하면 파생에 한 줄을 더 둔다(두 목록에 든다).
+ */
+#define SW_REGISTERED_COMPONENT( Type ) using RegisteredComponentType = Type

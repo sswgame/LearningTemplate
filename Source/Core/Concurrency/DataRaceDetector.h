@@ -121,7 +121,7 @@ namespace sw
          *
          * @details 데이터 레이스는 정의상 두 스레드가 있어야 생깁니다. 스레드를 구분하지 않으면 한 스레드가 가드를 잡은 채
          *          **같은 객체의 다른 가드 메서드를 부르기만 해도** 레이스로 보고합니다. 예를 들어
-         *          `sw::flat_set::operator=(initializer_list)` 는 쓰기 가드를 잡고 `clear()` · `insert()` 를 부르는데, 그 둘도 가드를 잡습니다.
+         *          `sw::set::operator=(initializer_list)` 는 쓰기 가드를 잡고 `clear()` · `insert()` 를 부르는데, 그 둘도 가드를 잡습니다.
          *
          *          `map` 에도 같은 곳이 있고, 쓰기 가드 안에서 const 메서드를 부르는 경우도 모두 같은 모양입니다. 즉 "가드 메서드가
          *          가드 메서드를 부르지 않게 조심한다" 로는 막을 수 없는 **구조적인** 오탐입니다. 그래서 주인 스레드를 기억해
@@ -204,7 +204,7 @@ namespace sw
 #if defined( SW_DO_CHECKS )
     #define SW_RACE_CTX_MEMBER mutable ::sw::RaceDetectContext _raceContext{};
 
-    // 가드는 `this->` 로 멤버를 짚는다 — 멤버가 템플릿 기반 형식(`internal::SortedVectorBase` · `internal::DenseHashTable`)에 있어도
+    // 가드는 `this->` 로 멤버를 짚는다 — 멤버가 템플릿 기반 형식(`internal::SortedContainerBase` · `internal::DenseHashTable`)에 있어도
     // 파생 템플릿의 멤버 함수에서 찾힌다(템플릿의 2 단계 이름 찾기는 의존 기반 형식의 멤버를 한정 없이는 보지 않는다).
     #define SW_SCOPED_RACE_READ()                                      \
         const ::sw::ScopedRaceRead SW_CONCAT( _swRaceRead_, __LINE__ ) \

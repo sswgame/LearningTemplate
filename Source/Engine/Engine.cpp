@@ -79,6 +79,7 @@
 #include "Engine/Presentation/IEngineUIDriver.h"
 #include "Engine/Profiling/FrameProfiler.h"
 #include "Engine/Profiling/ProfilerBackend.h"
+#include "Engine/Reflection/TypeInfo.h"
 #include "Engine/Reflection/TypeRegistry.h"
 #include "Engine/Scene/Scene.h"
 #include "Engine/Scene/SceneManager.h"
@@ -587,6 +588,11 @@ namespace sw
             const FrameDrawMode             drawMode        = pSimulationOnly != nullptr ? pSimulationOnly->beginFrame( engine::getSubsystem<DeterministicRun>().getPolicy()._fixedFrameDelta ) : FrameDrawMode::Draw;
             _pRenderDriver->submitFrame( deltaTime, views, sceneViewCameraProvider, drawMode );
         }
+    }
+
+    void Engine::update( float32 deltaTime, SceneTick sceneTick )
+    {
+        update( deltaTime, FrameViewports{}, ViewCameraProviderDelegate{}, sceneTick );
     }
 
     void Engine::endFrame()

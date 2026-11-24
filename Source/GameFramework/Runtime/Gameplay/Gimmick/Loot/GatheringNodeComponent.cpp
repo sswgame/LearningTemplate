@@ -8,6 +8,7 @@
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
 #include "Engine/Object/GameObject/Tick/TickContext.h"
+#include "Engine/Object/GameObject/Tick/TickInterval.h"
 
 #include "GameFramework/Runtime/Gameplay/Gimmick/GimmickUtil.h"
 #include "GameFramework/Runtime/Gameplay/Interaction/InteractableComponent.h"
@@ -25,7 +26,6 @@ namespace sw
         , _fallStepsLeft{ 0 }
         , _fallYaw{ 0.0f }
         , _standingRotation{}
-        , _clock{}
     {
     }
 
@@ -65,7 +65,7 @@ namespace sw
         GameObject&           owner = *getOwner(); // gather 가 이미 봤다
         const SceneComponent* pRoot = owner.getPrimarySceneComponent();
         const SceneComponent* pWho  = who.getPrimarySceneComponent();
-        _respawnStepsLeft           = _respawnDelay > 0.0f ? _clock.secondsToSteps( _respawnDelay, 1 ) : 0;
+        _respawnStepsLeft           = _respawnDelay > 0.0f ? TickIntervalUtil::secondsToCount( kTickInterval, _respawnDelay, 1 ) : 0;
         GimmickUtil::setInteractableEnabled( owner, false );
         if ( _fallDuration <= 0.0f || pRoot == nullptr )
         {
@@ -75,7 +75,7 @@ namespace sw
         const float3 away = pWho != nullptr ? pRoot->getWorldPosition() - pWho->getWorldPosition() : float3{ 0.0f, 0.0f, 1.0f };
         _fallYaw          = MathUtil::atan2( away._x, away._z );
         _standingRotation = pRoot->getLocalRotation();
-        _fallStepsLeft    = _clock.secondsToSteps( _fallDuration, 1 );
+        _fallStepsLeft    = TickIntervalUtil::secondsToCount( kTickInterval, _fallDuration, 1 );
     }
 
     void GatheringNodeComponent::applyFall( float32 amount )
@@ -93,7 +93,7 @@ namespace sw
     void GatheringNodeComponent::onTick( TickContext& context )
     {
         Component::onTick( context );
-        const int32 stepCount = _clock.consume( context.getDeltaTime() );
+        const int32 stepCount = context.getIntervalCount();
         for ( int32 stepIndex = 0; stepIndex < stepCount; ++stepIndex )
         {
             stepOnce();
@@ -108,7 +108,7 @@ namespace sw
         if ( _fallStepsLeft > 0 )
         {
             --_fallStepsLeft;
-            const int32   total = _clock.secondsToSteps( _fallDuration, 1 );
+            const int32   total = TickIntervalUtil::secondsToCount( kTickInterval, _fallDuration, 1 );
             const float32 time  = 1.0f - static_cast<float32>( _fallStepsLeft ) / static_cast<float32>( total );
             applyFall( time * time );
             if ( _fallStepsLeft == 0 )

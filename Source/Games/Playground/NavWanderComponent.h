@@ -28,6 +28,7 @@ namespace sw
     {
     public:
         REFLECT_BODY();
+        SW_REGISTERED_COMPONENT( NavWanderComponent );
 
         NavWanderComponent();
         ~NavWanderComponent() override = default;

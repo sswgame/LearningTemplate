@@ -5,8 +5,11 @@
 #include "Core/Algorithm/VectorUtil.h"
 #include "Core/Concurrency/mutex.h"
 #include "Core/Diagnostics/CrashHandler.h"
+#include "Core/File/ProcessRoots.h"
 #include "Core/Foundation/BuildInfo.h"
+#include "Core/Hash/HashUtil.h"
 #include "Core/Log/LogOnce.h"
+#include "Core/Log/ScopedDeferredLog.h"
 
 #include "Engine/Graphics/Debug/GPUBreadcrumbs.h"
 #include "Engine/Graphics/RHI/DX/DX12/D3D12RHICommandContext.h"
@@ -311,6 +314,7 @@ namespace sw
     void D3D12RHIDevice::flushBindlessRingSlot()
     {
         // 미러를 비우므로 배타 락이다(rebind 가 같은 락 아래에서 예약한다). 죽은 번호(그 사이 해제)는 건너뛴다 — 번호는 펜스 뒤에야 다시 나간다.
+        const ScopedDeferredLog  deferredLog;
         UniqueLock<shared_mutex> registryLock{ _bindlessMutex };
         const uint32             slot = _frameRing.currentIndex();
         _bindlessRingMirror.flushSlot( slot, [this, slot]( RHIDescriptorIndex index )
@@ -325,7 +329,8 @@ namespace sw
 
     uint32 D3D12RHIDevice::acquireOnlineBlock()
     {
-        ScopedLock<mutex> lock{ _onlineBlockMutex };
+        const ScopedDeferredLog deferredLog;
+        ScopedLock<mutex>       lock{ _onlineBlockMutex };
         // 프레임 끝까지 기다리지 않고 펜스가 지난 묶음을 먼저 거둔다 — 한 프레임에 리스트가 많으면(미리보기 씬 · 컴퓨트) 블록 수보다 리스트가 많다.
         if ( _freeOnlineBlock.empty() )
             recycleCompletedOnlineBlocksLocked( _fence->GetCompletedValue() );
@@ -1007,6 +1012,12 @@ namespace sw
 
         if ( createGlobalResources() == false )
             return false;
+        if ( deviceDesc._pipelineCacheSaveIntervalSeconds <= 0.0 )
+        {
+            SW_LOG_ERROR_ID( "D3D12.PipelineCacheSaveIntervalMissing", "EngineConfig _rhi._pipelineCacheSaveIntervalSeconds must be > 0 - the D3D12 backend does not start" );
+            return false;
+        }
+        initializePipelineLibrary( *adapter.Get(), deviceDesc._pipelineCacheSaveIntervalSeconds );
 
         _frameStreamContext = sw::make_unique<D3D12RHICommandContext>( this, _commandList.Get(), &_frameStreamState );
 
@@ -1072,8 +1083,163 @@ namespace sw
         return filled;
     }
 
+    namespace
+    {
+        struct D3D12PipelineLibraryInternal
+        {
+            static constexpr uint32 kNameLength = 17; ///< 16 진 16 자리와 끝 0
+
+            static uint64 appendShader( uint64 hash, const D3D12_SHADER_BYTECODE& code )
+            {
+                hash = HashUtil::combine( hash, static_cast<uint64>( code.BytecodeLength ) );
+                return code.BytecodeLength > 0 ? HashUtil::appendBytes64( hash, code.pShaderBytecode, code.BytecodeLength ) : hash;
+            }
+
+            static uint64 appendStencil( uint64 hash, const D3D12_DEPTH_STENCILOP_DESC& face )
+            {
+                const uint32 arrWord[] = { static_cast<uint32>( face.StencilFailOp ), static_cast<uint32>( face.StencilDepthFailOp ), static_cast<uint32>( face.StencilPassOp ), static_cast<uint32>( face.StencilFunc ) };
+                return HashUtil::appendValue64( hash, arrWord );
+            }
+
+            /** @brief 그래픽스 파이프라인의 이름 해시입니다 — 포인터가 가리키는 내용과 값을 넣고 포인터는 넣지 않는다. 해시가 겹쳐도 라이브러리가 서술을 견줘 거절하므로(E_INVALIDARG) 다른 파이프라인이 나오지 않는다. */
+            static uint64 computeHash( const D3D12_GRAPHICS_PIPELINE_STATE_DESC& desc, uint64 rootSignatureHash )
+            {
+                uint64 hash = rootSignatureHash;
+                for ( const D3D12_SHADER_BYTECODE* pCode : { &desc.VS, &desc.PS, &desc.DS, &desc.HS, &desc.GS } )
+                {
+                    hash = appendShader( hash, *pCode );
+                }
+                for ( UINT elementIndex = 0; elementIndex < desc.InputLayout.NumElements; ++elementIndex )
+                {
+                    const D3D12_INPUT_ELEMENT_DESC& element = desc.InputLayout.pInputElementDescs[elementIndex];
+                    hash                                    = HashUtil::appendBytes64( hash, element.SemanticName, strlen( element.SemanticName ) );
+                    const uint32 arrWord[]                  = { element.SemanticIndex, static_cast<uint32>( element.Format ), element.InputSlot, element.AlignedByteOffset, static_cast<uint32>( element.InputSlotClass ),
+                                                                element.InstanceDataStepRate };
+                    hash                                    = HashUtil::appendValue64( hash, arrWord );
+                }
+                // 블렌드 · 깊이 서술은 채움 바이트가 있어 칸마다 넣는다(채움이 다르면 같은 파이프라인이 다른 이름이 된다).
+                hash = HashUtil::appendValue64( hash, desc.BlendState.AlphaToCoverageEnable );
+                hash = HashUtil::appendValue64( hash, desc.BlendState.IndependentBlendEnable );
+                for ( const D3D12_RENDER_TARGET_BLEND_DESC& target : desc.BlendState.RenderTarget )
+                {
+                    const uint32 arrWord[] = { static_cast<uint32>( target.BlendEnable ), static_cast<uint32>( target.LogicOpEnable ), static_cast<uint32>( target.SrcBlend ), static_cast<uint32>( target.DestBlend ),
+                                               static_cast<uint32>( target.BlendOp ), static_cast<uint32>( target.SrcBlendAlpha ), static_cast<uint32>( target.DestBlendAlpha ), static_cast<uint32>( target.BlendOpAlpha ),
+                                               static_cast<uint32>( target.LogicOp ), static_cast<uint32>( target.RenderTargetWriteMask ) };
+                    hash                   = HashUtil::appendValue64( hash, arrWord );
+                }
+                const D3D12_DEPTH_STENCIL_DESC& depth          = desc.DepthStencilState;
+                const uint32                    arrDepthWord[] = { static_cast<uint32>( depth.DepthEnable ), static_cast<uint32>( depth.DepthWriteMask ), static_cast<uint32>( depth.DepthFunc ), static_cast<uint32>( depth.StencilEnable ),
+                                                                   static_cast<uint32>( depth.StencilReadMask ), static_cast<uint32>( depth.StencilWriteMask ) };
+                hash                                           = HashUtil::appendValue64( hash, arrDepthWord );
+                hash                                           = appendStencil( hash, depth.FrontFace );
+                hash                                           = appendStencil( hash, depth.BackFace );
+                hash                                           = HashUtil::appendValue64( hash, desc.RasterizerState );
+                hash                                           = HashUtil::appendValue64( hash, desc.SampleMask );
+                hash                                           = HashUtil::appendValue64( hash, desc.PrimitiveTopologyType );
+                hash                                           = HashUtil::appendValue64( hash, desc.NumRenderTargets );
+                hash                                           = HashUtil::appendValue64( hash, desc.RTVFormats );
+                hash                                           = HashUtil::appendValue64( hash, desc.DSVFormat );
+                return HashUtil::appendValue64( hash, desc.SampleDesc );
+            }
+
+            static void makeName( uint64 hash, utf16 ( &outName )[kNameLength] )
+            {
+                swprintf_s( outName, L"%016llx", static_cast<unsigned long long>( hash ) );
+            }
+        };
+    } // namespace
+
+    void D3D12RHIDevice::initializePipelineLibrary( IDXGIAdapter1& adapter, float64 saveIntervalSeconds )
+    {
+        D3D12_FEATURE_DATA_SHADER_CACHE       shaderCache{};
+        Microsoft::WRL::ComPtr<ID3D12Device1> device1;
+        const bool                            bSupported = SUCCEEDED( _device->CheckFeatureSupport( D3D12_FEATURE_SHADER_CACHE, &shaderCache, sizeof( shaderCache ) ) ) &&
+                                ( shaderCache.SupportFlags & D3D12_SHADER_CACHE_SUPPORT_LIBRARY ) != 0 && SUCCEEDED( _device.As( &device1 ) );
+        if ( bSupported == false || _bValidationLayer != SW_FALSE )
+        {
+            SW_LOG_INFO_ID( "D3D12.PipelineLibraryOff", "Pipeline library is not used (%#) - pipelines are built from scratch", bSupported ? "validation layer is on" : "the driver does not support it" );
+            return;
+        }
+        DXGI_ADAPTER_DESC1 adapterDesc{};
+        LARGE_INTEGER      driverVersion{};
+        (void)adapter.GetDesc1( &adapterDesc );
+        (void)adapter.CheckInterfaceSupport( __uuidof( IDXGIDevice ), &driverVersion ); // 못 물으면(WARP) 0 — 드라이버가 바뀌면 아래 CreatePipelineLibrary 가 거절한다
+        const AbsolutePath path = ProcessRoots::get()._saved.join(
+            RHIPipelineCacheFile::makeRelativePath( "d3d12_pipeline_library", adapterDesc.VendorId, adapterDesc.DeviceId, static_cast<uint64>( driverVersion.QuadPart ) ) );
+        _pipelineCacheFile.open( path, saveIntervalSeconds, SW_DELEGATE_METHOD( RHIPipelineCacheSerializeDelegate, &D3D12RHIDevice::serializePipelineLibrary, this ), _listPipelineLibraryBlob );
+
+        HRESULT hr = device1->CreatePipelineLibrary( _listPipelineLibraryBlob.data(), _listPipelineLibraryBlob.size(), IID_PPV_ARGS( _pipelineLibrary.GetAddressOf() ) );
+        if ( FAILED( hr ) && _listPipelineLibraryBlob.empty() == false )
+        {
+            SW_LOG_INFO_ID( "D3D12.PipelineLibraryDiscarded", "Saved pipeline library was discarded (hr=0x%08x, other driver or damaged file) - starting empty", static_cast<uint32>( hr ) );
+            _listPipelineLibraryBlob.clear();
+            hr = device1->CreatePipelineLibrary( nullptr, 0, IID_PPV_ARGS( _pipelineLibrary.GetAddressOf() ) );
+        }
+        if ( FAILED( hr ) )
+        {
+            SW_LOG_WARNING_ID( "D3D12.PipelineLibraryCreateFailed", "CreatePipelineLibrary failed (hr=0x%08x) - pipelines are built from scratch", static_cast<uint32>( hr ) );
+            _pipelineLibrary.Reset();
+            return;
+        }
+        if ( _listPipelineLibraryBlob.empty() == false )
+            SW_LOG_INFO_ID( "D3D12.LoadedPipelineLibraryBytes", "Loaded pipeline library (%# bytes).", _listPipelineLibraryBlob.size() );
+    }
+
+    void D3D12RHIDevice::savePipelineLibrary()
+    {
+        // 장치를 잃었으면 저장하지 않는다 — 직렬화가 실패하고, 주기 저장이 남긴 파일이 있다.
+        if ( _pipelineLibrary != nullptr && isDeviceLost() == false )
+            _pipelineCacheFile.saveAndClose();
+        _pipelineLibrary.Reset();
+    }
+
+    bool D3D12RHIDevice::serializePipelineLibrary( vector<uint8>& outBytes )
+    {
+        const SIZE_T sizeBytes = _pipelineLibrary != nullptr ? _pipelineLibrary->GetSerializedSize() : 0;
+        if ( sizeBytes == 0 )
+            return false;
+        outBytes.resize( sizeBytes );
+        // 크기를 물은 뒤 다른 스레드가 파이프라인을 더하면 모자라 실패한다 — 다음 주기에 다시 쓴다.
+        return SUCCEEDED( _pipelineLibrary->Serialize( outBytes.data(), outBytes.size() ) );
+    }
+
+    HRESULT D3D12RHIDevice::createGraphicsPipeline( const D3D12_GRAPHICS_PIPELINE_STATE_DESC& desc, Microsoft::WRL::ComPtr<ID3D12PipelineState>& outPSO )
+    {
+        if ( _pipelineLibrary == nullptr )
+            return _device->CreateGraphicsPipelineState( &desc, IID_PPV_ARGS( outPSO.GetAddressOf() ) );
+        utf16 arrName[D3D12PipelineLibraryInternal::kNameLength]{};
+        D3D12PipelineLibraryInternal::makeName( D3D12PipelineLibraryInternal::computeHash( desc, _rootSignatureHash ), arrName );
+        {
+            ScopedLock<mutex> lock{ _pipelineLibraryMutex };
+            if ( SUCCEEDED( _pipelineLibrary->LoadGraphicsPipeline( arrName, &desc, IID_PPV_ARGS( outPSO.GetAddressOf() ) ) ) )
+                return S_OK;
+        }
+        const HRESULT hr = _device->CreateGraphicsPipelineState( &desc, IID_PPV_ARGS( outPSO.ReleaseAndGetAddressOf() ) );
+        if ( SUCCEEDED( hr ) )
+            (void)_pipelineLibrary->StorePipeline( arrName, outPSO.Get() ); // 같은 이름을 다른 스레드가 먼저 넣었으면 E_INVALIDARG — 같은 파이프라인이다
+        return hr;
+    }
+
+    HRESULT D3D12RHIDevice::createComputePipeline( const D3D12_COMPUTE_PIPELINE_STATE_DESC& desc, Microsoft::WRL::ComPtr<ID3D12PipelineState>& outPSO )
+    {
+        if ( _pipelineLibrary == nullptr )
+            return _device->CreateComputePipelineState( &desc, IID_PPV_ARGS( outPSO.GetAddressOf() ) );
+        utf16 arrName[D3D12PipelineLibraryInternal::kNameLength]{};
+        D3D12PipelineLibraryInternal::makeName( D3D12PipelineLibraryInternal::appendShader( _rootSignatureHash, desc.CS ), arrName );
+        {
+            ScopedLock<mutex> lock{ _pipelineLibraryMutex };
+            if ( SUCCEEDED( _pipelineLibrary->LoadComputePipeline( arrName, &desc, IID_PPV_ARGS( outPSO.GetAddressOf() ) ) ) )
+                return S_OK;
+        }
+        const HRESULT hr = _device->CreateComputePipelineState( &desc, IID_PPV_ARGS( outPSO.ReleaseAndGetAddressOf() ) );
+        if ( SUCCEEDED( hr ) )
+            (void)_pipelineLibrary->StorePipeline( arrName, outPSO.Get() );
+        return hr;
+    }
+
     void D3D12RHIDevice::shutdownInternal()
     {
+        savePipelineLibrary();
         for ( BreadcrumbTrack& track : _arrBreadcrumb )
         {
             if ( track._buffer != nullptr && track._pMapped != nullptr )
@@ -1161,6 +1327,7 @@ namespace sw
         _validationCallbackCookie = 0;
         infoQueue1.Reset();
         _device.Reset();
+        _listPipelineLibraryBlob.clear(); // 라이브러리에서 나온 파이프라인이 모두 사라진 뒤다
 
         _fenceValue        = 0;
         _rtvDescriptorSize = 0;
@@ -1253,7 +1420,8 @@ namespace sw
         if ( _frameStreamState._bRecording != SW_FALSE && _commandList != nullptr )
         {
             {
-                ScopedLock<mutex> uploadLock{ _uploadSlotMutex };
+                const ScopedDeferredLog deferredLog;
+                ScopedLock<mutex>       uploadLock{ _uploadSlotMutex };
                 flushPendingUploads( true );
             }
             _frameStreamContext->endRenderPass();
@@ -1365,7 +1533,8 @@ namespace sw
 
         // 이 리스트가 방금 올린 버퍼를 읽을 수 있다. 열어 둔 업로드 복사를 먼저 내보낸다.
         {
-            ScopedLock<mutex> uploadLock{ _uploadSlotMutex };
+            const ScopedDeferredLog deferredLog;
+            ScopedLock<mutex>       uploadLock{ _uploadSlotMutex };
             flushPendingUploads( true );
         }
         ID3D12CommandList* arr[] = { pList };
@@ -1442,7 +1611,8 @@ namespace sw
 
         // 여기까지 기록된 구조 버퍼 갱신 복사가 이 리스트들보다 먼저 가야 한다. 앞에 끼운다. **실행까지 업로드 락을 쥔다** — 닫아서 대기열에 넣은 복사
         // 리스트를 실행 전에 다른 스레드의 갱신이 `Reset` 하면 그 복사가 사라진다.
-        ScopedLock<mutex> uploadLock{ _uploadSlotMutex };
+        const ScopedDeferredLog deferredLog;
+        ScopedLock<mutex>       uploadLock{ _uploadSlotMutex };
         flushPendingUploads( false );
         _commandQueue->ExecuteCommandLists( static_cast<UINT>( _listPendingSubmit.size() ), _listPendingSubmit.data() );
         _listPendingSubmit.clear();
@@ -1463,7 +1633,8 @@ namespace sw
         }
         // 구조 버퍼 복사가 앞에 끼고, 실행까지 업로드 락을 쥔다(submitPendingIfImmediate 와 같은 이유).
         {
-            ScopedLock<mutex> uploadLock{ _uploadSlotMutex };
+            const ScopedDeferredLog deferredLog;
+            ScopedLock<mutex>       uploadLock{ _uploadSlotMutex };
             flushPendingUploads( false );
             if ( _listPendingSubmit.empty() == false )
                 _commandQueue->ExecuteCommandLists( static_cast<UINT>( _listPendingSubmit.size() ), _listPendingSubmit.data() );
@@ -1585,7 +1756,8 @@ namespace sw
         UINT64  fenceToWait{ 0 };
         HRESULT signalHr{ S_OK };
         {
-            ScopedLock<mutex> uploadLock{ _uploadSlotMutex };
+            const ScopedDeferredLog deferredLog;
+            ScopedLock<mutex>       uploadLock{ _uploadSlotMutex };
             flushPendingUploads( true );
             fenceToWait = _fenceValue.load();
             signalHr    = _commandQueue->Signal( _fence.Get(), fenceToWait );
@@ -1933,6 +2105,8 @@ namespace sw
 
     void D3D12RHIDevice::beginFrameInternal()
     {
+        if ( _pipelineLibrary != nullptr && _pipelineCacheFile.isIntervalPassed() )
+            _pipelineCacheFile.saveIfDue( static_cast<uint64>( _pipelineLibrary->GetSerializedSize() ) ); // 실행 중에 죽어도 주기 앞까지의 컴파일이 남는다(R-13)
         if ( _frameStreamState._bRecording == SW_FALSE )
         {
             waitForRingSlot();
@@ -2059,7 +2233,8 @@ namespace sw
                 _computeWaitedValue = _computeFenceValue;
             }
             {
-                ScopedLock<mutex> uploadLock{ _uploadSlotMutex };
+                const ScopedDeferredLog deferredLog;
+                ScopedLock<mutex>       uploadLock{ _uploadSlotMutex };
                 flushPendingUploads( false );
 
                 // 프레임 세그먼트와 패스 리스트를 기록 순서 그대로 한 번에 제출한다.
@@ -2313,6 +2488,7 @@ namespace sw
             SW_LOG_ERROR_ID( "D3D12.CreateRootSignatureFailed", "CreateRootSignature failed." );
             return false;
         }
+        _rootSignatureHash      = HashUtil::appendBytes64( HashUtil::kFNVOffset64, signatureBlob->GetBufferPointer(), signatureBlob->GetBufferSize() );
         _bBindlessRootSignature = SW_TRUE;
 
         D3D12_INDIRECT_ARGUMENT_DESC drawArg{};
@@ -2471,7 +2647,8 @@ namespace sw
         if ( submitResult != RHISubmitResult::Accepted || outSpan.isSolo() == false )
             return submitResult;
         // 할당기가 단독 구간을 내줬다면 앞선 단독 구간은 이미 돌아왔다 — 남은 버퍼(아직 회수가 지우지 않은 것)를 GPU 가 더 쓰지 않는다.
-        ScopedLock<mutex> soloLock{ ring._soloMutex };
+        const ScopedDeferredLog deferredLog;
+        ScopedLock<mutex>       soloLock{ ring._soloMutex };
         destroyMappedStagingBuffer( ring._soloBuffer, ring._pSoloMapped );
         if ( createMappedStagingBuffer( ring._heapType, outSpan.getSizeBytes(), ring._soloBuffer, ring._pSoloMapped ) )
             return RHISubmitResult::Accepted;
@@ -2541,7 +2718,8 @@ namespace sw
             return 0;
         }
 
-        ScopedLock<mutex> submitLock{ _transferSubmitMutex };
+        const ScopedDeferredLog deferredLog;
+        ScopedLock<mutex>       submitLock{ _transferSubmitMutex };
         // 기록하는 사이에 장치를 잃었으면(다른 스레드의 손실 · rhi.removeDevice) 내지 않는다.
         if ( pollDeviceLost() )
         {
@@ -2618,8 +2796,9 @@ namespace sw
 
     bool D3D12RHIDevice::isTextureReadyToRegister( RHITextureHandle texture )
     {
-        ScopedLock<mutex> lock{ _textureTransferMutex };
-        const auto        foundIt = _mapTextureTransferMarks.find( texture );
+        const ScopedDeferredLog deferredLog;
+        ScopedLock<mutex>       lock{ _textureTransferMutex };
+        const auto              foundIt = _mapTextureTransferMarks.find( texture );
         return foundIt == _mapTextureTransferMarks.end() || _transferSerials.isTextureReadyToRegister( foundIt->second, texture );
     }
 

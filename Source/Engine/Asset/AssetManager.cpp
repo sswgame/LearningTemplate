@@ -9,6 +9,7 @@
 #include "Core/File/FileUtil.h"
 #include "Core/File/ProcessRoots.h"
 #include "Core/Log/Logger.h"
+#include "Core/Log/ScopedDeferredLog.h"
 #include "Core/Task/TaskManager.h"
 
 #include "Engine/Asset/AssetDatabase.h"
@@ -52,7 +53,8 @@ namespace sw
 {
     void AssetManager::addLoadTask( const TaskHandle& task )
     {
-        ScopedLock<mutex> lock{ _loadStageMutex };
+        const ScopedDeferredLog deferredLog;
+        ScopedLock<mutex>       lock{ _loadStageMutex };
         engine::getSubsystem<TaskManager>().addToStage( _loadStage, task, "AssetLoad" );
     }
 

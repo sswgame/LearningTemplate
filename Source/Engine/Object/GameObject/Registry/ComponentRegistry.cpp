@@ -40,22 +40,32 @@ namespace sw
         return pType != nullptr ? pType->_fullyQualifiedName.getHash() : 0u;
     }
 
-    void ComponentRegistry::addInterfaces( Component& component )
+    void ComponentRegistry::addComponent( Component& component )
     {
         const TypeInfo* pType = component.findCachedTypeInfo();
         if ( pType == nullptr )
             return;
+        const uint32 channel = component.getRegistryChannel();
+        for ( const hashed_string& typeName : pType->getRegisteredComponentTypes() )
+        {
+            addEntry( typeName.getHash(), channel, &component );
+        }
         for ( const TypeInterfaceEntry& entry : pType->getInterfacesWithBase() )
         {
             addEntry( entry._interfaceName.getHash(), 0, &component );
         }
     }
 
-    void ComponentRegistry::removeInterfaces( const Component& component )
+    void ComponentRegistry::removeComponent( const Component& component )
     {
         const TypeInfo* pType = component.findCachedTypeInfo();
         if ( pType == nullptr )
             return;
+        const uint32 channel = component.getRegistryChannel();
+        for ( const hashed_string& typeName : pType->getRegisteredComponentTypes() )
+        {
+            removeEntry( typeName.getHash(), channel, &component );
+        }
         for ( const TypeInterfaceEntry& entry : pType->getInterfacesWithBase() )
         {
             removeEntry( entry._interfaceName.getHash(), 0, &component );

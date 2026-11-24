@@ -2,13 +2,18 @@
 // 걸린 폴더 밖 · 서버 목록의 탈출 이름은 거절한다. 서버는 가짜 `IHTTPClient` 다(`Scripts/net/fileserve.py` 와 같은 끝점 · 글)(nogpu).
 #include "pch.h"
 
+#include "Core/Concurrency/ScopedLock.h"
+#include "Core/Concurrency/mutex.h"
 #include "Core/Container/unordered_map.h"
+#include "Core/File/AsyncFileIO.h"
 #include "Core/File/FileUtil.h"
 #include "Core/String/StringUtil.h"
 #include "Core/Testing/TestFramework.h"
 
 #include "Engine/Net/FileServe/FileServeContentSource.h"
 #include "Engine/Net/HTTPClient.h"
+
+#include <thread>
 
 using namespace sw;
 
@@ -27,9 +32,12 @@ namespace
         unordered_map<string, File> _mapFile;
         vector<string>              _listExtraName; ///< `/list` 에 덧붙일 이름(서버가 보낸 나쁜 이름)
         uint32                      _requestCount{ 0 };
+        vector<std::thread::id>     _listFileThreadID;        ///< `/file` 을 보낸 스레드
+        uint32                      _pendingRebakeCount{ 0 }; ///< 0 이 아니면 다음 `/file` 뒤에 그 파일의 수정 시각을 하나 올린다(받는 사이 다시 굽기)
 
         HTTPResponse send( const HTTPRequest& request ) override
         {
+            const ScopedLock<mutex> lock{ _mutex }; // 소스는 백엔드 스레드 여럿에서 부른다
             ++_requestCount;
             HTTPResponse      response;
             const string_view url      = request._url;
@@ -76,8 +84,14 @@ namespace
                 response._status = 404;
                 return response;
             }
+            _listFileThreadID.push_back( std::this_thread::get_id() );
             response._status = 200;
             response._body.assign( it->second._bytes.begin() + static_cast<ptrdiff_t>( offset ), it->second._bytes.begin() + static_cast<ptrdiff_t>( offset + size ) );
+            if ( _pendingRebakeCount > 0 )
+            {
+                --_pendingRebakeCount;
+                ++_mapFile[path]._modifiedNanos;
+            }
             return response;
         }
 
@@ -102,6 +116,9 @@ namespace
             }
             return {};
         }
+
+    private:
+        mutex _mutex;
     };
 
     vector<uint8> makePattern( size_t size )
@@ -153,6 +170,75 @@ SW_TEST_CASE( FileServeContentSourceTest, MirrorsInChunksAndReusesFreshStamp )
         vector<uint8>                bytes;
         SW_REQUIRE_TRUE( source.readFile( packPath, bytes ) );
         SW_EXPECT_EQUAL( uint64{ 3 }, source.getReceivedChunkCount().get() );
+    }
+}
+
+/**
+ * @brief [FileServeContentSourceTest] 소스 하나가 사는 동안 다시 구운 팩은 다음 열기가 받고, 먼저 연 핸들은 옛 내용을 끝까지 읽는다. 받는 사이 다시 구우면 그 열기는 실패하고 다음 열기가 새로 받는다.
+ *        결함이면 실행 중 다시 굽기가 장치에 닿지 않거나, 두 판이 섞인 팩이 새 도장으로 남는다
+ */
+SW_TEST_CASE( FileServeContentSourceTest, ReceivesRebakedFileDuringOneRun )
+{
+    FakeFileServeClient client;
+    client._mapFile["live.pack"]                       = FakeFileServeClient::File{ makePattern( 64 ), 1 };
+    const AbsolutePath                       mountRoot = test::makeScratchPath( "FileServe/Packs" );
+    const FileServeContentSource             source{ client, FakeFileServeClient::kBase, mountRoot.str(), test::makeScratchPath( "FileServe/Rebake" ) };
+    StringBuilder<constant::buffer::kMax512> packPath;
+    packPath.appendFormat( "%#/live.pack", mountRoot.str() );
+
+    vector<uint8> bytes;
+    SW_REQUIRE_TRUE( source.readFile( packPath.view(), bytes ) );
+    SW_EXPECT_EQUAL( size_t{ 64 }, bytes.size() );
+
+    client._mapFile["live.pack"] = FakeFileServeClient::File{ makePattern( 128 ), 2 };
+    SW_REQUIRE_TRUE( source.readFile( packPath.view(), bytes ) );
+    SW_EXPECT_TRUE( bytes == makePattern( 128 ) );
+    SW_EXPECT_EQUAL( uint64{ 2 }, source.getReceivedChunkCount().get() );
+
+    client._mapFile["live.pack"] = FakeFileServeClient::File{ makePattern( 32 ), 3 };
+    client._pendingRebakeCount   = 1;
+    SW_EXPECT_LOG( "FileServe.DownloadFailed" );
+    SW_EXPECT_FALSE( source.readFile( packPath.view(), bytes ) );
+    SW_REQUIRE_TRUE( source.readFile( packPath.view(), bytes ) );
+    SW_EXPECT_TRUE( bytes == makePattern( 32 ) );
+    SW_EXPECT_EQUAL( uint64{ 4 }, source.getReceivedChunkCount().get() );
+}
+
+/**
+ * @brief [FileServeContentSourceTest] 비동기 읽기는 백엔드 스레드에서 받고, 같은 파일을 두 스레드가 함께 열어도 한 번만 받는다. 없는 파일은 FileNotFound 로 끝난다.
+ *        결함이면 게임 스레드가 망을 기다리거나 팩을 두 번 받는다
+ */
+SW_TEST_CASE( FileServeContentSourceTest, AsyncReadsDownloadOnceOnBackendThread )
+{
+    FakeFileServeClient client;
+    client._mapFile["async.pack"]                      = FakeFileServeClient::File{ makePattern( FileServeContentSource::kChunkBytes + 100 ), 1 };
+    const AbsolutePath                       mountRoot = test::makeScratchPath( "FileServe/Packs" );
+    const FileServeContentSource             source{ client, FakeFileServeClient::kBase, mountRoot.str(), test::makeScratchPath( "FileServe/Async" ) };
+    StringBuilder<constant::buffer::kMax512> packPath;
+    packPath.appendFormat( "%#/async.pack", mountRoot.str() );
+    StringBuilder<constant::buffer::kMax512> missingPath;
+    missingPath.appendFormat( "%#/missing.pack", mountRoot.str() );
+
+    AsyncFileIO       io;
+    AsyncFileIOConfig settings{};
+    settings._backendKind           = AsyncIOBackendKind::ThreadPool;
+    settings._threadPoolThreadCount = 2;
+    SW_REQUIRE_TRUE( io.initialize( settings ) );
+    const AsyncReadHandle whole   = source.readFileAsync( io, packPath.view(), AsyncIOPriority::Normal, {} );
+    const AsyncReadHandle range   = source.readRangeAsync( io, packPath.view(), FileServeContentSource::kChunkBytes, 100, AsyncIOPriority::Normal, {} );
+    const AsyncReadHandle missing = source.readFileAsync( io, missingPath.view(), AsyncIOPriority::Normal, {} );
+    whole.wait();
+    range.wait();
+    missing.wait();
+    io.shutdown();
+
+    SW_EXPECT_TRUE( whole.getStatus() == AsyncIOStatus::Succeeded );
+    SW_EXPECT_TRUE( range.getStatus() == AsyncIOStatus::Succeeded );
+    SW_EXPECT_TRUE( missing.getStatus() == AsyncIOStatus::FileNotFound );
+    SW_REQUIRE_EQUAL( size_t{ 2 }, client._listFileThreadID.size() );
+    for ( const std::thread::id threadID : client._listFileThreadID )
+    {
+        SW_EXPECT_TRUE( threadID != std::this_thread::get_id() );
     }
 }
 

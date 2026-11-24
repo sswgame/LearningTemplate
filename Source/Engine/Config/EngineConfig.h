@@ -569,7 +569,7 @@ namespace sw
         PROPERTY( Min = 1 )
         uint32 _uploadStagingIdleFrames{};
 
-        /** @brief 파이프라인 캐시(Vulkan `VkPipelineCache`)를 디스크에 저장하는 주기(초)입니다. 종료 전에 죽어도 그 주기 앞까지의 컴파일이 남는다(R-13). */
+        /** @brief 파이프라인 캐시(Vulkan `VkPipelineCache` · D3D12 `ID3D12PipelineLibrary`)를 디스크에 저장하는 주기(초)입니다. 종료 전에 죽어도 그 주기 앞까지의 컴파일이 남는다(R-13). */
         PROPERTY( Min = 1, Units = s )
         float64 _pipelineCacheSaveIntervalSeconds{};
 

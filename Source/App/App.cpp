@@ -32,6 +32,7 @@
 #include "Engine/Net/GameNetSession.h"
 #include "Engine/Object/Component/CameraComponent.h"
 #include "Engine/Profiling/FrameProfiler.h"
+#include "Engine/Reflection/TypeInfo.h"
 #include "Engine/Reflection/TypeRegistry.h"
 #include "Engine/Renderer/Frame/Packet/RenderFramePacket.h"
 #include "Engine/Renderer/RenderThread.h"
@@ -622,7 +623,7 @@ namespace sw
         _launch.updateModuleReload();
 
         const ModuleFrameState& frameState = getModuleManager()->getFrameState();
-        _launch.getEngine().update( frameTime._deltaTime, frameState._views, _sceneViewCameraProvider, frameState._bTickScene == SW_TRUE ? SceneTick::Run : SceneTick::Pause );
+        _launch.getEngine().update( frameTime._deltaTime, getModuleManager()->getViews(), _sceneViewCameraProvider, frameState._bTickScene == SW_TRUE ? SceneTick::Run : SceneTick::Pause );
         getModuleManager()->endEditorFrame();
 
         // 프레임 경계의 장치 교체 · 다시 만들기 — 개발 구성의 백엔드 교체(`gv_rhiBackend`)와 배포도 쓰는 장치 분실 재생성(`RHIDeviceLostPolicy::Recreate`)이 같은 길이다.

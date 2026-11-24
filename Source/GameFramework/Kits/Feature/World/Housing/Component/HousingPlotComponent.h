@@ -52,6 +52,7 @@ namespace sw
     {
     public:
         REFLECT_BODY();
+        SW_REGISTERED_COMPONENT( HousingPlotComponent );
         friend class HousingNetSessionComponent; ///< 세션이 틱 뒤에 요청을 꺼내 보내고 판정 · 주인을 돌려준다
 
         static constexpr uint32 kStateTag     = FourCCUtil::make( "HPLT" );
@@ -110,8 +111,6 @@ namespace sw
 
     protected:
         [[nodiscard]] bool startGame() override;
-        void               onRegister( GameObjectManager& manager ) override;
-        void               onUnregister( GameObjectManager& manager ) override;
         void               onEndPlay() override;
         void               updateGame( float32 deltaTime ) override { (void)deltaTime; }
         void               onFlush( GameObjectManager& manager, bool bRespawnViews ) override;

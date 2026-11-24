@@ -5,6 +5,7 @@
 #include "Core/Diagnostics/CrashHandler.h"
 #include "Core/Hash/HashUtil.h"
 #include "Core/Log/LogOnce.h"
+#include "Core/Log/ScopedDeferredLog.h"
 #include "Core/Memory/Memory.h"
 #include "Core/String/formatString.h"
 
@@ -16,8 +17,9 @@ namespace sw
 {
     uint32 GPUBreadcrumbLog::registerPass( string_view name )
     {
-        const uint64      hash = HashUtil::computeStringHash64( name, false );
-        ScopedLock<mutex> lock{ _mutex };
+        const uint64            hash = HashUtil::computeStringHash64( name, false );
+        const ScopedDeferredLog deferredLog;
+        ScopedLock<mutex>       lock{ _mutex };
         for ( uint32 index = 0; index < _count; ++index )
         {
             if ( _arrHash[index] == hash )

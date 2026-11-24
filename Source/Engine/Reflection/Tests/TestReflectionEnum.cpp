@@ -6,6 +6,7 @@
 
 #include "Engine/Foundation/EngineServices.h"
 #include "Engine/Reflection/EnumName.h"
+#include "Engine/Reflection/ReflectionDesc.h"
 #include "Engine/Reflection/ReflectionEnumNames.h"
 #include "Engine/Reflection/Tests/ReflectionTestTypes.h"
 #include "Engine/Reflection/Tests/ScopedTestModule.h"

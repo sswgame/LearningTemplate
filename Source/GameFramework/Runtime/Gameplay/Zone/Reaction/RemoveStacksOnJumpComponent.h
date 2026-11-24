@@ -30,6 +30,7 @@ namespace sw
     {
     public:
         REFLECT_BODY();
+        SW_REGISTERED_COMPONENT( RemoveStacksOnJumpComponent );
 
         RemoveStacksOnJumpComponent();
         ~RemoveStacksOnJumpComponent() override = default;

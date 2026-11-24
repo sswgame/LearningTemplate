@@ -9,6 +9,7 @@ TU 마다 구문만 확인한다(clang-cl `-fsyntax-only`) — 빌드하지 않�
   py -3 -m Scripts syntax --all              # 컴파일 DB 의 Source TU 전부
   py -3 -m Scripts syntax --files a.cpp b.h  # 지정한 파일(헤더는 포함하는 TU 로)
   py -3 -m Scripts syntax --changed main --rest   # 위 고르기의 나머지(한 번 다 본 뒤 남은 몫)
+  py -3 -m Scripts syntax --files A.cpp --changed --direct --define SW_ENABLE_STL_CONTAINER   # 다른 구성의 매크로를 더해(preflight 의 std 컨테이너 갈래)
   … --jobs 4
 
 컴파일 DB 는 **본 트리** `build/<프리셋>/compile_commands.json` 을 읽기만 한다(`Scripts/lint/clang_tidy.py` 와 같은 경로 바꾸기). 낮은 우선순위로 돌아 겹쳐 도는 빌드가 CPU 를 먼저 받는다.
@@ -27,7 +28,7 @@ import re
 import sys
 import time
 from concurrent.futures import ThreadPoolExecutor
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
@@ -165,14 +166,18 @@ def split_command(command: str) -> list[str]:
 
 def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(prog="py -3 -m Scripts syntax", description="유니티를 푼 구문 확인(본 트리 컴파일 DB 를 읽기만 한다)")
-    mode = parser.add_mutually_exclusive_group(required=True)
+    mode = parser.add_argument_group("고르기(하나 이상)")
     mode.add_argument("--changed", nargs="?", const=DEFAULT_BASE, metavar="기준", help=f"기준(기본 {DEFAULT_BASE})과 다른 파일이 닿는 TU")
     mode.add_argument("--all", action="store_true", help="컴파일 DB 의 Source TU 전부")
-    mode.add_argument("--files", nargs="+", type=Path, help="지정한 파일만(헤더는 포함하는 TU 로)")
+    mode.add_argument("--files", nargs="+", type=Path, help="지정한 파일(헤더는 포함하는 TU 로)")
+    parser.add_argument("--direct", action="store_true", help="고른 .cpp 만 — 고른 헤더를 포함하는 TU 로 넓히지 않는다")
+    parser.add_argument("--define", action="append", default=[], metavar="이름", help="모든 TU 에 더할 매크로(되풀이해 준다)")
     parser.add_argument("--rest", action="store_true", help="고른 것의 나머지 TU")
     parser.add_argument("--jobs", type=int, default=DEFAULT_JOBS, help=f"동시 수(기본 {DEFAULT_JOBS})")
     parser.add_argument("--preset", default=DEFAULT_PRESET, help=f"읽을 컴파일 DB 의 프리셋(기본 {DEFAULT_PRESET})")
     args = parser.parse_args(argv)
+    if args.all == (args.changed is not None or args.files is not None):
+        parser.error("--all 하나 또는 --changed · --files 를 준다")
     if args.rest and args.all:
         parser.error("--rest 는 --changed · --files 와 쓴다")
     if not is_windows_host():
@@ -188,12 +193,19 @@ def main(argv: list[str] | None = None) -> int:
     units = make_units(json.loads(database_path.read_text(encoding="utf-8")), main_root, tree_root)
     selected, list_unbuilt = units, []
     if not args.all:
-        list_file = changed_files(tree_root, args.changed) if args.changed is not None else [path if path.is_absolute() else tree_root / path for path in args.files]
+        list_file = [path if path.is_absolute() else tree_root / path for path in args.files or []]
+        if args.changed is not None:
+            list_file += changed_files(tree_root, args.changed)
+        if args.direct:
+            list_file = [path for path in list_file if path.suffix.lower() in SOURCE_EXTENSIONS]
         selected, list_unbuilt = select_units(list_file, units, main_root, tree_root)
     for relative in list_unbuilt:
         print(f"[syntax] 건너뜀({args.preset} 이 짓지 않는 파일): {relative}")
     if args.rest:
         selected = {key: unit for key, unit in units.items() if key not in selected}
+
+    defines = "".join(f" /D{name}" for name in args.define)
+    selected = {key: replace(unit, arguments=unit.arguments + defines) for key, unit in selected.items()}
 
     lower_priority()
     started = time.monotonic()

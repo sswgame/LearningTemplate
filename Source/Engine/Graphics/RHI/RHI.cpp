@@ -382,7 +382,12 @@ namespace sw
         }
 
         if ( requested == _committedRHIBackend )
+        {
+            // 적용 전에 원래 백엔드로 되돌린 요청(Reset All 을 되돌리기)은 앞의 예약을 거둔다. 잃은 장치의 다시 만들기는 남긴다.
+            _pendingRHIBackend     = _committedRHIBackend;
+            _bPendingBackendChange = _bPendingDeviceRecreate;
             return;
+        }
 
         SW_LOG_INFO_ID( "RHI.RHIBackendChangeQueued", "RHI Backend change queued: %# → %#", getBackendTypeName( _committedRHIBackend ), getBackendTypeName( requested ) );
         _pendingRHIBackend     = requested;

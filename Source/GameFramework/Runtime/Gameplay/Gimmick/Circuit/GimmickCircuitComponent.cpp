@@ -753,18 +753,6 @@ namespace sw
         commitRestoredState();
         return true;
     }
-
-    void GimmickCircuitComponent::onRegister( GameObjectManager& manager )
-    {
-        Component::onRegister( manager );
-        manager.getComponentRegistry().add<GimmickCircuitComponent>( this );
-    }
-
-    void GimmickCircuitComponent::onUnregister( GameObjectManager& manager )
-    {
-        manager.getComponentRegistry().remove<GimmickCircuitComponent>( this );
-        Component::onUnregister( manager );
-    }
 } // namespace sw
 
 namespace sw

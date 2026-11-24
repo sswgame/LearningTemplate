@@ -50,11 +50,11 @@ namespace sw
     {
     public:
         REFLECT_BODY();
+        SW_REGISTERED_COMPONENT( PlayerControllerComponent );
 
         PlayerControllerComponent();
         ~PlayerControllerComponent() override = default;
 
-        void onRegister( GameObjectManager& manager ) override;
         void onUnregister( GameObjectManager& manager ) override;
 
         void produceIntent( const ControlFrameContext& context, const PawnComponent& pawn, ControlIntent& outIntent ) override;

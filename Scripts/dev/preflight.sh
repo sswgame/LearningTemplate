@@ -16,6 +16,8 @@
 #   build       lint --all(뒤에서) ‖ Release 빌드 → 임포트 → (ASan 빌드 ‖ 배포 Client → 서버(Release) → 배포 Server 빌드 · 쿠킹 → shipping-check 기동 · 종료). 배포 빌드는 증분 빌드의 링크 꼬리에 비는 코어를 쓴다(2026-11-13: CPU 단계 11.5 분 중 9 분이 배포 빌드였다).
 #               ASan 빌드가 끝나면 tidy 를 뒤에서 띄운다(아래 tidy).
 #               Debug 는 짓지 않는다 — 단언 · 검사는 SW_DO_CHECKS 로 Release 에 있고, CPU 단위는 ASan(Release + clang-cl ASan)이 돈다(사용자 결정 2026-11-18).
+#               Release 빌드 뒤 std 컨테이너 구성(SW_ENABLE_STL_CONTAINER)의 구문을 뒤에서 본다(syntax --direct) — 컨테이너 · 문자열 테스트와 이 묶음이 바꾼 .cpp. 교체 구성이 썩지 않게 하는 검사이고,
+#               실제로 지어 도는 것은 프리셋 Ninja-Release-STL(컨테이너를 고친 묶음에서 손으로 — `ctest -L nogpu`)이다.
 #   changed     origin/main 뒤에 들어온 · 바뀐 테스트 · 시나리오만 Release 로 먼저(test_history.py changed). 돈 적 없는 테스트 · 기준 파일의 실패를
 #               전체 실행 중간이 아니라 빌드 직후에 갈래 이름과 함께 낸다. 없는 골든 · 스냅숏만 쓰고(MissingBaseline) 쓴 것이 있으면 멈춘다 — 보고 커밋한 뒤 --from changed.
 #               지면 cpu · gpu-release 를 시작하지 않는다. 끝 줄 CHANGED_OK=<sha> · CHANGED_FAILED.
@@ -118,6 +120,14 @@ if [ -n "$TREE_CHANGES" ]; then
     exit 2
   fi
 fi
+
+# 끝났다고 적힌 할 일 줄(커밋 꼬리말 `NEXT: <줄 앞말> 끝`)이 docs/NEXT.md 에 남아 있으면 여기서 멈춘다 — 줄을 지운 커밋이 검증할 sha 여야 한다.
+if ! py -3 -m Scripts next-done && [ $DRY -eq 0 ]; then
+  exit 2
+fi
+
+# 강제로 끝난 git 의 찌꺼기 잠금을 먼저 알린다 — 검증이 끝난 뒤의 커밋 · 병합이 거기서 멈춘다. 검증 자체는 막지 않는다.
+py -3 -m Scripts git-locks || echo "git 잠금 파일이 남아 있다(위 줄) - 도는 git 이 없으면 py -3 -m Scripts git-locks --remove"
 
 # 단계 시간(test_history.py stage) — begin_stage 가 시작 시각을 잡고, 통과 · 건너뜀 · 실패 때 한 줄씩 쌓는다. 갈래(서브셸)에서는 쌓지 않는다(부모가 쌓는다).
 CURRENT_STAGE=""
@@ -299,6 +309,16 @@ run_shipping_check() {
   return $RC
 }
 
+# 컨테이너 저장을 std 로 바꾼 구성이 컴파일되는가(구문만) — 방금 지은 Release 의 컴파일 DB · 생성 헤더를 쓴다. 컨테이너 테스트가 모든 공개 API 를 인스턴스화한다.
+job_stl_container() {
+  echo "== std container syntax $(date +%T)"
+  run build/verify.stl.log py -3 -m Scripts syntax --changed origin/main --direct --define SW_ENABLE_STL_CONTAINER --files Source/Core/Container/Tests/*.cpp Source/Core/String/Tests/*.cpp
+  local RC=$?
+  [ $DRY -eq 1 ] || tail -n 20 build/verify.stl.log
+  echo "std container syntax exit=$RC"
+  return $RC
+}
+
 job_server_tools() {
   echo "== server unit $(date +%T)"
   run build/Ninja-Release-Server/Testing/Logs/verify.unit.log build/Ninja-Release-Server/Bin/Server.exe --test -unattended
@@ -379,6 +399,7 @@ if [ $RUN_BUILD -eq 1 ]; then
   # 최적화 App 으로 임포트한다 — Debug 의 BC7 · BC6H 압축기는 큰 텍스처 하나에 몇 분이다(AssetImportEntry.TextureImportDebugBuild). 산출물은 구성과 무관하게 Content 하나다.
   run_ctest Ninja-Release import -L import || windows_failed "Ninja-Release import"
   start_job "shipping build" job_shipping_build
+  start_job "std container syntax" job_stl_container
   build_preset Ninja-Release-ASan
   [ $RUN_TIDY -eq 0 ] || start_tidy
   wait_jobs

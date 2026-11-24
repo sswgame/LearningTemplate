@@ -366,16 +366,4 @@ namespace sw
         if ( const AdventureRegionCatalog* const pRegions = findRegions() )
             reconcileWithRegions( *pRegions );
     }
-
-    void AdventureGameModeComponent::onRegister( GameObjectManager& manager )
-    {
-        GameModeComponent::onRegister( manager );
-        manager.getComponentRegistry().add<AdventureGameModeComponent>( this );
-    }
-
-    void AdventureGameModeComponent::onUnregister( GameObjectManager& manager )
-    {
-        manager.getComponentRegistry().remove<AdventureGameModeComponent>( this );
-        GameModeComponent::onUnregister( manager );
-    }
 } // namespace sw

@@ -9,6 +9,7 @@
 #include "Core/Foundation/BuildInfo.h"
 #include "Core/Foundation/StdHeaders.h"
 #include "Core/Log/Logger.h"
+#include "Core/Log/ScopedDeferredLog.h"
 #include "Core/String/StringUtil.h"
 
 #include "Engine/Content/AssetIO.h"
@@ -291,6 +292,7 @@ namespace sw
         string oldLanguage;
         string newLanguage;
         {
+            const ScopedDeferredLog  deferredLog;
             UniqueLock<shared_mutex> lock{ _mutex };
             if ( const expected<void> checked = validateKeyHashesLocked( &mounted, nullptr ); checked.has_value() == false )
             {
@@ -357,12 +359,12 @@ namespace sw
     {
         if ( &source == this )
             return;
-        CultureTable                       cultureTable;
-        TimeZoneTable                      timeZoneTable;
-        vector<MountedProject>             listProject;
-        flat_map<string, TranslationTable> mapLooseTable;
-        string                             currentLanguage;
-        string                             fallbackLanguage;
+        CultureTable                  cultureTable;
+        TimeZoneTable                 timeZoneTable;
+        vector<MountedProject>        listProject;
+        map<string, TranslationTable> mapLooseTable;
+        string                        currentLanguage;
+        string                        fallbackLanguage;
         {
             ScopedSharedLock<shared_mutex> lock{ source._mutex };
             cultureTable     = source._cultureTable;
@@ -401,6 +403,7 @@ namespace sw
         string oldLanguage;
         string newLanguage;
         {
+            const ScopedDeferredLog  deferredLog;
             UniqueLock<shared_mutex> lock{ _mutex };
             if ( const expected<void> checked = validateKeyHashesLocked( nullptr, &table ); checked.has_value() == false )
             {
@@ -429,6 +432,7 @@ namespace sw
     {
         TranslationTable incoming;
         incoming.getOrAddEntry( key.view() );
+        const ScopedDeferredLog  deferredLog;
         UniqueLock<shared_mutex> lock{ _mutex };
         if ( const expected<void> checked = validateKeyHashesLocked( nullptr, &incoming ); checked.has_value() == false )
         {
@@ -511,6 +515,7 @@ namespace sw
     {
         const string                   code = normalizeLanguageCode( languageCode );
         LocalizationBinaryTable        table;
+        const ScopedDeferredLog        deferredLog;
         ScopedSharedLock<shared_mutex> lock{ _mutex };
         table.setCulture( code );
         for ( const MountedProject& project : _listProject )
@@ -774,6 +779,7 @@ namespace sw
         vector<CookedRead> listRead;
         bool               bAnyOutsideChain{ false };
         {
+            const ScopedDeferredLog        deferredLog;
             ScopedSharedLock<shared_mutex> lock{ _mutex };
             for ( const MountedProject& project : _listProject )
             {
@@ -1179,6 +1185,7 @@ namespace sw
         }
         string language;
         {
+            const ScopedDeferredLog  deferredLog;
             UniqueLock<shared_mutex> lock{ _mutex };
             if ( const expected<void> checked = validateKeyHashesLocked( &reloaded, nullptr ); checked.has_value() == false )
             {

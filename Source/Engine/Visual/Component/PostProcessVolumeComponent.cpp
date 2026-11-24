@@ -46,18 +46,6 @@ namespace sw
     {
     }
 
-    void PostProcessVolumeComponent::onRegister( GameObjectManager& manager )
-    {
-        SceneComponent::onRegister( manager );
-        manager.getComponentRegistry().add<PostProcessVolumeComponent>( this );
-    }
-
-    void PostProcessVolumeComponent::onUnregister( GameObjectManager& manager )
-    {
-        manager.getComponentRegistry().remove<PostProcessVolumeComponent>( this );
-        SceneComponent::onUnregister( manager );
-    }
-
     float32 PostProcessVolumeComponent::computeWeight( const float3& position ) const
     {
         const float32 blendWeight = MathUtil::saturate( _blendWeight );

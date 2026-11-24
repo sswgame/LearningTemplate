@@ -13,6 +13,7 @@
 #include "Core/File/FileUtil.h"
 #include "Core/Foundation/StdHeaders.h"
 #include "Core/Log/Logger.h"
+#include "Core/Log/ScopedDeferredLog.h"
 #include "Core/Math/MathUtil.h"
 #include "Core/Time/MonotonicClock.h"
 
@@ -122,6 +123,7 @@ namespace sw::editor
 
                 if ( bReload )
                 {
+                    const ScopedDeferredLog  deferredLog;
                     UniqueLock<shared_mutex> lock{ mutex };
                     auto                     iter = cache.find( assetPath );
                     // 다른 스레드가 잠금을 먼저 잡아 새로 읽었으면 그것을 쓴다.

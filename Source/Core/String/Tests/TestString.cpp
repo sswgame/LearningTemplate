@@ -15,6 +15,7 @@
 #include "Core/String/fixed_string.h"
 #include "Core/String/formatString.h"
 #include "Core/String/string_splitter.h"
+#include "Core/Testing/ScopedAllocationCount.h"
 #include "Core/Testing/ScopedAssertCapture.h"
 #include "Core/Testing/TestFramework.h"
 #include "Core/Testing/ThreadTestAccess.h"
@@ -1574,19 +1575,14 @@ namespace
         void       initialize() override {}
         void       shutdown() override {}
 
-        void writeLogWithID( sw::LogLevel level, const utf8* pTag, const utf8* pMessage, const utf8* pFile, int32 line, const utf8* pID ) override
+        void writeEvent( const sw::LogEvent& event ) override
         {
-            (void)level;
-            (void)pTag;
-            (void)pFile;
-            (void)line;
-            (void)pID;
             ++_writeCount;
             // 가드가 없으면 아래 대입이 경고 → 이 함수 → 대입 … 으로 끝없이 돈다. 테스트가 스택을 넘기지 않도록 여기서 끊는다.
             if ( _writeCount > kMaxWriteCount )
                 return;
             sw::fixed_string<4> tiny;
-            tiny          = ( pMessage != nullptr ) ? pMessage : "";
+            tiny          = ( event._pMessage != nullptr ) ? event._pMessage : "";
             _lastTinySize = tiny.size();
         }
 
@@ -2036,4 +2032,173 @@ SW_TEST_CASE( StringTest, AppendFormatGrowsAcrossUTF8Boundary )
         expected += text;
         SW_EXPECT_TRUE( builder.view() == expected );
     }
+}
+
+/**
+ * @brief [StringTest] sw::string 의 짧은 글 ↔ 힙 경계 — 용량 23(utf8) · 11(64 비트 utf16 두 바이트)에서 한 글자씩 넘나들어도 글 · 널 문자가 맞고, 짧은 글은 할당하지 않는다
+ * @details 마지막 칸은 짧은 글의 남은 칸 수다. 꽉 찬 짧은 글은 그 칸(0)이 곧 널 문자다.
+ */
+SW_TEST_CASE( StringTest, SmallBufferBoundary )
+{
+    const size_t smallCapacity = sw::string{}.capacity();
+    if constexpr ( sw::kUsesStdContainers == false )
+    {
+        SW_EXPECT_EQUAL( sizeof( void* ) * 3 - 1, smallCapacity );
+        SW_EXPECT_EQUAL( sizeof( void* ) * 3 / sizeof( utf16 ) - 1, sw::wstring{}.capacity() );
+        SW_EXPECT_TRUE( sw::is_bitwise_relocatable_v<sw::string> );
+    }
+
+    sw::string grown;
+    for ( size_t length = 0; length < smallCapacity * 3; ++length )
+    {
+        const sw::string filled( length, 'q' );
+        SW_EXPECT_EQUAL( length, filled.size() );
+        SW_EXPECT_EQUAL( '\0', filled.c_str()[length] );
+        SW_EXPECT_TRUE( grown == filled );
+        SW_EXPECT_EQUAL( '\0', grown.c_str()[grown.size()] );
+        SW_EXPECT_TRUE( filled.capacity() >= length );
+
+        const sw::string copied = filled;
+        sw::string       moved  = copied;
+        const sw::string taken  = std::move( moved );
+        SW_EXPECT_TRUE( copied == filled && taken == filled );
+        SW_EXPECT_TRUE( moved.empty() );
+        grown.push_back( 'q' );
+    }
+    while ( grown.empty() == false )
+    {
+        grown.pop_back();
+        SW_EXPECT_EQUAL( '\0', grown.c_str()[grown.size()] );
+    }
+    SW_EXPECT_TRUE( grown.capacity() > smallCapacity );
+    grown.assign( "short" );
+    grown.shrink_to_fit();
+    SW_EXPECT_EQUAL( smallCapacity, grown.capacity() );
+    SW_EXPECT_TRUE( grown == "short" );
+
+    uint64 allocationCount = 0;
+    {
+        const sw::test::ScopedAllocationCount counter;
+        const sw::string                      full( smallCapacity, 'x' );
+        sw::string                            copied = full;
+        copied.erase( 3, 4 );
+        copied.insert( 0, "abcd" );
+        SW_EXPECT_EQUAL( smallCapacity, copied.size() );
+        allocationCount = counter.getCount();
+    }
+    if constexpr ( sw::test::ScopedAllocationCount::kCountsAreActive )
+        SW_EXPECT_EQUAL( uint64{ 0 }, allocationCount );
+}
+
+/**
+ * @brief [StringTest] 자기 글의 일부를 넣어도(대입 · append · insert · replace) 원본이 키우기 · 밀기에 덮이지 않는다 — 짧은 글과 힙 글, 자리가 남을 때와 다시 잡을 때 모두
+ */
+SW_TEST_CASE( StringTest, SelfAliasedEditsKeepTheSource )
+{
+    const sw::string arrBase[] = { sw::string( "abcdef" ), sw::string( "abcdefghijklmnopqrstuvwxyz0123456789" ) };
+    for ( const sw::string& base : arrBase )
+    {
+        for ( const size_t extra : { size_t( 0 ), size_t( 64 ) } )
+        {
+            sw::string same = base;
+            same.reserve( base.size() + extra );
+            sw::string& alias = same;
+            same              = alias;
+            SW_EXPECT_TRUE( same == base );
+            same.assign( same.data() + 2, 3 );
+            SW_EXPECT_TRUE( same == "cde" );
+
+            sw::string appended = base;
+            appended.reserve( base.size() + extra );
+            appended.append( appended );
+            SW_EXPECT_EQUAL( base.size() * 2, appended.size() );
+            SW_EXPECT_TRUE( appended.substr( 0, base.size() ) == base && appended.substr( base.size() ) == base );
+
+            sw::string inserted = base;
+            inserted.reserve( base.size() + extra );
+            inserted.insert( 1, inserted.data(), 4 ); // 밀리는 구간과 겹친다
+            SW_EXPECT_TRUE( inserted.substr( 0, 6 ) == "aabcdb" );
+            SW_EXPECT_TRUE( inserted.substr( 5 ) == base.substr( 1 ) );
+
+            sw::string replaced = base;
+            replaced.reserve( base.size() + extra );
+            replaced.replace( 0, 2, sw::string_view( replaced ).substr( 1, 4 ) );
+            SW_EXPECT_TRUE( replaced.substr( 0, 4 ) == "bcde" );
+            SW_EXPECT_TRUE( replaced.substr( 4 ) == base.substr( 2 ) );
+        }
+    }
+    sw::string swapped = arrBase[0];
+    sw::string other   = arrBase[1];
+    swapped.swap( other );
+    swapped.swap( swapped );
+    SW_EXPECT_TRUE( swapped == arrBase[1] && other == arrBase[0] );
+}
+
+/**
+ * @brief [StringTest] 바꾸기 · 지우기 · 반복자 입구 · 비교가 std::string 과 같은 결과를 낸다 — 리터럴 0 위치(널 포인터 상수)도 위치 오버로드로 간다
+ */
+SW_TEST_CASE( StringTest, EditsMatchTheStandardString )
+{
+    sw::string  text( "0123456789" );
+    std::string expected( "0123456789" );
+    const auto  matches = [&text, &expected]
+    { return sw::string_view( text ) == sw::string_view( expected.data(), expected.size() ); };
+
+    text.insert( 0, 2, '-' );
+    expected.insert( 0, 2, '-' );
+    SW_EXPECT_TRUE( matches() );
+    text.insert( 0, "head:" );
+    expected.insert( 0, "head:" );
+    SW_EXPECT_TRUE( matches() );
+    text.erase( 0, 3 );
+    expected.erase( 0, 3 );
+    SW_EXPECT_TRUE( matches() );
+    text.replace( 2, 4, "a much longer piece than before" );
+    expected.replace( 2, 4, "a much longer piece than before" );
+    SW_EXPECT_TRUE( matches() );
+    text.replace( 1, sw::string::npos, 3, '#' );
+    expected.replace( 1, std::string::npos, 3, '#' );
+    SW_EXPECT_TRUE( matches() );
+    SW_EXPECT_EQUAL( '!', *text.insert( text.begin() + 1, '!' ) );
+    expected.insert( expected.begin() + 1, '!' );
+    SW_EXPECT_TRUE( matches() );
+    text.erase( std::remove( text.begin(), text.end(), '#' ), text.end() );
+    expected.erase( std::remove( expected.begin(), expected.end(), '#' ), expected.end() );
+    SW_EXPECT_TRUE( matches() );
+    text.resize( 40, 'z' );
+    expected.resize( 40, 'z' );
+    SW_EXPECT_TRUE( matches() );
+    text.resize( 2 );
+    expected.resize( 2 );
+    SW_EXPECT_TRUE( matches() );
+
+    // 입력 반복자(한 번만 도는 것)와 글자가 아닌 원소 구간
+    std::istringstream stream( "streamed" );
+    text.assign( std::istreambuf_iterator<utf8>( stream ), std::istreambuf_iterator<utf8>() );
+    SW_EXPECT_TRUE( text == "streamed" );
+    const vector<uint8> listByte{ 'b', 'y', 't', 'e' };
+    text.insert( text.begin() + 2, listByte.begin(), listByte.end() );
+    SW_EXPECT_TRUE( text == "stbytereamed" );
+
+    SW_EXPECT_TRUE( "abc" == sw::string( "abc" ) && sw::string_view( "abc" ) == sw::string( "abc" ) && sw::string( "abc" ) == sw::string_view( "abc" ) );
+    SW_EXPECT_TRUE( "abb" < sw::string( "abc" ) && sw::string( "abc" ) < sw::string_view( "abd" ) && sw::string( "ab" ) < sw::string( "abc" ) );
+    SW_EXPECT_TRUE( sw::string( "a\0b", 3 ) != sw::string( "a" ) );
+    SW_EXPECT_EQUAL( size_t( 3 ), sw::string( "a/b/c" ).rfind( '/' ) );
+    SW_EXPECT_TRUE( sw::string( "a/b/c" ).find( "x" ) == sw::string::npos );
+}
+
+/**
+ * @brief [StringTest] 범위 밖 위치는 예외 없이 개발 구성에서 단언하고 끝으로 자른다
+ */
+SW_TEST_CASE( StringTest, OutOfRangePositionsAssertAndClamp )
+{
+    const sw::test::ScopedAssertCapture assertCapture;
+    sw::string                          text( "abc" );
+    SW_EXPECT_TRUE( text.substr( 4 ).empty() );
+    text.insert( 9, "d" );
+    SW_EXPECT_TRUE( text == "abcd" );
+    text.erase( 4 ); // 끝은 범위 안이다
+    SW_EXPECT_TRUE( text == "abcd" );
+    if constexpr ( sw::test::ScopedAssertCapture::kAssertsAreActive )
+        SW_EXPECT_EQUAL( 2u, assertCapture.getCount() );
 }

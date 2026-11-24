@@ -73,7 +73,7 @@ namespace sw
          * @param outFailedCount 읽거나 쓰지 못한 씬 수입니다. 모르는 타입의 컴포넌트가 든 씬도 쓰지 않고 셉니다. 하나라도 있으면 배포본에 그 씬이 없다 —
          *                       쿠킹은 실패다. 다만 활성 게임이 아닌 게임 팩(`game/<다른 게임>/`)의 씬이 등록되지 않은 컴포넌트를 쓰면 세지 않고 건너뜁니다 —
          *                       그 게임 모듈은 이 빌드에 없고, 배포본은 활성 게임의 팩만 엽니다.
-         * @return 기록한 씬 파일 수입니다. 씬마다 옆에 프리로드 목록(`<씬>.preload.json`)도 굽지만 이 수에는 세지 않는다.
+         * @return 기록한 씬 파일 수입니다. 씬마다 옆에 프리로드 목록(`<씬>.preload.json`)과 합친 HLOD 메시(`<씬>.hlod.mesh`)도 굽지만 이 수에는 세지 않는다.
          *
          * @param store 기록과 DDC 입니다. 씬마다 작업(`CookJob`) 하나로 베이크하고, 기록이 새것이면 DDC 의 출력을 다시 씁니다(`CookStore::cookFile`).
          * @param reflectionFingerprint 쿠킹에 한 번 구한 리플렉션 지문(`CookReflectionFingerprint::compute`)입니다. 다른 쿠커도 같은 값을 받습니다.
@@ -95,6 +95,9 @@ namespace sw
          * @details 설정 해시는 리플렉션 지문이다 — 씬이 지어질 때 읽은 입력(씬 · 프리팹) 말고도 어느 칸이 경로인지와 기본값을 타입 표가 정한다. 형식 버전은 `ScenePreloadList::kVersion`.
          */
         static CookJobDesc makePreloadCookJobDesc( uint64 reflectionFingerprint );
+
+        /** @brief 씬의 합친 HLOD 메시 쿠킹 작업의 키 값입니다(`SceneHLODMeshCooker`). 씬 쿠킹과 따로 도는 작업이라 키가 따로다. 설정 해시는 리플렉션 지문이다. */
+        static CookJobDesc makeHLODMeshCookJobDesc( uint64 reflectionFingerprint );
     };
 
 } // namespace sw

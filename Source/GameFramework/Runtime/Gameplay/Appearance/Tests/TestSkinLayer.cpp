@@ -51,11 +51,11 @@ namespace
             lips._color   = float4{ 0.8f, 0.05f, 0.1f, 1.0f };
             lips._opacity = 0.75f;
             SkinLayerValue rose;
-            rose._layer           = hashed_string( "rose_tattoo" );
-            rose._offset          = float2{ 0.7f, 0.25f };
-            rose._scale           = float2{ 0.2f, 0.1f };
-            rose._rotationDegrees = 30.0f;
-            rose._bMirror         = SW_TRUE;
+            rose._layer    = hashed_string( "rose_tattoo" );
+            rose._offset   = float2{ 0.7f, 0.25f };
+            rose._scale    = float2{ 0.2f, 0.1f };
+            rose._rotation = Radians::fromDegrees( 30.0f );
+            rose._bMirror  = SW_TRUE;
             selection._listSkinLayer.push_back( lips );
             selection._listSkinLayer.push_back( rose );
             return selection;
@@ -133,13 +133,13 @@ SW_TEST_CASE( SkinLayerTest, PlacementTransformsSkinToLayerUV )
     const float2 right = value.toLayerUV( float2{ 0.8f, 0.25f }, false );
     SW_EXPECT_NEAR( 1.0f, right._x, 1e-5f );
 
-    value._rotationDegrees = 90.0f;
-    const float2 rotated   = value.toLayerUV( float2{ 0.7f, 0.30f }, false ); // 돌린 층의 +x 가 피부의 +y 다
+    value._rotation      = Radians::fromDegrees( 90.0f );
+    const float2 rotated = value.toLayerUV( float2{ 0.7f, 0.30f }, false ); // 돌린 층의 +x 가 피부의 +y 다
     SW_EXPECT_NEAR( 0.75f, rotated._x, 1e-4f );
     SW_EXPECT_NEAR( 0.5f, rotated._y, 1e-4f );
 
-    value._rotationDegrees = 0.0f;
-    const float2 mirrored  = value.toLayerUV( float2{ 0.2f, 0.25f }, true ); // 1 − 0.2 = 0.8 → 층 u 1 → 거울 0
+    value._rotation       = Radians{};
+    const float2 mirrored = value.toLayerUV( float2{ 0.2f, 0.25f }, true ); // 1 − 0.2 = 0.8 → 층 u 1 → 거울 0
     SW_EXPECT_NEAR( 0.0f, mirrored._x, 1e-5f );
 
     SkinLayerDef def;
@@ -191,7 +191,7 @@ SW_TEST_CASE_F( SkinLayerSelectionTest, ShareCodeV2RoundTripsLayersAndHiddenSlot
     SW_EXPECT_TRUE( decoded._listSkinLayer[0]._layer == hashed_string( "lipstick" ) );
     SW_EXPECT_TRUE( decoded._listSkinLayer[1]._layer == hashed_string( "rose_tattoo" ) );
     SW_EXPECT_NEAR( 0.75f, decoded._listSkinLayer[0]._opacity, 1.0f / 255.0f );
-    SW_EXPECT_NEAR( 30.0f, decoded._listSkinLayer[1]._rotationDegrees, 0.01f );
+    SW_EXPECT_NEAR( 30.0f, decoded._listSkinLayer[1]._rotation.degrees(), 0.01f );
     SW_EXPECT_NEAR( 0.2f, decoded._listSkinLayer[1]._scale._x, 1e-3f );
     SW_EXPECT_EQUAL( SW_TRUE, decoded._listSkinLayer[1]._bMirror );
     SW_REQUIRE_EQUAL( size_t{ 1 }, decoded._listSlot.size() );

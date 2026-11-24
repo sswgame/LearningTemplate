@@ -22,6 +22,7 @@
 #include "Engine/Asset/Reference/AssetReferenceFields.h"
 #include "Engine/Content/AssetPaths.h"
 #include "Engine/Reflection/ReflectionMetadata.h"
+#include "Engine/Reflection/TypeInfo.h"
 #include "Engine/Reflection/TypeRegistry.h"
 
 #include "ModuleAPI/ABI/EditorAPI.h"

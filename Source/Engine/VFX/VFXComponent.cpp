@@ -196,7 +196,6 @@ namespace sw
     void VFXComponent::onRegister( GameObjectManager& manager )
     {
         SceneComponent::onRegister( manager );
-        manager.getComponentRegistry().add<VFXComponent>( this );
         _pPrimitiveRegistry = &manager.getPrimitiveRegistry();
         rebuildMeshEmitters();
     }
@@ -208,7 +207,6 @@ namespace sw
         if ( _pPrimitiveRegistry != nullptr )
             _pPrimitiveRegistry->removeAssetWaiter( this );
         _pPrimitiveRegistry = nullptr;
-        manager.getComponentRegistry().remove<VFXComponent>( this );
         SceneComponent::onUnregister( manager );
     }
 

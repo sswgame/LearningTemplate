@@ -46,7 +46,6 @@ namespace sw
     void QuestLogComponent::onRegister( GameObjectManager& manager )
     {
         Component::onRegister( manager );
-        manager.getComponentRegistry().add<QuestLogComponent>( this );
         // 퀘스트 진행은 선택적 일대다 알림이라 이벤트 버스로 받는다(docs/agents/Gameplay.md "시스템 사이 알림") — 일지 주인이 구독해야 플레이어마다 따로 센다.
         EventDispatcher* const pDispatcher = game::findSubsystem<EventDispatcher>();
         if ( pDispatcher == nullptr )
@@ -61,7 +60,6 @@ namespace sw
     {
         _ownerDiedSubscription            = Subscription{};
         _interactionCompletedSubscription = Subscription{};
-        manager.getComponentRegistry().remove<QuestLogComponent>( this );
         Component::onUnregister( manager );
     }
 

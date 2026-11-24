@@ -30,6 +30,7 @@ namespace sw
     {
     public:
         REFLECT_BODY();
+        SW_REGISTERED_COMPONENT( ActionRoomHUDComponent );
 
         /** @brief 지금 보이는 알림입니다(시나리오 감시 값 `ActionCombat.HUDNotification`). */
         enum class Notification : uint8

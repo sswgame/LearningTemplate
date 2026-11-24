@@ -2,7 +2,7 @@
  * @file FuzzEngineScope.cpp
  * @brief 퍼저 실행 파일의 엔진 범위 — `LLVMFuzzerInitialize` 가 프로세스에 한 번 엔진(`DedicatedServer` 역할, 모듈 없음)을 세우고, 종료 때 역순으로 내립니다.
  * @details 단위 테스트 실행기(`App --test`)처럼 이름 풀 · 로거 · 타입 레지스트리 · 엔진 서비스가 선 상태에서 파서를 부른다 — 입력마다 세우면 exec/s 가 100 아래로 떨어진다
- *          (docs/NEXT.md 퍼저 타깃). 모양은 부하 봇(`Programs/OnlineLoadBot/Main.cpp`)의 호스트 범위와 같고, 게임 모듈은 올리지 않는다.
+ *          모양은 부하 봇(`Programs/OnlineLoadBot/Main.cpp`)의 호스트 범위와 같고, 게임 모듈은 올리지 않는다.
  *          타깃 파일은 `LLVMFuzzerTestOneInput` 하나만 정의한다.
  */
 #include "pch.h"

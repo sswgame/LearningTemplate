@@ -29,13 +29,10 @@ namespace sw
     {
     public:
         REFLECT_BODY();
+        SW_REGISTERED_COMPONENT( FogComponent );
 
         FogComponent();
         virtual ~FogComponent() override = default;
-
-        /** @brief 씬의 안개 목록(`ComponentRegistry`)에 등록합니다. `findFog` 가 씬 전체를 훑지 않고 이 목록을 봅니다. */
-        void onRegister( GameObjectManager& manager ) override;
-        void onUnregister( GameObjectManager& manager ) override;
 
         /** @brief 지금 값입니다. */
         FogSettings makeSettings() const;

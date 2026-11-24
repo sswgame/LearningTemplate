@@ -163,6 +163,7 @@ namespace sw
     {
     public:
         REFLECT_BODY();
+        SW_REGISTERED_COMPONENT( ShooterGameModeComponent );
 
         /** @brief `ShooterEnemyView::_kindIndex` 의 정예 표시입니다. */
         static constexpr uint8 kEliteKindIndex = 255;
@@ -214,8 +215,6 @@ namespace sw
     protected:
         /** @brief 막는 상자를 모으고 페이싱 감독을 시작합니다(데이터를 읽지 못하면 적이 오지 않을 뿐 판은 시작합니다). */
         [[nodiscard]] bool startGame() override;
-        void               onRegister( GameObjectManager& manager ) override;
-        void               onUnregister( GameObjectManager& manager ) override;
         void               onStateRestored( bool bRestored ) override;
         void               onGameStarted() override;
         void               updateGame( float32 deltaTime ) override;
@@ -281,7 +280,7 @@ namespace sw
         /** @brief 플레이어 폰을 자동 플레이 스위치에 맞는 조종자(자동 조준 AI 또는 플레이어 0)에게 넘깁니다(게임 스레드, 틱 밖). */
         void syncAutoPlayPossession( GameObjectManager& manager );
         void clearEnemies();
-        void logStatus( float32 deltaTime );
+        void logStatus() const override;
 
     private:
         PROPERTY( Category = "Prefabs", Tooltip = "Pooled sphere for hits and muzzle flashes" )
@@ -339,9 +338,8 @@ namespace sw
         vector<ShooterPlayerView>           _listPlayerView;
         vector<GameObjectHandle>            _listPlayerScratch;
         optional<uint32>                    _resultKillCount; ///< 결과로 낼 처치 수(비었으면 이 판의 처치 수)
-        float32                             _statusTimer;
-        float32                             _pendingHeal; ///< 감독의 수리 보상. 틱이 끝난 뒤 플레이어 체력에 반영한다.
-        uint32                              _spawnCursor; ///< 다음 적의 스폰 위치 순번.
+        float32                             _pendingHeal;     ///< 감독의 수리 보상. 틱이 끝난 뒤 플레이어 체력에 반영한다.
+        uint32                              _spawnCursor;     ///< 다음 적의 스폰 위치 순번.
         PROPERTY( RuntimeState )
         uint32                              _killCount;
         AssetReloadWatch<AIDirectorProfile> _profileReload;    ///< 프로필을 받을 때의 프로필 캐시 다시 읽기 횟수(바뀌면 판을 이어 새 프로필로 옮긴다)

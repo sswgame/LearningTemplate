@@ -329,6 +329,51 @@ SW_TEST_CASE( SurfaceDeformGridTest, WetPrintsEncodeInBlueAndMoveWithTheWindow )
     SW_EXPECT_EQUAL( 0u, grid.countWetTexels() );
 }
 
+/**
+ * @brief [SurfaceDeformGridTest] 큰 격자의 메우기(행을 작업으로 나눈다)가 칸마다의 셈과 같고, 남은 사각형이 남은 자국을 모두 품는다
+ * @details 변이: 구간마다 모은 남은 사각형을 합치지 않으면 다음 메우기가 그 구간 밖의 자국을 건너뛰어 영영 남는다.
+ */
+SW_TEST_CASE( SurfaceDeformGridTest, ParallelFillMatchesPerCellMath )
+{
+    constexpr uint32  kResolution = 256;
+    constexpr float32 kExtent     = 32.0f; // 텍셀 0.125 m
+    constexpr float32 kDrySpeed   = 0.5f;
+    constexpr float32 kStepTime   = 0.1f;
+    SurfaceDeformGrid grid;
+    grid.reset( kResolution, kExtent, 0.0f, 0.0f );
+    // 창 전체에 흩은 젖은 자국 — 활성 사각형이 나누는 문턱보다 훨씬 크다.
+    vector<float2> listPoint;
+    for ( int32 row = -3; row <= 3; ++row )
+    {
+        for ( int32 column = -3; column <= 3; ++column )
+        {
+            const float2  point{ static_cast<float32>( column ) * 4.0f, static_cast<float32>( row ) * 4.0f };
+            const float32 wetness = 0.4f + 0.05f * static_cast<float32>( row + 3 );
+            grid.applyWetPrint( point._x, point._y, 0.0f, float2{ 0.5f, 0.5f }, wetness, kDrySpeed );
+            listPoint.push_back( point );
+        }
+    }
+    vector<float32> listWet;
+    for ( const float2& point : listPoint )
+    {
+        listWet.push_back( grid.findWetnessAt( point._x, point._y ) );
+    }
+    for ( uint32 step = 0; step < 5; ++step )
+    {
+        grid.fill( kStepTime );
+        for ( size_t index = 0; index < listPoint.size(); ++index )
+        {
+            listWet[index] = MathUtil::max( listWet[index] - kDrySpeed * kStepTime, 0.0f );
+            SW_EXPECT_EQUAL( listWet[index], grid.findWetnessAt( listPoint[index]._x, listPoint[index]._y ) );
+        }
+    }
+    for ( uint32 step = 0; step < 20; ++step )
+    {
+        grid.fill( kStepTime );
+    }
+    SW_EXPECT_EQUAL( 0u, grid.countWetTexels() );
+}
+
 /** @brief [SurfaceDeformGridTest] 월드 원점을 옮기면 자국이 같은 절대 자리에 남는다 — 칸의 내용은 그대로 두고 칸의 자리만 옮긴다 */
 SW_TEST_CASE( SurfaceDeformGridTest, OriginShiftKeepsTracksInPlace )
 {

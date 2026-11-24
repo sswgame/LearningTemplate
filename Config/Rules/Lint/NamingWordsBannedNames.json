@@ -1,6 +1,12 @@
 {
   "_comment": "전수 개명한 옛 이름 → 새 이름 · 까닭(Scripts/lint/naming_words.py 의 naming-words 규칙이 되살린 옛 이름을 막는다). 언리얼 CoreRedirects 의 옛 이름 → 새 이름 자리이되 고쳐 주지 않고 막는다. 개명 도구(py -3 -m Scripts rename-symbol)가 줄을 더한다 — 키(옛 이름)는 개명 도구가 바꾸지 않는다.",
   "_bannedNames": {
+    "_rotationDegrees": "_rotation — 각 형식(Radians · EulerAngles)이 단위를 말한다(2026-11-24)",
+    "_minDegrees": "RigLimitRotationParams::_min(EulerAngles, 2026-11-24)",
+    "_maxDegrees": "RigLimitRotationParams::_max(EulerAngles, 2026-11-24)",
+    "_turnRateDegrees": "MoveAnimationComponent::_turnRate(Radians, 2026-11-24)",
+    "addInterfaces": "ComponentRegistry::addComponent — 표시한 목록(SW_REGISTERED_COMPONENT)과 인터페이스 칸에 함께 올린다(2026-11-24)",
+    "removeInterfaces": "ComponentRegistry::removeComponent(2026-11-24)",
     "Ninja-Release-Mimalloc": "지움 — mimalloc 이 모든 구성의 기본 힙이다(SW_MEMORY_BACKEND auto), 견줄 때만 -DSW_MEMORY_BACKEND=crt(사용자 결정 2026-11-24)",
     "_inputLayer": "PawnComponent::_listInputLayer — 레이어 하나를 쌓으면 스택 밖 레이어가 꺼져 다른 액션이 죽었다(2026-11-24)",
     "_threadGroupSize": "지움 — 그룹 크기는 셰이더 리플렉션(`RHIThreadGroupSize`)이 정한다(2026-11-24)",
@@ -2176,6 +2182,9 @@
     "VulkanMemoryAccount": "지움 — 할당 수 한도는 VMA 가 지킨다(`VulkanMemoryAllocator::computeBlockCount`, 2026-11-24)",
     "VulkanMemoryRange": "VulkanAllocation — VMA 할당 하나다(2026-11-24)",
     "RHIMemoryRangeAllocator": "지움 — 장치 메모리 구간은 VMA · D3D12MA 가 나눈다(2026-11-24)",
-    "_allocationCountReserve": "지움 — 할당 수 한도는 VMA 가 지킨다(2026-11-24)"
+    "_allocationCountReserve": "지움 — 할당 수 한도는 VMA 가 지킨다(2026-11-24)",
+    "VulkanPipelineCacheFile": "RHIPipelineCacheFile — Vulkan 과 DX12 의 디스크 PSO 캐시가 같은 파일 규칙을 쓴다(2026-11-24)",
+    "flat_map": "map — 정렬 컨테이너의 사용자 원래 이름 — 저장은 SW_ENABLE_STL_CONTAINER 로 고른다(2026-11-24)",
+    "flat_set": "set — 정렬 컨테이너의 사용자 원래 이름 — 저장은 SW_ENABLE_STL_CONTAINER 로 고른다(2026-11-24)"
   }
 }
