@@ -2170,6 +2170,7 @@
     "KitDemoComponent": "GameModeComponent — 규칙만 돌리던 키트 시연이 모두 디렉터 · 클라이언트로 옮겨가 시연 베이스가 남지 않았다(2026-11-24)",
     "tintNewUnits": "ArenaViewComponent::tintUnits — 처음 본 유닛을 따로 적지 않고 프레임마다 다시 건다(2026-11-24)",
     "_pShownLook": "MeshComponent::setMaterialInstance — 같은 인스턴스는 메시가 거른다(2026-11-24)",
-    "pYieldInventory": "yieldInventory — CreatureTown::useAbility 는 가방을 참조로 받는다(2026-11-24)"
+    "pYieldInventory": "yieldInventory — CreatureTown::useAbility 는 가방을 참조로 받는다(2026-11-24)",
+    "setTickGroup": "kTickGroup — 주 틱의 그룹은 형식 상수다(static constexpr TickGroup kTickGroup). 시작 · 실행 중에 바꾸지 않는다 — 편집 중 씬은 시작 없이 틱한다(2026-11-24)"
   }
 }

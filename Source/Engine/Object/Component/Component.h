@@ -504,7 +504,7 @@ namespace sw
          *          **서브틱 목록(`_listSubTick`)을 바꾸는 네 함수(등록, 해제, 선행 조건, 활성)는 틱 중이면 변경을 틱 직후로 미룬다**(구조 변경 큐이며,
          *          부른 순서대로 처리하므로 이어서 부른 선행 조건 추가도 등록 뒤에 실행된다). 목록은 이 컴포넌트를 틱하는 워커가 읽는데(64 번부터의 활성 여부,
          *          자기 틱 안의 등록과 해제), 다른 오브젝트의 틱이 목록을 늘리면 벡터가 다시 할당되어 그 워커가 해제된 메모리를 읽는다. 두 워커가 같은 컴포넌트에
-         *          등록하면 `push_back` 이 겹친다(형제 함수인 `setTickGroup` 과 `setCanEverTick` 도 같은 이유로 미룬다). 미루더라도 핸들은 바로 반환한다.
+         *          등록하면 `push_back` 이 겹친다(형제 함수인 `setCanEverTick` 도 같은 이유로 미룬다). 미루더라도 핸들은 바로 반환한다.
          *          실행 여부(서브틱 1~63 은 원자 마스크, 64 번부터는 `SubTickInfo::_bRunnable`)는 틱 중에 바꿀 수 있도록 원자값이다. 해제하거나 끄면 이 값을 바로
          *          내려서, 이번 틱의 남은 항목이 곧바로 건너뛴다.
          */
@@ -549,8 +549,6 @@ namespace sw
         void setActive( bool bActive );
         /** @brief `setActive` 가 `onPropertyChanged` 로 알리는 프로퍼티 이름(`_bActive`)입니다. 파생 컴포넌트가 "켜고 끄기만 바뀌었다" 를 가를 때 이것과 견줍니다. */
         static const hashed_string& getActivePropertyName();
-        /** @brief 틱 그룹을 바꿉니다. 유효하지 않은 그룹(`isValidTickGroup`)은 경고하고 무시합니다. */
-        void setTickGroup( TickGroup group );
         /**
          * @brief 주 틱에 참여할지 설정합니다. 생성자에서 끄면(언리얼의 `bCanEverTick = false`) 끈 것이 이깁니다.
          * @details **기본값은 "`onTick` 을 오버라이드했는가"** 이다(유니티는 `Update` 가 있으면 부른다). `GameObject::addComponent` 가
@@ -599,7 +597,7 @@ namespace sw
         bool isActive() const;
         /** @brief 자기 활성 비트만 봅니다. 소유자 활성을 이미 확인한 곳(오브젝트 단위 틱 디스패치)에서 씁니다. */
         bool isSelfActive() const { return _bActive.load( std::memory_order_relaxed ); }
-        /** @brief 현재 틱 그룹을 반환합니다. */
+        /** @brief 주 틱의 그룹(`kTickGroup`)입니다. 붙을 때 정해지고 바뀌지 않습니다. */
         TickGroup getTickGroup() const { return static_cast<TickGroup>( _tickGroup ); }
         /** @brief 주 틱에 참여하면 true 입니다. */
         bool canEverTick() const { return _bCanEverTick == SW_TRUE; }
@@ -685,7 +683,7 @@ namespace sw
         PROPERTY( HideInInspector )
         reflected_atomic<bool> _bActive;
         atomic<bool>           _bIsPendingDestroy; ///< 삭제 예정 표시
-        TickGroup              _tickGroup;         ///< 이 컴포넌트가 속한 TickGroup
+        TickGroup              _tickGroup;         ///< 주 틱의 그룹이다. 붙을 때 형식의 `kTickGroup` 을 한 번 적는다(`GameObject::attachCreatedComponent`)
         uint8                  _bCanEverTick      : 1;
         uint8                  _bIsSceneComponent : 1; ///< SceneComponent 생성자가 세운다
         uint8                  _bHasBegunPlay     : 1; ///< onBeginPlay 가 불렸고 onEndPlay 는 아직 불리지 않았다. `dispatchBeginPlay` 와 `dispatchEndPlay` 만 바꾼다

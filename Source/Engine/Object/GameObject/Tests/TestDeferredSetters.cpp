@@ -62,21 +62,6 @@ SW_TEST_CASE( DeferredSettersTest, CanEverTickOffThenOnKeepsLastRequest )
 }
 
 /**
- * @brief [DeferredSettersTest] 틱 중 틱 그룹 A → B → A 는 틱 뒤 A 로 남는다
- */
-SW_TEST_CASE( DeferredSettersTest, TickGroupBackAndForthKeepsLastRequest )
-{
-    DeferredSetterRig rig;
-    SW_REQUIRE_TRUE( rig._pProbe->getTickGroup() == TickGroup::DuringPhysics );
-    rig.runInTick( Delegate<void( Component& )>( []( Component& self )
-    {
-        self.setTickGroup( TickGroup::PostPhysics );
-        self.setTickGroup( TickGroup::DuringPhysics );
-    } ) );
-    SW_EXPECT_TRUE( rig._pProbe->getTickGroup() == TickGroup::DuringPhysics );
-}
-
-/**
  * @brief [DeferredSettersTest] 틱 중 오브젝트 이름 A → B → A 는 틱 뒤 A 로 남고 이름 검색도 A 로 찾는다
  */
 SW_TEST_CASE( DeferredSettersTest, ObjectNameBackAndForthKeepsLastRequest )
