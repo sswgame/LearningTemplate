@@ -187,7 +187,8 @@ namespace sw
             const float4& color = look == kTileLookReady ? _readyColor : look == kTileLookWatered ? _wateredColor
                                                                    : look == kTileLookTilled      ? _tilledColor
                                                                                                   : _grassColor;
-            _tintCache.apply( *pMesh, color );
+            if ( _tintCache.apply( *pMesh, color ) == false )
+                SW_LOG_ERROR_ONCE_ID( "FarmPlotView.TileWithoutMaterial", "[FarmPlot]: prefab '%#' has a mesh without a material - it keeps the prefab colour", _tilePrefab.c_str() );
         }
         return pView->getHandle();
     }

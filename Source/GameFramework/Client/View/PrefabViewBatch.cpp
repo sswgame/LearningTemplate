@@ -48,7 +48,6 @@ namespace sw
             slot._object       = pObject->getHandle();
             slot._prefabOffset = pMesh->getLocalPosition();
             slot._prefabScale  = pMesh->getLocalScale();
-            slot._tint         = float4{};
         }
         if ( pMesh == nullptr )
             return false; // 세운 뒤 메시를 뗀 인스턴스다 — 다른 쪽이 한 일이라 다시 붙이지 않는다
@@ -57,12 +56,7 @@ namespace sw
         pMesh->setLocalPosition( manager.getWorldOrigin().toLocal( position + slot._prefabOffset ) );
         pMesh->setLocalRotation( float3{ 0.0f, yaw, 0.0f } );
         pMesh->setLocalScale( float3{ slot._prefabScale._x * scale._x, slot._prefabScale._y * scale._y, slot._prefabScale._z * scale._z } );
-        const bool bSameTint = slot._tint._x == tint._x && slot._tint._y == tint._y && slot._tint._z == tint._z && slot._tint._w == tint._w;
-        if ( bSameTint == false && pMesh->getMaterial() != nullptr ) // 머티리얼은 비동기로 온다 — 온 프레임에 입힌다
-        {
-            _tintCache.apply( *pMesh, tint );
-            slot._tint = tint;
-        }
+        (void)_tintCache.apply( *pMesh, tint ); // 머티리얼이 아직 없으면 다음 프레임에 다시 건다(같은 색은 메시가 거른다)
         ++_shownCount;
         return true;
     }

@@ -349,7 +349,8 @@ namespace sw
                 return;
             pMesh->setMeshID( placement._shape );
             pMesh->setLocalScale( placement._size );
-            _tintCache.apply( *pMesh, placement._color );
+            if ( _tintCache.apply( *pMesh, placement._color ) == false )
+                SW_LOG_ERROR_ONCE_ID( "ParkView.RideWithoutMaterial", "[Park]: prefab '%#' has a mesh without a material - it keeps the prefab colour", _flatRidePrefab.c_str() );
             FlatRideComponent* pView = pObject->getComponent<FlatRideComponent>();
             if ( pView != nullptr )
                 pView->assignRide( getOwner()->getHandle(), placement._rideIndex, placement._spin, director.getParkYaw() );
