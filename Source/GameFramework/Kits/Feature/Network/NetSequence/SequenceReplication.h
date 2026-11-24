@@ -31,7 +31,7 @@
 #include "Engine/Foundation/ComponentHandle.h"
 #include "Engine/Foundation/GameObjectHandle.h"
 #include "Engine/Foundation/NetObjectID.h"
-#include "Engine/Net/NetMessageBody.h"
+#include "Engine/Network/NetMessageBody.h"
 #include "Engine/Reflection/ReflectionMacros.h"
 
 #include "GameFramework/GameFrameworkExports.h"

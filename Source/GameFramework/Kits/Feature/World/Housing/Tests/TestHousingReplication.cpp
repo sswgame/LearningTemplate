@@ -9,7 +9,7 @@
 #include "Core/Testing/TestFramework.h"
 
 #include "GameFramework/Kits/Feature/World/Housing/Catalog/HousingPart.h"
-#include "GameFramework/Kits/Feature/World/Housing/Net/HousingReplication.h"
+#include "GameFramework/Kits/Feature/World/Housing/Network/HousingReplication.h"
 #include "GameFramework/Kits/Feature/World/Housing/Rule/HousingLayout.h"
 #include "GameFramework/Runtime/Gameplay/Inventory/Wallet.h"
 

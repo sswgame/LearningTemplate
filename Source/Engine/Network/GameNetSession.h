@@ -12,7 +12,7 @@
  *            리눅스에서 `_bGamePortReuse` 면 한 포트에 `SO_REUSEPORT` 소켓 N 개(커널이 4-튜플로 나눈다). 키트는 샤드를 모른다 — `getPeers()` 가 연결 ID 에
  *            샤드 번호를 접어 넣은 묶음(`NetEndpointShardSet`)이다. 어느 샤드 포트로 붙을지는 서버 배정(`ServerDescriptor::pickPort`)이 계정마다 정한다.
  *            샤드 여럿에 포트 0 은 받지 않는다(연이은 포트가 배정의 계약이다).
- *          - 서버(개발 덮어쓰기): 개발 도구가 건 기동 덮어쓰기(`setLaunchOverride` — `DevTools/Net/NetListenLaunch` 의 `-gv_netListenPort`)로 연다. 리슨 호스트(`App`)는
+ *          - 서버(개발 덮어쓰기): 개발 도구가 건 기동 덮어쓰기(`setLaunchOverride` — `DevTools/Network/NetListenLaunch` 의 `-gv_netListenPort`)로 연다. 리슨 호스트(`App`)는
  *            이 길뿐이고, 전용 서버에서는 설정보다 우선한다. 배포에는 개발 도구가 없어 이 길도 없다 — 평문 리슨은 루프백 · 개발 빌드로만 남긴다(U4).
  *          - 브라우저 클라이언트: UDP 소켓이 없어 스트림(WebSocket)으로 붙는다(`GameNetSessionParams::_bStreamLink` — UDP 없는 플랫폼의 기본값). 서버는 `ServerConfig::_gameStreamPort` 를
  *            켜면 UDP 샤드 뒤에 스트림 샤드(`StreamNetTransport`)를 더 세운다 — 엔드포인트 · 키트 · 접속 티켓은 UDP 와 같은 길이다. WebTransport 는 서버에 HTTP/3 가 없어 두지 않는다.
@@ -67,8 +67,8 @@
 #include "Core/Task/TaskFuture.h"
 
 #include "Engine/EngineFrameHooks.h"
-#include "Engine/Net/GameConnectSecurity.h"
-#include "Engine/Net/NetMessageBody.h"
+#include "Engine/Network/GameConnectSecurity.h"
+#include "Engine/Network/NetMessageBody.h"
 #include "Engine/Object/GameObject/Service/SceneNetLink.h"
 #include "Engine/Reflection/ReflectionMacros.h"
 #include "Engine/Serialization/Inherit/ResourceComposition.h"

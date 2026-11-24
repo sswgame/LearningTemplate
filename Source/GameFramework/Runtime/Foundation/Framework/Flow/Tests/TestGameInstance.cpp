@@ -7,7 +7,7 @@
 #include "Engine/Config/GameTimeScale.h"
 #include "Engine/Input/InputManager.h"
 #include "Engine/Input/Map/InputMap.h"
-#include "Engine/Net/GameNetSession.h"
+#include "Engine/Network/GameNetSession.h"
 
 #include "GameFramework/Runtime/Foundation/Framework/Flow/GameInstance.h"
 #include "GameFramework/Runtime/Foundation/Framework/Flow/IGameDevPart.h"

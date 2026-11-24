@@ -4,7 +4,7 @@
 
 #include "Core/Testing/TestFramework.h"
 
-#include "Engine/Net/Dev/PlainHTTPClient.h"
+#include "Engine/Network/Dev/PlainHTTPClient.h"
 
 using namespace sw;
 

@@ -19,7 +19,7 @@
 #include "Engine/Foundation/WorldOrigin.h"
 #include "Engine/Input/InputManager.h"
 #include "Engine/Input/Map/InputMap.h"
-#include "Engine/Net/GameNetSession.h"
+#include "Engine/Network/GameNetSession.h"
 #include "Engine/Object/Component/SceneComponent.h"
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Object/GameObject/GameObjectManager.inl"

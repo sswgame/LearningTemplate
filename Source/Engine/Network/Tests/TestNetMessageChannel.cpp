@@ -6,8 +6,8 @@
 #include "Core/Serialization/BitStream.h"
 #include "Core/Testing/TestFramework.h"
 
-#include "Engine/Net/GameNetSession.h"
-#include "Engine/Net/NetMessageChannel.h"
+#include "Engine/Network/GameNetSession.h"
+#include "Engine/Network/NetMessageChannel.h"
 #include "Engine/Reflection/Tests/ReflectionTestTypes.h"
 #include "Engine/Serialization/Fixed/Tests/FixedLayoutTestTypes.h"
 

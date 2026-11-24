@@ -2,8 +2,8 @@
 
 #include "Core/Name/hashed_string.h"
 
-#include "Engine/Net/GameConnectSecurity.h"
-#include "Engine/Net/GameNetSession.h"
+#include "Engine/Network/GameConnectSecurity.h"
+#include "Engine/Network/GameNetSession.h"
 
 #include "GameFramework/Kits/Feature/Online/Account/Server/AccountKitConfig.h"
 #include "GameFramework/Kits/Feature/Online/Account/Server/NetSecurityLoginCrypto.h"

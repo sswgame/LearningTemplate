@@ -30,7 +30,7 @@
 #include "Editor/Common/Workspace/EditorService.h"
 
 #include "Engine/Content/AssetPaths.h"
-#include "Engine/Net/GameNetSession.h"
+#include "Engine/Network/GameNetSession.h"
 #include "Engine/Reflection/TypeRegistry.h"
 
 #include <thread>

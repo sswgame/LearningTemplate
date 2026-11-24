@@ -1,6 +1,6 @@
 #include "pch.h"
 
-#include "GameFramework/Kits/Feature/World/Housing/Net/HousingNetSessionComponent.h"
+#include "GameFramework/Kits/Feature/World/Housing/Network/HousingNetSessionComponent.h"
 
 #include "Core/Log/Logger.h"
 

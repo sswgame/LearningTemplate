@@ -13,7 +13,7 @@
 
 #include "Engine/Input/InputManager.h"
 #include "Engine/Input/Map/InputMap.h"
-#include "Engine/Net/NetMessageBody.h"
+#include "Engine/Network/NetMessageBody.h"
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
 #include "Engine/Presentation/InstanceHighlight.h"

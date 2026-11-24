@@ -23,7 +23,7 @@
 #include "Engine/Reflection/ReflectionMacros.h"
 
 #include "GameFramework/GameFrameworkExports.h"
-#include "GameFramework/Kits/Feature/World/Housing/Net/HousingReplication.h"
+#include "GameFramework/Kits/Feature/World/Housing/Network/HousingReplication.h"
 #include "GameFramework/Kits/Feature/World/Housing/Rule/HousingLayout.h"
 #include "GameFramework/Runtime/Foundation/Framework/GameModeComponent.h"
 #include "GameFramework/Runtime/Gameplay/Inventory/Wallet.h"

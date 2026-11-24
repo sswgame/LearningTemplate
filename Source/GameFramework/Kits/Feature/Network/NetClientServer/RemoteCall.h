@@ -35,7 +35,7 @@
 #include "Core/Network/Message/NetMessage.h"
 #include "Core/Network/Message/NetMessageTable.h"
 
-#include "Engine/Net/NetMessageBody.h"
+#include "Engine/Network/NetMessageBody.h"
 #include "Engine/Reflection/ReflectedValue.h"
 #include "Engine/Reflection/ReflectionMacros.h"
 #include "Engine/Reflection/ReflectionMetadataBox.h"

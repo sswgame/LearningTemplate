@@ -6,7 +6,7 @@
 #include "Engine/Config/ConfigManager.h"
 #include "Engine/Config/Server/ServerSecret.h"
 #include "Engine/Config/ServerConfig.h"
-#include "Engine/Net/GameNetSession.h"
+#include "Engine/Network/GameNetSession.h"
 #include "Engine/Reflection/TypeInfo.h"
 #include "Engine/Server/ServerServiceRegistry.h"
 

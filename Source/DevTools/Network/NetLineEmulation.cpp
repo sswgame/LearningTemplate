@@ -1,6 +1,6 @@
 #include "pch.h"
 
-#include "DevTools/Net/NetLineEmulation.h"
+#include "DevTools/Network/NetLineEmulation.h"
 
 #include "Core/GlobalVariable/GlobalVariableManager.h"
 #include "Core/Log/Logger.h"
@@ -12,7 +12,7 @@
 #include "Engine/Config/NetEmulationPresetTable.h"
 #include "Engine/Console/DevCommandRegistry.h"
 #include "Engine/Foundation/EngineServices.h"
-#include "Engine/Net/GameNetSession.h"
+#include "Engine/Network/GameNetSession.h"
 
 namespace sw
 {

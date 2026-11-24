@@ -1,6 +1,6 @@
 #include "pch.h"
 
-#include "Engine/Net/FileServe/FileServeContentSource.h"
+#include "Engine/Network/FileServe/FileServeContentSource.h"
 
 #include "Core/Concurrency/ScopedLock.h"
 #include "Core/File/AsyncFileIO.h"
@@ -9,7 +9,7 @@
 #include "Core/Log/Logger.h"
 #include "Core/String/StringUtil.h"
 
-#include "Engine/Net/HTTPClient.h"
+#include "Engine/Network/HTTPClient.h"
 
 namespace sw
 {

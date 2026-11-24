@@ -34,7 +34,7 @@
 #include "Core/Network/NetTypes.h"
 
 #include "Engine/Foundation/WorldOrigin.h"
-#include "Engine/Net/NetMessageBody.h"
+#include "Engine/Network/NetMessageBody.h"
 #include "Engine/Reflection/ReflectionMacros.h"
 
 #include "GameFramework/GameFrameworkExports.h"

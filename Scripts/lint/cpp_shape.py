@@ -613,7 +613,7 @@ def check_online_protocol_table(raw: str, code: str, relative: str) -> list[tupl
     return list_problem
 
 
-NET_MESSAGE_FOLDERS = ("Source/GameFramework/Kits/Feature/Network/", "Source/Engine/Net/", "Source/Games/")
+NET_MESSAGE_FOLDERS = ("Source/GameFramework/Kits/Feature/Network/", "Source/Engine/Network/", "Source/Games/")
 MANUAL_NET_MESSAGE_PATTERNS = (
     (re.compile(r"NetKitMessageRange::k\w+\s*\+\s*\d"), "손으로 적은 메시지 종류 — 표의 서술자(`NetMessageDef`)와 `Table::getKindOf` 를 쓴다"),
     (re.compile(r"1u\s*<<\s*\(\s*\w*Message::k"), "손으로 쓴 종류 마스크 — `NetTableHandler` 나 `Table::makeMask` 를 쓴다"),

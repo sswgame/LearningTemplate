@@ -5,7 +5,7 @@
 
 #include "Engine/EngineFrameHooks.h"
 #include "Engine/Foundation/EngineServices.h"
-#include "Engine/Net/GameNetSession.h"
+#include "Engine/Network/GameNetSession.h"
 #include "Engine/Serialization/Inherit/ResourceComposition.h"
 
 using namespace sw;

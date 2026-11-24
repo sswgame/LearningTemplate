@@ -8,7 +8,7 @@
 #include "Core/String/StringBuilder.h"
 #include "Core/String/StringUtil.h"
 
-#include "Engine/Net/GameNetSession.h"
+#include "Engine/Network/GameNetSession.h"
 
 namespace sw
 {

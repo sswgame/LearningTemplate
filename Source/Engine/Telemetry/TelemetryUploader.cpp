@@ -4,7 +4,7 @@
 
 #include "Core/String/StringUtil.h"
 
-#include "Engine/Net/HTTPClient.h"
+#include "Engine/Network/HTTPClient.h"
 
 namespace sw
 {

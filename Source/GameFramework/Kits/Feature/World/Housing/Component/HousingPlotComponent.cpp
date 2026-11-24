@@ -24,7 +24,7 @@
 #include "Engine/Serialization/Format/Archive.h"
 #include "Engine/Serialization/Format/FormatUpgrade.h"
 
-#include "GameFramework/Kits/Feature/World/Housing/Net/HousingNetSessionComponent.h"
+#include "GameFramework/Kits/Feature/World/Housing/Network/HousingNetSessionComponent.h"
 #include "GameFramework/Runtime/Foundation/Framework/Save/StatefulComponentRegistrar.h"
 #include "GameFramework/Runtime/Gameplay/GameState/GameStateComponent.h"
 

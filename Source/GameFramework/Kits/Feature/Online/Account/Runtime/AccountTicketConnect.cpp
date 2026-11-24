@@ -13,7 +13,7 @@
 
 #include "Engine/Console/DevCommandRegistry.h"
 #include "Engine/Module/ModuleSubsystemRegistrar.h"
-#include "Engine/Net/GameNetSession.h"
+#include "Engine/Network/GameNetSession.h"
 #include "Engine/Scene/SceneManager.h"
 
 #include "GameFramework/Runtime/Foundation/Framework/GameService.h"

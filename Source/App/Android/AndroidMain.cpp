@@ -30,8 +30,8 @@
         #include "Engine/Config/ConfigManager.h"
         #include "Engine/Config/EngineConfig.h"
         #include "Engine/Config/PlatformConfigOverride.h"
-        #include "Engine/Net/Dev/PlainHTTPClient.h"
-        #include "Engine/Net/FileServe/FileServeContentSource.h"
+        #include "Engine/Network/Dev/PlainHTTPClient.h"
+        #include "Engine/Network/FileServe/FileServeContentSource.h"
         #include "Engine/Serialization/JSON/JSONDocument.h"
     #endif
 

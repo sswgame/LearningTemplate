@@ -29,7 +29,7 @@
 #include "Engine/Input/InputManager.h"
 #include "Engine/Module/HostInterfaces.h"
 #include "Engine/Module/ModuleCatalog.h"
-#include "Engine/Net/GameNetSession.h"
+#include "Engine/Network/GameNetSession.h"
 #include "Engine/Object/Component/CameraComponent.h"
 #include "Engine/Profiling/FrameProfiler.h"
 #include "Engine/Reflection/TypeInfo.h"

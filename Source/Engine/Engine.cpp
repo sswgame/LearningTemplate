@@ -69,7 +69,7 @@
 #include "Engine/Localization/StringTable.h"
 #include "Engine/Module/ModuleRegistrationHost.h"
 #include "Engine/Module/ModuleTypeRegistry.h"
-#include "Engine/Net/GameNetSession.h"
+#include "Engine/Network/GameNetSession.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
 #include "Engine/Object/GameObject/Registry/CameraRegistry.h"
 #include "Engine/Object/GameObject/Service/SceneEngineServices.h"

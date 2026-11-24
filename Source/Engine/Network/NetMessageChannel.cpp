@@ -1,6 +1,6 @@
 #include "pch.h"
 
-#include "Engine/Net/NetMessageChannel.h"
+#include "Engine/Network/NetMessageChannel.h"
 
 #include "Core/Algorithm/VectorUtil.h"
 #include "Core/Hash/HashUtil.h"

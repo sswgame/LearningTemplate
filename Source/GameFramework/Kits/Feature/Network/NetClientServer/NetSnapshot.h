@@ -10,7 +10,7 @@
 #include "Core/Network/Message/NetMessageTable.h"
 #include "Core/Network/Replication/NetInputWindow.h"
 
-#include "Engine/Net/NetMessageBody.h"
+#include "Engine/Network/NetMessageBody.h"
 #include "Engine/Reflection/ReflectionMacros.h"
 
 #include "GameFramework/GameFrameworkExports.h"

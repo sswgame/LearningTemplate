@@ -1,6 +1,6 @@
 #include "pch.h"
 
-#include "Engine/Net/GameNetSession.h"
+#include "Engine/Network/GameNetSession.h"
 
 #include "Core/Algorithm/VectorUtil.h"
 #include "Core/Container/unordered_set.h"
@@ -25,7 +25,7 @@
 #include "Engine/EngineFrameHooks.h"
 #include "Engine/Foundation/EngineServices.h"
 #include "Engine/Foundation/EngineSubsystemRegistration.h"
-#include "Engine/Net/GameConnectSecurity.h"
+#include "Engine/Network/GameConnectSecurity.h"
 #include "Engine/Object/GameObject/Service/SceneNetLink.h"
 #include "Engine/Observability/MetricRegistry.h"
 #include "Engine/Reflection/EnumName.h"

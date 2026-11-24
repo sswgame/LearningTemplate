@@ -10,8 +10,8 @@
 #include "Core/String/StringUtil.h"
 #include "Core/Testing/TestFramework.h"
 
-#include "Engine/Net/FileServe/FileServeContentSource.h"
-#include "Engine/Net/HTTPClient.h"
+#include "Engine/Network/FileServe/FileServeContentSource.h"
+#include "Engine/Network/HTTPClient.h"
 
 #include <thread>
 

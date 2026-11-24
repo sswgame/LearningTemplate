@@ -14,7 +14,7 @@
 
 #include "Engine/Config/ServerConfig.h"
 #include "Engine/Foundation/EngineServices.h"
-#include "Engine/Net/GameNetSession.h"
+#include "Engine/Network/GameNetSession.h"
 #include "Engine/Observability/MetricRegistry.h"
 #include "Engine/Observability/ProcessMetrics.h"
 #include "Engine/Server/OpsHTTPEndpoint.h"

@@ -19,7 +19,7 @@
 #include "Core/Name/hashed_string.h"
 #include "Core/Network/NetTypes.h"
 
-#include "Engine/Net/GameNetSession.h"
+#include "Engine/Network/GameNetSession.h"
 
 #include "GameFramework/Kits/Feature/Online/Account/Runtime/AccountClient.h"
 #include "GameFramework/Kits/Feature/Online/Leaderboard/Runtime/LeaderboardProtocol.h"

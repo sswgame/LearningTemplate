@@ -4,7 +4,7 @@
 
 #include "Core/Math/MathUtil.h"
 
-#include "Engine/Net/GameNetSession.h"
+#include "Engine/Network/GameNetSession.h"
 
 #include "GameFramework/Kits/Genre/Strategy/RealTimeStrategy/SkirmishMatch.h"
 #include "GameFramework/Runtime/Foundation/Framework/GameService.h"

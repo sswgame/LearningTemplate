@@ -9,7 +9,7 @@
 #include "Core/Network/Message/NetMessageTable.h"
 #include "Core/Network/NetTypes.h"
 
-#include "Engine/Net/NetMessageBody.h"
+#include "Engine/Network/NetMessageBody.h"
 #include "Engine/Reflection/ReflectionMacros.h"
 
 #include "GameFramework/Kits/Feature/Network/NetKitMessageRange.h"

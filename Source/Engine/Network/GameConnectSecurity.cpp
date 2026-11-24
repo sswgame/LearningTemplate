@@ -1,6 +1,6 @@
 #include "pch.h"
 
-#include "Engine/Net/GameConnectSecurity.h"
+#include "Engine/Network/GameConnectSecurity.h"
 
 #include "Core/Log/ScopedDeferredLog.h"
 
