@@ -856,7 +856,7 @@ SW_TEST_CASE( VectorTest, BitwiseRelocatableTraitFollowsTheMembers )
     static_assert( sw::is_bitwise_relocatable_v<sw::pair<uint32, sw::unique_ptr<int32>>>, "쌍은 두 칸을 따른다" );
     static_assert( sw::is_bitwise_relocatable_v<sw::pair<uint32, TrackedValue>> == false, "쌍은 두 칸을 따른다" );
     static_assert( sw::is_bitwise_relocatable_v<sw::unordered_map<uint32, sw::unique_ptr<int32>>>, "맵 자신은 버퍼 둘" );
-    SW_EXPECT_TRUE( sw::is_bitwise_relocatable_v<sw::string> == sw::internal::kStdStringBitwiseRelocatable );
+    SW_EXPECT_TRUE( sw::is_bitwise_relocatable_v<sw::string> );
 }
 
 /**

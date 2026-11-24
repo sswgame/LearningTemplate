@@ -476,7 +476,7 @@ namespace sw::editor
 
         /** @brief 인자 위젯 테이블입니다. 순서는 `InspectorBuiltinValue` 테이블과 같습니다. 같은 파일을 같은 순서로 include 합니다. */
         const DrawMethodArgFn kArrDrawMethodArg[] = {
-#define SW_REFLECT_BUILTIN_TYPE( Canon, CppType, TextConv, Ns, ... ) &drawMethodArgument<InspectorBuiltinCppTypeT<CppType>>,
+#define SW_REFLECT_BUILTIN_TYPE( Canon, CppType, TextConv, Ns, ... ) &drawMethodArgument<CppType>,
 #define SW_REFLECT_BUILTIN_CONTAINER( ... )
 #include "Engine/Reflection/ReflectBuiltins.xxx"
 #undef SW_REFLECT_BUILTIN_TYPE
@@ -1010,7 +1010,7 @@ namespace sw::editor
     void PropertyDrawerRegistry::registerBuiltins()
     {
         // 빈 표의 내장 이름들이다 — 겹치면 레지스트리가 오류로 알린다.
-#define SW_REFLECT_BUILTIN_TYPE( Canon, CppType, TextConv, Ns, ... ) (void)_registry.addLogged( hashed_string( #Canon ), createBuiltinProperty<InspectorBuiltinCppTypeT<CppType>>(), kRegistryLabel );
+#define SW_REFLECT_BUILTIN_TYPE( Canon, CppType, TextConv, Ns, ... ) (void)_registry.addLogged( hashed_string( #Canon ), createBuiltinProperty<CppType>(), kRegistryLabel );
 #define SW_REFLECT_BUILTIN_CONTAINER( ... )
 #include "Engine/Reflection/ReflectBuiltins.xxx"
 #undef SW_REFLECT_BUILTIN_TYPE

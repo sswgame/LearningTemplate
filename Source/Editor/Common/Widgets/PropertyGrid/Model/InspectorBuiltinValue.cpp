@@ -124,7 +124,7 @@ namespace sw::editor
             static vector<InspectorBuiltinValue> makeTable()
             {
                 vector<InspectorBuiltinValue> listRow{
-#define SW_REFLECT_BUILTIN_TYPE( Canon, CppType, TextConv, Ns, ... ) makeRow<InspectorBuiltinCppTypeT<CppType>>( #Canon ),
+#define SW_REFLECT_BUILTIN_TYPE( Canon, CppType, TextConv, Ns, ... ) makeRow<CppType>( #Canon ),
 #define SW_REFLECT_BUILTIN_CONTAINER( ... )
 #include "Engine/Reflection/ReflectBuiltins.xxx"
 #undef SW_REFLECT_BUILTIN_TYPE

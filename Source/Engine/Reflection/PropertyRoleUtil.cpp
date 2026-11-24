@@ -66,7 +66,7 @@ namespace sw
             static BlendFn findBlend( const PropertyInfo& prop )
             {
                 static constexpr BlendFn kArrBlend[] = {
-#define SW_REFLECT_BUILTIN_TYPE( Canon, CppType, ... ) pickBlend<ReflectBuiltinCppTypeT<CppType>, ReflectBuiltinTraitTable::get( ReflectBuiltinIndex::k##Canon ).hasRole( ReflectBuiltinRole::Interp )>(),
+#define SW_REFLECT_BUILTIN_TYPE( Canon, CppType, ... ) pickBlend<CppType, ReflectBuiltinTraitTable::get( ReflectBuiltinIndex::k##Canon ).hasRole( ReflectBuiltinRole::Interp )>(),
 #define SW_REFLECT_BUILTIN_CONTAINER( ... )
 #include "Engine/Reflection/ReflectBuiltins.xxx"
 #undef SW_REFLECT_BUILTIN_TYPE

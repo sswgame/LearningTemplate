@@ -69,10 +69,10 @@ namespace sw::editor
 namespace sw::editor
 {
     // 위젯 종류는 `ReflectBuiltins.xxx` 의 Widget 칸이 정본이다 — 줄을 더하면 특수화가 따라오고, 칸 철자가 열거자에 없으면 컴파일이 멈춘다.
-#define SW_REFLECT_BUILTIN_TYPE( Canon, CppType, TextConv, Ns, Widget, ... )                                       \
-    template <>                                                                                                    \
-    struct InspectorWidgetFor<ReflectBuiltinCppTypeT<CppType>> : InspectorWidgetKind<InspectorValueWidget::Widget> \
-    {                                                                                                              \
+#define SW_REFLECT_BUILTIN_TYPE( Canon, CppType, TextConv, Ns, Widget, ... )               \
+    template <>                                                                            \
+    struct InspectorWidgetFor<CppType> : InspectorWidgetKind<InspectorValueWidget::Widget> \
+    {                                                                                      \
     };
 #define SW_REFLECT_BUILTIN_CONTAINER( ... )
 #include "Engine/Reflection/ReflectBuiltins.xxx"
@@ -82,10 +82,6 @@ namespace sw::editor
 
 namespace sw::editor
 {
-    /** @brief `ReflectBuiltins.xxx` 의 C++ 타입 항목을 값이 실제로 쓰는 타입으로 바꿉니다(`std::string` → `sw::string`). 엔진의 테이블과 같습니다. */
-    template <typename T>
-    using InspectorBuiltinCppTypeT = ReflectBuiltinCppTypeT<T>;
-
     struct InspectorMethodArgSlot;
 
     /** @brief 내장 값 타입 하나의 테이블 항목입니다. 항목 순서는 `ReflectBuiltins.xxx` 의 순서입니다. */

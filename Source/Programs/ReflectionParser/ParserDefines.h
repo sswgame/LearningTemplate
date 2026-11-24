@@ -94,7 +94,7 @@ namespace sw
         inline constexpr const utf8* kDynamicBitset        = "sw::DynamicBitset";
         inline constexpr const utf8* kEnumArray            = "sw::EnumArray";
         inline constexpr const utf8* kMulticastDelegate    = "sw::MulticastDelegate";
-        /** @brief 글(문자 원소가 `char`)로 싣는 문자열 템플릿입니다(`sw::string` 은 자체 클래스, `SW_ENABLE_STL_CONTAINER` 면 `std` 별칭). */
+        /** @brief 글(문자 원소가 `char`)로 싣는 문자열 템플릿입니다(`sw::string` 은 자체 클래스). */
         inline constexpr const utf8* kArrStringTemplate[] = { "sw::basic_string", "std::basic_string" };
         /** @brief 가변 길이 시퀀스로 싣는 템플릿입니다. */
         inline constexpr const utf8* kArrVectorTemplate[] = { "sw::vector", "std::vector" };

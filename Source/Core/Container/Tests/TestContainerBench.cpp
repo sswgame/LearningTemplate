@@ -246,7 +246,7 @@ SW_TEST_CASE( ContainerBenchTest, VectorShiftBitwise, ._tags = "bench", ._disabl
 SW_TEST_CASE( ContainerBenchTest, VectorGrowString, ._tags = "bench", ._disabledReason = "bench - Release 에서 --test-run-disabled 로 돌린다" )
 {
     static constexpr uint32 kCount = 200000;
-    const string            text( 40, 'x' ); // SSO(MSVC 15 자 · libstdc++ 15 자) 밖이라 힙 버퍼를 든다
+    const string            text( 40, 'x' ); // 짧은 글 버퍼(23 자) 밖이라 힙 버퍼를 든다
     vector<string>          listGrow;
     const Stopwatch         growWatch;
     for ( uint32 index = 0; index < kCount; ++index )

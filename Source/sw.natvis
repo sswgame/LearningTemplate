@@ -83,11 +83,28 @@
     </Expand>
   </Type>
 
-  <!-- sw::basic_string<T, ...> -->
-  <Type Name="sw::basic_string&lt;*,*,*&gt;">
-    <DisplayString>{*(std::basic_string&lt;$T1,$T2,$T3&gt;*)this}</DisplayString>
+  <!-- sw::basic_string<T, ...> — 마지막 바이트의 맨 위 비트가 켜졌으면 힙, 아니면 세 칸이 글자이고 마지막 칸이 남은 칸 수다 -->
+  <Type Name="sw::basic_string&lt;char,*,*&gt;">
+    <Intrinsic Name="isHeap" Expression="(((unsigned char*)&amp;_heap)[sizeof(_heap) - 1] &amp; 0x80) != 0"/>
+    <Intrinsic Name="lastIndex" Expression="sizeof(_heap) / sizeof(char) - 1"/>
+    <Intrinsic Name="size" Expression="isHeap() ? _heap._size : lastIndex() - (size_t)_arrSmall[lastIndex()]"/>
+    <DisplayString Condition="isHeap()">{_heap._pData,[_heap._size]s8}</DisplayString>
+    <DisplayString>{_arrSmall,[size()]s8}</DisplayString>
     <Expand>
-      <ExpandedItem>*(std::basic_string&lt;$T1,$T2,$T3&gt;*)this</ExpandedItem>
+      <Item Name="[size]" ExcludeView="simple">size()</Item>
+      <Item Name="[capacity]" ExcludeView="simple">isHeap() ? (_heap._capacityAndFlag &amp; (((size_t)-1) &gt;&gt; 1)) : lastIndex()</Item>
+    </Expand>
+  </Type>
+
+  <Type Name="sw::basic_string&lt;wchar_t,*,*&gt;">
+    <Intrinsic Name="isHeap" Expression="(((unsigned char*)&amp;_heap)[sizeof(_heap) - 1] &amp; 0x80) != 0"/>
+    <Intrinsic Name="lastIndex" Expression="sizeof(_heap) / sizeof(wchar_t) - 1"/>
+    <Intrinsic Name="size" Expression="isHeap() ? _heap._size : lastIndex() - (size_t)_arrSmall[lastIndex()]"/>
+    <DisplayString Condition="isHeap()">{_heap._pData,[_heap._size]su}</DisplayString>
+    <DisplayString>{_arrSmall,[size()]su}</DisplayString>
+    <Expand>
+      <Item Name="[size]" ExcludeView="simple">size()</Item>
+      <Item Name="[capacity]" ExcludeView="simple">isHeap() ? (_heap._capacityAndFlag &amp; (((size_t)-1) &gt;&gt; 1)) : lastIndex()</Item>
     </Expand>
   </Type>
 
