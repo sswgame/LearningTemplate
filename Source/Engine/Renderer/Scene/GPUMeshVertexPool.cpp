@@ -2,6 +2,7 @@
 
 #include "Engine/Renderer/Scene/GPUMeshVertexPool.h"
 
+#include "Core/Algorithm/VectorUtil.h"
 #include "Core/Log/LogOnce.h"
 #include "Core/Log/Logger.h"
 #include "Core/Math/MathUtil.h"
@@ -49,8 +50,8 @@ namespace sw
         {
             // GPU 원본 — 렌더 프록시 버퍼는 [위치 구간(그릴 정점 수 칸)][속성 구간] 이다(`Mesh::getAttributeStreamOffset`). CPU 정점을 읽지 않는다(R-15).
             const RHIBufferHandle source = proxy.getVertexBuffer();
-            _listPendingCopy.push_back( PendingCopy{ _vertexBuffer._buffer, dstPosition, source, 0, static_cast<uint64>( count ) * constant::render::kMeshPositionStride } );
-            _listPendingCopy.push_back( PendingCopy{ _vertexBuffer._buffer, dstAttribute, source, mesh.getAttributeStreamOffset(), static_cast<uint64>( count ) * attributeStride } );
+            _listPendingCopy.push_back( PendingCopy{ _vertexBuffer._buffer, dstPosition, source, 0, static_cast<uint64>( count ) * constant::render::kMeshPositionStride, firstVertex } );
+            _listPendingCopy.push_back( PendingCopy{ _vertexBuffer._buffer, dstAttribute, source, mesh.getAttributeStreamOffset(), static_cast<uint64>( count ) * attributeStride, firstVertex } );
             return true;
         }
         // 프록시가 없는 동적 메시(프레임마다 새 메시 — 천) — CPU 정점을 쥔 메시만 여기 온다(절차 메시는 CPU 정점을 놓지 않는다). GPU 전용 버퍼라 스테이징으로 올린다.
@@ -151,6 +152,9 @@ namespace sw
     {
         if ( inoutEntry._base == kInvalidBase )
             return;
+        // 살아 있는 구간은 겹치지 않으므로 지금 풀의 시작 정점 하나가 구간 하나다. 옛 풀(다시 꾸린 앞)을 채우는 복사는 새 풀 복사의 원본이라 남긴다.
+        (void)VectorUtil::removeIf( _listPendingCopy, [this, &inoutEntry]( const PendingCopy& copy )
+        { return copy._destination == _vertexBuffer._buffer && copy._base == inoutEntry._base; } );
         _allocator.freeDeferred( inoutEntry._base, inoutEntry._count, retireStamp );
         _indexAllocator.freeDeferred( inoutEntry._indexBase, inoutEntry._indexCount, retireStamp );
         _liveVertexCount -= inoutEntry._count;
@@ -324,9 +328,9 @@ namespace sw
                 // 옛 풀 → 새 풀 — 위치 구간과 속성 구간을 한 번씩(두 풀의 속성 구간 시작은 용량이 정한다).
                 const uint64 count = entry._count;
                 _listPendingCopy.push_back( PendingCopy{ _vertexBuffer._buffer, static_cast<uint64>( entry._base ) * constant::render::kMeshPositionStride, oldVertexBuffer,
-                                                         static_cast<uint64>( oldIt->second ) * constant::render::kMeshPositionStride, count * constant::render::kMeshPositionStride } );
+                                                         static_cast<uint64>( oldIt->second ) * constant::render::kMeshPositionStride, count * constant::render::kMeshPositionStride, entry._base } );
                 _listPendingCopy.push_back( PendingCopy{ _vertexBuffer._buffer, newAttribute + static_cast<uint64>( entry._base ) * attributeStride, oldVertexBuffer,
-                                                         oldAttributeStart + static_cast<uint64>( oldIt->second ) * attributeStride, count * attributeStride } );
+                                                         oldAttributeStart + static_cast<uint64>( oldIt->second ) * attributeStride, count * attributeStride, entry._base } );
             }
             else if ( queueMeshFill( *pDevice, *pMesh, entry._base, capacity ) == false )
             {
