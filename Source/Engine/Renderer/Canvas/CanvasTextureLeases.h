@@ -57,6 +57,8 @@ namespace sw
         CanvasTargetLease* findTarget( const hashed_string& path );
         /** @brief 경로로 빌린 이미지의 SRV 입니다. 빌리지 않았거나 아직 읽는 중이거나 읽지 못한 경로면 kInvalidDescriptorIndex 입니다. */
         RHITextureSRVIndex findPathTextureSRV( const hashed_string& path ) const { return _pathTextures.findReadySRV( path ); }
+        /** @brief 경로로 빌린 이미지를 아직 읽는 중이면 true 입니다(`PathTextureSet::isPending`). */
+        bool isPathTexturePending( const hashed_string& path ) const { return _pathTextures.isPending( path ); }
         /** @brief 빌린 이미지와 대상을 캐시에 돌려줍니다(다음 `prepareTargets` · `acquirePathTextures` 가 다시 빌립니다). */
         void release();
 

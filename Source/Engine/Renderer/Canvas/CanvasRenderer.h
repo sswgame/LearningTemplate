@@ -108,6 +108,11 @@ namespace sw
     private:
         /** @brief 일괄 텍스처 하나의 SRV 입니다(직접 텍스처 · 경로 이미지 · 아틀라스 페이지 순). 없으면 kInvalidDescriptorIndex 입니다. */
         RHITextureSRVIndex findTextureSRV( const CanvasTextureRef& texture ) const;
+        /**
+         * @brief 목록의 그림이 이대로 굳어도 되면 true 입니다 — 읽는 중인 이미지 · 올리는 중인 글리프 페이지가 없고, 프레임마다 바뀌는 렌더 텍스처를 그리지 않는다.
+         * @details 거짓이면 그 대상은 내용 번호가 같아도 다음 프레임에 다시 그린다. 굳히면 월드 위젯의 글 · 그림이 내용이 바뀔 때까지 빈 채 남는다.
+         */
+        bool hasAllTextures( const CanvasDrawList& list ) const;
 
     private:
         CanvasGlyphAtlasTexture _atlas;      ///< 글리프 아틀라스 페이지의 CPU 미러와 GPU 텍스처

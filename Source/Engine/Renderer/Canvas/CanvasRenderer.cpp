@@ -9,6 +9,7 @@
 #include "Engine/Graphics/RHI/IRHIDevice.h"
 #include "Engine/Graphics/Shader/Binding/ShaderBindingSlots.h"
 #include "Engine/Graphics/Texture/Texture2D.h"
+#include "Engine/Graphics/Texture/TextureCache.h"
 #include "Engine/Profiling/FrameProfiler.h"
 #include "Engine/Renderer/Frame/Resource/RenderPSOCache.h"
 
@@ -175,9 +176,30 @@ namespace sw
             cmd.endRenderPass();
             // 그린 텍스처는 셰이더가 읽는다(머티리얼 · 에디터 ImGui 이미지) — 카메라 렌더 텍스처 출력과 같이 읽기 상태로 둔다(Vulkan 레이아웃).
             cmd.prepareTextureForShaderRead( texture );
-            pState->_drawnRevision = target._contentRevision;
+            pState->_drawnRevision = hasAllTextures( target._list ) ? target._contentRevision : 0;
             pState->_drawnTexture  = texture;
         }
+    }
+
+    bool CanvasRenderer::hasAllTextures( const CanvasDrawList& list ) const
+    {
+        for ( const CanvasBatch& batch : list._listBatch )
+        {
+            for ( uint32 slot = 0; slot < batch._textureCount; ++slot )
+            {
+                const CanvasTextureRef& texture  = batch._arrTexture[slot];
+                bool                    bArrived = true;
+                if ( texture._texture != nullptr )
+                    bArrived = texture._texture->isRHIValid();
+                else if ( texture._texturePath.empty() == false )
+                    bArrived = _textures.isPathTexturePending( texture._texturePath ) == false && TextureCache::isRenderTargetPath( texture._texturePath.view() ) == false;
+                else
+                    bArrived = texture._atlasPage == constant::invalid_index::kUint16 || _atlas.isPagePending( texture._atlasPage ) == false;
+                if ( bArrived == false )
+                    return false;
+            }
+        }
+        return true;
     }
 
     RHITextureSRVIndex CanvasRenderer::findTextureSRV( const CanvasTextureRef& texture ) const

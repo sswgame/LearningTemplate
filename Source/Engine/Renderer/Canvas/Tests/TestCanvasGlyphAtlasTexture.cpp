@@ -70,3 +70,21 @@ SW_TEST_CASE( CanvasGlyphAtlasTextureTest, MissedBatchHealsWithFullUpload )
     atlas.takeUploads( listUpload );
     SW_EXPECT_TRUE( listUpload.empty() ); // 바뀐 것이 없으면 묶음도 번호도 없다
 }
+
+/**
+ * @brief [CanvasGlyphAtlasTextureTest] 아직 GPU 에 가지 않은 페이지는 기다리는 페이지다 — 월드 위젯은 그 글을 그린 것으로 치지 않고 다음 프레임에 다시 그린다
+ * @details 변이: 미러에 바이트가 있다는 것만으로 다 왔다고 하면, 새 아틀라스 페이지를 처음 쓴 월드 위젯의 글이 내용이 바뀔 때까지 빈 채 굳는다.
+ */
+SW_TEST_CASE( CanvasGlyphAtlasTextureTest, PageWithoutFinishedUploadIsPending )
+{
+    sw::CanvasGlyphAtlasTexture texture;
+    SW_EXPECT_TRUE( texture.isPagePending( 0 ) ); // 글리프 묶음이 아직 오지 않았다
+    sw::GlyphAtlas     atlas{ sw::GlyphFieldKind::MSDF, sw::test::kTestGlyphAtlasLayout };
+    sw::GlyphAtlasRect rect{};
+    SW_REQUIRE_TRUE( atlas.allocate( 4, 4, rect ) );
+    sw::vector<sw::GlyphAtlasUpload> listUpload;
+    atlas.takeUploads( listUpload );
+    texture.applyUploads( listUpload, &atlas );
+    SW_REQUIRE_EQUAL( 1u, texture.getPageCount() );
+    SW_EXPECT_TRUE( texture.isPagePending( 0 ) ); // 미러에만 있다 — 첫 업로드가 끝나야 SRV 가 선다
+}
