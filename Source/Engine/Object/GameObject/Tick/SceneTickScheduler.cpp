@@ -216,7 +216,7 @@ namespace sw
     void SceneTickScheduler::advanceTime( float32 deltaTime )
     {
         _frameTime._startSeconds = _frameTime._endSeconds;
-        _frameTime._endSeconds += static_cast<float64>( deltaTime );
+        _frameTime._endSeconds += deltaTime > 0.0f ? static_cast<float64>( deltaTime ) : 0.0; // NaN · 음수는 쌓지 않는다(`FixedStepTimer` 와 같다) — 한 번 섞이면 모든 주기가 멈춘다
         _frameTime._deltaTime = deltaTime;
     }
 

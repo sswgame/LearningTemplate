@@ -15,6 +15,8 @@
 #include "Engine/Object/GameObject/GameObjectManager.h"
 #include "Engine/Presentation/ISoundPlayer.h"
 #include "Engine/Reflection/Reflection.h"
+#include "Engine/Serialization/Format/Archive.h"
+#include "Engine/Serialization/Format/StateIO.h"
 #include "Engine/Serialization/Serializer/SerializerUtil.h"
 
 #include "GameFramework/Kits/Genre/Simulation/ThemePark/Component/ParkGameModeComponent.h"
@@ -110,5 +112,17 @@ SW_TEST_CASE( ParkGameModeTest, LayoutIsPlacedAtTheDirectorObject )
     SW_EXPECT_FALSE( pGameMode->submitToggleRideOpen( 1 ) );
     SW_EXPECT_TRUE( pGameMode->submitEntryFeeChange( 5 ) );
     SW_EXPECT_EQUAL( 5, pGameMode->getSimulation().getSettings()._entryFee );
+
+    // 옛 판(1)의 상태 — 머리 뒤 첫 칸이 손으로 세던 상태 로그 시간이었다. 패치 사슬이 버리고 나머지를 잇는다.
+    Archive written;
+    pGameMode->writeState( written );
+    Archive old;
+    old << uint32{ 1 } << uint64{ 0 } << 3.0f;
+    old.writeBytes( written.getData() + StateIO::kReflectedHeaderBytes, written.getSize() - StateIO::kReflectedHeaderBytes );
+    SW_EXPECT_TRUE( pGameMode->submitToggleRideOpen( 0 ) ); // 상태를 쓴 뒤 연다
+    SW_REQUIRE_TRUE( pGameMode->getSimulation().getRides()[0]._bOpen == SW_TRUE );
+    pGameMode->restoreState( vector<uint8>( old.getData(), old.getData() + old.getSize() ) );
+    SW_EXPECT_TRUE( pGameMode->getSimulation().getRides()[0]._bOpen == SW_FALSE ); // 쓴 때의 닫힘으로 돌아왔다
+    SW_EXPECT_EQUAL( 2u, pGameMode->getParkRevision() );
     manager.endPlay();
 }
