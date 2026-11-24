@@ -338,6 +338,11 @@ namespace sw
         [[nodiscard]] bool makeRequiredDataPath( string_view kindLabel, string& outPath ) const;
         /** @brief 필수 데이터 @p path 를 읽지 못했음을 파일과 이유로 알립니다. */
         void reportRequiredDataFailure( string_view kindLabel, const AssetID& assetID ) const;
+        /**
+         * @brief 서버에 붙은 클라이언트인 동안 세이브를 막습니다.
+         * @details 클라이언트의 씬은 서버의 상태를 비춘 것이라 찍으면 남의 세계가 자기 진행이 된다(언리얼은 서버만 세이브한다). 호스트 · 혼자 하는 게임은 막지 않는다.
+         */
+        void updateNetSaveBlock();
         /** @brief 이 인스턴스의 게임 범위를 지금 범위 사슬에서 뗍니다(지금 범위면 앞 범위로 되돌리고, 테스트 범위(`ScopedGameScope`)가 이 범위를 상위로 이었으면 그 위를 잇게 한다). */
         void detachGameScope();
         /** @brief 게임 범위에 같은 타입이 이미 걸려 있음을 알립니다(`bindScopedService`). */
@@ -350,6 +355,7 @@ namespace sw
     private:
         GameStateSnapshot                 _stateSnapshot;       ///< 상태 스냅샷 봉투와 그 봉투에 오른 컴포넌트 타입
         SaveLock                          _saveLock;            ///< 세이브 막기 문 — 게임 범위(씬 흐름이 빌린다)보다 먼저 서고 늦게 진다
+        Subscription                      _netClientSaveBlock;  ///< 서버에 붙은 동안의 세이브 막기(`updateNetSaveBlock`)
         SubsystemScope                    _gameScope;           ///< 게임 범위 — 인스턴스 서브시스템(화면 전환 · 로딩 화면)을 소유하고, 기동부터 종료까지 `game::findSubsystem<T>()` 의 지금 범위다
         SharedAssetRef<ItemCatalog>       _pItemCatalog;        ///< `<RequiredData kind="items">` 를 적은 게임의 아이템 카탈로그(공유 캐시의 한 벌, 게임 범위 서비스)
         unique_ptr<AppearanceDatabase>    _pAppearanceDatabase; ///< `<RequiredData kind="appearance">` 를 적은 게임의 외형 데이터(게임 범위 서비스)

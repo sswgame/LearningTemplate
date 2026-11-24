@@ -121,10 +121,12 @@ SW_TEST_CASE( ShooterEnemyPoolResetTest, ReplicaRestoresThePawnAutoPossess )
     },
                            AbsolutePosition{ float3{ 0.0f, 0.0f, 0.0f } }, 0.0f );
     SW_REQUIRE_TRUE( pPawn->getAutoPossess() == PawnAutoPossess::None );
+    SW_EXPECT_TRUE( pObject->isTransient() ); // 서버의 적을 비춘 모습은 세이브에 실리지 않는다
 
     pool.release( manager, pObject->getHandle() );
     SW_EXPECT_TRUE( pPawn->getAutoPossess() == PawnAutoPossess::AI );
     SW_EXPECT_FALSE( pEnemy->isReplica() );
+    SW_EXPECT_FALSE( pObject->isTransient() );
 }
 
 /** @brief [ShooterEnemyPoolResetTest] 월드 원점을 옮긴 씬에서 선 적의 시뮬레이션 자리는 절대 그대로이고, 모습만 원점만큼 옮긴 씬 자리에 선다 */

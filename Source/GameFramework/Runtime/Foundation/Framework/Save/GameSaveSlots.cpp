@@ -9,6 +9,7 @@
 
 #include "Engine/Automation/Watch/AutomationWatch.h"
 #include "Engine/Console/DevCommandRegistry.h"
+#include "Engine/Net/GameNetSession.h"
 #include "Engine/Scene/Scene.h"
 #include "Engine/Scene/SceneManager.h"
 
@@ -62,6 +63,20 @@ namespace sw
                 const SceneManager* const pSceneManager = game::findSubsystem<SceneManager>();
                 const Scene* const        pScene        = pSceneManager != nullptr ? pSceneManager->getActiveScene() : nullptr;
                 return pScene != nullptr ? pScene->getSourcePath() : string{};
+            }
+
+            /**
+             * @brief 넷 세션이 열려 있어 세이브를 이 씬에 풀 수 없으면 알리고 true 입니다.
+             * @details 씬의 상태는 서버의 것이고 피어가 함께 본다 — 한 피어가 로컬 세이브로 씬을 비우고 다시 세우면 복제 대상(폰 · 오브젝트 번호)이 그 피어에서만 갈린다.
+             *          씬을 바꾸는 미니게임을 거절하는 것과 같은 규칙이다(`MinigameFlow::validateEntry`). 불러온 뒤 세션을 여는 것은 된다.
+             */
+            static bool isRestoreRefused( string_view slot )
+            {
+                const GameNetSession* const pNetSession = game::findSubsystem<GameNetSession>();
+                if ( pNetSession == nullptr || pNetSession->isActive() == false )
+                    return false;
+                SW_LOG_WARNING_ID( "GameSaveSlots.LoadInNetSession", "Save slot '%#' is not loaded - a net session is open and a local restore would split this peer from the session", slot );
+                return true;
             }
 
             /** @brief 감시 값 `Save.Blocked` 입니다 — 세이브 막기 문이 들렸으면 1(씬 로드 · 깨진 복원 · 연출). */
@@ -218,7 +233,7 @@ namespace sw
             return false;
         }
         string slotName;
-        if ( resolveSlot( slot, slotName ) == false )
+        if ( resolveSlot( slot, slotName ) == false || GameSaveSlotsInternal::isRestoreRefused( slotName ) )
             return false;
         holdSlotRequest( _owner.getSubsystem<GameLocalStore>().submitRead( slotName, SW_DELEGATE_METHOD( GameLocalStore::CompletionFunction, &GameSaveSlots::onSlotRead, this ) ) );
         return true;
@@ -245,9 +260,9 @@ namespace sw
 
     void GameSaveSlots::applySlot( const string& slot, vector<uint8> bytes, const AppliedFunction& onApplied )
     {
-        if ( GameStateSnapshot::upgradeEnvelope( bytes ) == false )
+        if ( GameSaveSlotsInternal::isRestoreRefused( slot ) || GameStateSnapshot::upgradeEnvelope( bytes ) == false )
         {
-            publishSlotLoaded( slot, false, onApplied ); // 까닭은 판 올림이 남겼다
+            publishSlotLoaded( slot, false, onApplied ); // 까닭은 검사 · 판 올림이 남겼다
             return;
         }
         if ( _pendingSlotRestore.has_value() )
@@ -305,7 +320,9 @@ namespace sw
             publishSlotLoaded( pending._slot, false, pending._onApplied );
             return;
         }
-        publishSlotLoaded( pending._slot, _owner.restoreSnapshot( SerializePurpose::SaveGame, pending._bytes ), pending._onApplied );
+        // 씬을 여는 사이 세션이 열렸을 수 있다.
+        const bool bRestored = GameSaveSlotsInternal::isRestoreRefused( pending._slot ) == false && _owner.restoreSnapshot( SerializePurpose::SaveGame, pending._bytes );
+        publishSlotLoaded( pending._slot, bRestored, pending._onApplied );
     }
 
     void GameSaveSlots::publishSlotLoaded( const string& slot, bool bLoaded, const AppliedFunction& onApplied )

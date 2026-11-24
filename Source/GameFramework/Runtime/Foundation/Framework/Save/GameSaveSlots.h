@@ -74,7 +74,7 @@ namespace sw
          * @details 읽기가 끝나면 봉투 머리의 씬 정체를 본다. 지금 활성 씬이면 바로 복원하고, 다른 씬이면 `GameSceneFlow::requestSceneThen` 으로 그 씬을 연 뒤
          *          (`SceneLoadCompletedEvent` 바로 뒤) 복원한다(감사 G-7 — 언리얼 게임은 세이브의 맵으로 `OpenLevel` 한 뒤 적용한다). 어느 쪽이든 끝에 성공 · 실패와 함께
          *          `SaveGameLoadedEvent` 를 "game" 채널에 냅니다.
-         * @return 읽기를 맡겼으면 true 입니다. 슬롯이 없거나 틀리거나, 앞의 세이브가 아직 씬을 옮기는 중이면 알리고 이벤트 없이 false 입니다.
+         * @return 읽기를 맡겼으면 true 입니다. 슬롯이 없거나 틀리거나, 앞의 세이브가 아직 씬을 옮기는 중이거나, 넷 세션이 열려 있으면 알리고 이벤트 없이 false 입니다.
          */
         [[nodiscard]] bool load( string_view slot = {} );
         /** @brief 성공한 세이브 슬롯 쓰기 · 읽기 수입니다. */
@@ -82,7 +82,7 @@ namespace sw
         /**
          * @brief 읽은 세이브 바이트를 적용합니다 — 슬롯 불러오기와 자동 저장 되돌리기가 함께 지나는 한 길(감사 G-7).
          * @details 옛 판 봉투는 먼저 이 빌드의 판으로 올린다(`GameStateSnapshot::upgradeEnvelope`). 봉투 머리의 씬 정체가 활성 씬이면 바로 복원하고, 다른 씬이면 `GameSceneFlow::requestSceneThen` 으로 그 씬을 연 뒤 복원한다. 끝에 `SaveGameLoadedEvent` 를 내고 @p onApplied 를 부른다.
-         *          앞의 세이브가 씬을 옮기는 중이면 적용하지 않고 실패로 끝낸다.
+         *          앞의 세이브가 씬을 옮기는 중이거나 넷 세션이 열려 있으면 적용하지 않고 실패로 끝낸다.
          */
         void applySlot( const string& slot, vector<uint8> bytes, const AppliedFunction& onApplied );
         /** @brief 복원이 씬을 비운 뒤 졌습니다(`GameInstance::readStateEnvelope`) — 세이브 막기를 걸고, 세이브 목적이면 씬을 디스크에서 다시 엽니다. */

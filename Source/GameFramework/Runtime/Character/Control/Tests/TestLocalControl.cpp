@@ -57,7 +57,8 @@ SW_TEST_CASE( LocalControlTest, RemoteControllerNeedsAConnection )
     RemoteControllerComponent* pRemote = RemoteControllerComponent::spawnForConnection( manager, hashed_string( "Remote" ), 0, *pPawn );
     SW_REQUIRE_NOT_NULL( pRemote );
     SW_EXPECT_EQUAL( 0, pPawn->findInputConnection().value_or( -1 ) );
-    pRemote->transferToConnection( 3 ); // 조종 연결이 끊겨 다음 클라이언트가 맡는다
+    SW_EXPECT_TRUE( pRemote->getOwner()->isTransient() ); // 존재는 연결이 정한다 — 세이브 · 스냅샷에 실리지 않는다
+    pRemote->transferToConnection( 3 );                   // 조종 연결이 끊겨 다음 클라이언트가 맡는다
     SW_EXPECT_EQUAL( 3, pPawn->findInputConnection().value_or( -1 ) );
 }
 

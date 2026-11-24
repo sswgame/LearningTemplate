@@ -38,6 +38,7 @@ namespace sw
                 manager.destroyGameObject( pObject );
             return nullptr;
         }
+        pObject->setTransient( true ); // 존재는 연결이 정한다 — 세이브 · 핫 리로드 스냅샷에 실으면 주인 없는 조종자가 남는다
         pRemote->setInputConnection( connectionID );
         pRemote->possess( pawn );
         return pRemote;

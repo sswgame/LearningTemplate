@@ -2,17 +2,22 @@
 // 게임 범위 서비스 충돌의 초기화 실패 전파. 세이브 슬롯은 메모리 로컬 저장소라 사용자 데이터 폴더를 쓰지 않는다(nogpu, 디스크 없음).
 #include "pch.h"
 
+#define SW_TEST_INTERNAL // 세션을 직접 세우느라 엔진 서비스(`ResourceComposition`)를 찾는다
 #include "Core/Testing/TestFramework.h"
 
 #include "Engine/Config/GameTimeScale.h"
+#include "Engine/Config/ServerConfig.h"
+#include "Engine/Foundation/EngineServices.h"
 #include "Engine/Input/InputManager.h"
 #include "Engine/Input/Map/InputMap.h"
 #include "Engine/Net/GameNetSession.h"
+#include "Engine/Serialization/Inherit/ResourceComposition.h"
 
 #include "GameFramework/Runtime/Foundation/Framework/Flow/GameInstance.h"
 #include "GameFramework/Runtime/Foundation/Framework/Flow/IGameDevPart.h"
 #include "GameFramework/Runtime/Foundation/Framework/GameService.h"
 #include "GameFramework/Runtime/Foundation/Framework/Save/GameLocalStore.h"
+#include "GameFramework/Runtime/Foundation/Framework/Save/GameSaveSlots.h"
 #include "GameFramework/Runtime/Foundation/Framework/Save/Local/MemoryLocalStore.h"
 #include "GameFramework/Runtime/Foundation/GameData/GameSettings.h"
 
@@ -287,6 +292,53 @@ SW_TEST_CASE( GameInstanceTest, ContentIsPreparedBeforeDeclaredData )
     SW_EXPECT_EQUAL( 2u, game.getInitializeOrder() );
     SW_EXPECT_TRUE( game.wasContentConfigVisibleAtInitialize() );
     game.shutdown();
+}
+
+/**
+ * @brief [GameInstanceTest] 결함: 서버에 붙은 클라이언트가 복제된 씬을 자기 세이브에 썼고(간격 · 종료 자동 저장), 세션 중에 불러온 로컬 세이브가 씬을 혼자 갈아 끼웠다
+ * @details 클라이언트인 동안 세이브 막기 문이 들리고 세션이 끝나면 풀린다. 호스트는 저장할 수 있다. 세이브를 푸는 것은 역할과 무관하게 세션이 열린 동안 거절한다.
+ */
+SW_TEST_CASE( GameInstanceTest, NetSessionRefusesLocalRestoreAndClientSaves )
+{
+    SW_EXPECT_LOG( "GameSaveSlots.LoadInNetSession" );
+    GameTimeScale timeScale;
+    timeScale.setUnscaledDeltaTime( 1.0f / 60.0f );
+    GameNetSession server{ engine::getSubsystem<ResourceComposition>() };
+    GameNetSession session{ engine::getSubsystem<ResourceComposition>() };
+    ServerConfig   config;
+    config._listenAddress = "127.0.0.1";
+    config._gamePort      = 0; // 운영체제가 고른다
+    GameNetSessionParams serverParams;
+    SW_REQUIRE_TRUE( server.makeServerParams( config, serverParams ) );
+    SW_REQUIRE_TRUE( server.initialize( serverParams ) );
+    SubsystemScope testScope;
+    SW_REQUIRE_TRUE( testScope.bind( &timeScale ) );
+    SW_REQUIRE_TRUE( testScope.bind( &session ) );
+    const game::ScopedGameScope scoped{ testScope };
+    MemoryLocalDatabase         database;
+    LifecycleTestGame           game{ database, LifecycleTestStep::Succeed };
+    SW_REQUIRE_TRUE( game.initialize( nullptr ) );
+    SW_EXPECT_FALSE( game.getSaveLock().isBlocked() );
+
+    GameNetSessionParams clientParams;
+    clientParams._role          = GameNetRole::Client;
+    clientParams._serverAddress = NetAddress::makeLoopback( server.getListenPort() );
+    SW_REQUIRE_TRUE( session.initialize( clientParams ) );
+    game.update( 1.0f / 60.0f );
+    SW_EXPECT_TRUE( game.getSaveLock().isBlocked() );
+    SW_EXPECT_FALSE( game.getSubsystem<GameSaveSlots>().load( "save/none" ) );
+    session.shutdown();
+    game.update( 1.0f / 60.0f );
+    SW_EXPECT_FALSE( game.getSaveLock().isBlocked() );
+
+    SW_REQUIRE_TRUE( session.initialize( serverParams ) );
+    game.update( 1.0f / 60.0f );
+    SW_EXPECT_FALSE( game.getSaveLock().isBlocked() );
+    SW_EXPECT_FALSE( game.getSubsystem<GameSaveSlots>().load( "save/none" ) );
+    session.shutdown();
+    SW_EXPECT_TRUE( game.getSubsystem<GameSaveSlots>().load( "save/none" ) );
+    game.shutdown();
+    server.shutdown();
 }
 
 /** @brief [GameInstanceTest] 프레임 순서 계약 — 끝난 세이브 요청의 완료가 파생 프레임 훅보다 먼저, 개발 부분은 파생 훅 뒤다(`GameInstance::update`) */

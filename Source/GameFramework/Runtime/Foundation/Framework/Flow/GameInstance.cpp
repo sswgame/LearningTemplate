@@ -273,6 +273,7 @@ namespace sw
         // 사운드 이벤트는 gamesettings 가 기준이다. 적었는데 못 읽으면 게임을 띄우지 않는다(소리 없이 진행하지 않는다). 입력 맵을 적었는데 입력 서비스가 없어도 같다.
         if ( loadAudioEvents() == false || loadDeclaredCharacterData() == false || startAutosave() == false )
             return false;
+        updateNetSaveBlock();
         _bDerivedEntered = SW_TRUE;
         if ( onInitialize() == false )
             return false;
@@ -299,6 +300,7 @@ namespace sw
         // 다 선 인스턴스만 종료 저장을 맡긴다 - 씬이 살아 있는 동안 맡기고 쓰기는 저장소가 끝낸다. 정책이 끄면(`quit`) 맡기지 않는다. 되감기(서다 멈춤)는 저장할 게임이 없다.
         if ( _pAutosave != nullptr && _bStarted == SW_TRUE )
             (void)_pAutosave->notifyQuit();
+        _netClientSaveBlock.reset();
         getSubsystem<GameSceneFlow>().unregisterSessionCommands(); // 걸지 않았으면(창이 없는 호스트 · 타이틀 씬 없음 · 되감기) 빈 구독이다
         _pDevPart.reset();                                         // 게임이 세운 것을 보던 부분이라 파생보다 먼저 진다(남길 기록은 소멸자가 쓴다)
         if ( _bDerivedEntered == SW_TRUE )
@@ -503,6 +505,7 @@ namespace sw
         getSubsystem<GameLocalStore>().update(); // 끝난 세이브 · 자동 저장 요청의 콜백(세이브 이벤트)
         // 받은 이벤트와 메시지를 게임 프레임 앞에서 처리기에 나눠 준다. 세션을 열지 않았으면 바로 돌아온다. 필수 서비스라 없으면 멈춘다.
         game::getSubsystem<GameNetSession>().update();
+        updateNetSaveBlock();
         getSubsystem<OnlineSession>().update();        // 키트 응답 · 알림을 게임 프레임 앞에서 처리기에 넘긴다
         getSubsystem<PlayerStatsSubsystem>().update(); // 플랫폼에 모아 둔 업적 · 통계 쓰기를 내보낸다(통계가 없는 게임은 바로 돌아온다)
         if ( _pAppearanceWatcher != nullptr )
@@ -512,6 +515,15 @@ namespace sw
             _pDevPart->update( deltaTime );
         if ( _pAutosave != nullptr )
             _pAutosave->update( deltaTime );
+    }
+
+    void GameInstance::updateNetSaveBlock()
+    {
+        const bool bClient = game::getSubsystem<GameNetSession>().getRole() == GameNetRole::Client;
+        if ( bClient == false )
+            _netClientSaveBlock.reset();
+        else if ( _netClientSaveBlock.isActive() == false )
+            _netClientSaveBlock = _saveLock.block( "net.client" );
     }
 
     bool GameInstance::serializeState( vector<uint8>& outBytes )

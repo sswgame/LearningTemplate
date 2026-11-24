@@ -137,6 +137,8 @@ namespace sw
         enterPhase( ShooterEnemyPhase::Rising );
         GameObject*     pOwner = getOwner();
         SceneComponent* pScene = pOwner != nullptr ? pOwner->getPrimarySceneComponent() : nullptr;
+        if ( pOwner != nullptr )
+            pOwner->setTransient( true ); // 서버의 적을 비춘 모습이다 — 받은 복제에서 다시 세운다
         if ( pScene != nullptr )
         {
             pScene->setZeroOriginPosition( _position );
@@ -158,6 +160,8 @@ namespace sw
             PawnComponent* pPawn  = pOwner != nullptr ? pOwner->getComponent<PawnComponent>() : nullptr;
             if ( pPawn != nullptr )
                 pPawn->setAutoPossess( _autoPossessBeforeReplica );
+            if ( pOwner != nullptr )
+                pOwner->setTransient( false );
         }
         (void)_healthMachine.initialize( HealthSettings{} ); // 기본 설정은 범위 안이다 — 생성자의 가득 찬 상태와 같다
         _healthMachine.discardEvents();

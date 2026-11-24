@@ -619,6 +619,7 @@ namespace sw
         // 화면 · 소리 · HUD 는 갖지 않는다. 카메라는 눈 자리와 조준만 들고 화면 후보가 아니다.
         GameObject* pObject = manager.createGameObject( hashed_string( "ShooterNetPawn" ) );
         pObject->setAlwaysLoaded( true ); // 존재는 접속이 정한다 — 스트리밍 셀이 내리지 않는다
+        pObject->setTransient( true );    // 세이브 · 스냅샷도 싣지 않는다 — 접속마다 다시 세운다
         pObject->addComponent<CameraComponent>()->setRole( CameraRole::Custom );
         PawnComponent* pPawn = pObject->addComponent<PawnComponent>();
         pPawn->setButtonNames( pSourcePawn->getButtonNames() );
@@ -1147,7 +1148,9 @@ namespace sw
                 pRemote            = &_listRemotePawn.emplace_back();
                 pRemote->_entityID = entityID;
                 pRemote->_object   = pSelf->spawnBodyObject( manager, "RemotePlayerBody" );
-                pRemote->_bArmed   = SW_FALSE;
+                if ( GameObject* const pBody = manager.resolveGameObject( pRemote->_object ) )
+                    pBody->setTransient( true ); // 받은 복제에서 다시 세운다
+                pRemote->_bArmed = SW_FALSE;
             }
             NetSampleRatio ratio = sample->_ratio;
             ratio.breakAt( from._floorNumber, to._floorNumber ); // 바닥을 옮겨 탄 두 자리는 기준이 다르다

@@ -1004,6 +1004,7 @@ namespace sw
         pController->copyTuning( *pSourceController );
         pMovement->setNetDriven( true );
         pObject->setAlwaysLoaded( true ); // 존재는 접속 · 복제가 정한다 — 스트리밍 셀이 내리지 않는다
+        pObject->setTransient( true );    // 같은 까닭으로 세이브 · 스냅샷에도 싣지 않는다 — 복원한 씬에 주인 없는 폰이 서고, 복원한 이 컴포넌트가 접속마다 다시 세운다
         pRoot->teleportTo( localPosition );
         return pObject;
     }
