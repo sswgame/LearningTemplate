@@ -251,6 +251,8 @@ namespace sw
          *          예전에는 표시와 보고가 백엔드마다 따로였다(GL · WebGPU 는 브레드크럼 보고가 없었고 DX12 는 디버그 메시지 비우기에서만 보고했다). 어느 스레드에서 불러도 된다.
          */
         void reportDeviceLost( const utf8* pCause );
+        /** @brief 버퍼 @p buffer 가 놓인 메모리를 나눠 쓰는 · 앞서 쓴 할당을 로그로 남깁니다(개발 진단 — `MeshVertexCheck`). 자리를 아는 백엔드(Vulkan)만 남긴다. */
+        virtual void reportBufferPlacement( RHIBufferHandle buffer ) const { (void)buffer; }
         /**
          * @brief 장치를 잃은 뒤 GPU 가 마지막으로 닿은 브레드크럼 id 들을 읽습니다(`IRHICommandList::writeBreadcrumb` 가 남긴 값). DX12 는 [시작 칸, 끝 칸] 둘, Vulkan 은 파이프라인 단계마다 하나씩이다. 끝 표지는 `GPUBreadcrumbs::kEndMarkerBit` 을 가진다(푸는 일은 `GPUBreadcrumbs::parse`).
          * @param pOutID   id 를 받을 배열입니다. 0 이 아닌 값만 채운다.
