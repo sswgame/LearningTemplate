@@ -1,0 +1,134 @@
+<?asset guid="655c9ec32f75401d8fc36ebf413cb32a"?>
+<Scene formatVersion="3" name="AsymmetricHorrorEstate">
+	<!-- 비대칭 공포 미니게임(minigames/asymmetrichorror)의 무대 — 생존자 둘(사용자 0 · 1, 사람이 없으면 봇)이 발전기 셋 가운데 둘을 고쳐 탈출구로 나간다. 살인마는 15 초 뒤에 풀려난다. 자리는 디렉터의 _stage 다. -->
+	<SceneSettings _bStreaming="false" _unloadMargin="0" _maxCellLoadsPerFrame="0" _addToWorldBudgetMicroseconds="0">
+		<_cellGrid _cellSize="0" _loadingRadius="0" />
+	</SceneSettings>
+	<entities>
+		<!-- 화면 카메라 — 디렉터가 답하는 초점을 비스듬히 위에서 따라간다(FollowCameraComponent). -->
+		<entity id="1" name="GameCamera">
+			<GameObject _schemaVersion="0" _name="GameCamera" _bActive="true">
+				<_listComponent>
+					<CameraComponent _localID="17709685451340727998" _componentName="CameraComponent"
+					                 _bActive="true"
+					                 _localPosition="0,16,-12"
+					                 _localRotation="0.9272952,0,0"
+					                 _localScale="1,1,1"
+					                 _attachOwner="None"
+					                 _attachOwnerID="0"
+					                 _attachComponent="None"
+					                 _fovY="40.107045"
+					                 _nearZ="0.1"
+					                 _farZ="120"
+					                 _orthoHeight="10"
+					                 _priority="0"
+					                 _role="Game"
+					                 _bOrthographic="false" />
+					<FollowCameraComponent _localID="15357652970512560881" _componentName="FollowCameraComponent"
+					                      _bActive="true"
+					                      _gameMode="10"
+					                      _offset="0,16,-12"
+					                      _minFarPlane="120" />
+				</_listComponent>
+			</GameObject>
+		</entity>
+		<entity id="2" name="Moon">
+			<GameObject _schemaVersion="0" _name="Moon" _bActive="true">
+				<_listComponent>
+					<DirectionalLightComponent _localID="51927904365891271" _componentName="DirectionalLightComponent"
+					                           _bActive="true"
+					                           _localPosition="0,0,0"
+					                           _localRotation="0.448254,-2.121679,0"
+					                           _localScale="1,1,1"
+					                           _attachOwner="None"
+					                           _attachOwnerID="0"
+					                           _attachComponent="None"
+					                           _color="0.7,0.75,1"
+					                           _intensity="0.9"
+					                           _ambient="0.25"
+					                           _shadowExtent="30"
+					                           _shadowDistance="60"
+					                           _bCastShadow="true" />
+				</_listComponent>
+			</GameObject>
+		</entity>
+		<entity id="3" name="Ground">
+			<GameObject _schemaVersion="0" _name="Ground" _bActive="true">
+				<_listComponent>
+					<MeshComponent _localID="163493842152903304" _componentName="MeshComponent"
+					               _bActive="true"
+					               _localPosition="0,0,0"
+					               _localRotation="0,0,0"
+					               _localScale="50,1,30"
+					               _attachOwner="None"
+					               _attachOwnerID="0"
+					               _attachComponent="None"
+					               _meshID="Plane"
+					               _materialPath="engine/materials/prototypegrid_dark.material"
+					               _boundsRadius="0.866"
+					               _gpuSpinSeed="0"
+					               _bVisible="true" />
+				</_listComponent>
+			</GameObject>
+		</entity>
+		<!-- 디렉터 → 입력 · 그리기(클라이언트) → HUD 순서로 붙인다. -->
+		<entity id="10" name="Match">
+			<GameObject _schemaVersion="0" _name="Match" _bActive="true">
+				<_listComponent>
+					<AsymmetricHorrorGameModeComponent _localID="4418207361950284713" _componentName="AsymmetricHorrorGameModeComponent"
+					                                   _bActive="true"
+					                                   _killer="trapper"
+					                                   _fixedStep="0.0333333"
+					                                   _seed="7"
+					                                   _killerReleaseSeconds="15"
+					                                   _resultHoldSeconds="3"
+					                                   _escapeReward="10">
+						<_stage _killerStart="20,0,0"
+						        _hatch="0,0,12"
+						        _halfExtent="24,14">
+							<_listSurvivorStart>
+								<item>-16,0,0</item>
+								<item>-16,0,-10</item>
+							</_listSurvivorStart>
+							<_listGenerator>
+								<item>16,0,8</item>
+								<item>-16,0,1.5</item>
+								<item>-16,0,-11.5</item>
+							</_listGenerator>
+							<_listHook>
+								<item>0,0,6</item>
+								<item>0,0,-6</item>
+							</_listHook>
+							<_listGate>
+								<item>-22,0,0</item>
+								<item>22,0,0</item>
+							</_listGate>
+							<_listPallet>
+								<item>-6,0,4</item>
+								<item>6,0,-4</item>
+							</_listPallet>
+							<_listWindow>
+								<item>8,0,4</item>
+							</_listWindow>
+							<_listLocker>
+								<item>10,0,-10</item>
+							</_listLocker>
+						</_stage>
+						<_botSettings _sightRange="14"
+						              _fleeRange="7"
+						              _memorySeconds="5"
+						              _patrolSteps="180" />
+					</AsymmetricHorrorGameModeComponent>
+					<AsymmetricHorrorAvatarComponent _localID="7730915246318852047" _componentName="AsymmetricHorrorAvatarComponent"
+					                                 _bActive="true"
+					                                 _moveAction="Move"
+					                                 _useAction="AsymmetricHorror.Use"
+					                                 _markerPrefab="game/playground/prefabs/ruleviews/cube.prefab.xml" />
+					<HUDControllerComponent _localID="17122754535480611078" _componentName="HUDControllerComponent"
+					                        _bActive="true"
+					                        _documentPath="game/playground/asymmetrichorror/ui/hud.ui.xml" />
+				</_listComponent>
+			</GameObject>
+		</entity>
+	</entities>
+</Scene>

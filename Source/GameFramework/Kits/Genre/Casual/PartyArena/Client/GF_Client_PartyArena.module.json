@@ -1,0 +1,22 @@
+{
+    "_name": "GF_Client_PartyArena",
+    "_version": "1.0.0",
+    "_kind": "Kit",
+    "_description": "파티 아레나 키트(클라이언트) — 조작 입력을 디렉터 명령으로 바꾸고 트램펄린 무대 · 사람 · 아이템을 보이며 HUD 를 채운다(뷰 · 입력 · HUD). 규칙 · 디렉터는 GF_PartyArena",
+    "_listDependency": [
+        {
+            "_name": "GameFramework"
+        },
+        {
+            "_name": "GF_PartyArena"
+        }
+    ],
+    "_listConfiguration": [
+        "Dev",
+        "Shipping"
+    ],
+    "_listTarget": [
+        "Client"
+    ],
+    "_bEnabledByDefault": true
+}

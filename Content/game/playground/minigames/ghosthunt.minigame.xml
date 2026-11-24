@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="utf-8"?>
+<?asset guid="e017c695bbdd4c43a6e2a615423271bf"?>
+<!--
+  유령 사냥 미니게임(저택의 유령을 손전등으로 기절시키고 청소기로 빨아들여 방마다 불을 켠다) — GhostHunt 키트. 손전등 · 유령 · 방 · 문(data/ghosts.xml)은 게임 기능 GhostHunt 가 미니게임 범위에 걸고,
+  방 그래프 · 전리품(ghosthunt/data/mansion.*)은 맵의 디렉터가 씬 참조로 받는다.
+  맵의 Mansion 오브젝트에 GhostHuntGameModeComponent → GhostHuntAvatarComponent(GF_Client_GhostHunt) → HUDControllerComponent 가 그 순서로 붙는다.
+  여러 방을 잇는 탐험이라 안에서 저장한다. 입력은 걷기 공통 레이어와 GhostHunt 레이어(ghosthunt/data/ghosthunt.input.xml)만 켠다. 시나리오 automation/ghosthunt_slice 가 실행 전역 변수 gv_firstMinigame 로 들어간다.
+-->
+<Minigame name="ghosthunt" map="game/playground/ghosthunt/maps/mansion.scene.xml" entry="SceneSwitch" portalSlot="22" save="Allowed" features="GhostHunt" inputContexts="Movement,GhostHunt" catalogs="GhostCatalog"/>

@@ -58,6 +58,20 @@
   <!-- 사격장 미니게임(minigames/shooter3d)의 사격 · 재장전 · 무기 고르기 · 시점 — 꺼진 레이어 Shooter(미니게임이 켠다). 시점 확대 · 궤도는 공통. -->
   <inputMap path="common/input/cameraorbit.input.xml"/>
   <inputMap path="game/playground/shooter3d/data/shooter.input.xml"/>
+  <!-- 비대칭 공포 미니게임(minigames/asymmetrichorror)의 쓰기 — 꺼진 레이어 AsymmetricHorror(미니게임이 켠다). 로컬 사용자 둘이 같은 액션을 자기 장치로 읽는다. -->
+  <inputMap path="game/playground/asymmetrichorror/data/asymmetrichorror.input.xml"/>
+  <!-- 협동 수집 공포 미니게임(minigames/coopscavenger)의 쓰기 · 레버 — 꺼진 레이어 CoopScavenger(미니게임이 켠다). 로컬 사용자 둘이 같은 액션을 자기 장치로 읽는다. -->
+  <inputMap path="game/playground/coopscavenger/data/coopscavenger.input.xml"/>
+  <!-- 유령 사냥 미니게임(minigames/ghosthunt)의 손전등 · 스트로브 · 청소기 · 쓰기 — 꺼진 레이어 GhostHunt(미니게임이 켠다). -->
+  <inputMap path="game/playground/ghosthunt/data/ghosthunt.input.xml"/>
+  <!-- 생존 공포 미니게임(minigames/survivalhorror)의 쓰기 · 손전등 · 회복 — 꺼진 레이어 SurvivalHorror(미니게임이 켠다). -->
+  <inputMap path="game/playground/survivalhorror/data/survivalhorror.input.xml"/>
+  <!-- 카트 경기(minigames/kartracing) · 파티 아레나(minigames/partyarena) · 리듬(minigames/rhythm) · 덱 전투(minigames/cardgame) · 정복(minigames/sidescrollconquest) — 저마다 꺼진 레이어(미니게임이 켠다). -->
+  <inputMap path="game/playground/kartracing/data/kartracing.input.xml"/>
+  <inputMap path="game/playground/partyarena/data/partyarena.input.xml"/>
+  <inputMap path="game/playground/rhythm/data/rhythm.input.xml"/>
+  <inputMap path="game/playground/cardgame/data/cardgame.input.xml"/>
+  <inputMap path="game/playground/sidescrollconquest/data/sidescrollconquest.input.xml"/>
   <!-- 등불 길 미니게임(minigames/classicjrpg)의 공격 · 주문 · 방어 · 도망 · 쉬기 — 꺼진 레이어 JRPG(미니게임이 켠다). -->
   <inputMap path="game/playground/classicjrpg/data/jrpg.input.xml"/>
   <!-- 풀밭 수집 미니게임(minigames/monstercollector)의 기술 · 볼 · 교체 · 도망 · 쉬기 — 꺼진 레이어 MonsterCollector(미니게임이 켠다). -->

@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="utf-8"?>
+<?asset guid="79bb11de8ae7478c96fdb6190067eae6"?>
+<!-- 유령 사냥 미니게임의 가구 전리품 — 동전 이름은 카탈로그의 통화(Coins)라 지갑으로 간다. -->
+<LootCatalog>
+	<Table id="dresserLoot" rolls="1">
+		<Entry item="Coins" weight="1" min="5" max="10"/>
+	</Table>
+</LootCatalog>

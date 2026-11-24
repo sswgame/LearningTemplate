@@ -18,6 +18,11 @@
   <!-- 관통탄: 한 발이 앞의 적을 꿰뚫고 뒤의 적까지 둘을 더 맞힌다(광선이라 맞은 몸 뒤에서 남은 선분을 다시 묻는다). 킬캠 시나리오(game.playground.shooter3d_pierce_killcam)가 치트로 넣는다. -->
   <Projectile id="piercing_round" _base="rifle_round" damage="60" pierceCount="2" tracerColor="1.2,2.4,3,1" tracerWidth="0.04"/>
 
+  <!-- 카트 경기(minigames/kartracing)의 아이템 탄 — 평면에서 돌아 중력이 없고, 사거리 대신 수명으로 끝난다. 놓인 것(바나나)은 속력 · 수명이 0 이다(반응은 kartracing/data/circuit.kartitems.xml). -->
+  <Projectile id="kart_banana" tags="Ammo.Kart" speed="0" lifetime="0" range="0" radius="1.2" gravityScale="0"/>
+  <Projectile id="kart_green" tags="Ammo.Kart" speed="45" lifetime="2" range="0" radius="1.2" gravityScale="0"/>
+  <Projectile id="kart_red" _base="kart_green" lifetime="4" homingRate="400"/>
+
   <Impact id="body_incendiary" surface="Body" when="Ammo.Incendiary" color="4,0.8,0.1,1" size="0.32"/>
   <Impact id="body" surface="Body" color="1,0.45,0.2,1" size="0.18"/>
   <Impact id="cover" surface="Cover" color="0.9,0.85,0.6,1" size="0.1"/>

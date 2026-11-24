@@ -30,7 +30,7 @@ namespace
   <Window fastTime="0.5" mediumTime="1" killerTime="1" fastSpeedRatio="0.9" noiseRadius="40" blockTime="2" blockCount="2"/>
   <Locker searchTime="1"/>
   <Endgame gateTime="1" collapseTime="2" slowScale="0.5" hatchRemaining="1"/>
-  <Killer id="trapper" speedRatio="1.25" lungeRange="3" lungeAngle="57.29578" hitCooldown="1" missCooldown="1" cooldownSpeedScale="0.5" terrorRadius="32" abilityCooldown="5" carrySpeedScale="0.5"/>
+  <Killer id="trapper" speedRatio="1.25" lungeRange="3" lungeAngle="57.29578" hitCooldown="1" missCooldown="1" cooldownSpeedScale="0.5" terrorRadius="32" abilityCooldown="5" abilityDuration="2" abilitySpeedScale="1.5" abilityTerrorScale="0.5" carrySpeedScale="0.5"/>
   <Killer id="nurse"/>
   <Category id="Objectives" cap="100"/>
   <Score action="Repair" category="Objectives" points="500"/>
@@ -74,8 +74,8 @@ namespace
     /** @brief 정상 상태 바이트입니다. 칸 하나를 바꿔 읽어 봅니다. */
     struct AsymmetricFixtureBytes
     {
-        // 살인마 칸은 점수(`StatBlock`, 길이는 그 writeState 로 잰다) 뒤 위치 · 앞 · 넘기 끝(36) 타이머 넷(16) 든 사람 · 부수는 판자 · 참가자(12) 넘기(1)이다.
-        static constexpr size_t kKillerBytesAfterScore = 65;
+        // 살인마 칸은 점수(`StatBlock`, 길이는 그 writeState 로 잰다) 뒤 위치 · 앞 · 넘기 끝(36) 타이머 다섯(20) 든 사람 · 부수는 판자 · 참가자(12) 넘기(1)이다.
+        static constexpr size_t kKillerBytesAfterScore = 69;
         vector<uint8>           _listByte{};
         size_t                  _completedAt{ 0 }; ///< 리플렉션 칸의 완료 수 자리이다(해치 자리 다음)
         size_t                  _stageBase{ 0 };   ///< 무대(갈고리 수)가 시작하는 자리이다
@@ -507,6 +507,37 @@ SW_TEST_CASE_F( AsymmetricHorrorRulesTest, AbilityCooldown )
     SW_EXPECT_FALSE( _match.useKillerAbility() );
     advance( 5.2f );
     SW_EXPECT_TRUE( _match.useKillerAbility() );
+}
+
+/**
+ * @brief [AsymmetricHorrorRulesTest] 능력: 쓰는 동안 빨라지고 심장 소리가 가까이서만 들리며, 남은 시간은 상태에 실리고, 끝나면 되돌아온다
+ */
+SW_TEST_CASE_F( AsymmetricHorrorRulesTest, AbilityHastensAndHushes )
+{
+    SW_REQUIRE_TRUE( _match.addSurvivor( float3{} ) == 0 );
+    _match.start();
+    _match.setKillerPosition( AsymmetricHorrorTestUtil::at( 8.0f, 0.0f ) );
+    const float32 speed = _match.computeKillerSpeed();
+    SW_EXPECT_NEAR( 0.75f, _match.computeHeartbeat( 0 ), kAsymmetricTolerance );
+    SW_REQUIRE_TRUE( _match.useKillerAbility() );
+    SW_EXPECT_NEAR( speed * 1.5f, _match.computeKillerSpeed(), kAsymmetricTolerance );
+    SW_EXPECT_NEAR( 0.5f, _match.computeHeartbeat( 0 ), kAsymmetricTolerance );
+    expectRoundTrip(); // 0.5 초를 흘린다
+    advance( 1.8f );
+    SW_EXPECT_NEAR( speed, _match.computeKillerSpeed(), kAsymmetricTolerance );
+    SW_EXPECT_NEAR( 0.75f, _match.computeHeartbeat( 0 ), kAsymmetricTolerance );
+}
+
+/**
+ * @brief [AsymmetricHorrorRulesTest] 능력: 이어지는 시간을 적지 않은 살인마는 능력이 없다
+ */
+SW_TEST_CASE_F( AsymmetricHorrorRulesTest, KillerWithoutDurationHasNoAbility )
+{
+    AsymmetricHorrorMatch match;
+    SW_REQUIRE_TRUE( match.initialize( AsymmetricHorrorTestUtil::makeSettings( "nurse" ), &_catalog ) );
+    SW_REQUIRE_TRUE( match.addSurvivor( AsymmetricHorrorTestUtil::at( 90.0f, 0.0f ) ) == 0 );
+    match.start();
+    SW_EXPECT_FALSE( match.useKillerAbility() );
 }
 
 // ── 들기, 갈고리 ─────────────────────────────────────────────────────

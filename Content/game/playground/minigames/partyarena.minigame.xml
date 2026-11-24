@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="utf-8"?>
+<?asset guid="dd176a43dca33e53931fd10ad9070184"?>
+<!--
+  파티 아레나 미니게임(트램펄린 밀어내기 라운드 시리즈 — 사람 하나 · 봇 둘) — PartyArena 키트. 라운드 · 순위 점수(data/partyrounds.xml)는 게임 기능 PartyArena 가 미니게임 범위에 건다.
+  판은 맵의 PartyGameModeComponent 가 돌리고 입력 · 모습 · HUD 는 같은 오브젝트의 PartyArenaViewComponent(GF_Client_PartyArena)다. 짧은 대전이라 판이 끝날 때까지 저장을 막는다.
+  시나리오 automation/partyarena 이 실행 전역 변수 gv_firstMinigame 로 들어간다.
+-->
+<Minigame name="partyarena" map="game/playground/partyarena/maps/trampoline.scene.xml" entry="SceneSwitch" portalSlot="16" save="Blocked" features="PartyArena" inputContexts="Movement,PartyArena" catalogs="PartyRoundSeries"/>

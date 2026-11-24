@@ -31,6 +31,12 @@ namespace sw
         static bool play( const AssetID& assetID, const hashed_string& bus = hashed_string{} );
         /** @brief 배경 음악을 바꿉니다. */
         static bool playMusic( const AssetID& assetID );
+        /** @brief 적응형 음악을 시작 구간부터 냅니다(`ISoundPlayer::playAdaptiveMusic`). 창구가 없으면 false 입니다. */
+        [[nodiscard]] static bool playAdaptiveMusic( const AssetID& assetID );
+        /** @brief 나고 있는 음악을 멈춥니다. */
+        static void stopMusic();
+        /** @brief 적응형 음악의 지금 구간 시각(초)입니다(`ISoundPlayer::findMusicSeconds`). 창구 · 나는 음악이 없으면 nullopt 입니다. */
+        static optional<float32> findMusicSeconds();
 
         /**
          * @brief 이벤트 라이브러리를 올립니다. 이름은 경로이며, 같은 경로면 바꿉니다. 게임 초기화에서 부릅니다.

@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="utf-8"?>
+<?asset guid="041dc3291ef33e6291a7d17fc9ab5826"?>
+<!-- 카트 경기(minigames/kartracing)의 아이템 — 운동은 탄(data/projectiles.xml 의 kart_*), 반응(회전 · 감속)과 쓰는 법은 여기다. 뒤처질수록 강한 것이 나온다(네 대 기준). -->
+<KartItemCatalog places="4">
+	<Item id="banana" kind="Banana" projectile="kart_banana" spin="1" hitSpeedScale="0.5"/>
+	<Item id="green" kind="GreenShell" projectile="kart_green" spin="1"/>
+	<Item id="red" kind="RedShell" projectile="kart_red" spin="1.2"/>
+	<Item id="booster" kind="Booster" boost="1.5"/>
+	<Item id="shield" kind="Shield" shield="6"/>
+	<RankTable from="1" to="1"><Entry item="banana" weight="3"/><Entry item="shield" weight="1"/></RankTable>
+	<RankTable from="2" to="3"><Entry item="green" weight="2"/><Entry item="red" weight="2"/><Entry item="booster" weight="1"/></RankTable>
+	<RankTable from="4" to="4"><Entry item="red" weight="1"/><Entry item="booster" weight="3"/></RankTable>
+</KartItemCatalog>

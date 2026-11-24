@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="utf-8"?>
+<?asset guid="b99cbb139c1d4f1f9f91b7a2500729ed"?>
+<!--
+  비대칭 공포 미니게임(생존자 둘 대 살인마 봇 하나 — 발전기를 고쳐 탈출한다) — AsymmetricHorror 키트. 규칙 · 살인마(data/asymhorror.xml)는 게임 기능 AsymmetricHorror 가 미니게임 범위에 건다.
+  맵의 Match 오브젝트에 AsymmetricHorrorGameModeComponent → AsymmetricHorrorAvatarComponent(GF_Client_AsymmetricHorror) → HUDControllerComponent 가 그 순서로 붙는다.
+  한 화면 협동 둘이다(localPlayers) — 사용자 0 은 키보드, 사용자 1 은 짝지은 패드. 사용자 1 이 입력을 내기 전에는 봇이 그 생존자를 맡는다. 짧은 대전이라 안에서 저장하지 않는다.
+  입력은 걷기 공통 레이어와 AsymmetricHorror 레이어(asymmetrichorror/data/asymmetrichorror.input.xml)만 켠다. 시나리오 automation/asymmetrichorror_slice 가 실행 전역 변수 gv_firstMinigame 로 들어간다.
+-->
+<Minigame name="asymmetrichorror" map="game/playground/asymmetrichorror/maps/estate.scene.xml" entry="SceneSwitch" portalSlot="20" localPlayers="2" save="Blocked" features="AsymmetricHorror" inputContexts="Movement,AsymmetricHorror" catalogs="AsymmetricHorrorRulesCatalog"/>

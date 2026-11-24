@@ -1,0 +1,56 @@
+<?asset guid="0f4f893807bb0c8cd458b4b441dc3627"?>
+<UIDocument _schemaVersion="1">
+	<UIScreenDef _layer="HUD" _bTakesFocus="false" _bShowCursor="false" />
+	<SafeZonePanel _visibility="SelfHitTestInvisible">
+		<CanvasPanel _visibility="SelfHitTestInvisible">
+			<TextWidget _name="TerritoryLabel" _text="Sites held" _styleClass="hud" _visibility="HitTestInvisible">
+				<_slot _anchorMin="0,0" _anchorMax="0,0" _offsetMin="48,40" _offsetMax="308,76" />
+			</TextWidget>
+			<TextWidget _name="Territory" _text="{bind:_territory}" _styleClass="hud" _visibility="HitTestInvisible" _bLocalized="false">
+				<_slot _anchorMin="0,0" _anchorMax="0,0" _offsetMin="308,40" _offsetMax="468,76" />
+			</TextWidget>
+			<TextWidget _name="SiteCountLabel" _text="All sites" _styleClass="hud" _visibility="HitTestInvisible">
+				<_slot _anchorMin="0,0" _anchorMax="0,0" _offsetMin="48,80" _offsetMax="308,116" />
+			</TextWidget>
+			<TextWidget _name="SiteCount" _text="{bind:_siteCount}" _styleClass="hud" _visibility="HitTestInvisible" _bLocalized="false">
+				<_slot _anchorMin="0,0" _anchorMax="0,0" _offsetMin="308,80" _offsetMax="468,116" />
+			</TextWidget>
+			<TextWidget _name="SquadLabel" _text="Squad" _styleClass="hud" _visibility="HitTestInvisible">
+				<_slot _anchorMin="0,0" _anchorMax="0,0" _offsetMin="48,120" _offsetMax="308,156" />
+			</TextWidget>
+			<TextWidget _name="Squad" _text="{bind:_squad}" _styleClass="hud" _visibility="HitTestInvisible" _bLocalized="false">
+				<_slot _anchorMin="0,0" _anchorMax="0,0" _offsetMin="308,120" _offsetMax="468,156" />
+			</TextWidget>
+			<TextWidget _name="PopulationLabel" _text="Population" _styleClass="hud" _visibility="HitTestInvisible">
+				<_slot _anchorMin="0,0" _anchorMax="0,0" _offsetMin="48,160" _offsetMax="308,196" />
+			</TextWidget>
+			<TextWidget _name="Population" _text="{bind:_population}" _styleClass="hud" _visibility="HitTestInvisible" _bLocalized="false">
+				<_slot _anchorMin="0,0" _anchorMax="0,0" _offsetMin="308,160" _offsetMax="468,196" />
+			</TextWidget>
+			<TextWidget _name="PopulationCapLabel" _text="Population cap" _styleClass="hud" _visibility="HitTestInvisible">
+				<_slot _anchorMin="0,0" _anchorMax="0,0" _offsetMin="48,200" _offsetMax="308,236" />
+			</TextWidget>
+			<TextWidget _name="PopulationCap" _text="{bind:_populationCap}" _styleClass="hud" _visibility="HitTestInvisible" _bLocalized="false">
+				<_slot _anchorMin="0,0" _anchorMax="0,0" _offsetMin="308,200" _offsetMax="468,236" />
+			</TextWidget>
+			<TextWidget _name="GoldLabel" _text="Gold" _styleClass="hud" _visibility="HitTestInvisible">
+				<_slot _anchorMin="0,0" _anchorMax="0,0" _offsetMin="48,240" _offsetMax="308,276" />
+			</TextWidget>
+			<TextWidget _name="Gold" _text="{bind:_resource}" _styleClass="hud" _visibility="HitTestInvisible" _bLocalized="false">
+				<_slot _anchorMin="0,0" _anchorMax="0,0" _offsetMin="308,240" _offsetMax="468,276" />
+			</TextWidget>
+			<TextWidget _name="HealthLabel" _text="Commander" _styleClass="hud" _visibility="HitTestInvisible">
+				<_slot _anchorMin="0,0" _anchorMax="0,0" _offsetMin="48,280" _offsetMax="308,316" />
+			</TextWidget>
+			<ProgressBarWidget _name="Health" _percent="{bind:_healthRatio}" _visibility="HitTestInvisible" _fillColor="0.3,0.6,1,1" _backgroundColor="0,0,0,0.55">
+				<_slot _anchorMin="0,0" _anchorMax="0,0" _offsetMin="308,288" _offsetMax="628,308" />
+			</ProgressBarWidget>
+			<TextWidget _name="Won" _text="The land is yours!" _styleClass="hud" _visibility="{bind:_wonVisibility}">
+				<_slot _anchorMin="0.5,0" _anchorMax="0.5,0" _offsetMin="-200,120" _offsetMax="200,156" />
+			</TextWidget>
+			<TextWidget _name="Lost" _text="Your home is lost" _styleClass="hud" _visibility="{bind:_lostVisibility}">
+				<_slot _anchorMin="0.5,0" _anchorMax="0.5,0" _offsetMin="-200,160" _offsetMax="200,196" />
+			</TextWidget>
+		</CanvasPanel>
+	</SafeZonePanel>
+</UIDocument>

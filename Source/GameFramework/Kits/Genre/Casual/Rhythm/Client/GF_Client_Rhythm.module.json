@@ -1,0 +1,22 @@
+{
+    "_name": "GF_Client_Rhythm",
+    "_version": "1.0.0",
+    "_kind": "Kit",
+    "_description": "리듬 키트(클라이언트) — 음악을 틀어 그 시계(구간 박)와 레인 입력을 디렉터에 넘기고 노트를 보이며 HUD 를 채운다(뷰 · 입력 · HUD). 규칙 · 디렉터는 GF_Rhythm",
+    "_listDependency": [
+        {
+            "_name": "GameFramework"
+        },
+        {
+            "_name": "GF_Rhythm"
+        }
+    ],
+    "_listConfiguration": [
+        "Dev",
+        "Shipping"
+    ],
+    "_listTarget": [
+        "Client"
+    ],
+    "_bEnabledByDefault": true
+}

@@ -2,6 +2,7 @@
 
 #include "Engine/Audio/AudioSoundPlayer.h"
 
+#include "Core/Foundation/Constants.h"
 #include "Core/Log/Logger.h"
 
 #include "Engine/Audio/AudioEngine.h"
@@ -26,6 +27,28 @@ namespace sw
     bool AudioSoundPlayer::playMusic( const AssetID& assetID )
     {
         return _audio.isInitialized() && _audio.playMusic( assetID );
+    }
+
+    bool AudioSoundPlayer::playAdaptiveMusic( const AssetID& assetID )
+    {
+        return _audio.isInitialized() && _audio.playAdaptiveMusic( assetID );
+    }
+
+    void AudioSoundPlayer::stopMusic()
+    {
+        if ( _audio.isInitialized() )
+            _audio.stopMusic();
+    }
+
+    optional<float32> AudioSoundPlayer::findMusicSeconds() const
+    {
+        const AudioEngine* const pEngine = findEngine();
+        if ( pEngine == nullptr )
+            return nullopt;
+        const AudioMusicStatus status = pEngine->getMusicStatus();
+        if ( status._bPlaying == false || status._tempo <= 0.0f )
+            return nullopt;
+        return static_cast<float32>( status._beat * static_cast<float64>( constant::time::kSecondsPerMinute ) / static_cast<float64>( status._tempo ) );
     }
 
     bool AudioSoundPlayer::loadEvents( const AssetID& assetID )

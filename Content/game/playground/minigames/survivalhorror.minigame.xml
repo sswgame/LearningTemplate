@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="utf-8"?>
+<?asset guid="b2ad1b3876e9482d91d5d67c0ed3de7a"?>
+<!--
+  생존 공포 미니게임(열쇠 · 단서 · 손전등 · 괴물을 지나 집을 빠져나간다) — SurvivalHorror 키트. 규칙 · 아이템 · 괴물 · 자물쇠(data/horror.xml)는 게임 기능 SurvivalHorror 가 미니게임 범위에 걸고,
+  방 그래프(survivalhorror/data/house.areas.xml)는 맵의 디렉터가 씬 참조로 받는다.
+  맵의 House 오브젝트에 SurvivalHorrorGameModeComponent → SurvivalHorrorAvatarComponent(GF_Client_SurvivalHorror) → HUDControllerComponent 가 그 순서로 붙는다.
+  타자기 세이브가 있는 긴 판이라 안에서 저장한다. 입력은 걷기 공통 레이어와 SurvivalHorror 레이어(survivalhorror/data/survivalhorror.input.xml)만 켠다. 시나리오 automation/survivalhorror_slice 가 실행 전역 변수 gv_firstMinigame 로 들어간다.
+-->
+<Minigame name="survivalhorror" map="game/playground/survivalhorror/maps/house.scene.xml" entry="SceneSwitch" portalSlot="23" save="Allowed" features="SurvivalHorror" inputContexts="Movement,SurvivalHorror" catalogs="SurvivalHorrorCatalog"/>

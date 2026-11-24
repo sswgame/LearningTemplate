@@ -17,6 +17,7 @@
 #include "Engine/Asset/Cache/SharedAssetCache.h"
 #include "Engine/Content/AssetTypeRegistry.h"
 #include "Engine/Reflection/ReflectionMacros.h"
+#include "Engine/Serialization/Format/StateIO.h"
 
 #include "GameFramework/GameFrameworkExports.h"
 #include "GameFramework/Runtime/Foundation/GameData/XMLCatalog.h"
@@ -103,6 +104,12 @@ namespace sw
          * @return 받아들였으면 true 이다(사람 수가 다르거나 이미 끝났으면 false).
          */
         [[nodiscard]] bool reportRound( const vector<int32>& listRoundScore );
+
+        /**
+         * @brief 점수표(총점 · 라운드 번호 · 우승자 · 단계)를 씁니다. 라운드 목록과 점수 규칙은 저장하지 않고(카탈로그가 정본), 이벤트는 읽을 때 비웁니다.
+         *        `writeState` 가 쓴 바이트를 읽어 상태를 복원합니다. 같은 카탈로그로 `start` 한 뒤에 부르며, 사람 수가 다르거나 데이터가 깨졌으면 false 를 반환하고 상태는 그대로입니다.
+         */
+        SW_DECLARE_STATE_IO();
 
         const PartyRoundDef*         getCurrentRound() const;
         int32                        getRoundNumber() const { return _series.getRoundIndex(); }

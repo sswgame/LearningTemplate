@@ -17,11 +17,29 @@ msgctxt "/"
 msgid "/"
 msgstr "/"
 
+#. Context: TextWidget._text
+#: game/playground/rhythm/ui/hud.ui.xml
+msgctxt "Accuracy (%)"
+msgid "Accuracy (%)"
+msgstr "정확도(%)"
+
 #. Context: SequenceBinding._name
 #: game/playground/data/cinematic.seq.xml
 msgctxt "Actor"
 msgid "Actor"
 msgstr "배우"
+
+#. Context: TextWidget._text
+#: game/playground/sidescrollconquest/ui/hud.ui.xml
+msgctxt "All sites"
+msgid "All sites"
+msgstr "모든 거점"
+
+#. Context: TextWidget._text
+#: game/playground/partyarena/ui/hud.ui.xml
+msgctxt "Another player wins"
+msgid "Another player wins"
+msgstr "다른 사람이 우승했다"
 
 #. Context: Weapon name
 #: common/data/items.xml
@@ -84,6 +102,12 @@ msgid "Buy more while open (J)"
 msgstr "영업 중에도 살 수 있습니다 (J)"
 
 #. Context: TextWidget._text
+#: game/playground/cardgame/ui/hud.ui.xml
+msgctxt "Card cost"
+msgid "Card cost"
+msgstr "카드 비용"
+
+#. Context: TextWidget._text
 #: game/playground/monstercollector/ui/hud.ui.xml
 msgctxt "Caught"
 msgid "Caught"
@@ -107,6 +131,31 @@ msgctxt "Clues"
 msgid "Clues"
 msgstr "단서"
 
+#. Context: TextWidget._text
+#: game/playground/ghosthunt/ui/hud.ui.xml
+msgctxt "Coins"
+msgid "Coins"
+msgstr "동전"
+
+#. Context: TextWidget._text
+#: game/playground/partyarena/ui/hud.ui.xml
+#: game/playground/rhythm/ui/hud.ui.xml
+msgctxt "Combo"
+msgid "Combo"
+msgstr "콤보"
+
+#. Context: TextWidget._text
+#: game/playground/sidescrollconquest/ui/hud.ui.xml
+msgctxt "Commander"
+msgid "Commander"
+msgstr "지휘관"
+
+#. Context: TextWidget._text
+#: game/playground/coopscavenger/ui/hud.ui.xml
+msgctxt "Credits"
+msgid "Credits"
+msgstr "크레딧"
+
 #. Context: SequenceBinding._name
 #: game/playground/data/cinematic.seq.xml
 msgctxt "CutA"
@@ -120,16 +169,64 @@ msgid "CutB"
 msgstr "컷 B"
 
 #. Context: TextWidget._text
+#: game/playground/ghosthunt/ui/hud.ui.xml
+msgctxt "Dark rooms"
+msgid "Dark rooms"
+msgstr "어두운 방"
+
+#. Context: TextWidget._text
 #: game/playground/restaurantsim/ui/hud.ui.xml
 msgctxt "Day"
 msgid "Day"
 msgstr "날"
+
+#. Context: TextWidget._text
+#: game/playground/coopscavenger/ui/hud.ui.xml
+msgctxt "Days left"
+msgid "Days left"
+msgstr "남은 날"
+
+#. Context: TextWidget._text
+#: game/playground/cardgame/ui/hud.ui.xml
+msgctxt "Draw pile"
+msgid "Draw pile"
+msgstr "뽑을 더미"
 
 #. Context: JRPG name
 #: game/playground/data/jrpg.xml
 msgctxt "Dusk Moth"
 msgid "Dusk Moth"
 msgstr "땅거미 나방"
+
+#. Context: TextWidget._text
+#: game/playground/cardgame/ui/hud.ui.xml
+msgctxt "Enemy health"
+msgid "Enemy health"
+msgstr "상대 체력"
+
+#. Context: TextWidget._text
+#: game/playground/cardgame/ui/hud.ui.xml
+msgctxt "Enemy intent"
+msgid "Enemy intent"
+msgstr "상대가 할 일"
+
+#. Context: TextWidget._text
+#: game/playground/cardgame/ui/hud.ui.xml
+msgctxt "Energy"
+msgid "Energy"
+msgstr "에너지"
+
+#. Context: TextWidget._text
+#: game/playground/asymmetrichorror/ui/hud.ui.xml
+msgctxt "Escaped"
+msgid "Escaped"
+msgstr "탈출했습니다"
+
+#. Context: TextWidget._text
+#: game/playground/ghosthunt/ui/hud.ui.xml
+msgctxt "Every room is lit"
+msgid "Every room is lit"
+msgstr "모든 방에 불을 켰습니다"
 
 #. Context: TextWidget._text
 #: game/playground/monsterhuntrpg/ui/hud.ui.xml
@@ -150,6 +247,12 @@ msgid "Fernwarden"
 msgstr "고사리지기"
 
 #. Context: TextWidget._text
+#: game/playground/kartracing/ui/hud.ui.xml
+msgctxt "Finish!"
+msgid "Finish!"
+msgstr "결승!"
+
+#. Context: TextWidget._text
 #: game/playground/classicjrpg/ui/hud.ui.xml
 msgctxt "Follow the lantern trail to its end"
 msgid "Follow the lantern trail to its end"
@@ -160,6 +263,18 @@ msgstr "등불 길의 끝까지 가세요"
 msgctxt "GateCut"
 msgid "GateCut"
 msgstr ""
+
+#. Context: TextWidget._text
+#: game/playground/asymmetrichorror/ui/hud.ui.xml
+msgctxt "Generators left"
+msgid "Generators left"
+msgstr "남은 발전기"
+
+#. Context: TextWidget._text
+#: game/playground/kartracing/ui/hud.ui.xml
+msgctxt "Get ready!"
+msgid "Get ready!"
+msgstr "준비!"
 
 #. Context: Item name
 #: common/data/items.xml
@@ -182,9 +297,10 @@ msgstr "어스름"
 #. Context: TextWidget._text
 #: game/playground/classicjrpg/ui/hud.ui.xml
 #: game/playground/restaurantsim/ui/hud.ui.xml
+#: game/playground/sidescrollconquest/ui/hud.ui.xml
 msgctxt "Gold"
 msgid "Gold"
-msgstr "골드"
+msgstr "금"
 
 #. Context: TextWidget._text
 #: game/playground/classicjrpg/ui/hud.ui.xml
@@ -211,6 +327,42 @@ msgstr "텅 빈 수사슴"
 msgctxt "Hour"
 msgid "Hour"
 msgstr "시각"
+
+#. Context: TextWidget._text
+#: game/playground/coopscavenger/ui/hud.ui.xml
+msgctxt "In orbit - pull the lever to land"
+msgid "In orbit - pull the lever to land"
+msgstr "궤도 - 레버를 당겨 착륙하세요"
+
+#. Context: TextWidget._text
+#: game/playground/survivalhorror/ui/hud.ui.xml
+msgctxt "It is too dark to see"
+msgid "It is too dark to see"
+msgstr "너무 어두워 보이지 않습니다"
+
+#. Context: TextWidget._text
+#: game/playground/kartracing/ui/hud.ui.xml
+msgctxt "Item ready"
+msgid "Item ready"
+msgstr "아이템 있음"
+
+#. Context: TextWidget._text
+#: game/playground/survivalhorror/ui/hud.ui.xml
+msgctxt "Items"
+msgid "Items"
+msgstr "물건"
+
+#. Context: TextWidget._text
+#: game/playground/kartracing/ui/hud.ui.xml
+msgctxt "Karts"
+msgid "Karts"
+msgstr "달리는 차"
+
+#. Context: TextWidget._text
+#: game/playground/ghosthunt/ui/hud.ui.xml
+msgctxt "Keys"
+msgid "Keys"
+msgstr "열쇠"
 
 #. Context: Item name
 #: common/data/items.xml
@@ -242,11 +394,35 @@ msgctxt "Lantern Guard"
 msgid "Lantern Guard"
 msgstr "등불지기"
 
+#. Context: TextWidget._text
+#: game/playground/kartracing/ui/hud.ui.xml
+msgctxt "Lap"
+msgid "Lap"
+msgstr "바퀴"
+
+#. Context: TextWidget._text
+#: game/playground/kartracing/ui/hud.ui.xml
+msgctxt "Laps to race"
+msgid "Laps to race"
+msgstr "모두 몇 바퀴"
+
 #. Context: Monster name
 #: game/playground/data/monstercollector.xml
 msgctxt "Leaf Slap"
 msgid "Leaf Slap"
 msgstr "잎 치기"
+
+#. Context: TextWidget._text
+#: game/playground/rhythm/ui/hud.ui.xml
+msgctxt "Life"
+msgid "Life"
+msgstr "라이프"
+
+#. Context: TextWidget._text
+#: game/playground/ghosthunt/ui/hud.ui.xml
+msgctxt "Light: stun an attacking ghost - Vacuum: pull it in - Use: surge or search"
+msgid "Light: stun an attacking ghost - Vacuum: pull it in - Use: surge or search"
+msgstr "손전등: 공격하는 유령을 기절 - 청소기: 빨아들이기 - 쓰기: 서지 · 뒤지기"
 
 #. Context: Item name
 #: common/data/items.xml
@@ -284,6 +460,12 @@ msgctxt "Next day (Enter)"
 msgid "Next day (Enter)"
 msgstr "다음 날 (Enter)"
 
+#. Context: TextWidget._text
+#: game/playground/asymmetrichorror/ui/hud.ui.xml
+msgctxt "No one wins"
+msgid "No one wins"
+msgstr "비겼습니다"
+
 #. Context: Item name
 #: common/data/items.xml
 msgctxt "Notched Blade"
@@ -309,6 +491,36 @@ msgid "Pistol"
 msgstr "권총"
 
 #. Context: TextWidget._text
+#: game/playground/kartracing/ui/hud.ui.xml
+msgctxt "Place"
+msgid "Place"
+msgstr "순위"
+
+#. Context: TextWidget._text
+#: game/playground/partyarena/ui/hud.ui.xml
+msgctxt "Points"
+msgid "Points"
+msgstr "순위 점수"
+
+#. Context: TextWidget._text
+#: game/playground/partyarena/ui/hud.ui.xml
+msgctxt "Points to win"
+msgid "Points to win"
+msgstr "우승 점수"
+
+#. Context: TextWidget._text
+#: game/playground/sidescrollconquest/ui/hud.ui.xml
+msgctxt "Population"
+msgid "Population"
+msgstr "인구"
+
+#. Context: TextWidget._text
+#: game/playground/sidescrollconquest/ui/hud.ui.xml
+msgctxt "Population cap"
+msgid "Population cap"
+msgstr "인구 한도"
+
+#. Context: TextWidget._text
 #: game/playground/restaurantsim/ui/hud.ui.xml
 msgctxt "Price"
 msgid "Price"
@@ -325,6 +537,24 @@ msgstr "이익"
 msgctxt "Pump Shotgun"
 msgid "Pump Shotgun"
 msgstr "펌프 산탄총"
+
+#. Context: TextWidget._text
+#: game/playground/coopscavenger/ui/hud.ui.xml
+msgctxt "Quota left"
+msgid "Quota left"
+msgstr "남은 할당량"
+
+#. Context: TextWidget._text
+#: game/playground/coopscavenger/ui/hud.ui.xml
+msgctxt "Quota met"
+msgid "Quota met"
+msgstr "할당량을 채웠습니다"
+
+#. Context: TextWidget._text
+#: game/playground/coopscavenger/ui/hud.ui.xml
+msgctxt "Quota missed"
+msgid "Quota missed"
+msgstr "할당량을 채우지 못했습니다"
 
 #. Context: TextWidget._text
 #: game/playground/monstercollector/ui/hud.ui.xml
@@ -356,6 +586,12 @@ msgctxt "Root Grip"
 msgid "Root Grip"
 msgstr "뿌리 잡기"
 
+#. Context: TextWidget._text
+#: game/playground/partyarena/ui/hud.ui.xml
+msgctxt "Round"
+msgid "Round"
+msgstr "라운드"
+
 #. Context: Item name
 #: common/data/items.xml
 msgctxt "Round Shield"
@@ -368,11 +604,35 @@ msgctxt "Round Shield (Merged)"
 msgid "Round Shield (Merged)"
 msgstr "둥근 방패(병합)"
 
+#. Context: TextWidget._text
+#: game/playground/partyarena/ui/hud.ui.xml
+msgctxt "Round score"
+msgid "Round score"
+msgstr "라운드 점수"
+
 #. Context: Item name
 #: common/data/items.xml
 msgctxt "Rusted Helm"
 msgid "Rusted Helm"
 msgstr "녹슨 투구"
+
+#. Context: TextWidget._text
+#: game/playground/asymmetrichorror/ui/hud.ui.xml
+msgctxt "Sacrificed"
+msgid "Sacrificed"
+msgstr "희생되었습니다"
+
+#. Context: TextWidget._text
+#: game/playground/rhythm/ui/hud.ui.xml
+msgctxt "Score"
+msgid "Score"
+msgstr "점수"
+
+#. Context: TextWidget._text
+#: game/playground/coopscavenger/ui/hud.ui.xml
+msgctxt "Scrap on the ship"
+msgid "Scrap on the ship"
+msgstr "실은 고철"
 
 #. Context: TextWidget._text
 #: game/playground/monsterhuntrpg/ui/hud.ui.xml
@@ -387,10 +647,34 @@ msgid "Seated"
 msgstr "착석"
 
 #. Context: TextWidget._text
+#: game/playground/kartracing/ui/hud.ui.xml
+msgctxt "Seconds to start"
+msgid "Seconds to start"
+msgstr "출발까지(초)"
+
+#. Context: TextWidget._text
 #: game/playground/restaurantsim/ui/hud.ui.xml
 msgctxt "Served"
 msgid "Served"
 msgstr "계산"
+
+#. Context: TextWidget._text
+#: game/playground/sidescrollconquest/ui/hud.ui.xml
+msgctxt "Sites held"
+msgid "Sites held"
+msgstr "내 거점"
+
+#. Context: TextWidget._text
+#: game/playground/asymmetrichorror/ui/hud.ui.xml
+msgctxt "Skill check - press Use"
+msgid "Skill check - press Use"
+msgstr "스킬 체크 - 쓰기를 누르세요"
+
+#. Context: TextWidget._text
+#: game/playground/survivalhorror/ui/hud.ui.xml
+msgctxt "Something fights back"
+msgid "Something fights back"
+msgstr "무언가가 맞서 싸웁니다"
 
 #. Context: TextWidget._text
 #: game/playground/monsterhuntrpg/ui/hud.ui.xml
@@ -398,17 +682,47 @@ msgctxt "Something is here (E)"
 msgid "Something is here (E)"
 msgstr "무언가 있습니다 (E)"
 
+#. Context: TextWidget._text
+#: game/playground/survivalhorror/ui/hud.ui.xml
+msgctxt "Something is not real"
+msgid "Something is not real"
+msgstr "무언가가 진짜가 아닙니다"
+
+#. Context: TextWidget._text
+#: game/playground/rhythm/ui/hud.ui.xml
+msgctxt "Song clear!"
+msgid "Song clear!"
+msgstr "곡을 깼다!"
+
+#. Context: TextWidget._text
+#: game/playground/rhythm/ui/hud.ui.xml
+msgctxt "Song failed"
+msgid "Song failed"
+msgstr "곡을 깨지 못했다"
+
 #. Context: JRPG name
 #: game/playground/data/jrpg.xml
 msgctxt "Spark"
 msgid "Spark"
 msgstr "불씨"
 
+#. Context: TextWidget._text
+#: game/playground/kartracing/ui/hud.ui.xml
+msgctxt "Speed (km/h)"
+msgid "Speed (km/h)"
+msgstr "속도(km/h)"
+
 #. Context: Monster name
 #: game/playground/data/monstercollector.xml
 msgctxt "Splash Jab"
 msgid "Splash Jab"
 msgstr "물보라 찌르기"
+
+#. Context: TextWidget._text
+#: game/playground/sidescrollconquest/ui/hud.ui.xml
+msgctxt "Squad"
+msgid "Squad"
+msgstr "부대"
 
 #. Context: TextWidget._text
 #: game/playground/monsterhuntrpg/ui/hud.ui.xml
@@ -496,6 +810,12 @@ msgid "The day is done"
 msgstr "하루가 끝났습니다"
 
 #. Context: TextWidget._text
+#: game/playground/ghosthunt/ui/hud.ui.xml
+msgctxt "The ghosts won"
+msgid "The ghosts won"
+msgstr "유령에게 졌습니다"
+
+#. Context: TextWidget._text
 #: game/playground/restaurantsim/ui/hud.ui.xml
 msgctxt "The harbor loves this place"
 msgid "The harbor loves this place"
@@ -506,6 +826,12 @@ msgstr "항구가 이 식당을 사랑합니다"
 msgctxt "The hunter has fallen"
 msgid "The hunter has fallen"
 msgstr "사냥꾼이 쓰러졌습니다"
+
+#. Context: TextWidget._text
+#: game/playground/sidescrollconquest/ui/hud.ui.xml
+msgctxt "The land is yours!"
+msgid "The land is yours!"
+msgstr "모든 거점을 얻었다!"
 
 #. Context: TextWidget._text
 #: game/playground/monsterhuntrpg/ui/hud.ui.xml
@@ -538,6 +864,12 @@ msgid "The warrior wakes."
 msgstr "전사가 깨어난다."
 
 #. Context: TextWidget._text
+#: game/playground/partyarena/ui/hud.ui.xml
+msgctxt "Time left"
+msgid "Time left"
+msgstr "남은 시간"
+
+#. Context: TextWidget._text
 #: game/playground/monsterhuntrpg/ui/hud.ui.xml
 msgctxt "Toxicity"
 msgid "Toxicity"
@@ -550,10 +882,34 @@ msgid "Travel Cape"
 msgstr "여행 망토"
 
 #. Context: TextWidget._text
+#: game/playground/cardgame/ui/hud.ui.xml
+msgctxt "Turn"
+msgid "Turn"
+msgstr "턴"
+
+#. Context: TextWidget._text
 #: game/playground/monstercollector/ui/hud.ui.xml
 msgctxt "Use move (J)   Ball (K)   Switch (L)   Run (R)"
 msgid "Use move (J)   Ball (K)   Switch (L)   Run (R)"
 msgstr "기술 (J)   볼 (K)   교체 (L)   도망 (R)"
+
+#. Context: TextWidget._text
+#: game/playground/coopscavenger/ui/hud.ui.xml
+msgctxt "Use: pick up, load, sell - Lever: land or take off"
+msgid "Use: pick up, load, sell - Lever: land or take off"
+msgstr "쓰기: 줍기 · 싣기 · 팔기 - 레버: 착륙 · 이륙"
+
+#. Context: TextWidget._text
+#: game/playground/asymmetrichorror/ui/hud.ui.xml
+msgctxt "Use: repair, open, rescue, heal - hold to struggle"
+msgid "Use: repair, open, rescue, heal - hold to struggle"
+msgstr "쓰기: 수리 · 문 열기 · 구출 · 치료 - 누르고 있으면 몸부림"
+
+#. Context: TextWidget._text
+#: game/playground/survivalhorror/ui/hud.ui.xml
+msgctxt "Use: take, read, unlock, fight - Light: flashlight - Heal: use or mix"
+msgid "Use: take, read, unlock, fight - Light: flashlight - Heal: use or mix"
+msgstr "쓰기: 줍기 · 읽기 · 풀기 · 싸우기 - 손전등 - 회복: 쓰거나 섞기"
 
 #. Context: TextWidget._text
 #: game/playground/monstercollector/ui/hud.ui.xml
@@ -572,3 +928,57 @@ msgstr "심지술사"
 msgctxt "Wild"
 msgid "Wild"
 msgstr "야생"
+
+#. Context: TextWidget._text
+#: game/playground/kartracing/ui/hud.ui.xml
+msgctxt "Wrong way!"
+msgid "Wrong way!"
+msgstr "역주행!"
+
+#. Context: TextWidget._text
+#: game/playground/survivalhorror/ui/hud.ui.xml
+msgctxt "You died"
+msgid "You died"
+msgstr "죽었습니다"
+
+#. Context: TextWidget._text
+#: game/playground/survivalhorror/ui/hud.ui.xml
+msgctxt "You got out"
+msgid "You got out"
+msgstr "빠져나왔습니다"
+
+#. Context: TextWidget._text
+#: game/playground/cardgame/ui/hud.ui.xml
+msgctxt "You were defeated"
+msgid "You were defeated"
+msgstr "쓰러졌다"
+
+#. Context: TextWidget._text
+#: game/playground/cardgame/ui/hud.ui.xml
+msgctxt "You win the battle!"
+msgid "You win the battle!"
+msgstr "전투에서 이겼다!"
+
+#. Context: TextWidget._text
+#: game/playground/partyarena/ui/hud.ui.xml
+msgctxt "You win the party!"
+msgid "You win the party!"
+msgstr "우승했다!"
+
+#. Context: TextWidget._text
+#: game/playground/cardgame/ui/hud.ui.xml
+msgctxt "Your block"
+msgid "Your block"
+msgstr "내 방어"
+
+#. Context: TextWidget._text
+#: game/playground/cardgame/ui/hud.ui.xml
+msgctxt "Your health"
+msgid "Your health"
+msgstr "내 체력"
+
+#. Context: TextWidget._text
+#: game/playground/sidescrollconquest/ui/hud.ui.xml
+msgctxt "Your home is lost"
+msgid "Your home is lost"
+msgstr "본진을 잃었다"

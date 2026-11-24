@@ -1,10 +1,24 @@
 <?xml version="1.0" encoding="utf-8"?>
 <?asset guid="ea5780d3c44840f7861fa902cde7ca21"?>
 <!--
-  장르 키트 시연 — 비대칭 공포 판 하나(maps/kit_asymmetrichorror). 발전기 둘이면 전원, 혼자 고치면 1 초, 스킬 체크 없음. 탈출문은 1 초에 열린다.
+  비대칭 공포 미니게임(minigames/asymmetrichorror)의 규칙(AsymmetricHorrorRulesCatalog — 게임 기능 AsymmetricHorror 가 미니게임 범위에 건다).
+  발전기 둘이면 전원, 혼자 고치면 6 초, 탈출구는 3 초. 살인마는 생존자보다 1.15 배 빠르고 걸음마다 순찰 · 추격한다(씬의 _botSettings). 보이는데 닿지 않으면 능력을 쓴다 — 4 초 동안 1.35 배 빠르고 심장 소리가 절반 거리에서만 들린다.
 -->
-<AsymmetricHorrorRules survivorSpeed="4" interactRange="2" generatorsRequired="2">
-	<Generator time="1" scales="1,1.5" skillCheckInterval="0" noiseRadius="60" maxRepairers="2"/>
-	<Endgame gateTime="1" collapseTime="2" slowScale="0.5" hatchRemaining="1"/>
-	<Killer id="trapper" speedRatio="1.25" lungeRange="3" hitCooldown="1" terrorRadius="32"/>
+<AsymmetricHorrorRules survivorSpeed="4" crawlSpeed="0.7" hitHasteScale="1.5" hitHasteTime="1.8" bleedoutTime="90" interactRange="2" generatorsRequired="2">
+	<Generator time="6" scales="1,1.7" skillCheckInterval="5" noiseRadius="30" kickPenalty="0.05" kickRegression="0.005" maxRepairers="2"/>
+	<Heal time="6" scales="1,1.5" skillCheckInterval="0" maxHealers="2"/>
+	<SkillCheck leadTime="1" failPenalty="0.1"><Window grade="Good" early="0.25" late="0.25" score="50" bonus="0.02"/></SkillCheck>
+	<Hook stageTime="25" struggleGrace="1" wiggleTime="10" wiggleStunTime="2" stages="2"/>
+	<Pallet stunTime="2" stunRange="2" breakTime="2"/>
+	<Window fastTime="0.5" mediumTime="1.2" killerTime="1.7" fastSpeedRatio="0.9" noiseRadius="20" blockTime="15" blockCount="3"/>
+	<Locker searchTime="1"/>
+	<Endgame gateTime="3" collapseTime="60" slowScale="0.5" hatchRemaining="1"/>
+	<Killer id="trapper" speedRatio="1.15" lungeRange="2.5" hitCooldown="2.5" missCooldown="1.5" cooldownSpeedScale="0.3" terrorRadius="24" abilityCooldown="15" abilityDuration="4" abilitySpeedScale="1.35" abilityTerrorScale="0.5" carrySpeedScale="0.8"/>
+	<Category id="Objectives" cap="8000"/>
+	<Category id="Survival" cap="8000"/>
+	<Category id="Brutality" cap="8000"/>
+	<Score action="Repair" category="Objectives" points="1250"/>
+	<Score action="Escape" category="Survival" points="5000"/>
+	<Score action="Hit" category="Brutality" points="300"/>
+	<Score action="Hook" category="Brutality" points="500"/>
 </AsymmetricHorrorRules>

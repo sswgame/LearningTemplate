@@ -1,0 +1,107 @@
+<?asset guid="7ac46e6a34064c9480b66e88ea711ee1"?>
+<Scene formatVersion="3" name="GhostHuntMansion">
+	<!-- 유령 사냥 미니게임(minigames/ghosthunt)의 무대 — 방은 ghosthunt/data/mansion.areas.xml 의 사각형(미터)이고 유령 · 열쇠 · 가구는 카탈로그(data/ghosts.xml)다. 뷰가 방 바닥과 유령을 그린다. -->
+	<SceneSettings _bStreaming="false" _unloadMargin="0" _maxCellLoadsPerFrame="0" _addToWorldBudgetMicroseconds="0">
+		<_cellGrid _cellSize="0" _loadingRadius="0" />
+	</SceneSettings>
+	<entities>
+		<!-- 화면 카메라 — 디렉터가 답하는 초점을 비스듬히 위에서 따라간다(FollowCameraComponent). -->
+		<entity id="1" name="GameCamera">
+			<GameObject _schemaVersion="0" _name="GameCamera" _bActive="true">
+				<_listComponent>
+					<CameraComponent _localID="17709685451340727998" _componentName="CameraComponent"
+					                 _bActive="true"
+					                 _localPosition="0,14,-11"
+					                 _localRotation="0.9048,0,0"
+					                 _localScale="1,1,1"
+					                 _attachOwner="None"
+					                 _attachOwnerID="0"
+					                 _attachComponent="None"
+					                 _fovY="40.107045"
+					                 _nearZ="0.1"
+					                 _farZ="120"
+					                 _orthoHeight="10"
+					                 _priority="0"
+					                 _role="Game"
+					                 _bOrthographic="false" />
+					<FollowCameraComponent _localID="15357652970512560881" _componentName="FollowCameraComponent"
+					                      _bActive="true"
+					                      _gameMode="10"
+					                      _offset="0,14,-11"
+					                      _minFarPlane="120" />
+				</_listComponent>
+			</GameObject>
+		</entity>
+		<entity id="2" name="Moon">
+			<GameObject _schemaVersion="0" _name="Moon" _bActive="true">
+				<_listComponent>
+					<DirectionalLightComponent _localID="51927904365891271" _componentName="DirectionalLightComponent"
+					                           _bActive="true"
+					                           _localPosition="0,0,0"
+					                           _localRotation="0.448254,-2.121679,0"
+					                           _localScale="1,1,1"
+					                           _attachOwner="None"
+					                           _attachOwnerID="0"
+					                           _attachComponent="None"
+					                           _color="0.6,0.65,1"
+					                           _intensity="0.9"
+					                           _ambient="0.25"
+					                           _shadowExtent="30"
+					                           _shadowDistance="60"
+					                           _bCastShadow="true" />
+				</_listComponent>
+			</GameObject>
+		</entity>
+		<entity id="3" name="Ground">
+			<GameObject _schemaVersion="0" _name="Ground" _bActive="true">
+				<_listComponent>
+					<MeshComponent _localID="163493842152903304" _componentName="MeshComponent"
+					               _bActive="true"
+					               _localPosition="0,0,0"
+					               _localRotation="0,0,0"
+					               _localScale="60,1,60"
+					               _attachOwner="None"
+					               _attachOwnerID="0"
+					               _attachComponent="None"
+					               _meshID="Plane"
+					               _materialPath="engine/materials/prototypegrid_dark.material"
+					               _boundsRadius="0.866"
+					               _gpuSpinSeed="0"
+					               _bVisible="true" />
+				</_listComponent>
+			</GameObject>
+		</entity>
+		<!-- 디렉터 → 입력 · 그리기(클라이언트) → HUD 순서로 붙인다. -->
+		<entity id="10" name="Mansion">
+			<GameObject _schemaVersion="0" _name="Mansion" _bActive="true">
+				<_listComponent>
+					<GhostHuntGameModeComponent _localID="8351720046193582771" _componentName="GhostHuntGameModeComponent"
+					                            _bActive="true"
+					                            _areaGraph="game/playground/ghosthunt/data/mansion.areas.xml"
+					                            _loot="game/playground/ghosthunt/data/mansion.loot.xml"
+					                            _startRoom="foyer"
+					                            _seed="5"
+					                            _bagSlotCount="4"
+					                            _moveSpeed="4"
+					                            _maxHealth="100"
+					                            _useRadius="2"
+					                            _ghostSpeed="0.6"
+					                            _ghostReach="1.5"
+					                            _ghostSpacing="1.5"
+					                            _resultHoldSeconds="3" />
+					<GhostHuntAvatarComponent _localID="3366914087250417925" _componentName="GhostHuntAvatarComponent"
+					                          _bActive="true"
+					                          _moveAction="Move"
+					                          _lightAction="GhostHunt.Light"
+					                          _strobeAction="GhostHunt.Strobe"
+					                          _vacuumAction="GhostHunt.Vacuum"
+					                          _useAction="GhostHunt.Use"
+					                          _markerPrefab="game/playground/prefabs/ruleviews/cube.prefab.xml" />
+					<HUDControllerComponent _localID="17122754535480611078" _componentName="HUDControllerComponent"
+					                        _bActive="true"
+					                        _documentPath="game/playground/ghosthunt/ui/hud.ui.xml" />
+				</_listComponent>
+			</GameObject>
+		</entity>
+	</entities>
+</Scene>

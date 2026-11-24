@@ -2072,6 +2072,11 @@
     "wildWestOutlawStatus": "westernOutlawStatus — 와일드웨스트 게임을 Playground 허브 맵 바탕으로 흡수 — 디렉터는 서부극 키트 Component/, HUD 는 GF_Client_OpenWorldWestern(2026-11-24)",
     "gv_wildWestAutoPlay": "gv_playgroundAutoPlay — 와일드웨스트 게임을 Playground 허브 맵 바탕으로 흡수 — 디렉터는 서부극 키트 Component/, HUD 는 GF_Client_OpenWorldWestern(2026-11-24)",
     "AbilityArenaGame": "PlaygroundGame — 게임 AbilityArena 를 Playground 허브의 아레나 미니게임 abilityarena 로 흡수, 게임 코드는 AbilityArena 키트(2026-11-24)",
+    "KartRacingDemoComponent": "KartGameModeComponent — 키트 디렉터 · 클라이언트로 가르고 허브 미니게임으로 옮겼다(2026-11-24)",
+    "PartyArenaDemoComponent": "PartyGameModeComponent — 키트 디렉터 · 클라이언트로 가르고 허브 미니게임으로 옮겼다(2026-11-24)",
+    "RhythmDemoComponent": "RhythmGameModeComponent — 키트 디렉터 · 클라이언트로 가르고 허브 미니게임으로 옮겼다(2026-11-24)",
+    "CardGameDemoComponent": "CardBattleGameModeComponent — 키트 디렉터 · 클라이언트로 가르고 허브 미니게임으로 옮겼다(2026-11-24)",
+    "SideScrollConquestDemoComponent": "ConquestGameModeComponent — 키트 디렉터 · 클라이언트로 가르고 허브 미니게임으로 옮겼다(2026-11-24)",
     "gv_arenaAutoPlay": "gv_playgroundAutoPlay — 게임 AbilityArena 를 Playground 허브의 아레나 미니게임 abilityarena 로 흡수, 자동 플레이 스위치는 Playground 것 하나(2026-11-24)",
     "addOrReplace": "NameRegistry::addLogged(겹치면 거절) · addOwned(덮되 주인이 풀리면 앞 값으로 돌아간다) — 이름 레지스트리가 앞 등록을 소리 없이 바꾸는 길을 없앴다(2026-11-24)",
     "Shooter3DGame": "PlaygroundGame — 게임 Shooter3D 를 Playground 의 사격장 · 온라인 매치 미니게임으로 흡수(2026-11-24)",
@@ -2151,6 +2156,13 @@
     "ClassicJRPGDemoComponent": "JRPGGameModeComponent — 클래식 JRPG 시연을 허브 미니게임 classicjrpg 로 — 디렉터는 키트 Component/, 입력 · HUD 는 GF_Client_ClassicJRPG(2026-11-24)",
     "MonsterCollectorDemoComponent": "MonsterCollectorGameModeComponent — 몬스터 수집 시연을 허브 미니게임 monstercollector 로 — 디렉터는 키트 Component/, 입력 · HUD 는 GF_Client_MonsterCollector(2026-11-24)",
     "MonsterHuntRPGDemoComponent": "MonsterHuntGameModeComponent — 몬스터 사냥 시연을 허브 미니게임 monsterhuntrpg 로 — 디렉터는 키트 Component/, 입력 · HUD 는 GF_Client_MonsterHuntRPG(2026-11-24)",
-    "RestaurantSimDemoComponent": "RestaurantGameModeComponent — 식당 경영 시연을 허브 미니게임 restaurantsim 으로 — 디렉터는 키트 Component/, 입력 · HUD 는 GF_Client_RestaurantSim(2026-11-24)"
+    "RestaurantSimDemoComponent": "RestaurantGameModeComponent — 식당 경영 시연을 허브 미니게임 restaurantsim 으로 — 디렉터는 키트 Component/, 입력 · HUD 는 GF_Client_RestaurantSim(2026-11-24)",
+    "AsymmetricHorrorDemoComponent": "AsymmetricHorrorGameModeComponent — 규칙만 돌리던 시연을 키트 디렉터 · 클라이언트와 허브 미니게임으로 갈랐다(2026-11-24)",
+    "CoopScavengerDemoComponent": "ScavengerGameModeComponent — 규칙만 돌리던 시연을 키트 디렉터 · 클라이언트와 허브 미니게임으로 갈랐다(2026-11-24)",
+    "GhostHuntDemoComponent": "GhostHuntGameModeComponent — 규칙만 돌리던 시연을 키트 디렉터 · 클라이언트와 허브 미니게임으로 갈랐다(2026-11-24)",
+    "SurvivalHorrorDemoComponent": "SurvivalHorrorGameModeComponent — 규칙만 돌리던 시연을 키트 디렉터 · 클라이언트와 허브 미니게임으로 갈랐다(2026-11-24)",
+    "PrimitiveMarkerBatch": "PrefabViewBatch — 원시 도형 프리팹 묶음은 하나만 둔다. 바닥에 세우기는 showStanding(2026-11-24)",
+    "drawStanding": "PrefabViewBatch::showStanding(2026-11-24)",
+    "spawnMarker": "PrefabViewBatch::show 가 모자란 인스턴스를 스폰한다(2026-11-24)"
   }
 }

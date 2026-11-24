@@ -1,0 +1,22 @@
+{
+    "_name": "GF_Client_SideScrollConquest",
+    "_version": "1.0.0",
+    "_kind": "Kit",
+    "_description": "횡스크롤 정복 키트(클라이언트) — 지휘 입력을 디렉터 명령으로 바꾸고 거점 · 병사 · 지휘관을 보이며 HUD 를 채운다(뷰 · 입력 · HUD). 규칙 · 디렉터는 GF_SideScrollConquest",
+    "_listDependency": [
+        {
+            "_name": "GameFramework"
+        },
+        {
+            "_name": "GF_SideScrollConquest"
+        }
+    ],
+    "_listConfiguration": [
+        "Dev",
+        "Shipping"
+    ],
+    "_listTarget": [
+        "Client"
+    ],
+    "_bEnabledByDefault": true
+}

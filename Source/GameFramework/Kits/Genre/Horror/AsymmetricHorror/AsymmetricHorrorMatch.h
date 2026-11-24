@@ -128,6 +128,7 @@ namespace sw
         Countdown                        _stunRemaining{};
         Countdown                        _busyRemaining{}; ///< 판자 부수기, 넘기, 사물함 뒤지기 중이다
         Countdown                        _abilityCooldown{};
+        Countdown                        _abilityRemaining{}; ///< 능력의 효과가 남은 시간이다
         int32                            _carrying{ constant::invalid_index::kInt32 };
         int32                            _breakingPallet{ constant::invalid_index::kInt32 };
         int32                            _participant{ constant::invalid_index::kInt32 };
@@ -204,7 +205,8 @@ namespace sw
             Vaulted, ///< `_actor` 가 -1 이면 살인마이고, `_target` 은 창틀이며, `_value` 가 1 이면 빠른 넘기이다
             WindowBlocked,
             LockerGrab,
-            MatchEnded ///< `_value` 는 희생 수, `_target` 은 탈출 수이다
+            KillerAbilityUsed, ///< `_value` 는 능력이 이어지는 시간이다
+            MatchEnded         ///< `_value` 는 희생 수, `_target` 은 탈출 수이다
         };
         float3          _position{};
         float32         _value{ 0.0f };
@@ -248,7 +250,7 @@ namespace sw
         REFLECT_BODY();
 
         static constexpr uint32 kStateTag     = FourCCUtil::make( "HMAT" );
-        static constexpr uint32 kStateVersion = 1;
+        static constexpr uint32 kStateVersion = 2; ///< 2: 살인마 능력의 남은 시간
 
         AsymmetricHorrorMatch();
 
@@ -300,7 +302,11 @@ namespace sw
         /** @brief 사물함을 엽니다. 안에 생존자가 있으면 바로 들고(true), 비었으면 뒤지는 시간만 듭니다. */
         [[nodiscard]] bool searchLocker( int32 locker );
         [[nodiscard]] bool closeHatch();
-        /** @brief 능력을 씁니다. 쿨다운이 남았으면 false 를 반환하며, 효과는 게임이 처리합니다. */
+        /**
+         * @brief 능력을 씁니다. `_abilityDuration` 동안 속도와 심장 소리 거리가 살인마 정의의 배율로 바뀝니다. 능력이 없는 살인마이거나 쿨다운이 남았으면 false 입니다.
+         * @details 어빌리티 시스템(`AbilitySystemComponent`)을 쓰지 않는다 — 살인마는 오브젝트가 아니라 판의 값이고, 효과도 맞은 생존자의 가속(`_hasteRemaining`)처럼
+         *          고정 걸음 · 세이브 하나 안에서 돌아야 같은 입력이 같은 판을 낸다(컴포넌트의 시계와 저장이 따로 돌면 어긋난다).
+         */
         [[nodiscard]] bool useKillerAbility();
 
         // --- 읽기 ---
@@ -336,15 +342,21 @@ namespace sw
         const AsymmetricHorrorGate*      findGate( int32 gate ) const;
         const AsymmetricHorrorWindow*    findWindow( int32 window ) const;
         PalletState                      getPalletState( int32 pallet ) const;
-        int32                            getCompletedGeneratorCount() const { return _completedGeneratorCount; }
-        bool                             areGatesPowered() const { return _bGatesPowered == SW_TRUE; }
-        bool                             isHatchOpen() const { return _bHatchOpen == SW_TRUE; }
-        bool                             isCollapseStarted() const { return _bCollapseStarted == SW_TRUE; }
-        float32                          getCollapseRemaining() const { return _collapseRemaining.getRemaining(); }
-        const MatchState&                getMatch() const { return _match; }
-        bool                             isEnded() const { return _match.getPhase() == MatchPhase::Ended; }
-        int32                            countStandingSurvivors() const;
-        uint32                           getTick() const { return _tick; }
+        int32                            getGeneratorCount() const { return static_cast<int32>( _listGenerator.size() ); }
+        int32                            getGateCount() const { return static_cast<int32>( _listGate.size() ); }
+        /** @brief 상호작용 거리(카탈로그 규칙)를 반환합니다. `initialize` 전이면 0 입니다. */
+        float32 getInteractRange() const;
+        /** @brief 생존자 팀 번호(`getMatch().getWinningTeam()` 과 견준다)를 반환합니다. `start` 전이면 -1 입니다. */
+        int32             getSurvivorTeam() const { return _survivorTeam; }
+        int32             getCompletedGeneratorCount() const { return _completedGeneratorCount; }
+        bool              areGatesPowered() const { return _bGatesPowered == SW_TRUE; }
+        bool              isHatchOpen() const { return _bHatchOpen == SW_TRUE; }
+        bool              isCollapseStarted() const { return _bCollapseStarted == SW_TRUE; }
+        float32           getCollapseRemaining() const { return _collapseRemaining.getRemaining(); }
+        const MatchState& getMatch() const { return _match; }
+        bool              isEnded() const { return _match.getPhase() == MatchPhase::Ended; }
+        int32             countStandingSurvivors() const;
+        uint32            getTick() const { return _tick; }
 
     private:
         bool isValidSurvivor( int32 survivor ) const { return survivor >= 0 && survivor < static_cast<int32>( _listSurvivor.size() ); }

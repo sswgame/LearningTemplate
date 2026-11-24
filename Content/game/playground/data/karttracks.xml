@@ -1,10 +1,14 @@
 <?xml version="1.0" encoding="utf-8"?>
 <?asset guid="a2b0fe3e1f234b3280bad759e5aa93d1"?>
 <!--
-  장르 키트 시연 — 한 바퀴 경기(maps/kit_kartracing). 반지름 100 쯤의 고리, 체크포인트 · 아이템 상자 · 패드 없음.
+  카트 경기 미니게임(minigames/kartracing, 맵 kartracing/maps/circuit)의 트랙 — 두 바퀴 타원 길(약 280 m). 체크포인트 둘 · 아이템 상자 셋 · 부스트 패드 하나 · 모래 구간 하나.
 -->
 <KartTrackCatalog>
-	<Track id="ring" name="Ring" width="12" laps="1" samples="16">
-		<Point x="100" z="0"/><Point x="0" z="100"/><Point x="-100" z="0"/><Point x="0" z="-100"/>
+	<Track id="sunny_oval" name="Sunny Oval" width="11" laps="2" samples="12" offroadScale="0.5">
+		<Point x="50" z="0"/><Point x="38" z="28"/><Point x="0" z="40"/><Point x="-38" z="28"/><Point x="-50" z="0"/><Point x="-38" z="-28"/><Point x="0" z="-40"/><Point x="38" z="-28"/>
+		<Checkpoint at="0.33"/><Checkpoint at="0.66"/>
+		<ItemBox at="0.2" offset="-2.5"/><ItemBox at="0.45" offset="2.5"/><ItemBox at="0.8" offset="0"/>
+		<BoostPad at="0.55" offset="0" length="4" width="4" duration="1"/>
+		<Surface from="0.7" to="0.74" minOffset="2" maxOffset="6" scale="0.6" rollingResistance="0.1"/>
 	</Track>
 </KartTrackCatalog>
