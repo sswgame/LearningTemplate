@@ -2,6 +2,7 @@
 
 #include "Core/File/AsyncFileIO.h"
 
+#include "Core/Concurrency/DiskIOScope.h"
 #include "Core/Concurrency/ThreadName.h"
 #include "Core/Concurrency/thread.h"
 #include "Core/File/AsyncFileIOBackend.h"
@@ -106,6 +107,7 @@ namespace sw
         if ( filePath.empty() )
             return handle;
 
+        SW_LOG_ASSERT( DiskIOForbiddenScope::isActive() == false, "Disk IO inside a section that forbids it (render thread packet): %#", filePath );
         const string           pathText( filePath );
         const NativeFileHandle nativeHandle = PlatformFileUtil::openNativeFileForRead( pathText.c_str() );
         if ( nativeHandle == kInvalidNativeFileHandle )
@@ -172,6 +174,7 @@ namespace sw
             std::memcpy( pDst, _pOpenFile->_pMemoryBytes->data() + offset, size );
             return true;
         }
+        SW_LOG_ASSERT( DiskIOForbiddenScope::isActive() == false, "Disk IO inside a section that forbids it (render thread packet): %#", _pOpenFile->_path );
         size_t       readBytes{ 0 };
         const uint64 fileSize = _pOpenFile->_size;
         if ( offset > fileSize || size > fileSize - offset )

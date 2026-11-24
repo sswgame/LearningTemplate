@@ -2,6 +2,7 @@
 
 #include "Core/Task/TaskManager.h"
 
+#include "Core/Concurrency/DiskIOScope.h"
 #include "Core/Concurrency/Futex.h"
 #include "Core/Concurrency/ThreadName.h"
 #include "Core/Concurrency/atomic.h"
@@ -989,6 +990,7 @@ namespace sw
 
     void TaskManager::runGroupTicket( ParallelGroup* pGroup )
     {
+        const DiskIOAllowedScope allowDiskIO; // 남의 그룹을 돕는다 — 그 IO 는 이 스레드의 것이 아니다(`executeTask` 와 같다)
         runGroupChunks( pGroup );
         releaseGroupReference( pGroup );
     }
@@ -1284,7 +1286,8 @@ namespace sw
             t_pCurrentRunningTask           = pNode;
             const TaskPriority prevPriority = t_threadState._runningPriority;
             t_threadState._runningPriority  = pNode->_priority; // 본문 안의 `runParallel` 이 물려받는다
-            const ScopedMemoryTag taskMemoryTag{ pNode->_memoryTag };
+            const ScopedMemoryTag    taskMemoryTag{ pNode->_memoryTag };
+            const DiskIOAllowedScope allowDiskIO; // 기다리다 돕는 스레드(렌더 스레드)의 금지는 그 스레드의 코드에만 걸린다
 #if !defined( SW_SHIPPING )
             const TaskProfileHook* pHook = s_profileHookSlot.get();
             const TaskProfileZone  zone  = ( pHook != nullptr && pNode->_arrName[0] != '\0' ) ? pHook->_pBeginZone( pNode->_arrName, TaskProfileZoneKind::Execute )
