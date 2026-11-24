@@ -38,6 +38,12 @@ msgctxt "Bone Shield"
 msgid "Bone Shield"
 msgstr "뼈 방패"
 
+#. Context: TextWidget._text
+#: game/playground/coopscavenger/ui/hud.ui.xml
+msgctxt "Credits"
+msgid "Credits"
+msgstr "크레딧"
+
 #. Context: SequenceBinding._name
 #: game/playground/data/cinematic.seq.xml
 msgctxt "CutA"
@@ -49,6 +55,12 @@ msgstr "컷 A"
 msgctxt "CutB"
 msgid "CutB"
 msgstr "컷 B"
+
+#. Context: TextWidget._text
+#: game/playground/coopscavenger/ui/hud.ui.xml
+msgctxt "Days left"
+msgid "Days left"
+msgstr "남은 날"
 
 #. Context: TextWidget._text
 #: game/playground/asymmetrichorror/ui/hud.ui.xml
@@ -79,6 +91,12 @@ msgstr "금박 기사 투구"
 msgctxt "Heraldic Cape"
 msgid "Heraldic Cape"
 msgstr "문장 망토"
+
+#. Context: TextWidget._text
+#: game/playground/coopscavenger/ui/hud.ui.xml
+msgctxt "In orbit - pull the lever to land"
+msgid "In orbit - pull the lever to land"
+msgstr "궤도 - 레버를 당겨 착륙하세요"
 
 #. Context: Item name
 #: common/data/items.xml
@@ -134,6 +152,24 @@ msgctxt "Pump Shotgun"
 msgid "Pump Shotgun"
 msgstr "펌프 산탄총"
 
+#. Context: TextWidget._text
+#: game/playground/coopscavenger/ui/hud.ui.xml
+msgctxt "Quota left"
+msgid "Quota left"
+msgstr "남은 할당량"
+
+#. Context: TextWidget._text
+#: game/playground/coopscavenger/ui/hud.ui.xml
+msgctxt "Quota met"
+msgid "Quota met"
+msgstr "할당량을 채웠습니다"
+
+#. Context: TextWidget._text
+#: game/playground/coopscavenger/ui/hud.ui.xml
+msgctxt "Quota missed"
+msgid "Quota missed"
+msgstr "할당량을 채우지 못했습니다"
+
 #. Context: Item name
 #: common/data/items.xml
 msgctxt "Round Shield"
@@ -157,6 +193,12 @@ msgstr "녹슨 투구"
 msgctxt "Sacrificed"
 msgid "Sacrificed"
 msgstr "희생되었습니다"
+
+#. Context: TextWidget._text
+#: game/playground/coopscavenger/ui/hud.ui.xml
+msgctxt "Scrap on the ship"
+msgid "Scrap on the ship"
+msgstr "실은 고철"
 
 #. Context: TextWidget._text
 #: game/playground/asymmetrichorror/ui/hud.ui.xml
@@ -211,6 +253,12 @@ msgstr "전사가 깨어난다."
 msgctxt "Travel Cape"
 msgid "Travel Cape"
 msgstr "여행 망토"
+
+#. Context: TextWidget._text
+#: game/playground/coopscavenger/ui/hud.ui.xml
+msgctxt "Use: pick up, load, sell - Lever: land or take off"
+msgid "Use: pick up, load, sell - Lever: land or take off"
+msgstr "쓰기: 줍기 · 싣기 · 팔기 - 레버: 착륙 · 이륙"
 
 #. Context: TextWidget._text
 #: game/playground/asymmetrichorror/ui/hud.ui.xml

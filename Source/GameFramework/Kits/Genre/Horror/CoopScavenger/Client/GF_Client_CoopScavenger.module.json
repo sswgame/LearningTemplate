@@ -1,0 +1,22 @@
+{
+    "_name": "GF_Client_CoopScavenger",
+    "_version": "1.0.0",
+    "_kind": "Kit",
+    "_description": "협동 수집 공포 키트(클라이언트) — 로컬 사용자마다 입력을 같은 번호의 승무원 명령으로 바꾸고, 위성의 방 · 고철 · 승무원 · 위협을 원시 도형으로 그리며 HUD 를 채웁니다. 규칙 · 디렉터는 GF_CoopScavenger",
+    "_listDependency": [
+        {
+            "_name": "GameFramework"
+        },
+        {
+            "_name": "GF_CoopScavenger"
+        }
+    ],
+    "_listConfiguration": [
+        "Dev",
+        "Shipping"
+    ],
+    "_listTarget": [
+        "Client"
+    ],
+    "_bEnabledByDefault": true
+}

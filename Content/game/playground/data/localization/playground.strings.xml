@@ -36,6 +36,11 @@
 				<item>common/data/items.xml</item>
 			</origins>
 		</entry>
+		<entry key="Credits" source="Credits" context="TextWidget._text">
+			<origins>
+				<item>game/playground/coopscavenger/ui/hud.ui.xml</item>
+			</origins>
+		</entry>
 		<entry key="CutA" source="CutA" context="SequenceBinding._name">
 			<origins>
 				<item>game/playground/data/cinematic.seq.xml</item>
@@ -44,6 +49,11 @@
 		<entry key="CutB" source="CutB" context="SequenceBinding._name">
 			<origins>
 				<item>game/playground/data/cinematic.seq.xml</item>
+			</origins>
+		</entry>
+		<entry key="Days left" source="Days left" context="TextWidget._text">
+			<origins>
+				<item>game/playground/coopscavenger/ui/hud.ui.xml</item>
 			</origins>
 		</entry>
 		<entry key="Elder" source="Elder" context="Dialogue speaker name">
@@ -74,6 +84,11 @@
 		<entry key="Heraldic Cape" source="Heraldic Cape" context="Item name">
 			<origins>
 				<item>common/data/items.xml</item>
+			</origins>
+		</entry>
+		<entry key="In orbit - pull the lever to land" source="In orbit - pull the lever to land" context="TextWidget._text">
+			<origins>
+				<item>game/playground/coopscavenger/ui/hud.ui.xml</item>
 			</origins>
 		</entry>
 		<entry key="Knight Helmet" source="Knight Helmet" context="Item name">
@@ -133,6 +148,21 @@
 				<item>common/data/items.xml</item>
 			</origins>
 		</entry>
+		<entry key="Quota left" source="Quota left" context="TextWidget._text">
+			<origins>
+				<item>game/playground/coopscavenger/ui/hud.ui.xml</item>
+			</origins>
+		</entry>
+		<entry key="Quota met" source="Quota met" context="TextWidget._text">
+			<origins>
+				<item>game/playground/coopscavenger/ui/hud.ui.xml</item>
+			</origins>
+		</entry>
+		<entry key="Quota missed" source="Quota missed" context="TextWidget._text">
+			<origins>
+				<item>game/playground/coopscavenger/ui/hud.ui.xml</item>
+			</origins>
+		</entry>
 		<entry key="Round Shield" source="Round Shield" context="Item name">
 			<origins>
 				<item>common/data/items.xml</item>
@@ -151,6 +181,11 @@
 		<entry key="Sacrificed" source="Sacrificed" context="TextWidget._text">
 			<origins>
 				<item>game/playground/asymmetrichorror/ui/hud.ui.xml</item>
+			</origins>
+		</entry>
+		<entry key="Scrap on the ship" source="Scrap on the ship" context="TextWidget._text">
+			<origins>
+				<item>game/playground/coopscavenger/ui/hud.ui.xml</item>
 			</origins>
 		</entry>
 		<entry key="Skill check - press Use" source="Skill check - press Use" context="TextWidget._text">
@@ -203,6 +238,11 @@
 		<entry key="Travel Cape" source="Travel Cape" context="Item name">
 			<origins>
 				<item>common/data/items.xml</item>
+			</origins>
+		</entry>
+		<entry key="Use: pick up, load, sell - Lever: land or take off" source="Use: pick up, load, sell - Lever: land or take off" context="TextWidget._text">
+			<origins>
+				<item>game/playground/coopscavenger/ui/hud.ui.xml</item>
 			</origins>
 		</entry>
 		<entry key="Use: repair, open, rescue, heal - hold to struggle" source="Use: repair, open, rescue, heal - hold to struggle" context="TextWidget._text">

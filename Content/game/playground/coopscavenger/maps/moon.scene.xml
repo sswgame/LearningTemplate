@@ -1,0 +1,105 @@
+<?asset guid="0ce278724b504308ab8cf9bba2c14903"?>
+<Scene formatVersion="3" name="CoopScavengerMoon">
+	<!-- 협동 수집 공포 미니게임(minigames/coopscavenger)의 무대 — 승무원 둘(사용자 0 · 1, 사람이 없으면 봇). 우주선 · 바깥 · 시설 방은 카탈로그와 시드가 정하고, 방 한 칸이 _areaSpacing 이다. -->
+	<SceneSettings _bStreaming="false" _unloadMargin="0" _maxCellLoadsPerFrame="0" _addToWorldBudgetMicroseconds="0">
+		<_cellGrid _cellSize="0" _loadingRadius="0" />
+	</SceneSettings>
+	<entities>
+		<!-- 화면 카메라 — 디렉터가 답하는 초점을 비스듬히 위에서 따라간다(FollowCameraComponent). -->
+		<entity id="1" name="GameCamera">
+			<GameObject _schemaVersion="0" _name="GameCamera" _bActive="true">
+				<_listComponent>
+					<CameraComponent _localID="17709685451340727998" _componentName="CameraComponent"
+					                 _bActive="true"
+					                 _localPosition="0,18,-14"
+					                 _localRotation="0.909753,0,0"
+					                 _localScale="1,1,1"
+					                 _attachOwner="None"
+					                 _attachOwnerID="0"
+					                 _attachComponent="None"
+					                 _fovY="40.107045"
+					                 _nearZ="0.1"
+					                 _farZ="120"
+					                 _orthoHeight="10"
+					                 _priority="0"
+					                 _role="Game"
+					                 _bOrthographic="false" />
+					<FollowCameraComponent _localID="15357652970512560881" _componentName="FollowCameraComponent"
+					                      _bActive="true"
+					                      _gameMode="10"
+					                      _offset="0,18,-14"
+					                      _minFarPlane="120" />
+				</_listComponent>
+			</GameObject>
+		</entity>
+		<entity id="2" name="Moon">
+			<GameObject _schemaVersion="0" _name="Moon" _bActive="true">
+				<_listComponent>
+					<DirectionalLightComponent _localID="51927904365891271" _componentName="DirectionalLightComponent"
+					                           _bActive="true"
+					                           _localPosition="0,0,0"
+					                           _localRotation="0.448254,-2.121679,0"
+					                           _localScale="1,1,1"
+					                           _attachOwner="None"
+					                           _attachOwnerID="0"
+					                           _attachComponent="None"
+					                           _color="0.9,0.7,0.55"
+					                           _intensity="0.9"
+					                           _ambient="0.25"
+					                           _shadowExtent="30"
+					                           _shadowDistance="60"
+					                           _bCastShadow="true" />
+				</_listComponent>
+			</GameObject>
+		</entity>
+		<entity id="3" name="Ground">
+			<GameObject _schemaVersion="0" _name="Ground" _bActive="true">
+				<_listComponent>
+					<MeshComponent _localID="163493842152903304" _componentName="MeshComponent"
+					               _bActive="true"
+					               _localPosition="0,0,0"
+					               _localRotation="0,0,0"
+					               _localScale="80,1,80"
+					               _attachOwner="None"
+					               _attachOwnerID="0"
+					               _attachComponent="None"
+					               _meshID="Plane"
+					               _materialPath="engine/materials/prototypegrid_dark.material"
+					               _boundsRadius="0.866"
+					               _gpuSpinSeed="0"
+					               _bVisible="true" />
+				</_listComponent>
+			</GameObject>
+		</entity>
+		<!-- 디렉터 → 입력 · 그리기(클라이언트) → HUD 순서로 붙인다. -->
+		<entity id="10" name="Expedition">
+			<GameObject _schemaVersion="0" _name="Expedition" _bActive="true">
+				<_listComponent>
+					<ScavengerGameModeComponent _localID="6120447738510926413" _componentName="ScavengerGameModeComponent"
+					                            _bActive="true"
+					                            _companyMoon="company"
+					                            _threatTable="game/playground/coopscavenger/data/threats.spawns.xml"
+					                            _seed="11"
+					                            _crewCount="2"
+					                            _cyclesToWin="1"
+					                            _storageSlotCount="8"
+					                            _stepSeconds="0.5"
+					                            _areaSpacing="6"
+					                            _threatStepSeconds="2"
+					                            _threatLifeSeconds="60"
+					                            _threatDamage="25"
+					                            _resultHoldSeconds="3" />
+					<ScavengerAvatarComponent _localID="2904416683715529087" _componentName="ScavengerAvatarComponent"
+					                          _bActive="true"
+					                          _moveAction="Move"
+					                          _useAction="CoopScavenger.Use"
+					                          _leverAction="CoopScavenger.Lever"
+					                          _markerPrefab="game/playground/prefabs/primitivemarker.prefab.xml" />
+					<HUDControllerComponent _localID="17122754535480611078" _componentName="HUDControllerComponent"
+					                        _bActive="true"
+					                        _documentPath="game/playground/coopscavenger/ui/hud.ui.xml" />
+				</_listComponent>
+			</GameObject>
+		</entity>
+	</entities>
+</Scene>

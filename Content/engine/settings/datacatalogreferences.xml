@@ -135,6 +135,8 @@
 	<Field owner="SRPGGameModeComponent" field="_listPlayerUnit" tag="SRPGUnitDef"/>
 	<Field owner="SRPGGameModeComponent" field="_listEnemyUnit" tag="SRPGUnitDef"/>
 	<Field owner="SRPGGameModeComponent" field="_pilot" tag="SRPGPilotDef"/>
+	<CatalogKey tag="ScavengerMoonDef" catalog="ScavengerCatalog" entry="Moon"/>
+	<Field owner="ScavengerGameModeComponent" field="_companyMoon" tag="ScavengerMoonDef"/>
 	<CatalogKey tag="AsymmetricHorrorKillerDef" catalog="AsymmetricHorrorRules" entry="Killer"/>
 	<Field owner="AsymmetricHorrorGameModeComponent" field="_killer" tag="AsymmetricHorrorKillerDef"/>
 	<CatalogKey tag="WeaponDef" catalog="WeaponCatalog" entry="Weapon"/>

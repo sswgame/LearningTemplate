@@ -7,8 +7,10 @@
 		<entry source="Bone Axe" text="뼈 도끼" />
 		<entry source="Bone Shield" text="뼈 방패" />
 		<entry source="Combat Helmet" text="전투 헬멧" />
+		<entry source="Credits" text="크레딧" />
 		<entry source="CutA" text="컷 A" />
 		<entry source="CutB" text="컷 B" />
+		<entry source="Days left" text="남은 날" />
 		<entry source="Escaped" text="탈출했습니다" />
 		<entry source="Fatigues" text="전투복" />
 		<entry source="Field Pack" text="야전 배낭" />
@@ -17,6 +19,7 @@
 		<entry source="Gilded Knight Helmet" text="금박 기사 투구" />
 		<entry source="Guide" text="안내인" />
 		<entry source="Heraldic Cape" text="문장 망토" />
+		<entry source="In orbit - pull the lever to land" text="궤도 - 레버를 당겨 착륙하세요" />
 		<entry source="Knight Helmet" text="기사 투구" />
 		<entry source="Knight Helmet (Dyeable)" text="기사 투구(염색 가능)" />
 		<entry source="Knight Helmet (Merged)" text="기사 투구(병합)" />
@@ -29,6 +32,9 @@
 		<entry source="Notched Blade" text="이 빠진 칼" />
 		<entry source="Pistol" text="권총" />
 		<entry source="Pump Shotgun" text="펌프 산탄총" />
+		<entry source="Quota left" text="남은 할당량" />
+		<entry source="Quota met" text="할당량을 채웠습니다" />
+		<entry source="Quota missed" text="할당량을 채우지 못했습니다" />
 		<entry source="Recon Boots" text="정찰 부츠" />
 		<entry source="Recon Helmet" text="정찰 헬멧" />
 		<entry source="Recon Patch" text="정찰 패치" />
@@ -38,12 +44,14 @@
 		<entry source="Rusted Helm" text="녹슨 투구" />
 		<entry source="Sacrificed" text="희생되었습니다" />
 		<entry source="Scout" text="정찰병" />
+		<entry source="Scrap on the ship" text="실은 고철" />
 		<entry source="Skill check - press Use" text="스킬 체크 - 쓰기를 누르세요" />
 		<entry source="Tattered Cape" text="해진 망토" />
 		<entry source="The ford is gone after the storm; take the long road past the mill and wait for the bell."
 		       text="폭풍 뒤로 여울이 사라졌습니다. 방앗간을 지나는 먼 길로 가서 종소리를 기다리세요." />
 		<entry source="The warrior wakes." text="전사가 깨어난다." />
 		<entry source="Travel Cape" text="여행 망토" />
+		<entry source="Use: pick up, load, sell - Lever: land or take off" text="쓰기: 줍기 · 싣기 · 팔기 - 레버: 착륙 · 이륙" />
 		<entry source="Use: repair, open, rescue, heal - hold to struggle" text="쓰기: 수리 · 문 열기 · 구출 · 치료 - 누르고 있으면 몸부림" />
 	</entries>
 </TranslationMemory>

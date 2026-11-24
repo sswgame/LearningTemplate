@@ -133,6 +133,19 @@
 	<DevCommand line="minigame.leave"/>
 	<WaitUntil watch="Minigame.RestoreCount" differsFrom="restored_asymmetrichorror" timeoutWallSeconds="60"/>
 	<ExpectActiveScene path="game/playground/maps/hub.scene.xml"/>
+
+	<!-- coopscavenger — 자리 21(셋째 줄 여섯째 칸). 복원 수는 앞 묶음 수와 무관하게 "늘었다" 로 본다 -->
+	<WaitUntil watch="Assets.Pending" equals="0" timeoutWallSeconds="60"/>
+	<Expect watch="Object.X" target="MinigamePortal_coopscavenger" near="11" tolerance="0.01"/>
+	<Expect watch="Object.Z" target="MinigamePortal_coopscavenger" near="46" tolerance="0.01"/>
+	<Store watch="Minigame.RestoreCount" as="restored_coopscavenger"/>
+	<DevCommand line="teleport Player 11 0.05 46"/>
+	<WaitUntil watch="Minigame.Active" is="coopscavenger" timeoutWallSeconds="60"/>
+	<ExpectActiveScene path="game/playground/coopscavenger/maps/moon.scene.xml"/>
+	<WaitUntil watch="Assets.Pending" equals="0" timeoutWallSeconds="60"/>
+	<DevCommand line="minigame.leave"/>
+	<WaitUntil watch="Minigame.RestoreCount" differsFrom="restored_coopscavenger" timeoutWallSeconds="60"/>
+	<ExpectActiveScene path="game/playground/maps/hub.scene.xml"/>
 	<WaitUntil watch="Input.VirtualCursorEnabled" equals="0" timeoutFrames="60"/>
 	<Expect watch="Minigame.Active" is="none"/>
 	<Expect watch="Minigame.LeakCount" equals="0"/>
