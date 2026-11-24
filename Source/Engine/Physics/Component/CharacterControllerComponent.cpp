@@ -160,6 +160,12 @@ namespace sw
         }
     }
 
+    float3 CharacterControllerComponent::getRequestedStepVelocity() const
+    {
+        _physicsStep.assumeHeld(); // 게임 스레드, 물리 스텝 밖 — 스텝 훅과 겹치지 않는다
+        return _queuedStepVelocity;
+    }
+
     void CharacterControllerComponent::setMoveVelocity( const float3& velocity )
     {
         editCommand( [&velocity]( CharacterCommand3D& command )
