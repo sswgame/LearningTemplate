@@ -147,6 +147,7 @@ namespace sw
         /** @brief 농부 폰의 이번 틱 의도를 처리합니다. 이동 축으로 걷고, 발동한 버튼(도구, 씨앗, 사용, 출하, 구매, 수면, 상태)을 규칙대로 실행합니다. */
         void applyFarmerIntent( float32 deltaTime, const PawnComponent& pawn );
         /** @brief 농부를 @p direction 방향으로 움직이고 바라보는 방향을 네 방향으로 맞춥니다. 벡터 길이 1 이 걷는 속도의 최대치이며, 길이가 곧 속도 비율입니다. */
+        /** @brief 농부를 @p direction 으로 한 걸음 옮깁니다. 씬의 정적 바디에 막히면 미끄러지고(`WalkSweep`) 걷는 여백 밖으로 나가지 않는다. */
         void movePlayer( const float3& direction, float32 deltaTime );
         /** @brief 농부 폰을 반환합니다(`_farmer` 오브젝트). 없으면 nullptr 입니다. */
         const PawnComponent* findFarmerPawn() const;
@@ -188,6 +189,8 @@ namespace sw
         float3 _playerStart;
         PROPERTY( Category = "Farmer", DisplayName = "Walk Speed", Min = 0.0, Units = "m/s" )
         float32 _walkSpeed;
+        PROPERTY( Category = "Farmer", DisplayName = "Body Radius", Tooltip = "Radius of the walking body that static bodies (house, shop, fences, trees) stop", Min = 0.05, Units = m )
+        float32 _bodyRadius;
         PROPERTY( Category = "Farmer", DisplayName = "Reach", Tooltip = "Distance in front of the farmer that picks the faced tile", Min = 0.0, Units = m )
         float32 _reach;
         PROPERTY( Category = "Farmer", DisplayName = "Near Distance", Tooltip = "Distance that counts as standing next to the shipping bin or the shop", Min = 0.0, Units = m )

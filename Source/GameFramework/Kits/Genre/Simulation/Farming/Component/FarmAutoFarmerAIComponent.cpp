@@ -202,7 +202,7 @@ namespace sw
         blackboard.setBool( "CanAffordSeed", pSeasonalCrop != nullptr && pWallet->getWallet().canAfford( gameMode.getCurrency(), pSeasonalCrop->_seedPrice ) );
         Internal::writeTileJob( gameMode.getField(), pManager->getWorldOrigin(), _cultivateLimit, seasonalSeed.has_value(), bHasSeed, blackboard );
         blackboard.setVector( "ShipSpot", pManager->getWorldOrigin().toLocal( gameMode.getShippingBinPosition() + float3{ -1.0f, 0.0f, 0.0f } ) );
-        blackboard.setVector( "ShopSpot", pManager->getWorldOrigin().toLocal( gameMode.getShopPosition() + float3{ 1.4f, 0.0f, 0.0f } ) );
+        blackboard.setVector( "ShopSpot", pManager->getWorldOrigin().toLocal( gameMode.getShopPosition() + float3{ 1.8f, 0.0f, 0.0f } ) ); // 가게 앞면(1.4 m)과 몸 반지름 밖
     }
 
     // 자동 농부 트리 데이터(`data/ai/autofarmer.bt.xml`)가 `task` 속성으로 가리키는 이름이다.

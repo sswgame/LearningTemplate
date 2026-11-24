@@ -9,10 +9,11 @@
 #include "Core/String/fixed_string.h"
 #include "Core/String/formatString.h"
 
-#include "Engine/Object/Component/SceneComponent.h"
+#include "Engine/Navigation/NavMeshGeometry.h"
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
 #include "Engine/Object/GameObject/WorldOrigin.h"
+#include "Engine/Physics/Component/RigidBodyComponent.h"
 #include "Engine/Serialization/Format/Archive.h"
 #include "Engine/Serialization/Format/BinarySerializer.h"
 #include "Engine/Serialization/Format/StateIO.h"
@@ -52,7 +53,7 @@ namespace sw
         , _navHeight{ 0 }
         , _navCellSize{ 0.0f }
         , _navObstacleNames{}
-        , _navObstacleRadius{ 0.8f }
+        , _navObstacleClearance{ 0.4f }
         , _bodyCatchUpScale{ 1.5f }
         , _bodySnapDistance{ 3.0f }
         , _bodyAccelerationPerSpeed{ 10.0f }
@@ -71,6 +72,44 @@ namespace sw
 
     FarmVillageGameModeComponent::~FarmVillageGameModeComponent() = default;
 
+    uint32 FarmVillageGameModeComponent::blockCells( const RigidBodyComponent& body )
+    {
+        float3     position{};
+        quaternion rotation{};
+        float3     scale{};
+        if ( PhysicsComponent::readWorldPose( body, position, rotation, scale ) == false )
+            return 0; // 배율 0 — 물리도 짓지 않는 바디다
+        // 내비메시 베이크와 같은 길로 셰이프를 삼각형으로 옮겨 절대 경계를 얻는다 — 내비 격자 · 일정은 절대 자리로 돈다.
+        NavMeshGeometry geometry;
+        geometry.setWorldOrigin( getOwner()->getManager()->getWorldOrigin() );
+        const float4x4 world = float4x4::makeTrs( position, rotation, float3{ 1.0f, 1.0f, 1.0f } );
+        for ( const PhysicsShapeDesc3D& shape : body.getShapes() )
+        {
+            geometry.addPhysicsShape( PhysicsComponent::makeScaledShape( shape, scale ), world, 0 );
+        }
+        if ( geometry.isEmpty() )
+            return 0;
+        const AABB& bounds = geometry.getBounds();
+        const int2  first  = _navGrid.computeCell( bounds._min - float3{ _navObstacleClearance, 0.0f, _navObstacleClearance } );
+        const int2  last   = _navGrid.computeCell( bounds._max + float3{ _navObstacleClearance, 0.0f, _navObstacleClearance } );
+        uint32      count  = 0;
+        for ( int32 cellY = first._y; cellY <= last._y; ++cellY )
+        {
+            for ( int32 cellX = first._x; cellX <= last._x; ++cellX )
+            {
+                const int2   cell{ cellX, cellY };
+                const float3 center  = _navGrid.computeCellCenter( cell );
+                const bool   bInside = bounds._min._x - _navObstacleClearance <= center._x && center._x <= bounds._max._x + _navObstacleClearance &&
+                                     bounds._min._z - _navObstacleClearance <= center._z && center._z <= bounds._max._z + _navObstacleClearance;
+                if ( bInside == false || _navGrid.isInside( cell ) == false )
+                    continue;
+                _navGrid.setBlocked( cellX, cellY, true );
+                ++count;
+            }
+        }
+        return count;
+    }
+
     bool FarmVillageGameModeComponent::rebuildNavGrid()
     {
         const bool bNoGrid = _navWidth <= 0 || _navHeight <= 0 || _navCellSize <= 0.0f;
@@ -85,7 +124,6 @@ namespace sw
         StringUtil::forEachToken( string_view{ _navObstacleNames }, ", ", [&listObstacleName]( string_view token )
         { listObstacleName.push_back( token ); } );
         const GameObjectManager*  pManager     = getOwner()->getManager();
-        const int32               radiusCells  = static_cast<int32>( MathUtil::ceil( _navObstacleRadius / _navCellSize ) );
         uint32                    blockedCount = 0;
         vector<const GameObject*> listObstacle;
         for ( const string_view obstacleName : listObstacleName )
@@ -94,23 +132,14 @@ namespace sw
             pManager->findGameObjectsByBaseName( obstacleName, listObstacle );
             for ( const GameObject* pObject : listObstacle )
             {
-                const SceneComponent* pScene = pObject->getPrimarySceneComponent();
-                if ( pScene == nullptr )
-                    continue;
-                const float3 position = pManager->getWorldOrigin().toAbsolute( pScene->getWorldPosition() ); // 내비 격자 · 일정은 절대 자리로 돈다
-                const int2   center   = _navGrid.computeCell( position );
-                for ( int32 offsetY = -radiusCells; offsetY <= radiusCells; ++offsetY )
+                const RigidBodyComponent* const pBody   = pObject->getComponent<RigidBodyComponent>();
+                const bool                      bStatic = pBody != nullptr && pBody->getBodyType() == PhysicsBodyType::Static;
+                if ( bStatic == false )
                 {
-                    for ( int32 offsetX = -radiusCells; offsetX <= radiusCells; ++offsetX )
-                    {
-                        const int2 cell{ center._x + offsetX, center._y + offsetY };
-                        if ( _navGrid.isInside( cell ) && float3::getHorizontalDistance( _navGrid.computeCellCenter( cell ), position ) <= _navObstacleRadius )
-                        {
-                            _navGrid.setBlocked( cell._x, cell._y, true );
-                            ++blockedCount;
-                        }
-                    }
+                    SW_LOG_ERROR_ID( "FarmVillageGameMode.ObstacleNoStaticBody", "[Village] nav obstacle '%#' has no static rigid body - its size is the body's shape, the villagers stay home", pObject->getName().c_str() );
+                    return false;
                 }
+                blockedCount += blockCells( *pBody );
             }
         }
         SW_LOG_INFO_ID( "FarmVillageGameMode.NavGridXM", "[Village] nav grid %#x%# (%# m cells), %# cell(s) blocked by obstacles", _navWidth, _navHeight, _navCellSize, blockedCount );

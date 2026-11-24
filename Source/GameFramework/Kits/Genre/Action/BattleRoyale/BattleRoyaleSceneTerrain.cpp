@@ -9,6 +9,7 @@
 #include "Engine/Object/GameObject/GameObjectManager.h"
 #include "Engine/Object/GameObject/WorldOrigin.h"
 
+#include "GameFramework/Runtime/World/Query/WalkSweep.h"
 #include "GameFramework/Runtime/World/Query/WorldQuery.h"
 
 namespace sw
@@ -17,11 +18,8 @@ namespace sw
     {
         struct BattleRoyaleSceneTerrainInternal
         {
-            static constexpr float32 kSkin          = 0.02f;  ///< 벽 · 땅에 닿은 채로 쓸지 않게 남기는 틈(m)
             static constexpr float32 kProbeHeight   = 100.0f; ///< 설 자리를 내려다보는 높이(m) — 건물보다 높다
-            static constexpr int32   kMaxSlide      = 2;      ///< 한 걸음에 미끄러지는 벽의 수(구석은 둘)
-            static constexpr float32 kMinStep       = 1.0e-4f;
-            static constexpr float32 kRingStep      = 0.5f; ///< 설 자리를 찾는 고리 사이(m)
+            static constexpr float32 kRingStep      = 0.5f;   ///< 설 자리를 찾는 고리 사이(m)
             static constexpr int32   kRingDirection = 16;
         };
     } // namespace
@@ -49,7 +47,7 @@ namespace sw
         using Internal = BattleRoyaleSceneTerrainInternal;
         if ( _pManager == nullptr )
             return true;
-        const float32   drop = Internal::kProbeHeight - _settings._radius - Internal::kSkin; // 땅에 닿기 직전까지 — 땅은 막는 것이 아니다
+        const float32   drop = Internal::kProbeHeight - _settings._radius - WalkSweep::kSkin; // 땅에 닿기 직전까지 — 땅은 막는 것이 아니다
         CharacterRayHit hit;
         return CharacterRayHit::sphereCast3D( *_pManager, toLocal( position, Internal::kProbeHeight ), float3{ 0.0f, -1.0f, 0.0f }, drop, _settings._radius,
                                               MathUtil::kMaxUInt32, 0, hit ) == false;
@@ -57,31 +55,11 @@ namespace sw
 
     float2 BattleRoyaleSceneTerrain::walk( const float2& from, const float2& delta ) const
     {
-        using Internal = BattleRoyaleSceneTerrainInternal;
         if ( _pManager == nullptr )
             return from + delta;
-        float2 position  = from;
-        float2 remaining = delta;
-        for ( int32 slide = 0; slide <= Internal::kMaxSlide; ++slide )
-        {
-            const float32 length = remaining.getLength();
-            if ( length < Internal::kMinStep )
-                return position;
-            const float2    direction = remaining * ( 1.0f / length );
-            CharacterRayHit hit;
-            if ( CharacterRayHit::sphereCast3D( *_pManager, toLocal( position, _settings._radius + Internal::kSkin ), float3{ direction._x, 0.0f, direction._y },
-                                                length + Internal::kSkin, _settings._radius, MathUtil::kMaxUInt32, 0, hit ) == false )
-                return position + remaining;
-            // 벽에서 멀어지는 걸음은 그대로 걷는다(겹친 채 시작해도 빠져나온다). 아니면 닿는 데까지 걷고 벽 쪽 성분만 지운다.
-            const float2  normal = float2{ hit._normal._x, hit._normal._z }.normalizeOr( float2{ 0.0f, 0.0f }, Internal::kMinStep );
-            const float32 into   = direction._x * normal._x + direction._y * normal._y;
-            if ( into >= 0.0f )
-                return position + remaining;
-            const float32 moved = MathUtil::clamp( hit._distance - Internal::kSkin, 0.0f, length );
-            position            = position + direction * moved;
-            remaining           = ( direction - normal * into ) * ( length - moved );
-        }
-        return position;
+        const float3 center = toLocal( from, _settings._radius + WalkSweep::kSkin );
+        const float3 moved  = WalkSweep::slide( *_pManager, center, delta, _settings._radius ) - center;
+        return from + float2{ moved._x, moved._z };
     }
 
     bool BattleRoyaleSceneTerrain::hasLineOfSight( const float2& from, const float2& to ) const

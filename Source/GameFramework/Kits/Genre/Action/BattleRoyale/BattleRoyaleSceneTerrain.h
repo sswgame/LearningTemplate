@@ -1,7 +1,7 @@
 /**
  * @file BattleRoyaleSceneTerrain.h
  * @brief 배틀로얄 판이 씬의 지형에 묻는 것입니다 — 정적 바디(건물)가 막는 이동 · 시야 · 설 자리와 씬 내비메시의 길.
- * @details 판의 사람은 바디 없는 점(판 좌표)이라 물리 질의가 사람끼리 막지 않는다. 걷기는 몸 반지름의 구를 쓸어 벽을 따라 미끄러지고(언리얼 `SweepSingle` + `SlideAlongSurface`),
+ * @details 판의 사람은 바디 없는 점(판 좌표)이라 물리 질의가 사람끼리 막지 않는다. 걷기는 몸 반지름의 구를 쓸어 벽을 따라 미끄러지고(`WalkSweep`),
  *          시야는 게임 공통 질의(`WorldQuery::hasLineOfSight`), 길은 씬 내비게이션(`SceneNavigation::findPath` — 씬의 `NavMeshSurfaceComponent` 가 정적 바디로 베이크한 내비메시)이다.
  *          물리 바디 · 내비메시가 없는 씬(규칙 테스트)이면 막는 것이 없고 길은 곧은 선이다.
  */
