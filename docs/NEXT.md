@@ -8,15 +8,15 @@
 
 ## 0. 인계(2026-11-24 — 다음 세션은 여기부터)
 
-- 끝난 갈래는 모두 main 에 합쳤다(허브 흡수 전 단계 · 키트 셋 가르기 · 디스크 경로 형식 · VMA · D3D12MA · mimalloc 포함). 남은 갈래는 `w-buildtime`(셰이더 DDC 공유, 11-21) 하나 — main 의 `Saved/DDC` 와 견줘 남은 몫이 없으면 지운다.
-- 다음 차례: ① 합친 묶음 검증 · push(2 절) → ② Linux 검증(`linux-verify`) → ③ 에셋 GUID 데이터 이전(8 절) → ④ 헤더 팬인(6 절, 혼자 마지막).
+- 끝난 갈래는 모두 main 에 합쳤다(허브 흡수 전 단계 · 키트 셋 가르기 · 디스크 경로 형식 · VMA · D3D12MA · mimalloc 포함).
+- 다음 차례: ① 합친 묶음 검증 · push(2 절) → ② Linux 검증(`linux-verify`) → ③ 에셋 GUID 데이터 이전(8 절).
 - `[코드]` 는 빌드 없이 지금 짤 수 있는 일, 나머지는 실행 · 실기기 · 계정이 있어야 한다.
 
 ## 1. 다음 순서
 
 1. 2 절 통합 실행 → 3 절 Linux.
 2. 8 절 데이터 이전.
-3. 6 절 `[코드]` 줄을 갈래로 나눠 병렬로, 헤더 팬인은 맨 끝에 혼자.
+3. 5 · 6 · 10 절 `[코드]` 줄을 갈래로 나눠 병렬로.
 
 ## 2. 통합 빌드에서 볼 것
 
@@ -47,8 +47,6 @@
 
 - `[코드]` **DX12 PSO 캐시:** 디스크 PSO 캐시(`ID3D12PipelineLibrary` — 언리얼 D3D12 드라이버 캐시 자리)가 없다.
 - `[코드]` **개수 버퍼 압축:** 컬링 뒤 살아남은 인자만 앞으로 모아 개수 버퍼 간접 그리기(언리얼 인스턴스 컬링). 투명 정렬의 다단 bitonic(큰 배치).
-- `[코드]` **컴포넌트 틱 주기:** 언리얼 `TickInterval` 자리가 없다 — 멀거나 느린 컴포넌트가 손 타이머를 든다.
-- `[코드]` **직렬 씬 서비스(PO-2 · PO-3):** 겹치지 않는 서비스의 갱신을 작업으로 나눈다(`ISceneParallelService`, 게임 스레드 API 는 `const GameThreadKey&`, `TestSceneStateHash` 동일).
 - `[코드]` **카탈로그 쿠킹 꼴:** 카탈로그를 굽는 쿠커가 없다 — 언리얼 DataTable 처럼 이진 꼴로 구울지 정한다.
 - **RHI 큰 것:** RHI 스레드, 복사 큐, SM6.6 동적 자원, Vulkan 동적 오프셋 · 푸시 디스크립터, RT · 메시 셰이더 — 기능을 쓸 게임 요구가 생길 때.
 
@@ -61,20 +59,12 @@
 
 ### 코어 · 리플렉션
 
-- `[코드]` 손 `serializeState` 남은 몫(칸 나열이 긴 32 파일)을 `StateIO::reflected` 로.
-- `[코드]` `.cpp` 안 `REFLECT`(테스트 형식마다 헤더를 따로 두는 자리)를 `.gen.inl` 로.
-- `[코드]` `Radians` 남은 몫: 벡터 각(`float3` 오일러) — 회전 형식과 함께 정한다.
 - `[코드]` `sw::string` 자체 구현(지금 `std::basic_string` 상속 — 교체 빌드는 컴파일되게). AC-1: `set` · `unordered_set` · `string` 범위 연산의 복잡도.
 - `[코드]` 멤버 · 지역 · 매개변수 이름 형태(`_camelCase` · `out…` · 단수 컨테이너)를 clang 색인으로 자동 검사(`naming_words.py` 는 정규식이다).
-- `[코드]` **lockfmt 후속:** 잠금을 쥔 채 로그를 쓰는 자리를 고치고 `SW_ENFORCE_LEAF_LOCK_LOG` 를 켠다.
-- `[코드]` 자기 `.cpp` 만 포함하는 60 줄 미만 헤더 72 개 접기(`header-fanin` 이 늘면 안 함).
-- `[코드]` `FrameViewports.h` 를 `Engine.h` · `GameModuleManager.h` 가 앞 선언만 하게 — 서버 · 쿠커가 RHI 핸들 헤더를 읽지 않는다.
 - `[코드]` 받는 쪽 없는 이벤트(방 클리어 `ActionCombatEvents.h`, 빙의 `ControlEvents.h` 등 — 버스 구독은 둘뿐이다)를 HUD · 카메라에 잇거나 지운다.
 
 ### 에디터 · 도구
 
-- `[코드]` `new-online-kit` 의 생성 결과를 보는 Scripts 테스트.
-- `[코드]` 지운 NEXT 줄 · 측정 문턱을 가리키는 코드 · 시나리오 주석 정리(`LockKindBenchTest` · `ContainerBenchTest` · `TestQueueCellAlignmentBench` · `TestDelegate` · `TestOnlineServerCallTable` · `TextureCache.cpp` · `GameInstance.cpp` · `StreamingSourcePriority.h` · `EditorAssetFileCommands.h` · `LogTypes.h` · `editor/load/*` · `abilityarena_scenesave` · `kitdemo_respawn` · `materialinstances` · `minigamememory`). 판정이 끝난 벤치는 지운다.
 - 에디터 체인 단계의 뷰 누수를 막는다(다시 보일 때).
 - 공유 DDC(D3) · T3 샤드 균형 — 머신 · 외부 CI 가 정해진 뒤.
 
@@ -82,10 +72,6 @@
 
 - `[코드]` 두 사람이 싸우는 온라인 미니게임의 `netpair/` 리스폰 시나리오(허브 아바타는 죽지 않는다).
 - MMO 키트 부하 목표 · 운영 비용(측정).
-
-### 헤더 팬인(혼자 마지막)
-
-- `[코드]` ③ `TypeRegistry.h` 의 `EngineMinimal.h` · `ReflectionCast.h` 를 cpp 로. 점수 합 5 % · 그 헤더 30 % 안 줄면 되돌린다.
 
 ## 7. 허브 흡수
 
@@ -108,10 +94,8 @@
 
 정본 모양이 있으면 크기와 무관하게 고친다. 문턱이 규모인 것(`PackWriter` · `LinkJobPool` · `AssetAndToolTargets` · `GPUSceneBuilder` 둘 · `SceneVoxelizer`)만 남긴다.
 
-- `[코드]` 물리: 캐릭터 쌍 전부 훑기(`JoltPhysicsScene.h:221`), 바디 · 캐릭터 단계를 프레임마다 모두 보기(`ScenePhysics.cpp:202`) → 공간 색인.
 - `[코드]` 렌더: 방출기 버퍼 선형 찾기(`VFXGPUSimulation.cpp:820`), HLOD 대리 합치기를 쿠킹 산출물로(`HLODMeshComponent.h:8`).
 - `[코드]` 허브: 카드 탁자의 숨긴 손패를 서버가 나눈다(`HubCardTableComponent.h:7`), 허브 폰 복제를 절대 자리로(`HubPawnReplicationComponent.h:14`).
-- `[코드]` 도구: `EditorVirtualList.h:6` 높이 구간, Fileserve 받기(`FileServeContentSource.cpp:169,258` · `.h:98`).
 
 ## 11. 리소스
 
