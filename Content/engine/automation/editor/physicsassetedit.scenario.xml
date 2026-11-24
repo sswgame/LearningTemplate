@@ -65,6 +65,8 @@
 	<EditorClick mark="ragdoll.spawn"/>
 	<WaitUntil watch="Editor.RagdollPreviewBuiltBodies" atLeast="2" timeoutFrames="600"/>
 	<EditorWaitStable/>
+	<EditorClick mark="Data.preview.pause"/> <!-- 몸이 걷는 애니메이션을 재생한다 — 멈춰야 손잡이가 한자리에 선다 -->
+	<EditorWaitStable/>
 	<EditorClick mark="ragdoll.body.0" state="Down"/>
 	<AdvanceSimulation frames="3"/> <!-- 누름 · 뗌을 다른 프레임에 둔다(프레임 경계) -->
 	<EditorClick mark="ragdoll.body.0" state="Up"/>
