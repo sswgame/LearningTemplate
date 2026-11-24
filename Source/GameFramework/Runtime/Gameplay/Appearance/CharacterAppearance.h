@@ -116,7 +116,7 @@ namespace sw
     /**
      * @class CharacterAppearanceCatalog
      * @brief `<CharacterAppearanceCatalog><CharacterAppearance id="Soldier" parent="HumanBase" schema="Human" bodyType="Male" bodyShape="Average,Heavy" face="face_a"
-     *        body="body_male" tags="Faction.Army">` 아래의 `<Value>`, `<Equip>`, `<SocketOverride>` 를 읽습니다. 형식은 `Appearance/README.md` 에 있습니다.
+     *        body="body_male" tags="Faction.Army">` 아래의 `<Value>`, `<Equip>`, `<SocketOverride>` 를 읽습니다.
      */
     class SW_GF_API CharacterAppearanceCatalog
     {

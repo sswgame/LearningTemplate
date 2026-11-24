@@ -29,7 +29,7 @@ namespace
 } // namespace
 
 // RESPEndToEndTest — 서버 설정이 고른 `resp` 캐시: 조립(`OnlineServerRuntime`)이 드라이버 키트에서 저장소를 만들고, 실제 TCP 로 로컬 가짜 RESP 서버에 붙어 AUTH(환경 변수 비밀) · 쓰기 · 읽기 · 발행 · 구독을 끝까지 돈다.
-// 가짜 서버는 Valkey 의 명령 부분집합을 값으로 흉내 낸다 — 답을 대본으로 주는 `TestRespEphemeralStore.cpp` 와 달리 무엇이 키로 닿았는지 본다. 드라이버 표에 없는 이름 · 없는 환경 변수는 메모리로 물러나지 않고 기동이 멈춘다(nogpu).
+// 가짜 서버는 Valkey 의 명령 부분집합을 값으로 흉내 낸다 — 답을 대본으로 주는 `TestRESPEphemeralStore.cpp` 와 달리 무엇이 키로 닿았는지 본다. 드라이버 표에 없는 이름 · 없는 환경 변수는 메모리로 물러나지 않고 기동이 멈춘다(nogpu).
 
 using namespace sw;
 

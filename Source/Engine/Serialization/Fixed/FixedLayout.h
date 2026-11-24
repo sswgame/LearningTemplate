@@ -1,8 +1,7 @@
 /**
  * @file FixedLayout.h
  * @brief 고정 배치형(B) 직렬화입니다. 같은 빌드끼리만 읽는 바이트를 코드 생성기가 타입마다 만든 서술자 표(`FixedFieldDesc`)로 쓰고, 읽고, 비교합니다.
- * @details 계획과 근거는 `Source/Engine/Serialization/Fixed/README.md` 3절과 6절에 있습니다.
- *
+ * @details
  *          **사용자는 B 를 선언하지 않습니다.** 생성기가 `REFLECT()` 타입마다 코덱을 만들어 `TypeInfo::_pFixedCodec` 에 등록합니다.
  *          필드 타입이 인코딩 표 밖이면(포인터, `MaxCount` 없는 가변 길이, 핸들 등) 코덱 대신 그 이유를 등록합니다.
  *          코덱이 필요한 등록 API 는 기동 때 `findCodec` 으로 확인하고, 없으면 이유와 함께 멈춥니다.

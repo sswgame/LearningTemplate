@@ -59,7 +59,7 @@ namespace sw
         /** @brief 반환 타입의 이름과 값 변환입니다. void 이거나 생성자면 nullptr 입니다. */
         const ReflectTypeOps* _pReturnType;
 
-        /** @brief 빈 메서드 정보를 만듭니다(메타데이터 상자의 기본 생성이 `ReflectionMetadata.h` 를 봐야 해서 `Reflection.cpp` 에 둔다). */
+        /** @brief 빈 메서드 정보를 만듭니다(메타데이터 상자의 기본 생성이 `ReflectionMetadata.h` 를 봐야 해서 `FunctionInfo.cpp` 에 둔다). */
         FunctionInfo() noexcept;
         /** @brief 생성 코드의 서술자 한 줄(`FunctionDesc`)로 만듭니다. */
         explicit FunctionInfo( const FunctionDesc& desc );

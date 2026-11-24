@@ -319,7 +319,7 @@ namespace sw
     /**
      * @class ItemVisualCatalog
      * @brief `<ItemVisualCatalog><ItemVisual id="rifle_m4" occupancy="TwoHanded" customization="Rifle" tags="Weapon.Rifle" defaultState="Drawn">` 아래
-     *        `<Part>`, `<State>`, `<DamageStage>` 를 읽습니다. 형식은 `Appearance/README.md` 에 있습니다.
+     *        `<Part>`, `<State>`, `<DamageStage>` 를 읽습니다.
      */
     class SW_GF_API ItemVisualCatalog
     {

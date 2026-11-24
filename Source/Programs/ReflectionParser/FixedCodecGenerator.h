@@ -1,7 +1,7 @@
 /**
  * @file FixedCodecGenerator.h
  * @brief 고정 배치형(B) 코덱 생성기입니다. `REFLECT` 타입마다 서술자 표(`::sw::FixedFieldDesc`)와 정규 문자열 · 의존 목록을 냅니다.
- * @details 명세는 `Source/Engine/Serialization/Fixed/README.md` 3 · 4 절, 런타임은 `Engine/Serialization/Fixed/FixedLayout.h` 입니다.
+ * @details 런타임은 `Engine/Serialization/Fixed/FixedLayout.h` 입니다.
  *          쓰기 · 읽기 · 비교 본문은 내지 않는다 — 런타임 해석기 하나가 표로 한다(언리얼 `FRepLayout` 자리). 예전에는 타입마다 직선 코드를 냈다.
  *
  *          - 사용자는 B 를 선언하지 않습니다. 필드 타입이 인코딩 표 안이면 코덱을 만들고, 아니면 이유를 등록합니다(오류가 아닙니다).

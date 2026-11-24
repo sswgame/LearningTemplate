@@ -1,6 +1,6 @@
 /**
  * @file PlatformFileSystem.h
- * @brief 파일 시스템 OS 원시 연산(질의 · 폴더 · 지우기 · 복사 · 시각 · 경로 해석 · 나열)의 선언입니다. **`FileUtil` 의 구현(`FileUtilFileSystem.cpp`)과 플랫폼 구현(`File/Windows` ·
+ * @brief 파일 시스템 OS 원시 연산(질의 · 폴더 · 지우기 · 복사 · 시각 · 경로 해석 · 나열)의 선언입니다. **`FileUtil` 의 구현(`FileUtil.cpp`)과 플랫폼 구현(`File/Windows` ·
  *        `File/Linux` 의 `*FileSystem.cpp`)만 include 합니다** - 호출하는 쪽은 `FileUtil` 입니다.
  * @details 헤더가 있는 이유는 세 번역 단위(공용 · Windows · Linux)가 시그니처를 맞추기 위해서일 뿐이다. 경로 규칙 · 로그 · 자동화 쓰기 문(`isWriteAllowed`) · 캐시 알림은 `FileUtil` 에 있으므로
  *          이 층을 바로 부르면 그것들을 건너뛴다. `std::filesystem` 은 쓰지 않는다 - 한 층에 오류 모델 · UTF-16 변환이 둘이 되지 않게 Win32 · POSIX 네이티브 한 곳이다.

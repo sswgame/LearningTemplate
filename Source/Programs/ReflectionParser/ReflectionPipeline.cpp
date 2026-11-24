@@ -742,7 +742,7 @@ namespace sw
 
     /**
      * @details 진단 파일입니다. 빌드는 읽지 않으므로 CMake 산출물 목록에 넣지 않습니다. 스키마 해시가 왜 바뀌었는지 빌드 두 개의 이 파일을
-     *          비교해 봅니다(`Source/Engine/Serialization/Fixed/README.md` 3.11). 판정 줄은 생성기가 스탬프에 적은 사실이다(이번 실행에 최신이라 다시 쓰지 않은 입력도 스탬프에 남아 있다).
+     *          비교해 봅니다. 판정 줄은 생성기가 스탬프에 적은 사실이다(이번 실행에 최신이라 다시 쓰지 않은 입력도 스탬프에 남아 있다).
      */
     bool ReflectionPipeline::writeFixedSchemaList() const
     {

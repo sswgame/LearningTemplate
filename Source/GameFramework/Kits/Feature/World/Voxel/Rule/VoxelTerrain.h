@@ -1,6 +1,6 @@
 /**
  * @file VoxelTerrain.h
- * @brief 시드로 결정되는 지형을 생성합니다. 값 노이즈(`Utility/ValueNoise.h`)로 높이를 정하고, 흙, 돌, 모래 해변, 물, 나무를 배치합니다.
+ * @brief 시드로 결정되는 지형을 생성합니다. 값 노이즈(`Core/Math/ValueNoise.h`)로 높이를 정하고, 흙, 돌, 모래 해변, 물, 나무를 배치합니다.
  */
 #pragma once
 #include "Core/Container/vector.h"

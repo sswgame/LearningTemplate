@@ -1,7 +1,7 @@
 /**
  * @file Engine/Audio/AudioRenderListener.h
  * @brief 장치 없는 오프라인 렌더(믹서 최종 출력)를 보는 리스너 등록입니다 — 보는 쪽이 `SW_AUDIO_RENDER_LISTENER` 한 줄로 스스로 등록하고, 오디오 서비스는 렌더한 블록을 등록에 넘기기만 합니다.
- * @details 오프라인 렌더 덤프(`Audio/Dev/AudioDumpListener.cpp` 의 `-gv_audioDumpPath` — 배포 구성이 짓지 않는다)가 등록한다. 배포본에는 등록이 없어 서비스는 블록을 넘기지 않는다.
+ * @details 오프라인 렌더 덤프(`DevTools/Client/Audio/AudioDumpListener.cpp` 의 `-gv_audioDumpPath` — 배포 구성이 짓지 않는다)가 등록한다. 배포본에는 등록이 없어 서비스는 블록을 넘기지 않는다.
  *          예전에는 서비스가 테스트용 전역 변수를 읽고 덤프 표본 목록(`_listDumpSample`)을 직접 들었다. 언리얼 오디오 믹서의
  *          `ISubmixBufferListener`(마스터 서브믹스 출력에 붙는 관찰자 등록)와 같은 자리다.
  */

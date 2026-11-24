@@ -23,7 +23,7 @@ namespace sw
      * @class MaterialTintCache
      * @brief (부모 머티리얼 · 색) 하나에 인스턴스 하나입니다. 같은 색은 같은 인스턴스를 나눠 써서 배치 키가 갈라지지 않습니다.
      * @details 색만 다른 머티리얼 에셋을 두면 그 에셋은 처음 스폰할 때 게임 스레드에서 올라가고 마지막 것이 사라질 때 내려가 렌더 스레드의 병렬
-     *          기록과 겹친다(`Source/Games/README.md`). 인스턴스는 `"_color"` 벡터 매개변수 하나를 바꿉니다. 게임 스레드에서만 씁니다.
+     *          기록과 겹친다. 인스턴스는 `"_color"` 벡터 매개변수 하나를 바꿉니다. 게임 스레드에서만 씁니다.
      */
     class SW_GF_API MaterialTintCache
     {

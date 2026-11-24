@@ -1,8 +1,7 @@
 /**
  * @file NetMessageChannel.h
  * @brief 고정 배치형(B) 메시지를 넷 채널에 싣는 등록 창구입니다 — 등록한 타입의 스키마 해시가 핸드셰이크 버전에 섞이고, 확인을 마친 채널 안에서는 본문만 보냅니다.
- * @details 계획은 `Source/Engine/Serialization/Fixed/README.md` 3.3 · 3.10 · 5절 "게임 넷 연결" 입니다.
- *          - 등록(`registerMessage<T>( kind )`)이 (종류 바이트, `FixedLayout::getSchemaHash<T>`) 를 모으고, 봉인(`seal`)이 그 목록을 호스트 설정의 와이어 버전에
+ * @details - 등록(`registerMessage<T>( kind )`)이 (종류 바이트, `FixedLayout::getSchemaHash<T>`) 를 모으고, 봉인(`seal`)이 그 목록을 호스트 설정의 와이어 버전에
  *            섞은 설정을 돌려준다. 배치가 다른 빌드는 핸드셰이크에서 `VersionMismatch` 로 먼저 거절된다 — 메시지마다 싣던 스키마 해시 8 바이트가 빠진다.
  *          - **섞는 일을 따로 부를 자리가 없다**: 본문만 쓰고 읽는 길(`writeMessage` · `readMessage`)은 봉인한 채널에만 열리고, 봉인이 내준 설정만 그 해시를 가진다.
  *            봉인 뒤의 등록과 등록하지 않은 종류 · 타입의 쓰기는 오류다(거절 · 오류 로그). 머리 없는 바이트를 만드는 길은 이 클래스와 게임 넷 메시지 본문(`NetMessageBodyCodec` — 라우터가 표 판을 맞춘 뒤에만 넘긴다)뿐이다(`FixedLayout` 의 friend).

@@ -24,8 +24,8 @@
  * @file AbilitySystemComponent.cpp
  * @brief 어빌리티 컴포넌트의 수명 · 시간 진행 · 태그 차단 · 모듈 언로드를 구현합니다.
  * @details 책임마다 파일이 나뉜다(언리얼 GAS 가 `FGameplayAbilitySpecContainer` · `FActiveGameplayEffectsContainer` · `UAttributeSet` 을 가르는 나눔).
- *          어빌리티 스펙 컨테이너는 `AbilityComponentAbilities.cpp`, 어트리뷰트는 `AbilityComponentAttributes.cpp`, 게임플레이 이펙트는 `AbilityComponentEffects.cpp`,
- *          상태 저장 · 복원은 `AbilityComponentSave.cpp` 다.
+ *          어빌리티 스펙 컨테이너는 `AbilitySystemComponentAbilities.cpp`, 어트리뷰트는 `AbilitySystemComponentAttributes.cpp`, 게임플레이 이펙트는 `AbilitySystemComponentEffects.cpp`,
+ *          상태 저장 · 복원은 `AbilitySystemComponentSave.cpp` 다.
  */
 
 namespace sw

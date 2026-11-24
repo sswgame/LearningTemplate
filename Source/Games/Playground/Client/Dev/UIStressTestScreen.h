@@ -24,7 +24,7 @@ namespace sw
      * @details `onTick` 이 프레임마다 앞쪽(보이는) 칸 `gv_stressTestUiChurn` 개의 텍스트를 바꾼다. 무효화와 그리기 캐시가 비용을 그 칸으로 가두는지 측정한다.
      *          측정할 구간은 `GT.UI.*`, `RT.Canvas.*` 이고, 카운터는 `UI.LayoutWidgets`, `UI.PaintWidgets`, `Text.GlyphsRasterized` 다(값은 per_frame 열에 있다).
      *          `gv_stressTestUiOpacityPulse` 는 프레임마다 화면 루트의 불투명도를 바꿔 조상의 `kTransform` 으로 보이는 자손 전체를 다시 칠하게 한다(그림 캐시를 캐시 밖에서 곱하는 구조가
-     *          이기는지 판단하는 측정용이며, 방법과 기준은 `UI/README.md` "성능" 의 "측정 시나리오" 에 있다).
+     *          이기는지 판단하는 측정용이다).
      *          .cpp 의 화면 스위치(`SW_UI_SCREEN_SWITCH`)가 `gv_stressTestUiWidgets` 를 보고 열고 닫는다(HUD 레이어이며 포커스와 입력을 받지 않는다).
      */
     REFLECT( Abstract )
