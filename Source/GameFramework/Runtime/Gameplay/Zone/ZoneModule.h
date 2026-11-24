@@ -161,7 +161,7 @@ namespace sw
         const ZoneCompiledModule* _pModule{ nullptr };
         ZoneModuleMemory*         _pMemory{ nullptr };
         GameObject*               _pTarget{ nullptr };   ///< 역할을 푼 대상
-        GameObject*               _pOccupant{ nullptr }; ///< 들어온 개체
+        GameObject*               _pOccupant{ nullptr }; ///< 들어온 개체(이탈에서 이미 사라졌으면 nullptr)
         GameObjectManager*        _pManager{ nullptr };
         const ZoneSample*         _pSample{ nullptr };
         GameplayContext           _world{};                   ///< 위치 값 · 대상 태그 · 플래그 · 블랙보드 · 출처 · 대상 · 값 칸
