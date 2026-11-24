@@ -775,8 +775,9 @@ namespace sw
         target._worldOrigin = pManager->getWorldOrigin();
         if ( _listGroupTarget.empty() == false )
         {
-            vector<float3> listPoint;
-            listPoint.reserve( _listGroupTarget.size() );
+            // 그룹 카메라는 프레임마다 대상 자리를 모은다 — 한 화면의 대상은 몇 명이라 인라인 버퍼에 든다.
+            static constexpr size_t                      kInlineGroupPointCount = 8;
+            small_vector<float3, kInlineGroupPointCount> listPoint;
             for ( const GameObjectHandle& handle : _listGroupTarget )
             {
                 const GameObject* pObject = pManager->resolveGameObject( handle );

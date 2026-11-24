@@ -24,6 +24,7 @@ namespace sw
     MeleeHitboxComponent::MeleeHitboxComponent()
         : _listHitTarget{}
         , _listPreviousPoint{}
+        , _listBladeScratch{}
         , _teleport{}
         , _bladeStart{}
         , _bladeEnd{}
@@ -127,7 +128,8 @@ namespace sw
             return;
         if ( _teleport.consume( *this ).has_value() )
             _listPreviousPoint.clear();
-        vector<float3> listCurrent;
+        vector<float3>& listCurrent = _listBladeScratch;
+        listCurrent.clear();
         collectBlade( listCurrent );
         MeleeHitParams params;
         params._radius = _bladeRadius;
@@ -135,6 +137,6 @@ namespace sw
         params._bIs2D  = true;
         vector<MeleeHit> listHit;
         (void)MeleeHit::sweep( *pAttacker, _listPreviousPoint, listCurrent, params, MeleeHit::getProcessAuthority(), _listHitTarget, listHit );
-        _listPreviousPoint = std::move( listCurrent );
+        _listPreviousPoint.swap( listCurrent ); // 지난 버퍼는 다음 스윕이 다시 쓴다
     }
 } // namespace sw

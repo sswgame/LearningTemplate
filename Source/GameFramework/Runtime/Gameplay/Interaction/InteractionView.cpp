@@ -68,8 +68,9 @@ namespace sw
     optional<int32> InteractionView::selectBest( const InteractionView& viewer, const vector<InteractionCandidate>& listCandidate, const ILineOfSightQuery* pLineOfSight )
     {
         using Internal = InteractionSelectorInternal;
-        vector<Internal::ReachableCandidate> listReachable;
-        listReachable.reserve( listCandidate.size() );
+        // 플레이어의 상호작용 고르기는 프레임마다 돈다 — 닿는 후보는 몇 개라 인라인 버퍼에 든다(넘치면 힙으로 간다).
+        static constexpr size_t                                           kInlineReachableCount = 16;
+        small_vector<Internal::ReachableCandidate, kInlineReachableCount> listReachable;
         for ( size_t index = 0; index < listCandidate.size(); ++index )
         {
             Internal::ReachableCandidate reachable;
