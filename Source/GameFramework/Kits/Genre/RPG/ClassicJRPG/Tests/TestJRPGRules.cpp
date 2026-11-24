@@ -1139,7 +1139,7 @@ SW_TEST_CASE_F( JRPGRulesTest, BattleStateRefusals )
 SW_TEST_CASE_F( JRPGRulesTest, StepEncounter )
 {
     sw::JRPGEncounterWalker walker;
-    walker.initialize( &_catalog, 5 );
+    walker.initialize( _catalog, 5 );
     SW_EXPECT_EQUAL( sw::JRPGEncounterWalker::kNoEncounterYet, walker.getStepsSinceEncounter() );
 
     const sw::JRPGEncounterGroup* pGroup = walker.step( "field" );
@@ -1160,8 +1160,7 @@ SW_TEST_CASE_F( JRPGRulesTest, StepEncounter )
     SW_EXPECT_TRUE( walker.step( "weightless" ) == nullptr );
     SW_EXPECT_EQUAL( stepsBefore + 4, walker.getTotalSteps() );
 
-    sw::JRPGEncounterWalker noCatalog;
-    noCatalog.initialize( nullptr, 5 );
+    sw::JRPGEncounterWalker noCatalog; // 열기 전의 걸음은 조우하지 않는다
     SW_EXPECT_TRUE( noCatalog.step( "field" ) == nullptr );
 }
 
@@ -1171,14 +1170,14 @@ SW_TEST_CASE_F( JRPGRulesTest, StepEncounter )
 SW_TEST_CASE_F( JRPGRulesTest, StepEncounterState )
 {
     sw::JRPGEncounterWalker walker;
-    walker.initialize( &_catalog, 5 );
+    walker.initialize( _catalog, 5 );
     (void)walker.step( "field" );
 
     sw::Archive written;
     walker.writeState( written );
     sw::Archive             reading( written.getData(), written.getSize() );
     sw::JRPGEncounterWalker restored;
-    restored.initialize( &_catalog, 77 );
+    restored.initialize( _catalog, 77 );
     SW_REQUIRE_TRUE( restored.readState( reading ) );
     SW_EXPECT_TRUE( JRPGTestUtil::isSameState( walker, restored ) );
     for ( int32 step = 0; step < 8; ++step )

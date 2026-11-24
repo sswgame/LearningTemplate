@@ -235,7 +235,7 @@ namespace
         MonsterHuntMutagensTest()
         {
             SW_REQUIRE_TRUE( _catalog.loadFromXMLText( kMonsterHuntXML, "MonsterHuntTest" ) );
-            _mutagens.initialize( &_catalog, 3 );
+            _mutagens.initialize( _catalog, 3 );
         }
 
         bool readFixture( int32 level, const sw::hashed_string& slot00, const sw::hashed_string& slot01, const sw::hashed_string& slot10, const sw::hashed_string& mutagen0 )

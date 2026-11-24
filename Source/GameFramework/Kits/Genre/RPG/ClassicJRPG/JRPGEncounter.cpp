@@ -14,9 +14,9 @@ namespace sw
     {
     }
 
-    void JRPGEncounterWalker::initialize( const JRPGCatalog* pCatalog, uint32 seed )
+    void JRPGEncounterWalker::initialize( const JRPGCatalog& catalog, uint32 seed )
     {
-        _pCatalog = pCatalog;
+        _pCatalog = &catalog;
         _random.setSeed( seed );
         _counter.reset();
     }

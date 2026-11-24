@@ -190,7 +190,7 @@ namespace sw
     bool MonsterHuntGameModeComponent::openSkills()
     {
         _listLearnedSkill.clear();
-        _mutagens.initialize( _pCatalog.get(), _hunterLevel );
+        _mutagens.initialize( *_pCatalog, _hunterLevel );
         for ( const CatalogKey<MonsterHuntMutagenDef>& mutagen : _listMutagen )
         {
             if ( _pCatalog->findMutagen( mutagen.key() ) != nullptr )
@@ -611,7 +611,7 @@ namespace sw
             restoredBestiary.initialize( *_pCatalog, *_pChart );
             restoredAlchemy.initialize( *_pCatalog, *_pRecipes );
             restoredQuestLog.initialize( _pQuests.get() );
-            restoredMutagens.initialize( _pCatalog.get(), _hunterLevel );
+            restoredMutagens.initialize( *_pCatalog, _hunterLevel );
             restoredSkills.initialize( _skills.getTree() );
             restoredSkills.addPoints( _skillPoints );
         }

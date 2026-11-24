@@ -219,7 +219,7 @@ namespace sw
         _wallet.clear();
         if ( _startGold > 0 )
             _wallet.add( Wallet::getDefaultCurrency(), _startGold );
-        _walker.initialize( _pCatalog.get(), _seed );
+        _walker.initialize( *_pCatalog, _seed );
         _walker.restartGrace(); // 첫 걸음에 조우하지 않는다
         _battle = JRPGBattle{};
         _resultHold.clear();
@@ -686,7 +686,7 @@ namespace sw
             if ( io.check( restoredBag.initialize( _pItemCatalog.get(), _bagSlotCount ) ) == false )
                 return;
             restoredParty.initialize( *_pCatalog, *_pItemCatalog, _bag, _wallet );
-            restoredWalker.initialize( _pCatalog.get(), _seed );
+            restoredWalker.initialize( *_pCatalog, _seed );
             restoredBattle.initialize( *_pCatalog, _judge, _battleSettings, _seed );
             restoredBattle.bindParty( restoredParty );
         }
