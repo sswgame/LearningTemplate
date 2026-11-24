@@ -111,8 +111,9 @@ namespace sw
         const ComponentRegistry::View<PostProcessVolumeComponent> volumes = registry.getAll<PostProcessVolumeComponent>();
         if ( volumes.empty() )
             return values;
-        vector<Contribution> listContribution;
-        listContribution.reserve( volumes.size() );
+        // 카메라마다 프레임마다 묻는다 — 한 자리에 겹치는 볼륨은 몇 개라 인라인 버퍼에 든다(넘치면 힙으로 간다).
+        static constexpr size_t                              kInlineContributionCount = 8;
+        small_vector<Contribution, kInlineContributionCount> listContribution;
         for ( const PostProcessVolumeComponent* pVolume : volumes )
         {
             if ( pVolume == nullptr || pVolume->isActive() == false )

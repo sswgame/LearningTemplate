@@ -279,10 +279,17 @@ namespace sw
         SW_ASSERT( pLayer != nullptr && pLayer->_arrBuiltCell[_frontIndex] > 0.0f );
         if ( pLayer == nullptr )
             return;
-        // 질의마다 새 목록이다 — 병렬 틱이 같은 격자를 동시에 읽는다.
-        vector<SlotHandle> listHandle;
-        pLayer->_arrGrid[_frontIndex].queryAABB( minX, minY, maxX, maxY, listHandle );
-        VectorUtil::sort( listHandle, [this]( SlotHandle left, SlotHandle right )
+        // 질의마다 제 버퍼다 — 병렬 틱이 같은 격자를 동시에 읽는다. 보통의 결과는 인라인 버퍼에 들어 힙을 건드리지 않는다(AI 시각 · 상호작용 · 존이 틱마다 묻는다 —
+        // 언리얼 겹침 질의가 결과를 `TInlineAllocator` 배열로 받는 자리). 여러 셀에 걸친 핸들은 겹쳐 오므로 올린 순서로 정렬하며 하나만 남긴다(순서 번호는 항목마다 다르다).
+        static constexpr size_t                      kInlineHandleCount = 64;
+        small_vector<SlotHandle, kInlineHandleCount> listHandle;
+        const AABB2D                                 bounds{
+            float2{MathUtil::min( minX, maxX ), MathUtil::min( minY, maxY )},
+            float2{MathUtil::max( minX, maxX ), MathUtil::max( minY, maxY )}
+        };
+        pLayer->_arrGrid[_frontIndex].visitAABB( bounds, [&listHandle]( SlotHandle handle )
+        { listHandle.push_back( handle ); } );
+        VectorUtil::sortUnique( listHandle, [this]( SlotHandle left, SlotHandle right )
         {
             return _listEntry[left.index()]._sequence < _listEntry[right.index()]._sequence;
         } );

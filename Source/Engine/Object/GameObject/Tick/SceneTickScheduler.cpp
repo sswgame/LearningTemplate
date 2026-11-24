@@ -492,9 +492,11 @@ namespace sw
             return;
         }
 
-        TaskManager&       taskManager = engine::getSubsystem<TaskManager>();
-        TaskStageHandle    taskStage   = taskManager.createStage();
-        vector<TaskHandle> listHandle( itemCount );
+        TaskManager&    taskManager = engine::getSubsystem<TaskManager>();
+        TaskStageHandle taskStage   = taskManager.createStage();
+        // 간선 있는 스테이지마다 프레임마다 돈다 — 항목 핸들은 인라인 버퍼에 든다(위의 위상 정렬 배열처럼 스테이지마다 힙을 잡지 않는다).
+        static constexpr size_t                         kInlineStageItemCount = 64;
+        small_vector<TaskHandle, kInlineStageItemCount> listHandle( itemCount );
         for ( uint32 index = 0; index < itemCount; ++index )
         {
             listHandle[index] = taskManager.emplaceTask( "GT.Scene.tick.stageTask", SW_DELEGATE_METHOD( TaskDelegate, &StageItemTask::run, &_listStageItemTask[index] ) );
