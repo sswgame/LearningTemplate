@@ -9,7 +9,7 @@
         ],
         "argument_index": { "type": 0, "name": 1, "default_value": 2, "description": 3 },
         "name_prefix": "gv_",
-        "type_map": { "sw::GlobalString": "string", "sw::GlobalDiskPath": "string" },
+        "type_map": { "sw::GlobalString": "string", "sw::GlobalDiskPath": "string", "sw::GlobalSecret": "string" },
         "default_value_macros": {
             "SW_RHI_BACKEND_DEFAULT": { "file": "Config/Engine/CookContract.json", "key": "default_rhi_backend" }
         }
