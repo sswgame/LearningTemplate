@@ -2,12 +2,15 @@
 
 #include "GameFramework/Runtime/Foundation/Framework/Minigame/MinigameFlow.h"
 
+#include "Core/Algorithm/VectorUtil.h"
 #include "Core/Diagnostics/MemoryProfiler.h"
 #include "Core/File/FileUtil.h"
+#include "Core/Foundation/Constants.h"
 #include "Core/GlobalVariable/GlobalVariableManager.h"
 #include "Core/Log/Logger.h"
 #include "Core/String/StringBuilder.h"
 #include "Core/String/StringUtil.h"
+#include "Core/Time/MonotonicClock.h"
 
 #include "Engine/Asset/AssetManager.h"
 #include "Engine/Asset/Cache/AssetCacheBase.h"
@@ -295,6 +298,11 @@ namespace sw
         , _lastResult{}
         , _sceneLoadRequested{}
         , _worldPlayChanged{}
+        , _replicationServer{}
+        , _replicationClient{}
+        , _replicationHandler{}
+        , _listObserved{}
+        , _replicationRole{ NetLinkRole::Server }
         , _leakCount{ 0 }
         , _restoreCount{ 0 }
         , _lastLoad{ 0 }
@@ -325,7 +333,9 @@ namespace sw
         _pendingLeave     = nullopt;
         _pReturning.reset();
         _pPreviousStack.reset();
-        deactivateScope(); // 게임 범위 기능은 게임 인스턴스가 이 뒤에 끈다(미니게임의 해제 검사는 그것이 켜진 채로 찍었다)
+        _replicationHandler.reset();
+        _listObserved.clear(); // 켜진 범위는 아래에서 끈다
+        deactivateScope();     // 게임 범위 기능은 게임 인스턴스가 이 뒤에 끈다(미니게임의 해제 검사는 그것이 켜진 채로 찍었다)
         _stack.clear();
     }
 
@@ -549,6 +559,7 @@ namespace sw
                              _stack.findMatchID() != 0 ? "another match is still running" : "it is not a match minigame or carries no match id" );
             return false;
         }
+        leaveObserved( 0 ); // 매치 세션은 허브 세션의 월드가 아니다 — 보던 하위 레벨을 거두고 들어간다
         if ( enterDefinition( std::move( definition ), nullopt ) == false )
             return false;
         _stack.findTop()->_matchID = matchID;
@@ -557,8 +568,20 @@ namespace sw
 
     bool MinigameFlow::enterDefinition( MinigameDefinition definition, const optional<SubLevelPlacement>& placement )
     {
-        const string name{ definition._name.view() }; // 정의를 칸으로 옮긴 뒤에도 쓴다
-        Scene* const pScene = MinigameFlowInternal::findActivePlayScene();
+        const string              name{ definition._name.view() }; // 정의를 칸으로 옮긴 뒤에도 쓴다
+        Scene* const              pScene      = MinigameFlowInternal::findActivePlayScene();
+        const SceneNetLink* const pLink       = pScene != nullptr ? &pScene->getObjectManager()->getSubsystem<SceneNetLink>() : nullptr;
+        const bool                bReplicated = definition._entry == MinigameEntry::SubLevel && pLink != nullptr && pLink->isBound();
+        if ( bReplicated && game::getSubsystem<const MinigameConfig>()._subLevelReadySeconds <= 0.0f )
+        {
+            SW_LOG_ERROR_ID( "MinigameFlow.ReadyLimitMissing", "Minigame '%#' is refused - EngineConfig _minigame._subLevelReadySeconds must be > 0 (Config/Engine/EngineConfig.json)", name );
+            return false;
+        }
+        if ( isObserving() || ( bReplicated && pLink->hasAuthority() == false ) )
+        {
+            SW_LOG_ERROR_ID( "MinigameFlow.ServerEnters", "Minigame '%#' is refused - this world belongs to a server; only the server enters and leaves sub-level minigames", name );
+            return false;
+        }
         if ( definition._entry == MinigameEntry::SubLevel && ( pScene == nullptr || placement.has_value() == false ) )
         {
             SW_LOG_ERROR_ID( "MinigameFlow.SubLevelNeedsAnchor", "Minigame '%#' (entry=\"SubLevel\") is added at the transform of the object that enters it - %#", name,
@@ -576,7 +599,7 @@ namespace sw
             activateTop();
             return false;
         }
-        unique_ptr<GameFeatureScope> pScope = activate( definition );
+        unique_ptr<GameFeatureScope> pScope = activate( definition, ActivationRole::Player );
         if ( pScope == nullptr )
         {
             SW_LOG_ERROR_ID( "MinigameFlow.NotActivated", "Minigame '%#' could not be activated (see the messages above) - the covered minigame is active again", name );
@@ -591,8 +614,10 @@ namespace sw
         if ( bSub )
         {
             // 하위 레벨 이름은 미니게임 이름이다 — 나올 때 그 이름으로 뺀다. 자리는 진입을 건 사물의 변환이다(언리얼 레벨 인스턴스 액터).
-            SceneSubLevelSubsystem& subLevels = pScene->getObjectManager()->getSubsystem<SceneSubLevelSubsystem>();
-            if ( subLevels.addSubLevel( *pScene, name, mapPath, *placement ) == false )
+            // 넷 세션이면 클라이언트가 맵을 다 읽을 때까지 짓지 않는다(`updateServerEntries` 가 푼다) — 서버에만 선 바닥 · 벽을 클라이언트의 예측이 모르는 동안을 만들지 않는다.
+            SceneSubLevelSubsystem&  subLevels = pScene->getObjectManager()->getSubsystem<SceneSubLevelSubsystem>();
+            const SubLevelBuildStart start     = bReplicated ? SubLevelBuildStart::OnRelease : SubLevelBuildStart::WhenRead;
+            if ( subLevels.addSubLevel( *pScene, name, mapPath, *placement, start ) == false )
             {
                 SW_LOG_ERROR_ID( "MinigameFlow.SubLevelRefused", "Minigame '%#': the map '%#' could not be added to the active scene (see the messages above)", name, mapPath.c_str() );
                 dropTop();
@@ -637,7 +662,7 @@ namespace sw
             return false;
         }
         deactivateScope();
-        unique_ptr<GameFeatureScope> pScope = activate( definition );
+        unique_ptr<GameFeatureScope> pScope = activate( definition, ActivationRole::Player );
         if ( pScope == nullptr )
         {
             SW_LOG_ERROR_ID( "MinigameFlow.NotActivated", "Minigame '%#' could not be activated (see the messages above) - the previous minigame is active again", name );
@@ -758,7 +783,7 @@ namespace sw
         }
         // 들어가기와 같은 순서다 — 지금 것을 끄고 세이브의 맨 위를 켠 뒤 맵을 요청한다(맵의 컴포넌트가 씬 적용 때 서비스를 찾는다). 지면 지금 칸을 다시 켠다.
         deactivateScope();
-        unique_ptr<GameFeatureScope> pScope = activate( saved.findTop()->_definition );
+        unique_ptr<GameFeatureScope> pScope = activate( saved.findTop()->_definition, ActivationRole::Player );
         if ( pScope == nullptr )
         {
             SW_LOG_ERROR_ID( "MinigameFlow.NotActivated", "Minigame '%#' could not be activated (see the messages above) - the save is not loaded", saved.findTop()->_definition._name.c_str() );
@@ -875,6 +900,7 @@ namespace sw
         // 되살린 씬의 결과를 먼저 알린다 — 앞 프레임에 되살린 오브젝트가 상태를 받고 시작한 뒤라 보상이 복원 값에 덮이지 않는다.
         deliverPendingResults();
         dropFailedSubLevel(); // 하위 레벨 맵은 비동기로 읽는다 — 읽지 못했으면 진입을 되돌린다
+        updateReplication();
         // 다시 읽힌 카탈로그를 먼저 건다 — 이 프레임의 진입 · 컴포넌트가 새 판을 찾는다.
         if ( _pActive != nullptr )
             _pActive->rebindReloadedCatalogs();
@@ -898,7 +924,7 @@ namespace sw
     const MinigameDefinition* MinigameFlow::findActiveDefinition() const
     {
         const MinigameFrame* const pTop = _stack.findTop();
-        return ( _pActive != nullptr && pTop != nullptr ) ? &pTop->_definition : nullptr;
+        return ( _pActive != nullptr && pTop != nullptr && isObserving() == false ) ? &pTop->_definition : nullptr;
     }
 
     void MinigameFlow::activateTop()
@@ -907,7 +933,7 @@ namespace sw
         if ( pTop == nullptr || _pActive != nullptr )
             return;
         // 같은 정의는 덮이기 전까지 켜져 있었다 — 다시 켜지 않으면(그 사이 기능 모듈이 내려갔다) 칸은 남기고 켜진 미니게임 없이 둔다(나가기는 그대로 된다).
-        _pActive = activate( pTop->_definition );
+        _pActive = activate( pTop->_definition, ActivationRole::Player );
         if ( _pActive == nullptr )
             SW_LOG_ERROR_ID( "MinigameFlow.CoveredNotActivated", "Minigame '%#' could not be activated again (see the messages above) - it stays stacked without its features",
                              pTop->_definition._name.c_str() );
@@ -956,7 +982,7 @@ namespace sw
             return;
         SceneSubLevelSubsystem& subLevels = pScene->getObjectManager()->getSubsystem<SceneSubLevelSubsystem>();
         SubLevelState           state{ SubLevelState::Queued };
-        if ( subLevels.findSubLevelState( returnPoint._subLevelName.view(), state ) )
+        if ( subLevels.findSubLevelState( returnPoint._subLevelName.view(), state ) && state != SubLevelState::Removing )
             (void)subLevels.removeSubLevel( returnPoint._subLevelName.view() ); // 방금 찾은 이름이다
     }
 
@@ -985,7 +1011,7 @@ namespace sw
         (void)future;
         if ( kind != SceneLoadKind::Travel || _bRequestingScene == SW_TRUE )
             return; // 도구가 연 씬이거나 이 흐름의 요청이다
-        if ( _stack.isEmpty() == false || isLeaving() )
+        if ( _stack.isEmpty() == false || isLeaving() || isObserving() )
             clearForOutsideTravel( scenePath );
         if ( game::getSubsystem<GameSceneFlow>().isTitleScene( scenePath ) )
             _stack.clearResults(); // 하던 게임이 끝났다 — 다음 게임의 허브가 지난 게임의 보상을 받지 않는다
@@ -1001,7 +1027,7 @@ namespace sw
         // 컴포넌트가 끝난 뒤다 — 에디터가 멈춘 플레이의 범위 · 칸 · 맡긴 일이 다음 플레이에 남지 않게 한다.
         _pendingEnter.clear();
         _pendingPlacement = nullopt;
-        if ( _stack.isEmpty() == false || isLeaving() )
+        if ( _stack.isEmpty() == false || isLeaving() || isObserving() )
             clearForOutsideTravel( "(the world stopped playing)" );
         _stack.clearResults();
     }
@@ -1032,7 +1058,7 @@ namespace sw
         MinigameDefinition definition;
         if ( found.empty() || loadDefinition( found, definition ) == false || validateEntry( definition, MinigameFlowInternal::isNetSessionActive() ) == false || validateDepth( found ) == false )
             return; // 미니게임의 맵이 아니거나 까닭을 남겼다
-        unique_ptr<GameFeatureScope> pScope = activate( definition );
+        unique_ptr<GameFeatureScope> pScope = activate( definition, ActivationRole::Player );
         if ( pScope == nullptr )
         {
             SW_LOG_ERROR_ID( "MinigameFlow.NotActivated", "Minigame '%#' of the active scene could not be activated (see the messages above)", found.c_str() );
@@ -1060,6 +1086,7 @@ namespace sw
         _pReturning.reset();     // 저장 막기도 풀린다 — 새 씬(세이브 · 타이틀)이 바깥 진행이다
         _pPreviousStack.reset(); // 세이브의 맵을 기다리던 부른 쪽은 밀려난 로드의 끝(nullptr)을 받는다
         _pendingLeave = nullopt; // 맡긴 나가기의 칸은 방금 버렸다
+        _listObserved.clear();   // 하위 레벨은 씬 끝내기가 버린다 — 새 월드의 목록은 서버가 처음부터 보낸다
         deactivateScope();
         _stack.clear();
     }
@@ -1109,7 +1136,7 @@ namespace sw
         deliverResult( pReturn->_result );
     }
 
-    unique_ptr<GameFeatureScope> MinigameFlow::activate( const MinigameDefinition& definition )
+    unique_ptr<GameFeatureScope> MinigameFlow::activate( const MinigameDefinition& definition, ActivationRole role )
     {
         InputManager* const          pInput = game::findSubsystem<InputManager>(); // 입력 서비스가 없는 호스트(전용 서버)는 입력 레이어를 걸지 않는다
         unique_ptr<GameFeatureScope> scope  = make_unique<GameFeatureScope>( _gameScope, game::getSubsystem<GlobalVariableManager>(), _packConfig, pInput != nullptr ? &pInput->getInputMap() : nullptr,
@@ -1122,15 +1149,230 @@ namespace sw
             SW_LOG_ERROR_ID( "MinigameFlow.CatalogNotLoaded", "Minigame '%#': catalog '%#' is declared but no feature in features=\"...\" loaded it", definition._name.c_str(), pUnloaded->c_str() );
             return nullptr;
         }
-        if ( pushInputLayers( *scope, definition ) == false || openLocalUsers( *scope, definition ) == false )
+        // 보기만 하는 피어의 플레이어는 들지 않았다 — 조작과 화면은 그대로다.
+        const bool bPlayer = role == ActivationRole::Player;
+        if ( bPlayer && ( pushInputLayers( *scope, definition ) == false || openLocalUsers( *scope, definition ) == false ) )
             return nullptr;
         // UI 는 클라이언트 전용 부분이 연다 — 전용 서버(창구가 없다)는 화면이 없다.
-        IGameInstanceClientHook* const pClientHook = IGameInstanceClientHook::find();
+        IGameInstanceClientHook* const pClientHook = bPlayer ? IGameInstanceClientHook::find() : nullptr;
         if ( pClientHook != nullptr && pClientHook->openMinigameUI( *scope, definition ) == false )
             return nullptr;
         scope->finishActivation();
         SW_LOG_INFO_ID( "MinigameFlow.Activated", "Minigame '%#' is active (%# features)", definition._name.c_str(), static_cast<uint32>( definition._listFeature.size() ) );
         return scope;
+    }
+
+    void MinigameFlow::updateReplication()
+    {
+        Scene* const              pScene = MinigameFlowInternal::findActivePlayScene();
+        const SceneNetLink* const pLink  = pScene != nullptr ? &pScene->getObjectManager()->getSubsystem<SceneNetLink>() : nullptr;
+        if ( pLink == nullptr || pLink->isBound() == false )
+        {
+            stopReplication();
+            releaseHeldBuilds( pScene );
+            return;
+        }
+        if ( _replicationHandler.isActive() == false )
+        {
+            stopReplication(); // 앞 세션의 것(닫힌 세션이 등록을 풀었다)
+            const NetLinkValue& value = pLink->get();
+            _replicationRole          = value._role;
+            if ( _replicationRole == NetLinkRole::Server )
+            {
+                _replicationServer.initialize( value._pPeers );
+                _replicationHandler = value._pRouter->registerHandler( &_replicationServer );
+            }
+            else
+            {
+                _replicationClient.initialize( value._pPeers );
+                _replicationHandler = value._pRouter->registerHandler( &_replicationClient );
+            }
+            if ( _replicationHandler.isActive() == false )
+            {
+                releaseHeldBuilds( pScene );
+                return; // 까닭은 라우터가 남겼다
+            }
+        }
+        if ( _replicationRole == NetLinkRole::Server )
+            updateServerEntries( *pScene );
+        else if ( isEntering() == false && isLeaving() == false )
+            updateObserved( *pScene );
+    }
+
+    void MinigameFlow::stopReplication()
+    {
+        _replicationHandler.reset();
+        leaveObserved( 0 );
+    }
+
+    void MinigameFlow::releaseHeldBuilds( Scene* pScene )
+    {
+        if ( pScene == nullptr )
+            return;
+        SceneSubLevelSubsystem& subLevels = pScene->getObjectManager()->getSubsystem<SceneSubLevelSubsystem>();
+        for ( const MinigameFrame& frame : _stack.getFrames() )
+        {
+            if ( const MinigameSubLevelReturn* const pSubLevel = std::get_if<MinigameSubLevelReturn>( &frame._returnPoint ) )
+                subLevels.releaseBuild( pSubLevel->_subLevelName.view() );
+        }
+    }
+
+    void MinigameFlow::updateServerEntries( Scene& scene )
+    {
+        SceneSubLevelSubsystem& subLevels = scene.getObjectManager()->getSubsystem<SceneSubLevelSubsystem>();
+        vector<string>          listName;
+        for ( const MinigameFrame& frame : _stack.getFrames() )
+        {
+            const MinigameSubLevelReturn* const pSubLevel = std::get_if<MinigameSubLevelReturn>( &frame._returnPoint );
+            if ( pSubLevel != nullptr && pSubLevel->_scenePath == scene.getSourcePath() )
+                listName.push_back( string( pSubLevel->_subLevelName.view() ) );
+        }
+        for ( size_t index = _replicationServer.getEntries().size(); index > 0; --index )
+        {
+            const string name = _replicationServer.getEntries()[index - 1]._name;
+            if ( VectorUtil::contains( listName, name ) == false )
+                _replicationServer.removeEntry( name );
+        }
+        const int64 now           = MonotonicClock::nowNanoseconds();
+        const int64 readyDeadline = now + static_cast<int64>( static_cast<float64>( game::getSubsystem<const MinigameConfig>()._subLevelReadySeconds ) * static_cast<float64>( constant::time::kNanosecondsPerSecond ) );
+        for ( const string& name : listName )
+        {
+            const MinigameNetEntry* const     pEntry    = VectorUtil::findBy<&MinigameNetEntry::_name>( _replicationServer.getEntries(), name );
+            const optional<SubLevelPlacement> placement = subLevels.findPlacement( name );
+            const bool                        bHeld     = subLevels.isBuildHeld( name );
+            SubLevelState                     state{ SubLevelState::Loading };
+            if ( placement.has_value() == false || subLevels.findSubLevelState( name, state ) == false )
+                continue; // 짓지 못해 곧 되돌린다(`dropFailedSubLevel`)
+            if ( pEntry == nullptr && _replicationServer.addEntry( name, *placement, bHeld == false, readyDeadline ) == false )
+            {
+                subLevels.releaseBuild( name ); // 까닭은 남겼다 — 서버의 판은 그대로 세운다
+                continue;
+            }
+            if ( bHeld == false || state == SubLevelState::Loading || _replicationServer.isReady( name, now ) == false )
+                continue;
+            subLevels.releaseBuild( name );
+            _replicationServer.releaseEntry( name );
+        }
+        _replicationServer.update();
+    }
+
+    void MinigameFlow::updateObserved( Scene& scene )
+    {
+        if ( _replicationClient.isKnown() == false )
+        {
+            leaveObserved( 0 );
+            return;
+        }
+        // 서버는 위에서부터 나온다 — 같은 앞부분은 그대로 두고 달라진 것부터 거두고 다시 세운다.
+        const vector<MinigameNetEntry>& listEntry = _replicationClient.getEntries();
+        size_t                          kept      = 0;
+        while ( kept < _listObserved.size() && kept < listEntry.size() && _listObserved[kept]._entryID == listEntry[kept]._entryID )
+        {
+            ++kept;
+        }
+        leaveObserved( kept );
+        SceneSubLevelSubsystem& subLevels = scene.getObjectManager()->getSubsystem<SceneSubLevelSubsystem>();
+        for ( size_t index = _listObserved.size(); index < listEntry.size(); ++index )
+        {
+            SubLevelState state{ SubLevelState::Loading };
+            if ( subLevels.findSubLevelState( listEntry[index]._name, state ) )
+                break; // 같은 이름의 앞 것을 내리는 중이다 — 다음 갱신에 세운다
+            enterObserved( scene, listEntry[index] );
+        }
+        for ( size_t index = 0; index < _listObserved.size(); ++index )
+        {
+            ObservedMinigame& observed = _listObserved[index];
+            SubLevelState     state{ SubLevelState::Failed };
+            if ( observed._bFailed == SW_FALSE )
+            {
+                const bool bFound = subLevels.findSubLevelState( listEntry[index]._name, state );
+                observed._bFailed = bFound == false || state == SubLevelState::Failed ? SW_TRUE : SW_FALSE;
+                if ( bFound && state == SubLevelState::Failed )
+                    (void)subLevels.removeSubLevel( listEntry[index]._name ); // 방금 찾은 이름이다
+            }
+            if ( observed._bAnswered == SW_FALSE && ( observed._bFailed == SW_TRUE || state != SubLevelState::Loading ) )
+            {
+                observed._bAnswered = SW_TRUE;
+                _replicationClient.sendReady( observed._entryID, observed._bFailed == SW_FALSE );
+            }
+            if ( listEntry[index]._bReleased == SW_TRUE )
+                subLevels.releaseBuild( listEntry[index]._name );
+        }
+    }
+
+    void MinigameFlow::enterObserved( Scene& scene, const MinigameNetEntry& entry )
+    {
+        ObservedMinigame observed;
+        observed._entryID   = entry._entryID;
+        observed._scenePath = scene.getSourcePath();
+        observed._bFailed   = SW_TRUE;
+        // 맵은 이 피어의 정의에서 온다 — 선에는 이름뿐이다.
+        const bool bUsable = loadDefinition( entry._name, observed._definition ) && observed._definition._entry == MinigameEntry::SubLevel && observed._definition.isMatch() == false;
+        if ( bUsable == false )
+        {
+            SW_LOG_ERROR_ID( "MinigameFlow.ObservedNotUsable", "The server entered minigame '%#' but it is not a sub-level minigame of this client - it is not added", entry._name );
+            _listObserved.push_back( std::move( observed ) );
+            return;
+        }
+        deactivateScope(); // 같은 서비스를 둘이 걸 수 없다 — 덮는다(`activateObservedTop`)
+        const string mapPath = observed._definition._map.get();
+        _listObserved.push_back( std::move( observed ) );
+        activateObservedTop(); // 맵의 컴포넌트가 시작할 때 기능 서비스 · 카탈로그를 찾는다 — 더하기 앞이다
+        SceneSubLevelSubsystem& subLevels = scene.getObjectManager()->getSubsystem<SceneSubLevelSubsystem>();
+        if ( _pActive != nullptr && subLevels.addSubLevel( scene, entry._name, mapPath, entry._placement, SubLevelBuildStart::OnRelease ) )
+            _listObserved.back()._bFailed = SW_FALSE;
+        else
+            SW_LOG_ERROR_ID( "MinigameFlow.ObservedNotAdded", "The server entered minigame '%#' but it could not be added here (see the messages above)", entry._name );
+    }
+
+    void MinigameFlow::leaveObserved( size_t count )
+    {
+        if ( _listObserved.size() <= count )
+            return;
+        deactivateScope();
+        while ( _listObserved.size() > count )
+        {
+            const ObservedMinigame& observed = _listObserved.back();
+            if ( observed._bFailed == SW_FALSE )
+                removeSubLevel( MinigameSubLevelReturn{ observed._scenePath, observed._definition._name } );
+            _listObserved.pop_back();
+        }
+        activateObservedTop();
+    }
+
+    void MinigameFlow::activateObservedTop()
+    {
+        if ( _listObserved.empty() )
+        {
+            activateTop();
+            return;
+        }
+        const MinigameDefinition& definition = _listObserved.back()._definition;
+        _pActive                             = definition._name.empty() ? nullptr : activate( definition, ActivationRole::Observer );
+    }
+
+    bool MinigameFlow::isServerWorldReady() const
+    {
+        const Scene* const        pScene = MinigameFlowInternal::findActivePlayScene();
+        const SceneNetLink* const pLink  = pScene != nullptr ? &pScene->getObjectManager()->getSubsystem<SceneNetLink>() : nullptr;
+        if ( pLink == nullptr || pLink->hasAuthority() )
+            return true;
+        if ( _replicationHandler.isActive() == false || _replicationClient.isKnown() == false )
+            return false;
+        const vector<MinigameNetEntry>& listEntry = _replicationClient.getEntries();
+        const SceneSubLevelSubsystem&   subLevels = pScene->getObjectManager()->getSubsystem<SceneSubLevelSubsystem>();
+        for ( size_t index = 0; index < listEntry.size(); ++index )
+        {
+            if ( listEntry[index]._bReleased == SW_FALSE )
+                continue; // 서버도 아직 짓지 않았다
+            const bool bListed = index < _listObserved.size() && _listObserved[index]._entryID == listEntry[index]._entryID;
+            if ( bListed == false )
+                return false;
+            SubLevelState state{ SubLevelState::Loading };
+            if ( _listObserved[index]._bFailed == SW_FALSE && ( subLevels.findSubLevelState( listEntry[index]._name, state ) == false || state != SubLevelState::Loaded ) )
+                return false;
+        }
+        return true;
     }
 
     bool MinigameFlow::openLocalUsers( GameFeatureScope& scope, const MinigameDefinition& definition )

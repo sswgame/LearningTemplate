@@ -35,6 +35,7 @@
 #include "GameFramework/Runtime/Character/Control/Controller/RemoteControllerComponent.h"
 #include "GameFramework/Runtime/Character/Control/Pawn/PawnComponent.h"
 #include "GameFramework/Runtime/Foundation/Framework/GameService.h"
+#include "GameFramework/Runtime/Foundation/Framework/Minigame/MinigameFlow.h"
 #include "GameFramework/Runtime/Gameplay/Gimmick/Movement/InterpToMovementComponent.h"
 #include "GameFramework/Runtime/Gameplay/Gimmick/Movement/TickedFloorStep.h"
 #include "GameFramework/Runtime/Gameplay/Vehicle/VehicleSeatComponent.h"
@@ -558,6 +559,9 @@ namespace sw
         (void)VehicleSeatComponent::dismount( *pPawn, false ); // 접속 전에 혼자 탄 말에서 내린다 — 타고 내리는 것은 이제 서버가 정한다
         if ( pController->getCharacterHandle().isValid() == false )
             return false; // 몸은 다음 물리 프레임에 선다
+        const MinigameFlow* const pMinigames = game::findSubsystem<MinigameFlow>();
+        if ( pMinigames != nullptr && pMinigames->isServerWorldReady() == false )
+            return false; // 서버가 들어간 하위 레벨이 아직 다 서지 않았다 — 서버에는 있는 바닥 · 벽 없이 걷지 않는다
         pMovement->setNetDriven( true );
         for ( size_t mountIndex = 0; mountIndex < _listMount.size(); ++mountIndex )
         {

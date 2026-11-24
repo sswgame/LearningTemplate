@@ -39,7 +39,8 @@
         "_budgetMegabytes": 128
     },
     "_minigame": {
-        "_stackDepthLimit": 4
+        "_stackDepthLimit": 4,
+        "_subLevelReadySeconds": 10.0
     },
     "_fileServe": {
         "_maxResponseHeaderBytes": 16384,

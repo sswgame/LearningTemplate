@@ -147,6 +147,8 @@ namespace sw
         /** @brief 넘기지 못한 결과 수입니다. */
         size_t getResultCount() const { return _listResult.size(); }
 
+        /** @brief 칸 목록입니다(아래부터 위로). */
+        const vector<MinigameFrame>& getFrames() const { return _listFrame; }
         /** @brief 맨 위 칸입니다. 비었으면 nullptr 입니다. */
         MinigameFrame*       findTop() { return _listFrame.empty() ? nullptr : &_listFrame.back(); }
         const MinigameFrame* findTop() const { return _listFrame.empty() ? nullptr : &_listFrame.back(); }

@@ -24,7 +24,8 @@ namespace sw
     {
         static constexpr uint8 kSize      = 0x10; ///< 영역 하나의 메시지 수.
         static constexpr uint8 kEngine    = 0x00; ///< 엔진의 게임 세션(`GameNetSession`)이 쓰는 0x00..0x0F. 종류는 Engine 의 `GameNetSessionMessage` 에 있다.
-        static constexpr uint8 kFramework = 0x10; ///< 프레임워크(네트워크 키트)가 쓰는 0x10..0xBF(11 영역). 키트별 영역은 GameFramework 의 `NetKitMessageRange` 에 있다.
+        static constexpr uint8 kFramework = 0x10; ///< 프레임워크(네트워크 키트)가 쓰는 0x10..0xAF(10 영역). 키트별 영역은 GameFramework 의 `NetKitMessageRange` 에 있다.
+        static constexpr uint8 kRuntime   = 0xB0; ///< 키트가 아닌 게임 프레임워크 바탕(`GameFramework/Runtime`)이 쓰는 0xB0..0xBF — 하위 레벨 미니게임의 복제
         static constexpr uint8 kGame      = 0xC0; ///< 게임이 쓰는 메시지 0xC0..0xFF(4 영역). 키트 영역이 0x7F 에서 찼다(하우징이 여덟째) — 게임은 영역 하나 · 둘을 쓰고 키트는 계속 늘어 키트 쪽을 넓혔다.
         /**
          * @brief 라우터(`NetMessageRouter`)가 쓰는 종류 하나(엔진 영역의 마지막 0x0F) — 처리기는 맡지 못한다.

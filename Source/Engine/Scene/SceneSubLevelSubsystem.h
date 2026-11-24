@@ -73,9 +73,16 @@ namespace sw
         /**
          * @brief 씬 @p scenePath 를 이름 @p name 의 하위 레벨로 @p scene 에 더합니다. 워커가 문서를 읽고, 다 읽은 갱신부터 짓습니다(`findSubLevelState` 로 본다).
          * @details 읽지 못했거나 스트리밍하는 씬 · 데이터 레이어를 쓰는 씬이면 읽기가 끝난 갱신에 오류를 남기고 `Failed` 다.
+         * @param start 다 읽은 뒤 바로 지을지, `releaseBuild` 를 기다릴지입니다.
          * @return 이름이 비었거나 이미 있거나, @p scene 이 이 서비스의 매니저가 아니면 오류를 남기고 false 입니다.
          */
-        [[nodiscard]] bool addSubLevel( Scene& scene, string_view name, string_view scenePath, const Placement& placement );
+        [[nodiscard]] bool addSubLevel( Scene& scene, string_view name, string_view scenePath, const Placement& placement, SubLevelBuildStart start = SubLevelBuildStart::WhenRead );
+        /** @brief `SubLevelBuildStart::OnRelease` 로 더한 하위 레벨의 짓기를 허락합니다. 없거나 이미 허락했으면 할 일이 없습니다. */
+        void releaseBuild( string_view name );
+        /** @brief 이름 @p name 의 하위 레벨이 짓기 허락을 기다리면 true 입니다(아직 읽는 중이어도). */
+        bool isBuildHeld( string_view name ) const;
+        /** @brief 이름 @p name 의 하위 레벨을 놓은 자리입니다. 없으면 nullopt 입니다. */
+        optional<Placement> findPlacement( string_view name ) const;
         /** @brief 이름 @p name 의 하위 레벨을 뺍니다(다음 갱신에 내린다). 없으면 오류를 남기고 false 입니다. */
         [[nodiscard]] bool removeSubLevel( string_view name );
         /** @brief 씬을 내립니다(`Scene::shutdown`) — 하위 레벨을 모두 버립니다. 오브젝트는 씬이 지운다. */
@@ -154,10 +161,12 @@ namespace sw
             shared_ptr<Scene::CellBuild>           _pBuild;       ///< 짓는 중인 진행(`Building` 일 때만)
             vector<uint64>                         _listObjectID; ///< 앵커와 지은 멤버(엔티티마다 하나, 부품 제외). 내릴 때 자식까지 지운다
             SubLevelState                          _state{ SubLevelState::Queued };
+            SubLevelBuildStart                     _start{ SubLevelBuildStart::WhenRead }; ///< `OnRelease` 인 동안 짓지 않는다
         };
 
         /** @brief 이름의 하위 레벨입니다. 없으면 nullptr 입니다. */
-        SubLevel* findSubLevel( string_view name );
+        SubLevel*       findSubLevel( string_view name );
+        const SubLevel* findSubLevel( string_view name ) const;
         /** @brief 이름 · 씬 · 자리 · 지을 엔티티로 하위 레벨을 목록 끝에 더합니다(`Queued`). */
         SubLevel& pushSubLevel( string_view name, string_view scenePath, const Placement& placement, vector<SceneDocument::SceneObjectNode> listNode );
         /** @brief 씬 문서 읽기를 워커에 겁니다(`Loading`). 워커가 없으면(도구 · 테스트) 이 자리에서 읽습니다 — 거두는 것은 그래도 갱신이다. */

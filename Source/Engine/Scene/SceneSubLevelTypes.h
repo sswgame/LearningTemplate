@@ -21,6 +21,13 @@ namespace sw
         Removing, ///< 빼기를 받았다 — 다음 갱신이 내리고 목록에서 지운다
     };
 
+    /** @brief 읽은 하위 레벨을 언제 짓기 시작하는지입니다. */
+    enum class SubLevelBuildStart : uint8
+    {
+        WhenRead,  ///< 다 읽은 갱신
+        OnRelease, ///< `SceneSubLevelSubsystem::releaseBuild` 뒤 — 다른 프로세스가 다 읽기를 기다렸다가 함께 짓는다(그동안 `Queued`)
+    };
+
     /** @brief 하위 레벨을 놓을 자리입니다(앵커의 절대 위치 — 월드 원점과 무관, `Scene::getWorldOrigin` · 오일러 회전 — `SceneComponent::setLocalRotation` 과 같은 규칙, 라디안). */
     struct SubLevelPlacement
     {

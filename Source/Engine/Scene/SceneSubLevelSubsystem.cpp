@@ -89,7 +89,7 @@ namespace sw
         }
     }
 
-    bool SceneSubLevelSubsystem::addSubLevel( Scene& scene, string_view name, string_view scenePath, const Placement& placement )
+    bool SceneSubLevelSubsystem::addSubLevel( Scene& scene, string_view name, string_view scenePath, const Placement& placement, SubLevelBuildStart start )
     {
         if ( scene.getObjectManager() != _pManager )
         {
@@ -106,9 +106,29 @@ namespace sw
             SW_LOG_ERROR_ID( "SceneSubLevels.NameTaken", "Sub-level name '%#' is empty or already used - it is not added", name );
             return false;
         }
-        _pScene = &scene;
-        requestDocument( pushSubLevel( name, scenePath, placement, {} ) );
+        _pScene            = &scene;
+        SubLevel& subLevel = pushSubLevel( name, scenePath, placement, {} );
+        subLevel._start    = start;
+        requestDocument( subLevel );
         return true;
+    }
+
+    void SceneSubLevelSubsystem::releaseBuild( string_view name )
+    {
+        if ( SubLevel* const pSubLevel = findSubLevel( name ) )
+            pSubLevel->_start = SubLevelBuildStart::WhenRead;
+    }
+
+    bool SceneSubLevelSubsystem::isBuildHeld( string_view name ) const
+    {
+        const SubLevel* const pSubLevel = findSubLevel( name );
+        return pSubLevel != nullptr && pSubLevel->_start == SubLevelBuildStart::OnRelease;
+    }
+
+    optional<SceneSubLevelSubsystem::Placement> SceneSubLevelSubsystem::findPlacement( string_view name ) const
+    {
+        const SubLevel* const pSubLevel = findSubLevel( name );
+        return pSubLevel != nullptr ? optional<Placement>{ pSubLevel->_placement } : nullopt;
     }
 
     bool SceneSubLevelSubsystem::removeSubLevel( string_view name )
@@ -149,6 +169,11 @@ namespace sw
     }
 
     SceneSubLevelSubsystem::SubLevel* SceneSubLevelSubsystem::findSubLevel( string_view name )
+    {
+        return const_cast<SubLevel*>( static_cast<const SceneSubLevelSubsystem*>( this )->findSubLevel( name ) );
+    }
+
+    const SceneSubLevelSubsystem::SubLevel* SceneSubLevelSubsystem::findSubLevel( string_view name ) const
     {
         for ( const unique_ptr<SubLevel>& pSubLevel : _listSubLevel )
         {
@@ -253,7 +278,7 @@ namespace sw
                     engine::getSubsystem<TaskManager>().waitStage( _readStage, "SceneSubLevelSubsystem (deterministic run)" );
                 collectDocument( subLevel );
             }
-            if ( subLevel._state == SubLevelState::Queued )
+            if ( subLevel._state == SubLevelState::Queued && subLevel._start == SubLevelBuildStart::WhenRead )
                 beginBuild( subLevel );
             if ( subLevel._state != SubLevelState::Building )
                 continue;
