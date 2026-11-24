@@ -199,6 +199,8 @@ namespace sw
 {
     SequenceSpanState::SequenceSpanState( uint32 itemIndex )
         : _clip{}
+        , _animatorOverride{}
+        , _overrideID{ 0 }
         , _playingID{ 0 }
         , _subtitleLineID{ 0 }
         , _itemIndex{ itemIndex }

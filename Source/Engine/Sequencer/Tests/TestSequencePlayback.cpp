@@ -5,6 +5,8 @@
 #include "Core/Subsystem/SubsystemScope.h"
 #include "Core/Testing/TestFramework.h"
 
+#include "Engine/Animation/AnimationClip.h"
+#include "Engine/Animation/Component/SkeletalAnimatorComponent.h"
 #include "Engine/Object/Component/CameraComponent.h"
 #include "Engine/Object/Component/SceneComponent.h"
 #include "Engine/Object/GameObject/GameObject.h"
@@ -289,6 +291,28 @@ SW_TEST_CASE( SequencePlaybackTest, AnimationSpanNeedsAnAnimator )
     SW_EXPECT_TRUE( listSpan[0]._bInside == SW_FALSE );
     SequenceTimelineUtil::releaseSpans( &manager, asset, view, 30.0f, listSpan );
     SW_EXPECT_TRUE( listSpan.empty() );
+}
+
+/** @brief [SequencePlaybackTest] 결함: 애니메이터의 시퀀서 자리가 하나라 먼저 끝난 구간 · 시퀀스가 뒤 것의 덮어쓰기를 지웠다 — 자리마다 주인이 있고 놓으면 제 것만 사라진다 */
+SW_TEST_CASE( SequencePlaybackTest, AnimatorOverrideIsOwnedBySpan )
+{
+    const AnimationClip                 source{};
+    GameObjectManager                   manager;
+    SkeletalAnimatorComponent*          pAnimator = manager.createGameObject( hashed_string( "Hero" ) )->addComponent<SkeletalAnimatorComponent>();
+    const SharedAssetRef<AnimationClip> clip      = SharedAssetRef<AnimationClip>::borrow( &source );
+    SW_REQUIRE_FALSE( pAnimator->isAnimationActive() );
+    uint64       firstID  = 0;
+    uint64       secondID = 0;
+    Subscription first    = pAnimator->openSequencerOverride( firstID );
+    Subscription second   = pAnimator->openSequencerOverride( secondID );
+    SW_REQUIRE_TRUE( firstID != secondID );
+    pAnimator->setSequencerOverride( firstID, clip, 0.0f, 1.0f );
+    pAnimator->setSequencerOverride( secondID, clip, 0.0f, 1.0f );
+    first.reset(); // 앞 구간이 끝났다
+    SW_EXPECT_TRUE( pAnimator->isAnimationActive() );
+    pAnimator->setSequencerOverride( firstID, clip, 0.0f, 1.0f ); // 놓은 자리는 되살아나지 않는다
+    second.reset();
+    SW_EXPECT_FALSE( pAnimator->isAnimationActive() );
 }
 
 /** @brief [SequencePlaybackTest] 기록은 고정 용량이라 넘치면 가장 오래된 줄을 덮고, 누적 수는 이어 센다 */

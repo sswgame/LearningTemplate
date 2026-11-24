@@ -1,6 +1,12 @@
 {
   "_comment": "전수 개명한 옛 이름 → 새 이름 · 까닭(Scripts/lint/naming_words.py 의 naming-words 규칙이 되살린 옛 이름을 막는다). 언리얼 CoreRedirects 의 옛 이름 → 새 이름 자리이되 고쳐 주지 않고 막는다. 개명 도구(py -3 -m Scripts rename-symbol)가 줄을 더한다 — 키(옛 이름)는 개명 도구가 바꾸지 않는다.",
   "_bannedNames": {
+    "setControllerActive": "CharacterControllerComponent::suspend — 멈춤은 부른 쪽이 Subscription 으로 쥔다(2026-11-25)",
+    "setRiderMovementSuspended": "CharacterControllerComponent::suspend — 좌석이 _riderSuspension 을 쥔다(2026-11-25)",
+    "_motionTeleportSerial": "SceneComponent::getTeleportSerial · getOriginShiftSerial(2026-11-25)",
+    "_sequencerClip": "SkeletalAnimatorComponent::openSequencerOverride — 자리마다 주인이 있는 덮어쓰기 목록(2026-11-25)",
+    "_sequencerTime": "SkeletalAnimatorComponent::openSequencerOverride(2026-11-25)",
+    "_sequencerWeight": "SkeletalAnimatorComponent::openSequencerOverride(2026-11-25)",
     "GimmickDamageEvent": "맞음 길의 사본이라 지웠다 — 피해는 CharacterRayHit::deliverHit, 알림은 DamageAppliedEvent(2026-11-25)",
     "GimmickNoiseEvent": "연출 신호 \"Noise\"(GimmickUtil::sendCue) — 들리는 소리는 큐 표가 낸다(2026-11-25)",
     "SceneLoadRequestedEvent": "씬 매니저 알림의 사본이라 지웠다 — SceneManager::onSceneLoadRequested(2026-11-25)",
