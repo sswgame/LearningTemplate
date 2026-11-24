@@ -167,7 +167,12 @@
 				<item>common/data/items.xml</item>
 			</origins>
 		</entry>
-		<entry key="In orbit - pull the lever to land" source="In orbit - pull the lever to land" context="TextWidget._text">
+		<entry key="Hour" source="Hour" context="TextWidget._text">
+			<origins>
+				<item>game/playground/coopscavenger/ui/hud.ui.xml</item>
+			</origins>
+		</entry>
+		<entry key="In orbit - Move and Use buy from the terminal, the lever lands" source="In orbit - Move and Use buy from the terminal, the lever lands" context="TextWidget._text">
 			<origins>
 				<item>game/playground/coopscavenger/ui/hud.ui.xml</item>
 			</origins>
@@ -235,6 +240,11 @@
 		<entry key="Light: stun an attacking ghost - Vacuum: pull it in - Use: surge or search" source="Light: stun an attacking ghost - Vacuum: pull it in - Use: surge or search" context="TextWidget._text">
 			<origins>
 				<item>game/playground/ghosthunt/ui/hud.ui.xml</item>
+			</origins>
+		</entry>
+		<entry key="Lockpick" source="Lockpick" context="Item name">
+			<origins>
+				<item>common/data/items.xml</item>
 			</origins>
 		</entry>
 		<entry key="Longbow" source="Longbow" context="Item name">
@@ -354,6 +364,11 @@
 				<item>game/playground/coopscavenger/ui/hud.ui.xml</item>
 			</origins>
 		</entry>
+		<entry key="Scrap value in this weather (%)" source="Scrap value in this weather (%)" context="TextWidget._text">
+			<origins>
+				<item>game/playground/coopscavenger/ui/hud.ui.xml</item>
+			</origins>
+		</entry>
 		<entry key="Seconds to start" source="Seconds to start" context="TextWidget._text">
 			<origins>
 				<item>game/playground/kartracing/ui/hud.ui.xml</item>
@@ -449,6 +464,11 @@
 		<entry key="The warrior wakes." source="The warrior wakes." context="SequenceTrackItem._text">
 			<origins>
 				<item>game/playground/data/cinematic.seq.xml</item>
+			</origins>
+		</entry>
+		<entry key="Threat in this weather (%)" source="Threat in this weather (%)" context="TextWidget._text">
+			<origins>
+				<item>game/playground/coopscavenger/ui/hud.ui.xml</item>
 			</origins>
 		</entry>
 		<entry key="Time left" source="Time left" context="TextWidget._text">

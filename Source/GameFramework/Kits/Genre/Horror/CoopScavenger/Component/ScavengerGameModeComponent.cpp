@@ -13,6 +13,7 @@
 #include "Engine/Serialization/Format/StateIO.h"
 
 #include "GameFramework/Runtime/Foundation/Framework/Minigame/MinigameStack.h"
+#include "GameFramework/Runtime/Gameplay/GameState/GameStateComponent.h"
 
 namespace sw
 {
@@ -25,6 +26,7 @@ namespace sw
             static constexpr int32  kPlayer       = 0; ///< 늘 사람이 잡는 승무원(카메라 · 감시 값의 주인)
             /** @brief 축 방향과 이웃 방향이 이만큼은 맞아야 그 이웃으로 본다(내적). */
             static constexpr float32 kNeighborAlignment = 0.5f;
+            static constexpr float32 kPercent           = 100.0f;
 
             static constexpr const utf8* kWinResult  = "win";
             static constexpr const utf8* kLoseResult = "lose";
@@ -43,9 +45,16 @@ namespace sw
     SW_AUTOMATION_GETTER_WATCH( scavengerThreats, "Scavenger.Threats", "Threats on the moon", ScavengerGameModeComponent, &ScavengerGameModeComponent::getThreatCount );
     SW_AUTOMATION_GETTER_WATCH( scavengerPlayerInShip, "Scavenger.PlayerInShip", "1 while crew member 0 is in the ship", ScavengerGameModeComponent, &ScavengerGameModeComponent::isPlayerInShip );
 
+    SW_AUTOMATION_GETTER_WATCH( scavengerCanUnlock, "Scavenger.CanUnlock", "1 while the ship holds a lockpick", ScavengerGameModeComponent, &ScavengerGameModeComponent::canUnlockDoor );
+
     ScavengerGameModeComponent::ScavengerGameModeComponent()
         : _companyMoon{}
         , _threatTable{}
+        , _weatherCatalog{}
+        , _shopCatalog{}
+        , _unlockItem{}
+        , _speedItem{}
+        , _speedItemStepScale{ 1.0f }
         , _seed{ 11 }
         , _crewCount{ 2 }
         , _cyclesToWin{ 1 }
@@ -58,6 +67,9 @@ namespace sw
         , _resultHoldSeconds{ 3.0f }
         , _pCatalog{}
         , _pThreatTable{}
+        , _pShopCatalog{}
+        , _pItemCatalog{}
+        , _pWeatherCatalog{}
         , _wallet{}
         , _flags{}
         , _storage{}
@@ -78,27 +90,57 @@ namespace sw
     {
         _wallet.clear();
         _flags.clear();
-        if ( _storage.initialize( nullptr, _storageSlotCount ) == false )
+        GameStateComponent* const pState = GameStateComponent::findOnOwner( *this );
+        if ( pState == nullptr || _storage.initialize( _pItemCatalog.get(), _storageSlotCount ) == false )
             return false;
         ScavengerExpeditionData data;
-        data._pCatalog     = _pCatalog.get();
-        data._pThreatTable = _pThreatTable.get();
-        // 시계 · 날씨는 바탕 판의 것이라 빌리지 않는다 — 하루는 카탈로그의 길이로만 흐른다.
-        return _expedition.initialize( data, &_wallet, nullptr, nullptr, &_flags, _storage, _seed, _crewCount );
+        data._pCatalog        = _pCatalog.get();
+        data._pWeatherCatalog = _pWeatherCatalog.get();
+        data._pThreatTable    = _pThreatTable.get();
+        data._pShopCatalog    = _pShopCatalog.get();
+        data._pItemCatalog    = _pItemCatalog.get();
+        return _expedition.initialize( data, &_wallet, &pState->getClock(), pState->findWeather(), &_flags, _storage, _seed, _crewCount );
     }
 
-    bool ScavengerGameModeComponent::startGame()
+    bool ScavengerGameModeComponent::validateKeys() const
     {
-        if ( acquireBoundCatalog( _pCatalog ) == false || acquireRequired( _threatTable, _pThreatTable ) == false )
-            return false;
         const ScavengerMoonDef* const pCompany = _pCatalog->findMoon( _companyMoon.key() );
         if ( pCompany == nullptr || pCompany->_bCompany == false )
         {
             SW_LOG_ERROR_ID( "Scavenger.NoCompanyMoon", "Scavenger game mode: moon '%#' is not a company moon of the catalog - the expedition does not open", _companyMoon.c_str() );
             return false;
         }
+        if ( findTerminal() == nullptr )
+        {
+            SW_LOG_ERROR_ID( "Scavenger.NoTerminal", "Scavenger game mode: '%#' has no shop '%#' - the expedition does not open", _shopCatalog.c_str(), _pCatalog->getTerminalShopID().c_str() );
+            return false;
+        }
+        const expected<const ItemDef*> unlockItem = _pItemCatalog->require( _unlockItem );
+        const expected<const ItemDef*> speedItem  = _pItemCatalog->require( _speedItem );
+        if ( unlockItem.has_value() && speedItem.has_value() )
+            return true;
+        SW_LOG_ERROR_ID( "Scavenger.UnknownItem", "Scavenger game mode: the item catalog lacks the unlock item '%#' or the speed item '%#' - the expedition does not open", _unlockItem.c_str(), _speedItem.c_str() );
+        return false;
+    }
+
+    bool ScavengerGameModeComponent::startGame()
+    {
+        const bool bCatalogs = acquireBoundCatalog( _pCatalog ) && acquireBoundCatalog( _pItemCatalog ) && acquireRequired( _threatTable, _pThreatTable ) && acquireRequired( _shopCatalog, _pShopCatalog ) &&
+                               acquireRequiredSnapshot( _weatherCatalog, _pWeatherCatalog );
+        if ( bCatalogs == false || validateKeys() == false )
+            return false;
+        const ScavengerDayDef& day = _pCatalog->getDaySettings();
+        GameStateSettings      settings;
+        settings._clock._secondsPerDay = day._secondsPerDay;
+        settings._clock._startHour     = day._arrivalHour;
+        settings._clock._duskHour      = day._duskHour;
+        settings._pWeatherCatalog      = _pWeatherCatalog;
+        settings._weatherSeed          = _seed;
+        if ( GameStateComponent::openOnOwner( *this, settings ) == nullptr )
+            return false; // 까닭은 월드 상태가 남겼다
         if ( openExpedition() == false )
             return false;
+        updateClock();
         _listCommand.assign( static_cast<size_t>( _crewCount ), ScavengerCommand{} );
         _listStep.assign( static_cast<size_t>( _crewCount ), Countdown{} );
         _resultHold.clear();
@@ -127,6 +169,8 @@ namespace sw
             _humanMask |= 1u << static_cast<uint32>( player );
         ScavengerCommand& pending = _listCommand[static_cast<size_t>( player )];
         pending._moveTo           = command._moveTo;
+        if ( command._buyItemID.empty() == false )
+            pending._buyItemID = command._buyItemID;
         if ( command._bUseTriggered == SW_TRUE )
             pending._bUseTriggered = SW_TRUE;
         if ( command._bLeverTriggered == SW_TRUE )
@@ -197,7 +241,11 @@ namespace sw
         const bool bMayPullLever = player == ScavengerGameModeComponentInternal::kPlayer;
         if ( _expedition.getPhase() != ScavengerPhase::Landed )
         {
-            command._bLeverTriggered = bMayPullLever ? SW_TRUE : SW_FALSE;
+            // 자물쇠 따개가 없고 살 돈이 있으면 먼저 산다.
+            const hashed_string unlockItemID = _unlockItem.key();
+            const bool          bBuy         = bMayPullLever && canUnlockDoor() == false && _expedition.getShop().evaluateBuy( _pCatalog->getTerminalShopID(), unlockItemID, 1, _wallet, _storage ) == ShopResult::Ok;
+            command._buyItemID               = bBuy ? unlockItemID : hashed_string{};
+            command._bLeverTriggered         = bMayPullLever && bBuy == false ? SW_TRUE : SW_FALSE;
             return command;
         }
         const bool bCompany = _expedition.getMoon()->_bCompany;
@@ -227,7 +275,7 @@ namespace sw
             nearest     = scrap._areaID;
             nearestStep = listArea.size();
         }
-        if ( nearest.empty() )
+        if ( nearest.empty() && canUnlockDoor() )
         {
             // 닿는 고철이 없다 — 남은 것이 잠긴 문 뒤면 그 문 앞으로 간다.
             for ( const AreaLink& link : facility.getGraph().getLinks() )
@@ -271,6 +319,8 @@ namespace sw
         }
         for ( const AreaLink& link : facility.getGraph().getLinks() )
         {
+            if ( canUnlockDoor() == false )
+                return; // 자물쇠 따개가 없다
             const bool bBeside = link._from == member._areaID || link._to == member._areaID;
             if ( bBeside && facility.canTraverse( link._from, link._to ) == false )
             {
@@ -304,7 +354,13 @@ namespace sw
             return;
         const bool bStep = command._moveTo.empty() == false && step.isActive() == false;
         if ( bStep && _expedition.movePlayer( player, command._moveTo ) == ScavengerActionResult::Ok )
-            step.start( _stepSeconds / pMember->_carry.computeSpeedScale() );
+            step.start( _stepSeconds / pMember->_carry.computeSpeedScale() * ( _storage.hasItem( _speedItem.key() ) ? _speedItemStepScale : 1.0f ) );
+        if ( command._buyItemID.empty() == false && _expedition.getPhase() == ScavengerPhase::InOrbit )
+        {
+            const ShopResult bought = _expedition.buyFromTerminal( command._buyItemID, 1 );
+            SW_LOG_INFO_ID( "Scavenger.Terminal", "[Scavenger] the terminal %# '%#' (shop result %#) - credits %#", bought == ShopResult::Ok ? "sold" : "refused", command._buyItemID.c_str(),
+                            static_cast<int32>( bought ), getCredits() );
+        }
         if ( command._bUseTriggered == SW_TRUE && _expedition.getPhase() == ScavengerPhase::Landed )
             use( player );
         if ( command._bLeverTriggered == SW_TRUE )
@@ -385,6 +441,13 @@ namespace sw
         _expedition.update( deltaTime );
         updateThreats( deltaTime );
         settle();
+        updateClock();
+    }
+
+    void ScavengerGameModeComponent::updateClock()
+    {
+        if ( GameStateComponent* const pState = GameStateComponent::findOnOwner( *this ) )
+            pState->getClock().setPaused( _expedition.getPhase() != ScavengerPhase::Landed || _result != ScavengerResult::Ongoing );
     }
 
     void ScavengerGameModeComponent::settle()
@@ -487,6 +550,29 @@ namespace sw
             return 0.0f;
         const ScavengerDayDef& day = _pCatalog->getDaySettings();
         return MathUtil::saturate( _expedition.getHoursOnMoon() / ( day._departHour - day._arrivalHour ) );
+    }
+
+    const ShopDef* ScavengerGameModeComponent::findTerminal() const
+    {
+        return _pCatalog != nullptr && _pShopCatalog != nullptr ? _pShopCatalog->find( _pCatalog->getTerminalShopID() ) : nullptr;
+    }
+
+    int32 ScavengerGameModeComponent::computeTerminalPrice( const hashed_string& itemID ) const
+    {
+        return _pCatalog != nullptr ? _expedition.getShop().computeBuyPrice( _pCatalog->getTerminalShopID(), itemID ).value_or( 0 ) : 0;
+    }
+
+    int32 ScavengerGameModeComponent::getHour() const
+    {
+        const GameStateComponent* const pState = GameStateComponent::findOnOwner( *this );
+        return pState != nullptr ? pState->getClock().getHourInt() : 0;
+    }
+
+    int32 ScavengerGameModeComponent::computeWeatherPercent( const utf8* pValueName ) const
+    {
+        const GameStateComponent* const pState = GameStateComponent::findOnOwner( *this );
+        const float32                   value  = pState != nullptr ? pState->getWeather().computeValue( hashed_string( pValueName ) ) : 0.0f;
+        return static_cast<int32>( MathUtil::round( ( value > 0.0f ? value : 1.0f ) * ScavengerGameModeComponentInternal::kPercent ) );
     }
 
     void ScavengerGameModeComponent::onFlush( GameObjectManager& manager, bool bRespawnViews )

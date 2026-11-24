@@ -35,7 +35,8 @@
 		<entry source="Gold" text="금" />
 		<entry source="Guide" text="안내인" />
 		<entry source="Heraldic Cape" text="문장 망토" />
-		<entry source="In orbit - pull the lever to land" text="궤도 - 레버를 당겨 착륙하세요" />
+		<entry source="Hour" text="시각" />
+		<entry source="In orbit - Move and Use buy from the terminal, the lever lands" text="궤도 - 이동으로 고르고 사용으로 구매, 레버로 착륙" />
 		<entry source="It is too dark to see" text="너무 어두워 보이지 않습니다" />
 		<entry source="Item ready" text="아이템 있음" />
 		<entry source="Items" text="물건" />
@@ -49,6 +50,7 @@
 		<entry source="Laps to race" text="모두 몇 바퀴" />
 		<entry source="Life" text="라이프" />
 		<entry source="Light: stun an attacking ghost - Vacuum: pull it in - Use: surge or search" text="손전등: 공격하는 유령을 기절 - 청소기: 빨아들이기 - 쓰기: 서지 · 뒤지기" />
+		<entry source="Lockpick" text="자물쇠 따개" />
 		<entry source="Longbow" text="장궁" />
 		<entry source="M4 Rifle" text="M4 소총" />
 		<entry source="M9 Pistol" text="M9 권총" />
@@ -78,6 +80,7 @@
 		<entry source="Score" text="점수" />
 		<entry source="Scout" text="정찰병" />
 		<entry source="Scrap on the ship" text="실은 고철" />
+		<entry source="Scrap value in this weather (%)" text="이 날씨의 고철 값(%)" />
 		<entry source="Seconds to start" text="출발까지(초)" />
 		<entry source="Sites held" text="내 거점" />
 		<entry source="Skill check - press Use" text="스킬 체크 - 쓰기를 누르세요" />
@@ -93,6 +96,7 @@
 		<entry source="The ghosts won" text="유령에게 졌습니다" />
 		<entry source="The land is yours!" text="모든 거점을 얻었다!" />
 		<entry source="The warrior wakes." text="전사가 깨어난다." />
+		<entry source="Threat in this weather (%)" text="이 날씨의 위협(%)" />
 		<entry source="Time left" text="남은 시간" />
 		<entry source="Travel Cape" text="여행 망토" />
 		<entry source="Turn" text="턴" />

@@ -30,7 +30,8 @@
 		<entry key="Gilded Knight Helmet" text="금박 기사 투구" sourceHash="78c4a96597a1f01e" />
 		<entry key="Gold" text="금" sourceHash="c416c97e0d3218b3" />
 		<entry key="Heraldic Cape" text="문장 망토" sourceHash="6f86256a16ab8f26" />
-		<entry key="In orbit - pull the lever to land" text="궤도 - 레버를 당겨 착륙하세요" sourceHash="ce7df723d869830d" />
+		<entry key="Hour" text="시각" sourceHash="6b0bffd88024372f" />
+		<entry key="In orbit - Move and Use buy from the terminal, the lever lands" text="궤도 - 이동으로 고르고 사용으로 구매, 레버로 착륙" sourceHash="9e4354dbc98adea2" />
 		<entry key="It is too dark to see" text="너무 어두워 보이지 않습니다" sourceHash="b738d1982b5607a4" />
 		<entry key="Item ready" text="아이템 있음" sourceHash="c21723a998b01759" />
 		<entry key="Items" text="물건" sourceHash="fe386c25c1567ecf" />
@@ -44,6 +45,7 @@
 		<entry key="Laps to race" text="모두 몇 바퀴" sourceHash="afba7a5bea202185" />
 		<entry key="Life" text="라이프" sourceHash="3cdd76b47fc6df9f" />
 		<entry key="Light: stun an attacking ghost - Vacuum: pull it in - Use: surge or search" text="손전등: 공격하는 유령을 기절 - 청소기: 빨아들이기 - 쓰기: 서지 · 뒤지기" sourceHash="97bb2ad103e4ee65" />
+		<entry key="Lockpick" text="자물쇠 따개" sourceHash="a2b41c2d0a1ff1d3" />
 		<entry key="Longbow" text="장궁" sourceHash="1ca5e729801861e9" />
 		<entry key="No one wins" text="비겼습니다" sourceHash="acbcc8dd9be68815" />
 		<entry key="Notched Blade" text="이 빠진 칼" sourceHash="0bda544f4c061f1a" />
@@ -65,6 +67,7 @@
 		<entry key="Sacrificed" text="희생되었습니다" sourceHash="5f73767320dd1e56" />
 		<entry key="Score" text="점수" sourceHash="7d684b6257284e55" />
 		<entry key="Scrap on the ship" text="실은 고철" sourceHash="6126227dde317226" />
+		<entry key="Scrap value in this weather (%)" text="이 날씨의 고철 값(%)" sourceHash="3b1cc3396f9f0858" />
 		<entry key="Seconds to start" text="출발까지(초)" sourceHash="ed5e407701501a9b" />
 		<entry key="Sites held" text="내 거점" sourceHash="a17607d12fde5a3e" />
 		<entry key="Skill check - press Use" text="스킬 체크 - 쓰기를 누르세요" sourceHash="4873706293d39b49" />
@@ -85,6 +88,7 @@
 		<entry key="The ghosts won" text="유령에게 졌습니다" sourceHash="ea74586e5481b4f0" />
 		<entry key="The land is yours!" text="모든 거점을 얻었다!" sourceHash="8a38e00889460fce" />
 		<entry key="The warrior wakes." text="전사가 깨어난다." sourceHash="2cbe2d95a0824eaf" />
+		<entry key="Threat in this weather (%)" text="이 날씨의 위협(%)" sourceHash="8bff0544ec0aa97a" />
 		<entry key="Time left" text="남은 시간" sourceHash="ab77d17fb8dfa0bd" />
 		<entry key="Travel Cape" text="여행 망토" sourceHash="9b537522d0556b6c" />
 		<entry key="Turn" text="턴" sourceHash="b1288bfb6b36f2da" />

@@ -3,6 +3,7 @@
  * @brief 협동 수집 공포 HUD 문서가 보이는 값입니다 — 뷰 컴포넌트는 세터만 부르고, 문서의 `{bind:필드}` 가 위젯 칸에 잇습니다.
  */
 #pragma once
+#include "Core/Container/string.h"
 #include "Core/Foundation/Types.h"
 
 #include "Engine/Presentation/UIViewModel.h"
@@ -41,7 +42,15 @@ namespace sw
         void setHealthRatio( float32 ratio );
         /** @brief 지금 위성에서 흐른 하루의 비율입니다. */
         void setDayRatio( float32 ratio );
-        /** @brief 궤도의 안내를 보입니다. */
+        /** @brief 시계의 시(0..23)입니다. */
+        void setHour( int32 value );
+        /** @brief 지금 날씨의 고철 값 배율(%)입니다. */
+        void setScrapPercent( int32 value );
+        /** @brief 지금 날씨의 위협 배율(%)입니다. */
+        void setThreatPercent( int32 value );
+        /** @brief 터미널에서 고른 물건의 이름(번역 키)과 값입니다. */
+        void setTerminalItem( string_view name, int32 price );
+        /** @brief 궤도의 안내와 터미널을 보입니다. */
         void setOrbitShown( bool bShown );
         /** @brief 할당량을 채운 글을 보입니다. */
         void setWinShown( bool bShown );
@@ -65,6 +74,16 @@ namespace sw
         float32 _healthRatio;
         PROPERTY( DisplayName = "Day Ratio", Min = 0.0, Max = 1.0, Units = ratio )
         float32 _dayRatio;
+        PROPERTY( DisplayName = "Terminal Name", Tooltip = "Localization key (the source text when the table has no entry)" )
+        string _terminalName;
+        PROPERTY( DisplayName = "Terminal Price" )
+        int32 _terminalPrice;
+        PROPERTY( DisplayName = "Hour" )
+        int32 _hour;
+        PROPERTY( DisplayName = "Scrap Percent" )
+        int32 _scrapPercent;
+        PROPERTY( DisplayName = "Threat Percent" )
+        int32 _threatPercent;
         PROPERTY( DisplayName = "Orbit Visibility" )
         WidgetVisibility _orbitVisibility;
         PROPERTY( DisplayName = "Win Visibility" )

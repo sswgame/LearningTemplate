@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="utf-8"?>
+<?asset guid="d27f61a8be9c4c50b3f1e84a6507c9d2"?>
+<!-- 협동 수집 공포 미니게임(minigames/coopscavenger)의 터미널 — 궤도에서 산다(data/scavenger.xml 의 terminalShop). 아이템은 공용 팩(common/data/items.xml)의 것이고, 하나면 판이 끝날 때까지 승무원 모두가 쓴다.
+     시작 크레딧 60 으로 둘 다 살 수 있다. 산 값은 할당량에 들지 않고 번 돈에서 빠진다. -->
+<ShopCatalog>
+	<Shop id="terminal" currency="Credits" buybackLimit="0">
+		<Stock item="lockpick" price="15" count="1"/>
+		<Stock item="boots_low" price="30" count="1"/>
+	</Shop>
+</ShopCatalog>

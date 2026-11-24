@@ -190,12 +190,14 @@ namespace sw
          */
         SW_DECLARE_STATE_IO();
 
-        ScavengerPhase                getPhase() const { return _phase; }
-        const ScavengerMoonDef*       getMoon() const { return _pMoon; }
-        const ScavengerQuota&         getQuota() const { return _quota; }
-        int64                         getCredits() const;
-        const ScavengerFacility&      getFacility() const { return _facility; }
-        const Inventory&              getShipInventory() const { return *_pShipStorage; }
+        ScavengerPhase           getPhase() const { return _phase; }
+        const ScavengerMoonDef*  getMoon() const { return _pMoon; }
+        const ScavengerQuota&    getQuota() const { return _quota; }
+        int64                    getCredits() const;
+        const ScavengerFacility& getFacility() const { return _facility; }
+        const Inventory&         getShipInventory() const { return *_pShipStorage; }
+        /** @brief 터미널 상점(값 · 재고 · 살 수 있는지)입니다. 가게 id 는 카탈로그의 `getTerminalShopID` 입니다. */
+        const ShopManager&            getShop() const { return _shop; }
         const vector<ScavengerScrap>& getShipScrap() const { return _listShipScrap; }
         int32                         computeShipValue() const;
         const ScavengerCrewMember*    findCrewMember( int32 player ) const;
