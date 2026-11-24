@@ -7,6 +7,7 @@
 
 #include "GameFramework/Kits/Genre/Action/BattleRoyale/BattleRoyaleCatalog.h"
 #include "GameFramework/Kits/Genre/Action/BattleRoyale/BattleRoyaleMatch.h"
+#include "GameFramework/Kits/Genre/Action/BattleRoyale/Tests/BattleRoyaleTestTerrain.h"
 #include "GameFramework/Runtime/Gameplay/Inventory/ItemCatalog.h"
 #include "GameFramework/Runtime/Gameplay/Inventory/LootTable.h"
 
@@ -51,6 +52,7 @@ namespace
         sw::BattleRoyaleCatalog _catalog;
         sw::ItemCatalog         _items;
         sw::LootCatalog         _loot;
+        sw::AllowAllTerrain     _terrain;
         sw::BattleRoyaleMatch   _match;
 
         [[nodiscard]] bool loadCatalogs( const utf8* pCatalogXML )
@@ -61,7 +63,7 @@ namespace
         /** @brief 사람을 세우고 판을 엽니다. 적은 늘 마지막 번호입니다. */
         [[nodiscard]] bool setUp( const utf8* pCatalogXML, int32 teamASize, bool bStart = true )
         {
-            if ( loadCatalogs( pCatalogXML ) == false || _match.initialize( &_catalog, &_items, &_loot, 5, nullptr ) == false )
+            if ( loadCatalogs( pCatalogXML ) == false || _match.initialize( _catalog, _items, &_loot, 5, _terrain ) == false )
                 return false;
             const int32 teamA = _match.addTeam( sw::hashed_string( "A" ) );
             const int32 teamB = _match.addTeam( sw::hashed_string( "B" ) );
@@ -352,7 +354,7 @@ SW_TEST_CASE( BattleRoyaleMatchTest, UnknownAttackerCountsAsEnvironment )
     bench._match.writeState( written );
     MatchBench restored;
     SW_REQUIRE_TRUE( restored.loadCatalogs( kMatchXML ) );
-    SW_REQUIRE_TRUE( restored._match.initialize( &restored._catalog, &restored._items, &restored._loot, 5, nullptr ) );
+    SW_REQUIRE_TRUE( restored._match.initialize( restored._catalog, restored._items, &restored._loot, 5, restored._terrain ) );
     sw::Archive reading( written.getData(), written.getSize() );
     SW_EXPECT_TRUE( restored._match.readState( reading ) );
 }
@@ -488,14 +490,13 @@ SW_TEST_CASE( BattleRoyaleMatchTest, SupplyDropsFollowTheSchedule )
 }
 
 /**
- * @brief [BattleRoyaleMatchTest] 없는 팀 · 카탈로그 없는 판에는 사람을 넣지 못한다. 시작하면 남은 인원을 알린다
+ * @brief [BattleRoyaleMatchTest] 없는 팀 · 열지 않은 판에는 사람을 넣지 못한다. 시작하면 남은 인원을 알린다
  */
 SW_TEST_CASE( BattleRoyaleMatchTest, AddPlayerNeedsAValidTeam )
 {
-    sw::BattleRoyaleMatch noCatalog;
-    SW_REQUIRE_TRUE( noCatalog.initialize( nullptr, nullptr, nullptr, 1, nullptr ) );
-    const int32 team = noCatalog.addTeam( sw::hashed_string( "A" ) );
-    SW_EXPECT_FALSE( noCatalog.addPlayer( team ).has_value() );
+    sw::BattleRoyaleMatch unopened;
+    const int32           team = unopened.addTeam( sw::hashed_string( "A" ) );
+    SW_EXPECT_FALSE( unopened.addPlayer( team ).has_value() );
 
     MatchBench bench;
     SW_REQUIRE_TRUE( bench.setUp( kMatchXML, 1, false ) );
@@ -532,7 +533,7 @@ SW_TEST_CASE( BattleRoyaleMatchTest, StateRoundTripResumes )
 
     MatchBench restored;
     SW_REQUIRE_TRUE( restored.loadCatalogs( kMatchXML ) );
-    SW_REQUIRE_TRUE( restored._match.initialize( &restored._catalog, &restored._items, &restored._loot, 999, nullptr ) );
+    SW_REQUIRE_TRUE( restored._match.initialize( restored._catalog, restored._items, &restored._loot, 999, restored._terrain ) );
     sw::Archive reading( written.getData(), written.getSize() );
     SW_REQUIRE_TRUE( restored._match.readState( reading ) );
 
@@ -621,7 +622,7 @@ SW_TEST_CASE( BattleRoyaleMatchTest, MatchDeterminism )
     SW_REQUIRE_TRUE( bench.loadCatalogs( kMatchXML ) );
     const auto setup = [&bench]( sw::BattleRoyaleMatch& match )
     {
-        if ( match.initialize( &bench._catalog, &bench._items, &bench._loot, 5, nullptr ) == false )
+        if ( match.initialize( bench._catalog, bench._items, &bench._loot, 5, bench._terrain ) == false )
             return false;
         const int32 teamA = match.addTeam( sw::hashed_string( "A" ) );
         const int32 teamB = match.addTeam( sw::hashed_string( "B" ) );
@@ -654,6 +655,22 @@ SW_TEST_CASE( BattleRoyaleMatchTest, MatchDeterminism )
 SW_TEST_CASE( BattleRoyaleMatchTest, SurvivesSeedEqualToMixConstant )
 {
     const sw::BattleRoyaleCatalog catalog;
+    const sw::ItemCatalog         items{};
+    const sw::AllowAllTerrain     terrain{};
     sw::BattleRoyaleMatch         match;
-    SW_EXPECT_TRUE( match.initialize( &catalog, nullptr, nullptr, 0x5a4f4e45u, nullptr ) );
+    SW_EXPECT_TRUE( match.initialize( catalog, items, nullptr, 0x5a4f4e45u, terrain ) ); // 보급 상자를 적지 않은 카탈로그는 전리품이 없다
+}
+
+/**
+ * @brief [BattleRoyaleMatchTest] 보급 상자 시각을 적은 카탈로그에 전리품 카탈로그를 주지 않거나 그 표가 없으면 판을 열지 않는다 — 빈 상자를 떨어뜨리지 않는다
+ */
+SW_TEST_CASE( BattleRoyaleMatchTest, SupplyDropsNeedTheirLootTable )
+{
+    SW_EXPECT_LOG( "BattleRoyaleMatch.SupplyDropNoTable" );
+    MatchBench bench;
+    SW_REQUIRE_TRUE( bench.loadCatalogs( kMatchXML ) );
+    const sw::LootCatalog empty{};
+    SW_EXPECT_FALSE( bench._match.initialize( bench._catalog, bench._items, nullptr, 5, bench._terrain ) );
+    SW_EXPECT_FALSE( bench._match.initialize( bench._catalog, bench._items, &empty, 5, bench._terrain ) );
+    SW_EXPECT_TRUE( bench._match.initialize( bench._catalog, bench._items, &bench._loot, 5, bench._terrain ) );
 }

@@ -119,7 +119,7 @@ namespace
 
         [[nodiscard]] bool open()
         {
-            if ( _world.initialize( _settings, &_mechs, &_weapons, &_projectiles, &_moves ) == false )
+            if ( _world.initialize( _settings, _mechs, _weapons, _projectiles, _moves ) == false )
                 return false;
             (void)_world.addTeam( hashed_string( "A" ) );
             (void)_world.addTeam( hashed_string( "B" ) );
@@ -225,7 +225,7 @@ namespace
         bool readInFreshWorld( const vector<uint8>& listByte )
         {
             MechArenaWorld target;
-            if ( target.initialize( _settings, &_mechs, &_weapons, &_projectiles, &_moves ) == false )
+            if ( target.initialize( _settings, _mechs, _weapons, _projectiles, _moves ) == false )
                 return false;
             Archive reading( listByte.data(), listByte.size() );
             return target.readState( reading );
@@ -780,7 +780,7 @@ SW_TEST_CASE_F( MechArenaRulesTest, BrokenSettingsAreRefused )
     SW_REQUIRE_TRUE( openDuel( "gunner", "gunner" ) );
     MechArenaSettings broken;
     broken._fixedStep = 0.0f;
-    SW_EXPECT_FALSE( _world.initialize( broken, &_mechs, &_weapons, &_projectiles, &_moves ) );
+    SW_EXPECT_FALSE( _world.initialize( broken, _mechs, _weapons, _projectiles, _moves ) );
     SW_EXPECT_EQUAL( 2, _world.getPilotCount() );
 }
 
@@ -830,7 +830,7 @@ SW_TEST_CASE_F( MechArenaRulesTest, StateRoundTripContinuesIdentically )
 
     const vector<uint8> listSaved = writeBytes( _world );
     MechArenaWorld      restored;
-    SW_REQUIRE_TRUE( restored.initialize( _settings, &_mechs, &_weapons, &_projectiles, &_moves ) );
+    SW_REQUIRE_TRUE( restored.initialize( _settings, _mechs, _weapons, _projectiles, _moves ) );
     Archive reading( listSaved.data(), listSaved.size() );
     SW_REQUIRE_TRUE( restored.readState( reading ) );
     SW_EXPECT_TRUE( writeBytes( restored ) == listSaved );
@@ -1061,7 +1061,7 @@ SW_TEST_CASE_F( MechArenaRulesTest, WorldDeterminism )
 {
     const auto setup = [this]( MechArenaWorld& world )
     {
-        if ( world.initialize( _settings, &_mechs, &_weapons, &_projectiles, &_moves ) == false )
+        if ( world.initialize( _settings, _mechs, _weapons, _projectiles, _moves ) == false )
             return false;
         (void)world.addTeam( hashed_string( "A" ) );
         (void)world.addTeam( hashed_string( "B" ) );

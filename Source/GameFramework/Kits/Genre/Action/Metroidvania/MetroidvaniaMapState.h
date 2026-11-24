@@ -50,8 +50,8 @@ namespace sw
 
         MetroidvaniaMapState();
 
-        /** @brief 카탈로그와 방 그래프를 설정합니다(상태는 비웁니다). */
-        void initialize( const MetroidvaniaCatalog* pCatalog, AreaGraph* pGraph );
+        /** @brief 카탈로그와 방 그래프를 빌립니다(상태는 비웁니다). 둘 다 이 상태보다 오래 살아야 합니다. */
+        void initialize( const MetroidvaniaCatalog& catalog, AreaGraph& graph );
 
         /** @brief 방에 들어갑니다(그래프의 방문과 이웃 발견). 처음 방문이면 true 를 반환합니다. */
         bool enterArea( const hashed_string& areaID );

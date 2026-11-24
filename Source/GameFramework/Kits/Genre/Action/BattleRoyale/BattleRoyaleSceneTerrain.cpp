@@ -31,9 +31,9 @@ namespace sw
     {
     }
 
-    void BattleRoyaleSceneTerrain::initialize( const GameObjectManager* pManager, const BattleRoyaleBodySettings& settings )
+    void BattleRoyaleSceneTerrain::initialize( const GameObjectManager& manager, const BattleRoyaleBodySettings& settings )
     {
-        _pManager = pManager;
+        _pManager = &manager;
         _settings = settings;
     }
 
@@ -44,9 +44,7 @@ namespace sw
 
     bool BattleRoyaleSceneTerrain::isClear( const float2& position ) const
     {
-        using Internal = BattleRoyaleSceneTerrainInternal;
-        if ( _pManager == nullptr )
-            return true;
+        using Internal       = BattleRoyaleSceneTerrainInternal;
         const float32   drop = Internal::kProbeHeight - _settings._radius - WalkSweep::kSkin; // 땅에 닿기 직전까지 — 땅은 막는 것이 아니다
         CharacterRayHit hit;
         return CharacterRayHit::sphereCast3D( *_pManager, toLocal( position, Internal::kProbeHeight ), float3{ 0.0f, -1.0f, 0.0f }, drop, _settings._radius,
@@ -55,8 +53,6 @@ namespace sw
 
     float2 BattleRoyaleSceneTerrain::walk( const float2& from, const float2& delta ) const
     {
-        if ( _pManager == nullptr )
-            return from + delta;
         const float3 center = toLocal( from, _settings._radius + WalkSweep::kSkin );
         const float3 moved  = WalkSweep::slide( *_pManager, center, delta, _settings._radius ) - center;
         return from + float2{ moved._x, moved._z };
@@ -64,7 +60,7 @@ namespace sw
 
     bool BattleRoyaleSceneTerrain::hasLineOfSight( const float2& from, const float2& to ) const
     {
-        return _pManager == nullptr || WorldQuery::hasLineOfSight( *_pManager, toLocal( from, _settings._eyeHeight ), toLocal( to, _settings._eyeHeight ), 0, 0 );
+        return WorldQuery::hasLineOfSight( *_pManager, toLocal( from, _settings._eyeHeight ), toLocal( to, _settings._eyeHeight ), 0, 0 );
     }
 
     float2 BattleRoyaleSceneTerrain::findStandingSpot( const float2& position, float32 mapSize ) const
@@ -88,16 +84,13 @@ namespace sw
     void BattleRoyaleSceneTerrain::findRoute( const float2& from, const float2& to, vector<float2>& outListPoint ) const
     {
         outListPoint.clear();
-        if ( _pManager != nullptr )
+        NavPath path;
+        (void)_pManager->getSubsystem<SceneNavigation>().findPath( hashed_string{}, toLocal( from, 0.0f ), toLocal( to, 0.0f ), path ); // 실패면 점이 없다
+        const WorldOrigin& origin = _pManager->getWorldOrigin();
+        for ( size_t pointIndex = 1; pointIndex < path._listPoint.size(); ++pointIndex )
         {
-            NavPath path;
-            (void)_pManager->getSubsystem<SceneNavigation>().findPath( hashed_string{}, toLocal( from, 0.0f ), toLocal( to, 0.0f ), path ); // 실패면 점이 없다
-            const WorldOrigin& origin = _pManager->getWorldOrigin();
-            for ( size_t pointIndex = 1; pointIndex < path._listPoint.size(); ++pointIndex )
-            {
-                const float3 point = origin.toAbsolute( path._listPoint[pointIndex] );
-                outListPoint.push_back( float2{ point._x, point._z } );
-            }
+            const float3 point = origin.toAbsolute( path._listPoint[pointIndex] );
+            outListPoint.push_back( float2{ point._x, point._z } );
         }
         if ( outListPoint.empty() )
             outListPoint.push_back( to );

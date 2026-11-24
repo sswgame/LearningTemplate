@@ -235,7 +235,7 @@ namespace sw
             enemy._enemyID  = _listEnemyKind[index].key();
             enemy._position = _listEnemyPosition[index];
             enemy._bBoss    = _pCatalog->findEnemy( enemy._enemyID )->_bBoss ? SW_TRUE : SW_FALSE; // 있는지는 `validatePlacement` 가 보았다
-            if ( enemy._duelist.initialize( _pCatalog.get() ) == false )
+            if ( enemy._duelist.initialize( *_pCatalog ) == false )
                 return false;
             if ( enemy._bBoss == SW_TRUE )
                 enemy._duelist.setDamageTakenScale( _bossDamageTakenScale );
@@ -248,16 +248,17 @@ namespace sw
     {
         if ( acquireBoundCatalog( _pCatalog ) == false || acquireRequired( _areaDataPath, _pAreas ) == false )
             return false;
-        if ( validatePlacement() == false || populateTerrain() == false || populateEnemies( _listEnemy ) == false || _player.initialize( _pCatalog.get() ) == false )
+        if ( validatePlacement() == false || populateTerrain() == false || populateEnemies( _listEnemy ) == false || _player.initialize( *_pCatalog ) == false )
             return false;
         _graph = *_pAreas;
         _graph.resetState();
         _wallet.clear();
         _flags.clear();
         _abilities.initialize( *_pCatalog );
-        _mapState.initialize( _pCatalog.get(), &_graph );
-        _deathRest.initialize( _pCatalog.get(), &_wallet );
-        _loadout.initialize( _pCatalog.get() );
+        _mapState.initialize( *_pCatalog, _graph );
+        if ( _deathRest.initialize( *_pCatalog, _wallet, nullptr ) == false ) // 이 미니게임의 적은 전리품 표를 적지 않는다 — 적으면 여기서 멈춘다
+            return false;
+        _loadout.initialize( *_pCatalog );
         _motor = PlatformerMotor2D{};
         _abilities.applyToMotor( _motor );
         _motor.setPosition( _startPosition );
@@ -360,7 +361,7 @@ namespace sw
         if ( enemy._duelist.getHealthMachine().isAlive() )
             return;
         ItemStackList drops; // 전리품 표를 쓰지 않는 적이라 비어 있다
-        (void)_deathRest.registerKill( enemy._spawnID, enemy._enemyID, _flags, nullptr, _random, drops );
+        (void)_deathRest.registerKill( enemy._spawnID, enemy._enemyID, _flags, _random, drops );
     }
 
     void MetroidvaniaGameModeComponent::swing()
@@ -622,10 +623,11 @@ namespace sw
         if ( io.isReading() )
         {
             abilities.initialize( *_pCatalog );
-            mapState.initialize( _pCatalog.get(), &_graph );
-            deathRest.initialize( _pCatalog.get(), &_wallet );
-            loadout.initialize( _pCatalog.get() );
-            if ( io.check( player.initialize( _pCatalog.get() ) && populateEnemies( listEnemy ) ) == false )
+            mapState.initialize( *_pCatalog, _graph );
+            if ( io.check( deathRest.initialize( *_pCatalog, _wallet, nullptr ) ) == false )
+                return;
+            loadout.initialize( *_pCatalog );
+            if ( io.check( player.initialize( *_pCatalog ) && populateEnemies( listEnemy ) ) == false )
                 return;
         }
         else

@@ -63,7 +63,7 @@ namespace
             if ( _catalog.loadFromXMLText( kMapXML, "MetroidvaniaMapStateTest" ) == false )
                 return false;
             const bool bAreas = addArea( kHallArea, kCrossroads ) && addArea( kCaveArea, kCrossroads ) && addArea( kPitArea, kDeep ) && addArea( sw::hashed_string( "glade" ), kFree );
-            _map.initialize( &_catalog, &_graph );
+            _map.initialize( _catalog, _graph );
             return bAreas;
         }
     };
@@ -114,10 +114,9 @@ SW_TEST_CASE( MetroidvaniaMapStateTest, BuyingAMapSpendsAndReveals )
 
     SW_EXPECT_TRUE( bench._map.buyRegionMap( kFree, bench._wallet, sw::hashed_string( "nothing" ) ) == sw::MetroidvaniaMapPurchase::Bought );
 
-    sw::MetroidvaniaMapState noGraph;
-    noGraph.initialize( &bench._catalog, nullptr );
-    SW_EXPECT_TRUE( noGraph.buyRegionMap( kDeep, bench._wallet, kCurrency ) == sw::MetroidvaniaMapPurchase::UnknownRegion );
-    SW_EXPECT_FALSE( noGraph.enterArea( kHallArea ) );
+    sw::MetroidvaniaMapState unopened;
+    SW_EXPECT_TRUE( unopened.buyRegionMap( kDeep, bench._wallet, kCurrency ) == sw::MetroidvaniaMapPurchase::UnknownRegion );
+    SW_EXPECT_FALSE( unopened.enterArea( kHallArea ) );
 }
 
 /**
@@ -221,22 +220,18 @@ SW_TEST_CASE( MetroidvaniaMapStateTest, RatiosCountRoomsAndPickups )
     SW_EXPECT_NEAR( 0.5f, bench._map.computeCollectionRatio(), kMapTolerance );
     SW_EXPECT_NEAR( 100.0f / 3.0f, bench._map.computeCompletionPercent(), kMapTolerance ); // (1 + 1) / (4 + 2)
 
-    sw::MetroidvaniaMapState noGraph;
-    noGraph.initialize( &bench._catalog, nullptr );
-    SW_EXPECT_NEAR( 0.0f, noGraph.computeExplorationRatio(), kMapTolerance );
-    SW_EXPECT_NEAR( 0.0f, noGraph.computeCompletionPercent(), kMapTolerance );
-
-    sw::MetroidvaniaMapState noCatalog;
-    noCatalog.initialize( nullptr, nullptr );
-    SW_EXPECT_NEAR( 1.0f, noCatalog.computeCollectionRatio(), kMapTolerance );
-    SW_EXPECT_TRUE( noCatalog.collectPickup( kMask ) == nullptr );
+    sw::MetroidvaniaMapState unopened;
+    SW_EXPECT_NEAR( 0.0f, unopened.computeExplorationRatio(), kMapTolerance );
+    SW_EXPECT_NEAR( 0.0f, unopened.computeCompletionPercent(), kMapTolerance );
+    SW_EXPECT_NEAR( 1.0f, unopened.computeCollectionRatio(), kMapTolerance );
+    SW_EXPECT_TRUE( unopened.collectPickup( kMask ) == nullptr );
 
     SW_EXPECT_LOG( "XMLCatalog.NoEntries" );
     sw::MetroidvaniaCatalog empty;
     SW_EXPECT_FALSE( empty.loadFromXMLText( R"(<Metroidvania><BaseMotor halfExtents="0.35,0.45" runSpeed="7" groundAcceleration="70" airAcceleration="40" jumpHeight="3.2" timeToApex="0.38" fallGravityScale="1.6" jumpCutRatio="0.45" maxFallSpeed="18" coyoteTime="0.1" jumpBufferTime="0.12" wallSlideSpeed="2.5" wallJumpSpeedX="7.5" wallJumpSpeedY="12" wallJumpLockTime="0.15" dashSpeed="18" dashDuration="0.15" dashCooldown="0.3" climbSpeed="4" dropThroughTime="0.25" dashEndSpeedScale="0.4" climbJumpScale="0.8" climbSideScale="0.5" moveDeadzone="0.1" extraJumpCount="0" airDashCount="1" wallJump="true"/><Parry><Window grade="Perfect"/></Parry></Metroidvania>)", "empty" ) ); // 원소가 없어 읽기 실패지만 규칙은 들어온다
     sw::AreaGraph            noAreas;
     sw::MetroidvaniaMapState blank;
-    blank.initialize( &empty, &noAreas );
+    blank.initialize( empty, noAreas );
     SW_EXPECT_NEAR( 1.0f, blank.computeCollectionRatio(), kMapTolerance );
     SW_EXPECT_NEAR( 100.0f, blank.computeCompletionPercent(), kMapTolerance );
 }

@@ -21,12 +21,12 @@ namespace sw
     {
     }
 
-    void MetroidvaniaTrinketLoadout::initialize( const MetroidvaniaCatalog* pCatalog )
+    void MetroidvaniaTrinketLoadout::initialize( const MetroidvaniaCatalog& catalog )
     {
-        _pCatalog = pCatalog;
+        _pCatalog = &catalog;
         _listOwned.clear();
         _listEquipped.clear();
-        _notchCount = pCatalog != nullptr ? pCatalog->getRules()._charmNotches : 0;
+        _notchCount = catalog.getRules()._charmNotches;
     }
 
     bool MetroidvaniaTrinketLoadout::grantCharm( const hashed_string& charmID )

@@ -8,6 +8,7 @@
 
 #include "GameFramework/Kits/Genre/Action/BattleRoyale/BattleRoyaleDrop.h"
 #include "GameFramework/Kits/Genre/Action/BattleRoyale/BattleRoyaleZone.h"
+#include "GameFramework/Kits/Genre/Action/BattleRoyale/Tests/BattleRoyaleTestTerrain.h"
 
 #include <limits>
 
@@ -19,6 +20,8 @@ namespace
 {
     constexpr float32 kZoneTolerance = 1.0e-2f;
     constexpr float32 kMapSize       = 1000.0f;
+
+    const sw::AllowAllTerrain kOpenTerrain{};
 
     class DenyAllTerrain final : public sw::IBrZoneTerrain
     {
@@ -83,9 +86,9 @@ SW_TEST_CASE( BattleRoyaleZoneTest, InitializeHandlesBadMapAndNoPhases )
 {
     SW_EXPECT_LOG( "BattleRoyaleZone.BattleRoyaleZoneRefusedMapSize" );
     sw::BattleRoyaleZone zone;
-    SW_EXPECT_FALSE( zone.initialize( sw::BattleRoyaleZoneDef{}, 0.5f, 1, nullptr ) );
+    SW_EXPECT_FALSE( zone.initialize( sw::BattleRoyaleZoneDef{}, 0.5f, 1, kOpenTerrain ) );
 
-    SW_REQUIRE_TRUE( zone.initialize( sw::BattleRoyaleZoneDef{}, kMapSize, 1, nullptr ) );
+    SW_REQUIRE_TRUE( zone.initialize( sw::BattleRoyaleZoneDef{}, kMapSize, 1, kOpenTerrain ) );
     SW_EXPECT_TRUE( zone.getStage() == sw::BattleRoyaleZoneStage::Final );
     SW_EXPECT_NEAR( 500.0f * 1.41421356f, zone.getRadius(), kZoneTolerance );
     SW_EXPECT_NEAR( 0.0f, zone.computeDamagePerSecond( sw::float2{ -5000.0f, 0.0f } ), kZoneTolerance );
@@ -99,7 +102,7 @@ SW_TEST_CASE( BattleRoyaleZoneTest, InitializeHandlesBadMapAndNoPhases )
 SW_TEST_CASE( BattleRoyaleZoneTest, StagesFlowAndInterpolate )
 {
     sw::BattleRoyaleZone zone;
-    SW_REQUIRE_TRUE( zone.initialize( BattleRoyaleZoneTestUtil::makeSettings( 1 ), kMapSize, 7, nullptr ) );
+    SW_REQUIRE_TRUE( zone.initialize( BattleRoyaleZoneTestUtil::makeSettings( 1 ), kMapSize, 7, kOpenTerrain ) );
     SW_EXPECT_TRUE( zone.getStage() == sw::BattleRoyaleZoneStage::Waiting );
     SW_EXPECT_NEAR( 500.0f, zone.getCenter()._x, kZoneTolerance );
     SW_EXPECT_NEAR( 400.0f, zone.getRadius(), kZoneTolerance );
@@ -145,10 +148,10 @@ SW_TEST_CASE( BattleRoyaleZoneTest, LongStepsMatchShortSteps )
 {
     const sw::BattleRoyaleZoneDef settings = BattleRoyaleZoneTestUtil::makeSettings( 3 );
     sw::BattleRoyaleZone          whole;
-    SW_REQUIRE_TRUE( whole.initialize( settings, kMapSize, 11, nullptr ) );
+    SW_REQUIRE_TRUE( whole.initialize( settings, kMapSize, 11, kOpenTerrain ) );
     whole.update( 100.0f );
     sw::BattleRoyaleZone stepped;
-    SW_REQUIRE_TRUE( stepped.initialize( settings, kMapSize, 11, nullptr ) );
+    SW_REQUIRE_TRUE( stepped.initialize( settings, kMapSize, 11, kOpenTerrain ) );
     for ( int32 step = 0; step < 16; ++step )
     {
         stepped.update( 1.0f );
@@ -161,7 +164,7 @@ SW_TEST_CASE( BattleRoyaleZoneTest, LongStepsMatchShortSteps )
     SW_EXPECT_NEAR( whole.getCenter()._y, stepped.getCenter()._y, kZoneTolerance );
 
     sw::BattleRoyaleZone instant;
-    SW_REQUIRE_TRUE( instant.initialize( BattleRoyaleZoneTestUtil::makeSettings( 2, 0.0f, 0.0f ), kMapSize, 3, nullptr ) );
+    SW_REQUIRE_TRUE( instant.initialize( BattleRoyaleZoneTestUtil::makeSettings( 2, 0.0f, 0.0f ), kMapSize, 3, kOpenTerrain ) );
     instant.update( 0.0625f );
     SW_EXPECT_TRUE( instant.getStage() == sw::BattleRoyaleZoneStage::Final );
     SW_EXPECT_NEAR( 100.0f, instant.getRadius(), kZoneTolerance );
@@ -176,9 +179,9 @@ SW_TEST_CASE( BattleRoyaleZoneTest, NextCircleStaysInsideCurrentAndMap )
     for ( uint32 seed = 1; seed <= 20; ++seed )
     {
         sw::BattleRoyaleZone zone;
-        SW_REQUIRE_TRUE( zone.initialize( settings, kMapSize, seed, nullptr ) );
+        SW_REQUIRE_TRUE( zone.initialize( settings, kMapSize, seed, kOpenTerrain ) );
         sw::BattleRoyaleZone twin;
-        SW_REQUIRE_TRUE( twin.initialize( settings, kMapSize, seed, nullptr ) );
+        SW_REQUIRE_TRUE( twin.initialize( settings, kMapSize, seed, kOpenTerrain ) );
         for ( int32 phase = 0; phase < 4; ++phase )
         {
             const float32 distance = BattleRoyaleZoneTestUtil::computeDistance( zone.getCenter(), zone.getNextCenter() );
@@ -201,7 +204,7 @@ SW_TEST_CASE( BattleRoyaleZoneTest, TerrainDecidesTheCenter )
 {
     const DenyAllTerrain denyAll{};
     sw::BattleRoyaleZone blocked;
-    SW_REQUIRE_TRUE( blocked.initialize( BattleRoyaleZoneTestUtil::makeSettings( 1 ), kMapSize, 5, &denyAll ) );
+    SW_REQUIRE_TRUE( blocked.initialize( BattleRoyaleZoneTestUtil::makeSettings( 1 ), kMapSize, 5, denyAll ) );
     SW_EXPECT_NEAR( 500.0f, blocked.getNextCenter()._x, kZoneTolerance );
     SW_EXPECT_NEAR( 500.0f, blocked.getNextCenter()._y, kZoneTolerance );
     sw::GameRandom random{ 9u };
@@ -213,7 +216,7 @@ SW_TEST_CASE( BattleRoyaleZoneTest, TerrainDecidesTheCenter )
     for ( uint32 seed = 1; seed <= 10; ++seed )
     {
         sw::BattleRoyaleZone zone;
-        SW_REQUIRE_TRUE( zone.initialize( BattleRoyaleZoneTestUtil::makeSettings( 1 ), kMapSize, seed, &rightSide ) );
+        SW_REQUIRE_TRUE( zone.initialize( BattleRoyaleZoneTestUtil::makeSettings( 1 ), kMapSize, seed, rightSide ) );
         SW_EXPECT_TRUE( zone.getNextCenter()._x > 500.0f );
         SW_EXPECT_TRUE( zone.pickPointInside( random, point ) );
         SW_EXPECT_TRUE( point._x > 500.0f );
@@ -227,7 +230,7 @@ SW_TEST_CASE( BattleRoyaleZoneTest, TerrainDecidesTheCenter )
 SW_TEST_CASE( BattleRoyaleZoneTest, DamageAppliesOutsideOnly )
 {
     sw::BattleRoyaleZone zone;
-    SW_REQUIRE_TRUE( zone.initialize( BattleRoyaleZoneTestUtil::makeSettings( 2 ), kMapSize, 7, nullptr ) );
+    SW_REQUIRE_TRUE( zone.initialize( BattleRoyaleZoneTestUtil::makeSettings( 2 ), kMapSize, 7, kOpenTerrain ) );
     const sw::float2 onEdge{ 900.0f, 500.0f };
     const sw::float2 beyond{ 901.0f, 500.0f };
     SW_EXPECT_TRUE( zone.isInside( onEdge ) );
@@ -252,13 +255,13 @@ SW_TEST_CASE( BattleRoyaleZoneTest, ArchiveRoundTripResumes )
 {
     const sw::BattleRoyaleZoneDef settings = BattleRoyaleZoneTestUtil::makeSettings( 3 );
     sw::BattleRoyaleZone          original;
-    SW_REQUIRE_TRUE( original.initialize( settings, kMapSize, 21, nullptr ) );
+    SW_REQUIRE_TRUE( original.initialize( settings, kMapSize, 21, kOpenTerrain ) );
     original.update( 3.0f ); // 첫 단계가 줄어드는 중
 
     sw::Archive written;
     original.writeState( written );
     sw::BattleRoyaleZone restored;
-    SW_REQUIRE_TRUE( restored.initialize( settings, kMapSize, 999, nullptr ) );
+    SW_REQUIRE_TRUE( restored.initialize( settings, kMapSize, 999, kOpenTerrain ) );
     sw::Archive reading( written.getData(), written.getSize() );
     SW_REQUIRE_TRUE( restored.readState( reading ) );
     sw::vector<sw::BattleRoyaleZoneEvent> listEvent;
@@ -276,7 +279,7 @@ SW_TEST_CASE( BattleRoyaleZoneTest, ArchiveRoundTripResumes )
     }
 
     sw::BattleRoyaleZone truncatedTarget;
-    SW_REQUIRE_TRUE( truncatedTarget.initialize( settings, kMapSize, 1, nullptr ) );
+    SW_REQUIRE_TRUE( truncatedTarget.initialize( settings, kMapSize, 1, kOpenTerrain ) );
     sw::Archive truncated( written.getData(), written.getSize() - 1 );
     SW_EXPECT_FALSE( truncatedTarget.readState( truncated ) );
     SW_EXPECT_NEAR( 400.0f, truncatedTarget.getRadius(), kZoneTolerance );
@@ -288,7 +291,7 @@ SW_TEST_CASE( BattleRoyaleZoneTest, ArchiveRoundTripResumes )
 SW_TEST_CASE( BattleRoyaleZoneTest, CodecRejectsOutOfRangeValues )
 {
     sw::BattleRoyaleZone zone;
-    SW_REQUIRE_TRUE( zone.initialize( BattleRoyaleZoneTestUtil::makeSettings( 1 ), kMapSize, 2, nullptr ) );
+    SW_REQUIRE_TRUE( zone.initialize( BattleRoyaleZoneTestUtil::makeSettings( 1 ), kMapSize, 2, kOpenTerrain ) );
     using Stage        = sw::BattleRoyaleZoneStage;
     const float32 nan  = std::numeric_limits<float32>::quiet_NaN();
     const float32 huge = std::numeric_limits<float32>::infinity();

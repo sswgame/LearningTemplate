@@ -162,7 +162,7 @@ namespace sw
                              _listPlayerMech.size(), _listAllyMech.size(), _listAllySpawn.size(), _listEnemyMech.size(), _listEnemySpawn.size() );
             return false;
         }
-        if ( outWorld.initialize( _rules, _pMechs.get(), _pWeapons.get(), _pProjectiles.get(), _pMoves.get() ) == false )
+        if ( outWorld.initialize( _rules, *_pMechs, *_pWeapons, *_pProjectiles, *_pMoves ) == false )
             return false;                                    // 규칙이 범위 밖이면 판이 오류를 남긴다
         (void)outWorld.addTeam( hashed_string( "Player" ) ); // 팀 번호는 더한 순서다(kPlayerTeam · kEnemyTeam)
         (void)outWorld.addTeam( hashed_string( "Enemy" ) );

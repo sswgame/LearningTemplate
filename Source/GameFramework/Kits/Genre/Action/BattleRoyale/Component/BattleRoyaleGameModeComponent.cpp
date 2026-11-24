@@ -150,9 +150,9 @@ namespace sw
 
     bool BattleRoyaleGameModeComponent::openMatch( BattleRoyaleMatch& outMatch ) const
     {
-        if ( outMatch.initialize( _pCatalog.get(), _pItemCatalog.get(), _pLootCatalog.get(), _seed, &_terrain ) == false )
+        if ( outMatch.initialize( *_pCatalog, *_pItemCatalog, _pLootCatalog.get(), _seed, _terrain ) == false )
         {
-            SW_LOG_ERROR_ID( "BattleRoyale.OpenFailed", "Battle royale game mode: the zone refused the catalog map size - the match does not open" );
+            SW_LOG_ERROR_ID( "BattleRoyale.OpenFailed", "Battle royale game mode: the match refused the catalog (map size or supply drop loot) - the match does not open" );
             return false;
         }
         for ( int32 squad = 0; squad < _squadCount; ++squad )
@@ -214,8 +214,10 @@ namespace sw
             SW_LOG_ERROR_ID( "BattleRoyale.UnknownLootSpot", "Battle royale game mode: loot spot '%#' is not in the catalog - the match does not open", _lootSpotKind.c_str() );
             return false;
         }
-        _random = GameRandom( GameRandom::deriveSeed( _seed, BattleRoyaleGameModeComponentInternal::kPersonSalt ) );
-        _terrain.initialize( getObjectManager(), BattleRoyaleBodySettings{ _groundHeight, _bodyRadius, _eyeHeight } );
+        _random                                 = GameRandom( GameRandom::deriveSeed( _seed, BattleRoyaleGameModeComponentInternal::kPersonSalt ) );
+        const GameObjectManager* const pManager = getObjectManager();
+        SW_ASSERT( pManager != nullptr && "a game mode starts inside a scene" );
+        _terrain.initialize( *pManager, BattleRoyaleBodySettings{ _groundHeight, _bodyRadius, _eyeHeight } );
         if ( openMatch( _match ) == false || prepareDrop() == false )
             return false;
         _timer.reset();

@@ -50,7 +50,7 @@ namespace sw
         MetroidvaniaTrinketLoadout();
 
         /** @brief 카탈로그 규칙의 처음 슬롯 수로 시작합니다(가진 것과 낀 것은 비웁니다). */
-        void initialize( const MetroidvaniaCatalog* pCatalog );
+        void initialize( const MetroidvaniaCatalog& catalog );
 
         /** @brief 부적을 얻습니다. 새로 얻었으면 true 를 반환합니다. */
         bool grantCharm( const hashed_string& charmID );

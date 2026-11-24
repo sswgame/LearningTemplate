@@ -214,7 +214,7 @@ namespace sw
      * @brief 서버가 돌리는 한 판입니다. 카탈로그는 빌려 쓰며, 판보다 오래 살아야 합니다.
      * @code
      *     MechArenaWorld world;
-     *     world.initialize( settings, &mechCatalog, &weaponCatalog, &projectileCatalog, &moveCatalog );
+     *     world.initialize( settings, mechCatalog, weaponCatalog, projectileCatalog, moveCatalog );
      *     const int32 amuro = world.addPilot( config ).value();
      *     world.start();
      *     world.setInput( amuro, input );
@@ -244,8 +244,8 @@ namespace sw
          * @brief 설정과 카탈로그를 받아 판을 비웁니다. 설정이 범위 밖(`MechArenaSettings` 의 `PROPERTY( Min · Max )`)이면 오류를 남기고 false 를 반환하며 판은 그대로입니다.
          * @details 주무기 슬롯은 무기(`WeaponCatalog`)의 기본 탄(`ProjectileCatalog`)을 장전한다.
          */
-        [[nodiscard]] bool initialize( const MechArenaSettings& settings, const MechCatalog* pMechCatalog, const WeaponCatalog* pWeaponCatalog,
-                                       const ProjectileCatalog* pProjectileCatalog, const MoveCatalog* pMoveCatalog );
+        [[nodiscard]] bool initialize( const MechArenaSettings& settings, const MechCatalog& mechCatalog, const WeaponCatalog& weaponCatalog, const ProjectileCatalog& projectileCatalog,
+                                       const MoveCatalog& moveCatalog );
         /** @brief 팀을 추가하고 번호를 반환합니다. */
         int32 addTeam( const hashed_string& name );
         /** @brief 조종사를 추가합니다. 덱이 비었거나, 모르는 기체 · 스킬 · 팀이거나, 덱 코스트가 상한을 넘거나, 덱 기체의 체력 설정이 범위 밖이거나, 슬롯의 무기 · 기술이 카탈로그에 없으면 이유를 돌려줍니다. */
@@ -351,7 +351,7 @@ namespace sw
         vector<LockOnCandidate>            _listCandidateScratch;
         MatchState                         _match;
         FixedStepTimer                     _timer;
-        const MechCatalog*                 _pMechCatalog;
+        const MechCatalog*                 _pMechCatalog; ///< 빌린 카탈로그 — 넷은 `initialize` 가 함께 정한다(조종사는 그 뒤에만 들어와 조종사가 있으면 늘 있다)
         const WeaponCatalog*               _pWeaponCatalog;
         const ProjectileCatalog*           _pProjectileCatalog;
         const MoveCatalog*                 _pMoveCatalog;

@@ -27,7 +27,7 @@ namespace
         {
             addBox( "Ground", float3{ 50.0f, -0.5f, 50.0f }, float3{ 70.0f, 0.5f, 70.0f } );
             addBox( "Building", float3{ 22.0f, buildingHeight * 0.5f, 30.0f }, float3{ 2.0f, buildingHeight * 0.5f, 10.0f } );
-            _terrain.initialize( &_manager, BattleRoyaleBodySettings{} );
+            _terrain.initialize( _manager, BattleRoyaleBodySettings{} );
             _manager.beginPlay();
             _manager.update( kBattleRoyaleTerrainFrame ); // 첫 물리 프레임이 바디를 짓는다
         }
@@ -101,7 +101,7 @@ SW_TEST_CASE( BattleRoyaleTerrainTest, EmptySceneBlocksNothing )
 {
     GameObjectManager        manager;
     BattleRoyaleSceneTerrain terrain;
-    terrain.initialize( &manager, BattleRoyaleBodySettings{} );
+    terrain.initialize( manager, BattleRoyaleBodySettings{} );
     SW_EXPECT_TRUE( terrain.isZoneCenterAllowed( float2{ 1.0f, 1.0f } ) );
     SW_EXPECT_TRUE( terrain.hasLineOfSight( float2{ 0.0f, 0.0f }, float2{ 10.0f, 0.0f } ) );
     const float2 walked = terrain.walk( float2{ 1.0f, 1.0f }, float2{ 2.0f, 0.0f } );

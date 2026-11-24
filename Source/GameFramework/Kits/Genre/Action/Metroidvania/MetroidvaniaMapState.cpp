@@ -23,10 +23,10 @@ namespace sw
     {
     }
 
-    void MetroidvaniaMapState::initialize( const MetroidvaniaCatalog* pCatalog, AreaGraph* pGraph )
+    void MetroidvaniaMapState::initialize( const MetroidvaniaCatalog& catalog, AreaGraph& graph )
     {
-        _pCatalog = pCatalog;
-        _pGraph   = pGraph;
+        _pCatalog = &catalog;
+        _pGraph   = &graph;
         _listRegionMap.clear();
         _listSite.clear();
         _listPickup.clear();
@@ -34,12 +34,12 @@ namespace sw
 
     bool MetroidvaniaMapState::enterArea( const hashed_string& areaID )
     {
-        return _pGraph != nullptr && _pGraph->enterArea( areaID );
+        return _pCatalog != nullptr && _pGraph->enterArea( areaID );
     }
 
     MetroidvaniaMapPurchase MetroidvaniaMapState::buyRegionMap( const hashed_string& region, Wallet& inoutWallet, const hashed_string& currency )
     {
-        if ( _pCatalog == nullptr || _pGraph == nullptr )
+        if ( _pCatalog == nullptr )
             return MetroidvaniaMapPurchase::UnknownRegion;
         const MetroidvaniaRegionMapDef* pMap = _pCatalog->findRegionMap( region );
         if ( pMap == nullptr )
@@ -60,7 +60,7 @@ namespace sw
 
     bool MetroidvaniaMapState::isShownOnMap( const hashed_string& areaID ) const
     {
-        if ( _pGraph == nullptr )
+        if ( _pCatalog == nullptr )
             return false;
         const AreaDef* pArea = _pGraph->findArea( areaID );
         return pArea != nullptr && hasRegionMap( pArea->_region ) && _pGraph->isDiscovered( areaID );
@@ -85,7 +85,7 @@ namespace sw
     void MetroidvaniaMapState::collectItemMarkers( vector<const MetroidvaniaPickupDef*>& outListPickup ) const
     {
         outListPickup.clear();
-        if ( _pCatalog == nullptr || _pGraph == nullptr )
+        if ( _pCatalog == nullptr )
             return;
         for ( const MetroidvaniaPickupDef& pickup : _pCatalog->getPickups() )
         {
@@ -98,7 +98,7 @@ namespace sw
 
     bool MetroidvaniaMapState::activateSite( const hashed_string& siteID )
     {
-        const bool bCannotActivateSite = _pCatalog == nullptr || _pGraph == nullptr || isSiteActive( siteID );
+        const bool bCannotActivateSite = _pCatalog == nullptr || isSiteActive( siteID );
         if ( bCannotActivateSite )
             return false;
         const MetroidvaniaSiteDef* pSite = _pCatalog->findSite( siteID );
@@ -127,7 +127,7 @@ namespace sw
 
     float32 MetroidvaniaMapState::computeExplorationRatio() const
     {
-        return _pGraph != nullptr ? _pGraph->computeExplorationRatio() : 0.0f;
+        return _pCatalog != nullptr ? _pGraph->computeExplorationRatio() : 0.0f;
     }
 
     float32 MetroidvaniaMapState::computeCollectionRatio() const
@@ -139,7 +139,7 @@ namespace sw
 
     float32 MetroidvaniaMapState::computeCompletionPercent() const
     {
-        if ( _pCatalog == nullptr || _pGraph == nullptr )
+        if ( _pCatalog == nullptr )
             return 0.0f;
         const size_t total = _pGraph->getAreas().size() + _pCatalog->getPickups().size();
         if ( total == 0 )
@@ -185,8 +185,7 @@ namespace sw
             if ( _pCatalog->findRegionMap( region ) == nullptr || hasRegionMap( region ) )
                 continue;
             _listRegionMap.push_back( region );
-            if ( _pGraph != nullptr )
-                (void)_pGraph->discoverRegion( region );
+            (void)_pGraph->discoverRegion( region );
         }
         for ( const hashed_string& siteID : listSite )
         {
