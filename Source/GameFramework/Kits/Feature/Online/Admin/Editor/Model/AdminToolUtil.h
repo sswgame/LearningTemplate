@@ -37,5 +37,7 @@ namespace sw::editor
 
         /** @brief 상태 줄과 로그의 명령 이름입니다. */
         static const utf8* getMethodName( uint16 method );
+        /** @brief 공통 오류 코드 @p errorCode(`OnlineError`)의 이름입니다. 표에 없으면 "Error" 입니다. */
+        static const utf8* getErrorName( uint16 errorCode );
     };
 } // namespace sw::editor

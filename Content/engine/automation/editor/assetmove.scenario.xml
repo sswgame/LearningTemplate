@@ -106,7 +106,8 @@
 	<WaitUntil watch="Editor.SceneDirty" equals="0" timeoutFrames="60"/>
 	<DevCommand line="asset.expectScratchMissing scratch/assetmove/assetmove.scene.xml"/>
 	<DevCommand line="asset.expectScratchContains scratch/assetmove/renamed.scene.xml PointLightComponent"/>
-	<DevCommand line="asset.expectScratchContains scratch/assetmove/renamed.scene.xml target/pack/probe.material"/>
+	<!-- 씬은 에셋을 식별자로 적는다 — 옮긴 probe.material 의 식별자(사본 id 에서 나와 실행마다 같다) -->
+	<DevCommand line="asset.expectScratchContains scratch/assetmove/renamed.scene.xml guid:e23a2c3a524210f2a3de5c881d20a844"/>
 	<Variable name="gv_editorUiScale" value="0"/>
 	<Pass/>
 </Scenario>

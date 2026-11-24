@@ -257,7 +257,8 @@ SW_TEST_CASE( MeshPrimitiveTest, PrimitiveTangentsAreOrthonormalToNormals )
     }
 
     // 이음매 표시: 평면은 이음매가 없고, 면마다 노멀이 갈린 큐브의 정점은 모두 이음매다.
-    for ( const sw::RHIVertex& vertex : sw::MeshUtil::createPrimitive( "Plane" )->getCPUView().getVertices() )
+    const sw::shared_ptr<sw::Mesh> flatPlane = sw::MeshUtil::createPrimitive( "Plane" ); // 도는 동안 메시가 산다(범위 for 의 임시 값은 첫 바퀴 전에 사라진다)
+    for ( const sw::RHIVertex& vertex : flatPlane->getCPUView().getVertices() )
         SW_EXPECT_FALSE( vertex.isOnSeam() );
     const sw::shared_ptr<sw::Mesh>   cube           = sw::MeshUtil::createPrimitive( "Cube" );
     const sw::vector<sw::RHIVertex>& listCubeVertex = cube->getCPUView().getVertices();
