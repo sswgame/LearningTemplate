@@ -1,6 +1,6 @@
 #include "pch.h"
 
-#include "GameFramework/Runtime/Foundation/Framework/GameService.h"
+#include "GameFramework/Runtime/Foundation/Service/GameService.h"
 
 #include "Engine/Foundation/EngineScope.h"
 

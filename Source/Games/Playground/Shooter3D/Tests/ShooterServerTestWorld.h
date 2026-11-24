@@ -24,7 +24,7 @@
 #include "GameFramework/Runtime/Character/Control/FirstPersonCameraComponent.h"
 #include "GameFramework/Runtime/Character/Control/Intent/ControlIntent.h"
 #include "GameFramework/Runtime/Character/Control/Pawn/PawnComponent.h"
-#include "GameFramework/Runtime/Foundation/Framework/GameService.h"
+#include "GameFramework/Runtime/Foundation/Service/GameService.h"
 
 #include "Games/Playground/Shooter3D/ShooterAutoAimControllerComponent.h"
 #include "Games/Playground/Shooter3D/ShooterBodyMovementComponent.h"

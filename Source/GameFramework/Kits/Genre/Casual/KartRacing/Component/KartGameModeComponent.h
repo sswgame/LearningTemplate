@@ -25,7 +25,7 @@
 #include "GameFramework/Kits/Genre/Casual/KartRacing/KartTrack.h"
 #include "GameFramework/Runtime/Character/Combat/Projectile/ProjectileDef.h"
 #include "GameFramework/Runtime/Character/Movement/KinematicVehicleMotor.h"
-#include "GameFramework/Runtime/Foundation/Framework/GameModeComponent.h"
+#include "GameFramework/Runtime/Foundation/GameMode/GameModeComponent.h"
 
 namespace sw
 {

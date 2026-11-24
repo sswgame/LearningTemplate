@@ -12,8 +12,8 @@
 #include "Engine/Serialization/Format/Archive.h"
 #include "Engine/UserSettings/UserSettingsManager.h"
 
-#include "GameFramework/Runtime/Foundation/Framework/GameService.h"
 #include "GameFramework/Runtime/Foundation/GameData/GameSettings.h"
+#include "GameFramework/Runtime/Foundation/Service/GameService.h"
 #include "GameFramework/Runtime/Online/Platform/LocalPlatformServices.h"
 
 namespace sw

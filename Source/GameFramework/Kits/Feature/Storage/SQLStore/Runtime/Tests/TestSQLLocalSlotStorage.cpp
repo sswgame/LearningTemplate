@@ -5,9 +5,9 @@
 #include "Core/Testing/TestFramework.h"
 
 #include "GameFramework/Kits/Feature/Storage/SQLStore/Runtime/SQLLocalSlotStorage.h"
-#include "GameFramework/Runtime/Foundation/Framework/GameService.h"
 #include "GameFramework/Runtime/Foundation/Save/Local/Tests/LocalStoreContract.h"
 #include "GameFramework/Runtime/Foundation/Save/Local/ThreadedLocalStore.h"
+#include "GameFramework/Runtime/Foundation/Service/GameService.h"
 
 // LocalStoreSQLiteTest · SQLLocalSlotStorageTest — SQLite 바닥이 메모리 · 파일 바닥과 같은 계약 아홉을 지키고(`LocalStoreContract.h` 머리말의 약속), 바닥 자체의 슬롯 왕복 · 묶음 나열 · 주입 없음을 지킨다(nogpu).
 

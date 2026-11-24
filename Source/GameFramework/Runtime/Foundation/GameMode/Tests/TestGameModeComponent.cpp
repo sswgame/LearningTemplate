@@ -11,7 +11,7 @@
 #include "Engine/Object/GameObject/GameObjectManager.h"
 #include "Engine/Serialization/Format/Archive.h"
 
-#include "GameFramework/Runtime/Foundation/Framework/Tests/GameModeTestComponent.h"
+#include "GameFramework/Runtime/Foundation/GameMode/Tests/GameModeTestComponent.h"
 
 using namespace sw;
 

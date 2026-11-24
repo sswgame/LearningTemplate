@@ -47,7 +47,7 @@
 | `Renderer`(10) | 렌더 스레드 · 프레임 그래프 · GPU 파이프라인 |
 | `Module` · `Automation`(11) | 엔진 루프 조립 · 핫 리로드 바인딩 · 자동화 창구. 실행기 · 판정 · 녹화는 `DevTools/Client/Automation` |
 
-GameFramework 런타임(`GameFrameworkLayers.toml`): `Foundation`(0) 게임 서비스 · 저장 · 게임 데이터 · 격자 · 난수 · 조건 어휘 → `Online`(1) 세션 · HTTP · 보안 제공자 → `World`(2) 땅 · 환경 값 · 월드 질의 → `Character`(3) 조종 · 이동 · AI · 전투 · 카메라 · 길찾기 → `Gameplay`(4) 어빌리티 · 외형 · 인벤토리 · 퀘스트 · 판 상태 · 연출 · 존 · 게임 인스턴스 조립.
+GameFramework 런타임(`GameFrameworkLayers.toml`): `Foundation`(0) 게임 서비스 창구 · 게임 채널 이벤트(`Service`) · 게임 모드 바탕 · 프리팹 풀(`GameMode`) · 게임 인스턴스 흐름(`Flow`) · 저장(`Save`) · 게임 데이터 · 격자 · 난수 · 조건 어휘 · 트리거 바탕(`Trigger`) · 디버그 HUD 섹션(`Debug`) → `Online`(1) 세션 · HTTP · 보안 제공자 → `World`(2) 땅 · 환경 값 · 월드 질의 → `Character`(3) 조종 · 이동 · AI · 전투 · 카메라 · 길찾기 → `Gameplay`(4) 어빌리티 · 외형 · 인벤토리 · 퀘스트 · 판 상태 · 연출 · 존 · 게임 인스턴스 조립.
 
 CMake(`cmake/` — 폴더 하나에 파일 종류 하나): `Modules/<Build·Environment·Config>/` 는 `include()` 만 하는 모듈, `Toolchain/` 플래그 · 툴체인, `Scripts/` 는 `cmake -P` 전용, `Templates/` 는 `configure_file` 입력, 빌드 정책 데이터는 `Config/Build/`, 테스트 전용 `cmake -P` 드라이버는 `Test/<영역>/Run*.cmake`.
 

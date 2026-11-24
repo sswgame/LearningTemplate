@@ -10,7 +10,7 @@
 #include "Engine/Network/GameNetSession.h"
 #include "Engine/Serialization/Inherit/ResourceComposition.h"
 
-#include "GameFramework/Runtime/Foundation/Framework/GameService.h"
+#include "GameFramework/Runtime/Foundation/Service/GameService.h"
 
 #include "Games/Playground/StarSkirmish/SkirmishLockstepLink.h"
 

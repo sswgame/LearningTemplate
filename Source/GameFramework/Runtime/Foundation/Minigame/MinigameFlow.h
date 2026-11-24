@@ -33,9 +33,9 @@
 #include "Engine/Scene/SceneSubLevelTypes.h"
 
 #include "GameFramework/GameFrameworkExports.h"
-#include "GameFramework/Runtime/Foundation/Framework/GameInstanceSubsystem.h"
 #include "GameFramework/Runtime/Foundation/Minigame/MinigameDefinition.h"
 #include "GameFramework/Runtime/Foundation/Minigame/MinigameStack.h"
+#include "GameFramework/Runtime/Foundation/Service/GameInstanceSubsystem.h"
 
 namespace sw
 {

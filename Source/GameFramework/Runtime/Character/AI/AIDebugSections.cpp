@@ -19,7 +19,7 @@
 #include "GameFramework/Runtime/Character/AI/Schedule/NPCScheduleComponent.h"
 #include "GameFramework/Runtime/Character/AI/Schedule/ScheduleSystem.h"
 #include "GameFramework/Runtime/Character/Control/Controller/AIControllerComponent.h"
-#include "GameFramework/Runtime/Foundation/Framework/GameplayDebugTarget.h"
+#include "GameFramework/Runtime/Foundation/Debug/GameplayDebugTarget.h"
 
 namespace sw
 {

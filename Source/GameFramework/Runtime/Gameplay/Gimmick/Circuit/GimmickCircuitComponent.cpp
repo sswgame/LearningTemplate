@@ -16,9 +16,9 @@
 #include "Engine/Object/Prefab/PrefabCache.h"
 #include "Engine/Visual/Component/LightComponent.h"
 
-#include "GameFramework/Runtime/Foundation/Framework/GameService.h"
-#include "GameFramework/Runtime/Foundation/Framework/GameplayDebugTarget.h"
+#include "GameFramework/Runtime/Foundation/Debug/GameplayDebugTarget.h"
 #include "GameFramework/Runtime/Foundation/Presentation/GameSound.h"
+#include "GameFramework/Runtime/Foundation/Service/GameService.h"
 #include "GameFramework/Runtime/Gameplay/Gimmick/Combat/GimmickDamageUtil.h"
 #include "GameFramework/Runtime/Gameplay/Gimmick/Trigger/GimmickSensorComponent.h"
 #include "GameFramework/Runtime/World/Query/WorldQuery.h"

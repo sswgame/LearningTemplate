@@ -27,9 +27,9 @@
 #include "GameFramework/Kits/Genre/Simulation/ThemePark/Client/ParkGuestComponent.h"
 #include "GameFramework/Kits/Genre/Simulation/ThemePark/Component/ParkGameModeComponent.h"
 #include "GameFramework/Runtime/Character/Camera/CameraDirectorComponent.h"
-#include "GameFramework/Runtime/Foundation/Framework/GameService.h"
 #include "GameFramework/Runtime/Foundation/Presentation/GameSound.h"
 #include "GameFramework/Runtime/Foundation/Save/StatefulComponentRegistrar.h"
+#include "GameFramework/Runtime/Foundation/Service/GameService.h"
 
 namespace sw
 {

@@ -7,8 +7,8 @@
 #include "Engine/Object/GameObject/GameObjectManager.h"
 
 #include "GameFramework/Client/Marker/HealthBarComponent.h"
-#include "GameFramework/Runtime/Foundation/Framework/PrefabPool.h"
-#include "GameFramework/Runtime/Foundation/Framework/Tests/PrefabPoolComponentSpawner.h"
+#include "GameFramework/Runtime/Foundation/GameMode/PrefabPool.h"
+#include "GameFramework/Runtime/Foundation/GameMode/Tests/PrefabPoolComponentSpawner.h"
 #include "GameFramework/Runtime/Gameplay/Ability/AbilitySystemComponent.h"
 #include "GameFramework/Runtime/Gameplay/Ability/CombatAttributeSet.h"
 

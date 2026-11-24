@@ -6,8 +6,8 @@
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
 
-#include "GameFramework/Runtime/Foundation/Framework/PrefabPool.h"
-#include "GameFramework/Runtime/Foundation/Framework/Tests/PrefabPoolComponentSpawner.h"
+#include "GameFramework/Runtime/Foundation/GameMode/PrefabPool.h"
+#include "GameFramework/Runtime/Foundation/GameMode/Tests/PrefabPoolComponentSpawner.h"
 
 // PrefabPoolTest — 재사용 · 상한 · 미리 만들기 · 다시 내주기 · 조건 돌려받기 · 모두 지우기 · 풀 계약(되돌리기). 인스턴스는 프리팹 대신 코드로 만든 오브젝트다(nogpu, 에셋 없음).
 

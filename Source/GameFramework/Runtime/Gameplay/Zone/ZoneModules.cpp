@@ -24,7 +24,7 @@
 #include "Engine/Physics/PhysicsField.h"
 
 #include "GameFramework/Runtime/Character/AI/Blackboard.h"
-#include "GameFramework/Runtime/Foundation/Framework/TriggerComponent.h"
+#include "GameFramework/Runtime/Foundation/Trigger/TriggerComponent.h"
 #include "GameFramework/Runtime/Gameplay/Appearance/CharacterAppearanceComponent.h"
 #include "GameFramework/Runtime/Gameplay/Zone/ZoneModule.h"
 

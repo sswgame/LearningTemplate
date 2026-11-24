@@ -19,8 +19,8 @@
 #include "GameFramework/Runtime/Character/Camera/CameraDirectorComponent.h"
 #include "GameFramework/Runtime/Character/Camera/CameraManagerComponent.h"
 #include "GameFramework/Runtime/Character/Camera/CameraPose.h"
-#include "GameFramework/Runtime/Foundation/Framework/GameService.h"
 #include "GameFramework/Runtime/Foundation/Save/SaveLock.h"
+#include "GameFramework/Runtime/Foundation/Service/GameService.h"
 
 namespace sw
 {

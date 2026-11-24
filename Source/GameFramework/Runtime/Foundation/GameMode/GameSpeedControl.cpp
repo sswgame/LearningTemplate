@@ -1,6 +1,6 @@
 #include "pch.h"
 
-#include "GameFramework/Runtime/Foundation/Framework/GameSpeedControl.h"
+#include "GameFramework/Runtime/Foundation/GameMode/GameSpeedControl.h"
 
 #include "Core/Math/MathUtil.h"
 

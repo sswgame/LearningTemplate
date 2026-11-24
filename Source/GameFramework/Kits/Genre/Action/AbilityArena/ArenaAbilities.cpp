@@ -9,7 +9,7 @@
 #include "GameFramework/Kits/Genre/Action/AbilityArena/Component/ArenaGameModeComponent.h"
 #include "GameFramework/Kits/Genre/Action/AbilityArena/Component/ArenaUnitComponent.h"
 #include "GameFramework/Runtime/Character/Combat/Projectile/ProjectileDef.h"
-#include "GameFramework/Runtime/Foundation/Framework/GameService.h"
+#include "GameFramework/Runtime/Foundation/Service/GameService.h"
 #include "GameFramework/Runtime/Gameplay/Ability/AbilitySystemComponent.h"
 
 namespace sw

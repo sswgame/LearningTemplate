@@ -20,7 +20,7 @@
 #include "GameFramework/Kits/Genre/Casual/Rhythm/RhythmChart.h"
 #include "GameFramework/Kits/Genre/Casual/Rhythm/RhythmPlaySession.h"
 #include "GameFramework/Runtime/Character/Input/TimingJudge.h"
-#include "GameFramework/Runtime/Foundation/Framework/GameModeComponent.h"
+#include "GameFramework/Runtime/Foundation/GameMode/GameModeComponent.h"
 
 namespace sw
 {

@@ -11,8 +11,8 @@
 #include "GameFramework/Kits/Genre/Action/AbilityArena/Component/ArenaEnemyAIComponent.h"
 #include "GameFramework/Kits/Genre/Action/AbilityArena/Component/ArenaUnitComponent.h"
 #include "GameFramework/Runtime/Character/Control/Pawn/PawnComponent.h"
-#include "GameFramework/Runtime/Foundation/Framework/PrefabPool.h"
-#include "GameFramework/Runtime/Foundation/Framework/Tests/PrefabPoolComponentSpawner.h"
+#include "GameFramework/Runtime/Foundation/GameMode/PrefabPool.h"
+#include "GameFramework/Runtime/Foundation/GameMode/Tests/PrefabPoolComponentSpawner.h"
 #include "GameFramework/Runtime/Gameplay/Ability/AbilitySystemComponent.h"
 #include "GameFramework/Runtime/Gameplay/Ability/CombatAttributeSet.h"
 

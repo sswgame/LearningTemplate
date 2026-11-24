@@ -16,7 +16,7 @@
 #include "Engine/Network/GameNetSession.h"
 #include "Engine/Scene/SceneManager.h"
 
-#include "GameFramework/Runtime/Foundation/Framework/GameService.h"
+#include "GameFramework/Runtime/Foundation/Service/GameService.h"
 #include "GameFramework/Runtime/Online/Security/NetSecurity.h"
 
 namespace sw

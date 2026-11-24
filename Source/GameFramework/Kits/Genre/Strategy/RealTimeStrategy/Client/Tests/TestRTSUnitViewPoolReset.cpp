@@ -9,8 +9,8 @@
 #include "Engine/Visual/Component/MeshComponent.h"
 
 #include "GameFramework/Kits/Genre/Strategy/RealTimeStrategy/Client/RTSUnitViewComponent.h"
-#include "GameFramework/Runtime/Foundation/Framework/PrefabPool.h"
-#include "GameFramework/Runtime/Foundation/Framework/Tests/PrefabPoolComponentSpawner.h"
+#include "GameFramework/Runtime/Foundation/GameMode/PrefabPool.h"
+#include "GameFramework/Runtime/Foundation/GameMode/Tests/PrefabPoolComponentSpawner.h"
 
 using namespace sw;
 

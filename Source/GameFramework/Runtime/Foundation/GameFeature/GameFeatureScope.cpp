@@ -8,10 +8,10 @@
 
 #include "Engine/Input/Map/InputMap.h"
 
-#include "GameFramework/Runtime/Foundation/Framework/GameService.h"
 #include "GameFramework/Runtime/Foundation/GameData/GameSettings.h"
 #include "GameFramework/Runtime/Foundation/GameFeature/GameFeatureComponents.h"
 #include "GameFramework/Runtime/Foundation/GameFeature/GameFeatureRegistry.h"
+#include "GameFramework/Runtime/Foundation/Service/GameService.h"
 
 #include <algorithm>
 

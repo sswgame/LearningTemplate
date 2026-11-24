@@ -10,7 +10,7 @@
 #include "Engine/Object/GameObject/GameObjectManager.h"
 
 #include "GameFramework/Runtime/Character/Control/Pawn/PawnComponent.h"
-#include "GameFramework/Runtime/Foundation/Framework/GameService.h"
+#include "GameFramework/Runtime/Foundation/Service/GameService.h"
 
 #include "Games/Playground/Shooter3D/ShooterGameModeComponent.h"
 #include "Games/Playground/Shooter3D/ShooterPlayerComponent.h"

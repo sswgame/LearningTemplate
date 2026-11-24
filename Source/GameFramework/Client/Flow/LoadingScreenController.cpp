@@ -19,11 +19,11 @@
 #include "Engine/UI/Widgets/TextWidget.h"
 
 #include "GameFramework/Runtime/Foundation/Flow/ScreenTransitionManager.h"
-#include "GameFramework/Runtime/Foundation/Framework/GameEvents.h"
-#include "GameFramework/Runtime/Foundation/Framework/GameService.h"
 #include "GameFramework/Runtime/Foundation/GameData/GameSettings.h"
 #include "GameFramework/Runtime/Foundation/GameData/XMLCatalogTable.h"
 #include "GameFramework/Runtime/Foundation/Save/GameSaveSlots.h"
+#include "GameFramework/Runtime/Foundation/Service/GameEvents.h"
+#include "GameFramework/Runtime/Foundation/Service/GameService.h"
 
 namespace sw
 {

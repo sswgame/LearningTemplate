@@ -12,12 +12,12 @@
 #include "Engine/Object/GameObject/GameObjectManager.h"
 #include "Engine/Object/GameObject/Serialization/ObjectStateSerializer.h"
 
-#include "GameFramework/Runtime/Foundation/Framework/GameService.h"
 #include "GameFramework/Runtime/Foundation/GameData/GameSettings.h"
 #include "GameFramework/Runtime/Foundation/GameFeature/GameFeatureComponents.h"
 #include "GameFramework/Runtime/Foundation/GameFeature/GameFeatureReceiverComponent.h"
 #include "GameFramework/Runtime/Foundation/GameFeature/GameFeatureRegistry.h"
 #include "GameFramework/Runtime/Foundation/GameFeature/GameFeatureScope.h"
+#include "GameFramework/Runtime/Foundation/Service/GameService.h"
 
 using namespace sw;
 

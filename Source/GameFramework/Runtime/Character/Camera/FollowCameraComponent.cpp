@@ -11,7 +11,7 @@
 
 #include "GameFramework/Runtime/Character/Camera/CameraMode.h"
 #include "GameFramework/Runtime/Character/Camera/CameraPose.h"
-#include "GameFramework/Runtime/Foundation/Framework/GameModeComponent.h"
+#include "GameFramework/Runtime/Foundation/GameMode/GameModeComponent.h"
 
 namespace sw
 {

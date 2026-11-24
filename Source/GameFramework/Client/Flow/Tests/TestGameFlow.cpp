@@ -17,11 +17,11 @@
 #include "GameFramework/Client/Flow/LoadingScreenController.h"
 #include "GameFramework/Runtime/Foundation/Flow/GameSceneFlow.h"
 #include "GameFramework/Runtime/Foundation/Flow/ScreenTransitionManager.h"
-#include "GameFramework/Runtime/Foundation/Framework/GameEventUtil.h"
-#include "GameFramework/Runtime/Foundation/Framework/GameEvents.h"
-#include "GameFramework/Runtime/Foundation/Framework/GameService.h"
 #include "GameFramework/Runtime/Foundation/GameData/GameSettings.h"
 #include "GameFramework/Runtime/Foundation/Save/SaveLock.h"
+#include "GameFramework/Runtime/Foundation/Service/GameEventUtil.h"
+#include "GameFramework/Runtime/Foundation/Service/GameEvents.h"
+#include "GameFramework/Runtime/Foundation/Service/GameService.h"
 
 using namespace sw;
 

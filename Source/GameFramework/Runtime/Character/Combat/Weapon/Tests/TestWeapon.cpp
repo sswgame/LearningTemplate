@@ -8,9 +8,9 @@
 
 #include "GameFramework/Runtime/Character/Combat/Damage/DamageMath.h"
 #include "GameFramework/Runtime/Character/Combat/Weapon/Weapon.h"
-#include "GameFramework/Runtime/Foundation/Framework/GameService.h"
 #include "GameFramework/Runtime/Foundation/Presentation/GameSound.h"
 #include "GameFramework/Runtime/Foundation/Presentation/Tests/RecordingSoundPlayer.h"
+#include "GameFramework/Runtime/Foundation/Service/GameService.h"
 
 // WeaponTest — 피해 공식(거리 감쇠 · 머리 · 방어)과 총 한 자루의 상태(연사 속도 · 재장전 · 반자동 · 소리 · 상태 왕복). 정의는 구조체로 직접 준다(nogpu).
 

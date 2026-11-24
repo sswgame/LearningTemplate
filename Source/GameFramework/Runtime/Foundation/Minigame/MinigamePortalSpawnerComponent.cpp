@@ -11,10 +11,10 @@
 #include "Engine/Object/Prefab/PrefabCache.h"
 #include "Engine/Reflection/TypeInfo.h"
 
-#include "GameFramework/Runtime/Foundation/Framework/GameService.h"
 #include "GameFramework/Runtime/Foundation/Minigame/MinigameFlow.h"
 #include "GameFramework/Runtime/Foundation/Minigame/MinigamePreloadTriggerComponent.h"
 #include "GameFramework/Runtime/Foundation/Minigame/MinigameTriggerComponent.h"
+#include "GameFramework/Runtime/Foundation/Service/GameService.h"
 
 namespace sw
 {

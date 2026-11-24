@@ -15,7 +15,7 @@
 #include "GameFramework/GameFrameworkExports.h"
 #include "GameFramework/Kits/Genre/Action/AbilityArena/ArenaUnitView.h"
 #include "GameFramework/Runtime/Character/Control/Pawn/CharacterMovementComponent.h"
-#include "GameFramework/Runtime/Foundation/Framework/GameFrameworkComponent.h"
+#include "GameFramework/Runtime/Foundation/GameMode/GameFrameworkComponent.h"
 
 namespace sw
 {

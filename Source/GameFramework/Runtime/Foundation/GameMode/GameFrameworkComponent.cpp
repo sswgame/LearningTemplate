@@ -1,6 +1,6 @@
 #include "pch.h"
 
-#include "GameFramework/Runtime/Foundation/Framework/GameFrameworkComponent.h"
+#include "GameFramework/Runtime/Foundation/GameMode/GameFrameworkComponent.h"
 
 namespace sw
 {

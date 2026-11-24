@@ -28,7 +28,7 @@
 #include "GameFramework/Kits/Genre/Simulation/ThemePark/ParkLayout.h"
 #include "GameFramework/Kits/Genre/Simulation/ThemePark/ThemePark.h"
 #include "GameFramework/Runtime/Character/Navigation/NavGrid.h"
-#include "GameFramework/Runtime/Foundation/Framework/GameModeComponent.h"
+#include "GameFramework/Runtime/Foundation/GameMode/GameModeComponent.h"
 #include "GameFramework/Runtime/Gameplay/Inventory/Wallet.h"
 
 namespace sw

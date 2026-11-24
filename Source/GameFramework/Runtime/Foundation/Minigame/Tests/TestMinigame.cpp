@@ -14,8 +14,8 @@
 #include "Engine/Scene/Scene.h"
 #include "Engine/Scene/SceneSubLevelTypes.h"
 
-#include "GameFramework/Runtime/Foundation/Framework/GameModeComponent.h"
 #include "GameFramework/Runtime/Foundation/GameFeature/GameFeatureRegistry.h"
+#include "GameFramework/Runtime/Foundation/GameMode/GameModeComponent.h"
 #include "GameFramework/Runtime/Foundation/Minigame/MinigameDefinition.h"
 #include "GameFramework/Runtime/Foundation/Minigame/MinigameFlow.h"
 #include "GameFramework/Runtime/Foundation/Minigame/MinigamePortalSpawnerComponent.h"

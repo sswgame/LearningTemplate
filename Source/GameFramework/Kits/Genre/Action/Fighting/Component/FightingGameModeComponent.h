@@ -24,7 +24,7 @@
 #include "GameFramework/GameFrameworkExports.h"
 #include "GameFramework/Kits/Genre/Action/Fighting/FighterCatalog.h"
 #include "GameFramework/Kits/Genre/Action/Fighting/FightingMatch.h"
-#include "GameFramework/Runtime/Foundation/Framework/GameModeComponent.h"
+#include "GameFramework/Runtime/Foundation/GameMode/GameModeComponent.h"
 #include "GameFramework/Runtime/Foundation/Random/GameRandom.h"
 
 namespace sw

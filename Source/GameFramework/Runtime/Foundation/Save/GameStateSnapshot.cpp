@@ -23,9 +23,9 @@
 #include "Engine/Serialization/Inherit/AssetRedirect.h"
 
 #include "GameFramework/Runtime/Foundation/Flow/IContentConfiguration.h"
-#include "GameFramework/Runtime/Foundation/Framework/GameService.h"
 #include "GameFramework/Runtime/Foundation/Save/SnapshotFaultHook.h"
 #include "GameFramework/Runtime/Foundation/Save/StatefulComponentRegistrar.h"
+#include "GameFramework/Runtime/Foundation/Service/GameService.h"
 
 namespace sw
 {

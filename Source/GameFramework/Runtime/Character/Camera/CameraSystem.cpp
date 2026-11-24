@@ -7,7 +7,7 @@
 
 #include "GameFramework/Runtime/Character/Camera/CameraDirectorComponent.h"
 #include "GameFramework/Runtime/Character/Camera/CameraManagerComponent.h"
-#include "GameFramework/Runtime/Foundation/Framework/FrameSystemUtil.h"
+#include "GameFramework/Runtime/Foundation/Service/FrameSystemUtil.h"
 
 namespace sw
 {

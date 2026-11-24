@@ -7,8 +7,8 @@
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
 
-#include "GameFramework/Runtime/Foundation/Framework/Tests/SceneNetLinkTestBinding.h"
 #include "GameFramework/Runtime/Foundation/Random/WorldSeed.h"
+#include "GameFramework/Runtime/Foundation/Service/Tests/SceneNetLinkTestBinding.h"
 
 using namespace sw;
 

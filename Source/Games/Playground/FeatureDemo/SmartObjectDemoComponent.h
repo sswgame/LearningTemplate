@@ -14,7 +14,7 @@
 
 #include "GameFramework/Runtime/Character/AI/Schedule/ScheduleCatalog.h"
 #include "GameFramework/Runtime/Character/AI/Schedule/ScheduleSystem.h"
-#include "GameFramework/Runtime/Foundation/Framework/GameModeComponent.h"
+#include "GameFramework/Runtime/Foundation/GameMode/GameModeComponent.h"
 #include "GameFramework/Runtime/Gameplay/Interaction/SmartObjectScheduleLocator.h"
 
 namespace sw

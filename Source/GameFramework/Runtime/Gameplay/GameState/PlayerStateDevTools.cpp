@@ -18,8 +18,8 @@
 #include "Engine/Scene/SceneManager.h"
 
 #include "GameFramework/Runtime/Foundation/Condition/GameFlags.h"
-#include "GameFramework/Runtime/Foundation/Framework/GameService.h"
-#include "GameFramework/Runtime/Foundation/Framework/GameplayDebugTarget.h"
+#include "GameFramework/Runtime/Foundation/Debug/GameplayDebugTarget.h"
+#include "GameFramework/Runtime/Foundation/Service/GameService.h"
 #include "GameFramework/Runtime/Gameplay/GameState/GameStateComponent.h"
 #include "GameFramework/Runtime/Gameplay/GameState/PlayerComponentUtil.h"
 #include "GameFramework/Runtime/Gameplay/Inventory/InventoryComponent.h"

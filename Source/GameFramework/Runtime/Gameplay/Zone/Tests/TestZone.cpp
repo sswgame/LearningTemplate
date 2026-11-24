@@ -16,7 +16,7 @@
 #include "Engine/Scene/SceneStreamingSubsystem.h"
 
 #include "GameFramework/Runtime/Character/Control/Pawn/PawnComponent.h"
-#include "GameFramework/Runtime/Foundation/Framework/Tests/SceneNetLinkTestBinding.h"
+#include "GameFramework/Runtime/Foundation/Service/Tests/SceneNetLinkTestBinding.h"
 #include "GameFramework/Runtime/Gameplay/Ability/AbilityCatalog.h"
 #include "GameFramework/Runtime/Gameplay/Ability/AbilitySystemComponent.h"
 #include "GameFramework/Runtime/Gameplay/Ability/AttributeSet.h"

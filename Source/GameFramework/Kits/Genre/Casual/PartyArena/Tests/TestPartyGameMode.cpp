@@ -12,9 +12,9 @@
 
 #include "GameFramework/Kits/Genre/Casual/PartyArena/Component/PartyGameModeComponent.h"
 #include "GameFramework/Kits/Genre/Casual/PartyArena/TrampolineBot.h"
-#include "GameFramework/Runtime/Foundation/Framework/GameService.h"
 #include "GameFramework/Runtime/Foundation/Minigame/MinigameStack.h"
 #include "GameFramework/Runtime/Foundation/Presentation/Tests/RecordingSoundPlayer.h"
+#include "GameFramework/Runtime/Foundation/Service/GameService.h"
 
 using namespace sw;
 

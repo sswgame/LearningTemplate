@@ -13,7 +13,7 @@
 
 #include "GameFramework/GameFrameworkExports.h"
 #include "GameFramework/Kits/Feature/World/Voxel/Client/VoxelMesher.h"
-#include "GameFramework/Runtime/Foundation/Framework/GameFrameworkComponent.h"
+#include "GameFramework/Runtime/Foundation/GameMode/GameFrameworkComponent.h"
 
 namespace sw
 {

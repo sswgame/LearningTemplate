@@ -5,8 +5,8 @@
 #pragma once
 #include "Core/Event/EventDispatcher.h"
 
-#include "GameFramework/Runtime/Foundation/Framework/GameEvents.h"
-#include "GameFramework/Runtime/Foundation/Framework/GameService.h"
+#include "GameFramework/Runtime/Foundation/Service/GameEvents.h"
+#include "GameFramework/Runtime/Foundation/Service/GameService.h"
 
 namespace sw
 {

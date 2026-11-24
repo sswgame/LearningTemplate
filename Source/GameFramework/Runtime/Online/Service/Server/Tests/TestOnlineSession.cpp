@@ -3,8 +3,8 @@
 #include "Core/Network/Security/INetSecurityProvider.h"
 #include "Core/Testing/TestFramework.h"
 
-#include "GameFramework/Runtime/Foundation/Framework/GameService.h"
 #include "GameFramework/Runtime/Foundation/GameData/GameSettings.h"
+#include "GameFramework/Runtime/Foundation/Service/GameService.h"
 #include "GameFramework/Runtime/Online/Service/OnlineClientRegistry.h"
 #include "GameFramework/Runtime/Online/Service/OnlineSession.h"
 #include "GameFramework/Runtime/Online/Service/Server/Tests/OnlineHostTestUtil.h"

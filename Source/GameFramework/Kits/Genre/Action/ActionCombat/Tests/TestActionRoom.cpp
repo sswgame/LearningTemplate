@@ -15,8 +15,8 @@
 #include "GameFramework/Runtime/Character/Combat/Health/UnitStatsComponent.h"
 #include "GameFramework/Runtime/Character/Combat/Projectile/ProjectileDef.h"
 #include "GameFramework/Runtime/Character/Combat/Projectile/ProjectileSimulation.h"
-#include "GameFramework/Runtime/Foundation/Framework/GameEvents.h"
-#include "GameFramework/Runtime/Foundation/Framework/GameService.h"
+#include "GameFramework/Runtime/Foundation/Service/GameEvents.h"
+#include "GameFramework/Runtime/Foundation/Service/GameService.h"
 
 #include <cstring>
 #include <limits>

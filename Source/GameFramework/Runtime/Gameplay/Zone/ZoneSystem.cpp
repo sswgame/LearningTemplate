@@ -6,7 +6,7 @@
 #include "Engine/Object/GameObject/GameObjectManagerResolve.inl"
 #include "Engine/Object/GameObject/Registry/ComponentRegistry.h"
 
-#include "GameFramework/Runtime/Foundation/Framework/FrameSystemUtil.h"
+#include "GameFramework/Runtime/Foundation/Service/FrameSystemUtil.h"
 #include "GameFramework/Runtime/Gameplay/Zone/Reaction/RemoveStacksOnJumpComponent.h"
 #include "GameFramework/Runtime/Gameplay/Zone/Reaction/TagPostProcessComponent.h"
 #include "GameFramework/Runtime/Gameplay/Zone/ZoneContactComponent.h"

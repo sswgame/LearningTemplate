@@ -9,9 +9,9 @@
 #include "Engine/Automation/Scenario/AutomationStepRegistry.h"
 #include "Engine/Module/ModuleSubsystemRegistrar.h"
 
-#include "GameFramework/Runtime/Foundation/Framework/GameService.h"
 #include "GameFramework/Runtime/Foundation/Save/Local/LocalDeviceKeyProvider.h"
 #include "GameFramework/Runtime/Foundation/Save/Local/LocalStoreBackend.h"
+#include "GameFramework/Runtime/Foundation/Service/GameService.h"
 
 namespace sw
 {

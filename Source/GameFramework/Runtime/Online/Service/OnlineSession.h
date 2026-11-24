@@ -22,7 +22,7 @@
 #include "Core/Time/TimePoint.h"
 
 #include "GameFramework/GameFrameworkExports.h"
-#include "GameFramework/Runtime/Foundation/Framework/GameInstanceSubsystem.h"
+#include "GameFramework/Runtime/Foundation/Service/GameInstanceSubsystem.h"
 #include "GameFramework/Runtime/Online/Service/OnlineServiceClient.h"
 
 namespace sw

@@ -26,7 +26,7 @@
 #include "GameFramework/Kits/Genre/Action/MechArena/MechArenaWorld.h"
 #include "GameFramework/Kits/Genre/Action/MechArena/MechCatalog.h"
 #include "GameFramework/Runtime/Character/Combat/FrameData.h"
-#include "GameFramework/Runtime/Foundation/Framework/GameModeComponent.h"
+#include "GameFramework/Runtime/Foundation/GameMode/GameModeComponent.h"
 #include "GameFramework/Runtime/Foundation/Random/GameRandom.h"
 
 namespace sw

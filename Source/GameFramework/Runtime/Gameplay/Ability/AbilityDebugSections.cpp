@@ -13,7 +13,7 @@
 #include "Engine/Console/DevCommandRegistry.h"
 #include "Engine/Reflection/EnumName.h"
 
-#include "GameFramework/Runtime/Foundation/Framework/GameplayDebugTarget.h"
+#include "GameFramework/Runtime/Foundation/Debug/GameplayDebugTarget.h"
 #include "GameFramework/Runtime/Gameplay/Ability/AbilitySystemComponent.h"
 
 namespace sw

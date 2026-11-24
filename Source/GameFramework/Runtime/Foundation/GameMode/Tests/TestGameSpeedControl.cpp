@@ -2,7 +2,7 @@
 
 #include "Core/Testing/TestFramework.h"
 
-#include "GameFramework/Runtime/Foundation/Framework/GameSpeedControl.h"
+#include "GameFramework/Runtime/Foundation/GameMode/GameSpeedControl.h"
 #include "GameFramework/Runtime/Foundation/Presentation/SimulationViewSync.h"
 
 // GameSpeedControlTest · SimulationViewSyncTest — 디렉터가 같이 쓰는 배속 · 일시정지와 규칙 → 뷰 동기화(감사 K-10, nogpu).

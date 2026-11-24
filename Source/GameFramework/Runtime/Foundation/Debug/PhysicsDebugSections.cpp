@@ -21,7 +21,7 @@
 #include "Engine/Physics/Scene/ScenePhysics.h"
 #include "Engine/Reflection/EnumName.h"
 
-#include "GameFramework/Runtime/Foundation/Framework/GameplayDebugTarget.h"
+#include "GameFramework/Runtime/Foundation/Debug/GameplayDebugTarget.h"
 
 namespace sw
 {

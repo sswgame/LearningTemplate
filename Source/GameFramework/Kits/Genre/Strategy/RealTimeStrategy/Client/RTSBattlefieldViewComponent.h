@@ -24,7 +24,7 @@
 
 #include "GameFramework/GameFrameworkExports.h"
 #include "GameFramework/Kits/Genre/Strategy/RealTimeStrategy/RTSWorld.h"
-#include "GameFramework/Runtime/Foundation/Framework/PrefabPool.h"
+#include "GameFramework/Runtime/Foundation/GameMode/PrefabPool.h"
 #include "GameFramework/Runtime/Foundation/Presentation/RuleViewCatalog.h"
 #include "GameFramework/Runtime/Foundation/Presentation/SimulationViewSync.h"
 #include "GameFramework/Runtime/Gameplay/Appearance/MaterialTintCache.h"

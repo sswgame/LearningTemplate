@@ -9,8 +9,8 @@
 #include "Engine/Reflection/ReflectionMacros.h"
 
 #include "GameFramework/GameFrameworkExports.h"
-#include "GameFramework/Runtime/Foundation/Framework/TriggerComponent.h"
 #include "GameFramework/Runtime/Foundation/Save/Autosave.h"
+#include "GameFramework/Runtime/Foundation/Trigger/TriggerComponent.h"
 
 namespace sw
 {

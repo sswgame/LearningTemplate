@@ -15,7 +15,7 @@
 #include "Engine/Config/ServerConfig.h"
 #include "Engine/Server/ServiceHealthRegistry.h"
 
-#include "GameFramework/Runtime/Foundation/Framework/GameService.h"
+#include "GameFramework/Runtime/Foundation/Service/GameService.h"
 #include "GameFramework/Runtime/Online/Audit/Server/ServiceAuditLog.h"
 #include "GameFramework/Runtime/Online/Bus/Server/EphemeralServerBus.h"
 #include "GameFramework/Runtime/Online/Cache/Server/MemoryEphemeralStore.h"

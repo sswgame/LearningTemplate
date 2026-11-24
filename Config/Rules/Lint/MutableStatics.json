@@ -128,7 +128,7 @@
         "Source/GameFramework/Client/Flow/GameInstanceClient.cpp|s_gameInstanceClient": "정적 등록 항목 — 칸이 없는(상태 없는) 구현 객체다. 정적 등록 틀(RegistrationSlot · RegistrationList 등록자)이 이 객체를 가리키고 이미지와 수명이 같다(언리얼 compiled-in 등록 항목 자리).",
         "Source/GameFramework/Kits/Feature/Storage/SQLStore/Runtime/Driver/SQLite/SQLiteDriver.cpp|s_driver": "정적 등록 항목 — 상태 없는 SQL 드라이버다. SQLDriverRegistration(잠금을 든 정적 등록 표)이 가리키고 이미지와 수명이 같다.",
         "Source/GameFramework/Kits/Feature/Storage/SQLStore/Server/Driver/Postgres/PostgresDriver.cpp|s_driver": "정적 등록 항목 — 상태 없는 SQL 드라이버다. SQLDriverRegistration(잠금을 든 정적 등록 표)이 가리키고 이미지와 수명이 같다.",
-        "Source/GameFramework/Runtime/Foundation/Framework/GameService.cpp|s_gameServiceState": "게임 서비스 찾기의 뿌리 — game::findSubsystem 이 범위를 찾는 자리 자체다(엔진 쪽 s_pSubsystems 와 같은 자리). GameFramework.dll 정적이라 게임 · 키트 이미지보다 오래 산다.",
+        "Source/GameFramework/Runtime/Foundation/Service/GameService.cpp|s_gameServiceState": "게임 서비스 찾기의 뿌리 — game::findSubsystem 이 범위를 찾는 자리 자체다(엔진 쪽 s_pSubsystems 와 같은 자리). GameFramework.dll 정적이라 게임 · 키트 이미지보다 오래 산다.",
         "Source/GameFramework/Developer/SnapshotFaultLaunchHook.cpp|s_snapshotFaultLaunchHook": "정적 등록 항목 — 칸이 없는(상태 없는) 구현 객체다. 정적 등록 틀(RegistrationSlot 등록자)이 이 객체를 가리키고 이미지와 수명이 같다(GameSettingsLaunchOverride 와 같은 자리, 언리얼 compiled-in 등록 항목).",
         "Source/GameFramework/Developer/GameSettingsLaunchOverride.cpp|s_gameSettingsLaunchOverride": "정적 등록 항목 — 칸이 없는(상태 없는) 구현 객체다. 정적 등록 틀(RegistrationSlot · RegistrationList 등록자)이 이 객체를 가리키고 이미지와 수명이 같다(언리얼 compiled-in 등록 항목 자리).",
         "Source/DevTools/ModuleReload/LiveReload/ModuleCallGuard.cpp|_s_installDepth": "OS 시그널 바닥 — 모듈 호출 보호의 시그널 처리기 설치 깊이다. 처리기는 문맥 인자 없이 불리고(크래시 처리기와 같은 자리) 바깥 호출이 설치 · 해제한다.",

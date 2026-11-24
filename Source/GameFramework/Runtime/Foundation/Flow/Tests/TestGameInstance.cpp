@@ -11,10 +11,10 @@
 
 #include "GameFramework/Runtime/Foundation/Flow/GameInstance.h"
 #include "GameFramework/Runtime/Foundation/Flow/IGameDevPart.h"
-#include "GameFramework/Runtime/Foundation/Framework/GameService.h"
 #include "GameFramework/Runtime/Foundation/GameData/GameSettings.h"
 #include "GameFramework/Runtime/Foundation/Save/GameLocalStore.h"
 #include "GameFramework/Runtime/Foundation/Save/Local/MemoryLocalStore.h"
+#include "GameFramework/Runtime/Foundation/Service/GameService.h"
 
 namespace
 {

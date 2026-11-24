@@ -17,7 +17,7 @@
 #include "Engine/Asset/Cache/SharedAssetRef.h"
 
 #include "GameFramework/GameFrameworkExports.h"
-#include "GameFramework/Runtime/Foundation/Framework/GameInstanceSubsystem.h"
+#include "GameFramework/Runtime/Foundation/Service/GameInstanceSubsystem.h"
 #include "GameFramework/Runtime/Gameplay/Progression/AchievementTracker.h"
 #include "GameFramework/Runtime/Gameplay/Progression/PlayerStats.h"
 

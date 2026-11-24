@@ -17,7 +17,7 @@
 #include "Engine/Foundation/GameObjectHandle.h"
 
 #include "GameFramework/GameFrameworkExports.h"
-#include "GameFramework/Runtime/Foundation/Framework/TriggerComponent.h"
+#include "GameFramework/Runtime/Foundation/Trigger/TriggerComponent.h"
 #include "GameFramework/Runtime/Gameplay/Zone/ZoneModule.h"
 
 namespace sw

@@ -1,6 +1,6 @@
 #include "pch.h"
 
-#include "GameFramework/Runtime/Foundation/Framework/TriggerComponent.h"
+#include "GameFramework/Runtime/Foundation/Trigger/TriggerComponent.h"
 
 #include "Core/Log/Logger.h"
 

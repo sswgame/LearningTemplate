@@ -17,12 +17,12 @@
 #include "Engine/Serialization/XML/XMLDocument.h"
 #include "Engine/Serialization/XML/XMLFields.h"
 
-#include "GameFramework/Runtime/Foundation/Framework/GameService.h"
 #include "GameFramework/Runtime/Foundation/GameData/GameDataXML.h"
 #include "GameFramework/Runtime/Foundation/GameData/XMLCatalogRoot.h"
 #include "GameFramework/Runtime/Foundation/Save/GameLocalStore.h"
 #include "GameFramework/Runtime/Foundation/Save/Local/LocalStore.h"
 #include "GameFramework/Runtime/Foundation/Save/SaveLock.h"
+#include "GameFramework/Runtime/Foundation/Service/GameService.h"
 
 #include <algorithm>
 

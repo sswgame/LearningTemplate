@@ -15,7 +15,7 @@
 
 #include "GameFramework/Client/Inventory/InventoryScreen.h"
 #include "GameFramework/Client/Shop/ShopScreen.h"
-#include "GameFramework/Runtime/Foundation/Framework/GameService.h"
+#include "GameFramework/Runtime/Foundation/Service/GameService.h"
 #include "GameFramework/Runtime/Gameplay/Appearance/AppearanceDatabase.h"
 #include "GameFramework/Runtime/Gameplay/Appearance/CharacterEquipmentComponent.h"
 

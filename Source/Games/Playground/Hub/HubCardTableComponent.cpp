@@ -20,8 +20,8 @@
 #include "Engine/Scene/SceneManager.h"
 #include "Engine/Serialization/Fixed/FixedLayout.h"
 
-#include "GameFramework/Runtime/Foundation/Framework/GameService.h"
 #include "GameFramework/Runtime/Foundation/Presentation/IHUDViewModelBinder.h"
+#include "GameFramework/Runtime/Foundation/Service/GameService.h"
 
 #include "Games/Playground/Hub/HubCardHUDViewModel.h"
 

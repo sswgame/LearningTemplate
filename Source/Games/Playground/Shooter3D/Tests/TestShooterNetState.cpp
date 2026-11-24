@@ -11,7 +11,7 @@
 #include "Engine/Object/GameObject/GameObjectManager.h"
 #include "Engine/Serialization/Fixed/ReplicatedLayout.h"
 
-#include "GameFramework/Runtime/Foundation/Framework/Tests/SceneNetLinkTestBinding.h"
+#include "GameFramework/Runtime/Foundation/Service/Tests/SceneNetLinkTestBinding.h"
 
 #include "Games/Playground/Shooter3D/ShooterBodyMovementComponent.h"
 #include "Games/Playground/Shooter3D/ShooterNetPawnComponent.h"

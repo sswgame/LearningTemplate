@@ -9,7 +9,7 @@
 #include "Engine/UI/UISystem.h"
 
 #include "GameFramework/Client/Flow/LoadingScreenController.h"
-#include "GameFramework/Runtime/Foundation/Framework/GameService.h"
+#include "GameFramework/Runtime/Foundation/Service/GameService.h"
 
 namespace sw
 {

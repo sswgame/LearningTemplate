@@ -15,7 +15,7 @@
 #include "Engine/Sequencer/SequenceDiagnostics.h"
 #include "Engine/Sequencer/SequencePlayerComponent.h"
 
-#include "GameFramework/Runtime/Foundation/Framework/GameplayDebugTarget.h"
+#include "GameFramework/Runtime/Foundation/Debug/GameplayDebugTarget.h"
 
 namespace sw
 {

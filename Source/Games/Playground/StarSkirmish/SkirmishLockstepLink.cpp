@@ -7,7 +7,7 @@
 #include "Engine/Network/GameNetSession.h"
 
 #include "GameFramework/Kits/Genre/Strategy/RealTimeStrategy/SkirmishMatch.h"
-#include "GameFramework/Runtime/Foundation/Framework/GameService.h"
+#include "GameFramework/Runtime/Foundation/Service/GameService.h"
 
 namespace sw
 {

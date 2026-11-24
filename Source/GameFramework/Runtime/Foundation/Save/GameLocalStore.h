@@ -12,9 +12,9 @@
 #include "Core/Memory/Memory.h"
 
 #include "GameFramework/GameFrameworkExports.h"
-#include "GameFramework/Runtime/Foundation/Framework/GameInstanceSubsystem.h"
 #include "GameFramework/Runtime/Foundation/Save/Local/LocalStore.h"
 #include "GameFramework/Runtime/Foundation/Save/Local/LocalStoreChannel.h"
+#include "GameFramework/Runtime/Foundation/Service/GameInstanceSubsystem.h"
 
 namespace sw
 {

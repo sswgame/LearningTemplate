@@ -13,7 +13,7 @@
 
 #include "GameFramework/GameFrameworkExports.h"
 #include "GameFramework/Runtime/Character/Navigation/NavAgent.h"
-#include "GameFramework/Runtime/Foundation/Framework/GameFrameworkComponent.h"
+#include "GameFramework/Runtime/Foundation/GameMode/GameFrameworkComponent.h"
 
 namespace sw
 {

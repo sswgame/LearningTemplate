@@ -9,8 +9,8 @@
 
 #include "GameFramework/Runtime/Character/AI/IBehaviorTreeDebugSource.h"
 #include "GameFramework/Runtime/Character/Control/Controller/AIControllerComponent.h"
-#include "GameFramework/Runtime/Foundation/Framework/GameModeComponent.h"
-#include "GameFramework/Runtime/Foundation/Framework/GameService.h"
+#include "GameFramework/Runtime/Foundation/GameMode/GameModeComponent.h"
+#include "GameFramework/Runtime/Foundation/Service/GameService.h"
 
 namespace sw::editor
 {

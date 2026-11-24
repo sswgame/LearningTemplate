@@ -5,7 +5,7 @@
 #include "Engine/Object/GameObject/GameObjectManager.inl"
 #include "Engine/Object/GameObject/Registry/ComponentRegistry.h"
 
-#include "GameFramework/Runtime/Foundation/Framework/FrameSystemUtil.h"
+#include "GameFramework/Runtime/Foundation/Service/FrameSystemUtil.h"
 #include "GameFramework/Runtime/Gameplay/Appearance/CharacterWetnessComponent.h"
 
 namespace sw

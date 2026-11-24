@@ -24,7 +24,7 @@
 #include "GameFramework/Runtime/Character/Combat/Health/HealthStateMachine.h"
 #include "GameFramework/Runtime/Character/Combat/Weapon/Weapon.h"
 #include "GameFramework/Runtime/Character/Control/Intent/ControlIntent.h"
-#include "GameFramework/Runtime/Foundation/Framework/GameFrameworkComponent.h"
+#include "GameFramework/Runtime/Foundation/GameMode/GameFrameworkComponent.h"
 #include "GameFramework/Runtime/Foundation/Presentation/GameSound.h"
 #include "GameFramework/Runtime/Gameplay/Appearance/AppearanceSocketRig.h"
 

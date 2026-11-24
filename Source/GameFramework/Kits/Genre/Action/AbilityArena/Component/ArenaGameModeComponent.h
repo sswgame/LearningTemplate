@@ -36,8 +36,8 @@
 #include "GameFramework/GameFrameworkExports.h"
 #include "GameFramework/Kits/Genre/Action/AbilityArena/ArenaUnitView.h"
 #include "GameFramework/Runtime/Character/Combat/Projectile/ProjectileSimulation.h"
-#include "GameFramework/Runtime/Foundation/Framework/GameModeComponent.h"
-#include "GameFramework/Runtime/Foundation/Framework/PrefabPool.h"
+#include "GameFramework/Runtime/Foundation/GameMode/GameModeComponent.h"
+#include "GameFramework/Runtime/Foundation/GameMode/PrefabPool.h"
 #include "GameFramework/Runtime/Gameplay/Ability/AbilityEffect.h"
 
 namespace sw

@@ -25,8 +25,8 @@
 #include "GameFramework/Kits/Feature/Online/Social/Runtime/SocialClient.h"
 #include "GameFramework/Runtime/Character/Control/ControlSystem.h"
 #include "GameFramework/Runtime/Character/Control/Pawn/PawnComponent.h"
-#include "GameFramework/Runtime/Foundation/Framework/GameService.h"
 #include "GameFramework/Runtime/Foundation/Minigame/MinigameFlow.h"
+#include "GameFramework/Runtime/Foundation/Service/GameService.h"
 #include "GameFramework/Runtime/Online/Service/OnlineSession.h"
 #include "GameFramework/Runtime/Online/Store/ServiceKeyUtil.h"
 

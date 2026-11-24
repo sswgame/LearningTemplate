@@ -12,7 +12,7 @@
 #include "Core/Task/TaskFuture.h"
 
 #include "GameFramework/GameFrameworkExports.h"
-#include "GameFramework/Runtime/Foundation/Framework/GameInstanceSubsystem.h"
+#include "GameFramework/Runtime/Foundation/Service/GameInstanceSubsystem.h"
 
 namespace sw
 {

@@ -26,7 +26,7 @@
 #include "Engine/UI/Widgets/TextInputWidget.h"
 #include "Engine/UI/Widgets/TextWidget.h"
 
-#include "GameFramework/Runtime/Foundation/Framework/GameService.h"
+#include "GameFramework/Runtime/Foundation/Service/GameService.h"
 
 namespace sw
 {

@@ -15,7 +15,7 @@
 #include "Engine/Reflection/TypeLookupCache.h"
 #include "Engine/Reflection/TypeRegistry.h"
 
-#include "GameFramework/Runtime/Foundation/Framework/GameService.h"
+#include "GameFramework/Runtime/Foundation/Service/GameService.h"
 
 #include <cmath>
 #include <limits>

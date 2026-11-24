@@ -11,8 +11,8 @@
 #include "Engine/UserSettings/UserSettingsManager.h"
 
 #include "GameFramework/Runtime/Character/Control/Pawn/PawnComponent.h"
-#include "GameFramework/Runtime/Foundation/Framework/GameService.h"
-#include "GameFramework/Runtime/Foundation/Framework/Tests/SceneNetLinkTestBinding.h"
+#include "GameFramework/Runtime/Foundation/Service/GameService.h"
+#include "GameFramework/Runtime/Foundation/Service/Tests/SceneNetLinkTestBinding.h"
 #include "GameFramework/Runtime/Gameplay/Tutorial/TutorialHintTriggerComponent.h"
 
 // TutorialHintVolumeTest — 볼륨 바탕(`TriggerComponent`)의 거리 판정이 트리거 계약(docs/agents/Gameplay.md "트리거 · 물리")의 경계를 따르는지

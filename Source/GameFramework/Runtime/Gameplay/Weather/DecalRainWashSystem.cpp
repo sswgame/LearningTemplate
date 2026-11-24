@@ -8,7 +8,7 @@
 #include "Engine/Object/GameObject/GameObjectManager.inl"
 #include "Engine/Visual/Component/DecalComponent.h"
 
-#include "GameFramework/Runtime/Foundation/Framework/FrameSystemUtil.h"
+#include "GameFramework/Runtime/Foundation/Service/FrameSystemUtil.h"
 #include "GameFramework/Runtime/Gameplay/GameState/GameStateComponent.h"
 #include "GameFramework/Runtime/World/Environment/WeatherShelter.h"
 

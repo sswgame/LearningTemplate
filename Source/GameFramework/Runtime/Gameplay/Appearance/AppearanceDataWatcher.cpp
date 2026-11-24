@@ -6,7 +6,7 @@
 
 #include "Engine/Content/ContentFolderWatch.h"
 
-#include "GameFramework/Runtime/Foundation/Framework/GameService.h"
+#include "GameFramework/Runtime/Foundation/Service/GameService.h"
 #include "GameFramework/Runtime/Gameplay/Appearance/AppearanceDatabase.h"
 
 namespace sw
