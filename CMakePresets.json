@@ -10,6 +10,10 @@
         "CMAKE_INSTALL_PREFIX": "${sourceDir}/install/${presetName}",
         "VCPKG_INSTALLED_DIR": "${sourceDir}/build/vcpkg_installed",
         "CMAKE_TOOLCHAIN_FILE": "${sourceDir}/Tools/vcpkg/scripts/buildsystems/vcpkg.cmake",
+        "SW_ENABLE_TRACY": "auto",
+        "SW_MEMORY_BACKEND": "auto",
+        "SW_SHIPPING_RHI_BACKEND": "auto",
+        "SW_TARGET_TYPE": "auto",
         "SW_UNIT_TEST_SHARDS": "4"
       },
       "environment": {
@@ -95,6 +99,7 @@
       "hidden": true,
       "cacheVariables": {
         "CMAKE_BUILD_TYPE": "Release",
+        "SW_HOST_BUILD_DIR": "auto",
         "SW_SHIPPING_BUILD": "ON"
       }
     },
@@ -145,15 +150,6 @@
       }
     },
     {
-      "name": "Ninja-Release-Mimalloc",
-      "displayName": "Windows Ninja Release + mimalloc heap (Clang-cl)",
-      "description": "Ninja-Release 와 같고 힙 백엔드만 mimalloc(SW_MEMORY_BACKEND) — 할당 벤치(감사 AC-1)를 crt 구성과 견준다. 빌드 폴더 build/Ninja-Release-Mimalloc. Windows 는 mimalloc 이 검증 레이어의 의존으로 이미 설치 트리에 있어 vcpkg 설치 트리를 함께 쓴다",
-      "inherits": "Ninja-Release",
-      "cacheVariables": {
-        "SW_MEMORY_BACKEND": "mimalloc"
-      }
-    },
-    {
       "name": "Ninja-Shipping",
       "displayName": "Windows Ninja Shipping - Client (Clang-cl)",
       "description": "플레이어 배포본(SW_TARGET_TYPE=Client, 정적 링크 한 실행 파일) — 이름이 Server 인 폴더(전용 서버 · 온라인 서비스 구현)를 짓지 않고 그 헤더를 게이트가 막는다(언리얼 Client 타깃). 예전의 Ninja-Shipping-Client 는 이것과 같은 구성이라(정적 구성은 대상 종류가 비면 Client) 지웠다 — 배포 빌드 · 쿠킹을 두 번 했다",
@@ -196,8 +192,7 @@
       "cacheVariables": {
         "VCPKG_CHAINLOAD_TOOLCHAIN_FILE": "${sourceDir}/Tools/emsdk/upstream/emscripten/cmake/Modules/Platform/Emscripten.cmake",
         "VCPKG_TARGET_TRIPLET": "wasm32-emscripten-pthread",
-        "VCPKG_INSTALLED_DIR": "${sourceDir}/build/vcpkg_installed_${presetName}",
-        "SW_SHIPPING_RHI_BACKEND": "WebGPU"
+        "VCPKG_INSTALLED_DIR": "${sourceDir}/build/vcpkg_installed_${presetName}"
       },
       "environment": {
         "EMSDK": "${sourceDir}/Tools/emsdk",
@@ -221,8 +216,7 @@
         "VCPKG_TARGET_TRIPLET": "arm64-android",
         "VCPKG_INSTALLED_DIR": "${sourceDir}/build/vcpkg_installed_${presetName}",
         "ANDROID_ABI": "arm64-v8a",
-        "ANDROID_PLATFORM": "android-29",
-        "SW_SHIPPING_RHI_BACKEND": "Vulkan"
+        "ANDROID_PLATFORM": "android-29"
       }
     },
     {
@@ -233,7 +227,6 @@
       "cacheVariables": {
         "SW_SHIPPING_BUILD": "OFF",
         "SW_STATIC_MODULES": "ON",
-        "SW_ENABLE_TRACY": "OFF",
         "VCPKG_INSTALLED_DIR": "${sourceDir}/build/vcpkg_installed_Web-Shipping"
       }
     },
@@ -245,7 +238,6 @@
       "cacheVariables": {
         "SW_SHIPPING_BUILD": "OFF",
         "SW_STATIC_MODULES": "ON",
-        "SW_ENABLE_TRACY": "OFF",
         "VCPKG_INSTALLED_DIR": "${sourceDir}/build/vcpkg_installed_Android-Shipping"
       }
     }
@@ -266,10 +258,6 @@
     {
       "name": "Ninja-Release-Static",
       "configurePreset": "Ninja-Release-Static"
-    },
-    {
-      "name": "Ninja-Release-Mimalloc",
-      "configurePreset": "Ninja-Release-Mimalloc"
     },
     {
       "name": "Ninja-Shipping",

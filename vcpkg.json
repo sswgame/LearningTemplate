@@ -3,108 +3,74 @@
   "version-string": "1.0.0",
   "builtin-baseline": "0699a19d0c6386247ce50d4dedbb8217d484d536",
   "dependencies": [
-    "pugixml",
-    "nlohmann-json",
+    {
+      "name": "astc-encoder",
+      "platform": "windows | linux"
+    },
+    "box2d",
+    "cgltf",
+    {
+      "name": "d3d12-memory-allocator",
+      "platform": "windows & !uwp"
+    },
+    {
+      "name": "dawn",
+      "default-features": false,
+      "features": [
+        {
+          "name": "d3d12",
+          "platform": "windows"
+        },
+        {
+          "name": "tint-tools",
+          "platform": "!emscripten"
+        },
+        {
+          "name": "vulkan",
+          "platform": "!emscripten"
+        },
+        {
+          "name": "x11",
+          "platform": "linux"
+        }
+      ],
+      "platform": "(windows & !uwp) | linux | emscripten"
+    },
     {
       "name": "directx-dxc",
       "platform": "windows | linux"
     },
-    {
-      "name": "glad",
-      "features": [
-        "gl-api-46"
-      ]
-    },
-    "vulkan-headers",
-    {
-      "name": "vulkan-loader",
-      "features": [
-        "wayland",
-        "xcb",
-        "xlib"
-      ],
-      "platform": "linux"
-    },
-    {
-      "name": "vulkan-loader",
-      "platform": "!linux & !android & !emscripten"
-    },
-    {
-      "name": "vulkan-validationlayers",
-      "platform": "!linux & !android & !emscripten"
-    },
-    {
-      "name": "imgui",
-      "features": [
-        "docking-experimental",
-        "freetype"
-      ]
-    },
-    {
-      "name": "imgui",
-      "features": [
-        "win32-binding"
-      ],
-      "platform": "windows & !uwp"
-    },
-    "implot",
-    "imguizmo",
-    "imgui-node-editor",
     {
       "name": "directxtex",
       "default-features": false,
       "platform": "windows | linux"
     },
     {
-      "name": "astc-encoder",
-      "platform": "windows | linux"
-    },
-    {
       "name": "etcpak",
       "platform": "windows | linux"
     },
-    "stb",
     "freetype",
-    "cgltf",
-    "meshoptimizer",
+    {
+      "name": "glad",
+      "features": [
+        "gl-api-46"
+      ]
+    },
+    {
+      "name": "imgui",
+      "features": [
+        "docking-experimental",
+        "freetype",
+        {
+          "name": "win32-binding",
+          "platform": "windows & !uwp"
+        }
+      ]
+    },
+    "imgui-node-editor",
+    "imguizmo",
+    "implot",
     "joltphysics",
-    {
-      "name": "dawn",
-      "default-features": false,
-      "features": [
-        "vulkan",
-        "d3d12",
-        "tint-tools"
-      ],
-      "platform": "windows & !uwp"
-    },
-    {
-      "name": "dawn",
-      "default-features": false,
-      "features": [
-        "vulkan",
-        "x11",
-        "tint-tools"
-      ],
-      "platform": "linux"
-    },
-    {
-      "name": "dawn",
-      "default-features": false,
-      "platform": "emscripten"
-    },
-    "box2d",
-    "nfrechette-acl",
-    "recastnavigation",
-    {
-      "name": "tracy",
-      "default-features": false
-    },
-    "zlib",
-    "lz4",
-    "zstd",
-    "openssl",
-    "sqlite3",
     {
       "name": "libpq",
       "default-features": false,
@@ -112,7 +78,53 @@
         "openssl"
       ],
       "platform": "!emscripten & !android"
-    }
+    },
+    "lz4",
+    "meshoptimizer",
+    {
+      "name": "mimalloc",
+      "platform": "!emscripten"
+    },
+    "nfrechette-acl",
+    "nlohmann-json",
+    "openssl",
+    "pugixml",
+    "recastnavigation",
+    "sqlite3",
+    "stb",
+    {
+      "name": "tracy",
+      "default-features": false
+    },
+    "vulkan-headers",
+    {
+      "name": "vulkan-loader",
+      "features": [
+        {
+          "name": "wayland",
+          "platform": "linux"
+        },
+        {
+          "name": "xcb",
+          "platform": "linux"
+        },
+        {
+          "name": "xlib",
+          "platform": "linux"
+        }
+      ],
+      "platform": "!android & !emscripten"
+    },
+    {
+      "name": "vulkan-memory-allocator",
+      "platform": "!emscripten"
+    },
+    {
+      "name": "vulkan-validationlayers",
+      "platform": "!linux & !android & !emscripten"
+    },
+    "zlib",
+    "zstd"
   ],
   "features": {
     "complex-text": {
@@ -123,15 +135,6 @@
           "default-features": false
         },
         "sheenbidi"
-      ]
-    },
-    "mimalloc": {
-      "description": "mimalloc heap backend (SW_MEMORY_BACKEND=mimalloc); not built for the web",
-      "dependencies": [
-        {
-          "name": "mimalloc",
-          "platform": "!emscripten"
-        }
       ]
     }
   }

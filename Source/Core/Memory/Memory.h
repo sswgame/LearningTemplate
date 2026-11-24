@@ -126,6 +126,8 @@ namespace sw
 
         /** @brief 할당 블록 하나가 사용자 크기 앞에 더 잡는 헤더 바이트입니다(크기 · 태그 · 콜스택 해시). 배포본은 헤더가 없어 0 입니다. */
         static size_t getAllocationHeaderSize();
+        /** @brief 이 구성의 블록이 C 런타임 힙에서 오는지입니다(힙 백엔드가 crt). 거짓이면 CRT 의 집계 · 누수 검사에 이 블록이 들지 않습니다. */
+        static bool isInCRTHeap();
 
         /** @brief 할당 관찰자 등록 토큰입니다. 토큰이 사라지면 관찰자를 뗍니다. */
         using AllocationObserverRegistration = ObserverSlot<const MemoryAllocationObserver>::Registration;

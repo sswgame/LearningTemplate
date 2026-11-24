@@ -49,5 +49,8 @@ namespace sw
          * @details 언리얼 `FMalloc::GetAllocationSize` 자리입니다. `allocateAligned` 블록에는 쓰지 않습니다(CRT Windows 는 기본 정렬로 잡은 블록만 잰다).
          */
         [[nodiscard]] static size_t getUsableSize( const void* pBlock ) noexcept;
+
+        /** @brief 블록이 C 런타임 힙에서 오는지입니다. 거짓이면 CRT 디버그 힙의 집계 · 누수 검사가 이 블록을 보지 못합니다(`Memory::isInCRTHeap`). */
+        [[nodiscard]] static bool isInCRTHeap() noexcept;
     };
 } // namespace sw

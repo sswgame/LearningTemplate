@@ -20,8 +20,8 @@ namespace sw
 
     DiagnosticsSubsystem::~DiagnosticsSubsystem()
     {
-        // 위의 해제가 모두 태그 줄에서 빠진 뒤에 기동 뒤 기준선과 비교한다(어느 용도가 남았나, Debug). 플랫폼 누수 검사(CRT)는 바이트만 말하고,
-        // 이 보고는 그 바이트가 어느 하위 시스템의 것인지 말한다.
+        // 위의 해제가 모두 태그 줄에서 빠진 뒤에 기동 뒤 기준선과 비교한다(어느 용도가 남았나, Debug). sw 블록의 누수는 이 보고가 말한다 —
+        // 플랫폼 누수 검사(CRT)는 sw 할당자 밖(외부 라이브러리)의 바이트만 본다(힙 백엔드가 mimalloc 이면 sw 블록은 CRT 힙에 없다).
         if ( _memoryProfiler == nullptr )
             return;
         // 진단 구성(Debug — `Engine::initialize` 의 kDiagnostics)만 창을 연다. 다른 구성에서 닫으면 "창이 없다" 오류만 남는다.

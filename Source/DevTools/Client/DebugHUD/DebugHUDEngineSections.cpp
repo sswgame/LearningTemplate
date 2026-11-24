@@ -175,8 +175,8 @@ namespace sw
                 const MemoryProfiler* pProfiler = MemoryProfiler::getActive();
                 if ( pProfiler == nullptr || pProfiler->isTrackingEnabled() == false )
                 {
-                    // 태그 집계(Debug 의 MemoryProfiler)가 없는 구성이다. 운영체제 힙만 본다.
-                    writer.addLineFormat( "heap", "%.1f MB", static_cast<float64>( MemoryProfiler::getPlatformHeapBytes() ) / constant::memory::kBytesPerMegabyte );
+                    // 태그 집계(Debug 의 MemoryProfiler)가 없는 구성이다. C 런타임 힙만 본다.
+                    writer.addLineFormat( "CRT heap", "%.1f MB", static_cast<float64>( MemoryProfiler::getPlatformHeapBytes() ) / constant::memory::kBytesPerMegabyte );
                     return;
                 }
                 writer.addLineFormat( "live", "%.1f MB", static_cast<float64>( pProfiler->getLiveAllocatedBytes() ) / constant::memory::kBytesPerMegabyte );

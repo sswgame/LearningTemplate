@@ -5,8 +5,8 @@ Scripts/lint/pre_commit.py
 
 린트 입구 하나 — 규칙은 `rules.py` 의 표 한 곳에 있다.
 
-  py -3 -m Scripts lint                 # 커밋 훅: 모든 규칙이 스테이지된 파일만 본다(LintScope) + clang-format
-  py -3 -m Scripts lint --all           # 묶음 검증: 모든 규칙이 저장소 전체를 본다 + clang-format(preflight.sh 첫 단계)
+  py -3 -m Scripts lint                 # 커밋 훅: 모든 규칙이 스테이지된 파일만 본다(LintScope) + 포맷
+  py -3 -m Scripts lint --all           # 묶음 검증: 모든 규칙이 저장소 전체를 본다 + 포맷(preflight.sh 첫 단계)
   py -3 -m Scripts lint --list          # 규칙 표(갈래 · 막는 것 · 왜 린트인가 · 예외 파일)
   py -3 -m Scripts lint <id> [인자…]    # 규칙 하나의 단독 실행(`--all` · `--self-check` 등은 그 모듈의 인자)
 
@@ -15,7 +15,7 @@ Scripts/lint/pre_commit.py
 여러 규칙이 함께 쓰는 도우미만 바뀌었으면 그것을 쓰는 규칙의 자체 검사를 돈다(`Rule.listInputs`). `--all` 은 모든 규칙의 자체 검사도 돈다.
 이 모양은 시간이 아니라 연 파일 수로 지킨다(`check_read_bound` — 린트 코드가 바뀐 커밋과 `--all` 이 돈다): 파일 하나를 스테이지하면 모든 규칙을 통틀어
 그 파일을 한 번만 연다. 규칙은 파일 글을 `lint_scope.read_text` · `read_texts` 나 `index_cache` 로만 얻는다.
-**통과한 것은 찍지 않는다.** 통과는 한 줄, 실패만 상세를 찍는다. 고치는 것은 `py -3 -m Scripts format` 하나다(clang-format — include 순서 포함).
+**통과한 것은 찍지 않는다.** 통과는 한 줄, 실패만 상세를 찍는다. 고치는 것은 `py -3 -m Scripts format` 하나다(clang-format — include 순서 포함, vcpkg format-manifest).
 """
 
 from __future__ import annotations
@@ -42,7 +42,7 @@ from common.project_constants import CPP_ALL_EXTENSIONS, LINT_TARGET_REL_DIRS, N
 from common.exit_code import ExitCode  # noqa: E402
 from common.git import outside_hook_repository, run_git, run_git_in_hook_repository  # noqa: E402
 from common.paths import get_project_root  # noqa: E402
-from lint.format import run_clang_format_batch  # noqa: E402
+from lint.format import VCPKG_MANIFEST_NAME, run_clang_format_batch, run_vcpkg_manifest_format  # noqa: E402
 from lint.lint_scope import LintScope, clear_read_cache, list_staged_with_unstaged_changes, make_staged_scope, make_whole_scope  # noqa: E402
 from lint.index_cache import CACHE_FOLDER  # noqa: E402
 from lint.module_imports import list_imported_module_files  # noqa: E402
@@ -376,6 +376,11 @@ def run_lint(project_root: Path, scope: LintScope) -> int:
     if list_format and run_clang_format_batch(list_format, check_only=True, cwd=project_root) != 0:
         has_errors = True
         print("[format] FAIL — 'py -3 -m Scripts format' 으로 고친 뒤 다시 git add 한다.")
+    # vcpkg 실행 파일을 한 번 띄운다 — 매니페스트가 스테이지에 있을 때만(`--all` 은 모두).
+    list_manifest = [project_root / path for path in scope.list_file if path.rsplit("/", 1)[-1] == VCPKG_MANIFEST_NAME]
+    if run_vcpkg_manifest_format(list_manifest, check_only=True) != 0:
+        has_errors = True
+        print("[format] FAIL — 'py -3 -m Scripts format --files <vcpkg.json>' 으로 고친 뒤 다시 git add 한다.")
 
     time_line = format_rule_times(list_time, scope.whole_repo, read_hook_budget_seconds(project_root))
     if time_line:

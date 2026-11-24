@@ -9,12 +9,6 @@ endif()
 
 add_library(sw_sanitizer INTERFACE)
 
-# 새니타이저는 힙을 가로채야 선다 — mimalloc 백엔드(SW_MEMORY_BACKEND)는 할당을 제 힙으로 돌려 ASan · TSan 이 블록을 보지 못한다
-# (언리얼 -EnableASan 도 할당기를 시스템 할당기로 바꾼다). 조용히 덜 보는 대신 구성에서 멈춘다.
-if(SW_MEMORY_BACKEND STREQUAL "mimalloc")
-	message(FATAL_ERROR "[Sanitizer] SW_ENABLE_SANITIZER needs SW_MEMORY_BACKEND=crt — the sanitizer must see the heap (mimalloc replaces it)")
-endif()
-
 # 리눅스 Clang 은 새니타이저 런타임을 공유 라이브러리로 링크한다(GCC 는 원래 그렇다). 기본(정적)이면 런타임이 App 에 들어가는데, 리눅스 심볼 숨김의
 # `--exclude-libs,ALL`(cmake/Modules/Build/BuildLayout.cmake)이 그 심볼까지 가려 모듈 .so 가 __asan_* · __tsan_* 을 찾지 못하고 링크에서 진다.
 if(CMAKE_SYSTEM_NAME STREQUAL "Linux" AND CMAKE_CXX_COMPILER_ID STREQUAL "Clang")
@@ -66,7 +60,8 @@ if(MSVC OR SW_IS_CLANG_CL)
 	# (CRT 강제 · 임포트 구성 매핑)는 사람이 Debug 로 구성할 때만 뜻이 있다. 런타임 DLL · 썽크 라이브러리는 구성과 무관하게 아래가 넣는다.
 	# clang-cl 의 ASan 은 디버그 CRT 를 지원하지 않는다("AddressSanitizer doesn't support linking
 	# with debug runtime libraries yet"). 그래서 Debug 구성이어도 릴리스 CRT(/MD)를 써야 한다.
-	set(CMAKE_MSVC_RUNTIME_LIBRARY "MultiThreadedDLL" CACHE STRING "MSVC runtime library" FORCE)
+	# 보통 변수로 둔다(아래 둘도) — 캐시에 적으면 새니타이저를 끈 뒤에도 같은 빌드 폴더에 남는다.
+	set(CMAKE_MSVC_RUNTIME_LIBRARY "MultiThreadedDLL")
 
 	# 그런데 CRT 를 바꾸면 **의존성도 같이 바꿔야 한다.** vcpkg 는 Debug 구성에서 /MDd 로 빌드된
 	# 디버그 라이브러리를 물려주는데, 우리 오브젝트는 /MD(`_ITERATOR_DEBUG_LEVEL=0`)이므로
@@ -74,15 +69,14 @@ if(MSVC OR SW_IS_CLANG_CL)
 	# Windows ASan 빌드는 EditorModule.dll 링크에서 멈춰 **한 번도 완주하지 못했다** — CI 는
 	# Linux ASan 만 돌려 이 경로를 밟지 않았다.
 	# 임포트 타깃을 릴리스 쪽으로 매핑해 CRT 를 맞춘다.
-	set(CMAKE_MAP_IMPORTED_CONFIG_DEBUG "Release;RelWithDebInfo;" CACHE STRING
-		"ASan(/MD)은 vcpkg 릴리스 라이브러리와 링크한다" FORCE)
+	set(CMAKE_MAP_IMPORTED_CONFIG_DEBUG "Release;RelWithDebInfo;")
 
 	# 링크를 릴리스로 바꿨으면 **런타임 DLL 도 릴리스여야 한다.** vcpkg 의 applocal 은 구성이
 	# Debug 면 `debug/bin` 에서만 복사한다(경로가 툴체인에 박혀 있어 우리가 바꿀 수 없다). 그래서
 	# 이름이 다른 DLL(z.dll ↔ zd.dll)은 아예 안 오고, 이름이 같은 DLL(pugixml.dll)은 /MDd 로
 	# 빌드된 것이 와서 CRT 가 엇갈린다. 실제로 이 때문에 CoreTest.exe 가 z.dll 을 못 찾아 떴다.
 	# applocal 을 끄고 릴리스 DLL 을 직접 넣는다.
-	set(VCPKG_APPLOCAL_DEPS OFF CACHE BOOL "ASan: 릴리스 DLL 을 직접 staging 한다" FORCE)
+	set(VCPKG_APPLOCAL_DEPS OFF)
 
 	if(DEFINED _VCPKG_INSTALLED_DIR AND DEFINED VCPKG_TARGET_TRIPLET)
 		file(GLOB SW_ASAN_DEP_DLL "${_VCPKG_INSTALLED_DIR}/${VCPKG_TARGET_TRIPLET}/bin/*.dll")

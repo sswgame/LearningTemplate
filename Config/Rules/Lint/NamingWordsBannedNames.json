@@ -1,6 +1,7 @@
 {
   "_comment": "전수 개명한 옛 이름 → 새 이름 · 까닭(Scripts/lint/naming_words.py 의 naming-words 규칙이 되살린 옛 이름을 막는다). 언리얼 CoreRedirects 의 옛 이름 → 새 이름 자리이되 고쳐 주지 않고 막는다. 개명 도구(py -3 -m Scripts rename-symbol)가 줄을 더한다 — 키(옛 이름)는 개명 도구가 바꾸지 않는다.",
   "_bannedNames": {
+    "Ninja-Release-Mimalloc": "지움 — mimalloc 이 모든 구성의 기본 힙이다(SW_MEMORY_BACKEND auto), 견줄 때만 -DSW_MEMORY_BACKEND=crt(사용자 결정 2026-11-24)",
     "_inputLayer": "PawnComponent::_listInputLayer — 레이어 하나를 쌓으면 스택 밖 레이어가 꺼져 다른 액션이 죽었다(2026-11-24)",
     "_threadGroupSize": "지움 — 그룹 크기는 셰이더 리플렉션(`RHIThreadGroupSize`)이 정한다(2026-11-24)",
     "kLinearThreadGroupSize": "지움 — `dispatchThreads` 가 걸린 컴퓨트 PSO 의 그룹 크기를 쓴다(2026-11-24)",

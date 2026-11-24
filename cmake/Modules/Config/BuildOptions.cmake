@@ -6,7 +6,7 @@
 # - sw_snake_case     : 우리 function()(매크로는 쓰지 않는다) · 내부 INTERFACE 타깃 (예: sw_add_module_library, sw_global_options)
 # - SW_UPPER_SNAKE    : option() · 캐시 · 전역 변수 · C++ 컴파일 정의 (예: SW_ENABLE_PCH, SW_FLAG_LIBRARIES)
 # - snake_case        : 함수 지역 · 파일 임시 변수(sw 접두 없음), cmake_parse_arguments 접두는 ARG
-# 이 파일은 옵션(SW_*)과 메타데이터만 둔다 — 타깃 함수는 cmake/Modules/Build/, 찾은 도구 경로 캐시는 찾는 파일이 둔다.
+# 이 파일은 구성과 무관한 상수 기본값 옵션(SW_*)과 메타데이터만 둔다(구성에서 유도하는 옵션은 DerivedOptions.cmake) — 타깃 함수는 cmake/Modules/Build/, 찾은 도구 경로 캐시는 찾는 파일이 둔다.
 # ==============================================================================
 
 # ------------------------------------------------------------------------------
@@ -35,24 +35,7 @@ option(SW_SHIPPING_BUILD "배포용 단일 실행 파일 정적 링크 빌드 (E
 # DevTools(자동화 실행기 · 콘솔)와 테스트를 담는다(감사 P-9, 언리얼 Development + Gauntlet).
 option(SW_STATIC_MODULES "모듈을 한 실행 파일에 정적 링크 — 배포는 늘 켠다, 웹 · Android 개발 구성(Web-Release · Android-Release)도 켠다. 핫 리로드 · 에디터 없음" OFF)
 if(SW_SHIPPING_BUILD AND NOT SW_STATIC_MODULES)
-	set(SW_STATIC_MODULES ON) # 캐시 값은 그대로 두고 같은 이름의 보통 변수로 가린다(SW_TARGET_TYPE 과 같은 방식)
-endif()
-
-# 빌드 타깃 종류 — 언리얼 TargetType(Game · Client · Server)과 같은 자리. 모듈 매니페스트의 `_listTarget` 과 코드 상수
-# (`sw::build::kWithClientCode` · `kWithServerCode` — `SW_TARGET_NAME`, `cmake/Modules/Build/BuildLayout.cmake`)가 이 값을 따른다.
-# Game   — 클라이언트 + 서버 코드 전부(개발 · 에디터 · 한 프로세스 서버/클라 테스트 · 리슨 서버). App 과 Server 를 짓는다.
-# Client — 서버 전용 모듈이 없는 플레이어 배포본. App 만 짓는다.
-# Server — 클라이언트 전용 모듈(에디터 · RHI 백엔드)과 창 · GPU · 오디오 장치 코드가 없는 전용 서버. Server 만 짓는다.
-# 비우면 정적 모듈 구성(Shipping · 웹 · Android 개발)은 Client, 그 밖은 Game 이다. 캐시 값은 그대로 두고 같은 이름의 보통 변수로 가린다 — 아래 모든 곳이 해석된 값을 본다.
-set(SW_TARGET_TYPE "" CACHE STRING "빌드 타깃 종류: Game | Client | Server (비우면 정적 모듈 구성=Client, 그 밖=Game)")
-set_property(CACHE SW_TARGET_TYPE PROPERTY STRINGS "" Game Client Server)
-
-if(SW_TARGET_TYPE STREQUAL "")
-	if(SW_STATIC_MODULES)
-		set(SW_TARGET_TYPE Client)
-	else()
-		set(SW_TARGET_TYPE Game)
-	endif()
+	set(SW_STATIC_MODULES ON) # 캐시 값은 그대로 두고 같은 이름의 보통 변수로 가린다(AutoOption.cmake 와 같은 방식)
 endif()
 
 # 리눅스 클라이언트의 Wayland 창 계층(`Engine/Window/Linux/Wayland`). 켜면 wayland-client · wayland-cursor · xkbcommon · wayland-protocols ·
@@ -67,31 +50,6 @@ option(SW_ENABLE_ATSPI "리눅스 클라이언트에 AT-SPI 접근성 브리지�
 # 리눅스 X11 입력 주입기(`Engine/Window/Linux/XTestInputInjector`, 개발 명령 `input.xtest`). 선택 의존이다 — 켰는데 libxtst(pkg-config `xtst`)가 없으면
 # 구성을 세우지 않고 기능만 끈 채 "XTest 주입기 없음"을 알린다(`XTestInputInjector::isCompiledIn()` false). 패키지: libxtst-dev.
 option(SW_ENABLE_XTEST "리눅스 클라이언트에 XTest 입력 주입기를 짓는다(libxtst 가 없으면 기능을 끈다)" OFF)
-
-if(NOT SW_TARGET_TYPE MATCHES "^(Game|Client|Server)$")
-	message(FATAL_ERROR "SW_TARGET_TYPE='${SW_TARGET_TYPE}' — one of Game, Client, Server")
-endif()
-
-if(SW_TARGET_TYPE STREQUAL "Server" AND NOT SW_BUILD_GAME)
-	message(FATAL_ERROR "SW_TARGET_TYPE=Server needs SW_BUILD_GAME=ON — the dedicated server runs the game module")
-endif()
-
-# 배포 빌드가 Engine 에 정적으로 넣는 RHI 백엔드 하나 — 쿠킹 표(Config/Engine/CookContract.json rhi_backends)의 이름 그대로(별칭 · 소문자는 구성 실패).
-# 기본은 표의 default_rhi_backend, Windows 밖은 Vulkan(project() 전이라 WIN32 대신 CMAKE_HOST_WIN32 — 교차 컴파일은 지원하지 않는다).
-# Dev 는 백엔드 넷을 모두 모듈로 짓고 이 값을 읽지 않는다. 이 플랫폼에 없는 백엔드면 구성이 선다(cmake/Modules/Build/RHIBackends.cmake).
-include("${CMAKE_CURRENT_LIST_DIR}/JsonValue.cmake")
-sw_require_json_value(contract_default_rhi "${CMAKE_CURRENT_LIST_DIR}/../../../Config/Engine/CookContract.json" default_rhi_backend)
-
-if(CMAKE_HOST_WIN32)
-	set(SW_SHIPPING_RHI_BACKEND "${contract_default_rhi}" CACHE STRING "Shipping 이 Engine 에 정적 링크할 RHI 백엔드(쿠킹 표 이름)")
-elseif(CMAKE_HOST_SYSTEM_NAME STREQUAL "Linux")
-	set(SW_SHIPPING_RHI_BACKEND "Vulkan" CACHE STRING "Shipping 이 Engine 에 정적 링크할 RHI 백엔드(쿠킹 표 이름)")
-else()
-	# 새 호스트 · 대상(웹은 WebGPU)이 Vulkan 을 조용히 받지 않게 이름으로 고른다.
-	message(FATAL_ERROR "[BuildOptions] no default Shipping RHI backend for host '${CMAKE_HOST_SYSTEM_NAME}' - set SW_SHIPPING_RHI_BACKEND")
-endif()
-
-set_property(CACHE SW_SHIPPING_RHI_BACKEND PROPERTY STRINGS DirectX11 DirectX12 Vulkan OpenGL WebGPU)
 
 option(SW_BUILD_GAMEFRAMEWORK "Source/GameFramework 및 게임 장르별 키트 라이브러리 빌드" ON)
 
@@ -139,43 +97,20 @@ if(NOT SW_RELEASE_DEBUG_INFO MATCHES "^(lines|full|none)$")
 	message(FATAL_ERROR "SW_RELEASE_DEBUG_INFO must be lines, full or none (got '${SW_RELEASE_DEBUG_INFO}')")
 endif()
 
-# Tracy 프로파일러 클라이언트(엔진 프로파일러의 두 번째 출력, Source/Engine/Profiling). Shipping 은 언제나 뺀다.
-# Windows 는 TracyClient.dll 을 지연 로드한다 — `-gv_tracy` 로 켜기 전에는 DLL 도, 수집 스레드도 없다.
-# 리눅스(vcpkg 정적 라이브러리)는 지연 로드가 없어 링크하면 기동부터 수집 스레드 · 리슨 소켓이 선다 — 그래서 기본 꺼짐이다.
-# 정적 모듈 구성(웹 · Android 개발)은 Tracy 를 잇지 않는다 — DevTools 의 Tracy 링크 방식이 Windows · 리눅스만 정해져 있다.
-if(CMAKE_HOST_WIN32 AND NOT SW_STATIC_MODULES) # project() 앞이라 WIN32 는 아직 없다
-	set(tracy_default ON)
-else()
-	set(tracy_default OFF)
-endif()
-
-option(SW_ENABLE_TRACY "Tracy 프로파일러 클라이언트 링크(개발 빌드, Shipping 은 무시)" ${tracy_default})
-
 # 복합 문자 셰이핑 — HarfBuzz(셰이퍼, MIT) + SheenBidi(전체 UAX #9 수준, Apache 2.0). 엔진 인터페이스(ITextShaper · TextBidi) 뒤에 있고
 # 헤더는 Source/Engine/Text/HarfBuzz · Text/SheenBidi 에서만 include 한다. 켜면 두 패키지가 필수다(못 찾으면 구성이 선다).
 # 기본 꺼짐: vcpkg 설치 트리를 워크트리끼리 나눠 쓰므로 패키지는 main 에서 먼저 설치한다. 설치한 뒤 ON 으로 바꾼다.
 option(SW_ENABLE_COMPLEX_TEXT "HarfBuzz + SheenBidi 복합 문자 셰이핑(아랍어 연결형 · 전체 양방향). 끄면 단순 셰이퍼 · 단순 양방향" OFF)
-# 두 패키지는 vcpkg.json 의 선택 기능 `complex-text` 에 있다 — 기능 목록은 아래(힙 백엔드 뒤)에서 이 옵션으로 채운다.
-
-# 힙 백엔드 — `Memory` 아래의 `MemoryBackend`(Source/Core/Memory/MemoryBackend.h) 구현을 고른다. 고른 구현 파일 하나만 링크된다(가상 호출 없음).
-# crt — C 런타임 힙. mimalloc — mimalloc(MIT, vcpkg 선택 기능 `mimalloc`). 웹(Emscripten)은 crt 만 된다(Source/Core/CMakeLists.txt 가 막는다).
-# 기본값은 할당 벤치(감사 AC-1)를 두 백엔드로 잰 뒤에 정한다 — 그 전까지 crt. mimalloc 을 고른 구성은 프리셋 `Ninja-Release-Mimalloc`.
-set(SW_MEMORY_BACKEND "crt" CACHE STRING "힙 백엔드: crt | mimalloc")
-set_property(CACHE SW_MEMORY_BACKEND PROPERTY STRINGS crt mimalloc)
-if(NOT SW_MEMORY_BACKEND MATCHES "^(crt|mimalloc)$")
-	message(FATAL_ERROR "SW_MEMORY_BACKEND='${SW_MEMORY_BACKEND}' is not a heap backend — use crt or mimalloc")
-endif()
+# 두 패키지는 vcpkg.json 의 선택 기능 `complex-text` 에 있다 — 기능 목록은 아래에서 이 옵션으로 채운다.
 
 # vcpkg 선택 기능은 위 옵션에서 유도한다 — 옵션과 VCPKG_MANIFEST_FEATURES 를 둘 다 손으로 맞추면 어긋난 구성(옵션은 켜졌는데 패키지가 없다)이 생겼다.
-# vcpkg.json 의 선택 기능은 이 둘뿐이고 정본은 옵션이다 — 손으로 준 값은 덮는다. 툴체인(vcpkg)이 project() 에서 읽으므로 그 전인 여기서 정한다.
+# vcpkg.json 의 선택 기능은 이것뿐이고 정본은 옵션이다 — 손으로 준 값은 덮는다. 툴체인(vcpkg)이 project() 에서 읽으므로 그 전인 여기서 정한다.
+# 힙 백엔드는 선택 기능이 아니다 — 프리셋이 설치 트리를 나눠 쓰는데 crt 구성(ASan)이 기능을 빼고 설치하면 다른 구성의 mimalloc 을 지운다.
 set(list_manifest_feature "")
 if(SW_ENABLE_COMPLEX_TEXT)
 	list(APPEND list_manifest_feature "complex-text")
 endif()
-if(SW_MEMORY_BACKEND STREQUAL "mimalloc")
-	list(APPEND list_manifest_feature "mimalloc")
-endif()
-set(VCPKG_MANIFEST_FEATURES "${list_manifest_feature}" CACHE STRING "vcpkg 선택 기능 — SW_ENABLE_COMPLEX_TEXT · SW_MEMORY_BACKEND 에서 유도(손으로 정하지 않는다)" FORCE)
+set(VCPKG_MANIFEST_FEATURES "${list_manifest_feature}" CACHE STRING "vcpkg 선택 기능 — SW_ENABLE_COMPLEX_TEXT 에서 유도(손으로 정하지 않는다)" FORCE)
 
 # 활성화할 대상 게임 팩 선택 (Source/Games/ 하위 디렉터리 이름)
 set(SW_ACTIVE_GAME "Playground" CACHE STRING "활성 게임(Source/Games 폴더 이름) — Bin/Modules/SWGame · Shipping 이 굽는 게임. Dev 는 실행할 때 -game=<게임> 으로 다른 게임도 고른다")

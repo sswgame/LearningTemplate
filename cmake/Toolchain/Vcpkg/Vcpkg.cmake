@@ -33,21 +33,8 @@ if(DEFINED CACHE{VCPKG_MANIFEST_INSTALL} AND (DEFINED SW_VCPKG_GATE_REV OR NOT D
 endif()
 
 # ------------------------------------------------------------------------------
-# 0) sw_vcpkg_hash_file_normalized — 줄끝(CRLF/LF)을 같게 보고 파일 내용의 SHA256 을 구한다
-# 스탬프는 main 체크아웃과 워크트리가 나눠 쓴다. 두 체크아웃의 줄끝이 다르면(core.autocrlf — main 은 LF, 워크트리는 CRLF 로 나온 적이 있다)
-# 내용이 같아도 해시가 달라 configure 마다 스탬프가 번갈아 덮이고, 그때마다 바뀐 것 없이 설치가 돌았다.
-# ------------------------------------------------------------------------------
-function(sw_vcpkg_hash_file_normalized FILE_PATH OUT_VAR)
-    file(READ "${FILE_PATH}" content)
-    string(REPLACE "\r\n" "\n" content "${content}")
-    string(SHA256 hash "${content}")
-    set(${OUT_VAR} "${hash}" PARENT_SCOPE)
-endfunction()
-
-# ------------------------------------------------------------------------------
 # 1) sw_vcpkg_compute_manifest_hash — manifest + overlay port/triplet SHA256
-# 포함: vcpkg.json, vcpkg-configuration.json, ThirdParty/*/vcpkg-port,
-# cmake/Toolchain/Vcpkg 오버레이 triplet (.cmake). 없으면 빈 문자열
+# 포함: vcpkg.json, vcpkg-configuration.json, ThirdParty/*/vcpkg-port 의 모든 파일(VcpkgInstallPolicy.cmake), 오버레이 triplet (.cmake). 없으면 빈 문자열
 # ------------------------------------------------------------------------------
 function(sw_vcpkg_compute_manifest_hash OUT_VAR)
     set(src_dir "${CMAKE_CURRENT_SOURCE_DIR}")
@@ -56,25 +43,17 @@ function(sw_vcpkg_compute_manifest_hash OUT_VAR)
         set(src_dir "${CMAKE_SOURCE_DIR}")
     endif()
 
-    # 앞부분(매니페스트 두 파일)은 레거시 스탬프와 같다 — 두 벌로 적지 않고 그것에 오버레이를 덧붙인다.
-    sw_vcpkg_compute_manifest_hash_legacy(hash)
+    set(hash "")
 
-    file(GLOB_RECURSE overlay_port_files
-        "${src_dir}/ThirdParty/*/vcpkg-port/portfile.cmake"
-        "${src_dir}/ThirdParty/*/vcpkg-port/vcpkg.json"
-        "${src_dir}/ThirdParty/*/vcpkg-port/*.patch"
-        "${src_dir}/ThirdParty/*/vcpkg-port/*/portfile.cmake"
-        "${src_dir}/ThirdParty/*/vcpkg-port/*/vcpkg.json"
-        "${src_dir}/ThirdParty/*/vcpkg-port/*/*.patch"
-    )
-    list(SORT overlay_port_files)
-
-    foreach(overlay_file IN LISTS overlay_port_files)
-        if(EXISTS "${overlay_file}")
-            sw_vcpkg_hash_file_normalized("${overlay_file}" overlay)
-            string(APPEND hash "${overlay}")
+    foreach(manifest_file IN ITEMS vcpkg.json vcpkg-configuration.json)
+        if(EXISTS "${src_dir}/${manifest_file}")
+            sw_vcpkg_hash_file_normalized("${src_dir}/${manifest_file}" manifest)
+            string(APPEND hash "${manifest}")
         endif()
     endforeach()
+
+    sw_vcpkg_hash_overlay_ports("${src_dir}" overlay)
+    string(APPEND hash "${overlay}")
 
     # 생성한 오버레이(triplet · 포트 툴체인 · 컴파일 규칙 — 4 절이 이 함수보다 먼저 만든다). 포트 ABI 와 같은 입력이다.
     file(GLOB overlay_triplet_files "${VCPKG_OVERLAY_TRIPLETS}/*.cmake")
@@ -89,29 +68,6 @@ function(sw_vcpkg_compute_manifest_hash OUT_VAR)
     # Windows 는 생성한 포트 툴체인(VcpkgTriplets.cmake)이 컴파일러를 정하고 환경 CC 는 프리셋 · 재구성마다 달라 넣지 않는다.
     if(CMAKE_HOST_SYSTEM_NAME STREQUAL "Linux")
         string(APPEND hash "|cc=$ENV{CC}|cxx=$ENV{CXX}")
-    endif()
-
-    set(${OUT_VAR} "${hash}" PARENT_SCOPE)
-endfunction()
-
-# 레거시 스탬프(vcpkg.json + vcpkg-configuration.json만) 해시. 공식 마이그레이션용.
-function(sw_vcpkg_compute_manifest_hash_legacy OUT_VAR)
-    set(src_dir "${CMAKE_CURRENT_SOURCE_DIR}")
-
-    if(DEFINED CMAKE_SOURCE_DIR AND NOT CMAKE_SOURCE_DIR STREQUAL "")
-        set(src_dir "${CMAKE_SOURCE_DIR}")
-    endif()
-
-    set(hash "")
-
-    if(EXISTS "${src_dir}/vcpkg.json")
-        sw_vcpkg_hash_file_normalized("${src_dir}/vcpkg.json" h1)
-        string(APPEND hash "${h1}")
-    endif()
-
-    if(EXISTS "${src_dir}/vcpkg-configuration.json")
-        sw_vcpkg_hash_file_normalized("${src_dir}/vcpkg-configuration.json" h2)
-        string(APPEND hash "${h2}")
     endif()
 
     set(${OUT_VAR} "${hash}" PARENT_SCOPE)
@@ -405,22 +361,6 @@ if(tree_ready AND EXISTS "${stamp}" AND NOT manifest_hash STREQUAL "")
 endif()
 
 sw_vcpkg_install_read_only_reason("${src_dir}" "${VCPKG_INSTALLED_DIR}" "${SW_VCPKG_USER_INSTALL}" read_only_reason)
-
-# 스탬프가 레거시(json만)와 일치하면 overlay-aware 해시로 갱신하고 skip
-if(read_only_reason STREQUAL "" AND tree_ready AND NOT stamp_match AND NOT manifest_hash STREQUAL "" AND NOT SW_VCPKG_FORCE_INSTALL)
-    sw_vcpkg_compute_manifest_hash_legacy(legacy_hash)
-
-    if(EXISTS "${stamp}")
-        file(READ "${stamp}" stamp_content)
-        string(STRIP "${stamp_content}" stamp_content)
-
-        if(stamp_content STREQUAL legacy_hash)
-            file(WRITE "${stamp}" "${manifest_hash}\n")
-            set(stamp_match TRUE)
-            message(STATUS "[vcpkg] Manifest stamp migrated to overlay-aware hash (install skipped)")
-        endif()
-    endif()
-endif()
 
 if(NOT read_only_reason STREQUAL "")
     # 읽기 전용 — 폴백 없이 멈출 것은 멈춘다. 매니페스트와 다른 포트는 find_package 에서 드러난다.

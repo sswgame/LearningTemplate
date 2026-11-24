@@ -9,7 +9,7 @@
 내용이 같으면 파일을 다시 쓰지 않습니다(빌드가 다시 돌지 않게).
 
 사용법: py -3 Scripts/generate/third_party_notices.py --manifest vcpkg.json --installed build/vcpkg_installed
-        --triplet x64-windows --out build/Ninja-Debug/Bin/THIRD_PARTY_NOTICES.txt [--vendored-root ThirdParty] [--features mimalloc,complex-text]
+        --triplet x64-windows --out build/Ninja-Debug/Bin/THIRD_PARTY_NOTICES.txt [--vendored-root ThirdParty] [--features complex-text]
 """
 from __future__ import annotations
 
@@ -102,7 +102,7 @@ def _evaluate_platform(expression: str, triplet: str) -> bool:
 def _read_manifest_ports(manifest_path: str, triplet: str, list_feature: Sequence[str] = ()) -> set[str]:
     """매니페스트의 직접 의존과 켠 선택 기능(@p list_feature — `VCPKG_MANIFEST_FEATURES`)의 의존 가운데 이 트리플릿에 해당하는 포트 이름입니다.
 
-    켠 기능의 포트도 배포물에 들어간다(mimalloc 힙 백엔드 · 복합 문자) — 직접 의존만 보면 고지에서 빠진다. 매니페스트에 없는 기능 이름은 오류다.
+    켠 기능의 포트도 배포물에 들어간다(복합 문자) — 직접 의존만 보면 고지에서 빠진다. 매니페스트에 없는 기능 이름은 오류다.
     """
     with open(manifest_path, "r", encoding="utf-8") as handle:
         manifest = json.load(handle)

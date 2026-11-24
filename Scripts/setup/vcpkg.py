@@ -29,8 +29,8 @@ from common.project_constants import (
     KEY_VCPKG_SEARCH_ROOTS,
     KEY_VCPKG_TOOLS_SUBDIR,
 )
-from common.git import ensure_git_on_path, run_git
-from common.paths import platform_key, platform_script_command
+from common.git import ensure_git_on_path, get_main_working_tree, run_git
+from common.paths import get_project_root, platform_key, platform_script_command
 from common.run_process import run_process
 from common.file_collect import is_vcpkg_root
 from setup.toolchain_detect import ToolSpec, find_tool_root
@@ -107,13 +107,30 @@ def _remove_incomplete_vcpkg_tree(tools_dir: Path) -> None:
     shutil.rmtree(tools_dir, ignore_errors=True)
 
 
+def _vcpkg_file_name() -> str:
+    return "vcpkg.exe" if platform_key() == "windows" else "vcpkg"
+
+
 def has_vcpkg_executable(vcpkg_root: Path) -> bool:
     """
     이 OS 의 vcpkg 실행 파일(윈도우 `vcpkg.exe`, 그 밖 `vcpkg`)이 루트에 있는지 봅니다.
 
     `is_vcpkg_root` 는 `vcpkg.cmake` 만 본다 — 윈도우에서 부트스트랩한 트리를 리눅스에서 쓰면 그 파일은 있지만 리눅스 실행 파일은 없다.
     """
-    return (vcpkg_root / ("vcpkg.exe" if platform_key() == "windows" else "vcpkg")).is_file()
+    return (vcpkg_root / _vcpkg_file_name()).is_file()
+
+
+def find_vcpkg_executable() -> Path | None:
+    """
+    이 OS 의 vcpkg 실행 파일 — 설치 · 부트스트랩하지 않고 찾기만 한다(포맷 검사가 부른다). `find_tool_root` 의 순서, 없으면 메인 작업 폴더의 `Tools/vcpkg`
+    (연결된 워크트리에는 Tools 가 없고, 빌드 도구는 메인 작업 폴더 하나에만 깐다).
+    """
+    search = load_search_paths()
+    list_root = [find_tool_root(VCPKG_TOOL_SPEC, search), get_main_working_tree(get_project_root()) / str(search[KEY_VCPKG_TOOLS_SUBDIR])]
+    for root in list_root:
+        if root is not None and has_vcpkg_executable(Path(root)):
+            return Path(root) / _vcpkg_file_name()
+    return None
 
 
 def _run_bootstrap_script(vcpkg_root: Path) -> bool:

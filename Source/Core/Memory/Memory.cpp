@@ -234,6 +234,11 @@ namespace sw
 #endif
     }
 
+    bool Memory::isInCRTHeap()
+    {
+        return MemoryBackend::isInCRTHeap();
+    }
+
     Memory::AllocationObserverRegistration Memory::registerAllocationObserver( const MemoryAllocationObserver* pObserver )
     {
 #if defined( SW_SHIPPING )

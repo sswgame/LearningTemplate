@@ -3,11 +3,11 @@
 """
 Scripts/lint/format.py
 
-C++ · 셰이더 소스를 고친다 — 고치는 명령은 `format` 하나다: clang-format(include 순서 · 묶음도 `.clang-format` 의 IncludeCategories 가 정한다).
-린트의 format 안내도 이 명령을 가리킨다.
-대상 고르기(`--files` > `--all` > git 변경분 > 전체)와 clang-format 일괄 실행(`run_clang_format_batch`, 커밋 훅도 부른다)이 한 자리다.
+C++ · 셰이더 소스와 vcpkg 매니페스트를 고친다 — 고치는 명령은 `format` 하나다: clang-format(include 순서 · 묶음도 `.clang-format` 의 IncludeCategories 가 정한다)과
+`vcpkg format-manifest`(모든 `vcpkg.json` — 저장소 매니페스트 · 오버레이 포트). 린트의 format 안내도 이 명령을 가리킨다.
+대상 고르기(`--files` > `--all` > git 변경분 > 전체)와 일괄 실행(`run_clang_format_batch` · `run_vcpkg_manifest_format`, 커밋 훅도 부른다)이 한 자리다.
 
-  py -3 -m Scripts format [--files ...|--all] [--check]  clang-format 적용(C++ 와 셰이더), --check 는 고치지 않고 다른 파일만 알린다
+  py -3 -m Scripts format [--files ...|--all] [--check]  clang-format(C++ 와 셰이더) · vcpkg format-manifest 적용, --check 는 고치지 않고 다른 파일만 알린다
 
 파일을 고쳐 쓰되 줄 끝 · BOM 은 건드리지 않는다.
 """
@@ -16,6 +16,7 @@ from __future__ import annotations
 
 import argparse
 import sys
+import tempfile
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Sequence
@@ -105,6 +106,64 @@ def run_clang_format_batch(files: Sequence[Path | str],
     return run_until_non_zero(_run_single_batch, batches)
 
 
+# --- vcpkg 매니페스트 -------------------------------------------------------------
+
+VCPKG_MANIFEST_NAME = "vcpkg.json"
+
+
+def run_vcpkg_manifest_format(files: Sequence[Path], *, check_only: bool, vcpkg_command: Sequence[str | Path] | None = None) -> int:
+    """
+    `vcpkg.json` 들을 `vcpkg format-manifest` 모양(의존 이름 순 · 필드 순)으로 맞춘다. `check_only` 면 고치지 않고 다른 파일만 알린다.
+
+    명령에 검사 방식이 없어 사본을 고쳐 견준다(한 번 띄워 모든 파일을 본다). vcpkg 실행 파일이 없으면 오류다 — 건너뛰면 어긋난 매니페스트가 통과한다.
+    `vcpkg_command` 는 `format-manifest` 앞의 명령이다(없으면 `setup.vcpkg` 가 찾는다).
+    """
+    if not files:
+        return ExitCode.PASSED
+    if vcpkg_command is None:
+        from setup.vcpkg import find_vcpkg_executable  # 매니페스트를 볼 때만
+        executable = find_vcpkg_executable()
+        if executable is None:
+            print("[FormatVcpkgManifest] vcpkg 실행 파일을 찾지 못했습니다 — 'py -3 -m Scripts vcpkg --install' 로 설치하십시오.", file=sys.stderr)
+            return ExitCode.VIOLATION
+        vcpkg_command = [executable]
+
+    has_difference = False
+    with tempfile.TemporaryDirectory() as folder:
+        map_copy: dict[Path, Path] = {}
+        for index, path in enumerate(files):
+            copy = Path(folder) / str(index) / VCPKG_MANIFEST_NAME
+            copy.parent.mkdir()
+            copy.write_bytes(path.read_bytes())
+            map_copy[path] = copy
+        result = run_process([*vcpkg_command, "format-manifest", *map_copy.values()])
+        if not result.succeeded:
+            names = ", ".join(str(path) for path in files)
+            print(f"[FormatVcpkgManifest] vcpkg format-manifest 실패({names}): {result.stderr.strip() or result.stdout.strip()}", file=sys.stderr)
+            return ExitCode.VIOLATION
+        for path, copy in map_copy.items():
+            formatted = copy.read_bytes()
+            if formatted == path.read_bytes():
+                continue
+            has_difference = True
+            if check_only:
+                print(f"[FormatVcpkgManifest] {path} 가 vcpkg format-manifest 모양과 다릅니다.", file=sys.stderr)
+            else:
+                path.write_bytes(formatted)
+    return ExitCode.VIOLATION if has_difference and check_only else ExitCode.PASSED
+
+
+def select_vcpkg_manifests(args: argparse.Namespace, repository_root: Path) -> list[Path]:
+    """`select_fixer_target_files` 와 같은 순서(`--files` > `--all` > Git 변경 > 전체)로 고른 `vcpkg.json`. git 이 아는 것만이라 받아 온 vcpkg 트리(Tools)는 들지 않는다."""
+    if args.files:
+        return resolve_file_arguments(repository_root, args.files, file_names=(VCPKG_MANIFEST_NAME,), excluded_dir_names=())
+    if not args.all:
+        list_modified = [path for path in get_modified_cpp_files(repository_root, extensions={".json"}) if path.name == VCPKG_MANIFEST_NAME]
+        if list_modified:
+            return list_modified
+    return sorted(list_git_files(repository_root, ["ls-files", "--cached", "--others", "--exclude-standard", f":(glob)**/{VCPKG_MANIFEST_NAME}"], None))
+
+
 # --- 대상 고르기 ----------------------------------------------------------------
 
 def add_file_arguments(parser: argparse.ArgumentParser) -> None:
@@ -188,25 +247,26 @@ def _select_file_kind_targets(args: argparse.Namespace, repository_root: Path, t
     return list_all
 
 
-# --- clang-format -----------------------------------------------------------------
+# --- 명령 ----------------------------------------------------------------------
 
 SHADER_FILE_KIND = FixerFileKind(suffixes=tuple(sorted(SHADER_SOURCE_EXTENSIONS)))
 
 
 def main_format(argv: Sequence[str] | None = None) -> int:
-    parser = argparse.ArgumentParser(description="C++ 와 셰이더에 clang-format 을 적용합니다(include 순서 포함).")
+    parser = argparse.ArgumentParser(description="C++ 와 셰이더에 clang-format(include 순서 포함)을, vcpkg.json 에 vcpkg format-manifest 를 적용합니다.")
     add_file_arguments(parser)
-    parser.add_argument("--check", action="store_true", help="고치지 않고 다른 파일만 알린다(clang-format --dry-run --Werror)")
+    parser.add_argument("--check", action="store_true", help="고치지 않고 다른 파일만 알린다")
     args = parser.parse_args(argv)
 
     root = get_project_root()
     list_cpp = select_fixer_target_files(args, root, CLANG_FORMAT_TAG)
     list_shader = select_fixer_target_files(args, root, CLANG_FORMAT_TAG, SHADER_FILE_KIND)
     file_list = list_cpp + list_shader
+    manifest_result = run_vcpkg_manifest_format(select_vcpkg_manifests(args, root), check_only=args.check)
 
     if not file_list:
         sys.stderr.write(f"[{CLANG_FORMAT_TAG}] 포맷팅 대상 C++ · 셰이더 파일이 없습니다.\n")
-        return ExitCode.PASSED
+        return manifest_result
 
     print(f"[{CLANG_FORMAT_TAG}] {len(file_list)}개 파일(셰이더 {len(list_shader)}개)에 대해 clang-format {'검사' if args.check else '적용'} 중...", file=sys.stderr)
-    return run_clang_format_batch(file_list, check_only=args.check, cwd=root)
+    return run_clang_format_batch(file_list, check_only=args.check, cwd=root) or manifest_result
