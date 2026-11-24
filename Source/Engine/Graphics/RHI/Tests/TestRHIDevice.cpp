@@ -12,13 +12,13 @@
 #include "Core/Testing/ScopedAssertCapture.h"
 #include "Core/Testing/TestFramework.h"
 
+#include "Engine/Graphics/RHI/Backend/RHIPipelineCacheFile.h"
 #include "Engine/Graphics/RHI/IRHIDevice.h"
 #include "Engine/Graphics/RHI/RHI.h"
 #include "Engine/Graphics/RHI/RHIBackendInfo.h"
 #include "Engine/Graphics/RHI/RHIRenderResource.h"
 #include "Engine/Graphics/RHI/Tests/RHIFakeDevice.h"
 #include "Engine/Graphics/RHI/Vulkan/VulkanPhysicalDeviceRank.h"
-#include "Engine/Graphics/RHI/Vulkan/VulkanPipelineCacheFile.h"
 #include "Engine/Graphics/RHI/Vulkan/VulkanRHIRequiredVersion.h"
 
 #include <iterator>
@@ -398,28 +398,28 @@ SW_TEST_CASE( VulkanAPIVersionTest, DeviceBelowTheShaderTargetIsRejected )
 }
 
 /**
- * @brief [VulkanPipelineCacheFileTest] 파이프라인 캐시 파일이 장치 · 드라이버마다 따로다(R-13)
+ * @brief [RHIPipelineCacheFileTest] 파이프라인 캐시 파일이 장치 · 드라이버마다 따로다(R-13)
  * @details 파일이 하나면 하드웨어 → software → 하드웨어 실행이 하드웨어 캐시를 덮어(드라이버가 다른 장치의 데이터를 버린다) 매번 처음부터 컴파일한다.
  */
-SW_TEST_CASE( VulkanPipelineCacheFileTest, FileIsPerDeviceAndDriver )
+SW_TEST_CASE( RHIPipelineCacheFileTest, FileIsPerDeviceAndDriver )
 {
-    const string hardware = VulkanPipelineCacheFile::makeRelativePath( 0x10DEu, 0x2684u, 0x8A3C0000u );
-    SW_EXPECT_TRUE( hardware == "ShaderCache/vk_pipeline_cache_000010de_00002684_8a3c0000.bin" );
-    SW_EXPECT_FALSE( hardware == VulkanPipelineCacheFile::makeRelativePath( 0x10005u, 0u, 1u ) );              // software(lavapipe)
-    SW_EXPECT_FALSE( hardware == VulkanPipelineCacheFile::makeRelativePath( 0x10DEu, 0x2684u, 0x8A3C0001u ) ); // 드라이버 갱신
+    const string hardware = RHIPipelineCacheFile::makeRelativePath( "vk_pipeline_cache", 0x10DEu, 0x2684u, 0x8A3C0000u );
+    SW_EXPECT_TRUE( hardware == "ShaderCache/vk_pipeline_cache_000010de_00002684_000000008a3c0000.bin" );
+    SW_EXPECT_FALSE( hardware == RHIPipelineCacheFile::makeRelativePath( "vk_pipeline_cache", 0x10005u, 0u, 1u ) );              // software(lavapipe)
+    SW_EXPECT_FALSE( hardware == RHIPipelineCacheFile::makeRelativePath( "vk_pipeline_cache", 0x10DEu, 0x2684u, 0x8A3C0001u ) ); // 드라이버 갱신
 }
 
 /**
- * @brief [VulkanPipelineCacheFileTest] 파이프라인 캐시는 주기가 지나고 크기가 바뀌었을 때 저장한다(R-13)
+ * @brief [RHIPipelineCacheFileTest] 파이프라인 캐시는 주기가 지나고 크기가 바뀌었을 때 저장한다(R-13)
  * @details 예전엔 종료 때만 저장해 실행 중에 죽으면 그 실행의 컴파일이 모두 사라졌다. 크기가 그대로면 새 파이프라인이 없으므로 디스크를 건드리지 않는다.
  */
-SW_TEST_CASE( VulkanPipelineCacheFileTest, PeriodicSaveNeedsIntervalAndGrowth )
+SW_TEST_CASE( RHIPipelineCacheFileTest, PeriodicSaveNeedsIntervalAndGrowth )
 {
     constexpr int64 kInterval = 1000;
-    SW_EXPECT_TRUE( VulkanPipelineCacheFile::isPeriodicSaveDue( 1000, 0, kInterval, 200u, 100u ) );
-    SW_EXPECT_FALSE( VulkanPipelineCacheFile::isPeriodicSaveDue( 999, 0, kInterval, 200u, 100u ) );  // 주기 전
-    SW_EXPECT_FALSE( VulkanPipelineCacheFile::isPeriodicSaveDue( 5000, 0, kInterval, 100u, 100u ) ); // 새 파이프라인 없음
-    SW_EXPECT_FALSE( VulkanPipelineCacheFile::isPeriodicSaveDue( 5000, 0, 0, 200u, 100u ) );         // 주기 없음(설정 누락은 초기화가 막는다)
+    SW_EXPECT_TRUE( RHIPipelineCacheFile::isPeriodicSaveDue( 1000, 0, kInterval, 200u, 100u ) );
+    SW_EXPECT_FALSE( RHIPipelineCacheFile::isPeriodicSaveDue( 999, 0, kInterval, 200u, 100u ) );  // 주기 전
+    SW_EXPECT_FALSE( RHIPipelineCacheFile::isPeriodicSaveDue( 5000, 0, kInterval, 100u, 100u ) ); // 새 파이프라인 없음
+    SW_EXPECT_FALSE( RHIPipelineCacheFile::isPeriodicSaveDue( 5000, 0, 0, 200u, 100u ) );         // 주기 없음(설정 누락은 초기화가 막는다)
 }
 
 /** @brief [RHIAvailabilityTest] 다른 백엔드: 지금 것이 아니고 이 플랫폼에서 되는 것이다. Windows 는 DX12 ↔ DX11, Linux 는 Vulkan ↔ OpenGL 이다 */
