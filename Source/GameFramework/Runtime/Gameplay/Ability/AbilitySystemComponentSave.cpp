@@ -140,6 +140,8 @@ namespace sw
             if ( activeEffect._bInhibited == SW_FALSE )
                 AbilityComponentSaveInternal::subtractTags( listTagCount, activeEffect._grantedTags ); // 다시 걸 때 붙는다
             const AbilityEffectSpec& spec = activeEffect._spec;
+            if ( spec._context._bTransientOwner == SW_TRUE )
+                continue;
             if ( spec._pDef->_id.empty() )
             {
                 // 카탈로그 밖(코드)에서 만든 정의는 다른 실행에서 다시 찾을 길이 없다 — 이펙트는 카탈로그 id 로만 싣는다.

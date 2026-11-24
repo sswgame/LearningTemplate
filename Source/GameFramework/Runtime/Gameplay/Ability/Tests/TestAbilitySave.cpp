@@ -8,6 +8,7 @@
 #include "Engine/Serialization/Format/Archive.h"
 #include "Engine/Serialization/Format/StateIO.h"
 
+#include "GameFramework/Runtime/Foundation/Condition/GameConditions.h"
 #include "GameFramework/Runtime/Gameplay/Ability/AbilityCatalog.h"
 #include "GameFramework/Runtime/Gameplay/Ability/AbilityEffect.h"
 #include "GameFramework/Runtime/Gameplay/Ability/AbilitySystemComponent.h"
@@ -125,6 +126,45 @@ SW_TEST_CASE( AbilitySystemTest, SaveRoundTripKeepsCooldownAndDot )
     SW_EXPECT_NEAR( 70.0f, Rig::base( *rig._pTarget, CombatAttributes::health() ), 1.0e-3f );
     SW_EXPECT_EQUAL( 0, rig._pTarget->getOwnedTagCounts().getCount( cooldownTag ) );
     SW_EXPECT_EQUAL( 0u, rig._pTarget->getActiveEffectCount() );
+}
+
+/** @brief [AbilitySystemTest] 이어지지 않는 일(진행 중 상호작용)이 건 효과는 세이브에 싣지 않고 그 태그도 남지 않는다 — 실으면 불러온 뒤 지울 쪽이 없다 */
+SW_TEST_CASE( AbilitySystemTest, SaveDropsEffectsOfTransientOwners )
+{
+    Rig         rig;
+    const TagID lockTag = "Test.ChannelLock"_tag;
+    rig.addEffect( "GE_ChannelLock", EffectDurationPolicy::Infinite, 0.0f, 0.0f, hashed_string{}, 0.0f, lockTag );
+    AbilityEffectSpec spec = rig._pSource->makeOutgoingSpecByID( hashed_string( "GE_ChannelLock" ) );
+    SW_REQUIRE_TRUE( spec.isValid() );
+    spec._context._bTransientOwner = SW_TRUE;
+    SW_REQUIRE_TRUE( rig._pSource->applyGameplayEffectSpecToSelf( spec ).isValid() );
+    SW_EXPECT_EQUAL( 1, rig._pSource->getOwnedTagCounts().getCount( lockTag ) );
+
+    SW_REQUIRE_TRUE( rig.roundTrip() );
+    SW_EXPECT_EQUAL( 0u, rig._pTarget->getActiveEffectCount() );
+    SW_EXPECT_EQUAL( 0, rig._pTarget->getOwnedTagCounts().getCount( lockTag ) );
+}
+
+/** @brief [AbilitySystemTest] 같은 출처가 걸어 둔 끝없는 이펙트는 `ability.applyEffect` 가 다시 걸지 않는다 — 영역 안에서 저장하고 불러오면 세이브와 진입이 둘 다 온다 */
+SW_TEST_CASE( AbilitySystemTest, ApplyEffectActionHoldsOneInfiniteEffectPerSource )
+{
+    Rig rig;
+    rig.addEffect( "GE_Swamp", EffectDurationPolicy::Infinite, 0.0f, 0.0f, hashed_string{}, 0.0f, "Test.Swamp"_tag );
+    GameActionCall call;
+    SW_REQUIRE_TRUE( GameActionCall::compileText( "ability.applyEffect(effect=GE_Swamp)", "test", call ) );
+    const auto applyFrom = [&call, &rig]( const utf8* pSourceName )
+    {
+        const ActionSource source{ hashed_string( pSourceName ), GameObjectHandle{} };
+        ActionContext      context;
+        context._world.set<ActionTargetSlot>( rig._pTarget->getOwner() );
+        context._world.set<ActionSourceSlot>( &source );
+        (void)call.invoke( context );
+    };
+    applyFrom( "volume:Swamp" );
+    applyFrom( "volume:Swamp" ); // 불러온 뒤의 진입
+    SW_EXPECT_EQUAL( 1u, rig._pTarget->getActiveEffectCount() );
+    applyFrom( "volume:Bog" ); // 다른 영역의 것은 따로다
+    SW_EXPECT_EQUAL( 2u, rig._pTarget->getActiveEffectCount() );
 }
 
 SW_TEST_CASE( AbilitySystemTest, SaveRejectsTruncatedOrUnknownStateWithoutChanges )

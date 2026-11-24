@@ -214,6 +214,17 @@ namespace sw
         return true;
     }
 
+    bool AbilitySystemComponent::hasActiveEffectFromSource( const hashed_string& effectID, const hashed_string& sourceName ) const
+    {
+        for ( const unique_ptr<ActiveGameplayEffect>& pActiveEffect : _activeEffects )
+        {
+            const bool bSame = pActiveEffect->_bPendingRemove == SW_FALSE && pActiveEffect->_spec._context._sourceName == sourceName && pActiveEffect->_spec._pDef->_id == effectID;
+            if ( bSame )
+                return true;
+        }
+        return false;
+    }
+
     int32 AbilitySystemComponent::removeActiveEffectsFromSource( const hashed_string& sourceName )
     {
         if ( sourceName.size() == 0 )

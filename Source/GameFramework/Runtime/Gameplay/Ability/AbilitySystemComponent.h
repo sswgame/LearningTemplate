@@ -309,6 +309,8 @@ namespace sw
         int32 removeActiveEffectsWithTags( const TagContainer& tags );
         /** @brief 정의 id 가 @p effectID 인 활성 이펙트(지우는 중이 아닌 첫 것)의 핸들입니다. 없으면 무효입니다 — 스택 이펙트(가라앉음)는 대상에 하나라 이것으로 짚는다. */
         ActiveEffectHandle findActiveEffectByID( const hashed_string& effectID ) const;
+        /** @brief @p sourceName 이 건 @p effectID 이펙트가 걸려 있으면 true 입니다. */
+        bool hasActiveEffectFromSource( const hashed_string& effectID, const hashed_string& sourceName ) const;
         /** @brief 적용된 이펙트를 찾습니다. 즉시 이펙트나 이미 해제된 이펙트는 nullptr 입니다. */
         const ActiveGameplayEffect* findActiveEffect( ActiveEffectHandle handle ) const;
         /** @brief 이펙트가 아직 걸려 있으면 true 입니다. */
