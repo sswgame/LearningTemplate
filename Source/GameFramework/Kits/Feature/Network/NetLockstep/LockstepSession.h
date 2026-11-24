@@ -48,6 +48,8 @@ namespace sw
         int32 _inputDelay{ 2 }; ///< 내 입력을 이만큼 뒤 틱에 예약한다(0 ~ `LockstepSession::kMaxInputDelay`). 그동안 입력이 망을 건넌다
         PROPERTY()
         uint32 _matchID{ 0 }; ///< 판 번호. 방 · 매치가 정해 모두에게 같은 값을 준다 — 같은 연결에서 다음 판을 열면 다른 값이어야 지난 판의 늦은 입력이 새 판의 틱에 닿지 않는다
+        PROPERTY()
+        bool _bMatchFollowsWorld{ false }; ///< 판 번호가 서버 월드의 세대다(`NetMessageRouter::getWorldGeneration`) — 먼저 열려 옛 세대를 든 클라이언트가 새 세대를 받아 갈아 끼운다
     };
 } // namespace sw
 
@@ -105,6 +107,12 @@ namespace sw
         /** @brief 서버가 클라이언트 연결이 닫혔을 때 호출합니다. 그 플레이어의 이탈 틱을 정해 모두에게 알립니다. */
         void onConnectionClosed( int32 connectionID, NetDisconnectReason reason ) override;
 
+        /**
+         * @brief 서버가 새 월드를 열었습니다 — 판 번호가 월드 세대인 세션이 아직 남의 입력을 하나도 받지 않았으면 그 세대의 판이 되고 낸 입력을 다시 보냅니다.
+         * @details 클라이언트가 서버보다 먼저 판을 열면 옛 세대를 든다. 남의 입력을 받은 세션은 지난 판이므로 그대로 둔다(새 판의 입력을 버린다).
+         */
+        void onWorldOpened( uint32 generation ) override;
+
         /** @brief `initialize` 가 성공했는가입니다. 거절된 세션은 입력을 예약하지 않고 틱을 넘기지 않습니다. */
         bool   isStarted() const { return _playerCount > 0; }
         uint32 getCurrentTick() const { return _currentTick; }
@@ -129,7 +137,11 @@ namespace sw
         };
 
         [[nodiscard]] bool storeInput( int32 player, uint32 tick, const vector<uint8>& listInput );
-        void               storeChecksum( int32 player, uint32 tick, uint32 checksum );
+        /** @brief 남의 입력을 하나도 받지 않았으면 true 입니다(처음 지연 틱의 빈 입력만 있다). */
+        bool isWaitingForFirstInput() const;
+        /** @brief 아직 진행하지 않은 틱에 든 @p player 의 입력을 틱 순서로 @p connectionID 에(-1 이면 상대 모두에게) 다시 보냅니다. */
+        void resendInputs( int32 player, int32 connectionID );
+        void storeChecksum( int32 player, uint32 tick, uint32 checksum );
         /** @brief 그 틱에 보고해야 할 플레이어가 모두 보고했으면 체크섬을 비교하고 지웁니다. 지웠으면 true 를 반환합니다. */
         bool evaluateChecksum( uint32 tick, const vector<int64>& listChecksum );
         void applyLeave( int32 player, uint32 tick );
@@ -149,7 +161,9 @@ namespace sw
         int32                         _stallCount;
         uint32                        _currentTick;
         uint32                        _desyncTick;
-        uint8                         _bDesynced;
+        uint8                         _bDesynced          : 1;
+        uint8                         _bMatchFollowsWorld : 1; ///< 판 번호가 서버 월드의 세대다
+        [[maybe_unused]] uint8        _reserved           : 6;
         NetMessageWriter              _messageWriter; ///< 보낼 메시지. 버퍼를 재사용한다
     };
 } // namespace sw

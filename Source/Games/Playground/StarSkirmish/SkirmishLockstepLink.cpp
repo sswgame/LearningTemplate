@@ -47,7 +47,11 @@ namespace sw
             SW_LOG_ERROR_ID( "SkirmishLockstep.HandlerTaken", "[Skirmish] the lockstep message range is taken by another handler - the network match cannot start" );
             return false;
         }
-        if ( _session.initialize( &pNetSession->getPeers(), kPlayerCount, localPlayer, LockstepConfig{} ) == false )
+        // 판 번호는 서버 월드의 세대다 — 판마다 씬을 다시 열므로 두 쪽이 함께 아는 값이고, 같은 연결의 재대결에서 지난 판의 늦은 입력이 거절된다.
+        LockstepConfig config;
+        config._matchID            = pNetSession->getRouter().getWorldGeneration();
+        config._bMatchFollowsWorld = true;
+        if ( _session.initialize( &pNetSession->getPeers(), kPlayerCount, localPlayer, config ) == false )
         {
             _handlerSubscription.reset();
             return false; // 까닭은 세션이 남겼다

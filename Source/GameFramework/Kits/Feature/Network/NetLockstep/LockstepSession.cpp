@@ -26,6 +26,8 @@ namespace sw
         , _currentTick{ 0 }
         , _desyncTick{ 0 }
         , _bDesynced{ SW_FALSE }
+        , _bMatchFollowsWorld{ SW_FALSE }
+        , _reserved{ 0 }
         , _messageWriter{}
     {
     }
@@ -46,11 +48,12 @@ namespace sw
                              rangeError.empty() ? "within range" : rangeError.c_str() );
             return false;
         }
-        _pHost       = pHost;
-        _playerCount = playerCount;
-        _localPlayer = localPlayer;
-        _inputDelay  = settings._inputDelay;
-        _matchID     = settings._matchID;
+        _pHost              = pHost;
+        _playerCount        = playerCount;
+        _localPlayer        = localPlayer;
+        _inputDelay         = settings._inputDelay;
+        _matchID            = settings._matchID;
+        _bMatchFollowsWorld = settings._bMatchFollowsWorld ? SW_TRUE : SW_FALSE;
         _listTickInput.initialize( static_cast<int32>( kInputWindow ) );
         _listTickChecksum.initialize( static_cast<int32>( 2 * kChecksumWindow ) );
         _listNextInputTick.assign( static_cast<size_t>( _playerCount ), 0u );
@@ -100,6 +103,48 @@ namespace sw
         pTickInput->_listHas[static_cast<size_t>( player )]   = SW_TRUE;
         ++_listNextInputTick[static_cast<size_t>( player )];
         return true;
+    }
+
+    bool LockstepSession::isWaitingForFirstInput() const
+    {
+        for ( int32 player = 0; player < _playerCount; ++player )
+        {
+            if ( player != _localPlayer && _listNextInputTick[static_cast<size_t>( player )] != static_cast<uint32>( _inputDelay ) )
+                return false;
+        }
+        return true;
+    }
+
+    void LockstepSession::resendInputs( int32 player, int32 connectionID )
+    {
+        if ( _pHost == nullptr )
+            return;
+        for ( uint32 tick = static_cast<uint32>( _inputDelay ); tick < _listNextInputTick[static_cast<size_t>( player )]; ++tick )
+        {
+            const TickInput* pTickInput = _listTickInput.find( tick );
+            if ( pTickInput == nullptr || pTickInput->_listHas[static_cast<size_t>( player )] == SW_FALSE )
+                continue; // 이미 진행한 틱이다
+            LockstepInputBody body;
+            body._matchID = _matchID;
+            body._player  = player;
+            body._tick    = tick;
+            body._input   = pTickInput->_listInput[static_cast<size_t>( player )];
+            if ( _messageWriter.writeMessage<NetLockstepMessage::Table, NetLockstepMessage::Input>( body ) == false )
+                continue; // 받을 때 길이를 봤다 — 여기서 넘치지 않는다
+            if ( connectionID == constant::invalid_index::kInt32 )
+                (void)_messageWriter.sendMessageToPeers( *_pHost );
+            else
+                (void)_messageWriter.sendMessage( *_pHost, connectionID ); // 닫히는 중이면 보낼 곳이 없다
+        }
+    }
+
+    void LockstepSession::onWorldOpened( uint32 generation )
+    {
+        const bool bChangeMatch = isStarted() && _bMatchFollowsWorld != SW_FALSE && generation != _matchID && isWaitingForFirstInput();
+        if ( bChangeMatch == false )
+            return;
+        _matchID = generation;
+        resendInputs( _localPlayer, constant::invalid_index::kInt32 ); // 옛 번호로 낸 것은 서버가 버렸다
     }
 
     bool LockstepSession::submitLocalInput( const vector<uint8>& listInput )
@@ -260,8 +305,18 @@ namespace sw
         const bool bServer = _pHost != nullptr && _pHost->isServer();
         if ( body._matchID != _matchID || ( bServer && player != context._connectionID + 1 ) )
             return NetHandleResult::Handled; // 지난 판의 늦은 입력이거나 남의 번호다
-        if ( storeInput( player, tick, body._input ) && _pHost != nullptr )
-            (void)NetMessageRouter::relayToOtherPeers( *_pHost, context ); // 받아들인 입력만 전달한다. 버린 입력이 다른 클라이언트의 순서를 어지럽히지 않게 하려는 것이다
+        if ( storeInput( player, tick, body._input ) == false || _pHost == nullptr )
+            return NetHandleResult::Handled;
+        // 그 플레이어의 첫 입력이다 — 이제 이 판을 열었다. 앞서 낸 입력은 그쪽이 씬을 읽는 동안(처리기 없음) · 지난 판일 때 버려졌으므로 다시 보낸다(겹친 것은 받는 쪽이 버린다).
+        if ( tick == static_cast<uint32>( _inputDelay ) )
+        {
+            for ( int32 stored = 0; stored < _playerCount; ++stored )
+            {
+                if ( stored == _localPlayer || ( bServer && stored != player ) )
+                    resendInputs( stored, context._connectionID );
+            }
+        }
+        (void)NetMessageRouter::relayToOtherPeers( *_pHost, context ); // 받아들인 입력만 전달한다. 버린 입력이 다른 클라이언트의 순서를 어지럽히지 않게 하려는 것이다
         return NetHandleResult::Handled;
     }
 

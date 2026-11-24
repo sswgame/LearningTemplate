@@ -384,6 +384,73 @@ SW_TEST_CASE( NetLockstepTest, LateMessagesOfThePreviousMatchAreIgnored )
 }
 
 /**
+ * @brief [NetLockstepTest] 같은 연결의 재대결 — 먼저 연 클라이언트가 옛 세대를 들었다가 서버가 새 월드를 열면 갈아 끼우고, 서로 씬을 읽는 동안 버려진 입력을 첫 입력에 다시 받는다
+ */
+SW_TEST_CASE( NetLockstepTest, RematchFollowsTheServerWorldAndResendsLostInputs )
+{
+    test::LoopbackCluster cluster( 33u );
+    NetLockstepTestInternal::connectLockstepCluster( cluster, 1, NetEmulationConditions{} );
+    SW_REQUIRE_TRUE( cluster.areClientsConnected() );
+    NetMessageRouter serverRouter;
+    NetMessageRouter clientRouter;
+    LockstepConfig   settings;
+    settings._bMatchFollowsWorld = true;
+    const auto pollAll           = [&]()
+    {
+        for ( int32 step = 0; step < 12; ++step )
+        {
+            cluster.step();
+            (void)serverRouter.poll( cluster.getServer() );
+            (void)clientRouter.poll( cluster.getClient( 0 ) );
+        }
+    };
+    serverRouter.openWorld( cluster.getServer() );
+    pollAll();
+    SW_REQUIRE_EQUAL( 1u, clientRouter.getWorldGeneration() );
+
+    // 클라이언트가 먼저 다음 판을 연다 — 아직 세대 1 이다. 서버는 처리기가 없어 그 입력을 버린다.
+    LockstepSession client;
+    settings._matchID = clientRouter.getWorldGeneration();
+    SW_REQUIRE_TRUE( client.initialize( &cluster.getClient( 0 ), 2, 1, settings ) );
+    const Subscription clientSubscription = clientRouter.registerHandler( &client );
+    SW_REQUIRE_TRUE( client.submitLocalInput( vector<uint8>{ 0x11 } ) );
+    pollAll();
+
+    // 서버가 새 월드를 열고 바로 입력을 낸다.
+    serverRouter.openWorld( cluster.getServer() );
+    LockstepSession server;
+    settings._matchID = serverRouter.getWorldGeneration();
+    SW_REQUIRE_TRUE( server.initialize( &cluster.getServer(), 2, 0, settings ) );
+    const Subscription serverSubscription = serverRouter.registerHandler( &server );
+    SW_REQUIRE_TRUE( server.submitLocalInput( vector<uint8>{ 0x22 } ) );
+    pollAll();
+
+    vector<vector<uint8>> listServerInput;
+    vector<vector<uint8>> listClientInput;
+    for ( int32 tick = 0; tick <= settings._inputDelay; ++tick )
+    {
+        SW_REQUIRE_TRUE( server.tryAdvance( listServerInput ) );
+        SW_REQUIRE_TRUE( client.tryAdvance( listClientInput ) );
+    }
+    SW_EXPECT_TRUE( listServerInput[1] == vector<uint8>{ 0x11 } );
+    SW_EXPECT_TRUE( listServerInput == listClientInput );
+
+    // 진행한 판은 서버가 또 새 월드를 열어도 지난 판이다 — 새 판의 입력을 받지 않는다.
+    const uint32 tickBefore = client.getCurrentTick();
+    serverRouter.openWorld( cluster.getServer() );
+    settings._matchID = serverRouter.getWorldGeneration();
+    SW_REQUIRE_TRUE( server.initialize( &cluster.getServer(), 2, 0, settings ) );
+    for ( uint32 tick = 0; tick <= tickBefore; ++tick )
+    {
+        SW_REQUIRE_TRUE( server.submitLocalInput( vector<uint8>{ 0x33 } ) );
+    }
+    SW_REQUIRE_TRUE( client.submitLocalInput( vector<uint8>{ 0x44 } ) );
+    pollAll();
+    SW_EXPECT_FALSE( client.tryAdvance( listClientInput ) );
+    SW_EXPECT_EQUAL( tickBefore, client.getCurrentTick() );
+}
+
+/**
  * @brief [NetLockstepTest] 범위 밖 롤백 설정은 조용히 범위 안으로 맞추지 않고 오류로 거절하며, 거절된 세션은 진행하지 않는다
  * @details 예전에는 지연 20 을 8 로, 예측 0 을 1 로 바꿔 돌았다. 내 번호가 범위 밖이어도 받았다.
  */
