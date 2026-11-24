@@ -190,6 +190,19 @@ namespace sw
         SW_LOG_INFO_ID( "SceneManager.ShutDown", "Shut down." );
     }
 
+    void SceneManager::collectScenes( vector<Scene*>& outListScene ) const
+    {
+        outListScene.clear();
+        outListScene.reserve( _listLoadedScene.size() + _listPreviewScene.size() );
+        for ( const unique_ptr<Scene>& scene : _listLoadedScene )
+        {
+            if ( scene != nullptr )
+                outListScene.push_back( scene.get() );
+        }
+        for ( const PreviewSceneEntry& preview : _listPreviewScene )
+            outListScene.push_back( preview._scene.get() );
+    }
+
     Scene* SceneManager::createScene( string_view name )
     {
         const ScopedMemoryTag memoryScope{ kSubsystemMemoryTag };

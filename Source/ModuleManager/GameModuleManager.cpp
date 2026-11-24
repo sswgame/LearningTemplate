@@ -206,10 +206,12 @@ namespace sw
     {
         if ( engine::areEngineServicesBound() == false )
             return;
-        for ( const unique_ptr<Scene>& scene : engine::getSubsystem<SceneManager>().getLoadedScenes() )
+        vector<Scene*> listScene;
+        engine::getSubsystem<SceneManager>().collectScenes( listScene );
+        for ( Scene* const pScene : listScene )
         {
-            if ( scene != nullptr )
-                scene->getObjectManager()->markTickStagesDirty(); // 기본값은 다시 저장하지 않는다(ModuleTypeRegistry 의 같은 위치 참고).
+            if ( pScene->getObjectManager() != nullptr )
+                pScene->getObjectManager()->markTickStagesDirty(); // 기본값은 다시 저장하지 않는다(ModuleTypeRegistry 의 같은 위치 참고).
         }
     }
 

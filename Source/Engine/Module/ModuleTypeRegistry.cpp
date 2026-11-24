@@ -237,14 +237,16 @@ namespace sw
 
             if ( sceneSync == SceneSync::None )
                 return;
-            for ( const auto& scene : getSubsystem<SceneManager>().getLoadedScenes() )
+            vector<Scene*> listScene;
+            getSubsystem<SceneManager>().collectScenes( listScene );
+            for ( Scene* const pScene : listScene )
             {
-                if ( scene && scene->getObjectManager() )
+                if ( pScene->getObjectManager() != nullptr )
                 {
                     // 살아 있는 컴포넌트에 기본값을 다시 찍지 않는다 — 기본값은 만들 때 한 번이다(`ComponentDefaults`). 여기서 덮어쓰면
                     // 게임이 바꾼 값이 모듈 로드마다 기본값으로 돌아간다.
                     // 다시 등록된 타입은 새 TypeInfo 지만 포인터를 든 쪽은 세대(`TypeLookupCache`)로 다시 찾는다 — 다시 묶을 것은 없고 틱 항목만 다시 짓게 한다.
-                    scene->getObjectManager()->markTickStagesDirty();
+                    pScene->getObjectManager()->markTickStagesDirty();
                 }
             }
         }
@@ -274,12 +276,15 @@ namespace sw
             getSubsystem<SceneManager>().waitForPendingLoad(); // 해제도 상속 캐시를 비운다(등록과 같은 이유)
             // 씬은 엔진이 소유해 모듈보다 오래 산다. 이 모듈 타입의 인스턴스가 남아 있으면 vtable 이 사라진 객체가 된다.
             // 타입(생성 함수 포함)을 걷기 **전에** 인스턴스부터 지운다(소멸자가 아직 있는 동안).
-            for ( const auto& scene : getSubsystem<SceneManager>().getLoadedScenes() )
+            // 미리보기 씬(열린 프리팹 · 캐릭터 창)도 같다 — 창은 자기 상태를 위 알림에서 맡아 두고 새 이미지로 되돌린다(`EditorPreviewPanel`).
+            vector<Scene*> listScene;
+            getSubsystem<SceneManager>().collectScenes( listScene );
+            for ( Scene* const pScene : listScene )
             {
-                if ( scene == nullptr || scene->getObjectManager() == nullptr )
+                if ( pScene->getObjectManager() == nullptr )
                     continue;
                 // 남의 모듈 타입 객체를 든 컴포넌트(어빌리티 · 세트)는 위 알림(`publishModuleUnloading`)에서 이미 놓았다 — 이제 그 모듈 타입의 컴포넌트를 지운다.
-                scene->getObjectManager()->destroyComponentsOfModule( moduleName );
+                pScene->getObjectManager()->destroyComponentsOfModule( moduleName );
             }
             // 모듈 서브시스템은 그것을 빌려 쓰는 인스턴스(컴포넌트 · 등록 줄)가 모두 놓은 뒤, 타입과 코드가 아직 있을 때 걷는다.
             getRegistrationHost().unmountModule( moduleName );

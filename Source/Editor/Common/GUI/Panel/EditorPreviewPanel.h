@@ -4,6 +4,7 @@
  */
 #pragma once
 #include "Core/Container/vector.h"
+#include "Core/Delegate/Subscription.h"
 
 #include "Editor/Common/EditorExports.h"
 #include "Editor/Common/GUI/Panel/EditorDocumentPanel.h"
@@ -14,6 +15,7 @@
 namespace sw
 {
     struct ObjectSnapshot;
+    struct ScenePlaySnapshot;
 
     class CommandStack;
     class GameObject;
@@ -124,6 +126,8 @@ namespace sw::editor
 
         /** @brief 미리보기 재생이 멈췄으면 true 입니다(재생 막대의 멈춤). 시간을 스스로 정하는 창이 따라 멈출 때 읽습니다. */
         bool isPreviewPaused() const { return _bPreviewPaused; }
+        /** @brief 모듈 리로드로 맡아 둔 미리보기 상태가 남아 있으면 저장 앞에 되돌립니다 — 컴포넌트가 빠진 씬을 저장하지 않는다. */
+        void prepareDocumentForSave() override;
 
     private:
         /**
@@ -157,18 +161,27 @@ namespace sw::editor
         void onPanelClosed() override { releasePreview(); }
         /** @brief 초점과 선택 바인딩을 풀고 창 스택을 비운 뒤 씬과 렌더 타깃을 놓습니다. 닫기와 종료가 같이 쓰며 여러 번 불러도 됩니다. */
         void releasePreview();
+        /**
+         * @brief 모듈을 내리기 전에(`TypeRegistry::subscribeModuleUnloading`) 그 모듈의 컴포넌트를 가진 미리보기 오브젝트의 상태를 맡아 둡니다.
+         * @details 엔진이 그 컴포넌트를 지운다(코드가 사라진다). 메인 씬은 게임 상태 봉투가 되돌리지만 미리보기 씬은 창의 것이다 — 되돌리지 않으면 열린 프리팹의 다음 저장이 그 컴포넌트를 잃는다.
+         */
+        void onModuleUnloading( string_view moduleName );
+        /** @brief 맡아 둔 상태를 같은 오브젝트(같은 id)에 되돌립니다. 새 이미지가 오른 뒤의 첫 그리기나 저장이 부른다. 맡은 것이 없으면 아무것도 하지 않습니다. */
+        void restoreModuleState();
 
     private:
-        EditorPreviewViewport       _viewport;
-        unique_ptr<EditorSelection> _pSelection;
-        uint8                       _bFocusApplied  : 1; ///< 이 창이 초점 씬을 등록해 두었다
-        uint8                       _bPreviewPaused : 1; ///< 재생 막대의 멈춤
-        uint8                       _bFloorShown    : 1; ///< 바닥을 보인다
-        uint8                       _bAxesShown     : 1; ///< 축 방향 표시를 그린다
-        uint8                       _bFloorChanged  : 1; ///< 막대가 바닥 보임을 바꿨다 — `applyPreviewBar` 가 씬에 걸고 지운다
-        size_t                      _seenCommandCount;   ///< 지난 그리기의 창 Undo 스택 길이. 달라지면 문서를 고친 것이다
-        float2                      _previewBarSize;     ///< 앞 프레임 재생 막대 크기
-        uint32                      _speedIndex;         ///< 재생 속도 칸(`kArrPreviewSpeed` 의 번호)
-        uint32                      _stepFramesLeft;     ///< 멈춘 채 한 프레임 나아가기 — 남은 프레임만큼 속도로 돈다
+        EditorPreviewViewport         _viewport;
+        unique_ptr<EditorSelection>   _pSelection;
+        unique_ptr<ScenePlaySnapshot> _pModuleState;                ///< 모듈 리로드 동안 맡은 오브젝트 상태(`onModuleUnloading`). 없으면 nullptr
+        Subscription                  _moduleUnloadingSubscription; ///< 미리보기 씬이 있는 동안
+        uint8                         _bFocusApplied  : 1;          ///< 이 창이 초점 씬을 등록해 두었다
+        uint8                         _bPreviewPaused : 1;          ///< 재생 막대의 멈춤
+        uint8                         _bFloorShown    : 1;          ///< 바닥을 보인다
+        uint8                         _bAxesShown     : 1;          ///< 축 방향 표시를 그린다
+        uint8                         _bFloorChanged  : 1;          ///< 막대가 바닥 보임을 바꿨다 — `applyPreviewBar` 가 씬에 걸고 지운다
+        size_t                        _seenCommandCount;            ///< 지난 그리기의 창 Undo 스택 길이. 달라지면 문서를 고친 것이다
+        float2                        _previewBarSize;              ///< 앞 프레임 재생 막대 크기
+        uint32                        _speedIndex;                  ///< 재생 속도 칸(`kArrPreviewSpeed` 의 번호)
+        uint32                        _stepFramesLeft;              ///< 멈춘 채 한 프레임 나아가기 — 남은 프레임만큼 속도로 돈다
     };
 } // namespace sw::editor

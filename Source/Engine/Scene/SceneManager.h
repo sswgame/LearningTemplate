@@ -268,6 +268,11 @@ namespace sw
         /** @brief 로드된 씬을 모두 반환합니다. */
         const vector<unique_ptr<Scene>>& getLoadedScenes() const { return _listLoadedScene; }
         /**
+         * @brief 이 매니저가 가진 씬을 모두(로드된 씬, 미리보기 씬 차례) @p outListScene 에 담습니다.
+         * @details 모듈 경계(언로드 전에 그 모듈의 컴포넌트를 지우기 · 틱 단계 다시 짓기)는 모든 씬이 대상이다 — 미리보기 씬을 빠뜨리면 열린 편집기가 사라진 코드의 컴포넌트를 틱한다.
+         */
+        void collectScenes( vector<Scene*>& outListScene ) const;
+        /**
          * @brief 올라와 있는 모든 씬(로드된 씬 + 미리보기 씬)을 @p outListScene 에 모읍니다(비우고 채운다).
          * @details "어느 씬을 훑을 것인가" 를 한 곳에서 정한다 — 씬 사이 참조 검사(`SceneObjectReference::findReferenceTo`)처럼 전 씬을 훑는 쪽이 이것을 쓴다.
          */
