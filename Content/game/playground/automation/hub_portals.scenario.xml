@@ -149,6 +149,20 @@
 	<WaitUntil watch="Minigame.RestoreCount" differsFrom="restoredBefore_battleroyale" timeoutWallSeconds="60"/>
 	<ExpectActiveScene path="game/playground/maps/hub.scene.xml"/>
 
+
+	<!-- mecharena — 자리 13. 돌아온 수는 들어가기 전 값과 견준다(입구를 더하거나 빼도 이 묶음은 그대로다) -->
+	<WaitUntil watch="Assets.Pending" equals="0" timeoutWallSeconds="60"/>
+	<Expect watch="Object.X" target="MinigamePortal_mecharena" near="11" tolerance="0.01"/>
+	<Expect watch="Object.Z" target="MinigamePortal_mecharena" near="39" tolerance="0.01"/>
+	<Store watch="Minigame.RestoreCount" as="restoredBefore_mecharena"/>
+	<DevCommand line="teleport Player 11 0.05 39"/>
+	<WaitUntil watch="Minigame.Active" is="mecharena" timeoutWallSeconds="60"/>
+	<ExpectActiveScene path="game/playground/mecharena/maps/colony.scene.xml"/>
+	<WaitUntil watch="Assets.Pending" equals="0" timeoutWallSeconds="60"/>
+	<DevCommand line="minigame.leave"/>
+	<WaitUntil watch="Minigame.RestoreCount" differsFrom="restoredBefore_mecharena" timeoutWallSeconds="60"/>
+	<ExpectActiveScene path="game/playground/maps/hub.scene.xml"/>
+
 	<Expect watch="Minigame.Active" is="none"/>
 	<Expect watch="Minigame.LeakCount" equals="0"/>
 	<Pass/>

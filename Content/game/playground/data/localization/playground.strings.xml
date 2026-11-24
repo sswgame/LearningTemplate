@@ -11,6 +11,16 @@
 				<item>game/playground/data/cinematic.seq.xml</item>
 			</origins>
 		</entry>
+		<entry key="Allied strength" source="Allied strength" context="TextWidget._text">
+			<origins>
+				<item>game/playground/mecharena/ui/hud.ui.xml</item>
+			</origins>
+		</entry>
+		<entry key="Allied strength broken - you lose" source="Allied strength broken - you lose" context="TextWidget._text">
+			<origins>
+				<item>game/playground/mecharena/ui/hud.ui.xml</item>
+			</origins>
+		</entry>
 		<entry key="ArrivalCutA" source="ArrivalCutA" context="SequenceBinding._name">
 			<origins>
 				<item>game/playground/wildwest/data/arrival.seq.xml</item>
@@ -36,6 +46,11 @@
 				<item>common/data/items.xml</item>
 			</origins>
 		</entry>
+		<entry key="Boost overheated" source="Boost overheated" context="TextWidget._text">
+			<origins>
+				<item>game/playground/mecharena/ui/hud.ui.xml</item>
+			</origins>
+		</entry>
 		<entry key="CutA" source="CutA" context="SequenceBinding._name">
 			<origins>
 				<item>game/playground/data/cinematic.seq.xml</item>
@@ -54,6 +69,16 @@
 		<entry key="Elder" source="Elder" context="Dialogue speaker name">
 			<origins>
 				<item>game/playground/pixeltown/dialogue/elder.dialogue.xml</item>
+			</origins>
+		</entry>
+		<entry key="Enemy strength" source="Enemy strength" context="TextWidget._text">
+			<origins>
+				<item>game/playground/mecharena/ui/hud.ui.xml</item>
+			</origins>
+		</entry>
+		<entry key="Enemy strength broken - you win" source="Enemy strength broken - you win" context="TextWidget._text">
+			<origins>
+				<item>game/playground/mecharena/ui/hud.ui.xml</item>
 			</origins>
 		</entry>
 		<entry key="GateCut" source="GateCut" context="SequenceBinding._name">
@@ -109,6 +134,11 @@
 		<entry key="Longbow" source="Longbow" context="Item name">
 			<origins>
 				<item>common/data/items.xml</item>
+			</origins>
+		</entry>
+		<entry key="Mech destroyed - special picks the next mech" source="Mech destroyed - special picks the next mech" context="TextWidget._text">
+			<origins>
+				<item>game/playground/mecharena/ui/hud.ui.xml</item>
 			</origins>
 		</entry>
 		<entry key="Mind the pond - nobody swims in it." source="Mind the pond - nobody swims in it." context="Dialogue line">

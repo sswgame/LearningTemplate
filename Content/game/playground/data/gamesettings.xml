@@ -58,6 +58,8 @@
   <!-- 사격장 미니게임(minigames/shooter3d)의 사격 · 재장전 · 무기 고르기 · 시점 — 꺼진 레이어 Shooter(미니게임이 켠다). 시점 확대 · 궤도는 공통. -->
   <inputMap path="common/input/cameraorbit.input.xml"/>
   <inputMap path="game/playground/shooter3d/data/shooter.input.xml"/>
+  <!-- 기체 대전 미니게임(minigames/mecharena)의 입력 — 꺼진 레이어(미니게임이 켠다). 걷기는 공통. -->
+  <inputMap path="game/playground/mecharena/data/mecharena.input.xml"/>
   <!-- 배틀로얄 미니게임(minigames/battleroyale)의 입력 — 꺼진 레이어(미니게임이 켠다). 걷기는 공통. -->
   <inputMap path="game/playground/battleroyale/data/battleroyale.input.xml"/>
   <!-- 격투 미니게임(minigames/fighting)의 입력 — 꺼진 레이어(미니게임이 켠다). 걷기는 공통. -->

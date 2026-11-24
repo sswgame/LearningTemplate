@@ -20,6 +20,18 @@ msgctxt "Actor"
 msgid "Actor"
 msgstr "배우"
 
+#. Context: TextWidget._text
+#: game/playground/mecharena/ui/hud.ui.xml
+msgctxt "Allied strength"
+msgid "Allied strength"
+msgstr "아군 전력"
+
+#. Context: TextWidget._text
+#: game/playground/mecharena/ui/hud.ui.xml
+msgctxt "Allied strength broken - you lose"
+msgid "Allied strength broken - you lose"
+msgstr "아군 전력이 바닥났습니다 - 패배"
+
 #. Context: Weapon name
 #: common/data/items.xml
 msgctxt "Assault Rifle"
@@ -38,6 +50,12 @@ msgctxt "Bone Shield"
 msgid "Bone Shield"
 msgstr "뼈 방패"
 
+#. Context: TextWidget._text
+#: game/playground/mecharena/ui/hud.ui.xml
+msgctxt "Boost overheated"
+msgid "Boost overheated"
+msgstr "부스트 과열"
+
 #. Context: SequenceBinding._name
 #: game/playground/data/cinematic.seq.xml
 msgctxt "CutA"
@@ -55,6 +73,18 @@ msgstr "컷 B"
 msgctxt "Double K.O. - the bout is a draw"
 msgid "Double K.O. - the bout is a draw"
 msgstr "더블 K.O. 시합이 무승부입니다"
+
+#. Context: TextWidget._text
+#: game/playground/mecharena/ui/hud.ui.xml
+msgctxt "Enemy strength"
+msgid "Enemy strength"
+msgstr "적군 전력"
+
+#. Context: TextWidget._text
+#: game/playground/mecharena/ui/hud.ui.xml
+msgctxt "Enemy strength broken - you win"
+msgid "Enemy strength broken - you win"
+msgstr "적군 전력이 바닥났습니다 - 승리"
 
 #. Context: SequenceBinding._name
 #: game/playground/data/cutscenegate.seq.xml
@@ -121,6 +151,12 @@ msgstr "마지막 분대 - 승리했습니다"
 msgctxt "Longbow"
 msgid "Longbow"
 msgstr "장궁"
+
+#. Context: TextWidget._text
+#: game/playground/mecharena/ui/hud.ui.xml
+msgctxt "Mech destroyed - special picks the next mech"
+msgid "Mech destroyed - special picks the next mech"
+msgstr "기체 격추 - 특수기로 다음 기체를 고릅니다"
 
 #. Context: Item name
 #: common/data/items.xml

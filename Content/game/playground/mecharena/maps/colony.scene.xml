@@ -1,0 +1,126 @@
+<?asset guid="af80aec1d890484aadbdd6a1855e3957"?>
+<Scene formatVersion="3" name="MechArenaColony">
+	<!-- 기체 대전 미니게임 판(minigames/mecharena) — 판 중심이 원점, 반 너비 30 m(_rules _arenaHalfSize). 벽은 모습뿐이고 판이 자리를 자른다. 기체는 MechArenaViewComponent 가 옮긴다. -->
+	<SceneSettings _bStreaming="false" _unloadMargin="0" _maxCellLoadsPerFrame="0" _addToWorldBudgetMicroseconds="0">
+		<_cellGrid _cellSize="0" _loadingRadius="0" />
+	</SceneSettings>
+	<entities>
+		<entity id="1" name="Camera">
+			<GameObject _schemaVersion="0" _name="Camera" _bActive="true">
+				<_listComponent>
+					<CameraComponent _localID="17709685451340727998" _localPosition="0,14,-32" _localRotation="0.6,0,0" _localScale="1,1,1" _attachOwner="None" _attachComponent="None" _fovY="40.107045" _nearZ="0.1" _farZ="300" _orthoHeight="10" _priority="0" _role="Game" _bOrthographic="false" />
+					<FollowCameraComponent _localID="15357652970512560881" _gameMode="10" _offset="0,14,-16" _minFarPlane="300" />
+				</_listComponent>
+			</GameObject>
+		</entity>
+		<entity id="2" name="Sun">
+			<GameObject _schemaVersion="0" _name="Sun" _bActive="true">
+				<_listComponent>
+					<DirectionalLightComponent _localID="51927904365891271" _localPosition="0,0,0" _localRotation="0.9,-2.1,0" _localScale="1,1,1" _attachOwner="None" _attachComponent="None" _color="1,0.95,0.85" _intensity="1.4" _ambient="0.35" _shadowExtent="24" _shadowDistance="60" _bCastShadow="true" />
+				</_listComponent>
+			</GameObject>
+		</entity>
+		<entity id="3" name="Floor">
+			<GameObject _schemaVersion="0" _name="Floor" _bActive="true">
+				<_listComponent>
+					<MeshComponent _localID="163493842152903304" _localPosition="0,-0.1,0" _localRotation="0,0,0" _localScale="60,0.2,60" _attachOwner="None" _attachComponent="None" _meshID="Cube" _materialPath="engine/materials/prototypegrid_dark.material" _boundsRadius="0.866" _bVisible="true" />
+				</_listComponent>
+			</GameObject>
+		</entity>
+		<entity id="30" name="WallNorth">
+			<GameObject _schemaVersion="0" _name="WallNorth" _bActive="true">
+				<_listComponent>
+					<MeshComponent _localID="163493842152903304" _localPosition="0,2,30.5" _localRotation="0,0,0" _localScale="62,4,1" _attachOwner="None" _attachComponent="None" _meshID="Cube" _materialPath="engine/materials/prototypegrid_light.material" _boundsRadius="0.866" _bVisible="true" />
+				</_listComponent>
+			</GameObject>
+		</entity>
+		<entity id="31" name="WallSouth">
+			<GameObject _schemaVersion="0" _name="WallSouth" _bActive="true">
+				<_listComponent>
+					<MeshComponent _localID="163493842152903304" _localPosition="0,2,-30.5" _localRotation="0,0,0" _localScale="62,4,1" _attachOwner="None" _attachComponent="None" _meshID="Cube" _materialPath="engine/materials/prototypegrid_light.material" _boundsRadius="0.866" _bVisible="true" />
+				</_listComponent>
+			</GameObject>
+		</entity>
+		<entity id="32" name="WallEast">
+			<GameObject _schemaVersion="0" _name="WallEast" _bActive="true">
+				<_listComponent>
+					<MeshComponent _localID="163493842152903304" _localPosition="30.5,2,0" _localRotation="0,0,0" _localScale="1,4,60" _attachOwner="None" _attachComponent="None" _meshID="Cube" _materialPath="engine/materials/prototypegrid_light.material" _boundsRadius="0.866" _bVisible="true" />
+				</_listComponent>
+			</GameObject>
+		</entity>
+		<entity id="33" name="WallWest">
+			<GameObject _schemaVersion="0" _name="WallWest" _bActive="true">
+				<_listComponent>
+					<MeshComponent _localID="163493842152903304" _localPosition="-30.5,2,0" _localRotation="0,0,0" _localScale="1,4,60" _attachOwner="None" _attachComponent="None" _meshID="Cube" _materialPath="engine/materials/prototypegrid_light.material" _boundsRadius="0.866" _bVisible="true" />
+				</_listComponent>
+			</GameObject>
+		</entity>
+		<entity id="20" name="PlayerMech">
+			<GameObject _schemaVersion="0" _name="PlayerMech" _bActive="true">
+				<_listComponent>
+					<MeshComponent _localID="163493842152903304" _localPosition="0,1.2,-18" _localRotation="0,0,0" _localScale="1.8,2.4,1.8" _attachOwner="None" _attachComponent="None" _meshID="Cube" _materialPath="engine/materials/prototypegrid_light.material" _boundsRadius="0.866" _bVisible="true" />
+				</_listComponent>
+			</GameObject>
+		</entity>
+		<entity id="21" name="AllyMech">
+			<GameObject _schemaVersion="0" _name="AllyMech" _bActive="true">
+				<_listComponent>
+					<MeshComponent _localID="163493842152903304" _localPosition="6,1.2,-18" _localRotation="0,0,0" _localScale="1.8,2.4,1.8" _attachOwner="None" _attachComponent="None" _meshID="Cube" _materialPath="engine/materials/prototypegrid_light.material" _boundsRadius="0.866" _bVisible="true" />
+				</_listComponent>
+			</GameObject>
+		</entity>
+		<entity id="22" name="EnemyMech0">
+			<GameObject _schemaVersion="0" _name="EnemyMech0" _bActive="true">
+				<_listComponent>
+					<MeshComponent _localID="163493842152903304" _localPosition="-4,1.2,18" _localRotation="0,0,0" _localScale="1.8,2.4,1.8" _attachOwner="None" _attachComponent="None" _meshID="Cube" _materialPath="engine/materials/prototypegrid_orange.material" _boundsRadius="0.866" _bVisible="true" />
+				</_listComponent>
+			</GameObject>
+		</entity>
+		<entity id="23" name="EnemyMech1">
+			<GameObject _schemaVersion="0" _name="EnemyMech1" _bActive="true">
+				<_listComponent>
+					<MeshComponent _localID="163493842152903304" _localPosition="6,1.2,18" _localRotation="0,0,0" _localScale="1.8,2.4,1.8" _attachOwner="None" _attachComponent="None" _meshID="Cube" _materialPath="engine/materials/prototypegrid_orange.material" _boundsRadius="0.866" _bVisible="true" />
+				</_listComponent>
+			</GameObject>
+		</entity>
+		<entity id="10" name="MechArenaGameMode">
+			<GameObject _schemaVersion="0" _name="MechArenaGameMode" _bActive="true">
+				<_listComponent>
+					<MechArenaGameModeComponent _localID="1630066178603867017" _moveDataPath="game/playground/mecharena/data/mecharena.moves.xml" _playerSpawn="0,0,-18" _botThinkSeconds="0.6" _botKeepDistance="12" _botFireRange="30" _botMeleeRange="4" _botDashChance="0.25" _botSpecialChance="0.3" _resultHoldSeconds="3" _victoryMoney="50">
+						<_rules _arenaHalfSize="30" _ceiling="20" _respawnDelay="3" _respawnInvulnerable="1.5" _timeLimit="90" _teamGauge="800" _seed="7" />
+						<_listPlayerMech>
+							<item>trooper</item>
+							<item>duelist</item>
+						</_listPlayerMech>
+						<_listPlayerSkill>
+							<item>last_stand</item>
+						</_listPlayerSkill>
+						<_listAllyMech>
+							<item>sentry</item>
+						</_listAllyMech>
+						<_listAllySpawn>
+							<item>6,0,-18</item>
+						</_listAllySpawn>
+						<_listEnemyMech>
+							<item>duelist</item>
+							<item>sentry</item>
+						</_listEnemyMech>
+						<_listEnemySpawn>
+							<item>-4,0,18</item>
+							<item>6,0,18</item>
+						</_listEnemySpawn>
+					</MechArenaGameModeComponent>
+					<MechArenaViewComponent _localID="1524694205250410930" _moveAction="Move" _fireAction="MechArena.Fire" _meleeAction="MechArena.Melee" _specialAction="MechArena.Special" _dashAction="MechArena.Dash" _jumpAction="MechArena.Jump" _lockAction="MechArena.Lock" _mechHeight="2.4" _projectilePrefab="game/playground/mecharena/prefabs/projectile.prefab.xml" _projectilePoolSize="32">
+						<_listPilotBody>
+							<item>20</item>
+							<item>21</item>
+							<item>22</item>
+							<item>23</item>
+						</_listPilotBody>
+					</MechArenaViewComponent>
+					<HUDControllerComponent _localID="17122754535480611078" _documentPath="game/playground/mecharena/ui/hud.ui.xml" />
+				</_listComponent>
+			</GameObject>
+		</entity>
+	</entities>
+</Scene>

@@ -138,6 +138,12 @@
 	<CatalogKey tag="FighterDef" catalog="FighterCatalog" entry="Fighter"/>
 	<Field owner="FightingGameModeComponent" field="_playerFighter" tag="FighterDef"/>
 	<Field owner="FightingGameModeComponent" field="_opponentFighter" tag="FighterDef"/>
+	<CatalogKey tag="MechDef" catalog="MechCatalog" entry="Mech"/>
+	<CatalogKey tag="MechSkillDef" catalog="MechCatalog" entry="Skill"/>
+	<Field owner="MechArenaGameModeComponent" field="_listPlayerMech" tag="MechDef"/>
+	<Field owner="MechArenaGameModeComponent" field="_listPlayerSkill" tag="MechSkillDef"/>
+	<Field owner="MechArenaGameModeComponent" field="_listAllyMech" tag="MechDef"/>
+	<Field owner="MechArenaGameModeComponent" field="_listEnemyMech" tag="MechDef"/>
 	<CatalogKey tag="WeaponDef" catalog="WeaponCatalog" entry="Weapon"/>
 	<Field owner="ShooterPlayerComponent" field="_listWeaponID" tag="WeaponDef"/>
 	<CatalogKey tag="RTSUnitDef" catalog="RTSCatalog" entry="Unit"/>

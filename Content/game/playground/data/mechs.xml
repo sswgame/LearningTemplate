@@ -1,8 +1,23 @@
 <?xml version="1.0" encoding="utf-8"?>
 <?asset guid="f813057bdc3a4c8c8920a208c511e7e1"?>
 <!--
-  장르 키트 시연 — 기체 대전 판 하나(maps/kit_mecharena). 무기 없는 기체 하나(코스트 300 · 체력 100) — 팀 게이지는 코스트 x 2 = 600 이라 두 번 격추되면 바닥난다.
+  기체 대전 미니게임(minigames/mecharena)의 기체 — 게임 기능 MechArena 가 미니게임 범위에 건다. 무기는 data/weapons.xml · 탄은 data/projectiles.xml(mech_ 접두), 근접 기술은 mecharena/data/mecharena.moves.xml.
+  팀 게이지는 씬 규칙(_rules _teamGauge)이고 격추될 때마다 그 기체의 코스트가 빠진다.
 -->
-<MechCatalog deckCostLimit="2000">
-	<Mech id="plain" name="Plain" cost="300" hp="100" boostRegen="0"/>
+<MechCatalog deckCostLimit="1200">
+	<Class id="Near" melee="1.2" shot="0.9"/>
+	<Class id="Far" melee="0.8" shot="1.1"/>
+	<Mech id="trooper" name="Trooper" class="Mid" rank="B" cost="300" hp="400" radius="0.9" speed="8" dashSpeed="22" dashTime="0.3" jumpSpeed="11" down="100" downTime="1.5" wakeInvulnerable="1.5" lockOn="50">
+		<Weapon id="rifle" kind="Shot" weapon="mech_rifle" down="20" stagger="0.2" homing="40"/>
+		<Weapon id="missile" kind="Special" projectile="mech_missile" homing="120" cooldown="4" down="60" stagger="0.4" knockback="2"/>
+		<Weapon id="saber" kind="Melee" moves="mech_slash,mech_cleave" range="4" down="30"/>
+	</Mech>
+	<Mech id="duelist" name="Duelist" class="Near" rank="A" cost="400" hp="450" radius="0.9" speed="10" dashSpeed="28" dashTime="0.3" jumpSpeed="13" down="120" downTime="1.2" wakeInvulnerable="1.5" lockOn="40">
+		<Weapon id="rifle" kind="Shot" weapon="mech_rifle" down="15" stagger="0.2"/>
+		<Weapon id="saber" kind="Melee" moves="mech_slash,mech_cleave" range="5" down="40"/>
+	</Mech>
+	<Mech id="sentry" name="Sentry" class="Far" rank="C" cost="200" hp="260" radius="1" speed="6" dashSpeed="16" dashTime="0.3" jumpSpeed="9" down="80" downTime="1.8" wakeInvulnerable="1.2" lockOn="60">
+		<Weapon id="rifle" kind="Shot" weapon="mech_rifle" down="20" stagger="0.15"/>
+	</Mech>
+	<Skill id="last_stand" trigger="HealthBelow" threshold="0.35" duration="15"><Stats attack="1.3" defense="1.2"/></Skill>
 </MechCatalog>

@@ -3,12 +3,17 @@
 	<entries>
 		<entry key="/" text="/" sourceHash="af63a24c860189fe" />
 		<entry key="Actor" text="배우" sourceHash="f865a44470a1eb3a" />
+		<entry key="Allied strength" text="아군 전력" sourceHash="8d3ba6769f2ebd03" />
+		<entry key="Allied strength broken - you lose" text="아군 전력이 바닥났습니다 - 패배" sourceHash="7fc102a6588e40a9" />
 		<entry key="Assault Rifle" text="돌격 소총" sourceHash="67220abc0f738d9a" />
 		<entry key="Bone Axe" text="뼈 도끼" sourceHash="9e2cdbf7cb3d6953" />
 		<entry key="Bone Shield" text="뼈 방패" sourceHash="0201be6b95ece038" />
+		<entry key="Boost overheated" text="부스트 과열" sourceHash="e0efd5a0e587bb71" />
 		<entry key="CutA" text="컷 A" sourceHash="770f429cae410066" />
 		<entry key="CutB" text="컷 B" sourceHash="770f419cae40feb3" />
 		<entry key="Double K.O. - the bout is a draw" text="더블 K.O. 시합이 무승부입니다" sourceHash="2f4f1c8b2a8b8859" />
+		<entry key="Enemy strength" text="적군 전력" sourceHash="b5143e5e2a708834" />
+		<entry key="Enemy strength broken - you win" text="적군 전력이 바닥났습니다 - 승리" sourceHash="3ecc332ccec2feeb" />
 		<entry key="Gilded Knight Helmet" text="금박 기사 투구" sourceHash="78c4a96597a1f01e" />
 		<entry key="Heraldic Cape" text="문장 망토" sourceHash="6f86256a16ab8f26" />
 		<entry key="K.O. - you lose the bout" text="K.O. 시합에서 졌습니다" sourceHash="fb3474b00a384899" />
@@ -19,6 +24,7 @@
 		<entry key="Knight Sword (Merged)" text="기사 검(병합)" sourceHash="3c4283c2efbf5e38" />
 		<entry key="Last squad standing - you win" text="마지막 분대 - 승리했습니다" sourceHash="ddaaaecde8b4a637" />
 		<entry key="Longbow" text="장궁" sourceHash="1ca5e729801861e9" />
+		<entry key="Mech destroyed - special picks the next mech" text="기체 격추 - 특수기로 다음 기체를 고릅니다" sourceHash="3711c7fb7ac4eee8" />
 		<entry key="Notched Blade" text="이 빠진 칼" sourceHash="0bda544f4c061f1a" />
 		<entry key="People left" text="남은 인원" sourceHash="6f27a40f6f8161a7" />
 		<entry key="Pistol" text="권총" sourceHash="9fbfefa835da8476" />

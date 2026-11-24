@@ -1,0 +1,35 @@
+<?xml version="1.0" encoding="utf-8"?>
+<?asset guid="55135b13066d49b9a4d05a40fd908339"?>
+<!--
+  기체 대전 미니게임(minigames/mecharena)의 입력 차이 — Playground 공통 묶음(data/gamesettings.xml 의 <inputMap> 줄) 위에 얹힌다. 이동은 공통 Move 축이다.
+  레이어 MechArena 는 꺼져 있고 미니게임의 inputContexts 가 들어가 있는 동안만 켠다. 점프를 누른 채면 공중에서 부유하고, 격추 중의 특수기는 다음 기체를 고른다.
+-->
+<InputMap>
+	<layers>
+		<layer name="MechArena" enabled="0" blockLower="0"/>
+	</layers>
+	<action name="MechArena.Fire" layer="MechArena" trigger="Down">
+		<bind source="Key" code="J"/>
+		<bind source="Gamepad" code="RightShoulder"/>
+	</action>
+	<action name="MechArena.Melee" layer="MechArena" trigger="Pressed">
+		<bind source="Key" code="K"/>
+		<bind source="Gamepad" code="X"/>
+	</action>
+	<action name="MechArena.Special" layer="MechArena" trigger="Pressed">
+		<bind source="Key" code="L"/>
+		<bind source="Gamepad" code="Y"/>
+	</action>
+	<action name="MechArena.Dash" layer="MechArena" trigger="Pressed">
+		<bind source="Key" code="LeftShift"/>
+		<bind source="Gamepad" code="B"/>
+	</action>
+	<action name="MechArena.Jump" layer="MechArena" trigger="Pressed">
+		<bind source="Key" code="Space"/>
+		<bind source="Gamepad" code="A"/>
+	</action>
+	<action name="MechArena.Lock" layer="MechArena" trigger="Pressed">
+		<bind source="Key" code="Q"/>
+		<bind source="Gamepad" code="LeftShoulder"/>
+	</action>
+</InputMap>
