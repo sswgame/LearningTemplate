@@ -69,6 +69,8 @@ namespace sw::editor
         void   applyDocumentText( string_view text ) override { _document.applyText( text ); }
         /** @brief 문서를 읽어 내용을 채웁니다. 읽음 표시는 기반 클래스가 결과를 보고 합니다(`EditorDocumentPanel::reloadDocument`). */
         ToolAssetLoadResult loadDocument() override { return _document.loadDocument(); }
+        /** @brief 저장 자리는 모델의 경로 칸이다 — 연 문서를 가리키던 칸을 새 자리로 고친다. */
+        void onDocumentMoved( string_view oldPath, string_view newPath ) override;
         /** @brief 데이터 레이어 값 · 새 데이터 레이어 만들기 컨트롤을 그립니다. */
         void drawDataLayerControls();
         /** @brief Tile 레이어 셀을 그립니다. 아틀라스 이미지의 해당 셀을 그리고, 이미지가 없으면 브러시 색과 규칙이 고른 셀 번호를 그립니다. */

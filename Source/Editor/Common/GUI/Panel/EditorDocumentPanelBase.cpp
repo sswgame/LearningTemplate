@@ -14,6 +14,7 @@ namespace sw::editor
 {
     bool EditorDocumentPanelBase::saveDocumentAndClearDirty()
     {
+        prepareDocumentForSave();
         if ( canSaveDocument() == false )
             return false;
         // 저장이 쓸 파일을 패널이 내놓고 여기서 하나씩 본다 — 문서 하나가 여러 파일을 쓰거나(데이터 테이블) 연 경로가 없는 문서(프로젝트 설정)도 같은 확인을 지난다.

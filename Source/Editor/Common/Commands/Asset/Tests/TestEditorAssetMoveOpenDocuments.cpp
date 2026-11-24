@@ -55,6 +55,9 @@ SW_TEST_CASE( EditorAssetMoveOpenDocumentsTest, DirtyMovedDocumentFollows )
     vector<EditorOpenDocument> listOpen;
     listOpen.push_back( EditorOpenDocument{ "scratch/assetmove/target/keep.material", true } );
     SW_EXPECT_FALSE( EditorAssetFileCommands::findDirtyReferrerDocument( plan, listOpen ).has_value() );
+
+    listOpen[0]._bFollowsMove = false; // 글이 없는 문서(프리팹 · UI 미리보기)는 새 자리에서 다시 읽으면 편집을 잃는다 — 먼저 저장한다
+    SW_EXPECT_TRUE( EditorAssetFileCommands::findDirtyReferrerDocument( plan, listOpen ).has_value() );
 }
 
 /** @brief [EditorAssetMoveOpenDocumentsTest] 지우는 파일 · 폴더 아래에 연 문서가 있으면 그 id 다. 이름 앞부분만 같은 형제(`a/b` 와 `a/bc`)는 아래가 아니다 */

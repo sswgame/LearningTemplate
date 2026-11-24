@@ -149,6 +149,10 @@ namespace sw::editor
         void collectFilesToSave( vector<AbsolutePath>& outListPath ) const override;
         /** @brief 문서 글(`captureDocumentText`)입니다 — 저장하지 않은 편집까지 담는다. */
         string captureUnsavedText() const override { return captureDocumentText(); }
+        /** @brief 저장할 문서가 새 자리에서 아직 다시 읽히지 않았으면 먼저 읽습니다(옮긴 뒤 그려지지 않은 창) — 모델이 옛 경로를 든 채 쓰지 않는다. */
+        void prepareDocumentForSave() override;
+        /** @brief 열린 문서가 @p oldPath 에서 @p newPath 로 옮겨졌습니다. 다시 읽기(`loadDocument`)가 연 경로(`getLoadedAssetPath`)를 쓰지 않는 패널이 자기 경로 칸을 고친다. */
+        virtual void onDocumentMoved( string_view /*oldPath*/, string_view /*newPath*/ ) {}
         /** @brief @p path(리소스 id 또는 절대 경로)의 쓸 자리를 @p outListPath 에 더합니다 — 쓰기와 같은 해석(`AssetPaths::toDiskPath`)이다. 비었거나 풀지 못하면 더하지 않는다. */
         static void appendFileToSave( string_view path, vector<AbsolutePath>& outListPath ); /**
                                                                                               * @brief 이 문서의 되돌리기 스택입니다 — 문서 패널마다 하나(감사 E-3). 문서 글 편집 · 미리보기 씬 편집 · 패널 모델의 명령이 모두 여기 간다.
@@ -233,6 +237,7 @@ namespace sw::editor
         vector<string>                           _listRecentPath;
         vector<string>                           _listOpenCandidate; ///< 열기 팝업을 열 때 모은 이 종류의 에셋(리소스 id)
         fixed_string<constant::buffer::kMax128>  _openFilter;
+        string                                   _movedUnsavedText; ///< 문서를 옮길 때 미저장이던 글 — 새 자리에서 다시 읽은 뒤 얹는다(`markDocumentLoaded`)
         uint32                                   _documentSerial;   ///< 연 문서의 번호(`acceptFocusedDocument` 마다 오른다) — 되돌리기 단계가 자기 문서인지 경로가 아니라 이것으로 본다(옮기면 경로가 바뀐다)
         uint64                                   _lastCopyTextHash; ///< 지난 자동 저장 사본의 글 해시(`takeAutosaveCopies`). 0 은 사본 없음 — 읽기 · 저장이 비운다
         uint8                                    _bLoaded        : 1;

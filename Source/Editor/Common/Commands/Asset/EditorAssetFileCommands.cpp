@@ -626,8 +626,9 @@ namespace sw::editor
     {
         for ( const EditorOpenDocument& document : listOpen )
         {
-            const bool bReferrer = VectorUtil::contains( plan._listReferrerID, document._assetID ) || VectorUtil::contains( plan._listUnfixedReferrer, document._assetID );
-            if ( document._bDirty && ( bReferrer || EditorAssetFileCommandsInternal::hasMovedReference( document._unsavedText, plan ) ) )
+            const bool bReferrer    = VectorUtil::contains( plan._listReferrerID, document._assetID ) || VectorUtil::contains( plan._listUnfixedReferrer, document._assetID );
+            const bool bStaysBehind = document._bFollowsMove == false && VectorUtil::contains( plan._listOldID, document._assetID );
+            if ( document._bDirty && ( bReferrer || bStaysBehind || EditorAssetFileCommandsInternal::hasMovedReference( document._unsavedText, plan ) ) )
                 return document._assetID;
         }
         return nullopt;

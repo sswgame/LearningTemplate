@@ -64,6 +64,7 @@ namespace sw::editor
         , _listRecentPath{}
         , _listOpenCandidate{}
         , _openFilter{}
+        , _movedUnsavedText{}
         , _documentSerial{ 0 }
         , _lastCopyTextHash{ 0 }
         , _bLoaded{ SW_FALSE }
@@ -87,8 +88,15 @@ namespace sw::editor
                     // 자동 저장 사본은 옛 id 로 적혀 있다 — 남기면 비정상 종료 뒤 없는 문서를 복구하라고 묻는다. 미저장이면 다음 주기가 새 id 로 다시 쓴다.
                     EditorDocumentAutosaveEntry::remove( EditorAutosaveCommands::getSessionFolder(), previousPath );
                     _lastCopyTextHash = 0;
-                    if ( isDocumentDirty() == false )
-                        captureDiskBaseline();
+                    onDocumentMoved( previousPath, _loadedAssetPath );
+                    // 파생의 모델이 든 경로(저장할 자리)도 새 자리여야 한다 — 새 자리에서 다시 읽어 맞추고, 미저장이면 편집한 글을 그 위에 얹는다(`markDocumentLoaded`).
+                    // 글이 없는 미저장 문서는 얹을 수 없어 계획이 거절했다(`EditorOpenDocument::_bFollowsMove`).
+                    if ( _bLoadFailed == SW_FALSE )
+                    {
+                        if ( isDocumentDirty() )
+                            _movedUnsavedText = captureDocumentText();
+                        _bLoaded = SW_FALSE;
+                    }
                 }
                 // 깨끗한 참조 문서는 디스크에서 고친 글을 다시 읽는다 — 옛 id 를 든 채 두면 다음 저장이 고친 참조를 옛 id 로 덮는다. 읽기는 다음 그리기의
                 // `ensureDocumentLoaded` 가 한다(옮기기는 다른 창의 그리기 안에서 돈다). 미저장 참조자는 계획이 거절해 여기 오지 않는다.
@@ -115,6 +123,12 @@ namespace sw::editor
         const optional<AbsolutePath> diskPath = editor::getSubsystem<AssetPaths>().toDiskPath( path );
         if ( diskPath.has_value() )
             outListPath.push_back( *diskPath );
+    }
+
+    void EditorDocumentPanel::prepareDocumentForSave()
+    {
+        if ( _movedUnsavedText.empty() == false )
+            ensureDocumentLoaded();
     }
 
     void EditorDocumentPanel::onDocumentSaved()
@@ -168,6 +182,7 @@ namespace sw::editor
         if ( focused.empty() )
             return;
         _loadedAssetPath = string{ focused };
+        _movedUnsavedText.clear();
         ++_documentSerial;
         EditorDocumentOpenUtil::rememberRecent( _listRecentPath, _loadedAssetPath, kMaxRecentDocumentCount );
         _pendingFocusPath.clear();
@@ -191,6 +206,9 @@ namespace sw::editor
         string restoredText;
         if ( _loadedAssetPath.empty() == false && EditorAutosaveCommands::takePendingDocumentRestore( _loadedAssetPath, restoredText ) )
             restoreDocumentFromUndo( restoredText );
+        else if ( _movedUnsavedText.empty() == false )
+            restoreDocumentFromUndo( _movedUnsavedText ); // 옮기기 앞의 미저장 편집
+        _movedUnsavedText.clear();
     }
 
     void EditorDocumentPanel::applyPendingAutosaveRestore()

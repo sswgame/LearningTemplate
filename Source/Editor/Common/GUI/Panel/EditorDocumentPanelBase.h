@@ -148,6 +148,8 @@ namespace sw::editor
         void markDocumentDirty() { _bDocumentDirty = SW_TRUE; }
         /** @brief 저장이나 되돌리기 직후 dirty 를 지웁니다. */
         void clearDocumentDirty() { _bDocumentDirty = SW_FALSE; }
+        /** @brief 저장 앞에 부릅니다. 기본은 아무 일도 하지 않습니다(`EditorDocumentPanel` 이 옮긴 문서를 다시 읽는다). */
+        virtual void prepareDocumentForSave() {}
         /** @brief 문서를 디스크에 씁니다. 성공하면 true 입니다. */
         [[nodiscard]] virtual bool saveDocument() = 0;
         /** @brief 문서가 디스크와 같아졌을 때(읽은 직후) 저장이 쓸 파일의 지금 내용을 기준으로 적습니다(`EditorDiskBaseline`). */

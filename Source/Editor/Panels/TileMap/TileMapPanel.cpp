@@ -531,6 +531,12 @@ namespace sw::editor
         ImGui::Separator();
     }
 
+    void TileMapPanel::onDocumentMoved( string_view oldPath, string_view newPath )
+    {
+        if ( string_view( _document.getPath() ) == oldPath )
+            _document.editPath() = newPath;
+    }
+
     bool TileMapPanel::saveDocument()
     {
         if ( _document.saveDocument() == false )
