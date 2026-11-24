@@ -70,12 +70,6 @@ namespace sw
                     return kMonsterSize;
                 return kind == SurvivalHorrorSpotKind::Pickup || kind == SurvivalHorrorSpotKind::Document ? kSmallSize : kDeskSize;
             }
-
-            /** @brief 바닥에 선 표식 하나입니다. */
-            static void drawStanding( PrimitiveMarkerBatch& inoutMarkers, GameObjectManager& manager, const AbsolutePosition& foot, const float3& size, const float4& color )
-            {
-                inoutMarkers.draw( manager, foot + float3{ 0.0f, size._y * 0.5f, 0.0f }, size, color );
-            }
         };
     } // namespace
 
@@ -180,7 +174,7 @@ namespace sw
         for ( const AreaDef& area : director.getGraph().getAreas() )
         {
             const float3 size{ area._width - Internal::kFloorInset, Internal::kFloorHeight, area._height - Internal::kFloorInset };
-            Internal::drawStanding( _markers, manager, Director::toAbsolute( area.getCenter() ), size, area._region == stage._darkRegion ? Internal::kDarkColor : Internal::kRoomColor );
+            _markers.drawStanding( manager, Director::toAbsolute( area.getCenter() ), size, area._region == stage._darkRegion ? Internal::kDarkColor : Internal::kRoomColor );
         }
         for ( const AreaLink& link : director.getGraph().getLinks() )
         {
@@ -189,15 +183,15 @@ namespace sw
             if ( pFrom == nullptr || pTo == nullptr )
                 continue;
             const float2 middle = ( pFrom->getCenter() + pTo->getCenter() ) * 0.5f;
-            Internal::drawStanding( _markers, manager, Director::toAbsolute( middle ), Internal::kDoorSize, director.isLinkOpen( link ) ? Internal::kOpenColor : Internal::kLockedColor );
+            _markers.drawStanding( manager, Director::toAbsolute( middle ), Internal::kDoorSize, director.isLinkOpen( link ) ? Internal::kOpenColor : Internal::kLockedColor );
         }
         for ( size_t index = 0; index < stage._listSpot.size(); ++index )
         {
             const SurvivalHorrorSpot& spot = stage._listSpot[index];
             if ( director.isSpotUsed( index ) == false )
-                Internal::drawStanding( _markers, manager, Director::toAbsolute( spot._position ), Internal::findSpotSize( spot._kind ), Internal::findSpotColor( spot._kind ) );
+                _markers.drawStanding( manager, Director::toAbsolute( spot._position ), Internal::findSpotSize( spot._kind ), Internal::findSpotColor( spot._kind ) );
         }
-        Internal::drawStanding( _markers, manager, director.getPlayerPosition(), Internal::kPlayerSize, Internal::kPlayerColor );
+        _markers.drawStanding( manager, director.getPlayerPosition(), Internal::kPlayerSize, Internal::kPlayerColor );
     }
 
     void SurvivalHorrorAvatarComponent::fillHUD( SurvivalHorrorHUDViewModel& outViewModel, const SurvivalHorrorGameModeComponent& director )

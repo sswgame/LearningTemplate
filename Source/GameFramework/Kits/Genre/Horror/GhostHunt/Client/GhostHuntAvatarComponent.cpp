@@ -66,12 +66,6 @@ namespace sw
                 }
                 return nullptr; // 열거자는 여섯뿐이다(covered-switch) — 닿지 않는다
             }
-
-            /** @brief 바닥에 선 표식 하나입니다. */
-            static void drawStanding( PrimitiveMarkerBatch& inoutMarkers, GameObjectManager& manager, const AbsolutePosition& foot, const float3& size, const float4& color )
-            {
-                inoutMarkers.draw( manager, foot + float3{ 0.0f, size._y * 0.5f, 0.0f }, size, color );
-            }
         };
     } // namespace
 
@@ -181,7 +175,7 @@ namespace sw
         for ( const AreaDef& area : director.getGraph().getAreas() )
         {
             const float3 size{ area._width - Internal::kFloorInset, Internal::kFloorHeight, area._height - Internal::kFloorInset };
-            Internal::drawStanding( _markers, manager, Director::toAbsolute( area.getCenter() ), size, mansion.isRoomLit( area._id ) ? Internal::kLitRoomColor : Internal::kDarkRoomColor );
+            _markers.drawStanding( manager, Director::toAbsolute( area.getCenter() ), size, mansion.isRoomLit( area._id ) ? Internal::kLitRoomColor : Internal::kDarkRoomColor );
         }
         for ( const AreaLink& link : director.getGraph().getLinks() )
         {
@@ -190,12 +184,12 @@ namespace sw
             if ( pFrom == nullptr || pTo == nullptr )
                 continue;
             const float2 middle = ( pFrom->getCenter() + pTo->getCenter() ) * 0.5f;
-            Internal::drawStanding( _markers, manager, Director::toAbsolute( middle ), Internal::kDoorSize, director.isLinkOpen( link ) ? Internal::kOpenColor : Internal::kLockedColor );
+            _markers.drawStanding( manager, Director::toAbsolute( middle ), Internal::kDoorSize, director.isLinkOpen( link ) ? Internal::kOpenColor : Internal::kLockedColor );
         }
         for ( const GhostFurnitureDef& furniture : pCatalog->getFurniture() )
         {
-            Internal::drawStanding( _markers, manager, Director::toAbsolute( director.computeFurniturePosition( furniture ) ), Internal::kFurnitureSize,
-                                    mansion.isSearched( furniture._id ) ? Internal::kSearchedColor : Internal::kFurnitureColor );
+            _markers.drawStanding( manager, Director::toAbsolute( director.computeFurniturePosition( furniture ) ), Internal::kFurnitureSize,
+                                   mansion.isSearched( furniture._id ) ? Internal::kSearchedColor : Internal::kFurnitureColor );
         }
         for ( const HidingGhostDef& boo : pCatalog->getBoos() )
         {
@@ -204,19 +198,19 @@ namespace sw
             if ( pFurniture == nullptr || pBoo->_state != HidingGhostState::Revealed )
                 continue;
             const AbsolutePosition top = Director::toAbsolute( director.computeFurniturePosition( *pFurniture ) ) + float3{ 0.0f, Internal::kFurnitureSize._y, 0.0f };
-            Internal::drawStanding( _markers, manager, top, Internal::kBooSize, Internal::kBooColor );
+            _markers.drawStanding( manager, top, Internal::kBooSize, Internal::kBooColor );
         }
         for ( const GhostInstance& ghost : mansion.getEncounter().getGhosts() )
         {
             const float4* const pColor = Internal::findGhostColor( ghost._state );
             if ( pColor != nullptr )
-                Internal::drawStanding( _markers, manager, AbsolutePosition{ ghost._position }, Internal::kGhostSize, *pColor );
+                _markers.drawStanding( manager, AbsolutePosition{ ghost._position }, Internal::kGhostSize, *pColor );
         }
-        Internal::drawStanding( _markers, manager, director.getPlayerPosition(), Internal::kPlayerSize, Internal::kPlayerColor );
+        _markers.drawStanding( manager, director.getPlayerPosition(), Internal::kPlayerSize, Internal::kPlayerColor );
         for ( int32 step = 1; director.isLightOn() && step <= Internal::kBeamMarkers; ++step )
         {
-            Internal::drawStanding( _markers, manager, director.getPlayerPosition() + director.getFacing() * ( static_cast<float32>( step ) * Internal::kBeamSpacing ), Internal::kBeamSize,
-                                    Internal::kBeamColor );
+            _markers.drawStanding( manager, director.getPlayerPosition() + director.getFacing() * ( static_cast<float32>( step ) * Internal::kBeamSpacing ), Internal::kBeamSize,
+                                   Internal::kBeamColor );
         }
     }
 

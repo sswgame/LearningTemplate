@@ -36,6 +36,8 @@ namespace sw
         void begin() { _usedCount = 0; }
         /** @brief 표식 하나를 @p center 에 @p size(가로 · 세로 · 깊이)로 그립니다. 프리팹을 세우지 못하면 처음 한 번 오류를 남기고 그리지 않습니다. */
         void draw( GameObjectManager& manager, const AbsolutePosition& center, const float3& size, const float4& color );
+        /** @brief 바닥 자리 @p foot 에 선 표식 하나입니다(가운데를 높이의 절반만큼 올려 그린다). */
+        void drawStanding( GameObjectManager& manager, const AbsolutePosition& foot, const float3& size, const float4& color ) { draw( manager, foot + float3{ 0.0f, size._y * 0.5f, 0.0f }, size, color ); }
         /** @brief 이번 프레임에 쓰지 않은 표식을 숨깁니다. */
         void end( GameObjectManager& manager );
         /** @brief 세운 표식을 모두 지웁니다(플레이 끝). */

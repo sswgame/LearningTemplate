@@ -45,12 +45,6 @@ namespace sw
             static constexpr float32 kScrapSpacing    = 0.6f; ///< 한 곳에 놓인 고철 사이
             static constexpr int32   kScrapColumns    = 4;
             static constexpr float32 kScrapRow        = -1.5f; ///< 고철 줄이 시작하는 깊이
-
-            /** @brief 바닥에 선 표식 하나입니다. */
-            static void drawStanding( PrimitiveMarkerBatch& inoutMarkers, GameObjectManager& manager, const AbsolutePosition& foot, const float3& size, const float4& color )
-            {
-                inoutMarkers.draw( manager, foot + float3{ 0.0f, size._y * 0.5f, 0.0f }, size, color );
-            }
         };
     } // namespace
 
@@ -165,30 +159,30 @@ namespace sw
             for ( const AreaDef& area : facility.getGraph().getAreas() )
             {
                 const float4& color = area._id == ship ? Internal::kShipColor : ( area._id == outside ? Internal::kOutsideColor : Internal::kRoomColor );
-                Internal::drawStanding( _markers, manager, director.computeAreaPosition( area._id ), Internal::kAreaSize, color );
+                _markers.drawStanding( manager, director.computeAreaPosition( area._id ), Internal::kAreaSize, color );
             }
             for ( const AreaLink& link : facility.getGraph().getLinks() )
             {
                 const float3 middle = ( director.computeAreaPosition( link._from )._value + director.computeAreaPosition( link._to )._value ) * 0.5f;
-                Internal::drawStanding( _markers, manager, AbsolutePosition{ middle }, Internal::kDoorSize,
-                                        facility.canTraverse( link._from, link._to ) ? Internal::kOpenDoorColor : Internal::kLockedDoorColor );
+                _markers.drawStanding( manager, AbsolutePosition{ middle }, Internal::kDoorSize,
+                                       facility.canTraverse( link._from, link._to ) ? Internal::kOpenDoorColor : Internal::kLockedDoorColor );
             }
             int32 scrapIndex = 0;
             for ( const ScavengerScrap& scrap : facility.getGroundScrap() )
             {
                 const float32 column = static_cast<float32>( scrapIndex % Internal::kScrapColumns );
                 const float3  offset{ ( column - static_cast<float32>( Internal::kScrapColumns - 1 ) * 0.5f ) * Internal::kScrapSpacing, Internal::kAreaSize._y, Internal::kScrapRow };
-                Internal::drawStanding( _markers, manager, director.computeAreaPosition( scrap._areaID ) + offset, Internal::kScrapSize, scrap.isBody() ? Internal::kBodyColor : Internal::kScrapColor );
+                _markers.drawStanding( manager, director.computeAreaPosition( scrap._areaID ) + offset, Internal::kScrapSize, scrap.isBody() ? Internal::kBodyColor : Internal::kScrapColor );
                 ++scrapIndex;
             }
             for ( const ScavengerThreat& threat : director.getThreats() )
             {
-                Internal::drawStanding( _markers, manager, director.computeAreaPosition( threat._areaID ), Internal::kThreatSize, Internal::kThreatColor );
+                _markers.drawStanding( manager, director.computeAreaPosition( threat._areaID ), Internal::kThreatSize, Internal::kThreatColor );
             }
         }
         else
         {
-            Internal::drawStanding( _markers, manager, director.computeAreaPosition( ship ), Internal::kAreaSize, Internal::kShipColor );
+            _markers.drawStanding( manager, director.computeAreaPosition( ship ), Internal::kAreaSize, Internal::kShipColor );
         }
         const int32 crewCount = expedition.getCrewCount();
         for ( int32 player = 0; player < crewCount; ++player )
@@ -198,7 +192,7 @@ namespace sw
                 continue;
             const float32 column = static_cast<float32>( player ) - static_cast<float32>( crewCount - 1 ) * 0.5f;
             const float3  offset{ column * Internal::kCrewSpacing, Internal::kAreaSize._y, 0.0f };
-            Internal::drawStanding( _markers, manager, director.computeAreaPosition( member._areaID ) + offset, Internal::kCrewSize, player == 0 ? Internal::kPlayerColor : Internal::kCrewColor );
+            _markers.drawStanding( manager, director.computeAreaPosition( member._areaID ) + offset, Internal::kCrewSize, player == 0 ? Internal::kPlayerColor : Internal::kCrewColor );
         }
     }
 

@@ -48,12 +48,6 @@ namespace sw
             static constexpr float3 kBodySize           = float3( 0.6f, 1.7f, 0.6f );
             static constexpr float3 kDownSize           = float3( 0.6f, 0.4f, 1.4f );
             static constexpr float3 kKillerSize         = float3( 0.8f, 2.1f, 0.8f );
-
-            /** @brief 바닥에 선 표식 하나입니다. */
-            static void drawStanding( PrimitiveMarkerBatch& inoutMarkers, GameObjectManager& manager, const AbsolutePosition& foot, const float3& size, const float4& color )
-            {
-                inoutMarkers.draw( manager, foot + float3{ 0.0f, size._y * 0.5f, 0.0f }, size, color );
-            }
         };
     } // namespace
 
@@ -163,36 +157,36 @@ namespace sw
         for ( int32 index = 0; index < match.getGeneratorCount(); ++index )
         {
             const AsymmetricHorrorGenerator& generator = *match.findGenerator( index );
-            Internal::drawStanding( _markers, manager, Director::toAbsolute( generator._position ), Internal::kGeneratorSize,
-                                    generator._progress.isCompleted() ? Internal::kDoneGeneratorColor : Internal::kIdleGeneratorColor );
+            _markers.drawStanding( manager, Director::toAbsolute( generator._position ), Internal::kGeneratorSize,
+                                   generator._progress.isCompleted() ? Internal::kDoneGeneratorColor : Internal::kIdleGeneratorColor );
         }
         for ( int32 index = 0; index < match.getGateCount(); ++index )
         {
             const AsymmetricHorrorGate& gate   = *match.findGate( index );
             const float4&               closed = match.areGatesPowered() ? Internal::kPoweredGateColor : Internal::kClosedGateColor;
-            Internal::drawStanding( _markers, manager, Director::toAbsolute( gate._position ), Internal::kGateSize, gate._progress.isCompleted() ? Internal::kOpenGateColor : closed );
+            _markers.drawStanding( manager, Director::toAbsolute( gate._position ), Internal::kGateSize, gate._progress.isCompleted() ? Internal::kOpenGateColor : closed );
         }
         for ( const float3& hook : stage._listHook )
         {
-            Internal::drawStanding( _markers, manager, Director::toAbsolute( hook ), Internal::kHookSize, Internal::kHookColor );
+            _markers.drawStanding( manager, Director::toAbsolute( hook ), Internal::kHookSize, Internal::kHookColor );
         }
         for ( size_t index = 0; index < stage._listPallet.size(); ++index )
         {
             const PalletState state = match.getPalletState( static_cast<int32>( index ) );
             if ( state != PalletState::Broken )
-                Internal::drawStanding( _markers, manager, Director::toAbsolute( stage._listPallet[index] ), state == PalletState::Upright ? Internal::kPalletSize : Internal::kDroppedSize,
-                                        Internal::kPropColor );
+                _markers.drawStanding( manager, Director::toAbsolute( stage._listPallet[index] ), state == PalletState::Upright ? Internal::kPalletSize : Internal::kDroppedSize,
+                                       Internal::kPropColor );
         }
         for ( const float3& window : stage._listWindow )
         {
-            Internal::drawStanding( _markers, manager, Director::toAbsolute( window ), Internal::kWindowSize, Internal::kPropColor );
+            _markers.drawStanding( manager, Director::toAbsolute( window ), Internal::kWindowSize, Internal::kPropColor );
         }
         for ( const float3& locker : stage._listLocker )
         {
-            Internal::drawStanding( _markers, manager, Director::toAbsolute( locker ), Internal::kLockerSize, Internal::kPropColor );
+            _markers.drawStanding( manager, Director::toAbsolute( locker ), Internal::kLockerSize, Internal::kPropColor );
         }
         if ( match.isHatchOpen() )
-            Internal::drawStanding( _markers, manager, Director::toAbsolute( stage._hatch ), Internal::kHatchSize, Internal::kOpenHatchColor );
+            _markers.drawStanding( manager, Director::toAbsolute( stage._hatch ), Internal::kHatchSize, Internal::kOpenHatchColor );
         for ( int32 index = 0; index < match.getSurvivorCount(); ++index )
         {
             const AsymmetricHorrorSurvivor& survivor = *match.findSurvivor( index );
@@ -200,9 +194,9 @@ namespace sw
                 continue;
             const bool    bUpright = survivor._state == SurvivorState::Healthy || survivor._state == SurvivorState::Injured;
             const float4& upright  = survivor._state == SurvivorState::Healthy ? Internal::kHealthyColor : Internal::kInjuredColor;
-            Internal::drawStanding( _markers, manager, Director::toAbsolute( survivor._position ), bUpright ? Internal::kBodySize : Internal::kDownSize, bUpright ? upright : Internal::kDownColor );
+            _markers.drawStanding( manager, Director::toAbsolute( survivor._position ), bUpright ? Internal::kBodySize : Internal::kDownSize, bUpright ? upright : Internal::kDownColor );
         }
-        Internal::drawStanding( _markers, manager, Director::toAbsolute( match.getKiller()._position ), Internal::kKillerSize, Internal::kKillerColor );
+        _markers.drawStanding( manager, Director::toAbsolute( match.getKiller()._position ), Internal::kKillerSize, Internal::kKillerColor );
     }
 
     void AsymmetricHorrorAvatarComponent::fillHUD( AsymmetricHorrorHUDViewModel& outViewModel, const AsymmetricHorrorGameModeComponent& director )
