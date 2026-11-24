@@ -11,6 +11,8 @@
 #include "Engine/Serialization/Format/StateIO.h"
 
 #include "GameFramework/Kits/Genre/Simulation/ThemePark/CoasterTrain.h"
+#include "GameFramework/Runtime/Character/AI/Schedule/SchedulePathing.h"
+#include "GameFramework/Runtime/Character/Navigation/NavGrid.h"
 #include "GameFramework/Runtime/Foundation/GameData/ConfigRangeUtil.h"
 #include "GameFramework/Runtime/Gameplay/Inventory/Wallet.h"
 
@@ -23,8 +25,9 @@ namespace sw
     {
         struct ThemeParkInternal
         {
-            static constexpr float32 kMinDivisor   = 1.0e-3f; ///< 걷는 시간 · 줄 방향 길이를 나눌 때 0 나누기를 막는 하한
-            static constexpr float32 kMinWalkSpeed = 0.1f;    ///< 설정의 걷기 속도가 0 이어도 걷는 시간이 무한이 되지 않게 하는 하한(m/s)
+            static constexpr float32 kMinDivisor         = 1.0e-3f; ///< 걷는 시간 · 줄 방향 길이를 나눌 때 0 나누기를 막는 하한
+            static constexpr int32   kWanderSearchRadius = 8;       ///< 둘러볼 자리가 막혔으면 이 칸 수 안의 걸을 칸을 찾는다
+            static constexpr float32 kMinWalkSpeed       = 0.1f;    ///< 설정의 걷기 속도가 0 이어도 걷는 시간이 무한이 되지 않게 하는 하한(m/s)
 
             static float3 lerpPosition( const float3& from, const float3& to, float32 alpha )
             {
@@ -97,6 +100,8 @@ namespace sw
         , _random{ 12345u }
         , _pWallet{ nullptr }
         , _pLand{ nullptr }
+        , _pWalkGrid{ nullptr }
+        , _pathfinder{}
         , _parkRating{ 0 }
         , _landOwner{ LandRegistry::kNoOwner }
         , _nextGuestID{ 1 }
@@ -414,6 +419,13 @@ namespace sw
                     if ( guest._walkTimer > 0.0f )
                         break;
                     guest._position = guest._walkTo;
+                    if ( guest._listWalkPoint.empty() == false )
+                    {
+                        const float3 next = guest._listWalkPoint.front();
+                        guest._listWalkPoint.erase( guest._listWalkPoint.begin() );
+                        startWalkLeg( guest, next, ThemeParkInternal::kMinDivisor );
+                        break;
+                    }
                     if ( guest._state == ParkGuestState::Leaving )
                     {
                         guest._state = ParkGuestState::Left;
@@ -549,7 +561,13 @@ namespace sw
             const float32 radius = nextRandom() * _settings._wanderRadius;
             const float3  anchor = _listRide.empty() ? _settings._gatePosition
                                                      : _listRide[static_cast<size_t>( nextRandom() * static_cast<float32>( _listRide.size() ) ) % _listRide.size()]._entrance;
-            startWalking( guest, anchor + float3{ MathUtil::cos( angle ) * radius, 0.0f, MathUtil::sin( angle ) * radius } );
+            float3        spot   = anchor + float3{ MathUtil::cos( angle ) * radius, 0.0f, MathUtil::sin( angle ) * radius };
+            const int2    cell   = _pWalkGrid != nullptr ? _pWalkGrid->computeCell( spot ) : int2{};
+            int2          open{};
+            const bool    bBlocked = _pWalkGrid != nullptr && _pWalkGrid->isInside( cell ) && _pWalkGrid->isWalkable( cell ) == false;
+            if ( bBlocked && _pWalkGrid->findNearestWalkable( cell, ThemeParkInternal::kWanderSearchRadius, open ) )
+                spot = _pWalkGrid->computeCellCenter( open ); // 가판 안을 둘러볼 자리로 고르지 않는다
+            startWalking( guest, spot );
             return;
         }
 
@@ -557,13 +575,37 @@ namespace sw
         startWalking( guest, _listRide[static_cast<size_t>( bestRide )]._entrance );
     }
 
+    void ThemeParkSimulation::findWalkRoute( const NavGrid* pGrid, GridPathfinder& inoutPathfinder, const float3& from, const float3& to, vector<float3>& outListPoint )
+    {
+        outListPoint.clear();
+        const int2 fromCell = pGrid != nullptr ? pGrid->computeCell( from ) : int2{};
+        const int2 toCell   = pGrid != nullptr ? pGrid->computeCell( to ) : int2{};
+        const bool bInside  = pGrid != nullptr && pGrid->isInside( fromCell ) && pGrid->isInside( toCell );
+        if ( bInside && pGrid->hasLineOfSight( fromCell, toCell ) == false )
+        {
+            // 일정의 격자 길과 같은 길이다 — 점 목록의 첫 점은 시작이라 뺀다.
+            NavGridSchedulePathing( pGrid, &inoutPathfinder, SchedulePlane::XZ ).makeRoute( ScheduleLocation{ from }, ScheduleLocation{ to }, outListPoint );
+            outListPoint.erase( outListPoint.begin() );
+        }
+        if ( outListPoint.empty() )
+            outListPoint.push_back( to );
+    }
+
     void ThemeParkSimulation::startWalking( ParkGuest& guest, const float3& destination )
     {
+        findWalkRoute( _pWalkGrid, _pathfinder, guest._position, destination, guest._listWalkPoint );
+        const float3 first = guest._listWalkPoint.front();
+        guest._listWalkPoint.erase( guest._listWalkPoint.begin() );
+        startWalkLeg( guest, first, _settings._minWalkSeconds );
+        guest._state = ParkGuestState::Walking;
+    }
+
+    void ThemeParkSimulation::startWalkLeg( ParkGuest& guest, const float3& to, float32 minSeconds )
+    {
         guest._walkFrom     = guest._position;
-        guest._walkTo       = destination;
-        guest._walkDuration = MathUtil::max( _settings._minWalkSeconds, float3::getDistance( guest._position, destination ) / MathUtil::max( ThemeParkInternal::kMinWalkSpeed, _settings._walkSpeed ) );
+        guest._walkTo       = to;
+        guest._walkDuration = MathUtil::max( minSeconds, float3::getDistance( guest._position, to ) / MathUtil::max( ThemeParkInternal::kMinWalkSpeed, _settings._walkSpeed ) );
         guest._walkTimer    = guest._walkDuration;
-        guest._state        = ParkGuestState::Walking;
     }
 
     void ThemeParkSimulation::sendHome( ParkGuest& guest, ParkGuestThought thought )
