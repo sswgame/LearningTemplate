@@ -6,6 +6,7 @@
 #include "Core/Memory/Memory.h"
 
 #include "Engine/Graphics/Shader/Binding/ShaderBindingSlots.h"
+#include "Engine/Graphics/Texture/Texture2D.h"
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
 #include "Engine/Object/GameObject/Registry/ComponentRegistry.h"
@@ -43,6 +44,11 @@ namespace sw
         , _cloudColor{ 1.0f, 1.0f, 1.0f }
         , _intensityScale{ 1.0f }
     {
+    }
+
+    void SkyComponent::setHdriTexture( string_view path )
+    {
+        _hdriTexture = path;
     }
 
     SkyGradient SkyComponent::makeGradient() const

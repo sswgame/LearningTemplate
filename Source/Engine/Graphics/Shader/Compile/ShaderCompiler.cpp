@@ -71,7 +71,8 @@ namespace sw
 
                     vector<uint8>                bytes;
                     const optional<AbsolutePath> found = _resolver.findInclude( _input, pFileName, bytes );
-                    ( 가림 ) if ( found.has_value() == false || bytes.empty() ) return E_FAIL;
+                    if ( found.has_value() == false || bytes.empty() )
+                        return E_FAIL;
 
                     uint8* pHeap = static_cast<uint8*>( Memory::allocate( bytes.size() ) );
                     if ( pHeap == nullptr )

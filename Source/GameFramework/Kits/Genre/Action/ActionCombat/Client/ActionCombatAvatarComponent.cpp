@@ -13,7 +13,7 @@
 #include "Engine/Object/GameObject/Tick/TickContext.h"
 #include "Engine/Object/GameObject/WorldOrigin.h"
 
-#include "GameFramework/Kits/Genre/Action/ActionCombat/Client/ActionRoomDebugDraw.h"
+#include "GameFramework/Kits/Genre/Action/ActionCombat/ActionRoomDebugDraw.h"
 #include "GameFramework/Kits/Genre/Action/ActionCombat/Component/ActionCombatGameModeComponent.h"
 #include "GameFramework/Runtime/Character/Combat/Health/RuleHealthViewComponent.h"
 #include "GameFramework/Runtime/Foundation/Framework/GameService.h"

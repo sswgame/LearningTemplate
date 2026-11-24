@@ -61,7 +61,17 @@
 				<item>common/data/items.xml</item>
 			</origins>
 		</entry>
+		<entry key="Health Potion" source="Health Potion" context="Item name">
+			<origins>
+				<item>common/data/items.xml</item>
+			</origins>
+		</entry>
 		<entry key="Heraldic Cape" source="Heraldic Cape" context="Item name">
+			<origins>
+				<item>common/data/items.xml</item>
+			</origins>
+		</entry>
+		<entry key="High Heels" source="High Heels" context="Item name">
 			<origins>
 				<item>common/data/items.xml</item>
 			</origins>
@@ -81,12 +91,22 @@
 				<item>common/data/items.xml</item>
 			</origins>
 		</entry>
+		<entry key="Knight Helmet (Tintable)" source="Knight Helmet (Tintable)" context="Item name">
+			<origins>
+				<item>common/data/items.xml</item>
+			</origins>
+		</entry>
 		<entry key="Knight Sword (Merged)" source="Knight Sword (Merged)" context="Item name">
 			<origins>
 				<item>common/data/items.xml</item>
 			</origins>
 		</entry>
 		<entry key="Longbow" source="Longbow" context="Item name">
+			<origins>
+				<item>common/data/items.xml</item>
+			</origins>
+		</entry>
+		<entry key="Low Boots" source="Low Boots" context="Item name">
 			<origins>
 				<item>common/data/items.xml</item>
 			</origins>
@@ -180,6 +200,11 @@
 				<item>common/data/items.xml</item>
 			</origins>
 		</entry>
+		<entry key="Trout" source="Trout" context="Item name">
+			<origins>
+				<item>common/data/items.xml</item>
+			</origins>
+		</entry>
 		<entry key="Welcome to Dry Gulch." source="Welcome to Dry Gulch." context="SequenceTrackItem._text">
 			<origins>
 				<item>game/playground/wildwest/data/arrival.seq.xml</item>
@@ -188,6 +213,16 @@
 		<entry key="Welcome to Pixel Town, traveller." source="Welcome to Pixel Town, traveller." context="Dialogue line">
 			<origins>
 				<item>game/playground/pixeltown/dialogue/elder.dialogue.xml</item>
+			</origins>
+		</entry>
+		<entry key="Wild Herb" source="Wild Herb" context="Item name">
+			<origins>
+				<item>common/data/items.xml</item>
+			</origins>
+		</entry>
+		<entry key="Wood Log" source="Wood Log" context="Item name">
+			<origins>
+				<item>common/data/items.xml</item>
 			</origins>
 		</entry>
 	</entries>

@@ -39,7 +39,7 @@ namespace sw
     void GameFeatureReceiverComponent::addFeatureComponent( const GameFeatureComponentRule& rule )
     {
         GameObject*        pOwner   = getOwner();
-        GameObjectManager* pManager = pOwner != nullptr ? pOwner->getManager() : nullptr;
+        GameObjectManager* pManager = pOwner != nullptr ? pOwner->getMutableManager() : nullptr;
         if ( pManager == nullptr || pOwner->findComponentByTypeName( rule._componentType ) != nullptr )
             return;
         SW_ASSERT( pManager->isStructuralMutationFrozen() == false ); // 기능은 게임 프레임 앞에서 켜지고 시작은 틱 전이다 — 미뤄지면 무엇을 붙였는지 알 수 없다
@@ -54,7 +54,7 @@ namespace sw
     void GameFeatureReceiverComponent::removeFeatureComponent( uint32 ruleID )
     {
         GameObject*        pOwner   = getOwner();
-        GameObjectManager* pManager = pOwner != nullptr ? pOwner->getManager() : nullptr;
+        GameObjectManager* pManager = pOwner != nullptr ? pOwner->getMutableManager() : nullptr;
         for ( const AddedEntry& added : _listAdded )
         {
             Component* pComponent = added._ruleID == ruleID && pManager != nullptr ? pManager->resolveComponent( added._component ) : nullptr;

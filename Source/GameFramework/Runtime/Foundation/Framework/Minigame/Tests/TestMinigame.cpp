@@ -367,7 +367,7 @@ SW_TEST_CASE( MinigameTest, SaveStateRoundTripsTheFrames )
     SW_REQUIRE_NOT_NULL( pSuspended );
     SW_EXPECT_EQUAL( string( "game/test/maps/town.scene.xml" ), pSuspended->_scenePath );
     SW_EXPECT_TRUE( pSuspended->_snapshot.empty() ); // 스냅숏 목적의 봉투는 다른 실행에서 쓰지 않는다
-    SW_EXPECT_TRUE( pSuspended->_saveSnapshot == vector<uint8>{ 4, 5 } );
+    SW_EXPECT_TRUE( ( pSuspended->_saveSnapshot == vector<uint8>{ 4, 5 } ) );
     const MinigameSubLevelReturn* const pSubLevel = std::get_if<MinigameSubLevelReturn>( &listFrame[1]._returnPoint );
     SW_REQUIRE_NOT_NULL( pSubLevel );
     SW_EXPECT_TRUE( pSubLevel->_subLevelName == hashed_string( "cardtable" ) );
