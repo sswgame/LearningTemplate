@@ -1365,7 +1365,7 @@ namespace sw
             bounds2.ExpandBy( JPH::Vec3::sReplicate( settings.mMaxSeparationDistance ) );
             if ( bounds1.Overlaps( bounds2 ) == false )
                 continue;
-            ioCollector.SetUserData( reinterpret_cast<uint64>( entry._pMirror ) );
+            ioCollector.SetUserData( reinterpret_cast<uint64>( entry._pMirror.GetPtr() ) );
             JPH::CollisionDispatch::sCollideShapeVsShape( pShape1, pShape2, JPH::Vec3::sOne(), JPH::Vec3::sOne(), transform1, transform2, JPH::SubShapeIDCreator(),
                                                           JPH::SubShapeIDCreator(), settings, ioCollector );
         }
@@ -1407,7 +1407,7 @@ namespace sw
             bounds2.ExpandBy( extents + JPH::Vec3::sReplicate( padding ) );
             if ( JPH::RayAABoxHits( origin, direction, bounds2.mMin, bounds2.mMax ) == false )
                 continue;
-            ioCollector.SetUserData( reinterpret_cast<uint64>( entry._pMirror ) );
+            ioCollector.SetUserData( reinterpret_cast<uint64>( entry._pMirror.GetPtr() ) );
             JPH::CollisionDispatch::sCastShapeVsShapeWorldSpace( shapeCast, castSettings, pShape2, JPH::Vec3::sOne(), shapeFilter, transform2, JPH::SubShapeIDCreator(),
                                                                  JPH::SubShapeIDCreator(), ioCollector );
         }
