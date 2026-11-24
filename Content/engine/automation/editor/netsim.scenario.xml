@@ -18,8 +18,12 @@
 	<EditorClick mark="multiplayer.tab.inprocess" state="Down"/>
 	<AdvanceSimulation frames="3"/> <!-- 누름 · 뗌을 다른 프레임에 둔다(프레임 경계) -->
 	<EditorClick mark="multiplayer.tab.inprocess" state="Up"/>
-	<!-- 시작: 게임 목록의 첫 게임(본보기)이 클라이언트 둘로 선다. 첫 클라이언트가 입력 초점을 받는다 -->
+	<!-- 시작: 목록에서 고른 본보기 게임이 클라이언트 둘로 선다(목록의 첫 게임은 띄운 게임 모듈에 달렸다). 첫 클라이언트가 입력 초점을 받는다 -->
 	<WaitUntil watch="Editor.NetSimRunning" equals="0" timeoutFrames="60"/>
+	<EditorClick mark="multiplayer.inprocess.game"/>
+	<EditorWaitStable/>
+	<EditorClick mark="multiplayer.inprocess.game.Sample: avatars"/>
+	<EditorWaitStable/>
 	<EditorClick mark="multiplayer.inprocess.start" state="Down"/>
 	<AdvanceSimulation frames="3"/> <!-- 누름 · 뗌을 다른 프레임에 둔다(프레임 경계) -->
 	<EditorClick mark="multiplayer.inprocess.start" state="Up"/>

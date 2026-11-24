@@ -283,7 +283,7 @@ namespace sw::editor
     {
         StringBuilder<constant::buffer::kMax128> line;
         if ( reply._errorCode != OnlineError::kOk )
-            line.appendFormat( "%#: error %#", AdminToolUtil::getMethodName( reply._method ), reply._errorCode ); // 공통 범주(권한 · 형식 · 장애)는 업무 결과가 없다
+            line.appendFormat( "%#: %# (%#)", AdminToolUtil::getMethodName( reply._method ), AdminToolUtil::getErrorName( reply._errorCode ), reply._errorCode ); // 공통 범주(권한 · 형식 · 장애)는 업무 결과가 없다
         else
             line.appendFormat( "%#: %#", AdminToolUtil::getMethodName( reply._method ), getEnumName( reply._reply._result ) );
         return string( line.view() );

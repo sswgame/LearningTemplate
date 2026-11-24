@@ -540,6 +540,10 @@ namespace sw
         const AnimationComponentSet& getActiveComponents() const { return _componentActive; }
         /** @brief 평가한 프레임 수입니다. */
         uint64 getFrameIndex() const { return _frameIndex; }
+        /** @brief 시간이 흐른 프레임만 센 수입니다 — 갱신 주기(`AnimationLODState::isOnUpdateFrame`)의 기준이다. 일시 정지한 프레임을 세면 로딩 길이에 따라 먼 캐릭터의 갱신 시점이 갈린다. */
+        uint64 getUpdateFrame() const { return _updateFrame; }
+        /** @brief 갱신 주기의 위상을 등록한 순서로 하나 냅니다 — 같은 주기의 유닛이 프레임마다 고르게 나뉘고, 같은 씬이면 늘 같은 값이다(핸들 번호는 앞서 돈 씬에 달렸다). */
+        uint32 takeUpdatePhase() { return _nextUpdatePhase++; }
         /** @brief 지난 프레임에 일한(쉬지 않은) 유닛 수를 반환합니다. */
         uint32 getActiveMeshCount() const { return _activeMeshCount; }
         // --- 프레임 관찰자(AnimationFrameObserver.h — 개발 도구가 스스로 등록하고, 배포본에는 없다) ---
@@ -641,6 +645,8 @@ namespace sw
         GameObjectManager*                          _pManager;          ///< 의존 핸들을 해석할 매니저다(이 서비스를 소유한다)
         float3                                      _lodViewPosition;
         uint64                                      _frameIndex;
+        uint64                                      _updateFrame;     ///< 시간이 흐른 프레임 수(`getUpdateFrame`)
+        uint32                                      _nextUpdatePhase; ///< `takeUpdatePhase` 가 다음에 낼 값
         float32                                     _deltaSeconds;
         float32                                     _expectedEvaluationMicroseconds;
         uint32                                      _activeMeshCount;

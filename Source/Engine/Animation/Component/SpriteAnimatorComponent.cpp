@@ -3,7 +3,6 @@
 #include "Engine/Animation/Component/SpriteAnimatorComponent.h"
 
 #include "Core/Foundation/Constants.h"
-#include "Core/Hash/HashUtil.h"
 #include "Core/Math/MathUtil.h"
 
 #include "Engine/Animation/Graph/AnimationGraphAsset.h"
@@ -146,10 +145,9 @@ namespace sw
     void SpriteAnimatorComponent::onRegister( GameObjectManager& manager )
     {
         Component::onRegister( manager );
-        _pAnimationSystem  = &manager.getSubsystem<AnimationSystem>();
-        _lodRegistration   = _pAnimationSystem->registerLODClient( &_lodClient );
-        const uint64 mixed = getHandle().componentID() * HashUtil::kGoldenRatio64;
-        _updatePhase       = static_cast<uint32>( ( mixed ^ ( mixed >> 29 ) ) & 0xFFFFu );
+        _pAnimationSystem = &manager.getSubsystem<AnimationSystem>();
+        _lodRegistration  = _pAnimationSystem->registerLODClient( &_lodClient );
+        _updatePhase      = _pAnimationSystem->takeUpdatePhase();
     }
 
     void SpriteAnimatorComponent::onUnregister( GameObjectManager& manager )
@@ -200,7 +198,7 @@ namespace sw
         }
 
         // LOD: 안 보이거나 주기 밖이면 스프라이트에 넘기지 않는다(시간 · 상태는 위에서 흘렀다). 보이게 되면 그 틱에 맞춘다.
-        const uint64 frameIndex = ( _pAnimationSystem != nullptr ) ? _pAnimationSystem->getFrameIndex() : 0u;
+        const uint64 frameIndex = ( _pAnimationSystem != nullptr ) ? _pAnimationSystem->getUpdateFrame() : 0u;
         const bool   bOnRate    = AnimationLODState::isOnUpdateFrame( frameIndex, _updatePhase, MathUtil::max( _lodState._updateRateDivisor, 1u ) );
         if ( _lodState._bVisible == SW_FALSE || bOnRate == false )
         {

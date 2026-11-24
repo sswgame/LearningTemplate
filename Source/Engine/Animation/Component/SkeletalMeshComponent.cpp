@@ -46,14 +46,6 @@ namespace sw
                 return s_skeleton;
             }
 
-            /** @brief 핸들에서 주기 위상을 냅니다(정수 해시 — 이웃한 id 가 이웃한 위상이 되지 않게 섞는다). */
-            static uint32 makeUpdatePhase( uint64 id )
-            {
-                uint64 mixed = id * HashUtil::kGoldenRatio64;
-                mixed ^= mixed >> 29;
-                return static_cast<uint32>( mixed & 0xFFFFu );
-            }
-
 #if defined( SW_DO_CHECKS )
             /** @brief 로컬 포즈와 모프 가중치의 바이트 지문입니다 — `ReadsOnly` 를 선언한 작업이 단계 뒤에도 이 값을 그대로 두었는지 `runTasks` 가 본다. */
             static uint64 fingerprintPose( const Pose& pose, const vector<float32>& listMorphWeight )
@@ -239,7 +231,7 @@ namespace sw
         _pAnimationSystem = &manager.getSubsystem<AnimationSystem>();
         _pAnimationSystem->registerMesh( this );
         _lodRegistration = _pAnimationSystem->registerLODClient( &_lodClient );
-        _updatePhase     = SkeletalMeshComponentInternal::makeUpdatePhase( getHandle().componentID() );
+        _updatePhase     = _pAnimationSystem->takeUpdatePhase();
     }
 
     void SkeletalMeshComponent::onUnregister( GameObjectManager& manager )
@@ -924,7 +916,7 @@ namespace sw
         // 갱신 주기: 시간 단계는 매 프레임 돌고(알림 · 루트 모션이 늦지 않게), 포즈는 주기마다 만든다. 화면 밖이면 포즈를 건너뛴다.
         // 주기는 PROPERTY(하한)와 LOD 판정 중 큰 쪽이고, 위상을 더해 같은 주기의 유닛이 한 프레임에 몰리지 않게 한다.
         _effectiveDivisor           = MathUtil::max( _updateRateDivisor, MathUtil::max( _lodState._updateRateDivisor, 1u ) );
-        const bool bOnRate          = AnimationLODState::isOnUpdateFrame( frameIndex, _updatePhase, _effectiveDivisor );
+        const bool bOnRate          = AnimationLODState::isOnUpdateFrame( _pAnimationSystem != nullptr ? _pAnimationSystem->getUpdateFrame() : frameIndex, _updatePhase, _effectiveDivisor );
         const bool bOnScreen        = _bVisibleHint == SW_TRUE || hasBonesWhenNotRendered();
         const bool bPoseDirty       = _bPoseDirty == SW_TRUE;
         _frameContext._deltaSeconds = deltaSeconds;
