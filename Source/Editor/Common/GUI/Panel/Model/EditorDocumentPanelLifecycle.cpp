@@ -64,12 +64,13 @@ namespace sw::editor
         , _listRecentPath{}
         , _listOpenCandidate{}
         , _openFilter{}
-        , _movedUnsavedText{}
+        , _movedText{}
         , _documentSerial{ 0 }
         , _lastCopyTextHash{ 0 }
         , _bLoaded{ SW_FALSE }
         , _bConfirmSwitch{ SW_FALSE }
         , _bLoadFailed{ SW_FALSE }
+        , _bMovedUnsaved{ SW_FALSE }
         , _reserved{ 0 }
     {
         if ( bLoadOnOpen == false )
@@ -94,8 +95,11 @@ namespace sw::editor
                     // 글이 없는 미저장 문서는 얹을 수 없어 계획이 거절했다(`EditorOpenDocument::_bFollowsMove`).
                     if ( _bLoadFailed == SW_FALSE )
                     {
-                        if ( isDocumentDirty() )
-                            _movedUnsavedText = captureDocumentText();
+                        if ( isDocumentLoaded() ) // 다시 읽기 앞에 또 옮겼으면 처음 옮길 때의 글이 그대로다
+                        {
+                            _movedText     = captureDocumentText();
+                            _bMovedUnsaved = isDocumentDirty() ? SW_TRUE : SW_FALSE;
+                        }
                         _bLoaded = SW_FALSE;
                     }
                 }
@@ -128,7 +132,7 @@ namespace sw::editor
 
     void EditorDocumentPanel::prepareDocumentForSave()
     {
-        if ( _movedUnsavedText.empty() == false )
+        if ( _bMovedUnsaved == SW_TRUE )
             ensureDocumentLoaded();
     }
 
@@ -183,7 +187,8 @@ namespace sw::editor
         if ( focused.empty() )
             return;
         _loadedAssetPath = string{ focused };
-        _movedUnsavedText.clear();
+        _movedText.clear();
+        _bMovedUnsaved = SW_FALSE;
         ++_documentSerial;
         EditorDocumentOpenUtil::rememberRecent( _listRecentPath, _loadedAssetPath, kMaxRecentDocumentCount );
         _pendingFocusPath.clear();
@@ -195,21 +200,29 @@ namespace sw::editor
 
     void EditorDocumentPanel::markDocumentLoaded()
     {
-        _bLoaded     = SW_TRUE;
-        _bLoadFailed = SW_FALSE;
+        _bLoaded                   = SW_TRUE;
+        _bLoadFailed               = SW_FALSE;
+        const string movedText     = std::move( _movedText );
+        const bool   bMovedUnsaved = _bMovedUnsaved == SW_TRUE && movedText.empty() == false;
+        _movedText.clear();
+        _bMovedUnsaved = SW_FALSE;
         clearDocumentDirty();
-        resetDocumentHistory();
+        if ( movedText.empty() )
+            resetDocumentHistory();
         syncDocumentUndoBaseline();
         captureDiskBaseline();
         // 디스크의 글로 (다시) 읽었다 — 앞 편집의 사본은 낡았다(저장 안 함 · 다시 읽기). 복구 청이 이 문서면 사본 글을 되돌리기와 같은 길로 적용해 dirty 로 둔다(감사 E-1).
         EditorDocumentAutosaveEntry::remove( EditorAutosaveCommands::getSessionFolder(), _loadedAssetPath );
         _lastCopyTextHash = 0;
-        string restoredText;
-        if ( _loadedAssetPath.empty() == false && EditorAutosaveCommands::takePendingDocumentRestore( _loadedAssetPath, restoredText ) )
+        string     restoredText;
+        const bool bRestored = _loadedAssetPath.empty() == false && EditorAutosaveCommands::takePendingDocumentRestore( _loadedAssetPath, restoredText );
+        if ( bRestored )
             restoreDocumentFromUndo( restoredText );
-        else if ( _movedUnsavedText.empty() == false )
-            restoreDocumentFromUndo( _movedUnsavedText ); // 옮기기 앞의 미저장 편집
-        _movedUnsavedText.clear();
+        else if ( bMovedUnsaved )
+            restoreDocumentFromUndo( movedText ); // 옮기기 앞의 미저장 편집
+        // 옮기기만 한 문서는 글이 그대로라 되돌리기 기록을 잇는다. 글이 달라졌으면(사본 · 옮기며 고친 참조) 쥔 단계는 앞 글의 구간이라 버린다.
+        if ( movedText.empty() == false && ( bRestored || captureDocumentText() != movedText ) )
+            resetDocumentHistory();
     }
 
     void EditorDocumentPanel::applyPendingAutosaveRestore()
