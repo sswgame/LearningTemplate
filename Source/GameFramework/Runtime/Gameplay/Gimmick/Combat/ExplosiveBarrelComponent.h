@@ -62,7 +62,8 @@ namespace sw
         PROPERTY( RuntimeState, Category = "Barrel", DisplayName = "Exploded", Tooltip = "Runtime" )
         bool _bExploded;
 
-        int32  _fuseStepsLeft; ///< 도화선이 다 타기까지 남은 스텝 수(-1 이면 아직 세지 않음)
-        float3 _blastCenter;   ///< 터진 자리 — 틱 뒤 `applyRadialDamage` 가 읽는다(틱 뒤 일은 캡처 없이 핸들로 다시 찾는다)
+        PROPERTY( RuntimeState, Category = "Barrel", DisplayName = "Fuse Steps Left", Tooltip = "Runtime: steps until the fuse burns down (-1: not counting yet)" )
+        int32  _fuseStepsLeft;
+        float3 _blastCenter; ///< 터진 자리 — 틱 뒤 `applyRadialDamage` 가 읽는다(틱 뒤 일은 캡처 없이 핸들로 다시 찾는다)
     };
 } // namespace sw

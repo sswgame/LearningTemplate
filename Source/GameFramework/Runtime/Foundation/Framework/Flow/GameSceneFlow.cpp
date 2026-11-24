@@ -16,6 +16,7 @@
 #include "GameFramework/Runtime/Foundation/Framework/GameEventUtil.h"
 #include "GameFramework/Runtime/Foundation/Framework/GameService.h"
 #include "GameFramework/Runtime/Foundation/Framework/Save/Autosave.h"
+#include "GameFramework/Runtime/Foundation/Framework/Save/GameSaveSlots.h"
 #include "GameFramework/Runtime/Foundation/Framework/Save/SaveLock.h"
 #include "GameFramework/Runtime/Foundation/GameData/GameSettings.h"
 
@@ -38,6 +39,8 @@ namespace sw
         , _titleSaveBlock{}
         , _sceneLoadRequestedSubscription{}
         , _listSessionCommandRegistration{}
+        , _openSessionTravel{ kGameplayTravel }
+        , _lastSessionTravel{ kGameplayTravel }
         , _bResumingWorld{ SW_FALSE }
     {
     }
@@ -71,6 +74,7 @@ namespace sw
         _sceneLoadRequestedSubscription.reset();
         _listPendingSceneLoad.clear();
         _titleSaveBlock.reset();
+        _openSessionTravel = kGameplayTravel;
     }
 
     void GameSceneFlow::update()
@@ -113,13 +117,13 @@ namespace sw
             SW_LOG_INFO_ID( "GameSceneFlow.GameInstanceRecreatedOver", "The game instance was recreated over a live scene - keeping it instead of loading the first scene" );
             return false;
         }
-        return requestLoadScene( getFirstScene(), "first" );
+        return requestLoadScene( getFirstScene(), "first", kGameplayTravel );
     }
 
     bool GameSceneFlow::requestEntranceScene()
     {
         resetRunningProgress();
-        return requestLoadScene( getEntranceScene(), "entrance" );
+        return requestLoadScene( getEntranceScene(), "entrance", beginSessionTravel() );
     }
 
     bool GameSceneFlow::requestTitleScene()
@@ -129,13 +133,30 @@ namespace sw
             return false;
         resetRunningProgress();
         engine::notifyGameInstanceBoundary( GameInstanceBoundary::Ended ); // 하던 게임이 끝났다 — 열린 화면 · 자막 · 소리 · 세션. 로딩 화면은 바로 아래 요청이 띄운다
-        return requestLoadScene( titleScene.get(), "title" );
+        return requestLoadScene( titleScene.get(), "title", beginSessionTravel() );
     }
 
     void GameSceneFlow::resetRunningProgress()
     {
         if ( AutosaveManager* const pAutosave = game::findSubsystem<AutosaveManager>() )
             pAutosave->beginNewGame();
+        if ( GameSaveSlots* const pSaveSlots = game::findSubsystem<GameSaveSlots>() )
+            pSaveSlots->setPlayTime( 0.0 );
+    }
+
+    uint32 GameSceneFlow::beginSessionTravel()
+    {
+        ++_lastSessionTravel;
+        if ( _lastSessionTravel == kGameplayTravel )
+            ++_lastSessionTravel; // 한 바퀴 돌았다 — 0 은 게임 이동이다
+        _openSessionTravel = _lastSessionTravel;
+        return _openSessionTravel;
+    }
+
+    void GameSceneFlow::endSessionTravel( uint32 serial )
+    {
+        if ( isSessionTravelCurrent( serial ) )
+            _openSessionTravel = kGameplayTravel;
     }
 
     void GameSceneFlow::updateTitleSaveBlock( const string& scenePath )
@@ -179,31 +200,47 @@ namespace sw
             SW_LOG_ERROR_ID( "GameSceneFlow.StartGameEntranceScene", "Start game: the entrance scene '%#' was not requested", getEntranceScene().c_str() );
     }
 
-    bool GameSceneFlow::requestLoadScene( const string& scenePath, const utf8* pWhich )
+    bool GameSceneFlow::requestLoadScene( const string& scenePath, const utf8* pWhich, uint32 sessionTravel )
     {
         if ( scenePath.empty() )
+        {
+            endSessionTravel( sessionTravel );
             return false;
+        }
+        if ( sessionTravel == kGameplayTravel && _openSessionTravel != kGameplayTravel )
+        {
+            SW_LOG_WARNING_ID( "GameSceneFlow.TravelDuringSessionTravel", "The %# scene '%#' is not opened - the player is leaving this game (title, start or a save is being opened)", pWhich,
+                               scenePath.c_str() );
+            return false;
+        }
         SceneManager* pSceneManager = game::findSubsystem<SceneManager>();
         if ( pSceneManager == nullptr )
         {
             SW_LOG_WARNING_ID( "GameSceneFlow.SceneNotOpenedNo", "The %# scene '%#' is not opened - no SceneManager service", pWhich, scenePath.c_str() );
+            endSessionTravel( sessionTravel );
             return false;
         }
         // 로딩 화면 · 로드 이벤트는 받아들임 알림(`onSceneLoadRequested`)이 붙인다 — 시나리오 · 게임 코드가 연 씬도 같은 길이다.
         if ( pSceneManager->requestLoadFuture( scenePath, SceneLoadKind::Travel ).isValid() == false )
         {
             SW_LOG_ERROR_ID( "GameSceneFlow.SceneCouldNotRequested", "The %# scene '%#' could not be requested", pWhich, scenePath.c_str() );
+            endSessionTravel( sessionTravel );
             return false;
         }
+        // 받아들임 알림은 요청 안에서 동기로 돈다 — 방금 넣은 맨 뒤가 이 요청이다(알림이 걸리지 않은 범위는 로드를 따르지 않으니 여기서 닫는다).
+        if ( _listPendingSceneLoad.empty() == false && _listPendingSceneLoad.back()._scenePath == scenePath )
+            _listPendingSceneLoad.back()._sessionTravel = sessionTravel;
+        else
+            endSessionTravel( sessionTravel );
         return true;
     }
 
-    void GameSceneFlow::onSceneLoadRequested( const string& scenePath, SceneLoadKind kind, const TaskFuture<Scene*>& future )
+    void GameSceneFlow::onSceneLoadRequested( const string& scenePath, SceneLoadKind kind, const TaskFuture<SceneHandle>& future )
     {
         if ( kind != SceneLoadKind::Travel )
             return; // 도구가 연 씬(편집기 · 진단)은 게임 흐름이 아니다
         // 로드가 끝날 때까지 세이브를 막는다 — 언리얼 게임도 로딩 화면 동안 세이브를 받지 않는다(맵이 반쯤 섰다).
-        _listPendingSceneLoad.push_back( PendingSceneLoad{ scenePath, future, _saveLock.block( "scene.loading" ), SceneLoadedFunction{} } );
+        _listPendingSceneLoad.push_back( PendingSceneLoad{ scenePath, future, _saveLock.block( "scene.loading" ), kGameplayTravel, SceneLoadedFunction{} } );
         if ( _pLoadingScreen != nullptr && _pLoadingScreen->hasLoadingScreenDocument() )
             (void)_pLoadingScreen->beginLoading();
     }
@@ -229,7 +266,8 @@ namespace sw
 
         for ( const PendingSceneLoad& finished : listFinished )
         {
-            Scene* const pScene = finished._future.get();
+            // 부르는 자리마다 푼다 — 앞 알림이 다른 씬을 열어 이 씬을 내렸으면 밀려난 것과 같다(nullptr).
+            Scene* const pScene = game::getSubsystem<SceneManager>().resolveScene( finished._future.get() );
             if ( pScene != nullptr )
                 updateTitleSaveBlock( finished._scenePath );
             SceneLoadCompletedEvent event{};
@@ -238,12 +276,13 @@ namespace sw
             GameEventUtil::send( event );
             if ( finished._onLoaded.isBound() )
                 finished._onLoaded( pScene );
+            endSessionTravel( finished._sessionTravel ); // 세이브 적용까지 끝난 뒤다
         }
     }
 
-    bool GameSceneFlow::requestSceneThen( const string& scenePath, const SceneLoadedFunction& onLoaded )
+    bool GameSceneFlow::requestSceneThen( const string& scenePath, const SceneLoadedFunction& onLoaded, uint32 sessionTravel )
     {
-        if ( requestLoadScene( scenePath, "requested" ) == false )
+        if ( requestLoadScene( scenePath, "requested", sessionTravel ) == false )
             return false;
         // 받아들임 알림은 요청 안에서 동기로 돈다 — 방금 넣은 맨 뒤가 이 요청이다. 아니면 알림이 걸리지 않은 범위라 끝을 받을 수 없다(멈춘다).
         if ( _listPendingSceneLoad.empty() || _listPendingSceneLoad.back()._scenePath != scenePath )

@@ -9,6 +9,7 @@
  */
 #include "pch.h"
 
+#include "Engine/Object/Component/ComponentStateCodec.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
 
 #include "GameFramework/Runtime/Foundation/Framework/Flow/GameInstance.h"

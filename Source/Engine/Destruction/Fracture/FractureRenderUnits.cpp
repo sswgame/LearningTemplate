@@ -43,6 +43,7 @@ namespace sw
             SkeletalMeshComponent* pUnit = owner.addComponent<SkeletalMeshComponent>();
             if ( pUnit == nullptr )
                 continue;
+            pUnit->setTransient( true ); // 부서진 상태에서 다시 세우는 파생 — 저장 · 상태 해시에 넣지 않는다(그 메시는 파일이 아니라 실을 수도 없다)
             pUnit->setSkeleton( skeleton );
             pUnit->setMesh( _arrSkinnedMesh[slot] );
             pUnit->setVisibilityBasedTickOption( VisibilityBasedAnimationTickOption::AlwaysTickPoseAndRefreshBones );
@@ -92,6 +93,7 @@ namespace sw
                 pBaked = owner.addComponent<MeshComponent>();
                 if ( pBaked == nullptr )
                     continue;
+                pBaked->setTransient( true );
                 if ( pSkinned->getMaterialPath().empty() == false )
                     pBaked->setMaterialPath( pSkinned->getMaterialPath().view() );
                 else

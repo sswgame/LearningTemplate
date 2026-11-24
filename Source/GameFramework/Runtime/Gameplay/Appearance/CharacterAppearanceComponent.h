@@ -308,14 +308,14 @@ namespace sw
         static constexpr uint32   kStateTag     = FourCCUtil::make( "CAPP" );
         static constexpr uint32   kStateVersion = 1;
         /**
-         * @brief `ComponentStateStore` 계약 — 게임 중 꾸민 모습을 게임 세이브에 싣습니다: 게임 선택(`applySelection` — 공유 코드, 판이 따로 있어 옛 판을 읽는다)과 슬롯 덮어쓰기.
+         * @brief `ComponentStateCodec` 계약 — 게임 중 꾸민 모습을 게임 세이브에 싣습니다: 게임 선택(`applySelection` — 공유 코드, 판이 따로 있어 옛 판을 읽는다)과 슬롯 덮어쓰기.
          * @details 프리셋 id · 시드는 프로퍼티라 씬과 함께 실린다. 미리보기 입히기(편집기 데이터)는 싣지 않는다. 장비 인스턴스(아이템 염색)는 `CharacterEquipmentComponent` 가 싣는다.
          *          예전에는 상태가 없어 불러오면 꾸민 모습이 프리셋으로 돌아갔다. 읽기는 외형 데이터가 있어야 해 시작 뒤에만 한다 — 그 전 바이트는 `restoreState` 가 보관한다.
          */
         void serializeState( StateIO& io );
         /** @brief 저장한 상태를 받습니다. 시작 전이면 보관했다가 `onBeginPlay` 가 겁니다. 읽지 못하면 알리고 지금 모습을 그대로 둡니다. */
         void restoreState( vector<uint8>&& bytes );
-        /** @brief 시작 전에 받아 보관한 상태입니다(`ComponentStateStore` 계약 — 있으면 그것이 곧 상태다). */
+        /** @brief 시작 전에 받아 보관한 상태입니다(`ComponentStateCodec` 계약 — 있으면 그것이 곧 상태다). */
         const vector<uint8>& getPendingStateBytes() const { return _pendingStateBytes; }
 
         /** @brief 지금 스폰해 둔 부품 오브젝트입니다. */

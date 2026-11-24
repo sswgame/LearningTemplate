@@ -36,6 +36,8 @@ namespace sw
 
 namespace sw
 {
+    struct GameObjectUnloadInfo;
+
     class PawnComponent;
     class VehicleSeatComponent;
 
@@ -170,6 +172,8 @@ namespace sw
         GameObjectHandle                      _occupant;                  ///< 앉은 탑승자의 오브젝트. 저장 · 스냅샷(미니게임에서 돌아오기 · 되감기 · 핫 리로드)에 실리고 되살아난 뒤 다시 앉힌다(`restoreRider`)
         TComponentHandle<ControllerComponent> _occupantController;        ///< 탈 때 탑승자를 쥐고 있던 조종자. 운전석에서 쓰며 내릴 때 탑승자에게 돌려준다
         TComponentHandle<ControllerComponent> _previousVehicleController; ///< 탈 때 탈것에 빙의해 있던 조종자. 주인을 따라오던 말 AI 가 해당하며, 내리면 다시 빙의한다
+        Subscription                          _unloadSubscription;        ///< 탈것이 셀 · 레이어와 함께 내려가는 알림(`handleUnloading`)
+        Subscription                          _riderUnloadSubscription;   ///< 앉은 탑승자가 내려가는 알림(`handleUnloading`)
         Subscription                          _riderSuspension;           ///< 앉은 동안 탑승자의 걷기를 멈춘다
         float4x4                              _seatInVehicle;             ///< 탈 때 붙인 소켓 변환(탈것 기준). 기울임은 이 위에 얹는다
         float3                                _lastSeatPosition;          ///< 지난 틱의 좌석 월드 위치
@@ -197,6 +201,8 @@ namespace sw
          * @details 자동 빙의(`ControlSystem::autoPossess`)가 조종자에게 자기 폰을 쥐여 준 뒤에 부른다 — 그래야 탈 때처럼 조종자와 탈것의 앞 조종자(말 AI)를 다시 안다.
          */
         void restoreRider();
+        /** @brief 탈것과 탑승자 가운데 한쪽만 셀 · 레이어와 함께 내려갑니다 — 상태를 뜨기 전에 내립니다(`GameObjectEvents::_unloading`). */
+        void handleUnloading( const GameObjectUnloadInfo& info );
         /** @brief 탑승자의 소켓 변환에 기울임을 얹고 애니메이터 파라미터를 씁니다. */
         void applyRiderLean( GameObjectManager& manager );
     };

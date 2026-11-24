@@ -72,13 +72,6 @@ namespace sw
         void removeMatchScore( vector<MinigameResultValue>& inoutListValue ) const;
     };
 
-    /** @brief 세이브에 실린 칸 하나입니다(아래부터 위로) — 정의는 이름으로 다시 읽는다. */
-    struct MinigameSavedFrame
-    {
-        hashed_string       _minigame;    ///< 미니게임 이름
-        MinigameReturnPoint _returnPoint; ///< 돌아올 자리(찍은 씬은 `_saveSnapshot` 만 실린다)
-    };
-
     /** @brief 결과에 실려 바탕 판으로 넘어가는 값 하나입니다(번 돈 · 얻은 물건 수 · 점수). 이름의 뜻은 결과를 받는 쪽(허브 디렉터)이 정한다. */
     struct MinigameResultValue
     {
@@ -101,11 +94,32 @@ namespace sw
         vector<MinigameResultValue> _listValue;  ///< 바탕 판에 넘길 값(디렉터의 `collectMinigameResult`). 비었으면 넘길 것이 없다
     };
 
+    /** @brief 세이브에 실린 칸 하나입니다(아래부터 위로) — 정의는 이름으로 다시 읽는다. */
+    struct MinigameSavedFrame
+    {
+        hashed_string       _minigame;    ///< 미니게임 이름
+        MinigameReturnPoint _returnPoint; ///< 돌아올 자리(찍은 씬은 `_saveSnapshot` 만 실린다)
+    };
+
+    /** @brief 아직 넘기지 못한 결과 하나입니다. */
+    struct MinigamePendingResult
+    {
+        string         _scenePath; ///< 받을 바탕 씬
+        MinigameResult _result;
+    };
+
+    /** @brief 세이브에 실린 미니게임 상태입니다(`MinigameStack::writeSaveState`). */
+    struct MinigameSavedState
+    {
+        vector<MinigameSavedFrame>    _listFrame;  ///< 아래부터 위로
+        vector<MinigamePendingResult> _listResult; ///< 넘기지 못한 결과(건 순서대로)
+    };
+
     /**
      * @class MinigameStack
      * @brief 미니게임 칸의 스택과 아직 넘기지 못한 결과입니다. 맨 위 칸만 켜져 있고, 아래 칸들은 덮여 꺼져 있다(`MinigameFlow`).
      * @details 결과는 받을 곳(나간 미니게임의 바탕 씬)이 설 때까지 여기 남아 한 번만 꺼내진다 — 돌아가던 로드가 밀려나도 · 칸을 비워도(`clear`) 남고, 스택을 통째로
-     *          바꾸면(세이브의 미니게임) 함께 바뀐다. 진행이 갈리면(`clearResults` — 세이브를 되살림 · 게임이 끝남) 버린다.
+     *          바꾸면(세이브의 미니게임) 함께 바뀐다. 진행이 갈리면(세이브를 되살림 · 게임이 끝남) 버린다 — 결과는 진행이라 세이브에 실려, 되살린 세이브의 것으로 바뀐다(`setResults`).
      */
     class SW_GF_API MinigameStack
     {
@@ -128,10 +142,10 @@ namespace sw
         void push( MinigameFrame frame );
         /** @brief 맨 위 칸을 꺼냅니다. 비었으면 false 이고 @p outFrame 은 그대로입니다. */
         [[nodiscard]] bool pop( MinigameFrame& outFrame );
-        /** @brief 칸마다 미니게임 이름과 돌아올 자리를 씁니다. 칸이 없으면 빈 바이트입니다. */
+        /** @brief 칸마다 미니게임 이름 · 돌아올 자리와, 넘기지 못한 결과를 씁니다. 둘 다 없으면 빈 바이트입니다. */
         void writeSaveState( vector<uint8>& outBytes ) const;
-        /** @brief `writeSaveState` 의 짝입니다. 빈 바이트면 빈 목록이고, 깨졌으면 오류를 남기고 false 입니다(@p outListFrame 은 그대로). */
-        [[nodiscard]] static bool readSaveState( const vector<uint8>& bytes, vector<MinigameSavedFrame>& outListFrame );
+        /** @brief `writeSaveState` 의 짝입니다. 빈 바이트면 빈 상태이고, 깨졌으면 오류를 남기고 false 입니다(@p outState 는 그대로). */
+        [[nodiscard]] static bool readSaveState( const vector<uint8>& bytes, MinigameSavedState& outState );
         /** @brief 칸의 미니게임 이름 · 돌아올 자리 갈래가 @p listFrame 과 순서까지 같으면 true 입니다(세이브를 이 자리에서 되살릴 수 있다). */
         bool matches( const vector<MinigameSavedFrame>& listFrame ) const;
         /** @brief 칸의 돌아올 자리를 @p listFrame 의 것으로 바꿉니다(같은 미니게임 안에서 세이브를 되살린 뒤 — `matches` 인 목록만 받는다). */
@@ -144,6 +158,8 @@ namespace sw
         [[nodiscard]] vector<MinigameResult> takeResults( const string& scenePath );
         /** @brief 넘기지 못한 결과를 모두 버립니다 — 그 결과를 번 진행이 끝났다. */
         void clearResults() { _listResult.clear(); }
+        /** @brief 넘기지 못한 결과를 @p listResult 로 바꿉니다(되살린 세이브의 것). */
+        void setResults( vector<MinigamePendingResult> listResult ) { _listResult = std::move( listResult ); }
         /** @brief 넘기지 못한 결과 수입니다. */
         size_t getResultCount() const { return _listResult.size(); }
 
@@ -158,14 +174,7 @@ namespace sw
         bool hasSuspendedScene() const;
 
     private:
-        /** @brief 넘기지 못한 결과 하나입니다. */
-        struct PendingResult
-        {
-            string         _scenePath; ///< 받을 바탕 씬
-            MinigameResult _result;
-        };
-
-        vector<MinigameFrame> _listFrame;  ///< 아래부터 위로
-        vector<PendingResult> _listResult; ///< 건 순서대로
+        vector<MinigameFrame>         _listFrame;  ///< 아래부터 위로
+        vector<MinigamePendingResult> _listResult; ///< 건 순서대로
     };
 } // namespace sw

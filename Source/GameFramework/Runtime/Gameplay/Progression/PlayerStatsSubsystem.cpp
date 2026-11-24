@@ -143,6 +143,7 @@ namespace sw
     PlayerStatsSubsystem::PlayerStatsSubsystem( const GameSettings& settings )
         : _settings{ settings }
         , _pCatalog{}
+        , _pBoundCatalog{}
         , _pPlatform{}
         , _stats{}
         , _achievements{}
@@ -177,11 +178,14 @@ namespace sw
         const string                      gameName = FileUtil::getFileNamePart( FileUtil::trimTrailingSlashes( game::getSubsystem<const GameConfig>()._packRoot.get() ) );
         const AbsolutePath                folder   = pUserSettings->getUserFilePath().getParent().join( Internal::kPlatformFolderName ).join( gameName );
         unique_ptr<LocalPlatformServices> pLocal   = make_unique<LocalPlatformServices>( folder );
-        _stats.initialize( _pCatalog.get() );
-        if ( _achievements.initialize( _pCatalog.get(), &_stats, pLocal.get() ) == false )
+        _pLocalPlatform                            = pLocal.get();
+        _pPlatform                                 = std::move( pLocal );
+        if ( openCatalog() == false )
+        {
+            _pLocalPlatform = nullptr;
+            _pPlatform.reset();
             return SubsystemInitResult::Failed; // 까닭은 추적기가 남겼다
-        _pLocalPlatform     = pLocal.get();
-        _pPlatform          = std::move( pLocal );
+        }
         _unlockSubscription = _achievements.registerUnlockListener( SW_DELEGATE_METHOD( AchievementTracker::UnlockDelegate, &PlayerStatsSubsystem::onAchievementUnlocked, this ) );
         loadFromPlatform();
         SW_LOG_INFO_ID( "PlayerStatsSubsystem.Ready", "Player stats: %# stats, %# achievements (%# unlocked) on platform '%#'", static_cast<uint32>( _pCatalog->getStats().size() ),
@@ -200,13 +204,32 @@ namespace sw
         _stats.initialize( nullptr );
         _pLocalPlatform = nullptr;
         _pPlatform.reset();
+        _pBoundCatalog.reset();
         _pCatalog.reset();
     }
 
     void PlayerStatsSubsystem::update()
     {
-        if ( _pPlatform != nullptr )
-            _pPlatform->update();
+        if ( _pPlatform == nullptr )
+            return;
+        if ( _pCatalog.get() != _pBoundCatalog.get() )
+        {
+            // 정의가 다시 읽혔다 — 지금 진행을 쓰고 새 판에 열어 다시 읽는다(항목은 id 로 다시 찾는다). 앞 판은 다시 열 때까지 쥔다.
+            const shared_ptr<const StatCatalog> pPrevious = _pBoundCatalog;
+            (void)save();
+            if ( openCatalog() )
+                loadFromPlatform();
+            else
+                SW_LOG_ERROR_ID( "PlayerStatsSubsystem.ReloadedCatalogRefused", "Player stats: the reloaded stat catalog '%#' is not used (see the messages above) - no achievement is tracked", _settings._statCatalog.c_str() );
+        }
+        _pPlatform->update();
+    }
+
+    bool PlayerStatsSubsystem::openCatalog()
+    {
+        _pBoundCatalog = _pCatalog.snapshot();
+        _stats.initialize( _pBoundCatalog.get() );
+        return _achievements.initialize( _pBoundCatalog.get(), &_stats, _pPlatform.get() );
     }
 
     bool PlayerStatsSubsystem::save()

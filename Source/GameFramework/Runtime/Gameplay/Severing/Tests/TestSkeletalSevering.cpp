@@ -11,6 +11,7 @@
 #include "Engine/Graphics/Mesh/Mesh.h"
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
+#include "Engine/Object/GameObject/Serialization/ObjectStateSerializer.h"
 
 #include "GameFramework/Runtime/Gameplay/Severing/SeverResult.h"
 #include "GameFramework/Runtime/Gameplay/Severing/SkeletalSeveringComponent.h"
@@ -36,6 +37,30 @@ namespace
             }
             geometry._listIndex = { 0, 1, 2, 1, 3, 2, 2, 3, 4, 3, 5, 4 };
             return geometry;
+        }
+
+        /** @brief 띠를 푼 스킨 메시입니다 — 정점 4 · 5 가 손 본이다. */
+        static shared_ptr<Mesh> makeBodyMesh()
+        {
+            const AppearanceGeometry strip = makeStrip();
+            vector<RHIVertex>        listVertex;
+            vector<MeshSkinVertex>   listSkin;
+            for ( const uint32 index : strip._listIndex )
+            {
+                RHIVertex vertex{};
+                vertex._arrPosition[0] = strip._listPosition[index]._x;
+                vertex._arrPosition[1] = strip._listPosition[index]._y;
+                vertex._arrNormal[2]   = -1.0f;
+                listVertex.push_back( vertex );
+                MeshSkinVertex skin{};
+                skin._arrJoint[0]  = index >= 4 ? uint16{ 1 } : uint16{ 0 };
+                skin._arrWeight[0] = 1.0f;
+                listSkin.push_back( skin );
+            }
+            shared_ptr<Mesh> mesh = Mesh::create( MeshCPUAccess::Keep );
+            mesh->setVertices( std::move( listVertex ) );
+            mesh->setSkin( std::move( listSkin ), MeshSkinBinding::makeIdentity( 2u ) );
+            return mesh;
         }
     };
 } // namespace
@@ -88,28 +113,6 @@ SW_TEST_CASE( SkeletalSeveringTest, NewBodyMeshStaysSevered )
     SW_EXPECT_LOG( "SkeletalSevering.AppearanceSurfaceMissing" ); // 외형 없는 몸이다(피는 이 테스트의 일이 아니다)
     const test::ScopedScratchDomain domain;
     SW_REQUIRE_TRUE( FileUtil::writeTextFile( domain.makeDiskPath( "body.fit.xml" ), R"(<FitTables><Region name="Hand" bones="hand" minWeight="0.5"/></FitTables>)" ) );
-    const auto makeBodyMesh = []()
-    {
-        const AppearanceGeometry strip = SkeletalSeveringTestUtil::makeStrip();
-        vector<RHIVertex>        listVertex;
-        vector<MeshSkinVertex>   listSkin;
-        for ( const uint32 index : strip._listIndex )
-        {
-            RHIVertex vertex{};
-            vertex._arrPosition[0] = strip._listPosition[index]._x;
-            vertex._arrPosition[1] = strip._listPosition[index]._y;
-            vertex._arrNormal[2]   = -1.0f;
-            listVertex.push_back( vertex );
-            MeshSkinVertex skin{};
-            skin._arrJoint[0]  = index >= 4 ? uint16{ 1 } : uint16{ 0 };
-            skin._arrWeight[0] = 1.0f;
-            listSkin.push_back( skin );
-        }
-        shared_ptr<Mesh> mesh = Mesh::create( MeshCPUAccess::Keep );
-        mesh->setVertices( std::move( listVertex ) );
-        mesh->setSkin( std::move( listSkin ), MeshSkinBinding::makeIdentity( 2u ) );
-        return mesh;
-    };
     shared_ptr<Skeleton> skeleton = make_shared<Skeleton>();
     (void)skeleton->addBone( hashed_string( "spine" ), -1, BoneTransform{} );
     (void)skeleton->addBone( hashed_string( "hand" ), 0, BoneTransform{} );
@@ -121,13 +124,13 @@ SW_TEST_CASE( SkeletalSeveringTest, NewBodyMeshStaysSevered )
     pSevering->setRegionTablePath( test::ScopedScratchDomain::makeID( "body.fit.xml" ).str() );
     manager.beginPlay();
     pUnit->setSkeleton( skeleton );
-    pUnit->setSkinSourceMesh( makeBodyMesh() );
+    pUnit->setSkinSourceMesh( SkeletalSeveringTestUtil::makeBodyMesh() );
     const uint32 wholeCount = pUnit->getMesh()->getIndexCount();
     SW_REQUIRE_TRUE( pSevering->severRegion( hashed_string( "Hand" ), float3{} ) );
     const uint32 severedCount = pUnit->getMesh()->getIndexCount();
     SW_REQUIRE_TRUE( severedCount != wholeCount );
 
-    const shared_ptr<Mesh> dressed = makeBodyMesh();
+    const shared_ptr<Mesh> dressed = SkeletalSeveringTestUtil::makeBodyMesh();
     pUnit->setSkinSourceMesh( dressed ); // 옷을 갈아입어 몸을 다시 조립했다
     SW_EXPECT_TRUE( pUnit->getMesh() != dressed );
     SW_EXPECT_EQUAL( severedCount, pUnit->getMesh()->getIndexCount() );
@@ -135,5 +138,47 @@ SW_TEST_CASE( SkeletalSeveringTest, NewBodyMeshStaysSevered )
 
     SW_EXPECT_TRUE( pSevering->resetToSpawnState() == SpawnStateReset::Reset );
     SW_EXPECT_TRUE( pUnit->getMesh() == dressed ); // 옛 외형이 아니다
+    manager.endPlay();
+}
+
+/** @brief [SkeletalSeveringTest] 잘린 영역은 상태에 실리고, 다시 지은 몸은 메시가 서는 대로 잘려 있다 — 조각은 다시 띄우지 않고, 떨어진 조각은 저장되지 않는다 */
+SW_TEST_CASE( SkeletalSeveringTest, RestoredBodyIsSeveredAgain )
+{
+    SW_EXPECT_LOG( "SkeletalSevering.AppearanceSurfaceMissing" ); // 외형 없는 몸이다(피는 이 테스트의 일이 아니다)
+    const test::ScopedScratchDomain domain;
+    SW_REQUIRE_TRUE( FileUtil::writeTextFile( domain.makeDiskPath( "body.fit.xml" ), R"(<FitTables><Region name="Hand" bones="hand" minWeight="0.5"/></FitTables>)" ) );
+    shared_ptr<Skeleton> skeleton = make_shared<Skeleton>();
+    (void)skeleton->addBone( hashed_string( "spine" ), -1, BoneTransform{} );
+    (void)skeleton->addBone( hashed_string( "hand" ), 0, BoneTransform{} );
+
+    GameObjectManager          manager;
+    GameObject*                pBody     = manager.createGameObject( hashed_string( "Body" ) );
+    SkeletalMeshComponent*     pUnit     = pBody->addComponent<SkeletalMeshComponent>();
+    SkeletalSeveringComponent* pSevering = pBody->addComponent<SkeletalSeveringComponent>();
+    pSevering->setRegionTablePath( test::ScopedScratchDomain::makeID( "body.fit.xml" ).str() );
+    manager.beginPlay();
+    pUnit->setSkeleton( skeleton );
+    pUnit->setSkinSourceMesh( SkeletalSeveringTestUtil::makeBodyMesh() );
+    SW_REQUIRE_TRUE( pSevering->severRegion( hashed_string( "Hand" ), float3{} ) );
+    const uint32 severedCount = pUnit->getMesh()->getIndexCount();
+    SW_REQUIRE_EQUAL( size_t{ 1 }, pSevering->getPieces().size() );
+    SW_EXPECT_TRUE( manager.resolveGameObject( pSevering->getPieces()[0] )->isTransient() );
+    vector<uint8> bytes;
+    SW_REQUIRE_TRUE( ObjectStateSerializer::saveToBinaryBuffer( pBody, bytes, ObjectSaveOptions{ SerializePurpose::Snapshot } ) );
+
+    GameObject*       pRestored = manager.createGameObject( hashed_string( "Restored" ) );
+    ObjectLoadContext context{ SerializePurpose::Snapshot };
+    SW_REQUIRE_TRUE( ObjectStateSerializer::loadFromBinaryBuffer( pRestored, bytes.data(), bytes.size(), context ) != 0 );
+    SkeletalMeshComponent*           pRestoredUnit = pRestored->getComponent<SkeletalMeshComponent>();
+    const SkeletalSeveringComponent* pRestoredCut  = pRestored->getComponent<SkeletalSeveringComponent>();
+    SW_REQUIRE_TRUE( pRestoredUnit != nullptr && pRestoredCut != nullptr );
+    manager.update( 1.0f / 60.0f ); // 시작한다(표를 읽는다) — 몸 메시는 아직 없다
+    pRestoredUnit->setSkeleton( skeleton );
+    pRestoredUnit->setSkinSourceMesh( SkeletalSeveringTestUtil::makeBodyMesh() );
+    manager.update( 1.0f / 60.0f );
+    manager.update( 1.0f / 60.0f );
+    SW_EXPECT_EQUAL( severedCount, pRestoredUnit->getMesh()->getIndexCount() );
+    SW_EXPECT_EQUAL( size_t{ 1 }, pRestoredCut->getSeveredRegions().size() );
+    SW_EXPECT_TRUE( pRestoredCut->getPieces().empty() );
     manager.endPlay();
 }

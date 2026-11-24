@@ -9,6 +9,7 @@
 #include "Engine/Object/Component/SceneComponent.h"
 #include "Engine/Object/Component/Tests/StateHashTestComponent.h"
 #include "Engine/Object/GameObject/GameObject.h"
+#include "Engine/Object/GameObject/GameObjectEvents.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
 #include "Engine/Object/GameObject/Serialization/ObjectStateSerializer.h"
 #include "Engine/Object/GameObject/Service/NetObjectTable.h"
@@ -395,7 +396,15 @@ SW_TEST_CASE( SceneAssemblyTest, DataLayerKeepsStateWhenTurnedOffAndOn )
     pSnow->getPrimarySceneComponent()->setLocalPosition( float3{ 5.0f, 0.0f, 0.0f } );
     StateHashTestComponent* pState = pSnow->addComponent<StateHashTestComponent>();
     SW_REQUIRE_NOT_NULL( pState );
-    pState->_steps = 3;
+    pState->_steps = 2;
+    // 내려간다는 알림은 뜨기 앞이다 — 여기서 고친 상태가 실린다(한쪽만 내려가는 관계를 푸는 자리).
+    StateHashTestComponent* const          pUnloaded    = pState;
+    const uint64                           snowID       = pState->getOwner()->getObjectID();
+    const Subscription                     subscription = pState->getOwner()->getOrCreateEvents()._unloading.add( [pUnloaded, snowID]( const GameObjectUnloadInfo& info )
+    { pUnloaded->_steps = info.contains( snowID ) ? 3 : 0; } );
+    vector<SceneDocument::SceneObjectNode> listSaved;
+    scene.captureCellNodes( vector<uint64>{ snowID }, listSaved );
+    SW_EXPECT_EQUAL( 2, pState->_steps ); // 세이브에 싣는 뜨기는 알리지 않는다
 
     SW_REQUIRE_TRUE( layers.setLayerActive( "Winter", false ) );
     layers.update( 0.0f );

@@ -129,13 +129,15 @@ namespace sw
         float32 _growthRate;
         PROPERTY( Category = "Runtime", DisplayName = "Max Growth", Min = 0.0, Units = m, Tooltip = "Most the size grows" )
         float32 _maxGrowth;
+        PROPERTY( RuntimeState, Category = "Runtime", DisplayName = "Age", Units = s, Tooltip = "Runtime: seconds since the volume appeared (counts toward the lifetime)" )
+        float32 _age;
+        PROPERTY( RuntimeState, Category = "Runtime", DisplayName = "Growth", Units = m, Tooltip = "Runtime: how far the size has grown" )
+        float32 _growth;
 
         ZoneCompiledProfile           _compiled;
         ZoneTracker                   _tracker;
         vector<ZoneOccupantCandidate> _listCandidateScratch; ///< 격자 질의 결과 재사용 버퍼
         vector<Component*>            _listKeyScratch;       ///< 색인 질의의 열쇠 버퍼(재사용)
-        float32                       _age;
-        float32                       _growth;
         uint8                         _bReady   : 1;
         uint8                         _bOpened  : 1; ///< 시작을 시도했다(실패도 — 다시 오류를 내지 않는다)
         [[maybe_unused]] uint8        _reserved : 6;

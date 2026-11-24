@@ -96,11 +96,11 @@ namespace sw
         /** @brief 화면(엔진 UI 소유 — 컴포넌트보다 오래 살 수 있다)이 이 컴포넌트를 약하게 빌리는 출처입니다(`WeakRef`). */
         WeakRefSource& getWeakRefSource() { return _weakRefSource; }
 
-        /** @brief `ComponentStateStore` 계약 — 장비 칸(칸 이름 + 인스턴스)과 가방입니다. 읽기는 아이템 카탈로그가 선 뒤(`onBeginPlay`)에만 된다. */
+        /** @brief `ComponentStateCodec` 계약 — 장비 칸(칸 이름 + 인스턴스)과 가방입니다. 읽기는 아이템 카탈로그가 선 뒤(`onBeginPlay`)에만 된다. */
         void serializeState( StateIO& io );
         /** @brief 저장한 상태를 받습니다. 시작 전이면 보관했다가 `onBeginPlay` 가 겁니다. 읽지 못하면 알리고 지금 상태를 그대로 둡니다. */
         void restoreState( vector<uint8>&& bytes );
-        /** @brief 시작 전에 받아 보관한 상태입니다(`ComponentStateStore` 계약 — 있으면 그것이 곧 상태다). */
+        /** @brief 시작 전에 받아 보관한 상태입니다(`ComponentStateCodec` 계약 — 있으면 그것이 곧 상태다). */
         const vector<uint8>& getPendingStateBytes() const { return _pendingStateBytes; }
 
     private:

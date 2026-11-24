@@ -18,6 +18,7 @@
 #include "Engine/Object/GameObject/Service/SceneEngineServices.h"
 #include "Engine/Object/GameObject/Service/SceneNetLink.h"
 #include "Engine/Object/GameObject/Service/ScenePreviewPolicy.h"
+#include "Engine/Scene/SceneHandle.h"
 #include "Engine/Scene/SceneLoadLeakCheck.h"
 
 namespace sw
@@ -43,12 +44,12 @@ namespace sw
     };
 
     /**
-     * @brief 씬 로드를 받아들였다는 알림입니다 — 경로, 까닭, 그 요청의 답(끝나면 활성 씬, 실패 · 밀려남이면 nullptr).
+     * @brief 씬 로드를 받아들였다는 알림입니다 — 경로, 까닭, 그 요청의 답(끝나면 활성이 된 씬의 핸들, 실패 · 밀려남이면 빈 핸들).
      * @details 누가 요청했든(게임 흐름 · 시나리오 · 편집기) `requestLoadFuture` 가 낸다. 로딩 화면 · 로드 이벤트는 요청한 쪽이 아니라 이 알림에 붙는다 —
      *          그래야 어느 길로 열어도 같은 로딩 화면 · 같은 시작 시점이다(언리얼 `FCoreUObjectDelegates::PreLoadMap` 을 로딩 화면 모듈이 구독하는 것과 같다).
      */
-    using SceneLoadRequestedHandler  = Delegate<void( const string& scenePath, SceneLoadKind kind, const TaskFuture<Scene*>& future )>;
-    using SceneLoadRequestedDelegate = MulticastDelegate<void( const string& scenePath, SceneLoadKind kind, const TaskFuture<Scene*>& future )>;
+    using SceneLoadRequestedHandler  = Delegate<void( const string& scenePath, SceneLoadKind kind, const TaskFuture<SceneHandle>& future )>;
+    using SceneLoadRequestedDelegate = MulticastDelegate<void( const string& scenePath, SceneLoadKind kind, const TaskFuture<SceneHandle>& future )>;
 
     /** @brief 월드의 플레이가 바뀐다는 알림입니다 — 시작은 활성 씬의 `beginPlay` 앞, 끝은 `endPlay` 뒤에 옵니다(`SceneManager::setWorldPlaying`). */
     using WorldPlayChangedDelegate = MulticastDelegate<void( bool bPlaying )>;
@@ -123,13 +124,15 @@ namespace sw
         /** @brief 도는 로드 · 미리 읽기를 거두고 연 씬(덧붙인 것까지, 미리보기 씬은 뺀다)을 모두 내려 활성 씬이 없는 상태(프로세스 기동과 같은 자리)로 둡니다. 게임 재시작(`IGameRestarter`)이 부릅니다. */
         void closeLoadedScenes();
         /**
-         * @brief 씬 파일의 비동기 로드를 요청하고, 끝나면 활성 씬을 주는 TaskFuture 를 반환합니다.
+         * @brief 씬 파일의 비동기 로드를 요청하고, 끝나면 활성이 된 씬의 핸들을 주는 TaskFuture 를 반환합니다(`resolveScene` 으로 푼다).
          * @details **대기열에 들어가도 자기 답을 받습니다.** 이미 로드가 도는 중이면 이 요청은
          *          대기열로 가고, 반환하는 future 는 **이 요청의 것**입니다. 돌던 로드의 것이
          *          아닙니다. 대기열은 **한 자리**이므로 새 요청은 앞의 것을 밀어내고, 밀려난 쪽의
-         *          future 는 nullptr 로 끝납니다(영원히 끝나지 않는 future 는 없습니다).
+         *          future 는 빈 핸들로 끝납니다(영원히 끝나지 않는 future 는 없습니다).
          */
-        TaskFuture<Scene*> requestLoadFuture( string_view path, SceneLoadKind kind );
+        TaskFuture<SceneHandle> requestLoadFuture( string_view path, SceneLoadKind kind );
+        /** @brief @p handle 의 씬입니다. 내려갔거나 빈 핸들이면 nullptr 입니다. */
+        [[nodiscard]] Scene* resolveScene( const SceneHandle& handle ) const;
         /** @brief 씬 파일의 비동기 로드를 요청합니다(TaskManager 워커). */
         bool requestLoadAsync( string_view path, SceneLoadKind kind );
         /**
@@ -314,10 +317,10 @@ namespace sw
             atomic<bool>             _bAccepting{ true };
             /// 지금 로드의 중단 원천(`dispatchLoad` 가 로드마다 새로 만들고 토큰을 잡 인자로 넘긴다 — 게임 스레드만 만진다). `requestAsyncLoadStop`(종료)과
             /// 다른 경로의 요청이 대기열에 들 때(밀려난 로드) 올린다. `Scene::instantiate` 가 엔티티마다 읽는다
-            StopSource          _stop;
-            TaskPromise<Scene*> _promise{};
-            uint32              _typeTableGeneration{ 0 }; ///< 로드를 띄울 때의 `TypeRegistry::getGeneration` — 다르면 짓는 동안 타입(생성 함수)이 바뀌었다
-            SceneEngineServices _services{};               ///< 워커가 짓는 씬에 넘길 묶음(`initializeSubsystem` 이 적는다 — 워커는 전역 표를 읽지 않는다)
+            StopSource               _stop;
+            TaskPromise<SceneHandle> _promise{};
+            uint32                   _typeTableGeneration{ 0 }; ///< 로드를 띄울 때의 `TypeRegistry::getGeneration` — 다르면 짓는 동안 타입(생성 함수)이 바뀌었다
+            SceneEngineServices      _services{};               ///< 워커가 짓는 씬에 넘길 묶음(`initializeSubsystem` 이 적는다 — 워커는 전역 표를 읽지 않는다)
         };
         /** @brief 활성 씬을 @p absPath 에 쓰고, @p sourceID 가 있으면 씬의 소스로 삼습니다. 저장이 막혔거나 활성 씬이 없으면 false 입니다. */
         [[nodiscard]] bool writeActiveScene( const AbsolutePath& absPath, const string& sourceID );
@@ -353,7 +356,7 @@ namespace sw
          * @details 요청 경로와 대기열 경로가 **같은 자리**로 모입니다 — 대기열에 넣은 요청자가 쥔 future 와 실제 로드의 약속이
          *          갈리지 않게.
          */
-        bool dispatchLoad( string_view path, TaskPromise<Scene*> promise, SceneLoadKind kind );
+        bool dispatchLoad( string_view path, TaskPromise<SceneHandle> promise, SceneLoadKind kind );
         /** @brief 워커에서 씬을 로드하는 잡 본문입니다. TaskArgs 는 AsyncLoadSlot shared_ptr 와 경로 문자열입니다. */
         static void loadSceneAsyncJob( const TaskArgs& args );
 
@@ -375,6 +378,7 @@ namespace sw
         Scene*                    _pActiveScene;
         vector<PreviewSceneEntry> _listPreviewScene;  ///< `createPreviewScene` 로 만든 미리보기 씬(로드된 씬 목록과 따로)
         Scene*                    _pFocusedScene;     ///< `focusScene` 으로 고른 씬(nullptr 이면 활성 씬)
+        uint64                    _nextSceneSerial;   ///< 다음 씬 핸들 번호(1 부터, 다시 쓰지 않는다)
         uint32                    _nextPreviewKey;    ///< 다음 미리보기 씬 키(1 부터, 줄이지 않는다)
         uint8                     _bWorldPlaying : 1; ///< `setWorldPlaying`
         uint8                     _bInitialized  : 1;
@@ -390,9 +394,9 @@ namespace sw
         SceneLoadKind             _queuedKind;    ///< `_queuedPath` 를 요청한 까닭
         string                    _chunkWaitPath; ///< 미룬 청크(`AssetManager::prepareSceneChunks`)가 준비되기를 기다리는 씬 — 비어 있지 않으면 로드를 아직 띄우지 않았다(약속은 `_asyncLoad`)
         /** @brief 대기열에 든 요청의 약속. 대기열은 한 자리이므로 이것도 하나다. */
-        TaskPromise<Scene*> _queuedPromise;
-        atomic<bool>        _bLoadInFlight;
-        TaskHandle          _loadHandle;
+        TaskPromise<SceneHandle> _queuedPromise;
+        atomic<bool>             _bLoadInFlight;
+        TaskHandle               _loadHandle;
         /** @brief 이 매니저가 띄운 씬 로드 태스크 전부(핸들 하나는 다시 띄우면 덮인다). 종료 · 취소는 엔진 전체(`waitAll`)가 아니라 이것만 기다린다. */
         TaskStageHandle                 _loadStage;                 ///< 이 매니저가 띄운 로드 잡의 스테이지(처음 띄울 때 만든다 — 종료 · 취소가 이것만 기다린다, 게임 스레드에서만 쓴다)
         string                          _saveBlockReason;           ///< 비어 있지 않으면 씬 저장을 막는다(`setSaveBlockReason`)

@@ -6,6 +6,7 @@
 
 #define SW_TEST_INTERNAL // 임시 리소스 도메인 픽스처(`ScopedScratchDomain`)가 엔진 서비스를 직접 쓴다
 #include "Engine/Content/Tests/ScopedScratchDomain.h"
+#include "Engine/Scene/Scene.h"
 #include "Engine/Scene/SceneManager.h"
 #include "Engine/Scene/ScenePreloadList.h"
 
@@ -28,6 +29,21 @@ SW_TEST_CASE( SceneManagerTest, WorldPlayChangesAreBroadcastOnce )
     sceneManager.setWorldPlaying( true );
     SW_EXPECT_TRUE( listPlaying.size() == 2 );
     sceneManager.setWorldPlaying( false );
+}
+
+/** @brief [SceneManagerTest] 씬 핸들은 올라 있는 동안만 풀린다 — 내려간 씬의 핸들은 뒤에 연 씬으로 풀리지 않는다 */
+SW_TEST_CASE( SceneManagerTest, HandleOfAnUnloadedSceneDoesNotResolve )
+{
+    SceneManager sceneManager;
+    Scene* const pFirst = sceneManager.createEmptyActiveScene( "First" );
+    SW_REQUIRE_TRUE( pFirst != nullptr );
+    const SceneHandle first{ pFirst->getHandleSerial() };
+    SW_EXPECT_TRUE( sceneManager.resolveScene( first ) == pFirst );
+    Scene* const pSecond = sceneManager.createEmptyActiveScene( "Second" );
+    SW_REQUIRE_TRUE( pSecond != nullptr );
+    SW_EXPECT_TRUE( sceneManager.resolveScene( first ) == nullptr );
+    SW_EXPECT_TRUE( sceneManager.resolveScene( SceneHandle{ pSecond->getHandleSerial() } ) == pSecond );
+    SW_EXPECT_TRUE( sceneManager.resolveScene( SceneHandle{} ) == nullptr );
 }
 
 /** @brief [SceneManagerTest] 모든 씬 목록은 미리보기 씬도 담는다 — 모듈 경계가 빠뜨리면 열린 편집기가 사라진 코드의 컴포넌트를 틱한다 */

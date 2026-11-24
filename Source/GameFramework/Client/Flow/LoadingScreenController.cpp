@@ -199,7 +199,7 @@ namespace sw
     {
         closeSaveFailure();
         // 세이브의 씬이 열리지 않아 진 것은 씬 로드 실패 알림이 이미 말한다.
-        if ( event._bSuccess || isShowingLoadFailure() || _pUISystem == nullptr || _pUISystem->isInitialized() == false )
+        if ( event._bSuccess || event._bSuperseded || isShowingLoadFailure() || _pUISystem == nullptr || _pUISystem->isInitialized() == false )
             return;
         ConfirmDialogDesc desc{};
         desc._title        = SW_LOCKEYREF( "SaveGame", "LoadFailedTitle" );

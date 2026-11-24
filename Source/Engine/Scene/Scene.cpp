@@ -19,6 +19,7 @@
 #include "Engine/Object/Component/ComponentStateCodec.h"
 #include "Engine/Object/Component/SceneComponent.h"
 #include "Engine/Object/GameObject/GameObject.h"
+#include "Engine/Object/GameObject/GameObjectEvents.h"
 #include "Engine/Object/GameObject/GameObjectManager.inl"
 #include "Engine/Object/GameObject/GameObjectManagerResolve.inl"
 #include "Engine/Object/GameObject/Registry/CameraRegistry.h"
@@ -405,7 +406,8 @@ namespace sw
     }
 
     Scene::Scene( string_view name, const SceneEngineServices& services )
-        : _name{ name }
+        : _handleSerial{ 0 }
+        , _name{ name }
         , _sourcePath{}
         , _defaultMaterialPath{}
         , _sceneSettings{}
@@ -723,6 +725,25 @@ namespace sw
                 node._instanceAnchorFileID = memberIt->second._anchorFileID; // 앵커에 붙는 자리는 상태의 부착이 이미 들고 있다
             outListNode.push_back( std::move( node ) );
         }
+    }
+
+    void Scene::captureNodesForUnload( const vector<uint64>& listObjectID, vector<SceneDocument::SceneObjectNode>& outListNode )
+    {
+        outListNode.clear();
+        if ( _objectManager == nullptr )
+            return;
+        vector<uint64> listGroup;
+        collectCellGroup( listObjectID, listGroup );
+        const GameObjectUnloadInfo info{
+            vector_reference<const uint64>{ listGroup.data(), listGroup.size() }
+        };
+        for ( const uint64 objectID : listGroup )
+        {
+            const GameObject* const pObject = _objectManager->findGameObjectByID( objectID );
+            if ( pObject != nullptr && pObject->isPendingDestroy() == false )
+                GameObjectEvents::broadcast( *pObject, &GameObjectEvents::_unloading, info );
+        }
+        captureCellNodes( listObjectID, outListNode );
     }
 
     void Scene::holdRegistration()

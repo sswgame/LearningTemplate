@@ -814,7 +814,7 @@ namespace sw
         if ( fromIndex == kNoSlot )
             (void)_pScene->getOrAssignFileID( rootObjectID );
         vector<SceneDocument::SceneObjectNode> listNode;
-        _pScene->captureCellNodes( listGroup, listNode );
+        _pScene->captureNodesForUnload( listGroup, listNode );
         for ( const uint64 objectID : listGroup )
         {
             _mapObjectSlot.erase( objectID );
@@ -978,7 +978,7 @@ namespace sw
                 // 다시 올릴 때 이 상태로 짓는다 — 내리기 전에 뜬다(언리얼 레벨 스트리밍의 상태 보존 · 세이브 델타).
                 if ( bKeepState )
                 {
-                    _pScene->captureCellNodes( slot._listObjectID, slot._listNode );
+                    _pScene->captureNodesForUnload( slot._listObjectID, slot._listNode );
                     slot._bContentHeld = SW_TRUE;
                 }
                 for ( const uint64 objectID : slot._listObjectID )

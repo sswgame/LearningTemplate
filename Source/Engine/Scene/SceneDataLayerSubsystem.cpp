@@ -352,7 +352,7 @@ namespace sw
             if ( group._bBuilt == SW_FALSE || areLayersActive( group._listLayer ) )
                 continue;
             // 다시 켤 때 이 상태로 짓는다 — 내리기 전에 뜬다(런타임 칸까지, 스트리밍 셀과 같다). 문서(`_listNode`)는 저장이 다시 쓰도록 그대로 둔다.
-            _pScene->captureCellNodes( group._listObjectID, group._listHeldNode );
+            _pScene->captureNodesForUnload( group._listObjectID, group._listHeldNode );
             group._bStateHeld = SW_TRUE;
             for ( const uint64 objectID : group._listObjectID )
             {

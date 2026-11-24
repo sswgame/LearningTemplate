@@ -3,6 +3,7 @@
 #include "Engine/Destruction/Fracture/FractureBaseComponent.h"
 
 #include "Core/Algorithm/VectorUtil.h"
+#include "Core/Encoding/FourCCUtil.h"
 #include "Core/GlobalVariable/GlobalVariableManager.h"
 #include "Core/Math/MathUtil.h"
 #include "Core/Time/MonotonicClock.h"
@@ -16,6 +17,7 @@
 #include "Engine/Foundation/EngineServices.h"
 #include "Engine/Foundation/WorldOrigin.h"
 #include "Engine/Graphics/Material/Material.h"
+#include "Engine/Object/Component/ComponentStateCodec.h"
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Object/GameObject/GameObjectEvents.h"
 #include "Engine/Object/GameObject/GameObjectManagerResolve.inl"
@@ -99,6 +101,9 @@ namespace sw
 
         struct FractureComponentBaseInternal
         {
+            static constexpr uint32 kStateTag     = FourCCUtil::make( "FRST" );
+            static constexpr uint32 kStateVersion = 1;
+
             /// `_listRuntime` 은 그룹 번호 오름차순이다(그룹 변경 뒤 정렬, 복원은 상태의 오름차순 그룹 순서). 그 순서로 이분 탐색한다 — 사건 · 충돌마다 부르는 곳이라 선형이면 그룹 수만큼 든다.
             static bool isGroupBefore( const FractureGroupRuntime& lhs, const FractureGroupRuntime& rhs ) { return lhs._groupID < rhs._groupID; }
 
@@ -406,6 +411,7 @@ namespace sw
         , _eventLog{}
         , _listEventGroupPose{}
         , _networkSync{}
+        , _pendingStateBytes{}
         , _pendingDamage{}
         , _listLeafStaticBody{}
         , _listRuntime{}
@@ -1517,6 +1523,33 @@ namespace sw
         _pendingDamage.push( std::move( pending ) );
     }
 
+    void FractureBaseComponent::serializeState( StateIO& io )
+    {
+        io.header( FractureComponentBaseInternal::kStateTag, FractureComponentBaseInternal::kStateVersion );
+        vector<uint8> bytes;
+        if ( io.isWriting() && _bStateReady == SW_TRUE && _state.getEventCount() > 0 )
+            makeNetworkSnapshot( bytes );
+        io.value( bytes );
+        if ( io.isReading() )
+        {
+            io.end();
+            if ( io.isOk() )
+                applyNetworkSnapshot( bytes.data(), bytes.size() );
+        }
+    }
+
+    void FractureBaseComponent::restoreState( vector<uint8>&& bytes )
+    {
+        Archive archive( bytes.data(), bytes.size() );
+        if ( readState( archive ) == false )
+        {
+            SW_LOG_WARNING_ID( "FractureComponent.SavedStateUnreadable", "'%#': the saved destruction state did not read - the object starts intact", getOwner() != nullptr ? getOwner()->getName().c_str() : "?" );
+            return;
+        }
+        if ( _pendingDamage.isEmpty() == false )
+            _pendingStateBytes = std::move( bytes );
+    }
+
     void FractureBaseComponent::driveGroup( uint32 groupID, const float3& absoluteCenter, const quaternion& rotation )
     {
         FractureGroupPose target;
@@ -1562,6 +1595,7 @@ namespace sw
 
     void FractureBaseComponent::applySnapshotNow( ScenePhysics& physics, const vector<uint8>& bytes )
     {
+        _pendingStateBytes.clear(); // 이 뒤로는 구조 상태가 곧 상태다(맞지 않는 바이트는 아래가 알리고 버린다)
         const utf8*                                   pOwnerName = getOwner() != nullptr ? getOwner()->getName().c_str() : "?";
         vector<uint8>                                 stateBytes;
         vector<FractureGroupPose>                     listPose;
@@ -1589,6 +1623,10 @@ namespace sw
             return;
         }
         _state = std::move( trial );
+        // 기록은 이 상태 뒤의 사건부터 다시 센다 — 앞 사건은 상태가 통째로 담았다.
+        _eventLog._listEvent.clear();
+        _eventLog._firstEvent = _state.getEventCount();
+        _listEventGroupPose.clear();
         recordRecentStateHash();
 
         // 아직 온전하고 스냅샷도 한 덩어리 그대로면 바디나 렌더링을 바꿀 것이 없다(변형만 쌓였다).
@@ -1707,4 +1745,6 @@ namespace sw
         PhysicsComponent::onUnregister( manager );
         _pLeafShapeTable = nullptr;
     }
+
+    SW_COMPONENT_STATE_CODEC( FractureBaseComponent )
 } // namespace sw

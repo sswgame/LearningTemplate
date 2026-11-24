@@ -19,6 +19,7 @@ namespace sw
 {
     class SceneManager;
     class Scene;
+    struct SceneHandle;
 
     /**
      * @class SceneLoadLeakCheck
@@ -57,17 +58,17 @@ namespace sw
         void finish();
 
     private:
-        Phase                  _phase;
-        string                 _scenePath;
-        uint32                 _totalRounds;     ///< 워밍업 + 측정 회차 수(대조 회차는 따로)
-        uint32                 _round;           ///< 지금 회차(0 이 대조 회차, 1 부터 로드 회차)
-        uint32                 _stabilityFrames; ///< `Stabilizing` 에서 지난 프레임 수
-        uint64                 _controlBytes;    ///< 대조 회차에서 남은 바이트(빈 씬 몫)
-        uint64                 _controlBlocks;   ///< 대조 회차에서 남은 블록 수
-        uint64                 _sumBytes;        ///< 대조를 뺀 남은 바이트의 누적 합
-        uint64                 _sumBlocks;       ///< 대조를 뺀 남은 블록 수의 누적 합
-        TaskFuture<Scene*>     _loadFuture;
-        vector<LeakCurvePoint> _listPoint;
-        LeakCurveResult        _result;
+        Phase                   _phase;
+        string                  _scenePath;
+        uint32                  _totalRounds;     ///< 워밍업 + 측정 회차 수(대조 회차는 따로)
+        uint32                  _round;           ///< 지금 회차(0 이 대조 회차, 1 부터 로드 회차)
+        uint32                  _stabilityFrames; ///< `Stabilizing` 에서 지난 프레임 수
+        uint64                  _controlBytes;    ///< 대조 회차에서 남은 바이트(빈 씬 몫)
+        uint64                  _controlBlocks;   ///< 대조 회차에서 남은 블록 수
+        uint64                  _sumBytes;        ///< 대조를 뺀 남은 바이트의 누적 합
+        uint64                  _sumBlocks;       ///< 대조를 뺀 남은 블록 수의 누적 합
+        TaskFuture<SceneHandle> _loadFuture;
+        vector<LeakCurvePoint>  _listPoint;
+        LeakCurveResult         _result;
     };
 } // namespace sw

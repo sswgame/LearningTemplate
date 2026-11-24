@@ -7,6 +7,7 @@
  */
 #pragma once
 #include "Core/Container/vector.h"
+#include "Core/Delegate/Subscription.h"
 #include "Core/Foundation/Expected.h"
 #include "Core/Foundation/Types.h"
 #include "Core/Math/Math.h"
@@ -22,6 +23,8 @@
 
 namespace sw
 {
+    struct GameObjectUnloadInfo;
+
     /** @brief 집기 백엔드 인터페이스입니다. 게임 스레드의 틱 밖에서 불리며, 컴포넌트가 호출을 틱 뒤로 미룹니다. */
     class IGrabPhysics
     {
@@ -95,6 +98,8 @@ namespace sw
         /** @brief 쥔 것을 내려놓습니다 — 든 쪽이 사라져도 대상은 남고(물리로 돌아간다) 손과 함께 지워지지 않는다. */
         void onEndPlay() override;
         void onTick( TickContext& context ) override;
+        /** @brief 이 오브젝트가 셀 · 레이어와 함께 내려가는 알림을 구독합니다. */
+        void onRegister( GameObjectManager& manager ) override;
 
         /** @brief 집습니다. 이미 쥐고 있거나, 남이 쥐고 있거나, 자기 자신이면 false 입니다. 게임 스레드에서 부릅니다. */
         [[nodiscard]] bool grab( GameObject& target );
@@ -119,6 +124,10 @@ namespace sw
         IGrabPhysics& getBackend();
         /** @brief 살아 있는 든 것입니다. 없으면 nullptr 입니다. */
         const GameObject* findHeld() const;
+        /** @brief 쥔 @p held 가 손과 함께 지워지지 않게 하고 그것이 내려가는 알림을 듣습니다. */
+        void watchHeld( GameObject& held );
+        /** @brief 쥔 쪽과 쥔 것 가운데 한쪽만 셀 · 레이어와 함께 내려갑니다 — 상태를 뜨기 전에 놓습니다(`GameObjectEvents::_unloading`). */
+        void handleUnloading( const GameObjectUnloadInfo& info );
 
     private:
         PROPERTY( Category = "Grab", DisplayName = "Hold Offset", Tooltip = "Where the held object sits, in this object's space", Units = m )
@@ -137,7 +146,9 @@ namespace sw
         float32 _throwSpeed;
 
         RigidBodyGrabPhysics _fallback;
-        optional<int32>      _grabIndex;  ///< `_grabButton` 의 폰 버튼 번호(없으면 비어 있다)
-        vector<GameObject*>  _listTagged; ///< 후보 버퍼(태그 색인 결과)
+        optional<int32>      _grabIndex;              ///< `_grabButton` 의 폰 버튼 번호(없으면 비어 있다)
+        vector<GameObject*>  _listTagged;             ///< 후보 버퍼(태그 색인 결과)
+        Subscription         _unloadSubscription;     ///< 이 오브젝트가 내려가는 알림(`handleUnloading`)
+        Subscription         _heldUnloadSubscription; ///< 쥔 것이 내려가는 알림(`handleUnloading`)
     };
 } // namespace sw

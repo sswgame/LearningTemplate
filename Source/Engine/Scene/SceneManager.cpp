@@ -60,6 +60,7 @@ namespace sw
         , _listPreviewScene{}
         , _pFocusedScene{ nullptr }
         , _nextPreviewKey{ 1 }
+        , _nextSceneSerial{ 1 }
         , _bWorldPlaying{ SW_FALSE }
         , _bInitialized{ SW_FALSE }
         , _bRestartLoad{ SW_FALSE }
@@ -161,13 +162,13 @@ namespace sw
         if ( _queuedPath.empty() == false )
         {
             _queuedPath.clear();
-            _queuedPromise.setValue( nullptr );
+            _queuedPromise.setValue( SceneHandle{} );
         }
         if ( _chunkWaitPath.empty() == false ) // 청크를 기다리던 씬은 로드를 띄우지 않았다 — 그 약속을 여기서 비운다
         {
             _chunkWaitPath.clear();
             _bLoadInFlight.store( false, std::memory_order_release );
-            _asyncLoad->_promise.setValue( nullptr );
+            _asyncLoad->_promise.setValue( SceneHandle{} );
         }
         if ( _asyncLoad != nullptr )
             _asyncLoad->_bAccepting.store( false, std::memory_order_release );
@@ -188,7 +189,7 @@ namespace sw
                 _asyncLoad->_bReady.store( false, std::memory_order_release );
             }
             if ( _bLoadInFlight.load( std::memory_order_acquire ) )
-                _asyncLoad->_promise.setValue( nullptr ); // 기다리는 쪽이 끝나지 않는 future 를 쥐지 않는다
+                _asyncLoad->_promise.setValue( SceneHandle{} ); // 기다리는 쪽이 끝나지 않는 future 를 쥐지 않는다
         }
         _bRestartLoad  = SW_FALSE;
         _bLoadInFlight = false;
@@ -246,6 +247,7 @@ namespace sw
     {
         const ScopedMemoryTag memoryScope{ kSubsystemMemoryTag };
         Scene* const          pScene = scene.get();
+        pScene->setHandleSerial( _nextSceneSerial++ );
         pScene->finishHeldRegistration(); // 워커에서 지은 씬의 등록 · 로드 뒤 처리(게임 스레드) — 기본값 걸기 · 카메라 고르기가 레지스트리를 본다
         // 기본 머티리얼 · 기본 카메라 · 메시 기본값을 건다(디바이스가 없는 테스트는 건너뛴다). 머티리얼 없는 메시가 그려지려면 필요하다.
         if ( _pRenderBinding != nullptr )
@@ -278,9 +280,9 @@ namespace sw
     }
 
     /**
-     * @brief 씬 파일을 워커 스레드에서 비동기로 로드하도록 요청하고 TaskFuture<Scene*> 를 반환합니다.
+     * @brief 씬 파일을 워커 스레드에서 비동기로 로드하도록 요청하고 TaskFuture<SceneHandle> 를 반환합니다.
      */
-    TaskFuture<Scene*> SceneManager::requestLoadFuture( string_view path, SceneLoadKind kind )
+    TaskFuture<SceneHandle> SceneManager::requestLoadFuture( string_view path, SceneLoadKind kind )
     {
         if ( path.empty() )
         {
@@ -308,7 +310,7 @@ namespace sw
             // 실패를 알린다. `_queuedPath` 만 덮어쓰면 밀려난 쪽이 쥔 future 는
             // 아무도 채우지 않은 채로 남는다(영원히 끝나지 않는다).
             if ( _queuedPath.empty() == false )
-                _queuedPromise.setValue( nullptr );
+                _queuedPromise.setValue( SceneHandle{} );
 
             // 도는 로드가 다른 경로면 그 결과는 어차피 버린다(`updateTransitions` 의 대기열 처리) — 끝까지 짓지 않게 멈춘다. 멈춘 로드는 빈 결과를 내고
             // 그 뒤 대기열을 띄운다. 언리얼 `FlushAsyncLoading` 이 아니라 `CancelAsyncLoading` 자리다.
@@ -317,23 +319,23 @@ namespace sw
 
             _queuedPath    = path;
             _queuedKind    = kind;
-            _queuedPromise = TaskPromise<Scene*>{};
+            _queuedPromise = TaskPromise<SceneHandle>{};
             SW_LOG_TRACE_ID( "SceneManager.AsyncLoadFlightQueued", "Async load in flight — queued '%#'", path );
-            TaskFuture<Scene*> queuedFuture = _queuedPromise.getFuture();
+            TaskFuture<SceneHandle> queuedFuture = _queuedPromise.getFuture();
             _onSceneLoadRequested.broadcast( _queuedPath, kind, queuedFuture );
             return queuedFuture;
         }
 
         // `TaskPromise` 는 공유 상태를 가리키는 핸들이라 복사해도 같은 약속이다. 여기서 복사해 넘기고 원본으로 future 를 뽑는다.
-        TaskPromise<Scene*> promise{};
+        TaskPromise<SceneHandle> promise{};
         if ( dispatchLoad( path, promise, kind ) == false )
             return {};
-        TaskFuture<Scene*> future = promise.getFuture();
+        TaskFuture<SceneHandle> future = promise.getFuture();
         _onSceneLoadRequested.broadcast( string( path ), kind, future );
         return future;
     }
 
-    bool SceneManager::dispatchLoad( string_view path, TaskPromise<Scene*> promise, SceneLoadKind kind )
+    bool SceneManager::dispatchLoad( string_view path, TaskPromise<SceneHandle> promise, SceneLoadKind kind )
     {
         const ScopedMemoryTag memoryScope{ kSubsystemMemoryTag };
         // 로드를 띄울 곳(태스크)과 지을 표(타입)가 없으면 띄우지 않는다. 기다리는 쪽에는 실패로 알린다.
@@ -341,7 +343,7 @@ namespace sw
         {
             SW_LOG_ERROR_ID( "SceneManager.SceneCannotLoadedScene", "Scene '%#' cannot be loaded - the scene manager has no task manager or type registry", path );
             _bLoadInFlight.store( false, std::memory_order_release );
-            promise.setValue( nullptr );
+            promise.setValue( SceneHandle{} );
             return false;
         }
         // 씬이 쓰는 미룬 청크(씬 청크 · 공유 청크)가 마운트될 때까지 로드를 띄우지 않는다 — 씬 파일 · 쿠킹본 · 에셋이 그 청크에 있다.
@@ -352,7 +354,7 @@ namespace sw
             {
                 SW_LOG_ERROR_ID( "SceneManager.SceneChunksFailed", "Scene '%#' cannot be loaded - a pack chunk it needs could not be fetched or mounted", path );
                 _bLoadInFlight.store( false, std::memory_order_release );
-                promise.setValue( nullptr );
+                promise.setValue( SceneHandle{} );
                 return false;
             }
             if ( chunks == PackChunkState::Pending )
@@ -387,7 +389,7 @@ namespace sw
         if ( _loadHandle.isValid() == false )
         {
             _bLoadInFlight.store( false, std::memory_order_release );
-            _asyncLoad->_promise.setValue( nullptr );
+            _asyncLoad->_promise.setValue( SceneHandle{} );
             return false;
         }
         beginScenePreload( path );
@@ -593,7 +595,7 @@ namespace sw
         if ( _queuedPath.empty() == false )
         {
             _queuedPath.clear();
-            _queuedPromise.setValue( nullptr );
+            _queuedPromise.setValue( SceneHandle{} );
         }
 
         if ( _asyncLoad != nullptr )
@@ -602,7 +604,7 @@ namespace sw
             _asyncLoad->_scene.reset();
             _asyncLoad->_bReady.store( false, std::memory_order_release );
             _asyncLoad->_bAccepting.store( true, std::memory_order_release );
-            _asyncLoad->_promise.setValue( nullptr );
+            _asyncLoad->_promise.setValue( SceneHandle{} );
         }
     }
 
@@ -712,7 +714,7 @@ namespace sw
         if ( _queuedPath.empty() == false && FileUtil::isSameDiskPath( _queuedPath, _chunkWaitPath ) == false )
         {
             _chunkWaitPath.clear();
-            _asyncLoad->_promise.setValue( nullptr );
+            _asyncLoad->_promise.setValue( SceneHandle{} );
             const string nextPath = std::move( _queuedPath );
             _queuedPath.clear();
             dispatchLoad( nextPath, std::move( _queuedPromise ), _queuedKind );
@@ -727,11 +729,11 @@ namespace sw
         {
             SW_LOG_ERROR_ID( "SceneManager.SceneChunksFailedWhileWaiting", "Scene '%#' cannot be loaded - a pack chunk it needs could not be fetched or mounted", path );
             _bLoadInFlight.store( false, std::memory_order_release );
-            _asyncLoad->_promise.setValue( nullptr );
+            _asyncLoad->_promise.setValue( SceneHandle{} );
             if ( _queuedPath.empty() == false ) // 같은 경로의 대기열 요청도 같은 청크를 기다린다
             {
                 _queuedPath.clear();
-                _queuedPromise.setValue( nullptr );
+                _queuedPromise.setValue( SceneHandle{} );
             }
             return;
         }
@@ -795,7 +797,7 @@ namespace sw
             {
                 SW_LOG_TRACE_ID( "SceneManager.DiscardingCompletedLoadFavor", "Discarding completed load in favor of queued '%#'", nextPath );
                 if ( _asyncLoad != nullptr )
-                    _asyncLoad->_promise.setValue( nullptr );
+                    _asyncLoad->_promise.setValue( SceneHandle{} );
                 pendingScene.reset();
                 // 대기열 요청자의 약속을 **그대로 들고 간다.** `requestLoadFuture` 를 다시 불러 약속을 새로 만들면
                 // 대기열에 넣은 쪽이 쥔 future 는 바로 위에서 nullptr 로 닫힌 것이 되어, 자기 씬이 활성이 되는데도 실패를 받는다.
@@ -808,9 +810,9 @@ namespace sw
         {
             SW_LOG_ERROR_ID( "SceneManager.AsyncLoadFailed", "Async load failed" );
             if ( _asyncLoad != nullptr )
-                _asyncLoad->_promise.setValue( nullptr );
+                _asyncLoad->_promise.setValue( SceneHandle{} );
             if ( bQueuedSatisfiedByThisLoad )
-                _queuedPromise.setValue( nullptr );
+                _queuedPromise.setValue( SceneHandle{} );
             return;
         }
 
@@ -822,10 +824,10 @@ namespace sw
         Scene* const pActivated = applyScene( std::move( pendingScene ), SceneRole::Active );
         SW_LOG_INFO_ID( "SceneManager.ActiveSceneSwapped", "Active scene swapped to '%#'", pActivated->getName() );
         if ( _asyncLoad != nullptr )
-            _asyncLoad->_promise.setValue( pActivated );
+            _asyncLoad->_promise.setValue( SceneHandle{ pActivated->getHandleSerial() } );
         // 대기열이 같은 경로를 가리키고 있었으면 그 요청자도 이 씬이 답이다.
         if ( bQueuedSatisfiedByThisLoad )
-            _queuedPromise.setValue( pActivated );
+            _queuedPromise.setValue( SceneHandle{ pActivated->getHandleSerial() } );
     }
 
     bool SceneManager::processPendingSceneRegistration()
@@ -1001,6 +1003,20 @@ namespace sw
             entry._scene->update( deltaTime * entry._policy._timeScale );
             ++entry._tickCount;
         }
+    }
+
+    Scene* SceneManager::resolveScene( const SceneHandle& handle ) const
+    {
+        if ( handle.isValid() == false )
+            return nullptr;
+        vector<Scene*> listScene;
+        collectAllScenes( listScene );
+        for ( Scene* pScene : listScene )
+        {
+            if ( pScene->getHandleSerial() == handle._serial )
+                return pScene;
+        }
+        return nullptr;
     }
 
     GameObjectManager* SceneManager::findActiveObjectManager() const

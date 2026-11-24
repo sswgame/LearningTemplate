@@ -195,11 +195,8 @@ namespace sw
     void AssetManager::shutdown()
     {
         _configReloadedSubscription.reset();
-        if ( _pPackChunks != nullptr )
-        {
-            waitLoadTasks( "AssetManager::shutdown (chunk mounts)" ); // 마운트 태스크가 스트리머를 쥐고 있다
-            _pPackChunks.reset();
-        }
+        waitLoadTasks( "AssetManager::shutdown" ); // 로드 태스크가 캐시 · 청크 로더를 날 포인터로 쥐고 팩을 읽는다 — 내리기 전에 끝낸다
+        _pPackChunks.reset();
         if ( _pPackManager != nullptr )
             _pPackManager->unmountAll();
 

@@ -48,7 +48,7 @@ namespace TerrainStateTestUtil
 /**
  * @brief [TerrainStateTest] 쓴 높이는 상태로 실려 같은 에셋을 다시 읽은 지형에 그대로 돌아온다
  * @details 모듈 리로드 · 백엔드 교체는 씬을 속성으로 복원하고 에셋을 다시 읽으므로, 저장하지 않은 높이는 이 계약으로만 넘어간다.
- *          `ComponentStateStore::capture` 는 `StateIO::writeObject`(= `writeState`)로 쓰고 다시 만든 지형은 `restoreState` 로 받는다.
+ *          `ComponentStateCodec::captureObject` 는 `StateIO::writeObject`(= `writeState`)로 쓰고 다시 만든 지형은 `restoreState` 로 받는다.
  */
 SW_TEST_CASE( TerrainStateTest, UnsavedHeightEditsRoundTrip )
 {

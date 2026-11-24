@@ -2,10 +2,12 @@
 
 #include "Engine/Physics/Component/RigidBody2DComponent.h"
 
+#include "Core/Encoding/FourCCUtil.h"
 #include "Core/Math/MathUtil.h"
 
 #include "Engine/Foundation/EngineServices.h"
 #include "Engine/Foundation/StateHashBuilder.h"
+#include "Engine/Object/Component/ComponentStateCodec.h"
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Object/GameObject/Tick/FixedStepContext.h"
 #include "Engine/Physics/IPhysicsScene.h"
@@ -18,6 +20,12 @@ namespace sw
 {
     namespace
     {
+        struct RigidBody2DComponentInternal
+        {
+            static constexpr uint32 kStateTag     = FourCCUtil::make( "RB2S" );
+            static constexpr uint32 kStateVersion = 1;
+        };
+
         /** @brief 지금 월드 회전에서 Z 축 둘레 각만 바꾼 회전입니다(다른 축 회전은 2D 물리가 모른다 — 그대로 둔다). */
         quaternion replaceRigidBody2DAngle( const quaternion& current, float32 angle )
         {
@@ -202,6 +210,34 @@ namespace sw
     {
         const IPhysicsBodyScene2D* pScene = findScene();
         return pScene != nullptr && pScene->isBodySleeping( getBodyHandle() );
+    }
+
+    void RigidBody2DComponent::serializeState( StateIO& io )
+    {
+        float2  linear  = getLinearVelocity();
+        float32 angular = getAngularVelocity();
+        if ( io.isWriting() && ( _bodyType != PhysicsBodyType::Dynamic || ( linear.getLengthSquared() == 0.0f && angular == 0.0f ) ) )
+            return; // 멈춘 바디는 실을 것이 없다 — 큰 씬의 정적 바디마다 칸을 쓰지 않는다
+        io.header( RigidBody2DComponentInternal::kStateTag, RigidBody2DComponentInternal::kStateVersion );
+        io.value( linear );
+        io.value( angular );
+        if ( io.isWriting() )
+            return;
+        io.end();
+        if ( io.isOk() == false )
+            return;
+        setLinearVelocity( linear );
+        setAngularVelocity( angular );
+        // 바디가 서기 전에 다시 떠도 같은 값이게 지금 값 칸에도 둔다.
+        _pPosePage->_arrLinearVelocity[getPoseIndex()]  = linear;
+        _pPosePage->_arrAngularVelocity[getPoseIndex()] = angular;
+    }
+
+    void RigidBody2DComponent::restoreState( vector<uint8>&& bytes )
+    {
+        Archive archive( bytes.data(), bytes.size() );
+        if ( readState( archive ) == false )
+            SW_LOG_WARNING_ID( "RigidBody2DComponent.SavedVelocityUnreadable", "'%#': the saved velocity did not read - the body starts at rest", getOwner() != nullptr ? getOwner()->getName().c_str() : "?" );
     }
 
     void RigidBody2DComponent::foldStateHash( StateHashBuilder& inoutBuilder ) const
@@ -479,4 +515,6 @@ namespace sw
     {
         PhysicsNameValidation::validateMaterial( context, "_material", _material );
     }
+
+    SW_COMPONENT_STATE_CODEC( RigidBody2DComponent )
 } // namespace sw

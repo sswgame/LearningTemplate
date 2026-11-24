@@ -6,7 +6,9 @@
 #include "Core/Container/vector.h"
 #include "Core/Encoding/FourCCUtil.h"
 #include "Core/Foundation/Types.h"
+#include "Core/Memory/Memory.h"
 
+#include "Engine/Asset/Cache/SharedAssetRef.h"
 #include "Engine/Object/Component/Component.h"
 #include "Engine/Reflection/ReflectionMacros.h"
 #include "Engine/Serialization/Format/StateIO.h"
@@ -52,12 +54,12 @@ namespace sw
 
         /** @brief `_bOpenAtBeginPlay` 면 카탈로그 없이 엽니다. */
         void onBeginPlay() override;
-        /** @brief 열렸으면 이번 틱에 월드 상태의 날이 넘어간 수만큼 평판을 식힙니다. */
+        /** @brief 열렸으면 이번 틱에 월드 상태의 날이 넘어간 수만큼 평판을 식힙니다. 다시 읽힌 카탈로그가 있으면 틱 뒤에 다시 묶습니다. */
         void onTick( TickContext& context ) override;
 
-        /** @brief 평판 구간 하나를 씁니다. 열리기 전이면 들고 있던 바이트를 그대로 씁니다. `ComponentStateStore::capture` 가 부릅니다. */
+        /** @brief 평판 구간 하나를 씁니다. 열리기 전이면 들고 있던 바이트를 그대로 씁니다. `ComponentStateCodec::captureObject` 가 부릅니다. */
         SW_DECLARE_STATE_IO_IN_PLACE();
-        /** @brief 열리기 전이면 들고 있다가 `initialize` 에서, 열린 뒤면 바로 적용합니다. `ComponentStateStore::restore` 가 부릅니다. */
+        /** @brief 열리기 전이면 들고 있다가 `initialize` 에서, 열린 뒤면 바로 적용합니다. `ComponentStateCodec::restoreObject` 가 부릅니다. */
         void restoreState( vector<uint8>&& bytes );
 
         bool                   isOpen() const { return _restore.isOpen(); }
@@ -66,8 +68,14 @@ namespace sw
         const ReputationState& getReputation() const { return _reputation; }
 
     private:
-        ReputationState      _reputation;
-        DeferredStateRestore _restore;
+        /** @brief 평판을 지금 판의 카탈로그에 다시 묶습니다. */
+        void rebindCatalog();
+
+    private:
+        SharedAssetRef<ReputationCatalog>   _catalog;       ///< 연 카탈로그(다시 읽히면 새 판을 가리킨다). 카탈로그 없이 열었으면 비었다
+        shared_ptr<const ReputationCatalog> _pBoundCatalog; ///< 평판이 가리키는 판
+        ReputationState                     _reputation;
+        DeferredStateRestore                _restore;
         PROPERTY( Tooltip = "Open without a reputation catalog at begin play - only for scenes without a kit director (the hub); a director opens it with its own catalog" )
         uint8                  _bOpenAtBeginPlay : 1;
         [[maybe_unused]] uint8 _reserved         : 7;

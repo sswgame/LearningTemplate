@@ -17,6 +17,7 @@
 #include "Engine/Foundation/ComponentHandle.h"
 #include "Engine/Object/Component/Component.h"
 #include "Engine/Reflection/ReflectionMacros.h"
+#include "Engine/Serialization/Format/StateIO.h"
 
 #include "GameFramework/GameFrameworkExports.h"
 #include "GameFramework/Runtime/Character/Control/Intent/ControlIntent.h"
@@ -71,6 +72,11 @@ namespace sw
          * @details 다시 켜진 뒤 조종 시스템이 갓 스폰한 폰처럼 다시 빙의시킨다 — 꺼져 있는 동안은 쥐지 않는다(`ControlSystem::autoPossess`).
          */
         [[nodiscard]] SpawnStateReset resetToSpawnState() override;
+
+        /** @brief 바라보는 쪽(조종 회전)입니다 — 빙의가 폰의 의도에서 잇는 값이라(`ControllerComponent::possess`) 이것이 없으면 불러온 플레이어가 늘 같은 쪽을 본다. 앞(0)이면 쓰는 것이 없다. */
+        SW_DECLARE_STATE_IO_IN_PLACE();
+        /** @brief `serializeState` 의 바이트를 되돌립니다. 아직 빙의 전이면 빙의가 잇고, 쥔 조종자가 있으면 다음 틱에 넣습니다. */
+        void restoreState( vector<uint8>&& bytes );
 
         /** @brief 이번 틱의 의도입니다. */
         const ControlIntent& getIntent() const { return _intent; }

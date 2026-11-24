@@ -30,7 +30,6 @@
         "Source/GameFramework/Runtime/Online/Service/OnlineClientRegistry.h|OnlineClientRegistry": "등록 목록 창구 — 함수가 다루는 값은 여러 등록 줄의 목록(숨은 정적 목록)이고 줄 타입 하나가 아니다. 목록을 공통 틀(RegistrationList · 서브시스템)로 옮기는 일은 B 갈래(정적 등록 목록 한 틀)가 한다",
         "Source/GameFramework/Runtime/Online/Service/OnlineProtocolRegistry.h|OnlineProtocolRegistry": "등록 목록 창구 — 함수가 다루는 값은 여러 등록 줄의 목록(숨은 정적 목록)이고 줄 타입 하나가 아니다. 목록을 공통 틀(RegistrationList · 서브시스템)로 옮기는 일은 B 갈래(정적 등록 목록 한 틀)가 한다",
         "Source/GameFramework/Runtime/Gameplay/Zone/ZoneModule.h|ZoneModuleRegistry": "등록 목록 창구 — 함수가 다루는 값은 여러 등록 줄의 목록(숨은 정적 목록)이고 줄 타입 하나가 아니다. 목록을 공통 틀(RegistrationList · 서브시스템)로 옮기는 일은 B 갈래(정적 등록 목록 한 틀)가 한다",
-        "Source/GameFramework/Runtime/Foundation/Framework/Save/ComponentStateStore.h|StatefulComponentRegistrar": "등록 목록 창구 — 함수가 다루는 값은 여러 등록 줄의 목록(숨은 정적 목록)이고 줄 타입 하나가 아니다. 목록을 공통 틀(RegistrationList · 서브시스템)로 옮기는 일은 B 갈래(정적 등록 목록 한 틀)가 한다",
         "Source/GameFramework/Plugin/Editor/MeshModifiers/Stack/MeshModifierRegistry.h|MeshModifierRegistry": "등록 목록 창구 — 함수가 다루는 값은 여러 등록 줄의 목록(숨은 정적 목록)이고 줄 타입 하나가 아니다. 목록을 공통 틀(RegistrationList · 서브시스템)로 옮기는 일은 B 갈래(정적 등록 목록 한 틀)가 한다",
         "Source/GameFramework/Kits/Feature/Network/NetSimulation/NetSimGameRegistry.h|NetSimGameRegistry": "등록 목록 창구 — 함수가 다루는 값은 여러 등록 줄의 목록(숨은 정적 목록)이고 줄 타입 하나가 아니다. 목록을 공통 틀(RegistrationList · 서브시스템)로 옮기는 일은 B 갈래(정적 등록 목록 한 틀)가 한다",
         "Source/Engine/Audio/AudioSpatial.h|AudioSpatializer": "여러 타입에 걸친 계산 — 서명마다 받는 타입이 다르고(입력 · 설정 · 결과) 어느 한 타입의 값 · 불변식을 다루지 않는다",

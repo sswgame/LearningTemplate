@@ -3,10 +3,13 @@
 #include "GameFramework/Runtime/Gameplay/Quest/QuestLogComponent.h"
 
 #include "Core/Event/EventDispatcher.h"
+#include "Core/Foundation/BuildInfo.h"
 
+#include "Engine/Asset/Cache/SharedAssetCache.h"
 #include "Engine/Object/GameObject/GameObject.h"
-#include "Engine/Object/GameObject/GameObjectManager.h"
+#include "Engine/Object/GameObject/GameObjectManagerResolve.inl"
 #include "Engine/Object/GameObject/Registry/ComponentRegistry.h"
+#include "Engine/Object/GameObject/Tick/TickContext.h"
 
 #include "GameFramework/Runtime/Character/Control/Pawn/PawnComponent.h"
 #include "GameFramework/Runtime/Foundation/Framework/GameEvents.h"
@@ -15,6 +18,7 @@
 #include "GameFramework/Runtime/Gameplay/Ability/AbilityEvents.h"
 #include "GameFramework/Runtime/Gameplay/Gimmick/GimmickEvents.h"
 #include "GameFramework/Runtime/Gameplay/Interaction/InteractionAuthority.h"
+#include "GameFramework/Runtime/Gameplay/Quest/QuestCatalog.h"
 
 namespace sw
 {
@@ -25,7 +29,9 @@ namespace sw
     } // namespace
 
     QuestLogComponent::QuestLogComponent()
-        : _questLog{}
+        : _catalog{}
+        , _pBoundCatalog{}
+        , _questLog{}
         , _restore{}
         , _ownerDiedSubscription{}
         , _interactionCompletedSubscription{}
@@ -33,6 +39,7 @@ namespace sw
         , _bOpenAtBeginPlay{ SW_FALSE }
         , _reserved{ 0 }
     {
+        setCanEverTick( build::kShipping == false );
     }
 
     QuestLogComponent::~QuestLogComponent() = default;
@@ -41,8 +48,29 @@ namespace sw
     {
         if ( _restore.isOpen() )
             return GameStateInitResult::AlreadyInitialized; // 앞 디렉터가 연 일지를 다시 비우지 않는다
+        _catalog       = SharedAssetRef<QuestCatalog>::shareLive( &catalog );
+        _pBoundCatalog = _catalog.snapshot();
         _questLog.initialize( catalog );
         return _restore.open( *this );
+    }
+
+    void QuestLogComponent::onTick( TickContext& context )
+    {
+        Component::onTick( context );
+        if ( _catalog.get() != _pBoundCatalog.get() )
+            context.deferPostTickOnComponent( *this, []( QuestLogComponent& log )
+            { log.rebindCatalog(); } );
+    }
+
+    void QuestLogComponent::rebindCatalog()
+    {
+        shared_ptr<const QuestCatalog> pLatest = _catalog.snapshot();
+        if ( pLatest == nullptr || pLatest == _pBoundCatalog )
+            return;
+        const shared_ptr<const QuestCatalog> pPrevious = std::move( _pBoundCatalog ); // 다시 묶을 때까지 앞 판을 쥔다 — 일지가 그 정의를 가리킨다
+        _pBoundCatalog                                 = std::move( pLatest );
+        _restore.rebind( *this, [this]()
+        { _questLog.initialize( *_pBoundCatalog ); } );
     }
 
     void QuestLogComponent::onRegister( GameObjectManager& manager )

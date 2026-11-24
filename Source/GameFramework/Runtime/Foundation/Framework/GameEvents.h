@@ -48,8 +48,9 @@ namespace sw
     /** @brief 게임 상태 불러오기(`GameSaveSlots::load`)가 끝났음을 알립니다. 실패는 `LoadingScreenController` 가 대화 상자로 알린다. 되살린 상태는 컴포넌트가 복원 길로 직접 받는다. */
     struct SW_GF_API SaveGameLoadedEvent final : EventBase
     {
-        string _slot;             ///< 읽은(읽으려 한) 로컬 저장 슬롯 이름
-        bool   _bSuccess{ true }; ///< 씬과 상태를 모두 복원했으면 true NOLINT(sw-bool-flag): 참조(`bool&`)로 넘긴다
+        string _slot;                 ///< 읽은(읽으려 한) 로컬 저장 슬롯 이름
+        bool   _bSuccess{ true };     ///< 씬과 상태를 모두 복원했으면 true NOLINT(sw-bool-flag): 참조(`bool&`)로 넘긴다
+        bool   _bSuperseded{ false }; ///< 플레이어가 뒤에 고른 이동(타이틀로 · 다른 슬롯)이 물렸다 — 실패로 알릴 것이 아니다 NOLINT(sw-bool-flag): 참조(`bool&`)로 넘긴다
         SW_DECLARE_GAMEPLAY_EVENT( SaveGameLoadedEvent );
     };
 } // namespace sw

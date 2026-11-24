@@ -16,6 +16,7 @@
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
 #include "Engine/Scene/Scene.h"
+#include "Engine/Scene/SceneHandle.h"
 #include "Engine/Scene/SceneManager.h"
 
 #define SW_TEST_INTERNAL // 임시 리소스 도메인 픽스처(`ScopedScratchDomain`)가 엔진 서비스를 직접 쓴다
@@ -73,8 +74,8 @@ SW_TEST_CASE( EditorPlaySessionRestoreTest, StopCancelsTravelInFlight )
 
     PlaySessionData data;
     EditorPlaySession::captureSnapshot( data );
-    const uint64       generation = sceneManager.getSceneGeneration();
-    TaskFuture<Scene*> travel     = sceneManager.requestLoadFuture( test::ScopedScratchDomain::makeID( "next.scene.xml" ).str(), SceneLoadKind::Travel );
+    const uint64            generation = sceneManager.getSceneGeneration();
+    TaskFuture<SceneHandle> travel     = sceneManager.requestLoadFuture( test::ScopedScratchDomain::makeID( "next.scene.xml" ).str(), SceneLoadKind::Travel );
     SW_REQUIRE_TRUE( travel.isValid() );
     SW_REQUIRE_TRUE( sceneManager.isTransitioning() );
     EditorPlaySession::restoreSnapshot( data );
@@ -118,15 +119,15 @@ SW_TEST_CASE( EditorPlaySessionRestoreTest, SuspendedTravelFinishesAfterReload )
     const ScopedEditorScope scopedEditor( scope );
     SW_REQUIRE_NOT_NULL( EditorPlaySessionRestoreTestInternal::openEditScene( sceneManager ) );
     SW_REQUIRE_TRUE( sceneManager.saveActiveSceneCopy( domain.makeDiskPath( "next.scene.xml" ) ) );
-    const string       nextID = test::ScopedScratchDomain::makeID( "next.scene.xml" ).str();
-    TaskFuture<Scene*> travel = sceneManager.requestLoadFuture( nextID, SceneLoadKind::Travel );
+    const string            nextID = test::ScopedScratchDomain::makeID( "next.scene.xml" ).str();
+    TaskFuture<SceneHandle> travel = sceneManager.requestLoadFuture( nextID, SceneLoadKind::Travel );
     SW_REQUIRE_TRUE( travel.isValid() );
 
     sceneManager.suspendPendingLoad();
     SW_EXPECT_TRUE( sceneManager.isTransitioning() );
     SW_EXPECT_FALSE( travel.isReady() );
     vector<string> listReplayed;
-    sceneManager.replayPendingLoadRequests( SW_DELEGATE_LAMBDA( SceneLoadRequestedHandler, [&listReplayed]( const string& path, SceneLoadKind, const TaskFuture<Scene*>& )
+    sceneManager.replayPendingLoadRequests( SW_DELEGATE_LAMBDA( SceneLoadRequestedHandler, [&listReplayed]( const string& path, SceneLoadKind, const TaskFuture<SceneHandle>& )
     { listReplayed.push_back( path ); } ) );
     SW_REQUIRE_EQUAL( size_t{ 1 }, listReplayed.size() );
     SW_EXPECT_TRUE( listReplayed[0] == nextID );
@@ -135,8 +136,8 @@ SW_TEST_CASE( EditorPlaySessionRestoreTest, SuspendedTravelFinishesAfterReload )
     sceneManager.waitForPendingLoad();
     sceneManager.updateTransitions(); // 받는다
     SW_REQUIRE_TRUE( travel.isReady() );
-    SW_EXPECT_TRUE( travel.get() != nullptr );
-    SW_EXPECT_TRUE( travel.get() == sceneManager.getActiveScene() );
+    SW_EXPECT_TRUE( travel.get().isValid() );
+    SW_EXPECT_TRUE( sceneManager.resolveScene( travel.get() ) == sceneManager.getActiveScene() );
 }
 
 /** @brief [EditorPlaySessionRestoreTest] 플레이 중인 씬은 원본 파일에 쓰이지 않는다(사본은 쓴다) — 쓰면 플레이 상태가 레벨 파일을 덮는다 */
