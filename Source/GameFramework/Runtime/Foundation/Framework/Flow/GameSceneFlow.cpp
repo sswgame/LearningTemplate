@@ -78,7 +78,7 @@ namespace sw
         const float32 realDeltaTime = game::getSubsystem<GameTimeScale>().getUnscaledDeltaTime();
         _screenTransition.update( realDeltaTime );
         if ( _pLoadingScreen != nullptr )
-            _pLoadingScreen->update( realDeltaTime, bLoading, loadProgress, _screenTransition.fade() );
+            _pLoadingScreen->update( realDeltaTime, bLoading, loadProgress, _screenTransition );
         if ( _listPendingSceneLoad.empty() == false )
             publishFinishedSceneLoads();
     }

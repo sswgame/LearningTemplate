@@ -140,6 +140,13 @@ namespace sw
         }
     }
 
+    void ScreenTransitionManager::fadeInFromBlack( float32 duration )
+    {
+        if ( _phase == Phase::FadeOut )
+            return;
+        _fade.beginFadeIn( duration );
+    }
+
     void ScreenTransitionManager::reset()
     {
         _phase         = Phase::None;
