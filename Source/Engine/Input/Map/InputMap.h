@@ -239,9 +239,16 @@ namespace sw
         // ------------------------------------------------------------------------------
         // 5) 감도, 축 반전, 데드존 모드, 접근성 설정
         // ------------------------------------------------------------------------------
-        /** @brief 플레이어 설정(감도 · 축 반전 · 데드존 · 대각선 정규화 · 토글 액션)입니다. `clear` 나 맵 다시 읽기를 해도 남습니다. */
-        InputAccessibilitySettings&       getAccessibilitySettings() { return _accessibility; }
-        const InputAccessibilitySettings& getAccessibilitySettings() const { return _accessibility; }
+        /** @brief 플레이어 설정(감도 · 축 반전 · 데드존 · 대각선 정규화 · 토글 액션)입니다. `clear` 나 맵 다시 읽기를 해도 남습니다. 다른 맵의 설정을 함께 쓰면 그 설정입니다. */
+        const InputAccessibilitySettings& getAccessibilitySettings() const { return _pAccessibilitySource != nullptr ? _pAccessibilitySource->getAccessibilitySettings() : _accessibility; }
+        /** @brief 이 맵의 플레이어 설정을 고칩니다(설정 화면). 다른 맵의 설정을 함께 쓰는 맵은 고칠 것이 없으므로 부르지 않습니다. */
+        InputAccessibilitySettings& getMutableAccessibilitySettings()
+        {
+            SW_ASSERT( _pAccessibilitySource == nullptr );
+            return _accessibility;
+        }
+        /** @brief @p source 의 플레이어 설정을 함께 읽습니다(로컬 멀티의 다른 사용자 · 포토 모드 — 실행 중 바뀐 감도 · 반전도 바로 듣는다). @p source 는 이 맵보다 오래 살아야 합니다. */
+        void shareAccessibilitySettings( const InputMap& source ) { _pAccessibilitySource = &source; }
 
         /** @brief 토글 액션(`InputAccessibilitySettings::setToggleAction`)이 지금 켜져 있는지입니다. 누를 때마다 뒤집히고, 토글에서 빠지면 꺼집니다. */
         bool isActionToggled( const hashed_string& action ) const;
@@ -731,7 +738,8 @@ namespace sw
         uint32                               _currentSourceIndex; /**< 새로 만드는 액션 · 레이어가 속할 파일입니다. 읽기가 끝나면 마지막 파일 — 패널이 새로 만든 것은 묶음의 차이 파일로 간다. */
         hashed_string                        _defaultLayerName;
         InputAccessibilitySettings           _accessibility;
-        InputTriggerRules                    _triggerRules; ///< 시간 · 거리 문턱과 바인딩 상태 진행(홀드 · 탭 · 연타 · 끌기 · 반복)
+        const InputMap*                      _pAccessibilitySource; ///< 설정을 함께 읽는 맵(빌림, 없으면 nullptr — `shareAccessibilitySettings`)
+        InputTriggerRules                    _triggerRules;         ///< 시간 · 거리 문턱과 바인딩 상태 진행(홀드 · 탭 · 연타 · 끌기 · 반복)
         float32                              _totalElapsedTime;
         float32                              _lastDeltaSeconds;   ///< 가장 최근 `update` 의 프레임 시간. 프레임 시간 곱 바인딩이 쓴다.
         InputMapVirtualCursor                _virtualCursorStick; ///< 맵 전체가 켜는 가상 커서(`<InputMap virtualCursor>` — 레이어 값은 `LayerDef`)

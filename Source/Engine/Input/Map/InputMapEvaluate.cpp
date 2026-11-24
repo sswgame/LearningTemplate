@@ -57,7 +57,7 @@ namespace sw
             float32& accumulator = BindingKinds::isRelative( binding ) ? relative : bounded;
             accumulator += binding._bNegate ? -bVal._x : bVal._x; // 프레임 평가(InputMapEvaluate)와 같은 부호 뒤집기
         }
-        if ( _accessibility._bInvertX )
+        if ( getAccessibilitySettings()._bInvertX )
             bounded = -bounded;
         return MathUtil::clamp( bounded, -1.0f, 1.0f ) + relative;
     }
@@ -316,7 +316,7 @@ namespace sw
 
             // 접근성 토글 — 누른 프레임이나 켜진 동안만 목록을 본다. 토글에서 빠진 액션은 꺼진다.
             const bool bToggleCandidate = actionEntry._state._bPressed == SW_TRUE || actionEntry._state._bToggleState == SW_TRUE;
-            if ( bToggleCandidate && _accessibility.isToggleAction( actionName ) == false )
+            if ( bToggleCandidate && getAccessibilitySettings().isToggleAction( actionName ) == false )
                 actionEntry._state._bToggleState = SW_FALSE;
             else if ( actionEntry._state._bPressed == SW_TRUE )
                 actionEntry._state._bToggleState = ( actionEntry._state._bToggleState == SW_TRUE ) ? SW_FALSE : SW_TRUE;
@@ -417,11 +417,11 @@ namespace sw
     float2 InputMap::composeActionValue( const float2& bounded, const float2& relative ) const
     {
         float2 value = bounded;
-        if ( _accessibility._bInvertX )
+        if ( getAccessibilitySettings()._bInvertX )
             value._x = -value._x;
-        if ( _accessibility._bInvertY )
+        if ( getAccessibilitySettings()._bInvertY )
             value._y = -value._y;
-        if ( _accessibility._digitalNormalization == DigitalNormalization::Circular )
+        if ( getAccessibilitySettings()._digitalNormalization == DigitalNormalization::Circular )
         {
             const float32 lenSq = value._x * value._x + value._y * value._y;
             if ( lenSq > 1.0f )
@@ -584,11 +584,11 @@ namespace sw
         float32 stickX = binding._stickAxis == GamepadStickAxis::Y ? 0.0f : stick._x;
         float32 stickY = binding._stickAxis == GamepadStickAxis::X ? 0.0f : stick._y;
 
-        const float32 inDeadzone  = _accessibility._stickDeadzoneOverride >= 0.0f ? _accessibility._stickDeadzoneOverride : binding._deadzone;
+        const float32 inDeadzone  = getAccessibilitySettings()._stickDeadzoneOverride >= 0.0f ? getAccessibilitySettings()._stickDeadzoneOverride : binding._deadzone;
         const float32 outDeadzone = binding._outerDeadzone > inDeadzone ? binding._outerDeadzone : 1.0f;
         const float32 deadRange   = outDeadzone - inDeadzone;
 
-        if ( _accessibility._deadzoneShape == DeadzoneShape::Radial )
+        if ( getAccessibilitySettings()._deadzoneShape == DeadzoneShape::Radial )
         {
             const float32 mag = MathUtil::sqrt( stickX * stickX + stickY * stickY );
             if ( mag <= inDeadzone )
@@ -609,16 +609,16 @@ namespace sw
             stickY = applyAxialDeadzone( stickY, inDeadzone, deadRange, binding._responseExponent );
         }
 
-        stickX *= _accessibility._gamepadSensitivity._x;
-        stickY *= _accessibility._gamepadSensitivity._y;
+        stickX *= getAccessibilitySettings()._gamepadSensitivity._x;
+        stickY *= getAccessibilitySettings()._gamepadSensitivity._y;
         if ( BindingKinds::isRelative( binding ) )
         {
             // 이동량으로 쓰는 스틱: 배율과 프레임 시간을 곱하고, 반전은 마우스 이동처럼 여기서 한 번만 적용한다(액션 값 단계는 이동량을 반전하지 않는다).
             // 한 성분만 내는 스틱(확대 같은 1D 액션)은 시점 반전을 받지 않는다 — 반전 설정은 2D 시점 이동의 것이다.
             const float32 frameScale = binding._bScaleByDelta ? _lastDeltaSeconds : 1.0f;
             const bool    bLook      = binding._stickAxis == GamepadStickAxis::Both;
-            stickX *= binding._axisScale._x * frameScale * ( bLook && _accessibility._bInvertX ? -1.0f : 1.0f );
-            stickY *= binding._axisScale._y * frameScale * ( bLook && _accessibility._bInvertY ? -1.0f : 1.0f );
+            stickX *= binding._axisScale._x * frameScale * ( bLook && getAccessibilitySettings()._bInvertX ? -1.0f : 1.0f );
+            stickY *= binding._axisScale._y * frameScale * ( bLook && getAccessibilitySettings()._bInvertY ? -1.0f : 1.0f );
         }
         // 한 성분만 내는 바인딩은 그 성분이 1D 값(x)이다 — getAxis1D 가 x 를 읽는다.
         if ( binding._stickAxis == GamepadStickAxis::X )
@@ -731,7 +731,7 @@ namespace sw
                     kbdVec._x += 1.0f;
 
                 const float32 lenSq = kbdVec._x * kbdVec._x + kbdVec._y * kbdVec._y;
-                if ( _accessibility._digitalNormalization == DigitalNormalization::Circular && lenSq > 1.0f )
+                if ( getAccessibilitySettings()._digitalNormalization == DigitalNormalization::Circular && lenSq > 1.0f )
                 {
                     const float32 invLen = 1.0f / MathUtil::sqrt( lenSq );
                     kbdVec._x *= invLen;
@@ -758,8 +758,8 @@ namespace sw
                 const float2  movement = _pInput->getMouse() != nullptr && usesKeyboardMouse() ? _pInput->getMouse()->getMovementDelta() : float2{};
                 const float32 rdx      = movement._x;
                 const float32 rdy      = movement._y;
-                outValue._x            = rdx * binding._scale * _accessibility._mouseSensitivity._x * ( _accessibility._bInvertX ? -1.0f : 1.0f );
-                outValue._y            = rdy * binding._scale * _accessibility._mouseSensitivity._y * ( _accessibility._bInvertY ? -1.0f : 1.0f );
+                outValue._x            = rdx * binding._scale * getAccessibilitySettings()._mouseSensitivity._x * ( getAccessibilitySettings()._bInvertX ? -1.0f : 1.0f );
+                outValue._y            = rdy * binding._scale * getAccessibilitySettings()._mouseSensitivity._y * ( getAccessibilitySettings()._bInvertY ? -1.0f : 1.0f );
                 return ( rdx != 0.0f || rdy != 0.0f );
             }
             case BindingKind::MouseWheel1D:

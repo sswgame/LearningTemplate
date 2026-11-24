@@ -582,8 +582,8 @@ namespace sw
             unique_ptr<InputMap> pUserMap = make_unique<InputMap>();
             pUserMap->setInputManager( this );
             if ( pUserMap->loadBundleTexts( listSource ) == false )
-                return false; // 까닭은 맵이 남겼다
-            pUserMap->getAccessibilitySettings() = _pInputMap->getAccessibilitySettings();
+                return false;                                    // 까닭은 맵이 남겼다
+            pUserMap->shareAccessibilitySettings( *_pInputMap ); // 베끼면 열린 동안 바꾼 설정이 주 사용자에게만 듣는다
             for ( const hashed_string& layer : _pInputMap->getLayerNames() )
             {
                 pUserMap->setLayerEnabled( layer, VectorUtil::contains( listEnabledLayer, layer ) ); // 스택(주 사용자 폰의 레이어)은 베끼지 않는다 — 그 사람의 것이다

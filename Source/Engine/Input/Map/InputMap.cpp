@@ -73,6 +73,7 @@ namespace sw
         , _currentSourceIndex{ 0 }
         , _defaultLayerName{ InputMapDefaults::kDefaultLayerName }
         , _accessibility{}
+        , _pAccessibilitySource{ nullptr }
         , _triggerRules{}
         , _totalElapsedTime{ 0.0f }
         , _lastDeltaSeconds{ 0.0f }

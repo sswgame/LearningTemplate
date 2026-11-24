@@ -347,7 +347,10 @@ namespace sw
         photoInputMap->setInputManager( pInput );
         // 게임이 멈춰도 조종자는 프레임마다 의도를 만든다 — 막지 않으면 자유 카메라를 돌리는 입력이 폰의 시선 · 발동으로도 샌다(세션 중에는 멈추지도 않는다).
         if ( pInput != nullptr )
+        {
+            photoInputMap->shareAccessibilitySettings( pInput->getInputMap() ); // 축 반전 · 감도 · 데드존은 플레이어의 것이다
             _photoInputBlock = pInput->pushSharedLayer( hashed_string( CameraDirectorComponentInternal::kPhotoModeLayer ), true );
+        }
         _photoInputMap = std::move( photoInputMap );
         _photoMode.begin( _director.getPose() );
         _photoPause = game::getSubsystem<GameTimeScale>().addPauseRequest( GamePauseReason::Player );
