@@ -11,6 +11,9 @@ Scripts/generate/target_layers.py
 `[gatefolder]` 는 경로 접두어 대신 폴더 이름으로 막는다 — 서버 구성이 짓지 않는 `Client/`, 클라이언트 구성이 짓지 않는 `Server/` 가 모듈 · 게임마다 있어서다.
 `serverbuild` 는 서버가 짓지 않는 엔진 폴더(`cmake/Modules/Build/BuildLayout.cmake` 의 `SW_EXCLUDED_ENGINE_FOLDERS`)를 모두 막아야 한다 — 대조해 빠지면 멈춘다.
 
+`[devopen]` 은 게이트가 막는 접두어를 그 타깃의 개발 전용 `Dev/` 소스에만 연다 — 진짜 헤더를 잇는 파일을 `<빌드>/gates/devopen/<게이트>/` 에 놓고 CMake(`sw_open_dev_headers`)가 그 소스의
+include 자리 맨 앞에 둔다.
+
 파일 수가 많아(키트 60 여 개 × 헤더 수백) CMake 대신 여기서 쓴다. 게이트마다 목록 스탬프가 같으면 파일을 건드리지 않아 configure 가 파일 하나만 읽는다.
 
   python Scripts/generate/target_layers.py <출력 .cmake 파일>
@@ -43,6 +46,8 @@ WINDOWS_MAX_PATH = 260   # LongPathsEnabled 가 꺼진 Windows 의 컴파일러�
 QUOTED_INCLUDE = re.compile(r'^\s*#\s*include\s+"([^"]+)"', re.M)
 SERVER_GUARD_NAME = "serverbuild"
 CLIENT_GUARD_NAME = "clientbuild"
+DEV_OPEN_FOLDER_NAME = "devopen"   # `[devopen]` 의 잇는 파일이 사는 껍데기 하위 폴더
+HEADER_TOKEN = "@HEADER@"   # 껍데기 내용 안에서 헤더 경로가 들어갈 자리
 EXCLUDED_FOLDER_LINE = re.compile(r'list\(APPEND SW_EXCLUDED_ENGINE_FOLDERS ([^)]*)\)')
 
 
@@ -127,15 +132,14 @@ def find_owner(header: str, list_folder: list[str]) -> str | None:
     return None
 
 
-def write_guard_stubs(stub_dir: Path, gate_name: str, list_header: list[str], message: str) -> None:
-    """게이트 하나의 껍데기를 맞춘다. 스탬프(문구 해시 + 지난 헤더 목록)와 대조해 **바뀐 껍데기만** 더하고 지운다.
+def write_guard_stubs(stub_dir: Path, gate_name: str, list_header: list[str], content: str) -> None:
+    """게이트 하나의 껍데기를 맞춘다. 껍데기의 내용은 @p content 이고, 안의 `HEADER_TOKEN` 은 그 헤더 경로가 된다. 스탬프(문구 해시 + 지난 헤더 목록)와 대조해 **바뀐 껍데기만** 더하고 지운다.
 
     헤더 하나가 늘거나 옮겨질 때마다 그 폴더를 막는 게이트 전부가 폴더째 지우고 다시 쓰면(게이트 101 개 · 껍데기 5 만여 개) 재구성 46 초 중 31 초가
     이 생성기였다. 문구가 바뀌었거나 스탬프 · 폴더가 없을 때만 통째로 다시 쓴다(사라진 헤더의 껍데기가 옮겨 온 헤더를 가리지 않게 지우는 것은 같다).
     """
     stub_root = stub_dir / gate_name
     stamp_path = stub_dir / f"{gate_name}.stamp"
-    content = f"#error \"{message}\"\n"
     content_digest = hashlib.sha256(content.encode("utf-8")).hexdigest()
     set_previous: set[str] | None = None
     if stamp_path.is_file() and stub_root.is_dir():
@@ -163,7 +167,7 @@ def write_guard_stubs(stub_dir: Path, gate_name: str, list_header: list[str], me
         if path.parent not in set_folder:
             path.parent.mkdir(parents=True, exist_ok=True)
             set_folder.add(path.parent)
-        path.write_text(content, encoding="utf-8")
+        path.write_text(content.replace(HEADER_TOKEN, header), encoding="utf-8")
     stamp_path.parent.mkdir(parents=True, exist_ok=True)
     stamp_path.write_text("\n".join([content_digest, *sorted(set_current)]) + "\n", encoding="utf-8")
 
@@ -230,28 +234,41 @@ def collect_guards(source_dir: Path, map_rule: dict[str, list[str]], map_allow: 
     return map_gate
 
 
+def collect_dev_open_headers(map_rule: dict[str, list[str]], map_dev_open: dict[str, list[str]], map_gate: dict[str, tuple[list[str], str]]) -> dict[str, list[str]]:
+    """`[devopen]` 게이트 이름 → `Dev/` 소스에 여는 헤더. 게이트가 막지 않는 접두어는 낡은 줄이라 멈춘다."""
+    list_stale = [f"{gate_name}: {prefix}" for gate_name, list_prefix in map_dev_open.items() for prefix in list_prefix if prefix not in map_rule.get(gate_name, [])]
+    if list_stale:
+        raise GeneratorError(f"[devopen] 에 게이트가 막지 않는 접두어: {', '.join(sorted(list_stale))} — {RULE_FILE.name} 에서 지우세요")
+    return {gate_name: [header for header in map_gate[gate_name][0] if any(header.startswith(prefix + "/") for prefix in list_prefix)]
+            for gate_name, list_prefix in map_dev_open.items()}
+
+
 def generate_target_layers(output_path: Path) -> None:
     try:
         table = tomllib.loads(RULE_FILE.read_text(encoding="utf-8"))
         map_rule: dict[str, list[str]] = table["gate"]
         map_allow: dict[str, list[str]] = table["allow"]
         map_folder: dict[str, list[str]] = table["gatefolder"]
+        map_dev_open: dict[str, list[str]] = table["devopen"]
         list_server_prefix = map_rule[SERVER_GUARD_NAME]
         if CLIENT_GUARD_NAME not in map_rule:   # CMake(`sw_apply_target_layer_guard`)가 Client 구성에 거는 게이트
             raise KeyError(CLIENT_GUARD_NAME)
     except (OSError, tomllib.TOMLDecodeError, KeyError) as exception:
-        raise GeneratorError(f"{RULE_FILE.name}: 읽지 못했다 ({exception!r}) — [gate] · [gatefolder] · [allow] 표와 [gate] {SERVER_GUARD_NAME} · {CLIENT_GUARD_NAME} 가 있어야 한다") from exception
+        raise GeneratorError(f"{RULE_FILE.name}: 읽지 못했다 ({exception!r}) — [gate] · [gatefolder] · [devopen] · [allow] 표와 [gate] {SERVER_GUARD_NAME} · {CLIENT_GUARD_NAME} 가 있어야 한다") from exception
     project_root = get_project_root()
     check_server_guard_covers_excluded_folders(list_server_prefix, read_server_excluded_folders(project_root))
     source_dir = project_root / "Source"
     map_gate = collect_guards(source_dir, map_rule, map_allow, map_folder)
     stub_dir = output_path.parents[3] / STUB_FOLDER_NAME   # <빌드>/generated/sw/config/TargetLayers.cmake → <빌드>/gates
     for gate_name, (list_denied, message) in map_gate.items():
-        write_guard_stubs(stub_dir, gate_name, list_denied, message)
+        write_guard_stubs(stub_dir, gate_name, list_denied, f"#error \"{message}\"\n")
+    for gate_name, list_header in collect_dev_open_headers(map_rule, map_dev_open, map_gate).items():
+        write_guard_stubs(stub_dir / DEV_OPEN_FOLDER_NAME, gate_name, list_header, f"#include \"{source_dir.as_posix()}/{HEADER_TOKEN}\"\n")
     list_line = [
         "# AUTO-GENERATED by Scripts/generate/target_layers.py — do not edit. 쓰는 곳: sw_apply_target_layer_guard(cmake/Modules/Build/TargetCompileRules.cmake).",
         f'set(SW_TARGET_LAYER_STUB_DIR "{stub_dir.as_posix()}")',
         f'set(SW_TARGET_LAYER_GUARDS "{";".join(sorted(map_gate))}")',
+        f'set(SW_TARGET_LAYER_DEV_OPEN_GUARDS "{";".join(sorted(map_dev_open))}")',
         *(f'set(SW_TARGET_LAYER_ALLOW_{gate_name} "{";".join(sorted(list_allowed))}")' for gate_name, list_allowed in sorted(map_allow.items())),
         "",
     ]

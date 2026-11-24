@@ -9,7 +9,7 @@
 #include "Engine/Graphics/Canvas/CanvasDrawList.h"
 #include "Engine/Graphics/Canvas/CanvasOverlay.h"
 #include "Engine/Graphics/Canvas/CanvasPainter.h"
-#include "Engine/Graphics/Debug/DebugDrawQueue.h"
+#include "Engine/Graphics/DebugDraw/DebugDrawQueue.h"
 #include "Engine/Text/FontService.h"
 
 namespace sw

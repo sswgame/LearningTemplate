@@ -9,7 +9,7 @@
 
 #include "Engine/Foundation/EngineServices.h"
 #include "Engine/Foundation/EngineSubsystemRegistration.h"
-#include "Engine/Graphics/Debug/DebugDrawQueue.h"
+#include "Engine/Graphics/DebugDraw/DebugDrawQueue.h"
 #include "Engine/Reflection/EnumName.h"
 #include "Engine/Serialization/JSON/JSONDocument.h"
 

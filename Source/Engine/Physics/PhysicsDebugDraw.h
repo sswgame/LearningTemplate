@@ -11,7 +11,7 @@
 #include "Core/Foundation/Types.h"
 #include "Core/Math/Math.h"
 
-#include "Engine/Graphics/Debug/DebugDrawQueue.h"
+#include "Engine/Graphics/DebugDraw/DebugDrawQueue.h"
 #include "Engine/Physics/Collision/PhysicsShape.h"
 
 namespace sw

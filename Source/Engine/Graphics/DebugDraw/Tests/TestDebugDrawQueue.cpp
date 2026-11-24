@@ -5,7 +5,7 @@
 #include "Core/Math/MatrixMath.h"
 #include "Core/Testing/TestFramework.h"
 
-#include "Engine/Graphics/Debug/DebugDrawQueue.h"
+#include "Engine/Graphics/DebugDraw/DebugDrawQueue.h"
 
 using namespace sw;
 

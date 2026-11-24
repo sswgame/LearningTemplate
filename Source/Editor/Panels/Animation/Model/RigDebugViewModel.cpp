@@ -19,7 +19,7 @@
 #include "Engine/Animation/Skeletal/Skeleton.h"
 #include "Engine/Automation/Watch/AutomationWatch.h"
 #include "Engine/Character/PoseModifier/PoseModifierComponent.h"
-#include "Engine/Graphics/Debug/DebugDrawQueue.h"
+#include "Engine/Graphics/DebugDraw/DebugDrawQueue.h"
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
 

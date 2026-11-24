@@ -15,7 +15,7 @@
 
 #include "Engine/Config/GameTimeScale.h"
 #include "Engine/Console/DevCommandRegistry.h"
-#include "Engine/Graphics/Debug/DebugDrawQueue.h"
+#include "Engine/Graphics/DebugDraw/DebugDrawQueue.h"
 #include "Engine/Object/Component/CameraComponent.h"
 #include "Engine/Renderer/Frame/FrameRenderer.h"
 
