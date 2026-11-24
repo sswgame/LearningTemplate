@@ -64,6 +64,13 @@ namespace sw
         [[nodiscard]] bool initialize( INetPeers& peers, NetMessageRouter& router, const HubRules& rules, const StreamingCellGridDef& gridDef, HubServiceStoreSource storeSource );
         /** @brief 접속한 모두의 진행 쓰기를 맡기고 라우터에서 뗍니다(맡긴 쓰기는 저장소가 끝낸다). 두 번 불러도 됩니다. */
         void shutdown() override;
+        /**
+         * @brief 접속한 모두의 진행을 맡기고 저장소에 모두 닿을 때까지 기다립니다 — 진행 저장소(온라인 조립)가 내려가기 직전에 부른다(`IServerKitLocator::subscribeBeforeWithdraw`).
+         * @details 이 링크는 조립보다 늦게 내려간다 — 그때의 저장은 갈 곳이 없어 마지막 진행을 잃는다. 한도(`ServiceStore::kStopDrainMilliseconds`)를 넘으면 오류를 남긴다.
+         */
+        void flushProfiles();
+        /** @brief 저장소가 내려가기 직전의 알림 구독을 맡깁니다(`shutdown` 이 푼다). */
+        void holdBeforeWithdraw( Subscription beforeWithdraw ) { _beforeWithdraw = std::move( beforeWithdraw ); }
         /** @brief 규칙 · 저장 · 복제를 한 틱 돌립니다. */
         void            update( float32 deltaSeconds ) override;
         void            collectAvatars( vector<HubAvatarSession>& outListSession ) const override;
@@ -119,6 +126,8 @@ namespace sw
         void releaseAgent( int32 connectionID );
         void sendProgress( const HubAvatarAgent& agent );
         void saveAll();
+        /** @brief 끝난 저장소 일을 거두고 읽힌 진행의 연결을 들입니다. */
+        void pollProfiles();
         /** @brief 복제 엔티티(아바타 · 놓인 것) 가운데 지난번 올린 값과 다른 것만 이번 틱 상태로 올립니다. */
         void publishEntities();
         /** @brief 엔티티 하나를 올립니다. 지난번 올린 값과 같으면 아무것도 하지 않습니다. */
@@ -140,6 +149,7 @@ namespace sw
         unordered_map<uint32, HubPublishedEntity>        _mapPublished;     ///< 엔티티 id → 복제기에 마지막으로 올린 값
         vector<Subscription>                             _listSubscription; ///< 라우터 등록. 처리기들보다 뒤에 선언한다 — 먼저 풀린다
         HubServerStats                                   _stats;
+        Subscription                                     _beforeWithdraw; ///< 저장소가 내려가기 직전의 알림(`flushProfiles`)
         INetPeers*                                       _pPeers;
         const NetMessageRouter*                          _pRouter; ///< 월드의 서버 시계(`getWorldClock`)를 읽는다. 서 있는 동안만 있다
         float32                                          _autosaveTimer;

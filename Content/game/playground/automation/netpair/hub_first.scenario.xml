@@ -6,7 +6,7 @@
   → 사거리 밖 짐승은 서버가 OutOfRange(2) 로 거절 → 서버가 들어간 하위 레벨 미니게임을 이 클라이언트도 세우고 내림. 행동은 모두 반사 함수 호출(`HubAvatarAgent` 의 Server 함수)이고 판정 · 보상은 서버가 한다.
   끝나면 앱이 나가고 서버가 연결 끝에 진행을 저장한다. 이어 `hub_return.scenario.xml` 이 같은 계정으로 다시 붙어 같은 진행을 읽는지 본다.
 -->
-<Scenario name="game.playground.netpair.hub_first" fixedDelta="0.0166667" timeoutFrames="36000" startAfter="ScenePlaying" startTimeoutFrames="900">
+<Scenario name="game.playground.netpair.hub_first" fixedDelta="0.0166667" realTime="true" timeoutFrames="36000" startAfter="ScenePlaying" startTimeoutFrames="900">
 	<Expect watch="Hub.RulesValid" equals="1"/>
 	<Expect watch="Hub.NetRole" equals="0"/>
 	<DevCommand line="net.ticketconnect 127.0.0.1:17880 hub_netpair hub_netpair_pw_1 playground_hub 127.0.0.1:17877"/>

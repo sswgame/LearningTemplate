@@ -90,6 +90,25 @@ SW_TEST_CASE( FramePacerTest, EditorIdleNeedsStableQuietFrames )
     SW_EXPECT_TRUE( FramePacer::resolve( makeInputs( true, false, false, false ), FramePacingRequest::WindowState, FramePacer::kEditorIdleStabilityFrames ) == FramePacingState::EditorIdle );
 }
 
+/** @brief [FramePacerTest] 벽시계로 도는 시나리오는 포커스와 상관없이 그 프레임 상한까지만 돈다 — 고정 시간 시나리오는 전속이다 */
+SW_TEST_CASE( FramePacerTest, RealTimeScenarioKeepsItsFrameRate )
+{
+    PacingRecordWindow window;
+    FramePacer         pacer;
+    FramePacingInputs  inputs   = makeInputs( true, false, false, false );
+    inputs._automationFrameRate = 60;
+    pacer.markFrameStart();
+    pacer.beginFrame( inputs );
+    SW_REQUIRE_TRUE( pacer.getState() == FramePacingState::Automation );
+    pacer.endFrame( window );
+    SW_EXPECT_EQUAL( window._frameStartNanoseconds + constant::time::kNanosecondsPerSecond / 60, window._deadlineNanoseconds );
+
+    inputs._automationFrameRate = 0;
+    pacer.beginFrame( inputs );
+    pacer.endFrame( window );
+    SW_EXPECT_EQUAL( window._frameStartNanoseconds, window._deadlineNanoseconds );
+}
+
 SW_TEST_CASE( FramePacerTest, BackgroundDeadlineFollowsFrameRateLimit )
 {
     constexpr int64 kStart = 5 * constant::time::kNanosecondsPerSecond;

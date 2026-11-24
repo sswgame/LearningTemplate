@@ -5,7 +5,7 @@
   ① 첫 사람이 보이면(Shooter.RemotePawnCount) 바라보고 쏜다 — 서버가 되감아 판정하고 처치 수가 오른다.
   ② 첫 사람이 되갚아 쓰러지면 같은 매치에서 가득 찬 체력으로 다시 태어난다. 스스로 나가 허브로 돌아온다.
 -->
-<Scenario name="game.playground.netpair.match_respawn_second" fixedDelta="0.0166667" timeoutFrames="120000" startAfter="ScenePlaying" startTimeoutFrames="900">
+<Scenario name="game.playground.netpair.match_respawn_second" fixedDelta="0.0166667" realTime="true" timeoutFrames="120000" startAfter="ScenePlaying" startTimeoutFrames="900">
 	<Variable name="gv_playgroundAutoPlay" value="0"/>
 	<DevCommand line="online.connect"/>
 	<WaitUntil watch="Online.SessionState" atLeast="3" timeoutWallSeconds="30"/>

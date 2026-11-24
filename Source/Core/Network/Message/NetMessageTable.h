@@ -274,7 +274,7 @@ namespace sw
             HoldVisitor visitor{};
             return TTable::template dispatch<uint32>( kind, visitor, 0u );
         }
-        uint64 readHoldKey( uint8 kind, BitReader body ) const final
+        uint64 readMessageHoldKey( uint8 kind, BitReader body ) const final
         {
             HoldKeyVisitor visitor{ static_cast<const TDerived&>( *this ), body };
             return TTable::template dispatch<uint64>( kind, visitor, uint64{ 0 } );

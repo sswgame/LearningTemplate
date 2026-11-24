@@ -160,6 +160,15 @@ namespace sw
         return pStore;
     }
 
+    bool HubProfileStore::waitCompletions( const Deadline& deadline ) const
+    {
+        ServiceStore* const pStore = _source.isBound() ? _source() : nullptr;
+        if ( pStore == nullptr )
+            return false;
+        (void)pStore->waitCompletions( deadline );
+        return true;
+    }
+
     void HubProfileStore::requestLoad( uint64 accountID )
     {
         AccountState& state = _mapAccount[accountID];

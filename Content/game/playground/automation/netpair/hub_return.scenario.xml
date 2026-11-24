@@ -4,7 +4,7 @@
   허브 서버 두 프로세스 — 재접속(클라이언트). `hub_first.scenario.xml` 의 클라이언트가 나간 뒤 같은 서버 실행에 같은 계정으로 다시 붙는다(`py -3 -m Scripts net-pair mmo`).
   서버는 앞 연결이 끝날 때 진행을 저장했고(`Hub.ProfileSaved`), 이 접속에서 그 진행을 읽어 아바타를 세운다 — 레벨 2 · 경험 135 · 동전 10 · 버섯 1 · 처치 2 가 그대로다.
 -->
-<Scenario name="game.playground.netpair.hub_return" fixedDelta="0.0166667" timeoutFrames="7200" startAfter="ScenePlaying" startTimeoutFrames="900">
+<Scenario name="game.playground.netpair.hub_return" fixedDelta="0.0166667" realTime="true" timeoutFrames="7200" startAfter="ScenePlaying" startTimeoutFrames="900">
 	<Expect watch="Hub.NetRole" equals="0"/>
 	<DevCommand line="net.ticketconnect 127.0.0.1:17880 hub_netpair hub_netpair_pw_1 playground_hub 127.0.0.1:17877"/>
 	<WaitUntil watch="Hub.AvatarID" atLeast="1" timeoutSeconds="30"/>

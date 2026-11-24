@@ -9,7 +9,7 @@
   ③ 카드 탁자 뒤 ④ 움직이는 바닥: 왕복 발판에 올라 실려 간다(Hub.PawnFloor · Hub.PawnFloorSlip).
   넷 걸음은 실제 시간으로 돌아 기다림은 실제 시간 시한(timeoutWallSeconds)이다. 회선 흉내 아래라 보정 횟수는 하한만 본다.
 -->
-<Scenario name="game.playground.netpair.hub_walk_south" fixedDelta="0.0166667" timeoutFrames="36000" startAfter="ScenePlaying" startTimeoutFrames="900" input="exclusive">
+<Scenario name="game.playground.netpair.hub_walk_south" fixedDelta="0.0166667" realTime="true" timeoutFrames="36000" startAfter="ScenePlaying" startTimeoutFrames="900" input="exclusive">
 	<Expect watch="Hub.NetRole" equals="0"/>
 	<Expect watch="Hub.PawnPredicted" equals="0"/>
 	<DevCommand line="net.ticketconnect 127.0.0.1:17880 hub_south hub_south_pw_1 playground_hub 127.0.0.1:17877"/>

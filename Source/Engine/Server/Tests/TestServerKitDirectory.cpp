@@ -25,3 +25,25 @@ SW_TEST_CASE( ServerKitDirectoryTest, PublishedScopeIsVisibleUntilWithdrawn )
     directory.publish( &kits ); // 리로드 뒤 다시 선다
     SW_EXPECT_TRUE( directory.findKitScope() == &kits );
 }
+
+/** @brief [ServerKitDirectoryTest] 거두기 직전에 알리고, 그 안에서는 범위를 아직 찾을 수 있다 — 게임 서버 코드가 마지막 저장을 맡기는 자리다 */
+SW_TEST_CASE( ServerKitDirectoryTest, WithdrawIsAnnouncedWhileTheScopeIsVisible )
+{
+    ServerKitDirectory       directory;
+    SubsystemScope           kits;
+    SubsystemScope           other;
+    uint32                   announcedCount = 0;
+    const ISubsystemLocator* pSeen          = nullptr;
+    const Subscription       beforeWithdraw = directory.subscribeBeforeWithdraw( SW_DELEGATE_LAMBDA( Delegate<void()>, [&announcedCount, &pSeen, &directory]()
+          {
+        ++announcedCount;
+        pSeen = directory.findKitScope();
+    } ) );
+    directory.publish( &kits );
+    directory.withdraw( &other ); // 공개한 범위가 아니다
+    SW_EXPECT_EQUAL( 0u, announcedCount );
+    directory.withdraw( &kits );
+    SW_EXPECT_EQUAL( 1u, announcedCount );
+    SW_EXPECT_TRUE( pSeen == &kits );
+    SW_EXPECT_TRUE( directory.findKitScope() == nullptr );
+}

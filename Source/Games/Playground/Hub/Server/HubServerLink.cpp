@@ -50,6 +50,7 @@ namespace sw
         , _mapPublished{}
         , _listSubscription{}
         , _stats{}
+        , _beforeWithdraw{}
         , _pPeers{ nullptr }
         , _pRouter{ nullptr }
         , _autosaveTimer{ 0.0f }
@@ -105,7 +106,8 @@ namespace sw
     {
         if ( _pPeers == nullptr )
             return;
-        saveAll();
+        _beforeWithdraw.reset();
+        saveAll(); // 저장소가 먼저 내려갔으면 `flushProfiles` 가 이미 맡겼다 — 바뀐 것이 없어 다시 맡기지 않는다
         vector<int32> listConnection;
         for ( const auto& entry : _mapAgent )
         {
@@ -125,17 +127,38 @@ namespace sw
         _pRouter = nullptr;
     }
 
-    void HubServerLink::update( float32 deltaSeconds )
+    void HubServerLink::pollProfiles()
     {
-        if ( _pPeers == nullptr )
-            return;
-        _world.update( deltaSeconds );
         _listLoadScratch.clear();
         _profiles.poll( _listLoadScratch );
         for ( const HubProfileLoad& load : _listLoadScratch )
         {
             completeAdmission( load );
         }
+    }
+
+    void HubServerLink::flushProfiles()
+    {
+        if ( _pPeers == nullptr )
+            return;
+        saveAll();
+        const Deadline deadline = Deadline::afterMilliseconds( ServiceStore::kStopDrainMilliseconds );
+        while ( _profiles.getPendingCount() > 0 && deadline.isExpired() == false )
+        {
+            if ( _profiles.waitCompletions( deadline ) == false )
+                break;
+            pollProfiles(); // 쓰는 중에 들어온 바이트(쓰기 합치기)를 이어 맡긴다
+        }
+        if ( _profiles.getPendingCount() > 0 )
+            SW_LOG_ERROR_ID( "Hub.ProfileFlushTimedOut", "[Hub] %# profile job(s) did not finish before the store stopped - the last progress may be lost", _profiles.getPendingCount() );
+    }
+
+    void HubServerLink::update( float32 deltaSeconds )
+    {
+        if ( _pPeers == nullptr )
+            return;
+        _world.update( deltaSeconds );
+        pollProfiles();
         for ( const auto& entry : _mapAgent )
         {
             if ( _world.consumeDirtyFlag( entry.second->_avatarID ) )
