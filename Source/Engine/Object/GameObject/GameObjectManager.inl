@@ -106,7 +106,7 @@ namespace sw
             Component* pComponent = resolveComponent( handle );
             if ( pComponent == nullptr || pComponent->isPendingDestroy() || pComponent->isActive() == false )
                 continue;
-            func( *static_cast<T*>( pComponent ) ); // 레지스트리는 정확히 T 로 오른 것만 담는다(`ComponentRegistry::add<T>`)
+            func( *static_cast<T*>( pComponent ) ); // 목록에는 T 와 그 파생만 든다(`SW_REGISTERED_COMPONENT`)
         }
     }
 } // namespace sw

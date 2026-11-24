@@ -182,7 +182,6 @@ namespace sw
     void WaterBodyComponent::onRegister( GameObjectManager& manager )
     {
         SceneComponent::onRegister( manager );
-        manager.getComponentRegistry().add<WaterBodyComponent>( this ); // `findWaterAt` 와 `findUnderwaterFog` 가 씬을 훑지 않고 이 목록을 본다.
         _pPrimitiveRegistry = &manager.getPrimitiveRegistry();
         if ( isPostLoadPending() == false ) // 로드한 수면은 `onPostLoad` 가 한 번 짓는다(같은 배치의 지형이 등록된 뒤)
             rebuildSurface();
@@ -193,7 +192,6 @@ namespace sw
         _batch.reset(); // 소멸자가 레지스트리에서 뺀다
         _material.release();
         _pPrimitiveRegistry = nullptr;
-        manager.getComponentRegistry().remove<WaterBodyComponent>( this );
         SceneComponent::onUnregister( manager );
     }
 

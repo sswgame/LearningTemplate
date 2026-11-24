@@ -14,18 +14,6 @@ namespace sw
     {
     }
 
-    void FoliageInfluencerComponent::onRegister( GameObjectManager& manager )
-    {
-        SceneComponent::onRegister( manager );
-        manager.getComponentRegistry().add<FoliageInfluencerComponent>( this );
-    }
-
-    void FoliageInfluencerComponent::onUnregister( GameObjectManager& manager )
-    {
-        manager.getComponentRegistry().remove<FoliageInfluencerComponent>( this );
-        SceneComponent::onUnregister( manager );
-    }
-
     uint32 FoliageInfluencerComponent::collectNearest( const GameObjectManager& manager, const float3& viewPosition, float4 ( &outArrSphere )[kMaxInfluencerCount] )
     {
         float32 arrDistance[kMaxInfluencerCount]{};

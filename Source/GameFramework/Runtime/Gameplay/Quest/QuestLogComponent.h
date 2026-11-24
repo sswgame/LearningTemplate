@@ -37,6 +37,7 @@ namespace sw
     {
     public:
         REFLECT_BODY();
+        SW_REGISTERED_COMPONENT( QuestLogComponent );
 
         static constexpr uint32 kStateTag     = FourCCUtil::make( "QLGC" );
         static constexpr uint32 kStateVersion = 1;

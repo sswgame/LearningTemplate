@@ -39,18 +39,6 @@ namespace sw
 
     PairedAnimationComponent::~PairedAnimationComponent() = default;
 
-    void PairedAnimationComponent::onRegister( GameObjectManager& manager )
-    {
-        Component::onRegister( manager );
-        manager.getComponentRegistry().add<PairedAnimationComponent>( this );
-    }
-
-    void PairedAnimationComponent::onUnregister( GameObjectManager& manager )
-    {
-        manager.getComponentRegistry().remove<PairedAnimationComponent>( this );
-        Component::onUnregister( manager );
-    }
-
     void PairedAnimationComponent::onBeginPlay()
     {
         Component::onBeginPlay();

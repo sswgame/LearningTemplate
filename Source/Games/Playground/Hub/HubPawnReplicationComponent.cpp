@@ -889,18 +889,6 @@ namespace sw
             return left._ride._gait == right._ride._gait && left._ride._bGallopAllowed == right._ride._bGallopAllowed && left._ride._maxGait == right._ride._maxGait;
         return left._walk._motion._movementMode == right._walk._motion._movementMode && left._walk._bClimbing == right._walk._bClimbing;
     }
-
-    void HubPawnReplicationComponent::onRegister( GameObjectManager& manager )
-    {
-        Component::onRegister( manager );
-        manager.getComponentRegistry().add<HubPawnReplicationComponent>( this );
-    }
-
-    void HubPawnReplicationComponent::onUnregister( GameObjectManager& manager )
-    {
-        manager.getComponentRegistry().remove<HubPawnReplicationComponent>( this );
-        Component::onUnregister( manager );
-    }
 } // namespace sw
 
 namespace sw

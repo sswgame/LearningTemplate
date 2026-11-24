@@ -74,6 +74,7 @@ namespace sw
     {
     public:
         REFLECT_BODY();
+        SW_REGISTERED_COMPONENT( GameModeComponent );
 
         static constexpr TickGroup kTickGroup = TickGroup::PrePhysics; ///< 규칙은 앞 그룹 — 뷰 · 컨트롤러 · 카메라 리그(뒤 그룹)가 같은 프레임에 이 결과를 읽는다.
 
@@ -90,10 +91,6 @@ namespace sw
         void onBeginPlay() override;
         /** @brief 스폰한 오브젝트를 정리하고 판을 끝냅니다. */
         void onEndPlay() override;
-        /** @brief 씬의 컴포넌트 레지스트리에 오릅니다 — 감시 값 `GameMode.StepMs` 가 씬을 훑지 않고 디렉터를 찾는다. */
-        void onRegister( GameObjectManager& manager ) override;
-        /** @brief 레지스트리에서 내립니다. */
-        void onUnregister( GameObjectManager& manager ) override;
         /** @brief 규칙이 주 틱에서 돌면 `runRules` 를 틱 뒤로 겁니다(`deferRules`). `_tickAfter` 를 걸었으면 서브틱이 겁니다. */
         void onTick( TickContext& context ) override;
         /** @brief 규칙 서브틱(`kRuleSubTick`)이면 `runRules` 를 틱 뒤로 겁니다. */

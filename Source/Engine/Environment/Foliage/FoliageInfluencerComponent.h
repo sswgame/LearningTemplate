@@ -23,6 +23,7 @@ namespace sw
     {
     public:
         REFLECT_BODY();
+        SW_REGISTERED_COMPONENT( FoliageInfluencerComponent );
 
         /** @brief 한 프레임에 셰이더가 보는 구의 수입니다(머티리얼 슬롯 수와 같습니다). */
         static constexpr uint32 kMaxInfluencerCount = 4;
@@ -30,9 +31,6 @@ namespace sw
         FoliageInfluencerComponent();
         virtual ~FoliageInfluencerComponent() override = default;
 
-        /** @brief 씬의 식생 휘게 하는 구 목록(`ComponentRegistry`)에 등록합니다. `collectNearest` 가 씬 전체를 훑지 않고 이 목록을 봅니다. */
-        void    onRegister( GameObjectManager& manager ) override;
-        void    onUnregister( GameObjectManager& manager ) override;
         float32 getRadius() const { return _radius; }
         void    setRadius( float32 radius ) { _radius = radius; }
 

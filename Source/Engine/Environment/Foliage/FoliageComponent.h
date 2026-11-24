@@ -125,6 +125,7 @@ namespace sw
     {
     public:
         REFLECT_BODY();
+        SW_REGISTERED_COMPONENT( FoliageComponent );
 
         static constexpr TickGroup kTickGroup = TickGroup::PostUpdate;
 

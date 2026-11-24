@@ -30,17 +30,13 @@ namespace sw
     {
     public:
         REFLECT_BODY();
+        SW_REGISTERED_COMPONENT( WalletComponent );
 
         static constexpr uint32 kStateTag     = FourCCUtil::make( "WLTC" );
         static constexpr uint32 kStateVersion = 1;
 
         WalletComponent();
         ~WalletComponent() override;
-
-        /** @brief 씬의 컴포넌트 레지스트리에 오릅니다(`PlayerComponentUtil::findOpen`). */
-        void onRegister( GameObjectManager& manager ) override;
-        /** @brief 레지스트리에서 내립니다. */
-        void onUnregister( GameObjectManager& manager ) override;
 
         /** @brief 지갑 구간 하나를 씁니다. `ComponentStateStore::capture` 가 부릅니다. */
         SW_DECLARE_STATE_IO_IN_PLACE();

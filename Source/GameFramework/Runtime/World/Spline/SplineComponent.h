@@ -26,12 +26,11 @@ namespace sw
     {
     public:
         REFLECT_BODY();
+        SW_REGISTERED_COMPONENT( SplineComponent );
 
         SplineComponent();
         virtual ~SplineComponent() override = default;
 
-        void onRegister( GameObjectManager& manager ) override;
-        void onUnregister( GameObjectManager& manager ) override;
         void onBeginPlay() override;
         void onPostLoad() override;
         void onPropertyChanged( hashed_string propertyName ) override;

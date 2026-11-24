@@ -27,12 +27,10 @@ namespace sw
     {
     public:
         REFLECT_BODY();
+        SW_REGISTERED_COMPONENT( ExplosiveBarrelComponent );
 
         ExplosiveBarrelComponent();
         virtual ~ExplosiveBarrelComponent() override = default;
-
-        void onRegister( GameObjectManager& manager ) override;
-        void onUnregister( GameObjectManager& manager ) override;
 
         void    onTick( TickContext& context ) override;
         void    stepOnce();

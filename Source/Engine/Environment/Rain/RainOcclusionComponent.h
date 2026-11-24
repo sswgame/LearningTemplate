@@ -23,13 +23,11 @@ namespace sw
     {
     public:
         REFLECT_BODY();
+        SW_REGISTERED_COMPONENT( RainOcclusionComponent );
 
         RainOcclusionComponent();
         virtual ~RainOcclusionComponent() override = default;
 
-        /** @brief 씬의 목록(`ComponentRegistry`)에 등록합니다. */
-        void onRegister( GameObjectManager& manager ) override;
-        void onUnregister( GameObjectManager& manager ) override;
         /** @brief 지금 값입니다(해상도는 0 — 품질이 채운다). */
         RainOcclusionSettings makeSettings() const;
 

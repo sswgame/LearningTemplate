@@ -22,12 +22,11 @@ namespace sw
     {
     public:
         REFLECT_BODY();
+        SW_REGISTERED_COMPONENT( CharacterCrowdSpawnerComponent );
 
         CharacterCrowdSpawnerComponent();
         ~CharacterCrowdSpawnerComponent() override = default;
 
-        void onRegister( GameObjectManager& manager ) override;
-        void onUnregister( GameObjectManager& manager ) override;
         void onBeginPlay() override;
 
         /** @brief 세운 캐릭터 수입니다(부하 시나리오가 측정 경로를 탔는지 본다). */

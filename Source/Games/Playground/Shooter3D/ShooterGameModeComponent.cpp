@@ -72,7 +72,6 @@ namespace sw
             }
         };
     } // namespace
-
 } // namespace sw
 
 namespace sw
@@ -866,7 +865,6 @@ namespace sw
                         _director.getIntensity(), _killCount, static_cast<int32>( pPlayer->getHealth() ), weapon.getDef()._name.c_str(), weapon.getMagazineAmmo(),
                         weapon.getReserveAmmo(), static_cast<uint32>( _listEnemyView.size() ), percent );
     }
-
 } // namespace sw
 
 namespace sw
@@ -890,16 +888,4 @@ namespace sw
 
     SW_AUTOMATION_WATCH( shooterEffectCreatedCount, "Shooter.EffectCreatedCount", "Instances the effect pools of the shooter game mode created so far (reuse does not count)",
                          &ShooterEffectWatchInternal::readEffectCreatedCount );
-
-    void ShooterGameModeComponent::onRegister( GameObjectManager& manager )
-    {
-        GameModeComponent::onRegister( manager );
-        manager.getComponentRegistry().add<ShooterGameModeComponent>( this );
-    }
-
-    void ShooterGameModeComponent::onUnregister( GameObjectManager& manager )
-    {
-        manager.getComponentRegistry().remove<ShooterGameModeComponent>( this );
-        GameModeComponent::onUnregister( manager );
-    }
 } // namespace sw

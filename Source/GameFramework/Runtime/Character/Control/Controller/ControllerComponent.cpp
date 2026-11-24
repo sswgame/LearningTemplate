@@ -28,7 +28,6 @@ namespace sw
     void ControllerComponent::onRegister( GameObjectManager& manager )
     {
         Component::onRegister( manager );
-        manager.getComponentRegistry().add<ControllerComponent>( this );
         (void)ControlSystem::getOrCreate( manager ); // 시스템을 있게만 한다 — 관리자가 쥔다
     }
 
@@ -38,7 +37,6 @@ namespace sw
         if ( ControlSystem::find( manager ) != nullptr )
             unpossess();
         _pawn = TComponentHandle<PawnComponent>{};
-        manager.getComponentRegistry().remove<ControllerComponent>( this );
         ControlSystem::releaseIfUnused( manager );
         Component::onUnregister( manager );
     }

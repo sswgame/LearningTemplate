@@ -20,18 +20,6 @@ namespace sw
     {
     }
 
-    void SplineComponent::onRegister( GameObjectManager& manager )
-    {
-        SceneComponent::onRegister( manager );
-        manager.getComponentRegistry().add<SplineComponent>( this );
-    }
-
-    void SplineComponent::onUnregister( GameObjectManager& manager )
-    {
-        manager.getComponentRegistry().remove<SplineComponent>( this );
-        SceneComponent::onUnregister( manager );
-    }
-
     void SplineComponent::onBeginPlay()
     {
         SceneComponent::onBeginPlay();

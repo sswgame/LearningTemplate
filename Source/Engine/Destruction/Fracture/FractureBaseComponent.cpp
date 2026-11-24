@@ -1688,7 +1688,6 @@ namespace sw
         registerFixedStep<&FractureBaseComponent::onPrePhysicsStep>( manager, FixedStepGroup::PreStep );
         registerFixedStep<&FractureBaseComponent::onPostPhysicsStep>( manager, FixedStepGroup::PostStep );
         registerFixedStep<&FractureBaseComponent::onPhysicsFrameEnd>( manager, FixedStepGroup::FrameEnd );
-        manager.getComponentRegistry().add<FractureBaseComponent>( this );
         _pLeafShapeTable       = &manager.getSubsystem<FractureLeafShapeTable>();
         _collisionSubscription = GameObjectEvents::listen<&FractureBaseComponent::handleCollisionBegin>( *this, &GameObjectEvents::_collisionBegin );
     }
@@ -1705,7 +1704,6 @@ namespace sw
 
     void FractureBaseComponent::onUnregister( GameObjectManager& manager )
     {
-        manager.getComponentRegistry().remove<FractureBaseComponent>( this );
         PhysicsComponent::onUnregister( manager );
         _pLeafShapeTable = nullptr;
     }

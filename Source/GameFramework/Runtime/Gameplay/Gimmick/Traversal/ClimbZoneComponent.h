@@ -26,15 +26,13 @@ namespace sw
     {
     public:
         REFLECT_BODY();
+        SW_REGISTERED_COMPONENT( ClimbZoneComponent );
 
         static constexpr bool kTickReadSafe = true;
 
         ClimbZoneComponent();
         virtual ~ClimbZoneComponent() override = default;
 
-        /** @brief 씬의 오르기 구역 목록(`ComponentRegistry`)에 등록합니다. `findClimbZone` 이 씬 전체를 순회하지 않고 이 목록만 봅니다. */
-        void onRegister( GameObjectManager& manager ) override;
-        void onUnregister( GameObjectManager& manager ) override;
         /** @brief 오르는 축이 있는지 봅니다(0 이면 오류). */
         void onBeginPlay() override;
         /** @brief @p object 가 이 구역 안에 있으면 true 입니다. */

@@ -119,13 +119,11 @@ namespace sw
     void CharacterWetnessComponent::onRegister( GameObjectManager& manager )
     {
         Component::onRegister( manager );
-        manager.getComponentRegistry().add<CharacterWetnessComponent>( this );
         (void)CharacterWetnessSystem::getOrCreate( manager );
     }
 
     void CharacterWetnessComponent::onUnregister( GameObjectManager& manager )
     {
-        manager.getComponentRegistry().remove<CharacterWetnessComponent>( this );
         CharacterWetnessSystem::releaseIfUnused( manager );
         Component::onUnregister( manager );
     }

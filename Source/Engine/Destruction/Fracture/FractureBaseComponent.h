@@ -144,6 +144,7 @@ namespace sw
     {
     public:
         REFLECT_BODY();
+        SW_REGISTERED_COMPONENT( FractureBaseComponent );
 
         FractureBaseComponent();
         ~FractureBaseComponent() override;

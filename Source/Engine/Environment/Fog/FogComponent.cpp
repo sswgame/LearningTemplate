@@ -46,18 +46,6 @@ namespace sw
         return settings;
     }
 
-    void FogComponent::onRegister( GameObjectManager& manager )
-    {
-        Component::onRegister( manager );
-        manager.getComponentRegistry().add<FogComponent>( this );
-    }
-
-    void FogComponent::onUnregister( GameObjectManager& manager )
-    {
-        manager.getComponentRegistry().remove<FogComponent>( this );
-        Component::onUnregister( manager );
-    }
-
     bool FogComponent::findFog( const GameObjectManager& manager, const float3& viewPosition, FogSettings& outSettings )
     {
         outSettings = FogSettings{};

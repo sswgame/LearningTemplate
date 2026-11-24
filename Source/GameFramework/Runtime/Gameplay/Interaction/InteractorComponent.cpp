@@ -520,16 +520,4 @@ namespace sw
             context.deferPostTickOnComponent( *this, []( InteractorComponent& self, GameObjectManager& sceneManager )
             { self.syncHighlight( sceneManager ); } );
     }
-
-    void InteractorComponent::onRegister( GameObjectManager& manager )
-    {
-        Component::onRegister( manager );
-        manager.getComponentRegistry().add<InteractorComponent>( this );
-    }
-
-    void InteractorComponent::onUnregister( GameObjectManager& manager )
-    {
-        manager.getComponentRegistry().remove<InteractorComponent>( this );
-        Component::onUnregister( manager );
-    }
 } // namespace sw

@@ -116,18 +116,6 @@ namespace sw
     {
     }
 
-    void GroundSurfaceComponent::onRegister( GameObjectManager& manager )
-    {
-        Component::onRegister( manager );
-        manager.getComponentRegistry().add<GroundSurfaceComponent>( this );
-    }
-
-    void GroundSurfaceComponent::onUnregister( GameObjectManager& manager )
-    {
-        manager.getComponentRegistry().remove<GroundSurfaceComponent>( this );
-        Component::onUnregister( manager );
-    }
-
     void GroundSurfaceComponent::sampleGroundOnce( GameObjectManager& manager )
     {
         if ( _bSampledThisFrame == SW_TRUE )

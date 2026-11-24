@@ -116,13 +116,11 @@ namespace sw
     void CameraManagerComponent::onRegister( GameObjectManager& manager )
     {
         Component::onRegister( manager );
-        manager.getComponentRegistry().add<CameraManagerComponent>( this ); // `isViewTarget` 과 카메라 시스템이 씬을 훑지 않고 찾는다
         (void)CameraSystem::getOrCreate( manager );
     }
 
     void CameraManagerComponent::onUnregister( GameObjectManager& manager )
     {
-        manager.getComponentRegistry().remove<CameraManagerComponent>( this );
         CameraSystem::releaseIfUnused( manager );
         Component::onUnregister( manager );
     }

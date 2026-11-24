@@ -32,6 +32,7 @@ namespace sw
     {
     public:
         REFLECT_BODY();
+        SW_REGISTERED_COMPONENT( HousingNetSessionComponent );
 
         HousingNetSessionComponent();
         ~HousingNetSessionComponent() override;
@@ -47,10 +48,6 @@ namespace sw
         bool                            isServer() const { return _bServer == SW_TRUE; }
         const HousingReplicationServer& getServer() const { return _server; }
         const HousingReplicationClient& getClient() const { return _client; }
-
-    protected:
-        void onRegister( GameObjectManager& manager ) override;
-        void onUnregister( GameObjectManager& manager ) override;
 
     private:
         /** @brief 틱 뒤(게임 스레드): 열린 부지를 모아 서버는 판정 · 방송하고, 클라이언트는 쌓인 요청을 보내고 받은 상태 · 판정 · 주인을 부지에 돌려준다. */

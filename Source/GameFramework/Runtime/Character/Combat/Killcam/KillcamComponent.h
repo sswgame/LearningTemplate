@@ -26,14 +26,11 @@ namespace sw
     {
     public:
         REFLECT_BODY();
+        SW_REGISTERED_COMPONENT( KillcamComponent );
 
         KillcamComponent();
         virtual ~KillcamComponent() override = default;
 
-        /** @brief 씬의 컴포넌트 레지스트리에 오릅니다 — 쏘는 쪽이 기록할 킬캠을 씬을 훑지 않고 찾는다(`findInScene`). */
-        void onRegister( GameObjectManager& manager ) override;
-        /** @brief 레지스트리에서 내립니다. */
-        void onUnregister( GameObjectManager& manager ) override;
         void onEndPlay() override;
         /** @brief 기록과 재생 중인 발의 자리를 옮깁니다. */
         void onWorldOriginShifted( const float3& delta ) override;

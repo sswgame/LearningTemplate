@@ -13,16 +13,4 @@ namespace sw
         , _bClampToEdge{ false }
     {
     }
-
-    void MinimapMarkerComponent::onRegister( GameObjectManager& manager )
-    {
-        Component::onRegister( manager );
-        manager.getComponentRegistry().add<MinimapMarkerComponent>( this );
-    }
-
-    void MinimapMarkerComponent::onUnregister( GameObjectManager& manager )
-    {
-        manager.getComponentRegistry().remove<MinimapMarkerComponent>( this );
-        Component::onUnregister( manager );
-    }
 } // namespace sw

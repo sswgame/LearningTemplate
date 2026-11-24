@@ -109,19 +109,20 @@ namespace sw
     {
         const auto toFlag = [&desc]( const uint32 flag ) -> uint8
         { return ( desc._flags & flag ) != 0 ? SW_TRUE : SW_FALSE; };
-        _name               = hashed_string( desc._pName );
-        _fullyQualifiedName = hashed_string( desc._pFullyQualifiedName );
-        _parentFQN          = hashed_string( desc._pParentFQN );
-        _moduleName         = hashed_string( desc._pModuleName );
-        _size               = desc._size;
-        _destroyInstance    = desc._pDestroyInstance;
-        _addComponent       = desc._pAddComponent;
-        _pValidate          = desc._pValidate;
-        _pFixedCodec        = desc._pFixedCodec;
-        _bAbstract          = toFlag( TypeDescFlag::kAbstract );
-        _bStatic            = toFlag( TypeDescFlag::kStatic );
-        _bPrimitive         = toFlag( TypeDescFlag::kPrimitive );
-        _bInterface         = toFlag( TypeDescFlag::kInterface );
+        _name                 = hashed_string( desc._pName );
+        _fullyQualifiedName   = hashed_string( desc._pFullyQualifiedName );
+        _parentFQN            = hashed_string( desc._pParentFQN );
+        _moduleName           = hashed_string( desc._pModuleName );
+        _size                 = desc._size;
+        _destroyInstance      = desc._pDestroyInstance;
+        _addComponent         = desc._pAddComponent;
+        _pValidate            = desc._pValidate;
+        _pFixedCodec          = desc._pFixedCodec;
+        _bAbstract            = toFlag( TypeDescFlag::kAbstract );
+        _bStatic              = toFlag( TypeDescFlag::kStatic );
+        _bPrimitive           = toFlag( TypeDescFlag::kPrimitive );
+        _bInterface           = toFlag( TypeDescFlag::kInterface );
+        _bRegisteredComponent = toFlag( TypeDescFlag::kRegisteredComponent );
 
         // 적은 것이 없는 타입은 메타데이터 공유 기본값을 쓴다(힙 없음).
         constexpr uint32 kMetadataFlags = TypeDescFlag::kOverridesTick | TypeDescFlag::kOverridesSubTick | TypeDescFlag::kOverridesSerializeState;
@@ -210,6 +211,7 @@ namespace sw
         , _bStatic{ SW_FALSE }
         , _bPrimitive{ SW_FALSE }
         , _bInterface{ SW_FALSE }
+        , _bRegisteredComponent{ SW_FALSE }
         , _reservedFlags{ 0 }
         , _reservedPadding{ 0, 0, 0 }
     {
@@ -304,6 +306,8 @@ namespace sw
             {
                 (void)pSnapshot->_interfaces.add( entry._interfaceName, entry._portOffset );
             }
+            if ( chain[level - 1]->_bRegisteredComponent == SW_TRUE )
+                pSnapshot->_listRegisteredComponentType.push_back( chain[level - 1]->_fullyQualifiedName );
         }
         _derived._inheritedProperties.publish( std::move( pSnapshot ) );
     }
@@ -319,26 +323,27 @@ namespace sw
         if ( this == &other )
             return *this;
 
-        _size               = other._size;
-        _destroyInstance    = other._destroyInstance;
-        _addComponent       = other._addComponent;
-        _pValidate          = other._pValidate;
-        _pFixedCodec        = other._pFixedCodec;
-        _name               = other._name;
-        _fullyQualifiedName = other._fullyQualifiedName;
-        _parentFQN          = other._parentFQN;
-        _moduleName         = other._moduleName;
-        _listProperty       = other._listProperty;
-        _listMethod         = other._listMethod;
-        _listEvent          = other._listEvent;
-        _listRemovedField   = other._listRemovedField;
-        _ownInterfaces      = other._ownInterfaces;
-        _metadata           = other._metadata;
-        _typeID             = other._typeID;
-        _bAbstract          = other._bAbstract;
-        _bStatic            = other._bStatic;
-        _bPrimitive         = other._bPrimitive;
-        _bInterface         = other._bInterface;
+        _size                 = other._size;
+        _destroyInstance      = other._destroyInstance;
+        _addComponent         = other._addComponent;
+        _pValidate            = other._pValidate;
+        _pFixedCodec          = other._pFixedCodec;
+        _name                 = other._name;
+        _fullyQualifiedName   = other._fullyQualifiedName;
+        _parentFQN            = other._parentFQN;
+        _moduleName           = other._moduleName;
+        _listProperty         = other._listProperty;
+        _listMethod           = other._listMethod;
+        _listEvent            = other._listEvent;
+        _listRemovedField     = other._listRemovedField;
+        _ownInterfaces        = other._ownInterfaces;
+        _metadata             = other._metadata;
+        _typeID               = other._typeID;
+        _bAbstract            = other._bAbstract;
+        _bStatic              = other._bStatic;
+        _bPrimitive           = other._bPrimitive;
+        _bInterface           = other._bInterface;
+        _bRegisteredComponent = other._bRegisteredComponent;
 
         invalidateDerivedCaches();
 
@@ -350,26 +355,27 @@ namespace sw
         if ( this == &other )
             return *this;
 
-        _size               = other._size;
-        _destroyInstance    = other._destroyInstance;
-        _addComponent       = other._addComponent;
-        _pValidate          = other._pValidate;
-        _pFixedCodec        = other._pFixedCodec;
-        _name               = other._name;
-        _fullyQualifiedName = other._fullyQualifiedName;
-        _parentFQN          = other._parentFQN;
-        _moduleName         = other._moduleName;
-        _listProperty       = std::move( other._listProperty );
-        _listMethod         = std::move( other._listMethod );
-        _listEvent          = std::move( other._listEvent );
-        _listRemovedField   = std::move( other._listRemovedField );
-        _ownInterfaces      = other._ownInterfaces;
-        _metadata           = std::move( other._metadata );
-        _typeID             = other._typeID;
-        _bAbstract          = other._bAbstract;
-        _bStatic            = other._bStatic;
-        _bPrimitive         = other._bPrimitive;
-        _bInterface         = other._bInterface;
+        _size                 = other._size;
+        _destroyInstance      = other._destroyInstance;
+        _addComponent         = other._addComponent;
+        _pValidate            = other._pValidate;
+        _pFixedCodec          = other._pFixedCodec;
+        _name                 = other._name;
+        _fullyQualifiedName   = other._fullyQualifiedName;
+        _parentFQN            = other._parentFQN;
+        _moduleName           = other._moduleName;
+        _listProperty         = std::move( other._listProperty );
+        _listMethod           = std::move( other._listMethod );
+        _listEvent            = std::move( other._listEvent );
+        _listRemovedField     = std::move( other._listRemovedField );
+        _ownInterfaces        = other._ownInterfaces;
+        _metadata             = std::move( other._metadata );
+        _typeID               = other._typeID;
+        _bAbstract            = other._bAbstract;
+        _bStatic              = other._bStatic;
+        _bPrimitive           = other._bPrimitive;
+        _bInterface           = other._bInterface;
+        _bRegisteredComponent = other._bRegisteredComponent;
 
         invalidateDerivedCaches();
 
@@ -485,9 +491,17 @@ namespace sw
     {
         if ( _parentFQN.empty() )
             return _ownInterfaces;
-        // 모든 컴포넌트 등록이 이 길을 지난다(`ComponentRegistry::addInterfaces`) — 레지스트리 밖 사본(테스트 목의 손 `TypeInfo`)은 판이 없고 상속한 표도 없으니 자기 표다.
+        // 모든 컴포넌트 등록이 이 길을 지난다(`ComponentRegistry::addComponent`) — 레지스트리 밖 사본(테스트 목의 손 `TypeInfo`)은 판이 없고 상속한 표도 없으니 자기 표다.
         const TypeInheritedPropertySlot::Snapshot* const pSnapshot = _derived._inheritedProperties.load();
         return pSnapshot != nullptr ? pSnapshot->_interfaces : _ownInterfaces;
+    }
+
+    const vector<hashed_string>& TypeInfo::getRegisteredComponentTypes() const
+    {
+        // 컴포넌트 형식은 모두 부모(`Component`)가 있다 — 판이 없는 것은 레지스트리 밖 사본(테스트 목의 손 `TypeInfo`)뿐이고, 올릴 목록이 없다.
+        static const vector<hashed_string>               s_listEmpty;
+        const TypeInheritedPropertySlot::Snapshot* const pSnapshot = _derived._inheritedProperties.load();
+        return pSnapshot != nullptr ? pSnapshot->_listRegisteredComponentType : s_listEmpty;
     }
 
     const PropertyInfo* TypeInfo::findPropertyByNameText( string_view nameText ) const

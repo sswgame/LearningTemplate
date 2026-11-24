@@ -251,8 +251,8 @@ namespace sw
         if ( _bRegistered == SW_TRUE )
             return;
         _bRegistered = SW_TRUE;
-        // 내보낸 인터페이스(`REFLECT_INTERFACE`)는 레지스트리의 인터페이스 칸에 저절로 오른다 — 컴포넌트가 손으로 `add` 하던 자리를 형식의 표가 대신한다.
-        manager.getComponentRegistry().addInterfaces( *this );
+        // 형식의 표시(`SW_REGISTERED_COMPONENT` 목록 · `REFLECT_INTERFACE` 칸)대로 레지스트리에 저절로 오른다 — 손으로 올리는 길은 없다.
+        manager.getComponentRegistry().addComponent( *this );
         onRegister( manager );
     }
 
@@ -267,8 +267,8 @@ namespace sw
         if ( _bRegistered == SW_FALSE )
             return;
         _bRegistered = SW_FALSE;
+        manager.getComponentRegistry().removeComponent( *this ); // 먼저 내린다 — `onUnregister` 의 "남은 것이 없으면 시스템을 뗀다" 가 자신을 세지 않게
         onUnregister( manager );
-        manager.getComponentRegistry().removeInterfaces( *this );
     }
 
     void* Component::findInterfacePort( const TypeInfo* pInterface ) const

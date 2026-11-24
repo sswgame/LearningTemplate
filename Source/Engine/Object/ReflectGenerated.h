@@ -60,7 +60,7 @@ namespace sw::generated
     }
 
     /**
-     * @brief 타입 서술자의 바탕입니다 — 크기 · 소멸과, 컴파일러가 아는 사실(틱 · 상태 함수 재정의)을 채운다(엔진이 주 틱을 켜는 판정 `HasOnTickOverride_v` 와 같은 답).
+     * @brief 타입 서술자의 바탕입니다 — 크기 · 소멸과, 컴파일러가 아는 사실(틱 · 상태 함수 재정의 · 레지스트리 목록 표시)을 채운다(엔진이 주 틱을 켜는 판정 `HasOnTickOverride_v` 와 같은 답).
      * @details 틱 특성은 컴포넌트만 켠다. 나머지 칸(프로퍼티 표 · 생성 함수 …)은 생성 코드가 `TypeDesc::withX` 로 잇는다.
      */
     template <typename T>
@@ -71,6 +71,7 @@ namespace sw::generated
         {
             flags |= ::sw::HasOnTickOverride_v<T> ? TypeDescFlag::kOverridesTick : 0u;
             flags |= ::sw::HasOnSubTickOverride_v<T> ? TypeDescFlag::kOverridesSubTick : 0u;
+            flags |= ::sw::HasRegistryList<T>::value ? TypeDescFlag::kRegisteredComponent : 0u;
         }
         return TypeDesc::of<T>( pName, pFullyQualifiedName, pParentFQN, pModuleName ).withFlags( flags );
     }

@@ -34,13 +34,11 @@ namespace sw
     {
     public:
         REFLECT_BODY();
+        SW_REGISTERED_COMPONENT( SkyComponent );
 
         SkyComponent();
         virtual ~SkyComponent() override = default;
 
-        /** @brief 씬의 하늘 목록(`ComponentRegistry`)에 등록합니다. `findSky` 가 씬 전체를 훑지 않고 이 목록을 봅니다. */
-        void onRegister( GameObjectManager& manager ) override;
-        void onUnregister( GameObjectManager& manager ) override;
         /** @brief 지금 값입니다. */
         SkyGradient makeGradient() const;
         void        setZenithColor( const float3& color ) { _zenithColor = color; }

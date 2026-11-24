@@ -54,18 +54,6 @@ namespace sw
         return flat.getLengthSquared() > 0.0f ? flat.normalize() : float3{ 0.0f, 0.0f, 1.0f };
     }
 
-    void ClimbZoneComponent::onRegister( GameObjectManager& manager )
-    {
-        Component::onRegister( manager );
-        manager.getComponentRegistry().add<ClimbZoneComponent>( this );
-    }
-
-    void ClimbZoneComponent::onUnregister( GameObjectManager& manager )
-    {
-        manager.getComponentRegistry().remove<ClimbZoneComponent>( this );
-        Component::onUnregister( manager );
-    }
-
     const ClimbZoneComponent* ClimbZoneComponent::findClimbZone( const GameObjectManager& manager, GameObjectHandle object )
     {
         for ( const ClimbZoneComponent* pZone : manager.getComponentRegistry().getAll<ClimbZoneComponent>() )

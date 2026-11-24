@@ -341,16 +341,4 @@ namespace sw
                                    &HubWorldComponentDevInternal::readFirstCreatureHealth );
     SW_AUTOMATION_COMPONENT_WATCH( hubAttackReady, "Hub.AttackReady", "1 once the attack cooldown has passed in real time since the last action result", HubWorldComponent,
                                    &HubWorldComponentDevInternal::readAttackReady );
-
-    void HubWorldComponent::onRegister( GameObjectManager& manager )
-    {
-        Component::onRegister( manager );
-        manager.getComponentRegistry().add<HubWorldComponent>( this );
-    }
-
-    void HubWorldComponent::onUnregister( GameObjectManager& manager )
-    {
-        manager.getComponentRegistry().remove<HubWorldComponent>( this );
-        Component::onUnregister( manager );
-    }
 } // namespace sw

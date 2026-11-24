@@ -171,15 +171,4 @@ namespace sw
 
 namespace sw
 {
-    void RTSUnitViewComponent::onRegister( GameObjectManager& manager )
-    {
-        GameFrameworkComponent::onRegister( manager );
-        manager.getComponentRegistry().add<RTSUnitViewComponent>( this );
-    }
-
-    void RTSUnitViewComponent::onUnregister( GameObjectManager& manager )
-    {
-        manager.getComponentRegistry().remove<RTSUnitViewComponent>( this );
-        GameFrameworkComponent::onUnregister( manager );
-    }
 } // namespace sw

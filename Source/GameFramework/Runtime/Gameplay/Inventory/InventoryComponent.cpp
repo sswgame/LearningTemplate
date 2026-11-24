@@ -55,18 +55,6 @@ namespace sw
         return _restore.open( *this );
     }
 
-    void InventoryComponent::onRegister( GameObjectManager& manager )
-    {
-        Component::onRegister( manager );
-        manager.getComponentRegistry().add<InventoryComponent>( this );
-    }
-
-    void InventoryComponent::onUnregister( GameObjectManager& manager )
-    {
-        manager.getComponentRegistry().remove<InventoryComponent>( this );
-        Component::onUnregister( manager );
-    }
-
     void InventoryComponent::onBeginPlay()
     {
         Component::onBeginPlay();

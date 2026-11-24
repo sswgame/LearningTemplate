@@ -59,16 +59,4 @@ namespace sw
         blackboard.setVector( "FollowPosition", float3{ ownerPosition._x, pawnPosition._y, ownerPosition._z } );
         blackboard.setFloat( "OwnerDistance", float3::getHorizontalDistance( pawnPosition, ownerPosition ) );
     }
-
-    void FollowOwnerAIControllerComponent::onRegister( GameObjectManager& manager )
-    {
-        AIControllerComponent::onRegister( manager );
-        manager.getComponentRegistry().add<FollowOwnerAIControllerComponent>( this );
-    }
-
-    void FollowOwnerAIControllerComponent::onUnregister( GameObjectManager& manager )
-    {
-        manager.getComponentRegistry().remove<FollowOwnerAIControllerComponent>( this );
-        AIControllerComponent::onUnregister( manager );
-    }
 } // namespace sw

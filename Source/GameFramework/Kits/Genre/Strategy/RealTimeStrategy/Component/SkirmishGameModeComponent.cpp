@@ -177,18 +177,6 @@ namespace sw
         }
     }
 
-    void SkirmishGameModeComponent::onRegister( GameObjectManager& manager )
-    {
-        GameModeComponent::onRegister( manager );
-        manager.getComponentRegistry().add<SkirmishGameModeComponent>( this );
-    }
-
-    void SkirmishGameModeComponent::onUnregister( GameObjectManager& manager )
-    {
-        manager.getComponentRegistry().remove<SkirmishGameModeComponent>( this );
-        GameModeComponent::onUnregister( manager );
-    }
-
     SkirmishGameModeComponent* SkirmishGameModeComponent::findInScene( const GameObjectManager& manager )
     {
         return manager.getComponentRegistry().findUnique<SkirmishGameModeComponent>();

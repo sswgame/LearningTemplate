@@ -26,7 +26,6 @@ namespace sw
     void TagPostProcessComponent::onRegister( GameObjectManager& manager )
     {
         Component::onRegister( manager );
-        manager.getComponentRegistry().add<TagPostProcessComponent>( this );
         (void)ZoneSystem::getOrCreate( manager );
     }
 
@@ -35,7 +34,6 @@ namespace sw
         // 화면이 남지 않게 덧칠을 먼저 뺀다.
         applyToDirectors( manager, 0.0f );
         _weight = 0.0f;
-        manager.getComponentRegistry().remove<TagPostProcessComponent>( this );
         ZoneSystem::releaseIfUnused( manager );
         Component::onUnregister( manager );
     }

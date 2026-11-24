@@ -112,7 +112,6 @@ namespace sw
     void InteractableComponent::onRegister( GameObjectManager& manager )
     {
         Component::onRegister( manager );
-        manager.getComponentRegistry().add<InteractableComponent>( this );
         // 위치가 없는 대상(씬 컴포넌트 없음)은 격자에 오르지 않는다 — 하는 쪽도 그런 대상은 고르지 않는다.
         const SceneComponent* pScene = getOwner() != nullptr ? getOwner()->getPrimarySceneComponent() : nullptr;
         if ( pScene == nullptr )
@@ -124,7 +123,6 @@ namespace sw
 
     void InteractableComponent::onUnregister( GameObjectManager& manager )
     {
-        manager.getComponentRegistry().remove<InteractableComponent>( this );
         SceneSpatialGrid& grid = manager.getSubsystem<SceneSpatialGrid>();
         for ( SlotHandle& entry : _arrSpatialEntry )
         {

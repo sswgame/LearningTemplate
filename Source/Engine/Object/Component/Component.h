@@ -406,7 +406,7 @@ namespace sw
         // 겹침 · 접촉 · 맞음 · 애니메이션 알림은 가상 함수가 아니다 — 듣는 컴포넌트만 `onRegister` 에서 `GameObjectEvents::listen` 으로 구독한다(`GameObjectEvents.h`).
         // 모든 컴포넌트에 빈 가상 호출을 훑던 유니티식 메시지 대신 언리얼 액터 델리게이트 자리를 골랐다(듣지 않는 컴포넌트에는 비용이 없다).
         /**
-         * @brief 소유 GameObject 에 붙은 직후 불립니다.
+         * @brief 소유 GameObject 에 붙은 직후 불립니다. 형식이 표시한 씬 레지스트리 목록(`SW_REGISTERED_COMPONENT`)과 내보낸 인터페이스 칸에는 이미 올라 있다.
          * @details 컴포넌트가 어느 레지스트리에 들어가야 하는지는 컴포넌트 자신이 안다. GameObject 가 `castTo` 로
          *          타입을 골라 대신 등록해 주면, 레지스트리가 하나 늘 때마다 GameObject 를 고쳐야 하고
          *          GameObject 가 MeshComponent 같은 하위 타입을 알게 된다.
@@ -415,13 +415,15 @@ namespace sw
          *        파괴 시점에는 그 조회가 엉뚱한 씬을 가리키기 때문이다.
          */
         virtual void onRegister( GameObjectManager& manager ) { (void)manager; }
+        /** @brief 씬 레지스트리 목록 안의 칸입니다(`ComponentRegistry::getAll<T>( 칸 )`). 등록된 동안 바뀌지 않아야 한다 — 한 목록을 종류로 나누는 형식(빛)만 재정의한다. */
+        virtual uint32 getRegistryChannel() const { return 0; }
         /**
          * @brief 아직 등록하지 않았으면 `onRegister` 를 부르고 "등록됨" 으로 기록합니다(게임 스레드). 직접 부르지 말고 매니저(`GameObjectManager::registerComponent`)를 거친다.
          * @details 씬을 짓는 배치(`Scene::instantiate`) 안에서는 매니저가 배치 끝까지 미룬다 — 비동기 로드는 씬을 받는 게임 스레드까지(언리얼: 로딩 스레드는
          *          직렬화만, `OnRegister` · `PostLoad` 는 게임 스레드). 훅은 늘 게임 스레드에서 돈다.
          */
         void dispatchRegister( GameObjectManager& manager );
-        /** @brief 등록했으면 `onUnregister` 를 부르고 "등록됨" 을 지웁니다. 등록하기 전에 해체되면(미룬 등록을 받기 전에 씬을 버림) 아무것도 하지 않습니다. */
+        /** @brief 등록했으면 씬 레지스트리 목록에서 내린 뒤 `onUnregister` 를 부르고 "등록됨" 을 지웁니다. 등록하기 전에 해체되면(미룬 등록을 받기 전에 씬을 버림) 아무것도 하지 않습니다. */
         void dispatchUnregister( GameObjectManager& manager );
         /** @brief `onRegister` 가 불렸고 `onUnregister` 는 아직 불리지 않았으면 true 입니다. */
         bool isRegistered() const { return _bRegistered == SW_TRUE; }
