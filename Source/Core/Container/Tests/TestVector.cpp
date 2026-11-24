@@ -2,7 +2,10 @@
 #include "pch.h"
 
 #include "Core/Algorithm/VectorUtil.h"
+#include "Core/Container/ChunkedArray.h"
 #include "Core/Container/InlineAllocator.h"
+#include "Core/Container/deque.h"
+#include "Core/Container/flat_set.h"
 #include "Core/Container/frame_vector.h"
 #include "Core/Container/pair.h"
 #include "Core/Container/string.h"
@@ -10,6 +13,9 @@
 #include "Core/Container/vector.h"
 #include "Core/Testing/ScopedAssertCapture.h"
 #include "Core/Testing/TestFramework.h"
+
+#include <iterator>
+#include <sstream>
 
 using namespace sw;
 
@@ -808,6 +814,46 @@ SW_TEST_CASE( VectorTest, RangeInsertMovesTheTailOnce )
         SW_EXPECT_EQUAL( index, list[2 + index]._value );
     for ( int32 index = 2; index < kTail; ++index )
         SW_EXPECT_EQUAL( 1000 + index, list[kInsert + index]._value );
+}
+
+/**
+ * @brief [VectorTest] 한 번만 읽을 수 있는 입력 반복자로 만들고 · 대입하고 · 끼워도 원소를 잃지 않는다 — vector · deque · ChunkedArray · flat_set 모두
+ * @details 예전 `vector::assign( first, last )`(생성자가 부른다)는 `std::distance` 로 먼저 세어 스트림을 다 읽어 버렸다.
+ */
+SW_TEST_CASE( VectorTest, InputIteratorRangesKeepEveryElement )
+{
+    const auto makeFirst = []( std::istringstream& stream )
+    { return std::istream_iterator<int32>( stream ); };
+    const std::istream_iterator<int32> last{};
+    const vector<int32>                listExpected{ 3, 1, 2 };
+
+    std::istringstream  constructStream( "3 1 2" );
+    const vector<int32> listConstructed( makeFirst( constructStream ), last );
+    SW_EXPECT_TRUE( std::equal( listConstructed.begin(), listConstructed.end(), listExpected.begin(), listExpected.end() ) );
+
+    std::istringstream assignStream( "3 1 2" );
+    vector<int32>      listAssigned( 20, 7 ); // 남은 원소가 없어야 한다
+    listAssigned.assign( makeFirst( assignStream ), last );
+    SW_EXPECT_TRUE( std::equal( listAssigned.begin(), listAssigned.end(), listExpected.begin(), listExpected.end() ) );
+
+    std::istringstream insertStream( "3 1 2" );
+    vector<int32>      listInserted{ 9, 9 };
+    listInserted.insert( listInserted.begin() + 1, makeFirst( insertStream ), last );
+    SW_EXPECT_TRUE( listInserted.size() == 5 && listInserted[1] == 3 && listInserted[2] == 1 && listInserted[3] == 2 && listInserted[4] == 9 );
+
+    std::istringstream dequeStream( "3 1 2" );
+    deque<int32>       queue{ 5 };
+    queue.assign( makeFirst( dequeStream ), last );
+    SW_EXPECT_TRUE( queue.size() == 3 && queue[0] == 3 && queue[2] == 2 );
+
+    std::istringstream  chunkedStream( "3 1 2" );
+    ChunkedArray<int32> listChunked( makeFirst( chunkedStream ), last );
+    SW_EXPECT_TRUE( listChunked.size() == 3 && listChunked[0] == 3 && listChunked[2] == 2 );
+
+    std::istringstream setStream( "3 1 2 1" );
+    flat_set<int32>    setValue;
+    setValue.insert( makeFirst( setStream ), last );
+    SW_EXPECT_TRUE( setValue.size() == 3 && *setValue.begin() == 1 );
 }
 
 /**

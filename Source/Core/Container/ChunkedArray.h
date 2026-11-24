@@ -13,9 +13,10 @@ namespace sw
      * @brief 블록 단위로 할당해 `push_back` · `push_front` · `emplace_*` 뒤에도 이미 있는 원소의 주소가 그대로인 배열입니다. API 는 std::deque 와 같습니다.
      * @details 옮길 수 없는 원소(잠금을 품은 엔드포인트)나 바깥이 주소를 들고 있는 원소에 씁니다. FIFO 줄은 `deque`(연속 링)를 씁니다 — 이 배열은
      *          MSVC STL 블록(16 B)을 그대로 써 큰 원소마다 힙 할당이 하나씩 붙는다(감사 C-9). 가운데 `insert` · `erase` 는 주소를 지키지 않는다.
+     *          상속은 private 이다 — 여기 다시 선언하지 않은 std::deque 의 함수(뒤 표준이 더하는 것 · 비교 연산)가 레이스 · 범위 검사 없이 불리지 않는다.
      */
     template <typename T, typename Allocator = ContainerAllocator<T>>
-    class ChunkedArray : public std::deque<T, Allocator>
+    class ChunkedArray : private std::deque<T, Allocator>
     {
         using Base = std::deque<T, Allocator>;
         SW_RACE_CTX_MEMBER
@@ -53,12 +54,6 @@ namespace sw
         ChunkedArray( InputIt first, InputIt last, const Allocator& alloc = Allocator() )
             : Base( first, last, alloc ) {}
 
-        ChunkedArray( const Base& other )
-            : Base( other ) {}
-
-        ChunkedArray( Base&& other ) noexcept
-            : Base( std::move( other ) ) {}
-
         ChunkedArray( const ChunkedArray& other )
             : Base( static_cast<const Base&>( other ) ) {}
 
@@ -73,20 +68,6 @@ namespace sw
 
         ChunkedArray( std::initializer_list<T> init, const Allocator& alloc = Allocator() )
             : Base( init, alloc ) {}
-
-        ChunkedArray& operator=( const Base& other )
-        {
-            SW_SCOPED_RACE_WRITE();
-            Base::operator=( other );
-            return *this;
-        }
-
-        ChunkedArray& operator=( Base&& other ) noexcept
-        {
-            SW_SCOPED_RACE_WRITE();
-            Base::operator=( std::move( other ) );
-            return *this;
-        }
 
         ChunkedArray& operator=( const ChunkedArray& other )
         {

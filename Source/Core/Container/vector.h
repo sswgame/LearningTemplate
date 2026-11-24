@@ -644,13 +644,24 @@ namespace sw
     template <class InputIt, typename std::enable_if_t<kIsInputIterator<InputIt>, int32>>
     inline void vector<T, Allocator>::assign( InputIt first, InputIt last )
     {
-        SW_SCOPED_RACE_WRITE();
-        clearInternal();
-        size_t count = static_cast<size_t>( std::distance( first, last ) );
-        reserveInternal( count );
-        for ( auto it = first; it != last; ++it )
+        // 입력 반복자는 한 번만 읽을 수 있어 개수를 미리 모른다 — 세면 원소를 잃는다. 임시 벡터로 모은 뒤 옮겨 넣는다(범위 `insert` 와 같다).
+        using Category = typename std::iterator_traits<InputIt>::iterator_category;
+        if constexpr ( std::is_base_of_v<std::forward_iterator_tag, Category> == false )
         {
-            sw_placement_new( ( _pData + ( _size++ ) ) ) T( *it );
+            vector<T> listGathered;
+            for ( ; first != last; ++first )
+                listGathered.emplace_back( *first );
+            assign( std::make_move_iterator( listGathered.begin() ), std::make_move_iterator( listGathered.end() ) );
+        }
+        else
+        {
+            SW_SCOPED_RACE_WRITE();
+            clearInternal();
+            reserveInternal( static_cast<size_t>( std::distance( first, last ) ) );
+            for ( ; first != last; ++first )
+            {
+                sw_placement_new( ( _pData + ( _size++ ) ) ) T( *first );
+            }
         }
     }
 
