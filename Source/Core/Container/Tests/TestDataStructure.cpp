@@ -1216,7 +1216,7 @@ SW_TEST_CASE( DataStructureTest, DynamicBitsetBlockOperationsMatchBitModel )
  * @brief [DataStructureTest] 네 연관 컨테이너 모두 **키를 만들지 않고** 찾는다
  * @details 0-Alloc 이종 검색은 `unordered_map.h` 가 계약으로 적어 둔 것이다. 이종 `find` 가 빠진 컨테이너는
  *          `string_view` 로 찾을 때 **키를 하나 만들어서** 찾는다.
- *          두 구성(`SW_ENABLE_STL_CONTAINER`)이 같은 컨테이너 구현이라 이 계약도 구성과 무관하다.
+ *          std 저장(`SW_ENABLE_STL_CONTAINER`)도 같은 계약을 지킨다.
  *
  * @note 이 케이스는 **컴파일되는 것 자체가 검사**다. 이종 오버로드가 사라지면 빌드가 선다.
  */
@@ -1595,7 +1595,7 @@ SW_TEST_CASE( UnorderedMapTest, ReservedInsertsDoNotAllocate )
     }
     SW_EXPECT_EQUAL( static_cast<size_t>( kCount ), mapValue.size() );
     SW_EXPECT_EQUAL( static_cast<size_t>( kCount ), setValue.size() );
-    if constexpr ( sw::test::ScopedAllocationCount::kCountsAreActive )
+    if constexpr ( sw::test::ScopedAllocationCount::kCountsAreActive && sw::kUsesStdContainers == false ) // std 색인은 노드마다 할당한다
         SW_EXPECT_EQUAL( uint64{ 0 }, allocationCount );
 }
 
@@ -1637,6 +1637,44 @@ SW_TEST_CASE( UnorderedMapTest, FindOrInsertHashesTheKeyOnce )
     SW_EXPECT_FALSE( mapValue.insert_or_assign( HashCountingKey{ 100, &hashCount }, 3 ).second );
     SW_EXPECT_EQUAL( 1u, hashCount );
     SW_EXPECT_EQUAL( 3, mapValue.find( HashCountingKey{ 100, &hashCount } )->second );
+}
+
+/**
+ * @brief [UnorderedMapTest] 이터레이터로 지우면 키를 해시하지 않고, 돌며 지운 뒤에도 남은 원소가 모두 찾힌다
+ * @details 예전에는 이터레이터가 가리키는 키로 다시 찾아 지웠다(해시 + 체인의 키 비교).
+ */
+SW_TEST_CASE( UnorderedMapTest, EraseByIteratorDoesNotHashTheKey )
+{
+    uint32                                    hashCount = 0;
+    sw::unordered_map<HashCountingKey, int32> mapValue;
+    static constexpr int32                    kKeyCount = 100;
+    for ( int32 value = 0; value < kKeyCount; ++value )
+        mapValue.try_emplace( HashCountingKey{ value, &hashCount }, value );
+
+    hashCount = 0;
+    for ( auto it = mapValue.begin(); it != mapValue.end(); )
+    {
+        if ( it->second % 3 == 0 )
+            it = mapValue.erase( it );
+        else
+            ++it;
+    }
+    SW_EXPECT_EQUAL( 0u, hashCount );
+    for ( int32 value = 0; value < kKeyCount; ++value )
+    {
+        const auto found = mapValue.find( HashCountingKey{ value, &hashCount } );
+        SW_EXPECT_EQUAL( value % 3 != 0, found != mapValue.end() );
+        SW_EXPECT_TRUE( found == mapValue.end() || found->second == value );
+    }
+
+    sw::unordered_set<int32> setValue;
+    for ( int32 value = 0; value < kKeyCount; ++value )
+        setValue.insert( value );
+    for ( auto it = setValue.begin(); it != setValue.end(); )
+        it = *it % 2 == 0 ? setValue.erase( it ) : ++it;
+    SW_EXPECT_EQUAL( static_cast<size_t>( kKeyCount / 2 ), setValue.size() );
+    for ( int32 value = 0; value < kKeyCount; ++value )
+        SW_EXPECT_EQUAL( value % 2 != 0, setValue.contains( value ) );
 }
 
 /**
@@ -1729,6 +1767,42 @@ SW_TEST_CASE( MapTest, RangeBuildKeepsTheFirstOfEqualKeys )
         SW_EXPECT_EQUAL( expected, value );
         ++expected;
     }
+}
+
+/**
+ * @brief [DataStructureTest] 정렬 컨테이너 이터레이터 세대 — 삽입 · 삭제 뒤 옛 이터레이터를 쓰면 두 저장(정렬 벡터 · std 트리) 모두 검사 구성에서 단언하고, 돌려받은 이터레이터는 그대로 쓴다
+ */
+SW_TEST_CASE( DataStructureTest, SortedIteratorGenerationCatchesUseAfterChange )
+{
+    sw::flat_map<int32, int32> map;
+    map.reserve( 16 ); // 옛 이터레이터가 가리키는 자리가 살아 있게 한다 — 세대 단언만 본다
+    for ( int32 key = 0; key < 8; ++key )
+    {
+        map[key] = key * 10;
+    }
+
+    for ( auto it = map.begin(); it != map.end(); )
+    {
+        if ( it->first % 2 == 0 )
+            it = map.erase( it );
+        else
+            ++it;
+    }
+    SW_EXPECT_EQUAL( size_t( 4 ), map.size() );
+
+    // 이미 있는 키를 넣는 것은 자리를 옮기지 않는다.
+    auto kept = map.find( 1 );
+    SW_EXPECT_FALSE( map.insert( { 3, 0 } ).second );
+    SW_EXPECT_EQUAL( 10, kept->second );
+    SW_EXPECT_EQUAL( 7, map.rbegin()->first );
+
+    sw::test::ScopedAssertCapture capture;
+    SW_EXPECT_LOG( SW_ASSERT_LOG_ID ); // 옛 이터레이터 역참조 단언은 이 테스트가 보려는 대상이다
+    auto stale                              = map.find( 3 );
+    map[0]                                  = 1; // 정렬 벡터는 뒤 원소를 민다 — std 트리는 제자리지만 계약은 약한 쪽이다
+    [[maybe_unused]] const int32 movedValue = stale->second;
+    if ( sw::test::ScopedAssertCapture::kAssertsAreActive )
+        SW_EXPECT_EQUAL( 1u, capture.getCount() );
 }
 
 /**

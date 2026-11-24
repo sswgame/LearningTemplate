@@ -417,7 +417,7 @@ namespace sw
 
     std::ostream& operator<<( std::ostream& os, const DynamicBitset& bitset )
     {
-        os << bitset.to_string();
+        os << string_view{ bitset.to_string() };
         return os;
     }
 

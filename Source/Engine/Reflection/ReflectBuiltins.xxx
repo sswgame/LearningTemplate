@@ -43,7 +43,7 @@ SW_REFLECT_BUILTIN_TYPE( uint64, uint64, stoull, sw, Number, num, Interp|State, 
 SW_REFLECT_BUILTIN_TYPE( float32, float32, stof, sw, Number, num, Interp|State, float )
 SW_REFLECT_BUILTIN_TYPE( float64, float64, stod, sw, Number, num, Interp|State, double )
 SW_REFLECT_BUILTIN_TYPE( bool, bool, none, -, Checkbox, none, State, _ )
-SW_REFLECT_BUILTIN_TYPE( string, std::string, none, std, Text, none, State, basic_string<char>, sw::string )
+SW_REFLECT_BUILTIN_TYPE( string, sw::string, none, std, Text, none, State, basic_string<char>, sw::string )
 SW_REFLECT_BUILTIN_TYPE( hashed_string, sw::hashed_string, none, sw, Name, none, State, _ )
 SW_REFLECT_BUILTIN_TYPE( float2, sw::float2, none, sw, Vector2, f32(_x,_y), Interp|State, _ )
 SW_REFLECT_BUILTIN_TYPE( float3, sw::float3, none, sw, Vector3, f32(_x,_y,_z), Interp|State, _ )

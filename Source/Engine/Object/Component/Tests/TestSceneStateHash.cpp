@@ -310,7 +310,7 @@ namespace
 SW_TEST_CASE( StateHashTest, EveryStateRowCanBeChanged )
 {
     const TypeRegistry& registry = engine::getSubsystem<TypeRegistry>();
-#define SW_REFLECT_BUILTIN_TYPE( Canon, CppType, ... ) SW_EXPECT_TRUE_MSG( ( canChangeStateRow<ReflectBuiltinCppTypeT<CppType>, ReflectBuiltinTraitTable::get( ReflectBuiltinIndex::k##Canon ).hasRole( ReflectBuiltinRole::State )>( registry, ReflectedValueUtil::getBuiltinTypeName( ReflectBuiltinIndex::k##Canon ) ) ), #Canon );
+#define SW_REFLECT_BUILTIN_TYPE( Canon, CppType, ... ) SW_EXPECT_TRUE_MSG( ( canChangeStateRow<CppType, ReflectBuiltinTraitTable::get( ReflectBuiltinIndex::k##Canon ).hasRole( ReflectBuiltinRole::State )>( registry, ReflectedValueUtil::getBuiltinTypeName( ReflectBuiltinIndex::k##Canon ) ) ), #Canon );
 #define SW_REFLECT_BUILTIN_CONTAINER( ... )
 #include "Engine/Reflection/ReflectBuiltins.xxx"
 #undef SW_REFLECT_BUILTIN_TYPE

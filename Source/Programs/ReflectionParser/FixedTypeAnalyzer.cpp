@@ -139,7 +139,7 @@ namespace sw
             reason.appendFormat( "packed type '%#' has no fixed layout encoding", result->_typeName );
             return makeIneligibleFixedType( result, reason.view() );
         }
-        // `sw::vector` 는 자체 클래스입니다(`SW_ENABLE_STL_CONTAINER` 면 `std::vector` 별칭입니다).
+        // `sw::vector` 는 두 구성(`SW_ENABLE_STL_CONTAINER`) 모두 sw 의 클래스입니다(안의 저장만 다르다).
         const bool bVector = CursorReader::isAnyIdentity( identity, typeidentity::kArrVectorTemplate );
         const bool bArray  = CursorReader::isAnyIdentity( identity, typeidentity::kArrArrayTemplate );
         if ( bVector || bArray )

@@ -7,7 +7,7 @@
     <Expand>
       <ArrayItems>
         <Size>$T2</Size>
-        <ValuePointer>_elems</ValuePointer>
+        <ValuePointer>($T1*)&amp;_elems</ValuePointer>
       </ArrayItems>
     </Expand>
   </Type>
@@ -32,7 +32,7 @@
     </Expand>
   </Type>
 
-  <!-- 아래 항목은 자체 구현의 배치를 읽는다. 컨테이너 형식은 `SW_ENABLE_STL_CONTAINER` 두 구성에서 같은 구현이고 할당자만 다르다. -->
+  <!-- 아래 항목은 자체 저장의 배치를 먼저 읽고, 칸 이름이 다르면(`SW_ENABLE_STL_CONTAINER` 의 std 저장) Priority="Low" 항목으로 넘어간다. -->
 
   <!-- sw::vector<T, Alloc> — 자체 구현(_pData · _size · _capacity). std::vector 로 캐스트하면 배치가 달라 엉뚱한 값을 보인다 -->
   <Type Name="sw::vector&lt;*,*&gt;">
@@ -46,11 +46,34 @@
     </Expand>
   </Type>
 
+  <Type Name="sw::vector&lt;*,*&gt;" Priority="Low">
+    <DisplayString>{_storage}</DisplayString>
+    <Expand>
+      <ExpandedItem>_storage</ExpandedItem>
+    </Expand>
+  </Type>
+
   <!-- sw::deque<T, Alloc> -->
   <Type Name="sw::deque&lt;*,*&gt;">
-    <DisplayString>{*(std::deque&lt;$T1,$T2&gt;*)this}</DisplayString>
+    <DisplayString>{_storage}</DisplayString>
     <Expand>
-      <ExpandedItem>*(std::deque&lt;$T1,$T2&gt;*)this</ExpandedItem>
+      <ExpandedItem>_storage</ExpandedItem>
+    </Expand>
+  </Type>
+  <Type Name="sw::internal::DequeStorage&lt;*,*&gt;">
+    <DisplayString>{{ size={_size} }}</DisplayString>
+    <Expand>
+      <Item Name="[capacity]" ExcludeView="simple">_capacity</Item>
+      <IndexListItems>
+        <Size>_size</Size>
+        <ValueNode>_pData[(_head + $i) &amp; (_capacity - 1)]</ValueNode>
+      </IndexListItems>
+    </Expand>
+  </Type>
+  <Type Name="sw::internal::DequeStorage&lt;*,*&gt;" Priority="Low">
+    <DisplayString>{_items}</DisplayString>
+    <Expand>
+      <ExpandedItem>_items</ExpandedItem>
     </Expand>
   </Type>
 
@@ -58,7 +81,7 @@
   <Type Name="sw::unordered_map&lt;*,*,*,*,*&gt;">
     <DisplayString>{{ size={_listDenseData._size} }}</DisplayString>
     <Expand>
-      <Item Name="[bucket_count]" ExcludeView="simple">_listBucket._size</Item>
+      <Item Name="[bucket_count]" ExcludeView="simple">_index._listBucket._size</Item>
       <CustomListItems MaxItemsPerView="5000">
         <Variable Name="i" InitialValue="0"/>
         <Size>_listDenseData._size</Size>
@@ -70,24 +93,68 @@
       </CustomListItems>
     </Expand>
   </Type>
+  <Type Name="sw::unordered_map&lt;*,*,*,*,*&gt;" Priority="Low">
+    <DisplayString>{_listDenseData}</DisplayString>
+    <Expand>
+      <ExpandedItem>_listDenseData</ExpandedItem>
+    </Expand>
+  </Type>
 
   <!-- sw::unordered_set<K, ...> — 밀집 배열(_listDenseData)의 키를 넣은 순서로 보인다 -->
   <Type Name="sw::unordered_set&lt;*,*,*,*&gt;">
     <DisplayString>{{ size={_listDenseData._size} }}</DisplayString>
     <Expand>
-      <Item Name="[bucket_count]" ExcludeView="simple">_listBucket._size</Item>
+      <Item Name="[bucket_count]" ExcludeView="simple">_index._listBucket._size</Item>
       <IndexListItems>
         <Size>_listDenseData._size</Size>
         <ValueNode>_listDenseData._pData[$i]._key</ValueNode>
       </IndexListItems>
     </Expand>
   </Type>
-
-  <!-- sw::basic_string<T, ...> -->
-  <Type Name="sw::basic_string&lt;*,*,*&gt;">
-    <DisplayString>{*(std::basic_string&lt;$T1,$T2,$T3&gt;*)this}</DisplayString>
+  <Type Name="sw::unordered_set&lt;*,*,*,*&gt;" Priority="Low">
+    <DisplayString>{_listDenseData}</DisplayString>
     <Expand>
-      <ExpandedItem>*(std::basic_string&lt;$T1,$T2,$T3&gt;*)this</ExpandedItem>
+      <ExpandedItem>_listDenseData</ExpandedItem>
+    </Expand>
+  </Type>
+
+  <!-- sw::basic_string<T, ...> — 저장 형식을 보인다. 자체 저장 형식은 마지막 바이트의 맨 위 비트가 켜졌으면 힙, 아니면 세 칸이 글자이고 마지막 칸이 남은 칸 수다 -->
+  <Type Name="sw::basic_string&lt;*,*,*&gt;">
+    <DisplayString>{_storage}</DisplayString>
+    <Expand>
+      <ExpandedItem>_storage</ExpandedItem>
+    </Expand>
+  </Type>
+
+  <Type Name="sw::internal::StringStorage&lt;char,*,*&gt;">
+    <Intrinsic Name="isHeap" Expression="(((unsigned char*)&amp;_heap)[sizeof(_heap) - 1] &amp; 0x80) != 0"/>
+    <Intrinsic Name="lastIndex" Expression="sizeof(_heap) / sizeof(char) - 1"/>
+    <Intrinsic Name="size" Expression="isHeap() ? _heap._size : lastIndex() - (size_t)_arrSmall[lastIndex()]"/>
+    <DisplayString Condition="isHeap()">{_heap._pData,[_heap._size]s8}</DisplayString>
+    <DisplayString>{_arrSmall,[size()]s8}</DisplayString>
+    <Expand>
+      <Item Name="[size]" ExcludeView="simple">size()</Item>
+      <Item Name="[capacity]" ExcludeView="simple">isHeap() ? (_heap._capacityAndFlag &amp; (((size_t)-1) &gt;&gt; 1)) : lastIndex()</Item>
+    </Expand>
+  </Type>
+
+  <Type Name="sw::internal::StringStorage&lt;wchar_t,*,*&gt;">
+    <Intrinsic Name="isHeap" Expression="(((unsigned char*)&amp;_heap)[sizeof(_heap) - 1] &amp; 0x80) != 0"/>
+    <Intrinsic Name="lastIndex" Expression="sizeof(_heap) / sizeof(wchar_t) - 1"/>
+    <Intrinsic Name="size" Expression="isHeap() ? _heap._size : lastIndex() - (size_t)_arrSmall[lastIndex()]"/>
+    <DisplayString Condition="isHeap()">{_heap._pData,[_heap._size]su}</DisplayString>
+    <DisplayString>{_arrSmall,[size()]su}</DisplayString>
+    <Expand>
+      <Item Name="[size]" ExcludeView="simple">size()</Item>
+      <Item Name="[capacity]" ExcludeView="simple">isHeap() ? (_heap._capacityAndFlag &amp; (((size_t)-1) &gt;&gt; 1)) : lastIndex()</Item>
+    </Expand>
+  </Type>
+
+  <!-- std 저장 형식(SW_ENABLE_STL_CONTAINER) — 위 식이 맞지 않으면(칸 이름이 다르면) 이것으로 넘어온다 -->
+  <Type Name="sw::internal::StringStorage&lt;*,*,*&gt;" Priority="Low">
+    <DisplayString>{_text}</DisplayString>
+    <Expand>
+      <ExpandedItem>_text</ExpandedItem>
     </Expand>
   </Type>
 

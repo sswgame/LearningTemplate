@@ -63,7 +63,7 @@ namespace sw
             static FoldNumberFn findFoldNumber( const ReflectBuiltinIndex builtinIndex )
             {
                 static constexpr FoldNumberFn kArrFoldNumber[] = {
-#define SW_REFLECT_BUILTIN_TYPE( Canon, CppType, ... ) pickFoldNumber<ReflectBuiltinCppTypeT<CppType>, isStateNumber( ReflectBuiltinIndex::k##Canon )>(),
+#define SW_REFLECT_BUILTIN_TYPE( Canon, CppType, ... ) pickFoldNumber<CppType, isStateNumber( ReflectBuiltinIndex::k##Canon )>(),
 #define SW_REFLECT_BUILTIN_CONTAINER( ... )
 #include "Engine/Reflection/ReflectBuiltins.xxx"
 #undef SW_REFLECT_BUILTIN_TYPE

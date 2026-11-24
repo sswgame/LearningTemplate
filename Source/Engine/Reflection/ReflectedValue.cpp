@@ -97,7 +97,7 @@ namespace sw
 #define SW_REFLECT_BUILTIN_TYPE( Canon, CppType, TextConv, Ns, Widget, Layout, ... )                                                                                     \
     struct BuiltinLayoutCheck_##Canon                                                                                                                                    \
     {                                                                                                                                                                    \
-        using T = ReflectBuiltinCppTypeT<CppType>;                                                                                                                       \
+        using T = CppType;                                                                                                                                               \
         SW_BUILTIN_LAYOUT_CHECK_##Layout static_assert( ReflectBuiltinTraitTable::get( ReflectBuiltinIndex::k##Canon ).hasRole( ReflectBuiltinRole::Interp ) == false || \
                                                             isInterpLayout( ReflectBuiltinTraitTable::get( ReflectBuiltinIndex::k##Canon )._layout ),                    \
                                                         "ReflectBuiltins.xxx: Interp needs a num, f32 or angle layout" );                                                \
@@ -530,11 +530,11 @@ namespace sw
             };
 
             static constexpr BuiltinRow kArrBuiltinRow[] = {
-#define SW_REFLECT_BUILTIN_TYPE( Canon, CppType, TextConv, Ns, Widget, Layout, ... )                                                             \
-    { &ReflectSourceValue::readBuiltin<ReflectBuiltinCppTypeT<CppType>>, &ReflectSourceValue::convertToBuiltin<ReflectBuiltinCppTypeT<CppType>>, \
-      &formatBuiltin<ReflectBuiltinCppTypeT<CppType>>, &readNumberAs<ReflectBuiltinCppTypeT<CppType>>,                                           \
-      &readIntegerAs<ReflectBuiltinCppTypeT<CppType>>, &writeNumberAs<ReflectBuiltinCppTypeT<CppType>>,                                          \
-      getReflectBuiltinClass<ReflectBuiltinCppTypeT<CppType>>(), static_cast<uint8>( SW_BUILTIN_LAYOUT_COUNT_##Layout ), static_cast<uint8>( std::is_integral_v<ReflectBuiltinCppTypeT<CppType>> ? SW_TRUE : SW_FALSE ) },
+#define SW_REFLECT_BUILTIN_TYPE( Canon, CppType, TextConv, Ns, Widget, Layout, ... )             \
+    { &ReflectSourceValue::readBuiltin<CppType>, &ReflectSourceValue::convertToBuiltin<CppType>, \
+      &formatBuiltin<CppType>, &readNumberAs<CppType>,                                           \
+      &readIntegerAs<CppType>, &writeNumberAs<CppType>,                                          \
+      getReflectBuiltinClass<CppType>(), static_cast<uint8>( SW_BUILTIN_LAYOUT_COUNT_##Layout ), static_cast<uint8>( std::is_integral_v<CppType> ? SW_TRUE : SW_FALSE ) },
 #define SW_REFLECT_BUILTIN_CONTAINER( ... )
 #include "Engine/Reflection/ReflectBuiltins.xxx"
 #undef SW_REFLECT_BUILTIN_TYPE

@@ -1,6 +1,7 @@
 /**
  * @file array.h
- * @brief std::array 래퍼입니다. 디버그 빌드에서는 RaceDetectContext 로 동시 접근을 잡아냅니다.
+ * @brief 고정 길이 배열 sw::array 입니다(std::array 와 인터페이스 호환). 디버그 빌드에서는 RaceDetectContext 로 동시 접근을 잡아냅니다.
+ * @details 저장만 구성(`SW_ENABLE_STL_CONTAINER`)으로 고른다: 기본은 C 배열, 켜면 std::array 다. 공개 API 는 하나다.
  *
  * [쓰면 안 되는 곳: 여러 스레드가 **일부러** 동시에 만지는 버퍼]
  * 이 래퍼의 탐지기는 한 번에 한 스레드만 만지는 컨테이너를 전제로 합니다. lock-free 자료구조처럼 여러 스레드가 같은
@@ -23,7 +24,7 @@
 
 namespace sw
 {
-    /** @brief std::array 에 디버그 레이스 탐지를 더한 것입니다. API 는 STL 과 같습니다. */
+    /** @brief 고정 길이 배열에 디버그 레이스 탐지를 더한 것입니다. API 는 STL 과 같습니다. */
     template <typename T, size_t N>
     class array
     {
@@ -41,9 +42,6 @@ namespace sw
         using const_iterator         = const value_type*;
         using reverse_iterator       = std::reverse_iterator<iterator>;
         using const_reverse_iterator = std::reverse_iterator<const_iterator>;
-
-        // 실제 저장소인 C 배열
-        T _elems[N > 0 ? N : 1]{};
 
         // ------------------------------------------------------------------------------
         // 1) 생성 · 대입
@@ -127,12 +125,12 @@ namespace sw
 
         [[nodiscard]] constexpr pointer data() noexcept
         {
-            return _elems;
+            return std::data( _elems );
         }
 
         [[nodiscard]] constexpr const_pointer data() const noexcept
         {
-            return _elems;
+            return std::data( _elems );
         }
 
         // ------------------------------------------------------------------------------
@@ -140,32 +138,32 @@ namespace sw
         // ------------------------------------------------------------------------------
         [[nodiscard]] constexpr iterator begin() noexcept
         {
-            return _elems;
+            return std::data( _elems );
         }
 
         [[nodiscard]] constexpr const_iterator begin() const noexcept
         {
-            return _elems;
+            return std::data( _elems );
         }
 
         [[nodiscard]] constexpr const_iterator cbegin() const noexcept
         {
-            return _elems;
+            return std::data( _elems );
         }
 
         [[nodiscard]] constexpr iterator end() noexcept
         {
-            return _elems + N;
+            return std::data( _elems ) + N;
         }
 
         [[nodiscard]] constexpr const_iterator end() const noexcept
         {
-            return _elems + N;
+            return std::data( _elems ) + N;
         }
 
         [[nodiscard]] constexpr const_iterator cend() const noexcept
         {
-            return _elems + N;
+            return std::data( _elems ) + N;
         }
 
         [[nodiscard]] reverse_iterator rbegin() noexcept { return reverse_iterator( end() ); }
@@ -211,6 +209,15 @@ namespace sw
                 swap( _elems[index], other._elems[index] );
             }
         }
+
+    private:
+        static constexpr size_t kStorageCount = N > 0 ? N : 1;
+#if defined( SW_ENABLE_STL_CONTAINER )
+        using Storage = std::array<T, kStorageCount>;
+#else
+        using Storage = T[kStorageCount];
+#endif
+        Storage _elems{};
     };
 
     // ------------------------------------------------------------------------------

@@ -12,7 +12,7 @@ namespace sw
     /**
      * @brief 내부 버퍼를 가진 할당자입니다.
      * @details sw::vector 가 이 할당자를 알아보고 SBO 를 켭니다. 버퍼가 모자라면 컨테이너 기본 할당자(`ContainerAllocator`)로 힙에서 잡습니다.
-     *          `vector` 가 두 구성(`SW_ENABLE_STL_CONTAINER`)에서 같은 구현이라 이동할 때 인라인 버퍼를 옮기는 규칙도 같고, 구성마다 일반 할당자로 갈아 끼우지 않습니다.
+     *          std 벡터는 이 할당자를 옮길 수 없어(버퍼가 할당자 안에 있다) `small_vector` 는 `SW_ENABLE_STL_CONTAINER` 구성에서도 자체 구현에 담깁니다(Std/StdVector.h).
      */
     template <typename T, size_t N>
     struct InlineAllocator

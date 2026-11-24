@@ -198,7 +198,7 @@ namespace sw
 
         // 줄 순서는 ReflectBuiltinIndex 와 같다(같은 파일을 같은 순서로 include). 분류(`classifyType`)가 쓰는 갈래와 이 표가 같은 `getReflectBuiltinClass` 를 본다.
         constexpr UIBindingValueInternal::NumberOps UIBindingValueInternal::kArrNumberOps[] = {
-#define SW_REFLECT_BUILTIN_TYPE( Canon, CppType, ... ) makeRowNumberOps<ReflectBuiltinCppTypeT<CppType>>(),
+#define SW_REFLECT_BUILTIN_TYPE( Canon, CppType, ... ) makeRowNumberOps<CppType>(),
 #define SW_REFLECT_BUILTIN_CONTAINER( ... )
 #include "Engine/Reflection/ReflectBuiltins.xxx"
 #undef SW_REFLECT_BUILTIN_TYPE
