@@ -16,37 +16,9 @@
 
 namespace sw
 {
-    namespace
-    {
-        struct CityBuildingViewComponentInternal
-        {
-            static float32 computeBlockHeight( const CityBuildingDef& def, int32 level, bool bInhabited )
-            {
-                switch ( def._kind )
-                {
-                    case CityBuildingKind::House:
-                        return bInhabited ? 0.5f + 0.2f * static_cast<float32>( level ) : 0.15f;
-                    case CityBuildingKind::Service:
-                        return 1.2f;
-                    case CityBuildingKind::Producer:
-                        return def._bRequiresTerrain != SW_FALSE ? 0.25f : 0.9f;
-                    case CityBuildingKind::Storage:
-                        return 1.3f;
-                    case CityBuildingKind::Market:
-                        return 0.8f;
-                    case CityBuildingKind::Decoration:
-                        return 0.4f;
-                }
-                return 1.0f;
-            }
-        };
-    } // namespace
-} // namespace sw
-
-namespace sw
-{
     CityBuildingViewComponent::CityBuildingViewComponent()
         : _buildingIndex{ -1 }
+        , _blockInset{ 0.15f }
         , _shownKey{ -1 }
     {
         setCanEverTick( true );
@@ -86,7 +58,6 @@ namespace sw
 
     void CityBuildingViewComponent::onTick( TickContext& context )
     {
-        using Internal = CityBuildingViewComponentInternal;
         Component::onTick( context );
         GameObject*    pOwner = getOwner();
         MeshComponent* pMesh  = pOwner != nullptr ? pOwner->getComponent<MeshComponent>() : nullptr;
@@ -127,9 +98,12 @@ namespace sw
         }
         else
         {
-            const float32 height = Internal::computeBlockHeight( def, pBuilding->_level, bInhabited );
+            const CityCatalog*       pCatalog     = pGameMode->findCatalog();
+            const bool               bLevelHeight = def._kind == CityBuildingKind::House && bInhabited && pCatalog != nullptr;
+            const CityHouseLevelDef* pLevel       = bLevelHeight ? pCatalog->findHouseLevel( pBuilding->_level ) : nullptr;
+            const float32            height       = pLevel != nullptr ? pLevel->_blockHeight : def._blockHeight;
             pMesh->setMeshID( def._kind == CityBuildingKind::Decoration ? "Cylinder" : "Cube" );
-            pMesh->setLocalScale( float3{ size - 0.15f, height, size - 0.15f } );
+            pMesh->setLocalScale( float3{ size - _blockInset, height, size - _blockInset } );
             pMesh->setLocalPosition( origin.toLocal( center + float3{ 0.0f, height * 0.5f, 0.0f } ) );
         }
         pMesh->setVisible( true );

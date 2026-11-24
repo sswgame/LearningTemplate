@@ -55,6 +55,12 @@ namespace sw
 
     private:
         CheckedDelegate _onCheckedChanged;
+        PROPERTY( DisplayName = "Box Color" )
+        float4 _boxColor;
+        PROPERTY( DisplayName = "Box Border Color" )
+        float4 _boxBorderColor;
+        PROPERTY( DisplayName = "Mark Color" )
+        float4 _markColor;
         PROPERTY( DisplayName = "Checked" )
         bool _bChecked;
     };

@@ -119,5 +119,13 @@ namespace sw
         string _hintText;
         PROPERTY( DisplayName = "Max Length", Tooltip = "Maximum code points; 0 = unlimited" )
         uint32 _maxLength;
+        PROPERTY( DisplayName = "Text Color" )
+        float4 _textColor;
+        PROPERTY( DisplayName = "Hint Color" )
+        float4 _hintColor;
+        PROPERTY( DisplayName = "Selection Color" )
+        float4 _selectionColor;
+        PROPERTY( DisplayName = "Caret Color", Tooltip = "Caret and the underline of an unconfirmed composition" )
+        float4 _caretColor;
     };
 } // namespace sw

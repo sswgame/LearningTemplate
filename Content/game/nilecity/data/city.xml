@@ -16,42 +16,42 @@
   <Good id="beer" name="Beer" price="24"/>
 
   <!-- 집 -->
-  <Building id="house" name="Housing Plot" kind="House" size="1" cost="10"/>
+  <Building id="house" name="Housing Plot" kind="House" size="1" cost="10" blockHeight="0.15"/>
 
   <!-- 물 -->
-  <Building id="well" name="Well" kind="Service" service="Water" delivery="Radius" range="3" size="1" cost="15" desirability="1" desirabilityRadius="1"/>
-  <Building id="water_supply" name="Water Supply" kind="Service" service="Water" range="40" walkerInterval="3" workers="4" size="2" cost="60" desirability="2" desirabilityRadius="2"/>
+  <Building id="well" name="Well" kind="Service" service="Water" delivery="Radius" range="3" size="1" cost="15" desirability="1" desirabilityRadius="1" blockHeight="1.2"/>
+  <Building id="water_supply" name="Water Supply" kind="Service" service="Water" range="40" walkerInterval="3" workers="4" size="2" cost="60" desirability="2" desirabilityRadius="2" blockHeight="1.2"/>
 
   <!-- 순회 서비스 -->
   <Building id="shrine" _base="water_supply" name="Shrine to Osiris" service="Religion" workers="2" size="1" cost="40" desirability="4"/>
-  <Building id="juggler" name="Juggler School" kind="Service" service="Entertainment" range="40" walkerInterval="3" workers="3" size="2" cost="50"/>
+  <Building id="juggler" name="Juggler School" kind="Service" service="Entertainment" range="40" walkerInterval="3" workers="3" size="2" cost="50" blockHeight="1.2"/>
   <Building id="apothecary" _base="shrine" name="Apothecary" service="Health" workers="3" desirability="1" desirabilityRadius="1"/>
   <Building id="scribe_school" _base="water_supply" name="Scribal School" service="Education" walkerInterval="4" cost="80" desirability="3"/>
-  <Building id="tax_collector" name="Tax Collector" kind="Service" service="Tax" range="48" walkerInterval="3" workers="4" size="2" cost="80"/>
+  <Building id="tax_collector" name="Tax Collector" kind="Service" service="Tax" range="48" walkerInterval="3" workers="4" size="2" cost="80" blockHeight="1.2"/>
 
   <!-- 생산 — 범람원 농장은 해마다의 범람이 양을 정한다 -->
-  <Building id="grain_farm" name="Grain Farm" kind="Producer" goods="grain" productionTime="10" amount="16" terrain="Floodplain" workers="6" size="3" cost="40" desirability="-2" desirabilityRadius="2"/>
+  <Building id="grain_farm" name="Grain Farm" kind="Producer" goods="grain" productionTime="10" amount="16" terrain="Floodplain" workers="6" size="3" cost="40" desirability="-2" desirabilityRadius="2" blockHeight="0.25"/>
   <Building id="fig_farm" _base="grain_farm" name="Fig Farm" goods="figs" amount="14"/>
-  <Building id="potter" name="Potter" kind="Producer" goods="pottery" productionTime="16" amount="6" workers="5" size="2" cost="60" desirability="-4" desirabilityRadius="2"/>
+  <Building id="potter" name="Potter" kind="Producer" goods="pottery" productionTime="16" amount="6" workers="5" size="2" cost="60" desirability="-4" desirabilityRadius="2" blockHeight="0.9"/>
   <Building id="brewery" _base="potter" name="Brewery" goods="beer" productionTime="18"/>
 
   <!-- 저장 · 시장 -->
-  <Building id="granary" name="Granary" kind="Storage" goods="grain,figs" capacity="400" workers="4" size="3" cost="80" desirability="-2" desirabilityRadius="1"/>
-  <Building id="storage_yard" name="Storage Yard" kind="Storage" goods="pottery,beer" capacity="200" workers="3" size="3" cost="60" desirability="-3" desirabilityRadius="2"/>
-  <Building id="bazaar" name="Bazaar" kind="Market" goods="grain,figs,pottery,beer" capacity="160" range="40" walkerInterval="3" workers="3" size="2" cost="40" desirability="-1" desirabilityRadius="1"/>
+  <Building id="granary" name="Granary" kind="Storage" goods="grain,figs" capacity="400" workers="4" size="3" cost="80" desirability="-2" desirabilityRadius="1" blockHeight="1.3"/>
+  <Building id="storage_yard" name="Storage Yard" kind="Storage" goods="pottery,beer" capacity="200" workers="3" size="3" cost="60" desirability="-3" desirabilityRadius="2" blockHeight="1.3"/>
+  <Building id="bazaar" name="Bazaar" kind="Market" goods="grain,figs,pottery,beer" capacity="160" range="40" walkerInterval="3" workers="3" size="2" cost="40" desirability="-1" desirabilityRadius="1" blockHeight="0.8"/>
 
   <!-- 장식 — 매력도만 -->
-  <Building id="garden" name="Garden" kind="Decoration" size="1" cost="12" desirability="4" desirabilityRadius="3"/>
+  <Building id="garden" name="Garden" kind="Decoration" size="1" cost="12" desirability="4" desirabilityRadius="3" blockHeight="0.4"/>
   <Building id="statue" _base="garden" name="Small Statue" cost="30" desirability="6"/>
-  <Building id="plaza" name="Plaza" kind="Decoration" size="2" cost="40" desirability="8" desirabilityRadius="4"/>
+  <Building id="plaza" name="Plaza" kind="Decoration" size="2" cost="40" desirability="8" desirabilityRadius="4" blockHeight="0.4"/>
 
   <!-- 집 단계 — 파라오의 이름(Crude Hut … Spacious Homestead) -->
-  <HouseLevel name="Crude Hut" population="5" tax="1"/>
-  <HouseLevel name="Sturdy Hut" population="7" services="Water" tax="1"/>
-  <HouseLevel name="Meager Shanty" population="9" services="Water,Religion" goods="grain" desirability="-10" tax="1"/>
-  <HouseLevel name="Common Shanty" population="11" services="Water,Religion,Entertainment" goods="grain" desirability="-6" tax="2"/>
-  <HouseLevel name="Rough Cottage" population="13" services="Water,Religion,Entertainment,Health" goods="grain" desirability="-2" tax="2"/>
-  <HouseLevel name="Ordinary Cottage" population="15" services="Water,Religion,Entertainment,Health" goods="grain,pottery" desirability="2" tax="3"/>
-  <HouseLevel name="Modest Homestead" population="18" services="Water,Religion,Entertainment,Health,Education" goods="grain,figs,pottery" desirability="6" tax="3"/>
-  <HouseLevel name="Spacious Homestead" population="21" services="Water,Religion,Entertainment,Health,Education" goods="grain,figs,pottery,beer" desirability="10" tax="4"/>
+  <HouseLevel name="Crude Hut" population="5" tax="1" blockHeight="0.5"/>
+  <HouseLevel name="Sturdy Hut" population="7" services="Water" tax="1" blockHeight="0.7"/>
+  <HouseLevel name="Meager Shanty" population="9" services="Water,Religion" goods="grain" desirability="-10" tax="1" blockHeight="0.9"/>
+  <HouseLevel name="Common Shanty" population="11" services="Water,Religion,Entertainment" goods="grain" desirability="-6" tax="2" blockHeight="1.1"/>
+  <HouseLevel name="Rough Cottage" population="13" services="Water,Religion,Entertainment,Health" goods="grain" desirability="-2" tax="2" blockHeight="1.3"/>
+  <HouseLevel name="Ordinary Cottage" population="15" services="Water,Religion,Entertainment,Health" goods="grain,pottery" desirability="2" tax="3" blockHeight="1.5"/>
+  <HouseLevel name="Modest Homestead" population="18" services="Water,Religion,Entertainment,Health,Education" goods="grain,figs,pottery" desirability="6" tax="3" blockHeight="1.7"/>
+  <HouseLevel name="Spacious Homestead" population="21" services="Water,Religion,Entertainment,Health,Education" goods="grain,figs,pottery,beer" desirability="10" tax="4" blockHeight="1.9"/>
 </CityCatalog>
