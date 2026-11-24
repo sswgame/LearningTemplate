@@ -146,3 +146,15 @@ SW_TEST_CASE( ShooterServerCommandTest, NetDrivenEyeHeightIgnoresTheVisibleBody 
     SW_EXPECT_NEAR( 1.8f, ShooterPlayerComponent::chooseEyeHeight( 1.5f, 1.7f, 0.1f, false ), 1.0e-6f );
     SW_EXPECT_NEAR( 1.5f, ShooterPlayerComponent::chooseEyeHeight( 1.5f, 0.0f, 0.0f, false ), 1.0e-6f ); // 아직 조립 전이다
 }
+
+/** @brief [ShooterServerCommandTest] 서버의 탄 퍼짐 씨앗은 클라이언트가 아는 값이 아니다 — 같으면 클라이언트가 서버의 퍼짐을 미리 돌려 되받아 조준한다 */
+SW_TEST_CASE( ShooterServerCommandTest, ServerSpreadSeedIsNotTheClientsSeed )
+{
+    const uint32 clientSeed = ShooterPlayerComponent::makeSpreadSeed( 0, false );
+    SW_EXPECT_EQUAL( clientSeed, ShooterPlayerComponent::makeSpreadSeed( 0, false ) ); // 혼자 하는 판은 되풀이된다
+    const uint32 firstSeed  = ShooterPlayerComponent::makeSpreadSeed( 0, true );
+    const uint32 secondSeed = ShooterPlayerComponent::makeSpreadSeed( 0, true );
+    const uint32 thirdSeed  = ShooterPlayerComponent::makeSpreadSeed( 0, true );
+    SW_EXPECT_TRUE( firstSeed != clientSeed || secondSeed != clientSeed );
+    SW_EXPECT_TRUE( firstSeed != secondSeed || secondSeed != thirdSeed );
+}
