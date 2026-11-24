@@ -6,7 +6,7 @@
   돌아온 자리는 입구 안이다 — 다시 세운 입구가 나타난 플레이어를 세지 않는다(_spawnInside Ignore). 입구를 더하면 여기에 한 묶음을 더한다.
   실행: App -scenario=game/playground/automation/hub_portals.scenario.xml -unattended (체인: ctest -R Scenario.playground)
 -->
-<Scenario name="game.playground.hub_portals" fixedDelta="0.0166667" timeoutFrames="7200" startAfter="ScenePlaying" startTimeoutFrames="900" input="exclusive">
+<Scenario name="game.playground.hub_portals" fixedDelta="0.0166667" timeoutFrames="14400" startAfter="ScenePlaying" startTimeoutFrames="900" input="exclusive">
 	<Launch variable="gv_firstScene" value="game/playground/maps/hub.scene.xml"/>
 	<Variable name="gv_playgroundAutoPlay" value="0"/>
 	<WaitUntil watch="Assets.Pending" equals="0" timeoutWallSeconds="60"/>
@@ -121,6 +121,20 @@
 	<WaitUntil watch="Minigame.RestoreCount" equals="8" timeoutWallSeconds="60"/>
 	<ExpectActiveScene path="game/playground/maps/hub.scene.xml"/>
 	<WaitUntil watch="Input.VirtualCursorEnabled" equals="0" timeoutFrames="60"/>
+
+	<!-- fighting — 자리 11. 돌아온 수는 들어가기 전 값과 견준다(입구를 더하거나 빼도 이 묶음은 그대로다) -->
+	<WaitUntil watch="Assets.Pending" equals="0" timeoutWallSeconds="60"/>
+	<Expect watch="Object.X" target="MinigamePortal_fighting" near="-3" tolerance="0.01"/>
+	<Expect watch="Object.Z" target="MinigamePortal_fighting" near="39" tolerance="0.01"/>
+	<Store watch="Minigame.RestoreCount" as="restoredBefore_fighting"/>
+	<DevCommand line="teleport Player -3 0.05 39"/>
+	<WaitUntil watch="Minigame.Active" is="fighting" timeoutWallSeconds="60"/>
+	<ExpectActiveScene path="game/playground/fighting/maps/ring.scene.xml"/>
+	<WaitUntil watch="Assets.Pending" equals="0" timeoutWallSeconds="60"/>
+	<DevCommand line="minigame.leave"/>
+	<WaitUntil watch="Minigame.RestoreCount" differsFrom="restoredBefore_fighting" timeoutWallSeconds="60"/>
+	<ExpectActiveScene path="game/playground/maps/hub.scene.xml"/>
+
 	<Expect watch="Minigame.Active" is="none"/>
 	<Expect watch="Minigame.LeakCount" equals="0"/>
 	<Pass/>

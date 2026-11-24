@@ -9,12 +9,15 @@
 		<entry source="Combat Helmet" text="전투 헬멧" />
 		<entry source="CutA" text="컷 A" />
 		<entry source="CutB" text="컷 B" />
+		<entry source="Double K.O. - the bout is a draw" text="더블 K.O. 시합이 무승부입니다" />
 		<entry source="Fatigues" text="전투복" />
 		<entry source="Field Pack" text="야전 배낭" />
 		<entry source="Follow the lantern path to the old bridge." text="등불 길을 따라 옛 다리로 가세요." />
 		<entry source="Gilded Knight Helmet" text="금박 기사 투구" />
 		<entry source="Guide" text="안내인" />
 		<entry source="Heraldic Cape" text="문장 망토" />
+		<entry source="K.O. - you lose the bout" text="K.O. 시합에서 졌습니다" />
+		<entry source="K.O. - you win the bout" text="K.O. 시합에서 이겼습니다" />
 		<entry source="Knight Helmet" text="기사 투구" />
 		<entry source="Knight Helmet (Dyeable)" text="기사 투구(염색 가능)" />
 		<entry source="Knight Helmet (Merged)" text="기사 투구(병합)" />

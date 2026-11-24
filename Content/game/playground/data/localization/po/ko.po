@@ -50,6 +50,12 @@ msgctxt "CutB"
 msgid "CutB"
 msgstr "컷 B"
 
+#. Context: TextWidget._text
+#: game/playground/fighting/ui/hud.ui.xml
+msgctxt "Double K.O. - the bout is a draw"
+msgid "Double K.O. - the bout is a draw"
+msgstr "더블 K.O. 시합이 무승부입니다"
+
 #. Context: SequenceBinding._name
 #: game/playground/data/cutscenegate.seq.xml
 msgctxt "GateCut"
@@ -67,6 +73,18 @@ msgstr "금박 기사 투구"
 msgctxt "Heraldic Cape"
 msgid "Heraldic Cape"
 msgstr "문장 망토"
+
+#. Context: TextWidget._text
+#: game/playground/fighting/ui/hud.ui.xml
+msgctxt "K.O. - you lose the bout"
+msgid "K.O. - you lose the bout"
+msgstr "K.O. 시합에서 졌습니다"
+
+#. Context: TextWidget._text
+#: game/playground/fighting/ui/hud.ui.xml
+msgctxt "K.O. - you win the bout"
+msgid "K.O. - you win the bout"
+msgstr "K.O. 시합에서 이겼습니다"
 
 #. Context: Item name
 #: common/data/items.xml

@@ -1,0 +1,270 @@
+#include "pch.h"
+
+#include "GameFramework/Kits/Genre/Action/Fighting/Component/FightingGameModeComponent.h"
+
+#include "Core/Encoding/FourCCUtil.h"
+#include "Core/Foundation/Constants.h"
+
+#include "Engine/Asset/Cache/SharedAssetCache.h"
+#include "Engine/Automation/Watch/AutomationComponentWatch.h"
+#include "Engine/Automation/Watch/AutomationWatch.h"
+#include "Engine/Serialization/Format/StateIO.h"
+
+#include "GameFramework/Runtime/Foundation/Framework/Minigame/MinigameStack.h"
+
+namespace sw
+{
+    namespace
+    {
+        struct FightingGameModeComponentInternal
+        {
+            static constexpr uint32 kStateTag     = FourCCUtil::make( "FGHT" );
+            static constexpr uint32 kStateVersion = 1;
+
+            static constexpr const utf8* kWinResult  = "win";
+            static constexpr const utf8* kLoseResult = "lose";
+            static constexpr const utf8* kDrawResult = "draw";
+
+            // 넘패드 방향 표기다(격투 게임 공용).
+            static constexpr uint8 kNeutral = 5;
+            static constexpr uint8 kLeft    = 4;
+            static constexpr uint8 kRight   = 6;
+            static constexpr uint8 kFirst   = 1;
+            static constexpr uint8 kLast    = 9;
+
+            /** @brief 화면 쪽 @p side(+1 이면 오른쪽을 본다)에서 상대 쪽(앞)과 반대쪽(뒤)입니다. */
+            static uint8 findForward( int32 side ) { return side > 0 ? kRight : kLeft; }
+            static uint8 findBackward( int32 side ) { return side > 0 ? kLeft : kRight; }
+        };
+    } // namespace
+
+    SW_AUTOMATION_GETTER_WATCH( fightingMatchWinner, "Fighting.MatchWinner", "Fighting match winner (0 player, 1 opponent, 2 draw, -1 not over)", FightingGameModeComponent,
+                                &FightingGameModeComponent::getMatchWinner );
+    SW_AUTOMATION_GETTER_WATCH( fightingRound, "Fighting.Round", "Fighting round number (1 = first)", FightingGameModeComponent, &FightingGameModeComponent::getRound );
+    SW_AUTOMATION_GETTER_WATCH( fightingOpponentHealth, "Fighting.OpponentHealth", "Health of the opponent fighter", FightingGameModeComponent, &FightingGameModeComponent::getOpponentHealth );
+    SW_AUTOMATION_GETTER_WATCH( fightingPlayerState, "Fighting.PlayerState", "State of the player fighter (FighterState: 0 neutral, 1 attacking, 2 sidestep, 3 jump ...)", FightingGameModeComponent,
+                                &FightingGameModeComponent::getPlayerState );
+
+    FightingGameModeComponent::FightingGameModeComponent()
+        : _playerFighter{}
+        , _opponentFighter{}
+        , _rules{}
+        , _cpuThinkFrames{ 18 }
+        , _cpuAttackRange{ 1.1f }
+        , _cpuAttackChance{ 0.6f }
+        , _seed{ 7 }
+        , _resultHoldSeconds{ 3.0f }
+        , _victoryMoney{ 30 }
+        , _pCatalog{}
+        , _match{}
+        , _timer{}
+        , _random{}
+        , _resultHold{}
+        , _arrCPUHand{}
+        , _listEvent{}
+        , _queuedButtons{ 0 }
+        , _commandDirection{ FightingGameModeComponentInternal::kNeutral }
+    {
+    }
+
+    FightingGameModeComponent::~FightingGameModeComponent() = default;
+
+    bool FightingGameModeComponent::openMatch( FightingMatch& outMatch ) const
+    {
+        const FighterDef* const pPlayer   = _pCatalog->find( _playerFighter );
+        const FighterDef* const pOpponent = _pCatalog->find( _opponentFighter );
+        if ( pPlayer == nullptr || pOpponent == nullptr )
+        {
+            SW_LOG_ERROR_ID( "Fighting.UnknownFighter", "Fighting game mode: fighter '%#' or '%#' is not in the catalog - the match does not open", _playerFighter.c_str(), _opponentFighter.c_str() );
+            return false;
+        }
+        return outMatch.initialize( *pPlayer, *pOpponent, _rules ); // 규칙이 범위 밖이면 대전이 오류를 남긴다
+    }
+
+    bool FightingGameModeComponent::startGame()
+    {
+        if ( acquireBoundCatalog( _pCatalog ) == false || openMatch( _match ) == false )
+            return false;
+        _timer.reset();
+        _random = GameRandom( _seed );
+        _resultHold.clear();
+        for ( CPUHand& hand : _arrCPUHand )
+        {
+            hand = CPUHand{};
+        }
+        _queuedButtons    = 0;
+        _commandDirection = FightingGameModeComponentInternal::kNeutral;
+        return true;
+    }
+
+    void FightingGameModeComponent::onGameStarted()
+    {
+        SW_LOG_INFO_ID( "Fighting.Started", "[Fighting] '%#' against '%#', first to %# rounds - the player input arrives as commands (direction, buttons)", _playerFighter.c_str(),
+                        _opponentFighter.c_str(), _rules._roundsToWin );
+    }
+
+    bool FightingGameModeComponent::isAcceptingInput() const
+    {
+        return isStarted() && _match.getSeries().isRunning();
+    }
+
+    bool FightingGameModeComponent::submitPlayerInput( uint8 direction, uint16 pressedButtons )
+    {
+        const bool bDirectionValid = FightingGameModeComponentInternal::kFirst <= direction && direction <= FightingGameModeComponentInternal::kLast;
+        if ( isAcceptingInput() == false || bDirectionValid == false )
+            return false;
+        _commandDirection = direction;
+        _queuedButtons    = static_cast<uint16>( _queuedButtons | pressedButtons );
+        return true;
+    }
+
+    AbsolutePosition FightingGameModeComponent::getFighterPosition( int32 player ) const
+    {
+        const FighterRuntime& fighter = _match.getFighter( player );
+        return AbsolutePosition{ float3( fighter._x, fighter._y, fighter._z ) };
+    }
+
+    float32 FightingGameModeComponent::computeHealthRatio( int32 player ) const
+    {
+        const FighterRuntime& fighter = _match.getFighter( player );
+        return fighter._pDef != nullptr ? static_cast<float32>( fighter._health ) / static_cast<float32>( fighter._pDef->_health ) : 0.0f;
+    }
+
+    float32 FightingGameModeComponent::computeSecondsRemaining() const
+    {
+        return static_cast<float32>( _match.getRoundFramesRemaining() ) * _timer.getStep();
+    }
+
+    InputFrame FightingGameModeComponent::consumePlayerInput()
+    {
+        InputFrame frame;
+        frame._direction = _commandDirection;
+        frame._buttons   = _queuedButtons;
+        _queuedButtons   = 0;
+        return frame;
+    }
+
+    InputFrame FightingGameModeComponent::makeCPUInput( int32 player )
+    {
+        using Internal                = FightingGameModeComponentInternal;
+        CPUHand&              hand    = _arrCPUHand[player];
+        const FighterRuntime& fighter = _match.getFighter( player );
+        InputFrame            frame;
+        frame._direction = hand._direction == 0 ? Internal::kNeutral : hand._direction;
+        if ( hand._thinkFramesLeft > 0 )
+        {
+            --hand._thinkFramesLeft;
+            return frame;
+        }
+        hand._thinkFramesLeft = _cpuThinkFrames - 1;
+        if ( _match.computeDistance() > _cpuAttackRange )
+        {
+            hand._direction = Internal::findForward( fighter._side );
+        }
+        else if ( _random.nextChance( _cpuAttackChance ) && fighter._pDef->_listMove.empty() == false )
+        {
+            // 첫 단계의 버튼만 누른다 — 방향이 드는 커맨드는 컴퓨터가 쓰지 않는다.
+            const int32         moveIndex = _random.nextInt( 0, static_cast<int32>( fighter._pDef->_listMove.size() ) - 1 );
+            const InputCommand& command   = fighter._pDef->_listMove[static_cast<size_t>( moveIndex )]._command;
+            frame._buttons                = command._listStep.empty() ? uint16{ 0 } : command._listStep.front()._buttons;
+            hand._direction               = Internal::kNeutral;
+        }
+        else
+        {
+            hand._direction = Internal::findBackward( fighter._side );
+        }
+        frame._direction = hand._direction;
+        return frame;
+    }
+
+    void FightingGameModeComponent::settle()
+    {
+        _listEvent.clear();
+        _match.pollEvents( _listEvent );
+        for ( const FightingEvent& event : _listEvent )
+        {
+            if ( event._kind == FightingEvent::Kind::RoundEnd )
+                SW_LOG_INFO_ID( "Fighting.RoundEnd", "[Fighting] round %# ends - winner %# (2 = draw)", _match.getRound(), event._value );
+            if ( event._kind != FightingEvent::Kind::MatchEnd )
+                continue;
+            _resultHold.start( _resultHoldSeconds );
+            SW_LOG_INFO_ID( "Fighting.MatchEnd", "[Fighting] the match ends - winner %# (2 = draw), rounds %# to %#", event._value, getPlayerRounds(), getOpponentRounds() );
+        }
+    }
+
+    void FightingGameModeComponent::updateGame( float32 deltaTime )
+    {
+        if ( deltaTime <= 0.0f )
+            return;
+        if ( _match.getSeries().isFinished() )
+        {
+            if ( _resultHold.update( deltaTime ) == false )
+                return;
+            const utf8* pResult = FightingGameModeComponentInternal::kDrawResult;
+            if ( getMatchWinner() == kPlayer )
+                pResult = FightingGameModeComponentInternal::kWinResult;
+            else if ( getMatchWinner() == kOpponent )
+                pResult = FightingGameModeComponentInternal::kLoseResult;
+            (void)finishMinigame( hashed_string( pResult ) ); // 흐름이 없으면 베이스가 알린다
+            return;
+        }
+        const bool  bAutoPlay = isAutoPlayOn();
+        const int32 stepCount = _timer.consume( deltaTime );
+        for ( int32 step = 0; step < stepCount; ++step )
+        {
+            const InputFrame playerInput = bAutoPlay ? makeCPUInput( kPlayer ) : consumePlayerInput();
+            _match.advanceFrame( playerInput, makeCPUInput( kOpponent ) );
+        }
+        settle();
+    }
+
+    void FightingGameModeComponent::onFlush( GameObjectManager& manager, bool bRespawnViews )
+    {
+        // 디렉터는 세울 오브젝트가 없다 — 모습은 클라이언트 모듈(`FightingViewComponent`)이 씬의 몸 오브젝트를 옮겨 보인다.
+        (void)manager;
+        (void)bRespawnViews;
+    }
+
+    void FightingGameModeComponent::collectMinigameResult( vector<MinigameResultValue>& outListValue ) const
+    {
+        if ( getMatchWinner() == kPlayer )
+            addMoneyResult( outListValue, _victoryMoney );
+    }
+
+    void FightingGameModeComponent::serializeGameState( StateIO& io )
+    {
+        io.header( FightingGameModeComponentInternal::kStateTag, FightingGameModeComponentInternal::kStateVersion );
+        if ( io.isOk() == false )
+            return;
+        // 대전은 같은 캐릭터로 연 뒤에 읽는다(키트 계약). 입력 명령은 싣지 않는다.
+        FightingMatch  restoredMatch;
+        FixedStepTimer timer      = _timer;
+        GameRandom     random     = _random;
+        Countdown      resultHold = _resultHold;
+        CPUHand        arrHand[FightingMatch::kPlayerCount]{};
+        if ( io.isReading() && io.check( _pCatalog != nullptr && openMatch( restoredMatch ) ) == false )
+            return;
+        io.value( io.isWriting() ? _match : restoredMatch );
+        io.value( timer );
+        io.value( random );
+        io.value( resultHold );
+        for ( int32 player = 0; player < FightingMatch::kPlayerCount; ++player )
+        {
+            arrHand[player] = _arrCPUHand[player];
+            io.value( arrHand[player]._thinkFramesLeft );
+            io.value( arrHand[player]._direction );
+            io.check( arrHand[player]._thinkFramesLeft >= 0 && arrHand[player]._direction <= FightingGameModeComponentInternal::kLast );
+        }
+        io.end();
+        if ( io.isWriting() || io.isOk() == false )
+            return;
+        _match      = std::move( restoredMatch );
+        _timer      = timer;
+        _random     = random;
+        _resultHold = resultHold;
+        for ( int32 player = 0; player < FightingMatch::kPlayerCount; ++player )
+        {
+            _arrCPUHand[player] = arrHand[player];
+        }
+    }
+} // namespace sw

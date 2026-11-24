@@ -8,8 +8,11 @@
 		<entry key="Bone Shield" text="뼈 방패" sourceHash="0201be6b95ece038" />
 		<entry key="CutA" text="컷 A" sourceHash="770f429cae410066" />
 		<entry key="CutB" text="컷 B" sourceHash="770f419cae40feb3" />
+		<entry key="Double K.O. - the bout is a draw" text="더블 K.O. 시합이 무승부입니다" sourceHash="2f4f1c8b2a8b8859" />
 		<entry key="Gilded Knight Helmet" text="금박 기사 투구" sourceHash="78c4a96597a1f01e" />
 		<entry key="Heraldic Cape" text="문장 망토" sourceHash="6f86256a16ab8f26" />
+		<entry key="K.O. - you lose the bout" text="K.O. 시합에서 졌습니다" sourceHash="fb3474b00a384899" />
+		<entry key="K.O. - you win the bout" text="K.O. 시합에서 이겼습니다" sourceHash="f24709a43b0f812e" />
 		<entry key="Knight Helmet" text="기사 투구" sourceHash="4733227ae193d121" />
 		<entry key="Knight Helmet (Dyeable)" text="기사 투구(염색 가능)" sourceHash="ff08b0d01b60fde4" />
 		<entry key="Knight Helmet (Merged)" text="기사 투구(병합)" sourceHash="bd029e7ca9b9d6ac" />

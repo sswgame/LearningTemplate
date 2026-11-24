@@ -1,9 +1,21 @@
 <?xml version="1.0" encoding="utf-8"?>
 <?asset guid="a125daf825f240b6a835de0e448f71b4"?>
 <!--
-  장르 키트 시연 — 3D 격투 대전 하나(maps/kit_fighting)의 캐릭터. 체력 10 이라 하단(피해 10, demo.moves.xml) 한 방에 쓰러진다.
-  버튼 이름 1, 2, 3, 4 가 비트 0 .. 3 이다.
+  격투 미니게임(minigames/fighting)의 캐릭터 — 게임 기능 Fighting 이 미니게임 범위에 건다. 프레임 데이터는 fighting/data/ring.moves.xml.
+  버튼 이름 1, 2, 3, 4 가 비트 0 .. 3 이고 입력 액션(FightingViewComponent 의 _listButtonAction)과 같은 순서다: 1 손, 2 발, 3 하단, 4 잡기.
+  하단(3)은 서서 막지 못하고 잡기(4)는 앉아 피하거나 버튼 4 로 푼다.
 -->
-<FighterCatalog moves="game/playground/data/kitdemo/demo.moves.xml" buttons="1,2,3,4">
-	<Fighter id="basic" name="Basic" health="10" sidestep="u" sidestepDown="d,n" jump="u/f"><Move id="low" command="3"/></Fighter>
+<FighterCatalog moves="game/playground/fighting/data/ring.moves.xml" buttons="1,2,3,4">
+	<Fighter id="boxer" name="Boxer" health="120" walkSpeed="0.035" sidestep="u" sidestepDown="d,n" jump="u/f">
+		<Move id="straight" command="1"/>
+		<Move id="hook" command="2"/>
+		<Move id="low" command="3"/>
+		<Move id="clinch" command="4" breakButtons="4"/>
+	</Fighter>
+	<Fighter id="wrestler" name="Wrestler" health="150" walkSpeed="0.028" sidestep="u" sidestepDown="d,n" jump="u/f">
+		<Move id="straight" command="1"/>
+		<Move id="uppercut" command="2"/>
+		<Move id="low" command="3"/>
+		<Move id="clinch" command="4" breakButtons="4"/>
+	</Fighter>
 </FighterCatalog>

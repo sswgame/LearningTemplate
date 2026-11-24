@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="utf-8"?>
+<?asset guid="bd7c9ebd094f49a69f17b16a1664225f"?>
+<!--
+  격투 미니게임의 프레임 데이터(60 Hz). 캐릭터(data/fighters.xml)가 이 카탈로그를 moves 로 가리켜 커맨드를 얹는다. 단위 m — 판정 상자는 몸 앞 1.3 m 까지 닿는다.
+-->
+<MoveCatalog>
+	<Move id="straight" startup="10" active="2" recovery="14" damage="14" chip="2" hitstun="20" blockstun="12" hitstop="4" height="High"><Hitbox x="0.6" y="1.4" w="1.4" h="0.5"/><Cancel moves="hook,uppercut" from="12" to="22" onHit="true"/></Move>
+	<Move id="hook" startup="15" active="3" recovery="20" damage="22" chip="4" hitstun="26" blockstun="14" hitstop="6" height="Mid" wallSplat="true"><Hitbox x="0.6" y="0.9" w="1.4" h="1.4"/></Move>
+	<Move id="uppercut" startup="16" active="3" recovery="24" damage="20" chip="3" hitstun="26" blockstun="12" hitstop="6" height="Mid" launcher="true"><Hitbox x="0.6" y="0.9" w="1.4" h="1.4"/></Move>
+	<Move id="low" startup="14" active="3" recovery="18" damage="12" chip="2" hitstun="18" blockstun="10" hitstop="4" height="Low"><Hitbox x="0.6" y="0.4" w="1.4" h="0.7"/></Move>
+	<Move id="clinch" startup="12" active="2" recovery="26" damage="28" height="Throw"><Hitbox x="0.4" y="0.9" w="1.0" h="1.4"/></Move>
+</MoveCatalog>

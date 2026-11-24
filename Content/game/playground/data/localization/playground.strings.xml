@@ -46,6 +46,11 @@
 				<item>game/playground/data/cinematic.seq.xml</item>
 			</origins>
 		</entry>
+		<entry key="Double K.O. - the bout is a draw" source="Double K.O. - the bout is a draw" context="TextWidget._text">
+			<origins>
+				<item>game/playground/fighting/ui/hud.ui.xml</item>
+			</origins>
+		</entry>
 		<entry key="Elder" source="Elder" context="Dialogue speaker name">
 			<origins>
 				<item>game/playground/pixeltown/dialogue/elder.dialogue.xml</item>
@@ -64,6 +69,16 @@
 		<entry key="Heraldic Cape" source="Heraldic Cape" context="Item name">
 			<origins>
 				<item>common/data/items.xml</item>
+			</origins>
+		</entry>
+		<entry key="K.O. - you lose the bout" source="K.O. - you lose the bout" context="TextWidget._text">
+			<origins>
+				<item>game/playground/fighting/ui/hud.ui.xml</item>
+			</origins>
+		</entry>
+		<entry key="K.O. - you win the bout" source="K.O. - you win the bout" context="TextWidget._text">
+			<origins>
+				<item>game/playground/fighting/ui/hud.ui.xml</item>
 			</origins>
 		</entry>
 		<entry key="Knight Helmet" source="Knight Helmet" context="Item name">
