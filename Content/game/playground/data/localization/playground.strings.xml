@@ -106,6 +106,16 @@
 				<item>game/playground/coopscavenger/ui/hud.ui.xml</item>
 			</origins>
 		</entry>
+		<entry key="It is too dark to see" source="It is too dark to see" context="TextWidget._text">
+			<origins>
+				<item>game/playground/survivalhorror/ui/hud.ui.xml</item>
+			</origins>
+		</entry>
+		<entry key="Items" source="Items" context="TextWidget._text">
+			<origins>
+				<item>game/playground/survivalhorror/ui/hud.ui.xml</item>
+			</origins>
+		</entry>
 		<entry key="Keys" source="Keys" context="TextWidget._text">
 			<origins>
 				<item>game/playground/ghosthunt/ui/hud.ui.xml</item>
@@ -218,6 +228,16 @@
 				<item>game/playground/asymmetrichorror/ui/hud.ui.xml</item>
 			</origins>
 		</entry>
+		<entry key="Something fights back" source="Something fights back" context="TextWidget._text">
+			<origins>
+				<item>game/playground/survivalhorror/ui/hud.ui.xml</item>
+			</origins>
+		</entry>
+		<entry key="Something is not real" source="Something is not real" context="TextWidget._text">
+			<origins>
+				<item>game/playground/survivalhorror/ui/hud.ui.xml</item>
+			</origins>
+		</entry>
 		<entry key="Stamina" source="Stamina" context="TextWidget._text">
 			<origins>
 				<item>game/playground/wildwest/ui/hud.ui.xml</item>
@@ -280,6 +300,11 @@
 				<item>game/playground/asymmetrichorror/ui/hud.ui.xml</item>
 			</origins>
 		</entry>
+		<entry key="Use: take, read, unlock, fight - Light: flashlight - Heal: use or mix" source="Use: take, read, unlock, fight - Light: flashlight - Heal: use or mix" context="TextWidget._text">
+			<origins>
+				<item>game/playground/survivalhorror/ui/hud.ui.xml</item>
+			</origins>
+		</entry>
 		<entry key="Welcome to Dry Gulch." source="Welcome to Dry Gulch." context="SequenceTrackItem._text">
 			<origins>
 				<item>game/playground/wildwest/data/arrival.seq.xml</item>
@@ -288,6 +313,16 @@
 		<entry key="Welcome to Pixel Town, traveller." source="Welcome to Pixel Town, traveller." context="Dialogue line">
 			<origins>
 				<item>game/playground/pixeltown/dialogue/elder.dialogue.xml</item>
+			</origins>
+		</entry>
+		<entry key="You died" source="You died" context="TextWidget._text">
+			<origins>
+				<item>game/playground/survivalhorror/ui/hud.ui.xml</item>
+			</origins>
+		</entry>
+		<entry key="You got out" source="You got out" context="TextWidget._text">
+			<origins>
+				<item>game/playground/survivalhorror/ui/hud.ui.xml</item>
 			</origins>
 		</entry>
 	</entries>

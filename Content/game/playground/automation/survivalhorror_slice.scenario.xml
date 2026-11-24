@@ -1,0 +1,60 @@
+<?xml version="1.0" encoding="utf-8"?>
+<?asset guid="12ffd9d018504e59b005a856edfbc2e3"?>
+<!--
+  생존 공포 미니게임 한 판 — 열쇠 줍기 → 일기(단서) → 빨간 문 열기 → 어두운 복도에서 손전등 → 서재의 좀비 목격 · 전투 → 다이얼 → 정문 → 결과 `win`. 플레이어와 같은 입력(Move · SurvivalHorror.Use · SurvivalHorror.Light)으로만 움직인다.
+  방: 홀 x 0..10(시작 5,4), 복도 x 10..18(어둡다), 서재 x 18..26, 출구 x 26..30. 모두 z 4 를 지나 동쪽으로 간다(4 m/s). 쓸 수 있는 자리는 1.5 m 안의 가장 가까운 것이다.
+  좀비는 맷집 1 이고 조사자는 힘 주사위 넷을 굴린다(시드 고정 — 같은 싸움이다).
+  감시 값: SurvivalHorror.Result(0 진행, 1 이김, 2 짐) · .PlayerX · .Items · .Health · .Sanity · .Flashlight · .Dark · .Fighting · .Monsters.
+  실행: App -scenario=game/playground/automation/survivalhorror_slice.scenario.xml -unattended (체인: ctest -R Scenario.playground)
+-->
+<Scenario name="game.playground.survivalhorror_slice" fixedDelta="0.0166667" timeoutFrames="4800" startAfter="ScenePlaying" startTimeoutFrames="900" input="exclusive">
+	<Launch variable="gv_firstMinigame" value="survivalhorror"/>
+	<Launch variable="gv_playgroundAutoPlay" value="0"/>
+	<WaitUntil watch="SurvivalHorror.PlayerX" near="5" tolerance="0.01" timeoutFrames="120"/>
+	<Expect watch="SurvivalHorror.Items" equals="0"/>
+	<Expect watch="SurvivalHorror.Monsters" equals="1"/>
+	<!-- 곁의 열쇠 -->
+	<Action name="SurvivalHorror.Use"/>
+	<WaitUntil watch="SurvivalHorror.Items" equals="1" timeoutFrames="10"/>
+	<!-- 일기 -->
+	<ActionAxis name="Move" x="1" seconds="0.75"/>
+	<WaitUntil watch="SurvivalHorror.PlayerX" near="8" tolerance="0.1" timeoutSeconds="3"/>
+	<Action name="SurvivalHorror.Use"/>
+	<AdvanceSimulation frames="6"/> <!-- 누름이 걸음에 들어가 문서를 읽는다(프레임 경계) -->
+	<ExpectLog id="SurvivalHorror.DocumentRead" contains="diary" count="1"/>
+	<!-- 빨간 문을 열고 복도로 — 열쇠는 쓰이고, 어두워 손전등을 켠다 -->
+	<ActionAxis name="Move" x="1" seconds="1.5"/>
+	<WaitUntil watch="SurvivalHorror.Dark" equals="1" timeoutSeconds="3"/>
+	<ExpectLog id="SurvivalHorror.DoorUnlocked" contains="redDoor" count="1"/>
+	<Expect watch="SurvivalHorror.Items" equals="0"/>
+	<Action name="SurvivalHorror.Light"/>
+	<WaitUntil watch="SurvivalHorror.Flashlight" equals="1" timeoutFrames="10"/>
+	<WaitUntil watch="SurvivalHorror.PlayerX" near="14" tolerance="0.3" timeoutSeconds="3"/>
+	<AdvanceSimulation frames="20"/> <!-- 축이 놓인 뒤에 다시 누른다(같은 키의 누름이 겹치지 않게 — 프레임 경계) -->
+	<!-- 서재 — 좀비를 보고(정신력 20) 싸워 쓰러뜨린다 -->
+	<ActionAxis name="Move" x="1" seconds="2"/>
+	<WaitUntil watch="SurvivalHorror.PlayerX" near="22" tolerance="0.3" timeoutSeconds="4"/>
+	<Expect watch="SurvivalHorror.Dark" equals="0"/>
+	<Expect watch="SurvivalHorror.Sanity" atMost="85"/>
+	<AdvanceSimulation frames="12"/> <!-- 축이 놓인 뒤에 누른다(프레임 경계) -->
+	<Action name="SurvivalHorror.Use"/>
+	<WaitUntil watch="SurvivalHorror.Fighting" equals="1" timeoutFrames="10"/>
+	<WaitUntil watch="SurvivalHorror.Fighting" equals="0" timeoutSeconds="20"/>
+	<Expect watch="SurvivalHorror.Monsters" equals="0"/>
+	<Expect watch="SurvivalHorror.Health" atLeast="10"/>
+	<!-- 다이얼 — 단서가 번호를 알려 준다 -->
+	<ActionAxis name="Move" x="1" seconds="0.6"/>
+	<WaitUntil watch="SurvivalHorror.PlayerX" near="24.4" tolerance="0.4" timeoutSeconds="3"/>
+	<AdvanceSimulation frames="12"/> <!-- 축이 놓인 뒤에 누른다(프레임 경계) -->
+	<Action name="SurvivalHorror.Use"/>
+	<AdvanceSimulation frames="6"/> <!-- 누름이 걸음에 들어가 다이얼이 풀린다(프레임 경계) -->
+	<ExpectLog id="SurvivalHorror.PuzzleSolved" contains="gateDial" count="1"/>
+	<!-- 정문으로 나간다 -->
+	<ActionAxis name="Move" x="1" seconds="1"/>
+	<WaitUntil watch="SurvivalHorror.Result" equals="1" timeoutSeconds="3"/>
+	<ExpectLog id="SurvivalHorror.Ended" contains="got out" count="1"/>
+	<!-- 결과를 보인 뒤 미니게임이 스스로 끝난다 -->
+	<WaitUntil watch="Minigame.LastResult" is="win" timeoutWallSeconds="60"/>
+	<Expect watch="Minigame.LeakCount" equals="0"/>
+	<Pass/>
+</Scenario>

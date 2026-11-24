@@ -159,6 +159,19 @@
 	<DevCommand line="minigame.leave"/>
 	<WaitUntil watch="Minigame.RestoreCount" differsFrom="restored_ghosthunt" timeoutWallSeconds="60"/>
 	<ExpectActiveScene path="game/playground/maps/hub.scene.xml"/>
+
+	<!-- survivalhorror — 자리 23(셋째 줄 여덟째 칸). 복원 수는 앞 묶음 수와 무관하게 "늘었다" 로 본다 -->
+	<WaitUntil watch="Assets.Pending" equals="0" timeoutWallSeconds="60"/>
+	<Expect watch="Object.X" target="MinigamePortal_survivalhorror" near="25" tolerance="0.01"/>
+	<Expect watch="Object.Z" target="MinigamePortal_survivalhorror" near="46" tolerance="0.01"/>
+	<Store watch="Minigame.RestoreCount" as="restored_survivalhorror"/>
+	<DevCommand line="teleport Player 25 0.05 46"/>
+	<WaitUntil watch="Minigame.Active" is="survivalhorror" timeoutWallSeconds="60"/>
+	<ExpectActiveScene path="game/playground/survivalhorror/maps/house.scene.xml"/>
+	<WaitUntil watch="Assets.Pending" equals="0" timeoutWallSeconds="60"/>
+	<DevCommand line="minigame.leave"/>
+	<WaitUntil watch="Minigame.RestoreCount" differsFrom="restored_survivalhorror" timeoutWallSeconds="60"/>
+	<ExpectActiveScene path="game/playground/maps/hub.scene.xml"/>
 	<WaitUntil watch="Input.VirtualCursorEnabled" equals="0" timeoutFrames="60"/>
 	<Expect watch="Minigame.Active" is="none"/>
 	<Expect watch="Minigame.LeakCount" equals="0"/>

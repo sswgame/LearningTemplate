@@ -1,0 +1,46 @@
+<?asset guid="d8ddc71c7f9f4d42a4b14caf34597979"?>
+<UIDocument _schemaVersion="1">
+	<UIScreenDef _layer="HUD" _bTakesFocus="false" _bShowCursor="false" />
+	<SafeZonePanel _visibility="SelfHitTestInvisible">
+		<CanvasPanel _visibility="SelfHitTestInvisible">
+			<TextWidget _name="Items" _text="Items" _styleClass="hud" _visibility="HitTestInvisible">
+				<_slot _anchorMin="0,0" _anchorMax="0,0" _offsetMin="48,40" _offsetMax="488,76" />
+			</TextWidget>
+			<TextWidget _name="ItemsValue" _text="{bind:_items}" _styleClass="hud" _visibility="HitTestInvisible" _bLocalized="false">
+				<_slot _anchorMin="0,0" _anchorMax="0,0" _offsetMin="496,40" _offsetMax="640,76" />
+			</TextWidget>
+			<TextWidget _name="Controls" _text="Use: take, read, unlock, fight - Light: flashlight - Heal: use or mix" _styleClass="hud" _visibility="HitTestInvisible">
+				<_slot _anchorMin="0,0" _anchorMax="0,0" _offsetMin="48,80" _offsetMax="488,116" />
+			</TextWidget>
+			<ProgressBarWidget _name="Health" _percent="{bind:_healthRatio}" _visibility="HitTestInvisible" _fillColor="0.85,0.25,0.25,1" _backgroundColor="0,0,0,0.55">
+				<_slot _anchorMin="0,1" _anchorMax="0,1" _offsetMin="48,-76" _offsetMax="368,-56" />
+			</ProgressBarWidget>
+			<ProgressBarWidget _name="Sanity" _percent="{bind:_sanityRatio}" _visibility="HitTestInvisible" _fillColor="0.55,0.45,0.95,1" _backgroundColor="0,0,0,0.55">
+				<_slot _anchorMin="0,1" _anchorMax="0,1" _offsetMin="48,-108" _offsetMax="368,-88" />
+			</ProgressBarWidget>
+			<ProgressBarWidget _name="Battery" _percent="{bind:_batteryRatio}" _visibility="HitTestInvisible" _fillColor="0.95,0.9,0.5,1" _backgroundColor="0,0,0,0.55">
+				<_slot _anchorMin="0,1" _anchorMax="0,1" _offsetMin="48,-140" _offsetMax="368,-120" />
+			</ProgressBarWidget>
+			<TextWidget _name="Dark" _text="It is too dark to see" _styleClass="hud" _visibility="{bind:_darkVisibility}">
+				<_slot _anchorMin="0.5,0.4" _anchorMax="0.5,0.4" _offsetMin="-400,-24" _offsetMax="400,24" />
+				<_style _alignment="Center" />
+			</TextWidget>
+			<TextWidget _name="Fight" _text="Something fights back" _styleClass="hud" _visibility="{bind:_fightVisibility}">
+				<_slot _anchorMin="0.5,0.4" _anchorMax="0.5,0.4" _offsetMin="-400,-24" _offsetMax="400,24" />
+				<_style _alignment="Center" />
+			</TextWidget>
+			<TextWidget _name="Win" _text="You got out" _styleClass="hud" _visibility="{bind:_winVisibility}">
+				<_slot _anchorMin="0.5,0.4" _anchorMax="0.5,0.4" _offsetMin="-400,-24" _offsetMax="400,24" />
+				<_style _alignment="Center" />
+			</TextWidget>
+			<TextWidget _name="Lose" _text="You died" _styleClass="hud" _visibility="{bind:_loseVisibility}">
+				<_slot _anchorMin="0.5,0.4" _anchorMax="0.5,0.4" _offsetMin="-400,-24" _offsetMax="400,24" />
+				<_style _alignment="Center" />
+			</TextWidget>
+			<TextWidget _name="Hallucination" _text="Something is not real" _styleClass="hud" _visibility="{bind:_hallucinationVisibility}">
+				<_slot _anchorMin="0.5,0.2" _anchorMax="0.5,0.2" _offsetMin="-400,-24" _offsetMax="400,24" />
+				<_style _alignment="Center" />
+			</TextWidget>
+		</CanvasPanel>
+	</SafeZonePanel>
+</UIDocument>

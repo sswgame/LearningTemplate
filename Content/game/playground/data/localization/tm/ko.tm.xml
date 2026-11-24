@@ -23,6 +23,8 @@
 		<entry source="Guide" text="안내인" />
 		<entry source="Heraldic Cape" text="문장 망토" />
 		<entry source="In orbit - pull the lever to land" text="궤도 - 레버를 당겨 착륙하세요" />
+		<entry source="It is too dark to see" text="너무 어두워 보이지 않습니다" />
+		<entry source="Items" text="물건" />
 		<entry source="Keys" text="열쇠" />
 		<entry source="Knight Helmet" text="기사 투구" />
 		<entry source="Knight Helmet (Dyeable)" text="기사 투구(염색 가능)" />
@@ -51,6 +53,8 @@
 		<entry source="Scout" text="정찰병" />
 		<entry source="Scrap on the ship" text="실은 고철" />
 		<entry source="Skill check - press Use" text="스킬 체크 - 쓰기를 누르세요" />
+		<entry source="Something fights back" text="무언가가 맞서 싸웁니다" />
+		<entry source="Something is not real" text="무언가가 진짜가 아닙니다" />
 		<entry source="Tattered Cape" text="해진 망토" />
 		<entry source="The ford is gone after the storm; take the long road past the mill and wait for the bell."
 		       text="폭풍 뒤로 여울이 사라졌습니다. 방앗간을 지나는 먼 길로 가서 종소리를 기다리세요." />
@@ -59,5 +63,8 @@
 		<entry source="Travel Cape" text="여행 망토" />
 		<entry source="Use: pick up, load, sell - Lever: land or take off" text="쓰기: 줍기 · 싣기 · 팔기 - 레버: 착륙 · 이륙" />
 		<entry source="Use: repair, open, rescue, heal - hold to struggle" text="쓰기: 수리 · 문 열기 · 구출 · 치료 - 누르고 있으면 몸부림" />
+		<entry source="Use: take, read, unlock, fight - Light: flashlight - Heal: use or mix" text="쓰기: 줍기 · 읽기 · 풀기 · 싸우기 - 손전등 - 회복: 쓰거나 섞기" />
+		<entry source="You died" text="죽었습니다" />
+		<entry source="You got out" text="빠져나왔습니다" />
 	</entries>
 </TranslationMemory>

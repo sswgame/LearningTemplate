@@ -1,10 +1,19 @@
 <?xml version="1.0" encoding="utf-8"?>
 <?asset guid="5f686ca24dc648d59771a5d1c1bf01ac"?>
 <!--
-  장르 키트 시연 — 생존 공포 세션 하나(maps/kit_survivalhorror). 정신력 100 에서 좀비를 두 번 보면 20 + 10(배율 0.5) 깎이고, 체력 100 에서 50 을 입은 뒤 약초(25)로 75 가 된다.
+  생존 공포 미니게임(minigames/survivalhorror)의 규칙 · 아이템 · 조합 · 괴물 · 자물쇠 · 문서(SurvivalHorrorCatalog — 게임 기능 SurvivalHorror 가 미니게임 범위에 건다).
+  세이브는 잉크 리본이 든다. 정신력 100 에서 좀비를 처음 보면 20, 다시 보면 10 이 깎이고, 빛 없는 어둠은 초당 5 를 깎는다. 일기(diary)의 단서 gateCode 가 있어야 정문 다이얼을 맞춘다.
 -->
 <SurvivalHorrorCatalog>
-	<Rules maxHealth="100" maxSanity="100" darknessDrain="10" sanityRegen="5" sanityRegenDelay="2" repeatSightingScale="0.5" hallucinationThreshold="0.3" maxAimSway="2" maxBattery="10" batteryDrain="2" gridWidth="4" gridHeight="2"/>
-	<Item id="herb" kind="Heal" heal="25" maxStack="2"/>
-	<Monster id="zombie" sanityLoss="20"/>
+	<Rules saveMode="InkRibbon" maxHealth="100" maxSanity="100" darknessDrain="5" sanityRegen="5" sanityRegenDelay="2" repeatSightingScale="0.5" hallucinationThreshold="0.3" maxAimSway="2" maxBattery="60" batteryDrain="1" gridWidth="4" gridHeight="2"/>
+	<Item id="keyRed" kind="Key"/>
+	<Item id="herbGreen" kind="Heal" heal="25"/>
+	<Item id="herbMix" kind="Heal" heal="60"/>
+	<Item id="ribbon" kind="SaveItem"/>
+	<Item id="bullet" kind="Ammo" maxStack="10"/>
+	<Combine id="mixGreen" a="herbGreen" b="herbGreen" out="herbMix" count="1"/>
+	<Monster id="zombie" sanityLoss="20" speed="1" toughness="1" damage="1" horror="1"/>
+	<KeyLock id="redDoor" key="keyRed" flag="redDoorOpen"/>
+	<DialLock id="gateDial" code="3 1 4" flag="gateOpen"/>
+	<Document id="diary" title="Diary" clues="gateCode"/>
 </SurvivalHorrorCatalog>

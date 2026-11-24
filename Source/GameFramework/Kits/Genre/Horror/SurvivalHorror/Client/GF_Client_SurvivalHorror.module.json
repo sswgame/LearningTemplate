@@ -1,0 +1,22 @@
+{
+    "_name": "GF_Client_SurvivalHorror",
+    "_version": "1.0.0",
+    "_kind": "Kit",
+    "_description": "생존 공포 키트(클라이언트) — 입력 맵 액션을 걷기 · 쓰기 · 손전등 · 회복 명령으로 바꾸고, 집의 방 · 쓸 수 있는 자리 · 괴물을 원시 도형으로 그리며 HUD 를 채웁니다. 규칙 · 디렉터는 GF_SurvivalHorror",
+    "_listDependency": [
+        {
+            "_name": "GameFramework"
+        },
+        {
+            "_name": "GF_SurvivalHorror"
+        }
+    ],
+    "_listConfiguration": [
+        "Dev",
+        "Shipping"
+    ],
+    "_listTarget": [
+        "Client"
+    ],
+    "_bEnabledByDefault": true
+}
