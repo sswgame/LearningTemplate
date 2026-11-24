@@ -94,19 +94,19 @@ def make_units(database: list[dict], main_root: Path, tree_root: Path) -> dict[s
 
 
 def borrow_unit(relative: str, units: dict[str, SyntaxUnit], tree_root: Path) -> SyntaxUnit | None:
-    """DB 에 없는 새 파일은 가까운 폴더의 같은 갈래(테스트 · 서버 · 클라이언트) TU 의 명령을 빌린다. 없으면 같은 폴더 계열의 아무 TU, 그것도 없으면 None."""
+    """DB 에 없는 새 파일은 가장 가까운 폴더의 TU 명령을 빌린다(층 문지기가 폴더마다 다르다) — 같은 폴더 안에서는 테스트 · 서버 · 클라이언트 갈래가 같은 것이 앞선다. 없으면 None."""
     def make_branch(path: str) -> tuple[bool, ...]:
         return tuple(f"/{name}/" in path.lower() for name in ("tests", "server", "client"))
 
     wanted = make_branch(relative)
-    for is_same_branch in (True, False):
-        folder = Path(relative).parent
-        while len(folder.parts) > 1:
-            prefix = folder.as_posix().lower() + "/"
-            for key, unit in units.items():
-                if key.startswith(prefix) and (not is_same_branch or make_branch(key) == wanted):
-                    return SyntaxUnit(tree_root / relative, unit.directory, unit.arguments)
-            folder = folder.parent
+    folder = Path(relative).parent
+    while len(folder.parts) > 1:
+        prefix = folder.as_posix().lower() + "/"
+        list_key = [key for key in units if key.startswith(prefix)]
+        if list_key:
+            unit = units[next((key for key in list_key if make_branch(key) == wanted), list_key[0])]
+            return SyntaxUnit(tree_root / relative, unit.directory, unit.arguments)
+        folder = folder.parent
     return None
 
 
