@@ -83,7 +83,7 @@ namespace sw
         ServiceHealthRegistry*    _pHealthRegistry{ nullptr };
         const OnlineServerConfig* _pConfig{ nullptr };
         uint64                    _serverID{ 1 };
-        ServerDescriptor          _serverDescriptor{}; ///< 이 서버의 설명(id · 종류 · 지역 · 공개 주소 · 게임 포트와 수). 디렉터리 등록과 매칭 백필이 같은 값을 쓴다
+        ServerDescriptor          _serverDescriptor{}; ///< 이 서버의 설명(id · 종류 · 지역 · 공개 주소 · 게임 포트와 수). 디렉터리 등록과 매칭 백필이 같은 값을 쓴다. 매칭 키트가 정원을 게임이 정한 자리 수로 바꾸면 런타임이 다음 갱신에 등록한다
         UnixMilliseconds          _nowMs{ 0 };         ///< 시작 시각. 테스트는 가짜 시각을 넣는다
 
         // 키트가 `initialize` 에서 채운다(`IOnlineServerKit::addTTLRule`). 런타임이 키트를 모두 띄운 뒤 기반 규칙과 함께 보존 쓸기에 넘긴다.
