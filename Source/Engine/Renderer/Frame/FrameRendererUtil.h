@@ -423,6 +423,7 @@ namespace sw
         hashed_string _skyCloudVolume{ "g_SkyCloudVolume" };
         hashed_string _skyCloudSun{ "g_SkyCloudSun" };
         hashed_string _skyCloudAmbient{ "g_SkyCloudAmbient" };
+        hashed_string _skyCloudGround{ "g_SkyCloudGround" };
         hashed_string _skyCloudSample{ "g_SkyCloudSample" }; ///< 뷰마다 볼륨 구름 패스가 쓴다(`FramePassExecutor::executeVolumetricCloudsPass`)
         /// @brief 스카이 라이트의 프로브 버퍼 자리입니다(lighting.hlsli `SkyLight`). 배치는 `LightProbeElementBuilder::getSkyLight`.
         hashed_string _skyLight{ "g_SkyLight" };

@@ -719,12 +719,13 @@ namespace sw
         if ( clouds._mode != SkyCloudMode::Volumetric )
             return;
         // 볼륨 구름의 빛 — 프레임에 한 번 구한다(레이마치 셰이더가 대기를 다시 걷지 않는다). 해 색은 셰이더가 키 라이트 상수로 곱한다(sky.hlsl 의 두 갈래와 같다).
-        const bool   bAtmosphere       = sky._mode == SkyMode::Atmosphere;
-        const float3 sunScale          = bAtmosphere ? atmosphere.computeSunTransmittance( sky._toSunDirection ) * ( atmosphere._sunIntensity * sky._intensity ) : float3{ 1.0f, 1.0f, 1.0f };
-        const float3 ambient           = sky.evaluateRadiance( float3{ 0.0f, 1.0f, 0.0f } );
-        _state._frameSky._cloudVolume  = float4{ clouds._thicknessKm, clouds._extinctionPerKm, clouds._historyWeight, static_cast<float32>( clouds._viewStepCount ) };
-        _state._frameSky._cloudSun     = float4{ sunScale._x, sunScale._y, sunScale._z, 0.0f };
-        _state._frameSky._cloudAmbient = float4{ ambient._x, ambient._y, ambient._z, 0.0f };
+        const bool             bAtmosphere = sky._mode == SkyMode::Atmosphere;
+        const float3           sunScale    = bAtmosphere ? atmosphere.computeSunTransmittance( sky._toSunDirection ) * ( atmosphere._sunIntensity * sky._intensity ) : float3{ 1.0f, 1.0f, 1.0f };
+        const SkyCloudLighting light       = sky.computeCloudLighting();
+        _state._frameSky._cloudVolume      = float4{ clouds._thicknessKm, clouds._extinctionPerKm, clouds._historyWeight, static_cast<float32>( clouds._viewStepCount ) };
+        _state._frameSky._cloudSun         = float4{ sunScale._x, sunScale._y, sunScale._z, static_cast<float32>( clouds._scatterOctaveCount ) };
+        _state._frameSky._cloudAmbient     = float4{ light._sky._x, light._sky._y, light._sky._z, MathUtil::saturate( clouds._bottomOcclusion ) };
+        _state._frameSky._cloudGround      = float4{ light._ground._x, light._ground._y, light._ground._z, MathUtil::saturate( clouds._multiScattering ) };
     }
 
     void FrameRenderer::applyFrameShadow()
@@ -792,6 +793,7 @@ namespace sw
         context._passValues.setFloat4( passConstantNames()._skyCloudVolume, _state._frameSky._cloudVolume );
         context._passValues.setFloat4( passConstantNames()._skyCloudSun, _state._frameSky._cloudSun );
         context._passValues.setFloat4( passConstantNames()._skyCloudAmbient, _state._frameSky._cloudAmbient );
+        context._passValues.setFloat4( passConstantNames()._skyCloudGround, _state._frameSky._cloudGround );
         context._passValues.setFloat4( passConstantNames()._skyLight, _state._frameSky._skyLight );
         context._passValues.setFloat4( passConstantNames()._fogColorDensity, _fog.getFrameFog()._colorDensity );
         context._passValues.setFloat4( passConstantNames()._fogHeightParams, _fog.getFrameFog()._heightParams );

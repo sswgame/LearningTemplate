@@ -9,33 +9,36 @@
  * 층은 카메라를 따라온다(평면 구름과 같다) — 유니티 HDRP Volumetric Clouds 의 Local Clouds 를 끈 모양이고 늘 장면 뒤에 있다. 언리얼 Volumetric Cloud 도 작은 화면에 걷고 시간 누적으로 되살린다.
  *
  * 밀도: 정수 해시 값 노이즈 fbm(3D 텍스처가 RHI 에 없다 — 굽지 않아 네 백엔드 · 웹이 같은 무늬다). 덮는 비율의 문턱을 층 높이로 올려 바닥은 평평하고 위는 줄고, 잔 노이즈로 가장자리를 깎는다.
- * 빛: 해 쪽으로 몇 걸음 걸은 광학 두께의 비어 감쇠 × 두 엽 HG 위상. 여러 번 산란은 감쇠 · 이방성을 줄인 옥타브 합으로 어림한다(Wrenninge 2013 — 언리얼 · HDRP 와 같은 갈래).
- *     해 투과율(g_SkyCloudSun)과 하늘 앰비언트(g_SkyCloudAmbient)는 C++ 가 프레임에 한 번 구한다(`FrameRenderer::applyFrameSky`).
+ * 빛: 해 쪽으로 몇 걸음 걸은 광학 두께의 비어 감쇠 × 두 엽 HG 위상. 여러 번 산란은 감쇠 · 이방성 · 몫을 줄인 옥타브 합으로 어림한다(Wrenninge 2013 — 언리얼 · HDRP 와 같은 갈래).
+ *     두꺼운 구름의 바닥은 첫 옥타브가 거의 0 이라 뒤 옥타브와 하늘 · 땅 빛이 밝힌다. 옥타브 수는 품질 값이다(밀도를 더 읽지 않는다 — 옥타브마다 지수 하나).
+ *     하늘빛은 위 반구의 평균이고 층 바닥으로 갈수록 구름에 가린다(언리얼 Sky Light Cloud Bottom Occlusion). 땅 반사는 아래에서 오므로 바닥에서 가장 크다(언리얼 Ground Contribution).
+ *     해 투과율(g_SkyCloudSun) · 하늘빛(g_SkyCloudAmbient) · 땅 반사(g_SkyCloudGround)는 C++ 가 프레임에 한 번 구한다(`SkyGradient::computeCloudLighting`).
  * 누적: 층을 무한히 먼 것으로 보고 시선 방향만 지난 뷰-투영으로 옮긴다(카메라를 따라오는 층이라 이동은 시차가 없다). 프레임마다 텍셀 안 자리와 걸음 시작을 비켜 기록이 모은다.
  * 하늘이 보이지 않는 텍셀은 걷지 않는다 — 불투명도에 작은 음수를 적어 다음 프레임이 기록으로 쓰지 않는다.
  */
 
-static const float kCloudHorizonFadeStart = 0.02f; // sky.hlsl 과 같다 — 이 y 아래는 구름이 없다
-static const float kCloudHorizonFadeRange = 0.18f;
-static const float kCloudMaxMarchKm       = 14.0f;  // 지평선 쪽 시선이 걷는 길이의 상한
-static const float kCloudSkippedAlpha     = -1e-3f; // 걷지 않은 텍셀 표시(합성 쌍선형에 보이지 않을 만큼 작다)
-static const float kCloudMinTransmittance = 0.01f;
-static const uint  kCloudBaseOctaveCount  = 3u;
-static const uint  kCloudEdgeOctaveCount  = 2u;
-static const float kCloudEdgeFrequency    = 4.1f;  // 바탕 노이즈 대비 가장자리 노이즈의 배율
-static const float kCloudEdgeErosion      = 0.4f;  // 가장자리를 깎는 세기
-static const float kCloudBottomFade       = 0.12f; // 층 바닥이 나타나는 높이 비율
-static const float kCloudTaperStart       = 0.35f; // 이 높이 비율부터 문턱이 오른다
-static const float kCloudTopTaper         = 0.35f; // 층 꼭대기에서 문턱이 오른 폭
-static const uint  kCloudLightStepCount   = 4u;
-static const float kCloudLightReach       = 0.6f; // 해 쪽으로 걷는 길이(층 두께 비율)
-static const uint  kCloudScatterOctaves   = 3u;
-static const float kCloudForwardLobe      = 0.8f;
-static const float kCloudBackwardLobe     = -0.2f;
-static const float kCloudLobeBlend        = 0.5f;
-static const float kCloudAmbientScale     = 0.5f;  // 앰비언트의 몫 — 평면 구름(sky.hlsl)과 같다
-static const int   kCloudDepthProbeStride = 2;     // 하늘이 보이는지 텍셀 둘레 깊이를 이 간격으로 본다
-static const float kCloudMinHistoryWeight = 0.05f; // 쓸 수 있는 기록 이웃의 가중 합이 이보다 작으면 이번 값만 쓴다
+static const float kCloudHorizonFadeStart   = 0.02f; // sky.hlsl 과 같다 — 이 y 아래는 구름이 없다
+static const float kCloudHorizonFadeRange   = 0.18f;
+static const float kCloudMaxMarchKm         = 14.0f;  // 지평선 쪽 시선이 걷는 길이의 상한
+static const float kCloudSkippedAlpha       = -1e-3f; // 걷지 않은 텍셀 표시(합성 쌍선형에 보이지 않을 만큼 작다)
+static const float kCloudMinTransmittance   = 0.01f;
+static const uint  kCloudBaseOctaveCount    = 3u;
+static const uint  kCloudEdgeOctaveCount    = 2u;
+static const float kCloudEdgeFrequency      = 4.1f;  // 바탕 노이즈 대비 가장자리 노이즈의 배율
+static const float kCloudEdgeErosion        = 0.4f;  // 가장자리를 깎는 세기
+static const float kCloudBottomFade         = 0.12f; // 층 바닥이 나타나는 높이 비율
+static const float kCloudTaperStart         = 0.35f; // 이 높이 비율부터 문턱이 오른다
+static const float kCloudTopTaper           = 0.35f; // 층 꼭대기에서 문턱이 오른 폭
+static const uint  kCloudLightStepCount     = 4u;
+static const float kCloudLightReach         = 0.6f; // 해 쪽으로 걷는 길이(층 두께 비율)
+static const uint  kCloudMaxScatterOctaves  = 8u;   // 품질 값 `SkyCloudConfig::_scatterOctaveCount` 의 상한과 같다
+static const float kCloudOctaveOcclusion    = 0.5f; // 옥타브마다 줄어드는 감쇠
+static const float kCloudOctaveEccentricity = 0.5f; // 옥타브마다 줄어드는 위상 이방성
+static const float kCloudForwardLobe        = 0.8f;
+static const float kCloudBackwardLobe       = -0.2f;
+static const float kCloudLobeBlend          = 0.5f;
+static const int   kCloudDepthProbeStride   = 2;     // 하늘이 보이는지 텍셀 둘레 깊이를 이 간격으로 본다
+static const float kCloudMinHistoryWeight   = 0.05f; // 쓸 수 있는 기록 이웃의 가중 합이 이보다 작으면 이번 값만 쓴다
 
 /** @brief 볼륨 구름의 밀도 · 빛 · 기록 읽기 묶음입니다. */
 struct VolumetricClouds
@@ -45,7 +48,8 @@ struct VolumetricClouds
     static float computeDensity( float3 positionKm, bool bErodeEdge );
     static float computeSunOpticalDepth( float3 positionKm, float3 toSun );
     static float computePhase( float cosine, float anisotropyScale );
-    static float computeSunScattering( float cosine, float opticalDepth );
+    static float computeSunScattering( float arrOctavePhase[kCloudMaxScatterOctaves], uint octaveCount, float opticalDepth );
+    static float3 computeAmbient( float3 positionKm );
     static float3 computeViewDirection( float2 uv );
     static bool isSkyVisible( int2 texel );
     static float4 marchLayer( float3 direction, float3 toSun, float stepOffset );
@@ -133,17 +137,27 @@ static float VolumetricClouds::computePhase( float cosine, float anisotropyScale
     return lerp( forwardPhase, backwardPhase, kCloudLobeBlend ) * ( kInvPi * 0.25f );
 }
 
-/** @brief 해 빛의 산란 비율 — 감쇠 · 이방성 · 세기를 반씩 줄인 옥타브를 더해 여러 번 산란을 어림합니다. 단위는 평면 구름(sky.hlsl)의 해 빛과 같다. */
-static float VolumetricClouds::computeSunScattering( float cosine, float opticalDepth )
+/**
+ * @brief 해 빛의 산란 비율 — 감쇠 · 이방성 · 몫을 줄인 옥타브를 더해 여러 번 산란을 어림합니다. 단위는 평면 구름(sky.hlsl)의 해 빛과 같다.
+ * @param arrOctavePhase 옥타브마다의 위상 × 몫(시선에서 한 번 구한다 — 자리와 무관하다).
+ */
+static float VolumetricClouds::computeSunScattering( float arrOctavePhase[kCloudMaxScatterOctaves], uint octaveCount, float opticalDepth )
 {
-    float scattering = 0.0f;
-    float scale      = 1.0f;
-    SW_UNROLL for ( uint octave = 0u; octave < kCloudScatterOctaves; ++octave )
+    float scattering  = 0.0f;
+    float octaveDepth = opticalDepth;
+    SW_LOOP for ( uint octave = 0u; octave < octaveCount; ++octave )
     {
-        scattering += scale * exp( -opticalDepth * scale ) * VolumetricClouds::computePhase( cosine, scale );
-        scale *= 0.5f;
+        scattering += arrOctavePhase[octave] * exp( -octaveDepth );
+        octaveDepth *= kCloudOctaveOcclusion;
     }
     return scattering * kPi;
+}
+
+/** @brief 자리가 받는 하늘빛과 땅 반사입니다 — 층 안 높이로 나눈다(둘 다 반구 하나의 등방 산란 몫 1/2 을 이미 곱했다). */
+static float3 VolumetricClouds::computeAmbient( float3 positionKm )
+{
+    const float heightRatio = saturate( ( positionKm.y - g_SkyCloudShape.y ) / g_SkyCloudVolume.x );
+    return g_SkyCloudAmbient.rgb * ( 1.0f - g_SkyCloudAmbient.w * ( 1.0f - heightRatio ) ) + g_SkyCloudGround.rgb * ( 1.0f - heightRatio );
 }
 
 /** @brief 화면 자리의 시선 방향입니다(sky.hlsl 과 같은 식 — 행벡터 규약). */
@@ -188,6 +202,18 @@ static float4 VolumetricClouds::marchLayer( float3 direction, float3 toSun, floa
     const bool   bAtmosphere = g_SkyAtmosphereRayleigh.w > 0.5f && g_SkyAtmosphereRayleigh.w < 1.5f;
     const float3 sunRadiance = g_KeyLightColor.rgb * g_SkyCloudSun.rgb * ( bAtmosphere ? 1.0f : g_KeyLightDirIntensity.w );
 
+    // 옥타브의 위상은 시선에만 기댄다 — 걸음마다 다시 구하지 않는다.
+    const uint octaveCount = min( (uint)( g_SkyCloudSun.w + 0.5f ), kCloudMaxScatterOctaves );
+    float      arrOctavePhase[kCloudMaxScatterOctaves];
+    float      contribution = 1.0f;
+    float      eccentricity = 1.0f;
+    SW_UNROLL for ( uint octave = 0u; octave < kCloudMaxScatterOctaves; ++octave )
+    {
+        arrOctavePhase[octave] = contribution * VolumetricClouds::computePhase( cosine, eccentricity );
+        contribution *= g_SkyCloudGround.w;
+        eccentricity *= kCloudOctaveEccentricity;
+    }
+
     float3 scattered     = float3( 0.0f, 0.0f, 0.0f );
     float  transmittance = 1.0f;
     SW_LOOP for ( uint viewStep = 0u; viewStep < stepCount && transmittance > kCloudMinTransmittance; ++viewStep )
@@ -197,7 +223,7 @@ static float4 VolumetricClouds::marchLayer( float3 direction, float3 toSun, floa
         SW_BRANCH if ( density > 0.0f )
         {
             const float  sunDepth     = VolumetricClouds::computeSunOpticalDepth( positionKm, toSun );
-            const float3 source       = sunRadiance * VolumetricClouds::computeSunScattering( cosine, sunDepth ) + g_SkyCloudAmbient.rgb * kCloudAmbientScale;
+            const float3 source       = sunRadiance * VolumetricClouds::computeSunScattering( arrOctavePhase, octaveCount, sunDepth ) + VolumetricClouds::computeAmbient( positionKm );
             const float  stepTransmit = exp( -density * g_SkyCloudVolume.y * stepLength );
             scattered += source * ( transmittance * ( 1.0f - stepTransmit ) ); // 걸음 안을 적분한 산란(Hillaire 2016 — 걸음 수가 바뀌어도 밝기가 같다)
             transmittance *= stepTransmit;

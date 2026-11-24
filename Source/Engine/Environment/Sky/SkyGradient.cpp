@@ -179,8 +179,11 @@ namespace sw
         }
         if ( config._viewStepCount == 0 )
             reportFatalError( "EngineConfig _render._skyClouds._viewStepCount is missing - volumetric clouds need a step count" );
-        _viewStepCount = config._viewStepCount;
-        _historyWeight = config._historyWeight;
+        if ( config._scatterOctaveCount == 0 )
+            reportFatalError( "EngineConfig _render._skyClouds._scatterOctaveCount is missing - volumetric clouds need a scattering octave count" );
+        _viewStepCount      = config._viewStepCount;
+        _scatterOctaveCount = config._scatterOctaveCount;
+        _historyWeight      = config._historyWeight;
     }
 
     void SkyGradient::setSun( const float3& lightTravelDirection, const float3& color )
@@ -225,6 +228,31 @@ namespace sw
         const float3& poleColor     = y >= 0.0f ? _zenithColor : _groundColor;
         const float3  gradientColor = float3::lerp( poleColor, _horizonColor, horizonWeight );
         return gradientColor * _intensity;
+    }
+
+    SkyCloudLighting SkyGradient::computeCloudLighting() const
+    {
+        // 반구의 입체각은 높이(y)에 고르다 — 높이 구간마다 가운데 높이의 방위를 고르게 본다. 대기 모드의 방향 하나는 산란 적분 하나라 적은 수로 둔다.
+        constexpr uint32  kRingCount    = 2;
+        constexpr uint32  kAzimuthCount = 4;
+        constexpr float32 kHemisphere   = 0.5f; // 등방 산란은 온 방향 평균이고 하늘과 땅이 반구 하나씩이다
+        float3            sum{};
+        for ( uint32 ring = 0; ring < kRingCount; ++ring )
+        {
+            const float32 height = ( static_cast<float32>( ring ) + 0.5f ) / static_cast<float32>( kRingCount );
+            const float32 radius = MathUtil::sqrt( 1.0f - height * height );
+            for ( uint32 azimuth = 0; azimuth < kAzimuthCount; ++azimuth )
+            {
+                // 해의 방위에 묶는다(해는 두 표본의 가운데) — 해가 돌아도 표본이 해를 스치며 깜빡이지 않는다.
+                const float32 angle = MathUtil::atan2( _toSunDirection._z, _toSunDirection._x ) + ( static_cast<float32>( azimuth ) + 0.5f ) * ( MathUtil::kTwoPi / static_cast<float32>( kAzimuthCount ) );
+                sum                 = sum + evaluateRadiance( float3{ radius * MathUtil::cos( angle ), height, radius * MathUtil::sin( angle ) } );
+            }
+        }
+        const float32    openSky = 1.0f - MathUtil::saturate( _clouds._coverage ) * MathUtil::saturate( _clouds._opacity );
+        SkyCloudLighting lighting{};
+        lighting._sky    = sum * ( kHemisphere / static_cast<float32>( kRingCount * kAzimuthCount ) );
+        lighting._ground = evaluateRadiance( float3{ 0.0f, -1.0f, 0.0f } ) * ( kHemisphere * openSky * _clouds._groundLight );
+        return lighting;
     }
 
     bool SkyGradient::hasSameRadiance( const SkyGradient& other ) const

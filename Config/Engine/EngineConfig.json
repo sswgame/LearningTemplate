@@ -82,6 +82,7 @@
         "_skyClouds": {
             "_bVolumetric": true,
             "_viewStepCount": 48,
+            "_scatterOctaveCount": 6,
             "_historyWeight": 0.93
         },
         "_probeVisibility": {
