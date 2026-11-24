@@ -109,7 +109,7 @@ namespace sw
     {
     }
 
-    bool ThemeParkSimulation::initialize( const ThemeParkSettings& settings, Wallet& wallet )
+    bool ThemeParkSimulation::initialize( const ThemeParkSettings& settings, Wallet& wallet, const NavGrid& walkGrid )
     {
         const string rangeError = ConfigRangeUtil::describeRangeErrors( settings );
         const bool   bPairsOk   = settings._guestCashMin <= settings._guestCashMax && settings._guestMaxIntensityMin <= settings._guestMaxIntensityMax &&
@@ -119,8 +119,9 @@ namespace sw
             SW_LOG_ERROR_ID( "ThemePark.RefusedSettings", "ThemeParkSimulation: refused settings - %# %#", rangeError.c_str(), bPairsOk ? "" : "(a minimum is above its maximum: guest cash, intensity or nausea tolerance)" );
             return false;
         }
-        _settings = settings;
-        _pWallet  = &wallet;
+        _settings  = settings;
+        _pWallet   = &wallet;
+        _pWalkGrid = &walkGrid;
         _listRide.clear();
         _listGuest.clear();
         _arrival.reset();
@@ -147,15 +148,6 @@ namespace sw
     {
         _pLand     = pLand;
         _landOwner = pLand != nullptr ? pLand->registerOwner( hashed_string( "ThemePark" ) ) : LandRegistry::kNoOwner;
-    }
-
-    void ThemeParkSimulation::bindWalkGrid( const NavGrid* pGrid )
-    {
-        _pWalkGrid = pGrid;
-        for ( ParkRide& ride : _listRide )
-        {
-            ride._listQueuePoint.clear(); // 새 격자의 길로 다시 늘어선다
-        }
     }
 
     int32 ThemeParkSimulation::buildRide( const ParkRide& ride, int32 buildCost )
@@ -565,9 +557,9 @@ namespace sw
             const float3  anchor = _listRide.empty() ? _settings._gatePosition
                                                      : _listRide[static_cast<size_t>( nextRandom() * static_cast<float32>( _listRide.size() ) ) % _listRide.size()]._entrance;
             float3        spot   = anchor + float3{ MathUtil::cos( angle ) * radius, 0.0f, MathUtil::sin( angle ) * radius };
-            const int2    cell   = _pWalkGrid != nullptr ? _pWalkGrid->computeCell( spot ) : int2{};
+            const int2    cell   = _pWalkGrid->computeCell( spot );
             int2          open{};
-            const bool    bBlocked = _pWalkGrid != nullptr && _pWalkGrid->isInside( cell ) && _pWalkGrid->isWalkable( cell ) == false;
+            const bool    bBlocked = _pWalkGrid->isInside( cell ) && _pWalkGrid->isWalkable( cell ) == false;
             if ( bBlocked && _pWalkGrid->findNearestWalkable( cell, ThemeParkInternal::kWanderSearchRadius, open ) )
                 spot = _pWalkGrid->computeCellCenter( open ); // 가판 안을 둘러볼 자리로 고르지 않는다
             startWalking( guest, spot );
@@ -578,16 +570,16 @@ namespace sw
         startWalking( guest, _listRide[static_cast<size_t>( bestRide )]._entrance );
     }
 
-    void ThemeParkSimulation::findWalkRoute( const NavGrid* pGrid, GridPathfinder& inoutPathfinder, const float3& from, const float3& to, vector<float3>& outListPoint )
+    void ThemeParkSimulation::findWalkRoute( const NavGrid& grid, GridPathfinder& inoutPathfinder, const float3& from, const float3& to, vector<float3>& outListPoint )
     {
         outListPoint.clear();
-        const int2 fromCell = pGrid != nullptr ? pGrid->computeCell( from ) : int2{};
-        const int2 toCell   = pGrid != nullptr ? pGrid->computeCell( to ) : int2{};
-        const bool bInside  = pGrid != nullptr && pGrid->isInside( fromCell ) && pGrid->isInside( toCell );
-        if ( bInside && pGrid->hasLineOfSight( fromCell, toCell ) == false )
+        const int2 fromCell = grid.computeCell( from );
+        const int2 toCell   = grid.computeCell( to );
+        const bool bInside  = grid.isInside( fromCell ) && grid.isInside( toCell );
+        if ( bInside && grid.hasLineOfSight( fromCell, toCell ) == false )
         {
             // 일정의 격자 길과 같은 길이다 — 점 목록의 첫 점은 시작이라 뺀다.
-            NavGridSchedulePathing( pGrid, &inoutPathfinder, SchedulePlane::XZ ).makeRoute( ScheduleLocation{ from }, ScheduleLocation{ to }, outListPoint );
+            NavGridSchedulePathing( &grid, &inoutPathfinder, SchedulePlane::XZ ).makeRoute( ScheduleLocation{ from }, ScheduleLocation{ to }, outListPoint );
             outListPoint.erase( outListPoint.begin() );
         }
         if ( outListPoint.empty() )
@@ -596,7 +588,7 @@ namespace sw
 
     void ThemeParkSimulation::startWalking( ParkGuest& guest, const float3& destination )
     {
-        findWalkRoute( _pWalkGrid, _pathfinder, guest._position, destination, guest._listWalkPoint );
+        findWalkRoute( *_pWalkGrid, _pathfinder, guest._position, destination, guest._listWalkPoint );
         const float3 first = guest._listWalkPoint.front();
         guest._listWalkPoint.erase( guest._listWalkPoint.begin() );
         startWalkLeg( guest, first, _settings._minWalkSeconds );
@@ -615,7 +607,7 @@ namespace sw
     {
         if ( inoutRide._listQueuePoint.empty() )
         {
-            findWalkRoute( _pWalkGrid, _pathfinder, inoutRide._entrance, _settings._gatePosition, inoutRide._listQueuePoint );
+            findWalkRoute( *_pWalkGrid, _pathfinder, inoutRide._entrance, _settings._gatePosition, inoutRide._listQueuePoint );
             inoutRide._listQueuePoint.insert( inoutRide._listQueuePoint.begin(), inoutRide._entrance );
         }
         const float32 length   = ISchedulePathing::computeLength( inoutRide._listQueuePoint );

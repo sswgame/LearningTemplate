@@ -267,7 +267,7 @@ namespace sw
     void ParkGameModeComponent::findGuestRoute( const float3& from, const float3& to, vector<float3>& outListPoint ) const
     {
         GridPathfinder pathfinder; // 놀이기구를 세울 때 한 번 부른다
-        ThemeParkSimulation::findWalkRoute( &_walkGrid, pathfinder, from, to, outListPoint );
+        ThemeParkSimulation::findWalkRoute( _walkGrid, pathfinder, from, to, outListPoint );
     }
 
     bool ParkGameModeComponent::startGame()
@@ -286,9 +286,8 @@ namespace sw
         _wallet.clear();
         _startingCash = layout.getStartingCash();
         _wallet.add( _settings._currency, _startingCash );
-        if ( _simulation.initialize( _settings, _wallet ) == false )
+        if ( _simulation.initialize( _settings, _wallet, _walkGrid ) == false )
             return false; // 까닭은 시뮬레이션이 남겼다 — 틀린 규칙으로 공원을 열지 않는다
-        _simulation.bindWalkGrid( &_walkGrid );
         _listCoaster.clear();
 
         // 처음 공원에는 가장 싼 평지 놀이기구 하나와 가장 싼 코스터 하나를 둔다.
@@ -391,9 +390,8 @@ namespace sw
         if ( io.isOk() == false )
             return;
         ThemeParkSimulation restoredSimulation;
-        if ( io.isReading() && io.check( restoredSimulation.initialize( _settings, &_wallet ) ) == false )
+        if ( io.isReading() && io.check( restoredSimulation.initialize( _settings, _wallet, _walkGrid ) ) == false )
             return;
-        restoredSimulation.bindWalkGrid( &_walkGrid );
         ThemeParkSimulation& simulation = io.isWriting() ? _simulation : restoredSimulation;
         io.value( simulation );
         uint32 placementCount = static_cast<uint32>( _listPlacement.size() );

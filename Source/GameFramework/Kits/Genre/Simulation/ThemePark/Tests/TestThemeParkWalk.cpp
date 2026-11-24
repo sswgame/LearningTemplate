@@ -34,7 +34,7 @@ namespace
             _settings._guestArrivalPerMinute = 0.0f;
             _settings._fixedStep             = kThemeParkWalkStep;
             _wallet.add( _settings._currency, 10000 );
-            SW_REQUIRE_TRUE( _park.initialize( _settings, &_wallet ) );
+            SW_REQUIRE_TRUE( _park.initialize( _settings, _wallet, _grid ) );
             ParkRide ride;
             ride._id       = hashed_string( "wheel" );
             ride._entrance = float3{ 0.5f, 0.0f, 20.5f };
@@ -50,9 +50,8 @@ namespace
 SW_TEST_CASE( ThemeParkWalkTest, GuestWalksAroundBlockedCells )
 {
     ThemeParkWalkPark test;
-    test._park.bindWalkGrid( &test._grid );
-    bool  bRestored = false;
-    int32 step      = 0;
+    bool              bRestored = false;
+    int32             step      = 0;
     for ( ; step < kThemeParkWalkStepLimit && test._park.getGuests().front()._state == ParkGuestState::Walking; ++step )
     {
         test._park.update( kThemeParkWalkStep );
@@ -63,7 +62,7 @@ SW_TEST_CASE( ThemeParkWalkTest, GuestWalksAroundBlockedCells )
         test._park.writeState( written );
         Archive             reading( written.getData(), written.getSize() );
         ThemeParkSimulation restored;
-        SW_REQUIRE_TRUE( restored.initialize( test._settings, &test._wallet ) );
+        SW_REQUIRE_TRUE( restored.initialize( test._settings, test._wallet, test._grid ) );
         SW_REQUIRE_TRUE( restored.readState( reading ) );
         SW_EXPECT_EQUAL( test._park.getGuests().front()._listWalkPoint.size(), restored.getGuests().front()._listWalkPoint.size() );
         bRestored = true;
@@ -72,11 +71,18 @@ SW_TEST_CASE( ThemeParkWalkTest, GuestWalksAroundBlockedCells )
     SW_EXPECT_TRUE( test._park.getGuests().front()._state != ParkGuestState::Walking );
 }
 
-/** @brief [ThemeParkWalkTest] 격자가 없으면 곧게 걸어 벽 칸을 지난다 — 막는 것은 격자다 */
-SW_TEST_CASE( ThemeParkWalkTest, WithoutGridGuestWalksStraight )
+/** @brief [ThemeParkWalkTest] 칸이 없는 격자면 곧게 걸어 벽 칸을 지난다 — 막는 것은 격자다 */
+SW_TEST_CASE( ThemeParkWalkTest, EmptyGridGuestWalksStraight )
 {
+    const NavGrid     emptyGrid{};
     ThemeParkWalkPark test;
-    bool              bCrossed = false;
+    SW_REQUIRE_TRUE( test._park.initialize( test._settings, test._wallet, emptyGrid ) );
+    ParkRide ride;
+    ride._id       = hashed_string( "wheel" );
+    ride._entrance = float3{ 0.5f, 0.0f, 20.5f };
+    SW_REQUIRE_TRUE( test._park.buildRide( ride, 0 ) == 0 );
+    SW_REQUIRE_TRUE( test._park.admitGuest( 50, 0.0f, 10.0f, 1.0f ) );
+    bool bCrossed = false;
     for ( int32 step = 0; step < kThemeParkWalkStepLimit && test._park.getGuests().front()._state == ParkGuestState::Walking; ++step )
     {
         test._park.update( kThemeParkWalkStep );
@@ -92,8 +98,7 @@ SW_TEST_CASE( ThemeParkWalkTest, LongQueueFollowsTheWalkRoute )
     ThemeParkWalkPark test;
     ThemeParkSettings settings = test._settings;
     settings._queuePatience    = 100000.0f;
-    SW_REQUIRE_TRUE( test._park.initialize( settings, &test._wallet ) );
-    test._park.bindWalkGrid( &test._grid );
+    SW_REQUIRE_TRUE( test._park.initialize( settings, test._wallet, test._grid ) );
     ParkRide ride;
     ride._id        = hashed_string( "wheel" );
     ride._entrance  = float3{ 0.5f, 0.0f, 20.5f };

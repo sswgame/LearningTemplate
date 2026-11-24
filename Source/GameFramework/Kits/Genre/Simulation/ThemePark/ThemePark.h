@@ -307,10 +307,11 @@ namespace sw
 
         /**
          * @brief 설정으로 빈 공원을 엽니다. 공원 돈은 빌린 지갑(@p wallet — 통화는 `ThemeParkSettings::_currency`)이고, 시작 자금은 게임이 넣습니다.
+         * @param walkGrid 손님이 돌아갈 장애물(가판 · 의자 · 지을 땅)의 격자입니다. 시뮬레이션보다 오래 산다. 장애물이 없는 공원은 칸이 없는 격자를 준다 — 그때 곧게 걷는다.
          * @details 건설은 `trySpend`, 입장료와 탈것 요금은 `add`, 운영비는 `charge`(빚이 될 수 있다)로 처리한다.
          * @return 설정이 범위 밖이거나 하한이 상한보다 크면 false 이고 공원을 열지 않는다(오류 로그).
          */
-        [[nodiscard]] bool initialize( const ThemeParkSettings& settings, Wallet& wallet );
+        [[nodiscard]] bool initialize( const ThemeParkSettings& settings, Wallet& wallet, const NavGrid& walkGrid );
         /** @brief 시간을 진행합니다. 큰 시간은 0.25초씩 나눠 처리합니다. */
         void update( float32 deltaTime );
 
@@ -319,13 +320,11 @@ namespace sw
          * @details 그 뒤로 놀이기구는 지을 때 영역(`_footprintCenter`, `_footprintSize`)을 막힘으로 얻는다.
          */
         void bindLand( LandRegistry* pLand );
-        /** @brief 손님이 돌아갈 장애물(가판 · 의자 · 지을 땅)의 격자를 빌립니다. nullptr 이면 곧게 걷는다. 격자는 시뮬레이션보다 오래 산다. */
-        void bindWalkGrid( const NavGrid* pGrid );
         /**
-         * @brief @p from 에서 @p to 로 걷는 길의 점(시작은 뺀다, 마지막이 @p to)을 @p outListPoint 에 채웁니다. 곧게 지날 수 있거나 격자가 없거나 격자 밖이면 @p to 하나입니다.
+         * @brief @p from 에서 @p to 로 걷는 길의 점(시작은 뺀다, 마지막이 @p to)을 @p outListPoint 에 채웁니다. 곧게 지날 수 있거나 격자 밖이면 @p to 하나입니다.
          * @details 손님의 걸음과 깔리는 길의 모습이 같은 함수를 부른다 — 길은 손님이 걷는 자리에 놓인다.
          */
-        static void findWalkRoute( const NavGrid* pGrid, GridPathfinder& inoutPathfinder, const float3& from, const float3& to, vector<float3>& outListPoint );
+        static void findWalkRoute( const NavGrid& grid, GridPathfinder& inoutPathfinder, const float3& from, const float3& to, vector<float3>& outListPoint );
         /** @brief 놀이기구를 짓고 놀이기구 index 를 반환합니다. 지갑에 @p buildCost 가 없거나 영역의 공유 땅이 남의 것이면 짓지 않고 -1 을 반환합니다. */
         int32 buildRide( const ParkRide& ride, int32 buildCost );
         /** @brief 놀이기구를 닫거나 엽니다. 닫으면 줄 선 손님은 줄에서 나와 다른 것을 고릅니다. */
