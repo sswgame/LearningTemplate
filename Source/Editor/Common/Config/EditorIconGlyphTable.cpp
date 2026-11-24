@@ -37,11 +37,11 @@ namespace sw::editor
             return false;
         // 코드가 쓰는 이름은 컴파일 때 목록으로 막았다 — 목록과 표가 어긋나면 그리기 전에(기동에서) 멈춘다.
         bool bComplete = true;
-        for ( const utf8* pName : EditorIconName::kArrName )
+        for ( const utf8* pName : EditorIconName::List::kArrName )
         {
             if ( findGlyph( hashed_string{ pName } ) != nullptr )
                 continue;
-            SW_LOG_ERROR_ID( "EditorIcon.CodeNameNotInTable", "Editor icon '%#' (EditorIconName::kArrName) is not in %#", pName, assetID.view() );
+            SW_LOG_ERROR_ID( "EditorIcon.CodeNameNotInTable", "Editor icon '%#' (EditorIconNameList) is not in %#", pName, assetID.view() );
             bComplete = false;
         }
         if ( bComplete == false )

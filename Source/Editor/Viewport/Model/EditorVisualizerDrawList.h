@@ -10,6 +10,7 @@
 #include "Core/Foundation/Types.h"
 #include "Core/Math/VectorMath.h"
 
+#include "Editor/Common/Config/EditorThemeKey.h"
 #include "Editor/Common/EditorExports.h"
 #include "Editor/Common/GUI/Theme/EditorComponentIconRow.h"
 
@@ -36,7 +37,7 @@ namespace sw::editor
         AxisX,            ///< 테마 `Viewport.AxisX`
         AxisY,            ///< 테마 `Viewport.AxisY`
         AxisZ,            ///< 테마 `Viewport.AxisZ`
-        ThemeToken,       ///< 값의 `_pThemeKey`(테마 토큰 이름, 예 `Viewport.Label`) — 확장 시각화가 제 토큰을 쓴다
+        ThemeToken,       ///< 값의 `_themeKey`(테마 토큰 이름, 예 `Viewport.Label`) — 확장 시각화가 제 토큰을 쓴다
     };
 
     /** @brief 그린 선 · 글자를 어느 통계(`EditorVisualizerStats`)에 셀지입니다. 통계는 화면에 실제로 그린 수(근평면에서 다 잘린 것은 빼고)라 그리는 쪽이 센다. */
@@ -57,7 +58,7 @@ namespace sw::editor
         float32                   _thickness{ 1.5f };
         EditorVisualizerColorRole _colorRole{ EditorVisualizerColorRole::Explicit };
         EditorVisualizerStatSlot  _statSlot{ EditorVisualizerStatSlot::None };
-        const utf8*               _pThemeKey{ nullptr }; ///< `ThemeToken` 역할의 테마 토큰 이름(문자열 리터럴)
+        EditorThemeColorKey       _themeKey{}; ///< `ThemeToken` 역할의 테마 토큰 이름(`SW_THEME_COLOR_KEY`)
     };
 
     /** @brief 월드 위치에 그리는 글자 하나입니다. */
@@ -68,8 +69,8 @@ namespace sw::editor
         string                    _text;
         EditorVisualizerStatSlot  _statSlot{ EditorVisualizerStatSlot::None };
         EditorVisualizerColorRole _colorRole{ EditorVisualizerColorRole::Explicit };
-        const utf8*               _pThemeKey{ nullptr }; ///< `ThemeToken` 역할의 테마 토큰 이름(문자열 리터럴)
-        bool                      _bShadow{ true };      ///< NOLINT(sw-bool-flag): 값 집합체 — 그림자를 깔아 밝은 배경에서도 읽히게 한다(디버그 글자). 라벨은 끈다
+        EditorThemeColorKey       _themeKey{};      ///< `ThemeToken` 역할의 테마 토큰 이름(`SW_THEME_COLOR_KEY`)
+        bool                      _bShadow{ true }; ///< NOLINT(sw-bool-flag): 값 집합체 — 그림자를 깔아 밝은 배경에서도 읽히게 한다(디버그 글자). 라벨은 끈다
     };
 
     /**

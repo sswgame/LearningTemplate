@@ -2,7 +2,7 @@
 
 #include "Editor/AssetActions/EditorAssetThumbnailRenderer.h"
 #include "Editor/Common/Config/EditorIconGlyphTable.h"
-#include "Editor/Common/EditorColor.h"
+#include "Editor/Common/Config/EditorThemeKey.h"
 #include "Editor/Common/Workspace/Asset/EditorAssetType.h"
 #include "Editor/Common/Workspace/Asset/EditorAssetTypeActions.h"
 

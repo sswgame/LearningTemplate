@@ -27,7 +27,7 @@ namespace sw::editor
      * @brief `<이름>.tokens.json` 한 벌입니다(라이트 · 다크 · 고대비 등). 값은 키(`Namespace.Key`) → 값 표 둘이다.
      * @details 지역화 문구 표(`*.strings.xml` · `SW_LOCKEY`)와 같은 모양이다 — 코드는 키만 가리키고(`SW_THEME_COLOR` · `SW_THEME_METRIC`), 값은 이 파일에만 있다.
      *          토큰을 더할 때 C++ 형식 · 접근자를 늘리지 않고, 테마를 바꾸는 일은 표를 갈아 끼우는 일이다.
-     *          모든 벌은 같은 키 묶음을 가져야 한다(읽을 때 대조). 코드가 쓰는 키가 표에 있는지는 단위 테스트(`EditorThemeKeys`)가 소스를 훑어 본다.
+     *          모든 벌은 같은 키 묶음을 가져야 한다(읽을 때 대조). 코드가 쓰는 키는 목록(`EditorThemeKey.h`)에 있어야 컴파일되고, 벌을 읽을 때(`loadTheme`) 그 목록이 모두 있는지 본다.
      *          `_base` 는 같은 폴더의 다른 벌 이름이고, 이 벌은 다른 값만 적는다(Godot Theme 상속 · 유니티 USS 변수 자리). 합치기는 `loadThemeFile` 의 키 덮기다 — `DataInheritance` 는 XML 합치기라 쓰지 못하고,
      *          설정 층은 파일 경로로 값을 겹치는 길이라 여기처럼 데이터가 자기 부모를 고르지 못한다. 순환과 깊이 상한은 `DataInheritance` 와 같은 규칙이다.
      */
@@ -65,7 +65,7 @@ namespace sw::editor
         static string getFolderPath();
         /** @brief 폴더에 있는 벌의 이름(접미사를 뺀 파일 이름)을 이름순으로 씁니다. */
         static void listThemeNames( vector<string>& outListName );
-        /** @brief @p name 벌을 읽고 해석합니다. 실패하면 그 이유입니다(대상은 파일 경로 · 키). */
+        /** @brief @p name 벌을 읽고 해석합니다 — 코드가 쓰는 키(`EditorThemeKey.h`)가 모두 있어야 한다. 실패하면 그 이유입니다(대상은 파일 경로 · 키). */
         [[nodiscard]] static expected<EditorThemeConfig> loadTheme( string_view name );
         /** @brief 리소스 id(`editor/theme/dark.tokens.json`)의 벌을 읽고 해석합니다(리소스 데이터 종류 `editortheme` 의 로더). */
         [[nodiscard]] static bool loadThemeResource( const AssetID& id, EditorThemeConfig& outConfig );

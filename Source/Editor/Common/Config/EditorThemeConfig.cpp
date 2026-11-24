@@ -6,6 +6,7 @@
 #include "Core/String/StringUtil.h"
 
 #include "Editor/Common/Config/EditorAppearanceConfig.h"
+#include "Editor/Common/Config/EditorThemeKey.h"
 #include "Editor/Common/Workspace/EditorService.h"
 
 namespace sw::editor
@@ -28,25 +29,25 @@ namespace sw::editor
     {
         struct EditorThemeConfigInternal
         {
-            /** @brief 사용자가 덮어쓰는 토큰 키입니다(글 상수 — 정적 초기화에는 이름 풀이 없다). 나머지 둥글기는 슬라이더 셋에서 정한다. */
-            static constexpr const utf8* kAccentKey       = "Base.Accent";
-            static constexpr const utf8* kRadiusWindowKey = "Radius.Window";
-            static constexpr const utf8* kRadiusFrameKey  = "Radius.Frame";
-            static constexpr const utf8* kRadiusTabKey    = "Radius.Tab";
+            /** @brief 사용자가 덮어쓰는 토큰 키입니다(키 상수 — 정적 초기화에는 이름 풀이 없다). 나머지 둥글기는 슬라이더 셋에서 정한다. */
+            static constexpr EditorThemeColorKey  kAccentKey       = SW_THEME_COLOR_KEY( "Base", "Accent" );
+            static constexpr EditorThemeMetricKey kRadiusWindowKey = SW_THEME_METRIC_KEY( "Radius", "Window" );
+            static constexpr EditorThemeMetricKey kRadiusFrameKey  = SW_THEME_METRIC_KEY( "Radius", "Frame" );
+            static constexpr EditorThemeMetricKey kRadiusTabKey    = SW_THEME_METRIC_KEY( "Radius", "Tab" );
             /** @brief 둥글기를 한 슬라이더로 묶을 때 스크롤바 둥글기는 입력 필드 둥글기의 이 배수입니다. */
             static constexpr float32 kScrollbarRadiusPerFrameRadius = 2.0f;
 
             static void setWindowRadius( float32 radius, EditorThemeConfig& inoutTheme )
             {
-                inoutTheme._mapMetric[hashed_string( kRadiusWindowKey )] = radius;
-                inoutTheme._mapMetric[hashed_string( "Radius.Popup" )]   = radius;
+                inoutTheme._mapMetric[hashed_string( kRadiusWindowKey.c_str() )]                         = radius;
+                inoutTheme._mapMetric[hashed_string( SW_THEME_METRIC_KEY( "Radius", "Popup" ).c_str() )] = radius;
             }
 
             static void setFrameRadius( float32 radius, EditorThemeConfig& inoutTheme )
             {
-                inoutTheme._mapMetric[hashed_string( kRadiusFrameKey )]    = radius;
-                inoutTheme._mapMetric[hashed_string( "Radius.Scrollbar" )] = radius * kScrollbarRadiusPerFrameRadius;
-                inoutTheme._mapMetric[hashed_string( "Radius.Grab" )]      = radius;
+                inoutTheme._mapMetric[hashed_string( kRadiusFrameKey.c_str() )]                              = radius;
+                inoutTheme._mapMetric[hashed_string( SW_THEME_METRIC_KEY( "Radius", "Scrollbar" ).c_str() )] = radius * kScrollbarRadiusPerFrameRadius;
+                inoutTheme._mapMetric[hashed_string( SW_THEME_METRIC_KEY( "Radius", "Grab" ).c_str() )]      = radius;
             }
 
             /** @brief 덮어쓴 둥글기의 저장 값입니다. 덮어쓰면 슬라이더 키는 늘 표에 있다(`overrideRadius`). */
@@ -93,24 +94,24 @@ namespace sw::editor
         }
         if ( saved._themeTabRounding >= 0.0f )
         {
-            outTheme._mapMetric[hashed_string( EditorThemeConfigInternal::kRadiusTabKey )] = saved._themeTabRounding;
-            outTheme._bRadiusOverridden                                                    = SW_TRUE;
+            outTheme._mapMetric[hashed_string( EditorThemeConfigInternal::kRadiusTabKey.c_str() )] = saved._themeTabRounding;
+            outTheme._bRadiusOverridden                                                            = SW_TRUE;
         }
         return true;
     }
 
     void EditorThemeConfig::overrideAccent( const Color& accent, EditorThemeConfig& inoutTheme )
     {
-        inoutTheme._mapColor[hashed_string( EditorThemeConfigInternal::kAccentKey )] = accent;
-        inoutTheme._bAccentOverridden                                                = SW_TRUE;
+        inoutTheme._mapColor[hashed_string( EditorThemeConfigInternal::kAccentKey.c_str() )] = accent;
+        inoutTheme._bAccentOverridden                                                        = SW_TRUE;
     }
 
     void EditorThemeConfig::overrideRadius( float32 window, float32 frame, float32 tab, EditorThemeConfig& inoutTheme )
     {
         EditorThemeConfigInternal::setWindowRadius( MathUtil::max( window, 0.0f ), inoutTheme );
         EditorThemeConfigInternal::setFrameRadius( MathUtil::max( frame, 0.0f ), inoutTheme );
-        inoutTheme._mapMetric[hashed_string( EditorThemeConfigInternal::kRadiusTabKey )] = MathUtil::max( tab, 0.0f );
-        inoutTheme._bRadiusOverridden                                                    = SW_TRUE;
+        inoutTheme._mapMetric[hashed_string( EditorThemeConfigInternal::kRadiusTabKey.c_str() )] = MathUtil::max( tab, 0.0f );
+        inoutTheme._bRadiusOverridden                                                            = SW_TRUE;
     }
 
     void EditorThemeConfig::writeSaved( const EditorThemeConfig& theme, EditorAppearanceConfig& outSaved )
@@ -118,14 +119,14 @@ namespace sw::editor
         outSaved._themeName = theme._name;
 
         // 덮어쓰면 강조색 키는 늘 표에 있다(`overrideAccent`).
-        const Color* pAccent   = theme._bAccentOverridden == SW_TRUE ? theme.findColor( hashed_string( EditorThemeConfigInternal::kAccentKey ) ) : nullptr;
+        const Color* pAccent   = theme._bAccentOverridden == SW_TRUE ? theme.findColor( hashed_string( EditorThemeConfigInternal::kAccentKey.c_str() ) ) : nullptr;
         outSaved._themeAccentR = pAccent != nullptr ? pAccent->_r : EditorAppearanceConfig::kNotOverridden;
         outSaved._themeAccentG = pAccent != nullptr ? pAccent->_g : EditorAppearanceConfig::kNotOverridden;
         outSaved._themeAccentB = pAccent != nullptr ? pAccent->_b : EditorAppearanceConfig::kNotOverridden;
 
-        outSaved._themeWindowRounding = EditorThemeConfigInternal::readSavedRadius( theme, hashed_string( EditorThemeConfigInternal::kRadiusWindowKey ) );
-        outSaved._themeFrameRounding  = EditorThemeConfigInternal::readSavedRadius( theme, hashed_string( EditorThemeConfigInternal::kRadiusFrameKey ) );
-        outSaved._themeTabRounding    = EditorThemeConfigInternal::readSavedRadius( theme, hashed_string( EditorThemeConfigInternal::kRadiusTabKey ) );
+        outSaved._themeWindowRounding = EditorThemeConfigInternal::readSavedRadius( theme, hashed_string( EditorThemeConfigInternal::kRadiusWindowKey.c_str() ) );
+        outSaved._themeFrameRounding  = EditorThemeConfigInternal::readSavedRadius( theme, hashed_string( EditorThemeConfigInternal::kRadiusFrameKey.c_str() ) );
+        outSaved._themeTabRounding    = EditorThemeConfigInternal::readSavedRadius( theme, hashed_string( EditorThemeConfigInternal::kRadiusTabKey.c_str() ) );
     }
 
     EditorTheme& EditorTheme::getActive()

@@ -47,7 +47,7 @@ namespace sw::editor
                     label._position  = ride._position + float3{ 0.0f, ride._size._y + kLabelLift, 0.0f };
                     label._text      = ride._name;
                     label._colorRole = EditorVisualizerColorRole::ThemeToken;
-                    label._pThemeKey = "Viewport.Label";
+                    label._themeKey  = SW_THEME_COLOR_KEY( "Viewport", "Label" );
                     label._bShadow   = false;
                     outDrawList._listText.push_back( label );
                 }

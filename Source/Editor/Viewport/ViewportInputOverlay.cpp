@@ -61,7 +61,7 @@ namespace sw::editor
                 {
                     const bool   bDown = state.isFaceButtonDown( face._button );
                     const ImVec2 pos   = ImVec2( faceCenter.x + face._offsetX * btnDist, faceCenter.y + face._offsetY * btnDist );
-                    _pDrawList->AddCircleFilled( pos, btnRadius, color( EditorThemeUtil::findColor( hashed_string{ bDown ? face._pDownColorKey : face._pUpColorKey } ) ) );
+                    _pDrawList->AddCircleFilled( pos, btnRadius, color( EditorThemeUtil::findColor( bDown ? face._downColorKey : face._upColorKey ) ) );
                     _pDrawList->AddText( ImVec2( pos.x - 3.0f, pos.y - 6.0f ), color( SW_THEME_COLOR( "InputOverlay", "ButtonLabel" ) ), face._pLabel );
                 }
             }
@@ -87,16 +87,16 @@ namespace sw::editor
                 ViewportOverlayFaceButton _button;
                 float32                   _offsetX; ///< 다이아몬드 중심에서의 방향(-1 · 0 · 1) — 거리는 `btnDist`
                 float32                   _offsetY;
-                const utf8*               _pDownColorKey; ///< 눌렸을 때의 테마 색 토큰(`InputOverlay.*`)
-                const utf8*               _pUpColorKey;   ///< 뗐을 때의 테마 색 토큰
+                EditorThemeColorKey       _downColorKey; ///< 눌렸을 때의 테마 색 토큰(`InputOverlay.*`)
+                EditorThemeColorKey       _upColorKey;   ///< 뗐을 때의 테마 색 토큰
                 const utf8*               _pLabel;
             };
 
             static constexpr FaceButton kArrFaceButton[] = {
-                {ViewportOverlayFaceButton::A,  0.0f,  1.0f, "InputOverlay.ButtonADown", "InputOverlay.ButtonAUp", "A"}, // 아래
-                {ViewportOverlayFaceButton::B,  1.0f,  0.0f, "InputOverlay.ButtonBDown", "InputOverlay.ButtonBUp", "B"}, // 오른쪽
-                {ViewportOverlayFaceButton::X, -1.0f,  0.0f, "InputOverlay.ButtonXDown", "InputOverlay.ButtonXUp", "X"}, // 왼쪽
-                {ViewportOverlayFaceButton::Y,  0.0f, -1.0f, "InputOverlay.ButtonYDown", "InputOverlay.ButtonYUp", "Y"}, // 위
+                {ViewportOverlayFaceButton::A,  0.0f,  1.0f, SW_THEME_COLOR_KEY( "InputOverlay", "ButtonADown" ), SW_THEME_COLOR_KEY( "InputOverlay", "ButtonAUp" ), "A"}, // 아래
+                {ViewportOverlayFaceButton::B,  1.0f,  0.0f, SW_THEME_COLOR_KEY( "InputOverlay", "ButtonBDown" ), SW_THEME_COLOR_KEY( "InputOverlay", "ButtonBUp" ), "B"}, // 오른쪽
+                {ViewportOverlayFaceButton::X, -1.0f,  0.0f, SW_THEME_COLOR_KEY( "InputOverlay", "ButtonXDown" ), SW_THEME_COLOR_KEY( "InputOverlay", "ButtonXUp" ), "X"}, // 왼쪽
+                {ViewportOverlayFaceButton::Y,  0.0f, -1.0f, SW_THEME_COLOR_KEY( "InputOverlay", "ButtonYDown" ), SW_THEME_COLOR_KEY( "InputOverlay", "ButtonYUp" ), "Y"}, // 위
             };
 
             /** @brief 설정의 모서리에 맞춰 상자의 왼쪽 위를 정합니다. */
