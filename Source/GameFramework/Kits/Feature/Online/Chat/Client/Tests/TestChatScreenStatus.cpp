@@ -21,8 +21,8 @@ SW_TEST_CASE( ChatScreenStatusTest, EveryResultHasItsOwnText )
             SW_EXPECT_FALSE( other == text );
         listText.push_back( text );
     }
-    SW_EXPECT_TRUE( StringUtil::contains( ChatScreen::makeStatusText( ChatServiceResult{ ChatResult::Muted }, 12000 ), "12 s" ) );
-    SW_EXPECT_TRUE( StringUtil::contains( ChatScreen::makeStatusText( ChatServiceResult{ ChatResult::RateLimited }, 250 ), "250 ms" ) );
+    SW_EXPECT_TRUE( StringUtil::contains( ChatScreen::makeStatusText( ChatServiceResult{ ChatResult::Muted }, 12000 ), "12" ) );
+    SW_EXPECT_TRUE( StringUtil::contains( ChatScreen::makeStatusText( ChatServiceResult{ ChatResult::RateLimited }, 250 ), "250" ) );
 }
 
 /** @brief [ChatScreenStatusTest] 공통 오류는 업무 결과와 무관한 글이고, 판이 다르면 갱신하라고, 모르는 오류는 쓸 수 없다고 한다 */

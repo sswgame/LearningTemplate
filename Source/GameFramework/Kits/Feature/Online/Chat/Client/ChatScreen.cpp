@@ -6,6 +6,7 @@
 #include "Core/String/StringBuilder.h"
 #include "Core/String/StringUtil.h"
 
+#include "Engine/Localization/LocText.h"
 #include "Engine/UI/UISystem.h"
 #include "Engine/UI/WidgetTree/PanelWidget.h"
 #include "Engine/UI/WidgetTree/WidgetTree.h"
@@ -61,24 +62,24 @@ namespace sw
             }
             case OnlineError::kInvalidRequest:
             {
-                return "Message is empty or not valid";
+                return SW_LOCKEYREF( "Chat", "InvalidMessage" );
             }
             case OnlineError::kUnauthenticated:
             {
-                return "Sign in to chat";
+                return SW_LOCKEYREF( "Chat", "SignIn" );
             }
             case OnlineError::kVersionMismatch:
             case OnlineError::kUpdateRequired:
             {
-                return "Update the game to chat";
+                return SW_LOCKEYREF( "Chat", "UpdateGame" );
             }
             case OnlineError::kRateLimited:
             {
-                return "Too fast, try again soon";
+                return SW_LOCKEYREF( "Chat", "TooFast" );
             }
             default:
             {
-                return "Chat is not available right now";
+                return SW_LOCKEYREF( "Chat", "Unavailable" );
             }
         }
         switch ( result._result )
@@ -89,50 +90,46 @@ namespace sw
             }
             case ChatResult::NotMember:
             {
-                return "You have not joined this channel";
+                return SW_LOCKEYREF( "Chat", "NotMember" );
             }
             case ChatResult::NotJoinable:
             {
-                return "This channel cannot be joined";
+                return SW_LOCKEYREF( "Chat", "NotJoinable" );
             }
             case ChatResult::Muted:
             {
-                StringBuilder<constant::buffer::kMax256> resultBuilder;
-                resultBuilder.appendFormat( "You are muted (%# s left)", retryAfterMs / 1000 );
-                return string( resultBuilder.view() );
+                return SW_LOCALIZED_MESSAGE( "Chat", "Muted" ).addInteger( "seconds", retryAfterMs / 1000 ).str();
             }
             case ChatResult::RateLimited:
             {
-                StringBuilder<constant::buffer::kMax256> resultBuilder;
-                resultBuilder.appendFormat( "Too fast, wait %# ms", retryAfterMs );
-                return string( resultBuilder.view() );
+                return SW_LOCALIZED_MESSAGE( "Chat", "TooFastWait" ).addInteger( "milliseconds", retryAfterMs ).str();
             }
             case ChatResult::Repeated:
             {
-                return "You already said that";
+                return SW_LOCKEYREF( "Chat", "Repeated" );
             }
             case ChatResult::Rejected:
             {
-                return "Message was blocked by the word filter";
+                return SW_LOCKEYREF( "Chat", "Blocked" );
             }
             case ChatResult::TargetOffline:
             {
-                return "That player is offline";
+                return SW_LOCKEYREF( "Chat", "TargetOffline" );
             }
             case ChatResult::TooManyChannels:
             {
-                return "Too many channels";
+                return SW_LOCKEYREF( "Chat", "TooManyChannels" );
             }
             case ChatResult::NotFound:
             {
-                return "Message not found";
+                return SW_LOCKEYREF( "Chat", "NotFound" );
             }
             case ChatResult::Count:
             {
                 break;
             }
         }
-        return "Chat failed";
+        return SW_LOCKEYREF( "Chat", "Failed" );
     }
 
     bool ChatScreen::onCommand( const hashed_string& command, Widget& source )
@@ -213,6 +210,7 @@ namespace sw
             // 보낸 이름(32 바이트)과 본문(ChatLimit::kMaxTextSize = 512 바이트)이 다 들어가는 크기다.
             fixed_string<constant::buffer::kMax1024> rowText;
             formatstring( rowText.data(), rowText.capacity(), "[%#] %#", listLine[index]._senderName, listLine[index]._text );
+            row->setLocalized( false ); // 플레이어가 친 글이다 — 키로 풀지 않는다
             row->setText( rowText.view() );
             (void)pLines->addChild( std::move( row ) );
             ++rowIndex;

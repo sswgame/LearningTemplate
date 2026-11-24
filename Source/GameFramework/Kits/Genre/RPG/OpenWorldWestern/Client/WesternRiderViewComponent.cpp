@@ -7,6 +7,7 @@
 
 #include "Engine/Automation/Watch/AutomationWatch.h"
 #include "Engine/Automation/Watch/AutomationWatchComponent.h"
+#include "Engine/Localization/LocText.h"
 #include "Engine/Object/Component/SceneComponent.h"
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
@@ -35,15 +36,15 @@ namespace sw
                 switch ( gait )
                 {
                     case MountGait::Idle:
-                        return "Standing";
+                        return SW_LOCKEYREF( "Western", "GaitStanding" );
                     case MountGait::Walk:
-                        return "Walk";
+                        return SW_LOCKEYREF( "Western", "GaitWalk" );
                     case MountGait::Trot:
-                        return "Trot";
+                        return SW_LOCKEYREF( "Western", "GaitTrot" );
                     case MountGait::Canter:
-                        return "Canter";
+                        return SW_LOCKEYREF( "Western", "GaitCanter" );
                     case MountGait::Gallop:
-                        return "Gallop";
+                        return SW_LOCKEYREF( "Western", "GaitGallop" );
                 }
                 return "?";
             }
@@ -55,7 +56,7 @@ namespace sw
                 const WesternGameModeComponent* const  pDirector = pView != nullptr ? query.findTargetComponent<WesternGameModeComponent>( "Western Game Mode", outValue ) : nullptr;
                 if ( pDirector == nullptr )
                     return false;
-                outValue.setText( string_view{ pView->formatOutlawStatus( *pDirector ) } );
+                outValue.setText( LocalizedText::resolveNow( pView->formatOutlawStatus( *pDirector ) ) );
                 return true;
             }
         };
@@ -131,20 +132,19 @@ namespace sw
         const bool             bNothingToShow = pOutlaw->getHonorValue() == startHonor && pOutlaw->getWantedLevel() == 0 && pOutlaw->getBounty() == 0 && pOutlaw->getPeltCount() == 0 && pOutlaw->getCarcassCount() == 0 && bLowCore == false;
         if ( bNothingToShow )
             return string{};
-        StringBuilder<constant::buffer::kMax256> status;
-        status.appendFormat( "Honor %# (%#)", pOutlaw->getHonorValue(), pOutlaw->getHonorTierName().c_str() );
+        vector<string> listPart{ SW_LOCALIZED_MESSAGE( "Western", "Honor" ).addInteger( "honor", pOutlaw->getHonorValue() ).addKey( "tier", pOutlaw->getHonorTierName().c_str() ).str() };
         if ( pOutlaw->getWantedLevel() > 0 )
-            status.appendFormat( " - Wanted %#", pOutlaw->getWantedLevel() );
+            listPart.push_back( SW_LOCALIZED_MESSAGE( "Western", "Wanted" ).addInteger( "level", pOutlaw->getWantedLevel() ).str() );
         if ( pOutlaw->getBounty() > 0 )
-            status.appendFormat( " - Bounty $%#", pOutlaw->getBounty() );
+            listPart.push_back( SW_LOCALIZED_MESSAGE( "Western", "Bounty" ).addInteger( "amount", pOutlaw->getBounty() ).str() );
         if ( pOutlaw->getCarcassCount() > 0 )
-            status.appendFormat( " - Carcasses %#", pOutlaw->getCarcassCount() );
+            listPart.push_back( SW_LOCALIZED_MESSAGE( "Western", "Carcasses" ).addInteger( "count", pOutlaw->getCarcassCount() ).str() );
         if ( pOutlaw->getPeltCount() > 0 )
-            status.appendFormat( " - Pelts %#", pOutlaw->getPeltCount() );
-        status.appendFormat( " - $%#", pOutlaw->getMoney() );
+            listPart.push_back( SW_LOCALIZED_MESSAGE( "Western", "Pelts" ).addInteger( "count", pOutlaw->getPeltCount() ).str() );
+        listPart.push_back( SW_LOCALIZED_MESSAGE( "Western", "Money" ).addInteger( "amount", pOutlaw->getMoney() ).str() );
         if ( bLowCore )
-            status.append( " - Hungry" );
-        return string( status.view() );
+            listPart.push_back( SW_LOCKEYREF( "Western", "Hungry" ) );
+        return LocalizedMessage::join( " - ", listPart );
     }
 
     void WesternRiderViewComponent::updateHUD( const WesternGameModeComponent& director, const PawnComponent& playerPawn )
@@ -163,7 +163,7 @@ namespace sw
         const GameObject*           pHorseObject = pSeat != nullptr ? pSeat->getOwner() : nullptr;
         if ( pHorseObject == nullptr )
         {
-            pViewModel->setRideStatus( "On foot - E: mount  F: whistle" );
+            pViewModel->setRideStatus( SW_LOCKEYREF( "Western", "OnFoot" ) );
             pViewModel->setStamina( 0.0f, 0.0f );
             return;
         }
@@ -172,10 +172,7 @@ namespace sw
         const WesternHorse*           pHorse          = pHorseComponent != nullptr ? pHorseComponent->findHorse() : nullptr;
         const MountGait               gait            = pMovement != nullptr ? pMovement->getGait() : MountGait::Idle;
         const float32                 speed           = pMovement != nullptr ? pMovement->getForwardSpeed() : 0.0f;
-        utf8                          arrStatus[constant::buffer::kMax128]{};
-        formatstring( arrStatus, constant::buffer::kMax128, "Riding %# - %# %.1f m/s - E: dismount  Shift: gallop", pHorseObject->getName().c_str(),
-                      WesternRiderViewComponentInternal::findGaitName( gait ), speed );
-        pViewModel->setRideStatus( arrStatus );
+        pViewModel->setRideStatus( SW_LOCALIZED_MESSAGE( "Western", "Riding" ).addText( "horse", pHorseObject->getName().c_str() ).addKey( "gait", WesternRiderViewComponentInternal::findGaitName( gait ) ).addDecimal( "speed", static_cast<float64>( speed ), 1 ).str() );
         pViewModel->setStamina( pHorse != nullptr ? pHorse->getStamina().getValue() : 0.0f, pHorse != nullptr ? pHorse->getStamina().getRatio() : 0.0f );
     }
 } // namespace sw
