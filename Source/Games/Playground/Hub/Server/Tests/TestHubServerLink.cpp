@@ -255,6 +255,30 @@ SW_TEST_CASE( HubNetLinkTest, UnchangedProfileIsNotWrittenAgain )
     SW_EXPECT_FALSE( restarted.requestSave( 8, listLoad[0]._profile ) ); // 읽지 않은 계정은 판을 몰라 쓰지 않는다
 }
 
+/**
+ * @brief [HubNetLinkTest] 결함: 서버 종료에서 온라인 조립(저장소)이 먼저 내려가 접속자의 마지막 진행이 저장소에 닿지 않았다(`Hub.ProfileStoreMissing`)
+ * @details 저장소가 내려가기 직전의 알림에서 쓰는 중에 들어온 바이트까지 모두 닿을 때까지 기다리고, 그 뒤의 종료는 저장소를 찾지 않는다(바뀐 것이 없다).
+ */
+SW_TEST_CASE( HubNetLinkTest, ProfilesReachTheStoreBeforeItStops )
+{
+    HubLinkTestRig rig( 1 );
+    ServiceStore*  pStore = &rig._store;
+    SW_REQUIRE_TRUE( rig._server.initialize( *rig._pServerPeers, rig._serverRouter, makeHubLinkTestRules(), makeHubLinkTestGrid(),
+                                             SW_DELEGATE_LAMBDA( HubServiceStoreSource, [&pStore]() -> ServiceStore*
+    { return pStore; } ) ) );
+    rig.run( rig._server, 0.5f );
+    const uint32 avatarID = rig._arrClient[0].getAgent()._avatarID;
+    SW_REQUIRE_TRUE( avatarID != 0u );
+    rig.defeat( rig._server, 0, kNearCreatureID ); // 진행이 바뀌었다 — 자동 저장 전이다
+    rig._server.flushProfiles();
+    SW_EXPECT_EQUAL( 0, rig._server.getProfiles().getPendingCount() );
+    const uint64 savedCount = rig._server.getProfiles().getSavedCount();
+    SW_EXPECT_TRUE( savedCount >= 1 );
+    pStore = nullptr; // 조립이 내려갔다 — 종료의 저장은 저장소를 찾지 않는다(찾으면 오류 로그로 진다)
+    rig._server.shutdown();
+    SW_EXPECT_EQUAL( savedCount, rig._server.getProfiles().getSavedCount() );
+}
+
 /** @brief [HubNetLinkTest] 서버 둘이 한 계정을 쓰면 뒤 서버의 쓰기는 판 조건에 걸려 앞 서버의 진행을 덮지 않는다(저장소 계약 — 서버 여럿이 DB 하나를 나눈다). */
 SW_TEST_CASE( HubNetLinkTest, SecondServerDoesNotOverwriteNewerProgress )
 {

@@ -23,6 +23,7 @@
 
 namespace sw
 {
+    class Deadline;
     class ISQLConnection;
     class ISQLDriver;
 
@@ -82,6 +83,8 @@ namespace sw
 
         void  submit( unique_ptr<ISQLJob> job );
         int32 pollCompletions();
+        /** @brief 끝난 작업이 생기거나(또는 남은 작업이 없거나) @p deadline 이 지날 때까지 기다린 뒤 `pollCompletions` 합니다. */
+        int32 waitCompletions( const Deadline& deadline );
         /** @brief 맡았지만 아직 회수하지 않은 작업의 수입니다. */
         int32 getPendingCount() const;
 
@@ -95,6 +98,7 @@ namespace sw
         OnceInit<SQLConnectionPoolConfig>          _settings;
         mutable mutex                              _mutex;
         std::condition_variable_any                _jobReady;
+        std::condition_variable_any                _jobDone; ///< 끝난 작업이 생겼다(`waitCompletions`)
         OnceInit<ISQLDriver*>                      _pDriver;
         int32 _pendingCount                        SW_GUARDED_BY( _mutex );
         uint8                                      _bStopping;
