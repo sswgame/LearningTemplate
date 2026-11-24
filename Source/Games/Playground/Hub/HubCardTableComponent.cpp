@@ -107,6 +107,18 @@ namespace sw
         setCanEverTick( true );
     }
 
+    void HubCardTableComponent::onRegister( GameObjectManager& manager )
+    {
+        Component::onRegister( manager );
+        manager.getComponentRegistry().add<HubCardTableComponent>( this );
+    }
+
+    void HubCardTableComponent::onUnregister( GameObjectManager& manager )
+    {
+        manager.getComponentRegistry().remove<HubCardTableComponent>( this );
+        Component::onUnregister( manager );
+    }
+
     void HubCardTableComponent::onEndPlay()
     {
         stopRole();

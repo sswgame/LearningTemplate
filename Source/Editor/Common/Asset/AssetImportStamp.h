@@ -175,6 +175,8 @@ namespace sw::editor
         [[nodiscard]] static AssetImportSummary importSources( const AbsolutePath& resourceRoot, const IRawAssetImporter& importer, const vector<string>& listAssetPath,
                                                                TaskManager* pTaskManager, const DerivedDataCache& derivedDataCache );
 
+        /** @brief @p path 가 @p rawFolderName 폴더 아래의 파일인지입니다. 에셋 경로 · 디스크 경로 글을 모두 받는다(에셋 종류를 가리는 자리가 둘을 다 묻는다). */
+        [[nodiscard]] static bool isUnderRawFolder( string_view path, string_view rawFolderName );
         /**
          * @brief 원본 경로를 결과 경로로 바꿉니다(`<x>/<rawFolder>/<y>.<ext>` → `<x>/<importedFolder>/<y><importedExtension>`).
          * @details 원본 폴더 이름은 경로 구간 경계에서만 찾는다. `my_textures_raw_backup` 은 해당하지 않는다. 없으면 빈 문자열을 반환한다.

@@ -22,9 +22,9 @@ namespace
     <Piece type="Station" length="10"/>
     <Piece type="LiftHill" length="16" height="8"/>
     <Piece type="Drop" length="16" height="8"/>
-    <Piece type="TurnLeft" radius="10" angle="3.14159" bank="20"/>
+    <Piece type="TurnLeft" radius="10" angle="180" bank="20"/>
     <Piece type="Straight" length="54"/>
-    <Piece type="TurnLeft" radius="10" angle="3.14159" bank="15"/>
+    <Piece type="TurnLeft" radius="10" angle="180" bank="15"/>
     <Piece type="Brakes" length="8"/>
   </Layout>
 </CoasterLayoutCatalog>)";

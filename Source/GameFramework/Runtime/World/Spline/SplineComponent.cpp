@@ -4,6 +4,8 @@
 
 #include "Engine/Object/Component/SceneComponent.h"
 #include "Engine/Object/GameObject/GameObject.h"
+#include "Engine/Object/GameObject/GameObjectManager.h"
+#include "Engine/Object/GameObject/Registry/ComponentRegistry.h"
 
 namespace sw
 {
@@ -16,6 +18,18 @@ namespace sw
         , _worldPath{}
         , _pathRevision{ 0 }
     {
+    }
+
+    void SplineComponent::onRegister( GameObjectManager& manager )
+    {
+        SceneComponent::onRegister( manager );
+        manager.getComponentRegistry().add<SplineComponent>( this );
+    }
+
+    void SplineComponent::onUnregister( GameObjectManager& manager )
+    {
+        manager.getComponentRegistry().remove<SplineComponent>( this );
+        SceneComponent::onUnregister( manager );
     }
 
     void SplineComponent::onBeginPlay()

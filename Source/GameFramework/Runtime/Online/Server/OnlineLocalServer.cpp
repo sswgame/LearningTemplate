@@ -64,6 +64,7 @@ namespace sw
             settings._bTLS                       = SW_FALSE;
             settings._pClock                     = &clock;
             settings._listenAddress              = NetAddress::makeLoopback( 0 );
+            settings._gamePort                   = static_cast<uint16>( serverConfig._gamePort ); // 디렉터리가 배정하는 게임 포트다(0 이면 티켓 손님이 열지 못한다) — 게임 서버는 이 프로세스가 띄우지 않는다
             unique_ptr<OnlineLocalServer> server = make_unique<OnlineLocalServer>();
             if ( expected<void> started = server->initialize( std::move( settings ), nowMs ); started.has_value() == false )
                 return unexpected( started.error() ); // 만든 것은 `server` 의 소멸이 내린다

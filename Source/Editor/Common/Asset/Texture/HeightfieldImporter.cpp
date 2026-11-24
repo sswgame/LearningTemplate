@@ -297,8 +297,7 @@ namespace sw::editor
     {
         if ( FileUtil::hasAnyExtension( path, { ".png", ".r16" } ) == false )
             return false;
-        using Internal = HeightfieldImporterInternal;
-        return AssetImportStampUtil::makeImportedPath( path, Internal::kRawFolder, Internal::kImportedFolder, HeightfieldAsset::kExtension ).empty() == false;
+        return AssetImportStampUtil::isUnderRawFolder( path, HeightfieldImporterInternal::kRawFolder );
     }
 
     bool HeightfieldImporter::importChangedSourceHeightfield( const AssetPaths& assetPaths, string_view relativePath )

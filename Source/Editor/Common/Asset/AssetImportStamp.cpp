@@ -819,6 +819,13 @@ namespace sw::editor
         return AssetImportStampInternal::importFolders( resourceRoot, importer, AssetImportMode::ImportStale, &uniqueScope, pTaskManager, &derivedDataCache );
     }
 
+    bool AssetImportStampUtil::isUnderRawFolder( string_view path, string_view rawFolderName )
+    {
+        string rawFolder;
+        string relativePath;
+        return AssetImportStampInternal::splitRawPath( path, rawFolderName, rawFolder, relativePath );
+    }
+
     string AssetImportStampUtil::makeImportedPath( string_view rawPath, string_view rawFolderName, string_view importedFolderName, string_view importedExtension )
     {
         string rawFolder;

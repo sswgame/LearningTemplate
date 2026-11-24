@@ -51,6 +51,8 @@ namespace sw
 
         HubCardTableComponent();
 
+        void onRegister( GameObjectManager& manager ) override;
+        void onUnregister( GameObjectManager& manager ) override;
         void onEndPlay() override;
         void onTick( TickContext& context ) override;
 

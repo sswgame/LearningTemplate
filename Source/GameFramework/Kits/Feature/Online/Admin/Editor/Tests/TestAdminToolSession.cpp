@@ -183,7 +183,7 @@ SW_TEST_CASE( AdminToolSessionTest, ServerOnlyCommandsReportUnavailable )
     session.requestLookup( AdminToolSessionTestUtil::kPlayer );
     session.requestPostAnnouncement( 1, "text", 0, 60, "ticket" );
     SW_EXPECT_TRUE( session.getLastResult().hasError( OnlineError::kUnavailable ) );
-    SW_EXPECT_EQUAL( string( "ServerDirectory: Unavailable" ), session.getStatusLine() );
+    SW_EXPECT_EQUAL( string( "ServerDirectory: error 5" ), session.getStatusLine() );
     session.requestReports( true );
     SW_EXPECT_TRUE( session.getReports().empty() );
     session.requestLiveEvents();

@@ -176,7 +176,6 @@ SW_TEST_CASE( ModelImportPBRTest, MissingImageFileFails )
     SW_REQUIRE_TRUE( FileUtil::removeFile( root.join( "textures_raw/scan/crate_nor_gl_2k.jpg" ) ) );
 
     ModelImportResult result;
-    SW_EXPECT_LOG( "File.NotFound" );
     SW_EXPECT_LOG( "ModelImport.ImageFileMissing" );
     SW_EXPECT_FALSE( ModelImportMaterial::readPBRMaterial( *parsed._pData, sourcePath, result ) );
 

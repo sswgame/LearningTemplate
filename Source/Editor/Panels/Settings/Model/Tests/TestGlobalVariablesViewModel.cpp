@@ -168,7 +168,7 @@ SW_TEST_CASE( GlobalVariablesViewModelUndoTest, EditsPresetAndResetAllUndoAsOneS
 {
     GlobalVariablesViewModel model;
     GlobalVariableInfo*      pCulling = GlobalVariablesViewModel::findVariable( "gv_shadowCascadeCulling" );
-    GlobalVariableInfo*      pOther   = GlobalVariablesViewModel::findVariable( "gv_textureStreaming" );
+    GlobalVariableInfo*      pOther   = GlobalVariablesViewModel::findVariable( "gv_motionBlur" );
     SW_REQUIRE_TRUE( pCulling != nullptr && pOther != nullptr );
     const bool bCulling = pCulling->getValueAsBool();
     const bool bOther   = pOther->getValueAsBool();

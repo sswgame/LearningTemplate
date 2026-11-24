@@ -11,6 +11,7 @@
 <Scenario name="game.playground.shooter3d_onlinematch" fixedDelta="0.0166667" timeoutFrames="30000" startAfter="ScenePlaying" startTimeoutFrames="900" requiresModule="GF_Server_Matchmaking">
 	<AllowLog id="LoginTicketKey.AccountKitNoTicketKeySecretEnvironment" reason="프로세스 안 개발 서버는 티켓 주 키 없이 개발 키를 쓴다 - 게임 접속 티켓을 쓰지 않는다"/>
 	<AllowLog id="GameNetSession.NetSessionCouldNot5" reason="배정된 게임 포트에 서버가 없는 것이 이 시나리오의 조건이다"/>
+	<AllowLog id="GameNetSession.NetSessionLostServer" reason="배정된 게임 포트에 서버가 없는 것이 이 시나리오의 조건이다"/>
 	<AllowLog id="Playground.MatchNotConnected" reason="배정된 게임 포트에 서버가 없는 것이 이 시나리오의 조건이다"/>
 	<Variable name="gv_playgroundAutoPlay" value="0"/>
 	<Expect watch="Online.SessionClientCount" atLeast="6"/>
@@ -23,7 +24,7 @@
 	<!-- ① 줄 → 배정 → 붙지 못함 → 허브 -->
 	<DevCommand line="minigame.enter shooter3d_match"/>
 	<WaitUntil watch="Playground.OnlineMatchFound" equals="1" timeoutSeconds="20"/>
-	<WaitUntil watch="Playground.MatchState" equals="0" timeoutSeconds="60"/>
+	<WaitUntil watch="Playground.MatchState" equals="0" timeoutWallSeconds="60"/> <!-- 접속 시한은 벽시계다 -->
 	<ExpectLog id="Playground.MatchNotConnected" count="1"/>
 	<Expect watch="Minigame.Active" is="none"/>
 	<Expect watch="Minigame.RestoreCount" equals="0"/>

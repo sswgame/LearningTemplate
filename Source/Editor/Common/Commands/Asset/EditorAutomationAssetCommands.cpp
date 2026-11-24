@@ -39,6 +39,7 @@
 #include "Engine/Automation/Watch/AutomationWatch.h"
 #include "Engine/Console/DebugOverlayState.h"
 #include "Engine/Console/DevCommandRegistry.h"
+#include "Engine/Content/AssetGUID.h"
 #include "Engine/Content/AssetPaths.h"
 #include "Engine/Graphics/DebugDraw/DebugDrawQueue.h"
 #include "Engine/Object/Component/CameraComponent.h"
@@ -197,6 +198,14 @@ namespace sw::editor
                     replyBuilder.appendFormat( "no scratch asset '%#' or '%#' (does the scenario declare <Scratch>?)", listArgument[0], listArgument[1] );
                     outReply = string( replyBuilder.view() );
                     return false;
+                }
+                // 덮어써도 대상의 정체성은 그대로다(편집 저장처럼) — 원본의 GUID 머리까지 옮기면 대상을 GUID 로 가리키던 참조가 끊긴다.
+                string targetText;
+                if ( FileUtil::readTextFile( *targetPath, targetText ) )
+                {
+                    const AssetGUIDHeader identity = AssetGUIDHeader::read( targetText );
+                    if ( identity._state == AssetGUIDHeaderState::Found )
+                        text = AssetGUIDHeader::write( text, *identity._guid );
                 }
                 if ( FileUtil::writeTextFile( *targetPath, text ) == false )
                 {
