@@ -111,8 +111,8 @@
 				</_listComponent>
 			</GameObject>
 		</entity>
-		<entity id="6" name="StressTest1">
-			<GameObject _schemaVersion="0" _name="StressTest1" _bActive="true">
+		<entity id="6" name="Bench1">
+			<GameObject _schemaVersion="0" _name="Bench1" _bActive="true">
 				<_listComponent>
 					<MeshComponent _localID="163493842152903304" _componentName="MeshComponent"
 					               _bActive="true"
@@ -231,8 +231,8 @@
 				</_listComponent>
 			</GameObject>
 		</entity>
-		<entity id="9" name="StressTest2">
-			<GameObject _schemaVersion="0" _name="StressTest2" _bActive="true">
+		<entity id="9" name="Bench2">
+			<GameObject _schemaVersion="0" _name="Bench2" _bActive="true">
 				<_listComponent>
 					<MeshComponent _localID="163493842152903304" _componentName="MeshComponent"
 					               _bActive="true"
@@ -351,8 +351,8 @@
 				</_listComponent>
 			</GameObject>
 		</entity>
-		<entity id="12" name="StressTest3">
-			<GameObject _schemaVersion="0" _name="StressTest3" _bActive="true">
+		<entity id="12" name="Bench3">
+			<GameObject _schemaVersion="0" _name="Bench3" _bActive="true">
 				<_listComponent>
 					<MeshComponent _localID="163493842152903304" _componentName="MeshComponent"
 					               _bActive="true"
@@ -471,8 +471,8 @@
 				</_listComponent>
 			</GameObject>
 		</entity>
-		<entity id="15" name="StressTest4">
-			<GameObject _schemaVersion="0" _name="StressTest4" _bActive="true">
+		<entity id="15" name="Bench4">
+			<GameObject _schemaVersion="0" _name="Bench4" _bActive="true">
 				<_listComponent>
 					<MeshComponent _localID="163493842152903304" _componentName="MeshComponent"
 					               _bActive="true"
