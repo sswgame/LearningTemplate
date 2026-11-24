@@ -8,6 +8,7 @@
 #include "Core/Container/string.h"
 #include "Core/Container/vector.h"
 #include "Core/Delegate/Delegate.h"
+#include "Core/Delegate/Subscription.h"
 #include "Core/Foundation/Types.h"
 #include "Core/Math/Radians.h"
 #include "Core/Memory/Memory.h"
@@ -212,8 +213,6 @@ namespace sw
         void warnMissingPresetActions( const InputMap& inputMap, const CameraInputDef& inputDef );
         /** @brief 포토 모드 입력 맵(`_photoInputMap`)을 갱신하고 그 액션(`Photo.Move` 등)을 모아 자유 카메라에 넣습니다. */
         void gatherPhotoModeInput( float32 unscaledDeltaTime );
-        /** @brief 포토 모드가 건 UI 레이어 숨김 요청을 풉니다(건 적 없으면 아무 일도 하지 않습니다). */
-        void releasePhotoModeUILayers();
         /** @brief 씬의 흔들림 채널이 카메라 충격을 요청했습니다(카메라 매니저 없이 도는 게임도 흔들린다). */
         void onCameraShakeRequested( const CameraShakeRequest& request );
         /** @brief 포즈 계산과 쓰기를 합니다(게임 스레드, 틱 밖 — 암 충돌이 물리를 쓸어 본다). */
@@ -276,9 +275,10 @@ namespace sw
         bool            _bViewOverride;
 
         PhotoModeCamera      _photoMode;
-        unique_ptr<InputMap> _photoInputMap;            ///< 포토 모드 동안만 있는 엔진 포토 모드 입력 맵(`enterPhotoMode` 가 읽고 `exitPhotoMode` 가 버린다)
-        bool                 _bPhotoModeCut;            ///< 포토 모드를 켜거나 끈 뒤 첫 쓰기에 컷 표시를 넣는다(TAA 기록을 버린다)
-        UILayerMask          _photoAppliedHiddenLayers; ///< 포토 모드가 켤 때 UI 에 건 숨김 요청의 레이어(`enterPhotoMode`). 끌 때 같은 집합으로 푼다 — 켜 있는 동안 속성을 바꿔도 요청 수가 어긋나지 않는다
+        unique_ptr<InputMap> _photoInputMap;  ///< 포토 모드 동안만 있는 엔진 포토 모드 입력 맵(`enterPhotoMode` 가 읽고 `exitPhotoMode` 가 버린다)
+        bool                 _bPhotoModeCut;  ///< 포토 모드를 켜거나 끈 뒤 첫 쓰기에 컷 표시를 넣는다(TAA 기록을 버린다)
+        Subscription         _photoPause;     ///< 포토 모드가 건 게임 시간 정지 요청
+        Subscription         _photoLayerHide; ///< 포토 모드가 건 UI 레이어 숨김 요청(`IUILayerVisibility`)
 
         SharedAssetRef<CameraPresetCatalog> _pCatalog; ///< 공유 캐시의 한 벌(`SharedAssetCache<CameraPresetCatalog>`). 경로가 없으면 빈 표다
         CameraDirector                      _director;

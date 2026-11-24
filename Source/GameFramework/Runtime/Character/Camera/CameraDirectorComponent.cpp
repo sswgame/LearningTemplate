@@ -199,7 +199,8 @@ namespace sw
         , _photoMode{}
         , _photoInputMap{}
         , _bPhotoModeCut{ false }
-        , _photoAppliedHiddenLayers{ UILayerMask::None }
+        , _photoPause{}
+        , _photoLayerHide{}
         , _pCatalog{ make_shared<CameraPresetCatalog>() }
         , _director{}
         , _channelImpulse{}
@@ -242,8 +243,8 @@ namespace sw
         {
             _photoMode.end();
             _photoInputMap.reset();
-            game::getSubsystem<GameTimeScale>().removePauseRequest();
-            releasePhotoModeUILayers();
+            _photoPause.reset();
+            _photoLayerHide.reset();
         }
         CameraSystem::releaseIfUnused( manager );
         Component::onUnregister( manager );
@@ -339,14 +340,11 @@ namespace sw
         photoInputMap->setInputManager( game::findSubsystem<InputManager>() );
         _photoInputMap = std::move( photoInputMap );
         _photoMode.begin( _director.getPose() );
-        game::getSubsystem<GameTimeScale>().addPauseRequest();
+        _photoPause = game::getSubsystem<GameTimeScale>().addPauseRequest( GamePauseReason::Player );
         // UI 는 이 컴포넌트가 모른다 — 숨길 레이어는 속성(데이터)이 정하고, 숨기는 일은 레이어 숨김 창구(`IUILayerVisibility`, 구현은 UI 시스템)가 한다. 창구가 없으면(전용 서버) 가릴 화면도 없다.
         IUILayerVisibility* pLayerVisibility = game::findSubsystem<IUILayerVisibility>();
-        if ( pLayerVisibility != nullptr && _photoHiddenUILayers != UILayerMask::None )
-        {
-            pLayerVisibility->addLayerHideRequest( _photoHiddenUILayers );
-            _photoAppliedHiddenLayers = _photoHiddenUILayers;
-        }
+        if ( pLayerVisibility != nullptr )
+            _photoLayerHide = pLayerVisibility->addLayerHideRequest( _photoHiddenUILayers );
         _bPhotoModeCut = true;
         updateCamera( 0.0f );
         return true;
@@ -358,20 +356,10 @@ namespace sw
             return;
         _photoMode.end();
         _photoInputMap.reset();
-        game::getSubsystem<GameTimeScale>().removePauseRequest();
-        releasePhotoModeUILayers();
+        _photoPause.reset();
+        _photoLayerHide.reset();
         _bPhotoModeCut = true;
         updateCamera( 0.0f );
-    }
-
-    void CameraDirectorComponent::releasePhotoModeUILayers()
-    {
-        if ( _photoAppliedHiddenLayers == UILayerMask::None )
-            return;
-        IUILayerVisibility* pLayerVisibility = game::findSubsystem<IUILayerVisibility>();
-        if ( pLayerVisibility != nullptr )
-            pLayerVisibility->removeLayerHideRequest( _photoAppliedHiddenLayers );
-        _photoAppliedHiddenLayers = UILayerMask::None;
     }
 
     void CameraDirectorComponent::setFocusPoint( const float3& point )

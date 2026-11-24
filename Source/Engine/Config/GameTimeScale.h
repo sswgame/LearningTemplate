@@ -4,6 +4,7 @@
  */
 #pragma once
 #include "Core/Concurrency/atomic.h"
+#include "Core/Delegate/SubscriptionList.h"
 #include "Core/Foundation/Macros.h"
 #include "Core/Foundation/Types.h"
 #include "Core/Subsystem/ServiceSlot.h"
@@ -11,6 +12,14 @@
 
 namespace sw
 {
+    /** @brief 게임 시간을 멈추는 까닭입니다(`GameTimeScale::addPauseRequest`). */
+    enum class GamePauseReason : uint8
+    {
+        Player = 0, ///< 플레이어가 멈췄다(정지 메뉴 · 포토 모드). 시간을 다른 기계와 함께 쓰는 동안은 듣지 않는다
+        Host,       ///< 호스트가 붙잡았다(시나리오 시작 전). 늘 듣는다
+    };
+    constexpr uint32 kGamePauseReasonCount = 2;
+
     /**
      * @class GameTimeScale
      * @brief 게임 시간 배율입니다. 값은 전역 변수 `gv_timeScale` 하나에 있습니다(에디터 툴바 · 전역 변수 패널 · 콘솔 `timescale` 이 같은 값을 씁니다).
@@ -33,18 +42,21 @@ namespace sw
         float32 get() const;
         /** @brief 정한 배율입니다(범위로 자른 값, 정지 요청과 무관). 요청이 모두 풀리면 `get` 이 이 값이 된다. */
         float32 getSetting() const;
-        /** @brief 정지 요청이 하나라도 걸려 있으면 true 입니다(정지 메뉴 · 로딩 화면 — 멈춘 편집기에서는 첫 Play 까지 로딩 화면이 남는다). */
+        /** @brief 듣는 정지 요청이 하나라도 걸려 있으면 true 입니다(정지 메뉴 · 로딩 화면 — 멈춘 편집기에서는 첫 Play 까지 로딩 화면이 남는다). */
         bool isPaused() const;
         /** @brief 배율을 정합니다(범위로 자릅니다). 정지 요청과 따로 남습니다 — 요청이 모두 풀리면 이 값으로 돌아갑니다. */
         void set( float32 scale );
         /**
-         * @brief 게임 시간을 멈추는 요청을 하나 겁니다(일시정지 메뉴 화면 — `UIScreenDef::_bPausesGame`). 요청은 쌓이고, 하나라도 있으면 멈춥니다.
-         * @details 건 쪽이 `removePauseRequest` 로 꼭 풉니다. `gv_timeScale` 은 바꾸지 않습니다(에디터 · 콘솔이 정한 배율이 남는다).
+         * @brief 게임 시간을 멈추는 요청을 하나 겁니다. 돌려준 구독이 요청의 주인이며, 풀리거나 사라지면 요청도 풀립니다. 요청은 쌓이고, 하나라도 있으면 멈춥니다.
+         * @details `gv_timeScale` 은 바꾸지 않습니다(에디터 · 콘솔이 정한 배율이 남는다). 걸기와 풀기를 따로 부르게 두면 건 쪽이 사라지는 길마다 풀기를 되풀이해 적어야 하고, 하나를 빠뜨리면 게임이 영영 멈춘다.
          */
-        void addPauseRequest();
-        /** @brief `addPauseRequest` 로 건 요청을 하나 풉니다. */
-        void removePauseRequest();
-        /** @brief 지금 걸린 정지 요청 수입니다. */
+        [[nodiscard]] Subscription addPauseRequest( GamePauseReason reason );
+        /**
+         * @brief 이 세계의 시간을 다른 기계와 함께 씁니다(네트워크 세션). 쥔 동안 `GamePauseReason::Player` 요청은 걸려 있어도 듣지 않습니다.
+         * @details 한 기계만 멈추면 서버와 다른 플레이어는 계속 흘러 그 기계의 시간만 뒤처진다(언리얼은 클라이언트의 `SetPause` 를 거절한다). 요청은 남아 세션이 끝나면 다시 듣는다.
+         */
+        [[nodiscard]] Subscription shareWorldTime();
+        /** @brief 지금 걸린 정지 요청 수입니다(듣지 않는 요청도 센다). */
         uint32 getPauseRequestCount() const;
         /**
          * @brief 이번 프레임의 실제 경과(배율 · 정지와 무관, 최대 델타로 자름)를 적습니다. `Engine::beginFrame` 이 호스트에게 받은 값으로 부릅니다
@@ -59,8 +71,17 @@ namespace sw
         float32 getUnscaledDeltaTime() const;
 
     private:
-        atomic<uint32> _pauseRequestCount;    ///< 걸린 정지 요청 수(`addPauseRequest`)
-        float32        _unscaledDeltaSeconds; ///< 이번 프레임의 실제 경과(-1 = 아직 적지 않았다)
+        /** @brief 정지 요청 하나의 구독이 풀렸습니다(@p reason 은 `GamePauseReason`). */
+        void releasePauseRequest( uint64 reason );
+        /** @brief 시간을 함께 쓰는 구독이 풀렸습니다. */
+        void releaseWorldTimeShare( uint64 unusedID );
+
+    private:
+        atomic<uint32>   _arrPauseRequestCount[kGamePauseReasonCount]; ///< 까닭마다 걸린 정지 요청 수(`addPauseRequest`)
+        atomic<uint32>   _worldTimeShareCount;                         ///< 시간을 함께 쓰는 쪽의 수(`shareWorldTime`)
+        float32          _unscaledDeltaSeconds;                        ///< 이번 프레임의 실제 경과(-1 = 아직 적지 않았다)
+        SubscriptionList _pauseSubscriptions;
+        SubscriptionList _worldTimeShareSubscriptions;
 
         SW_SERVICE_SLOT( GameTimeScale, Required );
     };

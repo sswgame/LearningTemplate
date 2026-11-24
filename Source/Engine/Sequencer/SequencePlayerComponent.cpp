@@ -150,10 +150,10 @@ namespace sw
         , _bAllowFastForward{ SW_FALSE }
         , _bInputLayerPushed{ SW_FALSE }
         , _bInputLayerStacked{ SW_FALSE }
-        , _bHUDHidden{ SW_FALSE }
         , _bFastForwardHeld{ SW_FALSE }
         , _bTimelineOnly{ SW_FALSE }
         , _reserved{ 0 }
+        , _hudHide{}
         , _player{}
         , _pendingStep{}
         , _state{}
@@ -340,10 +340,7 @@ namespace sw
         // HUD 는 이 컴포넌트가 모른다 — 숨기는 일은 레이어 숨김 창구(구현은 UI 시스템)가 한다. 창구가 없으면(전용 서버) 가릴 화면도 없다.
         IUILayerVisibility* pLayerVisibility = engine::findSubsystem<IUILayerVisibility>();
         if ( _bHideHUD == SW_TRUE && pLayerVisibility != nullptr )
-        {
-            pLayerVisibility->addLayerHideRequest( UILayerMask::HUD );
-            _bHUDHidden = SW_TRUE;
-        }
+            _hudHide = pLayerVisibility->addLayerHideRequest( UILayerMask::HUD );
         const bool bNeedsInput = _playerMovement == SequencePlayerMovement::Blocked || _bSkippable == SW_TRUE || _bAllowFastForward == SW_TRUE;
         InputMap*  pInputMap   = bNeedsInput ? findPlayerInputMap() : nullptr;
         if ( pInputMap == nullptr )
@@ -375,13 +372,7 @@ namespace sw
 
     void SequencePlayerComponent::releaseCutsceneOptions()
     {
-        if ( _bHUDHidden == SW_TRUE )
-        {
-            IUILayerVisibility* pLayerVisibility = engine::findSubsystem<IUILayerVisibility>();
-            if ( pLayerVisibility != nullptr )
-                pLayerVisibility->removeLayerHideRequest( UILayerMask::HUD );
-            _bHUDHidden = SW_FALSE;
-        }
+        _hudHide.reset();
         if ( _bInputLayerPushed == SW_TRUE )
         {
             InputMap*           pInputMap = findPlayerInputMap();
@@ -477,7 +468,7 @@ namespace sw
     {
         const bool bWasPlaying = _player.isPlaying() || kind == SequenceHistoryKind::Finished;
         const bool bHoldsState = _state._listSpawned.empty() == false || _state._listSpan.empty() == false || _state._bRestoreCaptured == SW_TRUE || _bInputLayerPushed == SW_TRUE ||
-                                 _bHUDHidden == SW_TRUE;
+                                 _hudHide.isActive();
         if ( bWasPlaying == false && bHoldsState == false )
             return;
         if ( _bTimelineOnly == SW_TRUE )

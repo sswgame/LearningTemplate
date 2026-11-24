@@ -6,6 +6,7 @@
 #include "Core/Container/string.h"
 #include "Core/Container/vector.h"
 #include "Core/Delegate/Delegate.h"
+#include "Core/Delegate/Subscription.h"
 #include "Core/Foundation/Expected.h"
 #include "Core/Foundation/Macros.h"
 #include "Core/Foundation/Types.h"
@@ -232,10 +233,10 @@ namespace sw
         uint8                  _bAllowFastForward  : 1;
         uint8                  _bInputLayerPushed  : 1; ///< 컷씬 레이어를 켰다(끝내기가 끈다). 저장하지 않는다
         uint8                  _bInputLayerStacked : 1; ///< 막기(Blocked)라 컷씬 레이어를 스택에 올렸다(끝내기가 뺀다). 저장하지 않는다
-        uint8                  _bHUDHidden         : 1; ///< HUD 숨김 요청을 걸었다. 저장하지 않는다
         uint8                  _bFastForwardHeld   : 1; ///< 빨리감기 배율이 걸렸다. 저장하지 않는다
         uint8                  _bTimelineOnly      : 1; ///< 시간만 잰다(`copyTimelineFrom`). 저장하지 않는다
-        [[maybe_unused]] uint8 _reserved           : 7;
+        [[maybe_unused]] uint8 _reserved           : 8;
+        Subscription           _hudHide; ///< 재생 동안 건 HUD 숨김 요청(`IUILayerVisibility`). 저장하지 않는다
         SequencePlayer         _player;
         /** @brief 이번 틱이 민 재생 구간입니다 — 틱 뒤 작업이 묶인 오브젝트에 적용한다(틱 뒤 작업은 값을 캡처하지 않는다). 저장하지 않는다. */
         SequencePlaybackStep _pendingStep;
