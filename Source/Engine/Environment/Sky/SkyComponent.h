@@ -4,7 +4,7 @@
  * @details 렌더러는 이 값을 패킷으로 받아 스카이 패스(`RenderPassKind::Sky`, `sky.hlsl`)가 아무것도 그리지 않은 곳(깊이 원경)을 칠한다.
  *          같은 식(`SkyGradient::evaluateRadiance`)을 간접 조명 베이크가 프로브마다 SH 로 투영한다.
  *          언리얼 `SkyAtmosphere` + `SkyLight`, 유니티 `RenderSettings.skybox`(Gradient 앰비언트 · Panoramic) 자리다. HDRI 모드는 큐브로 굽지 않고 등장방형을 바로 읽는다(유니티 Panoramic 과 같다) — 프리팹 `engine/prefabs/sky/` 아래 파일 이 텍스처와 투영한 SH 계수를 함께 든다.
- *          대기 모드의 시간대는 씬의 방향광 방향이 정한다(해 = 방향광이 오는 쪽) — 방향광이 없으면 하늘이 어둡다. 구름은 평면 노이즈 층이다(`SkyClouds`).
+ *          대기 모드의 시간대는 씬의 방향광 방향이 정한다(해 = 방향광이 오는 쪽) — 방향광이 없으면 하늘이 어둡다. 구름은 평면 노이즈 층이거나 볼륨이다(`SkyClouds`).
  */
 #pragma once
 #include "Core/Container/vector.h"
@@ -95,24 +95,28 @@ namespace sw
         float32 _planetRadiusKm;
         PROPERTY( Category = "Atmosphere", DisplayName = "Atmosphere Height", Min = 1.0, Units = km, EditCondition = "_mode == Atmosphere", Tooltip = "Atmosphere thickness in kilometres" )
         float32 _atmosphereHeightKm;
-        PROPERTY( Category = "Clouds", DisplayName = "Clouds", Tooltip = "Draw a noise cloud layer over the sky" )
-        bool _bClouds;
-        PROPERTY( Category = "Clouds", DisplayName = "Coverage", Min = 0.0, Max = 1.0, EditCondition = "_bClouds", Tooltip = "Share of the sky the clouds cover" )
+        PROPERTY( Category = "Clouds", DisplayName = "Cloud Mode", Tooltip = "Layer: a flat noise layer. Volumetric: a thick layer marched at low resolution (Layer when the render quality turns volumetric clouds off)" )
+        SkyCloudMode _cloudMode;
+        PROPERTY( Category = "Clouds", DisplayName = "Coverage", Min = 0.0, Max = 1.0, EditCondition = "_cloudMode != None", Tooltip = "Share of the sky the clouds cover" )
         float32 _cloudCoverage;
-        PROPERTY( Category = "Clouds", DisplayName = "Altitude", Min = 0.1, Units = km, EditCondition = "_bClouds", Tooltip = "Height of the cloud layer above the eye in kilometres" )
+        PROPERTY( Category = "Clouds", DisplayName = "Altitude", Min = 0.1, Units = km, EditCondition = "_cloudMode != None", Tooltip = "Height of the cloud layer above the eye in kilometres" )
         float32 _cloudAltitudeKm;
-        PROPERTY( Category = "Clouds", DisplayName = "Scale", Min = 0.01, EditCondition = "_bClouds", Tooltip = "Noise frequency per kilometre; higher makes smaller clouds" )
+        PROPERTY( Category = "Clouds", DisplayName = "Scale", Min = 0.01, EditCondition = "_cloudMode != None", Tooltip = "Noise frequency per kilometre; higher makes smaller clouds" )
         float32 _cloudScale;
-        PROPERTY( Category = "Clouds", DisplayName = "Opacity", Min = 0.0, Max = 1.0, EditCondition = "_bClouds", Tooltip = "Maximum cloud opacity" )
+        PROPERTY( Category = "Clouds", DisplayName = "Opacity", Min = 0.0, Max = 1.0, EditCondition = "_cloudMode != None", Tooltip = "Maximum cloud opacity" )
         float32 _cloudOpacity;
-        PROPERTY( Category = "Clouds", DisplayName = "Wind Direction", EditCondition = "_bClouds", Tooltip = "Wind direction (from +x toward +z)" )
+        PROPERTY( Category = "Clouds", DisplayName = "Wind Direction", EditCondition = "_cloudMode != None", Tooltip = "Wind direction (from +x toward +z)" )
         Radians _cloudWindDirection;
-        PROPERTY( Category = "Clouds", DisplayName = "Wind Speed", Min = 0.0, EditCondition = "_bClouds", Tooltip = "Cloud drift speed in kilometres per second" )
+        PROPERTY( Category = "Clouds", DisplayName = "Wind Speed", Min = 0.0, EditCondition = "_cloudMode != None", Tooltip = "Cloud drift speed in kilometres per second" )
         float32 _cloudWindSpeedKmPerSecond;
-        PROPERTY( Category = "Clouds", DisplayName = "Softness", Min = 0.0, Max = 0.5, EditCondition = "_bClouds", Tooltip = "Softness of the cloud edge" )
+        PROPERTY( Category = "Clouds", DisplayName = "Softness", Min = 0.0, Max = 0.5, EditCondition = "_cloudMode != None", Tooltip = "Softness of the cloud edge" )
         float32 _cloudSoftness;
-        PROPERTY( Category = "Clouds", DisplayName = "Color", Meta = "Color", EditCondition = "_bClouds", Tooltip = "Linear RGB multiplied onto the lit cloud" )
+        PROPERTY( Category = "Clouds", DisplayName = "Color", Meta = "Color", EditCondition = "_cloudMode != None", Tooltip = "Linear RGB multiplied onto the lit cloud" )
         float3 _cloudColor;
+        PROPERTY( Category = "Clouds", DisplayName = "Thickness", Min = 0.1, Units = km, EditCondition = "_cloudMode == Volumetric", Tooltip = "Thickness of the volumetric layer in kilometres" )
+        float32 _cloudThicknessKm;
+        PROPERTY( Category = "Clouds", DisplayName = "Extinction", Min = 0.0, EditCondition = "_cloudMode == Volumetric", Tooltip = "Light lost per kilometre inside the densest cloud; higher makes darker, harder clouds" )
+        float32 _cloudExtinctionPerKm;
 
         float32 _intensityScale; ///< 날씨 같은 실행 중 배율(저장하지 않는다)
     };

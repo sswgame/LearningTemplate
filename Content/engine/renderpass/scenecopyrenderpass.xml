@@ -1,10 +1,12 @@
 <?asset guid="85dda27761602296f8342aa3e0fda17e"?>
-<!-- 반투명 앞의 장면 사본 — 반투명(물의 굴절 · 화면 공간 두께)이 읽는다. 복사 패스가 쓰므로 지우지 않는다. 깊이 사본은 R32 실수다(반투명은 장면 깊이를 깊이 붙임으로 쥐고 있어 직접 읽을 수 없다). -->
+<!-- 반투명 앞의 장면 사본과 하늘의 볼륨 구름 — 사본은 반투명(물의 굴절 · 화면 공간 두께)이 읽는다. 복사 패스가 쓰므로 지우지 않는다. 깊이 사본은 R32 실수다(반투명은 장면 깊이를 깊이 붙임으로 쥐고 있어 직접 읽을 수 없다). -->
 <RenderPassDesc _name="SceneCopyPass">
 	<_listAttachment>
 		<RenderPassAttachment _name="SceneColorCopy" _format="R16G16B16A16_FLOAT" _clearColor="0,0,0,1" _loadOp="DontCare" />
 		<RenderPassAttachment _name="SceneDepthCopy" _format="R32_FLOAT" _clearColor="1,0,0,0" _loadOp="DontCare" />
 		<!-- 화면 왜곡 오프셋(화면 UV, R16G16 실수) — 왜곡 누적 패스가 지운 뒤 가산으로 쌓고 적용 패스가 장면 색 사본을 그만큼 비껴 읽는다. 왜곡 배치가 없으면 둘 다 돌지 않는다. -->
 		<RenderPassAttachment _name="SceneDistortion" _format="R16G16_FLOAT" _clearColor="0,0,0,0" _loadOp="Clear" />
+		<!-- 볼륨 구름(산란 rgb — 불투명도 곱함, 불투명도 a) — 1/4 해상도에 걷고 뷰의 기록과 섞는다(volumetric_clouds.hlsl). 볼륨 구름이 없는 뷰는 만들지 않는다. 나눗수는 셰이더가 상수로 받는다. -->
+		<RenderPassAttachment _name="SkyCloudColor" _format="R16G16B16A16_FLOAT" _clearColor="0,0,0,0" _loadOp="DontCare" _resolutionDivisor="4" />
 	</_listAttachment>
 </RenderPassDesc>

@@ -78,6 +78,11 @@
             "_filterMipCount": 6,
             "_captureIntervalFrames": 30
         },
+        "_skyClouds": {
+            "_bVolumetric": true,
+            "_viewStepCount": 48,
+            "_historyWeight": 0.93
+        },
         "_probeVisibility": {
             "_normalBias": 0.1,
             "_viewBias": 0.1,

@@ -61,7 +61,8 @@ namespace sw
         Texture2D*                  _pOutputTexture{ nullptr }; ///< 준비된 렌더 텍스처(`_outputLoad` 가 쥐는 동안 유효). 만드는 중이면 nullptr — 그 뷰는 그리지 않는다
         RHITextureHandle            _viewportTarget{ 0 };       ///< 호스트 타깃 뷰의 출력(호스트가 소유한다)
         uint64                      _viewID{ 0 };
-        RHITextureSlot              _taaHistory; ///< TAA resolve 히스토리(지난 TAAColor 의 복사본)
+        RHITextureSlot              _taaHistory;      ///< TAA resolve 히스토리(지난 TAAColor 의 복사본)
+        RHITextureSlot              _skyCloudHistory; ///< 볼륨 구름 기록(지난 SkyCloudColor 의 복사본) — 볼륨 구름을 그리는 뷰만 있다
         /**
          * @brief 깊이 히스토리 — 지난 프레임에 이 뷰가 남긴 장면 깊이의 R32 실수 사본(RT · RW 텍스처)입니다. GPU 입자의 깊이 충돌이 읽는다(`recordDepthHistories`).
          * @details 깊이 텍스처는 RW 텍스처가 될 수 없고 에뮬 백엔드의 컴퓨트는 샘플 텍스처를 못 읽어서, 프레임 처음에 풀스크린으로 옮겨 둔다.
@@ -127,6 +128,8 @@ namespace sw
          * @details 풀과 수명이 같다 — `updateViewTransients` 가 만들고 `releaseViewTransients` 가 놓는다. 새로 만든 기록은 값이 없으므로 그 프레임은 기록을 버린다.
          */
         RHITextureSlot _arrAutoExposure[2];
+        /// @brief 볼륨 구름의 시간 표본 번호입니다 — 구름 기록을 버린 프레임에 0 부터 다시 센다(텍셀 안 자리 · 걸음 시작, `FramePassExecutor::executeVolumetricCloudsPass`).
+        uint32 _skyCloudSample{ 0 };
         /// @brief 이번 프레임의 측정 상수(최소 EV, 최대 EV, 밝아질 때 · 어두워질 때 목표로 다가가는 비율)입니다. 셋업(`prepareAutoExposure`)이 정하고 톤맵 패스는 읽기만 합니다.
         float4  _autoExposureParams{};
         float32 _autoExposureClock{ 0.0f };    ///< 지난번 이 뷰의 노출을 측정한 게임 시각(초, `GPUScene::getVertexAnimationTime`)
@@ -177,12 +180,14 @@ namespace sw
          *          `beginViewHistory` 가 `_bHistoryReset` 과 같은 자리에서 정한다(기능마다 따로 정하지 않는다).
          */
         uint8 _bTAAHistoryReset{ SW_TRUE };
-        uint8 _bFrameSkipped{ SW_FALSE };          ///< 지난번 그린 뒤 그리지 않은 프레임이 있었다(`markFrameSkipped`) — 다음 `beginViewHistory` 가 기록을 버린다
-        uint8 _bTAAHistoryWritten{ SW_FALSE };     ///< 이번 프레임의 TAA 가 돌아 기록을 쓴다 — 패스 고르기(`applyViewPassSelection`)의 결과 하나다. 다음 프레임의 `beginViewHistory` 가 읽는다
-        uint8 _autoExposureWrite{ 0 };             ///< 이번 프레임에 쓰는 자동 노출 기록 칸(0 · 1). 톤맵은 이 칸을 읽는다
-        uint8 _bAutoExposureThisFrame{ SW_FALSE }; ///< 이번 프레임에 이 뷰의 노출을 측정한다(`prepareAutoExposure`)
-        uint8 _bAutoExposureMeasured{ SW_FALSE };  ///< 지금 자동 노출 기록에 측정한 값이 있다(기록을 새로 만들면 내린다 — 첫 측정은 지난 칸을 섞지 않는다)
-        uint8 _bUpscaleThisFrame{ SW_FALSE };      ///< 이번 프레임에 Present 가 FSR 1(EASU + RCAS)로 키운다(`prepareUpscale`)
+        uint8 _bFrameSkipped{ SW_FALSE };           ///< 지난번 그린 뒤 그리지 않은 프레임이 있었다(`markFrameSkipped`) — 다음 `beginViewHistory` 가 기록을 버린다
+        uint8 _bTAAHistoryWritten{ SW_FALSE };      ///< 이번 프레임의 TAA 가 돌아 기록을 쓴다 — 패스 고르기(`applyViewPassSelection`)의 결과 하나다. 다음 프레임의 `beginViewHistory` 가 읽는다
+        uint8 _bSkyCloudHistoryWritten{ SW_FALSE }; ///< 이번 프레임의 볼륨 구름 패스가 돌아 기록을 쓴다 — 패스 고르기의 결과다(TAA 와 같은 규칙)
+        uint8 _bSkyCloudHistoryReset{ SW_TRUE };    ///< 이번 프레임은 구름 기록을 버린다 — `_bHistoryReset` 이거나 지난 프레임이 구름 기록을 쓰지 않았다
+        uint8 _autoExposureWrite{ 0 };              ///< 이번 프레임에 쓰는 자동 노출 기록 칸(0 · 1). 톤맵은 이 칸을 읽는다
+        uint8 _bAutoExposureThisFrame{ SW_FALSE };  ///< 이번 프레임에 이 뷰의 노출을 측정한다(`prepareAutoExposure`)
+        uint8 _bAutoExposureMeasured{ SW_FALSE };   ///< 지금 자동 노출 기록에 측정한 값이 있다(기록을 새로 만들면 내린다 — 첫 측정은 지난 칸을 섞지 않는다)
+        uint8 _bUpscaleThisFrame{ SW_FALSE };       ///< 이번 프레임에 Present 가 FSR 1(EASU + RCAS)로 키운다(`prepareUpscale`)
         /// @brief 사각형 배율의 하한입니다(풀 배율 `_resolutionScale` 의 하한과 같다).
         static constexpr float32 kMinRectScale = 0.1f;
         /// @brief 이번 프레임 그리는 사각형입니다(`updateViewRect`) — 렌더 공간(장면 패스). 풀이 없으면 0 이다.
@@ -203,10 +208,11 @@ namespace sw
          */
         void beginViewHistory()
         {
-            _bHistoryReset    = ( _bHasHistory == SW_FALSE || _settings._bCut == SW_TRUE || _bFrameSkipped == SW_TRUE ) ? SW_TRUE : SW_FALSE;
-            _bHasHistory      = SW_TRUE;
-            _bFrameSkipped    = SW_FALSE;
-            _bTAAHistoryReset = ( _bHistoryReset == SW_TRUE || _bTAAHistoryWritten == SW_FALSE ) ? SW_TRUE : SW_FALSE;
+            _bHistoryReset         = ( _bHasHistory == SW_FALSE || _settings._bCut == SW_TRUE || _bFrameSkipped == SW_TRUE ) ? SW_TRUE : SW_FALSE;
+            _bHasHistory           = SW_TRUE;
+            _bFrameSkipped         = SW_FALSE;
+            _bTAAHistoryReset      = ( _bHistoryReset == SW_TRUE || _bTAAHistoryWritten == SW_FALSE ) ? SW_TRUE : SW_FALSE;
+            _bSkyCloudHistoryReset = ( _bHistoryReset == SW_TRUE || _bSkyCloudHistoryWritten == SW_FALSE ) ? SW_TRUE : SW_FALSE;
         }
         /** @brief 이번 프레임에 이 뷰를 그리지 않습니다 — 다음에 그리는 프레임은 시간 누적 기록을 버립니다. */
         void markFrameSkipped() { _bFrameSkipped = SW_TRUE; }

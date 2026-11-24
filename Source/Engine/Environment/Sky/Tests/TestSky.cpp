@@ -3,6 +3,7 @@
 #include "Core/Math/MathUtil.h"
 #include "Core/Testing/TestFramework.h"
 
+#include "Engine/Config/EngineConfig.h"
 #include "Engine/Environment/Sky/SkyComponent.h"
 #include "Engine/Environment/Sky/SkyGradient.h"
 #include "Engine/Object/GameObject/GameObject.h"
@@ -194,7 +195,44 @@ SW_TEST_CASE( SkyTest, FindSkyTakesTheSunFromTheDirectionalLight )
     SW_EXPECT_NEAR( -travel._y, gradient._toSunDirection._y, 1.0e-5f );
     SW_EXPECT_NEAR( -travel._z, gradient._toSunDirection._z, 1.0e-5f );
     SW_EXPECT_NEAR( 0.5f, gradient._sunColor._y, 1.0e-6f );
-    SW_EXPECT_TRUE( gradient._clouds._bEnabled == SW_FALSE ); // 구름 기본은 끔
+    SW_EXPECT_TRUE( gradient._clouds._mode == SkyCloudMode::None ); // 구름 기본은 끔
+}
+
+/** @brief [SkyTest] 볼륨 구름은 품질이 켠 때만 볼륨으로 남고 걸음 수 · 기록 비율을 받는다. 끄면 평면 구름이고, 평면 · 없음은 품질과 무관하다 */
+SW_TEST_CASE( SkyTest, CloudQualityTurnsVolumetricIntoLayer )
+{
+    SkyCloudConfig config;
+    config._bVolumetric   = true;
+    config._viewStepCount = 32;
+    config._historyWeight = 0.9f;
+
+    SkyClouds clouds;
+    clouds._mode = SkyCloudMode::Volumetric;
+    clouds.applyQuality( config );
+    SW_EXPECT_TRUE( clouds._mode == SkyCloudMode::Volumetric );
+    SW_EXPECT_EQUAL( 32u, clouds._viewStepCount );
+    SW_EXPECT_NEAR( 0.9f, clouds._historyWeight, 1.0e-6f );
+
+    config._bVolumetric = false;
+    clouds.applyQuality( config );
+    SW_EXPECT_TRUE( clouds._mode == SkyCloudMode::Layer );
+
+    SkyClouds none;
+    none.applyQuality( config );
+    SW_EXPECT_TRUE( none._mode == SkyCloudMode::None );
+}
+
+/** @brief [SkyTest] 눈에서 해까지의 투과율은 해가 높으면 파랑이 조금 줄고, 낮으면 더 붉고, 행성에 가리면 0 이다 */
+SW_TEST_CASE( SkyTest, SunTransmittanceReddensTowardTheHorizon )
+{
+    const SkyAtmosphere atmosphere;
+    const float3        noon = atmosphere.computeSunTransmittance( float3{ 0.0f, 1.0f, 0.0f } );
+    SW_EXPECT_TRUE( noon._x > noon._z && noon._z > 0.0f && noon._x < 1.0f );
+    const float3 low{ 1.0f, 0.1f, 0.0f };
+    const float3 dusk = atmosphere.computeSunTransmittance( low * ( 1.0f / low.getLength() ) );
+    SW_EXPECT_TRUE( dusk._z / dusk._x < noon._z / noon._x );
+    const float3 below = atmosphere.computeSunTransmittance( float3{ 0.0f, -1.0f, 0.0f } );
+    SW_EXPECT_NEAR( 0.0f, below._x + below._y + below._z, 1.0e-7f );
 }
 
 /** @brief [SkyTest] HDRI 모드의 CPU 식은 SH9 계수를 세기 · 회전과 함께 평가하고, 음수 링잉은 0 으로 자른다 */
@@ -251,7 +289,7 @@ SW_TEST_CASE( SkyTest, SameRadianceComparesEveryRadianceField )
     SW_EXPECT_TRUE( base.hasSameRadiance( base ) );
 
     SkyGradient same       = base;
-    same._clouds._bEnabled = SW_TRUE;
+    same._clouds._mode     = SkyCloudMode::Volumetric;
     same._clouds._coverage = 0.9f;
     same._sourceID         = 77;
     SW_EXPECT_TRUE( base.hasSameRadiance( same ) );

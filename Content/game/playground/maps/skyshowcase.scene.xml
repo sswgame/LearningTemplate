@@ -56,7 +56,7 @@
 					              _sunDiscAngle="1.71887335"
 					              _planetRadiusKm="6360"
 					              _atmosphereHeightKm="60"
-					              _bClouds="true"
+					              _cloudMode="Layer"
 					              _cloudCoverage="0.5"
 					              _cloudAltitudeKm="2"
 					              _cloudScale="0.4"

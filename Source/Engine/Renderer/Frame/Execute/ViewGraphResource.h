@@ -37,6 +37,12 @@ namespace sw
             static const hashed_string kName( "TAAHistory" );
             return RenderGraphTextureCopyDest{ kName };
         }
+        /** @brief 뷰의 볼륨 구름 기록입니다 — 볼륨 구름 패스가 셰이더 읽기로 읽고, 끝에 출력을 복사해 다음 프레임의 셰이더 읽기로 남긴다(TAA 히스토리와 같다). */
+        static RenderGraphTextureCopyDest skyCloudHistory()
+        {
+            static const hashed_string kName( "SkyCloudHistory" );
+            return RenderGraphTextureCopyDest{ kName };
+        }
         /** @brief FSR 1 의 EASU 출력(중간 RT)입니다 — Present 가 그리고 같은 패스의 RCAS 가 읽는다. */
         static RenderGraphRenderTarget upscaleIntermediate()
         {

@@ -23,6 +23,7 @@
 		<RenderGraphPassDesc _name="SceneDepthCopy" _op="Remove" />
 		<RenderGraphPassDesc _name="SceneColorCopy" _op="Remove" />
 		<RenderGraphPassDesc _name="Sky" _op="Remove" />
+		<RenderGraphPassDesc _name="VolumetricClouds" _op="Remove" />
 		<RenderGraphPassDesc _name="HighlightOutline" _op="Remove" />
 		<RenderGraphPassDesc _name="MeshOutline" _op="Remove" />
 		<RenderGraphPassDesc _name="Shadow" _op="Remove" />

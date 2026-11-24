@@ -107,6 +107,8 @@ namespace sw
         GameObjectManager* pActiveObjects = activeScene.getObjectManager();
         SceneEnvironment*  pEnvironment   = pActiveObjects != nullptr ? &pActiveObjects->getSubsystem<SceneEnvironment>() : nullptr;
         packet._bHasSky                   = ( pEnvironment != nullptr && pEnvironment->findSky( packet._sky ) ) ? SW_TRUE : SW_FALSE;
+        // 볼륨 구름의 품질 — 끈 품질 단계 · 플랫폼이면 평면 구름으로 싣는다(렌더 스레드는 설정을 읽지 않는다).
+        packet._sky._clouds.applyQuality( engine::getSubsystem<EngineConfig>()._render._skyClouds );
         // 스카이 라이트 — 하늘을 거칠기 단계마다 거른 환경광이다. 하늘이 바뀐 프레임에만 다시 거르고(`SkyLightCache`), 하늘이 없으면 없다(그 씬의 환경광은 앰비언트 색이다).
         const SkyLightData* const pSkyLight = _skyLight.update( packet._bHasSky != SW_FALSE ? &packet._sky : nullptr, engine::getSubsystem<EngineConfig>()._render._skyLight );
 

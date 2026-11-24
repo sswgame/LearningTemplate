@@ -203,7 +203,9 @@ namespace sw
             sample._giAccumulatedFrames   = _state._probeUpdater.getAccumulatedFrames();
             sample._giError               = _state._probeUpdater.getError();
             sample._cameraStillFrameCount = _state.getMainView()._cameraStillFrameCount;
-            sample._bTemporalAccumulation = _state.getMainView()._bTAAHistoryWritten;
+            // 시간 누적은 TAA 와 볼륨 구름 둘이다 — 하나라도 쌓이면 정지 프레임을 기다린다.
+            const bool bTemporal          = _state.getMainView()._bTAAHistoryWritten == SW_TRUE || _state.getMainView()._bSkyCloudHistoryWritten == SW_TRUE;
+            sample._bTemporalAccumulation = bTemporal ? SW_TRUE : SW_FALSE;
             sample._bAutoExposure         = _state.getMainView()._bAutoExposureThisFrame;
             sample._bRealtimeGI           = _state._probeUpdater.isActive() ? SW_TRUE : SW_FALSE;
             return sample;

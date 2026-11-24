@@ -1,0 +1,25 @@
+<?xml version="1.0" encoding="utf-8"?>
+<?asset guid="bdc70f18aaed410292306086e3d22b75"?>
+<!--
+  볼륨 구름(maps/skyclouds) — 저해상도 레이마치 + 시간 누적(VolumetricClouds 패스)을 스카이 패스가 하늘 위에 얹는다.
+  ① 품질 high: 두께 있는 구름. 골든과 견준다(기록이 쌓인 뒤 — 사진의 기본 정착이 구름 기록도 본다).
+  ② 품질 low: RenderQuality.json 이 볼륨 구름을 꺼 평면 구름으로 바뀐다(모바일 · 웹이 쓰는 길 — Config/Platform). ① 과 달라야 한다. 레이마치 패스 · 기록이 없다.
+  ③ 다시 high: 기록을 버리고 처음부터 쌓아 ① 과 같은 그림이다.
+  실행: ctest -R Scenario.game.playground (체인)
+-->
+<Scenario name="game.playground.skyclouds" fixedDelta="0.0166667" timeoutFrames="900" startAfter="ScenePlaying" startTimeoutFrames="900" input="exclusive">
+	<Launch variable="gv_firstScene" value="game/playground/maps/skyclouds.scene.xml"/>
+	<Launch variable="gv_renderQuality" value="high"/>
+	<Screenshot file="skyclouds_volumetric.ppm"/>
+	<ExpectImage file="skyclouds_volumetric.ppm" golden="skyclouds_volumetric"/>
+	<Variable name="gv_renderQuality" value="low"/>
+	<WaitRenderStable/>
+	<Screenshot file="skyclouds_layer.ppm"/>
+	<ExpectImage file="skyclouds_layer.ppm" golden="skyclouds_layer"/>
+	<ExpectImagesDiffer first="skyclouds_volumetric.ppm" second="skyclouds_layer.ppm" region="0,0,1,0.6" minDiffering="0.1"/>
+	<Variable name="gv_renderQuality" value="high"/>
+	<WaitRenderStable/>
+	<Screenshot file="skyclouds_again.ppm"/>
+	<ExpectImage file="skyclouds_again.ppm" golden="skyclouds_volumetric"/>
+	<Pass/>
+</Scenario>

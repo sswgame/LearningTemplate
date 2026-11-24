@@ -73,7 +73,10 @@ namespace sw
         float4 _atmosphereGeometry{}; ///< x 행성 반지름(km), y 대기 두께(km), z 눈 고도(km), w 해 원반 각 반지름(라디안)
         float4 _cloudShape{};         ///< x 덮는 비율, y 층 고도(km), z 노이즈 배율(1/km), w 최대 불투명도
         float4 _cloudWind{};          ///< xy 바람 방향 단위 벡터(xz 평면), z 바람 속도(km/s), w 경계 부드러움
-        float4 _cloudColor{};         ///< rgb 구름 색, w 구름을 그리면 1
+        float4 _cloudColor{};         ///< rgb 구름 색, w 구름의 종류(`SkyCloudMode` 값)
+        float4 _cloudVolume{};        ///< x 볼륨 층 두께(km), y 소멸 계수(1/km), z 기록 비율(뷰의 기록이 있을 때), w 걸음 수
+        float4 _cloudSun{};           ///< rgb 구름이 받는 해 복사휘도의 배율(대기 모드는 투과율 × 해 배율, 그 밖은 1), w 0
+        float4 _cloudAmbient{};       ///< rgb 구름이 받는 하늘 앰비언트(바로 위의 하늘빛), w 0
         float4 _skyLight{};           ///< 스카이 라이트의 프로브 버퍼 자리 — x 옥타헤드럴 한 변, y 거칠기 단계 수(0 이면 없음), z 첫 원소 번호(`LightProbeElementBuilder::getSkyLight`)
     };
 

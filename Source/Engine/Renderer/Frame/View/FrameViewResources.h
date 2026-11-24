@@ -42,6 +42,7 @@ namespace sw
             uint8 _bLocalShadows{ SW_FALSE };      ///< 그림자 칸을 받은 점광 · 스폿이 있다(`FrameShadowData::_listLocalTile` 이 비지 않았다) — 없으면 점광 · 스폿 아틀라스 패스가 빠진다
             uint8 _bRefractionBatches{ SW_FALSE }; ///< 굴절 머티리얼(`MATERIAL_REFRACTION` — 물 · 유리) 배치가 있다(`GPUScene::hasRefractionBatches`) — 없으면 반투명 패스가 장면 색 · 깊이 사본을 필요로 하지 않는다(언리얼 MaterialUsesSceneColorCopy)
             uint8 _bDistortionBatches{ SW_FALSE }; ///< 왜곡 배치가 있다(`GPUScene::hasDistortionBatches`) — 없으면 왜곡 누적 · 적용이 비활성이다
+            uint8 _bVolumetricClouds{ SW_FALSE };  ///< 하늘에 볼륨 구름이 있다(품질이 켠 것 — `SkyClouds::applyQuality`) — 없으면 볼륨 구름 패스가 빠지고 출력 · 기록이 없다
             uint8 _bDecals{ SW_FALSE };            ///< 이번 프레임에 그릴 데칼이 있다(`FrameRenderState::_listFrameDecalDraw`) — 없으면 데칼 패스가 빠지고 DBuffer 출력이 없다
         };
 
@@ -87,6 +88,8 @@ namespace sw
          * @details TAA 패스 콜백은 병렬 기록에서 태스크 스레드가 실행하므로, 콜백 안에서 만들고 bindless 에 등록하면 다른 스레드가 같은 레지스트리를 읽는 도중에 레지스트리가 resize 된다.
          */
         void ensureTAAHistory( FrameViewTarget& view );
+        /** @brief 뷰의 볼륨 구름 기록을 출력 첨부 @p outputName 과 같은 크기 · 형식으로 만들어 둡니다(셋업 단계 — TAA 기록과 같은 까닭). */
+        void ensureSkyCloudHistory( FrameViewTarget& view, const hashed_string& outputName );
         /** @brief 뷰의 깊이 히스토리(R32 실수 RT · RW 텍스처)를 풀 크기로 만들어 둡니다. 장면 깊이 첨부가 없으면(2D 파이프라인) 만들지 않는다. */
         void ensureDepthHistory( FrameViewTarget& view );
         /**

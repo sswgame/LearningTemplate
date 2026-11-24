@@ -177,7 +177,7 @@ namespace sw
                     if ( attachment._role.empty() == false && tryParseRenderPassInputRole( attachment._role, declaredRole ) == false )
                     {
                         SW_LOG_ERROR_ID( "RenderPipelineAsset.AttachmentUnknownRoleMust", "[%#] attachment '%#': unknown role '%#' - must be one of SourceColor, SceneDepth, GBufferAlbedo, GBufferNormal, GBufferMaterial, "
-                                                                                          "GBufferCustomData, ShadowMap, AmbientOcclusion, BloomBright, SceneColorCopy, SceneDepthCopy, Velocity, Distortion, ContactShadow",
+                                                                                          "GBufferCustomData, ShadowMap, AmbientOcclusion, BloomBright, SceneColorCopy, SceneDepthCopy, Velocity, Distortion, ContactShadow, SkyClouds",
                                          sourcePath, attachment._name, attachment._role );
                         ++issueCount;
                     }

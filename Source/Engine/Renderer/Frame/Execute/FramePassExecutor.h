@@ -299,6 +299,8 @@ namespace sw
         void executeHighlightPass( const PassExecuteInput& input );
         /** @brief 하늘입니다. 씬에 하늘이 없거나 뎁스 · 컬러 출력이 없으면 그리지 않습니다. */
         void executeSkyPass( const PassExecuteInput& input );
+        /** @brief 볼륨 구름입니다 — 뷰의 기록을 걸고 저해상도 출력에 걸은 뒤 출력을 기록에 복사합니다. 일반 풀스크린 패스의 실행(`executeGenericFullscreenPass`)이 부릅니다. */
+        void executeVolumetricCloudsPass( const PassExecuteInput& input );
         /** @brief 안개 패스(`RenderPassKind::Fog`)를 실행합니다. 안개가 없거나 표면 값 보기에서는 그리지 않습니다. 안개 상수 · 볼륨 버퍼는 `FrameFog` 가 정해 둔 것을 읽습니다. */
         void executeFogPass( const PassExecuteInput& input );
         /** @brief 화면 왜곡 누적 — 왜곡 머티리얼의 반투명 배치가 오프셋을 선언한 출력에 더한다. 왜곡이 없는 뷰는 기록하지 않는다. */

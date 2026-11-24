@@ -328,6 +328,32 @@ namespace sw
 namespace sw
 {
     /**
+     * @struct SkyCloudConfig
+     * @brief 볼륨 구름(`SkyCloudMode::Volumetric`)의 품질 값입니다. 품질 단계(RenderQuality.json)와 플랫폼 층(Config/Platform)이 덮습니다.
+     * @details 언리얼 `r.VolumetricCloud` · `r.VolumetricCloud.ViewRaySampleMaxCount`, 유니티 HDRP Volumetric Clouds 의 품질 칸 자리다.
+     */
+    REFLECT()
+    struct SW_API SkyCloudConfig
+    {
+        REFLECT_BODY();
+
+        /** @brief 볼륨 구름을 그립니다. 끄면 볼륨 구름을 고른 하늘도 평면 구름(`SkyCloudMode::Layer`)으로 그린다 — 레이마치 패스 · 기록이 없다(모바일 · 웹 · 낮은 품질). */
+        PROPERTY()
+        bool _bVolumetric{};
+
+        /** @brief 시선마다 걷는 걸음 수입니다. 비용이 이것에 비례한다. */
+        PROPERTY( Min = 1, Max = 128 )
+        uint32 _viewStepCount{};
+
+        /** @brief 시간 누적의 기록 비율입니다 — 클수록 잡음이 적고 바람 · 빛의 변화가 늦게 따라온다. 1 이면 이번 걸음이 들지 않으므로 1 미만이다. */
+        PROPERTY( Min = 0.0, Max = 0.98 )
+        float32 _historyWeight{};
+    };
+} // namespace sw
+
+namespace sw
+{
+    /**
      * @struct ProbeVisibilityConfig
      * @brief 프로브 GI 의 빛샘 막기 계수입니다 — 소비 셰이더(lighting.hlsli `LightData::sampleProbeVolume`)가 이웃 프로브 여덟의 가중에 쓴다. 쿠킹 define `SW_PROBE_*` 로 간다.
      * @details DDGI(RTXGI · Adria) 모양이다: 표면 위치를 노멀 · 시선 쪽으로 띄우고(자기 그림자 바이어스), 표면 뒤에 있는 프로브를 코사인으로 줄이고(뒷면 가중),
@@ -462,6 +488,10 @@ namespace sw
         /** @brief 스카이 라이트 설정입니다(거르기 크기 · 단계 수 · 표본 수 · 다시 거르는 간격 — `SkyLightConfig`). */
         PROPERTY()
         SkyLightConfig _skyLight{};
+
+        /** @brief 볼륨 구름의 품질입니다(켬 · 걸음 수 · 기록 비율 — `SkyCloudConfig`). */
+        PROPERTY()
+        SkyCloudConfig _skyClouds{};
 
         /** @brief 프로브 GI 의 빛샘 막기 계수입니다(바이어스 · 뒷면 가중 · 체비쇼프 지수 — `ProbeVisibilityConfig`). */
         PROPERTY()

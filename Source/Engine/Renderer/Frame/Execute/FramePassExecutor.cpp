@@ -752,6 +752,7 @@ namespace sw
             ViewGraphResource::autoExposureHistory(),
             ViewGraphResource::autoExposureTarget(),
             ViewGraphResource::taaHistory(),
+            ViewGraphResource::skyCloudHistory(),
             ViewGraphResource::upscaleIntermediate(),
             ViewGraphResource::shadowCacheLayer(),
             ViewGraphResource::postProcessChainBeforeTonemap(),
@@ -886,6 +887,10 @@ namespace sw
         else if ( pass._type == RenderPassKind::TAA )
         {
             inoutListAccess.push_back( ViewGraphResource::taaHistory() ); // 지난 기록을 읽고 같은 패스가 이번 출력을 복사한다
+        }
+        else if ( pass._type == RenderPassKind::VolumetricClouds )
+        {
+            inoutListAccess.push_back( ViewGraphResource::skyCloudHistory() ); // TAA 와 같다
         }
         else if ( pass._type == RenderPassKind::Lighting )
         {
@@ -1306,6 +1311,9 @@ namespace sw
         // TAA 기록 — TAA 가 도는 뷰만(`applyViewPassSelection`). 지난 프레임의 복사 끝에 셰이더 읽기로 남았다.
         if ( view._bTAAHistoryWritten == SW_TRUE && view._taaHistory.isValid() )
             _viewResourceTable.registerTexture( ViewGraphResource::taaHistory()._name, 0, view._taaHistory._texture, RenderGraphAccess::ShaderRead );
+        // 볼륨 구름 기록 — 구름이 도는 뷰만(`applyViewPassSelection`). TAA 기록과 같은 상태로 남는다.
+        if ( view._bSkyCloudHistoryWritten == SW_TRUE && view._skyCloudHistory.isValid() )
+            _viewResourceTable.registerTexture( ViewGraphResource::skyCloudHistory()._name, 0, view._skyCloudHistory._texture, RenderGraphAccess::ShaderRead );
         // FSR 1 — 이번 프레임에 키우는 뷰만(`prepareUpscale`).
         if ( view._bUpscaleThisFrame == SW_TRUE && view._upscaleIntermediate.isValid() )
             _viewResourceTable.registerTexture( ViewGraphResource::upscaleIntermediate()._name, 0, view._upscaleIntermediate._texture, RenderGraphAccess::ShaderRead );
@@ -1413,6 +1421,8 @@ namespace sw
                 return names._dbufferB;
             case RenderPassInputRole::DBufferC:
                 return names._dbufferC;
+            case RenderPassInputRole::SkyClouds:
+                return names._skyClouds;
             case RenderPassInputRole::Invalid:
             case RenderPassInputRole::Count:
                 return names._sourceColor;

@@ -357,6 +357,7 @@ namespace sw
                 case RenderPassKind::MotionBlurTileMax:
                 case RenderPassKind::MotionBlurNeighborMax:
                 case RenderPassKind::SceneDepthCopy:
+                case RenderPassKind::VolumetricClouds:
                 case RenderPassKind::ForwardOpaqueNoDepthWrite:
                 case RenderPassKind::GPUCull:
                 case RenderPassKind::InstanceAnimation:
@@ -421,6 +422,11 @@ namespace sw
         // 후처리를 끈 뷰 · 품질로 꺼지는 효과(kSkipsWithoutPostProcess)도 모두 이 길이다 — 원본을 복사하거나 셰이더가 원본을 고르던 길은 지웠다.
         if ( activePool().isForwarded( *pTarget ) )
             return;
+        if ( input._passType == RenderPassKind::VolumetricClouds )
+        {
+            executeVolumetricCloudsPass( input );
+            return;
+        }
         // 컴퓨트 구현(`_implementation="Compute"`)은 네이티브 bindless 에서만 돈다. 에뮬 백엔드는 아래 픽셀 구현이다 — 능력이 정한 길이고 PSO 도 그 백엔드에는 만들지 않는다.
         if ( passDesc._implementation == RenderPassExecutionMode::Compute && _pDevice->supportsNativeBindlessSampling() )
         {
@@ -850,10 +856,46 @@ namespace sw
         const Texture2D* pHdri = _state._skyHdriLoad.isReady() ? _state._skyHdriLoad.getOperation()->getTexture() : nullptr;
         if ( pHdri != nullptr && pHdri->isRHIValid() )
             context._resourceRegistry.registerTexture( attachmentNames()._sourceColor, pHdri->getHandle(), pHdri->getSRV() );
+        // 볼륨 구름은 그 패스가 이 뷰에서 돌았을 때만 건다(없으면 셰이더는 구름을 얹지 않는다). 나머지 선언 입력(장면 색 · 깊이)은 이 패스가 그리는 첨부라 걸지 않는다.
+        const RenderGraphPassDesc::ResolvedAttachment* pCloudInput = FramePassExecutorInternal::findInputByRole( input._passDesc, RenderPassInputRole::SkyClouds );
+        if ( pCloudInput != nullptr && activePool().resolveName( pCloudInput->_attachment ).empty() == false )
+            registerPassTexture( context, attachmentNames()._skyClouds, pCloudInput->_attachment );
         if ( beginColorPass( context, colorTarget, input._passDepth, _state._clearColor, RHIRenderPassLoadOp::Load, RHIRenderPassLoadOp::Load ) == false )
             return;
         drawFullscreen( context, skyPSO );
         context._pCmd->endRenderPass();
+    }
+
+    void FramePassExecutor::executeVolumetricCloudsPass( const PassExecuteInput& input )
+    {
+        FramePassContext&      context = input._context;
+        const AttachmentNames& names   = attachmentNames();
+        const hashed_string&   target  = input._declaredColor[0]._attachment;
+        const FrameViewTarget& view    = *_pActiveView;
+        registerDeclaredInputs( context, input._passDesc );
+        // 기록은 이 패스가 복사 대상으로 선언한 뷰 자원이다 — 읽기 앞에 셰이더 읽기로 옮긴다. 버리는 프레임(처음 · 컷 · 지난 프레임에 구름이 없음)은 읽지 않고 새로 채우기만 한다.
+        const bool bHistory  = context._pGraphPass->isRegistered( ViewGraphResource::skyCloudHistory() );
+        const bool bReadable = bHistory && view._bSkyCloudHistoryReset == SW_FALSE;
+        if ( bReadable )
+        {
+            context._pGraphPass->transition( ViewGraphResource::skyCloudHistory(), RenderGraphAccess::ShaderRead );
+            context._resourceRegistry.registerTexture( names._gbufferAlbedo, view._skyCloudHistory._texture, view._skyCloudHistory._srv );
+        }
+        float4 volume = _state._frameSky._cloudVolume;
+        volume._z     = bReadable ? volume._z : 0.0f;
+        // 텍셀 안 자리는 TAA 지터와 같은 Halton 한 바퀴, 걸음 시작은 황금비 수열이다 — 프레임마다 다른 자리를 기록이 모은다.
+        constexpr float32                         kGoldenRatioFraction = 0.618034f;
+        const TransientAttachmentPool::Attachment output               = findTransientAttachment( target );
+        const float2                              offset               = TemporalJitterSequence::getPixelOffset( view._skyCloudSample % TemporalJitterSequence::kSampleCount );
+        const float32                             stepPhase            = static_cast<float32>( view._skyCloudSample % TemporalJitterSequence::kMaxSampleCount ) * kGoldenRatioFraction;
+        const float32                             divisor              = output._width > 0 ? static_cast<float32>( view._transientPool.getWidth() ) / static_cast<float32>( output._width ) : 1.0f;
+        context._passValues.setFloat4( passConstantNames()._skyCloudVolume, volume );
+        context._passValues.setFloat4( passConstantNames()._skyCloudSample, float4{ offset._x, offset._y, stepPhase - MathUtil::floor( stepPhase ), divisor } );
+        executeFullscreenInto( context, _psoManager.getEnginePSO( RenderPassKind::VolumetricClouds ), target, getTargetClearColor( target ) );
+        if ( output._texture == 0 || bHistory == false )
+            return;
+        context._pCmd->blitTexture( output._texture, view._skyCloudHistory._texture );
+        context._pGraphPass->transition( ViewGraphResource::skyCloudHistory(), RenderGraphAccess::ShaderRead ); // 복사는 기록을 렌더 타깃 상태로 남긴다(TAA 와 같다)
     }
 
     bool FramePassExecutor::isPassDisabledInView( uint32 passIndex ) const

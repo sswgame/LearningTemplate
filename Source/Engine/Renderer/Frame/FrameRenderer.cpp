@@ -702,7 +702,16 @@ namespace sw
         const SkyClouds& clouds      = sky._clouds;
         _state._frameSky._cloudShape = float4{ MathUtil::saturate( clouds._coverage ), clouds._altitudeKm, clouds._scale, MathUtil::saturate( clouds._opacity ) };
         _state._frameSky._cloudWind  = float4{ MathUtil::cos( clouds._windDirection ), MathUtil::sin( clouds._windDirection ), clouds._windSpeedKmPerSecond, clouds._softness };
-        _state._frameSky._cloudColor = float4{ clouds._color._x, clouds._color._y, clouds._color._z, clouds._bEnabled == SW_TRUE ? 1.0f : 0.0f };
+        _state._frameSky._cloudColor = float4{ clouds._color._x, clouds._color._y, clouds._color._z, static_cast<float32>( static_cast<uint8>( clouds._mode ) ) };
+        if ( clouds._mode != SkyCloudMode::Volumetric )
+            return;
+        // 볼륨 구름의 빛 — 프레임에 한 번 구한다(레이마치 셰이더가 대기를 다시 걷지 않는다). 해 색은 셰이더가 키 라이트 상수로 곱한다(sky.hlsl 의 두 갈래와 같다).
+        const bool   bAtmosphere       = sky._mode == SkyMode::Atmosphere;
+        const float3 sunScale          = bAtmosphere ? atmosphere.computeSunTransmittance( sky._toSunDirection ) * ( atmosphere._sunIntensity * sky._intensity ) : float3{ 1.0f, 1.0f, 1.0f };
+        const float3 ambient           = sky.evaluateRadiance( float3{ 0.0f, 1.0f, 0.0f } );
+        _state._frameSky._cloudVolume  = float4{ clouds._thicknessKm, clouds._extinctionPerKm, clouds._historyWeight, static_cast<float32>( clouds._viewStepCount ) };
+        _state._frameSky._cloudSun     = float4{ sunScale._x, sunScale._y, sunScale._z, 0.0f };
+        _state._frameSky._cloudAmbient = float4{ ambient._x, ambient._y, ambient._z, 0.0f };
     }
 
     void FrameRenderer::applyFrameShadow()
@@ -728,6 +737,7 @@ namespace sw
         sceneState._bRefractionBatches = _state._gpuScene.hasRefractionBatches() ? SW_TRUE : SW_FALSE;
         sceneState._bDistortionBatches = _state._gpuScene.hasDistortionBatches() ? SW_TRUE : SW_FALSE;
         sceneState._bDecals            = _state._listFrameDecalDraw.empty() ? SW_FALSE : SW_TRUE;
+        sceneState._bVolumetricClouds  = _state._bHasFrameSky == SW_TRUE && _state._frameSkySource._clouds._mode == SkyCloudMode::Volumetric ? SW_TRUE : SW_FALSE;
         return sceneState;
     }
 
@@ -763,6 +773,9 @@ namespace sw
         context._passValues.setFloat4( passConstantNames()._skyCloudShape, _state._frameSky._cloudShape );
         context._passValues.setFloat4( passConstantNames()._skyCloudWind, _state._frameSky._cloudWind );
         context._passValues.setFloat4( passConstantNames()._skyCloudColor, _state._frameSky._cloudColor );
+        context._passValues.setFloat4( passConstantNames()._skyCloudVolume, _state._frameSky._cloudVolume );
+        context._passValues.setFloat4( passConstantNames()._skyCloudSun, _state._frameSky._cloudSun );
+        context._passValues.setFloat4( passConstantNames()._skyCloudAmbient, _state._frameSky._cloudAmbient );
         context._passValues.setFloat4( passConstantNames()._skyLight, _state._frameSky._skyLight );
         context._passValues.setFloat4( passConstantNames()._fogColorDensity, _fog.getFrameFog()._colorDensity );
         context._passValues.setFloat4( passConstantNames()._fogHeightParams, _fog.getFrameFog()._heightParams );

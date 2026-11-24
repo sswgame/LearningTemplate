@@ -30,6 +30,24 @@ SW_TEST_CASE( FrameViewTargetTest, SkippedFrameResetsHistory )
     SW_EXPECT_TRUE( view._bHistoryReset == SW_FALSE );
 }
 
+/** @brief [FrameViewTargetTest] 볼륨 구름 기록은 지난 프레임이 구름을 그렸을 때만 잇는다 — 다시 켠 첫 프레임 · 건너뛴 프레임 뒤는 버린다 */
+SW_TEST_CASE( FrameViewTargetTest, SkyCloudHistoryResetsWhenCloudsDidNotRun )
+{
+    FrameViewTarget view;
+    view.beginViewHistory();
+    SW_EXPECT_TRUE( view._bSkyCloudHistoryReset == SW_TRUE ); // 처음 그린다
+    view._bSkyCloudHistoryWritten = SW_TRUE;
+    view.beginViewHistory();
+    SW_EXPECT_TRUE( view._bSkyCloudHistoryReset == SW_FALSE );
+    view._bSkyCloudHistoryWritten = SW_FALSE; // 이번 프레임은 구름이 없다
+    view.beginViewHistory();
+    SW_EXPECT_TRUE( view._bSkyCloudHistoryReset == SW_TRUE );
+    view._bSkyCloudHistoryWritten = SW_TRUE;
+    view.markFrameSkipped();
+    view.beginViewHistory();
+    SW_EXPECT_TRUE( view._bSkyCloudHistoryReset == SW_TRUE );
+}
+
 /** @brief [FrameViewTargetTest] 컷이 든 프레임은 기록을 버린다 */
 SW_TEST_CASE( FrameViewTargetTest, CutResetsHistory )
 {

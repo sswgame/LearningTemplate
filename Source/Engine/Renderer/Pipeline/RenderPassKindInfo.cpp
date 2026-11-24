@@ -205,8 +205,9 @@ namespace sw
                         // 하늘 — 깊이 1 의 풀스크린 삼각형을 깊이 테스트(LessEqual)로 그려 빈 곳만 칠한다. 깊이는 쓰지 않는다(전용 실행: 하늘이 없거나 표면 값 보기면 건너뛴다).
                         // 하늘 값은 패스 상수(g_Sky*)로 받는다. 입력은 그려 둔 장면 색 · 깊이 뒤에 서게 하는 순서 선언이라 둘 다 선택이다(셰이더는 읽지 않는다).
                         info._pDefaultShader = &EngineDefaultAssets::_shaderSky;
-                        info._inputContract  = makeContract( {}, { Role::SourceColor, Role::SceneDepth } );
-                        info._flags          = Flag::kDepthTest | Flag::kHasInputContract | Flag::kDrawsDeclaredColor;
+                        // 볼륨 구름(VolumetricClouds 출력)만 읽는다 — 그 패스가 돌지 않은 뷰는 걸지 않는다.
+                        info._inputContract = makeContract( {}, { Role::SourceColor, Role::SceneDepth, Role::SkyClouds } );
+                        info._flags         = Flag::kDepthTest | Flag::kHasInputContract | Flag::kDrawsDeclaredColor;
                         break;
                     }
                     case RenderPassKind::Canvas:
@@ -365,6 +366,16 @@ namespace sw
                         // 톤맵 앞 · 뒤 자리는 그릴 머티리얼이 없는 뷰에서 출력이 원본을 가리킨다(kBypassesToSource). 입력은 원본 말고 모두 선택이다(머티리얼 그래프 "Post Process" 노드가 읽는 것).
                         info._inputContract = makeContract( { Role::SourceColor }, { Role::SceneDepth, Role::GBufferAlbedo, Role::GBufferNormal, Role::GBufferMaterial, Role::GBufferCustomData } );
                         info._flags         = Flag::kDrawsDeclaredColor | Flag::kHasInputContract | Flag::kSkipsWithoutPostProcess | Flag::kBypassesToSource;
+                        break;
+                    }
+                    case RenderPassKind::VolumetricClouds:
+                    {
+                        // 저해상도 레이마치 + 시간 누적 — 일반 풀스크린 패스의 실행 안에서 기록을 걸고 출력을 기록에 복사한다(`FramePassExecutor::executeVolumetricCloudsPass`).
+                        // 볼륨 구름이 없는 뷰는 기록하지 않고 출력이 없다(kCullWhenUnconsumed 고르기 — FrameViewResources 의 isPassEnabledInView).
+                        info._pDefaultShader     = &EngineDefaultAssets::_shaderVolumetricClouds;
+                        info._inputContract      = makeContract( { Role::SceneDepth }, {} );
+                        info._executionBoundRole = Role::GBufferAlbedo; // 기록(지난 출력)을 그 칸에 건다 — TAA 와 같다
+                        info._flags              = Flag::kGenericFullscreen | Flag::kDrawsDeclaredColor | Flag::kHasInputContract | Flag::kCullWhenUnconsumed;
                         break;
                     }
                     case RenderPassKind::LateOcclusion:
