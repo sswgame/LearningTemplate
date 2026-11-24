@@ -32,7 +32,7 @@
 	<WaitUntil watch="Object.Exists" target="Coin" equals="0" timeoutFrames="20"/>
 	<Expect watch="Inventory.ItemCount" target="PlayerController" key="herb_wild" equals="3"/>
 
-	<!-- ③ 나무 베기 — 시작 누름 하나 + 연타 셋 = 한 번 -->
+	<!-- ③ 나무 베기 — 시작 누름 하나 + 연타 넷 = 한 번(누름 셋이면 차지만 쉬는 사이 줄어 하나 더 눌러야 찬다) -->
 	<DevCommand line="object.place Player 12 0.05 -7.2"/>
 	<WaitUntil watch="Interaction.Focus" target="Player" is="Tree" timeoutFrames="20"/>
 	<Tap slot="Key.E" hold="2"/>
@@ -43,10 +43,14 @@
 	<Tap slot="Key.E" hold="2"/>
 	<AdvanceSimulation frames="4"/>
 	<Tap slot="Key.E" hold="2"/>
+	<AdvanceSimulation frames="4"/>
+	<Tap slot="Key.E" hold="2"/>
 	<WaitUntil watch="Inventory.ItemCount" target="PlayerController" key="wood_log" equals="2" timeoutFrames="20"/>
 	<AdvanceSimulation frames="20"/> <!-- 쿨다운 0.2 초 -->
 	<Tap slot="Key.E" hold="2"/>
 	<WaitUntil watch="Interaction.StepMode" target="Player" is="Mash" timeoutFrames="10"/>
+	<AdvanceSimulation frames="4"/>
+	<Tap slot="Key.E" hold="2"/>
 	<AdvanceSimulation frames="4"/>
 	<Tap slot="Key.E" hold="2"/>
 	<AdvanceSimulation frames="4"/>
@@ -74,6 +78,8 @@
 	<WaitUntil watch="Interaction.ReactionOpen" target="Player" equals="1" timeoutFrames="180"/>
 	<Tap slot="Key.E" hold="2"/>
 	<WaitUntil watch="Interaction.StepMode" target="Player" is="Mash" timeoutFrames="10"/>
+	<AdvanceSimulation frames="4"/>
+	<Tap slot="Key.E" hold="2"/>
 	<AdvanceSimulation frames="4"/>
 	<Tap slot="Key.E" hold="2"/>
 	<AdvanceSimulation frames="4"/>
