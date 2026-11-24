@@ -7,7 +7,7 @@
 #pragma once
 #include "Core/Concurrency/mutex.h"
 #include "Core/Container/IDAllocator.h"
-#include "Core/Container/flat_map.h"
+#include "Core/Container/map.h"
 #include "Core/Container/string.h"
 #include "Core/Container/vector.h"
 #include "Core/Event/EventBuffer.h"
@@ -48,9 +48,9 @@ namespace sw
             int64         _writtenAtMs{ 0 };
         };
 
-        mutable mutex                        _mutex;
-        flat_map<string, SlotEntry> _mapSlot SW_GUARDED_BY( _mutex );
-        uint8 _bFailNextWrite                SW_GUARDED_BY( _mutex );
+        mutable mutex                   _mutex;
+        map<string, SlotEntry> _mapSlot SW_GUARDED_BY( _mutex );
+        uint8 _bFailNextWrite           SW_GUARDED_BY( _mutex );
     };
 } // namespace sw
 

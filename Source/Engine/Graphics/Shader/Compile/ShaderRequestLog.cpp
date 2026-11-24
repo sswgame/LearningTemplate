@@ -196,7 +196,7 @@ namespace sw
     {
         vector<ShaderCompileDesc> listPresent;
         listPresent.reserve( inoutList.size() );
-        flat_set<string> setMissing;
+        set<string> setMissing;
         for ( ShaderCompileDesc& desc : inoutList )
         {
             if ( resolver.resolve( desc._source ).has_value() )

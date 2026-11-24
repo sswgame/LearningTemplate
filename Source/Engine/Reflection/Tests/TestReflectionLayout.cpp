@@ -53,8 +53,8 @@ SW_TEST_CASE( ReflectionContainersTest, DequeWrapper )
  */
 SW_TEST_CASE( ReflectionContainersTest, SetWrapper )
 {
-    sw::flat_set<int32>                 st = { 100, 200, 300 };
-    sw::SetWrapper<sw::flat_set<int32>> wrapper;
+    sw::set<int32>                 st = { 100, 200, 300 };
+    sw::SetWrapper<sw::set<int32>> wrapper;
 
     SW_EXPECT_EQUAL( 3u, wrapper.getSize( &st ) );
     SW_EXPECT_EQUAL( 100, *static_cast<const int32*>( wrapper.getElementConst( &st, 0 ) ) );
@@ -65,11 +65,11 @@ SW_TEST_CASE( ReflectionContainersTest, SetWrapper )
  */
 SW_TEST_CASE( ReflectionContainersTest, MapWrapper )
 {
-    sw::flat_map<sw::string, int32> mp = {
+    sw::map<sw::string, int32> mp = {
         {"Atk", 50},
         {"Def", 20}
     };
-    sw::MapWrapper<sw::flat_map<sw::string, int32>> wrapper;
+    sw::MapWrapper<sw::map<sw::string, int32>> wrapper;
 
     SW_EXPECT_EQUAL( 2u, wrapper.getSize( &mp ) );
 
@@ -100,12 +100,12 @@ SW_TEST_CASE( ReflectionContainersTest, MapWrapper )
  */
 SW_TEST_CASE( ReflectionContainersTest, MapValuesAreEditableAndEntriesErasable )
 {
-    sw::flat_map<sw::string, int32> sortedMap = {
+    sw::map<sw::string, int32> sortedMap = {
         {"a", 1},
         {"b", 2},
         {"c", 3}
     };
-    sw::MapWrapper<sw::flat_map<sw::string, int32>> sortedWrapper;
+    sw::MapWrapper<sw::map<sw::string, int32>> sortedWrapper;
     sortedWrapper.forEachMutable( &sortedMap, [&]( const void*, void* pValue )
     { *static_cast<int32*>( pValue ) += 10; } );
     SW_EXPECT_TRUE( sortedMap["a"] == 11 && sortedMap["b"] == 12 && sortedMap["c"] == 13 );
@@ -135,8 +135,8 @@ SW_TEST_CASE( ReflectionContainersTest, MapValuesAreEditableAndEntriesErasable )
  */
 SW_TEST_CASE( ReflectionContainersTest, SetElementIsReplacedByEraseAndReinsert )
 {
-    sw::flat_set<int32>                 sortedSet = { 1, 5, 9 };
-    sw::SetWrapper<sw::flat_set<int32>> wrapper;
+    sw::set<int32>                 sortedSet = { 1, 5, 9 };
+    sw::SetWrapper<sw::set<int32>> wrapper;
     SW_EXPECT_TRUE( wrapper.replaceElement( &sortedSet, 0, [&]( void* pElement ) -> bool
     {
         *static_cast<int32*>( pElement ) = 7;

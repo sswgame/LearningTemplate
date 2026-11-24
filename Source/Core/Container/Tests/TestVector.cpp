@@ -5,9 +5,9 @@
 #include "Core/Container/ChunkedArray.h"
 #include "Core/Container/InlineAllocator.h"
 #include "Core/Container/deque.h"
-#include "Core/Container/flat_set.h"
 #include "Core/Container/frame_vector.h"
 #include "Core/Container/pair.h"
+#include "Core/Container/set.h"
 #include "Core/Container/string.h"
 #include "Core/Container/unordered_map.h"
 #include "Core/Container/vector.h"
@@ -817,7 +817,7 @@ SW_TEST_CASE( VectorTest, RangeInsertMovesTheTailOnce )
 }
 
 /**
- * @brief [VectorTest] 한 번만 읽을 수 있는 입력 반복자로 만들고 · 대입하고 · 끼워도 원소를 잃지 않는다 — vector · deque · ChunkedArray · flat_set 모두
+ * @brief [VectorTest] 한 번만 읽을 수 있는 입력 반복자로 만들고 · 대입하고 · 끼워도 원소를 잃지 않는다 — vector · deque · ChunkedArray · set 모두
  * @details 예전 `vector::assign( first, last )`(생성자가 부른다)는 `std::distance` 로 먼저 세어 스트림을 다 읽어 버렸다.
  */
 SW_TEST_CASE( VectorTest, InputIteratorRangesKeepEveryElement )
@@ -851,7 +851,7 @@ SW_TEST_CASE( VectorTest, InputIteratorRangesKeepEveryElement )
     SW_EXPECT_TRUE( listChunked.size() == 3 && listChunked[0] == 3 && listChunked[2] == 2 );
 
     std::istringstream setStream( "3 1 2 1" );
-    flat_set<int32>    setValue;
+    set<int32>         setValue;
     setValue.insert( makeFirst( setStream ), last );
     SW_EXPECT_TRUE( setValue.size() == 3 && *setValue.begin() == 1 );
 }

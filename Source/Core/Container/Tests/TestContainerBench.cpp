@@ -2,7 +2,7 @@
 #include "pch.h"
 
 #include "Core/Container/deque.h"
-#include "Core/Container/flat_map.h"
+#include "Core/Container/map.h"
 #include "Core/Container/pair.h"
 #include "Core/Container/string.h"
 #include "Core/Container/unordered_map.h"
@@ -117,9 +117,9 @@ SW_TEST_CASE( ContainerBenchTest, MapRangeBuild, ._tags = "bench", ._disabledRea
         listPair.emplace_back( static_cast<uint32>( nextRandom( state ) ), index );
     }
 
-    const Stopwatch                buildWatch;
-    const flat_map<uint32, uint32> mapValue( listPair.begin(), listPair.end() );
-    const int64                    buildNanos = buildWatch.getElapsedNanoseconds();
+    const Stopwatch           buildWatch;
+    const map<uint32, uint32> mapValue( listPair.begin(), listPair.end() );
+    const int64               buildNanos = buildWatch.getElapsedNanoseconds();
 
     vector<pair<uint32, uint32>> sorted = listPair;
     const Stopwatch              sortWatch;

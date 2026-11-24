@@ -1,6 +1,6 @@
 /**
  * @file StdSortedStorage.h
- * @brief 정렬 컨테이너(`flat_map` · `flat_set`)의 std 저장입니다(`SW_ENABLE_STL_CONTAINER`). std::map · std::set 을 멤버로 듭니다. 쓰는 쪽은 `Core/Container/SortedContainerBase.h` 를 include 합니다.
+ * @brief 정렬 컨테이너(`map` · `set`)의 std 저장입니다(`SW_ENABLE_STL_CONTAINER`). std::map · std::set 을 멤버로 듭니다. 쓰는 쪽은 `Core/Container/SortedContainerBase.h` 를 include 합니다.
  * @details 노드는 자리를 옮기지 않지만 공통 계약은 약한 쪽(삽입 · 삭제 뒤 무효)이다 — 세대 검사가 두 구성에서 같이 잡는다. 이종 키 조회는 비교자에 `is_transparent` 를 붙여 얻는다.
  */
 #pragma once

@@ -86,9 +86,9 @@ SW_REFLECT_BUILTIN_TYPE( int2, sw::int2, packed, sw, Packed, i32(_x,_y), State, 
 // std:: / 서드파티 컨테이너
 // -----------------------------------------------------------------------------
 SW_REFLECT_BUILTIN_CONTAINER( unordered_map, Map, UnorderedMap, None )
-SW_REFLECT_BUILTIN_CONTAINER( flat_map, Map, Map, None )
+SW_REFLECT_BUILTIN_CONTAINER( map, Map, Map, None )
 SW_REFLECT_BUILTIN_CONTAINER( unordered_set, Sequence, UnorderedSet, None )
-SW_REFLECT_BUILTIN_CONTAINER( flat_set, Sequence, Set, None )
+SW_REFLECT_BUILTIN_CONTAINER( set, Sequence, Set, None )
 SW_REFLECT_BUILTIN_CONTAINER( vector, Sequence, Vector, State )
 SW_REFLECT_BUILTIN_CONTAINER( TArray, Sequence, Vector, State )
 SW_REFLECT_BUILTIN_CONTAINER( deque, Sequence, Deque, State )

@@ -1,7 +1,7 @@
 /**
  * @file NativeSortedStorage.h
- * @brief 정렬 컨테이너(`flat_map` · `flat_set`)의 자체 저장입니다(기본 구성) — 정렬된 `vector` 와 이진 검색. 쓰는 쪽은 `Core/Container/SortedContainerBase.h` 를 include 합니다.
- * @details `flat_map` 과 `flat_set` 은 원소에서 키를 읽는 법만 다르다(쌍의 `first` / 원소 자신). 그 차이를 비교자 `ValueLess` 하나로 받고 나머지를 여기 한 벌로 둔다
+ * @brief 정렬 컨테이너(`map` · `set`)의 자체 저장입니다(기본 구성) — 정렬된 `vector` 와 이진 검색. 쓰는 쪽은 `Core/Container/SortedContainerBase.h` 를 include 합니다.
+ * @details `map` 과 `set` 은 원소에서 키를 읽는 법만 다르다(쌍의 `first` / 원소 자신). 그 차이를 비교자 `ValueLess` 하나로 받고 나머지를 여기 한 벌로 둔다
  *          (boost `flat_tree` · MSVC `_Tree` 가 map · set 을 한 몸통 위에 두는 것과 같다).
  *
  *          범위 삽입의 임시 버퍼는 컨테이너 자신의 할당자로 잡는다 — `std::stable_sort` · `std::inplace_merge` 는 `operator new` 로 버퍼를 잡아
@@ -16,7 +16,7 @@
 namespace sw::internal
 {
     /**
-     * @brief 쌍의 키(`first`)만 견주는 비교자입니다(`flat_map` 의 `ValueLess`). 원소끼리, 원소와 이종 키를 양쪽 순서로 받습니다.
+     * @brief 쌍의 키(`first`)만 견주는 비교자입니다(`map` 의 `ValueLess`). 원소끼리, 원소와 이종 키를 양쪽 순서로 받습니다.
      * @details 이종 키 쪽에서는 `.first` 를 읽지 않습니다(`upper_bound` 는 키를 왼쪽에 넘긴다).
      */
     template <typename Value, typename Compare>

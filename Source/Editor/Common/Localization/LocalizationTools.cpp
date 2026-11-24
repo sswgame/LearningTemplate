@@ -3,7 +3,7 @@
 #include "Editor/Common/Localization/LocalizationTools.h"
 
 #include "Core/Algorithm/VectorUtil.h"
-#include "Core/Container/flat_set.h"
+#include "Core/Container/set.h"
 #include "Core/File/FileUtil.h"
 #include "Core/File/ProcessRoots.h"
 #include "Core/Log/Logger.h"
@@ -150,7 +150,7 @@ namespace sw
             }
 
             /** @brief 1) 해시가 없는 번역은 현재 원문의 번역으로 받고, 현재 번역은 메모리에 쌓고, 원문이 없는 키의 번역은 뺍니다. */
-            static void reconcileTranslation( const flat_map<string, const SourceTextEntry*>& mapSource, TranslationTable& inoutTranslation, TranslationMemory& inoutMemory,
+            static void reconcileTranslation( const map<string, const SourceTextEntry*>& mapSource, TranslationTable& inoutTranslation, TranslationMemory& inoutMemory,
                                               LocalizationCultureReport& inoutCultureReport )
             {
                 vector<string> listOrphan;
@@ -179,7 +179,7 @@ namespace sw
             }
 
             /** @brief 2) 없는 번역과 오래된 번역을 메모리로 채웁니다. 같은 원문은 그대로 채우고, 비슷한 원문은 검토 표시를 붙입니다(번역이 없는 항목만). */
-            static void prefillFromMemory( const flat_map<string, const SourceTextEntry*>& mapSource, const TranslationMemory& memory, TranslationTable& inoutTranslation,
+            static void prefillFromMemory( const map<string, const SourceTextEntry*>& mapSource, const TranslationMemory& memory, TranslationTable& inoutTranslation,
                                            LocalizationCultureReport& inoutCultureReport )
             {
                 for ( const auto& [key, pSource] : mapSource )
@@ -205,7 +205,7 @@ namespace sw
             }
 
             /** @brief 3) 원문 키마다 번역 상태를 세고 번역을 검사합니다. */
-            static void countAndValidate( const string& culture, const flat_map<string, const SourceTextEntry*>& mapSource, const TranslationTable& translation,
+            static void countAndValidate( const string& culture, const map<string, const SourceTextEntry*>& mapSource, const TranslationTable& translation,
                                           LocalizationCultureReport& inoutCultureReport, TextGatherReport& inoutReport )
             {
                 for ( const auto& [key, pSource] : mapSource )
@@ -247,7 +247,7 @@ namespace sw
              * @brief 문화권 번역 테이블 하나를 수집 결과에 맞춥니다. 해시가 없는 번역에 해시를 기록하고, 현재 번역을 번역 메모리에 쌓고, 원문 테이블에 없는 키의 번역을 빼고,
              *        없거나 오래된 번역을 메모리로 미리 채운 뒤 상태를 세고 검사합니다.
              */
-            static void updateTranslation( const AbsolutePath& projectPath, const string& culture, const flat_map<string, const SourceTextEntry*>& mapSource, bool bWrite,
+            static void updateTranslation( const AbsolutePath& projectPath, const string& culture, const map<string, const SourceTextEntry*>& mapSource, bool bWrite,
                                            LocalizationGatherResult& inoutResult )
             {
                 LocalizationCultureReport& cultureReport = inoutResult._listCulture.emplace_back();
@@ -287,7 +287,7 @@ namespace sw
             }
 
             /** @brief PO 하나를 만듭니다. 원문 테이블의 모든 키를 사전 순으로 담습니다. */
-            static PortableObjectFile makePortableObject( const LocalizationProject& project, string_view culture, const flat_map<string, const SourceTextEntry*>& mapSource,
+            static PortableObjectFile makePortableObject( const LocalizationProject& project, string_view culture, const map<string, const SourceTextEntry*>& mapSource,
                                                           const TranslationTable& translation, const TranslationMemory& memory, LocalizationExchangeResult& outResult )
             {
                 PortableObjectFile file;
@@ -338,7 +338,7 @@ namespace sw
 
             /** @brief 프로젝트와 원문 테이블들을 읽어 키에서 원문 테이블 행으로의 대응을 만듭니다. */
             [[nodiscard]] static bool loadProjectSources( string_view projectPath, LocalizationProject& outProject, vector<SourceStringTable>& outListTable,
-                                                          flat_map<string, const SourceTextEntry*>& outMapSource, AbsolutePath& outAbsolutePath )
+                                                          map<string, const SourceTextEntry*>& outMapSource, AbsolutePath& outAbsolutePath )
             {
                 outAbsolutePath = resolveAbsolutePath( projectPath );
                 if ( const expected<void> read = outProject.loadFromFile( outAbsolutePath ); read.has_value() == false )
@@ -361,7 +361,7 @@ namespace sw
             }
 
             /** @brief 원문 테이블들의 키에서 행으로의 대응을 만듭니다. 같은 키가 여러 테이블에 있으면 앞 테이블의 것입니다. */
-            static void collectSourceEntries( const vector<SourceStringTable>& listTable, flat_map<string, const SourceTextEntry*>& outMapSource )
+            static void collectSourceEntries( const vector<SourceStringTable>& listTable, map<string, const SourceTextEntry*>& outMapSource )
             {
                 outMapSource.clear();
                 for ( const SourceStringTable& table : listTable )
@@ -594,7 +594,7 @@ namespace sw
         }
 
         // 4) 번역 테이블. 해시 기록, 상태, 검사를 한다
-        flat_map<string, const SourceTextEntry*> mapSource;
+        map<string, const SourceTextEntry*> mapSource;
         Internal::collectSourceEntries( listTable, mapSource );
         for ( const string& culture : project._listCulture )
         {
@@ -698,10 +698,10 @@ namespace sw
     bool LocalizationTools::exportProjectPo( string_view projectPath, vector<LocalizationExchangeResult>& outListResult )
     {
         outListResult.clear();
-        LocalizationProject                      project;
-        vector<SourceStringTable>                listTable;
-        flat_map<string, const SourceTextEntry*> mapSource;
-        AbsolutePath                             absolute;
+        LocalizationProject                 project;
+        vector<SourceStringTable>           listTable;
+        map<string, const SourceTextEntry*> mapSource;
+        AbsolutePath                        absolute;
         if ( LocalizationToolsInternal::loadProjectSources( projectPath, project, listTable, mapSource, absolute ) == false )
             return false;
 
@@ -751,10 +751,10 @@ namespace sw
     {
         outResult       = LocalizationExchangeResult{};
         outResult._path = poPath;
-        LocalizationProject                      project;
-        vector<SourceStringTable>                listTable;
-        flat_map<string, const SourceTextEntry*> mapSource;
-        AbsolutePath                             absolute;
+        LocalizationProject                 project;
+        vector<SourceStringTable>           listTable;
+        map<string, const SourceTextEntry*> mapSource;
+        AbsolutePath                        absolute;
         if ( LocalizationToolsInternal::loadProjectSources( projectPath, project, listTable, mapSource, absolute ) == false )
             return false;
 

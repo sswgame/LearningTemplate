@@ -3,7 +3,7 @@
 #include "Engine/Localization/TextFormatter.h"
 
 #include "Core/Algorithm/VectorUtil.h"
-#include "Core/Container/flat_set.h"
+#include "Core/Container/set.h"
 #include "Core/String/StringBuilder.h"
 #include "Core/String/StringUtil.h"
 
@@ -69,8 +69,8 @@ namespace sw
                 return bParsed;
             }
 
-            const string&           getError() const { return _error; }
-            const flat_set<string>& getNames() const { return _uniqueName; }
+            const string&      getError() const { return _error; }
+            const set<string>& getNames() const { return _uniqueName; }
 
         private:
             bool fail( string_view reason )
@@ -579,7 +579,7 @@ namespace sw
             string_view             _pattern;
             string                  _error;
             vector<string>          _listPluralNumber; ///< 바깥에서 안쪽 순서이며, `#` 은 가장 안쪽 복수형의 수입니다.
-            flat_set<string>        _uniqueName;
+            set<string>             _uniqueName;
             const TextArgumentList* _pArguments;
             const CultureInfo*      _pCulture;
             TextLiteralMapFunc      _pfnMap;
