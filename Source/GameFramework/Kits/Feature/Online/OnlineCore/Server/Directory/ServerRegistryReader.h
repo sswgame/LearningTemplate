@@ -9,6 +9,7 @@
  *          - 라우터보다 먼저 종료할 수 있다. `shutdown` 이 기다리던 캐시 요청을 취소한다.
  */
 #pragma once
+#include "Core/Concurrency/DevCounter.h"
 #include "Core/Container/string.h"
 #include "Core/Container/unordered_map.h"
 #include "Core/Container/vector.h"
@@ -55,7 +56,7 @@ namespace sw
 
         const vector<ServerStatus>& getSnapshot() const { return _listSnapshot; }
         const string&               getKind() const { return _kind; }
-        uint64                      getRefreshCount() const { return _refreshCount; }
+        const DevCounter&           getRefreshCount() const { return _refreshCount; }
         bool                        isRefreshing() const { return _outstandingCount > 0; }
 
     private:
@@ -78,7 +79,7 @@ namespace sw
         int64                         _refreshPeriodMs;
         int64                         _seatReservationTTLMs;
         UnixMilliseconds              _lastRefreshStartMs;
-        uint64                        _refreshCount;
+        DevCounter                    _refreshCount;
         int32                         _outstandingCount;
         uint8                         _bRefreshRequested;
     };

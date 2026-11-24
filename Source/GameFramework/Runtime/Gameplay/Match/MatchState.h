@@ -198,9 +198,9 @@ namespace sw
         PROPERTY( RuntimeState )
         vector<MatchTeam> _listTeam;
         PROPERTY( RuntimeState )
-        vector<MatchParticipant> _listParticipant;
-        EventBuffer<MatchEvent>  _eventBuffer;
-        MatchSettings            _settings;
+        vector<MatchParticipant>       _listParticipant;
+        NotificationBuffer<MatchEvent> _eventBuffer;
+        MatchSettings                  _settings;
         PROPERTY( RuntimeState )
         float32 _elapsed;
         PROPERTY( RuntimeState )

@@ -16,9 +16,9 @@
 #include "Engine/Foundation/EngineServices.h"
 #include "Engine/Reflection/ReflectionCast.h"
 #include "Engine/Reflection/ReflectionConstants.h"
+#include "Engine/Reflection/ReflectionDesc.h"
 #include "Engine/Reflection/ReflectionEditorMetadata.h"
 #include "Engine/Reflection/ReflectionEnumNames.h"
-#include "Engine/Reflection/ReflectionMetadataText.h"
 #include "Engine/Reflection/ReflectionValidation.h"
 #include "Engine/Reflection/TypeRegistry.h"
 
@@ -81,6 +81,57 @@ namespace sw
         return _pEditor != nullptr ? *_pEditor : PropertyEditorMetadata::getDefault();
     }
 
+    void PropertyMetadataDesc::applyTo( PropertyMetadata& outMetadata ) const
+    {
+        const auto toFlag = [this]( const uint32 flag ) -> uint8
+        { return ( _flags & flag ) != 0 ? SW_TRUE : SW_FALSE; };
+        outMetadata._bHasMinRange    = toFlag( PropertyMetadataFlag::kHasMinRange );
+        outMetadata._bHasMaxRange    = toFlag( PropertyMetadataFlag::kHasMaxRange );
+        outMetadata._bReadOnly       = toFlag( PropertyMetadataFlag::kReadOnly );
+        outMetadata._bXMLAttribute   = toFlag( PropertyMetadataFlag::kXMLAttribute );
+        outMetadata._bAssetPath      = toFlag( PropertyMetadataFlag::kAssetPath );
+        outMetadata._bTransient      = toFlag( PropertyMetadataFlag::kTransient );
+        outMetadata._bSkipIfEmpty    = toFlag( PropertyMetadataFlag::kSkipIfEmpty );
+        outMetadata._bReplicated     = toFlag( PropertyMetadataFlag::kReplicated );
+        outMetadata._bRequired       = toFlag( PropertyMetadataFlag::kRequired );
+        outMetadata._bInheritKey     = toFlag( PropertyMetadataFlag::kInheritKey );
+        outMetadata._bSaveGame       = toFlag( PropertyMetadataFlag::kSaveGame );
+        outMetadata._bInterp         = toFlag( PropertyMetadataFlag::kInterp );
+        outMetadata._bRuntimeState   = toFlag( PropertyMetadataFlag::kRuntimeState );
+        outMetadata._bRequiredAtRoot = toFlag( PropertyMetadataFlag::kRequiredAtRoot );
+        outMetadata._bInheritParent  = toFlag( PropertyMetadataFlag::kInheritParent );
+        outMetadata._minRange        = _minRange;
+        outMetadata._maxRange        = _maxRange;
+        outMetadata._unit            = _unit;
+        outMetadata._maxCount        = _maxCount;
+        outMetadata._pApplyDefault   = _pApplyDefault;
+        outMetadata._pReadMinRange   = _pReadMinRange;
+        outMetadata._pReadMaxRange   = _pReadMaxRange;
+        outMetadata._pEditCondition  = _pEditCondition;
+        for ( uint32 index = 0; index < _textCount; ++index )
+        {
+            const utf8* const pText = _pText[index]._pText;
+            switch ( _pText[index]._kind )
+            {
+                case PropertyMetadataTextKind::DefaultValue:
+                    outMetadata._defaultValue = pText;
+                    break;
+                case PropertyMetadataTextKind::AssetType:
+                    outMetadata._assetType = pText;
+                    break;
+                case PropertyMetadataTextKind::CatalogKeyTag:
+                    outMetadata._catalogKeyTag = pText;
+                    break;
+                case PropertyMetadataTextKind::RepNotify:
+                    outMetadata._repNotify = hashed_string{ pText };
+                    break;
+                case PropertyMetadataTextKind::Validate:
+                    outMetadata._validate = hashed_string{ pText };
+                    break;
+            }
+        }
+    }
+
     PropertyAllowedRange PropertyMetadata::computeAllowedRange( const void* pOwner ) const noexcept
     {
         // 경계 하나는 숫자이거나 필드다(둘이 함께 있지 않다). 필드 경계는 그 객체의 지금 값이다.
@@ -112,18 +163,4 @@ namespace sw
         return _pEditor != nullptr ? *_pEditor : FunctionEditorMetadata::getDefault();
     }
 
-    void ReflectionMetadataText::assign( string& outText, const utf8* pText )
-    {
-        outText = pText;
-    }
-
-    void ReflectionMetadataText::assign( hashed_string& outName, const utf8* pText )
-    {
-        outName = hashed_string{ pText };
-    }
-
-    void ReflectionMetadataText::addCustomMeta( unordered_map<hashed_string, string>& outMap, const utf8* pKey, const utf8* pValue )
-    {
-        outMap.emplace( hashed_string{ pKey }, string{ pValue } );
-    }
 } // namespace sw

@@ -72,13 +72,11 @@ namespace sw
         /** @brief 링과 넘침 목록에 든 항목 수의 어림값입니다(다른 스레드가 넣고 꺼내는 중이면 잠깐의 값). */
         [[nodiscard]] uint32 getQueuedCount() const { return _ring.size() + _overflowCount.load( std::memory_order_acquire ); }
 
-        /** @brief 지금 넘침 목록에 든 항목 수입니다(테스트 · 감시용, 잠깐의 값). */
-        [[nodiscard]] uint32 getOverflowCount() const { return _overflowCount.load( std::memory_order_acquire ); }
-
         /** @brief 링 용량입니다. 넘치면 넘침 목록이 받는다. */
         [[nodiscard]] static constexpr uint32 getRingCapacity() { return Capacity; }
 
     private:
+        friend struct OverflowConcurrentQueueTestAccess; ///< 테스트만 안을 본다 — 배포 공개 API 에 진단 조회를 두지 않는다
         ConcurrentQueue<T, Capacity> _ring;
         atomic<uint32>               _overflowCount{ 0 }; ///< 넘침 목록에 남은 수 — 0 이면 넣기 · 꺼내기가 잠금을 보지 않는다
         mutable mutex                _overflowMutex;

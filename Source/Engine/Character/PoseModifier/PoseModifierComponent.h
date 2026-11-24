@@ -115,6 +115,8 @@ namespace sw
 
         void onBeginPlay() override;
         void onEndPlay() override;
+        /** @brief 리그의 스프링 · 지글이 월드 자리로 든 입자를 옮깁니다. */
+        void onWorldOriginShifted( const float3& delta ) override;
         void onPropertyChanged( hashed_string propertyName ) override;
 
         /** @brief 리그 에셋 경로를 바꾸고 다시 묶습니다. */

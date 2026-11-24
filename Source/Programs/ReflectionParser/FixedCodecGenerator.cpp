@@ -239,10 +239,21 @@ namespace sw
     {
         const TypePlan& plan = _listPlan[typeIndex];
         vector<string>  listEmittedEnum;
+
+        // 복제 스키마 — `Replicated` 칸만 든 두 번째 표다. 기반 · 검증은 없다(기반의 복제 칸은 `ReplicatedLayout` 이 거절한다, 검증은 타입 전체의 것이다).
+        // 코덱이 생성자 인자로 이것을 가리키므로 먼저 낸다(둘 다 상수 초기화된다 — 의존 표가 있는 타입만 그 표가 첫 호출에 지어진다).
+        const utf8* pReplicated = "nullptr";
+        if ( plan._replicatedCanonical.empty() == false )
+        {
+            const pair<string, string> tableArgs =
+                emitTables( emit, plan._replicated._listRootNode, plan._replicated._listEnum, plan._replicated._listDependency, "s_arrReplicated", listEmittedEnum );
+            emit.linef( "static ::sw::FixedCodec s_replicatedCodec( %#, %#, %#, nullptr, nullptr, nullptr );", tableArgs.first, CodeEmit::quoted( plan._replicatedCanonical ), tableArgs.second );
+            pReplicated = "&s_replicatedCodec";
+        }
+
         if ( plan._bEligible == SW_FALSE )
         {
-            emit.linef( "// FixedLayout: not eligible - %#", plan._reason );
-            emit.linef( "static ::sw::FixedCodec s_fixedCodec( %# );", CodeEmit::quoted( plan._reason ) );
+            emit.linef( "static ::sw::FixedCodec s_fixedCodec( %#, %# );", CodeEmit::quoted( plan._reason ), pReplicated );
         }
         else
         {
@@ -257,19 +268,10 @@ namespace sw
                                    type._fullyQualifiedName );
                 baseCast = string( text.view() );
             }
-            // 검증 함수는 위에서 건 `info._pValidate` 와 같은 것이다(`REFLECT( Validate = fn )` 이 없으면 nullptr).
-            emit.linef( "static ::sw::FixedCodec s_fixedCodec( %#, %#, %#, %#, info._pValidate );", tableArgs.first, CodeEmit::quoted( plan._canonical ), tableArgs.second, baseCast );
+            // 검증 함수는 타입 서술자와 같은 것이다(`REFLECT( Validate = fn )` 이 없으면 nullptr).
+            emit.linef( "static ::sw::FixedCodec s_fixedCodec( %#, %#, %#, %#, %#, %# );", tableArgs.first, CodeEmit::quoted( plan._canonical ), tableArgs.second, baseCast,
+                        type._validate.empty() ? "nullptr" : "kValidate", pReplicated );
         }
-
-        // 복제 스키마 — `Replicated` 칸만 든 두 번째 표다. 기반 · 검증은 없다(기반의 복제 칸은 `ReplicatedLayout` 이 거절한다, 검증은 타입 전체의 것이다).
-        if ( plan._replicatedCanonical.empty() == false )
-        {
-            const pair<string, string> tableArgs =
-                emitTables( emit, plan._replicated._listRootNode, plan._replicated._listEnum, plan._replicated._listDependency, "s_arrReplicated", listEmittedEnum );
-            emit.linef( "static ::sw::FixedCodec s_replicatedCodec( %#, %#, %#, nullptr, nullptr );", tableArgs.first, CodeEmit::quoted( plan._replicatedCanonical ), tableArgs.second );
-            emit.line( "s_fixedCodec._pReplicated = &s_replicatedCodec;" );
-        }
-        emit.line( "info._pFixedCodec = &s_fixedCodec;" );
     }
 
     string FixedCodecGenerator::makeSchemaLine( const size_t typeIndex ) const

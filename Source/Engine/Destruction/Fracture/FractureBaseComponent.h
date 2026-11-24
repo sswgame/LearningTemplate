@@ -44,6 +44,7 @@
 #include "Engine/Destruction/Fracture/FractureNetworkSync.h"
 #include "Engine/Destruction/Fracture/FractureRenderUnits.h"
 #include "Engine/Foundation/ComponentHandle.h"
+#include "Engine/Object/GameObject/WorldOrigin.h"
 #include "Engine/Physics/Component/PhysicsComponent.h"
 #include "Engine/Physics/PhysicsTypes.h"
 #include "Engine/Physics/Scene/DebrisBudget.h"
@@ -192,7 +193,7 @@ namespace sw
         /** @brief 사건 기록과 같은 인덱스의 값입니다. 그 사건이 맞힌 떨어진 그룹의 적용 직전 자세입니다. 앵커 그룹이거나 그룹이 없으면 비어 있습니다. */
         const vector<optional<FractureGroupPose>>& getEventGroupPoses() const { return _listEventGroupPose; }
         /** @brief 맞은 그룹 @p pHit 의 사건 자세입니다. 그룹이 없거나 앵커 그룹이면 비어 있습니다(그룹 번호 0 으로 대신하지 않는다). */
-        [[nodiscard]] static optional<FractureGroupPose> makeEventGroupPose( const FractureGroupRuntime* pHit );
+        [[nodiscard]] static optional<FractureGroupPose> makeEventGroupPose( const FractureGroupRuntime* pHit, const WorldOrigin& origin );
         const FractureAsset*                             findAsset() const { return _asset.get(); }
         /** @brief 지금 있는 동적 바디 수(떨어진 그룹)입니다. */
         uint32 getDynamicBodyCount() const;
@@ -240,10 +241,10 @@ namespace sw
         /** @brief 스냅샷을 쌓습니다. 다음 물리 프레임에서 앞서 쌓인 사건 뒤에 적용하며, 바디와 렌더링을 그룹마다 다시 만듭니다. */
         void applyNetworkSnapshot( const uint8* pData, size_t size );
         /**
-         * @brief 떨어진 그룹 하나의 자세를 네트워크가 정합니다(클라이언트의 덩어리). @p worldCenter 는 월드 질량 중심입니다. 그 바디는 키네마틱이 되고 스텝마다 이 자세로 옮겨집니다.
+         * @brief 떨어진 그룹 하나의 자세를 네트워크가 정합니다(클라이언트의 덩어리). @p absoluteCenter 는 절대 질량 중심입니다. 그 바디는 키네마틱이 되고 스텝마다 이 자세로 옮겨집니다.
          * @details 그룹이 아직 없거나(사건이 오기 전) 사라졌으면 아무것도 하지 않는다. 다음 물리 프레임에 반영된다.
          */
-        void driveGroup( uint32 groupID, const float3& worldCenter, const quaternion& rotation );
+        void driveGroup( uint32 groupID, const float3& absoluteCenter, const quaternion& rotation );
 
     protected:
         /** @brief 2D 물리(Box2D)를 쓰는지입니다. */
@@ -293,6 +294,8 @@ namespace sw
         void spawnGroup( FractureGroupRuntime& inoutRuntime, const DestructionGroup& group, const float3& linearVelocity, const float3& angularVelocity );
         /** @brief 앵커 그룹의 잎에만 정적 바디가 있게 맞춥니다. 남은 바디는 그대로 두므로 붙은 벽이 갈라져도 다시 만들지 않습니다. */
         void syncStaticBodies( vector<PhysicsBodyHandle>& inoutListDestroy );
+        /** @brief 이 씬의 월드 원점입니다(네트워크로 주고받는 절대 자리를 옮긴다). 매니저가 없으면 0 입니다. */
+        WorldOrigin getManagerWorldOrigin() const;
         /** @brief 메시 공간 사건 하나를 상태에 적용하고, 기록과 그룹 바디를 고칩니다. */
         void applyMeshEvent( ScenePhysics& physics, const DestructionDamageEvent& event, const FractureGroupPose* pGroupPose = nullptr );
         /** @brief 월드 요청 하나를 현재 자세로 메시 공간 사건들로 바꿉니다. */

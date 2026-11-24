@@ -269,7 +269,7 @@ namespace sw
             const bool bNotHostileTarget = candidate._object == from || candidate._bAlive == SW_FALSE || bHostile == false;
             if ( bNotHostileTarget )
                 continue;
-            const float32 distance = float3::getDistance( pFrom->_position, candidate._position );
+            const float32 distance = float3::getDistance( pFrom->_position._value, candidate._position._value );
             if ( distance <= nearestDistance )
             {
                 nearestDistance = distance;
@@ -329,7 +329,7 @@ namespace sw
         request._spec         = spec;
         request._extraSpec    = extraSpec;
         request._projectileID = projectileID;
-        request._origin       = pFromView->_position;
+        request._origin       = pFromView->_position._value;
         request._direction    = facing;
         request._bFromPlayer  = from.getOwnedTagCounts().hasMatchingTag( "Team.Player"_tag ) ? SW_TRUE : SW_FALSE;
         // 어빌리티는 워커(유닛의 틱)에서 쏘고, 오브젝트는 틱이 끝난 뒤 게임 스레드에서 스폰한다. 그 사이 디렉터가 사라질 수 있으니 핸들로 다시 찾는다.
@@ -676,7 +676,7 @@ namespace sw
             ArenaUnitView view;
             view._object      = unit._object;
             view._unitID      = unit._unitID;
-            view._position    = pManager->getWorldOrigin().toAbsolute( pMesh->getWorldPosition() );
+            view._position    = AbsolutePosition{ pManager->getWorldOrigin().toAbsolute( pMesh->getWorldPosition() ) };
             view._kind        = unit._kind;
             view._bAlive      = unit._deathTimer < 0.0f && pAbilitySystem->getOwnedTagCounts().hasMatchingTag( CombatAttributeSet::getDeadTag() ) == false ? SW_TRUE : SW_FALSE;
             view._bPlayerTeam = pAbilitySystem->getOwnedTagCounts().hasMatchingTag( "Team.Player"_tag ) ? SW_TRUE : SW_FALSE;

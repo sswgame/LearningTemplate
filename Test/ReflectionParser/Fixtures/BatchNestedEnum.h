@@ -3,7 +3,7 @@
 // EXPECT-GEN: "sw::fixture::BatchNestOwner::Mode", "ParserFixture"
 // EXPECT-GEN: OldBatchNestMode
 // EXPECT-GEN: struct Registrar<sw::fixture::BatchNestOwner::Inner>
-// EXPECT-GEN: offsetof( sw::fixture::BatchNestOwner::Inner, _innerMode )
+// EXPECT-GEN: offsetof( Self, _innerMode )
 // EXPECT-TYPE: sw::fixture::BatchNestOwner::Mode
 // EXPECT-TYPE: sw::fixture::BatchNestOwner::Inner
 // 형식 안의 중첩 ENUM · REFLECT 는 그 형식 본문 안의 표식으로 짝짓는다 — 표식 인자(Alias)가 바깥이 아니라 중첩 열거형에 붙는다.

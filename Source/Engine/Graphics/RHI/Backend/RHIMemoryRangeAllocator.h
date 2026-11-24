@@ -27,10 +27,9 @@ namespace sw
         bool isEmpty() const { return _usedBytes == 0; }
         /** @brief 떼어 간 바이트 합입니다. */
         uint64 getUsedBytes() const { return _usedBytes; }
-        /** @brief 빈 구간 수입니다(조각남 — 테스트 · 진단). */
-        uint32 getFreeRangeCount() const { return static_cast<uint32>( _listFree.size() ); }
 
     private:
+        friend struct RHIMemoryRangeAllocatorTestAccess; ///< 테스트만 안을 본다 — 배포 공개 API 에 진단 조회를 두지 않는다
         /** @brief 빈 구간 하나입니다. */
         struct FreeRange
         {

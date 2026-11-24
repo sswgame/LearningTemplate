@@ -69,8 +69,6 @@ namespace sw
         const float2& getCellSpacing() const { return _cellSpacing; }
         /** @brief 칸 사이 간격(열, 행, UI 단위)을 바꿉니다. kLayout 입니다. */
         void setCellSpacing( const float2& cellSpacing );
-        /** @brief 마지막 measure 에서 트랙 밖이라 마지막 트랙으로 옮긴 자식 수입니다(테스트와 진단용). */
-        uint32 getOutOfRangeCellCount() const { return _outOfRangeCellCount; }
         /**
          * @brief 마지막 arrange 의 열 너비 · 행 높이입니다(UI 단위, 트랙 순서). 에디터의 칸 손잡이가 놓은 점의 칸을 고릅니다.
          * @details 자식 사각형으로 줄을 거꾸로 추정하면 걸친 칸(span)이 섞이고 자식 없는 줄을 고를 수 없어, 배치가 정한 값을 그대로 낸다.
@@ -84,6 +82,7 @@ namespace sw
         void   arrangeChildren( const UILayoutContext& context, const float2& size ) override;
 
     private:
+        friend struct GridPanelTestAccess; ///< 테스트만 안을 본다 — 배포 공개 API 에 진단 조회를 두지 않는다
         PROPERTY( DisplayName = "Columns" )
         vector<UIGridTrack> _listColumn;
         PROPERTY( DisplayName = "Rows" )

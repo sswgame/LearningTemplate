@@ -214,6 +214,11 @@ namespace sw
         bindRig();
     }
 
+    void PoseModifierComponent::onWorldOriginShifted( const float3& delta )
+    {
+        _instance.applyWorldOffset( delta );
+    }
+
     void PoseModifierComponent::onEndPlay()
     {
         releaseDependencies();

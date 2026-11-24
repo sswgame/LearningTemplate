@@ -291,6 +291,6 @@ namespace sw
             return;
         const FarmField& field = director.getField();
         const float3     fieldCenter{ static_cast<float32>( field.getWidth() ) * 0.5f, 0.0f, static_cast<float32>( field.getHeight() ) * 0.5f };
-        pRig->setFocusPoint( manager.getWorldOrigin().toLocal( fieldCenter + ( director.getPlayerPosition() - fieldCenter ) * _cameraFollow ) );
+        pRig->setFocusPoint( manager.getWorldOrigin().toLocal( fieldCenter + ( director.getPlayerPosition()._value - fieldCenter ) * _cameraFollow ) );
     }
 } // namespace sw

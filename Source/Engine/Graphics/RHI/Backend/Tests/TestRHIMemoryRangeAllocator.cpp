@@ -9,6 +9,15 @@
 
 #include "Engine/Graphics/RHI/Backend/RHIMemoryRangeAllocator.h"
 
+namespace sw
+{
+    /** @brief 안을 보는 테스트 창구입니다(`friend`). */
+    struct RHIMemoryRangeAllocatorTestAccess
+    {
+        static uint32 getFreeRangeCount( const RHIMemoryRangeAllocator& ranges ) { return static_cast<uint32>( ranges._listFree.size() ); }
+    };
+} // namespace sw
+
 using namespace sw;
 
 /**
@@ -56,13 +65,13 @@ SW_TEST_CASE( RHIMemoryRangeAllocatorTest, ReleasingEverythingMergesBack )
     {
         ranges.release( listOffset[index], kPiece );
     }
-    SW_EXPECT_EQUAL( kCount / 2, ranges.getFreeRangeCount() );
+    SW_EXPECT_EQUAL( kCount / 2, RHIMemoryRangeAllocatorTestAccess::getFreeRangeCount( ranges ) );
     for ( uint32 index = 1; index < kCount; index += 2 )
     {
         ranges.release( listOffset[index], kPiece );
     }
     SW_EXPECT_TRUE( ranges.isEmpty() );
-    SW_EXPECT_EQUAL( 1u, ranges.getFreeRangeCount() );
+    SW_EXPECT_EQUAL( 1u, RHIMemoryRangeAllocatorTestAccess::getFreeRangeCount( ranges ) );
     uint64 whole{ 1 };
     SW_REQUIRE_TRUE( ranges.allocate( kPiece * kCount, 1, whole ) );
     SW_EXPECT_EQUAL( uint64{ 0 }, whole );

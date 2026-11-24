@@ -51,13 +51,13 @@ namespace sw::editor
 
     bool EditorMultiEditGroup::hasMixedValues( const PropertyInfo& prop, const vector<ObjectAddress>& listInstance )
     {
-        if ( listInstance.size() < 2 )
+        const SerializeContext& context     = SerializeContext::getDefault( SerializePurpose::Authoring );
+        const bool              bComparable = listInstance.size() >= 2 && SerializerUtil::canCarryProperty( prop, context );
+        if ( bComparable == false )
             return false;
-        const SerializeContext& context = SerializeContext::getDefault( SerializePurpose::Authoring );
-        const string            first   = SerializerUtil::formatPropertyText( prop, listInstance[0], context );
         for ( size_t index = 1; index < listInstance.size(); ++index )
         {
-            if ( SerializerUtil::formatPropertyText( prop, listInstance[index], context ) != first )
+            if ( SerializerUtil::arePropertyValuesEqual( prop, listInstance[0], listInstance[index], context ) == false )
                 return true;
         }
         return false;

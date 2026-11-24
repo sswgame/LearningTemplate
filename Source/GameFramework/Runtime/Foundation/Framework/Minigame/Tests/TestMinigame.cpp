@@ -1,5 +1,5 @@
 // MinigameTest — 미니게임 데이터 읽기 · 참조 검사(모르는 게임 기능 · 겹친 이름 · 빠진 맵, 모르는 속성 · 원소), 칸 스택(쌓기 · 교체 · 빈 스택 나가기 · 깊이 한도 ·
-// 저장 막기 · 장치 밖 씬 이동 비우기), 결과 통로(값 목록 · 디렉터 계약 ③ · 매치 점수), 넷 세션의 씬 전환 거절(nogpu).
+// 저장 막기 · 장치 밖 씬 이동 비우기), 결과 통로(값 목록 · 디렉터 계약 ③ · 매치 점수 빼기), 넷 세션의 씬 전환 거절(nogpu).
 #include "pch.h"
 
 #include "Core/File/FileUtil.h"
@@ -243,34 +243,25 @@ SW_TEST_CASE( MinigameTest, MatchSettingsComeTogether )
     SW_EXPECT_FALSE( partial.validate( features, "match.minigame.xml" ) );
 }
 
-/** @brief [MinigameTest] 매치 칸의 점수 값은 바탕 판 보상 목록에서 빠져 매치 결과 칸으로 간다 — 매치가 아닌 칸은 값 목록을 그대로 둔다 */
+/** @brief [MinigameTest] 매치 칸의 점수 값은 바탕 판 보상 목록에서 빠진다(점수는 매치 서버가 낸다) — 배정 없이 선 칸은 값 목록을 그대로 둔다 */
 SW_TEST_CASE( MinigameTest, MatchScoreLeavesTheRewardValues )
 {
     MinigameFrame frame{ makeMinigame( "match", MinigameEntry::SceneSwitch ), MinigameReturnPoint{ MinigameEntranceReturn{} } };
     frame._definition._matchMode  = "solo";
     frame._definition._matchBoard = "kills";
     frame._definition._matchScore = hashed_string( "kills" );
-    const auto makeResult         = []()
-    { return MinigameResult{
-          hashed_string( "match" ),
-          hashed_string( "down" ),
-          { MinigameResultValue{ hashed_string( "kills" ), 7 }, MinigameResultValue{ hashed_string( "gold" ), 2 } }
- }; };
 
-    MinigameResult offline = makeResult();
-    frame.takeMatchResult( offline ); // 배정 없이 선 칸(서버가 첫 판으로 띄운 것)
-    SW_EXPECT_EQUAL( 2u, static_cast<uint32>( offline._listValue.size() ) );
-    SW_EXPECT_FALSE( offline._matchScore.has_value() );
+    vector<MinigameResultValue> listValue{
+        MinigameResultValue{hashed_string( "kills" ), 7},
+        MinigameResultValue{ hashed_string( "gold" ), 2}
+    };
+    frame.removeMatchScore( listValue ); // 배정 없이 선 칸(서버가 첫 판으로 띄운 것)
+    SW_EXPECT_EQUAL( 2u, static_cast<uint32>( listValue.size() ) );
 
-    frame._matchID        = 41;
-    MinigameResult result = makeResult();
-    frame.takeMatchResult( result );
-    SW_EXPECT_EQUAL( uint64{ 41 }, result._matchID );
-    SW_EXPECT_EQUAL( string( "kills" ), result._matchBoard );
-    SW_REQUIRE_TRUE( result._matchScore.has_value() );
-    SW_EXPECT_EQUAL( int64{ 7 }, *result._matchScore );
-    SW_REQUIRE_TRUE( result._listValue.size() == 1 );
-    SW_EXPECT_TRUE( result._listValue[0]._name == hashed_string( "gold" ) );
+    frame._matchID = 41;
+    frame.removeMatchScore( listValue );
+    SW_REQUIRE_TRUE( listValue.size() == 1 );
+    SW_EXPECT_TRUE( listValue[0]._name == hashed_string( "gold" ) );
 
     MinigameStack stack;
     SW_EXPECT_EQUAL( uint64{ 0 }, stack.findMatchID() );

@@ -106,7 +106,7 @@ namespace sw
         /**
          * @brief 한 번 감지합니다. 시각은 보이는 자극만, 청각은 소리 자극만 보고 감지한 것을 기억에 넣습니다.
          * @details 감지되지 않은 기억은 나이를 더하고, `_memoryDuration` 이 지나면 잊습니다.
-         * @param pGrid 가림을 볼 격자입니다. 없으면 가림을 보지 않습니다.
+         * @param pGrid 가림을 볼 격자(절대 자리)입니다. 없으면 가림을 보지 않습니다.
          */
         void sense( const float3& eyePosition, const float3& forward, const vector<AIStimulus>& listCandidate, const NavGrid* pGrid, float32 deltaTime );
         /**

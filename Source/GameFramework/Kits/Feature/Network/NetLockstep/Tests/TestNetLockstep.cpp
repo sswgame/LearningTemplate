@@ -275,7 +275,7 @@ SW_TEST_CASE( NetLockstepTest, RollbackPredictsRewindsAndConvergesOnBothSides )
         }
     }
     // 예측이 틀린 적이 있고, 되감아 고쳤다.
-    SW_EXPECT_TRUE( arrSession[0].getRollbackCount() > 0 && arrSession[1].getRollbackCount() > 0 );
+    SW_EXPECT_TRUE( arrSession[0].getRollbackCount().get() > 0 && arrSession[1].getRollbackCount().get() > 0 );
     SW_EXPECT_TRUE( arrSession[0].getFrame() > 400 && arrSession[1].getFrame() > 400 );
     // 둘 다 확정한 프레임까지는 상태가 같다.
     const int32 confirmed = std::min( arrSession[0].getConfirmedFrame(), arrSession[1].getConfirmedFrame() );

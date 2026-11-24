@@ -125,19 +125,19 @@ namespace sw
         void                            pushEvent( BattleRoyaleZoneEvent::Kind kind );
 
     private:
-        BattleRoyaleZoneDef                _settings;
-        EventBuffer<BattleRoyaleZoneEvent> _eventBuffer;
-        const IBrZoneTerrain*              _pTerrain;
-        GameRandom                         _random;
-        float2                             _center;
-        float2                             _fromCenter; ///< 줄기 시작할 때의 원
-        float2                             _nextCenter;
-        float32                            _radius;
-        float32                            _fromRadius;
-        float32                            _nextRadius;
-        float32                            _mapSize;
-        float32                            _stageRemaining;
-        int32                              _phaseIndex;
-        BattleRoyaleZoneStage              _stage;
+        BattleRoyaleZoneDef                       _settings;
+        NotificationBuffer<BattleRoyaleZoneEvent> _eventBuffer;
+        const IBrZoneTerrain*                     _pTerrain;
+        GameRandom                                _random;
+        float2                                    _center;
+        float2                                    _fromCenter; ///< 줄기 시작할 때의 원
+        float2                                    _nextCenter;
+        float32                                   _radius;
+        float32                                   _fromRadius;
+        float32                                   _nextRadius;
+        float32                                   _mapSize;
+        float32                                   _stageRemaining;
+        int32                                     _phaseIndex;
+        BattleRoyaleZoneStage                     _stage;
     };
 } // namespace sw

@@ -17,8 +17,6 @@ namespace sw
     /// @brief 시퀀스와 맵이 공통으로 쓰는 컨테이너 래퍼입니다.
     struct IContainerWrapper
     {
-        /** @brief 가상 소멸자입니다. */
-        virtual ~IContainerWrapper() = default;
         /** @brief Sequence 인지 Map 인지 종류를 반환합니다. */
         virtual ContainerKind getKind() const = 0;
         /** @brief 컨테이너 크기를 반환합니다. */
@@ -34,6 +32,10 @@ namespace sw
         // 래퍼는 상태가 없다 — 생성 코드가 서술자 표에서 가리키는 정적 `const` 객체이므로 연산은 모두 const 다.
         virtual const ISequenceContainerWrapper* asSequence() const { return nullptr; }
         virtual const IMapContainerWrapper*      asMap() const { return nullptr; }
+
+    protected:
+        /** @brief 기반 포인터로 지우지 않는다 — 래퍼는 상수 정적 객체(`ContainerWrapperOf::kInstance`)다. 소멸자가 사소해야 그 객체가 초기화 · 종료 코드 없이 상수로 놓인다. */
+        ~IContainerWrapper() = default;
     };
 } // namespace sw
 
@@ -182,40 +184,27 @@ namespace sw
         bool isFixedSize() const final { return TDerived::kFixedSize; }
     };
 
-    template <typename TContainer>
-    /// @brief vector 시퀀스 래퍼입니다. 원소 주소를 `&container[index]` 로 잡습니다. 비트로 묶는 `vector<bool>` 은 `VectorElementCheck` 가 막아 이 주소는 늘 원소 자체입니다.
-    struct VectorWrapper : SequenceContainerWrapperBase<VectorWrapper<TContainer>>
+    /**
+     * @brief 번호로 바로 닿는 시퀀스(vector · deque) 래퍼의 공통 본문입니다. 원소 주소는 `&container[index]` 다. 비트로 묶는 `vector<bool>` 은 `VectorElementCheck` 가 막아 이 주소는 늘 원소 자체입니다.
+     * @details 컨테이너 형식마다 펼쳐지는 함수라 래퍼마다 사본을 두지 않고 한 벌만 둔다. 형식을 지우는 것(언리얼 `FScriptArray`)은 하지 않는다 — 컨테이너 배치를 한 벌로 못박아야 하고
+     *          (두 구성 `SW_ENABLE_STL_CONTAINER` 의 배치가 다르다), 원소 접근이 가상 호출 둘이 된다.
+     */
+    template <typename TContainer, typename TDerived>
+    struct IndexedContainerWrapperBase : SequenceContainerWrapperBase<TDerived>
     {
         /** @brief 원소 개수를 반환합니다. */
         size_t getSize( const void* pContainer ) const override { return static_cast<const TContainer*>( pContainer )->size(); }
         /** @brief 인덱스 위치의 원소 포인터를 반환합니다. */
-        void* getElement( void* pContainer, size_t index ) const override
-        {
-            TContainer* pContainerTyped = static_cast<TContainer*>( pContainer );
-            return &( ( *pContainerTyped )[index] );
-        }
-
+        void* getElement( void* pContainer, size_t index ) const override { return &( ( *static_cast<TContainer*>( pContainer ) )[index] ); }
         /** @brief 인덱스 위치의 원소 const 포인터를 반환합니다. */
-        const void* getElementConst( const void* pContainer, size_t index ) const override
-        {
-            const TContainer* pContainerTyped = static_cast<const TContainer*>( pContainer );
-            return &( ( *pContainerTyped )[index] );
-        }
-
+        const void* getElementConst( const void* pContainer, size_t index ) const override { return &( ( *static_cast<const TContainer*>( pContainer ) )[index] ); }
         /** @brief 비웁니다. */
         void clear( void* pContainer ) const override { static_cast<TContainer*>( pContainer )->clear(); }
         /** @brief 0 으로 채운 저장소에 빈 컨테이너를 placement new 로 만듭니다. */
         void constructEmpty( void* pContainer ) const override { sw_placement_new( pContainer ) TContainer{}; }
         void destroyContainer( void* pContainer ) const override { static_cast<TContainer*>( pContainer )->~TContainer(); }
         /** @brief 기본 원소를 뒤에 추가합니다. */
-        void addElementDefault( void* pContainer ) const override
-        {
-            using ElementType = typename TContainer::value_type;
-            static_cast<TContainer*>( pContainer )->emplace_back( ElementType{} );
-        }
-
-        /** @brief 용량을 예약합니다. */
-        void reserve( void* pContainer, size_t capacity ) const override { static_cast<TContainer*>( pContainer )->reserve( capacity ); }
+        void addElementDefault( void* pContainer ) const override { static_cast<TContainer*>( pContainer )->emplace_back( typename TContainer::value_type{} ); }
 
         /** @brief @p index 번째 원소를 지웁니다. */
         bool eraseAt( void* pContainer, size_t index ) const override
@@ -223,60 +212,23 @@ namespace sw
             TContainer* pContainerTyped = static_cast<TContainer*>( pContainer );
             if ( pContainerTyped->size() <= index )
                 return false;
-            auto it = pContainerTyped->begin();
-            for ( size_t step = 0; step < index; ++step )
-            {
-                ++it;
-            }
-            pContainerTyped->erase( it );
+            pContainerTyped->erase( pContainerTyped->begin() + static_cast<std::ptrdiff_t>( index ) ); // 번호 접근 컨테이너의 반복자는 임의 접근이다
             return true;
         }
     };
-} // namespace sw
 
-namespace sw
-{
+    template <typename TContainer>
+    /// @brief vector 시퀀스 래퍼입니다.
+    struct VectorWrapper : IndexedContainerWrapperBase<TContainer, VectorWrapper<TContainer>>
+    {
+        /** @brief 용량을 예약합니다. */
+        void reserve( void* pContainer, size_t capacity ) const override { static_cast<TContainer*>( pContainer )->reserve( capacity ); }
+    };
+
     template <typename TContainer>
     /// @brief deque 시퀀스 래퍼입니다.
-    struct DequeWrapper : SequenceContainerWrapperBase<DequeWrapper<TContainer>>
+    struct DequeWrapper : IndexedContainerWrapperBase<TContainer, DequeWrapper<TContainer>>
     {
-        /** @brief 원소 개수를 반환합니다. */
-        size_t getSize( const void* pContainer ) const override { return static_cast<const TContainer*>( pContainer )->size(); }
-        /** @brief 인덱스 위치의 원소 포인터를 반환합니다. */
-        void* getElement( void* pContainer, size_t index ) const override
-        {
-            TContainer* pContainerTyped = static_cast<TContainer*>( pContainer );
-            return &( ( *pContainerTyped )[index] );
-        }
-
-        /** @brief 인덱스 위치의 원소 const 포인터를 반환합니다. */
-        const void* getElementConst( const void* pContainer, size_t index ) const override
-        {
-            const TContainer* pContainerTyped = static_cast<const TContainer*>( pContainer );
-            return &( ( *pContainerTyped )[index] );
-        }
-
-        /** @brief 비웁니다. */
-        void clear( void* pContainer ) const override { static_cast<TContainer*>( pContainer )->clear(); }
-        /** @brief 0 으로 채운 저장소에 빈 컨테이너를 placement new 로 만듭니다. */
-        void constructEmpty( void* pContainer ) const override { sw_placement_new( pContainer ) TContainer{}; }
-        void destroyContainer( void* pContainer ) const override { static_cast<TContainer*>( pContainer )->~TContainer(); }
-        /** @brief 기본 원소를 뒤에 추가합니다. */
-        void addElementDefault( void* pContainer ) const override
-        {
-            using ElementType = typename TContainer::value_type;
-            static_cast<TContainer*>( pContainer )->emplace_back( ElementType{} );
-        }
-
-        /** @brief @p index 번째 원소를 지웁니다. */
-        bool eraseAt( void* pContainer, size_t index ) const override
-        {
-            TContainer* pContainerTyped = static_cast<TContainer*>( pContainer );
-            if ( pContainerTyped->size() <= index )
-                return false;
-            pContainerTyped->erase( pContainerTyped->begin() + static_cast<std::ptrdiff_t>( index ) ); // 링 deque 는 임의 접근이다
-            return true;
-        }
     };
 } // namespace sw
 
@@ -619,14 +571,15 @@ namespace sw
     using UnorderedMapWrapper = MapWrapper<TContainer>;
 
     /**
-     * @brief 래퍼 타입마다 하나인 정적 `const` 객체입니다. 생성 코드의 서술자 표(`PropertyDesc::_pContainerWrapper`)가 이 주소를 싣는다.
-     * @details 래퍼는 상태가 없어 프로퍼티마다 `make_shared` 로 짓던 것을 공유한다(언리얼 `FArrayProperty` 가 내부 프로퍼티를 정적 서술자로 드는 자리).
+     * @brief 래퍼 타입마다 하나인 정적 `const` 객체입니다. 생성 코드의 서술자 표(`PropertyContainerDesc::_pWrapper`)가 이 주소를 싣는다.
+     * @details 래퍼는 상태가 없어 프로퍼티마다 `make_shared` 로 짓던 것을 공유한다(언리얼 `FArrayProperty` 가 내부 프로퍼티를 정적 서술자로 드는 자리). `constexpr` 라 상태 · 소멸자를
+     *          더하면 컴파일이 멈춘다 — 형식마다 정적 초기화 · 종료 등록이 붙지 않는다.
      *          모듈(DLL)마다 하나씩 생기고 그 모듈의 수명이다 — 등록한 타입의 함수 포인터와 같다.
      */
     template <typename TWrapper>
     struct ContainerWrapperOf
     {
-        static inline const TWrapper kInstance{};
+        static constexpr TWrapper kInstance{};
 
         /** @brief 래퍼 형식의 종류입니다 — 기반(`ISequenceContainerWrapper` · `IMapContainerWrapper`)이 정한다. */
         static constexpr ContainerKind kKind = std::is_base_of_v<IMapContainerWrapper, TWrapper>      ? ContainerKind::Map
@@ -638,12 +591,27 @@ namespace sw
         static constexpr bool kStateCarried = kKind == ContainerKind::Sequence && TWrapper::kInPlaceElementWrite;
 
         /**
-         * @brief `ReflectBuiltins.xxx` CONTAINER 줄의 종류 · 역할이 이 래퍼 형식과 같은지입니다. 생성 코드가 컨테이너 칸마다 `static_assert` 로 부른다.
+         * @brief `ReflectBuiltins.xxx` CONTAINER 줄의 종류 · 역할이 이 래퍼 형식과 같은지입니다. 생성 코드가 컨테이너 칸마다 `getChecked` 로 본다.
          * @details 표가 래퍼와 다르면(종류를 Map 이라 적고 시퀀스 래퍼를 가리킴, State 를 집합에 담 …) 그 칸을 쓴 생성 코드가 컴파일되지 않는다.
          */
         static constexpr bool matchesTable( const ContainerKind kind, const bool bState, const bool bFixed )
         {
             return kind == kKind && bState == kStateCarried && bFixed == TWrapper::kFixedSize;
+        }
+
+        /** @brief 표의 종류 · 역할과 대조한 정적 래퍼의 주소입니다 — 생성 코드의 컨테이너 표가 이것으로 싣는다(어긋나면 그 칸의 생성 코드가 컴파일되지 않는다). */
+        template <ContainerKind kind, bool bState, bool bFixed>
+        static constexpr const IContainerWrapper* getChecked() noexcept
+        {
+            static_assert( matchesTable( kind, bState, bFixed ), "ReflectBuiltins.xxx: CONTAINER row (kind, State, Fixed) disagrees with the container wrapper type" );
+            return &kInstance;
+        }
+        /** @brief 표 밖 컨테이너(`REFLECT_CONTAINER( Kind, Stem )`)의 정적 래퍼 주소입니다 — 역할 칸이 없어 종류만 대조한다. */
+        template <ContainerKind kind>
+        static constexpr const IContainerWrapper* getOfKind() noexcept
+        {
+            static_assert( kind == kKind, "REFLECT_CONTAINER kind disagrees with the container wrapper type" );
+            return &kInstance;
         }
     };
 } // namespace sw

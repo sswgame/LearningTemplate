@@ -260,7 +260,7 @@ SW_TEST_CASE( NetMessageRouterTest, MalformedMessageIsCountedNotForwarded )
     vector<NetReceivedMessage> listUnhandled;
     SW_EXPECT_EQUAL( 2, router.poll( pair.getServer(), &listUnhandled ) );
     SW_EXPECT_EQUAL( 1, handler.getHandledCount() );
-    SW_EXPECT_EQUAL( uint64{ 1 }, router.getMalformedCount() );
+    SW_EXPECT_EQUAL( uint64{ 1 }, router.getMalformedCount().get() );
     SW_EXPECT_TRUE( listUnhandled.empty() );
 }
 
@@ -486,7 +486,7 @@ SW_TEST_CASE( NetMessageRouterTest, WrongDirectionMessageIsMalformedAndDisconnec
         SW_EXPECT_TRUE( NetHandleResult::Handled == router.dispatch( NetPeerRole::Server, NetMessageContext{}, arrUp, static_cast<int32>( sizeof( arrUp ) ) ) );
         SW_EXPECT_EQUAL( 1, down.getHandledCount() );
         SW_EXPECT_EQUAL( 1, up.getHandledCount() );
-        SW_EXPECT_EQUAL( uint64{ 2 }, router.getMalformedCount() );
+        SW_EXPECT_EQUAL( uint64{ 2 }, router.getMalformedCount().get() );
     }
 
     // 실제 연결 — 클라이언트가 ToClient 종류를 보내면 서버 라우터가 끊고, 같은 꺼내기의 뒤 메시지도 넘기지 않는다.
@@ -512,7 +512,7 @@ SW_TEST_CASE( NetMessageRouterTest, WrongDirectionMessageIsMalformedAndDisconnec
     pair.run( 0.3 );
     SW_EXPECT_EQUAL( 0, down.getHandledCount() );
     SW_EXPECT_EQUAL( 0, up.getHandledCount() ); // 끊은 연결의 뒤 메시지다
-    SW_EXPECT_EQUAL( uint64{ 1 }, serverRouter.getMalformedCount() );
+    SW_EXPECT_EQUAL( uint64{ 1 }, serverRouter.getMalformedCount().get() );
     SW_EXPECT_TRUE( pair.getClient( 0 ).getConnectionState( 0 ) != NetConnectionState::Connected );
 }
 

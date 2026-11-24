@@ -14,7 +14,21 @@
 
 namespace sw
 {
-    class CodeEmit;
+    /** @brief 필드 줄들이 모은 코드젠 값입니다 — 생성 코드의 상수 표(플래그 비트 · 글 줄)가 된다. 이름은 엔진 쪽 상수 이름이다(멤버 `_bX` · `_x` 의 X). */
+    struct AnnotationOutput
+    {
+        vector<string>               _listFlag; ///< 켜진 플래그의 이름
+        vector<pair<string, string>> _listText; ///< 글 칸의 이름 → 글
+        vector<pair<string, string>> _listCustomMeta;
+        FunctionNetRole              _netRole{ FunctionNetRole::Local };
+
+        /** @brief Runtime 필드를 표 순서대로 모읍니다(등록 단위 .gen.cpp 의 상수 표). 프로퍼티 · 메서드만 Runtime 필드를 갖는다(AnnotationFields.cpp 의 `static_assert`). */
+        template <typename TParsed>
+        static AnnotationOutput collectRuntime( const TParsed& parsed );
+        /** @brief Display · Editor 필드를 표 순서대로 모읍니다(개발 전용 단위 `<이름>.gen.meta.cpp` 의 줄 표). 배포 구성은 그 단위를 짓지 않는다 — 구조체 칸을 `#if` 로 가르지 않는다. */
+        template <typename TParsed>
+        static AnnotationOutput collectEditor( const TParsed& parsed );
+    };
 
     // ------------------------------------------------------------------------------
     // 1) 필드 한 줄
@@ -23,8 +37,8 @@ namespace sw
     enum class AnnotationEmit : uint8
     {
         Display, ///< Editor 와 같은 자리에 쓰는 표시 메타 — 어느 멤버(이벤트 포함)에나 붙는다
-        Editor,  ///< 개발 전용 단위(`<이름>.gen.meta.cpp`)의 에디터 메타데이터 `<접두><멤버>`(엔진 `ReflectionEditorMetadata.h`)
-        Runtime, ///< 등록 단위(.gen.cpp)의 `<접두><멤버>`(대상은 `PropertyMetadata&` · `_metadata.edit()`, 엔진 `ReflectionMetadata.h`)
+        Editor,  ///< 개발 전용 단위(`<이름>.gen.meta.cpp`)의 에디터 메타데이터 줄(엔진 `EditorMetadataField`)
+        Runtime, ///< 등록 단위(.gen.cpp)의 런타임 메타데이터 칸(엔진 `PropertyMetadataFlag` · `PropertyMetadataTextKind` · `FunctionMetadataFlag`)
         Manual,  ///< CodeGenerator 가 직접 쓴다(템플릿 변수 · 별칭 등록 · 범위처럼 메타데이터 멤버가 아닌 자리)
     };
 
@@ -39,17 +53,15 @@ namespace sw
         Count,   ///< uint32 ← count. 1 이상의 정수입니다
     };
 
-    /** @brief 필드 한 줄입니다. 함수 포인터 셋은 `.xxx` 의 한 줄에서 만들어집니다. */
+    /** @brief 필드 한 줄입니다. 함수 포인터 둘은 `.xxx` 의 한 줄에서 만들어집니다. */
     template <typename TParsed>
     struct AnnotationField
     {
         string_view _id; ///< 소스에 적는 키 철자(`PredefinedAnnotationField.xxx` 의 Key)
         /** @brief 토큰 값을 대상에 넣습니다. 단독 토큰이면 값은 빈 문자열입니다(bool 로는 참). */
         void ( *_pApply )( TParsed& target, string_view value );
-        /** @brief 코드젠에 쓸 값이 있는지 봅니다. Manual 이면 nullptr 입니다. */
-        bool ( *_pIsSet )( const TParsed& parsed );
-        /** @brief `<접두><멤버> = 값;` 을 씁니다(값이 없으면 아무것도 안 씁니다). Manual 이면 nullptr 입니다. */
-        void ( *_pEmit )( CodeEmit& emit, string_view prefix, const TParsed& parsed );
+        /** @brief 값을 @p outOutput 에 모읍니다(값이 없으면 아무것도 안 모읍니다). Manual 이면 nullptr 입니다. */
+        void ( *_pCollect )( AnnotationOutput& outOutput, const TParsed& parsed );
         AnnotationValue _value;
         AnnotationEmit  _emit;
     };
@@ -106,22 +118,6 @@ namespace sw
     // ------------------------------------------------------------------------------
     struct AnnotationFields
     {
-        /**
-         * @brief Runtime 필드를 표 순서대로 등록 단위(.gen.cpp)에 씁니다.
-         * @param prefix 생성 코드의 대상 식. 예: "m." · "info._metadata.edit()."
-         */
-        template <typename TParsed>
-        static void emitRuntimeMetadata( CodeEmit& emit, const TParsed& parsed, string_view prefix );
-        /** @brief 개발 전용 단위에 쓸 에디터 메타데이터(Display · Editor 필드)가 하나라도 있으면 true 입니다. */
-        template <typename TParsed>
-        static bool hasEditorMetadata( const TParsed& parsed );
-        /**
-         * @brief Display · Editor 필드를 표 순서대로 개발 전용 단위(`<이름>.gen.meta.cpp`)에 씁니다. 배포 구성은 그 단위를 짓지 않는다 — 구조체 칸을 `#if` 로 가르지 않는다.
-         * @param prefix 생성 코드의 대상 식(에디터 메타데이터 객체). 예: "p." · "set._type."
-         */
-        template <typename TParsed>
-        static void emitEditorMetadata( CodeEmit& emit, const TParsed& parsed, string_view prefix );
-
         /** @brief 이벤트 필드의 PROPERTY 가 받는 필드인지 봅니다 — 표에서 Display 인 PROPERTY 줄과 이름(`Name`)입니다. */
         static bool canAcceptOnEvent( string_view propertyFieldID );
         /** @brief 이벤트가 받는 필드 이름을 ", " 로 이은 글입니다(오류 글). */
@@ -129,18 +125,11 @@ namespace sw
     };
 
     // 정의는 AnnotationFields.cpp 에 있고 네 DTO 로만 인스턴스화합니다.
-    extern template void AnnotationFields::emitRuntimeMetadata<ParsedTypeInfo>( CodeEmit&, const ParsedTypeInfo&, string_view );
-    extern template void AnnotationFields::emitRuntimeMetadata<ParsedEnumInfo>( CodeEmit&, const ParsedEnumInfo&, string_view );
-    extern template void AnnotationFields::emitRuntimeMetadata<ParsedPropertyInfo>( CodeEmit&, const ParsedPropertyInfo&, string_view );
-    extern template void AnnotationFields::emitRuntimeMetadata<ParsedFunctionInfo>( CodeEmit&, const ParsedFunctionInfo&, string_view );
-    extern template bool AnnotationFields::hasEditorMetadata<ParsedTypeInfo>( const ParsedTypeInfo& );
-    extern template bool AnnotationFields::hasEditorMetadata<ParsedEnumInfo>( const ParsedEnumInfo& );
-    extern template bool AnnotationFields::hasEditorMetadata<ParsedPropertyInfo>( const ParsedPropertyInfo& );
-    extern template bool AnnotationFields::hasEditorMetadata<ParsedFunctionInfo>( const ParsedFunctionInfo& );
-    extern template bool AnnotationFields::hasEditorMetadata<ParsedEnumeratorInfo>( const ParsedEnumeratorInfo& );
-    extern template void AnnotationFields::emitEditorMetadata<ParsedTypeInfo>( CodeEmit&, const ParsedTypeInfo&, string_view );
-    extern template void AnnotationFields::emitEditorMetadata<ParsedEnumInfo>( CodeEmit&, const ParsedEnumInfo&, string_view );
-    extern template void AnnotationFields::emitEditorMetadata<ParsedPropertyInfo>( CodeEmit&, const ParsedPropertyInfo&, string_view );
-    extern template void AnnotationFields::emitEditorMetadata<ParsedFunctionInfo>( CodeEmit&, const ParsedFunctionInfo&, string_view );
-    extern template void AnnotationFields::emitEditorMetadata<ParsedEnumeratorInfo>( CodeEmit&, const ParsedEnumeratorInfo&, string_view );
+    extern template AnnotationOutput AnnotationOutput::collectRuntime<ParsedPropertyInfo>( const ParsedPropertyInfo& );
+    extern template AnnotationOutput AnnotationOutput::collectRuntime<ParsedFunctionInfo>( const ParsedFunctionInfo& );
+    extern template AnnotationOutput AnnotationOutput::collectEditor<ParsedTypeInfo>( const ParsedTypeInfo& );
+    extern template AnnotationOutput AnnotationOutput::collectEditor<ParsedEnumInfo>( const ParsedEnumInfo& );
+    extern template AnnotationOutput AnnotationOutput::collectEditor<ParsedPropertyInfo>( const ParsedPropertyInfo& );
+    extern template AnnotationOutput AnnotationOutput::collectEditor<ParsedFunctionInfo>( const ParsedFunctionInfo& );
+    extern template AnnotationOutput AnnotationOutput::collectEditor<ParsedEnumeratorInfo>( const ParsedEnumeratorInfo& );
 } // namespace sw

@@ -121,10 +121,10 @@ namespace sw
         void                         pushEvent( PartySeriesEvent::Kind kind, optional<int32> player, int32 value, int32 points );
 
     private:
-        vector<PartyRoundDef>         _listRound;
-        RoundSeriesSettings           _seriesSettings; ///< 다음 `start` 가 시리즈에 넘길 순위 점수, 목표, 동점 규칙(서든 데스)이다
-        RoundSeries                   _series;
-        EventBuffer<PartySeriesEvent> _eventBuffer;
+        vector<PartyRoundDef>                _listRound;
+        RoundSeriesSettings                  _seriesSettings; ///< 다음 `start` 가 시리즈에 넘길 순위 점수, 목표, 동점 규칙(서든 데스)이다
+        RoundSeries                          _series;
+        NotificationBuffer<PartySeriesEvent> _eventBuffer;
     };
 
     /** @brief 공유 캐시는 이 카탈로그의 .cpp 가 인스턴스화합니다. 쓰는 쪽은 사본을 읽지 않고 `SharedAssetCache<PartyRoundSeries>::acquire` 로 한 벌을 받습니다. */

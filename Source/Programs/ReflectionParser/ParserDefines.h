@@ -157,7 +157,6 @@ namespace sw
         inline constexpr const utf8* kArgsForceInclude  = "force_include";
         inline constexpr const utf8* kPaths             = "paths";
         inline constexpr const utf8* kClangFlags        = "clang_flags";
-        inline constexpr const utf8* kEmit              = "emit";
         inline constexpr const utf8* kParsing           = "parsing";
         inline constexpr const utf8* kTuning            = "tuning";
 
@@ -181,8 +180,6 @@ namespace sw
         inline constexpr const utf8* kParsingComponentBaseTypes   = "component_base_types";
         inline constexpr const utf8* kParsingTypeStripPrefixes    = "type_strip_prefixes";
         inline constexpr const utf8* kParsingNameFieldSkipFolders = "name_field_skip_folders";
-        inline constexpr const utf8* kEmitValueForbiddenBases     = "value_forbidden_base_types";
-        inline constexpr const utf8* kEmitValueForbiddenMessage   = "value_forbidden_message";
 
         // tuning.*
         inline constexpr const utf8* kMaxParallelParses = "max_parallel_parses";
@@ -242,11 +239,10 @@ namespace sw
         inline constexpr const utf8* kName          = "Name";
         inline constexpr const utf8* kFqn           = "FQN";
         inline constexpr const utf8* kKey           = "Key"; ///< 등록기 특수화의 열쇠 — 보통 FQN, 숨은 중첩 형식이면 생성한 열쇠 구조체 이름(`CodeGenerator::makeRegistrarKey`)
-        inline constexpr const utf8* kParentFqn     = "ParentFQN";
         inline constexpr const utf8* kModuleName    = "ModuleName";
         inline constexpr const utf8* kCppType       = "CppType";
-        inline constexpr const utf8* kFlags         = "Flags";
-        inline constexpr const utf8* kAliasRegs     = "AliasRegs";
+        inline constexpr const utf8* kAliasTable    = "AliasTable"; ///< 옛 이름 표 줄(없으면 빈 글)
+        inline constexpr const utf8* kAliases       = "Aliases";    ///< 서술자에 옛 이름 표를 잇는 조각(없으면 빈 글)
         inline constexpr const utf8* kIsBitFlag     = "IsBitFlag";
         inline constexpr const utf8* kInvalidName   = "InvalidName";
         inline constexpr const utf8* kCountName     = "CountName";

@@ -49,14 +49,14 @@ namespace sw
     {
     }
 
-    EnumInfo EnumInfo::createFromDesc( const EnumInfoDesc& desc, const uint8 size, const bool bSigned )
+    EnumInfo EnumInfo::createFromDesc( const EnumInfoDesc& desc )
     {
         EnumInfo info;
         info._name               = hashed_string( desc._pName );
         info._fullyQualifiedName = hashed_string( desc._pFullyQualifiedName );
         info._moduleName         = hashed_string( desc._pModuleName );
-        info._size               = size;
-        info._bIsSigned          = bSigned ? SW_TRUE : SW_FALSE;
+        info._size               = desc._size;
+        info._bIsSigned          = desc._bSigned ? SW_TRUE : SW_FALSE;
         info._bIsBitFlag         = desc._bIsBitFlag ? SW_TRUE : SW_FALSE;
 
         // 이름은 한 번만 intern 해 세 표가 같은 이름 객체를 든다(`_listDenseName` 의 포인터가 `_mapValueToName` 과 같다).

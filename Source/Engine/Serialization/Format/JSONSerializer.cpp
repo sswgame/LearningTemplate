@@ -201,7 +201,6 @@ namespace sw
                     const void* const pObject = object.get();
                     if ( pObject == nullptr )
                         return; // 널 원소는 배열에 넣지 않는다
-                    const JSONValue dst = _listSlot.back().pushBack();
                     // 맡아 둔 원소(모르는 타입)는 읽은 원문 그대로 다시 쓴다.
                     SerializeContext::OpaqueElementView opaque{};
                     if ( _context.queryOpaqueElement( pObject, opaque ) && opaque._format == SerializeContext::OpaqueFormat::JSON )
@@ -209,14 +208,15 @@ namespace sw
                         JSONDocument rawDoc;
                         if ( rawDoc.tryParse( opaque._text ) )
                         {
-                            dst.assignFrom( rawDoc.getRoot() );
+                            _listSlot.back().pushBack().assignFrom( rawDoc.getRoot() );
                             return;
                         }
                     }
-                    dst.setObject();
                     const TypeInfo* pRuntimeType = _context.getRuntimeTypeInfo( pObject );
                     if ( pRuntimeType == nullptr )
-                        return;
+                        return; // 쓰지 않는 원소는 XML 처럼 자리도 남기지 않는다
+                    const JSONValue dst = _listSlot.back().pushBack();
+                    dst.setObject();
                     const JSONValue body = dst.set( pRuntimeType->_name.c_str() );
                     JSONSerializer::writeObject( body, pObject, *pRuntimeType, _context );
                     body.set( kSchemaVersionKey ).setUint( 0 );
@@ -556,7 +556,7 @@ namespace sw
             if ( value.isValid() == false )
                 continue;
             const bool      bContainer = prop._bIsContainer == SW_TRUE;
-            const TypeInfo* pNested    = SerializerUtil::findNestedObjectType( bContainer ? prop._elementTypeName : prop._typeName, SerializeContext::getDefault( SerializePurpose::Authoring ) );
+            const TypeInfo* pNested    = SerializerUtil::findNestedObjectType( bContainer ? prop._elementTypeName : prop._typeName, bContainer ? prop.findElementBinding() : prop.findValueBinding(), SerializeContext::getDefault( SerializePurpose::Authoring ) );
             if ( bContainer == false && value.isObject() )
             {
                 if ( pNested != nullptr )

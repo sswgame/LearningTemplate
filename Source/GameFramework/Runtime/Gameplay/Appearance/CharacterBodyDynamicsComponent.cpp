@@ -429,7 +429,7 @@ namespace sw
         for ( uint32 nodeIndex = 0; nodeIndex < instance.getNodeCount(); ++nodeIndex )
         {
             const RigNode& node = instance.getNode( nodeIndex );
-            if ( string_view( node.getTypeName() ) != RigJiggleNode::kTypeName )
+            if ( node.getTypeName().view() != RigJiggleNode::kTypeName )
                 continue;
             const RigSpringChain& chain        = static_cast<const RigJiggleNode&>( node ).getChain();
             const vector<float3>& listParticle = chain.getParticles();

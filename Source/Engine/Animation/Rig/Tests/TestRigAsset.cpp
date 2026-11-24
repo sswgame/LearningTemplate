@@ -7,9 +7,11 @@
 
 #include "Engine/Animation/Retarget/RetargetProfile.h"
 #include "Engine/Animation/Rig/RigAsset.h"
+#include "Engine/Animation/Rig/RigJiggleNode.h"
 #include "Engine/Animation/Rig/RigNode.h"
 #include "Engine/Asset/Cache/SharedAssetRef.h"
 #include "Engine/Content/Tests/ScopedScratchDomain.h"
+#include "Engine/Foundation/EngineServices.h"
 
 using namespace sw;
 
@@ -67,6 +69,15 @@ SW_TEST_CASE( RigAssetTest, RejectsUnknownKey )
 {
     SW_EXPECT_LOG( "Rig.Rig" );
     SW_EXPECT_FALSE( loadNodeFromXML( R"(<item type="TwoBoneIK" name="Arm" root="a" mid="b" end="c" target="Grip" typo="1" />)" ) );
+}
+
+/** @brief [RigAssetTest] 데이터가 종류를 다른 대소문자로 적어도 노드의 종류 이름은 등록 이름이다 — 종류로 노드를 고르는 쪽(지글 그룹 검증 · 몸 흔들림)이 빠뜨리지 않는다 */
+SW_TEST_CASE( RigAssetTest, NodeTypeNameIsTheRegisteredName )
+{
+    const unique_ptr<RigNode> node = engine::getSubsystem<RigNodeRegistry>().createNode( hashed_string( "jiggle" ) );
+    SW_REQUIRE_TRUE( node != nullptr );
+    SW_EXPECT_TRUE( node->getTypeName().view() == RigJiggleNode::kTypeName );
+    SW_EXPECT_TRUE( node->clone()->getTypeName().view() == RigJiggleNode::kTypeName );
 }
 
 /** @brief [RigAssetTest] 공통 키의 범위(가중치 0..1)는 PROPERTY 가 본다 */

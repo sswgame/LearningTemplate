@@ -107,7 +107,6 @@ KEY_PARSER_ARGS_EXTRA = "extra"
 KEY_PARSER_ARGS_FORCE_INCLUDE = "force_include"
 KEY_PATHS = "paths"
 KEY_CLANG_FLAGS = "clang_flags"
-KEY_EMIT = "emit"
 KEY_TUNING = "tuning"
 
 # Toolchain Paths (toolchain_config.json)

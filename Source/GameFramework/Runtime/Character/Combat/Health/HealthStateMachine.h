@@ -231,8 +231,8 @@ namespace sw
         void pushEvent( HealthEventKind type, float32 amount, optional<int32> instigatorID );
 
     private:
-        HealthSettings           _settings;
-        EventBuffer<HealthEvent> _eventBuffer;
+        HealthSettings                  _settings;
+        NotificationBuffer<HealthEvent> _eventBuffer;
         PROPERTY( RuntimeState, Min = 0 )
         float32 _health;
         PROPERTY( RuntimeState, Min = 0 )

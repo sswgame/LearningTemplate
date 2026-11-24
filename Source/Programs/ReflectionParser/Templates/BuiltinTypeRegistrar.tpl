@@ -1,22 +1,8 @@
 	// --- $Name ---
-	struct ${ID}_Registrar
+	static const ::sw::TypeDesc& get${ID}Desc()
 	{
-		static void RegisterType( ::sw::TypeRegistry& registry )
-		{
-			::sw::TypeInfo info{};
-			info._name               = ::sw::hashed_string( "$Name" );
-			info._fullyQualifiedName = ::sw::hashed_string( "$Name" );
-			info._moduleName         = ::sw::hashed_string( "$ModuleName" );
-			info._size               = sizeof( $CppType );
-			info._bPrimitive         = 1;
-			registry.registerClass( ::std::move( info ) );
-$AliasRegs
-		}
-
-		${ID}_Registrar()
-		{
-			static ::sw::TypeRegistrar reg{ &RegisterType };
-		}
-	};
-	static ${ID}_Registrar s_${ID}_registrar{};
+$AliasTable		static constexpr ::sw::TypeDesc kType = ::sw::TypeDesc::makePrimitive( "$Name", "$ModuleName", sizeof( $CppType ) )$Aliases;
+		return kType;
+	}
+	static ::sw::TypeRegistrar s_${ID}_registrar{ &get${ID}Desc };
 

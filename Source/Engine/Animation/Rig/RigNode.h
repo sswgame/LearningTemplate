@@ -285,8 +285,8 @@ namespace sw
 
         /** @brief 같은 종류와 같은 파라미터의 새 노드를 만듭니다(상태는 초기화됩니다). */
         virtual unique_ptr<RigNode> clone() const = 0;
-        /** @brief 종류 이름(등록 이름)입니다. */
-        virtual const utf8* getTypeName() const = 0;
+        /** @brief 종류 이름입니다 — 이 노드를 만든 등록부(`RigNodeRegistry::createNode`)가 등록 이름을 적고 복제가 물려받는다. 노드마다 이름을 다시 적지 않는다(등록 이름과 어긋날 수 없다). */
+        const hashed_string& getTypeName() const { return _typeName; }
         /** @brief 노드 자기 키를 읽습니다(공통 키는 에셋이 읽었습니다). */
         [[nodiscard]] virtual bool parse( RigXMLReader& reader ) = 0;
         /** @brief 이름을 번호로 바인딩합니다. 모르는 본이나 대상은 오류입니다. */
@@ -299,6 +299,8 @@ namespace sw
         virtual void collectWrittenBones( vector<uint32>& inoutListBone ) const = 0;
         /** @brief 실행 상태를 버립니다(순간이동이나 다시 켤 때). */
         virtual void reset() {}
+        /** @brief 월드 자리로 든 시뮬레이션 상태를 @p delta 만큼 옮깁니다(월드 원점 이동). */
+        virtual void applyWorldOffset( const float3& delta ) { (void)delta; }
         /** @brief 이름 붙은 조절 값을 받습니다(부모 바꾸기의 활성 부모 등). 모르는 조절이면 false 입니다. */
         virtual bool setControl( const hashed_string& control, float32 value )
         {
@@ -334,5 +336,10 @@ namespace sw
 
     protected:
         RigNodeCommonParams _common; ///< 공통 키 · 기본값 · 범위(RigNodeParams.h)
+
+    private:
+        friend class RigNodeRegistry;
+
+        hashed_string _typeName; ///< 등록 이름. 등록부만 적는다
     };
 } // namespace sw

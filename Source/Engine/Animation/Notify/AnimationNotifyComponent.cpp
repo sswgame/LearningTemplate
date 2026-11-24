@@ -77,6 +77,17 @@ namespace sw
         return SpawnStateReset::Reset;
     }
 
+    void AnimationNotifyComponent::onWorldOriginShifted( const float3& delta )
+    {
+        for ( ActiveState& state : _listActiveState )
+        {
+            for ( float3& point : state._data._listPreviousPoint )
+            {
+                point += delta;
+            }
+        }
+    }
+
     void AnimationNotifyComponent::onEndPlay()
     {
         closeAllStates();

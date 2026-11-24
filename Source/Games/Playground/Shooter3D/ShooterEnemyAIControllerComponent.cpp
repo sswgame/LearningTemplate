@@ -31,9 +31,9 @@ namespace sw
             blackboard.clearValue( "PlayerFeet" );
             return;
         }
-        const float3& target = pGameMode->getPlayerFeet();
-        blackboard.setVector( "PlayerFeet", target );
-        blackboard.setFloat( "PlayerDistance", float3::getHorizontalDistance( target, pEnemy->getPosition() ) );
+        const AbsolutePosition& target = pGameMode->getPlayerFeet();
+        blackboard.setVector( "PlayerFeet", pManager->getWorldOrigin().toLocal( target ) ); // 이동 · 시선은 씬 자리다
+        blackboard.setFloat( "PlayerDistance", float3::getHorizontalDistance( target._value, pEnemy->getPosition()._value ) );
         blackboard.setFloat( "Reach", pEnemy->getReach() );
         blackboard.setFloat( "StopDistance", pEnemy->getReach() * pEnemy->getStopFraction() );
         blackboard.setBool( "PlayerAlive", pGameMode->isPlayerAlive() );

@@ -68,7 +68,7 @@ namespace sw
         PROPERTY()
         string _matchMode{}; ///< 매치형이면 매칭 모드(서버 매칭 키트 `MatchModeCatalog` 의 id) — 적으면 배정받은 매치로만 들어간다(`MinigameFlow::enterMatch`). 아래 둘과 함께 적는다
         PROPERTY()
-        string _matchBoard{}; ///< 매치 결과를 낼 순위표(서버 순위표 키트 `LeaderboardCatalog` 의 id)
+        string _matchBoard{}; ///< 매치 서버가 결과를 낼 순위표(서버 순위표 키트 `LeaderboardCatalog` 의 id)
         PROPERTY()
         hashed_string _matchScore{}; ///< 순위표에 낼 결과 값 이름(디렉터의 `collectMinigameResult`) — 이 값은 바탕 판의 보상으로 넘기지 않는다
         PROPERTY( Name = "features" )

@@ -113,7 +113,7 @@ namespace sw
              */
             static bool isNumericTypeName( hashed_string typeName )
             {
-                const ReflectBuiltinClass builtinClass = ReflectedValueUtil::getBuiltinClass( typeName );
+                const ReflectBuiltinClass builtinClass = ReflectedValueUtil::getBuiltinClass( ReflectedValueUtil::findBuiltinIndex( typeName ) ); // 기록 타입의 이름이라 칸 묶음이 없다
                 return builtinClass == ReflectBuiltinClass::Bool || builtinClass == ReflectBuiltinClass::Number;
             }
 
@@ -511,8 +511,8 @@ namespace sw
         // 숫자로 기록된 값 → 문자열. 대상이 문자열 타입이면 텍스트를 그대로 담는다.
         if ( SchemaMigrateInternal::isStringType( typeName ) )
         {
-            // 캐스트할 C++ 타입의 내장 자리로 묻는다(별칭도 같은 자리) — 이름 리터럴을 두지 않는다.
-            if ( ReflectedValueUtil::findBuiltinIndex( typeName ) == ReflectBuiltinOf<hashed_string>::kIndex )
+            // `isStringType` 이 미리 정의된 두 이름만 받으므로 같은 이름으로 가른다.
+            if ( typeName.isPredefinedType( PredefinedNameType::NameType_hashed_string ) )
             {
                 *static_cast<hashed_string*>( pValPtr ) =
                     hashed_string( stripped.data(), static_cast<uint32>( stripped.size() ) );

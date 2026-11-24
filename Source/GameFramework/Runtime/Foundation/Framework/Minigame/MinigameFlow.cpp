@@ -671,8 +671,8 @@ namespace sw
             return false;
         }
         deactivateScope();
+        frame.removeMatchScore( listValue );
         MinigameResult result{ frame._definition._name, resultName, std::move( listValue ) };
-        frame.takeMatchResult( result );
         // 하위 레벨은 그 자리에서 끝난다 — 빼고, 덮였던 미니게임을 다시 켜고, 결과를 넘긴다.
         if ( const MinigameSubLevelReturn* const pSubLevel = std::get_if<MinigameSubLevelReturn>( &frame._returnPoint ) )
         {
@@ -824,6 +824,21 @@ namespace sw
             if ( bInMinigame && pGameMode->isStarted() )
                 pGameMode->collectMinigameResult( outListValue );
         }
+    }
+
+    optional<int64> MinigameFlow::findMatchScore() const
+    {
+        const MinigameDefinition* const pActive = findActiveDefinition();
+        if ( pActive == nullptr || pActive->isMatch() == false )
+            return nullopt;
+        vector<MinigameResultValue> listValue;
+        collectDirectorResults( listValue );
+        for ( const MinigameResultValue& value : listValue )
+        {
+            if ( value._name == pActive->_matchScore )
+                return value._amount;
+        }
+        return nullopt;
     }
 
     void MinigameFlow::requestEnter( string_view name, const optional<SubLevelPlacement>& placement )

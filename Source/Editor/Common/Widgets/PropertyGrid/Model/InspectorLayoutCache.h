@@ -7,7 +7,6 @@
  */
 #pragma once
 #include "Core/Container/string.h"
-#include "Core/Container/unordered_map.h"
 #include "Core/Container/vector.h"
 #include "Core/Foundation/Types.h"
 #include "Core/Memory/Memory.h"
@@ -53,10 +52,6 @@ namespace sw::editor
          */
         const vector<InspectorPropertyGroup>& getOrCreateGroups( const TypeInfo& type, const vector<hashed_string>& listDrawnName, const EditorListFilter& filter,
                                                                  string_view filterText, uint32 typeGeneration, bool bMayEvict );
-        /** @brief 묶음에 든 프로퍼티의 표시 정보입니다. 묶음 밖(컨테이너 원소처럼 값으로 만든 임시 PropertyInfo)이면 nullptr 입니다. */
-        InspectorPropertyDisplay* findDisplay( const PropertyInfo& prop );
-        /** @brief 묶음에 든 @p prop 의 표시 정보입니다. 이 캐시가 돌려준 묶음의 프로퍼티만 부릅니다(아니면 멈춘다). */
-        const InspectorPropertyDisplay& getLaidOutDisplay( const PropertyInfo& prop ) const;
         /** @brief 묶음을 새로 지은 횟수입니다(감시 값 `Editor.InspectorLayoutRebuildCount`). */
         uint32 getRebuildCount() const { return _rebuildCount; }
 
@@ -64,22 +59,18 @@ namespace sw::editor
         /** @brief 지은 묶음 하나와 그 키입니다. */
         struct Slot
         {
-            const TypeInfo*                _pType{ nullptr };
-            vector<hashed_string>          _listDrawnName;
-            string                         _filterText;
-            vector<InspectorPropertyGroup> _listGroup;
+            const TypeInfo*                  _pType{ nullptr };
+            vector<hashed_string>            _listDrawnName;
+            string                           _filterText;
+            vector<InspectorPropertyGroup>   _listGroup;
+            vector<InspectorPropertyDisplay> _listDisplay; ///< 묶음의 줄(`InspectorPropertyItem::_pDisplay`)이 가리킨다 — 지을 때 한 번 채우고 크기를 바꾸지 않는다
         };
 
         /** @brief 묶음 수의 상한입니다. 검색 글을 칠 때마다 새 키가 생기므로 넘으면 비우고 다시 쌓는다. */
         static constexpr uint32 kMaxSlotCount = 64;
 
         vector<unique_ptr<Slot>> _listSlot;
-        /**
-         * @brief 프로퍼티 하나는 선언한 타입 하나에 속하므로 어느 타입에서 보든 같다.
-         * @details 값이 `unique_ptr` 인 것은 `findDisplay` 가 내준 주소를 지키기 위해서다 — 밀집 맵은 넣을 때 원소를 옮기고, 중첩 구조체를 그리면 그리는 도중에 넣는다.
-         */
-        unordered_map<const PropertyInfo*, unique_ptr<InspectorPropertyDisplay>> _mapDisplay;
-        uint32                                                                   _typeGeneration{ 0 };
-        uint32                                                                   _rebuildCount{ 0 };
+        uint32                   _typeGeneration{ 0 };
+        uint32                   _rebuildCount{ 0 };
     };
 } // namespace sw::editor

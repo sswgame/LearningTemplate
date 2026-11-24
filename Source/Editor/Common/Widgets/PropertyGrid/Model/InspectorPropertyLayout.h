@@ -60,11 +60,20 @@ namespace sw::editor
 
 namespace sw::editor
 {
+    struct InspectorPropertyDisplay;
+
+    /** @brief 묶음의 한 줄입니다 — 프로퍼티와 그 표시 정보. 줄이 곁에 들어 행을 그릴 때 프로퍼티 주소로 다시 찾지 않는다(언리얼 `FPropertyNode` 가 표시 정보를 드는 자리). */
+    struct InspectorPropertyItem
+    {
+        const PropertyInfo*       _pProperty{ nullptr };
+        InspectorPropertyDisplay* _pDisplay{ nullptr }; ///< `InspectorLayoutCache` 가 지은 묶음만 채운다(그 캐시의 자리가 든다)
+    };
+
     /** @brief 인스펙터가 한 카테고리로 묶어 그리는 리플렉션 프로퍼티입니다. */
     struct InspectorPropertyGroup
     {
-        string                      _category;
-        vector<const PropertyInfo*> _listProperty;
+        string                        _category;
+        vector<InspectorPropertyItem> _listItem;
     };
 } // namespace sw::editor
 

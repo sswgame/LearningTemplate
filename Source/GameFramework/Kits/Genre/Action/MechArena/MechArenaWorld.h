@@ -343,15 +343,15 @@ namespace sw
         vector<MechPilot>    _listPilot;
         ProjectileSimulation _projectiles;
         PROPERTY( RuntimeState )
-        vector<hashed_string>       _listTeamName;
-        EventBuffer<MechArenaEvent> _eventBuffer;
-        vector<LockOnCandidate>     _listCandidateScratch;
-        MatchState                  _match;
-        FixedStepTimer              _timer;
-        const MechCatalog*          _pMechCatalog;
-        const WeaponCatalog*        _pWeaponCatalog;
-        const ProjectileCatalog*    _pProjectileCatalog;
-        const MoveCatalog*          _pMoveCatalog;
+        vector<hashed_string>              _listTeamName;
+        NotificationBuffer<MechArenaEvent> _eventBuffer;
+        vector<LockOnCandidate>            _listCandidateScratch;
+        MatchState                         _match;
+        FixedStepTimer                     _timer;
+        const MechCatalog*                 _pMechCatalog;
+        const WeaponCatalog*               _pWeaponCatalog;
+        const ProjectileCatalog*           _pProjectileCatalog;
+        const MoveCatalog*                 _pMoveCatalog;
         PROPERTY( RuntimeState )
         uint32 _tick;
         PROPERTY( RuntimeState, Min = 0, Max = 1 )

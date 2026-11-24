@@ -85,7 +85,8 @@ namespace sw
         return bAll;
     }
 
-    uint32 SceneNavigationCooker::cookAll( const SceneEngineServices& services, const string& resourceRoot, const string& cookedDir, const CookStore& store, uint32& outFailedCount )
+    uint32 SceneNavigationCooker::cookAll( const SceneEngineServices& services, const string& resourceRoot, const string& cookedDir, const CookStore& store, const uint64 reflectionFingerprint,
+                                           uint32& outFailedCount )
     {
         using Internal = SceneNavigationCookerInternal;
         if ( cookedDir.empty() )
@@ -103,7 +104,7 @@ namespace sw
         VectorUtil::sort( listFile );
         const string      normalizedRoot = FileUtil::trimTrailingSlashes( FileUtil::normalizeSeparators( resourceRoot ) );
         const string      activePackRoot = FileUtil::trimTrailingSlashes( FileUtil::normalizePath( engine::getSubsystem<GameConfig>()._packRoot.get() ).str() );
-        const CookJobDesc desc           = makeCookJobDesc();
+        const CookJobDesc desc           = makeCookJobDesc( reflectionFingerprint );
         CookStats         stats;
         for ( const string& filePath : listFile )
         {
@@ -142,13 +143,13 @@ namespace sw
         return stats.getWrittenCount();
     }
 
-    CookJobDesc SceneNavigationCooker::makeCookJobDesc()
+    CookJobDesc SceneNavigationCooker::makeCookJobDesc( const uint64 reflectionFingerprint )
     {
         CookJobDesc desc;
         desc._cookerName      = "NavMesh";
         desc._codeFingerprint = CookCodeFingerprint::find( "NavMesh" );
         desc._target          = "Any";
-        desc._settingsHash    = 0; // 베이크 설정은 리소스(내비 설정 표)라 읽기로 입력에 든다
+        desc._settingsHash    = reflectionFingerprint; // 베이크 설정(내비 설정 표)은 읽기로 입력에 들고, 씬을 짓는 타입 표는 여기다
         return desc;
     }
 } // namespace sw

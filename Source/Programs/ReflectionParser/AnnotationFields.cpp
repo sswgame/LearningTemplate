@@ -8,8 +8,6 @@
 
 #include "Engine/Reflection/ReflectionEnumNames.h"
 
-#include "Programs/ReflectionParser/CodeEmit.h"
-
 namespace sw
 {
     namespace
@@ -63,41 +61,36 @@ namespace sw
             // ------------------------------------------------------------------------------
             // B) 코드젠 — 멤버 타입마다 한 벌
             // ------------------------------------------------------------------------------
-            static bool isValueSet( const uint8 value ) noexcept { return value == SW_TRUE; }
-            static bool isValueSet( const string& value ) noexcept { return value.empty() == false; }
-            static bool isValueSet( const vector<pair<string, string>>& listPair ) noexcept { return listPair.empty() == false; }
-            static bool isValueSet( const FunctionNetRole role ) noexcept { return role != FunctionNetRole::Local; }
-
             /** @brief 개발 전용 단위(`<이름>.gen.meta.cpp`)에 쓰는 에디터 메타데이터 줄인지 봅니다(Display · Editor). */
             static constexpr bool isEditorBlock( const AnnotationEmit emit ) { return emit == AnnotationEmit::Display || emit == AnnotationEmit::Editor; }
 
-            static void emitValue( CodeEmit& emit, const string_view prefix, const string_view member, const uint8 value )
+            /** @brief 멤버 이름(`_bReadOnly` · `_tooltip`)에서 접두어를 떼어 엔진 쪽 상수 이름(`ReadOnly` · `Tooltip`)을 만듭니다. */
+            static string makeOutputName( const string_view member, const string_view memberPrefix )
             {
-                if ( isValueSet( value ) )
-                    emit.linef( "%#%# = SW_TRUE;", prefix, member );
+                string name{ member.substr( memberPrefix.size() ) };
+                if ( name.empty() == false && 'a' <= name.front() && name.front() <= 'z' )
+                    name.front() = static_cast<utf8>( name.front() - 'a' + 'A' );
+                return name;
             }
 
-            /** @brief 글 칸(`string` · `hashed_string`)은 리터럴 포인터만 넘기고 대입은 Engine 의 비인라인 도우미가 한다 — TU 마다 문자열 대입이 펼쳐지지 않게(`ReflectionMetadataText`). */
-            static void emitValue( CodeEmit& emit, const string_view prefix, const string_view member, const string& value )
+            static void collectValue( AnnotationOutput& outOutput, const string_view member, const uint8 value )
             {
-                if ( isValueSet( value ) )
-                    emit.linef( "::sw::ReflectionMetadataText::assign( %#%#, %# );", prefix, member, CodeEmit::quoted( value ) );
+                if ( value == SW_TRUE )
+                    outOutput._listFlag.push_back( makeOutputName( member, "_b" ) );
             }
 
-            /** @brief 커스텀 메타는 엔진에서 `_mapCustomMeta` 입니다(DTO 는 적은 순서를 지키는 목록). 맵 초기화 목록 대신 쌍마다 비인라인 도우미를 부른다. */
-            static void emitValue( CodeEmit& emit, const string_view prefix, const string_view, const vector<pair<string, string>>& listPair )
+            static void collectValue( AnnotationOutput& outOutput, const string_view member, const string& value )
             {
-                for ( const auto& [key, val] : listPair )
-                {
-                    emit.linef( "::sw::ReflectionMetadataText::addCustomMeta( %#_mapCustomMeta, %#, %# );", prefix, CodeEmit::quoted( key ), CodeEmit::quoted( val ) );
-                }
+                if ( value.empty() == false )
+                    outOutput._listText.emplace_back( makeOutputName( member, "_" ), value );
             }
 
-            static void emitValue( CodeEmit& emit, const string_view prefix, const string_view member, const FunctionNetRole role )
+            static void collectValue( AnnotationOutput& outOutput, const string_view, const vector<pair<string, string>>& listPair )
             {
-                if ( isValueSet( role ) )
-                    emit.linef( "%#%# = %#;", prefix, member, toCppExpr( role ) );
+                outOutput._listCustomMeta.insert( outOutput._listCustomMeta.end(), listPair.begin(), listPair.end() );
             }
+
+            static void collectValue( AnnotationOutput& outOutput, const string_view, const FunctionNetRole role ) { outOutput._netRole = role; }
 
             // ------------------------------------------------------------------------------
             // C) 손으로 넣는 줄(`REGISTER_ANNOTATION_FIELD_FN`)의 Fn
@@ -323,12 +316,11 @@ namespace sw
 #define SW_ANNOTATION_TARGET_Function   ParsedFunctionInfo
 #define SW_ANNOTATION_TARGET_Enumerator ParsedEnumeratorInfo
 
-#define SW_ANNOTATION_OUTPUT_Editor( TParsed, Member )                                             \
-    []( const TParsed& parsed ) { return AnnotationFieldsInternal::isValueSet( parsed.Member ); }, \
-        []( CodeEmit& emit, string_view prefix, const TParsed& parsed ) { AnnotationFieldsInternal::emitValue( emit, prefix, #Member, parsed.Member ); }
+#define SW_ANNOTATION_OUTPUT_Editor( TParsed, Member ) \
+    []( AnnotationOutput& outOutput, const TParsed& parsed ) { AnnotationFieldsInternal::collectValue( outOutput, #Member, parsed.Member ); }
 #define SW_ANNOTATION_OUTPUT_Runtime                   SW_ANNOTATION_OUTPUT_Editor
 #define SW_ANNOTATION_OUTPUT_Display                   SW_ANNOTATION_OUTPUT_Editor
-#define SW_ANNOTATION_OUTPUT_Manual( TParsed, Member ) nullptr, nullptr
+#define SW_ANNOTATION_OUTPUT_Manual( TParsed, Member ) nullptr
 
 #define SW_ANNOTATION_ROW( TParsed, ID, Member, ApplyStatement, Emit )                                                   \
     { #ID, []( TParsed& target, string_view value ) { ApplyStatement; }, SW_ANNOTATION_OUTPUT_##Emit( TParsed, Member ), \
@@ -405,6 +397,42 @@ namespace sw
 #undef SW_ANNOTATION_TARGET_Function
 #undef SW_ANNOTATION_TARGET_Enumerator
 
+        /** @brief 표의 Runtime 줄이 모두 @p arrKind 의 값 종류인지 봅니다. 생성 코드의 상수 표가 실을 칸이 없는 값은 조용히 빠지지 않고 여기서 멈춘다. */
+        template <typename TParsed, size_t N, size_t KindCount>
+        constexpr bool hasOnlyRuntimeKinds( const AnnotationField<TParsed> ( &arrField )[N], const AnnotationValue ( &arrKind )[KindCount] )
+        {
+            for ( const AnnotationField<TParsed>& field : arrField )
+            {
+                bool bCarried = field._emit != AnnotationEmit::Runtime;
+                for ( const AnnotationValue kind : arrKind )
+                {
+                    bCarried = bCarried || field._value == kind;
+                }
+                if ( bCarried == false )
+                    return false;
+            }
+            return true;
+        }
+
+        /** @brief 표에 Runtime 줄이 없는지 봅니다 — 타입 · 열거형 · 열거자의 서술자는 애노테이션 표에서 오는 런타임 칸이 없다. */
+        template <typename TParsed, size_t N>
+        constexpr bool hasNoRuntimeField( const AnnotationField<TParsed> ( &arrField )[N] )
+        {
+            for ( const AnnotationField<TParsed>& field : arrField )
+            {
+                if ( field._emit == AnnotationEmit::Runtime )
+                    return false;
+            }
+            return true;
+        }
+
+        constexpr AnnotationValue kArrPropertyRuntimeKind[] = { AnnotationValue::Bool, AnnotationValue::String };
+        constexpr AnnotationValue kArrFunctionRuntimeKind[] = { AnnotationValue::Bool, AnnotationValue::NetRole };
+        static_assert( hasOnlyRuntimeKinds( kArrPropertyField, kArrPropertyRuntimeKind ), "PropertyMetadataDesc carries flags and texts only - add a column before adding a Runtime PROPERTY row" );
+        static_assert( hasOnlyRuntimeKinds( kArrFunctionField, kArrFunctionRuntimeKind ), "FunctionDesc carries flags and a net role only - add a column before adding a Runtime FUNCTION row" );
+        static_assert( hasNoRuntimeField( kArrReflectField ) && hasNoRuntimeField( kArrEnumField ) && hasNoRuntimeField( kArrEnumeratorField ),
+                       "REFLECT, ENUM and ENUMERATOR rows are Display, Editor or Manual - the type and enum descriptors have no runtime annotation column" );
+
         constexpr AnnotationScope<ParsedTypeInfo> kReflectScope{
             &annotation::kReflect, kArrReflectField, static_cast<uint32>( SW_COUNT_OF( kArrReflectField ) ) };
         constexpr AnnotationScope<ParsedEnumInfo> kEnumScope{
@@ -451,50 +479,36 @@ namespace sw
     }
 
     template <typename TParsed>
-    void AnnotationFields::emitRuntimeMetadata( CodeEmit& emit, const TParsed& parsed, const string_view prefix )
+    AnnotationOutput AnnotationOutput::collectRuntime( const TParsed& parsed )
     {
+        AnnotationOutput output;
         for ( const AnnotationField<TParsed>& field : getAnnotationScope<TParsed>() )
         {
             if ( field._emit == AnnotationEmit::Runtime )
-                field._pEmit( emit, prefix, parsed );
+                field._pCollect( output, parsed );
         }
+        return output;
     }
 
     template <typename TParsed>
-    bool AnnotationFields::hasEditorMetadata( const TParsed& parsed )
+    AnnotationOutput AnnotationOutput::collectEditor( const TParsed& parsed )
     {
-        for ( const AnnotationField<TParsed>& field : getAnnotationScope<TParsed>() )
-        {
-            if ( AnnotationFieldsInternal::isEditorBlock( field._emit ) && field._pIsSet( parsed ) )
-                return true;
-        }
-        return false;
-    }
-
-    template <typename TParsed>
-    void AnnotationFields::emitEditorMetadata( CodeEmit& emit, const TParsed& parsed, const string_view prefix )
-    {
+        AnnotationOutput output;
         for ( const AnnotationField<TParsed>& field : getAnnotationScope<TParsed>() )
         {
             if ( AnnotationFieldsInternal::isEditorBlock( field._emit ) )
-                field._pEmit( emit, prefix, parsed );
+                field._pCollect( output, parsed );
         }
+        return output;
     }
 
-    template void AnnotationFields::emitRuntimeMetadata<ParsedTypeInfo>( CodeEmit&, const ParsedTypeInfo&, string_view );
-    template void AnnotationFields::emitRuntimeMetadata<ParsedEnumInfo>( CodeEmit&, const ParsedEnumInfo&, string_view );
-    template void AnnotationFields::emitRuntimeMetadata<ParsedPropertyInfo>( CodeEmit&, const ParsedPropertyInfo&, string_view );
-    template void AnnotationFields::emitRuntimeMetadata<ParsedFunctionInfo>( CodeEmit&, const ParsedFunctionInfo&, string_view );
-    template bool AnnotationFields::hasEditorMetadata<ParsedTypeInfo>( const ParsedTypeInfo& );
-    template bool AnnotationFields::hasEditorMetadata<ParsedEnumInfo>( const ParsedEnumInfo& );
-    template bool AnnotationFields::hasEditorMetadata<ParsedPropertyInfo>( const ParsedPropertyInfo& );
-    template bool AnnotationFields::hasEditorMetadata<ParsedFunctionInfo>( const ParsedFunctionInfo& );
-    template bool AnnotationFields::hasEditorMetadata<ParsedEnumeratorInfo>( const ParsedEnumeratorInfo& );
-    template void AnnotationFields::emitEditorMetadata<ParsedTypeInfo>( CodeEmit&, const ParsedTypeInfo&, string_view );
-    template void AnnotationFields::emitEditorMetadata<ParsedEnumInfo>( CodeEmit&, const ParsedEnumInfo&, string_view );
-    template void AnnotationFields::emitEditorMetadata<ParsedPropertyInfo>( CodeEmit&, const ParsedPropertyInfo&, string_view );
-    template void AnnotationFields::emitEditorMetadata<ParsedFunctionInfo>( CodeEmit&, const ParsedFunctionInfo&, string_view );
-    template void AnnotationFields::emitEditorMetadata<ParsedEnumeratorInfo>( CodeEmit&, const ParsedEnumeratorInfo&, string_view );
+    template AnnotationOutput AnnotationOutput::collectRuntime<ParsedPropertyInfo>( const ParsedPropertyInfo& );
+    template AnnotationOutput AnnotationOutput::collectRuntime<ParsedFunctionInfo>( const ParsedFunctionInfo& );
+    template AnnotationOutput AnnotationOutput::collectEditor<ParsedTypeInfo>( const ParsedTypeInfo& );
+    template AnnotationOutput AnnotationOutput::collectEditor<ParsedEnumInfo>( const ParsedEnumInfo& );
+    template AnnotationOutput AnnotationOutput::collectEditor<ParsedPropertyInfo>( const ParsedPropertyInfo& );
+    template AnnotationOutput AnnotationOutput::collectEditor<ParsedFunctionInfo>( const ParsedFunctionInfo& );
+    template AnnotationOutput AnnotationOutput::collectEditor<ParsedEnumeratorInfo>( const ParsedEnumeratorInfo& );
 
     bool AnnotationFields::canAcceptOnEvent( const string_view propertyFieldID )
     {

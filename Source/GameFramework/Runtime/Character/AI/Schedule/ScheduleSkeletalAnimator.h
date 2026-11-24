@@ -7,6 +7,7 @@
  *          그래프에 없는 상태는 재생하지 않고 횟수만 센다(`getFailedPlayCount`).
  */
 #pragma once
+#include "Core/Concurrency/DevCounter.h"
 #include "Core/Container/vector.h"
 #include "Core/Foundation/Macros.h"
 #include "Core/Foundation/Types.h"
@@ -44,7 +45,7 @@ namespace sw
         hashed_string chooseState( const ScheduleActivityCue& cue ) const;
 
         /** @brief NPC 오브젝트나 애니메이터가 없거나 그래프에 없는 상태라 재생하지 못한 횟수입니다. */
-        uint32 getFailedPlayCount() const { return _failedPlayCount; }
+        const DevCounter& getFailedPlayCount() const { return _failedPlayCount; }
         /** @brief 재생을 시작한 횟수입니다. */
         uint32 getPlayCount() const { return _playCount; }
 
@@ -64,6 +65,6 @@ namespace sw
         vector<ActivityState> _listActivityState;
         float32               _blendSeconds;
         uint32                _playCount;
-        uint32                _failedPlayCount;
+        DevCounter            _failedPlayCount;
     };
 } // namespace sw

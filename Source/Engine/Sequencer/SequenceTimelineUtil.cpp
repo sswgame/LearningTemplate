@@ -11,14 +11,17 @@
 #include "Engine/Animation/AnimationClip.h"
 #include "Engine/Asset/AssetManager.h"
 #include "Engine/Character/PoseModifier/PoseModifierComponent.h"
+#include "Engine/Foundation/EngineServices.h"
 #include "Engine/Object/Component/CameraComponent.h"
 #include "Engine/Object/Component/SceneComponent.h"
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
 #include "Engine/Object/GameObject/Registry/CameraRegistry.h"
 #include "Engine/Object/Prefab/PrefabCache.h"
+#include "Engine/Reflection/ReflectValueBinding.h"
 #include "Engine/Reflection/ReflectedValue.h"
 #include "Engine/Reflection/TypeInfo.h"
+#include "Engine/Reflection/TypeRegistry.h"
 #include "Engine/Sequencer/SequenceAsset.h"
 #include "Engine/Sequencer/SequencePlayer.h"
 
@@ -70,7 +73,7 @@ namespace sw
                 SceneComponent* pScene = pTarget->getPrimarySceneComponent();
                 if ( pScene == nullptr || track._listChannel.size() < kSequenceTransformChannelCount )
                     return;
-                float3 arrValue[3] = { pScene->getLocalPosition(), pScene->getLocalRotation(), pScene->getLocalScale() };
+                float3 arrValue[3] = { pScene->getZeroOriginPosition(), pScene->getLocalRotation(), pScene->getLocalScale() };
                 bool   arrKeyed[3] = { false, false, false };
                 for ( uint32 channelIndex = 0; channelIndex < kSequenceTransformChannelCount; ++channelIndex )
                 {
@@ -84,11 +87,17 @@ namespace sw
                 }
                 // 키가 있는 그룹만 쓴다. 키 없는 회전과 크기까지 쓰면 트랜스폼이 프레임마다 더티가 된다.
                 if ( arrKeyed[0] )
-                    pScene->setLocalPosition( arrValue[0] );
+                    pScene->setZeroOriginPosition( arrValue[0] ); // 키는 원점 0 기준이다 — 월드 원점을 옮겨도 루트가 제자리다
                 if ( arrKeyed[1] )
                     pScene->setLocalRotation( arrValue[1] );
                 if ( arrKeyed[2] )
                     pScene->setLocalScale( arrValue[2] );
+            }
+
+            /** @brief 칸 값의 내장 타입 자리입니다. 프레임마다 트랙마다 불리므로 이름으로 찾지 않고 칸의 묶음에서 읽는다. */
+            static ReflectBuiltinIndex findPropertyBuiltinIndex( const PropertyInfo& property )
+            {
+                return property.resolveValueFacts( engine::getSubsystem<TypeRegistry>() )._builtinIndex;
             }
 
             static void applyPropertyTrack( GameObject* pTarget, const SequenceKeyTrack& track, float32 frame )
@@ -102,8 +111,7 @@ namespace sw
                 const float32 value = *track._listChannel[0].evaluate( frame );
                 // 그 타입이 담지 못하는 값(정수 범위 밖 · unorm 범위 밖)은 쓰지 않고 지금 값을 둔다.
                 // findTrackProperty 가 숫자 갈래(내장 타입)를 확인했다.
-                (void)ReflectedValueUtil::writeNumber( ReflectedValueUtil::findBuiltinIndex( pProperty->_typeName ), pProperty->getRawPtr( static_cast<void*>( pComponent ) ),
-                                                       static_cast<float64>( value ) );
+                (void)ReflectedValueUtil::writeNumber( findPropertyBuiltinIndex( *pProperty ), pProperty->getRawPtr( static_cast<void*>( pComponent ) ), static_cast<float64>( value ) );
             }
 
             /** @brief 리그 슬롯 트랙의 가중치를 대상의 `PoseModifierComponent` 에 씁니다. 키나 슬롯 이름이 없으면 건드리지 않습니다. */
@@ -471,7 +479,7 @@ namespace sw
         const PropertyInfo* pProperty = pComponent->getTypeInfo()->findPropertyInHierarchy( hashed_string( track._propertyPath.substr( dot + 1 ).c_str() ) );
         if ( pProperty == nullptr )
             return false;
-        if ( ReflectedValueUtil::getBuiltinClass( pProperty->_typeName ) != ReflectBuiltinClass::Number )
+        if ( ReflectedValueUtil::getBuiltinClass( SequenceTimelineUtilInternal::findPropertyBuiltinIndex( *pProperty ) ) != ReflectBuiltinClass::Number )
             return false;
         pOutComponent = pComponent;
         pOutProperty  = pProperty;
@@ -490,7 +498,7 @@ namespace sw
                 const SceneComponent* pScene = pTarget->getPrimarySceneComponent();
                 if ( pScene == nullptr )
                     return false;
-                const float3 arrValue[3] = { pScene->getLocalPosition(), pScene->getLocalRotation(), pScene->getLocalScale() };
+                const float3 arrValue[3] = { pScene->getZeroOriginPosition(), pScene->getLocalRotation(), pScene->getLocalScale() };
                 for ( uint32 groupIndex = 0; groupIndex < 3; ++groupIndex )
                 {
                     pOutArrValue[groupIndex * 3 + 0] = arrValue[groupIndex]._x;
@@ -526,7 +534,7 @@ namespace sw
                 if ( findTrackProperty( pTarget, track, pComponent, pProperty ) == false )
                     return false;
                 float64 number{ 0.0 };
-                if ( ReflectedValueUtil::readNumber( ReflectedValueUtil::findBuiltinIndex( pProperty->_typeName ), pProperty->getRawPtr( static_cast<const void*>( pComponent ) ), number ) == false ) // findTrackProperty 가 숫자 갈래를 확인했다
+                if ( ReflectedValueUtil::readNumber( SequenceTimelineUtilInternal::findPropertyBuiltinIndex( *pProperty ), pProperty->getRawPtr( static_cast<const void*>( pComponent ) ), number ) == false ) // findTrackProperty 가 숫자 갈래를 확인했다
                     return false;
                 pOutArrValue[0] = static_cast<float32>( number );
                 return true;
@@ -550,7 +558,7 @@ namespace sw
                 SceneComponent* pScene = pTarget->getPrimarySceneComponent();
                 if ( pScene == nullptr )
                     return;
-                pScene->setLocalPosition( float3{ pArrValue[0], pArrValue[1], pArrValue[2] } );
+                pScene->setZeroOriginPosition( float3{ pArrValue[0], pArrValue[1], pArrValue[2] } );
                 pScene->setLocalRotation( float3{ pArrValue[3], pArrValue[4], pArrValue[5] } );
                 pScene->setLocalScale( float3{ pArrValue[6], pArrValue[7], pArrValue[8] } );
                 return;
@@ -574,7 +582,7 @@ namespace sw
                 Component*          pComponent{ nullptr };
                 const PropertyInfo* pProperty{ nullptr };
                 if ( findTrackProperty( pTarget, track, pComponent, pProperty ) )
-                    (void)ReflectedValueUtil::writeNumber( ReflectedValueUtil::findBuiltinIndex( pProperty->_typeName ), pProperty->getRawPtr( static_cast<void*>( pComponent ) ),
+                    (void)ReflectedValueUtil::writeNumber( SequenceTimelineUtilInternal::findPropertyBuiltinIndex( *pProperty ), pProperty->getRawPtr( static_cast<void*>( pComponent ) ),
                                                            static_cast<float64>( pArrValue[0] ) ); // findTrackProperty 가 숫자 갈래를 확인했다
                 return;
             }

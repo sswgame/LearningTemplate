@@ -97,7 +97,7 @@ namespace sw
         for ( uint32 nodeIndex = 0; nodeIndex < instance.getNodeCount(); ++nodeIndex )
         {
             const RigNode& node = instance.getNode( nodeIndex );
-            if ( string_view( node.getTypeName() ) != kTypeName )
+            if ( node.getTypeName().view() != kTypeName )
                 continue;
             const hashed_string& group = static_cast<const RigJiggleNode&>( node ).getGroup();
             if ( instance.getBodyInput().findJiggleGroup( group ) != nullptr )

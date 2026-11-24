@@ -12,6 +12,15 @@
 
 #include <limits>
 
+namespace sw
+{
+    /** @brief 안을 보는 테스트 창구입니다(`friend`). */
+    struct DestructionStateTestAccess
+    {
+        static float32 getLinkLoad( const DestructionState& state, uint32 link ) { return state._listLinkLoad[link]; }
+    };
+} // namespace sw
+
 using namespace sw;
 
 namespace
@@ -418,8 +427,8 @@ SW_TEST_CASE( DestructionStateTest, SupportCarriesWeightTowardTheAnchor )
     const vector<uint8> listChainAnchor{ 1, 0, 0 };
     chainState.initialize( chain, Util::makeProfile(), listChainAnchor );
     SW_REQUIRE_TRUE( chainState.breakNode( 3, change ) );
-    SW_EXPECT_NEAR( chainState.getLinkLoad( 1 ), gravity, 1.0e-3f );
-    SW_EXPECT_NEAR( chainState.getLinkLoad( 0 ), 2.0f * gravity, 1.0e-3f );
+    SW_EXPECT_NEAR( DestructionStateTestAccess::getLinkLoad( chainState, 1 ), gravity, 1.0e-3f );
+    SW_EXPECT_NEAR( DestructionStateTestAccess::getLinkLoad( chainState, 0 ), 2.0f * gravity, 1.0e-3f );
     SW_EXPECT_EQUAL( change._overloadedLinkCount, 0u );
 
     const FractureGraph shared = Util::makeFlatGraph( 3, {
@@ -430,8 +439,8 @@ SW_TEST_CASE( DestructionStateTest, SupportCarriesWeightTowardTheAnchor )
     const vector<uint8> listSharedAnchor{ 1, 1, 0 };
     sharedState.initialize( shared, Util::makeProfile(), listSharedAnchor );
     SW_REQUIRE_TRUE( sharedState.breakNode( 3, change ) );
-    SW_EXPECT_NEAR( sharedState.getLinkLoad( 0 ), 0.25f * gravity, 1.0e-3f );
-    SW_EXPECT_NEAR( sharedState.getLinkLoad( 1 ), 0.75f * gravity, 1.0e-3f );
+    SW_EXPECT_NEAR( DestructionStateTestAccess::getLinkLoad( sharedState, 0 ), 0.25f * gravity, 1.0e-3f );
+    SW_EXPECT_NEAR( DestructionStateTestAccess::getLinkLoad( sharedState, 1 ), 0.75f * gravity, 1.0e-3f );
 }
 
 // 버티는 세기를 넘으면 끊겨 떨어진다. 앵커가 없으면 무게가 흐를 곳이 없어 끊기지 않는다.

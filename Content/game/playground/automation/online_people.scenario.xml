@@ -1,0 +1,35 @@
+<?xml version="1.0" encoding="utf-8"?>
+<?asset guid="c2718a87658df286089430651b308219"?>
+<!--
+  허브 사람들(소셜 · 거래 키트) — 프로세스 안 서버(Config/Server/Online/Playground.json)에 혼자 붙어 거절 길과 화면을 본다. 두 계정의 친구 · 거래 정산은 py -3 -m Scripts online-local people.
+  ① 없는 이름의 친구 신청은 서버가 거절한다(PeopleRefusedCount 1).
+  ② 접속하지 않은 상대에게 거는 거래는 서버가 거절한다(2).
+  ③ 친구 목록 화면(FriendListScreen — 게임 범위의 FriendList 모델)이 열리고 닫힌다.
+  실행: ctest -R Scenario.playground (체인)
+-->
+<Scenario name="game.playground.online_people" fixedDelta="0.0166667" timeoutFrames="20000" startAfter="ScenePlaying" startTimeoutFrames="900" input="exclusive" requiresModule="GF_Server_Social,GF_Server_Trade,GF_Client_Social">
+	<AllowLog id="LoginTicketKey.AccountKitNoTicketKeySecretEnvironment" reason="프로세스 안 개발 서버는 티켓 주 키 없이 개발 키를 쓴다 - 게임 접속 티켓을 쓰지 않는다"/>
+	<DevCommand line="online.local.start Config/Server/Online/Playground.json"/>
+	<WaitUntil watch="Online.SessionState" atLeast="3" timeoutSeconds="20"/>
+	<DevCommand line="playground.online.login"/>
+	<WaitUntil watch="Playground.OnlineLoggedIn" equals="1" timeoutSeconds="20"/>
+	<!-- ① -->
+	<DevCommand line="playground.online.friend request nobody_here"/>
+	<WaitUntil watch="Playground.PeopleRefusedCount" equals="1" timeoutSeconds="10"/>
+	<!-- ② -->
+	<DevCommand line="playground.online.trade invite playground_dev2"/>
+	<WaitUntil watch="Playground.PeopleRefusedCount" equals="2" timeoutSeconds="10"/>
+	<Expect watch="Playground.TradeSettledCount" equals="0"/>
+	<!-- ③ 첫 패드 입력은 기본 포커스(Refresh), 오른쪽이 Close -->
+	<DevCommand line="social.friendlist common/ui/online/friendlist.ui.xml"/>
+	<WaitUntil watch="UI.ActiveScreen" is="common/ui/online/friendlist.ui.xml" timeoutFrames="30"/>
+	<Expect watch="Playground.FriendCount" equals="0"/>
+	<Tap slot="Gamepad.DPadDown" hold="1"/>
+	<WaitUntil watch="UI.FocusedWidget" is="Refresh" timeoutFrames="10"/>
+	<Tap slot="Gamepad.DPadRight" hold="1"/>
+	<WaitUntil watch="UI.FocusedWidget" is="Close" timeoutFrames="10"/>
+	<Tap slot="Gamepad.A" hold="1"/>
+	<WaitUntil watch="UI.ActiveScreen" is="none" timeoutFrames="30"/>
+	<DevCommand line="online.disconnect"/>
+	<Pass/>
+</Scenario>

@@ -54,11 +54,11 @@ namespace sw::editor
     bool EditorDefaultObjects::isDefaultValue( const PropertyInfo& prop, const ObjectAddress instance, const ObjectAddress defaultInstance )
     {
         const SerializeContext& context = SerializeContext::getDefault( SerializePurpose::Authoring );
-        const string            current = SerializerUtil::formatPropertyText( prop, instance, context );
         if ( defaultInstance.get() != nullptr )
-            return current == SerializerUtil::formatPropertyText( prop, defaultInstance, context );
+            return SerializerUtil::canCarryProperty( prop, context ) == false || SerializerUtil::arePropertyValuesEqual( prop, instance, defaultInstance, context );
         if ( prop._metadata->_defaultValue.empty() )
             return true;
+        const string current = SerializerUtil::formatPropertyText( prop, instance, context );
         // 메타 글은 사람이 쓴 꼴이라("1.0" 과 "1") 숫자는 값으로 비교한다.
         float64 currentNumber{ 0.0 };
         float64 defaultNumber{ 0.0 };

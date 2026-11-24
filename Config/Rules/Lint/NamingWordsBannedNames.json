@@ -2146,6 +2146,7 @@
     "MeadowFarmGameModeComponent": "FarmPlotGameModeComponent — 한 키트만 쓰는 밭 디렉터를 Farming 키트로 옮겼다(흡수 8 의 남은 몫)(2026-11-24)",
     "NileBuildingComponent": "CityBuildingViewComponent — 도시 건물 뷰는 키트 클라이언트(GF_Client_CityBuilder)의 것이다 — 게임 접두를 뗀다(2026-11-24)",
     "NileWalkerComponent": "CityWalkerViewComponent — 도시 일꾼 뷰는 키트 클라이언트(GF_Client_CityBuilder)의 것이다 — 게임 접두를 뗀다(2026-11-24)",
-    "NileCursorComponent": "CityBuildCursorComponent — 도시 짓기 뷰는 키트 클라이언트(GF_Client_CityBuilder)의 것이다 — 게임 접두를 뗀다(2026-11-24)"
+    "NileCursorComponent": "CityBuildCursorComponent — 도시 짓기 뷰는 키트 클라이언트(GF_Client_CityBuilder)의 것이다 — 게임 접두를 뗀다(2026-11-24)",
+    "HostSubsystemNames": "ModuleLoaderSubsystem::kSubsystemName — 쓰는 곳이 주인 하나뿐이라 헤더째 접었다(2026-11-24)"
   }
 }

@@ -142,8 +142,8 @@ namespace sw
         void     advanceGameSeconds( float32 gameSeconds );
 
     private:
-        WorldClockSettings           _settings;
-        EventBuffer<WorldClockEvent> _eventBuffer;
+        WorldClockSettings                  _settings;
+        NotificationBuffer<WorldClockEvent> _eventBuffer;
         PROPERTY( RuntimeState, Min = 0 )
         int32 _day;
         PROPERTY( RuntimeState, Min = 0 )

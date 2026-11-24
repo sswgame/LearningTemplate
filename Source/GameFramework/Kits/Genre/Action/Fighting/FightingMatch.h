@@ -384,9 +384,9 @@ namespace sw
         FighterRuntime   _arrFighter[kPlayerCount];
         FightingSettings _settings;
         PROPERTY()
-        RoundSeries                _series; ///< 라운드 번호, 시간, 대기, 라운드 승, 대전 결과
-        EventBuffer<FightingEvent> _eventBuffer;
-        vector<MoveHitbox>         _listHitboxScratch; ///< 판정에 쓰는 임시 버퍼(상태가 아님)
+        RoundSeries                       _series; ///< 라운드 번호, 시간, 대기, 라운드 승, 대전 결과
+        NotificationBuffer<FightingEvent> _eventBuffer;
+        vector<MoveHitbox>                _listHitboxScratch; ///< 판정에 쓰는 임시 버퍼(상태가 아님)
         PROPERTY( Min = 0 )
         int32 _frame;
         PROPERTY( Min = -1, Max = kDraw )

@@ -153,6 +153,11 @@ namespace sw
 
         /** @brief 켜진(맨 위) 미니게임입니다. 없거나 덮인 것을 다시 켜지 못했으면 nullptr 입니다. */
         const MinigameDefinition* findActiveDefinition() const;
+        /**
+         * @brief 켜진 매치형 미니게임의 지금 점수입니다(정의의 `_matchScore` — 열린 디렉터들이 모은 값). 매치형이 아니거나 디렉터가 내지 않으면 nullopt 입니다.
+         * @details 매치 서버가 판이 끝날 때 정의의 순위표(`_matchBoard`)에 낸다 — 클라이언트의 결과는 순위표에 가지 않는다.
+         */
+        optional<int64> findMatchScore() const;
         /** @brief 칸 스택입니다(읽기). */
         const MinigameStack& getStack() const { return _stack; }
         /** @brief 켰고 미니게임 맵이 서기를 기다리는 중이면 true 입니다. */

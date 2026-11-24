@@ -13,6 +13,25 @@
 #include "Engine/Object/GameObject/GameObjectManager.h"
 #include "Engine/Physics/Scene/SocketPhysicsBody.h"
 
+namespace sw
+{
+    /** @brief 안을 보는 테스트 창구입니다(`friend`). */
+    struct SocketPartPoolTestAccess
+    {
+        static uint32 getRestingCount( const SocketPartPool& pool, const hashed_string& assetPath )
+        {
+            const auto found = pool._mapResting.find( assetPath );
+            uint32     count = 0;
+            for ( size_t index = 0; found != pool._mapResting.end() && index < found->second.size(); ++index )
+            {
+                const GameObject* pObject = pool._pManager->resolveGameObject( found->second[index] );
+                count += pObject != nullptr && pObject->isPendingDestroy() == false ? 1u : 0u;
+            }
+            return count;
+        }
+    };
+} // namespace sw
+
 using namespace sw;
 
 // 소켓 부착 컴포넌트 — 붙음 · 떼기(애니메이션 · 물리) · 되돌아가기 블렌드 · 주인 바꾸기, 쉬는 단위의 비용, 2D 소켓.
@@ -188,8 +207,8 @@ SW_TEST_CASE( SocketPartPoolTest, StoresDetachedInactivePartsAndRefusesDroppedOn
     SW_EXPECT_TRUE( rig._pBinding->getState() == SocketBindingState::ReleasedAnimated );
     SW_EXPECT_TRUE( rig._pUnitScene->getParent() == nullptr );
     SW_EXPECT_FALSE( rig._pUnit->isActive() );
-    SW_EXPECT_EQUAL( 1u, pool.getRestingCount( sword ) );
-    SW_EXPECT_EQUAL( 0u, pool.getRestingCount( hashed_string( "p/axe.prefab.xml" ) ) );
+    SW_EXPECT_EQUAL( 1u, SocketPartPoolTestAccess::getRestingCount( pool, sword ) );
+    SW_EXPECT_EQUAL( 0u, SocketPartPoolTestAccess::getRestingCount( pool, hashed_string( "p/axe.prefab.xml" ) ) );
 
     // 옛 주인을 지워도 쉬는 부품은 자식이 아니라 남는다.
     rig._manager.destroyGameObject( rig._pHolder );
@@ -214,12 +233,12 @@ SW_TEST_CASE( SocketPartPoolTest, StoresDetachedInactivePartsAndRefusesDroppedOn
     SW_EXPECT_FALSE( dropPool.storePart( *dropRig._pUnit, sword ) );
     SW_EXPECT_TRUE( dropRig._pUnit->isActive() );
 
-    SW_EXPECT_EQUAL( 0u, dropPool.getRestingCount( sword ) );
+    SW_EXPECT_EQUAL( 0u, SocketPartPoolTestAccess::getRestingCount( dropPool, sword ) );
 
     // 지울 예정인 부품도 받지 않는다(떼어 둔 상태여도).
     rig._manager.destroyGameObject( pTaken );
     SW_EXPECT_FALSE( pool.storePart( *pTaken, sword ) );
-    SW_EXPECT_EQUAL( 0u, pool.getRestingCount( sword ) );
+    SW_EXPECT_EQUAL( 0u, SocketPartPoolTestAccess::getRestingCount( pool, sword ) );
 }
 
 /**

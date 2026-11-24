@@ -6,8 +6,8 @@
 #include "Core/Container/unordered_map.h"
 #include "Core/Container/unordered_set.h"
 #include "Core/File/FileUtil.h"
-#include "Core/Hash/HashUtil.h"
 #include "Core/Math/MathUtil.h"
+#include "Core/String/StringBuilder.h"
 #include "Core/String/StringUtil.h"
 #include "Core/Time/MonotonicClock.h"
 
@@ -106,51 +106,6 @@ namespace sw
                     }
                 }
                 return false;
-            }
-
-            /**
-             * @brief 등록된 타입 · 프로퍼티 · 열거자의 지문입니다. 쿠킹된 상태의 바이트가 이 표로 정해지므로 작업 키의 설정 해시로 쓴다.
-             * @details 이름순으로 늘어놓아 등록 순서(링크 순서)와 관계없다. 프로퍼티는 선언 순서 그대로다.
-             */
-            static uint64 computeReflectionFingerprint( const TypeRegistry& registry )
-            {
-                vector<string> listTypeText;
-                registry.forEachType( [&listTypeText]( const TypeInfo& type )
-                {
-                    string text( type._fullyQualifiedName.view() );
-                    for ( const PropertyInfo& property : type._listProperty )
-                    {
-                        text.append( "|" ).append( property._name.view() ).append( ":" ).append( property._typeName.view() );
-                        text.append( "<" ).append( property._keyTypeName.view() ).append( "," ).append( property._elementTypeName.view() ).append( ">" );
-                    }
-                    listTypeText.push_back( std::move( text ) );
-                } );
-                registry.forEachEnum( [&listTypeText]( const EnumInfo& info )
-                {
-                    vector<string>                           listEntry;
-                    StringBuilder<constant::buffer::kMax256> entryBuilder;
-                    for ( const auto& [name, value] : info._mapNameToValue )
-                    {
-                        entryBuilder.clear();
-                        entryBuilder.appendFormat( "%#=%#", name.toString(), value );
-                        listEntry.push_back( string( entryBuilder.view() ) );
-                    }
-                    VectorUtil::sort( listEntry );
-                    StringBuilder<constant::buffer::kMax1024> textBuilder;
-                    textBuilder.appendFormat( "enum %#", info._fullyQualifiedName.view() );
-                    for ( const string& entry : listEntry )
-                    {
-                        textBuilder.append( '|' ).append( entry );
-                    }
-                    listTypeText.push_back( string( textBuilder.view() ) );
-                } );
-                VectorUtil::sort( listTypeText );
-                string canonical;
-                for ( const string& text : listTypeText )
-                {
-                    canonical.append( text ).append( "\n" );
-                }
-                return HashUtil::computeStringHash64( canonical.c_str(), canonical.size(), false );
             }
 
             /** @brief @p layerSet 이 @p targetLayers 를 모두 품으면 true 입니다(둘 다 정렬돼 있다). */
@@ -354,7 +309,8 @@ namespace sw
         ObjectSavedIDMap mapSourceSavedID;
         source.collectSavedIDMap( mapSourceSavedID );
         ObjectSaveOptions saveOptions{ SerializePurpose::Authoring };
-        saveOptions._pSavedIDMap = &mapSourceSavedID;
+        saveOptions._pSavedIDMap   = &mapSourceSavedID;
+        saveOptions._bSchemaLayout = SW_TRUE; // 쿠킹 키가 리플렉션 지문을 들어(`makeCookJobDesc`) 배치가 바뀌면 다시 굽는다
 
         SceneDocument cooked = inoutDoc;
         for ( SceneDocument::SceneObjectNode& entity : cooked._listSceneObjectNode )
@@ -418,7 +374,7 @@ namespace sw
     }
 
     uint32 SceneCooker::cookAllScenes( const SceneEngineServices& services, string_view sourceRoot, string_view cookedDir, const CookStore& store,
-                                       uint32& outFailedCount )
+                                       const uint64 reflectionFingerprint, uint32& outFailedCount )
     {
         outFailedCount = 0;
         if ( cookedDir.empty() )
@@ -463,8 +419,8 @@ namespace sw
         const string      normalizedRoot = FileUtil::trimTrailingSlashes( FileUtil::normalizeSeparators( resourceRoot ) );
         const string      normalizedOut  = FileUtil::normalizeSeparators( cookedDir );
         const string      activePackRoot = FileUtil::trimTrailingSlashes( FileUtil::normalizePath( engine::getSubsystem<GameConfig>()._packRoot.get() ).str() );
-        const CookJobDesc desc           = makeCookJobDesc( registry );
-        const CookJobDesc preloadDesc    = makePreloadCookJobDesc();
+        const CookJobDesc desc           = makeCookJobDesc( reflectionFingerprint );
+        const CookJobDesc preloadDesc    = makePreloadCookJobDesc( reflectionFingerprint );
 
         // 다시 구운 씬의 시간 합과 가장 느린 씬(요약 로그). 씬은 차례로 굽는다 — 에셋 캐시와 결과가 프로세스 하나의 것이라, 나눈다면 언리얼 멀티프로세스 쿡처럼 프로세스를 가른다.
         CookStats stats;
@@ -719,24 +675,24 @@ namespace sw
         return true;
     }
 
-    CookJobDesc SceneCooker::makePreloadCookJobDesc()
+    CookJobDesc SceneCooker::makePreloadCookJobDesc( const uint64 reflectionFingerprint )
     {
         CookJobDesc desc;
         desc._cookerName      = "ScenePreload";
         desc._codeFingerprint = CookCodeFingerprint::find( "ScenePreload" );
         desc._target          = "Any";
-        desc._settingsHash    = 0; // 목록은 컴포넌트의 경로 프로퍼티 값이 정한다 — 타입 표가 바뀌어 프로퍼티가 달라지면 입력(씬 · 프리팹)을 다시 읽어 알게 된다
+        desc._settingsHash    = reflectionFingerprint; // 어느 칸이 경로인지 · 파일에 없는 칸의 기본값은 타입 표가 정한다 — 입력 파일만으로는 모른다
         return desc;
     }
 
-    CookJobDesc SceneCooker::makeCookJobDesc( const TypeRegistry& registry )
+    CookJobDesc SceneCooker::makeCookJobDesc( const uint64 reflectionFingerprint )
     {
         CookJobDesc desc;
         desc._cookerName      = "Scene";
         desc._codeFingerprint = CookCodeFingerprint::find( "Scene" );
         desc._target          = "Any";
         // 쿠킹된 상태는 리플렉션 표로 쓴다 — 타입 · 프로퍼티가 바뀌면 같은 XML 이라도 다시 베이크한다.
-        desc._settingsHash = SceneCookerInternal::computeReflectionFingerprint( registry );
+        desc._settingsHash = reflectionFingerprint;
         return desc;
     }
 

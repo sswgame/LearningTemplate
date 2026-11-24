@@ -31,12 +31,12 @@ namespace sw
         RigJiggleNode();
 
         unique_ptr<RigNode> clone() const override;
-        const utf8*         getTypeName() const override { return kTypeName; }
         [[nodiscard]] bool  parse( RigXMLReader& reader ) override;
         [[nodiscard]] bool  bind( const RigBindContext& context ) override;
         void                evaluate( RigEvaluateContext& context ) override;
         void                collectWrittenBones( vector<uint32>& inoutListBone ) const override;
         void                reset() override { _chain.reset(); }
+        void                applyWorldOffset( const float3& delta ) override { _chain.applyWorldOffset( delta ); }
 
         const hashed_string&  getGroup() const { return _group; }
         const RigSpringChain& getChain() const { return _chain; }

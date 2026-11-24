@@ -110,3 +110,20 @@ SW_TEST_CASE( EventBufferTest, TakeAllReturnsPendingAndKeepsLaterPushes )
     SW_EXPECT_EQUAL( 2, listSecond[0] );
     SW_EXPECT_TRUE( buffer.takeAll().empty() );
 }
+
+/**
+ * @brief [EventBufferTest] 상한이 있는 버퍼는 아무도 꺼내지 않으면 오래된 알림부터 버리고 최근 것을 순서대로 남긴다 — 끝없이 쌓이지 않는다
+ */
+SW_TEST_CASE( EventBufferTest, BoundedBufferKeepsTheLatestWhenNobodyDrains )
+{
+    EventBuffer<int32, 8> buffer;
+    for ( int32 value = 0; value < 100; ++value )
+    {
+        buffer.push( value );
+        SW_REQUIRE_TRUE( buffer.getCount() <= 8u );
+    }
+    const vector<int32>& listPending = buffer.getPending();
+    SW_REQUIRE_FALSE( listPending.empty() );
+    SW_EXPECT_EQUAL( 99, listPending.back() );
+    SW_EXPECT_EQUAL( 99 - static_cast<int32>( listPending.size() ) + 1, listPending.front() );
+}

@@ -248,10 +248,11 @@ namespace sw
                 return static_cast<const MissingComponent*>( pComp )->tryGetOriginalElement( outElement );
             }
 
+            /** @brief 저장할 컴포넌트의 타입입니다. 곧 사라질 것과 파생 컴포넌트(`Component::isTransient`)는 없음이다 — 세 형식의 쓰기가 모두 이것으로 건너뛴다. */
             static const TypeInfo* getComponentRuntimeTypeInfo( const void* pInstance )
             {
                 const Component* pComp = static_cast<const Component*>( pInstance );
-                if ( pComp == nullptr || pComp->isPendingDestroy() )
+                if ( pComp == nullptr || pComp->isPendingDestroy() || pComp->isTransient() )
                     return nullptr;
                 return pComp->getTypeInfo();
             }
@@ -554,6 +555,7 @@ namespace sw
                     , _context{ makeGameObjectContext( const_cast<GameObject*>( pGameObject ), options.getPurpose(),
                                                        SW_DELEGATE_METHOD( SerializeContext::TextWriteFn, &ReferenceWriter::writeComponent, &_writer ), nullptr ) }
                 {
+                    _context.setSchemaLayout( options._bSchemaLayout == SW_TRUE );
                     const SerializeContext::BinaryReadFn* pComponentBinaryReader = _context.findBinaryReader( getComponentHandleTypeName() );
                     if ( pComponentBinaryReader != nullptr )
                         _context.registerBinaryHandler( getComponentHandleTypeName(), SW_DELEGATE_METHOD( SerializeContext::BinaryWriteFn, &ReferenceWriter::writeComponentBinary, &_writer ),
@@ -639,9 +641,10 @@ namespace sw
 
         const GameObject::ComponentIDRestoreScope restoreScope( pGameObject, context._pIdentity );
         ObjectStateBatch::ComponentKeyTextMap     mapKeyText; // 읽은 컴포넌트 핸들의 키 글이다. 배치가 풀지 못한 참조를 남길 때 쓴다
-        const SerializeContext                    serializeContext = ObjectStateSerializerInternal::makeGameObjectContext(
+        SerializeContext                          serializeContext = ObjectStateSerializerInternal::makeGameObjectContext(
             pGameObject, context.getPurpose(), SW_DELEGATE_FUNCTION( SerializeContext::TextWriteFn, &ObjectStateSerializerInternal::ReferenceWriter::writeRuntimeComponentText ),
             &mapKeyText );
+        serializeContext.setSchemaLayout( context.getPurpose() == SerializePurpose::Authoring ); // 쿠킹 상태는 저작 목적으로만 쓴다 — 세이브 · 스냅샷 바이트는 배치 스트림을 받지 않는다
         const bool bLoaded = deserializeState( serializeContext );
         if ( bLoaded )
         {
@@ -746,22 +749,18 @@ namespace sw
         if ( pTypeInfo == nullptr )
             return 0;
 
-        ByteReader reader( pData, size );
-        uint32     bodySize{ 0 };
-        bodySize = reader.readPod<uint32>();
+        ByteReader         reader( pData, size );
+        const uint32       bodySize = reader.readPod<uint32>();
+        const uint8* const pBody    = reader.readView( bodySize ); // 크기는 뺄셈으로 견준다 — 더해 견주면 32 비트 size_t(웹)에서 넘친다
         if ( reader.hasOverflowed() )
-            return 0;
-
-        const size_t bodyStart = reader.getOffset();
-        if ( bodyStart + bodySize > size )
             return 0;
 
         const bool bLoaded = loadStateInPlace( pGameObject, context, [&]( const SerializeContext& serializeContext )
         {
-            return BinarySerializer::deserializeVersioned( pGameObject, *pTypeInfo, pData + bodyStart, bodySize,
+            return BinarySerializer::deserializeVersioned( pGameObject, *pTypeInfo, pBody, bodySize,
                                                            kObjectReflectedSchemaVersion, serializeContext );
         } );
-        return bLoaded ? bodyStart + bodySize : 0;
+        return bLoaded ? reader.getOffset() : 0;
     }
 
     bool ObjectStateSerializer::loadFromXMLString( GameObject* pGameObject, string_view xmlString, const ObjectLoadContext& context )
@@ -784,7 +783,7 @@ namespace sw
         identity._listComponent.reserve( pGameObject->getComponents().size() );
         for ( const Component* pComp : pGameObject->getComponents() )
         {
-            if ( pComp == nullptr || pComp->isPendingDestroy() )
+            if ( pComp == nullptr || pComp->isPendingDestroy() || pComp->isTransient() )
                 continue;
             // 타입 FQN 으로 적는다. 복원할 때(`takeRestoredComponentID`) 새 컴포넌트의 타입 FQN 과 비교한다. 컴포넌트 이름을 적으면 이름을 붙인
             // 컴포넌트는 id 를 되찾지 못해 되돌리기 뒤 핸들이 끊기고, 짧은 타입 이름을 적으면 이름이 같은 다른 타입이 id 를 가져간다.

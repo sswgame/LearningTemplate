@@ -174,9 +174,9 @@ namespace sw
         PROPERTY( RuntimeState )
         vector<hashed_string> _listPendingKeyRoom; ///< 가방이 차서 아직 주지 못한 열쇠의 방이다
         PROPERTY( RuntimeState )
-        vector<uint32>                 _listRewardedGhost; ///< 지금 방에서 잡아 동전을 준 유령의 번호이다. 이벤트로 세면 잡은 뒤 `update` 앞의 저장이 동전과 불을 잃는다
-        EventBuffer<GhostMansionEvent> _eventBuffer;
-        vector<GhostEvent>             _listGhostEvent; ///< 게임에 넘길 싸움 이벤트이다
+        vector<uint32>                        _listRewardedGhost; ///< 지금 방에서 잡아 동전을 준 유령의 번호이다. 이벤트로 세면 잡은 뒤 `update` 앞의 저장이 동전과 불을 잃는다
+        NotificationBuffer<GhostMansionEvent> _eventBuffer;
+        vector<GhostEvent>                    _listGhostEvent; ///< 게임에 넘길 싸움 이벤트이다
         PROPERTY( RuntimeState )
         hashed_string       _currentRoom;
         const GhostCatalog* _pCatalog;

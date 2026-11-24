@@ -12,7 +12,7 @@ namespace sw
         , _settings{}
         , _onRequest{}
         , _ioThreadCount{ 0 }
-        , _handledCount{ 0 }
+        , _handledCount{}
         , _bInitialized{ SW_FALSE }
     {
     }
@@ -77,7 +77,7 @@ namespace sw
                 response._statusCode = 400;
             else
                 _onRequest.get()( ready._request, response );
-            ++_handledCount;
+            _handledCount.add();
             vector<uint8> bytes;
             HTTPServerResponse::write( response, bytes );
             ScopedLock<mutex> lock{ _mutex };

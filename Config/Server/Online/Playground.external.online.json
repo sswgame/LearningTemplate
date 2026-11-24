@@ -51,6 +51,13 @@
             }
         },
         {
+            "_name": "gameConnect",
+            "_settings": {
+                "_serverName": "0000000000000001",
+                "_ticketKeySecretEnvironment": "SW_PLAYGROUND_TICKET_KEY"
+            }
+        },
+        {
             "_name": "leaderboard",
             "_settings": {
                 "_pastScoreTTL": { "_expireAfterDays": 30, "_maxScanPerSweep": 20000, "_maxDeletePerSweep": 5000 },
@@ -80,6 +87,22 @@
                 "_reconnectGraceMs": 60000,
                 "_cancelConfirmWaitMs": 3000,
                 "_bGameServer": true
+            }
+        },
+        {
+            "_name": "social",
+            "_settings": {
+                "_expiredInviteTTL": { "_expireAfterDays": 30, "_maxScanPerSweep": 5000, "_maxDeletePerSweep": 1000 },
+                "_expiredApplicationTTL": { "_expireAfterDays": 30, "_maxScanPerSweep": 5000, "_maxDeletePerSweep": 1000 }
+            }
+        },
+        {
+            "_name": "trade",
+            "_settings": {
+                "_listTradablePrefix": [ "cur.gold" ],
+                "_closedSessionTTL": { "_expireAfterDays": 30, "_maxScanPerSweep": 5000, "_maxDeletePerSweep": 1000 },
+                "_inviteTimeoutMs": 30000,
+                "_idleTimeoutMs": 120000
             }
         }
     ]

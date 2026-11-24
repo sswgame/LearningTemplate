@@ -8,6 +8,7 @@
 
 #include "Engine/Foundation/EngineServices.h"
 #include "Engine/Reflection/ReflectBuiltinClass.h"
+#include "Engine/Reflection/ReflectValueBinding.h"
 #include "Engine/Reflection/ReflectedValue.h"
 #include "Engine/Reflection/TypeInfo.h"
 #include "Engine/Reflection/TypeRegistry.h"
@@ -374,10 +375,10 @@ namespace sw
 
 namespace sw
 {
-    UIBindingValueKind UIBindingValue::classifyType( const hashed_string& typeName )
+    UIBindingValueKind UIBindingValue::classifyType( const ReflectBuiltinIndex builtinIndex )
     {
         // 갈래는 내장 타입 표가 정한다(`ReflectBuiltinClass`) — 숫자 읽기 · 쓰기 표(`kArrNumberOps`)도 같은 갈래로 채워지므로 Number 인데 줄이 없는 타입은 없다.
-        switch ( ReflectedValueUtil::getBuiltinClass( typeName ) )
+        switch ( ReflectedValueUtil::getBuiltinClass( builtinIndex ) )
         {
             case ReflectBuiltinClass::Bool:
                 return UIBindingValueKind::Bool;
@@ -437,12 +438,12 @@ namespace sw
             outPath._listProperty.push_back( PropertyHandle::of( *pType, *pProperty ) );
             if ( bIsLast == false )
             {
-                pType = engine::getSubsystem<TypeRegistry>().findType( pProperty->_typeName );
+                pType = pProperty->resolveValueFacts( engine::getSubsystem<TypeRegistry>() )._pType;
                 begin = dot + 1;
             }
         }
         const PropertyInfo& leaf = outPath.getLeafProperty();
-        outPath._kind            = leaf._bIsContainer == SW_TRUE ? UIBindingValueKind::Other : classifyType( leaf._typeName );
+        outPath._kind            = leaf._bIsContainer == SW_TRUE ? UIBindingValueKind::Other : classifyType( leaf.resolveValueFacts( engine::getSubsystem<TypeRegistry>() )._builtinIndex );
         return {};
     }
 
@@ -457,7 +458,7 @@ namespace sw
         if ( leaf._bIsBitField == SW_TRUE )
             return UIBindingValue::makeBool( leaf.getValue<bool>( pOwner ) );
         const void*               pValue       = leaf.getRawPtr( pOwner );
-        const ReflectBuiltinIndex builtinIndex = ReflectedValueUtil::findBuiltinIndex( leaf._typeName ); // 숫자 · 글 갈래만 보고, 그 갈래는 내장 타입에서만 나온다
+        const ReflectBuiltinIndex builtinIndex = leaf.resolveValueFacts( engine::getSubsystem<TypeRegistry>() )._builtinIndex; // 숫자 · 글 갈래만 보고, 그 갈래는 내장 타입에서만 나온다
         return UIBindingValueInternal::getKindOps( path._kind ).pRead( leaf, ObjectAddress{ pOwner }, ValueAddress{ pValue }, builtinIndex );
     }
 
@@ -478,7 +479,7 @@ namespace sw
             return true;
         }
         void*                     pValue       = leaf.getRawPtr( pOwner );
-        const ReflectBuiltinIndex builtinIndex = ReflectedValueUtil::findBuiltinIndex( leaf._typeName ); // 숫자 · 글 갈래만 보고, 그 갈래는 내장 타입에서만 나온다
+        const ReflectBuiltinIndex builtinIndex = leaf.resolveValueFacts( engine::getSubsystem<TypeRegistry>() )._builtinIndex; // 숫자 · 글 갈래만 보고, 그 갈래는 내장 타입에서만 나온다
         return UIBindingValueInternal::getKindOps( path._kind ).pWrite( leaf, MutableObjectAddress{ pOwner }, MutableValueAddress{ pValue }, builtinIndex, value );
     }
 

@@ -52,6 +52,8 @@ namespace sw
         vector<uint8> stateBytes;
         for ( Component* pComponent : object.getComponents() )
         {
+            if ( pComponent != nullptr && pComponent->isTransient() )
+                continue; // 파생 컴포넌트는 상태가 아니다
             vector<string_view> listTakenType;
             for ( const ComponentStateCodec* pCodec : ComponentStateCodecInternal::getCodecs().getItems() )
             {

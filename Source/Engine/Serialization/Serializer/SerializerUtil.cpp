@@ -6,11 +6,13 @@
 #include "Core/Container/InlineAllocator.h"
 #include "Core/Log/LogOnce.h"
 #include "Core/Log/Logger.h"
+#include "Core/Memory/Memory.h"
 #include "Core/Serialization/ByteStream.h"
 #include "Core/String/StringBuilder.h"
 #include "Core/String/StringUtil.h"
 
 #include "Engine/Reflection/ReflectValueBinding.h"
+#include "Engine/Reflection/ReflectVisit.h"
 #include "Engine/Reflection/ReflectedValue.h"
 #include "Engine/Reflection/ReflectionContainers.h"
 #include "Engine/Reflection/ReflectionMetadata.h"
@@ -57,15 +59,6 @@ namespace sw
                 return ReflectedValueUtil::readNumber( builtinIndex, value.get(), outValue ); // kNone 이면 false
             }
 
-            /** @brief 칸 값 · 원소 형식이 중첩 객체면 그 타입입니다(`SerializerUtil::findNestedObjectType` 과 같은 규칙). 프로퍼티의 묶음으로 찾아 값마다 이름 조회 · 공유 잠금이 없다. */
-            static const TypeInfo* findNestedObjectType( const hashed_string& typeName, const ReflectValueBinding* pBinding, const SerializeContext& context )
-            {
-                const SerializerUtil::ValueCodecs codecs = SerializerUtil::findValueCodecs( typeName, pBinding, context );
-                if ( codecs.findTextWriter( context ) != nullptr || codecs.findEnum( context ) != nullptr )
-                    return nullptr;
-                return codecs.findStructType( context );
-            }
-
             /** @brief @p value 가 @p range 밖이면 "경로 = 값 is outside [아래, 위]" 한 줄을 더합니다. */
             static void appendRangeError( const string& path, const float64 value, const PropertyAllowedRange& range, vector<string>& outListError )
             {
@@ -108,7 +101,7 @@ namespace sw
                         const bool bSequence        = prop._containerWrapper != nullptr && prop._containerWrapper->asSequence() != nullptr && bNestedContainer == false;
                         if ( bSequence == false )
                             continue;
-                        const TypeInfo* pElement     = findNestedObjectType( prop._elementTypeName, prop.findElementBinding(), context );
+                        const TypeInfo* pElement     = SerializerUtil::findNestedObjectType( prop._elementTypeName, prop.findElementBinding(), context );
                         const bool      bNumberRange = pElement == nullptr && prop._metadata->hasAllowedRange();
                         if ( pElement == nullptr && bNumberRange == false )
                             continue;
@@ -136,7 +129,7 @@ namespace sw
                             return false;
                         continue;
                     }
-                    const TypeInfo* pNested = findNestedObjectType( prop._typeName, prop.findValueBinding(), context );
+                    const TypeInfo* pNested = SerializerUtil::findNestedObjectType( prop._typeName, prop.findValueBinding(), context );
                     if ( pNested != nullptr && isEveryValueWithinRange( *pNested, ObjectAddress{ pValue } ) == false )
                         return false;
                 }
@@ -220,6 +213,76 @@ namespace sw
                 }
                 if ( unnamedBits != 0 )
                     appendEnumEntry( buffer, 0, unnamedBits );
+            }
+
+            /**
+             * @brief 값 둘(같은 형식 @p typeName)이 같은지입니다(`arePropertyValuesEqual` 의 값 하나).
+             * @details 언리얼 `FProperty::Identical` 처럼 형식이 정한 길로 값을 바로 견준다 — 성분 배치가 정해진 내장 타입(`ReflectBuiltinLayout`, 상태 직렬화 · 상태 해시와 같은 표)은
+             *          메모리, 글 · 이름은 철자, 열거형은 값, 반사 구조체는 칸마다다. 처리기만 아는 잎(핸들 · 자산 참조 · 압축 타입 …)만 바이트로 옮겨 견준다.
+             */
+            static bool areValuesEqual( const ValueAddress a, const ValueAddress b, const hashed_string& typeName, const ReflectValueBinding* pBinding, const SerializeContext& context )
+            {
+                const SerializerUtil::ValueCodecs codecs = SerializerUtil::findValueCodecs( typeName, pBinding, context );
+                switch ( codecs._builtinIndex )
+                {
+                    case ReflectBuiltinIndex::kbool:
+                        return *static_cast<const bool*>( a.get() ) == *static_cast<const bool*>( b.get() );
+                    case ReflectBuiltinIndex::kstring:
+                        return *static_cast<const string*>( a.get() ) == *static_cast<const string*>( b.get() );
+                    case ReflectBuiltinIndex::khashed_string: // `==` 는 대소문자를 무시한다 — 저장하는 글은 철자다
+                        return static_cast<const hashed_string*>( a.get() )->isEqual( *static_cast<const hashed_string*>( b.get() ), NameCase::CaseSensitive );
+                    default:
+                        break;
+                }
+                const bool bPlainMemory = ReflectBuiltinTraitTable::get( codecs._builtinIndex )._layout != ReflectBuiltinLayout::None && codecs._pType != nullptr;
+                if ( bPlainMemory )
+                    return Memory::compare( a.get(), b.get(), codecs._pType->_size ) == 0;
+                if ( codecs.findBinaryWriter( context ) == nullptr ) // 처리기가 먼저다(`serializeValueBinary` 와 같은 순서)
+                {
+                    if ( const EnumInfo* pEnumInfo = codecs.findEnum( context ) )
+                        return pEnumInfo->readValueFromMemory( a.get() ) == pEnumInfo->readValueFromMemory( b.get() );
+                    if ( const TypeInfo* pStructInfo = codecs.findStructType( context ) )
+                    {
+                        const ReflectPropertyVisitor propertyVisitor{ ReflectVisitOptions{} };
+                        return propertyVisitor.visitProperties( *pStructInfo, a.get(), [&]( const ReflectVisitConstField& field )
+                        {
+                            const bool bSame = SerializerUtil::shouldSerializeProperty( *pStructInfo, field._property, context ) == false ||
+                                               SerializerUtil::arePropertyValuesEqual( field._property, ObjectAddress{ a.get() }, ObjectAddress{ b.get() }, context );
+                            return bSame ? ReflectVisitFlow::Continue : ReflectVisitFlow::Stop;
+                        } );
+                    }
+                }
+                vector<uint8> bytesA;
+                vector<uint8> bytesB;
+                // 바이트로 옮기지 못한 값은 같은지 알 수 없다. 같다고 하면 바뀐 값을 놓치므로 다르다고 본다.
+                return SerializerUtil::serializeValueBinary( a, typeName, pBinding, bytesA, context ) && SerializerUtil::serializeValueBinary( b, typeName, pBinding, bytesB, context ) &&
+                       bytesA == bytesB;
+            }
+
+            /** @brief 컨테이너 둘이 같은지입니다. 값 원소의 시퀀스는 원소마다, 맵 · 중첩 컨테이너 · 소유 포인터 원소는 바이트로 옮겨 견준다. */
+            static bool areContainersEqual( const ValueAddress a, const ValueAddress b, const NestedContainerInfo& shape, const SerializeContext& context )
+            {
+                const bool                       bValueElement = shape._elementNested == nullptr && SerializerUtil::isOwnedPointerElementType( shape._elementTypeName ) == false;
+                const ISequenceContainerWrapper* pSequence     = shape._wrapper != nullptr && bValueElement ? shape._wrapper->asSequence() : nullptr;
+                if ( pSequence == nullptr )
+                {
+                    vector<uint8> bytesA;
+                    vector<uint8> bytesB;
+                    return SerializerUtil::serializeNestedContainerBinary( a, shape, bytesA, context ) && SerializerUtil::serializeNestedContainerBinary( b, shape, bytesB, context ) &&
+                           bytesA == bytesB;
+                }
+                const size_t elementCount = pSequence->getSize( a.get() );
+                if ( pSequence->getSize( b.get() ) != elementCount )
+                    return false;
+                const ReflectValueBinding* pBinding = shape.findBinding( shape._elementTypeName );
+                for ( size_t elementIndex = 0; elementIndex < elementCount; ++elementIndex )
+                {
+                    const ValueAddress elementA{ pSequence->getElementConst( a.get(), elementIndex ) };
+                    const ValueAddress elementB{ pSequence->getElementConst( b.get(), elementIndex ) };
+                    if ( areValuesEqual( elementA, elementB, shape._elementTypeName, pBinding, context ) == false )
+                        return false;
+                }
+                return true;
             }
 
             /** @brief 모르는 열거자 이름을 알립니다. enum 과 이름마다 한 번만 알립니다(같은 세이브의 오브젝트 천 개가 천 줄을 쓰지 않게 하려는 것입니다). */
@@ -566,16 +629,12 @@ namespace sw
                          owner._fullyQualifiedName.c_str(), prop._name.c_str() );
     }
 
-    const TypeInfo* SerializerUtil::findNestedObjectType( hashed_string typeName, const SerializeContext& context )
+    const TypeInfo* SerializerUtil::findNestedObjectType( const hashed_string& typeName, const ReflectValueBinding* pBinding, const SerializeContext& context )
     {
-        if ( context.findTextWriter( typeName ) != nullptr )
+        const ValueCodecs codecs = findValueCodecs( typeName, pBinding, context );
+        if ( codecs.findTextWriter( context ) != nullptr || codecs.findEnum( context ) != nullptr )
             return nullptr;
-        if ( context.getTypeRegistry().findEnum( typeName ) != nullptr )
-            return nullptr;
-        const TypeInfo* pTypeInfo = context.getTypeRegistry().findType( typeName );
-        if ( pTypeInfo == nullptr || pTypeInfo->isPrimitive() )
-            return nullptr;
-        return pTypeInfo;
+        return codecs.findStructType( context );
     }
 
     bool SerializerUtil::isNameValueType( const hashed_string& typeName )
@@ -976,21 +1035,9 @@ namespace sw
         const void* pB = prop.getRawPtr( pInstanceB );
         if ( pA == nullptr || pB == nullptr )
             return pA == pB;
-        vector<uint8> bytesA;
-        vector<uint8> bytesB;
-        bool          bWritten = false;
         if ( prop._bIsContainer == SW_TRUE && prop.hasContainerWrapper() )
-        {
-            bWritten = serializeNestedContainerBinary( ValueAddress{ pA }, prop.getContainerShape(), bytesA, context ) &&
-                       serializeNestedContainerBinary( ValueAddress{ pB }, prop.getContainerShape(), bytesB, context );
-        }
-        else
-        {
-            bWritten = serializeValueBinary( ValueAddress{ pA }, prop._typeName, prop.findValueBinding(), bytesA, context ) &&
-                       serializeValueBinary( ValueAddress{ pB }, prop._typeName, prop.findValueBinding(), bytesB, context );
-        }
-        // 바이트로 옮기지 못한 값은 같은지 알 수 없다. 같다고 하면 바뀐 값을 놓치므로 다르다고 본다.
-        return bWritten && bytesA == bytesB;
+            return SerializerUtilInternal::areContainersEqual( ValueAddress{ pA }, ValueAddress{ pB }, prop.getContainerShape(), context );
+        return SerializerUtilInternal::areValuesEqual( ValueAddress{ pA }, ValueAddress{ pB }, prop._typeName, prop.findValueBinding(), context );
     }
 
     bool SerializerUtil::applyPropertyText( const PropertyInfo& prop, MutableObjectAddress instance, string_view text, const SerializeContext& context )
@@ -1202,6 +1249,7 @@ namespace sw
         const bool        bSkipProperty = prop._bIsBitField == SW_TRUE || prop.hasValueAccessor();
         if ( bSkipProperty )
             return;
+        const SerializeContext&                  context = SerializeContext::getDefault( SerializePurpose::Authoring );
         StringBuilder<constant::buffer::kMax256> pathBuilder;
         if ( prefix.empty() == false )
             pathBuilder.appendFormat( "%#.", prefix );
@@ -1218,9 +1266,10 @@ namespace sw
             const bool bSequence        = prop._containerWrapper != nullptr && prop._containerWrapper->asSequence() != nullptr && bNestedContainer == false;
             if ( bSequence == false )
                 return;
-            const ISequenceContainerWrapper* pSequence    = prop._containerWrapper->asSequence();
-            const TypeInfo*                  pElement     = findNestedObjectType( prop._elementTypeName, SerializeContext::getDefault( SerializePurpose::Authoring ) );
-            const size_t                     elementCount = pSequence->getSize( pValue );
+            const ISequenceContainerWrapper* pSequence      = prop._containerWrapper->asSequence();
+            const TypeInfo*                  pElement       = SerializerUtil::findNestedObjectType( prop._elementTypeName, prop.findElementBinding(), context );
+            const ReflectBuiltinIndex        elementBuiltin = prop.resolveElementFacts( context.getTypeRegistry() )._builtinIndex;
+            const size_t                     elementCount   = pSequence->getSize( pValue );
             // 필드 경계는 원소가 아니라 이 프로퍼티를 가진 객체에서 읽는다(인스펙터와 같다).
             const PropertyAllowedRange range = prop._metadata->hasAllowedRange() ? prop._metadata->computeAllowedRange( pInstance ) : PropertyAllowedRange{};
             for ( size_t elementIndex = 0; elementIndex < elementCount; ++elementIndex )
@@ -1233,19 +1282,19 @@ namespace sw
                 // 구조체 원소의 값 주소는 그 원소 타입의 객체 주소다.
                 if ( pElement != nullptr )
                     collectRangeErrors( *pElement, ObjectAddress{ pElementValue }, elementPath, outListError, pListRestored );
-                else if ( Internal::readRangeNumber( ReflectedValueUtil::findBuiltinIndex( prop._elementTypeName ), ValueAddress{ pElementValue }, value ) )
+                else if ( Internal::readRangeNumber( elementBuiltin, ValueAddress{ pElementValue }, value ) )
                     Internal::appendRangeError( elementPath, value, range, outListError );
             }
             return;
         }
-        const TypeInfo* pNested = findNestedObjectType( prop._typeName, SerializeContext::getDefault( SerializePurpose::Authoring ) );
+        const TypeInfo* pNested = SerializerUtil::findNestedObjectType( prop._typeName, prop.findValueBinding(), context );
         if ( pNested != nullptr )
         {
             collectRangeErrors( *pNested, ObjectAddress{ pValue }, path, outListError, pListRestored );
             return;
         }
         float64 value = 0.0;
-        if ( prop._metadata->hasAllowedRange() && Internal::readRangeNumber( ReflectedValueUtil::findBuiltinIndex( prop._typeName ), ValueAddress{ pValue }, value ) )
+        if ( prop._metadata->hasAllowedRange() && Internal::readRangeNumber( prop.resolveValueFacts( context.getTypeRegistry() )._builtinIndex, ValueAddress{ pValue }, value ) )
             Internal::appendRangeError( path, value, prop._metadata->computeAllowedRange( pInstance ), outListError );
     }
 

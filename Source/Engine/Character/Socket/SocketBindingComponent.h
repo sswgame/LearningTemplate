@@ -71,6 +71,8 @@ namespace sw
         void onBeginPlay() override;
         /** @brief 물리 바디를 쓰고 있으면 끝냅니다. */
         void onEndPlay() override;
+        /** @brief 되돌아가기를 시작한 월드 자세를 옮깁니다. */
+        void onWorldOriginShifted( const float3& delta ) override;
 
         /**
          * @brief @p pHolder 의 소켓에 붙습니다. 물리 중이면 끝내고, 되돌아가는 중이면 멈춥니다.

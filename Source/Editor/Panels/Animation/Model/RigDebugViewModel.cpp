@@ -192,7 +192,7 @@ namespace sw::editor
             row._listBone.clear();
             node.collectWrittenBones( row._listBone );
             row._name       = node.getName().empty() ? "(unnamed)" : node.getName().c_str();
-            row._typeName   = node.getTypeName();
+            row._typeName   = node.getTypeName().c_str();
             row._bones      = pUnit != nullptr ? Internal::describeBones( pUnit->getSkeleton(), row._listBone ) : string{ "?" };
             row._weightSlot = node.getWeightSlot().empty() ? "" : node.getWeightSlot().c_str();
             row._weight     = node.getWeight();

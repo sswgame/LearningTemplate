@@ -8,6 +8,7 @@
 #include "Engine/Foundation/EngineServices.h"
 #include "Engine/Object/Component/Component.h"
 #include "Engine/Reflection/PropertyInfo.h"
+#include "Engine/Reflection/ReflectValueBinding.h"
 #include "Engine/Reflection/ReflectedValue.h"
 #include "Engine/Reflection/ReflectionContainers.h"
 #include "Engine/Reflection/ReflectionMetadata.h"
@@ -21,42 +22,33 @@ namespace sw
     {
         struct ComponentAssetPathUtilInternal
         {
-            /** @brief 형식 이름 @p typeName 이 에셋 경로 값의 형식이면 그 종류입니다(`AssetRef` · `string` · `hashed_string`). 아니면 nullopt 입니다. */
-            static optional<AssetPathValueKind> findValueKind( const hashed_string& typeName )
+            /** @brief 형식(이름 @p typeName · 사실 @p facts)이 에셋 경로 값의 형식이면 그 종류입니다(`AssetRef` · `string` · `hashed_string`). 아니면 nullopt 입니다. */
+            static optional<AssetPathValueKind> findValueKind( const hashed_string& typeName, const ReflectValueFacts& facts )
             {
                 static const hashed_string s_assetRefType( AssetRefBase::kTypeName );
                 if ( typeName == s_assetRefType )
                     return AssetPathValueKind::AssetRef;
                 // 읽을 C++ 타입과 같은 자리(`ReflectBuiltinOf<T>`)로 묻는다 — 이름 글과 캐스트 타입이 따로 놀지 않고 별칭도 같은 자리가 된다.
-                const ReflectBuiltinIndex builtinIndex = ReflectedValueUtil::findBuiltinIndex( typeName );
-                if ( builtinIndex == ReflectBuiltinOf<string>::kIndex )
+                if ( facts._builtinIndex == ReflectBuiltinOf<string>::kIndex )
                     return AssetPathValueKind::String;
-                if ( builtinIndex == ReflectBuiltinOf<hashed_string>::kIndex )
+                if ( facts._builtinIndex == ReflectBuiltinOf<hashed_string>::kIndex )
                     return AssetPathValueKind::HashedString;
                 return nullopt;
             }
 
-            /** @brief 형식 이름 @p typeName 이 리플렉션 구조체(내장 값이 아닌 등록 타입)면 그 타입입니다. 아니면 nullptr 입니다. */
-            static const TypeInfo* findNestedType( const hashed_string& typeName )
-            {
-                if ( typeName.empty() || ReflectedValueUtil::findBuiltinIndex( typeName ) != ReflectBuiltinIndex::kNone )
-                    return nullptr;
-                return engine::getSubsystem<TypeRegistry>().findType( typeName ); // 필수 서비스: 리플렉션 컴포넌트가 있으면 레지스트리가 있다
-            }
-
-            /** @brief 값 하나(@p pValue, 형식 @p typeName)를 돈다 — 경로 칸(@p bAssetPath)이면 그 값, 아니면 구조체 안으로 내려간다. */
-            static void visitValue( void* pValue, const hashed_string& typeName, bool bAssetPath, const PropertyInfo& topProperty, const AssetPathVisitor& visit )
+            /** @brief 값 하나(@p pValue, 형식 @p typeName · @p facts)를 돈다 — 경로 칸(@p bAssetPath)이면 그 값, 아니면 구조체 안으로 내려간다. */
+            static void visitValue( void* pValue, const hashed_string& typeName, const ReflectValueFacts& facts, bool bAssetPath, const PropertyInfo& topProperty, const AssetPathVisitor& visit )
             {
                 if ( pValue == nullptr )
                     return;
                 if ( bAssetPath )
                 {
-                    const optional<AssetPathValueKind> kind = findValueKind( typeName );
+                    const optional<AssetPathValueKind> kind = findValueKind( typeName, facts );
                     if ( kind.has_value() )
                         visit( AssetPathValue{ pValue, *kind, &topProperty } );
                     return;
                 }
-                const TypeInfo* const pNested = findNestedType( typeName );
+                const TypeInfo* const pNested = facts.findStructType();
                 if ( pNested != nullptr )
                     visitObject( *pNested, pValue, &topProperty, visit );
             }
@@ -64,7 +56,8 @@ namespace sw
             /** @brief @p type 인스턴스 @p pInstance 의 칸마다 돈다. @p pTopProperty 가 nullptr 이면 이 인스턴스가 컴포넌트다(칸 자신이 맨 위 칸). */
             static void visitObject( const TypeInfo& type, void* pInstance, const PropertyInfo* pTopProperty, const AssetPathVisitor& visit )
             {
-                type.forEachProperty( [pInstance, pTopProperty, &visit]( const PropertyInfo& prop )
+                const TypeRegistry& registry = engine::getSubsystem<TypeRegistry>(); // 필수 서비스: 리플렉션 컴포넌트가 있으면 레지스트리가 있다
+                type.forEachProperty( [pInstance, pTopProperty, &visit, &registry]( const PropertyInfo& prop )
                 {
                     if ( prop._bIsBitField == SW_TRUE || prop.hasValueAccessor() )
                         return; // 비트필드는 경로가 아니고, 접근자 칸은 값이 객체 밖이라 주소로 고칠 수 없다
@@ -73,14 +66,15 @@ namespace sw
                     void* const         pValue      = prop.getValuePtr<void>( pInstance );
                     if ( prop._bIsContainer == SW_FALSE )
                     {
-                        visitValue( pValue, prop._typeName, bAssetPath, topProperty, visit );
+                        visitValue( pValue, prop._typeName, prop.resolveValueFacts( registry ), bAssetPath, topProperty, visit );
                         return;
                     }
                     const ISequenceContainerWrapper* const pSequence = prop.hasContainerWrapper() ? prop._containerWrapper->asSequence() : nullptr;
                     if ( pSequence == nullptr || pValue == nullptr || pSequence->allowsInPlaceElementWrite() == false )
                         return;
+                    const ReflectValueFacts elementFacts = prop.resolveElementFacts( registry ); // 칸마다 한 번
                     for ( size_t index = 0; index < pSequence->getSize( pValue ); ++index )
-                        visitValue( pSequence->getElement( pValue, index ), prop._elementTypeName, bAssetPath, topProperty, visit );
+                        visitValue( pSequence->getElement( pValue, index ), prop._elementTypeName, elementFacts, bAssetPath, topProperty, visit );
                 }, true ); // 상속 칸도 — 기반 타입의 경로 칸이 빠지지 않게
             }
         };

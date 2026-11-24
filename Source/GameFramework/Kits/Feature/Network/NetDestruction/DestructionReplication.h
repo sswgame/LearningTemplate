@@ -134,7 +134,7 @@ namespace sw
         REFLECT_BODY();
 
         PROPERTY( Replicated, Min = -1000000000, Max = 1000000000 )
-        float3 _position{ 0.0f, 0.0f, 0.0f }; ///< 질량 중심(월드)
+        float3 _position{ 0.0f, 0.0f, 0.0f }; ///< 질량 중심(절대)
 
         PROPERTY( Replicated, Min = -2, Max = 2 )
         quaternion _rotation{};

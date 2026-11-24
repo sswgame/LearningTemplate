@@ -15,7 +15,6 @@ namespace sw
             return false;
 
         outDiffBytes.clear();
-        vector<uint8> cdoBytes;
         vector<uint8> modifiedBytes;
         bool          bAllWritten = true;
 
@@ -31,36 +30,18 @@ namespace sw
             if ( prop._bIsBitField == SW_FALSE && ( pCdoPtr == nullptr || pModifiedValue == nullptr ) )
                 return ReflectVisitFlow::Continue;
 
-            cdoBytes.clear();
+            if ( SerializerUtil::arePropertyValuesEqual( prop, ObjectAddress{ pCdoInstance }, ObjectAddress{ pModifiedInstance }, context ) )
+                return ReflectVisitFlow::Continue;
+
             modifiedBytes.clear();
-            bool bWritten = false;
-            if ( prop._bIsBitField == SW_TRUE )
-            {
-                const bool bCdo      = prop.getValue<bool>( pCdoInstance );
-                const bool bModified = prop.getValue<bool>( pModifiedInstance );
-                bWritten             = SerializerUtil::serializeValueBinary( ValueAddress{ &bCdo }, hashed_string( "bool" ), cdoBytes, context ) &&
-                           SerializerUtil::serializeValueBinary( ValueAddress{ &bModified }, hashed_string( "bool" ), modifiedBytes, context );
-            }
-            else if ( prop._bIsContainer && prop.hasContainerWrapper() )
-            {
-                bWritten = SerializerUtil::serializeNestedContainerBinary( ValueAddress{ pCdoPtr }, prop.getContainerShape(), cdoBytes, context ) &&
-                           SerializerUtil::serializeNestedContainerBinary( ValueAddress{ pModifiedValue }, prop.getContainerShape(), modifiedBytes, context );
-            }
-            else
-            {
-                bWritten = SerializerUtil::serializeValueBinary( ValueAddress{ pCdoPtr }, prop._typeName, cdoBytes, context ) &&
-                           SerializerUtil::serializeValueBinary( ValueAddress{ pModifiedValue }, prop._typeName, modifiedBytes, context );
-            }
-            // 바이트로 옮기지 못한 값이 있으면 diff 전체가 실패다. 그 값만 빼면 받는 쪽이 바뀐 값을 놓친다.
-            if ( bWritten == false )
+            // 바이트로 옮기지 못한 값은 위에서 다르다고 나온다. 있으면 diff 전체가 실패다 — 그 값만 빼면 받는 쪽이 바뀐 값을 놓친다.
+            if ( SerializerUtil::writePropertyBinary( prop, ObjectAddress{ pModifiedInstance }, modifiedBytes, context ) == false )
             {
                 SW_LOG_ERROR_ID( "ObjectDiff.CannotWrittenDiffValue", "%#::%# (%#) cannot be written to a diff: it or a value inside it has no binary, enum, struct or text handler", typeInfo._name.c_str(),
                                  prop._name.c_str(), prop._typeName.c_str() );
                 bAllWritten = false;
                 return ReflectVisitFlow::Stop;
             }
-            if ( cdoBytes == modifiedBytes )
-                return ReflectVisitFlow::Continue;
 
             const uint32 nameHash   = prop.getNameHash();
             const uint32 size       = static_cast<uint32>( modifiedBytes.size() );

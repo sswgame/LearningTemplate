@@ -204,8 +204,6 @@ namespace sw
     {
         /** @brief 내장 타입 자리의 갈래입니다(`ReflectBuiltinClass`). 표 밖 자리(`kNone`)는 Other 입니다. */
         static ReflectBuiltinClass getBuiltinClass( ReflectBuiltinIndex builtinIndex );
-        /** @brief 타입 이름의 갈래입니다. 내장 타입이 아니면(열거형 · 구조체) Other 입니다 — Other 는 "그 밖" 갈래라 폴백이 아니다. */
-        static ReflectBuiltinClass getBuiltinClass( const hashed_string& typeName );
         /**
          * @brief 내장 타입 자리의 성분 수입니다 — Layout 이 f32 · i32 면 멤버 수, num · angle 이면 1, none 이거나 표 밖이면 0 입니다.
          * @details 멤버 수가 타입 크기와 맞는지는 `ReflectedValue.cpp` 가 컴파일 때 본다.
@@ -217,6 +215,7 @@ namespace sw
         static const hashed_string& getBuiltinTypeName( ReflectBuiltinIndex builtinIndex );
         /**
          * @brief 정규 이름의 내장 타입 자리입니다. 내장 타입이 아니면 `ReflectBuiltinIndex::kNone` 입니다(별칭은 `TypeRegistry` 로 정규 이름으로 바꿔 찾습니다).
+         *        표를 훑으므로 이름밖에 없을 때(기록 타입 · 이름 붙은 값)만 쓴다 — 칸은 `PropertyInfo::resolveValueFacts`, 함수 인자는 `ReflectTypeOps::_builtinIndex` 가 이미 안다.
          * @details `ReflectBuiltinOf<T>::kIndex` 와 같은 형식이라 `findBuiltinIndex( name ) == ReflectBuiltinOf<string>::kIndex` 로 바로 견준다.
          */
         [[nodiscard]] static ReflectBuiltinIndex findBuiltinIndex( const hashed_string& typeName );
@@ -321,7 +320,7 @@ namespace sw
 
 namespace sw
 {
-    /** @brief 타입 하나의 이름과 값 변환입니다. 함수 인자 · 반환 · 이벤트 인자의 자리마다 하나를 가리킵니다. */
+    /** @brief 타입 하나의 이름 · 갈래와 값 변환입니다. 함수 인자 · 반환 · 이벤트 인자의 자리마다 하나를 가리킵니다. */
     struct ReflectTypeOps
     {
         /** @brief 정규 이름(`getReflectTypeName<T>`)입니다. */
@@ -332,6 +331,9 @@ namespace sw
          * @return 바꿀 수 없으면 false
          */
         bool ( *_pConvert )( const ReflectedValue& in, TaskValue& outValue );
+        /** @brief 내장 타입이면 표 안 자리입니다(아니면 `kNone`). 컴파일 때 정해져 부를 때마다 이름으로 찾지 않는다(언리얼 `FProperty` 가 형식을 스스로 아는 자리). */
+        ReflectBuiltinIndex _builtinIndex;
+        uint8               _bEnum : 1; ///< C++ 열거형입니다. 등록(`ENUM()`)했는지는 `TypeRegistry` 가 안다
     };
 } // namespace sw
 
@@ -372,6 +374,6 @@ namespace sw
                 return false;
         }
 
-        static constexpr ReflectTypeOps kOps{ &getReflectTypeName<T>, &convert };
+        static constexpr ReflectTypeOps kOps{ &getReflectTypeName<T>, &convert, ReflectBuiltinOf<T>::kIndex, std::is_enum_v<T> ? SW_TRUE : SW_FALSE };
     };
 } // namespace sw

@@ -15,16 +15,19 @@ namespace sw
      * @brief 알림을 쌓고(`push`) 받는 쪽 목록 끝에 넘긴 뒤 비웁니다(`moveAllTo`). 프레임마다 할당하지 않습니다.
      * @details 받는 목록이 비어 있으면 두 저장소를 맞바꿔 복사 없이 넘깁니다 — 받는 쪽이 같은 목록을 비워 다시 쓰면 두 버퍼가 번갈아 돌고,
      *          쌓이는 쪽은 받는 쪽이 쓰던 용량을 물려받습니다. 받는 목록에 이미 있으면 그 뒤에 옮겨 붙입니다(여러 곳의 알림을 한 목록에 모으는 쪽 — 복사하지 않는다).
+     *          받는 쪽이 없어도 되는 알림은 상한이 있는 `NotificationBuffer` 로 든다 — 상한 없는 이 버퍼는 놓치면 안 되는 것(끝난 요청 · 명령)과 소유 쪽이 늘 비우는 것만 쓴다.
      *          언리얼 `TQueue` 를 프레임마다 비우는 용도 · 유니티 이벤트 큐와 같은 역할이지만 스레드 안전하지 않습니다 — 한 스레드(게임 스레드)용입니다.
      * @code
      *     void RTSWorld::pushEvent( ... ) { _eventBuffer.push( event ); }
      *     void RTSWorld::pollEvents( vector<RTSEvent>& outListEvent ) { _eventBuffer.moveAllTo( outListEvent ); }
      * @endcode
      */
-    template <typename T>
+    template <typename T, size_t kMaxPending = 0>
     class EventBuffer
     {
     public:
+        static constexpr size_t kNotificationMaxPending = 16384; ///< `NotificationBuffer` 의 상한 — 한 프레임의 알림은 닿지 않는 개수
+
         EventBuffer() = default;
         // 복사 · 이동은 쌓인 알림만 옮긴다 — 꺼내기 권한 표(`_consumerLock`)는 복사본에 따라가지 않는다(복사본은 아무도 안 쥔 새 큐).
         EventBuffer( const EventBuffer& other )
@@ -42,8 +45,16 @@ namespace sw
             return *this;
         }
 
-        void push( const T& event ) { _listPending.push_back( event ); }
-        void push( T&& event ) { _listPending.push_back( std::move( event ) ); }
+        void push( const T& event )
+        {
+            dropOldestIfFull();
+            _listPending.push_back( event );
+        }
+        void push( T&& event )
+        {
+            dropOldestIfFull();
+            _listPending.push_back( std::move( event ) );
+        }
 
         /**
          * @brief 꺼내는 쪽을 @p outLease 하나로 정합니다. 이미 다른 표가 쥐고 있으면 false 입니다(어서션도 남깁니다). 표를 쥔 큐는 표 없는 `moveAllTo` 가 어서션에 걸립니다.
@@ -87,6 +98,16 @@ namespace sw
         const vector<T>& getPending() const { return _listPending; }
 
     private:
+        /** @brief 상한(@p kMaxPending, 0 이면 없음)에 닿았으면 오래된 절반을 버립니다 — 쌓기 하나의 비용은 그대로다(절반마다 한 번 옮긴다). */
+        void dropOldestIfFull()
+        {
+            if constexpr ( kMaxPending > 0 )
+            {
+                if ( _listPending.size() >= kMaxPending )
+                    _listPending.erase( _listPending.begin(), _listPending.begin() + static_cast<ptrdiff_t>( kMaxPending - kMaxPending / 2 ) );
+            }
+        }
+
         void moveTo( vector<T>& outList )
         {
             if ( outList.empty() )
@@ -104,4 +125,12 @@ namespace sw
         vector<T>    _listTaken; ///< `takeAll` 이 돌려준 목록. 복사 · 이동에 따라가지 않는다(지난 꺼냄의 것이다)
         ConsumerLock _consumerLock;
     };
+
+    /**
+     * @brief 받는 쪽이 없어도 되는 알림의 버퍼입니다 — 아무도 꺼내지 않으면 최근 것만 남기고 버려 끝없이 쌓이지 않는다.
+     * @details 규칙 모델(지갑 · 도시 · 시합)은 화면 · 게임이 듣지 않아도 알림을 낸다(개척 마을이 도시 알림을 꺼내지 않아 판이 도는 동안 쌓이기만 했다). 언리얼 델리게이트 · Godot 시그널은 받는
+     *          쪽이 없으면 쌓지 않고, Bevy `Events` 는 두 걸음만 남긴다 — 여기서는 걸음을 모르는 순수 모델이라 개수로 끊는다. 프레임마다 꺼내는 쪽은 상한에 닿지 않는다.
+     */
+    template <typename T>
+    using NotificationBuffer = EventBuffer<T, EventBuffer<T>::kNotificationMaxPending>;
 } // namespace sw

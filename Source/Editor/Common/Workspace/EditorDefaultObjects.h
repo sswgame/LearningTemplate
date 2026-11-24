@@ -49,8 +49,8 @@ namespace sw::editor
         void clear();
 
         /**
-         * @brief 프로퍼티 값이 기본값과 같은지 묻습니다. @p defaultInstance 가 nullptr 이 아니면 프로퍼티 글로 비교하고, 없으면 리플렉션 메타의 기본값 글과 비교합니다.
-         * @return 기본값을 모르면(인스턴스도 메타도 없음) true 입니다 — 표시할 차이가 없다.
+         * @brief 프로퍼티 값이 기본값과 같은지 묻습니다. @p defaultInstance 가 nullptr 이 아니면 값으로 비교하고(`arePropertyValuesEqual`), 없으면 리플렉션 메타의 기본값 글과 비교합니다.
+         * @return 기본값을 모르거나(인스턴스도 메타도 없음) 견줄 수 없는 값이면 true 입니다 — 표시할 차이가 없다.
          */
         static bool isDefaultValue( const PropertyInfo& prop, ObjectAddress instance, ObjectAddress defaultInstance );
 

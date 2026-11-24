@@ -11,6 +11,7 @@
 #include "Engine/Net/GameNetSession.h"
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
+#include "Engine/Reflection/EnumName.h"
 #include "Engine/Scene/SceneManager.h"
 
 #include "GameFramework/Kits/Feature/Online/Economy/Runtime/EconomyClient.h"
@@ -21,6 +22,7 @@
 #include "GameFramework/Kits/Feature/Online/Mailbox/Runtime/MailboxClient.h"
 #include "GameFramework/Kits/Feature/Online/Matchmaking/Runtime/MatchmakingClient.h"
 #include "GameFramework/Kits/Feature/Online/ServerDirectory/Runtime/ServerDirectoryClient.h"
+#include "GameFramework/Kits/Feature/Online/Social/Runtime/SocialClient.h"
 #include "GameFramework/Runtime/Character/Control/ControlSystem.h"
 #include "GameFramework/Runtime/Character/Control/Pawn/PawnComponent.h"
 #include "GameFramework/Runtime/Foundation/Framework/GameService.h"
@@ -35,8 +37,8 @@ namespace sw
         /** @brief 개발 명령과 감시 값입니다. 세션과 흐름은 게임 범위에서 찾습니다. */
         struct PlaygroundOnlineFlowInternal
         {
-            static constexpr const utf8* kDevLoginName = "playground_dev"; ///< `Config/Server/Online/Playground.online.json` 의 시드 계정
-            static constexpr const utf8* kDevPassword  = "playground_dev_pw";
+            static constexpr const utf8* kArrDevLoginName[2] = { "playground_dev", "playground_dev2" }; ///< `Config/Server/Online/Playground.online.json` 의 시드 계정
+            static constexpr const utf8* kArrDevPassword[2]  = { "playground_dev_pw", "playground_dev2_pw" };
 
             /** @brief 세션 · 흐름이 없을 때의 명령 답입니다. */
             static constexpr const utf8* kNoGameReply = "playground.online: no Playground game instance";
@@ -51,7 +53,8 @@ namespace sw
 
             static bool runLogin( const vector<string>& listArgument, string& outReply )
             {
-                if ( listArgument.empty() == false )
+                int32 number = 1;
+                if ( listArgument.size() > 1 || ( listArgument.size() == 1 && StringUtil::parseInt( listArgument[0], number ) == false ) || number < 1 || number > 2 )
                     return false;
                 OnlineSession*        pSession = nullptr;
                 PlaygroundOnlineFlow* pFlow    = nullptr;
@@ -60,7 +63,7 @@ namespace sw
                     outReply = kNoGameReply;
                     return true;
                 }
-                pFlow->requestLogin( *pSession, kDevLoginName, kDevPassword );
+                pFlow->requestLogin( *pSession, kArrDevLoginName[number - 1], kArrDevPassword[number - 1] );
                 outReply = "playground.online: login sent";
                 return true;
             }
@@ -111,6 +114,22 @@ namespace sw
                 }
                 pFlow->requestSubmitKills( *pSession, kills );
                 outReply = "playground.online: score sent";
+                return true;
+            }
+
+            static bool runJoinHub( const vector<string>& listArgument, string& outReply )
+            {
+                NetAddress address;
+                if ( listArgument.size() != 1 || NetAddress::parse( listArgument[0], 0, address ) == false )
+                    return false;
+                OnlineSession*        pSession = nullptr;
+                PlaygroundOnlineFlow* pFlow    = nullptr;
+                if ( findParts( pSession, pFlow ) == false )
+                {
+                    outReply = kNoGameReply;
+                    return true;
+                }
+                outReply = pFlow->requestJoinHub( *pSession, address ) ? "playground.online: hub ticket sent" : "playground.online: joining the hub is refused";
                 return true;
             }
 
@@ -279,6 +298,16 @@ namespace sw
                 return true;
             }
 
+            [[nodiscard]] static bool readRefusedCount( const GameObjectManager* pManager, float64& outValue )
+            {
+                (void)pManager;
+                const PlaygroundOnlineFlow* const pFlow = game::findSubsystem<PlaygroundOnlineFlow>();
+                if ( pFlow == nullptr )
+                    return false;
+                outValue = static_cast<float64>( pFlow->getRefusedScoreCount() );
+                return true;
+            }
+
             static void onMailList( const OnlineResult<MailboxListReply>& result )
             {
                 if ( result.isOk() )
@@ -298,24 +327,27 @@ namespace sw
         , _listTopKills{}
         , _offers{}
         , _shopProvider{}
+        , _friends{}
+        , _listTradeReplyScratch{}
+        , _listTradeUpdateScratch{}
         , _matchLease{}
-        , _finishedSubscription{}
         , _assignment{}
+        , _pendingTicket{}
         , _matchMinigame{}
         , _hubAddress{}
+        , _shownFriendRevision{ 0 }
         , _submittedScoreCount{ 0 }
+        , _refusedScoreCount{ 0 }
+        , _peopleRefusedCount{ 0 }
+        , _tradeSettledCount{ 0 }
         , _selfMailSentCount{ 0 }
         , _matchState{ PlaygroundMatchState::None }
         , _bHubTicket{ SW_FALSE }
+        , _bFriendsBound{ SW_FALSE }
     {
     }
 
     PlaygroundOnlineFlow::~PlaygroundOnlineFlow() = default;
-
-    void PlaygroundOnlineFlow::initialize( MinigameFlow& minigames )
-    {
-        _finishedSubscription = minigames.onFinished().add( SW_DELEGATE_METHOD( Delegate<void( const MinigameResult& )>, &PlaygroundOnlineFlow::onMinigameFinished, this ) );
-    }
 
     bool PlaygroundOnlineFlow::isLocalPlayer( const GameObject& activator ) const
     {
@@ -338,8 +370,13 @@ namespace sw
             SW_LOG_WARNING_ID( "Playground.MatchBusy", "[Playground] match '%#' is refused - another match is queued or running (step %#)", definition._name.c_str(), static_cast<int32>( _matchState ) );
             return false;
         }
-        const GameNetSession* const pNetSession = game::findSubsystem<GameNetSession>();
-        const bool                  bTicketHub  = pNetSession != nullptr && pNetSession->getRole() == GameNetRole::Client && pNetSession->isTicketBound();
+        const GameNetSession& netSession = game::getSubsystem<GameNetSession>();
+        if ( netSession.getRole() == GameNetRole::Server )
+        {
+            SW_LOG_WARNING_ID( "Playground.MatchHostCannotLeave", "[Playground] match '%#' is refused - this process hosts the session its players are in", definition._name.c_str() );
+            return false;
+        }
+        const bool bTicketHub = netSession.getRole() == GameNetRole::Client && netSession.isTicketBound();
         if ( bTicketHub && pSession->getHubServerID().empty() )
         {
             // 돌아올 길 없이 허브를 떠나지 않는다 — 티켓은 되쓰지 않으므로 허브 서버 이름이 있어야 새 티켓을 청한다.
@@ -386,6 +423,8 @@ namespace sw
         AccountClient* const pAccount = session.find<AccountClient>();
         if ( pAccount == nullptr )
             return;
+        openTicketSession( session ); // 앞 프레임에 받은 티켓
+        updatePeople( session );
         _listReplyScratch.clear();
         (void)pAccount->pollReplies( _listReplyScratch );
         for ( const AccountClientReply& reply : _listReplyScratch )
@@ -402,6 +441,7 @@ namespace sw
                 onGameTicket( session, reply._ticket );
         }
         pollMatches( session );
+        updateMatchConnect( session );
         updateMatchExit( session );
     }
 
@@ -433,16 +473,25 @@ namespace sw
     void PlaygroundOnlineFlow::beginMatch( OnlineSession& session )
     {
         const GameNetSession& netSession = game::getSubsystem<GameNetSession>();
-        if ( netSession.getRole() != GameNetRole::Client )
-        {
-            _hubAddress = NetAddress{};
-            enterMatch( session ); // 혼자 하는 허브 — 옮길 세션이 없다
-            return;
-        }
-        _hubAddress = netSession.getServerAddress();
-        _bHubTicket = netSession.isTicketBound() ? SW_TRUE : SW_FALSE;
-        _matchState = PlaygroundMatchState::MatchTicket;
+        const bool            bInHub     = netSession.getRole() == GameNetRole::Client;
+        _hubAddress                      = bInHub ? netSession.getServerAddress() : NetAddress{}; // 혼자 하는 허브면 돌아갈 세션이 없다
+        _bHubTicket                      = bInHub && netSession.isTicketBound() ? SW_TRUE : SW_FALSE;
+        _matchState                      = PlaygroundMatchState::MatchTicket;
         (void)session.get<AccountClient>().issueGameTicket( ServiceKeyUtil::makeHex64( _assignment._serverID ) ); // 답은 `update` 가 받는다
+    }
+
+    bool PlaygroundOnlineFlow::requestJoinHub( OnlineSession& session, const NetAddress& address )
+    {
+        if ( session.getHubServerID().empty() || _matchState != PlaygroundMatchState::None || address.isValid() == false )
+        {
+            SW_LOG_WARNING_ID( "Playground.HubJoinRefused", "[Playground] joining the hub %# is refused - it needs GameSettings onlineHubServerID, a valid address and no running match", address.toString() );
+            return false;
+        }
+        _hubAddress = address;
+        _bHubTicket = SW_TRUE;
+        _matchState = PlaygroundMatchState::HubTicket;
+        (void)session.get<AccountClient>().issueGameTicket( session.getHubServerID() );
+        return true;
     }
 
     void PlaygroundOnlineFlow::onGameTicket( OnlineSession& session, const NetGameTicket& ticket )
@@ -450,12 +499,25 @@ namespace sw
         const bool bMatch = _matchState == PlaygroundMatchState::MatchTicket;
         if ( bMatch == false && _matchState != PlaygroundMatchState::HubTicket )
             return; // 매치와 상관없는 티켓(개발 명령)이다
-        NetAddress address = _hubAddress;
+        // 세션을 여는 것은 앞 세션(허브)을 닫는 일이다 — 링크를 먼저 떼고 한 프레임을 돌려, 씬의 컴포넌트가 앞 세션의 처리기를 내린 뒤에 연다(`update`).
+        game::getSubsystem<SceneManager>().setNetLink( NetLinkValue{} );
+        _pendingTicket = ticket;
+        (void)session;
+    }
+
+    void PlaygroundOnlineFlow::openTicketSession( OnlineSession& session )
+    {
+        if ( _pendingTicket.has_value() == false )
+            return;
+        const NetGameTicket ticket = std::move( *_pendingTicket );
+        _pendingTicket             = nullopt;
+        const bool bMatch          = _matchState == PlaygroundMatchState::MatchTicket;
+        NetAddress address         = _hubAddress;
         if ( bMatch && NetAddress::parse( _assignment._address, _assignment._port, address ) == false )
         {
-            SW_LOG_ERROR_ID( "Playground.MatchAddressInvalid", "[Playground] match %# names the server '%#:%#', which is not an address - the player stays in the hub", _assignment._matchID,
+            SW_LOG_ERROR_ID( "Playground.MatchAddressInvalid", "[Playground] match %# names the server '%#:%#', which is not an address - returning to the hub", _assignment._matchID,
                              _assignment._address.c_str(), _assignment._port );
-            clearMatch();
+            reconnectHub( session );
             return;
         }
         GameNetSession&       netSession   = game::getSubsystem<GameNetSession>();
@@ -463,22 +525,21 @@ namespace sw
         NetConnectCredentials credentials;
         GameNetSessionParams  params;
         AccountClient::makeConnectCredentials( ticket, credentials );
-        // 세션을 여는 것은 앞 세션(허브 · 매치)을 닫는 일이다 — 앞 세션의 링크를 먼저 떼어 씬의 컴포넌트가 닫힌 세션을 보지 않게 한다.
-        sceneManager.setNetLink( NetLinkValue{} );
         const bool bOpened = netSession.makeTicketClientParams( address, credentials, params ) && netSession.initialize( params );
-        if ( bOpened )
-            sceneManager.setNetLink( netSession.makeNetLink() );
-        else
+        if ( bOpened == false )
             SW_LOG_ERROR_ID( "Playground.SessionNotOpened", "[Playground] the session with %# could not be opened (see the messages above)", address.toString() );
-        if ( bMatch == false )
+        if ( bMatch )
         {
-            clearMatch(); // 허브로 돌아왔다(열지 못했으면 혼자 하는 허브로 남는다 — 위에서 알렸다)
+            // 매치 서버에 붙은 뒤에 허브 씬을 떠난다 — 링크는 그때 다음 씬에만 건다(허브 씬의 컴포넌트가 매치 세션에 붙지 않는다).
+            if ( bOpened )
+                _matchState = PlaygroundMatchState::MatchConnect;
+            else
+                reconnectHub( session );
             return;
         }
         if ( bOpened )
-            enterMatch( session );
-        else
-            reconnectHub( session );
+            sceneManager.setNetLink( netSession.makeNetLink() );
+        clearMatch(); // 허브로 돌아왔다(열지 못했으면 혼자 하는 허브로 남는다 — 위에서 알렸다)
     }
 
     void PlaygroundOnlineFlow::onGameTicketRefused()
@@ -492,8 +553,20 @@ namespace sw
         }
     }
 
-    void PlaygroundOnlineFlow::enterMatch( OnlineSession& session )
+    void PlaygroundOnlineFlow::updateMatchConnect( OnlineSession& session )
     {
+        if ( _matchState != PlaygroundMatchState::MatchConnect )
+            return;
+        GameNetSession& netSession = game::getSubsystem<GameNetSession>();
+        if ( netSession.getConnectedCount() == 0 )
+        {
+            if ( netSession.hasConnectFailed() == false )
+                return; // 붙는 중이다
+            SW_LOG_WARNING_ID( "Playground.MatchNotConnected", "[Playground] the server of match %# could not be reached - returning to the hub", _assignment._matchID );
+            reconnectHub( session );
+            return;
+        }
+        game::getSubsystem<SceneManager>().setNextSceneNetLink( netSession.makeNetLink() ); // 매치 씬이 받는다
         _matchState = PlaygroundMatchState::Playing;
         if ( game::getSubsystem<MinigameFlow>().enterMatch( _matchMinigame.view(), _assignment._matchID ) )
             return;
@@ -503,12 +576,17 @@ namespace sw
 
     void PlaygroundOnlineFlow::updateMatchExit( OnlineSession& session )
     {
-        const MinigameFlow& minigames = game::getSubsystem<MinigameFlow>();
-        if ( _matchState == PlaygroundMatchState::Playing && minigames.getStack().findMatchID() == 0 )
+        MinigameFlow& minigames = game::getSubsystem<MinigameFlow>();
+        const bool    bPlaying  = _matchState == PlaygroundMatchState::Playing;
+        // 판 도중 서버를 잃었다(서버가 내려감 · 시간 초과) — 남은 화면에 세워 두지 않고 나온다. 들어가는 · 나오는 중이면 끝난 뒤에 본다.
+        const bool bLost = bPlaying && minigames.getStack().findMatchID() != 0 && minigames.isEntering() == false && minigames.isLeaving() == false &&
+                           game::getSubsystem<GameNetSession>().getConnectedCount() == 0;
+        if ( bLost )
+            (void)minigames.leave( hashed_string( kResultDisconnected ) ); // 실패는 leave 가 알렸다
+        if ( bPlaying && minigames.getStack().findMatchID() == 0 )
         {
             // 나갔다(판 끝 · 나가기 · 장치 밖 씬 이동). 곧 서는 허브 씬이 매치 세션에 붙지 않게 링크를 먼저 뗀다 — 세션은 매치 씬이 내려간 뒤에 닫는다.
-            if ( _hubAddress.isValid() )
-                game::getSubsystem<SceneManager>().setNetLink( NetLinkValue{} );
+            game::getSubsystem<SceneManager>().setNetLink( NetLinkValue{} );
             _matchState = PlaygroundMatchState::Leaving;
         }
         if ( _matchState == PlaygroundMatchState::Leaving && minigames.isLeaving() == false )
@@ -517,14 +595,14 @@ namespace sw
 
     void PlaygroundOnlineFlow::reconnectHub( OnlineSession& session )
     {
-        if ( _hubAddress.isValid() == false )
-        {
-            clearMatch();
-            return;
-        }
         GameNetSession& netSession = game::getSubsystem<GameNetSession>();
         game::getSubsystem<SceneManager>().setNetLink( NetLinkValue{} );
         netSession.shutdown();
+        if ( _hubAddress.isValid() == false )
+        {
+            clearMatch(); // 혼자 하는 허브다
+            return;
+        }
         if ( _bHubTicket == SW_TRUE )
         {
             _matchState = PlaygroundMatchState::HubTicket;
@@ -544,22 +622,10 @@ namespace sw
     void PlaygroundOnlineFlow::clearMatch()
     {
         _matchState    = PlaygroundMatchState::None;
+        _pendingTicket = nullopt;
         _matchMinigame = hashed_string{};
         _hubAddress    = NetAddress{};
         _bHubTicket    = SW_FALSE;
-    }
-
-    void PlaygroundOnlineFlow::onMinigameFinished( const MinigameResult& result )
-    {
-        OnlineSession* const pSession = game::findSubsystem<OnlineSession>();
-        if ( result._matchID == 0 || result._matchScore.has_value() == false || pSession == nullptr )
-            return;
-        // 접속한 매치의 점수는 서버가 센 값이다(`ShooterOwnerNetState::_killCount`). 혼자 선 판은 클라이언트가 세고, 순위표의 clientSubmit 이 그 제출을 받을지 정한다.
-        LeaderboardSubmitRequest request;
-        request._boardID = result._matchBoard;
-        request._score   = *result._matchScore;
-        (void)pSession->get<LeaderboardClient>().call<LeaderboardMethod::SubmitScore>( request, SW_DELEGATE_METHOD( OnlineReplyDelegate<LeaderboardMethod::SubmitScore>, &PlaygroundOnlineFlow::onScoreSubmitted, this ) );
-        SW_LOG_INFO_ID( "Playground.MatchReported", "[Playground] match %# reported: %# = %#", result._matchID, result._matchBoard.c_str(), *result._matchScore );
     }
 
     void PlaygroundOnlineFlow::requestSubmitKills( OnlineSession& session, int64 kills )
@@ -572,6 +638,12 @@ namespace sw
 
     void PlaygroundOnlineFlow::onScoreSubmitted( const OnlineResult<LeaderboardSubmitReply>& result )
     {
+        if ( result._errorCode == OnlineError::kOk && result._reply._result == LeaderboardResult::NotAllowed )
+        {
+            ++_refusedScoreCount;
+            SW_LOG_INFO_ID( "Playground.OnlineScoreRefused", "[Playground] online score refused - the board takes scores from the game server only" );
+            return;
+        }
         if ( result.isOk() == false )
         {
             SW_LOG_WARNING_ID( "Playground.OnlineScoreFailed", "[Playground] online score submit failed (error %#, result %#)", result._errorCode, static_cast<int32>( result._reply._result ) );
@@ -611,6 +683,92 @@ namespace sw
         (void)session.get<ServerDirectoryClient>().call<ServerDirectoryMethod::GetStatus>( SW_DELEGATE_FUNCTION( OnlineReplyDelegate<ServerDirectoryMethod::GetStatus>, &PlaygroundOnlineFlowInternal::onServiceStatus ) );
     }
 
+    void PlaygroundOnlineFlow::requestFriend( OnlineSession& session, string_view displayName )
+    {
+        SocialTextRequest request;
+        request._text = string( displayName );
+        (void)session.get<SocialClient>().call<SocialMethod::RequestFriendByName>( request, SW_DELEGATE_METHOD( OnlineReplyDelegate<SocialMethod::RequestFriendByName>, &PlaygroundOnlineFlow::onFriendRequested, this ),
+                                                                                   NetIdempotencyKey::makeRandom() );
+    }
+
+    void PlaygroundOnlineFlow::requestAcceptFriends( OnlineSession& session )
+    {
+        (void)session.get<SocialClient>().call<SocialMethod::ListLinks>( SW_DELEGATE_METHOD( OnlineReplyDelegate<SocialMethod::ListLinks>, &PlaygroundOnlineFlow::onLinksToAccept, this ) );
+    }
+
+    void PlaygroundOnlineFlow::onFriendRequested( const OnlineResult<SocialLinkReply>& result )
+    {
+        if ( result.isOk() )
+        {
+            SW_LOG_INFO_ID( "Playground.FriendRequested", "[Playground] friend request sent" );
+            return;
+        }
+        ++_peopleRefusedCount;
+        SW_LOG_INFO_ID( "Playground.FriendRefused", "[Playground] friend request refused (error %#, result %#)", result._errorCode, static_cast<int32>( result._reply._result ) );
+    }
+
+    void PlaygroundOnlineFlow::onLinksToAccept( const OnlineResult<SocialLinksReply>& result )
+    {
+        OnlineSession* const pSession = game::findSubsystem<OnlineSession>();
+        if ( result.isOk() == false || pSession == nullptr )
+            return;
+        for ( const SocialLink& link : result._reply._listLink )
+        {
+            if ( link._state != SocialLinkState::Incoming )
+                continue;
+            SocialRespondRequest request;
+            request._otherID = link._otherID;
+            request._bAccept = SW_TRUE;
+            (void)pSession->get<SocialClient>().call<SocialMethod::RespondFriend>( request, SW_DELEGATE_METHOD( OnlineReplyDelegate<SocialMethod::RespondFriend>, &PlaygroundOnlineFlow::onFriendAnswered, this ),
+                                                                                   NetIdempotencyKey::makeRandom() );
+        }
+    }
+
+    void PlaygroundOnlineFlow::onFriendAnswered( const OnlineResult<SocialLinkReply>& result )
+    {
+        if ( result.isOk() )
+            SW_LOG_INFO_ID( "Playground.FriendAccepted", "[Playground] friend request accepted" );
+        else
+            SW_LOG_WARNING_ID( "Playground.FriendAcceptFailed", "[Playground] accepting a friend failed (error %#, result %#)", result._errorCode, static_cast<int32>( result._reply._result ) );
+    }
+
+    void PlaygroundOnlineFlow::updatePeople( OnlineSession& session )
+    {
+        SocialClient* const pSocial = session.find<SocialClient>();
+        if ( pSocial == nullptr )
+            return;
+        if ( _bFriendsBound == SW_FALSE )
+            _bFriendsBound = _friends.initialize( pSocial ) ? SW_TRUE : SW_FALSE;
+        if ( _bFriendsBound == SW_TRUE )
+            _friends.update();
+        if ( _friends.getState() == FriendListState::Loaded && _friends.getRevision() != _shownFriendRevision )
+        {
+            _shownFriendRevision = _friends.getRevision();
+            SW_LOG_INFO_ID( "Playground.FriendList", "[Playground] friend list: %# friends, %# pending requests", static_cast<uint32>( _friends.getEntries().size() ), _friends.getPendingRequestCount() );
+        }
+        TradeClient* const pTrade = session.find<TradeClient>();
+        if ( pTrade == nullptr )
+            return;
+        pTrade->setAccountID( session.get<AccountClient>().getIdentity()._accountID );
+        _listTradeReplyScratch.clear();
+        _listTradeUpdateScratch.clear();
+        (void)pTrade->pollReplies( _listTradeReplyScratch );
+        (void)pTrade->pollUpdates( _listTradeUpdateScratch );
+        for ( const TradeClientReply& reply : _listTradeReplyScratch )
+        {
+            if ( reply._errorCode == OnlineError::kOk && reply._result == TradeResult::Ok )
+                continue;
+            ++_peopleRefusedCount;
+            SW_LOG_INFO_ID( "Playground.TradeRefused", "[Playground] trade call refused (error %#, result %#)", reply._errorCode, static_cast<int32>( reply._result ) );
+        }
+        for ( const TradeClientUpdate& update : _listTradeUpdateScratch )
+        {
+            SW_LOG_INFO_ID( "Playground.TradeChanged", "[Playground] trade %# is %#", update._snapshot._tradeID, getEnumName( update._snapshot._state ) );
+            if ( update._snapshot._state == TradeState::Settled )
+                ++_tradeSettledCount;
+        }
+    }
+
     void PlaygroundOnlineFlow::requestLogin( OnlineSession& session, string_view loginName, string_view password )
     {
         (void)session.get<AccountClient>().login( loginName, password );
@@ -638,10 +796,11 @@ namespace sw
 
 namespace sw
 {
-    SW_DEV_COMMAND( PlaygroundOnlineLogin, "playground.online.login", "playground.online.login", "Log the online session in with the development account of Config/Server/Online/Playground.online.json", &PlaygroundOnlineFlowInternal::runLogin );
+    SW_DEV_COMMAND( PlaygroundOnlineLogin, "playground.online.login", "playground.online.login [1|2]", "Log the online session in with a development account (first by default) of Config/Server/Online/Playground.online.json", &PlaygroundOnlineFlowInternal::runLogin );
     SW_DEV_COMMAND( PlaygroundOnlineListMail, "playground.online.listmail", "playground.online.listmail", "Ask the mailbox kit for the first mail page", &PlaygroundOnlineFlowInternal::runListMail );
     SW_DEV_COMMAND( PlaygroundOnlineClaimAll, "playground.online.claimall", "playground.online.claimall", "Claim all mail and hand the balances to the economy client", &PlaygroundOnlineFlowInternal::runClaimAll );
-    SW_DEV_COMMAND( PlaygroundOnlineSubmitKills, "playground.online.submitkills", "playground.online.submitkills <kills>", "Submit one round's kills to the arena_kills leaderboard", &PlaygroundOnlineFlowInternal::runSubmitKills );
+    SW_DEV_COMMAND( PlaygroundOnlineSubmitKills, "playground.online.submitkills", "playground.online.submitkills <kills>", "Submit kills to the arena_kills leaderboard as a client (the board refuses it - the match server submits)", &PlaygroundOnlineFlowInternal::runSubmitKills );
+    SW_DEV_COMMAND( PlaygroundOnlineJoinHub, "playground.online.joinhub", "playground.online.joinhub <hubHost:port>", "Ask for the hub server ticket (GameSettings onlineHubServerID) and join the hub with it", &PlaygroundOnlineFlowInternal::runJoinHub );
     SW_DEV_COMMAND( PlaygroundOnlineTopKills, "playground.online.topkills", "playground.online.topkills", "Ask the arena_kills leaderboard for its top entries", &PlaygroundOnlineFlowInternal::runTopKills );
 
     SW_DEV_COMMAND( PlaygroundOnlineLiveEvents, "playground.online.liveevents", "playground.online.liveevents", "Ask the live-ops kit for the open events of this account", &PlaygroundOnlineFlowInternal::runLiveEvents );
@@ -652,9 +811,10 @@ namespace sw
     SW_AUTOMATION_WATCH( playgroundOnlineGold, "Playground.OnlineGold", "Gold balance in the economy kit client's cache", &PlaygroundOnlineFlowInternal::readGold );
     SW_AUTOMATION_WATCH( playgroundOnlineGem, "Playground.OnlineGem", "Gem balance in the economy kit client's cache", &PlaygroundOnlineFlowInternal::readGem );
     SW_AUTOMATION_WATCH( playgroundOnlineMatchFound, "Playground.OnlineMatchFound", "1 once the matchmaking kit assigned this player a match", &PlaygroundOnlineFlowInternal::readMatchFound );
-    SW_AUTOMATION_WATCH( playgroundMatchState, "Playground.MatchState", "Match session step: 0 none, 1 queued, 2 match ticket, 3 playing, 4 leaving, 5 hub ticket", &PlaygroundOnlineFlowInternal::readMatchState );
+    SW_AUTOMATION_WATCH( playgroundMatchState, "Playground.MatchState", "Match session step: 0 none, 1 queued, 2 match ticket, 3 match connect, 4 playing, 5 leaving, 6 hub ticket", &PlaygroundOnlineFlowInternal::readMatchState );
     SW_AUTOMATION_WATCH( playgroundOnlineTopKillsScore, "Playground.OnlineTopKillsScore", "Best score in the last arena_kills top list", &PlaygroundOnlineFlowInternal::readTopKillsScore );
     SW_AUTOMATION_WATCH( playgroundOnlineSubmittedScoreCount, "Playground.OnlineSubmittedScoreCount", "Leaderboard score submits the server has applied", &PlaygroundOnlineFlowInternal::readSubmittedCount );
+    SW_AUTOMATION_WATCH( playgroundOnlineRefusedScoreCount, "Playground.OnlineRefusedScoreCount", "Client score submits the board refused (server submits only)", &PlaygroundOnlineFlowInternal::readRefusedCount );
     SW_AUTOMATION_WATCH( playgroundOnlineTopKillsCount, "Playground.OnlineTopKillsCount", "Entries in the last arena_kills top list", &PlaygroundOnlineFlowInternal::readTopKillsCount );
     SW_AUTOMATION_WATCH( playgroundOnlineSelfMailSent, "Playground.OnlineSelfMailSent", "Development mails the in-process server's store has written", &PlaygroundOnlineFlowInternal::readSelfMailSent );
 } // namespace sw

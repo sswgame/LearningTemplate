@@ -386,23 +386,27 @@ namespace sw
                 continue;
 
             const string&                             canonical = row._listArgument[0];
-            StringBuilder<constant::buffer::kMax1024> aliasRegs;
+            StringBuilder<constant::buffer::kMax1024> aliasTable;
             for ( const string& alias : ReflectBuiltinsLoaderInternal::makeRegistryAliases( row._listArgument ) )
             {
                 if ( alias.empty() || alias == canonical )
                     continue;
-                aliasRegs.appendFormat( "\t\t\tregistry.registerTypeAlias( \"%#\", \"%#\" );\n", alias, canonical );
+                aliasTable.appendFormat( "%#\"%#\"", aliasTable.size() > 0 ? ", " : "\t\tstatic constexpr const ::utf8* kAliases[] = { ", alias );
             }
+            const bool bAlias = aliasTable.size() > 0;
+            if ( bAlias )
+                aliasTable.append( " };\n" );
 
             StringBuilder<constant::buffer::kMax128> id;
             id.appendFormat( "Builtin_%#", canonical );
             out += tpls.render( EmitTemplate::BuiltinTypeRegistrar,
                                 {
-                                    {        templatekey::kID,            id.view()},
-                                    {      templatekey::kName,            canonical},
-                                    {   templatekey::kCppType, row._listArgument[1]},
-                                    { templatekey::kAliasRegs,     aliasRegs.view()},
-                                    {templatekey::kModuleName,           moduleName}
+                                    {        templatekey::kID,                                id.view()},
+                                    {      templatekey::kName,                                canonical},
+                                    {   templatekey::kCppType,                     row._listArgument[1]},
+                                    {templatekey::kAliasTable,                        aliasTable.view()},
+                                    {   templatekey::kAliases, bAlias ? ".withAliases( kAliases )" : ""},
+                                    {templatekey::kModuleName,                               moduleName}
             } );
             ++typeCount;
         }

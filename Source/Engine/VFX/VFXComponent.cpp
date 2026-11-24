@@ -284,6 +284,11 @@ namespace sw
         return emitterIndex < _listEmitterEnabled.size() && _listEmitterEnabled[emitterIndex] != 0;
     }
 
+    void VFXComponent::onWorldOriginShifted( const float3& delta )
+    {
+        _lastOrigin += delta;
+    }
+
     void VFXComponent::onPostLoad()
     {
         SceneComponent::onPostLoad();

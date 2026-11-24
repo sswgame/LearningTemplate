@@ -61,11 +61,11 @@ namespace sw
         const float2& getReferencePoint() const { return _referencePoint; }
         void          setReferencePoint( const float2& reference ) { _referencePoint = reference; }
 
-        /** @brief 카메라 X · Y 를 주고 자리를 맞춥니다(틱이 게임 카메라로 부릅니다. 테스트는 직접 부릅니다). 시작 전이면 지금 자리를 저작한 자리로 잡습니다. */
+        /** @brief 카메라 X · Y(월드 원점 0 기준)를 주고 자리를 맞춥니다(틱이 게임 카메라로 부릅니다. 테스트는 직접 부릅니다). 시작 전이면 지금 자리를 저작한 자리로 잡습니다. */
         void applyCamera( const float2& camera );
 
     private:
-        /** @brief 저작한 자리를 아직 안 잡았으면 지금 로컬 위치로 잡습니다. 잡았으면 true 입니다. */
+        /** @brief 저작한 자리를 아직 안 잡았으면 지금 자리로 잡습니다. 잡았으면 true 입니다. */
         bool captureOrigin();
 
         PROPERTY( Category = "Parallax", DisplayName = "Scroll Factor", Tooltip = "Fraction of the camera motion this layer follows on screen; 1 = world, 0 = fixed to the camera" )
@@ -74,7 +74,7 @@ namespace sw
         float2 _repeatSize;
         PROPERTY( Category = "Parallax", DisplayName = "Reference Point", Tooltip = "Camera position at which the layer sits where it was authored", Units = m )
         float2 _referencePoint;
-        float3 _origin;     ///< 저작한 로컬 위치(시작할 때 잡습니다). 저장하지 않습니다
+        float3 _origin;     ///< 저작한 자리(`getZeroOriginPosition` — 시작할 때 잡습니다). 저장하지 않습니다
         uint8  _bHasOrigin; ///< `_origin` 을 잡았는가
     };
 } // namespace sw

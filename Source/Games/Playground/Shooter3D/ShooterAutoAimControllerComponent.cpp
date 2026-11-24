@@ -79,12 +79,13 @@ namespace sw
         }
 
         // 아레나 가운데를 도는 나선 — 접선으로 돌고 안쪽으로 조금 끈다. 가운데 가까이에서는 그 점이 도착 거리 안이라 선다.
-        const float3 feet   = pPlayer->getFeetPosition();
-        const float3 circle = float3{ -feet._z * _circleTangent - feet._x * _circleInward, 0.0f, feet._x * _circleTangent - feet._z * _circleInward };
-        blackboard.setVector( "CirclePoint", float3{ feet._x + circle._x, 0.0f, feet._z + circle._z } );
+        const WorldOrigin& origin = pManager->getWorldOrigin(); // 시뮬레이션은 절대, 블랙보드(이동 · 시선)는 씬 자리다
+        const float3       feet   = pPlayer->getFeetPosition()._value;
+        const float3       circle = float3{ -feet._z * _circleTangent - feet._x * _circleInward, 0.0f, feet._x * _circleTangent - feet._z * _circleInward };
+        blackboard.setVector( "CirclePoint", origin.toLocal( float3{ feet._x + circle._x, 0.0f, feet._z + circle._z } ) );
 
         // 보이는 적 가운데 가장 가까운 가슴. 보이는 적이 없으면 가장 가까운 적을 겨누되 쏘지 않는다(엄폐물에 탄을 버리지 않는다 — 트리가 TargetVisible 을 본다).
-        const float3                    eye          = pPlayer->getEyePosition();
+        const float3                    eye          = origin.toAbsolute( pPlayer->getEyePosition() );
         float32                         bestDistance = MathUtil::kMaxFloat;
         float3                          aimPoint{ 0.0f, 0.0f, 0.0f };
         bool                            bVisible = false;
@@ -92,7 +93,7 @@ namespace sw
         const ShooterEnemyView*         pView    = listView.data();
         for ( size_t viewIndex = 0; viewIndex < listView.size(); ++viewIndex )
         {
-            const float3  chest          = pView[viewIndex]._position + float3{ 0.0f, pView[viewIndex]._height * _chestHeight, 0.0f };
+            const float3  chest          = pView[viewIndex]._position._value + float3{ 0.0f, pView[viewIndex]._height * _chestHeight, 0.0f };
             const float32 distance       = float3::getDistance( eye, chest );
             const bool    bChestVisible  = Internal::isVisible( eye, chest, pGameMode->getBoxes() );
             const bool    bBetterVisible = bChestVisible && ( bVisible == false || distance < bestDistance );
@@ -109,7 +110,7 @@ namespace sw
             return;
         const float3  toTarget  = aimPoint - eye;
         const float32 targetYaw = MathUtil::atan2( toTarget._x, toTarget._z );
-        blackboard.setVector( "AimPoint", aimPoint );
+        blackboard.setVector( "AimPoint", origin.toLocal( aimPoint ) );
         blackboard.setBool( "TargetVisible", bVisible );
         blackboard.setFloat( "TargetDistance", bestDistance );
         blackboard.setFloat( "AimError", MathUtil::abs( MathUtil::wrapAngle( targetYaw - getControlYaw() ) ) );

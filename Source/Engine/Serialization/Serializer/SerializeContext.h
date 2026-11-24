@@ -78,6 +78,7 @@ namespace sw
             , _bSkipUnreadableProperties{ SW_FALSE }
             , _bRestoringValueBeforeRead{ SW_FALSE }
             , _bWriteEmptyValues{ SW_FALSE }
+            , _bSchemaLayout{ SW_FALSE }
             , _reservedFlags{ 0 } {}
 
         // ------------------------------------------------------------------------------
@@ -141,6 +142,18 @@ namespace sw
             return *this;
         }
 
+        /**
+         * @brief 바이너리를 프로퍼티 이름 · 형식 태그 없이 배치 차례로 쓰고(중첩 객체까지), 그 스트림을 받습니다 — 쿠킹 상태의 저작 문맥만 켠다. 켠 읽기는 태그 스트림도 받는다(머리로 가린다).
+         *        끈 읽기에 배치 스트림이 오면 모르는 버전으로 거절한다.
+         * @details 배치가 다른 빌드는 읽지 못한다(다시 쿠킹한다). 세이브 · 스냅숏 · 메시지처럼 빌드가 바뀌어도 읽어야 하는 데이터는 켜지 않는다
+         *          (언리얼 쿠킹본의 unversioned property serialization, 유니티 플레이어 빌드의 TypeTree 제거와 같은 자리).
+         */
+        SerializeContext& setSchemaLayout( bool bSchemaLayout )
+        {
+            _bSchemaLayout = bSchemaLayout ? SW_TRUE : SW_FALSE;
+            return *this;
+        }
+
         // ------------------------------------------------------------------------------
         // 3) 조회: 타입 이름 → 등록된 writer/reader
         // ------------------------------------------------------------------------------
@@ -170,6 +183,8 @@ namespace sw
         bool isRestoringValueBeforeRead() const { return _bRestoringValueBeforeRead == SW_TRUE; }
         /** @brief 생략을 허락한 빈 칸도 쓰는지(`setWriteEmptyValues`) 반환합니다. */
         bool shouldWriteEmptyValues() const { return _bWriteEmptyValues == SW_TRUE; }
+        /** @brief 바이너리를 배치 차례로 쓰고 받는지(`setSchemaLayout`) 반환합니다. */
+        bool usesSchemaLayout() const { return _bSchemaLayout == SW_TRUE; }
         /**
          * @brief 저장 목적입니다. 만들 때 정하고 바꾸지 않습니다.
          * @details 목적이 쓰지 않는 필드는 읽을 때도 지금 값 그대로다(기본값을 채우지 않는다). 세이브는 옵트인 타입의 나머지 필드를, 저작 읽기는 `RuntimeState` 를 덮지 않는다.
@@ -289,7 +304,8 @@ namespace sw
         uint8                  _bSkipUnreadableProperties : 1;
         uint8                  _bRestoringValueBeforeRead : 1;
         uint8                  _bWriteEmptyValues         : 1;
-        [[maybe_unused]] uint8 _reservedFlags             : 4;
+        uint8                  _bSchemaLayout             : 1;
+        [[maybe_unused]] uint8 _reservedFlags             : 3;
     };
 
 } // namespace sw

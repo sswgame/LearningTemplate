@@ -179,18 +179,6 @@ namespace sw
         return ( it != _mapMaterialPSO.end() ) ? it->second._state : MaterialPSOState::Absent;
     }
 
-    size_t RenderPSOCache::countMaterialPSOs( MaterialPSOState state ) const
-    {
-        ScopedSharedLock<shared_mutex> lock{ _materialPSOMutex };
-        size_t                         count = 0;
-        for ( const auto& [key, entry] : _mapMaterialPSO )
-        {
-            if ( entry._state == state )
-                ++count;
-        }
-        return count;
-    }
-
     RHIPipelineStateHandle RenderPSOCache::findMaterialPSO( const MaterialPSOKey& key ) const
     {
         ScopedSharedLock<shared_mutex> lock{ _materialPSOMutex };

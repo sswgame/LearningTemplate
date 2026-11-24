@@ -97,36 +97,6 @@ namespace sw
     {
     }
 
-    FixedCodec::FixedCodec( const FixedFieldDesc* pField, const uint32 fieldCount, const utf8* pCanonical, const Dependency* pDependency, const uint32 dependencyCount,
-                            const BaseCastFunction pBaseCast, const ReflectValidateFunction pValidate ) noexcept
-        : _pField{ pField }
-        , _pCanonical{ pCanonical }
-        , _pIneligibleReason{ nullptr }
-        , _pDependency{ pDependency }
-        , _pBaseCast{ pBaseCast }
-        , _pValidate{ pValidate }
-        , _fieldCount{ fieldCount }
-        , _dependencyCount{ dependencyCount }
-        , _dependencyState{ dependencyCount == 0 ? FixedDependencyState::Valid : FixedDependencyState::Unknown }
-        , _schemaHash{ 0 }
-        , _pReplicated{ nullptr }
-    {
-    }
-
-    FixedCodec::FixedCodec( const utf8* pIneligibleReason ) noexcept
-        : _pField{ nullptr }
-        , _pCanonical{ nullptr }
-        , _pIneligibleReason{ pIneligibleReason }
-        , _pDependency{ nullptr }
-        , _pBaseCast{ nullptr }
-        , _pValidate{ nullptr }
-        , _fieldCount{ 0 }
-        , _dependencyCount{ 0 }
-        , _dependencyState{ FixedDependencyState::Missing }
-        , _schemaHash{ 0 }
-        , _pReplicated{ nullptr }
-    {
-    }
 } // namespace sw
 
 namespace sw

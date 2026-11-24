@@ -1,10 +1,5 @@
-			registry.registerClass( ::std::move( info ) );
-$AliasRegs
-		}
-		Registrar()
-		{
-			static ::sw::TypeRegistrar reg{ &RegisterType };
+			return kType;
 		}
 	};
-	static Registrar<$Key> s_${ID}_registrar{};
+	static ::sw::TypeRegistrar s_${ID}_registrar{ &Registrar<$Key>::getDesc };
 

@@ -12,6 +12,15 @@
 #include "Engine/Text/Tests/FakeFontRasterizer.h"
 #include "Engine/Text/TextItemizer.h"
 
+namespace sw
+{
+    /** @brief 안을 보는 테스트 창구입니다(`friend`). */
+    struct FontServiceTestAccess
+    {
+        static uint32 getWarnedOnceCount( const FontService& service ) { return static_cast<uint32>( service._warnedOnce.getCount() ); }
+    };
+} // namespace sw
+
 namespace
 {
     struct FontServiceTestUtil
@@ -89,20 +98,20 @@ SW_TEST_CASE( FontServiceTest, MissingFamilyWarnsOnceAndIsSkipped )
     spec._family                  = "No Such Family";
     const sw::FontFaceChain chain = fixture._fontService->getFaceChain( spec );
     SW_REQUIRE_EQUAL( 1u, static_cast<uint32>( chain._faceCount ) ); // 기본 가족만
-    SW_EXPECT_EQUAL( 1u, fixture._fontService->getWarnedOnceCount() );
+    SW_EXPECT_EQUAL( 1u, sw::FontServiceTestAccess::getWarnedOnceCount( *fixture._fontService ) );
 
     spec._weight = sw::FontWeight::Bold;
     (void)fixture._fontService->getFaceChain( spec );
     fixture._fontService->invalidateFaceChains();
     (void)fixture._fontService->getFaceChain( spec );
-    SW_EXPECT_EQUAL( 1u, fixture._fontService->getWarnedOnceCount() );
+    SW_EXPECT_EQUAL( 1u, sw::FontServiceTestAccess::getWarnedOnceCount( *fixture._fontService ) );
 
     uint32               glyphIndex = 7;
     const sw::FontFaceID face       = fixture._fontService->findFaceForCodepoint( chain, 0x0627u, glyphIndex ); // 아랍 알리프 — 어느 면에도 없다
     SW_EXPECT_EQUAL( chain._arrFace[0], face );
     SW_EXPECT_EQUAL( 0u, glyphIndex );
     (void)fixture._fontService->findFaceForCodepoint( chain, 0x0627u, glyphIndex ); // 면을 미리 열거나 경고 횟수만 본다(위 설명)
-    SW_EXPECT_EQUAL( 2u, fixture._fontService->getWarnedOnceCount() );
+    SW_EXPECT_EQUAL( 2u, sw::FontServiceTestAccess::getWarnedOnceCount( *fixture._fontService ) );
 }
 
 /**
@@ -214,5 +223,5 @@ SW_TEST_CASE( FontServiceTest, FormatControlsAreNotMissingGlyphs )
     const sw::FontFaceChain chain = fixture._fontService->getFaceChain( spec );
     uint32                  glyphIndex{ 0 };
     (void)fixture._fontService->findFaceForCodepoint( chain, 0x202Eu, glyphIndex );
-    SW_EXPECT_EQUAL( 0u, fixture._fontService->getWarnedOnceCount() );
+    SW_EXPECT_EQUAL( 0u, sw::FontServiceTestAccess::getWarnedOnceCount( *fixture._fontService ) );
 }

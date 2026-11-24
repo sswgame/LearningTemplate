@@ -68,6 +68,8 @@ namespace sw
          * @details 견본은 데이터가 아니라 형식의 초기값이라, 빈 필수 이름 칸 같은 검증 경고가 저장마다 거짓으로 남는다.
          */
         uint8 _bSkipValidation : 1;
+        /** @brief 바이너리 상태를 배치 차례로(태그 없이) 씁니다(`SerializeContext::setSchemaLayout`). 쿠커만 켠다 — 쿠킹 키가 리플렉션 지문을 들어 배치가 바뀌면 다시 굽는다. */
+        uint8 _bSchemaLayout : 1;
         /**
          * @brief 있으면 이 저장이 가리킨 다른 오브젝트의 런타임 id(0 제외)를 모두 더합니다. 쿠커가 셀을 넘는 참조를 찾는 데 씁니다(`SceneCooker`).
          * @details 참조는 모두 `getSavedObjectID` 를 거치므로 여기서 모으면 부착 · 핸들 PROPERTY 를 타입마다 따로 훑지 않아도 된다.
@@ -82,7 +84,7 @@ namespace sw
         string_view _attachOwnerNamePrefix{};
         /** @brief 목적 @p purpose 로 저장합니다. 참조는 런타임 id 그대로 적습니다(아래 필드로 바꾼다). */
         explicit ObjectSaveOptions( SerializePurpose purpose )
-            : _bOmitExternalParent{ SW_FALSE }, _bSkipValidation{ SW_FALSE }, _purpose{ purpose }
+            : _bOmitExternalParent{ SW_FALSE }, _bSkipValidation{ SW_FALSE }, _bSchemaLayout{ SW_FALSE }, _purpose{ purpose }
         {
         }
 
@@ -413,9 +415,9 @@ namespace sw
 
 /*
  * 전용 서버가 짓지 않는 소스(런타임 UI · `Client/`)의 리플렉션 형식 이름 표입니다 — 서버가 씬에서 그 컴포넌트를 만나면 `MissingComponent` 가 아니라 조용히 건너뜁니다.
- * 표는 서버 구성의 빌드가 짓지 않는 헤더에서 만들어 실행 파일 옆에 두는 `ClientOnlyTypes.json`(`Scripts/generate/client_only_types.py`, 패키지가 함께 싣는다)이다. 서버는 그 형식을 모르므로
+ * 표는 전용 서버 실행 파일을 짓는 빌드(서버 구성 · 개발 구성)가 클라이언트 전용 헤더에서 만들어 실행 파일 옆에 두는 `ClientOnlyTypes.json`(`Scripts/generate/client_only_types.py`, 패키지가 함께 싣는다)이다. 서버는 그 형식을 모르므로
  *          이름 바꾸기 · 빠진 모듈(오류 — 경고를 남기고 원문을 지킨다)과 클라이언트 전용(정상 — 서버에는 할 일이 없다)을 이 표로 가른다.
- *          언리얼은 클래스를 서버도 지어 두고 HUD 를 띄우지 않지만, 여기는 클래스를 짓지 않으니 이름만 싣는다(기억). 클라이언트 구성은 표를 읽지 않는다.
+ *          언리얼은 클래스를 서버도 지어 두고 HUD 를 띄우지 않지만, 여기는 클래스를 짓지 않으니 이름만 싣는다(기억). 클라이언트로 선 프로세스는 표를 읽지 않는다.
  */
 namespace sw
 {
@@ -425,7 +427,7 @@ namespace sw
         /** @brief 실행 파일 폴더(`ProcessRoots::_binary`) 기준 표 이름입니다 — 빌드(`Source/Server/CMakeLists.txt`)와 패키지(`pack.py`)가 같은 이름을 쓴다. */
         static constexpr const utf8* kTableFile = "ClientOnlyTypes.json";
 
-        /** @brief @p typeName 이 이 구성이 짓지 않는 클라이언트 전용 형식이면 true 입니다. 클라이언트 구성(`build::kWithClientCode`)은 언제나 false 입니다. */
+        /** @brief @p typeName 이 이 구성이 짓지 않는 클라이언트 전용 형식이면 true 입니다. 클라이언트로 선 프로세스(배포 클라이언트 · 에디터 · 게임)는 언제나 false 입니다. */
         [[nodiscard]] static bool isClientOnlyTypeSkipped( string_view typeName );
     };
 } // namespace sw

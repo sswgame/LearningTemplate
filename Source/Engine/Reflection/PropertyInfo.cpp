@@ -19,6 +19,7 @@
 #include "Engine/Reflection/ReflectionCast.h"
 #include "Engine/Reflection/ReflectionConstants.h"
 #include "Engine/Reflection/ReflectionContainers.h"
+#include "Engine/Reflection/ReflectionDesc.h"
 #include "Engine/Reflection/ReflectionEditorMetadata.h"
 #include "Engine/Reflection/ReflectionEnumNames.h"
 #include "Engine/Reflection/ReflectionMetadata.h"
@@ -39,6 +40,32 @@ namespace sw
             if ( pBinding != nullptr && engine::findSubsystem<TypeRegistry>() == &registry )
                 return pBinding->resolve( typeName, registry );
             return ReflectValueFacts::find( typeName, registry );
+        }
+
+        /** @brief 중첩 단계 표를 바깥 → 안 순서의 목록으로 짓습니다. 단계가 없으면 nullptr 입니다. */
+        shared_ptr<const vector<NestedContainerInfo>> makeNestedLevels( const NestedContainerDesc* pOuter )
+        {
+            if ( pOuter == nullptr )
+                return nullptr;
+            size_t levelCount = 0;
+            for ( const NestedContainerDesc* pLevel = pOuter; pLevel != nullptr; pLevel = pLevel->_pElementNested )
+            {
+                ++levelCount;
+            }
+            shared_ptr<vector<NestedContainerInfo>> pLevels = make_shared<vector<NestedContainerInfo>>();
+            pLevels->resize( levelCount ); // 단계끼리 주소로 잇는다 — 채우기 전에 한 번만 잡는다
+            size_t levelIndex = 0;
+            for ( const NestedContainerDesc* pLevel = pOuter; pLevel != nullptr; pLevel = pLevel->_pElementNested )
+            {
+                NestedContainerInfo& info = ( *pLevels )[levelIndex++];
+                info._kind                = pLevel->_kind;
+                info._typeName            = hashed_string( pLevel->_pTypeName );
+                info._elementTypeName     = hashed_string( pLevel->_pElementTypeName );
+                info._keyTypeName         = hashed_string( pLevel->_pKeyTypeName );
+                info._wrapper             = pLevel->_pWrapper;
+                info._elementNested       = levelIndex < levelCount ? &( *pLevels )[levelIndex] : nullptr;
+            }
+            return pLevels;
         }
     } // namespace
 } // namespace sw
@@ -63,6 +90,7 @@ namespace sw
         , _listAlias{}
         , _metadata{}
         , _pValueBindings{}
+        , _pNestedLevels{}
         , _bitOffset{ 0 }
         , _containerKind{ ContainerKind::None }
         , _bIsContainer{ SW_FALSE }
@@ -189,6 +217,7 @@ namespace sw
         , _listAlias{}
         , _metadata{}
         , _pValueBindings{ make_shared<PropertyValueBindings>() }
+        , _pNestedLevels{}
         , _bitOffset{ 0 }
         , _containerKind{ containerKind }
         , _bIsContainer{ static_cast<uint8>( bIsContainer ? SW_TRUE : SW_FALSE ) }
@@ -202,39 +231,38 @@ namespace sw
     }
 
     PropertyInfo::PropertyInfo( const PropertyDesc& desc )
-        : _containerWrapper{ desc._pContainerWrapper }
-        , _nestedContainer{ desc._pNestedContainer }
-        , _pValueAccessor{ desc._pValueAccessor }
-        , _pRepNotify{ desc._pRepNotify }
-        , _pValidate{ desc._pValidate }
-        , _name{ desc._pName }
-        , _typeName{ desc._pTypeName }
-        , _elementTypeName{ desc._pElementTypeName != nullptr ? hashed_string( desc._pElementTypeName ) : hashed_string{} }
-        , _keyTypeName{ desc._pKeyTypeName != nullptr ? hashed_string( desc._pKeyTypeName ) : hashed_string{} }
-        , _handleTargetTypeName{ desc._pHandleTargetTypeName != nullptr ? hashed_string( desc._pHandleTargetTypeName ) : hashed_string{} }
-        , _listAlias{}
-        , _metadata{}
-        , _pValueBindings{ make_shared<PropertyValueBindings>() }
-        , _bitOffset{ 0 }
-        , _containerKind{ desc._containerKind }
-        , _bIsContainer{ static_cast<uint8>( desc._containerKind != ContainerKind::None ? SW_TRUE : SW_FALSE ) }
-        , _bIsBitField{ SW_FALSE }
-        , _reservedFlags{ 0 }
-        , _offset{ desc._offset }
-        , _bitMask{ MathUtil::kMaxUInt8 }
+        : PropertyInfo( hashed_string( desc._pName ), hashed_string( desc._pTypeName ), desc._offset )
     {
-        if ( desc._aliasCount != 0 )
+        if ( desc._pMetadata != nullptr )
+            desc._pMetadata->applyTo( _metadata.edit() );
+        if ( desc._pContainer != nullptr )
         {
-            _listAlias.reserve( desc._aliasCount );
-            for ( uint32 aliasIndex = 0; aliasIndex < desc._aliasCount; ++aliasIndex )
-            {
-                _listAlias.push_back( hashed_string( desc._ppAlias[aliasIndex] ) );
-            }
+            const PropertyContainerDesc& container = *desc._pContainer;
+            _containerKind                         = container._kind;
+            _bIsContainer                          = container._kind != ContainerKind::None ? SW_TRUE : SW_FALSE;
+            _containerWrapper                      = container._pWrapper;
+            if ( container._pElementTypeName != nullptr )
+                _elementTypeName = hashed_string( container._pElementTypeName );
+            if ( container._pKeyTypeName != nullptr )
+                _keyTypeName = hashed_string( container._pKeyTypeName );
+            _pNestedLevels   = makeNestedLevels( container._pNested );
+            _nestedContainer = _pNestedLevels != nullptr ? _pNestedLevels->data() : nullptr;
         }
-        if ( desc._pFillMetadata != nullptr )
-            desc._pFillMetadata( _metadata.edit() );
+        if ( desc._pBinding == nullptr )
+            return;
+        const PropertyBindingDesc& binding = *desc._pBinding;
+        _pValueAccessor                    = binding._pValueAccessor;
+        _pRepNotify                        = binding._pRepNotify;
+        _pValidate                         = binding._pValidate;
+        if ( binding._pHandleTargetTypeName != nullptr )
+            _handleTargetTypeName = hashed_string( binding._pHandleTargetTypeName );
+        _listAlias.reserve( binding._aliasCount );
+        for ( uint32 aliasIndex = 0; aliasIndex < binding._aliasCount; ++aliasIndex )
+        {
+            _listAlias.push_back( hashed_string( binding._ppAlias[aliasIndex] ) );
+        }
         // 파서가 측정한 바이트를 박지 않는다 — 파서는 Debug 정의를 모르고 측정한다(`resolveBitField` 설명). 못 찾으면 그쪽이 이름과 함께 오류를 남긴다.
-        if ( desc._pSetBit != nullptr && resolveBitField( desc._ownerSize, desc._pSetBit ) == false )
+        if ( binding._pSetBit != nullptr && resolveBitField( binding._ownerSize, binding._pSetBit ) == false )
             SW_ASSERT( false && "bit field not found in this build layout" );
     }
 } // namespace sw

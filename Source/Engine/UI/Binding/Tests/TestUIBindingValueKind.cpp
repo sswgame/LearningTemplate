@@ -30,12 +30,12 @@ SW_TEST_CASE( UIBindingValueKindTest, SameValueMatchesTextComparison )
  */
 SW_TEST_CASE( UIBindingValueKindTest, KindFollowsTheBuiltinClass )
 {
-    SW_EXPECT_TRUE( UIBindingValue::classifyType( hashed_string( "unorm8" ) ) == UIBindingValueKind::Number );
-    SW_EXPECT_TRUE( UIBindingValue::classifyType( hashed_string( "half" ) ) == UIBindingValueKind::Number );
-    SW_EXPECT_TRUE( UIBindingValue::classifyType( hashed_string( "half2" ) ) == UIBindingValueKind::Other );
-    SW_EXPECT_TRUE( UIBindingValue::classifyType( hashed_string( "float32" ) ) == UIBindingValueKind::Number );
-    SW_EXPECT_TRUE( UIBindingValue::classifyType( hashed_string( "bool" ) ) == UIBindingValueKind::Bool );
-    SW_EXPECT_TRUE( UIBindingValue::classifyType( hashed_string( "string" ) ) == UIBindingValueKind::Text );
+    SW_EXPECT_TRUE( UIBindingValue::classifyType( ReflectBuiltinIndex::kunorm8 ) == UIBindingValueKind::Number );
+    SW_EXPECT_TRUE( UIBindingValue::classifyType( ReflectBuiltinIndex::khalf ) == UIBindingValueKind::Number );
+    SW_EXPECT_TRUE( UIBindingValue::classifyType( ReflectBuiltinIndex::khalf2 ) == UIBindingValueKind::Other );
+    SW_EXPECT_TRUE( UIBindingValue::classifyType( ReflectBuiltinIndex::kfloat32 ) == UIBindingValueKind::Number );
+    SW_EXPECT_TRUE( UIBindingValue::classifyType( ReflectBuiltinIndex::kbool ) == UIBindingValueKind::Bool );
+    SW_EXPECT_TRUE( UIBindingValue::classifyType( ReflectBuiltinIndex::kstring ) == UIBindingValueKind::Text );
 }
 
 /**
@@ -48,7 +48,7 @@ SW_TEST_CASE( UIBindingValueKindTest, EveryRowKindComesFromItsOwnClass )
     {
         const ReflectBuiltinIndex builtinIndex = static_cast<ReflectBuiltinIndex>( index );
         const hashed_string&      typeName     = ReflectedValueUtil::getBuiltinTypeName( builtinIndex );
-        const UIBindingValueKind  kind         = UIBindingValue::classifyType( typeName );
+        const UIBindingValueKind  kind         = UIBindingValue::classifyType( builtinIndex );
         const ReflectBuiltinClass builtinClass = ReflectedValueUtil::getBuiltinClass( builtinIndex );
         const bool                bSameKind    = ( builtinClass == ReflectBuiltinClass::Number ) == ( kind == UIBindingValueKind::Number ) &&
                                ( builtinClass == ReflectBuiltinClass::Bool ) == ( kind == UIBindingValueKind::Bool ) &&
