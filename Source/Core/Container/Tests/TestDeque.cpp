@@ -92,7 +92,8 @@ SW_TEST_CASE( DequeTest, WrapsAndGrowsKeepingOrder )
             slidingQueue.pop_front();
         }
     }
-    SW_EXPECT_EQUAL( capacity, slidingQueue.capacity() );
+    if constexpr ( sw::kUsesStdContainers == false ) // std::deque 는 용량이 없다
+        SW_EXPECT_EQUAL( capacity, slidingQueue.capacity() );
 }
 
 /**
