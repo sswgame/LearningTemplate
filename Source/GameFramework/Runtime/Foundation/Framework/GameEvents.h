@@ -8,7 +8,7 @@
  *          - `SceneLoadCompletedEvent`: 그 로드가 활성 씬이 되었거나 실패한 뒤의 첫 `GameInstance::update` 에서 낸다.
  *
  *          언리얼의 `FCoreUObjectDelegates::PreLoadMap` 과 `PostLoadMapWithWorld` 에 해당한다. 낼 시점이 없는 이벤트(일시정지 등)는 두지 않는다.
- *          다른 채널 이벤트는 킷이 자기 헤더에 둔다(`ActionCombatEvents.h` 의 피해와 룸 이벤트).
+ *          다른 채널 이벤트는 킷이 자기 헤더에 둔다(`ActionCombatEvents.h` 의 룸 이벤트). 유닛의 피해는 `DamageEvents.h` 다.
  *          `SceneManager` 를 직접 불러 한 씬 로드는 레벨 이벤트를 내지 않는다. 엔진은 GameFramework 를 모르기 때문이다.
  */
 #pragma once

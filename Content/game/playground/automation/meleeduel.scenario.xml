@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
 <?asset guid="b60ffe60257199e061686a73c2c8021f"?>
 <!--
-  근접 판정 · 유닛 스탯(ActionCombat 키트의 MeleeHitboxComponent · UnitStatsComponent, maps/meleeduel) — 값으로 판정한다(골든 없음).
+  근접 판정 · 유닛 스탯(MeleeHitboxComponent · UnitStatsComponent, maps/meleeduel) — 값으로 판정한다(골든 없음).
   ① 휘두르기(개발 명령 exec … beginAttack — 게임의 공격 입력 · AI 가 부르는 beginAttack 과 같은 함수)가 칼날 안의 Dummy 를 한 번 맞혀 HP 30 → 20(방어 0).
   ② 한 창 안에서는 같은 대상을 다시 맞히지 않는다. ③ 다음 휘두르기(25)로 쓰러진다. 휘두른 쪽(공격자 계층)은 맞지 않는다.
   ④ 기믹 피해(폭발 통의 반경 피해)도 같은 맞음 길로 UnitStatsComponent 체력을 깎는다 — 도화선 0.5 초 FuseBarrel 이 거리 2 의 BlastDummy 를 HP 100 → 60.

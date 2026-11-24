@@ -35,6 +35,7 @@
 
 namespace sw
 {
+    class UnitStatsComponent;
     class XMLNode;
     struct ProjectileDef;
 
@@ -71,14 +72,17 @@ namespace sw
 namespace sw
 {
     /**
-     * @brief 몬스터 한 종의 기본 스탯입니다(`<Stats>`). `UnitStatsComponent::setStats( const MonsterStatsDef& )` 가 그대로 옮깁니다.
+     * @brief 몬스터 한 종의 기본 스탯입니다(`<Stats>`). `applyTo` 가 유닛(`UnitStatsComponent`)에 그대로 옮깁니다.
      * @details 단위는 월드 단위다. 거리는 m, 속도는 m/s, 시간은 s 이다. 이동 속도의 상한은 `UnitStatsComponent` 의 Move Speed 상한과 같다 —
      *          넘으면 로드 오류다(픽셀 단위로 적은 값을 잡아낸다).
      */
     REFLECT()
-    struct MonsterStatsDef
+    struct SW_KIT_API MonsterStatsDef
     {
         REFLECT_BODY();
+
+        /** @brief 이 종의 스탯을 @p unit 에 정합니다. 단위는 같습니다(이동 속도는 m/s, 무적 시간은 s). */
+        void applyTo( UnitStatsComponent& unit ) const;
 
         PROPERTY( Min = 1 )
         int32 _maxHP{ 100 };
