@@ -2,12 +2,16 @@
 
 #include "GameFramework/Client/Flow/LoadingScreenController.h"
 
+#include "Core/Event/EventDispatcher.h"
 #include "Core/Math/MathUtil.h"
 
 #include "Engine/Foundation/DeterministicRun.h"
+#include "Engine/Localization/LocText.h"
 #include "Engine/Localization/LocalizationManager.h"
+#include "Engine/Scene/SceneManager.h"
 #include "Engine/Serialization/XML/XMLDocument.h"
 #include "Engine/Serialization/XML/XMLReadUtil.h"
+#include "Engine/UI/Menu/ConfirmDialogScreen.h"
 #include "Engine/UI/Screen/UIScreen.h"
 #include "Engine/UI/UISystem.h"
 #include "Engine/UI/WidgetTree/WidgetTree.h"
@@ -16,6 +20,7 @@
 #include "Engine/UI/Widgets/TextWidget.h"
 
 #include "GameFramework/Runtime/Foundation/Framework/Flow/ScreenTransitionManager.h"
+#include "GameFramework/Runtime/Foundation/Framework/GameEvents.h"
 #include "GameFramework/Runtime/Foundation/Framework/GameService.h"
 #include "GameFramework/Runtime/Foundation/GameData/GameSettings.h"
 #include "GameFramework/Runtime/Foundation/GameData/XMLCatalogTable.h"
@@ -92,8 +97,10 @@ namespace sw
         , _pUISystem{ nullptr }
         , _loadingScreen{ kInvalidUIScreenHandle }
         , _fadeScreen{ kInvalidUIScreenHandle }
+        , _loadFailureDialog{ kInvalidUIScreenHandle }
         , _shownSeconds{ 0.0f }
         , _spinnerAngle{ 0.0f }
+        , _sceneLoadSubscription{}
         , _tipRandom{ GameRandom::kDefaultSeed }
     {
     }
@@ -113,7 +120,52 @@ namespace sw
         }
         UISystem* pUISystem = game::findSubsystem<UISystem>();
         bindUISystem( pUISystem != nullptr && pUISystem->isInitialized() ? pUISystem : nullptr );
+        // 버스가 없는 범위(도구 · 테스트)는 받을 이벤트도 없다.
+        EventDispatcher* const pDispatcher = game::findSubsystem<EventDispatcher>();
+        if ( pDispatcher != nullptr )
+            _sceneLoadSubscription = pDispatcher->subscribe<SceneLoadCompletedEvent>( gameEventChannel(), SW_DELEGATE_METHOD( Delegate<void( const SceneLoadCompletedEvent& )>, &LoadingScreenController::onSceneLoadCompleted, this ) );
         return SubsystemInitResult::Succeeded;
+    }
+
+    void LoadingScreenController::shutdownSubsystem()
+    {
+        _sceneLoadSubscription.reset();
+        bindUISystem( nullptr );
+    }
+
+    void LoadingScreenController::onSceneLoadCompleted( const SceneLoadCompletedEvent& event )
+    {
+        closeLoadFailure();
+        const SceneManager* const pSceneManager = game::findSubsystem<SceneManager>();
+        const bool                bSuperseded   = pSceneManager != nullptr && pSceneManager->isTransitioning(); // 뒤 요청에 밀렸다 — 그 로드의 끝이 온다
+        if ( event._bSuccess || bSuperseded || _pUISystem == nullptr || _pUISystem->isInitialized() == false )
+            return;
+        ConfirmDialogDesc desc{};
+        // 키를 넘긴다 — 바인딩이 지금 문화권으로 푼다(원문은 engine.strings.xml).
+        desc._title            = SW_LOCKEYREF( "SceneLoad", "FailedTitle" );
+        desc._message          = SW_LOCKEYREF( "SceneLoad", "FailedMessage" );
+        desc._acceptText       = SW_LOCKEYREF( "SceneLoad", "Retry" );
+        desc._cancelText       = SW_LOCKEYREF( "UIMenu", "Cancel" );
+        const string levelName = event._levelName;
+        _loadFailureDialog     = ConfirmDialogScreen::open( *_pUISystem, desc, SW_DELEGATE_LAMBDA( ConfirmDialogScreen::ResultDelegate, [levelName]( ConfirmDialogResult result )
+            {
+            SceneManager* const pScenes = game::findSubsystem<SceneManager>();
+            if ( result == ConfirmDialogResult::Accepted && pScenes != nullptr && pScenes->requestLoadFuture( levelName, SceneLoadKind::Travel ).isValid() == false )
+                SW_LOG_ERROR_ID( "LoadingScreen.RetryNotRequested", "The scene '%#' could not be requested again", levelName.c_str() );
+        } ) );
+    }
+
+    void LoadingScreenController::closeLoadFailure()
+    {
+        if ( _pUISystem != nullptr && _loadFailureDialog != kInvalidUIScreenHandle )
+            _pUISystem->closeScreen( _loadFailureDialog );
+        _loadFailureDialog = kInvalidUIScreenHandle;
+    }
+
+    bool LoadingScreenController::isShowingLoadFailure() const
+    {
+        const UIScreen* const pScreen = _pUISystem != nullptr ? _pUISystem->findScreen( _loadFailureDialog ) : nullptr;
+        return pScreen != nullptr && pScreen->isClosing() == false;
     }
 
     LoadingScreenController::~LoadingScreenController()
@@ -243,6 +295,7 @@ namespace sw
 
     void LoadingScreenController::closeScreens()
     {
+        closeLoadFailure();
         if ( _pUISystem != nullptr )
         {
             if ( _loadingScreen != kInvalidUIScreenHandle )

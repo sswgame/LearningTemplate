@@ -2412,6 +2412,21 @@
 				<item>engine/ui/confirm_countdown.ui.xml</item>
 			</origins>
 		</entry>
+		<entry key="SceneLoad.FailedMessage" source="The scene could not be opened. Try again, or stay here.">
+			<origins>
+				<item>Source/GameFramework/Client/Flow/LoadingScreenController.cpp</item>
+			</origins>
+		</entry>
+		<entry key="SceneLoad.FailedTitle" source="Loading Failed">
+			<origins>
+				<item>Source/GameFramework/Client/Flow/LoadingScreenController.cpp</item>
+			</origins>
+		</entry>
+		<entry key="SceneLoad.Retry" source="Try Again">
+			<origins>
+				<item>Source/GameFramework/Client/Flow/LoadingScreenController.cpp</item>
+			</origins>
+		</entry>
 		<entry key="Sections" source="Sections" context="TextWidget._text">
 			<origins>
 				<item>engine/ui/debughud.ui.xml</item>

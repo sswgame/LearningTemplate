@@ -1,6 +1,6 @@
 /**
  * @file ActionRoomHUDComponent.h
- * @brief 액션 룸 이벤트(`ActionCombatEvents.h`)를 받아 HUD 알림과 카메라 흔들림으로 보입니다 — 룸을 든 디렉터가 무엇이든(키트의 디렉터 · 게임의 전투) 같은 이벤트 하나로 이어진다.
+ * @brief 액션 룸 이벤트(`ActionCombatEvents.h`)와 유닛 피해(`DamageAppliedEvent`)를 받아 HUD 알림과 카메라 흔들림으로 보입니다 — 룸을 든 디렉터가 무엇이든(키트의 디렉터 · 게임의 전투) 같은 이벤트 하나로 이어진다.
  * @details 같은 오브젝트의 HUD(`HUDControllerComponent` — `actionroom.ui.xml`)에 뷰모델을 건다. 문이 잠겨 있는 동안 잠김 표시를, 방을 비우거나 쓰러지면 알림을 `_notificationSeconds` 동안 보인다.
  *          카메라는 씬의 흔들림 채널(`CameraShakeChannel`)로 흔든다 — 카메라 매니저 · 디렉터가 없는 씬이면 듣는 쪽이 없다.
  */
@@ -17,6 +17,7 @@
 namespace sw
 {
     struct ClearGateStateChangedEvent;
+    struct DamageAppliedEvent;
     struct PlayerDefeatedInRoomEvent;
     struct RoomClearedEvent;
 
@@ -56,6 +57,8 @@ namespace sw
         void onGateStateChanged( const ClearGateStateChangedEvent& event );
         void onRoomCleared( const RoomClearedEvent& event );
         void onPlayerDefeated( const PlayerDefeatedInRoomEvent& event );
+        /** @brief 이 씬의 유닛이 맞았습니다 — 맞은 자리에서 흔들림을 냅니다(거리로 약해진다). 다른 월드의 유닛이면 아무 일도 없습니다. */
+        void onDamageApplied( const DamageAppliedEvent& event );
         void showNotification( Notification notification, float32 shakeAmplitude );
         void updateHUD();
 
@@ -68,6 +71,10 @@ namespace sw
         float32 _bossShakeScale;
         PROPERTY( Category = "Camera", DisplayName = "Defeat Shake", Min = 0.0, Units = m, Tooltip = "Camera shake amplitude when the player is defeated; 0 = none" )
         float32 _defeatShake;
+        PROPERTY( Category = "Camera", DisplayName = "Damage Shake", Min = 0.0, Units = m, Tooltip = "Camera shake amplitude at a unit that took damage; 0 = none" )
+        float32 _damageShake;
+        PROPERTY( Category = "Camera", DisplayName = "Damage Shake Radius", Min = 0.01, Units = m, Tooltip = "Damage farther than this from the camera does not shake it" )
+        float32 _damageShakeRadius;
         PROPERTY( Category = "Camera", DisplayName = "Shake Seconds", Min = 0.01, Units = s )
         float32 _shakeSeconds;
 
@@ -75,6 +82,7 @@ namespace sw
         Subscription                       _gateSubscription;
         Subscription                       _clearedSubscription;
         Subscription                       _defeatedSubscription;
+        Subscription                       _damageSubscription;
         float32                            _notificationLeft;
         Notification                       _notification;
         uint8                              _bGateLocked;

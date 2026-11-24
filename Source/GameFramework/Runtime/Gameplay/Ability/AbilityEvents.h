@@ -51,6 +51,7 @@ namespace sw
      * @brief 이펙트가 낸 게임플레이 큐 하나입니다. 언리얼의 `UGameplayCueManager` 가 받는 정보에 해당합니다.
      * @details 즉시 실행이나 주기 실행이면 `Executed` 이고, 지속 이펙트가 걸리면 `Added`, 해제되면 `Removed` 이다. 크기는 실행에서는 그 이펙트가 바꾼
      *          양(피해이면 음수)이고, 지속에서는 스택 수이다. 연출 전용이므로 이 이벤트로 게임 상태를 바꾸지 않는다.
+     *          프레임워크의 받는 쪽은 없다 — 연출은 큐 창구(`IAbilityCueSink`)와 `registerGameplayCue` 가 직접 걸고, 이 이벤트는 이름으로 더 받을 게임 몫이다.
      */
     struct SW_GF_API AbilityPresentationEvent final : EventBase
     {

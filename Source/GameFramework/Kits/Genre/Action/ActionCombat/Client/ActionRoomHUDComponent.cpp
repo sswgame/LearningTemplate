@@ -16,6 +16,7 @@
 
 #include "GameFramework/Kits/Genre/Action/ActionCombat/ActionCombatEvents.h"
 #include "GameFramework/Kits/Genre/Action/ActionCombat/Client/ActionRoomHUDViewModel.h"
+#include "GameFramework/Runtime/Character/Combat/Damage/DamageEvents.h"
 #include "GameFramework/Runtime/Foundation/Framework/GameEvents.h"
 #include "GameFramework/Runtime/Foundation/Framework/GameService.h"
 #include "GameFramework/Runtime/Foundation/Framework/Presentation/IHUDViewModelBinder.h"
@@ -27,11 +28,14 @@ namespace sw
         , _clearShake{ 0.08f }
         , _bossShakeScale{ 2.0f }
         , _defeatShake{ 0.15f }
+        , _damageShake{ 0.03f }
+        , _damageShakeRadius{ 12.0f }
         , _shakeSeconds{ 0.35f }
         , _viewModel{}
         , _gateSubscription{}
         , _clearedSubscription{}
         , _defeatedSubscription{}
+        , _damageSubscription{}
         , _notificationLeft{ 0.0f }
         , _notification{ Notification::None }
         , _bGateLocked{ SW_FALSE }
@@ -52,6 +56,7 @@ namespace sw
         _gateSubscription     = pDispatcher->subscribe<ClearGateStateChangedEvent>( gameEventChannel(), SW_DELEGATE_METHOD( Delegate<void( const ClearGateStateChangedEvent& )>, &ActionRoomHUDComponent::onGateStateChanged, this ) );
         _clearedSubscription  = pDispatcher->subscribe<RoomClearedEvent>( gameEventChannel(), SW_DELEGATE_METHOD( Delegate<void( const RoomClearedEvent& )>, &ActionRoomHUDComponent::onRoomCleared, this ) );
         _defeatedSubscription = pDispatcher->subscribe<PlayerDefeatedInRoomEvent>( gameEventChannel(), SW_DELEGATE_METHOD( Delegate<void( const PlayerDefeatedInRoomEvent& )>, &ActionRoomHUDComponent::onPlayerDefeated, this ) );
+        _damageSubscription   = pDispatcher->subscribe<DamageAppliedEvent>( gameEventChannel(), SW_DELEGATE_METHOD( Delegate<void( const DamageAppliedEvent& )>, &ActionRoomHUDComponent::onDamageApplied, this ) );
     }
 
     void ActionRoomHUDComponent::onUnregister( GameObjectManager& manager )
@@ -59,6 +64,7 @@ namespace sw
         _gateSubscription.reset();
         _clearedSubscription.reset();
         _defeatedSubscription.reset();
+        _damageSubscription.reset();
         manager.getComponentRegistry().remove<ActionRoomHUDComponent>( this );
         Component::onUnregister( manager );
     }
@@ -95,6 +101,22 @@ namespace sw
     {
         (void)event;
         showNotification( Notification::Defeated, _defeatShake );
+    }
+
+    void ActionRoomHUDComponent::onDamageApplied( const DamageAppliedEvent& event )
+    {
+        GameObjectManager* const    pManager = getOwner() != nullptr ? getOwner()->getMutableManager() : nullptr;
+        const GameObject* const     pTarget  = pManager != nullptr ? pManager->resolveGameObject( event._target ) : nullptr;
+        const SceneComponent* const pRoot    = pTarget != nullptr ? pTarget->getPrimarySceneComponent() : nullptr;
+        if ( pRoot == nullptr || _damageShake <= 0.0f )
+            return;
+        CameraShakeRequest shake;
+        shake._origin         = pRoot->getWorldPosition();
+        shake._sourceObjectID = pTarget->getObjectID();
+        shake._amplitude      = _damageShake;
+        shake._duration       = _shakeSeconds;
+        shake._falloffRadius  = _damageShakeRadius;
+        pManager->getCameraRegistry().getShakeChannel().broadcast( shake );
     }
 
     void ActionRoomHUDComponent::showNotification( Notification notification, float32 shakeAmplitude )

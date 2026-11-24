@@ -5,6 +5,7 @@
 #include "Core/Subsystem/SubsystemScope.h"
 #include "Core/Testing/TestFramework.h"
 
+#include "Engine/Object/Component/SceneComponent.h"
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
 #include "Engine/Object/GameObject/Registry/CameraRegistry.h"
@@ -13,6 +14,7 @@
 #include "GameFramework/Kits/Genre/Action/ActionCombat/ActionCombatEvents.h"
 #include "GameFramework/Kits/Genre/Action/ActionCombat/Client/ActionRoomHUDComponent.h"
 #include "GameFramework/Kits/Genre/Action/ActionCombat/Client/ActionRoomHUDViewModel.h"
+#include "GameFramework/Runtime/Character/Combat/Damage/DamageEvents.h"
 #include "GameFramework/Runtime/Foundation/Framework/GameEventUtil.h"
 #include "GameFramework/Runtime/Foundation/Framework/GameService.h"
 
@@ -64,4 +66,34 @@ SW_TEST_CASE( ActionRoomHUDTest, RoomEventsShowOnTheHUDAndShakeTheCamera )
     SW_EXPECT_EQUAL( size_t( 3 ), listShake.size() );
     manager.endPlay();
     SW_EXPECT_TRUE( pHUD->findViewModel() == nullptr );
+}
+
+/** @brief [ActionRoomHUDTest] 이 씬의 유닛이 맞으면 맞은 자리에서 거리로 약해지는 흔들림이 나고, 이 씬에 없는 대상의 피해는 아무 일도 없다 */
+SW_TEST_CASE( ActionRoomHUDTest, DamageShakesTheCameraAtTheTarget )
+{
+    EventDispatcher dispatcher;
+    SubsystemScope  scope;
+    SW_REQUIRE_TRUE( scope.bind<EventDispatcher>( &dispatcher ) );
+    game::ScopedGameScope      scopedScope( scope );
+    GameObjectManager          manager;
+    vector<CameraShakeRequest> listShake;
+    const Subscription         shakeSubscription = manager.getCameraRegistry().getShakeChannel().add(
+        SW_DELEGATE_LAMBDA( CameraShakeRequestCallback, [&listShake]( const CameraShakeRequest& request )
+            { listShake.push_back( request ); } ) );
+    (void)manager.createGameObject( hashed_string( "RoomHUD" ) )->addComponent<ActionRoomHUDComponent>();
+    GameObject* const pTarget = manager.createGameObject( hashed_string( "Target" ) );
+    pTarget->addComponent<SceneComponent>()->setLocalPosition( float3{ 3.0f, 0.0f, 1.0f } );
+    manager.beginPlay();
+
+    GameEventUtil::send( DamageAppliedEvent{} );
+    SW_EXPECT_TRUE( listShake.empty() );
+    DamageAppliedEvent damage;
+    damage._target = pTarget->getHandle();
+    damage._amount = 5;
+    GameEventUtil::send( damage );
+    SW_REQUIRE_EQUAL( size_t( 1 ), listShake.size() );
+    SW_EXPECT_NEAR( 3.0f, listShake[0]._origin._x, 1.0e-4f );
+    SW_EXPECT_TRUE( listShake[0]._amplitude > 0.0f && listShake[0]._falloffRadius > 0.0f );
+    SW_EXPECT_EQUAL( pTarget->getObjectID(), listShake[0]._sourceObjectID );
+    manager.endPlay();
 }
