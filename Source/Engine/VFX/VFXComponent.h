@@ -204,7 +204,8 @@ namespace sw
         float4x4                    _worldSpaceFrame;    ///< 월드 공간 입자의 기준 틀(재생 시작의 배율 · 자리) — 원점 이동을 따라간다
         PrimitiveRegistry*          _pPrimitiveRegistry; ///< 등록된 씬의 프리미티브 레지스트리(빌림). 등록 전이면 nullptr
         PROPERTY( Category = "VFX", DisplayName = "Seed", Tooltip = "Random seed of the emitters; the same seed replays the same particles" )
-        uint32 _seed;
+        uint32  _seed;
+        float32 _spawnScale; ///< 지금 시뮬레이션을 지은 이펙트 품질 배율 — 다음 재생(`play`)이 지금 값과 견준다
         PROPERTY( Category = "Playback", DisplayName = "Play On Begin", Tooltip = "Start playing when gameplay begins" )
         bool _bPlayOnBegin;
         bool _bPlaying;

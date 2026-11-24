@@ -2,11 +2,17 @@
 #include "pch.h"
 
 #include "Core/Container/vector.h"
+#include "Core/GlobalVariable/GlobalVariableManager.h"
 #include "Core/Math/MathUtil.h"
 #include "Core/Memory/Memory.h"
+#include "Core/Testing/ScopedGlobalVariableValue.h"
 #include "Core/Testing/TestFramework.h"
 
+#include "Engine/Foundation/EngineServices.h"
+#include "Engine/Object/GameObject/GameObject.h"
+#include "Engine/Object/GameObject/GameObjectManager.h"
 #include "Engine/VFX/VFXCPUSimulation.h"
+#include "Engine/VFX/VFXComponent.h"
 #include "Engine/VFX/VFXEffectDef.h"
 #include "Engine/VFX/VFXGPUEmitter.h"
 #include "Engine/VFX/VFXParticle.h"
@@ -166,4 +172,34 @@ SW_TEST_CASE( VFXSimulationSpaceTest, OpenSkyEmitterIsNotBornUnderARoof )
     vector<uint32> listSlot;
     simulation.writeInstanceSlots( listSlot );
     SW_EXPECT_EQUAL( listParticle.size(), listSlot.size() ); // 태어나지 않은 입자는 칸을 쓰지 않는다
+}
+
+/**
+ * @brief [VFXSimulationSpaceTest] 이펙트 품질(생성 배율)을 바꾸면 다음 재생부터 따른다 — 효과를 다시 읽지 않는 풀의 효과가 옛 품질에 남지 않는다
+ * @details 변이: `play` 가 배율을 견주지 않으면 배율 0 에서도 입자가 나와 진다.
+ */
+SW_TEST_CASE( VFXSimulationSpaceTest, ReplayFollowsTheEffectsQuality )
+{
+    GlobalVariableInfo* const pScale = engine::getSubsystem<GlobalVariableManager>().findVariable( "gv_effectsSpawnScale" );
+    SW_REQUIRE_NOT_NULL( pScale );
+    shared_ptr<VFXEffectDef> pEffect = make_shared<VFXEffectDef>();
+    pEffect->_listEmitter.push_back( Util::makeEmitter( VFXSimulationSpace::Local ) );
+
+    GameObjectManager manager;
+    GameObject* const pObject = manager.createGameObject( hashed_string( "Effect" ) );
+    SW_REQUIRE_NOT_NULL( pObject );
+    VFXComponent* const pComponent = pObject->addComponent<VFXComponent>();
+    SW_REQUIRE_NOT_NULL( pComponent );
+    manager.mergePendingAdds();
+    const test::ScopedGlobalVariableValue full{ *pScale, "1" };
+    pComponent->setEffect( pEffect );
+    manager.beginPlay();
+    pComponent->play();
+    manager.update( 0.5f );
+    SW_EXPECT_TRUE( pComponent->getSpawnedParticleCount() > 0u );
+
+    const test::ScopedGlobalVariableValue off{ *pScale, "0" };
+    pComponent->play();
+    manager.update( 0.5f );
+    SW_EXPECT_EQUAL( uint64{ 0 }, pComponent->getSpawnedParticleCount() );
 }
